@@ -117,8 +117,8 @@ impl DiscordIpc {
                                 }
                             }
                         }
-                        Err(e) => {
-                            eprintln!("[discord-rpc] read_packet error on {}: {e}", path.display());
+                        Err(_) => {
+                            // Read timeout or socket busy, proceed silently to next candidate
                         }
                     }
                 }
@@ -241,10 +241,14 @@ pub fn now_sec() -> u64 {
 #[cfg(unix)]
 fn find_socket_paths() -> Vec<PathBuf> {
     let mut candidates = Vec::new();
-
+    let mut seen_canonical = Vec::new();
     let mut add_candidate = |p: PathBuf| {
-        if p.exists() && !candidates.contains(&p) {
-            candidates.push(p);
+        if p.exists() {
+            let canonical = p.canonicalize().unwrap_or_else(|_| p.clone());
+            if !seen_canonical.contains(&canonical) {
+                seen_canonical.push(canonical);
+                candidates.push(p);
+            }
         }
     };
 
