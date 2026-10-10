@@ -265,11 +265,11 @@
         "state": "unverified",
         "program": "{artifact}",
         "args": ["--data", "{data}", "--window"],
-        "platforms": ["windows"],
+        "platforms": ["windows", "linux"],
         "requires": ["artifact"],
         "artifact": "port/build/release/openrac-rac1-pal.exe",
         "docs": "port/game/rac1-pal/README.md",
-        "todo": "Windows only for now (the artifact's .exe), built by port-build. The port also needs decompiler_out (openrac-extractor --decompile) and the levels (editor/extract.py port) in <data>/port, which the launcher does not make yet."
+        "todo": "Built by port-build. The port also needs decompiler_out (openrac-extractor --decompile) and the levels (editor/extract.py port) in <data>/port."
       }
     ],
     "rac1/ntsc": [

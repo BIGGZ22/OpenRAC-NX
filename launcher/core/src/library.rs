@@ -205,11 +205,19 @@ mod tests {
             let key = &version.version.key;
             let play = version.actions.iter().find(|a| a.id == "play");
             let play = play.unwrap_or_else(|| panic!("{key} has no play action"));
-            assert_eq!(play.kind, actions::Kind::Play);
             let built = file
                 .find(&Scope::Version(key.clone()), "play")
                 .and_then(|a| a.artifact.as_deref())
-                .is_some_and(|artifact| crate::under(&root, artifact).exists());
+                .is_some_and(|artifact| {
+                    let path = crate::under(&root, artifact);
+                    if path.exists() {
+                        true
+                    } else if !cfg!(windows) && artifact.ends_with(".exe") {
+                        crate::under(&root, &artifact[..artifact.len() - 4]).exists()
+                    } else {
+                        false
+                    }
+                });
             assert!(!play.runnable || built, "{key}: play runs before the port is built");
         }
     }

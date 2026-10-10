@@ -381,7 +381,15 @@ impl Action {
     /// `artifact`, filled in and absolute.
     fn artifact_path(&self, ctx: &Context) -> Result<PathBuf, String> {
         let artifact = self.artifact.as_deref().ok_or_else(|| format!("{} names no artifact", self.label))?;
-        Ok(abs(ctx.root, &fill(artifact, ctx, None)?))
+        let filled = fill(artifact, ctx, None)?;
+        let full_path = abs(ctx.root, &filled);
+        if !cfg!(windows) && filled.ends_with(".exe") {
+            let without_exe = abs(ctx.root, &filled[..filled.len() - 4]);
+            if without_exe.exists() || !full_path.exists() {
+                return Ok(without_exe);
+            }
+        }
+        Ok(full_path)
     }
 }
 
