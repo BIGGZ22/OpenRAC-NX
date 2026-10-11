@@ -63,6 +63,7 @@ int openrac_game_language = 1;
 int openrac_game_no_card = 0;
 int openrac_game_start_level = -1;
 void (*openrac_game_on_frame)(unsigned frame) = nullptr;
+int (*openrac_game_bolts)(void) = nullptr;
 }
 
 namespace {
@@ -245,10 +246,22 @@ int openrac_game_vsync(void) {
     g_frame++;
     // The level being played, once per change: the launcher reads this line for Discord's presence.
     static int shown_level = OPENRAC_OVERLAY_EXE;
+    static int shown_bolts = -1;
+    static long bolts_frame = 0;
     if (const int level = openrac_game_loaded_overlay(); level != shown_level) {
         shown_level = level;
+        shown_bolts = -1;
         if (level != OPENRAC_OVERLAY_EXE) {
             log::info("now playing level {}", level);
+        }
+    }
+    // Its bolts too, when they change, at most every 600 frames: Discord takes few updates.
+    if (shown_level != OPENRAC_OVERLAY_EXE && openrac_game_bolts != nullptr &&
+        (shown_bolts < 0 || g_frame >= bolts_frame + 600)) {
+        if (const int bolts = openrac_game_bolts(); bolts >= 0 && bolts != shown_bolts) {
+            shown_bolts = bolts;
+            bolts_frame = g_frame;
+            log::info("bolts {}", bolts);
         }
     }
     if (openrac_game_on_frame != nullptr) {

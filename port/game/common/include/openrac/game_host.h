@@ -71,6 +71,10 @@ int openrac_game_vsync(void);
  * installs it (rac1: the direct start into a level, boot.c). */
 extern void (*openrac_game_on_frame)(unsigned frame);
 
+/* The player's bolts, when a game installs it (rac1/pal: boot.c): logged while a level plays for
+ * the launcher's Discord presence. */
+extern int (*openrac_game_bolts)(void);
+
 /* The game sends a DMA chain (sceDmaSend): channel is the game address of
  * the channel's registers (0x10009000 is VIF1, the display list; 0x1000A000
  * is the GIF), tag the address of the chain's first tag. The renderer reads

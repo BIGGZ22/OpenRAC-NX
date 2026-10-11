@@ -91,8 +91,14 @@ static void direct_start(unsigned frame) {
     GREF(short, 0x0013E15Au) = 1;
 }
 
+/* gBolts (include/names.h). */
+static int bolts(void) {
+    return GREF(int, 0x0015EE98u);
+}
+
 __attribute__((constructor)) static void install_direct_start(void) {
     openrac_game_on_frame = direct_start;
+    openrac_game_bolts = bolts;
 }
 
 void func_00209DC0(void) {
