@@ -1179,6 +1179,15 @@ void draw_kept(bool first) {
     input.effects = k.effects;
     input.effect_uploads = k.effect_uploads;
     input.ui_quads = k.ui_quads;
+    // A tick that draws no world and has no picture of its own to put under its 2D (the page
+    // menu's first ticks, before its snapshot of the frame comes; the tick it closes on): the
+    // console still shows the last frame there, so the 2D goes over the last world drawn, not black.
+    constexpr std::size_t kSnapshotBytes = 0x40000;
+    if (has_camera && (k.draws & 0x0Fu) == 0 && k.before_world < kSnapshotBytes && g->last_world.width() == width
+        && g->last_world.height() == height) {
+        g->last_world.blit_to(g->frame.id(), width, height);
+        input.keep_colour = true;
+    }
     if (g->renderer) {
         g->renderer->render(input, {g->frame.id(), width, height});
         if (first && has_camera && (k.draws & 0x1Fu) != 0 && width > 0 && height > 0) {

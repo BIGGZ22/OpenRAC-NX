@@ -123,6 +123,9 @@ struct FrameInput {
     // The 2D layer's quads drawn natively (UiQuad), indexed by their markers in the 2D path.
     std::span<const UiQuad> ui_quads{};
     std::array<float, 4> clear_colour{0.0f, 0.0f, 0.0f, 1.0f};
+    // The target already holds the picture to start from (a tick that draws no world of its own):
+    // only depth is cleared.
+    bool keep_colour = false;
     std::uint64_t frame = 0;
     double seconds = 0.0;
 };

@@ -78,7 +78,7 @@ void Renderer::render(const FrameInput& input, const RenderTarget& target) {
     );
     // Reversed depth: nothing is in front of 0, and the tests are GEQUAL.
     glClearDepth(0.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    glClear((input.keep_colour ? 0 : GL_COLOR_BUFFER_BIT) | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_GEQUAL);
 
