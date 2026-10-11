@@ -43,7 +43,22 @@ void openrac_sound_continue_groups(uint32_t mask);
  * IOP's reply word. Commands the port does not take yet answer 0. */
 uint32_t openrac_sound_command(uint32_t command, const void* data, uint32_t size);
 
-/* Interleaved stereo, 48 kHz. */
+/* VAG streams (music, speech): a mono VAG file at a disc sector, read and decoded on a thread of
+ * its own, mixed after the sounds. Handles have bit 30 set, so they are never a sound's.
+ * `queue_on`: a live stream's handle to play this one after (the same stream: either handle
+ * names it). Flags: 1 start paused, 4 loop. `group`: the master volume group (1 music). */
+#define OPENRAC_STREAM_TAG 0x40000000u
+uint32_t openrac_stream_play(uint32_t sector, int32_t volume, int32_t group, uint32_t queue_on,
+                             uint32_t flags);
+int openrac_stream_live(uint32_t stream);
+int openrac_stream_buffered(uint32_t stream);
+/* Milliseconds left in the part playing (a loop: in this pass), 0 once ended. */
+int32_t openrac_stream_remaining_ms(uint32_t stream);
+void openrac_stream_stop(uint32_t stream); /* 0: every stream */
+void openrac_stream_pause(uint32_t stream, int paused);
+void openrac_stream_set_volume(uint32_t stream, int32_t volume);
+
+/* Interleaved stereo, 48 kHz: the sounds and the streams. */
 void openrac_sound_render(int16_t* interleaved, size_t frames);
 
 #ifdef __cplusplus

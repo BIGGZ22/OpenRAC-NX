@@ -1,18 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// openrac/sound_engine.h: one SoundPlayer for the game, behind a lock, since the audio output
-// renders on its own thread.
+// openrac/sound_engine.h: one SoundPlayer for the game, and the VAG streams (music, speech),
+// behind a lock, since the audio output renders on its own thread.
 
 #include "openrac/sound_engine.h"
 
 #include <algorithm>
+#include <array>
 #include <cstdio>
 #include <cstring>
+#include <deque>
+#include <memory>
 #include <mutex>
 #include <span>
+#include <thread>
 #include <vector>
 
+#include "assets/sound/adpcm.h"
+#include "assets/sound/vag.h"
 #include "audio/sound_player.h"
 #include "common/log.h"
 #include "openrac/game_host.h"
@@ -27,6 +33,140 @@ std::mutex g_lock;
 audio::SoundPlayer& player() {
     static auto* p = new audio::SoundPlayer;
     return *p;
+}
+
+// The master volume of each group, as the game last set it (the streams apply it themselves).
+std::array<std::int32_t, audio::kVolumeGroups> g_master = [] {
+    std::array<std::int32_t, audio::kVolumeGroups> a{};
+    a.fill(audio::kFullVolume);
+    return a;
+}();
+
+// ---- VAG streams ----
+
+// A track read from the disc and decoded on a thread of its own; `ready` (or `failed`) is set
+// under g_lock.
+struct Track {
+    std::vector<std::int16_t> samples;
+    std::uint32_t rate = 44100;
+    bool ready = false;
+    bool failed = false;
+};
+
+struct Part {
+    std::shared_ptr<Track> track;
+    bool loop = false;
+};
+
+// One stream: what it plays now and what is queued after it, under one or more handles.
+struct Stream {
+    std::vector<std::uint32_t> handles;
+    std::deque<Part> parts;
+    double position = 0.0;  // in the front part's samples
+    std::int32_t volume = audio::kFullVolume;
+    std::int32_t group = 1;
+    bool paused = false;
+};
+
+std::vector<std::unique_ptr<Stream>> g_streams;
+std::uint32_t g_next_stream = 1;
+
+Stream* find_stream(std::uint32_t handle) {
+    if ((handle & 0xFF000000u) != OPENRAC_STREAM_TAG) {
+        return nullptr;
+    }
+    for (auto& s : g_streams) {
+        if (std::find(s->handles.begin(), s->handles.end(), handle) != s->handles.end()) {
+            return s.get();
+        }
+    }
+    return nullptr;
+}
+
+// A mono VAG file at `sector`: {"VAGp", version, pad, data size, rate, ...} big-endian, 0x30 bytes.
+void read_track(std::uint32_t sector, std::shared_ptr<Track> track) {
+    std::vector<std::int16_t> samples;
+    std::uint32_t rate = 0;
+    if (std::FILE* disc =
+            openrac_game_disc_image ? std::fopen(openrac_game_disc_image, "rb") : nullptr) {
+        const long at = static_cast<long>(sector) * 2048;
+        std::uint8_t header[0x30];
+        if (std::fseek(disc, at, SEEK_SET) == 0
+            && std::fread(header, 1, sizeof header, disc) == sizeof header
+            && std::memcmp(header, "VAGp", 4) == 0) {
+            const std::uint32_t size = static_cast<std::uint32_t>(header[12]) << 24
+                                       | header[13] << 16 | header[14] << 8 | header[15];
+            std::vector<std::uint8_t> file(sizeof header + size);
+            if (size > 0 && size < 64u * 1024 * 1024 && std::fseek(disc, at, SEEK_SET) == 0
+                && std::fread(file.data(), 1, file.size(), disc) == file.size()) {
+                try {
+                    const assets::VagFile vag = assets::parse_vag(file);
+                    rate = vag.header.sample_rate;
+                    samples = assets::decode_adpcm(vag.body);
+                } catch (const std::exception& e) {
+                    log::warn("music: the stream at sector {}: {}", sector, e.what());
+                }
+            }
+        }
+        std::fclose(disc);
+    }
+    std::lock_guard lock(g_lock);
+    if (samples.empty() || rate == 0) {
+        log::warn("music: no VAG stream at sector {}", sector);
+        track->failed = true;
+        return;
+    }
+    track->samples = std::move(samples);
+    track->rate = rate;
+    track->ready = true;
+}
+
+// Adds the streams to `out`. A part not decoded yet holds its stream silent; an ended part gives
+// way to the next, the position's fraction carried over.
+void mix_streams(std::span<std::int16_t> out) {
+    const std::size_t frames = out.size() / 2;
+    for (auto it = g_streams.begin(); it != g_streams.end();) {
+        Stream& s = **it;
+        const double master =
+            static_cast<double>(g_master[static_cast<std::size_t>(s.group)]) / audio::kFullVolume;
+        const double gain = static_cast<double>(s.volume) / audio::kFullVolume * master * master;
+        for (std::size_t f = 0; f < frames && !s.parts.empty() && !s.paused;) {
+            const Track& t = *s.parts.front().track;
+            if (t.failed) {
+                s.parts.pop_front();
+                s.position = 0.0;
+                continue;
+            }
+            if (!t.ready) {
+                break;
+            }
+            const std::size_t n = t.samples.size();
+            const double step = static_cast<double>(t.rate) / audio::kOutputRate;
+            for (; f < frames; ++f) {
+                auto i = static_cast<std::size_t>(s.position);
+                if (i >= n) {
+                    break;
+                }
+                const double frac = s.position - static_cast<double>(i);
+                const double a = t.samples[i];
+                const double b = i + 1 < n ? t.samples[i + 1] : a;
+                const double v = (a + (b - a) * frac) * gain;
+                for (int c = 0; c < 2; ++c) {
+                    const double mixed = out[f * 2 + c] + v;
+                    out[f * 2 + c] =
+                        static_cast<std::int16_t>(std::clamp(mixed, -32768.0, 32767.0));
+                }
+                s.position += step;
+            }
+            if (static_cast<std::size_t>(s.position) >= n) {
+                s.position -= static_cast<double>(n);
+                if (!s.parts.front().loop || s.parts.size() > 1) {
+                    s.parts.pop_front();
+                }
+            }
+        }
+        it = s.parts.empty() ? g_streams.erase(it) : it + 1;
+    }
 }
 
 std::int32_t word(const std::uint8_t* data, std::uint32_t i) {
@@ -129,6 +269,12 @@ uint32_t openrac_sound_set_params(
     uint32_t sound, int32_t mask, int32_t volume, int32_t pan, int32_t pitch_mod, int32_t pitch_bend
 ) {
     std::lock_guard lock(g_lock);
+    if (Stream* stream = find_stream(sound)) {
+        if ((mask & 1) != 0) {
+            stream->volume = volume;
+        }
+        return sound;
+    }
     audio::SoundPlayer& p = player();
     if (sound == 0 || !p.playing(sound)) {
         return 0;
@@ -169,6 +315,7 @@ void openrac_sound_set_master_volume(int32_t group, int32_t volume) {
         return;
     }
     std::lock_guard lock(g_lock);
+    g_master[static_cast<std::size_t>(group)] = volume;
     player().set_master_volume(static_cast<std::size_t>(group), volume);
 }
 
@@ -214,9 +361,90 @@ uint32_t openrac_sound_command(uint32_t command, const void* data, uint32_t size
     }
 }
 
+uint32_t openrac_stream_play(
+    uint32_t sector, int32_t volume, int32_t group, uint32_t queue_on, uint32_t flags
+) {
+    if (sector == 0) {
+        return 0;
+    }
+    auto track = std::make_shared<Track>();
+    std::uint32_t handle;
+    {
+        std::lock_guard lock(g_lock);
+        handle = OPENRAC_STREAM_TAG | (g_next_stream++ & 0x00FFFFFFu);
+        Stream* stream = find_stream(queue_on);
+        if (stream == nullptr) {
+            g_streams.push_back(std::make_unique<Stream>());
+            stream = g_streams.back().get();
+            stream->volume = volume;
+            stream->group = std::clamp<std::int32_t>(group, 0, audio::kVolumeGroups - 1);
+            stream->paused = (flags & 1) != 0;
+        }
+        // A part queued behind a loop replaces the loop when the loop ends its pass.
+        if (!stream->parts.empty() && stream->parts.back().loop) {
+            stream->parts.back().loop = false;
+        }
+        stream->parts.push_back({track, (flags & 4) != 0});
+        stream->handles.push_back(handle);
+    }
+    std::thread(read_track, sector, track).detach();
+    return handle;
+}
+
+int openrac_stream_live(uint32_t stream) {
+    std::lock_guard lock(g_lock);
+    return find_stream(stream) != nullptr;
+}
+
+int openrac_stream_buffered(uint32_t stream) {
+    std::lock_guard lock(g_lock);
+    const Stream* s = find_stream(stream);
+    return s != nullptr && !s->parts.empty() && s->parts.front().track->ready;
+}
+
+int32_t openrac_stream_remaining_ms(uint32_t stream) {
+    std::lock_guard lock(g_lock);
+    const Stream* s = find_stream(stream);
+    if (s == nullptr || s->parts.empty()) {
+        return 0;
+    }
+    const Track& t = *s->parts.front().track;
+    if (!t.ready) {
+        return 60000;  // not read yet: the game only needs it to be playing
+    }
+    const double left = static_cast<double>(t.samples.size()) - s->position;
+    return static_cast<int32_t>(std::max(0.0, left) * 1000.0 / t.rate);
+}
+
+void openrac_stream_stop(uint32_t stream) {
+    std::lock_guard lock(g_lock);
+    if (stream == 0) {
+        g_streams.clear();
+        return;
+    }
+    std::erase_if(g_streams, [&](const std::unique_ptr<Stream>& s) {
+        return std::find(s->handles.begin(), s->handles.end(), stream) != s->handles.end();
+    });
+}
+
+void openrac_stream_pause(uint32_t stream, int paused) {
+    std::lock_guard lock(g_lock);
+    if (Stream* s = find_stream(stream)) {
+        s->paused = paused != 0;
+    }
+}
+
+void openrac_stream_set_volume(uint32_t stream, int32_t volume) {
+    std::lock_guard lock(g_lock);
+    if (Stream* s = find_stream(stream)) {
+        s->volume = volume;
+    }
+}
+
 void openrac_sound_render(int16_t* interleaved, size_t frames) {
     std::lock_guard lock(g_lock);
     player().render(std::span(interleaved, frames * 2));
+    mix_streams(std::span(interleaved, frames * 2));
 }
 
 }  // extern "C"

@@ -5,10 +5,8 @@
  * everything below it ran on the IOP (docs/port/RAC1_PAL_SURVEY.md, section
  * 8). Banks and sounds go to the port's sound engine (openrac/sound_engine.h);
  * the sounds a game sends in its command batch are taken by that game's flush.
- * VAG streams (music, speech) and movie sound are not played yet. A VAG stream (music, a scene's sound)
- * answers as if the IOP had it buffered at once and played it until it is
- * stopped, so what waits on a stream (a level's landing scene waits for its
- * sound to be playing) goes on. Disc reads made through the library's
+ * VAG streams (music, speech) are read from the disc and played by the same
+ * engine; movie sound is the movie player's. Disc reads made through the library's
  * stream-safe calls go to the disc replacement. */
 #include "openrac/game_host.h"
 #include "openrac/game_lib.h"
@@ -75,38 +73,11 @@ void openrac_lib_snd_ContinueAllSoundsInGroup(int group) {
     openrac_sound_continue_groups((uint32_t)group);
 } /* snd_ContinueAllSoundsInGroup */
 
-/* The streams playing: handles this library gave out, tagged so that a sound's handle is never
- * taken for one. */
-#define STREAM_TAG 0x40000000u
-#define STREAMS 16
-static uint32_t streams[STREAMS];
-static uint32_t next_stream = 1;
-
-static int stream_live(uint32_t handle) {
-    if ((handle & 0xFF000000u) != STREAM_TAG) {
-        return 0;
-    }
-    for (int i = 0; i < STREAMS; ++i) {
-        if (streams[i] == handle) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-static void stream_stop(uint32_t handle) {
-    for (int i = 0; i < STREAMS; ++i) {
-        if (streams[i] == handle || handle == 0) {
-            streams[i] = 0;
-        }
-    }
-}
-
 /* snd_SoundIsStillPlaying_CB(handle, callback, argument): callback(handle) while it plays,
  * callback(0) once it has ended (a stream when stopped). */
 void openrac_lib_snd_SoundIsStillPlaying_CB(int a, int b, int c) {
     if (b != 0) {
-        const int live = stream_live((uint32_t)a) || openrac_sound_playing((uint32_t)a);
+        const int live = openrac_stream_live((uint32_t)a) || openrac_sound_playing((uint32_t)a);
         GFN(void (*)(int, long long), (gaddr)b)(live ? a : 0, (long long)c);
     }
 } /* snd_SoundIsStillPlaying_CB */
@@ -123,66 +94,57 @@ int openrac_lib_snd_InitVAGStreamingEx(int a, int b, int c, int d) {
 } /* snd_InitVAGStreamingEx */
 
 void openrac_lib_snd_StopAllStreams(void) {
-    stream_stop(0);
+    openrac_stream_stop(0);
 } /* snd_StopAllStreams */
 
 /* snd_StopSound(handle): a sound or a stream ends. */
 void openrac_lib_snd_StopSound(int handle) {
     if (handle != 0) {
-        if (stream_live((uint32_t)handle)) {
-            stream_stop((uint32_t)handle);
+        if (openrac_stream_live((uint32_t)handle)) {
+            openrac_stream_stop((uint32_t)handle);
         } else {
             openrac_sound_stop((uint32_t)handle);
         }
     }
 } /* snd_StopSound */
 
-/* snd_PlayVAGStreamByLocEx_CB(..., callback, argument): the stream starts; the callback gets its
- * handle, as the IOP's answer would. */
+/* snd_PlayVAGStreamByLocEx_CB(sector, 0, 0, 0, volume, pan, group, queue on, flags, callback,
+ * argument), as RAC1's music and speech call it: a stream starts (or is queued behind the live
+ * stream `queue on`); the callback gets its handle, as the IOP's answer would. Flags: 1 paused,
+ * 4 loop. */
 void openrac_lib_snd_PlayVAGStreamByLocEx_CB(
     int a, int b, int c, int d, int e, int f, int g, int h, int i, int j, long long k
 ) {
-    (void)a;
     (void)b;
     (void)c;
     (void)d;
-    (void)e;
     (void)f;
-    (void)g;
-    (void)h;
-    (void)i;
-    uint32_t handle = STREAM_TAG | (next_stream++ & 0x00FFFFFFu);
-    for (int s = 0; s < STREAMS; ++s) {
-        if (streams[s] == 0) {
-            streams[s] = handle;
-            break;
-        }
-    }
+    const uint32_t handle = openrac_stream_play((uint32_t)a, e, g, (uint32_t)h, (uint32_t)i);
     if (j != 0) {
         GFN(void (*)(int, long long), (gaddr)j)((int)handle, k);
     }
 } /* snd_PlayVAGStreamByLocEx_CB */
 
 void openrac_lib_snd_PauseVAGStream(int stream) {
-    (void)stream;
+    openrac_stream_pause((uint32_t)stream, 1);
 } /* snd_PauseVAGStream */
 
 void openrac_lib_snd_ContinueVAGStream(int stream) {
-    (void)stream;
+    openrac_stream_pause((uint32_t)stream, 0);
 } /* snd_ContinueVAGStream */
 
-/* snd_GetVAGStreamTimeRemaining_CB(handle, callback, argument): a playing stream has a minute
- * left (no stream is read yet, so none ends by itself); a stopped one none. */
+/* snd_GetVAGStreamTimeRemaining_CB(handle, callback, argument): milliseconds left in the part
+ * playing (the game only compares them with each other). */
 void openrac_lib_snd_GetVAGStreamTimeRemaining_CB(int a, int b, int c) {
     if (b != 0) {
-        GFN(void (*)(int, long long), (gaddr)b)(stream_live((uint32_t)a) ? 60000 : 0, (long long)c);
+        GFN(void (*)(int, long long), (gaddr)b)(openrac_stream_remaining_ms((uint32_t)a), (long long)c);
     }
 } /* snd_GetVAGStreamTimeRemaining_CB */
 
-/* snd_IsVAGStreamBuffered_CB(handle, callback, argument): a playing stream is buffered. */
+/* snd_IsVAGStreamBuffered_CB(handle, callback, argument): once its first part is decoded. */
 void openrac_lib_snd_IsVAGStreamBuffered_CB(int a, int b, int c) {
     if (b != 0) {
-        GFN(void (*)(int, long long), (gaddr)b)(stream_live((uint32_t)a), (long long)c);
+        GFN(void (*)(int, long long), (gaddr)b)(openrac_stream_buffered((uint32_t)a), (long long)c);
     }
 } /* snd_IsVAGStreamBuffered_CB */
 

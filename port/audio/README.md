@@ -24,8 +24,11 @@ processors' memory or registers.
 The games drive it through `port/game/common/lib/sound_engine.cpp`: `snd.c`
 loads banks and sets volumes, each game's command flush passes the sounds the
 game batched (play, set parameters), and the game window's audio output pulls
-`SoundPlayer::render`. Not yet: the VAG stream players (music and speech)
-above the voices' streaming, and movie sound through this engine.
+`SoundPlayer::render`. Music and speech (VAG streams) are played there too:
+each track read from the disc and decoded on its own thread, a loop queued
+behind its intro, mixed after the sounds. Not yet: streams through the
+voices' own streaming (`spu.h`), reverb on streams, movie sound through this
+engine.
 
 ## Tests
 
