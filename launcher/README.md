@@ -7,10 +7,10 @@ disc, plays the **native PC port**, and can open the levels in Godot to edit
 them. **There is no emulation**: the launcher never runs the retail program
 or a model of the console ([docs/port](../docs/port/README.md)).
 
-The native ports are not playable yet ([port/](../port/README.md) builds
-Ratchet & Clank (PAL) up to its boot stage), so today a player can set a
-game up from their disc and edit levels, and Play says what the port still
-needs. With
+Ratchet & Clank (PAL) builds and runs from the launcher on Linux and
+Windows: **Build the game** compiles its native port ([port/](../port/README.md)),
+**Play** starts it. The port is not complete yet, and the other versions
+are not playable yet: their Play says what is missing. With
 **developer tools** switched on in Settings, the launcher is also a
 contributor's console: place what each decompilation's build needs, set up
 the toolchains, build, check, and see each decompilation's progress. Either
@@ -21,9 +21,9 @@ It is a [Tauri 2](https://tauri.app/) app: a Rust side (`core/` and
 `src-tauri/`) that does every file and process operation, and a Svelte 5 UI
 (`src/`) styled after [openrac.dev](https://openrac.dev).
 
-| Games                                                                                          | A game                                                                                          |
-| ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| ![The games, with each version's progress and what is in place](docs/screenshots/library.webp) | ![Ratchet & Clank (PAL): set up from your disc, play, level editor](docs/screenshots/game.webp) |
+| Games                                                                                          | A game                                                                                         |
+| ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| ![The games, with each version's progress and what is in place](docs/screenshots/library.webp) | ![Ratchet & Clank (PAL): build and play, level editor, save files](docs/screenshots/game.webp) |
 
 ## Read first
 
@@ -49,11 +49,24 @@ OpenGOAL's flow, step for step ([docs/INTEGRATION.md](docs/INTEGRATION.md#settin
    the boot executable against the builds OpenRAC knows
    (`games/<game>/game.json`). An unknown or damaged image is refused, with
    OpenGOAL's error number for the same failure.
-3. Preparing the assets and building the game are the next steps; they show
-   as "not available yet" until the port exists.
+3. **Build the game** runs [tools/build_port.py](../tools/build_port.py): it
+   compiles the native port for this computer (a few minutes the first time),
+   and **Rebuild** compiles again what changed after an update.
+4. **Play** starts the port with the set-up data. Preparing the assets is
+   still "not available yet".
 
 **Remove the set-up** deletes what set-up made, as OpenGOAL's uninstall does;
 the disc image and saves are kept.
+
+## On a game's page
+
+- **Save files**: the port's memory card (`~/.local/share/openrac/memcard/<serial>/`
+  on Linux) with each slot's planet, bolts and save time, backups you can
+  restore, and the folder.
+- **Level editor**: the levels in Godot 4 (choose Godot once).
+- **Layout**: Settings → Appearance switches between Compact (the default:
+  the game, its versions and Play on one band) and Classic, the original
+  layout. Compact is one stylesheet, `src/layouts/compact.css`.
 
 ## Develop
 
@@ -125,9 +138,10 @@ launcher/
 - **Progress from openrac.dev**: at start-up it fetches
   `https://openrac.dev/progress.json` and, when that works, rewrites the
   checkout's `progress/summary.json` with it (the copy shown offline).
-- **Discord**: unless switched off in Settings, it shows the game being
-  viewed in Discord's Rich Presence through Discord's local socket (Linux and
-  macOS), under OpenRAC's Discord application.
+- **Discord**: unless switched off in Settings, Discord's Rich Presence shows
+  the game being viewed or played, and while Ratchet & Clank plays, the
+  planet (the port logs each level it enters), through Discord's local socket
+  (Linux and macOS), under OpenRAC's Discord application.
 - **Linux desktop integration**: at every start it writes its icons to
   `~/.local/share/icons/hicolor/` and two `.desktop` files to
   `~/.local/share/applications/`, and refreshes the desktop's caches.

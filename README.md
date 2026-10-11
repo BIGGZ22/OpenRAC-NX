@@ -68,14 +68,22 @@ OpenGOAL ported Jak and Daxter: the decompiled code compiled for the PC, a
 renderer of OpenRAC's own, the assets extracted once from your own disc. No
 emulation. [port/](port/README.md) is its code: it builds Ratchet & Clank
 (PAL)'s whole decompilation into a native program, which runs the game's
-`main` and stops where the decompilation is still assembly (the boot
-stage); [docs/port](docs/port/README.md) has the design, the studies of the
-decompiled code and the order of work.
+`main` with OpenRAC's renderer and sound; what is still assembly is
+logged and skipped. [docs/port](docs/port/README.md) has the design, the
+studies of the decompiled code and the order of work.
 
-A desktop launcher ([launcher/README.md](launcher/README.md)) sets a game up
-from your disc (OpenGOAL's way, with [tools/extractor.py](tools/extractor.py)),
-runs the level editor and, with developer tools on, every game's builds and
-checks.
+## The launcher
+
+The easiest way in is the desktop launcher ([launcher/](launcher/README.md)),
+OpenRAC's answer to OpenGOAL's: set a game up from your disc, build the
+native port and play it, manage its saves, open its levels in the editor.
+With developer tools on, it also runs every game's builds and checks.
+
+![The launcher: Ratchet & Clank (PAL), ready to build and play](launcher/docs/screenshots/game.webp)
+
+```sh
+cd launcher && corepack enable && yarn install && yarn tauri dev
+```
 
 ## Repository layout
 
