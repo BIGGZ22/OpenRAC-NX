@@ -420,18 +420,19 @@ pub fn run() {
                 .discord_client_id
                 .clone()
                 .unwrap_or_else(|| openrac_launcher_core::discord::DEFAULT_CLIENT_ID.to_string());
-            let mut ipc = openrac_launcher_core::discord::DiscordIpc::new(client_id);
+            let ipc = openrac_launcher_core::discord::DiscordIpc::new(client_id);
             let app_start = openrac_launcher_core::discord::now_sec();
+            let discord = Arc::new(Mutex::new(DiscordState { ipc, app_start }));
+            // Discord can take seconds to answer: connect without holding up the window.
             if config.discord_rpc {
-                let _ = ipc.set_status(&openrac_launcher_core::discord::DiscordStatus::Idle, app_start);
+                let discord = discord.clone();
+                tauri::async_runtime::spawn_blocking(move || {
+                    let mut discord = discord.lock().unwrap();
+                    let _ = discord.ipc.set_status(&openrac_launcher_core::discord::DiscordStatus::Idle, app_start);
+                });
             }
 
-            app.manage(AppState {
-                config: Mutex::new(config),
-                config_file,
-                jobs: Jobs::default(),
-                discord: Arc::new(Mutex::new(DiscordState { ipc, app_start })),
-            });
+            app.manage(AppState { config: Mutex::new(config), config_file, jobs: Jobs::default(), discord });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

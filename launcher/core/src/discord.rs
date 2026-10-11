@@ -105,6 +105,9 @@ pub struct DiscordIpc {
     planet: Option<String>,
     planet_since: u64,
     last: Option<(DiscordStatus, u64)>,
+    /// No new connection attempt before this (seconds): a socket Discord no longer answers costs
+    /// a whole handshake wait, so it is not retried on every status change.
+    retry_at: u64,
 }
 
 impl DiscordIpc {
@@ -117,6 +120,7 @@ impl DiscordIpc {
             planet: None,
             planet_since: 0,
             last: None,
+            retry_at: 0,
         }
     }
 
@@ -125,6 +129,7 @@ impl DiscordIpc {
         if self.client_id != new_id {
             self.client_id = new_id;
             self.disconnect();
+            self.retry_at = 0;
         }
     }
 
@@ -139,6 +144,9 @@ impl DiscordIpc {
     fn connect(&mut self) -> Result<&mut Connection, String> {
         if self.stream.is_some() {
             return self.stream.as_mut().ok_or_else(|| "Discord IPC socket closed".to_string());
+        }
+        if now_sec() < self.retry_at {
+            return Err("Discord IPC socket not available".to_string());
         }
 
         for path in find_socket_paths() {
@@ -157,6 +165,7 @@ impl DiscordIpc {
                 match read_packet(&mut stream) {
                     Ok((opcode, data)) => {
                         if opcode == 1 {
+                            set_reply_timeout(&stream);
                             return Ok(self.stream.insert(stream));
                         } else if opcode == 2 {
                             if let Ok(err) = std::str::from_utf8(&data) {
@@ -171,6 +180,7 @@ impl DiscordIpc {
             }
         }
 
+        self.retry_at = now_sec() + RETRY_SECS;
         Err("Discord IPC socket not available".to_string())
     }
 
@@ -333,13 +343,31 @@ pub fn now_sec() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()
 }
 
+/// Discord answers the handshake in anything from a few hundred milliseconds to several seconds;
+/// a shorter wait never connects. Callers run off the UI thread, so the wait stalls nothing.
+#[cfg(unix)]
+const HANDSHAKE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+/// An activity's reply, read so that replies do not pile up in the socket.
+#[cfg(unix)]
+const REPLY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
+#[cfg(any(unix, windows))]
+const RETRY_SECS: u64 = 15;
+
 #[cfg(unix)]
 fn open_connection(path: &std::path::Path) -> Option<Connection> {
     let stream = std::os::unix::net::UnixStream::connect(path).ok()?;
-    let _ = stream.set_read_timeout(Some(std::time::Duration::from_millis(150)));
-    let _ = stream.set_write_timeout(Some(std::time::Duration::from_millis(150)));
+    let _ = stream.set_read_timeout(Some(HANDSHAKE_TIMEOUT));
+    let _ = stream.set_write_timeout(Some(REPLY_TIMEOUT));
     Some(stream)
 }
+
+#[cfg(unix)]
+fn set_reply_timeout(stream: &Connection) {
+    let _ = stream.set_read_timeout(Some(REPLY_TIMEOUT));
+}
+
+#[cfg(windows)]
+fn set_reply_timeout(_: &Connection) {}
 
 /// A pipe has no timeouts: Discord answers every packet, so a read returns.
 #[cfg(windows)]
