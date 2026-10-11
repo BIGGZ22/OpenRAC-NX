@@ -1189,8 +1189,12 @@ void draw_kept(bool first) {
         }
     }
     debug_menu::draw(g->frame.id(), width, height);
-    // OPENRAC_SHOT=FRAME:FILE.png writes that frame (for checking without looking at the screen).
-    if (const char* shot = first ? std::getenv("OPENRAC_SHOT") : nullptr) {
+    // OPENRAC_SHOT=FRAME:FILE.png writes that frame (for checking without looking at the screen);
+    // OPENRAC_SHOT_BETWEEN also writes the frames drawn between ticks (FILE<frame>_b<n>.png).
+    static const bool shot_between = std::getenv("OPENRAC_SHOT_BETWEEN") != nullptr;
+    static int between_index = 0;
+    between_index = first ? 0 : between_index + 1;
+    if (const char* shot = first || shot_between ? std::getenv("OPENRAC_SHOT") : nullptr) {
         const char* colon = std::strchr(shot, ':');
         const std::uint64_t every = static_cast<std::uint64_t>(std::atoll(shot));
         // OPENRAC_SHOT_FROM=FRAME: no shots before that frame.
@@ -1199,7 +1203,8 @@ void draw_kept(bool first) {
             return v != nullptr ? std::strtoull(v, nullptr, 10) : 0ull;
         }();
         if (colon && every > 0 && input.frame % every == 0 && input.frame >= shot_from) {
-            const std::string path = std::string(colon + 1) + std::to_string(input.frame) + ".png";
+            const std::string path = std::string(colon + 1) + std::to_string(input.frame)
+                                     + (first ? std::string() : "_b" + std::to_string(between_index)) + ".png";
             viewer::write_png(path, width, height, g->frame.read_rgba());
             log::info("frame {} written to {}", input.frame, path);
         }
@@ -1497,6 +1502,18 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     g->effect_uploads.clear();
     g->particles.clear();
     g->sky_sprites.clear();
+    // OPENRAC_FRAME_LOG=FROM-TO: what each tick in that range drew, in the log.
+    static const char* frame_log = std::getenv("OPENRAC_FRAME_LOG");
+    if (frame_log != nullptr) {
+        char* end = nullptr;
+        const std::uint64_t from = std::strtoull(frame_log, &end, 10);
+        const std::uint64_t to = *end == '-' ? std::strtoull(end + 1, nullptr, 10) : from;
+        if (k.frame >= from && k.frame <= to) {
+            log::info("tick {}: draws {:#x} camera {} 2D bytes {} before world {} quads {} effects {} mobys {}", k.frame,
+                      k.draws, k.has_camera, k.packets.size(), k.before_world, k.ui_quads.size(), k.effects.size(),
+                      k.live.size());
+        }
+    }
     // The tick's own frame (when frames are drawn between ticks, part way from the last tick's
     // scene, by the refresh it is shown at).
     draw_kept(true);
@@ -1515,8 +1532,18 @@ int ui_quad(const openrac_game_ui_rect& quad) {
     if (!g || !native || g->ui_quads.size() >= 0xFFFFFFu) {
         return -1;
     }
-    g->ui_quads.push_back(renderer::UiQuad{quad.x0, quad.y0, quad.x1, quad.y1, quad.s0, quad.s1, quad.t0,
-                                           quad.t1, quad.rgba, quad.tex0, quad.flags});
+    renderer::UiQuad q;
+    for (int i = 0; i < 4; ++i) {
+        q.x[i] = quad.x[i];
+        q.y[i] = quad.y[i];
+        q.u[i] = quad.u[i];
+        q.v[i] = quad.v[i];
+    }
+    q.z = quad.z;
+    q.rgba = quad.rgba;
+    q.tex0 = quad.tex0;
+    q.flags = quad.flags;
+    g->ui_quads.push_back(q);
     return static_cast<int>(g->ui_quads.size() - 1);
 }
 

@@ -652,36 +652,59 @@ void GifInterpreter::draw_frame_upload(const ImageUpload& upload) {
     m_state_dirty = true;  // the next primitive's state is its own again
 }
 
-// A quad of the 2D layer: as the game's routine would send it (TEX0, a textured, blended
-// triangle strip with texel coordinates, the four corners), drawn from the port's own record.
+// A quad of the 2D layer: as a textured, blended triangle strip with texel coordinates through its
+// four corners, its texture and colour, drawn from the port's own record.
 void GifInterpreter::native_quad(const UiQuad& quad) {
     write_register(gs::kTex0_1, quad.tex0);
-    write_prim(0x154);
+    const bool sprite = (quad.flags & kUiSprite) != 0;
+    write_prim(sprite ? 0x156 : 0x154);
     m_glyph = (quad.flags & kUiGlyph) != 0;
-    const std::uint32_t xs[4] = {quad.x0, quad.x1, quad.x0, quad.x1};
-    const std::uint32_t ys[4] = {quad.y0, quad.y0, quad.y1, quad.y1};
-    const std::uint32_t us[4] = {quad.s0, quad.s1, quad.s0, quad.s1};
-    const std::uint32_t vs[4] = {quad.t0, quad.t0, quad.t1, quad.t1};
+    m_in_native = true;
     for (int i = 0; i < 4; ++i) {
+        if (sprite && (i == 1 || i == 2)) {
+            continue;
+        }
         m_current.rgba[0] = static_cast<std::uint8_t>(quad.rgba);
         m_current.rgba[1] = static_cast<std::uint8_t>(quad.rgba >> 8);
         m_current.rgba[2] = static_cast<std::uint8_t>(quad.rgba >> 16);
         m_current.rgba[3] = static_cast<std::uint8_t>(quad.rgba >> 24);
         m_current.q = 1.0f;
-        m_current.u = us[i];
-        m_current.v = vs[i] << 4;
-        m_current.x = xs[i];
-        m_current.y = ys[i];
-        m_current.z = 0xFFFFF0;
+        m_current.u = quad.u[i];
+        m_current.v = quad.v[i];
+        m_current.x = quad.x[i];
+        m_current.y = quad.y[i];
+        m_current.z = quad.z;
         kick(true);
     }
+    m_in_native = false;
     if (m_glyph) {
         m_glyph = false;
         m_state_dirty = true;
     }
 }
 
+// OPENRAC_UI_RESIDUAL: each kind of 2D primitive still drawn from the game's packets (not a native
+// quad), once: what is left to move off the GS packets.
+static void log_residual(const gs::Prim& prim, const gs::Tex0& tex0, bool native) {
+    static const bool on = std::getenv("OPENRAC_UI_RESIDUAL") != nullptr;
+    if (!on || native) {
+        return;
+    }
+    static std::vector<std::uint64_t> seen;
+    const std::uint64_t key = static_cast<std::uint64_t>(prim.kind) | (static_cast<std::uint64_t>(prim.tme) << 4)
+                              | (static_cast<std::uint64_t>(prim.tme ? tex0.tbp0 : 0) << 8);
+    if (std::find(seen.begin(), seen.end(), key) != seen.end()) {
+        return;
+    }
+    seen.push_back(key);
+    log::info("ui residual: prim {} textured {} tbp {:#x} psm {:#x}", static_cast<int>(prim.kind), prim.tme ? 1 : 0,
+              prim.tme ? tex0.tbp0 : 0u, prim.tme ? tex0.psm : 0u);
+}
+
 void GifInterpreter::kick(bool draw) {
+    if (draw) {
+        log_residual(attributes(), context().tex0, m_in_native);
+    }
     m_queue[m_queued++] = m_current;
     if (g_dump_draws && m_prim.kind != gs::PrimKind::Sprite) {
         const gs::Alpha& al = context().alpha;

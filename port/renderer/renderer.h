@@ -86,17 +86,23 @@ struct EffectStrip {
     int uploads = -1, upload_count = 0;
 };
 
-// A textured rectangle of the 2D layer the game drew through its quad routine (rac1:
-// DrawTexturedQuad), drawn natively where its marker comes in the 2D path (GifInterpreter): the
-// corners in the chip's 12.4 screen coordinates as the game computed them, the texel rectangle
-// (12.4 across, whole texels down), the colour (RGBAQ's low word) and the texture (TEX0).
+// A textured quad of the 2D layer the game drew through one of its 2D routines (rac1:
+// DrawTexturedQuad, the HUD's sprite routines), drawn natively where its marker comes in the 2D
+// path (GifInterpreter): four corners in strip order (0-1-2, 1-2-3) in the chip's 12.4 screen
+// coordinates as the game computed them, with their texel coordinates (12.4 both ways), the depth,
+// the colour (RGBAQ's low word) and the texture (TEX0).
 struct UiQuad {
-    std::uint32_t x0 = 0, y0 = 0, x1 = 0, y1 = 0;
-    std::uint32_t s0 = 0, s1 = 0, t0 = 0, t1 = 0;
+    std::uint32_t x[4] = {}, y[4] = {};
+    std::uint32_t u[4] = {}, v[4] = {};
+    std::uint32_t z = 0xFFFFF0;
     std::uint32_t rgba = 0;
     std::uint64_t tex0 = 0;
-    std::uint32_t flags = 0;  // kUiGlyph: a glyph of text (drawn from a distance field)
+    std::uint32_t flags = 0;  // kUiGlyph: a glyph of text (drawn from a distance field); kUiSprite
 };
+
+// UiQuad::flags: kUiSprite, an axis-aligned rectangle the game sends as a sprite (corners 0 and 3),
+// whose texel mapping follows the sprite's rules (a panel drawn off-screen and sampled back).
+inline constexpr std::uint32_t kUiSprite = 2;
 
 inline constexpr std::uint32_t kUiGlyph = 1;
 
