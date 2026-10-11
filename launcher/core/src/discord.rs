@@ -21,6 +21,16 @@ pub const DEFAULT_CLIENT_ID: &str = "1558096324602363955";
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Activity {
+    /// The name after "Playing": the Discord application's own name when left out. While a game
+    /// plays it is the game's title, so Discord shows "Playing Ratchet & Clank".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// 0: Playing.
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub kind: Option<u8>,
+    /// What the member list shows after "Playing": 0 the name, 1 the state, 2 the details.
+    #[serde(rename = "status_display_type", skip_serializing_if = "Option::is_none")]
+    pub status_display_type: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub details: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -243,7 +253,6 @@ impl DiscordIpc {
         self.last = Some((status.clone(), app_start));
         let activity = match status {
             DiscordStatus::Idle => Activity {
-                buttons: None,
                 details: Some("In Launcher".into()),
                 state: Some("Browsing Library".into()),
                 timestamps: Some(ActivityTimestamps { start: Some(app_start), end: None }),
@@ -253,6 +262,7 @@ impl DiscordIpc {
                     small_image: None,
                     small_text: None,
                 }),
+                ..Default::default()
             },
             DiscordStatus::ViewingGame { title, region, progress_pct, game_id: _ } => {
                 let state_str = match progress_pct {
@@ -260,7 +270,6 @@ impl DiscordIpc {
                     None => region.clone(),
                 };
                 Activity {
-                    buttons: None,
                     details: Some(format!("Viewing {title}")),
                     state: Some(state_str),
                     timestamps: Some(ActivityTimestamps { start: Some(app_start), end: None }),
@@ -270,16 +279,18 @@ impl DiscordIpc {
                         small_image: None,
                         small_text: None,
                     }),
+                    ..Default::default()
                 }
             }
             DiscordStatus::PlayingGame { title, region, game_id, start_time } => {
                 let current_sec = now_sec();
                 Activity {
-                    buttons: None,
-                    details: Some(format!("Playing {title}")),
-                    state: Some(match &self.planet {
-                        Some(planet) => format!("On {planet} ({region})"),
-                        None => format!("In Game ({region})"),
+                    name: Some(title.clone()),
+                    kind: Some(0),
+                    status_display_type: Some(0),
+                    details: Some(match &self.planet {
+                        Some(planet) => format!("Exploring {planet}"),
+                        None => "In the menus".into(),
                     }),
                     timestamps: Some(ActivityTimestamps {
                         start: Some(match self.planet {
@@ -290,10 +301,11 @@ impl DiscordIpc {
                     }),
                     assets: Some(ActivityAssets {
                         large_image: Some(game_image_url(game_id)),
-                        large_text: Some(title.clone()),
+                        large_text: Some(format!("{title} ({region})")),
                         small_image: Some("https://openrac.dev/wrench.webp".into()),
                         small_text: Some("OpenRAC".into()),
                     }),
+                    ..Default::default()
                 }
             }
             DiscordStatus::Working { task, title, game_id, start_time } => Activity {
@@ -306,7 +318,7 @@ impl DiscordIpc {
                     small_image: Some("https://openrac.dev/wrench.webp".into()),
                     small_text: Some("OpenRAC".into()),
                 }),
-                buttons: None,
+                ..Default::default()
             },
         };
         let activity = Activity { buttons: buttons(), ..activity };
@@ -469,9 +481,12 @@ mod tests {
     #[test]
     fn serializes_activity_cleanly() {
         let act = Activity {
+            name: Some("Ratchet & Clank".into()),
+            kind: Some(0),
+            status_display_type: Some(0),
             buttons: buttons(),
-            details: Some("Playing Ratchet & Clank".into()),
-            state: Some("In Game (PAL)".into()),
+            details: Some("Exploring Kerwan".into()),
+            state: None,
             timestamps: Some(ActivityTimestamps { start: Some(1700000000), end: None }),
             assets: Some(ActivityAssets {
                 large_image: Some(game_image_url("rac1")),
@@ -482,7 +497,9 @@ mod tests {
         };
 
         let json = serde_json::to_string(&act).unwrap();
-        assert!(json.contains("Playing Ratchet & Clank"));
+        assert!(json.contains("\"name\":\"Ratchet & Clank\",\"type\":0,\"status_display_type\":0"));
+        assert!(json.contains("\"details\":\"Exploring Kerwan\""));
+        assert!(!json.contains("\"state\""));
         assert!(json.contains("\"large_image\":\"rac1\""));
         assert!(json.contains("\"buttons\":[{\"label\":\"OpenRAC\",\"url\":\"https://openrac.dev\"}"));
     }
