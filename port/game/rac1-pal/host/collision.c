@@ -246,6 +246,13 @@ static int cell_triangle(const Cell* c, int j, int v[3], int* type) {
     return 0;
 }
 
+/* A moby whose bounding sphere is not finite (its update produced a NaN, which the console's floats
+ * cannot hold: they saturate) is in no query, rather than in every one (a NaN never compares as
+ * outside), as the follow camera's line would otherwise be blocked by it everywhere. */
+static int unbounded(gaddr m) {
+    return !isfinite(F32(m)) || !isfinite(F32(m + 4)) || !isfinite(F32(m + 8)) || !isfinite(F32(m + 0xC));
+}
+
 /* Query flags 0x80 (type bit 7) and 0x20 (surface id == (flags >> 8) & 0x1F) leave a face out. */
 static inline int face_excluded(uint32_t fl, int ty) {
     return (fl & 0x80 & (uint32_t)ty) != 0 || ((fl & 0x20) != 0 && (((fl >> 8) ^ (uint32_t)ty) & 0x1F) == 0);
@@ -863,7 +870,7 @@ static void line_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, V3 a, V3 b, V3
             const V3 e = vsub(vmadds(a, d, t), bc);
             const V3 sq = vmul(e, e);
             const float v = ((sq.v[0] - br * br) + sq.v[1]) + sq.v[2];
-            if (U32(m + 0x94) == 0 || gtz(v) || U32(m + 0x9C) == stamp) {
+            if (U32(m + 0x94) == 0 || gtz(v) || U32(m + 0x9C) == stamp || unbounded(m)) {
                 continue;
             }
             U32(m + 0x9C) = stamp;
@@ -1058,7 +1065,7 @@ static void volume_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, const Volume
             const gaddr list = grid_cell(x, gx, gy, &count);
             for (int li = 0; li < count; ++li) {
                 const gaddr m = moby_at(x, U16(list + 2 * (gaddr)li));
-                if (m == ignore || U32(m + 0x9C) == stamp || U32(m + 0x94) == 0) {
+                if (m == ignore || U32(m + 0x9C) == stamp || U32(m + 0x94) == 0 || unbounded(m)) {
                     continue;
                 }
                 const V3 bs = vld(m);
@@ -1341,7 +1348,7 @@ int func_L00_001F2BE8(float a0, gaddr a1, int a2, gaddr a3, gaddr a4) {
                 const gaddr list = grid_cell(x, gx, gy, &count);
                 for (int li = 0; li < count; ++li) {
                     const gaddr m = moby_at(x, U16(list + 2 * (gaddr)li));
-                    if (m == a3 || U32(m + 0x9C) == (uint32_t)stamp || U32(m + 0x94) == 0) {
+                    if (m == a3 || U32(m + 0x9C) == (uint32_t)stamp || U32(m + 0x94) == 0 || unbounded(m)) {
                         continue;
                     }
                     const V3 bs = vld(m);
