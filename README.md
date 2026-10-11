@@ -1,12 +1,37 @@
 # OpenRAC
 
-Decompilations of the PlayStation 2 Ratchet & Clank games, in one place:
-Ratchet & Clank, Going Commando, Up Your Arsenal and Deadlocked. Each game is
-being turned back into C that compiles to a byte-identical copy of the
-original program. That match is how correctness is proven. C that compiles
-and runs on PC is the long-term goal.
+[![checks](https://github.com/OpenRAC/OpenRAC/actions/workflows/checks.yml/badge.svg)](https://github.com/OpenRAC/OpenRAC/actions/workflows/checks.yml)
+[![openrac.dev](https://img.shields.io/badge/community-openrac.dev-e8a317)](https://openrac.dev/)
 
-OpenRAC holds no game code or assets. You build it from your own discs.
+The PlayStation 2 Ratchet & Clank games, decompiled back into C and brought to
+PC natively: Ratchet & Clank, Going Commando, Up Your Arsenal and Deadlocked.
+Each game is matched function by function until it compiles to a byte-identical
+copy of the original, and that C then runs on PC the way OpenGOAL brought Jak
+and Daxter there. No emulation.
+
+OpenRAC holds no game code or assets. You build everything from your own discs.
+
+![The OpenRAC launcher: the games, each version's progress and what is ready](launcher/docs/screenshots/library.webp)
+
+## Play
+
+The launcher ([launcher/](launcher/README.md)) is the way in: it sets a game up
+from your disc, builds the native port and starts it, keeps your saves, and
+opens the levels in the editor. While you play, Discord shows the game and the
+planet you are on.
+
+```sh
+git clone https://github.com/OpenRAC/OpenRAC.git && cd OpenRAC/launcher
+corepack enable && yarn install && yarn tauri dev
+```
+
+![A game's page: build and play, the level editor, the memory card's save slots](launcher/docs/screenshots/game.webp)
+
+Ratchet & Clank (PAL) is the first game on PC. The native port
+([port/](port/README.md)) builds its whole decompilation into one program that
+runs the game's own `main`, drawn by OpenRAC's OpenGL renderer, with its sound
+effects, music and speech; what is still assembly is logged and skipped. The
+design and the order of work are in [docs/port](docs/port/README.md).
 
 ## Progress
 
@@ -21,9 +46,8 @@ OpenRAC holds no game code or assets. You build it from your own discs.
 | Ratchet: Deadlocked | SCUS_974.65 ([`games/rac4/ntsc`](games/rac4/ntsc)) | 0.51% (26,572 / 5,175,440 bytes) | 243 / 15,056 | 0.51% |
 <!-- progress:end -->
 
-Each project measures its own scope, so compare percentages within a game,
-not between games ([progress/](progress/README.md) explains each). The
-community hub for these projects is [openrac.dev](https://openrac.dev/).
+Each project measures its own scope, so compare percentages within a game, not
+between games ([progress/](progress/README.md) explains each).
 
 ## Games
 
@@ -42,56 +66,34 @@ Each version is a self-contained project that you build and work on from its
 own directory. The game pages ([games/](games/README.md)) explain how the
 versions relate and where to start.
 
-## Getting started
+## Decompiling
 
 ```sh
-git clone git@github.com:OpenRAC/OpenRAC.git && cd OpenRAC
 # Put images of your own discs in baserom/ (see baserom/README.md), then:
 python3 tools/openrac.py discs     # identify and check them
 python3 tools/openrac.py setup     # put each game's inputs where its build expects them
 ```
 
 `setup` ends by printing the next command for each game. The compilers are
-proprietary and not included; [toolchains/README.md](toolchains/README.md)
-says what each game needs and where its builders get it. Then follow the
-game's README, for example [games/rac1/pal](games/rac1/pal/README.md).
+proprietary and not included: [toolchains/README.md](toolchains/README.md) says
+what each game needs. Then follow the game's README, for example
+[games/rac1/pal](games/rac1/pal/README.md). The launcher runs the same builds
+and checks with its developer tools on.
 
-The level editor turns your own disc's levels into a Godot 4 project you can
-edit ([editor/README.md](editor/README.md)):
+The level editor turns your disc's levels into a Godot 4 project
+([editor/README.md](editor/README.md)):
 
 ```sh
 python3 editor/extract.py godot baserom/SCES_509.16.iso assets/godot
-```
-
-The goal for playing is a **native PC port** of each game, built the way
-OpenGOAL ported Jak and Daxter: the decompiled code compiled for the PC, a
-renderer of OpenRAC's own, the assets extracted once from your own disc. No
-emulation. [port/](port/README.md) is its code: it builds Ratchet & Clank
-(PAL)'s whole decompilation into a native program, which runs the game's
-`main` with OpenRAC's renderer and sound; what is still assembly is
-logged and skipped. [docs/port](docs/port/README.md) has the design, the
-studies of the decompiled code and the order of work.
-
-## The launcher
-
-The easiest way in is the desktop launcher ([launcher/](launcher/README.md)),
-OpenRAC's answer to OpenGOAL's: set a game up from your disc, build the
-native port and play it, manage its saves, open its levels in the editor.
-With developer tools on, it also runs every game's builds and checks.
-
-![The launcher: Ratchet & Clank (PAL), ready to build and play](launcher/docs/screenshots/game.webp)
-
-```sh
-cd launcher && corepack enable && yarn install && yarn tauri dev
 ```
 
 ## Repository layout
 
 ```
 games/       one directory per game, one per version inside (pal, ntsc)
+port/        the native PC port: runtime, hostgen, renderer, sound, the games' programs
+launcher/    the desktop app: set up, build and play the games
 editor/      the Godot level editor and its extractor
-launcher/    a desktop app to set up, build and play the games (in progress)
-port/        the native PC port: runtime, hostgen, renderer, platform, the games' programs
 tools/       openrac.py (discs, setup, progress) and sources.py (imports)
 docs/        policy, engine knowledge, toolchains and workflows across games
 progress/    consolidated progress, generated
@@ -114,8 +116,8 @@ in [docs/policy/OPEN_QUESTIONS.md](docs/policy/OPEN_QUESTIONS.md).
 
 ## Supported discs
 
-Only these releases are supported. `tools/openrac.py discs` checks your
-images against them; images are recognised by content, not by file name.
+Only these releases are supported. `tools/openrac.py discs` checks your images
+against them; images are recognised by content, not by file name.
 
 <!-- discs:begin -->
 <!-- Generated by tools/openrac.py tables from games/*/game.json; do not edit. -->
