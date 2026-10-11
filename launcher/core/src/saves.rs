@@ -102,7 +102,7 @@ fn parse_save_clock(clock: &[u8]) -> Option<String> {
     Some(format!("{:04}-{mo:02}-{d:02} {h:02}:{m:02}:{s:02}", 2000 + y))
 }
 
-/// Ratchet & Clank 1 planet names by level number (games/rac1/pal/docs/OVERLAYS.md).
+/// Ratchet & Clank 1 planet names by level number, as the game's own planet list names them.
 pub const RAC1_PLANETS: &[&str] = &[
     "Veldin",        // 0
     "Novalis",       // 1
@@ -110,19 +110,42 @@ pub const RAC1_PLANETS: &[&str] = &[
     "Kerwan",        // 3
     "Eudora",        // 4
     "Rilgar",        // 5
-    "Blarg Station", // 6
+    "Nebula G34",    // 6
     "Umbris",        // 7
     "Batalia",       // 8
     "Gaspar",        // 9
     "Orxon",         // 10
     "Pokitaru",      // 11
     "Hoven",         // 12
-    "Gemlik Base",   // 13
+    "Oltanis Orbit", // 13
     "Oltanis",       // 14
     "Quartu",        // 15
     "Kalebo III",    // 16
-    "Drek's Fleet",  // 17
+    "Veldin Orbit",  // 17
     "Veldin",        // 18
+];
+
+/// Where on the planet each level is, as the game's list of locations names it.
+pub const RAC1_LOCATIONS: &[&str] = &[
+    "Kyzil Plateau",    // 0
+    "Tobruk Crater",    // 1
+    "Outpost X11",      // 2
+    "Metropolis",       // 3
+    "Logging Site",     // 4
+    "Blackwater City",  // 5
+    "Blarg Station",    // 6
+    "Qwark's HQ",       // 7
+    "Fort Krontos",     // 8
+    "Blarg Depot",      // 9
+    "Kogor Refinery",   // 10
+    "Jowai Resort",     // 11
+    "Bomb Factory",     // 12
+    "Gemlik Base",      // 13
+    "Gorda City Ruins", // 14
+    "Robot Plant",      // 15
+    "Gadgetron Site",   // 16
+    "Drek's Fleet",     // 17
+    "Kyzil Plateau",    // 18
 ];
 
 pub fn get_planet_name(serial: &str, planet_id: u32) -> Option<String> {

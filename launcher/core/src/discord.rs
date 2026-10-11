@@ -112,7 +112,7 @@ pub struct DiscordIpc {
     seq: u64,
     /// The planet the running game reported (`planet_from_log`), shown while it plays, and since
     /// when (the elapsed time counts from there).
-    planet: Option<String>,
+    planet: Option<Place>,
     planet_since: u64,
     last: Option<(DiscordStatus, u64)>,
     /// No new connection attempt before this (seconds): a socket Discord no longer answers costs
@@ -237,7 +237,7 @@ impl DiscordIpc {
     }
 
     /// The planet being played; shown at once if a game is playing.
-    pub fn set_planet(&mut self, planet: Option<String>) -> Result<(), String> {
+    pub fn set_planet(&mut self, planet: Option<Place>) -> Result<(), String> {
         if self.planet == planet {
             return Ok(());
         }
@@ -289,9 +289,10 @@ impl DiscordIpc {
                     kind: Some(0),
                     status_display_type: Some(0),
                     details: Some(match &self.planet {
-                        Some(planet) => format!("Exploring {planet}"),
+                        Some(place) => format!("Exploring {}", place.planet),
                         None => "In the menus".into(),
                     }),
+                    state: self.planet.as_ref().and_then(|place| place.location.clone()),
                     timestamps: Some(ActivityTimestamps {
                         start: Some(match self.planet {
                             Some(_) => self.planet_since,
@@ -331,13 +332,23 @@ impl DiscordIpc {
     }
 }
 
+/// Where the player is: the planet, and the place on it when the game's level is known.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Place {
+    pub planet: String,
+    pub location: Option<String>,
+}
+
 /// The level a running port announces in its log ("now playing level N", port/game/common/main.cpp)
-/// as a planet name, for the games whose levels are known.
-pub fn planet_from_log(game: &str, line: &str) -> Option<String> {
+/// as a place, for the games whose levels are known.
+pub fn planet_from_log(game: &str, line: &str) -> Option<Place> {
     let level: usize = line.split("now playing level ").nth(1)?.trim().parse().ok()?;
     match game {
-        "rac1" => crate::saves::RAC1_PLANETS.get(level).map(|p| p.to_string()),
-        _ => Some(format!("Level {level}")),
+        "rac1" => Some(Place {
+            planet: crate::saves::RAC1_PLANETS.get(level)?.to_string(),
+            location: crate::saves::RAC1_LOCATIONS.get(level).map(|l| l.to_string()),
+        }),
+        _ => Some(Place { planet: format!("Level {level}"), location: None }),
     }
 }
 
@@ -506,8 +517,18 @@ mod tests {
 
     #[test]
     fn reads_the_planet_from_the_port_log() {
-        assert_eq!(planet_from_log("rac1", "[info] now playing level 3").as_deref(), Some("Kerwan"));
-        assert_eq!(planet_from_log("rac2", "[info] now playing level 4").as_deref(), Some("Level 4"));
+        assert_eq!(
+            planet_from_log("rac1", "[info] now playing level 3"),
+            Some(Place { planet: "Kerwan".into(), location: Some("Metropolis".into()) })
+        );
+        assert_eq!(
+            planet_from_log("rac1", "[info] now playing level 6"),
+            Some(Place { planet: "Nebula G34".into(), location: Some("Blarg Station".into()) })
+        );
+        assert_eq!(
+            planet_from_log("rac2", "[info] now playing level 4"),
+            Some(Place { planet: "Level 4".into(), location: None })
+        );
         assert_eq!(planet_from_log("rac1", "[info] 4000 frames"), None);
     }
 

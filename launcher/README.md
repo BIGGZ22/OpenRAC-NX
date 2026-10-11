@@ -140,7 +140,7 @@ launcher/
   checkout's `progress/summary.json` with it (the copy shown offline).
 - **Discord**: unless switched off in Settings, Discord's Rich Presence shows
   the game being viewed, set up, built or played. While a game plays, Discord
-  says "Playing Ratchet & Clank, Exploring Kerwan" with the time on that
+  says "Playing Ratchet & Clank, Exploring Kerwan, Metropolis" with the time on that
   planet (the port logs each level it enters), and links to openrac.dev and
   GitHub. It talks to Discord's local socket (Linux,
   macOS) or named pipe (Windows), under OpenRAC's Discord application. While a
