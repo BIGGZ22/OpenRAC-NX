@@ -1555,19 +1555,23 @@ bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
     analog[1] = p.right_y;
     analog[2] = p.left_x;
     analog[3] = p.left_y;
-    // OPENRAC_PRESS=FRAME:MASK:FRAMES[:LX:LY],... holds buttons (mask bits as the pad reports them,
-    // 0x4000 cross, 0x8 start) and optionally the left stick (0-255, 128 centred; 0 is left or
-    // up) for scripted checks. FRAME counts the window's frames (world, 2D and movie frames).
+    // OPENRAC_PRESS=FRAME:MASK:FRAMES[:LX:LY[:RX:RY]],... holds buttons (mask bits as the pad reports
+    // them, 0x4000 cross, 0x8 start) and optionally the left and right sticks (0-255, 128 centred; 0
+    // is left or up) for scripted checks. FRAME counts the window's frames (world, 2D and movie frames).
     if (const char* script = port == 0 ? std::getenv("OPENRAC_PRESS") : nullptr) {
         for (const char* at = script; at && *at;) {
             unsigned long frame = 0, mask = 0, length = 5;
-            unsigned int lx = 128, ly = 128;
-            const int read = std::sscanf(at, "%lu:%lx:%lu:%u:%u", &frame, &mask, &length, &lx, &ly);
+            unsigned int lx = 128, ly = 128, rx = 128, ry = 128;
+            const int read = std::sscanf(at, "%lu:%lx:%lu:%u:%u:%u:%u", &frame, &mask, &length, &lx, &ly, &rx, &ry);
             if (read >= 2 && g->index >= frame && g->index < frame + length) {
                 *buttons = static_cast<std::uint16_t>(*buttons & ~mask);
                 if (read >= 5) {
                     analog[2] = static_cast<std::uint8_t>(lx);
                     analog[3] = static_cast<std::uint8_t>(ly);
+                }
+                if (read >= 7) {
+                    analog[0] = static_cast<std::uint8_t>(rx);
+                    analog[1] = static_cast<std::uint8_t>(ry);
                 }
             }
             at = std::strchr(at, ',');
