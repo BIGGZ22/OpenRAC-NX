@@ -3,7 +3,8 @@
 
 /*
  * Ratchet & Clank (PAL): the 2D layer's draw routines, wrapped (libraries.tsv, port = wrap) on the
- * way to drawing the HUD and menus natively instead of replaying their GS packets.
+ * way to drawing the HUD and menus natively instead of replaying their GS packets (OPENRAC_UI_REPLAY
+ * replays them, for comparing).
  * OPENRAC_UI_LOG: each distinct caller and texture of DrawTexturedQuad, once, in the log.
  */
 #include "game_protos.h"

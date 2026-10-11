@@ -1509,8 +1509,9 @@ void set_tick(std::chrono::steady_clock::time_point tick, std::chrono::duration<
 }
 
 int ui_quad(const openrac_game_ui_rect& quad) {
-    // OPENRAC_UI_NATIVE: the 2D layer's quads drawn natively (on the way off the GS packets).
-    static const bool native = std::getenv("OPENRAC_UI_NATIVE") != nullptr;
+    // The 2D layer's quads are drawn natively (on the way off the GS packets); OPENRAC_UI_REPLAY
+    // replays the game's packets instead, for comparing.
+    static const bool native = std::getenv("OPENRAC_UI_REPLAY") == nullptr;
     if (!g || !native || g->ui_quads.size() >= 0xFFFFFFu) {
         return -1;
     }
