@@ -35,6 +35,7 @@ option(OPENRAC_PORT_GAMES "Build the games from their decompilations (needs Clan
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(Warnings)
+include(FastBuild)
 
 enable_testing()
 

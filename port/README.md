@@ -17,7 +17,9 @@ python3 -m unittest discover -s tools/hostgen    # the translator's tests
 
 You need CMake 3.24+, Ninja, Clang (it builds the port, and hostgen uses it
 to read the decompilation) and Python 3. `--preset headless` builds without
-a window (no SDL3): the runtime, the games and their tests.
+a window (no SDL3): the runtime, the games and their tests. On Linux the
+build links with mold or lld and compiles through ccache when they are
+installed (`-DOPENRAC_PORT_FAST_BUILD=OFF` turns that off).
 
 To build a game's program without any of that by hand, run
 `python3 tools/build_port.py [GAME] [--source DIR]` from the top of OpenRAC:
