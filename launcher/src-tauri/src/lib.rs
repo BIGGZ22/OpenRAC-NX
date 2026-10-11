@@ -158,14 +158,16 @@ fn run_action(app: AppHandle, state: State<'_, AppState>, scope: Scope, id: Stri
     state.jobs.start(&plan, config.root.as_deref(), move |event| {
         let _ = match &event {
             Event::Output { line, .. } => {
-                if let Some(planet) =
-                    play_game.as_deref().and_then(|g| openrac_launcher_core::discord::planet_from_log(g, line))
+                // The planet and bolts the game logs.
+                if let Some(game) =
+                    play_game.clone().filter(|_| line.contains("now playing level") || line.contains("] bolts "))
                 {
                     if let Some(st) = app_handle.try_state::<AppState>() {
                         if st.config.lock().unwrap().discord_rpc {
                             let discord = st.discord.clone();
+                            let line = line.clone();
                             tauri::async_runtime::spawn_blocking(move || {
-                                let _ = discord.lock().unwrap().ipc.set_planet(Some(planet));
+                                let _ = discord.lock().unwrap().ipc.on_game_log(&game, &line);
                             });
                         }
                     }

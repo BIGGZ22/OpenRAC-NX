@@ -18,6 +18,10 @@ type Connection = std::fs::File;
 
 pub const DEFAULT_CLIENT_ID: &str = "1558096324602363955";
 
+/// OpenRAC's wrench on its orange, an art asset of the Discord application (docs/discord/openrac.png):
+/// the launcher's image, and the small one while a game plays.
+pub const OPENRAC_IMAGE: &str = "openrac";
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Activity {
@@ -114,6 +118,8 @@ pub struct DiscordIpc {
     /// when (the elapsed time counts from there).
     planet: Option<Place>,
     planet_since: u64,
+    /// The player's bolts, as the running game last logged them.
+    bolts: Option<u32>,
     last: Option<(DiscordStatus, u64)>,
     /// No new connection attempt before this (seconds): a socket Discord no longer answers costs
     /// a whole handshake wait, so it is not retried on every status change.
@@ -129,6 +135,7 @@ impl DiscordIpc {
             seq: 0,
             planet: None,
             planet_since: 0,
+            bolts: None,
             last: None,
             retry_at: 0,
         }
@@ -241,8 +248,35 @@ impl DiscordIpc {
         if self.planet == planet {
             return Ok(());
         }
+        if planet.is_none() {
+            self.bolts = None;
+        }
         self.planet = planet;
         self.planet_since = now_sec();
+        self.resend_playing()
+    }
+
+    /// The player's bolts; shown at once if a game is playing.
+    pub fn set_bolts(&mut self, bolts: u32) -> Result<(), String> {
+        if self.bolts == Some(bolts) {
+            return Ok(());
+        }
+        self.bolts = Some(bolts);
+        self.resend_playing()
+    }
+
+    /// A line of the running game's log: its planet or its bolts.
+    pub fn on_game_log(&mut self, game: &str, line: &str) -> Result<(), String> {
+        if let Some(place) = planet_from_log(game, line) {
+            return self.set_planet(Some(place));
+        }
+        match bolts_from_log(line) {
+            Some(bolts) => self.set_bolts(bolts),
+            None => Ok(()),
+        }
+    }
+
+    fn resend_playing(&mut self) -> Result<(), String> {
         match self.last.clone() {
             Some((status @ DiscordStatus::PlayingGame { .. }, app_start)) => self.set_status(&status, app_start),
             _ => Ok(()),
@@ -257,7 +291,7 @@ impl DiscordIpc {
                 state: Some("Browsing Library".into()),
                 timestamps: Some(ActivityTimestamps { start: Some(app_start), end: None }),
                 assets: Some(ActivityAssets {
-                    large_image: Some("https://openrac.dev/wrench.webp".into()),
+                    large_image: Some(OPENRAC_IMAGE.into()),
                     large_text: Some("OpenRAC Launcher".into()),
                     small_image: None,
                     small_text: None,
@@ -274,7 +308,7 @@ impl DiscordIpc {
                     state: Some(state_str),
                     timestamps: Some(ActivityTimestamps { start: Some(app_start), end: None }),
                     assets: Some(ActivityAssets {
-                        large_image: Some("https://openrac.dev/wrench.webp".into()),
+                        large_image: Some(OPENRAC_IMAGE.into()),
                         large_text: Some("OpenRAC Launcher".into()),
                         small_image: None,
                         small_text: None,
@@ -289,10 +323,11 @@ impl DiscordIpc {
                     kind: Some(0),
                     status_display_type: Some(0),
                     details: Some(match &self.planet {
-                        Some(place) => format!("Exploring {}", place.planet),
+                        Some(Place { planet, location: Some(location) }) => format!("Exploring {planet} · {location}"),
+                        Some(Place { planet, location: None }) => format!("Exploring {planet}"),
                         None => "In the menus".into(),
                     }),
-                    state: self.planet.as_ref().and_then(|place| place.location.clone()),
+                    state: self.planet.as_ref().and(self.bolts).map(|b| format!("{} bolts", thousands(b))),
                     timestamps: Some(ActivityTimestamps {
                         start: Some(match self.planet {
                             Some(_) => self.planet_since,
@@ -303,7 +338,7 @@ impl DiscordIpc {
                     assets: Some(ActivityAssets {
                         large_image: Some(game_image_url(game_id)),
                         large_text: Some(format!("{title} ({region})")),
-                        small_image: Some("https://openrac.dev/wrench.webp".into()),
+                        small_image: Some(OPENRAC_IMAGE.into()),
                         small_text: Some("OpenRAC".into()),
                     }),
                     ..Default::default()
@@ -316,7 +351,7 @@ impl DiscordIpc {
                 assets: Some(ActivityAssets {
                     large_image: Some(game_image_url(game_id)),
                     large_text: Some(title.clone()),
-                    small_image: Some("https://openrac.dev/wrench.webp".into()),
+                    small_image: Some(OPENRAC_IMAGE.into()),
                     small_text: Some("OpenRAC".into()),
                 }),
                 ..Default::default()
@@ -352,13 +387,31 @@ pub fn planet_from_log(game: &str, line: &str) -> Option<Place> {
     }
 }
 
+/// The bolts a running port logs ("bolts N", port/game/common/main.cpp).
+pub fn bolts_from_log(line: &str) -> Option<u32> {
+    line.split("] bolts ").nth(1)?.trim().parse().ok()
+}
+
+/// 1250 as "1,250", the way the game writes bolts.
+fn thousands(n: u32) -> String {
+    let digits = n.to_string();
+    let mut out = String::new();
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
+            out.push(',');
+        }
+        out.push(c);
+    }
+    out
+}
+
 /// The large image while a game plays: the game's logo, an art asset of the Discord application
 /// named after the game (Developer Portal, Rich Presence, Art Assets: `rac1` to `rac4`), so no
-/// logo is kept in OpenRAC. Another game shows the wrench.
+/// logo is kept in OpenRAC. Another game shows OpenRAC's wrench.
 pub fn game_image_url(game_id: &str) -> String {
     match game_id {
         "rac1" | "rac2" | "rac3" | "rac4" => game_id.to_string(),
-        _ => "https://openrac.dev/wrench.webp".to_string(),
+        _ => OPENRAC_IMAGE.to_string(),
     }
 }
 
@@ -502,7 +555,7 @@ mod tests {
             assets: Some(ActivityAssets {
                 large_image: Some(game_image_url("rac1")),
                 large_text: Some("Ratchet & Clank".into()),
-                small_image: Some("https://openrac.dev/wrench.webp".into()),
+                small_image: Some(OPENRAC_IMAGE.into()),
                 small_text: Some("OpenRAC".into()),
             }),
         };
@@ -525,6 +578,11 @@ mod tests {
             planet_from_log("rac1", "[info] now playing level 6"),
             Some(Place { planet: "Nebula G34".into(), location: Some("Blarg Station".into()) })
         );
+        assert_eq!(bolts_from_log("[info] bolts 1250"), Some(1250));
+        assert_eq!(bolts_from_log("[info] 2500 frames"), None);
+        assert_eq!(thousands(0), "0");
+        assert_eq!(thousands(1250), "1,250");
+        assert_eq!(thousands(1234567), "1,234,567");
         assert_eq!(
             planet_from_log("rac2", "[info] now playing level 4"),
             Some(Place { planet: "Level 4".into(), location: None })
