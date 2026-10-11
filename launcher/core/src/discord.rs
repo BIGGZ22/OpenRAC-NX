@@ -74,10 +74,25 @@ pub struct ActivityAssets {
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum DiscordStatus {
     Idle,
-    ViewingGame { title: String, region: String, progress_pct: Option<f64>, game_id: String },
-    PlayingGame { title: String, region: String, game_id: String, start_time: Option<u64> },
+    ViewingGame {
+        title: String,
+        region: String,
+        progress_pct: Option<f64>,
+        game_id: String,
+    },
+    PlayingGame {
+        title: String,
+        region: String,
+        game_id: String,
+        start_time: Option<u64>,
+    },
     /// A long job for a game: setting it up from the disc, building it, preparing the editor.
-    Working { task: String, title: String, game_id: String, start_time: Option<u64> },
+    Working {
+        task: String,
+        title: String,
+        game_id: String,
+        start_time: Option<u64>,
+    },
 }
 
 pub struct DiscordIpc {

@@ -149,9 +149,9 @@ fn run_action(app: AppHandle, state: State<'_, AppState>, scope: Scope, id: Stri
 
     // The game id whose planet names the play job's log gives (Discord).
     let play_game = match (&scope, is_play, &config.root) {
-        (Scope::Version(key), true, Some(root)) => openrac_launcher_core::catalog::load(root)
-            .ok()
-            .and_then(|c| c.version(key).map(|v| v.game.clone())),
+        (Scope::Version(key), true, Some(root)) => {
+            openrac_launcher_core::catalog::load(root).ok().and_then(|c| c.version(key).map(|v| v.game.clone()))
+        }
         _ => None,
     };
     let app_handle = app.clone();

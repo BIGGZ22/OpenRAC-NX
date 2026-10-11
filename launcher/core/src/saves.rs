@@ -104,25 +104,25 @@ fn parse_save_clock(clock: &[u8]) -> Option<String> {
 
 /// Ratchet & Clank 1 planet names by level number (games/rac1/pal/docs/OVERLAYS.md).
 pub const RAC1_PLANETS: &[&str] = &[
-    "Veldin", // 0
-    "Novalis", // 1
-    "Aridia", // 2
-    "Kerwan", // 3
-    "Eudora", // 4
-    "Rilgar", // 5
+    "Veldin",        // 0
+    "Novalis",       // 1
+    "Aridia",        // 2
+    "Kerwan",        // 3
+    "Eudora",        // 4
+    "Rilgar",        // 5
     "Blarg Station", // 6
-    "Umbris", // 7
-    "Batalia", // 8
-    "Gaspar", // 9
-    "Orxon", // 10
-    "Pokitaru", // 11
-    "Hoven", // 12
-    "Gemlik Base", // 13
-    "Oltanis", // 14
-    "Quartu", // 15
-    "Kalebo III", // 16
-    "Drek's Fleet", // 17
-    "Veldin", // 18
+    "Umbris",        // 7
+    "Batalia",       // 8
+    "Gaspar",        // 9
+    "Orxon",         // 10
+    "Pokitaru",      // 11
+    "Hoven",         // 12
+    "Gemlik Base",   // 13
+    "Oltanis",       // 14
+    "Quartu",        // 15
+    "Kalebo III",    // 16
+    "Drek's Fleet",  // 17
+    "Veldin",        // 18
 ];
 
 pub fn get_planet_name(serial: &str, planet_id: u32) -> Option<String> {
