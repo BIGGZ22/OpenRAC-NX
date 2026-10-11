@@ -86,6 +86,17 @@ struct EffectStrip {
     int uploads = -1, upload_count = 0;
 };
 
+// A textured rectangle of the 2D layer the game drew through its quad routine (rac1:
+// DrawTexturedQuad), drawn natively where its marker comes in the 2D path (GifInterpreter): the
+// corners in the chip's 12.4 screen coordinates as the game computed them, the texel rectangle
+// (12.4 across, whole texels down), the colour (RGBAQ's low word) and the texture (TEX0).
+struct UiQuad {
+    std::uint32_t x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+    std::uint32_t s0 = 0, s1 = 0, t0 = 0, t1 = 0;
+    std::uint32_t rgba = 0;
+    std::uint64_t tex0 = 0;
+};
+
 struct FrameInput {
     // The packets the game built for each bucket this frame (empty when a
     // bucket has nothing, or its renderer draws from elsewhere).
@@ -100,6 +111,8 @@ struct FrameInput {
     std::span<const ImageUpload> effect_uploads{};
     std::span<const EffectVertex> strip_vertices{};
     std::span<const EffectStrip> strips{};
+    // The 2D layer's quads drawn natively (UiQuad), indexed by their markers in the 2D path.
+    std::span<const UiQuad> ui_quads{};
     std::array<float, 4> clear_colour{0.0f, 0.0f, 0.0f, 1.0f};
     std::uint64_t frame = 0;
     double seconds = 0.0;

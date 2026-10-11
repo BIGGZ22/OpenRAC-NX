@@ -255,3 +255,4 @@ func_L02_0020A690	game	func_L02_0020A690	host	a level's draw callback register f
 func_L14_0020CAE0	game	func_L14_0020CAE0	host	a level's draw callback register for list 4, folded into func_001F49B0 by the catalogue (split_places.tsv, host/callback_lists.c)	void (unsigned int, unsigned int)
 func_L00_002A2080	game	func_L00_002A2080	host	a place the catalogue folds into another function although its code differs (split_places.tsv, host/variants.c)	void (void)
 func_L00_002A20E0	game	func_L00_002A20E0	host	a place the catalogue folds into another function although its code differs (split_places.tsv, host/variants.c)	void (void)
+func_001F5800	draw	DrawTexturedQuad	wrap	the 2D layer's textured quad (host/ui2d.c), on the way to drawing the HUD and menus natively

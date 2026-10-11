@@ -58,6 +58,7 @@ struct Kept {
     std::vector<renderer::EffectStrip> strips;
     std::vector<renderer::EffectQuad> effects;
     std::vector<renderer::ImageUpload> effect_uploads;
+    std::vector<renderer::UiQuad> ui_quads;
     std::uint32_t draws = 0;
     bool has_camera = false;
     std::uint64_t frame = 0;
@@ -98,6 +99,8 @@ struct State {
     std::vector<Particle> particles;
     // The sky sprites the game drew since the last frame (sky_sprite): record, TEX0.
     std::vector<std::pair<std::array<std::uint8_t, 0x20>, std::uint64_t>> sky_sprites;
+    // The 2D layer's quads drawn natively since the last frame (ui_quad), by marker index.
+    std::vector<renderer::UiQuad> ui_quads;
     Kept kept;
 };
 
@@ -1175,6 +1178,7 @@ void draw_kept(bool first) {
         std::span<const std::uint8_t>(k.packets).subspan(k.before_world);
     input.effects = k.effects;
     input.effect_uploads = k.effect_uploads;
+    input.ui_quads = k.ui_quads;
     if (g->renderer) {
         g->renderer->render(input, {g->frame.id(), width, height});
         if (first && has_camera && (k.draws & 0x1Fu) != 0 && width > 0 && height > 0) {
@@ -1487,6 +1491,8 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     particle_quads(ram, state);
     k.effects = std::move(g->effects);
     k.effect_uploads = std::move(g->effect_uploads);
+    k.ui_quads = std::move(g->ui_quads);
+    g->ui_quads.clear();
     g->effects.clear();
     g->effect_uploads.clear();
     g->particles.clear();
@@ -1500,6 +1506,17 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
 void set_tick(std::chrono::steady_clock::time_point tick, std::chrono::duration<double> period) {
     pacing.tick = tick;
     pacing.period = period;
+}
+
+int ui_quad(const openrac_game_ui_rect& quad) {
+    // OPENRAC_UI_NATIVE: the 2D layer's quads drawn natively (on the way off the GS packets).
+    static const bool native = std::getenv("OPENRAC_UI_NATIVE") != nullptr;
+    if (!g || !native || g->ui_quads.size() >= 0xFFFFFFu) {
+        return -1;
+    }
+    g->ui_quads.push_back(renderer::UiQuad{quad.x0, quad.y0, quad.x1, quad.y1, quad.s0, quad.s1, quad.t0,
+                                           quad.t1, quad.rgba, quad.tex0});
+    return static_cast<int>(g->ui_quads.size() - 1);
 }
 
 bool interpolating() {

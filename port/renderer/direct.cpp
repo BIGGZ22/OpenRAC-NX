@@ -323,6 +323,11 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
     Context& c1 = m_context[0];
     Context& c2 = m_context[1];
     switch (address) {
+        case 0x7F:  // NOP; the port's marker for a quad of the 2D layer drawn natively
+            if ((value >> 48) == kUiQuadMarker && (value & 0xFFFFFFFFu) < m_ui_quads.size()) {
+                native_quad(m_ui_quads[value & 0xFFFFFFFFu]);
+            }
+            return;
         case gs::kPrim:
             write_prim(value);
             return;
@@ -645,6 +650,30 @@ void GifInterpreter::draw_frame_upload(const ImageUpload& upload) {
         }
     }
     m_state_dirty = true;  // the next primitive's state is its own again
+}
+
+// A quad of the 2D layer: as the game's routine would send it (TEX0, a textured, blended
+// triangle strip with texel coordinates, the four corners), drawn from the port's own record.
+void GifInterpreter::native_quad(const UiQuad& quad) {
+    write_register(gs::kTex0_1, quad.tex0);
+    write_prim(0x154);
+    const std::uint32_t xs[4] = {quad.x0, quad.x1, quad.x0, quad.x1};
+    const std::uint32_t ys[4] = {quad.y0, quad.y0, quad.y1, quad.y1};
+    const std::uint32_t us[4] = {quad.s0, quad.s1, quad.s0, quad.s1};
+    const std::uint32_t vs[4] = {quad.t0, quad.t0, quad.t1, quad.t1};
+    for (int i = 0; i < 4; ++i) {
+        m_current.rgba[0] = static_cast<std::uint8_t>(quad.rgba);
+        m_current.rgba[1] = static_cast<std::uint8_t>(quad.rgba >> 8);
+        m_current.rgba[2] = static_cast<std::uint8_t>(quad.rgba >> 16);
+        m_current.rgba[3] = static_cast<std::uint8_t>(quad.rgba >> 24);
+        m_current.q = 1.0f;
+        m_current.u = us[i];
+        m_current.v = vs[i] << 4;
+        m_current.x = xs[i];
+        m_current.y = ys[i];
+        m_current.z = 0xFFFFF0;
+        kick(true);
+    }
 }
 
 void GifInterpreter::kick(bool draw) {
@@ -1229,6 +1258,7 @@ void DirectRenderer::render(const FrameInput& input, RenderState& state) {
     if (packets.empty()) {
         return;
     }
+    m_interpreter->set_ui_quads(input.ui_quads);
     submit(packets);
     flush(state);
 }

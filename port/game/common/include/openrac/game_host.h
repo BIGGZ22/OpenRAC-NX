@@ -148,6 +148,19 @@ typedef struct openrac_game_quad {
 
 void openrac_game_effect_quad(const openrac_game_quad* quad);
 
+/* A textured rectangle of the 2D layer (rac1: DrawTexturedQuad): its corners in the chip's 12.4
+ * screen coordinates as the game computes them, its texel rectangle (s 12.4, t whole texels), its
+ * colour (RGBAQ's low word) and its texture (TEX0). The window draws it natively: the index to put
+ * in the display list's marker, or -1 to send the game's own packet (no window, or native 2D off). */
+typedef struct openrac_game_ui_rect {
+    uint32_t x0, y0, x1, y1;
+    uint32_t s0, s1, t0, t1;
+    uint32_t rgba;
+    uint64_t tex0;
+} openrac_game_ui_rect;
+
+int openrac_game_ui_quad(const openrac_game_ui_rect* quad);
+
 /* A live particle the game's particle renderer would draw (rac1: PartProc): its 0x40-byte record
  * (+0x01 bits 0-1 the render kind: 0 camera-facing sprite, 1 flat quad, 2 line, 3 ribbon; +0x03
  * ALPHA_1's low byte; +0x04 RGBA; +0x08 rotation, 256 steps a turn; +0x09 near (low nibble, 1/4

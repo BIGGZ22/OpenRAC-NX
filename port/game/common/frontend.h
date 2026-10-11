@@ -36,6 +36,10 @@ void mobys_drawn(std::span<const std::uint8_t> ram, std::uint32_t first, int cou
 // A world effect quad the game drew this frame (openrac_game_effect_quad).
 void effect_quad(std::span<const std::uint8_t> ram, const openrac_game_quad& quad);
 
+// A quad of the 2D layer drawn natively (openrac_game_ui_quad): its index for the marker, or -1
+// when the 2D layer is replayed from the game's packets.
+int ui_quad(const openrac_game_ui_rect& quad);
+
 // A sky sprite the game drew this frame (openrac_game_sky_sprite).
 void sky_sprite(const std::uint8_t* record, std::uint64_t tex0);
 
