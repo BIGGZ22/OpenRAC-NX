@@ -607,8 +607,8 @@ extern GbMoby *D_L06_001745D8 __attribute__((section(".data")));
 extern GbStats D_L06_0017EC58;
 extern char *FUN_L00_0026daa0(float, char *, int, int, int);
 extern char D_L06_00167540[];
-extern float AbsoluteFloat(float);
-extern float ConvertIntegerToFloat(int);
+extern float absolute_float(float) __asm__("func_001F99C0");
+extern float convert_integer_to_float(int) __asm__("func_001FA6C0");
 extern float FUN_001f9b48(void *, void *);
 extern float FUN_001f9b80(void *, void *);
 extern float FUN_001f9e90(float, float);
@@ -644,7 +644,6 @@ extern int random_integer_below(int) __asm__("FUN_00213260");
 extern int scale_game_frames(int);
 extern int tick_countdown_32(int *);
 extern float D_L06_00161CE0 __attribute__((sda));
-extern unsigned char D_001413F4[];
 extern unsigned char D_0014C050[];
 #define GB_FLAG (*(unsigned char *)0x15EDB3)
 extern void FUN_L00_001ff290(void *, void *, void *);
@@ -693,11 +692,11 @@ void FUN_L06_002f0040(GbMoby *moby) {
     flags = 0;
     c = &d->ctl;
     dist = FUN_001f9b80(moby->pos, hero.motion.pos.f);
-    dz = AbsoluteFloat(moby->pos[2] - hero.ground_point.f[2]);
+    dz = absolute_float(moby->pos[2] - hero.ground_point.f[2]);
     *(OvlQuad *)save1 = *(OvlQuad *)save0 = *(OvlQuad *)moby->pos;
     if (moby->state != 1) {
         FUN_L06_002f3640_u(moby);
-        if (dist < 16.0f && AbsoluteFloat(moby->pos[2] - hero.motion.pos.f[2]) < 1.5f) {
+        if (dist < 16.0f && absolute_float(moby->pos[2] - hero.motion.pos.f[2]) < 1.5f) {
             int ok = 0;
             if (moby->state == 2 || moby->state == 5 || moby->state == 3 || moby->state == 6 ||
                 moby->state == 7 || moby->state == 4) {
@@ -814,7 +813,7 @@ void FUN_L06_002f0040(GbMoby *moby) {
             moby->f94 = moby->cls->f10;
             moby->state = 3;
         } else {
-            if (D_001413F4[0] == 0) {
+            if (hero.unk20A4 == 0) {
                 moby->flags |= 0x41;
                 d->f170->flags |= 0x41;
                 moby->flags &= 0xEFFF;
@@ -945,7 +944,7 @@ void FUN_L06_002f0040(GbMoby *moby) {
                     }
                 }
                 dist = FUN_001f9b80(moby->pos, hero.motion.pos.f);
-                dz = AbsoluteFloat(moby->pos[2] - hero.ground_point.f[2]);
+                dz = absolute_float(moby->pos[2] - hero.ground_point.f[2]);
                 probe_ground_height(moby->pos, 0, 0.5f);
                 if (D_L06_001745D8 != 0 && D_L06_001745D8->cls_id == 0x3B1) {
                     *(OvlQuad *)moby->pos = *(OvlQuad *)v60;
@@ -1306,7 +1305,7 @@ void FUN_L06_002f0040(GbMoby *moby) {
                 do {
                     qcopy(v50, moby->pos);
                     v50[2] += d->ctl.f04;
-                    if (FUN_L00_001f0d60(ConvertIntegerToFloat(d->ctl.i00) * 0.0009765625f, v50, 6,
+                    if (FUN_L00_001f0d60(convert_integer_to_float(d->ctl.i00) * 0.0009765625f, v50, 6,
                                          moby) == 0) {
                         break;
                     }
@@ -1318,7 +1317,7 @@ void FUN_L06_002f0040(GbMoby *moby) {
                     i++;
                 } while (i < 6);
                 moby->pos[2] = z;
-                if (AbsoluteFloat(save1[2] - probe_ground_height(moby->pos, 0, 0.5f)) >=
+                if (absolute_float(save1[2] - probe_ground_height(moby->pos, 0, 0.5f)) >=
                     d->ctl.f0C) {
                     *(OvlQuad *)moby->pos = *(OvlQuad *)save1;
                     d->f284 = 0.0f;
@@ -1427,8 +1426,8 @@ void FUN_L06_002f2910(void *moby_arg) {
             if (((GbMoby *)list)->cls_id == 0x3b1 || ((GbMoby *)list)->cls_id == 0x400 ||
                 ((GbMoby *)list)->cls_id == 0x515 || ((GbMoby *)list)->cls_id == 0x516) {
                 if (!(best < vector_distance(moby->pos, ((GbMoby *)list)->pos)) &&
-                    !(0.2f < AbsoluteFloat(moby->pos[2] - ((GbMoby *)list)->pos[2])) &&
-                    !(1.5f < AbsoluteFloat(moby->pos[2] - ((GbMoby *)list)->pos[2]))) {
+                    !(0.2f < absolute_float(moby->pos[2] - ((GbMoby *)list)->pos[2])) &&
+                    !(1.5f < absolute_float(moby->pos[2] - ((GbMoby *)list)->pos[2]))) {
                     if ((((GbMoby *)list)->cls_id != 0x400 && ((GbMoby *)list)->cls_id != 0x516) ||
                         ((GbMoby *)list)->state != 2) {
                         if (((GbMoby *)list)->cls_id != 0x515 || *(int *)((GbMoby *)list)->vars != -1) {
@@ -1446,8 +1445,8 @@ void FUN_L06_002f2910(void *moby_arg) {
             if (candidate->cls_id == 0x3b1 || candidate->cls_id == 0x400 ||
                 candidate->cls_id == 0x515 || candidate->cls_id == 0x516) {
                 if (!(best < vector_distance(moby->pos, candidate->pos)) &&
-                    !(0.2f < AbsoluteFloat(moby->pos[2] - candidate->pos[2])) &&
-                    !(1.5f < AbsoluteFloat(moby->pos[2] - candidate->pos[2]))) {
+                    !(0.2f < absolute_float(moby->pos[2] - candidate->pos[2])) &&
+                    !(1.5f < absolute_float(moby->pos[2] - candidate->pos[2]))) {
                     if ((candidate->cls_id != 0x400 && candidate->cls_id != 0x516) ||
                         candidate->state != 2) {
                         if (candidate->cls_id != 0x515 || *(int *)candidate->vars != -1) {
@@ -1788,7 +1787,7 @@ typedef struct {
 } Beam_2f8a58;
 
 extern char D_L06_00167540[];
-extern f32 ConvertIntegerToFloat(s32) __asm__("func_001FA6C0");
+extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
 extern int D_L06_0015F5CC;
 extern int D_L06_00161E58 __attribute__((sda));
 extern int D_L06_00161E5C __attribute__((sda));
@@ -1807,7 +1806,7 @@ extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
 extern void clear_u64_value(void *) __asm__("func_001F99F8");
 extern void normalize_vector_xyz(void *, void *, f32) __asm__("FUN_001f9bf8");
 extern void subtract_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a28");
-float AbsoluteFloat(float input) __asm__("func_001F99C0");
+float absolute_float(float input) __asm__("func_001F99C0");
 unsigned char *FUN_L00_00272f68(OvlQuad *a, int c, unsigned char b, int idx, int flag, int n, int mode, float f);
 extern int func_001FA898_g(float) __asm__("FUN_001fa6d0");
 extern unsigned char *func_L00_00273E08_g(void *, int, unsigned char, int, int, int, int, float) __asm__("FUN_L00_00272f68");
@@ -1836,8 +1835,8 @@ void FUN_L06_002f7628(char *moby) {
         if (tick_countdown_32_alt(&beam->t[i])) {
             beam->t[i] = scale_game_frames(0xFF);
         }
-        f = ConvertIntegerToFloat(scale_game_frames(0xFF) - beam->t[i]) / (float)scale_game_frames(0xFF);
-        c = FUN_001fa6e0(D_L06_00161E58, D_L06_00161E5C, AbsoluteFloat(0.5f - f));
+        f = convert_integer_to_float(scale_game_frames(0xFF) - beam->t[i]) / (float)scale_game_frames(0xFF);
+        c = FUN_001fa6e0(D_L06_00161E58, D_L06_00161E5C, absolute_float(0.5f - f));
         func_L00_00273E08_g(pos, c, func_001FA898_g(beam->ph[i]), D_L06_00161E64, D_L06_00161E60, 2, 0,
                           beam->sz[i]);
         add_vector_xyz(pos, pos, step);
@@ -1868,7 +1867,6 @@ extern s32 scale_game_frames(s32) __asm__("func_001F96F8");
 extern void FUN_L00_00211250(void);
 extern int hero_set_state(int, int) __asm__("FUN_L06_002356a0");
 extern void fade_to_black(s32 n) __asm__("FUN_001f4a58");
-extern char D_0013F3D0[];
 
 void FUN_L06_002f7930(char *m) {
     char *d = *(char **)(m + 0x78);
@@ -1898,19 +1896,19 @@ void FUN_L06_002f7930(char *m) {
         }
     }
     for (i = 0; i < 32; i++) {
-        if (list[i] >= 0 && is_point_inside_clip_volume(((char *)&D_0013F3D0), list[i])) {
-            char *h = ((char *)&D_0013F3D0) - 0x80;
-            if (*(unsigned char *)(h + 0x20A4) != 0) {
+        if (list[i] >= 0 && is_point_inside_clip_volume(&hero.motion.pos, list[i])) {
+            struct Hero *h = &hero;
+            if (h->unk20A4 != 0) {
                 fade_to_black(scale_game_frames(10));
                 FUN_L00_00211250();
-            } else if (*(int *)(h + 0x2084) != 0x77) {
+            } else if (h->state.current != 0x77) {
                 hero_set_state(0x77, 1);
             }
         }
     }
     list2 = (int *)(d + 0x80);
     for (j = 0; j < 32; j++) {
-        if (list2[j] >= 0 && is_point_inside_clip_volume(((char *)&D_0013F3D0), list2[j])) {
+        if (list2[j] >= 0 && is_point_inside_clip_volume(&hero.motion.pos, list2[j])) {
             fade_to_black(scale_game_frames(10));
             FUN_L00_00211250();
         }

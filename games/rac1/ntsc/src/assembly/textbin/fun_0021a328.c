@@ -32,8 +32,8 @@ extern int selected_level_index[] __asm__("D_001A0314");
 extern void setup_gif_paging(int) __asm__("func_001F4280");
 extern void do_gif_paging(void) __asm__("func_001F4398");
 extern long get_effect_texture(int) __asm__("func_001F44B8");
-extern void EnableGlobalStateFlag(void) __asm__("func_001F61E8");
-extern void DisableGlobalStateFlag(void) __asm__("func_001F61F8");
+extern void enable_global_state_flag(void) __asm__("func_001F61E8");
+extern void disable_global_state_flag(void) __asm__("func_001F61F8");
 extern void font_print_window(struct TextRegion *, long, char *, int, long,
                               u8 *) __asm__("func_001F7090");
 extern int scale_game_frames(int) __asm__("func_001F96F8");
@@ -102,7 +102,8 @@ int render_configured_text_label(struct MenuScreen *label) {
         label->data.label.cached_value = 0;
         label->data.label.value_variant = 0;
     } else if (selector_flags & 0x80) {
-        value_index = menu_system.current->focus->data.list.selected;
+        page = menu_system.current->focus;
+        value_index = page->data.list.selected;
         if (selector_flags & 0x8000) {
             value_variant = pal_mode != 0;
         }
@@ -235,7 +236,7 @@ int render_configured_text_label(struct MenuScreen *label) {
                               func_001FA6E0(menu_text_color, 0x80FFA888, 0.5f), 0x80FFA888);
         c.flags |= 4;
         font_print_window(&c, color, text, -1, texture_tex0, font);
-        window->flags ^= 4;
+        window->flags = c.flags ^ 4;
         flags = label->data.label.flags;
         text_extent = c.rendered_height + 4;
         visible_height = c.bottom - c.top;
@@ -255,9 +256,9 @@ int render_configured_text_label(struct MenuScreen *label) {
         c.right += text_shadow_x;
         c.anchor_x += text_shadow_x;
         c.anchor_y += text_shadow_y;
-        DisableGlobalStateFlag();
+        disable_global_state_flag();
         font_print_window(&c, 0x80000000L, text, -1, texture_tex0, font);
-        EnableGlobalStateFlag();
+        enable_global_state_flag();
         c.top -= text_shadow_y;
         c.bottom -= text_shadow_y;
         c.left -= text_shadow_x;
@@ -273,9 +274,9 @@ int render_configured_text_label(struct MenuScreen *label) {
             c.right += text_shadow_x;
             c.anchor_x += text_shadow_x;
             c.anchor_y += text_shadow_y;
-            DisableGlobalStateFlag();
+            disable_global_state_flag();
             font_print_window(&c, 0x80000000L, text, -1, texture_tex0, font);
-            EnableGlobalStateFlag();
+            enable_global_state_flag();
             c.top -= text_shadow_y;
             c.bottom -= text_shadow_y;
             c.left -= text_shadow_x;

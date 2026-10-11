@@ -75,7 +75,7 @@ void FUN_L00_00269290(char *o) {
 /* Ported from rac1-decomp (src/overlays/shared/partupd_0026A130.c: func_L00_0026A398), where it is exact; names translated to the US level program. */
 
 extern char D_L00_00166DC0[];
-extern f32 ConvertIntegerToFloat_c(s32) __asm__("FUN_001fa6c0");
+extern f32 convert_integer_to_float_c(s32) __asm__("FUN_001fa6c0");
 extern float D_L00_001CB7C0[];
 extern float FUN_001f9b48(void *, void *);
 extern float FUN_001f9dc8(float);
@@ -92,7 +92,7 @@ extern int func_L00_001EFFF0(void *, void *, int, int, int) __asm__("FUN_001efa6
 extern s32 truncate_float_to_s32(f32) __asm__("FUN_001fa6d0");
 extern void FUN_001f9a10(void *, void *, void *);
 extern void FUN_L00_00267a08(void *);
-float AbsoluteFloat(float input) __asm__("FUN_001f99c0");
+float absolute_float(float input) __asm__("FUN_001f99c0");
 extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 
 void FUN_L00_002694f8(char *m) {
@@ -135,7 +135,7 @@ after:
     a = fast_subtract_rotations(FUN_001f9e90(*(float *)(m + 0x10) - *(float *)(B + 0x140),
                                              *(float *)(m + 0x14) - *(float *)(B + 0x144)),
                                 *(float *)(B + 0x158));
-    if (AbsoluteFloat(a) > 1.0471976f) {
+    if (absolute_float(a) > 1.0471976f) {
         if ((*(int *)(p + 0x18))++ >= 6)
             goto kill;
         v[0] = FUN_001f9dc8(
@@ -166,9 +166,9 @@ after:
     if (d < 8.0f || d > 96.0f)
         goto kill;
     if (d < 16.0f) {
-        k = func_001FA898_r(ConvertIntegerToFloat_c(k) * (d - 8.0f) * 0.125f);
+        k = func_001FA898_r(convert_integer_to_float_c(k) * (d - 8.0f) * 0.125f);
     } else if (d > 80.0f) {
-        k = func_001FA898_r(ConvertIntegerToFloat_c(k) * (96.0f - d) * 0.0625f);
+        k = func_001FA898_r(convert_integer_to_float_c(k) * (96.0f - d) * 0.0625f);
     }
     *(int *)(m + 4) = (k << 24) | (*(int *)(m + 4) & 0xFFFFFF);
     if (FUN_001f9770(m + 0xA)) {
@@ -260,7 +260,7 @@ void FUN_L00_00269a70(O00269a70 *o) {
 /* spawns a type-5 particle at pos with packed color and a target */
 /* Ported from rac1-decomp (src/overlays/shared/partupd_0026A130.c: func_L00_0026AA10), where it is exact; names translated to the US level program. */
 
-extern f32 ConvertIntegerToFloat(s32) __asm__("func_001FA6C0");
+extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
 extern int D_L00_001B2094 __attribute__((section(".data")));
 extern s32 truncate_float_to_s32(f32) __asm__("func_001FA6D0");
 extern void *FUN_L00_002678b8(int);
@@ -282,7 +282,7 @@ void FUN_L00_00269b70(void *pos, unsigned char red, unsigned char green, unsigne
             particle[8] = 0;
             particle[2] = **(unsigned char **)&D_L00_001B2094;
             *(int *)(particle + 0x20) = target;
-            q[1] = a / ConvertIntegerToFloat(target);
+            q[1] = a / convert_integer_to_float(target);
         }
     }
 }
@@ -493,7 +493,7 @@ void FUN_L00_0026a9f0(void *pos, void *dir, int col, int d, int n, int b1A, int 
 /* Ported from rac1-decomp (src/overlays/shared/partupd_0026A130.c: func_L00_0026BB18), where it is exact; names translated to the US level program. */
 
 extern char D_L00_00166DC0[];
-extern f32 ConvertIntegerToFloat(s32) __asm__("func_001FA6C0");
+extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
 extern float D_L00_0015F5D0;
 extern float FUN_001f9988(float);
 extern float FUN_001f9b48(void *, void *);
@@ -539,10 +539,10 @@ void FUN_L00_0026ac78(char *m) {
         }
         if (!(p[0x19] & 4)) {
             float x = *(float *)(p + 0x1C);
-            float A = ConvertIntegerToFloat((unsigned char)p[0x1B]);
+            float A = convert_integer_to_float((unsigned char)p[0x1B]);
             float B = (A * 8.0f - A * 3.0f * x) / (x * 8.0f * x + x * 8.0f);
             float C = (A * 3.0f + B * 8.0f * x) / (x * -8.0f);
-            float F = ConvertIntegerToFloat(*(short *)(m + 0xA));
+            float F = convert_integer_to_float(*(short *)(m + 0xA));
             float s = FUN_001f9988(B * B - C * 4.0f * (A - F));
             float r2 = (-B + s) / (C + C);
             float r1 = (-B - s) / (C + C);
@@ -700,7 +700,76 @@ unsigned char *FUN_L00_0026b230(void *pos, void *vel, unsigned char flags, float
     return m;
 }
 #endif
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_0026b500.s", FUN_L00_0026b500);
+#else
+extern void FUN_001f9a10_26b500(void *, void *, void *) __asm__("FUN_001f9a10");
+extern float FUN_001f9af0_26b500(void *) __asm__("FUN_001f9af0");
+extern void FUN_001f9bf8_26b500(void *, void *, float) __asm__("FUN_001f9bf8");
+extern void advance_accelerated_scalar_26b500(float, float, float, float, float *, float *)
+    __asm__("FUN_00213f38");
+extern float FUN_001fa6c0_26b500(int) __asm__("FUN_001fa6c0");
+extern int FUN_001fa6e0_26b500(int, int, float) __asm__("FUN_001fa6e0");
+extern int FUN_001f96f8_26b500(int) __asm__("FUN_001f96f8");
+extern int FUN_001f9770_26b500(void *) __asm__("FUN_001f9770");
+extern void FUN_L00_00267a08_26b500(void *) __asm__("FUN_L00_00267a08");
+extern unsigned char D_0013E530_26b500 __asm__("D_0013E530") __attribute__((section(".data")));
+extern float D_L00_001601B8_26b500 __asm__("D_L00_001601B8") __attribute__((sda));
+extern float D_L00_001601BC_26b500 __asm__("D_L00_001601BC") __attribute__((sda));
+extern float D_L00_001601D8_26b500 __asm__("D_L00_001601D8") __attribute__((sda));
+extern float D_L00_001601DC_26b500 __asm__("D_L00_001601DC") __attribute__((sda));
+extern float D_L00_001601E8_26b500 __asm__("D_L00_001601E8") __attribute__((sda));
+extern float D_L00_001601EC_26b500 __asm__("D_L00_001601EC") __attribute__((sda));
+
+void FUN_L00_0026b500(unsigned char *m) {
+    unsigned char *p = m + 0x20;
+    float rotation;
+    float scale = 1.0f;
+    float life, duration, start, end, t;
+
+    m[8] += p[0x1e];
+    if (p[0x1f] & 4)
+        scale += FUN_001fa6c0_26b500(D_0013E530_26b500) * 0.5f;
+
+    FUN_001f9a10_26b500(m + 0x10, m + 0x10, p);
+    rotation = -FUN_001f9af0_26b500(p);
+    advance_accelerated_scalar_26b500(0.0f, 0.0f,
+                                       D_L00_001601E8_26b500 * frame_time_sq,
+                                       rotation, (float *)(p + 0x10), &rotation);
+    FUN_001f9bf8_26b500(p, p, -rotation);
+    *(float *)(m + 0x18) += D_L00_001601EC_26b500 * frame_time;
+
+    life = FUN_001fa6c0_26b500(*(short *)(m + 0xa));
+    duration = FUN_001fa6c0_26b500(p[0x1d]);
+    t = life / duration;
+    if (p[0x1f] & 1) {
+        start = D_L00_001601DC_26b500;
+        end = D_L00_001601D8_26b500;
+    } else {
+        start = D_L00_001601BC_26b500;
+        end = D_L00_001601B8_26b500;
+    }
+    *(float *)(m + 0xc) = ((end - start * scale) * t + start * scale) * 210000.0f;
+
+    *(int *)(m + 4) = FUN_001fa6e0_26b500(*(int *)(p + 0x18), *(int *)(p + 0x14), t);
+    if (*(short *)(m + 0xa) < FUN_001f96f8_26b500(15)) {
+        int color;
+        life = FUN_001fa6c0_26b500(*(short *)(m + 0xa));
+        duration = FUN_001fa6c0_26b500(FUN_001f96f8_26b500(10));
+        color = *(int *)(m + 4);
+        *(int *)(m + 4) = FUN_001fa6e0_26b500(color & 0xffffff, color, life / duration);
+    }
+
+    if (*(float *)(m + 0x10) < 2.0f || 1021.0f < *(float *)(m + 0x10) ||
+        *(float *)(m + 0x14) < 2.0f || 1021.0f < *(float *)(m + 0x14) ||
+        *(float *)(m + 0x18) < 2.0f || 1021.0f < *(float *)(m + 0x18) ||
+        FUN_001f9770_26b500(m + 0xa)) {
+        FUN_L00_00267a08_26b500(m);
+    } else if (*(float *)(p + 0x10) < 0.01f) {
+        *(short *)(m + 0xa) -= 1;
+    }
+}
+#endif
 extern unsigned char *D_L00_001B20B4_26b790 __asm__("D_L00_001B20B4")
     __attribute__((section(".data")));
 unsigned char *FUN_L00_002678b8_26b790(int) __asm__("FUN_L00_002678b8");
@@ -959,7 +1028,86 @@ unsigned char *FUN_L00_0026bed0(void *a, void *b, int c, int d, float f, int n, 
     }
     return m;
 }
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_0026c088.s", FUN_L00_0026c088);
+/* Ported from rac1-decomp src/overlays/shared/partupd_0026A130.c (func_L00_0026CF28) */
+
+/* Updates a type 16 particle: fades it by age and distance, applies its gravity, and on landing spawns the next kind. */
+
+typedef struct {
+    unsigned char b0, b1, b2, b3;
+    int col;
+    unsigned char b8, b9;
+    short timer;
+    float fC;
+    float pos[4];
+} Part_0026CF28;
+
+typedef struct {
+    float vel[4];
+    int c10;
+    int c14;
+    short life;
+    short kind;
+    float f1C;
+} Data_0026CF28;
+
+extern float D_0015ED70;
+extern float D_L00_0015F5D0_c __asm__("D_L00_0015F5D0");
+extern int tick_countdown_32_alt(void *) __asm__("FUN_001f9770");
+extern f32 convert_integer_to_float_c2(s32) __asm__("FUN_001fa6c0");
+extern f32 distance_xyz(void *, void *) __asm__("FUN_001f9b48");
+extern int scale_game_frames_alt(int) __asm__("FUN_001f96f8");
+extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
+extern f32 random_float_between(f32, f32) __asm__("FUN_002132a8");
+extern int FUN_L00_002371e0_c(int, int, float) __asm__("FUN_L00_002371e0");
+extern void FUN_L00_0026bed0_c(void *, void *, int, int, float, int, int) __asm__("FUN_L00_0026bed0");
+
+void FUN_L00_0026c088(Part_0026CF28 *m) {
+    float saved[4];
+    float grav[4] = { D_0015ED70 * 4.8f, D_0015ED70 * 24.5f, D_0015ED70 * 9.8f, -(D_0015ED70 * 0.24f) };
+    Data_0026CF28 *p = (Data_0026CF28 *)(m + 1);
+    int c, r, k;
+    float f;
+
+    if (p->kind == 3 && D_L00_0015F5D0_c > 0.95f)
+        tick_countdown_32_alt(&m->timer);
+    if (tick_countdown_32_alt(&m->timer)) {
+        FUN_L00_00267a08(m);
+        return;
+    }
+    {
+        float f20 = convert_integer_to_float_c2(m->timer);
+        m->col = FUN_L00_002371e0_c(p->c14, p->c10, f20 / convert_integer_to_float_c2(p->life));
+        c = m->col >> 24;
+        f = distance_xyz(m->pos, D_L00_00166DC0);
+        if (m->timer < scale_game_frames_alt(6))
+            c = c * m->timer / scale_game_frames_alt(6);
+        if (f < 4.0f) {
+            FUN_L00_00267a08(m);
+            return;
+        }
+        if (f < 8.0f)
+            c = truncate_float_to_s32(convert_integer_to_float_c2(c) * (f - 4.0f) * 0.25f);
+        m->col = (c << 24) | (m->col & 0xFFFFFF);
+        add_vector_xyz(m->pos, m->pos, p);
+        k = p->kind;
+        p->vel[2] -= grav[k];
+        qcopy(saved, m->pos);
+        if (m->pos[2] < p->vel[3]) {
+            if (k == 1) {
+                int u, w, t;
+                u = FUN_L00_002371e0_c(0x7F000000, 0x7F182030, random_float_between(0.25f, 1.0f));
+                w = FUN_L00_002371e0_c(0, 0x5F5F5F, random_float_between(0.5f, 1.0f));
+                p->vel[2] = 0;
+                f = random_float_between(200000.0f, 300000.0f);
+                t = scale_game_frames_alt(0x5A);
+                r = FUN_L00_00257b90(t, scale_game_frames_alt(0x96));
+                FUN_L00_0026bed0_c(m->pos, p, u, w, f, r, 3);
+            }
+            FUN_L00_00267a08(m);
+        } else
+            m->b8++;
+    }
+}
 #include "qzero.h"
 extern unsigned char *D_L00_001B20C8_26c3d0 __asm__("D_L00_001B20C8")
     __attribute__((section(".data")));
@@ -2416,7 +2564,6 @@ typedef struct {
 } V __attribute__((aligned(16)));
 
 extern V D_L00_00173E60;
-extern float D_0013F640 __attribute__((section(".data")));
 extern int D_L00_00173E40[];
 extern int FUN_001f0b58(void);
 extern void FUN_L00_002715e8(void *, int, int, float, float);
@@ -2445,7 +2592,7 @@ void FUN_L00_0026f660(char *m) {
         float lim;
         q = m + 0x10;
         FUN_001f9a10(q, q, b);
-        lim = D_0013F640;
+        lim = hero.height_threshold;
         if (*(float *)(m + 0x18) < lim) {
             *(float *)(m + 0x18) = lim;
             FUN_L00_002715e8(q, 0, -1, 0.2f, 5250.0f);

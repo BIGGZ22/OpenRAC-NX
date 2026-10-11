@@ -5,6 +5,7 @@
 #ifndef NON_MATCHING
 INCLUDE_ASM("config/us/expected/asm/assembly/textbin/fun_0022eaa8/FUN_0022eaa8.s", FUN_0022eaa8);
 #else
+#include "rnc/globals.h"
 #include "types.h"
 #include "eetypes.h"
 #include "sda.h"
@@ -123,7 +124,7 @@ extern s16 D_0015EE48 __attribute__((sda));
 extern f32 sequence_fade __asm__("D_0015F43C") MACRO_ADDR;
 extern s32 D_0015F618 MACRO_ADDR;
 extern f32 D_00160404 MACRO_ADDR;
-extern u8 D_00160460[] MACRO_ADDR;
+#include "rnc/rendering/sky_shell.h"
 extern s32 D_001604E0 __attribute__((sda));
 extern s32 D_001604F0 __attribute__((sda));
 extern s32 D_00160500 __attribute__((sda));
@@ -139,8 +140,8 @@ extern u128 D_001D9AE0[];
 extern f32 D_001D9B30[];
 extern f32 D_001D9B48[];
 
-extern void FillTransferWords(void *, s32, s32);
-extern void ReadGlobalTableEntry(void);
+extern void fill_transfer_words(void *, s32, s32) __asm__("func_001F97E8");
+extern void read_global_table_entry(void) __asm__("ReadGlobalTableEntry");
 extern void snd_flush_sound_commands(void) __asm__("func_0012DC80");
 extern void snd_play_sound_vol_pan_pmpb(s32, s32, s32, s32, s32, s32, s32,
                                         void *) __asm__("func_0012E308");
@@ -210,7 +211,7 @@ void update_level_gameplay_frame(void) {
     }
     if (render_sequence.time == 1 && current_level_index != 0 &&
         (current_level_index != 1 || level_available[3] != 0)) {
-        ReadGlobalTableEntry();
+        read_global_table_entry();
         sound_bank = D_0015ED5C;
         mode_advance = level_render_state.mode;
         snd_play_sound_vol_pan_pmpb(sound_bank, mode_advance, 0x400, 0, 0, 0, 0, D_0013E5C0);
@@ -242,7 +243,7 @@ void update_level_gameplay_frame(void) {
             level_render_state.history_count = 0;
             level_render_state.state++;
             qcopy(&D_001604F0, &D_001604E0);
-            FillTransferWords(&render_sequence, 0, 0x1C0);
+            fill_transfer_words(&render_sequence, 0, 0x1C0);
             render_sequence.source_begin = D_001940C0.source_begin_offset + D_00160F0C;
             render_sequence.source_end = D_001940C0.source_end_offset + D_00160F0C;
             archive_table = D_001940C0.archive_table;
@@ -279,7 +280,7 @@ void update_level_gameplay_frame(void) {
         scale_vector(&first_position, &D_00160500, scale);
         add_vectors(&D_001604F0, &D_001604F0, &first_position);
     }
-    scale_vector(D_00160460, &D_001D9AE0[level_render_state.mode],
+    scale_vector(&D_00160460, &D_001D9AE0[level_render_state.mode],
                  (f32)(render_sequence.time - scale_ticks(0x78)) * 20.0f * scale);
     D_00160404 = D_001D9B30[level_render_state.mode];
     for (object_index = 0; object_index < render_sequence.count; object_index++) {

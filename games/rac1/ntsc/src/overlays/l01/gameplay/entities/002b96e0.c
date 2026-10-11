@@ -467,7 +467,7 @@ extern char *D_L01_001600EC;
 extern char *FUN_L01_002fa068(void *, void *, void *, float, float, int);
 extern char D_0013E533[];
 extern char D_L01_0020AF80[];
-extern float AbsoluteFloat(float);
+extern float absolute_float(float) __asm__("func_001F99C0");
 extern float D_L01_0015F580[] __attribute__((section(".sdata")));
 extern float FUN_001f96b0(float);
 extern float FUN_001f9988(float);
@@ -526,8 +526,6 @@ extern void mark_moby_for_removal(void *) __asm__("FUN_0020c828");
 extern void normalize_vector_xyz(void *, void *, float);
 extern void subtract_vector_xyz(void *, void *, void *);
 void FUN_L01_002e6518_c(SplashMoby *m, u128 *origin) __asm__("FUN_L01_002e6518");
-extern char D_0013F350[];
-extern char D_0013F3D0[];
 extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 
 void FUN_L01_002e6bf0(PeMoby *m) {
@@ -572,18 +570,18 @@ void FUN_L01_002e6bf0(PeMoby *m) {
     FUN_001f9770(&v->h26);
     if (hit != 0 && v->h26 == 0) {
         if (hit->src != 0) {
-            PeHero *hero = (PeHero *)(((char *)&D_0013F350));
+            struct Hero *player = &hero;
 
-            if (hit->src != hero->f1090) {
+            if (hit->src != player->items[0].moby) {
                 ang = FUN_001f9e90_cf(m->pos.f[0] - hit->src->pos.f[0],
                                       m->pos.f[1] - hit->src->pos.f[1]);
             } else {
-                ang = FUN_001f9e90_cf(m->pos.f[0] - hero->pos.f[0], m->pos.f[1] - hero->pos.f[1]);
+                ang = FUN_001f9e90_cf(m->pos.f[0] - player->motion.pos.f[0], m->pos.f[1] - player->motion.pos.f[1]);
             }
         } else {
-            PeHero *hero = (PeHero *)(((char *)&D_0013F350));
+            struct Hero *player = &hero;
 
-            ang = FUN_001f9e90_cf(m->pos.f[0] - hero->pos.f[0], m->pos.f[1] - hero->pos.f[1]);
+            ang = FUN_001f9e90_cf(m->pos.f[0] - player->motion.pos.f[0], m->pos.f[1] - player->motion.pos.f[1]);
         }
         v->h1E2 = scale_game_frames(0x258);
         v->f20 -= dmg;
@@ -698,7 +696,7 @@ void FUN_L01_002e6bf0(PeMoby *m) {
         }
         m->h34 |= 0x1000;
         v->b29 = 0;
-        m->l38 = ((PeHero *)(((char *)&D_0013F350)))->f2080->l38;
+        m->l38 = ((struct PeMoby *)hero.moby)->l38;
         v->b58 = 8;
         v->b5A = 8;
         FUN_L01_0026d930_u(v->xD0);
@@ -739,7 +737,7 @@ void FUN_L01_002e6bf0(PeMoby *m) {
         tick_countdown_32(&v->w190);
         d = FUN_001f9b80(&m->pos, &tgt);
         if ((flag ? d < v->f1A0 * 2.0f : d < v->f1A0) &&
-            AbsoluteFloat(m->pos.f[2] - tgt.pos.f[2]) < 2.0f && m->b31 != 0 &&
+            absolute_float(m->pos.f[2] - tgt.pos.f[2]) < 2.0f && m->b31 != 0 &&
             (!flag || res == 0) && v->w190 == 0 &&
             FUN_001fa688(m->rot.f[2], FUN_001f9e90_cf(tgt.pos.f[0] - m->pos.f[0],
                                                       tgt.pos.f[1] - m->pos.f[1])) < 0.08726646f) {
@@ -758,7 +756,7 @@ void FUN_L01_002e6bf0(PeMoby *m) {
                 v->w190 = scale_game_frames(0x3C);
             }
         } else if (flag || (FUN_001f9b80(&m->pos, &tgt) < 4.0f &&
-                            AbsoluteFloat(m->pos.f[2] - tgt.pos.f[2]) < 6.0f)) {
+                            absolute_float(m->pos.f[2] - tgt.pos.f[2]) < 6.0f)) {
             if (res != 0 && FUN_001f9b48(&m->pos, (PeVec *)c->path + (idx + 1)) > 0.25f) {
                 if (v->h1AC == 0 || c->idx < c->path->count - 1) {
                     int i;
@@ -785,7 +783,7 @@ void FUN_L01_002e6bf0(PeMoby *m) {
     }
     case 2:
         if (FUN_001f9b80(&m->pos, &tgt) < v->f1A8 ||
-            is_point_inside_clip_volume(((char *)&D_0013F3D0), v->w1C0) != 0 || v->w1E8 != 0) {
+            is_point_inside_clip_volume(&hero.motion.pos, v->w1C0) != 0 || v->w1E8 != 0) {
             if (v->w1C4 != -1) {
                 char *p;
 
@@ -915,7 +913,7 @@ void FUN_L01_002e6bf0(PeMoby *m) {
         }
         if (frame < 2.0f) {
             if (v->h1A4 >= 4 || FUN_001f9b80(&m->pos, &tgt) > (flag ? v->f1A0 * 2.0f : v->f1A0) ||
-                AbsoluteFloat(m->pos.f[2] - tgt.pos.f[2]) > 6.0f) {
+                absolute_float(m->pos.f[2] - tgt.pos.f[2]) > 6.0f) {
                 if (m->b53 != 5) {
                     blend_moby_animation_cf(m, 5, 5, scale_game_frames(10));
                 }
@@ -938,7 +936,7 @@ void FUN_L01_002e6bf0(PeMoby *m) {
         } else if (m->b70 & 2) {
             m->f58 = 1.0f;
             if ((flag || (FUN_001f9b80(&m->pos, &tgt) < 8.0f &&
-                          AbsoluteFloat(m->pos.f[2] - tgt.pos.f[2]) < 6.0f)) &&
+                          absolute_float(m->pos.f[2] - tgt.pos.f[2]) < 6.0f)) &&
                 res != 0 && FUN_001f9b48(&m->pos, (PeVec *)v->main.path + (idx + 1)) > 0.25f) {
                 v->main.idx = idx;
                 if (m->b53 != 8) {
@@ -951,7 +949,7 @@ void FUN_L01_002e6bf0(PeMoby *m) {
 
                 d = FUN_001f9b80(&m->pos, &tgt);
                 if ((flag ? d < v->f1A0 * 2.0f : d < v->f1A0) &&
-                    AbsoluteFloat(m->pos.f[2] - tgt.pos.f[2]) < 2.0f && m->b31 != 0 &&
+                    absolute_float(m->pos.f[2] - tgt.pos.f[2]) < 2.0f && m->b31 != 0 &&
                     (!flag || res == 0) && v->w190 == 0 &&
                     FUN_001fa688(m->rot.f[2], FUN_001f9e90_cf(tgt.pos.f[0] - m->pos.f[0],
                                                               tgt.pos.f[1] - m->pos.f[1])) <
@@ -2042,8 +2040,8 @@ void FUN_L01_002f3120(Moby *self)
         if (hero.state.control_mode == 0x12 && hero.state.prev == hero.state.control_mode) {
             if (hero.state_timer < scale_game_frames(3)) {
                 cap = frame_time * 1.5f;
-                if (cap < hero.unk194) {
-                    hero.unk194 = cap;
+                if (cap < hero.ground_speed) {
+                    hero.ground_speed = cap;
                 }
                 clear_vector(&hero.motion.unk150);
             }
@@ -2412,7 +2410,7 @@ void FUN_L01_002f4960(CarrierMoby *m) {
         m->flags |= 0x41;
         return;
     case 1:
-        if (is_point_inside_clip_volume(D_0013F3D0, n) != 0) {
+        if (is_point_inside_clip_volume(&hero.motion.pos, n) != 0) {
             v->state = 2;
             m->flags &= ~0x41;
             if (v->camera != -1) {
@@ -2702,7 +2700,6 @@ typedef struct {
     HoverVars *pvars;
 } HoverMoby;
 
-#include "rnc/gameplay/hero.h"
 
 extern f32 D_L01_00161BF0 __attribute__((sda));
 extern f32 D_L01_00161BF4 __attribute__((sda));

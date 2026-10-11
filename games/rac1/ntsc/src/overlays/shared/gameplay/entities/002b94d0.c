@@ -368,7 +368,7 @@ typedef struct {
 
 extern char D_0013E533[];
 extern char D_L00_001DBBA0[];
-extern float ConvertIntegerToFloat(int);
+extern float convert_integer_to_float(int) __asm__("func_001FA6C0");
 extern float D_L00_001616D4;
 extern float D_L00_00166DC0[];
 extern float D_L00_0017AEBC __attribute__((section(".data")));
@@ -432,13 +432,13 @@ void FUN_L00_002bb558(char *m) {
             if (6.0f <= f) {
                 flag = 1;
                 if (func_001F9908_r(&D_L00_00161660_e[54]) == 0) {
-                    float a = ConvertIntegerToFloat(D_L00_001616CC);
-                    a = a / ConvertIntegerToFloat(scale_game_frames(*(int *)&D_L00_001616A8));
+                    float a = convert_integer_to_float(D_L00_001616CC);
+                    a = a / convert_integer_to_float(scale_game_frames(*(int *)&D_L00_001616A8));
                     D_L00_001616D4 = 1.0f - a;
                 } else if (12.0f <= f) {
                     if (func_001F9908_r(&D_L00_00161660_e[56]) == 0) {
-                        float a = ConvertIntegerToFloat(D_L00_001616D0);
-                        a = a / ConvertIntegerToFloat(scale_game_frames(*(int *)&D_L00_001616AC));
+                        float a = convert_integer_to_float(D_L00_001616D0);
+                        a = a / convert_integer_to_float(scale_game_frames(*(int *)&D_L00_001616AC));
                         D_L00_001616D4 = a;
                     } else {
                         D_L00_001616D4 = 0.0f;
@@ -794,10 +794,12 @@ void FUN_L00_002bcf98(u8 *m) {
     volatile u128 *source = *(u128 **)(m + 0x78);
     s32 i;
     f32 scale;
+    u128 *copies;
+    s32 *clears;
 
     if (D_L00_001617BC_abs != 0) {
         D_L00_001617BC = 0;
-        scale = D_L00_001616DC / ConvertIntegerToFloat(12);
+        scale = D_L00_001616DC / convert_integer_to_float(12);
         D_L00_001617CC = scale;
         scale_vector_2bcf98(-scale, &vec, m + 0xD0);
         D_L00_001DBF50[1] = source[0];
@@ -809,9 +811,11 @@ void FUN_L00_002bcf98(u8 *m) {
         D_L00_00161724_i = 0;
         D_L00_001617D0 = 0;
         D_L00_00161824 = 0;
+        copies = D_L00_001DD0D0;
+        clears = D_L00_00161818;
         for (i = 2; i >= 0; i--) {
-            D_L00_00161818[2 - i] = 0;
-            D_L00_001DD0D0[2 - i] = vec;
+            *clears++ = 0;
+            *copies++ = vec;
         }
     }
 }
@@ -989,11 +993,7 @@ void FUN_L00_002be650(void *o) {
     quad.unk64 = 0;
     quad.unk68 = 1.0f;
     quad.unk6C = 1.0f;
-    if (D_0013E535) {
-        color = D_L00_00161764;
-    } else {
-        color = D_L00_00161760;
-    }
+    color = D_0013E535 ? D_L00_00161764 : D_L00_00161760;
     color &= 0xFFFFFF;
     vertexTarget = &vertex[0];
     i = 0;
@@ -1110,7 +1110,7 @@ typedef struct {
 } Vx __attribute__((aligned(16)));
 
 extern char D_0013E533[];
-extern f32 ConvertIntegerToFloat(s32) __asm__("func_001FA6C0");
+extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
 extern int D_L00_00173E40[];
 extern int FUN_L00_001f0d60(float, void *, int, void *);
 
@@ -1119,7 +1119,7 @@ int FUN_L00_002beab0(char *a, int b, Vx *c) {
     float s;
     float t;
     int r;
-    s = ConvertIntegerToFloat((unsigned char)D_0013E533[1]) * 0.5f + 1.0f;
+    s = convert_integer_to_float((unsigned char)D_0013E533[1]) * 0.5f + 1.0f;
     if (c != 0) {
         qcopy(&v, c);
     } else {
@@ -1143,12 +1143,12 @@ int FUN_L00_002beab0(char *a, int b, Vx *c) {
 
 /* Saves the moby's position, word 0x4C and float 0x5C into ((char *)&hero) at 0x1ED0. */
 void FUN_L00_002beb90(char *a) {
-    char *g = ((char *)&hero);
-    *(float *)(g + 0x1ED0) = *(float *)(a + 0x40);
-    *(float *)(g + 0x1ED4) = *(float *)(a + 0x44);
-    *(float *)(g + 0x1ED8) = *(float *)(a + 0x48);
-    *(int *)(g + 0x1F08) = *(int *)(a + 0x4C);
-    *(float *)(g + 0x1EE4) = *(float *)(a + 0x5C);
+    struct Hero *g = &hero;
+    g->unk1ED0 = *(float *)(a + 0x40);
+    g->unk1ED4 = *(float *)(a + 0x44);
+    g->unk1ED8 = *(float *)(a + 0x48);
+    g->unk1F08 = *(int *)(a + 0x4C);
+    g->unk1EE4 = *(float *)(a + 0x5C);
 }
 #define NOT_SDA
 
@@ -1159,12 +1159,12 @@ void FUN_L00_002beb90(char *a) {
 
 /* Restores the moby's position, word 0x4C and float 0x5C from ((char *)&hero) at 0x1ED0. */
 void FUN_L00_002bebc8(char *a) {
-    char *g = ((char *)&hero);
-    *(float *)(a + 0x40) = *(float *)(g + 0x1ED0);
-    *(float *)(a + 0x44) = *(float *)(g + 0x1ED4);
-    *(float *)(a + 0x48) = *(float *)(g + 0x1ED8);
-    *(int *)(a + 0x4C) = *(int *)(g + 0x1F08);
-    *(float *)(a + 0x5C) = *(float *)(g + 0x1EE4);
+    struct Hero *g = &hero;
+    *(float *)(a + 0x40) = g->unk1ED0;
+    *(float *)(a + 0x44) = g->unk1ED4;
+    *(float *)(a + 0x48) = g->unk1ED8;
+    *(int *)(a + 0x4C) = g->unk1F08;
+    *(float *)(a + 0x5C) = g->unk1EE4;
 }
 #include "qcopy.h"
 
@@ -1172,13 +1172,13 @@ void FUN_L00_002bebc8(char *a) {
 
 /* Saves moby fields 0x44..0x68 and its vector into ((char *)&hero) at 0x1F10..0x1F40. */
 void FUN_L00_002bec00(char *a) {
-    char *g = ((char *)&hero);
-    *(float *)(g + 0x1F20) = *(float *)(a + 0x50);
-    *(float *)(g + 0x1F24) = *(float *)(a + 0x54);
-    *(float *)(g + 0x1F28) = *(float *)(a + 0x58);
-    *(char *)(g + 0x1F3F) = *(char *)(a + 0x68);
-    *(float *)(g + 0x1F40) = *(float *)(a + 0x44);
-    qcopy(g + 0x1F10, a);
+    struct Hero *g = &hero;
+    g->unk1F20 = *(float *)(a + 0x50);
+    g->unk1F24 = *(float *)(a + 0x54);
+    g->unk1F28 = *(float *)(a + 0x58);
+    g->unk1F3F = *(char *)(a + 0x68);
+    g->unk1F40 = *(float *)(a + 0x44);
+    qcopy(&g->unk1F10, a);
 }
 #define NOT_SDA
 
@@ -1189,12 +1189,12 @@ void FUN_L00_002bec00(char *a) {
 
 /* Copies fields from ((char *)&hero) at 0x1F20..0x1F40 into the moby. */
 void FUN_L00_002bec48(char *a) {
-    char *g = ((char *)&hero);
-    *(float *)(a + 0x50) = *(float *)(g + 0x1F20);
-    *(float *)(a + 0x54) = *(float *)(g + 0x1F24);
-    *(float *)(a + 0x58) = *(float *)(g + 0x1F28);
-    *(char *)(a + 0x68) = *(char *)(g + 0x1F3F);
-    *(float *)(a + 0x44) = *(float *)(g + 0x1F40);
+    struct Hero *g = &hero;
+    *(float *)(a + 0x50) = g->unk1F20;
+    *(float *)(a + 0x54) = g->unk1F24;
+    *(float *)(a + 0x58) = g->unk1F28;
+    *(char *)(a + 0x68) = g->unk1F3F;
+    *(float *)(a + 0x44) = g->unk1F40;
 }
 #include "eetypes.h"
 #include "qcopy.h"
@@ -1516,7 +1516,7 @@ f32 FUN_L00_002bf050(Mob *m, VU *pos, f32 *tgt, f32 *out, f32 ang, f32 arc, f32 
 /* Steps a vector by n repeated additions of the normalised difference. */
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002BA7C8.c: func_L00_002C0B18), where it is exact; names translated to the US level program. */
 
-extern f32 ConvertIntegerToFloat(s32) __asm__("func_001FA6C0");
+extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
 extern void FUN_001f9a10(void *, void *, void *);
 extern void FUN_001f9a28(void *, void *, void *);
 extern void FUN_001f9a68(void *, void *, float);
@@ -1526,7 +1526,7 @@ void FUN_L00_002bf810(char *a, char *b, int n) {
     float t[4];
     int i;
     FUN_001f9a28(d, b, a);
-    FUN_001f9a68(d, d, 1.0f / ConvertIntegerToFloat(n));
+    FUN_001f9a68(d, d, 1.0f / convert_integer_to_float(n));
     qcopy(t, a);
     for (i = 0; i < n; i++) {
         FUN_001f9a10(t, t, d);

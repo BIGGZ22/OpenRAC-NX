@@ -565,12 +565,13 @@ void FUN_L00_0025b6b8(f32 t, f32 *out, f32 *a, f32 *b) {
     Vec4_25b6b8 left, right;
     f32 *dest = out;
     volatile f32 *rightPtr = right.f;
+    volatile f32 *leftPtr = left.f;
     left.q = *(u128 *)a;
     right.q = *(u128 *)b;
     dest[0] = FUN_L00_0025b6a8(left.f[0], right.f[0], t);
     dest[1] = FUN_L00_0025b6a8(left.f[1], right.f[1], t);
     dest[2] = FUN_L00_0025b6a8(left.f[2], rightPtr[2], t);
-    dest[3] = FUN_L00_0025b6a8(left.f[3], rightPtr[3], t);
+    dest[3] = FUN_L00_0025b6a8(leftPtr[3], rightPtr[3], t);
 }
 #endif
 #define NOT_SDA
@@ -593,7 +594,7 @@ float FUN_L00_0025b750(float a, float b, float c) {
 
 /* Ported from rac1-decomp (src/overlays/shared/mobyutil_00258BC8.c: func_L00_0025C7F0), where it is exact; names translated to the US level program. */
 
-float AbsoluteFloat(float input) __asm__("func_001F99C0");
+float absolute_float(float input) __asm__("func_001F99C0");
 
 void FUN_L00_0025b798(float *ptr, float rate, float b, float c, float limit) {
     float v = *ptr + (b * rate - c * (*ptr));
@@ -606,9 +607,9 @@ void FUN_L00_0025b798(float *ptr, float rate, float b, float c, float limit) {
             *ptr = -limit;
         }
     }
-    if (AbsoluteFloat(rate) < *ptr) {
-        *ptr = AbsoluteFloat(rate);
-    } else if (*ptr < -AbsoluteFloat(rate)) {
-        *ptr = -AbsoluteFloat(rate);
+    if (absolute_float(rate) < *ptr) {
+        *ptr = absolute_float(rate);
+    } else if (*ptr < -absolute_float(rate)) {
+        *ptr = -absolute_float(rate);
     }
 }

@@ -232,7 +232,7 @@ typedef struct {
 } List;
 
 extern float FUN_001f9b48(void *, void *);
-float AbsoluteFloat(float input) __asm__("func_001F99C0");
+float absolute_float(float input) __asm__("func_001F99C0");
 
 int FUN_L01_0028b510(void *arg0, List *arg1, float target) {
     int best = 0;
@@ -240,7 +240,7 @@ int FUN_L01_0028b510(void *arg0, List *arg1, float target) {
     float bestDiff = 1e11f;
     for (i = 0; i < arg1->count; i++) {
         float d = FUN_001f9b48(arg1->e[i], arg0);
-        if (AbsoluteFloat(d - target) < bestDiff) {
+        if (absolute_float(d - target) < bestDiff) {
             bestDiff = d;
             best = i;
         }
@@ -414,8 +414,8 @@ float FUN_L01_0028bb90(T_28b828 *path, int particles, void *moby, float a, float
     OvlVec4 nextNode;
     OvlVec4 point;
     OvlVec4 previousPoint;
-    int savedIndex = *(int *)path;
     int count = *path->f10;
+    int savedIndex = *(int *)path;
     int index;
     float total = 0.0f;
     int emitParticles;
@@ -432,15 +432,16 @@ float FUN_L01_0028bb90(T_28b828 *path, int particles, void *moby, float a, float
     while (index < count) {
         float t;
         float step;
-        float segmentLength = 0.0f;
+        float segmentLength;
         int nextIndex;
-        previousTangent.q = nextTangent.q;
         currentNode.q = nextNode.q;
+        previousTangent.q = nextTangent.q;
         if (emitParticles) {
             FUN_L01_00285768(1.0f, &currentNode, (int)moby, index % 15 + 2, 0x80108010, 0x7f, -1, 0xff);
         }
         t = 0.05f;
         nextIndex = FUN_L01_0028b828(path, index + 1);
+        segmentLength = 0.0f;
         nextNode.q = *(OvlQuad *)((char *)path->f10 + nextIndex * 16 + 0x10);
         *(int *)path = index;
         FUN_L01_0028b8c8(&nextTangent, (int *)path, 1, a, b);

@@ -80,7 +80,7 @@ void FUN_L05_002daf58(unsigned char *m) {
     }
 }
 #include "qcopy.h"
-extern void *CreateMoby() __asm__("FUN_0020c4f8");
+extern void *create_moby() __asm__("FUN_0020c4f8");
 
 #define NOT_SDA
 
@@ -91,7 +91,7 @@ extern void *CreateMoby() __asm__("FUN_0020c4f8");
 extern void FUN_L00_00250df8(void *);
 
 char *FUN_L05_002f8718(char *owner) {
-    char *moby = CreateMoby(0x1B7);
+    char *moby = create_moby(0x1B7);
     if (moby != 0) {
         ((unsigned char *)moby)[0x30] = 0xFF;
         *(short *)(moby + 0x32) = 0xFF;
@@ -329,7 +329,6 @@ INCLUDE_ASM("config/us/overlays/asm/FUN_L05_002d7140.s", FUN_L05_002d7140);
 INCLUDE_ASM("config/us/overlays/asm/FUN_L05_002d7920.s", FUN_L05_002d7920);
 /* Ported from rac1-decomp (src/overlays/l05_rilgar/vendor_002D28D0.c: func_L05_002DBF10), where it is exact; names translated to the US level program. */
 
-extern char D_0013F3D0[];
 extern f32 fast_cos_c(f32) __asm__("func_001F9DC8");
 extern f32 fast_sin_c(f32) __asm__("func_001F9DE0");
 extern float FUN_001f9b80(void *, void *);
@@ -393,7 +392,7 @@ void FUN_L05_002dac80(struct Moby *m) {
         break;
     }
     case 2:
-        if (48.0f < FUN_001f9b80(&m->pos, D_0013F3D0)) {
+        if (48.0f < FUN_001f9b80(&m->pos, &hero.motion.pos)) {
             m->state = 1;
             m->unk31 = 1;
             m->flags &= 0xFFFE;
@@ -649,7 +648,7 @@ float FUN_L05_00304058(volatile s32 path_index, void *position, void *out, float
     int i;
     char *path;
 
-    *(u128 *)&from_point = *(u128 *)position;
+    from_point = *(Vec4 *)position;
     for (i = 0; i < *(int *)D_L05_001B0930[path_index] - 1; i++) {
         char *next;
         path = D_L05_001B0930[path_index];

@@ -25,17 +25,16 @@ extern char *D_L16_0015FFD8;
 extern char *D_L16_001B0930[];
 extern f32 advance_accelerated_scalar(f32 *, f32 *, f32, f32, f32, f32) __asm__("func_00213F38");
 extern f32 fast_sin(f32) __asm__("func_001F9DE0");
-extern float D_0013F3D0[];
 extern float D_L16_0015F580[] __attribute__((section(".sdata")));
 extern float D_L16_001D9680[4];
 extern float FUN_001f9e90(float, float);
-extern float distance_xyz_alt(void *) __asm__("FUN_001f9b48");
+extern float distance_xyz(void *) __asm__("FUN_001f9b48");
 extern float fast_add_rotations(float, float) __asm__("func_001FA580");
 extern float fast_difference_between_rotations(float, float) __asm__("func_001FA688");
 extern int D_L16_0015F5C4;
 extern int FUN_L00_00259740(void *, void *, int);
 extern int FUN_L16_002e2e88(char *, char *);
-extern int tick_countdown_32_alt(int*) __asm__("FUN_001f9740");
+extern int fast_dec_timer(int*) __asm__("FUN_001f9740");
 extern s32 scale_game_frames(s32) __asm__("func_001F96F8");
 extern unsigned char D_001413F4[];
 extern short D_L16_00161D7C __attribute__((sda));
@@ -50,7 +49,7 @@ extern void FUN_L16_002e2b60(struct Moby *);
 extern void FUN_L16_002e2fa0(void *);
 extern void FUN_L16_002e3050(char *);
 extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
-extern void allocate_voice_for_target_entry_alt(int, int, int) __asm__("FUN_0022da68");
+extern void allocate_voice_for_target_entry(int, int, int) __asm__("FUN_0022da68");
 extern void clear_u64_value(void *) __asm__("func_001F99F8");
 extern void mark_moby_for_removal(void *) __asm__("func_0020C828");
 extern void normalize_vector_xyz(void *, void *, f32) __asm__("FUN_001f9bf8");
@@ -101,7 +100,7 @@ void FUN_L16_002e22d8(char *m) {
 
         if (D_L16_0015F5C4 == 0
             && (*(int *)(d + 0xD4) == -1
-                || FUN_L00_00259740(D_0013F3D0, D_L16_001B0930[*(int *)(d + 0xD4)] + 0x10,
+                || FUN_L00_00259740(hero.motion.pos.f, D_L16_001B0930[*(int *)(d + 0xD4)] + 0x10,
                                      *(int *)D_L16_001B0930[*(int *)(d + 0xD4)]))) {
             m[0x20] = 2;
             *(unsigned short *)(m + 0x34) &= 0xFFFE;
@@ -145,7 +144,7 @@ void FUN_L16_002e22d8(char *m) {
     case 3: {
         int i, *slot;
 
-        if (!tick_countdown_32_alt((int *)(d + 0x184))) break;
+        if (!fast_dec_timer((int *)(d + 0x184))) break;
         slot = (int *)(d + 0xC0);
         for (i = 0; i < 4; i++, slot++) {
             if (((int *)(d + 0xC0))[i] >= 0) {
@@ -205,7 +204,7 @@ void FUN_L16_002e22d8(char *m) {
                       frame_time * 6.2831855f);
         advance_accelerated_scalar((float *)(m + 0x40), (float *)(d + 0x188), 0.0f, frame_time_sq * 1.5707964f,
                       frame_time_sq * 1.5707964f, frame_time * 6.2831855f);
-        if (tick_countdown_32_alt((int *)(d + 0x164)) && *(int *)(d + 0xB4) != 2) m[0x20] = 7;
+        if (fast_dec_timer((int *)(d + 0x164)) && *(int *)(d + 0xB4) != 2) m[0x20] = 7;
         break;
     }
     case 7:
@@ -222,7 +221,7 @@ void FUN_L16_002e22d8(char *m) {
 
         *(float *)(d + 0x194) -= dt + dt;
         *(float *)(m + 0x40) += dt * 0.2617994f;
-        if (tick_countdown_32_alt((int *)(d + 0x160)) || D_001413F4[0] == 2) {
+        if (fast_dec_timer((int *)(d + 0x160)) || hero.unk20A4 == 2) {
             FUN_L00_0025e450(m, D_L16_0015F580, m + 0x10, 0.0f, 0.0f, 20, 12, 8, 4.0f, 2.5f, 9.0f, -1, 2.0f, 0.0f,
                               0, 0, -1, 0);
             FUN_L00_00263fd8(m, 0x634, (float *)(m + 0x10), m + 0x40, 0, 0, 0.0f, D_L16_0015F580, D_L16_0015F580,
@@ -303,7 +302,7 @@ void FUN_L16_002e2b60(struct Moby *m) {
     response = FUN_L00_0025a478(m, record, d + 0x20, 0, &hit.status, &hit.amount, 0, 4);
     if (hit.status != 1 && m->state != 8) {
         *(float *)(d + 0x20) -= hit.amount;
-        if (*(float *)(d + 0x20) <= zero || (D_001413F4[0] == 2 && hit.amount >= 2.0f))
+        if (*(float *)(d + 0x20) <= zero || (hero.unk20A4 == 2 && hit.amount >= 2.0f))
             response = 1;
         if (response > 0) {
             if (response >= 3) {
@@ -315,7 +314,7 @@ void FUN_L16_002e2b60(struct Moby *m) {
                 }
             } else {
                 FUN_0022da68_i(3, 0, m);
-                if (D_001413F4[0] != 2)
+                if (hero.unk20A4 != 2)
                     FUN_0022da68_i(2, 0, m);
                 {
                     int *child = (int *)(d + 0xC0), count = 3;
@@ -353,15 +352,13 @@ void FUN_L16_002e2b60(struct Moby *m) {
 /* Advance a path segment and ease the remaining travel distance. */
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002A1B58.c: func_L16_002E42F0), where it is exact; names translated to the US level program. */
 
-extern f32 advance_accelerated_scalar_q(f32 *, f32 *, f32, f32, f32, f32) __asm__("FUN_00213f38");
 extern float D_0015ED6C_q __asm__("D_0015ED6C");
 extern float D_L16_00161D84_q __asm__("D_L16_00161D84") __attribute__((sda));
-extern float FUN_001f9b48_q(void *) __asm__("FUN_001f9b48");
-extern s32 truncate_float_to_s32_q(f32) __asm__("FUN_001fa6d0");
+extern s32 truncate_float_to_s32(f32) __asm__("FUN_001fa6d0");
 extern short D_0015ED70_u __asm__("D_0015ED70");
 extern short D_L16_00161E40_q __asm__("D_L16_00161E40");
 extern short D_L16_00161E44, D_L16_00161D80_q __asm__("D_L16_00161D80") __attribute__((sda));
-extern void sample_camera_path_q(void *, s32, void *, void *, s32, f32) __asm__("FUN_00214e58");
+extern void sample_camera_path(void *, s32, void *, void *, s32, f32) __asm__("FUN_00214e58");
 extern void func_00215CA8_path42_q(float, void *, int, void *, void *, int) __asm__("FUN_00214e58");
 extern float func_001F9D10_path42_q(void *, void *) __asm__("FUN_001f9b48");
 extern float func_00214D88_path42_q(float, float, float, float, float *,
@@ -371,7 +368,7 @@ int FUN_L16_002e2e88(char *m, char *path) {
     char *d = *(char **)(m + 0x78);
     float progress = (float)*(int *)(d + 0x168) + *(float *)(d + 0x16C) +
                      *(float *)(d + 0x170) / *(float *)(d + 0x174);
-    int index = truncate_float_to_s32_q(progress);
+    int index = truncate_float_to_s32(progress);
     float speed;
     float distance, rate;
     char *position;
@@ -437,14 +434,12 @@ void FUN_L16_002e3050(char *moby) {
 /* Updates a moby effect and advances it when its linked object is ready. */
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002A1B58.c: func_L16_002E6B70), where it is exact; names translated to the US level program. */
 
-extern float fast_add_rotations(float, float) __asm__("FUN_001fa580");
 extern int FUN_L00_0028d8c0(void *, int);
 int FUN_L16_002e5cd0(int idx);
 extern short D_L16_00161E00_d __asm__("D_L16_00161E00") __attribute__((sda));
 extern short D_L16_00161E04_d __asm__("D_L16_00161E04") __attribute__((sda));
 extern short D_L16_00161E08_d __asm__("D_L16_00161E08") __attribute__((sda));
-extern void allocate_voice_for_target_entry(int, int, int) __asm__("FUN_0022da68");
-extern void FUN_L16_002e58d8(void);
+extern void FUN_L16_002e58d8_u(void) __asm__("FUN_L16_002e58d8");
 extern void FUN_L16_002e5d30_c(int) __asm__("FUN_L16_002e5d30");
 extern void enqueue_callback_list_1_alt(void (*)(void), void *) __asm__("FUN_001f4600");
 extern int func_0022ED80_6B70(int, int, void *) __asm__("FUN_0022da68");
@@ -475,7 +470,7 @@ void FUN_L16_002e5708(struct Moby *m) {
                                       ((float *)&D_L16_00161E08_d)[i] * DEG_TO_RAD * frame_time);
         }
         if (m->unk31)
-            enqueue_callback_list_1_alt(FUN_L16_002e58d8, m);
+            enqueue_callback_list_1_alt(FUN_L16_002e58d8_u, m);
         if (*(int *)(d + 0x20) != -1 && FUN_L16_002e5cd0(*(int *)(d + 0x20))) {
             m->unk94 = 0;
             m->state = 2;
@@ -490,7 +485,117 @@ void FUN_L16_002e5708(struct Moby *m) {
         break;
     }
 }
-INCLUDE_ASM("config/us/overlays/asm/FUN_L16_002e58d8.s", FUN_L16_002e58d8);
+/* Draw the animated ring quads and four rotating accents around a moby. */
+/* Ported from rac1-decomp (src/overlays/shared/vendor_002A1B58.c: func_L16_002E6D40), where it is exact; names translated to the US level program. */
+
+typedef struct {
+    float position[4][4];
+    int color[4];
+    float uv[4][2];
+    unsigned long flags, texture, giftag, primitive;
+} RingQuad;
+
+typedef struct { char pad00[8]; float yaw, phase; float cardinal_angles[4]; } RingData;
+
+extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
+extern f32 fast_add_rotations_c(f32, f32) __asm__("func_001FA580");
+extern float D_L16_001D9780[4][2];
+extern float D_L16_001D9A70[4][2];
+extern float D_L16_001D97C0[4][4];
+extern float D_L16_001D9AD0[4][4];
+extern float D_L16_001D9A50[4][2];
+extern float D_L16_001D97A0[4][2];
+extern float D_L16_001D9A90[4][4];
+extern float D_L16_001D9800[4][4];
+extern int D_L16_00161E18 __attribute__((sda));
+extern int D_L16_00161E1C __attribute__((sda));
+extern int D_L16_00161E20 __attribute__((sda));
+extern int D_L16_00161E28 __attribute__((sda));
+extern int D_L16_00161E2C __attribute__((sda));
+extern int D_L16_00161E30 __attribute__((sda));
+extern int D_L16_00161E34 __attribute__((sda));
+extern int D_L16_00161E38 __attribute__((sda));
+extern int D_L16_00161E3C __attribute__((sda));
+extern int D_L16_00161E40 __attribute__((sda));
+extern int FUN_001fa6e0(int,int,float);
+extern s64 get_effect_texture(s32) __asm__("func_001F44B8");
+extern void draw_geometry_quad(void *, int, int) __asm__("func_001F7D30");
+extern void scale_vector_xyz(void *, void *, float) __asm__("FUN_001f9a68");
+extern void vu_euler_rotation_basis(void *, void *) __asm__("func_001FA030");
+
+void FUN_L16_002e58d8(char *m) {
+    RingQuad quad;
+    float transform[4][4], rotation[4];
+    RingData *data = *(RingData **)(m + 0x78);
+    float scale = *(float *)(m + 0x2C) / *(float *)(*(char **)(m + 0x24) + 0x24);
+    float *u, *v;
+    float *angles;
+    int *color_base;
+    float phase, angle_step, phase_step;
+    int i;
+    qcopy(rotation, m + 0x40);
+    qcopy(transform[3], m + 0x10);
+    quad.texture = get_effect_texture(*(int *)&D_L16_00161E38);
+    u = &quad.uv[0][0];
+    v = &quad.uv[0][1];
+    quad.giftag = 0xFF9000000260UL;
+    quad.primitive = *(int *)&D_L16_00161E28;
+    quad.primitive |= (unsigned long)*(int *)&D_L16_00161E2C << 2;
+    quad.primitive |= (unsigned long)*(int *)&D_L16_00161E30 << 4;
+    quad.primitive |= (unsigned long)*(int *)&D_L16_00161E34 << 6;
+    quad.primitive |= 0x8000000000UL;
+    quad.flags = 0;
+    color_base = quad.color;
+    {
+        int k;
+        for (k = 0; k < 4; ++k) {
+            u[k * 2] = D_L16_001D9780[k][0];
+            v[k * 2] = D_L16_001D9780[k][1];
+            color_base[k] = *(int *)&D_L16_00161E1C;
+            qcopy(quad.position[k], D_L16_001D97C0[k]);
+            scale_vector_xyz(quad.position[k], quad.position[k], scale);
+        }
+    }
+    angles = data->cardinal_angles;
+    angle_step = 6.2831855f / convert_integer_to_float(*(int *)&D_L16_00161E40);
+    phase_step = 3.0f / convert_integer_to_float(*(int *)&D_L16_00161E40);
+    phase = data->phase;
+    while (phase < 0.0f) phase += 1.0f;
+    while (phase > 1.0f) phase -= 1.0f;
+    for (i = 0; i < *(int *)&D_L16_00161E40;) {
+        float blend;
+        int color, j;
+        rotation[0] = fast_add_rotations_c(data->yaw, (float)i * angle_step);
+        vu_euler_rotation_basis(transform, rotation);
+        if (phase > 0.5f) blend = (-phase + 1.0f) + (-phase + 1.0f);
+        else blend = phase + phase;
+        ++i;
+        color = FUN_001fa6e0(*(int *)&D_L16_00161E18, *(int *)&D_L16_00161E1C, blend);
+        for (j = 1; j >= 0; --j) color_base[j] = color;
+        phase += phase_step;
+        if (phase > 1.0f) phase -= 1.0f;
+        draw_geometry_quad(&quad, transform, 0);
+    }
+    quad.texture = get_effect_texture(*(int *)&D_L16_00161E3C);
+    {
+        int k;
+        int solid_color = *(int *)&D_L16_00161E20;
+        for (k = 0; k < 4; ++k) {
+            u[k * 2] = D_L16_001D97A0[k][0];
+            v[k * 2] = D_L16_001D97A0[k][1];
+            color_base[k] = solid_color;
+            qcopy(quad.position[k], D_L16_001D9800[k]);
+        }
+    }
+    {
+        int count;
+        for (count = 3; count >= 0; --count) {
+            rotation[0] = angles[3 - count];
+            vu_euler_rotation_basis(transform, rotation);
+            draw_geometry_quad(&quad, transform, 0);
+        }
+    }
+}
 /* Returns 1 when every moby in the list is active, 0 if any is not or the list is empty. */
 extern short *D_L16_001ABCC0_5cd0[] __asm__("D_L16_001ABCC0");
 typedef struct {
@@ -522,7 +627,6 @@ extern float D_L16_00161D78_far __asm__("D_L16_00161D78");
 extern char D_0013E533[];
 extern float FUN_001f9b48(void *);
 extern short *D_L16_001ABCC0[];
-extern void allocate_voice_for_target_entry(int, int, int) __asm__("FUN_0022da68");
 extern float func_001F9D10_2E7198(void *, void *) __asm__("FUN_001f9b48");
 
 void FUN_L16_002e5d30(int idx) {

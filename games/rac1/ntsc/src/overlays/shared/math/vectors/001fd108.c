@@ -10,7 +10,7 @@ INCLUDE_ASM("config/us/overlays/asm/FUN_L00_001fde98.s", FUN_L00_001fde98);
 #include "eetypes.h"
 #include "qcopy.h"
 extern char D_L00_0016EA40_001fe990[] __asm__("D_L00_0016EA40");
-float FUN_00213308_001fe990() __asm__("FUN_00213308");
+float random_angle_radians() __asm__("FUN_00213308");
 /* Fills the first free 0x20-byte D_L00_0016EA40 slot with v, b and x; returns its index or -1. */
 int FUN_L00_001fe990(u128 *v, int b, float x) {
     u128 t;
@@ -25,7 +25,7 @@ int FUN_L00_001fe990(u128 *v, int b, float x) {
             *(float *)(e + 0x1c) = x;
             *(short *)(e + 0x10) = 0x18;
             *(short *)(e + 0x14) = b;
-            *(float *)(e + 0x18) = FUN_00213308_001fe990();
+            *(float *)(e + 0x18) = random_angle_radians();
             return i;
         }
     }
@@ -48,7 +48,7 @@ typedef struct {
 
 extern P D_L00_0016EA40[16];
 extern float fast_subtract_rotations(float, float) __asm__("FUN_001fa5c8");
-extern void FillTransferWords(u8 *, s32, s32);
+extern void fill_transfer_words(u8 *, s32, s32) __asm__("func_001F97E8");
 
 void FUN_L00_001fea18(void) {
     int i;
@@ -63,13 +63,19 @@ void FUN_L00_001fea18(void) {
             }
             p->life = p->life - 1;
             if (p->life <= 0) {
-                FillTransferWords(p, 0, 0x20);
+                fill_transfer_words(p, 0, 0x20);
             }
         }
     }
 }
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_001fefc8.s", FUN_L00_001fefc8);
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_001ff250.s", FUN_L00_001ff250);
+/* Ported from rac1-decomp (src/overlays/shared/fastfunc_001FEF78.c: func_L00_001FF200), where it is exact; names translated to the US level program. */
+
+void FUN_L00_001ff250(s64 *v) {
+    v[0] = 0;
+    __asm__ volatile ("nop");
+    ((s32 *)v)[2] = 0;
+}
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_001ff290.s", FUN_L00_001ff290);
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_001ff2c0.s", FUN_L00_001ff2c0);
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_001ff318.s", FUN_L00_001ff318);

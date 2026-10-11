@@ -360,7 +360,6 @@ extern void transform_scaled_vertex_batch(char *arg0, int arg1, void *arg2,
 void FUN_L04_002d1608(void *m);
 void build_spherical_offset(f32 *out, f32 scale, f32 a, f32 b) __asm__("FUN_00214db0");
 void mark_moby_for_removal(void *obj) __asm__("FUN_0020c828");
-extern char D_0013F3D0[];
 
 void FUN_L04_002d16b8(WBMoby *m) {
     int excited = 0;
@@ -527,7 +526,7 @@ void FUN_L04_002d16b8(WBMoby *m) {
             s.f14 = 0x10001;
             s.f1C = 1.0f;
             s.m = m;
-            subtract_vector_xyz(&s, ((char *)&D_0013F3D0), pos);
+            subtract_vector_xyz(&s, &hero.motion.pos, pos);
             normalize_vector_xyz(&s, &s, frame_time * 5.0f);
             s.f20 = 1;
             transform_scaled_vertex_batch(m, 6, &joints, pts);
@@ -970,7 +969,7 @@ void FUN_L04_002d16b8(WBMoby *m) {
 /* Ported from rac1-decomp (src/overlays/l04_eudora/vendor_002CB800.c: func_L04_002D8348), where it is exact; names translated to the US level program. */
 
 extern char *D_L04_0015FFD0_e[] __asm__("D_L04_0015FFD0") __attribute__((section(".sdata")));
-extern f32 ConvertIntegerToFloat(s32) __asm__("func_001FA6C0");
+extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
 extern float FUN_L00_00200260(float, float);
 extern int *D_L04_001B0630[];
 extern s32 truncate_float_to_s32(f32) __asm__("FUN_001fa6d0");
@@ -992,7 +991,7 @@ void FUN_L04_002d6f68(char *moby) {
     int n = 1;
     float one = 1.0f;
 
-    f = ConvertIntegerToFloat(t[0] - 1);
+    f = convert_integer_to_float(t[0] - 1);
     g = (one - src[0]) * f;
     f = FUN_L00_00200260(g, one);
     idx = func_001FA898_r(g);
@@ -1125,7 +1124,7 @@ void FUN_L04_002e1a10(struct Moby *moby) {
         break;
     case 1:
         FUN_L04_002e1d00_m(moby);
-        if (FUN_001f9b80(&moby->pos, D_0013F3D0) < 3.0f) {
+        if (FUN_001f9b80(&moby->pos, &hero.motion.pos) < 3.0f) {
             moby->flags |= 0x41;
             FUN_L00_00298840(2);
             moby->state = 2;
