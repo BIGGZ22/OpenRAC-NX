@@ -126,6 +126,21 @@
   </section>
 
   <section class="panel">
+    <h2>Appearance</h2>
+    <label class="toggle-row">
+      <input
+        type="checkbox"
+        checked={draft.layout !== "classic"}
+        onchange={(e) => (draft.layout = e.currentTarget.checked ? "compact" : "classic")}
+      />
+      <div>
+        <strong>Compact layout</strong>
+        <p class="muted">The game, its versions and Play on one band. Off: the original layout.</p>
+      </div>
+    </label>
+  </section>
+
+  <section class="panel">
     <h2>Integrations</h2>
     <label class="toggle-row">
       <input type="checkbox" bind:checked={draft.discordRpc} />

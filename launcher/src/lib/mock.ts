@@ -100,6 +100,7 @@ let config: Config = {
   installDir: "/home/you/.local/share/dev.openrac.launcher",
   lastVersion: null,
   discordRpc: true,
+  layout: "compact",
   discordClientId: null,
 };
 
@@ -430,7 +431,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
             isEmpty: false,
             bolts: 1250,
             planetId: 0,
-            planetName: "Veldin (Kyzil Plateau)",
+            planetName: "Veldin",
             timestamp: "2026-10-09 17:01:21",
             modifiedMillis: Date.now() - 3600000,
           },
@@ -443,7 +444,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
             isEmpty: false,
             bolts: 4890,
             planetId: 3,
-            planetName: "Kerwan (Metropolis)",
+            planetName: "Kerwan",
             timestamp: "2026-10-09 17:21:44",
             modifiedMillis: Date.now() - 1800000,
           },

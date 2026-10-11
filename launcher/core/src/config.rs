@@ -31,6 +31,8 @@ pub struct Config {
     pub discord_rpc: bool,
     /// Custom Discord application ID (optional).
     pub discord_client_id: Option<String>,
+    /// The page layout: "compact" (default) or "classic", the original design (src/layouts/).
+    pub layout: String,
 }
 
 impl Default for Config {
@@ -46,6 +48,7 @@ impl Default for Config {
             last_version: None,
             discord_rpc: true,
             discord_client_id: None,
+            layout: "compact".into(),
         }
     }
 }

@@ -37,6 +37,8 @@ export interface Config {
   lastVersion: string | null;
   discordRpc: boolean;
   discordClientId: string | null;
+  /** "compact", or "classic": the original design (src/layouts/compact.css). */
+  layout: "compact" | "classic";
 }
 
 export type DiscordStatus =

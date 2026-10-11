@@ -1,0 +1,83 @@
+/* The Compact layout (Settings → Appearance). Every rule is scoped to
+   :root[data-layout="compact"]: with Classic chosen none applies, and the
+   launcher looks exactly as it did before. To remove the layout, delete this
+   file and its import in main.ts. */
+
+/* ---- The game page: the title, the versions and Play on one band ---- */
+
+:root[data-layout="compact"] .page:has(> .hero) {
+  max-width: 1040px;
+  gap: 16px;
+}
+:root[data-layout="compact"] .hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "title go"
+    "versions go"
+    "steps steps";
+  align-items: center;
+  justify-items: start;
+  gap: 12px 28px;
+  padding: 24px 28px;
+  border-radius: 22px;
+}
+:root[data-layout="compact"] .hero > .title {
+  grid-area: title;
+  font-size: clamp(22px, 2.6vw, 32px);
+  padding: 12px 22px;
+  border-width: 5px;
+  text-align: left;
+}
+:root[data-layout="compact"] .hero > .versions {
+  grid-area: versions;
+}
+:root[data-layout="compact"] .hero > .go {
+  grid-area: go;
+  justify-self: end;
+  margin-top: 0;
+  max-width: 340px;
+}
+:root[data-layout="compact"] .hero .big {
+  font-size: 19px;
+  padding: 13px 38px;
+}
+:root[data-layout="compact"] .hero .line {
+  font-size: 13px;
+}
+:root[data-layout="compact"] .hero > .steps {
+  grid-area: steps;
+  justify-self: stretch;
+  margin: 4px 0 0;
+}
+:root[data-layout="compact"] .page-ambient-bg {
+  height: 360px;
+}
+
+@media (max-width: 760px) {
+  :root[data-layout="compact"] .hero {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "title" "versions" "go" "steps";
+    justify-items: center;
+  }
+  :root[data-layout="compact"] .hero > .go {
+    justify-self: center;
+  }
+}
+
+/* ---- The games: smaller cards, so more of them fit ---- */
+
+:root[data-layout="compact"] .card {
+  padding: 18px;
+  border-radius: 22px;
+}
+:root[data-layout="compact"] .card-content {
+  gap: 12px;
+}
+:root[data-layout="compact"] .card .title {
+  padding: 9px 18px;
+  border-radius: 14px;
+}
+:root[data-layout="compact"] .card .title-text {
+  font-size: 20px;
+}

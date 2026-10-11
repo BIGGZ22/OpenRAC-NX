@@ -8,6 +8,11 @@
   import Tasks from "./pages/Tasks.svelte";
 
   $effect(() => {
+    // The layout (Settings → Appearance): src/layouts/compact.css applies only to "compact".
+    document.documentElement.dataset.layout = app.config?.layout ?? "compact";
+  });
+
+  $effect(() => {
     // Sync Discord Rich Presence when page or game changes
     updateDiscordPresence(app.page, app.version);
   });

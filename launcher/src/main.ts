@@ -3,6 +3,7 @@ import "@fontsource-variable/orbitron";
 import "@fontsource/audiowide";
 import { mount } from "svelte";
 import "./app.css";
+import "./layouts/compact.css";
 import App from "./App.svelte";
 
 const target = document.getElementById("app");
