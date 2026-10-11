@@ -139,12 +139,13 @@ launcher/
   `https://openrac.dev/progress.json` and, when that works, rewrites the
   checkout's `progress/summary.json` with it (the copy shown offline).
 - **Discord**: unless switched off in Settings, Discord's Rich Presence shows
-  the game being viewed or played, and while Ratchet & Clank plays, the
-  planet (the port logs each level it enters), through Discord's local socket
-  (Linux and macOS), under OpenRAC's Discord application. While a game plays,
-  the large image is that application's art asset named after the game
-  (`rac1` to `rac4`, uploaded in Discord's Developer Portal): the logos are not
-  kept in OpenRAC.
+  the game being viewed, set up, built or played; while Ratchet & Clank plays,
+  the planet and the time on it (the port logs each level it enters), with
+  links to openrac.dev and GitHub. It talks to Discord's local socket (Linux,
+  macOS) or named pipe (Windows), under OpenRAC's Discord application. While a
+  game plays, the large image is that application's art asset named after the
+  game (`rac1` to `rac4`, uploaded in Discord's Developer Portal): the logos
+  are not kept in OpenRAC.
 - **Linux desktop integration**: at every start it writes its icons to
   `~/.local/share/icons/hicolor/` and two `.desktop` files to
   `~/.local/share/applications/`, and refreshes the desktop's caches.

@@ -157,6 +157,14 @@ export function currentVersion(): VersionView | null {
   return versions.find((v) => v.key === app.version) ?? null;
 }
 
+/** What Discord says a long job is doing; null for jobs it does not show. */
+function taskOf(actionId: string): string | null {
+  if (actionId.startsWith("install:")) return "Setting up from the disc";
+  if (actionId === "port-build" || actionId === "build") return "Building the game";
+  if (actionId === "editor-extract" || actionId === "editor-import") return "Preparing the level editor";
+  return null;
+}
+
 export function updateDiscordPresence(page: Page = app.page, version: string | null = app.version) {
   // While the game (the native port) runs, the status stays PlayingGame:
   const playingJob = jobs.list.find((j) => j.actionId === "play" && j.state === "running");
@@ -171,6 +179,26 @@ export function updateDiscordPresence(page: Page = app.page, version: string | n
         region: v.region,
         gameId: v.game,
         startTime: playingJob.startedAt ? Math.floor(playingJob.startedAt / 1000) : null,
+      });
+      return;
+    }
+  }
+
+  // A long job for a game: what it does, while it runs.
+  const working = jobs.list.find((j) => j.state === "running" && taskOf(j.actionId) !== null);
+  if (working) {
+    const games = app.library?.games ?? [];
+    const game =
+      working.scope.kind === "version"
+        ? games.find((g) => g.versions.some((ver) => working.scope.kind === "version" && ver.key === working.scope.key))
+        : games.find((g) => working.actionId === `install:${g.id}`);
+    if (game) {
+      void api.setDiscordStatus({
+        kind: "working",
+        task: taskOf(working.actionId) ?? working.title,
+        title: game.title,
+        gameId: game.id,
+        startTime: working.startedAt ? Math.floor(working.startedAt / 1000) : null,
       });
       return;
     }

@@ -56,6 +56,14 @@ export type DiscordStatus =
       region: string;
       gameId: string;
       startTime?: number | null;
+    }
+  | {
+      /** A long job for a game: set-up, build, the editor's preparation. */
+      kind: "working";
+      task: string;
+      title: string;
+      gameId: string;
+      startTime?: number | null;
     };
 
 export interface Candidate {

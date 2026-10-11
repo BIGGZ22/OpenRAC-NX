@@ -1,13 +1,20 @@
 //! Discord Rich Presence integration via local IPC socket.
 //!
-//! Connects to Discord's local Unix domain socket (`discord-ipc-0` .. `9`) on Linux/macOS
-//! and updates activity when idle in launcher or playing a game.
+//! Connects to Discord's local IPC endpoint (`discord-ipc-0` .. `9`): a Unix domain socket on
+//! Linux and macOS, a named pipe (`\\.\pipe\discord-ipc-N`) on Windows, and updates the
+//! activity: in the launcher, working on a game, or playing one.
 
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
+
+/// The connection to Discord: its socket, or on Windows its named pipe opened as a file.
+#[cfg(unix)]
+type Connection = std::os::unix::net::UnixStream;
+#[cfg(windows)]
+type Connection = std::fs::File;
 
 pub const DEFAULT_CLIENT_ID: &str = "1558096324602363955";
 
@@ -22,6 +29,23 @@ pub struct Activity {
     pub timestamps: Option<ActivityTimestamps>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub assets: Option<ActivityAssets>,
+    /// Up to two links under the activity; Discord shows them to others, not to yourself.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub buttons: Option<Vec<ActivityButton>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActivityButton {
+    pub label: String,
+    pub url: String,
+}
+
+/// The links every activity carries.
+fn buttons() -> Option<Vec<ActivityButton>> {
+    Some(vec![
+        ActivityButton { label: "OpenRAC".into(), url: "https://openrac.dev".into() },
+        ActivityButton { label: "GitHub".into(), url: "https://github.com/OpenRAC/OpenRAC".into() },
+    ])
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -52,15 +76,19 @@ pub enum DiscordStatus {
     Idle,
     ViewingGame { title: String, region: String, progress_pct: Option<f64>, game_id: String },
     PlayingGame { title: String, region: String, game_id: String, start_time: Option<u64> },
+    /// A long job for a game: setting it up from the disc, building it, preparing the editor.
+    Working { task: String, title: String, game_id: String, start_time: Option<u64> },
 }
 
 pub struct DiscordIpc {
     client_id: String,
-    #[cfg(unix)]
-    stream: Option<std::os::unix::net::UnixStream>,
+    #[cfg(any(unix, windows))]
+    stream: Option<Connection>,
     seq: u64,
-    /// The planet the running game reported (`planet_from_log`), shown while it plays.
+    /// The planet the running game reported (`planet_from_log`), shown while it plays, and since
+    /// when (the elapsed time counts from there).
     planet: Option<String>,
+    planet_since: u64,
     last: Option<(DiscordStatus, u64)>,
 }
 
@@ -68,10 +96,11 @@ impl DiscordIpc {
     pub fn new(client_id: impl Into<String>) -> Self {
         Self {
             client_id: client_id.into(),
-            #[cfg(unix)]
+            #[cfg(any(unix, windows))]
             stream: None,
             seq: 0,
             planet: None,
+            planet_since: 0,
             last: None,
         }
     }
@@ -85,46 +114,43 @@ impl DiscordIpc {
     }
 
     pub fn disconnect(&mut self) {
-        #[cfg(unix)]
+        #[cfg(any(unix, windows))]
         {
             self.stream = None;
         }
     }
 
-    #[cfg(unix)]
-    fn connect(&mut self) -> Result<&mut std::os::unix::net::UnixStream, String> {
+    #[cfg(any(unix, windows))]
+    fn connect(&mut self) -> Result<&mut Connection, String> {
         if self.stream.is_some() {
             return self.stream.as_mut().ok_or_else(|| "Discord IPC socket closed".to_string());
         }
 
-        let socket_paths = find_socket_paths();
-        for path in socket_paths {
-            if let Ok(mut stream) = std::os::unix::net::UnixStream::connect(&path) {
-                let _ = stream.set_read_timeout(Some(std::time::Duration::from_millis(150)));
-                let _ = stream.set_write_timeout(Some(std::time::Duration::from_millis(150)));
+        for path in find_socket_paths() {
+            let Some(mut stream) = open_connection(&path) else {
+                continue;
+            };
+            // Handshake (Opcode 0): {"v": 1, "client_id": "..."}
+            let payload = serde_json::json!({
+                "v": 1,
+                "client_id": self.client_id
+            })
+            .to_string();
 
-                // Handshake (Opcode 0): {"v": 1, "client_id": "..."}
-                let payload = serde_json::json!({
-                    "v": 1,
-                    "client_id": self.client_id
-                })
-                .to_string();
-
-                if send_packet(&mut stream, 0, &payload).is_ok() {
-                    // Try reading handshake response packet
-                    match read_packet(&mut stream) {
-                        Ok((opcode, data)) => {
-                            if opcode == 1 {
-                                return Ok(self.stream.insert(stream));
-                            } else if opcode == 2 {
-                                if let Ok(err) = std::str::from_utf8(&data) {
-                                    eprintln!("[discord-rpc] Handshake error: {err}");
-                                }
+            if send_packet(&mut stream, 0, &payload).is_ok() {
+                // Try reading handshake response packet
+                match read_packet(&mut stream) {
+                    Ok((opcode, data)) => {
+                        if opcode == 1 {
+                            return Ok(self.stream.insert(stream));
+                        } else if opcode == 2 {
+                            if let Ok(err) = std::str::from_utf8(&data) {
+                                eprintln!("[discord-rpc] Handshake error: {err}");
                             }
                         }
-                        Err(_) => {
-                            // Read timeout or socket busy, proceed silently to next candidate
-                        }
+                    }
+                    Err(_) => {
+                        // Read timeout or socket busy, proceed silently to next candidate
                     }
                 }
             }
@@ -134,7 +160,7 @@ impl DiscordIpc {
     }
 
     pub fn update_activity(&mut self, activity: Option<&Activity>) -> Result<(), String> {
-        #[cfg(unix)]
+        #[cfg(any(unix, windows))]
         {
             self.seq += 1;
             let nonce = self.seq.to_string();
@@ -168,7 +194,7 @@ impl DiscordIpc {
             }
             Ok(())
         }
-        #[cfg(not(unix))]
+        #[cfg(not(any(unix, windows)))]
         {
             let _ = activity;
             Ok(())
@@ -181,6 +207,7 @@ impl DiscordIpc {
             return Ok(());
         }
         self.planet = planet;
+        self.planet_since = now_sec();
         match self.last.clone() {
             Some((status @ DiscordStatus::PlayingGame { .. }, app_start)) => self.set_status(&status, app_start),
             _ => Ok(()),
@@ -191,6 +218,7 @@ impl DiscordIpc {
         self.last = Some((status.clone(), app_start));
         let activity = match status {
             DiscordStatus::Idle => Activity {
+                buttons: None,
                 details: Some("In Launcher".into()),
                 state: Some("Browsing Library".into()),
                 timestamps: Some(ActivityTimestamps { start: Some(app_start), end: None }),
@@ -207,6 +235,7 @@ impl DiscordIpc {
                     None => region.clone(),
                 };
                 Activity {
+                    buttons: None,
                     details: Some(format!("Viewing {title}")),
                     state: Some(state_str),
                     timestamps: Some(ActivityTimestamps { start: Some(app_start), end: None }),
@@ -221,12 +250,19 @@ impl DiscordIpc {
             DiscordStatus::PlayingGame { title, region, game_id, start_time } => {
                 let current_sec = now_sec();
                 Activity {
+                    buttons: None,
                     details: Some(format!("Playing {title}")),
                     state: Some(match &self.planet {
                         Some(planet) => format!("On {planet} ({region})"),
                         None => format!("In Game ({region})"),
                     }),
-                    timestamps: Some(ActivityTimestamps { start: Some(start_time.unwrap_or(current_sec)), end: None }),
+                    timestamps: Some(ActivityTimestamps {
+                        start: Some(match self.planet {
+                            Some(_) => self.planet_since,
+                            None => start_time.unwrap_or(current_sec),
+                        }),
+                        end: None,
+                    }),
                     assets: Some(ActivityAssets {
                         large_image: Some(game_image_url(game_id)),
                         large_text: Some(title.clone()),
@@ -235,7 +271,20 @@ impl DiscordIpc {
                     }),
                 }
             }
+            DiscordStatus::Working { task, title, game_id, start_time } => Activity {
+                details: Some(task.clone()),
+                state: Some(title.clone()),
+                timestamps: Some(ActivityTimestamps { start: Some(start_time.unwrap_or_else(now_sec)), end: None }),
+                assets: Some(ActivityAssets {
+                    large_image: Some(game_image_url(game_id)),
+                    large_text: Some(title.clone()),
+                    small_image: Some("https://openrac.dev/wrench.webp".into()),
+                    small_text: Some("OpenRAC".into()),
+                }),
+                buttons: None,
+            },
         };
+        let activity = Activity { buttons: buttons(), ..activity };
 
         self.update_activity(Some(&activity))
     }
@@ -267,6 +316,25 @@ pub fn game_image_url(game_id: &str) -> String {
 
 pub fn now_sec() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()
+}
+
+#[cfg(unix)]
+fn open_connection(path: &std::path::Path) -> Option<Connection> {
+    let stream = std::os::unix::net::UnixStream::connect(path).ok()?;
+    let _ = stream.set_read_timeout(Some(std::time::Duration::from_millis(150)));
+    let _ = stream.set_write_timeout(Some(std::time::Duration::from_millis(150)));
+    Some(stream)
+}
+
+/// A pipe has no timeouts: Discord answers every packet, so a read returns.
+#[cfg(windows)]
+fn open_connection(path: &std::path::Path) -> Option<Connection> {
+    std::fs::OpenOptions::new().read(true).write(true).open(path).ok()
+}
+
+#[cfg(windows)]
+fn find_socket_paths() -> Vec<PathBuf> {
+    (0..10).map(|i| PathBuf::from(format!(r"\\.\pipe\discord-ipc-{i}"))).collect()
 }
 
 #[cfg(unix)]
@@ -324,7 +392,7 @@ fn find_socket_paths() -> Vec<PathBuf> {
     candidates
 }
 
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 fn send_packet<W: Write>(writer: &mut W, opcode: u32, payload: &str) -> std::io::Result<()> {
     let bytes = payload.as_bytes();
     let len = bytes.len() as u32;
@@ -339,7 +407,7 @@ fn send_packet<W: Write>(writer: &mut W, opcode: u32, payload: &str) -> std::io:
     Ok(())
 }
 
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 fn read_packet<R: Read>(reader: &mut R) -> std::io::Result<(u32, Vec<u8>)> {
     let mut header = [0u8; 8];
     reader.read_exact(&mut header)?;
@@ -358,6 +426,7 @@ mod tests {
     #[test]
     fn serializes_activity_cleanly() {
         let act = Activity {
+            buttons: buttons(),
             details: Some("Playing Ratchet & Clank".into()),
             state: Some("In Game (PAL)".into()),
             timestamps: Some(ActivityTimestamps { start: Some(1700000000), end: None }),
@@ -372,6 +441,7 @@ mod tests {
         let json = serde_json::to_string(&act).unwrap();
         assert!(json.contains("Playing Ratchet & Clank"));
         assert!(json.contains("\"large_image\":\"rac1\""));
+        assert!(json.contains("\"buttons\":[{\"label\":\"OpenRAC\",\"url\":\"https://openrac.dev\"}"));
     }
 
     #[test]
