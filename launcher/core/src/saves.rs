@@ -84,56 +84,45 @@ fn decode_bcd(byte: u8) -> Option<u32> {
     }
 }
 
-/// Try to parse in-game timestamp from Ratchet & Clank save file header.
-/// In rac1 save.bin:
-/// offset 0x48: 4 bytes BCD time (HH MM SS 00)
-/// offset 0x4c: 4 bytes BCD date (YY MM DD 00)
-fn parse_save_timestamp(bytes: &[u8]) -> Option<String> {
-    if bytes.len() < 0x50 {
+/// The save's clock (record 4): the console clock as sceCdReadClock gives it, BCD
+/// `stat, second, minute, hour, pad, day, month, year`. None when unset or invalid.
+fn parse_save_clock(clock: &[u8]) -> Option<String> {
+    if clock.len() < 8 || clock.iter().all(|&b| b == 0) {
         return None;
     }
-    // Check if empty slot (all zeros at 0x48..0x50)
-    if bytes[0x48..0x50].iter().all(|&b| b == 0) {
-        return None;
-    }
-
-    let h = decode_bcd(bytes[0x48])?;
-    let m = decode_bcd(bytes[0x49])?;
-    let s = decode_bcd(bytes[0x4a])?;
-
-    let y = decode_bcd(bytes[0x4c])?;
-    let mo = decode_bcd(bytes[0x4d])?;
-    let d = decode_bcd(bytes[0x4e])?;
-
+    let s = decode_bcd(clock[1])?;
+    let m = decode_bcd(clock[2])?;
+    let h = decode_bcd(clock[3])?;
+    let d = decode_bcd(clock[5])?;
+    let mo = decode_bcd(clock[6])?;
+    let y = decode_bcd(clock[7])?;
     if !(1..=12).contains(&mo) || !(1..=31).contains(&d) || h > 23 || m > 59 || s > 59 {
         return None;
     }
-
-    let full_year = 2000 + y;
-    Some(format!("{full_year:04}-{mo:02}-{d:02} {h:02}:{m:02}:{s:02}"))
+    Some(format!("{:04}-{mo:02}-{d:02} {h:02}:{m:02}:{s:02}", 2000 + y))
 }
 
-/// Ratchet & Clank 1 planet names by internal planet ID (0..18).
+/// Ratchet & Clank 1 planet names by level number (games/rac1/pal/docs/OVERLAYS.md).
 pub const RAC1_PLANETS: &[&str] = &[
-    "Veldin (Kyzil Plateau)",   // 0
-    "Novalis (Tobruk Crater)",  // 1
-    "Aridia (Outpost X11)",     // 2
-    "Kerwan (Metropolis)",      // 3
-    "Eudora (Logging Site)",    // 4
-    "Rilgar (Blackwater City)", // 5
-    "Blarg Station",            // 6
-    "Umbris (Snagglebeast)",    // 7
-    "Batalia (Fort Krontos)",   // 8
-    "Gaspar (Jowai Resort)",    // 9
-    "Orxon (Kogor Refinery)",   // 10
-    "Pokitaru (Jowai Resort)",  // 11
-    "Hoven (Bomb Factory)",     // 12
-    "Gemlik Base",              // 13
-    "Oltanis (Gorda City)",     // 14
-    "Quartu (Robot Plant)",     // 15
-    "Kalebo III (Gadgetron)",   // 16
-    "Drek's Fleet",             // 17
-    "Veldin (Return)",          // 18
+    "Veldin", // 0
+    "Novalis", // 1
+    "Aridia", // 2
+    "Kerwan", // 3
+    "Eudora", // 4
+    "Rilgar", // 5
+    "Blarg Station", // 6
+    "Umbris", // 7
+    "Batalia", // 8
+    "Gaspar", // 9
+    "Orxon", // 10
+    "Pokitaru", // 11
+    "Hoven", // 12
+    "Gemlik Base", // 13
+    "Oltanis", // 14
+    "Quartu", // 15
+    "Kalebo III", // 16
+    "Drek's Fleet", // 17
+    "Veldin", // 18
 ];
 
 pub fn get_planet_name(serial: &str, planet_id: u32) -> Option<String> {
@@ -149,11 +138,15 @@ pub fn get_planet_name(serial: &str, planet_id: u32) -> Option<String> {
 struct SaveGameplayInfo {
     bolts: Option<u32>,
     planet_id: Option<u32>,
+    /// Record 0 is -1 in a slot never saved to.
+    empty: bool,
+    timestamp: Option<String>,
 }
 
 /// Parses internal records from serialized Ratchet & Clank save data:
 /// - Record 0: Current planet ID (D_0015EE84)
 /// - Record 1: Current bolt count (gBolts, D_0015EE98)
+/// - Record 4: the clock when saved (parse_save_clock)
 fn parse_save_gameplay_info(bytes: &[u8]) -> SaveGameplayInfo {
     if bytes.len() < 24 {
         return SaveGameplayInfo::default();
@@ -180,12 +173,15 @@ fn parse_save_gameplay_info(bytes: &[u8]) -> SaveGameplayInfo {
 
         if rec_id == 0 && sz >= 4 {
             let pid = u32::from_le_bytes(bytes[data_start..data_start + 4].try_into().unwrap());
+            info.empty = pid == u32::MAX;
             if pid < 50 {
                 info.planet_id = Some(pid);
             }
         } else if rec_id == 1 && sz >= 4 {
             let b = u32::from_le_bytes(bytes[data_start..data_start + 4].try_into().unwrap());
             info.bolts = Some(b);
+        } else if rec_id == 4 {
+            info.timestamp = parse_save_clock(&bytes[data_start..data_end]);
         }
 
         cursor = data_start + ((sz + 3) & !3);
@@ -259,12 +255,11 @@ pub fn inspect_saves(serial: &str) -> GameSaveStatus {
                         .map(|d| d.as_millis() as u64);
 
                     let data = fs::read(&save_path).unwrap_or_default();
-                    let ts = parse_save_timestamp(&data);
-                    // In rac1, an initialized but empty save slot has 0x00 at 0x48..0x50 and 0xffffffff at 0x18
-                    let empty = ts.is_none() || (data.len() > 0x1c && data[0x18..0x1c] == [0xff, 0xff, 0xff, 0xff]);
+                    let g = parse_save_gameplay_info(&data);
+                    let empty = g.empty || g.timestamp.is_none();
+                    let ts = if empty { None } else { g.timestamp.clone() };
 
                     let (b, pid, pname) = if !empty {
-                        let g = parse_save_gameplay_info(&data);
                         let pn = g.planet_id.and_then(|p| get_planet_name(serial, p));
                         (g.bolts, g.planet_id, pn)
                     } else {
@@ -461,21 +456,37 @@ fn decode_shift_jis_or_ascii(bytes: &[u8]) -> Option<String> {
 mod tests {
     use super::*;
 
+    /// A save as the game writes it: the four size words, then records {id, size, data}.
+    fn save(records: &[(i32, &[u8])]) -> Vec<u8> {
+        let mut out = vec![0u8; 16];
+        for (id, data) in records {
+            out.extend_from_slice(&id.to_le_bytes());
+            out.extend_from_slice(&(data.len() as i32).to_le_bytes());
+            out.extend_from_slice(data);
+            out.resize(out.len().div_ceil(4) * 4, 0);
+        }
+        out.extend_from_slice(&(-1i32).to_le_bytes());
+        out
+    }
+
     #[test]
-    fn parses_bcd_timestamp() {
-        let mut data = vec![0u8; 0x60];
-        data[0x48] = 0x14; // 14:
-        data[0x49] = 0x30; // 30:
-        data[0x4a] = 0x15; // 15
-        data[0x4b] = 0x00;
+    fn reads_planet_bolts_and_clock() {
+        let clock = [0x00, 0x14, 0x14, 0x23, 0x00, 0x10, 0x10, 0x26];
+        let data = save(&[(0, &3u32.to_le_bytes()), (1, &1234u32.to_le_bytes()), (4, &clock)]);
+        let g = parse_save_gameplay_info(&data);
+        assert!(!g.empty);
+        assert_eq!(g.planet_id, Some(3));
+        assert_eq!(g.bolts, Some(1234));
+        assert_eq!(g.timestamp.as_deref(), Some("2026-10-10 23:14:14"));
+        assert_eq!(get_planet_name("SCES_509.16", 3).as_deref(), Some("Kerwan"));
+    }
 
-        data[0x4c] = 0x26; // 2026-
-        data[0x4d] = 0x10; // 10-
-        data[0x4e] = 0x09; // 09
-        data[0x4f] = 0x00;
-
-        let parsed = parse_save_timestamp(&data);
-        assert_eq!(parsed, Some("2026-10-09 14:30:15".to_string()));
+    #[test]
+    fn an_unused_slot_is_empty() {
+        let data = save(&[(0, &u32::MAX.to_le_bytes()), (4, &[0u8; 8])]);
+        let g = parse_save_gameplay_info(&data);
+        assert!(g.empty);
+        assert_eq!(g.timestamp, None);
     }
 
     #[test]
