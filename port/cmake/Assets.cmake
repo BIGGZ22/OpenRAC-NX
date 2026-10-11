@@ -129,7 +129,7 @@ openrac_add_module_tests(assets openrac_assets_core)
 # default once it is reviewed and tested and listed here; the others only
 # with -DOPENRAC_PORT_WIP=ON.
 option(OPENRAC_PORT_WIP "Build the unfinished parts of the ReRAC conversion (WIP.md)" OFF)
-set(OPENRAC_PORT_READY disc extract geometry world sound media audio)
+set(OPENRAC_PORT_READY disc extract geometry world sound media audio renderer_world)
 function(openrac_part_enabled part out)
   if(OPENRAC_PORT_WIP OR part IN_LIST OPENRAC_PORT_READY)
     set(${out} ON PARENT_SCOPE)

@@ -15,7 +15,7 @@ agent worked to (rules, layout, legal constraints).
 | Geometry | `assets/geometry/`, `tests/geometry/` | rc-formats texture, vif, tfrag, tie, shrub, sky, moby, moby_anim, moby_light, moby_collision, moby_shadow, gadget, lighting | **done**: reviewed, tested, built by default |
 | World data | `assets/world/`, `tests/assets_world/` | rc-formats collision, occlusion, cameras, gameplay, font, hud, pif, spaceships | **done**: reviewed, tested, built by default; water and sea left to the decompiled level code |
 | Sound, movies, audio | `assets/sound/`, `media/`, `audio/`, their tests | rc-formats sound_bank, vag, pss; rc-video (MPEG-2); the voices and reverb; a 989snd player after OpenGOAL's | **done**: reviewed, tested, built by default; VAG stream players and the snd.c hook-up still to do |
-| World renderers | `renderer/world/`, `renderer/shaders/world/` | rc-engine renderers and its 23 WGSL shaders, to GLSL 4.1 | writing the draw-data definitions |
+| World renderers | `renderer/world/`, `renderer/shaders/world/` | rc-engine renderers and its 23 WGSL shaders, to GLSL 4.1 | **tfrag and ties done**: tested (`world_lod`, `world_gl_smoke`), built by default; shrubs, mobys, sky, particles, water and HUD have draw data but no renderer yet |
 | Engine docs | `../docs/engine/formats/`, `../docs/engine/systems/` | ReRAC docs/formats and docs/plan | part-way; docs/engine/README.md not updated |
 
 To continue: finish each part against WIP_BRIEF.md, build it with

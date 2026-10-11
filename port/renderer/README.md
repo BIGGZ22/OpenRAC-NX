@@ -36,7 +36,11 @@ Shaders are in `shaders/` and compiled into the library
 
 ## Placeholders and gaps
 
-The world renderers (`subsystems.h`) draw nothing yet: they need the game's
+`world/` holds the world renderers converted from ReRAC: terrain (tfrag) and
+ties, with the game's level of detail, culling and fog replayed on the CPU
+(`tfrag_lod.h`, `tie_lod.h`, `fog.h`); `draw_data.h` also defines the inputs
+of shrubs, mobys, sky, particles and water, which have no renderer yet. The
+placeholders (`subsystems.h`) draw nothing yet: they need the game's
 camera, visibility and lights, which come with the decompiled frame loop.
 The level viewer ([viewer/](../viewer/README.md)) already draws the extracted
 terrain, ties, shrubs, moby bind poses and sky.
