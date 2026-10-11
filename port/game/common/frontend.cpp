@@ -101,6 +101,11 @@ struct State {
     std::vector<std::pair<std::array<std::uint8_t, 0x20>, std::uint64_t>> sky_sprites;
     // The 2D layer's quads drawn natively since the last frame (ui_quad), by marker index.
     std::vector<renderer::UiQuad> ui_quads;
+    // The last world drawn (last_world): the tick it was drawn on; whether the last tick was a page
+    // menu's with its snapshot; whether this tick's frames go over the last world (draw_kept).
+    std::uint64_t last_world_tick = 0;
+    bool last_tick_menu = false;
+    bool hold_last_world = false;
     Kept kept;
 };
 
@@ -1182,20 +1187,37 @@ void draw_kept(bool first) {
     // A tick that draws no world and has no picture of its own to put under its 2D (the page
     // menu's first ticks, before its snapshot of the frame comes; the tick it closes on): the
     // console still shows the last frame there, so the 2D goes over the last world drawn, not black.
+    // Only right after the world was drawn (the menu opening) or right after a menu tick with its
+    // snapshot (the menu closing): other ticks without a world (a new game's captions between its
+    // scenes) are drawn on black, as they come.
     constexpr std::size_t kSnapshotBytes = 0x40000;
-    if (has_camera && (k.draws & 0x0Fu) == 0 && k.before_world < kSnapshotBytes && g->last_world.width() == width
+    const bool after_world = g->last_world_tick != 0 && k.frame - g->last_world_tick <= 3;
+    if (first && has_camera && (k.draws & 0x0Fu) == 0 && k.before_world < kSnapshotBytes
+        && (after_world || g->last_tick_menu) && g->last_world.width() == width
         && g->last_world.height() == height) {
+        g->hold_last_world = true;
+    } else if (first) {
+        g->hold_last_world = false;
+    }
+    if (g->hold_last_world && g->last_world.width() == width && g->last_world.height() == height) {
         g->last_world.blit_to(g->frame.id(), width, height);
         input.keep_colour = true;
     }
-    if (g->renderer) {
-        g->renderer->render(input, {g->frame.id(), width, height});
-        if (first && has_camera && (k.draws & 0x1Fu) != 0 && width > 0 && height > 0) {
+    // The last frame that drew its world, as the world alone (before the HUD's 2D goes over it):
+    // what the page menus read back for their background, and what a tick without a world of its
+    // own is drawn over.
+    if (first && has_camera && (k.draws & 0x1Fu) != 0 && width > 0 && height > 0) {
+        input.before_hud = [&]() {
             if (g->last_world.width() != width || g->last_world.height() != height) {
-                g->last_world.create(width, height, error);
+                std::string e;
+                g->last_world.create(width, height, e);
             }
             g->frame.blit_to(g->last_world.id(), width, height);
-        }
+            g->last_world_tick = k.frame;
+        };
+    }
+    if (g->renderer) {
+        g->renderer->render(input, {g->frame.id(), width, height});
     }
     debug_menu::draw(g->frame.id(), width, height);
     // OPENRAC_SHOT=FRAME:FILE.png writes that frame (for checking without looking at the screen);
@@ -1471,6 +1493,7 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     k.palette = std::move(palette);
     k.draws = draws;
     k.has_camera = state.forward[0] != 0.0f || state.forward[1] != 0.0f || state.forward[2] != 0.0f;
+    g->last_tick_menu = k.before_world >= 0x40000;  // the last tick's, read before this one's is kept
     k.frame = g->index++;
     // OPENRAC_DUMP_DRAWS=N or N-M: the frames whose 2D draws are logged.
     static const char* dump_at = std::getenv("OPENRAC_DUMP_DRAWS");

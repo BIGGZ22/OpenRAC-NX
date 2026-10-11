@@ -19,6 +19,7 @@
 #pragma once
 
 #include <array>
+#include <functional>
 #include <cstdint>
 #include <memory>
 #include <span>
@@ -126,6 +127,9 @@ struct FrameInput {
     // The target already holds the picture to start from (a tick that draws no world of its own):
     // only depth is cleared.
     bool keep_colour = false;
+    // Called with the target as drawn before the HUD's renderer (the world, without the 2D over
+    // it): what a copy of the frame the game reads back should hold.
+    std::function<void()> before_hud;
     std::uint64_t frame = 0;
     double seconds = 0.0;
 };

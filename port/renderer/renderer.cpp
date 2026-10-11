@@ -83,7 +83,21 @@ void Renderer::render(const FrameInput& input, const RenderTarget& target) {
     glDepthFunc(GL_GEQUAL);
 
     RenderState state{m_textures, target, {}};
-    for (auto& r : m_renderers) {
+    // The HUD's renderer is the last of its bucket (the part of the 2D path before the world is
+    // drawn by one ahead of the world's).
+    std::size_t hud = m_renderers.size();
+    for (std::size_t i = 0; i < m_renderers.size(); ++i) {
+        if (m_renderers[i]->bucket() == Bucket::Hud) {
+            hud = i;
+        }
+    }
+    for (std::size_t i = 0; i < m_renderers.size(); ++i) {
+        if (i == hud && input.before_hud) {
+            input.before_hud();
+            glBindFramebuffer(GL_FRAMEBUFFER, target.framebuffer);
+            glViewport(0, 0, target.width, target.height);
+        }
+        auto& r = m_renderers[i];
         if (r->enabled) {
             r->render(input, state);
         }
