@@ -286,10 +286,12 @@ tail:
 }
 typedef struct { char pad[0x254]; int p; char pad2[0x18]; short s; char pad3[1]; char c; char pad4[0x14]; float f0; char pad5[8]; float f1; } S;
 extern S D_L00_00166D80;
-extern void func_L00_002EB3A0();
+extern void func_L00_002EB3A0(char *);
 extern void func_0022ED80(int, int, int);
 
-void func_L00_002EBC50(void) {
+/* ActivateCamera_4, the first-person camera's init: the camera it gets is handed on to the
+   state reset (func_L00_002EB3A0), which builds the camera's rows. */
+void func_L00_002EBC50(char *cam) {
     S *g = &D_L00_00166D80;
     S *h;
     if (g->s == 0) g->s = 1; else g->s = 2;
@@ -297,7 +299,7 @@ void func_L00_002EBC50(void) {
     h->c = 0;
     h->f1 = 0.05f;
     h->f0 = 0.05f;
-    func_L00_002EB3A0();
+    func_L00_002EB3A0(cam);
     if (h->p != 0) func_0022ED80(0, 0, h->p);
 }
 typedef struct { float x, y, z, w; } Vec4 __attribute__((aligned(16)));
