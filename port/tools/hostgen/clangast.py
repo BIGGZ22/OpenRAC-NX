@@ -127,7 +127,11 @@ def fix_from_diagnostics(text: str, stderr: str, rel: str) -> tuple[str, list[st
                 # every call to the definition's parameters anyway).
                 alias = f"{name}__openrac_decl_{line + 1}"
                 decl = re.sub(rf"\b{name}\b", alias, lines[line], count=1)
-                decl, n = re.subn(r"\)\s*;", f') __asm__("{name}");', decl, count=1)
+                if re.search(r"__asm__\s*\(", decl):
+                    # Already labelled with its symbol: the label stays the alias's.
+                    n = 1
+                else:
+                    decl, n = re.subn(r"\)\s*;", f') __asm__("{name}");', decl, count=1)
                 if n == 0:
                     continue
                 lines[line] = decl
@@ -150,14 +154,27 @@ def fix_from_diagnostics(text: str, stderr: str, rel: str) -> tuple[str, list[st
             fixes.append(f"line {use + 1}: {name} called before its declaration, as int {name}()")
             continue
         if msg.startswith(("cannot apply asm label to function after its first use", "conflicting asm label")):
-            src = lines[line]
-            lm = re.search(r"\b(\w+)\s*\(([^;]*)\)\s*(__asm__|asm)\s*\(\s*\"([^\"]+)\"\s*\)", src)
-            if lm:
-                lines[line] = src[:lm.start(3)] + " " * (lm.end() - lm.start(3)) + src[lm.end():]
-                if msg.startswith("cannot apply"):
+            # The label may be on a declaration that runs over several lines, and for a conflict
+            # it may be on the earlier declaration the note points at, not on this line.
+            places = [line]
+            note = diags[k + 1] if k + 1 < len(diags) else None
+            if note is not None and note["kind"] == "note" and note["file"].replace("\\", "/").endswith(rel):
+                places.append(int(note["line"]) - 1)
+            for at in places:
+                end = at
+                while end < len(lines) - 1 and end - at < 6 and ";" not in lines[end] and "{" not in lines[end]:
+                    end += 1
+                window = "\n".join(lines[at:end + 1])
+                lm = re.search(r"\b(\w+)\s*\(([^;{]*)\)\s*(__asm__|asm)\s*\(\s*\"([^\"]+)\"\s*\)", window)
+                if not lm:
+                    continue
+                cut = window[:lm.start(3)] + re.sub(r"[^\n]", " ", window[lm.start(3):lm.end()]) + window[lm.end():]
+                lines[at:end + 1] = cut.split("\n")
+                if msg.startswith("cannot apply") or at != line:
                     fixes.append(f"alias {lm.group(1)} {lm.group(4)}")
                 else:
                     fixes.append(f"line {line + 1}: second asm label {lm.group(4)} for {lm.group(1)} removed")
+                break
             continue
         if re.match(r"(invalid (output|input) constraint|unknown register name|invalid operand in inline asm"
                     r"|couldn't allocate .* inline asm)", msg):
