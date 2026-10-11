@@ -11,6 +11,7 @@ in vec4 v_colour;
 in float v_fog;
 
 uniform sampler2D tex_T0;
+uniform sampler2D tex_T1;      // with distance_field: R the glyphs' opacity, A the distance to their edge
 uniform int textured;
 uniform int tcc;              // take alpha from the texture
 uniform int tfx;              // 0 modulate, 1 decal, 2 highlight, 3 highlight2
@@ -20,6 +21,7 @@ uniform vec3 fog_colour;      // 0..255
 uniform int alpha_test;       // 0 off, else TEST.ATST (2 LESS ... 7 NOTEQUAL)
 uniform float alpha_ref;      // TEST.AREF
 uniform int alpha_keep_failing;  // the second pass of the double draw
+uniform int distance_field;   // the texture's alpha is a distance field (text drawn sharp)
 
 layout(location = 0) out vec4 out_colour;
 
@@ -41,7 +43,15 @@ void main() {
     if (textured != 0) {
         // S/Q, T/Q per pixel, as the chip divides.
         vec4 t = texture(tex_T0, v_stq.xy / v_stq.z) * 255.0;
-        t.a *= tex_alpha_scale;
+        if (distance_field != 0) {
+            // The edge from the distance field, about a pixel wide at any size; inside it, the
+            // glyph's own opacity (the font fades its glyphs downwards), in the chip's units.
+            vec4 f = texture(tex_T1, v_stq.xy / v_stq.z);
+            float w = max(fwidth(f.a) * 0.75, 1e-4);
+            t.a = smoothstep(0.5 - w, 0.5 + w, f.a) * f.r * 128.0;
+        } else {
+            t.a *= tex_alpha_scale;
+        }
         if (tfx == 0) {
             c.rgb = c.rgb * t.rgb / 128.0;
             c.a = tcc != 0 ? c.a * t.a / 128.0 : c.a;

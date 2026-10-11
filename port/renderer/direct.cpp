@@ -323,6 +323,11 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
     Context& c1 = m_context[0];
     Context& c2 = m_context[1];
     switch (address) {
+        case 0x7F:  // NOP; the port's marker for a quad of the 2D layer drawn natively
+            if ((value >> 48) == kUiQuadMarker && (value & 0xFFFFFFFFu) < m_ui_quads.size()) {
+                native_quad(m_ui_quads[value & 0xFFFFFFFFu]);
+            }
+            return;
         case gs::kPrim:
             write_prim(value);
             return;
@@ -647,7 +652,59 @@ void GifInterpreter::draw_frame_upload(const ImageUpload& upload) {
     m_state_dirty = true;  // the next primitive's state is its own again
 }
 
+// A quad of the 2D layer: as a textured, blended triangle strip with texel coordinates through its
+// four corners, its texture and colour, drawn from the port's own record.
+void GifInterpreter::native_quad(const UiQuad& quad) {
+    write_register(gs::kTex0_1, quad.tex0);
+    const bool sprite = (quad.flags & kUiSprite) != 0;
+    write_prim(sprite ? 0x156 : 0x154);
+    m_glyph = (quad.flags & kUiGlyph) != 0;
+    m_in_native = true;
+    for (int i = 0; i < 4; ++i) {
+        if (sprite && (i == 1 || i == 2)) {
+            continue;
+        }
+        m_current.rgba[0] = static_cast<std::uint8_t>(quad.rgba);
+        m_current.rgba[1] = static_cast<std::uint8_t>(quad.rgba >> 8);
+        m_current.rgba[2] = static_cast<std::uint8_t>(quad.rgba >> 16);
+        m_current.rgba[3] = static_cast<std::uint8_t>(quad.rgba >> 24);
+        m_current.q = 1.0f;
+        m_current.u = quad.u[i];
+        m_current.v = quad.v[i];
+        m_current.x = quad.x[i];
+        m_current.y = quad.y[i];
+        m_current.z = quad.z;
+        kick(true);
+    }
+    m_in_native = false;
+    if (m_glyph) {
+        m_glyph = false;
+        m_state_dirty = true;
+    }
+}
+
+// OPENRAC_UI_RESIDUAL: each kind of 2D primitive still drawn from the game's packets (not a native
+// quad), once: what is left to move off the GS packets.
+static void log_residual(const gs::Prim& prim, const gs::Tex0& tex0, bool native) {
+    static const bool on = std::getenv("OPENRAC_UI_RESIDUAL") != nullptr;
+    if (!on || native) {
+        return;
+    }
+    static std::vector<std::uint64_t> seen;
+    const std::uint64_t key = static_cast<std::uint64_t>(prim.kind) | (static_cast<std::uint64_t>(prim.tme) << 4)
+                              | (static_cast<std::uint64_t>(prim.tme ? tex0.tbp0 : 0) << 8);
+    if (std::find(seen.begin(), seen.end(), key) != seen.end()) {
+        return;
+    }
+    seen.push_back(key);
+    log::info("ui residual: prim {} textured {} tbp {:#x} psm {:#x}", static_cast<int>(prim.kind), prim.tme ? 1 : 0,
+              prim.tme ? tex0.tbp0 : 0u, prim.tme ? tex0.psm : 0u);
+}
+
 void GifInterpreter::kick(bool draw) {
+    if (draw) {
+        log_residual(attributes(), context().tex0, m_in_native);
+    }
     m_queue[m_queued++] = m_current;
     if (g_dump_draws && m_prim.kind != gs::PrimKind::Sprite) {
         const gs::Alpha& al = context().alpha;
@@ -865,11 +922,19 @@ void GifInterpreter::ensure_draw() {
             s.clamp_t = true;
         } else if (s.textured) {
             s.texture = m_textures.resolve(c.tex0, m_texa);
+            if (m_glyph && s.texture != m_textures.placeholder()) {
+                s.field = m_textures.distance_field(s.texture);
+                s.distance_field = s.field != s.texture;
+            }
             s.texture_full_alpha = m_textures.alpha_scale(s.texture) == AlphaScale::Full;
             s.tcc = c.tex0.tcc;
             s.tfx = c.tex0.tfx;
             s.linear_mag = c.tex1.mmag;
             s.linear_min = c.tex1.mmin == 1 || c.tex1.mmin == 4 || c.tex1.mmin == 5;
+            if (s.distance_field) {
+                s.linear_mag = true;
+                s.linear_min = true;
+            }
             // Region clamp and repeat have no GL equivalent; clamp is the
             // closer of the two for the 2D path.
             s.clamp_s = c.clamp.wms != gs::Wrap::Repeat;
@@ -882,6 +947,14 @@ void GifInterpreter::ensure_draw() {
         s.test = c.test;
         s.depth_write = !c.zbuf.zmsk;
         s.fbmsk = c.frame.fbmsk;
+        // A texture nothing has been put at yet (the game draws before its upload arrives): the
+        // chip would show whatever its memory held, so the draw writes nothing, rather than the
+        // placeholder's magenta (OPENRAC_SHOW_MISSING shows it, for finding missing textures).
+        static const bool show_missing = std::getenv("OPENRAC_SHOW_MISSING") != nullptr;
+        if (s.textured && s.texture == m_textures.placeholder() && !show_missing) {
+            s.fbmsk = 0xFFFFFFFFu;
+            s.depth_write = false;
+        }
         // The scissor is in this buffer's own pixels: scaled onto the picture as its draws are
         // (screen_position), so it clips where they land.
         {
@@ -1160,6 +1233,8 @@ bool DirectRenderer::init(RenderState& state, std::string& error) {
     m_uniforms.alpha_test = m_shader.uniform("alpha_test");
     m_uniforms.alpha_ref = m_shader.uniform("alpha_ref");
     m_uniforms.alpha_keep_failing = m_shader.uniform("alpha_keep_failing");
+    m_uniforms.distance_field = m_shader.uniform("distance_field");
+    m_uniforms.tex_T1 = m_shader.uniform("tex_T1");
 
     glGenVertexArrays(1, &m_vao);
     glGenBuffers(1, &m_vbo);
@@ -1229,6 +1304,7 @@ void DirectRenderer::render(const FrameInput& input, RenderState& state) {
     if (packets.empty()) {
         return;
     }
+    m_interpreter->set_ui_quads(input.ui_quads);
     submit(packets);
     flush(state);
 }
@@ -1322,6 +1398,17 @@ void DirectRenderer::apply(const DirectState& s, RenderState& render_state) {
         glUniform1i(m_uniforms.tcc, s.tcc ? 1 : 0);
         glUniform1i(m_uniforms.tfx, static_cast<GLint>(s.tfx));
         glUniform1f(m_uniforms.tex_alpha_scale, s.texture_full_alpha ? 0.5f : 1.0f);
+        glUniform1i(m_uniforms.distance_field, s.distance_field ? 1 : 0);
+        if (s.distance_field) {
+            glActiveTexture(GL_TEXTURE0 + 1);
+            glBindTexture(GL_TEXTURE_2D, render_state.textures.gl_texture(s.field));
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glUniform1i(m_uniforms.tex_T1, 1);
+            glActiveTexture(GL_TEXTURE0);
+        }
     }
     glUniform1i(m_uniforms.fog_enable, s.fog ? 1 : 0);
     glUniform3f(

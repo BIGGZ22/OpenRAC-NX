@@ -555,6 +555,17 @@ void openrac_game_effect_quad(const openrac_game_quad* quad) {
 #endif
 }
 
+int openrac_game_ui_quad(const openrac_game_ui_rect* quad) {
+#ifdef OPENRAC_FRONTEND
+    if (g_window) {
+        return frontend::ui_quad(*quad);
+    }
+#else
+    (void)quad;
+#endif
+    return -1;
+}
+
 void openrac_game_particle(const uint8_t* record, uint32_t pixels, uint32_t clut, int log2_side) {
 #ifdef OPENRAC_FRONTEND
     if (g_window) {

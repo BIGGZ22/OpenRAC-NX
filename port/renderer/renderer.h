@@ -19,6 +19,7 @@
 #pragma once
 
 #include <array>
+#include <functional>
 #include <cstdint>
 #include <memory>
 #include <span>
@@ -86,6 +87,26 @@ struct EffectStrip {
     int uploads = -1, upload_count = 0;
 };
 
+// A textured quad of the 2D layer the game drew through one of its 2D routines (rac1:
+// DrawTexturedQuad, the HUD's sprite routines), drawn natively where its marker comes in the 2D
+// path (GifInterpreter): four corners in strip order (0-1-2, 1-2-3) in the chip's 12.4 screen
+// coordinates as the game computed them, with their texel coordinates (12.4 both ways), the depth,
+// the colour (RGBAQ's low word) and the texture (TEX0).
+struct UiQuad {
+    std::uint32_t x[4] = {}, y[4] = {};
+    std::uint32_t u[4] = {}, v[4] = {};
+    std::uint32_t z = 0xFFFFF0;
+    std::uint32_t rgba = 0;
+    std::uint64_t tex0 = 0;
+    std::uint32_t flags = 0;  // kUiGlyph: a glyph of text (drawn from a distance field); kUiSprite
+};
+
+// UiQuad::flags: kUiSprite, an axis-aligned rectangle the game sends as a sprite (corners 0 and 3),
+// whose texel mapping follows the sprite's rules (a panel drawn off-screen and sampled back).
+inline constexpr std::uint32_t kUiSprite = 2;
+
+inline constexpr std::uint32_t kUiGlyph = 1;
+
 struct FrameInput {
     // The packets the game built for each bucket this frame (empty when a
     // bucket has nothing, or its renderer draws from elsewhere).
@@ -100,7 +121,15 @@ struct FrameInput {
     std::span<const ImageUpload> effect_uploads{};
     std::span<const EffectVertex> strip_vertices{};
     std::span<const EffectStrip> strips{};
+    // The 2D layer's quads drawn natively (UiQuad), indexed by their markers in the 2D path.
+    std::span<const UiQuad> ui_quads{};
     std::array<float, 4> clear_colour{0.0f, 0.0f, 0.0f, 1.0f};
+    // The target already holds the picture to start from (a tick that draws no world of its own):
+    // only depth is cleared.
+    bool keep_colour = false;
+    // Called with the target as drawn before the HUD's renderer (the world, without the 2D over
+    // it): what a copy of the frame the game reads back should hold.
+    std::function<void()> before_hud;
     std::uint64_t frame = 0;
     double seconds = 0.0;
 };

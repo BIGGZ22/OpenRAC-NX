@@ -107,6 +107,10 @@ struct DirectState {
     // panels), or textured from one; 0 for the main frame / a texture of the pool.
     std::uint32_t target = 0;
     std::uint32_t source = 0;
+    // A glyph of the 2D layer's text drawn natively: the texture is the font's distance field
+    // (TexturePool::distance_field), its alpha the distance to the glyphs' edge.
+    bool distance_field = false;
+    TextureHandle field = 0;  // its distance field, beside the texture itself
 
     bool operator==(const DirectState&) const = default;
 };
@@ -157,6 +161,12 @@ public:
     // draws accumulate until clear().
     bool gif(std::span<const std::uint8_t> input);
 
+    // The 2D layer's quads drawn natively: a marker in the 2D path (an A+D write to the NOP
+    // register, kUiQuadMarker in the value's top 16 bits, the index in its low bits) draws
+    // quads[index] there, in the context the packets before it set up.
+    void set_ui_quads(std::span<const UiQuad> quads) { m_ui_quads = quads; }
+    static constexpr std::uint64_t kUiQuadMarker = 0x4E55;
+
     // A VIF1 stream carrying GIF data in DIRECT and DIRECTHL commands, with
     // the bookkeeping codes around them (NOP, FLUSH, STCYCL...). A command
     // that starts a VU program (MSCAL, UNPACK, MPG) is not the direct path:
@@ -201,6 +211,10 @@ private:
 
     void write_prim(std::uint64_t value);
     void kick(bool draw);
+    void native_quad(const UiQuad& quad);
+    std::span<const UiQuad> m_ui_quads{};
+    bool m_glyph = false;  // native_quad: drawing a glyph
+    bool m_in_native = false;  // native_quad: its own vertices
     void emit_triangle(
         const GsVertex& a, const GsVertex& b, const GsVertex& c, const GsVertex& colour_from
     );
@@ -330,7 +344,7 @@ private:
 
     struct Uniforms {
         int textured, tcc, tfx, tex_alpha_scale, fog_enable, fog_colour, alpha_test, alpha_ref,
-            alpha_keep_failing;
+            alpha_keep_failing, distance_field, tex_T1;
     } m_uniforms{};
 };
 
@@ -345,6 +359,7 @@ public:
 
     void render(const FrameInput& input, RenderState& state) override {
         if (!input.direct_before_world.empty()) {
+            m_direct.interpreter().set_ui_quads(input.ui_quads);
             m_direct.submit(input.direct_before_world);
             m_direct.flush(state, true);
         }

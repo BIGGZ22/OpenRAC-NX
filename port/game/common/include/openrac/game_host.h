@@ -148,6 +148,22 @@ typedef struct openrac_game_quad {
 
 void openrac_game_effect_quad(const openrac_game_quad* quad);
 
+/* A textured quad of the 2D layer (rac1: DrawTexturedQuad, the HUD's sprite routines): four corners
+ * in strip order (0-1-2, 1-2-3) in the chip's 12.4 screen coordinates as the game computes them,
+ * their texel coordinates (12.4 both ways), the depth, the colour (RGBAQ's low word) and the
+ * texture (TEX0). The window draws it natively: the index to put in the display list's marker, or
+ * -1 to send the game's own packet (no window, or the 2D layer replayed). */
+typedef struct openrac_game_ui_rect {
+    uint32_t x[4], y[4];
+    uint32_t u[4], v[4];
+    uint32_t z;
+    uint32_t rgba;
+    uint64_t tex0;
+    uint32_t flags; /* 1: a glyph of text; 2: sent as a sprite (corners 0 and 3) */
+} openrac_game_ui_rect;
+
+int openrac_game_ui_quad(const openrac_game_ui_rect* quad);
+
 /* A live particle the game's particle renderer would draw (rac1: PartProc): its 0x40-byte record
  * (+0x01 bits 0-1 the render kind: 0 camera-facing sprite, 1 flat quad, 2 line, 3 ribbon; +0x03
  * ALPHA_1's low byte; +0x04 RGBA; +0x08 rotation, 256 steps a turn; +0x09 near (low nibble, 1/4

@@ -4,11 +4,14 @@
 #include "renderer/texture_pool.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <format>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "common/log.h"
 #include "renderer/gl.h"
@@ -341,6 +344,163 @@ std::size_t TexturePool::size() const {
     return static_cast<std::size_t>(
         std::count_if(m_entries.begin(), m_entries.end(), [](const Entry& e) { return e.live; })
     );
+}
+
+}  // namespace openrac::renderer
+
+namespace openrac::renderer {
+
+namespace {
+
+// Squared Euclidean distance transform of one row or column (Felzenszwalb and Huttenlocher):
+// f in, d out, both n long; f is 0 at feature texels and a large value elsewhere.
+void distance_1d(const float* f, float* d, int n, int* v, float* z) {
+    int k = 0;
+    v[0] = 0;
+    z[0] = -1e20f;
+    z[1] = 1e20f;
+    for (int q = 1; q < n; ++q) {
+        float s = ((f[q] + static_cast<float>(q * q)) - (f[v[k]] + static_cast<float>(v[k] * v[k])))
+                  / static_cast<float>(2 * q - 2 * v[k]);
+        while (s <= z[k]) {
+            --k;
+            s = ((f[q] + static_cast<float>(q * q)) - (f[v[k]] + static_cast<float>(v[k] * v[k])))
+                / static_cast<float>(2 * q - 2 * v[k]);
+        }
+        ++k;
+        v[k] = q;
+        z[k] = s;
+        z[k + 1] = 1e20f;
+    }
+    k = 0;
+    for (int q = 0; q < n; ++q) {
+        while (z[k + 1] < static_cast<float>(q)) {
+            ++k;
+        }
+        const float dq = static_cast<float>(q - v[k]);
+        d[q] = dq * dq + f[v[k]];
+    }
+}
+
+// The squared distance of every texel to the nearest texel where `inside` is set.
+std::vector<float> distance_2d(const std::vector<std::uint8_t>& inside, int w, int h) {
+    const int n = std::max(w, h);
+    std::vector<float> grid(static_cast<std::size_t>(w * h));
+    for (std::size_t i = 0; i < grid.size(); ++i) {
+        grid[i] = inside[i] ? 0.0f : 1e20f;
+    }
+    std::vector<float> f(static_cast<std::size_t>(n)), d(static_cast<std::size_t>(n)), z(static_cast<std::size_t>(n + 1));
+    std::vector<int> v(static_cast<std::size_t>(n));
+    for (int x = 0; x < w; ++x) {
+        for (int y = 0; y < h; ++y) {
+            f[static_cast<std::size_t>(y)] = grid[static_cast<std::size_t>(y * w + x)];
+        }
+        distance_1d(f.data(), d.data(), h, v.data(), z.data());
+        for (int y = 0; y < h; ++y) {
+            grid[static_cast<std::size_t>(y * w + x)] = d[static_cast<std::size_t>(y)];
+        }
+    }
+    for (int y = 0; y < h; ++y) {
+        distance_1d(&grid[static_cast<std::size_t>(y * w)], d.data(), w, v.data(), z.data());
+        std::copy(d.begin(), d.begin() + w, grid.begin() + y * w);
+    }
+    return grid;
+}
+
+}  // namespace
+
+TextureHandle TexturePool::distance_field(TextureHandle source) {
+    const Rgba8Image& src = image(source);
+    if (src.width <= 0 || src.height <= 0) {
+        return source;
+    }
+    // Looked up by the source and a sample of its texels (a handle can be given again to another
+    // texture once its own is dropped); the full field is made only when that misses.
+    std::uint64_t hash = (static_cast<std::uint64_t>(source) << 32) ^ static_cast<std::uint64_t>(src.width * 65536 + src.height);
+    const std::size_t step = std::max<std::size_t>(4, src.pixels.size() / 256 / 4 * 4);
+    for (std::size_t i = 0; i < src.pixels.size(); i += step) {
+        std::uint32_t texel_word;
+        std::memcpy(&texel_word, &src.pixels[i], 4);
+        hash = (hash ^ texel_word) * 1099511628211ull;
+    }
+    if (auto it = m_distance_fields.find(hash); it != m_distance_fields.end()) {
+        return it->second;
+    }
+    constexpr int kScale = 4;
+    const int w = src.width * kScale;
+    const int h = src.height * kScale;
+    const float opaque = alpha_scale(source) == AlphaScale::Full ? 255.0f : 128.0f;
+    auto texel = [&](int x, int y, int c) {
+        x = std::clamp(x, 0, src.width - 1);
+        y = std::clamp(y, 0, src.height - 1);
+        return static_cast<float>(src.pixels[static_cast<std::size_t>((y * src.width + x) * 4 + c)]);
+    };
+    // The glyphs' shape: at least half as opaque as the glyph is nearby (a source texel's 5 x 5
+    // neighbourhood), so a font that fades its glyphs downwards in their alpha keeps its lower part
+    // and one that does not keeps its weight; below a 32nd of opaque is always outside.
+    std::vector<float> local(static_cast<std::size_t>(src.width * src.height));
+    for (int y = 0; y < src.height; ++y) {
+        for (int x = 0; x < src.width; ++x) {
+            float m = 0.0f;
+            for (int dy = -2; dy <= 2; ++dy) {
+                for (int dx = -2; dx <= 2; ++dx) {
+                    m = std::max(m, texel(x + dx, y + dy, 3));
+                }
+            }
+            local[static_cast<std::size_t>(y * src.width + x)] = m;
+        }
+    }
+    auto local_at = [&](int x, int y) {
+        x = std::clamp(x, 0, src.width - 1);
+        y = std::clamp(y, 0, src.height - 1);
+        return local[static_cast<std::size_t>(y * src.width + x)];
+    };
+    Rgba8Image out(w, h);
+    std::vector<std::uint8_t> inside(static_cast<std::size_t>(w * h)), outside(static_cast<std::size_t>(w * h));
+    for (int y = 0; y < h; ++y) {
+        const float sy = (static_cast<float>(y) + 0.5f) / kScale - 0.5f;
+        const int y0 = static_cast<int>(std::floor(sy));
+        const float fy = sy - static_cast<float>(y0);
+        for (int x = 0; x < w; ++x) {
+            const float sx = (static_cast<float>(x) + 0.5f) / kScale - 0.5f;
+            const int x0 = static_cast<int>(std::floor(sx));
+            const float fx = sx - static_cast<float>(x0);
+            float c[4];
+            for (int k = 0; k < 4; ++k) {
+                const float top = texel(x0, y0, k) * (1.0f - fx) + texel(x0 + 1, y0, k) * fx;
+                const float bottom = texel(x0, y0 + 1, k) * (1.0f - fx) + texel(x0 + 1, y0 + 1, k) * fx;
+                c[k] = top * (1.0f - fy) + bottom * fy;
+            }
+            const std::size_t i = static_cast<std::size_t>(y * w + x);
+            // R: the glyph's own opacity here, from the nearest opaque-enough texel of the four (so
+            // it holds up to the edge instead of fading with the filter), 0..1 as 0..255.
+            float near_alpha = 0.0f;
+            for (int k = 0; k < 4; ++k) {
+                const float a = texel(x0 + (k & 1), y0 + (k >> 1), 3);
+                near_alpha = std::max(near_alpha, a);
+            }
+            const float near_local = (local_at(x0, y0) * (1.0f - fx) + local_at(x0 + 1, y0) * fx) * (1.0f - fy)
+                                     + (local_at(x0, y0 + 1) * (1.0f - fx) + local_at(x0 + 1, y0 + 1) * fx) * fy;
+            const float edge = std::max(near_local * 0.5f, opaque / 32.0f);
+            const float own = c[3] >= edge ? std::max(c[3], std::min(near_alpha, c[3] * 2.0f)) : near_alpha;
+            out.pixels[i * 4 + 0] = static_cast<std::uint8_t>(std::clamp(own / opaque, 0.0f, 1.0f) * 255.0f + 0.5f);
+            out.pixels[i * 4 + 1] = 0;
+            out.pixels[i * 4 + 2] = 0;
+            inside[i] = c[3] >= edge;
+            outside[i] = !inside[i];
+        }
+    }
+    const std::vector<float> to_inside = distance_2d(inside, w, h);
+    const std::vector<float> to_outside = distance_2d(outside, w, h);
+    const float spread = 2.0f * kScale;  // two source texels either side of the edge
+    for (std::size_t i = 0; i < inside.size(); ++i) {
+        const float signed_distance = inside[i] ? std::sqrt(to_outside[i]) : -std::sqrt(to_inside[i]);
+        const float value = 0.5f + signed_distance / (2.0f * spread);
+        out.pixels[i * 4 + 3] = static_cast<std::uint8_t>(std::clamp(value, 0.0f, 1.0f) * 255.0f + 0.5f);
+    }
+    const TextureHandle handle = add(std::move(out), AlphaScale::Full, name(source) + " (distance field)");
+    m_distance_fields.emplace(hash, handle);
+    return handle;
 }
 
 }  // namespace openrac::renderer

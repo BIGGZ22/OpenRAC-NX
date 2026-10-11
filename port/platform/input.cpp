@@ -139,8 +139,13 @@ SDL_Gamepad* Input::gamepad(int port) const {
 void Input::update() {
     int key_count = 0;
     const bool* state = SDL_GetKeyboardState(&key_count);
+    // The keyboard counts only while the window has it, and not while Cmd/Win is held: a system
+    // shortcut (Cmd+Shift+4 takes a screenshot) is not the game's L1, and the key-up of a key held
+    // when another window took the keyboard never comes.
+    const bool keyboard_ours =
+        SDL_GetKeyboardFocus() != nullptr && (SDL_GetModState() & SDL_KMOD_GUI) == 0;
     const std::span<const bool> keys(
-        state, state != nullptr ? static_cast<std::size_t>(key_count) : 0
+        state, state != nullptr && keyboard_ours ? static_cast<std::size_t>(key_count) : 0
     );
 
     for (int port = 0; port < kPadPorts; ++port) {

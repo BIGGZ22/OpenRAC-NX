@@ -79,6 +79,11 @@ public:
 
     TextureHandle placeholder() const { return m_placeholder; }
 
+    // A distance field of `source` for drawing text sharp at any size, four times its size: in
+    // alpha the signed distance to the glyphs' edge (0.5 on the edge, 1/8 per source texel), in red
+    // the glyphs' own opacity (0..1) held up to that edge; made once per content of the source.
+    TextureHandle distance_field(TextureHandle source);
+
     const Rgba8Image& image(TextureHandle texture) const;
     AlphaScale alpha_scale(TextureHandle texture) const;
     const std::string& name(TextureHandle texture) const;
@@ -146,6 +151,7 @@ private:
     std::unordered_map<Key, TextureHandle, KeyHash> m_converted;
     TextureHandle m_placeholder = 0;
     std::uint64_t m_frame = 0;
+    std::unordered_map<std::uint64_t, TextureHandle> m_distance_fields;  // by the source's content
 };
 
 // FNV-1a, for the cache keys.

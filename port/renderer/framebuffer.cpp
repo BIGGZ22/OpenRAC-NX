@@ -92,6 +92,10 @@ std::vector<std::uint8_t> FrameBuffer::read_rgba() const {
 }
 
 void FrameBuffer::blit_to(unsigned target, int dst_width, int dst_height) const {
+    // A blit is clipped by the scissor and the colour mask like a draw: neither applies to a copy
+    // (the renderers set both again for their own draws).
+    glDisable(GL_SCISSOR_TEST);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, m_framebuffer);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target);
     glBlitFramebuffer(
