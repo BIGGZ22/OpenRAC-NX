@@ -141,7 +141,10 @@ launcher/
 - **Discord**: unless switched off in Settings, Discord's Rich Presence shows
   the game being viewed or played, and while Ratchet & Clank plays, the
   planet (the port logs each level it enters), through Discord's local socket
-  (Linux and macOS), under OpenRAC's Discord application.
+  (Linux and macOS), under OpenRAC's Discord application. While a game plays,
+  the large image is that application's art asset named after the game
+  (`rac1` to `rac4`, uploaded in Discord's Developer Portal): the logos are not
+  kept in OpenRAC.
 - **Linux desktop integration**: at every start it writes its icons to
   `~/.local/share/icons/hicolor/` and two `.desktop` files to
   `~/.local/share/applications/`, and refreshes the desktop's caches.

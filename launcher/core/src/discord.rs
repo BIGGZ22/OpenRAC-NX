@@ -33,8 +33,8 @@ pub struct ActivityTimestamps {
     pub end: Option<u64>,
 }
 
+/// Discord's field names: snake_case (`large_image`); other spellings are ignored.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
 pub struct ActivityAssets {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub large_image: Option<String>,
@@ -255,12 +255,12 @@ pub fn planet_from_log(game: &str, line: &str) -> Option<String> {
     }
 }
 
+/// The large image while a game plays: the game's logo, an art asset of the Discord application
+/// named after the game (Developer Portal, Rich Presence, Art Assets: `rac1` to `rac4`), so no
+/// logo is kept in OpenRAC. Another game shows the wrench.
 pub fn game_image_url(game_id: &str) -> String {
     match game_id {
-        "rac1" => "https://openrac.dev/img/rac1-bg.webp".to_string(),
-        "rac2" => "https://openrac.dev/img/gc-bg.webp".to_string(),
-        "rac3" => "https://openrac.dev/img/uya-bg.webp".to_string(),
-        "rac4" => "https://openrac.dev/img/deadlocked-bg.webp".to_string(),
+        "rac1" | "rac2" | "rac3" | "rac4" => game_id.to_string(),
         _ => "https://openrac.dev/wrench.webp".to_string(),
     }
 }
@@ -371,7 +371,7 @@ mod tests {
 
         let json = serde_json::to_string(&act).unwrap();
         assert!(json.contains("Playing Ratchet & Clank"));
-        assert!(json.contains("largeImage"));
+        assert!(json.contains("\"large_image\":\"rac1\""));
     }
 
     #[test]
