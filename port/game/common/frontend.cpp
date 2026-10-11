@@ -1252,6 +1252,13 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         g->world_camera.reset();
     }
 
+    // OPENRAC_CAM_LOG: the camera each frame is drawn from (position, forward, up), in the log.
+    static const bool cam_log = std::getenv("OPENRAC_CAM_LOG") != nullptr;
+    if (cam_log) {
+        log::info("cam {} {:.3f} {:.3f} {:.3f} f {:.4f} {:.4f} {:.4f} u {:.4f} {:.4f} {:.4f} world {}", g->index,
+                  state.camera_position[0], state.camera_position[1], state.camera_position[2], state.forward[0],
+                  state.forward[1], state.forward[2], state.up[0], state.up[1], state.up[2], world_ran ? 1 : 0);
+    }
     // OPENRAC_DUMP_RAM=FRAME: the game's 32 MB of main memory at that frame, to ram_FRAME.bin.
     static const char* dump_ram = std::getenv("OPENRAC_DUMP_RAM");
     if (dump_ram != nullptr && g->index == std::strtoull(dump_ram, nullptr, 10)) {
