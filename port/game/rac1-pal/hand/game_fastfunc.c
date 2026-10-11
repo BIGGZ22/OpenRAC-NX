@@ -624,3 +624,35 @@ void func_001FA648(float *q, float *out) {
     out[10] = 1.0f - xx - yy;
     out[11] = 0.0f;
 }
+
+/* The quaternion t of the way from a to b, the short way round (b negated when a and b point
+ * apart), normalised: out = (a (1 - t) +- b t) / |a (1 - t) +- b t|. (VU0 macro mode in retail.) */
+void func_001FA5C8(float *out, float *a, float *b, float t) {
+    const float s = 1.0f - t;
+    float p[4], q[4], v[4];
+    float dot = 0.0f, len = 0.0f;
+    int i;
+    for (i = 0; i < 4; i++) {
+        p[i] = a[i] * s;
+        q[i] = b[i] * t;
+        dot += p[i] * q[i];
+    }
+    for (i = 0; i < 4; i++) {
+        v[i] = dot >= 0.0f ? p[i] + q[i] : p[i] - q[i];
+        len += v[i] * v[i];
+    }
+    len = 1.0f / sqrtf(len);
+    for (i = 0; i < 4; i++) {
+        out[i] = v[i] * len;
+    }
+}
+
+/* func_001FA648's full matrix: the quaternion's rotation in the first three rows and (0, 0, 0, 1)
+ * in the fourth. */
+void func_001FA6C0(float *q, float *out) {
+    func_001FA648(q, out);
+    out[12] = 0.0f;
+    out[13] = 0.0f;
+    out[14] = 0.0f;
+    out[15] = 1.0f;
+}
