@@ -107,6 +107,10 @@ struct DirectState {
     // panels), or textured from one; 0 for the main frame / a texture of the pool.
     std::uint32_t target = 0;
     std::uint32_t source = 0;
+    // A glyph of the 2D layer's text drawn natively: the texture is the font's distance field
+    // (TexturePool::distance_field), its alpha the distance to the glyphs' edge.
+    bool distance_field = false;
+    TextureHandle field = 0;  // its distance field, beside the texture itself
 
     bool operator==(const DirectState&) const = default;
 };
@@ -209,6 +213,7 @@ private:
     void kick(bool draw);
     void native_quad(const UiQuad& quad);
     std::span<const UiQuad> m_ui_quads{};
+    bool m_glyph = false;  // native_quad: drawing a glyph
     void emit_triangle(
         const GsVertex& a, const GsVertex& b, const GsVertex& c, const GsVertex& colour_from
     );
@@ -338,7 +343,7 @@ private:
 
     struct Uniforms {
         int textured, tcc, tfx, tex_alpha_scale, fog_enable, fog_colour, alpha_test, alpha_ref,
-            alpha_keep_failing;
+            alpha_keep_failing, distance_field, tex_T1;
     } m_uniforms{};
 };
 

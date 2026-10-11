@@ -157,6 +157,7 @@ typedef struct openrac_game_ui_rect {
     uint32_t s0, s1, t0, t1;
     uint32_t rgba;
     uint64_t tex0;
+    uint32_t flags; /* 1: a glyph of text */
 } openrac_game_ui_rect;
 
 int openrac_game_ui_quad(const openrac_game_ui_rect* quad);

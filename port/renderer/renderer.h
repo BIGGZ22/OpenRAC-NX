@@ -95,7 +95,10 @@ struct UiQuad {
     std::uint32_t s0 = 0, s1 = 0, t0 = 0, t1 = 0;
     std::uint32_t rgba = 0;
     std::uint64_t tex0 = 0;
+    std::uint32_t flags = 0;  // kUiGlyph: a glyph of text (drawn from a distance field)
 };
+
+inline constexpr std::uint32_t kUiGlyph = 1;
 
 struct FrameInput {
     // The packets the game built for each bucket this frame (empty when a

@@ -43,6 +43,17 @@ static void log_caller(const char* what, unsigned long long tex, int w, int h) {
     free(names);
 }
 
+/* Inside FontPrint: the quads drawn are glyphs of text. */
+static int g_glyphs = 0;
+
+/* FontPrint: a string at (x, y) in colour, glyph by glyph through DrawTexturedQuad. */
+void func_001F6668(int x, int y, unsigned long long colour, gaddr text, int limit, long long texture,
+                   gaddr glyphs) {
+    ++g_glyphs;
+    func_001F6668__game(x, y, colour, text, limit, texture, glyphs);
+    --g_glyphs;
+}
+
 /* DrawTexturedQuad: a w x h screen rectangle at (x, y) textured from (u, v) .. (u + uw, v + vh) of
  * the texture tex (TEX0) in colour rgba: one GS triangle strip appended to the display list. */
 void func_001F5800(int x, int y, int w, int h, int u, int v, int uw, int vh, unsigned long long rgba,
@@ -67,6 +78,7 @@ void func_001F5800(int x, int y, int w, int h, int u, int v, int uw, int vh, uns
     q.t1 = (uint32_t)(v + vh);
     q.rgba = (uint32_t)rgba;
     q.tex0 = tex;
+    q.flags = g_glyphs > 0 ? 1u : 0u;
     const int index = openrac_game_ui_quad(&q);
     if (index < 0) {
         func_001F5800__game(x, y, w, h, u, v, uw, vh, rgba, tex);

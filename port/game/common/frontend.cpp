@@ -1515,7 +1515,7 @@ int ui_quad(const openrac_game_ui_rect& quad) {
         return -1;
     }
     g->ui_quads.push_back(renderer::UiQuad{quad.x0, quad.y0, quad.x1, quad.y1, quad.s0, quad.s1, quad.t0,
-                                           quad.t1, quad.rgba, quad.tex0});
+                                           quad.t1, quad.rgba, quad.tex0, quad.flags});
     return static_cast<int>(g->ui_quads.size() - 1);
 }
 

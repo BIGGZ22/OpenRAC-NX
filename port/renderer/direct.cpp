@@ -657,6 +657,7 @@ void GifInterpreter::draw_frame_upload(const ImageUpload& upload) {
 void GifInterpreter::native_quad(const UiQuad& quad) {
     write_register(gs::kTex0_1, quad.tex0);
     write_prim(0x154);
+    m_glyph = (quad.flags & kUiGlyph) != 0;
     const std::uint32_t xs[4] = {quad.x0, quad.x1, quad.x0, quad.x1};
     const std::uint32_t ys[4] = {quad.y0, quad.y0, quad.y1, quad.y1};
     const std::uint32_t us[4] = {quad.s0, quad.s1, quad.s0, quad.s1};
@@ -673,6 +674,10 @@ void GifInterpreter::native_quad(const UiQuad& quad) {
         m_current.y = ys[i];
         m_current.z = 0xFFFFF0;
         kick(true);
+    }
+    if (m_glyph) {
+        m_glyph = false;
+        m_state_dirty = true;
     }
 }
 
@@ -894,11 +899,19 @@ void GifInterpreter::ensure_draw() {
             s.clamp_t = true;
         } else if (s.textured) {
             s.texture = m_textures.resolve(c.tex0, m_texa);
+            if (m_glyph && s.texture != m_textures.placeholder()) {
+                s.field = m_textures.distance_field(s.texture);
+                s.distance_field = s.field != s.texture;
+            }
             s.texture_full_alpha = m_textures.alpha_scale(s.texture) == AlphaScale::Full;
             s.tcc = c.tex0.tcc;
             s.tfx = c.tex0.tfx;
             s.linear_mag = c.tex1.mmag;
             s.linear_min = c.tex1.mmin == 1 || c.tex1.mmin == 4 || c.tex1.mmin == 5;
+            if (s.distance_field) {
+                s.linear_mag = true;
+                s.linear_min = true;
+            }
             // Region clamp and repeat have no GL equivalent; clamp is the
             // closer of the two for the 2D path.
             s.clamp_s = c.clamp.wms != gs::Wrap::Repeat;
@@ -1189,6 +1202,8 @@ bool DirectRenderer::init(RenderState& state, std::string& error) {
     m_uniforms.alpha_test = m_shader.uniform("alpha_test");
     m_uniforms.alpha_ref = m_shader.uniform("alpha_ref");
     m_uniforms.alpha_keep_failing = m_shader.uniform("alpha_keep_failing");
+    m_uniforms.distance_field = m_shader.uniform("distance_field");
+    m_uniforms.tex_T1 = m_shader.uniform("tex_T1");
 
     glGenVertexArrays(1, &m_vao);
     glGenBuffers(1, &m_vbo);
@@ -1352,6 +1367,17 @@ void DirectRenderer::apply(const DirectState& s, RenderState& render_state) {
         glUniform1i(m_uniforms.tcc, s.tcc ? 1 : 0);
         glUniform1i(m_uniforms.tfx, static_cast<GLint>(s.tfx));
         glUniform1f(m_uniforms.tex_alpha_scale, s.texture_full_alpha ? 0.5f : 1.0f);
+        glUniform1i(m_uniforms.distance_field, s.distance_field ? 1 : 0);
+        if (s.distance_field) {
+            glActiveTexture(GL_TEXTURE0 + 1);
+            glBindTexture(GL_TEXTURE_2D, render_state.textures.gl_texture(s.field));
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glUniform1i(m_uniforms.tex_T1, 1);
+            glActiveTexture(GL_TEXTURE0);
+        }
     }
     glUniform1i(m_uniforms.fog_enable, s.fog ? 1 : 0);
     glUniform3f(
