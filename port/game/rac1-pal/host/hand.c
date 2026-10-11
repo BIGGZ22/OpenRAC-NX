@@ -21,10 +21,25 @@
 void func_0020C268(void) {}
 
 /* The square root and the reciprocal square root the hand-written vector
- * routines (hand/) use, as the FPU's sqrt.s and rsqrt.s; translated code calls
- * a named function of its own under the game_ prefix. */
-float game_openrac_sqrt(float x) { return sqrtf(x); }
-float game_openrac_rsqrt(float a, float b) { return a / sqrtf(b); }
+ * routines (hand/) use, as the FPU's sqrt.s and rsqrt.s and VU0's vsqrt;
+ * translated code calls a named function of its own under the game_ prefix.
+ * All three take the root of the magnitude, so a negative argument gives a
+ * number where the host's sqrtf gives NaN (a toad's turn spring passes one
+ * the first time it turns, and the NaN spread to its position). rsqrt.s by
+ * zero gives +-FLT_MAX, like the EE's divide. */
+float game_openrac_sqrt(float x) { return sqrtf(fabsf(x)); }
+float game_openrac_rsqrt(float a, float b) {
+    const float root = sqrtf(fabsf(b));
+    const int negative = signbit(a) != signbit(b);
+    if (root < 1.17549435e-38f) {
+        return negative ? -3.40282347e38f : 3.40282347e38f;
+    }
+    const float q = a / root;
+    if (isinf(q)) {
+        return q < 0.0f ? -3.40282347e38f : 3.40282347e38f;
+    }
+    return q;
+}
 
 /* A trap the game raises on purpose (teq $0, $0 in a hand-written routine): an assertion of the
  * game that failed. The console would stop in its exception handler; the port says so and stops. */
