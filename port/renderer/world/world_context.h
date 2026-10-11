@@ -22,6 +22,7 @@
 
 #include "renderer/renderer.h"
 #include "renderer/world/gpu.h"
+#include "renderer/world/profile.h"
 #include "renderer/world/world_frame.h"
 
 namespace openrac::renderer::world {
@@ -70,12 +71,10 @@ public:
 
     SamplerCache& samplers() { return m_samplers; }
 
-    // The game's draw buffer: 512 x 416 on NTSC (ReRAC's), 512 x 448 on PAL.
-    // Particle and star sprites are sized in its pixels.
-    float frame_width = 512.0f;
-    float frame_height = 416.0f;
-    // tan_y / tan_x of the game's own view (0.775 NTSC, 0.756 PAL).
-    float frame_y_ratio = 0.775f;
+    // The game version's frame and constants (profile.h); RAC1 PAL's until set.
+    void set_profile(const WorldProfile& profile) { m_profile = profile; }
+
+    const WorldProfile& profile() const { return m_profile; }
 
 private:
     struct Uploaded {
@@ -83,6 +82,7 @@ private:
         TextureHandle handle = 0;
     };
 
+    WorldProfile m_profile = *world_profile(assets::Game::Rac1, assets::Region::Pal);
     const WorldFrame* m_frame = nullptr;
     WorldFrame m_empty;
     WorldCamera m_camera;

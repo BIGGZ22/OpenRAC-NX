@@ -23,8 +23,8 @@
 //     the bytes the GS sees, texel alpha in the chip's units (0x80 opaque).
 //   - Matrices are renderer/math.h's Mat4: column-major, game axes.
 //   - Constants the game's code sets (draw-distance caps, near and far
-//     culls) are not hard-coded: they come in WorldConstants, known for RAC1
-//     only (kRac1Constants).
+//     culls) are not hard-coded: they come in WorldConstants, per game version
+//     (profile.h).
 
 #pragma once
 

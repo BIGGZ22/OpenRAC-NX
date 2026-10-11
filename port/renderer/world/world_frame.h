@@ -60,7 +60,7 @@ struct WorldCamera {
 // builds them for the console's numbers (InitViewContext, ReRAC's reading):
 // near 32 and far 745472 integer units, and the GS's 24-bit Z, larger nearer,
 // mapped to GL's window depth as Z / 2^24 (reversed depth, cleared to 0,
-// tested GEQUAL). tan_y is tan_x x 0.775 on NTSC (0.756 on PAL).
+// tested GEQUAL). tan_y is tan_x x the profile's frame_y_ratio (profile.h).
 Mat4 game_projection(float tan_x, float tan_y);
 
 // The game's camera: `eye` in game units, rows forward / left / up.
@@ -195,7 +195,7 @@ struct ScreenTint {
 struct MissileView {
     std::array<float, 4> viewport{};  // x, y, width, height
     std::uint8_t band_alpha = 0x17;
-    std::uint32_t frame_rows = 416;
+    std::uint32_t frame_rows = 448;  // the profile's frame_height
     std::uint32_t band_period = 34;
     std::uint32_t band_rows = 31;
 };
@@ -210,7 +210,7 @@ struct PostFrame {
 };
 
 // A 2D primitive of the HUD pass: four corners in strip order (triangles 0 1
-// 2, 1 3 2), in 1/16 game pixels of the 512 x 416 frame, texel UVs.
+// 2, 1 3 2), in 1/16 game pixels of the profile's frame, texel UVs.
 struct HudPrim {
     std::optional<std::uint32_t> texture;  // index into HudDrawData::textures
     std::array<std::array<std::int32_t, 2>, 4> position{};

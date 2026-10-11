@@ -47,7 +47,8 @@ bool WorldContext::init(std::string& error) {
         return true;
     }
     if (!gl::loaded()) {
-        error = "world renderers: world::gl::load() has not been called (renderer/world/gl_world.h)";
+        error =
+            "world renderers: world::gl::load() has not been called (renderer/world/gl_world.h)";
         return false;
     }
     glGenVertexArrays(1, &m_empty_vao);
@@ -87,15 +88,16 @@ void WorldContext::prepare(const FrameInput& input, const RenderTarget& target) 
     v.projection = input.camera.projection;
     v.view_projection = multiply(input.camera.projection, input.camera.view);
     v.eye = {m_camera.eye[0], m_camera.eye[1], m_camera.eye[2], 0.0f};
-    v.fog_colour = {
-        f.fog.colour[0] / 255.0f,
-        f.fog.colour[1] / 255.0f,
-        f.fog.colour[2] / 255.0f,
-        f.fog.enabled ? 1.0f : 0.0f
-    };
+    v.fog_colour =
+        {f.fog.colour[0] / 255.0f,
+         f.fog.colour[1] / 255.0f,
+         f.fog.colour[2] / 255.0f,
+         f.fog.enabled ? 1.0f : 0.0f};
     v.fog_params = fog_params(f.fog);
-    v.screen = {frame_width * 0.5f, frame_height * 0.5f, kNear, f.lod_tint ? 1.0f : 0.0f};
-    v.tans = {m_camera.tan_x, m_camera.tan_y, frame_y_ratio, 0.0f};
+    v.screen = {
+        m_profile.frame_width * 0.5f, m_profile.frame_height * 0.5f, kNear, f.lod_tint ? 1.0f : 0.0f
+    };
+    v.tans = {m_camera.tan_x, m_camera.tan_y, m_profile.frame_y_ratio, 0.0f};
     m_view_block.upload(GL_UNIFORM_BUFFER, &v, sizeof v, true);
     glBindBufferBase(GL_UNIFORM_BUFFER, kWorldViewBinding, m_view_block.id());
 
