@@ -37,6 +37,8 @@ target_link_libraries(openrac_game_common PUBLIC openrac_runtime)
 if(TARGET openrac_assets_disc)
   target_link_libraries(openrac_game_common PUBLIC openrac_assets_disc)
 endif()
+# The sound engine the sound library's replacement drives (lib/sound_engine.cpp).
+target_link_libraries(openrac_game_common PUBLIC openrac_audio)
 # The moby animation code the blend snapshot runs (lib/moby_snapshot.cpp).
 if(TARGET openrac_assets_geometry)
   target_link_libraries(openrac_game_common PUBLIC openrac_assets_geometry)

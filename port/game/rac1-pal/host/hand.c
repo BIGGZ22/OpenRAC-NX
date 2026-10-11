@@ -7,6 +7,7 @@
 #include "game_protos.h"
 #include "openrac/game_host.h"
 #include "openrac/game_lib.h"
+#include "openrac/sound_engine.h"
 
 #include <math.h>
 #include <stdarg.h>
@@ -225,23 +226,58 @@ int func_00116078(gaddr format, ...) {
 }
 
 /*
- * snd_FlushSoundCommands (989snd, matched C in the decompilation, replaced here). The port has no
- * IOP sound server yet: a finished disc read is reported through the shared library, and the
- * command buffer being filled is marked as sent, as snd_SendCurrentBatch leaves it (no command
- * left, all its 0xFFC bytes free), so the game never waits for the IOP. The commands themselves are
- * dropped until the port's sound player takes them. PAL addresses: the buffer in use D_0015EDC0,
- * the counts D_0015EDA0[2] (pointers), the space left D_0015EDA8[2].
+ * snd_FlushSoundCommands (989snd, matched C in the decompilation, replaced here). There is no
+ * IOP: a finished disc read is reported through the shared library, and the commands in the
+ * buffer being filled go to the port's sound engine (openrac/sound_engine.h), each callback then
+ * called with its reply as the IOP's answer would be. The buffer is left as snd_SendCurrentBatch
+ * leaves it (no command, all its 0xFFC bytes free), so the game never waits for the IOP. It is
+ * emptied before the commands run, as a callback may send more. PAL addresses: the buffer in use
+ * D_0015EDC0, the counts D_0015EDA0[2] (pointers; the commands follow the count word, each
+ * u16 command, u16 size, data padded to 4 bytes), the space left D_0015EDA8[2], the callbacks
+ * D_0015EDB0[2] (pointers to {u32 function, u32, u64 argument}).
  */
 int func_0012DDC0(void) {
-    uint32_t cur, count_at, free_bytes = 0xFFC, zero = 0;
+    uint32_t cur, count_at, callbacks_at, count = 0, used = 0, free_bytes = 0xFFC, zero = 0;
+    uint8_t batch[0x1000];
+    struct {
+        uint32_t function;
+        uint32_t pad;
+        uint64_t argument;
+    } callbacks[0x100];
     openrac_lib_snd_FlushSoundCommands();
     memcpy(&cur, G(0x0015EDC0u), 4);
     cur &= 1;
     memcpy(&count_at, G(0x0015EDA0u + cur * 4u), 4);
+    memcpy(&callbacks_at, G(0x0015EDB0u + cur * 4u), 4);
     if (count_at != 0) {
+        memcpy(&count, G(count_at), 4);
+        memcpy(&used, G(0x0015EDA8u + cur * 4u), 4);
+        used = used <= 0xFFC ? 0xFFC - used : 0;
+        if (count > 0x100) {
+            count = 0x100;
+        }
+        memcpy(batch, G(count_at + 4u), used);
+        if (callbacks_at != 0) {
+            memcpy(callbacks, G(callbacks_at), count * sizeof callbacks[0]);
+        } else {
+            memset(callbacks, 0, sizeof callbacks);
+        }
         memcpy(G(count_at), &zero, 4);
     }
     memcpy(G(0x0015EDA8u + cur * 4u), &free_bytes, 4);
+    for (uint32_t i = 0, at = 0; i < count && at + 4 <= used; ++i) {
+        uint16_t command, size;
+        memcpy(&command, batch + at, 2);
+        memcpy(&size, batch + at + 2, 2);
+        if (at + 4u + size > used) {
+            break;
+        }
+        const uint32_t reply = openrac_sound_command(command, batch + at + 4, size);
+        at += (4u + size + 3u) & ~3u;
+        if (callbacks[i].function != 0) {
+            GFN(void (*)(int, long long), callbacks[i].function)((int)reply, (long long)callbacks[i].argument);
+        }
+    }
     return 0;
 }
 

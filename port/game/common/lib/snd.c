@@ -3,9 +3,9 @@
  *
  * The sound library (989snd), replaced at its API: the cleanest cut, since
  * everything below it ran on the IOP (docs/port/RAC1_PAL_SURVEY.md, section
- * 8). Until the port's sound engine exists (banks, voices, VAG streams,
- * music, movie sound: docs/port/ROADMAP.md), the game is silent: banks
- * "load" and sounds finish at once. A VAG stream (music, a scene's sound)
+ * 8). Banks and sounds go to the port's sound engine (openrac/sound_engine.h);
+ * the sounds a game sends in its command batch are taken by that game's flush.
+ * VAG streams (music, speech) and movie sound are not played yet. A VAG stream (music, a scene's sound)
  * answers as if the IOP had it buffered at once and played it until it is
  * stopped, so what waits on a stream (a level's landing scene waits for its
  * sound to be playing) goes on. Disc reads made through the library's
@@ -13,6 +13,7 @@
 #include "openrac/game_host.h"
 #include "openrac/game_lib.h"
 #include "openrac/guest.h"
+#include "openrac/sound_engine.h"
 
 int openrac_lib_snd_StartSoundSystem(void) {
     return 0;
@@ -34,20 +35,15 @@ int openrac_lib_snd_FlushSoundCommands(void) {
     return 0;
 } /* snd_FlushSoundCommands */
 
-static unsigned int next_bank = 1;
-
 unsigned int openrac_lib_snd_BankLoadByLoc(int sector, int offset) { /* snd_BankLoadByLoc */
-    (void)sector;
-    (void)offset;
-    return next_bank++;
+    return openrac_sound_load_bank_from_disc((uint32_t)sector, (uint32_t)offset);
 }
 
-/* snd_BankLoadFromEE_CB(bank, callback, argument): a bank in EE memory; the
- * port has no sound server yet, so the bank gets a handle at once and the
+/* snd_BankLoadFromEE_CB(bank, callback, argument): a bank in EE memory, loaded at once; the
  * callback is told, as the IOP's answer would: callback(handle, argument). */
 void openrac_lib_snd_BankLoadFromEE_CB(int bank, int callback, long long argument) {
-    const unsigned int handle = next_bank++;
-    (void)bank;
+    const unsigned int handle =
+        bank != 0 ? openrac_sound_load_bank(G((gaddr)bank), 0x02000000u - ((gaddr)bank & 0x01FFFFFFu)) : 0;
     if (callback != 0) {
         GFN(void (*)(int, long long), (gaddr)callback)((int)handle, argument);
     }
@@ -56,26 +52,27 @@ void openrac_lib_snd_BankLoadFromEE_CB(int bank, int callback, long long argumen
 void openrac_lib_snd_ResolveBankXREFS(void) {} /* snd_ResolveBankXREFS */
 
 void openrac_lib_snd_UnloadBank(int bank) {
-    (void)bank;
+    openrac_sound_unload_bank((uint32_t)bank);
 } /* snd_UnloadBank */
 
 void openrac_lib_snd_SetMasterVolume(int which, int volume) {
-    (void)which;
-    (void)volume;
+    openrac_sound_set_master_volume(which, volume);
 } /* snd_SetMasterVolume */
 
 void openrac_lib_snd_SetPlaybackMode(int mode) {
     (void)mode;
 } /* snd_SetPlaybackMode */
 
-void openrac_lib_snd_StopAllSounds(void) {} /* snd_StopAllSounds */
+void openrac_lib_snd_StopAllSounds(void) {
+    openrac_sound_stop_all();
+} /* snd_StopAllSounds */
 
 void openrac_lib_snd_PauseAllSoundsInGroup(int group) {
-    (void)group;
+    openrac_sound_pause_groups((uint32_t)group);
 } /* snd_PauseAllSoundsInGroup */
 
 void openrac_lib_snd_ContinueAllSoundsInGroup(int group) {
-    (void)group;
+    openrac_sound_continue_groups((uint32_t)group);
 } /* snd_ContinueAllSoundsInGroup */
 
 /* The streams playing: handles this library gave out, tagged so that a sound's handle is never
@@ -106,10 +103,11 @@ static void stream_stop(uint32_t handle) {
 }
 
 /* snd_SoundIsStillPlaying_CB(handle, callback, argument): callback(handle) while it plays,
- * callback(0) once it has ended (a sound at once; a stream when stopped). */
+ * callback(0) once it has ended (a stream when stopped). */
 void openrac_lib_snd_SoundIsStillPlaying_CB(int a, int b, int c) {
     if (b != 0) {
-        GFN(void (*)(int, long long), (gaddr)b)(stream_live((uint32_t)a) ? a : 0, (long long)c);
+        const int live = stream_live((uint32_t)a) || openrac_sound_playing((uint32_t)a);
+        GFN(void (*)(int, long long), (gaddr)b)(live ? a : 0, (long long)c);
     }
 } /* snd_SoundIsStillPlaying_CB */
 
@@ -128,10 +126,14 @@ void openrac_lib_snd_StopAllStreams(void) {
     stream_stop(0);
 } /* snd_StopAllStreams */
 
-/* snd_StopSound(handle): a sound has ended already; a stream ends. */
+/* snd_StopSound(handle): a sound or a stream ends. */
 void openrac_lib_snd_StopSound(int handle) {
     if (handle != 0) {
-        stream_stop((uint32_t)handle);
+        if (stream_live((uint32_t)handle)) {
+            stream_stop((uint32_t)handle);
+        } else {
+            openrac_sound_stop((uint32_t)handle);
+        }
     }
 } /* snd_StopSound */
 

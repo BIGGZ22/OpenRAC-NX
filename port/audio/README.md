@@ -21,9 +21,11 @@ processors' memory or registers.
 | `pitch.h` | notes to pitch words (the note table computed), pitch bend |
 | `reverb.h` | a native stereo reverb with the character of each of the library's effect types (measured results, not the library's tables) |
 
-Not yet: the VAG stream players (music and speech) above the voices'
-streaming, and the hook-up: `snd.c` calling this engine and the platform's
-audio output pulling `SoundPlayer::render`.
+The games drive it through `port/game/common/lib/sound_engine.cpp`: `snd.c`
+loads banks and sets volumes, each game's command flush passes the sounds the
+game batched (play, set parameters), and the game window's audio output pulls
+`SoundPlayer::render`. Not yet: the VAG stream players (music and speech)
+above the voices' streaming, and movie sound through this engine.
 
 ## Tests
 

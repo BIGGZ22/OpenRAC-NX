@@ -124,7 +124,7 @@ func_0012BBA8	mpeg	sceMpegReset?	todo
 func_0012BC50	mpeg	sceMpegAddCallback	todo
 func_0012D380	scf	sceScfGetLanguage	host	from the port's settings
 func_0012D818	scf	sceScfGetLocalTimefromRTC	host
-func_0012DB68	989snd	snd_StartSoundSystem	host	sound is silent until the port's sound engine exists
+func_0012DB68	989snd	snd_StartSoundSystem	host	the port's sound engine needs no start-up
 func_0012DDC0	989snd	SndFlushPal	host	the shared flush plus the PAL buffers marked sent (host/hand.c)	int (void)
 func_0012E060	989snd	snd_BankLoadByLoc	host
 func_0012E1C8	989snd	snd_BankLoadFromEE_CB	host

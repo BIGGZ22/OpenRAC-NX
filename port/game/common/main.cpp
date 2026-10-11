@@ -46,6 +46,8 @@
 
 #ifdef OPENRAC_FRONTEND
 #include "frontend.h"
+#include "openrac/sound_engine.h"
+#include "platform/audio.h"
 #include "renderer/texture.h"
 #include "viewer/moby_pose.h"
 #endif
@@ -691,6 +693,14 @@ int main(int argc, char** argv) {
             log::fatalf("no window: {}", why);
         }
         g_window = true;
+        // The game's sounds (openrac/sound_engine.h), rendered on the output's thread.
+        static std::unique_ptr<platform::AudioOutput> sound_output =
+            platform::AudioOutput::open(why, [](std::span<std::int16_t> samples) {
+                openrac_sound_render(samples.data(), samples.size() / 2);
+            });
+        if (!sound_output) {
+            log::warn("no sound: {}", why);
+        }
     }
 #endif
 
