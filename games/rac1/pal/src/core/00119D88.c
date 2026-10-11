@@ -812,7 +812,115 @@ void func_0011B438(void *request, void *data) {
     func_00119678(base[0]);
 }
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_0011B4C8);
+typedef unsigned char u8_1B4C8;
+typedef signed int s32_1B4C8;
+struct SifRpcClient_1B4C8
+{
+  volatile s32_1B4C8 packet;
+  volatile s32_1B4C8 request_id;
+    s32_1B4C8 semaphore_id;
+    u8_1B4C8 pad_C[0x8];
+    s32_1B4C8 server_buffer;
+    u8_1B4C8 pad_18[0x4];
+    s32_1B4C8 end_callback;
+  volatile s32_1B4C8 end_argument;
+    s32_1B4C8 server;
+};
+struct SifRpcPacket_1B4C8 {
+    u8_1B4C8 pad_0[0x14];
+    s32_1B4C8 packet_address;
+    s32_1B4C8 request_id;
+    s32_1B4C8 client;
+    s32_1B4C8 rpc_number;
+    s32_1B4C8 send_size;
+    s32_1B4C8 receive_address;
+    s32_1B4C8 receive_size;
+    s32_1B4C8 completion_mode;
+    s32_1B4C8 server;
+};
+extern u8_1B4C8 D_00156900_1B4C8[] __asm__("D_00156900");
+extern s32_1B4C8 func_00118C70();
+extern s32_1B4C8 func_00118C80_1B4C8() __asm__("func_00118C80");
+extern s32_1B4C8 func_00118CB0();
+extern s32_1B4C8 func_0011AFE8_1B4C8() __asm__("func_0011AFE8");
+extern s32_1B4C8 func_0011B090_1B4C8() __asm__("func_0011B090");
+extern s32_1B4C8 func_0011ABC8();
+extern s32_1B4C8 func_0011AD70_1B4C8() __asm__("func_0011AD70");
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/sdk/rpc/sce_sif_call_rpc.c, sceSifCallRpc. */
+s32_1B4C8 func_0011B4C8_r(struct SifRpcClient_1B4C8 *client, s32_1B4C8 rpc_number, s32_1B4C8 mode, s32_1B4C8 send_buf, s32_1B4C8 send_size,
+                          s32_1B4C8 recv_buf, s32_1B4C8 recv_size, s32_1B4C8 end_func, s32_1B4C8 end_data) __asm__("func_0011B4C8");
+s32_1B4C8 func_0011B4C8_r(struct SifRpcClient_1B4C8 *client, s32_1B4C8 rpc_number, s32_1B4C8 mode, s32_1B4C8 send_buf, s32_1B4C8 send_size,
+                          s32_1B4C8 recv_buf, s32_1B4C8 recv_size, s32_1B4C8 end_func, s32_1B4C8 end_data) {
+    s32_1B4C8 semaphore_parameters[6];
+    struct SifRpcPacket_1B4C8 *packet;
+    s32_1B4C8 semaphore_id;
+    s32_1B4C8 skip_cache_writeback;
+    s32_1B4C8 request_id;
+    s32_1B4C8 allocation_failure_result;
+    packet = (struct SifRpcPacket_1B4C8 *)func_0011AFE8_1B4C8(D_00156900_1B4C8);
+    allocation_failure_result = -1;
+    if (packet == 0) {
+        return allocation_failure_result;
+    }
+    request_id = packet->request_id;
+    skip_cache_writeback = mode & 2;
+    client->end_argument = end_data;
+    client->packet = (s32_1B4C8)packet;
+    client->request_id = request_id;
+    client->end_callback = end_func;
+    packet->rpc_number = rpc_number;
+    packet->send_size = send_size;
+    packet->receive_address = recv_buf;
+    packet->receive_size = recv_size;
+    packet->packet_address = (s32_1B4C8)packet;
+    packet->server = client->server;
+    packet->client = (s32_1B4C8)client;
+    if (!skip_cache_writeback) {
+        if (send_buf == recv_buf) {
+            func_0011AD70_1B4C8(send_buf, (send_size >= recv_size) ? (send_size) : (recv_size));
+        } else {
+            if (send_size > 0) {
+                func_0011AD70_1B4C8(send_buf, send_size);
+            }
+            if (recv_size > 0) {
+                func_0011AD70_1B4C8(recv_buf, recv_size);
+            }
+        }
+    }
+    if (mode & 1) {
+        if (end_func == 0) {
+            packet->completion_mode = 0;
+        } else {
+            packet->completion_mode = 1;
+        }
+        client->semaphore_id = -1;
+        if (func_0011ABC8(0x8000000A, packet, 0x40, send_buf, client->server_buffer, send_size) != 0) {
+            return 0;
+        } else {
+            func_0011B090_1B4C8(packet);
+            return -2;
+        }
+    } else {
+        semaphore_parameters[1] = 1;
+        semaphore_parameters[2] = 0;
+        semaphore_id = func_00118C70(semaphore_parameters);
+        client->semaphore_id = semaphore_id;
+        if (semaphore_id < 0) {
+            func_0011B090_1B4C8(packet);
+            return -3;
+        }
+        packet->completion_mode = 1;
+        if (func_0011ABC8(0x8000000A, packet, 0x40, send_buf, client->server_buffer, send_size) == 0) {
+            func_00118C80_1B4C8(client->semaphore_id);
+            func_0011B090_1B4C8(packet);
+            return -2;
+        }
+        func_00118CB0(client->semaphore_id);
+        func_00118C80_1B4C8(client->semaphore_id);
+        return 0;
+    }
+}
 
 /*
  * REVERTED: size mismatch, 56 bytes against retail's 60. Semantics are

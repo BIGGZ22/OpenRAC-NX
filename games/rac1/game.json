@@ -40,7 +40,7 @@
           "tools/extract",
           "docs/GDSCRIPT_CONVENTIONS.md"
         ],
-        "commit": "6127cb448010571b756ff07b1da0cf72cdf52b56",
+        "commit": "ace37f88ed8b2e634acc0cf977ed3c41854a60f9",
         "date": "2026-10-10",
         "imported": "2026-10-10"
       },
@@ -173,9 +173,9 @@
         "checkout": "~/Projects/rac1-decomp-ntsc",
         "license": "MIT (GPL-2.0 and newlib parts)",
         "exclude": [],
-        "commit": "cdddf69e53a2a227d5b64b0e64cffd24fda66e0c",
+        "commit": "8ae3b8ff1cd3db64e03f0b58c2b49113d6556e9d",
         "date": "2026-10-10",
-        "imported": "2026-10-09"
+        "imported": "2026-10-10"
       },
       "build": {
         "host": "Linux or WSL; macOS through ./setup.sh --docker; toolchains downloaded and built by setup.sh",
