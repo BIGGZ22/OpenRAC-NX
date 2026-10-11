@@ -59,6 +59,9 @@ pub struct DiscordIpc {
     #[cfg(unix)]
     stream: Option<std::os::unix::net::UnixStream>,
     seq: u64,
+    /// The planet the running game reported (`planet_from_log`), shown while it plays.
+    planet: Option<String>,
+    last: Option<(DiscordStatus, u64)>,
 }
 
 impl DiscordIpc {
@@ -68,6 +71,8 @@ impl DiscordIpc {
             #[cfg(unix)]
             stream: None,
             seq: 0,
+            planet: None,
+            last: None,
         }
     }
 
@@ -170,7 +175,20 @@ impl DiscordIpc {
         }
     }
 
+    /// The planet being played; shown at once if a game is playing.
+    pub fn set_planet(&mut self, planet: Option<String>) -> Result<(), String> {
+        if self.planet == planet {
+            return Ok(());
+        }
+        self.planet = planet;
+        match self.last.clone() {
+            Some((status @ DiscordStatus::PlayingGame { .. }, app_start)) => self.set_status(&status, app_start),
+            _ => Ok(()),
+        }
+    }
+
     pub fn set_status(&mut self, status: &DiscordStatus, app_start: u64) -> Result<(), String> {
+        self.last = Some((status.clone(), app_start));
         let activity = match status {
             DiscordStatus::Idle => Activity {
                 details: Some("In Launcher".into()),
@@ -204,7 +222,10 @@ impl DiscordIpc {
                 let current_sec = now_sec();
                 Activity {
                     details: Some(format!("Playing {title}")),
-                    state: Some(format!("In Game ({region})")),
+                    state: Some(match &self.planet {
+                        Some(planet) => format!("On {planet} ({region})"),
+                        None => format!("In Game ({region})"),
+                    }),
                     timestamps: Some(ActivityTimestamps { start: Some(start_time.unwrap_or(current_sec)), end: None }),
                     assets: Some(ActivityAssets {
                         large_image: Some(game_image_url(game_id)),
@@ -221,6 +242,16 @@ impl DiscordIpc {
 
     pub fn clear(&mut self) -> Result<(), String> {
         self.update_activity(None)
+    }
+}
+
+/// The level a running port announces in its log ("now playing level N", port/game/common/main.cpp)
+/// as a planet name, for the games whose levels are known.
+pub fn planet_from_log(game: &str, line: &str) -> Option<String> {
+    let level: usize = line.split("now playing level ").nth(1)?.trim().parse().ok()?;
+    match game {
+        "rac1" => crate::saves::RAC1_PLANETS.get(level).map(|p| p.to_string()),
+        _ => Some(format!("Level {level}")),
     }
 }
 
@@ -341,6 +372,13 @@ mod tests {
         let json = serde_json::to_string(&act).unwrap();
         assert!(json.contains("Playing Ratchet & Clank"));
         assert!(json.contains("largeImage"));
+    }
+
+    #[test]
+    fn reads_the_planet_from_the_port_log() {
+        assert_eq!(planet_from_log("rac1", "[info] now playing level 3").as_deref(), Some("Kerwan"));
+        assert_eq!(planet_from_log("rac2", "[info] now playing level 4").as_deref(), Some("Level 4"));
+        assert_eq!(planet_from_log("rac1", "[info] 4000 frames"), None);
     }
 
     #[test]

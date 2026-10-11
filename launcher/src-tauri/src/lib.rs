@@ -147,10 +147,31 @@ fn run_action(app: AppHandle, state: State<'_, AppState>, scope: Scope, id: Stri
         }
     }
 
+    // The game id whose planet names the play job's log gives (Discord).
+    let play_game = match (&scope, is_play, &config.root) {
+        (Scope::Version(key), true, Some(root)) => openrac_launcher_core::catalog::load(root)
+            .ok()
+            .and_then(|c| c.version(key).map(|v| v.game.clone())),
+        _ => None,
+    };
     let app_handle = app.clone();
     state.jobs.start(&plan, config.root.as_deref(), move |event| {
         let _ = match &event {
-            Event::Output { .. } => app.emit("job-output", &event),
+            Event::Output { line, .. } => {
+                if let Some(planet) =
+                    play_game.as_deref().and_then(|g| openrac_launcher_core::discord::planet_from_log(g, line))
+                {
+                    if let Some(st) = app_handle.try_state::<AppState>() {
+                        if st.config.lock().unwrap().discord_rpc {
+                            let discord = st.discord.clone();
+                            tauri::async_runtime::spawn_blocking(move || {
+                                let _ = discord.lock().unwrap().ipc.set_planet(Some(planet));
+                            });
+                        }
+                    }
+                }
+                app.emit("job-output", &event)
+            }
             Event::Exit { .. } => {
                 if is_play {
                     if let Some(st) = app_handle.try_state::<AppState>() {
@@ -160,6 +181,7 @@ fn run_action(app: AppHandle, state: State<'_, AppState>, scope: Scope, id: Stri
                             tauri::async_runtime::spawn_blocking(move || {
                                 let mut discord = discord.lock().unwrap();
                                 let app_start = discord.app_start;
+                                let _ = discord.ipc.set_planet(None);
                                 let _ = discord
                                     .ipc
                                     .set_status(&openrac_launcher_core::discord::DiscordStatus::Idle, app_start);

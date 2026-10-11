@@ -243,6 +243,14 @@ int openrac_game_vsync(void) {
     }
 #endif
     g_frame++;
+    // The level being played, once per change: the launcher reads this line for Discord's presence.
+    static int shown_level = OPENRAC_OVERLAY_EXE;
+    if (const int level = openrac_game_loaded_overlay(); level != shown_level) {
+        shown_level = level;
+        if (level != OPENRAC_OVERLAY_EXE) {
+            log::info("now playing level {}", level);
+        }
+    }
     if (openrac_game_on_frame != nullptr) {
         openrac_game_on_frame(static_cast<unsigned>(g_frame));
     }
