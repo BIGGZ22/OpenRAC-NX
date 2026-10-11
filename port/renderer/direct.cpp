@@ -947,6 +947,14 @@ void GifInterpreter::ensure_draw() {
         s.test = c.test;
         s.depth_write = !c.zbuf.zmsk;
         s.fbmsk = c.frame.fbmsk;
+        // A texture nothing has been put at yet (the game draws before its upload arrives): the
+        // chip would show whatever its memory held, so the draw writes nothing, rather than the
+        // placeholder's magenta (OPENRAC_SHOW_MISSING shows it, for finding missing textures).
+        static const bool show_missing = std::getenv("OPENRAC_SHOW_MISSING") != nullptr;
+        if (s.textured && s.texture == m_textures.placeholder() && !show_missing) {
+            s.fbmsk = 0xFFFFFFFFu;
+            s.depth_write = false;
+        }
         // The scissor is in this buffer's own pixels: scaled onto the picture as its draws are
         // (screen_position), so it clips where they land.
         {
