@@ -129,3 +129,48 @@ jobs:
           SDL_VIDEO_DRIVER: offscreen
         run: ctest --preset release
 
+  # The native port on Windows: rac1/pal's program built as the launcher's
+  # "Build the game" builds it (tools/build_port.py: Visual Studio's C++
+  # libraries and the Windows SDK, Clang, Ninja), then the runtime's tests and
+  # those of hostgen's that need no POSIX host. The port is written on Linux
+  # and macOS, and what only builds there (execinfo.h, fseeko) stops here.
+  port-windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      LLVM_VERSION: "21.1.4"
+      LLVM_SHA256: 8e39f8051cd10a163c1fab304f16d8e16a9c0f5e94b59d08853bbab630bd65dd
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The runner's own Clang may be older than Visual Studio's C++ library
+      # accepts, so LLVM's release is fetched at a fixed version and checked
+      # against its SHA-256. Its installer is unpacked, not run: nothing is
+      # installed over what the runner has.
+      - name: Clang
+        shell: pwsh
+        run: |
+          $ProgressPreference = "SilentlyContinue"
+          $installer = Join-Path $env:RUNNER_TEMP "llvm.exe"
+          $release = "https://github.com/llvm/llvm-project/releases/download"
+          Invoke-WebRequest "$release/llvmorg-${env:LLVM_VERSION}/LLVM-${env:LLVM_VERSION}-win64.exe" -OutFile $installer
+          $sha256 = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()
+          if ($sha256 -ne $env:LLVM_SHA256) { throw "LLVM ${env:LLVM_VERSION}: its SHA-256 is $sha256" }
+          $llvm = Join-Path $env:RUNNER_TEMP "llvm"
+          7z x $installer "-o$llvm" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "7z could not unpack LLVM's installer" }
+          "OPENRAC_CLANG=$llvm\bin\clang.exe" >> $env:GITHUB_ENV
+          "$llvm\bin" >> $env:GITHUB_PATH
+
+      - name: Build openrac-rac1-pal and the runtime's tests
+        run: python tools/build_port.py rac1-pal --target runtime_test
+
+      - name: The runtime's tests
+        run: port\build\release\runtime_test.exe
+
+      - name: hostgen's tests
+        run: python -m unittest discover -s port/tools/hostgen -v
+

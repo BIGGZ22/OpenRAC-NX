@@ -108,4 +108,13 @@ publicly known of each API, never from Sony's code or documentation.
 Generated C and build output stay in build trees (`port/build/` is ignored).
 The C and C++ layout is [.clang-format](.clang-format); comments say why.
 
+The port is built on Linux, macOS and Windows (there with Clang against
+MSVC's libraries); CI builds all of it on Linux and rac1/pal's program on
+Windows. Host C and C++ keep to the standard library and to what the runtime
+offers: a POSIX-only header or function (`execinfo.h`, `unistd.h`, `fseeko`,
+...) goes behind `_WIN32` with its Windows form beside it, as in
+[runtime/](runtime), and a debugging aid that wants the host's stack calls
+`openrac_host_caller` ([guest.h](runtime/include/openrac/guest.h)) instead of
+`backtrace`.
+
 GPL-3.0-or-later, as the rest of OpenRAC's top level.
