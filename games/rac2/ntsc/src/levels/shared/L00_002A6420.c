@@ -4,6 +4,12 @@ typedef unsigned char u8;
 
 extern void func_L00_002A61C8(int arg0, int arg1, int arg2, int arg3);
 
+extern void func_002E6CF0(void *routine, void *state);
+
+extern void func_00323270(void *a0, void *a1, void *a2, float f12, float f13, float f14);
+
+extern void func_L00_002A7A50();
+
 extern int func_L00_002B3998_1(float value);
 
 #ifndef RAC2_T_RESIDENTSTATE_FD160FB9C
@@ -92,6 +98,7 @@ extern float func_00282E48_4(char *source, short *table);
 extern short D_L00_001BF220_2[];
 
 extern float D_0018A084;
+
 
 typedef int s32;
 
@@ -214,17 +221,41 @@ INCLUDE_ASM("asm/levels", func_L00_002A74A8);
 
 INCLUDE_ASM("asm/levels", func_L00_002A75D8);
 
-INCLUDE_ASM("asm/levels", func_L00_002A76B8);
+/* runs a three-float setup over two resident blocks when the mode is 124, then publishes a
+   height once two resident flags are clear */
+void func_L00_002A76B8(void)
+{
+    char *base = D_00189E20_2;
+
+    if (*(int *)(base + 0x2294) == 124)
+        func_00323270(*(void **)(base + 0x2290), base + 0x7B0, base + 0x7B4,
+                      0.174532949924469f, 0.02617994323372841f, 0.03490659222006798f);
+    if (*(short *)(base + 0x6BC) == 0)
+        return;
+    if (*(int *)(base + 0x660) != 0)
+        return;
+    *(float *)(*(char **)(base + 0x2290) + 0xF4) = *(float *)(base + 0x6B0);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002A7748);
 
 INCLUDE_ASM("asm/levels", func_L00_002A7958);
 
-INCLUDE_ASM("asm/levels", func_L00_002A7A10);
+/* raises the pending flag once: registers an update routine with the resident pointer */
+void func_L00_002A7A10(void)
+{
+    char *base = D_00189E20_2;
+
+    if (*(short *)(base + 0x2162) == 0) {
+        *(short *)(base + 0x2162) = 1;
+        func_002E6CF0(func_L00_002A7A50, *(void **)(base + 0x2290));
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002A7A50);
 
 INCLUDE_ASM("asm/levels", func_L00_002A7DE8);
+
 
 INCLUDE_ASM("asm/levels", func_L00_002A7E60);
 
@@ -357,13 +388,33 @@ INCLUDE_ASM("asm/levels", func_L00_002AABE0);
 
 INCLUDE_ASM("asm/levels", func_L00_002AAE00);
 
-INCLUDE_ASM("asm/levels", func_L00_002AB0A8);
+typedef struct {
+    char reserved00[0xA4];
+    float first;
+    float second;
+    int reservedAC;
+} FloatPairRow;
+extern FloatPairRow D_L00_0025BE10[4];
 
-INCLUDE_ASM("asm/levels", func_L00_002AB0C0);
+void func_L00_002AB0A8(float first, float second) {
+    D_L00_0025BE10[0].first = first;
+    D_L00_0025BE10[0].second = second;
+}
 
-INCLUDE_ASM("asm/levels", func_L00_002AB0D8);
+void func_L00_002AB0C0(float first, float second) {
+    D_L00_0025BE10[1].first = first;
+    D_L00_0025BE10[1].second = second;
+}
 
-INCLUDE_ASM("asm/levels", func_L00_002AB0F0);
+void func_L00_002AB0D8(float first, float second) {
+    D_L00_0025BE10[2].first = first;
+    D_L00_0025BE10[2].second = second;
+}
+
+void func_L00_002AB0F0(float first, float second) {
+    D_L00_0025BE10[3].first = first;
+    D_L00_0025BE10[3].second = second;
+}
 
 /* scales and blends two 16-byte samples through a helper, and on a successful comparison writes a table-derived value to the caller's output */
 int func_L00_002AB108(float *out, float scale, float amount)
@@ -382,7 +433,23 @@ int func_L00_002AB108(float *out, float scale, float amount)
 
 INCLUDE_ASM("asm/levels", func_L00_002AB1D8);
 
-INCLUDE_ASM("asm/levels", func_L00_002AB3E0);
+void func_L00_002AB3E0(void)
+{
+    char *p = D_00189E20_2;
+    int i;
+
+    char *q;
+
+    *(int *)(p + 0x1194) = 0;
+    *(int *)(p + 0x1198) = 0;
+    q = p;
+    for (i = 3; i >= 0; i--) {
+        *(int *)(q + 0x11B4) = 0;
+        *(int *)(q + 0x11B8) = 0;
+        q += 0x10;
+    }
+}
+
 
 INCLUDE_ASM("asm/levels", func_L00_002AB420);
 
@@ -435,7 +502,16 @@ s32 func_L00_002ADF10(s32 index) {
  return func_L00_002ADEA0(index)==47;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_002ADF38);
+/* the indexed resident status is one of four measured values */
+s32 func_L00_002ADF38(s32 index)
+{
+    s32 value = func_L00_002ADEA0(index);
+
+    if (value == 19 || value == 52 || value == 54 || value == 20)
+        return 1;
+    return 0;
+}
+
 
 /* tests the measured unsigned resident kind and mode alternatives */
 s32 func_L00_002ADF80(void)
@@ -458,6 +534,8 @@ u32 func_L00_002ADFD0(u8 *object,u32 value) {
 
 INCLUDE_ASM("asm/levels", func_L00_002ADFE8);
 
+
 INCLUDE_ASM("asm/levels", func_L00_002AE070);
+
 
 INCLUDE_ASM("asm/levels", func_L00_002AE0C8);

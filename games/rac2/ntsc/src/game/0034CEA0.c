@@ -123,7 +123,9 @@ void func_0034E4D8(int param_1)
 
 INCLUDE_ASM("asm/game", func_0034E4F8);
 
-INCLUDE_ASM("asm/game", func_0034E5B8);
+void *func_0034E5B8(void *object) {
+    return object;
+}
 
 INCLUDE_ASM("asm/game", func_0034E5C0);
 
@@ -172,15 +174,30 @@ void func_0034F3B8(void) {
     func_0011AAD0(1);
 }
 
-INCLUDE_ASM("asm/game", func_0034F3D8);
+extern char *D_001B23CC[] __attribute__((sda));
+extern int func_0034FAE8(u8 *);
+
+int func_0034F3D8(void) {
+    return func_0034FAE8((u8 *)(D_001B23CC[0] + 0xD9100));
+}
 
 INCLUDE_ASM("asm/game", func_0034F408);
 
 INCLUDE_ASM("asm/game", func_0034F690);
 
-INCLUDE_ASM("asm/game", func_0034F780);
+extern char D_001AE820[];
+extern void func_0026FEB8(void *, int);
 
-INCLUDE_ASM("asm/game", func_0034F7A8);
+void func_0034F780(int value) {
+    func_0026FEB8(D_001AE820, value);
+}
+
+extern char *D_001B23CC[] __attribute__((sda));
+extern void func_0034FAF8(int *);
+
+void func_0034F7A8(void) {
+    func_0034FAF8((int *)(D_001B23CC[0] + 0xD9100));
+}
 
 INCLUDE_ASM("asm/game", func_0034F7D8);
 
@@ -249,7 +266,12 @@ void func_0034FA30(s32 *a0,s32 a1) {
 /* true when the counter has reached 0x1000; byte-identical across all 27 levels. */
 s32 func_0034FAE8(u8 *a0) { return *(s32 *)(a0 + 0x50) >= 0x1000; }
 
-INCLUDE_ASM("asm/game", func_0034FAF8);
+extern void func_0034FBC8(void *);
+
+void func_0034FAF8(int *object) {
+    if (object[0] != 0)
+        func_0034FBC8(object);
+}
 
 void func_0034FB20(u8 *a0, s32 a1, s32 a2, s32 a3) {
     s32 dma[4], id;

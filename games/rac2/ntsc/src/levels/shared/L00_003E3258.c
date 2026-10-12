@@ -86,7 +86,12 @@ INCLUDE_ASM("asm/levels", func_L00_003E3A18);
 
 INCLUDE_ASM("asm/levels", func_L00_003E4508);
 
-INCLUDE_ASM("asm/levels", func_L00_003E4948);
+extern void ref_L00_003E4948_00(void);
+
+void func_L00_003E4948(void)
+{
+    ref_L00_003E4948_00();
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003E4968);
 
@@ -98,13 +103,69 @@ INCLUDE_ASM("asm/levels", func_L00_003E51C0);
 
 INCLUDE_ASM("asm/levels", func_L00_003E5328);
 
-INCLUDE_ASM("asm/levels", func_L00_003E5330);
+extern int D_L00_001B2B50_1 __attribute__((sda));
+
+extern int D_L00_001B05DC_1 __attribute__((sda));
+
+/* clears two words of the shared state block; the second store reaches through
+   $gp because it lands in the return delay slot */
+void func_L00_003E5330(void)
+{
+    D_L00_001B2B50_1 = 0;
+    D_L00_001B05DC_1 = 0;
+}
+
 
 INCLUDE_ASM("asm/levels", func_L00_003E5340);
 
-INCLUDE_ASM("asm/levels", func_L00_003E55B0);
 
-INCLUDE_ASM("asm/levels", func_L00_003E5650);
+#include "common.h"
+
+extern int func_002B4038(short id, int mode);
+
+extern int func_00283DB8(Vec16_Fc936841d *v, float scale);
+
+extern void func_0029F338(char *object);
+
+extern void func_L00_003E5710(char *object);
+
+extern void func_L00_003E5978(char *object);
+
+extern void func_L00_003E55B0(char *object);
+
+extern void func_L00_003E5BD8(char *object);
+
+extern void func_L00_003E6030(char *object);
+
+extern void func_L00_003E6710(char *object);
+
+void func_L00_003E5650(char *object)
+{
+    char *data;
+    Vec16_Fc936841d local;
+    int result;
+
+    data = *(char **)(object + 0x68);
+    if (func_002B4038(*(short *)(object + 0xAA), *(int *)(data + 0x28)) == 0) {
+        func_L00_003E5330();
+        func_0029F338(object);
+    } else {
+        qcopy(&local, object + 0x10);
+        local.w = 2.0f;
+        result = func_00283DB8(&local, 100.0f);
+        if (result != -1) {
+            if (*(unsigned char *)(object + 0x20) != 6) {
+                func_L00_003E5710(object);
+                func_L00_003E5978(object);
+                func_L00_003E55B0(object);
+            }
+            func_L00_003E5BD8(object);
+            func_L00_003E6030(object);
+            func_L00_003E6710(object);
+        }
+    }
+}
+
 
 INCLUDE_ASM("asm/levels", func_L00_003E5710);
 
@@ -182,7 +243,6 @@ INCLUDE_ASM("asm/levels", func_L00_003E7E40);
 
 INCLUDE_ASM("asm/levels", func_L00_003E80A8);
 
-INCLUDE_ASM("asm/levels", func_L00_003E8150);
 
 INCLUDE_ASM("asm/levels", func_L00_003E8180);
 

@@ -22,7 +22,13 @@ INCLUDE_ASM("asm/game", func_002B5828);
 
 INCLUDE_ASM("asm/game", func_002B5BC0);
 
-INCLUDE_ASM("asm/game", func_002B5CD8);
+extern int func_002AD0E0(void *, void *, void *, void *, void *, void *);
+
+void func_002B5CD8(char *first, char *second) {
+    void *target = *(void **)(second + 0x88);
+    if (target != 0 && func_002AD0E0(first, target, first + 0x10, first + 0xF0, first + 0x10, first + 0xF0) != 0)
+        *(unsigned int *)(second + 0x94) |= 0x40;
+}
 
 void *func_002B5D28(u8 *a0) { return *(void **)(*(u8 **)(a0 + 0x68) + 0x18); }
 

@@ -356,7 +356,9 @@ INCLUDE_ASM("asm/game", func_003489E8);
 
 INCLUDE_ASM("asm/game", func_00348EC0);
 
-INCLUDE_ASM("asm/game", func_00349148);
+void *func_00349148(void *object) {
+    return object;
+}
 
 void func_00349150(s32 *a0) {
  u8 *p=(u8 *)a0+0x50; s32 value=-1; s32 i=15;
@@ -413,7 +415,19 @@ void func_00349590(u8 *a0, s32 a1) { *(s32 *)(a0 + 0x2c) = a1; }
 
 INCLUDE_ASM("asm/game", func_00349598);
 
-INCLUDE_ASM("asm/game", func_003495A0);
+typedef struct {
+    char reserved[0x18];
+    float value;
+    char gap[0xC];
+    int mode;
+} Value_3495A0;
+
+float func_003495A0(Value_3495A0 *object) {
+    float previous = object->value;
+    object->value = 0.0f;
+    object->mode = 1;
+    return previous;
+}
 
 INCLUDE_ASM("asm/game", func_003495B8);
 
@@ -593,7 +607,19 @@ unsigned int func_0034CA68(unsigned char *owner)
     return *(unsigned int *)address & 0xff000000u;
 }
 
-INCLUDE_ASM("asm/game", func_0034CA90);
+extern void func_00336920(char *, int, int);
+void func_0034CA90(char *self, int mode)
+{
+    *(int *)(self + 0x1584) = mode;
+    switch (mode) {
+    case 0:
+        func_00336920(self + 0x280, 0x7567, 0);
+        break;
+    case 1:
+        func_00336920(self + 0x280, 0xEAA2, 0);
+        break;
+    }
+}
 
 void func_0034CAE8(char *p, void *a1, int a2)
 {

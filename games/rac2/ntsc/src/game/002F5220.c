@@ -140,7 +140,13 @@ INCLUDE_ASM("asm/game", func_002F5AE8);
 
 INCLUDE_ASM("asm/game", func_002F5AF8);
 
-INCLUDE_ASM("asm/game", func_002F5CB8);
+extern int D_001A8C80[] __attribute__((sda));
+extern int D_001A8C84 __attribute__((sda));
+
+void func_002F5CB8(int first, int second) {
+    D_001A8C80[0] = first;
+    D_001A8C84 = second;
+}
 
 INCLUDE_ASM("asm/game", func_002F5CC8);
 
@@ -154,7 +160,8 @@ INCLUDE_ASM("asm/game", func_002F5EF8);
 
 INCLUDE_ASM("asm/game", func_002F5FB8);
 
-INCLUDE_ASM("asm/game", func_002F6458);
+extern void func_288CB0(int, int);
+void func_002F6458(void) { char *base = D_00138180 + 0x1260; int index = *(int *)(base + 0x148); if (index != -1) { if (*(short *)(base + index * 0xA0 + 0x18) >= 0) *(int *)(base + 0x17C) = 1; } func_288CB0(0, 0); }
 
 INCLUDE_ASM("asm/game", func_002F64A8);
 
@@ -174,7 +181,12 @@ INCLUDE_ASM("asm/game", func_002F8178);
 
 INCLUDE_ASM("asm/game", func_002F8768);
 
-INCLUDE_ASM("asm/game", func_002F88D8);
+typedef struct { unsigned char pad0[0x3C]; char *destination; unsigned char pad1[0x24]; int clear; } Func_002F88D8State;
+extern Func_002F88D8State ref_L00_002F88D8_00;
+extern void func_00115DA8(char *, const char *, ...);
+extern const char D_001AD2B8[];
+
+void func_002F88D8(void *arg) { func_00115DA8(ref_L00_002F88D8_00.destination, D_001AD2B8, arg); ref_L00_002F88D8_00.clear = 0; }
 
 INCLUDE_ASM("asm/game", func_002F8918);
 
@@ -184,7 +196,12 @@ INCLUDE_ASM("asm/game", func_002F93A8);
 
 INCLUDE_ASM("asm/game", func_002F93B0);
 
-INCLUDE_ASM("asm/game", func_002F9778);
+extern void func_002F93B0(void);
+
+void func_002F9778(void)
+{
+    func_002F93B0();
+}
 
 INCLUDE_ASM("asm/game", func_002F9798);
 

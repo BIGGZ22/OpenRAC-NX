@@ -74,4 +74,20 @@ void func_0012CFE8(struct M2c_arg0 *arg0, s32 arg1)
   arg0->unk850 = (s32) ((arg0->unk850 < temp_4_32) ? (temp_4_32) : (arg0->unk850));
 }
 
-INCLUDE_ASM("asm/core", func_0012D060);
+extern int func_0012C878(void *, int);
+extern void func_0012CC88(void *);
+
+void func_0012D060(char *object) {
+    *(int *)(object + 0xE8) = 0;
+    *(int *)(object + 0x854) = 1;
+    *(int *)(object + 0x84C) = *(int *)(object + 0x850) + 1;
+    func_0012C878(object, 1);
+    func_0012C878(object, 5);
+    func_0012C878(object, 6);
+    func_0012C878(object, 1);
+    func_0012C878(object, 6);
+    func_0012C878(object, 6);
+    *(int *)(object + 0x1A4) = func_0012C878(object, 1);
+    *(int *)(object + 0x1A8) = func_0012C878(object, 1);
+    func_0012CC88(object);
+}

@@ -14,6 +14,10 @@ void func_002AFF08(unsigned long arg1, unsigned long arg2, unsigned long arg3) {
     func_00282E20((unsigned char (*)[16])stack_buffer);
 }
 
-INCLUDE_ASM("asm/game", func_002AFF38);
+float func_002AFF38(unsigned long first, unsigned long second, unsigned long third) {
+    float result[4];
+    func_002AFDD8(first, (unsigned long)result, second, third);
+    return result[2];
+}
 
 INCLUDE_ASM("asm/game", func_002AFF60);

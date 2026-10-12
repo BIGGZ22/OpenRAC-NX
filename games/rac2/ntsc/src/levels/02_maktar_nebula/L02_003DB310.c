@@ -8,17 +8,56 @@ INCLUDE_ASM("asm/levels", func_L02_003DB870);
 
 INCLUDE_ASM("asm/levels", func_L02_003DB880);
 
-INCLUDE_ASM("asm/levels", func_L02_003DB938);
+void func_L02_003DB938(char *arg0) {
+    char *state = *(char **)(arg0 + 0x68);
 
-INCLUDE_ASM("asm/levels", func_L02_003DB950);
+    if (*(short *)(state + 0x280) != 0)
+        *(short *)(state + 0x280) = 0;
+}
 
-INCLUDE_ASM("asm/levels", func_L02_003DB9E0);
+extern void func_002A7750();
+
+int func_L02_003DB950(char *arg0) {
+    char *state = *(char **)(arg0 + 0x68);
+    char *other = *(char **)(state + 0x264);
+    unsigned char kind;
+    int result = 0;
+
+    if (other == 0)
+        goto done;
+    kind = *(unsigned char *)(other + 0x20);
+    if (kind == 0xFE)
+        goto done;
+    if (kind == 0xFD)
+        goto done;
+    if (kind < 3)
+        goto done;
+    if (*(float *)(state + 0x20) <
+        (float)*(short *)(state + 0x24) *
+            (3.0f - (float)*(short *)(state + 0x282)) * 0.33333334f)
+        result = 1;
+done:
+    return result;
+}
 
 INCLUDE_ASM("asm/levels", func_L02_003DBA70);
 
 INCLUDE_ASM("asm/levels", func_L02_003DBB70);
 
-INCLUDE_ASM("asm/levels", func_L02_003DBE60);
+extern char D_L02_001BA500;
+
+extern float func_00282E48();
+
+extern void func_002A93B0();
+
+void func_L02_003DBE60(char *arg0) {
+    if (*(unsigned char *)(arg0 + 0x31) != 0) {
+        if (func_00282E48(arg0 + 0x10, &D_L02_001BA500) < 64.0f) {
+            func_002A93B0(arg0);
+            *(unsigned char *)(arg0 + 0x6F) = 60;
+        }
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L02_003DBF40);
 
@@ -106,7 +145,13 @@ INCLUDE_ASM("asm/levels", func_L02_003F18E8);
 
 INCLUDE_ASM("asm/levels", func_L02_003F1A88);
 
-INCLUDE_ASM("asm/levels", func_L02_003F1B70);
+void func_L02_003F1B70(char *arg0) {
+    char *state = *(char **)(arg0 + 0x68);
+
+    *(short *)(state + 0x4EC) = *(unsigned char *)(arg0 + 0x20);
+    *(short *)(state + 0x4EE) = *(unsigned char *)(arg0 + 0x95);
+    func_002A7750(arg0, 6, 4);
+}
 
 INCLUDE_ASM("asm/levels", func_L02_003F1BA8);
 

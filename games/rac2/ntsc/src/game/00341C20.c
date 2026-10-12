@@ -35,7 +35,14 @@ void func_00341C20(char *a0)
     func_00341A88(a0);
 }
 
-INCLUDE_ASM("asm/game", func_00341C90);
+char *func_00341C90(char *p) {
+    extern void func_00347EA0(void *);
+    extern void func_003361A8(char *);
+    func_00347EA0(p + 0x10);
+    func_003361A8(p + 0xDC);
+    func_003361A8(p + 0x128);
+    return p;
+}
 
 INCLUDE_ASM("asm/game", func_00341CD0);
 
@@ -48,15 +55,34 @@ INCLUDE_ASM("asm/game", func_00341E50);
 
 INCLUDE_ASM("asm/game", func_00341E58);
 
-INCLUDE_ASM("asm/game", func_00341E90);
+extern void func_00348128(void *);
 
-INCLUDE_ASM("asm/game", func_00341EB0);
+void func_00341E90(char *object) {
+    func_00348128(object + 0x10);
+}
+
+void func_00341EB0(unsigned char *owner, float *records)
+{
+    func_00348068(owner + 0x10, records);
+    *(float **)(owner + 0xD8) = records;
+}
 
 INCLUDE_ASM("asm/game", func_00341EE8);
 
 INCLUDE_ASM("asm/game", func_00341F38);
 
-INCLUDE_ASM("asm/game", func_003420C8);
+char *func_003420C8(char *object) {
+    extern void func_003361A8(char *);
+    extern void func_003366D0(char *);
+    extern void func_00347EA0(void *);
+    func_003361A8(object);
+    func_003361A8(object + 0x4C);
+    func_003361A8(object + 0x98);
+    func_003361A8(object + 0xE4);
+    func_003366D0(object + 0x130);
+    func_00347EA0(object + 0x188);
+    return object;
+}
 
 INCLUDE_ASM("asm/game", func_00342118);
 
@@ -72,7 +98,7 @@ void func_003423A8(u8 *a0, s32 a1) { *(s32 *)(a0 + 0x170) = a1; }
 /* multiplies the index by 20 and adds it to a base; byte-identical across all 27 levels. */
 s32 func_003423B0(u8 *a0) { return *(s32 *)(a0 + 0x250) + *(s32 *)(a0 + 0x16C) * 20; }
 
-INCLUDE_ASM("asm/game", func_003423C8);
+
 
 void func_00342420(void)
 {

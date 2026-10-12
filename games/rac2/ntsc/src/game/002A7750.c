@@ -278,7 +278,24 @@ INCLUDE_ASM("asm/game", func_002A84E0);
 
 INCLUDE_ASM("asm/game", func_002A8508);
 
-INCLUDE_ASM("asm/game", func_002A8598);
+#define MACRO_ADDR __attribute__((section(".sdata")))
+
+extern unsigned short *r1_D_L01_001ABFC0[];
+
+extern char *r1_D_L01_00160058 MACRO_ADDR;
+
+/* rac1-decomp src/overlays/shared/mobyutil_0026E8E0.c: func_L01_0026F040 */
+// Set byte 0xBC of each entry in a negative-terminated index list.
+void func_002A8598(int i, int v) {
+    unsigned short *t = r1_D_L01_001ABFC0[i];
+    unsigned short *p;
+    if (t != 0) {
+        p = t;
+        do {
+            r1_D_L01_00160058[(*p & 0x7FFF) * 256 + 0xBC] = v;
+        } while (*(short *)p++ >= 0);
+    }
+}
 
 INCLUDE_ASM("asm/game", func_002A85F0);
 
@@ -302,7 +319,11 @@ INCLUDE_ASM("asm/game", func_002A88A0);
 
 INCLUDE_ASM("asm/game", func_002A89A8);
 
-INCLUDE_ASM("asm/game", func_002A8A20);
+extern void func_002A89A8(void *, int, float);
+
+void func_002A8A20(void *object) {
+    func_002A89A8(object, 32, 0.5f);
+}
 
 INCLUDE_ASM("asm/game", func_002A8A48);
 
@@ -334,7 +355,7 @@ int func_002A8AF0(float *p, float *v, int n) {
 
 INCLUDE_ASM("asm/game", func_002A8BC0);
 
-INCLUDE_ASM("asm/game", func_002A8BD0);
+void func_002A8BD0(char *a0, int a1, int a2, float a3) { extern void func_00282C88(void *); *(int *)(a0 + 0x10) = a1; *(int *)(a0 + 0x14) = a2; *(float *)(a0 + 0x1C) = a3; *(int *)(a0 + 0x20) = 0; func_00282C88(a0); }
 
 void func_002A8C00(char *a, int b, int c, float d, Quad16 *q) {
     *(int *)(a + 0x10) = b;
@@ -366,9 +387,17 @@ INCLUDE_ASM("asm/game", func_002A9288);
 
 INCLUDE_ASM("asm/game", func_002A93B0);
 
-INCLUDE_ASM("asm/game", func_002A9548);
+extern void func_002A93B0(void *);
 
-INCLUDE_ASM("asm/game", func_002A9568);
+void func_002A9548(void *object) {
+    func_002A93B0(object);
+}
+
+extern int func_00283D38(int, int, float);
+
+int func_002A9568(int first, int second, float amount) {
+    return func_00283D38(first, second, amount);
+}
 
 INCLUDE_ASM("asm/game", func_002A9588);
 
@@ -416,7 +445,11 @@ INCLUDE_ASM("asm/game", func_002AA130);
 
 f32 func_002AA140(f32 a, f32 b, f32 t) { return a + (b - a) * t; }
 
-INCLUDE_ASM("asm/game", func_002AA150);
+float func_002AA150(float a0, float a1, float a2)
+{
+    return F27f9be8e_FUN_00283B98(a0,
+            F27f9be8e_FUN_00283BE0(a1, a0) * a2);
+}
 
 void func_002AA198(Obj_Ff454dd77 *o, float a, float b, float c, float d)
 {
@@ -439,9 +472,26 @@ void func_002AA198(Obj_Ff454dd77 *o, float a, float b, float c, float d)
         o->f0 = -Ff454dd77_FUN_00282C48(a);
 }
 
-INCLUDE_ASM("asm/game", func_002AA2E8);
+f32 func_002AA2E8(f32 *value, f32 target, f32 step) {
+    f32 diff = target - *value;
+    if (step < diff) diff = step;
+    else if (diff < -step) diff = -step;
+    *value = *value + diff;
+    return Ff454dd77_FUN_00282C48(target - *value);
+}
 
-INCLUDE_ASM("asm/game", func_002AA340);
+f32 func_002AA340(s32 *a0, s32 a1, s32 a2)
+{
+    s32 value;
+    s32 step = a1 - *a0;
+    if (a2 < step)
+        step = a2;
+    else if (step < -a2)
+        step = -a2;
+    value = *(volatile s32 *)a0 + step;
+    *a0 = value;
+    return (f32)func_00282C30(a1 - value);
+}
 
 INCLUDE_ASM("asm/game", func_002AA3A0);
 

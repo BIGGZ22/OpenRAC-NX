@@ -1,4 +1,7 @@
 #include "include_asm.h"
+#include "common.h"
+
+typedef int TI128 __attribute__((mode(TI)));
 
 extern void func_002A7750(char *arg, int mode, int value);
 
@@ -67,7 +70,6 @@ INCLUDE_ASM("asm/levels", func_L00_004005B0);
 
 INCLUDE_ASM("asm/levels", func_L00_00400F30);
 
-INCLUDE_ASM("asm/levels", func_L00_00400F38);
 
 INCLUDE_ASM("asm/levels", func_L00_00401168);
 
@@ -75,29 +77,83 @@ INCLUDE_ASM("asm/levels", func_L00_00401668);
 
 INCLUDE_ASM("asm/levels", func_L00_00401D50);
 
-INCLUDE_ASM("asm/levels", func_L00_00401E28);
-
 INCLUDE_ASM("asm/levels", func_L00_00402068);
-
-INCLUDE_ASM("asm/levels", func_L00_004028C0);
 
 INCLUDE_ASM("asm/levels", func_L00_004029E8);
 
-INCLUDE_ASM("asm/levels", func_L00_00402DB8);
 
-INCLUDE_ASM("asm/levels", func_L00_00402DD8);
+extern void func_002FDBD8(void *obj, float f, void *p, void *q);
+typedef struct __attribute__((packed)) { unsigned char b[8]; } Blob8;
+extern Blob8 D_L00_001B0DB8 __attribute__((nosda));
+
+void func_L00_00402DD8(char *arg)
+{
+    int *o = *(int **)(arg + 104);
+    if (o[9] != 0) {
+        if (o[11] == 0) {
+            func_002FDBD8(o, 1.0f, (char *)o + 16, 0);
+        } else {
+            Blob8 tmp = D_L00_001B0DB8;
+            func_002FDBD8(o, 1.0f, (char *)o + 16, &tmp);
+        }
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00402E50);
 
 INCLUDE_ASM("asm/levels", func_L00_00403730);
 
+extern int D_L00_001B2C6C __attribute__((nosda));
+
 INCLUDE_ASM("asm/levels", func_L00_00403BF8);
+
+extern int D_L00_001B2C30[] __attribute__((nosda));
 
 INCLUDE_ASM("asm/levels", func_L00_00403C30);
 
+extern int func_0031A728(int range);
+extern void func_L00_00403900(int value);
+extern void func_L00_00403C68(int value);
+
 INCLUDE_ASM("asm/levels", func_L00_00403CB8);
 
-INCLUDE_ASM("asm/levels", func_L00_00403D58);
+extern void func_002EE108(char *a, int *b, char *c);
+extern void func_0037F9A0(char *a, char *b);
+extern void func_0037E1D8(int a, int *b, int c);
+extern int func_002EDD48(char *a);
+extern void func_002E6EF8(void (*f)(char *), char *arg);
+extern void func_0037E1B8(int a);
+extern void func_00310440(char *arg);
+extern void func_L00_00404168(char *arg);
+extern void func_L00_00403F90(char *arg, void *p);
+
+void func_L00_00403D58(char *arg)
+{
+    int *o = *(int **)(arg + 104);
+    unsigned char state = *(unsigned char *)(arg + 32);
+    TI128 tmp;
+
+    switch (state) {
+    case 0:
+        arg[32] = 1;
+    case 1:
+        qcopy(&tmp, arg + 16);
+        func_002EE108(arg + 16, o, arg + 16);
+        func_0037F9A0(arg + 16, arg + 16);
+        func_0037E1D8(o[7], o, 0);
+        func_L00_00403F90(arg, &tmp);
+        if (func_002EDD48((char *)o + 16) != 0)
+            arg[32] = 2;
+        break;
+    case 2:
+        func_0037E1B8(o[7]);
+        func_00310440(arg);
+        return;
+    default:
+        break;
+    }
+    func_002E6EF8(func_L00_00404168, arg);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00403F90);
 
@@ -109,7 +165,29 @@ INCLUDE_ASM("asm/levels", func_L00_004045E8);
 
 INCLUDE_ASM("asm/levels", func_L00_00404B48);
 
-INCLUDE_ASM("asm/levels", func_L00_00404DD8);
+extern TI128 D_L00_001BF220;
+extern void func_00310440(char *arg);
+extern int func_002DE4B0(void *a, void *b, int c, void *d, int e);
+extern void func_0035F450(int a, int b, void *c, int d);
+
+void func_L00_00404DD8(char *arg, void *a1)
+{
+    if (*(float *)(arg + 16) < 2.0f || *(float *)(arg + 16) > 1021.0f ||
+        *(float *)(arg + 20) < 2.0f || *(float *)(arg + 20) > 1021.0f ||
+        *(float *)(arg + 24) < 2.0f || *(float *)(arg + 24) > 1021.0f) {
+        func_00310440(arg);
+        return;
+    }
+    {
+        char *p = arg + 16;
+
+        if (func_002DE4B0(a1, p, 0, arg, 0) != 0) {
+            qcopy(p, &D_L00_001BF220);
+            arg[32] = 2;
+            func_0035F450(5, 0, arg, 3705);
+        }
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00404ED8);
 

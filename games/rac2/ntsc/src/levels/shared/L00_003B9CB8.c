@@ -67,15 +67,19 @@ void func_L00_003B9CB8(Rac2Native_86f665335d9cb905_AnalysisOwner *owner)
     func_L00_003B9310(owner, owner->context_68);
 }
 
-INCLUDE_ASM("asm/levels", func_L00_003BAAD0);
+extern void func_003182C0(void);
+
+/* Calls the measured no-argument callee. */
+void func_L00_003BAAD0(void)
+{
+    func_003182C0();
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003BAC30);
 
 INCLUDE_ASM("asm/levels", func_L00_003BB080);
 
 INCLUDE_ASM("asm/levels", func_L00_003BB1F8);
-
-INCLUDE_ASM("asm/levels", func_L00_003BB5F0);
 
 INCLUDE_ASM("asm/levels", func_L00_003BB600);
 
@@ -274,8 +278,6 @@ void func_L00_003C3920(char *unused, char *arg)
 INCLUDE_ASM("asm/levels", func_L00_003C3A70);
 
 INCLUDE_ASM("asm/levels", func_L00_003C3D90);
-
-INCLUDE_ASM("asm/levels", func_L00_003C4850);
 
 INCLUDE_ASM("asm/levels", func_L00_003C48D0);
 

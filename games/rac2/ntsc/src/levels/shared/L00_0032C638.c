@@ -19,7 +19,11 @@ INCLUDE_ASM("asm/levels", func_L00_0032CB30);
 
 INCLUDE_ASM("asm/levels", func_L00_0032CF60);
 
-INCLUDE_ASM("asm/levels", func_L00_0032D100);
+void func_L00_0032D100(int value, long address) {
+    int *target = (int *)(int)address;
+    if (target != 0)
+        *target = value;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0032D208);
 

@@ -160,6 +160,35 @@ void func_L00_002B1230(int slot, int value)
     }
 }
 
+typedef struct {
+    u8 pad0[0x98];
+    f32 f98;
+    u8 pad1[0x1A0 - 0x9C];
+    f32 f1A0;
+    f32 f1A4;
+    f32 f1A8;
+    u8 pad2[0x1B0 - 0x1AC];
+    f32 f1B0;
+    f32 f1B4;
+    u8 pad3[0x1FC - 0x1B8];
+    short a;
+    u8 pad4[0xA70 - 0x1FE];
+    f32 fA70;
+    f32 fA74;
+    f32 fA78;
+    u8 pad4b[0x1FB0 - 0xA7C];
+    f32 f1FB0;
+    f32 f1FB4;
+    u8 pad5[0x22C3 - 0x1FB8];
+    u8 flag;
+    u8 pad6[0x24F4 - 0x22C4];
+    short b;
+} D00189E20_Overlay;
+
+extern D00189E20_Overlay D_00189E20;
+
+extern void func_002AA2E8(float *, float, float);
+
 INCLUDE_ASM("asm/levels", func_L00_002B1308);
 
 INCLUDE_ASM("asm/levels", func_L00_002B1350);
@@ -220,7 +249,32 @@ s32 func_L00_002B3248(u8 *object) {
  return *(short *)(object+0xaa)==71;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_002B3268);
+extern int D_00138320[];
+
+extern char D_L00_001B8FF0[];
+
+extern float D_L00_001B8DD8;
+
+extern float func_L00_002B9B38(char *, int);
+
+extern float func_00282C48(float);
+
+extern float func_00283C80(float, float);
+
+int func_L00_002B3268(float x) {
+    float r;
+
+    if ((D_00138320[0] & 3) != 0) {
+        if (D_00189E20.flag != 0)
+            r = func_00282C48(func_L00_002B9B38(D_L00_001B8FF0, 0));
+        else
+            r = func_00283C80(D_00189E20.f98, D_L00_001B8DD8);
+        if (r < x)
+            return 0;
+        return 1;
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002B32F8);
 
@@ -228,7 +282,25 @@ INCLUDE_ASM("asm/levels", func_L00_002B35A0);
 
 INCLUDE_ASM("asm/levels", func_L00_002B36E0);
 
-INCLUDE_ASM("asm/levels", func_L00_002B3900);
+extern char D_0018BDD0[];
+
+extern float func_00282DF0(char *);
+
+float func_L00_002B3900(void) {
+    float a = func_00282C48(D_00189E20.f1FB0);
+    float b = func_00282C48(D_00189E20.f1FB4);
+    float c;
+    float v;
+
+    if (b < a)
+        c = func_00282C48(D_00189E20.f1FB0);
+    else
+        c = func_00282C48(D_00189E20.f1FB4);
+    v = (c + func_00282DF0(D_0018BDD0)) * 0.5f;
+    if (1.0f < v)
+        v = 1.0f;
+    return v;
+}
 
 /* Test whether a scalar lies below a plane within its configured depth, rejecting unordered values */
 int func_L00_002B3998(f32 value)
@@ -241,7 +313,13 @@ int func_L00_002B3998(f32 value)
     return 0;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_002B39D8);
+/* clears the two floats at the head of the window block; the second store is the one the
+   scheduler parks in the jr delay slot, so it is written second */
+void func_L00_002B39D8(void)
+{
+    D_00189E20.f1B0 = 0.0f;
+    D_00189E20.f1B4 = 0.0f;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002B39F0);
 
@@ -276,17 +354,33 @@ void func_L00_002B3E40(int a0, float a1, float a2, float a3)
     func_L00_002B3DC0_1(0.0f, 0.0f, out);
 }
 
-INCLUDE_ASM("asm/levels", func_L00_002B3EF8);
+void func_L00_002B3EF8(int a0, float x, float y, float z) {
+    if (D_00189E20.flag != 0)
+        func_L00_002B3E40(a0, x, y, z);
+    else
+        D_00189E20.f1A8 = func_002AA898(&D_00189E20.f98, (char *)&D_00189E20.f1A4, a0, D_00189E20.f1A0, x, y, z);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002B3F60);
 
 INCLUDE_ASM("asm/levels", func_L00_002B3F68);
 
-INCLUDE_ASM("asm/levels", func_L00_002B41B8);
+void func_L00_002B41B8(float x, float y) {
+    if (D_00189E20.f1B4 < D_00189E20.f1B0)
+        func_002AA2E8(&D_00189E20.f1B4, D_00189E20.f1B0, x);
+    else
+        func_002AA2E8(&D_00189E20.f1B4, D_00189E20.f1B0, y);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002B4208);
 
-INCLUDE_ASM("asm/levels", func_L00_002B42D8);
+extern char D_00189F10[];
+
+extern void func_00282F20(char *, void *, float);
+
+void func_L00_002B42D8(void *obj) {
+    func_00282F20(D_00189F10, obj, *(float *)(D_00189F10 + 0xC4));
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002B4308);
 
@@ -298,7 +392,24 @@ INCLUDE_ASM("asm/levels", func_L00_002B4900);
 
 INCLUDE_ASM("asm/levels", func_L00_002B5250);
 
-INCLUDE_ASM("asm/levels", func_L00_002B54F8);
+extern void func_002AF000(char *, float, float, float);
+
+extern void func_00282D30(char *, char *, float);
+
+extern void func_00282C88(char *);
+
+void func_L00_002B54F8(float x, float y) {
+    char *p = (char *)&D_00189E20 + 0xA60;
+    float r;
+
+    func_002AF000(p, D_00189E20.fA70, D_00189E20.fA78, D_00189E20.fA74);
+    func_00282D30(p, p, x);
+    r = func_00282DF0(p);
+    if (r <= y)
+        func_00282C88(p);
+    else
+        func_00282F20(p, p, r - y);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002B5590);
 

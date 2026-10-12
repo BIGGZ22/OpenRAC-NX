@@ -55,7 +55,20 @@ INCLUDE_ASM("asm/game", func_00292078);
 
 INCLUDE_ASM("asm/game", func_00292328);
 
-INCLUDE_ASM("asm/game", func_002923C0);
+extern void func_00292078(void *);
+extern void func_00292328(void *);
+extern u8 *D_L03_001DAB80[];
+extern void func_002934B8(u8 *, u8 *);
+extern unsigned char *D_001BAF38;
+
+void func_002923C0(void *param)
+{
+    func_00292078(param);
+    func_00292328(param);
+    func_002934B8((u8 *)D_L03_001DAB80[0], D_001BAF38);
+    *(int *)0x001A7290 = (int)param;
+}
+
 
 INCLUDE_ASM("asm/game", func_00292408);
 
@@ -71,7 +84,64 @@ INCLUDE_ASM("asm/game", func_00292B20);
 
 INCLUDE_ASM("asm/game", func_00292B88);
 
-INCLUDE_ASM("asm/game", func_00292EB0);
+extern long r1_D_0019E7C0[];
+
+extern long r1_D_0019E640[];
+
+extern long r1_D_0019E7D8[];
+
+/* rac1-decomp src/game/loaders.c: func_00203808 */
+/* Fills four A+D qwords (low dwords only) at out: a TEX1-style word
+   (MXL bits from the second word of row arg5 of the 3-dword table
+   r1_D_0019E640, MMAG 1, MMIN arg2, K arg1), then arg3 | arg4 << 2 |
+   arg5 << 24, then the row's first and third words. A negative arg5 has
+   no row: -2 and -3 take the rows r1_D_0019E7C0 and r1_D_0019E7D8 (and 5 for
+   the second word), -1 a fixed constant and 0. The row is read before
+   the sign test, as in retail. The OR operands are named locals so fold
+   does not move the 0x20 to the end of the chain. */
+void func_00292EB0(long *out, int arg1, int arg2, int arg3, int arg4, int arg5) {
+    long f0 = r1_D_0019E640[arg5 * 3];
+    long f1 = r1_D_0019E640[arg5 * 3 + 1];
+    long f2 = r1_D_0019E640[arg5 * 3 + 2];
+
+    if (arg5 >= 0) {
+        long t = ((long)arg2 << 6) | 0x20;
+
+        *out = (f1 & 0x1C) | t | ((long)arg1 << 32);
+        out += 2;
+        *out = arg3 | ((long)arg4 << 2) | ((long)arg5 << 24);
+        out += 2;
+        *out = f0;
+        out[2] = f2;
+    } else if (arg5 < -1) {
+        long *tpl = r1_D_0019E7C0;
+
+        if (arg5 == -3) {
+            tpl = r1_D_0019E7D8;
+        }
+        {
+            long v = (long)arg2 << 6;
+            long u = ((long)arg1 << 32) | 0x20;
+            *out = v | u;
+        }
+        out += 2;
+        *out = 5;
+        out += 2;
+        *out = tpl[0];
+        out[2] = tpl[2];
+    } else {
+        {
+            long v = (long)arg2 << 6;
+            long u = ((long)arg1 << 32) | 0x20;
+            *out = v | u;
+        }
+        out += 2;
+        *out = 5;
+        out += 2;
+        *out = 0x80000004CC007FFBL;
+        out[2] = 0;
+    }
+}
 
 INCLUDE_ASM("asm/game", func_00293000);
 
@@ -137,7 +207,17 @@ INCLUDE_ASM("asm/game", func_00293F98);
 
 INCLUDE_ASM("asm/game", func_00294070);
 
-INCLUDE_ASM("asm/game", func_002940C0);
+void func_002940C0(void)
+{
+    extern void func_00282A60(unsigned int *, unsigned int, int);
+    struct Table2 *table = &Fee2b87d1_D_00152CD0;
+    int i;
+    func_00282A60((unsigned int *)table, 0, 0x35840);
+    *(short *)((char *)table + 0x14) = -1;
+    for (i = 2; i >= 0; --i)
+        table->slots[i] = -1;
+}
+
 
 INCLUDE_ASM("asm/game", func_00294130);
 
@@ -149,7 +229,14 @@ INCLUDE_ASM("asm/game", func_00294398);
 
 INCLUDE_ASM("asm/game", func_00294420);
 
-INCLUDE_ASM("asm/game", func_002945E8);
+extern void func_00294398(void *a0, void *a1);
+
+void func_002945E8(void *a0, void *a1)
+{
+    F46b43b72_FUN_002B7CE0(1);
+    func_00294398(a0, a1);
+    F46b43b72_FUN_002B7CE0(1);
+}
 
 s32 func_00294630(s32 value) {
     s32 i = 0;

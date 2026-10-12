@@ -35,7 +35,8 @@ extern void func_003417D0(void *a0, int a1);
 
 extern void func_00341760(void *a0);
 
-extern void func_L00_004370F8(void *a0);
+/* This call target is not the unrelated function at Aranos 0x004370F8. */
+extern void ref_L00_003418C0_00(void *a0);
 
 int func_003418C0(char *self, int arg1)
 {
@@ -55,8 +56,12 @@ int func_003418C0(char *self, int arg1)
     *(int *)func_00335E20_1(self + 304) = func_002A9588(0x60442D00, 0x70FFFEED, 20, 0, 0);
     func_003417D0(self, arg1);
     func_00341760(self);
-    func_L00_004370F8(self);
+    ref_L00_003418C0_00(self);
     return *(int *)(self + (*(int *)(self + 764) << 2) + 440);
 }
 
-INCLUDE_ASM("asm/game", func_00341A48);
+extern void func_00336320(void *);
+
+void func_00341A48(char *object) {
+    func_00336320(object + 0x130);
+}

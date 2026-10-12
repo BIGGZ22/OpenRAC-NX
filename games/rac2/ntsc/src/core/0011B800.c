@@ -109,7 +109,7 @@ int func_0011B800(void) {
     return r1_D_0012FCF8;
 }
 
-INCLUDE_ASM("asm/core", func_0011B8D8);
+ASM_FUNC("asm/core", func_0011B8D8);
 
 INCLUDE_ASM("asm/core", func_0011B970);
 

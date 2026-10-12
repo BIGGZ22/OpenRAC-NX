@@ -33,11 +33,7 @@ INCLUDE_ASM("asm/levels", func_L05_00417448);
 
 INCLUDE_ASM("asm/levels", func_L05_00417550);
 
-INCLUDE_ASM("asm/levels", func_L05_00417730);
-
 INCLUDE_ASM("asm/levels", func_L05_00417D48);
-
-INCLUDE_ASM("asm/levels", func_L05_00418200);
 
 INCLUDE_ASM("asm/levels", func_L05_00418288);
 
@@ -65,6 +61,8 @@ INCLUDE_ASM("asm/levels", func_L05_0041A218);
 
 INCLUDE_ASM("asm/levels", func_L05_0041A228);
 
+
+
 INCLUDE_ASM("asm/levels", func_L05_0041C118);
 
 INCLUDE_ASM("asm/levels", func_L05_0041C1F0);
@@ -91,7 +89,18 @@ INCLUDE_ASM("asm/levels", func_L05_00421860);
 
 INCLUDE_ASM("asm/levels", func_L05_00421908);
 
-INCLUDE_ASM("asm/levels", func_L05_00424780);
+extern void func_L00_002E6EF8(void *, void *);
+
+extern int ref_L05_00424780_00;
+
+void func_L05_00424780(char *object)
+{
+    char *state = *(char **)(object + 0x68);
+
+    if (*(int *)(state + 0xC) != 0)
+        func_L00_002E6EF8(&ref_L05_00424780_00, object);
+    *(unsigned short *)(object + 0x34) |= 0x41;
+}
 
 INCLUDE_ASM("asm/levels", func_L05_004247C8);
 
@@ -101,7 +110,25 @@ INCLUDE_ASM("asm/levels", func_L05_00424980);
 
 INCLUDE_ASM("asm/levels", func_L05_00424990);
 
-INCLUDE_ASM("asm/levels", func_L05_00424C88);
+extern void func_0029F338(char *);
+
+extern int func_00282978(char *);
+
+extern int ref_L05_00424C88_00;
+
+extern void ref_L05_00424C88_01(void *, void *);
+
+void func_L05_00424C88(char *object)
+{
+    char *state = *(char **)(object + 0x68);
+
+    if (func_00282978(state) == 0) {
+        func_00282978(state + 4);
+        ref_L05_00424C88_01(&ref_L05_00424C88_00, object);
+    } else {
+        func_0029F338(object);
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L05_00424CF0);
 

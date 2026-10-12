@@ -6,6 +6,12 @@ typedef unsigned char u8;
 
 typedef int s32;
 
+typedef short s16;
+
+typedef unsigned short u16;
+
+typedef unsigned int u32;
+
 /* Dispatches an indexed polygon query through the already integrated helper. */
 typedef struct { s32 field00; u8 remainder[12]; } JobaPolygonHeaderView;
 
@@ -21,9 +27,43 @@ typedef struct {
 
 INCLUDE_ASM("asm/levels", func_L11_0043E1A0);
 
-INCLUDE_ASM("asm/levels", func_L11_00440160);
+/* bumps the 0xFFFF-saturated counter, then starts the state's timer and reports the object */
+extern u8 D_L11_004465F8[];
+extern void func_300150(void *);
+extern void func_2F8AD0(void *, void *);
+extern void func_31F338(void);
 
-INCLUDE_ASM("asm/levels", func_L11_004401C0);
+void func_L11_00440160(u8 *obj) {
+    u8 *state = *(u8 **)(obj + 0x68);
+    u16 *counter = (u16 *)(obj + 0x96);
+    if (*counter <= 0xFFFE) {
+        *counter = *counter + 1;
+    }
+    func_300150(state + 0x190);
+    func_2F8AD0(D_L11_004465F8, obj);
+    func_31F338();
+}
+
+/* clears the state's six-word block and its counters, then restarts the object */
+extern void func_32C9E0();
+
+void func_L11_004401C0(u8 *obj) {
+    u8 *state = *(u8 **)(obj + 0x68);
+    s32 i;
+    s32 *p = (s32 *)(state + 0x134);
+    *(s16 *)(state + 0x1F0) = -1;
+    *(s16 *)(state + 0x1E8) = 0;
+    *(s16 *)(state + 0x1F2) = -1;
+    for (i = 5; i >= 0; i--) {
+        *p = 0;
+        p--;
+    }
+    *(s32 *)(state + 0x18C) = 0;
+    *(s32 *)(state + 0x180) = 0;
+    func_32C9E0(obj, 1, -1);
+    *(float *)(state + 0x1BC) = 1.0f;
+    *(s32 *)(state + 0x170) = 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L11_00440238);
 
@@ -53,9 +93,30 @@ INCLUDE_ASM("asm/levels", func_L11_00441350);
 
 INCLUDE_ASM("asm/levels", func_L11_004417A0);
 
-INCLUDE_ASM("asm/levels", func_L11_004417A8);
+/* arms the one-shot flag block when it is idle and the state agrees */
+typedef struct { u8 pad[0x284]; s32 field284; s32 field288; } JobaFlagBlockView;
 
-INCLUDE_ASM("asm/levels", func_L11_004417E8);
+extern JobaFlagBlockView D_L11_001BA780;
+
+void func_L11_004417A8(u8 *object, s32 value) {
+    u8 *state = *(u8 **)(object + 0x68);
+    if (D_L11_001BA780.field284 == *(s32 *)(state + 0x184)) {
+        D_L11_001BA780.field284 = 0;
+    }
+    if (value != 0 && D_L11_001BA780.field284 == 0) {
+        D_L11_001BA780.field284 = value;
+        D_L11_001BA780.field288 = 0;
+    }
+    *(s32 *)(state + 0x184) = value;
+}
+
+/* returns the 128-byte entry selected by the state index, at its 0x30-byte payload */
+extern u8 *D_L11_001B368C __attribute__((sda));
+
+u8 *func_L11_004417E8(u8 *object) {
+    u8 *state = *(u8 **)(object + 0x68);
+    return D_L11_001B368C + (*(s32 *)(state + 0x168) << 7) + 0x30;
+}
 
 /* returns zero for a missing state polygon index or dispatches its point query to the integrated crossing-parity helper */
 s32 func_L11_00441808(u8 *object, f32 *point) {
@@ -136,7 +197,7 @@ INCLUDE_ASM("asm/levels", func_L11_00442C80);
 
 INCLUDE_ASM("asm/levels", func_L11_00442E38);
 
-INCLUDE_ASM("asm/levels", func_L11_00443380);
+/* func_L11_00443380 lives in the sibling small-data unit (L11_0043E1A0-g8.c). */
 
 INCLUDE_ASM("asm/levels", func_L11_004433D8);
 
@@ -144,6 +205,7 @@ INCLUDE_ASM("asm/levels", func_L11_00443498);
 
 INCLUDE_ASM("asm/levels", func_L11_00443940);
 
+/* maps the class index to its measured identifier */
 INCLUDE_ASM("asm/levels", func_L11_00443CE0);
 
 INCLUDE_ASM("asm/levels", func_L11_00443D78);
@@ -162,6 +224,12 @@ INCLUDE_ASM("asm/levels", func_L11_00445DF8);
 
 INCLUDE_ASM("asm/levels", func_L11_00446020);
 
-INCLUDE_ASM("asm/levels", func_L11_004461C0);
+/* hands the state's 0x1C4 field to the shared helper, after the caller's argument */
+extern void func_332CE8();
+
+void func_L11_004461C0(u8 *object, u8 *arg) {
+    u8 *state = *(u8 **)(object + 0x68);
+    func_332CE8(arg, *(u8 **)(state + 0x1C4));
+}
 
 INCLUDE_ASM("asm/levels", func_L11_004461E8);

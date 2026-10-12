@@ -1108,7 +1108,21 @@ void func_L18_002D93C0(unsigned char *arg) {
         data[0x70 / 4] = -1;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L18_002D9440);
+/* Moby state check: state 3 becomes 1 and returns 1; state 2 returns -1 when data+0x6C is zero; else 0. */
+int func_L18_002D9440(char *moby) {
+    unsigned char st = moby[0x20];
+    char *data = *(char **)(moby + 0x78);
+    if (st == 3) {
+        moby[0x20] = 1;
+        return 1;
+    }
+    if (st == 2) {
+        if (*(int *)(data + 0x6C) == 0) {
+            return -1;
+        }
+    }
+    return 0;
+}
 INCLUDE_ASM("asm/overlays", func_L18_002D9460);
 extern int D_L18_0015F6B0 MACRO_ADDR;
 extern short D_L18_00161AAC;
@@ -1199,7 +1213,17 @@ int func_L18_002D9C48(Level18State *obj) {
     }
     return 0;
 }
-INCLUDE_ASM("asm/overlays", func_L18_002D9C78);
+/* Sets a moby's state to 3 and stores two words in its data block if its state is 1; returns 1 on success, 0 otherwise. */
+int func_L18_002D9C78(unsigned char *moby, int a1, int a2) {
+    char *data = *(char **)(moby + 0x78);
+    if (moby[0x20] == 1) {
+        moby[0x20] = 3;
+        *(int *)(data + 0x7C) = a1;
+        *(int *)(data + 0x78) = a2;
+        return 1;
+    }
+    return 0;
+}
 INCLUDE_ASM("asm/overlays", func_L18_002D9C90);
 extern float func_00214158(void);
 extern void func_001F9BC8(void *);

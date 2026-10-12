@@ -25,4 +25,8 @@ void func_L00_002F0EA8(u32 value) {
  D_L24_001BE894=value;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_002F3478);
+extern short D_L00_001BEF84[];
+
+void func_L00_002F3478(void) {
+    D_L00_001BEF84[0] = 0;
+}

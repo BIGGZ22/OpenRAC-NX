@@ -1,3 +1,7 @@
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/core", func_00120368);
+extern void (*D_00135D34)(void);
+
+void func_00120368(void) {
+    D_00135D34();
+}

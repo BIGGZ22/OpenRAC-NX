@@ -1,5 +1,9 @@
 #include "include_asm.h"
 
+typedef int TI128 __attribute__((mode(TI)));
+
+extern int func_2DB350(TI128 *dst, float f);
+
 extern void func_L00_0041AEF8_1(void *dst);
 
 extern long long func_0027C878(int id);
@@ -50,8 +54,6 @@ extern float *func_002AB1F0(char *object);
 extern float func_002702C8_1(int *dst, float a, float b, float c, float d, float e);
 
 INCLUDE_ASM("asm/levels", func_L00_0041ABB8);
-
-INCLUDE_ASM("asm/levels", func_L00_0041ACA0);
 
 INCLUDE_ASM("asm/levels", func_L00_0041AD40);
 
@@ -200,7 +202,13 @@ int func_L00_00420310(char *object)
 
 INCLUDE_ASM("asm/levels", func_L00_00420388);
 
-INCLUDE_ASM("asm/levels", func_L00_004204A0);
+int func_L00_004204A0(TI128 *src)
+{
+    TI128 local;
+
+    local = *src;
+    return func_2DB350(&local, 0.0f) != 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00420638);
 

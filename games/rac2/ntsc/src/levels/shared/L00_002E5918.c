@@ -17,9 +17,6 @@ void func_L00_002E5918(void) {
  func_00284EA8();
 }
 
-INCLUDE_ASM("asm/levels", func_L00_002E6348);
-
-INCLUDE_ASM("asm/levels", func_L00_002E6400);
 
 INCLUDE_ASM("asm/levels", func_L00_002E6440);
 
@@ -28,17 +25,95 @@ void func_L00_002E6448(void) {
  func_002CBC58(0);
 }
 
-INCLUDE_ASM("asm/levels", func_L00_002E6CF0);
+#define MACRO_ADDR __attribute__((section(".sdata")))
+
+extern int r1_D_0015F564_002E6CF0 MACRO_ADDR;
+
+ /* GetEffectTex(int, int) */
+
+/*
+ * Four parallel callback lists, each a (function, argument) pair of
+ * arrays with its own count, plus a "register" and a "run them all"
+ * function per list. The counts are reached with retail's one-register
+ * macro form, so they are MACRO_ADDR.
+ */
+typedef void (*DrawCallback_r002E6CF0)(void *);
+
+extern DrawCallback_r002E6CF0 r1_D_0018DC40_002E6CF0[];
+
+extern void *r1_D_0018DD40_002E6CF0[];
+
+/* rac1-decomp src/game/draw.c: func_001F49B0 */
+void func_L00_002E6CF0(DrawCallback_r002E6CF0 fn, void *arg) {
+    int count = r1_D_0015F564_002E6CF0;
+    if (count < 0x40) {
+        r1_D_0018DC40_002E6CF0[count] = fn;
+        r1_D_0018DD40_002E6CF0[count] = arg;
+        r1_D_0015F564_002E6CF0 = count + 1;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002E6D40);
 
-INCLUDE_ASM("asm/levels", func_L00_002E6DB8);
+#define MACRO_ADDR __attribute__((section(".sdata")))
+
+extern int r1_D_0015F564_002E6DB8 MACRO_ADDR;
+
+ /* GetEffectTex(int, int) */
+
+/*
+ * Four parallel callback lists, each a (function, argument) pair of
+ * arrays with its own count, plus a "register" and a "run them all"
+ * function per list. The counts are reached with retail's one-register
+ * macro form, so they are MACRO_ADDR.
+ */
+typedef void (*DrawCallback_r002E6DB8)(void *);
+
+extern DrawCallback_r002E6DB8 r1_D_0018DC40_002E6DB8[];
+
+extern void *r1_D_0018DD40_002E6DB8[];
+
+/* rac1-decomp src/game/draw.c: func_001F49B0 */
+void func_L00_002E6DB8(DrawCallback_r002E6DB8 fn, void *arg) {
+    int count = r1_D_0015F564_002E6DB8;
+    if (count < 0x40) {
+        r1_D_0018DC40_002E6DB8[count] = fn;
+        r1_D_0018DD40_002E6DB8[count] = arg;
+        r1_D_0015F564_002E6DB8 = count + 1;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002E6E08);
 
 INCLUDE_ASM("asm/levels", func_L00_002E6E80);
 
-INCLUDE_ASM("asm/levels", func_L00_002E6EF8);
+#define MACRO_ADDR __attribute__((section(".sdata")))
+
+extern int r1_D_0015F564_002E6EF8 MACRO_ADDR;
+
+ /* GetEffectTex(int, int) */
+
+/*
+ * Four parallel callback lists, each a (function, argument) pair of
+ * arrays with its own count, plus a "register" and a "run them all"
+ * function per list. The counts are reached with retail's one-register
+ * macro form, so they are MACRO_ADDR.
+ */
+typedef void (*DrawCallback_r002E6EF8)(void *);
+
+extern DrawCallback_r002E6EF8 r1_D_0018DC40_002E6EF8[];
+
+extern void *r1_D_0018DD40_002E6EF8[];
+
+/* rac1-decomp src/game/draw.c: func_001F49B0 */
+void func_L00_002E6EF8(DrawCallback_r002E6EF8 fn, void *arg) {
+    int count = r1_D_0015F564_002E6EF8;
+    if (count < 0x40) {
+        r1_D_0018DC40_002E6EF8[count] = fn;
+        r1_D_0018DD40_002E6EF8[count] = arg;
+        r1_D_0015F564_002E6EF8 = count + 1;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002E6F48);
 
@@ -52,27 +127,56 @@ INCLUDE_ASM("asm/levels", func_L00_002E8428);
 
 INCLUDE_ASM("asm/levels", func_L00_002E8DD8);
 
-INCLUDE_ASM("asm/levels", func_L00_002E9098);
+extern void func_0027F128(void *a0, void *a1, void *a2);
+extern char D_L00_0028C590[];
 
-INCLUDE_ASM("asm/levels", func_L00_002E90A8);
+void func_L00_002E9100(void *a0, void *a1) {
+ func_0027F128(a0, a1, D_L00_0028C590);
+}
 
-INCLUDE_ASM("asm/levels", func_L00_002E9100);
+extern char D_L00_0028C930[];
 
-INCLUDE_ASM("asm/levels", func_L00_002E9120);
+void func_L00_002E9120(void *a0, void *a1) {
+ func_0027F128(a0, a1, D_L00_0028C930);
+}
 
-INCLUDE_ASM("asm/levels", func_L00_002E9140);
+extern char D_L00_0028CCD0[];
 
-INCLUDE_ASM("asm/levels", func_L00_002E9210);
+void func_L00_002E9140(void *a0, void *a1) {
+ func_0027F128(a0, a1, D_L00_0028CCD0);
+}
+
+extern void func_0027F1D8(void *a0, void *a1, void *a2);
+extern char D_L00_0028C590[];
+
+void func_L00_002E9210(void *a0, void *a1) {
+ func_0027F1D8(a0, a1, D_L00_0028C590);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002E94B8);
 
-INCLUDE_ASM("asm/levels", func_L00_002E95C0);
+extern int func_0027C878(int);
+
+extern void func_0027F2A8(void *, void *, void *, void *, void *, int, void *);
+
+void func_L00_002E95C0(void *a0, void *a1, void *a2, void *a3, void *a4) {
+ int t = func_0027C878(3);
+ func_0027F2A8(a0, a1, a2, a3, a4, t, D_L00_0028CCD0);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002E9AA0);
 
 INCLUDE_ASM("asm/levels", func_L00_002EA318);
 
-INCLUDE_ASM("asm/levels", func_L00_002EA600);
+extern void func_0027A9F0(void);
+
+extern void func_0027AB40(void);
+
+void func_L00_002EA600(void) {
+ func_00284EA8();
+ func_0027A9F0();
+ func_0027AB40();
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002EA660);
 

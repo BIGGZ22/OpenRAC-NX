@@ -82,7 +82,9 @@ void func_00336CC8(u8 *a0,s32 a1) {
  (*(f32 **)(a0+4))[1]=(f32)a1;
 }
 
-INCLUDE_ASM("asm/game", func_00336CE0);
+void func_00336CE0(u8 *object, s32 value) {
+    *(s32 *)(object + 0x44) = value;
+}
 
 INCLUDE_ASM("asm/game", func_00336CE8);
 
@@ -101,7 +103,9 @@ void func_00336DA0(void)
 
 void *func_00336DA8(void *first, void *second) { (void) first; return second; }
 
-INCLUDE_ASM("asm/game", func_00336DB0);
+void *func_00336DB0(void *object) {
+    return object;
+}
 
 /* shared native body of family 5b6bba31 */
 void func_00336DB8(int *p, unsigned int a1, int a2, int a3)
@@ -151,15 +155,25 @@ void func_00336ED0(u8 *a0, u8 *a1) {
     *(s32 *)(a0 + 0x10) = *(s32 *)(a0 + 0x10) - 1;
 }
 
-INCLUDE_ASM("asm/game", func_00336EF0);
+extern int D_001ADB10 __attribute__((sda));
 
-INCLUDE_ASM("asm/game", func_00336EF8);
+int func_00336EF0(void) {
+    return D_001ADB10;
+}
+
+
 
 INCLUDE_ASM("asm/game", func_00336F20);
 
 INCLUDE_ASM("asm/game", func_00337210);
 
-INCLUDE_ASM("asm/game", func_00337BD8);
+extern void *func_003361A8(void *);
+
+void *func_00337BD8(char *object) {
+    func_003361A8(object + 0x10);
+    func_003361A8(object + 0x5C);
+    return object;
+}
 
 INCLUDE_ASM("asm/game", func_00337C10);
 

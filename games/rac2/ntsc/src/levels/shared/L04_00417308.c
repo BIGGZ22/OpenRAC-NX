@@ -1,5 +1,15 @@
 #include "include_asm.h"
 
+typedef unsigned char u8;
+
+typedef unsigned short u16;
+
+typedef unsigned int u32;
+
+typedef short s16;
+
+typedef int s32;
+
 typedef float f32;
 
 INCLUDE_ASM("asm/levels", func_L04_00417308);
@@ -28,7 +38,41 @@ INCLUDE_ASM("asm/levels", func_L04_00434AD0);
 
 INCLUDE_ASM("asm/levels", func_L04_0043BC58);
 
-INCLUDE_ASM("asm/levels", func_L04_0043BE40);
+extern void func_002833F0(char *a, char *b);
+
+extern void func_00282D30(char *a, char *b, float f);
+
+extern int func_00283D38(int a, int b, float f);
+
+extern void func_002A0488(void *a, u8 b, u8 c, u8 d);
+
+extern void func_002A10E8(void *a);
+
+void func_L04_0043BE40(char *a0)
+{
+    char *s0 = *(char **)(a0 + 0x68);
+    char *p;
+    char *r;
+    char *t;
+    char *u;
+    float f;
+    s32 v;
+
+    p = *(char **)(s0 + 0x48);
+    *(u16 *)(p + 0x34) &= 0xFFFE;
+    *(u8 *)(*(char **)(s0 + 0x48) + 0x31) = 1;
+    r = *(char **)(s0 + 0x48);
+    *(s32 *)(r + 0x98) = *(s32 *)(*(s32 *)(r + 0x24) + 0x10);
+    t = *(char **)(s0 + 0x48);
+    func_002833F0(t + 0xC0, t + 0xF0);
+    u = *(char **)(s0 + 0x48);
+    f = *(float *)(s0 + 0x58);
+    func_00282D30(u + 0xE0, u + 0xE0, f);
+    f = *(float *)(s0 + 0x58);
+    v = func_00283D38(0x800000FF, *(s32 *)(s0 + 0x54), f);
+    func_002A0488(*(char **)(s0 + 0x48), v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF);
+    func_002A10E8(*(char **)(s0 + 0x48));
+}
 
 INCLUDE_ASM("asm/levels", func_L04_0043BEE8);
 
@@ -52,11 +96,14 @@ INCLUDE_ASM("asm/levels", func_L04_00456860);
 
 INCLUDE_ASM("asm/levels", func_L04_00459408);
 
-INCLUDE_ASM("asm/levels", func_L04_0046B740);
+/* rac1-decomp src/game/stub.c: func_001E97C8 */
+/* Takes an argument (callers pass one, e.g. r1_func_001EC210) and ignores
+   it -- the unused parameter costs no codegen, still 0/8. */
+int func_L04_0046B740(void *arg0) {
+    return 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L04_0046CD68);
-
-INCLUDE_ASM("asm/levels", func_L04_0046CE28);
 
 INCLUDE_ASM("asm/levels", func_L04_0046CE68);
 
@@ -66,7 +113,16 @@ INCLUDE_ASM("asm/levels", func_L04_0046D250);
 
 INCLUDE_ASM("asm/levels", func_L04_0046D6A8);
 
-INCLUDE_ASM("asm/levels", func_L04_0046D768);
+extern s32 D_L04_001B1E84 __attribute__((sda));
+
+extern s32 D_L04_001B24DC __attribute__((sda));
+
+int func_L04_0046D768(u8 *a0)
+{
+    s32 v1 = (*(s16 *)(a0 + 0x84) << 5) + D_L04_001B1E84;
+    u8 *a1 = (u8 *)(D_L04_001B24DC + (*(s32 *)(*(s32 *)(v1 + 0x1C) + 0x60) << 8));
+    return (u32)(*(u8 *)(a1 + 0x20) - 2) < 2;
+}
 
 void func_L04_0047A7C8(void)
 {

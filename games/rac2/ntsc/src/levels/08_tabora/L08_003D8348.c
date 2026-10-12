@@ -1,14 +1,28 @@
 #include "include_asm.h"
 
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef signed short s16;
+typedef int s32;
+
+/* the level's object-handle table entry: 0x100 bytes, indexed by the handle */
+typedef struct {
+    u8 pad00[0x68];
+    void *f68;
+    u8 pad6C[0x100 - 0x6C];
+} Ent;
+
+/* what an entry points at; only the queue flag and its sound handle are named here */
+typedef struct {
+    u8 pad00[0x18C];
+    u8 f18C;
+    u8 pad18D[0x1CC - 0x18D];
+    s32 f1CC;
+} Moby;
+
+extern s32 func_2F9A60();
+
 INCLUDE_ASM("asm/levels", func_L08_003D8348);
-
-INCLUDE_ASM("asm/levels", func_L08_003D8918);
-
-INCLUDE_ASM("asm/levels", func_L08_003D8948);
-
-INCLUDE_ASM("asm/levels", func_L08_003D8990);
-
-INCLUDE_ASM("asm/levels", func_L08_003D89D8);
 
 INCLUDE_ASM("asm/levels", func_L08_003D8A28);
 
@@ -56,17 +70,18 @@ INCLUDE_ASM("asm/levels", func_L08_00422850);
 
 INCLUDE_ASM("asm/levels", func_L08_00422900);
 
-INCLUDE_ASM("asm/levels", func_L08_004229C8);
-
-INCLUDE_ASM("asm/levels", func_L08_004229F8);
-
-INCLUDE_ASM("asm/levels", func_L08_00422A40);
-
-INCLUDE_ASM("asm/levels", func_L08_00422A88);
-
 INCLUDE_ASM("asm/levels", func_L08_00422AD8);
 
-INCLUDE_ASM("asm/levels", func_L08_00422B60);
+/* the queued sound of the entry is released and the flag cleared */
+void func_L08_00422B60(Ent *a0)
+{
+    Moby *s0 = a0->f68;
+
+    if (s0->f18C != 0) {
+        func_2F9A60(s0->f1CC);
+        s0->f18C = 0;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L08_00422B98);
 

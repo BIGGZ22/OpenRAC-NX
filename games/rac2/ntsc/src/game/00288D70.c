@@ -4,7 +4,13 @@
    /* current buffer */
 extern short r1_D_0015EDC4;
 extern void func_00288D70(void);
-INCLUDE_ASM("asm/game", func_00288D70);
+extern int D_001A7B8C __attribute__((sda));
+
+void func_00288D70(void) {
+    D_001A7B8C = 1;
+}
 
 
-INCLUDE_ASM("asm/game", func_00288D80);
+int func_00288D80(void) {
+    return D_001A7B8C;
+}

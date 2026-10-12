@@ -41,11 +41,11 @@ void func_0012E110(void *arg0, unsigned int arg1, int arg2) {
     }
 }
 
-INCLUDE_ASM("asm/core", func_0012E238);
+ASM_FUNC("asm/core", func_0012E238);
 
 INCLUDE_ASM("asm/core", func_0012E378);
 
-INCLUDE_ASM("asm/core", func_0012E538);
+ASM_FUNC("asm/core", func_0012E538);
 
 INCLUDE_ASM("asm/core", func_0012E608);
 

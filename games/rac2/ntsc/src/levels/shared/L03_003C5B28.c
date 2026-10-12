@@ -190,16 +190,52 @@ INCLUDE_ASM("asm/levels", func_L03_0042B908);
 
 INCLUDE_ASM("asm/levels", func_L03_0042B930);
 
-INCLUDE_ASM("asm/levels", func_L03_0043AC40);
+typedef struct {
+    int a;
+    int b;
+    float c;
+    int d;
+    void (*e)(void);
+} S_2fa6d8_r0043AC40;
+
+extern S_2fa6d8_r0043AC40 r1_D_L02_00167680_FBB10 __asm__("r1_D_L02_00167680");
+
+extern void r1_func_L02_002FBB48(void);
+
+typedef struct {
+    int a;
+    int b;
+    float c;
+    float d;
+} S_r0043AC40;
+
+extern S_r0043AC40 r1_D_L02_00167680;
+
+extern void r1_func_L02_002FBB48();
+
+/* rac1-decomp src/overlays/shared/vendor_002A5218.c: func_L02_002FBB10 */
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002ec308.c, FUN_L02_002fa6d8. */
+void func_L03_0043AC40(void) {
+    r1_D_L02_00167680_FBB10.a = 0;
+    r1_D_L02_00167680_FBB10.b = 0;
+    r1_D_L02_00167680_FBB10.c = 10000.0f;
+    r1_D_L02_00167680_FBB10.d = 0;
+    r1_D_L02_00167680_FBB10.e = r1_func_L02_002FBB48;
+}
 
 INCLUDE_ASM("asm/levels", func_L03_0043AC78);
+
 extern void func_L03_0043ACD8(void);
-INCLUDE_ASM("asm/levels", func_L03_0043ACD8);
 
 
 INCLUDE_ASM("asm/levels", func_L03_0043AD30);
 
-INCLUDE_ASM("asm/levels", func_L03_0043AF30);
+/* rac1-decomp src/game/stub.c: func_001E97C8 */
+/* Takes an argument (callers pass one, e.g. r1_func_001EC210) and ignores
+   it -- the unused parameter costs no codegen, still 0/8. */
+int func_L03_0043AF30(void *arg0) {
+    return 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L03_00454888);
 

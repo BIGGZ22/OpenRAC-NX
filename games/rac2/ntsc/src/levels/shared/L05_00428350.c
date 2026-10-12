@@ -4,6 +4,18 @@ extern void func_00282CF0_9(char *local, char *first, char *second);
 
 extern void func_00282CC0_14(char *target, char *first, char *local);
 
+extern char *D_L05_001B9710;
+
+extern int func_00282978(void *);
+
+extern void func_0029F338(void *);
+
+/* The call target and the callback it registers are not the same function in
+   every level this unit is placed in, so neither name may state an address. */
+extern void ref_L05_0042E4E8_00(void);
+
+extern int ref_L05_0042E4E8_01(void *, void *);
+
 #ifndef RAC2_T_VEC16_FC936841D
 #define RAC2_T_VEC16_FC936841D
 typedef struct {
@@ -36,7 +48,20 @@ INCLUDE_ASM("asm/levels", func_L05_0042BDB0);
 
 INCLUDE_ASM("asm/levels", func_L05_0042C928);
 
-INCLUDE_ASM("asm/levels", func_L05_0042E4E8);
+/* Two bound helpers at the node's +0x68; the second call registers a callback
+   and the context, the other branch calls a one-argument helper. */
+void func_L05_0042E4E8(char *a0)
+{
+    char *context = a0;
+    char *node = *(char **)(context + 0x68);
+
+    if (func_00282978(node) == 0) {
+        func_00282978(node + 4);
+        ref_L05_0042E4E8_01(&ref_L05_0042E4E8_00, context);
+    } else {
+        func_0029F338(context);
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L05_0042F4E8);
 
@@ -77,8 +102,6 @@ INCLUDE_ASM("asm/levels", func_L05_004427A8);
 
 INCLUDE_ASM("asm/levels", func_L05_00442828);
 
-INCLUDE_ASM("asm/levels", func_L05_00442860);
-
 INCLUDE_ASM("asm/levels", func_L05_00442880);
 
 INCLUDE_ASM("asm/levels", func_L05_00442A58);
@@ -109,7 +132,17 @@ INCLUDE_ASM("asm/levels", func_L05_00444FD0);
 
 INCLUDE_ASM("asm/levels", func_L05_00445338);
 
-INCLUDE_ASM("asm/levels", func_L05_00445980);
+/* Reads a state word from a fixed global; unless its +0x86 halfword is 0x19 it
+   returns 0, otherwise it reports whether the signed halfword reached through
+   the pointer at +0x70, offset +0xD8, is non-zero. */
+int func_L05_00445980(void)
+{
+    char *base = D_L05_001B9710;
+
+    if (*(short *)(base + 0x86) != 0x19)
+        return 0;
+    return *(short *)(*(char **)(base + 0x70) + 0xD8) != 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L05_004459B0);
 

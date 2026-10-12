@@ -131,7 +131,24 @@ INCLUDE_ASM("asm/game", func_002EEE50);
 
 INCLUDE_ASM("asm/game", func_002EEED0);
 
-INCLUDE_ASM("asm/game", func_002EEFE0);
+typedef struct StashBlock_r002EEFE0 {
+    /* 0x00 */ int   ram;      /* IOP stash RAM address */
+    /* 0x04 */ int   qwc;      /* quadword count (16 bytes per unit) */
+    /* 0x08 */ int   comment;  /* char* debug comment / tag */
+    /* 0x0C */ int   pad;
+} StashBlock_r002EEFE0;
+
+extern StashBlock_r002EEFE0 r1_D_001DD568[];
+
+extern int func_002EEFE0(unsigned int);
+
+/* rac1-decomp src/game/stash.c: func_00234350 */
+int func_002EEFE0(unsigned int arg0) {
+    if (arg0 >= 0x40) {
+        return -3;
+    }
+    return r1_D_001DD568[arg0].qwc;
+}
 
 INCLUDE_ASM("asm/game", func_002EF010);
 
@@ -165,11 +182,11 @@ void func_002EF310(void)
 
 INCLUDE_ASM("asm/game", func_002EF3B0);
 
-INCLUDE_ASM("asm/game", func_002EF480);
+ASM_FUNC("asm/game", func_002EF480);
 
-INCLUDE_ASM("asm/game", func_002F00A8);
+ASM_FUNC("asm/game", func_002F00A8);
 
-INCLUDE_ASM("asm/game", func_002F0218);
+ASM_FUNC("asm/game", func_002F0218);
 
 INCLUDE_ASM("asm/game", func_002F0468);
 
@@ -177,7 +194,14 @@ INCLUDE_ASM("asm/game", func_002F0B78);
 
 INCLUDE_ASM("asm/game", func_002F0D00);
 
-INCLUDE_ASM("asm/game", func_002F0E08);
+void func_002F0E08(void)
+{
+    extern int D_001A72D0 __attribute__((sda));
+    extern void func_002F3300(int);
+    extern void func_002FC748(void);
+    func_002F3300(D_001A72D0);
+    func_002FC748();
+}
 
 /* apply nonzero signed halfword overrides to selected object rows; observed count0F, rows1C, stride50 and key33 */
 void func_002F0E38(void)

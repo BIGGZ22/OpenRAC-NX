@@ -15,7 +15,8 @@
 5. `tools/build.py` the programs that have it (`boot`, `level 4`, or `all`). It places the
    function everywhere the catalogue says and prints `OK` per program, or why a place does
    not match. A function counts once its C links into a program that equals the retail one.
-6. `tools/progress.py` updates `progress/report.json` and the README table.
+6. Leave `progress/report.json` and the README table alone: a maintainer regenerates them on
+   `master` after merging, so pull requests do not conflict on them (AGENTS.md, "The progress report").
 
 Close but not matching: put it in `nonmatching/` with a line in its README.
 

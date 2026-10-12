@@ -29,9 +29,26 @@ void func_00285708(s32 a0, s32 a1, s32 a2, s32 a3, u8 *a4) {
     func_00126730(image,a4);
 }
 
-INCLUDE_ASM("asm/game", func_00285788);
+typedef struct {
+    char reserved[0x8C];
+    int first, second;
+} Limits_285788;
+extern Limits_285788 D_001BAC80;
 
-INCLUDE_ASM("asm/game", func_002857B0);
+void func_00285788(int first, int second) {
+    int first_limit = 64;
+    int second_limit = 16;
+    if (first != 0) first_limit = first;
+    if (second != 0) second_limit = second;
+    D_001BAC80.first = first_limit;
+    D_001BAC80.second = second_limit;
+}
+
+extern int D_001A8A5C __attribute__((sda));
+
+int func_002857B0(void) {
+    return D_001A8A5C;
+}
 
 /* Calls one callee with 1 and a second with no argument, then tests an absolute global word: when it is set it calls a callee with (512, 416, 640, 448, 0, 0), otherwise (512, 416, 512, 448, 0, 0). */
 void func_002857B8(void)

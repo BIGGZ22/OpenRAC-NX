@@ -41,12 +41,40 @@ INCLUDE_ASM("asm/levels", func_L00_002FC460);
 
 INCLUDE_ASM("asm/levels", func_L00_002FC580);
 
-INCLUDE_ASM("asm/levels", func_L00_002FC588);
+extern int r1_func_0011CC38_002FC588();
 
-INCLUDE_ASM("asm/levels", func_L00_002FC5A8);
+/* rac1-decomp src/core/00119D88.c: func_0011CCB0 */
+/* Returns its callee's value: retail keeps the frame and calls, and
+   2.9-ee would tail-call it (a bare `j`) if it were void. */
+int func_L00_002FC588(void) {
+    return r1_func_0011CC38_002FC588();
+}
 
-INCLUDE_ASM("asm/levels", func_L00_002FC5C8);
+extern int r1_func_0011CC38_002FC5A8();
 
-INCLUDE_ASM("asm/levels", func_L00_002FC5E8);
+/* rac1-decomp src/core/00119D88.c: func_0011CCB0 */
+/* Returns its callee's value: retail keeps the frame and calls, and
+   2.9-ee would tail-call it (a bare `j`) if it were void. */
+int func_L00_002FC5A8(void) {
+    return r1_func_0011CC38_002FC5A8();
+}
+
+extern int r1_func_0011CC38_002FC5C8();
+
+/* rac1-decomp src/core/00119D88.c: func_0011CCB0 */
+/* Returns its callee's value: retail keeps the frame and calls, and
+   2.9-ee would tail-call it (a bare `j`) if it were void. */
+int func_L00_002FC5C8(void) {
+    return r1_func_0011CC38_002FC5C8();
+}
+
+extern int r1_func_0011CC38_002FC5E8();
+
+/* rac1-decomp src/core/00119D88.c: func_0011CCB0 */
+/* Returns its callee's value: retail keeps the frame and calls, and
+   2.9-ee would tail-call it (a bare `j`) if it were void. */
+int func_L00_002FC5E8(void) {
+    return r1_func_0011CC38_002FC5E8();
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002FC798);

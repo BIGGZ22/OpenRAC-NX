@@ -32,10 +32,10 @@ def todo() -> list[tuple[str, int, int, str, str]]:
             places[name] = len(where)
         else:
             info[name] = (size, len(where), kind)
-    out = []
+    out, by_hand = [], progress.handwritten()
     for path, fns in progress.source_functions().items():
         for name, has_c in fns:
-            if not has_c:
+            if not has_c and name not in by_hand:
                 size, n, kind = info[name]
                 out.append((name, size, n + places.get(name, 0), kind, path))
     return out

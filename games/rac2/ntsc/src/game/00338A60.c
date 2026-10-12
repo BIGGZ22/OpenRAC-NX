@@ -75,4 +75,11 @@ void func_00339590(char *a0)
     func_00336A78_1(a0 + 456);
 }
 
-INCLUDE_ASM("asm/game", func_003395F8);
+char *func_003395F8(char *object)
+{
+    extern void func_0033AB50(void *);
+    extern void *func_003361A8(void *);
+    func_0033AB50(object + 8);
+    func_003361A8(object + 0x2A8);
+    return object;
+}

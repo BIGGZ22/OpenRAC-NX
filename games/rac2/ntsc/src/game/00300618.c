@@ -128,7 +128,7 @@ NativeCompactHeader *func_00300618(NativeCompactHeader *header) {
 
 INCLUDE_ASM("asm/game", func_00300748);
 
-INCLUDE_ASM("asm/game", func_00300910);
+
 
 /* scales a float argument by a field of the object into a stack buffer, then calls a second routine with the object, its flags, the buffer and three float arguments */
 void func_00300968 (char *object, int flags, float a, float b, float c, float d)
@@ -188,7 +188,12 @@ int func_003022A0(char *obj, char *obj2, float x, float y)
     return 1;
 }
 
-INCLUDE_ASM("asm/game", func_00302440);
+int func_00302440(char *obj, char *obj2)
+{
+    if (*(u8 *)(obj + 32) != 3)
+        return 3;
+    return func_003022A0(obj, obj2, 0.0f, 0.0f);
+}
 
 INCLUDE_ASM("asm/game", func_00302470);
 
@@ -235,7 +240,15 @@ void func_00304B68(char *object)
     F6eb4f363_FUN_002BF728(object + 16, local, F6eb4f363_FUN_002A7878(0.05f, 0.1f) * 210000.0f, base);
 }
 
-INCLUDE_ASM("asm/game", func_00304C18);
+void func_00304C18(void *object) {
+    extern void func_0029FCC0(void *, int, void *);
+    extern int func_00277258(void *, int, void *, float);
+    extern int D_001BAF9C;
+    char local[16];
+    func_0029FCC0(object, 0, local);
+    if (func_00277258(local, 2, object, 0.2f) && D_001BAF9C > 0)
+        *((unsigned char *)object + 0x20) = 8;
+}
 
 INCLUDE_ASM("asm/game", func_00304C78);
 
@@ -270,7 +283,12 @@ INCLUDE_ASM("asm/game", func_00305310);
 
 INCLUDE_ASM("asm/game", func_00305408);
 
-INCLUDE_ASM("asm/game", func_00305418);
+extern char D_00227DA0[];
+extern void func_00300330(void *);
+
+void func_00305418(void) {
+    func_00300330(D_00227DA0);
+}
 
 INCLUDE_ASM("asm/game", func_00305438);
 
@@ -308,7 +326,16 @@ void func_00305838(char *p)
     *(float *)(p + 60) = 1.0f;
 }
 
-INCLUDE_ASM("asm/game", func_003058C8);
+extern int func_00282948(void *);
+extern void func_00305C10(void *);
+extern void func_00305798(void *);
+void func_003058C8(void *owner)
+{
+    void *p = *(void **)((char *)owner + 0x68);
+    if (func_00282948((char *)p + 0x44) == 0)
+        func_00305C10(owner);
+    func_00305798(owner);
+}
 
 INCLUDE_ASM("asm/game", func_00305910);
 
@@ -370,9 +397,17 @@ void func_003079E8(Owner_F9e2cd219 *self)
 
 INCLUDE_ASM("asm/game", func_00307AD0);
 
-INCLUDE_ASM("asm/game", func_00307BD0);
+extern char D_00228610[];
+extern void func_00300330(void *);
 
-INCLUDE_ASM("asm/game", func_00307BF0);
+void func_00307BD0(void) {
+    func_00300330(D_00228610);
+}
+
+extern int func_00282948(void *p);
+extern void func_00307FC0(void *p);
+
+void func_00307BF0(void *owner) { void *p = *(void **)((char *)owner + 0x68); if (func_00282948((char *)p + 0x44) != 0) return; func_00307FC0(owner); }
 
 void func_00307C30(char *p)
 {

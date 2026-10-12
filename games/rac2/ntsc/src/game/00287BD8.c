@@ -65,6 +65,7 @@ void func_00287BD8(char *arg0, int arg1)
     func_00283738(D_L00_001B8FF0, (char *)&a, D_L00_001B8FF0);
 }
 
-INCLUDE_ASM("asm/game", func_00287D20);
+extern float D_L00_001A8DD0 __attribute__((sda));
+void func_00287D20(float *arg0) { char temp[0x40]; float value = *arg0 * 0.0002908882452175021f * D_L00_001A8DD0; func_002ACE78(temp, D_L00_001B8FF0, value); func_00283958(temp, temp + 0x10); func_00283738(D_L00_001B8FF0, temp + 0x10, D_L00_001B8FF0); }
 
 INCLUDE_ASM("asm/game", func_00287D98);

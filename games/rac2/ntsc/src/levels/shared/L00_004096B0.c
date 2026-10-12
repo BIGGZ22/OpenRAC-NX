@@ -155,7 +155,7 @@ void func_L00_004110D8(Obj_F23626ad8 *p)
     d->b6 = v;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_004115A8);
+
 
 INCLUDE_ASM("asm/levels", func_L00_004115E8);
 

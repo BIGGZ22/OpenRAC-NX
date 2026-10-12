@@ -52,39 +52,39 @@ INCLUDE_ASM("asm/core", func_00129DA8);
 
 INCLUDE_ASM("asm/core", func_0012A1C8);
 
-INCLUDE_ASM("asm/core", func_0012A3E8);
+ASM_FUNC("asm/core", func_0012A3E8);
 
-INCLUDE_ASM("asm/core", func_0012A460);
+ASM_FUNC("asm/core", func_0012A460);
 
-INCLUDE_ASM("asm/core", func_0012A4F8);
+ASM_FUNC("asm/core", func_0012A4F8);
 
-INCLUDE_ASM("asm/core", func_0012A5B0);
+ASM_FUNC("asm/core", func_0012A5B0);
 
-INCLUDE_ASM("asm/core", func_0012A680);
+ASM_FUNC("asm/core", func_0012A680);
 
-INCLUDE_ASM("asm/core", func_0012A730);
+ASM_FUNC("asm/core", func_0012A730);
 
-INCLUDE_ASM("asm/core", func_0012A7E8);
+ASM_FUNC("asm/core", func_0012A7E8);
 
-INCLUDE_ASM("asm/core", func_0012A8E0);
+ASM_FUNC("asm/core", func_0012A8E0);
 
-INCLUDE_ASM("asm/core", func_0012A9E0);
+ASM_FUNC("asm/core", func_0012A9E0);
 
-INCLUDE_ASM("asm/core", func_0012AA80);
+ASM_FUNC("asm/core", func_0012AA80);
 
-INCLUDE_ASM("asm/core", func_0012AB30);
+ASM_FUNC("asm/core", func_0012AB30);
 
-INCLUDE_ASM("asm/core", func_0012AC10);
+ASM_FUNC("asm/core", func_0012AC10);
 
-INCLUDE_ASM("asm/core", func_0012ACF8);
+ASM_FUNC("asm/core", func_0012ACF8);
 
-INCLUDE_ASM("asm/core", func_0012ADD0);
+ASM_FUNC("asm/core", func_0012ADD0);
 
-INCLUDE_ASM("asm/core", func_0012AEA0);
+ASM_FUNC("asm/core", func_0012AEA0);
 
-INCLUDE_ASM("asm/core", func_0012AFC0);
+ASM_FUNC("asm/core", func_0012AFC0);
 
-INCLUDE_ASM("asm/core", func_0012B0D8);
+ASM_FUNC("asm/core", func_0012B0D8);
 
 /* rac1-decomp src/core/00125630.c: func_00127378 */
 void func_0012B198(int arg0) {

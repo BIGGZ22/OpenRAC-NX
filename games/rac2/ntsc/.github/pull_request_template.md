@@ -5,4 +5,4 @@
 ## Checked
 
 <!-- The commands you ran and what they printed, e.g. `tools/build.py all`: 28 programs OK;
-`tools/progress.py`: before and after. Say what you did not run. -->
+how many functions this adds (leave `progress/report.json` and the README table out: they are regenerated on master). Say what you did not run. -->

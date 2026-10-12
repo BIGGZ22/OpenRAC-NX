@@ -1,4 +1,5 @@
 #include "include_asm.h"
+#include "common.h"
 
 INCLUDE_ASM("asm/levels", func_L19_003E9400);
 
@@ -12,7 +13,26 @@ INCLUDE_ASM("asm/levels", func_L19_004160A0);
 
 INCLUDE_ASM("asm/levels", func_L19_004170D8);
 
-INCLUDE_ASM("asm/levels", func_L19_00417A00);
+extern void func_2EB590();
+
+extern void func_2EB5C0();
+
+extern float func_3183D8(float, float);
+
+extern float func_2EBF18(float);
+
+extern float func_2EBF30(float);
+
+void func_L19_00417A00(char *a0)
+{
+    int obj = *(int *)(a0 + 0x68);
+
+    func_2EB590(obj + 0x218);
+    func_2EB5C0(obj + 0x21C);
+    if (*(unsigned short *)(a0 + 0x96) < 0xFFFF) {
+        *(unsigned short *)(a0 + 0x96) += 1;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L19_00417A58);
 
@@ -23,8 +43,6 @@ INCLUDE_ASM("asm/levels", func_L19_00417F88);
 INCLUDE_ASM("asm/levels", func_L19_0041B078);
 
 INCLUDE_ASM("asm/levels", func_L19_0041BFD0);
-
-INCLUDE_ASM("asm/levels", func_L19_0041C2B8);
 
 INCLUDE_ASM("asm/levels", func_L19_0041C328);
 
@@ -44,7 +62,15 @@ INCLUDE_ASM("asm/levels", func_L19_00420EF0);
 
 INCLUDE_ASM("asm/levels", func_L19_00421E80);
 
-INCLUDE_ASM("asm/levels", func_L19_00422178);
+void func_L19_00422178(char *a0, float *a1)
+{
+    float t = func_3183D8(0.0f, (*(float *)(a0 + 0x2C) / *(float *)(*(int *)(a0 + 0x24) + 0x24)) * 6.0f);
+    float r = func_3183D8(-3.14159274f, 3.14159274f);
+
+    qcopy(a1, a0 + 0x10);
+    a1[0] = a1[0] + t * func_2EBF18(r);
+    a1[1] = a1[1] + t * func_2EBF30(r);
+}
 
 INCLUDE_ASM("asm/levels", func_L19_00422238);
 

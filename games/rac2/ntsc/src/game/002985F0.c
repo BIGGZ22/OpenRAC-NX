@@ -15,5 +15,4 @@ extern Rac2Native_170b399a2496b87e_LeafSelect7State11Layout D_001393E0;
 
 extern int D_001A7420;
 extern void func_002985F0(void);
-INCLUDE_ASM("asm/game", func_002985F0);
 

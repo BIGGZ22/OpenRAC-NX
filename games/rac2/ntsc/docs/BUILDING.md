@@ -28,6 +28,23 @@ python3 tools/progress.py             # progress/report.json
 
 `tools/build.py boot`, `tools/build.py level 4` and `tools/build.py levels` build a part.
 Each program prints `OK` with its C functions, or stops at the first byte that differs.
+
+### Build in parallel
+
+The 28 programs do not depend on each other, so `all` and `levels` build several at once
+(`--jobs N`; the default is half the machine's cores, at most 8). Measured on an 18-core Mac
+with the tools in containers: about 12 minutes one program at a time, about 7 at eight. Every
+program is built from scratch each time, so there is no faster incremental `all`: after a C
+change, build only the programs that hold the function (`boot`, `level N`) and run `all` once
+before the report.
+
+If a build is several times slower than that, Wine is being started for every tool call. Keep
+its server alive in the container (`wineserver -p`, which `tools/docker/run.sh` does): one level
+is then about half a minute instead of over two, and everything above scales with it.
+
+The same goes for everything else that is independent: `tools/check.py` on different functions
+can run side by side (it writes only that file's object), and so can workers in their own
+worktrees. What must not run twice at once is two builds of the *same* program in one checkout.
 A C function that does not match where the catalogue places it is listed with the reason
 and stays assembly there; the program still has to come out equal.
 

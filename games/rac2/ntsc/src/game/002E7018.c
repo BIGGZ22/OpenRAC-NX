@@ -87,7 +87,24 @@ INCLUDE_ASM("asm/game", func_002EA8E8);
 
 INCLUDE_ASM("asm/game", func_002EA968);
 
-INCLUDE_ASM("asm/game", func_002EAAA8);
+extern void func_001325E8(void *, void (*)(int, long), long long);
+extern void func_0011AEA0(int);
+extern int func_001261F0(int);
+extern int func_00132028(void);
+extern void func_002E6088(int, long);
+
+void func_002EAAA8(void *arg, int *status) {
+    *status = -1;
+    func_001325E8(arg, func_002E6088, (unsigned long long)(unsigned int)status);
+    {
+        int sentinel = -1;
+        do {
+            func_0011AEA0(0);
+            func_001261F0(0);
+            func_00132028();
+        } while (*status == sentinel);
+    }
+}
 
 INCLUDE_ASM("asm/game", func_002EAB18);
 

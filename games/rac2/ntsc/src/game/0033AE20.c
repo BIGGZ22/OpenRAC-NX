@@ -53,7 +53,10 @@ void func_0033AF48(char *object)
     }
 }
 
-INCLUDE_ASM("asm/game", func_0033B018);
+void func_0033B018(float **position, float x, float y) {
+    (*position)[0] = x;
+    (*position)[1] = y;
+}
 
 void func_0033B030(u8 *a0, f32 a1, f32 a2, f32 a3, f32 a4, f32 a5, f32 a6) {
     *(f32 *)(a0 + 0x278) = a1;
@@ -64,7 +67,12 @@ void func_0033B030(u8 *a0, f32 a1, f32 a2, f32 a3, f32 a4, f32 a5, f32 a6) {
     *(f32 *)(a0 + 0x284) = a6;
 }
 
-INCLUDE_ASM("asm/game", func_0033B050);
+void func_0033B050(int object, unsigned int a1, unsigned int a2, unsigned int a3)
+{
+    func_00336A38(object + 0x198, a1);
+    func_00336A38(object + 0x228, a2);
+    func_00336A38(object + 0x1E0, a3);
+}
 
 /* Measured target: byte-identical across all 27 levels. */
 void func_0033B0A8(u8 *a0, f32 a1) { *(f32 *)(a0 + 0x274) = a1; }

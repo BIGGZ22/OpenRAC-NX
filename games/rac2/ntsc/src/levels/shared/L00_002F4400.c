@@ -10,7 +10,11 @@ INCLUDE_ASM("asm/levels", func_L00_002F45B8);
 
 INCLUDE_ASM("asm/levels", func_L00_002F46C8);
 
-INCLUDE_ASM("asm/levels", func_L00_002F4720);
+extern short D_L00_0027D880[];
+
+void func_L00_002F4720(void) {
+    D_L00_0027D880[0] = 0;
+}
 
 void func_L00_002F51B0(void)
 {
@@ -30,11 +34,22 @@ INCLUDE_ASM("asm/levels", func_L00_002F7298);
 
 INCLUDE_ASM("asm/levels", func_L00_002F74F0);
 
-INCLUDE_ASM("asm/levels", func_L00_002F7568);
+extern int r1_func_0011CC38();
 
-INCLUDE_ASM("asm/levels", func_L00_002F7588);
+/* rac1-decomp src/core/00119D88.c: func_0011CCB0 */
+/* Returns its callee's value: retail keeps the frame and calls, and
+   2.9-ee would tail-call it (a bare `j`) if it were void. */
+int func_L00_002F7568(void) {
+    return r1_func_0011CC38();
+}
 
-INCLUDE_ASM("asm/levels", func_L00_002F9858);
+int func_L00_002F7588(void) {
+    return 0;
+}
+
+int func_L00_002F9858(void) {
+    return 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002FACF8);
 

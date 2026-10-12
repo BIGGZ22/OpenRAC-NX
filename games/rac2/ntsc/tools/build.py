@@ -6,6 +6,7 @@ Build the game's programs and compare them with the retail ones.
   python3 tools/build.py level 04         # one level's program
   python3 tools/build.py levels           # all 27
   python3 tools/build.py all              # the boot and all 27
+  python3 tools/build.py all --jobs 12    # that many programs at once (default: half the cores, at most 8)
 
 Each program is disassembled with splat into build/<program>/asm/, converted for SN
 ProDG 2.0's assembler (tools/expand_asm.py) and assembled with it; the C in src/ is
@@ -224,12 +225,12 @@ def compile_c(source: Path) -> Path:
         # the SDK compiler's driver (integrated cpp), then the game compiler's assembler
         script = (f"set -e; t=$(mktemp -d); cd $t; cp '{source}' x.c; "
                   f"'{SDK_COMPILER}/xgcc' -B'{SDK_COMPILER}/' -S {flags[3:]} -I'{ROOT}/include' -I'{SDK_COMPILER}/include' "
-                  f"-I'{source.parent}' x.c -o x.s; '{COMPILER}/as' -o x.o x.s; cp x.o '{out}'; rm -rf $t")
+                  f"-I'{source.parent}' x.c -o x.s; '{COMPILER}/as' -o x.o x.s; cp x.o '{out}'.$$; mv '{out}'.$$ '{out}'; rm -rf $t")
     else:
         script = (f"set -e; t=$(mktemp -d); cd $t; cp '{source}' x.c; "
                   f"'{COMPILER}/cpp' -I'{ROOT}/include' -I'{source.parent}' x.c > x.i; "
                   f"'{COMPILER}/cc1' -quiet {flags} x.i -o x.s; '{COMPILER}/as' -o x.o x.s; "
-                  f"cp x.o '{out}'; rm -rf $t")
+                  f"cp x.o '{out}'.$$; mv '{out}'.$$ '{out}'; rm -rf $t")
     result = subprocess.run([*runner, "bash", "-c", script], capture_output=True, text=True)
     if result.returncode:
         sys.exit(f"{source.relative_to(ROOT)} does not compile:\n{result.stderr[-3000:]}")
@@ -500,12 +501,16 @@ def level_reference(number: int) -> Path:
     d = levels.DUMP / levels.level_dir(number)
     m = json.loads((d / "manifest.json").read_text())
     path = BUILD / "reference" / f"{levels.level_dir(number)}.elf"
+    if path.is_file() and path.stat().st_mtime >= max(f.stat().st_mtime for f in d.iterdir()):
+        return path           # current: tools/check.py runs side by side must not rewrite it
     sections = [{"name": "." + s["name"] if s["name"] in ("text", "data", "bss") else s["name"],
                  "address": s["address"], "type": s["type"],
                  "data": (d / f"{s['name']}.bin").read_bytes() if s["type"] != elf.SHT_NOBITS else b"\0" * s["size"]}
                 for s in m["sections"]]
     path.parent.mkdir(parents=True, exist_ok=True)
-    elf.write_exec(path, m["entry"], sections)
+    fresh = path.with_suffix(f".{os.getpid()}.tmp")
+    elf.write_exec(fresh, m["entry"], sections)
+    os.replace(fresh, path)   # whole or not at all, for a reader in another process
     return path
 
 
@@ -582,10 +587,10 @@ def build_program(name: str, reference: Path) -> tuple[int, int]:
         objects = list(pool.map(assemble, sources))
     undefined_symbols(directory, extra, aliases)
     out = directory / "build/program.elf"
+    # No object goes on the command line: the script names every one it places, which loads
+    # it, and a Windows program takes 32,767 characters, fewer than a thousand C functions need.
     run([str(SN / "ld.exe"), "-T", "config/rac2.ld", "-e", hex(image["entry"]),
-         "-Map", "build/program.map", "-o", "build/program.elf",
-         *(o.relative_to(directory).as_posix() for o in objects),
-         *(o.relative_to(directory, walk_up=True).as_posix() for o in placement.objects)],
+         "-Map", "build/program.map", "-o", "build/program.elf"],
         directory, directory / "link.log")
     same, why = elf.compare_loads(reference, out)
     c_bytes = sum(v[1] for v in placement.placed.values())
@@ -609,11 +614,22 @@ def main() -> None:
     elif len(args) == 2 and args[0] == "level":
         number = int(args[1])
         build_program(levels.level_dir(number), level_reference(number))
-    elif args in (["levels"], ["all"]):
-        if args == ["all"]:
-            build_program("boot", levels.BOOT)
-        for number in sorted(levels.NAMES):
-            build_program(levels.level_dir(number), level_reference(number))
+    elif args[:1] in (["levels"], ["all"]) and (len(args) == 1 or len(args) == 3 and args[1] == "--jobs"):
+        # The programs are independent: several at once, each in a process of its own.
+        jobs = int(args[2]) if len(args) == 3 else max(1, min(8, JOBS // 2))
+        programs = ([["boot"]] if args[0] == "all" else []) + [["level", str(n)] for n in sorted(levels.NAMES)]
+
+        def one(program: list[str]) -> tuple[int, str]:
+            done = subprocess.run([sys.executable, __file__, *program], capture_output=True, text=True)
+            return done.returncode, (done.stdout + done.stderr).rstrip()
+
+        failed = 0
+        with ThreadPoolExecutor(jobs) as pool:
+            for code, text in pool.map(one, programs):       # printed in program order
+                print(text, flush=True)
+                failed += bool(code)
+        if failed:
+            sys.exit(f"{failed} of {len(programs)} programs failed")
     else:
         sys.exit(__doc__)
 

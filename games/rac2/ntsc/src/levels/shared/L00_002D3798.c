@@ -217,9 +217,44 @@ float func_L00_002D3A58(char *arg)
     return func_00282E20_1(third);
 }
 
-INCLUDE_ASM("asm/levels", func_L00_002D3B00);
+extern void func_00283098(void *a, void *b, void *c);
 
-INCLUDE_ASM("asm/levels", func_L00_002D3B58);
+float func_L00_002D3B00(char *in)
+{
+    char *p = (char *)&D_00189E20_11;
+    int mode = *(unsigned char *)(p + 8899);
+    float local[4];
+
+    if (mode == 0)
+        return *(float *)(in + 8);
+    if (mode < 0)
+        return 0.0f;
+    if (mode >= 3)
+        return 0.0f;
+    func_00283098(local, in, p + 64);
+    return local[2];
+}
+
+extern void func_002830C0(void *a, void *b, void *c);
+
+void func_L00_002D3B58(V4_F6a70b950 *dst, V4_F6a70b950 *src, float k)
+{
+    char *p = (char *)&D_00189E20_11;
+    int mode = *(unsigned char *)(p + 8899);
+
+    if (mode == 0) {
+        *dst = *src;
+        ((float *)dst)[2] = k;
+        return;
+    }
+    if (mode < 0)
+        return;
+    if (mode >= 3)
+        return;
+    func_002830C0(dst, src, p + 64);
+    ((float *)dst)[2] = k;
+    func_002830C0(dst, dst, p);
+}
 
 /* reads a mode byte from a global block; when zero it forwards the arguments to one helper, otherwise it range-checks the byte and drives two helpers with the object and block pointers */
 void func_L00_002D3BD8(char *a0, int a1, float f12)
@@ -289,7 +324,43 @@ INCLUDE_ASM("asm/levels", func_L00_002D3D98);
 
 INCLUDE_ASM("asm/levels", func_L00_002D3EA8);
 
-INCLUDE_ASM("asm/levels", func_L00_002D3F30);
+#ifndef RAC2_T_ENTRY_262570
+#define RAC2_T_ENTRY_262570
+typedef struct {
+    unsigned char pad0[142];
+    unsigned short f8E;
+    unsigned char rest[80];
+} Entry_262570;
+#endif
+
+extern unsigned char D_L00_00139568[];
+
+extern Entry_262570 D_L00_00262570[];
+
+extern int D_L00_00139688[];
+
+extern int D_0018B068;
+
+int func_L00_002D3F30(int a0, int a1)
+{
+    int idx = a0;
+    unsigned char b;
+    Entry_262570 *e;
+    int word;
+
+    if (idx == -1)
+        idx = D_0018B068;
+    b = D_L00_00139568[idx];
+
+    e = &D_L00_00262570[b];
+    if (e->f8E == 0)
+        return 1;
+    word = D_L00_00139688[idx];
+    if (word < a1)
+        return 0;
+    D_L00_00139688[idx] = word - a1;
+    return 1;
+}
 
 /* Return the complete supplied unsigned-long 64-bit value unchanged. */
 /* Target: FUN_003427B0 — identity function returning its first argument */
@@ -303,60 +374,71 @@ unsigned long func_L00_002D3FB0(unsigned long param_1)
 
 INCLUDE_ASM("asm/levels", func_L00_002D3FB8);
 
-INCLUDE_ASM("asm/levels", func_L00_002D4040);
+extern unsigned char D_L00_00139568[];
+
+#ifndef RAC2_T_ENTRY_262570
+#define RAC2_T_ENTRY_262570
+typedef struct {
+    unsigned char pad0[142];
+    unsigned short f8E;
+    unsigned char rest[80];
+} Entry_262570;
+#endif
+
+extern Entry_262570 D_L00_00262570[];
+
+extern int D_L00_00139688[];
+
+extern int D_0018B068;
+
+int func_L00_002D4040(int a0)
+{
+    int idx = a0;
+    unsigned char b;
+    Entry_262570 *e;
+
+    if (idx == -1)
+        idx = D_0018B068;
+    b = D_L00_00139568[idx];
+
+    e = &D_L00_00262570[b];
+    if (e->f8E == 0)
+        return 1;
+    return D_L00_00139688[idx];
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002D40A0);
 
-INCLUDE_ASM("asm/levels", func_L00_002D40F0);
+extern int D_0018C0B4;
+
+int func_L00_002D40F0(void)
+{
+    switch (D_0018C0B4) {
+    case 98:
+    case 99:
+        return 1;
+    case 100:
+        return 2;
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002D4138);
 
 INCLUDE_ASM("asm/levels", func_L00_002D4140);
 
-INCLUDE_ASM("asm/levels", func_L00_002D49F0);
+extern int func_003425F8(int, float, char *, char *);
 
-/* Advances three mode-selected resident scalars through a rate helper and writes a 0..1 fold of the first two into offset 120 of the objects those scalars point at. */
-void func_L00_002D4A38(void)
+void func_L00_002D49F0(void)
 {
-    Node_F882f1178 *node;
+    char *p = (char *)&D_00189E20_11;
 
-    node = (Node_F882f1178 *)D_00189E20_11.p1360;
-    if (node != 0) {
-        if (*(int *)0x1A8F00 == 2)
-            D_00189E20_11.f250C = func_00283B98_4(D_00189E20_11.f250C, 0.020362177863717079f);
-        else
-            D_00189E20_11.f250C = func_00283B98_4(D_00189E20_11.f250C, 0.034906592220067978f);
-        node->field120 = func_00283D38_1(0xd2d2d2, 0x285050,
-                                 func_00283198_3(D_00189E20_11.f250C) * 0.5f + 0.5f);
-    }
-    node = (Node_F882f1178 *)D_00189E20_11.p1364;
-    if (node != 0) {
-        if (D_L00_001A8F00 != 2) {
-            float limit;
-            int which;
-
-            limit = func_00283B98_4(D_00189E20_11.f2510, 0.049451004713773727f);
-            D_00189E20_11.f2510 = limit;
-            which = 0x1ee628;
-            if (limit > 0.0f && limit < 1.9198623895645142f) {
-                which = 0x1e1ed2;
-            }
-            node->field120 = func_00283D38_1(node->field120, which, 0.070000000298023224f);
-        } else {
-            D_00189E20_11.f2510 = func_00283B98_4(D_00189E20_11.f2510, 0.026179943233728409f);
-            node->field120 = func_00283D38_1(0x1e1ed2, 0x1e1e50,
-                                     func_00283198_3(D_00189E20_11.f2510) * 0.5f + 0.5f);
-        }
-    }
-    if (D_00189E20_11.p1368 != 0) {
-        if (D_L00_001A8F00 == 2)
-            func_L00_00326048((int)D_00189E20_11.p1368, &D_00189E20_11.f2514, 0xdcdcdc, 0x323232,
-                    0.026179943233728409f);
-        else
-            func_L00_00326048((int)D_00189E20_11.p1368, &D_00189E20_11.f2514, 0xdcdcdc, 0x323232,
-                    0.040724355727434158f);
+    if (func_003425F8(*(short *)(p + 0x24FE), *(float *)(p + 0x264), p + 0x80, p + 0x80)) {
+        *(short *)(p + 0x216) = 4;
     }
 }
+
+INCLUDE_ASM("asm/levels", func_L00_002D4A38);
 
 INCLUDE_ASM("asm/levels", func_L00_002D4C28);
 

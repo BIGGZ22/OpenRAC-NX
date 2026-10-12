@@ -137,11 +137,67 @@ void func_002B7E28(void *a0, long a1)
     }
 }
 
-INCLUDE_ASM("asm/game", func_002B7EA8);
+extern void func_002B6D80(s32, s32, s32);
+void func_002B7EA8(s32 a0, long a1)
+{
+    s32 p = (s32)a1;
+    if (p == 0)
+        return;
+    *(s32 *)p = a0;
+    if (a0 != 0) {
+        if (*(short *)(p + 10) == 1)
+            *(short *)(p + 10) = 2;
+    } else {
+        u8 *g = (u8 *)D_001A63A8_4;
+        func_002B6D80(*(short *)(g + 0x48),
+                      *(short *)(g + 0x4C),
+                      *(short *)(g + 0x4A));
+    }
+}
 
-INCLUDE_ASM("asm/game", func_002B7F08);
+extern short D_001A63D4;
 
-INCLUDE_ASM("asm/game", func_002B7F58);
+void func_002B7F08(int arg0, long arg1)
+{
+    short *p = (short *)(int)arg1;
+    short state;
+    if (p != 0) {
+        *(int *)p = arg0;
+        if (arg0 != 0) {
+            state = p[5];
+            if (state == 1) {
+                p[5] = 4;
+                if (p[8] != 0) D_001A63D4 = state;
+            }
+        } else {
+            p[5] = 0;
+        }
+    }
+}
+
+#define NOT_SDA __attribute__((section(".data")))
+
+extern short r1_D_001517F0 NOT_SDA;
+
+/* rac1-decomp src/game/stream.c: func_00217970 */
+void func_002B7F58(int arg0, long arg1) {
+    short *p = (short *)(int)arg1;
+    if (p != 0) {
+        if (arg0 < 0) {
+            *(int *)p = arg0;
+        }
+        if (arg0 != 0) {
+            if (p[5] == 9) {
+                p[5] = 4;
+                if (p[8] != 0) {
+                    r1_D_001517F0 = 1;
+                }
+            }
+        } else {
+            p[5] = 0;
+        }
+    }
+}
 
 void func_002B7FB0(int arg0, long arg1) {
     short *p = (short *)(int)arg1;
@@ -158,7 +214,21 @@ void func_002B7FB0(int arg0, long arg1) {
     }
 }
 
-INCLUDE_ASM("asm/game", func_002B7FF0);
+extern void func_0026FEB8(const char *, ...);
+extern char D_001AA220[];
+void func_002B7FF0(int value, long address)
+{
+    char *p = (char *)(int)address;
+    if (p == 0)
+        return;
+    if (*(unsigned int *)p != 0xFFFFFFFFU) {
+        func_0026FEB8(D_001AA220);
+        return;
+    }
+    *(int *)p = value;
+    if (value == 0)
+        *(short *)(p + 10) = 7;
+}
 
 INCLUDE_ASM("asm/game", func_002B8048);
 
@@ -166,7 +236,18 @@ INCLUDE_ASM("asm/game", func_002B80B8);
 
 INCLUDE_ASM("asm/game", func_002B8108);
 
-INCLUDE_ASM("asm/game", func_002B8518);
+typedef struct {
+    char reserved[0x18E];
+    short active;
+    int value;
+} State_2B8518;
+
+extern State_2B8518 D_00138180;
+
+void func_002B8518(void) {
+    D_00138180.active = 0;
+    D_00138180.value = 0;
+}
 
 INCLUDE_ASM("asm/game", func_002B8530);
 
@@ -185,7 +266,12 @@ void func_002B8888(u8 *a0) {
 
 INCLUDE_ASM("asm/game", func_002B88F0);
 
-INCLUDE_ASM("asm/game", func_002B9000);
+void func_002B9000(void) {
+    extern void func_002B85F8(void *);
+    extern State_2B8518 D_00138500;
+    func_002B85F8(&D_00138180);
+    func_002B85F8(&D_00138500);
+}
 
 INCLUDE_ASM("asm/game", func_002B9030);
 
@@ -215,7 +301,8 @@ INCLUDE_ASM("asm/game", func_002BAA28);
 
 INCLUDE_ASM("asm/game", func_002BABE8);
 
-INCLUDE_ASM("asm/game", func_002BAE48);
+void func_002BAE48(void) {
+}
 
 INCLUDE_ASM("asm/game", func_002BAE50);
 
@@ -345,7 +432,8 @@ INCLUDE_ASM("asm/game", func_002BCF18);
 
 INCLUDE_ASM("asm/game", func_002BD0D0);
 
-INCLUDE_ASM("asm/game", func_002BD390);
+void func_002BD390(void) {
+}
 
 void func_002BD398(OBJ_F3c007b59 *o)
 {

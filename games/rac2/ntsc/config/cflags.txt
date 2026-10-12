@@ -83,16 +83,16 @@ src/core/00131780.c	sdk -O2 -G2 -ffunction-sections
 src/core/00133988.c	sdk -O2 -G2 -ffunction-sections
 src/game/00274118.c	sdk -O2 -G2 -ffunction-sections
 src/game/0027B7E0.c	-O2 -G8 -ffunction-sections
-src/game/0027F110.c	sdk -O2 -G2 -ffunction-sections
+src/game/0027F110.c	sdk -O2 -G8 -ffunction-sections
 src/game/00284FC0.c	-O2 -G8 -ffunction-sections
 src/game/00285828.c	-O2 -G8 -ffunction-sections
 src/game/00287BD8.c	-O2 -G8 -ffunction-sections
 src/game/00287E60.c	-O2 -G8 -ffunction-sections
-src/game/00287E98.c	sdk -O2 -G2 -ffunction-sections
+src/game/00287E98.c	sdk -O2 -G8 -ffunction-sections
 src/game/00288D30.c	-O2 -G8 -ffunction-sections
-src/game/00288D70.c	sdk -O2 -G2 -ffunction-sections
+src/game/00288D70.c	sdk -O2 -G8 -ffunction-sections
 src/game/0028E440.c	-O2 -G8 -ffunction-sections
-src/game/00290670.c	sdk -O2 -G2 -ffunction-sections
+src/game/00290670.c	sdk -O2 -G8 -ffunction-sections
 src/game/00290730.c	-O2 -G8 -ffunction-sections
 src/game/002983D0.c	-O2 -G8 -ffunction-sections
 src/game/00298630.c	-O2 -G8 -ffunction-sections
@@ -133,3 +133,9 @@ src/levels/shared/L00_0037B6F0.c	-O2 -G8 -ffunction-sections
 src/levels/shared/L00_0037E668.c	-O2 -G8 -ffunction-sections
 src/levels/shared/L00_0042C818.c	-O2 -G8 -ffunction-sections
 src/levels/shared/L05_00446E28.c	-O2 -G8 -ffunction-sections
+
+src/game/0027A0F8.c	-O2 -G0 -ffunction-sections -mno-split-addresses
+src/game/002CCED0.c	-O2 -G0 -ffunction-sections -mno-split-addresses
+src/core/00120390.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012CFE8.c	sdk -O2 -G2 -ffunction-sections
+src/core/001232F0.c	sdk -O2 -G2 -ffunction-sections

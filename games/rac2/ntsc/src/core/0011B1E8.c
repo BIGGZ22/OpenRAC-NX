@@ -35,18 +35,18 @@ int func_0011B1E8(int fd, int buf, int len) {
 
 INCLUDE_ASM("asm/core", func_0011B268);
 
-INCLUDE_ASM("asm/core", func_0011B270);
+ASM_FUNC("asm/core", func_0011B270);
 
 INCLUDE_ASM("asm/core", func_0011B320);
 
-INCLUDE_ASM("asm/core", func_0011B328);
+ASM_FUNC("asm/core", func_0011B328);
 
-INCLUDE_ASM("asm/core", func_0011B3D0);
+ASM_FUNC("asm/core", func_0011B3D0);
 
 INCLUDE_ASM("asm/core", func_0011B450);
 
 INCLUDE_ASM("asm/core", func_0011B458);
 
-INCLUDE_ASM("asm/core", func_0011B500);
+ASM_FUNC("asm/core", func_0011B500);
 
 INCLUDE_ASM("asm/core", func_0011B580);

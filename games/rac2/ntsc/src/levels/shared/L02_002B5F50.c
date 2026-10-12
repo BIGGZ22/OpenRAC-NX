@@ -12,8 +12,6 @@ INCLUDE_ASM("asm/levels", func_L02_002EFB60);
 
 INCLUDE_ASM("asm/levels", func_L02_002F1650);
 
-INCLUDE_ASM("asm/levels", func_L02_002F1658);
-
 INCLUDE_ASM("asm/levels", func_L02_002F1FB8);
 
 INCLUDE_ASM("asm/levels", func_L02_002F21C0);
@@ -40,7 +38,12 @@ INCLUDE_ASM("asm/levels", func_L02_00329C48);
 
 INCLUDE_ASM("asm/levels", func_L02_0032B468);
 
-INCLUDE_ASM("asm/levels", func_L02_0032E390);
+extern void func_L02_0032E3B0(void *a0, void *a1);
+
+/* Forward the call with the second pointer advanced by one record. */
+void func_L02_0032E390(void *a0, void *a1) {
+    func_L02_0032E3B0(a0, (char *)a1 + 0x10);
+}
 
 INCLUDE_ASM("asm/levels", func_L02_0032E3B0);
 
@@ -118,9 +121,19 @@ INCLUDE_ASM("asm/levels", func_L02_0038E610);
 
 INCLUDE_ASM("asm/levels", func_L02_0038E838);
 
-INCLUDE_ASM("asm/levels", func_L02_00392C70);
+/* Raise the byte field to eight when it is below. */
+void func_L02_00392C70(unsigned char *a0) {
+    if (a0[0x20] < 8) {
+        a0[0x20] = 8;
+    }
+}
 
-INCLUDE_ASM("asm/levels", func_L02_003948D0);
+/* Raise the byte field to eight when it is below. */
+void func_L02_003948D0(unsigned char *a0) {
+    if (a0[0x20] < 8) {
+        a0[0x20] = 8;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L02_003A6F78);
 

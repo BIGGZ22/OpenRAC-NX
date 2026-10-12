@@ -90,7 +90,9 @@ void func_002B00D8(void *p, float *a1, float *a2, float f)
     }
 }
 
-INCLUDE_ASM("asm/game", func_002B0158);
+void func_002B0158(char *object, float *first, float *second, float amount) {
+    func_002B00D8(object + 0x10, first, second, amount);
+}
 
 INCLUDE_ASM("asm/game", func_002B0178);
 
@@ -109,7 +111,14 @@ float func_002B0360(char *p)
     return v;
 }
 
-INCLUDE_ASM("asm/game", func_002B03B8);
+extern void func_00282D30(void *, void *, float);
+extern void func_002B0408(void *, void *, void *);
+
+void func_002B03B8(void *first, void *second, void *third) {
+    float vector[4];
+    func_00282D30(vector, second, -1.0f);
+    func_002B0408(first, vector, third);
+}
 
 /* Builds a 4-float value from a unit seed and a 0.5f-scaled blend against a region 32 bytes into the first argument, squares a scalar returned by a fourth callee, stores the negated complement of that square into a fifth word, converts the value into a 48-byte record and copies that record into the third argument when it is non-null. */
 void func_002B0408(void *a0, void *a1, void *a2)
@@ -151,7 +160,15 @@ float func_002B08A8(int a0, int a1)
     return 2.0f * r * 3.1415927f / s - 3.1415927f;
 }
 
-INCLUDE_ASM("asm/game", func_002B0910);
+extern float func_002B08A8(int, int);
+extern float func_00283198(float);
+extern void func_00283D38(int, int, float);
+void func_002B0910(int a0, int a1, int a2, int a3)
+{
+    float v = func_002B08A8(a0, a1);
+    v = func_00283198(v);
+    func_00283D38(a2, a3, v * 0.5f + 0.5f);
+}
 
 INCLUDE_ASM("asm/game", func_002B0968);
 
@@ -159,9 +176,18 @@ INCLUDE_ASM("asm/game", func_002B0990);
 
 INCLUDE_ASM("asm/game", func_002B0A08);
 
-INCLUDE_ASM("asm/game", func_002B0A18);
+void func_002B0A18(int first, int second)
+{
+    extern int func_00288FB8(int);
+    extern void func_0029CC98(int, int);
+    func_0029CC98(func_00288FB8(first), second);
+}
 
-INCLUDE_ASM("asm/game", func_002B0A48);
+extern void func_0029CC50(int, int, int);
+
+void func_002B0A48(int first, int second, int third) {
+    func_0029CC50(first, second, third);
+}
 
 /* Walks selected mask bits, evaluates three stored curve components, optionally transforms the vector, and dispatches one object operation per selected bit. */
 void func_002B0A68(char *self, int mask, int arg2,
@@ -202,7 +228,14 @@ INCLUDE_ASM("asm/game", func_002B0CE0);
 
 s32 func_002B0D60(void) { return D_00139648; }
 
-INCLUDE_ASM("asm/game", func_002B0D70);
+extern int func_002B0DB8(void);
+int func_002B0D70(void) {
+    int count = func_002B0DB8();
+    int diff = count - func_002B0D60();
+    if (diff < 0) diff = 0;
+    if (diff > 40) diff = 40;
+    return diff;
+}
 
 int func_002B0DB8(void)
 {

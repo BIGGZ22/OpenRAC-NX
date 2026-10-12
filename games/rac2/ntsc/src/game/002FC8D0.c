@@ -133,11 +133,42 @@ void func_002FCDA8(void)
     D_L03_001B31A4 = 0;
 }
 
-INCLUDE_ASM("asm/game", func_002FCE18);
+ASM_FUNC("asm/game", func_002FCE18);
 
 INCLUDE_ASM("asm/game", func_002FCF18);
 
-INCLUDE_ASM("asm/game", func_002FCF90);
+#define MACRO_ADDR __attribute__((section(".sdata")))
+
+/*
+ * The VU1 chain state. r1_D_00161000 (the write pointer), r1_D_00161010 (the
+ * buffer index) and the two limits r1_D_0015F718/r1_D_0015F71C are all reached
+ * with retail's one-instruction macro form, so they are MACRO_ADDR: the
+ * assembler expands them through $at, or through $gp where the access
+ * lands in a delay slot.
+ */
+extern int *r1_D_00161000 MACRO_ADDR;
+
+/*
+ * Append one quadword to the packet at r1_D_00161000. This one wants the
+ * pointer typed as a quadword: stepping an `int *` by 4 folds the copy
+ * retail keeps (`daddu $5,$2,$0`) into the increment and comes out one
+ * instruction short, so the same symbol is declared a second time under
+ * a quadword type.
+ */
+typedef struct {
+    int w[4];
+} Qword_r002FCF90;
+
+extern Qword_r002FCF90 *r1_D_00161000_q __asm__("r1_D_00161000") MACRO_ADDR;
+
+/* rac1-decomp src/game/vuchain.c: func_00235290 */
+void func_002FCF90(int arg0) {
+    Qword_r002FCF90 *p = r1_D_00161000_q++;
+    p->w[0] = arg0 + 0x90000000;
+    p->w[1] = 0;
+    p->w[2] = 0;
+    p->w[3] = 0;
+}
 
 INCLUDE_ASM("asm/game", func_002FCFC8);
 
@@ -161,7 +192,14 @@ INCLUDE_ASM("asm/game", func_002FE8D8);
 
 INCLUDE_ASM("asm/game", func_002FE9D0);
 
-INCLUDE_ASM("asm/game", func_002FEC50);
+extern char D_0021F9C0[];
+
+void *func_002FEC50(int index) {
+    void *result = 0;
+    if ((unsigned int)index < 64u)
+        result = D_0021F9C0 + index * 0x50;
+    return result;
+}
 
 INCLUDE_ASM("asm/game", func_002FEC78);
 
@@ -171,7 +209,14 @@ INCLUDE_ASM("asm/game", func_002FED78);
 
 INCLUDE_ASM("asm/game", func_002FED90);
 
-INCLUDE_ASM("asm/game", func_002FEE50);
+extern char D_002212E0[];
+
+void func_002FEE50(int index) {
+    int *p;
+    if (index < 0) return;
+    p = (int *)((unsigned int)D_002212E0 + (index << 5));
+    p[7] = 0;
+}
 
 INCLUDE_ASM("asm/game", func_002FEE70);
 
@@ -209,7 +254,7 @@ INCLUDE_ASM("asm/game", func_00300190);
 
 INCLUDE_ASM("asm/game", func_003001E0);
 
-INCLUDE_ASM("asm/game", func_00300248);
+
 
 s32 func_00300280(s32 *a0,s32 a1) {
  s32 out=-1,i=0,flag=1; s32 *p=a0;
@@ -239,7 +284,26 @@ INCLUDE_ASM("asm/game", func_00300330);
 
 INCLUDE_ASM("asm/game", func_003004A8);
 
-INCLUDE_ASM("asm/game", func_003004B0);
+typedef struct {
+    int padding;
+    float value;
+    int reserved[2];
+} Record003004B0;
+
+typedef struct {
+    Record003004B0 records[64];
+    int enabled;
+    int index;
+} State003004B0;
+
+extern State003004B0 D_00220DC0;
+
+float func_003004B0(float value) {
+    float result = value;
+    if (D_00220DC0.enabled != 0)
+        result = D_00220DC0.records[D_00220DC0.index].value;
+    return result;
+}
 
 /* shared native body of family 8a42bc68419c7402 */
 int func_003004E0(int value)

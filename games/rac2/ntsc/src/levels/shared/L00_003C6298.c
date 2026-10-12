@@ -32,6 +32,15 @@ typedef struct {
 } Vec16_Fc936841d;
 #endif
 
+/* Measured partial layout; original type and game role are unknown. */
+typedef struct Rac2Native_9cdc323a4d0c2fbd_ClearedRecord {
+    unsigned char prefix_00[0x48];
+    unsigned int field_48;
+    unsigned char suffix_4C[4];
+} Rac2Native_9cdc323a4d0c2fbd_ClearedRecord;
+
+extern Rac2Native_9cdc323a4d0c2fbd_ClearedRecord D_L00_00241500[];
+
 INCLUDE_ASM("asm/levels", func_L00_003C6298);
 
 INCLUDE_ASM("asm/levels", func_L00_003C6A88);
@@ -63,7 +72,14 @@ INCLUDE_ASM("asm/levels", func_L00_003C94D8);
 
 INCLUDE_ASM("asm/levels", func_L00_003C9978);
 
-INCLUDE_ASM("asm/levels", func_L00_003CA470);
+/* Clears one word of each of three hundred 80-byte records, from the last one down. */
+void func_L00_003CA470(void)
+{
+    int i;
+
+    for (i = 299; i >= 0; i--)
+        D_L00_00241500[i].field_48 = 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003CA650);
 
@@ -76,10 +92,6 @@ INCLUDE_ASM("asm/levels", func_L00_003CADA0);
 INCLUDE_ASM("asm/levels", func_L00_003CB538);
 
 INCLUDE_ASM("asm/levels", func_L00_003CB980);
-
-INCLUDE_ASM("asm/levels", func_L00_003CBBD0);
-
-INCLUDE_ASM("asm/levels", func_L00_003CBBE0);
 
 /* resets a state record: zero words, plus/minus one float flags and two 64-bit fields in the retail store order */
 void func_L00_003CBC80(char *p)

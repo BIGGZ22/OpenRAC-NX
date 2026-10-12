@@ -79,8 +79,81 @@ extern int func_0012C680(void *arg, int count);
 INCLUDE_ASM("asm/core", func_0012C680);
 
 extern void func_0012C788(void *arg0, int arg1);
-INCLUDE_ASM("asm/core", func_0012C788);
+extern long r1_func_00128638();
+
+
+
+
+/* rac1-decomp src/core/00125630.c: func_00128968 */
+/*
+ * IPU command send: r1_func_00128590's wait (IPU_CTRL & 0x80004000 ==
+ * 0x80000000, a r1_func_0012BCC8 kick every 5001 spins) inlined, then
+ * cmd = arg1 | 0x40000000 to IPU_CMD, s+0x818 = r1_D_00132F70[cmd >> 28]
+ * (r1_func_00128560 inlined), s+0x838 = the narrowed r1_func_00128638 result,
+ * s+0x83C = 0x20.
+ *
+ * Written plainly it is exact under 2.9-ee, which rematerialises the
+ * MMIO constants inside the loop and keeps only %hi(r1_D_00132F70) in $18,
+ * like retail; 2.95.3 hoists them into saved registers (SIZE 252/240).
+ * The stores go in source order 0x838 then 0x83C.
+ */
+void func_0012C788(void *arg0, int arg1) {
+    int counter = 0;
+    unsigned int cmd;
+
+    while ((*(volatile int *)0x10002010 & 0x80004000) == 0x80000000) {
+        if (counter++ >= 0x1389) {
+            r1_func_0012BCC8(*(int *)((char *)arg0 + 0x858));
+            counter = 0;
+        }
+    }
+    cmd = arg1 | 0x40000000;
+    *(volatile int *)0x10002000 = cmd;
+    *(int *)((char *)arg0 + 0x818) = r1_D_00132F70[cmd >> 28];
+    *(int *)((char *)arg0 + 0x838) = r1_func_00128638(arg0);
+    *(int *)((char *)arg0 + 0x83C) = 0x20;
+}
 
 extern int func_0012C878(void *arg0, int n);
-INCLUDE_ASM("asm/core", func_0012C878);
+
+
+
+
+/* rac1-decomp src/core/00125630.c: func_00128A58 */
+/* _nextBit (libmpeg.a:mpc.o), Get_Bits: waits for the IPU, refills the
+ * bit cache when it is empty or short, returns the top n bits and tells
+ * the IPU to consume them. The r1_D_00132F70 index needs its own local,
+ * computed before the command store, or the allocator swaps $v1 and $a0.
+ */
+int func_0012C878(void *arg0, int n) {
+    char *s = (char *)arg0;
+    int counter = 0;
+    unsigned int cmd;
+    unsigned int idx;
+    unsigned int oldBits;
+    unsigned int result;
+
+    while ((*(volatile int *)0x10002010 & 0x80004000) == 0x80000000) {
+        if (counter++ >= 0x1389) {
+            r1_func_0012BCC8(*(int *)(s + 0x858));
+            counter = 0;
+        }
+    }
+
+    if (*(int *)(s + 0x818) != 0 || *(int *)(s + 0x83C) < n) {
+        *(volatile int *)0x10002000 = 0x40000000;
+        *(int *)(s + 0x818) = r1_D_00132F70[4];
+        *(int *)(s + 0x838) = r1_func_00128638(s);
+    }
+
+    *(int *)(s + 0x83C) = 0x20;
+    oldBits = *(unsigned int *)(s + 0x838);
+    cmd = n | 0x40000000;
+    idx = cmd >> 28;
+    *(volatile unsigned int *)0x10002000 = cmd;
+    result = oldBits >> (0x20 - n);
+    *(int *)(s + 0x818) = r1_D_00132F70[idx];
+    *(int *)(s + 0x838) = r1_func_00128638(s);
+    return result;
+}
 

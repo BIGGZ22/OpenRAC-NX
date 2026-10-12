@@ -116,7 +116,12 @@ INCLUDE_ASM("asm/levels", func_L00_00433DB0);
 
 INCLUDE_ASM("asm/levels", func_L00_00433DE8);
 
-INCLUDE_ASM("asm/levels", func_L00_00433F50);
+extern int func_0033AF48(char *p);
+
+int func_L00_00433F50(char *p)
+{
+    return func_0033AF48(p + 8);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00433FF8);
 
@@ -130,7 +135,12 @@ INCLUDE_ASM("asm/levels", func_L00_00437600);
 
 INCLUDE_ASM("asm/levels", func_L00_00437780);
 
-INCLUDE_ASM("asm/levels", func_L00_004377C0);
+extern int func_00348128(char *p);
+
+int func_L00_004377C0(char *p)
+{
+    return func_00348128(p + 16);
+}
 
 void func_L00_00437D50(void)
 {
@@ -157,7 +167,12 @@ void func_L00_00438970(float first, float second, float **cell)
     (*cell)[1] = second;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_00438E68);
+extern int func_00342F70(char *p);
+
+int func_L00_00438E68(char *p)
+{
+    return func_00342F70(p + 664);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00438E88);
 
@@ -248,9 +263,13 @@ INCLUDE_ASM("asm/levels", func_L00_0043F680);
 
 INCLUDE_ASM("asm/levels", func_L00_0043FDD0);
 
-INCLUDE_ASM("asm/levels", func_L00_004427C8);
+void func_L00_004427C8(char *object, int value) {
+    *(int *)(object + 0x157C) = value;
+}
 
-INCLUDE_ASM("asm/levels", func_L00_004427D0);
+void func_L00_004427D0(char *object, int value) {
+    *(int *)(object + 0x1580) = value;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00443918);
 
@@ -258,9 +277,19 @@ void func_L00_00443B58(void)
 {
 }
 
-INCLUDE_ASM("asm/levels", func_L00_00443DF8);
+extern int func_00338A60(char *p);
 
-INCLUDE_ASM("asm/levels", func_L00_00443E18);
+int func_L00_00443DF8(char *p)
+{
+    return func_00338A60(p + 0x1D6C);
+}
+
+extern int func_00338F58(char *p);
+
+int func_L00_00443E18(char *p)
+{
+    return func_00338F58(p + 0x1D6C);
+}
 
 /* Return the complete supplied unsigned-long 64-bit value unchanged. */
 /* Target: FUN_003427B0 — identity function returning its first argument */
@@ -292,11 +321,26 @@ int func_L00_00445FE8(void) {
 
 INCLUDE_ASM("asm/levels", func_L00_00447160);
 
-INCLUDE_ASM("asm/levels", func_L00_00447188);
+extern int func_00350A78(char *p);
 
-INCLUDE_ASM("asm/levels", func_L00_004471A8);
+int func_L00_00447188(char *p)
+{
+    return func_00350A78(p + 0x48);
+}
 
-INCLUDE_ASM("asm/levels", func_L00_00447278);
+extern int func_00350B70(char *p);
+
+int func_L00_004471A8(char *p)
+{
+    return func_00350B70(p + 0x48);
+}
+
+extern int func_00351268(char *p);
+
+int func_L00_00447278(char *p)
+{
+    return func_00351268(p + 0x48);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00447298);
 

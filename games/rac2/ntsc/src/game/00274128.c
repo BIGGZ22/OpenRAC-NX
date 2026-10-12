@@ -173,7 +173,7 @@ INCLUDE_ASM("asm/game", func_00274C90);
 
 INCLUDE_ASM("asm/game", func_00274D90);
 
-INCLUDE_ASM("asm/game", func_00276158);
+ASM_FUNC("asm/game", func_00276158);
 
 INCLUDE_ASM("asm/game", func_002761F8);
 
@@ -185,13 +185,26 @@ INCLUDE_ASM("asm/game", func_00278870);
 
 INCLUDE_ASM("asm/game", func_00278CE0);
 
-INCLUDE_ASM("asm/game", func_00278E78);
+ASM_FUNC("asm/game", func_00278E78);
 
 INCLUDE_ASM("asm/game", func_00278EA8);
 
 INCLUDE_ASM("asm/game", func_00278EB0);
 
-INCLUDE_ASM("asm/game", func_00278F80);
+extern void func_002FC3C0(int);
+extern void func_002FC138(void);
+extern void func_002FC1D8(void);
+extern void func_0027D330(int);
+extern int D_001B7F98;
+extern int D_001A72D4 __attribute__((sda));
+
+void func_00278F80(void) {
+    func_002FC3C0(1);
+    func_002FC138();
+    func_002FC1D8();
+    D_001A72D4 = D_001B7F98;
+    func_0027D330(30);
+}
 
 INCLUDE_ASM("asm/game", func_00278FC0);
 
@@ -235,7 +248,12 @@ void func_00279828(void)
 
 INCLUDE_ASM("asm/game", func_002798A0);
 
-INCLUDE_ASM("asm/game", func_00279988);
+extern int func_00282948(void *);
+extern char D_001B7FA8[];
+
+int func_00279988(void) {
+    return func_00282948(D_001B7FA8);
+}
 
 INCLUDE_ASM("asm/game", func_002799A8);
 
@@ -250,32 +268,6 @@ INCLUDE_ASM("asm/game", func_00279BD8);
 INCLUDE_ASM("asm/game", func_00279D18);
 
 INCLUDE_ASM("asm/game", func_00279FF0);
-
-/* shared native body of family 74360f8d53836176 */
-int func_0027A0F8(int a0, int a1, int a2)
-{
-    unsigned char *base = *(unsigned char **)0x001B23C0;
-    unsigned char *end = base + *(int *)base;
-    unsigned short *node = (unsigned short *)(base + 4);
-    int i2;
-    int i1;
-    int i0;
-
-    i2 = a2 - node[0];
-    if (i2 < 0) return 0;
-    if (!(i2 < node[1])) return 0;
-    if (!node[i2 + 2]) return 0;
-    node = (unsigned short *)(base + node[i2 + 2] * 4);
-    i1 = a1 - node[0];
-    if (i1 < 0) return 0;
-    if (!(i1 < node[1])) return 0;
-    if (!node[i1 + 2]) return 0;
-    node = (unsigned short *)(base + node[i1 + 2] * 4);
-    i0 = a0 - node[0];
-    if (i0 < 0 || !(i0 < node[1])) return 0;
-    if (node[i0 + 2] == 0xFFFF) return 0;
-    return (int)(end + node[i0 + 2] * 128);
-}
 
 int func_0027A1D0(float x, int a, int b, int c, int d, int e, int g)
 {

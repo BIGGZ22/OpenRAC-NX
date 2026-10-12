@@ -2,8 +2,6 @@
 
 extern int func_002ED688(char *);
 
-extern int func_L05_0037CEB8(char *);
-
 extern void func_002EE678(char *, int);
 
 extern int func_002A7820_1(int, int);
@@ -11,6 +9,22 @@ extern int func_002A7820_1(int, int);
 extern int func_001163B0(void);
 
 extern int D_L05_00221D10[];
+
+extern int D_L05_00221D28;
+
+extern void func_L05_0037BB28(char *);
+
+extern void func_L05_0037BD40(char *);
+
+extern void func_L05_0037BC08(char *);
+
+extern void func_L05_0037BF48(char *);
+
+extern float func_332B50(float, float);
+
+extern void func_306AD8(void *, void *, void *);
+
+extern void func_306630(void *, void *, void *);
 
 /* looks up an object, then sets flags, arms a stored value and calls one of two helper pairs before building a timer */
 void func_L05_0037B6D0(char *obj)
@@ -64,25 +78,72 @@ INCLUDE_ASM("asm/levels", func_L05_0037BB28);
 
 INCLUDE_ASM("asm/levels", func_L05_0037BB78);
 
-INCLUDE_ASM("asm/levels", func_L05_0037BB90);
+int func_L05_0037BB90(char *obj)
+{
+    int *p = (int *)func_002ED688(obj);
 
-INCLUDE_ASM("asm/levels", func_L05_0037BBB8);
+    if (p == 0)
+        return 0;
+    return p[5];
+}
+
+int func_L05_0037BBB8(char *obj)
+{
+    int *p = (int *)func_002ED688(obj);
+
+    if (p == 0)
+        return 0;
+    if (p[5] == 0 && p[4] == 0)
+        return 0;
+    return 1;
+}
 
 INCLUDE_ASM("asm/levels", func_L05_0037BC08);
 
 INCLUDE_ASM("asm/levels", func_L05_0037BD40);
 
-INCLUDE_ASM("asm/levels", func_L05_0037BE98);
+void func_L05_0037BE98(char *obj)
+{
+    int *p = (int *)func_002ED688(obj);
+    char *child;
+    int *q;
+
+    if (p == 0)
+        return;
+    if (func_L05_0037BB90(obj) != 0)
+        func_L05_0037BD40(obj);
+    child = (char *)p[4];
+    q = (int *)func_002ED688(child);
+    q[6] = q[6] - 1;
+    func_L05_0037BB28(obj);
+    if (q[6] < D_L05_00221D28)
+        func_L05_0037BC08(child);
+    else
+        func_L05_0037BF48(child);
+}
 
 INCLUDE_ASM("asm/levels", func_L05_0037BF48);
 
 INCLUDE_ASM("asm/levels", func_L05_0037C160);
 
-INCLUDE_ASM("asm/levels", func_L05_0037CDD8);
+void func_L05_0037CDD8(char *obj, int value)
+{
+    int *p = (int *)func_002ED688(obj);
+
+    if (p != 0)
+        *(int *)((char *)p + 0x114) = value;
+}
 
 INCLUDE_ASM("asm/levels", func_L05_0037CE08);
 
-INCLUDE_ASM("asm/levels", func_L05_0037CEB8);
+int func_L05_0037CEB8(char *obj)
+{
+    int *p = (int *)func_002ED688(obj);
+
+    if (p == 0)
+        return 0;
+    return *(int *)((char *)p + 0x114);
+}
 
 INCLUDE_ASM("asm/levels", func_L05_0037CEE0);
 
@@ -134,7 +195,12 @@ INCLUDE_ASM("asm/levels", func_L05_003CFAB8);
 
 INCLUDE_ASM("asm/levels", func_L05_003CFB90);
 
-INCLUDE_ASM("asm/levels", func_L05_003CFC28);
+int func_L05_003CFC28(int a0)
+{
+    if (a0 == 0x971)
+        return 4;
+    return a0 - 0x953;
+}
 
 INCLUDE_ASM("asm/levels", func_L05_003CFC48);
 
@@ -152,7 +218,15 @@ INCLUDE_ASM("asm/levels", func_L05_003D0538);
 
 INCLUDE_ASM("asm/levels", func_L05_003D0728);
 
-INCLUDE_ASM("asm/levels", func_L05_003D08C0);
+void func_L05_003D08C0(float *a0, char *a1)
+{
+    a0[0] = func_332B50(-1.0f, 1.0f);
+    a0[1] = func_332B50(-1.0f, 1.0f);
+    a0[2] = func_332B50(-1.0f, 1.0f);
+    a0[3] = 1.0f;
+    func_306AD8(a0, a0, a1);
+    func_306630(a0, a0, a1 + 0x30);
+}
 
 INCLUDE_ASM("asm/levels", func_L05_003D0960);
 

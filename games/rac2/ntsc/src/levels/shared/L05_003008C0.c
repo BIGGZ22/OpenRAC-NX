@@ -12,10 +12,6 @@ INCLUDE_ASM("asm/levels", func_L05_0030C930);
 
 INCLUDE_ASM("asm/levels", func_L05_00324DB8);
 
-INCLUDE_ASM("asm/levels", func_L05_003251A0);
-
-INCLUDE_ASM("asm/levels", func_L05_003263F8);
-
 INCLUDE_ASM("asm/levels", func_L05_00334358);
 
 INCLUDE_ASM("asm/levels", func_L05_00336630);
@@ -48,25 +44,54 @@ INCLUDE_ASM("asm/levels", func_L05_00379968);
 
 INCLUDE_ASM("asm/levels", func_L05_00379B60);
 
-INCLUDE_ASM("asm/levels", func_L05_00379C68);
+extern char *func_002ED688(int, int);
 
-INCLUDE_ASM("asm/levels", func_L05_00379E60);
+void func_L05_00379C68(int arg0, int value) {
+    char *object = func_002ED688(arg0, value);
+    if (object != 0)
+        *(int *)(object + 0x150) = value;
+}
 
-INCLUDE_ASM("asm/levels", func_L05_00379EB8);
+extern int D_L05_00225DD0[];
+
+int *func_L05_00379EB8(void) {
+    return D_L05_00225DD0;
+}
 
 INCLUDE_ASM("asm/levels", func_L05_00379ED0);
 
-INCLUDE_ASM("asm/levels", func_L05_00379F18);
+extern int D_L05_00221D10[];
 
-INCLUDE_ASM("asm/levels", func_L05_00379F28);
+void func_L05_00379F18(int value) {
+    D_L05_00221D10[13] = value;
+}
 
-INCLUDE_ASM("asm/levels", func_L05_00379F38);
+void func_L05_00379F28(int value) {
+    D_L05_00221D10[15] = value;
+}
 
-INCLUDE_ASM("asm/levels", func_L05_00379F48);
+int func_L05_00379F38(void) {
+    return D_L05_00221D10[15];
+}
 
-INCLUDE_ASM("asm/levels", func_L05_00379F58);
+void func_L05_00379F48(int value) {
+    D_L05_00221D10[18] = value;
+}
 
-INCLUDE_ASM("asm/levels", func_L05_00379F68);
+int func_L05_00379F58(void) {
+    return D_L05_00221D10[18];
+}
+
+void func_L05_00379F68(void) {
+    char *base = (char *)D_L05_00221D10 + 0xC0;
+    int *p = (int *)(base + 0x3FD0);
+    int i = 0x7F;
+    do {
+        *p = 0;
+        p -= 0x20;
+        i--;
+    } while (i >= 0);
+}
 
 INCLUDE_ASM("asm/levels", func_L05_00379FA0);
 
@@ -88,7 +113,9 @@ INCLUDE_ASM("asm/levels", func_L05_0037AC80);
 
 INCLUDE_ASM("asm/levels", func_L05_0037ADD8);
 
-INCLUDE_ASM("asm/levels", func_L05_0037AE28);
+float func_L05_0037AE28(void) {
+    return ((float *)D_L05_00221D10)[12];
+}
 
 INCLUDE_ASM("asm/levels", func_L05_0037AE38);
 

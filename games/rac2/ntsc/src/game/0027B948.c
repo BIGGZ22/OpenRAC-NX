@@ -98,7 +98,14 @@ INCLUDE_ASM("asm/game", func_0027BD70);
 
 INCLUDE_ASM("asm/game", func_0027C478);
 
-INCLUDE_ASM("asm/game", func_0027C480);
+void func_0027C480(void) {
+    extern void func_00284F40(int);
+    extern void func_0027BD70(void);
+    extern int D_001B1594 __attribute__((sda));
+    func_00284F40(0);
+    D_001B1594 = 0x7F;
+    func_0027BD70();
+}
 
 INCLUDE_ASM("asm/game", func_0027C4A8);
 
@@ -118,21 +125,85 @@ INCLUDE_ASM("asm/game", func_0027C768);
 
 INCLUDE_ASM("asm/game", func_0027C878);
 
-INCLUDE_ASM("asm/game", func_0027CDC8);
+extern int D_001B1608[] __attribute__((sda));
+extern fn_t D_001B9E40[];
+extern int D_001B9F40[];
 
-INCLUDE_ASM("asm/game", func_0027CE18);
+void func_0027CDC8(fn_t first, int second) {
+    int index = D_001B1608[0];
+    if (index < 64) {
+        D_001B9E40[index] = first;
+        D_001B9F40[index] = second;
+        D_001B1608[0] = index + 1;
+    }
+}
 
-INCLUDE_ASM("asm/game", func_0027CE90);
+void func_0027CE18(void) {
+    int index;
+    for (index = 0; index < D_001B1608[0]; ++index)
+        D_001B9E40[index](D_001B9F40[index]);
+}
 
-INCLUDE_ASM("asm/game", func_0027CEE0);
+extern int D_001B1610[] __attribute__((sda));
+extern fn_t D_001BA240[];
+extern int D_001BA340[];
 
-INCLUDE_ASM("asm/game", func_0027CF58);
+void func_0027CE90(fn_t first, int second) {
+    int index = D_001B1610[0];
+    if (index < 64) {
+        D_001BA240[index] = first;
+        D_001BA340[index] = second;
+        D_001B1610[0] = index + 1;
+    }
+}
 
-INCLUDE_ASM("asm/game", func_0027CFD0);
+void func_0027CEE0(void) {
+    int index;
+    for (index = 0; index < D_001B1610[0]; ++index)
+        D_001BA240[index](D_001BA340[index]);
+}
 
-INCLUDE_ASM("asm/game", func_0027D020);
+extern int D_001B1614[] __attribute__((sda));
+extern fn_t D_001BA440[];
+extern int D_001BA540[];
 
-INCLUDE_ASM("asm/game", func_0027D098);
+void func_0027CF58(void) {
+    int index;
+    for (index = 0; index < D_001B1614[0]; ++index)
+        D_001BA440[index](D_001BA540[index]);
+}
+
+extern int D_001B160C[] __attribute__((sda));
+extern fn_t D_001BA040[];
+extern int D_001BA140[];
+
+void func_0027CFD0(fn_t first, int second) {
+    int index = D_001B160C[0];
+    if (index < 64) {
+        D_001BA040[index] = first;
+        D_001BA140[index] = second;
+        D_001B160C[0] = index + 1;
+    }
+}
+
+void func_0027D020(void) {
+    int index;
+    for (index = 0; index < D_001B160C[0]; ++index)
+        D_001BA040[index](D_001BA140[index]);
+}
+
+extern int D_001B1638[] __attribute__((sda));
+extern fn_t D_001B1618[] __attribute__((sda));
+extern int D_001B1628[] __attribute__((sda));
+
+void func_0027D098(fn_t callback, int argument) {
+    int index = D_001B1638[0];
+    if (index < 4) {
+        D_001B1618[index] = callback;
+        D_001B1628[index] = argument;
+        D_001B1638[0] = index + 1;
+    }
+}
 
 /* shared native body of family 489bf28ebf58470c */
   /* argument table        */

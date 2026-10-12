@@ -1,10 +1,14 @@
 #include "include_asm.h"
 
+typedef unsigned char u8;
+
+typedef unsigned short u16;
+
+typedef int s32;
+
 INCLUDE_ASM("asm/levels", func_L23_0041E418);
 
 INCLUDE_ASM("asm/levels", func_L23_0041E538);
-
-INCLUDE_ASM("asm/levels", func_L23_0041E548);
 
 INCLUDE_ASM("asm/levels", func_L23_0041E570);
 
@@ -28,8 +32,6 @@ INCLUDE_ASM("asm/levels", func_L23_004234C0);
 
 INCLUDE_ASM("asm/levels", func_L23_00423588);
 
-INCLUDE_ASM("asm/levels", func_L23_00423698);
-
 INCLUDE_ASM("asm/levels", func_L23_004236B8);
 
 INCLUDE_ASM("asm/levels", func_L23_00425568);
@@ -52,7 +54,16 @@ INCLUDE_ASM("asm/levels", func_L23_004277B0);
 
 INCLUDE_ASM("asm/levels", func_L23_004277E8);
 
-INCLUDE_ASM("asm/levels", func_L23_004278B0);
+
+/* increments the 16-bit counter at object + 0x96 while it stays below 0xFFFF */
+void func_L23_004278B0(u8 *arg0) {
+    u16 *counter = (u16 *)(arg0 + 0x96);
+    u16 value = *counter;
+
+    if (value <= 0xFFFE) {
+        *counter = value + 1;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L23_004278D8);
 
@@ -68,11 +79,18 @@ INCLUDE_ASM("asm/levels", func_L23_00429098);
 
 INCLUDE_ASM("asm/levels", func_L23_00429430);
 
-INCLUDE_ASM("asm/levels", func_L23_00429CC0);
 
 INCLUDE_ASM("asm/levels", func_L23_00429DC8);
 
-INCLUDE_ASM("asm/levels", func_L23_00429FF8);
+/* increments the 16-bit counter at object + 0x96 while it stays below 0xFFFF */
+void func_L23_00429FF8(u8 *arg0) {
+    u16 *counter = (u16 *)(arg0 + 0x96);
+    u16 value = *counter;
+
+    if (value <= 0xFFFE) {
+        *counter = value + 1;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L23_0042A018);
 
@@ -80,16 +98,28 @@ INCLUDE_ASM("asm/levels", func_L23_0042A438);
 
 INCLUDE_ASM("asm/levels", func_L23_0042A8C0);
 
-INCLUDE_ASM("asm/levels", func_L23_0042AC70);
-
-INCLUDE_ASM("asm/levels", func_L23_0042ACC0);
-
 INCLUDE_ASM("asm/levels", func_L23_0042AD10);
 
-INCLUDE_ASM("asm/levels", func_L23_0042AD90);
+/* increments the 16-bit counter at object + 0x96 while it stays below 0xFFFF */
+void func_L23_0042AD90(u8 *arg0) {
+    u16 *counter = (u16 *)(arg0 + 0x96);
+    u16 value = *counter;
+
+    if (value <= 0xFFFE) {
+        *counter = value + 1;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L23_0042ADB0);
 
-INCLUDE_ASM("asm/levels", func_L23_0043F930);
+extern void func_L00_004287E8(void);
+
+extern void func_L00_00428CE0(s32);
+
+/* prepares the shared object then hands it to the shared starter */
+void func_L23_0043F930(s32 arg0) {
+    func_L00_004287E8();
+    func_L00_00428CE0(arg0);
+}
 
 INCLUDE_ASM("asm/levels", func_L23_004402D8);

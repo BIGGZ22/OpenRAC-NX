@@ -1056,3 +1056,46 @@ The byte flags 0x1A7B95 / 0x1A7B94 (family `c558ca7050ec6154`) and 0x1A7BB2 /
 chain, so a catalogue now names them directly. Only a non-integer type and an
 address outside 0..0xFFFFFFFF remain refused. Binding a byte global through its
 aligned base with a constant index stays valid where a body needs it.
+
+## Body-writing notes measured on 12 October 2026
+
+From a wave of small-function workers (each body confirmed by `tools/check.py` and then by a
+full `tools/build.py all`). These are source-shape habits of cc1 that decide the emitted bytes.
+
+* **Branch polarity decides the layout.** `if (x < 8) x = 8;` and `if (x >= 8) x = 8;` are both
+  valid C but one emits `beqz` and the other `bnez`, everything else identical. Read the retail
+  branch direction before choosing the operator, and try the other polarity before abandoning a
+  body whose only difference is a likely against a normal branch.
+* **If-conversion is the small-tier wall.** A trailing `if (X) r = 1;` in an if/else chain is
+  folded to `sltu`/`xori`/`sltiu`/`movz` where the retail keeps `beql`/`bnez` and the assignment
+  in the delay slot. A `switch` often keeps the retail shape where if/else does not (measured:
+  `func_L18_002E4090`).
+* **Integer width changes the loop shape.** An `s32` counter is strength-reduced to the
+  decrement form (`addiu $v1,$v1,-1` / `bgez`); a `u32` counter keeps the retail's incrementing
+  layout (`sltiu` / `bnez`). A retail `sltiu` in the test is the tell.
+* **Commutative reassociation.** cc1 normalises `base + index * size` to `index * size + base`;
+  a twin pair differing only in `addu` operand order is the hint. `addu` writes operand 0, so
+  `u32 old = D; D = old + v; return old;` is what forces the retail's `addu $a0,$v0,$a0`.
+* **A local pointer that lives across a call** goes to a callee-saved register and grows the
+  prologue; declaring it in a block after the call keeps the small frame.
+* **`mult` on the EE is three-operand** (`0x00A22818` is `a1 = a1 * 0xA430`, rabbitizer prints
+  two); an apparently orphan `mult` is usually a live scaled index, not dead code.
+* **`extern void f();` without a prototype** is what lets one symbol be called with different
+  signatures across a file; a prototype conflicts (`default promotion cannot match an empty
+  parameter name list`) even in block scope.
+* **A `nop` before `jr $ra`** (load delay left in place plus a branch-slot fill) is a wall: the
+  pinned compiler emits the compact three-instruction form instead, so those bodies do not
+  reproduce.
+* **Catalogue rows that are not functions.** `tools/levels.py` binds rows whose bytes are the
+  linker's padding between two functions (`addiu $sp,$sp,N; nop` chains with no `jr $ra`); ten
+  were found in `0032EB28.c` alone. That is a `tools/levels.py` fix, not C.
+
+## Quadword copy source shapes
+
+For func_L08_003D3D80 and func_L08_003D82F0, the current game profile folds
+TI scalar pointer offsets into lq/sq operands, while retail materializes the
+vector pointers and uses zero-offset copies. Aligned float aggregates and
+TI/float unions emitted ld/sd pairs; memcpy variants emitted unaligned word
+copies. Neither candidate matched. The retail shape resembles the qcopy
+helpers in include/common.h, but those helpers use inline assembly and cannot
+be used as a matching route under AGENTS.md.
