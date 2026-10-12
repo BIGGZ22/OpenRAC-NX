@@ -10,7 +10,7 @@ Each level is a scene, levels/level_NN/level_NN.tscn:
         Collision         collision.glb, hidden: the baked collision mesh by surface type
         Ties/Tie_NNNN     instances of ties/tie_<class>.glb
         Shrubs/Shrub_NNNN instances of shrubs/shrub_<class>.glb
-        Mobys/Moby_NNNN   instances of mobys/moby_<class>.tscn: the class's
+        Mobys/<Class>_NNNN   instances of mobys/moby_<class>.tscn: the class's
                           mesh (or a box) and a label naming the class
 
 Placements are node transforms in game units; fields the game stores
@@ -30,7 +30,7 @@ from gltf import Gltf
 from level import Level
 from mesh import Mesh
 from moby_class import GREY, UNTEXTURED, MobyClass, moby_classes
-from mobys import moby_class_names, moby_instances
+from mobys import LEVEL_NAMES, moby_logic, node_name, moby_class_names, moby_instances
 from shrubs import shrub_classes, shrub_instances
 from sky import panorama, sky
 from terrain import terrain
@@ -47,7 +47,7 @@ PROJECT = """config_version=5
 
 [application]
 
-config/name="Ratchet & Clank levels (PAL)"
+config/name="{name}"
 run/main_scene="{main}"
 
 [importer_defaults]
@@ -296,6 +296,7 @@ class LevelWriter:
         angles (R = Rz * Ry * Rx); the transform itself is exact either way.
         """
         names = moby_class_names()
+        logic = moby_logic(self.level.id)
         placed = {p["class_id"] for p in placements}
         scenes, models = {}, {}
         for class_id in sorted(set(classes) | placed):
@@ -306,13 +307,13 @@ class LevelWriter:
                          moby.mesh.bounds()[1][2] * moby.scale)
             path = f"mobys/moby_{class_id}.tscn"
             write_marker(self.dir / path, class_id, f"{class_id} {names[class_id]}" if class_id in names else str(class_id),
-                         model)
+                         model, names.get(class_id), logic.get(class_id))
             if class_id in placed:
                 scenes[class_id] = self.scene.resource("PackedScene", f"{self.res}/{path}", f"moby_{class_id}")
         self.scene.node("Mobys", "Game", "Node3D")
         for p in placements:
             fields = {f"metadata__rc1_{k}": v for k, v in {"index": p["index"], **p["fields"]}.items()}
-            self.scene.node(f"Moby_{p['index']:04}", "Game/Mobys", instance=scenes[p["class_id"]],
+            self.scene.node(node_name(p["class_id"], p["index"], names), "Game/Mobys", instance=scenes[p["class_id"]],
                             rotation_order=0, transform=transform(p["matrix"]), **fields)
         shown = [models[p["class_id"]].mesh for p in placements if p["class_id"] in models]
         animated = [m.skeleton for m in models.values() if m.skeleton is not None]
@@ -362,7 +363,8 @@ class LevelWriter:
         return self.stats
 
 
-def write_marker(path: Path, class_id: int, label: str, model: tuple[str, float, float] | None = None) -> None:
+def write_marker(path: Path, class_id: int, label: str, model: tuple[str, float, float] | None = None,
+                 name: str | None = None, logic: dict | None = None) -> None:
     """A moby class's scene: its model, or else a box coloured by class
     number, and a label that faces the camera and fades out beyond 60 units.
 
@@ -370,7 +372,21 @@ def write_marker(path: Path, class_id: int, label: str, model: tuple[str, float,
     GLB is in model units, so the Model node carries the class scale.
     """
     scene = Scene()
-    scene.node(f"Moby_{class_id}", kind="Node3D", metadata__rc1_class=class_id)
+    # What the class is and what runs it, where the Inspector and a hover in the scene tree show
+    # them: the function the game calls for each of its mobys every frame, in the decompilation.
+    about, facts = [f"Moby class {class_id}" + (f": {name}" if name else "")], {}
+    if name:
+        facts["metadata__rc1_class_name"] = name
+    if logic:
+        facts["metadata__rc1_update"] = logic["function"]
+        about.append(f"Updated every frame by {logic['function']}")
+        if logic["file"]:
+            facts["metadata__rc1_source"] = logic["file"]
+            about.append(("C: " if logic["decompiled"] else "Still assembly, in ") + logic["file"])
+    elif name is not None or model is not None:
+        about.append("No update function in this level")
+    scene.node(f"Moby_{class_id}", kind="Node3D", metadata__rc1_class=class_id,
+               editor_description="\n".join(about), **facts)
     if model is None:
         r, g, b = colorsys.hsv_to_rgb(class_id * 0.618034 % 1.0, 0.65, 0.95)
         colour = scene.subresource("StandardMaterial3D", "colour",
@@ -391,8 +407,10 @@ def write_marker(path: Path, class_id: int, label: str, model: tuple[str, float,
 
 
 def write_project(project: Path, levels: list[int]) -> None:
-    """project.godot and the rc1 scripts; the main scene is the first level."""
+    """project.godot and the rc1 scripts; the main scene is the first level. A project of one
+    level is named after it."""
     project.mkdir(parents=True, exist_ok=True)
     main = f"res://levels/level_{levels[0]:02}/level_{levels[0]:02}.tscn"
-    (project / "project.godot").write_text(PROJECT.format(main=main))
+    name = f"Ratchet & Clank: {LEVEL_NAMES[levels[0]]} (PAL)" if len(levels) == 1 else "Ratchet & Clank levels (PAL)"
+    (project / "project.godot").write_text(PROJECT.format(main=main, name=name))
     shutil.copytree(SCRIPTS, project / "rc1")

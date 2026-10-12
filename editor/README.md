@@ -30,15 +30,23 @@ inside matches PAL v2.00.
 ## Extract
 
 ```sh
-python3 editor/extract.py godot baserom/SCES_509.16.iso assets/godot
-godot --path assets/godot -e res://levels/level_00/level_00.tscn
+python3 editor/extract.py godot baserom/SCES_509.16.iso assets/levels/rac1 --split
+godot --path assets/levels/rac1/level_00 -e
 ```
 
-The second command opens level 0 in the editor. Other levels are in the
-FileSystem dock under `levels/`; double-click a `level_NN.tscn` to open it.
+`--split` writes a Godot project per level, `level_00` to `level_18`, each
+named after its planet. The second command opens Veldin in the editor. A
+project holds one level, so Godot imports it in about five seconds the
+first time it is opened, and only that level is loaded. This is what the
+launcher's Mods page uses.
 
-All 19 levels take about 20 seconds and 630 MB, one level per CPU core at
-a time. Godot's first import takes about two minutes. Options:
+Without `--split` the 19 levels go into one project (`assets/godot` in
+earlier versions of this page): the other levels are then in the FileSystem
+dock under `levels/`, and Godot's first import takes about a minute and a
+half.
+
+All 19 levels take about 20 seconds and 800 MB to extract, one level per
+CPU core at a time. Options:
 
 - `--level N` (repeatable) exports only some levels.
 - `--jobs N` limits how many levels are exported at once.
@@ -67,13 +75,40 @@ WorldEnvironment, for instance), so after updating it, move your changes
 into the new scene instead. Godot saves a scene as text, so a diff
 against a fresh export shows each edit.
 
+## What a moby is, and what runs it
+
+A placed moby's node is named after its class: `Vendor_0012`, `Bolt_0003`,
+`BlargHeavyInterceptor_0040` (568 classes have a name, from
+[moby_classes.tsv](moby_classes.tsv); the rest show as `Class809_0001`).
+Select one and the Inspector shows its values as `rc1_*` metadata (spawn id,
+group, colour, draw distance...), which the packer writes back.
+
+Its class scene (`levels/level_NN/mobys/moby_<class>.tscn`) says what the
+class is and what runs it, in its tooltip in the Scene dock and as metadata:
+
+| Metadata | |
+|---|---|
+| `rc1_class`, `rc1_class_name` | the class number and name |
+| `rc1_update` | the function the game calls for each moby of the class, every frame |
+| `rc1_source` | where that function is in the decompilation ([games/rac1/pal](../games/rac1/pal)), and the tooltip says whether it is C there yet |
+
+That function is the moby's behaviour: an enemy's attack pattern, a crate
+breaking, a vendor's menu. It is ordinary C in the decompilation, and the
+native port is built from that C, so **changing a moby's logic is editing
+that function and building the port again** (the launcher's Build the game).
+There is no scripting layer on top of it yet: no way to change behaviour
+from Godot or without a compiler. The table comes from the decompilation's
+`config/overlays/names.tsv` (its `UpdateMoby_<class>` roles), per level, so
+it is only written when `games/rac1/pal` is in the checkout.
+
 ## Pack your edits
 
 ```sh
-python3 editor/extract.py pack baserom/SCES_509.16.iso assets/godot assets/packed/rac1
+python3 editor/extract.py pack baserom/SCES_509.16.iso assets/levels/rac1 assets/packed/rac1
 ```
 
-Turns what was edited in Godot back into the game's level data. For each
+Turns what was edited in Godot back into the game's level data (the folder
+of per-level projects, or a single project with every level). For each
 level whose scene differs from the disc it writes that level's gameplay file
 as the game stores it, compressed, and the list of disc sectors it replaces:
 
@@ -158,7 +193,8 @@ Level_NN
     Collision           the collision layer, hidden until you show it
     Ties/Tie_NNNN       one node per placed tie
     Shrubs/Shrub_NNNN   one node per placed shrub
-    Mobys/Moby_NNNN     one node per placed moby (crates, enemies, NPCs...)
+    Mobys/Vendor_0012   one node per placed moby (crates, enemies, NPCs...), named
+                        after its class and its place in the level's table
 ```
 
 To edit a level:

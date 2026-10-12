@@ -13,6 +13,7 @@ not the instance.
 """
 
 import math
+import re
 import struct
 from pathlib import Path
 
@@ -76,3 +77,52 @@ def moby_class_names() -> dict[int, str]:
     """Class number -> name, from moby_classes.tsv (see its header)."""
     rows = (line.split("\t") for line in CLASS_NAMES.read_text().splitlines() if line and not line.startswith("#"))
     return {int(number): name for number, name in rows}
+
+
+LEVEL_NAMES = ("Veldin", "Novalis", "Aridia", "Kerwan", "Eudora", "Rilgar", "Blarg Station", "Umbris", "Batalia",
+               "Gaspar", "Orxon", "Pokitaru", "Hoven", "Gemlik Base", "Oltanis", "Quartu", "Kalebo III",
+               "Drek's Fleet", "Veldin (the return)")
+
+
+def node_name(class_id: int, index: int, names: dict[int, str]) -> str:
+    """A placed moby's node: its class's name and its place in the level's table, "Vendor_0012";
+    "Class809_0001" for a class nobody has named."""
+    name = names.get(class_id)
+    kind = "".join(part.capitalize() for part in re.split(r"[^A-Za-z0-9]+", name) if part) if name else f"Class{class_id}"
+    return f"{kind}_{index:04}"
+
+
+DECOMPILATION = Path(__file__).resolve().parents[1] / "games" / "rac1" / "pal"
+_UPDATE = re.compile(r"UpdateMoby_(\d+):([\d/]+)")
+_logic = None
+
+
+def moby_logic(level: int) -> dict[int, dict]:
+    """class -> {"function", "file", "decompiled"} for the classes LEVEL updates: the function
+    the game calls for each moby of the class every frame, where it is in the decompilation
+    (games/rac1/pal), and whether it is C there yet. From that project's
+    config/overlays/names.tsv (the UpdateMoby_<class> roles) and its src/. Empty when the
+    decompilation is not in this checkout."""
+    global _logic
+    if _logic is None:
+        _logic = {}
+        table = DECOMPILATION / "config" / "overlays" / "names.tsv"
+        if table.is_file():
+            where = {}
+            for path in sorted((DECOMPILATION / "src").rglob("*.c")):
+                text = path.read_text(errors="replace")
+                for name in re.findall(r"^(?:INCLUDE_ASM|ASM_FUNC)\([^)]*\b(func_\w+)\);", text, re.M):
+                    where.setdefault(name, (path, False))
+                for name in re.findall(r"^(?!extern\b)[A-Za-z_][^;=\n]*?\b(func_(?:L\d\d_)?[0-9A-F]{8})\s*\([^;]*$", text, re.M):
+                    where[name] = (path, True)
+            for line in table.read_text().splitlines():
+                if line.startswith("#") or "\t" not in line:
+                    continue
+                function, roles = line.split("\t", 1)
+                for class_id, levels in _UPDATE.findall(roles):
+                    path, is_c = where.get(function, (None, False))
+                    for lv in levels.split("/"):
+                        _logic.setdefault(int(lv), {})[int(class_id)] = {
+                            "function": function, "decompiled": is_c,
+                            "file": path.relative_to(DECOMPILATION.parents[2]).as_posix() if path else None}
+    return _logic.get(level, {})

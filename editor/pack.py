@@ -181,7 +181,8 @@ def pack_level(level_id: int, gameplay: bytes, scene: str) -> tuple[bytes, list[
             RECORD.pack_into(out, at, *(record[f] for f in FIELDS))
             changes.append(f"{node['name']}: {', '.join(edits)}")
     for index in sorted(set(range(len(originals))) - set(seen)):
-        problems.append(f"Moby_{index:04}: deleted in Godot; deleting mobys is not packed yet (it stays in the level)")
+        problems.append(f"moby {index} of the level's table: deleted in Godot; deleting mobys is not packed yet "
+                        "(it stays in the level)")
     return bytes(out), changes, problems
 
 
@@ -189,8 +190,11 @@ def pack(disc, survey: dict, project: Path, out: Path) -> tuple[int, int]:
     """Writes OUT from the scenes of PROJECT. Returns (levels packed, mobys changed)."""
     patches, report, packed, total = [], [], 0, 0
     for info in survey["levels"]:
-        scene = project / "levels" / f"level_{info['id']:02}" / f"level_{info['id']:02}.tscn"
-        if not scene.is_file():
+        name = f"level_{info['id']:02}"
+        # one project with every level, or a project per level (`godot --split`)
+        scene = next((s for s in (project / "levels" / name / f"{name}.tscn",
+                                  project / name / "levels" / name / f"{name}.tscn") if s.is_file()), None)
+        if scene is None:
             continue
         place = info["ranges"]["gameplay_pal"]
         stored = disc.sectors(place["lba"], place["sectors"])
@@ -208,7 +212,7 @@ def pack(disc, survey: dict, project: Path, out: Path) -> tuple[int, int]:
         if len(stream) > room:
             raise FormatError(f"level {info['id']}: the packed gameplay file is {len(stream)} bytes, "
                               f"{len(stream) - room} more than its place on the disc")
-        name = f"level_{info['id']:02}/gameplay_pal.wad"
+        name = f"{name}/gameplay_pal.wad"
         (out / name).parent.mkdir(parents=True, exist_ok=True)
         (out / name).write_bytes(stream + bytes(room - len(stream)))
         patches.append(f"{place['lba']}\t{place['sectors']}\t{name}")

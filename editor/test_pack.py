@@ -93,7 +93,7 @@ class PackLevel(unittest.TestCase):
         self.assertEqual(out, self.data)
         self.assertEqual(len(problems), 2)
         self.assertIn("a copy of Moby_0002", problems[0])
-        self.assertIn("Moby_0000: deleted", problems[1])
+        self.assertIn("moby 0 of the level's table: deleted", problems[1])
 
 
 class Placement(unittest.TestCase):
@@ -116,6 +116,21 @@ class Placement(unittest.TestCase):
         nodes = scene_mobys('[node name="X" parent="Game/Mobys"]\nmetadata/rc1_index = 4\nmetadata/rc1_colour = [1, 2, 3]\n')
         self.assertEqual(nodes[0]["meta"], {"index": 4, "colour": [1, 2, 3]})
         self.assertEqual(nodes[0]["transform"][:3], (1.0, 0.0, 0.0))
+
+
+class Names(unittest.TestCase):
+    def test_a_node_is_named_after_its_class(self):
+        from mobys import node_name
+        names = {11: "vendor", 8: "blarg_heavy_interceptor"}
+        self.assertEqual(node_name(11, 12, names), "Vendor_0012")
+        self.assertEqual(node_name(8, 40, names), "BlargHeavyInterceptor_0040")
+        self.assertEqual(node_name(809, 1, names), "Class809_0001")
+
+    def test_any_name_packs(self):
+        """The packer goes by rc1_index, not by the node's name."""
+        data = gameplay([{"x": 1.0}])
+        text = scene(data).replace("Moby_0000", "Vendor_0000")
+        self.assertEqual(pack_level(0, data, text), (data, [], []))
 
 
 if __name__ == "__main__":
