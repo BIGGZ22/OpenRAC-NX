@@ -67,10 +67,20 @@ the disc image and saves are kept.
 - **Save files**: the port's memory card (`~/.local/share/openrac/memcard/<serial>/`
   on Linux) with each slot's planet, bolts and save time, backups you can
   restore, and the folder.
-- **Level editor**: the levels in Godot 4 (choose Godot once).
+- **Level editor**: under **Mods** (below), and in the game's menu.
 - **Layout**: Settings → Launcher switches between Compact (the default:
   the game's name and its main button side by side) and Classic, stacked and
   centred. Compact is one stylesheet, `src/layouts/compact.css`.
+
+## Mods
+
+The Mods tab has, for each game that can be edited (Ratchet & Clank, PAL, for
+now), the three steps of modding in order: **Open the editor** (the levels in
+Godot 4; the first time they are read from the disc), **Pack** (turns the
+edits into the game's own level data, in `assets/packed/<game>`) and **Play**
+with them (the port's `--mods`). The disc image is never changed. With
+developer tools on, the page also shows the folders and the three commands
+behind the buttons ([editor/README.md](../editor/README.md#pack-your-edits)).
 
 What a contributor needs and a player does not is behind **Developer tools**
 (Settings → Launcher): decompilation progress, disc serials, the Tasks tab,

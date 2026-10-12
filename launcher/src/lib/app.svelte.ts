@@ -16,7 +16,7 @@ import {
 } from "./api";
 import { Queue, type Job } from "./queue";
 
-export type Page = "library" | "game" | "tasks" | "settings";
+export type Page = "library" | "game" | "mods" | "tasks" | "settings";
 
 interface AppState {
   info: AppInfo | null;

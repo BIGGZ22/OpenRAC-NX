@@ -217,11 +217,26 @@
       {
         "id": "editor-pack",
         "label": "Pack your edited levels",
-        "description": "Turns the levels you edited in Godot back into the game's level data, in a folder of their own; your disc image is never changed.",
+        "description": "Turns the levels you edited in Godot back into the game's level data, in assets/packed/rac1; your disc image is never changed. Packs the objects you moved, turned, scaled or changed; objects you added or deleted are listed and left out for now.",
         "kind": "edit",
-        "state": "planned",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "editor/extract.py",
+          "pack",
+          "{disc}",
+          "assets/godot",
+          "assets/packed/rac1"
+        ],
+        "cwd": ".",
+        "requires": [
+          "disc",
+          "python",
+          "artifact"
+        ],
+        "artifact": "assets/godot/project.godot",
         "docs": "editor/README.md",
-        "todo": "The packer does not exist yet (editor/README.md, 'Regenerate'). The scenes keep what it needs: each object's class, its place in the level's tables and its instance data. Start with moby instances (move, add, delete), write the packed level under build/, never into baserom/."
+        "todo": "Run from a shell on macOS: an untouched project packs to nothing, a scene Godot re-saved with one object moved packs to a level file that differs from the disc in that object's record, and the port ran level 0 for 400 frames from it. Not run from the desktop app yet. Next: adding and deleting objects, then ties and shrubs."
       },
       {
         "id": "editor-tests",
@@ -284,6 +299,31 @@
         "artifact": "port/build/release/openrac-rac1-pal.exe",
         "docs": "port/game/rac1-pal/README.md",
         "todo": "Built by port-build. The port also needs decompiler_out (openrac-extractor --decompile) and the levels (editor/extract.py port) in <data>/port."
+      },
+      {
+        "id": "play-edited",
+        "label": "Play with your edits",
+        "description": "The game with the levels you packed: the port reads them in place of the disc's (its --mods option). Without packed levels it plays the disc's.",
+        "kind": "play",
+        "state": "unverified",
+        "program": "{artifact}",
+        "args": [
+          "--data",
+          "{data}",
+          "--window",
+          "--mods",
+          "{root}/assets/packed/rac1"
+        ],
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "requires": [
+          "artifact"
+        ],
+        "artifact": "port/build/release/openrac-rac1-pal.exe",
+        "docs": "port/game/rac1-pal/README.md",
+        "todo": "Built by port-build; needs Pack your edited levels first. Run headless on macOS (--level 0 --frames 400): the port logged the sectors it took from the packed file and ran as it does without. Not run from the desktop app yet."
       }
     ],
     "rac1/ntsc": [

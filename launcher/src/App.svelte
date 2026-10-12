@@ -4,6 +4,7 @@
   import { app, refresh, start, updateDiscordPresence, type Page } from "$lib/app.svelte";
   import Game from "./pages/Game.svelte";
   import Library from "./pages/Library.svelte";
+  import Mods from "./pages/Mods.svelte";
   import Settings from "./pages/Settings.svelte";
   import Tasks from "./pages/Tasks.svelte";
 
@@ -46,6 +47,7 @@
     <main>
       {#if !app.config.setupComplete}<Settings setup />
       {:else if app.page === "game"}<Game />
+      {:else if app.page === "mods"}<Mods />
       {:else if app.page === "tasks"}<Tasks />
       {:else if app.page === "settings"}<Settings />
       {:else}<Library />

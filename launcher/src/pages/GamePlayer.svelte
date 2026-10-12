@@ -1,26 +1,14 @@
 <script lang="ts">
   // A game as a player meets it. One main button, always in the same place,
   // says the next thing to do (set up from your disc, build, play); what is done
-  // less often is in the menu beside it. Below: the save files and the level
-  // editor. Each button runs the actions the developer page lists
+  // less often is in the menu beside it. Below: the save files (the level editor
+  // is under Mods). Each button runs the actions the developer page lists
   // (launcher/actions.json), found by their ids.
   import Icon from "$components/Icon.svelte";
   import Menu, { type MenuItem } from "$components/Menu.svelte";
   import SaveManagerBlock from "$components/SaveManagerBlock.svelte";
-  import { api, pickFile, type ActionView } from "$lib/api";
-  import {
-    app,
-    currentVersion,
-    guard,
-    jobs,
-    openVersion,
-    run,
-    runChain,
-    saveConfig,
-    toast,
-    uninstallGame,
-  } from "$lib/app.svelte";
-  import { GODOT_URL } from "$lib/links";
+  import { api, type ActionView } from "$lib/api";
+  import { app, currentVersion, guard, openVersion, run, uninstallGame } from "$lib/app.svelte";
   import { isBuilt, playerAct, playerState, regionWords } from "$lib/player.svelte";
   import { themeStyle } from "$lib/themes";
 
@@ -32,8 +20,6 @@
   const build = $derived(action("port-build"));
   const playGodot = $derived(action("editor-preview"));
   const extract = $derived(action("editor-extract"));
-  const bring = $derived(action("editor-import"));
-  const edit = $derived(action("editor-open"));
 
   const GAME_MEDIA: Record<string, { bg: string; gif?: string }> = {
     rac1: { bg: "/img/rac1-bg.webp", gif: "/img/rac1-gameplay.gif" },
@@ -46,20 +32,8 @@
   const next = $derived(v && game ? playerState(game, v) : null);
   const setUp = $derived(game?.install?.extracted ?? null);
   const built = $derived(!!v && !!game && isBuilt(game, v));
-  const disc = $derived(v?.status.disc.state ?? "missing");
-  const preparing = $derived(
-    jobs.list.find(
-      (j) =>
-        j.scope.kind === "version" &&
-        j.scope.key === v?.key &&
-        (j.actionId === "editor-extract" || j.actionId === "editor-import") &&
-        (j.state === "queued" || j.state === "running"),
-    ),
-  );
   /** The steps are shown while there is one left that the player can take. */
   const showSteps = $derived(!!next && next.kind !== "play" && next.kind !== "playing");
-
-  let opening = $state(false);
 
   async function removeSetUp() {
     if (!v) return;
@@ -68,24 +42,6 @@
     );
     if (sure) await uninstallGame(v.game);
   }
-
-  async function chooseGodot() {
-    if (!app.config) return;
-    const picked = await pickFile("Godot 4");
-    if (picked) await saveConfig({ ...app.config, godot: picked });
-  }
-
-  /** Extracts and imports the levels when the project is not there yet, then opens Godot. */
-  async function editLevels() {
-    if (!edit) return;
-    opening = true;
-    const steps = edit.runnable ? [edit] : [extract, bring, edit].filter((a) => a !== null);
-    const done = await runChain(scope, steps);
-    opening = false;
-    if (done) toast("Godot is opening your levels.");
-  }
-
-  const lacksGodot = $derived((edit?.blockers ?? []).some((b) => b.replace(/^needs /, "").startsWith("Godot")));
 
   /** What is done less often than playing, in the menu beside the main button. */
   const menu = $derived.by<MenuItem[]>(() => {
@@ -97,6 +53,9 @@
     }
     if (playGodot?.runnable) {
       items.push({ label: "Preview a level in Godot", icon: "play", run: () => void run(scope, playGodot) });
+    }
+    if (extract && extract.state !== "planned") {
+      items.push({ label: "Edit its levels (Mods)", icon: "edit", run: () => (app.page = "mods") });
     }
     items.push({ label: "Open the game's folder", icon: "folder", run: () => void guard(api.openPath(dir)) });
     items.push({ label: "Activity log", icon: "terminal", run: () => (app.page = "tasks") });
@@ -172,39 +131,6 @@
     </section>
 
     <SaveManagerBlock version={v} />
-
-    <section class="panel editor">
-      <div class="grow">
-        <h2>Level editor</h2>
-        {#if !extract || extract.state === "planned"}
-          <p class="muted">The level editor cannot open this game yet.</p>
-        {:else if disc !== "found"}
-          <p class="muted">Set up your disc first; the editor reads the levels from it.</p>
-        {:else if lacksGodot}
-          <p class="muted">
-            The levels open in Godot 4, a free editor.
-            <button class="link" onclick={() => void guard(api.openUrl(GODOT_URL))}>Get Godot</button>, then choose
-            where it is.
-          </p>
-        {:else if preparing}
-          <p class="muted clip">{preparing.title}: {preparing.lines.at(-1)?.line ?? "starting…"}</p>
-        {:else if edit?.runnable}
-          <p class="muted">Move, add or delete objects in any level. Your edits stay on this computer.</p>
-        {:else}
-          <p class="muted">The first time, the levels are read from your disc: about three minutes and 630 MB.</p>
-        {/if}
-      </div>
-      {#if extract && extract.state !== "planned" && disc === "found"}
-        {#if lacksGodot}
-          <button onclick={() => void chooseGodot()}><Icon name="folder" size={16} />Choose Godot</button>
-        {:else}
-          <button disabled={opening || !!preparing} onclick={() => void editLevels()}>
-            {#if opening || preparing}<span class="spinner"></span>{:else}<Icon name="edit" size={16} />{/if}
-            {edit?.runnable ? "Edit levels" : "Prepare and edit levels"}
-          </button>
-        {/if}
-      {/if}
-    </section>
   </div>
 {/if}
 
@@ -415,23 +341,5 @@
     color: var(--tx2);
     text-align: center;
     max-width: 640px;
-  }
-
-  .editor {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
-
-  .editor h2 {
-    margin: 0 0 4px;
-  }
-
-  .link {
-    border: 0;
-    background: none;
-    padding: 0;
-    color: var(--amber);
-    font-weight: 600;
   }
 </style>
