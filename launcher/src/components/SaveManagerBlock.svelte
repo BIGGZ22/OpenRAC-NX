@@ -179,7 +179,7 @@
   /* One slot per row, the columns aligned down the list. */
   .slots li {
     display: grid;
-    grid-template-columns: 64px minmax(120px, 1.2fr) minmax(90px, 0.7fr) minmax(150px, 1fr) auto;
+    grid-template-columns: 56px minmax(0, 1.2fr) minmax(0, 0.7fr) minmax(0, 1fr) auto;
     align-items: center;
     gap: 16px;
     padding: 10px 2px;

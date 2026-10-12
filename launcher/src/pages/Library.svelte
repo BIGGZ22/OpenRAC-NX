@@ -158,7 +158,7 @@
     gap: 20px;
   }
 
-  @media (max-width: 760px) {
+  @media (max-width: 820px) {
     .tiles {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -189,7 +189,7 @@
 
   .actions {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
     gap: 14px;
   }
 </style>

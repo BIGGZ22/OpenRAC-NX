@@ -17,9 +17,9 @@
         "title": "OpenRAC Launcher",
         "width": 1200,
         "height": 780,
-        "minWidth": 980,
-        "minHeight": 640,
-        "resizable": false,
+        "minWidth": 760,
+        "minHeight": 560,
+        "resizable": true,
         "center": true,
         "backgroundColor": "#181820"
       }

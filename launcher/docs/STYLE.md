@@ -103,8 +103,9 @@ release. Without them the cards show the gradient, as the site does.
 - Keep text readable on its background: the pills' and blockers' colours are
   only used on `--panel`, `--panel-hi` or a game's dark boxes.
 - Respect `prefers-reduced-motion` (already global in `app.css`).
-- Window sizes: the window opens at 1200 × 780 and cannot be made smaller
-  than 980 × 640 (`tauri.conf.json`); lay pages out for that range.
+- Window sizes: the window opens at 1200 × 780, can be resized, and cannot be
+  made smaller than 760 × 560 (`tauri.conf.json`). A page scrolls down, never
+  sideways: lay it out to fit from 760 px wide.
 
 ## Keeping in step with the site
 

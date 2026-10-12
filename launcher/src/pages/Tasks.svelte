@@ -1,7 +1,7 @@
 <script lang="ts">
   // The job queue: what ran, what runs, what waits, and each job's output.
   import Icon from "$components/Icon.svelte";
-  import { app, cancel, clearFinished, jobs } from "$lib/app.svelte";
+  import { app, cancel, clearFinished, clock, jobs } from "$lib/app.svelte";
   import { elapsed } from "$lib/format";
   import type { Job, JobState } from "$lib/queue";
 
@@ -14,17 +14,9 @@
   };
 
   const selected = $derived(jobs.list.find((j) => j.key === jobs.selected) ?? jobs.list.at(-1) ?? null);
-  let now = $state(Date.now());
-  $effect(() => {
-    const timer = setInterval(() => (now = Date.now()), 1000);
-    return () => {
-      clearInterval(timer);
-    };
-  });
-
   function duration(job: Job): string {
     if (!job.startedAt) return "";
-    return elapsed((job.endedAt ?? now) - job.startedAt);
+    return elapsed((job.endedAt ?? clock.now) - job.startedAt);
   }
 
   let output = $state<HTMLElement | null>(null);
@@ -70,7 +62,8 @@
           <h2 class="clip">{selected.title}</h2>
           <p class="mono dim clip" title={selected.command}>{selected.command || "not started"}</p>
         </div>
-        {#if selected.code !== null}<span class="dim">exit {selected.code}</span>{/if}
+        <span class="dim time">{duration(selected)}</span>
+        {#if selected.code !== null && app.config?.developer}<span class="dim">exit {selected.code}</span>{/if}
         <button class="small" onclick={() => void copy(selected)}>Copy</button>
         {#if selected.state === "running" || selected.state === "queued"}
           <button class="small" onclick={() => void cancel(selected)}><Icon name="x" size={14} />Cancel</button>
@@ -94,7 +87,7 @@
   .page {
     height: 100%;
     display: grid;
-    grid-template-columns: 320px 1fr;
+    grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
     gap: 18px;
     padding: 22px 28px;
     max-width: 1400px;
@@ -127,6 +120,11 @@
 
   .small {
     font-size: 12px;
+  }
+
+  .time {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
   .out {

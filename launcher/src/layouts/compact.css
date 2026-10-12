@@ -54,7 +54,7 @@
   height: 360px;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 860px) {
   :root[data-layout="compact"] .hero {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "title" "versions" "go" "steps";

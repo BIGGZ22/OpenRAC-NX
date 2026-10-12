@@ -40,6 +40,10 @@ export const app = $state<AppState>({
   toasts: [],
 });
 
+/** The time, once a second: what a running job's elapsed time is counted against. One timer for
+ *  the whole app (started in `start`), so a page shows it moving however it was reached. */
+export const clock = $state({ now: Date.now() });
+
 /** The jobs, oldest first; reactive. */
 export const jobs = $state<{ list: Job[]; selected: number | null }>({ list: [], selected: null });
 const queue = new Queue(jobs.list);
@@ -71,6 +75,7 @@ export async function guard<T>(work: Promise<T>): Promise<T | undefined> {
 // ---- loading ----------------------------------------------------------------------------
 
 export async function start() {
+  setInterval(() => (clock.now = Date.now()), 1000);
   await onJobEvent((event) => {
     queue.apply(event);
     if (event.type === "exit") {

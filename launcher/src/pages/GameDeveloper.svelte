@@ -370,14 +370,14 @@
   /* The action sections two by two on a wide window. */
   .kinds {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr));
     align-items: start;
     gap: 20px;
   }
 
   .actions {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
     gap: 14px;
   }
 

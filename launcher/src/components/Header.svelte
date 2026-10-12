@@ -223,4 +223,22 @@
     background: var(--bar-ink);
     color: #fff;
   }
+
+  /* A narrow window keeps the tabs: the site link and the tag give way first. */
+  @media (max-width: 900px) {
+    header,
+    .site-header {
+      gap: 12px;
+    }
+
+    .brand small,
+    .site,
+    .preview {
+      display: none;
+    }
+
+    .job {
+      max-width: 160px;
+    }
+  }
 </style>
