@@ -104,7 +104,7 @@ export async function refresh() {
   }
 }
 
-/** Fetches latest progress from openrac.dev; caches in summary.json for offline use. */
+/** Fetches the latest progress from openrac.dev; the Rust side keeps a copy under build/ for offline use. */
 export async function syncProgressWeb() {
   if (!app.config?.root) return;
   try {
@@ -122,7 +122,7 @@ export async function syncProgressWeb() {
       return;
     }
   } catch {
-    // Offline or network error: try backend or keep using cached summary.json
+    // Offline or a network error: let the Rust side try, or keep what was read at start.
   }
 
   try {

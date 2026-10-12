@@ -186,11 +186,31 @@ pub fn load(root: &Path) -> Result<Catalog, String> {
     Ok(Catalog { games })
 }
 
+/// Where the figures fetched from openrac.dev are kept between runs: under build/, which git
+/// does not track. progress/summary.json belongs to the checkout (`openrac.py progress` writes
+/// it) and the launcher never changes it.
+fn site_cache(root: &Path) -> std::path::PathBuf {
+    root.join("build").join("launcher").join("progress.json")
+}
+
+fn read_rows(path: &Path) -> BTreeMap<String, RawSummaryRow> {
+    std::fs::read_to_string(path).ok().and_then(|text| serde_json::from_str(&text).ok()).unwrap_or_default()
+}
+
+/// The checkout's own figures, with the website's where those are further along (a player's
+/// checkout may be older than the site; a contributor's is usually newer).
 fn read_summary(root: &Path) -> BTreeMap<String, RawSummaryRow> {
-    std::fs::read_to_string(root.join("progress").join("summary.json"))
-        .ok()
-        .and_then(|text| serde_json::from_str(&text).ok())
-        .unwrap_or_default()
+    let mut rows = read_rows(&root.join("progress").join("summary.json"));
+    for (key, site) in read_rows(&site_cache(root)) {
+        match rows.get_mut(&key) {
+            Some(own) if own.progress.matched_code >= site.progress.matched_code => {}
+            Some(own) => own.progress = site.progress,
+            None => {
+                rows.insert(key, site);
+            }
+        }
+    }
+    rows
 }
 
 fn game(raw: RawGame, summary: &BTreeMap<String, RawSummaryRow>) -> Result<Game, String> {
@@ -261,17 +281,14 @@ struct SiteFunctions {
     total: Option<u64>,
 }
 
-/// Updates progress/summary.json with latest figures from openrac.dev /progress.json
-/// and returns the reloaded Catalog. If called while offline, summary.json provides
-/// the offline cache.
+/// Keeps the latest figures from openrac.dev /progress.json (in build/launcher/, for the next
+/// start without a network) and returns the reloaded Catalog. The checkout's
+/// progress/summary.json is read, never written.
 pub fn update_progress_from_openrac_dev(root: &Path, site_json: &str) -> Result<Catalog, String> {
     let site: SiteProgressResponse =
         serde_json::from_str(site_json).map_err(|e| format!("invalid progress json from openrac.dev: {e}"))?;
-    let summary_path = root.join("progress").join("summary.json");
-    let mut current_summary: serde_json::Value = std::fs::read_to_string(&summary_path)
-        .ok()
-        .and_then(|t| serde_json::from_str(&t).ok())
-        .unwrap_or_else(|| serde_json::json!({}));
+    let summary_path = site_cache(root);
+    let mut current_summary = serde_json::json!({});
 
     for p in site.projects {
         let key = match p.id.as_str() {
@@ -316,8 +333,9 @@ pub fn update_progress_from_openrac_dev(root: &Path, site_json: &str) -> Result<
         }
     }
 
-    let progress_dir = root.join("progress");
-    let _ = std::fs::create_dir_all(&progress_dir);
+    if let Some(dir) = summary_path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
     let formatted = serde_json::to_string_pretty(&current_summary).map_err(|e| e.to_string())?;
     std::fs::write(&summary_path, formatted).map_err(|e| format!("cannot write {}: {e}", summary_path.display()))?;
 
@@ -413,7 +431,9 @@ mod tests {
         assert_eq!(prog.matched_code, 2271268);
         assert_eq!(prog.matched_functions, Some(3702));
 
-        // Verify offline reload from cached summary.json
+        // The checkout's own file is not created or changed.
+        assert!(!dir.path().join("progress").join("summary.json").exists());
+        // Offline, the kept copy is read again.
         let offline_catalog = load(dir.path()).unwrap();
         let offline_prog = offline_catalog.version("rac1/pal").unwrap().progress.as_ref().unwrap();
         assert_eq!(offline_prog.percent, 61.17);
