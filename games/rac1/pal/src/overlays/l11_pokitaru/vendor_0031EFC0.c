@@ -178,7 +178,6 @@ extern int func_00215570(void *arg0, int arg1);
 extern void func_L11_0031FB18(int arg);
 extern void func_L11_0031FBF0(int);
 extern void func_L11_0031FCC8(int);
-extern char D_L11_00167700[];
 extern int D_L11_001626A0_w __asm__("D_L11_001626A0") MACRO_ADDR;
 extern int D_L11_0016265C MACRO_ADDR;
 extern int D_L11_0016267C MACRO_ADDR;
@@ -227,15 +226,6 @@ void func_L11_0031FDA0(char *m) {
     }
 }
 typedef struct { int a, b; } PairA_3205C0;
-extern void func_L08_002F2428(void *, int, void *, float, float, float, float, int);
-extern int func_L00_00200290(char *, float);
-extern void func_001F9BF0(void *, void *, void *);
-extern float func_001F9CB8(void *);
-extern void func_L08_002F2760(int);
-extern void func_L08_002F2618(void *, float, float, float, void *);
-extern int func_001FA898_r(float) __asm__("func_001FA898");
-extern void func_L08_002F2838(int);
-extern void func_001F49B0(void (*)(void), void *);
 extern int D_L11_00217A00[];
 extern int D_L11_00215528[];
 extern PairA_3205C0 D_L11_00217A18_p[] __asm__("D_L11_00217A18");

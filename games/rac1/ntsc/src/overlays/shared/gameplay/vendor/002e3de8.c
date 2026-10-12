@@ -13,7 +13,7 @@ extern float FUN_001f9dc8(float);
 extern float FUN_001f9de0(float);
 extern float random_angle_radians(void) __asm__("FUN_00213308");
 extern float random_float_between_alt(float, float) __asm__("FUN_002132a8");
-extern int FUN_L00_00257b90(int, int);
+extern int random_int_between(int, int) __asm__("FUN_L00_00257b90");
 extern short D_L10_00161E58_d __asm__("D_L10_00161E58") __attribute__((sda));
 extern short D_L10_00161E5C_d __asm__("D_L10_00161E5C") __attribute__((sda));
 extern short D_L10_00161E60_d __asm__("D_L10_00161E60") __attribute__((sda));
@@ -31,7 +31,7 @@ void FUN_L10_002e3de8(char *moby) {
     float b = random_float_between_alt(0.0f, *(float *)&D_L10_00161E70_d);
     float c = random_float_between_alt(0.0f, *(float *)&D_L10_00161E60_d);
     float d = random_float_between_alt(*(float *)&D_L10_00161E60_d, *(float *)&D_L10_00161E64_d);
-    int e = FUN_L00_00257b90(*(int *)&D_L10_00161E68_d, *(int *)&D_L10_00161E6C_d);
+    int e = random_int_between(*(int *)&D_L10_00161E68_d, *(int *)&D_L10_00161E6C_d);
     v[0] = FUN_001f9dc8(a) * b;
     v[1] = FUN_001f9de0(a) * b;
     v[2] = 0.0f;
@@ -100,6 +100,15 @@ extern int float_to_integer(float) __asm__("FUN_001fa6d0");
 extern float integer_to_float(int) __asm__("FUN_001fa6c0");
 extern void transform_vectors(float *, void *, int) __asm__("FUN_001f7d30");
 typedef struct { float v[4]; } aligned_vector __attribute__((aligned(16)));
+/* Retail uses gp-0x4cc0 for the count and four separate two-word
+ * color tables at gp-0x4cb8, -0x4cb0, -0x4ca8 and -0x4ca0.
+ * With gp=0x166c00 these are 0x161f40 and 0x161f48..0x161f60.
+ * Keep the existing C names while binding the checked overlay addresses. */
+extern int D_L10_0015B340 __asm__("D_L10_00161F40") __attribute__((sda));
+extern int D_L10_0015B348[2] __asm__("D_L10_00161F48") __attribute__((sda));
+extern int D_L10_00161F50[2] __attribute__((sda));
+extern int D_L10_00161F58[2] __attribute__((sda));
+extern int D_L10_00161F60[2] __attribute__((sda));
 
 void FUN_L10_002e91b8(unsigned char *m) {
     unsigned char first[0x90] __attribute__((aligned(16)));
@@ -126,10 +135,8 @@ void FUN_L10_002e91b8(unsigned char *m) {
     *(int *)(second + 0x4c) = 0;
     i = 3;
     do {
-        first_vectors[0] = first_source[0]; first_vectors[1] = first_source[1];
-        first_vectors[2] = first_source[2]; first_vectors[3] = first_source[3];
-        second_vectors[0] = second_source[0]; second_vectors[1] = second_source[1];
-        second_vectors[2] = second_source[2]; second_vectors[3] = second_source[3];
+        *(aligned_vector *)first_vectors = *(aligned_vector *)first_source;
+        *(aligned_vector *)second_vectors = *(aligned_vector *)second_source;
         first_source += 4;
         second_source += 4;
         first_vectors[0] *= scale[0];
@@ -141,13 +148,13 @@ void FUN_L10_002e91b8(unsigned char *m) {
         i--;
     } while (i >= 0);
 
-    for (i = 0; i < *(int *)0x0015b340; i++) {
+    for (i = 0; i < D_L10_0015B340; i++) {
         int parity = i & 1;
-        int *colors = (int *)0x0015b348;
+        int *colors = D_L10_0015B348;
         unsigned long long color = (long long)colors[parity] |
-            ((long long)colors[parity + 2] << 2) |
-            ((long long)colors[parity + 4] << 4) |
-            ((long long)colors[parity + 6] << 6) | 0x8000000000ULL;
+            ((long long)D_L10_00161F50[parity] << 2) |
+            ((long long)D_L10_00161F58[parity] << 4) |
+            ((long long)D_L10_00161F60[parity] << 6) | 0x8000000000ULL;
         int shade = ((int *)0x001da250)[i];
         float *angles = (float *)(first + 0x58);
         float *offsets = (float *)(first + 0x68);
@@ -156,7 +163,10 @@ void FUN_L10_002e91b8(unsigned char *m) {
         float *first_offsets = (float *)(second + 0x58);
         float *second_offsets = (float *)(second + 0x68);
         *(unsigned long long *)(first + 0x88) = color;
-        *(unsigned long long *)(second + 0x88) = color;
+        *(unsigned long long *)(second + 0x88) =
+            (long long)colors[parity] | ((long long)D_L10_00161F50[parity] << 2) |
+            ((long long)D_L10_00161F58[parity] << 4) | ((long long)D_L10_00161F60[parity] << 6) |
+            0x8000000000ULL;
         ((int *)(first + 0x40))[0] = shade;
         ((int *)(second + 0x40))[2] = shade;
         ((int *)(second + 0x40))[0] = shade;
@@ -166,9 +176,8 @@ void FUN_L10_002e91b8(unsigned char *m) {
         for (j = 0; j < 4; j++) {
             for (k = 0; k != 2; k++) {
                 int index = i * 2 + k;
-                float frequency = ((float *)0x001da270)[index];
-                int limit = float_to_integer(frequency * 360.0f);
-                float angle = integer_to_float(*(int *)0x0015f3f8 % limit) / frequency - 180.0f;
+                int limit = float_to_integer(((float *)0x001da270)[index] * 360.0f);
+                float angle = integer_to_float(*(int *)0x0015f3f8 % limit) / ((float *)0x001da270)[index] - 180.0f;
                 float wave;
                 if (((int *)0x001da2b0)[index] == 0)
                     wave = FUN_001f9de0(angle * 0.017453292f);
@@ -248,13 +257,9 @@ extern char D_L10_00167100[];
 void FUN_L10_002f5b58(char *moby) {
     char *data = *(char **)(D_L10_0015EF50 + *(short *)(moby + 0x84) * 0x20 + 0x1c);
     char *work;
-    char *path;
-    int i, count, next;
-    float distance, angle;
+    float angle;
     short *indices;
     float *angles;
-    short *index_cursor;
-    float *angle_cursor;
     char *acc;
     char *moby_pos;
     char *moby_rot;
@@ -271,46 +276,63 @@ void FUN_L10_002f5b58(char *moby) {
     *(short *)(acc + 0x14) = 0;
     *(short *)(acc + 0x16) = scale_game_frames(*(short *)(data + 0x3a));
 
-    indices = (short *)(acc + 0x18);
-    angles = (float *)(acc + 0x28);
-    index_cursor = indices;
-    angle_cursor = angles;
-    i = 7;
-    do {
-        *angle_cursor = 0.0f;
-        *index_cursor = -1;
-        angle_cursor++;
-        index_cursor++;
-        i--;
-    } while (i >= 0);
+    work = *(char **)(moby + 0x70);
+    indices = (short *)(work + 0x58);
+    angles = (float *)(work + 0x68);
+    {
+        int i;
+        short *index_cursor;
+        float *angle_cursor;
+        index_cursor = indices;
+        angle_cursor = angles;
+        i = 7;
+        do {
+            *angle_cursor = 0.0f;
+            *index_cursor = -1;
+            angle_cursor++;
+            index_cursor++;
+            i--;
+        } while (i >= 0);
+    }
     moby_scale = moby + 0x30;
     moby_pos = moby + 0x10;
     moby_rot = moby + 0x20;
     angle = angle_atan2(1.0f, D_L10_0016CF70);
-    *(float *)(acc + 0x48) = angle + angle;
+    *(float *)((char *)indices + 0x30) = angle + angle;
 
     if (*(int *)(data + 0x20) >= 0) {
+        char *path;
+        int i, count, next;
+        unsigned int offset;
+        float distance;
         path = D_L10_001B0930_5a78[*(int *)(data + 0x20)];
         count = *(int *)path;
         if (count > 0) {
-            indices = (short *)(acc + 0x18);
-            angles = (float *)(acc + 0x28);
-            for (i = 0; i < *(int *)path; i++) {
-                angle = *(float *)(path + i * 0x10 + 0x1c);
+            short *index_cursor;
+            float *angle_cursor;
+            index_cursor = indices;
+            angle_cursor = angles;
+            i = 0;
+            do {
+                offset = i * 0x10;
+                angle = *(float *)((unsigned int)path + offset + 0x1c);
                 if (angle > 0.0f) {
-                    *angles = angle;
+                    *angle_cursor = angle;
                     if (angle > 180.0f)
-                        *angles = *(float *)(acc + 0x48) * 57.295776f;
-                    *indices = i;
-                    angles++;
-                    indices++;
+                        *angle_cursor = *(float *)((char *)indices + 0x30) * 57.295776f;
+                    *index_cursor = i;
+                    angle_cursor++;
+                    index_cursor++;
                 }
                 next = (i + 1) % *(int *)path;
-                distance = FUN_001f9b48(path + i * 0x10 + 0x10, path + next * 0x10 + 0x10);
-                *(float *)(path + i * 0x10 + 0x1c) = distance;
+                distance = FUN_001f9b48(
+                    (char *)((unsigned int)path + (offset + 0x10)),
+                    (char *)((unsigned int)path + ((unsigned int)next * 0x10 + 0x10)));
+                *(float *)((unsigned int)path + offset + 0x1c) = distance;
                 if (i < *(int *)path - 1)
                     *(float *)(acc + 0x08) += distance;
-            }
+                i++;
+            } while (i < *(int *)path);
         }
     }
     if (*(short *)(data + 0x3a) > 0) {
@@ -318,22 +340,34 @@ void FUN_L10_002f5b58(char *moby) {
                                     s32_to_float(scale_game_frames(*(short *)(data + 0x3a)))) * 60.0f;
     }
     if (*(int *)(data + 0x24) >= 0) {
+        char *path;
+        int i, count, next;
+        unsigned int offset;
+        float distance;
         path = D_L10_001B0930_5a78[*(int *)(data + 0x24)];
         count = *(int *)path;
         if (count > 0) {
-            for (i = 0; i < *(int *)path; i++) {
-                next = (i + 1) % *(int *)path;
-                distance = FUN_001f9b48(path + i * 0x10 + 0x10, path + next * 0x10 + 0x10);
-                *(float *)(path + i * 0x10 + 0x1c) = distance;
+            i = 0;
+            do {
+                offset = i * 0x10;
+                next = (i + 1) % count;
+                distance = FUN_001f9b48(
+                    (char *)((unsigned int)path + (offset + 0x10)),
+                    (char *)((unsigned int)path + ((unsigned int)next * 0x10 + 0x10)));
+                *(float *)((unsigned int)path + offset + 0x1c) = distance;
                 if (i < *(int *)path - 1)
                     *(float *)(acc + 0x0c) += distance;
-            }
+                count = *(int *)path;
+                i++;
+            } while (i < count);
         }
     }
 
+    work = *(char **)(moby + 0x70);
     *(float *)(work + 0x00) = 0.03f;
     *(float *)(work + 0x04) = 0.2f;
     FUN_001f99f8(work + 0x10);
+    work = *(char **)(moby + 0x70);
     *(float *)(work + 0x20) = 0.03f;
     *(float *)(work + 0x24) = 0.2f;
     FUN_001f99f8(work + 0x30);

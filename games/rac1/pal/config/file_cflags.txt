@@ -12,3 +12,5 @@ src/overlays/l16_kalebo3/vendor_002A50F0.c   -fno-sched-interblock
 src/overlays/l18_veldin2/vendor_002FAEF8.c   -mno-split-addresses
 src/overlays/shared/camera_001ED6D8.c        -fno-force-mem
 src/overlays/shared/vendor_002E9D78.c        -fno-schedule-insns
+# func_L00_00207220 (voice-slot pruner) needs it; the file's other functions build the same either way
+src/overlays/shared/help_00203E98.c    -fno-sched-interblock

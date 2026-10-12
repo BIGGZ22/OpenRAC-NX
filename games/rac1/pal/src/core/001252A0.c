@@ -1,4 +1,5 @@
 #include "common.h"
+#include "callees.h"
 #include "structs.h"
 
 /*
@@ -24,7 +25,6 @@ extern void func_00113968(void);
 extern void func_00114438(void *, void *);
 extern char D_00152470[];
 extern int func_00119088();
-extern int func_00119110();
 extern long func_00116108_wide(int *errOut, void *a, void *b, void *c)
     __asm__("func_00116108");
 extern long func_001188C8_wide(int *errOut, void *a, void *b, void *c)
@@ -58,7 +58,6 @@ extern char D_00157E80[];
 extern int D_0012FD9C;
 extern void func_0011BBF0(void);
 extern int D_0012FD9C NOT_SDA;
-extern int func_001151B4();
 extern char D_0012FCEC[];
 extern char D_001580A8[];
 extern int D_0012FDA8;
@@ -71,26 +70,15 @@ extern int D_001581C0;
 extern char D_00158528[];
 extern int D_0012FDB4;
 extern int func_0011CE70(int arg0, int arg1, int arg2, void *arg3);
-extern int func_00118E70(int);
 extern void func_00118EC0(void);
-extern int func_00118EA0(void);
 extern void func_0011D4E0(void);
 extern void func_00118EB0(void);
 extern int D_00130420;
 extern int D_00130424;
-extern void func_00118CF0(void *);
-extern void func_00118CE0(void *);
 extern int D_00130BD0[];
 extern char D_00130428[];
 extern int func_0011DC50(void);
-extern void func_0011DBE8(int, int);
-extern void func_0011DBF8(int, void *, int);
-extern int func_0011DC40(int);
 extern void func_00118D80(int);
-extern void func_001206B0(float *, int *);
-extern void func_001208E4();
-extern void func_00118B20(int, void *, int);
-extern void func_00118C80(int);
 extern int func_00120F30(int);
 extern void *D_00159840;
 extern int D_001313E0;
@@ -99,7 +87,6 @@ extern int D_001313EC;
 extern int D_001313F0;
 extern int D_001313E4;
 extern int D_001313FC;
-extern void func_00120C58(void);
 extern int func_0011B4C8();
 extern int func_00120D28(int);
 extern void func_00118C90(int);

@@ -331,21 +331,21 @@ void FUN_L00_00236268(HudElem *e) {
     float limit;
     float step;
     float y;
+    float upper;
 
     FUN_L00_00235d80(e);
     vy = &star_init_array[0].vy;
     for (i = 0; i < 100; i++, vy += 4) {
-        if (i < 10) {
-            limit = star_init_limit0;
-        } else if (i < 20) {
+        limit = star_init_limit0;
+        if (i >= 10) {
             limit = star_init_limit1;
-        } else {
-            limit = star_init_limit2;
+            if (i >= 20) limit = star_init_limit2;
         }
         step = (232.0f - (limit + limit)) / (float)star_init_columns;
         y = (limit - 116.0f) + (float)(i % star_init_columns) * step;
+        upper = y + step;
         vy[-3] = random_float_between(limit - 17.0f, 17.0f - limit);
-        star_init_array[i].y = random_float_between(y, y + step);
+        star_init_array[i].y = random_float_between(y, upper);
         star_init_array[i].vx = random_float_between(-0.4f, 0.4f);
         *vy = random_float_between(-0.6f, 0.6f);
         star_init_array[i].vx += random_float_between(-0.4f, 0.4f);
@@ -457,18 +457,16 @@ int FUN_L00_002365a8(HudElem *e) {
     if (e->unk74 * 3 < 10001) {
         size = FUN_001fef20(1);
         half_w = FUN_001fef10(0.75f);
-        period = (int)((float)size * 60.0f);
-        threshold = (int)(half_w * 60.0f);
-        previous = (D_L00_0015F3F8 - 1) % period < threshold;
+        previous = (D_L00_0015F3F8 - 1) % (int)((float)size * 60.0f) <
+                   (int)(half_w * 60.0f);
     } else {
         previous = 0;
     }
     if (e->unk74 * 3 < 10001) {
         size = FUN_001fef20(1);
         half_w = FUN_001fef10(0.75f);
-        period = (int)((float)size * 60.0f);
-        threshold = (int)(half_w * 60.0f);
-        current = D_L00_0015F3F8 % period < threshold;
+        current = D_L00_0015F3F8 % (int)((float)size * 60.0f) <
+                  (int)(half_w * 60.0f);
     } else {
         current = 0;
     }
@@ -478,26 +476,28 @@ int FUN_L00_002365a8(HudElem *e) {
                        D_L00_0015F760, D_L00_0015F764, 0x80);
 
     half_h = (float)D_L00_0015F764 * D_L00_0015F76C * 0.5f;
-    fade = (float)(10000 - e->unk74) / 10000.0f;
+    offset = (float)(10000 - e->unk74) / 10000.0f;
     half_w = (float)D_L00_0015F760 * D_L00_0015F768 * 0.5f;
-    origin.x = (half_w / 17.0f) * 16.0f;
-    origin.y = (-half_h / 116.0f) * 16.0f;
-    origin.z = 1.0f;
-    origin.w = 1.0f;
+    origin.y = -half_h / 116.0f;
+    origin.x = half_w / 17.0f;
+    direction.w = 0.0f;
+    direction.z = 0.0f;
     direction.x = (half_w + (float)(x + e->unk48) +
                    (1.0f - D_L00_0015F768) * 0.5f * (float)D_L00_0015F760) * 16.0f;
     direction.y = (half_h + (float)(y + e->unk4A) +
                    (1.0f - D_L00_0015F76C) * 0.5f * (float)D_L00_0015F764) * 16.0f;
-    direction.z = 0.0f;
-    direction.w = 0.0f;
-    offset = 116.0f - (fade + fade) * 116.0f;
+    origin.x *= 16.0f;
+    origin.y *= 16.0f;
+    origin.w = 1.0f;
+    origin.z = 1.0f;
+    offset = 116.0f - (offset + offset) * 116.0f;
     image = FUN_0023b208(*(int *)e, 2);
     FUN_001ff260(&first_step);
     FUN_001ff260(&second_step);
     FUN_001ff260(&third_step);
-    first_step.x = first_step.y = D_L00_0015F750 * 16.0f;
-    second_step.x = second_step.y = (D_L00_0015F754 - D_L00_0015F750) * 16.0f;
-    third_step.x = third_step.y = (D_L00_0015F758 - D_L00_0015F754) * 16.0f;
+    first_step.y = first_step.x = D_L00_0015F750 * 16.0f;
+    second_step.y = second_step.x = (D_L00_0015F754 - D_L00_0015F750) * 16.0f;
+    third_step.y = third_step.x = (D_L00_0015F758 - D_L00_0015F754) * 16.0f;
     star_width = 0;
     for (i = 0; i < 100; i++) {
         if (i == 0) {
@@ -537,14 +537,14 @@ extern int current_level_index __asm__("D_0015ED84");
 extern int current_level_index_sda __asm__("D_0015ED84") __attribute__((sda));
 extern int D_L00_0015F770 __attribute__((sda));
 extern unsigned char D_L00_0017E530[];
-extern int D_0015EE58[];
-extern int D_0015EE68[];
+extern int freeze_stats_time_ref_a[] __asm__("D_0015EE58");
+extern int freeze_stats_score_ref_a[] __asm__("D_0015EE68");
 extern float D_0013F3D0[];
 
 extern float FUN_00200240(unsigned int) __asm__("FUN_001fa6c0");
 extern float FUN_001fef10(float) __asm__("FUN_001f96b0");
 extern int FUN_00200250(float) __asm__("FUN_001fa6d0");
-extern int FUN_001fb090(const char *, int) __asm__("FUN_001f6250");
+extern int FUN_001fb090(const char *, int) __asm__("FUN_L00_001fb090");
 extern void *FUN_0023b208(int, int) __asm__("FUN_001ff960");
 extern void FUN_0023b4d8(void *, int, int, int, int, int) __asm__("FUN_001ffc30");
 extern void FUN_0023b860(void *, int, int, int, int, int) __asm__("FUN_001ffe18");
@@ -593,10 +593,12 @@ int FUN_L00_00237200(HudElem *e) {
         left = 0xe0 - (width >> 1);
         other_width = FUN_001fb090(line + i + 1, -1);
         other_left = 0xe0 - (other_width >> 1);
-        if (other_left <= left) {
-            left = other_left;
+        if (left < other_left) {
+            other_left = left;
+        } else {
             width = other_width;
         }
+        left = other_left;
         FUN_0023b4d8(FUN_0023b208(0x7580, 0), left + 0x20, y, width, 0x36, alpha);
         FUN_0023b4d8(FUN_0023b208(0x7580, 1), left, y, 0x20, 0x36, alpha);
         FUN_0023b860(FUN_0023b208(0x7580, 1), left + width + 0x20, y, 0x20, 0x36, alpha);
@@ -631,8 +633,8 @@ int FUN_L00_00237200(HudElem *e) {
             *(int *)0x15f648 = y + 100;
             extra = 4;
             if (current_level_index_sda != 0x10) extra = 0;
-            elapsed = *(int *)((char *)D_0015EE58 + extra);
-            extra = *(int *)((char *)D_0015EE68 + extra);
+            elapsed = *(int *)((char *)freeze_stats_time_ref_a + extra);
+            extra = *(int *)((char *)freeze_stats_score_ref_a + extra);
             if (elapsed != 0) {
                 interval = pal_mode != 0 ? 3000 : 3600;
                 minute_scale = interval / 60;

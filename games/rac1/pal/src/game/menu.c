@@ -1,4 +1,6 @@
 #include "common.h"
+#include "callees.h"
+#include "records.h"
 #include "structs.h"
 
 /*
@@ -14,12 +16,6 @@ extern void func_001F9A98(void *, void *, int);
 extern char D_00189310[];
 extern char D_001899D0[];
 extern void *D_001871C0 NOT_SDA;
-typedef struct {
-    char unk_00[8];
-    void (*fn_08)(void *);
-    char unk_0C[4];
-    void (*fn_10)(void *);
-} DispatchRec;
 extern DispatchRec D_001E8F80[];
 extern int D_0018A3B0[];
 extern void func_001F99B0();
@@ -44,7 +40,6 @@ extern void func_001F6668(void *, void *, void *, void *, void *, int,
 extern int func_001F6600(unsigned char *, int);
 extern int func_001F6620(unsigned char *, int);
 extern int func_001F4868(int);
-extern void func_001F7070(void *, void *, void *, void *, int, unsigned char *);
 extern void func_001FB498(void);
 extern void func_001F3008(void);
 extern void func_001F3140(void);
@@ -73,13 +68,6 @@ extern int D_001941C8 NOT_SDA;
 extern int D_0016100C;
 extern int D_001A0468[];
 extern void func_00205830(int a, int b);
-typedef struct {
-    int _pad0[0x9E];
-    int use[5];   /* +0x278 */
-    int flags[5]; /* +0x28C */
-    int sel;      /* +0x2A0 -- index of the active slot, -1 for none */
-    int size[5];  /* +0x2A4 */
-} PadSlots;
 extern PadSlots D_001A01F0_slots __asm__("D_001A01F0");
 extern int D_001A01F0[];
 extern int *D_001602E0;
@@ -1195,8 +1183,6 @@ extern char D_0013D390[];
 /* menu.cpp's state word and flags. Stored through the assembler's lui
    macro, and $gp-relative where the access sits in a delay slot (see
    tools/check_macro_slots.py). */
-extern int D_0015EFB0 MACRO_ADDR;
-extern int D_0015EFB4 MACRO_ADDR;
 extern int D_0013D3AC;
 
 /* Word view of the D_0013D390 record: indexing an int array here, rather
@@ -1377,7 +1363,6 @@ void func_002094E0(void) {
 }
 
 extern char D_0013D390[];
-extern int D_0015EFB0 MACRO_ADDR;
 
 /* Dispatch-table handler for menu.cpp's D_0013D390 state record. First,
    guarded by unkDC>=3 || unkE4>=0, clears a per-index slot in the

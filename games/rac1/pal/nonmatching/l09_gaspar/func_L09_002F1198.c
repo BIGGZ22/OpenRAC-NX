@@ -1,53 +1,66 @@
 /* NON_MATCHING func_L09_002F1198 -- src/overlays/l09_gaspar/vendor_002C2B08.c
- * Best so far: SIZE ours 496 / retail 500, checked 2026-10-03.
+ * Best so far: BYTES 55/500 (89.0% of the bytes match), checked 2026-10-12.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
- * No longer builds in its file (COMPILE failed, 2026-10-09): match its declarations to the file's first.
  * What the last attempts found:
- *   Spawns moby 0x1A1 with random heading/speed, velocity from two vectors, scale 0x2C by (pi-h)*2+1.
- *   Only difference left (p1/p3, 496 vs 500 bytes): ours CSEs/hoists (pi-h) to before the second func_L00_001FF4B0
+ *   func_L09_002F1198: effect moby spawner (class 0x1A1): random angle and speed, direction from atan2 of the velo
+ *   gen5/p07 = 55/500 (size ok). Left: pi/ang/dir float regs rotated (retail pi=f21 ang=f22 dir=f23), second pi-di
  */
-extern char *func_0020D348(int);
-extern float func_002140F8(float, float);
-extern float func_L00_001FF860(float, float);
-extern float func_001FA850(float, float);
-extern float func_001F9F90(float);
-extern float func_001F9FA8(float);
-extern void func_L00_001FF4B0(void *, void *, float);
-extern void func_001F9BD8(void *, void *, void *);
-extern void func_001F9C30(void *, void *, float);
-extern void func_L00_00251E30(void *);
-extern float D_0015EE6C MACRO_ADDR;
+extern Moby *func_0020D348_a(int) __asm__("func_0020D348");
+extern float func_002140F8_a(float, float) __asm__("func_002140F8");
+extern float func_L00_001FF860_a(float, float) __asm__("func_L00_001FF860");
+extern float func_001FA850_a(float, float) __asm__("func_001FA850");
+extern float func_001F9F90_a(float) __asm__("func_001F9F90");
+extern float func_001F9FA8_a(float) __asm__("func_001F9FA8");
+extern float D_0015EE6C_a __asm__("D_0015EE6C") MACRO_ADDR;
+extern void func_L00_001FF4B0_a(void *, void *, float) __asm__("func_L00_001FF4B0");
+extern void func_001F9BD8_a(void *, void *, void *) __asm__("func_001F9BD8");
+extern void func_001F9C30_a(void *, void *, float) __asm__("func_001F9C30");
+extern void func_L00_00251E30_a(void *, int) __asm__("func_L00_00251E30");
 
-/* Spawns a debris moby with a random heading, speed and velocity derived from the given vectors. */
-char *func_L09_002F1198(int unused, char *a, char *b, float lo, float hi) {
-    char *moby = func_0020D348(0x1A1);
-    if (moby != 0) {
-        char *pos = moby + 0x10;
-        char *d = *(char **)(moby + 0x78);
-        float pi = 3.14159274f;
-        float ang = func_002140F8(-3.14159274f, pi);
-        float spd = func_002140F8(lo, hi);
-        float h = func_001FA850(func_L00_001FF860(((float *)b)[0], ((float *)b)[1]), ang);
-        float t[4];
-        *(float *)(moby + 0x10) = func_001F9F90(ang) * spd;
-        *(float *)(moby + 0x14) = func_001F9FA8(ang) * spd;
-        *(int *)(moby + 0x18) = 0;
-        func_L00_001FF4B0(d, pos, h * D_0015EE6C);
-        func_L00_001FF4B0(t, b, (pi - h) * (pi - h) * 0.25f * D_0015EE6C);
-        func_001F9BD8(d, d, t);
-        *(int *)(d + 8) = 0;
-        func_001F9BD8(pos, pos, a);
-        func_001F9BD8(pos, pos, b);
-        func_001F9C30(d, d, 0.35f);
-        *(float *)(moby + 0x58) = *(float *)(moby + 0x58) * 0.5f;
-        *(float *)(moby + 0x48) = func_L00_001FF860(((float *)d)[0], ((float *)d)[1]);
-        ((unsigned char *)moby)[0x30] = 0xFF;
-        *(short *)(moby + 0x32) = 0xFF;
-        moby[0x31] = 1;
-        h = pi - h;
-        *(float *)(moby + 0x2C) = *(float *)(moby + 0x2C) * (h + h + 1.0f);
-        func_L00_00251E30(moby);
+char *func_L09_002F1198(void *a0, void *a1, void *a2, float lo, float hi) {
+    Vec4f *src = (Vec4f *)a1;
+    Vec4f *vel = (Vec4f *)a2;
+    Moby *obj;
+    Vec4f *out;
+    Vec4f *p;
+    Vec4f tmp;
+    float ang;
+    float spd;
+    float dir;
+    float t;
+    float q;
+    float pi;
+
+    obj = func_0020D348_a(0x1A1);
+    if (obj != 0) {
+        p = &obj->pos;
+        out = (Vec4f *)obj->pvars;
+        pi = 3.1415927f;
+        ang = func_002140F8_a(-3.1415927f, pi);
+        spd = func_002140F8_a(lo, hi);
+        dir = func_001FA850_a(func_L00_001FF860_a(vel->x, vel->y), ang);
+        obj->pos.x = func_001F9F90_a(ang) * spd;
+        obj->pos.y = func_001F9FA8_a(ang) * spd;
+        obj->pos.z = 0;
+        func_L00_001FF4B0_a(out, p, dir * D_0015EE6C_a);
+        q = pi - dir;
+        q = q * q * 0.25f * D_0015EE6C_a;
+        func_L00_001FF4B0_a(&tmp, vel, q);
+        func_001F9BD8_a(out, out, &tmp);
+        out->z = 0;
+        func_001F9BD8_a(p, p, src);
+        func_001F9BD8_a(p, p, vel);
+        func_001F9C30_a(out, out, 0.35f);
+        obj->unk58 = obj->unk58 * 0.5f;
+        obj->rot.z = func_L00_001FF860_a(out->x, out->y);
+        t = pi - dir;
+        t = t + t + 1.0f;
+        obj->unk32 = 0xFF;
+        obj->unk30 = 0xFF;
+        obj->unk31 = 1;
+        obj->scale = obj->scale * t;
+        func_L00_00251E30_a(obj, 1);
     }
-    return moby;
+    return (char *)obj;
 }

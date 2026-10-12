@@ -1,4 +1,5 @@
 #include "common.h"
+#include "callees.h"
 #include "structs.h"
 
 /*
@@ -24,7 +25,6 @@ extern void func_00113968(void);
 extern void func_00114438(void *, void *);
 extern char D_00152470[];
 extern int func_00119088();
-extern int func_00119110();
 extern long func_00116108_wide(int *errOut, void *a, void *b, void *c)
     __asm__("func_00116108");
 extern long func_001188C8_wide(int *errOut, void *a, void *b, void *c)
@@ -58,7 +58,6 @@ extern char D_00157E80[];
 extern int D_0012FD9C;
 extern void func_0011BBF0(void);
 extern int D_0012FD9C NOT_SDA;
-extern int func_001151B4();
 extern char D_0012FCEC[];
 extern char D_001580A8[];
 extern int D_0012FDA8;
@@ -136,7 +135,6 @@ s32 func_0011D0D0(const char *arg, s32 mode) {
     return 0;
 }
 
-extern int func_00118E70(int);
 extern void func_00118EC0(void);
 
 int func_0011D210(void) {
@@ -268,7 +266,6 @@ int func_0011D3C8(void) {
 
 ASM_FUNC("asm/handwritten/core_text", func_0011D490);
 
-extern int func_00118EA0(void);
 extern int func_0011D4E0(void);
 extern int func_00118EB0(void);
 

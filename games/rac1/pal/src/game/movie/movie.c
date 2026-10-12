@@ -1,4 +1,5 @@
 #include "common.h"
+#include "callees.h"
 #include "structs.h"
 
 extern int D_00161308 MACRO_ADDR;
@@ -6,7 +7,6 @@ extern int D_00161314 MACRO_ADDR;
 extern int movie_clear_gp SDATA(D_00161318);
 extern char *D_0016130C MACRO_ADDR;
 extern char *movie_gp_base SDATA(D_0016130C);
-extern int func_00118BE0(void);
 extern int func_00118BA0(int,int);
 extern int func_0023BB90(int,int,int);
 extern void func_0023B740(void*,void*,void*);
@@ -37,7 +37,6 @@ void func_0023BB40(void) {
     func_00118BC0(1);
 }
 extern int func_0023C2B0(char *);
-extern char *D_0016130C MACRO_ADDR;
 
 /* isAudioOK -- true when the audio decoder at offset 0xD9100 of the movie state holds 0x1000
  * bytes or more. */

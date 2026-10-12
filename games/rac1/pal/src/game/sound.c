@@ -1,4 +1,7 @@
 #include "common.h"
+#include "callees.h"
+#include "records.h"
+#include "hero.h"
 #include "structs.h"
 
 /*
@@ -14,12 +17,6 @@ extern void func_001F9A98(void *, void *, int);
 extern char D_00189310[];
 extern char D_001899D0[];
 extern void *D_001871C0 NOT_SDA;
-typedef struct {
-    char unk_00[8];
-    void (*fn_08)(void *);
-    char unk_0C[4];
-    void (*fn_10)(void *);
-} DispatchRec;
 extern DispatchRec D_001E8F80[];
 extern int D_0018A3B0[];
 extern void func_001F99B0();
@@ -44,7 +41,6 @@ extern void func_001F6668(void *, void *, void *, void *, void *, int,
 extern int func_001F6600(unsigned char *, int);
 extern int func_001F6620(unsigned char *, int);
 extern int func_001F4868(int);
-extern void func_001F7070(void *, void *, void *, void *, int, unsigned char *);
 extern void func_001FB498(void);
 extern void func_001F3008(void);
 extern void func_001F3140(void);
@@ -73,13 +69,6 @@ extern int D_001941C8 NOT_SDA;
 extern int D_0016100C;
 extern int D_001A0468[];
 extern void func_00205830(int a, int b);
-typedef struct {
-    int _pad0[0x9E];
-    int use[5];   /* +0x278 */
-    int flags[5]; /* +0x28C */
-    int sel;      /* +0x2A0 -- index of the active slot, -1 for none */
-    int size[5];  /* +0x2A4 */
-} PadSlots;
 extern PadSlots D_001A01F0_slots __asm__("D_001A01F0");
 extern int D_001A01F0[];
 extern int *D_001602E0;
@@ -153,18 +142,12 @@ extern int D_001B2F40[];
 extern void func_001FA460_2(void *, void *) __asm__("func_001FA460");
 extern void func_001F9C30(void *, void *, float);
 extern void func_001F9BD8(void *, void *, void *);
-extern void func_002116A0(void *, int, int *, void *);
-extern void func_001FA540(void *, void *, void *);
-extern void func_00211548(void *, int, void *, void *);
 extern void func_001F9EC0(void *, void *, void *);
 extern int D_001414D0 NOT_SDA;
 extern float D_001CAE00[] NOT_SDA;
-extern void func_0020E360(void *, void *);
-extern float func_001FA058(float, float);
 extern float func_001F9F90(float);
 extern float func_001F9FA8(float);
 extern void func_00118D80(int);
-extern void func_00212578(int, int);
 extern char D_00165600[];
 extern int D_0015F718;
 extern short D_0015F71C;
@@ -189,7 +172,6 @@ extern void func_0012EDE0(void *);
 extern void func_0012EFE8(void);
 extern char D_001E8980[];
 extern int func_0012EE98(int, int, int, void *);
-extern void func_001F9978(void);
 extern int func_00217628_v(void) __asm__("func_00217628");
 extern void func_00122598(int);
 extern void func_00217130(void);
@@ -220,7 +202,6 @@ extern int D_00141FA0[];
 extern char D_001D0A50[];
 extern char D_001D0A88[];
 extern int D_001A0418 NOT_SDA;
-extern void func_00226D50(int);
 extern float func_001FA748(float, float);
 extern char *D_001D5F74 NOT_SDA;
 extern void func_0020E180(int, int);
@@ -248,10 +229,8 @@ extern int func_00226F68(int);
 extern int D_0013CC04 NOT_SDA;
 extern char D_001D2678[];
 extern char *D_001D5F78 NOT_SDA;
-extern void func_001FDF78(int, int, int, int);
 extern unsigned char D_001B3E40[] NOT_SDA;
 extern void *func_0020D348(void);
-extern void func_0020ED48(void *);
 extern void func_0020E340(void *, int, int, int, int);
 typedef struct {
     int key;
@@ -290,7 +269,6 @@ void func_0022D8C0(void *arg0) {
 
 extern char D_00187180[];
 extern void func_001F9BF0(void *, void *, void *);
-extern void func_001F9E58(void *, void *, float);
 extern void func_001F9BD8(void *, void *, void *);
 extern void func_001EFE10(void *, void *, int, int, int);
 
@@ -345,7 +323,6 @@ void func_0022DB00(void *arg0, int arg1) {
 
 extern void func_001F9EE8(void *, void *, void *);
 extern float func_001F9CE8(void *);
-extern float func_001F9BB0(float, float, float);
 extern float func_001FA058_a(float, float) __asm__("func_001FA058");
 extern void func_001FA898(float);
 
@@ -363,7 +340,71 @@ void func_0022DB48(void *arg0, void *arg1, void *arg2) {
     truncate_float_to_s32(-func_001FA058_a(v[0], v[1]) * 180.0f * t * 0.31830987f);
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_0022DBE8);
+typedef u32 u128_2DBE8 __attribute__((mode(TI), aligned(16)));
+typedef struct {
+    s32 x0;
+    u8 x4;
+    u8 pad5[0x6B];
+} SndVoice_2DBE8;
+typedef struct {
+    u128_2DBE8 q[4];
+    s32 x40;
+    s32 x44;
+    s32 vol[6];
+    u8 pad60[0x10];
+    SndVoice_2DBE8 voices[30];
+} SndState_2DBE8;
+extern int D_0015EEE8 MACRO_ADDR;
+extern int D_0015EEEC MACRO_ADDR;
+extern int D_0015EEF0 MACRO_ADDR;
+extern void func_0012DB68(void);
+extern void func_0012E380(int);
+extern void func_0012E3C0(int, int);
+extern void func_0012F0E8(int, int);
+extern void func_0012E3F8(int, int, int);
+extern void func_0012E348(int, int);
+extern void func_002161E0(void);
+
+void func_0022DBE8(void) {
+    s32 i;
+    s32 p;
+    s32 end;
+    s32 v;
+
+    for (i = 0; i < 4; i++) {
+        qzero(&((SndState_2DBE8 *)D_0013E650)->q[i]);
+    }
+    ((SndState_2DBE8 *)D_0013E650)->x40 = 0;
+    ((SndState_2DBE8 *)D_0013E650)->x44 = 0;
+    p = (s32)D_0013E650;
+    end = p + 0xD20;
+    do {
+        ((SndVoice_2DBE8 *)p)[1].x0 = 0;
+        ((SndVoice_2DBE8 *)p)[1].x4 = 0;
+        p += 0x70;
+    } while (p < end);
+    func_0012DB68();
+    func_0012E380(D_0015EEE8 == 0);
+    func_0012E3C0(0, 1);
+    func_0012F0E8(2, 4);
+    func_0012E3F8(1, 0x18, 0x2F);
+    func_0012E3F8(2, 0x18, 0x2F);
+    func_0012E3F8(4, 0x18, 0x2F);
+    v = D_0015EEF0;
+    ((SndState_2DBE8 *)D_0013E650)->vol[0] = (v * 8) / 10;
+    ((SndState_2DBE8 *)D_0013E650)->vol[1] = D_0015EEEC;
+    ((SndState_2DBE8 *)D_0013E650)->vol[2] = (v * 8) / 10;
+    ((SndState_2DBE8 *)D_0013E650)->vol[3] = (v * 7) / 10;
+    ((SndState_2DBE8 *)D_0013E650)->vol[4] = (v * 7) / 10;
+    ((SndState_2DBE8 *)D_0013E650)->vol[5] = v;
+    func_002161E0();
+    func_0012E348(0, ((SndState_2DBE8 *)D_0013E650)->vol[0]);
+    func_0012E348(1, ((SndState_2DBE8 *)D_0013E650)->vol[1]);
+    func_0012E348(2, ((SndState_2DBE8 *)D_0013E650)->vol[2]);
+    func_0012E348(3, ((SndState_2DBE8 *)D_0013E650)->vol[3]);
+    func_0012E348(4, ((SndState_2DBE8 *)D_0013E650)->vol[4]);
+    func_0012E348(5, ((SndState_2DBE8 *)D_0013E650)->vol[5]);
+}
 
 INCLUDE_ASM("asm/nonmatchings/text", func_0022DD68); /* sound_update */
 
@@ -461,14 +502,8 @@ typedef struct {
     VoiceVector_2EB08 value;
     u8 pad10[0x60];
 } VoicePositionRecord_2EB08;
-typedef struct {
-    u8 pad0[0x1090];
-    VoiceMoby_2EB08 *item0_moby;
-    u8 pad1094[0xFEC];
-    VoiceMoby_2EB08 *moby;
-} Hero_2EB08;
 extern VoicePool_2EB08 D_0013E650_2EB08 __asm__("D_0013E650");
-extern Hero_2EB08 D_0013F450_2EB08 __asm__("D_0013F450");
+extern Hero D_0013F450_2EB08 __asm__("D_0013F450");
 extern VoicePositionRecord_2EB08 D_0013E6E0_2EB08[] __asm__("D_0013E6E0");
 extern u8 D_0013E6C0_2EB08[] __asm__("D_0013E6C0");
 extern void func_001F9BC0_2EB08(VoiceVector_2EB08 *) __asm__("func_001F9BC0");
@@ -516,10 +551,10 @@ check_moby:
     if (moby == 0) {
         goto find_free_slot;
     }
-    if (D_0013F450_2EB08.moby == moby) {
+    if (((VoiceMoby_2EB08 *)D_0013F450_2EB08.moby) == moby) {
         goto use_extended_pool;
     }
-    if (D_0013F450_2EB08.item0_moby == moby) {
+    if (((VoiceMoby_2EB08 *)D_0013F450_2EB08.items[0].moby) == moby) {
         goto use_extended_pool;
     }
     if (moby->class_id != 0x472) {
@@ -603,7 +638,6 @@ return_result:
     return result;
 }
 
-extern int func_0022EB08(void *, int, int, int, int);
 
 /* Starts entry idx of the sound bank arg2 points at; the same shape as
    its siblings func_0022EE28 and func_0022EEB8. */
@@ -636,7 +670,6 @@ int func_0022ED80(int idx, int arg1, int arg2) {
 }
 
 extern char *D_0015F714 MACRO_ADDR;
-extern int func_0022EB08(void *, int, int, int, int);
 
 int func_0022EE28(int idx, int arg1, int arg2) {
     int h;

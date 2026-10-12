@@ -348,9 +348,8 @@ def overlay_match_results(file_map: dict) -> dict[str, float]:
 
 def overlay_units(file_map: dict, fuzzy: dict) -> tuple[list[dict], list, dict, dict, int, int]:
     """(out_units, all_items, cat_items, cat_complete, complete_units,
-    complete_code) for src/overlays/shared/ (one unit per file, "Shared level
-    code/<file>") and src/overlays/lNN_<planet>/ (one unit per level, named
-    after it): a unit's functions are its files' INCLUDE_ASM'd or defined
+    complete_code) for src/overlays/shared/ (one unit, "Shared level code") and
+    src/overlays/lNN_<planet>/ (one unit per level, named after it): a unit's functions are its files' INCLUDE_ASM'd or defined
     func_LNN_XXXXXXXX names in address order (docs/OVERLAYS.md, "Plan" step 3).
     cat_items/cat_complete cover "level_code", "common", "levels" and "level_NN" -- a
     level file's items count under both "levels" and its own "level_NN"."""
@@ -367,7 +366,7 @@ def overlay_units(file_map: dict, fuzzy: dict) -> tuple[list[dict], list, dict, 
 
     # decomp.dev lays its treemap out in report order and draws no border
     # around a group, so a level is one unit (one box, its functions inside)
-    # and the shared code stays one unit per file, all side by side.
+    # and so is the shared code.
     for directory, cats in overlay_dirs():
         shared = directory.name == "shared"
         groups = []     # [(unit name, source path, rows)]
@@ -382,12 +381,11 @@ def overlay_units(file_map: dict, fuzzy: dict) -> tuple[list[dict], list, dict, 
                 _kind, size = catalogue[name]
                 m = OVERLAY_NAME.match(name)
                 rows.append((name, int(m.group(2), 16), size, is_c))
-            if shared:
-                groups.append((f"{SHARED_TITLE}/{path.stem}", path.as_posix(), rows))
-            elif groups:
+            if groups:
                 groups[0][2].extend(rows)
             else:
-                groups.append((level_title(level_of_dir(directory.name)), directory.as_posix(), rows))
+                groups.append((SHARED_TITLE if shared else level_title(level_of_dir(directory.name)),
+                               directory.as_posix(), rows))
         for uname, source, rows in groups:
             rows.sort(key=lambda r: r[1])
             start = rows[0][1]

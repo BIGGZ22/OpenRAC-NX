@@ -174,21 +174,7 @@ void func_L00_0029BED8(int a) {
     func_0012DDC0();
 }
 INCLUDE_ASM("asm/overlays", func_L00_0029C070);
-extern int func_L00_00222B80(int, int);
-extern void func_L00_00233950(void);
-extern void func_001F9EC0(void *, void *, void *);
-extern void func_001F9BD8(void *, void *, void *);
-extern float func_001FA748(float, float);
-extern void func_L00_00217718(void *, void *, int, int);
-extern void func_001FFFA0(void);
-extern void func_0012E558(int);
-extern void func_00216F28(void);
-extern int func_0012DDC0(void);
-extern int D_L00_0015F6BC MACRO_ADDR;
-extern unsigned char D_001414F5[] NOT_SDA;
-extern short D_L00_0015F6A8;
 extern short D_L00_001611C0;
-extern unsigned char D_0014171B[] NOT_SDA;
 
 /* resets state and snaps the camera for a new scene */
 void func_L00_0029C2E8(void) {

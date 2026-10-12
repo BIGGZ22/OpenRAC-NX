@@ -16,7 +16,7 @@ extern s32 is_point_inside_clip_volume_b618(void *, s32) __asm__("FUN_00214720")
 extern s32 is_timer_active_b618(void *) __asm__("FUN_001f9740");
 extern s32 random_integer_between_b618(s32, s32) __asm__("FUN_L00_00257b90");
 extern f32 itof_s_b618(s32) __asm__("FUN_001fa6c0");
-extern f32 fast_sin_b618(f32) __asm__("FUN_001f9de0");
+extern f32 fast_sin(f32) __asm__("FUN_001f9de0");
 extern void interpolate_vector_b618(void *, void *, void *, f32) __asm__("FUN_L00_0025b6b8");
 extern s32 FUN_L00_0023e738(void *, f32, f32, f32, f32, f32);
 extern void FUN_L00_0023e838(s32);
@@ -36,6 +36,7 @@ void FUN_L01_0030b618(u8 *m) {
     f32 elapsed;
     f32 active;
     f32 phase;
+    f32 sine_input;
     f32 sine;
     f32 cutoff;
     OvlQuad first;
@@ -47,12 +48,15 @@ void FUN_L01_0030b618(u8 *m) {
             mark_moby_for_removal_b618(m);
             return;
         }
-        for (i = 0; i < *(s32 *)(e + 0x58); i++) {
-            f32 *point = ((f32 *)e) + i * 4;
-            point[0] *= 0.00390625f;
-            point[1] *= 0.00390625f;
-            point[2] *= 0.00390625f;
-            point[3] *= 0.00390625f;
+        {
+            s32 i;
+            for (i = 0; i < *(s32 *)(e + 0x58); i++) {
+                f32 *point = ((f32 *)e) + i * 4;
+                point[0] *= 0.00390625f;
+                point[1] *= 0.00390625f;
+                point[2] *= 0.00390625f;
+                point[3] *= 0.00390625f;
+            }
         }
         *(s32 *)(e + 0x68) = -1;
         if (m[0x30] < truncate_float_to_s32_b618(*(f32 *)(e + 0x5c)) + 4)
@@ -94,10 +98,10 @@ void FUN_L01_0030b618(u8 *m) {
         phase = itof_s_b618(*(s32 *)(e + 0x70) - *(s32 *)(e + 0x6c));
         phase = phase / itof_s_b618(*(s32 *)(e + 0x70));
         phase *= 3.1415927f;
-        phase *= 0.5f;
+        sine_input = phase * 0.5f;
         if (*(s32 *)(e + 0x7c) != 0)
-            phase += 1.5707964f;
-        sine = fast_sin_b618(phase);
+            sine_input += 1.5707964f;
+        sine = fast_sin(sine_input);
 
         if (*(s32 *)(e + 0x7c) != 0) {
             first = ((OvlQuad *)e)[*(s32 *)(e + 0x78)];
@@ -106,14 +110,17 @@ void FUN_L01_0030b618(u8 *m) {
         } else {
             first = ((OvlQuad *)e)[*(s32 *)(e + 0x74)];
             second = ((OvlQuad *)e)[*(s32 *)(e + 0x78)];
-            interpolate_vector_b618(e + 0x40, &first, &second, phase);
+            interpolate_vector_b618(e + 0x40, &first, &second, sine);
         }
         cutoff = *(f32 *)(e + 0x5c) * 0.75f;
-        if (cutoff < elapsed) {
-            first = 0;
-            second = *(OvlQuad *)(e + 0x40);
-            interpolate_vector_b618(e + 0x40, &second, &first,
-                                    (elapsed - cutoff) / (*(f32 *)(e + 0x5c) - cutoff));
+        {
+            f32 denominator = *(f32 *)(e + 0x5c) - cutoff;
+            if (cutoff < elapsed) {
+                f32 numerator = elapsed - cutoff;
+                first = 0;
+                second = *(OvlQuad *)(e + 0x40);
+                interpolate_vector_b618(e + 0x40, &second, &first, numerator / denominator);
+            }
         }
         slot = *(s32 *)(e + 0x68);
         if (slot == -1) {
@@ -138,9 +145,6 @@ void FUN_L01_0030b618(u8 *m) {
     }
 }
 #endif
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L01_0030bfa8.s", FUN_L01_0030bfa8);
-#else
 #include "rnc/overlay/quad.h"
 typedef union {
     OvlQuad q;
@@ -179,6 +183,8 @@ void FUN_L01_0030bfa8(char *m) {
         struct { GlowVec_bfa8 mat0, mat1, mat2, point, partial, offset; } basis;
     } local;
     GlowVec_bfa8 *dst;
+    GlowVec_bfa8 *src;
+    GlowVec_bfa8 *basis;
     s32 i;
     f32 one;
     OvlQuad q0, q1, q2, q3;
@@ -209,25 +215,31 @@ void FUN_L01_0030bfa8(char *m) {
     scale_vector_xyz_bfa8(&local.basis.offset, m + 0xc0, D_L01_00162064);
     scale_vector_xyz_bfa8(&local.basis.partial, m + 0xe0, D_L01_0016206C);
     add_vector_xyz_bfa8(&local.basis.offset, &local.basis.offset, &local.basis.partial);
+    src = &local.basis.mat0;
     add_vector_xyz_bfa8(&local.basis.point, &local.basis.offset, m + 0x10);
-    subtract_vector_xyz_bfa8(&local.basis.mat0, D_L01_00167240, &local.basis.point);
-    normalize_vector_xyz_bfa8(&local.basis.mat0, &local.basis.mat0, one);
-    cross_vectors_xyz_bfa8(&local.basis.mat1, &local.basis.mat0, D_0013F5E0);
-    normalize_vector_xyz_bfa8(&local.basis.mat1, &local.basis.mat1, -1.0f);
-    cross_vectors_xyz_bfa8(&local.basis.mat2, &local.basis.mat1, &local.basis.mat0);
+    subtract_vector_xyz_bfa8(src, D_L01_00167240, &local.basis.point);
+    normalize_vector_xyz_bfa8(src, src, one);
+    dst = &local.basis.mat1;
+    cross_vectors_xyz_bfa8(dst, src, D_0013F5E0);
+    normalize_vector_xyz_bfa8(dst, dst, -1.0f);
+    cross_vectors_xyz_bfa8(&local.basis.mat2, dst, src);
+    basis = src;
 
-    local.quad.color[0] = local.quad.color[3] =
-        local.quad.color[2] = local.quad.color[1] = 0x202020FF;
+    local.quad.color[3] = 0x202020FF;
+    local.quad.color[2] = 0x202020FF;
+    local.quad.color[1] = 0x202020FF;
+    local.quad.color[0] = 0x202020FF;
+    src = local.src_corner;
     dst = local.quad.corner;
     do {
-        scale_vector_xyz_bfa8(dst, &local.src_corner[3 - i], 0.4f);
-        transform_vector_bfa8(dst, dst, &local.basis.mat0);
+        scale_vector_xyz_bfa8(dst, src, 0.4f);
+        src++;
+        transform_vector_bfa8(dst, dst, basis);
         dst++;
         i--;
     } while (i >= 0);
-    draw_geometry_quad_bfa8(&local.quad, &local.basis.mat0, 0);
+    draw_geometry_quad_bfa8(&local.quad, 0, 0);
 }
-#endif
 #define NOT_SDA
 
 #define MACRO_ADDR
@@ -272,9 +284,6 @@ char *FUN_L01_0030c898(char *owner, char *pos, float a, float b, float c, float 
     }
     return m;
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L01_0030c9a8.s", FUN_L01_0030c9a8);
-#else
 typedef struct {
     OvlQuad dir;
     void *owner;
@@ -288,9 +297,9 @@ typedef struct {
 
 extern f32 spring_turn(f32 *, f32, f32, f32, f32, f32) __asm__("FUN_L00_00258110");
 extern void build_spherical_offset_30c9a8(f32 *, f32, f32, f32) __asm__("FUN_00214db0");
-extern void add_vector_xyz_30c9a8(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void fast_vec_add(void *, void *, void *) __asm__("FUN_001f9a10");
 extern f32 distance_xyz_30c9a8(void *, void *) __asm__("FUN_001f9b80");
-extern void subtract_vector_xyz_30c9a8(void *, void *, void *) __asm__("FUN_001f9a28");
+extern void fast_vec_sub(void *, void *, void *) __asm__("FUN_001f9a28");
 extern void scale_vector_xyz_30c9a8(void *, void *, f32) __asm__("FUN_001f9c48");
 extern s32 is_timer_active_30c9a8(void *) __asm__("FUN_001f9770");
 extern s32 collision_line_30c9a8(void *, void *, s32, void *, void *) __asm__("FUN_001efa68");
@@ -329,16 +338,20 @@ void FUN_L01_0030c9a8(char *m) {
     pitch_k = frame_time_sq * 4.712389f;
     pitch_max = frame_time * 3.1415927f;
     *(f32 *)(m + 0x48) = desired_yaw;
-    *(f32 *)(m + 0x44) = spring_turn((f32 *)(e + 4), *(f32 *)(m + 0x44), desired_pitch,
-                                            pitch_k, pitch_d, pitch_max);
-    build_spherical_offset_30c9a8(offset.f, frame_time * 40.0f,
-                                   *(f32 *)(m + 0x48), -*(f32 *)(m + 0x44));
-    old_pos.q = *(OvlQuad *)pos;
-    add_vector_xyz_30c9a8(pos, pos, &offset);
-    if (pos[0] < 2.0f || pos[0] > 1021.0f ||
-        pos[1] < 2.0f || pos[1] > 1021.0f ||
-        pos[2] < 2.0f || pos[2] > 1021.0f ||
-        pos[0] < 0.0f || pos[1] < 0.0f || pos[2] < 0.0f ||
+    {
+        f32 pitch_result = spring_turn((f32 *)(e + 4), *(f32 *)(m + 0x44), desired_pitch,
+                                                pitch_k, pitch_d, pitch_max);
+        pitch_max = frame_time * 40.0f;
+        *(f32 *)(m + 0x44) = pitch_result;
+        build_spherical_offset_30c9a8(offset.f, pitch_max,
+                                       *(f32 *)(m + 0x48), -pitch_result);
+    }
+    qcopy(&old_pos, pos);
+    fast_vec_add(pos, pos, &offset);
+    if (*(f32 *)(m + 0x10) < 2.0f || *(f32 *)(m + 0x10) > 1021.0f ||
+        *(f32 *)(m + 0x14) < 2.0f || *(f32 *)(m + 0x14) > 1021.0f ||
+        *(f32 *)(m + 0x18) < 2.0f || *(f32 *)(m + 0x18) > 1021.0f ||
+        *(f32 *)(m + 0x10) < 0.0f || *(f32 *)(m + 0x14) < 0.0f || *(f32 *)(m + 0x18) < 0.0f ||
         distance_xyz_30c9a8(pos, D_L01_00167240_30c9a8) > 64.0f) {
         mark_moby_for_removal_30c9a8(m);
         return;
@@ -347,7 +360,7 @@ void FUN_L01_0030c9a8(char *m) {
     probe.flags = 0x10001;
     probe.scale = 0.5f;
     probe.count = 1;
-    subtract_vector_xyz_30c9a8(&probe.dir, pos, &D_0013F3D0_30c9a8);
+    fast_vec_sub(&probe.dir, pos, &D_0013F3D0_30c9a8);
     scale_vector_xyz_30c9a8(&probe.dir, &probe.dir, 1.0f);
     ((f32 *)&probe.dir)[2] = 1.0f;
     ((f32 *)&probe.dir)[3] = 5627.9248f;
@@ -366,11 +379,10 @@ void FUN_L01_0030c9a8(char *m) {
                 *(s16 *)(e + 0x14) = scale_game_frames(3);
             return;
         }
-        *(OvlQuad *)pos = D_L01_001742E0_30c9a8;
+        qcopy(pos, &D_L01_001742E0_30c9a8);
     }
     mark_moby_for_removal_30c9a8(m);
 }
-#endif
 #define NOT_SDA
 
 #define MACRO_ADDR
@@ -427,7 +439,7 @@ struct Moby *FUN_L01_0030d308(struct Moby *moby, f32 *from, f32 *ang, f32 yawMax
         f32 dist, score, p2;
         struct Moby *hit;
 
-        if (t->unk32 == 0) continue;
+        if (t->draw_dist == 0) continue;
         hp = FUN_002141f8_30d308(t);
         if (t == 0 || t->pclass == 0) continue;
         cls = ((TargetClass_30d308 *)t->pclass)->kind;
@@ -596,13 +608,13 @@ void FUN_L01_0030d880(struct Moby *m, struct HoverVars *p) {
         d = FUN_001f9b80(&m->pos, &hero.motion.pos);
     }
     FUN_001f9b80(&m->pos, p);
-    switch (m->unkBC) {
+    switch (m->command) {
     case 0:
         ang = FUN_001f9e90(p->goal.f[0] - m->pos.x, p->goal.f[1] - m->pos.y);
         FUN_L00_00258278(m, &D_L01_001DEB4C, ang, frame_time_sq * 6.2831855f, frame_time_sq * 3.1415927f,
                          frame_time * 11.519173f);
         if (1.3f < d) {
-            m->unkBC = 2;
+            m->command = 2;
         }
         break;
     case 2:
@@ -635,7 +647,7 @@ void FUN_L01_0030d880(struct Moby *m, struct HoverVars *p) {
             p->stuck = 0;
         } else if (len < 0.005f) {
             n = ++p->stuck;
-            if (FUN_001f96f8(20) < n && m->unk31 == 0) {
+            if (FUN_001f96f8(20) < n && m->visible == 0) {
                 qcopy(&m->pos, p);
                 p->stuck = 0;
             }
@@ -648,9 +660,9 @@ void FUN_L01_0030d880(struct Moby *m, struct HoverVars *p) {
         }
         break;
     default:
-        m->unkBC = 0;
+        m->command = 0;
         if (1.3f < d) {
-            m->unkBC = 2;
+            m->command = 2;
         }
         break;
     }
@@ -741,13 +753,7 @@ typedef struct {
     u8 pad2E[0x22];
 } CameraView;
 
-typedef struct {
-    f32 dist;           /* 0x00 */
-    f32 unk4;           /* 0x04 */
-    u8 pad8[8];
-    f32 height;         /* 0x10 */
-    u8 pad14[0xC];
-} CameraSpring;
+#include "rnc/gameplay/camera/camera_spring.h"
 
 typedef struct {
     Vec4 vel;           /* 0x00 */
@@ -938,7 +944,306 @@ void FUN_L01_00314e98(Camera *cam) {
     }
     control->mode = 0;
 }
-INCLUDE_ASM("config/us/overlays/asm/FUN_L01_00315358.s", FUN_L01_00315358);
+#include "rnc/math/vector.h"
+
+/* Update function of camera 3: follows a path beside the hero's and turns toward a look-at point on it.
+   The four `= 0` initialisers in the mode 2 block are dead and leave no code: they make up for the insns
+   qcopy()'s parameters add, which decide the size of gcse's hash table and so the order of the spill slots. */
+/* Ported from rac1-decomp (src/overlays/shared/vendor_002F7700.c: func_L01_00316730), where it is exact; names translated to the US level program. */
+
+typedef struct Hero Hero;
+
+typedef struct {
+    float x;
+    float y;
+    float z;
+    float w;
+} __attribute__((aligned(16))) Node_316730;
+
+typedef struct {
+    int n;
+    int pad[3];
+    Node_316730 nodes[1];
+} Path_316730;
+
+typedef struct {
+    char p00[0x20];
+    float f20;
+    char p24[0x10];
+    float f34;
+    char p38[0x18];
+} SubA_316730;
+
+typedef struct {
+    float pos[4];
+    char p10[0x3C];
+    float f4C;
+    char p50[0x80];
+} SubB_316730;
+
+typedef struct {
+    int idx;
+    float t;
+    int p08[2];
+    int f10;
+} SubC_316730;
+
+typedef struct {
+    float vel[3];
+    float f0C;
+    float f10;
+    char p14[0x1C];
+    SubA_316730 a;
+    SubB_316730 b;
+    SubC_316730 c;
+} Data_316730;
+
+typedef struct {
+    float f0;
+    char p04[0x1C];
+    int f20;
+    int f24;
+    int f28;
+    int f2C;
+    int f30;
+    short f34;
+    short f36;
+    float f38;
+} Parm_316730;
+
+typedef struct {
+    char p00[0x1C];
+    Parm_316730 *f1C;
+} Ent50_316730;
+
+typedef struct {
+    char p00[0x10];
+    Path_316730 *f10;
+    char p14[0xC];
+} Ent7EC_316730;
+
+typedef struct {
+    float f0[4];
+    float f10[4];
+    float f20[4];
+    float pos[4];
+    float f40[4];
+    char p50[0x20];
+    Data_316730 *data;
+    char p74[0x10];
+    short f84;
+} Cam_316730;
+
+extern Ent50_316730 *D_L01_0015EF50_c __asm__("D_L01_0015EF50") __attribute__((section(".sdata")));
+extern Ent7EC_316730 *D_L01_0015F70C_c __asm__("D_L01_0015F70C") __attribute__((section(".sdata")));
+extern char *D_L01_001B0930_c[] __asm__("D_L01_001B0930");
+extern f32 approximate_arcsine(f32) __asm__("func_001F9DF8");
+extern f32 dot_vectors_xyz(void *, void *) __asm__("func_001F9AB0");
+extern f32 vector_length_xyz(void *) __asm__("FUN_001f9af0");
+extern float D_L01_001672B0[];
+extern float FUN_L00_001eb328(void *, float, float, float, float, float);
+extern float cam_interp_values(float a, float b, float *p, float c, float d, float e);
+extern int D_0015ED84; /* no foreign declaration */
+extern int FUN_L00_0025d808(void *, void *, int *, float *, float, int);
+extern s32 truncate_float_to_s32_c(f32) __asm__("func_001FA6D0");
+extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void build_look_at_matrix(void *out, void *dir, void *axis, f32 ang) __asm__("FUN_00214890");
+extern void cross_vectors_xyz(void *, void *, void *) __asm__("func_001F9AD8");
+extern void normalize_vector_xyz(void *, void *, f32) __asm__("FUN_001f9bf8");
+extern void scale_vector_xyz(void *, void *, float) __asm__("FUN_001f9a68");
+extern void subtract_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a28");
+float absolute_float(float input) __asm__("func_001F99C0");
+extern char D_0013F350[];
+extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
+extern int D_0015EE84_c __asm__("D_0015ED84") __attribute__((section(".sdata")));
+extern Path_316730 *D_L01_001B0C30_316730[] __asm__("D_L01_001B0930");
+
+void FUN_L01_00315358(Cam_316730 *cam) {
+    float camera_goal[4];
+    float look_offset[4];
+    float look_dir[4];
+    float path_point[4];
+    float look_target[4];
+    float delta[4];
+    float rail_point[4];
+    int segment;
+    float fraction;
+    Data_316730 *data = cam->data;
+    SubA_316730 *look = &data->a;
+    SubB_316730 *follow = &data->b;
+    SubC_316730 *progress = &data->c;
+    Parm_316730 *params = D_L01_0015EF50_c[cam->f84].f1C;
+    float rate = 0.01f;
+    int mode = params->f30;
+    int path_index = params->f20;
+    float lead = params->f0;
+    float pitch_error;
+    float look_length;
+    float pitch_step;
+
+    if (mode == 0) {
+        Path_316730 *path;
+        float dist;
+
+        segment = ((Hero *)(((char *)&D_0013F350)))->unk564;
+        fraction = ((Hero *)(((char *)&D_0013F350)))->unk568;
+        progress->t = fraction;
+        progress->idx = segment;
+        FUN_L00_0025d808(D_L01_001B0C30_316730[path_index], camera_goal, &progress->idx, &progress->t, 1.0f, 0);
+        qcopy(follow->pos, camera_goal);
+        path = D_L01_001B0C30_316730[path_index];
+        dist = path->nodes[segment].w * (fraction / ((Path_316730 *)((Hero *)(((char *)&D_0013F350)))->unk560)->nodes[segment].w);
+        subtract_vector_xyz(delta, &path->nodes[segment + 1], &path->nodes[segment]);
+        normalize_vector_xyz(look_target, delta, dist);
+        add_vector_xyz(rail_point, &path->nodes[segment], look_target);
+        cam->pos[0] = cam_interp_values(cam->pos[0], rail_point[0], &data->vel[0], rate, 0.175f, 0.0f);
+        cam->pos[1] = cam_interp_values(cam->pos[1], rail_point[1], &data->vel[1], rate, 0.175f, 0.0f);
+        cam->pos[2] = cam_interp_values(cam->pos[2], rail_point[2], &data->vel[2], rate, 0.175f, 0.0f);
+    } else if (mode == 2) {
+        Path_316730 *pathA = D_L01_001B0C30_316730[path_index];
+        Path_316730 *pathD = D_L01_0015F70C_c[params->f24].f10;
+        Path_316730 *pathC = D_L01_001B0C30_316730[params->f28];
+        Path_316730 *pathB = D_L01_001B0C30_316730[params->f2C];
+        int i;
+        int prev = 0;
+        int range_start = 0;
+        int range_end = 0;
+        int j = 0;
+        int count;
+        int base;
+        int node;
+        float node_fraction;
+        float sum;
+        float hero_length;
+        float camera_length;
+        float speed_scale;
+        float dist;
+
+        prev = pathB->n - 1;
+        for (i = 0; i < pathB->n; i++) {
+            range_start = func_001FA898_r(pathB->nodes[prev].w);
+            range_end = func_001FA898_r(pathB->nodes[i].w);
+            if (range_end < range_start) {
+                if (((Hero *)(((char *)&D_0013F350)))->unk564 >= range_start || ((Hero *)(((char *)&D_0013F350)))->unk564 < range_end) {
+                    break;
+                }
+            } else {
+                if (((Hero *)(((char *)&D_0013F350)))->unk564 >= range_start && ((Hero *)(((char *)&D_0013F350)))->unk564 < range_end) {
+                    break;
+                }
+            }
+            prev = i;
+        }
+        progress->f10 = i;
+        sum = 0.0f;
+        j = (i - 1 + pathB->n) % pathB->n;
+        hero_length = pathB->nodes[i].y;
+        camera_length = pathC->nodes[i].y;
+        if (pathB->nodes[j].x != 0.0f) {
+            lead = pathB->nodes[j].x;
+        }
+        base = func_001FA898_r(pathB->nodes[j].w);
+        count = ((Hero *)(((char *)&D_0013F350)))->unk564 - base;
+        if (count < 0) {
+            count += pathD->n;
+        }
+        for (i = 0; i < count; i++) {
+            sum += pathD->nodes[(base + i) % pathD->n].w;
+        }
+        sum += ((Hero *)(((char *)&D_0013F350)))->unk568;
+        dist = camera_length * (sum / hero_length);
+        node = func_001FA898_r(pathC->nodes[j].w);
+        node_fraction = 0.0f;
+        FUN_L00_0025d808(pathA, look_target, &node, &node_fraction, dist, 1);
+        speed_scale = pathC->nodes[j].x;
+        if (speed_scale <= 0.0f) {
+            speed_scale = 0.01f;
+        } else {
+            rate *= speed_scale;
+            speed_scale *= 0.01f;
+        }
+        if (absolute_float(data->f10 - speed_scale) < 0.00015f) {
+            data->f10 = speed_scale;
+        } else if (data->f10 < speed_scale) {
+            data->f10 = data->f10 + 0.00015f;
+        } else {
+            data->f10 = data->f10 - 0.00015f;
+        }
+        cam->pos[0] = cam_interp_values(cam->pos[0], look_target[0], &data->vel[0], data->f10, 0.175f, 0.0f);
+        cam->pos[1] = cam_interp_values(cam->pos[1], look_target[1], &data->vel[1], data->f10, 0.175f, 0.0f);
+        cam->pos[2] = cam_interp_values(cam->pos[2], look_target[2], &data->vel[2], data->f10, 0.175f, 0.0f);
+    } else {
+        Path_316730 *path = D_L01_001B0C30_316730[path_index];
+
+        if (params->f24 < 0) {
+            float lead_offset;
+
+            FUN_L00_0025df68(path, ((Hero *)(((char *)&D_0013F350)))->motion.pos.f, path_point, &segment, &fraction, 0, 20.0f, 1.0f, 0.0f);
+            if (params->f36 == 1) {
+                lead_offset = -(params->f38 * 4.0f);
+            } else {
+                lead_offset = params->f38;
+            }
+            FUN_L00_0025d808(path, path_point, &segment, &fraction, lead_offset, 1);
+            qcopy(camera_goal, path_point);
+        } else {
+            int hero_segment;
+            float hero_fraction;
+
+            hero_segment = ((Hero *)(((char *)&D_0013F350)))->unk564;
+            hero_fraction = ((Hero *)(((char *)&D_0013F350)))->unk568;
+            FUN_L00_0025d808((Path_316730 *)((Hero *)(((char *)&D_0013F350)))->unk560, path_point, &hero_segment, &hero_fraction, params->f38, 1);
+            FUN_L00_0025df68(path, path_point, camera_goal, &segment, &fraction, 0, 20.0f, 1.0f, 0.0f);
+        }
+        cam->pos[0] = cam_interp_values(cam->pos[0], camera_goal[0], &data->vel[0], rate, 0.175f, 0.0f);
+        cam->pos[1] = cam_interp_values(cam->pos[1], camera_goal[1], &data->vel[1], rate, 0.175f, 0.0f);
+        cam->pos[2] = cam_interp_values(cam->pos[2], camera_goal[2], &data->vel[2], rate, 0.175f, 0.0f);
+    }
+    if (params->f24 < 0) {
+        Path_316730 *path = D_L01_001B0C30_316730[params->f20];
+
+        FUN_L00_0025df68(path, ((Hero *)(((char *)&D_0013F350)))->motion.pos.f, look_target, &segment, &fraction, 0, 20.0f, 1.0f, 0.0f);
+        if (D_0015EE84_c == 0xE && params->f30 == 0) {
+            FUN_L00_0025d808(path, delta, &segment, &fraction, lead, 0);
+        } else {
+            FUN_L00_0025d808(path, delta, &segment, &fraction, lead, 1);
+        }
+        subtract_vector_xyz(delta, delta, look_target);
+        add_vector_xyz(look_target, ((Hero *)(((char *)&D_0013F350)))->motion.pos.f, delta);
+    } else {
+        int hero_segment;
+        float hero_fraction;
+
+        hero_segment = ((Hero *)(((char *)&D_0013F350)))->unk564;
+        hero_fraction = ((Hero *)(((char *)&D_0013F350)))->unk568;
+        FUN_L00_0025d808((Path_316730 *)((Hero *)(((char *)&D_0013F350)))->unk560, look_target, &hero_segment, &hero_fraction, lead, 1);
+    }
+    normalize_vector_xyz(look_offset, D_L01_001672B0, follow->f4C);
+    add_vector_xyz(path_point, look_offset, look_target);
+    subtract_vector_xyz(look_dir, path_point, cam->pos);
+    look_length = vector_length_xyz(look_dir);
+    if (look_length != 0.0f) {
+        scale_vector_xyz(look_dir, look_dir, 1.0f / look_length);
+        pitch_error = 1.5707964f - approximate_arcsine(dot_vectors_xyz(look_dir, cam->f0));
+    } else {
+        pitch_error = 0.0f;
+    }
+    if (absolute_float(look->f20 - rate) < 0.00015f) {
+        look->f20 = rate;
+    } else if (look->f20 < rate) {
+        look->f20 = look->f20 + 0.00015f;
+    } else {
+        look->f20 = look->f20 - 0.00015f;
+    }
+    pitch_step = FUN_L00_001eb328(&look->f34, 0.0f, pitch_error, look->f20, 0.175f, 0.0f);
+    cross_vectors_xyz(delta, look_dir, cam->f40);
+    build_look_at_matrix(cam->f0, cam->f40, delta, pitch_step);
+    normalize_vector_xyz(cam->f40, cam->f0, 1.0f);
+    normalize_vector_xyz(cam->f0, cam->f0, 1.0f);
+    cross_vectors_xyz(cam->f10, cam->f0, D_L01_001672B0);
+    normalize_vector_xyz(cam->f10, cam->f10, 1.0f);
+    cross_vectors_xyz(cam->f20, cam->f10, cam->f0);
+}
 extern Camera *D_L01_00167284 __attribute__((section(".data")));
 extern OvlVec4 D_0013F3D0_315de0 __asm__("D_0013F3D0");
 extern f32 FUN_001f9b48(void *, void *);
@@ -1068,7 +1373,7 @@ extern char D_L01_00167240[];
 extern void subtract_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a28");
 extern void transform_vector_by_basis(void *, void *, void *) __asm__("FUN_001f9cf8");
 extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
-extern float vector_length_319928(void *) __asm__("FUN_001f9af0");
+extern float fast_vec_length(void *) __asm__("FUN_001f9af0");
 extern float absolute_float(float) __asm__("FUN_001f99c0");
 extern int calculate_spatial_volume_319928(float, float, float, void *) __asm__("FUN_0022c6f8");
 extern int is_timer_active_319928(void *) __asm__("FUN_001f9740");
@@ -1090,8 +1395,8 @@ void FUN_L01_00319928(char *moby) {
     delta.f[3] = 0.0f;
     transform_vector_by_basis(&box_size, &delta, moby + 0x50);
     transform_vector_by_basis(&listener, &radius, moby + 0x50);
-    listener_length = vector_length_319928(&listener);
-    box_length = vector_length_319928(&box_size);
+    listener_length = fast_vec_length(&listener);
+    box_length = fast_vec_length(&box_size);
     if (box_length < listener_length) {
         flags = 0x10;
         if (absolute_float(box_size.f[0]) <= 1.0f &&
@@ -1105,7 +1410,7 @@ void FUN_L01_00319928(char *moby) {
             else if (box_size.f[1] < -1.0f) box_size.f[1] = -1.0f;
             if (box_size.f[2] > 1.0f) box_size.f[2] = 1.0f;
             else if (box_size.f[2] < -1.0f) box_size.f[2] = -1.0f;
-            volume = calculate_spatial_volume_319928(box_length, vector_length_319928(&box_size),
+            volume = calculate_spatial_volume_319928(box_length, fast_vec_length(&box_size),
                                                      listener_length, D_L00_0015F5F4 + sound_data[0] * 0x20);
         }
         if (*(u8 *)(D_L00_0015F5F4 + sound_data[0] * 0x20 + 0x18)) flags = 0x14;

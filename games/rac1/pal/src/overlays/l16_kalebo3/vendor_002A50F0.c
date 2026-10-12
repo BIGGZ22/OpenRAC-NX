@@ -197,13 +197,11 @@ void func_L16_002C5030(unsigned char *moby) {
 typedef int u128 __attribute__((mode(TI)));
 extern int func_L00_001F10E0(float, void *, int, void *);
 extern float func_002140F8(float, float);
-extern float func_00214158(void);
 extern void func_00215C00_57(float,float,float,void*) __asm__("func_00215C00");
 extern void func_001F9BD8(void *, void *, void *);
 extern void *func_L00_002CD3B8(void *, void *, void *);
 extern int func_0022ED80_57(int, int, void *) __asm__("func_0022ED80");
 extern void func_00213DE0(void *, int, int, int);
-extern int func_001F9850(int);
 extern short D_L16_001619A8;
 extern short D_L16_001619AC;
 extern short D_L16_001619B0;
@@ -348,7 +346,6 @@ void func_L16_002C7218(L16FallingMoby *m) {
     func_L00_0025E590(m, d);
 }
 extern char *func_0020D348_m(int) __asm__("func_0020D348");
-extern int func_001F9850(int);
 extern float func_002140F8(float, float);
 extern float func_L00_001FF860(float, float);
 extern void func_L00_00251E30(void *);
@@ -405,7 +402,6 @@ void func_L16_002CA848(unsigned char *m) {
     }
 }
 extern int func_002140B0(int);
-extern int func_001F9850(int);
 
 // Initialises the per-moby data block with random values, tick scalars and constants.
 void func_L16_002CA930(char *moby) {
@@ -575,7 +571,6 @@ void func_L16_002CAE18(unsigned char *m) {
     }
 }
 extern short *D_L16_001ABFC0_2CB000[] __asm__("D_L16_001ABFC0");
-extern char *D_L16_00160098 MACRO_ADDR;
 extern void func_L00_002617B0(char *a, void *b, void *c, void *d);
 
 // For each moby in a list with type 0x1D7, calls a helper with its data and position.
@@ -592,7 +587,6 @@ void func_L16_002CB000(int index, void *arg) {
 }
 extern char *D_L16_001601AC_m __asm__("D_L16_001601AC") MACRO_ADDR;
 extern int D_L16_0015F6B0 MACRO_ADDR;
-extern float func_001F9CB8(void *);
 extern float func_001F9FA8(float);
 extern int func_001F4868(int);
 extern void func_L00_001FD1D8(void *,void *,int);
@@ -1136,7 +1130,6 @@ void func_L16_002CFDB8(void *moby) {
     func_L00_0025E590(m, d->reaction);
 }
 extern int *D_L16_001ABFC0[];
-extern char *D_L16_00160098 MACRO_ADDR;
 
 // For each listed moby of class 0x21D: sets its state bytes and clears bit 0 of its flags.
 void func_L16_002D0070(int idx) {
@@ -1160,7 +1153,6 @@ void func_L16_002D0070(int idx) {
 }
 typedef int L16MoveQuad __attribute__((mode(TI)));
 extern float func_L00_0025CE58(float *, float *, float, float, float, float);
-extern float func_001F9CB8(void *);
 extern float func_00214D88(float, float, float, float, float *, float *);
 int func_L16_002D00E8(char *moby, void *vec, float angle) {
     float a[4] __attribute__((aligned(16)));
@@ -1275,9 +1267,7 @@ void func_L16_002D0328(L16BeamMoby *moby) {
         }
     } while (*p++ >= 0);
 }
-extern float func_00214158(void);
 extern float func_001FA748(float,float);
-extern float func_001F9FA8(float);
 extern char *func_L00_0025B478(void*,int,int);
 extern int func_0022ED80_i(int,int,void*) __asm__("func_0022ED80");
 extern void func_L16_002E4BD8(void*,int);
@@ -1332,8 +1322,6 @@ void func_L16_002D0560(char *m) {
 extern void func_L16_002D0990_2D0870(void *) __asm__("func_L16_002D0990");
 extern int func_L16_002D0B00(void *);
 extern void func_L16_002D0B70(char *);
-extern void func_001F49B0(void (*)(void), void *);
-extern int func_L00_0028EB98(void *, int);
 extern int func_0022ED80_i(int, int, void *) __asm__("func_0022ED80");
 extern void func_L00_0028EBF0(int);
 extern char D_0013E633[];
@@ -1577,12 +1565,9 @@ extern char D_0013E633[];
 extern int func_001F9908(int *arg0);
 extern int func_L00_0025A208(int *, int, int, int);
 extern int func_L00_0025A2F0(int *, int, int, int);
-extern void func_001F9BF0(void *, void *, void *);
-extern float func_001F9CB8(void *);
 extern void func_001FA190(void *);
 extern void func_001FA4A0(void *, void *);
 extern void func_001F9EE8(void *, void *, void *);
-extern float func_001F9B88(float);
 
 // Checks the nearby list entries of two classes against the moby and adds a timed delay when one is close.
 void func_L16_002D0FC8(char *moby) {
@@ -1648,7 +1633,6 @@ void func_L16_002D0FC8(char *moby) {
         }
     }
 }
-extern int func_L00_0025E7F8(char *, int, int, int);
 
 // Advance the vector-table index until its entry is 2.0 and copy that vector out.
 void func_L16_002D1310(char *moby) {
@@ -1678,7 +1662,6 @@ extern float func_L00_0025CCF0(void *, void *, int, float, float, float, float);
 extern void func_L00_00237B70_anim(void *, int, int, int) __asm__("func_L00_00237B70");
 extern int func_L00_0025A5D8(float *, float *, float, float, float);
 extern int func_L00_00258BC8(int, int);
-extern float func_0020D830(void *);
 typedef struct {
     char pad0[0x268]; float height; char pad26C[0xC]; float target_height;
     char pad27C[0x44]; char *path; char pad2C4[4]; float vertical_speed;
@@ -1760,16 +1743,12 @@ void func_L16_002D1420(L16LeapMoby *m) {
     }
 }
 extern void func_L00_00264BB0(void *, float);
-extern float func_001FA850(float, float);
 extern void func_L00_00264EA8(void *, int, int, int, int, int, int);
 extern void func_L16_002D0DC0(char *);
-extern float func_001F9F90(float);
-extern void func_001F9C30(void *, void *, float);
 extern int func_L00_001F2BE8(float, void *, int, void *, void *);
 extern int func_L00_0025F410(int);
 extern void func_L00_0025AC00(void *, int, int, void *, void *, float);
 extern void func_L00_00263950(float, float, void *, void *, int);
-extern void func_L00_00250800(void *, int, void *);
 extern void func_L00_0026A7F8(void *, void *, int, int, int, int, int, int);
 extern unsigned char D_0013D5E7 NOT_SDA;
 typedef struct { char pad0[0x140]; float position[4]; char pad150[8]; float yaw; } L16RacePlayer;
@@ -2192,7 +2171,6 @@ extern void func_L00_00217718(void*,void*,int,int);
 extern void func_L00_0025A8E8(int,float,void*,int,float,float,int,int,int);
 extern void func_0022ED80(int,int,void*);
 extern char D_0013E633[],D_0014171B[],D_0013D355[],D_L16_00167240[];
-extern char *D_L16_001601AC_m __asm__("D_L16_001601AC") MACRO_ADDR;
 typedef struct {char pad[0x72];unsigned char complete;} L16ObjectiveEntry;
 typedef struct {int trigger,helper,path,hidden,pose,camera,objective,pad1,pad2,timer;} L16SceneData;
 /* Drive a triggered scene, player pose and objective completion. */
@@ -2258,11 +2236,9 @@ notify:
     }
 }
 extern char *D_L16_001B0C30[];
-extern char *D_L16_001601AC_m __asm__("D_L16_001601AC") MACRO_ADDR;
 extern short D_L16_00161B4C;
 extern void func_001F9EC0(void *, void *, void *);
 extern void func_001F9C08(void *, void *, void *, float);
-extern void func_001F9BC0(void *);
 
 /* Computes a moby's direction vectors from its table entry. */
 void func_L16_002D7628(char *moby, void *out1, float *out2) {
@@ -2281,9 +2257,7 @@ void func_L16_002D7628(char *moby, void *out1, float *out2) {
 }
 extern char *func_L00_0025B478(void *, int, int);
 extern void func_0022ED80(int, int, void *);
-extern void func_L00_002584A8(void *, int, int);
 extern void func_L01_00279790(void *);
-extern void func_L00_00264EA8(void *, int, int, int, int, int, int);
 extern void func_0020D678(void *);
 
 // Update moby 800: waits for a trigger value, then plays an effect and deletes itself.
@@ -2346,12 +2320,10 @@ extern void func_L00_002512D8(int);
 extern void func_L00_00286128(void *, void *);
 extern int func_0020BFC8(int, int);
 extern float func_001FA790(float, float);
-extern float func_001FA850(float, float);
 extern float func_001F9878(float);
 extern int func_001FA898(float);
 extern float func_001F9CE8(void *);
 extern void func_00215C00(void *, float, float, float);
-extern void func_L00_00263950(float, float, void *, void *, int);
 extern unsigned char D_0015EEB0[] MACRO_ADDR;
 extern short D_L16_0015F6A8;
 extern float D_L16_001D9990[8];
@@ -2510,7 +2482,6 @@ void func_L16_002E45F8(L16WatchMoby *m) {
     func_L00_00263950(rate * D_0015EE64, head_rate * D_0015EE64, m, d->head, 2);
 }
 extern void func_L00_001FF4B0(void *, void *, float);
-extern void func_L00_00251E30(void *);
 
 /* UpdateMoby: on the first tick scales two data floats by 0.25 into the moby and sets its state. */
 void func_L16_002E4B50(unsigned char *moby) {
@@ -2611,7 +2582,6 @@ extern void func_L14_00300130(void *);
 extern int func_L16_002E5408(char *moby);
 extern float func_L00_0025C918(float *p, float *v, float t, float u1, float u2, float eps);
 extern int func_L00_0025D6F0(void *,void *);
-extern void func_L00_0025E590(void *, void *);
 
 /* Update of the crate platform: hit reaction, then its seven states. */
 void func_L16_002E4C08(L16CrateMoby *m) {
@@ -2780,8 +2750,6 @@ void func_L16_002E4C08(L16CrateMoby *m) {
     func_L00_0025E590(m, d->effect);
 }
 extern int func_L00_0025E860_path54(char*,float*,float*,float*,int,float) __asm__("func_L00_0025E860");
-extern float func_L00_0025C918(float *p, float *v, float t, float u1, float u2, float eps);
-extern void func_L00_002592B0_path54(char*,float,float*,float,float,float) __asm__("func_L00_002592B0");
 extern char *D_L16_001B0C30_path54[] __asm__("D_L16_001B0C30");
 extern short D_L16_00161E50, D_L16_00161E54, D_L16_00161E58;
 
@@ -2815,7 +2783,6 @@ extern void func_L16_002E5EC0(char *);
 extern void func_L16_002E6140(char *);
 extern char *func_L05_0031AAA8(void *, int);
 extern void func_00215CA8_f5848(float, int *, int, void *, float *, int) __asm__("func_00215CA8");
-extern float func_001FA790(float, float);
 extern int func_L16_002E60A8(char *);
 extern void func_L16_002E5FC0(void *);
 extern void func_L16_002E61F0(char *);
@@ -2953,7 +2920,6 @@ void func_L16_002E5848(char *moby) {
     FastVecSub(v20, moby + 0x10, v00);
     func_L00_002617B0(d + 0x20, v20, v10, moby + 0x40);
 }
-extern char *D_L16_001601AC_slots __asm__("D_L16_001601AC") MACRO_ADDR;
 extern unsigned char D_0013D5C8_b[] __asm__("D_0013D5C8");
 
 /* picks the nearest target slot and sets the moby's state */
@@ -2966,7 +2932,7 @@ void func_L16_002E5D68(void *moby_v) {
     char *g;
     *(short *)(data + 0xAC) = -1;
     for (i = 0; i < 3; i++) {
-        if (FastVecDist(moby + 0x10, D_L16_001601AC_slots + (list[i] << 7) + 0x30) < 1.0f) {
+        if (FastVecDist(moby + 0x10, D_L16_001601AC_m + (list[i] << 7) + 0x30) < 1.0f) {
             *(short *)(data + 0xAC) = i;
         }
     }
@@ -2989,12 +2955,11 @@ void func_L16_002E5D68(void *moby_v) {
         selected += *(short *)(data + 0xAC);
         idx = *selected << 7;
     }
-    g = D_L16_001601AC_slots;
+    g = D_L16_001601AC_m;
     qcopy(data + 0x60, (void *)(idx + (int)g + 0x30));
     qcopy(data + 0x70, (void *)(idx + (int)g + 0x70));
 }
 extern char *D_L16_001B0C30[];
-extern float func_001F9D10(void *, void *);
 
 /* Pick the path for the current segment and set the travel speeds from its length. */
 void func_L16_002E5EC0(char *moby) {
@@ -3069,7 +3034,6 @@ void func_L16_002E6140(char *moby) {
 }
 extern float func_001FA748(float, float);
 extern float D_0015EE6C MACRO_ADDR;
-extern float func_001F9FA8(float);
 void func_L16_002E61F0(char *moby) {
     char *d = *(char **)(moby + 0x78);
     float s, t, w;
@@ -3097,7 +3061,6 @@ extern char *D_L16_001B0C30[];
 extern void func_001F9EC0(void *, void *, void *);
 extern char D_L16_001D99B0[];
 extern void func_001F9BD8(void *, void *, void *);
-extern char D_0013F450[];
 void func_L16_002E6398(char *a) {
     char *data = *(char **)(a + 0x78);
     int idx = *(int *)(data + 0xA0);
@@ -3212,7 +3175,6 @@ void func_L16_002E66C0(unsigned char *m) {
 }
 extern float D_0015EE6C;
 extern short D_L16_00161EB0;
-extern float func_00214158(void);
 extern int func_001F9908(int *);
 extern void func_L16_002E6B48_6908(void *) __asm__("func_L16_002E6B48");
 extern int func_0022ED80_6908(int, int, void *) __asm__("func_0022ED80");
@@ -3293,7 +3255,6 @@ extern float func_L00_0025CE58(float *,float *,float,float,float,float);
 extern int func_00215B18(char *,float);
 extern void func_L00_0025AA20(void *,int,int,float,float,float,int,int,int);
 extern int func_L00_002DDEA0(void *,void *);
-extern int func_L00_0025D6F0(void *,void *);
 extern void func_L00_00260108(void *,void *,int,float,float);
 extern short D_L16_00161F08;
 /* Update the wandering helper's motion, animations, interaction and damage states. */

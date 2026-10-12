@@ -1,4 +1,5 @@
 #include "common.h"
+#include "callees.h"
 #include "structs.h"
 
 /*
@@ -20,7 +21,6 @@ extern void func_00113968(void);
 extern void func_00114438(void *, void *);
 extern char D_00152470[];
 extern int func_00119088();
-extern int func_00119110();
 extern int func_00114518(int *errOut, void *a, void *b, void *c);
 extern int func_00116108(int *errOut, void *a, void *b, void *c);
 

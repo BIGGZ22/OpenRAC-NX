@@ -179,7 +179,6 @@ extern void func_001F9BF0(void *, void *, void *);
 extern void func_001F9EC0(void *, void *, void *);
 extern float func_001F9B88(float);
 extern void func_L00_002664B0(int, int);
-extern char D_0013E633[];
 
 /* sound instance update: fade/stop test against a listener distance */
 void func_L01_0031B500(int *moby) {

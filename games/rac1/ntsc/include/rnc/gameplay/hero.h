@@ -129,13 +129,13 @@ struct HeroMotion {
     Vec4 unkC0;                    /* 0xC0 */
     Vec4 unkD0;                    /* 0xD0 */
     Vec4 velocity;                 /* 0xE0: per-frame velocity */
-    Vec4 unkF0;                    /* 0xF0 */
-    Vec4 unk100;                   /* 0x100 */
+    Vec4 platform_delta;           /* 0xF0: platform movement this frame */
+    Vec4 displacement;             /* 0x100: total displacement this frame */
     Vec4 unk110;                   /* 0x110 */
     Vec4 unk120;                   /* 0x120 */
     Vec4 unk130;                   /* 0x130 */
     Vec4 platform_carry;                   /* 0x140 */
-    Vec4 unk150;                   /* 0x150: copied from unk110/unk100 on hero_set_state */
+    Vec4 unk150;                   /* 0x150: copied from unk110/displacement on hero_set_state */
     f32 speed_xy;                  /* 0x160: current horizontal speed per frame; eases toward ground_speed, capped at frame_time * 52 */
     f32 unk164;                    /* 0x164 */
     f32 unk168;                    /* 0x168 */
@@ -234,16 +234,16 @@ struct Hero {
     u8 pad_1FA[0x6];
     Vec4 unk200;                   /* 0x200 */
     Vec4 unk210;                   /* 0x210 */
-    f32 unk220;                    /* 0x220 */
+    f32 capsule_top;               /* 0x220 */
     f32 unk224;                    /* 0x224 */
     f32 unk228;                    /* 0x228 */
     f32 unk22C;                    /* 0x22C */
     f32 unk230;                    /* 0x230 */
     f32 unk234;                    /* 0x234 */
-    u8 pad_238[0x4];
+    f32 unk238;                    /* 0x238: velocity of the unk234 spring (FUN_L00_00211380) */
     u8 *coll_hit_moby;             /* 0x23C: moby of the last push-out collision hit */
     s32 unk240;                    /* 0x240 */
-    u8 pad_244[0x4];
+    union { f32 f; s32 i; } unk244; /* 0x244: written as a float and zeroed as an int */
     f32 wall_probe_distance;                    /* 0x248 */
     u8 pad_24C[0x4];
     f32 unk250;                    /* 0x250 */
@@ -257,7 +257,7 @@ struct Hero {
     u8 pad_264[0xC];
     Vec4 unk270;                   /* 0x270 */
     Vec4 unk280;                   /* 0x280 */
-    Vec4 unk290;                   /* 0x290 */
+    Vec4 gravity_dir;              /* 0x290: gravity direction (0, 0, -1) */
     Vec4 ground_point;             /* 0x2A0: ground probe hit point under the hero */
     Vec4 unk2B0;                   /* 0x2B0 */
     union { f32 f[2]; s32 i[2]; } unk2C0; /* 0x2C0: written as floats and zeroed as ints */
@@ -266,14 +266,14 @@ struct Hero {
     union { f32 f; s32 i; } ground_z; /* 0x2D8: ground_point.z; zeroed as an int */
     f32 ground_distance;           /* 0x2DC: distance from motion.pos to ground_point */
     union { f32 f; s32 i; } ground_slope; /* 0x2E0: written as a float and zeroed as an int */
-    union { f32 f; s32 i; } unk2E4; /* 0x2E4: written as a float and zeroed as an int */
+    union { f32 f; s32 i; } ground_pitch; /* 0x2E4: written as a float and zeroed as an int */
     union { f32 f; s32 i; } unk2E8; /* 0x2E8: written as a float and zeroed as an int */
     f32 downhill_yaw;                    /* 0x2EC */
     f32 water_surface_z;          /* 0x2F0 */
     f32 unk2F4;                    /* 0x2F4 */
     s32 unk2F8;                    /* 0x2F8 */
     struct Moby *ground_moby;      /* 0x2FC: moby the ground probe hit (0 = level ground) */
-    s32 unk300;                    /* 0x300 */
+    s32 grounded_frames;           /* 0x300: frames on the ground */
     f32 unk304;                    /* 0x304 */
     s16 unk308;                    /* 0x308 */
     s16 unk30A;                    /* 0x30A */
@@ -415,7 +415,8 @@ struct Hero {
     f32 unk610;                    /* 0x610 */
     f32 unk614;                    /* 0x614 */
     union { f32 f; s32 i; } unk618; /* 0x618: float distance clamp, zeroed as an int */
-    u8 pad_61C[0x54];
+    u8 pad_61C[0x24];
+    Vec4 basis[3];                 /* 0x640: rotation rows (transform_vector_by_basis) */
     f32 unk670;                    /* 0x670 */
     f32 unk674;                    /* 0x674 */
     u8 pad_678[0xC];
@@ -448,7 +449,9 @@ struct Hero {
     Vec4 unk770;                   /* 0x770 */
     Vec4 unk780;                   /* 0x780 */
     Vec4 unk790;                   /* 0x790 */
-    u8 pad_7A0[0x30];
+    s16 unk7A0[8];                 /* 0x7A0 */
+    s16 unk7B0[8];                 /* 0x7B0 */
+    s16 unk7C0[8];                 /* 0x7C0 */
     f32 unk7D0[0x20];              /* 0x7D0 */
     u8 pad_850[0x4];
     f32 unk854;                    /* 0x854 */
@@ -491,10 +494,11 @@ struct Hero {
     s16 unk8BE;                    /* 0x8BE */
     s32 unk8C0;                    /* 0x8C0: 1..3 picks the HUD rank string (FUN_L05_00266320) */
     s32 unk8C4;                    /* 0x8C4 */
-    u8 pad_8C8[0x4];
+    u8 pad_8C8[0x2];
+    s16 unk8CA;                    /* 0x8CA */
     s16 unk8CC;                    /* 0x8CC */
     u8 unk8CE;                     /* 0x8CE */
-    u8 pad_8CF[0x1];
+    u8 unk8CF;                     /* 0x8CF */
     Vec4 unk8D0;                   /* 0x8D0 */
     s32 unk8E0;                    /* 0x8E0 */
     f32 unk8E4;                    /* 0x8E4 */
@@ -518,7 +522,9 @@ struct Hero {
     u8 pad_918[0x8];
     Vec4 move_impulse;             /* 0x920: one-frame displacement; the hero update adds it to motion.pos and clears it (some states; zero while running) */
     f32 unk930;                    /* 0x930 */
-    u8 pad_934[0xC];
+    f32 unk934;                    /* 0x934 */
+    f32 unk938;                    /* 0x938 */
+    u8 pad_93C[0x4];
     f32 unk940;                    /* 0x940 */
     f32 unk944;                    /* 0x944 */
     f32 unk948;                    /* 0x948 */
@@ -608,7 +614,19 @@ struct Hero {
     s32 unk1010;                   /* 0x1010 */
     f32 unk1014;                   /* 0x1014 */
     f32 unk1018;                   /* 0x1018 */
-    u8 pad_101C[0x74];
+    u8 pad_101C[0x8];
+    s32 unk1024;                    /* 0x1024: cleared by FUN_L00_0020a500 */
+    s32 unk1028;                    /* 0x1028: cleared by FUN_L00_0020a500 */
+    u8 pad_102C[0x8];
+    s32 unk1034;                    /* 0x1034: cleared by FUN_L00_0020a500 */
+    s32 unk1038;                    /* 0x1038: cleared by FUN_L00_0020a500 */
+    u8 pad_103C[0x8];
+    s32 unk1044;                    /* 0x1044: cleared by FUN_L00_0020a500 */
+    s32 unk1048;                    /* 0x1048: cleared by FUN_L00_0020a500 */
+    u8 pad_104C[0x8];
+    s32 unk1054;                    /* 0x1054: cleared by FUN_L00_0020a500 */
+    s32 unk1058;                    /* 0x1058: cleared by FUN_L00_0020a500 */
+    u8 pad_105C[0x34];
     struct HeroItemSlot items[7];  /* 0x1090: item slots; slot 0 is the equipped gadget */
     u8 pad_12C0[0x20];
     s16 ground_type;                   /* 0x12E0 */
@@ -661,8 +679,8 @@ struct Hero {
     struct HeroEase unk18F0[3];    /* 0x18F0: eased records, kind 5 set when an item slot is ready (FUN_L00_00210748) */
     Vec4 unk1B00[32];              /* 0x1B00: ring of 32 quads indexed by unk21B0 */
     u8 unk1D00[0x20];              /* 0x1D00 */
-    f32 unk1D20;                   /* 0x1D20 */
-    f32 unk1D24;                   /* 0x1D24 */
+    f32 stick_x;                   /* 0x1D20: stick vector (d-pad when the stick is idle) */
+    f32 stick_y;                   /* 0x1D24 */
     u8 pad_1D28[0x68];
     struct HeroEase unk1D90;       /* 0x1D90: manipulator record handed to attach_manipulator (FUN_L00_00234808) */
     u8 pad_1E40[0x70];
@@ -698,7 +716,10 @@ struct Hero {
     struct Moby *unk2040;          /* 0x2040: nearest oclass 0x25D moby (FUN_L00_002d2ee8) */
     f32 unk2044;                   /* 0x2044: distance to unk2040; 100000 when none */
     s32 unk2048;                   /* 0x2048 */
-    u8 pad_204C[0x34];
+    u8 pad_204C[0x4];
+    struct Moby *unk2050[10];      /* 0x2050 */
+    s32 unk2078;                   /* 0x2078 */
+    s32 unk207C;                   /* 0x207C */
     struct Moby *moby;             /* 0x2080: the hero's moby */
     struct HeroState state;        /* 0x2084 */
     u8 vehicle_mode;                    /* 0x20A4 */
@@ -713,7 +734,7 @@ struct Hero {
     u8 unk20AD;                    /* 0x20AD */
     u8 unk20AE;                    /* 0x20AE */
     u8 unk20AF;                    /* 0x20AF */
-    s8 unk20B0;                    /* 0x20B0 */
+    u8 unk20B0;                    /* 0x20B0 */
     u8 unk20B1;                    /* 0x20B1 */
     u8 unk20B2;                    /* 0x20B2 */
     u8 unk20B3;                    /* 0x20B3 */
@@ -731,7 +752,7 @@ struct Hero {
     u8 pad_21B8[0x20];
     s16 unk21D8[8][4];             /* 0x21D8: 8 slots of four s16 */
     s32 unk2218;                   /* 0x2218: voice of sound slot 0, -1 = none (slots 0-7 run to 0x2234, FUN_L00_00206c08) */
-    u8 pad_221C[0x4];
+    s32 unk221C;                   /* 0x221C: voice of sound slot 1 */
     s32 unk2220;                   /* 0x2220 */
     s32 unk2224;                   /* 0x2224 */
     s32 unk2228;                   /* 0x2228 */

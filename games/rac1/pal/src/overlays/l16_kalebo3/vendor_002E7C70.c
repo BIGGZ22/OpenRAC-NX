@@ -291,9 +291,7 @@ void func_L16_002E8538(char *moby) {
     func_L16_002DF780(76.0f);
     func_L00_002664B0(2, 6);
 }
-extern void func_L13_00266060(int, int, int, int);
 extern void func_L16_002DF780(float);
-extern void func_L00_002664B0(int, int);
 
 // Resets the moby's two arrays of handles, then starts the follow-up effect.
 void func_L16_002E85E0(char *moby)
@@ -317,8 +315,6 @@ void func_L16_002E85E0(char *moby)
 extern char D_0013E633[];
 extern char D_0013D50F[];
 extern int func_00215570(void *, int);
-extern int func_0022EE28(int, int, int);
-extern void func_L00_00264DB8(int, int);
 
 /* update: a two-state trigger on the player's state */
 void func_L16_002E8680(char *moby) {
@@ -480,7 +476,6 @@ extern short D_L16_00161F5C;
 extern short D_L16_00161F60;
 extern short D_L16_00161F64;
 extern short D_L16_00161F68;
-extern float D_0015EE6C MACRO_ADDR;
 extern void func_001F9C30(void *, void *, float);
 extern void func_L00_001FF4B0(void *, void *, float);
 extern float func_00214158(void);
@@ -650,16 +645,13 @@ extern char *D_L16_001601BC MACRO_ADDR;
 extern float D_L16_00161F6C SDATA(D_L16_00161F6C);
 extern float D_L16_00161F7C SDATA(D_L16_00161F7C);
 extern short D_L16_00161F78;
-extern float D_0015EE70 MACRO_ADDR;
 extern void func_001F9EC0(void *, void *, void *);
 extern void func_001F9EE8(void *, void *, void *);
 extern void func_001F9BC0(void *);
 extern float func_001F9B88(float);
 extern float func_00214D88(float *, float *, float, float, float, float);
 extern void func_L00_002617B0(char *, void *, void *, void *);
-extern int func_L00_0028EB98(void *, int);
 extern void func_L00_0028EBF0(int);
-extern int func_0022ED80(int, int, int);
 extern void func_001F49B0(void *, void *);
 extern void func_L16_002E9960(char *);
 
@@ -761,14 +753,12 @@ void func_L16_002E93F8(L16PlatformMoby *m) {
         func_L00_002617B0((char *)d->basis, delta.v, old_rotation.v, m->rotation);
     }
 }
-extern float func_001F9B88(float);
 extern int func_001FA8A8(int,int,float);
 extern void func_001FA460(void *,void *);
 extern float func_001F9F90(float);
 extern float func_001F9FA8(float);
 extern float func_001FA7D8(float);
 extern void func_L00_001FD1D8(void *,void *,int);
-extern char *D_L16_001601BC MACRO_ADDR;
 extern float D_L16_001D9B50[][2];
 extern short D_L16_00161F78,D_L16_00161F9C,D_L16_00161FA0;
 extern short D_L16_00161F90,D_L16_00161F8C,D_L16_00161F94,D_L16_00161F98;
@@ -841,8 +831,6 @@ void func_L16_002E9960(char *m) {
         } while(matrix.position[2]<upper);
     }
 }
-extern float D_0015EE6C MACRO_ADDR;
-extern float func_001FA748(float, float);
 
 void func_L16_002E9D48(unsigned char *moby)
 {
@@ -864,14 +852,9 @@ void func_L16_002E9D48(unsigned char *moby)
         break;
     }
 }
-extern char *D_L16_00160098 MACRO_ADDR;
-extern int func_00215570(void *, int);
-extern float func_001F9D48(void *, void *);
 extern char *func_L16_002E9F80(int);
-extern int func_001F9908(void *);
 extern void func_L16_002E2248(void *);
 extern int func_L00_00258BC8(int, int);
-extern int func_001F9850(int);
 extern int func_L16_002E2290(void *);
 extern float func_00214358(void *, int, float);
 extern void func_L16_002C57E8(void *, void *);
@@ -921,7 +904,6 @@ void func_L16_002E9DE8(char *moby) {
         break;
     }
 }
-extern short *D_L16_001ABFC0[];
 extern int func_L16_002C5A08(void *);
 
 // Finds the first moby of type 0x10E in a level's id list that passes the check.
@@ -942,12 +924,7 @@ char *func_L16_002E9F80(int idx)
 typedef struct {
     float x, y, z;
 } Vec3f;
-extern char D_L16_00167240[];
-extern void func_001F9BF0(void *, void *, void *);
-extern void func_L00_001FF4B0(void *, void *, float);
 extern float func_001F9C78(void *, void *);
-extern void func_001F9C30(void *, void *, float);
-extern float func_001F9CB8(void *);
 
 /* For each of n point pairs, reflects a direction and writes its 2D map coordinates. */
 void func_L16_002EA010(int n, Vec3f *p1, Vec3f *p2, int unused, float *out) {
@@ -993,7 +970,6 @@ extern char D_L16_001DC900[];
 extern int func_001F4868(int);
 extern void func_00234C98(int, long);
 extern void func_001F7868(void);
-extern int func_L00_00200290(char *, float);
 extern void func_L00_001FDE48(int, int, int, char *, int);
 
 /* Sets up the draw state, then draws the three entries of the level's table. */
@@ -1107,7 +1083,6 @@ extern short D_L16_00162000_bounds __asm__("D_L16_00162000");
 extern short D_L16_00162020_bounds __asm__("D_L16_00162020");
 typedef struct {float x,y,z,radius;} L16SingleSphere;
 extern L16SingleSphere D_L16_00162040_bounds[] __asm__("D_L16_00162040") MACRO_ADDR;
-extern void func_001F49B0(void *, void *);
 extern void func_L16_002EA6E8(void);
 
 /* Compute bounding spheres for one mesh and register their renderer. */

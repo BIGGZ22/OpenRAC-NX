@@ -25,4 +25,48 @@ unsigned char *func_L07_0029B070(char *pos, char *vec) {
     }
     return p;
 }
-INCLUDE_ASM("asm/overlays", func_L07_0029C6A8);
+extern int func_001FA898(float);
+extern int func_001F9850(int);
+extern int func_001160D8(void);
+extern float func_002140F8(float, float);
+extern void func_L00_00250800(void *, int, void *);
+extern void func_001F9BD8(void *, void *, void *);
+extern void func_L00_001FF4B0(void *, void *, float);
+extern void func_001F9BF0(void *, void *, void *);
+extern unsigned char * D_L07_001B24F4;
+extern float D_0015EE60 MACRO_ADDR;
+extern float D_L07_00166EC0[];
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/0029a2a0.c, FUN_L07_0029b8d8. */
+unsigned char *func_L07_0029C6A8(void *m, short index, float amount, float factor) {
+    float v[4];
+    float t[4];
+    unsigned char *p = func_00218928(0x3d);
+    if (p != 0) {
+        unsigned char *q = p + 0x20;
+        *(void **)q = m;
+        *(short *)(p + 0xa) = func_001F9850(0x50);
+        *(float *)(q + 4) = 0.0f;
+        *(float *)(q + 8) = func_002140F8(*(float *)(q + 4), 1.0f);
+        {
+            int random_index = func_001160D8() & 15;
+            *(float *)(q + 0x14) = factor;
+            *(short *)(q + 0xc) = random_index;
+        }
+        p[8] = func_001160D8();
+        *(int *)(p + 4) = 0x7f7f7f;
+        *(volatile unsigned char *)(p + 9) = func_001FA898(4.0f) + 0x40;
+        *(volatile unsigned char *)(p + 3) = 0x48;
+        *(volatile unsigned char *)(p + 1) = 0;
+        *(volatile float *)(p + 0xc) = amount;
+        p[2] = D_L07_001B24F4[*(short *)(q + 0xc)];
+        *(float *)(q + 0x10) = D_0015EE60 * 0.015f;
+        *(short *)(q + 0xe) = index;
+        p[8] = func_001FA898(*(float *)(q + 8) * 255.0f);
+        func_L00_00250800(*(void **)q, *(short *)(q + 0xe), v);
+        func_001F9BF0(t, D_L07_00166EC0, v);
+        func_L00_001FF4B0(t, t, *(float *)(q + 0x14));
+        func_001F9BD8(p + 0x10, v, t);
+    }
+    return p;
+}

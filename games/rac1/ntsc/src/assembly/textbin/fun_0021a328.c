@@ -192,8 +192,8 @@ int render_configured_text_label(struct MenuScreen *label) {
 
     render_flags = label->data.label.flags;
     draw_flags = render_flags;
-    x = 4;
     y = 4;
+    text_style = 8;
     if ((draw_flags & 0x4004) == 0x4004 && label->data.label.text_id == 0x523E) {
         draw_flags |= 1;
         y = 12;
@@ -205,7 +205,7 @@ int render_configured_text_label(struct MenuScreen *label) {
     if (text == 0) {
         text = fallback_label_text;
     }
-    text_style = 8;
+    x = 4;
     if (draw_flags & 1) {
         text_style = 9;
         x = label->width / 2;

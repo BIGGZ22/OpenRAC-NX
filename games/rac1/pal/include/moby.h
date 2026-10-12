@@ -13,14 +13,8 @@
  */
 
 #include "common.h"
+#include "vector.h"
 
-/* A float vector with 4-byte alignment (no 128-bit member). */
-typedef struct {
-    f32 x;
-    f32 y;
-    f32 z;
-    f32 w;
-} Vec4f;
 
 struct Manip;
 struct GifEntry;
@@ -82,7 +76,10 @@ struct Moby {
     u8 pad7D;
     u8 unk7E;
     u8 unk7F;                         /* set to 0x17 by FUN_L09_002c5990 near D_L09_00166F40 */
-    u8 pad80[0x10];
+    s32 unk80;                        /* colour from the level's moby records, c2 << 16 | c1 << 8 | c0 (func_L00_002422D8) */
+    u8 pad84[2];
+    s16 unk86;                        /* compared with 5 (func_L02_002D9F08) */
+    u8 pad88[8];
     s32 unk90;
     u32 unk94;                        /* set from the class header's word 0x10 */
     s32 unk98;                        /* set to 1 while a carrier holds the moby (FUN_L00_002c7a58) */
@@ -92,10 +89,10 @@ struct Moby {
     s16 oclass;
     u8 padA8[8];
     u8 unkB0;                         /* 0xB0: index into the level's D_0014C050 row (0xFF: not spawned) */
-    u8 padB1;
+    u8 unkB1;                         /* set from the level's moby records (func_L00_002422D8) */
     u16 save_id;                      /* index into the level collected[]/killed[] tables and save bits D_0014C190[level][id >> 5] */
     s16 unkB4;
-    u8 padB6[2];
+    s16 unkB6;                        /* set from the level's moby records (func_L00_002422D8) */
     void *unkB8;                      /* 0xB8: bolt source record; its byte 0xB1 is a per-level id (FUN_L00_002a6b70) */
     u8 unkBC;
     u8 padBD[3];

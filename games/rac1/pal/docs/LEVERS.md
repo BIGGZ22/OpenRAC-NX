@@ -337,3 +337,36 @@ As [WORKER.md](WORKER.md) says: `RESULT.md` holds exactly two lines, the
 verdict and the candidate file; what you tried and what mattered goes in
 `NOTES.md`. Put a short comment above the definition in the candidate:
 what the function does and, if needed, why the C is shaped that way.
+
+16. **Loop updates at the top, a `nop` where retail has work, a missing saved register** (func_L00_00207220,
+    2026-10-12). Three things found with `TRY_CFLAGS='-dL'` (`src.c.loop`: each giv's benefit and why it was or
+    was not reduced), `-dS`/`-dR` (`src.c.sched`, `src.c.sched2`: the per-block schedule) and
+    `tools/regalloc.py`:
+    - Retail kept `unk2238[i]` as base register + running offset (`addu $2,$s3,$s7`) instead of one pointer.
+      The address giv is reduced when `benefit * lifetime * threshold >= loop insn count`; an explicit
+      `off += 4` induction variable (not `i << 2`) drops its benefit to 0, so it stays unreduced.
+    - Retail's biv updates sit at the loop bottom; ours were moved to the top by inter-block scheduling. A
+      file whose retail object was built with `-fno-sched-interblock` needs that flag (config/file_cflags.txt):
+      the function went from 88 bytes off to 6 off. Test a flag by appending a line there and running
+      `try_func.py`; undo it if nothing improves.
+    - The last two bytes were the bottom block's order: write `for (i = 7; i >= 0; p++, i--, off += 4)` with
+      the stores in the arms and `continue`, and the order of the three updates decides which one reorg puts
+      in the delay slot (the scheduler orders ties by insn number).
+
+17. **A result that lands in the second operand's register** (func_L00_00211D28, 2026-10-12). Local allocation
+    ties the result of `a - b` to a dying first operand, so `subu $v1,$v1,$a0` comes out where retail has
+    `subu $v1,$a0,$v1`. Retail's form is a named temporary reused for the result, `r = l - r;` (declare `l`
+    and `r` once, set both from the bit tests, then subtract into `r`). Written as one expression, or with a
+    third temporary, it did not change. A two-function test file compiled by hand
+    (`wine .../ee-gcc2953.exe -O2 -G2 -S`) shows this in seconds: a first operand that stays live afterwards
+    ties the result to the second, which is how the rule was found.
+
+18. **gcse hoists a plain `w = B + 12` to the top of the function** (func_L15_002A3B98, 2026-10-12). Expressions
+    that every path computes (`high(sym)`, a stack address kept in a pointer variable) are inserted at the end of
+    the first block by gcse ("PRE/HOIST" lines in `TRY_CFLAGS='-dG'`, file `src.c.gcse`), above a small loop that
+    retail runs first; reload then keeps the stack address in `$a2` across it. Retail's address is computed after
+    the loop. Two spellings stop it: write the address at its use (`qcopy(B + 12, pos)`, no pointer variable), and
+    assign a loop-invariant base (`c = D_L15_00167300;`) inside the loop, where loop.c hoists it later and its live
+    range shrinks enough to win a saved register over the table pointer (priorities 0.173 against 0.172 in
+    `tools/regalloc.py`). Also: `qcopy()` has a memory clobber that makes gcc reload a value inside an inner loop
+    that retail keeps in a register; `qcopy_nc()` does not.

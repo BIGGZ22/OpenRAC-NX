@@ -67,12 +67,10 @@ void func_L00_00229B78(void) {
         }
     }
 }
-extern char D_0013E633[];
 extern unsigned char D_0013A5E0[] NOT_SDA;
 extern unsigned char D_0013D5CA NOT_SDA;
 extern float D_0015EE6C MACRO_ADDR;
 extern int func_L00_00222520(void);
-extern int func_001F9850(int);
 extern int func_L00_00267C48(int, int, int, int);
 extern int func_L00_00222B80(int, int);
 extern int func_L00_00222B80_b(int, int) __asm__("func_L00_00222B80");
@@ -174,12 +172,8 @@ int func_L00_0022A0E0(void) {
 }
 typedef struct { char pad[0x24]; int v; char pad2[0x24]; } Rec;
 extern Rec D_L00_00179BC0[] __attribute__((section(".data")));
-extern char D_0013E633[];
-extern int func_L00_0020DB30(int);
 extern void func_L00_0020ED30(void);
 extern int func_L00_00222B80(int, int);
-extern int func_001F9850(int);
-extern void func_L00_00232C10(int, int, float);
 
 /* starts the pending global action if conditions hold; returns 1 on success */
 int func_L00_0022A268(void) {

@@ -133,7 +133,6 @@ extern void func_L00_0023E9A0(void *);
 extern void func_L00_0025805C(void *);
 extern void func_00233AB8();
 extern void func_L00_0023E4C8();
-extern int D_0015EE84_m __asm__("D_0015EE84") MACRO_ADDR;
 extern float D_0015EE6C MACRO_ADDR;
 extern VeldinLevelState D_L00_0016C960;
 

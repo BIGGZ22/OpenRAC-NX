@@ -1,4 +1,5 @@
 #include "common.h"
+#include "callees.h"
 #include "structs.h"
 
 /*
@@ -18,7 +19,6 @@ extern void func_00113968(void);
 extern void func_00114438(void *, void *);
 extern char D_00152470[];
 extern int func_00119088();
-extern int func_00119110();
 extern long func_00116108_wide(int *errOut, void *a, void *b, void *c)
     __asm__("func_00116108");
 extern long func_001188C8_wide(int *errOut, void *a, void *b, void *c)
@@ -52,7 +52,6 @@ extern char D_00157E80[];
 extern int D_0012FD9C;
 extern void func_0011BBF0(void);
 extern int D_0012FD9C NOT_SDA;
-extern int func_001151B4();
 extern char D_0012FCEC[];
 extern char D_001580A8[];
 extern int D_0012FDA8;
@@ -65,26 +64,15 @@ extern int D_001581C0;
 extern char D_00158528[];
 extern int D_0012FDB4;
 extern int func_0011CE70(int arg0, int arg1, int arg2, void *arg3);
-extern int func_00118E70(int);
 extern void func_00118EC0(void);
-extern int func_00118EA0(void);
 extern void func_0011D4E0(void);
 extern void func_00118EB0(void);
 extern int D_00130420;
 extern int D_00130424;
-extern void func_00118CF0(void *);
-extern void func_00118CE0(void *);
 extern int D_00130BD0[];
 extern char D_00130428[];
 extern int func_0011DC50(void);
-extern void func_0011DBE8(int, int);
-extern void func_0011DBF8(int, void *, int);
-extern int func_0011DC40(int);
 extern void func_00118D80(int);
-extern void func_001206B0(float *, int *);
-extern void func_001208E4();
-extern void func_00118B20(int, void *, int);
-extern void func_00118C80(int);
 extern int func_00120F30(int);
 extern void *D_00159840;
 extern int D_001313E0;
@@ -93,7 +81,6 @@ extern int D_001313EC;
 extern int D_001313F0;
 extern int D_001313E4;
 extern int D_001313FC;
-extern void func_00120C58(void);
 extern int func_00120D28(int);
 extern void func_00118C90(int);
 extern char D_00132590[];
@@ -185,13 +172,9 @@ int func_001236F0(void) {
 LINKER_REMNANT("asm/remnants/core_text", func_001238A8);
 
 extern char D_00159B00[];
-extern int D_00132EAC;
 extern int func_00118CC0(int);
-extern void func_00118C90(int);
 extern char D_00159BB0[];
 extern void *func_00116B00(void *, const void *, int);
-extern char D_0015B0C0[];
-extern int func_0011B4C8();
 extern int D_00132EA8;
 
 /* sceMcOpen(port, slot, fname, mode) (libmc): same RPC-wrapper shape as
@@ -229,7 +212,6 @@ int func_001238B0(int port, int slot, int fname_, int mode) {
 }
 
 extern int func_001238B0(int, int, int, int);
-extern int D_00132EA8;
 
 int func_001239D8(int arg0, int arg1, int arg2) {
     int r = func_001238B0(arg0, arg1, arg2, 0x40);
@@ -240,11 +222,7 @@ int func_001239D8(int arg0, int arg1, int arg2) {
 }
 
 extern char D_00159B00[];
-extern int D_00132EAC;
 extern int D_00159B80;
-extern char D_0015B0C0[];
-extern int func_00118CC0(int);
-extern int func_0011B4C8();
 
 /* RPC 3 on the client D_00159B00, in func_001239D8's shape: -100 with
    no server bound, -200 when the semaphore wait fails. */
@@ -269,11 +247,7 @@ int func_00123A10(int arg0) {
 }
 
 extern char D_00159B00[];
-extern int D_00132EAC;
 extern int D_00159B80;
-extern char D_0015B0C0[];
-extern int func_00118CC0(int);
-extern int func_0011B4C8();
 
 /* RPC 4, the same shape with three request words. `buf` is assigned
    after the semaphore call, so retail builds its address in a temp. */
@@ -350,15 +324,9 @@ void func_00123BA0(void *arg0) {
 }
 
 extern char D_00159B00[];
-extern int D_00132EAC;
-extern int func_00118CC0(int);
-extern void func_00118C90(int);
 extern int D_00159B80;
 extern char D_0015A000[];
-extern char D_0015B0C0[];
 extern int func_0011AD70(void *, int);
-extern int func_0011B4C8();
-extern int D_00132EA8;
 extern void func_00123BA0(void *);
 
 int func_00123C30(int fd, void *buf, int nbyte) {
@@ -446,7 +414,6 @@ int func_00123D48(int fd, unsigned char *buffer, int size) {
 
 ASM_FUNC("asm/handwritten/core_text", func_00123EC0);
 
-extern int func_00118BE0(void);
 extern int func_00118C00(void);
 extern void func_00123EC0(int, unsigned short, void *);
 
@@ -459,8 +426,6 @@ void func_00123EE8(int time) {
 }
 
 extern char D_00159B00[];
-extern int D_00132EAC;
-extern char D_0015B0C0[];
 extern void func_00123EE8(int);
 
 /* sceMcSync(mode, &cmd, &result): polls the pending memory card command
@@ -619,14 +584,6 @@ int func_00124340(int arg0, int arg1) {
 }
 
 extern char D_00159B00[];
-extern int D_00132EAC;
-extern int func_00118CC0(int);
-extern void func_00118C90(int);
-extern char D_00159BB0[];
-extern void *func_00116B00(void *, const void *, int);
-extern char D_0015B0C0[];
-extern int func_0011B4C8();
-extern int D_00132EA8;
 
 /* sceMcDelete(port, slot, fname): rejects a null/empty fname (SignalSema,
    return -210), else strncpy's it into the shared sifParamFname
@@ -666,11 +623,7 @@ int func_00124410(int port, int slot, char *fname) {
 }
 
 extern char D_00159B00[];
-extern int D_00132EAC;
 extern int D_00159B80;
-extern char D_0015B0C0[];
-extern int func_00118CC0(int);
-extern int func_0011B4C8();
 
 /* RPC 0x11, the same shape with two request words. */
 int func_00124528(int arg0, int arg1) {
@@ -696,7 +649,6 @@ int func_00124528(int arg0, int arg1) {
     return r;
 }
 
-extern int func_0011B4C8();
 extern char D_0015B108[];
 extern int D_0015B180;
 
@@ -765,7 +717,6 @@ int func_00124650(void) {
     return 1;
 }
 
-extern void func_00124B60(void *, ...);
 extern char D_00153658[];
 
 /* Same RPC shape as func_001245F8 above (9 args: $4-$11 plus one stack
@@ -793,10 +744,6 @@ int func_001247E8(int arg0) {
     }
 }
 
-extern int D_0015B180;
-extern char D_0015B108[];
-extern int func_0011B4C8();
-extern void func_00124B60(void *, ...);
 extern char D_00153678[];
 
 /* sceDbcCreateSocket (libdbc): copy the caller's socket record (five
@@ -836,18 +783,11 @@ int func_00124858(void *arg0, int arg1, int arg2) {
 }
 
 extern void func_00119288(void *, void *);
-extern int func_0011D960(void);
 /* EIntr returns the previous interrupt state; the file declares it void.
    A call that returns a value changes how the lookup after it is
    allocated. */
 extern int func_0011D9A8_i(void) __asm__("func_0011D9A8");
-extern char D_0015B580[];
-extern int D_0015B600[];
 extern void *memcpy(void *, const void *, unsigned int);
-extern int D_0015B180;
-extern char D_0015B108[];
-extern int func_0011B4C8();
-extern void func_00124B60(void *, ...);
 extern char D_001536B8[];
 
 /*
@@ -992,8 +932,6 @@ int func_00124B88(void) {
 }
 
 extern int func_00124858(void *, int, int);
-extern void func_001153FC(void *, int, int);
-extern void *memcpy(void *, const void *, unsigned int);
 
 extern char D_0015B640_b[] __asm__("D_0015B640");
 
@@ -1100,8 +1038,6 @@ int func_00124D18(int id, void *dst) {
    same lever on D_001E8F80 in text.c. */
 
 
-extern int func_00125020(int);
-extern int func_00125160(unsigned char *, int *);
 
 /* The command word, built as bitfields of an `unsigned long` union: the
    union stays in a register, each insert is a 64-bit and/or, and the
@@ -1143,7 +1079,6 @@ int func_00124DF0(int port, void *arg1) {
 }
 
 extern int func_001250E0(int);
-extern void *func_00125078(int);
 
 /* A single stack-resident local shared by both call paths below: its
    byte 0 is the state code every path eventually returns (retail's two

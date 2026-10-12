@@ -135,8 +135,8 @@ resident and is shared by every level.
    the result with the level's bytes. `EXACT` there means every
    relocation reaches the right place.
 3. **Audit and progress**: the same check over every C function in
-   `src/overlays/`. In `progress/report.json` each shared file is a unit
-   ("Shared level code/<file>", category `common`) and each level is one
+   `src/overlays/`. In `progress/report.json` the shared code is one unit
+   ("Shared level code", category `common`) and each level is one
    unit named after it ("Level 04: Eudora", categories `levels` and
    `level_NN`), so each distinct function counts once. decomp.dev lays
    its treemap out in report order with no border around a group: one

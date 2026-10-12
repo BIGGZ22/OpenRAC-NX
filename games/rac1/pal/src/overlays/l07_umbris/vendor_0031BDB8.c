@@ -142,13 +142,11 @@ void func_L07_0031FF78(char *m) {
     }
 }
 extern char *func_L00_0025B478(void *, int, int);
-extern int func_0022ED80(int, int, int);
 extern void func_L01_00279790(void *);
 extern void func_L00_00265050(void *, int, void *, void *, int, int, float, void *, void *, void *);
 extern char *func_0020D348(int);
 extern void func_L00_00251E30(void *);
 extern void func_0020D678(void *);
-extern float D_L07_0015F660[] MACRO_ADDR;
 /* Level moby state machine: wait, detect proximity, then emit effects, spawn a replacement and delete itself. */
 void func_L07_003207A8(char *m) {
     int hit = 0;
@@ -227,12 +225,6 @@ void func_L07_00320980(char *self) {
     }
     }
 }
-extern char *func_L00_0025B478(void *, int, int);
-extern int func_0022ED80(int, int, int);
-extern void func_L01_00279790(void *);
-extern void func_L00_00265050(void *, int, void *, void *, int, int, float, void *, void *, void *);
-extern void func_0020D678(void *);
-extern float D_L07_0015F660[] MACRO_ADDR;
 
 // Waits for a trigger, then spawns three effects at the moby and deletes it.
 void func_L07_00320B50(unsigned char *m) {
@@ -265,11 +257,9 @@ void func_L07_00320B50(unsigned char *m) {
     }
 }
 
-extern void func_L00_00250800(void *, int, void *);
 extern void func_001F9BF0(void *dst, void *a, void *b);
 extern void func_L00_001FF4B0(void *, void *, float);
 extern void func_L00_00264BE8(void *, void *, void *, float, float);
-extern int D_L07_0015F6A8 MACRO_ADDR;
 extern char D_L07_0016C960[];
 extern short D_L07_00161D68;
 extern short D_L07_00161D70;

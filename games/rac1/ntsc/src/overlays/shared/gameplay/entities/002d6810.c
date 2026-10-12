@@ -130,9 +130,9 @@ extern int D_L15_001D39D0_r[] __asm__("D_L15_001D39D0");
 extern float D_L15_001D3A20_r[][4] __asm__("D_L15_001D3A20");
 extern int D_L15_001D3B60_r[] __asm__("D_L15_001D3B60");
 extern int scale_frames_r(int) __asm__("FUN_001f96f8");
-extern void sub_r(void *, void *, void *) __asm__("FUN_001f9a28");
-extern void norm_r(void *, void *, float) __asm__("FUN_001f9bf8");
-extern void add_r(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void fast_vec_sub(void *, void *, void *) __asm__("FUN_001f9a28");
+extern void fast_vec_normalize(void *, void *, float) __asm__("FUN_001f9bf8");
+extern void fast_vec_add(void *, void *, void *) __asm__("FUN_001f9a10");
 extern void zero_r(void *) __asm__("FUN_001f99f8");
 
 void FUN_L15_002d79e8(char *m) {
@@ -146,11 +146,11 @@ void FUN_L15_002d79e8(char *m) {
         D_L15_00161CE4_r = 0;
         D_L15_00161CE0_r = scale_frames_r(D_L15_00161C8C_r);
         D_L15_00161C60_r = 0x7F2020;
-        sub_r(v, d + 0x100, d + 0xF0);
-        norm_r(step, v, D_L15_00161BFC_r / 20.0f);
+        fast_vec_sub(v, d + 0x100, d + 0xF0);
+        fast_vec_normalize(step, v, D_L15_00161BFC_r / 20.0f);
         qcopy(D_L15_001D3750_r, d + 0xF0);
         for (i = 1; i < 20; i++) {
-            add_r(D_L15_001D3750_r[i], D_L15_001D3740_r[i], step);
+            fast_vec_add(D_L15_001D3750_r[i], D_L15_001D3740_r[i], step);
             D_L15_001D39D0_r[i] = 0;
             zero_r(D_L15_001D3A20_r[i]);
             D_L15_001D3B60_r[i] = 0;
@@ -170,210 +170,260 @@ void FUN_L15_002d79e8(char *m) {
         D_L15_00161C30_r = 0;
     }
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L15_002d7bb0.s", FUN_L15_002d7bb0);
-#else
-extern unsigned char D_0013E533_trail __asm__("D_0013E533");
-extern float D_L15_00161C08_trail __asm__("D_L15_00161C08") __attribute__((sda));
-extern float D_L15_00161C0C_trail __asm__("D_L15_00161C0C") __attribute__((sda));
-extern float D_L15_00161C10_trail __asm__("D_L15_00161C10") __attribute__((sda));
-extern float D_L15_00161C14_trail __asm__("D_L15_00161C14") __attribute__((sda));
-extern float D_L15_00161C18_trail __asm__("D_L15_00161C18") __attribute__((sda));
-extern float D_L15_00161C1C_trail __asm__("D_L15_00161C1C") __attribute__((sda));
-extern float D_L15_00161C20_trail __asm__("D_L15_00161C20") __attribute__((sda));
-extern float D_L15_00161C24_trail __asm__("D_L15_00161C24") __attribute__((sda));
-extern float D_L15_00161C28_trail __asm__("D_L15_00161C28") __attribute__((sda));
-extern float D_L15_00161C2C_trail __asm__("D_L15_00161C2C") __attribute__((sda));
-extern float D_L15_00161C30_trail __asm__("D_L15_00161C30") __attribute__((sda));
-extern float D_L15_00161C34_trail __asm__("D_L15_00161C34") __attribute__((sda));
-extern float D_L15_00161C38_trail __asm__("D_L15_00161C38") __attribute__((sda));
-extern float D_L15_00161C4C_trail __asm__("D_L15_00161C4C") __attribute__((sda));
-extern float D_L15_00161C50_trail __asm__("D_L15_00161C50") __attribute__((sda));
-extern unsigned int D_L15_00161C60_trail __asm__("D_L15_00161C60") __attribute__((sda));
-extern float D_L15_00161C90_trail __asm__("D_L15_00161C90") __attribute__((sda));
-extern float D_L15_00161C98_trail __asm__("D_L15_00161C98") __attribute__((sda));
-extern float D_0015ED60_trail __asm__("D_0015ED60");
-extern float D_L15_001673C0_trail[] __asm__("D_L15_001673C0");
-extern float D_L15_001D3BB0_trail[][20] __asm__("D_L15_001D3BB0");
-extern short D_L15_00161CC0_trail[] __asm__("D_L15_00161CC0");
-extern short D_L15_00161CC8_trail[] __asm__("D_L15_00161CC8");
-extern short D_L15_00161CD0_trail[] __asm__("D_L15_00161CD0");
-extern short D_L15_00161CD8_trail[] __asm__("D_L15_00161CD8");
-extern float trail_angle_add(float, float) __asm__("FUN_001fa580");
-extern float trail_angle_difference(float, float) __asm__("FUN_001fa5c8");
-extern float trail_distance(void *, void *) __asm__("FUN_001f9b48");
-extern float trail_length(void *) __asm__("FUN_001f9af0");
-extern float trail_atan2(float, float) __asm__("FUN_001f9e90");
-extern float trail_cos(float) __asm__("FUN_001f9dc8");
-extern float trail_sin(float) __asm__("FUN_001f9de0");
-extern float trail_float_from_int(int) __asm__("FUN_001fa6c0");
-extern short trail_short_from_float(float) __asm__("FUN_001fa6d0");
-extern int trail_scale_frames(int) __asm__("FUN_001f96f8");
-extern int trail_timer_done(short *) __asm__("FUN_001f9770");
-extern void trail_sub(void *, void *, void *) __asm__("FUN_001f9a28");
-extern void trail_add(void *, void *, void *) __asm__("FUN_001f9a10");
-extern void trail_scale(float, void *, void *) __asm__("FUN_001f9a68");
-extern void trail_blend(float, void *, void *, void *) __asm__("FUN_001f9a40");
-extern void trail_cross(void *, void *, void *) __asm__("FUN_001f9ad8");
-extern void trail_normalize(float, void *, void *) __asm__("FUN_001f9bf8");
-extern void trail_build_offset(float, float, float, void *) __asm__("FUN_00214db0");
-extern void trail_rotate(float, void *, void *, void *) __asm__("FUN_00214890");
-extern float trail_random_between(float, float) __asm__("FUN_002132a8");
-extern float trail_random_range(float, float) __asm__("FUN_L00_00257c48");
-extern float trail_random_signed(void) __asm__("FUN_00213308");
-extern int trail_random_integer(int, int) __asm__("FUN_L00_00257b90");
-extern int trail_random_bool(int) __asm__("FUN_00213260");
-extern float trail_random_angle(float) __asm__("FUN_L00_0025e310");
-extern void trail_particle(float, float, float, void *, int, int, int, int, void *) __asm__("FUN_L00_00272060");
+#include "rnc/gameplay/entities/moby.h"
 
-void FUN_L15_002d7bb0(char *moby) {
-    char *data = *(char **)(moby + 0x78);
-    float delta[4] __attribute__((aligned(16)));
-    float axis[4] __attribute__((aligned(16)));
-    float step[4] __attribute__((aligned(16)));
-    float direction[4] __attribute__((aligned(16)));
-    float offset[4] __attribute__((aligned(16)));
-    float transverse[4] __attribute__((aligned(16)));
-    float local[4] __attribute__((aligned(16)));
-    float end[4] __attribute__((aligned(16)));
-    float rotated[4] __attribute__((aligned(16)));
-    float points[4][4] __attribute__((aligned(16)));
-    float speed, length, radius, angle, width, segment_angle, factor;
-    int i, j, sign, color;
-    unsigned char enabled = D_0013E533_trail;
+/* Quartu arc emitter: rebuilds the 20-point bolt and its mirror between the data block's end points, regrows or jitters four side arcs, then spawns three particles. */
+/* Ported from rac1-decomp (src/overlays/shared/vendor_002D7C00.c: func_L15_002D8FA0), where it is exact; names translated to the US level program. */
 
-    D_L15_00161C14_trail = trail_angle_add(D_L15_00161C14_trail, D_L15_00161C18_trail);
-    D_L15_00161C1C_trail = trail_angle_difference(D_L15_00161C1C_trail, D_L15_00161C20_trail);
-    D_L15_00161C30_trail = trail_angle_add(D_L15_00161C30_trail, D_L15_00161C34_trail);
-    speed = trail_distance(data + 0xf0, data + 0x110) * 0.05f;
-    if (enabled != 0) D_L15_00161C60_trail = 0x7f2040; else D_L15_00161C60_trail = 0x7f2020;
-    trail_sub(delta, data + 0x100, data + 0xf0);
-    trail_normalize(1.0f, delta, delta);
-    trail_cross(axis, delta, (void *)0x13f5e0);
-    trail_rotate(0.17453292f, delta, delta, axis);
-    trail_scale(speed, step, delta);
-    qcopy(D_L15_001D3750_r[0], data + 0xf0);
-    qcopy(D_L15_001D3750_r[20], data + 0xf0);
+typedef struct Moby Moby;
+
+typedef struct { float f[4]; } __attribute__((aligned(16))) V_2d8fa0;
+
+typedef struct { V_2d8fa0 p[5]; } P_2d8fa0;
+
+typedef struct { V_2d8fa0 hdr; V_2d8fa0 p[4]; } H_2d8fa0;
+
+typedef struct { char pad[0xF0]; V_2d8fa0 a; V_2d8fa0 b; V_2d8fa0 c; } Data_2d8fa0;
+
+typedef struct { float f[4]; } __attribute__((aligned(16))) V2d8e48;
+
+extern H_2d8fa0 D_L15_001D3BA0[];
+extern V2d8e48 D_0013F5E0;
+extern V2d8e48 D_L15_001673C0_c __asm__("D_L15_001673C0");
+extern V_2d8fa0 D_L15_001D3740[];
+extern V_2d8fa0 D_L15_001D3750[2][20];
+extern V_2d8fa0 D_L15_001D3A20[];
+extern char D_0013E533[];
+extern char D_L15_001D3BC0[];
+extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
+extern f32 distance_xyz(void *, void *) __asm__("func_001F9B48");
+extern f32 fast_add_rotations(f32, f32) __asm__("func_001FA580");
+extern f32 fast_cos(f32) __asm__("func_001F9DC8");
+extern f32 fast_sin_c(f32) __asm__("func_001F9DE0");
+extern f32 fast_subtract_rotations(f32, f32) __asm__("func_001FA5C8");
+extern f32 random_angle_radians(void) __asm__("func_00213308");
+extern f32 random_float_between(f32, f32) __asm__("func_002132A8");
+extern f32 vector_length_xyz(void *) __asm__("FUN_001f9af0");
+extern float D_0015ED60;
+extern float D_L15_0015F580[] __attribute__((section(".sdata")));
+extern float D_L15_001D3B60[];
+extern float D_L15_001D39D0[];
+extern float FUN_L00_00257c48(float lo, float hi);
+extern float FUN_L00_0025e310(float);
+extern int FUN_001f9770(void *);
+extern int random_int_between(int, int) __asm__("FUN_L00_00257b90");
+extern int scale_game_frames_alt(int) __asm__("FUN_001f96f8");
+extern s32 random_integer_below_c(s32) __asm__("func_00213260");
+extern s32 truncate_float_to_s32(f32) __asm__("func_001FA6D0");
+extern short D_L15_00161C08 __attribute__((sda));
+extern short D_L15_00161C0C __attribute__((sda));
+extern short D_L15_00161C10 __attribute__((sda));
+extern short D_L15_00161C14 __attribute__((sda));
+extern short D_L15_00161C18 __attribute__((sda));
+extern short D_L15_00161C1C __attribute__((sda));
+extern short D_L15_00161C20 __attribute__((sda));
+extern short D_L15_00161C24 __attribute__((sda));
+extern short D_L15_00161C28 __attribute__((sda));
+extern short D_L15_00161C2C __attribute__((sda));
+extern short D_L15_00161C30 __attribute__((sda));
+extern short D_L15_00161C34 __attribute__((sda));
+extern short D_L15_00161C38 __attribute__((sda));
+extern short D_L15_00161C4C __attribute__((sda));
+extern short D_L15_00161C50 __attribute__((sda));
+extern short D_L15_00161C60_c __asm__("D_L15_00161C60") __attribute__((sda));
+extern short D_L15_00161C90 __attribute__((sda));
+extern short D_L15_00161C98 __attribute__((sda));
+extern short D_L15_00161CC0[] __attribute__((section(".sdata")));
+extern short D_L15_00161CC8[] __attribute__((section(".sdata")));
+extern short D_L15_00161CD0[] __attribute__((section(".sdata")));
+extern short D_L15_00161CD8[] __attribute__((section(".sdata")));
+extern void FUN_001f9a40(void *, void *, void *, float);
+extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void build_look_at_matrix(void *out, void *dir, void *axis, f32 ang) __asm__("FUN_00214890");
+extern void build_spherical_offset(void *, f32, f32, f32) __asm__("func_00214DB0");
+extern void cross_vectors_xyz(void *, void *, void *) __asm__("func_001F9AD8");
+extern void normalize_vector_xyz(void *, void *, f32) __asm__("FUN_001f9bf8");
+extern void scale_vector_xyz(void *, void *, float) __asm__("FUN_001f9a68");
+extern void subtract_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a28");
+unsigned char *FUN_L00_00272060(void *pos, int s, int color, int mode, int b, float *v, float x, float y, float z);
+extern void spawn_2d8fa0(void *, int, float, float, int, int, int, void *, float) __asm__("FUN_L00_00272060");
+extern char D_0013F6E0_2d8fa0[] __asm__("D_0013F5E0");
+extern short D_L15_00161CE0_2d8fa0 __asm__("D_L15_00161C60") __attribute__((sda));
+extern P_2d8fa0 D_L15_001D3E80_2d8fa0[] __asm__("D_L15_001D3BB0");
+extern float D_L15_00167440_2d8fa0[] __asm__("D_L15_001673C0");
+
+void FUN_L15_002d7bb0(Moby *moby) {
+    V_2d8fa0 vectors[10];
+    V_2d8fa0 jitter[5];
+    Data_2d8fa0 *data = (Data_2d8fa0 *)moby->pvars;
+    unsigned char flag = *(unsigned char *)D_0013E533;
+    float scale;
+    int i;
+    int k;
+    float angle;
+    int spin;
+
+    *(float *)&D_L15_00161C14 = fast_add_rotations(*(float *)&D_L15_00161C14, *(float *)&D_L15_00161C18);
+    *(float *)&D_L15_00161C1C = fast_subtract_rotations(*(float *)&D_L15_00161C1C, *(float *)&D_L15_00161C20);
+    *(float *)&D_L15_00161C30 = fast_add_rotations(*(float *)&D_L15_00161C30, *(float *)&D_L15_00161C34);
+    scale = distance_xyz(&data->a, &data->c) * 0.05f;
+    if (flag) {
+        *(int *)&D_L15_00161CE0_2d8fa0 = 0x7F2040;
+    } else {
+        *(int *)&D_L15_00161CE0_2d8fa0 = 0x7F2020;
+    }
+    subtract_vector_xyz(&vectors[0], &data->b, &data->a);
+    normalize_vector_xyz(&vectors[0], &vectors[0], 1.0f);
+    cross_vectors_xyz(&vectors[1], &vectors[0], D_0013F6E0_2d8fa0);
+    build_look_at_matrix(&vectors[0], &vectors[0], &vectors[1], 0.17453292f);
+    scale_vector_xyz(&vectors[3], &vectors[0], scale);
+    qcopy(D_L15_001D3750[0], &data->a);
+    qcopy(D_L15_001D3750[1], &data->a);
     for (i = 1; i < 20; i++) {
-        float previous, current, magnitude;
-        float *point = D_L15_001D3750_r[i];
-        float *out = D_L15_001D3750_r[20 + i];
-        float phase = (float)i;
-        radius = D_L15_00161C0C_trail + (D_L15_00161C10_trail - D_L15_00161C0C_trail) * trail_float_from_int(i) * 0.05f;
-        radius *= trail_sin(trail_random_angle(D_L15_00161C14_trail + phase * D_L15_00161C08_trail));
-        radius += trail_random_range(D_L15_00161C4C_trail, D_L15_00161C50_trail);
-        previous = *(float *)&D_L15_001D39D0_r[i];
-        current = point[2];
-        *(float *)&D_L15_001D39D0_r[i] = radius;
-        point[2] = current - previous;
-        trail_build_offset(speed, trail_random_signed(), trail_random_signed(), axis);
-        axis[2] *= 0.5f;
-        trail_blend(D_L15_00161C98_trail, direction, step, axis);
-        magnitude = trail_length(direction);
-        if (magnitude == 0.0f) {
-            qcopy(point, D_L15_001D3750_r[i - 1]);
+        float wave;
+        float remaining;
+        float step_length;
+        float yaw;
+        float pitch;
+        wave = *(float *)&D_L15_00161C0C
+              + (*(float *)&D_L15_00161C10 - *(float *)&D_L15_00161C0C) * (convert_integer_to_float(i) * 0.05f);
+        wave = wave * fast_sin_c(FUN_L00_0025e310(*(float *)&D_L15_00161C14 + (float)i * *(float *)&D_L15_00161C08));
+        wave = wave + FUN_L00_00257c48(*(float *)&D_L15_00161C4C, *(float *)&D_L15_00161C50);
+        D_L15_001D3750[0][i].f[2] = D_L15_001D3750[0][i].f[2] - D_L15_001D39D0[i];
+        D_L15_001D39D0[i] = wave;
+        yaw = random_angle_radians();
+        pitch = random_angle_radians();
+        build_spherical_offset(&vectors[1], scale, yaw, pitch);
+        vectors[1].f[2] = vectors[1].f[2] * 0.5f;
+        FUN_001f9a40(&vectors[2], &vectors[3], &vectors[1], *(float *)&D_L15_00161C98);
+        step_length = vector_length_xyz(&vectors[2]);
+        if (step_length == 0.0f) {
+            qcopy(&D_L15_001D3750[0][i], &D_L15_001D3750[0][i - 1]);
         } else {
-            trail_scale(speed / magnitude, direction, direction);
-            trail_add(point, D_L15_001D3740_r[i], direction);
-            qcopy(step, direction);
+            scale_vector_xyz(&vectors[2], &vectors[2], scale / step_length);
+            add_vector_xyz(&D_L15_001D3750[0][i], &D_L15_001D3740[i], &vectors[2]);
+            qcopy(&vectors[3], &vectors[2]);
         }
-        point[2] += radius;
-        trail_sub(axis, point, D_L15_001D3740_r[i]);
-        trail_sub(offset, data + 0x110, point);
-        length = trail_length(offset);
-        if (length != 0.0f) {
-            if (i == 19) { factor = 0.5f; speed = length; }
-            else if (i < 16) factor = 0.1f;
-            else { factor = 0.5f; speed = length / trail_float_from_int(19 - i); }
-            trail_scale(speed / length, offset, offset);
-            trail_blend(factor, step, step, offset);
+        D_L15_001D3750[0][i].f[2] = D_L15_001D3750[0][i].f[2] + wave;
+        subtract_vector_xyz(&vectors[1], &D_L15_001D3750[0][i], &D_L15_001D3740[i]);
+        subtract_vector_xyz(&vectors[5], &data->c, &D_L15_001D3750[0][i]);
+        remaining = vector_length_xyz(&vectors[5]);
+        if (remaining != 0.0f) {
+            float blend;
+            if (i == 19) {
+                blend = 0.5f;
+                scale = remaining;
+            } else if (i >= 16) {
+                blend = 0.5f;
+                scale = remaining / convert_integer_to_float(19 - i);
+            } else {
+                blend = 0.1f;
+            }
+            scale_vector_xyz(&vectors[5], &vectors[5], scale / remaining);
+            FUN_001f9a40(&vectors[3], &vectors[3], &vectors[5], blend);
         }
         if (i < 10) {
-            float c, s;
-            angle = trail_random_angle(D_L15_00161C1C_trail + phase * D_L15_00161C24_trail);
-            segment_angle = trail_random_angle(D_L15_00161C30_trail + phase * D_L15_00161C38_trail);
-            width = D_L15_00161C28_trail * trail_sin(segment_angle);
-            qcopy(out, point);
-            radius = width * trail_sin(angle) + trail_random_range(0.0f, 0.1f);
-            ((float *)D_L15_001D3B60_r)[i] = radius;
-            point[0x148 / 4] += radius;
-            segment_angle = trail_angle_add(trail_atan2(axis[0], axis[1]), 1.5707964f);
-            width = D_L15_00161C2C_trail * trail_cos(angle);
-            c = trail_cos(segment_angle) * width;
-            s = trail_sin(segment_angle) * width;
-            transverse[0] = c;
-            transverse[1] = s;
-            transverse[2] = 0.0f;
-            qcopy(D_L15_001D3A20_r[i], transverse);
-            trail_add(out, out, transverse);
+            float phase;
+            float height;
+            float side_angle;
+            float swing;
+            phase = FUN_L00_0025e310(*(float *)&D_L15_00161C1C + (float)i * *(float *)&D_L15_00161C24);
+            height = *(float *)&D_L15_00161C28
+                * fast_sin_c(FUN_L00_0025e310(*(float *)&D_L15_00161C30 + (float)i * *(float *)&D_L15_00161C38));
+            qcopy(&D_L15_001D3750[1][i], &D_L15_001D3750[0][i]);
+            height = height * fast_sin_c(phase) + FUN_L00_00257c48(0.0f, 0.1f);
+            D_L15_001D3750[1][i].f[2] = D_L15_001D3750[1][i].f[2] + height;
+            D_L15_001D3B60[i] = height;
+            side_angle = fast_add_rotations(FUN_001f9e90(vectors[1].f[0], vectors[1].f[1]), 1.5707964f);
+            swing = *(float *)&D_L15_00161C2C * fast_cos(phase);
+            vectors[4].f[0] = fast_cos(side_angle) * swing;
+            vectors[4].f[1] = fast_sin_c(side_angle) * swing;
+            vectors[4].f[2] = 0.0f;
+            qcopy(&D_L15_001D3A20[i], &vectors[4]);
+            add_vector_xyz(&D_L15_001D3750[1][i], &D_L15_001D3750[1][i], &vectors[4]);
         } else {
-            j = 21 - i;
-            qcopy(out, point);
-            point[0x148 / 4] += *(float *)&D_L15_001D3B60_r[j];
-            trail_add(out, out, D_L15_001D3A20_r[j]);
-            qcopy(transverse, D_L15_001D3A20_r[i]);
+            int mirror = 21 - i;
+            qcopy(&D_L15_001D3750[1][i], &D_L15_001D3750[0][i]);
+            D_L15_001D3750[1][i].f[2] = D_L15_001D3750[1][i].f[2] + D_L15_001D3B60[mirror];
+            add_vector_xyz(&D_L15_001D3750[1][i], &D_L15_001D3750[1][i], &D_L15_001D3A20[mirror]);
+            qcopy(&vectors[4], &D_L15_001D3A20[i]);
         }
     }
-    trail_cross(end, delta, (void *)0x13f5e0);
-    trail_normalize(1.0f, end, end);
-    trail_normalize(1.0f, rotated, (void *)0x13f5e0);
-    for (i = 0; i < 4; i++) {
-        short *timer = &D_L15_00161CC0_trail[i];
-        if (i < 2) { qcopy(local, data + 0xf0); factor = 0.4f; }
-        else { qcopy(local, data + 0x100); factor = 0.5f; }
-        if (trail_timer_done(timer) == 0) {
-            float *track = D_L15_001D3BB0_trail[i];
-            for (j = 0; j < 4; j++) {
-                trail_sub(points[j], &track[j * 4 + 4], &track[j * 4]);
-                points[j][0] += trail_random_range(0.0f, 0.1f);
-                points[j][1] += trail_random_range(0.0f, 0.1f);
-                points[j][2] += trail_random_range(0.0f, 0.1f);
-            }
-            qcopy(track, local);
-            for (j = 0; j < 4; j++) trail_add(&track[j * 4 + 4], &track[j * 4], points[j]);
-            j = D_L15_00161CC0_trail[i];
-            sign = D_L15_00161CD8_trail[i];
-            j = j < sign ? sign - j : j - sign;
-            D_L15_00161CC8_trail[i] = trail_short_from_float((1.0f - trail_float_from_int(j) / trail_float_from_int(trail_scale_frames(15))) * 32.0f);
+    cross_vectors_xyz(&vectors[6], &vectors[0], D_0013F6E0_2d8fa0);
+    normalize_vector_xyz(&vectors[6], &vectors[6], 1.0f);
+    normalize_vector_xyz(&vectors[7], D_0013F6E0_2d8fa0, 1.0f);
+    for (k = 0; k < 4; k++) {
+        float bend;
+        if (k < 2) {
+            qcopy(&vectors[8], &data->a);
+            bend = 0.4f;
         } else {
-            float *track = D_L15_001D3BB0_trail[i];
-            *timer = trail_scale_frames(D_L15_00161CD0_trail[i]);
-            D_L15_00161CC8_trail[i] = 0;
-            width = trail_random_range(0.5235988f, 1.0471976f);
-            angle = trail_random_range(-1.0471976f, 0.17453292f);
-            trail_scale(factor, offset, delta);
-            trail_rotate(angle, offset, offset, end);
-            trail_rotate(width, offset, offset, rotated);
-            qcopy(track, local);
-            trail_add(track + 4, local, offset);
-            factor = 1.0f;
-            for (j = 0; j < 3; j++) {
-                trail_sub(points[0], track + 4 + j * 4, D_L15_001673C0_trail);
-                width = trail_random_range(0.17453292f, 0.96f) * factor;
-                factor = -factor;
-                trail_rotate(width, offset, offset, points[0]);
-                trail_add(track + 8 + j * 4, track + 4 + j * 4, offset);
+            qcopy(&vectors[8], &data->b);
+            bend = 0.5f;
+        }
+        if (FUN_001f9770(D_L15_00161CC0 + k)) {
+            int j;
+            D_L15_00161CC0[k] = scale_game_frames_alt(D_L15_00161CD0[k]);
+            D_L15_00161CC8[k] = 0;
+            scale = FUN_L00_00257c48(0.52359879f, 1.04719758f);
+            angle = random_float_between(-1.04719758f, 0.17453292f);
+            scale_vector_xyz(&vectors[5], &vectors[0], bend);
+            build_look_at_matrix(&vectors[5], &vectors[5], &vectors[6], angle);
+            build_look_at_matrix(&vectors[5], &vectors[5], &vectors[7], scale);
+            qcopy(&D_L15_001D3E80_2d8fa0[k].p[0], &vectors[8]);
+            add_vector_xyz(&D_L15_001D3E80_2d8fa0[k].p[1], &vectors[8], &vectors[5]);
+            bend = 1.0f;
+            for (j = 2; j < 5; j++) {
+                subtract_vector_xyz(&vectors[9], &D_L15_001D3BA0[k].p[j - 1], D_L15_00167440_2d8fa0);
+                angle = random_float_between(0.17453292f, 0.959931076f) * bend;
+                bend = -bend;
+                build_look_at_matrix(&vectors[5], &vectors[5], &vectors[9], angle);
+                add_vector_xyz((D_L15_001D3E80_2d8fa0[k].p + j), &D_L15_001D3BA0[k].p[j - 1], &vectors[5]);
+            }
+        } else {
+            int j;
+            for (j = 1; j < 5; j++) {
+                subtract_vector_xyz(&jitter[j], (D_L15_001D3E80_2d8fa0[k].p + j), &D_L15_001D3BA0[k].p[j - 1]);
+                jitter[j].f[0] += FUN_L00_00257c48(0.0f, 0.1f);
+                jitter[j].f[1] += FUN_L00_00257c48(0.0f, 0.1f);
+                jitter[j].f[2] += FUN_L00_00257c48(0.0f, 0.1f);
+            }
+            qcopy(&D_L15_001D3E80_2d8fa0[k].p[0], &vectors[8]);
+            for (j = 1; j < 5; j++) {
+                add_vector_xyz((D_L15_001D3E80_2d8fa0[k].p + j), &D_L15_001D3BA0[k].p[j - 1], &jitter[j]);
+            }
+            {
+                int elapsed = D_L15_00161CD8[k];
+                int timer = D_L15_00161CC0[k];
+                float fade;
+                if (elapsed < timer) {
+                    elapsed = timer - elapsed;
+                } else {
+                    elapsed = elapsed - timer;
+                }
+                fade = convert_integer_to_float(elapsed);
+                fade = fade / convert_integer_to_float(scale_game_frames_alt(15));
+                D_L15_00161CC8[k] = func_001FA898_r((1.0f - fade) * 32.0f);
             }
         }
     }
-    width = trail_random_range(0.5235988f, 1.0471976f);
-    angle = trail_random_range(-0.5235988f, 1.0471976f);
-    trail_scale(D_L15_00161C90_trail * D_0015ED60_trail, offset, delta);
-    trail_rotate(angle, offset, offset, end);
-    trail_rotate(width, offset, offset, rotated);
-    sign = trail_random_integer(1, 8);
-    if (trail_random_bool(2)) sign = -sign;
-    width = trail_random_between(0.2f, 0.6f);
-    color = D_L15_00161C60_trail | 0x7f000000;
-    trail_particle(width * 0.3f, width, 0.0f, data + 0xf0, trail_scale_frames(15), color, 0, sign, offset);
-    trail_particle(width * 0.15f, width * 0.5f, 0.0f, data + 0xf0, trail_scale_frames(15), 0x307f7f7f, 0, -sign, offset);
-    sign = trail_random_integer(1, 8);
-    if (trail_random_bool(2)) sign = -sign;
-    width = trail_random_between(0.15f, 3.0f);
-    trail_particle(width * 0.1f, width, 0.0f, data + 0x110, trail_scale_frames(12), color, 0, sign, (void *)0x15f580);
+    scale = FUN_L00_00257c48(0.52359879f, 1.04719758f);
+    angle = random_float_between(-0.52359879f, 1.04719758f);
+    scale_vector_xyz(&vectors[5], &vectors[0], *(float *)&D_L15_00161C90 * D_0015ED60);
+    build_look_at_matrix(&vectors[5], &vectors[5], &vectors[6], angle);
+    build_look_at_matrix(&vectors[5], &vectors[5], &vectors[7], scale);
+    spin = random_int_between(1, 8);
+    if (random_integer_below_c(2)) spin = -spin;
+    angle = random_float_between(0.2f, 0.6f);
+    spawn_2d8fa0(&data->a, scale_game_frames_alt(15), angle * 0.3f, angle, *(int *)&D_L15_00161CE0_2d8fa0 | 0x7F000000, 0, spin, &vectors[5], 0.0f);
+    spin = -spin;
+    spawn_2d8fa0(&data->a, scale_game_frames_alt(15), angle * 0.15f, angle * 0.5f, 0x307F7F7F, 0, spin, &vectors[5], 0.0f);
+    spin = random_int_between(1, 8);
+    if (random_integer_below_c(2)) spin = -spin;
+    angle = random_float_between(0.15f, 3.0f);
+    spawn_2d8fa0(&data->c, scale_game_frames_alt(12), angle * 0.1f, angle, *(int *)&D_L15_00161CE0_2d8fa0 | 0x7F000000, 0, spin, D_L15_0015F580, 0.0f);
 }
-#endif
-extern float D_0015ED60_8710 __asm__("D_0015ED60");
+extern float frame_scale __asm__("D_0015ED60");
 extern char D_L15_001D3750_8710[] __asm__("D_L15_001D3750");
 extern char D_L15_001D3BB0_8710[] __asm__("D_L15_001D3BB0");
 extern int D_L15_00161CC8_8710 __asm__("D_L15_00161CC8");
@@ -397,7 +447,7 @@ extern void FUN_L00_002baae0_8710(char *, int, int, int, float, float,
 extern void FUN_L15_002d8e48_8710(char *) __asm__("FUN_L15_002d8e48");
 #define F(x) (*(float *)&(x))
 void FUN_L15_002d8710(char *moby) {
-    float v = F(D_L15_00161C54_8710) - F(D_L15_00161C58_8710) * D_0015ED60_8710;
+    float v = F(D_L15_00161C54_8710) - F(D_L15_00161C58_8710) * frame_scale;
     F(D_L15_00161C54_8710) = v;
     if (v <= -8.0f) {
         F(D_L15_00161C54_8710) = v + 8.0f;
@@ -422,9 +472,6 @@ void FUN_L15_002d8710(char *moby) {
     FUN_L15_002d8e48_8710(moby);
 }
 typedef struct {
-    float f[4];
-} __attribute__((aligned(16))) V2d8e48;
-typedef struct {
     float u, v;
 } UV2d8e48;
 typedef struct {
@@ -443,8 +490,8 @@ extern UV2d8e48 D_L15_001D3730[] __asm__("D_L15_001D3730") __attribute__((sectio
 extern void vsub_2d8e48(void *, void *, void *) __asm__("FUN_001f9a28");
 extern void vadd_2d8e48(void *, void *, void *) __asm__("FUN_001f9a10");
 extern void vscl_2d8e48(void *, void *, float) __asm__("FUN_001f9bf8");
-extern void cross_2d8e48(void *, void *, void *) __asm__("FUN_001f9ad8");
-extern void vmul_2d8e48(float, void *, void *) __asm__("FUN_001f9a68");
+extern void fast_vec_cross(void *, void *, void *) __asm__("FUN_001f9ad8");
+extern void fast_vec_scale(float, void *, void *) __asm__("FUN_001f9a68");
 extern void xform_2d8e48(void *, void *, void *) __asm__("FUN_001f9d20");
 extern long tex_2d8e48(int) __asm__("FUN_001f44b8");
 extern float rnd_2d8e48(float, float) __asm__("FUN_L00_00257c48");
@@ -469,9 +516,9 @@ void FUN_L15_002d8e48(void *mv) {
     mat[3].f[3] = 1.0f;
     vsub_2d8e48(&mat[0], &D_L15_001673C0, &mat[3]);
     vscl_2d8e48(&mat[0], &mat[0], 1.0f);
-    cross_2d8e48(&mat[1], &mat[0], (V2d8e48 *)&hero.unk290);
+    fast_vec_cross(&mat[1], &mat[0], (V2d8e48 *)&hero.gravity_dir);
     vscl_2d8e48(&mat[1], &mat[1], -1.0f);
-    cross_2d8e48(&mat[2], &mat[1], &mat[0]);
+    fast_vec_cross(&mat[2], &mat[1], &mat[0]);
     c = D_L15_00161CAC;
     quad.color[3] = c;
     quad.color[2] = c;
@@ -479,7 +526,7 @@ void FUN_L15_002d8e48(void *mv) {
     quad.color[0] = c;
     s = D_L15_00161CB4 + rnd_2d8e48(0.0f, 0.025f);
     for (i = 0; i < 4; i++) {
-        vmul_2d8e48(s, &quad.corner[i], &D_L15_001D36F0[i]);
+        fast_vec_scale(s, &quad.corner[i], &D_L15_001D36F0[i]);
         xform_2d8e48(&quad.corner[i], &quad.corner[i], &mat[0]);
         quad.uv[i].u = D_L15_001D3730[i].u;
         quad.uv[i].v = D_L15_001D3730[i].v;
@@ -492,7 +539,7 @@ void FUN_L15_002d8e48(void *mv) {
     quad.color[0] = c;
     s = D_L15_00161CB8 + rnd_2d8e48(0.0f, 0.05f);
     for (i = 0; i < 4; i++) {
-        vmul_2d8e48(s, &quad.corner[i], &D_L15_001D36F0[i]);
+        fast_vec_scale(s, &quad.corner[i], &D_L15_001D36F0[i]);
         xform_2d8e48(&quad.corner[i], &quad.corner[i], &mat[0]);
         quad.uv[i].u = D_L15_001D3730[i].u;
         quad.uv[i].v = D_L15_001D3730[i].v;

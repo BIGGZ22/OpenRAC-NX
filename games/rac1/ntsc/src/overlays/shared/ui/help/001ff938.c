@@ -102,7 +102,7 @@ void FUN_L15_001ff938(void) {
         green_byte = moby[0x91];
         blue_byte = moby[0x92];
         if (hero.unk22DE != 0)
-            alpha = FUN_001fa6d0((FUN_001fa6c0_inherited() / FUN_001fa6c0(0x12)) * (float)alpha);
+            alpha = FUN_001fa6d0((FUN_001fa6c0(hero.unk22DE) / FUN_001fa6c0(0x12)) * (float)alpha);
         *(u32 *)((u8 *)&hero + 0x22E4) = (alpha << 24) | (blue_byte << 16) | (green_byte << 8) | red_byte;
         FUN_L00_00207d00();
         hero.unk22E0 = 0;
@@ -490,9 +490,9 @@ void FUN_L15_00215e58(void) {
             if (m != 0) {
                 qcopy(&m->pos, &hero.motion.pos);
                 qcopy(&m->rot, &hero.motion.rot);
-                m->unk32 = 0x40;
-                ((struct Moby *)hero.unkA8C)->unk31 = 1;
-                ((struct Moby *)hero.unkA8C)->unk90 = 0;
+                m->draw_dist = 0x40;
+                ((struct Moby *)hero.unkA8C)->visible = 1;
+                ((struct Moby *)hero.unkA8C)->glow_color = 0;
                 ((struct Moby *)hero.unkA8C)->spawn_frame = hero.moby->spawn_frame;
                 FUN_L00_00250df8_215e58(hero.unkA8C);
                 FUN_L00_00210a08_215e58(3, 0x53, hero.unkA8C);

@@ -137,7 +137,6 @@ void func_0023D2E8(ViBuf *vb, int size) {
 INCLUDE_ASM("asm/nonmatchings/text", func_0023D340); /* viBufAddDMA(ViBuf *) */
 INCLUDE_ASM("asm/nonmatchings/text", func_0023D540); /* viBufStopDMA(ViBuf *) */
 INCLUDE_ASM("asm/nonmatchings/text", func_0023D650); /* viBufRestartDMA(ViBuf *) */
-extern void func_0023CF80(unsigned int);
 extern void func_00118C80(int);     /* DeleteSema */
 
 /* viBufDelete(ViBuf *) -- stops DMA channel 4 (setD4_CHCR(5)), zeroes its MADR/QWC/TADR

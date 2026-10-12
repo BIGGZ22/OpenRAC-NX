@@ -1,4 +1,6 @@
 #include "common.h"
+#include "callees.h"
+#include "records.h"
 #include "structs.h"
 
 /*
@@ -14,12 +16,6 @@ extern void func_001F9A98(void *, void *, int);
 extern char D_00189310[];
 extern char D_001899D0[];
 extern void *D_001871C0 NOT_SDA;
-typedef struct {
-    char unk_00[8];
-    void (*fn_08)(void *);
-    char unk_0C[4];
-    void (*fn_10)(void *);
-} DispatchRec;
 extern DispatchRec D_001E8F80[];
 extern int D_0018A3B0[];
 extern void func_001F99B0();
@@ -44,7 +40,6 @@ extern void func_001F6668(void *, void *, void *, void *, void *, int,
 extern int func_001F6600(unsigned char *, int);
 extern int func_001F6620(unsigned char *, int);
 extern int func_001F4868(int);
-extern void func_001F7070(void *, void *, void *, void *, int, unsigned char *);
 extern void func_001FB498(void);
 extern void func_001F3008(void);
 extern void func_001F3140(void);
@@ -76,7 +71,6 @@ int func_001FF668(int arg0) {
 extern int D_0019A4E8 NOT_SDA;
 extern int func_001FFB38(int, int, int, int, int, int, int);
 extern char *func_001FFAB8_d(int, int, char *, int) __asm__("func_001FFAB8");
-extern void func_001F99D8(void *, int);
 extern char D_0015F7B8[];
 extern unsigned char *D_0015FAB8 MACRO_ADDR;
 extern unsigned char *D_0015FABC MACRO_ADDR;
@@ -536,7 +530,6 @@ typedef struct HudBankCb {
 extern char D_0019A4E8_raw[] __asm__("D_0019A4E8");
 extern HudBankCb D_00199C60_cb[] __asm__("D_00199C60") NOT_SDA;
 extern int D_0015F544 MACRO_ADDR;
-extern int D_0015F6E8 MACRO_ADDR;
 extern int D_0015F760 MACRO_ADDR;
 extern int D_0015F764 MACRO_ADDR;
 extern int D_0015F768 MACRO_ADDR;
@@ -598,8 +591,6 @@ void func_001FFFB8(void) {
 
 LINKER_REMNANT("asm/remnants/text", func_00200190);
 
-extern char D_0019A4E8_raw[] __asm__("D_0019A4E8");
-extern int func_001FF668(int);
 
 /* GetIconFrame(iconId, sub): finds the icon's {id, count, base} row
    (func_001FF668 gives its index) in the arena's +0x1C table; frame =
@@ -946,7 +937,6 @@ void func_00200A90(int tex, int x, int y, int w, int h, int u, int v, int alpha)
 }
 
 extern int *D_00161000 MACRO_ADDR;
-extern int D_0013E600[];
 
 /* Appends a 1-tag + 5-quadword PACKED GIF packet to D_00161000: a GIFtag
    (0x10000005 / 0 / 0 / 0x50000005), fixed GS register data, arg0
@@ -990,8 +980,6 @@ void func_00200CA0(long arg0, int arg1, int arg2, int arg3, int arg4,
 }
 
 extern int *D_00161000 MACRO_ADDR;
-extern int D_0013E600[];
-extern char D_0019A4E8_raw[] __asm__("D_0019A4E8");
 extern float func_001F9F90(float);
 extern float func_001F9FA8(float);
 extern void func_001F9BD8(float *, float *, float *);
@@ -1168,7 +1156,6 @@ void func_00201348(char *arg0, int arg1, int arg2, int arg3, int arg4, int arg5)
 }
 
 extern int *D_00161000 MACRO_ADDR;
-extern int D_0013E600[];
 
 /* func_002017C8's sibling: same 1-tag + 3-quadword PACKED GIF packet, but
    register-id constant 0x41 (not 0x46) at +0x20, and a FIXED mask
@@ -1212,7 +1199,6 @@ void func_002014B8(int arg0, int arg1, int arg2, int arg3, long arg4,
 }
 
 extern int *D_00161000 MACRO_ADDR;
-extern int D_0013E600[];
 
 /* func_002014B8's sibling (register-id constant 0x46, like
    func_002017C8's, instead of 0x41): same 1-tag + 3-quadword PACKED GIF
@@ -1256,7 +1242,6 @@ void func_00201640(int arg0, int arg1, int arg2, int arg3, long arg4,
 }
 
 extern int *D_00161000 MACRO_ADDR;
-extern int D_0013E600[];
 
 /* Appends a 1-tag + 3-quadword PACKED GIF packet to D_00161000: a GIFtag
    (0x10000003 / 0 / 0 / 0x50000003), then TEX-ish GS register data at

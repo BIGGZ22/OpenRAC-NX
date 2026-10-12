@@ -61,13 +61,14 @@ void FUN_L07_0031d2e0(char *moby) {
         count = *(int *)path;
         i = 0;
         if (count > 0) do {
-            char *current_path = D_L07_001B0530[data[1]];
+            char *current_path = D_L07_001B0530[path_index];
             int next = (i + 1) % *(int *)current_path;
             float length = fast_vec_dist(current_path + 0x10 + i * 0x10,
                                          current_path + 0x10 + next * 0x10);
             *(float *)(D_L07_001B0530[data[1]] + 0x1c + i * 0x10) = length;
             *(float *)(data + 8) += *(float *)(D_L07_001B0530[data[1]] + 0x1c + i * 0x10);
-            count = *(int *)D_L07_001B0530[data[1]];
+            path_index = data[1];
+            count = *(int *)D_L07_001B0530[path_index];
             i++;
         } while (i < count);
         moby[0x20] = 1;
@@ -83,7 +84,7 @@ state_one:
         for (i = 0; list[i] != -1; i++) {
             int id = list[i];
             float value = convert_integer_to_float(D_0013D428[id]);
-            float scale = convert_integer_to_float(D_L07_001C4130[id].scale);
+            float scale = convert_integer_to_float(((L07ScaleRow *)((char *)D_L07_001C4130 + id * 0x18))->scale);
             float ratio = value / scale;
             float step = random_float_between(0.0f, *(float *)(data + 8));
             float min_ratio = *(float *)(data + 2) / 100.0f;
@@ -113,15 +114,18 @@ state_one:
                 segment = 0;
                 debug_print(D_L07_00211B50, total, batch);
                 if (total > 0) {
-                    remaining = total - batch;
                     do {
+                        int accepted = 0;
+                        remaining = total - batch;
                         do {
                             sample_path(step, (int *)path, position, &segment, &fraction, 1);
                             if (data[9] == -1 ||
-                                12.0f < vector_distance((*(char **)0x15ffd8) + data[9] * 0x100 + 0x10, position))
-                                break;
-                            step += 10.0f;
-                        } while (1);
+                                12.0f < vector_distance(D_L07_0015FFD8 + data[9] * 0x100 + 0x10, position))
+                                accepted = 1;
+                            else
+                                step += 10.0f;
+                        } while (!accepted);
+                        total = remaining;
                         {
                             int x = FUN_00120478(position[0]);
                             int y = FUN_00120478(position[1]);
@@ -135,9 +139,7 @@ state_one:
                             debug_print(D_L07_00211BA8, remaining);
                             batch = remaining;
                         }
-                        total = remaining;
-                        remaining = total - batch;
-                    } while (total > 0);
+                    } while (remaining > 0);
                 }
             }
         }
@@ -162,7 +164,7 @@ extern char D_L07_0016C8E0[];
 extern float D_L07_0015F580[] __attribute__((section(".sdata")));
 extern float random_float_between(float a, float b) __asm__("FUN_002132a8");
 extern int D_L07_0015F5C4;
-extern int FUN_L00_00257b90(int, int);
+extern int random_int_between(int, int) __asm__("FUN_L00_00257b90");
 extern s32 random_integer_below(s32) __asm__("func_00213260");
 extern s32 scale_game_frames(s32) __asm__("func_001F96F8");
 extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
@@ -211,8 +213,8 @@ void FUN_L07_0031eba8(char *m) {
                 moby_point_position(mob, i, buf);
                 for (j = 9; j >= 0; j--) {
                     float d = random_float_between(20000.0f, 200000.0f);
-                    int col = (FUN_L00_00257b90(0x20, 0x80) << 24) | 0x7F7F7F;
-                    int v = FUN_L00_00257b90(0, 4);
+                    int col = (random_int_between(0x20, 0x80) << 24) | 0x7F7F7F;
+                    int v = random_int_between(0, 4);
                     char *p;
                     char *q;
                     if (random_integer_below(2) != 0)
@@ -220,7 +222,7 @@ void FUN_L07_0031eba8(char *m) {
                     p = func_L00_0026DEA0_c(buf, v, D_L07_0015F580, col, 0.6f, 1.0f, 1.01f, d);
                     if (p != 0) {
                         q = p + 0x20;
-                        *(short *)(p + 0xA) = scale_game_frames(FUN_L00_00257b90(0x3C, 0x5A));
+                        *(short *)(p + 0xA) = scale_game_frames(random_int_between(0x3C, 0x5A));
                         *(int *)(q + 4) = 2;
                         *(char *)(q + 0xA) = col >> 24;
                         *(char *)(q + 0xB) = *(unsigned char *)(p + 0xA);

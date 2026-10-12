@@ -1,4 +1,6 @@
 #include "common.h"
+#include "callees.h"
+#include "records.h"
 #include "structs.h"
 
 /*
@@ -14,12 +16,6 @@ extern void func_001F9A98(void *, void *, int);
 extern char D_00189310[];
 extern char D_001899D0[];
 extern void *D_001871C0 NOT_SDA;
-typedef struct {
-    char unk_00[8];
-    void (*fn_08)(void *);
-    char unk_0C[4];
-    void (*fn_10)(void *);
-} DispatchRec;
 extern DispatchRec D_001E8F80[];
 extern int D_0018A3B0[];
 extern void func_001F99B0();
@@ -44,7 +40,6 @@ extern void func_001F6668(void *, void *, void *, void *, void *, int,
 extern int func_001F6600(unsigned char *, int);
 extern int func_001F6620(unsigned char *, int);
 extern int func_001F4868(int);
-extern void func_001F7070(void *, void *, void *, void *, int, unsigned char *);
 extern void func_001FB498(void);
 extern void func_001F3008(void);
 extern void func_001F3140(void);
@@ -73,13 +68,6 @@ extern int D_001941C8 NOT_SDA;
 extern int D_0016100C;
 extern int D_001A0468[];
 extern void func_00205830(int a, int b);
-typedef struct {
-    int _pad0[0x9E];
-    int use[5];   /* +0x278 */
-    int flags[5]; /* +0x28C */
-    int sel;      /* +0x2A0 -- index of the active slot, -1 for none */
-    int size[5];  /* +0x2A4 */
-} PadSlots;
 extern PadSlots D_001A01F0_slots __asm__("D_001A01F0");
 extern int D_001A01F0[];
 extern int *D_001602E0;

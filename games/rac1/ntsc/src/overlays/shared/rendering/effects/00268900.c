@@ -93,16 +93,11 @@ extern void FUN_L00_00275eb0(void);
 
 extern u32 effect_handlers[] __asm__("D_L00_001B1E80");
 
-void FUN_L00_00268900(void)
+void register_part_types(void) __asm__("FUN_L00_00268900");
+void register_part_types(void)
 {
     u32 *handlers = effect_handlers;
     handlers[0] = (u32)FUN_L00_00268d48;
-    handlers[1] = (u32)FUN_L00_00268fe8;
-    handlers[2] = (u32)FUN_L00_00269290;
-    handlers[3] = (u32)FUN_L00_002694f8;
-    handlers[4] = (u32)FUN_L00_00269a70;
-    handlers[5] = (u32)FUN_L00_00269c70;
-    handlers[6] = (u32)FUN_L00_00269d20;
     handlers[7] = (u32)FUN_L00_0026a418;
     handlers[8] = (u32)FUN_L00_0026a5b8;
     handlers[9] = (u32)FUN_L00_0026a6f0;
@@ -119,6 +114,12 @@ void FUN_L00_00268900(void)
     handlers[20] = (u32)FUN_L00_0026c860;
     handlers[21] = (u32)FUN_L00_0026ccb0;
     handlers[22] = (u32)FUN_L00_00267b10;
+    handlers[1] = (u32)FUN_L00_00268fe8;
+    handlers[2] = (u32)FUN_L00_00269290;
+    handlers[3] = (u32)FUN_L00_002694f8;
+    handlers[4] = (u32)FUN_L00_00269a70;
+    handlers[5] = (u32)FUN_L00_00269c70;
+    handlers[6] = (u32)FUN_L00_00269d20;
     handlers[23] = (u32)FUN_L00_0026d1b0;
     handlers[24] = (u32)FUN_L00_0026d470;
     handlers[25] = (u32)FUN_L00_0026d700;
@@ -248,11 +249,11 @@ void FUN_L00_00268d48(FallingParticle *p)
     vel->f[3] = ground + particle_clearance.value;
 }
 extern unsigned char *D_L00_001B2084 __attribute__((section(".data")));
-unsigned char *FUN_L00_002678b8(int);
+unsigned char *create_part(int) __asm__("FUN_L00_002678b8");
 int truncate_float_to_s32(float) __asm__("FUN_001fa6d0");
 int scale_game_frames(int) __asm__("FUN_001f96f8");
 void FUN_L00_00268f10(Vec4 *v, int c) {
-    unsigned char *m = FUN_L00_002678b8(1);
+    unsigned char *m = create_part(1);
     if (m) {
         v->f[2] += 0.1f;
         qcopy(m + 0x10, v);

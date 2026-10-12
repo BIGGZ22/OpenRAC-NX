@@ -15,7 +15,7 @@ extern s32 D_L00_00173E08;
 extern u8 D_L00_00173E40[];
 extern void *D_L00_00197300[];
 extern s32 D_L00_0015F3F8_gp __asm__("D_L00_0015F3F8") __attribute__((sda));
-extern s32 D_0013E504;
+extern s32 frame_size __asm__("D_0013E504");
 extern s32 D_L00_001611CC;
 extern s32 D_L00_00184414;
 extern s32 D_L00_001B9E90_init[] __asm__("D_L00_001B9E90");
@@ -120,6 +120,8 @@ void FUN_L00_00276368(void) {
     }
     FUN_L00_001ff300(D_L00_00180250, (u8 *)0x00160280, 1.0f);
     qcopy((void *)D_L00_00180240, (u8 *)0x00160290);
+    *(volatile u128_init *)D_L00_00180260 = 0;
+    *(volatile u128_init *)(D_L00_00180260 + 4) = 0;
     qcopy((void *)D_L00_001B9D30, (void *)D_L00_00166DC0_init);
     qcopy((void *)(D_L00_001B9D30 + 4), (void *)(D_L00_00166DC0_init + 4));
     D_L00_001B9DD8 = *(s32 *)D_L00_0016CAF0_raw;
@@ -128,8 +130,6 @@ void FUN_L00_00276368(void) {
     D_L00_0016CC68 = 255.0f;
     D_L00_0016CC58 = 0;
     D_L00_0016CC6C = 0;
-    *(volatile u128_init *)D_L00_00180260 = 0;
-    *(volatile u128_init *)(D_L00_00180260 + 4) = 0;
     FUN_L00_001f7980();
     FUN_L00_00276128();
     FUN_L00_001f6e48();
@@ -166,7 +166,7 @@ void FUN_L00_00276368(void) {
     } else {
         FUN_L00_00234fd0(0);
     }
-    FUN_L00_002a0f18(D_L00_001B9D00, D_L00_0015EE84, D_0013E504 << 11);
+    FUN_L00_002a0f18(D_L00_001B9D00, D_L00_0015EE84, frame_size << 11);
     D_L00_001B9D08 = D_L00_0015EE78;
     if (D_L00_001B9CF0.state == 11 || D_L00_001B9CF0.state == 15) {
         D_L00_00184434 = D_L00_0015EE78 + 0x40000;
@@ -250,6 +250,7 @@ extern s32 show_health_hud(void) __asm__("FUN_L00_00234e00");
 extern void hud_keep_visible(s32, s32) __asm__("FUN_L00_00235e18");
 extern s32 queue_animation_update(s32, s32, void *, void *, void *, void *, s32) __asm__("FUN_001ff308");
 
+#include "rnc/gameplay/hero.h"
 void FUN_L00_00276908(void) {
     s32 i;
     s32 value;
@@ -263,72 +264,76 @@ void FUN_L00_00276908(void) {
     s32 *active;
     u8 *table;
 
-    if (*(s32 *)(state + 0x110) < 10) {
-        return;
-    }
-    FUN_L00_002a09d8(1);
-    FUN_L00_002a07f8();
-    if (*(void **)(state + 4) != 0) {
-        for (i = 0; i < 14; i++) {
-            obj = D_L00_001B9CF0.owner->objs[i];
-            if (obj != 0) {
-                callback = *(void (**)(void *, s32))((u8 *)obj + 0xc);
-                if (callback != 0) {
-                    callback(obj, 0);
+    if (D_L00_001B9CF0.progress >= 10) {
+
+        FUN_L00_002a09d8(1);
+        FUN_L00_002a07f8();
+        if (*(void **)(state + 4) != 0) {
+            for (i = 0; i < 14; i++) {
+                obj = D_L00_001B9CF0.owner->objs[i];
+                if (obj != 0) {
+                    callback = *(void (**)(void *, s32))((u8 *)obj + 0xc);
+                    if (callback != 0) {
+                        callback(obj, 0);
+                    }
                 }
             }
+            *(void **)(state + 4) = 0;
         }
-        *(void **)(state + 4) = 0;
-    }
-    saved = D_00141408;
-    desired = (s32 *)(state + 0x30);
-    active = D_00141660;
-    remaining = 3;
-    do {
-        if (*active != *desired) {
-            *saved = *desired != 0 ? *desired : 0x26;
-        }
-        saved++;
-        desired++;
-        active++;
-        remaining--;
-    } while (remaining >= 0);
-    D_0015EE78_gp = *(s32 *)(state + 0x18);
-    hud_send_resident_bank(0, *(s32 *)((u8 *)*(void **)(D_L00_0017E4D8 + 0x18) + 0x74), 0);
-    FUN_L00_00235310(2);
-    if (*(s32 *)((u8 *)*(void **)(D_L00_0017E4D8 + 0x18) + 0x80) != 0) {
-        FUN_L00_00235310(3);
-    }
-    if (*(s32 *)((u8 *)*(void **)(D_L00_0017E4D8 + 0x18) + 0x84) != 0) {
-        FUN_L00_00235310(4);
-    }
-    for (i = 13; i >= 0; i--) {
-        D_L00_001B9E90[13 - i] = delete_moby(D_L00_001B9E90[13 - i]);
-    }
-    handle = show_health_hud();
-    hud_keep_visible(handle, scale_game_frames(0xb4));
-    handle = queue_animation_update(2, 0x754e, FUN_L00_00239cc8, FUN_L00_00239d00,
-                                FUN_L00_00239df8, &current_bolt_count, 9999999);
-    hud_keep_visible(handle, scale_game_frames(0xb4));
-    D_L00_001B9CF0.state = 0x14;
-    D_L00_001B9CF0.unk14 = 2;
-    table = (u8 *)*(void * volatile *)&D_L00_00197300[0];
-    value = *(s32 *)(state + 0xcc);
-    if (value < table[0xc]) {
-        i = value;
+        active = D_00141660;
+        desired = (s32 *)(state + 0x30);
+        remaining = 3;
+        saved = (s32 *)&hero;
+        saved = (s32 *)((u8 *)saved + 0x20b8);
         do {
-            table = (u8 *)*(void * volatile *)&D_L00_00197300[0];
-            *(s32 *)(table + 0x48 + i * 4) = 0;
-            i++;
-            table = (u8 *)*(void * volatile *)&D_L00_00197300[0];
-        } while (i < table[0xc]);
+            if (*active != *desired) {
+                *saved = *desired != 0 ? *desired : 0x26;
+            }
+            saved++;
+            desired++;
+            remaining--;
+            active++;
+        } while (remaining >= 0);
+        D_0015EE78_gp = *(s32 *)(state + 0x18);
+        hud_send_resident_bank(0, *(s32 *)((u8 *)*(void **)(D_L00_0017E4D8 + 0x18) + 0x74), 0);
+        FUN_L00_00235310(2);
+        if (*(s32 *)((u8 *)*(void **)(D_L00_0017E4D8 + 0x18) + 0x80) != 0) {
+            FUN_L00_00235310(3);
+        }
+        if (*(s32 *)((u8 *)*(void **)(D_L00_0017E4D8 + 0x18) + 0x84) != 0) {
+            FUN_L00_00235310(4);
+        }
+        saved = (s32 *)D_L00_001B9E90;
+        remaining = 13;
+        do {
+            remaining--;
+            *saved = (s32)delete_moby((struct Ent *)*saved);
+            saved++;
+        } while (remaining >= 0);
+        handle = show_health_hud();
+        hud_keep_visible(handle, scale_game_frames(0xb4));
+        handle = queue_animation_update(2, 0x754e, FUN_L00_00239cc8, FUN_L00_00239d00,
+                                    FUN_L00_00239df8, &current_bolt_count, 9999999);
+        hud_keep_visible(handle, scale_game_frames(0xb4));
+        D_L00_001B9CF0.state = 0x14;
+        D_L00_001B9CF0.unk14 = 2;
+        table = (u8 *)*(void * volatile *)&D_L00_00197300[0];
+        value = *(s32 *)(state + 0xcc);
+        if (value < table[0xc]) {
+            do {
+                table = (u8 *)*(void * volatile *)&D_L00_00197300[0];
+                *(s32 *)(table + 0x48 + value * 4) = 0;
+                value++;
+                table = (u8 *)*(void * volatile *)&D_L00_00197300[0];
+            } while (value < table[0xc]);
+        }
+        table = (u8 *)*(void * volatile *)&D_L00_00197300[0];
+        table[0xc] = *(u8 *)(state + 0xcc);
+        D_L00_0015F5D8 = 1;
+        *(s32 *)(D_L00_00173E40 + 0x10) &= 0x7fffffff;
+        FUN_L00_002a08c8();
+        FUN_L00_002a09d8(1);
     }
-    table = (u8 *)*(void * volatile *)&D_L00_00197300[0];
-    table[0xc] = (u8)value;
-    D_L00_0015F5D8 = 1;
-    *(s32 *)(D_L00_00173E40 + 0x10) &= 0x7fffffff;
-    FUN_L00_002a08c8();
-    FUN_L00_002a09d8(1);
 }
 #endif
 #include "eetypes.h"
@@ -391,7 +396,7 @@ extern Own D_L00_001B78F0;
 extern Own D_L00_001B6820;
 extern G841F0 D_L00_001841F0;
 extern s16 D_001516D8[];
-extern s32 D_0015EED8;
+extern s32 decode_mode __asm__("D_0015EED8");
 extern s32 D_L00_0015F5AC;
 extern s32 D_L00_0015F578 __attribute__((sda));
 extern s32 D_L00_0015F5C4;
@@ -478,35 +483,35 @@ void FUN_L00_00276bd0(void) {
             FUN_001e93b0(D_L00_001E91B0, D_L00_001841F0.w224);
             FUN_L00_0028ed58(D_L00_001841F0.w224);
         } else if (D_L00_001B9CF0.unkC == 3) {
-            tmp = D_0015EED8;
-            D_0015EED8 = 2;
+            tmp = decode_mode;
+            decode_mode = 2;
             D_L00_001B9CF0.unk130 = tmp;
             fade_to_black(scale_game_frames(0x10));
             D_L00_0015F5C4 = 0;
             FUN_L00_00299460(D_L00_001B9CF0.unkE4);
         } else if (D_L00_001B9CF0.unkC == 4) {
-            tmp = D_0015EED8;
-            D_0015EED8 = 1;
+            tmp = decode_mode;
+            decode_mode = 1;
             D_L00_001B9CF0.unk130 = tmp;
             fade_to_black(scale_game_frames(0x10));
             D_L00_0015F5C4 = 0;
             FUN_L00_00299560(D_L00_001B9CF0.unkE4);
         } else if (D_L00_001B9CF0.unkC == 6) {
-            tmp = D_0015EED8;
-            D_0015EED8 = 1;
+            tmp = decode_mode;
+            decode_mode = 1;
             D_L00_001B9CF0.unk130 = tmp;
             fade_to_black(scale_game_frames(0x10));
             D_L00_0015F5C4 = 0;
             FUN_L00_002994f8(D_L00_001B9CF0.unkE4);
         } else if (D_L00_001B9CF0.unkC == 5) {
-            tmp = D_0015EED8;
-            D_0015EED8 = 1;
+            tmp = decode_mode;
+            decode_mode = 1;
             D_L00_001B9CF0.unk130 = tmp;
             fade_to_black(scale_game_frames(0x10));
             D_L00_0015F5C4 = 0;
             FUN_L00_00298840(D_L00_001B9CF0.unkE4);
         } else if (D_L00_001B9CF0.unkC == 7) {
-            tmp = D_0015EED8;
+            tmp = decode_mode;
             D_L00_001B9CF0.unk130 = tmp;
             fade_to_black(scale_game_frames(0x10));
             D_L00_0015F5C4 = 0;
@@ -625,9 +630,9 @@ typedef struct {
     s32 *image;
 } VoiceRenderObject;
 
-typedef struct {
+typedef struct VoiceRenderEntry {
     s32 unk0;
-    u32 (*draw)(void);
+    u32 (*draw)(struct VoiceRenderEntry *);
     u8 pad8[8];
     u32 flags;
     u8 pad14[4];
@@ -637,7 +642,7 @@ typedef struct {
     s32 height;
 } VoiceRenderEntry;
 
-extern s32 D_0013E504;
+extern s32 frame_size __asm__("D_0013E504");
 extern s32 D_L00_0015EE84 __asm__("D_0015EE84");
 extern s32 D_L00_001B9E90_init[] __asm__("D_L00_001B9E90");
 extern s32 D_L00_001B23C0[] __asm__("D_L00_001B23C0");
@@ -678,7 +683,7 @@ void FUN_L00_002772c0(s32 param_1) {
     struct { u128d image_copy[4]; u128d unused[5]; u128d first, last; } copies;
 
     emit_fixed_dma_packet_if_cursor();
-    FUN_L00_002a0fc8_772c0(D_L00_001B9CF0.unk10, D_L00_0015EE84, D_0013E504 << 11);
+    FUN_L00_002a0fc8_772c0(D_L00_001B9CF0.unk10, D_L00_0015EE84, frame_size << 11);
     if (param_1 != 0) {
         return;
     }
@@ -741,14 +746,14 @@ void FUN_L00_002772c0(s32 param_1) {
                 continue;
             }
             if ((flags & 1) != 0) {
-                entry->draw();
+                entry->draw(entry);
                 continue;
             }
             object = (VoiceRenderObject *)D_L00_001B9E90_init[i];
             texture_width = object->image[22];
             texture_height = object->image[23];
-            left = object->image[20];
-            top = object->image[21];
+            right = object->image[20];
+            bottom = object->image[21];
             width_shift = 7;
             if (texture_width > 0x80) {
                 for (width_shift = 8; (1 << (width_shift & 31)) < texture_width; width_shift++) {}
@@ -764,7 +769,8 @@ void FUN_L00_002772c0(s32 param_1) {
             width = 1 << (width_shift & 31);
             height = 1 << (height_shift & 31);
             FUN_L00_0023cc30(0, 0, width, height, *(s32 *)0x00160270, 0, 0);
-            flags = entry->draw();
+            entry = (VoiceRenderEntry *)handles[i];
+            flags = entry->draw(entry);
             FUN_L00_001fca18();
             FUN_L00_002a0ba8(0x42, 0x8000000064ULL);
             FUN_L00_002a0ba8(0x47, 0x43);
@@ -798,7 +804,7 @@ void FUN_L00_002772c0(s32 param_1) {
             } else if ((flags & 0x10) == 0) {
                 continue;
             }
-            FUN_L00_001fa290(left, top, texture_width, texture_height,
+            FUN_L00_001fa290(right, bottom, texture_width, texture_height,
                               out_left, out_top, out_right - out_left, out_bottom - out_top,
                               0x80808080ULL, D_L00_0015EED0);
         }

@@ -207,16 +207,13 @@ int func_0023E298(VideoDec *dec) {
     func_0012BBA8(dec);
     return result;
 }
-extern void func_001E9730(char *, ...);
 extern char D_00161328[];
 /* mpegError(sceMpeg *, sceMpegCbDataError *, void *) */
 int func_0023E450(void *mpeg, int *cbdata, void *arg) {
     STUB_printf(D_00161328, cbdata[1]);
     return 1;
 }
-extern void func_0023BB40(void);
 extern int func_0023D340(char *);
-extern char *D_0016130C MACRO_ADDR;
 
 /* mpegNodata(sceMpeg *, sceMpegCbData *, void *) -- switchThread, then viBufAddDMA on the
  * buffer at offset 0xD9090 of the movie state. Returns 1. */

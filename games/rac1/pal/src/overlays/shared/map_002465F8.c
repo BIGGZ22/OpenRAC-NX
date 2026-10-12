@@ -4,7 +4,200 @@
 
 INCLUDE_ASM("asm/overlays", func_L00_002465F8);
 INCLUDE_ASM("asm/overlays", func_L00_00246EC0);
-INCLUDE_ASM("asm/overlays", func_L00_002472D0);
+typedef u32 u128 __attribute__((mode(TI), aligned(16)));
+typedef union {
+    u128 q;
+    f32 f[4];
+    s32 i[4];
+} Vec4;
+struct Mth;
+struct NO;
+struct Own {
+    s32 ids[14];
+    struct Own *unk38;
+    s32 unk3C;
+    struct Mth *unk40;
+    struct NO *objs[14];
+    u8 pad7C[4];
+    struct Mth *unk80;
+};
+struct GameState {
+    s32 state;
+    struct Own *owner;
+    struct Own *unk8;
+    s32 unkC;
+    s32 unk10;
+    s32 unk14;
+    u8 pad18[0x28];
+    Vec4 v40;
+    Vec4 v50;
+    u8 pad60[0x70];
+    struct Own *unkD0;
+    u8 padD4[0x10];
+    void *unkE4;
+    f32 unkE8;
+    void *unkEC;
+    u8 padF0[0xC];
+    s32 first_base; /* 0xFC: render archive allocation */
+    s32 second_base; /* 0x100 */
+    s32 unk104;
+    s32 unk108;
+    s32 unk10C;
+    s32 progress;
+    u8 pad114[0x124 - 0x114];
+    s32 unk124;
+    u8 pad128[0x130 - 0x128];
+    s32 unk130;
+    u8 pad134[0x140 - 0x134];
+    s32 unk140;
+    s32 unk144;
+    s32 stash_handles[20]; /* 0x148: FUN_L00_00276078 */
+};
+extern struct GameState D_L00_001BA070;
+extern s32 D_0015EE84 MACRO_ADDR;
+struct DiscFile {
+    s32 sector;
+    s32 size;
+};
+struct DiscTable {
+    u8 pad_0[0x8];
+    struct DiscFile debug_font; /* 0x8 */
+    struct DiscFile memcard_data; /* 0x10, read by memcard_update_state and memcard_restore_game */
+    struct DiscFile animation_streams[49]; /* 0x18, streamed animations by archive index */
+    struct DiscFile music_10000[37]; /* 0x1A0, music tracks 10000.. */
+    struct DiscFile unk2C8[6]; /* 0x2C8, one per language */
+    struct DiscFile unk2F8[6]; /* 0x2F8, one per language */
+    u8 pad_328[0x1D0];
+    struct DiscFile level_chunk; /* 0x4F8, read by load_level_chunk_from_disc */
+    u8 pad_500[0x3B8];
+    /* 0x8B8: render archive sector/length records; extent reaches the next
+       known field, not a proven count of valid archives. */
+    struct DiscFile render_archives[201];
+    s32 music_50000[40][6]; /* 0xF00, tracks 50000.., one location per language */
+    struct DiscFile unk12C0; /* 0x12C0 */
+    struct DiscFile level_archives[24]; /* 0x12C8, by level index */
+    struct DiscFile loading_slides[6]; /* 0x1388, one per language */
+    struct DiscFile unk13B8; /* 0x13B8 */
+    struct DiscFile music_40000[36]; /* 0x13C0, music tracks 40000.. */
+    s32 sound_bank; /* 0x14E0, passed to load_audio_bank_by_location */
+    s32 pad_14E4;
+    struct DiscFile unk14E8; /* 0x14E8 */
+    u8 pad_14F0[0x8];
+    struct DiscFile wad_chunks[6]; /* 0x14F8, level wad chunks */
+    struct DiscFile help_text; /* 0x1528, per-language archive read by update_menu_help_text_load */
+    struct DiscFile unk1530[14]; /* 0x1530, overlays: x of an x/y pair picked by D_0015ED80 */
+    struct DiscFile unk15A0[14]; /* 0x15A0, the y half of the 0x1530 pair */
+    struct DiscFile animation_table; /* 0x1610, read with animation_asset_read_active set */
+    struct DiscFile music_60000[62]; /* 0x1618, music tracks 60000.. */
+    struct DiscFile unk1808[19]; /* 0x1808, overlays: x of an x/y pair picked by D_0015ED80 */
+    struct DiscFile unk18A0[19]; /* 0x18A0, the y half of the 0x1808 pair */
+    struct DiscFile movies[12]; /* 0x1938, level transition movies */
+    struct DiscFile movies_alt[12]; /* 0x1998, picked by the video mode flag */
+    struct DiscFile unk19F8[3]; /* 0x19F8, overlays: x/y pair picked by D_0015ED80 */
+    struct DiscFile unk1A10[3]; /* 0x1A10, the y half of the 0x19F8 pair */
+    struct DiscFile unk1A28[5]; /* 0x1A28, overlays: x/y pair picked by D_0015ED80 */
+    struct DiscFile unk1A50[5]; /* 0x1A50, the y half of the 0x1A28 pair */
+    struct DiscFile start_movies[4]; /* 0x1A78, played by start_level */
+    struct DiscFile start_movies_alt[4]; /* 0x1A98, while D_0015ED80 is set */
+    u8 pad_1AB8[0xEB0];
+    struct DiscFile shared_archive; /* 0x2968 */
+    struct DiscFile sound_archive; /* 0x2970 */
+    struct DiscFile sound_archive_alt; /* 0x2978, while D_0015ED80 is set */
+    u8 pad_2980[0x8];
+    struct DiscFile music_20000[36]; /* 0x2988, music tracks 20000.. */
+    s32 music_tracks[1]; /* 0x2AA8, by track number */
+};
+extern struct DiscTable D_00137C80;
+typedef struct {
+    u8 pad0[0x24];
+    s32 active;
+    u8 pad28[0x1fc];
+    s32 archive_index;
+    s32 load_state;
+    s32 file_handle;
+    s32 loaded;
+    s32 transfer_bytes;
+    u8 pad238[4];
+    s32 old_base;
+    u8 pad240[0x38];
+    s32 start;
+    s32 buffer;
+    s32 old_end;
+    s32 zero_284;
+    s32 zero_288;
+    s32 slot_28c;
+    s32 level_slot;
+    s32 slot_294;
+    s32 slot_298;
+    s32 slot_29c;
+    s32 slot_2a0;
+    u8 pad2a4[4];
+    s32 last_transfer_bytes;
+} RenderArchiveState;
+extern RenderArchiveState D_L00_001842F0;
+extern u8 D_0013D5E9 NOT_SDA;
+void func_001E9768(void);
+void func_0020CDE0(s32, s32);
+void func_00217628(s32, s32, s32);
+void func_00217748(s32);
+void func_L00_00295010(s32, s32, s32, s32);
+void func_00234238(s32, s32, s32, s32, s32);
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/00245c28.c, FUN_L00_002468b8. */
+void func_L00_002472D0(void) {
+    s32 first_base;
+    s32 second_base;
+    s32 buffer;
+    s32 bytes;
+    s32 archive_index;
+    RenderArchiveState *state = &D_L00_001842F0;
+
+    func_001E9768();
+    func_0020CDE0(state->archive_index, 1);
+    first_base = D_L00_001BA070.first_base;
+    second_base = D_L00_001BA070.second_base;
+    buffer = first_base + 0x9a800;
+    D_L00_001BA070.first_base = buffer + 0x48000;
+    D_L00_001842F0.old_base = first_base;
+    D_L00_001842F0.start = 0;
+    D_L00_001842F0.buffer = buffer;
+    D_L00_001842F0.old_end = second_base;
+    D_L00_001BA070.second_base = second_base + 0x48000;
+    state->zero_284 = 0;
+    state->zero_288 = 0;
+    state->slot_28c = -1;
+    state->level_slot = -1;
+    state->slot_294 = -1;
+    state->slot_298 = -1;
+    state->slot_29c = -1;
+    state->slot_2a0 = -1;
+    if (state->file_handle != -1) {
+        if (state->loaded == 0 && D_0013D5E9 != 0) {
+            archive_index = state->archive_index;
+            bytes = D_00137C80.render_archives[archive_index].size << 7;
+            func_00217628(buffer, D_00137C80.render_archives[archive_index].sector,
+                         D_00137C80.render_archives[archive_index].size);
+            func_00217748(1);
+            state->loaded = 1;
+            state->transfer_bytes = bytes;
+            func_L00_00295010(state->buffer, state->file_handle, 0, bytes);
+            state->level_slot = D_0015EE84 + 0x100;
+            state->last_transfer_bytes = bytes;
+            state->active = 1;
+            state->load_state = -2;
+            return;
+        }
+        if (D_L00_001842F0.file_handle != -1) {
+            D_L00_001842F0.last_transfer_bytes = D_L00_001842F0.transfer_bytes;
+            func_00234238(D_L00_001842F0.buffer, D_L00_001842F0.file_handle, 0, D_L00_001842F0.transfer_bytes, 0);
+            D_L00_001842F0.level_slot = D_0013D5E9 != 0 ? D_0015EE84 + 0x100 : D_0015EE84;
+            D_L00_001842F0.active = 1;
+            D_L00_001842F0.load_state = -2;
+            return;
+        }
+    }
+    D_L00_001842F0.active = 0;
+}
 extern int D_L00_00184568[];
 
 /* finds an occupied slot with an unset key in the requested order (joined with func_L00_002474C4) */

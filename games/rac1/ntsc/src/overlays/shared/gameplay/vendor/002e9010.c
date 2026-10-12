@@ -346,7 +346,7 @@ void FUN_L00_002e9bb0(int a) {
     FUN_L00_002e8378(a);
     FUN_L00_002e9010_u(a);
 }
-extern s32 D_0015EDE4;
+extern s32 opt_cam_yaw_rate __asm__("D_0015EDE4");
 extern f32 D_L00_0015EF44 __attribute__((sda));
 extern f32 D_L00_00161DB0[2] __attribute__((sda));
 void FUN_L00_002e46b8();
@@ -358,7 +358,7 @@ void follow_camera_approach() __asm__("FUN_L00_002e5e38");
 void follow_camera_update(u8 *m) __asm__("FUN_L00_002e9c28");
 void follow_camera_update(u8 *m) {
     u8 *p = *(u8 **)(m + 0x70) + 0x1D0;
-    D_L00_0015EF44 = D_L00_00161DB0[D_0015EDE4];
+    D_L00_0015EF44 = D_L00_00161DB0[opt_cam_yaw_rate];
     FUN_L00_002e46b8();
     follow_camera_apply_overrides(m);
     FUN_001e93e8(m);
@@ -1335,46 +1335,70 @@ extern float FUN_001ff8b0_2ebbd8(float, float) __asm__("FUN_001f9e90");
 
 void FUN_L00_002ebbd8(void *arg) {
     O002ebb00 *o = (O002ebb00 *)arg;
-    char *m = (char *)o->m;
-    char *p = m + 0x40;
-    struct Hero *g = &hero;
-    char *cam = D_00166C80_c;
+    char *m;
+    char *p;
+    struct Hero *g;
+    char *cam;
+    char *tail;
     char *source;
-    int state;
+    char *q;
+    int state = current_level_index;
+    float scale = 1.5f;
     int frames;
     int next;
 
+    {
+        char *m = (char *)o->m;
+        p = m + 0x40;
+    }
     *(int *)(p + 0x40) = 0;
-    if (current_level_index == 14 &&
-        (unsigned)(g->state.current - 0x2c) < 2)
-        *(float *)(p + 0x4c) = 2.0f;
-    else
-        *(float *)(p + 0x4c) = 1.5f;
-    *(volatile float *)(p + 0x48) = 0.20943952f;
-    *(volatile float *)(p + 0x58) = 0.0017453292f;
-    *(volatile float *)(p + 0x5c) = -0.004363323f;
+    if (state == 14) {
+        if ((unsigned)(hero.state.current - 0x2c) >= 2) {
+            *(float *)(p + 0x4c) = scale;
+            goto scale_done;
+        }
+        scale = 2.0f;
+    }
+    *(float *)(p + 0x4c) = scale;
+scale_done:
+    g = &hero;
+    *(float *)(p + 0x48) = 0.20943952f;
+    *(float *)(p + 0x58) = 0.0017453292f;
+    *(float *)(p + 0x5c) = -0.004363323f;
     *(int *)(p + 0x44) = ((int)g->moby);
-    *(volatile float *)(m + 0xa0) = 4.64f;
-    *(volatile float *)(m + 0xb4) = 0.05f;
-    *(volatile float *)(m + 0xa4) = 0.5f;
-    *(volatile float *)(m + 0xb0) = 2.0f;
-    *(volatile int *)(m + 0x18) = 0;
-    *(volatile float *)(m + 0x10) = 0.01f;
-    *(volatile float *)(m + 0x14) = 0.3f;
+    {
+        char *m = (char *)((volatile O002ebb00 *)o)->m + 0xa0;
+        *(float *)(m + 0) = 4.64f;
+        *(float *)(m + 4) = 0.5f;
+        *(float *)(m + 0x10) = 2.0f;
+        *(float *)(m + 0x14) = 0.05f;
+    }
+    {
+        char *m = (char *)((volatile O002ebb00 *)o)->m;
+        *(int *)(m + 0x18) = 0;
+        *(float *)(m + 0x10) = 0.01f;
+        *(float *)(m + 0x14) = 0.3f;
+        frames = FUN_001fef20_2ebbd8(0x78);
+        *(short *)(m + 0x1c) = 0;
+        *(short *)(m + 0x1e) = frames;
+        FUN_001ff260_2ebbd8(m);
+    }
+    {
+        char *m = (char *)((volatile O002ebb00 *)o)->m + 0x30;
+        *(float *)(m + 4) = 0.02f;
+        *(float *)(m + 8) = 0.2f;
+        *(int *)(m + 0xc) = 0;
+        *(int *)m = 0;
+    }
     m = (char *)((volatile O002ebb00 *)o)->m;
-    frames = FUN_001fef20_2ebbd8(0x78);
-    *(short *)(m + 0x1c) = 0;
-    *(short *)(m + 0x1e) = frames;
-    FUN_001ff260_2ebbd8(m);
-    m = (char *)((volatile O002ebb00 *)o)->m;
-    *(float *)(m + 0x34) = 0.02f;
-    *(float *)(m + 0x38) = 0.2f;
-    *(int *)(m + 0x3c) = 0;
-    *(int *)(m + 0x30) = 0;
-    *(int *)(m + 0xbc) = 0;
-    m = (char *)((volatile O002ebb00 *)o)->m;
-    source = *(char **)(cam + 0x184);
-    qcopy((char *)o + 0x30, source + 0x30);
+    tail = m + 0xb8;
+    *(int *)(tail + 4) = 0;
+    {
+        char *cam = D_00166C80_c;
+        source = *(char **)(cam + 0x184);
+    }
+    q = (char *)o + 0x30;
+    qcopy(q, source + 0x30);
     qcopy(o, source);
     qcopy((char *)o + 0x10, source + 0x10);
     qcopy((char *)o + 0x20, source + 0x20);
@@ -1385,19 +1409,19 @@ void FUN_L00_002ebbd8(void *arg) {
         *(float *)(p + 0x34) = FUN_001ff800_2ebbd8(g->unk9AC);
         *(int *)(p + 0x38) = 0;
         *(float *)(m + 0xb8) = g->unk9AC;
-        next = (int)g->unk994;
+        *(int *)(tail + 8) = (int)g->unk994;
     } else {
-        FUN_001ff2a8_2ebbd8(p + 0x30, ((char *)g->unk964) + 0x10, (char *)o + 0x30);
+        FUN_001ff2a8_2ebbd8(p + 0x30, ((char *)g->unk964) + 0x10, q);
         *(int *)(p + 0x38) = 0;
         *(int *)(p + 0x3c) = 0;
         FUN_001ff500_2ebbd8(p + 0x30, p + 0x30, 1.0f);
         *(float *)(m + 0xb8) =
             FUN_001ff8b0_2ebbd8(*(float *)(p + 0x30), *(float *)(p + 0x34));
-        next = (int)g->unk964;
+        *(int *)(tail + 8) = (int)g->unk964;
     }
-    *(int *)(m + 0xc0) = next;
-    *(volatile short *)(cam + 0x270) = 1;
-    *(volatile char *)(cam + 0x273) = 2;
+    cam = D_00166C80_c;
+    *(char *)(cam + 0x273) = 2;
+    *(short *)(cam + 0x270) = 1;
     *(int *)(cam + 0x2f4) = FUN_001fef20_2ebbd8(0x3c);
 }
 #endif
@@ -1427,7 +1451,7 @@ void FUN_L00_002ebe70(char *o) {
     char *p = m + 0x40;
     float *angle = (float *)(m + 0xb8);
     float *distance = (float *)(m + 0xa0);
-    OvlQuad scaled, diff, next;
+    OvlQuad next, diff, scaled, aim;
     float target, rate, fraction, score, best;
     char *candidate, *chosen;
     unsigned short *list;
@@ -1446,7 +1470,7 @@ void FUN_L00_002ebe70(char *o) {
     }
     FUN_L00_0025b868(target, frame_time * 8.0f, (float *)(*(char **)(*(char **)(D_00166C80_c + 0x180) + 0x70) + 0xa0));
     FUN_L00_0025b868(rate, frame_time * 4.0f, (float *)(*(char **)(*(char **)(D_00166C80_c + 0x180) + 0x70) + 0xb0));
-    if (current_level_index == 14 && hero.state.current == 0x2c)
+    if (hero.state.current == 0x2c && current_level_index == 14)
         FUN_L00_0025b868(rate + 0.25f, frame_time * 8.0f, (float *)(*(char **)(*(char **)(D_00166C80_c + 0x180) + 0x70) + 0x8c));
     else
         FUN_L00_0025b868(rate - 0.5f, frame_time * 8.0f, (float *)(*(char **)(*(char **)(D_00166C80_c + 0x180) + 0x70) + 0x8c));
@@ -1464,10 +1488,10 @@ void FUN_L00_002ebe70(char *o) {
                         (*(short *)(candidate + 0xa6) == 0x323 || *(short *)(candidate + 0xa6) == 0x2f6)) {
                         FUN_001ff2a8_2ebe70(&diff, candidate + 0x10, (char *)hero.unk994 + 0x10);
                         FUN_001ff500_2ebe70(1.0f, &scaled, &diff);
-                        ((float *)&next)[0] = FUN_001ff7e8_2ebe70(((float *)&hero.motion.rot)[2]);
-                        ((float *)&next)[1] = FUN_001ff800_2ebe70(((float *)&hero.motion.rot)[2]);
-                        ((float *)&next)[2] = 0.0f;
-                        score = FUN_001ff398_2ebe70(&scaled, &next);
+                        ((float *)&aim)[0] = FUN_001ff7e8_2ebe70(((float *)&hero.motion.rot)[2]);
+                        ((float *)&aim)[1] = FUN_001ff800_2ebe70(((float *)&hero.motion.rot)[2]);
+                        ((float *)&aim)[2] = 0.0f;
+                        score = FUN_001ff398_2ebe70(&scaled, &aim);
                         if (score > 0.0f) {
                             score = FUN_001ff3d8_2ebe70(&diff) - score * 10.0f;
                             if (score < best) {
@@ -1814,11 +1838,11 @@ stop:
         tail->distance = params->height;
         follow->look_height = params->offset_scale;
         qcopy(state->tail.unk140, tail->unk130);
-        fast_vec_scale(dir, &hero.unk290, -tail->distance);
+        fast_vec_scale(dir, &hero.gravity_dir, -tail->distance);
         pos = &rec->pos;
         fast_vec_add(state->follow.eye, &hero.motion.pos, dir);
         fast_vec_add(pos, state->follow.eye, tail->unk130);
-        fast_vec_scale(dir, &hero.unk290, -follow->look_height);
+        fast_vec_scale(dir, &hero.gravity_dir, -follow->look_height);
         fast_vec_add(state->follow.look_target, &hero.motion.pos, dir);
         qcopy(state->follow.unkD0, state->follow.look_target);
         qcopy(follow->focus, &hero.motion.pos);
@@ -2045,8 +2069,8 @@ run:
         }
         *(s32 *)&pos[3] = 0;
         fast_vec_sub(to_pos, pos, &hero.motion.pos);
-        up = fast_vec_dot(to_pos, &hero.unk290);
-        fast_vec_scale(tmp, &hero.unk290, up);
+        up = fast_vec_dot(to_pos, &hero.gravity_dir);
+        fast_vec_scale(tmp, &hero.gravity_dir, up);
         fast_vec_sub(level, to_pos, tmp);
         params->distance = fast_vec_length(level);
         params->height = -up;
@@ -2069,11 +2093,11 @@ run:
         tail->unk15C = params->distance;
         tail->distance = params->height;
         follow->look_height = params->offset_scale;
-        fast_vec_scale(tmp, &hero.unk290, -tail->distance);
+        fast_vec_scale(tmp, &hero.gravity_dir, -tail->distance);
         fast_vec_add(state->follow.eye, &hero.motion.pos, tmp);
         fast_vec_sub(tail->unk130, pos, state->follow.eye);
         qcopy(state->tail.unk140, tail->unk130);
-        fast_vec_scale(tmp, &hero.unk290, -follow->look_height);
+        fast_vec_scale(tmp, &hero.gravity_dir, -follow->look_height);
         fast_vec_add(state->follow.look_target, &hero.motion.pos, tmp);
         qcopy(state->follow.unkD0, state->follow.look_target);
         qcopy(follow->focus, &hero.motion.pos);

@@ -1,5 +1,6 @@
 #include <stdarg.h>
 #include "common.h"
+#include "callees.h"
 #include "structs.h"
 
 /*
@@ -28,7 +29,6 @@ extern void func_00113968(void);
 extern void func_00114438(void *, void *);
 extern char D_00152470[];
 extern int func_00119088();
-extern int func_00119110();
 extern long func_00116108_wide(int *errOut, void *a, void *b, void *c)
     __asm__("func_00116108");
 extern long func_001188C8_wide(int *errOut, void *a, void *b, void *c)
@@ -129,9 +129,6 @@ extern void func_0011A690(const char *, ...);
 extern char D_00152880[]; /* "0.%d" */
 extern char D_00152888[]; /* "e+%d" */
 extern char D_00152890[]; /* "e%d" */
-extern void *D_0012FD00;
-extern long func_0011E6D8(double);
-extern void func_0011A690(const char *, ...);
 
 /* printfloat (libkernl.a:kprintf.o): the kprintf %f formatter. Prints a
    leading '-' through the putchar hook (D_0012FD00) if negative, then
@@ -203,7 +200,6 @@ void func_0011A690(const char *fmt, ...) {
  * under 2.9-ee; under 2.95.3 the frame comes out 0x90 against retail's
  * 0xB0 (the $f12-$f18 save again, as with sprintf, 00116248.c).
  */
-extern void *D_0012FD00;
 extern void func_00119DC0();
 
 int func_0011A6C8(const char *fmt, ...) {
@@ -454,7 +450,6 @@ void func_0011AE20(int mode) {
 }
 
 extern void func_0011AA00(void);
-extern int D_0012FD08 NOT_SDA;
 
 void func_0011AFC0(void) {
     func_0011AA00();
@@ -1068,7 +1063,6 @@ ASM_FUNC("asm/handwritten/core_text", func_0011BC80);
 
 INCLUDE_ASM("asm/nonmatchings/core_text", func_0011BCB0);
 
-extern int func_001151B4();
 extern char D_0012FCEC[];
 extern char D_001580A8[];
 extern int D_0012FDA8;
@@ -1096,7 +1090,6 @@ int func_0011BEB8(void) {
 
 extern void func_001153FC(void *, int, int);
 extern int D_0012FD94;
-extern char D_001580A8[];
 
 int func_0011BF48(void) {
     D_0012FD94 = 0;
@@ -1249,7 +1242,6 @@ typedef struct {
 extern CloseState D_00156980;
 extern char D_001575C0[];
 extern char D_00158080[];
-extern void func_00118C80(int);
 extern int func_00118CB0(int);
 extern int func_0011B4C8();
 extern int func_0011BC40_arg(int) __asm__("func_0011BC40");
@@ -1323,10 +1315,7 @@ struct SemaphoreParameters2 {
 };
 extern struct FsSeekRequest D_00156980_1C388 __asm__("D_00156980");
 extern volatile s32 D_0012FD10[];
-extern s32 D_0012FD94_1C388[] __asm__("D_0012FD94");
 extern s32 D_0012FDA4_1C388[] __asm__("D_0012FDA4");
-extern u8 D_001575C0_1C388[] __asm__("D_001575C0");
-extern struct SifFileSlot D_00157E80_1C388[] __asm__("D_00157E80");
 struct SifClient {
     u8 pad[0x28];
 };
@@ -1353,7 +1342,7 @@ s32 func_0011C388(s32 fd, s32 offset, s32 origin)
     request = &D_00156980_1C388;
     file_slot = func_0011B7F8_1C388(fd);
     func_0011BC40_1C388(4);
-    if (D_0012FD94_1C388[0] == 0) {
+    if (D_0012FD94_1BF80[0] == 0) {
         func_0011BC70_1C388();
         return -1;
     }
@@ -1364,7 +1353,7 @@ s32 func_0011C388(s32 fd, s32 offset, s32 origin)
     request->fd = file_slot->fd;
     request->offset = offset;
     request->origin = origin;
-    request->slot = file_slot - D_00157E80_1C388;
+    request->slot = file_slot - D_00157E80_1BF80;
     semaphore_parameters.max_count = 1;
     semaphore_parameters.init_count = 0;
     semaphore_parameters.option = 0;
@@ -1386,12 +1375,12 @@ s32 func_0011C388(s32 fd, s32 offset, s32 origin)
         }
         func_00118C90(D_0012FDA4_1C388[0]);
     }
-    if (func_0011B4C8(&D_00158080_1C388, 4, 0, &D_00156980_1C388, 0x1C, D_001575C0_1C388, 4, 0, 0) < 0) {
+    if (func_0011B4C8(&D_00158080_1C388, 4, 0, &D_00156980_1C388, 0x1C, D_001575C0_1BF80, 4, 0, 0) < 0) {
         func_00118C80_1C388(completion_semaphore);
         func_0011BC70_1C388();
         return -11;
     }
-    rpc_result = *(s32 *)((u32)D_001575C0_1C388 | 0x20000000);
+    rpc_result = *(s32 *)((u32)D_001575C0_1BF80 | 0x20000000);
     func_0011BC70_1C388();
     if (rpc_result == 0) {
         func_00118C80_1C388(completion_semaphore);
@@ -1417,12 +1406,6 @@ struct FsReadRequest {
     s32 slot;
 };
 extern struct FsReadRequest D_00156980_1C5C0 __asm__("D_00156980");
-extern volatile s32 D_0012FD10[];
-extern s32 D_0012FD94_1C5C0[] __asm__("D_0012FD94");
-extern s32 D_0012FDA4_1C5C0[] __asm__("D_0012FDA4");
-extern u8 D_001575C0_1C5C0[] __asm__("D_001575C0");
-extern struct SifFileSlot D_00157E80_1C5C0[] __asm__("D_00157E80");
-extern struct SifClient D_00158080_1C5C0 __asm__("D_00158080");
 extern struct SifFileSlot *func_0011B7F8_1C5C0(s32 fd) __asm__("func_0011B7F8");
 extern s32 func_0011BC40_1C5C0(s32) __asm__("func_0011BC40");
 extern s32 func_0011BC70_1C5C0(void) __asm__("func_0011BC70");
@@ -1446,7 +1429,7 @@ s32 func_0011C5C0(s32 fd, void *buffer, s32 length)
     request = &D_00156980_1C5C0;
     file_slot = func_0011B7F8_1C5C0(fd);
     func_0011BC40_1C5C0(2);
-    if (D_0012FD94_1C5C0[0] == 0) {
+    if (D_0012FD94_1BF80[0] == 0) {
         func_0011BC70_1C5C0();
         return -1;
     }
@@ -1456,7 +1439,7 @@ s32 func_0011C5C0(s32 fd, void *buffer, s32 length)
     }
     request->fd = file_slot->fd;
     semaphore_parameters.max_count = 1;
-    request->slot = file_slot - D_00157E80_1C5C0;
+    request->slot = file_slot - D_00157E80_1BF80;
     request->buffer = buffer;
     request->length = length;
     semaphore_parameters.init_count = 0;
@@ -1466,7 +1449,7 @@ s32 func_0011C5C0(s32 fd, void *buffer, s32 length)
     request->result_size = 4;
     D_00156980_1C5C0.completion_semaphore = completion_semaphore;
     if ((s16)flags & 0x8000) {
-        func_00118CB0(D_0012FDA4_1C5C0[0]);
+        func_00118CB0(D_0012FDA4_1C388[0]);
         for (async_index = 0; async_index < 32; async_index++) {
             volatile s32 *async_semaphores = D_0012FD10;
 
@@ -1477,18 +1460,18 @@ s32 func_0011C5C0(s32 fd, void *buffer, s32 length)
                 break;
             }
         }
-        func_00118C90(D_0012FDA4_1C5C0[0]);
+        func_00118C90(D_0012FDA4_1C388[0]);
     }
     if (!(flags & 0x20000000)) {
         func_0011AD70(buffer, length);
     }
     func_0011AD70(request, 0x20);
-    if (func_0011B4C8(&D_00158080_1C5C0, 2, 0, &D_00156980_1C5C0, 0x20, D_001575C0_1C5C0, 4, 0, 0) < 0) {
+    if (func_0011B4C8(&D_00158080_1C388, 2, 0, &D_00156980_1C5C0, 0x20, D_001575C0_1BF80, 4, 0, 0) < 0) {
         func_00118C80_1C5C0(completion_semaphore);
         func_0011BC70_1C5C0();
         return -11;
     }
-    rpc_result = *(s32 *)((u32)D_001575C0_1C5C0 | 0x20000000);
+    rpc_result = *(s32 *)((u32)D_001575C0_1BF80 | 0x20000000);
     func_0011BC70_1C5C0();
     if (rpc_result == 0) {
         func_00118C80_1C5C0(completion_semaphore);
@@ -1515,19 +1498,12 @@ struct FsWriteRequest {
     s32 slot;
 };
 extern struct FsWriteRequest D_00156980_1C820 __asm__("D_00156980");
-extern volatile s32 D_0012FD10[];
-extern s32 D_0012FD94_1C820[] __asm__("D_0012FD94");
-extern s32 D_0012FDA4_1C820[] __asm__("D_0012FDA4");
-extern u8 D_001575C0_1C820[] __asm__("D_001575C0");
-extern struct SifFileSlot D_00157E80_1C820[] __asm__("D_00157E80");
-extern struct SifClient D_00158080_1C820 __asm__("D_00158080");
 extern struct SifFileSlot *func_0011B7F8_1C820(s32 fd) __asm__("func_0011B7F8");
 extern s32 func_0011BC40_1C820(s32) __asm__("func_0011BC40");
 extern s32 func_0011BC70_1C820(void) __asm__("func_0011BC70");
 extern s32 func_00118C70_1C820(struct SemaphoreParameters2 *) __asm__("func_00118C70");
 extern s32 func_00118C80_1C820(s32) __asm__("func_00118C80");
 extern s32 func_00118CB0(s32);
-extern s32 func_00118C90(s32);
 extern void func_0011AD70(void *, s32);
 extern s32 func_0011B4C8(void *, s32, s32, void *, s32, void *, s32, void *, void *);
 
@@ -1550,7 +1526,7 @@ s32 func_0011C820(s32 fd, u8 *buffer, s32 length)
     request = &D_00156980_1C820;
     file_slot = func_0011B7F8_1C820(fd);
     func_0011BC40_1C820(3);
-    if (D_0012FD94_1C820[0] == 0) {
+    if (D_0012FD94_1BF80[0] == 0) {
         func_0011BC70_1C820();
         return -1;
     }
@@ -1560,7 +1536,7 @@ s32 func_0011C820(s32 fd, u8 *buffer, s32 length)
     }
     request->fd = file_slot->fd;
     semaphore_parameters.max_count = 1;
-    request->slot = file_slot - D_00157E80_1C820;
+    request->slot = file_slot - D_00157E80_1BF80;
     request->length = length;
     request->buffer = buffer;
     semaphore_parameters.init_count = 0;
@@ -1570,7 +1546,7 @@ s32 func_0011C820(s32 fd, u8 *buffer, s32 length)
     request->result_size = 4;
     D_00156980_1C820.completion_semaphore = completion_semaphore;
     if ((s16)flags & 0x8000) {
-        func_00118CB0(D_0012FDA4_1C820[0]);
+        func_00118CB0(D_0012FDA4_1C388[0]);
         for (async_index = 0; async_index < 32; async_index++) {
             volatile s32 *async_semaphores = D_0012FD10;
 
@@ -1581,7 +1557,7 @@ s32 func_0011C820(s32 fd, u8 *buffer, s32 length)
                 break;
             }
         }
-        func_00118C90(D_0012FDA4_1C820[0]);
+        func_00118C90(D_0012FDA4_1C388[0]);
     }
     if (((u32)buffer & 0xF) == 0) {
         prefix_length = 0;
@@ -1600,12 +1576,12 @@ s32 func_0011C820(s32 fd, u8 *buffer, s32 length)
     for (prefix_index = 0; prefix_index < prefix_length; prefix_index++) {
         request->prefix[prefix_index] = buffer[prefix_index];
     }
-    if (func_0011B4C8(&D_00158080_1C820, 3, 0, &D_00156980_1C820, 0x30, D_001575C0_1C820, 4, 0, 0) < 0) {
+    if (func_0011B4C8(&D_00158080_1C388, 3, 0, &D_00156980_1C820, 0x30, D_001575C0_1BF80, 4, 0, 0) < 0) {
         func_00118C80_1C820(completion_semaphore);
         func_0011BC70_1C820();
         return -11;
     }
-    rpc_result = *(s32 *)((u32)D_001575C0_1C820 | 0x20000000);
+    rpc_result = *(s32 *)((u32)D_001575C0_1BF80 | 0x20000000);
     func_0011BC70_1C820();
     if (rpc_result == 0) {
         func_00118C80_1C820(completion_semaphore);
@@ -1632,8 +1608,6 @@ extern int D_0012FDAC;
 /* func_0011CB40: matched only with -fno-schedule-insns, which the rest of its object does not build with (docs/BUILD_FIDELITY.md, "Removed"). */
 INCLUDE_ASM("asm/nonmatchings/core_text", func_0011CB40);
 
-extern int D_0012FDAC;
-extern char D_00158140[];
 extern int D_00158180;
 extern int D_001581C0;
 

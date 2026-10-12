@@ -1,4 +1,6 @@
 #include "common.h"
+#include "callees.h"
+#include "moby.h"
 #include "structs.h"
 
 /*
@@ -144,13 +146,6 @@ typedef struct
   u8 pad0[0x2C];
   s32 count;
 } HelpState_EABE8;
-typedef struct 
-{
-  u8 pad0[0xD];
-  u8 xD;
-  u8 padE[0x1A];
-  void *x28;
-} MobyClass_EABE8;
 extern s32 D_0015EF74_EABE8 __asm__("D_0015EF74") MACRO_ADDR;
 extern s32 D_0015EF78_EABE8 __asm__("D_0015EF78") MACRO_ADDR;
 extern s32 D_0015EF8C_EABE8 __asm__("D_0015EF8C") MACRO_ADDR;
@@ -175,7 +170,7 @@ extern LoadState_EABE8 D_001941C0_EABE8 __asm__("D_001941C0");
 extern u8 D_00194280_EABE8[] __asm__("D_00194280");
 extern HelpState_EABE8 D_001997D0_EABE8 __asm__("D_001997D0");
 extern u64 D_0019E7C0_EABE8[] __asm__("D_0019E7C0");
-extern MobyClass_EABE8 *D_001B3580_EABE8[] __asm__("D_001B3580");
+extern MobyClass *D_001B3580_EABE8[] __asm__("D_001B3580");
 extern u8 D_001B3E40_EABE8[] __asm__("D_001B3E40");
 extern s32 D_001B5D00_EABE8[] __asm__("D_001B5D00");
 extern s32 D_001B6500_EABE8[] __asm__("D_001B6500");
@@ -400,8 +395,8 @@ void func_001EABE8(void)
   cnt = (new_var = D_001B3E40_EABE8[0x472]);
   if (cnt >= 0)
   {
-    D_001B3580_EABE8[cnt]->x28 = D_001862E0_EABE8;
-    D_001B3580_EABE8[cnt]->xD = 5;
+    D_001B3580_EABE8[cnt]->unk28 = (s32)D_001862E0_EABE8;
+    (*(u8 *)&D_001B3580_EABE8[cnt]->pad_D) = 5;
   }
 }
 
@@ -430,10 +425,6 @@ extern char D_0018CC20[];
 extern float D_0018CEB0;
 extern char D_00187180[];
 extern void func_001F3140(void);
-extern void func_00125358(float *);
-extern void func_001254A0(float *, float *, float);
-extern void func_00125548(float *, float *, float);
-extern void func_001253F8(float *, float *, float);
 
 /* Transition_UpdateMovieCamera: the current keyframe (0x20 bytes: position,
    a flag byte at +0xC, then X/Y/Z angles) sets the camera position and
@@ -509,7 +500,6 @@ extern RenderSequenceState_EB458 D_0018CC20_EB458 __asm__("D_0018CC20");
 extern f32 D_0015F53C_EB458 __asm__("D_0015F53C") MACRO_ADDR;
 extern s32 D_0015F050_EB458 __asm__("D_0015F050") MACRO_ADDR;
 extern s32 D_0015F054_EB458 __asm__("D_0015F054") MACRO_ADDR;
-extern s32 D_0015F058_EB458 __asm__("D_0015F058") MACRO_ADDR;
 extern s32 D_0015F6E8_EB458 __asm__("D_0015F6E8") MACRO_ADDR;
 extern s32 D_0013CBE4_EB458[] __asm__("D_0013CBE4");
 extern void func_00219E60_EB458(void) __asm__("func_00219E60");
@@ -580,15 +570,15 @@ void func_001EB458(void) {
     }
     func_001E97A8_EB458();
     if (D_0015F6E8_EB458 == 0) {
-        D_0015F058_EB458++;
-        if (func_001F98C0_EB458(0x1E) < D_0015F058_EB458) {
+        D_0015F058_EABE8++;
+        if (func_001F98C0_EB458(0x1E) < D_0015F058_EABE8) {
             if (++D_0015F050_EB458 > 0x40) {
                 D_0015F050_EB458 = 0x40;
             }
         }
-        if (func_001F98C0_EB458(0x78) < D_0015F058_EB458) {
+        if (func_001F98C0_EB458(0x78) < D_0015F058_EABE8) {
             D_0015F054_EB458 =
-                (s32)(func_001F9F90_EB458((D_0015F058_EB458 - func_001F98C0_EB458(0x78)) % 60 * 0.10471976f +
+                (s32)(func_001F9F90_EB458((D_0015F058_EABE8 - func_001F98C0_EB458(0x78)) % 60 * 0.10471976f +
                                           -3.1415927f) *
                       32.0f) +
                 0x60;
@@ -598,7 +588,7 @@ void func_001EB458(void) {
         }
         func_0022DD68_EB458();
     } else if (D_0015F6E8_EB458 == 3) {
-        D_0015F058_EB458 = func_001F98C0_EB458(0x3C);
+        D_0015F058_EABE8 = func_001F98C0_EB458(0x3C);
         if ((D_0015F050_EB458 -= 0x10) < 0) {
             D_0015F050_EB458 = 0;
         }

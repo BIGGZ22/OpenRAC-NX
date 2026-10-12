@@ -45,8 +45,6 @@ void func_L15_0025F0A0(int a0, void *a1, char *a2) {
     }
 }
 extern int *D_L15_001B2A70;
-extern unsigned char *func_00218928(int);
-extern int func_001FA898_r(float) __asm__("func_001FA898");
 extern int func_002140B0(int);
 extern void func_002158E8(float *, int *);
 extern void func_00215A10(float *, int *);

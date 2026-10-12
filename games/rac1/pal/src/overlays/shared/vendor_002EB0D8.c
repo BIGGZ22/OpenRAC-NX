@@ -51,9 +51,7 @@ void func_L00_002EB170(char *p) {
     FastVecAdd(p, D_0013E633 + 0xE9D, b);
     FastVecAdd(p, D_0013E633 + 0xE9D + 0xC0, p);
 }
-extern void func_L00_001FF4B0(void *, void *, float);
 extern void func_001F9C30(void *, void *, float);
-extern void func_001F9BD8(void *, void *, void *);
 extern void func_001F9CA0(void *, void *, void *);
 extern char D_0013F450[];
 extern void *D_L00_00166F04;
@@ -455,8 +453,6 @@ void func_L00_002EC0C8(int mode) {
 }
 LINKER_REMNANT("asm/overlays", func_L00_002EC208);
 extern void func_001F9BC0(void *);
-extern void func_001FA218(void *, void *);
-extern void func_001FA480(void *, void *);
 
 void func_L00_002EC210(char *m) {
     float v[16];
@@ -567,10 +563,7 @@ void func_L00_002EC6C8(char *a) {
         func_L00_001EDA28(a + 0x30, 0.5f);
     }
 }
-extern void func_L00_001ED900(void *, void *, void *);
 extern float func_001FA748(float, float);
-extern void func_001FA218(void *, void *);
-extern void func_001FA480(void *, void *);
 void func_L00_002EC728(void *arg) {
     char *a = arg;
     float m[16];
@@ -629,8 +622,6 @@ void func_L00_002EC860(void *arg) {
     func_L00_002EC728(p);
     *(short *)(p + 0x7E) = 0;
 }
-extern float func_L00_001EB6A8(void *, float, float, float, float, float);
-extern float func_001EC120(void *, float, float, float, float, float);
 /* smooths camera values toward targets and rebuilds the camera matrix */
 void func_L00_002EC930(char *m) {
     char *p = *(char **)(m + 0x70);
@@ -764,8 +755,6 @@ char *func_L00_002ECDE0(char *a) {
     return m;
 }
 extern char D_0013E633[];
-extern float func_L00_001FF860(float, float);
-extern float func_001FA850(float, float);
 extern float func_001F9D10(void *, void *);
 
 /* Sets the moby's state to 2 (and arms the camera-side fields) when the target is nearly in front and close, else to 4. */
@@ -786,7 +775,6 @@ void func_L00_002ECEC8(char *m) {
     m[0x7D] = 0;
 }
 extern char D_0013F450[];
-extern void func_L00_002EC860(void *);
 void func_L00_002ECFB0(void *arg) {
     char *a = arg;
     char *g = D_0013F450 + 0x80;
@@ -1058,7 +1046,6 @@ void func_L00_002EEE00(u8 *m) {
     }
 }
 extern float D_L00_00166EC0[];
-extern void func_001F9EC0(void *, void *, void *);
 extern int func_L00_0028F0B0(int a, int b, int c, int d);
 extern float func_002140F8(float, float);
 extern int func_002140B0(int);

@@ -1,4 +1,6 @@
 #include "common.h"
+#include "callees.h"
+#include "records.h"
 #include "structs.h"
 
 /*
@@ -14,12 +16,6 @@ extern void func_001F9A98(void *, void *, int);
 extern char D_00189310[];
 extern char D_001899D0[];
 extern void *D_001871C0 NOT_SDA;
-typedef struct {
-    char unk_00[8];
-    void (*fn_08)(void *);
-    char unk_0C[4];
-    void (*fn_10)(void *);
-} DispatchRec;
 extern DispatchRec D_001E8F80[];
 extern int D_0018A3B0[];
 extern void func_001F99B0();
@@ -44,7 +40,6 @@ extern void func_001F6668(void *, void *, void *, void *, void *, int,
 extern int func_001F6600(unsigned char *, int);
 extern int func_001F6620(unsigned char *, int);
 extern int func_001F4868(int);
-extern void func_001F7070(void *, void *, void *, void *, int, unsigned char *);
 extern void func_001FB498(void);
 extern void func_001F3008(void);
 extern void func_001F3140(void);
@@ -73,13 +68,6 @@ extern int D_001941C8 NOT_SDA;
 extern int D_0016100C;
 extern int D_001A0468[];
 extern void func_00205830(int a, int b);
-typedef struct {
-    int _pad0[0x9E];
-    int use[5];   /* +0x278 */
-    int flags[5]; /* +0x28C */
-    int sel;      /* +0x2A0 -- index of the active slot, -1 for none */
-    int size[5];  /* +0x2A4 */
-} PadSlots;
 extern PadSlots D_001A01F0_slots __asm__("D_001A01F0");
 extern int D_001A01F0[];
 extern int *D_001602E0;
@@ -153,18 +141,12 @@ extern int D_001B2F40[];
 extern void func_001FA460_2(void *, void *) __asm__("func_001FA460");
 extern void func_001F9C30(void *, void *, float);
 extern void func_001F9BD8(void *, void *, void *);
-extern void func_002116A0(void *, int, int *, void *);
-extern void func_001FA540(void *, void *, void *);
-extern void func_00211548(void *, int, void *, void *);
 extern void func_001F9EC0(void *, void *, void *);
 extern int D_001414D0 NOT_SDA;
 extern float D_001CAE00[] NOT_SDA;
-extern void func_0020E360(void *, void *);
-extern float func_001FA058(float, float);
 extern float func_001F9F90(float);
 extern float func_001F9FA8(float);
 extern void func_00118D80(int);
-extern void func_00212578(int, int);
 extern char D_00165600[];
 extern int D_0015F718;
 extern short D_0015F71C;
@@ -224,7 +206,6 @@ int func_002175C8(int arg0, int arg1, int arg2) {
 
 extern char D_001E8980[];
 extern int func_0012EE98(int, int, int, void *);
-extern void func_001F9978(void);
 
 /* Start a stream: refuse if one is already running (+0x8) or the length
    is zero, otherwise hand the request to func_0012EE98 with the header
@@ -666,7 +647,6 @@ void func_00217EC0(void) {
 LINKER_REMNANT("asm/remnants/text", func_00217ED8);
 
 extern int D_001CDAE0 NOT_SDA;
-extern char D_0013CA40[];
 extern void func_00124650(void);
 extern void func_00124B88(int);
 extern int func_00124BC8(void *, void *);

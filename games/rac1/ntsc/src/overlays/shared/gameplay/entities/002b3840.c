@@ -134,7 +134,7 @@ void FUN_L05_002f5200(struct Moby *m) {
     s32 i;
     s32 *path;
 
-    m->unk30 = 0xFF;
+    m->update_dist = 0xFF;
     inside = 0;
     if (v->use_alt_target != 0) {
         qcopy(&target, &D_L05_001671C0_2f5200);
@@ -156,13 +156,13 @@ void FUN_L05_002f5200(struct Moby *m) {
             }
         }
     }
-    if ((inside && m->unkBC == 0) || (!inside && m->unkBC != 0) || m->state == 0) {
+    if ((inside && m->command == 0) || (!inside && m->command != 0) || m->state == 0) {
         if (inside) {
-            m->unkBC = 1;
+            m->command = 1;
         } else {
-            m->unkBC = 0;
+            m->command = 0;
         }
-        m->state = m->unkBC + 1;
+        m->state = m->command + 1;
         for (i = 0; i < 12; i++) {
             if (v->on_lists[i] != -1) {
                 FUN_L05_002f5190_2f5200(m, v, v->on_lists[i], inside);
@@ -281,9 +281,9 @@ extern int D_00151928_87a8 __asm__("D_00151928") __attribute__((sda));
 extern int D_0015190C_87a8 __asm__("D_0015190C") __attribute__((sda));
 extern int D_00151910_87a8 __asm__("D_00151910") __attribute__((sda));
 
-void FUN_L05_002f87a8(char *moby) {
+void FUN_L05_002f87a8(unsigned char *moby) {
     char *data = *(char **)(moby + 0x78);
-    float position[4], effect_position[4], offset[4], second_position[4], delta[4];
+    float position[4], delta[4], effect_position[4], offset[4], second_position[4];
     float angle, distance_scale, delta_length;
     int state = (u8)moby[0x20];
 
@@ -436,7 +436,7 @@ void FUN_L05_00307010(char *moby) {
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002CF2C0.c: func_L05_0030D500), where it is exact; names translated to the US level program. */
 
 extern float FUN_001f9de0(float);
-extern float FUN_L00_00257c48(float lo, float hi);
+extern float randf_sym(float lo, float hi) __asm__("FUN_L00_00257c48");
 extern float random_angle_radians(void) __asm__("FUN_00213308");
 extern void FUN_L00_001fff28(void *, int, float);
 extern void FUN_L00_002502f0(void *, int, int, int);
@@ -455,11 +455,11 @@ void FUN_L05_0030c0a8(unsigned char *m) {
         lo = frame_time * 0.47123888f;
         hi = frame_time * 0.5235988f;
         *(float *)(d + 0x44) = r;
-        r = FUN_L00_00257c48(lo, hi);
+        r = randf_sym(lo, hi);
         lo = frame_time * 0.20943951f;
         hi = frame_time * 0.2617994f;
         *(float *)(d + 0x50) = r;
-        *(float *)(d + 0x4C) = FUN_L00_00257c48(lo, hi);
+        *(float *)(d + 0x4C) = randf_sym(lo, hi);
         FUN_L00_002502f0(m, 0x80, 0x80, 0x80);
         attach_manipulator((char *)m, 0, d);
         m[0x20] = 1;
@@ -522,6 +522,9 @@ void FUN_L05_0030c220(struct Moby *m) {
     float sign;
     float pass;
     int i, j, color;
+    int next_pass;
+    float *vertex_a, *vertex_b;
+    int *color_a, *color_b;
     char *vars = (char *)m->pvars;
 
     get_moby_position(m, 0, position);
@@ -533,7 +536,7 @@ void FUN_L05_0030c220(struct Moby *m) {
     normalize_vector_xyz_30c220(direction, direction, 1.0f);
     cross_vector_xyz_30c220(side, direction, up);
     cross_vector_xyz_30c220(direction, up, side);
-    qcopy(matrix, position);
+    *(u128 *)matrix = *(u128 *)position;
 
     texture = get_effect_texture_30c220(D_L05_00161D0C);
     flags = (u64)(s64)D_L05_00161CF4 |
@@ -545,32 +548,56 @@ void FUN_L05_0030c220(struct Moby *m) {
     a.control[1] = b.control[1] = texture;
     a.control[2] = b.control[2] = 0xff9000000260ULL;
     a.control[3] = b.control[3] = flags;
-    j = 0;
-    do {
-        float u = D_L05_001D67B0[j * 2];
-        float v = D_L05_001D67B0[j * 2 + 1];
-        a.texcoord[j * 2] = b.texcoord[j * 2] = u;
-        a.texcoord[j * 2 + 1] = b.texcoord[j * 2 + 1] = v;
-    } while (++j < 4);
+    {
+        float *texcoord_a = a.texcoord;
+        float *texcoord_a_v = a.texcoord + 1;
+        float *texcoord_b = b.texcoord;
+        float *texcoord_b_v = b.texcoord + 1;
+        float *texcoord = D_L05_001D67B0;
+        int count = 3;
+        do {
+            float u = texcoord[0];
+            float v = texcoord[1];
+            *texcoord_a = u;
+            *texcoord_a_v = v;
+            *texcoord_b = u;
+            *texcoord_b_v = v;
+            texcoord += 2;
+            texcoord_a += 2;
+            texcoord_a_v += 2;
+            texcoord_b += 2;
+            texcoord_b_v += 2;
+        } while (--count >= 0);
+    }
     i = 0;
     do {
+        next_pass = i + 1;
         pass = (float)i;
         j = 0;
+        vertex_a = a.vertex[0];
+        vertex_b = b.vertex[0];
+        color_a = a.color;
+        color_b = b.color;
         do {
-            qcopy(a.vertex[j], D_L05_001D67D0[j]);
+            qcopy_nc(vertex_a, D_L05_001D67D0[j]);
             qcopy(b.vertex[j], D_L05_001D6810[j]);
-            phase = ((float)i + (float)(j & 1)) * 0.1f;
-            sign = j < 2 ? 1.0f : -1.0f;
+            phase = (float)(i + (j & 1)) * 0.1f;
+            sign = 1.0f;
+            if (j > 1) sign = -1.0f;
             color = fast_tween_color(D_L05_00161D04, D_L05_00161D08, phase);
-            a.color[j] = b.color[j] = color;
-            a.vertex[j][2] += pass * 10.0f;
-            a.vertex[j][0] += phase * 8.0f * sign;
-            b.vertex[j][0] += phase * 6.0f * sign;
-            b.vertex[j][2] += pass * 12.0f;
+            *color_b++ = color;
+            *color_a++ = color;
+            vertex_a[2] += pass * 10.0f;
+            vertex_a[0] += phase * 8.0f * sign;
+            vertex_b[0] += phase * 6.0f * sign;
+            vertex_b[2] += pass * 12.0f;
+            vertex_a += 4;
+            vertex_b += 4;
         } while (++j < 4);
         draw_quad_30c220(&a, matrix, 0);
         draw_quad_30c220(&b, matrix, 0);
-    } while (++i < 10);
+        i = next_pass;
+    } while (i < 10);
 }
 #endif
 #ifndef NON_MATCHING
@@ -615,14 +642,14 @@ void FUN_L05_0030c5b0(struct Moby *m) {
             if (v->active == 0) {
                 goto active_30c5b0;
             }
-            if (D_0014C050[current_level_index][m->unkB0] != 0xFF) {
+            if (D_0014C050[current_level_index][m->mission] != 0xFF) {
                 goto active_30c5b0;
             }
         }
         {
-            m->unkBC = 2;
+            m->command = 2;
             m->state = 2;
-            m->unk90 = 0x80208020;
+            m->glow_color = 0x80208020;
             if (v->table != -1) {
                 int i = 0;
                 while (i < *(int *)D_L05_001B0930[v->table]) {
@@ -643,16 +670,17 @@ void FUN_L05_0030c5b0(struct Moby *m) {
         intensity = truncate_float_to_s32((fast_sin(v->angle) * 4.0f - 3.0f) * 128.0f);
         if (intensity > 0x80) intensity = 0x80;
         else if (intensity < 0x20) intensity = 0x20;
-        m->unk90 = 0x80000000 | intensity << 16 | intensity << 8 | intensity;
+        m->glow_color = 0x80000000 | intensity << 16 | intensity << 8 | intensity;
         if (hero.ground_moby == m && hero.air_frames.s == 0) {
-            D_L05_001BAA50.killed[(short)m->save_id] = m->unkB0 + 2;
-            if (m->unkB0 == 0xFF ||
-                (D_L05_0015FC88[m->unkB0] != 0xFF && D_0014C050[current_level_index][m->unkB0] == 0xFF)) {
-                D_L05_001BB6B0.killed[(short)m->save_id] = m->unkB0 + 2;
+            int next_state = 2;
+            D_L05_001BAA50.killed[(short)m->save_id] = m->mission + 2;
+            if (m->mission == 0xFF ||
+                (D_L05_0015FC88[m->mission] != 0xFF && D_0014C050[current_level_index][m->mission] == 0xFF)) {
+                D_L05_001BB6B0.killed[(short)m->save_id] = m->mission + 2;
             }
-            m->state = 2;
-            m->unkBC = 1;
-            m->unk90 = 0x80208020;
+            m->state = next_state;
+            m->command = 1;
+            m->glow_color = 0x80208020;
             allocate_voice_for_target_entry(0, 0, m);
             if (v->table != -1) {
                 int i = 0;
@@ -731,7 +759,7 @@ extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
 extern f32 dot_vectors_xyz(void *, void *) __asm__("func_001F9AB0");
 extern f32 fast_add_rotations_c(f32, f32) __asm__("func_001FA580");
 extern float D_0015ED70;
-extern int FUN_L00_001f0d60(float, void *, int, void *);
+extern int coll_sphere(float, void *, int, void *) __asm__("FUN_L00_001f0d60");
 extern int fast_dec_timer(int *) __asm__("FUN_001f9740");
 extern void FUN_001fa050(void *, void *);
 extern void FUN_L00_001ff660(void *, void *, void *);
@@ -782,7 +810,7 @@ void FUN_L05_003186f8(char *moby)
             add_vector_xyz(buf + 0x50, buf + 0x50, moby + 0x10);
         }
 
-        if (FUN_L00_001f0d60(convert_integer_to_float(*(int *)(data + 0xC)) * 0.0009765625f, buf + 0x50, 0, moby)) {
+        if (coll_sphere(convert_integer_to_float(*(int *)(data + 0xC)) * 0.0009765625f, buf + 0x50, 0, moby)) {
             hs = D_L05_00174240;
             if (*(int *)(hs + 0x18) == 0 || *(int *)(hs + 0x18) != *(int *)(data + 8)) {
                 *(int *)data = 0;

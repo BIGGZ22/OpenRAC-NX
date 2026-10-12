@@ -1,7 +1,7 @@
 #include "common.h"
+#include "callees.h"
 #include "structs.h"
 
-extern void func_001F99D8(void *, int);
 extern int func_0012F1A8(int, int, int, int, int, int);
 extern char *D_001613B8 MACRO_ADDR;
 /* Clears the header, sets buffer parameters, and acquires the sound transport handle. */
@@ -164,4 +164,79 @@ void func_0023C2E8(AudioDec *dec, unsigned char *src, int len, int flag) {
     }
     func_0012F288(len, flag);
 }
-INCLUDE_ASM("asm/nonmatchings/text", func_0023C390); /* sendADPCM(_AudioDec *) */
+typedef struct AdpcmDec_0023C390 {
+    int mode;           /* 0x0 */
+    char pad4[0x14];
+    int nch;            /* 0x18 */
+    int chunk;          /* 0x1C */
+    char pad20[0x14];
+    unsigned char *buf; /* 0x34 */
+    int rd;             /* 0x38 */
+    int cnt;            /* 0x3C */
+    int size;           /* 0x40 */
+    char pad44[0xC];
+    int bytes;          /* 0x50 */
+    char pad54[0xC];
+    int pos;            /* 0x60 */
+} AdpcmDec_0023C390;
+extern int func_0012F2B8(void);
+
+/* sendADPCM(_AudioDec *) */
+void func_0023C390(AudioDec *dec) {
+    AdpcmDec_0023C390 *d = (AdpcmDec_0023C390 *)dec;
+    int avail;
+    int ch;
+    int done;
+    int next;
+    unsigned char *src;
+    unsigned char *dst;
+    int j;
+    int v;
+    int w;
+
+    avail = 0;
+    switch (d->mode) {
+    case 1:
+        if (d->cnt < 0x1000) {
+            return;
+        }
+        avail = 0x1000 - d->bytes;
+        break;
+    case 2:
+        avail = (func_0012F2B8() - d->pos) & 0xFFF;
+        break;
+    case 3:
+        return;
+    }
+    while (avail >= 0x400 && d->cnt >= (d->nch << 10)) {
+        next = avail - 0x400;
+        for (ch = 0; ch < d->nch; ch++) {
+            done = 0;
+            src = d->buf + (d->rd - d->cnt + d->size) % d->size;
+            src += ch * d->chunk;
+            dst = (unsigned char *)D_001613B8;
+            do {
+                for (j = 0; j < d->chunk; j++) {
+                    *dst++ = *src++;
+                    done++;
+                }
+                src += d->chunk * (d->nch - 1);
+            } while (done < 0x400);
+            if (d->pos + 0x400 == 0x1000) {
+                D_001613B8[0x3F1] = 3;
+            }
+            if (d->pos == 0) {
+                char *p = D_001613B8;
+                p[1] = 6;
+                p[0x11] = 2;
+            }
+            func_0023C2E8(dec, (unsigned char *)D_001613B8, 0x400, (ch << 12) + d->pos);
+        }
+        v = d->pos + 0x400;
+        w = (v > -1) ? v : v + 0xFFF;
+        d->pos = v - (w >> 12 << 12);
+        d->cnt -= d->nch << 10;
+        d->bytes += 0x400;
+        avail = next;
+    }
+}

@@ -10,7 +10,6 @@ extern S D_L00_00166D80;
 extern char D_0013E633[];
 extern void func_L00_001FF4B0(void *, void *, float);
 extern char D_L00_00166FF0[];
-extern char D_0013E633[];
 typedef struct {
     char pad[0x74];
     int i74;
@@ -24,12 +23,10 @@ typedef struct {
 } Elem;
 extern Elem D_L00_00167250[];
 extern int D_L00_00169990[];
-extern char D_L00_00166FF0[];
 extern int D_L00_0015F04C MACRO_ADDR;
 extern int D_L00_0015F054 MACRO_ADDR;
 extern short D_L00_0015F040;
 extern char *D_L00_0015F050 MACRO_ADDR;
-extern void func_L00_001FF4B0(void *, void *, float);
 extern void func_001F9BC0(void *);
 
 /* Initialises the camera slot tables and the camera state from the hero's transform. */

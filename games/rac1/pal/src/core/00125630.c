@@ -1,4 +1,5 @@
 #include "common.h"
+#include "callees.h"
 #include "structs.h"
 
 /*
@@ -25,7 +26,6 @@ extern void func_00113968(void);
 extern void func_00114438(void *, void *);
 extern char D_00152470[];
 extern int func_00119088();
-extern int func_00119110();
 extern long func_00116108_wide(int *errOut, void *a, void *b, void *c)
     __asm__("func_00116108");
 extern long func_001188C8_wide(int *errOut, void *a, void *b, void *c)
@@ -59,7 +59,6 @@ extern char D_00157E80[];
 extern int D_0012FD9C;
 extern void func_0011BBF0(void);
 extern int D_0012FD9C NOT_SDA;
-extern int func_001151B4();
 extern char D_0012FCEC[];
 extern char D_001580A8[];
 extern int D_0012FDA8;
@@ -72,26 +71,15 @@ extern int D_001581C0;
 extern char D_00158528[];
 extern int D_0012FDB4;
 extern int func_0011CE70(int arg0, int arg1, int arg2, void *arg3);
-extern int func_00118E70(int);
 extern void func_00118EC0(void);
-extern int func_00118EA0(void);
 extern void func_0011D4E0(void);
 extern void func_00118EB0(void);
 extern int D_00130420;
 extern int D_00130424;
-extern void func_00118CF0(void *);
-extern void func_00118CE0(void *);
 extern int D_00130BD0[];
 extern char D_00130428[];
 extern int func_0011DC50(void);
-extern void func_0011DBE8(int, int);
-extern void func_0011DBF8(int, void *, int);
-extern int func_0011DC40(int);
 extern void func_00118D80(int);
-extern void func_001206B0(float *, int *);
-extern void func_001208E4();
-extern void func_00118B20(int, void *, int);
-extern void func_00118C80(int);
 extern int func_00120F30(int);
 extern void *D_00159840;
 extern int D_001313E0;
@@ -100,7 +88,6 @@ extern int D_001313EC;
 extern int D_001313F0;
 extern int D_001313E4;
 extern int D_001313FC;
-extern void func_00120C58(void);
 extern int func_0011B4C8();
 extern int func_00120D28(int);
 extern void func_00118C90(int);
@@ -348,7 +335,6 @@ int func_00127748(void *arg0) {
 
 extern char D_001538E0[];
 extern int func_00127A90(void *, int);
-extern void func_00128590(void *);
 extern int func_001273A0(void *);
 extern int func_001263A8(void *, int);
 extern void func_0012C468(void *, void *);
@@ -390,9 +376,6 @@ int func_00127858(void *arg0) {
 }
 
 extern void func_00128BA8(void *);
-extern int func_00128860(void *, int);
-extern void func_0012C430(void *, char *, int);
-extern void func_00128968(void *, int);
 extern int func_00128C28(void *);
 extern void func_0012C468(void *, void *);
 extern char D_00153900[];
@@ -452,14 +435,11 @@ int func_00127960(void *arg0, int arg1, int *arg2, int *arg3, void *arg4) {
 }
 
 extern int func_00127960(void *, int, int *, int *, void *);
-extern int func_001273A0(void *);
-extern int func_00128860(void *, int);
 extern int func_00127748(void *);
 extern void func_0012C468(void *, void *);
 extern char D_00153948[];
 extern int func_00127D40(void *, int *, int *, int *, void *, void *, void *);
 extern int func_00125630(void *, int, int, int, int, void *, void *, void *);
-extern int func_001263A8(void *, int);
 
 /* slice0 (libmpeg.a:mpc.o): the per-picture macroblock loop -- sliceA0
  * (func_00127960) parses the first slice header and starting mb address
@@ -795,8 +775,6 @@ void func_001281E8(int *pred, int r_size, int motion_code, int motion_residual, 
     *pred = full_pel_vector ? (vec << 1) : vec;
 }
 
-extern void func_00128410(void *, int *, int *, int, int, int, int, int);
-extern int func_00128A58(void *, int);
 
 /* motionVectors (libmpeg.a:mpc.o): ISO/IEC 13818-2 6.2.5.2/6.3.17.2/7.6.3
  * motion_vectors(), matching mpeg2decode reference source (motion.c)
@@ -824,7 +802,6 @@ void func_00128270(void *arg0, int PMV[][2][2], int *dmvector, int mvfs[][2],
 }
 
 extern void func_001281E8(int *, int, int, int, int);
-extern int func_00128A58(void *, int);
 
 /* motionVector (libmpeg.a:mpc.o): ISO/IEC 13818-2 7.6.3.1 motion_vector(),
  * hardware-VLC variant of mpeg2decode's motion.c. func_001286E8(s, 2) is
@@ -1109,9 +1086,6 @@ int func_00128A58(void *arg0, int n) {
     return result;
 }
 
-extern void func_00128590(void *);
-extern void func_00128968(void *, int);
-extern int func_00128860(void *, int);
 
 void func_00128BA8(void *arg0) {
     int pad;
@@ -1126,8 +1100,6 @@ void func_00128BA8(void *arg0) {
     }
 }
 
-extern void func_00128968(void *, int);
-extern int func_00128A58(void *, int);
 extern void func_00129180(void *);
 
 int func_00128C28(void *arg0) {
@@ -1140,12 +1112,9 @@ int func_00128C28(void *arg0) {
     return 0;
 }
 
-extern void func_00128BA8(void *);
-extern int func_00128A58(void *, int);
 extern void func_0012C4E0(void *);
 extern void func_00129240(void *);
 extern void func_00128DA0(void *);
-extern void func_0012BC78(int, void *);
 
 typedef struct {
     int n;
@@ -1190,8 +1159,6 @@ int func_00128C90(void *arg0) {
     }
 }
 
-extern int func_00128A58(void *, int);
-extern void func_00129180(void *);
 extern void func_00128E68(void *);
 extern void func_001291C8(void *, int);
 
@@ -1235,10 +1202,6 @@ extern void func_00128F90(void *);
 extern void func_0012CC50(void *);
 extern void func_0012CC60(void *);
 
-extern void func_00128BA8(void *);
-extern int func_00128860(void *, int);
-extern void func_00128968(void *, int);
-extern int func_00128A58(void *, int);
 
 /* _extensionAndUserData (libmpeg.a:mpc.o): extension_and_user_data */
 void func_00128E68(void *arg0) {
@@ -1333,8 +1296,6 @@ void func_00128F90(void *arg) {
     }
 }
 
-extern void func_00128968(void *, int);
-extern int func_00128A58(void *, int);
 
 void func_00129180(void *arg0) {
     while (func_00128A58(arg0, 1) != 0) {
@@ -1377,8 +1338,6 @@ void func_001291C8(void *arg0, int arg1) {
     *(int *)(s + 0x850) = max;
 }
 
-extern int func_00128A58(void *, int);
-extern void func_00128E68(void *);
 
 /* groupOfPicturesHeader (libmpeg.a:mpc.o): ISO/IEC 13818-2 6.2.2.6
  * group_of_pictures_header(). The reference decoder's "if (ld == &base)"
@@ -1410,9 +1369,6 @@ void func_00129240(void *arg0) {
     func_00128E68(s);
 }
 
-extern int func_00128A58(void *, int);
-extern void func_00128590(void *);
-extern void func_00128560(char *, unsigned int);
 extern void func_0012C468(void *, void *);
 extern char D_001539E8[];
 extern char D_00153A10[];
@@ -1496,7 +1452,6 @@ void func_001293A8(void *arg0) {
     }
 }
 
-extern int func_00128A58(void *, int);
 
 /* copyrightExtension (libmpeg.a:mpc.o) -- ISO/IEC 13818-2 6.2.3.6: skip the
  * copyright_extension() fields with func_00128A58 (nextBit, "get n bits").
@@ -1574,7 +1529,6 @@ int func_00129530(void *arg0) {
 }
 
 extern void func_00129E30();
-extern void func_00129F40();
 
 void func_00129600(void *arg0, int arg1, int arg2) {
     char *s = (char *)arg0;
@@ -1765,8 +1719,6 @@ INCLUDE_ASM("asm/nonmatchings/core_text", func_00129F40);
 
 INCLUDE_ASM("asm/nonmatchings/core_text", func_0012A0F8);
 
-extern int func_0011D960(void);
-extern void func_0011D9A8(void);
 
 /* receiveDataFromIPU (libmpeg.a:mpc.o): kicks off an IPU->main-memory DMA
  * receive. func_0011D960 presumably starts/queries the DMA channel; its

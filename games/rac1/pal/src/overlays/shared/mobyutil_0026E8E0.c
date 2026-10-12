@@ -109,7 +109,6 @@ int func_L01_00277A38(int *objs, int n, int idx, float f, float *pos)
     }
     return mask;
 }
-extern char *D_L01_001B0C30[];
 
 // Expands a bit mask through a table of per-bit masks until it meets another mask.
 int func_L01_00277C30(int idx, int a, int mask)

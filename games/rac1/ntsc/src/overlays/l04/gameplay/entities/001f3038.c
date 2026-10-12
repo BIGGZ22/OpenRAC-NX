@@ -11,299 +11,318 @@
 
 extern float FUN_001f9b80(void *, void *);
 
-int FUN_L04_001f3038(char *a, char *b, int n) {
+int FUN_L04_001f3038(char *moby, char *points, int count) {
     int best = -1;
     int i;
-    float m = 32767.0f;
-    for (i = 0; i < n; i++) {
-        float d = FUN_001f9b80(a + 0x10, b + i * 0x10);
-        if (d < m) {
-            m = d;
+    float best_distance = 32767.0f;
+    for (i = 0; i < count; i++) {
+        float distance = FUN_001f9b80(moby + 0x10, points + i * 0x10);
+        if (distance < best_distance) {
+            best_distance = distance;
             best = i;
         }
     }
     return best;
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L04_001f30e0.s", FUN_L04_001f30e0);
-#else
-typedef u32 u128 __attribute__((mode(TI), aligned(16)));
-typedef struct { float x, y, z, w; } __attribute__((aligned(16))) Vec_30e0;
-typedef union { Vec_30e0 v; int count; } PathEl_30e0;
-typedef struct Moby_30e0 {
-    char pad0[0x10];
-    Vec_30e0 pos;
-    signed char state;
-    char pad21[0x85];
-    short oclass;
-} Moby_30e0;
+#include "rnc/gameplay/hero.h"
+#include "rnc/gameplay/entities/moby.h"
+
+#include "qcopy.h"
+
+/* Ported from rac1-decomp (src/overlays/l04_eudora/fastfunc_001F2F68.c: func_L04_001F3010), where it is exact; names translated to the US level program. */
+
+typedef struct Hero Hero;
+
+typedef struct Moby Moby;
+
+typedef struct { float x, y, z, w; } __attribute__((aligned(16))) Vec_1F3010;
+
+typedef union { Vec_1F3010 v; int n; } PathEl_1F3010;
+
 typedef struct {
-    Vec_30e0 vel;
-    Vec_30e0 pos;
-    Vec_30e0 dir;
-    Vec_30e0 drift;
+    Vec_1F3010 vel;
+    Vec_1F3010 pos;
+    Vec_1F3010 dir;
+    Vec_1F3010 drift;
     float range;
     short timer;
     short pad46;
     float f48;
     float near;
-    Moby_30e0 *target;
-    Vec_30e0 *point;
+    Moby *target;
+    Vec_1F3010 *point;
     int pad58;
     short path;
     short count;
     short classes[8];
     float weight[8];
     float scale[8];
-} Steer_30e0;
-typedef struct {
-    char pad0[0x2080];
-    Moby_30e0 *moby;
-} Hero_30e0;
+} Steer_1F3010;
+
 typedef struct {
     char pad0[0x1C];
     int hit;
     char pad20[8];
     float z;
     char pad2C[0x14];
-    Vec_30e0 normal;
-} Coll_30e0;
+    Vec_1F3010 normal;
+} Coll_1F3010;
 
-extern PathEl_30e0 *D_L04_001b0630_30e0[] __asm__("D_L04_001b0630");
-extern Coll_30e0 D_L04_00173FC0_30e0 __asm__("D_L04_00173FC0");
-extern char D_L04_00173FF0_30e0[] __asm__("D_L04_00173FF0");
-extern char D_0013F350_30e0[] __asm__("D_0013F350");
-extern void clear_vector_xyz_30e0(void *) __asm__("FUN_001f99f8");
-extern float vector_distance_30e0(void *, void *) __asm__("FUN_001f9b48");
-extern void subtract_vector_xyz_30e0(void *, void *, void *) __asm__("FUN_001f9a28");
-extern float vector_length_xy_30e0(void *) __asm__("FUN_001f9af0");
-extern void normalize_vector_xyz_30e0(void *, void *, float) __asm__("FUN_001f9bf8");
-extern void add_vector_xyz_30e0(void *, void *, void *) __asm__("FUN_001f9a10");
-extern void scale_vector_xyz_30e0(void *, void *, float) __asm__("FUN_001f9a68");
-extern int FUN_001efa68_30e0(void *, void *, int, void *, int) __asm__("FUN_001efa68");
-extern float vector_length_30e0(void *) __asm__("FUN_001f9b20");
-extern float vector_angle_30e0(float, float) __asm__("FUN_001f9e90");
-extern void set_vector_length_30e0(void *, void *, float) __asm__("FUN_001f9c48");
-extern int collision_check_30e0(float, void *, int, void *) __asm__("FUN_L00_001f0d60");
-extern int timer_elapsed_30e0(void *) __asm__("FUN_001f9770");
-extern float random_float_between_30e0(float, float) __asm__("FUN_002132a8");
-extern int angle_to_short_30e0(float) __asm__("FUN_001fa6d0");
-extern int nearest_point_30e0(Moby_30e0 *, void *, int) __asm__("FUN_L04_001f3038");
-extern int FUN_L04_0024c7d8_30e0(void *, void *, void *, int) __asm__("FUN_L04_0024c7d8");
+extern char D_L04_00173FF0[];
+extern f32 distance_xyz(void *, void *) __asm__("func_001F9B48");
+extern f32 random_float_between(f32, f32) __asm__("func_002132A8");
+extern f32 vector_length_xy(void *) __asm__("FUN_001f9b20");
+extern f32 vector_length_xyz(void *) __asm__("FUN_001f9af0");
+extern float FUN_001f9e90(float, float);
+extern int D_0013F350; /* no foreign declaration */
+extern int D_L04_00173FC0; /* no foreign declaration */
+extern int D_L04_001B0630; /* no foreign declaration */
+extern int FUN_001efa68();
+extern int FUN_001f9770();
+extern int FUN_001f9c48();
+extern int FUN_L00_001f0d60(float, void *, int, void *);
+extern s32 truncate_float_to_s32(f32) __asm__("func_001FA6D0");
+extern void add_vector_xyz_c(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void clear_u64_value(void *) __asm__("func_001F99F8");
+extern void normalize_vector_xyz_c(void *, void *, f32) __asm__("FUN_001f9bf8");
+extern void scale_vector_xyz(void *, void *, float) __asm__("FUN_001f9a68");
+extern void subtract_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a28");
+int FUN_L04_001f3038_c(char *a, char *b, int n) __asm__("FUN_L04_001f3038");
+int FUN_L04_0024c7d8(float *out, float *p, float *poly, int n);
+extern PathEl_1F3010 *D_L04_001B0930_1F3010[] __asm__("D_L04_001B0630");
+extern Coll_1F3010 D_L04_00174040_1F3010 __asm__("D_L04_00173FC0");
+extern char D_L04_00174070_1F3010[] __asm__("D_L04_00173FF0");
+extern char D_0013F450_1F3010[] __asm__("D_0013F350");
+extern void func_001F9BC0_1F3010(void *) __asm__("FUN_001f99f8");
+extern float func_001F9D10_1F3010(void *, void *) __asm__("FUN_001f9b48");
+extern void fast_vec_sub(void *, void *, void *) __asm__("FUN_001f9a28");
+extern float fast_vec_length(void *) __asm__("FUN_001f9af0");
+extern void fast_vec_normalize(void *, void *, float) __asm__("FUN_001f9bf8");
+extern void fast_vec_add(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void fast_vec_scale(void *, void *, float) __asm__("FUN_001f9a68");
+extern int func_L00_001EFFF0_1F3010(void *, void *, int, void *, int) __asm__("FUN_001efa68");
+extern float func_001F9CE8_1F3010(void *) __asm__("FUN_001f9b20");
+extern float func_L00_001FF860_1F3010(float, float) __asm__("FUN_001f9e90");
+extern void func_L00_001FF500_1F3010(void *, void *, float) __asm__("FUN_001f9c48");
+extern int func_L00_001F10E0_1F3010(float, void *, int, void *) __asm__("FUN_L00_001f0d60");
+extern int func_001F9938_1F3010(void *) __asm__("FUN_001f9770");
+extern float func_002140F8_1F3010(float, float) __asm__("FUN_002132a8");
+extern int func_001FA898_1F3010(float) __asm__("FUN_001fa6d0");
+extern int func_L04_001F2F68_1F3010(Moby *, void *, int) __asm__("FUN_L04_001f3038");
+extern int func_L04_0024D790_1F3010(void *, void *, void *, int) __asm__("FUN_L04_0024c7d8");
 
-/* Steering for a moby: pulls it along its path (data->path) and toward its target, pushes it away from the
- * listed mobys (and the hero's), and keeps it off the ground; effect holds the gains. */
-void FUN_L04_001f30e0(Moby_30e0 **children, int count, Moby_30e0 *child, Steer_30e0 *data, float *effect) {
-    Vec_30e0 path_hit;
-    Vec_30e0 force;
-    Vec_30e0 scratch;
-    Vec_30e0 ray_start;
-    Vec_30e0 ray_end;
-    Vec_30e0 surface_normal;
-    PathEl_30e0 *path;
-    Moby_30e0 *other;
+void FUN_L04_001f30e0(Moby **others, int other_count, Moby *moby, Steer_1F3010 *steer, float *params) {
+    Vec_1F3010 path_hit;
+    Vec_1F3010 force;
+    Vec_1F3010 uninitialized_point;
+    Vec_1F3010 ray_start;
+    Vec_1F3010 ray_end;
+    Vec_1F3010 surface_normal;
+    PathEl_1F3010 *path;
+    Moby *other;
     int hit;
-    Moby_30e0 *neighbor;
-    int path_index;
+    Moby *too_close;
+    int nearest_index;
     int i;
     int best_index;
     int class_index;
     int next_index;
     int previous_index;
+    int point_count;
     float distance;
-    float strength;
+    float length;
     float next_distance;
     float repulsion;
 
-    clear_vector_xyz_30e0(data);
-    distance = vector_distance_30e0(&child->pos, &scratch);
-    path_index = 0;
+    func_001F9BC0_1F3010(steer);
+    distance = func_001F9D10_1F3010(&moby->pos, &uninitialized_point);
+    nearest_index = 0;
     path = 0;
     hit = 0;
-    neighbor = 0;
-    if (data->path != -1) {
-        path = D_L04_001b0630_30e0[data->path];
-        path_index = nearest_point_30e0(child, &path[1], path[0].count);
-        hit = FUN_L04_0024c7d8_30e0(&path_hit, &child->pos, &path[1], path[0].count);
+    too_close = 0;
+    if (steer->path != -1) {
+        path = D_L04_001B0930_1F3010[steer->path];
+        nearest_index = func_L04_001F2F68_1F3010(moby, &path[1], path[0].n);
+        hit = func_L04_0024D790_1F3010(&path_hit, &moby->pos, &path[1], path[0].n);
         if (hit == 0) {
-            subtract_vector_xyz_30e0(&force, &path_hit, &child->pos);
-            strength = vector_length_xy_30e0(&force);
-            if (strength != 0.0f) {
-                strength = -effect[2] / (strength * strength);
+            fast_vec_sub(&force, &path_hit, &moby->pos);
+            length = fast_vec_length(&force);
+            if (length != 0.0f) {
+                length = -params[2] / (length * length);
             } else {
-                strength = -1000.0f;
+                length = -1000.0f;
             }
         } else {
-            subtract_vector_xyz_30e0(&force, &path_hit, &child->pos);
-            strength = vector_length_xy_30e0(&force) + 3.0f;
-            if (distance < strength) {
-                strength = strength * (effect[2] * strength);
+            fast_vec_sub(&force, &path_hit, &moby->pos);
+            length = fast_vec_length(&force) + 3.0f;
+            if (distance < length) {
+                length = length * (params[2] * length);
             } else {
-                strength = 10000.0f;
+                length = 10000.0f;
             }
         }
-        normalize_vector_xyz_30e0(&force, &force, strength);
-        add_vector_xyz_30e0(data, data, &force);
+        fast_vec_normalize(&force, &force, length);
+        fast_vec_add(steer, steer, &force);
     }
-    if (effect[0] != 0.0f) {
-        normalize_vector_xyz_30e0(&force, &data->dir, effect[0]);
-        add_vector_xyz_30e0(data, data, &force);
+    if (params[0] != 0.0f) {
+        fast_vec_normalize(&force, &steer->dir, params[0]);
+        fast_vec_add(steer, steer, &force);
     }
-    if (data->target == child) {
-        *(u128 *)&force = *(u128 *)&data->pos;
-        normalize_vector_xyz_30e0(&force, &force, effect[1]);
-        add_vector_xyz_30e0(data, data, &force);
+    if (steer->target == moby) {
+        qcopy(&force, &steer->pos);
+        fast_vec_normalize(&force, &force, params[1]);
+        fast_vec_add(steer, steer, &force);
     } else {
-        if (data->path != -1) {
-            best_index = path_index;
-            strength = vector_distance_30e0(&path[path_index + 1], &scratch);
+        if (steer->path != -1) {
+            best_index = nearest_index;
+            length = func_001F9D10_1F3010(&path[nearest_index + 1], &uninitialized_point);
             next_index = 0;
-            if (path_index + 1 < path[0].count) {
-                next_index = path_index + 1;
+            if (nearest_index + 1 < path[0].n) {
+                next_index = nearest_index + 1;
             }
-            next_distance = vector_distance_30e0(&path[next_index + 1], &scratch);
-            if (strength < next_distance) {
+            next_distance = func_001F9D10_1F3010(&path[next_index + 1], &uninitialized_point);
+            if (length < next_distance) {
                 best_index = next_index;
-                strength = next_distance;
+                length = next_distance;
             }
-            next_index = path_index - 1;
+            next_index = nearest_index - 1;
             if (next_index < 0) {
-                next_index = path[0].count - 1;
+                next_index = path[0].n - 1;
             }
-            if (strength < vector_distance_30e0(&path[next_index + 1], &scratch)) {
+            if (length < func_001F9D10_1F3010(&path[next_index + 1], &uninitialized_point)) {
                 best_index = next_index;
             }
             next_index = 0;
-            if (best_index + 1 < path[0].count) {
+            point_count = path[0].n;
+            if (best_index + 1 < point_count) {
                 next_index = best_index + 1;
             }
             previous_index = best_index - 1;
             if (previous_index <= -1) {
-                previous_index = path[0].count - 1;
+                previous_index = point_count - 1;
             }
-            add_vector_xyz_30e0(&force, &path[next_index + 1], &path[previous_index + 1]);
-            add_vector_xyz_30e0(&force, &force, &path[best_index + 1]);
-            scale_vector_xyz_30e0(&force, &force, 0.33333334f);
+            fast_vec_add(&force, &path[next_index + 1], &path[previous_index + 1]);
+            fast_vec_add(&force, &force, &path[best_index + 1]);
+            fast_vec_scale(&force, &force, 0.33333334f);
             if (hit == 0) {
-                subtract_vector_xyz_30e0(&force, &force, &child->pos);
-                strength = vector_length_xy_30e0(&force);
-                normalize_vector_xyz_30e0(&force, &force, strength * (strength * strength * effect[2]));
-                add_vector_xyz_30e0(data, data, &force);
+                fast_vec_sub(&force, &force, &moby->pos);
+                length = fast_vec_length(&force);
+                fast_vec_normalize(&force, &force, length * (length * length * params[2]));
+                fast_vec_add(steer, steer, &force);
             }
         }
-        if (data->target != 0) {
-            subtract_vector_xyz_30e0(&force, &data->target->pos, &child->pos);
-            if (vector_length_xy_30e0(&force) < distance) {
-                strength = vector_length_xy_30e0(&force);
-                normalize_vector_xyz_30e0(&force, &force, strength * (strength * strength * effect[1]));
-                add_vector_xyz_30e0(data, data, &force);
+        if (steer->target != 0) {
+            fast_vec_sub(&force, &steer->target->pos, &moby->pos);
+            if (fast_vec_length(&force) < distance) {
+                length = fast_vec_length(&force);
+                fast_vec_normalize(&force, &force, length * (length * length * params[1]));
+                fast_vec_add(steer, steer, &force);
             }
         }
-        if (data->point != 0) {
-            force.x = data->point->x - child->pos.x;
-            force.y = data->point->y - child->pos.y;
-            force.z = data->point->z - child->pos.z;
-            if (vector_length_xy_30e0(&force) < distance) {
-                strength = vector_length_xy_30e0(&force);
-                normalize_vector_xyz_30e0(&force, &force, strength * (strength * strength * effect[1]));
-                add_vector_xyz_30e0(data, data, &force);
+        if (steer->point != 0) {
+            force.x = steer->point->x - moby->pos.x;
+            force.y = steer->point->y - moby->pos.y;
+            force.z = steer->point->z - moby->pos.z;
+            if (fast_vec_length(&force) < distance) {
+                length = fast_vec_length(&force);
+                fast_vec_normalize(&force, &force, length * (length * length * params[1]));
+                fast_vec_add(steer, steer, &force);
             }
         }
-        for (i = 0; i < count + 1; i++) {
-            if (i < count) {
-                other = children[i];
+        for (i = 0; i < other_count + 1; i++) {
+            if (i < other_count) {
+                other = others[i];
             } else {
-                other = ((Hero_30e0 *)D_0013F350_30e0)->moby;
+                other = ((Hero *)D_0013F450_1F3010)->moby;
             }
             class_index = 0;
-            if (other->state < 0 || child == other) {
+            if ((*(signed char *)&other->state) < 0 || moby == other) {
                 continue;
             }
-            strength = vector_distance_30e0(&child->pos, &other->pos);
-            if (data->near < strength) {
+            length = func_001F9D10_1F3010(&moby->pos, &other->pos);
+            if (steer->near < length) {
                 continue;
             }
             do {
-                if (other->oclass == data->classes[class_index]) {
+                if (other->oclass == steer->classes[class_index]) {
                     break;
                 }
                 class_index++;
-            } while (class_index < data->count);
-            if (class_index < data->count) {
-                if (strength < effect[4]) {
-                    neighbor = other;
+            } while (class_index < steer->count);
+            if (class_index < steer->count) {
+                if (length < params[4]) {
+                    too_close = other;
                     break;
                 }
-                repulsion = strength / data->scale[class_index];
+                repulsion = length / steer->scale[class_index];
                 if (repulsion != 0.0f) {
-                    repulsion = data->weight[class_index] / (repulsion * repulsion);
+                    repulsion = steer->weight[class_index] / (repulsion * repulsion);
                 } else {
                     repulsion = 1000.0f;
                 }
-                subtract_vector_xyz_30e0(&force, &child->pos, &other->pos);
-                normalize_vector_xyz_30e0(&force, &force, repulsion);
-                add_vector_xyz_30e0(data, data, &force);
+                fast_vec_sub(&force, &moby->pos, &other->pos);
+                fast_vec_normalize(&force, &force, repulsion);
+                fast_vec_add(steer, steer, &force);
             }
         }
     }
-    if (data->f48 == 0.0f) {
-        add_vector_xyz_30e0(&ray_start, &child->pos, &data->pos);
-        add_vector_xyz_30e0(&ray_end, &child->pos, &data->pos);
+    if (steer->f48 == 0.0f) {
+        fast_vec_add(&ray_start, &moby->pos, &steer->pos);
+        fast_vec_add(&ray_end, &moby->pos, &steer->pos);
         ray_start.z = ray_start.z + 1.5f;
         ray_end.z = 0.01f;
-        if (FUN_001efa68_30e0(&ray_start, &ray_end, 2, child, 0) != 0) {
-            if (D_L04_00173FC0_30e0.hit > 0 && D_L04_00173FC0_30e0.z > child->pos.z) {
-                *(volatile Vec_30e0 *)&surface_normal = *(volatile Vec_30e0 *)&D_L04_00173FC0_30e0.normal;
-                strength = vector_angle_30e0(D_L04_00173FC0_30e0.normal.z, vector_length_30e0(&D_L04_00173FC0_30e0.normal));
-                set_vector_length_30e0(&surface_normal, &surface_normal, 1.0f);
-                scale_vector_xyz_30e0(&surface_normal, &surface_normal, effect[3]);
-                add_vector_xyz_30e0(data, data, &surface_normal);
-                if (0.4f < strength) {
-                    scale_vector_xyz_30e0(&surface_normal, &surface_normal, effect[3] * (strength * 10000.0f));
-                    add_vector_xyz_30e0(data, data, &surface_normal);
+        if (func_L00_001EFFF0_1F3010(&ray_start, &ray_end, 2, moby, 0) != 0) {
+            if (D_L04_00174040_1F3010.hit > 0 && D_L04_00174040_1F3010.z > moby->pos.z) {
+                qcopy(&surface_normal, &D_L04_00174040_1F3010.normal);
+                length = func_L00_001FF860_1F3010(D_L04_00174040_1F3010.normal.z, func_001F9CE8_1F3010(&D_L04_00174040_1F3010.normal));
+                func_L00_001FF500_1F3010(&surface_normal, &surface_normal, 1.0f);
+                fast_vec_scale(&surface_normal, &surface_normal, params[3]);
+                fast_vec_add(steer, steer, &surface_normal);
+                if (0.4f < length) {
+                    fast_vec_scale(&surface_normal, &surface_normal, params[3] * (length * 10000.0f));
+                    fast_vec_add(steer, steer, &surface_normal);
                 }
-                if (0.2f < child->pos.z - D_L04_00173FC0_30e0.z) {
-                    set_vector_length_30e0(&surface_normal, &data->pos, -(effect[3] * 1000.0f));
-                    add_vector_xyz_30e0(data, data, &surface_normal);
+                if (0.2f < moby->pos.z - D_L04_00174040_1F3010.z) {
+                    func_L00_001FF500_1F3010(&surface_normal, &steer->pos, -(params[3] * 1000.0f));
+                    fast_vec_add(steer, steer, &surface_normal);
                 }
             }
         }
     } else {
-        if (collision_check_30e0(effect[4], &child->pos, 4, child) != 0) {
-            subtract_vector_xyz_30e0(&force, D_L04_00173FF0_30e0, &child->pos);
-            force.z = force.z + effect[3];
-            normalize_vector_xyz_30e0(&force, &force, effect[3]);
-            add_vector_xyz_30e0(data, data, &force);
+        if (func_L00_001F10E0_1F3010(params[4], &moby->pos, 4, moby) != 0) {
+            fast_vec_sub(&force, D_L04_00174070_1F3010, &moby->pos);
+            force.z = force.z + params[3];
+            fast_vec_normalize(&force, &force, params[3]);
+            fast_vec_add(steer, steer, &force);
         }
     }
-    if (data->f48 == 0.0f) {
-        set_vector_length_30e0(data, data, effect[6]);
-        data->vel.z = 0.0f;
+    if (steer->f48 == 0.0f) {
+        func_L00_001FF500_1F3010(steer, steer, params[6]);
+        steer->vel.z = 0.0f;
     } else {
-        normalize_vector_xyz_30e0(data, data, effect[6]);
-        data->vel.z = data->vel.z / data->f48;
+        fast_vec_normalize(steer, steer, params[6]);
+        steer->vel.z = steer->vel.z / steer->f48;
     }
-    if (timer_elapsed_30e0(&data->timer) != 0) {
-        data->timer = angle_to_short_30e0(random_float_between_30e0(45.0f, 90.0f));
-        data->drift.x = random_float_between_30e0(0.0f, data->range) - data->range * 0.5f;
-        data->drift.y = random_float_between_30e0(0.0f, data->range) - data->range * 0.5f;
-        if (data->f48 != 0.0f) {
-            data->drift.z = random_float_between_30e0(0.0f, data->range) - data->range * 0.5f;
+    if (func_001F9938_1F3010(&steer->timer) != 0) {
+        steer->timer = func_001FA898_1F3010(func_002140F8_1F3010(45.0f, 90.0f));
+        steer->drift.x = func_002140F8_1F3010(0.0f, steer->range) - steer->range * 0.5f;
+        steer->drift.y = func_002140F8_1F3010(0.0f, steer->range) - steer->range * 0.5f;
+        if (steer->f48 != 0.0f) {
+            steer->drift.z = func_002140F8_1F3010(0.0f, steer->range) - steer->range * 0.5f;
         } else {
-            data->drift.z = 0.0f;
+            steer->drift.z = 0.0f;
         }
     }
-    add_vector_xyz_30e0(data, data, &data->drift);
-    if (neighbor != 0) {
-        subtract_vector_xyz_30e0(&force, &child->pos, &neighbor->pos);
-        if (data->f48 != 0.0f) {
-            normalize_vector_xyz_30e0(data, &force, effect[6]);
+    fast_vec_add(steer, steer, &steer->drift);
+    if (too_close != 0) {
+        fast_vec_sub(&force, &moby->pos, &too_close->pos);
+        if (steer->f48 != 0.0f) {
+            fast_vec_normalize(steer, &force, params[6]);
         } else {
-            set_vector_length_30e0(data, &force, effect[6]);
+            func_L00_001FF500_1F3010(steer, &force, params[6]);
         }
     }
 }
-#endif
 
 #define NOT_SDA
 

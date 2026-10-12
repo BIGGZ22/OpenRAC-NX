@@ -2,4 +2,83 @@
 #include "types.h"
 #include "asm.h"
 
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_00258830.s", FUN_L00_00258830);
+#include "rnc/math/vector.h"
+
+#include "qcopy.h"
+
+/* Ported from rac1-decomp (src/overlays/shared/mobyutil_00258BC8.c: func_L00_00259868), where it is exact; names translated to the US level program. */
+
+typedef struct { float a[4]; } Vs __attribute__((aligned(16)));
+
+extern Vec4 D_L00_00173E70;
+extern f32 vector_length_xy(void *) __asm__("FUN_001f9b20");
+extern f32 vector_length_xyz(void *) __asm__("FUN_001f9af0");
+extern float FUN_001f9e90(float, float);
+extern int D_L00_00173E40[];
+extern int D_L00_00173E60; /* no foreign declaration */
+extern int FUN_001efa68(void *, void *, int, int, int);
+extern int FUN_L00_001f0d60();
+extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void normalize_vector_xyz(void *, void *, f32) __asm__("FUN_001f9bf8");
+extern void subtract_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a28");
+extern Vec4 D_94C8_60 __asm__("D_L00_00173E60");
+extern int func_L00_001F10E0_l(void *, float, int, void *) __asm__("FUN_L00_001f0d60");
+
+int FUN_L00_00258830(char *moby, char *velocity, int flags, float step_height, float radius, float height) {
+    Vs old_pos;
+    Vs ray_start;
+    Vs ray_end;
+    Vs reach;
+    int result = 0;
+    int coll_flags = (flags * 2) & 0x20;
+    char *pos = moby + 0x10;
+    int i;
+    char *position;
+
+    qcopy(&old_pos, pos);
+    add_vector_xyz(pos, pos, velocity);
+    if (radius < vector_length_xyz(velocity)) {
+        qcopy(&ray_start, &old_pos);
+        ray_start.a[2] += step_height;
+        normalize_vector_xyz(&reach, velocity, radius);
+        add_vector_xyz(&ray_end, &reach, pos);
+        ray_end.a[2] += step_height;
+        if (FUN_001efa68(&ray_start, &ray_end, coll_flags, (int)moby, 0)) {
+            subtract_vector_xyz(pos, (char *)&D_94C8_60, &reach);
+            result = 1;
+            *(float *)(moby + 0x18) -= step_height;
+        }
+    }
+    for (i = 0, position = moby + 0x10; i < 6; i++) {
+        qcopy(&ray_start, position);
+        ray_start.a[2] += step_height;
+        if (func_L00_001F10E0_l(&ray_start, radius, coll_flags | 4, moby)) {
+            qcopy(position, &D_L00_00173E70);
+            result |= 1;
+            *(float *)(moby + 0x18) -= step_height;
+        } else {
+            break;
+        }
+    }
+    radius = *(float *)(moby + 0x18) - height;
+    qcopy(&ray_start, position);
+    qcopy(&ray_end, position);
+    ray_start.a[2] += step_height;
+    ray_end.a[2] = radius - 0.05f;
+    if (FUN_001efa68(&ray_start, &ray_end, coll_flags | 2, (int)moby, 0)) {
+        if (D_L00_00173E40[7] > 0) {
+            float surface;
+            result |= 2;
+            surface = FUN_001f9e90(*(float *)((char *)D_L00_00173E40 + 0x48), vector_length_xy((char *)D_L00_00173E40 + 0x40));
+            if (surface > 0.5f) {
+                result |= 4;
+            }
+            surface = *(float *)((char *)D_L00_00173E40 + 0x28);
+            if (radius < surface) {
+                *(float *)(moby + 0x18) += (surface - radius) * 0.3f;
+            }
+        }
+    }
+    subtract_vector_xyz(velocity, position, &old_pos);
+    return result;
+}

@@ -100,7 +100,6 @@ char *func_L01_00286530(float scale, void *pos, int a, int idx, int b, unsigned 
     return r;
 }
 extern int func_001FA898(float);
-extern int func_002140B0(int);
 extern float func_001FA888(int);
 extern unsigned char *D_L01_001B28D0;
 
@@ -184,7 +183,6 @@ typedef struct {
     float e[1][4];
 } List;
 
-extern float func_001F9D10(void *, void *);
 extern float func_001F9B88(float);
 
 /* Returns the index of the entry whose distance to arg0 is closest to a target value. */
@@ -332,8 +330,6 @@ void func_L01_0028C690(void *out, int *l, int idx, float a, float b) {
         *(u128 *)out = *(u128 *)v3;
     }
 }
-extern void func_001F9C30(void *, void *, float);
-extern void func_001F9BD8(void *, void *, void *);
 
 // Cubic Hermite blend of four vectors at parameter t, written to out.
 void func_L01_0028C848(float t, void *out, void *p1, void *p2, void *p3, void *p4) {
@@ -351,4 +347,80 @@ void func_L01_0028C848(float t, void *out, void *p1, void *p2, void *p3, void *p
     FastVecScale(tmp, p2, b - a);
     FastVecAdd(out, out, tmp);
 }
-INCLUDE_ASM("asm/overlays", func_L01_0028C958);
+char *func_L01_00286530(float scale, void *pos, int a, int idx, int b, unsigned char flags, short h, unsigned char kind);
+typedef int OvlQuad __attribute__((mode(TI)));
+typedef union {
+    OvlQuad q;
+    f32 f[4];
+    s32 i[4];
+} OvlVec4;
+typedef struct {
+    char pad0[4];
+    signed char f4;
+    char pad1[0x10 - 5];
+    int *f10;
+} T_28b828;
+int func_L01_0028C5F0_8C958(T_28b828 *a, int b) __asm__("func_L01_0028C5F0");
+void func_L01_0028C690(void *out, int *l, int idx, float a, float b);
+void func_L01_0028C848(float t, void *out, void *p1, void *p2, void *p3, void *p4);
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/0027f660.c, FUN_L01_0028bb90. */
+float func_L01_0028C958(float a, float b, T_28b828 *path, int particles, void *moby) {
+    OvlVec4 previousTangent;
+    OvlVec4 nextTangent;
+    OvlVec4 currentNode;
+    OvlVec4 nextNode;
+    OvlVec4 point;
+    OvlVec4 previousPoint;
+    int count = *path->f10;
+    int savedIndex = *(int *)path;
+    int index;
+    float total = 0.0f;
+
+    *(int *)path = 0;
+    nextNode.q = *(OvlQuad *)((char *)path->f10 + 0x10);
+    if (particles) {
+        func_L01_00286530(0.666f, &nextNode, (int)moby, 0, 0x80101080, 0x7f, -1, 0xff);
+    }
+    /* The SN ABI assigns float arguments independently of the integer arguments.
+     * Keep the retail argument setup order without changing the shared helper. */
+    ((void (*)(void *, int *, float, float, int))func_L01_0028C690)(&nextTangent, (int *)path, a, b, 0);
+
+    index = 0;
+    while (index < count) {
+        float t;
+        float step;
+        float segmentLength;
+        int nextIndex;
+        currentNode.q = nextNode.q;
+        previousTangent.q = nextTangent.q;
+        if (particles) {
+            func_L01_00286530(1.0f, &currentNode, (int)moby, index % 15 + 2, 0x80108010, 0x7f, -1, 0xff);
+        }
+        t = 0.05f;
+        nextIndex = func_L01_0028C5F0_8C958(path, index + 1);
+        segmentLength = 0.0f;
+        nextNode.q = *(OvlQuad *)((char *)path->f10 + nextIndex * 16 + 0x10);
+        *(int *)path = index;
+        ((void (*)(void *, int *, float, float, int))func_L01_0028C690)(&nextTangent, (int *)path, a, b, 1);
+        previousPoint.q = currentNode.q;
+        step = t;
+        do {
+            if (particles) {
+                func_L01_00286530(0.2f, &previousPoint, (int)moby, 0, 0x80404080, 0x7f, -1, 0xff);
+            }
+            func_L01_0028C848(t, &point, &currentNode, &nextNode, &previousTangent, &nextTangent);
+            t += step;
+            segmentLength += func_001F9D10(&previousPoint, &point);
+            previousPoint.q = point.q;
+        } while (t <= 1.0f);
+        total += segmentLength;
+        {
+            char *nodeData = (char *)path->f10;
+            *(float *)(nodeData + (index << 4) + 0x1c) = segmentLength;
+        }
+        index++;
+    }
+    *(int *)path = savedIndex;
+    return total;
+}

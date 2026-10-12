@@ -1,4 +1,6 @@
 #include "common.h"
+#include "callees.h"
+#include "records.h"
 #include "structs.h"
 
 /*
@@ -14,12 +16,6 @@ extern void func_001F9A98(void *, void *, int);
 extern char D_00189310[];
 extern char D_001899D0[];
 extern void *D_001871C0 NOT_SDA;
-typedef struct {
-    char unk_00[8];
-    void (*fn_08)(void *);
-    char unk_0C[4];
-    void (*fn_10)(void *);
-} DispatchRec;
 extern DispatchRec D_001E8F80[];
 extern int D_0018A3B0[];
 extern void func_001F99B0();
@@ -44,7 +40,6 @@ extern void func_001F6668(void *, void *, void *, void *, void *, int,
 extern int func_001F6600(unsigned char *, int);
 extern int func_001F6620(unsigned char *, int);
 extern int func_001F4868(int);
-extern void func_001F7070(void *, void *, void *, void *, int, unsigned char *);
 extern void func_001FB498(void);
 extern void func_001F3008(void);
 extern void func_001F3140(void);
@@ -122,7 +117,6 @@ typedef struct {
 } FrameCfg;
 extern FrameCfg D_00151880_f __asm__("D_00151880");
 extern long D_0015EFD0 MACRO_ADDR;
-extern void func_001F99D8(void *, int);
 /* sceGsSetDefDrawEnv */
 extern int func_001222C8(void *, short, short, short, short, short);
 
@@ -192,7 +186,6 @@ void func_001FB608(int a, int b, int c) {
 /* Retail carries 4 bytes of inter-function padding after this endlabel. */
 __asm__(".section .text\n\tnop\n");
 
-extern int *D_00161000 MACRO_ADDR;
 extern char D_00151A00[];
 
 /* AA_BlurPass(void) */

@@ -1,4 +1,7 @@
 #include "common.h"
+#include "callees.h"
+#include "records.h"
+#include "vector.h"
 #include "structs.h"
 
 /*
@@ -14,12 +17,6 @@ extern void func_001F9A98(void *, void *, int);
 extern char D_00189310[];
 extern char D_001899D0[];
 extern void *D_001871C0 NOT_SDA;
-typedef struct {
-    char unk_00[8];
-    void (*fn_08)(void *);
-    char unk_0C[4];
-    void (*fn_10)(void *);
-} DispatchRec;
 extern DispatchRec D_001E8F80[];
 extern int D_0018A3B0[];
 extern void func_001F99B0();
@@ -44,7 +41,6 @@ extern void func_001F6668(void *, void *, void *, void *, void *, int,
 extern int func_001F6600(unsigned char *, int);
 extern int func_001F6620(unsigned char *, int);
 extern int func_001F4868(int);
-extern void func_001F7070(void *, void *, void *, void *, int, unsigned char *);
 extern void func_001FB498(void);
 extern void func_001F3008(void);
 extern void func_001F3140(void);
@@ -73,13 +69,6 @@ extern int D_001941C8 NOT_SDA;
 extern int D_0016100C;
 extern int D_001A0468[];
 extern void func_00205830(int a, int b);
-typedef struct {
-    int _pad0[0x9E];
-    int use[5];   /* +0x278 */
-    int flags[5]; /* +0x28C */
-    int sel;      /* +0x2A0 -- index of the active slot, -1 for none */
-    int size[5];  /* +0x2A4 */
-} PadSlots;
 extern PadSlots D_001A01F0_slots __asm__("D_001A01F0");
 extern int D_001A01F0[];
 extern int *D_001602E0;
@@ -153,18 +142,12 @@ extern int D_001B2F40[];
 extern void func_001FA460_2(void *, void *) __asm__("func_001FA460");
 extern void func_001F9C30(void *, void *, float);
 extern void func_001F9BD8(void *, void *, void *);
-extern void func_002116A0(void *, int, int *, void *);
-extern void func_001FA540(void *, void *, void *);
-extern void func_00211548(void *, int, void *, void *);
 extern void func_001F9EC0(void *, void *, void *);
 extern int D_001414D0 NOT_SDA;
 extern float D_001CAE00[] NOT_SDA;
-extern void func_0020E360(void *, void *);
-extern float func_001FA058(float, float);
 extern float func_001F9F90(float);
 extern float func_001F9FA8(float);
 extern void func_00118D80(int);
-extern void func_00212578(int, int);
 extern char D_00165600[];
 extern int D_0015F718;
 extern short D_0015F71C;
@@ -189,7 +172,6 @@ extern void func_0012EDE0(void *);
 extern void func_0012EFE8(void);
 extern char D_001E8980[];
 extern int func_0012EE98(int, int, int, void *);
-extern void func_001F9978(void);
 extern int func_00217628_v(void) __asm__("func_00217628");
 extern void func_00122598(int);
 extern void func_00217130(void);
@@ -220,7 +202,6 @@ extern int D_00141FA0[];
 extern char D_001D0A50[];
 extern char D_001D0A88[];
 extern int D_001A0418 NOT_SDA;
-extern void func_00226D50(int);
 extern float func_001FA748(float, float);
 extern char *D_001D5F74 NOT_SDA;
 extern void func_0020E180(int, int);
@@ -248,10 +229,8 @@ extern int func_00226F68(int);
 extern int D_0013CC04 NOT_SDA;
 extern char D_001D2678[];
 extern char *D_001D5F78 NOT_SDA;
-extern void func_001FDF78(int, int, int, int);
 extern unsigned char D_001B3E40[] NOT_SDA;
 extern void *func_0020D348(void);
-extern void func_0020ED48(void *);
 extern void func_0020E340(void *, int, int, int, int);
 typedef struct {
     int key;
@@ -275,13 +254,11 @@ extern void func_001F9BF0_a(void *, void *, void *) __asm__("func_001F9BF0");
 extern int func_001EFE10_a(void *, void *, int, int, int) __asm__("func_001EFE10");
 extern char D_00187180[];
 extern void func_001F9BF0(void *, void *, void *);
-extern void func_001F9E58(void *, void *, float);
 extern void func_001EFE10(void *, void *, int, int, int);
 extern float func_001F9D10(int, void *);
 extern void func_0022DA10(void *, float, float, float);
 extern void func_001F9EE8(void *, void *, void *);
 extern float func_001F9CE8(void *);
-extern float func_001F9BB0(float, float, float);
 extern float func_001FA058_a(float, float) __asm__("func_001FA058");
 extern void func_001FA898(float);
 extern void func_00120F30(int);
@@ -293,10 +270,6 @@ extern void func_0012E2E8(void);
 extern char D_0018CC20_c[] __asm__("D_0018CC20");
 extern float D_0018CEB0;
 extern unsigned char D_0015EEB4_m[4] __asm__("D_0015EEB4") MACRO_ADDR;
-extern void func_00125358(float *);
-extern void func_001254A0(float *, float *, float);
-extern void func_00125548(float *, float *, float);
-extern void func_001253F8(float *, float *, float);
 extern void func_001F9CA0(void *, void *, void *);
 
 /* Movie-camera keyframe step (as func_001EB338): the keyframe's +0x1C
@@ -431,11 +404,9 @@ INCLUDE_ASM("asm/nonmatchings/text", func_0022F738);
 
 extern void func_00234C98_l(int, long) __asm__("func_00234C98");
 extern long D_00160680 MACRO_ADDR;
-extern char D_001D9B40[];
 extern float D_001D9E20[];
 extern float D_001D9DE0[][4];
 extern short D_001605F0;
-extern void func_001F7EF8(void *, int, int);
 extern int D_0015EE84_m __asm__("D_0015EE84") MACRO_ADDR;
 
 /* Its 0x8000000044 is built as ps2eeas built it (tools/ps2eeas_dli.py). */
@@ -800,7 +771,6 @@ extern f32 resident_data_0015EE60 __asm__("D_0015EE60") MACRO_ADDR;
 extern f32 resident_data_0015EE6C __asm__("D_0015EE6C") MACRO_ADDR;
 extern f32 resident_data_0015EE70 __asm__("D_0015EE70") MACRO_ADDR;
 extern s32 resident_data_0015EE80 __asm__("D_0015EE80") MACRO_ADDR;
-extern s32 resident_data_0015EE84 __asm__("D_0015EE84") MACRO_ADDR;
 extern u8 resident_data_0015EEB4[4] __asm__("D_0015EEB4") MACRO_ADDR;
 extern f32 resident_data_0015F53C __asm__("D_0015F53C") MACRO_ADDR;
 extern f32 resident_data_0015F540 __asm__("D_0015F540") MACRO_ADDR;
@@ -1058,7 +1028,7 @@ void func_00230A90(void) {
             resident_call_0020ED48(object);
             if (object->class_id == 0) {
                 if (resident_data_0013E130.state == 0) {
-                    if (resident_data_0015EE84 == 10 && resident_data_0013D5C8[6] == 0) {
+                    if (D_0015EE84_305A0 == 10 && resident_data_0013D5C8[6] == 0) {
                         object->unk7F = 0;
                     } else if (resident_data_0018CC20.time <= resident_call_001F98C0(0x3E)) {
                         object->unk7F = 0x18;
@@ -1066,7 +1036,7 @@ void func_00230A90(void) {
                         object->unk7F = 0;
                     }
                 } else if (resident_call_001F98C0(360) < resident_data_0018CC20.time) {
-                    if (resident_data_0015EE84 == 10 && resident_data_0013D5C8[6] == 0) {
+                    if (D_0015EE84_305A0 == 10 && resident_data_0013D5C8[6] == 0) {
                         object->unk7F = 0;
                     } else {
                         object->unk7F = 0x18;
@@ -1095,8 +1065,8 @@ void func_00230A90(void) {
             }
             if (object->class_id == 0) {
                 resident_call_001E9790(object);
-                if ((resident_data_0015EE84 == 10 && resident_data_0013D5C8[6] != 0) ||
-                    resident_data_0015EE84 == 13) {
+                if ((D_0015EE84_305A0 == 10 && resident_data_0013D5C8[6] != 0) ||
+                    D_0015EE84_305A0 == 13) {
                     if (resident_data_0013E130.attachment == 0) {
                         resident_data_0013E130.attachment = resident_call_0020D348(0x509);
                         resident_data_0013E130.attachment->selected_index = 0x40;
@@ -1602,7 +1572,171 @@ void func_00232A00(int x, int y, int w, int h, unsigned long rgba,
     D_00161000 = (int *)((char *)D_00161000 + 0x60);
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_00232B90);
+extern s32 D_0015EF74 MACRO_ADDR;
+extern s32 D_0015EF78 MACRO_ADDR;
+typedef struct {
+    u64 q[12];
+} sceGsLoadImage __attribute__((aligned(16)));
+struct DiscFile {
+    s32 sector;
+    s32 size;
+};
+struct DiscTable {
+    u8 pad_0[0x8];
+    struct DiscFile debug_font; /* 0x8 */
+    struct DiscFile memcard_data; /* 0x10, read by memcard_update_state and memcard_restore_game */
+    struct DiscFile animation_streams[49]; /* 0x18, streamed animations by archive index */
+    struct DiscFile music_10000[37]; /* 0x1A0, music tracks 10000.. */
+    struct DiscFile unk2C8[6]; /* 0x2C8, one per language */
+    struct DiscFile unk2F8[6]; /* 0x2F8, one per language */
+    u8 pad_328[0x1D0];
+    struct DiscFile level_chunk; /* 0x4F8, read by load_level_chunk_from_disc */
+    u8 pad_500[0x3B8];
+    /* 0x8B8: render archive sector/length records; extent reaches the next
+       known field, not a proven count of valid archives. */
+    struct DiscFile render_archives[201];
+    s32 music_50000[40][6]; /* 0xF00, tracks 50000.., one location per language */
+    struct DiscFile unk12C0; /* 0x12C0 */
+    struct DiscFile level_archives[24]; /* 0x12C8, by level index */
+    struct DiscFile loading_slides[6]; /* 0x1388, one per language */
+    struct DiscFile unk13B8; /* 0x13B8 */
+    struct DiscFile music_40000[36]; /* 0x13C0, music tracks 40000.. */
+    s32 sound_bank; /* 0x14E0, passed to load_audio_bank_by_location */
+    s32 pad_14E4;
+    struct DiscFile unk14E8; /* 0x14E8 */
+    u8 pad_14F0[0x8];
+    struct DiscFile wad_chunks[6]; /* 0x14F8, level wad chunks */
+    struct DiscFile help_text; /* 0x1528, per-language archive read by update_menu_help_text_load */
+    struct DiscFile unk1530[14]; /* 0x1530, overlays: x of an x/y pair picked by D_0015ED80 */
+    struct DiscFile unk15A0[14]; /* 0x15A0, the y half of the 0x1530 pair */
+    struct DiscFile animation_table; /* 0x1610, read with animation_asset_read_active set */
+    struct DiscFile music_60000[62]; /* 0x1618, music tracks 60000.. */
+    struct DiscFile unk1808[19]; /* 0x1808, overlays: x of an x/y pair picked by D_0015ED80 */
+    struct DiscFile unk18A0[19]; /* 0x18A0, the y half of the 0x1808 pair */
+    struct DiscFile movies[12]; /* 0x1938, level transition movies */
+    struct DiscFile movies_alt[12]; /* 0x1998, picked by the video mode flag */
+    struct DiscFile unk19F8[3]; /* 0x19F8, overlays: x/y pair picked by D_0015ED80 */
+    struct DiscFile unk1A10[3]; /* 0x1A10, the y half of the 0x19F8 pair */
+    struct DiscFile unk1A28[5]; /* 0x1A28, overlays: x/y pair picked by D_0015ED80 */
+    struct DiscFile unk1A50[5]; /* 0x1A50, the y half of the 0x1A28 pair */
+    struct DiscFile start_movies[4]; /* 0x1A78, played by start_level */
+    struct DiscFile start_movies_alt[4]; /* 0x1A98, while D_0015ED80 is set */
+    u8 pad_1AB8[0xEB0];
+    struct DiscFile shared_archive; /* 0x2968 */
+    struct DiscFile sound_archive; /* 0x2970 */
+    struct DiscFile sound_archive_alt; /* 0x2978, while D_0015ED80 is set */
+    u8 pad_2980[0x8];
+    struct DiscFile music_20000[36]; /* 0x2988, music tracks 20000.. */
+    s32 music_tracks[1]; /* 0x2AA8, by track number */
+};
+extern struct DiscTable D_00137C80;
+struct CommonArchiveMemory {
+    u8 pad_0[0x14];
+    s32 archive_base;
+};
+extern s32 D_0015EF8C MACRO_ADDR;
+extern struct CommonArchiveMemory D_001941C0;
+extern void func_00118D80(s32 a0);
+extern s32 func_00120F30_32B90(s32 a0) __asm__("func_00120F30");
+extern s32 func_00122958(sceGsLoadImage *load_image, s32 image_address);
+extern s32 func_00122630(sceGsLoadImage *load_image, s32 block_offset, s32 buffer_width, s32 pixel_storage_format, s32 x, s32 y, s32 width, s32 height);
+extern s32 func_00120858_32B90(s32 a0, s32 a1) __asm__("func_00120858");
+extern s32 func_0020C468(s32 source_address, s32 destination_address);
+extern s32 func_002175C8(void *a0, u32 a1, u32 a2);
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00231878.c, prepare_loading_slide_textures. */
+void func_00232B90(s32 language_index, s32 first_slide, s32 second_slide,
+                                    u64 *shared_texture, u64 *first_texture, u64 *second_texture) {
+    s32 texture_bases[6];
+    sceGsLoadImage load_image;
+    u64 *first_output;
+    u64 *second_output;
+    s32 upload_index;
+    s32 *texture_base_output;
+    s32 upload_bytes;
+    s32 image_address;
+    s32 archive_base;
+    struct CommonArchiveMemory *archive_memory;
+
+    first_output = first_texture;
+    second_output = second_texture;
+    archive_memory = &D_001941C0;
+    upload_index = 0;
+    func_002175C8((void *)(archive_memory->archive_base + 0x100000),
+                           D_00137C80.loading_slides[language_index].sector,
+                           D_00137C80.loading_slides[language_index].size);
+    func_00120F30_32B90(0);
+    func_00118D80(0);
+    func_0020C468(archive_memory->archive_base + 0x100000, archive_memory->archive_base);
+    func_00118D80(0);
+    archive_base = archive_memory->archive_base;
+    D_0015EF74 = D_0015EF8C;
+    D_0015EF78 = D_0015EF8C;
+    texture_base_output = texture_bases;
+    for (upload_index = 0; upload_index < 6; upload_index++) {
+        if (upload_index == 0) {
+            func_00122630(&load_image, (D_0015EF74 << 8) >> 16, 1, 0, 0, 0,
+                                 0x10, 0x10);
+            upload_bytes = 0x400;
+            image_address = (s32)((u8 *)archive_base + *(s32 *)((u8 *)archive_base + 4)) + 0x20;
+        } else if (upload_index == 1) {
+            func_00122630(&load_image, (D_0015EF74 << 8) >> 16, 1, 0x13, 0,
+                                 0, 0x40, 0x40);
+            upload_bytes = 0x1000;
+            image_address = (s32)((u8 *)archive_base + *(s32 *)((u8 *)archive_base + 4)) + 0x420;
+        } else if (upload_index == 2) {
+            func_00122630(&load_image, (D_0015EF74 << 8) >> 16, 1, 0, 0, 0,
+                                 0x10, 0x10);
+            upload_bytes = 0x400;
+            image_address =
+                (s32)((u8 *)archive_base + *(s32 *)((u8 *)archive_base + first_slide * 4 + 8)) +
+                0x20;
+        } else if (upload_index == 3) {
+            func_00122630(&load_image, (D_0015EF74 << 8) >> 16, 8, 0x13, 0,
+                                 0, 0x200, 0x40);
+            upload_bytes = 0x8000;
+            image_address =
+                (s32)((u8 *)archive_base + *(s32 *)((u8 *)archive_base + first_slide * 4 + 8)) +
+                0x420;
+        } else if (upload_index == 4) {
+            func_00122630(&load_image, (D_0015EF74 << 8) >> 16, 1, 0, 0, 0,
+                                 0x10, 0x10);
+            upload_bytes = 0x400;
+            image_address =
+                (s32)((u8 *)archive_base + *(s32 *)((u8 *)archive_base + second_slide * 4 + 8)) +
+                0x20;
+        } else {
+            func_00122630(&load_image, (D_0015EF74 << 8) >> 16, 8, 0x13, 0,
+                                 0, 0x200, 0x40);
+            upload_bytes = 0x8000;
+            image_address =
+                (s32)((u8 *)archive_base + *(s32 *)((u8 *)archive_base + second_slide * 4 + 8)) +
+                0x420;
+        }
+        func_00118D80(0);
+        func_00122958(&load_image, image_address);
+        func_00120858_32B90(0, 0);
+        *texture_base_output = D_0015EF74 >> 8;
+        D_0015EF74 = D_0015EF74 + upload_bytes;
+        texture_base_output++;
+    }
+    /* Each TEX0 combines an image base with its paired palette base. */
+    {
+        u64 texture_bits = ((u64)texture_bases[0] << 37) | (0xB000ULL << 19);
+        u64 image_bits = (u64)(texture_bases[1] | 0x19304000);
+        *shared_texture = (image_bits | texture_bits) | (1ULL << 63);
+    }
+    {
+        u64 image_bits = (u64)(texture_bases[3] | 0x25320000);
+        u64 texture_bits = ((u64)texture_bases[2] << 37) | (0xB000ULL << 19);
+        *first_output = (image_bits | texture_bits) | (1ULL << 63);
+    }
+    {
+        u64 image_bits = (u64)(texture_bases[5] | 0x25320000);
+        u64 texture_bits = ((u64)texture_bases[4] << 37) | (0xB000ULL << 19);
+        *second_output = (image_bits | texture_bits) | (1ULL << 63);
+    }
+}
 
 typedef struct {
     u8 pad_0[0xC];
@@ -1796,16 +1930,11 @@ extern void func_0022EFE8(void);
 extern void func_00216D88(void);
 extern void func_0012E318(int);
 extern void func_001FB448(int, int, int);
-extern void func_00209E68(void);
-extern void func_00209070(void);
 extern int func_00204BE8(void);
 extern void func_002350A8(void);
 extern void func_00232EF0(int, int, int, int, int);
 extern void func_00232278(void);
 extern int func_0012F4A8(int);
-extern void func_002349B8(void);
-extern void func_00234948(void);
-extern void func_001FB598(void);
 extern void func_001FB8A8(void);
 extern void func_00218908(void);
 extern void func_00230A90(void);
@@ -1973,11 +2102,6 @@ void func_00233308(void) {
 }
 
 typedef u32 u128_33AB8 __attribute__((mode(TI), aligned(16)));
-typedef union {
-    u128_33AB8 q;
-    f32 f[4];
-    s32 i[4];
-} Vec4;
 typedef float FloatVector4[4] __attribute__((aligned(16)));
 typedef struct {
     s16 vertex_index;
@@ -2016,7 +2140,6 @@ extern float D_001DCED0[][2];
 extern float D_001DD200[][2];
 extern u64 func_001F4868_33AB8(int) __asm__("func_001F4868");
 extern void func_001F9908(s32 *);
-extern float func_001F9B50(float);
 extern float func_001F9B88(float);
 extern float func_001F9C78(void *, void *);
 extern float func_001FA888(int);

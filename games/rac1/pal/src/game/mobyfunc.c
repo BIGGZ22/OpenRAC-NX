@@ -1,4 +1,6 @@
 #include "common.h"
+#include "callees.h"
+#include "records.h"
 #include "structs.h"
 
 /*
@@ -14,12 +16,6 @@ extern void func_001F9A98(void *, void *, int);
 extern char D_00189310[];
 extern char D_001899D0[];
 extern void *D_001871C0 NOT_SDA;
-typedef struct {
-    char unk_00[8];
-    void (*fn_08)(void *);
-    char unk_0C[4];
-    void (*fn_10)(void *);
-} DispatchRec;
 extern DispatchRec D_001E8F80[];
 extern int D_0018A3B0[];
 extern void func_001F99B0();
@@ -44,7 +40,6 @@ extern void func_001F6668(void *, void *, void *, void *, void *, int,
 extern int func_001F6600(unsigned char *, int);
 extern int func_001F6620(unsigned char *, int);
 extern int func_001F4868(int);
-extern void func_001F7070(void *, void *, void *, void *, int, unsigned char *);
 extern void func_001FB498(void);
 extern void func_001F3008(void);
 extern void func_001F3140(void);
@@ -73,13 +68,6 @@ extern int D_001941C8 NOT_SDA;
 extern int D_0016100C;
 extern int D_001A0468[];
 extern void func_00205830(int a, int b);
-typedef struct {
-    int _pad0[0x9E];
-    int use[5];   /* +0x278 */
-    int flags[5]; /* +0x28C */
-    int sel;      /* +0x2A0 -- index of the active slot, -1 for none */
-    int size[5];  /* +0x2A4 */
-} PadSlots;
 extern PadSlots D_001A01F0_slots __asm__("D_001A01F0");
 extern int D_001A01F0[];
 extern int *D_001602E0;
@@ -218,7 +206,6 @@ Moby *func_0020D348(int oClass) {
     return 0;
 }
 
-extern void func_001F99B0();
 extern unsigned char D_001B3E40[] NOT_SDA;
 extern int D_001B3900[];
 extern void *D_001B3580[];
@@ -573,9 +560,6 @@ void func_0020DAB0(void) {
 extern void func_001FA460_2(void *, void *) __asm__("func_001FA460");
 extern void func_001F9C30(void *, void *, float);
 extern void func_001F9BD8(void *, void *, void *);
-extern void func_002116A0(void *, int, int *, void *);
-extern void func_001FA540(void *, void *, void *);
-extern void func_00211548(void *, int, void *, void *);
 extern void func_001F9EC0(void *, void *, void *);
 
 /* Scale the single vertex block at arg2+0x30 by the object's 0x2C field
@@ -653,7 +637,6 @@ void func_0020DC40(void) {
 }
 
 extern int D_001B6880[];
-extern void *D_001B3580[];
 extern short D_001B6100[];
 
 /* A class's joint records (the list at class+0x20): the joint's tag
@@ -708,8 +691,6 @@ void func_0020DD48(void) {
 
 extern int D_001414D0 NOT_SDA;
 extern float D_001CAE00[] NOT_SDA;
-extern void func_0020E360(void *, void *);
-extern float func_001FA058(float, float);
 extern float func_001F9F90(float);
 extern float func_001F9FA8(float);
 
@@ -772,7 +753,6 @@ void func_0020DEB0(void) {
 }
 
 extern void func_00118D80(int);
-extern void func_00212578(int, int);
 extern char D_00165600[];
 extern int D_0015F718 MACRO_ADDR;
 extern int D_0015F71C MACRO_ADDR;
@@ -792,7 +772,6 @@ void func_0020E040(void) {
     FastMemSet((void *)0x70003A00, (void *)0x40000000, 0x380);
 }
 
-extern void func_001F9A98(void *, void *, int);
 extern char D_001B3200[];
 
 /* StashMobyClassDists(void) */
@@ -814,12 +793,8 @@ extern char D_0010FAA0[];
 extern int D_0015F704 MACRO_ADDR;
 extern char D_00100080[];
 extern int D_0015EF78 MACRO_ADDR;
-extern int D_0016000C MACRO_ADDR;
-extern int D_0015EF74 MACRO_ADDR;
 extern char D_0015FFD0[];
-extern int D_00160040 MACRO_ADDR;
 extern int D_00160014 MACRO_ADDR;
-extern int D_00161000 MACRO_ADDR;
 extern int D_00161008 MACRO_ADDR;
 
 /* DrawMobysSetup(void). What an older note here called a dead
@@ -858,13 +833,11 @@ void func_0020E180(int arg0, int arg1) {
 }
 
 extern void func_0020DC40(void);
-extern void func_001F2558(void *, int);
 extern void func_0020DFF8(void);
 extern void func_00212508(void);
 extern char D_0015FFE0[];
 extern char D_0015FFF0[];
 extern int D_00160038 MACRO_ADDR;
-extern int D_00160040 MACRO_ADDR;
 
 /* DrawMobysCleanUp. The empty profiling markers take (void *, int);
    DmaMobyTextures and func_00212508 take nothing. With the arguments
@@ -886,10 +859,6 @@ void func_0020E200(void) {
 }
 
 extern int D_0018A3D8;
-extern int D_00160018 MACRO_ADDR;
-extern int D_00160014 MACRO_ADDR;
-extern int D_00161000 MACRO_ADDR;
-extern int D_00161008 MACRO_ADDR;
 extern char D_001E8730[];
 extern void func_0020E0C8(void);
 extern void func_0020E200(void);

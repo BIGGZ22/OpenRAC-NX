@@ -755,6 +755,11 @@ One more is this project's own port of a function it has from Lombyte: `func_L00
 the vector type, is adapted from Lombyte's `include/rnc/gameplay/entities/moby.h` at 88c78925, whose layout
 and field names come from the matched code it cites.
 
+`include/hero.h` (the hero and the records inside it) and `include/vector.h` (the 16-byte vector) are
+adapted from Lombyte's `include/rnc/gameplay/hero.h` and `include/rnc/math/vector.h` at 42adb529, while
+Lombyte was MIT licensed. `include/pad.h` (the controller state) is adapted from its
+`include/rnc/input/pad_state.h` at the same commit.
+
 Data taken from Lombyte:
 
 - `editor/moby_classes.tsv` (OpenRAC's top level): the moby class names the level editor

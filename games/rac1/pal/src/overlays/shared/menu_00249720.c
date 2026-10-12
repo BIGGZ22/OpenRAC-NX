@@ -99,7 +99,6 @@ INCLUDE_ASM("asm/overlays", func_L00_0024B788);
 INCLUDE_ASM("asm/overlays", func_L00_0024B7AC);
 extern int D_0015EFB4 MACRO_ADDR;
 extern int D_0015EFB0 MACRO_ADDR;
-extern int D_0013D390[];
 /* clears the menu flag and advances based on card status */
 void func_L00_0024B8B0(void) {
  D_0015EFB4 &= ~0x20;

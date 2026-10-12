@@ -1,5 +1,6 @@
 #include <stdarg.h>
 #include "common.h"
+#include "callees.h"
 #include "structs.h"
 
 /*
@@ -119,7 +120,6 @@ s32 func_001161B0(f64 x) {
     return (u32)hx >> 31;
 }
 
-extern int func_00119110();
 
 int func_001161E8(int *errOut, int arg1) {
     unsigned int r;

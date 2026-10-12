@@ -17,8 +17,6 @@ void func_L13_00266128(int id, int state) {
         } while ((unsigned long)D_L13_00160060 >= (unsigned long)moby);
     }
 }
-extern char *D_L13_00160058 MACRO_ADDR;
-extern char *D_L13_00160060 MACRO_ADDR;
 
 // Sets flag bits and a data pointer on every live object in the pool whose id appears in a zero-terminated list.
 void func_L13_00266180(short *ids, int a, int b, int c) {

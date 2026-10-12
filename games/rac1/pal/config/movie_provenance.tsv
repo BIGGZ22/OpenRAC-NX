@@ -74,3 +74,4 @@ func_0023DBE0	asm only	2026-10-09	viBufPutTs queue timestamp
 func_0023CBE0	asm only	2026-10-09	cpy2area copy between ring buffer spans
 func_0023D090	asm only	2026-10-09	viBufReset tags, DMA registers and state reset
 func_0023D1F0	asm only	2026-10-09	viBufBeginPut ring buffer span split
+func_0023C390	asm only	2026-10-12	ADPCM ring to SPU transfer in 0x400-byte chunks

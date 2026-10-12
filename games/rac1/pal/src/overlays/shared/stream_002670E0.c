@@ -3,7 +3,10 @@
 #include "include_asm.h"
 
 INCLUDE_ASM("asm/overlays", func_L00_002670E0);
-INCLUDE_ASM("asm/overlays", func_L00_00267120);
+/* Clear the 16-bit field at offset 0xA; volatile keeps the store before the return delay slot. */
+void func_L00_00267120(void *a0, unsigned char *a1) {
+    *(volatile unsigned short *)(a1 + 0xA) = 0;
+}
 INCLUDE_ASM("asm/overlays", func_L00_00267130);
 INCLUDE_ASM("asm/overlays", func_L00_00267188);
 INCLUDE_ASM("asm/overlays", func_L00_00267290);

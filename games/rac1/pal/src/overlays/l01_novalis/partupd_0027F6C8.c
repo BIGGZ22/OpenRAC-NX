@@ -49,9 +49,7 @@ void func_L01_0027F6C8(int owner, float *pos, int snd, unsigned char arg, unsign
     }
 }
 extern char *D_L01_001B28E0;
-extern unsigned char *func_00218928(int);
 extern int func_002140B0(int);
-extern int func_001FA898_r(float) __asm__("func_001FA898");
 
 /* Spawns a particle at a, with a random tint, offset b and scale f. */
 unsigned char *func_L01_002888C8(void *a, void *b, float f) {

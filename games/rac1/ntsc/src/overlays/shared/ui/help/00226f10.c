@@ -285,7 +285,7 @@ void FUN_L01_0022cd48(void) {
     }
     {
         struct Hero *q = &hero;
-        if (q->unk12E3 != 0 && q->unk300 != 0) {
+        if (q->unk12E3 != 0 && q->grounded_frames != 0) {
             x = q->state.control_mode;
             if (x != 0x10 && x != 0x14 && x != 7) {
                 hero_set_state(0x31, 1);
@@ -300,7 +300,7 @@ void FUN_L01_0022cd48(void) {
                 if (func_001F9B88_2cd48(r->water_surface_z - (r->motion.pos.f[2] + 0.25f)) <
                     1.0f) {
                     if (r->water_surface_z - r->motion.pos.f[2] > 0.0f) {
-                        if (r->motion.unk100.f[2] < 0.0f) {
+                        if (r->motion.displacement.f[2] < 0.0f) {
                             func_L00_0020BFA8_2cd48();
                             hero_set_state(HERO_STATE_SINK, 1);
                         }
@@ -358,20 +358,19 @@ void FUN_L01_0022d090(void)
     up = 1.5f;
     reach = 1.15f;
     edge_offset = 0.45f;
+    launch_scale = hero.unk940;
     if (hero.state.control_mode == 4)
         launch_scale = hero.unk4A0;
-    else
-        launch_scale = hero.unk940;
     frames = scale_game_frames(2);
     step = 0.25f;
     top_margin = 0.15f;
-    max_slope = 0.34906584f;
     FUN_L00_00259508(&probe, &hero.motion.pos, &hero.motion.unk110, frames, launch_scale);
     found = 0;
     i = 0;
     probe.f[0] += fast_cos(hero.motion.rot.f[2]) * hero.unk234;
     probe.f[1] += fast_sin(hero.motion.rot.f[2]) * hero.unk234;
-    do {
+    while (1) {
+probe_next:
         probe.f[0] += fast_cos(hero.motion.rot.f[2]) * fwd * step;
         probe.f[1] += fast_sin(hero.motion.rot.f[2]) * fwd * step;
         qcopy(&top, &probe);
@@ -381,16 +380,17 @@ void FUN_L01_0022d090(void)
         if (collision_line(&top, &low, 4, hero.moby, 0)) {
             material = collision_hit_material();
             if (material != 9 && material != 12 && material != 0) {
-                if (atan2_f(coll_hit.normal_z, vector_length_xy(&coll_hit.normal_x)) < max_slope)
+                if (atan2_f(coll_hit.normal_z, vector_length_xy(&coll_hit.normal_x)) < 0.34906584f)
                     found = 1;
             }
         }
         i++;
         if (found)
             break;
-    } while (i < 4);
-    if (!found)
+        if (i < 4)
+            goto probe_next;
         return;
+    }
 
     if (coll_hit.moby != 0) {
         moby_allowed = 0;
@@ -409,7 +409,7 @@ void FUN_L01_0022d090(void)
     qcopy(&top, &coll_hit.point);
     qcopy(&low, &coll_hit.point);
     low.f[2] += 0.05f;
-    qcopy(&from, &hero.motion.pos);
+    qcopy_nc(&from, &hero.motion.pos);
     from.f[2] = low.f[2];
     if (collision_line(&from, &low, 4, hero.moby, 0))
         return;
@@ -420,20 +420,23 @@ void FUN_L01_0022d090(void)
     else
         hero.unk4F4 &= ~1;
     ang = atan2_f(top.f[0] - hero.motion.pos.f[0], top.f[1] - hero.motion.pos.f[1]);
-    hero.unk4E0 = top.f[2];
-    if (top.f[2] - hero.ground_z.f < 1.8f)
+    wall_yaw = hero.ground_z.f;
+    max_slope = top.f[2];
+    hero.unk4E0 = max_slope;
+    max_slope -= wall_yaw;
+    if (max_slope < 1.8f)
         return;
 
     five = 5.0f;
     one = 1.0f;
     hit = 0;
     for (j = 0; j < 5; j++) {
-        qcopy(&from, &hero.motion.pos);
+        qcopy(&wall, &hero.motion.pos);
         qcopy(&to, &top);
         circle_offset(&to, ang, hero.unk234);
         to.f[2] += drop * (one - (f32)j / five);
-        from.f[2] = to.f[2];
-        if (collision_line(&from, &to, 2, 0, 0)) {
+        wall.f[2] = to.f[2];
+        if (collision_line(&wall, &to, 2, 0, 0)) {
             hit = 1;
             hero.unk4E4 = atan2_f(coll_hit.normal_x, coll_hit.normal_y);
             break;
@@ -441,31 +444,34 @@ void FUN_L01_0022d090(void)
     }
     if (!hit)
         return;
-    wall_yaw = hero.unk4E4;
     if (fast_difference_between_rotations(hero.motion.rot.f[2],
-            fast_add_rotations(wall_yaw, 3.14159274f)) < 1.13446403f) {
+            fast_add_rotations(hero.unk4E4, 3.14159274f)) < 1.13446403f) {
         limit = 2.4f;
         inc = 0.03f;
         d = 0.0f;
         half = 0.5f;
         do {
-            qcopy(&wall, &top);
-            wall.f[0] += fast_cos(wall_yaw) * d;
-            wall.f[1] += fast_sin(wall_yaw) * d;
-            qcopy(&edge, &wall);
-            wall.f[2] += half;
-            edge.f[2] -= half;
-            if (!collision_line(&wall, &edge, 4, hero.moby, 0)) {
-                qcopy(&probe, &wall);
-                probe.f[2] = top.f[2];
-                d = -(half * 0.03f);
-                probe.f[0] += fast_cos(wall_yaw) * d;
-                probe.f[1] += fast_sin(wall_yaw) * d;
-                qcopy(&hero.unk4D0, &probe);
-                hero.unk4D0.f[0] += fast_cos(wall_yaw) * edge_offset;
-                hero.unk4D0.f[1] += fast_sin(wall_yaw) * edge_offset;
-                hero.unk4D0.f[2] += -1.43f;
+            qcopy(&to, &top);
+            to.f[2] = top.f[2];
+            to.f[0] += fast_cos(hero.unk4E4) * d;
+            to.f[1] += fast_sin(hero.unk4E4) * d;
+            qcopy(&wall, &to);
+            to.f[2] += half;
+            wall.f[2] -= half;
+            if (!collision_line(&to, &wall, 4, hero.moby, 0)) {
+                qcopy(&edge, &to);
+                edge.f[2] = top.f[2];
+                d = inc * half;
+                d = -d;
+                edge.f[0] += fast_cos(hero.unk4E4) * d;
+                edge.f[1] += fast_sin(hero.unk4E4) * d;
+                qcopy(&hero.unk4D0, &edge);
+                hero.unk4D0.f[0] += fast_cos(hero.unk4E4) * edge_offset;
+                wall_yaw = fast_sin(hero.unk4E4) * edge_offset;
                 hero.unk4E8 = 1;
+                hero.unk4D0.f[1] = wall_yaw + hero.unk4D0.f[1];
+                wall_yaw = -1.43f;
+                hero.unk4D0.f[2] += wall_yaw;
                 return;
             }
             d += inc;
@@ -817,7 +823,7 @@ s32 FUN_L01_00231580(s32 arg) {
         break;
     }
     FUN_001f9a10_8(&hero.motion.velocity, &hero.motion.velocity, &v);
-    FUN_001f9a10_8(&hero.motion.unk100, &hero.motion.unk100, &v);
+    FUN_001f9a10_8(&hero.motion.displacement, &hero.motion.displacement, &v);
     return 1;
 }
 /* Adapted from the exact FUN_L17_0020e1c0 (src/overlays/l17/ui_help_002020a8.c) /
@@ -996,7 +1002,7 @@ extern u8 D_L01_001742E0[] __attribute__((section(".data")));
 void FUN_001f99f8_c(void *) __asm__("FUN_001f99f8");
 void FUN_L00_002126b8_c(void *, void *, s32, f32, f32) __asm__("FUN_L00_002126b8");
 s32 FUN_001efa68_c(void *, void *, s32, s32, s32) __asm__("FUN_001efa68");
-s32 FUN_L00_001f3608(void);
+s32 coll_sound_class(void) __asm__("FUN_L00_001f3608");
 s32 FUN_001f0b58_c(void) __asm__("FUN_001f0b58");
 f32 resolve_camera_surface_height(void *, void *) __asm__("FUN_002135f0");
 s32 FUN_L00_0025e3b8(s32);
@@ -1053,7 +1059,7 @@ void FUN_L01_00232dc0(void) {
     if (FUN_001efa68_c(&v10, &v0, 2, (s32)hero.moby, 0) == 0) {
         goto tail;
     }
-    r = FUN_L00_001f3608();
+    r = coll_sound_class();
     if (r == -1) {
         r = 3;
     }
@@ -1067,7 +1073,7 @@ void FUN_L01_00232dc0(void) {
         if (FUN_001efa68_c(&v10, &v0, 0x24, (s32)hero.moby, 0) == 0) {
             goto d1;
         }
-        r = FUN_L00_001f3608();
+        r = coll_sound_class();
         if (current_level_index == 1 || current_level_index == 0x12) {
             r = 3;
         }
@@ -1115,30 +1121,30 @@ void FUN_L01_00232dc0(void) {
     }
 tail:
     if (hero.air_frames.s != 0) {
-        hero.unk300 = 0;
+        hero.grounded_frames = 0;
     } else {
-        hero.unk300++;
+        hero.grounded_frames++;
         qcopy((u8 *)&hero.unk2B0, (u8 *)&hero.ground_point);
     }
     if (hero.motion.pos.f[2] > hero.water_surface_z) {
         hero.unk2F8 = 0;
     }
 d1:
-    FUN_001f99f8_c((u8 *)&hero.unk290);
+    FUN_001f99f8_c((u8 *)&hero.gravity_dir);
     switch (hero.unk20B3) {
     case 0:
-        hero.unk290.f[2] = -1.0f;
+        hero.gravity_dir.f[2] = -1.0f;
         break;
     case 1:
-        qcopy((u8 *)&hero.unk290, (u8 *)&hero.unk270);
-        FUN_001f9a68_c((u8 *)&hero.unk290, (u8 *)&hero.unk290, -1.0f);
+        qcopy((u8 *)&hero.gravity_dir, (u8 *)&hero.unk270);
+        FUN_001f9a68_c((u8 *)&hero.gravity_dir, (u8 *)&hero.gravity_dir, -1.0f);
         break;
     case 2:
-        FUN_001f9a28((u8 *)&hero.unk290, (u8 *)&hero.motion.unkB0, (u8 *)&hero.motion.pos);
-        FUN_001f9bf8_c((u8 *)&hero.unk290, (u8 *)&hero.unk290, 1.0f);
+        FUN_001f9a28((u8 *)&hero.gravity_dir, (u8 *)&hero.motion.unkB0, (u8 *)&hero.motion.pos);
+        FUN_001f9bf8_c((u8 *)&hero.gravity_dir, (u8 *)&hero.gravity_dir, 1.0f);
         break;
     }
-    hero.unk2E4.i = 0;
+    hero.ground_pitch.i = 0;
     hero.unk2E8.i = 0;
     hero.unk2D0.i[0] = 0;
     hero.unk2D0.i[1] = 0;
@@ -1155,7 +1161,7 @@ d1:
     }
     FUN_L00_00216078((u8 *)&hero.unk270, &v20);
     if (-0.78539819f < v20.f[1] && v20.f[1] < 0.78539819f) {
-        hero.unk2E4.f = v20.f[1];
+        hero.ground_pitch.f = v20.f[1];
     }
     if (-0.78539819f < v20.f[0] && v20.f[0] < 0.78539819f) {
         hero.unk2E8.f = v20.f[0];
@@ -1183,7 +1189,7 @@ d1:
             }
         } else {
             hero.unk2C0.i[i] = 0;
-            hero.unk2C8.f[i] = hero.unk2E4.f;
+            hero.unk2C8.f[i] = hero.ground_pitch.f;
             hero.unk2D0.f[i] = hero.unk2E8.f;
         }
     }
@@ -1247,7 +1253,7 @@ s32 FUN_L01_00233940(s32 mode) {
                 break;
         } else {
             s32 a;
-            h = hero.unk220 - hero.unk224;
+            h = hero.capsule_top - hero.unk224;
             if (h < 0.05f) {
                 h = 0.05f;
             }
@@ -1299,9 +1305,10 @@ extern void add_vector_xyz_34358(void *, void *, void *) __asm__("FUN_001f9a10")
 extern void FUN_001f9c48_34358(void *, void *, f32) __asm__("FUN_001f9c48");
 extern f32 vector_length_xy_34358(void *) __asm__("FUN_001f9b20");
 
-void FUN_L01_00234358(float amount) {
+void air_accel(float amount) __asm__("FUN_L01_00234358");
+void air_accel(float amount) {
     f32 delta[4];
-    Vec4 *velocity = &hero.motion.velocity;
+    Vec4 *velocity;
     Vec4 saved;
     f32 value;
     f32 angle;
@@ -1309,66 +1316,74 @@ void FUN_L01_00234358(float amount) {
     f32 factor;
     f32 length;
     f32 current_length;
+    f32 min_factor;
+    int mode = hero.unk20B3;
 
-    if (hero.unk20B3 == 0)
+    if (mode == 0)
         goto zero_mode;
-    if (hero.unk20B3 == 1 || hero.unk20B3 == 2)
+    if (mode < 0)
+        return;
+    if (mode < 3)
         goto nonzero_mode;
     return;
 zero_mode:
-            angle = hero.motion.move_yaw;
-            speed = hero.target_speed;
-            if (hero.state.control_mode == 4) {
-                if (hero.unk30A == 0) {
-                    if (hero.unk4A4 != 0 && hero.wall_hit != 0)
-                        speed = frame_time * 2.1f;
-                }
-            }
-            if (hero.unk30A != 0) {
-                if (hero.state.current == 0xE && frame_time < speed)
-                    speed = frame_time;
-            }
-            delta[0] = fast_cos(angle) * speed;
-            delta[1] = fast_sin(angle) * speed;
-            delta[2] = velocity->f[2];
-            factor = -(velocity->f[0] * delta[0] + velocity->f[1] * delta[1]);
-            length = vector_length_xy_34358(delta);
-            current_length = vector_length_xy_34358(velocity);
-            if (length == 0.0f) {
-                factor = 0.0f;
-                goto ratio_done;
-            }
-            if (current_length != 0.0f) {
-                factor /= length;
-                goto divide_current;
-            }
-            factor = 0.0f;
-            goto ratio_done;
-        divide_current:
-            factor /= current_length;
-        ratio_done:
-            factor += 1.0f;
-            factor *= 1.5f;
-            if (hero.state.current == 0x81) {
-                if (factor > 1.7f)
-                    factor = 1.7f;
-            } else if (factor > 3.0f) {
-                factor = 3.0f;
-            }
-            if (factor < 1.0f)
-                factor = 1.0f;
-            amount *= factor;
-            subtract_vector_xyz_34358(delta, delta, velocity);
-            length = vector_length_xy_34358(delta);
-            if (amount < length)
-                FUN_001f9c48_34358(delta, delta, amount);
-            add_vector_xyz_34358(velocity, velocity, delta);
-            saved.q = hero.move_impulse.q;
-            hero.ground_speed = hero.motion.unk168 - FUN_L00_00213350_34358(&saved);
+    angle = hero.motion.move_yaw;
+    speed = hero.target_speed;
+    if (hero.state.control_mode == 4) {
+        if (hero.unk30A == 0) {
+            if (hero.unk4A4 != 0 && hero.wall_hit != 0)
+                speed = frame_time * 2.1f;
+        }
+    }
+    if (hero.unk30A != 0) {
+        if (hero.state.current == 0xE && frame_time < speed)
+            speed = frame_time;
+    }
+    delta[0] = fast_cos(angle) * speed;
+    delta[1] = fast_sin(angle) * speed;
+    delta[2] = hero.motion.velocity.f[2];
+    factor = -(hero.motion.velocity.f[0] * delta[0] + hero.motion.velocity.f[1] * delta[1]);
+    length = vector_length_xy_34358(delta);
+    current_length = vector_length_xy_34358(&hero.motion.velocity);
+    if (length == 0.0f) {
+        factor = 0.0f;
+        goto ratio_done;
+    }
+    if (current_length != 0.0f) {
+        factor /= length;
+        goto divide_current;
+    }
+    factor = 0.0f;
+    goto ratio_done;
+divide_current:
+    factor /= current_length;
+ratio_done:
+    min_factor = 1.0f;
+    factor += min_factor;
+    factor *= 1.5f;
+    if (hero.state.current == 0x81) {
+        if (factor > 1.7f)
+            factor = 1.7f;
+    } else if (factor > 3.0f) {
+        factor = 3.0f;
+    }
+    if (factor < min_factor)
+        factor = min_factor;
+    velocity = &hero.motion.velocity;
+    amount *= factor;
+    subtract_vector_xyz_34358(delta, delta, velocity);
+    length = vector_length_xy_34358(delta);
+    if (amount < length)
+        FUN_001f9c48_34358(delta, delta, amount);
+    add_vector_xyz_34358(velocity, velocity, delta);
+    /* velocity is at hero + 0xE0; retail keeps this base for the copy. */
+    saved.q = ((struct Hero *)((char *)velocity - 0xE0))->move_impulse.q;
+    ((struct Hero *)((char *)velocity - 0xE0))->ground_speed = ((struct Hero *)((char *)velocity - 0xE0))->motion.unk168 - FUN_L00_00213350_34358(&saved);
     return;
 nonzero_mode:
+        velocity = &hero.motion.velocity;
         value = FUN_L00_002339d0_34358(velocity);
-        approach_value_34358(hero.target_speed, amount, &value);
+        approach_value_34358(((struct Hero *)((char *)velocity - 0xE0))->target_speed, amount, &value);
         FUN_L00_00233ba0_34358(velocity, velocity, 0.0f);
         FUN_L00_00233708_34358(velocity, velocity, value);
 }
@@ -1477,9 +1492,9 @@ void FUN_L01_0023c710(void) {
             if (m != 0) {
                 qcopy(&m->pos, &hero.motion.pos);
                 qcopy(&m->rot, &hero.motion.rot);
-                m->unk32 = 0x40;
-                ((struct Moby *)hero.unkA8C)->unk31 = 1;
-                ((struct Moby *)hero.unkA8C)->unk90 = 0;
+                m->draw_dist = 0x40;
+                ((struct Moby *)hero.unkA8C)->visible = 1;
+                ((struct Moby *)hero.unkA8C)->glow_color = 0;
                 ((struct Moby *)hero.unkA8C)->spawn_frame = hero.moby->spawn_frame;
                 FUN_L00_00250df8_23c710(hero.unkA8C);
                 FUN_L01_00231348_23c710(3, 0x53, hero.unkA8C);

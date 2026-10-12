@@ -220,6 +220,7 @@ OVERLAY_SN_UNITS = {
     "l04/gameplay/entities/0024c4f0.c",
     "l04/gameplay/entities/0029eb20.c",
     "l04/gameplay/entities/002ca420.c",
+    "l04/gameplay/vendor/002e3078.c",
     "l04/runtime/dma/002922d0.c",
     "l05/gameplay/entities/002d1688.c",
     "l05/gameplay/entities/0030d6a0.c",
@@ -243,6 +244,7 @@ OVERLAY_SN_UNITS = {
     "l08/gameplay/vendor/00305138.c",
     "l08/rendering/00279f00.c",
     "l09/gameplay/entities/0021e538.c",
+    "l09/gameplay/vendor/003033a0.c",
     "l10/gameplay/entities/00295a38.c",
     "l10/gameplay/vendor/002df270.c",
     "l10/gameplay/vendor/002ea1f0.c",
@@ -312,9 +314,11 @@ OVERLAY_SN_UNITS = {
     "shared/gameplay/entities/002b1e48.c",
     "shared/gameplay/entities/002b2100.c",
     "shared/gameplay/entities/002b3840.c",
+    "shared/gameplay/entities/002b7d50.c",
     "shared/gameplay/entities/002b8c08.c",
     "shared/gameplay/entities/002b94d0.c",
     "shared/gameplay/entities/002bffa8.c",
+    "shared/gameplay/entities/002c5990.c",
     "shared/gameplay/entities/002c8440.c",
     "shared/gameplay/entities/002c8830.c",
     "shared/gameplay/entities/002cfcb8.c",
@@ -334,7 +338,9 @@ OVERLAY_SN_UNITS = {
     "shared/gameplay/vendor/0030b618.c",
     "shared/gameplay/vendor/0030e690.c",
     "shared/gameplay/vendor/00316f48.c",
+    "shared/gameplay/vendor/0031abe0.c",
     "shared/math/interpolation/00257ef0.c",
+    "shared/math/interpolation/00258830.c",
     "shared/math/interpolation/0026d930.c",
     "shared/math/rotations/002899f8.c",
     "shared/math/vectors/0025c230.c",
@@ -345,6 +351,7 @@ OVERLAY_SN_UNITS = {
     "shared/rendering/sky/00288ec0.c",
     "shared/runtime/dma/002b7a48.c",
     "shared/ui/help/001fe778.c",
+    "shared/ui/help/00203b18.c",
     "shared/ui/help/00204c60.c",
     "shared/ui/help/0020c758.c",
     "shared/ui/help/00215340.c",
@@ -405,7 +412,7 @@ RODATA_OVERLAYS = {
     "update_help_state": (0x1E7A40, 0xE89C0),  # switch table
     "memcard_update_state": (0x1E8200, 0xE9180),  # switch table
     "init_once": (0x1E7B30, 0xE8AB0),  # switch table
-    "fun_001e8d08": (0x1E7640, 0xE85C0),  # switch table
+    "actuator_calc_power": (0x1E7640, 0xE85C0),  # switch table
     "fun_00213928": (0x1E84E0, 0xE9460),  # switch table
     "fun_00204428": (0x1E7CE0, 0xE8C60),  # switch table
     "mode_freeze_init": (0x1E78D0, 0xE8850),  # switch table
@@ -918,7 +925,11 @@ def hoist_sda_externs(assembly, source):
     known.  The source says which globals retail reads through $gp: those
     declared `__attribute__((sda))` (the game compiler's spelling, ignored by
     SN cc1); their directives go first, the others stay where cc1 put them.
+    A NON_MATCHING `#else` draft is not compiled, so its declarations do not
+    count.
     """
+    source = re.sub(r"^(#ifndef NON_MATCHING\n(?:INCLUDE_ASM[^\n]*\n)*)#else\n.*?^#endif",
+                    r"\1#endif", source, flags=re.M | re.S)
     sda = set()
     for decl in re.findall(r"^extern[^;]*__attribute__\(\(sda\)\)[^;]*;", source, re.M):
         label = re.search(r'__asm__\s*\(\s*"([\w.$]+)"', decl)

@@ -37,8 +37,6 @@ unsigned char *func_L05_0029CA28(void *pos, void *vel, int a2, int a3, int a4, f
     return p;
 }
 extern unsigned char *D_L05_001B2948;
-extern unsigned char *func_00218928(int);
-extern int func_001FA898_r(float) __asm__("func_001FA898");
 extern float func_002140F8(float, float);
 extern int func_001F9850(int);
 

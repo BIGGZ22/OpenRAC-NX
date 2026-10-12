@@ -1,4 +1,5 @@
 #include "common.h"
+#include "callees.h"
 #include "structs.h"
 
 /*
@@ -19,7 +20,6 @@ extern void func_00113968(void);
 extern void func_00114438(void *, void *);
 extern char D_00152470[];
 extern int func_00119088();
-extern int func_00119110();
 extern long func_00116108_wide(int *errOut, void *a, void *b, void *c)
     __asm__("func_00116108");
 extern long func_001188C8_wide(int *errOut, void *a, void *b, void *c)
@@ -53,7 +53,6 @@ extern char D_00157E80[];
 extern int D_0012FD9C;
 extern void func_0011BBF0(void);
 extern int D_0012FD9C NOT_SDA;
-extern int func_001151B4();
 extern char D_0012FCEC[];
 extern char D_001580A8[];
 extern int D_0012FDA8;
@@ -66,26 +65,15 @@ extern int D_001581C0;
 extern char D_00158528[];
 extern int D_0012FDB4;
 extern int func_0011CE70(int arg0, int arg1, int arg2, void *arg3);
-extern int func_00118E70(int);
 extern void func_00118EC0(void);
-extern int func_00118EA0(void);
 extern void func_0011D4E0(void);
 extern void func_00118EB0(void);
 extern int D_00130420;
 extern int D_00130424;
-extern void func_00118CF0(void *);
-extern void func_00118CE0(void *);
 extern int D_00130BD0[];
 extern char D_00130428[];
 extern int func_0011DC50(void);
-extern void func_0011DBE8(int, int);
-extern void func_0011DBF8(int, void *, int);
-extern int func_0011DC40(int);
 extern void func_00118D80(int);
-extern void func_001206B0(float *, int *);
-extern void func_001208E4();
-extern void func_00118B20(int, void *, int);
-extern void func_00118C80(int);
 extern int func_00120F30(int);
 extern void *D_00159840;
 extern int D_001313E0;
@@ -94,7 +82,6 @@ extern int D_001313EC;
 extern int D_001313F0;
 extern int D_001313E4;
 extern int D_001313FC;
-extern void func_00120C58(void);
 extern int func_0011B4C8();
 extern int func_00120D28(int);
 extern void func_00118C90(int);
@@ -141,7 +128,6 @@ extern void func_00129180(void *);
 extern char D_00153A80[];
 extern void func_00116248_4(void *, char *, int, int) __asm__("func_00116248");
 extern void func_0012C468_a(void *, void *) __asm__("func_0012C468");
-extern int func_0012AAA8(void *, int);
 extern void func_0012AAC8(void *, int);
 extern void func_0012C468(void *, void *);
 extern char D_00153B38[];
@@ -149,7 +135,6 @@ extern void func_0012C0A0(void *);
 extern void func_0012BF40(void *);
 extern void func_0012C278(void *);
 extern void func_00129E30(void *, int, int, int);
-extern void func_00129F40();
 extern char D_00153BB8[];
 extern char D_00153BD8[];
 extern void func_00116248(void *);
@@ -307,8 +292,6 @@ int func_0012DFB0(void) {
     return 1;
 }
 
-extern short D_0015ED84;
-extern short D_0015ED80;
 
 /* snd_PrepareReturnBuffer */
 void func_0012E038(void *arg0, int arg1) {
@@ -367,18 +350,11 @@ unsigned int func_0012E060(int arg0, int arg1) {
 
 LINKER_REMNANT("asm/remnants/core_text", func_0012E1B8);
 
-extern short D_0015EDC8;
-extern short D_0015ED88;
 extern short D_0015EDD0;
 extern long D_0015EDD8 MACRO_ADDR;
-extern unsigned int D_0015EE00 MACRO_ADDR;
 extern int D_00137C40;
-extern int D_0015ECE8;
 extern char D_00153FC0[];
 extern char D_00153FF8[];
-extern char D_00153E20[];
-extern int func_0012EF48(int);
-extern int func_0012DDC0(void);
 
 /* Start an IOP stream (command 0x57) for arg0, unless one is already
    pending (D_0015EDC8) or the CD is busy (func_0012EF48); the reply word
@@ -644,9 +620,6 @@ void func_0012E820_r(int cmd, int size, unsigned char *data, int cb, long cb_dat
 /* gp-relative, no retail symbol: gp 0x166D00 - 0x7F40 = 0x15EDC0
    (message-queue index) and gp 0x166D00 - 0x7F60 = 0x15EDA0 (array of
    pointers to the per-queue message-count int). */
-extern short D_0015EDC0;
-extern short D_0015EDA0;
-extern int func_0012DDC0(void);
 
 /* snd_PostMessage */
 void func_0012EAE0(void) {
@@ -662,14 +635,12 @@ INCLUDE_ASM("asm/nonmatchings/core_text", func_0012EB18); /* snd_SendCurrentBatc
 
 /* gp-relative: declared small so -G2 places it in the small-data area,
    accessed as the word it really is. gp 0x166D00 - 0x7F3C = 0x15EDC4. */
-extern short D_0015EDC4;
 
 /* snd_UnkFunction_0012eaf0 */
 void func_0012EC30(void) {
     *(int *)&D_0015EDC4 = 1;
 }
 
-extern int func_0012DDC0(void);
 
 /*
  * Close, not exact (2/32), same size. Retail saves/restores $ra with
@@ -776,9 +747,7 @@ void func_0012EE70(int arg0) {
 
 /* gp-relative, no retail symbol: gp 0x166D00 - 0x7F74 = 0x15ED8C
    (streaming-enabled flag, see func_0012F030/func_0012F068). */
-extern short D_0015ED8C;
 extern short D_0015ED94;
-extern short D_0015ED98;
 
 typedef struct {
     volatile unsigned int count;
@@ -812,9 +781,7 @@ int func_0012EE98(int arg0, int arg1, int arg2) {
     return 1;
 }
 
-extern int func_00120F30(int);
 extern void func_00118D80(int);
-extern int func_0012DDC0(void);
 
 /* snd_StreamSafeCdSync */
 int func_0012EF48(int arg0) {
@@ -869,7 +836,6 @@ int func_0012F030(void) {
 /* gp-relative, no retail symbol: gp 0x166D00 - 0x7F74 = 0x15ED8C
    (streaming-enabled flag, same as func_0012F030's) and
    gp 0x166D00 - 0x7F70 = 0x15ED90 (cached callback value). */
-extern short D_0015ED8C;
 extern short D_0015ED90;
 extern int func_00120978(void);
 

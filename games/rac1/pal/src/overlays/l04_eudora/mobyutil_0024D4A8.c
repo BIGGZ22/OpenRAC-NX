@@ -40,7 +40,6 @@ float func_L04_0024D618(float *dst, float *a, float *b, float *c) {
 }
 extern int func_L04_0024D4A8(float *, float *, int);
 extern float func_L04_0024D618(float *, float *, float *, float *);
-extern void func_001F9BF0(void *, void *, void *);
 extern float func_001F9CB8(void *);
 
 /* finds the closest point on a polygon's edges to a point, returns whether the first test hit */
