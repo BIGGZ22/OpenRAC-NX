@@ -340,7 +340,8 @@ void func_001FA4A0(float *out, float *m) {
  * out = the product of two rotations held as (x, y, z, w): the vector parts scaled by the other's
  * w and added, plus their cross product; w is the product of the w's less the dot product.
  */
-void func_001FA588(float *out, float *a, float *b) {
+void func_001FA588(void *out_, void *a_, void *b_) {
+    float *out = out_, *a = a_, *b = b_;
     float ax = a[0], ay = a[1], az = a[2], aw = a[3];
     float bx = b[0], by = b[1], bz = b[2], bw = b[3];
     float ww = bw * aw;
@@ -399,7 +400,8 @@ void func_001F99B0(int *dst, int value, int bytes) {
 }
 
 /* FastMemZero16: clears 16 bytes at least once, then until the byte count is used up. */
-void func_001F99D8(int *dst, int bytes) {
+void func_001F99D8(void *dst_, int bytes) {
+    int *dst = dst_;
     do {
         dst[0] = 0;
         dst[1] = 0;
@@ -605,7 +607,8 @@ void func_001F9E10(float *out, float *v, float len) {
 
 /* The rotation of the quaternion q (x, y, z, w) as three matrix rows; out's fourth row is left
  * as it was. (Two products of q with 2q, then the usual sums; the rows' w are 0.) */
-void func_001FA648(float *q, float *out) {
+void func_001FA648(void *q_, void *out_) {
+    float *q = q_, *out = out_;
     const float x = q[0], y = q[1], z = q[2], w = q[3];
     const float x2 = x + x, y2 = y + y, z2 = z + z;
     const float wx = x2 * w, wy = y2 * w, wz = z2 * w;
@@ -627,7 +630,8 @@ void func_001FA648(float *q, float *out) {
 
 /* The quaternion t of the way from a to b, the short way round (b negated when a and b point
  * apart), normalised: out = (a (1 - t) +- b t) / |a (1 - t) +- b t|. (VU0 macro mode in retail.) */
-void func_001FA5C8(float *out, float *a, float *b, float t) {
+void func_001FA5C8(void *out_, void *a_, void *b_, float t) {
+    float *out = out_, *a = a_, *b = b_;
     const float s = 1.0f - t;
     float p[4], q[4], v[4];
     float dot = 0.0f, len = 0.0f;
