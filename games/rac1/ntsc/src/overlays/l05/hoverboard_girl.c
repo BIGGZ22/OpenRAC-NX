@@ -140,7 +140,7 @@ void update_hoverboard_girl(HoverboardGirlMoby *) __asm__("FUN_L05_00316ab8");
 #ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L05_00316810.s", FUN_L05_00316810);
 #else
-void update_hoverboard_girl_boobs_animation(HoverboardGirlMoby *moby, HoverboardGirlState *state) {
+void FUN_L05_00316810(HoverboardGirlMoby *moby, HoverboardGirlState *state) {
     extern FrameTiming frame_timing_gp __asm__("D_0015ED64") __attribute__((sda));
     s32 joint_index = 0;
     HoverboardGirlJoint *joint = &state->joints[2];
@@ -158,14 +158,10 @@ void update_hoverboard_girl_boobs_animation(HoverboardGirlMoby *moby, Hoverboard
             animation_value = (f32)(frame_number & 0x7F) * 0.0078125f;
             state_window->joints[2].target_rotation[1] =
                 fast_cos(animation_value * 3.1415927f) * 0.61086524f;
-            delta = frame_timing_absolute.delta;
+            delta = *(f32 *)0x0015ED64;
         }
-        {
-            s32 animation_joint_index = joint_index + 2;
-            joint_index++;
-            update_joint_animation(moby, joint, animation_joint_index, delta * 0.05f,
-                                   delta * 0.3f);
-        }
+        update_joint_animation(moby, joint, joint_index++ + 2, delta * 0.05f,
+                               delta * 0.3f);
         joint++;
         /* Retail advances both its state window and joint cursor by 0x80. */
         state_window = (HoverboardGirlState *)((u8 *)state_window + 0x80);
@@ -176,7 +172,7 @@ void update_hoverboard_girl_boobs_animation(HoverboardGirlMoby *moby, Hoverboard
 #ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L05_00316ab8.s", FUN_L05_00316ab8);
 #else
-void update_hoverboard_girl(HoverboardGirlMoby *moby) {
+void FUN_L05_00316ab8(HoverboardGirlMoby *moby) {
     HoverboardGirlState *state = moby->data;
     HoverboardGirlVector target_position;
     HoverboardGirlVector head_position;
@@ -214,8 +210,8 @@ void update_hoverboard_girl(HoverboardGirlMoby *moby) {
         }
         if (state->dialogue_state == 3) {
             state->previous_dialogue_state = state->dialogue_state;
-            state->dialogue_state_frame = frame_number_absolute;
             state->dialogue_state = 2;
+            state->dialogue_state_frame = frame_number_absolute;
             moby->dialogue_event = 0;
             set_race_camera(&race_camera_vectors[0], &race_camera_vectors[1], 0, 1);
             qcopy(&saved_camera_vectors[0], &race_camera_vectors[2]);
@@ -283,8 +279,8 @@ void update_hoverboard_girl(HoverboardGirlMoby *moby) {
         if (vector_distance(&moby->position, &hero.motion.pos) < 8.0f &&
             absolute_angle_difference(
                 moby->yaw,
-                angle_from_xy(hero.motion.unkD0.component[0] - moby->position.component[0],
-                              hero.motion.unkD0.component[1] -
+                angle_from_xy(hero.motion.unkD0.f[0] - moby->position.component[0],
+                              hero.motion.unkD0.f[1] -
                                   moby->position.component[1])) < 1.5707964f) {
             if (vector_length(&hero.motion.unk100) > 0.01f) {
                 state->player_look_timer = scale_frame_count(120);
@@ -335,10 +331,10 @@ void update_hoverboard_girl(HoverboardGirlMoby *moby) {
     if (vector_distance(&moby->position, &hero.motion.pos) < 15.0f &&
         absolute_angle_difference(
             moby->yaw,
-            angle_from_xy(hero.motion.pos.component[0] - moby->position.component[0],
-                          hero.motion.pos.component[1] - moby->position.component[1])) <
+            angle_from_xy(hero.motion.pos.f[0] - moby->position.component[0],
+                          hero.motion.pos.f[1] - moby->position.component[1])) <
             1.2217305f) {
-        if (hero.state.current == 11 && hero.state_timer == 15) {
+        if (hero.state.current == HERO_STATE_HIGH_JUMP && hero.state_timer == 15) {
             state->breast_growth_count++;
             if (state->breast_growth_count > 20)
                 state->breast_growth_count = 20;
@@ -346,7 +342,7 @@ void update_hoverboard_girl(HoverboardGirlMoby *moby) {
         }
         /* Action 4 eventually reduces the effect, one step
          * every tenth game frame. Keep the scaled-frame threshold. */
-        if (hero.state.current == 4 && scale_frame_count(20) < hero.state_timer &&
+        if (hero.state.current == HERO_STATE_CROUCH && scale_frame_count(20) < hero.state_timer &&
             frame_number % 10 == 0) {
             state->breast_growth_count--;
             if (state->breast_growth_count < 0)

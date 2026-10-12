@@ -1,5 +1,5 @@
 /* NON_MATCHING func_L00_00284410 -- src/overlays/shared/pause_00277208.c
- * Best so far: SIZE ours 508 / retail 516, checked 2026-10-09.
+ * Best so far: SIZE ours 508 / retail 516, checked 2026-10-12.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
  * What the last attempts found:

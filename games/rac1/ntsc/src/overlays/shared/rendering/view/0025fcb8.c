@@ -89,7 +89,135 @@ int FUN_L00_0025fcb8(char *a, char *o, float best) {
     *(int *)(o + 0x44) = res;
     return res;
 }
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_0025ff38.s", FUN_L00_0025ff38);
+#else
+extern int FUN_00214720_25ff38(void *, int) __asm__("FUN_00214720");
+extern int FUN_L00_00259740_25ff38(void *, void *, int) __asm__("FUN_L00_00259740");
+
+int FUN_L00_0025ff38(float best, char *a, char *o, int *excluded,
+                       int excluded_count, void *region, int region_count) {
+    struct Hero *g = &hero_data;
+    char *m;
+    char *p;
+    int res;
+    int i;
+    int j;
+    int k;
+    int valid;
+    float d;
+
+    m = (char *)g->moby;
+    res = 0;
+    if (g->state.control_mode == 0x18 || g->state.current == 0x72) {
+        m = 0;
+        res = 2;
+    } else if (excluded_count > 0) {
+        for (k = 0; k < excluded_count - 1; k++) {
+            if (FUN_00214720_25ff38(&g->motion.pos, excluded[k])) {
+                m = 0;
+                res = 2;
+                break;
+            }
+        }
+    } else if (region && region_count > 0 &&
+               !FUN_L00_00259740_25ff38(&g->motion.pos, region, region_count)) {
+        m = 0;
+        res = 2;
+    }
+    for (i = 1; i <= D_L00_001B0830_25fcb8[0]; i++) {
+        p = D_L00_0015FFD8_25fcb8 + (D_L00_001B0830_25fcb8[i] << 8);
+        if (p == 0)
+            continue;
+        if (*(short *)(p + 0xA6) != 0xCB && *(short *)(p + 0xA6) != 0x76C)
+            continue;
+        if (*(unsigned char *)(p + 0x20) == 0xFE)
+            continue;
+        if (*(unsigned char *)(p + 0x20) == 0xFD)
+            continue;
+        if (*(unsigned char *)(p + 0x20) != 3)
+            continue;
+        d = FUN_001f9b80_25fcb8(a + 0x10, p + 0x10);
+        valid = 1;
+        if (best <= d) {
+            valid = 0;
+        } else {
+            if (excluded_count > 0) {
+                for (k = 0; k < excluded_count - 1; k++) {
+                    if (FUN_00214720_25ff38(p + 0x10, excluded[k])) {
+                        valid = 0;
+                        break;
+                    }
+                }
+            } else if (region && region_count > 0 &&
+                       !FUN_L00_00259740_25ff38(p + 0x10, region, region_count)) {
+                valid = 0;
+            }
+        }
+        if (valid) {
+            m = p;
+            best = d;
+            res = 1;
+        }
+    }
+    for (j = 0; j < 20; j++) {
+        p = D_L00_001DD100_25fcb8[j];
+        if (p == 0)
+            continue;
+        if (*(short *)(p + 0xA6) != 0x10E)
+            continue;
+        if (*(unsigned char *)(p + 0x20) == 0xFE)
+            continue;
+        if (*(unsigned char *)(p + 0x20) == 0xFD)
+            continue;
+        if (*(unsigned char *)(p + 0xBC) == 0)
+            continue;
+        d = FUN_001f9b80_25fcb8(a + 0x10, p + 0x10);
+        valid = 1;
+        if (best <= d) {
+            valid = 0;
+        } else {
+            if (excluded_count > 0) {
+                for (k = 0; k < excluded_count - 1; k++) {
+                    if (FUN_00214720_25ff38(p + 0x10, excluded[k])) {
+                        valid = 0;
+                        break;
+                    }
+                }
+            } else if (region && region_count > 0 &&
+                       !FUN_L00_00259740_25ff38(p + 0x10, region, region_count)) {
+                valid = 0;
+            }
+        }
+        if (valid) {
+            m = p;
+            best = d;
+            res = 1;
+        }
+    }
+    if (m != 0) {
+        *(char **)(o + 0x40) = m;
+        qcopy(o, m + 0x10);
+        qcopy(o + 0x10, m + 0x40);
+        if (m == (char *)hero_data.moby) {
+            qcopy(o + 0x20, &hero_data.motion.unkC0);
+            qcopy(o + 0x30, &hero_data.motion.unkD0);
+        } else {
+            qcopy(o + 0x30, o);
+            *(float *)(o + 0x38) += 0.6f;
+            qcopy(o + 0x20, o + 0x30);
+        }
+    } else {
+        *(char **)(o + 0x40) = 0;
+        qzero(o);
+        qzero(o + 0x30);
+        qzero(o + 0x20);
+        qzero(o + 0x10);
+    }
+    *(int *)(o + 0x44) = res;
+    return res;
+}
+#endif
 typedef float M4_260400[16] __attribute__((aligned(16)));
 extern char *c338_p(char *) __asm__("FUN_L00_002603d0");
 void FUN_001fa050(void *, void *);
@@ -198,7 +326,8 @@ void FUN_L00_00260738(char *out, OvlQuad *pos, void *m1, void *m2) {
 extern u8 D_0013DD40_2607d0[] __asm__("D_0013DD40");
 extern s32 D_0013D510_2607d0[] __asm__("D_0013D510");
 void FUN_L00_00262d38(s32);
-void FUN_L00_002607d0(s32 id) {
+void unlock_planet(s32 id) __asm__("FUN_L00_002607d0");
+void unlock_planet(s32 id) {
     s32 n, i;
     n = 0;
     if (D_0013DD40_2607d0[id] == 0) {
@@ -222,7 +351,7 @@ typedef struct {
     char pad2[0x40];
 } ItemDef;
 
-extern ItemDef D_L00_00179AC0[] __attribute__((section(".data")));
+extern ItemDef item_defs[] __asm__("D_L00_00179AC0") __attribute__((section(".data")));
 extern int D_0013D428[];
 extern int D_00141EA0[];
 extern int D_L00_001B0340[] __attribute__((section(".data")));
@@ -278,7 +407,7 @@ void FUN_L00_00260860(int id, int flag) {
             }
         }
         if (flag != 0) {
-            int t = D_L00_00179AC0[id].t;
+            int t = item_defs[id].t;
             if (t == 0) {
                 D_00141408 = id;
             } else if (t == 3) {
@@ -287,7 +416,7 @@ void FUN_L00_00260860(int id, int flag) {
                 D_00141410 = id;
             }
         }
-        if (D_L00_00179AC0[id].t == 0) {
+        if (item_defs[id].t == 0) {
             for (i = 0; i < 8 && D_00141EA0[i] != 0; i++) {
             }
             if (i < 8) {
@@ -296,4 +425,183 @@ void FUN_L00_00260860(int id, int flag) {
         }
     }
 }
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_00260a88.s", FUN_L00_00260a88);
+#else
+#include "rnc/overlay/quad.h"
+
+typedef OvlVec4 Vec_260a88;
+
+extern int D_L00_0015F598_260a88 __asm__("D_L00_0015F598");
+extern unsigned char D_L00_0015FC88_260a88[] __asm__("D_L00_0015FC88");
+extern int D_L00_0015EEA0_260a88 __asm__("D_0015EEA0");
+extern int D_L00_0015EE20_260a88 __asm__("D_0015EE20");
+extern int D_L00_0015EE28_260a88 __asm__("D_0015EE28");
+extern int D_L00_0015EE2C_260a88 __asm__("D_0015EE2C");
+extern float D_L00_0015ED6C_260a88 __asm__("D_0015ED6C");
+extern float D_L00_0015ED70_260a88 __asm__("D_0015ED70");
+extern char *D_L00_001B04B0_260a88[] __asm__("D_L00_001B04B0");
+extern void FUN_001ff260_260a88(void *) __asm__("FUN_001f99f8");
+extern void FUN_001ff500_260a88(float, void *, void *) __asm__("FUN_001f9bf8");
+extern void FUN_001ff278_260a88(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void FUN_001ff300_260a88(float, void *, void *) __asm__("FUN_001f9a68");
+extern void FUN_001ff2a8_260a88(void *, void *, void *) __asm__("FUN_001f9a28");
+extern float FUN_001ff7e8_260a88(float) __asm__("FUN_001f9dc8");
+extern float FUN_001ff800_260a88(float) __asm__("FUN_001f9de0");
+extern int FUN_00257b50_260a88(int) __asm__("FUN_00213260");
+extern float FUN_00257be8_260a88(float, float) __asm__("FUN_002132a8");
+extern float FUN_00257cb0_260a88(void) __asm__("FUN_00213308");
+extern int FUN_002595a0_260a88(float, float, float, float *, float *) __asm__("FUN_L00_002595a0");
+extern int FUN_L00_00261b48_260a88(int, void *, void *, void *) __asm__("FUN_L00_00261b48");
+extern void FUN_002a7438_260a88(void *, void *, void *, int, int, int) __asm__("FUN_L00_002a7438");
+extern char *FUN_0025c338_260a88(char *) __asm__("FUN_002141f8");
+extern int FUN_001fef20_260a88(int) __asm__("FUN_001f96f8");
+extern void FUN_001eb078_260a88(int, ...) __asm__("FUN_001e93b0");
+extern float FUN_00200240_260a88(int) __asm__("FUN_001fa6c0");
+extern double FUN_00120478_260a88(float) __asm__("FUN_00120478");
+
+void FUN_L00_00260a88(char *moby, int lower, int upper, unsigned int flags, int path_index) {
+    Vec_260a88 base, position, velocity, offset, adjusted, difference, quarter;
+    float crossings[2];
+    float time;
+    int large = 0, medium = 0, small = 0, single;
+    int count, remaining, multiplier, near_count, far_count;
+    int near_large, near_medium, near_small, near_single;
+    int far_large, far_medium, far_small, far_single;
+    int near_value, far_value, gated = 0;
+    char *path;
+
+    FUN_001ff260_260a88(&base);
+    if (!(flags & 0x20) && (unsigned char)moby[0xb0] != 0xff &&
+        (unsigned int)((unsigned short)*(unsigned short *)(moby + 0xa6) - 500) > 40) {
+        D_L00_0015F598_260a88 = D_L00_0015FC88_260a88[(unsigned char)moby[0xb0]] == 0xff;
+    }
+    if (D_L00_0015F598_260a88)
+        gated = !(flags & 0x20);
+    if (!flags || (!lower && !upper))
+        return;
+    if (flags & 4) {
+        path = FUN_0025c338_260a88(moby);
+        if (path)
+            base = *(Vec_260a88 *)(path + 0x20);
+    }
+    if (lower < 1)
+        lower = 1;
+    count = FUN_00257b50_260a88(upper - lower + 1) + lower;
+    if (D_L00_0015EEA0_260a88 || D_L00_0015EE20_260a88)
+        count *= 2;
+    if (count < 500 && gated && D_L00_0015EE28_260a88) {
+        multiplier = (int)((float)FUN_001fef20_260a88(60) * 60.0f) * D_L00_0015EE2C_260a88 / D_L00_0015EE28_260a88;
+        if (D_L00_0015EEA0_260a88 || D_L00_0015EE20_260a88)
+            multiplier /= 2;
+        if (multiplier < 150) {
+            if (multiplier < 91) {
+                FUN_001eb078_260a88(0x1600a0);
+                count *= 5;
+            } else {
+                multiplier = (190 - multiplier) / 20;
+                FUN_001eb078_260a88(0x1600b0, multiplier);
+                count *= multiplier;
+            }
+            if (D_L00_0015EEA0_260a88) {
+                if (count > 1000) count = 1000;
+            } else if (count > 500) count = 500;
+        } else if (multiplier >= 301) {
+            if (multiplier < 352) {
+                int span = 360 - multiplier;
+                float scale = FUN_00200240_260a88(span);
+                FUN_001eb078_260a88(0x1600c0, FUN_00120478_260a88(scale / 20.0f));
+                count *= span / 80;
+            } else {
+                FUN_001eb078_260a88(0x1600c0, 0x3fb99999a0000000LL);
+                count /= 10;
+            }
+            if (count < 1) count = 1;
+        }
+    }
+    remaining = count;
+    if (count >= 300) {
+        do {
+            remaining -= 50;
+            large++;
+        } while (remaining >= 300);
+    }
+    for (; remaining >= 200; remaining -= 20) medium++;
+    for (; remaining >= 30; remaining -= 25) { medium++; small++; }
+    for (; remaining >= 7; remaining -= 5) small++;
+    single = remaining;
+    if (large + medium + small + single > 3 && (flags & 8)) {
+        int a_large = 3, a_medium = 0, a_small = 0, a_single = 0;
+        int b_large = 0, b_medium = 0, b_small = 0, b_single = 3;
+        near_value = 150;
+        far_value = 3;
+        if (count < 150) {
+            int value_large = 150, value_medium = 0, value_small = 0, value_single = 0;
+            do {
+                if (a_large) {
+                    value_large -= 50; a_large--; value_medium += 20; a_medium++;
+                } else if (a_medium) {
+                    value_medium -= 20; a_medium--; value_small += 5; a_small++;
+                } else if (a_small) {
+                    value_small -= 5; a_small--; a_single++;
+                }
+                near_value = value_large + value_medium + value_small + a_single;
+            } while (count < near_value && near_value > 3);
+        }
+        if (count > 3) {
+            int value_large = 0, value_medium = 0, value_small = 0;
+            do {
+                if (b_single) {
+                    b_single--; value_small += 5; b_small++;
+                } else if (b_small) {
+                    value_small -= 5; b_small--; value_medium += 20; b_medium++;
+                } else if (b_medium) {
+                    value_medium -= 20; b_medium--; value_large += 50; b_large++;
+                }
+                far_value = value_large + value_medium + value_small + b_single;
+            } while (far_value < count && far_value < 150);
+        }
+        if (near_value - count < count - far_value) {
+            large = a_large; medium = a_medium; small = a_small; single = a_single;
+        } else {
+            large = b_large; medium = b_medium; small = b_small; single = b_single;
+        }
+    }
+    while (large || medium || small || single) {
+        position = *(Vec_260a88 *)(moby + 0x10);
+        position.f[2] += 0.5f;
+        time = FUN_00257cb0_260a88();
+        velocity.f[0] = FUN_001ff7e8_260a88(time) * (FUN_00257be8_260a88(0.0f, 3.0f) * D_L00_0015ED6C_260a88);
+        velocity.f[1] = FUN_001ff800_260a88(time) * (FUN_00257be8_260a88(0.0f, 3.0f) * D_L00_0015ED6C_260a88);
+        velocity.f[2] = FUN_00257be8_260a88(3.7f, 6.0f) * D_L00_0015ED6C_260a88;
+        velocity.f[3] = 0.0f;
+        offset = velocity;
+        FUN_001ff500_260a88(0.5f, &offset, &offset);
+        FUN_001ff278_260a88(&position, &position, &offset);
+        if (path_index >= 0) {
+            float half = D_L00_0015ED70_260a88 * 10.8f * -0.5f;
+            time = 120.0f;
+            if ((float)FUN_002595a0_260a88(half, velocity.f[2] - half,
+                position.f[2] - *(float *)(D_L00_001B04B0_260a88[path_index] + 0x18),
+                &crossings[0], &crossings[1]) >= 1.0f && crossings[0] > 0.0f && crossings[0] < 120.0f)
+                time = crossings[0];
+            FUN_001ff300_260a88(time, &adjusted, &velocity);
+            FUN_001ff278_260a88(&adjusted, &adjusted, moby + 0x10);
+            FUN_L00_00261b48_260a88(path_index, moby + 0x10, &adjusted, &difference);
+            FUN_001ff2a8_260a88(&adjusted, &difference, &position);
+            adjusted.f[2] = 0.0f;
+            FUN_001ff500_260a88(0.25f, &quarter, &adjusted);
+            FUN_001ff2a8_260a88(&adjusted, &adjusted, &quarter);
+            FUN_001ff300_260a88(1.0f / time, &adjusted, &adjusted);
+            velocity.f[0] = adjusted.f[0];
+            velocity.f[1] = adjusted.f[1];
+        }
+        FUN_001ff278_260a88(&velocity, &velocity, &base);
+        if (large) { multiplier = 50; large--; }
+        else if (medium) { multiplier = 20; medium--; }
+        else if (small) { multiplier = 5; small--; }
+        else { multiplier = 1; single--; }
+        FUN_002a7438_260a88(moby, &position, &velocity, flags, multiplier, gated);
+    }
+}
+#endif

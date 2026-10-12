@@ -31,7 +31,7 @@ void sceGsSetDefDispEnv(struct sceGsDispEnv *output, s16 pixel_storage_format, s
     u64 value;
 
     state = GetCoreDataTable();
-    if (state->wMode != 2 && state->wMode != 3 && checkModelVersion() != 0) {
+    if (!((u32)(state->wMode - 2) < 2) && checkModelVersion() != 0) {
         InvokeKernelSyscall0080((s16)state->wMode, &kernel_horizontal, &kernel_vertical,
                                  &kernel_width, &kernel_height);
     } else {
@@ -46,7 +46,7 @@ void sceGsSetDefDispEnv(struct sceGsDispEnv *output, s16 pixel_storage_format, s
     value = 0x66;
     output->pmode = value;
     value = 2;
-    if (interlace != 0) {
+    if (state->nSInterlace != 0) {
         value = 3;
         if (state->nSFrame_mode == 0) value = 1;
     }
@@ -59,9 +59,9 @@ void sceGsSetDefDispEnv(struct sceGsDispEnv *output, s16 pixel_storage_format, s
             scale = width + 0x9ff;
             scale /= width;
             scaled_horizontal = horizontal_offset * scale;
-            value = ((u64)(s64)(scale - 1) << 23) |
+            value = ((u64)(((s64)scaled_horizontal + ((s64)kernel_horizontal + 0x27c)) & 0xfff)) |
+                    ((u64)(s64)(scale - 1) << 23) |
                     ((u64)((s64)(scale * width) - 1) << 32) |
-                    ((u64)(((s64)scaled_horizontal + (s64)(((u32)kernel_horizontal + 0x27cU) & 0xfffU)) & 0xfff)) |
                     ((u64)((vertical_offset + kernel_vertical + 0x32) & 0xfff) << 12);
             if (state->nSFrame_mode == 0) {
                 value |= (u64)(s64)(height - 1) << 44;
@@ -84,9 +84,9 @@ void sceGsSetDefDispEnv(struct sceGsDispEnv *output, s16 pixel_storage_format, s
             scale = width + 0x9ff;
             scale /= width;
             scaled_horizontal = horizontal_offset * scale;
-            value = ((u64)(s64)(scale - 1) << 23) |
+            value = ((u64)(((s64)scaled_horizontal + ((s64)kernel_horizontal + 0x290)) & 0xfff)) |
+                    ((u64)(s64)(scale - 1) << 23) |
                     ((u64)((s64)(scale * width) - 1) << 32) |
-                    ((u64)(((s64)scaled_horizontal + (s64)(((u32)kernel_horizontal + 0x290U) & 0xfffU)) & 0xfff)) |
                     ((u64)((vertical_offset + kernel_vertical + 0x48) & 0xfff) << 12);
             if (state->nSFrame_mode == 0) {
                 value |= (u64)(s64)(height - 1) << 44;

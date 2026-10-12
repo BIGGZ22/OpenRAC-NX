@@ -29,7 +29,89 @@ void func_L00_0029B6A0(void) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_0029B770);
+typedef struct {
+    s32 f0; /* bolt price (scene/menu callers) */
+    s32 f4;
+    u16 h8;
+    u16 hA;
+    u16 hC;
+    u16 hE;
+    u16 h10;
+    u16 h12;
+    u8 pad14[4];
+} VendorItemInfo;
+extern VendorItemInfo D_L00_001C43B0[];
+typedef struct {
+    s32 item;
+    s32 selected;
+    s32 state;
+    s32 unused;
+    s32 sound;
+} VendorListEntry_29a400;
+typedef struct {
+    u8 pad[0xD0];
+    VendorListEntry_29a400 entries[16];
+    s32 count;
+} VendorList_29a400;
+typedef struct {
+    s32 sound;
+    s32 pad[4];
+} VendorSound_29a400;
+extern VendorList_29a400 D_L00_001CA7C0_9B770 __asm__("D_L00_001CA7C0");
+extern VendorSound_29a400 D_L00_001C2488[];
+extern u8 D_0015EED0[] MACRO_ADDR;
+extern u8 D_0013D5C8[];
+
+/* Builds the vendor list: the stocked items (up to 12, 0xFF-terminated), then every other available item (D_0013D4C0 set, h8 non-zero) not already listed.
+   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00295100.c, FUN_L00_0029a400. */
+void func_L00_0029B770(s32 skip_unflagged) {
+    s32 count, i, j, value, item, k;
+
+    count = 0;
+    if (D_0015EED0[0] != 0xFF) {
+        do count++; while (count < 12 && D_0015EED0[count] != 0xFF);
+    }
+    D_L00_001CA7C0_9B770.count = 0;
+    for (i = 0; i < count; i++) {
+        value = D_0015EED0[i];
+        if (value == 0xFF) continue;
+        item = value & 0x3F;
+        if (value & 0x40) {
+            s32 sound;
+            if (D_L00_001C43B0[item].h8 == 0) continue;
+            sound = D_L00_001C2488[item].sound;
+            D_L00_001CA7C0_9B770.entries[D_L00_001CA7C0_9B770.count].item = item;
+            D_L00_001CA7C0_9B770.entries[D_L00_001CA7C0_9B770.count].selected = 1;
+            D_L00_001CA7C0_9B770.entries[D_L00_001CA7C0_9B770.count].state = 0;
+            D_L00_001CA7C0_9B770.entries[D_L00_001CA7C0_9B770.count].sound = sound;
+            D_L00_001CA7C0_9B770.count++;
+        } else {
+            s32 sound;
+            if (skip_unflagged) continue;
+            sound = D_L00_001C2488[item].sound;
+            D_L00_001CA7C0_9B770.entries[D_L00_001CA7C0_9B770.count].item = item;
+            D_L00_001CA7C0_9B770.entries[D_L00_001CA7C0_9B770.count].selected = 0;
+            D_L00_001CA7C0_9B770.entries[D_L00_001CA7C0_9B770.count].state = 0;
+            D_L00_001CA7C0_9B770.entries[D_L00_001CA7C0_9B770.count].sound = sound;
+            D_L00_001CA7C0_9B770.count++;
+        }
+    }
+    for (k = 0; k < 37; k++) {
+        s32 sound;
+        if (!D_0013D5C8[k]) continue;
+        if (!D_L00_001C43B0[k].h8) continue;
+        for (j = 0; j < D_L00_001CA7C0_9B770.count; j++) {
+            if (D_L00_001CA7C0_9B770.entries[j].item == k) break;
+        }
+        if (j < D_L00_001CA7C0_9B770.count) continue;
+        sound = D_L00_001C2488[k].sound;
+        D_L00_001CA7C0_9B770.entries[D_L00_001CA7C0_9B770.count].item = k;
+        D_L00_001CA7C0_9B770.entries[D_L00_001CA7C0_9B770.count].selected = 1;
+        D_L00_001CA7C0_9B770.entries[D_L00_001CA7C0_9B770.count].state = 0;
+        D_L00_001CA7C0_9B770.entries[D_L00_001CA7C0_9B770.count].sound = sound;
+        D_L00_001CA7C0_9B770.count++;
+    }
+}
 INCLUDE_ASM("asm/overlays", func_L00_0029BA20);
 extern void func_001FFDA0(int, int);
 extern void func_001FFFA0(void);

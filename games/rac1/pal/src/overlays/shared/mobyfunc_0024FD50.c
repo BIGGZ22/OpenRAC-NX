@@ -89,7 +89,35 @@ Slot *func_L00_00250060(char *o, int id) {
     *(Slot **)(o + 0x60) = s;
     return s;
 }
-INCLUDE_ASM("asm/overlays", func_L00_00250120);
+typedef struct ListNode_24f0e8 ListNode_24f0e8;
+struct ListNode_24f0e8 {
+    u8 pad0[0x1C];
+    ListNode_24f0e8 *next; /* 0x1C */
+};
+typedef struct {
+    u8 pad0[0x60];
+    ListNode_24f0e8 *head; /* 0x60 */
+} ListOwner_24f0e8;
+extern void func_001F99B0(void *, s32, s32);
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/0024eec0.c, FUN_L00_0024f0e8. */
+void func_L00_00250120(ListOwner_24f0e8 *owner, ListNode_24f0e8 **slot) {
+    ListNode_24f0e8 *p;
+
+    if (*slot == 0)
+        return;
+    if (owner->head == *slot) {
+        owner->head = (*slot)->next;
+    } else {
+        p = owner->head;
+        while (p->next != 0 && p->next != *slot)
+            p = p->next;
+        if (p->next == *slot)
+            p->next = (*slot)->next;
+    }
+    func_001F99B0(*slot, 0, 0x40);
+    *slot = 0;
+}
 extern void func_L00_00250478(void *, int, int, int);
 extern void func_L00_002539C8(void *);
 

@@ -85,7 +85,7 @@ void FUN_L00_00271450(unsigned char *p) {
         v[2] = *(float *)(q + 8);
         *(int *)&v[3] = 0;
         FUN_001f9a10_271450(r, r, v);
-        t[0] = *(OvlQuad *)(&hero.motion.unk140);
+        t[0] = *(OvlQuad *)(&hero.motion.platform_carry);
         FUN_L00_001ff318_271450(m, t, *(float *)(p + 0x1C));
         FUN_L00_001ff290_271450(m, r, t);
         FUN_001f9a68_271450(m, &hero.unk290, *(float *)(q + 0xC));
@@ -582,7 +582,7 @@ typedef struct {
 } P_2726d8;
 void FUN_L00_00267a08(void *);
 f32 random_float_between(f32, f32) __asm__("FUN_002132a8");
-void FUN_L00_0024f7c8(void *, s32, void *);
+void moby_point_position(void *, s32, void *) __asm__("FUN_L00_0024f7c8");
 void FUN_001f9a28(void *, void *, void *);
 f32 FUN_001f9af0(void *);
 void FUN_001f9bf8(void *, void *, f32);
@@ -599,7 +599,7 @@ void FUN_L00_002726d8(P_2726d8 *p) {
     sc = q->xC * random_float_between(0.5f, 1.0f);
     save = p->f2C;
     qcopy(&t, &p->pos);
-    FUN_L00_0024f7c8(p->q.owner, q->x4, &p->pos);
+    moby_point_position(p->q.owner, q->x4, &p->pos);
     FUN_001f9a28(&t, &t, &p->pos);
     r2 = random_float_between(-0.021f, 0.021f);
     if (FUN_001f9af0(&t) < 0.0625f) {

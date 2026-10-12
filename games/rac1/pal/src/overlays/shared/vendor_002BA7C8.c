@@ -1686,7 +1686,73 @@ float func_L00_002BFF88(Vx *a, void *b) {
     }
     return 0.0f;
 }
-INCLUDE_ASM("asm/overlays", func_L00_002C0098);
+extern char * D_L00_001ABD80[];
+extern char D_0013F4D0[];
+extern float func_001F9D10(void *, void *);
+extern float func_001F9D48(void *, void *);
+extern float func_L00_001FF860(float, float);
+extern float func_001FA850(float, float);
+extern float func_001F9B88(float);
+extern int func_L00_001EFFF0_C0098(void *, void *, int, void *, int) __asm__("func_L00_001EFFF0");
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b94d0.c, FUN_L00_002bed90. */
+char *func_L00_002C0098(char *self, float *position, float *angles, int unused, int mode) {
+    char *candidate;
+    char *best = 0;
+    float target[4] __attribute__((aligned(16)));
+    float bestScore = 1000000000.0f;
+    float distance, score, angleError, heightError, bonus;
+    int checkCollision = 1;
+    int valid;
+    int i;
+    (void)unused;
+    for (i = 0; (candidate = D_L00_001ABD80[i]) != 0; i++) {
+        char *classData = *(char **)(candidate + 0x24);
+        short classId = classData ? *(short *)(classData + 0x46) : 0;
+        if (classId != 5)
+            continue;
+        distance = func_001F9D10(position, candidate + 0x10);
+        if (distance > 40.0f)
+            continue;
+        if (distance > 30.0f)
+            checkCollision = 0;
+        qcopy(target, candidate + 0x10);
+        target[2] += 0.4f;
+        angleError = func_001FA850(angles[2], func_L00_001FF860(target[0] - position[0], target[1] - position[1]));
+        angleError *= angleError;
+        heightError = func_001FA850(angles[1], func_L00_001FF860(distance, target[2] - position[2]));
+        heightError *= heightError;
+        if (checkCollision) {
+            if (8.0f < func_001F9B88(*(float *)(candidate + 0x18) - *(float *)(self + 0x18)))
+                valid = 1;
+            else
+                valid = func_L00_001EFFF0_C0098(position, target, 6, candidate, 0) != 0;
+        } else {
+            valid = *(unsigned char *)(candidate + 0x31) == 0;
+        }
+        if (mode != 0 || !valid) {
+            bonus = 0.0f;
+            score = func_001F9D10(position, target);
+            if (*(float *)(candidate + 0x18) - *(float *)(self + 0x18) > 3.25f)
+                score += 15.0f;
+            if (valid)
+                bonus = 5.0f;
+            {
+                float finalScore = score + bonus + heightError + angleError;
+                if (finalScore < bestScore) {
+                    bestScore = finalScore;
+                    best = candidate;
+                }
+            }
+        }
+    }
+    if (best == 0) {
+        char *playerPosition = D_0013F4D0;
+        if (func_001F9D48(self + 0x10, playerPosition) > 3.2f)
+            best = *(char **)(playerPosition + 0x2000);
+    }
+    return best;
+}
 typedef int V4 __attribute__((mode(TI), aligned(16)));
 typedef union { V4 q; f32 f[4]; } VU;
 typedef struct { u8 pad0[0x46]; s16 h46; } Cls;

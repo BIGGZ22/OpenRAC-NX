@@ -138,7 +138,96 @@ void func_L01_002B9DC0(float *pos) {
         y += D_L01_001CAF80[5];
     }
 }
-INCLUDE_ASM("asm/overlays", func_L01_002B9E68);
+extern f32 D_L01_001CAF80[];
+extern void func_001F9BF0(void *, void *, void *);
+extern void func_001F9C30(void *, void *, f32);
+extern void func_001F9EE8(void *, void *, void *);
+extern u32 func_001F9B20(void *);
+extern void func_L01_00263338(s32, s32);
+extern char D_L01_001672C0[];
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b8c08.c, FUN_L01_002b8cb0. */
+void func_L01_002B9E68(f32 *pos, s32 index, s32 mode) {
+    f32 corners[4][4];
+    f32 near_clip[4];
+    f32 far_clip[4];
+    f32 offsets[4][4];
+    f32 x_offset, y_offset, x_end, y_end;
+    f32 half_x, half_y;
+    f32 x, y;
+    u32 near_bits, far_bits;
+    s32 i, value, row, column;
+
+    if (mode != 0) {
+        row = index >> 2;
+        column = index & 3;
+        half_x = 0.5f * -D_L01_001CAF80[2];
+        half_y = 0.5f * -D_L01_001CAF80[3];
+        x_offset = half_x * (f32)column;
+        y_offset = half_y * (f32)row;
+        y_end = y_offset + half_y;
+        x_end = x_offset + half_x;
+        offsets[0][1] = y_offset;
+        offsets[0][0] = x_offset;
+        offsets[1][1] = y_offset;
+        offsets[1][0] = x_end;
+        offsets[2][0] = x_offset;
+        offsets[2][1] = y_end;
+        offsets[3][0] = x_end;
+        offsets[3][1] = y_end;
+        x = pos[0] + D_L01_001CAF80[2];
+        y = pos[1] + D_L01_001CAF80[3];
+        corners[0][0] = x + offsets[2][0];
+        corners[0][1] = y + offsets[0][1];
+        corners[0][2] = pos[2];
+        corners[0][3] = 1.0f;
+        corners[1][0] = x + offsets[1][0];
+        corners[1][1] = y + offsets[1][1];
+        corners[1][2] = pos[2];
+        corners[1][3] = 1.0f;
+        corners[2][0] = corners[0][0];
+        corners[2][1] = y + offsets[2][1];
+        corners[2][2] = pos[2];
+        corners[2][3] = 1.0f;
+        corners[3][0] = corners[1][0];
+        corners[3][1] = corners[2][1];
+        corners[3][2] = pos[2];
+        corners[3][3] = 1.0f;
+        near_bits = 0;
+        far_bits = 0;
+        for (i = 0; i < 4; i++) {
+            func_001F9BF0(near_clip, corners[i], D_L01_001672C0);
+            func_001F9C30(far_clip, near_clip, 1024.0f);
+            func_001F9C30(near_clip, near_clip, 1024.0f);
+            func_001F9EE8(far_clip, far_clip, D_L01_001672C0 - 0x80);
+            func_001F9EE8(near_clip, near_clip, D_L01_001672C0 - 0x40);
+            far_bits = (far_bits << 8) | func_001F9B20(far_clip);
+            near_bits = (near_bits << 8) | func_001F9B20(near_clip);
+        }
+        if (mode == 1) {
+            if ((near_bits & 0x01010101) == 0x01010101) return;
+            if ((near_bits & 0x02020202) == 0x02020202) return;
+            if ((near_bits & 0x04040404) == 0x04040404) return;
+            if ((near_bits & 0x08080808) == 0x08080808) return;
+            if (far_bits == 0) mode = 0;
+            if ((near_bits & 0x20202020) == 0x20202020) return;
+        } else {
+            if ((near_bits & 0x01010101) == 0x01010101) return;
+            if ((near_bits & 0x02020202) == 0x02020202) return;
+            if ((near_bits & 0x04040404) == 0x04040404) return;
+            if ((near_bits & 0x08080808) == 0x08080808) return;
+            if ((near_bits & 0x20202020) == 0x20202020) return;
+            mode = 0;
+        }
+    }
+    value = (index & 3) * 4 + (index >> 2) * 0x44;
+    if (mode != 0) {
+        mode = 0xe;
+    } else {
+        mode = 0xc;
+    }
+    func_L01_00263338(mode, value);
+}
 INCLUDE_ASM("asm/overlays", func_L01_002BA150);
 INCLUDE_ASM("asm/overlays", func_L01_002BA380);
 extern char D_0013E633[];

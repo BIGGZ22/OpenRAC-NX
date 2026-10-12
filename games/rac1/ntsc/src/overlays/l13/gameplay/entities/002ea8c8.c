@@ -19,7 +19,7 @@ extern int allocate_voice_for_target_entry(int, int, int) __asm__("FUN_0022da68"
 extern int scale_game_frames_alt(int) __asm__("FUN_001f96f8");
 extern int fast_dec_timer(void *) __asm__("FUN_001f9740");
 extern unsigned char *FUN_L13_002ea6b8(char *, char *);
-extern void FUN_L00_0024f7c8(void *, int, void *);
+extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
 extern void FUN_L13_002ea540(void *, void *);
 extern void release_voice_slot(s32) __asm__("FUN_0022d798");
 extern char D_0013E550[];
@@ -100,7 +100,7 @@ s3:
         }
         *(int *)(p + 0x11C) = -1;
     }
-    FUN_L00_0024f7c8(moby, 0x13, sv);
+    moby_point_position(moby, 0x13, sv);
     f1 = distance_xyz(sv, ((char *)&D_0013F3D0));
     if (*(int *)(p + 0x100) == 0) {
         if (f1 < 100.0f) {
@@ -250,7 +250,7 @@ INCLUDE_ASM("config/us/overlays/asm/FUN_L13_002eb098.s", FUN_L13_002eb098);
 
 extern char *create_moby(int);
 extern s32 scale_game_frames(s32) __asm__("func_001F96F8");
-extern void FUN_L00_0024f7c8(void *, int, void *);
+extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
 extern void FUN_L00_00250df8(void *);
 extern char *create_moby(int) __asm__("FUN_0020c4f8");
 
@@ -267,7 +267,7 @@ char *FUN_L13_002ecd10(char *src, int arg, int id) {
         moby[0x20] = 0;
         *(float *)(moby + 0x2C) = f;
         *(int *)(data + 0x44) = arg;
-        FUN_L00_0024f7c8(src, arg, moby + 0x10);
+        moby_point_position(src, arg, moby + 0x10);
         *(char **)(data + 0x3C) = src;
         FUN_L00_00250df8(moby);
         qcopy(moby + 0x40, src + 0x40);
@@ -280,7 +280,78 @@ char *FUN_L13_002ecd10(char *src, int arg, int id) {
     return moby;
 }
 INCLUDE_ASM("config/us/overlays/asm/FUN_L13_002ece00.s", FUN_L13_002ece00);
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L13_002ed158.s", FUN_L13_002ed158);
+#else
+extern void FUN_001fa2d8(void *, void *);
+extern void FUN_001f9d20(void *, void *, void *);
+extern void FUN_001f9a10(void *, void *, void *);
+extern void FUN_001f9a28(void *, void *, void *);
+extern void FUN_001fa030(void *, void *);
+extern void FUN_001f9cf8(void *, void *, void *);
+extern int collect_mobies_in_sphere(float, void *, int, void *, void *) __asm__("FUN_L00_001f2868");
+extern void FUN_L10_0024c7f0(float, void *, void *, int, void *);
+extern void *memcpy(void *, const void *, unsigned int);
+
+void FUN_L13_002ed158(void *moby, void *data) {
+    float matrix[12];
+    float query[4];
+    float candidate_pos[4];
+    float local_pos[4];
+    float rotation_matrix[16];
+    float probe[4];
+    void **candidates;
+    void **hit;
+    int count, hit_count, i;
+    char *candidate;
+    short half_width, half_height, max_size;
+    float limit, tolerance, height_limit, height_tolerance;
+
+    FUN_001fa030(matrix, moby + 0x40);
+    max_size = *(short *)(data + 10) < *(short *)(data + 8) ?
+        *(short *)(data + 8) : *(short *)(data + 10);
+    *(OvlQuad *)query = 0;
+    query[2] = (float)max_size * 0.5f;
+    FUN_001f9cf8(query, query, matrix);
+    FUN_001f9a10(query, query, moby + 0x10);
+    count = collect_mobies_in_sphere((float)max_size * 0.5f, query, 0x10, moby, 0);
+    if (count == 0) return;
+    candidates = __builtin_alloca(((unsigned)count << 5) >> 3);
+    memcpy(candidates, (void *)0x178200, count * 4);
+    for (i = 0; i < count; i++) {
+        candidate = candidates[i];
+        if (candidate == 0 || (unsigned char)candidate[0x20] == 0xfe ||
+            (unsigned char)candidate[0x20] == 0xfd) continue;
+        FUN_001f9a28(candidate_pos, candidate + 0x10, moby + 0x10);
+        FUN_001fa2d8(rotation_matrix, matrix);
+        FUN_001f9d20(local_pos, candidate_pos, rotation_matrix);
+        qcopy(probe, local_pos);
+        half_width = *(short *)(data + 8);
+        limit = (float)half_width * 0.5f;
+        tolerance = limit + 0.7f;
+        if (probe[0] < -tolerance) probe[0] = (float)-half_width * 0.5f;
+        else if (tolerance < probe[0]) probe[0] = limit;
+        half_height = *(short *)(data + 10);
+        height_limit = (float)half_height * 0.5f;
+        height_tolerance = height_limit + 1.5f;
+        if (probe[2] < -height_tolerance) probe[2] = (float)-half_height * 0.5f;
+        else if (height_tolerance < probe[2]) probe[2] = height_limit;
+        probe[1] = 0.0f;
+        FUN_001f9cf8(probe, probe, matrix);
+        FUN_001f9a10(probe, probe, moby + 0x10);
+        hit_count = collect_mobies_in_sphere(0.7f, probe, 0x10, moby, 0);
+        if (hit_count > 0) {
+            hit = (void **)0x178200;
+            do {
+                if (*hit == candidate)
+                    FUN_L10_0024c7f0(1.0f, candidate, moby, 0x10001, probe);
+                hit_count--;
+                hit++;
+            } while (hit_count != 0);
+        }
+    }
+}
+#endif
 /* Fades the moby in, waits for its linked moby to be collected or gone, fades out and kills it; spins it all the while. */
 extern int D_L13_0015FFD8_n __asm__("D_L13_0015FFD8");
 extern int D_0014C190_n[][64] __asm__("D_0014C190");

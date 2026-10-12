@@ -34,7 +34,7 @@ struct Moby {
     Vec4f pos;
     u8 state;                         /* >= 0xFE: dead, waiting to respawn */
     u8 group;                         /* linked group: index into the level moby-list table D_Lxx_001ABCC0 (0xFF: none) */
-    u8 unk22;                         /* class slot: pclass = D_L00_00197300[unk22] (FUN_L00_002cf218) */
+    u8 unk22;                         /* class slot: pclass = D_L00_00197300[unk22] (crate_update) */
     u8 unk23;                         /* 0x40 for the smoke trail FUN_L09_00307ba8 spawns */
     struct MobyClass *pclass;
     struct Moby *next;
@@ -63,7 +63,7 @@ struct Moby {
     void (*update)(struct Moby *moby);
     u8 *pvars;
     u8 unk7C;
-    u8 pad7D;
+    u8 sound_slot;                    /* 0x7D: D_0013E550 slot of its looping sound, 0xFF: none (FUN_L00_00232670) */
     u8 unk7E;
     u8 unk7F;                         /* set to 0x17 by FUN_L09_002c5990 near D_L09_00166F40 */
     u8 pad80[0x10];

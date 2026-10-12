@@ -4,7 +4,98 @@
 #include "rnc/globals.h"
 #include "asm.h"
 
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L09_0021e560.s", FUN_L09_0021e560);
+#else
+extern int *D_L09_001611C0;
+#define PACKET_CURSOR (*(int * volatile *)&D_L09_001611C0)
+extern int D_L09_0015F420;
+extern unsigned char D_L09_0016D300[];
+extern u64 FUN_001f44b8(int);
+extern void FUN_L02_0024fca0(void *, void *, void *, void *, void *, int);
+extern void FUN_00233980(int, u64);
+typedef struct {
+    char unused[8];
+    unsigned short first;
+    unsigned short second;
+    char tail[4];
+} TextureEntry;
+
+void FUN_L09_0021e560(int tex0, int tex1) {
+    int *packet;
+    u64 *words;
+    if (tex0 == tex1) {
+        PACKET_CURSOR[0] = 0x10000002;
+        PACKET_CURSOR[1] = 0;
+        PACKET_CURSOR[2] = 0;
+        PACKET_CURSOR[3] = 0x50000002;
+        packet = PACKET_CURSOR;
+        words = (u64 *)(packet + 4);
+        PACKET_CURSOR = packet + 4;
+        words[0] = 0x1000000000008001ULL;
+        words[1] = 0x0eeeeeeeULL;
+        words[2] = FUN_001f44b8(tex1);
+        words[3] = 6;
+        PACKET_CURSOR = packet + 12;
+    } else {
+        TextureEntry *a = (TextureEntry *)D_L09_0016D300 + tex0;
+        TextureEntry *b = (TextureEntry *)D_L09_0016D300 + tex1;
+        int base = D_L09_0015F420;
+        u64 texture_address;
+        u64 *data;
+        *(u64 *)0x161fc0 = 0x0800000000000400ULL;
+        *(u64 *)0x161fc8 = 0;
+        FUN_L02_0024fca0((void *)0x161fd0,
+                          (char *)(base + a->first * 16),
+                          (char *)(base + a->second * 16),
+                          (char *)(base + b->first * 16),
+                          (char *)(base + b->second * 16),
+                          0x1000);
+        PACKET_CURSOR[0] = 0x10000006;
+        PACKET_CURSOR[1] = 0;
+        PACKET_CURSOR[2] = 0;
+        PACKET_CURSOR[3] = 0x50000006;
+        packet = PACKET_CURSOR;
+        data = (u64 *)(packet + 4);
+        PACKET_CURSOR = packet + 4;
+        data[0] = 0x5000000000008001ULL;
+        data[1] = 0x0eeeeeeeULL;
+        texture_address = (u64)(long)(gs_texture_allocation_cursor >> 8) | 0x598100000ULL;
+        data[2] = texture_address;
+        data[3] = 6;
+        data[4] = ((u64)((long)gs_texture_allocation_cursor >> 8) << 32) | 0x1000000000000ULL;
+        data[5] = 0x50;
+        data[6] = 0;
+        data[7] = 0x51;
+        data[8] = 0x4000000040ULL;
+        data[9] = 0x52;
+        data[10] = 0;
+        data[11] = 0x53;
+        PACKET_CURSOR = packet + 28;
+        PACKET_CURSOR[0] = 0x30000401;
+        PACKET_CURSOR[1] = 0x161fc0;
+        PACKET_CURSOR[2] = 0;
+        PACKET_CURSOR[3] = 0x50000401;
+        packet = PACKET_CURSOR;
+        PACKET_CURSOR = packet + 4;
+        PACKET_CURSOR[0] = 0x10000002;
+        PACKET_CURSOR[1] = 0;
+        PACKET_CURSOR[2] = 0;
+        PACKET_CURSOR[3] = 0x50000002;
+        packet = PACKET_CURSOR;
+        PACKET_CURSOR = packet + 4;
+        data = (u64 *)(packet + 4);
+        data[0] = 0x1000000000008001ULL;
+        data[1] = 0xe;
+        data[2] = 0;
+        data[3] = 0x3f;
+        PACKET_CURSOR = packet + 12;
+        FUN_00233980(7, (u64)(int)(gs_texture_allocation_cursor >> 8) | 0x598100000ULL);
+        gs_texture_allocation_cursor += 0x4000;
+    }
+}
+#undef PACKET_CURSOR
+#endif
 
 #define NOT_SDA
 
@@ -72,7 +163,144 @@ void FUN_L09_0021e8c0(char *list, int count, float unused, long tex0, long tex1)
         }
     }
 }
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L09_002c1978.s", FUN_L09_002c1978);
+#else
+extern void setup_first_context(void) __asm__("FUN_001f2d98");
+extern void setup_second_context(void) __asm__("FUN_001f2260");
+extern void FUN_001f9ff8(float, void *);
+extern void setup_offset_vector(float, void *, void *) __asm__("FUN_001f9a68");
+extern void FUN_00233830(void *, int);
+extern void transform_packet_data(void *, void *, void *) __asm__("FUN_001fa378");
+extern int FUN_001fa728(char *, float);
+extern void FUN_L00_001fde98(int, int, int, void *, int);
+extern void FUN_L02_002a46e0(void *);
+extern int D_L09_0015F458;
+extern int D_L09_0016CDD0;
+extern int D_L09_0016CDD8[];
+extern int D_L09_0016CD50[];
+extern int D_L09_0016CD60[];
+extern int D_L09_0016CDF0[];
+extern u64 D_L09_001612F0;
+extern unsigned short D_L09_0010E800;
+extern int D_L09_0010E810;
+extern int D_L09_001CB470;
+extern char D_L09_00166E40[];
+extern char D_L09_00166EC0[];
+
+void FUN_L09_002c1978(void *data_ptr, void *list_ptr, int count) {
+    char *data = data_ptr;
+    char *list = list_ptr;
+    int i;
+    int j;
+    int *packet;
+    u64 *words;
+    float matrix[16];
+    float offset[4];
+    int color;
+    int *scratch = (int *)0x700003fc;
+    float *old = (float *)0x001612f8;
+    float *current = (float *)0x0016cbc0;
+    old[0] = current[0x218 / 4];
+    old[1] = current[0x21c / 4];
+    old[2] = current[0x228 / 4];
+    *(float *)0x00161304 = current[0x22c / 4];
+    if (D_L09_0015F458 != 1) {
+        current[0x218 / 4] = *(float *)(data + 0x20);
+        current[0x21c / 4] = *(float *)(data + 0x24);
+        current[0x228 / 4] = *(float *)(data + 0x28);
+        current[0x22c / 4] = *(float *)(data + 0x2c);
+    }
+    setup_first_context();
+    setup_second_context();
+    FUN_001f9ff8(1024.0f, matrix);
+    setup_offset_vector(-1024.0f, offset, (void *)0x00166f40);
+    offset[3] = 1.0f;
+    FUN_00233830(&D_L09_0010E810, D_L09_0010E800);
+    D_L09_001611C0[0] = 0x10000000;
+    D_L09_001611C0[1] = 0;
+    D_L09_001611C0[2] = 0x11000000;
+    D_L09_001611C0[3] = 0x01000404;
+    packet = D_L09_001611C0;
+    packet[4] = 0;
+    packet[5] = 0;
+    packet[6] = 0;
+    packet[7] = 0x6c0c43a4;
+    transform_packet_data(packet + 8, D_L09_00166E40, matrix);
+    transform_packet_data(packet + 24, D_L09_00166EC0, matrix);
+    packet[40] = 0x8000;
+    packet[41] = 0x303ec000;
+    packet[42] = 0x412;
+    packet[43] = *(int *)0x0016cdd0;
+    *(u64 *)(packet + 44) = *(u64 *)0x0016cd50;
+    packet[46] = *(int *)0x0016cd58;
+    packet[47] = *(int *)0x0016cd5c;
+    *(u64 *)(packet + 48) = *(u64 *)0x0016cd60;
+    packet[50] = *(int *)0x0016cd68;
+    packet[51] = *(int *)0x0016cd6c;
+    packet[52] = *(int *)0x0016cdec;
+    packet[57] = 0x020001d2;
+    packet[56] = 0x03000000;
+    packet[53] = *(int *)0x0016cde8;
+    packet[58] = 0x15000000;
+    packet[54] = 0;
+    packet[55] = 0;
+    packet[59] = 0;
+    *D_L09_001611C0 |= (((packet + 60) - D_L09_001611C0) >> 2) - 1;
+    D_L09_001611C0 = packet + 60;
+    packet[60] = 0x30000003;
+    D_L09_001611C0[1] = (int)&D_L09_001CB470;
+    D_L09_001611C0[2] = 0;
+    D_L09_001611C0[3] = 0x50000003;
+    packet = D_L09_001611C0 + 4;
+    D_L09_001611C0 += 4;
+    packet[0] = 0x10000008;
+    D_L09_001611C0[1] = 0;
+    D_L09_001611C0[2] = 0;
+    D_L09_001611C0[3] = 0x50000008;
+    color = (unsigned char)data[0x30] | ((unsigned char)data[0x31] << 8) |
+            ((unsigned char)data[0x32] << 16);
+    if (D_L09_0015F458 == 1)
+        color = *(int *)0x0016cdf0 | (*(int *)0x0016cdf4 << 8) |
+                (*(int *)0x0016cdf8 << 16);
+    words = (u64 *)(D_L09_001611C0 + 4);
+    *(u64 *)(D_L09_001611C0 + 4) = 0x7000000000008001ULL;
+    words[1] = 0xeeeeeeeeULL;
+    words[2] = ((u64)(unsigned char)data[0x3f] << 32) | 100;
+    words[3] = 0x42;
+    words[4] = D_L09_001612F0;
+    words[5] = 6;
+    words[6] = (long)color;
+    words[7] = 0x3d;
+    words[8] = 0;
+    words[9] = 8;
+    words[10] = 0x50000;
+    words[11] = 0x47;
+    words[12] = 0xff9000000260ULL;
+    words[13] = 0x14;
+    words[14] = (unsigned char)data[0x3f] > 0x60 ? 0x5360a : 0x5370b;
+    words[15] = 0x47;
+    D_L09_001611C0 += 36;
+    for (i = 255; i >= 0; i--)
+        *scratch-- = 0x757c8e;
+    for (i = 0; i < count; i++) {
+        char *entry = list + i * 32;
+        int visible = FUN_001fa728(entry, 256.0f);
+        if (visible != -1) {
+            int n = *(int *)(entry + 0x1c);
+            float *source = *(float **)(entry + 0x14);
+            float *destination = (float *)0x70001000;
+            for (j = 0; j < n; j++) {
+                *destination++ = *source++ * 0.5f;
+                *destination++ = *source++ * 0.5f;
+            }
+            FUN_L00_001fde98(n, *(int *)(entry + 0x10), 0x70000000,
+                              (void *)0x70001000, visible == 0);
+        }
+    }
+    FUN_L02_002a46e0(data);
+}
+#endif
 #define NOT_SDA
 
 #define MACRO_ADDR
@@ -85,7 +313,7 @@ INCLUDE_ASM("config/us/overlays/asm/FUN_L09_002c1978.s", FUN_L09_002c1978);
 
 extern char *func_0020D348_m(int);
 extern void FUN_001f9cf8(void *, void *, void *);
-extern void FUN_L00_0024f7c8(void *, int, void *);
+extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
 extern void FUN_L00_00250df8(void *);
 extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
 extern void subtract_vector_xyz(void *out, void *a, void *b) __asm__("FUN_001f9a28");
@@ -106,7 +334,7 @@ char *FUN_L09_002c2500(struct Moby *src, char *pos, int cls) {
         qcopy(d + 0x10, pos);
         *(char **)(d + 0x2C) = src;
         FUN_L00_00250df8(m);
-        FUN_L00_0024f7c8(m, 0, &v0);
+        moby_point_position(m, 0, &v0);
         subtract_vector_xyz(&v1, pos, &v0);
         FUN_001f9cf8(&v1, &v1, &src->unkC0);
         add_vector_xyz(p, pos, &v1);
@@ -844,7 +1072,7 @@ typedef struct {
     float x, y, z, w;
 } __attribute__((aligned(16))) Vx;
 
-extern char *FUN_L00_0025a420(void *, int, int);
+extern char *find_moby_hit(void *, int, int) __asm__("FUN_L00_0025a420");
 extern char *FUN_L00_0026dd20(char *pos, char *vel, int c, int d, float f);
 extern char *FUN_L09_002ee380(char *owner, void *position, float angle);
 extern float fast_cos(float);
@@ -858,7 +1086,7 @@ extern void normalize_vector_xyz(void *, void *, float);
 
 void FUN_L09_002ee110(struct Moby *m) {
     char *d = (char *)m->pvars;
-    char *r = FUN_L00_0025a420(m, 0x10000, 0);
+    char *r = find_moby_hit(m, 0x10000, 0);
     Vx v;
     Vx b;
     int i;
@@ -1208,7 +1436,125 @@ void FUN_L09_002f0040(struct Moby *moby) {
         delete_moby(moby);
     }
 }
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L09_002f86a0.s", FUN_L09_002f86a0);
+#else
+extern void scale_vector_2f86a0(float, void *, void *) __asm__("FUN_001f9a68");
+extern void timer_event_2f86a0(int, int, struct Moby *) __asm__("FUN_0022da68");
+extern int elapsed_frames_2f86a0(int) __asm__("FUN_001f96f8");
+extern void decrement_timer_2f86a0(int *) __asm__("FUN_001f9740");
+extern void subtract_vector_2f86a0(void *, void *, void *) __asm__("FUN_001f9a28");
+extern float vector_measure_2f86a0(void *, void *) __asm__("FUN_001f9ab0");
+extern void update_rotation_2f86a0(float *, float *, int, float, float, float, float) __asm__("FUN_L00_0025bc98");
+extern void update_position_2f86a0(void *, void *, void *, void *, void *) __asm__("FUN_L07_00288968");
+extern void copy_vector_2f86a0(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void update_oscillation_2f86a0(float, float, struct Moby *, float *, float *) __asm__("FUN_L00_00262b00");
+extern void update_oscillation_pair_2f86a0(struct Moby *, float *, float *, float, float, float) __asm__("FUN_L00_00262b80");
+extern float approach_rotation_2f86a0(float, float) __asm__("FUN_001fa580");
+extern void finish_motion_2f86a0(void *, void *, void *, void *) __asm__("FUN_L00_00260738");
+extern short D_0013F65E_2f86a0 __asm__("D_0013F65E");
+extern struct Moby *D_0013F64C_2f86a0 __asm__("D_0013F64C");
+extern float D_0013F3D0_2f86a0[] __asm__("D_0013F3D0");
+extern float D_0013F440_2f86a0[] __asm__("D_0013F440");
+extern float D_2f86a0_adf4 __asm__("D_0015ADF4") __attribute__((section(".sdata")));
+extern float D_2f86a0_adf8 __asm__("D_0015ADF8") __attribute__((section(".sdata")));
+extern float D_2f86a0_adfc __asm__("D_0015ADFC") __attribute__((section(".sdata")));
+extern float D_2f86a0_ae04 __asm__("D_0015AE04") __attribute__((section(".sdata")));
+extern float D_2f86a0_ae08 __asm__("D_0015AE08") __attribute__((section(".sdata")));
+extern float D_2f86a0_ae0c __asm__("D_0015AE0C") __attribute__((section(".sdata")));
+extern float D_2f86a0_ae10 __asm__("D_0015AE10") __attribute__((section(".sdata")));
+extern float D_2f86a0_ae14 __asm__("D_0015AE14") __attribute__((section(".sdata")));
+extern float D_2f86a0_ae18 __asm__("D_0015AE18") __attribute__((section(".sdata")));
+
+struct MotionState_2f86a0 {
+    char pad[0x20];
+    float output[4];
+    char pad30[0x30];
+    float rotations[4];
+    float previous[4];
+    int active;
+    float target_height;
+    int timer;
+    int pad8c;
+    float oscillation_pair[2];
+    float oscillation[2];
+};
+
+void FUN_L09_002f86a0(struct Moby *moby) {
+    struct MotionState_2f86a0 *state = (struct MotionState_2f86a0 *)moby->pvars;
+    float old_position[4];
+    float old_rotation[4];
+    float direction[4];
+    float saved_position[8];
+    float result[4];
+    float previous_height;
+    float threshold;
+    float angle;
+    float left;
+    float right;
+    int timer;
+
+    scale_vector_2f86a0(-1.0f, old_position, &moby->pos);
+    *(u128_ee380 *)old_rotation = *(u128_ee380 *)&moby->rot;
+    previous_height = moby->pos.z;
+    threshold = state->target_height - 0.25f;
+    if (state->active == 0) {
+        *(u128_ee380 *)state->rotations = *(u128_ee380 *)&moby->rot;
+        *(u128_ee380 *)state->previous = 0;
+        moby->pos.z -= 0.3f;
+        state->active = 1;
+        state->target_height = moby->pos.z;
+    }
+    timer = state->timer;
+    if (D_0013F65E_2f86a0 == 0 && D_0013F64C_2f86a0 == moby) {
+        if (timer == 0) timer_event_2f86a0(0, 0, moby);
+        if (state->timer < elapsed_frames_2f86a0(30)) {
+            state->timer = elapsed_frames_2f86a0(30);
+        }
+        timer = state->timer;
+    }
+    angle = 0.017453292f;
+    if (timer != 0) {
+        decrement_timer_2f86a0(&state->timer);
+        subtract_vector_2f86a0(direction, D_0013F3D0_2f86a0, &moby->pos);
+        left = vector_measure_2f86a0(direction, &moby->unkC0);
+        right = vector_measure_2f86a0(direction, &moby->unkD0);
+        *(u128_ee380 *)saved_position = *(u128_ee380 *)state->rotations;
+        *(u128_ee380 *)(&saved_position[4]) = *(u128_ee380 *)&moby->pos;
+        update_rotation_2f86a0(&state->rotations[0], &state->previous[0], 0,
+            -D_2f86a0_adf4 * right, D_2f86a0_ae04 * angle * frame_time_sq,
+            D_2f86a0_ae08 * frame_scale_sq, D_2f86a0_ae0c * angle * frame_time);
+        update_rotation_2f86a0(&state->rotations[1], &state->previous[1], 0,
+            D_2f86a0_adf4 * left, D_2f86a0_ae04 * angle * frame_time_sq,
+            D_2f86a0_ae08 * frame_scale_sq, D_2f86a0_ae0c * angle * frame_time);
+        moby->pos.z -= D_2f86a0_adf8 * frame_time;
+        if (threshold < previous_height && moby->pos.z <= threshold)
+            timer_event_2f86a0(1, 0, moby);
+        update_position_2f86a0(D_0013F3D0_2f86a0, result, &moby->pos, saved_position, state->rotations);
+        subtract_vector_2f86a0(D_0013F440_2f86a0, result, D_0013F3D0_2f86a0);
+        D_0013F440_2f86a0[2] += moby->pos.z - saved_position[6];
+    } else {
+        update_rotation_2f86a0(&state->rotations[0], &state->previous[0], 0,
+            0.0f, D_2f86a0_ae10 * angle * frame_time_sq,
+            D_2f86a0_ae14 * frame_scale_sq, D_2f86a0_ae18 * angle * frame_time);
+        update_rotation_2f86a0(&state->rotations[1], &state->previous[1], 0,
+            0.0f, D_2f86a0_ae10 * angle * frame_time_sq,
+            D_2f86a0_ae14 * frame_scale_sq, D_2f86a0_ae18 * angle * frame_time);
+        moby->pos.z += D_2f86a0_adfc * frame_time * (state->target_height - moby->pos.z);
+        if (state->target_height < moby->pos.z) moby->pos.z = state->target_height;
+        if (previous_height < threshold && threshold <= moby->pos.z)
+            timer_event_2f86a0(2, 0, moby);
+    }
+    update_oscillation_2f86a0(0.140000f, frame_time * 0.5235988f, moby,
+                              &state->oscillation[0], &state->oscillation[1]);
+    update_oscillation_pair_2f86a0(moby, &state->oscillation_pair[0], &state->oscillation_pair[1],
+        0.08726646f, frame_time * 0.31415927f, frame_time * 0.4886922f);
+    moby->rot.x = approach_rotation_2f86a0(state->rotations[0], moby->rot.x);
+    moby->rot.y = approach_rotation_2f86a0(state->rotations[1], moby->rot.y);
+    copy_vector_2f86a0(old_position, old_position, &moby->pos);
+    finish_motion_2f86a0(state->output, old_position, old_rotation, &moby->rot);
+}
+#endif
 /* UpdateMoby_1000: timer and sound bookkeeping */
 /* Ported from rac1-decomp (src/overlays/l09_gaspar/vendor_002C2B08.c: func_L09_00301C38), where it is exact; names translated to the US level program. */
 

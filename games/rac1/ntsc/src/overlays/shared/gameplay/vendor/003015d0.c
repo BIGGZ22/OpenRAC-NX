@@ -48,7 +48,7 @@ extern int FUN_001fa728(void *, float);
 extern int scale_game_frames(int) __asm__("FUN_001f96f8");
 extern void FUN_L14_003017f8(char *);
 extern void FUN_L14_00301de8(char *);
-extern void FUN_L14_00301fa8(void);
+extern void FUN_L14_00301fa8(char *);
 extern void FUN_L14_00302538(char *);
 extern void enqueue_callback_list_1(void (*)(void), void *) __asm__("FUN_001f4600");
 extern short D_L14_0016219C_s __asm__("D_L14_001620CC") __attribute__((sda));
@@ -129,7 +129,123 @@ void FUN_L14_003015d0(unsigned char *m) {
         }
     }
 }
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L14_003017f8.s", FUN_L14_003017f8);
+#else
+extern int random_integer_between(int, int) __asm__("FUN_L00_00257b90");
+extern int random_integer_below(int) __asm__("FUN_00213260");
+extern float random_float_between(float, float) __asm__("FUN_002132a8");
+extern float convert_integer_to_float(int) __asm__("FUN_001fa6c0");
+extern int truncate_float_to_s32(float) __asm__("FUN_001fa6d0");
+extern void clear_u64_value(void *) __asm__("FUN_001f99f8");
+extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void scale_vector_xyz(void *, void *, float) __asm__("FUN_001f9a68");
+extern void set_vector_xyz(void *, float, float) __asm__("FUN_L00_00257d78");
+extern void FUN_001f9d20(void *, void *, void *);
+extern float FUN_001f9b80(void *, void *);
+extern void FUN_001fa050(void *, void *) __asm__("FUN_001fa050");
+extern void FUN_00218888(void *, void *, void *, int, int, int, int, int, int);
+extern float D_0015ED6C;
+extern int D_L14_001620BC __attribute__((sda));
+extern int D_L14_001620C0 __attribute__((sda));
+extern float D_L14_001620FC __attribute__((sda));
+extern float D_L14_00162100 __attribute__((sda));
+extern float D_L14_00162104 __attribute__((sda));
+extern int D_L14_00162108 __attribute__((sda));
+extern int D_L14_0016210C __attribute__((sda));
+extern float D_L14_00162114 __attribute__((sda));
+extern int D_L14_0016211C __attribute__((sda));
+extern int D_L14_00162120 __attribute__((sda));
+
+void FUN_L14_003017f8(char *m) {
+    char *d = *(char **)(m + 0x78);
+    float path_a[32][4] __attribute__((aligned(16)));
+    float path_b[32][4] __attribute__((aligned(16)));
+    float work[4] __attribute__((aligned(16)));
+    float delta_a[4] __attribute__((aligned(16)));
+    float matrix[12] __attribute__((aligned(16)));
+    float origin[4] __attribute__((aligned(16)));
+    int i, j, index, next, color;
+    float length, t;
+
+    D_L14_001600EC[*(int *)d].origin.f[3] = 1.0f;
+    {
+        short duration = random_integer_between(scale_game_frames(D_L14_001620BC),
+                                                scale_game_frames(D_L14_001620C0));
+        *(int *)(d + 0x620) = duration;
+        *(short *)(d + 0x12) = duration;
+    }
+    length = vector_length_xyz(&D_L14_001600EC[*(int *)d].axis[1]);
+    for (i = 0; i < 32; i++) {
+        t = 0.5f - convert_integer_to_float(i) / convert_integer_to_float(31);
+        if ((unsigned)(i - 3) < 26) {
+            set_vector_xyz(path_a[i], 0.0f, D_L14_001620FC);
+            set_vector_xyz(path_b[i], 0.0f, D_L14_00162100 * D_0015ED6C);
+        } else {
+            clear_u64_value(path_a[i]);
+            clear_u64_value(path_b[i]);
+        }
+        path_a[i][3] = 1.0f;
+        path_a[i][1] += t * (length + length);
+    }
+    for (i = 0; i < 32; i++) {
+        if (i == 0 || i == 31) {
+            qcopy(d + 0x20 + (i << 4), path_a[i]);
+            qcopy(d + 0x220 + (i << 4), path_b[i]);
+        } else {
+            add_vector_xyz(work, path_a[i - 1], path_a[i]);
+            add_vector_xyz(work, work, path_a[i + 1]);
+            scale_vector_xyz(d + 0x20 + (i << 4), work, 0.333f);
+            add_vector_xyz(work, path_b[i - 1], path_b[i]);
+            add_vector_xyz(work, work, path_b[i + 1]);
+            scale_vector_xyz(d + 0x220 + (i << 4), work, 0.333f);
+        }
+    }
+    for (i = 0; i < 4; i++) {
+        next = i + 1;
+        set_vector_xyz(work, D_L14_001620FC, D_L14_001620FC);
+        index = truncate_float_to_s32(random_float_between((float)i * 6.0f,
+                                                            (float)next * 6.0f));
+        index += 4;
+        d[0x18 + i] = index;
+        *(u128 *)(d + 0x420 + (i << 4)) = *(u128 *)(d + 0x20 + (index << 4));
+        *(u128 *)(d + 0x520 + (i << 4)) = *(u128 *)(d + 0x220 + (index << 4));
+        for (j = 2; j >= 0; j--) {
+            set_vector_xyz(work, 0.1f, 0.1f);
+            set_vector_xyz(d + 0x560 + (i << 4) + ((2 - j) << 6), 0.0f,
+                           D_L14_00162100 * D_0015ED6C);
+            add_vector_xyz(d + 0x460 + (i << 4) + ((2 - j) << 6),
+                           d + 0x420 + (i << 4) + ((2 - j) << 6), work);
+            add_vector_xyz(d + 0x460 + (i << 4) + ((2 - j) << 6),
+                           d + 0x460 + (i << 4) + ((2 - j) << 6), work);
+        }
+    }
+    if (FUN_001f9b80(&D_L14_001600EC[*(int *)d].origin, (void *)0x001674c0) >= 4.0f) {
+        FUN_001fa050(matrix, &D_L14_001600EC[*(int *)d].pad40[0x30]);
+        *(u128 *)origin = *(u128 *)&D_L14_001600EC[*(int *)d].origin;
+        for (i = 0; i < 4; i++) {
+            FUN_001f9d20(work, d + 0x20 + (i << 7), matrix);
+            *(u128 *)delta_a = *(u128 *)(d + 0x220 + (i << 7));
+            delta_a[3] = D_L14_00162114;
+            index = random_integer_below(2);
+            color = index ? D_L14_0016211C : D_L14_00162120;
+            index = random_integer_below(10);
+            FUN_00218888(work, delta_a, delta_a, D_L14_00162108,
+                           D_L14_0016210C, i * 4, 15, scale_game_frames(index + 20), color);
+        }
+        for (i = 0; i < 2; i++) {
+            FUN_001f9d20(work, d + 0x4e0 + (i << 4), matrix);
+            *(u128 *)delta_a = *(u128 *)(d + 0x5e0 + (i << 4));
+            delta_a[3] = D_L14_00162114;
+            random_integer_below(2);
+            index = random_integer_below(10);
+            FUN_00218888(work, delta_a, delta_a, D_L14_00162108,
+                           D_L14_0016210C, (unsigned char)d[0x18 + i] >> 1, 15,
+                           scale_game_frames(index + 20), D_L14_00162120);
+        }
+    }
+}
+#endif
 #ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L14_00301de8.s", FUN_L14_00301de8);
 #else
@@ -137,7 +253,7 @@ extern int D_L14_001620C4 __attribute__((sda));
 extern int D_L14_001620F0 __attribute__((sda));
 extern int D_L14_001620F4 __attribute__((sda));
 extern int D_L14_001620F8 __attribute__((sda));
-extern float convert_integer_to_float(int) __asm__("func_001FA6C0");
+extern float convert_integer_to_float(int) __asm__("FUN_001fa6c0");
 extern int fast_tween_color(int, int, float) __asm__("FUN_001fa6e0");
 extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
 void FUN_L14_00301de8(char *m) {
@@ -157,20 +273,17 @@ void FUN_L14_00301de8(char *m) {
             src += 0x10;
         }
         i = 0;
-        offset = 0;
         do {
             next_i = i + 1;
-            dst = d + offset;
-            src = dst;
-            dst += 0x460;
-            src += 0x560;
+            offset = i << 4;
+            dst = d + offset + 0x460;
+            src = d + offset + 0x560;
             for (k = 2; k >= 0; k--) {
                 add_vector_xyz(dst, dst, src);
                 dst += 0x40;
                 src += 0x40;
             }
             i = next_i;
-            offset = i << 4;
         } while ((float)i < 4.0f);
         copy_i = 0;
         do {
@@ -191,7 +304,131 @@ void FUN_L14_00301de8(char *m) {
     }
 }
 #endif
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L14_00301fa8.s", FUN_L14_00301fa8);
+#else
+typedef struct {
+    u128 vertices[4];
+    int colors[4];
+    float uv[4][2];
+    u64 tag;
+    u64 texture;
+    u64 texture_state;
+    u64 gs_state;
+} VendorBeamStripPacket;
+
+extern void FUN_001fa050(void *, void *) __asm__("FUN_001fa050");
+extern void FUN_001fa2d8(void *, void *) __asm__("FUN_001fa2d8");
+extern void transform_vector_xyz(void *, void *, void *) __asm__("FUN_001f9cf8");
+extern void subtract_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a28");
+extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void cross_vectors_xyz(void *, void *, void *) __asm__("FUN_001f9ad8");
+extern void normalize_vector_xyz(void *, void *, float) __asm__("FUN_001f9bf8");
+extern void clear_u64_value(void *) __asm__("FUN_001f99f8");
+extern u64 get_effect_texture(int) __asm__("FUN_001f44b8");
+extern float convert_integer_to_float(int) __asm__("FUN_001fa6c0");
+extern void draw_geometry_quad(void *, void *, int) __asm__("FUN_001f7d30");
+
+void FUN_L14_00301fa8(char *m) {
+    char *d = *(char **)(m + 0x78);
+    VendorBeamStripPacket packet[3];
+    float base[16] __attribute__((aligned(16)));
+    float matrix[16] __attribute__((aligned(16)));
+    float direction[4] __attribute__((aligned(16)));
+    float work[4] __attribute__((aligned(16)));
+    float side[4] __attribute__((aligned(16)));
+    float start[4] __attribute__((aligned(16)));
+    float end[4] __attribute__((aligned(16)));
+    int i, j, k, strip, point, rounded;
+    int color;
+
+    FUN_001fa050(base, &D_L14_001600EC[*(int *)d].pad40[0x30]);
+    FUN_001fa2d8(matrix, base);
+    *(u128 *)(base + 12) = *(u128 *)&D_L14_001600EC[*(int *)d].origin;
+    subtract_vector_xyz(direction, (void *)0x1674c0, &D_L14_001600EC[*(int *)d].origin);
+    transform_vector_xyz(direction, direction, matrix);
+
+    {
+        u64 texture = get_effect_texture(*(int *)0x001fb4dc);
+        u64 gs_state = (u64)*(int *)0x001fb4e0 | (u64)*(int *)0x001fb4e4 << 2 |
+            (u64)*(int *)0x001fb4e8 << 4 | (u64)*(int *)0x001fb4ec << 6 | 0x8000000000ULL;
+        packet[0].texture_state = packet[1].texture_state = packet[2].texture_state = 0xff9000000260ULL;
+        packet[0].texture = packet[1].texture = packet[2].texture = texture;
+        packet[0].gs_state = packet[1].gs_state = packet[2].gs_state = gs_state;
+    }
+    packet[0].tag = packet[1].tag = packet[2].tag = 0;
+    for (i = 0; i < 4; i++) {
+        float v = ((float *)0x001e5fd0)[i * 2 + 1];
+        color = *(int *)(d + 0x14);
+        for (j = 0; j < 3; j++) {
+            packet[j].uv[i][1] = v;
+            packet[j].colors[i] = color;
+        }
+    }
+
+    clear_u64_value(start);
+    for (point = 0; point < 31; point++) {
+        *(u128 *)end = *(u128 *)start;
+        if (point < 30) {
+            subtract_vector_xyz(side, d + 0x20 + (point << 4), d + 0x40 + (point << 4));
+            subtract_vector_xyz(work, d + 0x30 + (point << 4), direction);
+            cross_vectors_xyz(start, work, side);
+            normalize_vector_xyz(start, start, 0.1f);
+        } else {
+            clear_u64_value(start);
+        }
+        rounded = ((point >= 0) ? point : point + 3) >> 2 << 2;
+        for (i = 0; i < 4; i++) {
+            if (i < 2) {
+                packet[0].vertices[i] = *(u128 *)(d + 0x20 + (point << 4));
+                if (!(i & 1)) subtract_vector_xyz(&packet[0].vertices[i], &packet[0].vertices[i], end);
+                else add_vector_xyz(&packet[0].vertices[i], &packet[0].vertices[i], end);
+            } else {
+                packet[0].vertices[i] = *(u128 *)(d + 0x30 + (point << 4));
+                if (!(i & 1)) subtract_vector_xyz(&packet[0].vertices[i], &packet[0].vertices[i], start);
+                else add_vector_xyz(&packet[0].vertices[i], &packet[0].vertices[i], start);
+            }
+            packet[0].uv[i][0] = ((float *)0x001e5fd0)[i * 2] +
+                convert_integer_to_float(point - rounded) * 0.25f;
+        }
+        draw_geometry_quad(&packet[0], base, 0);
+    }
+    for (strip = 0; strip < 4; strip++) {
+        clear_u64_value(start);
+        if ((u8)d[0x18 + strip] < 31) {
+            for (point = 0; point < 3; point++) {
+                *(u128 *)end = *(u128 *)start;
+                if (point < 2) {
+                    subtract_vector_xyz(side, d + (strip << 4) + (point << 6) + 0x420,
+                        d + (strip << 4) + (point << 6) + 0x4a0);
+                    subtract_vector_xyz(work, d + (strip << 4) + (point << 6) + 0x460,
+                        direction);
+                    cross_vectors_xyz(start, work, side);
+                    normalize_vector_xyz(start, start, 0.1f);
+                } else {
+                    clear_u64_value(start);
+                }
+                if (point == 0) *(u128 *)end = *(u128 *)start;
+                rounded = ((point >= 0) ? point : point + 3) >> 2 << 2;
+                for (k = 0; k < 4; k++) {
+                    if (k < 2) {
+                        packet[0].vertices[k] = *(u128 *)(d + (strip << 4) + (point << 6) + 0x420);
+                        if (!(k & 1)) subtract_vector_xyz(&packet[0].vertices[k], &packet[0].vertices[k], end);
+                        else add_vector_xyz(&packet[0].vertices[k], &packet[0].vertices[k], end);
+                    } else {
+                        packet[0].vertices[k] = *(u128 *)(d + (strip << 4) + (point << 6) + 0x460);
+                        if (!(k & 1)) subtract_vector_xyz(&packet[0].vertices[k], &packet[0].vertices[k], start);
+                        else add_vector_xyz(&packet[0].vertices[k], &packet[0].vertices[k], start);
+                    }
+                    packet[0].uv[k][0] = ((float *)0x001e5fd0)[k * 2] +
+                        convert_integer_to_float(point - rounded) * 0.25f;
+                }
+                draw_geometry_quad(&packet[0], base, 0);
+            }
+        }
+    }
+}
+#endif
 /* Damage request passed to the collision line test (FUN_001efa68). */
 typedef struct {
     f32 v[4];          /* 0x0: push direction xy; w 5627.925 */

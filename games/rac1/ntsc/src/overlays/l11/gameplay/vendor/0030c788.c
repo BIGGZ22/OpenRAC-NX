@@ -948,7 +948,7 @@ void FUN_L11_0030eb90(struct Moby *m) {
         d->spin = d->spin + change;
         if (absolute_float_eb90(m->rot.y) > D_L11_00161F84 * 0.017453292f &&
             (u32)hero.state.control_mode < 2) {
-            hero_set_state(6, 1);
+            hero_set_state(HERO_STATE_FALL, 1);
         }
     }
     m->rot.y = fast_add_rotations(m->rot.y, d->spin);
@@ -1043,7 +1043,7 @@ char *FUN_L11_0030f5a8(void *position, void *vector, int id) {
 /* Ported from rac1-decomp (src/overlays/l11_pokitaru/vendor_002CC828.c: func_L11_00310B28), where it is exact; names translated to the US level program. */
 
 extern char *FUN_L11_0030fd98_c(char *) __asm__("FUN_L11_0030fd98");
-extern void FUN_L00_0024f7c8(void *, int, void *);
+extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
 extern void subtract_vector_xyz_c(void *, void *, void *) __asm__("FUN_001f9a28");
 
 int FUN_L11_0030f660(struct Moby *owner, char *data) {
@@ -1061,7 +1061,7 @@ int FUN_L11_0030f660(struct Moby *owner, char *data) {
     qcopy(child + 0x10, &owner->pos);
     qcopy(child + 0x40, &owner->rot);
     FUN_L00_00250df8(child);
-    FUN_L00_0024f7c8(*(char **)(data + 0x34), 0, data);
+    moby_point_position(*(char **)(data + 0x34), 0, data);
     subtract_vector_xyz_c(data + 0x20, *(char **)(data + 0x34) + 0x10, data);
     return 1;
 missing:
@@ -2127,7 +2127,7 @@ extern short D_L11_0016205C_d __asm__("D_L11_0016205C") __attribute__((sda));
 extern short D_L11_00162060_d __asm__("D_L11_00162060") __attribute__((sda));
 extern short D_L11_00162090_d __asm__("D_L11_00162090") __attribute__((sda));
 extern unsigned char D_0013A4E0[];
-extern void FUN_L00_0024f7c8(void *, int, void *);
+extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
 extern void FUN_001f9a10(void *, void *, void *);
 extern void FUN_001f9bf8(void *, void *, float);
 extern void FUN_L11_00311210(void *, void *, void *, int);
@@ -2144,7 +2144,7 @@ void FUN_L11_003125a8(struct Moby *moby, char *obj, float p2, float p3) {
     FUN_001f9a10(a, a, obj);
     if (FUN_001f9740_c(obj + 0x80) && (*(int *)(D_0013A4E0 + 0x2610) & 0x84)) {
         FUN_001f9bf8(c, a, 2.2f);
-        FUN_L00_0024f7c8(moby, 3 + (obj[0x61] & 1), b);
+        moby_point_position(moby, 3 + (obj[0x61] & 1), b);
         FUN_001f9a10(b, b, c);
         FUN_L11_00308848(moby, a, b, 200.0f, -1.0f);
         *(int *)(obj + 0x80) = *(int *)&D_L11_00162060_d;
@@ -2168,7 +2168,7 @@ extern void FUN_001f9740(int *arg0);
 extern void FUN_001f9a10(void *, void *, void *);
 extern void FUN_0022da68(int, int, int);
 extern void FUN_001f9bf8(void *, void *, float);
-extern void FUN_L00_0024f7c8(void *, int, void *);
+extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
 extern int func_0022ED80_i(int, int, int) __asm__("FUN_0022da68");
 extern int func_001F9908_i(void *) __asm__("FUN_001f9740");
 
@@ -2180,7 +2180,7 @@ void FUN_L11_003126f8(struct Moby *moby, char *d) {
             int t = 0;
             int v = (*(unsigned short *)(d + 0x6A) + 1) & 3;
             *(unsigned short *)(d + 0x6A) = v;
-            FUN_L00_0024f7c8(moby, v + 7, a);
+            moby_point_position(moby, v + 7, a);
             FUN_001f9bf8(b, d, 0.3f);
             FUN_001f9a10(a, a, b);
             if (*(int *)(d + 0x88) != 0 && !(500 < *(int *)(d + 0x8C)))
@@ -2373,7 +2373,7 @@ void FUN_L11_00312838(struct Moby *m, ShipVars_2838 *o) {
     *(Q_2838 *)vel = up.q;
     up.q = 0;
     up.v[2] = 1.0f;
-    if (controller_state.raw_pressed & 0x8000) {
+    if (controller_state.raw_pressed & PAD_LEFT) {
         if (++o->sel >= 2) {
             o->sel = 0;
         }
@@ -2422,7 +2422,7 @@ void FUN_L11_00312838(struct Moby *m, ShipVars_2838 *o) {
         kb = D_L11_001620B4;
         a = x;
         b = y;
-        if (controller_state.held & 0x200) {
+        if (controller_state.held & PAD_L3) {
             a = x / D_L11_00162018 * D_L11_00162020;
             b = y / D_L11_00162014 * D_L11_0016201C;
             ka = D_L11_001620A8;
@@ -2500,7 +2500,7 @@ void FUN_L11_00312838(struct Moby *m, ShipVars_2838 *o) {
     ang[2] = fast_sub_rot_2838(o->f28, o->fD4);
     ang[1] = fast_sub_rot_2838(o->f24, o->fD8);
     FUN_L00_002eaa30(ang);
-    if (controller_state.raw_held & 0x40) {
+    if (controller_state.raw_held & PAD_CROSS) {
         fov = D_L11_00162138;
     } else {
         fov = D_L11_00162134;
@@ -2615,7 +2615,7 @@ extern int FUN_00215130(int, int);
 extern void FUN_L01_0027a248(int, int);
 extern void FUN_001ff570(int, int);
 extern void FUN_0020e098(void *);
-extern void FUN_L00_00211250(void);
+extern void hero_respawn(void) __asm__("FUN_L00_00211250");
 extern void FUN_L00_002502a0(int);
 extern void FUN_L11_003112b8(void *, void *);
 extern int FUN_L00_0028d8c0(void *, int);
@@ -2844,7 +2844,7 @@ void FUN_L11_00313290(struct Moby *moby) {
         case 7:
             D_L11_0015F608 = 2;
             if (timer_3290(&v->iF8)) {
-                FUN_L00_00211250();
+                hero_respawn();
             }
             break;
         case 8:

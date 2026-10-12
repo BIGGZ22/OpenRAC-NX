@@ -4,7 +4,130 @@
 #include "rnc/globals.h"
 #include "asm.h"
 
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L15_001ff938.s", FUN_L15_001ff938);
+#else
+extern void FUN_L00_00232670(void);
+extern void hero_update(void) __asm__("FUN_L00_00211670");
+extern void FUN_L15_002044c8(void);
+extern void FUN_L15_0021d040(void);
+extern void FUN_L00_00216f10(void);
+extern void FUN_L00_002054e8(void);
+extern void FUN_L00_00208a10(void);
+extern void FUN_L00_00207c48(void);
+extern void FUN_L00_00207a58(void);
+extern void FUN_L00_002484e0(void *);
+extern void FUN_L00_002059d8(void);
+extern void FUN_L00_002061f0(void);
+extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
+extern void FUN_L00_00207d00(void);
+extern int FUN_001f96f8(int);
+extern float FUN_001fa6c0(int);
+extern float FUN_001fa6c0_inherited(void) __asm__("FUN_001fa6c0");
+extern float FUN_001f9de0(float);
+extern int FUN_001fa6d0(float);
+extern u32 FUN_001fa6e0(f32, u32, u32);
+extern void FUN_L00_00216de8(int, int);
+extern void FUN_L00_00208b60(void);
+extern void FUN_L00_00257024(void *);
+extern u8 D_0015EDB3;
+extern u8 D_0015EDB1;
+extern float D_0015EE18_001ff938 __asm__("D_0015EE18_gp") __attribute__((sda));
+extern int D_L15_0015F5CC;
+extern u8 D_0013D4DC[];
+
+void FUN_L15_001ff938(void) {
+    u8 *moby;
+    u32 copy[4] __attribute__((aligned(16)));
+    int period, red, green, blue, alpha, i;
+    u32 color;
+    u8 red_byte, green_byte, blue_byte;
+    float pulse;
+
+    FUN_L00_00232670();
+    hero_update();
+    FUN_L15_002044c8();
+    FUN_L15_0021d040();
+    if (hero.vehicle_mode == 0)
+        return;
+    FUN_L00_00216f10();
+    FUN_L00_002054e8();
+    if (hero.vehicle_mode == 0)
+        return;
+    FUN_L00_00208a10();
+    FUN_L00_00207c48();
+    FUN_L00_00207a58();
+    FUN_L00_002484e0((u8 *)&hero + 0x80);
+
+    if (hero.vehicle_mode == 2) {
+        if (D_0015EDB3 != 0)
+            *(float *)(0x0017C06C + (((u32)&FUN_L15_001ff938 == 0x0020EFA8) ? 0x400 : 0)) = D_0015EE18_001ff938 * 1.4f;
+        FUN_L00_002059d8();
+        FUN_L00_002061f0();
+        moby = (u8 *)hero.moby;
+        if (((*(u16 *)(moby + 0x34) ^ 1) & 1) != 0) {
+            moby_point_position(moby, 6, copy);
+            *(u128 *)((u8 *)&hero + 0x1D80) = *(u128 *)copy;
+            FUN_L00_00207d00();
+        }
+    }
+
+    if (hero.vehicle_mode == 3) {
+        if (D_0015EDB1 != 0)
+            *(u32 *)(0x0017C1CC + (((u32)&FUN_L15_001ff938 == 0x0020EFA8) ? 0x400 : 0)) = 0x3ff33333;
+        alpha = 0x80;
+        period = FUN_001f96f8(0xAA);
+        if (hero.unk22E0 == 2)
+            period = FUN_001f96f8(0x32);
+        else if (hero.unk22E0 == 1)
+            period = FUN_001f96f8(0x5A);
+        pulse = FUN_001f9de0((((float)(D_L15_0015F5CC % period) / FUN_001fa6c0(period)) * 2.0f) * 3.1415927f + -3.1415927f);
+        red = FUN_001fa6d0(pulse * 20.0f) + 0x32;
+        green = FUN_001fa6d0(pulse * 70.0f) + 0xB4;
+        blue = FUN_001fa6d0(pulse * 10.0f) + 0x14;
+        moby = (u8 *)hero.moby;
+        if (red > 0xFF) red = 0xFF;
+        if (green > 0xFF) green = 0xFF;
+        *(u16 *)(moby + 0x34) |= 0x10;
+        if (hero.unk22E0 == 2)
+            color = (alpha << 24) | (blue << 16) | ((red / 2) << 8) | green;
+        else
+            color = (alpha << 24) | (blue << 16) | (green << 8) | red;
+        *(u32 *)(moby + 0x90) = FUN_001fa6e0(0.1f, *(u32 *)(moby + 0x90), color);
+        for (i = 0; i < 3; i++)
+            moby_point_position(hero.moby, i, (u8 *)&hero + 0x1D50 + i * 16);
+        alpha = 0x30;
+        moby = (u8 *)hero.moby;
+        red_byte = moby[0x90];
+        green_byte = moby[0x91];
+        blue_byte = moby[0x92];
+        if (hero.unk22DE != 0)
+            alpha = FUN_001fa6d0((FUN_001fa6c0_inherited() / FUN_001fa6c0(0x12)) * (float)alpha);
+        *(u32 *)((u8 *)&hero + 0x22E4) = (alpha << 24) | (blue_byte << 16) | (green_byte << 8) | red_byte;
+        FUN_L00_00207d00();
+        hero.unk22E0 = 0;
+        if (hero.vehicle_mode == 3) {
+            int pending = hero.pending_item[0];
+            if (pending != 0 && pending != 0x1F) {
+                if (hero.unk22DE == 0) {
+                    FUN_L00_00216de8(0x19, 0);
+                    hero.unk22DC = 1;
+                    hero.unk22DE = 0x12;
+                }
+            } else {
+                hero.pending_item[0] = 0;
+                if (hero.unk12E7 != 0 && *(int *)((u8 *)&hero + 0x300) != 0 && D_0013D4DC[0] != 0 && hero.unk22DE == 0) {
+                    FUN_L00_00216de8(0x19, 0);
+                    hero.unk22DC = 1;
+                    hero.unk22DE = 0x12;
+                }
+            }
+        }
+    }
+    FUN_L00_00208b60();
+    FUN_L00_00257024(hero.moby);
+}
+#endif
 #define NOT_SDA
 
 #define MACRO_ADDR
@@ -107,7 +230,7 @@ void FUN_L15_00208ca8(void) {
     *(float *)(b + 0xA94) = 1.0f;
     FUN_L00_00232628();
     if (*(int *)(b + 0x2084) != 100 || (D_L15_0015F5C4 != 2 && D_L15_0015F5C4 != 6)) {
-        hero_set_state(0, 1);
+        hero_set_state(HERO_STATE_IDLE, 1);
     }
 }
 extern f32 D_0013F570_209450[] __asm__("D_0013F570");
@@ -118,7 +241,7 @@ f32 FUN_001f9b80_209450(void *, void *) __asm__("FUN_001f9b80");
 f32 approach_value_209450(f32, f32, f32 *) __asm__("FUN_00213ed8");
 void FUN_L00_0025b8c0_209450(f32 *, f32 *, f32, f32, f32, f32) __asm__("FUN_L00_0025b8c0");
 void FUN_L15_00209450(void) {
-    switch (hero.unk20A4) {
+    switch (hero.vehicle_mode) {
     case 0:
         hero.unk228 = 0.8f;
         hero.unk22C = 0.7f;
@@ -138,17 +261,17 @@ void FUN_L15_00209450(void) {
     if (hero.state.control_mode == 4) {
         if (hero.state_timer > hero.unk420 && hero.unk41E == 0)
             hero.unk22C = hero.unk434;
-    } else if (hero.state.current == 6) {
+    } else if (hero.state.current == HERO_STATE_FALL) {
         hero.unk22C = 0.5f;
-    } else if (hero.state.current == 4) {
+    } else if (hero.state.current == HERO_STATE_CROUCH) {
         hero.unk228 = 0.35000002f;
     } else if ((u32)(hero.state.control_mode - 0x11) < 2) {
         hero.unk228 = 0.0f;
         hero.unk22C = 0.0f;
-    } else if (hero.state.current == 0x7F) {
+    } else if (hero.state.current == HERO_STATE_SINK) {
         hero.unk230 = 0.8f;
     }
-    if (!hero.unk257 || hero.state.prev_control_mode == 0x12 || hero.state.control_mode == 0x11 || hero.base_condition ||
+    if (!hero.wall_hit || hero.state.prev_control_mode == 0x12 || hero.state.control_mode == 0x11 || hero.base_condition ||
         FUN_001f9b80_209450(hero.unk210.f, hero.motion.pos.f) > hero.unk234 * 0.5f) {
         f32 *q = D_0013F570_209450;
         struct Hero *b = (struct Hero *)((u8 *)q - 0x220);
@@ -314,7 +437,7 @@ void FUN_L15_00215e58(void) {
     hero.unk1A0++;
     hero.unk1A4++;
     FUN_001f9740_215e58(&hero.unk1C4);
-    FUN_001f9740_215e58(&hero.unk1C0);
+    FUN_001f9740_215e58(&hero.invulnerable_frames);
     FUN_001f9770_215e58(&hero.unk1B2);
     FUN_001f9740_215e58(&hero.unk1B8);
     FUN_001f9770_215e58(&hero.unk1D8);
@@ -329,7 +452,7 @@ void FUN_L15_00215e58(void) {
     FUN_001f9740_215e58(&hero.unk1CC);
     FUN_001f9740_215e58(&hero.unk1D0);
     FUN_001f9740_215e58(&hero.unk1D4);
-    FUN_001f9770_215e58(&hero.unk1E8);
+    FUN_001f9770_215e58(&hero.fidget_cooldown);
     FUN_001f9770_215e58(&hero.unk1E0);
     FUN_001f9770_215e58(&hero.unk1EE);
     FUN_001f9770_215e58(&hero.unk1EA);
@@ -356,7 +479,7 @@ void FUN_L15_00215e58(void) {
     }
     if (hero.unk22DE != 0 && FUN_001f9770_215e58(&hero.unk22DE) != 0 &&
         hero.health.hp != 0 && D_L15_0015F5C4_215e58 == 0) {
-        if (hero.unk20A4 == 3) {
+        if (hero.vehicle_mode == 3) {
             FUN_L15_00208ca8_215e58();
             if (FUN_L00_00266d60_215e58(0x80, FUN_001f96f8_215e58(0x12), 0)) {
                 hero.unk20A6 = 1;
@@ -376,7 +499,7 @@ void FUN_L15_00215e58(void) {
             }
         }
     }
-    if (hero.unk20A4 == 2) {
+    if (hero.vehicle_mode == 2) {
         FUN_001f9770_215e58(&hero.unk1636);
     }
     for (i = 0; i < 5; i++) {
@@ -405,18 +528,18 @@ void FUN_L15_00215e58(void) {
     hero.unk1E2 = 0;
 skip:
     FUN_L00_00221b68_215e58();
-    if (hero.unk20A4 == 2) {
+    if (hero.vehicle_mode == 2) {
         FUN_L00_00233660_215e58(&hero.motion.unkD0, 0.0f, 0.0f, 4.0f);
-        hero.unk2288 = 15.0f;
-        hero.unk228C = 3.0f;
+        hero.reach_distance = 15.0f;
+        hero.reach_height = 3.0f;
     } else {
         FUN_L00_00233660_215e58(&hero.motion.unkD0, 0.0f, 0.0f, 0.7f);
         if (D_0013D4E2_215e58) {
-            hero.unk2288 = 12.0f;
-            hero.unk228C = 4.5f;
+            hero.reach_distance = 12.0f;
+            hero.reach_height = 4.5f;
         } else {
-            hero.unk2288 = 3.0f;
-            hero.unk228C = 1.75f;
+            hero.reach_distance = 3.0f;
+            hero.reach_height = 1.75f;
         }
     }
     {
@@ -440,7 +563,7 @@ extern int hero_set_state(int, int) __asm__("FUN_L15_00216c38");
 void FUN_L15_0021ab60(void) {
     switch (D_0013E533[0x2EC1]) {
     case 0:
-        hero_set_state(0, 1);
+        hero_set_state(HERO_STATE_IDLE, 1);
         break;
     case 2:
         hero_set_state(0x5A, 1);

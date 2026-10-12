@@ -5,27 +5,31 @@
 
 /*
  * Per-level data tables the hero code reads (one copy per level overlay,
- * e.g. D_L00_00179890, D_L00_00179AC0, D_L00_0017BC28 in level 0).
+ * e.g. idle_fidgets, item_defs, attack_records in level 0).
  */
 
 /*
- * 0x70-byte entry of D_L00_00179890, picked by FUN_L00_00229010(&index).
- * The hero stores the index, sets duration_frames from duration and then
- * either enters hero state 0x40 or calls FUN_L00_002323b8(unk48, 0, ...).
+ * 0x70-byte idle fidget entry of idle_fidgets, picked by
+ * pick_idle_fidget(&index) with weight 1 / (interval * 60). The hero stores
+ * the index, sets duration_frames from duration and then either enters hero
+ * state 0x40 or calls set_hero_animation(unk48, 0, ...).
  */
 typedef struct HeroTableEntry70 {
     u8 pad_0[0x44];
-    s32 use_state_40;    /* nonzero: hero_set_state(0x40, 1) instead of FUN_L00_002323b8 */
-    s32 unk48;           /* first argument of FUN_L00_002323b8 */
-    u8 pad_4C[0x10];
+    s32 use_state_40;    /* nonzero: hero_set_state(0x40, 1) instead of set_hero_animation */
+    s32 unk48;           /* first argument of set_hero_animation */
+    u8 pad_4C[0x4];
+    s32 item_id;         /* only while hero_slot_item_id(0) returns it; -1: any */
+    u8 pad_54[0x4];
+    f32 interval;        /* seconds; 0 = never picked */
     f32 duration;        /* seconds */
     s32 duration_frames; /* FUN_001f96b0(duration) * 60 */
     u8 pad_64[0xC];
 } HeroTableEntry70;
 
 /*
- * 0x4C-byte row of D_L00_00179AC0, indexed by the id from
- * FUN_L00_0020d498(0); the hero plays anim when its moby is not already in it.
+ * 0x4C-byte row of item_defs, indexed by the id from
+ * hero_slot_item_id(0); the hero plays anim when its moby is not already in it.
  */
 typedef struct HeroAnimRow {
     u8 pad_0[0x18];
@@ -36,8 +40,8 @@ typedef struct HeroAnimRow {
 } HeroAnimRow;
 
 /*
- * 0x2C-byte row of D_L00_0017BC28, indexed by hero.unkA60. fC..f20 are
- * limits on the float hero.unkAA8 (fC is subtracted from it; f10, f14,
+ * 0x2C-byte row of attack_records, indexed by hero.attack_record. fC..f20 are
+ * limits on the float hero.anim_frame (fC is subtracted from it; f10, f14,
  * f18 and f1C..f20 are compared with it).
  */
 typedef struct HeroTableRow2C {

@@ -6,27 +6,14 @@ INCLUDE_ASM(
     "config/us/expected/asm/assembly/textbin/math/rotations/fast_normalize_angle/FUN_001fa610.s",
     FUN_001fa610);
 #else
-#include "types.h"
-#define PI 3.1415927f
-f32 fast_normalize_angle(f32 angle) __asm__("FUN_001fa610");
-f32 fast_normalize_angle(f32 angle) {
-    f32 wrapped_angle;
-    f32 pi = PI;
-    f32 negative_pi = -PI;
-    wrapped_angle = angle;
-    do {
-        if (wrapped_angle < pi)
-            break;
-        wrapped_angle = (wrapped_angle - pi) - pi;
-    } while (!(wrapped_angle < pi));
-    do {
-        if (!(wrapped_angle < negative_pi))
-            break;
-        wrapped_angle = (wrapped_angle + pi) + pi;
-    } while (wrapped_angle < negative_pi);
-    return wrapped_angle;
-}
-
-extern __typeof__(fast_normalize_angle) func_001FA610 __attribute__((alias("FUN_001fa610")));
-
+/* No C body on purpose: this unit is intentional low-level assembly
+   (config/us/unit_categories.json), like its fastfunc neighbours
+   fast_add_rotations and fast_subtract_rotations. Retail interleaves two
+   constant builds: lui $1 / lui $2 / ori $1,$1 / ori $2,$2. $at is never
+   allocated by gcc, so $1 can only come from the assembler's li.s macro,
+   and a macro expansion is always contiguous. Compiling the C loop and
+   assembling it with ps2eeas gives exactly that contiguous
+   lui $1 / ori $1 / mtc1 $1 pair, twice, at BYTES 24/30. The nops agree:
+   ps2eeas puts one hazard nop between c.lt.s and bc1x, while retail has
+   two after the loop tests and none (an mtc1 instead) after the first. */
 #endif /* NON_MATCHING */

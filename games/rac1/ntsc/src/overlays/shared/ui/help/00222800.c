@@ -44,7 +44,7 @@ s32 FUN_L08_00222800(s32 arg) {
     if (G.state.current == 0x32) {
         return 0;
     }
-    if (G.unk1C0 != 0) {
+    if (G.invulnerable_frames != 0) {
         return 0;
     }
     if (D_L08_0015F5C4_8 != 0) {
@@ -86,7 +86,7 @@ s32 FUN_L08_00222800(s32 arg) {
         v.f[1] = FUN_001f9de0_8(FUN_001fa580_8(G.motion.rot.f[2], 3.1415927f));
         v.i[2] = 0;
     }
-    switch (G.unk20A4) {
+    switch (G.vehicle_mode) {
     case 0:
         mob = (u8 *)G.unk2280;
         if (mob != 0 && (*(s16 *)(mob + 0xA6) == 0x4EB || *(s16 *)(mob + 0xA6) == 0x558)) {
@@ -129,9 +129,9 @@ s32 FUN_L08_00222800(s32 arg) {
                     goto call_ret;
                 }
             }
-            hero_set_state(0x16, 1);
+            hero_set_state(HERO_STATE_HURT, 1);
         } else {
-            hero_set_state(0x16, 1);
+            hero_set_state(HERO_STATE_HURT, 1);
         }
         e = D_0015ED6C_8;
         a = e * 5.7f;

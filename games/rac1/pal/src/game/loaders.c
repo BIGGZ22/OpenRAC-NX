@@ -391,7 +391,98 @@ void func_00203548(int idx, int size) {
     }
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_002035B0);
+typedef struct ResidentRenderTextureDefinition {
+    s32 unk0; /* unused here; a word, so the record is 4-byte aligned */
+    s16 width;
+    s16 height;
+    s16 draw_control_count;
+    s16 clut_block_offset; /* 0x0A: TEX0.CBP (bit 37) after adding the base */
+    s16 mip_block_offset_0;
+    s16 mip_block_offset_1;
+} ResidentRenderTextureDefinition;
+extern s32 D_0015EF8C MACRO_ADDR;
+extern u64 D_0019E7C0_035B0[3] __asm__("D_0019E7C0");
+extern u64 D_0019E7D8_035B0[3] __asm__("D_0019E7D8");
+extern s32 func_001F9968(s32);
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/rendering/build_indexed_resident_render_packet.c, build_indexed_resident_render_packet. */
+void func_002035B0(u64 *packet,
+                                          struct ResidentRenderTextureDefinition *texture,
+                                          s32 draw_high, s32 draw_shift, s32 material_base,
+                                          s32 material_shift, s32 material_index) {
+    s32 width_units_128;
+    s32 width_units_64;
+    s32 width_log2;
+    s32 height_log2;
+    s32 gs_block_base;
+    s32 texture_block;
+    s32 mip_block_1;
+    s32 mip_block_0;
+    u64 *fallback_packet;
+    u64 draw_control_word;
+    u64 texture_word;
+    u64 texture_address_word;
+    u64 mip_word;
+    u64 mip_address_word;
+    s32 draw_control_count;
+    u64 filter;
+    u64 format;
+
+    width_units_64 = texture->width >> 6;
+    width_units_128 = texture->width >> 7;
+    if (width_units_64 <= 0) {
+        width_units_64 = 1;
+    }
+    if (width_units_128 <= 0) {
+        width_units_128 = 1;
+    }
+    width_log2 = func_001F9968(texture->width);
+    height_log2 = func_001F9968(texture->height);
+    gs_block_base = D_0015EF8C >> 8;
+    mip_block_1 = texture->mip_block_offset_1 + gs_block_base;
+    texture_block = texture->clut_block_offset + gs_block_base;
+    mip_block_0 = texture->mip_block_offset_0 + gs_block_base;
+    /* Preserve sparse writes: every other 64-bit packet word is untouched. */
+    draw_control_count = texture->draw_control_count;
+    if (material_index >= 0) {
+        filter = ((u64)draw_shift << 6) | 0x20;
+        draw_control_word = ((u64)(draw_control_count - 1) << 2) | filter;
+        draw_control_word |= (u64)draw_high << 32;
+        packet[0] = draw_control_word;
+        packet += 2;
+        packet[0] = material_base | ((u64)material_shift << 2) | ((u64)material_index << 24);
+        packet += 2;
+        format = ((u64)width_log2 << 26) | 0x1300000;
+        texture_word = (((u64)width_units_64 << 14) | format) | ((u64)height_log2 << 30);
+        texture_address_word = ((u64)0x8000 << 19) | ((u64)texture_block << 37);
+        mip_word = ((u64)width_units_128 << 14) | ((u64)mip_block_0 << 20);
+        mip_address_word = ((u64)mip_block_1 << 40) | ((u64)0x8000 << 19);
+        mip_word |= mip_address_word;
+        texture_word |= texture_address_word;
+        texture_word |= (u64)-1 << 63;
+        mip_word |= (u64)0x8000 << 39;
+        packet[0] = texture_word;
+        packet[2] = mip_word;
+    } else if (material_index < -1) {
+        fallback_packet = D_0019E7C0_035B0;
+        if (material_index == -3) {
+            fallback_packet = D_0019E7D8_035B0;
+        }
+        packet[0] = ((u64)draw_shift << 6) | 0x20 | ((u64)draw_high << 32);
+        packet += 2;
+        packet[0] = 5;
+        packet += 2;
+        packet[0] = fallback_packet[0];
+        packet[2] = fallback_packet[2];
+    } else {
+        packet[0] = ((u64)draw_shift << 6) | 0x20 | ((u64)draw_high << 32);
+        packet += 2;
+        packet[0] = 5;
+        packet += 2;
+        packet[0] = ((((u64)0x8000 << 29) | 0x9980) << 19) | 0x7FFB;
+        packet[2] = 0;
+    }
+}
 
 extern long D_0019E640[];
 extern long D_0019E7C0[];

@@ -16,7 +16,7 @@ void FUN_L00_002377b8(char *p) {
         *(int *)(p + 8) = 10;
     else
         *(int *)(p + 8) = 5;
-    if (hero.items[0].item_id == 9 && hero.unk20A4 == 0) {
+    if (hero.items[0].item_id == 9 && hero.vehicle_mode == 0) {
         *(int *)(p + 0x7C) = FUN_001f96f8(0x78) + 30;
     } else if (*(int *)(p + 0x7C) > 30) {
         *(int *)(p + 0x7C) = 30;
@@ -36,22 +36,26 @@ extern void FUN_L00_0023bac0(int, int, int, int, int, int);
 int FUN_L00_00237840(char *rec) {
     int x, y;
     int left, top, right, bottom;
-    int w, h, bar_height, step, i;
-    y = *(int *)(rec + 0x54);
+    int w, h, bar_height, step, i, xbase, ybase;
+    w = D_L00_0015F760;
+    h = D_L00_0015F764;
     x = *(int *)(rec + 0x50);
-    *(int *)(rec + 0x58) = D_L00_0015F760;
-    *(int *)(rec + 0x5c) = D_L00_0015F764;
+    y = *(int *)(rec + 0x54);
+    *(int *)(rec + 0x58) = w;
+    *(int *)(rec + 0x5c) = h;
     FUN_L00_00235a70(rec, &x, &y);
     FUN_L00_00235ad8(rec, &x, &y, *(int *)(rec + 0x6c), 0);
     w = D_L00_0015F760;
     h = D_L00_0015F764;
-    left = ((x + *(short *)(rec + 0x48)) << 4) + (w * 0xd0) / 64;
-    top = ((y + *(short *)(rec + 0x4a)) << 4) + (h * 0xa0) / 256;
+    xbase = (x + *(short *)(rec + 0x48)) << 4;
+    ybase = (y + *(short *)(rec + 0x4a)) << 4;
+    left = xbase + (w * 0xd0) / 64;
+    top = ybase + (h * 0xa0) / 256;
     right = left + (w * 0x260) / 64;
     bottom = top + (h * 0xea0) / 256;
     FUN_L00_0023caa8(left, top, right, bottom, 0x80000000UL, 1);
     h = D_L00_0015F764;
-    bar_height = (*(int *)(rec + 0x74) * h * 0xea0) / (*(int *)(rec + 8) << 8);
+    bar_height = (h * *(int *)(rec + 0x74) * 0xea0) / (*(int *)(rec + 8) << 8);
     top = ((y + *(short *)(rec + 0x4a)) << 4) + (h * 0xf40) / 256;
     FUN_L00_0023caa8(left, top, right, top - bar_height, 0x80829e00UL, 1);
     i = 1;
@@ -97,7 +101,7 @@ extern s32 D_L00_0015F718 __attribute__((sda));
 extern s32 D_L00_0015F71C __attribute__((sda));
 extern s32 D_L00_0015F72C __attribute__((sda));
 extern D00237ae8 D_L00_0017DAC0[];
-extern E00237ae8 D_L00_00179AC0[];
+extern E00237ae8 item_defs[] __asm__("D_L00_00179AC0");
 extern s32 D_00141EA0[];
 s32 FUN_001f96f8(s32);
 void FUN_L00_00237ae8(O00237ae8 *o) {
@@ -116,7 +120,7 @@ void FUN_L00_00237ae8(O00237ae8 *o) {
     o->x70 = 0;
     D_L00_0015F72C = 0;
     d = D_L00_0017DAC0;
-    tab = D_L00_00179AC0;
+    tab = item_defs;
     s = D_00141EA0;
     for (i = 7; i >= 0; i--) {
         d->x18 = *s;
@@ -295,7 +299,198 @@ void FUN_L00_00237ba0(Obj *p) {
         D_L00_0015FA94 = D_L00_0015F3F8;
     }
 }
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_002382a0.s", FUN_L00_002382a0);
+#else
+extern s32 D_L00_0015F5CC;
+extern s32 D_L00_0015F718 __attribute__((sda));
+extern s32 D_L00_0015F71C __attribute__((sda));
+extern s32 D_L00_0015F720 __attribute__((sda));
+extern s32 D_L00_0015F724 __attribute__((sda));
+extern s32 D_L00_0015F72C __attribute__((sda));
+extern s32 D_L00_0015F780 __attribute__((sda));
+extern s32 D_L00_0015F7B0 __attribute__((sda));
+extern f32 D_L00_0015F78C __attribute__((sda));
+extern f32 D_L00_0015F7C0 __attribute__((sda));
+extern f32 D_L00_0015F7C4 __attribute__((sda));
+extern s32 D_L00_0015F790 __attribute__((sda));
+extern s32 D_L00_0015F794 __attribute__((sda));
+extern s32 D_L00_0015F798 __attribute__((sda));
+extern s32 D_L00_0015F79C __attribute__((sda));
+extern s32 D_L00_0015F7A0 __attribute__((sda));
+extern s32 D_L00_0015F7A4 __attribute__((sda));
+extern s32 D_L00_0015F7A8 __attribute__((sda));
+extern s32 D_L00_0015F7AC __attribute__((sda));
+extern s32 D_L00_0015F7B4 __attribute__((sda));
+extern s32 D_L00_0015F7B8 __attribute__((sda));
+extern s32 D_L00_0015F7BC __attribute__((sda));
+extern s32 D_L00_0015FA90;
+extern Ent **D_L00_0015FAC0_c __asm__("D_L00_0015FAC0");
+extern s32 D_L00_0017E504;
+extern s32 D_00141EA0[];
+extern E00237ae8 D_L00_00179AC0[];
+extern s32 D_0013D428[];
+extern u8 D_0013E520[];
+extern char D_L00_0015F7C8[];
+extern f32 convert_integer_to_float(s32) __asm__("FUN_001fa6c0");
+extern s32 truncate_float_to_s32(f32) __asm__("FUN_001fa6d0");
+extern f32 fast_sin(f32) __asm__("FUN_001f9de0");
+extern f32 fast_cos(f32) __asm__("FUN_001f9dc8");
+extern f32 fast_add_rotations(f32, f32) __asm__("FUN_001fa580");
+extern s32 fast_tween_color_alpha_first(f32, s32, s32) __asm__("FUN_001fa6e0");
+extern s32 get_icon_frame(s32, s32) __asm__("FUN_001ff960");
+extern void draw_hud_sprite(s32, s32, s32, s32, s32, s32) __asm__("FUN_001ffc30");
+extern void draw_hud_icon(void *, s32, s32, s32, s32, s32) __asm__("FUN_L00_0023b120");
+extern void font_print_right_2382a0(s32, s32, s32, const char *, s32) __asm__("FUN_001f6af0");
+extern const char *get_text(s32) __asm__("FUN_001fdd10");
+extern s32 strlen_alt(const char *) __asm__("FUN_001166cc");
+extern s32 sprintf_alt(char *, const char *, ...) __asm__("FUN_00116248");
+extern s32 FUN_L00_00235a70(char *, s32 *, s32 *);
+
+s32 FUN_L00_002382a0(char *rec) {
+    s32 x, y, half_w, half_h, alpha;
+    volatile s32 marker_alpha;
+    s32 i, icon_x, icon_y, selected, entry_offset, marker_offset, normal_offset;
+    s32 color, shadow, text_y, id, item, prefix_length, text_length, j;
+    f32 open, fade, phase, angle, radius;
+    const char *text, *suffix;
+    Ent *entry;
+    u8 *q = (u8 *)rec + 0x70;
+    char formatted[64];
+
+    open = convert_integer_to_float(q[0]) / convert_integer_to_float(D_L00_0015F780);
+    if (1.0f < open) open = 1.0f;
+    else if (open < 0.0f) open = 0.0f;
+    fade = convert_integer_to_float(q[1]) / convert_integer_to_float(D_L00_0015F780);
+    if (1.0f < fade) fade = 1.0f;
+    else if (fade < 0.0f) fade = 0.0f;
+    i = 0;
+    phase = convert_integer_to_float(D_L00_0015F5CC % D_L00_0015F7B0) /
+            convert_integer_to_float(D_L00_0015F7B0);
+    angle = fast_sin(phase * 6.28318f - 3.14159f);
+    alpha = truncate_float_to_s32(open * 128.0f);
+    marker_alpha = truncate_float_to_s32((open * 128.0f) * (angle * 0.125f + 0.875f));
+    x = *(s32 *)(rec + 0x50);
+    y = *(s32 *)(rec + 0x54);
+    FUN_L00_00235a70(rec, &x, &y);
+    half_w = D_L00_0015F718 / 2;
+    half_h = D_L00_0015F71C / 2;
+    draw_hud_sprite(get_icon_frame(0xe934, 0), x, y, half_w, half_h, alpha);
+    draw_hud_sprite(get_icon_frame(0xe934, 0), x + D_L00_0015F718,
+                    y + D_L00_0015F71C, -half_w, -half_h, alpha);
+    draw_hud_sprite(get_icon_frame(0xe934, 0), x + D_L00_0015F718,
+                    y, -half_w, half_h, alpha);
+    draw_hud_sprite(get_icon_frame(0xe934, 0), x,
+                    y + D_L00_0015F71C, half_w, -half_h, alpha);
+    if (D_L00_0015FA90 > 0) {
+        entry_offset = 0;
+        marker_offset = 0;
+        normal_offset = 0;
+        for (; i < D_L00_0015FA90; i++) {
+            angle = fast_add_rotations(((f32)i + (f32)i) * 3.1415927f /
+                                       (f32)D_L00_0015FA90 - 3.1415927f, 1.5707964f);
+            icon_x = x + D_L00_0015F720 +
+                     (s32)(D_L00_0015F78C * fast_cos(angle) * D_L00_0015F7C4);
+            icon_y = y + D_L00_0015F724 +
+                     (s32)(D_L00_0015F78C * fast_sin(angle));
+            entry = D_L00_0015FAC0_c[D_L00_0015F72C];
+            if (*(s32 *)(rec + 0x74) == i && entry[i].f0 != 0)
+                draw_hud_sprite(get_icon_frame(0xe99c, 0), icon_x - 0x13,
+                                icon_y - 0x13, 0x26, 0x26, marker_alpha);
+            entry = D_L00_0015FAC0_c[D_L00_0015F72C];
+            if (entry[i].f0 != 0) {
+                s32 icon_alpha = alpha;
+                if (i != *(s32 *)(rec + 0x74))
+                    icon_alpha = truncate_float_to_s32((f32)alpha * D_L00_0015F7C0);
+                entry = D_L00_0015FAC0_c[D_L00_0015F72C];
+                item = entry[i].f18;
+                draw_hud_icon(rec, get_icon_frame(entry[i].f0,
+                              D_0013E520[item] ? 4 : 0), icon_x, icon_y, 1, icon_alpha);
+            }
+            entry_offset += 0x1c;
+            marker_offset += 0x1c;
+            normal_offset += 0x1c;
+        }
+    }
+    selected = *(s32 *)(rec + 0x74);
+    if (selected >= 0 && D_L00_0015FAC0_c[D_L00_0015F72C][selected].f0 != 0) {
+        f32 opacity = open * fade;
+        color = fast_tween_color_alpha_first(opacity, D_L00_0015F798, D_L00_0015F79C);
+        id = D_00141EA0[selected];
+        if (D_L00_001C40B0[id].h8 != 0) {
+            item = D_0013D428[id];
+            sprintf_alt(formatted, D_L00_0015F7C8, item, D_L00_001C40B0[id].hE);
+            shadow = fast_tween_color_alpha_first(opacity,
+                item ? D_L00_0015F7A8 : D_L00_0015F7A0,
+                item ? D_L00_0015F7AC : D_L00_0015F7A4);
+            font_print_right_2382a0(x + D_L00_0015F720 + 1, y + D_L00_0015F724 + 13, color, formatted, -1);
+            font_print_right_2382a0(x + D_L00_0015F720, y + D_L00_0015F724 + 12, shadow, formatted, -1);
+        }
+        shadow = fast_tween_color_alpha_first(opacity, D_L00_0015F790, D_L00_0015F794);
+        item = D_L00_0015FAC0_c[D_L00_0015F72C][selected].f18;
+        id = D_0013E520[item] ? *(s16 *)((char *)&D_L00_00179AC0[item] + 0x48) :
+                               *(s16 *)((char *)&D_L00_00179AC0[item] + 0x46);
+        text = get_text(id);
+        if (text == 0) return *(s32 *)(rec + 0x58);
+        if (strlen_alt(text) == 0) return *(s32 *)(rec + 0x58);
+        text_length = strlen_alt(text);
+        prefix_length = 0;
+        suffix = text;
+        if (text_length > 0) {
+            suffix = text + 1;
+            if (text[1] == '-') {
+                suffix = text + 2;
+                prefix_length = 2;
+            } else {
+                for (j = 1; j < text_length; j++) {
+                    suffix++;
+                    if (*suffix == '-') {
+                        prefix_length = j + 2;
+                        suffix++;
+                        break;
+                    }
+                }
+            }
+        }
+        if (prefix_length == 0) {
+            suffix = text;
+            if (text_length > 0) {
+                suffix = text + 1;
+                if (text[1] == ' ') {
+                    suffix = text + 2;
+                    prefix_length = 1;
+                } else {
+                    for (j = 1; j < text_length; j++) {
+                        suffix++;
+                        if (*suffix == ' ') {
+                            prefix_length = j + 1;
+                            suffix++;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        if (D_L00_001C40B0[D_00141EA0[selected]].h8 != 0)
+            text_y = D_L00_0015F7B4;
+        else if (prefix_length != 0)
+            text_y = D_L00_0015F7B8;
+        else
+            text_y = D_L00_0015F7BC;
+        text_y += y + D_L00_0015F724;
+        if (prefix_length != 0) {
+            font_print_right_2382a0(x + D_L00_0015F720 + 1, text_y + 1, color, text, prefix_length);
+            font_print_right_2382a0(x + D_L00_0015F720, text_y, shadow, text, prefix_length);
+            font_print_right_2382a0(x + D_L00_0015F720 + 1, text_y + 17, color, suffix, -1);
+            font_print_right_2382a0(x + D_L00_0015F720, text_y + 16, shadow, suffix, -1);
+        } else {
+            font_print_right_2382a0(x + D_L00_0015F720 + 1, text_y + 1, color, text, -1);
+            font_print_right_2382a0(x + D_L00_0015F720, text_y, shadow, text, -1);
+        }
+    }
+    return *(s32 *)(rec + 0x58);
+}
+#endif
 extern int D_L00_0015FA90;
 extern void *D_L00_0015FAC0;
 extern int D_L00_0015F718 __attribute__((sda));
@@ -408,7 +603,131 @@ void FUN_L00_00238b80(Obj *o) {
         D_L00_0015FA94 = D_L00_0015F3F8;
     }
 }
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_00238f88.s", FUN_L00_00238f88);
+#else
+extern s32 D_L00_0015F5CC;
+extern s32 D_L00_0015F718 __attribute__((sda));
+extern s32 D_L00_0015F71C __attribute__((sda));
+extern s32 D_L00_0015F720 __attribute__((sda));
+extern s32 D_L00_0015F724 __attribute__((sda));
+extern s32 D_L00_0015F72C __attribute__((sda));
+extern s32 D_L00_0015F780 __attribute__((sda));
+extern s32 D_L00_0015F7B0 __attribute__((sda));
+extern f32 D_L00_0015F78C __attribute__((sda));
+extern f32 D_L00_0015F7C0 __attribute__((sda));
+extern f32 D_L00_0015F7C4 __attribute__((sda));
+extern s32 D_L00_0015F7D4 __attribute__((sda));
+extern s32 D_L00_0015F7D8 __attribute__((sda));
+extern s32 D_L00_0015F7DC __attribute__((sda));
+typedef struct { s32 ids[4]; } TextIds238f88;
+extern TextIds238f88 D_L00_0015F7E0 __attribute__((sda));
+extern s32 D_L00_0015FA90;
+extern Ent **D_L00_0015FAC0_c __asm__("D_L00_0015FAC0");
+extern s32 D_L00_0017E504;
+extern f32 convert_integer_to_float(s32) __asm__("FUN_001fa6c0");
+extern s32 truncate_float_to_s32(f32) __asm__("FUN_001fa6d0");
+extern f32 fast_sin(f32) __asm__("FUN_001f9de0");
+extern f32 fast_cos(f32) __asm__("FUN_001f9dc8");
+extern f32 fast_add_rotations(f32, f32) __asm__("FUN_001fa580");
+extern s32 fast_tween_color_alpha_first(f32, s32, s32) __asm__("FUN_001fa6e0");
+extern s32 get_icon_frame(s32, s32) __asm__("FUN_001ff960");
+extern void draw_hud_sprite(s32, s32, s32, s32, s32, s32) __asm__("FUN_001ffc30");
+extern void draw_hud_icon(void *, s32, s32, s32, s32, s32) __asm__("FUN_L00_0023b120");
+extern void font_print_right_238f88(s32, s32, s32, const char *, s32) __asm__("FUN_001f6af0");
+extern const char *get_text(s32) __asm__("FUN_001fdd10");
+extern s32 strlen_alt(const char *) __asm__("FUN_001166cc");
+extern s32 FUN_L00_00235a70(char *, s32 *, s32 *);
+
+s32 FUN_L00_00238f88(char *rec) {
+    s32 x, y, half_w, half_h, alpha;
+    volatile s32 marker_alpha;
+    s32 i, icon_x, icon_y, selected, entry_offset, marker_offset, normal_offset;
+    s32 color, shadow, text_y;
+    f32 open, fade, phase, angle, radius;
+    const char *text;
+    Ent *entry;
+    TextIds238f88 text_ids;
+    u8 *q = (u8 *)rec + 0x70;
+
+    open = convert_integer_to_float(q[0]) / convert_integer_to_float(D_L00_0015F780);
+    if (1.0f < open) open = 1.0f;
+    else if (open < 0.0f) open = 0.0f;
+    fade = convert_integer_to_float(q[1]) / convert_integer_to_float(D_L00_0015F780);
+    if (1.0f < fade) fade = 1.0f;
+    else if (fade < 0.0f) fade = 0.0f;
+
+    phase = convert_integer_to_float(D_L00_0015F5CC % D_L00_0015F7B0) /
+            convert_integer_to_float(D_L00_0015F7B0);
+    angle = fast_sin(phase * 6.28318f - 3.14159f);
+    alpha = truncate_float_to_s32(open * 128.0f);
+    marker_alpha = truncate_float_to_s32((open * 128.0f) * (angle * 0.125f + 0.875f));
+
+    x = *(s32 *)(rec + 0x50);
+    y = *(s32 *)(rec + 0x54);
+    FUN_L00_00235a70(rec, &x, &y);
+    half_w = D_L00_0015F718 / 2;
+    half_h = D_L00_0015F71C / 2;
+    draw_hud_sprite(get_icon_frame(0xe934, 1), x, y, half_w, half_h, alpha);
+    draw_hud_sprite(get_icon_frame(0xe934, 1), x + D_L00_0015F718,
+                    y + D_L00_0015F71C, -half_w, -half_h, alpha);
+    draw_hud_sprite(get_icon_frame(0xe934, 1), x + D_L00_0015F718,
+                    y, -half_w, half_h, alpha);
+    draw_hud_sprite(get_icon_frame(0xe934, 1), x,
+                    y + D_L00_0015F71C, half_w, -half_h, alpha);
+
+    if (D_L00_0015FA90 > 0) {
+        entry_offset = 0;
+        marker_offset = 0;
+        normal_offset = 0;
+        for (i = 0; i < D_L00_0015FA90; i++) {
+            angle = fast_add_rotations(((f32)i + (f32)i) * 3.1415927f /
+                                       (f32)D_L00_0015FA90 - 3.1415927f, 1.5707964f);
+            icon_x = x + D_L00_0015F720 +
+                     (s32)(D_L00_0015F78C * fast_cos(angle) * D_L00_0015F7C4);
+            icon_y = y + D_L00_0015F724 +
+                     (s32)(D_L00_0015F78C * fast_sin(angle));
+            entry = D_L00_0015FAC0_c[D_L00_0015F72C];
+            if (*(s32 *)(rec + 0x74) == i && *(s32 *)((char *)entry + marker_offset) != 0)
+                draw_hud_sprite(get_icon_frame(0xe99c, 0), icon_x - 0x13,
+                                icon_y - 0x13, 0x26, 0x26, marker_alpha);
+            entry = D_L00_0015FAC0_c[D_L00_0015F72C];
+            if (*(s32 *)((char *)entry + entry_offset) != 0) {
+                s32 icon_alpha = alpha;
+                if (i != *(s32 *)(rec + 0x74))
+                    icon_alpha = truncate_float_to_s32((f32)alpha * D_L00_0015F7C0);
+                entry = D_L00_0015FAC0_c[D_L00_0015F72C];
+                if (D_L00_0017E504 == 0) {
+                    draw_hud_icon(rec, get_icon_frame(*(s32 *)((char *)entry + entry_offset), *(s32 *)((char *)entry + entry_offset + 4) + 4),
+                                  icon_x, icon_y, 1, alpha);
+                } else {
+                    draw_hud_icon(rec, get_icon_frame(*(s32 *)((char *)entry + normal_offset), *(s32 *)((char *)entry + normal_offset + 4)),
+                                  icon_x, icon_y, 1, icon_alpha);
+                }
+            }
+            entry_offset += 0x1c;
+            marker_offset += 0x1c;
+            normal_offset += 0x1c;
+        }
+    }
+    selected = *(s32 *)(rec + 0x74);
+    if (selected >= 0 && D_L00_0015FAC0_c[D_L00_0015F72C][selected].f0 != 0) {
+        text_ids = D_L00_0015F7E0;
+        if (D_L00_0015FAC0_c[D_L00_0015F72C][selected].f0 != 0) {
+            text = get_text(text_ids.ids[selected]);
+            if (text == 0) return *(s32 *)(rec + 0x58);
+            if (strlen_alt(text) != 0) {
+                color = fast_tween_color_alpha_first(open * fade, D_L00_0015F7D4, D_L00_0015F7D8);
+                shadow = fast_tween_color_alpha_first(open * fade, 0, 0x80000000);
+                text_y = y + D_L00_0015F7DC + D_L00_0015F724;
+                font_print_right_238f88(x + D_L00_0015F720 - 1, text_y - 1, shadow, text, -1);
+                font_print_right_238f88(x + D_L00_0015F720, text_y, color, text, -1);
+            }
+        }
+    }
+    return *(s32 *)(rec + 0x58);
+}
+#endif
 typedef struct {
     short a, b, c, d;
 } Q2395b0;
@@ -567,7 +886,7 @@ s32 FUN_L00_00239810(Hud *m) {
     Pt *e;
     u8 *q;
 
-    if (hero.unk20A4 == 2)
+    if (hero.vehicle_mode == 2)
         goto out;
     if (hero.state.current == 0x32)
         goto out;
@@ -597,7 +916,7 @@ s32 FUN_L00_00239810(Hud *m) {
     mode = D_0015EDA0;
     if (cnt == 0)
         sel = 0x1E;
-    if (hero.unk20A4 == 1)
+    if (hero.vehicle_mode == 1)
         mode = hero.health.unk22AC;
     if (mode == 8) {
         tab = D_L00_0017E478;
@@ -836,7 +1155,82 @@ void FUN_L00_0023a218(u8 *m) {
         }
     }
 }
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_0023a2d0.s", FUN_L00_0023a2d0);
+#else
+extern s32 D_0013E504;
+extern s32 D_L00_0015F5CC;
+extern char D_L00_0015F918[];
+extern s32 D_L00_0015F8F8 __attribute__((sda));
+extern s32 D_L00_0015F8FC __attribute__((sda));
+extern s32 D_L00_0015F900 __attribute__((sda));
+extern s32 D_L00_0015F904 __attribute__((sda));
+extern s32 D_L00_0015F908 __attribute__((sda));
+extern s32 D_L00_0015F90C __attribute__((sda));
+extern s32 D_L00_0015F910 __attribute__((sda));
+extern s32 D_L00_0015F914 __attribute__((sda));
+extern s32 FUN_001f96f8(s32);
+extern f32 fast_sin(f32) __asm__("FUN_001f9de0");
+extern void FUN_L00_001fb470(s32, s32, s32, char *, s32);
+
+/* Draws the short counter panel, its spinning icon, and a pulsing label. */
+s32 FUN_L00_0023a2d0(Hud *m) {
+    char buf[16];
+    u8 *q;
+    s32 x, y, panel_right, panel_left, slide, alpha, text_alpha;
+    s32 color, shadow, period;
+    f32 open, text, pulse, scaled_text;
+
+    y = D_0013E504 - 42;
+    if (pal_mode_reload[0] == 0)
+        y = D_0013E504 - 50;
+    x = m->x;
+    if (hero.vehicle_mode == 2)
+        return m->ret;
+    if (*(s32 *)((u8 *)&hero + 0x2084) == 50)
+        return m->ret;
+    q = m->ab;
+    if (q[0] == 0)
+        return m->ret;
+
+    open = convert_integer_to_float(q[0]) / convert_integer_to_float(D_L00_0015F7F0);
+    if (1.0f < open)
+        open = 1.0f;
+    else if (open < 0.0f)
+        open = 0.0f;
+    text = convert_integer_to_float(q[1]) / convert_integer_to_float(D_L00_0015F7F0);
+    if (1.0f < text)
+        text = 1.0f;
+    else if (text < 0.0f)
+        text = 0.0f;
+
+    text_alpha = truncate_float_to_s32(text * 128.0f);
+    alpha = truncate_float_to_s32((f32)D_L00_0015F8F8 * open);
+    panel_right = x + D_L00_0015F900;
+    slide = truncate_float_to_s32((f32)D_L00_0015F8FC * open);
+    panel_left = panel_right - slide;
+    draw_hud_sprite_flipped(get_icon_frame(0x7580, 1), panel_right + 16, y, 32, 32, alpha);
+    draw_hud_sprite(get_icon_frame(0x7580, 0), panel_left, y, slide + 16, 32, alpha);
+    draw_hud_sprite(get_icon_frame(0x7580, 1), panel_left - 32, y, 32, 32, alpha);
+    draw_hud_icon(m, get_icon_frame(0x754f, D_L00_0015F5CC % 60 >> 1), x - 32, y, 0, text_alpha);
+
+    sprintf_alt(buf, D_L00_0015F918);
+    x += D_L00_0015F904;
+    y += D_L00_0015F908;
+    period = FUN_001f96f8(D_L00_0015F914);
+    pulse = fast_sin((f32)(D_L00_0015F5CC % period) /
+                     convert_integer_to_float(period) * 6.28318f - 3.14159f) * 4.0f - 3.0f;
+    if (pulse < 0.0f)
+        pulse = 0.0f;
+    scaled_text = pulse * text;
+    shadow = fast_tween_color(0, 0x80000000, scaled_text);
+    color = fast_tween_color(D_L00_0015F90C, D_L00_0015F910, scaled_text);
+    FUN_L00_001fb470(x + 1, y + 1, shadow, buf, -1);
+    FUN_L00_001fb470(x, y, color, buf, -1);
+out:
+    return m->ret;
+}
+#endif
 extern short D_00140986 __attribute__((section(".data")));
 int FUN_L00_00235a70(char *, int *, int *);
 void FUN_L00_00235ad8(char *, int *, int *, int, int);

@@ -271,8 +271,8 @@ void FUN_L00_002637f8(u8 *m) {
         lifetime = fraction * 25000.0f + 5000.0f;
         size = fraction * 0.015000001f + 0.01f;
         FUN_001f9bf8_2637f8(&scaled, &vectors[2], scale);
-        FUN_001f9a10_2637f8(&pos, &vectors[3], &scaled);
         count = 4;
+        FUN_001f9a10_2637f8(&pos, &vectors[3], &scaled);
         do {
             effect = FUN_L00_0026d000_2637f8(&pos, size, 1.0f, 1.0f, lifetime, 0x10,
                                                D_L00_0015F580_2637f8, 0x7fffffff);
@@ -555,7 +555,7 @@ void FUN_L00_00237190(void);
 void FUN_L00_002371e0(void);
 void FUN_L00_00237200(void);
 s32 queue_animation_update(s32, s32, void *, void *, void *, s32, s32) __asm__("FUN_001ff308");
-void FUN_L00_00235e18(s32, s32);
+void hud_keep_visible(s32, s32) __asm__("FUN_L00_00235e18");
 void FUN_L00_00264328(void) {
     if (D_L00_0015F590 != 0) {
         if (--D_L00_0015F590 == 0)
@@ -567,6 +567,6 @@ void FUN_L00_00264328(void) {
         D_L00_00161E04 = queue_animation_update(0xC, 0, FUN_L00_00237190, FUN_L00_002371e0,
                                                 FUN_L00_00237200, 0, 0);
     } else {
-        FUN_L00_00235e18(D_L00_00161E04, 10);
+        hud_keep_visible(D_L00_00161E04, 10);
     }
 }

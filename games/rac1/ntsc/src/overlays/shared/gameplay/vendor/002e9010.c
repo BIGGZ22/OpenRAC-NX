@@ -4,7 +4,139 @@
 #include "rnc/globals.h"
 #include "asm.h"
 
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_002e9010.s", FUN_L00_002e9010);
+extern u8 D_L00_00166E10_2e9010[] __asm__("D_L00_00166E10");
+extern u8 D_L00_00166E30_2e9010[] __asm__("D_L00_00166E30");
+extern u8 D_0013F3D0_2e9010[] __asm__("D_0013F3D0");
+extern s32 D_L00_00161D24_2e9010 __asm__("D_L00_00161D24") __attribute__((sda));
+
+void FUN_001f9a28_2e9010(void *, void *, void *) __asm__("FUN_001f9a28");
+f32 FUN_001f9ab0_2e9010(void *, void *) __asm__("FUN_001f9ab0");
+void FUN_001f9a68_2e9010(void *, void *, f32) __asm__("FUN_001f9a68");
+void FUN_001f9ad8_2e9010(void *, void *, void *) __asm__("FUN_001f9ad8");
+void FUN_001f9bf8_2e9010(void *, void *, f32) __asm__("FUN_001f9bf8");
+f32 FUN_001f9af0_2e9010(void *) __asm__("FUN_001f9af0");
+f32 FUN_001f9df8_2e9010(f32) __asm__("FUN_001f9df8");
+f32 FUN_001f9e90_2e9010(f32, f32) __asm__("FUN_001f9e90");
+f32 FUN_001ebd78_2e9010(void *, f32, f32, f32, f32, f32) __asm__("FUN_001ebd78");
+f32 FUN_L00_001eb328_2e9010(void *, f32, f32, f32, f32, f32) __asm__("FUN_L00_001eb328");
+f32 FUN_001fa5c8_2e9010(f32, f32) __asm__("FUN_001fa5c8");
+f32 FUN_001fa6c0_2e9010(s32) __asm__("FUN_001fa6c0");
+s32 FUN_001f96f8_2e9010(s32) __asm__("FUN_001f96f8");
+s32 fast_dec_timer(void *) __asm__("FUN_001f9770");
+void FUN_00214890_2e9010(void *, void *, void *, f32) __asm__("FUN_00214890");
+void lerp_vector(void *, void *, void *, f32) __asm__("FUN_001f9a40");
+
+/* Follow-camera orientation update: rebuilds the basis vectors at p from the
+ * target moby, eases pitch/yaw and renormalises. */
+void follow_camera_build_view(u8 *p) __asm__("FUN_L00_002e9010");
+void follow_camera_build_view(u8 *p) {
+    u8 *q40;
+    u8 *q;
+    u8 *q2;
+    u8 *q20;
+    u8 *q130;
+    u8 *tb;
+    u8 *base;
+    u8 *p10;
+    u8 *p20;
+    u8 *w;     /* scratch vector pointer: p + 0x10, later v4 */
+    u8 *up;    /* up vector (D_L00_00166E30), set on both paths */
+    f32 r0;
+    f32 g2, g3, e2, h2;
+    f32 g, r, d, e, t, x, h;
+    f32 v0[4];
+    f32 v1[4];
+    f32 v2[4];
+    f32 v3[4];
+    f32 v4[4];
+
+    base = D_L00_00166E10_2e9010;
+    q = *(u8 **)(p + 0x70);
+    q40 = q + 0x40;
+    q20 = q + 0x20;
+    if (q40[0xC4] == 0xB) {
+        FUN_001f9a28_2e9010(p, D_0013F3D0_2e9010, p + 0x30);
+        p10 = p + 0x10;
+        FUN_001f9bf8_2e9010(p, p, 1.0f);
+        p20 = p + 0x20;
+        fast_dec_timer(q20);
+        up = D_L00_00166E30_2e9010;
+    } else {
+        up = D_L00_00166E30_2e9010;
+        tb = base + 0x20;
+        g = FUN_001f9ab0_2e9010(q + 0x80, tb);
+        FUN_001f9a68_2e9010(v0, tb, g);
+        FUN_001f9a28_2e9010(v1, q + 0x80, v0);
+        q2 = *(u8 **)(p + 0x70);
+        q130 = q2 + 0x130;
+        g = FUN_001f9ab0_2e9010(p + 0x30, tb);
+        FUN_001f9a68_2e9010(v0, tb, g);
+        FUN_001f9a28_2e9010(v2, p + 0x30, v0);
+        FUN_001f9a28_2e9010(v3, v1, v2);
+        r0 = FUN_001f9af0_2e9010(v3);
+        if (0.05f <= r0) {
+            FUN_001f9a68_2e9010(p, v3, 1.0f / r0);
+        }
+        w = p + 0x10;
+        FUN_001f9ad8_2e9010(w, p, up);
+        FUN_001f9bf8_2e9010(w, w, 1.0f);
+        p10 = w;
+        *(f32 *)(q20 + 0x8) = FUN_001ebd78_2e9010(q + 0x30, *(f32 *)(q20 + 0x8), *(f32 *)(q130 + 0x30),
+                               0.004f, 0.2f, 0.0f);
+        p20 = p + 0x20;
+        g2 = FUN_001ebd78_2e9010(q + 0x2C, *(f32 *)(q20 + 0x4), *(f32 *)(q40 + 0xB0),
+                               0.004f, 0.2f, 0.0f);
+        d = *(f32 *)(q20 + 0x8) - g2;
+        *(f32 *)(q20 + 0x4) = g2;
+        FUN_001f9a68_2e9010(v0, up, -FUN_001f9ab0_2e9010(q2 + 0x140, up));
+        FUN_001f9a28_2e9010(v0, v0, v3);
+        w = (u8 *)v4;
+        FUN_001f9a28_2e9010(w, p + 0x30, v0);
+        FUN_001f9a68_2e9010(v0, up, -d);
+        FUN_001f9a28_2e9010(w, w, v0);
+        FUN_001f9a28_2e9010(v3, w, p + 0x30);
+        r = FUN_001f9af0_2e9010(v3);
+        if (r != 0.0f) {
+            e = 1.5707964f - FUN_001f9df8_2e9010(FUN_001f9ab0_2e9010(p, v3) / r);
+            FUN_001f9ad8_2e9010(p20, p10, p);
+            if (FUN_001f9ab0_2e9010(p20, v3) < 0.0f) {
+                e = -e;
+            }
+            g3 = FUN_001f9ab0_2e9010(q130, up);
+            x = FUN_001f9e90_2e9010(FUN_001f9af0_2e9010(q130), g3) / 0.6981317f;
+            t = 0.0f;
+            if (x < -0.1f) {
+                x = -x;
+                if (0.5f < x) {
+                    x = 1.0f - x;
+                }
+                x = x + x;
+                t = x * 0.2617994f + t;
+            }
+            h = FUN_L00_001eb328_2e9010(q20 + 0x18, *(f32 *)(q20 + 0x14), t, 0.005f, 0.2f, 0.0f);
+            *(f32 *)(q20 + 0x14) = h;
+            e = FUN_001fa5c8_2e9010(e, h);
+            if (1.2217305f < e) {
+                e = 1.2217305f;
+            } else if (e < -1.2217305f) {
+                e = -1.2217305f;
+            }
+            FUN_00214890_2e9010(p, p, p10, e);
+            FUN_001f9bf8_2e9010(p, p, 1.0f);
+        }
+    }
+    if (*(s16 *)q20 != 0) {
+        fast_dec_timer(q20);
+        e2 = FUN_001fa6c0_2e9010(*(s16 *)q20);
+        h2 = e2 / FUN_001fa6c0_2e9010(FUN_001f96f8_2e9010(D_L00_00161D24_2e9010));
+        lerp_vector(p, p, p + 0x40, h2);
+        FUN_001f9bf8_2e9010(p, p, 1.0f);
+    }
+    FUN_001f9ad8_2e9010(p10, p, up);
+    FUN_001f9bf8_2e9010(p10, p10, 1.0f);
+    FUN_001f9ad8_2e9010(p20, p10, p);
+}
+
 typedef struct {
     char p0[0x80];
     float v80[4];
@@ -25,9 +157,10 @@ extern float D_161D18_2e9518 __asm__("D_L00_00161D18") __attribute__((sda));
 extern float dot_2e9518(void *, void *) __asm__("FUN_001f9ab0");
 extern float fabs_2e9518(float) __asm__("FUN_001f99c0");
 extern int fr_2e9518(int) __asm__("FUN_001f96f8");
-extern void f8450_2e9518(int, float, float) __asm__("FUN_L00_002e8450");
+extern void pitch_s(int, float, float) __asm__("FUN_L00_002e8450");
 
-void FUN_L00_002e9518(char *o, float *x, float *y) {
+void follow_camera_pull_back(char *o, float *x, float *y) __asm__("FUN_L00_002e9518");
+void follow_camera_pull_back(char *o, float *x, float *y) {
     C_2e9518 *C = &D_166E10_2e9518;
     char *v = *(char **)(o + 0x70);
     S_2e9518 *s = (S_2e9518 *)(v + 0x220);
@@ -48,7 +181,7 @@ void FUN_L00_002e9518(char *o, float *x, float *y) {
             f = *(float *)(t + 0x58) + (e - *(float *)(t + 0x58)) * k;
             if (s->f8 < f)
                 s->f8 = f;
-            f8450_2e9518(0, s->f8, 0.003f);
+            pitch_s(0, s->f8, 0.003f);
             *x = D_161CEC_2e9518 + (D_161D14_2e9518 - D_161CEC_2e9518) * k;
             *y = D_161CF0_2e9518 + (D_161D18_2e9518 - D_161CF0_2e9518) * k;
             return;
@@ -90,7 +223,8 @@ f32 cam_interp_values(void *p, f32 to, f32 stiffness, f32 damping, f32 max,
                       f32 vel) __asm__("FUN_001ebd78");
 float absolute_float(float input) __asm__("func_001F99C0");
 
-void FUN_L00_002e9720(int arg) {
+void follow_camera_orbit(int arg) __asm__("FUN_L00_002e9720");
+void follow_camera_orbit(int arg) {
     char *m = (char *)arg;
     char *d = *(char **)(m + 0x70);
     float t0[4];
@@ -161,7 +295,7 @@ void FUN_L00_002e9720(int arg) {
 extern int *D_L00_0015EF80_9aa0 __asm__("D_L00_0015EF80");
 extern char *D_L00_001600F4_9aa0 __asm__("D_L00_001600F4");
 extern float FUN_001f9af0_9aa0(void *) __asm__("FUN_001f9af0");
-extern void FUN_001e93e8_9aa0(void *, float) __asm__("FUN_001e93e8");
+extern void no_op_main_callback_alt(void *, float) __asm__("FUN_001e93e8");
 typedef struct {
     int pad[4];
     int type;
@@ -178,7 +312,7 @@ void FUN_L00_002e9aa0(int a) {
                 for (k = 0; k < *(int *)p; k++) {
                     if (((E_9aa0 *)(p + 16))[k].type == 5) {
                         char *e = D_L00_001600F4_9aa0 + ((E_9aa0 *)(p + 16))[k].idx * 128;
-                        FUN_001e93e8_9aa0(e + 0x30, FUN_001f9af0_9aa0(e));
+                        no_op_main_callback_alt(e + 0x30, FUN_001f9af0_9aa0(e));
                     }
                 }
             }
@@ -191,12 +325,12 @@ void FUN_L00_002e9aa0(int a) {
 
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002E1660.c: func_L00_002EB060), where it is exact; names translated to the US level program. */
 
-extern void FUN_L00_002e7d20(int);
+extern void follow_camera_avoid_mobies(int) __asm__("FUN_L00_002e7d20");
 extern void FUN_L00_002e8378(int);
-extern void FUN_L00_002e89b0(int, float *, float *);
-extern void FUN_L00_002e8bb8(int, float, float);
-extern void FUN_L00_002e8f40(int);
-extern void FUN_L00_002e9010(int);
+extern void follow_camera_read_stick(int, float *, float *) __asm__("FUN_L00_002e89b0");
+extern void follow_camera_turn_and_pitch(int, float, float) __asm__("FUN_L00_002e8bb8");
+extern void follow_camera_auto_turn(int) __asm__("FUN_L00_002e8f40");
+extern void FUN_L00_002e9010_u(int) __asm__("FUN_L00_002e9010");
 extern void FUN_L00_002e9720_u(int) __asm__("FUN_L00_002e9720");
 extern void FUN_L00_002e9aa0(int);
 
@@ -204,34 +338,35 @@ extern void FUN_L00_002e9aa0(int);
 void FUN_L00_002e9bb0(int a) {
     float v[2];
     FUN_L00_002e9aa0(a);
-    FUN_L00_002e8f40(a);
-    FUN_L00_002e89b0(a, &v[0], &v[1]);
-    FUN_L00_002e8bb8(a, v[0], v[1]);
-    FUN_L00_002e7d20(a);
+    follow_camera_auto_turn(a);
+    follow_camera_read_stick(a, &v[0], &v[1]);
+    follow_camera_turn_and_pitch(a, v[0], v[1]);
+    follow_camera_avoid_mobies(a);
     FUN_L00_002e9720_u(a);
     FUN_L00_002e8378(a);
-    FUN_L00_002e9010(a);
+    FUN_L00_002e9010_u(a);
 }
 extern s32 D_0015EDE4;
 extern f32 D_L00_0015EF44 __attribute__((sda));
 extern f32 D_L00_00161DB0[2] __attribute__((sda));
 void FUN_L00_002e46b8();
-void FUN_L00_002e6000();
+void follow_camera_apply_overrides() __asm__("FUN_L00_002e6000");
 void FUN_001e93e8();
-void FUN_L00_002e5830();
+void follow_camera_springs() __asm__("FUN_L00_002e5830");
 void FUN_L00_002e9bb0();
-void FUN_L00_002e5e38();
-void FUN_L00_002e9c28(u8 *m) {
+void follow_camera_approach() __asm__("FUN_L00_002e5e38");
+void follow_camera_update(u8 *m) __asm__("FUN_L00_002e9c28");
+void follow_camera_update(u8 *m) {
     u8 *p = *(u8 **)(m + 0x70) + 0x1D0;
     D_L00_0015EF44 = D_L00_00161DB0[D_0015EDE4];
     FUN_L00_002e46b8();
-    FUN_L00_002e6000(m);
+    follow_camera_apply_overrides(m);
     FUN_001e93e8(m);
-    FUN_L00_002e5830(m);
+    follow_camera_springs(m);
     FUN_001e93e8(m, p);
     FUN_L00_002e9bb0(m);
     FUN_001e93e8(m);
-    FUN_L00_002e5e38(m);
+    follow_camera_approach(m);
 }
 extern unsigned char D_0015EDB3_002e9cc0 __asm__("D_0015EDB3");
 extern void FUN_001f9bf8_002e9cc0(void *, void *, float) __asm__("FUN_001f9bf8");
@@ -244,7 +379,7 @@ void FUN_L00_002e9cc0(char *p) {
     struct Hero *g = &hero;
     int m;
     FUN_001f9bf8_002e9cc0(a, ((char *)g->moby) + 0xE0, 1.0f);
-    m = g->unk20A4;
+    m = g->vehicle_mode;
     if (m == 2) {
         FUN_001f9a68_002e9cc0(b, a, 9.5f);
     } else if (m == 1) {
@@ -258,7 +393,7 @@ void FUN_L00_002e9cc0(char *p) {
     }
     p += 0x30;
     FUN_001f9a10_002e9cc0(p, &hero.motion.pos, b);
-    FUN_001f9a10_002e9cc0(p, &hero.motion.unk140, p);
+    FUN_001f9a10_002e9cc0(p, &hero.motion.platform_carry, p);
 }
 #include "eetypes.h"
 #include "qcopy.h"
@@ -275,9 +410,9 @@ void FUN_L00_002e9dd0(char *m) {
     u128 b;
     struct Hero *g = &hero;
     FUN_001f9bf8_2e9dd0(&a, ((char *)g->moby) + 0xE0, 1.0f);
-    if (g->unk20A4 == 2) {
+    if (g->vehicle_mode == 2) {
         FUN_001f9a68_2e9dd0(&b, &a, 9.5f);
-    } else if (g->unk20A4 == 1) {
+    } else if (g->vehicle_mode == 1) {
         FUN_001f9a68_2e9dd0(&b, &a, 0.9f);
     } else {
         FUN_001f9a68_2e9dd0(&b, &a, 1.6f);
@@ -364,8 +499,8 @@ void FUN_L00_002e9f38(u8 *o) {
     st->a = r = FUN_001ebd78(st->a, t, D_L00_00161DC8, D_L00_00161DCC, D_L00_00161DD0, &st->va);
     if (r != 0.0f)
         build_look_at_matrix(o, o, &up, k * r);
-    if (hero.motion.unk140.f[3] != 0.0f && hero.unk308 == 0)
-        build_look_at_matrix(o, o, &up, hero.motion.unk140.f[3]);
+    if (hero.motion.platform_carry.f[3] != 0.0f && hero.unk308 == 0)
+        build_look_at_matrix(o, o, &up, hero.motion.platform_carry.f[3]);
     t = -D_0013C940.f10C;
     if (t == 0.0f)
         t = -D_0013C940.f104;
@@ -1047,7 +1182,7 @@ void FUN_L00_002eb320_2eb648(char *, void *, void *, float) __asm__("FUN_L00_002
 float FUN_001fa580_2eb648(float, float) __asm__("FUN_001fa580");
 float FUN_001f9e90_2eb648(float, float) __asm__("FUN_001f9e90");
 float FUN_001fa688_2eb648(float, float) __asm__("FUN_001fa688");
-float FUN_001f9b80_2eb648(void *, void *) __asm__("FUN_001f9b80");
+float vector_distance(void *, void *) __asm__("FUN_001f9b80");
 int FUN_L00_002eb648(char *a, char *t) {
     u128 v[1];
     u128 w[1];
@@ -1089,11 +1224,11 @@ int FUN_L00_002eb648(char *a, char *t) {
     ang = FUN_001f9e90_2eb648(*(float *)(cam + 0x140) - g->motion.pos.f[0],
                               *(float *)(cam + 0x144) - g->motion.pos.f[1]);
     ang = FUN_001fa688_2eb648(ang, *(float *)(cam + 0x158));
-    d1 = FUN_001f9b80_2eb648(pp, cp);
-    if (d1 < FUN_001f9b80_2eb648(((char *)g->items[0].moby) + 0x10, cp)) {
-        x = FUN_001f9b80_2eb648(pp, cp);
+    d1 = vector_distance(pp, cp);
+    if (d1 < vector_distance(((char *)g->items[0].moby) + 0x10, cp)) {
+        x = vector_distance(pp, cp);
     } else {
-        x = FUN_001f9b80_2eb648(((char *)g->items[0].moby) + 0x10, cp);
+        x = vector_distance(((char *)g->items[0].moby) + 0x10, cp);
     }
     if (x < 0.77f) {
         if (ang < 1.5707964f) {
@@ -1207,6 +1342,7 @@ void FUN_L00_002ebbd8(void *arg) {
     char *source;
     int state;
     int frames;
+    int next;
 
     *(int *)(p + 0x40) = 0;
     if (current_level_index == 14 &&
@@ -1230,11 +1366,13 @@ void FUN_L00_002ebbd8(void *arg) {
     *(short *)(m + 0x1c) = 0;
     *(short *)(m + 0x1e) = frames;
     FUN_001ff260_2ebbd8(m);
+    m = (char *)((volatile O002ebb00 *)o)->m;
     *(float *)(m + 0x34) = 0.02f;
     *(float *)(m + 0x38) = 0.2f;
     *(int *)(m + 0x3c) = 0;
     *(int *)(m + 0x30) = 0;
     *(int *)(m + 0xbc) = 0;
+    m = (char *)((volatile O002ebb00 *)o)->m;
     source = *(char **)(cam + 0x184);
     qcopy((char *)o + 0x30, source + 0x30);
     qcopy(o, source);
@@ -1247,7 +1385,7 @@ void FUN_L00_002ebbd8(void *arg) {
         *(float *)(p + 0x34) = FUN_001ff800_2ebbd8(g->unk9AC);
         *(int *)(p + 0x38) = 0;
         *(float *)(m + 0xb8) = g->unk9AC;
-        *(int *)(m + 0xc0) = ((int)g->unk994);
+        next = (int)g->unk994;
     } else {
         FUN_001ff2a8_2ebbd8(p + 0x30, ((char *)g->unk964) + 0x10, (char *)o + 0x30);
         *(int *)(p + 0x38) = 0;
@@ -1255,14 +1393,129 @@ void FUN_L00_002ebbd8(void *arg) {
         FUN_001ff500_2ebbd8(p + 0x30, p + 0x30, 1.0f);
         *(float *)(m + 0xb8) =
             FUN_001ff8b0_2ebbd8(*(float *)(p + 0x30), *(float *)(p + 0x34));
-        *(int *)(m + 0xc0) = ((int)g->unk964);
+        next = (int)g->unk964;
     }
-    *(short *)(cam + 0x270) = 1;
-    *(char *)(cam + 0x273) = 2;
+    *(int *)(m + 0xc0) = next;
+    *(volatile short *)(cam + 0x270) = 1;
+    *(volatile char *)(cam + 0x273) = 2;
     *(int *)(cam + 0x2f4) = FUN_001fef20_2ebbd8(0x3c);
 }
 #endif
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_002ebe70.s", FUN_L00_002ebe70);
+#else
+extern void FUN_L00_0025b868(float, float, float *) __asm__("FUN_L00_0025b868");
+extern void FUN_001ff2a8_2ebe70(void *, void *, void *) __asm__("FUN_001f9a28");
+extern void FUN_001ff500_2ebe70(float, void *, void *) __asm__("FUN_001f9bf8");
+extern float FUN_001ff7e8_2ebe70(float) __asm__("FUN_001f9dc8");
+extern float FUN_001ff800_2ebe70(float) __asm__("FUN_001f9de0");
+extern float FUN_001ff398_2ebe70(void *, void *) __asm__("FUN_001f9ab0");
+extern float FUN_001ff3d8_2ebe70(void *) __asm__("FUN_001f9af0");
+extern float FUN_001ff8b0_2ebe70(float, float) __asm__("FUN_001f9e90");
+extern void FUN_001ff300_2ebe70(float, void *, void *) __asm__("FUN_001f9a68");
+extern void FUN_001ff278_2ebe70(void *, void *, void *) __asm__("FUN_001f9a10");
+extern int FUN_001efc70_2ebe70(void *, void *, int, int, int) __asm__("FUN_001efa68");
+extern int FUN_001f0d60_2ebe70(float, void *, int, int) __asm__("FUN_L00_001f0d60");
+extern unsigned short *D_L00_001AB840_2ebe70[] __asm__("D_L00_001AB840");
+extern char *D_0015FFD8_2ebe70 __asm__("D_L00_0015FFD8");
+extern OvlQuad D_L00_00173E60_2ebe70 __asm__("D_L00_00173E60");
+extern float D_L00_00173E70_2ebe70[] __asm__("D_L00_00173E70");
+extern float D_L00_00161DD8_2ebe70 __asm__("D_L00_00161DD8") __attribute__((sda));
+
+void FUN_L00_002ebe70(char *o) {
+    char *m = *(char **)(o + 0x70);
+    char *p = m + 0x40;
+    float *angle = (float *)(m + 0xb8);
+    float *distance = (float *)(m + 0xa0);
+    OvlQuad scaled, diff, next;
+    float target, rate, fraction, score, best;
+    char *candidate, *chosen;
+    unsigned short *list;
+    int i;
+
+    if (hero.unk994 != 0 && hero.state.current == 0x2c) {
+        fraction = ((float *)hero.unk994)[6] - ((float *)&hero.motion.pos)[2];
+        if (fraction > hero.unk9A0) fraction = hero.unk9A0;
+        else if (fraction < 0.0f) fraction = 0.0f;
+        fraction /= hero.unk9A0;
+        target = fraction + 3.65f;
+        rate = fraction + fraction;
+    } else {
+        target = 4.64f;
+        rate = 2.0f;
+    }
+    FUN_L00_0025b868(target, frame_time * 8.0f, (float *)(*(char **)(*(char **)(D_00166C80_c + 0x180) + 0x70) + 0xa0));
+    FUN_L00_0025b868(rate, frame_time * 4.0f, (float *)(*(char **)(*(char **)(D_00166C80_c + 0x180) + 0x70) + 0xb0));
+    if (current_level_index == 14 && hero.state.current == 0x2c)
+        FUN_L00_0025b868(rate + 0.25f, frame_time * 8.0f, (float *)(*(char **)(*(char **)(D_00166C80_c + 0x180) + 0x70) + 0x8c));
+    else
+        FUN_L00_0025b868(rate - 0.5f, frame_time * 8.0f, (float *)(*(char **)(*(char **)(D_00166C80_c + 0x180) + 0x70) + 0x8c));
+
+    if (hero.state.current == 0x2c) {
+        if ((current_level_index == 14 || current_level_index == 7 || current_level_index == 9) &&
+            (hero.unk994 == 0 || *(signed char *)((char *)hero.unk994 + 0x21) != -1)) {
+            chosen = 0;
+            best = 1000.0f;
+            list = D_L00_001AB840_2ebe70[*(unsigned char *)((char *)hero.unk994 + 0x21)];
+            if (list != 0) {
+                do {
+                    candidate = D_0015FFD8_2ebe70 + (*list & 0x7fff) * 0x100;
+                    if (candidate != (char *)hero.unk994 &&
+                        (*(short *)(candidate + 0xa6) == 0x323 || *(short *)(candidate + 0xa6) == 0x2f6)) {
+                        FUN_001ff2a8_2ebe70(&diff, candidate + 0x10, (char *)hero.unk994 + 0x10);
+                        FUN_001ff500_2ebe70(1.0f, &scaled, &diff);
+                        ((float *)&next)[0] = FUN_001ff7e8_2ebe70(((float *)&hero.motion.rot)[2]);
+                        ((float *)&next)[1] = FUN_001ff800_2ebe70(((float *)&hero.motion.rot)[2]);
+                        ((float *)&next)[2] = 0.0f;
+                        score = FUN_001ff398_2ebe70(&scaled, &next);
+                        if (score > 0.0f) {
+                            score = FUN_001ff3d8_2ebe70(&diff) - score * 10.0f;
+                            if (score < best) {
+                                best = score;
+                                chosen = candidate;
+                            }
+                        }
+                    }
+                } while ((short)*list++ >= 0);
+            }
+            if (chosen != 0) {
+                FUN_001ff2a8_2ebe70(&diff, chosen + 0x10, (char *)hero.unk994 + 0x10);
+                target = FUN_001ff8b0_2ebe70(((float *)&diff)[0], ((float *)&diff)[1]);
+            } else if (*(int *)(m + 0x80) == 1)
+                target = *(float *)(*(char **)(m + 0x84) + 0x48);
+            else
+                target = ((float *)&hero.motion.rot)[2];
+        } else target = ((float *)&hero.motion.rot)[2];
+        *angle = FUN_L00_001eb328(m + 0xbc, *angle, target, 0.00125f, 0.175f, 0.0f);
+    } else if (hero.state.current == 0x25) {
+        target = ((float *)&hero.motion.rot)[2];
+        if (*(int *)(m + 0x80) == 1)
+            target = *(float *)(*(char **)(m + 0x84) + 0x48);
+        *angle = FUN_L00_001eb328(m + 0xbc, *angle, target, D_L00_00161DD8_2ebe70, 0.175f, 0.0f);
+    }
+    *(float *)(p + 0x30) = FUN_001ff7e8_2ebe70(*angle);
+    *(float *)(p + 0x34) = FUN_001ff800_2ebe70(*angle);
+    *(int *)(p + 0x38) = 0;
+    *(int *)(p + 0x3c) = *(int *)(p + 0x38);
+    FUN_001ff500_2ebe70(-*distance, &next, p + 0x30);
+    ((float *)&next)[2] += distance[4];
+    FUN_001ff278_2ebe70(&next, &next, &hero.motion.pos);
+    if (FUN_001efc70_2ebe70(o + 0x30, &next, 0x12, 0, 0) != 0) {
+        FUN_001ff2a8_2ebe70(&diff, &D_L00_00173E60_2ebe70, o + 0x30);
+        score = FUN_001ff3d8_2ebe70(&diff);
+        if (score > 0.5f) {
+            FUN_001ff300_2ebe70((score - 0.5f) / score, &diff, &diff);
+            FUN_001ff278_2ebe70(&next, o + 0x30, &diff);
+            for (i = 0; i < 5 && FUN_001f0d60_2ebe70(0.75f, &next, 0, 0); i++)
+                next = *(OvlQuad *)D_L00_00173E70_2ebe70;
+        }
+        qcopy(o + 0x30, &next);
+        FUN_001ff2a8_2ebe70(&diff, &hero.motion.pos, o + 0x30);
+        *angle = FUN_001ff8b0_2ebe70(((float *)&diff)[0], ((float *)&diff)[1]);
+        *(int *)(m + 0xbc) = 0;
+    } else qcopy(o + 0x30, &next);
+}
+#endif
 typedef union {
     OvlQuad q;
     float f[4];
@@ -1363,171 +1616,525 @@ void FUN_L00_002ec7b0(char *a) {
         *(short *)(a + 0x7E) = 3;
     }
 }
+/*
+ * Camera volumes. Each camera record (UpdateCam) has a descriptor in
+ * camera_descriptors (UpdateCam.descriptor_index); the descriptor points at
+ * the parameters of its camera type. Two types are handled here:
+ *  - swing cameras: volume_camera_swing_check -> volume_camera_swing;
+ *  - aim cameras: volume_camera_check -> volume_camera_aim.
+ * Both run while the hero stands in one of the volumes the parameters name
+ * (clip volumes and the FUN_L00_0025fa38 / FUN_L00_0025faf0 / path tests),
+ * then end the camera with FUN_L00_002e8388 and set `done`.
+ */
+#include "rnc/gameplay/camera/follow_cam.h"
+#include "rnc/input/pad_state.h"
+#include "rnc/math/fast_math.h"
+
+typedef float CameraVec[4] __attribute__((aligned(16)));
+
+/* Parameters of a swing camera. */
 typedef struct {
-    char pad84[0x84];
-    s16 f84;
-} A_2ec7e8;
+    f32 swing;                   /* 0x00: degrees swung around `yaw` over the first 200 frames */
+    u8 pad04[4];
+    s32 volume_25faf0;           /* 0x08: FUN_L00_0025faf0 volume, -1 none */
+    s32 clip_volume;             /* 0x0C: is_point_inside_clip_volume id, -1 none */
+    s32 volume_25fa38;           /* 0x10: FUN_L00_0025fa38 volume, -1 none */
+    s32 path;                    /* 0x14: point_in_path_xy path index, -1 none */
+    u8 pad18[8];
+    f32 pitch;                   /* 0x20: degrees, second angle for FUN_L00_002e8918 */
+    f32 distance;                /* 0x24: follow_camera_set_distance */
+    f32 height;                  /* 0x28: follow_camera_set_height */
+    s16 type;                    /* 0x2C: 1..11, picks timing and easing */
+    s16 timer;                   /* 0x2E: frames since the camera started, 0 when off */
+    f32 offset_scale;            /* 0x30: follow_camera_set_offset_scale; follow.look_height on a type 5 snap */
+    s16 keep_unk10;              /* 0x34: 0 clears FollowCamState.unk10 each frame */
+    s16 check_yaw;               /* 0x36: nonzero ends the camera when D_L00_00166DD8 is 80 degrees or more off `yaw` */
+    f32 lateral_stiffness;       /* 0x38: eased in over 120 frames from start_lateral_stiffness */
+    f32 lateral_damping;         /* 0x3C: likewise from start_lateral_damping */
+    f32 start_lateral_stiffness; /* 0x40: follow.lateral_stiffness of the player camera when the camera started */
+    f32 start_lateral_damping;   /* 0x44 */
+    s16 l_buttons_end;           /* 0x48: type 5 ends on L1 or L2; with `done` set it does not restart */
+    s16 done;                    /* 0x4A: set when the camera ends */
+    s32 clip_volume2;            /* 0x4C: second clip volume, -1 none */
+    f32 unk50;                   /* 0x50: degrees, passed to FUN_L00_002e8540 */
+    s16 set_flag1;               /* 0x54: sets tail.ctl.flags bit 1 each frame */
+    s16 set_flag0;               /* 0x56: sets tail.ctl.flags bit 0 each frame */
+} SwingCameraParams;
+
+/* Parameters of an aim camera: it looks from the descriptor's position at the hero. */
+typedef struct {
+    u8 pad00[8];
+    s32 volume_25faf0;           /* 0x08: FUN_L00_0025faf0 volume, -1 none */
+    s32 clip_volume;             /* 0x0C: is_point_inside_clip_volume id, -1 none */
+    s32 volume_25fa38;           /* 0x10: FUN_L00_0025fa38 volume, -1 none */
+    u8 pad14[0xC];
+    s32 timer;                   /* 0x20: frames since the camera started (capped at 200), 0 when off */
+    s16 keep_unk10;              /* 0x24: 0 clears FollowCamState.unk10 each frame */
+    s16 done;                    /* 0x26: set when the camera ends */
+    f32 unk28;                   /* 0x28: degrees, passed to FUN_L00_002e8540 */
+    f32 angle;                   /* 0x2C: radians; with height and distance gives offset_scale */
+    u8 pad30[4];
+    s32 need_still;              /* 0x34: start only while tail.unk164 and tail.unk1B0 are (nearly) 0 */
+    f32 distance;                /* 0x38: horizontal distance from the hero to the position */
+    f32 height;                  /* 0x3C: height of the hero below the position */
+    f32 offset_scale;            /* 0x40 */
+    s16 not_in_mode_1;           /* 0x44: nonzero blocks the camera while D_001413F4 is 1 */
+    s16 only_in_mode_1;          /* 0x46: nonzero allows it only while D_001413F4 is 1 */
+} AimCameraParams;
 
 typedef struct {
-    char pad08[0x8];
-    s32 f08;
-    s32 f0C;
-    s32 f10;
-    s32 f14;
-    char pad18[0x14];
-    s16 f2C;
-    s16 f2E;
-    char pad30[0x1C];
-    s32 f4C;
-} O_2ec7e8;
+    f32 pos[3];                  /* 0x00: aim cameras look from here */
+    u8 pad0C[0xC];
+    f32 yaw;                     /* 0x18: swing cameras turn around this */
+    void *params;                /* 0x1C: SwingCameraParams or AimCameraParams */
+} CameraDescriptor;
 
-extern u8 *D_L00_00166E00_c[] __asm__("D_L00_00166E00");
-extern u8 *D_L00_0015EF50_c __asm__("D_L00_0015EF50");
-extern u8 *D_L00_001B04B0[];
-extern s32 D_001413DC[];
+extern CameraDescriptor *camera_descriptors __asm__("D_L00_0015EF50");
+/* controller_state.held (the label sits inside struct PadState). */
+extern s32 pad_held __asm__("D_0013CAE0") __attribute__((section(".data")));
+extern f32 D_L00_00166DD8 __asm__("D_L00_00166DD8") __attribute__((section(".data")));
+extern f32 D_L00_00166EB4 __asm__("D_L00_00166EB4") __attribute__((section(".data")));
+extern u8 D_001413F4 __asm__("D_001413F4") __attribute__((section(".data")));
+extern s32 D_001413DC __asm__("D_001413DC") __attribute__((section(".data")));
 extern s32 D_001415D4[];
+extern u8 *D_L00_001B04B0[];
+
 extern s32 is_point_inside_clip_volume(void *, s32) __asm__("FUN_00214720");
 extern s32 FUN_L00_0025fa38(void *, s32);
 extern s32 FUN_L00_0025faf0(void *, s32);
-extern s32 FUN_L00_00259740(void *, void *, s32);
+extern s32 point_in_path_xy(void *, void *, s32) __asm__("FUN_L00_00259740");
+extern s32 fun_l00_002e83c0(struct UpdateCam *) __asm__("FUN_L00_002e83c0");
+extern void fun_l00_002e8388(struct UpdateCam *) __asm__("FUN_L00_002e8388");
+extern void fun_l00_002e8490(f32) __asm__("FUN_L00_002e8490");
+extern void fun_l00_002e8540(f32) __asm__("FUN_L00_002e8540");
+extern void fun_l00_002e8568(s32) __asm__("FUN_L00_002e8568");
+extern void fun_l00_002e8620(void) __asm__("FUN_L00_002e8620");
+extern void fun_l00_002e8680(void) __asm__("FUN_L00_002e8680");
+extern void fun_l00_002e8918(void *, f32, f32) __asm__("FUN_L00_002e8918");
 
-s32 FUN_L00_002ec7e8(A_2ec7e8 *a) {
-    O_2ec7e8 *o;
-    s32 v17 = 0;
-    u16 w;
+/* Nonzero while the hero is in one of the swing camera's volumes. */
+s32 volume_camera_swing_active(struct UpdateCam *cam) __asm__("FUN_L00_002ec7e8");
+s32 volume_camera_swing_active(struct UpdateCam *cam) {
+    SwingCameraParams *params;
+    s32 forced = 0;
+    u16 type;
 
-    o = *(O_2ec7e8 **)(&D_L00_0015EF50_c[a->f84 * 32] + 0x1C);
-    if (*(s16 *)(D_L00_00166E00_c[0] + 0x86) != 0) {
+    params = camera_descriptors[cam->descriptor_index].params;
+    if (current_follow_cam->unk86 != 0) {
         return 0;
     }
-    w = *(u16 *)&o->f2C;
-    if (o->f2C == 2 && D_001413DC[0] == 0x1A && o->f2E > 0) {
-        v17 = 1;
-    } else if ((s16)w == 4 && D_001415D4[0] == 3) {
-        v17 = 0 < o->f2E;
+    type = *(u16 *)&params->type;
+    if (params->type == 2 && D_001413DC == 0x1A && params->timer > 0) {
+        forced = 1;
+    } else if ((s16)type == 4 && D_001415D4[0] == 3) {
+        forced = 0 < params->timer;
     }
-    if (o->f0C >= 0 && (v17 || is_point_inside_clip_volume(&hero.motion.pos, o->f0C)))
+    if (params->clip_volume >= 0 && (forced || is_point_inside_clip_volume(&hero.motion.pos, params->clip_volume)))
         return 1;
-    if (o->f4C >= 0 && (v17 || is_point_inside_clip_volume(&hero.motion.pos, o->f4C)))
+    if (params->clip_volume2 >= 0 && (forced || is_point_inside_clip_volume(&hero.motion.pos, params->clip_volume2)))
         return 1;
-    if (o->f10 >= 0 && (v17 || FUN_L00_0025fa38(&hero.motion.pos, o->f10)))
+    if (params->volume_25fa38 >= 0 && (forced || FUN_L00_0025fa38(&hero.motion.pos, params->volume_25fa38)))
         return 1;
-    if (o->f08 >= 0 && (v17 || FUN_L00_0025faf0(&hero.motion.pos, o->f08)))
+    if (params->volume_25faf0 >= 0 && (forced || FUN_L00_0025faf0(&hero.motion.pos, params->volume_25faf0)))
         return 1;
-    if (o->f14 >= 0 && (v17 || FUN_L00_00259740(&hero.motion.pos, D_L00_001B04B0[o->f14] + 0x10,
-                                                *(s32 *)D_L00_001B04B0[o->f14])))
+    if (params->path >= 0 && (forced || point_in_path_xy(&hero.motion.pos, D_L00_001B04B0[params->path] + 0x10,
+                                                         *(s32 *)D_L00_001B04B0[params->path])))
         return 1;
     return 0;
 }
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_002ec988.s", FUN_L00_002ec988);
-typedef struct {
-    char pad[0x2c];
-    short v;
-    short w;
-    char pad2[0x48 - 0x30];
-    short a;
-    short b;
-} S_002ed230;
-extern char *D_L00_0015EF50_002ed230 __asm__("D_L00_0015EF50");
-extern unsigned char D_001413F4_002ed230 __asm__("D_001413F4") __attribute__((section(".data")));
-extern int D_001413DC_002ed230 __asm__("D_001413DC") __attribute__((section(".data")));
-void FUN_L00_002ec988_002ed230(unsigned char *) __asm__("FUN_L00_002ec988");
-int FUN_L00_002ed230(unsigned char *p) {
-    S_002ed230 *s = *(S_002ed230 **)(D_L00_0015EF50_002ed230 + *(short *)(p + 0x84) * 32 + 0x1c);
-    if (s->a == 1 && s->b != 0)
+
+/* Runs a swing camera for one frame: by its type, sets the follow camera's
+   distance, height, offset scale and springs, and swings it around the
+   descriptor's yaw over `timer`. */
+void volume_camera_swing(struct UpdateCam *cam) __asm__("FUN_L00_002ec988");
+void volume_camera_swing(struct UpdateCam *cam) {
+    CameraVec dir;
+    SwingCameraParams *params;
+    struct UpdateCam *rec;
+    Vec4f *pos;
+    FollowCamState *rig;
+    FollowCamState *state;
+    FollowCamBlock *follow;
+    FollowCamTail *tail;
+    FollowCamSnap *snap;
+    FollowCamReset *reset;
+    s32 at_end;
+    f32 total;
+    f32 swing;
+    f32 t;
+
+    params = camera_descriptors[cam->descriptor_index].params;
+    if (params->type == 8 && FOLLOW_CAM_STATE(current_follow_cam)->tail.mode == 0) {
+        return;
+    }
+    if (params->type == 6 && FOLLOW_CAM_STATE(current_follow_cam)->tail.mode != 0) {
+        return;
+    }
+    if (volume_camera_swing_active(cam) == 0) {
+        goto stop;
+    }
+    if (fun_l00_002e83c0(cam) <= 0) {
+        if (params->timer != 0) {
+            params->done = 1;
+        }
+        params->timer = 0;
+        return;
+    }
+    if (params->check_yaw != 0
+        && fast_difference_between_rotations(camera_descriptors[cam->descriptor_index].yaw, D_L00_00166DD8) >= 1.3962634f) {
+        goto stop;
+    }
+    if (params->l_buttons_end != 0 && params->type == 5 && (pad_held & (PAD_L2 | PAD_L1))) {
+stop:
+        if (params->timer != 0) {
+            params->done = 1;
+        }
+        params->timer = 0;
+        fun_l00_002e8388(cam);
+        return;
+    }
+    if (params->timer == 0) {
+        u8 *g = (u8 *)&D_L00_00166C80;
+        params->start_lateral_stiffness = FOLLOW_CAM_STATE(*(struct UpdateCam **)(g + 0x180))->follow.lateral_stiffness;
+        params->start_lateral_damping = FOLLOW_CAM_STATE(*(struct UpdateCam **)(g + 0x180))->follow.lateral_damping;
+    }
+    /* One word over type and timer: type 5 on its first frame snaps the camera. */
+    if (*(s32 *)&params->type == 5) {
+        *(s32 *)&params->swing = 0;
+        rec = current_follow_cam;
+        rig = FOLLOW_CAM_STATE(rec);
+        follow = &rig->follow;
+        tail = &rig->tail;
+        snap = &rig->tail.snap;
+        /* A second pointer to the same state: retail keeps both. */
+        state = rig;
+        reset = &state->reset;
+        fast_vec_normalize(tail->unk130, tail->unk130, params->distance);
+        tail->unk15C = params->distance;
+        tail->distance = params->height;
+        follow->look_height = params->offset_scale;
+        qcopy(state->tail.unk140, tail->unk130);
+        fast_vec_scale(dir, &hero.unk290, -tail->distance);
+        pos = &rec->pos;
+        fast_vec_add(state->follow.eye, &hero.motion.pos, dir);
+        fast_vec_add(pos, state->follow.eye, tail->unk130);
+        fast_vec_scale(dir, &hero.unk290, -follow->look_height);
+        fast_vec_add(state->follow.look_target, &hero.motion.pos, dir);
+        qcopy(state->follow.unkD0, state->follow.look_target);
+        qcopy(follow->focus, &hero.motion.pos);
+        qcopy(state->follow.offset, follow->focus);
+        qcopy(state->position, pos);
+        qcopy(state->tail.snap.unk1F0, pos);
+        snap->unk200 = tail->unk15C - fast_vec_length(tail->unk130);
+        *(s32 *)&reset->unk34 = 0;
+        reset->look_height = follow->look_height;
+        { f32 zero = reset->unk34;
+        f32 distance = tail->distance;
+        reset->distance = distance;
+        reset->unk38 = zero;
+        reset->unk30 = zero;
+        reset->unk2C = zero; }
+    }
+    at_end = 0;
+    total = convert_integer_to_float(scale_game_frames(200));
+    params->timer++;
+    if (params->type == 10) {
+        fun_l00_002e8680();
+        FOLLOW_CAM_STATE(current_follow_cam)->tail.mode = 0x14D;
+    }
+    if (params->type == 11) {
+        fun_l00_002e8680();
+        FOLLOW_CAM_STATE(current_follow_cam)->tail.mode = 2;
+    }
+    if (params->type == 2 || params->type == 4) {
+        { FollowCamFlags *ctl = &FOLLOW_CAM_STATE(current_follow_cam)->tail.ctl; ctl->flags |= 3; }
+        if (params->timer > scale_game_frames(200)) {
+            at_end = 1;
+            params->timer = scale_game_frames(200);
+        }
+        fun_l00_002e8620();
+    } else if (params->type == 1 || params->type == 7 || params->type == 10 || params->type == 9) {
+        /* Moving the left stick skips to the end of the swing. */
+        struct PadState *pad = &controller_state;
+        if (pad->analog[0] != 0.0f || pad->analog[1] != 0.0f) {
+            params->timer = scale_game_frames(200);
+        }
+        if (params->timer >= scale_game_frames(200)) {
+            at_end = 1;
+            if (D_L00_00166EB4 > 0.0f) {
+                params->timer = scale_game_frames(200);
+            }
+        }
+        if (params->timer >= scale_game_frames(400)) {
+            at_end = 0;
+            params->timer = 1;
+        }
+    } else if (params->type == 3) {
+        total = convert_integer_to_float(scale_game_frames(1));
+        if (params->timer > scale_game_frames(1)) {
+            at_end = 1;
+            params->timer = scale_game_frames(1);
+        }
+    } else {
+        if (params->timer > scale_game_frames(200)) {
+            at_end = 1;
+            params->timer = scale_game_frames(200);
+        }
+    }
+    dir[0] = fast_cos(camera_descriptors[cam->descriptor_index].yaw);
+    dir[1] = fast_sin(camera_descriptors[cam->descriptor_index].yaw);
+    *(s32 *)&dir[2] = 0;
+    swing = params->swing * 0.017453292f * (params->timer / total);
+    if ((params->type != 1 && params->type != 7 && params->type != 9) || at_end == 0) {
+        fun_l00_002e8918(dir, swing, params->pitch * 0.017453292f);
+    }
+    if (params->distance != 0.0f) {
+        if (params->type == 6 || params->type == 8) {
+            follow_camera_set_distance(0, params->distance, 0.002f);
+            fun_l00_002e8490(params->distance + 1.36f);
+        } else {
+            follow_camera_set_distance(0, params->distance, 0.003f);
+            fun_l00_002e8620();
+        }
+    }
+    if (params->height != 0.0f) {
+        if (params->type == 6 || params->type == 8) {
+            follow_camera_set_height(params->height, 0.002f);
+        } else {
+            follow_camera_set_height(params->height, 0.003f);
+        }
+    }
+    if (params->offset_scale != 0.0f) {
+        if (params->type == 6 || params->type == 8) {
+            follow_camera_set_offset_scale(0, params->offset_scale, 0.002f);
+        } else {
+            follow_camera_set_offset_scale(0, params->offset_scale, 0.005f);
+        }
+    }
+    if (params->unk50 != 0.0f) {
+        fun_l00_002e8540(params->unk50 * 0.017453292f);
+    }
+    if (params->set_flag1 != 0) {
+        { FollowCamFlags *ctl = &FOLLOW_CAM_STATE(current_follow_cam)->tail.ctl; ctl->flags |= 2; }
+    }
+    if (params->set_flag0 != 0) {
+        { FollowCamFlags *ctl = &FOLLOW_CAM_STATE(current_follow_cam)->tail.ctl; ctl->flags |= 1; }
+    }
+    if (params->keep_unk10 == 0) {
+        fun_l00_002e8568(0);
+    }
+    if (params->lateral_stiffness != 0.0f || params->lateral_damping != 0.0f) {
+        if (params->timer >= scale_game_frames(120)) {
+            follow_camera_set_lateral_spring(params->lateral_stiffness, params->lateral_damping);
+        } else {
+            t = params->timer / convert_integer_to_float(scale_game_frames(120));
+            follow_camera_set_lateral_spring(
+                params->start_lateral_stiffness + (params->lateral_stiffness - params->start_lateral_stiffness) * t,
+                params->start_lateral_damping + (params->lateral_damping - params->start_lateral_damping) * t);
+        }
+    }
+    if (params->type == 1 || params->type == 7 || params->type == 10) {
+        fun_l00_002e8620();
+        follow_camera_start_slide();
+        follow_camera_set_up_spring(0.01f, 0.2f);
+    }
+}
+
+/* Runs volume_camera_swing unless its type is blocked right now (by
+   D_001413F4, D_001413DC, or the hero being off the ground). */
+s32 volume_camera_swing_check(struct UpdateCam *cam) __asm__("FUN_L00_002ed230");
+s32 volume_camera_swing_check(struct UpdateCam *cam) {
+    SwingCameraParams *params = camera_descriptors[cam->descriptor_index].params;
+    if (params->l_buttons_end == 1 && params->done != 0)
         return 0;
-    if (s->v == 11 && D_001413F4_002ed230 != 2)
+    if (params->type == 11 && D_001413F4 != 2)
         return 0;
-    if ((s->v == 1 || s->v == 10) && s->w == 0) {
+    if ((params->type == 1 || params->type == 10) && params->timer == 0) {
         struct Hero *g = &hero;
-        if (g->unk30C.s != 0) {
+        if (g->frames_off_ground.s != 0) {
             if (current_level_index != 14)
                 return 0;
             if (g->unk2284 != 13)
                 return 0;
         }
     }
-    if (s->v == 2 && D_001413DC_002ed230 != 0x1a) {
-        s->w = 0;
+    if (params->type == 2 && D_001413DC != 0x1a) {
+        params->timer = 0;
         return 0;
     }
-    FUN_L00_002ec988_002ed230(p);
+    volume_camera_swing(cam);
     return 0;
 }
-typedef struct {
-    char pad[8];
-    int c;
-    int a;
-    int b;
-    char pad2[0x26 - 0x14];
-    short done;
-    char pad3[0x34 - 0x28];
-    int chk;
-    char pad4[0x44 - 0x38];
-    short x;
-    short y;
-} S_2ed348_002ed348;
-extern char *D_L00_0015EF50_002ed348 __asm__("D_L00_0015EF50");
-extern char *D_L00_00166E00_002ed348 __asm__("D_L00_00166E00") __attribute__((section(".data")));
-extern unsigned char D_001413F4_002ed348 __asm__("D_001413F4") __attribute__((section(".data")));
-extern float FUN_001f99c0_002ed348(float) __asm__("FUN_001f99c0");
-extern int FUN_00214720_002ed348(void *, int) __asm__("FUN_00214720");
-extern int FUN_L00_0025fa38_002ed348(void *, int) __asm__("FUN_L00_0025fa38");
-extern int FUN_L00_0025faf0_002ed348(void *, int) __asm__("FUN_L00_0025faf0");
 
-int FUN_L00_002ed348(void *pv) {
-    unsigned char *p = pv;
-    char *g = D_L00_00166E00_002ed348;
-    S_2ed348_002ed348 *s =
-        *(S_2ed348_002ed348 **)(D_L00_0015EF50_002ed348 + *(short *)(p + 0x84) * 32 + 0x1c);
-    char *h = *(char **)(g + 0x70);
-    char *b = h + 0x130;
-    char *a = h + 0x1A8;
-    if (*(short *)(g + 0x86) != 0)
+/* Nonzero while the hero is in one of the aim camera's volumes; sets `done` otherwise. */
+s32 volume_camera_aim_active(struct UpdateCam *cam) __asm__("FUN_L00_002ed348");
+s32 volume_camera_aim_active(struct UpdateCam *cam) {
+    struct UpdateCam *rec = current_follow_cam;
+    AimCameraParams *params = camera_descriptors[cam->descriptor_index].params;
+    FollowCamState *state = FOLLOW_CAM_STATE(rec);
+    FollowCamTail *tail = &state->tail;
+    FollowCamFlags *ctl = &state->tail.ctl;
+    if (rec->unk86 != 0)
         return 0;
-    if (s->y != 0 && D_001413F4_002ed348 != 1)
+    if (params->only_in_mode_1 != 0 && D_001413F4 != 1)
         return 0;
-    if (s->x != 0 && D_001413F4_002ed348 == 1)
+    if (params->not_in_mode_1 != 0 && D_001413F4 == 1)
         return 0;
-    if (s->chk != 0) {
-        if (0.01f < FUN_001f99c0_002ed348(*(float *)(b + 0x34)))
+    if (params->need_still != 0) {
+        if (0.01f < absolute_float(tail->unk164))
             return 0;
-        if (0.01f < FUN_001f99c0_002ed348(*(float *)(a + 8)))
+        if (0.01f < absolute_float(ctl->unk1B0))
             return 0;
     }
-    if (s->a >= 0 && FUN_00214720_002ed348(&hero.motion.pos, s->a))
+    if (params->clip_volume >= 0 && is_point_inside_clip_volume(&hero.motion.pos, params->clip_volume))
         return 1;
-    if (s->b >= 0 && FUN_L00_0025fa38_002ed348(&hero.motion.pos, s->b))
+    if (params->volume_25fa38 >= 0 && FUN_L00_0025fa38(&hero.motion.pos, params->volume_25fa38))
         return 1;
-    if (s->c >= 0 && FUN_L00_0025faf0_002ed348(&hero.motion.pos, s->c))
+    if (params->volume_25faf0 >= 0 && FUN_L00_0025faf0(&hero.motion.pos, params->volume_25faf0))
         return 1;
-    s->done = 1;
+    params->done = 1;
     return 0;
 }
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_002ed498.s", FUN_L00_002ed498);
+
+/* Runs an aim camera for one frame: on its first two frames places the
+   camera at the descriptor's position and fits distance, height and offset
+   scale to the hero; then eases them each frame. */
+void volume_camera_aim(struct UpdateCam *cam) __asm__("FUN_L00_002ed498");
+void volume_camera_aim(struct UpdateCam *cam) {
+    CameraVec pos;
+    CameraVec to_pos;
+    CameraVec tmp;
+    CameraVec level;
+    AimCameraParams *params;
+    struct UpdateCam *rec;
+    Vec4f *rec_pos;
+    FollowCamState *rig;
+    FollowCamState *state;
+    FollowCamBlock *follow;
+    FollowCamTail *tail;
+    FollowCamSnap *snap;
+    FollowCamReset *reset;
+    f32 up;
+    f32 angle;
+
+    params = camera_descriptors[cam->descriptor_index].params;
+    if (volume_camera_aim_active(cam)) {
+        if (fun_l00_002e83c0(cam) <= 0) {
+            if (params->timer) {
+                params->done = 1;
+            }
+            params->timer = 0;
+            return;
+        }
+        if (!(pad_held & (PAD_L2 | PAD_L1))) {
+            goto run;
+        }
+    }
+    if (params->timer) {
+        params->done = 1;
+    }
+    params->timer = 0;
+    fun_l00_002e8388(cam);
+    return;
+run:
+    if (params->timer < 2) {
+        {
+            pos[0] = camera_descriptors[cam->descriptor_index].pos[0];
+            pos[1] = camera_descriptors[cam->descriptor_index].pos[1];
+            pos[2] = camera_descriptors[cam->descriptor_index].pos[2];
+        }
+        *(s32 *)&pos[3] = 0;
+        fast_vec_sub(to_pos, pos, &hero.motion.pos);
+        up = fast_vec_dot(to_pos, &hero.unk290);
+        fast_vec_scale(tmp, &hero.unk290, up);
+        fast_vec_sub(level, to_pos, tmp);
+        params->distance = fast_vec_length(level);
+        params->height = -up;
+        angle = params->angle;
+        if (absolute_float(angle) == 1.5707964f) {
+            *(s32 *)&params->offset_scale = 0;
+        } else {
+            params->offset_scale = params->height - params->distance * (fast_sin(angle) / fast_cos(angle));
+        }
+        rec = current_follow_cam;
+        rig = FOLLOW_CAM_STATE(rec);
+        rec_pos = &rec->pos;
+        follow = &rig->follow;
+        tail = &rig->tail;
+        snap = &rig->tail.snap;
+        /* A second pointer to the same state: retail keeps both. */
+        state = rig;
+        reset = &state->reset;
+        qcopy(rec_pos, pos);
+        tail->unk15C = params->distance;
+        tail->distance = params->height;
+        follow->look_height = params->offset_scale;
+        fast_vec_scale(tmp, &hero.unk290, -tail->distance);
+        fast_vec_add(state->follow.eye, &hero.motion.pos, tmp);
+        fast_vec_sub(tail->unk130, pos, state->follow.eye);
+        qcopy(state->tail.unk140, tail->unk130);
+        fast_vec_scale(tmp, &hero.unk290, -follow->look_height);
+        fast_vec_add(state->follow.look_target, &hero.motion.pos, tmp);
+        qcopy(state->follow.unkD0, state->follow.look_target);
+        qcopy(follow->focus, &hero.motion.pos);
+        qcopy(state->follow.offset, follow->focus);
+        qcopy(state->position, rec_pos);
+        qcopy(state->tail.snap.unk1F0, rec_pos);
+        *(s32 *)&snap->unk200 = 0;
+        *(s32 *)&reset->unk34 = 0;
+        reset->look_height = follow->look_height;
+        { f32 zero = reset->unk34;
+        f32 distance = tail->distance;
+        reset->distance = distance;
+        reset->unk22 = 0;
+        reset->unk38 = zero;
+        reset->unk30 = zero;
+        reset->unk2C = zero; }
+    }
+    params->timer += 1;
+    if (scale_game_frames(200) < params->timer) {
+        params->timer = scale_game_frames(200);
+    }
+    if (params->distance != 0.0f) {
+        follow_camera_set_distance(0, params->distance, 0.003f);
+        fun_l00_002e8620();
+    }
+    if (params->height != 0.0f) {
+        follow_camera_set_height(params->height, 0.003f);
+    }
+    if (params->offset_scale != 0.0f) {
+        follow_camera_set_offset_scale(0, params->offset_scale, 0.005f);
+    }
+    if (params->unk28 != 0.0f) {
+        fun_l00_002e8540(params->unk28 * 0.017453292f);
+    }
+    if (params->keep_unk10 == 0) {
+        fun_l00_002e8568(0);
+    }
+}
 #define NOT_SDA
 
 #define MACRO_ADDR
 
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002EB0D8.c: func_L00_002EED60), where it is exact; names translated to the US level program. */
 
-extern char *D_L00_0015EF50;
-extern int D_L00_0015F5C4;
-extern int FUN_L00_002ed348(void *);
-extern void FUN_L00_002ed498(void *);
+extern s32 D_L00_0015F5C4;
 
-int FUN_L00_002ed8b0(char *a) {
-    char *p = *(char **)(D_L00_0015EF50 + *(short *)(a + 0x84) * 32 + 0x1C);
-    if (*(short *)(p + 0x26) != 0)
+/* Runs volume_camera_aim unless the camera is done. While D_L00_0015F5C4 is
+   set and the hero is in the volumes, resets the camera instead. */
+s32 volume_camera_check(struct UpdateCam *cam) __asm__("FUN_L00_002ed8b0");
+s32 volume_camera_check(struct UpdateCam *cam) {
+    AimCameraParams *params = camera_descriptors[cam->descriptor_index].params;
+    if (params->done != 0)
         return 0;
     if (D_L00_0015F5C4 != 0) {
-        if (FUN_L00_002ed348(a) != 0) {
-            *(short *)(p + 0x26) = 0;
-            *(int *)(p + 0x20) = 0;
+        if (volume_camera_aim_active(cam) != 0) {
+            params->done = 0;
+            params->timer = 0;
             return 0;
         }
     }
-    FUN_L00_002ed498(a);
+    volume_camera_aim(cam);
     return 0;
 }
 typedef struct {
@@ -1552,18 +2159,18 @@ typedef struct {
 extern u8 D_L00_00166DC0_2ed950[] __asm__("D_L00_00166DC0") __attribute__((section(".data")));
 extern E_2ed950 D_0013E550_2ed950[] __asm__("D_0013E550") __attribute__((section(".data")));
 extern T_2ed950 *D_L00_0015F5F4_2ed950 __asm__("D_L00_0015F5F4");
-f32 FUN_001f9b48_2ed950(void *, void *) __asm__("FUN_001f9b48");
+f32 distance_xyz(void *, void *) __asm__("FUN_001f9b48");
 s32 FUN_001f9740_2ed950(s32 *) __asm__("FUN_001f9740");
 s32 FUN_L00_0028ddd8_2ed950(s32, s32, void *, s32) __asm__("FUN_L00_0028ddd8");
 s32 FUN_00213260_2ed950(s32) __asm__("FUN_00213260");
 s32 FUN_001f96f8_2ed950(s32) __asm__("FUN_001f96f8");
-void FUN_0022d798_2ed950(s32) __asm__("FUN_0022d798");
+void release_voice_slot(s32) __asm__("FUN_0022d798");
 void FUN_L00_002ed950(u8 *m) {
     S_2ed950 *s = *(S_2ed950 **)(m + 8);
     f32 d, r;
     if (s->id < 0)
         return;
-    d = FUN_001f9b48_2ed950(D_L00_00166DC0_2ed950, m + 0x40);
+    d = distance_xyz(D_L00_00166DC0_2ed950, m + 0x40);
     r = *(f32 *)(m + 0xC);
     if (d < r) {
         E_2ed950 *e = ENT_2ed950(s->snd);
@@ -1584,7 +2191,7 @@ void FUN_L00_002ed950(u8 *m) {
         if (h != -1) {
             E_2ed950 *e = ENT_2ed950(h);
             if (e->o == m && e->b74)
-                FUN_0022d798_2ed950(h);
+                release_voice_slot(h);
         }
         s->snd = -1;
     }
@@ -1607,7 +2214,7 @@ extern void mul_2edad8(void *, void *, void *) __asm__("FUN_001f9cf8");
 extern f32 fabs_2edad8(f32) __asm__("FUN_001f99c0");
 extern s32 tick_2edad8(void *) __asm__("FUN_001f9740");
 extern s32 play_2edad8(s32, s32, void *, s32) __asm__("FUN_L00_0028ddd8");
-extern f32 frand_2edad8(f32, f32) __asm__("FUN_002132a8");
+extern f32 random_float_between(f32, f32) __asm__("FUN_002132a8");
 extern s32 irand_2edad8(s32) __asm__("FUN_00213260");
 extern s32 scale_2edad8(s32) __asm__("FUN_001f96f8");
 void FUN_L00_002edad8(u8 *m) {
@@ -1645,9 +2252,9 @@ void FUN_L00_002edad8(u8 *m) {
     if (tick_2edad8(&s->timer) != 0) {
         s->h = play_2edad8(s->snd, 0, m, 0x400);
         if (s->h != -1) {
-            r.f[0] = frand_2edad8(-1.0f, 1.0f);
-            r.f[1] = frand_2edad8(-1.0f, 1.0f);
-            r.f[2] = frand_2edad8(-1.0f, 1.0f);
+            r.f[0] = random_float_between(-1.0f, 1.0f);
+            r.f[1] = random_float_between(-1.0f, 1.0f);
+            r.f[2] = random_float_between(-1.0f, 1.0f);
             mul_2edad8(&r, &r, m + 0x10);
             add_2edad8(&r, &r, m + 0x40);
             qcopy(D_0013E550_2edad8 + 0x90 + s->h * 0x70, &r);

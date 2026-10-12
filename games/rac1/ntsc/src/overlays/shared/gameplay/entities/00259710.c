@@ -13,7 +13,8 @@ void FUN_L00_00259710(void *a) {
 
 /* Ported from rac1-decomp (src/overlays/shared/mobyutil_00258BC8.c: func_L00_0025A778), where it is exact; names translated to the US level program. */
 
-int FUN_L00_00259740(float *p, float *v, int n) {
+int point_in_path_xy(float *p, float *v, int n) __asm__("FUN_L00_00259740");
+int point_in_path_xy(float *p, float *v, int n) {
     int r = 0;
     int i = 0;
     int k;
@@ -57,7 +58,8 @@ void FUN_L00_00259858(char *a, int b, int c, float d) {
 }
 #include "qcopy.h"
 /* Fills a record with b, c, d and flag 1, and copies the vector q into its start. */
-void FUN_L00_00259888(char *a, int b, int c, float d, void *q) {
+void make_hit_descriptor(char *a, int b, int c, float d, void *q) __asm__("FUN_L00_00259888");
+void make_hit_descriptor(char *a, int b, int c, float d, void *q) {
     *(int *)(a + 0x10) = b;
     *(int *)(a + 0x14) = c;
     *(float *)(a + 0x1C) = d;
@@ -68,11 +70,11 @@ INCLUDE_ASM("config/us/overlays/asm/FUN_L00_002598b0.s", FUN_L00_002598b0);
 #ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_002599e8.s", FUN_L00_002599e8);
 #else
-extern void FUN_L00_0024f7c8(void *, int, void *);
+extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
 extern void FUN_L00_002598b0(void *, void *, int, float, float, float, int, int, int);
 void FUN_L00_002599e8(void *a, int b, int c, float d, float e, float f, int g, int h, int i) {
     float position[4] __attribute__((aligned(16)));
-    FUN_L00_0024f7c8(a, b, position);
+    moby_point_position(a, b, position);
     FUN_L00_002598b0(a, position, c, d, (float)c, f, g, h, i);
 }
 #endif
@@ -150,18 +152,18 @@ typedef struct {
     int idx;
 } G_259bc8;
 extern G_259bc8 D_L00_00173E40 __attribute__((section(".data")));
-extern T_259bc8 D_L00_00178100[] __attribute__((section(".data")));
+extern T_259bc8 moby_hits[] __asm__("D_L00_00178100") __attribute__((section(".data")));
 extern float FUN_001f9af0(void *);
 
 void FUN_L00_00259bc8(unsigned char *m, int x, int y, u128 *p, u128 *q, float f) {
     int i = D_L00_00173E40.idx;
     T_259bc8 *e;
     if (m[0xA4] != 0xFF) {
-        T_259bc8 *c = &D_L00_00178100[m[0xA4]];
+        T_259bc8 *c = &moby_hits[m[0xA4]];
         if (c->owner == m && f < c->f)
             return;
     }
-    e = &D_L00_00178100[i];
+    e = &moby_hits[i];
     e->x = x;
     e->y = y;
     e->f = f;
@@ -172,8 +174,8 @@ void FUN_L00_00259bc8(unsigned char *m, int x, int y, u128 *p, u128 *q, float f)
     } else {
         e->flag = 0;
     }
-    qcopy(&D_L00_00178100[i].a, p);
-    qcopy(&D_L00_00178100[i].b, q);
+    qcopy(&moby_hits[i].a, p);
+    qcopy(&moby_hits[i].b, q);
     m[0xA4] = i;
     D_L00_00173E40.idx = (i + 1) & 0x3F;
 }
@@ -183,7 +185,8 @@ void FUN_001f9a68_00259d08(void *, void *, float) __asm__("FUN_001f9a68");
 void FUN_001f9a10_00259d08(void *, void *, void *) __asm__("FUN_001f9a10");
 void FUN_001f9a28_00259d08(void *, void *, void *) __asm__("FUN_001f9a28");
 int FUN_001efa68_00259d08(void *, void *, int, void *, int) __asm__("FUN_001efa68");
-int FUN_L00_00259d08(void *a, void *b, void *c, void *d, void *e, int f, int n) {
+int sweep_hit_segment(void *a, void *b, void *c, void *d, void *e, int f, int n) __asm__("FUN_L00_00259d08");
+int sweep_hit_segment(void *a, void *b, void *c, void *d, void *e, int f, int n) {
     V4_259d08 da, db, va, vb;
     float k, t;
     int i = 0;
@@ -292,8 +295,9 @@ extern struct Ent_z D_L00_00178100_c[] __asm__("D_L00_00178100") __attribute__((
 static inline u8 load_u8_0025a420(u8 *p) {
     return *p;
 }
-/* Returns the D_L00_00178100 entry linked from p+0xA4 when it matches mask; may unlink it. */
-struct Ent_z *FUN_L00_0025a420(u8 *p, s32 mask, s32 flag) {
+/* Returns the moby_hits entry linked from p+0xA4 when it matches mask; may unlink it. */
+struct Ent_z *find_moby_hit(u8 *p, s32 mask, s32 flag) __asm__("FUN_L00_0025a420");
+struct Ent_z *find_moby_hit(u8 *p, s32 mask, s32 flag) {
     struct Ent_z *e;
     u8 *a = p + 0xA4;
     u8 i = load_u8_0025a420(a);
@@ -367,7 +371,7 @@ extern void FUN_001f9bf8(void *, void *, f32);
 extern void FUN_001f9a10(void *, void *, void *);
 extern void FUN_001f9c48(void *, void *, f32);
 
-/* FUN_L00_0025a478 is the executable function of the same bytes (src/gameplay). */
+/* hit_reaction is the executable function of the same bytes (src/gameplay). */
 
 typedef struct {
     f32 x, y, z, w;
@@ -383,7 +387,9 @@ f32 FUN_001f9e90_0025a9f8(f32, f32) __asm__("FUN_001f9e90");
 f32 FUN_001f9dc8_0025a9f8(f32) __asm__("FUN_001f9dc8");
 f32 FUN_001f9de0_0025a9f8(f32) __asm__("FUN_001f9de0");
 void FUN_L00_00259a88_0025a9f8(u8 *, M_0025a9f8 *) __asm__("FUN_L00_00259a88");
-void FUN_L00_0025a9f8(u8 *self, OvlQuad *pos, u8 **list, s32 n, u8 *skip, s32 k, s32 c0,
+void send_blast_hits(u8 *self, OvlQuad *pos, u8 **list, s32 n, u8 *skip, s32 k, s32 c0,
+                      s32 c1, f32 f, f32 spd, f32 z) __asm__("FUN_L00_0025a9f8");
+void send_blast_hits(u8 *self, OvlQuad *pos, u8 **list, s32 n, u8 *skip, s32 k, s32 c0,
                       s32 c1, f32 f, f32 spd, f32 z) {
     struct {
         OvlQuad p;
@@ -456,7 +462,156 @@ float FUN_L00_0025abf0(float *a, float *b, float *out, float speed, float g) {
     }
     return -((a[2] - b[2]) + g * (t * t) * 0.5f) / t;
 }
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_0025aca0.s", FUN_L00_0025aca0);
+#else
+typedef union {
+    u128 q;
+    float f[4];
+} Vec4_25aca0 __attribute__((aligned(16)));
+
+extern void FUN_002531e0_25aca0(void *, int, int) __asm__("FUN_0020fa90");
+extern void FUN_001f9a10_25aca0(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void FUN_001f9a28_25aca0(void *, void *, void *) __asm__("FUN_001f9a28");
+extern void FUN_001f9a68_25aca0(float, void *, void *) __asm__("FUN_001f9a68");
+extern void FUN_001f9a80_25aca0(float, void *, void *) __asm__("FUN_001f9a80");
+extern void FUN_001251e8_25aca0(float, void *, void *) __asm__("FUN_001251e8");
+extern float FUN_001f9af0_25aca0(void *) __asm__("FUN_001f9af0");
+extern float FUN_001f9988_25aca0(float) __asm__("FUN_001f9988");
+extern void FUN_001f9cf8_25aca0(void *, void *, void *) __asm__("FUN_001f9cf8");
+extern void FUN_L00_001ff378_25aca0(float, void *, void *) __asm__("FUN_L00_001ff378");
+extern float FUN_001f9dc8_25aca0(float) __asm__("FUN_001f9dc8");
+extern float FUN_001f9de0_25aca0(float) __asm__("FUN_001f9de0");
+extern float FUN_002132a8_25aca0(float, float) __asm__("FUN_002132a8");
+extern float FUN_00213308_25aca0(void) __asm__("FUN_00213308");
+
+int FUN_L00_0025aca0(float density, unsigned char *entity, int maximum, Vec4_25aca0 *out, int mask) {
+    float weights[20];
+    unsigned char *entries[20];
+    Vec4_25aca0 first, second, third, fourth, fifth;
+    unsigned char *list;
+    unsigned char *entry;
+    int count, index, chosen, emitted, limit;
+    unsigned int flags;
+    float total, weight, radius, extent, random;
+
+    list = *(unsigned char **)(*(unsigned char **)(entity + 0x24) + 0x10);
+    if (!list) return 0;
+    if (*(short *)(list + 2)) FUN_002531e0_25aca0(entity, *(short *)(list + 2), 0);
+    if (*(int *)(list + 4) <= 0) return 0;
+    count = 0;
+    index = 0;
+    total = 0.0f;
+    entry = list + 0x10;
+    do {
+        flags = *(unsigned int *)entry;
+        if (!((mask >> (index & 31) ^ 1) & 1) && (flags & 0x20000)) {
+            entries[count] = entry;
+            if ((flags & 0xff) == 3) {
+                first.q = *(u128 *)(entry + 0x10);
+                FUN_001f9a68_25aca0(*(float *)(entity + 0x2c), &first, &first);
+                radius = first.f[3] * *(float *)(entity + 0x2c) * 0.0009765625f;
+                extent = *(float *)(entry + 4) * *(float *)(entity + 0x2c) * 0.0009765625f;
+                weights[count] = radius * 4.187743f * radius * radius + radius * 1.5707964f * radius * extent;
+            } else if ((flags & 0xff) < 4) {
+              if ((flags & 0xff) < 2) {
+                first.q = *(u128 *)(entry + 0x10);
+                FUN_001f9a80_25aca0(*(float *)(entity + 0x2c) * 0.0009765625f, &first, &first);
+                radius = first.f[3];
+                weights[count] = radius * 4.1887903f * radius * radius;
+              } else {
+                first.q = *(u128 *)(0x70000000 + (*(int *)(entry + 4) << 4));
+                second.q = *(u128 *)(entry + 0x10);
+                FUN_001f9a10_25aca0(&first, &first, &second);
+                FUN_001f9a68_25aca0(*(float *)(entity + 0x2c) * 0.0009765625f, &first, &first);
+                radius = *(float *)(entry + 0xc) * *(float *)(entity + 0x2c) * 0.0009765625f;
+                weights[count] = radius * 4.1887903f * radius * radius;
+              }
+            } else if ((flags & 0xff) == 4) {
+                FUN_001251e8_25aca0(*(float *)(entity + 0x2c) * 0.0009765625f, &first, (void *)(0x70000000 + (*(short *)(entry + 4) << 4)));
+                FUN_001251e8_25aca0(*(float *)(entity + 0x2c) * 0.0009765625f, &second, (void *)(0x70000000 + (*(short *)(entry + 6) << 4)));
+                FUN_001f9a28_25aca0(&third, &first, &second);
+                radius = FUN_001f9af0_25aca0(&third);
+                extent = *(float *)(entry + 0xc) * *(float *)(entity + 0x2c) * 0.0009765625f;
+                weights[count] = extent * 1.5707964f * extent * radius;
+            }
+            total += weights[count];
+            count++;
+        }
+        index++;
+        entry = list + 0x10 + (index << 5);
+    } while (!(flags & 0x80000000));
+    limit = (int)(density * total + 0.5f);
+    if (maximum < limit) limit = maximum;
+    if (limit < 1) return limit;
+    for (emitted = 0; emitted < limit; emitted++) {
+        random = FUN_002132a8_25aca0(0.0f, total);
+        chosen = 0;
+        if (count > 0 && !(random < weights[0])) {
+            do {
+                random -= weights[chosen++];
+            } while (chosen < count && !(random < weights[chosen]));
+        }
+        entry = entries[chosen];
+        if (*entry < 3) {
+            if (*entry < 2) {
+                first.q = *(u128 *)(entry + 0x10);
+                FUN_001f9a68_25aca0(*(float *)(entity + 0x2c), &first, &first);
+                radius = first.f[3];
+            } else {
+                first.q = *(u128 *)(0x70000000 + (*(int *)(entry + 4) << 4));
+                second.q = *(u128 *)(entry + 0x10);
+                FUN_001f9a10_25aca0(&first, &first, &second);
+                FUN_001f9a68_25aca0(*(float *)(entity + 0x2c), &first, &first);
+                radius = *(float *)(entry + 0xc);
+            }
+            extent = radius * *(float *)(entity + 0x2c) * 0.0009765625f;
+            FUN_L00_001ff378_25aca0(1024.0f, &first, &first);
+            do {
+                second.f[0] = FUN_002132a8_25aca0(-extent, extent);
+                second.f[1] = FUN_002132a8_25aca0(-extent, extent);
+                second.f[2] = FUN_002132a8_25aca0(-extent, extent);
+            } while (extent < FUN_001f9af0_25aca0(&second));
+            FUN_001f9a10_25aca0(&second, &second, &first);
+            FUN_001f9cf8_25aca0(&second, &second, entity + 0xc0);
+            FUN_001f9a10_25aca0(&out[emitted], &second, entity + 0x10);
+        } else if (*entry == 3) {
+            first.q = *(u128 *)(entry + 0x10);
+            FUN_001f9a68_25aca0(*(float *)(entity + 0x2c), &first, &first);
+            radius = first.f[3] * *(float *)(entity + 0x2c) * 0.0009765625f;
+            extent = *(float *)(entry + 4) * *(float *)(entity + 0x2c) * 0.0009765625f;
+            FUN_L00_001ff378_25aca0(1024.0f, &first, &first);
+            weight = FUN_002132a8_25aca0(0.0f, radius * radius);
+            weight = FUN_001f9988_25aca0(weight);
+            random = FUN_002132a8_25aca0(0.0f, extent);
+            radius = FUN_00213308_25aca0();
+            second.f[0] = FUN_001f9dc8_25aca0(radius) * weight;
+            second.f[1] = FUN_001f9de0_25aca0(radius) * weight;
+            second.f[2] = random;
+            FUN_001f9a10_25aca0(&second, &second, entity + 0x10);
+            FUN_001f9a10_25aca0(&out[emitted], &first, &second);
+        } else if (*entry == 4) {
+            FUN_001251e8_25aca0(*(float *)(entity + 0x2c), &first, (void *)(0x70000000 + (*(short *)(entry + 4) << 4)));
+            FUN_001251e8_25aca0(*(float *)(entity + 0x2c), &second, (void *)(0x70000000 + (*(short *)(entry + 6) << 4)));
+            FUN_001f9a28_25aca0(&third, &second, &first);
+            weight = FUN_002132a8_25aca0(0.0f, 1.0f);
+            FUN_001f9a68_25aca0(weight, &third, &third);
+            FUN_001f9a10_25aca0(&fourth, &third, &first);
+            FUN_L00_001ff378_25aca0(1024.0f, &fourth, &fourth);
+            extent = *(float *)(entry + 0xc) * *(float *)(entity + 0x2c) * 0.0009765625f;
+            do {
+                fifth.f[0] = FUN_002132a8_25aca0(-extent, extent);
+                fifth.f[1] = FUN_002132a8_25aca0(-extent, extent);
+                fifth.f[2] = FUN_002132a8_25aca0(-extent, extent);
+            } while (extent < FUN_001f9af0_25aca0(&fifth));
+            FUN_001f9a10_25aca0(&fifth, &fifth, &fourth);
+            FUN_001f9cf8_25aca0(&fifth, &fifth, entity + 0xc0);
+            FUN_001f9a10_25aca0(&out[emitted], &fifth, entity + 0x10);
+        }
+    }
+    return limit;
+}
+#endif
 typedef struct {
     unsigned char pad0[8];
     float f8;

@@ -3990,7 +3990,163 @@ void func_L01_00316730(Cam_316730 *cam) {
     func_L00_001FF4B0(cam->f10, cam->f10, 1.0f);
     FastVecCross(cam->f20, cam->f10, cam->f0);
 }
-INCLUDE_ASM("asm/overlays", func_L01_003171B8);
+typedef u32 u128_171B8 __attribute__((mode(TI), aligned(16)));
+typedef union {
+    u128_171B8 q;
+    f32 f[4];
+    s32 i[4];
+} Vec4_171B8;
+typedef int OvlQuad_171B8 __attribute__((mode(TI)));
+typedef union {
+    OvlQuad_171B8 q;
+    f32 f[4];
+    s32 i[4];
+} OvlVec4;
+typedef struct {
+    Vec4_171B8 pos; /* 0x00 */
+    u8 pad10[0x30];
+    s32 state; /* 0x40 */
+    u8 pad44[4];
+    f32 max_angle; /* 0x48 */
+    f32 dist; /* 0x4C */
+    u8 pad50[0x10];
+} CameraFocus_171B8;
+typedef struct {
+    Vec4_171B8 vel; /* 0x00 */
+    u8 pad10[0x10];
+    f32 unk20; /* 0x20 */
+    f32 unk24; /* 0x24 */
+    f32 unk28; /* 0x28 */
+    s16 unk2C; /* 0x2C */
+    u8 pad2E[0x22];
+} CameraView_171B8;
+typedef struct {
+    f32 dist; /* 0x00 */
+    f32 unk4; /* 0x04 */
+    u8 pad8[8];
+    f32 height; /* 0x10 */
+    u8 pad14[0xC];
+} CameraSpring_171B8;
+typedef struct {
+    Vec4_171B8 vel; /* 0x00 */
+    u8 pad10[0x10];
+    Vec4_171B8 accel; /* 0x20 */
+    f32 unk30; /* 0x30 */
+    f32 unk34; /* 0x34 */
+    f32 unk38; /* 0x38 */
+    s32 unk3C; /* 0x3C */
+    f32 unk40; /* 0x40 */
+    u8 pad44[0xC];
+} CameraTrack_171B8;
+typedef struct {
+    s32 unk0;
+    s32 unk4;
+    s32 unk8;
+    s32 unkC;
+    s32 unk10;
+} CameraBlend_171B8;
+typedef struct {
+    Vec4_171B8 axis; /* 0x00 */
+    f32 unk10; /* 0x10 */
+    f32 unk14; /* 0x14 */
+    s32 unk18; /* 0x18 */
+    s16 mode; /* 0x1C */
+    u8 pad1E[2];
+    f32 unk20; /* 0x20 */
+    s32 unk24; /* 0x24 */
+    u8 pad28[8];
+    CameraView_171B8 view; /* 0x30 */
+    CameraFocus_171B8 focus; /* 0x80 */
+    CameraSpring_171B8 spring; /* 0xE0 */
+    CameraTrack_171B8 track; /* 0x100 */
+    CameraBlend_171B8 blend; /* 0x150 */
+} CameraOrbit_171B8;
+typedef struct {
+    u8 padA[0xA];
+    s16 mode; /* 0x7E */
+} CameraControl_171B8;
+typedef struct {
+    u8 pad0[0x70];
+    CameraOrbit_171B8 *orbit; /* 0x70 */
+    CameraControl_171B8 control; /* 0x74 */
+    u8 pad80[4];
+    s16 preset; /* 0x84: row of D_L01_0015EF50 */
+} Camera_171B8;
+typedef struct {
+    s32 count;
+    u8 pad4[0xC];
+    Vec4_171B8 pts[1]; /* 0x10 */
+} CameraPath_171B8;
+typedef struct {
+    u8 pad0[0x20];
+    s32 track_path; /* 0x20: D_L01_001B0930 path the first path is measured along */
+    s32 target; /* 0x24: row of D_L01_0015F70C */
+    s32 path; /* 0x28: D_L01_001B0930 path */
+    s32 look_path; /* 0x2C: D_L01_001B0930 path measured along the target's path */
+    s32 kind; /* 0x30 */
+    s16 ready; /* 0x34: paths prepared */
+} CameraPreset_171B8;
+typedef struct {
+    u8 pad0[0x1C];
+    CameraPreset_171B8 *preset; /* 0x1C */
+} CameraPresetRow_171B8;
+extern CameraPresetRow_171B8 * D_L01_0015F050_171B8 __asm__("D_L01_0015F050") MACRO_ADDR;
+extern CameraPath_171B8 * D_L01_001B0C30_171B8[] __asm__("D_L01_001B0C30");
+void func_L01_00316270_171B8(Camera_171B8 *cam) __asm__("func_L01_00316270");
+extern Camera_171B8 * D_L01_00167304;
+extern OvlVec4 D_0013F4D0_171B8 __asm__("D_0013F4D0");
+extern f32 func_001F9D10(void *, void *);
+extern f32 func_001F9C78(void *, void *);
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_00315de0. */
+void func_L01_003171B8(Camera_171B8 *cam) {
+    CameraPresetRow_171B8 *rows = D_L01_0015F050_171B8;
+    Camera_171B8 *src = D_L01_00167304;
+    CameraPreset_171B8 *s = rows[cam->preset].preset;
+    OvlVec4 at, delta, to_camera;
+    s32 seg;
+    f32 t;
+
+    qcopy((char *)cam + 0x30, (char *)src + 0x30);
+    qcopy(cam, src);
+    qcopy((char *)cam + 0x10, (char *)src + 0x10);
+    qcopy((char *)cam + 0x20, (char *)src + 0x20);
+    qcopy((char *)cam + 0x40, cam);
+
+    if (s->track_path >= 0) {
+        CameraPath_171B8 *path;
+        s32 i;
+        s32 next;
+        path = D_L01_001B0C30_171B8[s->track_path];
+        for (i = 0; i < path->count; i++) {
+            next = (i + 1) % path->count;
+            path->pts[i].f[3] = func_001F9D10(&path->pts[i], &path->pts[next]);
+        }
+    }
+
+    *(s16 *)((char *)s + 0x36) = 0;
+    if (s->kind == 3) {
+        CameraPath_171B8 *path;
+        s32 next;
+        path = D_L01_001B0C30_171B8[s->track_path];
+        seg = 0;
+        t = 0.0f;
+        if (func_L00_0025EFC0(path, &D_0013F4D0_171B8, &at, &seg, &t,
+                             0, 20.0f, 1.0f, 0.0f)) {
+            s32 count = path->count;
+            next = seg + 1;
+            if (next >= count) next = count - 1;
+            func_001F9BF0(&delta, &path->pts[next], &path->pts[seg]);
+            if (func_001F9CB8(&delta) != 0.0f && next != seg) {
+                func_L00_001FF4B0(&delta, &delta, 1.0f);
+                func_001F9BF0(&to_camera, (char *)cam + 0x30, &D_0013F4D0_171B8);
+                if (0.0f < func_001F9C78(&to_camera, &delta))
+                    *(s16 *)((char *)s + 0x36) = 1;
+            }
+        }
+    }
+    func_L01_00316270_171B8(cam);
+}
 typedef struct {
     u8 pad00[0x24];
     s32 target;

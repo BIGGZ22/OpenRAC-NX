@@ -201,7 +201,107 @@ void func_001FF7F0(int bank, int addr) {
 
 LINKER_REMNANT("asm/remnants/text", func_001FF950);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001FF958); /* Hud_SendResidentBank(int, char *, bool) */
+extern s32 D_0015EF88 MACRO_ADDR;
+struct HudAnimDef {
+    u16 id;
+    u16 count;
+    u16 start;
+    u8 flags;
+    u8 pad7;
+};
+struct HudFrameRef {
+    s16 palette_index;
+    s16 image_index;
+};
+struct HudTexPage {
+    u32 source_address;
+    u16 gs_block_offset;
+    u8 width_log2;
+    u8 height_log2;
+};
+struct HudTexCounts {
+    u8 pad0[0x14];
+    s32 mid_ends[8];
+    s32 ends[16];
+    s32 loaded[16];
+};
+struct HudBank {
+    s32 unk0;
+    s32 off4;
+    s32 off8;
+    s32 offC;
+    s32 off10;
+    u8 pad14[0x40];
+    s32 has54;
+    s32 size58;
+    s32 has5C;
+    s32 has60;
+    s32 has64;
+    u8 pad68[0x2C];
+    s32 unk94;
+    s32 unk98;
+    s32 unk9C;
+    s32 unkA0;
+    s32 unkA4;
+};
+struct HudState {
+    s32 serial; /* 0x00: next animation serial (queue_animation_update) */
+    s32 unk4;
+    s32 unk8;
+    s32 z; /* 0x0C: sprite Z in the high word of XYZ */
+    s32 heap_cur; /* 0x10: hud_heap_alloc cursor */
+    s32 heap_end; /* 0x14 */
+    union {
+        struct HudTexCounts *counts;
+        struct HudBank *bank;
+    } header; /* 0x18 */
+    struct HudAnimDef *anim_defs; /* 0x1C */
+    struct HudFrameRef *frame_refs; /* 0x20 */
+    struct HudTexPage *image_pages; /* 0x24 */
+    struct HudTexPage *palette_pages; /* 0x28 */
+    s32 unk2C;
+    s32 unk30;
+};
+extern struct HudState D_0019A4E8_FF958 __asm__("D_0019A4E8");
+extern void func_001FF7F0(s32 bank, s32 base);
+extern void func_00201348_FF958(u32 data, s32 dbp, s32 psm, s32 wlog, s32 hlog, s32 immediate) __asm__("func_00201348");
+
+/* Uploads the image pages of one HUD bank to GS memory, from the depth buffer address up, and records each page's block offset. Bank 0's pages are linked first when the bank file is not linked yet.
+   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/ui/hud/hud_send_resident_bank.c, hud_send_resident_bank. */
+void func_001FF958(s32 bank, s32 base, s32 immediate) {
+    struct HudTexCounts *counts;
+    s32 address;
+    s32 bank_offset;
+    s32 first;
+    s32 end;
+    s32 i;
+    s32 page;
+    s32 width_log2;
+    s32 height_log2;
+    s32 size;
+
+    if (D_0019A4E8_FF958.header.counts->loaded[bank] == 0) {
+        func_001FF7F0(0, base);
+        address = D_0015EF88;
+    } else {
+        address = D_0015EF88;
+    }
+    counts = D_0019A4E8_FF958.header.counts;
+    bank_offset = bank << 2;
+    first = bank == 0 ? 0 : counts->ends[bank - 1];
+    i = first;
+    end = *(s32 *)((u8 *)D_0019A4E8_FF958.header.counts + bank_offset + 0x34); /* ends[bank] */
+    for (; i < end; i++) {
+        page = address >> 8;
+        width_log2 = D_0019A4E8_FF958.image_pages[i].width_log2;
+        height_log2 = D_0019A4E8_FF958.image_pages[i].height_log2;
+        size = 1 << (width_log2 + height_log2);
+        func_00201348_FF958(D_0019A4E8_FF958.image_pages[i].source_address, page, 0x1B, width_log2,
+                         height_log2, immediate);
+        address += size * 4;
+        D_0019A4E8_FF958.image_pages[i].gs_block_offset = page;
+    }
+}
 
 extern int D_001941CC NOT_SDA;
 extern int D_0019A4E8 NOT_SDA;

@@ -2,7 +2,150 @@
 #include "types.h"
 #include "asm.h"
 
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L07_0031d2e0.s", FUN_L07_0031d2e0);
+#else
+extern void debug_print(const char *, ...) __asm__("FUN_001e93b0");
+extern float convert_integer_to_float(int) __asm__("FUN_001fa6c0");
+extern int truncate_float_to_s32(float) __asm__("FUN_001fa6d0");
+extern float fast_vec_dist(void *, void *) __asm__("FUN_001f9b48");
+extern float vector_distance(void *, void *) __asm__("FUN_001f9b80");
+extern int is_point_inside_clip_volume(void *, int) __asm__("FUN_00214720");
+extern void mark_moby_for_removal(void *) __asm__("FUN_0020c828");
+extern float random_float_between(float, float) __asm__("FUN_002132a8");
+extern int sample_path(float, int *, float *, int *, float *, int) __asm__("FUN_L00_0025d808");
+extern void spawn_on_path(float *, int, int, int) __asm__("FUN_L00_002c52a8");
+extern int FUN_00120478(float);
+extern char *D_L07_001B0530[];
+extern char D_L07_00211AF0[];
+extern char D_L07_00211B30[];
+extern char D_L07_00211B50[];
+extern char D_L07_00211B78[];
+extern char D_L07_00211BA8[];
+extern int D_L07_00161CA0[] __attribute__((section(".sdata")));
+extern char *D_L07_0015FFD8 __attribute__((sda));
+extern char D_0013F3D0[];
+extern int D_0013D428[];
+
+typedef struct { char pad[0xe]; unsigned short scale; char tail[8]; } L07ScaleRow;
+extern L07ScaleRow D_L07_001C4130[];
+
+void FUN_L07_0031d2e0(char *moby) {
+    int *data = *(int **)(moby + 0x78);
+    int state = *(unsigned char *)(moby + 0x20);
+    if (state == 1) goto state_one;
+    if (state >= 2) return;
+    if (state != 0) return;
+    {
+        int bad = 0;
+        int path_index;
+        int i;
+        int count;
+        char *path;
+        if (data[0] == -1) {
+            debug_print(D_L07_00211AF0);
+            bad = 1;
+        }
+        if (data[1] == -1) {
+            debug_print(D_L07_00211AF0);
+            bad = 1;
+        }
+        if (bad) {
+            debug_print(D_L07_00211B30, *(short *)(moby + 0xb2));
+            mark_moby_for_removal(moby);
+            return;
+        }
+        path_index = data[1];
+        data[8] = 0;
+        path = D_L07_001B0530[path_index];
+        count = *(int *)path;
+        i = 0;
+        if (count > 0) do {
+            char *current_path = D_L07_001B0530[data[1]];
+            int next = (i + 1) % *(int *)current_path;
+            float length = fast_vec_dist(current_path + 0x10 + i * 0x10,
+                                         current_path + 0x10 + next * 0x10);
+            *(float *)(D_L07_001B0530[data[1]] + 0x1c + i * 0x10) = length;
+            *(float *)(data + 8) += *(float *)(D_L07_001B0530[data[1]] + 0x1c + i * 0x10);
+            count = *(int *)D_L07_001B0530[data[1]];
+            i++;
+        } while (i < count);
+        moby[0x20] = 1;
+
+    }
+    return;
+state_one:
+    {
+        int i;
+        int *list = D_L07_00161CA0;
+        if (is_point_inside_clip_volume(D_0013F3D0, data[0]) == 0)
+            return;
+        for (i = 0; list[i] != -1; i++) {
+            int id = list[i];
+            float value = convert_integer_to_float(D_0013D428[id]);
+            float scale = convert_integer_to_float(D_L07_001C4130[id].scale);
+            float ratio = value / scale;
+            float step = random_float_between(0.0f, *(float *)(data + 8));
+            float min_ratio = *(float *)(data + 2) / 100.0f;
+            if (min_ratio <= ratio && ratio < *(float *)(data + 3) / 100.0f) {
+                float lower = scale * (*(float *)(data + 4) / 100.0f) - value;
+                float upper = scale * (*(float *)(data + 5) / 100.0f);
+                float chosen;
+                int total;
+                int batch;
+                int remaining;
+                int path_index;
+                float position[4];
+                float fraction;
+                int segment;
+                char *path;
+                if (data[6] == 0)
+                    chosen = lower < upper ? lower : upper;
+                else
+                    chosen = upper < lower ? lower : upper;
+                total = truncate_float_to_s32(chosen + 0.5f);
+                batch = total / data[7];
+                if (batch == 0)
+                    batch = total;
+                path_index = data[1];
+                path = D_L07_001B0530[path_index];
+                fraction = 0.0f;
+                segment = 0;
+                debug_print(D_L07_00211B50, total, batch);
+                if (total > 0) {
+                    remaining = total - batch;
+                    do {
+                        do {
+                            sample_path(step, (int *)path, position, &segment, &fraction, 1);
+                            if (data[9] == -1 ||
+                                12.0f < vector_distance((*(char **)0x15ffd8) + data[9] * 0x100 + 0x10, position))
+                                break;
+                            step += 10.0f;
+                        } while (1);
+                        {
+                            int x = FUN_00120478(position[0]);
+                            int y = FUN_00120478(position[1]);
+                            int z = FUN_00120478(position[2]);
+                            int path_step = FUN_00120478(step);
+                            debug_print(D_L07_00211B78, id, batch, x, y, z, path_step);
+                        }
+                        spawn_on_path(position, id, batch, 0);
+                        step += random_float_between(*(float *)(data + 8) / 10.0f, 2.0f);
+                        if (remaining < batch) {
+                            debug_print(D_L07_00211BA8, remaining);
+                            batch = remaining;
+                        }
+                        total = remaining;
+                        remaining = total - batch;
+                    } while (total > 0);
+                }
+            }
+        }
+        moby[0x20] = 2;
+
+    }
+}
+#endif
 
 #define NOT_SDA
 
@@ -22,7 +165,7 @@ extern int D_L07_0015F5C4;
 extern int FUN_L00_00257b90(int, int);
 extern s32 random_integer_below(s32) __asm__("func_00213260");
 extern s32 scale_game_frames(s32) __asm__("func_001F96F8");
-extern void FUN_L00_0024f7c8(void *, int, void *);
+extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
 extern void FUN_L00_002637f8(int);
 unsigned char *FUN_L00_0026d000(void *pos, int n, void *vel, int color, float r, float lo, float hi,
                                 float size);
@@ -65,7 +208,7 @@ void FUN_L07_0031eba8(char *m) {
         if (k != 0) {
             mob = (char *)((L07SparkState *)S)->arr[k];
             for (i = 0; i < 4; i++) {
-                FUN_L00_0024f7c8(mob, i, buf);
+                moby_point_position(mob, i, buf);
                 for (j = 9; j >= 0; j--) {
                     float d = random_float_between(20000.0f, 200000.0f);
                     int col = (FUN_L00_00257b90(0x20, 0x80) << 24) | 0x7F7F7F;
@@ -97,7 +240,7 @@ extern int D_L07_0015F5C4;
 extern short D_L07_00161CD8_d __asm__("D_L07_00161CD8") __attribute__((sda));
 extern short D_L07_00161CDC_d __asm__("D_L07_00161CDC") __attribute__((sda));
 extern short D_L07_00161CE0_d __asm__("D_L07_00161CE0") __attribute__((sda));
-extern void FUN_L00_0024f7c8(void *, int, void *);
+extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
 extern void FUN_L00_00263b70(void *, void *, void *, float, float);
 extern void normalize_vector_xyz(void *out, void *a, f32 len) __asm__("FUN_001f9bf8");
 extern void subtract_vector_xyz(void *out, void *a, void *b) __asm__("FUN_001f9a28");
@@ -121,20 +264,20 @@ void FUN_L07_0031f900(unsigned char *moby) {
                 if (s == 2)
                     idx = 4;
                 o = *(char **)(g - (-(idx * 4)) + 0x178);
-                FUN_L00_0024f7c8(o, 0, a0);
-                FUN_L00_0024f7c8(o, 3, b0);
+                moby_point_position(o, 0, a0);
+                moby_point_position(o, 3, b0);
                 subtract_vector_xyz(c0, a0, b0);
                 normalize_vector_xyz(c0, c0, *(float *)&D_L07_00161CD8_d);
                 FUN_L00_00263b70(a0, a0, c0, *(float *)&D_L07_00161CDC_d,
                                  *(float *)&D_L07_00161CE0_d);
-                FUN_L00_0024f7c8(o, 1, a1);
-                FUN_L00_0024f7c8(o, 4, b1);
+                moby_point_position(o, 1, a1);
+                moby_point_position(o, 4, b1);
                 subtract_vector_xyz(c1, a1, b1);
                 normalize_vector_xyz(c1, c1, *(float *)&D_L07_00161CD8_d);
                 FUN_L00_00263b70(a1, a1, c1, *(float *)&D_L07_00161CDC_d,
                                  *(float *)&D_L07_00161CE0_d);
-                FUN_L00_0024f7c8(o, 2, a2);
-                FUN_L00_0024f7c8(o, 5, b2);
+                moby_point_position(o, 2, a2);
+                moby_point_position(o, 5, b2);
                 subtract_vector_xyz(c2, a2, b2);
                 normalize_vector_xyz(c2, c2, *(float *)&D_L07_00161CD8_d);
                 FUN_L00_00263b70(a2, a2, c2, *(float *)&D_L07_00161CDC_d,

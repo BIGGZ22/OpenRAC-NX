@@ -2476,4 +2476,72 @@ void func_L00_002B2DD8(unsigned char *o) {
         spark_2b1af0(&c, &d, 0x4F007FFF, 0x1FFFFFFF, rndi_2b1af0(t, fr_2b1af0(0x28)), 1, 10000.0f);
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_002B30C8);
+typedef int OvlQuad __attribute__((mode(TI)));
+typedef struct {
+    float f[4];
+} __attribute__((aligned(16))) V_2b1af0_B30C8;
+void func_001F9EC0(void *, void *, void *);
+void func_001F9BD8(void *, void *, void *);
+void func_001F9C30(void *, void *, float);
+float func_002140F8(float, float);
+void func_L00_001FF4B0(void *, void *, float);
+float func_L00_00258C80(float, float);
+int func_001F9850(int);
+int func_L00_00258BC8(int, int);
+void func_L00_00272158(void *, void *, int, int, int, int, float, float, float, float, float);
+void func_L00_0026DA50(void *, void *, int, int, int, int, float);
+extern V_2b1af0_B30C8 D_0013FAB0;
+void func_002156E0(void *, void *, void *, float);
+int func_001FA898(float);
+int func_002140B0(int);
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002aa670.c, FUN_L00_002b1de0. */
+void func_L00_002B30C8(unsigned char *o) {
+    V_2b1af0_B30C8 c;
+    V_2b1af0_B30C8 a;
+    V_2b1af0_B30C8 b;
+    V_2b1af0_B30C8 d;
+    int i;
+    int j;
+    int t;
+    float angle;
+
+    *(OvlQuad *)&a = 0;
+    a.f[0] = 0.3f;
+    a.f[1] = -1.2f;
+    a.f[3] = 1.0f;
+    func_001F9EC0(&a, &a, o + 0xC0);
+    func_001F9BD8(&b, o + 0x10, &a);
+    for (i = 0; i < func_001FA898(24.0f); i++) {
+        angle = func_L00_00258C80(0.0f, 0.1308997f);
+        func_002156E0(&c, &D_0013FAB0, (char *)&D_0013FAB0 - 0x20,
+                         (float)i * 0.2617994f + angle);
+        func_L00_001FF4B0(&c, &c, func_002140F8(0.05f, 0.1f));
+        t = func_L00_00258BC8(0, 3);
+        if (func_002140B0(2) != 0)
+            t = -t;
+        if (*(int *)((char *)&D_0013FAB0 - 0x360) != 0) {
+            func_001F9C30(&d, (char *)&D_0013FAB0 - 0x560, 1.7f);
+            func_001F9BD8(&c, &c, &d);
+        }
+        {
+            int low = func_001F9850(30);
+            int high = func_001F9850(90);
+            func_L00_00272158(&b, &c, func_L00_00258BC8(low, high), 30, 0xFFFFFF, t,
+                         60000.0f, 3000.0f, 0.85f, -0.001f, 0.0f);
+        }
+    }
+    for (j = 0; j < func_001FA898(6.0f); j++) {
+        angle = func_002140F8(0.0f, 0.7853982f);
+        func_002156E0(&c, &D_0013FAB0, (char *)&D_0013FAB0 - 0x20,
+                         (float)j * 1.0471976f + angle);
+        func_L00_001FF4B0(&c, &c, func_002140F8(0.05f, 0.1f));
+        {
+            int low = func_001F9850(20);
+            int high = func_001F9850(60);
+            func_L00_0026DA50(&b, &c, 0x4F007FFF, 0x1FFFFFFF,
+                         func_L00_00258BC8(low, high), 1, 10000.0f);
+        }
+    }
+    o[0xBC] = func_001F9850(5);
+}

@@ -488,7 +488,94 @@ int func_00121040(int arg0) {
 
 INCLUDE_ASM("asm/nonmatchings/core_text", func_001211B0);
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_00121490);
+struct sceSifRpcData {
+    void *paddr; /* 0x0: packet in flight; released by _request_end */
+    u32 pid; /* 0x4 */
+    s32 tid; /* 0x8: semaphore signalled by _request_end when >= 0 */
+    u32 mode; /* 0xC */
+};
+struct sceSifClientData {
+    struct sceSifRpcData rpcd; /* 0x0 */
+    u32 command; /* 0x10 */
+    void *buff; /* 0x14 */
+    void *cbuff; /* 0x18 */
+    void (*func)(void *); /* 0x1C: end function, called with para when the call completes */
+    void *para; /* 0x20 */
+    void *serve; /* 0x24: server bound by sceSifBindRpc; 0 until bound */
+};
+extern s32 D_001313D0_21490[] __asm__("D_001313D0");
+extern volatile s32 D_001313EC_21490[] __asm__("D_001313EC");
+extern s32 D_00131404[];
+extern struct sceSifClientData D_00159A90;
+extern s32 D_00159AD0[];
+extern u8 D_001325C0_21490[] __asm__("D_001325C0");
+extern u8 D_00153080[];
+extern u8 D_00153090[];
+extern u8 D_001530B0[];
+extern s32 func_00118CC0();
+extern void func_00118C90();
+extern void func_00120B28_21490() __asm__("func_00120B28");
+extern s32 func_00120FD0();
+extern s32 func_0011B2F8();
+extern void func_0011AE20();
+extern void func_0011AD70();
+extern s32 func_0011B4C8();
+
+/* libcdvd disk-ready query (the sceCdDiskReady pattern): take the S-command semaphore, bind the 0x8000059A server once, send mode and return the server's status word. Mode 8 reports -1 on failure, every other mode 6.
+   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00121190.c, FUN_00121190. */
+s32 func_00121490(s32 mode) {
+    s32 response;
+    s32 spin;
+
+    if (D_001313D0_21490[0] > 0) {
+        func_0011A6C8(D_00153080);
+    }
+    func_00120B28_21490();
+    if (D_001313EC_21490[0] != func_00118CC0(D_001313EC_21490[0])) {
+        return 6;
+    }
+    if (func_00120FD0(1) != 0) {
+        func_00118C90(D_001313EC_21490[0]);
+        if (mode == 8) {
+            return -1;
+        }
+        return 6;
+    }
+    func_0011AE20(0);
+    if (D_00131404[0] < 0) {
+        for (;;) {
+            if (func_0011B2F8(&D_00159A90, 0x8000059A, 0) < 0) {
+                if (D_001313D0_21490[0] > 0) {
+                    func_0011A6C8(D_00153090);
+                }
+                for (spin = 0x100000; spin != -1; spin--) {
+                }
+                continue;
+            }
+            if (D_00159A90.serve != 0) {
+                D_00131404[0] = 0;
+                break;
+            }
+            for (spin = 0x100000; spin != -1; spin--) {
+            }
+        }
+    }
+    D_00159AD0[0] = mode;
+    func_0011AD70(D_00159AD0, 4);
+    if (func_0011B4C8(&D_00159A90, 0, 0, D_00159AD0, 4, D_001325C0_21490, 4, 0, 0) < 0) {
+        func_00118C90(D_001313EC_21490[0]);
+        if (mode == 8) {
+            return -1;
+        }
+        return 6;
+    }
+    if (D_001313D0_21490[0] > 0) {
+        func_0011A6C8(D_001530B0);
+    }
+    response = *(s32 *)((u32)D_001325C0_21490 | 0x20000000);
+    func_00118C90(D_001313EC_21490[0]);
+    return response;
+}
 
 extern int D_00132A00;
 extern int D_001325C0;

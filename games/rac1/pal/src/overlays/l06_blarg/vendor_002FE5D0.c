@@ -5,7 +5,105 @@
 
 INCLUDE_ASM("asm/overlays", func_L06_002FE5D0);
 INCLUDE_ASM("asm/overlays", func_L06_002FE890);
-INCLUDE_ASM("asm/overlays", func_L06_002FEB78);
+extern f32 D_L06_00167500[];
+typedef u32 u128 __attribute__((mode(TI), aligned(16)));
+typedef struct {
+    u128 v[4];
+    int color[4];
+    float uv[4][2];
+    long unk70, tex, unk80, unk88;
+} Packet_2fd748;
+extern short D_L06_0016200C;
+extern short D_L06_00162010;
+extern short D_L06_00162014;
+extern short D_L06_00162018;
+extern short D_L06_0016201C;
+extern short D_L06_00162020;
+extern short D_L06_00162024;
+extern short D_L06_00162028;
+extern short D_L06_0016202C;
+extern short D_L06_00162030;
+extern short D_L06_00162034;
+extern float D_L06_00167640_FEB78[] __asm__("D_L06_00167640");
+extern short D_L06_001DFA40[][4][2];
+extern float D_L06_001E3040[][2];
+extern float D_L06_001DC340[][4];
+extern char D_L06_001EBA80[][16];
+extern char D_L06_001E4D80[][16];
+extern long func_001F4868_FEB78(int) __asm__("func_001F4868");
+extern void func_001FA190(void *);
+extern void func_001F9C30(void *, void *, float);
+extern void func_001F9EE8(void *, void *, void *);
+extern void func_001F9BF0(void *, void *, void *);
+extern void func_L00_001FF4B0(void *, void *, float);
+extern void func_001F9EC0(void *, void *, void *);
+extern float func_001F9C78(void *, void *);
+extern void func_L00_001FD1D8(void *, void *, int);
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002fd1a0.c, FUN_L06_002fd748. */
+void func_L06_002FEB78(void) {
+    Packet_2fd748 first, second;
+    float matrix[4][4] __attribute__((aligned(16)));
+    float vec2[4] __attribute__((aligned(16)));
+    float vec1[4] __attribute__((aligned(16)));
+    void *matrix_ptr;
+    float y_offset = (*(float *)&D_L06_00162030) * D_L06_00167500[86];
+    float x_offset = (*(float *)&D_L06_00162034) * D_L06_00167500[85];
+    long flags;
+    int i, j;
+    float facing;
+
+    first.tex = func_001F4868_FEB78((*(int *)&D_L06_00162020));
+    second.tex = func_001F4868_FEB78(0x2a);
+    matrix_ptr = matrix;
+    flags = (long)(*(int *)&D_L06_0016200C) | (long)(*(int *)&D_L06_00162010) << 2 |
+            (long)(*(int *)&D_L06_00162014) << 4 | (long)(*(int *)&D_L06_00162018) << 6 |
+            (long)(*(int *)&D_L06_0016201C) << 32;
+    second.unk88 = flags;
+    first.unk88 = flags;
+    second.unk80 = 0xFF9000000260L;
+    first.unk80 = 0xFF9000000260L;
+    second.unk70 = 0;
+    first.unk70 = 0;
+    func_001FA190(matrix_ptr);
+    first.color[3] = (*(unsigned int *)&D_L06_00162024);
+    first.color[2] = (*(unsigned int *)&D_L06_00162024);
+    first.color[1] = (*(unsigned int *)&D_L06_00162024);
+    first.color[0] = (*(unsigned int *)&D_L06_00162024);
+    second.color[3] = (*(int *)&D_L06_00162028);
+    second.color[2] = (*(int *)&D_L06_00162028);
+    second.color[1] = (*(int *)&D_L06_00162028);
+    second.color[0] = (*(int *)&D_L06_00162028);
+    i = 0;
+    do {
+        func_001F9C30(vec1, D_L06_001EBA80[i], (*(float *)&D_L06_0016202C));
+        func_001F9EE8(vec1, vec1, matrix);
+        func_001F9BF0(vec2, vec1, D_L06_00167640_FEB78);
+        func_L00_001FF4B0(vec2, vec2, 1.0f);
+        func_001F9EC0(vec1, D_L06_001E4D80[i], matrix_ptr);
+        facing = func_001F9C78(vec2, vec1);
+        if (!(facing > 0.0f)) {
+            j = 0;
+            do {
+                int a = D_L06_001DFA40[i][j][0];
+                int b = D_L06_001DFA40[i][j][1];
+                float u, v;
+                func_001F9C30(&first.v[j], D_L06_001DC340[a], (*(float *)&D_L06_0016202C));
+                qcopy(&second.v[j], &first.v[j]);
+                u = D_L06_001E3040[b][0];
+                v = D_L06_001E3040[b][1];
+                first.uv[j][0] = u + y_offset;
+                first.uv[j][1] = v + x_offset;
+                second.uv[j][0] = u;
+                second.uv[j][1] = v;
+                j++;
+            } while (j < 4);
+            func_L00_001FD1D8(&first, matrix, 0);
+            func_L00_001FD1D8(&second, matrix, 0);
+        }
+        i++;
+    } while (i < 0x360);
+}
 extern char D_0013E633[];
 extern short *D_L06_001AC340[];
 extern char *D_L06_00160058_p __asm__("D_L06_00160058") MACRO_ADDR;
