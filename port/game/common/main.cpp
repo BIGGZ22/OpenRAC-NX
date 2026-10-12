@@ -6,7 +6,7 @@
 // (openrac_game, generated from port/game/<id>/hostgen.json).
 //
 //   openrac-<id> --data <install>/active/<game>/data [--cards DIR] [--frames N] [--stop-on-missing]
-//                [--level N] [--skip-movies]
+//                [--level N] [--skip-movies] [--mods DIR]
 //
 // The data folder is what the extractor made from the player's disc
 // (tools/extractor.py; the launcher's "Set up from your disc"). The program
@@ -59,6 +59,7 @@
 extern "C" {
 const char* openrac_game_disc_image = nullptr;
 const char* openrac_game_card_dir = nullptr;
+const char* openrac_game_mods_dir = nullptr;
 int openrac_game_language = 1;
 int openrac_game_no_card = 0;
 int openrac_game_start_level = -1;
@@ -79,6 +80,7 @@ struct Options {
     bool window = false;
     bool skip_movies = false;  // development probes; not movie-playback validation
     fs::path levels;  // the extracted levels the window draws (level_00, ...)
+    fs::path mods;  // levels edited in Godot and packed (editor/pack.py), read in place of the disc's
 };
 
 Options g_options;
@@ -95,7 +97,7 @@ std::string program_name() {
 [[noreturn]] void usage(const std::string& why) {
     log::error("{}", why);
     log::error(
-        "usage: {} --data <install>/active/{}/data [--cards DIR] [--frames N] [--stop-on-missing] [--level N] [--skip-movies]",
+        "usage: {} --data <install>/active/{}/data [--cards DIR] [--frames N] [--stop-on-missing] [--level N] [--skip-movies] [--mods DIR]",
         program_name(),
         openrac_game.game
     );
@@ -139,6 +141,8 @@ Options parse(int argc, char** argv) {
             openrac_game_no_card = 1;
         } else if (a == "--window") {
             o.window = true;
+        } else if (a == "--mods") {
+            o.mods = value();
         } else if (a == "--levels") {
             o.levels = value();
         } else if (a == "--frames") {
@@ -716,6 +720,11 @@ int main(int argc, char** argv) {
     static std::string cards_path = g_options.cards.string();
     openrac_game_disc_image = disc_path.c_str();
     openrac_game_card_dir = cards_path.c_str();
+    static std::string mods_path = g_options.mods.string();
+    if (!mods_path.empty()) {
+        openrac_game_mods_dir = mods_path.c_str();
+        log::info("edited levels from {}", mods_path);
+    }
 
 #ifdef OPENRAC_FRONTEND
     if (g_options.window) {

@@ -20,7 +20,10 @@ The first memory card is the folder the launcher's save manager shows
 `~/Library/Application Support/OpenRAC/memcard/SCES_509.16` on macOS) unless
 `--cards` says otherwise; the game's save folder and files are ordinary files
 in it. `--frames N` stops after N frames; `--keep-going` logs a
-function without C and carries on instead of stopping at it.
+function without C and carries on instead of stopping at it. `--mods DIR`
+plays levels edited in Godot: DIR is what `editor/extract.py pack` wrote, a
+list of disc sectors (`patches.tsv`) and the files read in their place
+([editor/README.md](../../../editor/README.md#pack-your-edits)).
 
 To build another copy of the decompilation (your own checkout, further
 along than OpenRAC's), configure with `-DOPENRAC_RAC1_PAL_SOURCE=<its directory>`.

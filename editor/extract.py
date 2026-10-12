@@ -28,6 +28,7 @@ from godot import LevelWriter, write_project
 from spaceships import add_spaceships
 from level import load_flight, load_level, load_title
 from lighting import normal_table
+from pack import pack
 from port import PortLevelWriter
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -150,6 +151,10 @@ def main() -> None:
                         help="levels to export at once (default: one per CPU)")
     native.add_argument("--terrain-lod", type=int, choices=(0, 2), default=0,
                         help="terrain detail: 0 finest (default), 2 coarsest")
+    packing = commands.add_parser("pack")
+    packing.add_argument("iso", type=Path)
+    packing.add_argument("project", type=Path, help="the Godot project the levels were edited in")
+    packing.add_argument("out", type=Path, help="where the packed levels go (under assets/ or build/)")
     dump = commands.add_parser("raw")
     dump.add_argument("iso", type=Path)
     dump.add_argument("out", type=Path)
@@ -169,6 +174,17 @@ def main() -> None:
                 levels = sorted(set(args.level or range(LEVEL_COUNT)))
                 dest = publish(args.out, lambda out: port(args.iso, survey, levels, args.terrain_lod, max(1, args.jobs), out))
                 print(f"Levels for the port's viewer: {dest}")
+            elif args.command == "pack":
+                # Its own output, written again after each edit: the one command that may write
+                # into a directory that exists.
+                dest = args.out.resolve()
+                if not any(root in dest.parents for root in (ROOT / "assets", ROOT / "build")):
+                    raise FormatError("output must be a directory under this repository's assets/ or build/")
+                if not (args.project / "project.godot").is_file():
+                    raise FormatError(f"{args.project} is not the editor's Godot project (run `godot` first)")
+                levels, mobys = pack(disc, survey, args.project, dest)
+                print((dest / "changes.txt").read_text(), end="")
+                print(f"Packed {levels} level(s), {mobys} moby edit(s): {dest}")
             else:
                 dest = publish(args.out, lambda out: raw(disc, survey, args.level, out))
                 print(f"Level {args.level} sections: {dest}")

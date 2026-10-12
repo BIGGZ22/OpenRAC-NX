@@ -53,8 +53,8 @@ the command again; the extractor never overwrites an existing directory.
 Godot rebuilds its import cache (`.godot/`) the next time it opens the
 project.
 
-Until the packer exists, edits made in Godot live only in that project,
-and regenerating replaces them. To keep an edited level:
+Regenerating replaces the project, and with it any edit that has not been
+packed (below). To keep an edited level across a regeneration:
 
 1. Copy its scene, `levels/level_NN/level_NN.tscn`, somewhere safe.
 2. Regenerate.
@@ -66,6 +66,52 @@ made. A newer extractor can write scenes with other nodes (the sky's
 WorldEnvironment, for instance), so after updating it, move your changes
 into the new scene instead. Godot saves a scene as text, so a diff
 against a fresh export shows each edit.
+
+## Pack your edits
+
+```sh
+python3 editor/extract.py pack baserom/SCES_509.16.iso assets/godot assets/packed/rac1
+```
+
+Turns what was edited in Godot back into the game's level data. For each
+level whose scene differs from the disc it writes that level's gameplay file
+as the game stores it, compressed, and the list of disc sectors it replaces:
+
+```
+assets/packed/rac1/
+  level_NN/gameplay_pal.wad   one per edited level, the size of its place on the disc
+  patches.tsv                 first sector, sector count, file
+  changes.txt                 what changed, in words
+```
+
+The disc image is never written. The native port reads the folder with
+`--mods assets/packed/rac1` and serves those sectors from the files
+([port/game/common/lib/cdvd.c](../port/game/common/lib/cdvd.c)); the
+launcher's Mods page does all three steps (edit, pack, play).
+
+What is packed today: **mobys that were moved, turned, scaled, given another
+class, or given other values** (the `rc1_*` metadata in the Inspector). A
+moby keeps one scale for all three axes. Not yet: mobys that were added or
+deleted (reported in `changes.txt` and left out), ties, shrubs and terrain.
+
+How it stays exact ([pack.py](pack.py), [wadpack.py](wadpack.py)):
+
+- A moby the scene has as the extractor wrote it keeps its bytes from the
+  disc. A project nobody edited packs to nothing, and an edited level's file
+  differs from the disc's only in the records that were edited. Godot's own
+  way of saving a scene (other float rounding, `unique_id`, `rc1_class` on
+  every instance) is not an edit.
+- The compressor writes streams the way the retail ones are laid out,
+  measured on all 19 gameplay files: 0x2000-byte blocks that no packet
+  crosses, each ending with a skip and unused room after it, and no literal
+  run after a literal run. Its output is smaller than retail's for every
+  level, so a packed level always fits where the original is.
+
+Checked on 2026-10-12: all 19 gameplay files round-trip through the
+compressor; a scene re-saved by Godot 4.7.2 with one moby moved packs to a
+file five bytes from the disc's, all in that moby's record; the port ran
+level 0 for 400 frames from it. Whether the moved moby shows where it was
+put has not been looked at in the running game yet.
 
 ## Other commands
 
