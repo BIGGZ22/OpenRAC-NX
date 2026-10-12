@@ -245,6 +245,16 @@ void openrac_guest_missing(const char* name);
 void openrac_guest_report_missing(void);
 void openrac_guest_stop_on_missing(int stop);
 
+/* ---- The host's stack, for the debugging aids ----
+ *
+ * Host code is built on Linux, macOS and Windows, and only the first two have
+ * backtrace (execinfo.h): a debugging aid that names who called it asks here
+ * instead. `text` gets the function `depth` calls above the caller of this one
+ * (0: who called the caller) as the host can name it: its symbol on Linux and
+ * macOS, the module and the offset in it on Windows (which a symbolizer
+ * resolves with the program's PDB), "?" when the stack does not reach it. */
+void openrac_host_caller(int depth, char* text, size_t size);
+
 /* ---- What the game's own inline assembly did ----
  *
  * The decompilation keeps three quadword helpers as inline assembly

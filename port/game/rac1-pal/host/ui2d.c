@@ -12,7 +12,6 @@
 #include "game_protos.h"
 #include "openrac/game_host.h"
 
-#include <execinfo.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,19 +26,13 @@
 static void log_caller(const char* what, unsigned long long tex, int w, int h) {
     static const char* seen[256];
     static int count = 0;
-    void* frames[3];
-    if (backtrace(frames, 3) < 3) {
-        return;
-    }
-    char** names = backtrace_symbols(frames + 2, 1);
-    if (names == NULL) {
-        return;
-    }
+    /* Who called the routine that called this, as the host names it (guest.h: any host). */
+    char caller[160];
+    openrac_host_caller(1, caller, sizeof(caller));
     char key[256];
-    snprintf(key, sizeof(key), "%s%s tbp %#x %dx%d", what, names[0], (unsigned)tex & 0x3FFF, w, h);
+    snprintf(key, sizeof(key), "%s%s tbp %#x %dx%d", what, caller, (unsigned)tex & 0x3FFF, w, h);
     for (int i = 0; i < count; ++i) {
         if (strcmp(seen[i], key) == 0) {
-            free(names);
             return;
         }
     }
@@ -47,7 +40,6 @@ static void log_caller(const char* what, unsigned long long tex, int w, int h) {
         seen[count++] = strdup(key);
         fprintf(stderr, "ui2d: %s\n", key);
     }
-    free(names);
 }
 
 /* The quad to the window and its marker into the display list (DMA cnt and VIF DIRECT of two
