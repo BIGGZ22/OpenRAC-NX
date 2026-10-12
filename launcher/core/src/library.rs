@@ -75,7 +75,7 @@ pub fn library(config: &Config) -> Result<Library, String> {
         list.map(|l| l.iter().map(|a| a.view(ctx)).collect()).unwrap_or_default()
     };
 
-    let repo_ctx = Context { root: &root, config, version: None, status: None, toolchains, platform };
+    let repo_ctx = Context { root: &root, config, version: None, status: None, toolchains, platform, level: None };
     let repository = views(file.as_ref().map(|f| &f.repository), &repo_ctx);
     let games = catalog
         .games
@@ -94,6 +94,7 @@ pub fn library(config: &Config) -> Result<Library, String> {
                         status: Some(&status),
                         toolchains,
                         platform,
+                        level: None,
                     };
                     let actions = views(file.as_ref().and_then(|f| f.versions.get(&version.key)), &ctx);
                     VersionView { version, status, actions }
@@ -109,19 +110,29 @@ pub fn library(config: &Config) -> Result<Library, String> {
 
 /// The command line for action `id` in `scope`, checked against the
 /// checkout as it is now (not as the UI last saw it).
-pub fn plan(config: &Config, scope: &Scope, id: &str) -> Result<Plan, String> {
+pub fn plan(config: &Config, scope: &Scope, id: &str, level: Option<u32>) -> Result<Plan, String> {
     let root = config.root()?;
     let file: ActionFile = actions::load(root)?;
     let action = file.find(scope, id).ok_or_else(|| format!("no action {id:?} for {scope:?}"))?;
     let toolchains = status::toolchains_present(root);
     let platform = Platform::current();
     match scope {
-        Scope::Repository => action.plan(&Context { root, config, version: None, status: None, toolchains, platform }),
+        Scope::Repository => {
+            action.plan(&Context { root, config, version: None, status: None, toolchains, platform, level })
+        }
         Scope::Version(key) => {
             let catalog = catalog::load(root)?;
             let version = catalog.version(key).ok_or_else(|| format!("no version {key}"))?;
             let status = version_status(root, config, version);
-            action.plan(&Context { root, config, version: Some(version), status: Some(&status), toolchains, platform })
+            action.plan(&Context {
+                root,
+                config,
+                version: Some(version),
+                status: Some(&status),
+                toolchains,
+                platform,
+                level,
+            })
         }
     }
 }
@@ -149,15 +160,15 @@ mod tests {
     #[test]
     fn plans_are_refused_until_their_needs_are_met() {
         let config = Config { root: Some(checkout()), ..Config::default() };
-        let err = plan(&config, &Scope::Repository, "discs").unwrap_err();
+        let err = plan(&config, &Scope::Repository, "discs", None).unwrap_err();
         assert!(err.contains("Python"), "{err}");
         let python = crate::detect::which("python3").unwrap_or_else(|| "/usr/bin/python3".into());
         let config = Config { python: Some(python.clone()), ..config };
-        let plan = plan(&config, &Scope::Repository, "discs").unwrap();
+        let plan = plan(&config, &Scope::Repository, "discs", None).unwrap();
         assert_eq!(plan.program, python);
         assert_eq!(plan.args, ["tools/openrac.py", "discs"]);
-        assert!(super::plan(&config, &Scope::Repository, "nope").is_err());
-        assert!(super::plan(&config, &Scope::Version("rac9/pal".into()), "build").is_err());
+        assert!(super::plan(&config, &Scope::Repository, "nope", None).is_err());
+        assert!(super::plan(&config, &Scope::Version("rac9/pal".into()), "build", None).is_err());
     }
 
     /// A copy of the checkout's game manifests and actions in a temporary
@@ -184,15 +195,19 @@ mod tests {
         let config =
             Config { root: Some(dir.path().to_path_buf()), godot: Some("/usr/bin/godot".into()), ..Config::default() };
         let scope = Scope::Version("rac1/pal".into());
-        let err = plan(&config, &scope, "editor-preview").unwrap_err();
-        assert!(err.contains("assets/godot/project.godot"), "{err}");
+        // Listed without a level, an action stands for level 00.
+        let err = plan(&config, &scope, "editor-preview", None).unwrap_err();
+        assert!(err.contains("assets/levels/rac1/level_00/project.godot"), "{err}");
 
-        std::fs::create_dir_all(dir.path().join("assets/godot")).unwrap();
-        std::fs::write(dir.path().join("assets/godot/project.godot"), "").unwrap();
-        let plan = plan(&config, &scope, "editor-preview").unwrap();
+        // Each level is a project of its own: the one asked for is the one opened.
+        let project = dir.path().join("assets/levels/rac1/level_07");
+        std::fs::create_dir_all(&project).unwrap();
+        std::fs::write(project.join("project.godot"), "").unwrap();
+        assert!(plan(&config, &scope, "editor-preview", Some(3)).is_err(), "level 03 was not extracted");
+        let plan = plan(&config, &scope, "editor-preview", Some(7)).unwrap();
         assert_eq!(plan.program, PathBuf::from("/usr/bin/godot"));
         assert!(plan.detached);
-        assert_eq!(plan.args, ["--path", "assets/godot", "res://levels/level_00/level_00.tscn"]);
+        assert_eq!(plan.args, ["--path", "assets/levels/rac1/level_07", "res://levels/level_07/level_07.tscn"]);
     }
 
     #[test]

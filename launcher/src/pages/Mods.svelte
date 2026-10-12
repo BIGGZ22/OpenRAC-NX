@@ -6,6 +6,7 @@
   import Icon from "$components/Icon.svelte";
   import { api, pickFile, type ActionView, type GameView, type VersionView } from "$lib/api";
   import { app, guard, jobs, run, runChain, saveConfig, toast } from "$lib/app.svelte";
+  import { RAC1_LEVELS } from "$lib/labels";
   import { GODOT_URL } from "$lib/links";
   import type { Job } from "$lib/queue";
 
@@ -32,6 +33,8 @@
   const needs = (a: ActionView | null) => (a?.blockers ?? []).map((b) => b.replace(/^needs /, ""));
 
   let opening = $state<string | null>(null);
+  /** The level the editor opens, per game. Each level is a Godot project of its own. */
+  const level = $state<Record<string, number>>({});
 
   async function chooseGodot() {
     if (!app.config) return;
@@ -39,17 +42,16 @@
     if (picked) await saveConfig({ ...app.config, godot: picked });
   }
 
-  /** Extracts and imports the levels when the project is not there yet, then opens Godot. */
+  /** Reads the levels from the disc when that has not been done yet, then opens the chosen one in Godot. */
   async function editLevels(v: VersionView) {
     const edit = action(v, "editor-open");
     if (!edit) return;
+    const which = level[v.game] ?? 0;
     opening = v.key;
-    const steps = edit.runnable
-      ? [edit]
-      : [action(v, "editor-extract"), action(v, "editor-import"), edit].filter((a) => a !== null);
-    const done = await runChain({ kind: "version", key: v.key }, steps);
+    const steps = edit.runnable ? [edit] : [action(v, "editor-extract"), edit].filter((a) => a !== null);
+    const done = await runChain({ kind: "version", key: v.key }, steps, which);
     opening = null;
-    if (done) toast("Godot is opening your levels.");
+    if (done) toast(`Godot is opening ${RAC1_LEVELS[which] ?? "your level"}.`);
   }
 
   /** The last line the packer printed: "Packed 1 level(s), 3 moby edit(s): …". */
@@ -107,15 +109,23 @@
                 {:else if preparing}
                   {preparing.title}: {preparing.lines.at(-1)?.line ?? "starting…"}
                 {:else if edit?.runnable}
-                  Move, turn or scale the objects of any level in Godot, and save.
+                  Move, turn or scale a level's objects in Godot, and save. Each level opens on its own.
                 {:else}
-                  The first time, the levels are read from your disc: about three minutes and 800 MB.
+                  The first time, the levels are read from your disc: about 20 seconds and 800 MB.
                 {/if}
               </p>
             </div>
             {#if lacksGodot && !noDisc}
               <button onclick={() => void chooseGodot()}><Icon name="folder" size={16} />Choose Godot</button>
             {:else}
+              <select
+                aria-label="Level to edit"
+                disabled={noDisc}
+                value={level[v.game] ?? 0}
+                onchange={(e) => (level[v.game] = Number(e.currentTarget.value))}
+              >
+                {#each RAC1_LEVELS as name, i (i)}<option value={i}>{name}</option>{/each}
+              </select>
               <button
                 class:primary={!result}
                 disabled={noDisc || opening === v.key || !!preparing}
@@ -170,15 +180,16 @@
         {#if developer}
           <div class="sdk">
             <p class="dim">
-              The project is <code>assets/godot</code>, the packed levels <code>assets/packed/{game.id}</code> (a list of
-              disc sectors and the files that replace them). The same steps from a shell:
+              The projects are <code>assets/levels/{game.id}/level_NN</code>, the packed levels
+              <code>assets/packed/{game.id}</code> (a list of disc sectors and the files that replace them). The same steps
+              from a shell:
             </p>
-            <pre>python3 editor/extract.py godot &lt;disc.iso&gt; assets/godot
-python3 editor/extract.py pack &lt;disc.iso&gt; assets/godot assets/packed/{game.id}
+            <pre>python3 editor/extract.py godot &lt;disc.iso&gt; assets/levels/{game.id} --split
+python3 editor/extract.py pack &lt;disc.iso&gt; assets/levels/{game.id} assets/packed/{game.id}
 openrac-{v.key.replace("/", "-")} --data &lt;data&gt; --mods assets/packed/{game.id}</pre>
             <div class="row">
-              <button class="small" onclick={() => void guard(api.openPath("assets/godot"))}
-                ><Icon name="folder" size={14} />Project folder</button
+              <button class="small" onclick={() => void guard(api.openPath(`assets/levels/${game.id}`))}
+                ><Icon name="folder" size={14} />Level projects</button
               >
               <button class="small" onclick={() => void guard(api.openPath(`assets/packed/${game.id}`))}
                 ><Icon name="folder" size={14} />Packed levels</button
@@ -262,6 +273,23 @@ openrac-{v.key.replace("/", "-")} --data &lt;data&gt; --mods assets/packed/{game
     flex: none;
     min-width: 170px;
     justify-content: center;
+  }
+
+  select {
+    flex: none;
+    font: inherit;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--ink-deep);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    padding: 7px 10px;
+    max-width: 190px;
+  }
+
+  select:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
   }
 
   .failed {

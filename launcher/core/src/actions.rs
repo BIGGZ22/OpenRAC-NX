@@ -21,7 +21,7 @@ pub const FILE: &str = "launcher/actions.json";
 
 /// The only `{name}` placeholders an argument, `program` or `cwd` may hold.
 pub const PLACEHOLDERS: &[&str] =
-    &["root", "dir", "python", "godot", "docker", "disc", "boot", "artifact", "serial", "key", "data"];
+    &["root", "dir", "python", "godot", "docker", "disc", "boot", "artifact", "serial", "key", "data", "level"];
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -204,6 +204,10 @@ pub struct Context<'a> {
     pub status: Option<&'a VersionStatus>,
     pub toolchains: bool,
     pub platform: Platform,
+    /// The level an action is run for (`{level}`, two digits: the level editor's per-level
+    /// projects). None while an action is only listed: `{level}` is then level 00, so that
+    /// "is the project there" has an answer.
+    pub level: Option<u32>,
 }
 
 pub fn load(root: &Path) -> Result<ActionFile, String> {
@@ -335,7 +339,9 @@ impl Action {
                     }
                     Requirement::Artifact => {
                         if !self.artifact_path(ctx).is_ok_and(|p| p.exists()) {
-                            let what = self.artifact.as_deref().unwrap_or("its artifact");
+                            // As written in actions.json, with its placeholders filled ({level}).
+                            let named = self.artifact.as_deref().unwrap_or("its artifact");
+                            let what = fill(named, ctx, None).unwrap_or_else(|_| named.to_string());
                             out.push(format!("needs {what}, which an earlier step makes"));
                         }
                         None
@@ -446,6 +452,7 @@ fn value(name: &str, ctx: &Context) -> Result<String, String> {
             let install = ctx.config.install_dir.as_ref().ok_or("the install folder is not set (Settings)")?;
             crate::install::data_dir(install, &version()?.game).display().to_string()
         }
+        "level" => format!("{:02}", ctx.level.unwrap_or(0)),
         other => return Err(format!("unknown placeholder {{{other}}}")),
     })
 }
@@ -522,6 +529,7 @@ mod tests {
             status: Some(&status),
             toolchains: false,
             platform: Platform::Linux,
+            level: None,
         };
         let view = action.view(&ctx(&blocked));
         assert!(!view.runnable && view.this_platform);

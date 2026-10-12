@@ -75,8 +75,9 @@ the disc image and saves are kept.
 ## Mods
 
 The Mods tab has, for each game that can be edited (Ratchet & Clank, PAL, for
-now), the three steps of modding in order: **Open the editor** (the levels in
-Godot 4; the first time they are read from the disc), **Pack** (turns the
+now), the three steps of modding in order: **Open the editor** (choose a
+level: each is a Godot 4 project of its own under `assets/levels/<game>`, so
+only that level loads; the first time they are read from the disc), **Pack** (turns the
 edits into the game's own level data, in `assets/packed/<game>`) and **Play**
 with them (the port's `--mods`). The disc image is never changed. With
 developer tools on, the page also shows the folders and the three commands
