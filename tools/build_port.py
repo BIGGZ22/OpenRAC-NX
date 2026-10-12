@@ -3,7 +3,7 @@
 Builds the native port (port/): what the launcher's "Build the game" runs, so
 that nobody has to put a compiler's environment together by hand.
 
-  python3 tools/build_port.py [GAME ...] [--source DIR] [--preset NAME]
+  python3 tools/build_port.py [GAME ...] [--source DIR] [--preset NAME] [--target NAME ...]
 
 GAME is one of the port's games (port/game/<id>/hostgen.json: rac1-pal,
 rac1-ntsc, ...), rac1-pal when none is named. The build makes openrac-GAME
@@ -11,6 +11,9 @@ for each, and the C++ extractor (openrac-extractor), in port/build/PRESET
 (a CMake preset, "release" by default). The first run configures that
 folder; later runs rebuild only what changed, hostgen included when the
 decompilation or hostgen changed (port/cmake/Games.cmake).
+
+--target NAME builds another of the port's targets as well (a test program
+such as runtime_test), in the same environment.
 
 --source DIR builds GAME (one game) from another copy of its decompilation:
 your own checkout, further along than OpenRAC's (OPENRAC_<ID>_SOURCE). The
@@ -81,8 +84,9 @@ def default_source(game: str) -> Path:
     return ROOT / config["source"]
 
 
-def targets(names: list[str]) -> list[str]:
-    return [f"openrac-{name}" for name in names] + ["openrac-extractor"]
+def targets(names: list[str], more: list[str] | None = None) -> list[str]:
+    """What is built: each game's program, the extractor, and any target asked for besides."""
+    return [f"openrac-{name}" for name in names] + ["openrac-extractor"] + list(more or [])
 
 
 def parse_cache(text: str) -> dict[str, str]:
@@ -131,18 +135,23 @@ def commands(
     source: Path | None,
     cache: dict[str, str],
     compilers: tuple[str, str, str] | None = None,
+    python: str | None = None,
+    more: list[str] | None = None,
 ) -> list[list[str]]:
     """The command lines to run, in order. A folder not configured yet is configured from the
     preset; a configured one is only built, after a configure without the preset when `source`
     names another decompilation than it builds from. The preset names its compilers (clang,
     clang++), and a name that finds another Clang than the cached one makes CMake drop the whole
     cache, so a configure from the preset passes the folder's own compilers, else `compilers`
-    (C, C++, Ninja) when given."""
+    (C, C++, Ninja) when given. `python` is the interpreter hostgen runs under in a new folder
+    (this one: CMake's own choice may be an older Python than hostgen reads)."""
     variable = source_variable(names[0]) if source is not None else None
     if not cache or not (build / "build.ninja").is_file():
         configure = [cmake, "--preset", preset]
         found = dict(zip(("CMAKE_C_COMPILER", "CMAKE_CXX_COMPILER", "CMAKE_MAKE_PROGRAM"), compilers or ()))
-        for key in ("CMAKE_C_COMPILER", "CMAKE_CXX_COMPILER", "CMAKE_MAKE_PROGRAM"):
+        if python:
+            found["Python3_EXECUTABLE"] = python
+        for key in ("CMAKE_C_COMPILER", "CMAKE_CXX_COMPILER", "CMAKE_MAKE_PROGRAM", "Python3_EXECUTABLE"):
             value = cache.get(key) or found.get(key)
             if value:
                 configure.append(f"-D{key}={value}")
@@ -153,7 +162,7 @@ def commands(
         out = [[cmake, "-S", str(PORT), "-B", str(build), f"-D{variable}={Path(source).as_posix()}"]]
     else:
         out = []
-    out.append([cmake, "--build", "--preset", preset, "--target", *targets(names)])
+    out.append([cmake, "--build", "--preset", preset, "--target", *targets(names, more)])
     return out
 
 
@@ -276,6 +285,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("games", nargs="*", metavar="GAME", help=f"a port game ({', '.join(known)}); default {DEFAULT_GAME}")
     parser.add_argument("--source", type=Path, help="build GAME from this copy of its decompilation (kept for later builds)")
     parser.add_argument("--preset", default="release", help="the CMake preset (port/CMakePresets.json); default release")
+    parser.add_argument("--target", action="append", default=[], metavar="NAME",
+                        help="also build this target of the port (a test program such as runtime_test)")
     args = parser.parse_args(argv)
 
     names = args.games or [DEFAULT_GAME]
@@ -301,7 +312,8 @@ def main(argv: list[str] | None = None) -> int:
     for name in names:
         decompilation = source if name == names[0] and source else cache.get(source_variable(name)) or default_source(name)
         say(f"{name}: from {decompilation}")
-    for command in commands(str(cmake), args.preset, build, names, source, cache, compilers):
+    python = Path(sys.executable).as_posix()
+    for command in commands(str(cmake), args.preset, build, names, source, cache, compilers, python, args.target):
         say("> " + " ".join(f'"{part}"' if " " in part else part for part in command))
         status = subprocess.run(command, cwd=PORT, env=env).returncode
         if status != 0:

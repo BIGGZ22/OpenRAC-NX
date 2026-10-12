@@ -89,6 +89,16 @@ class Commands(unittest.TestCase):
         self.assertEqual(steps[0][-1], "-DOPENRAC_RAC1_PAL_SOURCE=" + Path("/elsewhere/rac1").as_posix())
         self.assertEqual(steps[1], BUILD)
 
+    def test_a_new_folder_runs_hostgen_under_this_python(self):
+        steps = build_port.commands("cmake", "release", self.build, ["rac1-pal"], None, {}, None, "/usr/bin/python3")
+        self.assertEqual(steps[0], ["cmake", "--preset", "release", "-DPython3_EXECUTABLE=/usr/bin/python3"])
+
+    def test_more_targets_are_built_with_the_game(self):
+        (self.build / "build.ninja").write_text("")
+        steps = build_port.commands("cmake", "release", self.build, ["rac1-pal"], None,
+                                    build_port.parse_cache(CACHE), more=["runtime_test"])
+        self.assertEqual(steps, [BUILD + ["runtime_test"]])
+
     def test_an_unfinished_folder_keeps_its_own_compilers(self):
         steps = self.plan(build_port.parse_cache(CACHE), compilers=("other", "other++", "ninja2"), configured=False)
         self.assertEqual(steps[0][:3], ["cmake", "--preset", "release"])
