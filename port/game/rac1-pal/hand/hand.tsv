@@ -26,6 +26,7 @@ func_001FA460	game_fastfunc.c
 func_001FA4A0	game_fastfunc.c
 func_001FA588	game_fastfunc.c
 func_L00_001FF4B0	overlays_shared_fastfunc_001FEF78.c
+func_L00_001FF240	overlays_shared_fastfunc_001FEF78.c
 func_L00_00200210	overlays_shared_fastfunc_001FEF78.c
 func_L00_001FF500	overlays_shared_fastfunc_001FEF78.c
 func_L00_001FEF78	overlays_shared_fastfunc_001FEF78.c

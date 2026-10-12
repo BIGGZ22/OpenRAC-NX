@@ -49,6 +49,17 @@ void func_L00_001FF4B0(float *out, float *a, float length) {
     func_001F9DC0(out, a, length);
 }
 
+/* a = a + b in x, y and z; w stays a's. The first argument is not used. (vadd.xyz, stored back to a) */
+void func_L00_001FF240(void *unused, float *a, float *b) {
+    float x = a[0] + b[0];
+    float y = a[1] + b[1];
+    float z = a[2] + b[2];
+    (void)unused;
+    a[0] = x;
+    a[1] = y;
+    a[2] = z;
+}
+
 /* a less the whole multiples of b in it: the quotient's fraction times b. (vdiv, vftoi0, vitof0) */
 float func_L00_00200210(float a, float b) {
     float quotient = 0.0f + a / b;
