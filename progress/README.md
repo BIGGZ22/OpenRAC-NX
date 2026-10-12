@@ -6,9 +6,9 @@ are comparable within a game, not between games.
 
 | Game | Version | Code matched | Functions | Fuzzy | Report date |
 |---|---|---:|---:|---:|---|
-| Ratchet & Clank | SCES_509.16 ([`games/rac1/pal`](../games/rac1/pal)) | 78.50% (2,914,476 / 3,712,808 bytes) | 4,214 / 5,109 | 79.78% | 2026-10-09 |
+| Ratchet & Clank | SCES_509.16 ([`games/rac1/pal`](../games/rac1/pal)) | 78.59% (2,917,868 / 3,712,808 bytes) | 4,220 / 5,109 | 79.80% | 2026-10-10 |
 | Ratchet & Clank | SCUS_971.99 ([`games/rac1/ntsc`](../games/rac1/ntsc)) | 68.55% (2,431,648 / 3,547,428 bytes) | 3,549 / 4,237 | 70.14% | 2026-10-10 |
-| Ratchet & Clank: Going Commando | SCUS_972.68 ([`games/rac2/ntsc`](../games/rac2/ntsc)) | 1.09% (531,224 / 48,788,176 bytes) | not counted | – | 2026-10-07 |
+| Ratchet & Clank: Going Commando | SCUS_972.68 ([`games/rac2/ntsc`](../games/rac2/ntsc)) | 2.54% (140,412 / 5,538,056 bytes) | 1,207 / 9,101 | 2.54% | 2026-10-11 |
 | Ratchet & Clank: Up Your Arsenal | SCUS_973.53 ([`games/rac3/ntsc`](../games/rac3/ntsc)) | 1.28% (164,764 / 12,838,776 bytes) | 1,292 / 31,316 | 1.28% | 2026-10-01 |
 | Ratchet: Deadlocked | SCUS_974.65 ([`games/rac4/ntsc`](../games/rac4/ntsc)) | 0.51% (26,572 / 5,175,440 bytes) | 243 / 15,056 | 0.51% | 2026-10-05 |
 
@@ -16,6 +16,6 @@ are comparable within a game, not between games.
 
 - **rac1/pal**: The boot executable and all 19 level programs. Handwritten assembly and linker remnants count as finished; staged near misses (nonmatching/) give the fuzzy figure.
 - **rac1/ntsc**: Lombyte commits no report: its CI publishes one on the project's progress branch, which `openrac.py progress --fetch` copies to progress/sources/. Byte-weighted over the boot executable and the 19 level programs.
-- **rac2/ntsc**: Integrated C bytes over every executable byte of the boot program and its 27 level overlays (config/progress-scope.json); the rest already rebuilds from reconstructed assembly. Functions are not counted.
+- **rac2/ntsc**: Every distinct function of the boot executable and the 27 level programs counted once (a function many levels share is one function); matched when its C links into a program that equals retail.
 - **rac3/ntsc**: The committed report is from 2026-10-01. At bfd8278, tools/pr_check.py --target all counts frontbin 1,800 of 1,867 entries final (1,419 functions in C), boot_elf 2,265 of 2,809 (1,580 in C) and i5bootn 191 of 199 (35 in C); the level programs are counted but not compiled yet.
 - **rac4/ntsc**: Functions are compared one by one with most 16-bit immediates masked (symbols, struct offsets and small constants are not checked), and nothing is linked yet, so this is a looser proof than the other games'. Overlay code identical to resident code is counted once.

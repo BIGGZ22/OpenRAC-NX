@@ -251,9 +251,14 @@
         "kind": "build",
         "state": "unverified",
         "program": "{python}",
-        "args": ["tools/build_port.py", "rac1-pal"],
+        "args": [
+          "tools/build_port.py",
+          "rac1-pal"
+        ],
         "cwd": ".",
-        "requires": ["python"],
+        "requires": [
+          "python"
+        ],
         "docs": "port/README.md",
         "todo": "Run it from the desktop app on each platform. tools/build_port.py ran from a shell on Windows 11 (Visual Studio 2026, Clang 21): an incremental build, a rerun of hostgen, nothing to do. Another copy of the decompilation is chosen once, with tools/build_port.py --source DIR; the launcher has no setting for it yet."
       },
@@ -264,9 +269,18 @@
         "kind": "play",
         "state": "unverified",
         "program": "{artifact}",
-        "args": ["--data", "{data}", "--window"],
-        "platforms": ["windows", "linux"],
-        "requires": ["artifact"],
+        "args": [
+          "--data",
+          "{data}",
+          "--window"
+        ],
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "requires": [
+          "artifact"
+        ],
         "artifact": "port/build/release/openrac-rac1-pal.exe",
         "docs": "port/game/rac1-pal/README.md",
         "todo": "Built by port-build. The port also needs decompiler_out (openrac-extractor --decompile) and the levels (editor/extract.py port) in <data>/port."
@@ -375,43 +389,9 @@
     ],
     "rac2/ntsc": [
       {
-        "id": "doctor",
-        "label": "Check this machine",
-        "description": "rac2's own report of what this machine can do: Python, the toolchains, WSL, Wrench.",
-        "kind": "check",
-        "state": "unverified",
-        "program": "{python}",
-        "args": [
-          "scripts/doctor.py"
-        ],
-        "requires": [
-          "python"
-        ],
-        "docs": "games/rac2/ntsc/docs/START-HERE.md",
-        "todo": "Run once; it may need requirements.txt installed first."
-      },
-      {
-        "id": "setup",
-        "label": "Set up",
-        "description": "Unpacks your disc with Wrench into a runtime folder outside OpenRAC and prepares the reference build.",
-        "kind": "setup",
-        "state": "planned",
-        "docs": "games/rac2/ntsc/docs/START-HERE.md",
-        "todo": "Needs two settings the launcher does not have yet: rac2's runtime folder (outside the tree; build/rac2-runtime works) and Wrench's wrenchbuild. Then: {python} scripts/setup.py --iso {disc} --runtime <runtime> --wrench <wrenchbuild>. Windows with WSL."
-      },
-      {
-        "id": "build",
-        "label": "Build",
-        "description": "Rebuilds the boot program and its 27 level overlays from the reconstructed assembly and the C.",
-        "kind": "build",
-        "state": "planned",
-        "docs": "games/rac2/ntsc/docs/START-HERE.md",
-        "todo": "scripts/build.py --manifest <runtime>/runs/<id>/manifest.json --toolchain <ProDG 2.0>: the run id comes from setup's output; decide how the launcher learns it."
-      },
-      {
         "id": "tests",
-        "label": "Run rac2's tests",
-        "description": "rac2's unit tests (no disc needed; rabbitizer 1.16.2 must be installed).",
+        "label": "Run rac2's checks",
+        "description": "The tool tests, the catalogue and layout check, and whether the progress report matches src/ (no disc needed).",
         "kind": "check",
         "state": "unverified",
         "program": "{python}",
@@ -425,8 +405,44 @@
         "requires": [
           "python"
         ],
-        "docs": "games/rac2/ntsc/README.md",
-        "todo": "Fails without rabbitizer: say so, or install the requirements in a launcher-owned venv."
+        "docs": "games/rac2/ntsc/CONTRIBUTING.md"
+      },
+      {
+        "id": "setup",
+        "label": "Set up",
+        "description": "Reads the boot executable and the 27 level programs from your disc (baserom/SCUS_972.68.iso).",
+        "kind": "setup",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "tools/levels.py",
+          "dump"
+        ],
+        "requires": [
+          "python",
+          "inputs"
+        ],
+        "docs": "games/rac2/ntsc/docs/BUILDING.md",
+        "todo": "The compilers come next: tools/compiler/build.sh and tools/compiler/sdk/build.py (Linux, or tools/docker/run.sh)."
+      },
+      {
+        "id": "build",
+        "label": "Build",
+        "description": "Rebuilds the boot program and its 27 level programs with the C linked in, and compares every loaded byte with retail.",
+        "kind": "build",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "tools/build.py",
+          "all"
+        ],
+        "requires": [
+          "python",
+          "inputs",
+          "toolchains"
+        ],
+        "docs": "games/rac2/ntsc/docs/BUILDING.md",
+        "todo": "Needs the compilers built and SN ProDG 2.0's assembler and linker in toolchain/; on macOS run it through tools/docker/run.sh."
       },
       {
         "id": "editor-extract",

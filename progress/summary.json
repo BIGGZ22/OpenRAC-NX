@@ -4,13 +4,13 @@
     "region": "PAL (Europe)",
     "serial": "SCES_509.16",
     "progress": {
-      "matched_code": 2914476,
+      "matched_code": 2917868,
       "total_code": 3712808,
-      "matched_functions": 4214,
+      "matched_functions": 4220,
       "total_functions": 5109,
-      "fuzzy_percent": 79.78,
-      "date": "2026-10-09",
-      "percent": 78.5
+      "fuzzy_percent": 79.8,
+      "date": "2026-10-10",
+      "percent": 78.59
     },
     "note": "The boot executable and all 19 level programs. Handwritten assembly and linker remnants count as finished; staged near misses (nonmatching/) give the fuzzy figure."
   },
@@ -34,15 +34,15 @@
     "region": "NTSC-U (North America)",
     "serial": "SCUS_972.68",
     "progress": {
-      "matched_code": 531224,
-      "total_code": 48788176,
-      "matched_functions": null,
-      "total_functions": null,
-      "fuzzy_percent": null,
-      "date": "2026-10-07",
-      "percent": 1.09
+      "matched_code": 140412,
+      "total_code": 5538056,
+      "matched_functions": 1207,
+      "total_functions": 9101,
+      "fuzzy_percent": 2.54,
+      "date": "2026-10-11",
+      "percent": 2.54
     },
-    "note": "Integrated C bytes over every executable byte of the boot program and its 27 level overlays (config/progress-scope.json); the rest already rebuilds from reconstructed assembly. Functions are not counted."
+    "note": "Every distinct function of the boot executable and the 27 level programs counted once (a function many levels share is one function); matched when its C links into a program that equals retail."
   },
   "rac3/ntsc": {
     "title": "Ratchet & Clank: Up Your Arsenal",

@@ -136,18 +136,19 @@ with `python3` run on the host.
 | Land | Delete the oracle block, `git mv src/assembly/<path>.c src/<path>.c`, change the owner in `config/us/rnc1.us.yaml`, then `make elf` |
 | Progress | Nothing to commit: CI rebuilds the report. `make check` and `make progress` preview it locally |
 
-### rac2: `games/rac2/ntsc` (PowerShell)
+### rac2: `games/rac2/ntsc`
 
 | Step | Command |
 |---|---|
-| Set up | `.venv\Scripts\python.exe scripts/doctor.py`, then `.venv\Scripts\python.exe scripts/setup.py --iso <disc.iso> --runtime <runtime> --wrench <wrenchbuild.exe>` |
-| List | No tool: "a small function, or a family that is already matched" ([CONTRIBUTING.md](../../games/rac2/ntsc/CONTRIBUTING.md)) |
-| Try | `.venv\Scripts\python.exe scripts/check_candidates.py --reference <runtime>\runs\<id>\reference\boot.elf --toolchain <ProDG-3.01> --runtime <runtime>` |
-| Try (level C) | `python -B scripts/check_level_candidates.py --level 24_ship_shack --reference <private-overlay.elf> --toolchain <C-toolchain> --runtime <runtime-outside-repository> --write-review` |
-| In context | `.venv\Scripts\python.exe scripts/build.py --manifest <runtime>\runs\<id>\manifest.json --toolchain <ProDG-2.0> --all-levels`, adding `--c-toolchain <ProDG-3.01>` |
-| Land | Add the C to `candidates/boot.c` and its entry to `config/candidate-catalog.json`, then regenerate `progress/candidates.json` with a fresh checker run on the same build snapshot |
-| Test | `.venv\Scripts\python.exe -m unittest discover -s tests -v` |
-| Progress | `python scripts/decomp_report.py --output build/decomp/report.json` |
+| Set up | `python3 tools/levels.py dump` (disc in `baserom/SCUS_972.68.iso`), `tools/compiler/build.sh`, `python3 tools/compiler/sdk/build.py` |
+| List | `grep -rn INCLUDE_ASM src/` (every function without C, in address order); the catalogues are `config/boot/functions.tsv` and `config/levels/functions.tsv` |
+| Try | `python3 tools/check.py func_XXXXXXXX --diff` (one function at all its places) |
+| In context | `python3 tools/build.py all` (or `boot`, `level N`): all 28 programs, every loaded byte compared |
+| Land | Replace the function's `INCLUDE_ASM` line with its C, in place; then `python3 tools/progress.py` |
+| Test | `python3 -m unittest discover -s tests`, `python3 tests/check_repository.py`, `python3 tools/progress.py --check` |
+| Progress | `python3 tools/progress.py` (objdiff's report format) |
+
+On hosts without the tools, prefix any step with `bash tools/docker/run.sh`.
 
 ### rac3: `games/rac3/ntsc`
 
@@ -242,44 +243,18 @@ with `python3` run on the host.
 
 ### rac2: Going Commando NTSC-U v1.01 (from rac2-decomp)
 
-Since 2026-10-04 the project writes its C under `src/` as ordered fragments
-and generates the compiled units in `candidates/` from them
-([SOURCE-LAYOUT.md](../../games/rac2/ntsc/docs/SOURCE-LAYOUT.md); check with
-`python scripts/source_layout.py --check --inventory-check progress/source-inventory.json`),
-and schedules work through `scripts/campaign.py`
-([CAMPAIGN-WORKFLOW.md](../../games/rac2/ntsc/docs/CAMPAIGN-WORKFLOW.md),
-[CONTRIBUTOR-QUICKSTART.md](../../games/rac2/ntsc/docs/CONTRIBUTOR-QUICKSTART.md)).
-The checks and gates below are unchanged.
+Since 2026-10-11 the project follows rac1/pal's structure ([AGENTS.md](../../games/rac2/ntsc/AGENTS.md),
+[docs/BUILDING.md](../../games/rac2/ntsc/docs/BUILDING.md), [docs/LEVELS.md](../../games/rac2/ntsc/docs/LEVELS.md)).
 
-- **Setup** ([docs/START-HERE.md](../../games/rac2/ntsc/docs/START-HERE.md)).
-  You need Python 3.12, SN ProDG 2.0 (assembly reconstruction), SN ProDG 3.01
-  (C), Wrench, and a runtime directory outside the repository.
-  `scripts/doctor.py` always ends with the next command to run.
-- **What a match is.** A fresh compile and link, a defined `STT_FUNC` at the
-  reviewed address, the full symbol size, and every byte equal. START-HERE's
-  "When it goes wrong" table explains each refusal.
-- **Landing is a transaction.** The source, the catalogue and the review
-  (`progress/candidates.json`) must agree, and integration refuses a catalogue
-  edited after its review. A level's own C has its own source, catalogue and
-  review ([LEVEL-NATIVE-C.md](../../games/rac2/ntsc/docs/LEVEL-NATIVE-C.md)).
-- **Lots and trials.** Each batch of matches is written up as a lot
-  (`docs/*-C-LOT.md`) with its origin, profile and refusals. Read the
-  [experiment register](../../games/rac2/ntsc/docs/C-NATIVE-EXPERIMENT-REGISTER.md)
-  before trying a level variant, and add a row after every trial; never
-  overwrite one.
-- **PR checklist** ([template](../../games/rac2/ntsc/.github/pull_request_template.md)):
-  the proof command and its result, unit tests passing, both PT_LOAD segments
-  matching for every program touched, no retail-derived files, pinned
-  identities untouched or regenerated together, and provenance. One function
-  or one coherent family per pull request.
-- **Shared families** (since 2026-10-06). Copies of one function across boot
-  and the overlays are discovered by measured intervals, bound to one reviewed
-  C body per program, and accepted only by the exact checks; discovery itself
-  earns no credit ([NORMALIZED-FAMILY-WORKFLOW.md](../../games/rac2/ntsc/docs/NORMALIZED-FAMILY-WORKFLOW.md),
-  [GLOBAL-CODE-REUSE.md](../../games/rac2/ntsc/docs/GLOBAL-CODE-REUSE.md)). Recorded trials are
-  reviewed and a batch finalised through guarded, immutable steps
-  ([CAMPAIGN-TOOLS.md](../../games/rac2/ntsc/docs/CAMPAIGN-TOOLS.md)); the tools take NTSC or PAL
-  ([REGIONS.md](../../games/rac2/ntsc/docs/REGIONS.md)).
+- **Setup.** The disc, SN ProDG 2.0's assembler and linker you supply, and the two compilers
+  `tools/compiler/` rebuilds from public source; or the project's Docker image.
+- **What a match is.** Only what `tools/build.py` links into a program that equals retail byte
+  for byte. A level function is defined once and linked at every place the catalogue gives it;
+  the symbol values each program needs are read from its retail bytes.
+- **Where C goes.** In place of the function's `INCLUDE_ASM` line; never a copy per level, and
+  never a level address written as a number.
+- **Sending work.** A branch and a pull request with the build, progress and test output; CI
+  checks the catalogues, the layout and that the report is current.
 
 ### rac3: Up Your Arsenal NTSC-U (from rac3-uya-decomp)
 

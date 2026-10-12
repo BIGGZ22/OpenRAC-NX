@@ -227,7 +227,7 @@ depend least on the compiler question.
 |---|---|---|
 | rac1/pal | `games/rac1/pal/baserom/SCES_509.16`, `baserom/overlays/level_*` | `openrac.py setup rac1/pal`, then `python3 tools/overlays.py dump` there |
 | rac1/ntsc | `games/rac1/ntsc/config/us/SCUS_971.99`, `config/us/overlays/level_*` | `openrac.py setup rac1/ntsc`, then its `setup.sh` |
-| rac2/ntsc | `build/rac2/runtime/runs/*/reference/` | `scripts/setup.py --runtime build/rac2/runtime` ([host recipe](../../games/rac2/ntsc/host/README.md)) |
+| rac2/ntsc | `games/rac2/ntsc/baserom/SCUS_972.68`, `baserom/levels/*_*` | `python3 tools/levels.py dump` there |
 | rac3/ntsc | `build/rac3/wrench_out/uya_scus_973_53/` | the Wrench unpack on [rac3's page](../../games/rac3/README.md#getting-started) |
 | rac4/ntsc | `games/rac4/ntsc/baserom/SCUS_974.65.elf`, `build/rac4/wrench_out/levels/` | `bash tools/setup_asm.sh` there, and `wrenchbuild unpack ... -o build/rac4/wrench_out -g dl -r us` |
 

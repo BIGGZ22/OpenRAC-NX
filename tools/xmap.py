@@ -71,8 +71,8 @@ def slug(key: str) -> str:
 
 
 def level_id(path: Path, fmt: str) -> int:
-    """A level's number from its directory: level_05 (rac1), 16_kerwan (Wrench)."""
-    name = path.name if fmt == "rac1-level" else path.parent.name
+    """A level's number from its directory: level_05 (rac1), 04_barlow (rac2), 16_kerwan (Wrench)."""
+    name = path.name if fmt in ("rac1-level", "rac2-level") else path.parent.name
     return int(re.search(r"\d+", name).group())
 
 
@@ -97,6 +97,9 @@ def load(path: str, fmt: str) -> dict[str, tuple[int, bytes]]:
     if fmt == "rac1-level":             # games/rac1/*/…/level_NN: text.bin and manifest.json
         text = next(r for r in json.loads((p / "manifest.json").read_text())["records"] if r["name"] == "text")
         return {".text": (text["address"], (p / "text.bin").read_bytes())}
+    if fmt == "rac2-level":             # games/rac2/*/baserom/levels/NN_name (tools/levels.py dump)
+        text = next(s for s in json.loads((p / "manifest.json").read_text())["sections"] if s["name"] == "text")
+        return {".text": (text["address"], (p / "text.bin").read_bytes())}
     raise SystemExit(f"{path}: unknown code format {fmt}")
 
 
@@ -112,8 +115,7 @@ def klass(prog: str, section: str) -> str:
 
 def known(key: str, version: dict) -> dict[str, list[tuple[int, int, str, bool]]]:
     """program -> [(address, size, name, matched)] of the functions the project lists, as it
-    cuts them, with whether it counts each as matched C. Projects that list only their matched
-    functions (rac2) give only those."""
+    cuts them, with whether it counts each as matched C."""
     cfg = version["xmap"].get("matched")
     out: dict[str, list] = {}
     if not cfg:
@@ -140,16 +142,6 @@ def known(key: str, version: dict) -> dict[str, list[tuple[int, int, str, bool]]
                     level = next((c[6:] for c in cats if re.fullmatch(r"level_\d+", c)), None)
                     addr = int(f["metadata"]["virtual_address"])
                     add(level, addr + (cfg.get("boot_offset_delta", 0) if level is None else 0), int(f["size"]), f["name"], done)
-    elif cfg["kind"] == "rac2":
-        for f in json.loads((base / "config/candidate-catalog.json").read_text())["functions"]:
-            add(None, f["address"], f["size"], f["symbol"])
-        for name, level in json.loads((base / "config/level-catalog.json").read_text())["levels"].items():
-            for f in level["functions"]:
-                add(re.match(r"\d+", name).group(), f["address"], f["size"], f["symbol"])
-        for path in sorted((base / "config/level-native").glob("*.json")):
-            native = json.loads(path.read_text())
-            for f in native.get("functions", []):
-                add(re.match(r"\d+", native["level"]).group(), f["address"], f["size"], f["symbol"])
     elif cfg["kind"] == "rac3":             # C blocks in src/frontbin; sizes from the project's report
         in_c = set()
         for src in sorted((base / "src/frontbin").glob("*.c")):

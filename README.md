@@ -41,7 +41,7 @@ design and the order of work are in [docs/port](docs/port/README.md).
 |---|---|---:|---:|---:|
 | Ratchet & Clank | SCES_509.16 ([`games/rac1/pal`](games/rac1/pal)) | 78.59% (2,917,868 / 3,712,808 bytes) | 4,220 / 5,109 | 79.80% |
 | Ratchet & Clank | SCUS_971.99 ([`games/rac1/ntsc`](games/rac1/ntsc)) | 68.55% (2,431,648 / 3,547,428 bytes) | 3,549 / 4,237 | 70.14% |
-| Ratchet & Clank: Going Commando | SCUS_972.68 ([`games/rac2/ntsc`](games/rac2/ntsc)) | 1.09% (531,224 / 48,788,176 bytes) | not counted | – |
+| Ratchet & Clank: Going Commando | SCUS_972.68 ([`games/rac2/ntsc`](games/rac2/ntsc)) | 2.54% (140,412 / 5,538,056 bytes) | 1,207 / 9,101 | 2.54% |
 | Ratchet & Clank: Up Your Arsenal | SCUS_973.53 ([`games/rac3/ntsc`](games/rac3/ntsc)) | 1.28% (164,764 / 12,838,776 bytes) | 1,292 / 31,316 | 1.28% |
 | Ratchet: Deadlocked | SCUS_974.65 ([`games/rac4/ntsc`](games/rac4/ntsc)) | 0.51% (26,572 / 5,175,440 bytes) | 243 / 15,056 | 0.51% |
 <!-- progress:end -->
@@ -57,7 +57,7 @@ between games ([progress/](progress/README.md) explains each).
 |---|---|---|---|---|
 | Ratchet & Clank (2002) | PAL (Europe) `SCES_509.16` | [`games/rac1/pal`](games/rac1/pal) | The boot executable SCES_509.16 and the 19 level programs (overlays), matched function by function. | macOS or Linux through Docker (linux/386 image with Wine); SN ProDG toolchain you supply |
 | Ratchet & Clank (2002) | NTSC-U (North America) `SCUS_971.99` | [`games/rac1/ntsc`](games/rac1/ntsc) | The boot executable SCUS_971.99 and the 19 level programs, as per-function units. | Linux or WSL; macOS through ./setup.sh --docker; toolchains downloaded and built by setup.sh |
-| Ratchet & Clank: Going Commando (2003) | NTSC-U (North America) `SCUS_972.68` | [`games/rac2/ntsc`](games/rac2/ntsc) | The boot executable SCUS_972.68 and its 27 level overlays: the whole program rebuilds from reconstructed assembly, and C replaces it function by function. | Windows with WSL for the C compiler; SN ProDG 2.0 assembler and linker you supply |
+| Ratchet & Clank: Going Commando (2003) | NTSC-U (North America) `SCUS_972.68` | [`games/rac2/ntsc`](games/rac2/ntsc) | The boot executable SCUS_972.68 and its 27 level programs: every program rebuilds byte for byte from splat's assembly, with the C in src/ linked in place of its functions (one definition per function, at every place it has). | macOS, Linux or Windows through Docker (linux/386 image with Wine and the build tools); SN ProDG 2.0's assembler and linker you supply |
 | Ratchet & Clank: Up Your Arsenal (2004) | NTSC-U (North America) `SCUS_973.53` | [`games/rac3/ntsc`](games/rac3/ntsc) | Three programs extracted from the disc with Wrench, each rebuilt byte for byte: frontbin.elf (the frontend and menu program), boot_elf.elf (the main executable) and i5bootn.elf (the launcher); the level programs are counted for progress. | Windows with SN ee-gcc 2.95.3 v1.36 (and Sony 2.9-ee-991111 for library ranges); macOS (wibo-macos, natively) and Linux through tools/build.py with wibo |
 | Ratchet: Deadlocked (2005) | NTSC-U (North America) `SCUS_974.65` | [`games/rac4/ntsc`](games/rac4/ntsc) | The game image packed inside the boot executable SCUS_974.65 (core, network and resident level code: 8,027 functions) and the 47 level overlays (24 campaign, 23 multiplayer), compared function by function; there is no linked image yet. | macOS or Linux through Docker (rac1/pal's linux/386 image with Wine); SN ProDG toolchain you supply |
 <!-- games:end -->

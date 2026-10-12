@@ -14,7 +14,7 @@ each project.
 |---|---|---|---|---|---|---|
 | [`games/rac1/pal`](../games/rac1/pal) | rac1-decomp | https://github.com/OpenRAC/rac1-decomp | main | `ace37f88ed8b` | 2026-10-10 | GPL-3.0 (third-party parts keep theirs) |
 | [`games/rac1/ntsc`](../games/rac1/ntsc) | Lombyte | https://github.com/lombyte-project/Lombyte | main | `8ae3b8ff1cd3` | 2026-10-10 | MIT (GPL-2.0 and newlib parts) |
-| [`games/rac2/ntsc`](../games/rac2/ntsc) | rac2-decomp | https://github.com/llesieur99/rac2-decomp | RAC2 | `9ba277d68cec` | 2026-10-07 | MIT |
+| [`games/rac2/ntsc`](../games/rac2/ntsc) | rac2-decomp | https://github.com/OpenRAC/rac2-gc-decomp | master | `99d98838893a` | 2026-10-11 | GPL-3.0 |
 | [`games/rac3/ntsc`](../games/rac3/ntsc) | rac3-uya-decomp | https://github.com/OpenRAC/rac3-uya-decomp | main | `bfd8278e8c73` | 2026-10-07 | GPL-3.0 |
 | [`games/rac4/ntsc`](../games/rac4/ntsc) | rac-deadlocked-decomp | https://github.com/OpenRAC/rac-deadlocked-decomp | main | `dedfcd416a1b` | 2026-10-05 | MIT (GPL libgcc, newlib libm) |
 <!-- sources:end -->
@@ -56,23 +56,12 @@ Everything else is exactly as it was at that commit.
   Nothing in the project reads them.
 
 **rac2/ntsc**
-- Left out `include/moby.h`. Its structure was taken from leaked material
-  ([SOURCING.md](policy/SOURCING.md)); `include/engine.h`, which no C file
-  includes, now forward-declares `struct Moby` instead.
-- `docs/COMMUNITY-ENGINE-REFERENCE.md` loses its moby field list, and the
-  table row and note taken from a leaked port's source path (same reason),
-  and its opening line no longer names a community chat archive.
-- `docs/PROTOTYPE-BUILDS.md` loses one sentence about another game's
-  prototype.
-- `CONTRIBUTING.md` points to the sourcing policy: leaked material is never
-  used.
-- `AGENTS.md` and `.gitmessage` use OpenRAC's commit convention instead of
-  the Lombyte style.
-- Added `host/`: running the pipeline on macOS and Linux, unchanged (nothing
-  in the project reads or hashes it).
-- `ports/pal-functional/` (platypet2217-star's RAC2Decomp, MIT, merged
-  upstream on 2026-10-05) comes along unchanged; it is not part of the
-  matching sources or progress.
+- Nothing changed. Since 2026-10-11 the project carries the sourcing edits OpenRAC used to make
+  itself (no `include/moby.h`, the leaked-material passages gone from its docs) and states the
+  sourcing rule in its own CONTRIBUTING.md and AGENTS.md. Its history was squashed when it was
+  rebuilt to rac1-decomp's structure, so it was imported afresh at that commit.
+- `ports/pal-functional/` (platypet2217-star's RAC2Decomp, MIT) comes along unchanged; it is
+  not part of the matching sources or progress.
 
 **rac4/ntsc**
 - In `src/game/00473A88.c`, the five members of the local struct are named by

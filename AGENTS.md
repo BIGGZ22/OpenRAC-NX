@@ -37,7 +37,7 @@ to play a game. Start with [docs/LAYOUT.md](docs/LAYOUT.md).
 | Anything | [docs/policy/SOURCING.md](docs/policy/SOURCING.md), [docs/LAYOUT.md](docs/LAYOUT.md), [CONTRIBUTING.md](CONTRIBUTING.md) |
 | rac1/pal | [games/rac1/pal/README.md](games/rac1/pal/README.md), [docs/WORKFLOW.md](games/rac1/pal/docs/WORKFLOW.md), [docs/BUILD_FIDELITY.md](games/rac1/pal/docs/BUILD_FIDELITY.md), [docs/AGENT_WORKFLOW.md](games/rac1/pal/docs/AGENT_WORKFLOW.md), [docs/LLM_DECOMP_INSTRUCTIONS.md](games/rac1/pal/docs/LLM_DECOMP_INSTRUCTIONS.md) |
 | rac1/ntsc | [games/rac1/ntsc/CONTRIBUTING.md](games/rac1/ntsc/CONTRIBUTING.md), [docs/decompilation-tips.md](games/rac1/ntsc/docs/decompilation-tips.md), [docs/building.md](games/rac1/ntsc/docs/building.md) |
-| rac2 | [games/rac2/ntsc/AGENTS.md](games/rac2/ntsc/AGENTS.md), [docs/START-HERE.md](games/rac2/ntsc/docs/START-HERE.md), [CONTRIBUTING.md](games/rac2/ntsc/CONTRIBUTING.md) |
+| rac2 | [games/rac2/ntsc/AGENTS.md](games/rac2/ntsc/AGENTS.md), [docs/BUILDING.md](games/rac2/ntsc/docs/BUILDING.md), [CONTRIBUTING.md](games/rac2/ntsc/CONTRIBUTING.md) |
 | rac3 | [games/rac3/ntsc/CONTRIBUTING.md](games/rac3/ntsc/CONTRIBUTING.md), [docs/targets.md](games/rac3/ntsc/docs/targets.md), [docs/wiki/Workflow.md](games/rac3/ntsc/docs/wiki/Workflow.md), [docs/wiki/Matching-Patterns.md](games/rac3/ntsc/docs/wiki/Matching-Patterns.md) |
 | rac4 | [games/rac4/README.md](games/rac4/README.md), [ntsc/CONTRIBUTING.md](games/rac4/ntsc/CONTRIBUTING.md), [ntsc/LEGAL.md](games/rac4/ntsc/LEGAL.md), [ntsc/docs/RESEARCH.md](games/rac4/ntsc/docs/RESEARCH.md) |
 | The editor | [editor/README.md](editor/README.md), [editor/GDSCRIPT_CONVENTIONS.md](editor/GDSCRIPT_CONVENTIONS.md) |

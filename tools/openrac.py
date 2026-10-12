@@ -276,12 +276,6 @@ def measure(version: dict) -> dict | None:
                "matched_functions": m.get("matched_functions"), "total_functions": m.get("total_functions"),
                "fuzzy_percent": round(float(m.get("fuzzy_match_percent", 0)), 2)}
         out["date"] = report.get("openrac_source", {}).get("date") or report_date(version, path)
-    elif progress["format"] == "rac2-proof":
-        scope = json.loads((path.parent.parent / "config/progress-scope.json").read_text())
-        total = sum(s["size"] for p in scope["programs"] for s in p["sections"] if s["flags"] & 4)
-        out = {"matched_code": report["integrated_code_bytes"], "total_code": total,
-               "matched_functions": None, "total_functions": None, "fuzzy_percent": None,
-               "date": report.get("verified_at", "")[:10]}
     else:
         raise SystemExit(f"{progress['report']}: unknown progress format {progress['format']}")
     out["percent"] = round(100.0 * out["matched_code"] / out["total_code"], 2) if out["total_code"] else 0.0
