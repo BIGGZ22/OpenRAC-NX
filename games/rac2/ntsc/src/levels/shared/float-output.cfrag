@@ -1,6 +1,0 @@
-
-extern void @@HELPER_DECL@@(f32, f32, f32, f32 *, s32);
-
-void @@FUNCTION@@(f32 *output) {
- @@HELPER_CALL@@(0.3f,0.0f,1.34f,output,1);
-}

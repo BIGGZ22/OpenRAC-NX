@@ -1,8 +1,0 @@
-
-extern void @@HELPER_DECL@@(f32, f32, f32, f32, s32, s32);
-
-void @@FUNCTION@@(u8 *object) {
- object[0x1d]=0;
- if (*(f32 *)(object+0x10)>=0.0f)
-  @@HELPER_CALL@@(1.1243411302566528f,0.005f,0.2f,0.0f,0,3);
-}

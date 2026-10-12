@@ -1,3 +1,5 @@
+.vscode
+.config/
 .local/
 .venv/
 reference/
@@ -22,3 +24,19 @@ __pycache__/
 .env
 .env.*
 config/local.json
+
+# Legal compliance (LEGAL.md): game-derived inputs stay on the contributor's machine.
+# candidates/ and progress/ are tracked: authored C and hash/size proof metadata only,
+# enforced by scripts/legal_check.py.
+baserom/
+extracted/
+going-decompiled/
+
+# Third-party SN Systems / Sony SDK mirrors: every contributor clones them themselves
+# (see README Quick Start). Never commit or redistribute them.
+toolchain/sn-prodg-3.01/
+toolchain/sn-prodg-24/
+toolchain/sn-prodg-2.0/
+toolchain/local/
+
+.DS_Store

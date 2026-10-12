@@ -1,0 +1,6 @@
+# A function whose diagnostic message spells out the name of an SDK-style function it calls or implements (hint only).
+# Columns: referencing function start, spelled name, string address.
+0x00127340	mcman	0x0013B7A0
+0x00127340	mcserv	0x0013B778
+0x00132318	snd_BankLoadByLoc	0x001A7650
+0x001326D8	snd_BankLoadFromIOP	0x001A7760

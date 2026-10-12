@@ -1,0 +1,4 @@
+# alias_provides.txt - EU region
+
+# Maps old address-named symbols to their new names for linker compatibility.
+# Format: old_name new_name

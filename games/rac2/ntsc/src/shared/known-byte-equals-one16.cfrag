@@ -1,3 +1,0 @@
-
-
-int @@FUNCTION@@(unsigned char *p) { return p[0x20] == 1; }

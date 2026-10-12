@@ -1,150 +1,64 @@
+# decomp.dev progress report, as rac1-decomp publishes its own.
+#
+# decomp.dev reads objdiff's report.json from an artifact named "<VERSION>_report" on the
+# default branch. This job does NOT build the game: SN ProDG's tools and the retail programs
+# cannot be redistributed. The report is generated locally after a full build (tools/build.py
+# all, then tools/progress.py) and committed as progress/report.json; this job proves it is
+# current, validates it and uploads it. It holds names, addresses, sizes and percentages: no
+# retail bytes. The repository must be registered once at https://decomp.dev/manage/new.
 name: Progress report
 
 on:
   push:
-    branches: [ RAC2 ]
+    branches: [master]
   pull_request:
-    branches: [ RAC2 ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  progress:
-    name: SCUS_972.68 Progress
+  report:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
-      - name: Check authored source inventory
-        run: python scripts/source_layout.py --check --inventory-check progress/source-inventory.json
-
-      - name: Export verified RAC2 progress (objdiff v2)
-        run: |
-          python scripts/decomp_report.py --output build/decomp/report.json \
-            $(for f in progress/levels/*.json; do printf -- '--level-proof %s ' "$f"; done)
+      # Fails if C was added to src/ or removed from it without regenerating the report.
+      - name: Check the committed report is current
+        run: python tools/progress.py --check
 
       - name: Validate the report with objdiff
-        # decomp.dev parses this artifact with objdiff; reject a report it cannot load.
-        # The release binary is pinned by version and SHA-256.
         run: |
           curl --fail --location --retry 3 -o "$RUNNER_TEMP/objdiff-cli" \
             https://github.com/encounter/objdiff/releases/download/v3.8.1/objdiff-cli-linux-x86_64
           echo "c8290281e82114bcc1a06ff73061110d3902a177822e750337de2537188e358f  $RUNNER_TEMP/objdiff-cli" | sha256sum --check
           chmod +x "$RUNNER_TEMP/objdiff-cli"
-          "$RUNNER_TEMP/objdiff-cli" report changes build/decomp/report.json build/decomp/report.json \
-            -o "$RUNNER_TEMP/objdiff-validation.json"
+          "$RUNNER_TEMP/objdiff-cli" report changes progress/report.json progress/report.json \
+            -o "$RUNNER_TEMP/validation.json"
 
-      - name: Check README progress bar
-        run: python scripts/readme_progress.py --check
-      - name: Check global unique catalogue and paired progress
+      - name: Summarise
         run: |
-          python scripts/unique_code_report.py --catalog config/function-catalog/catalog.json --output progress/unique-code-report.json --check
-          python scripts/unique_code_report.py --catalog config/function-catalog/catalog.json --output build/decomp/unique-summary.json --objdiff-output build/decomp/unique-report.json
-          python scripts/readme_unique_progress.py --catalogue-report progress/unique-code-report.json --physical-report build/decomp/report.json --check
-          # Validate all units without the CLI doing a quadratic self-comparison.
-          python -c 'import sys,json; sys.path.insert(0,"scripts"); from decomp_report import measures; print(json.dumps({"version":2,"measures":measures(0,0,0),"units":[],"categories":[]}))' > "$RUNNER_TEMP/empty-report.json"
-          "$RUNNER_TEMP/objdiff-cli" report changes "$RUNNER_TEMP/empty-report.json" build/decomp/unique-report.json -o "$RUNNER_TEMP/unique-objdiff-validation.json"
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          r = json.load(open("progress/report.json"))
+          m = r["measures"]
+          print("| Measure | Value |")
+          print("| --- | --- |")
+          print("| Code matched | %.2f%% (%s / %s bytes) |" % (m["matched_code_percent"], m["matched_code"], m["total_code"]))
+          print("| Functions matched | %s / %s |" % (m["matched_functions"], m["total_functions"]))
+          print("| Units complete | %s / %s |" % (m["complete_units"], m["total_units"]))
+          for c in r["categories"]:
+              cm = c["measures"]
+              print("| %s | %.2f%% code, %s functions |" % (c["name"], cm["matched_code_percent"], cm["matched_functions"]))
+          PY
 
-      - name: Upload decomp.dev progress artifact
+      - name: Upload the progress report
         uses: actions/upload-artifact@v4
         with:
           name: SCUS_972.68_report
-          path: build/decomp/report.json
+          path: progress/report.json
           if-no-files-found: error
-
-      - name: Upload separate authored-source inventory
-        uses: actions/upload-artifact@v4
-        with:
-          name: SCUS_972.68_authored_source
-          path: progress/source-inventory.json
-          if-no-files-found: error
-      - name: Upload conservative unique EE report
-        uses: actions/upload-artifact@v4
-        with:
-          name: SCUS_972.68-unique_report
-          path: build/decomp/unique-report.json
-          if-no-files-found: error
-      - name: Upload paired global metric quality
-        uses: actions/upload-artifact@v4
-        with:
-          name: SCUS_972.68_unique-metrics
-          path: build/decomp/unique-summary.json
-          if-no-files-found: error
-
-      - name: Check supplementary reusable-code families
-        run: |
-          python scripts/code_reuse_report.py --repo . --catalog config/function-catalog/catalog.json \
-            --output progress/code-reuse-report.json --families-output progress/code-reuse-families.json.gz --check
-      - name: Upload supplementary reusable-code families
-        uses: actions/upload-artifact@v4
-        with:
-          name: SCUS_972.68_code-reuse
-          path: |
-            progress/code-reuse-report.json
-            progress/code-reuse-families.json.gz
-          if-no-files-found: error
-
-      - name: Post Job Summary
-        run: |
-          python -c '
-          import json, os
-          with open("build/decomp/report.json") as f:
-              report = json.load(f)
-          measures = report["measures"]
-          total_code = int(measures["totalCode"])
-          matched_code = int(measures["matchedCode"])
-          code_pct = measures["matchedCodePercent"]
-          total_units = measures["totalUnits"]
-          complete_units = measures["completeUnits"]
-
-          lines = [
-              "### 🎮 decomp.dev Progress Report: SCUS_972.68 (Ratchet & Clank: Going Commando)",
-              "",
-              "| Metric | Value |",
-              "| :--- | :--- |",
-              f"| **Matched Code** | `{matched_code:,} / {total_code:,} bytes` ({code_pct:.3f}%) |",
-              f"| **Matched Units** | `{complete_units} / {total_units}` |",
-              "",
-              "#### Breakdown by Category",
-              "| Category | Matched Code | Percent | Units |",
-              "| :--- | :--- | :--- | :--- |",
-          ]
-          for cat in report.get("categories", []):
-              cm = cat["measures"]
-              cname = cat["name"]
-              mc = int(cm["matchedCode"])
-              tc = int(cm["totalCode"])
-              pct = cm["matchedCodePercent"]
-              cu = cm["completeUnits"]
-              tu = cm["totalUnits"]
-              lines.append(f"| {cname} | `{mc:,} / {tc:,} B` | {pct:.3f}% | {cu} / {tu} |")
-
-          with open("build/decomp/unique-summary.json") as f:
-              unique = json.load(f)
-          um = unique["metrics"]
-          uq = unique["quality"]
-          unique_matched = um["unique_matched_bytes"]
-          unique_total = um["unique_total_bytes"]
-          unique_percent = um["unique_matched_percent"]
-          unique_unknown = uq["unknown_bytes"]
-          lines.extend([
-              "",
-              "#### Conservative unique EE partition",
-              "",
-              f"Exact C across every grouped placement: {unique_matched:,} / {unique_total:,} bytes ({unique_percent:.6f}%).",
-              f"Unsupported boundaries and unresolved gaps retained without collapse: {unique_unknown:,} bytes.",
-              "This is a separate structural grouping policy, not certified original-source size. VU code remains in the physical report.",
-          ])
-
-          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
-          if summary_path:
-              with open(summary_path, "a") as f_out:
-                  f_out.write("\n".join(lines) + "\n")
-          else:
-              print("\n".join(lines))
-          '

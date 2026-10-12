@@ -1,0 +1,7 @@
+# Source-file name strings in the USA v1.01 boot and the functions that reference them (scripts/datamine.py).
+# Columns: string address, file name, referencing function starts. Addresses and names only.
+0x001A8E08	hud.cpp	0x0028AB70
+0x001A91F0	loaders.cpp	0x00292888
+0x001A95B8	map.cpp	0x00294F10
+0x001ADA98	gui/memoryManagement.cpp	0x00336DB8,0x00336E40
+0x001AE79F	Bgui/mathUtil.cpp	0x0034EE78

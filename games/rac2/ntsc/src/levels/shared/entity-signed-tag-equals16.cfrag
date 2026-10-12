@@ -1,7 +1,0 @@
-
-
-/* One fixed ordinary scalar query. Signed halfword width, offset and
-   equality constant are measured; no original class or field-name claim. */
-int @@FUNCTION@@(const unsigned char *entity) {
-    return *(const signed short *)(entity + 0xAA) == 0x0CDB;
-}

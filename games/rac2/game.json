@@ -28,48 +28,47 @@
         "sha1": "bacda860cbd6723142e86db56f197e47e728970f",
         "sha256": "36d5814d8d95328d5839612ccdf7a2e7ecac0b6f868d3ad4bb2e98411f734b4a"
       },
-      "target": "The boot executable SCUS_972.68 and its 27 level overlays: the whole program rebuilds from reconstructed assembly, and C replaces it function by function.",
+      "target": "The boot executable SCUS_972.68 and its 27 level programs: every program rebuilds byte for byte from splat's assembly, with the C in src/ linked in place of its functions (one definition per function, at every place it has).",
       "source": {
         "name": "rac2-decomp",
-        "repo": "https://github.com/llesieur99/rac2-decomp",
-        "branch": "RAC2",
+        "repo": "https://github.com/OpenRAC/rac2-gc-decomp",
+        "branch": "master",
         "checkout": "~/Projects/rac2-decomp",
-        "license": "MIT",
-        "exclude": [
-          "include/moby.h"
-        ],
-        "commit": "9ba277d68cecb54c016985d877b5199b36757509",
-        "date": "2026-10-07",
-        "imported": "2026-10-07"
+        "license": "GPL-3.0",
+        "exclude": [],
+        "commit": "99d98838893a64e584e175bc4eb7b03144ef78fa",
+        "date": "2026-10-11",
+        "imported": "2026-10-11"
       },
       "build": {
-        "host": "Windows with WSL for the C compiler; SN ProDG 2.0 assembler and linker you supply",
-        "readme": "games/rac2/ntsc/README.md"
+        "host": "macOS, Linux or Windows through Docker (linux/386 image with Wine and the build tools); SN ProDG 2.0's assembler and linker you supply",
+        "readme": "games/rac2/ntsc/docs/BUILDING.md"
       },
       "progress": {
         "report": "games/rac2/ntsc/progress/report.json",
-        "format": "rac2-proof",
-        "note": "Integrated C bytes over every executable byte of the boot program and its 27 level overlays (config/progress-scope.json); the rest already rebuilds from reconstructed assembly. Functions are not counted."
+        "format": "objdiff",
+        "note": "Every distinct function of the boot executable and the 27 level programs counted once (a function many levels share is one function); matched when its C links into a program that equals retail."
       },
       "inputs": [],
-      "setup": "in games/rac2/ntsc: python scripts/setup.py --iso ../../../baserom/SCUS_972.68.iso --runtime <a directory outside OpenRAC> --wrench <wrenchbuild> (Windows with WSL; its README)",
+      "setup": "in games/rac2/ntsc: python3 tools/levels.py dump (baserom/SCUS_972.68.iso), tools/compiler/build.sh, python3 tools/compiler/sdk/build.py, then python3 tools/build.py all (docs/BUILDING.md; bash tools/docker/run.sh <command> on hosts without the tools)",
       "xmap": {
         "code": [
           {
             "program": "boot",
-            "glob": "build/rac2/runtime/runs/*/reference/boot.elf",
+            "path": "games/rac2/ntsc/baserom/SCUS_972.68",
             "format": "elf"
           },
           {
             "program": "level",
-            "glob": "build/rac2/runtime/runs/*/reference/levels/*/overlay.elf",
-            "format": "elf"
+            "glob": "games/rac2/ntsc/baserom/levels/*_*",
+            "format": "rac2-level"
           }
         ],
         "matched": {
-          "kind": "rac2"
+          "kind": "objdiff",
+          "report": "games/rac2/ntsc/progress/report.json"
         },
-        "setup": "scripts/setup.py with --runtime build/rac2/runtime (games/rac2/ntsc/host/README.md)"
+        "setup": "python3 tools/levels.py dump in games/rac2/ntsc"
       }
     }
   }

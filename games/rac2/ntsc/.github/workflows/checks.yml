@@ -1,0 +1,35 @@
+name: Checks
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Catalogues and sources
+        run: python tests/check_repository.py
+      - name: Compile tools
+        run: |
+          python - <<'PY'
+          import py_compile
+          from pathlib import Path
+          files = sorted({*Path("tools").glob("*.py"), *Path("tools/compiler").rglob("*.py")})
+          for f in files:
+              py_compile.compile(str(f), doraise=True)
+          print(f"compiled {len(files)} files")
+          PY

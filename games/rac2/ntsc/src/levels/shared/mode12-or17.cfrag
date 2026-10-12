@@ -1,6 +1,0 @@
-
-s32 @@FUNCTION@@(s32 index) {
- s32 value=@@HELPER_CALL@@(index);
- if(value==12 || value==17) return 1;
- return 0;
-}

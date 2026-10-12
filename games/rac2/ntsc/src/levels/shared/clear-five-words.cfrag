@@ -1,3 +1,0 @@
-void @@FUNCTION@@(s32 *object) {
-    object[0]=0; object[1]=0; object[2]=0; object[3]=0; object[4]=0;
-}

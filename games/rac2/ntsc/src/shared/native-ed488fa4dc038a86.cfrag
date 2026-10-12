@@ -1,9 +1,0 @@
-typedef unsigned short u16;
-
-void @@FUNCTION@@(void) {
-    *(u16 *)0x1aa842 = *(u8 *)0x1a7bc9 ? 3 : 0;
-    *(u16 *)0x1aa85a = *(u8 *)0x1a7bca ? 3 : 0;
-    *(u16 *)0x1aa872 = *(u8 *)0x1a7bcb ? 3 : 0;
-    *(u16 *)0x1aa88a = *(u8 *)0x1a7bcc ? 3 : 0;
-    *(u16 *)0x1aa8a2 = *(u8 *)0x1a7bce ? 3 : 0;
-}

@@ -1,5 +1,5 @@
-# type(rac2): <concrete change and measured result>
-# Types and scopes: OpenRAC's CONTRIBUTING.md, "Commits" (feat, fix, docs, build, chore...).
+# <scope>: <concrete change and measured result>
+# Scopes: overlay, decomp, compiler, docs, config, fix, chore.
 #
 # Describe the affected functions or files and their resulting behavior.
 # Explain the measured cause or implementation choice.

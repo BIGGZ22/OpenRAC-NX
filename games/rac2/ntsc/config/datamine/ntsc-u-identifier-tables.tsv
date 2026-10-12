@@ -1,0 +1,4 @@
+# Tables of pointers to identifier-like names (state, enum or asset-slot names) in the USA v1.01 boot.
+# Columns: table address, member count, member names in table order.
+0x00137E90	4	NOLINK,STABLE,EXECCMD,ERROR
+0x001ACF00	4	blue,black,grey,white

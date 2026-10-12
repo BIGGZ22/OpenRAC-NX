@@ -1,0 +1,135 @@
+# path (a glob)<TAB>flags; "sdk" first: the SDK compiler (tools/compiler/sdk/) instead of the game's
+# The default is "-O2 -G0 -ffunction-sections" (-G8 for a file named *-g8.c).
+src/core/001163B0.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011B1E8.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011B588.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011B800.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011BAC8.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011BAF0.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011BE20.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011BF18.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011C820.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011C8B0.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011CF78.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011D140.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011D868.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011D950.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011DD98.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011DDC8.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011E0D8.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011E360.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011E4E0.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011E938.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011ED08.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011ED60.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011F5E0.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011F828.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011F888.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011F938.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011FA18.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011FA20.c	sdk -O2 -G2 -ffunction-sections
+src/core/0011FA70.c	sdk -O2 -G2 -ffunction-sections
+src/core/001213B8.c	sdk -O2 -G2 -ffunction-sections
+src/core/00124568.c	sdk -O2 -G2 -ffunction-sections
+src/core/00124AF0.c	sdk -O2 -G2 -ffunction-sections
+src/core/00124C98.c	sdk -O2 -G2 -ffunction-sections
+src/core/001253A8.c	sdk -O2 -G2 -ffunction-sections
+src/core/00125970.c	sdk -O2 -G2 -ffunction-sections
+src/core/00125E58.c	sdk -O2 -G2 -ffunction-sections
+src/core/001261F0.c	sdk -O2 -G2 -ffunction-sections
+src/core/00126E60.c	sdk -O2 -G2 -ffunction-sections
+src/core/00127040.c	sdk -O2 -G2 -ffunction-sections
+src/core/00127630.c	sdk -O2 -G2 -ffunction-sections
+src/core/00127888.c	sdk -O2 -G2 -ffunction-sections
+src/core/00127B88.c	sdk -O2 -G2 -ffunction-sections
+src/core/00128440.c	sdk -O2 -G2 -ffunction-sections
+src/core/00128898.c	sdk -O2 -G2 -ffunction-sections
+src/core/00128D58.c	sdk -O2 -G2 -ffunction-sections
+src/core/00129450.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012B568.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012B780.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012B8B0.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012BB60.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012C230.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012C508.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012C9C8.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012CFA0.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012D100.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012D808.c	sdk -O2 -g2 -gstabs
+src/core/0012E088.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012E110.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012E8E8.c	sdk -O2 -g2 -gstabs
+src/core/0012E980.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012E9D0.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012EA18.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012EAA0.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012F070.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012F9B8.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012FB80.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012FE78.c	sdk -O2 -G2 -ffunction-sections
+src/core/0012FEC0.c	sdk -O2 -G2 -ffunction-sections
+src/core/00130020.c	sdk -O2 -G2 -ffunction-sections
+src/core/00130288.c	sdk -O2 -G2 -ffunction-sections
+src/core/00130890.c	sdk -O2 -G2 -ffunction-sections
+src/core/00130AA0.c	sdk -O2 -G2 -ffunction-sections
+src/core/00130AB0.c	sdk -O2 -G2 -ffunction-sections
+src/core/00130B80.c	sdk -O2 -G2 -ffunction-sections
+src/core/00130C68.c	sdk -O2 -g2 -gstabs
+src/core/00130E20.c	sdk -O2 -G2 -ffunction-sections
+src/core/001313C8.c	sdk -O2 -G2 -ffunction-sections
+src/core/00131540.c	sdk -O2 -G2 -ffunction-sections
+src/core/001315E0.c	sdk -O2 -G2 -ffunction-sections
+src/core/00131780.c	sdk -O2 -G2 -ffunction-sections
+src/core/00133988.c	sdk -O2 -G2 -ffunction-sections
+src/game/00274118.c	sdk -O2 -G2 -ffunction-sections
+src/game/0027B7E0.c	-O2 -G8 -ffunction-sections
+src/game/0027F110.c	sdk -O2 -G2 -ffunction-sections
+src/game/00284FC0.c	-O2 -G8 -ffunction-sections
+src/game/00285828.c	-O2 -G8 -ffunction-sections
+src/game/00287BD8.c	-O2 -G8 -ffunction-sections
+src/game/00287E60.c	-O2 -G8 -ffunction-sections
+src/game/00287E98.c	sdk -O2 -G2 -ffunction-sections
+src/game/00288D30.c	-O2 -G8 -ffunction-sections
+src/game/00288D70.c	sdk -O2 -G2 -ffunction-sections
+src/game/0028E440.c	-O2 -G8 -ffunction-sections
+src/game/00290670.c	sdk -O2 -G2 -ffunction-sections
+src/game/00290730.c	-O2 -G8 -ffunction-sections
+src/game/002983D0.c	-O2 -G8 -ffunction-sections
+src/game/00298630.c	-O2 -G8 -ffunction-sections
+src/game/00298838.c	-O2 -G8 -ffunction-sections
+src/game/0029BCC8.c	-O2 -G8 -ffunction-sections
+src/game/002A0430.c	-O2 -G8 -ffunction-sections
+src/game/002B1C20.c	-O2 -G8 -ffunction-sections
+src/game/002DF1B8.c	sdk -O2 -G2 -ffunction-sections
+src/game/002ED260.c	-O2 -G8 -ffunction-sections
+src/game/002F5220.c	-O2 -G8 -ffunction-sections
+src/game/002FC3C0.c	-O2 -G8 -ffunction-sections
+src/game/003005A0.c	-O2 -G8 -ffunction-sections
+src/game/00336828.c	-O2 -G8 -ffunction-sections
+src/game/00339630.c	-O2 -G8 -ffunction-sections
+src/game/003398A8.c	-O2 -G8 -ffunction-sections
+src/game/0033BD70.c	-O2 -G8 -ffunction-sections
+src/game/0033C468.c	-O2 -G8 -ffunction-sections
+src/game/0033C9F0.c	-O2 -G8 -ffunction-sections
+src/game/0033EC98.c	-O2 -G8 -ffunction-sections
+src/game/003418C0.c	-O2 -G8 -ffunction-sections
+src/game/00341A88.c	-O2 -G8 -ffunction-sections
+src/game/00342668.c	-O2 -G8 -ffunction-sections
+src/game/00343068.c	-O2 -G8 -ffunction-sections
+src/game/00343798.c	-O2 -G8 -ffunction-sections
+src/game/00344848.c	-O2 -G8 -ffunction-sections
+src/game/003506A8.c	sdk -O2 -G2 -ffunction-sections
+src/levels/shared/L00_002A3B80.c	-O2 -G8 -ffunction-sections
+src/levels/shared/L00_002D64B8.c	-O2 -G8 -ffunction-sections
+src/levels/shared/L00_002D6FD8.c	-O2 -G8 -ffunction-sections
+src/levels/shared/L00_002D7938.c	-O2 -G8 -ffunction-sections
+src/levels/shared/L00_002E3B38.c	-O2 -G8 -ffunction-sections
+src/levels/shared/L00_002F08D0.c	-O2 -G8 -ffunction-sections
+src/levels/shared/L00_002F3488.c	-O2 -G8 -ffunction-sections
+src/levels/shared/L00_002F43E0.c	-O2 -G8 -ffunction-sections
+src/levels/shared/L00_002FBF60.c	-O2 -G8 -ffunction-sections
+src/levels/shared/L00_0032B270.c	-O2 -G8 -ffunction-sections
+src/levels/shared/L00_0037B6F0.c	-O2 -G8 -ffunction-sections
+src/levels/shared/L00_0037E668.c	-O2 -G8 -ffunction-sections
+src/levels/shared/L00_0042C818.c	-O2 -G8 -ffunction-sections
+src/levels/shared/L05_00446E28.c	-O2 -G8 -ffunction-sections

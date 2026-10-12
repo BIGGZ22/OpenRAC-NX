@@ -1,0 +1,9 @@
+# Functions that reference a source-file name string in the USA v1.01 boot (found with Ghidra, scripts/ghidra_anchors.py).
+# Columns: function start, source file, address of the file-name string. Addresses and names only.
+0x0028AB70	hud.cpp	0x001A8E08
+0x00292888	loaders.cpp	0x001A91F0
+0x00294F10	map.cpp	0x001A95B8
+0x003358A0	gui/behaviors.cpp	0x001AD8B0
+0x00336DB8	gui/memoryManagement.cpp	0x001ADA98
+0x00336E40	gui/memoryManagement.cpp	0x001ADA98
+0x0034EE78	gui/mathUtil.cpp	0x001AE7A0

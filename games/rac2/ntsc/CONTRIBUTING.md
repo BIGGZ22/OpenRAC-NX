@@ -1,93 +1,48 @@
 # Contributing
 
-Thanks for helping. This repository is a byte-matching decompilation: the only thing that
-counts as progress is code that a compiler turns into **exactly** the bytes the retail disc
-contains. Analysis, tooling and documentation are welcome, but they never count as a match.
+## Matching a function
 
-Full walkthrough: **[docs/START-HERE.md](docs/START-HERE.md)**.
+1. Set up the build once ([docs/BUILDING.md](docs/BUILDING.md)) and run `tools/build.py all`.
+2. Pick a function from `config/boot/functions.tsv` or `config/levels/functions.tsv`. A level
+   function's row lists all its places; one definition serves them all.
+3. Find its `INCLUDE_ASM` line in `src/` (`grep -rn func_XXXXXXXX src`) and replace it with
+   its C, in place. Name what it uses by what it is: other functions by their catalogue names,
+   the boot's resident data `D_XXXXXXXX`, a level's data `D_LNN_XXXXXXXX` (its address in level
+   NN). Never write a level address as a number: a level function is linked into every level
+   that has it, each with its own addresses.
+4. `tools/check.py func_XXXXXXXX` compiles its file and tries it at each of its places in a few
+   seconds; `--diff` shows the instructions beside the retail ones.
+5. `tools/build.py` the programs that have it (`boot`, `level 4`, or `all`). It places the
+   function everywhere the catalogue says and prints `OK` per program, or why a place does
+   not match. A function counts once its C links into a program that equals the retail one.
+6. `tools/progress.py` updates `progress/report.json` and the README table.
 
-First contribution with no programming/PS2 experience: use the
-[AI beginner guide](docs/CONTRIBUTOR-QUICKSTART.md). It first requires your own
-legally acquired matching ISO and complete tool suite, then a validated task
-and draft PR from your fork. The
-[toolchain guide](toolchain/README.md) distinguishes public software downloads
-from the locally supplied components needed for actual game-code qualification.
+Close but not matching: put it in `nonmatching/` with a line in its README.
 
-Before choosing a function, inspect the single register through
-`scripts/campaign.py --runtime <private-runtime> queue` and the corresponding `packet`. Use the
-[maintained campaign workflow](docs/CAMPAIGN-WORKFLOW.md) for new trials.
-Edit authored modules under `src/`, then regenerate the standalone compilation
-units using the [source layout workflow](docs/SOURCE-LAYOUT.md). Preserve the
-complete compilation context and refresh affected proofs after source changes.
+## Sending your work
 
-## The three things this repository cannot ship
+Branch from `master`, commit, push the branch and open a pull request to `master`. In the pull
+request, give the commands you ran and what they printed (`tools/build.py all`,
+`tools/progress.py`, the tests). CI runs the tests and the repository check; a maintainer merges.
+Never push to `master` and never force-push a shared branch. AGENTS.md has the full rules, for
+people as much as for agents.
 
-1. **Your own copy of the game** — the USA v1.01 disc (`SCUS_972.68`), verified against the
-   hashes pinned in `config/target.json`. Greatest Hits v2.00 and other regions are
-   *different targets*; do not mix them.
-2. **The local toolchains** — ProDG 2.0 (`ee/bin/Ps2EeAs.exe`, `ee/bin/ld.exe`)
-   reconstructs assembly. Authored C uses the qualified GNU EE compiler and
-   assembler profile, then the ProDG linker. See
-   [docs/COMPILER-NOTES.md](docs/COMPILER-NOTES.md) for the measured profiles and
-   their limits; a byte match does not establish the original compiler identity.
-3. **Wrench** (`wrenchbuild`) to unpack the level executables.
+## Rules
 
-That is deliberate: no game data and no proprietary SDK is distributed here. The tooling and
-the tests run without any of it — `python -m unittest discover -s tests -v` and
-`scripts/decomp_report.py` need nothing but Python 3.12.
-
-That is a technical property of preparation and CI checks, not a waiver of the
-contributor requirement: your legally acquired matching ISO and full tool suite
-must be available before contribution work begins.
-
-## The loop
-
-1. **Check your environment** — `python scripts/doctor.py` reports what you have, what is
-   missing, and the next command to run.
-2. **Prepare the reference locally** — `scripts/setup.py` verifies your disc and extracts the
-   boot executable and the 27 level overlays into a runtime directory **outside** this
-   repository.
-3. **Pick a target** — a small function, or a family that is already matched. Say what you are
-   working on early (a draft pull request) so two people do not match the same function.
-4. **Prove it** — `scripts/check_candidates.py` compiles `candidates/boot.c` and compares each
-   catalogued symbol byte for byte; `scripts/build.py` then re-links the whole boot and the
-   level overlays and compares every loaded byte of both PT_LOAD segments.
-5. **Open the pull request** — with the command you ran and its result.
-
-## Hard rules
-
-- **Write in English.** Documentation, comments, messages, catalogue
-  descriptions and commit messages use English. Measured game identifiers and
-  program names retain their original spelling.
-- **Use detailed, scoped commit messages.** Follow the Lombyte style: a subject
-  such as `overlay: qualify two native code families across 27 levels`, then
-  paragraphs explaining the concrete change, its technical reason, measured
-  scope and before/after progress, and the validation actually performed.
-  Record relevant limitations. Substantive changes require more than a subject.
-  The repository provides `.gitmessage` as a commit template.
-
-- **Byte equality is the only acceptor.** No patched bytes, no trimming after the link, no
-  "it looks right", no model verdict.
-- **Never commit retail-derived material**: the disc image, `boot.elf`, level overlays,
-  objects or `.bin` files produced from them, `asm/`, `build/`, runtime output. `.gitignore`
-  covers the usual names — read your diff anyway.
-- **Do not touch pinned identities.** `config/target.json`, `config/overlays.json`, the
-  catalogue hashes and the `reference_sha256` fields are what makes a claim verifiable. If a
-  catalogue legitimately changes, regenerate `progress/candidates.json` with a fresh checker
-  run **on the same build snapshot** — the integration refuses a catalogue that changed since
-  its review, and that refusal is a feature.
-- **Say where your material comes from.** A match must be derived from the retail disc you
-  own, be your own work, or come from a sister project that shares it with us — name the
-  project, its author and the agreement in the pull request. Community archives and prototype
-  builds may be *cited as reference*, never as evidence; leaked material is never used
-  (see `docs/policy/SOURCING.md` at the root of OpenRAC). The Ratchet &
-  Clank decompilations work together; what keeps that possible is that every reuse is written
-  down, byte proof and permission side by side.
-- **One function (or one coherent family) per pull request**, tests green:
-  `python -m unittest discover -s tests -v` must pass.
-
-## Licence
-
-This repository is MIT ([LICENSE](LICENSE)). By opening a pull request you agree that your
-contribution is distributed under the same terms. The licence covers the code in this
-repository only — never the game, its assets, or the proprietary toolchains.
+- **Sources.** Use the retail programs of your own disc, SDK library *binaries*, open-source code
+  under its licence, public decompilations and tools, and public hardware documentation. Never
+  use Sony's SDK source, samples or headers, or leaked or NDA material of any kind (leaked
+  builds, symbol dumps from them, leaked source), not even as a reference. Publicly distributed
+  prototype discs may be cited, naming the build, never as the evidence for a match. OpenRAC's
+  docs/policy/SOURCING.md is the full policy.
+- Plain C. No inline assembly in a function, no register pins, no tricks to defeat the
+  compiler. Flags are per file (`config/cflags.txt`), never per function.
+- The build only does what the retail assembler and linker did; nothing edits compiler
+  output.
+- Never commit game data, extracted assembly, disc images or proprietary tools: `baserom/`,
+  `toolchain/` and `build/` stay local.
+- Conventional commit subjects (`feat(src):`, `fix(tools):`, `docs:` ...), with a body that
+  says what changed and how it was checked.
+- `python -m unittest discover -s tests`, `python tests/check_repository.py` and
+  `python tools/progress.py --check` pass (CI runs
+  them; it cannot build, having no game data).

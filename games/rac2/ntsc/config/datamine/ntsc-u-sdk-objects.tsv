@@ -1,0 +1,20 @@
+# SDK library objects located in the USA v1.01 boot: all matched functions of an object agree on its start,
+# it has two or more matches (or one covering the whole object), and it overlaps no better-supported object.
+# Columns: boot start, boot end, library, object member, matched functions.
+0x001153D4	0x00115484	libc.a	memcpy.o	3
+0x00115484	0x00115544	libc.a	memset.o	3
+0x00115690	0x001157AC	libc.a	strcpy.obj	1
+0x001157AC	0x001158F4	libc.a	strlen.obj	1
+0x00115AC0	0x00115C90	libc.a	strncpy.obj	1
+0x0011A800	0x0011B0A0	libkernl.a	klib.o	130
+0x0011C880	0x0011CFC8	libkernl.a	sifcmd.o	2
+0x0011F630	0x0011F894	libkernl.a	initsys.o	2
+0x00124418	0x00124540	libsn.a	vu.o	1
+0x00126DE0	0x00127624	libdma.a	libdma.o	2
+0x00129450	0x0012E10C	libmpeg.a	mpc.o	20
+0x0012E890	0x0012EA9C	libmpeg.a	bit.o	3
+0x0012FF88	0x00130A8C	libmpeg.a	init.o	2
+0x001313C8	0x00131400	libc.a	s_isnan.o	3
+0x00288828	0x002889E8	libstl.a	messages.o	1
+0x003333A8	0x003367C0	libstdc++.a	iostream.o	2
+0x003427F8	0x00343118	libiberty.a	hashtab.o	2

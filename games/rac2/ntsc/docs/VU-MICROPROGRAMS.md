@@ -108,3 +108,51 @@ Open threads:
   library strings.
 - Program **56883** (5 chunks) has no RAC1 counterpart; its role is unknown.
 - The roles must be verified per program against our own code before any rename.
+
+## 5. References for a future renderer study
+
+These references explain hardware and related renderers; they do not establish
+any RAC2 program's role, original source, or matching C. Reviewed 9 October 2026.
+
+| Reference | Useful scope | Limit |
+| --- | --- | --- |
+| [Sony VU manual, version 6.0 (April 2002)](https://manuals.plus/m/a858ef55cd2638accdfca612d5359eb6e48a48c7fd6792b18080d866e610fde5) and [PS2Docs index](https://github.com/ninjadynamics/PS2Docs) | VU micro/macro modes, upper/lower instructions, pipelines; companion EE manuals cover DMA and VIF | Consult the actual edition and errata. Mirrors are references, not toolchain qualification. |
+| [R5900 opcode tables](https://github.com/wasaylor/r5900-opcodes) | Cross-check EE encodings; CPU, COP1 and EE-specific tables are separate | `opcodes-cpu` alone is not a complete EE or VU decoder. |
+| [PCSX2 VU notes](https://pcsx2.net/blog/2009/ps2-vu-vector-unit-documentation-part-1/) | Observed VI branch delays and floating-point edge cases | Historical emulator research includes unresolved cases; compare current implementations and measured behaviour. |
+| [Govanify's rendering example](https://govanify.com/post/im-path-three-ps2/) | Trace EE setup, VIF uploads, VU calculations and GIF output together | A teaching example, not Ratchet's renderer. |
+| [OpenGOAL Tfrag porting notes](https://opengoal.dev/docs/porting-info/drawable_and_tfrag/porting_tfrag/) and [geometry overview](https://opengoal.dev/docs/porting-info/drawable_and_tfrag/) | DMA buckets, visibility, geometry trees, colour interpolation and VU packet generation | Jak's layouts, addresses and algorithms remain comparison hypotheses for RAC2. |
+| [Jak 1 background](https://opengoal.dev/docs/source-docs/jak1/packages/engine/gfx/background/) and [Jak 2 background](https://opengoal.dev/docs/source-docs/jak2/packages/engine/gfx/background/) | Named `tfrag`, `tie`, `shrub` structures and renderer entry points | Distinguish recovered code from additions explicitly made for the PC port. |
+
+The historical connection is real but narrower than engine identity:
+[Ted Price's postmortem](https://www.gamedeveloper.com/game-platforms/postmortem-insomniac-games-i-ratchet-clank-i-),
+published in June 2003, describes borrowing Naughty Dog background-rendering
+code during development of the **first** Ratchet & Clank, including smooth LOD
+transitions and instanced objects. It does not date the first reuse to 2003 or
+prove any particular Jak/RAC2 function identical.
+
+[OpenGOAL](https://github.com/open-goal/jak-project#methodology) is a detailed
+comparative reference, not a drop-in Ratchet decompiler: its decompiler targets
+original GOAL compiler output. Its [x86 porting notes](https://opengoal.dev/docs/porting-info/porting_to_x86/)
+also distinguish GIF paths: VU1 `XGKICK` feeds PATH 1, VIF1 `DIRECT` feeds PATH 2,
+and EE/GIF DMA feeds PATH 3. Sending code/data through VIF1 does not make the
+following `XGKICK` a PATH 2 transfer.
+
+### Suggested bounded study, not a new matching task
+
+Program **55907** is a useful first comparison because all eight chunks already
+match the measured RAC1 counterpart (§3). Its `tfrag` role remains a hypothesis:
+
+1. Locate its actual RAC2 upload and invocation; distinguish EE payload addresses
+   from VU micro-memory destinations and execution entry points.
+2. Recover the associated DMA/VIF inputs, VU data layout and GIF output, preserving
+   chunk boundaries, instruction scheduling and relevant numeric behaviour.
+3. Compare those observations with Jak's Tfrag pipeline; retain differing layouts,
+   constants, visibility rules and callees rather than inferring equivalence.
+4. Record confirmed roles and counterexamples before renaming anything. Use the
+   campaign register and shared reservations
+   if this later becomes function work; this reference section starts no trial.
+
+VU microcode reconstruction or a behaviourally equivalent PC implementation is
+separate from exact EE C credit. These resources do not add VU instruction support
+to the qualified C compiler, change the progress denominator, or resolve unrelated
+SDK register-allocation and return-delay-slot mismatches.

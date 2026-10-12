@@ -96,7 +96,7 @@ not adoption.
 
 rac1-decomp uses these to propose candidates. These observations do not
 permit source permutations on parked RAC2 targets: the concrete reopening
-evidence required by [CAMPAIGN-WORKFLOW.md](CAMPAIGN-WORKFLOW.md) still applies.
+evidence required by CAMPAIGN-WORKFLOW.md still applies.
 
 - **m2c with generated context** for a first C sketch. Its output is never
   matching as emitted and mis-decodes branch-likely conditions.

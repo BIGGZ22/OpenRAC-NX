@@ -1,8 +1,8 @@
 # Assert-message carriers: 597 recorded annotations
 
 Measured on 3 October 2026 against the USA v1.01 retail programs identified by
-[`config/target.json`](../config/target.json) and
-[`config/overlays.json`](../config/overlays.json).
+`config/target.json` and
+`config/overlays.json`.
 
 The second naming pass adds **495 function annotations, using 33 distinct labels,
 across 25 level overlays**. Combined with the previous 102 entries, the public table
@@ -169,7 +169,7 @@ retail image and analysis database remain the source for semantic review.
 
 ## Applying or verifying the table
 
-[`ApplyAssertMessageNames.java`](../scripts/ghidra/ApplyAssertMessageNames.java)
+[`ApplyAssertMessageNames.java`](../tools/ghidra/ApplyAssertMessageNames.java)
 accepts a program identifier and the TSV path. It previews by default; the explicit
 third argument `--apply` enables renaming. It checks the complete level `.text`
 SHA-256 against its recorded retail fingerprint before processing names, resolves a

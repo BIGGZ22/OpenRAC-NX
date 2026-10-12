@@ -1,5 +1,0 @@
-
-s32 @@FUNCTION@@(u8 *object) {
- if(object==0) return 0;
- return *(short *)(object+0xaa)==71;
-}

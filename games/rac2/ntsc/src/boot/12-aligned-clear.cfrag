@@ -1,2 +1,0 @@
-/* Clear one aligned 128-bit object through architectural zero. */
-void FUN_00282C88(TI *a0) { *a0 = 0; }

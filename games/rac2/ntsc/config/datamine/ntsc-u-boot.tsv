@@ -1,0 +1,57 @@
+# Optional names for boot objects of USA v1.01, one "<start address> <name>" row each.
+# Objects start after every run of linker fill (0xCDCDCDCD) and at each code section; they are named
+# by their start address (core/00115200, game/0026EA00) until their source file is identified. Add a
+# row to split a unit at a proven file boundary or to rename it; only the name changes, never the
+# address. Rows are read by scripts/unique_estimate.py when it builds the decomp.dev report.
+# mapped: rows below come from scripts/map_segments.py (boundaries of Promises/RC2-Going-Decompiled's v2.00 split,
+# matched by relocation-masked function digest; columns: v1.01 start, name, kind, v2.00 start, functions used to match).
+0x00115200 00115200 c 0x00115200 2
+0x00115340 lib_r5900_memcmp_strcmp lib 0x00115340 1
+0x00115690 lib_r5900_strcpy_strlen lib 0x00115690 1
+0x00115AC0 lib_strncpy lib 0x00115AC0 1
+0x00115C90 00115C90 c 0x00115C90 1
+0x0011FC68 lib__divdi3 lib 0x0011FC68 1
+0x001212C8 lib__fixunsdfdi lib 0x001212C8 1
+0x001213B8 lib__floatdidf lib 0x001213B8 1
+0x00121450 00121450 c 0x00121450 1
+0x00121AB8 lib__muldi3 lib 0x00121AB8 1
+0x00122630 lib_dp-bit lib 0x00122630 1
+0x001232F0 lib_fp-bit-pack lib 0x001232F0 1
+0x00123490 00123490 c 0x00123490 1
+0x001234C0 lib_fp-bit-make lib 0x001234C0 1
+0x00123530 00123530 c 0x00123530 1
+0x001313C8 lib_s_isnan lib 0x001313C8 1
+0x00131400 00131400 c 0x00131400 1
+0x00131540 00131540 c 0x00131540 1
+0x00132220 00132220 c 0x00132220 1
+0x001339F0 001339F0 cpp 0x001339F0 1
+0x0026EA00 0026EA00 c 0x0026EA00 1
+0x00274118 00274118 asm 0x00274128 2
+0x00278EB0 00278EB0 cpp 0x00278EC0 1
+0x00281A08 00281A08 cpp 0x002823B8 1
+0x00282848 00282848 c 0x002831F8 1
+0x00282A18 00282A18 asm 0x002833C8 1
+0x00287BD8 00287BD8 cpp 0x00288600 1
+0x00290A40 00290A40 cpp 0x002912B8 1
+0x00298278 00298278 cpp 0x00299020 1
+0x0029F338 0029F338 cpp 0x002A0170 1
+0x002A7398 002A7398 c 0x002A8200 1
+0x002B1350 002B1350 asm 0x002B2268 1
+0x002B3380 002B3380 cpp 0x002B4298 1
+0x002B8108 002B8108 asm 0x002B9028 1
+0x002C91E0 002C91E0 cpp 0x002CA100 1
+0x002EF1E8 002EF1E8 cpp 0x002F0040 1
+0x002FC138 002FC138 cpp 0x002FCFC8 1
+0x002FC220 002FC220 asm 0x002FD0B0 1
+0x002FED90 002FED90 cpp 0x002FFC20 1
+0x00307298 00307298 asm 0x00308090 3
+0x00335270 00335270 c 0x00336068 1
+0x00347EA0 00347EA0 cpp 0x00348BD0 1
+0x0034F3B8 0034F3B8 cpp 0x00350100 1
+# named: rows below come from scripts/name_units_from_rac1.py (rac1-decomp source file whose first function and at least
+# two more match in order; columns: v1.01 start, file name, rac1, matched functions, functions in the rac1 file).
+0x002808F8 drawquad rac1 6 10
+0x0029CF58 miscproc rac1 5 7
+0x002C9C90 pause rac1 7 155
+0x002EF480 tfragproc rac1 2 4
+0x00350590 movie_readbuf rac1 5 6

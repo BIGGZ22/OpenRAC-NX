@@ -1,8 +1,0 @@
-void @@FUNCTION@@(void)
-{
-    *(short *)0x1AA882 = *(unsigned char *)0x1A7BC9 ? 3 : 0;
-    *(short *)0x1AA89A = *(unsigned char *)0x1A7BCA ? 3 : 0;
-    *(short *)0x1AA8B2 = *(unsigned char *)0x1A7BCB ? 3 : 0;
-    *(short *)0x1AA8CA = *(unsigned char *)0x1A7BCC ? 3 : 0;
-    *(short *)0x1AA8E2 = *(unsigned char *)0x1A7BCE ? 3 : 0;
-}

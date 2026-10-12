@@ -1,7 +1,0 @@
-
-f32 @@FUNCTION@@(f32 value) {
-    f32 squared = value * value;
-    value = value * -2.0f;
-    value = value + 3.0f;
-    return squared * value;
-}
