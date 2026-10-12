@@ -166,8 +166,41 @@ def split_multiline_strings(text: str) -> str:
     return "".join(out)
 
 
+_FUNCTION_HEAD = re.compile(r'^[A-Za-z_][^;{}]*\)\s*\{\s*$')
+_INLINE_RECORD_CAST = re.compile(r'\(\s*(struct|union)\s*\{([^{}]*)\}\s*(\*+)\s*\)')
+
+
+def hoist_inline_records(text: str) -> str:
+    """Names a record defined inside a cast, `(struct { u8 pad[8]; s32 v[8]; } *)p`.
+
+    Clang's JSON leaves such a record out, so its layout would be unknown to
+    hostgen. Each becomes `struct openrac_inline_N`, defined at the start of
+    the head line of the function that casts to it, so no line moves and the
+    types it uses are the ones the function sees."""
+    lines = text.split("\n")
+    count = 0
+    heads: dict[int, list[str]] = {}
+    for i, line in enumerate(lines):
+        if not _INLINE_RECORD_CAST.search(line):
+            continue
+        head = next((j for j in range(i, -1, -1) if _FUNCTION_HEAD.match(lines[j])), None)
+        if head is None:
+            continue
+
+        def name(m: re.Match) -> str:
+            nonlocal count
+            heads.setdefault(head, []).append(f"{m.group(1)} openrac_inline_{count} {{{m.group(2)}}};")
+            count += 1
+            return f"({m.group(1)} openrac_inline_{count - 1} {m.group(3)})"
+
+        lines[i] = _INLINE_RECORD_CAST.sub(name, line)
+    for head, defs in heads.items():
+        lines[head] = " ".join(defs) + " " + lines[head]
+    return "\n".join(lines)
+
+
 def prepare(text: str) -> str:
-    return widen_long(split_multiline_strings(blank_file_scope_asm(text)))
+    return hoist_inline_records(widen_long(split_multiline_strings(blank_file_scope_asm(text))))
 
 
 _INCLUDE_ASM = re.compile(r'^[ \t]*(?:INCLUDE_ASM|ASM_FUNC|LINKER_REMNANT)\(\s*"[^"]*"\s*,\s*(\w+)\s*\)\s*;?[ \t]*(?:/\*.*?\*/)?[ \t]*$', re.M)

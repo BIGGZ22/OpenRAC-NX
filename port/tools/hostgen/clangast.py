@@ -272,6 +272,41 @@ def _function_start(lines: list[str], code_lines: set[int], use: int) -> int:
     return 0
 
 
+def drop_superseded_declarations(root: Path, rel: str, text: str, stderr: str) -> list[str]:
+    """A function this unit defines, declared otherwise by an earlier line of a header.
+
+    "conflicting types for 'f'" at f's definition, with a note that the
+    previous declaration is in another file (a header that declares every
+    callee as `void *`, say). The definition is the function's real
+    signature, so the header's one-line declaration is blanked in the
+    prepared copy of the header (no line moves). Returns what was done."""
+    done = []
+    diags = list(_DIAG.finditer(stderr))
+    for k, d in enumerate(diags[:-1]):
+        m = re.match(r"conflicting types for '(\w+)'", d["msg"])
+        note = diags[k + 1]
+        if d["kind"] != "error" or not m or note["kind"] != "note" or not note["msg"].startswith("previous declaration is here"):
+            continue
+        name = m.group(1)
+        if not d["file"].replace("\\", "/").endswith(rel):
+            continue
+        defline = text.split("\n")[int(d["line"]) - 1]
+        if ";" in defline.split("{")[0] or "(" not in defline:
+            continue  # a declaration, not a definition: fix_from_diagnostics aliases it
+        other = Path(note["file"])
+        other = other if other.is_absolute() else root / other
+        if not other.is_file() or other.resolve() == (root / rel).resolve():
+            continue
+        lines = other.read_text(encoding="utf-8", errors="surrogateescape").split("\n")
+        at = int(note["line"]) - 1
+        if name not in lines[at] or "{" in lines[at] or not lines[at].rstrip().endswith(";"):
+            continue
+        done.append(f"{other.name}:{at + 1}: declaration of {name} dropped, {rel} defines it differently")
+        lines[at] = ""
+        other.write_text("\n".join(lines), encoding="utf-8", errors="surrogateescape")
+    return done
+
+
 def parse_unit(clang: str, root: Path, rel: str, flags: list[str], attempts: int = 12) -> tuple[Unit | None, str]:
     """The AST of root/rel. Returns (None, errors) if Clang still refuses it."""
     path = root / rel
@@ -287,6 +322,10 @@ def parse_unit(clang: str, root: Path, rel: str, flags: list[str], attempts: int
             return Unit(path, ast, fixes), ""
         text = path.read_text(encoding="utf-8", errors="surrogateescape")
         fixed, more = fix_from_diagnostics(text, check.stderr, rel)
+        header_fixes = drop_superseded_declarations(root, rel, text, check.stderr)
+        if header_fixes:
+            fixes += header_fixes
+            continue
         if not more or fixed == text:
             return None, check.stderr
         path.write_text(fixed, encoding="utf-8", errors="surrogateescape")

@@ -22,6 +22,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+import clangast  # noqa: E402
 import ctype  # noqa: E402
 import hostgen  # noqa: E402
 import prep  # noqa: E402
@@ -477,6 +478,28 @@ class Preparation(unittest.TestCase):
         self.assertEqual(out.count("\n"), src.count("\n"))
         self.assertNotIn("nop", out)
         self.assertIn('__asm__("sync")', out)
+
+    def test_record_in_a_cast_is_named_keeping_lines(self):
+        src = '#include "a.h"\nvoid f(char *p) {\n    ((struct { int pad[2]; int v[4]; } *)p)->v[1] = -1;\n}\n'
+        out = prep.hoist_inline_records(src)
+        self.assertEqual(out.count("\n"), src.count("\n"))
+        self.assertEqual(out.split("\n")[0], '#include "a.h"')
+        self.assertTrue(out.split("\n")[1].startswith("struct openrac_inline_0 { int pad[2]; int v[4]; }; void f("))
+        self.assertIn("((struct openrac_inline_0 *)p)->v[1]", out)
+        self.assertEqual(prep.hoist_inline_records("int a;\n"), "int a;\n")
+
+    def test_header_declaration_a_definition_contradicts_is_dropped(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "include").mkdir()
+            (root / "include/h.h").write_text("int keep;\nextern void f(void *, int);\nint tail;\n")
+            text = '#include "include/h.h"\nvoid f(int *p, int n) {\n}\n'
+            err = ("a.c:2:6: error: conflicting types for 'f'\n"
+                   "include/h.h:2:13: note: previous declaration is here\n")
+            done = clangast.drop_superseded_declarations(root, "a.c", text, err)
+            self.assertEqual(len(done), 1)
+            self.assertEqual((root / "include/h.h").read_text(), "int keep;\n\nint tail;\n")
 
 
 if __name__ == "__main__":
