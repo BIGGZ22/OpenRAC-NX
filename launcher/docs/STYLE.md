@@ -83,6 +83,19 @@ those images and clips come from, and under what terms, is not recorded yet:
 it belongs in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) before a
 release. Without them the cards show the gradient, as the site does.
 
+## Structure
+
+- A page has one main action, in the bar's orange, in a fixed place. Stops,
+  dead ends and secondary actions are never orange.
+- Secondary actions go in a menu beside the main one (`Menu.svelte`), with
+  anything that removes set apart at the end in `--err`.
+- A panel holds rows, not more boxes: lists are rows with a `--line` rule
+  between them (`SaveManagerBlock.svelte`).
+- A state is a dot and a few words, or a tick; a pill only where a list of
+  states has to be scanned (the developer pages, Tasks).
+- What only a contributor reads (serials, percentages, file names, paths) is
+  shown with developer tools on.
+
 ## Rules
 
 - Use the tokens, not new colours. A new colour goes on `:root` with a name

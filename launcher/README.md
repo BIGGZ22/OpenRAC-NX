@@ -21,9 +21,9 @@ It is a [Tauri 2](https://tauri.app/) app: a Rust side (`core/` and
 `src-tauri/`) that does every file and process operation, and a Svelte 5 UI
 (`src/`) styled after [openrac.dev](https://openrac.dev).
 
-| Games                                                                                          | A game                                                                                         |
-| ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| ![The games, with each version's progress and what is in place](docs/screenshots/library.webp) | ![Ratchet & Clank (PAL): build and play, level editor, save files](docs/screenshots/game.webp) |
+| Games                                                                                 | A game                                                                                           |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| ![The games: one tile each, with what can be done next](docs/screenshots/library.jpg) | ![A game: the main button, its menu, save files and the level editor](docs/screenshots/game.jpg) |
 
 ## Read first
 
@@ -60,13 +60,21 @@ the disc image and saves are kept.
 
 ## On a game's page
 
+- **One main button**, always in the same place, says the next thing to do:
+  Set up from your disc, Build the game, Play. What is done less often
+  (rebuild, open the folder, the activity log, remove the set-up) is in the
+  menu beside it. The games page shows the same button on each game's tile.
 - **Save files**: the port's memory card (`~/.local/share/openrac/memcard/<serial>/`
   on Linux) with each slot's planet, bolts and save time, backups you can
   restore, and the folder.
 - **Level editor**: the levels in Godot 4 (choose Godot once).
-- **Layout**: Settings → Appearance switches between Compact (the default:
-  the game, its versions and Play on one band) and Classic, the original
-  layout. Compact is one stylesheet, `src/layouts/compact.css`.
+- **Layout**: Settings → Launcher switches between Compact (the default:
+  the game's name and its main button side by side) and Classic, stacked and
+  centred. Compact is one stylesheet, `src/layouts/compact.css`.
+
+What a contributor needs and a player does not is behind **Developer tools**
+(Settings → Launcher): decompilation progress, disc serials, the Tasks tab,
+file names and sizes of the saves, and the checks' details in Settings.
 
 ## Develop
 

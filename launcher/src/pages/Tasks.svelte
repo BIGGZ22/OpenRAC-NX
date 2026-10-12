@@ -1,7 +1,7 @@
 <script lang="ts">
   // The job queue: what ran, what runs, what waits, and each job's output.
   import Icon from "$components/Icon.svelte";
-  import { cancel, clearFinished, jobs } from "$lib/app.svelte";
+  import { app, cancel, clearFinished, jobs } from "$lib/app.svelte";
   import { elapsed } from "$lib/format";
   import type { Job, JobState } from "$lib/queue";
 
@@ -43,11 +43,11 @@
 <div class="page">
   <aside class="panel list">
     <div class="row">
-      <h2 class="grow">Tasks</h2>
+      <h2 class="grow">{app.config?.developer ? "Tasks" : "Activity"}</h2>
       <button class="ghost small" onclick={clearFinished}>Clear finished</button>
     </div>
     {#if !jobs.list.length}
-      <p class="muted">Nothing has run yet. Builds, checks and setup steps show here with their output.</p>
+      <p class="muted">Nothing has run yet. When the launcher sets a game up or builds it, what it did shows here.</p>
     {/if}
     {#each [...jobs.list].reverse() as job (job.key)}
       <button class="job" class:on={selected?.key === job.key} onclick={() => (jobs.selected = job.key)}>
@@ -85,7 +85,7 @@
             >{l.line}
 </span>{/each}</pre>
     {:else}
-      <p class="muted">Select a task to see its output.</p>
+      <p class="muted">Choose an entry to see what it printed.</p>
     {/if}
   </section>
 </div>

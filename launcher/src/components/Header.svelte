@@ -5,10 +5,12 @@
   import { app, jobs, pendingJobs, runningJob, type Page } from "$lib/app.svelte";
   import { DISCORD_URL, SITE_URL } from "$lib/links";
 
-  // A player's launcher has no "tasks": what it ran is under Activity.
+  // A player has two places to be: the games and the settings. What the launcher
+  // ran (Activity) opens from the running job here and from a game's menu; with
+  // developer tools on it is a tab of its own, Tasks.
   const tabs = $derived<{ page: Page; label: string }[]>([
     { page: "library", label: "Games" },
-    { page: "tasks", label: app.config?.developer ? "Tasks" : "Activity" },
+    ...(app.config?.developer ? [{ page: "tasks" as Page, label: "Tasks" }] : []),
     { page: "settings", label: "Settings" },
   ]);
 
@@ -44,6 +46,7 @@
     >
       <span class="spinner"></span>
       <span class="clip">{running.title}</span>
+      {#if pending > 1}<span class="count">+{pending - 1}</span>{/if}
     </button>
   {/if}
 

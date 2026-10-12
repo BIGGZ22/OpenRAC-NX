@@ -9,6 +9,7 @@
     value = $bindable(null),
     candidates = [],
     folder = false,
+    detail = false,
     check,
   }: {
     label: string;
@@ -16,6 +17,8 @@
     value?: string | null;
     candidates?: Candidate[];
     folder?: boolean;
+    /** Also say what a good value was found to be (a version, a count): for contributors. */
+    detail?: boolean;
     check: (path: string) => Promise<Check>;
   } = $props();
 
@@ -51,10 +54,10 @@
     <label class="grow" for={label}>{label}</label>
     {#if checking}
       <span class="spinner dim"></span>
+    {:else if result && !result.ok}
+      <span class="pill err"><span class="dot"></span>Problem</span>
     {:else if result}
-      <span class={`pill ${result.ok ? "ok" : "err"}`} title={result.message}
-        ><span class="dot"></span>{result.ok ? "OK" : "Problem"}</span
-      >
+      <span class="good" title={result.message}><Icon name="check" size={14} />Found</span>
     {/if}
   </div>
   <p class="dim hint">{hint}</p>
@@ -72,7 +75,9 @@
         ><Icon name="x" size={14} /></button
       >{/if}
   </div>
-  {#if result && !result.ok}<p class="message err">{result.message}</p>{:else if result}<p class="message dim">
+  {#if result && !result.ok}<p class="message err">{result.message}</p>{:else if result && detail}<p
+      class="message dim"
+    >
       {result.message}
     </p>{/if}
   {#if candidates.length && candidates.some((c) => c.path !== value)}
@@ -88,6 +93,15 @@
 </div>
 
 <style>
+  .good {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ok);
+  }
+
   .field {
     display: flex;
     flex-direction: column;
