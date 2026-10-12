@@ -11,8 +11,9 @@ of config/levels/functions.tsv that the boot does not also have (a function many
 is one function). A function is matched when its C linked into at least one program that came
 out equal to the retail one (build/<program>/placed.json, written by tools/build.py).
 
-Units are the files of src/, with their functions in address order; categories are the boot
-executable and the level code. src/ holds only C that links (a near miss goes to nonmatching/), so
+Units and categories are rac1-decomp's: one unit per file of the boot (core/, game/) and of the
+shared level code, one unit per level with all of that level's own functions; categories for the
+boot executable, the level code, the shared and the level-specific code, and each level. src/ holds only C that links (a near miss goes to nonmatching/), so
 --check, which needs neither the toolchain nor the game, requires the functions src/ has as C to be
 exactly the report's matched ones.
 """
@@ -86,32 +87,52 @@ def main() -> None:
     for name, kind, size, _, places in levels.read_catalogue():
         if kind != "boot":
             where[name] = (places[0][1], size)
-    units, in_c = [], set()
+    # Units as rac1-decomp's report has them: one per file of the boot (core/, game/) and of the
+    # shared level code ("Shared level code/<file>"), and one per level holding all of that
+    # level's own functions ("Level 04: Barlow").
+    title = lambda number: f"Level {number:02d}: {levels.NAMES[number].replace('_', ' ').title()}"
+    groups, in_c = {}, set()          # unit name -> {"rows", "source_path", "categories"}
     for path, fns in source_functions().items():
         if not fns:
             continue
         rows = []
-        base = where[fns[0][0]][0]
         for name, has_c in fns:
             address, size = where[name]
             if has_c:
                 in_c.add(name)
             rows.append({"name": name, "size": size, "matched": has_c and name in placed, "address": address})
-        category = "executable" if path.startswith(("src/core/", "src/game/")) else "level_code"
+        if path.startswith(("src/core/", "src/game/")):
+            unit, source, cats_of = path.removeprefix("src/").removesuffix(".c"), path, ["executable", "game"]
+        elif path.startswith("src/levels/shared/"):
+            unit = "Shared level code/" + Path(path).stem
+            source, cats_of = path, ["level_code", "common"]
+        else:
+            number = int(Path(path).parent.name[:2])
+            unit, source = title(number), Path(path).parent.as_posix()
+            cats_of = ["level_code", "levels", f"level_{number:02d}"]
+        g = groups.setdefault(unit, {"rows": [], "source_path": source, "categories": cats_of})
+        g["rows"] += rows
+    units = []
+    for unit, g in groups.items():
+        rows = sorted(g["rows"], key=lambda r: r["address"])
+        base = rows[0]["address"]
         m = measures(rows)
-        units.append({"name": path.removeprefix("src/").removesuffix(".c"),
+        units.append({"name": unit,
                       "measures": {**m, "total_units": 1, "complete_units": int(m["complete_code"] == m["total_code"])},
                       "functions": [{"name": r["name"], "size": str(r["size"]),
                                      "fuzzy_match_percent": 100.0 if r["matched"] else 0.0,
                                      "address": str(r["address"] - base),
                                      "metadata": {"virtual_address": str(r["address"])}} for r in rows],
-                      "metadata": {"complete": m["complete_code"] == m["total_code"], "source_path": path,
-                                   "progress_categories": [category]},
-                      "_rows": rows, "_category": category})
+                      "metadata": {"complete": m["complete_code"] == m["total_code"],
+                                   "source_path": g["source_path"], "progress_categories": g["categories"]},
+                      "_rows": rows, "_category": g["categories"]})
     allrows = [r for u in units for r in u["_rows"]]
+    wanted = [("executable", "Boot executable"), ("level_code", "Level code"), ("game", "Boot game code"),
+              ("common", "Shared level code"), ("levels", "Level-specific code")]
+    wanted += [(f"level_{n:02d}", title(n)) for n in sorted(levels.NAMES)]
     cats = []
-    for cid, cname in (("executable", "Boot executable"), ("level_code", "Level code")):
-        rows = [r for u in units if u["_category"] == cid for r in u["_rows"]]
+    for cid, cname in wanted:
+        rows = [r for u in units if cid in u["_category"] for r in u["_rows"]]
         cats.append({"id": cid, "name": cname, "measures": measures(rows)})
     total = measures(allrows)
     total.update({"total_units": len(units), "complete_units": sum(u["measures"]["complete_units"] for u in units)})
