@@ -118,6 +118,17 @@ work in. It was removed on purpose. Do not recreate any of it:
 If several agents work at once, give each its own branch (or worktree) and its own functions;
 they meet in pull requests, not in a shared queue or reservation system.
 
+## Which model does what
+
+docs/AGENT_WORKFLOW.md is the whole procedure. In short, sort by size with `python3 tools/todo.py`:
+
+- **Haiku 5.5**: small functions, up to 400 bytes, many workers at once.
+- **Sonnet 5.5**: 401 to 1,000 bytes, and what Haiku gave up on.
+- **Opus 5.5**: only functions over 1,000 bytes, complex ones, near misses in `nonmatching/`, and
+  leading (the full build, landing, the report).
+
+A worker stops at its bound and hands its attempt up a tier; it never keeps grinding.
+
 ## If something seems to need a new mechanism
 
 Stop and ask a human first. A new tool belongs in `tools/` with a test and a short docstring; a new

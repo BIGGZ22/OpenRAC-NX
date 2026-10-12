@@ -385,6 +385,11 @@ For now, OpenRAC's [CONTRIBUTING.md](../../CONTRIBUTING.md#commits) asks for a
 `Co-Authored-By:` trailer naming the assistant, as OpenRAC's commits have
 carried so far, and leaves the rule open for the group to decide.
 
+**rac2's tiers** ([AGENT_WORKFLOW.md](../../games/rac2/ntsc/docs/AGENT_WORKFLOW.md)).
+The same idea sorted by size with `tools/todo.py`: Haiku up to 400 bytes, Sonnet
+from 401 to 1,000, Opus only above that and on near misses. Each worker has its
+own worktree and branch; there is no queue or claim file.
+
 ## 6. Porting between versions and games
 
 ### US and PAL (rac1/ntsc and rac1/pal)

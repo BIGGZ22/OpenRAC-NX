@@ -228,5 +228,28 @@ class IsoTest(unittest.TestCase):
             iso.f.close()
 
 
+class Todo(unittest.TestCase):
+    def test_every_marker_is_listed_once_with_its_size(self):
+        import progress
+        import todo
+        rows = todo.todo()
+        names = [r[0] for r in rows]
+        self.assertEqual(len(names), len(set(names)))
+        markers = {n for fns in progress.source_functions().values() for n, has_c in fns if not has_c}
+        self.assertEqual(set(names), markers)
+        sizes = {n: s for n, _, s in levels.read_boot_functions()}
+        for name, size, places, kind, path in rows:
+            self.assertGreater(size, 0)
+            self.assertGreaterEqual(places, 1)
+            if kind == "boot":
+                self.assertEqual(size, sizes[name])
+
+    def test_tiers_cover_every_size(self):
+        import todo
+        self.assertEqual(todo.TIERS[0][1], 0)
+        for (_, _, hi), (_, lo, _) in zip(todo.TIERS, todo.TIERS[1:]):
+            self.assertEqual(lo, hi + 1)
+
+
 if __name__ == "__main__":
     unittest.main()
