@@ -127,7 +127,8 @@ jobs:
           got = hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest()
           sys.exit(0 if got == sys.argv[2] else f"the Python archive's SHA-256 is {got}")
           PY
-          mkdir -p "$RUNNER_TEMP/python" && tar -xzf "$RUNNER_TEMP/python.tar.gz" -C "$RUNNER_TEMP/python"
+          # From inside the folder: on Windows tar reads "D:\..." as a host named D.
+          cd "$RUNNER_TEMP" && mkdir -p python && tar -xzf python.tar.gz -C python
 
       - name: Put the copy together and try it
         shell: bash
@@ -213,7 +214,11 @@ jobs:
           path: ${{ runner.temp }}/standalone
       - name: The copy of OpenRAC the installer carries
         shell: bash
-        run: tar -xzf "$RUNNER_TEMP/standalone/openrac-standalone.tar.gz" -C src-tauri/resources/openrac
+        run: |
+          # The archive by a relative name: on Windows tar reads "D:\..." as a host named D.
+          cp "$RUNNER_TEMP/standalone/openrac-standalone.tar.gz" openrac-standalone.tar.gz
+          tar -xzf openrac-standalone.tar.gz -C src-tauri/resources/openrac
+          rm openrac-standalone.tar.gz
 
       # The cache above keeps target/, and with it the installers of the last version: without
       # this a release carried 0.2.0's files beside 0.3.0's.
@@ -271,7 +276,11 @@ jobs:
           path: ${{ runner.temp }}/standalone
       - name: The copy of OpenRAC the installer carries
         shell: bash
-        run: tar -xzf "$RUNNER_TEMP/standalone/openrac-standalone.tar.gz" -C src-tauri/resources/openrac
+        run: |
+          # The archive by a relative name: on Windows tar reads "D:\..." as a host named D.
+          cp "$RUNNER_TEMP/standalone/openrac-standalone.tar.gz" openrac-standalone.tar.gz
+          tar -xzf openrac-standalone.tar.gz -C src-tauri/resources/openrac
+          rm openrac-standalone.tar.gz
 
       - name: No installers from an earlier build
         run: rm -rf target/release/bundle
