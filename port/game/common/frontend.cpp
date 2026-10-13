@@ -481,10 +481,16 @@ constexpr int kTitleWorld = 99;
 constexpr int kFlightWorld = 98;
 // Where the sky's textures are placed in the texture pool, past the GS's 14-bit blocks.
 constexpr std::uint32_t kSkyTextureKey = 0x20000;
-// The game mode word (0x15F6E8); 6 in the boot program is the flight between planets.
-constexpr std::uint32_t kGameMode = 0x0015F6E8;
-// The directional light bank, in the executable's terms (relocated to the loaded program's copy).
-constexpr gaddr kLightBank = 0x0019BEC0;
+// The game mode word (PAL 0x15F6E8, NTSC-U 0x15F604); 6 in the boot program is the flight between
+// planets.
+std::uint32_t game_mode_address() {
+    return g->game == "rac1-ntsc" ? 0x0015F604 : 0x0015F6E8;
+}
+// The directional light bank, in the executable's terms (relocated to the loaded program's copy):
+// PAL 0x19BEC0, NTSC-U 0x19BDC0.
+gaddr light_bank_address() {
+    return g->game == "rac1-ntsc" ? 0x0019BDC0 : 0x0019BEC0;
+}
 
 // Uploads a level's geometry; while the boot program runs (the title and the main menu), the title
 // world's, or level 0's when the title world was not extracted.
@@ -1008,7 +1014,7 @@ void mobys_drawn(std::span<const std::uint8_t> ram, std::uint32_t first, int cou
     }
     const int level = openrac_game_loaded_overlay();
     const viewer::GameAddresses& a =
-        level >= 0 && level < 19 ? viewer::kRac1PalLevels[level] : viewer::kRac1Pal;
+        viewer::rac1_addresses(g->game, level);
     const viewer::GameState camera = viewer::read_game_state(ram, a);
     for (int i = 0; i < count; ++i) {
         g->moby_cameras.emplace_back(first + static_cast<std::uint32_t>(i) * 0x100u, camera);
@@ -1021,7 +1027,7 @@ void world_drawn(std::span<const std::uint8_t> ram) {
     }
     const int level = openrac_game_loaded_overlay();
     const viewer::GameAddresses& a =
-        level >= 0 && level < 19 ? viewer::kRac1PalLevels[level] : viewer::kRac1Pal;
+        viewer::rac1_addresses(g->game, level);
     g->world_camera = viewer::read_game_state(ram, a);
 }
 
@@ -1463,9 +1469,9 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     // The level program loaded now (-1: the boot program, title and menus), as the port knows it.
     const int level = openrac_game_loaded_overlay();
     const viewer::GameAddresses& a =
-        level >= 0 && level < 19 ? viewer::kRac1PalLevels[level] : viewer::kRac1Pal;
+        viewer::rac1_addresses(g->game, level);
     // The boot program's worlds: the flight between planets (game mode 6), else the title world.
-    use_level(level >= 0 && level < 19 ? level : word_at(ram, kGameMode) == 6 ? -2 : -1);
+    use_level(level >= 0 && level < 19 ? level : word_at(ram, game_mode_address()) == 6 ? -2 : -1);
     viewer::GameState state = viewer::read_game_state(ram, a);
     // The world is drawn from the camera the game's world renderers used, not from whatever the
     // camera globals hold at the end of the frame (the page menu sets its own camera, at
@@ -1713,7 +1719,7 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     // level's copy elsewhere): the level loader fills it from the gameplay file, and the game changes
     // sets at run time (the page menus write set 14 for their frame mobys, fog zones the hero's).
     {
-        const gaddr bank = openrac_relocate_data(kLightBank);
+        const gaddr bank = openrac_relocate_data(light_bank_address());
         if (bank + 16 * 0x40 <= ram.size()) {
             std::vector<float> sets(16 * 16);
             std::memcpy(sets.data(), ram.data() + bank, sets.size() * sizeof(float));

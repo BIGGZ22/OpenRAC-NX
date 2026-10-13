@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <span>
+#include <string_view>
 #include <string>
 #include <vector>
 
@@ -39,6 +40,12 @@ struct GameAddresses {
 /** Ratchet & Clank, PAL (SCES-50916): the boot program's (title, menus) and each level's. */
 extern const GameAddresses kRac1Pal;
 extern const GameAddresses kRac1PalLevels[19];
+/** Ratchet & Clank, NTSC-U (SCUS-97199): the same. */
+extern const GameAddresses kRac1Ntsc;
+extern const GameAddresses kRac1NtscLevels[19];
+/** The table of a port game ("rac1-pal", "rac1-ntsc") for the program loaded: a level's, or the
+ *  boot program's when level is not one. An unknown game reads as PAL. */
+const GameAddresses& rac1_addresses(std::string_view game, int level);
 
 /**
  * The table for the program loaded now: each level's program has its own copy of the engine, with
