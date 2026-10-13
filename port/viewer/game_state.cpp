@@ -129,8 +129,11 @@ GameState read_game_state(std::span<const std::uint8_t> ram, const GameAddresses
         return s;
     }
     for (std::uint32_t m = first; m < end; m += 0x100) {
-        // A state of 0xFE or more: a free slot (0xFF ends the used part).
-        if (at<std::uint8_t>(ram, m + 0x20) >= 0xFE) {
+        // A state with its sign bit set is no moby any more: 0xFD a deleted moby of the level's own
+        // (its slot is never used again, and it keeps its last position: a bolt picked up), 0xFE a
+        // deleted spawned one, 0xFF the end of the used part. The game's own loops skip them by the
+        // sign (the update's activity gate, MobyBuildMatrix, the groups' counts).
+        if (at<std::uint8_t>(ram, m + 0x20) >= 0x80) {
             continue;
         }
         const renderer::Vec3 pos = vec3(ram, m + 0x10);
