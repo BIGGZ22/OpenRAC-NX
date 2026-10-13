@@ -1,6 +1,5 @@
 // Words for the codes the Rust side sends.
-import type { ActionKind, ActionState, DiscState } from "./api";
-import type { IconName } from "$components/Icon.svelte";
+import type { ActionState, DiscState } from "./api";
 
 /** `pal` -> "PAL", `ntsc` -> "NTSC-U", `ntsc-j` -> "NTSC-J". */
 export function regionLabel(name: string): string {
@@ -32,30 +31,6 @@ export const STATE: Record<ActionState, { text: string; tone: "ok" | "warn" | "i
   },
   planned: { text: "Not connected", tone: "info", hint: "Planned: the launcher cannot run this yet." },
 };
-
-/** The game page's sections, in order, one per kind of action. */
-export const SECTIONS: { kind: ActionKind; title: string; icon: IconName; blurb: string }[] = [
-  {
-    kind: "setup",
-    title: "Set up",
-    icon: "setup",
-    blurb: "Your disc's files and the toolchains, where the build expects them.",
-  },
-  { kind: "build", title: "Build", icon: "build", blurb: "Compile the decompiled source." },
-  {
-    kind: "check",
-    title: "Check",
-    icon: "check",
-    blurb: "Prove the build matches retail, and the project's own checks.",
-  },
-  {
-    kind: "play",
-    title: "Play",
-    icon: "play",
-    blurb: "The native port: the decompiled game built for this computer, with its own renderer.",
-  },
-  { kind: "edit", title: "Level editor", icon: "edit", blurb: "Your levels in Godot." },
-];
 
 /** Ratchet & Clank's levels, by the number the game and the level editor give them. */
 export const RAC1_LEVELS = [

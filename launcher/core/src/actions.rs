@@ -47,6 +47,9 @@ pub struct Action {
     #[serde(default)]
     pub description: String,
     pub kind: Kind,
+    /// Which of the game's parts it works on; the decompilation when left out.
+    #[serde(default)]
+    pub area: Area,
     /// How far the action is wired up; see [`State`].
     #[serde(default)]
     pub state: State,
@@ -85,6 +88,19 @@ pub struct Action {
     /// Not shown to players.
     #[serde(default)]
     pub todo: Option<String>,
+}
+
+/// What an action works on. A game has two builds, and the launcher keeps them apart.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Area {
+    /// The decompilation: the original program rebuilt and compared with the disc.
+    #[default]
+    Decomp,
+    /// The PC port: the game built for this computer, and playing it.
+    Port,
+    /// The level editor.
+    Editor,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -184,6 +200,7 @@ pub struct ActionView {
     pub label: String,
     pub description: String,
     pub kind: Kind,
+    pub area: Area,
     pub state: State,
     pub detached: bool,
     pub docs: Option<String>,
@@ -319,6 +336,7 @@ impl Action {
             label: self.label.clone(),
             description: self.description.clone(),
             kind: self.kind,
+            area: self.area,
             state: self.state,
             detached: self.detached,
             docs: self.docs.clone(),

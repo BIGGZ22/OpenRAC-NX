@@ -97,7 +97,7 @@
       },
       {
         "id": "build",
-        "label": "Build",
+        "label": "Build the PS2 program",
         "description": "Compiles the decompiled C with SN ProDG and links the executable.",
         "kind": "build",
         "state": "unverified",
@@ -117,6 +117,7 @@
         "label": "Preview a level in Godot",
         "description": "Opens one extracted level in Godot's player, to fly around it. This is Godot showing the editor's scene, not the game.",
         "kind": "edit",
+        "area": "editor",
         "state": "connected",
         "program": "{godot}",
         "args": [
@@ -154,6 +155,7 @@
         "label": "Extract the levels",
         "description": "Turns the 19 levels on your disc into Godot 4 projects, one per level, in assets/levels/rac1. About 20 seconds and 800 MB. Stops if they already exist: it never overwrites your edits.",
         "kind": "edit",
+        "area": "editor",
         "state": "unverified",
         "program": "{python}",
         "args": [
@@ -176,6 +178,7 @@
         "label": "Import a level into Godot",
         "description": "Has Godot read one level's meshes and textures without opening a window. Not needed before opening the editor, which does the same the first time (a few seconds per level).",
         "kind": "edit",
+        "area": "editor",
         "state": "unverified",
         "program": "{godot}",
         "args": [
@@ -198,6 +201,7 @@
         "label": "Open a level in Godot",
         "description": "Opens one level in the Godot editor: move, turn or scale its objects and save. Each level is a project of its own, so only that level loads.",
         "kind": "edit",
+        "area": "editor",
         "state": "unverified",
         "program": "{godot}",
         "args": [
@@ -220,6 +224,7 @@
         "label": "Pack your edited levels",
         "description": "Turns the levels you edited in Godot back into the game's level data, in assets/packed/rac1; your disc image is never changed. Packs the objects you moved, turned, scaled or changed; objects you added or deleted are listed and left out for now.",
         "kind": "edit",
+        "area": "editor",
         "state": "unverified",
         "program": "{python}",
         "args": [
@@ -244,6 +249,7 @@
         "label": "Test the level editor",
         "description": "The unit tests of editor/ (no disc needed).",
         "kind": "check",
+        "area": "editor",
         "state": "unverified",
         "program": "{python}",
         "args": [
@@ -265,6 +271,7 @@
         "label": "Build the game",
         "description": "Compiles the decompiled game for this computer with the compilers it finds (on Windows, Visual Studio's C++ tools, Clang and Ninja). A few minutes the first time; later builds redo only what changed.",
         "kind": "build",
+        "area": "port",
         "state": "unverified",
         "program": "{python}",
         "args": [
@@ -283,6 +290,7 @@
         "label": "Get the levels ready",
         "description": "Reads the levels from your disc into the form the game draws: the worlds behind the menus and all 19 levels, in assets/port/rac1. About half a minute and 1 GB, once.",
         "kind": "build",
+        "area": "port",
         "state": "unverified",
         "program": "{python}",
         "args": [
@@ -305,6 +313,7 @@
         "label": "Play",
         "description": "The game as a native PC program: its decompiled C built for this computer, drawn by OpenRAC's own renderer, with the assets from your disc.",
         "kind": "play",
+        "area": "port",
         "state": "unverified",
         "program": "{artifact}",
         "args": [
@@ -332,6 +341,7 @@
         "label": "Play with your edits",
         "description": "The game with the levels you packed: the port reads them in place of the disc's (its --mods option). Without packed levels it plays the disc's.",
         "kind": "play",
+        "area": "port",
         "state": "unverified",
         "program": "{artifact}",
         "args": [
@@ -404,7 +414,7 @@
       },
       {
         "id": "build",
-        "label": "Build",
+        "label": "Build the PS2 program",
         "description": "Builds the executable (make elf).",
         "kind": "build",
         "state": "unverified",
@@ -444,6 +454,7 @@
         "label": "Extract the levels",
         "description": "The level editor reads the PAL disc only, for now.",
         "kind": "edit",
+        "area": "editor",
         "state": "planned",
         "docs": "editor/README.md",
         "todo": "The editor's readers know PAL v2.00 offsets only (editor/README.md); NTSC-U needs its own table."
@@ -453,6 +464,7 @@
         "label": "Play",
         "description": "The game as a native PC program: its decompiled C built for this computer, drawn by OpenRAC's own renderer, with the assets from your disc.",
         "kind": "play",
+        "area": "port",
         "state": "planned",
         "docs": "port/game/README.md",
         "todo": "openrac-rac1-ntsc builds from this version's decompilation (port/, cmake --preset release); before it runs it needs the game's main in port/game/rac1-ntsc/hostgen.json and its library table (port/game/README.md). rac1/pal is furthest along."
@@ -498,7 +510,7 @@
       },
       {
         "id": "build",
-        "label": "Build",
+        "label": "Build the PS2 program",
         "description": "Rebuilds the boot program and its 27 level programs with the C linked in, and compares every loaded byte with retail.",
         "kind": "build",
         "state": "unverified",
@@ -520,6 +532,7 @@
         "label": "Extract the levels",
         "description": "The level editor reads the first game's PAL disc only, for now.",
         "kind": "edit",
+        "area": "editor",
         "state": "planned",
         "docs": "editor/README.md",
         "todo": "The editor's readers know Ratchet & Clank PAL v2.00 only. This game's level format is a close relative (docs/engine/README.md): give editor/ a table of its offsets and its section layout."
@@ -529,6 +542,7 @@
         "label": "Play",
         "description": "The game as a native PC program: its decompiled C built for this computer, drawn by OpenRAC's own renderer, with the assets from your disc.",
         "kind": "play",
+        "area": "port",
         "state": "planned",
         "docs": "port/game/README.md",
         "todo": "openrac-rac2-ntsc builds from this version's decompilation (port/, cmake --preset release); before it runs it needs the game's main in port/game/rac2-ntsc/hostgen.json and its library table (port/game/README.md). rac1/pal is furthest along."
@@ -546,7 +560,7 @@
       },
       {
         "id": "build",
-        "label": "Build",
+        "label": "Build the PS2 program",
         "description": "Builds the three programs and checks them byte for byte (prints MATCH).",
         "kind": "build",
         "state": "planned",
@@ -567,6 +581,7 @@
         "label": "Extract the levels",
         "description": "The level editor reads the first game's PAL disc only, for now.",
         "kind": "edit",
+        "area": "editor",
         "state": "planned",
         "docs": "editor/README.md",
         "todo": "As rac2/ntsc's editor-extract: the format is a later relative; its levels are in the WAD the boot program loads."
@@ -576,6 +591,7 @@
         "label": "Play",
         "description": "The game as a native PC program: its decompiled C built for this computer, drawn by OpenRAC's own renderer, with the assets from your disc.",
         "kind": "play",
+        "area": "port",
         "state": "planned",
         "docs": "port/game/README.md",
         "todo": "openrac-rac3-ntsc builds from this version's decompilation (port/, cmake --preset release); before it runs it needs the game's main in port/game/rac3-ntsc/hostgen.json and its library table (port/game/README.md). rac1/pal is furthest along."
@@ -604,7 +620,7 @@
       },
       {
         "id": "build",
-        "label": "Build",
+        "label": "Build the PS2 program",
         "description": "Compiles the decompiled C with SN GCC 2.95.3.",
         "kind": "build",
         "state": "unverified",
@@ -664,6 +680,7 @@
         "label": "Extract the levels",
         "description": "The level editor reads the first game's PAL disc only, for now.",
         "kind": "edit",
+        "area": "editor",
         "state": "planned",
         "docs": "editor/README.md",
         "todo": "As rac2/ntsc's editor-extract."
@@ -673,6 +690,7 @@
         "label": "Play",
         "description": "The game as a native PC program: its decompiled C built for this computer, drawn by OpenRAC's own renderer, with the assets from your disc.",
         "kind": "play",
+        "area": "port",
         "state": "planned",
         "docs": "port/game/README.md",
         "todo": "openrac-rac4-ntsc builds from this version's decompilation (port/, cmake --preset release); before it runs it needs the game's main in port/game/rac4-ntsc/hostgen.json and its library table (port/game/README.md). rac1/pal is furthest along."

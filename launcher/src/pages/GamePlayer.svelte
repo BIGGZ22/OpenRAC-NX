@@ -1,15 +1,18 @@
 <script lang="ts">
-  // A game as a player meets it. One main button, always in the same place,
+  // A game's page. One main button, always in the same place,
   // says the next thing to do (set up from your disc, build, play); what is done
   // less often is in the menu beside it. Below: the save files (the level editor
   // is under Mods). Each button runs the actions the developer page lists
-  // (launcher/actions.json), found by their ids.
+  // (launcher/actions.json), found by their ids. With developer tools on, that
+  // list follows under the same button (DeveloperPanel).
+  import DeveloperPanel from "$components/DeveloperPanel.svelte";
   import Icon from "$components/Icon.svelte";
   import Menu, { type MenuItem } from "$components/Menu.svelte";
   import SaveManagerBlock from "$components/SaveManagerBlock.svelte";
   import { api, type ActionView } from "$lib/api";
   import { app, currentVersion, guard, openVersion, run, uninstallGame } from "$lib/app.svelte";
   import { isBuilt, playerAct, playerState, regionWords } from "$lib/player.svelte";
+  import { regionLabel } from "$lib/labels";
   import { themeStyle } from "$lib/themes";
 
   const v = $derived(currentVersion());
@@ -28,6 +31,7 @@
     rac4: { bg: "/img/deadlocked-bg.webp", gif: "/img/rac4-gameplay.gif" },
   };
   const media = $derived(v ? GAME_MEDIA[v.game] : null);
+  const developer = $derived(app.config?.developer ?? false);
 
   const next = $derived(v && game ? playerState(game, v) : null);
   const setUp = $derived(game?.install?.extracted ?? null);
@@ -99,7 +103,7 @@
               class:on={other.key === v.key}
               onclick={() => {
                 openVersion(other.key);
-              }}>{regionWords(other)}</button
+              }}>{developer ? `${regionLabel(other.name)} · ${other.serial}` : regionWords(other)}</button
             >
           {/each}
         </div>
@@ -130,6 +134,7 @@
       {/if}
     </section>
 
+    {#if developer}<DeveloperPanel {game} version={v} />{/if}
     <SaveManagerBlock version={v} />
   </div>
 {/if}

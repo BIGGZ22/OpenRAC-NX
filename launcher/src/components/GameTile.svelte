@@ -2,7 +2,9 @@
   // One game in a player's library: its art, its name, whether it can be played,
   // and the one thing to do next. The whole tile opens the game's page.
   import type { GameView } from "$lib/api";
-  import { openVersion } from "$lib/app.svelte";
+  import { app, openVersion } from "$lib/app.svelte";
+  import { pct } from "$lib/format";
+  import { regionLabel } from "$lib/labels";
   import { playerAct, playerState, playerVersion } from "$lib/player.svelte";
   import { themeStyle } from "$lib/themes";
   import Icon from "./Icon.svelte";
@@ -22,6 +24,12 @@
   /** The tile offers the next step itself only when there is one to take. */
   const offers = $derived(!!next && !next.disabled && next.kind !== "installing" && (next.primary || !!next.job));
   let hovered = $state(false);
+  /** With developer tools on: how far each version's decompilation is. */
+  const matched = $derived(
+    app.config?.developer
+      ? game.versions.map((o) => `${regionLabel(o.name)} ${o.progress ? pct(o.progress.percent) : "–"}`).join(" · ")
+      : "",
+  );
 </script>
 
 {#if v && next}
@@ -51,6 +59,7 @@
         <p class={`status ${next.tone}`}>
           {#if next.job}<span class="spinner"></span>{:else}<span class="dot"></span>{/if}{next.status}
         </p>
+        {#if matched}<p class="matched">{matched} matched</p>{/if}
       </div>
       {#if offers}
         <button class="act" class:primary={next.primary} onclick={() => void playerAct(v, next)}>
@@ -143,6 +152,13 @@
     font-size: 14px;
     font-weight: 500;
     color: var(--soft);
+  }
+
+  .matched {
+    margin-top: 2px;
+    font-size: 13px;
+    color: var(--soft);
+    font-variant-numeric: tabular-nums;
   }
 
   .status.ok {

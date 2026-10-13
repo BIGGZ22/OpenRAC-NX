@@ -143,8 +143,14 @@ beside it. Each is a button over actions found by id in `actions.json`:
 | Play                  | the `play` action: the native port (planned for every version)                                                                  |
 | Edit levels           | `editor-open`, after `editor-extract` and `editor-import` when the project is not there yet (`runChain` in `lib/app.svelte.ts`) |
 
-On, `pages/GameDeveloper.svelte`: every action by kind, the inputs and the
-progress. A version whose `play` or `editor-extract` is `planned`
+On, the same page goes on under the same button with
+`components/DeveloperPanel.svelte`: the version's actions as rows
+(`ActionRow.svelte`), grouped by the action's `area` in `actions.json` so the
+game's two builds are never side by side: "PC port" (`port`), "Decompilation"
+(`decomp`, the default, with the progress), "Level editor" (`editor`: its
+checks; editing is under Mods), then the files and the facts of the version.
+The library adds each version's progress to its tile and the checkout's own
+actions under the tiles. A version whose `play` or `editor-extract` is `planned`
 shows as "not playable yet" or "cannot open this game yet" to a player. A
 first start asks nothing when the checkout and a Python are found
 (`firstRun`).

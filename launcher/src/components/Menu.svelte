@@ -10,13 +10,34 @@
 
 <script lang="ts">
   // A button that opens a short list of secondary actions, below it and aligned
-  // to its right edge. Closes on a choice, a click elsewhere or Escape.
+  // to its right edge (above it when there is no room below). The list is a
+  // popover, in the browser's top layer, so no box it sits in can cut it off.
+  // Closes on a choice, a click elsewhere, Escape, or when the page moves.
   import Icon, { type IconName } from "./Icon.svelte";
 
   let { items, label = "More actions" }: { items: MenuItem[]; label?: string } = $props();
 
   let open = $state(false);
   let root = $state<HTMLElement | null>(null);
+  let list = $state<HTMLElement | null>(null);
+
+  /** Puts the list by the button, inside the window. */
+  function place() {
+    if (!root || !list) return;
+    const at = root.getBoundingClientRect();
+    const gap = 8;
+    const below = at.bottom + gap + list.offsetHeight <= window.innerHeight - gap;
+    const top = below ? at.bottom + gap : Math.max(gap, at.top - gap - list.offsetHeight);
+    const left = Math.min(Math.max(gap, at.right - list.offsetWidth), window.innerWidth - list.offsetWidth - gap);
+    list.style.top = `${top}px`;
+    list.style.left = `${left}px`;
+  }
+
+  $effect(() => {
+    if (!list) return;
+    list.showPopover();
+    place();
+  });
   const plain = $derived(items.filter((i) => !i.danger));
   const danger = $derived(items.filter((i) => i.danger));
 
@@ -28,11 +49,17 @@
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") open = false;
     };
+    const moved = () => (open = false);
     window.addEventListener("mousedown", outside);
     window.addEventListener("keydown", key);
+    window.addEventListener("resize", moved);
+    // Capturing: the page scrolls inside <main>, and scroll does not bubble.
+    window.addEventListener("scroll", moved, true);
     return () => {
       window.removeEventListener("mousedown", outside);
       window.removeEventListener("keydown", key);
+      window.removeEventListener("resize", moved);
+      window.removeEventListener("scroll", moved, true);
     };
   });
 
@@ -52,7 +79,7 @@
     onclick={() => (open = !open)}><Icon name="more" size={20} /></button
   >
   {#if open}
-    <div class="list" role="menu">
+    <div class="list" role="menu" popover="manual" bind:this={list}>
       {#each plain as item (item.label)}
         <button
           role="menuitem"
@@ -91,18 +118,22 @@
   }
 
   .list {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-    z-index: 30;
+    position: fixed;
+    inset: auto;
+    margin: 0;
     min-width: 230px;
-    display: flex;
+    color: inherit;
     flex-direction: column;
     padding: 6px;
     background: var(--panel-hi);
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-sm);
+  }
+
+  /* Not on .list itself: a popover that is not showing must stay display: none. */
+  .list:popover-open {
+    display: flex;
   }
 
   .list button {

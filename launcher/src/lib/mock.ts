@@ -33,6 +33,7 @@ interface RawAction {
   label: string;
   description?: string;
   kind: ActionView["kind"];
+  area?: ActionView["area"];
   state?: ActionView["state"];
   program?: string;
   args?: string[];
@@ -196,6 +197,7 @@ function view(action: RawAction, st: VersionStatus | null): ActionView {
     label: action.label,
     description: action.description ?? "",
     kind: action.kind,
+    area: action.area ?? "decomp",
     state,
     detached: action.detached ?? false,
     docs: action.docs ?? null,

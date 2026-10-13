@@ -78,7 +78,7 @@ orange); the tests fail until every game in `games/` has one.
 The site's cards can show a backdrop image (`/img/<game>-bg.webp`), which the
 site does not ship in its repository. The launcher has carried its own copies
 in `public/img/` since 2026-10-09, with a gameplay clip or animation per game
-shown when a card is hovered (`GameCard.svelte`, `GamePlayer.svelte`). Where
+shown when a card is hovered (`GameTile.svelte`, `GamePlayer.svelte`). Where
 those images and clips come from, and under what terms, is not recorded yet:
 it belongs in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) before a
 release. Without them the cards show the gradient, as the site does.
@@ -113,6 +113,6 @@ release. Without them the cards show the gradient, as the site does.
 | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `src/app/globals.css` `@theme` colours or fonts            | `src/app.css` `:root`, the tables above                                                                                           |
 | `src/lib/projects.ts` themes                               | `src/lib/themes.ts`                                                                                                               |
-| `src/components/Header.tsx`, `Progress.tsx`                | `Header.svelte`, `GameCard.svelte`, `Game.svelte`                                                                                 |
+| `src/components/Header.tsx`, `Progress.tsx`                | `Header.svelte`, `GameTile.svelte`, `GamePlayer.svelte`                                                                           |
 | `public/wrench.webp`, `src/app/icon.png`, `apple-icon.png` | `public/`, and `npx tauri icon <1024 px png> -o src-tauri/icons` (then delete the `android/`, `ios/` and `Square*` files it adds) |
 | `DISCORD_URL`                                              | `src/lib/links.ts`                                                                                                                |

@@ -86,6 +86,8 @@ export interface Check {
 }
 
 /** core/src/actions.rs */
+/** What an action works on: the decompilation, the PC port, or the level editor. */
+export type ActionArea = "decomp" | "port" | "editor";
 export type ActionKind = "setup" | "build" | "check" | "play" | "edit";
 export type ActionState = "connected" | "unverified" | "planned";
 export type Scope = { kind: "repository" } | { kind: "version"; key: string };
@@ -95,6 +97,7 @@ export interface ActionView {
   label: string;
   description: string;
   kind: ActionKind;
+  area: ActionArea;
   state: ActionState;
   detached: boolean;
   docs: string | null;
