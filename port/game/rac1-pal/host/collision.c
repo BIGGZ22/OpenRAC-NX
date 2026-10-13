@@ -21,9 +21,12 @@
  * stamp (+0x9C), the hit records and coll_sphere_mobys's list as the game does, and do their float work
  * on the host's floats rounded toward zero (the VU's rounding; no model of its guard bits).
  *
- * Not done: the joint primitives of posed classes (kinds 2 and 4) need the joint positions that
- * func_L00_00254218 (hand-written, not in the port yet) poses through the 8-entry cache at CollOutput
- * +4/+8/+0xC; they are skipped. The scratchpad copies the kernels leave behind are not made.
+ * The joint primitives of posed classes (kinds 2 and 4: a sphere on a joint, a capsule between two;
+ * most creatures are made of them) take their joints from the pose the port's own evaluator gives the
+ * moby now (openrac_game_moby_chain), where the kernels call func_L00_00254218 (hand-written, not in
+ * the port) through the 8-entry cache at CollOutput +4/+8/+0xC. So a moby whose matrix is not rebuilt
+ * is tested in its pose of now, not the cached one. The scratchpad copies the kernels leave behind are
+ * not made.
  */
 #include "game_protos.h"
 #include "openrac/game_host.h"
@@ -402,15 +405,61 @@ static int prim_active(const MobyColl* c, int i, uint32_t fl, int* last) {
 
 static inline int joint_count(const MobyColl* c, uint32_t fl) { return U16(c->blob + ((fl & 0x4) ? 0 : 2)); }
 
-/* The sphere / capsule kernels' primitive point nearest the query point and its radius (kinds 1 and 3;
- * 0 for the joint kinds, which need a pose). */
-static int vol_prim(const MobyColl* c, gaddr p, V3 cq, V3* cc, float* rad) {
+/* The joints of the moby being tested, model units: the translation rows of its posed joint matrices
+ * (pose_joints). */
+#define JOINT_MAX 128
+static V3 g_joints[JOINT_MAX];
+static int g_joint_count;
+
+/* Poses the first `count` joints of the moby (the blob's count for this kind of query): the port's
+ * evaluator writes each marked joint's matrix to the scratchpad, 0x40 bytes a joint, which is put back
+ * as it was. */
+static void pose_joints(const MobyColl* c, uint32_t fl) {
+    static gaddr marks;
+    static uint8_t kept[JOINT_MAX * 0x40];
+    int count = joint_count(c, fl);
+    g_joint_count = 0;
+    if (count <= 0) {
+        return;
+    }
+    if (count > 0x7F) {
+        count = 0x7F;
+    }
+    if (marks == 0) {
+        marks = openrac_guest_static(0x80);
+    }
+    memset(G(marks), 0, 0x80);
+    memset(G(marks), 1, (size_t)count);
+    U8(marks + 0x7F) = (uint8_t)count;
+    const gaddr spr = 0x70000000u;
+    memcpy(kept, G(spr), (size_t)count * 0x40);
+    memset(G(spr), 0, (size_t)count * 0x40);
+    openrac_game_moby_chain(c->m, marks);
+    for (int j = 0; j < count; ++j) {
+        g_joints[j] = vld(spr + (gaddr)j * 0x40 + 0x30);
+    }
+    memcpy(G(spr), kept, (size_t)count * 0x40);
+    g_joint_count = count;
+}
+
+static inline V3 joint_at(int j) { return j >= 0 && j < g_joint_count ? g_joints[j] : v3(0.0f, 0.0f, 0.0f); }
+
+/* The sphere / capsule kernels' primitive point nearest the query point (a capsule's base) and its
+ * radius: kind 1 a sphere, 2 a sphere on a joint, 3 a vertical cylinder, any other a capsule between
+ * two joints. */
+static int vol_prim(const MobyColl* c, gaddr p, V3 cq, int capsule, V3* cc, float* rad) {
     const int kind = S8(p);
     const float s = c->s;
     if (kind == 1) {
         const V3 q = vld(p + 0x10);
         *cc = vadd(rot(c->rows, vmuls(q, s)), c->pos);
         *rad = F32(p + 0x1C) * s;
+        return 1;
+    }
+    if (kind == 2) {
+        const V3 v = vadd(joint_at(S32(p + 4)), vld(p + 0x10));
+        *cc = vadd(rot(c->rows, vmuls(v, s)), c->pos);
+        *rad = F32(p + 0xC) * s;
         return 1;
     }
     if (kind == 3) {
@@ -422,7 +471,29 @@ static int vol_prim(const MobyColl* c, gaddr p, V3 cq, V3* cc, float* rad) {
         *rad = F32(p + 0x1C) * s;
         return 1;
     }
-    return 0;
+    const V3 a = vadd(rot(c->rows, vmuls(joint_at(S16(p + 4)), s)), c->pos);
+    const V3 b = vadd(rot(c->rows, vmuls(joint_at(S16(p + 6)), s)), c->pos);
+    const V3 e = vsub(b, a);
+    const V3 w = vsub(cq, a);
+    *rad = F32(p + 0xC) * s;
+    if (!capsule) {
+        const float t = fmin2(fmax2(0.0f + fdiv(dot(w, e), dot(e, e)), 0.0f), 1.0f);
+        *cc = vadd(a, vmuls(e, t));
+        return 1;
+    }
+    /* A capsule query: the closest point in x/y, or the base's height clamped to the segment when
+     * the segment is upright (|e.xy|^2 <= 1). */
+    const float wd = w.v[0] * e.v[0] + w.v[1] * e.v[1];
+    const float ee = e.v[0] * e.v[0] + e.v[1] * e.v[1];
+    if (!neg(1.0f - fabsf(ee))) {
+        V3 o = a;
+        o.v[2] = fmin2(b.v[2], fmax2(a.v[2], cq.v[2]));
+        *cc = o;
+    } else {
+        const float t = fmin2(fmax2(0.0f + fdiv(wd, ee), 0.0f), 1.0f);
+        *cc = vmadds(a, e, t);
+    }
+    return 1;
 }
 
 /* The closest point of the primitive sphere (cc, rad) to c, its offset from cc and d^2, when r + rad
@@ -809,8 +880,50 @@ static int line_prim(const MobyColl* c, gaddr p, V3 a, V3 b, float best_t, float
         const V3 p6 = vmadds(a, d2, te);
         const float top = cc.v[2] + F32(p + 4) * s;
         cc.v[2] = fmin2(fmax2(cc.v[2], p6.v[2]), top);
+    } else if (kind == 2) {
+        const V3 v = vadd(joint_at(S32(p + 4)), vld(p + 0x10));
+        cc = vadd(rot(c->rows, vmuls(v, s)), c->pos);
+        rad = F32(p + 0xC) * s;
     } else {
-        return 0; /* the joint kinds need a pose */
+        /* A capsule between two joints: where the segment enters the capsule's infinite axis line (the
+         * segment's start when they are parallel), brought back onto the axis between the joints. */
+        const V3 a0 = rot(c->rows, vmuls(joint_at(S16(p + 4)), s));
+        const V3 b0 = rot(c->rows, vmuls(joint_at(S16(p + 6)), s));
+        rad = F32(p + 0xC) * s;
+        const float rr = rad * rad;
+        const V3 d = vsub(b, a);
+        const V3 e = vsub(b0, a0);
+        const V3 pa = vadd(a0, c->pos);
+        const V3 n3 = cross(e, d);
+        const V3 n4 = cross(d, e);
+        const V3 n3sq = vmul(n3, n3);
+        const V3 n7 = cross(d, n3);
+        const V3 n8 = cross(e, n4);
+        const int parallel = neg(n3sq.v[0] - 1.0f) && neg(n3sq.v[1] - 1.0f) && neg(n3sq.v[2] - 1.0f);
+        V3 x = a;
+        if (!parallel) {
+            const float nn = (n3sq.v[0] + n3sq.v[1]) + n3sq.v[2];
+            const float s7 = dot(n7, vsub(a, pa));
+            const float s8 = dot(n8, vsub(pa, a));
+            const V3 c3 = vmadds(pa, e, fdiv(s7, nn)); /* the axis line's point nearest the segment's line */
+            const V3 c4 = vmadds(a, d, fdiv(s8, nn));  /* the segment's line's point nearest the axis */
+            const V3 g = vsub(c4, c3);
+            const V3 gs = vmul(g, g);
+            const float v = (((0.0f - rr) + gs.v[0]) + gs.v[1]) + gs.v[2];
+            if (!neg(v)) {
+                return 0;
+            }
+            const V3 eh = vmuls(e, fdiv(1.0f, fsqrt(dot(e, e))));
+            const V3 dh = vmuls(d, fdiv(1.0f, fsqrt(dot(d, d))));
+            const float cs = dot(eh, dh);
+            const float k = fmax2(0.0f + fdiv(0.0f - v, 1.0f - cs * cs), 0.0f);
+            const V3 entry = vsub(c4, vmuls(dh, fsqrt(k)));
+            if (!neg(dot(vsub(entry, a), d))) {
+                x = entry;
+            }
+        }
+        const float t = fmin2(fmax2(0.0f + fdiv(dot(vsub(x, pa), e), dot(e, e)), 0.0f), 1.0f);
+        cc = vadd(pa, vmuls(e, t));
     }
     const V3 d2 = vsub(b, a);
     const V3 w = vsub(cc, a);
@@ -879,6 +992,7 @@ static void line_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, V3 a, V3 b, V3
             if (joint_count(&c, fl) != 0 && (fl & 0x2) != 0 && c.nverts == 0) {
                 continue;
             }
+            pose_joints(&c, fl);
             if (c.nverts != 0) {
                 const V3 a_rel = vsub(a, c.pos);
                 const V3 b_rel = vsub(b, c.pos);
@@ -1092,6 +1206,7 @@ static void volume_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, const Volume
                 if (joint_count(&mc, fl) != 0 && (fl & 0x2) != 0 && mc.nverts == 0) {
                     continue;
                 }
+                pose_joints(&mc, fl);
                 if (mc.nverts != 0) {
                     const V3 c_rel = vsub(c, mc.pos);
                     V3 vlo, vhi;
@@ -1133,7 +1248,7 @@ static void volume_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, const Volume
                         const gaddr p = mc.prims + 0x20 * (gaddr)i;
                         V3 cc, pt, off;
                         float rad, d2;
-                        if (vol_prim(&mc, p, c, &cc, &rad)) {
+                        if (vol_prim(&mc, p, c, vol->capsule, &cc, &rad)) {
                             V3 from = c;
                             if (vol->capsule) {
                                 from.v[2] = c.v[2] + fmax2(fmin2(cc.v[2] - c.v[2], h), 0.0f);
@@ -1361,6 +1476,7 @@ int func_L00_001F2BE8(float a0, gaddr a1, int a2, gaddr a3, gaddr a4) {
                     U32(m + 0x9C) = (uint32_t)stamp;
                     MobyColl mc;
                     moby_coll(m, &mc);
+                    pose_joints(&mc, fl);
                     int hit = 0;
                     if (mc.nverts != 0) {
                         const V3 c_rel = vsub(c, mc.pos);
@@ -1388,7 +1504,7 @@ int func_L00_001F2BE8(float a0, gaddr a1, int a2, gaddr a3, gaddr a4) {
                             V3 cc, pt, off;
                             float rad, d2;
                             const gaddr p = mc.prims + 0x20 * (gaddr)i;
-                            if (vol_prim(&mc, p, c, &cc, &rad) && vol_prim_test(c, r, cc, rad, best, &pt, &off, &d2)) {
+                            if (vol_prim(&mc, p, c, 0, &cc, &rad) && vol_prim_test(c, r, cc, rad, best, &pt, &off, &d2)) {
                                 hit = 1;
                             }
                         }
@@ -1412,6 +1528,20 @@ int func_L00_001F2BE8(float a0, gaddr a1, int a2, gaddr a3, gaddr a4) {
         S32(out + 0x1C) = 0x3F;
         U32(out + 0x18) = U32(x->list);
         if (a4 != 0) {
+            /* OPENRAC_HIT_LOG: each sphere with a template and the mobys it listed, on stderr. */
+            static int hit_log = -1;
+            if (hit_log < 0) {
+                hit_log = getenv("OPENRAC_HIT_LOG") != NULL;
+            }
+            if (hit_log) {
+                fprintf(stderr, "[debug] hit sphere r %.2f at %.2f %.2f %.2f flags %#x damage %.2f by class %d: %d listed",
+                        (double)a0, (double)F32(a1), (double)F32(a1 + 4), (double)F32(a1 + 8), U32(a4 + 0x14),
+                        (double)F32(a4 + 0x1C), a3 != 0 ? S16(a3 + 0xA6) : -1, (int)((cursor - x->list) >> 2));
+                for (gaddr at = x->list; at != cursor; at += 4) {
+                    fprintf(stderr, " %d%s", S16(U32(at) + 0xA6), (U16(U32(at) + 0x34) & 0x4000) ? "" : "(no hits)");
+                }
+                fprintf(stderr, "\n");
+            }
             for (gaddr at = x->list; at != cursor; at += 4) {
                 const gaddr m = U32(at);
                 if ((U16(m + 0x34) & 0x4000) == 0) {
