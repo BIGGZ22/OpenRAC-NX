@@ -36,6 +36,8 @@ target_link_libraries(openrac_game_common PUBLIC openrac_runtime)
 # The asset readers the library replacements use (the WAD decompressor).
 if(TARGET openrac_assets_disc)
   target_link_libraries(openrac_game_common PUBLIC openrac_assets_disc)
+  # main.cpp reads a level's program from the player's image (load_level_program).
+  target_compile_definitions(openrac_game_common PUBLIC OPENRAC_HAS_DISC=1)
 endif()
 # The sound engine the sound library's replacement drives (lib/sound_engine.cpp).
 target_link_libraries(openrac_game_common PUBLIC openrac_audio)

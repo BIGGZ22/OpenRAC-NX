@@ -328,7 +328,7 @@
         ],
         "artifact": "port/build/release/openrac-rac1-pal.exe",
         "docs": "port/game/rac1-pal/README.md",
-        "todo": "Built by port-build. The port also needs decompiler_out (openrac-extractor --decompile). It draws from the levels port-levels writes (--levels): without them the menus have no world behind them and a level has no scenery. Runs on Windows, Linux and macOS: the port is one program for all three (it was listed for Windows and Linux only until 2026-10-13, though it had been built and run on macOS).",
+        "todo": "Built by port-build. The port reads each level's program from your disc image when decompiler_out (openrac-extractor --decompile) is not there. It draws from the levels port-levels writes (--levels): without them the menus have no world behind them and a level has no scenery. Runs on Windows, Linux and macOS: the port is one program for all three (it was listed for Windows and Linux only until 2026-10-13, though it had been built and run on macOS).",
         "needs": [
           {
             "path": "assets/port/rac1/level_99/manifest.json",

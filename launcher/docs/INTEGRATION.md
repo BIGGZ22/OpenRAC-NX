@@ -182,10 +182,13 @@ actions, as rac1/pal has on Windows:
   the levels: an action's `needs` lists files an earlier step makes, and it
   stays blocked, naming that step, until they exist.
 
-To do here: make `decompiler_out` (from `openrac-extractor --decompile`)
-part of the set-up, the "Prepare the assets" step; a setting for the
-copy of the decompilation to build from, which today is chosen once with
-`tools/build_port.py --source DIR`.
+The port needs each level's program to place the functions levels share; it
+reads it from the disc image the set-up kept (`iso_data/<game>/disc.iso`)
+when `decompiler_out` (from `openrac-extractor --decompile`) is not there, so
+the set-up has no step for it.
+
+To do here: a setting for the copy of the decompilation to build from, which
+today is chosen once with `tools/build_port.py --source DIR`.
 
 ### 4. Each game's set-up, build and checks
 

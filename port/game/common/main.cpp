@@ -41,6 +41,9 @@
 #include <cmath>
 
 #include "common/log.h"
+#ifdef OPENRAC_HAS_DISC
+#include "assets/disc/disc.h"
+#endif
 #include "common/stats.h"
 #include "openrac/elf.h"
 #include "openrac/game_host.h"
@@ -736,18 +739,61 @@ int openrac_game_pad(int port, uint16_t* buttons, uint8_t analog[4]) {
 
 }  // extern "C"
 
-// A level's program as the extractor wrote it (decompiler_out/<game>/levels/NN/overlay.bin): the
-// pieces the game's ParseBin copies in, each a header (load address, size, a word, entry) and its
-// bytes, while the entry stays the same. For the runtime's level-to-level relocation.
+// A level's program straight from the player's image (<data>/iso_data/<game>/disc.iso, kept by the
+// set-up), for rac1, whose disc layout is known. The image is opened once.
+static bool level_program_from_disc(int level, std::vector<std::uint8_t>* bytes) {
+#ifdef OPENRAC_HAS_DISC
+    static std::optional<assets::disc::Disc> disc;
+    static bool tried = false;
+    if (!tried) {
+        tried = true;
+        const fs::path image = g_options.data / "iso_data" / openrac_game.game / "disc.iso";
+        if (std::string(openrac_game.game) == "rac1") {
+            try {
+                disc.emplace(assets::disc::Disc::open(image, assets::disc::rac1_layout()));
+            } catch (const std::exception& e) {
+                log::warn("the level programs cannot be read from {}: {}", image.string(), e.what());
+            }
+        }
+    }
+    if (!disc) {
+        return false;
+    }
+    try {
+        assets::disc::LevelFiles files = disc->level(static_cast<std::uint32_t>(level));
+        if (files.overlay) {
+            *bytes = std::move(*files.overlay);
+            return true;
+        }
+    } catch (const std::exception& e) {
+        log::warn("level {}'s program cannot be read from the disc image: {}", level, e.what());
+    }
+#else
+    (void)level;
+    (void)bytes;
+#endif
+    return false;
+}
+
+// A level's program: the pieces the game's ParseBin copies in, each a header (load address, size,
+// a word, entry) and its bytes, while the entry stays the same. For the runtime's level-to-level
+// relocation: a function several levels share reads its globals where the loaded level keeps
+// them, which the runtime finds by pairing the function's code in the two programs. Without it
+// such a function reads the address of the level its name gives, where the loaded level has
+// something else: the arctangent's tables were zero in a level, so the camera's angles were zero
+// and the stick moved the hero along the world's axes whatever way the camera faced.
+// From the extractor's copy when there is one (decompiler_out/<game>/levels/NN/overlay.bin), else
+// from the player's image.
 static void load_level_program(int level) {
     char name[8];
     std::snprintf(name, sizeof(name), "%02d", level);
     const fs::path path =
         g_options.data / "decompiler_out" / openrac_game.game / "levels" / name / "overlay.bin";
     std::vector<std::uint8_t> bytes;
-    if (!runtime::read_file(path, &bytes)) {
-        log::warn("level {}'s program is not in {}: its shared functions are not relocated",
-                  level, path.string());
+    if (!runtime::read_file(path, &bytes) && !level_program_from_disc(level, &bytes)) {
+        log::error("level {}'s program is in neither {} nor the disc image: the functions levels share are not "
+                   "relocated, and the game will misbehave (the hero's heading ignores the camera)",
+                   level, path.string());
         return;
     }
     std::uint32_t entry = 0;
