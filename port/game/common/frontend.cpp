@@ -571,6 +571,8 @@ void effect_quad(std::span<const std::uint8_t> ram, const openrac_game_quad& qua
     const std::uint32_t clut = quad.clut & 0x01FFFFFF;
     const std::uint32_t tbp = static_cast<std::uint32_t>(quad.tex0 & 0x3FFF);
     const std::uint32_t cbp = static_cast<std::uint32_t>((quad.tex0 >> 37) & 0x3FFF);
+    q.tbp = tbp;
+    q.cbp = cbp;
     const std::uint32_t width = 1u << ((quad.tex0 >> 26) & 0xF);
     const std::uint32_t height = 1u << ((quad.tex0 >> 30) & 0xF);
     if (pixels != 0 && clut != 0 && pixels + width * height <= ram.size() && clut + 1024 <= ram.size()) {
@@ -591,8 +593,10 @@ void effect_quad(std::span<const std::uint8_t> ram, const openrac_game_quad& qua
         q.uploads = static_cast<int>(g->effect_uploads.size());
         g->effect_uploads.push_back(std::move(palette));
         g->effect_uploads.push_back(std::move(image));
+        g->effects.push_back(q);
+    } else if (quad.pixels != 0 || quad.clut != 0) {
+        g->effects.push_back(q);
     }
-    g->effects.push_back(q);
 }
 
 void sky_sprite(const std::uint8_t* record, std::uint64_t tex0) {
