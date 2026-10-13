@@ -161,6 +161,21 @@ class Translate(unittest.TestCase):
         """})
         self.assertEqual(out, ["30", "2.500", "6", "15"])
 
+    def test_a_local_vector_or_matrix_starts_on_a_quadword(self):
+        out = self.run_program({"a.c": """
+            int test_main(void) {
+                char pad[3];
+                float v[4];
+                char pad2[5];
+                float m[4][4];
+                pad[0] = 1; pad2[0] = 2; v[0] = 1.0f; m[0][0] = 2.0f;
+                test_print((int)((unsigned long)&v[0] & 15));
+                test_print((int)((unsigned long)&m[0][0] & 15));
+                return pad[0] - 1 + pad2[0] - 2;
+            }
+        """})
+        self.assertEqual(out, ["0", "0"])
+
     def test_calls_follow_the_definition(self):
         # The caller declares the callee with its float and integer arguments
         # swapped, and with one argument fewer: on the EE that call still

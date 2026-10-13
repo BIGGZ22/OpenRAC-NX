@@ -222,6 +222,22 @@ class Unit:
             return "va_list"
         return ctype.host(self._rename_type(t))
 
+    _FOUR_BYTE_ELEMENTS = {"float", "int", "unsigned int", "unsigned", "signed int", "s32", "u32", "f32"}
+
+    def _frame_alignment(self, t: ctype.Type) -> str:
+        """A local array of 16 bytes or more, whole quadwords of 32-bit elements (a vector, a
+        matrix), starts on a quadword in the frame: the console's compiler placed such locals so,
+        and the game copies them with quadword loads (lq), which the host makes movaps."""
+        count = 1
+        while isinstance(t, ctype.Arr):
+            if t.size is None:
+                return ""
+            count *= t.size
+            t = t.of
+        if isinstance(t, ctype.Base) and t.name in self._FOUR_BYTE_ELEMENTS and count >= 4 and count % 4 == 0:
+            return " __attribute__((aligned(16)))"
+        return ""
+
     def declare(self, t: ctype.Type, name: str) -> str:
         if isinstance(t, ctype.Base) and t.name in VA_NAMES:
             return f"va_list {name}"
@@ -586,7 +602,7 @@ class Unit:
         lines = self.compound(body, 1, top=True)
         frame_decl = []
         if fn.frame:
-            fields = "\n".join(f"    {self.declare(t, f)};" for f, t in fn.frame)
+            fields = "\n".join(f"    {self.declare(t, f)}{self._frame_alignment(t)};" for f, t in fn.frame)
             frame_decl = [f"struct openrac_frame_{fn.name} {{\n{fields}\n}};"]
             prologue.append(f"    GFRAME(frame_, sizeof(struct openrac_frame_{fn.name}));")
             for p, n in zip(params, names):
