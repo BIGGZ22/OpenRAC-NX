@@ -57,7 +57,12 @@ void func_L00_00358D98(char *a0)
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L00_00358E50);
+extern char D_L00_0021DE10[];
+
+void func_L00_00358E50(void)
+{
+    func_L00_00358D98(D_L00_0021DE10);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0035CC98);
 
@@ -102,7 +107,11 @@ void func_L00_0035F8D0(unsigned int value, unsigned int selector, int other,
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0035F9F0);
+void func_L00_0035F9F0(int value, long address) {
+    int *target = (int *)(int)address;
+    if (target != 0)
+        *target = value;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0035FA80);
 
@@ -112,11 +121,22 @@ INCLUDE_ASM("asm/levels", func_L00_00364EE0);
 
 INCLUDE_ASM("asm/levels", func_L00_00364EE8);
 
-INCLUDE_ASM("asm/levels", func_L00_003672F8);
+extern unsigned short D_00152C26;
+
+void func_L00_003672F8(void) {
+    D_00152C26 = 1;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00367308);
 
-INCLUDE_ASM("asm/levels", func_L00_00367720);
+#define NOT_SDA __attribute__((section(".data")))
+
+extern void *r1_D_0012F86C_00367720 NOT_SDA;
+
+/* rac1-decomp src/core/001138A8.c: func_001138A8 */
+int func_L00_00367720(void) {
+    return (int)r1_D_0012F86C_00367720;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00368F58);
 
@@ -161,7 +181,12 @@ INCLUDE_ASM("asm/levels", func_L00_00374348);
 
 INCLUDE_ASM("asm/levels", func_L00_00374708);
 
-INCLUDE_ASM("asm/levels", func_L00_00374B78);
+extern void func_002F93B0(void);
+
+void func_L00_00374B78(void)
+{
+    func_002F93B0();
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00374B98);
 

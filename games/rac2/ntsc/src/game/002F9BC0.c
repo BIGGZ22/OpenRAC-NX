@@ -49,7 +49,10 @@ INCLUDE_ASM("asm/game", func_002FADB0);
 
 INCLUDE_ASM("asm/game", func_002FAE68);
 
-INCLUDE_ASM("asm/game", func_002FB170);
+extern void func_002B7AD0(void);
+extern int ref_L00_002FB170_00[];
+
+void func_002FB170(void) { func_002B7AD0(); ref_L00_002FB170_00[0x23] = 0; ref_L00_002FB170_00[0x22] = 0; }
 
 INCLUDE_ASM("asm/game", func_002FB1A0);
 
@@ -57,7 +60,18 @@ INCLUDE_ASM("asm/game", func_002FBFB8);
 
 INCLUDE_ASM("asm/game", func_002FC008);
 
-INCLUDE_ASM("asm/game", func_002FC010);
+extern int func_002FBFB8(int);
+extern unsigned char D_001395B8[];
+int func_002FC010(int arg, int bit)
+{
+    int index = func_002FBFB8(arg);
+    if (index >= 0) {
+        unsigned char value = D_001395B8[index] & (1 << bit);
+        D_001395B8[index] = value;
+        return value != 0;
+    }
+    return 0;
+}
 
 void func_002FC070(int mask)
 {

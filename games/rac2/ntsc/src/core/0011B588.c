@@ -28,13 +28,13 @@ extern int r1_func_0011A690(const char *, ...);
 
 extern void func_0011B728(void *);
 
-INCLUDE_ASM("asm/core", func_0011B588);
+ASM_FUNC("asm/core", func_0011B588);
 
-INCLUDE_ASM("asm/core", func_0011B5F0);
+ASM_FUNC("asm/core", func_0011B5F0);
 
-INCLUDE_ASM("asm/core", func_0011B658);
+ASM_FUNC("asm/core", func_0011B658);
 
-INCLUDE_ASM("asm/core", func_0011B6C0);
+ASM_FUNC("asm/core", func_0011B6C0);
 
 /* rac1-decomp src/core/00119328.c: func_001194C8 */
 /* topThread: kernel service dispatcher. Adapted from Lombyte (MIT) for PAL. */

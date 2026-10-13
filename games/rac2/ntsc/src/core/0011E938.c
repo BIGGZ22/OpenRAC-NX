@@ -74,10 +74,32 @@ done:
     return 0;
 }
 extern int func_0011EA38(void);
-INCLUDE_ASM("asm/core", func_0011EA38);
+extern char D_00134684[];
+extern char D_00140528[];
+extern char *D_0013474C;
+extern int func_00115340(void *, void *, int);
+
+int func_0011EA38(void) {
+    char *reference = D_00134684;
+    char *state = D_00140528;
+    int result = 0;
+    if (func_00115340(state, reference, 4) != 0) {
+        if (func_00115340(state, D_0013474C, 4) != 0)
+            result = func_00115340(reference, D_0013474C, 4) != 0;
+    }
+    return result;
+}
 
 
-INCLUDE_ASM("asm/core", func_0011EAC8);
+extern int D_00134748;
+extern char D_00140528[];
+extern void func_00115484(void *, int, int);
+
+int func_0011EAC8(void) {
+    D_00134748 = -1;
+    func_00115484(D_00140528, 0, 4);
+    return 0;
+}
 
 /* rac1-decomp src/core/0011CCE0.c: func_0011CE70 */
 /* _sceSifLoadModuleBuffer. Adapted from Lombyte (MIT) for PAL. */

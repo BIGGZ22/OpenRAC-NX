@@ -27,7 +27,16 @@ s32 func_0029AE78(s32 *a0) {
 
 INCLUDE_ASM("asm/game", func_0029AEB0);
 
-INCLUDE_ASM("asm/game", func_0029AF58);
+int func_0029AF58(char *a0)
+{
+    extern int func_0029AEB0(char *, int);
+    int expected = *(int *)(a0 + 4);
+    int first = *(int *)a0;
+    int result = 0;
+    if (expected != 0)
+        result = func_0029AEB0(a0 + 8, first) == expected;
+    return result;
+}
 
 int func_0029AF98(char *out, int mult, int *recs)
 {
@@ -76,13 +85,29 @@ INCLUDE_ASM("asm/game", func_0029B628);
 
 INCLUDE_ASM("asm/game", func_0029B658);
 
-INCLUDE_ASM("asm/game", func_0029B698);
+extern char *D_001A8CFC[] __attribute__((sda));
+extern void func_0034CE28(void *, int);
 
-INCLUDE_ASM("asm/game", func_0029B6D0);
+void func_0029B698(int value) {
+    if (D_001A8CFC[0] != 0)
+        func_0034CE28(D_001A8CFC[0] + 0x376C8, value);
+}
+
+extern void func_0034CAE8(void *, int, int);
+
+void func_0029B6D0(int first, int second) {
+    if (D_001A8CFC[0] != 0)
+        func_0034CAE8(D_001A8CFC[0] + 0x376C8, first, second);
+}
 
 INCLUDE_ASM("asm/game", func_0029B710);
 
-INCLUDE_ASM("asm/game", func_0029B720);
+extern void func_0034B000(void *, int);
+
+void func_0029B720(int value) {
+    if (D_001A8CFC[0] != 0)
+        func_0034B000(D_001A8CFC[0] + 0x37EB0, value);
+}
 
 /* A08-sda-offset-40 freshly exact-verified under family reservation */
 void func_0029B758(BatchA_A08_s32 a0, BatchA_A08_s32 a1) {
@@ -94,7 +119,15 @@ void func_0029B758(BatchA_A08_s32 a0, BatchA_A08_s32 a1) {
     p[0x736C/4] = a1;
 }
 
-INCLUDE_ASM("asm/game", func_0029B780);
+int func_0029B780(void) {
+    int base = D_L00_001A904C[0];
+    if (base != 0) {
+        int *state = (int *)(base + 0x38000);
+        if (state[0x7368 / 4] != 0 || state[0x736C / 4] != 0)
+            return 1;
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_0029B7C0);
 
@@ -102,7 +135,12 @@ INCLUDE_ASM("asm/game", func_0029B810);
 
 INCLUDE_ASM("asm/game", func_0029B848);
 
-INCLUDE_ASM("asm/game", func_0029B858);
+extern void func_0034E4B8(void *);
+
+void func_0029B858(void) {
+    if (D_001A8CFC[0] != 0)
+        func_0034E4B8(D_001A8CFC[0] + 0x36F28);
+}
 
 /* Loads a 32-bit global pointer from a fixed data address; if non-null, tail-forwards it (offset by 0x36F28) plus ten incoming arguments to an overlay-local callee. */
 void func_0029B888(int a0, int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9)

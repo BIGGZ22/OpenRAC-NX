@@ -114,23 +114,7 @@ INCLUDE_ASM("asm/levels", func_L00_003DBF50);
 
 INCLUDE_ASM("asm/levels", func_L00_003DC1C0);
 
-INCLUDE_ASM("asm/levels", func_L00_003DC2D0);
-
-/* shared native body of family beb4059b71338403 */
-void func_L00_003DC350(void)
-{
-    int *p;
-    int i;
-
-    p = *(int **)0x1B32A0 + 60;
-    for (i = 3; i >= 0; i--) { *p = 0; p -= 16; }
-
-    p = *(int **)0x1B32A4 + 4799;
-    for (i = 149; i >= 0; i--) { *p = 0; p -= 32; }
-
-    p = *(int **)0x1B32A8;
-    for (i = 9; i >= 0; i--) { p[1] = 0; p[0] = 0; p += 4; }
-}
+INCLUDE_ASM("asm/levels", func_L00_003DC350);
 
 INCLUDE_ASM("asm/levels", func_L00_003DC3E0);
 
@@ -221,7 +205,13 @@ INCLUDE_ASM("asm/levels", func_L00_003DCC48);
 
 INCLUDE_ASM("asm/levels", func_L00_003DD2B8);
 
-INCLUDE_ASM("asm/levels", func_L00_003DD680);
+void func_L00_003DD680(char *p)
+{
+    if (*(unsigned char *)(p + 0x20) == 0) {
+        *(unsigned short *)(p + 0x34) |= 0x800;
+        *(unsigned char *)(p + 0x20) = 1;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003DD6A8);
 
@@ -231,19 +221,13 @@ INCLUDE_ASM("asm/levels", func_L00_003DE088);
 
 INCLUDE_ASM("asm/levels", func_L00_003DE258);
 
-INCLUDE_ASM("asm/levels", func_L00_003DE260);
-
 INCLUDE_ASM("asm/levels", func_L00_003DE490);
 
 INCLUDE_ASM("asm/levels", func_L00_003DE950);
 
 INCLUDE_ASM("asm/levels", func_L00_003DF030);
 
-INCLUDE_ASM("asm/levels", func_L00_003DF108);
-
 INCLUDE_ASM("asm/levels", func_L00_003DF338);
-
-INCLUDE_ASM("asm/levels", func_L00_003DF6B0);
 
 INCLUDE_ASM("asm/levels", func_L00_003DF710);
 
@@ -381,3 +365,4 @@ INCLUDE_ASM("asm/levels", func_L00_003E2510);
 INCLUDE_ASM("asm/levels", func_L00_003E2BD0);
 
 INCLUDE_ASM("asm/levels", func_L00_003E2E80);
+

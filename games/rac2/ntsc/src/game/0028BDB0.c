@@ -28,9 +28,11 @@ INCLUDE_ASM("asm/game", func_0028D1E8);
 
 INCLUDE_ASM("asm/game", func_0028DDD8);
 
-INCLUDE_ASM("asm/game", func_0028DF38);
+void func_0028DF38(char *object) { extern void func_0028B950(u8 *); *(int *)(object + 0x58) = 0x20; *(int *)(object + 0x7C) = 0x96; *(int *)(object + 0x5C) = 0x20; func_0028B950((u8 *)object); }
 
-INCLUDE_ASM("asm/game", func_0028DF68);
+int func_0028DF68(void) {
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_0028DF70);
 
@@ -41,5 +43,3 @@ INCLUDE_ASM("asm/game", func_0028E138);
 INCLUDE_ASM("asm/game", func_0028E260);
 
 INCLUDE_ASM("asm/game", func_0028E2A8);
-
-INCLUDE_ASM("asm/game", func_0028E408);

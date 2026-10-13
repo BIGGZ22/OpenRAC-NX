@@ -61,7 +61,21 @@ void func_00130088(void *arg0) {
     r1_func_00127378(1);
 }
 
-INCLUDE_ASM("asm/core", func_00130098);
+extern char D_0013BDC8[];
+extern void func_00130288(void *, void *);
+extern void func_0012DC50(void *, int, int);
+extern void func_0012DD60(void *, int, int, int);
+
+void func_00130098(char *object) {
+    int width = *(int *)(object + 0x118);
+    if (*(int *)(object + 0x120) != 0)
+        func_00130288(object, D_0013BDC8);
+    else if (*(int *)(object + 0x174) == 3)
+        func_0012DC50(object, *(int *)(object + 0x1BC), width - 1);
+    else
+        func_0012DD60(object, *(int *)(object + 0x1CC), *(int *)(object + 0x1DC), width - 1);
+    *(int *)(object + 0x120) = 0;
+}
 
 /* rac1-decomp src/core/0012AC80.c: func_0012C2F8 */
 /*

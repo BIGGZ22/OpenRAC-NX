@@ -13,6 +13,7 @@ the screen, the pads, sound and time, replaced at the game's library calls
 | `input.h` | keyboard and SDL gamepads into two pad ports, rumble |
 | `audio.h` | `AudioOutput`: one SDL audio stream, 48 kHz stereo signed 16-bit, pulled by a callback or pushed by `queue()` |
 | `clock.h` | a monotonic clock and `FramePacer`, which holds the loop to the console's 50 Hz (PAL) or 59.94 Hz (NTSC) field rate |
+| `pump.h` | `run_pumped` and `poll_event`: the program beside the window's event pump on one thread (a fiber on Windows), so it goes on drawing while Windows holds the pump in its own loop (the window dragged by its title bar, sized, a menu open) |
 
 As in OpenGOAL ([OPENGOAL_NOTES.md](../../docs/port/OPENGOAL_NOTES.md),
 section 6), OpenGL 4.1 core is requested everywhere, so macOS gets the same

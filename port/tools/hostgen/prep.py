@@ -13,6 +13,10 @@ where it was:
   matching build's object files (padding, sections).
 - A string literal that runs across lines, which GCC 2.95 accepted, becomes
   one literal per line, concatenated: the same string, the same lines.
+- A struct or union defined inside a cast, `((struct { ... } *)p)->field`,
+  gets a name and is defined on the first line of its function: Clang's JSON
+  leaves out a record defined inside an expression, so hostgen could not lay
+  it out and the whole function became a stub.
 - With candidates (hostgen.json "candidates"), a function the decompilation
   still has as an assembly stub gets the candidate's C at the end of its file
   (use_candidates).
@@ -166,41 +170,57 @@ def split_multiline_strings(text: str) -> str:
     return "".join(out)
 
 
-_FUNCTION_HEAD = re.compile(r'^[A-Za-z_][^;{}]*\)\s*\{\s*$')
-_INLINE_RECORD_CAST = re.compile(r'\(\s*(struct|union)\s*\{([^{}]*)\}\s*(\*+)\s*\)')
+# A cast to a record defined on the spot, without a tag: "(struct { ... }".
+_CAST_RECORD = re.compile(r"\(\s*(struct|union)\s*\{([^{}]*)\}")
+# The first line of a function's definition (clangast's _FUNC_START).
+_FUNCTION_START = re.compile(r"^(?:static\s+|extern\s+)?[A-Za-z_][\w\s\*]*\b\w+\s*\(")
 
 
-def hoist_inline_records(text: str) -> str:
-    """Names a record defined inside a cast, `(struct { u8 pad[8]; s32 v[8]; } *)p`.
-
-    Clang's JSON leaves such a record out, so its layout would be unknown to
-    hostgen. Each becomes `struct openrac_inline_N`, defined at the start of
-    the head line of the function that casts to it, so no line moves and the
-    types it uses are the ones the function sees."""
+def name_cast_records(text: str) -> str:
+    """A record defined inside a cast gets a name (openrac_cast_LINE_N) and its definition goes
+    to the start of the first line of the function around it; every line stays where it was."""
+    if not _CAST_RECORD.search(text):
+        return text
     lines = text.split("\n")
-    count = 0
-    heads: dict[int, list[str]] = {}
-    for i, line in enumerate(lines):
-        if not _INLINE_RECORD_CAST.search(line):
-            continue
-        head = next((j for j in range(i, -1, -1) if _FUNCTION_HEAD.match(lines[j])), None)
-        if head is None:
-            continue
-
-        def name(m: re.Match) -> str:
-            nonlocal count
-            heads.setdefault(head, []).append(f"{m.group(1)} openrac_inline_{count} {{{m.group(2)}}};")
-            count += 1
-            return f"({m.group(1)} openrac_inline_{count - 1} {m.group(3)})"
-
-        lines[i] = _INLINE_RECORD_CAST.sub(name, line)
-    for head, defs in heads.items():
-        lines[head] = " ".join(defs) + " " + lines[head]
+    out = []
+    last = 0
+    definitions: dict[int, list[str]] = {}
+    for m in _CAST_RECORD.finditer(text):
+        line = text.count("\n", 0, m.start())
+        start = None
+        for i in range(line, -1, -1):
+            if i != line and lines[i].startswith("}"):
+                break  # the end of the function before: this cast is in none
+            if _FUNCTION_START.match(lines[i]) and not lines[i].rstrip().endswith(";"):
+                start = i
+                break
+        if start is None:
+            continue  # not in a function (a macro in a header): left as it is
+        name = f"openrac_cast_{line + 1}_{len(definitions.get(start, []))}"
+        body = " ".join(m.group(2).split())
+        definitions.setdefault(start, []).append(f"{m.group(1)} {name} {{ {body} }};")
+        # The lines the record ran over are kept, empty.
+        out.append(text[last:m.start()] + f"({m.group(1)} {name}" + "\n" * m.group(0).count("\n"))
+        last = m.end()
+    lines = ("".join(out) + text[last:]).split("\n")
+    for start, records in definitions.items():
+        lines[start] = " ".join(records) + " " + lines[start]
     return "\n".join(lines)
 
 
+# A 128-bit integer written as a type name: "int __attribute__((mode(TI)))" before a "*" or a ")".
+_WIDE_CAST = re.compile(r"\b(unsigned\s+)?int\s+__attribute__\(\(mode\(TI\)\)\)(?=\s*[*)])")
+
+
+def name_wide_casts(text: str) -> str:
+    """Clang keeps a mode attribute on a declaration and drops it from a type name, so a copy
+    through `*(int __attribute__((mode(TI))) *)p` moved 4 bytes of the 16. The type is written as
+    openrac_ti / openrac_uti (openrac_hostgen.h), which carry the attribute in their typedefs."""
+    return _WIDE_CAST.sub(lambda m: "openrac_uti" if m.group(1) else "openrac_ti", text)
+
+
 def prepare(text: str) -> str:
-    return hoist_inline_records(widen_long(split_multiline_strings(blank_file_scope_asm(text))))
+    return name_wide_casts(name_cast_records(widen_long(split_multiline_strings(blank_file_scope_asm(text)))))
 
 
 _INCLUDE_ASM = re.compile(r'^[ \t]*(?:INCLUDE_ASM|ASM_FUNC|LINKER_REMNANT)\(\s*"[^"]*"\s*,\s*(\w+)\s*\)\s*;?[ \t]*(?:/\*.*?\*/)?[ \t]*$', re.M)

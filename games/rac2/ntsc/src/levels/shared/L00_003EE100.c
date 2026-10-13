@@ -1,4 +1,9 @@
 #include "include_asm.h"
+#include "common.h"
+
+/* The 0x50-stride record table both walkers below scan; the retail reaches it through $gp in
+   ordinary flow, which the assembler only selects from a bare symbol operand. */
+extern char *D_L00_001B2BB4_1 __attribute__((sda));
 
 extern void func_002833F0_1(char *a, char *b);
 
@@ -179,11 +184,40 @@ INCLUDE_ASM("asm/levels", func_L00_003EF3E0);
 
 INCLUDE_ASM("asm/levels", func_L00_003EF548);
 
-INCLUDE_ASM("asm/levels", func_L00_003EF550);
+extern int D_L00_001B0838 __attribute__((sda));
+
+extern int D_L00_001B2BB4 __attribute__((sda));
+
+void func_L00_003EF550(void)
+{
+    D_L00_001B2BB4 = 0;
+    D_L00_001B0838 = 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003EF560);
 
-INCLUDE_ASM("asm/levels", func_L00_003EFA00);
+extern int func_00283DB8(char *local, float value);
+
+void func_L00_003EFA00(char *obj)
+{
+    char local[16];
+    int r;
+
+    r = func_002B4038(*(short *)(obj + 0xAA), *(int *)(*(int *)(obj + 0x68) + 0x28));
+    if (r == 0) {
+        func_L00_003EF550();
+        func_0029F338(obj);
+        return;
+    }
+    qcopy(local, obj + 0x10);
+    *(float *)(local + 0xC) = 2.0f;
+    r = func_00283DB8(local, 100.0f);
+    if (r == -1)
+        return;
+    func_L00_003EFA98(obj);
+    func_L00_003EFD00(obj);
+    func_L00_003F0130(obj);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003EFA98);
 
@@ -191,15 +225,71 @@ INCLUDE_ASM("asm/levels", func_L00_003EFD00);
 
 INCLUDE_ASM("asm/levels", func_L00_003EFF58);
 
-INCLUDE_ASM("asm/levels", func_L00_003F00A0);
+extern int func_00282948(char *p);
 
-INCLUDE_ASM("asm/levels", func_L00_003F0130);
+extern void func_L00_003F0680(char *rec);
+
+void func_L00_003F00A0(char *obj)
+{
+    char *rec;
+    int i;
+    int offset;
+
+    offset = 0;
+    i = 0;
+    do {
+        i--;
+        rec = (char *)(offset + (int)D_L00_001B2BB4_1);
+        if (*(int *)(rec + 0x30) == (int)obj) {
+            if (func_00282948(rec + 0x34) != 0 && *(int *)(rec + 0x38) == 0)
+                *(int *)(rec + 0x30) = 0;
+            func_L00_003F0680(rec);
+        }
+        offset += 0x50;
+    } while (i >= 0);
+}
+
+extern void func_L00_003F09A0(char *rec);
+
+void func_L00_003F0130(char *obj)
+{
+    char *rec;
+    int i;
+    int offset;
+
+    offset = 0;
+    i = 0;
+    do {
+        i--;
+        rec = (char *)(offset + (int)D_L00_001B2BB4_1);
+        if (*(int *)(rec + 0x30) == (int)obj)
+            func_L00_003F09A0(rec);
+        offset += 0x50;
+    } while (i >= 0);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003F0198);
 
 INCLUDE_ASM("asm/levels", func_L00_003F0680);
 
-INCLUDE_ASM("asm/levels", func_L00_003F09A0);
+extern char *D_L00_001B2BB8 __attribute__((sda));
+
+extern void ref_L00_003F09A0_00(char *rec, float f1, int a1, int a2, int a3,
+                                float f2, int a4, float f3);
+
+void func_L00_003F09A0(char *obj)
+{
+    char *rec;
+    int i;
+
+    for (i = 0; i < 320; i++) {
+        rec = (char *)(i * 128 + (int)D_L00_001B2BB8);
+        if (*(int *)(rec + 0x7C) == (int)obj)
+            ref_L00_003F09A0_00(rec, *(float *)(rec + 0x48), *(int *)(rec + 0x68),
+                                *(int *)(rec + 0x60), 46, *(float *)(rec + 0x34),
+                                *(int *)(rec + 0x70), 0.25f);
+    }
+}
 
 /* resets a state record: zero words, plus/minus one float flags and two 64-bit fields in the retail store order */
 void func_L00_003F0A20(char *p)
@@ -304,15 +394,70 @@ void func_L00_003F28A0(Vec16_Fc936841d *object, int index)
 
 INCLUDE_ASM("asm/levels", func_L00_003F3160);
 
-INCLUDE_ASM("asm/levels", func_L00_003F34D8);
+void func_L00_003F34D8(char *src, int *src4, char *dst16, int *dst4, int *count)
+{
+    int i = *count;
+
+    if (i < 0x46) {
+        qcopy(dst16 + i * 16, src);
+        dst4[i] = *src4;
+        (*count)++;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003F3518);
 
-INCLUDE_ASM("asm/levels", func_L00_003F37A0);
+extern void ref_L00_003F37A0_00(void *p, char *obj);
+
+extern void func_L00_003F37E8(void);
+
+typedef struct Obj_L00_003F37A0 {
+    unsigned char pad0[0x20];
+    unsigned char f20;
+    unsigned char pad21[0xC0 - 0x21];
+    float fC0;
+    unsigned char padC4[0xD4 - 0xC4];
+    float fD4;
+    unsigned char padD8[0xE8 - 0xD8];
+    float fE8;
+} Obj_L00_003F37A0;
+
+void func_L00_003F37A0(Obj_L00_003F37A0 *obj)
+{
+    if (obj->f20 == 0) {
+        obj->f20 = 1;
+        obj->fC0 = 1.0f;
+        obj->fD4 = 1.0f;
+        obj->fE8 = 1.0f;
+    }
+    ref_L00_003F37A0_00((void *)func_L00_003F37E8, (char *)obj);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003F37E8);
 
-INCLUDE_ASM("asm/levels", func_L00_003F3A88);
+extern void func_L00_003F3AD0(void);
+
+typedef struct Obj_L00_003F3A88 {
+    unsigned char pad0[0x20];
+    unsigned char f20;
+    unsigned char pad21[0xC0 - 0x21];
+    float fC0;
+    unsigned char padC4[0xD4 - 0xC4];
+    float fD4;
+    unsigned char padD8[0xE8 - 0xD8];
+    float fE8;
+} Obj_L00_003F3A88;
+
+void func_L00_003F3A88(Obj_L00_003F3A88 *obj)
+{
+    if (obj->f20 == 0) {
+        obj->f20 = 1;
+        obj->fC0 = 1.0f;
+        obj->fD4 = 1.0f;
+        obj->fE8 = 1.0f;
+    }
+    ref_L00_003F3A88_00((void *)func_L00_003F3AD0, (char *)obj);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003F3AD0);
 
@@ -409,7 +554,30 @@ int func_L00_003F6A58(int *a0)
 
 INCLUDE_ASM("asm/levels", func_L00_003F6B10);
 
-INCLUDE_ASM("asm/levels", func_L00_003F71E8);
+extern void func_002AD0E0(char *a0, char *a1, char *a2, char *a3, char *a4, char *a5);
+
+extern void func_0029F338(char *a0);
+
+extern int func_00282978(char *a0);
+
+extern void ref_L00_003F71E8_01(void *p, char *obj);
+
+extern void ref_L00_003F71E8_00(void);
+
+void func_L00_003F71E8(char *a0)
+{
+    char *s1 = *(char **)(a0 + 0x68);
+
+    if (*(char **)(s1 + 0x3C) != 0) {
+        func_002AD0E0(a0, *(char **)(s1 + 0x3C), a0 + 0x10, a0 + 0xF0, a0 + 0x10, a0 + 0xF0);
+    }
+    if (func_00282978(s1) == 0) {
+        func_00282978(s1 + 4);
+        ref_L00_003F71E8_01((void *)ref_L00_003F71E8_00, a0);
+    } else {
+        func_0029F338(a0);
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003F7268);
 
@@ -439,4 +607,3 @@ void func_L00_003F89F8(Obj_Fe48725c6 *p)
     d->b6 = v;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_003F8DC8);

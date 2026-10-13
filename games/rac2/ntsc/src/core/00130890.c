@@ -104,13 +104,25 @@ void func_00130A50(void *arg0) {
     r1_func_00114438(arg0, r1_func_00113968);
 }
 extern void func_00130A60(void *arg0);
-INCLUDE_ASM("asm/core", func_00130A60);
+extern char D_0013BE88[];
+
+void func_00130A60(void *object) {
+    func_00130288(object, D_0013BE88);
+}
 
 extern void func_00130A70(void *arg0);
-INCLUDE_ASM("asm/core", func_00130A70);
+extern char D_0013BEA0[];
+
+void func_00130A70(void *object) {
+    func_00130288(object, D_0013BEA0);
+}
 
 extern void func_00130A80(void *arg0);
-INCLUDE_ASM("asm/core", func_00130A80);
+extern char D_0013BED8[];
+
+void func_00130A80(void *object) {
+    func_00130288(object, D_0013BED8);
+}
 
 
 INCLUDE_ASM("asm/core", func_00130A8C);

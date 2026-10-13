@@ -1,10 +1,45 @@
 #include "include_asm.h"
 
+typedef int s32;
+typedef unsigned char u8;
+
+extern float func_00283B98(float, float);
+
+extern float func_00283180(float);
+
+extern float func_00283198(float);
+
+extern void func_L04_003A21F8(char *, s32);
+
+extern char D_L18_002A9C40[];
+
+void func_L18_00435CC8(void) {
+    func_L04_003A21F8(D_L18_002A9C40, 0x12);
+}
+
+void func_L18_00434128(u8 *obj) {
+    u8 *state = *(u8 **)(obj + 0x68);
+    s32 i;
+    for (i = 0; i < 2; i++) {
+        u8 *p = &state[i * 0xA0 + 0x610];
+        s32 j;
+        for (j = 1; j >= 0; j--) {
+            float x;
+            *(float *)(p + 0x40) = func_00283B98(*(float *)(p + 0x40), *(float *)(p + 0x60));
+            *(float *)(p + 0x44) = func_00283B98(*(float *)(p + 0x44), *(float *)(p + 0x64));
+            *(float *)(p + 0x48) = func_00283B98(*(float *)(p + 0x48), *(float *)(p + 0x68));
+            x = func_00283180(*(float *)(p + 0x40));
+            *(float *)(p + 0x20) = x * *(float *)(p + 0x80);
+            *(float *)(p + 0x24) = func_00283198(*(float *)(p + 0x44)) * *(float *)(p + 0x84);
+            *(float *)(p + 0x28) = -func_00283198(*(float *)(p + 0x48)) * *(float *)(p + 0x88);
+            p += 0x10;
+        }
+    }
+}
+
 INCLUDE_ASM("asm/levels", func_L18_00433460);
 
 INCLUDE_ASM("asm/levels", func_L18_00433B70);
-
-INCLUDE_ASM("asm/levels", func_L18_00434128);
 
 INCLUDE_ASM("asm/levels", func_L18_00434510);
 
@@ -19,8 +54,6 @@ INCLUDE_ASM("asm/levels", func_L18_004354F8);
 INCLUDE_ASM("asm/levels", func_L18_004359A8);
 
 INCLUDE_ASM("asm/levels", func_L18_00435B10);
-
-INCLUDE_ASM("asm/levels", func_L18_00435CC8);
 
 INCLUDE_ASM("asm/levels", func_L18_00436B80);
 

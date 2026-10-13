@@ -48,7 +48,10 @@ void func_00343028(u8 *a0, f32 a1, f32 a2) { *(f32 *)(a0 + 0x8) = a1; *(f32 *)(a
 /* Measured target: byte-identical across all 27 levels. */
 void func_00343038(u8 *a0, f32 a1) { *(f32 *)(a0 + 0x4) = a1; }
 
-INCLUDE_ASM("asm/game", func_00343040);
+void func_00343040(float **position, float x, float y) {
+    (*position)[0] = x;
+    (*position)[1] = y;
+}
 
 /* Measured target: byte-identical across all 27 levels. */
 void func_00343058(u8 *a0) { *(s32 *)(a0 + 0x90) = 0; }

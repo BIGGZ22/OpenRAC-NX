@@ -31,6 +31,32 @@ extern void func_002FDBD8(float scale, Rac2Native_9cdc323a4d0c2fbd_AnalysisCondi
 extern void func_002FDBD8_1(float scale, Rac2Native_9cdc323a4d0c2fbd_AnalysisConditionalContext *context,
                                     float *vector, int mode);
 
+typedef int TI128 __attribute__((mode(TI)));
+
+extern int D_18C0A0;
+
+extern int D_18C0B4;
+
+extern int D_L00_001B9080;
+
+extern void func_002A7470(char *object, int mode, int a2, int a3);
+
+extern void func_002FEE50(int value);
+
+extern void func_00282C88(char *quad);
+
+extern void func_002A10E8(char *object);
+
+extern void func_002A0F48(char *object);
+
+extern void func_L00_004283C8(int value);
+
+extern void func_L00_002C42E0(int a, int b);
+
+extern void func_L00_002F4720(void);
+
+extern void func_L00_00390F28(char *object, int mode);
+
 typedef unsigned char u8;
 
 typedef float f32;
@@ -96,7 +122,28 @@ INCLUDE_ASM("asm/levels", func_L00_00390F28);
 
 INCLUDE_ASM("asm/levels", func_L00_00390FF8);
 
-INCLUDE_ASM("asm/levels", func_L00_00391310);
+/* Releases the second argument's object: clears a word of the sub-object at +0x68, clears
+ * two globals, hands its +0x14 word over before clearing it, then runs five helpers and the
+ * first argument through one more. */
+void func_L00_00391310(char *arg0, char *arg1)
+{
+    char *s0 = arg1;
+    char *s1 = arg0;
+    int *v = *(int **)s0;
+
+    v = (int *)*(int *)((char *)v + 0x68);
+    if (v != 0)
+        v[1] = 0;
+    D_18C0A0 = 0;
+    func_L00_004283C8(*(int *)(s0 + 0x14));
+    *(int *)(s0 + 0x14) = 0;
+    func_L00_002C42E0(0, 1);
+    func_L00_00390F28(s1, 1);
+    func_L00_002F4720();
+    func_002FEE50(*(int *)(s0 + 0x4C));
+    func_0029F338((NativeUpdate775View *)s1);
+    D_L00_001B9080 = 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00391398);
 
@@ -106,7 +153,32 @@ INCLUDE_ASM("asm/levels", func_L00_003918C8);
 
 INCLUDE_ASM("asm/levels", func_L00_00392530);
 
-INCLUDE_ASM("asm/levels", func_L00_00395240);
+/* Builds the object for type 0xB3 and, when the constructor returns one, fills its fields,
+ * clears a quad at +0xF0, records the argument in the sub-object at +0x68 and copies three
+ * quads from the argument before running two helpers. Returns the object. */
+char *func_L00_00395240(char *arg)
+{
+    char *p = arg;
+    char *object = func_0029EFD0_1(0xB3);
+
+    if (object != 0) {
+        int *sub = *(int **)(object + 0x68);
+        *(unsigned char *)(object + 0x30) = 0xFF;
+        *(unsigned short *)(object + 0x32) = 0xFF;
+        *(unsigned char *)(object + 0x31) = 1;
+        *(unsigned short *)(object + 0x34) = 0x204;
+        *(unsigned char *)(object + 0x23) = 0x50;
+        *(char *)(object + 0x20) = 0;
+        sub[2] = (int)p;
+        func_00282C88(object + 0xF0);
+        *(TI128 *)(object + 0xC0) = *(TI128 *)(p + 0xC0);
+        *(TI128 *)(object + 0xD0) = *(TI128 *)(p + 0xD0);
+        *(TI128 *)(object + 0xE0) = *(TI128 *)(p + 0xE0);
+        func_002A10E8(object);
+        func_002A0F48(object);
+    }
+    return object;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003952E0);
 
@@ -154,7 +226,15 @@ void func_L00_0039D340(Rac2Native_9cdc323a4d0c2fbd_AnalysisOwner *owner)
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0039D378);
+/* The mode word at 0x18C0B4 must be 8 and the object's byte 0x43 must not be 6; the
+ * helper then takes the object with mode 6, zero and ten. */
+void func_L00_0039D378(char *object)
+{
+    if (D_18C0B4 == 8) {
+        if (*(unsigned char *)(object + 0x43) != 6)
+            func_002A7470(object, 6, 0, 10);
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0039D598);
 

@@ -88,3 +88,12 @@ func_L00_001FF5B0	level_planar_limit.c
 func_L00_002862E0	level_checkpoint_restore.c
 func_001FA5C8	game_fastfunc.c
 func_001FA6C0	game_fastfunc.c
+func_L00_0025A8E8	level_hit_sphere.c
+func_L00_0025AA20	level_hit_sphere.c
+func_L00_002D6610	level_creature_hits.c
+func_L00_0025D6F0	level_knockback.c
+func_L00_002D1E68	level_crate_break.c
+func_L00_00261B00	level_bolt_burst.c
+func_L00_002D4EC0	level_class639.c
+func_001F9BB0	game_sound_math.c
+func_001F9E58	game_sound_math.c

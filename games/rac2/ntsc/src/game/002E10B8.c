@@ -122,7 +122,7 @@ INCLUDE_ASM("asm/game", func_002E11C0);
 
 INCLUDE_ASM("asm/game", func_002E1228);
 
-INCLUDE_ASM("asm/game", func_002E2988);
+ASM_FUNC("asm/game", func_002E2988);
 
 INCLUDE_ASM("asm/game", func_002E2C38);
 
@@ -167,13 +167,13 @@ INCLUDE_ASM("asm/game", func_002E3BD8);
 
 INCLUDE_ASM("asm/game", func_002E3E50);
 
-INCLUDE_ASM("asm/game", func_002E3E54);
+ASM_FUNC("asm/game", func_002E3E54);
 
-INCLUDE_ASM("asm/game", func_002E3FA0);
+ASM_FUNC("asm/game", func_002E3FA0);
 
-INCLUDE_ASM("asm/game", func_002E40C8);
+ASM_FUNC("asm/game", func_002E40C8);
 
-INCLUDE_ASM("asm/game", func_002E425C);
+ASM_FUNC("asm/game", func_002E425C);
 
 INCLUDE_ASM("asm/game", func_002E4388);
 
@@ -299,7 +299,11 @@ INCLUDE_ASM("asm/game", func_002E5F00);
 
 INCLUDE_ASM("asm/game", func_002E5F38);
 
-INCLUDE_ASM("asm/game", func_002E5F40);
+s32 func_002E5F40(s32 index, s32 callback) {
+    u8 *p = D_00188660 + index * 0x70;
+    *(s32 *)(p + 0x84) = callback;
+    return 1;
+}
 
 void func_002E5F60(void) {
     s32 i=0;
@@ -328,7 +332,11 @@ void func_002E5FE0(void) {
     }
 }
 
-INCLUDE_ASM("asm/game", func_002E6088);
+void func_002E6088(int value, long target) {
+    int *destination = (int *)(int)target;
+    if (destination != 0)
+        *destination = value;
+}
 
 void func_002E60A0(int arg0, long arg1) {
     unsigned char *p = (unsigned char *)(int)arg1;

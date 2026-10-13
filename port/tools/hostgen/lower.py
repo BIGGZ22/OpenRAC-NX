@@ -103,6 +103,7 @@ class _Fn:
     host: dict = field(default_factory=dict)         # decl id -> host name
     frame: list = field(default_factory=list)        # (field, type)
     report: FnReport | None = None
+    tail_id: str | None = None                       # the last statement, a call whose result is returned
     labels: dict = field(default_factory=dict)       # label decl id -> name
     int_params: list = field(default_factory=list)   # host names, in register order
     record_params: set = field(default_factory=set)  # host names of parameters passed as records
@@ -489,10 +490,18 @@ class Unit:
             raise SystemExit(f"{self.unit}: {sym} has type {sig_t}")
         params = [c for c in _inner(decl) if c.get("kind") == "ParmVarDecl"]
         names = [p.get("name") or f"arg{i}" for i, p in enumerate(params)]
+        # A definition that returns nothing and ends in a call returns that call's result, as the
+        # console's result register did (program.py, inherit_results).
+        known = self.program.lookup(self.unit, sym)
+        inherits = known is not None and getattr(known, "inherits", False) and self.cls(sig_t.ret) == "void"
+        if inherits:
+            sig_t = ctype.Func(known.sig.ret, sig_t.params, sig_t.variadic, sig_t.prototyped)
         proto = self.signature(sym, sig_t, names, static)
         report = FnReport(sym, "translated")
         self.fn = _Fn(sym, sig_t, params, report=report)
         body = next(c for c in _inner(decl) if c.get("kind") == "CompoundStmt")
+        if inherits:
+            self.fn.tail_id = [s for s in _inner(body) if s.get("kind")][-1].get("id")
         local_types = self._local_types(body)
         self.local_names = {}
         for d in local_types:
@@ -691,10 +700,20 @@ class Unit:
             for d in _inner(n):
                 out.extend(self.local_decl(d, depth))
             return out
+        if self.fn is not None and self.fn.tail_id is not None and n.get("id") == self.fn.tail_id:
+            ret = self.host(ctype.strip_quals(self.fn.sig.ret))
+            call = self.rv(n)
+            if call.startswith("GFN(void (*)"):
+                # Called by code address (a folded wrapper's own callee): through a pointer to a
+                # function with the result this one returns, as the definition there has it.
+                call = f"GFN({ret} (*)" + call[len("GFN(void (*)"):]
+            return [pad + f"return ({ret})({call});"]
         if k == "ReturnStmt":
             kids = _inner(n)
             if not kids:
-                return [pad + "return;"]
+                # In a definition that returns its last call's result, an earlier return leaves
+                # the register as it was: nothing a caller could use.
+                return [pad + ("return 0;" if self.fn.tail_id is not None else "return;")]
             if self.cls(self.fn.sig.ret) == "void":
                 return [pad + f"{self.rv(kids[0])};", pad + "return;"]
             return [pad + f"return {self.convert(kids[0], self.fn.sig.ret)};"]

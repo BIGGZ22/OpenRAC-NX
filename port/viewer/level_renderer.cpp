@@ -357,6 +357,14 @@ void LevelScene::draw_layer(
         renderer::multiply(input.camera.projection, input.camera.view);
     m_mesh.use();
     glUniformMatrix4fv(m_mesh.uniform("view_projection"), 1, GL_FALSE, view_projection.data());
+    // On a target wider than the game's picture, the 2D layer's mobys are cut at the picture's sides
+    // (mesh.vert).
+    const bool cut = layer == Layer::Mobys && state.target.picture_scale_x < 1.0f;
+    glUniform1f(m_mesh.uniform("picture_scale"), state.target.picture_scale_x);
+    if (cut) {
+        glEnable(GL_CLIP_DISTANCE0);
+        glEnable(GL_CLIP_DISTANCE1);
+    }
     // The terrain's vertex colours are the game's own lighting (the extractor lights it as
     // LightTfrags does): it gets no viewer sun.
     glUniform1i(m_mesh.uniform("lighting"), lighting && layer != Layer::Terrain ? 1 : 0);
@@ -431,6 +439,10 @@ void LevelScene::draw_layer(
     glDisable(GL_BLEND);
     glDepthMask(GL_TRUE);
     glBindVertexArray(0);
+    if (cut) {
+        glDisable(GL_CLIP_DISTANCE0);
+        glDisable(GL_CLIP_DISTANCE1);
+    }
     if (palettes) {
         glActiveTexture(GL_TEXTURE0 + kPaletteUnit);
         glBindTexture(GL_TEXTURE_2D, 0);

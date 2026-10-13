@@ -159,7 +159,18 @@ INCLUDE_ASM("asm/game", func_002956E8);
 
 INCLUDE_ASM("asm/game", func_00295788);
 
-INCLUDE_ASM("asm/game", func_00295828);
+int func_00295828(int id) {
+    extern int D_001C4FA0[];
+    int *base = D_001C4FA0;
+    int *p = base + 0x29C / 4;
+    int i = 0;
+    do {
+        if (p[-5] != 0 && p[0] == id) return i;
+        i++;
+        p++;
+    } while (i < 5);
+    return -1;
+}
 
 INCLUDE_ASM("asm/game", func_00295870);
 
@@ -204,7 +215,13 @@ void func_00295BE8(u8 *a0,u8 *a1,u8 *a2,u8 *a3) {
  } while(i<0x8000);
 }
 
-INCLUDE_ASM("asm/game", func_00295C50);
+extern int D_001C51D0;
+extern void func_00295C70(void);
+
+void func_00295C50(int value) {
+    D_001C51D0 = value;
+    func_00295C70();
+}
 
 INCLUDE_ASM("asm/game", func_00295C70);
 
@@ -342,10 +359,36 @@ void func_00298170(void)
 
 INCLUDE_ASM("asm/game", func_00298178);
 
-INCLUDE_ASM("asm/game", func_00298278);
+typedef struct {
+    char reserved00[0x10];
+    int field10;
+    char reserved14[0x150];
+    int field164;
+    int field168;
+    char reserved16c[0x10];
+    int field17c;
+} SharedState;
+extern SharedState D_001393E0;
+extern int D_001A7420[] __attribute__((sda));
+
+void func_00298278(void) {
+    D_001A7420[0] = 3;
+    D_001393E0.field17c = 0;
+    D_001393E0.field10 = 0;
+}
 
 INCLUDE_ASM("asm/game", func_00298298);
 
-INCLUDE_ASM("asm/game", func_00298380);
+extern unsigned int D_001A7424[] __attribute__((sda));
+extern int D_001A7420[] __attribute__((sda));
 
-INCLUDE_ASM("asm/game", func_002983A8);
+void func_00298380(void) {
+    if (((D_001A7424[0] ^ 1) & 1) != 0)
+        D_001A7420[0] = 3;
+}
+
+void func_002983A8(void) {
+    D_001393E0.field164 = -1;
+    D_001A7420[0] = 4;
+    D_001393E0.field168 = -1;
+}

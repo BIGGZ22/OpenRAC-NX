@@ -170,9 +170,19 @@ INCLUDE_ASM("asm/levels", func_L00_0031C0F8);
 
 INCLUDE_ASM("asm/levels", func_L00_0031C3D0);
 
-INCLUDE_ASM("asm/levels", func_L00_0031C978);
+extern void func_002A93B0(void);
 
-INCLUDE_ASM("asm/levels", func_L00_0031C998);
+void func_L00_0031C978(void)
+{
+    func_002A93B0();
+}
+
+extern void func_00283D38(void);
+
+void func_L00_0031C998(void)
+{
+    func_00283D38();
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0031CAC8);
 
@@ -180,7 +190,11 @@ INCLUDE_ASM("asm/levels", func_L00_0031CDD0);
 
 INCLUDE_ASM("asm/levels", func_L00_0031D618);
 
-INCLUDE_ASM("asm/levels", func_L00_0031D620);
+extern int func_002EF250(float);
+
+int func_L00_0031D620(int a0, int a1, float x) {
+    return a0 + func_002EF250((float)(a1 - a0) * x);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0031D670);
 
@@ -331,13 +345,28 @@ INCLUDE_ASM("asm/levels", func_L00_00324F10);
 
 INCLUDE_ASM("asm/levels", func_L00_00324F18);
 
-INCLUDE_ASM("asm/levels", func_L00_003252A8);
+extern void func_002AFFD8(u8 *);
+
+void func_L00_003252A8(u8 *a0)
+{
+    func_002AFFD8(a0 + 0x10);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003252C8);
 
-INCLUDE_ASM("asm/levels", func_L00_00325300);
+extern void func_L00_003252C8(u8 *);
 
-INCLUDE_ASM("asm/levels", func_L00_003253A0);
+void func_L00_00325300(u8 *a0)
+{
+    func_L00_003252C8(a0 + 0x10);
+}
+
+extern void func_002B00D8(u8 *);
+
+void func_L00_003253A0(u8 *a0)
+{
+    func_002B00D8(a0 + 0x10);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003255A0);
 
@@ -367,7 +396,12 @@ INCLUDE_ASM("asm/levels", func_L00_00326108);
 
 INCLUDE_ASM("asm/levels", func_L00_00326110);
 
-INCLUDE_ASM("asm/levels", func_L00_00326200);
+extern void func_0029CC50(void);
+
+void func_L00_00326200(void)
+{
+    func_0029CC50();
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003263D0);
 
@@ -377,7 +411,18 @@ INCLUDE_ASM("asm/levels", func_L00_003266D8);
 
 INCLUDE_ASM("asm/levels", func_L00_003268E8);
 
-INCLUDE_ASM("asm/levels", func_L00_00326950);
+extern unsigned char D_001395B8[];
+extern int func_L00_003269F0(void);
+
+int func_L00_00326950(int a0) {
+    unsigned char *base;
+
+    if (func_L00_003269F0() < a0)
+        return 0;
+    base = D_001395B8;
+    base[0x90] = base[0x90] + a0;
+    return 1;
+}
 
 /* One fixed ordinary scalar source hypothesis. Byte offset and mask are
    measured; no original object/class/field name or allocation claim. The

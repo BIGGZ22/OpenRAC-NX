@@ -63,7 +63,32 @@ INCLUDE_ASM("asm/game", func_0026EA00);
 
 INCLUDE_ASM("asm/game", func_0026EAC8);
 
-INCLUDE_ASM("asm/game", func_0026EB98);
+extern int func_002A77E0(int);
+
+void func_0026EB98(int *first, int *second, int *third) {
+    switch (func_002A77E0(3)) {
+    case 0:
+        *first = 0;
+        *second = 1;
+        *third = 2;
+        break;
+    case 1:
+        *first = 1;
+        *second = 0;
+        *third = 2;
+        break;
+    case 2:
+        *first = 2;
+        *second = 1;
+        *third = 0;
+        break;
+    }
+    if (func_002A77E0(2) != 0) {
+        int value = *second;
+        *second = *third;
+        *third = value;
+    }
+}
 
 INCLUDE_ASM("asm/game", func_0026EC58);
 
@@ -312,13 +337,25 @@ void func_002704D0(void) {
 
 INCLUDE_ASM("asm/game", func_002704F0);
 
-INCLUDE_ASM("asm/game", func_00270550);
+typedef void (*ObjectDispatch)(void *);
+typedef struct { ObjectDispatch entries[5]; } ObjectDispatchRecord;
+extern ObjectDispatchRecord D_0026E900[];
+
+void func_00270550(char *object) {
+    ObjectDispatch callback = D_0026E900[*(short *)(object + 0x8C)].entries[2];
+    if (callback != 0)
+        callback(object);
+}
 
 INCLUDE_ASM("asm/game", func_00270598);
 
 INCLUDE_ASM("asm/game", func_00270838);
 
-INCLUDE_ASM("asm/game", func_00270A00);
+void func_00270A00(char *object) {
+    ObjectDispatch callback = D_0026E900[*(short *)(object + 0x8C)].entries[4];
+    if (callback != 0)
+        callback(object);
+}
 
 INCLUDE_ASM("asm/game", func_00270A48);
 

@@ -59,6 +59,10 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
 // reads the window's events: 1 drawn, 0 none due, -1 the window was closed.
 void set_tick(std::chrono::steady_clock::time_point tick, std::chrono::duration<double> period);
 bool interpolating();
+
+// The game's text lookup, asked for an id of the port's own (the rows it adds to the game's
+// options, options_menu.h): the string in game memory, or 0.
+std::uint32_t text(int id);
 bool wants_between();
 int between(std::chrono::steady_clock::time_point next_tick);
 

@@ -398,6 +398,11 @@ def family_order(rows: list, findex: dict) -> list:
 
 def plan(args, quiet: bool = False) -> None:
     names = choose(args)
+    pieces = all_joined_pieces()
+    dropped = [n for n in names if n in pieces]
+    if dropped:         # not functions of their own: their owner's packet carries them
+        print(f"left out, pieces of a joined function (config/overlays/joined.tsv): {' '.join(dropped)}")
+        names = [n for n in names if n not in pieces]
     if not names:
         sys.exit("nothing to plan")
     overlay = is_overlay_wave(names)
@@ -540,6 +545,15 @@ def claim(args) -> None:
         return
     for name in got:
         print(packet(name, wave["budget"], wave.get("near", False)))
+
+
+def all_joined_pieces() -> set[str]:
+    """Every catalogue entry that is a later piece of some joined function."""
+    table = ROOT / "config/overlays/joined.tsv"
+    if not table.exists():
+        return set()
+    return {p for line in table.read_text().splitlines() if line and not line.startswith("#")
+            for p in line.split("\t", 1)[1].split()}
 
 
 def joined_pieces(name: str) -> list[str]:

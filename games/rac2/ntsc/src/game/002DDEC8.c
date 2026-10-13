@@ -59,6 +59,14 @@ INCLUDE_ASM("asm/game", func_002DE990);
 
 INCLUDE_ASM("asm/game", func_002DF050);
 
-INCLUDE_ASM("asm/game", func_002DF158);
+void func_002DF158(s32 object, s32 amount)
+{
+    extern s32 D_001F2840[];
+    extern void func_002A0300(s32, s32);
+    if (D_001F2840[0x168 / 4] != 0) {
+        D_001F2840[0x16C / 4] += amount;
+        func_002A0300(object, amount);
+    }
+}
 
 INCLUDE_ASM("asm/game", func_002DF190);

@@ -40,7 +40,16 @@ BatchA_A04_u32 func_L04_0040A1D0(BatchA_A04_u8 *a0) {
 
 INCLUDE_ASM("asm/levels", func_L04_0040A220);
 
-INCLUDE_ASM("asm/levels", func_L04_0040A268);
+/* shared native body of family A04-table-select: reads the state-selected byte */
+unsigned int func_L04_0040A268(unsigned char *a0)
+{
+    unsigned int v = D_001A79F0[0];
+    unsigned int r = 0;
+
+    if (v == 4) r = D_001395B8[(unsigned int)a0 + 0x52];
+    else if (v == 0xB) r = D_001395B8[(unsigned int)a0 + 0x5C];
+    return r;
+}
 
 INCLUDE_ASM("asm/levels", func_L04_0040A2B8);
 
@@ -55,8 +64,6 @@ INCLUDE_ASM("asm/levels", func_L04_0040A628);
 INCLUDE_ASM("asm/levels", func_L04_0040A958);
 
 INCLUDE_ASM("asm/levels", func_L04_0040AC30);
-
-INCLUDE_ASM("asm/levels", func_L04_0040AC80);
 
 INCLUDE_ASM("asm/levels", func_L04_0040AC98);
 
@@ -78,7 +85,22 @@ INCLUDE_ASM("asm/levels", func_L04_0040C368);
 
 INCLUDE_ASM("asm/levels", func_L04_0040C880);
 
-INCLUDE_ASM("asm/levels", func_L04_0040CDD0);
+extern void func_L04_0040D148();
+
+extern void func_L04_0040CE30();
+
+void func_L04_0040CDD0(unsigned char *a0)
+{
+    unsigned char *s = *(unsigned char **)(a0 + 0x68);
+
+    if (*(unsigned int *)(s + 0x4D8) != 0) {
+        func_L04_0040D148(a0, -1);
+    } else if (*(unsigned int *)(s + 0x768) != 0) {
+        func_L04_0040D148(a0, *(unsigned int *)(s + 0x764));
+    } else if (*(unsigned char *)(a0 + 0xBC) != 6) {
+        func_L04_0040CE30(a0);
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L04_0040CE30);
 

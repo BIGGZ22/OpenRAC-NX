@@ -1,6 +1,7 @@
 #include "include_asm.h"
 
 typedef unsigned char u8;
+typedef float f32;
 
 /* Family cbc1388ebe801e68 (116 B, 2 placements): arm one animation slot on a
  * resident object.  Two global guards, a "current slot" guard, then five
@@ -21,8 +22,6 @@ INCLUDE_ASM("asm/levels", func_L22_003A5BD8);
 INCLUDE_ASM("asm/levels", func_L22_003A5F90);
 
 INCLUDE_ASM("asm/levels", func_L22_003A6128);
-
-INCLUDE_ASM("asm/levels", func_L22_003A61A8);
 
 INCLUDE_ASM("asm/levels", func_L22_003A6230);
 
@@ -48,7 +47,16 @@ INCLUDE_ASM("asm/levels", func_L22_003A65E0);
 
 INCLUDE_ASM("asm/levels", func_L22_003A6640);
 
-INCLUDE_ASM("asm/levels", func_L22_003A8BA0);
+extern u8 D_00189E20[];
+extern f32 func_00282E48(void *a0, void *a1);
+extern void func_L22_002B70F8(int a0, int a1, void *a2);
+
+void func_L22_003A8BA0(u8 *a0) {
+    if (D_00189E20[0x22B4] != 0) return;
+    if (func_00282E48(D_00189E20 + 0x80, a0 + 0x10) < 4.0f) {
+        func_L22_002B70F8(2, 0x56, a0);
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L22_003AD090);
 
@@ -58,8 +66,6 @@ INCLUDE_ASM("asm/levels", func_L22_003B9128);
 
 INCLUDE_ASM("asm/levels", func_L22_003B9358);
 
-INCLUDE_ASM("asm/levels", func_L22_003B9428);
-
 INCLUDE_ASM("asm/levels", func_L22_003C9880);
 
 INCLUDE_ASM("asm/levels", func_L22_003C9B60);
@@ -68,7 +74,13 @@ INCLUDE_ASM("asm/levels", func_L22_003C9D48);
 
 INCLUDE_ASM("asm/levels", func_L22_003D4320);
 
-INCLUDE_ASM("asm/levels", func_L22_003D4428);
+extern void func_L22_003D4320(u8 *a0, int a1, int a2);
+
+void func_L22_003D4428(u8 *a0) {
+    int v = *(int *)(a0 + 0x68);
+    func_L22_003D4320(a0, v, v);
+    *(u8 *)(a0 + 0x30) = 0xFF;
+}
 
 INCLUDE_ASM("asm/levels", func_L22_003F45D8);
 

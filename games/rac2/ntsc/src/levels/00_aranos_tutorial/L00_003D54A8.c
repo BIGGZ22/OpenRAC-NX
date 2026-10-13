@@ -18,16 +18,58 @@ INCLUDE_ASM("asm/levels", func_L00_0040EA98);
 
 INCLUDE_ASM("asm/levels", func_L00_00412E68);
 
-INCLUDE_ASM("asm/levels", func_L00_00419B80);
+void func_L00_00419B80(void *a0) {
+    unsigned char *p = (unsigned char *)a0;
+    if (p[0x20] == 0) {
+        p[0x20] = 1;
+        *(unsigned short *)(p + 0x34) |= 0x800;
+    }
+}
 
-INCLUDE_ASM("asm/levels", func_L00_00419BA8);
+void func_L00_00419BA8(void *a0) {
+    unsigned char *p = (unsigned char *)a0;
+    if (p[0x20] == 0) {
+        p[0x20] = 1;
+        *(unsigned short *)(p + 0x34) |= 0x800;
+    }
+}
 
-INCLUDE_ASM("asm/levels", func_L00_00419BD0);
+void func_L00_00419BD0(void *a0) {
+    unsigned char *p = (unsigned char *)a0;
+    if (p[0x20] == 0) {
+        p[0x20] = 1;
+        *(unsigned short *)(p + 0x34) |= 0x800;
+    }
+}
 
-INCLUDE_ASM("asm/levels", func_L00_00419BF8);
+void func_L00_00419BF8(void *a0) {
+    unsigned char *p = (unsigned char *)a0;
+    if (p[0x20] == 0) {
+        p[0x20] = 1;
+        *(unsigned short *)(p + 0x34) |= 0x800;
+    }
+}
 
-INCLUDE_ASM("asm/levels", func_L00_00419C20);
+void func_L00_00419C20(void *a0) {
+    unsigned char *p = (unsigned char *)a0;
+    if (p[0x20] == 0) {
+        p[0x20] = 1;
+        *(unsigned short *)(p + 0x34) |= 0x800;
+    }
+}
 
-INCLUDE_ASM("asm/levels", func_L00_00419C48);
+void func_L00_00419C48(void *a0) {
+    unsigned char *p = (unsigned char *)a0;
+    if (p[0x20] == 0) {
+        p[0x20] = 1;
+        *(unsigned short *)(p + 0x34) |= 0x800;
+    }
+}
 
-INCLUDE_ASM("asm/levels", func_L00_00419C70);
+void func_L00_00419C70(void *a0) {
+    unsigned char *p = (unsigned char *)a0;
+    if (p[0x20] == 0) {
+        p[0x20] = 1;
+        *(unsigned short *)(p + 0x34) |= 0x800;
+    }
+}

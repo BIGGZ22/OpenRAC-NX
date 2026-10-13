@@ -115,21 +115,21 @@
       {
         "id": "editor-preview",
         "label": "Preview a level in Godot",
-        "description": "Opens the first extracted level in Godot's player, to walk around it. This is Godot showing the editor's scenes, not the game.",
+        "description": "Opens one extracted level in Godot's player, to fly around it. This is Godot showing the editor's scene, not the game.",
         "kind": "edit",
         "state": "connected",
         "program": "{godot}",
         "args": [
           "--path",
-          "assets/godot",
-          "res://levels/level_00/level_00.tscn"
+          "assets/levels/rac1/level_{level}",
+          "res://levels/level_{level}/level_{level}.tscn"
         ],
         "cwd": ".",
         "requires": [
           "godot",
           "artifact"
         ],
-        "artifact": "assets/godot/project.godot",
+        "artifact": "assets/levels/rac1/level_{level}/project.godot",
         "detached": true,
         "docs": "editor/README.md"
       },
@@ -152,7 +152,7 @@
       {
         "id": "editor-extract",
         "label": "Extract the levels",
-        "description": "Turns the 19 levels on your disc into a Godot 4 project in assets/godot. About 20 seconds and 630 MB. Stops if the project already exists: it never overwrites your edits.",
+        "description": "Turns the 19 levels on your disc into Godot 4 projects, one per level, in assets/levels/rac1. About 20 seconds and 800 MB. Stops if they already exist: it never overwrites your edits.",
         "kind": "edit",
         "state": "unverified",
         "program": "{python}",
@@ -160,7 +160,8 @@
           "editor/extract.py",
           "godot",
           "{disc}",
-          "assets/godot"
+          "assets/levels/rac1",
+          "--split"
         ],
         "cwd": ".",
         "requires": [
@@ -168,18 +169,18 @@
           "python"
         ],
         "docs": "editor/README.md",
-        "todo": "Run it from the desktop app. From a shell on macOS the same command extracted a level into a new folder and refused an existing one with a clear message. Then offer Open in Godot instead when assets/godot exists."
+        "todo": "Run it from the desktop app. From a shell on macOS the same command wrote the per-level projects, and refused an existing folder with a clear message."
       },
       {
         "id": "editor-import",
-        "label": "Import into Godot",
-        "description": "Has Godot read the extracted meshes and textures once, without opening a window, so that the first time you open the editor is quick. About two minutes for all levels.",
+        "label": "Import a level into Godot",
+        "description": "Has Godot read one level's meshes and textures without opening a window. Not needed before opening the editor, which does the same the first time (a few seconds per level).",
         "kind": "edit",
         "state": "unverified",
         "program": "{godot}",
         "args": [
           "--path",
-          "assets/godot",
+          "assets/levels/rac1/level_{level}",
           "--headless",
           "--import"
         ],
@@ -188,20 +189,20 @@
           "godot",
           "artifact"
         ],
-        "artifact": "assets/godot/project.godot",
+        "artifact": "assets/levels/rac1/level_{level}/project.godot",
         "docs": "editor/README.md",
         "todo": "Run it from the desktop app. From a shell on macOS, Godot 4.7.2 imported one extracted level this way in five seconds; a 4.9 development build crashed on it."
       },
       {
         "id": "editor-open",
-        "label": "Open in Godot",
-        "description": "Opens the extracted levels in the Godot editor: move, add or delete objects and save. Your edits stay in assets/godot.",
+        "label": "Open a level in Godot",
+        "description": "Opens one level in the Godot editor: move, turn or scale its objects and save. Each level is a project of its own, so only that level loads.",
         "kind": "edit",
         "state": "unverified",
         "program": "{godot}",
         "args": [
           "--path",
-          "assets/godot",
+          "assets/levels/rac1/level_{level}",
           "-e"
         ],
         "cwd": ".",
@@ -209,7 +210,7 @@
           "godot",
           "artifact"
         ],
-        "artifact": "assets/godot/project.godot",
+        "artifact": "assets/levels/rac1/level_{level}/project.godot",
         "detached": true,
         "docs": "editor/README.md",
         "todo": "Run it from the desktop app. The project file is assets/godot/project.godot, as the action expects."
@@ -217,11 +218,26 @@
       {
         "id": "editor-pack",
         "label": "Pack your edited levels",
-        "description": "Turns the levels you edited in Godot back into the game's level data, in a folder of their own; your disc image is never changed.",
+        "description": "Turns the levels you edited in Godot back into the game's level data, in assets/packed/rac1; your disc image is never changed. Packs the objects you moved, turned, scaled or changed; objects you added or deleted are listed and left out for now.",
         "kind": "edit",
-        "state": "planned",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "editor/extract.py",
+          "pack",
+          "{disc}",
+          "assets/levels/rac1",
+          "assets/packed/rac1"
+        ],
+        "cwd": ".",
+        "requires": [
+          "disc",
+          "python",
+          "artifact"
+        ],
+        "artifact": "assets/levels/rac1/level_00/project.godot",
         "docs": "editor/README.md",
-        "todo": "The packer does not exist yet (editor/README.md, 'Regenerate'). The scenes keep what it needs: each object's class, its place in the level's tables and its instance data. Start with moby instances (move, add, delete), write the packed level under build/, never into baserom/."
+        "todo": "Run from a shell on macOS: an untouched project packs to nothing, a scene Godot re-saved with one object moved packs to a level file that differs from the disc in that object's record, and the port ran level 0 for 400 frames from it. Not run from the desktop app yet. Next: adding and deleting objects, then ties and shrubs."
       },
       {
         "id": "editor-tests",
@@ -284,6 +300,31 @@
         "artifact": "port/build/release/openrac-rac1-pal.exe",
         "docs": "port/game/rac1-pal/README.md",
         "todo": "Built by port-build. The port also needs decompiler_out (openrac-extractor --decompile) and the levels (editor/extract.py port) in <data>/port."
+      },
+      {
+        "id": "play-edited",
+        "label": "Play with your edits",
+        "description": "The game with the levels you packed: the port reads them in place of the disc's (its --mods option). Without packed levels it plays the disc's.",
+        "kind": "play",
+        "state": "unverified",
+        "program": "{artifact}",
+        "args": [
+          "--data",
+          "{data}",
+          "--window",
+          "--mods",
+          "{root}/assets/packed/rac1"
+        ],
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "requires": [
+          "artifact"
+        ],
+        "artifact": "port/build/release/openrac-rac1-pal.exe",
+        "docs": "port/game/rac1-pal/README.md",
+        "todo": "Built by port-build; needs Pack your edited levels first. Run headless on macOS (--level 0 --frames 400): the port logged the sectors it took from the packed file and ran as it does without. Not run from the desktop app yet."
       }
     ],
     "rac1/ntsc": [

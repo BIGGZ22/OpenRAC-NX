@@ -37,7 +37,7 @@ import clangast  # noqa: E402
 import ctype  # noqa: E402
 import prep  # noqa: E402
 from lower import Unit, UnitReport  # noqa: E402
-from program import Function, Program, Signature, canon, cname, index_unit, merge, read_places, read_split_places, read_symbols  # noqa: E402
+from program import Function, Program, Signature, canon, cname, index_unit, inherit_results, merge, read_places, read_split_places, read_symbols  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 PROGRAM_FILES = ["stubs.c", "functions.c", "libraries.c", "game_info.c", "game_protos.h"]
@@ -519,6 +519,7 @@ def main(argv: list[str] | None = None) -> int:
             f = program.functions.get(sym)
             program.functions[sym] = Function(sym, sig, None, asm=f.asm if f else False)
     program.index_places()
+    inherited = inherit_results(program)
     state["program"] = program
     with ProcessPoolExecutor(args.jobs, initializer=_init, initargs=(state,)) as ex:
         reports = list(ex.map(_lower_one, units))
@@ -526,6 +527,7 @@ def main(argv: list[str] | None = None) -> int:
     extra = write_program_files(program, out, cfg.get("title", cfg.get("name", args.game.parent.name)))
     extra["roots"] = cfg.get("roots", [])
     extra["candidates_used"] = sorted(used)
+    extra["results_inherited"] = sorted(inherited)
     extra["bound_libraries"] = write_libraries(program, out, host_rows, library_api(args.game.parent, cfg))
     write_game_info(program, out, cfg)
     extra["index_problems"] = problems

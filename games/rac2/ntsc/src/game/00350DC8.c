@@ -33,4 +33,13 @@ int func_00350DC8(int *p)
 
 INCLUDE_ASM("asm/game", func_00350ED8);
 
-INCLUDE_ASM("asm/game", func_00351210);
+extern void func_0011AC30(int value);
+int func_00351210(int *p)
+{
+    func_00350808_1(5);
+    *(volatile int *)0x1000B420 = 0;
+    *(volatile int *)0x1000B410 = 0;
+    *(volatile int *)0x1000B430 = 0;
+    func_0011AC30(p[16]);
+    return 1;
+}

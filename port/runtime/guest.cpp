@@ -8,6 +8,7 @@
 #include "openrac/guest.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <format>
@@ -327,6 +328,50 @@ void openrac_guest_missing(const char* name) {
 
 void openrac_guest_stop_on_missing(int stop) {
     g_stop_on_missing = stop != 0;
+}
+
+void openrac_host_caller(int depth, char* text, size_t size) {
+    if (size == 0) {
+        return;
+    }
+    std::snprintf(text, size, "?");
+    void* frames[16];
+    if (depth < 0 || depth > 13) {
+        return;
+    }
+    // Frame 0 is this function, 1 its caller, 2 who called that (depth 0).
+    const int want = depth + 2;
+#if defined(_WIN32)
+    if (CaptureStackBackTrace(static_cast<DWORD>(want), 1, frames, nullptr) != 1) {
+        return;
+    }
+    // Symbols need the debugger's library; the module and the offset in it are the same from
+    // run to run, and a symbolizer names them with the program's PDB.
+    HMODULE module = nullptr;
+    char path[MAX_PATH];
+    if (GetModuleHandleExA(
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            static_cast<LPCSTR>(frames[0]), &module
+        ) != 0
+        && GetModuleFileNameA(module, path, static_cast<DWORD>(sizeof(path))) != 0) {
+        const char* file = std::strrchr(path, '\\');
+        const auto offset = static_cast<std::size_t>(
+            static_cast<const char*>(frames[0]) - reinterpret_cast<const char*>(module)
+        );
+        std::snprintf(text, size, "%s+%#zx", file != nullptr ? file + 1 : path, offset);
+    } else {
+        std::snprintf(text, size, "%p", frames[0]);
+    }
+#else
+    if (backtrace(frames, want + 1) <= want) {
+        return;
+    }
+    char** names = backtrace_symbols(frames + want, 1);
+    if (names != nullptr) {
+        std::snprintf(text, size, "%s", names[0]);
+        std::free(names);
+    }
+#endif
 }
 
 void openrac_guest_set_overlay_source(int (*current)(void)) {

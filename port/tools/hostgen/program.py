@@ -67,6 +67,8 @@ class Function:
     static: bool = False
     asm: bool = False           # still assembly in the decompilation
     declared: list = field(default_factory=list)  # signatures seen in declarations
+    tail: str | None = None     # a definition returning nothing that ends in a call: the function called
+    inherits: bool = False      # its result is that call's (inherit_results): sig.ret is the callee's
 
 
 @dataclass
@@ -180,9 +182,62 @@ def has_body(decl: dict) -> bool:
     return any(c.get("kind") == "CompoundStmt" for c in decl.get("inner", ()))
 
 
+def tail_call(decl: dict, by_id: dict) -> str | None:
+    """The function a definition's last statement calls, when that statement is a direct call:
+    on the console its result is still in the result register when the definition returns."""
+    body = next((c for c in decl.get("inner", ()) if c.get("kind") == "CompoundStmt"), None)
+    stmts = [s for s in (body or {}).get("inner", ()) if s.get("kind")]
+    if not stmts or stmts[-1].get("kind") != "CallExpr" or not stmts[-1].get("inner"):
+        return None
+    callee = stmts[-1]["inner"][0]
+    while callee.get("kind") in ("ImplicitCastExpr", "ParenExpr") and callee.get("inner"):
+        callee = callee["inner"][0]
+    ref = callee.get("referencedDecl") or {}
+    if callee.get("kind") != "DeclRefExpr" or ref.get("kind") != "FunctionDecl":
+        return None
+    d = by_id.get(ref.get("id"))
+    return symbol_of(d) if d is not None else ref.get("name")
+
+
+def inherit_results(program: Program) -> list[str]:
+    """A definition that returns nothing and ends in a call leaves that call's result in the
+    result register, and the decompilation's callers read it there (a wrapper matched as `void
+    f(p) { g(p, 0x20); }` whose callers declare it `float f(void *)`). Such a definition is given
+    its callee's result type, so the translation returns the value (lower.py); through a chain of
+    them too. Only scalar results, and only from a callee that has C. Returns the names changed."""
+    changed = []
+    again = True
+    while again:
+        again = False
+        for f in list(program.functions.values()) + list(program.statics.values()):
+            if f.unit is None or f.tail is None or f.inherits or canon(f.sig.ret, program.typedefs) != "void":
+                continue
+            if f.symbol in program.wrap or f.symbol in program.host:
+                continue  # the port's own C around it or in its place says what it returns
+            sym = program.aliases.get((f.unit, f.tail), f.tail)
+            g = program.statics.get((f.unit, sym))
+            if g is None:
+                own = program.grouped(f.unit, sym)
+                g = program.functions.get(own) if own != sym else None
+            if g is None:
+                g = program.functions.get(program.canonical(sym))
+            if g is None or g is f or (g.unit is None and g.symbol not in program.host):
+                continue
+            ret = canon(g.sig.ret, program.typedefs)
+            if ret in (None, "void", "va_list"):
+                continue
+            result = ctype.Ptr(ctype.Base("void")) if ret == "gaddr" else ctype.Base(ret)
+            f.sig = Signature(result, f.sig.params, f.sig.variadic, f.sig.prototyped)
+            f.inherits = True
+            again = True
+            changed.append(f.symbol)
+    return changed
+
+
 def index_unit(program: Program, unit: str, ast: dict) -> list[str]:
     """Adds one unit's definitions and declarations. Returns problems found."""
     problems = []
+    by_id = {d.get("id"): d for d in ast.get("inner", ()) if d.get("kind") == "FunctionDecl"}
     for decl in ast.get("inner", ()):
         kind = decl.get("kind")
         if kind == "TypedefDecl":
@@ -224,18 +279,19 @@ def index_unit(program: Program, unit: str, ast: dict) -> list[str]:
             sym = program.grouped(unit, sym)
         if has_body(decl):
             from_main = decl.get("_file", "").endswith(unit) or not static
+            tail = tail_call(decl, by_id) if canon(sig.ret) == "void" else None
             if static:
                 if not from_main and not decl.get("_file", "").endswith(".c"):
                     # A static function from a header is translated in every unit that has it.
                     pass
-                program.statics[(unit, sym)] = Function(sym, sig, unit, static=True)
+                program.statics[(unit, sym)] = Function(sym, sig, unit, static=True, tail=tail)
                 continue
             f = program.functions.get(sym)
             if f is not None and f.unit is not None and f.unit != unit:
                 problems.append(f"{sym} is defined in {f.unit} and in {unit}; keeping the first")
                 continue
             declared = f.declared if f else []
-            program.functions[sym] = Function(sym, sig, unit, asm=f.asm if f else False, declared=declared)
+            program.functions[sym] = Function(sym, sig, unit, asm=f.asm if f else False, declared=declared, tail=tail)
         else:
             f = program.functions.get(sym)
             if f is None:
@@ -326,7 +382,7 @@ def merge(into: Program, part: Program) -> list[str]:
                 problems.append(f"{sym} is defined in {have.unit} and in {f.unit}; keeping the first")
                 continue
             declared = have.declared + f.declared
-            into.functions[sym] = Function(sym, f.sig, f.unit, asm=have.asm, declared=declared)
+            into.functions[sym] = Function(sym, f.sig, f.unit, asm=have.asm, declared=declared, tail=f.tail)
         else:
             have.declared.extend(f.declared)
             if have.unit is None and have.declared:

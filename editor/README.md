@@ -30,15 +30,23 @@ inside matches PAL v2.00.
 ## Extract
 
 ```sh
-python3 editor/extract.py godot baserom/SCES_509.16.iso assets/godot
-godot --path assets/godot -e res://levels/level_00/level_00.tscn
+python3 editor/extract.py godot baserom/SCES_509.16.iso assets/levels/rac1 --split
+godot --path assets/levels/rac1/level_00 -e
 ```
 
-The second command opens level 0 in the editor. Other levels are in the
-FileSystem dock under `levels/`; double-click a `level_NN.tscn` to open it.
+`--split` writes a Godot project per level, `level_00` to `level_18`, each
+named after its planet. The second command opens Veldin in the editor. A
+project holds one level, so Godot imports it in about five seconds the
+first time it is opened, and only that level is loaded. This is what the
+launcher's Mods page uses.
 
-All 19 levels take about 20 seconds and 630 MB, one level per CPU core at
-a time. Godot's first import takes about two minutes. Options:
+Without `--split` the 19 levels go into one project (`assets/godot` in
+earlier versions of this page): the other levels are then in the FileSystem
+dock under `levels/`, and Godot's first import takes about a minute and a
+half.
+
+All 19 levels take about 20 seconds and 800 MB to extract, one level per
+CPU core at a time. Options:
 
 - `--level N` (repeatable) exports only some levels.
 - `--jobs N` limits how many levels are exported at once.
@@ -53,8 +61,8 @@ the command again; the extractor never overwrites an existing directory.
 Godot rebuilds its import cache (`.godot/`) the next time it opens the
 project.
 
-Until the packer exists, edits made in Godot live only in that project,
-and regenerating replaces them. To keep an edited level:
+Regenerating replaces the project, and with it any edit that has not been
+packed (below). To keep an edited level across a regeneration:
 
 1. Copy its scene, `levels/level_NN/level_NN.tscn`, somewhere safe.
 2. Regenerate.
@@ -66,6 +74,99 @@ made. A newer extractor can write scenes with other nodes (the sky's
 WorldEnvironment, for instance), so after updating it, move your changes
 into the new scene instead. Godot saves a scene as text, so a diff
 against a fresh export shows each edit.
+
+## What a moby is, and what runs it
+
+A placed moby's node is named after its class: `Vendor_0012`, `Bolt_0003`,
+`BlargHeavyInterceptor_0040` (568 classes have a name, from
+[moby_classes.tsv](moby_classes.tsv); the rest show as `Class809_0001`).
+Select one and the Inspector shows its values as `rc1_*` metadata (spawn id,
+group, colour, draw distance...), which the packer writes back.
+
+Its class scene (`levels/level_NN/mobys/moby_<class>.tscn`) says what the
+class is and what runs it, in its tooltip in the Scene dock and as metadata:
+
+| Metadata | |
+|---|---|
+| `rc1_class`, `rc1_class_name` | the class number and name |
+| `rc1_update` | the function the game calls for each moby of the class, every frame |
+| `rc1_source` | where that function is in the decompilation ([games/rac1/pal](../games/rac1/pal)), and the tooltip says whether it is C there yet |
+
+That function is the moby's behaviour: an enemy's attack pattern, a crate
+breaking, a vendor's menu. It is ordinary C in the decompilation, and the
+native port is built from that C, so **changing a moby's logic is editing
+that function and building the port again** (the launcher's Build the game).
+There is no scripting layer on top of it yet: no way to change behaviour
+from Godot or without a compiler. The table comes from the decompilation's
+`config/overlays/names.tsv` (its `UpdateMoby_<class>` roles), per level, so
+it is only written when `games/rac1/pal` is in the checkout.
+
+## Pack your edits
+
+```sh
+python3 editor/extract.py pack baserom/SCES_509.16.iso assets/levels/rac1 assets/packed/rac1
+```
+
+Turns what was edited in Godot back into the game's level data (the folder
+of per-level projects, or a single project with every level). For each
+level whose scene differs from the disc it writes that level's gameplay file
+as the game stores it, compressed, and the list of disc sectors it replaces:
+
+```
+assets/packed/rac1/
+  level_NN/gameplay_pal.wad   one per level whose mobys were edited, the size of its place on the disc
+  level_NN/placements.json    one per level whose ties or shrubs were edited, for the native port
+  patches.tsv                 first sector, sector count, file
+  changes.txt                 what changed, in words
+```
+
+The disc image is never written. The native port reads the folder with
+`--mods assets/packed/rac1` and serves those sectors from the files
+([port/game/common/lib/cdvd.c](../port/game/common/lib/cdvd.c)); the
+launcher's Mods page does all three steps (edit, pack, play).
+
+What is packed today: **mobys that were moved, turned, scaled, given another
+class, given other values** (the `rc1_*` metadata in the Inspector), **added
+or deleted**, and **ties and shrubs** the same way (moved, turned, scaled
+each axis its own, another class of the level, other values, added, deleted).
+A moby keeps one scale for all three axes. Not yet: terrain, and anything of
+a class the level does not load.
+
+Ties and shrubs are packed for the native port only ([scenery.py](scenery.py)):
+the port draws them from the extractor's files, so the pack writes the
+level's `placements.json` with the lists that changed, each tie and shrub lit
+again where it stands, and `--mods` reads it in place of the level's own.
+The gameplay file's own tie and shrub tables and the level's collision stay
+the disc's: a tie that was moved is drawn in its new place and still walked
+on in its old one, and a new one is walked through.
+
+An added moby is a copy made in Godot (Ctrl+D) or one of the level's class
+scenes dropped under `Game/Mobys`. It takes after the moby it copies (or the
+level's first moby of its class): the same values, a spawn number of its own,
+a copy of that moby's pvars, and a place in its group. A deleted moby leaves
+the table, and the groups and pvar links that name mobys by their place in
+it follow ([gameplay.py](gameplay.py)). A level the game gives more mobys
+than it has room for is not caught yet: the room is what the level's own
+"spare" count and memory allow.
+
+How it stays exact ([pack.py](pack.py), [wadpack.py](wadpack.py)):
+
+- A moby the scene has as the extractor wrote it keeps its bytes from the
+  disc. A project nobody edited packs to nothing, and an edited level's file
+  differs from the disc's only in the records that were edited. Godot's own
+  way of saving a scene (other float rounding, `unique_id`, `rc1_class` on
+  every instance) is not an edit.
+- The compressor writes streams the way the retail ones are laid out,
+  measured on all 19 gameplay files: 0x2000-byte blocks that no packet
+  crosses, each ending with a skip and unused room after it, and no literal
+  run after a literal run. Its output is smaller than retail's for every
+  level, so a packed level always fits where the original is.
+
+Checked on 2026-10-12: all 19 gameplay files round-trip through the
+compressor; a scene re-saved by Godot 4.7.2 with one moby moved packs to a
+file five bytes from the disc's, all in that moby's record; the port ran
+level 0 for 400 frames from it. Whether the moved moby shows where it was
+put has not been looked at in the running game yet.
 
 ## Other commands
 
@@ -112,7 +213,8 @@ Level_NN
     Collision           the collision layer, hidden until you show it
     Ties/Tie_NNNN       one node per placed tie
     Shrubs/Shrub_NNNN   one node per placed shrub
-    Mobys/Moby_NNNN     one node per placed moby (crates, enemies, NPCs...)
+    Mobys/Vendor_0012   one node per placed moby (crates, enemies, NPCs...), named
+                        after its class and its place in the level's table
 ```
 
 To edit a level:

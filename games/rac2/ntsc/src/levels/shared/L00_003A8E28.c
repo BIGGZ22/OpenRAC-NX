@@ -4,6 +4,20 @@ extern void func_00282CF0_9(char *local, char *first, char *second);
 
 extern void func_00282CC0_15(char *target, char *first, char *local);
 
+extern void func_3251D0();
+
+extern int func_31E7A8();
+
+extern float func_2EE238();
+
+extern void func_2EE178(void *, void *, float);
+
+extern void func_2EE108();
+
+extern void func_2EE138();
+
+extern void func_2EE3D0(void *, void *, float);
+
 #ifndef RAC2_T_VEC16_FC936841D
 #define RAC2_T_VEC16_FC936841D
 typedef struct {
@@ -32,7 +46,29 @@ INCLUDE_ASM("asm/levels", func_L00_003AA708);
 
 INCLUDE_ASM("asm/levels", func_L00_003AB388);
 
-INCLUDE_ASM("asm/levels", func_L00_003AB618);
+/* Applies a state record to a 3D point when the record carries a live tag. */
+void func_L00_003AB618(char *a0, char *a1, char *a2)
+{
+    if (a2 != 0) {
+        unsigned char t = *(unsigned char *)(a2 + 0x20);
+
+        if (t != 0xFE)
+            if (t != 0xFD) {
+                char b0[16];
+                char b1[16];
+                char b2[16];
+                float f;
+
+                func_3251D0(a0, b0, 1);
+                f = *(float *)(func_31E7A8(a2) + 0x10);
+                func_2EE178(b1, b0, f);
+                func_2EE108(b2, a2 + 0x10, b1);
+                f = func_2EE238(a1);
+                func_2EE138(a1, b2, a0);
+                func_2EE3D0(a1, a1, f);
+            }
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003AB6F0);
 
@@ -63,8 +99,6 @@ INCLUDE_ASM("asm/levels", func_L00_003ADEA0);
 INCLUDE_ASM("asm/levels", func_L00_003AE550);
 
 INCLUDE_ASM("asm/levels", func_L00_003AE900);
-
-INCLUDE_ASM("asm/levels", func_L00_003B09F8);
 
 INCLUDE_ASM("asm/levels", func_L00_003B0A28);
 

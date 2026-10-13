@@ -20,19 +20,42 @@ int func_0033E348(int owner)
     return func_00348128((unsigned char *)(owner + 0x2b0));
 }
 
-INCLUDE_ASM("asm/game", func_0033E368);
+void func_0033E368(unsigned char *owner, float *records)
+{
+    extern void func_00348068(unsigned char *, float *);
+    func_00348068(owner + 0x2B0, records);
+    *(float **)(owner + 0x378) = records;
+}
 
 INCLUDE_ASM("asm/game", func_0033E3A0);
 
 INCLUDE_ASM("asm/game", func_0033E428);
 
-INCLUDE_ASM("asm/game", func_0033E480);
+extern void func_0033AB50(void *);
+extern void *func_00336968(void *);
+
+char *func_0033E480(char *object) {
+    func_0033AB50(object + 8);
+    func_00336968(object + 0x2B0);
+    return object;
+}
 
 INCLUDE_ASM("asm/game", func_0033E4B8);
 
 INCLUDE_ASM("asm/game", func_0033E4C0);
 
-INCLUDE_ASM("asm/game", func_0033E5C0);
+extern void func_0033AE28(char *p);
+extern void func_0033B018(char *p, float x, float y);
+
+int func_0033E5C0(char *object, int flags)
+{
+    char *p = object + 8;
+    float *v;
+    func_0033AE28(p);
+    v = *(float **)(object + 0x2A8);
+    func_0033B018(p, v[0], v[1]);
+    return (flags >> 6) & 1;
+}
 
 void func_0033E620(int param_1) {
   func_0033AF48(param_1 + 8);

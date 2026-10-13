@@ -280,7 +280,66 @@ FLO_union_type;
 
 extern void func_00123400  (FLO_union_type *, fp_number_type *);
 
-INCLUDE_ASM("asm/core", func_001232F0);
+static __inline__ int fp_pack_isnan(fp_number_type *number) {
+    return number->class == CLASS_SNAN || number->class == CLASS_QNAN;
+}
+static __inline__ int fp_pack_isinf(fp_number_type *number) {
+    return number->class == CLASS_INFINITY;
+}
+static __inline__ int fp_pack_iszero(fp_number_type *number) {
+    return number->class == CLASS_ZERO;
+}
+
+/* Single-precision packing from the GNU fp-bit.c implementation above. */
+FLO_type func_001232F0(fp_number_type *src) {
+    FLO_union_type dst;
+    fractype fraction = src->fraction.ll;
+    int sign = src->sign;
+    int exp = 0;
+
+    if (fp_pack_isnan(src)) {
+        exp = 255;
+        fraction |= 0x100000;
+    } else if (fp_pack_isinf(src)) {
+        exp = 255;
+        fraction = 0;
+    } else if (fp_pack_iszero(src)) {
+        exp = 0;
+        fraction = 0;
+    } else if (fraction == 0) {
+        exp = 0;
+    } else {
+        if (src->normal_exp < -126) {
+            int shift = -126 - src->normal_exp;
+            exp = 0;
+            if (shift > 25)
+                fraction = 0;
+            else
+                fraction >>= shift;
+            fraction >>= 7;
+        } else if (src->normal_exp > 127) {
+            exp = 255;
+            fraction = 0;
+        } else {
+            exp = src->normal_exp + 127;
+            if ((fraction & 127) == 64) {
+                if (fraction & 128)
+                    fraction += 64;
+            } else {
+                fraction += 63;
+            }
+            if (fraction >= ((fractype)1 << 31)) {
+                fraction >>= 1;
+                exp += 1;
+            }
+            fraction >>= 7;
+        }
+    }
+    dst.bits.fraction = fraction;
+    dst.bits.exp = exp;
+    dst.bits.sign = sign;
+    return dst.value;
+}
 
 void
 func_00123400  (FLO_union_type * src, fp_number_type * dst)
@@ -370,9 +429,26 @@ func_00123400  (FLO_union_type * src, fp_number_type * dst)
 
 INCLUDE_ASM("asm/core", func_00123490);
 
-INCLUDE_ASM("asm/core", func_001234C0);
+extern FLO_type func_001232F0(fp_number_type *);
 
-INCLUDE_ASM("asm/core", func_001234F0);
+FLO_type func_001234C0(fp_class_type classification, unsigned int sign, int exponent, fractype fraction) {
+    fp_number_type number;
+    number.class = classification;
+    number.sign = sign;
+    number.normal_exp = exponent;
+    number.fraction.ll = fraction;
+    return func_001232F0(&number);
+}
+
+extern double func_00123268(fp_class_type, unsigned int, int, unsigned long);
+
+double func_001234F0(FLO_type value) {
+    fp_number_type number;
+    FLO_type input = value;
+    func_00123400((FLO_union_type *)&input, &number);
+    return func_00123268(number.class, number.sign, number.normal_exp,
+                         (unsigned long)number.fraction.ll << 30);
+}
 
 /* Qwen draft (branch qwen/autonomy, fa99c1ac), checked by tools/check.py */
 /*
@@ -405,7 +481,20 @@ unsigned char *func_00123530(unsigned char *param_1, unsigned int *param_2)
   return param_1;
 }
 
-INCLUDE_ASM("asm/core", func_00123578);
+unsigned char *func_00123578(unsigned char *input, int *output) {
+    unsigned int shift = 0;
+    int value = 0;
+    unsigned int byte;
+    do {
+        byte = *input++;
+        value |= (byte & 0x7F) << shift;
+        shift += 7;
+    } while (byte & 0x80);
+    if (shift < 32 && (byte & 0x40))
+        value |= -1 << shift;
+    *output = value;
+    return input;
+}
 
 INCLUDE_ASM("asm/core", func_001235C8);
 
@@ -413,7 +502,34 @@ INCLUDE_ASM("asm/core", func_001236C8);
 
 INCLUDE_ASM("asm/core", func_00123930);
 
-INCLUDE_ASM("asm/core", func_00123978);
+typedef struct {
+    int **records;
+    int count;
+} RecordOutput;
+
+void func_00123978(int *record, RecordOutput *output, unsigned int *minimum, unsigned int *maximum) {
+    unsigned int low = *minimum;
+    unsigned int high = *maximum;
+    RecordOutput *destination = output;
+    if (record[0] != 0) {
+        do {
+            if (record[1] != 0 && record[2] != 0) {
+                unsigned int address;
+                unsigned int end;
+                destination->records[destination->count++] = record;
+                address = record[2];
+                end = address + record[3];
+                if (address < low)
+                    low = address;
+                if (high < end)
+                    high = end;
+            }
+            record = (int *)((char *)record + record[0] + 4);
+        } while (record[0] != 0);
+    }
+    *minimum = low;
+    *maximum = high;
+}
 
 INCLUDE_ASM("asm/core", func_00123A00);
 
@@ -431,4 +547,4 @@ INCLUDE_ASM("asm/core", func_00124414);
 
 INCLUDE_ASM("asm/core", func_001244B8);
 
-INCLUDE_ASM("asm/core", func_00124540);
+ASM_FUNC("asm/core", func_00124540);

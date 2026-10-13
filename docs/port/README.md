@@ -38,6 +38,8 @@ The code is in [port/](../../port/README.md).
 | [RENDERER.md](RENDERER.md) | How the game builds a frame, everything it draws, the VU programs, the graphics chip's conventions |
 | [PORTABILITY.md](PORTABILITY.md) | What the matching C assumes about the console, and the choices for a PC build |
 | [RAC1_PAL_SURVEY.md](RAC1_PAL_SURVEY.md) | The first survey of the game for a native build (2026-10-08): frame loop, display list, menu path, disc, memory card, library surface |
+| [RAC1_PAL_CAMPAIGN.md](RAC1_PAL_CAMPAIGN.md) | The rules and the dated log of the campaign for a playable Ratchet & Clank (PAL) |
+| [RAC1_PAL_BUGFIX_GUIDE.md](RAC1_PAL_BUGFIX_GUIDE.md) | For whoever continues it: building and running, the development switches, how to find the cause of a gameplay bug, how to supply C for a function without any, and what is open |
 | [VU_PROGRAMS.md](VU_PROGRAMS.md) | The games' vector unit programs by name, and which the games share |
 | [OPENGOAL_NOTES.md](OPENGOAL_NOTES.md) | How OpenGOAL's renderer and platform layer work, and what carries over |
 | [tools/extractor.py](../../tools/extractor.py) | The disc extractor (OpenGOAL's `extractor`, for OpenRAC) |

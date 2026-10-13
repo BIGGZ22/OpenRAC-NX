@@ -63,7 +63,22 @@ INCLUDE_ASM("asm/levels", func_L00_002D7D58);
 
 INCLUDE_ASM("asm/levels", func_L00_002D8208);
 
-INCLUDE_ASM("asm/levels", func_L00_002D9D48);
+typedef struct {
+    int key;
+    int pad[4];
+} E_r002D9D48;
+
+extern E_r002D9D48 r1_D_L00_001EAC00[];
+
+/* rac1-decomp src/overlays/shared/camera_001EB508.c: func_L00_001ED5B0 */
+/* Returns the index of the entry with the given key, or of the -1 terminator. */
+int func_L00_002D9D48(int key) {
+    int i = 0;
+    while (r1_D_L00_001EAC00[i].key != -1 && r1_D_L00_001EAC00[i].key != key) {
+        i++;
+    }
+    return i;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002D9D98);
 

@@ -21,9 +21,9 @@ extern int r1_D_00130408;
 
 extern void func_0011F718(void);
 
-INCLUDE_ASM("asm/core", func_0011F5E0);
+ASM_FUNC("asm/core", func_0011F5E0);
 
-INCLUDE_ASM("asm/core", func_0011F628);
+ASM_FUNC("asm/core", func_0011F628);
 
 /* rac1-decomp src/core/0011D960.c: func_0011D9C0 */
 void func_0011F640(void) {

@@ -1,9 +1,10 @@
 <script lang="ts">
-  // Every game. A player sees which ones are ready to play; with developer
-  // tools on, each version's progress and inputs as well, and the actions
-  // for the checkout as a whole (identify discs, place inputs).
+  // Every game. A player sees a tile per game: can it be played, and the next
+  // thing to do. With developer tools on, each version's progress and inputs,
+  // and the actions for the checkout as a whole (identify discs, place inputs).
   import ActionCard from "$components/ActionCard.svelte";
   import GameCard from "$components/GameCard.svelte";
+  import GameTile from "$components/GameTile.svelte";
   import Icon from "$components/Icon.svelte";
   import { api } from "$lib/api";
   import { app, guard, refresh } from "$lib/app.svelte";
@@ -18,26 +19,26 @@
   const developer = $derived(app.config?.developer ?? false);
 </script>
 
-<div class="page sections">
-  <div class="intro row">
-    <div class="grow">
-      <span class="sec-num"></span>
-      <h1>Your games</h1>
-      {#if lib && !developer}
-        <p class="muted">
-          Set a game up from your own disc, play its native port, edit its levels. OpenRAC never downloads a game.
-        </p>
-      {:else if lib}
-        <p class="muted">
-          {lib.games.length} games, {versions} versions · {discs} of {versions} discs found ·
-          <button class="link mono" onclick={() => void guard(api.openPath("."))} title="Open the folder"
-            >{lib.root}</button
-          >
-        </p>
-      {/if}
+<div class="page" class:sections={developer}>
+  {#if developer}
+    <div class="intro row">
+      <div class="grow">
+        <span class="sec-num"></span>
+        <h1>Your games</h1>
+        {#if lib}
+          <p class="muted">
+            {lib.games.length} games, {versions} versions · {discs} of {versions} discs found ·
+            <button class="link mono" onclick={() => void guard(api.openPath("."))} title="Open the folder"
+              >{lib.root}</button
+            >
+          </p>
+        {/if}
+      </div>
+      <button class="ghost" onclick={() => void refresh()}><Icon name="refresh" size={16} />Refresh</button>
     </div>
-    <button class="ghost" onclick={() => void refresh()}><Icon name="refresh" size={16} />Refresh</button>
-  </div>
+  {:else}
+    <h1 class="sr">Games</h1>
+  {/if}
 
   {#if app.libraryError}
     <div class="panel notice">
@@ -54,11 +55,19 @@
   {/if}
 
   {#if lib}
-    <div class="games">
-      {#each lib.games as game, i (game.id)}
-        <GameCard {game} delay={i * 80} />
-      {/each}
-    </div>
+    {#if developer}
+      <div class="games">
+        {#each lib.games as game, i (game.id)}
+          <GameCard {game} delay={i * 80} />
+        {/each}
+      </div>
+    {:else}
+      <div class="tiles">
+        {#each lib.games as game, i (game.id)}
+          <GameTile {game} delay={i * 60} />
+        {/each}
+      </div>
+    {/if}
 
     {#if developer}
       <section class="panel start">
@@ -134,6 +143,27 @@
     width: 100%;
   }
 
+  /* A heading for screen readers: the header's tab already names the page. */
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  @media (max-width: 820px) {
+    .tiles {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
   .start {
     display: flex;
     flex-direction: column;
@@ -159,7 +189,7 @@
 
   .actions {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
     gap: 14px;
   }
 </style>

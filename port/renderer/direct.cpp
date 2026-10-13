@@ -1453,8 +1453,16 @@ void DirectRenderer::apply(const DirectState& s, RenderState& render_state) {
                      / static_cast<float>(s.target != 0 ? kOffscreenPixels : m_config.screen_width);
     const float sy = static_cast<float>(target_height)
                      / static_cast<float>(s.target != 0 ? kOffscreenPixels : m_config.screen_height);
-    const auto x0 = static_cast<GLint>(std::floor(static_cast<float>(s.scissor.x0) * sx));
-    const auto x1 = static_cast<GLint>(std::ceil(static_cast<float>(s.scissor.x1 + 1) * sx));
+    auto x0 = static_cast<GLint>(std::floor(static_cast<float>(s.scissor.x0) * sx));
+    auto x1 = static_cast<GLint>(std::ceil(static_cast<float>(s.scissor.x1 + 1) * sx));
+    // On a target wider than the picture, the picture's scissor goes with the picture, to the
+    // target's middle (flush() says which triangles are the whole target's instead).
+    const float k = render_state.target.picture_scale_x;
+    if (s.target == 0 && k < 1.0f && !m_whole_target) {
+        const float middle = 0.5f * static_cast<float>(target_width);
+        x0 = static_cast<GLint>(std::floor(middle + (static_cast<float>(s.scissor.x0) * sx - middle) * k));
+        x1 = static_cast<GLint>(std::ceil(middle + (static_cast<float>(s.scissor.x1 + 1) * sx - middle) * k));
+    }
     const auto y0 = static_cast<GLint>(std::floor(static_cast<float>(s.scissor.y0) * sy));
     const auto y1 = static_cast<GLint>(std::ceil(static_cast<float>(s.scissor.y1 + 1) * sy));
     glEnable(GL_SCISSOR_TEST);
@@ -1543,12 +1551,80 @@ void DirectRenderer::flush(RenderState& state, bool background) {
         nullptr,
         GL_STREAM_DRAW
     );
-    glBufferSubData(GL_ARRAY_BUFFER, 0, static_cast<GLsizeiptr>(bytes), vertices.data());
+    const float k = state.target.picture_scale_x;
+    // On a target wider than the game's picture: each draw as runs of triangles that are the
+    // picture's (in the target's middle) or the whole target's, in the order they came.
+    struct Run {
+        const DirectDraw* draw;
+        std::uint32_t first, count;
+        bool whole;
+    };
+    std::vector<Run> runs;
+    if (k < 1.0f) {
+        // The picture goes to the target's middle, at its own shape, and is cut at its own sides
+        // as the television's edge cut it (apply()'s scissor). A triangle is moved whole, so
+        // nothing is stretched, except what covered the whole screen: a plain fill that spans the
+        // picture's whole width (a fade, a clear, a letterbox bar) and the frame itself drawn
+        // again. Those are the whole target's. A texture of the pool across the whole width (a
+        // loading picture's band) keeps its shape in the middle.
+        std::vector<DirectVertex> placed(vertices.begin(), vertices.end());
+        for (const DirectDraw& d : m_interpreter->draws()) {
+            const DirectState& s = d.state;
+            if (s.target != 0 || d.count == 0) {
+                if (d.count != 0) {
+                    runs.push_back({&d, d.first, d.count, true});  // an off-screen panel's own square
+                }
+                continue;
+            }
+            // The frame itself, read back or read now, is sent in strips that together are the
+            // whole screen: each is its part of the whole target.
+            const bool of_frame = s.snapshot || s.frame_source;
+            for (std::uint32_t i = d.first; i + 3 <= d.first + d.count && i + 3 <= placed.size(); i += 3) {
+                const float lo = std::min({placed[i].x, placed[i + 1].x, placed[i + 2].x});
+                const float hi = std::max({placed[i].x, placed[i + 1].x, placed[i + 2].x});
+                // A plain fill of the screen's whole width, or of its whole height (the game clears
+                // its frame in strips 32 pixels wide): its part of the whole target.
+                const float lo_y = std::min({placed[i].y, placed[i + 1].y, placed[i + 2].y});
+                const float hi_y = std::max({placed[i].y, placed[i + 1].y, placed[i + 2].y});
+                const bool whole = of_frame
+                    || (!s.textured && ((lo <= -0.995f && hi >= 0.995f) || (lo_y <= -0.995f && hi_y >= 0.995f)));
+                // What lies along one side of the picture (the black line the game draws down the
+                // screen's first column) was at the television's edge; in the middle of a wider
+                // target it would be a line through the world, and it is left out.
+                constexpr float kEdge = 1.0f - 3.0f / 512.0f;
+                if (!s.textured && ((lo <= -kEdge && hi <= -kEdge) || (lo >= kEdge && hi >= kEdge))) {
+                    continue;
+                }
+                if (!runs.empty() && runs.back().draw == &d && runs.back().whole == whole) {
+                    runs.back().count += 3;
+                } else {
+                    runs.push_back({&d, i, 3, whole});
+                }
+                if (whole) {
+                    continue;
+                }
+                for (std::uint32_t j = i; j < i + 3; ++j) {
+                    placed[j].x *= k;
+                }
+            }
+        }
+        glBufferSubData(GL_ARRAY_BUFFER, 0, static_cast<GLsizeiptr>(bytes), placed.data());
+    } else {
+        glBufferSubData(GL_ARRAY_BUFFER, 0, static_cast<GLsizeiptr>(bytes), vertices.data());
+    }
     m_vbo_bytes = std::max(bytes, m_vbo_bytes);
     m_shader.use();
-    for (const DirectDraw& d : m_interpreter->draws()) {
-        if (d.count != 0) {
-            draw(d, state);
+    if (k < 1.0f) {
+        for (const Run& r : runs) {
+            m_whole_target = r.whole;
+            draw(DirectDraw{r.draw->state, r.first, r.count}, state);
+        }
+        m_whole_target = true;
+    } else {
+        for (const DirectDraw& d : m_interpreter->draws()) {
+            if (d.count != 0) {
+                draw(d, state);
+            }
         }
     }
     // Leave GL as the next renderer expects it.

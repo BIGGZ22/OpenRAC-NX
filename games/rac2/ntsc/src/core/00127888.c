@@ -123,7 +123,7 @@ int func_001279A0(int fd, unsigned char *buffer, int size) {
     return rpc_result;
 }
 
-INCLUDE_ASM("asm/core", func_00127B18);
+ASM_FUNC("asm/core", func_00127B18);
 
 /* rac1-decomp src/core/001236F0.c: func_00123EE8 */
 /* mcDelayThread (libmc): sleep this thread until an alarm of `time`

@@ -4,6 +4,7 @@
   import { app, refresh, start, updateDiscordPresence, type Page } from "$lib/app.svelte";
   import Game from "./pages/Game.svelte";
   import Library from "./pages/Library.svelte";
+  import Mods from "./pages/Mods.svelte";
   import Settings from "./pages/Settings.svelte";
   import Tasks from "./pages/Tasks.svelte";
 
@@ -46,6 +47,7 @@
     <main>
       {#if !app.config.setupComplete}<Settings setup />
       {:else if app.page === "game"}<Game />
+      {:else if app.page === "mods"}<Mods />
       {:else if app.page === "tasks"}<Tasks />
       {:else if app.page === "settings"}<Settings />
       {:else}<Library />
@@ -69,9 +71,11 @@
     flex-direction: column;
   }
 
+  /* A page scrolls down, never sideways: what is wider than the window is the page's to fit. */
   main {
     flex: 1;
     min-height: 0;
-    overflow: auto;
+    min-width: 0;
+    overflow: hidden auto;
   }
 </style>

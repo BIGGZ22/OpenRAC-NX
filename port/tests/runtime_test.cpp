@@ -152,6 +152,31 @@ void elf() {
     CHECK(!openrac::runtime::load_elf(outside, image, &reason));
 }
 
+volatile bool g_asked = false;
+
+// A function of its own, so its caller is a frame above it; the store after the call keeps the
+// call from being its last act, which would drop this frame (a tail call).
+[[gnu::noinline]] void ask_caller(char* text, std::size_t size) {
+    openrac_host_caller(0, text, size);
+    g_asked = true;
+}
+
+void host_stack() {
+    char text[160] = "";
+    ask_caller(text, sizeof(text));
+    CHECK(g_asked);
+    CHECK(text[0] != '\0' && std::strcmp(text, "?") != 0);  // the host names who asked
+#if defined(_WIN32)
+    // On Windows the name is the module and the offset in it.
+    CHECK(std::strstr(text, "runtime_test") != nullptr && std::strstr(text, "+0x") != nullptr);
+#endif
+    char small[4] = "abc";
+    openrac_host_caller(64, small, sizeof(small));  // deeper than it looks: no name, nothing overrun
+    CHECK(std::strcmp(small, "?") == 0);
+    openrac_host_caller(0, small, 0);  // no room: left alone
+    CHECK(std::strcmp(small, "?") == 0);
+}
+
 }  // namespace
 
 int main() {
@@ -160,5 +185,6 @@ int main() {
     frames_and_strings();
     functions();
     elf();
+    host_stack();
     return openrac::test::result();
 }

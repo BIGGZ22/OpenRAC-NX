@@ -199,13 +199,19 @@ void func_0028B950(u8 *a0) {
     }
 }
 
-INCLUDE_ASM("asm/game", func_0028BA50);
+void func_0028BA50(HudElem *a0) { a0->unk7C = 0xD2; a0->unk48 = 0; a0->unk4A = 0; func_0028B950((u8 *)a0); }
 
 INCLUDE_ASM("asm/game", func_0028BA88);
 
 INCLUDE_ASM("asm/game", func_0028BC58);
 
-INCLUDE_ASM("asm/game", func_0028BCA0);
+extern void func_0029CCD8(int, int);
+extern void func_002B0CE0(int, int, int);
+
+void func_0028BCA0(int arg) {
+    func_0029CCD8(arg, 1);
+    func_002B0CE0(13, 0, 1);
+}
 
 INCLUDE_ASM("asm/game", func_0028BCD0);
 

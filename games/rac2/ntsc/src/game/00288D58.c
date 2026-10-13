@@ -7,4 +7,8 @@ extern BatchA_A16_u8 BatchA_A16_BatchA_D001A7A0A[] __attribute__((sda));
 
 int func_00288D58(void) { return BatchA_A16_BatchA_D001A7A0A[0] != 0; }
 
-INCLUDE_ASM("asm/game", func_00288D68);
+extern int D_001A7B8C __attribute__((sda));
+
+void func_00288D68(void) {
+    D_001A7B8C = 0;
+}

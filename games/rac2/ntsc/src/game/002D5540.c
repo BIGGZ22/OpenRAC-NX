@@ -54,36 +54,93 @@ long long func_002D5540(void)
 
 INCLUDE_ASM("asm/game", func_002D5570);
 
-INCLUDE_ASM("asm/game", func_002D55D8);
+int func_002D55D8(void) {
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002D55E0);
 
-INCLUDE_ASM("asm/game", func_002D5718);
+extern void func_0029CB20(void);
+
+int func_002D5718(void) {
+    func_0027C540(0);
+    func_0029CB20();
+    func_0027C660();
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002D5748);
 
 INCLUDE_ASM("asm/game", func_002D57A0);
 
-INCLUDE_ASM("asm/game", func_002D5870);
+extern void func_0029CAB0(void);
+
+int func_002D5870(void) {
+    func_0027C540(0);
+    func_0029CAB0();
+    func_0027C660();
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002D58A0);
 
-INCLUDE_ASM("asm/game", func_002D58F8);
+extern int D_00138344;
+extern void func_0029C3A0(int);
 
-INCLUDE_ASM("asm/game", func_002D5920);
+int func_002D58F8(void) {
+    func_0029C3A0(D_00138344);
+    return 0;
+}
 
-INCLUDE_ASM("asm/game", func_002D5950);
+extern void func_0029C370(void);
 
-INCLUDE_ASM("asm/game", func_002D5968);
+int func_002D5920(void) {
+    func_0027C540(0);
+    func_0029C370();
+    func_0027C660();
+    return 0;
+}
+
+extern int D_001C51D4;
+
+int func_002D5950(void) {
+    D_001C51D4 = -1;
+    return 0;
+}
+
+int func_002D5968(void) {
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002D5970);
 
-INCLUDE_ASM("asm/game", func_002D5B08);
+extern void func_0029C3E0(void);
 
-INCLUDE_ASM("asm/game", func_002D5B38);
+int func_002D5B08(void) {
+    func_0027C540(0);
+    func_0029C3E0();
+    func_0027C660();
+    return 0;
+}
+
+extern void func_002D5B58(int, int, int *);
+
+void func_002D5B38(int first, int second) {
+    int result[4];
+    result[0] = 0;
+    func_002D5B58(first, second, result);
+}
 
 INCLUDE_ASM("asm/game", func_002D5B58);
 
-INCLUDE_ASM("asm/game", func_002D5E38);
+void func_002D5E38(char *object, int arg, int *result)
+{
+    typedef struct { int first, value, third; } Func002D5E38Row;
+    Func002D5E38Row *rows = *(Func002D5E38Row **)(object + 0x34);
+    int index = *(int *)(object + 0x40);
+    func_002D5B58(arg, rows[index].value, result);
+}
 
-INCLUDE_ASM("asm/game", func_002D5E70);
+void func_002D5E70(char *object, int *result) {
+    func_002D5B58(*(short *)(object + 2), *(int *)(object + 4), result);
+}

@@ -53,6 +53,11 @@ void openrac_game_register_functions(void);
  * The game reads it by sector. */
 extern const char* openrac_game_disc_image;
 
+/* A folder of edited levels (--mods), or NULL: its patches.tsv lists the disc
+ * sectors that are read from files beside it instead (editor/pack.py writes
+ * both). The disc image itself is never changed. */
+extern const char* openrac_game_mods_dir;
+
 /* The first memory card's folder (the second is beside it, <folder>.slot2). */
 extern const char* openrac_game_card_dir;
 
@@ -204,6 +209,10 @@ extern int openrac_game_no_card;
 extern int openrac_game_start_level;
 
 int openrac_game_pad(int port, uint16_t* buttons, uint8_t analog[4]);
+
+/* The game's text lookup, asked for a text id: the game address of a string of the port's own (the
+ * rows it adds to the game's options), or 0 when the id is the game's. */
+gaddr openrac_game_text(int id);
 
 /* ---- Inside the replacements ---- */
 

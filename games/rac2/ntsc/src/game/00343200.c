@@ -66,6 +66,6 @@ void func_003435B0(u8 *a0, u32 a1) {
     *(s32 *)(a0 + 0x1a0) = 0;
 }
 
-INCLUDE_ASM("asm/game", func_003435C8);
+
 
 INCLUDE_ASM("asm/game", func_00343638);

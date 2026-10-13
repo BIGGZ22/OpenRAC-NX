@@ -8,7 +8,12 @@ int func_002DF1B8(void) {
 
 INCLUDE_ASM("asm/game", func_002DF1C0);
 
-INCLUDE_ASM("asm/game", func_002DF1D0);
+extern void *D_001F2854;
+extern char D_00259458[];
+
+int func_002DF1D0(void) {
+    return D_001F2854 == D_00259458;
+}
 
 INCLUDE_ASM("asm/game", func_002DF1F0);
 
@@ -38,12 +43,12 @@ INCLUDE_ASM("asm/game", func_002DFD88);
 
 INCLUDE_ASM("asm/game", func_002E0088);
 
-INCLUDE_ASM("asm/game", func_002E0408);
+ASM_FUNC("asm/game", func_002E0408);
 
 INCLUDE_ASM("asm/game", func_002E0558);
 
 INCLUDE_ASM("asm/game", func_002E0BA8);
 
-INCLUDE_ASM("asm/game", func_002E0C40);
+ASM_FUNC("asm/game", func_002E0C40);
 
 INCLUDE_ASM("asm/game", func_002E0F98);

@@ -28,6 +28,7 @@ from godot import LevelWriter, write_project
 from spaceships import add_spaceships
 from level import load_flight, load_level, load_title
 from lighting import normal_table
+from pack import pack
 from port import PortLevelWriter
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -63,11 +64,17 @@ def export_level(iso: Path, info: dict, out: Path, lod: int) -> dict:
         return LevelWriter(out, load_level(disc, info)).write(lod)
 
 
-def godot(iso: Path, survey: dict, levels: list[int], lod: int, jobs: int, out: Path) -> None:
-    """Levels are independent, so they are written in parallel."""
-    write_project(out, levels)
+def godot(iso: Path, survey: dict, levels: list[int], lod: int, jobs: int, out: Path, split: bool = False) -> None:
+    """Levels are independent, so they are written in parallel. SPLIT: a project per level,
+    OUT/level_NN, each with only its own level to import and open."""
+    where = {i: out / f"level_{i:02}" if split else out for i in levels}
+    if split:
+        for i in levels:
+            write_project(where[i], [i])
+    else:
+        write_project(out, levels)
     with ProcessPoolExecutor(min(jobs, len(levels))) as pool:
-        running = [pool.submit(export_level, iso, survey["levels"][i], out, lod) for i in levels]
+        running = [pool.submit(export_level, iso, survey["levels"][i], where[i], lod) for i in levels]
         try:
             for done in as_completed(running):
                 stats = done.result()
@@ -141,6 +148,8 @@ def main() -> None:
                         help="levels to export at once (default: one per CPU)")
     export.add_argument("--terrain-lod", type=int, choices=(0, 2), default=0,
                         help="terrain detail: 0 finest (default), 2 coarsest")
+    export.add_argument("--split", action="store_true",
+                        help="a Godot project per level (OUT/level_NN): each opens in seconds")
     native = commands.add_parser("port")
     native.add_argument("iso", type=Path)
     native.add_argument("out", type=Path)
@@ -150,6 +159,11 @@ def main() -> None:
                         help="levels to export at once (default: one per CPU)")
     native.add_argument("--terrain-lod", type=int, choices=(0, 2), default=0,
                         help="terrain detail: 0 finest (default), 2 coarsest")
+    packing = commands.add_parser("pack")
+    packing.add_argument("iso", type=Path)
+    packing.add_argument("project", type=Path,
+                         help="the Godot project the levels were edited in, or the folder of per-level projects")
+    packing.add_argument("out", type=Path, help="where the packed levels go (under assets/ or build/)")
     dump = commands.add_parser("raw")
     dump.add_argument("iso", type=Path)
     dump.add_argument("out", type=Path)
@@ -163,12 +177,25 @@ def main() -> None:
                 print()
             elif args.command == "godot":
                 levels = sorted(set(args.level or range(LEVEL_COUNT)))
-                dest = publish(args.out, lambda out: godot(args.iso, survey, levels, args.terrain_lod, max(1, args.jobs), out))
-                print(f"Godot project: {dest}")
+                dest = publish(args.out, lambda out: godot(args.iso, survey, levels, args.terrain_lod, max(1, args.jobs), out,
+                                                           args.split))
+                print(f"Godot project{'s, one per level' if args.split else ''}: {dest}")
             elif args.command == "port":
                 levels = sorted(set(args.level or range(LEVEL_COUNT)))
                 dest = publish(args.out, lambda out: port(args.iso, survey, levels, args.terrain_lod, max(1, args.jobs), out))
                 print(f"Levels for the port's viewer: {dest}")
+            elif args.command == "pack":
+                # Its own output, written again after each edit: the one command that may write
+                # into a directory that exists.
+                dest = args.out.resolve()
+                if not any(root in dest.parents for root in (ROOT / "assets", ROOT / "build")):
+                    raise FormatError("output must be a directory under this repository's assets/ or build/")
+                if not (args.project / "project.godot").is_file() and not list(args.project.glob("level_*/project.godot")):
+                    raise FormatError(f"{args.project} is not the editor's Godot project or its folder of "
+                                      "per-level projects (run `godot` first)")
+                levels, mobys = pack(disc, survey, args.project, dest)
+                print((dest / "changes.txt").read_text(), end="")
+                print(f"Packed {levels} level(s), {mobys} moby edit(s): {dest}")
             else:
                 dest = publish(args.out, lambda out: raw(disc, survey, args.level, out))
                 print(f"Level {args.level} sections: {dest}")

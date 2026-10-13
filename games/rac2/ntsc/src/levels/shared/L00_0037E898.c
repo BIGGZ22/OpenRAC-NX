@@ -97,8 +97,6 @@ void func_L00_0037E898(void)
 {
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0037F790);
-
 INCLUDE_ASM("asm/levels", func_L00_0037F7E8);
 
 INCLUDE_ASM("asm/levels", func_L00_0037FA90);
@@ -119,7 +117,12 @@ void func_L00_00381F78(void)
 
 INCLUDE_ASM("asm/levels", func_L00_003825C8);
 
-INCLUDE_ASM("asm/levels", func_L00_003827C0);
+extern void ref_L00_003827C0_00(void);
+
+void func_L00_003827C0(void)
+{
+    ref_L00_003827C0_00();
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00382910);
 
@@ -250,7 +253,12 @@ void func_L00_00387EF0(void)
         D_L00_00238580[i + 128] = 0;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_00387F98);
+extern void ref_L00_00387F98_00(void *arg);
+
+void func_L00_00387F98(void)
+{
+    ref_L00_00387F98_00(D_L00_00238580);
+}
 
 /* shared native body of family a04928c6 */
 void func_L00_003883B8(char *p)
@@ -378,7 +386,12 @@ void func_L00_0038A968(void)
         D_L00_00238DF0[i + 128] = 0;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0038A9E0);
+extern void ref_L00_0038A9E0_00(void *arg);
+
+void func_L00_0038A9E0(void)
+{
+    ref_L00_0038A9E0_00(D_L00_00238DF0);
+}
 
 /* shared native body of family a04928c6 */
 void func_L00_0038AA40(char *p)
@@ -419,9 +432,37 @@ INCLUDE_ASM("asm/levels", func_L00_0038B208);
 
 INCLUDE_ASM("asm/levels", func_L00_0038B6F8);
 
-INCLUDE_ASM("asm/levels", func_L00_0038B7F8);
+extern void *D_L00_001BF218;
 
-INCLUDE_ASM("asm/levels", func_L00_0038B848);
+extern void *ref_L00_0038B848_00(void *arg);
+
+int func_L00_0038B7F8(void)
+{
+    int s0 = 0;
+    unsigned char *r = 0;
+    if (D_L00_001BF218) {
+        r = (unsigned char *)ref_L00_0038B848_00(D_L00_001BF218);
+    }
+    if (r) {
+        s0 = (r[9] == 1);
+    }
+    return s0;
+}
+
+extern void *D_L00_001BF218;
+
+extern void *ref_L00_0038B848_00(void *arg);
+
+int func_L00_0038B848(void)
+{
+    unsigned short *r = (unsigned short *)ref_L00_0038B848_00(D_L00_001BF218);
+    if (r) {
+        if (r[15] & 2) {
+            return 1;
+        }
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0038B888);
 

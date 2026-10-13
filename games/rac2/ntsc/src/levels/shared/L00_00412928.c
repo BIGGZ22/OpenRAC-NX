@@ -18,6 +18,18 @@ extern int func_00282978_5(char *handle);
 
 extern void func_0029F338_2(char *object);
 
+extern int func_002EDD78(char *handle);
+
+extern void func_002E6EF8(char *callback, char *object);
+
+extern void func_00310440(char *object);
+
+extern void func_00320DE0(char *object, int a, char *b, char *c, char *d, char *e);
+
+extern char ref_L00_00415A38_00[];
+
+extern char ref_L00_00414350_00[];
+
 INCLUDE_ASM("asm/levels", func_L00_00412928);
 
 INCLUDE_ASM("asm/levels", func_L00_00412FF8);
@@ -38,7 +50,22 @@ void func_L00_00414018(void)
 
 INCLUDE_ASM("asm/levels", func_L00_00414020);
 
-INCLUDE_ASM("asm/levels", func_L00_00414350);
+/* Forwards the cached sub-object into the pair update when it is present, then releases the handle pair or re-arms the module callback. */
+void func_L00_00414350(char *object)
+{
+    char *handle = *(char **)(object + 0x68);
+
+    if (*(int *)(handle + 0x3C) != 0)
+        func_00320DE0(object, *(int *)(handle + 0x3C), object + 0x10, object + 0xF0,
+                      object + 0x10, object + 0xF0);
+
+    if (func_002EDD78(handle) == 0) {
+        func_002EDD78(handle + 4);
+        func_002E6EF8(ref_L00_00414350_00, object);
+    } else {
+        func_00310440(object);
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_004143D0);
 
@@ -48,7 +75,18 @@ INCLUDE_ASM("asm/levels", func_L00_00415210);
 
 INCLUDE_ASM("asm/levels", func_L00_00415740);
 
-INCLUDE_ASM("asm/levels", func_L00_00415A38);
+/* Releases the object's cached handle pair when free and otherwise re-arms the module's tick callback. */
+void func_L00_00415A38(char *object)
+{
+    char *handle = *(char **)(object + 0x68);
+
+    if (func_002EDD78(handle) == 0) {
+        func_002EDD78(handle + 4);
+        func_002E6EF8(ref_L00_00415A38_00, object);
+    } else {
+        func_00310440(object);
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00415AA0);
 
@@ -135,7 +173,14 @@ INCLUDE_ASM("asm/levels", func_L00_00419668);
 
 INCLUDE_ASM("asm/levels", func_L00_00419A80);
 
-INCLUDE_ASM("asm/levels", func_L00_00419B58);
+/* Marks the object as started and raises the high bit of its flag word, once. */
+void func_L00_00419B58(char *object)
+{
+    if (*(unsigned char *)(object + 0x20) == 0) {
+        *(unsigned char *)(object + 0x20) = 1;
+        *(unsigned short *)(object + 0x34) |= 0x800;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00419C98);
 

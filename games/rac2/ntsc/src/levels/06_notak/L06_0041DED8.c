@@ -1,5 +1,13 @@
 #include "include_asm.h"
 
+extern char D_L06_002AA500[];
+
+extern void func_32D268(char *);
+extern void func_366160(char *, char *, float, int, int);
+extern void func_36C158();
+extern void func_36C1B0(float);
+extern void func_3BFBB8(char *, int);
+
 INCLUDE_ASM("asm/levels", func_L06_0041DED8);
 
 INCLUDE_ASM("asm/levels", func_L06_0041EF08);
@@ -40,16 +48,35 @@ INCLUDE_ASM("asm/levels", func_L06_00443280);
 
 INCLUDE_ASM("asm/levels", func_L06_00443A38);
 
-INCLUDE_ASM("asm/levels", func_L06_00443DE0);
+void func_L06_00443DE0(char *a0, int a1, int a2)
+{
+    char *p = *(char **)(a0 + 0x68);
 
-INCLUDE_ASM("asm/levels", func_L06_00443E18);
+    if (a2 == 0) {
+        func_36C158();
+    } else {
+        func_36C1B0(*(float *)(p + 0x31C));
+    }
+}
+
+void func_L06_00443E18(char *a0)
+{
+    char *s1 = *(char **)(a0 + 0x68);
+    unsigned int v;
+
+    func_32D268(s1 + 0x310);
+    func_32D268(s1 + 0x312);
+    v = *(unsigned short *)(a0 + 0x96);
+    if (v <= 0xFFFE)
+        *(unsigned short *)(a0 + 0x96) = v + 1;
+    func_366160(a0, s1 + 0x260, 2.5f, 0, 1);
+}
 
 INCLUDE_ASM("asm/levels", func_L06_00443E88);
 
 INCLUDE_ASM("asm/levels", func_L06_00443F30);
 
 INCLUDE_ASM("asm/levels", func_L06_00444068);
-
 INCLUDE_ASM("asm/levels", func_L06_00444168);
 
 INCLUDE_ASM("asm/levels", func_L06_00444300);
@@ -68,7 +95,10 @@ INCLUDE_ASM("asm/levels", func_L06_00456278);
 
 INCLUDE_ASM("asm/levels", func_L06_00456BB0);
 
-INCLUDE_ASM("asm/levels", func_L06_00456EE0);
+void func_L06_00456EE0(void)
+{
+    func_3BFBB8(D_L06_002AA500, 0x30);
+}
 
 INCLUDE_ASM("asm/levels", func_L06_00456F08);
 

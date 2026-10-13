@@ -38,6 +38,61 @@ INCLUDE_ASM("asm/levels", func_L00_002D7060);
 
 INCLUDE_ASM("asm/levels", func_L00_002D7068);
 
-INCLUDE_ASM("asm/levels", func_L00_002D70A0);
+/* Partial 64-byte pool record, measured from the retail loads and stores. */
+typedef struct {
+    float f0;
+    float f4;
+    float f8;
+    float f12;
+    float f16;
+    float f20;
+    unsigned char f24;
+    unsigned char f25;
+    short f26;
+    unsigned char f28;
+    unsigned char f29;
+    unsigned char f30;
+    unsigned char f31;
+    unsigned char pad32[16];
+    short f48;
+    short f50;
+    int f52;
+    int f56;
+    int f60;
+} PoolRecord64;
+
+extern PoolRecord64 D_L16_001BC730[];
+
+PoolRecord64 *func_L00_002D70A0(int a)
+{
+    PoolRecord64 *p = D_L16_001BC730;
+    int i;
+
+    for (i = 0; i < 32; i++) {
+        if (p->f29 == 0) {
+            p->f0 = -1.0f;
+            p->f4 = -1.0f;
+            p->f8 = -1.0f;
+            p->f12 = -1.0f;
+            p->f16 = -1.0f;
+            p->f20 = -1.0f;
+            p->f28 = a;
+            p->f52 = 6;
+            p->f50 = 120;
+            p->f29 = 1;
+            p->f56 = -1;
+            p->f24 = 0;
+            p->f25 = 0;
+            p->f26 = 0;
+            p->f30 = 0;
+            p->f31 = 0;
+            p->f60 = 0;
+            p->f48 = 0;
+            return p;
+        }
+        p++;
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002D7138);

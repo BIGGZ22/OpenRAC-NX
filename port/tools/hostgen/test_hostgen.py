@@ -22,7 +22,6 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-import clangast  # noqa: E402
 import ctype  # noqa: E402
 import hostgen  # noqa: E402
 import prep  # noqa: E402
@@ -188,6 +187,31 @@ class Translate(unittest.TestCase):
             """,
         })
         self.assertEqual(out, ["42"])
+
+    def test_a_result_passes_through_a_definition_that_ends_in_a_call(self):
+        # Matched as returning nothing, the wrappers still leave their last call's result in
+        # the register, and their callers (which declare them with a result) read it: through
+        # two of them here, a float and an integer, with an early return that leaves nothing.
+        out = self.run_program({
+            "callee.c": """
+                float height(void *p, int flags, float r) { return (float)flags + r; }
+                int count(int n) { return n + 1; }
+                void ground(void *p) { height(p, 0x20, 0.5f); }
+                void ground2(void *p) { ground(p); }
+                void counted(int n) { if (n < 0) return; count(n); }
+            """,
+            "caller.c": """
+                extern float ground2_f(void *) __asm__("ground2");
+                extern int counted_i(int) __asm__("counted");
+                int test_main(void) {
+                    test_print_float(ground2_f(0));
+                    test_print(counted_i(4));
+                    test_print(counted_i(-1));
+                    return 0;
+                }
+            """,
+        })
+        self.assertEqual(out, ["32.500", "5", "0"])
 
     def test_pass_through_of_a_record_parameter(self):
         # The callee is defined with three parameters and called with two: the
@@ -479,27 +503,37 @@ class Preparation(unittest.TestCase):
         self.assertNotIn("nop", out)
         self.assertIn('__asm__("sync")', out)
 
-    def test_record_in_a_cast_is_named_keeping_lines(self):
-        src = '#include "a.h"\nvoid f(char *p) {\n    ((struct { int pad[2]; int v[4]; } *)p)->v[1] = -1;\n}\n'
-        out = prep.hoist_inline_records(src)
-        self.assertEqual(out.count("\n"), src.count("\n"))
-        self.assertEqual(out.split("\n")[0], '#include "a.h"')
-        self.assertTrue(out.split("\n")[1].startswith("struct openrac_inline_0 { int pad[2]; int v[4]; }; void f("))
-        self.assertIn("((struct openrac_inline_0 *)p)->v[1]", out)
-        self.assertEqual(prep.hoist_inline_records("int a;\n"), "int a;\n")
+    def test_a_record_defined_in_a_cast_is_named_before_its_function(self):
+        # Clang's JSON leaves such a record out; named and defined ahead of the function (the
+        # statement may be a loop's whole body), hostgen can lay it out.
+        src = ("int g;\n"
+               "void f(int i)\n"
+               "{\n"
+               "    for (i = 0; i < 8; i++)\n"
+               "        ((struct { char pad[8];\n"
+               "                   int v[8]; } *)&g)->v[i] = -1;\n"
+               "}\n"
+               "#define PEEK(p) ((struct { int x; } *)(p))\n")
+        out = prep.name_cast_records(src)
+        lines = out.split("\n")
+        self.assertEqual(len(lines), len(src.split("\n")))
+        self.assertEqual(lines[1], "struct openrac_cast_5_0 { char pad[8]; int v[8]; }; void f(int i)")
+        self.assertIn("((struct openrac_cast_5_0", lines[4])
+        self.assertEqual(lines[5].strip(), "*)&g)->v[i] = -1;")
+        self.assertEqual(lines[7], "#define PEEK(p) ((struct { int x; } *)(p))")  # no function: as it was
+        self.assertEqual(prep.name_cast_records("int a;\n"), "int a;\n")
 
-    def test_header_declaration_a_definition_contradicts_is_dropped(self):
-        import tempfile
-        with tempfile.TemporaryDirectory() as d:
-            root = Path(d)
-            (root / "include").mkdir()
-            (root / "include/h.h").write_text("int keep;\nextern void f(void *, int);\nint tail;\n")
-            text = '#include "include/h.h"\nvoid f(int *p, int n) {\n}\n'
-            err = ("a.c:2:6: error: conflicting types for 'f'\n"
-                   "include/h.h:2:13: note: previous declaration is here\n")
-            done = clangast.drop_superseded_declarations(root, "a.c", text, err)
-            self.assertEqual(len(done), 1)
-            self.assertEqual((root / "include/h.h").read_text(), "int keep;\n\nint tail;\n")
+    def test_wide_cast_is_named(self):
+        """A 128-bit integer as a type name becomes openrac_ti: Clang drops the attribute there."""
+        src = ("*(int __attribute__((mode(TI))) *)a = *(unsigned int __attribute__((mode(TI))) *)(b + 0x10);\n"
+               "typedef int Quad __attribute__((mode(TI)));\n"
+               "int __attribute__((mode(TI))) whole;\n"
+               "print __attribute__((mode(TI))) *p;\n")
+        out = prep.name_wide_casts(src).split("\n")
+        self.assertEqual(out[0], "*(openrac_ti *)a = *(openrac_uti *)(b + 0x10);")
+        self.assertEqual(out[1], "typedef int Quad __attribute__((mode(TI)));")
+        self.assertEqual(out[2], "int __attribute__((mode(TI))) whole;")
+        self.assertEqual(out[3], "print __attribute__((mode(TI))) *p;")
 
 
 if __name__ == "__main__":

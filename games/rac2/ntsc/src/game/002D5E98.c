@@ -99,9 +99,18 @@ int func_002D7AC8(void)
     return 0;
 }
 
-INCLUDE_ASM("asm/game", func_002D7AE0);
+int func_002D7AE0(void) {
+    func_002DE3A0(1);
+    return 0;
+}
 
-INCLUDE_ASM("asm/game", func_002D7B00);
+extern int D_001A7BA0[] __attribute__((sda));
+extern int D_001886B0[];
+
+int func_002D7B00(void) {
+    D_001886B0[0] = D_001A7BA0[0];
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002D7B18);
 
@@ -109,7 +118,9 @@ INCLUDE_ASM("asm/game", func_002D7DB8);
 
 INCLUDE_ASM("asm/game", func_002D8120);
 
-INCLUDE_ASM("asm/game", func_002D81A8);
+int func_002D81A8(void) {
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002D81B0);
 
@@ -125,7 +136,29 @@ INCLUDE_ASM("asm/game", func_002D8EC0);
 
 INCLUDE_ASM("asm/game", func_002D9008);
 
-INCLUDE_ASM("asm/game", func_002D95D8);
+#define NOT_SDA __attribute__((section(".data")))
+
+extern unsigned char r1_D_001414F4 NOT_SDA;
+
+/* A short-returning inline keeps retail's branch: the select happens in
+   HImode, which has no movcc pattern, so jump.c cannot turn it into the
+   xori/movz a promoted `short` local gets. */
+static inline short pauseFlagState_r002D95D8(void) {
+    if (r1_D_001414F4 != 1) {
+        return 3;
+    }
+    return 0;
+}
+
+/* rac1-decomp src/game/pause.c: func_0021EDD8 */
+/* The select sits in a `static inline short` helper so that it stays a
+   branch: jump.c turns an if into movz/movn only when its arm sets a
+   full register, and the inline's short return value is a subreg. */
+int func_002D95D8(char *arg0) {
+    char *p = *(char **)(arg0 + 0x34);
+    *(short *)(p + 2) = pauseFlagState_r002D95D8();
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002D9600);
 
@@ -207,7 +240,24 @@ s32 func_002DA238 (s32 self)
   return 0;
 }
 
-INCLUDE_ASM("asm/game", func_002DA2D0);
+typedef struct {
+    char reserved[0x44];
+    int state;
+    unsigned int first, second;
+    int index, pending;
+} Handles_2DCB28;
+
+extern void func_002B7CE0(int);
+
+int func_002DA2D0(Handles_2DCB28 *object) {
+    object->first = func_002DE618(object->first);
+    object->second = func_002DE618(object->second);
+    object->index = -1;
+    object->pending = -1;
+    object->state = -1;
+    func_002B7CE0(1);
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002DA328);
 
@@ -229,11 +279,27 @@ INCLUDE_ASM("asm/game", func_002DB7F0);
 
 INCLUDE_ASM("asm/game", func_002DB988);
 
-INCLUDE_ASM("asm/game", func_002DBAA8);
+int func_002DBAA8(void)
+{
+    extern s32 D_00138344;
+    extern s32 D_001F2858;
+    extern void func_0025E680(void);
+    if (D_00138344 & 0x40)
+        D_001F2858 = (s32)func_0025E680;
+    return 0;
+}
 
-INCLUDE_ASM("asm/game", func_002DBAD0);
+extern void func_00288D88(int, int, int, int);
 
-INCLUDE_ASM("asm/game", func_002DBB08);
+int func_002DBAD0(char *p) { int x = *(int *)(p + 0x18); int y = *(int *)(p + 0x1C); int w = *(int *)(p + 0x20); int h = *(int *)(p + 0x24); func_00288D88(x, x + w, y, y + h); return 2; }
+
+extern char *D_001F2854;
+
+int func_002DBB08(char *object) {
+    *(int *)(D_001F2854 + 0x12C) = 0;
+    *(int *)(object + 0x54) = func_002DE550(0);
+    return 0;
+}
 
 undefined8 func_002DBB48(int param_1)
 {
@@ -247,7 +313,21 @@ INCLUDE_ASM("asm/game", func_002DBB78);
 
 INCLUDE_ASM("asm/game", func_002DBC10);
 
-INCLUDE_ASM("asm/game", func_002DBE80);
+#define MACRO_ADDR __attribute__((section(".sdata")))
+
+/* MACRO_ADDR: lui/lw where retail has them, $gp-relative in a delay slot
+   (r1_func_0021F7D0, r1_func_002229B0). */
+extern int r1_D_0015EE84 MACRO_ADDR;
+
+extern int r1_D_001D48A8[];
+
+/* rac1-decomp src/game/pause.c: func_00222D70 */
+/* `r1_D_001D48A8[(unsigned)r1_D_0015EE84 % 19]`; the older near-miss
+   predated MACRO_ADDR. */
+int func_002DBE80(char *arg0) {
+    *(int *)(arg0 + 0x34) = r1_D_001D48A8[(unsigned int)r1_D_0015EE84 % 19];
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002DBEC0);
 
@@ -283,28 +363,12 @@ INCLUDE_ASM("asm/game", func_002DC720);
 
 INCLUDE_ASM("asm/game", func_002DC900);
 
-/* Initialises an object: runs setup helpers, clears word +0x4C, stores one helper result at +0x48, then calls a final helper with (small-data global + 0x3CAA8) only when two globals are non-zero, and returns 0. */
-int func_002DCAB8(char *a0)
-{
-    int v;
+INCLUDE_ASM("asm/game", func_002DCAB8);
 
-    func_002DE3A0(1);
-    v = func_002DE550_1(0);
-    *(int *)(a0 + 76) = 0;
-    *(int *)(a0 + 72) = v;
-    func_002C9A60();
-    func_L00_002F3478();
-    v = *(int *)0x1A8FD8;
-    if (v != 0) {
-        v = D_L00_001A904C_8;
-        if (v != 0) {
-            func_00339760(v + 0x3CAA8);
-        }
-    }
+int func_002DCB28(Handles_2DCB28 *object) {
+    object->first = func_002DE618(object->first);
     return 0;
 }
-
-INCLUDE_ASM("asm/game", func_002DCB28);
 
 INCLUDE_ASM("asm/game", func_002DCB58);
 

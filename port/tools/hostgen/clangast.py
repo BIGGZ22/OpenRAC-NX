@@ -15,6 +15,7 @@ import os
 import re
 import shutil
 import subprocess
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -93,7 +94,10 @@ def fix_from_diagnostics(text: str, stderr: str, rel: str) -> tuple[str, list[st
       same lines), so the function becomes a stub that says why.
     - "conflicting types for 'f'" after an earlier declaration or definition
       of f: the later declaration, and the calls after it, use an alias of
-      f's symbol.
+      f's symbol. So does a later definition of f that contradicts an
+      earlier declaration (a shared header that says `void *` where the
+      body takes `float *`): the alias is declared with f's symbol on the
+      definition's own line, and the definition is the alias's.
     - An asm label Clang refuses (given after the function's first use, or
       a second spelling of one already given): removed from that
       declaration, and the name recorded as an alias of the label's symbol
@@ -127,17 +131,32 @@ def fix_from_diagnostics(text: str, stderr: str, rel: str) -> tuple[str, list[st
                 # every call to the definition's parameters anyway).
                 alias = f"{name}__openrac_decl_{line + 1}"
                 decl = re.sub(rf"\b{name}\b", alias, lines[line], count=1)
+                what = "a second declaration"
                 if re.search(r"__asm__\s*\(", decl):
                     # Already labelled with its symbol: the label stays the alias's.
                     n = 1
                 else:
                     decl, n = re.subn(r"\)\s*;", f') __asm__("{name}");', decl, count=1)
+                if n == 0 and note["msg"].startswith("previous declaration is here"):
+                    # Not a declaration but the definition, which says other types than a
+                    # declaration before it (a shared header's `void *` where the body takes
+                    # `float *`). A definition cannot carry an asm label, so the alias is
+                    # declared with it first, from the definition's own heading, on its line.
+                    end = line
+                    while end < len(lines) - 1 and end - line < 8 and "{" not in lines[end] and ";" not in lines[end]:
+                        end += 1
+                    heading = " ".join(lines[line:end] + [lines[end].split("{", 1)[0]])
+                    if "{" in lines[end] and ";" not in heading:
+                        heading = re.sub(rf"\b{name}\b", alias, heading, count=1).strip()
+                        decl = f'{heading} __asm__("{name}"); {decl}'
+                        what = "the definition"
+                        n = 1
                 if n == 0:
                     continue
                 lines[line] = decl
                 for j in range(line + 1, len(lines)):
                     lines[j] = re.sub(rf"\b{name}\b", alias, lines[j])
-                fixes.append(f"line {line + 1}: a second declaration of {name} that contradicts the first, kept apart")
+                fixes.append(f"line {line + 1}: {what} of {name} that contradicts the first, kept apart")
                 continue
             if "implicit declaration" not in note["msg"]:
                 continue
@@ -328,9 +347,23 @@ def parse_unit(clang: str, root: Path, rel: str, flags: list[str], attempts: int
             continue
         if not more or fixed == text:
             return None, check.stderr
-        path.write_text(fixed, encoding="utf-8", errors="surrogateescape")
+        _write(path, fixed)
         fixes += more
     return None, "too many rounds of fixes"
+
+
+def _write(path: Path, text: str) -> None:
+    """Writes the prepared copy again. On Windows a file another program has open cannot be
+    written, and an editor's indexer or a virus scanner opens a file just written for a moment:
+    the write is tried again for a few seconds before it is given up."""
+    for attempt in range(60):
+        try:
+            path.write_text(text, encoding="utf-8", errors="surrogateescape")
+            return
+        except PermissionError:
+            if attempt == 59:
+                raise
+            time.sleep(0.05)
 
 
 def annotate(ast: dict) -> None:

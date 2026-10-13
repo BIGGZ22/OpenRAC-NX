@@ -54,14 +54,32 @@ unsigned long long func_002CD620(void)
   return 0;
 }
 
-INCLUDE_ASM("asm/game", func_002CD650);
+int func_002CD650(void) {
+    return 0;
+}
 
-INCLUDE_ASM("asm/game", func_002CD658);
+int func_002CD658(void) {
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002CD660);
 
-INCLUDE_ASM("asm/game", func_002CD6F0);
+extern void func_0029CC20(void);
+
+int func_002CD6F0(void) {
+    func_0027C540(0);
+    func_0029CC20();
+    func_0027C660();
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002CD720);
 
-INCLUDE_ASM("asm/game", func_002CD878);
+extern char *D_001A8CFC[] __attribute__((sda));
+extern void *func_00344378(void *);
+
+int func_002CD878(char *object) {
+    if (D_001A8CFC[0] != 0)
+        *(void **)(object + 0x34) = func_00344378(D_001A8CFC[0] + 0x39F38);
+    return 0;
+}

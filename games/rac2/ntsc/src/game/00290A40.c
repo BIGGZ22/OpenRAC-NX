@@ -34,7 +34,11 @@ void func_00291108(void)
   return;
 }
 
-INCLUDE_ASM("asm/game", func_00291128);
+extern void func_00278F80(void);
+
+void func_00291128(void) {
+    func_00278F80();
+}
 
 INCLUDE_ASM("asm/game", func_00291148);
 
@@ -54,7 +58,18 @@ INCLUDE_ASM("asm/game", func_00291308);
 
 INCLUDE_ASM("asm/game", func_00291448);
 
-INCLUDE_ASM("asm/game", func_00291450);
+extern void func_00291788(void);
+extern void func_00282A88(void *, int);
+extern char D_001C2B40[];
+extern char D_001C2C40[];
+
+void func_00291450(int index) {
+    if ((unsigned int)index >= 8)
+        return;
+    func_00291788();
+    func_00282A88((void *)(D_001C2B40 + (index << 5)), 0x20);
+    func_00282A88((void *)(D_001C2C40 + index * 0x30), 0x30);
+}
 
 INCLUDE_ASM("asm/game", func_002914B8);
 

@@ -159,8 +159,8 @@ int func_0011CD60(int arg0, int arg1, int arg2, int arg3, int arg4, int arg5) {
     return func_0011CBE8(arg0, 0x1, arg1, arg2, arg3, arg4, arg5);
 }
 
-INCLUDE_ASM("asm/core", func_0011CDA0);
+ASM_FUNC("asm/core", func_0011CDA0);
 
-INCLUDE_ASM("asm/core", func_0011CEC8);
+ASM_FUNC("asm/core", func_0011CEC8);
 
 INCLUDE_ASM("asm/core", func_0011CF74);

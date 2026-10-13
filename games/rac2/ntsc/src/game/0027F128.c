@@ -66,15 +66,31 @@ s32 func_0027F128(u8 *a0,s32 a1,u8 *a2) {
  return out;
 }
 
-INCLUDE_ASM("asm/game", func_0027F178);
+extern u8 D_00263B50[];
 
-INCLUDE_ASM("asm/game", func_0027F198);
+s32 func_0027F178(u8 *text, s32 length) {
+    return func_0027F128(text, length, D_00263B50);
+}
 
-INCLUDE_ASM("asm/game", func_0027F1B8);
+extern u8 D_00263EF0[];
+
+s32 func_0027F198(u8 *text, s32 length) {
+    return func_0027F128(text, length, D_00263EF0);
+}
+
+extern u8 D_00264290[];
+
+s32 func_0027F1B8(u8 *text, s32 length) {
+    return func_0027F128(text, length, D_00264290);
+}
 
 INCLUDE_ASM("asm/game", func_0027F1D8);
 
-INCLUDE_ASM("asm/game", func_0027F288);
+extern int func_0027F1D8(u8 *, int, u8 *);
+
+int func_0027F288(u8 *text, int length) {
+    return func_0027F1D8(text, length, D_00263B50);
+}
 
 INCLUDE_ASM("asm/game", func_0027F2A8);
 
@@ -122,7 +138,15 @@ INCLUDE_ASM("asm/game", func_00280328);
 
 INCLUDE_ASM("asm/game", func_00280510);
 
-INCLUDE_ASM("asm/game", func_00280600);
+extern void func_00284EA8(void);
+extern void func_0027A9F0(void);
+extern void func_0027AB40(void);
+
+void func_00280600(void) {
+    func_00284EA8();
+    func_0027A9F0();
+    func_0027AB40();
+}
 
 INCLUDE_ASM("asm/game", func_00280630);
 
@@ -132,7 +156,7 @@ INCLUDE_ASM("asm/game", func_00280670);
 
 INCLUDE_ASM("asm/game", func_00280710);
 
-INCLUDE_ASM("asm/game", func_002808F8);
+ASM_FUNC("asm/game", func_002808F8);
 
 INCLUDE_ASM("asm/game", func_00280A70);
 
@@ -140,11 +164,11 @@ INCLUDE_ASM("asm/game", func_00280B30);
 
 INCLUDE_ASM("asm/game", func_00280B90);
 
-INCLUDE_ASM("asm/game", func_00281154);
+ASM_FUNC("asm/game", func_00281154);
 
-INCLUDE_ASM("asm/game", func_002811D4);
+ASM_FUNC("asm/game", func_002811D4);
 
-INCLUDE_ASM("asm/game", func_00281214);
+ASM_FUNC("asm/game", func_00281214);
 
 INCLUDE_ASM("asm/game", func_00281810);
 
@@ -191,9 +215,9 @@ INCLUDE_ASM("asm/game", func_00282928);
 
 INCLUDE_ASM("asm/game", func_00282938);
 
-INCLUDE_ASM("asm/game", func_00282948);
+ASM_FUNC("asm/game", func_00282948);
 
-INCLUDE_ASM("asm/game", func_00282978);
+ASM_FUNC("asm/game", func_00282978);
 
 INCLUDE_ASM("asm/game", func_002829A8);
 
@@ -203,17 +227,17 @@ INCLUDE_ASM("asm/game", func_00282A18);
 
 INCLUDE_ASM("asm/game", func_00282A28);
 
-INCLUDE_ASM("asm/game", func_00282A38);
+ASM_FUNC("asm/game", func_00282A38);
 
-INCLUDE_ASM("asm/game", func_00282A60);
+ASM_FUNC("asm/game", func_00282A60);
 
-INCLUDE_ASM("asm/game", func_00282A88);
+ASM_FUNC("asm/game", func_00282A88);
 
 INCLUDE_ASM("asm/game", func_00282AB0);
 
-INCLUDE_ASM("asm/game", func_00282B50);
+ASM_FUNC("asm/game", func_00282B50);
 
-INCLUDE_ASM("asm/game", func_00282B78);
+ASM_FUNC("asm/game", func_00282B78);
 
 INCLUDE_ASM("asm/game", func_00282BA8);
 
@@ -223,7 +247,7 @@ INCLUDE_ASM("asm/game", func_00282C08);
 
 INCLUDE_ASM("asm/game", func_00282C10);
 
-INCLUDE_ASM("asm/game", func_00282C30);
+ASM_FUNC("asm/game", func_00282C30);
 
 /* 8-BYTE LOT -- bare getters and setters, identical across all 27 levels. */
 /* Measured target: byte-identical across all 27 levels. */
@@ -278,7 +302,7 @@ INCLUDE_ASM("asm/game", func_00282E80);
 
 INCLUDE_ASM("asm/game", func_00282EB0);
 
-INCLUDE_ASM("asm/game", func_00282ED8);
+ASM_FUNC("asm/game", func_00282ED8);
 
 INCLUDE_ASM("asm/game", func_00282F20);
 
@@ -298,7 +322,7 @@ INCLUDE_ASM("asm/game", func_00283108);
 
 INCLUDE_ASM("asm/game", func_00283130);
 
-INCLUDE_ASM("asm/game", func_00283150);
+ASM_FUNC("asm/game", func_00283150);
 
 INCLUDE_ASM("asm/game", func_00283180);
 
@@ -318,7 +342,7 @@ INCLUDE_ASM("asm/game", func_002833F0);
 
 INCLUDE_ASM("asm/game", func_00283410);
 
-INCLUDE_ASM("asm/game", func_00283430);
+ASM_FUNC("asm/game", func_00283430);
 
 INCLUDE_ASM("asm/game", func_00283658);
 
@@ -330,7 +354,7 @@ INCLUDE_ASM("asm/game", func_002836E8);
 
 INCLUDE_ASM("asm/game", func_00283738);
 
-INCLUDE_ASM("asm/game", func_00283788);
+ASM_FUNC("asm/game", func_00283788);
 
 INCLUDE_ASM("asm/game", func_002837D0);
 
@@ -372,11 +396,11 @@ INCLUDE_ASM("asm/game", func_00283D38);
 
 INCLUDE_ASM("asm/game", func_00283D80);
 
-INCLUDE_ASM("asm/game", func_00283DB8);
+ASM_FUNC("asm/game", func_00283DB8);
 
-INCLUDE_ASM("asm/game", func_00283EB0);
+ASM_FUNC("asm/game", func_00283EB0);
 
-INCLUDE_ASM("asm/game", func_00283EF0);
+ASM_FUNC("asm/game", func_00283EF0);
 
 INCLUDE_ASM("asm/game", func_00283FE8);
 
@@ -399,7 +423,12 @@ void func_00284E40(void) {
     func_00125A20(*(u8 **)0x001a742c,D_001A6480.c,D_001A6480.a,D_001A6480.b,D_001A6480.d,D_001A6480.e);
 }
 
-INCLUDE_ASM("asm/game", func_00284E80);
+int func_00284E80(void)
+{
+    extern int func_00125D98(void *);
+    return func_00125D98((void *)D_001A742C);
+}
+
 
 /* shared native body of family c1edda5cc3fa91ec */
 void func_00284EA8(void)

@@ -266,7 +266,9 @@ export const api = {
   checkRoot: (path: string) => call<Check>("check_root", { path }),
   checkTool: (tool: Tool, path: string) => call<Check>("check_tool", { tool, path }),
   library: () => call<Library>("library"),
-  runAction: (scope: Scope, id: string) => call<Started>("run_action", { scope, id }),
+  /** `level`: which level a per-level action is for (the level editor's projects, one each). */
+  runAction: (scope: Scope, id: string, level?: number) =>
+    call<Started>("run_action", { scope, id, level: level ?? null }),
   cancelJob: (id: number) => call<null>("cancel_job", { id }),
   /** A file or folder in the checkout, relative to it (`games/rac1/pal/README.md`). */
   openPath: (path: string) => call<null>("open_path", { path }),

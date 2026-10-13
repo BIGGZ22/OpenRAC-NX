@@ -1,0 +1,1 @@
+/* No attempt: all 7 instructions would differ. The retail bytes at 0x341798 are not code: seven words 0x27bd0030, 0, 0x27bd0050, 0, 0x27bd0080, 0, 0x27bd0020 (addiu sp,sp,imm with nops between), directly after the epilogue of the function ending at 0x341794. Probably a data table or a catalogue split error. */

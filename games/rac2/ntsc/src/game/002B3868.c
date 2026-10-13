@@ -14,9 +14,19 @@ s32 func_002B3868(u8 *a0) {
  return 0;
 }
 
-INCLUDE_ASM("asm/game", func_002B3890);
+/* Sets the second pending flag and reports whether it was newly set. */
+s32 func_002B3890(u8 *m) {
+    u8 flags = m[0xBE];
+    if ((flags & 2) == 0) {
+        m[0xBE] = flags | 2;
+        return 1;
+    }
+    return 0;
+}
 
-INCLUDE_ASM("asm/game", func_002B38B8);
+s32 func_002B38B8(u8 *m) {
+    return m[0xBE] & 4;
+}
 
 INCLUDE_ASM("asm/game", func_002B38C8);
 
@@ -38,7 +48,16 @@ INCLUDE_ASM("asm/game", func_002B3BA8);
 
 INCLUDE_ASM("asm/game", func_002B4028);
 
-INCLUDE_ASM("asm/game", func_002B4038);
+typedef struct {
+    int reserved;
+    int value;
+    char remainder[0xA428];
+} Record_2B4038;
+extern Record_2B4038 D_00240450[];
+
+int func_002B4038(int value, int index) {
+    return D_00240450[index].value == value;
+}
 
 INCLUDE_ASM("asm/game", func_002B4068);
 
@@ -52,17 +71,29 @@ INCLUDE_ASM("asm/game", func_002B44C0);
 
 INCLUDE_ASM("asm/game", func_002B49A0);
 
-INCLUDE_ASM("asm/game", func_002B49B0);
+extern int D_001AA0F0 __attribute__((sda));
 
-INCLUDE_ASM("asm/game", func_002B49C0);
+void func_002B49B0(int value) {
+    D_001AA0F0 = value;
+}
 
-INCLUDE_ASM("asm/game", func_002B49C8);
+extern int D_001AA0F4 __attribute__((sda));
+
+void func_002B49C0(int value) {
+    D_001AA0F4 = value;
+}
+
+extern int D_001A8BB8 __attribute__((sda));
+
+int func_002B49C8(int value) {
+    return D_001A8BB8 == value;
+}
 
 INCLUDE_ASM("asm/game", func_002B49E0);
 
 INCLUDE_ASM("asm/game", func_002B4B70);
 
-INCLUDE_ASM("asm/game", func_002B4BE8);
+
 
 INCLUDE_ASM("asm/game", func_002B4C18);
 
@@ -72,4 +103,8 @@ INCLUDE_ASM("asm/game", func_002B50D8);
 
 INCLUDE_ASM("asm/game", func_002B50E0);
 
-INCLUDE_ASM("asm/game", func_002B5258);
+extern void func_002B50E0(void *, void *, float);
+
+void func_002B5258(char *m) {
+    func_002B50E0(m, m + 0x10, *(float *)(m + 0xF8));
+}

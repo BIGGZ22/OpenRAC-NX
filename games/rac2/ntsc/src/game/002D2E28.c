@@ -52,4 +52,36 @@ unsigned long long func_002D2E28(void)
     return 0;
 }
 
-INCLUDE_ASM("asm/game", func_002D2E58);
+typedef struct {
+    char reserved00[0x14];
+    char *source;
+    int value;
+    char reserved1c[0x118];
+    int fallback;
+} CallbackState;
+extern CallbackState D_001F2840;
+extern int D_00138344;
+
+extern void func_0029C760(int);
+
+int func_002D2E58(void) {
+    int result = 0;
+    int flags = D_00138344;
+    if (flags & 0x10) {
+        int value = *(int *)(D_001F2840.source + 0xE0);
+        if (value != 0)
+            D_001F2840.value = value;
+        else if (D_001F2840.fallback == 0) {
+            value = -1;
+            goto return_value;
+        }
+        value = 0;
+return_value:
+        return value;
+    }
+    if (flags & 0x900)
+        result = 1;
+    else
+        func_0029C760(flags);
+    return result;
+}

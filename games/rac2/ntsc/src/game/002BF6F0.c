@@ -437,7 +437,15 @@ void func_002C4788(u8 *a0) {
 
 INCLUDE_ASM("asm/game", func_002C47E8);
 
-INCLUDE_ASM("asm/game", func_002C4B10);
+void func_002C4B10(u8 *a0)
+{
+    f32 value = *(f32 *)(a0 + 0x0C);
+    *(u8 *)(a0 + 0x08) = *(u8 *)(a0 + 0x08) + *(u8 *)(a0 + 0x38);
+    if (value <= 0.0f) {
+        *(f32 *)(a0 + 0x0C) = 0.0f;
+        func_002B9180(a0);
+    }
+}
 
 INCLUDE_ASM("asm/game", func_002C4B50);
 

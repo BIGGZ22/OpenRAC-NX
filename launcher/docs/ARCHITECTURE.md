@@ -130,8 +130,12 @@ mirrored in `src/lib/api.ts`.
 ### The two views
 
 `Config.developer` (Settings, "Developer tools") chooses what the pages show.
-Off, which is the default, a player's view: `pages/GamePlayer.svelte` has
-three things, each a button over actions found by id in `actions.json`:
+Off, which is the default, a player's view. `lib/player.svelte.ts` answers
+one question, what can the player do with this game now (`playerState`), and
+does it (`playerAct`); the games page's tiles (`components/GameTile.svelte`)
+and `pages/GamePlayer.svelte` both show that answer as their main button, so
+the two never disagree. The secondary actions are in `components/Menu.svelte`
+beside it. Each is a button over actions found by id in `actions.json`:
 
 | Button                | What it runs                                                                                                                    |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------- |

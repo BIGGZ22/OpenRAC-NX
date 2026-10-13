@@ -107,9 +107,15 @@ async fn library(state: State<'_, AppState>) -> Result<Library, String> {
 /// Runs action `id` of `scope`: a job whose output streams as `job-output`
 /// and `job-exit` events, or a detached launch (id 0).
 #[tauri::command]
-fn run_action(app: AppHandle, state: State<'_, AppState>, scope: Scope, id: String) -> Result<Started, String> {
+fn run_action(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    scope: Scope,
+    id: String,
+    level: Option<u32>,
+) -> Result<Started, String> {
     let config = state.config.lock().unwrap().clone();
-    let plan = library::plan(&config, &scope, &id)?;
+    let plan = library::plan(&config, &scope, &id, level)?;
     let is_play = if let Scope::Version(_) = &scope {
         if let Some(root) = &config.root {
             if let Ok(file) = openrac_launcher_core::actions::load(root) {

@@ -18,7 +18,12 @@ INCLUDE_ASM("asm/levels", func_L11_00474920);
 
 INCLUDE_ASM("asm/levels", func_L11_0047A310);
 
-INCLUDE_ASM("asm/levels", func_L11_004885A0);
+extern char *r1_D_L08_00167680;
+
+/* rac1-decomp src/overlays/shared/vendor_002D3DF8.c: func_L08_00315068 */
+void func_L11_004885A0(void) {
+    r1_D_L08_00167680[0x88] = 1;
+}
 
 INCLUDE_ASM("asm/levels", func_L11_004885B8);
 

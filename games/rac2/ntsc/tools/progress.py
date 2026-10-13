@@ -3,6 +3,10 @@
 How much of the game's code is C: progress/report.json, in objdiff's report format (the one
 decomp.dev reads, as rac1-decomp's), and the table in README.md.
 
+  python3 tools/progress.py            # write both, after tools/build.py all (maintainers, on master)
+  python3 tools/progress.py --check    # the report counts nothing that is not C; it may be behind
+  python3 tools/progress.py --check --strict   # and it is not behind either
+
   python3 tools/progress.py           # after tools/build.py all
   python3 tools/progress.py --check   # CI: fail if src/ and the committed report disagree
 
@@ -49,6 +53,15 @@ def source_functions() -> dict[str, list[tuple[str, bool]]]:
     return out
 
 
+HANDWRITTEN = re.compile(rf'^ASM_FUNC\("[^"]*",\s*({NAME})\);', re.M)
+
+
+def handwritten() -> set[str]:
+    """Functions marked ASM_FUNC: assembly in the original too (VU0 and other routines no C
+    compiles to), kept as assembly and counted as finished, as rac1-decomp counts them."""
+    return {n for path in (ROOT / "src").rglob("*.c") for n in HANDWRITTEN.findall(path.read_text(errors="replace"))}
+
+
 def measures(fns: list[dict]) -> dict:
     total = sum(f["size"] for f in fns)
     matched = sum(f["size"] for f in fns if f["matched"])
@@ -64,34 +77,46 @@ def measures(fns: list[dict]) -> dict:
 def check() -> None:
     report = json.loads(REPORT.read_text())
     matched = {f["name"] for u in report["units"] for f in u["functions"] if f["fuzzy_match_percent"] == 100.0}
-    in_c = {n for fns in source_functions().values() for n, c in fns if c}
-    problems = sorted(in_c ^ matched)
-    if problems:
-        sys.exit(f"progress/report.json is out of date for {len(problems)} function(s), e.g. "
-                 f"{', '.join(problems[:5])}: run tools/build.py all, then tools/progress.py")
-    print(f"progress/report.json is current: {len(matched)} matched functions")
+    in_c = {n for fns in source_functions().values() for n, c in fns if c} | handwritten()
+    gone = sorted(matched - in_c)
+    if gone:
+        sys.exit(f"progress/report.json counts {len(gone)} function(s) that are not C in src/, e.g. "
+                 f"{', '.join(gone[:5])}: run tools/build.py all, then tools/progress.py")
+    ahead = sorted(in_c - matched)
+    if ahead and "--strict" in sys.argv:
+        sys.exit(f"progress/report.json is behind src/ by {len(ahead)} function(s), e.g. "
+                 f"{', '.join(ahead[:5])}: run tools/build.py all, then tools/progress.py")
+    if ahead:
+        # A pull request does not carry the report: a maintainer regenerates it on master.
+        print(f"progress/report.json: {len(matched)} matched functions; {len(ahead)} more are C in src/ "
+              f"and not in it yet (regenerated on master after merging)")
+    else:
+        print(f"progress/report.json is current: {len(matched)} matched functions")
 
 
 def main() -> None:
     if "--check" in sys.argv:
         check()
         return
-    placed = set()
+    placed, differ = set(), set()
     programs = ["boot"] + [levels.level_dir(n) for n in sorted(levels.NAMES)]
     for program in programs:
         path = ROOT / "build" / program / "placed.json"
         if not path.is_file():
             sys.exit(f"no build of {program}: run tools/build.py all first")
-        placed |= set(json.loads(path.read_text())["functions"])
+        result = json.loads(path.read_text())
+        placed |= set(result["functions"])
+        differ |= set(result["differ"])
+    placed -= differ      # a function counts when it links at every place it has, not at some
     where = {n: (a, s) for n, a, s in levels.read_boot_functions()}
     for name, kind, size, _, places in levels.read_catalogue():
         if kind != "boot":
             where[name] = (places[0][1], size)
-    # Units as rac1-decomp's report has them: one per file of the boot (core/, game/) and of the
-    # shared level code ("Shared level code/<file>"), and one per level holding all of that
-    # level's own functions ("Level 04: Barlow").
+    # Units as rac1-decomp's report has them: one per file of the boot (core/, game/), one for the
+    # shared level code ("Shared level code") and one per level holding all of that level's own
+    # functions ("Level 04: Barlow").
     title = lambda number: f"Level {number:02d}: {levels.NAMES[number].replace('_', ' ').title()}"
-    groups, in_c = {}, set()          # unit name -> {"rows", "source_path", "categories"}
+    groups, in_c, by_hand = {}, set(), handwritten()          # unit name -> {"rows", "source_path", "categories"}
     for path, fns in source_functions().items():
         if not fns:
             continue
@@ -100,12 +125,13 @@ def main() -> None:
             address, size = where[name]
             if has_c:
                 in_c.add(name)
-            rows.append({"name": name, "size": size, "matched": has_c and name in placed, "address": address})
+            rows.append({"name": name, "size": size, "address": address,
+                         "matched": has_c and name in placed or name in by_hand})
         if path.startswith(("src/core/", "src/game/")):
             unit, source, cats_of = path.removeprefix("src/").removesuffix(".c"), path, ["executable", "game"]
         elif path.startswith("src/levels/shared/"):
-            unit = "Shared level code/" + Path(path).stem
-            source, cats_of = path, ["level_code", "common"]
+            unit, source = "Shared level code", "src/levels/shared"
+            cats_of = ["level_code", "common"]
         else:
             number = int(Path(path).parent.name[:2])
             unit, source = title(number), Path(path).parent.as_posix()
@@ -154,7 +180,9 @@ def main() -> None:
                        row("Boot executable", cats[0]["measures"]), row("Levels", cats[1]["measures"]),
                        row("**Total**", total)[:-2] + f" ({total['matched_code_percent']:.2f}%) |", "",
                        f"The 27 levels hold {sum(len(r[4]) for r in levels.read_catalogue()):,} function "
-                       f"placements; C covers {placements:,} of them."])
+                       f"placements; C covers {placements:,} of them.",
+                       f"{len(by_hand):,} of the matched functions are the original's own assembly "
+                       f"(`ASM_FUNC`), kept as assembly."])
     readme = ROOT / "README.md"
     text = readme.read_text()
     a, b = text.index("<!-- progress -->") + len("<!-- progress -->"), text.index("<!-- /progress -->")

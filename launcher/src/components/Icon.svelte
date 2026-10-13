@@ -23,6 +23,8 @@
     bolt: "M7 3h10v4H7zm2 4v14h6V7zM9 11h6M9 15h6M9 19h6",
     globe:
       "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 0a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10zm-8 10h16",
+    more: "M5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM19 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z",
+    trash: "M4 7h16M9 7V4.5h6V7M6.5 7l1 12.5h9l1-12.5M10 11v5M14 11v5",
   } as const;
   export type IconName = keyof typeof PATHS;
 </script>

@@ -1,6 +1,8 @@
 <script lang="ts">
-  // Where the OpenRAC folder and the programs are. With `setup`, the
-  // first-run screen: the same fields, filled from detection.
+  // Three groups: where things are (folders), the programs the launcher uses,
+  // and how the launcher itself behaves. Edits stay local until saved; the bar
+  // that saves them stays in view at the bottom of the window. With `setup`,
+  // the first-run screen: the folders and programs, filled from detection.
   import PathField from "$components/PathField.svelte";
   import { api, type Check, type Config, type Detected } from "$lib/api";
   import { app, saveConfig } from "$lib/app.svelte";
@@ -61,8 +63,7 @@
       <div>
         <h1>Welcome to OpenRAC</h1>
         <p class="muted">
-          Play the Ratchet &amp; Clank games natively and edit their levels, with your own discs. The launcher could not
-          find everything it needs by itself: choose your OpenRAC folder below, and Python if none is shown.
+          Play the Ratchet &amp; Clank games natively, with your own discs. Choose your OpenRAC folder to start.
         </p>
       </div>
     </section>
@@ -71,26 +72,28 @@
   {/if}
 
   <section class="panel">
-    <h2>OpenRAC</h2>
+    <h2>Folders</h2>
     <PathField
       label="OpenRAC folder"
-      hint="Your checkout of OpenRAC: the folder with games/, tools/ and baserom/."
+      hint="Your copy of OpenRAC: the folder with games/ and tools/ in it."
       folder
       bind:value={draft.root}
       candidates={found?.roots}
+      detail={draft.developer}
       check={root}
     />
     {#if !draft.root}
       <p class="dim note">
-        No checkout yet? <button class="link" onclick={() => void api.openUrl(REPO_URL)}>Get OpenRAC</button> with git, then
-        choose its folder here.
+        No copy yet? <button class="link" onclick={() => void api.openUrl(REPO_URL)}>Get OpenRAC</button>, then choose
+        its folder here.
       </p>
     {/if}
     <PathField
       label="Install folder"
-      hint="Where games are set up from your discs: the disc's files, and later the prepared assets and the built game. A few GB per game."
+      hint="Where your games are set up from your discs. A few GB per game."
       folder
       bind:value={draft.installDir}
+      detail={draft.developer}
       check={installFolder}
     />
   </section>
@@ -99,18 +102,20 @@
     <h2>Programs</h2>
     <PathField
       label="Godot"
-      hint="Godot 4 (4.7 or newer), the game's 3D engine and level player. Optional."
+      hint="Godot 4.7 or newer, for the level editor. Optional."
       bind:value={draft.godot}
       candidates={found?.godots}
+      detail={draft.developer}
       check={tool("godot")}
     />
     <!-- A player is asked for Python only when none was found; contributors always see it. -->
     {#if draft.developer || setup || !app.config?.python}
       <PathField
         label="Python"
-        hint="Python 3.10 or newer: OpenRAC's tools and the level editor run with it."
+        hint="Python 3.10 or newer: OpenRAC's tools run with it."
         bind:value={draft.python}
         candidates={found?.pythons}
+        detail={draft.developer}
         check={tool("python")}
       />
     {/if}
@@ -120,88 +125,89 @@
         hint="The build container of Ratchet & Clank (PAL) and Deadlocked runs in it, on Linux and macOS. Optional."
         bind:value={draft.docker}
         candidates={found?.dockers}
+        detail={draft.developer}
         check={tool("docker")}
       />
     {/if}
   </section>
 
-  <section class="panel">
-    <h2>Appearance</h2>
-    <label class="toggle-row">
-      <input
-        type="checkbox"
-        checked={draft.layout !== "classic"}
-        onchange={(e) => (draft.layout = e.currentTarget.checked ? "compact" : "classic")}
-      />
-      <div>
-        <strong>Compact layout</strong>
-        <p class="muted">The game, its versions and Play on one band. Off: the original layout.</p>
-      </div>
-    </label>
-  </section>
-
-  <section class="panel">
-    <h2>Integrations</h2>
-    <label class="toggle-row">
-      <input type="checkbox" bind:checked={draft.discordRpc} />
-      <div>
-        <strong>Discord Rich Presence</strong>
-        <p class="muted">Show in Discord when you are in the launcher or playing a game.</p>
-      </div>
-    </label>
-    {#if draft.discordRpc}
-      <div class="rpc-config">
-        <label for="discord-client-id" class="field-title">Discord Application ID</label>
-        <input
-          id="discord-client-id"
-          type="text"
-          class="text-input mono"
-          placeholder="e.g. 1348000000000000000"
-          bind:value={draft.discordClientId}
-        />
-        <p class="muted hint">
-          Leave empty for default. Create an app on
-          <button class="link" onclick={() => void api.openUrl("https://discord.com/developers/applications")}>
-            discord.com/developers/applications
-          </button>
-          named <em>OpenRAC</em> to show custom game name and assets on your profile.
-        </p>
-      </div>
-    {/if}
-  </section>
-
   {#if !setup}
     <section class="panel">
-      <h2>Developer tools</h2>
-      <label class="switch">
-        <input type="checkbox" bind:checked={draft.developer} />
+      <h2>Launcher</h2>
+      <label class="option">
+        <input
+          type="checkbox"
+          checked={draft.layout !== "classic"}
+          onchange={(e) => (draft.layout = e.currentTarget.checked ? "compact" : "classic")}
+        />
         <span>
-          Show what contributors use: each game's build, checks, toolchains and decompilation progress. Off, the
-          launcher shows a player's three steps: set up from your disc, play, edit levels.
+          <strong>Compact layout</strong>
+          <small>A game's name and its Play button side by side. Off: stacked and centred.</small>
         </span>
       </label>
+      <label class="option">
+        <input type="checkbox" bind:checked={draft.discordRpc} />
+        <span>
+          <strong>Show in Discord</strong>
+          <small>Your Discord status says when you are in the launcher or playing.</small>
+        </span>
+      </label>
+      <label class="option">
+        <input type="checkbox" bind:checked={draft.developer} />
+        <span>
+          <strong>Developer tools</strong>
+          <small>
+            For contributors: each game's builds, checks and decompilation progress, disc serials, and the Tasks page.
+          </small>
+        </span>
+      </label>
+      {#if draft.developer && draft.discordRpc}
+        <div class="field">
+          <label for="discord-client-id">Discord application ID</label>
+          <input
+            id="discord-client-id"
+            type="text"
+            class="mono"
+            placeholder="Empty: OpenRAC's own"
+            bind:value={draft.discordClientId}
+          />
+          <p class="dim note">
+            To show your own name and art, create an app at
+            <button class="link" onclick={() => void api.openUrl("https://discord.com/developers/applications")}>
+              discord.com/developers/applications
+            </button>.
+          </p>
+        </div>
+      {/if}
     </section>
   {/if}
 
-  <div class="row end">
-    {#if app.info?.configFile}<span class="dim mono grow clip" title="Settings file">{app.info.configFile}</span>{/if}
-    {#if setup}
+  {#if setup}
+    <div class="row end">
       <button class="primary" disabled={saving || !draft.root} onclick={() => void save(true)}>Start</button>
-    {:else}
-      <button disabled={!changed || saving} onclick={() => (draft = saved())}>Undo</button>
-      <button class="primary" disabled={!changed || saving} onclick={() => void save(false)}>Save</button>
-    {/if}
-  </div>
-  {#if !setup && app.info}
-    <p class="dim version">OpenRAC Launcher {app.info.version} · {app.info.platform}</p>
+    </div>
+  {:else}
+    <p class="dim about">
+      OpenRAC Launcher {app.info?.version ?? ""}{#if draft.developer && app.info}
+        · {app.info.platform}{#if app.info.configFile}
+          · <span class="mono">{app.info.configFile}</span>{/if}{/if}
+    </p>
   {/if}
 </div>
+
+{#if !setup && changed}
+  <div class="save-bar" role="status">
+    <span class="grow">You have unsaved changes.</span>
+    <button disabled={saving} onclick={() => (draft = saved())}>Discard</button>
+    <button class="primary" disabled={saving} onclick={() => void save(false)}>Save</button>
+  </div>
+{/if}
 
 <style>
   .page {
     max-width: 820px;
     margin: 0 auto;
-    padding: 28px 28px 60px;
+    padding: 28px 28px 110px;
     display: flex;
     flex-direction: column;
     gap: 18px;
@@ -222,6 +228,11 @@
     margin-bottom: 6px;
   }
 
+  .panel {
+    display: flex;
+    flex-direction: column;
+  }
+
   .panel h2 {
     margin-bottom: 4px;
   }
@@ -230,20 +241,56 @@
     font-size: 13px;
   }
 
-  .switch {
+  /* A checkbox with its name and one line saying what it does. */
+  .option {
     display: flex;
-    gap: 12px;
     align-items: flex-start;
-    font-size: 14px;
-    color: var(--soft);
+    gap: 14px;
+    padding: 12px 0;
     cursor: pointer;
   }
 
-  .switch input {
-    margin-top: 3px;
+  .option + .option {
+    border-top: 1px solid var(--line);
+  }
+
+  .option input {
+    flex: none;
     width: 18px;
     height: 18px;
+    margin: 2px 0 0;
     accent-color: var(--amber);
+    cursor: pointer;
+  }
+
+  .option strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .option small {
+    display: block;
+    margin-top: 2px;
+    font-size: 13px;
+    color: var(--soft);
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 0 2px 32px;
+    border-top: 1px solid var(--line);
+  }
+
+  .field label {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .field input {
+    max-width: 400px;
   }
 
   .link {
@@ -258,71 +305,26 @@
     justify-content: flex-end;
   }
 
-  .version {
+  .about {
     font-size: 12px;
-    text-align: right;
   }
 
-  .toggle-row {
+  /* Stays in view while there is something to save. */
+  .save-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    z-index: 25;
+    width: min(764px, calc(100% - 56px));
     display: flex;
     align-items: center;
-    gap: 14px;
-    cursor: pointer;
-    user-select: none;
-    padding: 6px 0;
-  }
-
-  .toggle-row input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--amber);
-    cursor: pointer;
-  }
-
-  .toggle-row strong {
-    color: var(--text);
+    gap: 10px;
+    padding: 12px 14px 12px 20px;
+    background: var(--panel-hi);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    box-shadow: var(--shadow);
     font-size: 14px;
-    display: block;
-  }
-
-  .toggle-row p {
-    margin: 2px 0 0;
-    font-size: 13px;
-  }
-
-  .rpc-config {
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .field-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text);
-  }
-
-  .text-input {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text);
-    padding: 8px 12px;
-    font-size: 13px;
-    outline: none;
-    width: 100%;
-    max-width: 400px;
-  }
-
-  .text-input:focus {
-    border-color: var(--amber);
-  }
-
-  .hint {
-    font-size: 12px;
-    margin: 2px 0 0;
   }
 </style>

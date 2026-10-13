@@ -6,7 +6,7 @@
 // (openrac_game, generated from port/game/<id>/hostgen.json).
 //
 //   openrac-<id> --data <install>/active/<game>/data [--cards DIR] [--frames N] [--stop-on-missing]
-//                [--level N] [--skip-movies]
+//                [--level N] [--skip-movies] [--mods DIR] [--settings FILE]
 //
 // The data folder is what the extractor made from the player's disc
 // (tools/extractor.py; the launcher's "Set up from your disc"). The program
@@ -46,8 +46,10 @@
 
 #ifdef OPENRAC_FRONTEND
 #include "frontend.h"
+#include "settings.h"
 #include "openrac/sound_engine.h"
 #include "platform/audio.h"
+#include "platform/pump.h"
 #include "renderer/texture.h"
 #include "viewer/moby_pose.h"
 #endif
@@ -59,6 +61,7 @@
 extern "C" {
 const char* openrac_game_disc_image = nullptr;
 const char* openrac_game_card_dir = nullptr;
+const char* openrac_game_mods_dir = nullptr;
 int openrac_game_language = 1;
 int openrac_game_no_card = 0;
 int openrac_game_start_level = -1;
@@ -79,6 +82,8 @@ struct Options {
     bool window = false;
     bool skip_movies = false;  // development probes; not movie-playback validation
     fs::path levels;  // the extracted levels the window draws (level_00, ...)
+    fs::path mods;  // levels edited in Godot and packed (editor/pack.py), read in place of the disc's
+    fs::path settings;  // the player's settings (settings.h); in OpenRAC's data folder unless given
 };
 
 Options g_options;
@@ -95,17 +100,16 @@ std::string program_name() {
 [[noreturn]] void usage(const std::string& why) {
     log::error("{}", why);
     log::error(
-        "usage: {} --data <install>/active/{}/data [--cards DIR] [--frames N] [--stop-on-missing] [--level N] [--skip-movies]",
+        "usage: {} --data <install>/active/{}/data [--cards DIR] [--frames N] [--stop-on-missing] [--level N] [--skip-movies] [--mods DIR] [--settings FILE]",
         program_name(),
         openrac_game.game
     );
     std::exit(64);
 }
 
-// Where the first memory card lives unless --cards says otherwise: the folder
-// the launcher's save manager reads and backs up (launcher/core/src/saves.rs,
-// get_memcard_dir): <data home>/openrac/memcard/<serial>.
-fs::path default_cards() {
+// OpenRAC's folder in the player's data home, as the launcher finds it
+// (launcher/core/src/saves.rs, get_memcard_dir).
+fs::path data_home() {
 #if defined(__APPLE__)
     const char* home = std::getenv("HOME");
     fs::path base = fs::path(home != nullptr ? home : ".") / "Library/Application Support/OpenRAC";
@@ -118,7 +122,18 @@ fs::path default_cards() {
         base = fs::path(home != nullptr ? home : ".") / ".local/share/openrac";
     }
 #endif
-    return base / "memcard" / openrac_game.serial;
+    return base;
+}
+
+// Where the first memory card lives unless --cards says otherwise: the folder
+// the launcher's save manager reads and backs up: <data home>/openrac/memcard/<serial>.
+fs::path default_cards() {
+    return data_home() / "memcard" / openrac_game.serial;
+}
+
+// The player's settings unless --settings says otherwise: <data home>/openrac/settings/<id>.ini.
+fs::path default_settings() {
+    return data_home() / "settings" / (std::string(openrac_game.id) + ".ini");
 }
 
 Options parse(int argc, char** argv) {
@@ -139,6 +154,10 @@ Options parse(int argc, char** argv) {
             openrac_game_no_card = 1;
         } else if (a == "--window") {
             o.window = true;
+        } else if (a == "--mods") {
+            o.mods = value();
+        } else if (a == "--settings") {
+            o.settings = value();
         } else if (a == "--levels") {
             o.levels = value();
         } else if (a == "--frames") {
@@ -169,6 +188,9 @@ Options parse(int argc, char** argv) {
     }
     if (o.cards.empty()) {
         o.cards = default_cards();
+    }
+    if (o.settings.empty()) {
+        o.settings = default_settings();
     }
     return o;
 }
@@ -488,6 +510,7 @@ int openrac_game_play_movie(uint32_t lsn, uint32_t bytes, int channel, int start
     };
     for (std::uint64_t blank = 0;; ++blank) {
         if (output) {
+            output->set_gain(settings::output_gain());
             const std::size_t got = player->read_audio(samples);
             if (got > 0) {
                 output->queue(std::span<const std::int16_t>(samples.data(), got * 2));
@@ -621,6 +644,16 @@ void openrac_game_moby_chain(gaddr moby, gaddr marks) {
 #endif
 }
 
+gaddr openrac_game_text(int id) {
+#ifdef OPENRAC_FRONTEND
+    if (g_window) {
+        return frontend::text(id);
+    }
+#endif
+    (void)id;
+    return 0;
+}
+
 int openrac_game_pad(int port, uint16_t* buttons, uint8_t analog[4]) {
 #ifdef OPENRAC_FRONTEND
     if (g_window && frontend::pad(port, buttons, analog)) {
@@ -716,11 +749,17 @@ int main(int argc, char** argv) {
     static std::string cards_path = g_options.cards.string();
     openrac_game_disc_image = disc_path.c_str();
     openrac_game_card_dir = cards_path.c_str();
+    static std::string mods_path = g_options.mods.string();
+    if (!mods_path.empty()) {
+        openrac_game_mods_dir = mods_path.c_str();
+        log::info("edited levels from {}", mods_path);
+    }
 
 #ifdef OPENRAC_FRONTEND
     if (g_options.window) {
         std::string why;
-        fs::path levels = g_options.levels.empty() ? g_options.data / "port" : g_options.levels;
+        settings::load(g_options.settings);
+        fs::path levels =g_options.levels.empty() ? g_options.data / "port" : g_options.levels;
         if (!frontend::open(openrac_game.id, levels, why)) {
             log::fatalf("no window: {}", why);
         }
@@ -729,6 +768,12 @@ int main(int argc, char** argv) {
         static std::unique_ptr<platform::AudioOutput> sound_output =
             platform::AudioOutput::open(why, [](std::span<std::int16_t> samples) {
                 openrac_sound_render(samples.data(), samples.size() / 2);
+                // The player's volume (settings.h): at 0 the output is silence itself.
+                if (const float gain = settings::output_gain(); gain < 1.0f) {
+                    for (std::int16_t& sample : samples) {
+                        sample = static_cast<std::int16_t>(static_cast<float>(sample) * gain);
+                    }
+                }
             });
         if (!sound_output) {
             log::warn("no sound: {}", why);
@@ -744,7 +789,19 @@ int main(int argc, char** argv) {
 
     // What the console's start-up code did before main: the stack and heap are
     // the runtime's, .bss was zeroed by the loader.
-    if (!openrac_game_run()) {
+    int ran = 0;
+#ifdef OPENRAC_FRONTEND
+    if (g_window) {
+        // Beside the window's event pump, so the game goes on while the system holds the pump (a
+        // window being dragged or sized on Windows: platform/pump.h).
+        ran = platform::run_pumped([](void*) { return openrac_game_run(); }, nullptr);
+    } else {
+        ran = openrac_game_run();
+    }
+#else
+    ran = openrac_game_run();
+#endif
+    if (!ran) {
         log::error(
             "{}'s main is not known yet: port/game/{}/hostgen.json has no \"entry\"",
             openrac_game.title,

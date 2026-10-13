@@ -56,3 +56,26 @@ export const SECTIONS: { kind: ActionKind; title: string; icon: IconName; blurb:
   },
   { kind: "edit", title: "Level editor", icon: "edit", blurb: "Your levels in Godot." },
 ];
+
+/** Ratchet & Clank's levels, by the number the game and the level editor give them. */
+export const RAC1_LEVELS = [
+  "Veldin",
+  "Novalis",
+  "Aridia",
+  "Kerwan",
+  "Eudora",
+  "Rilgar",
+  "Blarg Station",
+  "Umbris",
+  "Batalia",
+  "Gaspar",
+  "Orxon",
+  "Pokitaru",
+  "Hoven",
+  "Gemlik Base",
+  "Oltanis",
+  "Quartu",
+  "Kalebo III",
+  "Drek's Fleet",
+  "Veldin (the return)",
+];

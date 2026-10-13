@@ -236,6 +236,7 @@ class Todo(unittest.TestCase):
         names = [r[0] for r in rows]
         self.assertEqual(len(names), len(set(names)))
         markers = {n for fns in progress.source_functions().values() for n, has_c in fns if not has_c}
+        markers -= progress.handwritten()
         self.assertEqual(set(names), markers)
         sizes = {n: s for n, _, s in levels.read_boot_functions()}
         for name, size, places, kind, path in rows:
