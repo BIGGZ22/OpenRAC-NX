@@ -1483,13 +1483,18 @@ the Cross press the run waits on the menu at level -1 and shows nothing).
   ulp off), `func_L04_0029FEC8` (written from the instructions, 1,476 bytes),
   and the near miss `func_L00_00286068` accepted. All three are only believed
   correct: levels 4 and 12 have not been played far enough to exercise them.
-- State after the fixes (trap on, 3,000 frames, direct start): levels 0 and 17
-  exit 0. Next blocker: level 1 code address 0x276280; 2 `func_L02_002D5250`;
-  3 `func_L03_002ED138`; 4 `func_L01_002E1FE0` (3,672 bytes, no near miss);
-  5 code address 0x28b4c8; 6 0x26ffa8; 7 `func_L07_0030C3E0`; 8
-  `func_L08_002D55E0`; 9 `func_L09_002EEF80`; 10 `func_L10_00299D18`; 11
-  `func_L11_00317598`; 12 code address 0x279e30 (and `func_L12_002E8640`,
-  without C, called 65,569 times with `--keep-going`); 13 `func_L13_002C3840`;
-  14 and 15 `func_L14_002B2A28`; 16 `func_L00_002CABC0`; 18 code address
-  0x263718. "Code address" is a call to a place no function of the port has.
+- Backfill since (functional C by workers, each checked with `tools/equiv.py`,
+  none yet exercised by a level run): func_L07_0030C3E0, func_L10_00299D18,
+  func_L13_002C3840, func_L04_002CB800 (near misses repaired: a wrong global,
+  swapped arguments, a wrong state byte), func_L01_002E1FE0, func_L12_002E8640,
+  func_L12_002EB2E8, func_L01_002EF078, func_L00_002A5158, func_L00_0025EFC0,
+  func_L03_002ED138, func_L11_00317598, and the near misses func_L00_00286068,
+  func_L18_002EAB58. Also `fix(rac1-pal): register the two split variants of
+  func_L00_0025D390` (code-address stops of levels 1, 5, 6, 12, 18).
+- Next blocker of each level (trap on, 3,000 frames, direct start; 0 and 17
+  exit 0): 1 and 11 func_L01_002F0040; 2 func_L02_002D5250; 3 func_L03_002D44A0;
+  4 func_L01_002F6540; 5 func_L05_002D28D0; 6 func_L06_002E9AA8; 7
+  func_L07_0030E370; 8 func_L08_002D55E0; 9 func_L09_002EEF80; 10
+  func_L10_002BFBB8; 12 func_L01_0026EFB8; 13 func_L07_0031C2B0; 14 and 15
+  func_L14_002B2A28; 16 func_L00_002CABC0; 18 func_L18_002F9D48.
 - Open and next: those blockers, in that order; level 17's hero freeze.
