@@ -390,6 +390,12 @@ The same idea sorted by size with `tools/todo.py`: Haiku up to 400 bytes, Sonnet
 from 401 to 1,000, Opus only above that and on near misses. Each worker has its
 own worktree and branch; there is no queue or claim file.
 
+**When to stop.** [BACKFILL.md](BACKFILL.md) says which functions C cannot
+match (pieces of a neighbour, handwritten assembly, what the build cannot
+express), when a matchable one has cost enough, and how to write the
+functional C the port takes in its place. Read it before a wave, and give
+its signs to workers.
+
 ## 6. Porting between versions and games
 
 ### US and PAL (rac1/ntsc and rac1/pal)
