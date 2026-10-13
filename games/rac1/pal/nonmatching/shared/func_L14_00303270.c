@@ -6,7 +6,7 @@
  *   Chain of vectors advanced per tick (func_001F9BD8 loops), copies 4 indexed quads, then interpolates a value fr
  *   p4.c is 436 vs 444 bytes: remaining diffs are two small moves (retail `daddu $v0,$v1,$zero` in the j loop arou
  */
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_03270 __attribute__((mode(TI)));
 extern void func_001F9BD8(void *, void *, void *);
 extern float func_001FA888(int);
 extern int func_001FA8A8(int, int, float);
@@ -25,7 +25,7 @@ void func_L14_00303270(char *moby) {
         int k;
         char *p;
         char *q;
-        u128 *dst;
+        u128_03270 *dst;
         unsigned char *idx = (unsigned char *)(d + 0x18);
         *(short *)(d + 0x12) = *(short *)(d + 0x12) - 1;
         p = d + 0x260;
@@ -47,9 +47,9 @@ void func_L14_00303270(char *moby) {
                 b += 0x40;
             }
         } while ((float)j < 4.0f);
-        dst = (u128 *)(d + 0x420);
+        dst = (u128_03270 *)(d + 0x420);
         for (k = 0; k < 4; k++) {
-            *dst = ((u128 *)(d + 0x20))[idx[k]];
+            *dst = ((u128_03270 *)(d + 0x20))[idx[k]];
             dst++;
         }
     }

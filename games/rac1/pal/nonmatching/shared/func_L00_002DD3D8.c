@@ -34,8 +34,8 @@ extern void func_L00_002D4CE8(void *, void *, int, int);
 extern int func_L00_001F2BE8_2FB898(float, void *, int, void *, void *) __asm__("func_L00_001F2BE8");
 extern void func_L00_0025BA50(void *, void *, void *, int, int, int, int, int, float, float, float);
 
-typedef int u128 __attribute__((mode(TI)));
-typedef struct { u128 v[5]; } B50;
+typedef int u128_DD3D8 __attribute__((mode(TI)));
+typedef struct { u128_DD3D8 v[5]; } B50;
 typedef struct { int v[6]; } I6;
 
 /* Builds the spray of effect sprites around self: a set of sampled points along the moby's path, each sprite placed by a vector step and drawn through the level tables. */
@@ -80,11 +80,11 @@ void func_L00_002DD3D8(char *self, char *q) {
     if (n > 0) {
         f21 = -1.0f;
         do {
-            *(u128 *)g = 0;
+            *(u128_DD3D8 *)g = 0;
             g[0] = func_002140F8(f21, f20);
             i++;
             g[1] = func_002140F8(f21, f20);
-            *(u128 *)e = *(u128 *)g;
+            *(u128_DD3D8 *)e = *(u128_DD3D8 *)g;
             dt = func_001F9C78(e, c);
             func_L00_001FF4B0(d, c, dt);
             func_001F9BF0(e, e, d);
@@ -102,11 +102,11 @@ void func_L00_002DD3D8(char *self, char *q) {
     if (cnt > 0) {
         f21 = -1.0f;
         do {
-            *(u128 *)g = 0;
+            *(u128_DD3D8 *)g = 0;
             g[0] = func_002140F8(f21, f20);
             i++;
             g[1] = func_002140F8(f21, f20);
-            *(u128 *)e = *(u128 *)g;
+            *(u128_DD3D8 *)e = *(u128_DD3D8 *)g;
             dt = func_001F9C78(e, c);
             func_L00_001FF4B0(d, c, dt);
             func_001F9BF0(e, e, d);
@@ -122,11 +122,11 @@ void func_L00_002DD3D8(char *self, char *q) {
     f20 = 1.0f;
     f21 = -1.0f;
     f24 = f23 + f23;
-    *(u128 *)g = 0;
+    *(u128_DD3D8 *)g = 0;
     g[0] = func_002140F8(f21, f20);
     g[1] = func_002140F8(f21, f20);
     g[2] = func_002140F8(f21, f20);
-    *(u128 *)e = *(u128 *)g;
+    *(u128_DD3D8 *)e = *(u128_DD3D8 *)g;
     a[2] += f23 * 0.5f;
     func_L00_001FF4B0(e, e, (f23 / 5.0f) * D_0015EE6C);
     func_L00_001FF4B0(a, a, f24 * D_0015EE6C);
@@ -196,7 +196,7 @@ void func_L00_002DD3D8(char *self, char *q) {
     func_L00_002D4CE8(&blk, pos, 0, 0);
     if (flag[9]) {
         int n2 = func_L00_001F2BE8_2FB898(3.0f, pos, 0x10, self, 0);
-        *(u128 *)e = *(u128 *)(self + 0x10);
+        *(u128_DD3D8 *)e = *(u128_DD3D8 *)(self + 0x10);
         func_L00_0025BA50(self, e, D_L00_00178000, n2, 0, 0x830000, 2, 1, 2.0f, 1.0f, 1.0f);
     }
 }

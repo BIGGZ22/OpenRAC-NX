@@ -24,7 +24,7 @@ extern char D_L00_00173F60_v[] __asm__("D_L00_00173F60") MACRO_ADDR;
 extern float D_L00_001617AC SDATA(D_L00_001617AC);
 extern float D_L00_001617A8 SDATA(D_L00_001617A8);
 extern char D_0013E633[];
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_BD6B8 __attribute__((mode(TI)));
 
 /* Scans the moby list for the target nearest a1; sets a2/a3 for the hit and returns that moby, else 0. */
 int func_L00_002BD6B8(char *a0, float *a1, float *a2, float *a3) {
@@ -45,13 +45,13 @@ int func_L00_002BD6B8(char *a0, float *a1, float *a2, float *a3) {
     f26 = D_L00_001617AC;
     a0s[0] = (int)a0;
     g = D_0013E633 + 0xE1D;
-    *(u128 *)vec = *(u128 *)a1;
+    *(u128_BD6B8 *)vec = *(u128_BD6B8 *)a1;
     obj2 = *(char **)(g + 0x2080);
     qcopy(v10, obj2 + 0x10);
     v10[2] = vec[2];
     res[0] = 0;
     if (func_L00_001EFFF0_C0358(v10, vec, 6, obj2, 0)) {
-        *(u128 *)vec = *(u128 *)D_L00_00173F60_v;
+        *(u128_BD6B8 *)vec = *(u128_BD6B8 *)D_L00_00173F60_v;
         return 0;
     }
     for (k = D_L00_001ABD80; (obj = *k) != 0; k++) {

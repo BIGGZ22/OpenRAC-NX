@@ -1789,7 +1789,6 @@ extern float func_001F9CB8(void *);
 extern void func_L00_0025E590(void *, void *);
 extern short D_L05_00161C34;
 extern short D_L05_00161BB0;
-extern const float D_0015EE6C MACRO_ADDR;
 extern short D_L05_00161BB4;
 typedef struct Hero_065D0 Hero_065D0;
 

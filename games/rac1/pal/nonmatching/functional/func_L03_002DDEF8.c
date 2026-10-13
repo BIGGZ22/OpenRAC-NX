@@ -1,6 +1,4 @@
 /* functional: high. Exact logic of retail func_L03_002DDEF8 in l03_kerwan. */
-#include "types.h"
-
 extern int func_L03_002DDF10(unsigned char *moby, char *data);
 
 int func_L03_002DDEF8(unsigned char *moby) {

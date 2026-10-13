@@ -1,5 +1,5 @@
 /* functional: high. Copies ripple heights and halos into the scratchpad: 16 x 2 pairs of 16-byte blocks from a1 (stride 0x40) into a0+0x70 (stride 0x60), 4 x 3 blocks from a1+0x400/0x480/0x500 into a0+0x10/0x670/0x6D0, 16 x 3 words from a1+0x440/0x4C0/0x540 into a0+0x6C/0xB0/0xB4 (stride 0x60), then six words from a1+0x580 to a0+0xC/0x50/0x66C/0x6B0/0x6B4/0x710. Same reads, writes and order as the assembly; no return value. */
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_62BC0 __attribute__((mode(TI)));
 
 void func_L01_00262BC0(char *a0, char *a1)
 {
@@ -11,10 +11,10 @@ void func_L01_00262BC0(char *a0, char *a1)
             char *dd = d;
             int inner = 2;
             do {
-                u128 p = *(u128 *)s;
-                u128 q = *(u128 *)(s + 0x10);
-                *(u128 *)dd = p;
-                *(u128 *)(dd + 0x10) = q;
+                u128_62BC0 p = *(u128_62BC0 *)s;
+                u128_62BC0 q = *(u128_62BC0 *)(s + 0x10);
+                *(u128_62BC0 *)dd = p;
+                *(u128_62BC0 *)(dd + 0x10) = q;
                 s += 0x20;
                 dd += 0x20;
             } while (--inner != 0);
@@ -31,12 +31,12 @@ void func_L01_00262BC0(char *a0, char *a1)
         char *d3 = a0 + 0x6D0;
         int n = 4;
         do {
-            u128 x = *(u128 *)s1;
-            u128 y = *(u128 *)s2;
-            u128 z = *(u128 *)s3;
-            *(u128 *)d1 = x;
-            *(u128 *)d2 = y;
-            *(u128 *)d3 = z;
+            u128_62BC0 x = *(u128_62BC0 *)s1;
+            u128_62BC0 y = *(u128_62BC0 *)s2;
+            u128_62BC0 z = *(u128_62BC0 *)s3;
+            *(u128_62BC0 *)d1 = x;
+            *(u128_62BC0 *)d2 = y;
+            *(u128_62BC0 *)d3 = z;
             s1 += 0x10;
             s2 += 0x10;
             s3 += 0x10;
