@@ -565,6 +565,34 @@ class Preparation(unittest.TestCase):
         self.assertEqual(out[2], "int __attribute__((mode(TI))) whole;")
         self.assertEqual(out[3], "print __attribute__((mode(TI))) *p;")
 
+    def test_candidate_replaces_a_stub_whose_path_is_several_strings(self):
+        # A long path written as adjacent strings over three lines: the stub is found, and the
+        # lines it took stay, so nothing below it moves.
+        src = ('INCLUDE_ASM("config/asm/a/"\n'
+               '            "FUN_00100000.s",\n'
+               '            FUN_00100000);\n'
+               'int after;\n')
+        used: set[str] = set()
+        out = prep.use_candidates(src, {"FUN_00100000": "int FUN_00100000(void) { return 1; }\n"}, used)
+        self.assertEqual(used, {"FUN_00100000"})
+        self.assertEqual(out.split("\n")[3], "int after;")
+        self.assertIn("int FUN_00100000(void) { return 1; }", out)
+
+    def test_draft_is_read_where_the_stub_stands(self):
+        stub = ('#ifndef NON_MATCHING\n'
+                'INCLUDE_ASM("a.s", FUN_00100000);\n'
+                '#else\n'
+                'int FUN_00100000(void) { return 1; }\n'
+                '#endif\n')
+        out = prep.use_draft(stub, "NON_MATCHING")
+        self.assertTrue(out.startswith("#if 0"))
+        self.assertEqual(out.count("\n"), stub.count("\n"))
+        # A candidate took the stub's place: the draft is not read as well.
+        taken = stub.replace('INCLUDE_ASM("a.s", FUN_00100000);', "")
+        self.assertEqual(prep.use_draft(taken, "NON_MATCHING"), taken)
+        # Another guard is left alone.
+        self.assertEqual(prep.use_draft(stub, "OTHER"), stub)
+
 
 if __name__ == "__main__":
     unittest.main()

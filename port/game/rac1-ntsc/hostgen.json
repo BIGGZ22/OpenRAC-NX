@@ -10,7 +10,17 @@
     "src"
   ],
   "skip": [
-    "src/libgcc"
+    "src/libgcc",
+    "src/sdk/library/__divdi3.c",
+    "src/sdk/library/__muldi3.c",
+    "src/sdk/library/moddi3.c",
+    "src/sdk/library/udivdi3.c",
+    "src/sdk/library/umoddi3.c",
+    "src/sdk/library/malloc_extend_top.c",
+    "src/overlays/l06/gameplay/entities/002b4770.c",
+    "src/overlays/l13/gameplay/vendor/003058a8.c",
+    "src/overlays/l16/gameplay/entities/002a3f38.c",
+    "src/overlays/shared/gameplay/vendor/002e9010.c"
   ],
   "includes": [
     "include",
@@ -26,6 +36,7 @@
   "roots": [
     "FUN_0012d9d8",
     "FUN_001e9658",
+    "FUN_001eb798",
     "FUN_L00_00245c28"
   ],
   "names": {
@@ -37,5 +48,101 @@
       "^(?:D|func)_(?:L(?P<overlay>\\d\\d)_)?(?P<addr>[0-9A-Fa-f]{6,8})(?:_\\w*)?$",
       "^DAT_(?:L(?P<overlay>\\d\\d)_)?(?P<addr>[0-9A-Fa-f]{8})$"
     ]
-  }
+  },
+  "relocate": [
+    1437440,
+    2424832
+  ],
+  "returns_64": [
+    "FUN_001f44b8"
+  ],
+  "level_hooks": [
+    "func_001E9400",
+    "func_001E9408",
+    "func_001E9410",
+    "func_001E9418",
+    "func_001E9420",
+    "func_001E9428",
+    "func_001E9430",
+    "func_001E9438",
+    "func_001E9440"
+  ],
+  "host_functions": [
+    "FUN_001f7580",
+    "FUN_001f75f0",
+    "func_0020B418",
+    "openrac_sqrt",
+    "openrac_rsqrt",
+    "openrac_game_trap",
+    "FUN_002334d8",
+    "FUN_001f9dc8",
+    "FUN_001f9de0",
+    "FUN_0023a3b8",
+    "func_00233E00",
+    "FUN_001f7d30",
+    "FUN_001f89a4",
+    "FUN_001f8ff0",
+    "FUN_00203b08",
+    "FUN_00211408",
+    "FUN_002116b8",
+    "FUN_00211728",
+    "FUN_00211808",
+    "FUN_00217c18",
+    "FUN_00227740",
+    "FUN_00227a08",
+    "FUN_00227d80",
+    "FUN_00227ed0",
+    "FUN_00228520",
+    "FUN_00228598",
+    "FUN_00228be8",
+    "FUN_0022a330",
+    "FUN_0022a5e0",
+    "FUN_0022b6e8",
+    "FUN_0022b928",
+    "FUN_0022bba0",
+    "FUN_00233fb0",
+    "FUN_00234bd8",
+    "FUN_00234d48",
+    "FUN_00234f98",
+    "FUN_00235be8",
+    "FUN_002370c0",
+    "FUN_00237370",
+    "FUN_0020cef8",
+    "FUN_00228a30",
+    "FUN_00233308",
+    "FUN_00235780",
+    "printf",
+    "FUN_001f7a98",
+    "func_001F7C10",
+    "func_001F7CD0",
+    "FUN_001f82e4",
+    "FUN_001f8364",
+    "FUN_001f83a4",
+    "FUN_0022bf94",
+    "FUN_0022c0e0",
+    "FUN_0022c208",
+    "FUN_0022c4c8",
+    "func_L00_001FD228",
+    "func_L00_001FE6D8",
+    "func_L00_0028C680",
+    "func_L00_00295100",
+    "FUN_L00_00298840",
+    "FUN_002109b8",
+    "sprintf",
+    "FUN_001efa68",
+    "func_L00_001EFC70",
+    "FUN_L00_001f0d60",
+    "FUN_L00_001f19a0",
+    "FUN_L00_001f2868",
+    "FUN_L00_001f3170",
+    "FUN_00125180",
+    "FUN_0020ede8",
+    "func_L00_00251CE8"
+  ],
+  "hand": "hand/hand.tsv",
+  "drafts": {
+    "guard": "NON_MATCHING",
+    "units": "drafts.tsv"
+  },
+  "split_places": "split_places.tsv"
 }

@@ -131,6 +131,17 @@ def read_hand(config_dir: Path, cfg: dict) -> dict[str, str]:
     return read_table_of_c(config_dir / table)
 
 
+def read_drafts(config_dir: Path, cfg: dict) -> tuple[str, set[str]] | None:
+    """The files whose own pending C is read in place of their assembly stub (hostgen.json
+    "drafts": {"guard": the macro the decompilation keeps it under, "units": a list beside the
+    game's configuration, one file a line from the decompilation's top, # for comments})."""
+    drafts = cfg.get("drafts")
+    if not drafts or not (config_dir / drafts["units"]).is_file():
+        return None
+    units = {line.split("#")[0].strip() for line in (config_dir / drafts["units"]).read_text().splitlines()}
+    return drafts["guard"], units - {""}
+
+
 def read_candidates(source: Path, cfg: dict) -> dict[str, str]:
     """Candidate C for functions the decompilation still has as assembly
     (hostgen.json "candidates": a table in the decompilation, one
@@ -273,6 +284,11 @@ def write_program_files(program: Program, out: Path, game: str) -> dict:
     tables: dict[int, list[tuple[int, str]]] = {}
     for sym, f in sorted(program.functions.items()):
         if prototype(f, program.typedefs) is None:
+            continue
+        # Two spellings of one address (FUN_0020c828, func_0020C828): the one with C answers a
+        # call through the address too, not whichever sorts first.
+        own = program.canonical(sym)
+        if own != sym and prototype(program.functions[own], program.typedefs) is not None:
             continue
         for overlay, addr in program.code_places(sym):
             tables.setdefault(overlay, []).append((addr, sym))
@@ -481,9 +497,10 @@ def main(argv: list[str] | None = None) -> int:
     # candidate for the same function stands aside.
     candidates = {**read_candidates(source, cfg), **read_hand(args.game.parent, cfg)}
     used: set[str] = set()
+    drafts = read_drafts(args.game.parent, cfg)
     for d in sorted(set(cfg["sources"] + cfg["includes"])):
         if (source / d).is_dir():
-            prep.copy_tree(source / d, root / d, candidates=candidates, used=used)
+            prep.copy_tree(source / d, root / d, candidates=candidates, used=used, drafts=drafts, prefix=d)
     units = units_of(root, cfg)
     if args.only:
         units = [u for u in units if u in args.only]
