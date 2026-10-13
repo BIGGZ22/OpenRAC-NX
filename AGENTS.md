@@ -46,6 +46,7 @@ to play a game. Start with [docs/LAYOUT.md](docs/LAYOUT.md).
 | The native port | [port/README.md](port/README.md), [docs/port/README.md](docs/port/README.md), [DESIGN.md](docs/port/DESIGN.md), [ROADMAP.md](docs/port/ROADMAP.md), [hostgen](port/tools/hostgen/README.md) |
 | The launcher | [launcher/README.md](launcher/README.md), [docs/INTEGRATION.md](launcher/docs/INTEGRATION.md), [docs/ARCHITECTURE.md](launcher/docs/ARCHITECTURE.md), [docs/STYLE.md](launcher/docs/STYLE.md) |
 | Cross-game knowledge | [docs/engine](docs/engine/README.md), [docs/toolchains](docs/toolchains/README.md), [docs/workflow](docs/workflow/README.md) |
+| Matching any game: when to stop, and what to write instead | [docs/workflow/BACKFILL.md](docs/workflow/BACKFILL.md) |
 
 ## Rules
 
