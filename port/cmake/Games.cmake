@@ -145,7 +145,9 @@ function(openrac_add_game config)
   # The window: the renderer draws what the game holds in memory (game/common/frontend.h).
   if(TARGET openrac_viewer_lib AND TARGET openrac_platform)
     target_sources(openrac-${id} PRIVATE "${OPENRAC_GAME_DIR}/common/frontend.cpp"
-                                         "${OPENRAC_GAME_DIR}/common/debug_menu.cpp")
+                                         "${OPENRAC_GAME_DIR}/common/debug_menu.cpp"
+                                         "${OPENRAC_GAME_DIR}/common/options_menu.cpp"
+                                         "${OPENRAC_GAME_DIR}/common/settings.cpp")
     target_link_libraries(openrac-${id} PRIVATE openrac_viewer_lib openrac_platform)
     target_compile_definitions(openrac-${id} PRIVATE OPENRAC_FRONTEND=1)
     if(TARGET openrac_media)

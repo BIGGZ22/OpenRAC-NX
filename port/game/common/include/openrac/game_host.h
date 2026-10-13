@@ -210,6 +210,10 @@ extern int openrac_game_start_level;
 
 int openrac_game_pad(int port, uint16_t* buttons, uint8_t analog[4]);
 
+/* The game's text lookup, asked for a text id: the game address of a string of the port's own (the
+ * rows it adds to the game's options), or 0 when the id is the game's. */
+gaddr openrac_game_text(int id);
+
 /* ---- Inside the replacements ---- */
 
 /* Interrupt handlers the game installed (AddIntcHandler, sceGsSyncVCallback,

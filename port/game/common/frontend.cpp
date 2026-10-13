@@ -3,6 +3,8 @@
 
 #include "frontend.h"
 #include "debug_menu.h"
+#include "options_menu.h"
+#include "settings.h"
 
 #include <SDL3/SDL.h>
 
@@ -53,6 +55,10 @@ struct Kept {
     std::vector<std::uint32_t> addresses;  // each live moby's address, for its last matrix
     std::unordered_map<std::uint32_t, renderer::Mat4> prev_matrices;
     std::vector<viewer::LevelScene::JointColumns> palette;
+    // The last tick's poses, by moby: where its joints start in prev_palette and how many.
+    std::vector<viewer::LevelScene::JointColumns> prev_palette;
+    std::unordered_map<std::uint32_t, std::pair<int, int>> prev_poses;
+    std::vector<int> joints;  // each live moby's joints in `palette` (0 without a pose)
     std::vector<std::uint8_t> packets;  // the 2D path
     std::size_t before_world = 0;
     std::vector<renderer::EffectVertex> strip_vertices;
@@ -107,6 +113,10 @@ struct State {
     std::uint64_t last_world_tick = 0;
     bool last_tick_menu = false;
     bool hold_last_world = false;
+    // What the window is in now of the player's settings (apply_settings).
+    bool vsync = true;
+    bool fullscreen = false;
+    settings::Aspect aspect = settings::Aspect::Standard;
     Kept kept;
 };
 
@@ -389,26 +399,48 @@ std::vector<std::uint8_t> direct_packets(std::span<const std::uint8_t> ram, std:
 // The game's frame as the TV showed it: 4:3 (the PS2's 512x448 PAL / 512x416 NTSC buffer), the
 // largest such box in the window, centred; the rest of the window is black. As ReRAC's game frame
 // (crates/rc-engine/src/display.rs; ISC License, Copyright (c) 2026 ReRAC contributors): the frame
-// keeps the game's framing whatever the window's shape.
+// keeps the game's framing whatever the window's shape. `aspect`: a wider picture (the player's
+// setting, settings.h), which shows more of the world to the sides.
 struct Box {
     int x, y, width, height;
 };
 
-Box frame_box(int window_width, int window_height) {
+constexpr float kTvAspect = 4.0f / 3.0f;
+
+Box frame_box(int window_width, int window_height, float aspect = kTvAspect) {
     int width = window_width;
-    int height = width * 3 / 4;
+    int height = aspect == kTvAspect ? width * 3 / 4 : static_cast<int>(std::lround(static_cast<float>(width) / aspect));
     if (height > window_height) {
         height = window_height;
-        width = height * 4 / 3;
+        width = aspect == kTvAspect
+                    ? height * 4 / 3
+                    : std::min(window_width, static_cast<int>(std::lround(static_cast<float>(height) * aspect)));
     }
     return {(window_width - width) / 2, (window_height - height) / 2, width, height};
 }
 
+// The picture's shape now: the player's setting, for the window as it is.
+float picture_aspect(int window_width, int window_height) {
+    return settings::aspect_ratio(settings::get().aspect, window_width, window_height);
+}
+
+// The development switches that keep one frame a tick whatever the settings say.
+bool one_frame_a_tick() {
+    static const bool on = std::getenv("OPENRAC_UNCAPPED") != nullptr || std::getenv("OPENRAC_NO_BLEND") != nullptr;
+    return on;
+}
+
+// A swap waits for a refresh only when the frames are drawn at the display's rate.
+bool wants_vsync() {
+    return !one_frame_a_tick() && settings::get().frame_rate == settings::FrameRate::Display;
+}
+
 // Draws `framebuffer` (width x height) into the window's box, black around it; `flip`: its first
 // row is the top (an uploaded picture) rather than the bottom (a rendered frame).
-void present(unsigned framebuffer, int width, int height, int window_width, int window_height, bool flip) {
+void present(unsigned framebuffer, int width, int height, int window_width, int window_height, bool flip,
+             float aspect = kTvAspect) {
     using namespace gl;
-    const Box b = frame_box(window_width, window_height);
+    const Box b = frame_box(window_width, window_height, aspect);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glDisable(GL_SCISSOR_TEST);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -802,13 +834,25 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
     config.height = 960;
     // The game ticks at its own rate (main.cpp: 50 Hz for PAL) and the window draws at the
     // display's, the frames between ticks moving the scene on (between), each shown at a refresh.
-    // With one frame a tick (OPENRAC_UNCAPPED, OPENRAC_NO_BLEND) nothing waits for the display:
-    // 50 frames a second shown at 60 or 120 Hz stagger.
-    config.vsync = std::getenv("OPENRAC_UNCAPPED") == nullptr && std::getenv("OPENRAC_NO_BLEND") == nullptr;
+    // With one frame a tick (the "Original" frame rate; OPENRAC_UNCAPPED, OPENRAC_NO_BLEND) or a
+    // frame rate of the player's own, nothing waits for the display: 50 frames a second shown at
+    // 60 or 120 Hz stagger.
+    config.vsync = wants_vsync();
+    const settings::Settings& chosen = settings::get();
+    if (chosen.aspect != settings::Aspect::Standard && chosen.aspect != settings::Aspect::Window) {
+        // A window of the picture's shape.
+        config.width = static_cast<int>(std::lround(static_cast<float>(config.height) * picture_aspect(0, 0)));
+    }
+    if (chosen.fullscreen) {
+        config.mode = platform::DisplayMode::Borderless;
+    }
     g->window = platform::Window::open(config, error);
     if (!g->window) {
         return false;
     }
+    g->vsync = config.vsync;
+    g->fullscreen = chosen.fullscreen;
+    g->aspect = chosen.aspect;
     std::string missing;
     if (!gl::load(platform::Window::gl_loader(), missing)) {
         error = "OpenGL functions missing: " + missing;
@@ -1049,6 +1093,21 @@ void swapped(std::chrono::steady_clock::time_point started) {
         const SDL_DisplayMode* mode = SDL_GetCurrentDisplayMode(SDL_GetDisplayForWindow(g->window->sdl()));
         pacing.interval = mode != nullptr && mode->refresh_rate > 20.0f ? 1.0 / mode->refresh_rate : 0.0;
     }
+    if (!g->vsync) {
+        // No refresh is waited for. One frame a tick: the tick paces it (main.cpp). A frame rate
+        // of the player's own: each frame is due that long after the last one was due, so a frame
+        // held up by the game's tick is made up for by the next ones; one more than a frame late
+        // starts the count again. Unlimited: the next frame starts now.
+        pacing.last_swap = {};
+        const int cap = interpolating() ? settings::frame_cap(settings::get().frame_rate) : 0;
+        if (cap > 0) {
+            static steady_clock::time_point due{};
+            const auto step = duration_cast<steady_clock::duration>(duration<double>(1.0 / cap));
+            due = due.time_since_epoch().count() == 0 || after > due + 2 * step ? after : due + step;
+            std::this_thread::sleep_until(due);
+        }
+        return;
+    }
     // A swap that did not wait for a refresh gives no phase; the frames are then paced at the
     // display's rate here.
     if (duration<double>(after - before).count() < 0.0005) {
@@ -1063,10 +1122,10 @@ void swapped(std::chrono::steady_clock::time_point started) {
 
 // A moby's matrix part way from the last tick's to this one's, or this one's when it moved too far
 // or turned too much in a tick to be the same thing moving (a moby slot used again, a teleport).
-renderer::Mat4 blend_matrix(const renderer::Mat4& from, const renderer::Mat4& to, float t) {
+bool same_moby(const renderer::Mat4& from, const renderer::Mat4& to) {
     const float dx = to[12] - from[12], dy = to[13] - from[13], dz = to[14] - from[14];
     if (dx * dx + dy * dy + dz * dz > 16.0f) {
-        return to;
+        return false;
     }
     float dot = 0.0f, la = 0.0f, lb = 0.0f;
     for (int i = 0; i < 3; ++i) {
@@ -1074,7 +1133,11 @@ renderer::Mat4 blend_matrix(const renderer::Mat4& from, const renderer::Mat4& to
         la += from[i] * from[i];
         lb += to[i] * to[i];
     }
-    if (la <= 0.0f || lb <= 0.0f || dot < 0.7f * std::sqrt(la * lb)) {
+    return la > 0.0f && lb > 0.0f && dot >= 0.7f * std::sqrt(la * lb);
+}
+
+renderer::Mat4 blend_matrix(const renderer::Mat4& from, const renderer::Mat4& to, float t) {
+    if (!same_moby(from, to)) {
         return to;
     }
     renderer::Mat4 m = to;
@@ -1147,16 +1210,45 @@ void draw_kept(bool first) {
                 }
             }
         }
-        g->scene.set_palette(k.palette);
+        if (alpha < 1.0f && !k.prev_poses.empty()) {
+            // The poses too: each joint part way from the last tick's to this one's, for a moby
+            // that is the same thing moving (its matrix was blended) with the same skeleton.
+            std::vector<viewer::LevelScene::JointColumns> palette = k.palette;
+            for (std::size_t i = 0; i < live.size() && i < k.addresses.size() && i < k.joints.size(); ++i) {
+                const auto pose = k.prev_poses.find(k.addresses[i]);
+                const int first = live[i].palette;
+                const int count = k.joints[i];
+                const auto last = k.prev_matrices.find(k.addresses[i]);
+                if (pose == k.prev_poses.end() || first < 0 || count <= 0 || pose->second.second != count
+                    || last == k.prev_matrices.end() || !same_moby(last->second, k.live[i].matrix)
+                    || static_cast<std::size_t>(first + count) > palette.size()) {
+                    continue;
+                }
+                const viewer::LevelScene::JointColumns* from = k.prev_palette.data() + pose->second.first;
+                for (int j = 0; j < count; ++j) {
+                    viewer::LevelScene::JointColumns& to = palette[static_cast<std::size_t>(first + j)];
+                    for (std::size_t c = 0; c < to.size(); ++c) {
+                        to[c] = from[j][c] + (to[c] - from[j][c]) * alpha;
+                    }
+                }
+            }
+            g->scene.set_palette(palette);
+        } else {
+            g->scene.set_palette(k.palette);
+        }
         g->scene.set_instances(viewer::Layer::Mobys, live);
     }
 
     int window_width = 0;
     int window_height = 0;
     g->window->drawable_size(window_width, window_height);
-    const Box box = frame_box(window_width, window_height);
+    const float aspect = picture_aspect(window_width, window_height);
+    const Box box = frame_box(window_width, window_height, aspect);
     const int width = box.width;
     const int height = box.height;
+    // How much of the frame's width the game's 4:3 picture is: all of it, or its middle.
+    const float picture_scale = aspect > kTvAspect && width > 0 && height > 0
+        ? std::min(1.0f, kTvAspect * static_cast<float>(height) / static_cast<float>(width)) : 1.0f;
     std::string error;
     if (width > 0 && height > 0 && (g->frame.width() != width || g->frame.height() != height)) {
         g->frame.create(width, height, error);
@@ -1177,9 +1269,12 @@ void draw_kept(bool first) {
     }
     input.camera.view = state.view();
     // The game's frustum: its horizontal and vertical tangents as the game set them (the frame is
-    // the TV's 4:3, which they were made for), not the window's shape.
+    // the TV's 4:3, which they were made for), not the window's shape. A wider picture keeps the
+    // vertical one and opens the horizontal one by as much as the picture is wider: the game's
+    // view is its middle.
     input.camera.projection = state.projection(
-        state.tan_half_fov_y > 0.0f ? state.tan_half_fov_x / state.tan_half_fov_y : 4.0f / 3.0f, 0.05f, 2000.0f
+        (state.tan_half_fov_y > 0.0f ? state.tan_half_fov_x / state.tan_half_fov_y : 4.0f / 3.0f) / picture_scale,
+        0.05f, 2000.0f
     );
     input.camera.position = state.camera_position;
     input.frame = k.frame;
@@ -1224,7 +1319,7 @@ void draw_kept(bool first) {
         };
     }
     if (g->renderer) {
-        g->renderer->render(input, {g->frame.id(), width, height});
+        g->renderer->render(input, {g->frame.id(), width, height, picture_scale});
     }
     debug_menu::draw(g->frame.id(), width, height);
     // OPENRAC_SHOT=FRAME:FILE.png writes that frame (for checking without looking at the screen);
@@ -1247,9 +1342,55 @@ void draw_kept(bool first) {
             log::info("frame {} written to {}", input.frame, path);
         }
     }
-    present(g->frame.id(), width, height, window_width, window_height, false);
+    present(g->frame.id(), width, height, window_width, window_height, false, aspect);
     swapped(started);
 }
+
+namespace {
+
+// The window as the player's settings want it: fullscreen (a window covering the desktop) or not,
+// each swap waiting for a refresh or not. Called when they may have changed.
+void apply_settings() {
+    const settings::Settings& s = settings::get();
+    if (s.fullscreen != g->fullscreen) {
+        g->window->set_display_mode(s.fullscreen ? platform::DisplayMode::Borderless : platform::DisplayMode::Windowed);
+        g->fullscreen = s.fullscreen;
+    }
+    if (s.aspect != g->aspect) {
+        g->aspect = s.aspect;
+        // A window takes the picture's new shape, at the height it has.
+        int w = 0;
+        int h = 0;
+        if (!g->fullscreen && s.aspect != settings::Aspect::Window && SDL_GetWindowSize(g->window->sdl(), &w, &h)
+            && h > 0) {
+            SDL_SetWindowSize(g->window->sdl(), static_cast<int>(std::lround(static_cast<float>(h) * picture_aspect(w, h))), h);
+        }
+    }
+    if (wants_vsync() != g->vsync) {
+        g->vsync = wants_vsync();
+        g->window->set_vsync(g->vsync);
+        pacing.last_swap = {};
+    }
+}
+
+// The window's own keys: F11 and Alt+Return change between fullscreen and the window. True when
+// the event was one of them.
+bool window_key(const SDL_Event& event) {
+    if (event.type != SDL_EVENT_KEY_DOWN || event.key.repeat) {
+        return false;
+    }
+    const bool alt_return = (event.key.key == SDLK_RETURN || event.key.key == SDLK_KP_ENTER)
+                            && (event.key.mod & SDL_KMOD_ALT) != 0;
+    if (event.key.key != SDLK_F11 && !alt_return) {
+        return false;
+    }
+    settings::get().fullscreen = !settings::get().fullscreen;
+    settings::save();
+    apply_settings();
+    return true;
+}
+
+}  // namespace
 
 bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t draws) {
     if (!g) {
@@ -1261,13 +1402,17 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
             || (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)) {
             return false;
         }
-        if (debug_menu::event(event, g->game.c_str(), openrac_game_loaded_overlay())) {
-            continue;  // the port's debug menu (debug_menu.h)
+        if (window_key(event) || debug_menu::event(event, g->game.c_str(), openrac_game_loaded_overlay())) {
+            continue;  // the window's own keys; the port's debug menu (debug_menu.h)
         }
         g->input.handle_event(event);
     }
     g->input.update();
     debug_menu::update(g->game.c_str(), openrac_game_loaded_overlay(), g->index);
+    // The port's rows on the game's Video options page (options_menu.h): a changed one is applied.
+    if (options_menu::update(g->game.c_str(), openrac_game_loaded_overlay())) {
+        apply_settings();
+    }
 
     // The level program loaded now (-1: the boot program, title and menus), as the port knows it.
     const int level = openrac_game_loaded_overlay();
@@ -1382,6 +1527,7 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     }();
     std::vector<viewer::Instance> live;
     std::vector<std::uint32_t> live_addresses;
+    std::vector<int> live_joints;
     std::vector<viewer::LevelScene::JointColumns> palette;
     for (const viewer::LiveMoby& m : state.mobys) {
         // Hidden (mode bit 0): MobyProc does not draw it (the parked ship while the landing one comes
@@ -1414,6 +1560,11 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         // Drawn by the game with a camera of its own: placed so the world's camera sees it where
         // that camera did (M' = V_world^-1 V_own M), as ReRAC draws the menu's frame objects.
         for (const auto& [address, camera] : g->moby_cameras) {
+            if (address == m.address && instance.moby_light[3] == 1.0f) {
+                // One of the 2D layer's: in a picture wider than the game's it is cut at the game's
+                // picture's sides (mesh.vert), where those parked beside the screen stay unseen.
+                instance.moby_light[3] = 2.0f;
+            }
             if (address == m.address
                 && (camera.camera_position != state.camera_position || camera.forward != state.forward)) {
                 instance.matrix = renderer::multiply(
@@ -1468,6 +1619,7 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
                 }
             }
         }
+        live_joints.push_back(instance.palette >= 0 ? joints : 0);
         live.push_back(instance);
         live_addresses.push_back(m.address);
     }
@@ -1492,18 +1644,25 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         k.has_state = false;
         k.live.clear();
         k.addresses.clear();
+        k.joints.clear();
         k.level = g->loaded;
     }
     k.prev_state = k.state;
     k.has_prev_state = k.has_state;
     k.prev_matrices.clear();
+    k.prev_poses.clear();
     for (std::size_t i = 0; i < k.live.size() && i < k.addresses.size(); ++i) {
         k.prev_matrices[k.addresses[i]] = k.live[i].matrix;
+        if (i < k.joints.size() && k.joints[i] > 0 && k.live[i].palette >= 0) {
+            k.prev_poses[k.addresses[i]] = {k.live[i].palette, k.joints[i]};
+        }
     }
+    k.prev_palette = std::move(k.palette);
     k.state = state;
     k.has_state = true;
     k.live = std::move(live);
     k.addresses = std::move(live_addresses);
+    k.joints = std::move(live_joints);
     k.palette = std::move(palette);
     k.draws = draws;
     k.has_camera = state.forward[0] != 0.0f || state.forward[1] != 0.0f || state.forward[2] != 0.0f;
@@ -1594,8 +1753,11 @@ int ui_quad(const openrac_game_ui_rect& quad) {
 }
 
 bool interpolating() {
-    static const bool on = std::getenv("OPENRAC_UNCAPPED") == nullptr && std::getenv("OPENRAC_NO_BLEND") == nullptr;
-    return on && g && g->window;
+    return !one_frame_a_tick() && settings::get().frame_rate != settings::FrameRate::Original && g && g->window;
+}
+
+std::uint32_t text(int id) {
+    return options_menu::text(id);
 }
 
 bool wants_between() {
@@ -1617,7 +1779,7 @@ int between(std::chrono::steady_clock::time_point next_tick) {
             || (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)) {
             return -1;
         }
-        if (debug_menu::event(event, g->game.c_str(), openrac_game_loaded_overlay())) {
+        if (window_key(event) || debug_menu::event(event, g->game.c_str(), openrac_game_loaded_overlay())) {
             continue;
         }
         g->input.handle_event(event);

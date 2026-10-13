@@ -6,7 +6,7 @@
 // (openrac_game, generated from port/game/<id>/hostgen.json).
 //
 //   openrac-<id> --data <install>/active/<game>/data [--cards DIR] [--frames N] [--stop-on-missing]
-//                [--level N] [--skip-movies] [--mods DIR]
+//                [--level N] [--skip-movies] [--mods DIR] [--settings FILE]
 //
 // The data folder is what the extractor made from the player's disc
 // (tools/extractor.py; the launcher's "Set up from your disc"). The program
@@ -46,6 +46,7 @@
 
 #ifdef OPENRAC_FRONTEND
 #include "frontend.h"
+#include "settings.h"
 #include "openrac/sound_engine.h"
 #include "platform/audio.h"
 #include "renderer/texture.h"
@@ -81,6 +82,7 @@ struct Options {
     bool skip_movies = false;  // development probes; not movie-playback validation
     fs::path levels;  // the extracted levels the window draws (level_00, ...)
     fs::path mods;  // levels edited in Godot and packed (editor/pack.py), read in place of the disc's
+    fs::path settings;  // the player's settings (settings.h); in OpenRAC's data folder unless given
 };
 
 Options g_options;
@@ -97,17 +99,16 @@ std::string program_name() {
 [[noreturn]] void usage(const std::string& why) {
     log::error("{}", why);
     log::error(
-        "usage: {} --data <install>/active/{}/data [--cards DIR] [--frames N] [--stop-on-missing] [--level N] [--skip-movies] [--mods DIR]",
+        "usage: {} --data <install>/active/{}/data [--cards DIR] [--frames N] [--stop-on-missing] [--level N] [--skip-movies] [--mods DIR] [--settings FILE]",
         program_name(),
         openrac_game.game
     );
     std::exit(64);
 }
 
-// Where the first memory card lives unless --cards says otherwise: the folder
-// the launcher's save manager reads and backs up (launcher/core/src/saves.rs,
-// get_memcard_dir): <data home>/openrac/memcard/<serial>.
-fs::path default_cards() {
+// OpenRAC's folder in the player's data home, as the launcher finds it
+// (launcher/core/src/saves.rs, get_memcard_dir).
+fs::path data_home() {
 #if defined(__APPLE__)
     const char* home = std::getenv("HOME");
     fs::path base = fs::path(home != nullptr ? home : ".") / "Library/Application Support/OpenRAC";
@@ -120,7 +121,18 @@ fs::path default_cards() {
         base = fs::path(home != nullptr ? home : ".") / ".local/share/openrac";
     }
 #endif
-    return base / "memcard" / openrac_game.serial;
+    return base;
+}
+
+// Where the first memory card lives unless --cards says otherwise: the folder
+// the launcher's save manager reads and backs up: <data home>/openrac/memcard/<serial>.
+fs::path default_cards() {
+    return data_home() / "memcard" / openrac_game.serial;
+}
+
+// The player's settings unless --settings says otherwise: <data home>/openrac/settings/<id>.ini.
+fs::path default_settings() {
+    return data_home() / "settings" / (std::string(openrac_game.id) + ".ini");
 }
 
 Options parse(int argc, char** argv) {
@@ -143,6 +155,8 @@ Options parse(int argc, char** argv) {
             o.window = true;
         } else if (a == "--mods") {
             o.mods = value();
+        } else if (a == "--settings") {
+            o.settings = value();
         } else if (a == "--levels") {
             o.levels = value();
         } else if (a == "--frames") {
@@ -173,6 +187,9 @@ Options parse(int argc, char** argv) {
     }
     if (o.cards.empty()) {
         o.cards = default_cards();
+    }
+    if (o.settings.empty()) {
+        o.settings = default_settings();
     }
     return o;
 }
@@ -625,6 +642,16 @@ void openrac_game_moby_chain(gaddr moby, gaddr marks) {
 #endif
 }
 
+gaddr openrac_game_text(int id) {
+#ifdef OPENRAC_FRONTEND
+    if (g_window) {
+        return frontend::text(id);
+    }
+#endif
+    (void)id;
+    return 0;
+}
+
 int openrac_game_pad(int port, uint16_t* buttons, uint8_t analog[4]) {
 #ifdef OPENRAC_FRONTEND
     if (g_window && frontend::pad(port, buttons, analog)) {
@@ -729,7 +756,8 @@ int main(int argc, char** argv) {
 #ifdef OPENRAC_FRONTEND
     if (g_options.window) {
         std::string why;
-        fs::path levels = g_options.levels.empty() ? g_options.data / "port" : g_options.levels;
+        settings::load(g_options.settings);
+        fs::path levels =g_options.levels.empty() ? g_options.data / "port" : g_options.levels;
         if (!frontend::open(openrac_game.id, levels, why)) {
             log::fatalf("no window: {}", why);
         }

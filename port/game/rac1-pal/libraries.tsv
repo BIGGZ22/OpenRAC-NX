@@ -264,3 +264,4 @@ func_00200A90	hud	func_00200A90	wrap	a HUD texture as a sprite with a texture wi
 func_00200CA0	hud	func_00200CA0	wrap	a sprite of a given texture: drawn natively (host/ui2d.c)
 func_00200E38	hud	func_00200E38	wrap	a rotated sprite: drawn natively (host/ui2d.c)
 func_00201190	hud	func_00201190	wrap	a HUD texture as a sprite with explicit texel corners: drawn natively (host/ui2d.c)
+func_001FE540	text	msg_string	wrap	the text of an id: the port's own ids (its rows on the Video options page) have their strings from the port (host/options.c)

@@ -69,6 +69,22 @@ decompilation is present. The other four build today but do not run yet:
 their `main` is not identified and their library tables are partly or not
 filled; [game/README.md](game/README.md) says what each needs.
 
+## The player's settings
+
+What the port adds to a game's own options is kept in a small text file,
+`<data home>/openrac/settings/<id>.ini` (`--settings FILE` names another):
+
+| Key | Values | |
+|---|---|---|
+| `aspect` | `4:3`, `16:10`, `16:9`, `21:9`, `window` | the picture's shape. A wider one keeps the game's vertical field of view and shows more of the world to the sides; the 2D layer (HUD, menus, text) keeps its shape in the middle, and only what covered the whole screen (fades, clears, the frame a menu draws back) covers the whole picture |
+| `frame_rate` | `original`, `display`, `60`, `120`, `144`, `240`, `unlimited` | how many frames are drawn. The game's tick stays its own (50 a second for PAL: its logic counts frames, so it cannot run faster and stay the same game); the frames between two ticks move the camera, the mobys and their poses from one tick to the next. `original` draws one frame a tick, `display` one a refresh |
+| `fullscreen` | `0`, `1` | a window covering the desktop (F11 or Alt+Return changes it while playing) |
+
+In Ratchet & Clank (PAL) they are rows of the title menu's Options, Video
+page, beside the game's own video mode, drawn by the game's widgets
+([options_menu.cpp](game/common/options_menu.cpp)); Cross moves a row to its
+next value, which is applied and saved at once.
+
 ## Direct level probes (RAC1 PAL)
 
 For development, `OPENRAC_DIRECT=1` with `--level 0` starts a fresh game
