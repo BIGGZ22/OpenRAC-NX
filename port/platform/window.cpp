@@ -33,6 +33,10 @@ constexpr unsigned kGlRenderer = 0x1F01;
 
 }  // namespace
 
+void set_app_metadata(const char* name, const char* id) {
+    SDL_SetAppMetadata(name, nullptr, id);
+}
+
 Platform::Platform(unsigned subsystems) {
     SDL_InitFlags flags = 0;
     if ((subsystems & kVideo) != 0) {
@@ -66,6 +70,16 @@ bool Platform::display_available() {
 #else
     return true;
 #endif
+}
+
+void Window::set_icon(const unsigned char* rgba, int width, int height) {
+    SDL_Surface* surface = SDL_CreateSurfaceFrom(width, height, SDL_PIXELFORMAT_RGBA32,
+                                                 const_cast<unsigned char*>(rgba), width * 4);
+    if (surface == nullptr) {
+        return;
+    }
+    SDL_SetWindowIcon(m_window, surface);
+    SDL_DestroySurface(surface);
 }
 
 std::unique_ptr<Window> Window::open(const WindowConfig& config, std::string& error) {

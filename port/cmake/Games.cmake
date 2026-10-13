@@ -150,12 +150,32 @@ function(openrac_add_game config)
                                          "${OPENRAC_GAME_DIR}/common/settings.cpp")
     target_link_libraries(openrac-${id} PRIVATE openrac_viewer_lib openrac_platform)
     target_compile_definitions(openrac-${id} PRIVATE OPENRAC_FRONTEND=1)
+    # The window's icon: OpenRAC's own, the launcher's, embedded as PNG bytes.
+    openrac_window_icon(icon_c)
+    target_sources(openrac-${id} PRIVATE "${icon_c}")
     if(TARGET openrac_media)
       target_link_libraries(openrac-${id} PRIVATE openrac_media)
       target_compile_definitions(openrac-${id} PRIVATE OPENRAC_MOVIES=1)
     endif()
   endif()
   openrac_warnings(openrac-${id})
+endfunction()
+
+# The launcher's 128x128 icon as a C array (openrac_icon_png, openrac_icon_png_size), written once
+# into the build folder and again when the picture changes.
+function(openrac_window_icon out)
+  set(png "${PROJECT_SOURCE_DIR}/../launcher/src-tauri/icons/128x128.png")
+  set(c "${CMAKE_BINARY_DIR}/generated/openrac_icon.c")
+  set_property(DIRECTORY "${PROJECT_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${png}")
+  file(READ "${png}" hex HEX)
+  string(LENGTH "${hex}" n)
+  math(EXPR size "${n} / 2")
+  string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," bytes "${hex}")
+  file(CONFIGURE OUTPUT "${c}" CONTENT "/* Generated from launcher/src-tauri/icons/128x128.png by cmake/Games.cmake. */
+const unsigned char openrac_icon_png[] = {${bytes}};
+const unsigned int openrac_icon_png_size = ${size}u;
+")
+  set(${out} "${c}" PARENT_SCOPE)
 endfunction()
 
 # Every game in port/game/ (the directories with a hostgen.json).

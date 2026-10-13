@@ -58,6 +58,10 @@ enum class DisplayMode {
     Borderless,  // a window covering the desktop, at its resolution
 };
 
+// The program's name and id for the desktop, before the Platform starts SDL: on Wayland the id is
+// the window's app id, by which the desktop finds the program's icon and groups its windows.
+void set_app_metadata(const char* name, const char* id);
+
 struct WindowConfig {
     std::string title = "OpenRAC";
     // The client area when windowed. The PAL picture is 512 x 448 with
@@ -100,6 +104,8 @@ public:
     // it, otherwise plain. Returns false if the driver refused both.
     bool set_vsync(bool on);
 
+    // The window's icon: `rgba` is width x height pixels, 4 bytes each, top row first.
+    void set_icon(const unsigned char* rgba, int width, int height);
     void swap();
 
     // The size to render at, in pixels (larger than the window's size on a

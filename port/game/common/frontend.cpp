@@ -42,6 +42,13 @@
 
 extern "C" int openrac_game_loaded_overlay(void);
 
+#include <stb_image.h>
+
+extern "C" {
+extern const unsigned char openrac_icon_png[];
+extern const unsigned int openrac_icon_png_size;
+}
+
 namespace openrac::frontend {
 
 namespace {
@@ -824,10 +831,28 @@ void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& 
     g->sky_sprites.clear();
 }
 
+// OpenRAC's icon on the window (the taskbar's, and the title bar's where there is one): the
+// launcher's picture, embedded by cmake/Games.cmake.
+void set_window_icon(platform::Window& window) {
+    int width = 0;
+    int height = 0;
+    int channels = 0;
+    unsigned char* rgba = stbi_load_from_memory(openrac_icon_png, static_cast<int>(openrac_icon_png_size), &width,
+                                                &height, &channels, 4);
+    if (rgba == nullptr) {
+        return;
+    }
+    window.set_icon(rgba, width, height);
+    stbi_image_free(rgba);
+}
+
 bool open(const std::string& game_id, const std::filesystem::path& levels, std::string& error) {
     g = std::make_unique<State>();
     g->game = game_id;
     g->levels = levels;
+    // Before SDL starts: on Wayland the app id names the program to the desktop.
+    const std::string app_id = "dev.openrac." + game_id;
+    platform::set_app_metadata("OpenRAC: Ratchet & Clank", app_id.c_str());
     g->sdl = std::make_unique<platform::Platform>(platform::kVideo | platform::kGamepad | platform::kAudio);
     if (!g->sdl->ok()) {
         error = g->sdl->error();
@@ -855,6 +880,7 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
     if (!g->window) {
         return false;
     }
+    set_window_icon(*g->window);
     g->vsync = config.vsync;
     g->fullscreen = chosen.fullscreen;
     g->aspect = chosen.aspect;
