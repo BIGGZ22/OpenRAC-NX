@@ -3,6 +3,7 @@
 
 #include "renderer/renderer.h"
 
+#include "common/stats.h"
 #include "renderer/direct.h"
 #include "renderer/gl.h"
 #include "renderer/subsystems.h"
@@ -99,6 +100,8 @@ void Renderer::render(const FrameInput& input, const RenderTarget& target) {
         }
         auto& r = m_renderers[i];
         if (r->enabled) {
+            // [debug tools] The pass, timed and counted for the overlay and the dump (common/stats.h).
+            const stats::Scope pass(r->name(), stats::kGpu);
             r->render(input, state);
         }
     }
