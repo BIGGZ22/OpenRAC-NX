@@ -96,6 +96,10 @@ bool show_picture(const std::uint8_t* rgba, int width, int height, float black);
 // left sticks (x, y each).
 bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]);
 
+// While the debug overlay holds the game (its pause): draws the last tick again and reads the
+// window's events until the overlay lets a tick through. False once the window was closed.
+bool hold();
+
 void close();
 
 }  // namespace openrac::frontend

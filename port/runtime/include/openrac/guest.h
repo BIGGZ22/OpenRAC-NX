@@ -253,6 +253,13 @@ void openrac_guest_missing(const char* name);
 void openrac_guest_report_missing(void);
 void openrac_guest_stop_on_missing(int stop);
 
+/* For the debugging tools: every call so far to a function without C (the
+ * return value) and how many such functions there are; then each of them, in
+ * the order of their names, with its calls (null past the last). The names
+ * stay valid for the life of the program. */
+unsigned long openrac_guest_missing_calls(unsigned* functions);
+const char* openrac_guest_missing_at(unsigned index, unsigned long* calls);
+
 /* ---- The host's stack, for the debugging aids ----
  *
  * Host code is built on Linux, macOS and Windows, and only the first two have

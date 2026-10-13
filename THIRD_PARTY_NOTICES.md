@@ -133,6 +133,7 @@ none is copied into OpenRAC.
 | [SDL](https://github.com/libsdl-org/SDL) | 3.2.24 | zlib | the platform layer: window, OpenGL context, input, audio |
 | [cgltf](https://github.com/jkuhlmann/cgltf) | 1.15 | MIT | the level viewer: reading the editor's glTF meshes |
 | [stb_image](https://github.com/nothings/stb) | commit 2c980bb | MIT or public domain | the level viewer: reading textures (PNG) |
+| [Dear ImGui](https://github.com/ocornut/imgui) | 1.91.9b | MIT | the games' debug overlay ([docs/port/DEBUGGING.md](docs/port/DEBUGGING.md)) |
 
 The renderer's conventions (colour 0x80 as 1.0, reversed depth, the double
 draw for alpha-test fail modes, textures identified by the game's base

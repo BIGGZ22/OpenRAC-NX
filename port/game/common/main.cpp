@@ -38,13 +38,17 @@
 #include <thread>
 #include <vector>
 
+#include <cmath>
+
 #include "common/log.h"
+#include "common/stats.h"
 #include "openrac/elf.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
 #include "openrac/memory.h"
 
 #ifdef OPENRAC_FRONTEND
+#include "debug_overlay.h"
 #include "frontend.h"
 #include "settings.h"
 #include "openrac/sound_engine.h"
@@ -84,6 +88,8 @@ struct Options {
     fs::path levels;  // the extracted levels the window draws (level_00, ...)
     fs::path mods;  // levels edited in Godot and packed (editor/pack.py), read in place of the disc's
     fs::path settings;  // the player's settings (settings.h); in OpenRAC's data folder unless given
+    fs::path debug_dump;  // each frame's measurements, a JSON object a line (docs/port/DEBUGGING.md)
+    bool debug_overlay = false;  // the debug overlay shown from the start (F3 shows and hides it)
 };
 
 Options g_options;
@@ -100,7 +106,7 @@ std::string program_name() {
 [[noreturn]] void usage(const std::string& why) {
     log::error("{}", why);
     log::error(
-        "usage: {} --data <install>/active/{}/data [--cards DIR] [--frames N] [--stop-on-missing] [--level N] [--skip-movies] [--mods DIR] [--settings FILE]",
+        "usage: {} --data <install>/active/{}/data [--cards DIR] [--frames N] [--stop-on-missing] [--level N] [--skip-movies] [--mods DIR] [--settings FILE] [--debug-overlay] [--debug-dump FILE]",
         program_name(),
         openrac_game.game
     );
@@ -170,6 +176,10 @@ Options parse(int argc, char** argv) {
             o.keep_going = true;
         } else if (a == "--stop-on-missing") {
             o.keep_going = false;
+        } else if (a == "--debug-dump") {
+            o.debug_dump = value();
+        } else if (a == "--debug-overlay") {
+            o.debug_overlay = true;
         } else if (a == "--help" || a == "-h") {
             usage(program_name() + ": " + openrac_game.title + ", native");
         } else {
@@ -243,7 +253,26 @@ static void apply_writes() {
     }
 }
 
+// [debug tools] The game's tick length, stretched by the overlay's slow motion (debug_overlay.h).
+static std::chrono::microseconds tick_period() {
+    auto period = std::chrono::microseconds(1000000 / (openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60));
+#ifdef OPENRAC_FRONTEND
+    if (g_window) {
+        period = std::chrono::microseconds(
+            std::llround(static_cast<double>(period.count()) * frontend::debug_overlay::tick_stretch()));
+    }
+#endif
+    return period;
+}
+
 int openrac_game_vsync(void) {
+    // [debug tools] The game's own code stops here and goes on when this returns: its time is the
+    // tick's (common/stats.h). The tick's frame of measurements begins.
+    stats::game_yielded();
+    struct Resume {
+        ~Resume() { stats::game_resumed(); }
+    } resume;
+    stats::begin_frame(stats::FrameKind::Tick, static_cast<std::uint64_t>(g_frame));
     g_vsync_since_kick = true;
     apply_writes();
     // With a window, the renderer draws the frame from the game's memory; without one, a frame is
@@ -252,8 +281,7 @@ int openrac_game_vsync(void) {
     if (g_window) {
         // The tick about to be drawn was due at the time the last one set (frames between ticks
         // count from it).
-        const auto period = std::chrono::microseconds(
-            1000000 / (openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60));
+        const auto period = tick_period();
         const auto now = std::chrono::steady_clock::now();
         frontend::set_tick(g_next_frame.time_since_epoch().count() == 0 || now > g_next_frame + period
                                ? now : g_next_frame, period);
@@ -297,7 +325,7 @@ int openrac_game_vsync(void) {
     // OPENRAC_FPS: the frames per second over each 300 frames, in the log. OPENRAC_UNCAPPED: no wait
     // for the next frame's time (the game then runs as fast as the machine allows: a measure, not a
     // way to play, since the game's tick is its frame).
-    static const bool fps = std::getenv("OPENRAC_FPS") != nullptr;
+    static const bool& fps = stats::probe("OPENRAC_FPS", "the ticks per second over each 300 ticks, in the log");
     static const bool uncapped = std::getenv("OPENRAC_UNCAPPED") != nullptr;
     static steady_clock::time_point fps_from = now;
     // OPENRAC_WATCH=ADDRESS:COUNT[:i],...: COUNT floats (or words, with i) from each ADDRESS, each
@@ -323,7 +351,7 @@ int openrac_game_vsync(void) {
         log::info("frame {} watch{}", g_frame, line);
     }
     // OPENRAC_HITCH: each frame that took more than twice the frame time, with how long, in the log.
-    static const bool hitch = std::getenv("OPENRAC_HITCH") != nullptr;
+    static const bool& hitch = stats::probe("OPENRAC_HITCH", "each tick that took over 1.25 tick times, in the log");
     static steady_clock::time_point last = now;
     if (hitch) {
         const double ms = duration<double, std::milli>(now - last).count();
@@ -345,7 +373,7 @@ int openrac_game_vsync(void) {
     if (g_next_frame.time_since_epoch().count() == 0 || now > g_next_frame + milliseconds(100)) {
         g_next_frame = now;
     }
-    const auto period = microseconds(1000000 / (openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60));
+    const auto period = tick_period();
     g_next_frame += period;
 #ifdef OPENRAC_FRONTEND
     // Until the next tick is due, frames at the display's rate (each swap waits for a refresh),
@@ -358,7 +386,16 @@ int openrac_game_vsync(void) {
         }
     }
 #endif
-    std::this_thread::sleep_until(g_next_frame);
+    {
+        const stats::Scope wait("wait");  // [debug tools]
+        std::this_thread::sleep_until(g_next_frame);
+    }
+#ifdef OPENRAC_FRONTEND
+    // [debug tools] A paused game stays here, its last tick drawn again (frontend.h, hold).
+    if (g_window && !frontend::hold()) {
+        std::exit(0);
+    }
+#endif
     return static_cast<int>(g_frame & 1);
 }
 
@@ -764,6 +801,9 @@ int main(int argc, char** argv) {
             log::fatalf("no window: {}", why);
         }
         g_window = true;
+        if (g_options.debug_overlay) {
+            frontend::debug_overlay::request();
+        }
         // The game's sounds (openrac/sound_engine.h), rendered on the output's thread.
         static std::unique_ptr<platform::AudioOutput> sound_output =
             platform::AudioOutput::open(why, [](std::span<std::int16_t> samples) {
@@ -780,6 +820,22 @@ int main(int argc, char** argv) {
         }
     }
 #endif
+
+    // [debug tools] --debug-dump FILE (or OPENRAC_DEBUG_DUMP=FILE): each frame's measurements, with
+    // or without a window.
+    if (g_options.debug_dump.empty()) {
+        if (const char* env = std::getenv("OPENRAC_DEBUG_DUMP")) {
+            g_options.debug_dump = env;
+        }
+    }
+    if (!g_options.debug_dump.empty()) {
+        std::string why;
+        if (stats::open_dump(g_options.debug_dump.string(), why)) {
+            log::info("frame measurements are written to {}", g_options.debug_dump.string());
+        } else {
+            log::warn("--debug-dump: {}", why);
+        }
+    }
 
     openrac_game_register_functions();
     openrac_guest_set_overlay_source(openrac_game_loaded_overlay);

@@ -9,10 +9,11 @@
 #   SDL3      window, OpenGL context, input, audio (zlib license)
 #   cgltf     glTF 2.0 reader, for the level viewer (MIT)
 #   stb       stb_image and stb_image_write, for the viewer's PNGs (MIT or public domain)
+#   Dear ImGui  the games' debug overlay (MIT)
 #
 # To build without network access, point CMake at local clones:
 #   -DFETCHCONTENT_SOURCE_DIR_SDL3=... -DFETCHCONTENT_SOURCE_DIR_CGLTF=...
-#   -DFETCHCONTENT_SOURCE_DIR_STB=...
+#   -DFETCHCONTENT_SOURCE_DIR_STB=... -DFETCHCONTENT_SOURCE_DIR_IMGUI=...
 
 include_guard(GLOBAL)
 include(FetchContent)
@@ -85,4 +86,37 @@ if(NOT TARGET openrac_cgltf)
   target_include_directories(openrac_cgltf SYSTEM INTERFACE "${cgltf_SOURCE_DIR}")
   add_library(openrac_stb INTERFACE)
   target_include_directories(openrac_stb SYSTEM INTERFACE "${stb_SOURCE_DIR}")
+endif()
+
+# ---- Dear ImGui: the debug overlay of the games (game/common/debug_overlay.cpp) ----
+# What OpenGOAL draws its debug windows with. The repository has no build of
+# its own: its four sources and the SDL3 and OpenGL 3 backends are compiled
+# here into one static library, without the port's warnings. The OpenGL
+# backend brings its own small loader, so it needs nothing of renderer/gl.h.
+FetchContent_Declare(imgui
+  GIT_REPOSITORY https://github.com/ocornut/imgui.git
+  GIT_TAG v1.91.9b
+  GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(imgui)
+
+if(NOT TARGET openrac_imgui)
+  add_library(openrac_imgui STATIC
+    "${imgui_SOURCE_DIR}/imgui.cpp"
+    "${imgui_SOURCE_DIR}/imgui_draw.cpp"
+    "${imgui_SOURCE_DIR}/imgui_tables.cpp"
+    "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
+    "${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp"
+    "${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp"
+  )
+  target_include_directories(openrac_imgui SYSTEM PUBLIC "${imgui_SOURCE_DIR}" "${imgui_SOURCE_DIR}/backends")
+  target_link_libraries(openrac_imgui PUBLIC openrac_sdl3)
+  if(UNIX AND NOT APPLE)
+    target_link_libraries(openrac_imgui PRIVATE ${CMAKE_DL_LIBS})  # the backend's loader opens libGL
+  endif()
+  if(MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(openrac_imgui PRIVATE /w)
+  else()
+    target_compile_options(openrac_imgui PRIVATE -w)
+  endif()
 endif()

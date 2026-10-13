@@ -109,6 +109,15 @@ fresh-game level loading, not saved progression or menu/movie playback.
 Keep `--stop-on-missing` enabled and also run the normal New Game path
 without these shortcuts when validating startup behavior.
 
+## Debugging
+
+F3 shows a debug overlay over the game: frame times, the renderer, memory,
+the mobys with an inspector, the game's state and the shaders, with pause,
+single step and slow motion. `--debug-dump FILE` writes each frame's
+measurements as JSON lines for automated checks.
+[docs/port/DEBUGGING.md](../docs/port/DEBUGGING.md) describes them and
+lists every `OPENRAC_*` environment variable.
+
 To diagnose controller input, set `OPENRAC_TRACE_INPUT=1`: it logs the pad
 report passed to the game every 25 frontend frames in which a port is read,
 including scripted input. With `OPENRAC_DEBUG=1`, RAC1 PAL also logs the
