@@ -92,6 +92,10 @@ gaddr g_chain = 0;  // the display list sent this frame
 bool g_vsync_since_kick = true;  // a vertical blank was waited for since the last frame was sent
 bool g_window = false;
 std::chrono::steady_clock::time_point g_next_frame;
+// The game's ticks a second.
+int tick_rate() {
+    return openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60;
+}
 
 std::string program_name() {
     return std::string("openrac-") + openrac_game.id;
@@ -252,11 +256,16 @@ int openrac_game_vsync(void) {
     if (g_window) {
         // The tick about to be drawn was due at the time the last one set (frames between ticks
         // count from it).
-        const auto period = std::chrono::microseconds(
-            1000000 / (openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60));
+        const auto period = std::chrono::microseconds(1000000 / tick_rate());
         const auto now = std::chrono::steady_clock::now();
+        // How late the tick is, for the window to leave a frame out rather than fall further behind
+        // (not after a long stop, a level loading: the count below starts again from now).
+        const bool counted = g_next_frame.time_since_epoch().count() != 0
+                             && now <= g_next_frame + std::chrono::milliseconds(100);
         frontend::set_tick(g_next_frame.time_since_epoch().count() == 0 || now > g_next_frame + period
-                               ? now : g_next_frame, period);
+                               ? now : g_next_frame, period,
+                           counted && now > g_next_frame ? std::chrono::duration<double>(now - g_next_frame)
+                                                         : std::chrono::duration<double>(0.0));
         const auto* ram = runtime::Memory::get().base();
         const std::uint32_t draws = g_reports_draws ? g_draws : ~0u;
         g_draws = 0;
@@ -327,7 +336,7 @@ int openrac_game_vsync(void) {
     static steady_clock::time_point last = now;
     if (hitch) {
         const double ms = duration<double, std::milli>(now - last).count();
-        if (ms > 1.25 * 1000.0 / (openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60)) {
+        if (ms > 1.25 * 1000.0 / tick_rate()) {
             log::info("frame {}: {:.1f} ms", g_frame, ms);
         }
     }
@@ -345,7 +354,7 @@ int openrac_game_vsync(void) {
     if (g_next_frame.time_since_epoch().count() == 0 || now > g_next_frame + milliseconds(100)) {
         g_next_frame = now;
     }
-    const auto period = microseconds(1000000 / (openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60));
+    const auto period = microseconds(1000000 / tick_rate());
     g_next_frame += period;
 #ifdef OPENRAC_FRONTEND
     // Until the next tick is due, frames at the display's rate (each swap waits for a refresh),
@@ -491,7 +500,7 @@ int openrac_game_play_movie(uint32_t lsn, uint32_t bytes, int channel, int start
     if (!output) {
         log::warn("movie: no sound ({})", error);
     }
-    const int rate = openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60;
+    const int rate = tick_rate();
     const std::size_t per_blank = static_cast<std::size_t>(platform::kAudioRate / rate);
     std::vector<std::int16_t> samples(per_blank * 2);
     std::vector<std::uint8_t> rgba;
@@ -589,6 +598,15 @@ void openrac_game_effect_quad(const openrac_game_quad* quad) {
 #else
     (void)quad;
 #endif
+}
+
+int openrac_game_hud_side(void) {
+#ifdef OPENRAC_FRONTEND
+    if (g_window) {
+        return frontend::hud_side();
+    }
+#endif
+    return 0;
 }
 
 int openrac_game_ui_quad(const openrac_game_ui_rect* quad) {
