@@ -1457,3 +1457,39 @@ Three reports after the fixes above, each traced by measurement in level 0
 Not a bug: the hero's standing pose is static until a random fidget.
 Open and next: the guide's last section. The wrench against the hand has
 not been looked at again; nobody has played these fixes yet.
+
+### Levels 4 and 12: the hook stubs and the frame alignment, 2026-10-13
+
+Two crashes reported as "level 4 (null host access) and level 12 (access at
+0x3FA93F19)", started with `OPENRAC_DIRECT=1 OPENRAC_PRESS=100:4000:5` (without
+the Cross press the run waits on the menu at level -1 and shows nothing).
+
+- Level 12: `fix(port): the engine's calls to the executable's hook stubs go to
+  each level's own function`. The executable's `func_001E9780..001E97C0` only
+  return; every level fills them with a function of its own (level 12's
+  `func_00230A90` calls, at the same instructions, the function that clears the
+  draw callback lists, and the voice and particle hooks). The port had one copy
+  of the engine code calling the stubs, so in the arrival cinematic one draw
+  callback a frame piled up, 64 of them wrote their quads past the 1.1 MB
+  display list into the cutscene's next bank, and the loader decompressed
+  garbage. hostgen's `level_hooks` key and `openrac_hook_in_copy` read the
+  level copy's own call. Found with `OPENRAC_TRACE_CD` (new: each disc read)
+  and a guest write-protect of the bank, not by guessing.
+- Level 4: `fix(hostgen): a local vector or matrix starts on a quadword in its
+  frame`. The crash handler's "host address (nil)" was a general protection
+  fault of a `movaps` on a misaligned frame local.
+- Functional C in `rac1-decomp`: `func_L12_002C0310` (the near miss had two
+  bugs: a distance stored where retail stores the moby's z, and a constant one
+  ulp off), `func_L04_0029FEC8` (written from the instructions, 1,476 bytes),
+  and the near miss `func_L00_00286068` accepted. All three are only believed
+  correct: levels 4 and 12 have not been played far enough to exercise them.
+- State after the fixes (trap on, 3,000 frames, direct start): levels 0 and 17
+  exit 0. Next blocker: level 1 code address 0x276280; 2 `func_L02_002D5250`;
+  3 `func_L03_002ED138`; 4 `func_L01_002E1FE0` (3,672 bytes, no near miss);
+  5 code address 0x28b4c8; 6 0x26ffa8; 7 `func_L07_0030C3E0`; 8
+  `func_L08_002D55E0`; 9 `func_L09_002EEF80`; 10 `func_L10_00299D18`; 11
+  `func_L11_00317598`; 12 code address 0x279e30 (and `func_L12_002E8640`,
+  without C, called 65,569 times with `--keep-going`); 13 `func_L13_002C3840`;
+  14 and 15 `func_L14_002B2A28`; 16 `func_L00_002CABC0`; 18 code address
+  0x263718. "Code address" is a call to a place no function of the port has.
+- Open and next: those blockers, in that order; level 17's hero freeze.
