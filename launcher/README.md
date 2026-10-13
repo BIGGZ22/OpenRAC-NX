@@ -111,6 +111,12 @@ games are set up, what a job prints): see `src/lib/mock.ts`. Add `?setup` to
 the address for the first-run screen, `?version=rac1/pal` for a game page,
 `?page=tasks` for Tasks.
 
+The installers are also built by GitHub
+([launcher.yml](../.github/workflows/launcher.yml)) for Windows, Linux and
+macOS, on every change to `launcher/` on `master` and on pull requests:
+they are the run's artifacts, under Actions. A tag `launcher-v<version>`
+puts them on a draft release as well. They are not signed.
+
 ## Check
 
 ```sh

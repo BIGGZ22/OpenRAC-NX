@@ -1,0 +1,124 @@
+# The launcher's installers, built for Windows, Linux and macOS and kept as
+# the run's artifacts (Actions, the run, "Artifacts"). A tag `launcher-v*`
+# also puts them on a draft release of that name, to be looked over and
+# published by hand.
+#
+# They are not signed: Windows SmartScreen and macOS Gatekeeper warn about
+# them until the project has certificates. The launcher is only the desktop
+# app; it still works on an OpenRAC checkout, which it finds or asks for.
+name: launcher
+
+on:
+  push:
+    branches: [master]
+    tags: ["launcher-v*"]
+    paths:
+      - "launcher/**"
+      - ".github/workflows/launcher.yml"
+  pull_request:
+    paths:
+      - "launcher/**"
+      - ".github/workflows/launcher.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: launcher-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows
+            os: windows-latest
+            args: ""
+            files: |
+              launcher/target/release/bundle/nsis/*.exe
+              launcher/target/release/bundle/msi/*.msi
+          # The oldest Ubuntu the runners offer: what is built there starts
+          # on newer systems too, not the other way round.
+          - name: linux
+            os: ubuntu-22.04
+            args: "--bundles deb,rpm,appimage"
+            files: |
+              launcher/target/release/bundle/deb/*.deb
+              launcher/target/release/bundle/rpm/*.rpm
+              launcher/target/release/bundle/appimage/*.AppImage
+          # One program for Apple silicon and Intel.
+          - name: macos
+            os: macos-latest
+            args: "--target universal-apple-darwin --bundles app,dmg"
+            files: |
+              launcher/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+    defaults:
+      run:
+        working-directory: launcher
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Yarn (the version package.json names, through Corepack)
+        run: corepack enable
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.name == 'macos' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            launcher/target
+          key: launcher-${{ matrix.name }}-${{ hashFiles('launcher/Cargo.lock') }}
+          restore-keys: launcher-${{ matrix.name }}-
+
+      - name: Tauri's system libraries
+        if: matrix.name == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev patchelf rpm file
+
+      - name: Build the installers
+        run: |
+          yarn install --immutable
+          yarn tauri build ${{ matrix.args }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openrac-launcher-${{ matrix.name }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
+
+  # A tag `launcher-v*`: the installers of the three builds on a draft
+  # release. Nothing is published until someone publishes the draft.
+  release:
+    if: startsWith(github.ref, 'refs/tags/launcher-v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: installers
+          merge-multiple: true
+      - name: Draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # The installers' names have spaces in them: an array, not a word list.
+          mapfile -d '' files < <(find installers -type f -print0 | sort -z)
+          printf '%s\n' "${files[@]}"
+          gh release create "$TAG" --draft --title "OpenRAC Launcher ${TAG#launcher-v}" \
+            --notes "Installers built by the launcher workflow from $GITHUB_SHA. They are not signed." \
+            "${files[@]}"
