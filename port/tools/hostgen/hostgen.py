@@ -461,6 +461,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--jobs", type=int, default=os.cpu_count() or 2)
     ap.add_argument("--only", action="append", default=[], help="translate only these units (for checks)")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--allow-unreadable", action="store_true",
+                    help="build without the source files Clang cannot read, instead of stopping")
     ap.add_argument("--list", action="store_true", help="print the files it would write, and stop (for the build)")
     args = ap.parse_args(argv)
 
@@ -539,6 +541,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"hostgen: {summary['units']} units, {summary['functions_translated']} functions translated, "
               f"{summary['functions_stubbed']} stubbed, {summary['functions_without_c']} without C, "
               f"in {time.time() - started:.0f} s; report in {out / 'report.md'}")
+    # A unit Clang cannot read is left out whole: every function in it goes missing and the game
+    # fails somewhere else, much later. So it stops the build here, with Clang's own words.
+    unreadable = [(r.unit, p) for r in reports for p in r.problems if p.startswith("Clang could not")]
+    if unreadable and not args.allow_unreadable:
+        for unit, problem in unreadable:
+            print(f"hostgen: {unit}: {problem[:600]}", file=sys.stderr)
+        print(f"hostgen: {len(unreadable)} source file(s) Clang cannot read; each would be left out of the game "
+              "with all its functions. Fix the declarations named above (--allow-unreadable builds without them).",
+              file=sys.stderr)
+        return 1
     return 0
 
 
