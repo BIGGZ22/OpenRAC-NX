@@ -229,11 +229,12 @@ class Unit:
         matrix), starts on a quadword in the frame: the console's compiler placed such locals so,
         and the game copies them with quadword loads (lq), which the host makes movaps."""
         count = 1
+        t = self.resolve(t)
         while isinstance(t, ctype.Arr):
             if t.size is None:
                 return ""
             count *= t.size
-            t = t.of
+            t = self.resolve(t.of)
         if isinstance(t, ctype.Base) and t.name in self._FOUR_BYTE_ELEMENTS and count >= 4 and count % 4 == 0:
             return " __attribute__((aligned(16)))"
         return ""

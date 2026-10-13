@@ -163,18 +163,22 @@ class Translate(unittest.TestCase):
 
     def test_a_local_vector_or_matrix_starts_on_a_quadword(self):
         out = self.run_program({"a.c": """
+            typedef float Vec[4] __attribute__((aligned(16)));
             int test_main(void) {
                 char pad[3];
                 float v[4];
                 char pad2[5];
                 float m[4][4];
-                pad[0] = 1; pad2[0] = 2; v[0] = 1.0f; m[0][0] = 2.0f;
+                char pad3[7];
+                Vec t;
+                pad[0] = 1; pad2[0] = 2; pad3[0] = 3; v[0] = 1.0f; m[0][0] = 2.0f; t[0] = 3.0f;
                 test_print((int)((unsigned long)&v[0] & 15));
                 test_print((int)((unsigned long)&m[0][0] & 15));
-                return pad[0] - 1 + pad2[0] - 2;
+                test_print((int)((unsigned long)&t[0] & 15));
+                return pad[0] - 1 + pad2[0] - 2 + pad3[0] - 3;
             }
         """})
-        self.assertEqual(out, ["0", "0"])
+        self.assertEqual(out, ["0", "0", "0"])
 
     def test_calls_follow_the_definition(self):
         # The caller declares the callee with its float and integer arguments
