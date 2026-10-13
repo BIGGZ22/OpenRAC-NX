@@ -8,6 +8,7 @@
  * game's polling (sceCdSync) finds it done. */
 #define _FILE_OFFSET_BITS 64
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 
 #include "openrac/game_host.h"
@@ -113,6 +114,10 @@ int openrac_lib_sceCdMmode(int media) {
 int openrac_lib_sceCdRead(unsigned int sector, unsigned int count, gaddr buffer, gaddr mode) {
     (void)mode;
     FILE* f = open_disc();
+    /* OPENRAC_TRACE_CD=1: each read, to see where the game's data lands. */
+    if (getenv("OPENRAC_TRACE_CD") != NULL) {
+        fprintf(stderr, "[debug] CD read %u sectors at %u -> %08x\n", count, sector, (unsigned)buffer);
+    }
     if (f == NULL) {
         last_error = 0x01; /* any non-zero error: the game retries */
         return 0;
