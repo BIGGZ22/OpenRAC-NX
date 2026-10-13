@@ -1138,11 +1138,20 @@ bool same_moby(const renderer::Mat4& from, const renderer::Mat4& to) {
 }
 
 renderer::Mat4 blend_matrix(const renderer::Mat4& from, const renderer::Mat4& to, float t) {
-    if (!same_moby(from, to)) {
-        return to;
+    const float dx = to[12] - from[12], dy = to[13] - from[13], dz = to[14] - from[14];
+    if (dx * dx + dy * dy + dz * dz > 16.0f) {
+        return to;  // a moby slot used again, a teleport
     }
+    // Where it is always moves with the blend: a thing carried by another (the wrench in the
+    // hero's hand) turns fast, more in a tick than the same-moby test allows, and one left at this
+    // tick's place while its carrier is drawn part way there runs ahead of the hand. Only its
+    // turning is taken whole when it turned too far to blend its axes.
     renderer::Mat4 m = to;
-    for (int i = 0; i < 15; ++i) {
+    const int upto = same_moby(from, to) ? 12 : 0;
+    for (int i = 0; i < upto; ++i) {
+        m[i] = from[i] + (to[i] - from[i]) * t;
+    }
+    for (int i = 12; i < 15; ++i) {
         m[i] = from[i] + (to[i] - from[i]) * t;
     }
     return m;
