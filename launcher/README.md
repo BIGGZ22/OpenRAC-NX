@@ -7,8 +7,8 @@ disc, plays the **native PC port**, and can open the levels in Godot to edit
 them. **There is no emulation**: the launcher never runs the retail program
 or a model of the console ([docs/port](../docs/port/README.md)).
 
-Ratchet & Clank (PAL) builds and runs from the launcher on Linux and
-Windows: **Build the game** compiles its native port ([port/](../port/README.md)),
+Ratchet & Clank (PAL) builds and runs from the launcher on Windows, Linux
+and macOS: **Build the game** compiles its native port ([port/](../port/README.md)),
 **Play** starts it. The port is not complete yet, and the other versions
 are not playable yet: their Play says what is missing. With
 **developer tools** switched on in Settings, the launcher is also a
