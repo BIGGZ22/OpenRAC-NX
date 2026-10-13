@@ -86,6 +86,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev patchelf rpm file
 
+      # The cache above keeps target/, and with it the installers of the last version: without
+      # this a release carried 0.2.0's files beside 0.3.0's.
+      - name: No installers from an earlier build
+        shell: bash
+        run: rm -rf target/release/bundle target/universal-apple-darwin/release/bundle
+
       - name: Build the installers
         run: |
           yarn install --immutable
@@ -129,10 +135,16 @@ jobs:
           key: launcher-fedora-${{ hashFiles('launcher/Cargo.lock') }}
           restore-keys: launcher-fedora-
 
+      - name: No installers from an earlier build
+        run: rm -rf target/release/bundle
+
+      # Its file is named as the one built on Ubuntu is: "fc44" tells them apart on a release,
+      # which takes one file of a name.
       - name: Build the installer
         run: |
           yarn install --immutable
           yarn tauri build --bundles rpm
+          for f in target/release/bundle/rpm/*.x86_64.rpm; do mv "$f" "${f%.x86_64.rpm}.fc44.x86_64.rpm"; done
 
       - uses: actions/upload-artifact@v4
         with:
