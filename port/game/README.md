@@ -7,7 +7,7 @@ makes `openrac-<id>` for every one whose decompilation is present:
 | Directory | Game | Decompilation | Entry (`main`) | Library table |
 |---|---|---|---|---|
 | [rac1-pal](rac1-pal/README.md) | Ratchet & Clank (PAL) | `games/rac1/pal` | `func_0012DB18` | complete, from [the survey](../../docs/port/RAC1_PAL_SURVEY.md) |
-| rac1-ntsc | Ratchet & Clank (NTSC-U) | `games/rac1/ntsc` | not known yet | from its `config/us/symbol_addrs.txt` |
+| [rac1-ntsc](rac1-ntsc/README.md) | Ratchet & Clank (NTSC-U) | `games/rac1/ntsc` | `FUN_0012d9d8` | carried from rac1-pal's ([versionmap](../tools/versionmap/README.md)); runs into its title loop |
 | rac2-ntsc | Going Commando (NTSC-U) | `games/rac2/ntsc` (`candidates/`, its rendered units) | not known yet | empty |
 | rac3-ntsc | Up Your Arsenal (NTSC-U) | `games/rac3/ntsc` (without `i5bootn`, the online program; the menu, `frontbin`, as a group of its own) | not known yet | empty |
 | rac4-ntsc | Deadlocked (NTSC-U) | `games/rac4/ntsc` | not known yet | its libc, from `config/libc.tsv` |
