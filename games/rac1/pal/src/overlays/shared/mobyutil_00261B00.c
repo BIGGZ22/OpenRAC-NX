@@ -80,7 +80,78 @@ void func_L00_002626A8(char *moby, char *d, float a, float b) {
 INCLUDE_ASM("asm/overlays", func_L00_002629E0);
 INCLUDE_ASM("asm/overlays", func_L00_00262BC0);
 LINKER_REMNANT("asm/overlays", func_L00_00262DE8);
-INCLUDE_ASM("asm/overlays", func_L00_00262DF0);
+typedef int OvlQuad __attribute__((mode(TI)));
+typedef union {
+    OvlQuad q;
+    f32 f[4];
+    s32 i[4];
+} OvlVec4;
+typedef struct {
+    s32 count;
+    u8 pad[12];
+    OvlVec4 points[1];
+} SegmentPath_261d78;
+extern SegmentPath_261d78 * D_L00_001B0830[];
+extern f32 func_001F9B88(f32);
+extern void func_001F9BD8_62DF0(OvlVec4 *, OvlVec4 *, OvlVec4 *) __asm__("func_001F9BD8");
+extern void func_001F9BF0_62DF0(OvlVec4 *, OvlVec4 *, OvlVec4 *) __asm__("func_001F9BF0");
+extern f32 func_001F9C78(OvlVec4 *, OvlVec4 *);
+extern void func_001F9CA0_62DF0(OvlVec4 *, OvlVec4 *, OvlVec4 *) __asm__("func_001F9CA0");
+extern f32 func_001F9CB8_62DF0(OvlVec4 *) __asm__("func_001F9CB8");
+extern void func_L00_001FF4B0_62DF0(OvlVec4 *, OvlVec4 *, f32) __asm__("func_L00_001FF4B0");
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00261968.c, FUN_L00_00261d78. */
+s32 func_L00_00262DF0(f32 distance, s32 path_index, OvlVec4 *point, OvlVec4 *out) {
+    OvlVec4 difference;
+    OvlVec4 scaled_difference;
+    OvlVec4 working;
+    OvlVec4 segment;
+    OvlVec4 scaled_segment;
+    OvlVec4 cross;
+    OvlVec4 scaled_cross;
+    SegmentPath_261d78 **entry;
+    s32 i;
+    s32 found;
+
+    found = 0;
+    qcopy_nc(&working, point);
+    for (i = 0; i < D_L00_001B0830[path_index]->count - 1; i++) {
+        entry = &D_L00_001B0830[path_index];
+        if ((*entry)->points[i].f[3] == 0.0f && (*entry)->points[i + 1].f[3] == 0.0f)
+            continue;
+        func_001F9BF0_62DF0(&difference, &working, &(*entry)->points[i]);
+        difference.i[2] = 0;
+        func_001F9BF0_62DF0(&segment, &(*entry)->points[i + 1], &(*entry)->points[i]);
+        segment.i[2] = 0;
+        func_L00_001FF4B0_62DF0(&scaled_segment, &segment, 1.0f);
+        func_001F9CA0_62DF0(&cross, &difference, &scaled_segment);
+        if (distance < func_001F9B88(cross.f[2]))
+            continue;
+        {
+            f32 segment_length = func_001F9CB8_62DF0(&segment);
+            f32 projection = func_001F9C78(&difference, &scaled_segment);
+            if (segment_length < projection || projection < 0.0f) {
+                if (!(func_001F9CB8_62DF0(&difference) < distance))
+                    continue;
+                found = 1;
+                func_L00_001FF4B0_62DF0(&scaled_difference, &difference, distance);
+                func_001F9BD8_62DF0(&working, &scaled_difference, &(*entry)->points[i]);
+                working.f[2] = point->f[2];
+            } else {
+                found = 1;
+                func_L00_001FF4B0_62DF0(&scaled_cross, &scaled_segment, projection);
+                func_001F9BF0_62DF0(&scaled_difference, &difference, &scaled_cross);
+                func_L00_001FF4B0_62DF0(&scaled_difference, &scaled_difference, distance);
+                func_001F9BD8_62DF0(&scaled_difference, &scaled_difference, &scaled_cross);
+                func_001F9BD8_62DF0(&working, &scaled_difference, &(*entry)->points[i]);
+                working.f[2] = point->f[2];
+            }
+        }
+    }
+    if (found)
+        qcopy(out, &working);
+    return found;
+}
 INCLUDE_ASM("asm/overlays", func_L00_002630A8);
 typedef struct {
     s32 count; /* 0x00 */
@@ -509,7 +580,100 @@ void func_L00_00264690(float *p, int b, float s, float t) {
     func_L00_001FD1D8(m, 0, 0);
 }
 LINKER_REMNANT("asm/overlays", func_L00_00264860);
-INCLUDE_ASM("asm/overlays", func_L00_00264870);
+typedef u32 u128_64870 __attribute__((mode(TI), aligned(16)));
+typedef union {
+    u128_64870 q;
+    float f[4];
+} Vec4_2634f8;
+typedef struct {
+    u8 pad20[4];
+    s32 w24;
+    u8 pad28[2];
+    u8 b2A;
+    u8 b2B;
+} EffectTail_2637f8;
+typedef struct {
+    u8 pad[8];
+    u8 b8;
+    u8 b9;
+    s16 hA;
+    u8 padC[0x14];
+    EffectTail_2637f8 tail;
+} Effect_2637f8;
+extern void func_0020DAF8(void *, s32, void *);
+extern f32 func_001F9CB8(void *);
+extern s32 func_002140B0(s32);
+extern s32 func_001F9850(s32);
+extern Effect_2637f8 *func_L00_0026DEA0(void *, f32, f32, f32, s32, void *, f32, u32);
+extern u8 D_L00_0015F660_64870[] __asm__("D_L00_0015F660") MACRO_ADDR;
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002630b8.c, FUN_L00_002637f8. */
+void func_L00_00264870(u8 *m) {
+    Vec4_2634f8 vectors[4];
+    Vec4_2634f8 pos;
+    Vec4_2634f8 scaled;
+    f32 fraction, size, lifetime, scale;
+    s32 count;
+    s32 w24;
+    Effect_2637f8 *effect;
+    if (*(s16 *)(m + 0xa6) == 0x2ee && m != 0) {
+        func_0020DAF8(m, 0, vectors);
+        fraction = func_001F9CB8(vectors) / 1.026f;
+        if (1.0f < fraction)
+            fraction = 1.0f;
+        {
+            s32 b2A;
+            scale = fraction * -0.025f + -0.025f;
+            lifetime = fraction * 44000.0f + 6000.0f;
+            size = fraction * 0.02f + 0.01f;
+            w24 = 2;
+            func_L00_001FF4B0(&scaled, &vectors[2], scale);
+            func_001F9BD8(&pos, &vectors[3], &scaled);
+            b2A = 0x50;
+            count = 1;
+            do {
+                s32 n;
+                n = func_002140B0(0x10);
+                if (func_002140B0(2) != 0)
+                    n = -n;
+                effect = func_L00_0026DEA0(&pos, size, 1.0f, 0.75f, n,
+                                                   D_L00_0015F660_64870, lifetime, 0x503030ff);
+                if (effect) {
+                    EffectTail_2637f8 *tail = &effect->tail;
+                    effect->hA = func_001F9850(6);
+                    tail->w24 = w24;
+                    tail->b2A = b2A;
+                    tail->b2B = effect->hA;
+                }
+                count--;
+            } while (count >= 0);
+        }
+        {
+            s32 b2A;
+            scale = fraction * -0.015000001f + -0.01f;
+            lifetime = fraction * 25000.0f + 5000.0f;
+            size = fraction * 0.015000001f + 0.01f;
+            w24 = 2;
+            b2A = 0x7f;
+            func_L00_001FF4B0(&scaled, &vectors[2], scale);
+            func_001F9BD8(&pos, &vectors[3], &scaled);
+            count = 4;
+            do {
+                effect = func_L00_0026DEA0(&pos, size, 1.0f, 1.0f, 0x10,
+                                                   D_L00_0015F660_64870, lifetime, 0x7fffffff);
+                if (effect) {
+                    EffectTail_2637f8 *tail = &effect->tail;
+                    effect->hA = func_001F9850(2);
+                    effect->b8 = func_002140B0(0xff);
+                    tail->w24 = w24;
+                    tail->b2A = b2A;
+                    tail->b2B = effect->hA;
+                }
+                count--;
+            } while (count >= 0);
+        }
+    }
+}
 extern unsigned char D_0015EEB4_m[4] __asm__("D_0015EEB4") MACRO_ADDR;
 
 /* Sets a moby's three float fields to x, running its setup call first when it has a flag byte; without the global flag only runs func_0020D9D8 on a flagged moby. */

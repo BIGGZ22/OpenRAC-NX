@@ -1205,8 +1205,6 @@ extern float D_L06_00161D74 __attribute__((sda));
 extern float D_L06_00161D78 __attribute__((sda));
 extern float D_L06_00161D7C __attribute__((sda));
 extern float D_L06_00161D80 __attribute__((sda));
-extern float D_L06_00161DA0 __attribute__((sda));
-extern float D_L06_00161DA4 __attribute__((sda));
 extern float D_L06_00161D50 __attribute__((sda));
 extern float D_L06_00161D60 __attribute__((sda));
 
@@ -1240,59 +1238,62 @@ void FUN_L06_002f5d78(char *moby) {
         FUN_L00_00250df8(*left);
         FUN_L00_00250df8(*right);
     }
-    left = (char **)(data + 0x110);
-    right = (char **)(data + 0x138);
-    for (i = 0, offset = 0; i < 10; i++, offset += 2, left++, right++) {
-        float length = D_L06_00161D78 - ((float)i + (float)i);
-        threshold = D_L06_00161D70 + (float)(4 - i) * D_L06_00161D74;
-        upper = length;
-        lower = length - 1.0f;
-        if (length < threshold) upper = threshold;
-        if (lower < threshold) lower = threshold;
-        normalize_vector_xyz(&first, moby + 0xc0, upper);
-        normalize_vector_xyz(&second, moby + 0xc0, lower);
-        FUN_001f9cf8(&result, &D_L06_00161D50, moby + 0xc0);
-        add_vector_xyz(&result, &result, moby + 0x10);
-        add_vector_xyz(&result, &result, &first);
-        qcopy(*left + 0x10, &result);
-        FUN_001f9cf8(&result, &D_L06_00161D60, moby + 0xc0);
-        add_vector_xyz(&result, &result, moby + 0x10);
-        add_vector_xyz(&result, &result, &second);
-        qcopy(*right + 0x10, &result);
-        angle = D_L06_00161D7C * DEG_TO_RAD - (float)offset * 0.7853982f;
-        other = angle - D_L06_00161DA0 * DEG_TO_RAD;
-        if (1.5707964f < angle) angle = 1.5707964f;
-        else if (angle < 0.0f) angle = 0.0f;
-        if (1.5707964f < other) other = 1.5707964f;
-        else if (other < 0.0f) other = 0.0f;
-        if (angle != 0.0f && other == 0.0f) allocate_voice_for_target_entry(1, 0, (int)*left);
-        upper = (D_L06_00161D7C * DEG_TO_RAD - (float)(i + i) * 0.7853982f) - 0.7853982f;
-        other = upper - D_L06_00161DA0 * DEG_TO_RAD;
-        if (1.5707964f < upper) upper = 1.5707964f;
-        else if (upper < 0.0f) upper = 0.0f;
-        if (1.5707964f < other) other = 1.5707964f;
-        else if (other < 0.0f) other = 0.0f;
-        if (upper != 0.0f && other == 0.0f) allocate_voice_for_target_entry(1, 0, (int)*right);
-        *(float *)(*left + 0x40) = -angle;
-        angle = D_L06_00161D80 * DEG_TO_RAD - (float)(i + i) * 0.7853982f;
-        *(float *)(*right + 0x40) = upper;
-        other = angle - D_L06_00161DA4 * DEG_TO_RAD;
-        if (1.5707964f < angle) angle = 1.5707964f;
-        else if (angle < 0.0f) angle = 0.0f;
-        if (1.5707964f < other) other = 1.5707964f;
-        else if (other < 0.0f) other = 0.0f;
-        if (angle != 0.0f && other == 0.0f) allocate_voice_for_target_entry(2, 0, (int)*left);
-        lower = (D_L06_00161D80 * DEG_TO_RAD - (float)(i + i) * 0.7853982f) - 0.7853982f;
-        other = angle - D_L06_00161DA4 * DEG_TO_RAD;
-        if (1.5707964f < lower) lower = 1.5707964f;
-        else if (lower < 0.0f) lower = 0.0f;
-        if (1.5707964f < other) other = 1.5707964f;
-        else if (other < 0.0f) other = 0.0f;
-        if (lower != 0.0f && other == 0.0f) allocate_voice_for_target_entry(2, 0, (int)*right);
-        *(float *)(*left + 0x44) = -angle;
-        *(float *)(*right + 0x44) = -lower;
-        FUN_L00_00250df8(*left);
-        FUN_L00_00250df8(*right);
+    {
+        int i, offset;
+        left = (char **)(data + 0x110);
+        right = (char **)(data + 0x138);
+        for (i = 0, offset = 0; i < 10; i++, offset += 2, left++, right++) {
+            float length = D_L06_00161D78 - ((float)i + (float)i);
+            threshold = D_L06_00161D70 + (float)(4 - i) * D_L06_00161D74;
+            upper = length;
+            lower = length - 1.0f;
+            if (length < threshold) upper = threshold;
+            if (lower < threshold) lower = threshold;
+            normalize_vector_xyz(&first, moby + 0xc0, upper);
+            normalize_vector_xyz(&second, moby + 0xc0, lower);
+            FUN_001f9cf8(&result, &D_L06_00161D50, moby + 0xc0);
+            add_vector_xyz(&result, &result, moby + 0x10);
+            add_vector_xyz(&result, &result, &first);
+            qcopy(*left + 0x10, &result);
+            FUN_001f9cf8(&result, &D_L06_00161D60, moby + 0xc0);
+            add_vector_xyz(&result, &result, moby + 0x10);
+            add_vector_xyz(&result, &result, &second);
+            qcopy(*right + 0x10, &result);
+            angle = D_L06_00161D7C * DEG_TO_RAD - (float)offset * 0.7853982f;
+            other = angle - (*(float *)&D_L06_00161DA0) * DEG_TO_RAD;
+            if (1.5707964f < angle) angle = 1.5707964f;
+            else if (angle < 0.0f) angle = 0.0f;
+            if (1.5707964f < other) other = 1.5707964f;
+            else if (other < 0.0f) other = 0.0f;
+            if (angle != 0.0f && other == 0.0f) allocate_voice_for_target_entry(1, 0, (int)*left);
+            upper = (D_L06_00161D7C * DEG_TO_RAD - (float)(i + i) * 0.7853982f) - 0.7853982f;
+            other = upper - (*(float *)&D_L06_00161DA0) * DEG_TO_RAD;
+            if (1.5707964f < upper) upper = 1.5707964f;
+            else if (upper < 0.0f) upper = 0.0f;
+            if (1.5707964f < other) other = 1.5707964f;
+            else if (other < 0.0f) other = 0.0f;
+            if (upper != 0.0f && other == 0.0f) allocate_voice_for_target_entry(1, 0, (int)*right);
+            *(float *)(*left + 0x40) = -angle;
+            angle = D_L06_00161D80 * DEG_TO_RAD - (float)(i + i) * 0.7853982f;
+            *(float *)(*right + 0x40) = upper;
+            other = angle - (*(float *)&D_L06_00161DA4) * DEG_TO_RAD;
+            if (1.5707964f < angle) angle = 1.5707964f;
+            else if (angle < 0.0f) angle = 0.0f;
+            if (1.5707964f < other) other = 1.5707964f;
+            else if (other < 0.0f) other = 0.0f;
+            if (angle != 0.0f && other == 0.0f) allocate_voice_for_target_entry(2, 0, (int)*left);
+            lower = (D_L06_00161D80 * DEG_TO_RAD - (float)(i + i) * 0.7853982f) - 0.7853982f;
+            other = angle - (*(float *)&D_L06_00161DA4) * DEG_TO_RAD;
+            if (1.5707964f < lower) lower = 1.5707964f;
+            else if (lower < 0.0f) lower = 0.0f;
+            if (1.5707964f < other) other = 1.5707964f;
+            else if (other < 0.0f) other = 0.0f;
+            if (lower != 0.0f && other == 0.0f) allocate_voice_for_target_entry(2, 0, (int)*right);
+            *(float *)(*left + 0x44) = -angle;
+            *(float *)(*right + 0x44) = -lower;
+            FUN_L00_00250df8(*left);
+            FUN_L00_00250df8(*right);
+        }
     }
 }
 #endif
@@ -1305,8 +1306,8 @@ extern int D_L06_00161E54 __attribute__((section(".sdata")));
 extern float D_L06_00161E0C __attribute__((sda));
 extern float D_L06_00161E08 __attribute__((sda));
 extern float D_L06_00161E18 __attribute__((sda));
-extern float D_L06_00161E1C __attribute__((sda));
-extern float D_L06_00161E20 __attribute__((sda));
+extern int D_L06_00161E1C __attribute__((sda));
+extern int D_L06_00161E20 __attribute__((sda));
 extern float D_L06_00161E24 __attribute__((sda));
 extern float D_L06_00161E28 __attribute__((sda));
 extern int D_L06_00161E2C __attribute__((sda));
@@ -1318,7 +1319,6 @@ extern int D_L06_00161E48 __attribute__((section(".sdata")));
 extern int D_L06_00161E4C __attribute__((section(".sdata")));
 extern int D_L06_0015F58C __attribute__((sda));
 extern char D_0013F3D0[];
-extern int D_001413D0;
 extern short D_00141AC0;
 extern unsigned short D_00141AC2;
 extern unsigned int D_00141AC4;
@@ -1333,7 +1333,7 @@ extern float D_L06_001DAFD0[];
 extern float D_L06_001DB060[];
 extern void FUN_L06_002f7000(struct Moby *);
 extern void FUN_L06_002f6dd0(char *);
-extern void FUN_L00_0023e738(char *);
+extern void mark_moby_for_removal(struct Moby *) __asm__("FUN_0020c828");
 extern void decrement_timer(short *) __asm__("FUN_001f9770");
 extern int check_voice_target_2f6470(char *, int) __asm__("FUN_L00_0028d8c0");
 extern int allocate_voice_for_target_entry_2f6470(int, int, int) __asm__("FUN_0022da68");
@@ -1358,7 +1358,7 @@ extern int random_int_2f6470(int) __asm__("FUN_00213260");
 extern int make_particle_color_2f6470(int, int, float) __asm__("FUN_001fa6e0");
 extern int make_particle_color2_2f6470(float) __asm__("FUN_001fa6d0");
 extern void random_vector_2f6470(void *, float, float) __asm__("FUN_L00_00257d78");
-extern void spawn_spark_2f6470(void *, void *, int, unsigned char, unsigned char, int, float) __asm__("FUN_L00_002730e0");
+extern void spawn_spark_2f6470(void *, void *, int, float, unsigned char, unsigned char, int) __asm__("FUN_L00_002730e0");
 extern void collision_setup_2f6470(void *, char *, int, float, void *) __asm__("FUN_L00_00259888");
 extern void collision_response_2f6470(int, void *) __asm__("FUN_L00_00259a88");
 extern int collision_check_2f6470(char *, int, int) __asm__("FUN_L00_0025a420");
@@ -1372,6 +1372,7 @@ void FUN_L06_002f6470(char *moby) {
     char *data = *(char **)(moby + 0x78);
     int i, j, voice, index, color, frame;
     char *child;
+    float *pos;
     int all_done, all_same;
     float distance, dot;
     /* Retail reuses the collision vectors as matrix rows in state 2.
@@ -1389,12 +1390,14 @@ void FUN_L06_002f6470(char *moby) {
     } vectors;
     switch ((unsigned char)moby[0x20]) {
     case 0:
+        j = 22;
+        i = 45;
         D_L06_00161E44 = 11;
         D_L06_00161E48 = 23;
         D_L06_00161E4C = 34;
         D_L06_00161E40[0] = 0;
-        D_L06_00161E54 = 22;
-        D_L06_00161E50 = 45;
+        D_L06_00161E54 = j;
+        D_L06_00161E50 = i;
         *(int *)(data + 0x10) = -1;
         moby[0x20] = 1;
         *(unsigned short *)(moby + 0x34) |= 0x4000;
@@ -1404,9 +1407,10 @@ void FUN_L06_002f6470(char *moby) {
         voice = *(int *)(data + 0x10);
         if (check_voice_target_2f6470(moby, voice) == 0)
             *(int *)(data + 0x10) = allocate_voice_for_target_entry_2f6470(0, 4, (int)moby);
-        vectors.pos = (float *)(moby + 0x10);
+        pos = (float *)(moby + 0x10);
         FUN_L06_002f7000((struct Moby *)moby);
-        distance = distance_xyz_2f6470(moby + 0x10, D_L06_00167540);
+        vectors.pos = pos;
+        distance = distance_xyz_2f6470(pos, D_L06_00167540);
         if (distance < 48.0f) {
             approach_value_2f6470((float *)(data + 0x18), 1.0f, frame_time_2f6470 + frame_time_2f6470);
             vectors.matrix[2].f[0] = fast_cos_2f6470(*(float *)(moby + 0x48)) * 0.5f;
@@ -1472,14 +1476,14 @@ void FUN_L06_002f6470(char *moby) {
             ((unsigned char *)moby)[0xa4] = 255;
             if (*(short *)(data + 0x14) > 2) play_sound_2f6470(0x1774, 0x2b);
         }
-        all_done = all_same = 1;
+        all_same = all_done = 1;
         for (i = 0; i < 4; i++) {
             index = ((int *)data)[i];
             if (index >= 0) {
                 child = (char *)D_L06_0015FFD8_d + index * 256;
                 if (*(short *)(child + 0xa6) == 0x516) {
-                    if ((unsigned char)child[0x20] == 2) all_same = 0;
-                    else all_done = 0;
+                    if ((unsigned char)child[0x20] != 2) all_done = 0;
+                    else all_same = 0;
                 } else if (((unsigned char *)child)[0xbc] == 0) all_done = 0;
             }
         }
@@ -1494,11 +1498,13 @@ void FUN_L06_002f6470(char *moby) {
             if (all_same && D_00141968[43].count < 0xFFFF) D_00141968[43].count++;
             frame = scale_game_frames_2f6470(D_L06_0015EEA4);
             color = current_level_index;
-            if (D_00141968[43].best < frame / 600) {
+            frame /= 600;
+            if (frame > D_00141968[43].best) {
                 D_00141968[43].best = scale_game_frames_2f6470(D_L06_0015EEA4) / 600;
                 color = D_L06_0015ED84;
             }
-            D_00141968[43].flags = D_00141968[43].flags | (1 << color) | 0x80000000;
+            frame = 1 << color;
+            D_00141968[43].flags |= frame | 0x80000000;
         }
         return;
     case 2: {
@@ -1511,15 +1517,14 @@ void FUN_L06_002f6470(char *moby) {
         multiply_matrix_2f6470(vectors.matrix, vectors.matrix, vectors.shared.local_matrix);
         vectors.column = &vectors.shared.local_matrix[1];
         do {
-            index = i;
-            i++;
-            rotation_matrix_2f6470(vectors.shared.local_matrix, D_L06_001DB060 + index * 4);
-            vectors.i = i;
+            index = i * 4;
+            rotation_matrix_2f6470(vectors.shared.local_matrix, D_L06_001DB060 + index);
+            j = 19;
+            vectors.i = ++i;
             multiply_matrix_2f6470(vectors.shared.local_matrix, vectors.matrix, vectors.shared.local_matrix);
-            transform_vector_2f6470(&vectors.at, D_L06_001DAFD0 + index * 4, vectors.matrix);
+            transform_vector_2f6470(&vectors.at, D_L06_001DAFD0 + index, vectors.matrix);
             fast_vec_add(&vectors.shared.collision.delta, &vectors.at, vectors.pos);
             vectors.shared.collision.delta.f[3] = 1.0f;
-            j = 19;
             do {
                 float amount;
                 j--;
@@ -1531,24 +1536,21 @@ void FUN_L06_002f6470(char *moby) {
                 dot = random_float_between_alt_2f6470(D_L06_00161E24, D_L06_00161E28);
                 frame = make_particle_color2_2f6470(random_float_between_alt_2f6470((float)D_L06_00161E2C, (float)D_L06_00161E30));
                 random_vector_2f6470(&vectors.effect, D_L06_00161E34 * D_0015ED6C, D_L06_00161E38 * D_0015ED6C);
-                spawn_spark_2f6470(&vectors.offset, &vectors.effect, color, (unsigned char)scale_game_frames_2f6470(frame), (unsigned char)random_int_2f6470(255), 0, dot);
+                spawn_spark_2f6470(&vectors.offset, &vectors.effect, color, dot, (unsigned char)scale_game_frames_2f6470(frame), (unsigned char)random_int_2f6470(255), 0);
             } while (j >= 0);
         } while ((i = vectors.i) < 9);
         moby[0x20] = 3;
         return;
     }
     case 3:
-        FUN_L00_0023e738(moby);
+        mark_moby_for_removal((struct Moby *)moby);
         return;
     }
 }
 #endif
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L06_002f6dd0.s", FUN_L06_002f6dd0);
-#else
 extern void rotation_matrix(void *, void *) __asm__("FUN_001fa050");
-extern void FUN_001f9ff8(void *, float);
-extern void FUN_001fa378(void *, void *, void *);
+extern void rotation_matrix_y(void *, float) __asm__("FUN_001f9ff8");
+extern void multiply_matrix(void *, void *, void *) __asm__("FUN_001fa378");
 extern int get_effect_texture(int) __asm__("FUN_001f44b8");
 extern void vu1_add_gs_register(int, long) __asm__("FUN_00233980");
 extern void font_queue_vu_state(void) __asm__("FUN_001f76a0");
@@ -1566,24 +1568,24 @@ extern float D_L06_00161DF8 __attribute__((sda));
 extern float D_L06_00161DFC __attribute__((sda));
 extern int D_L06_00161E50;
 extern int D_L06_00161E54;
-extern int D_L06_00161E40[];
+extern int D_L06_00161E40[] __attribute__((section(".sdata")));
 extern float D_L06_001DAFD0[];
 extern float D_L06_001DB060[];
 extern Vec4 D_L06_001DB0F0[4][30];
 
-void FUN_L06_002f6dd0(char *m) {
-    float a[16];
-    float b[16];
-    float mat[9][16];
-    float v[4];
-    int s[9];
-    char *data = *(char **)(m + 0x78);
-    float *mp;
-    float *tp;
-    float *vp;
-    float *sp;
-    float *m0;
-    int *s0;
+void FUN_L06_002f6dd0(char *moby) {
+    float base_matrix[16];
+    float yaw_matrix[16];
+    float segment_matrix[9][16];
+    float offset[4];
+    int params[9];
+    char *data = *(char **)(moby + 0x78);
+    float *matrix;
+    float *rotation;
+    float *offset_src;
+    float *translation;
+    float *first_matrix;
+    int *segment_params;
     unsigned int color;
     int first, second, fourth;
     int *points, *sequence;
@@ -1591,9 +1593,9 @@ void FUN_L06_002f6dd0(char *m) {
     int i;
     int j;
 
-    rotation_matrix(a, m + 0x40);
-    FUN_001f9ff8(b, D_L06_00161E0C);
-    FUN_001fa378(a, a, b);
+    rotation_matrix(base_matrix, moby + 0x40);
+    rotation_matrix_y(yaw_matrix, D_L06_00161E0C);
+    multiply_matrix(base_matrix, base_matrix, yaw_matrix);
     vu1_add_gs_register(6, get_effect_texture(14));
     vu1_add_gs_register(0x14, 0xFF9000000260L);
     vu1_add_gs_register(8, 0);
@@ -1601,47 +1603,46 @@ void FUN_L06_002f6dd0(char *m) {
                                   ((long)D_L06_00161DD8 << 4) | ((long)D_L06_00161DDC << 6) |
                                   0x8000000000L);
     font_queue_vu_state();
-    m0 = mat[0];
-    s0 = s;
-    tp = D_L06_001DB060;
-    vp = D_L06_001DAFD0;
-    sp = mat[0] + 12;
-    mp = m0;
+    first_matrix = segment_matrix[0];
+    segment_params = params;
+    rotation = D_L06_001DB060;
+    offset_src = D_L06_001DAFD0;
+    translation = segment_matrix[0] + 12;
+    matrix = first_matrix;
     for (i = 8; i >= 0; i--) {
-        rotation_matrix(mp, tp);
-        tp += 4;
-        FUN_001fa378(mp, a, mp);
-        transform_vector(v, vp, a);
-        vp += 4;
-        add_vector_xyz(sp, v, m + 0x10);
-        mp[15] = 1.0f;
-        mp += 16;
-        sp += 16;
+        rotation_matrix(matrix, rotation);
+        rotation += 4;
+        multiply_matrix(matrix, base_matrix, matrix);
+        transform_vector(offset, offset_src, base_matrix);
+        offset_src += 4;
+        add_vector_xyz(translation, offset, moby + 0x10);
+        matrix[15] = 1.0f;
+        matrix += 16;
+        translation += 16;
     }
     color = fast_tween_color(D_L06_00161DF0 & 0xFFFFFF, D_L06_00161DF0, *(float *)(data + 0x18));
     first = D_L06_00161E50;
     points = (int *)D_L06_001DB0F0;
     second = D_L06_00161E54;
     fourth = D_L06_00161DF4;
+    seventh = D_L06_00161DF8;
     eighth = D_L06_00161DFC;
     sequence = D_L06_00161E40;
-    seventh = D_L06_00161DF8;
-    s[0] = first;
-    s[2] = (int)sequence;
-    s[1] = second;
-    s[3] = color;
-    s[4] = fourth;
-    *(float *)&s[7] = seventh;
-    *(float *)&s[8] = eighth;
-    s[5] = 0x1E;
-    s[6] = (int)points;
-    mp = m0;
+    params[0] = first;
+    params[2] = (int)sequence;
+    params[1] = second;
+    params[3] = color;
+    params[4] = fourth;
+    *(float *)&params[7] = seventh;
+    *(float *)&params[8] = eighth;
+    params[5] = 0x1E;
+    params[6] = (int)points;
+    matrix = first_matrix;
     for (j = 8; j >= 0; j--) {
-        FUN_L06_00216b88(s0, mp);
-        mp += 16;
+        FUN_L06_00216b88(segment_params, matrix);
+        matrix += 16;
     }
 }
-#endif /* NON_MATCHING */
 #include "rnc/gameplay/entities/moby.h"
 
 extern f32 D_L06_00161E10 __attribute__((sda));
@@ -2222,9 +2223,9 @@ void FUN_L06_002fbfb0(char *moby) {
         (*(char **)(data + 0x40))[0x31] = 1;
         *(long *)(*(char **)(data + 0x40) + 0x38) = *(long *)(moby + 0x38);
         *(unsigned short *)(*(char **)(data + 0x40) + 0x34) = *(unsigned short *)(moby + 0x34);
-        child = *(char **)(data + 0x40);
-        qcopy(child + 0x10, moby + 0x10);
-        qcopy(child + 0x40, moby + 0x40);
+        child = *(char **)(data + 0x40) + 0x10;
+        qcopy(child, moby + 0x10);
+        qcopy(child + 0x30, moby + 0x40);
         if (*(int *)data >= 0) {
             moby[0x20] = 1;
             return;
@@ -2241,7 +2242,7 @@ void FUN_L06_002fbfb0(char *moby) {
         moby[0x20] = 5;
         return;
     case 1:
-        if (!is_point_inside_clip_volume((void *)0x13f3d0, *(int *)data)) return;
+        if (!is_point_inside_clip_volume(&hero.motion.pos, *(int *)data)) return;
         if (*(int *)(data + 4) == 1) {
             moby[0x20] = 4;
             *(int *)(data + 0x4c) = scale_game_frames_alt(0x14);
@@ -2268,7 +2269,7 @@ void FUN_L06_002fbfb0(char *moby) {
         phase_a = FUN_001f9b48(moby + 0x10, data + 0x10);
         phase_b = FUN_001f9b48(*(char **)(data + 0x40) + 0x10, data + 0x10);
         if ((unsigned char)moby[0xbc] == 1) goto phase_one;
-        if ((unsigned char)moby[0xbc] < 2) goto phase_default;
+        if ((int)(unsigned char)moby[0xbc] < 2) goto phase_default;
         if ((unsigned char)moby[0xbc] == 2) goto phase_two;
 
         phase_default:
@@ -2336,9 +2337,9 @@ void FUN_L06_002fbfb0(char *moby) {
         moby[0x20] = 1;
         qcopy(moby + 0x10, data + 0x10);
         qcopy(moby + 0x40, data + 0x20);
-        child = *(char **)(data + 0x40);
-        qcopy(child + 0x10, moby + 0x10);
-        qcopy(child + 0x40, moby + 0x40);
+        child = *(char **)(data + 0x40) + 0x10;
+        qcopy(child, moby + 0x10);
+        qcopy(child + 0x30, moby + 0x40);
         *(volatile float *)(data + 0x48) = 0.0f;
         *(volatile float *)(data + 8) = 0.0f;
         *(volatile float *)(data + 0xc) = 0.0f;

@@ -111,7 +111,215 @@ unsigned char *func_L11_00309C18(char *owner, float *dir, float *pos, float a, f
     }
     return m;
 }
-INCLUDE_ASM("asm/overlays", func_L11_00309DA0);
+typedef struct {
+    f32 x;
+    f32 y;
+    f32 z;
+    f32 w;
+} Vec4f_09DA0;
+struct Moby_09DA0;
+extern f32 D_0015EE6C MACRO_ADDR;
+char *func_L11_00309A40(float *pos, float *aim, float r1, float r2, float maxd);
+typedef int OvlQuad __attribute__((mode(TI)));
+struct Manip;
+struct GifEntry;
+struct AnimSeq;
+struct MobyClass_09DA0 {
+    u8 pad_0[0xC];
+    u8 seq_count; /* number of entries in seqs[] (menu previews clamp the sequence to it) */
+    u8 pad_D[3];
+    u32 collision; /* collision data; copied into Moby.collision when a moby is (re)classed */
+    u8 pad_14[0x8];
+    void *retarget_table; /* retarget table: word table, indexed id * 4 + 4 (0024eec0) */
+    struct GifEntry *gifs; /* patched by patch_moby_gifs */
+    f32 scale; /* default draw scale: copied into Moby.scale, divides it */
+    s32 sound_defs; /* sound definitions, 0x20 bytes each */
+    void **callbacks; /* function-pointer table, called with the moby */
+    u8 pad_30[0x14];
+    u16 flags; /* initial Moby.flags */
+    s16 type; /* class type; 5 (a creature) is tested by targeting code */
+    struct AnimSeq *seqs[1]; /* animation sequences, indexed by Moby.seq */
+};
+struct Moby_09DA0 {
+    Vec4f_09DA0 bsphere;
+    Vec4f_09DA0 pos;
+    u8 state; /* >= 0xFE: dead, waiting to respawn */
+    u8 group; /* linked group: index into the level moby-list table D_Lxx_001ABCC0 (0xFF: none) */
+    u8 class_slot; /* class slot: pclass = D_L00_00197300[class_slot] (crate_update) */
+    u8 alpha; /* 0x80 by default; 0x40 for the smoke trail FUN_L09_00307ba8 spawns */
+    struct MobyClass_09DA0 *pclass;
+    struct Moby_09DA0 *next;
+    f32 scale; /* draw scale (FUN_L01_002fa068 halves it, FUN_L00_00215ef8 divides by it) */
+    u8 update_dist; /* update distance; 0xFF (always) or 0x7F for beams, set by spawners */
+    u8 visible; /* drawn last frame; set to 1 by spawners */
+    s16 draw_dist; /* draw distance; 0xFF (0x7F for beams), set by spawners */
+    u16 flags;
+    u16 occlusion; /* occlusion bits; 0x7F80 set by spawners */
+    u64 spawn_frame; /* frame count at which it may respawn */
+    Vec4f_09DA0 rot; /* z: yaw (FUN_L00_00266448 compares it with atan2 to the hero) */
+    u8 frame; /* animation frame */
+    u8 prev_frame; /* frame index in prev_seq */
+    u8 seq; /* animation sequence id */
+    u8 prev_seq;
+    f32 anim_time;
+    f32 anim_speed;
+    u8 pad5C[8];
+    struct Manip *manips;
+    void *cur_frame_data;
+    void *prev_frame_data;
+    u8 anim_flags;
+    u8 unk71; /* set to 0xFF when a moby changes class */
+    u8 unk72;
+    u8 unk73;
+    void (*update)(struct Moby_09DA0 *moby);
+    u8 *pvars;
+    u8 unk7C;
+    u8 sound_slot; /* 0x7D: D_0013E550 slot of its looping sound, 0xFF: none (FUN_L00_00232670) */
+    u8 anim_trigger_count;
+    u8 shadow_range; /* shadow range in units of 1024; 0x17 from FUN_L09_002c5990 near D_L09_00166F40 */
+    u8 pad80[6];
+    s16 unk86;
+    u8 pad88[8];
+    s32 glow_color; /* glow colour (class header + 0x40) */
+    u32 collision; /* collision data, from the class header (MobyClass.collision) */
+    s32 collision_disable; /* per-primitive collision disable bits; 1 while a carrier holds the moby (FUN_L00_002c7a58) */
+    u8 pad9C[8];
+    u8 hit_slot; /* hit-message slot (0xFF: none) */
+    u8 padA5;
+    s16 oclass;
+    u8 padA8[8];
+    u8 mission; /* 0xB0: index into the level's D_0014C050 row (0xFF: not spawned) */
+    u8 padB1;
+    u16 save_id; /* index into the level collected[]/killed[] tables and save bits D_0014C190[level][id >> 5] */
+    s16 unkB4;
+    u8 padB6[2];
+    void *parent; /* 0xB8: spawner (bolt source record); its byte 0xB1 is a per-level id (FUN_L00_002a6b70) */
+    u8 command; /* external command byte */
+    u8 padBD[3];
+    Vec4f_09DA0 rot_row0; /* 0xC0: rows of the matrix built from rot (FUN_001fa030) */
+    Vec4f_09DA0 rot_row1;
+    Vec4f_09DA0 rot_row2;
+    u8 padF0[0x10];
+};
+typedef struct {
+    float vel[4];
+    float size;
+    int unk14;
+    int timer;
+    struct Moby_09DA0 *owner;
+    float target_pos[3];
+    struct Moby_09DA0 *target;
+    float *aim;
+    float *src;
+} MissileVars_089d0;
+typedef struct {
+    u8 pad0[0x1A];
+    s16 oclass;
+    u8 pad1C[0x14];
+} MissileHit_089d0;
+extern int D_L11_0015F6B0 MACRO_ADDR;
+extern char * D_L11_00160058 MACRO_ADDR;
+extern char D_L11_00174900[];
+extern int func_001FA898(float);
+extern float func_001FA790(float, float);
+extern float func_001FA748(float, float);
+extern float func_001F9B88(float);
+extern void func_00215C00(void *, float, float, float);
+extern void func_001E9768(void *, void *);
+extern void func_001F9BD8(void *, void *, void *);
+extern void func_L00_0025A890(float, void *, struct Moby_09DA0 *, int);
+extern int func_L00_001EFFF0(void *, void *, int, void *, void *);
+extern float func_002140F8(float, float);
+extern void func_L00_001FF610(void *, void *, void *);
+extern int func_L00_00258BC8(int, int);
+extern char *func_L00_0026EBC0_09DA0(void *, void *, int, int, float) __asm__("func_L00_0026EBC0");
+extern int func_001F9908(int *);
+static inline void copy_xyz_089d0(float *dst, float *src) {
+    dst[0] = src[0];
+    dst[1] = src[1];
+    dst[2] = src[2];
+}
+
+/* Homing missile: eases its scale, re-picks a target every sixth frame, turns toward it within a cone and flies on; on impact it bursts into five sparks, otherwise it shrinks away once its timer runs out.
+   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002c8830.c, FUN_L11_003089d0. */
+void func_L11_00309DA0(struct Moby_09DA0 *moby) {
+    MissileVars_089d0 *vars = (MissileVars_089d0 *)moby->pvars;
+    float old[4];
+    float look[4];
+    MissileHit_089d0 hit;
+    float q[4];
+    float r[4];
+    struct Moby_09DA0 *target;
+    float speed, yaw, yaw_off, pitch, pitch_off, max_yaw, max_pitch;
+    int i;
+
+    moby->scale += (moby->pclass->scale - moby->scale) * 0.1f;
+    qcopy(old, &moby->pos);
+    if (D_L11_0015F6B0 % 6 == (((char *)moby - D_L11_00160058) >> 8) % 6)
+        vars->target = 0;
+    moby->alpha = func_001FA898(vars->size * 24.0f);
+    copy_xyz_089d0(look, vars->target_pos);
+    ((int *)look)[3] = 0;
+    target = vars->target;
+    if (target == 0 || target->state == 0xFE || target->state == 0xFD ||
+        func_001F9D10(&target->pos, look) > 3.0f)
+        vars->target = (struct Moby_09DA0 *)func_L11_00309A40((float *)&moby->pos, (float *)&moby->rot, 0.2617994f, 0.2617994f, 60.0f);
+    if (vars->target != 0) {
+        copy_xyz_089d0(vars->target_pos, (float *)&vars->target->pos);
+        speed = func_001F9CB8(vars);
+        yaw_off = func_001FA790(func_L00_001FF860(vars->target->pos.x - moby->pos.x, vars->target->pos.y - moby->pos.y), moby->rot.z);
+        yaw = func_001F9B88(yaw_off);
+        pitch_off = func_001FA790(-func_L00_001FF860(func_001F9D48(&moby->pos, &vars->target->pos), vars->target->pos.z - moby->pos.z), moby->rot.y);
+        pitch = func_001F9B88(pitch_off);
+        if (yaw < 0.2617994f && pitch < 0.2617994f) {
+            max_yaw = D_0015EE6C * 0.87266463f;
+            if (max_yaw < yaw) {
+                yaw_off /= yaw;
+                yaw_off *= max_yaw;
+            }
+            moby->rot.z = func_001FA748(moby->rot.z, yaw_off);
+            max_pitch = D_0015EE6C * 0.87266463f;
+            if (max_pitch < pitch) {
+                pitch_off /= pitch;
+                pitch_off *= max_pitch;
+            }
+            moby->rot.y = func_001FA748(moby->rot.y, pitch_off);
+            func_00215C00(vars, speed, moby->rot.z, -moby->rot.y);
+            func_001E9768(&moby->pos, &vars->target->pos);
+        } else {
+            vars->target = 0;
+        }
+    }
+    func_001F9BD8(&moby->pos, &moby->pos, vars);
+    if (moby->pos.x < 2.0f || moby->pos.x > 1021.0f || moby->pos.y < 2.0f || moby->pos.y > 1021.0f ||
+        moby->pos.z < 2.0f || moby->pos.z > 1021.0f) {
+        func_0020D678(moby);
+        return;
+    }
+    func_L00_0025A890(1.0f, &hit, moby, 0x10000);
+    hit.oclass = moby->oclass;
+    if (func_L00_001EFFF0(old, &moby->pos, 0, vars->owner, &hit)) {
+        for (i = 0; i < 5; i++) {
+            *(OvlQuad *)r = 0;
+            r[0] = func_002140F8(-1.0f, 1.0f);
+            r[1] = func_002140F8(-1.0f, 1.0f);
+            r[2] = func_002140F8(-1.0f, 1.0f);
+            *(OvlQuad *)q = *(OvlQuad *)r;
+            func_L00_001FF610(r, vars, D_L11_00174900);
+            func_L00_001FF4B0(q, q, func_001F9CB8(r) * 0.5f);
+            func_001F9BD8(q, r, q);
+            func_L00_001FF4B0(q, q, func_002140F8(D_0015EE6C * 5.0f, D_0015EE6C * 9.0f));
+            func_L00_0026EBC0_09DA0(&moby->pos, q, 0x7F2F4F6F, func_L00_00258BC8(func_001F9850(10), func_001F9850(15)), 90000.0f);
+        }
+        func_0020D678(moby);
+        return;
+    }
+    if (func_001F9908(&vars->timer)) {
+        vars->size *= 0.74f;
+        if (vars->size < 0.02f)
+            func_0020D678(moby);
+    }
+}
 extern char *func_0020D348(int);
 extern int func_001FA898(float);
 extern float func_L00_001FF860(float, float);

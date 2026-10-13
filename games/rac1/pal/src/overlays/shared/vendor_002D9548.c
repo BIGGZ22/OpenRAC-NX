@@ -196,7 +196,273 @@ void func_L06_002E7578(char *moby)
     func_L00_002D80A0(moby);
 }
 INCLUDE_ASM("asm/overlays", func_L06_002E9AA8);
-INCLUDE_ASM("asm/overlays", func_L06_002EA920);
+typedef u32 u128_EA920 __attribute__((mode(TI), aligned(16)));
+typedef struct {
+    f32 x;
+    f32 y;
+    f32 z;
+    f32 w;
+} Vec4f_EA920;
+typedef union {
+    u128_EA920 q;
+    f32 f[4];
+    s32 i[4];
+} Vec4_EA920;
+struct Moby_EA920;
+typedef struct {
+    char _pad00[0x10];
+    unsigned char nframes; /* 0x10 */
+} AnimSeq_EA920;
+struct Manip;
+struct GifEntry;
+struct AnimSeq_EA920;
+struct MobyClass_EA920 {
+    u8 pad_0[0xC];
+    u8 seq_count; /* number of entries in seqs[] (menu previews clamp the sequence to it) */
+    u8 pad_D[3];
+    u32 collision; /* collision data; copied into Moby.collision when a moby is (re)classed */
+    u8 pad_14[0x8];
+    void *retarget_table; /* retarget table: word table, indexed id * 4 + 4 (0024eec0) */
+    struct GifEntry *gifs; /* patched by patch_moby_gifs */
+    f32 scale; /* default draw scale: copied into Moby.scale, divides it */
+    s32 sound_defs; /* sound definitions, 0x20 bytes each */
+    void **callbacks; /* function-pointer table, called with the moby */
+    u8 pad_30[0x14];
+    u16 flags; /* initial Moby.flags */
+    s16 type; /* class type; 5 (a creature) is tested by targeting code */
+    struct AnimSeq_EA920 *seqs[1]; /* animation sequences, indexed by Moby.seq */
+};
+struct Moby_EA920 {
+    Vec4f_EA920 bsphere;
+    Vec4f_EA920 pos;
+    u8 state; /* >= 0xFE: dead, waiting to respawn */
+    u8 group; /* linked group: index into the level moby-list table D_Lxx_001ABCC0 (0xFF: none) */
+    u8 class_slot; /* class slot: pclass = D_L00_00197300[class_slot] (crate_update) */
+    u8 alpha; /* 0x80 by default; 0x40 for the smoke trail FUN_L09_00307ba8 spawns */
+    struct MobyClass_EA920 *pclass;
+    struct Moby_EA920 *next;
+    f32 scale; /* draw scale (FUN_L01_002fa068 halves it, FUN_L00_00215ef8 divides by it) */
+    u8 update_dist; /* update distance; 0xFF (always) or 0x7F for beams, set by spawners */
+    u8 visible; /* drawn last frame; set to 1 by spawners */
+    s16 draw_dist; /* draw distance; 0xFF (0x7F for beams), set by spawners */
+    u16 flags;
+    u16 occlusion; /* occlusion bits; 0x7F80 set by spawners */
+    u64 spawn_frame; /* frame count at which it may respawn */
+    Vec4f_EA920 rot; /* z: yaw (FUN_L00_00266448 compares it with atan2 to the hero) */
+    u8 frame; /* animation frame */
+    u8 prev_frame; /* frame index in prev_seq */
+    u8 seq; /* animation sequence id */
+    u8 prev_seq;
+    f32 anim_time;
+    f32 anim_speed;
+    u8 pad5C[8];
+    struct Manip *manips;
+    void *cur_frame_data;
+    void *prev_frame_data;
+    u8 anim_flags;
+    u8 unk71; /* set to 0xFF when a moby changes class */
+    u8 unk72;
+    u8 unk73;
+    void (*update)(struct Moby_EA920 *moby);
+    u8 *pvars;
+    u8 unk7C;
+    u8 sound_slot; /* 0x7D: D_0013E550 slot of its looping sound, 0xFF: none (FUN_L00_00232670) */
+    u8 anim_trigger_count;
+    u8 shadow_range; /* shadow range in units of 1024; 0x17 from FUN_L09_002c5990 near D_L09_00166F40 */
+    u8 pad80[6];
+    s16 unk86;
+    u8 pad88[8];
+    s32 glow_color; /* glow colour (class header + 0x40) */
+    u32 collision; /* collision data, from the class header (MobyClass.collision) */
+    s32 collision_disable; /* per-primitive collision disable bits; 1 while a carrier holds the moby (FUN_L00_002c7a58) */
+    u8 pad9C[8];
+    u8 hit_slot; /* hit-message slot (0xFF: none) */
+    u8 padA5;
+    s16 oclass;
+    u8 padA8[8];
+    u8 mission; /* 0xB0: index into the level's D_0014C050 row (0xFF: not spawned) */
+    u8 padB1;
+    u16 save_id; /* index into the level collected[]/killed[] tables and save bits D_0014C190[level][id >> 5] */
+    s16 unkB4;
+    u8 padB6[2];
+    void *parent; /* 0xB8: spawner (bolt source record); its byte 0xB1 is a per-level id (FUN_L00_002a6b70) */
+    u8 command; /* external command byte */
+    u8 padBD[3];
+    Vec4f_EA920 rot_row0; /* 0xC0: rows of the matrix built from rot (FUN_001fa030) */
+    Vec4f_EA920 rot_row1;
+    Vec4f_EA920 rot_row2;
+    u8 padF0[0x10];
+};
+struct MobyHit {
+    u8 pad0[0x10];
+    Vec4f_EA920 pos;
+    struct Moby_EA920 *source;
+};
+struct RespawnVars {
+    u8 pad0[0x20];
+    f32 health;
+    s16 max_health;
+    u8 pad26[0xA];
+    f32 spin;
+    u8 pad34[4];
+    int new_blink;
+    u8 pad3C[0x112];
+    u8 sparks_pending;
+    u8 pad14F[0x31];
+    Vec4f_EA920 target_pos;
+    u8 pad190[0x30];
+    struct Moby_EA920 *target;
+    int target_mode;
+    u8 pad1C8[0x14];
+    f32 base_range;
+    f32 range;
+    u8 pad1E4[4];
+    s16 blink_timer;
+    u8 pad1EA[0xA];
+    int path;
+    u8 pad1F8[0xC];
+    int target_id;
+    u8 pad208[2];
+    s16 frame_slot;
+    struct Moby_EA920 *carried;
+    Vec4f_EA920 spawn_pos;
+    u8 pad220[0x20];
+    s16 lives;
+    u8 pad242[6];
+    f32 glow_phase;
+};
+extern f32 D_L06_0015F660[] MACRO_ADDR;
+extern short D_L06_00161C94;
+extern short D_L06_00161C98;
+extern short D_L06_00161C9C;
+extern short D_L06_00160058_EA920 __asm__("D_L06_00160058");
+extern u8 D_001414F4[];
+extern int * D_L06_001B0FB0[];
+extern int func_L00_0025B4D0(void *, void *, void *, int, int *, float *, int, int);
+extern void func_L00_002584A8(void *, int, int);
+extern void func_L06_002EB5C8_EA920(struct Moby_EA920 *, Vec4_EA920 *) __asm__("func_L06_002EB5C8");
+extern void func_L06_002EB360_EA920(struct Moby_EA920 *) __asm__("func_L06_002EB360");
+extern void func_L06_002EB8C8(char *);
+extern float func_001FA748(float, float);
+extern float func_001F9878(float);
+extern int func_001FA898(float);
+extern int func_001F9938(s16 *);
+extern void func_L06_002F4908(char *, char **, f32);
+extern int func_L00_0025A778(void *, void *, int);
+extern float func_001F9D48(void *, void *);
+extern int func_L00_00260FB0(void *, void *, float, int, int, void *, int);
+extern float func_001F9B88(float);
+extern struct MobyHit *func_L00_0025B478_EA920(void *, int, int) __asm__("func_L00_0025B478");
+extern void func_0020D678_EA920(struct Moby_EA920 *) __asm__("func_0020D678");
+extern struct Moby_EA920 * D_001414D0_EA920 __asm__("D_001414D0");
+typedef struct Moby_EA920 Moby_EA920;
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002e94f0. */
+void func_L06_002EA920(struct Moby_EA920 *moby) {
+    struct RespawnVars *vars;
+    struct MobyHit *hit;
+    int kind;
+    float damage;
+    int code;
+
+    vars = (struct RespawnVars *)moby->pvars;
+    vars->spin = moby->rot_row2.z * 0.25f;
+    if (vars->carried != 0) {
+        hit = func_L00_0025B478_EA920(vars->carried, 0x330000, 0);
+        if (hit != 0 && (hit->source == 0 || hit->source->oclass != 0xAF)) {
+            func_L06_002EB5C8_EA920(moby, (Vec4_EA920 *)D_L06_0015F660);
+            func_L06_002EB360_EA920(moby);
+            func_L00_002584A8(moby, 0, -1);
+            goto remove;
+        }
+    }
+    damage = 0.0f;
+    hit = func_L00_0025B478_EA920(moby, 0x330000, 0);
+    code = func_L00_0025B4D0(moby, hit, &vars->health, 0, &kind, &damage, 0, 4);
+    if (kind != 1 && moby->state != 0xE) {
+        vars->health = vars->health - damage;
+        if (vars->health <= 0.0f) {
+            code = 1;
+        }
+        switch (code) {
+        case 1:
+        case 2:
+            func_L00_002584A8(moby, 0, -1);
+            func_L06_002EB5C8_EA920(moby, (Vec4_EA920 *)&hit->pos);
+            if (vars->sparks_pending == 1) {
+                func_L06_002EB8C8((char *)moby);
+                vars->sparks_pending = 0;
+            }
+            func_0022ED80(3, 0, (int)moby);
+            if (vars->carried != 0) {
+                func_L06_002EB360_EA920(moby);
+            }
+            if (vars->lives == 0) {
+            remove:
+                func_0020D678_EA920(moby);
+                return;
+            }
+            vars->lives = vars->lives - 1;
+            vars->health = vars->max_health;
+            qcopy(&moby->pos, &vars->spawn_pos);
+            moby->state = 0xF;
+            moby->collision = 0;
+            moby->flags = (moby->flags & 0xEFFF) | 0x41;
+            break;
+        case 0:
+        case 3:
+        case 11:
+            break;
+        }
+    }
+    moby->hit_slot = 0xFF;
+    vars->glow_phase = func_001FA748(vars->glow_phase, (*(f32 *)&D_L06_00161C94) * 0.017453292f * D_0015EE6C);
+    moby->glow_color = func_001FA8A8((*(int *)&D_L06_00161C98), (*(int *)&D_L06_00161C9C), (func_001F9FA8(vars->glow_phase) + 1.0f) * 0.5f);
+    if (vars->new_blink != 0) {
+        vars->blink_timer = func_001FA898(func_001F9878(func_002140F8(180.0f, 240.0f)));
+        vars->new_blink = 0;
+    }
+    func_001F9938(&vars->blink_timer);
+    if (vars->blink_timer != 0) {
+        vars->range = vars->base_range + 6.0f;
+    } else {
+        vars->range = vars->base_range;
+    }
+    if (vars->target_id != -1) {
+        struct Moby_EA920 *target = &(*(struct Moby_EA920 * *)&D_L06_00160058_EA920)[vars->target_id];
+        vars->target_mode = 1;
+        vars->target = target;
+        qcopy(&vars->target_pos, &target->pos);
+    } else if (D_001414F4[0] == 1) {
+        if (D_L06_0015F6B0 % 8 == vars->frame_slot) {
+            func_L06_002F4908((char *)moby, (char **)&vars->target, vars->range);
+            if (vars->target == 0) {
+                vars->target_mode = 2;
+            } else {
+                int *path = D_L06_001B0FB0[vars->path];
+                if (func_L00_0025A778(&vars->target->pos, path + 4, *path) == 0 ||
+                    (vars->target->oclass == 0x359 && 2.0f < func_001F9D48(&moby->pos, &vars->target->pos))) {
+                    vars->target = 0;
+                    vars->target_mode = 2;
+                } else {
+                    vars->target_mode = 0;
+                }
+            }
+        }
+    } else {
+        Vec4f_EA920 *goal = &vars->target_pos;
+        int *path = D_L06_001B0FB0[vars->path];
+        if (func_L00_00260FB0(moby, goal, vars->range, 0, 0, path + 4, *path) != 2) {
+            if (vars->range < func_001F9D48(&vars->spawn_pos, goal) ||
+                3.0f < func_001F9B88(moby->pos.z - vars->target_pos.z)) {
+                vars->target_mode = 2;
+            }
+        }
+    }
+    if (vars->target == 0) {
+        vars->target = D_001414D0_EA920;
+    }
+}
 extern void func_L00_001FF4B0(void *, void *, float);
 extern float func_001F9C78(void *, void *);
 extern void func_001F9CA0(void *, void *, void *);

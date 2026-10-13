@@ -696,7 +696,16 @@ void func_L00_0025A8C0(char *arg, int a, int b, void *src, float scale) {
     qcopy(arg, src);
 }
 INCLUDE_ASM("asm/overlays", func_L00_0025A8E8);
-INCLUDE_ASM("asm/overlays", func_L00_0025AA20);
+extern void func_L00_00250800(void *, int, void *);
+extern int func_L00_0025A8E8(void *, void *, int, float, float, float, int, int, int);
+
+/* Calls FUN_L00_002598b0 at a moby point; the f13 argument is ignored and c is passed again as a float.
+   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00259710.c, FUN_L00_002599e8. */
+int func_L00_0025AA20(void *moby, int point, int c, float d, float unused, float f, int g, int h, int i) {
+    float position[4] __attribute__((aligned(16)));
+    func_L00_00250800(moby, point, position);
+    return func_L00_0025A8E8(moby, position, c, d, (float)c, f, g, h, i);
+}
 typedef unsigned int u128_t __attribute__((mode(TI), aligned(16)));
 typedef struct { u128_t v; int x, y; unsigned char b0, b1; unsigned short s; float f; int flag; int pad[3]; } L_t;
 typedef struct { u128_t a; u128_t b; int x, y; unsigned char b0, b1; unsigned short s; float f; int flag; void *owner; int z; int pad2; } T_t;
@@ -1747,7 +1756,105 @@ float func_L00_0025ED30(u128_ED30 *out, u128_ED30 *p, u128_ED30 *a, u128_ED30 *b
     g[0] = *out;
     return func_L00_0025EAC8_f(e, g, 0.0f);
 }
-INCLUDE_ASM("asm/overlays", func_L00_0025EFC0);
+s32 func_L00_0025E7F8(s32 *tab, s32 i, s32 d, s32 wrap);
+typedef int OvlQuad __attribute__((mode(TI)));
+float func_L00_0025ED30(OvlQuad *out, OvlQuad *p, OvlQuad *a, OvlQuad *b, float r);
+extern f32 func_L00_0025EAC8_5EFC0(void *, void *, f32) __asm__("func_L00_0025EAC8");
+extern s32 func_L00_0025E860_5EFC0(s32 *, OvlQuad *, s32 *, f32 *, f32, s32) __asm__("func_L00_0025E860");
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/math/rotations/0025d238.c, FUN_L00_0025df68. */
+s32 func_L00_0025EFC0(s32 *path, OvlQuad *point, OvlQuad *nearest,
+                       s32 *segment, f32 *fraction, s32 wrap,
+                       f32 limit, f32 step, f32 height_tolerance) {
+    OvlQuad work[4];
+    s32 current = 0;
+    s32 best_segment;
+    s32 start, end, previous, count;
+    s32 crossed;
+    f32 current_fraction = 0.0f;
+    f32 best_fraction;
+    f32 distance, previous_distance, next_distance;
+    f32 expanded_limit;
+
+    qcopy(&work[0], path + 4);
+    work[1] = *point;
+    best_fraction = 0.0f;
+    distance = func_L00_0025EAC8_5EFC0(&work[0], &work[1], height_tolerance);
+    best_segment = 0;
+    if (*path == 0) {
+        func_001F9BC0(nearest);
+        return 0;
+    }
+
+    expanded_limit = step + limit;
+    do {
+        crossed = func_L00_0025E860_5EFC0(path, &work[0], &current,
+                                   &current_fraction, step, wrap);
+        work[1] = *point;
+        next_distance = func_L00_0025EAC8_5EFC0(&work[0], &work[1], height_tolerance);
+        if (next_distance < distance) {
+            distance = next_distance;
+            best_segment = current;
+            best_fraction = current_fraction;
+        }
+    } while (!crossed);
+    if (expanded_limit < distance)
+        return 0;
+
+    start = best_segment;
+    current_fraction = best_fraction;
+    func_L00_0025E860_5EFC0(path, &work[0], &start, &current_fraction, -step, wrap);
+    current_fraction = best_fraction;
+    end = best_segment;
+    func_L00_0025E860_5EFC0(path, &work[0], &end, &current_fraction, step, wrap);
+    end = func_L00_0025E7F8(path, end, 1, wrap);
+    current = start;
+    distance = 1000000000.0f;
+    do {
+        work[1] = *(OvlQuad *)(path + 4 + current * 4);
+        work[2] = *point;
+        next_distance = func_L00_0025EAC8_5EFC0(&work[1], &work[2], height_tolerance);
+        if (next_distance < distance) {
+            distance = next_distance;
+            best_segment = current;
+        }
+        if (current == end)
+            break;
+        current = (current + 1) % *path;
+    } while (1);
+
+    previous_distance = 1000000000.0f;
+    if (best_segment > 0 || wrap) {
+        f32 distance;
+        count = *path;
+        previous = count - 1;
+        previous = (best_segment + previous) % count;
+        distance = func_L00_0025ED30(nearest, point,
+            (OvlQuad *)(path + 4 + previous * 4),
+            (OvlQuad *)(path + 4 + best_segment * 4), height_tolerance);
+        *segment = previous;
+        /* Retail reads the segment vertex before the projected point. */
+        work[1] = *(volatile OvlQuad *)(path + 4 + previous * 4);
+        work[2] = *(volatile OvlQuad *)nearest;
+        *fraction = func_L00_0025EAC8_5EFC0(&work[1], &work[2], 0.0f);
+        previous_distance = distance;
+    }
+    count = *path;
+    if (best_segment < count - 1 || wrap) {
+        next_distance = func_L00_0025ED30(&work[1], point,
+            (OvlQuad *)(path + 4 + best_segment * 4),
+            (OvlQuad *)(path + 4 + ((best_segment + 1) % count) * 4),
+            height_tolerance);
+        if (next_distance < previous_distance) {
+            qcopy_nc(nearest, &work[1]);
+            *segment = best_segment;
+            work[2] = *(OvlQuad *)(path + 4 + best_segment * 4);
+            work[3] = *nearest;
+            *fraction = func_L00_0025EAC8_5EFC0(&work[2], &work[3], 0.0f);
+        }
+    }
+    return 1;
+}
 LINKER_REMNANT("asm/overlays", func_L00_0025F360);
 extern f32 func_L00_002001D8(void *, f32);
 

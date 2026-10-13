@@ -40,7 +40,7 @@ extern short D_L14_00162164;
 extern short D_L14_00162170;
 extern short D_L14_00162174;
 
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_00302288 __attribute__((mode(TI)));
 typedef struct { char b[12]; } blk12;
 
 /* Level 14 moby update, class 1193: steps the moby through its state machine. */
@@ -78,7 +78,7 @@ void func_L14_00302288(unsigned char *moby) {
         k45000 = 45000.0f;
         k5000 = 5000.0f;
         for (i = 0; i < 3; i++) {
-            *(u128 *)v40 = *(u128 *)(moby + 0x10);
+            *(u128_00302288 *)v40 = *(u128_00302288 *)(moby + 0x10);
             func_L00_0025C710(v30, v40, v20, (float)i * k1);
             r = func_002140B0(6);
             func_002140B0(2);
@@ -106,7 +106,7 @@ L3024CC:
         src = D_L14_00174640 + 0x20;
         if (d18 != 0 && d18 == *(int *)(data + 0x24)) src = (char *)v20;
     }
-    *(u128 *)(moby + 0x10) = *(u128 *)src;
+    *(u128_00302288 *)(moby + 0x10) = *(u128_00302288 *)src;
     r = func_L00_001F10E0(*(float *)&D_L14_00162158, moby + 0x10, 0, moby);
     if (r == 0) goto L302874;
     if (moby[0x20] == 0) goto L30255C;
@@ -138,7 +138,7 @@ L302578:
                 func_L00_001FF500(data + 0x10, data + 0x10, *(float *)&D_L14_00162160 * D_0015EE6C);
                 *(float *)(data + 0x18) = *(float *)(data + 0x18) * *(float *)&D_L14_00162170;
             } else {
-                *(u128 *)(data + 0x10) = *(u128 *)v40;
+                *(u128_00302288 *)(data + 0x10) = *(u128_00302288 *)v40;
             }
         }
     }

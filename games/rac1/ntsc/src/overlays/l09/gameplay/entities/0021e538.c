@@ -163,9 +163,6 @@ void FUN_L09_0021e8c0(char *list, int count, float unused, long tex0, long tex1)
         }
     }
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L09_002c1978.s", FUN_L09_002c1978);
-#else
 extern void setup_first_context(void) __asm__("FUN_001f2d98");
 extern void setup_second_context(void) __asm__("FUN_001f2260");
 extern void FUN_001f9ff8(float, void *);
@@ -182,9 +179,9 @@ extern int D_L09_0016CD50[];
 extern int D_L09_0016CD60[];
 extern int D_L09_0016CDF0[];
 extern u64 D_L09_001612F0;
-extern unsigned short D_L09_0010E800;
-extern int D_L09_0010E810;
-extern int D_L09_001CB470;
+extern unsigned short D_L09_0010E800[];
+extern int D_L09_0010E810[];
+extern int D_L09_001CB470[];
 extern char D_L09_00166E40[];
 extern char D_L09_00166EC0[];
 
@@ -210,6 +207,7 @@ void FUN_L09_002c1978(void *data_ptr, void *list_ptr, int count) {
     float offset[4];
     u64 color;
     int *scratch;
+    int scratch_color;
     float *old = (float *)0x001612f8;
     float *current = D_L09_0016CBC0;
     float saved0 = current[0x218 / 4];
@@ -231,7 +229,7 @@ void FUN_L09_002c1978(void *data_ptr, void *list_ptr, int count) {
     FUN_001f9ff8(1024.0f, matrix);
     setup_offset_vector(-1024.0f, offset, D_L09_00166F40);
     offset[3] = 1.0f;
-    FUN_00233830(&D_L09_0010E810, D_L09_0010E800);
+    FUN_00233830(D_L09_0010E810, D_L09_0010E800[0]);
     {
         int *packet;
         int *packet_end;
@@ -255,9 +253,12 @@ void FUN_L09_002c1978(void *data_ptr, void *list_ptr, int count) {
         packet_end = packet + 48;
         qcopy(packet_end, current + 0x1a0 / 4);
         *(float *)(packet + 52) = current[0x22c / 4];
-        packet[57] = 0x020001d2;
-        packet[56] = 0x03000000;
-        *(float *)(packet + 53) = current[0x228 / 4];
+        {
+            float saved0 = current[0x228 / 4];
+            packet[56] = 0x03000000;
+            packet[57] = 0x020001d2;
+            *(float *)(packet + 53) = saved0;
+        }
         packet[58] = 0x15000000;
         packet[54] = 0;
         packet[55] = 0;
@@ -270,12 +271,14 @@ void FUN_L09_002c1978(void *data_ptr, void *list_ptr, int count) {
         D_L09_001611C0 = packet_end;
         packet[60] = 0x30000003;
     }
-    PACKET_CURSOR[1] = (int)&D_L09_001CB470;
+    PACKET_CURSOR[1] = (int)D_L09_001CB470;
     PACKET_CURSOR[2] = 0;
     PACKET_CURSOR[3] = 0x50000003;
-    packet = PACKET_CURSOR + 4;
-    D_L09_001611C0 = packet;
-    packet[0] = 0x10000008;
+    {
+        int *packet = PACKET_CURSOR + 4;
+        D_L09_001611C0 = packet;
+        packet[0] = 0x10000008;
+    }
     PACKET_CURSOR[1] = 0;
     PACKET_CURSOR[2] = 0;
     PACKET_CURSOR[3] = 0x50000008;
@@ -283,18 +286,23 @@ void FUN_L09_002c1978(void *data_ptr, void *list_ptr, int count) {
     words = (u64 *)(packet + 4);
     D_L09_001611C0 = packet + 4;
     color = (unsigned char)data[0x30] | (unsigned char)data[0x31] << 8 | (unsigned char)data[0x32] << 16;
-    if (D_L09_0015F458 == 1)
+    /* Retail reads the mode after the packet cursor stores. */
+    if (*(volatile int *)&D_L09_0015F458 == 1)
         color = (long)(*(int *)(current + 0x230 / 4) | (*(int *)(current + 0x234 / 4) << 8) |
                 (*(int *)(current + 0x238 / 4) << 16));
     {
         u64 alpha = (unsigned char)data[0x3f];
         u64 blend;
         words[0] = 0x7000000000008001ULL;
-        blend = 0x60U < alpha ? 0x5360a : 0x5370b;
         words[1] = 0xeeeeeeeeULL;
-        words[2] = ((u64)(unsigned char)data[0x3f] << 32) | 100;
+        blend = (unsigned char)data[0x3f];
         words[3] = 0x42;
-        words[4] = D_L09_001612F0;
+        /* Retail stores packed alpha before reading D_L09_001612F0. */
+        *(volatile u64 *)&words[2] = (blend << 32) | 100;
+        alpha = alpha <= 0x60U ? 0x5370b : 0x5360a;
+        blend = alpha;
+        words[4] = *(volatile u64 *)&D_L09_001612F0;
+        scratch_color = 0x757c8e;
         words[5] = 6;
         words[6] = (long)color;
         words[7] = 0x3d;
@@ -308,34 +316,35 @@ void FUN_L09_002c1978(void *data_ptr, void *list_ptr, int count) {
         words[15] = 0x47;
         D_L09_001611C0 = (int *)(words + 16);
     }
-    scratch = (int *)0x700003fc;
+    scratch = (int *)0x70000000;
     for (i = 255; i >= 0; i--)
-        *scratch-- = 0x757c8e;
+        scratch[i] = scratch_color;
     i = 0;
     if (count > 0) do {
         char *entry;
         int visible;
         entry_offset = i * 32;
         entry = (char *)((int)list + entry_offset);
-        i++;
         visible = FUN_001fa728(entry, 256.0f);
         if (visible != -1) {
             int n = *(int *)(entry + 0x1c);
             float *source = *(float **)(entry + 0x14);
             float *destination = (float *)0x70001000;
-            j = n;
-            if (j > 0) do {
-                *destination++ = *source++ * 0.5f;
-                *destination++ = *source++ * 0.5f;
-            } while (--j != 0);
-            FUN_L00_001fde98(n, *(int *)(entry_offset + (int)list + 0x10), 0x70000000,
+            if (n > 0) {
+                j = n;
+                do {
+                    *destination++ = *source++ * 0.5f;
+                    *destination++ = *source++ * 0.5f;
+                } while (--j != 0);
+            }
+            FUN_L00_001fde98(n, ((int *)list)[(i << 3) + 4], 0x70000000,
                               (void *)0x70001000, visible == 0);
         }
+        i++;
     } while (i < count);
     FUN_L02_002a46e0(data);
 }
 #undef PACKET_CURSOR
-#endif
 #define NOT_SDA
 
 #define MACRO_ADDR
@@ -404,7 +413,6 @@ char *FUN_L09_002c2610(void *pos, int type, float *dist) {
     }
     return best;
 }
-INCLUDE_ASM("config/us/overlays/asm/FUN_L09_002c26c8.s", FUN_L09_002c26c8);
 /* spawns a debris moby with randomized velocity toward a point */
 /* Ported from rac1-decomp (src/overlays/l09_gaspar/vendor_002C2B08.c: func_L09_002EB808), where it is exact; names translated to the US level program. */
 
@@ -1094,7 +1102,118 @@ char *FUN_L09_002edb60(char *src, int cls) {
     }
     return moby;
 }
-INCLUDE_ASM("config/us/overlays/asm/FUN_L09_002edc30.s", FUN_L09_002edc30);
+extern u8 D_0014C050_edc30[] __asm__("D_0014C050");
+extern float D_L09_00166F40_edc30[] __asm__("D_L09_00166F40");
+extern float frame_time_edc30 __asm__("D_0015ED6C");
+extern void mark_moby_for_removal_edc30(struct Moby *) __asm__("FUN_0020c828");
+extern char *find_moby_hit_edc30(struct Moby *, int, int) __asm__("FUN_L00_0025a420");
+extern int dec_byte_timer_edc30(u8 *) __asm__("FUN_L00_001fefc8");
+extern void FUN_L00_00257470_edc30(struct Moby *, int, int) __asm__("FUN_L00_00257470");
+extern void FUN_L00_0025f8e0_edc30(void *, float) __asm__("FUN_L00_0025f8e0");
+extern int allocate_target_entry_edc30(int, int, struct Moby *) __asm__("FUN_0022da68");
+extern void subtract_vector_edc30(void *, void *, void *) __asm__("FUN_001f9a28");
+extern void add_vector_edc30(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void set_vector_length_edc30(void *, void *, float) __asm__("FUN_001f9bf8");
+extern void scale_vector_edc30(void *, void *, float) __asm__("FUN_001f9a68");
+extern void transform_vector_edc30(void *, void *, void *) __asm__("FUN_001f9cf8");
+extern float vector_length_edc30(void *) __asm__("FUN_001f9af0");
+extern float FUN_001f99c0_edc30(float) __asm__("FUN_001f99c0");
+extern float random_float_between_edc30(float, float) __asm__("FUN_002132a8");
+extern int random_integer_below_edc30(int) __asm__("FUN_00213260");
+extern int scale_game_frames_edc30(int) __asm__("FUN_001f96f8");
+extern struct Moby *FUN_L09_002ef868(struct Moby *, Vec4 *, Vec4 *, s32, f32);
+extern void FUN_L00_0025f090_edc30(struct Moby *, void *, int, float, float) __asm__("FUN_L00_0025f090");
+extern void FUN_L00_0025e450_edc30(struct Moby *, void *, void *, float, float, int, int, int, float, float, float,
+                                   float, int, float, int, int, int, int) __asm__("FUN_L00_0025e450");
+
+/* Level 9 breakable stack: when hit, swaps in the next damaged class (0x512 -> 0x513 -> 0x514), bursts debris and smoke and removes itself once gone. */
+void FUN_L09_002edc30(struct Moby *moby) {
+    float center[4];
+    float top[4];
+    float push[4];
+    float pos[4];
+    float vel[4];
+    float pull[4];
+    char *hit;
+    int replaced;
+    int next;
+    int i;
+    float spread;
+    float falloff;
+    if (moby->mission != 0xFF && D_0014C050_edc30[moby->mission + current_level_index * 16] == 0xFF) {
+        mark_moby_for_removal_edc30(moby);
+        return;
+    }
+    replaced = 0;
+    hit = find_moby_hit_edc30(moby, 0x40000, 0);
+    if (moby->state == 0) {
+        moby->state = 1;
+    }
+    if (dec_byte_timer_edc30(&moby->command) == 0 || hit == 0) {
+        return;
+    }
+    if (moby->oclass < 0x514) {
+        next = 0x512;
+        switch (moby->oclass) {
+        case 0x512:
+            next = 0x513;
+            break;
+        case 0x513:
+            qcopy(center, &moby->pos);
+            moby->pos.z += 4.0f;
+            FUN_L00_00257470_edc30(moby, 0, -1);
+            qcopy(&moby->pos, center);
+            next = 0x514;
+            break;
+        }
+        replaced = FUN_L09_002edb60((char *)moby, next) != 0;
+    }
+    moby->command = scale_game_frames_edc30(10);
+    qcopy(top, &moby->pos);
+    top[2] += 1.25f;
+    qcopy(center, top);
+    FUN_L00_0025f8e0_edc30(center, 0.4f);
+    if (moby->oclass < 0x513) {
+        allocate_target_entry_edc30(0, 0, moby);
+    } else {
+        allocate_target_entry_edc30(0, 0, moby);
+    }
+    moby->hit_slot = 0xFF;
+    subtract_vector_edc30(push, D_L09_00166F40_edc30, center);
+    set_vector_length_edc30(push, push, 2.0f);
+    spread = 4.0f;
+    if (moby->oclass != 0x114) {
+        spread = 2.0f;
+    }
+    for (i = 0; i < 20; i++) {
+        *(u128 *)vel = 0;
+        vel[0] = random_float_between_edc30(-0.5f, 0.5f);
+        vel[1] = random_float_between_edc30(-2.0f, 2.0f);
+        vel[2] = random_float_between_edc30(-spread, spread);
+        *(u128 *)pos = *(u128 *)vel;
+        transform_vector_edc30(pos, pos, &moby->rot_row0);
+        add_vector_edc30(pos, pos, top);
+        subtract_vector_edc30(vel, pos, center);
+        falloff = FUN_001f99c0_edc30(3.0f - vector_length_edc30(vel)) / 3.0f;
+        set_vector_length_edc30(pull, hit + 0x10, falloff * falloff * 8.0f);
+        add_vector_edc30(vel, vel, pull);
+        set_vector_length_edc30(vel, vel, falloff * (random_float_between_edc30(6.0f, 10.0f) * frame_time_edc30));
+        add_vector_edc30(pos, pos, push);
+        if (moby->oclass == 0x514 || random_integer_below_edc30(4) == 0) {
+            FUN_L09_002ef868(moby, (Vec4 *)pos, (Vec4 *)vel, i & 1, random_float_between_edc30(1.0f, 2.0f));
+        }
+        if (i % 3 == 0) {
+            FUN_L00_0025f090_edc30(moby, pos, -1, random_float_between_edc30(1.0f, 1.6f), 0.0f);
+        }
+    }
+    scale_vector_edc30(pos, hit + 0x10, 0.5f);
+    add_vector_edc30(center, center, push);
+    FUN_L00_0025e450_edc30(moby, hit + 0x10, center, 0.0f, 0.0f, 10, 3, 16, 3.0f, 2.0f, 1.0f, 1.0f, -1, 15.0f, 1, 1,
+                           -1, 0);
+    if (moby->oclass == 0x514 || replaced) {
+        mark_moby_for_removal_edc30(moby);
+    }
+}
 
 #define NOT_SDA
 

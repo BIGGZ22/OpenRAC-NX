@@ -609,7 +609,194 @@ void func_L05_003108D0(char *moby, float k, float m) {
                       *(float *)&D_L05_00161EA0 * m * s * D_0015EE70,
                       *(float *)&D_L05_00161EA4 * s * D_0015EE6C);
 }
-INCLUDE_ASM("asm/overlays", func_L05_00310A90);
+typedef u32 u128_10A90 __attribute__((mode(TI), aligned(16)));
+typedef struct {
+    f32 x;
+    f32 y;
+    f32 z;
+    f32 w;
+} Vec4f_10A90;
+struct Moby_10A90;
+struct Manip;
+struct GifEntry;
+struct AnimSeq;
+struct MobyClass_10A90 {
+    u8 pad_0[0xC];
+    u8 seq_count; /* number of entries in seqs[] (menu previews clamp the sequence to it) */
+    u8 pad_D[3];
+    u32 collision; /* collision data; copied into Moby.collision when a moby is (re)classed */
+    u8 pad_14[0x8];
+    void *retarget_table; /* retarget table: word table, indexed id * 4 + 4 (0024eec0) */
+    struct GifEntry *gifs; /* patched by patch_moby_gifs */
+    f32 scale; /* default draw scale: copied into Moby.scale, divides it */
+    s32 sound_defs; /* sound definitions, 0x20 bytes each */
+    void **callbacks; /* function-pointer table, called with the moby */
+    u8 pad_30[0x14];
+    u16 flags; /* initial Moby.flags */
+    s16 type; /* class type; 5 (a creature) is tested by targeting code */
+    struct AnimSeq *seqs[1]; /* animation sequences, indexed by Moby.seq */
+};
+struct Moby_10A90 {
+    Vec4f_10A90 bsphere;
+    Vec4f_10A90 pos;
+    u8 state; /* >= 0xFE: dead, waiting to respawn */
+    u8 group; /* linked group: index into the level moby-list table D_Lxx_001ABCC0 (0xFF: none) */
+    u8 class_slot; /* class slot: pclass = D_L00_00197300[class_slot] (crate_update) */
+    u8 alpha; /* 0x80 by default; 0x40 for the smoke trail FUN_L09_00307ba8 spawns */
+    struct MobyClass_10A90 *pclass;
+    struct Moby_10A90 *next;
+    f32 scale; /* draw scale (FUN_L01_002fa068 halves it, FUN_L00_00215ef8 divides by it) */
+    u8 update_dist; /* update distance; 0xFF (always) or 0x7F for beams, set by spawners */
+    u8 visible; /* drawn last frame; set to 1 by spawners */
+    s16 draw_dist; /* draw distance; 0xFF (0x7F for beams), set by spawners */
+    u16 flags;
+    u16 occlusion; /* occlusion bits; 0x7F80 set by spawners */
+    u64 spawn_frame; /* frame count at which it may respawn */
+    Vec4f_10A90 rot; /* z: yaw (FUN_L00_00266448 compares it with atan2 to the hero) */
+    u8 frame; /* animation frame */
+    u8 prev_frame; /* frame index in prev_seq */
+    u8 seq; /* animation sequence id */
+    u8 prev_seq;
+    f32 anim_time;
+    f32 anim_speed;
+    u8 pad5C[8];
+    struct Manip *manips;
+    void *cur_frame_data;
+    void *prev_frame_data;
+    u8 anim_flags;
+    u8 unk71; /* set to 0xFF when a moby changes class */
+    u8 unk72;
+    u8 unk73;
+    void (*update)(struct Moby_10A90 *moby);
+    u8 *pvars;
+    u8 unk7C;
+    u8 sound_slot; /* 0x7D: D_0013E550 slot of its looping sound, 0xFF: none (FUN_L00_00232670) */
+    u8 anim_trigger_count;
+    u8 shadow_range; /* shadow range in units of 1024; 0x17 from FUN_L09_002c5990 near D_L09_00166F40 */
+    u8 pad80[6];
+    s16 unk86;
+    u8 pad88[8];
+    s32 glow_color; /* glow colour (class header + 0x40) */
+    u32 collision; /* collision data, from the class header (MobyClass.collision) */
+    s32 collision_disable; /* per-primitive collision disable bits; 1 while a carrier holds the moby (FUN_L00_002c7a58) */
+    u8 pad9C[8];
+    u8 hit_slot; /* hit-message slot (0xFF: none) */
+    u8 padA5;
+    s16 oclass;
+    u8 padA8[8];
+    u8 mission; /* 0xB0: index into the level's D_0014C050 row (0xFF: not spawned) */
+    u8 padB1;
+    u16 save_id; /* index into the level collected[]/killed[] tables and save bits D_0014C190[level][id >> 5] */
+    s16 unkB4;
+    u8 padB6[2];
+    void *parent; /* 0xB8: spawner (bolt source record); its byte 0xB1 is a per-level id (FUN_L00_002a6b70) */
+    u8 command; /* external command byte */
+    u8 padBD[3];
+    Vec4f_10A90 rot_row0; /* 0xC0: rows of the matrix built from rot (FUN_001fa030) */
+    Vec4f_10A90 rot_row1;
+    Vec4f_10A90 rot_row2;
+    u8 padF0[0x10];
+};
+extern void *func_L00_0025B478(struct Moby_10A90 *, int, int);
+extern struct Moby_10A90 *func_0020D348(int);
+extern void func_0020D678_10A90(struct Moby_10A90 *) __asm__("func_0020D678");
+extern int func_002140B0(int);
+extern void func_001F9C30(void *, void *, float);
+extern void func_L00_00258DB0(void *, float, float);
+extern int func_001FA898(float);
+extern int func_0022ED80(int, int, void *);
+extern void func_L05_00319B58(struct Moby_10A90 *, struct Moby_10A90 *, void *, void *, int);
+extern void func_L01_0029C2A0(void *, int, void *, int, void *);
+extern void func_L00_00251E30_10A90(struct Moby_10A90 *) __asm__("func_L00_00251E30");
+extern u8 *func_L00_00272F00(void *pos, s32 life, f32 size0, f32 size1, s32 color, s32 mode, s32 spin, void *vel, f32 f2);
+extern char D_L05_001BAE30[];
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l05/gameplay/entities/0030d6a0.c, FUN_L05_0030f5c8. */
+void func_L05_00310A90(struct Moby_10A90 *moby) {
+    float vel[4];
+    float spin_vel[4];
+    float dir[4];
+    float drift[4];
+    float pos[4];
+    struct Moby_10A90 *piece;
+    float angle;
+    float life;
+    float speed;
+    int j, spin;
+    if (func_L00_0025B478(moby, 0xB30000, 0) != 0) {
+        piece = func_0020D348(0x3D4);
+        if (piece != 0) {
+            char *vars;
+            piece->spawn_frame = moby->spawn_frame;
+            piece->visible = 1;
+            vars = (char *)piece->pvars;
+            piece->draw_dist = 0x40;
+            piece->update_dist = 0x40;
+            qcopy(&piece->pos, &moby->pos);
+            qcopy(&piece->rot, &moby->rot);
+            speed = func_002140F8(5.0f, 12.0f);
+            func_001F9C30(vel, &moby->rot_row0, -(speed * D_0015EE6C));
+            func_001F9BC0(spin_vel);
+            func_L05_00319B58(piece, moby, vel, spin_vel, func_001F9850(60));
+            *(int *)(vars + 0xC) = 0x200;
+        }
+        func_0022ED80(0, 0, piece);
+        angle = 0.0f;
+        {
+            int i;
+            for (i = 0; i < 6; i++) {
+                angle = func_001FA748(angle, 1.0471976f);
+                piece = func_0020D348(0x3D5);
+                if (piece != 0) {
+                    char *vars = (char *)piece->pvars;
+                    *(u128_10A90 *)spin_vel = 0;
+                    *(u128_10A90 *)drift = 0;
+                    spin_vel[2] = 0.75f;
+                    drift[1] = func_001F9FA8(angle) * 1.4f;
+                    drift[2] = func_001F9F90(angle) * 1.4f;
+                    *(u128_10A90 *)dir = *(u128_10A90 *)drift;
+                    func_001F9EC0(dir, dir, &moby->rot_row0);
+                    for (j = 0; j < 10; j++) {
+                        float size;
+                        func_L00_00258DB0(drift, D_0015EE6C * 1.5f, D_0015EE6C * 2.0f);
+                        func_001F9C30(pos, drift, 5.0f);
+                        func_001F9BD8(pos, pos, dir);
+                        func_001F9BD8(pos, pos, &moby->pos);
+                        spin = func_002140B0(2);
+                        if (spin == 0) {
+                            spin--;
+                        }
+                        size = func_002140F8(0.4f, 0.5f);
+                        func_L00_00272F00(pos, func_001F9850(25), size * 0.2f, size, 0x7F207F7F, 0, spin, drift,
+                                         0.0f);
+                        spin = -spin;
+                        func_L00_00272F00(pos, func_001F9850(25), size * 0.14f, size * 0.7f, 0x7F7F7F7F, 1, spin, drift,
+                                         0.0f);
+                    }
+                        piece->spawn_frame = moby->spawn_frame;
+                    piece->draw_dist = 0x40;
+                    piece->visible = 1;
+                    piece->update_dist = 0x40;
+                        qcopy(&piece->pos, &moby->pos);
+                    qcopy(&piece->rot, &moby->rot);
+                    speed = func_002140F8(0.0f, 24.0f);
+                    life = func_002140F8(60.0f, 120.0f);
+                    func_001F9C30(vel, &moby->rot_row0, -(speed * D_0015EE6C));
+                    func_001F9BC0(spin_vel);
+                    func_L05_00319B58(piece, moby, vel, spin_vel, func_001FA898(func_001F9878(life)));
+                    *(int *)(vars + 0xC) = 0x200;
+                    piece->rot.x = angle;
+                    func_L00_00251E30_10A90(piece);
+                }
+            }
+        }
+        moby->command = 1;
+        func_L01_0029C2A0(&moby->command, 1, moby, 1, D_L05_001BAE30);
+        func_0020D678_10A90(moby);
+    } else if (moby->command) {
+        func_0020D678_10A90(moby);
+    }
+}
 extern int func_0022ED80(int, int, void *);
 struct GateVars_16378 {
     s32 trigger; /* D_L05_0015FFD8 index of the moby whose byte 0xBC opens it */

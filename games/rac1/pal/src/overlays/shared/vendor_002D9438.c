@@ -1343,7 +1343,84 @@ char *func_L00_002DCD40(char *p) {
     if (f) return (char *)f(o);
     return 0;
 }
-INCLUDE_ASM("asm/overlays", func_L00_002DCDA8);
+extern u8 D_L00_001EA3B0[];
+void func_001E9730(void *);
+u8 *func_L00_002DCD40_DCDA8(u8 *) __asm__("func_L00_002DCD40");
+s32 func_001F9850(s32);
+void func_00213DE0(void *, s32, s32, s32);
+f32 func_001F9D48(void *, void *);
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002d7f88.c, FUN_L00_002db8f8. */
+s32 func_L00_002DCDA8(u8 *moby, u8 *position, u8 *target) {
+    u8 *record = func_L00_002DCD40_DCDA8(moby);
+    s16 state;
+    if (record == 0)
+        goto missing;
+    if (moby == 0 || moby[0x20] == 0xFE || moby[0x20] == 0xFD || *(s16 *)(record + 0x68) == 8)
+        goto fail;
+    qcopy_nc(record, position);
+    *(u8 **)(record + 0x60) = target;
+    *(f32 *)(record + 0xC) = 1.0f;
+    state = (s16)(*(u16 *)(record + 0x68) - 1);
+    switch (state) {
+    case 0:
+        if (1.0f <= *(f32 *)(record + 0x6C)) {
+            {
+                u8 *seq = *(u8 **)(record + 0x70);
+                if (moby[0x53] != seq[2]) {
+                    func_00213DE0(moby, seq[2], 0, func_001F9850(10));
+                }
+            }
+            *(s32 *)(record + 0x6C) = 0;
+            *(s16 *)(record + 0x68) = 2;
+            return 1;
+        }
+        {
+            u8 *seq = *(u8 **)(record + 0x70);
+            if (moby[0x53] != seq[1]) {
+                func_00213DE0(moby, seq[1], 0, func_001F9850(10));
+            }
+        }
+        return 1;
+    case 1:
+        if (!(1.0f <= *(f32 *)(record + 0x6C)))
+            return 1;
+        return 2;
+    case 2:
+        break;
+    case 3:
+        return 3;
+    case 4:
+    case 5:
+    case 6:
+        {
+            u8 *seq = *(u8 **)(record + 0x70);
+            if (moby[0x53] != seq[3]) {
+                func_00213DE0(moby, seq[3], 0, func_001F9850(10));
+            }
+        }
+        *(s16 *)(record + 0x68) = 3;
+        *(s32 *)(record + 0x6C) = 0;
+        *(f32 *)(moby + 0x58) = 1.0f;
+        *(f32 *)(record + 0x64) = func_001F9D48(moby + 0x10, target + 0x10);
+        break;
+    default:
+        {
+            u8 *seq = *(u8 **)(record + 0x70);
+            if (moby[0x53] != seq[1]) {
+                func_00213DE0(moby, seq[1], 0, func_001F9850(10));
+            }
+        }
+        *(s32 *)(record + 0x6C) = 0;
+        *(s16 *)(record + 0x68) = 1;
+        return 1;
+    }
+    return 2;
+missing:
+    func_001E9730(D_L00_001EA3B0);
+fail:
+    return 0;
+}
 extern short D_L00_00161BF0;
 extern char *func_L00_002DCD40(char *);
 extern int func_0022ED80(int, int, int);

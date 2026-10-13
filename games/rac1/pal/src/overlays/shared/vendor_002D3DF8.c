@@ -458,8 +458,236 @@ void func_L08_002D5410(char *arg) {
     }
     func_L00_001FD1D8(&pk, 0, 0);
 }
-INCLUDE_ASM("asm/overlays", func_L08_002E9288);
-INCLUDE_ASM("asm/overlays", func_L08_002E95E8);
+typedef u32 u128_E9288 __attribute__((mode(TI), aligned(16)));
+extern f32 D_0015EE6C MACRO_ADDR;
+extern char *func_0020D348(int);
+extern void func_L00_00251328(void *, int, int, int);
+extern void func_L00_00251E30(void *);
+extern float func_001F9CE8(void *);
+extern float func_L00_001FF860(float, float);
+extern void func_001FA218(void *, void *);
+extern float func_00214158(void);
+extern float func_002140F8(float, float);
+extern float func_001F9F90(float);
+extern int func_L00_00258BC8(int, int);
+extern void *func_L00_0026DA50(void *, void *, int, int, int, int, float);
+extern int func_001FA898(float);
+extern float func_001F9878(float);
+extern int func_001F9850(int);
+extern void func_00219780(void *, void *, void *, int, int, int, int, int, int);
+extern int D_L08_0015F6B0 MACRO_ADDR;
+extern int D_0015EE84 MACRO_ADDR;
+extern short D_L08_00161D68;
+extern short D_L08_00161D70;
+extern short D_L08_00161D80;
+extern short D_L08_00161D84;
+extern short D_L08_00161D88;
+extern short D_L08_00161D8C;
+extern short D_L08_00161D94;
+extern short D_L08_00161D98;
+extern short D_L08_00161D9C;
+extern short D_L08_00161DA0;
+extern short D_L08_00161DA4;
+extern short D_L08_00161DA8;
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002937a0.c, FUN_L08_002e7eb0. */
+char *func_L08_002E9288(int owner, float *position, float *rotation, int value) {
+    float position_copy[4] __attribute__((aligned(16)));
+    float rotation_copy[4] __attribute__((aligned(16)));
+    float matrix[4][4] __attribute__((aligned(16)));
+    float velocity[4] __attribute__((aligned(16)));
+    float offset[4] __attribute__((aligned(16)));
+    float angle, magnitude;
+    int i, a, b, c;
+    char *moby;
+    char *data;
+    float * volatile particle_position_ptr;
+    float *velocity_ptr, *offset_ptr, *matrix_row_ptr;
+
+    *(u128_E9288 *)position_copy = *(u128_E9288 *)position;
+    *(u128_E9288 *)rotation_copy = *(u128_E9288 *)rotation;
+    position = position_copy;
+    rotation = rotation_copy;
+    moby = func_0020D348(0x1ca);
+    if (moby != 0) {
+        data = *(char **)(moby + 0x78);
+        *(int *)(data + 0x14) = owner;
+        *(int *)(data + 0x10) = value;
+        func_L00_00251328(moby, 0xa0, 0xa0, 0xa0);
+        *(volatile int *)(moby + 0x40) = 0;
+        *(unsigned char *)(moby + 0x30) = 0xff;
+        *(short *)(moby + 0x32) = 0xff;
+        *(unsigned char *)(moby + 0x31) = 1;
+        *(float *)(moby + 0x44) = -func_L00_001FF860(func_001F9CE8(rotation_copy), rotation[2]);
+        *(float *)(moby + 0x48) = func_L00_001FF860(rotation[0], rotation[1]);
+        qcopy(moby + 0x10, position_copy);
+        qcopy(data, rotation_copy);
+        if (D_L08_0015F6B0 & 1)
+            *(volatile int *)(data + 0x1c) = 1;
+        else
+            *(volatile int *)(data + 0x1c) = -1;
+        func_001FA218(matrix, moby + 0x40);
+        i = 0;
+        if ((float)i < (*(float *)&D_L08_00161D70)) {
+            /* Retail intentionally uses the matrix third row as the particle input. */
+            particle_position_ptr = matrix[2];
+            velocity_ptr = velocity;
+            offset_ptr = offset;
+            matrix_row_ptr = matrix[1];
+            do {
+                angle = func_00214158();
+                {
+                    float spread = (*(float *)&D_L08_00161D94);
+                    magnitude = func_002140F8(spread, spread + spread) * D_0015EE6C;
+                }
+                func_L00_001FF4B0(velocity_ptr, particle_position_ptr, magnitude * func_001F9F90(angle));
+                func_L00_001FF4B0(offset_ptr, matrix_row_ptr, magnitude * func_001F9FA8(angle));
+                func_001F9BD8(velocity_ptr, velocity_ptr, offset_ptr);
+                qcopy(offset_ptr, velocity_ptr);
+                velocity[3] = (*(float *)&D_L08_00161DA4);
+                offset[3] = (*(float *)&D_L08_00161DA8);
+                i++;
+                func_L00_0026DA50(moby + 0x10, velocity_ptr, (*(int *)&D_L08_00161D88), (*(int *)&D_L08_00161D8C),
+                    func_L00_00258BC8(func_001F9850(10), func_001F9850(20)), 1, 20000.0f);
+                a = func_001FA898(func_001F9878(func_002140F8((float)(*(int *)&D_L08_00161D98), (float)(*(int *)&D_L08_00161D98) * 1.2f)));
+                b = func_001FA898(func_001F9878(func_002140F8((float)(*(int *)&D_L08_00161D9C), (float)(*(int *)&D_L08_00161D9C) * 1.2f)));
+                c = func_001FA898(func_001F9878(func_002140F8((float)(*(int *)&D_L08_00161DA0), (float)(*(int *)&D_L08_00161DA0) * 1.5f)));
+                func_00219780(moby + 0x10, velocity_ptr, offset_ptr, (*(int *)&D_L08_00161D80), (*(int *)&D_L08_00161D84), a, b, c, -1);
+            } while ((float)i < (*(float *)&D_L08_00161D70));
+        }
+        if (D_0015EE84 == 12)
+            *(int *)(data + 0x18) = func_001F9850(120);
+        else
+            *(int *)(data + 0x18) = func_001FA898(func_001F9878((*(float *)&D_L08_00161D68)));
+        func_L00_00251E30(moby);
+    }
+    return moby;
+}
+extern f32 D_0015EE6C MACRO_ADDR;
+extern f32 func_001FA748(f32 a, f32 b);
+extern f32 func_001F9CB8(void *a);
+extern void func_001F9BF0(void *out, void *a, void *b);
+extern void func_001F9C30(void *, void *, float);
+extern float func_001F9D10(void *, void *);
+extern float func_00214158(void);
+extern float func_002140F8(float, float);
+extern float func_001F9F90(float);
+extern float func_001F9878(float);
+extern int func_001FA898(float);
+extern int func_001F9908(int *);
+extern int func_L00_001EFFF0_E95E8(void *, void *, int, void *, void *) __asm__("func_L00_001EFFF0");
+extern void func_0020D678(void *);
+extern void func_00219780(void *, void *, void *, int, int, int, int, int, int);
+extern void func_L00_002607A8(float, void *);
+extern void func_L00_0025F4A8(void *, void *, void *, float, float, int, int, int, float, float, float, int, float, float, int, int, int, int);
+extern short D_L08_00161D6C;
+extern short D_L08_00161D74;
+extern short D_L08_00161D78;
+extern short D_L08_00161D7C;
+extern short D_L08_00161D90;
+extern short D_L08_00161D98;
+extern short D_L08_00161D9C;
+extern short D_L08_00161DA0;
+extern short D_L08_00161DAC;
+extern short D_L08_00161DB0;
+extern float D_L08_001746E0[4];
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002937a0.c, FUN_L08_002e8210. */
+void func_L08_002E95E8(char *moby) {
+    char *position_ptr = moby + 0x10;
+    char *data = *(char **)(moby + 0x78);
+    float position_copy[4] __attribute__((aligned(16)));
+    float position[4] __attribute__((aligned(16)));
+    float direction[4] __attribute__((aligned(16)));
+    float velocity[4] __attribute__((aligned(16)));
+    float offset[4] __attribute__((aligned(16)));
+    float angle, magnitude, length, radius, spread;
+    int i, a, b, c;
+    int *timer_ptr;
+    char *target;
+
+    qcopy(position_copy, position_ptr);
+    func_001F9BD8(position_ptr, position_ptr, data);
+    if (*(float *)(moby + 0x10) < 10.0f || *(float *)(moby + 0x14) < 10.0f ||
+        *(float *)(moby + 0x18) < 10.0f || 500.0f < *(float *)(moby + 0x10) ||
+        500.0f < *(float *)(moby + 0x14) || 500.0f < *(float *)(moby + 0x18)) {
+        func_0020D678(moby);
+        return;
+    }
+    func_001F9C30(direction, data, -1.0f / (*(float *)&D_L08_00161D6C));
+    qcopy(position, position_ptr);
+    i = 0;
+    timer_ptr = (int *)(data + 0x18);
+    while ((float)i < (*(float *)&D_L08_00161D6C)) {
+        func_001F9BD8(position, position, direction);
+        angle = func_00214158();
+        spread = (*(float *)&D_L08_00161D90);
+        magnitude = func_002140F8(0.0f, spread) * D_0015EE6C;
+        func_L00_001FF4B0(velocity, moby + 0xe0, magnitude * func_001F9F90(angle));
+        func_L00_001FF4B0(offset, moby + 0xd0, magnitude * func_001F9FA8(angle));
+        func_001F9BD8(velocity, velocity, offset);
+        qcopy(offset, offset);
+        velocity[3] = (*(float *)&D_L08_00161DAC);
+        offset[3] = (*(float *)&D_L08_00161DB0);
+        i++;
+        a = func_001FA898(func_001F9878(func_002140F8(
+            (float)(*(int *)&D_L08_00161D98), (float)(*(int *)&D_L08_00161D98) * 1.2f)));
+        b = func_001FA898(func_001F9878(func_002140F8(
+            (float)(*(int *)&D_L08_00161D9C), (float)(*(int *)&D_L08_00161D9C) * 1.2f)));
+        c = func_001FA898(func_001F9878(func_002140F8(
+            (float)(*(int *)&D_L08_00161DA0), (float)(*(int *)&D_L08_00161DA0) * 1.5f)));
+        func_00219780(position, velocity, offset, (*(int *)&D_L08_00161D78),
+                               (*(int *)&D_L08_00161D7C), a, b, c, -1);
+    }
+    *(float *)(moby + 0x40) = func_001FA748(*(float *)(moby + 0x40),
+        (*(float *)&D_L08_00161D74) * 0.017453292f * D_0015EE6C * (float)*(int *)(data + 0x1c));
+    target = *(char **)(data + 0x10);
+    if (target != 0) {
+        if ((unsigned char)target[0x20] == 0xfe) goto clear_target;
+        if ((unsigned char)target[0x20] == 0xfd) goto clear_target;
+        if (*(short *)(target + 0xa6) != 0x1b3) goto clear_target;
+        {
+            char *target_data = *(char **)(target + 0x78);
+            length = func_001F9CB8(data);
+            spread = func_001F9D10(moby + 0x10, *(char **)(data + 0x10) + 0x10);
+            func_001F9C30(position, target_data + 0x20, spread / length);
+            func_001F9BD8(position, position, *(char **)(data + 0x10) + 0x10);
+            func_001F9BF0(direction, position, moby + 0x10);
+            func_L00_001FF4B0(direction, direction, length);
+            func_001F9BF0(velocity, direction, data);
+            func_L00_002607A8(D_0015EE6C * 3.7f, velocity);
+            func_001F9BD8(data, data, velocity);
+            func_L00_001FF4B0(data, data, length);
+        }
+        goto target_done;
+clear_target:
+        *(int *)(data + 0x10) = 0;
+    }
+target_done:
+    ((int *)direction)[1] = 0x50001;
+    ((int *)direction)[0] = (int)moby;
+    direction[3] = 2.0f;
+    ((int *)velocity)[0] = 1;
+    qcopy(position, data);
+    if (func_001F9908(timer_ptr) == 0) goto collision;
+remove:
+    func_0020D678(moby);
+    return;
+collision:
+    if (func_L00_001EFFF0_E95E8(position_copy, moby + 0x10, 0, moby, position) == 0)
+        return;
+    qcopy(moby + 0x10, D_L08_001746E0);
+    if (15.0f < *(float *)(moby + 0x10) && 15.0f < *(float *)(moby + 0x14) &&
+        15.0f < *(float *)(moby + 0x18)) {
+        radius = 24.0f;
+        if (*(float *)(moby + 0x10) - 2.0f < radius) radius = *(float *)(moby + 0x10) - 2.0f;
+        if (*(float *)(moby + 0x14) - 2.0f < radius) radius = *(float *)(moby + 0x14) - 2.0f;
+        if (*(float *)(moby + 0x18) - 2.0f < radius) radius = *(float *)(moby + 0x18) - 2.0f;
+        func_L00_0025F4A8(moby, data, moby + 0x10, 3.0f, 3.0f, 0,
+            10, 20, 5.0f, 3.0f, 9.0f, -1, 1.0f, radius, 1, 1, -1, 0);
+    }
+    func_0020D678(moby);
+}
 typedef struct { int a, b; } Pair;
 extern int D_L08_001E8560[];
 extern int D_L08_001E2B18[];

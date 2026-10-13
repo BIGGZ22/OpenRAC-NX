@@ -132,7 +132,89 @@ int func_L01_00277C30(int idx, int a, int mask)
     return 0;
 }
 LINKER_REMNANT("asm/overlays", func_L01_00277CA0);
-INCLUDE_ASM("asm/overlays", func_L01_00277FD8);
+int func_L01_00277C30(int idx, int a, int mask);
+typedef int OvlQuad __attribute__((mode(TI)));
+typedef union {
+    OvlQuad q;
+    f32 f[4];
+    s32 i[4];
+} OvlVec4;
+typedef struct {
+    s32 count;
+    u8 pad04[0xC];
+    OvlVec4 pts[1];
+} Path_276a48;
+extern Path_276a48 * D_L01_001B0C30_77FD8[] __asm__("D_L01_001B0C30");
+extern void func_001F9BF0_77FD8(OvlVec4 *, OvlVec4 *, OvlVec4 *) __asm__("func_001F9BF0");
+extern void func_001F9BD8_77FD8(OvlVec4 *, OvlVec4 *, OvlVec4 *) __asm__("func_001F9BD8");
+extern void func_L00_001FF4B0_77FD8(OvlVec4 *, OvlVec4 *, f32) __asm__("func_L00_001FF4B0");
+extern s32 func_L00_002629E0_77FD8(s32, OvlVec4 *, OvlVec4 *) __asm__("func_L00_002629E0");
+s32 func_L01_00277A38_77FD8(s32 *ids, s32 n, f32 radius, s32 path_index, OvlVec4 *pos) __asm__("func_L01_00277A38");
+extern f32 func_001F9D48_77FD8(OvlVec4 *, OvlVec4 *) __asm__("func_001F9D48");
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00276a48.c, FUN_L01_00276fe8. */
+s32 func_L01_00277FD8(s32 *ids, s32 n, s32 path_index, f32 radius,
+                       OvlVec4 *pos, OvlVec4 *target, OvlVec4 *out) {
+    OvlVec4 side;
+    OvlVec4 left;
+    OvlVec4 right;
+    Path_276a48 *path;
+    s32 hit = 0;
+    s32 mask;
+    s32 best;
+    s32 i;
+    s32 j;
+    f32 nearest;
+    f32 x;
+    s32 from_mask, to_mask;
+
+    for (j = 0; j < n; j++) {
+        if (radius != 0.0f) {
+            func_001F9BF0_77FD8(&side, pos, target);
+            func_L00_001FF4B0_77FD8(&side, &side, radius);
+            x = side.f[0];
+            side.f[3] = x;
+            side.f[0] = side.f[1];
+            side.f[1] = -x;
+            func_001F9BF0_77FD8(&left, pos, &side);
+            func_001F9BD8_77FD8(&right, pos, &side);
+            if (func_L00_002629E0_77FD8(ids[j], &left, target)) {
+                hit = 1;
+            } else if (func_L00_002629E0_77FD8(ids[j], &right, target)) {
+                hit = 1;
+            }
+        } else if (func_L00_002629E0_77FD8(ids[j], pos, target)) {
+            hit = 1;
+        }
+        if (hit) break;
+    }
+    if (hit) {
+        path = D_L01_001B0C30_77FD8[path_index];
+        from_mask = func_L01_00277A38_77FD8(ids, n, radius, path_index, pos);
+        to_mask = func_L01_00277A38_77FD8(ids, n, radius, path_index, target);
+        mask = func_L01_00277C30(path_index, from_mask, to_mask);
+        if (mask != 0) {
+            nearest = 10000.0f;
+            best = -1;
+            for (i = 0; i < path->count; i++) {
+                if ((mask >> i) & 1) {
+                    f32 distance = func_001F9D48_77FD8(&path->pts[i], target);
+                    if (distance < nearest) {
+                        nearest = distance;
+                        best = i;
+                    }
+                }
+            }
+            if (best >= 0) {
+                qcopy(out, &path->pts[best]);
+                return 1;
+            }
+        }
+        return 0;
+    }
+    qcopy(out, target);
+    return 1;
+}
 INCLUDE_ASM("asm/overlays", func_L01_00278FA8);
 INCLUDE_ASM("asm/overlays", func_L01_00278FE0);
 typedef struct {

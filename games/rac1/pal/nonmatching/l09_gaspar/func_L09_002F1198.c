@@ -1,10 +1,16 @@
 /* NON_MATCHING func_L09_002F1198 -- src/overlays/l09_gaspar/vendor_002C2B08.c
- * Best so far: BYTES 55/500 (89.0% of the bytes match), checked 2026-10-12.
+ * Best so far: BYTES 18/500 (96.4% of the bytes match), checked 2026-10-12.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
  * What the last attempts found:
  *   func_L09_002F1198: effect moby spawner (class 0x1A1): random angle and speed, direction from atan2 of the velo
  *   gen5/p07 = 55/500 (size ok). Left: pi/ang/dir float regs rotated (retail pi=f21 ang=f22 dir=f23), second pi-di
+ *   gen8/f4 = 18/500 (size ok). Fix that got there: final scale as one expression
+ *   `obj->scale * ((pi - dir) + (pi - dir) + 1.0f)` (no t var) -> pi/lo/hi regs match.
+ *   Left: tail consts. Retail: li 255, li 255 (two regs: sb30, sh32), li a1,1 shared with
+ *   sb31 and the call arg. Ours: one 255 reg for both, li 1 for sb31 + separate li a1.
+ *   cse1 keeps two SI const-1 loads; tiny tt/z_*.c tests share a1 only when the block has
+ *   no extra float store/ops (q2/t3), so the sharing is pass-order/alloc dependent.
  */
 extern Moby *func_0020D348_a(int) __asm__("func_0020D348");
 extern float func_002140F8_a(float, float) __asm__("func_002140F8");
@@ -54,12 +60,10 @@ char *func_L09_002F1198(void *a0, void *a1, void *a2, float lo, float hi) {
         func_001F9C30_a(out, out, 0.35f);
         obj->unk58 = obj->unk58 * 0.5f;
         obj->rot.z = func_L00_001FF860_a(out->x, out->y);
-        t = pi - dir;
-        t = t + t + 1.0f;
         obj->unk32 = 0xFF;
         obj->unk30 = 0xFF;
         obj->unk31 = 1;
-        obj->scale = obj->scale * t;
+        obj->scale = obj->scale * ((pi - dir) + (pi - dir) + 1.0f);
         func_L00_00251E30_a(obj, 1);
     }
     return (char *)obj;

@@ -165,7 +165,15 @@ void func_L00_0024BCA0(void) {
  }
 }
 INCLUDE_ASM("asm/overlays", func_L00_0024BCF0);
-INCLUDE_ASM("asm/overlays", func_L00_0024BD18);
+/* clears the menu flags 4 and 2, then picks the card menu's next state from the flags and the card status */
+void func_L00_0024BD18(void) {
+    if (D_0015EFB4 & 4) D_0015EFB4 &= ~4;
+    if (D_0015EFB4 & 2) D_0015EFB4 &= ~2;
+    if (D_0015EFB4 & 0x80) { D_0015EFB0 = 21; D_0015EFB4 = (D_0015EFB4 ^ 0x80) | 0x40; }
+    else if (D_0015EFB4 & 0x100) { D_0015EFB0 = 20; D_0015EFB4 = (D_0015EFB4 ^ 0x100) | 0x40; }
+    else if (D_0013D390[7] != 0) D_0015EFB0 = 3;
+    else if (D_0013D390[0xfc/4] != 0) D_0015EFB0 = 1;
+}
 INCLUDE_ASM("asm/overlays", func_L00_0024BD84);
 INCLUDE_ASM("asm/overlays", func_L00_0024BDB8);
 INCLUDE_ASM("asm/overlays", func_L00_0024BF30);
