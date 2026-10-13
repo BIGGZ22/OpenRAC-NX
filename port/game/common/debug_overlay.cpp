@@ -66,7 +66,19 @@ struct RamCell {
     bool changed = false;
 };
 
+// A scripted key or click (OPENRAC_KEYS).
+struct ScriptedInput {
+    std::uint64_t frame = 0;  // the window frame it happens at
+    int held = 0;             // and that many held pictures later, while paused there
+    SDL_Keycode key = 0;      // 0: a click
+    float x = 0.0f, y = 0.0f;
+    bool done = false;
+};
+
 struct State {
+    std::vector<ScriptedInput> script;
+    SDL_Window* window = nullptr;  // as last drawn into
+    int held_pictures = 0;         // pictures of the tick held now
     bool wanted = false;      // shown from the start
     bool configured = false;  // the environment was read
     bool visible = false;
@@ -260,10 +272,58 @@ void configure() {
             s.open_at_start = open;
         }
         s.labels = has("labels");
+        s.wireframe = has("wireframe");
         s.memory_viewer = has("memview");
         if (has("inspect")) {
             s.inspector = true;
             s.follow_hero = true;
+        }
+    }
+    // OPENRAC_HIDE_PASSES=NAME,...: the renderer's passes of those names are not drawn (the names of
+    // the Renderer section's rows: sky, terrain, ties, shrubs, mobys, effects, hud).
+    if (const char* v = std::getenv("OPENRAC_HIDE_PASSES")) {
+        std::string name;
+        for (const char* at = v;; ++at) {
+            if (*at == ',' || *at == '\0') {
+                if (!name.empty()) {
+                    s.hidden.insert(name);
+                }
+                name.clear();
+                if (*at == '\0') {
+                    break;
+                }
+            } else {
+                name += *at;
+            }
+        }
+    }
+    // OPENRAC_KEYS=FRAME[+HELD]:KEY,...: keys pressed by script at those window frames, as
+    // OPENRAC_PRESS presses pad buttons: KEY is SDL's name of a key (F3, F5, Return, ...), or
+    // click@X,Y for a left click at that place of the window (in its own units, not pixels).
+    // +HELD: that many pictures later while the game is paused at FRAME, where frames do not count.
+    if (const char* v = std::getenv("OPENRAC_KEYS")) {
+        for (const char* at = v; at != nullptr && *at != '\0';) {
+            ScriptedInput in;
+            char* end = nullptr;
+            in.frame = std::strtoull(at, &end, 10);
+            if (*end == '+') {
+                in.held = static_cast<int>(std::strtol(end + 1, &end, 10));
+            }
+            const char* comma = std::strchr(end, ',');
+            if (*end == ':') {
+                std::string name(end + 1, comma != nullptr ? static_cast<std::size_t>(comma - end - 1) : std::strlen(end + 1));
+                if (name.rfind("click@", 0) == 0) {
+                    // The click's two numbers are parted by a comma of their own.
+                    comma = comma != nullptr ? std::strchr(comma + 1, ',') : nullptr;
+                    std::sscanf(end + 1, "click@%f,%f", &in.x, &in.y);
+                    s.script.push_back(in);
+                } else if ((in.key = SDL_GetKeyFromName(name.c_str())) != 0) {
+                    s.script.push_back(in);
+                } else {
+                    log::warn("OPENRAC_KEYS: no key is named {}", name);
+                }
+            }
+            at = comma != nullptr ? comma + 1 : nullptr;
         }
     }
     // OPENRAC_OVERLAY_SHOT=N:PREFIX: every N ticks the window, overlay included, to PREFIX<tick>.png
@@ -328,6 +388,47 @@ bool initialise(SDL_Window* window) {
     }
     s.initialised = true;
     return true;
+}
+
+// The scripted keys and clicks due at this picture, put in SDL's queue as the system would.
+void run_script(std::uint64_t frame, int held) {
+    for (ScriptedInput& in : s.script) {
+        if (in.done || in.frame != frame || in.held != held) {
+            continue;
+        }
+        in.done = true;
+        const SDL_WindowID window = s.window != nullptr ? SDL_GetWindowID(s.window) : 0;
+        SDL_Event e{};
+        if (in.key != 0) {
+            e.type = SDL_EVENT_KEY_DOWN;
+            e.key.windowID = window;
+            e.key.key = in.key;
+            e.key.scancode = SDL_GetScancodeFromKey(in.key, nullptr);
+            e.key.down = true;
+            SDL_PushEvent(&e);
+            e.type = SDL_EVENT_KEY_UP;
+            e.key.down = false;
+            SDL_PushEvent(&e);
+        } else {
+            e.type = SDL_EVENT_MOUSE_MOTION;
+            e.motion.windowID = window;
+            e.motion.x = in.x;
+            e.motion.y = in.y;
+            SDL_PushEvent(&e);
+            e = SDL_Event{};
+            e.type = SDL_EVENT_MOUSE_BUTTON_DOWN;
+            e.button.windowID = window;
+            e.button.button = SDL_BUTTON_LEFT;
+            e.button.down = true;
+            e.button.clicks = 1;
+            e.button.x = in.x;
+            e.button.y = in.y;
+            SDL_PushEvent(&e);
+            e.type = SDL_EVENT_MOUSE_BUTTON_UP;
+            e.button.down = false;
+            SDL_PushEvent(&e);
+        }
+    }
 }
 
 // ---- Averages over the frame history ----
@@ -1305,6 +1406,10 @@ void tick(const Tick& t) {
 }
 
 void begin(bool first, bool held, float alpha, std::uint64_t tick_number) {
+    if (!s.script.empty() && (first || held)) {
+        s.held_pictures = held ? s.held_pictures + 1 : 0;
+        run_script(tick_number, s.held_pictures);
+    }
     if (first) {
         // The tick's frame was opened where the tick ended (main.cpp); what came since read the
         // scene from the game's memory.
@@ -1338,6 +1443,7 @@ void draw(const Shown& shown) {
         s.wireframe_set = false;
     }
     stats::lap("present");
+    s.window = shown.window;
     if (!s.visible || shown.window == nullptr || !initialise(shown.window)) {
         return;
     }
