@@ -101,6 +101,19 @@ from Godot or without a compiler. The table comes from the decompilation's
 `config/overlays/names.tsv` (its `UpdateMoby_<class>` roles), per level, so
 it is only written when `games/rac1/pal` is in the checkout.
 
+## Moby behaviour as GDScript (prototype)
+
+```sh
+python3 editor/behaviour.py export <exported level project> --level 0 --classes 357,749,500
+```
+
+Writes a GDScript per moby class into `levels/level_NN/mobys/behaviour/` and attaches it to
+the class scene: the class, its update function and source, its pvars as typed exported
+variables with their offsets, and the update function translated from the decompiled C (what
+could not be translated is a `pass  # not translated` line saying why). The scripts run against
+the `RcEngine` stub in `rc1/` for reading and preview; the port still runs the C. See
+[BEHAVIOUR.md](BEHAVIOUR.md) for what was found and the routes to getting scripts into the game.
+
 ## Pack your edits
 
 ```sh
