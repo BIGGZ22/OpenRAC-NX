@@ -42,11 +42,14 @@ Shader::~Shader() {
     // frees it while the context is current.
 }
 
-Shader::Shader(Shader&& other) noexcept : m_program(std::exchange(other.m_program, 0)) {}
+Shader::Shader(Shader&& other) noexcept
+    : m_program(std::exchange(other.m_program, 0)), m_locations(std::move(other.m_locations)) {}
 
 Shader& Shader::operator=(Shader&& other) noexcept {
     if (this != &other) {
         m_program = std::exchange(other.m_program, 0);
+        m_locations = std::move(other.m_locations);
+        other.m_locations.clear();
     }
     return *this;
 }
@@ -85,6 +88,7 @@ bool Shader::build(
     }
     release();
     m_program = program;
+    m_locations.clear();
     glUseProgram(m_program);
     for (int unit = 0; unit < kSamplerUnits; ++unit) {
         const std::string sampler = std::format("tex_T{}", unit);
@@ -101,7 +105,13 @@ void Shader::use() const {
 }
 
 int Shader::uniform(const char* name) const {
-    return glGetUniformLocation(m_program, name);
+    const auto found = m_locations.find(name);
+    if (found != m_locations.end() && found->second.name == name) {
+        return found->second.location;
+    }
+    const int location = glGetUniformLocation(m_program, name);
+    m_locations[name] = Location{name, location};
+    return location;
 }
 
 void Shader::release() {
@@ -109,6 +119,7 @@ void Shader::release() {
         glDeleteProgram(m_program);
         m_program = 0;
     }
+    m_locations.clear();
 }
 
 }  // namespace openrac::renderer
