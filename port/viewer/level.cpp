@@ -349,7 +349,7 @@ std::vector<renderer::Rgba8Image> load_sky_textures(const fs::path& dir) {
     return out;
 }
 
-bool load_level(const fs::path& dir, LevelData& out, std::string& error) {
+bool load_level(const fs::path& dir, LevelData& out, std::string& error, const fs::path& edited) {
     out = LevelData{};
     out.dir = dir;
     json::Value manifest;
@@ -450,12 +450,21 @@ bool load_level(const fs::path& dir, LevelData& out, std::string& error) {
     if (!json::parse_file((dir / placements_file).string(), placements, error)) {
         return false;
     }
+    // A mod's placements: the lists it has stand for the level's own.
+    json::Value edits;
+    if (!edited.empty() && fs::exists(edited) && !json::parse_file(edited.string(), edits, error)) {
+        return false;
+    }
     const std::tuple<const char*, Layer, std::map<int, ClassModel>*> groups[] =
         {{"ties", Layer::Ties, &ties},
          {"shrubs", Layer::Shrubs, &shrubs},
          {"mobys", Layer::Mobys, &mobys}};
     for (const auto& [key, layer, table] : groups) {
-        for (const json::Value& p : placements[key].items()) {
+        const json::Value& list = edits[key].is_array() ? edits[key] : placements[key];
+        if (edits[key].is_array()) {
+            log::info("{} {} from {}", list.items().size(), key, edited.string());
+        }
+        for (const json::Value& p : list.items()) {
             const int id = static_cast<int>(p["class"].number(-1));
             auto cls = table->find(id);
             if (cls == table->end()) {

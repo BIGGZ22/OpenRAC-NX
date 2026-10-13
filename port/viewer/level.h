@@ -124,7 +124,12 @@ struct LevelData {
 
 // Load a level directory. Returns false with a reason if the manifest or a
 // mesh cannot be read; a missing texture only counts in missing_images.
-bool load_level(const std::filesystem::path& dir, LevelData& out, std::string& error);
+// `edited`, when it names a file, is a placements file from a mod (the editor's
+// pack): the lists it has ("ties", "shrubs") stand for the level's own.
+bool load_level(
+    const std::filesystem::path& dir, LevelData& out, std::string& error,
+    const std::filesystem::path& edited = {}
+);
 
 // The level's sky textures (textures/sky_NNNN.png, by the sky's own texture numbers), including the
 // ones only its sprites use; an empty image where one is missing.

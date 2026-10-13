@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "common/log.h"
+#include "openrac/game_host.h"
 #include "openrac/guest.h"
 #include "platform/input.h"
 #include "platform/window.h"
@@ -475,7 +476,13 @@ void use_level(int number) {
     g->level = viewer::LevelData();
     std::string error;
     const auto dir = g->levels / std::format("level_{:02d}", wanted);
-    if (!viewer::load_level(dir, g->level, error)) {
+    // An edited level's scenery (--mods): the editor's pack writes it beside its gameplay file.
+    std::filesystem::path edited;
+    if (openrac_game_mods_dir != nullptr) {
+        edited = std::filesystem::path(openrac_game_mods_dir) / std::format("level_{:02d}", wanted)
+                 / "placements.json";
+    }
+    if (!viewer::load_level(dir, g->level, error, edited)) {
         log::warn("level {}: {} (extract it with editor/extract.py port)", wanted, error);
         g->renderer->add(std::make_unique<renderer::DirectRenderer>("hud", renderer::Bucket::Hud, renderer::DirectConfig{}, renderer::DirectRenderer::Input::Vif), error);
         if (fresh) {

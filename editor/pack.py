@@ -15,8 +15,10 @@ The disc image is never written. The native port reads `patches.tsv` (its
 
 What it packs, for now: mobys that were moved, turned, scaled, given another
 class or other values (the `rc1_*` metadata), added (a copy made in Godot, or
-a class scene of the level dropped in) or deleted. Edits to ties, shrubs and
-terrain are a later step, as are classes the level does not have.
+a class scene of the level dropped in) or deleted. Ties and shrubs are packed
+for the native port, as the files it draws them from (scenery.py:
+<out>/level_NN/placements.json). Terrain is a later step, as are classes the
+level does not have.
 
 A moby the scene has as the extractor wrote it keeps its bytes on the disc,
 so a scene nobody edited packs to nothing, and a level whose mobys were only
@@ -25,6 +27,7 @@ write the table again, and with it what names mobys by their place in it
 (gameplay.py).
 """
 
+import json
 import math
 import re
 import struct
@@ -32,17 +35,17 @@ from pathlib import Path
 
 from disc import SECTOR
 from formats import FormatError, unpack
-from level import decoded
+from level import decoded, load_level
 import gameplay as gp
 from mobys import (ALWAYS, FIELDS, POINTER, RECORD, SIZE, USUAL, matrix, moby_class_names,
                    moby_instances, node_name)
 from wadpack import compress
 
 # Godot saves a node's header with more in it than the extractor writes (type, unique_id).
-NODE = re.compile(r'^\[node name="([^"]+)"[^\]]* parent="Game/Mobys"')
+NODE = re.compile(r'^\[node name="([^"]+)"[^\]]* parent="Game/(\w+)"')
 INSTANCE = re.compile(r'instance=ExtResource\("([^"]+)"\)')
 RESOURCE = re.compile(r'^\[ext_resource [^\]]*path="([^"]+)"[^\]]*id="([^"]+)"')
-CLASS_SCENE = re.compile(r"/moby_(\d+)\.tscn$")
+CLASS_SCENE = re.compile(r"/(moby|tie|shrub)_(\d+)\.(?:tscn|glb)$")
 PROPERTY = re.compile(r"^([A-Za-z_/0-9]+) = (.*)$")
 IDENTITY = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0)
 
@@ -53,8 +56,13 @@ def f32(x: float) -> bytes:
 
 
 def scene_mobys(text: str) -> list[dict]:
-    """The moby nodes of a level scene: name, class id, the 12 floats of its transform
-    (basis rows, then origin) and its rc1_* metadata."""
+    return scene_nodes(text, "Mobys", "moby")
+
+
+def scene_nodes(text: str, parent: str, kind: str) -> list[dict]:
+    """The nodes of a level scene under Game/PARENT (Mobys, Ties, Shrubs): name, class id (of a
+    KIND class scene: moby, tie, shrub), the 12 floats of its transform (basis rows, then
+    origin) and its rc1_* metadata."""
     classes, nodes, node = {}, [], None
     for line in text.splitlines():
         if line.startswith("["):
@@ -62,11 +70,11 @@ def scene_mobys(text: str) -> list[dict]:
             resource = RESOURCE.match(line)
             if resource:
                 found = CLASS_SCENE.search(resource.group(1))
-                if found:
-                    classes[resource.group(2)] = int(found.group(1))
+                if found and found.group(1) == kind:
+                    classes[resource.group(2)] = int(found.group(2))
                 continue
             match = NODE.match(line)
-            if match:
+            if match and match.group(2) == parent:
                 instance = INSTANCE.search(line)
                 node = {"name": match.group(1), "class_id": classes.get(instance.group(1)) if instance else None,
                         "transform": IDENTITY, "meta": {}}
@@ -307,6 +315,7 @@ def pack_level(level_id: int, gameplay: bytes, scene: str) -> tuple[bytes, list[
 
 def pack(disc, survey: dict, project: Path, out: Path) -> tuple[int, int]:
     """Writes OUT from the scenes of PROJECT. Returns (levels packed, mobys changed)."""
+    import scenery          # it reads the scene with this module's reader
     patches, report, packed, total = [], [], 0, 0
     for info in survey["levels"]:
         name = f"level_{info['id']:02}"
@@ -318,10 +327,22 @@ def pack(disc, survey: dict, project: Path, out: Path) -> tuple[int, int]:
         place = info["ranges"]["gameplay_pal"]
         stored = disc.sectors(place["lba"], place["sectors"])
         gameplay = decoded(stored)
-        edited, changes, problems = pack_level(info["id"], gameplay, scene.read_text())
-        if changes or problems:
+        text = scene.read_text()
+        edited, changes, problems = pack_level(info["id"], gameplay, text)
+        # Ties and shrubs: the port draws them from the extractor's files, so they are packed as
+        # those are (scenery.py), beside the gameplay file.
+        placements, scenery_changes, scenery_problems = None, [], []
+        if scenery.edited(gameplay, text):
+            placements, scenery_changes, scenery_problems = scenery.pack_scenery(load_level(disc, info), text)
+        if changes or problems or scenery_changes or scenery_problems:
             report.append(f"level {info['id']:02}")
-            report += [f"  {line}" for line in changes] + [f"  not packed: {line}" for line in problems]
+            report += [f"  {line}" for line in changes + scenery_changes]
+            report += [f"  not packed: {line}" for line in problems + scenery_problems]
+        if placements is not None:
+            (out / name).mkdir(parents=True, exist_ok=True)
+            (out / name / "placements.json").write_text(json.dumps(placements, separators=(",", ":")) + "\n")
+            total += len(scenery_changes)
+            packed += 0 if changes else 1
         if not changes:
             continue
         stream = compress(edited, stored[:16])

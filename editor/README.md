@@ -114,7 +114,8 @@ as the game stores it, compressed, and the list of disc sectors it replaces:
 
 ```
 assets/packed/rac1/
-  level_NN/gameplay_pal.wad   one per edited level, the size of its place on the disc
+  level_NN/gameplay_pal.wad   one per level whose mobys were edited, the size of its place on the disc
+  level_NN/placements.json    one per level whose ties or shrubs were edited, for the native port
   patches.tsv                 first sector, sector count, file
   changes.txt                 what changed, in words
 ```
@@ -126,8 +127,18 @@ launcher's Mods page does all three steps (edit, pack, play).
 
 What is packed today: **mobys that were moved, turned, scaled, given another
 class, given other values** (the `rc1_*` metadata in the Inspector), **added
-or deleted**. A moby keeps one scale for all three axes. Not yet: ties,
-shrubs and terrain, and mobys of a class the level does not load.
+or deleted**, and **ties and shrubs** the same way (moved, turned, scaled
+each axis its own, another class of the level, other values, added, deleted).
+A moby keeps one scale for all three axes. Not yet: terrain, and anything of
+a class the level does not load.
+
+Ties and shrubs are packed for the native port only ([scenery.py](scenery.py)):
+the port draws them from the extractor's files, so the pack writes the
+level's `placements.json` with the lists that changed, each tie and shrub lit
+again where it stands, and `--mods` reads it in place of the level's own.
+The gameplay file's own tie and shrub tables and the level's collision stay
+the disc's: a tie that was moved is drawn in its new place and still walked
+on in its old one, and a new one is walked through.
 
 An added moby is a copy made in Godot (Ctrl+D) or one of the level's class
 scenes dropped under `Game/Mobys`. It takes after the moby it copies (or the
