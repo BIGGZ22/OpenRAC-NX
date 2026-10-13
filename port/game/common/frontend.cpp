@@ -1254,7 +1254,7 @@ void swapped(std::chrono::steady_clock::time_point started) {
     if (const double cap = frame_cap(); cap > 0.0) {
         const auto step = duration_cast<steady_clock::duration>(duration<double>(1.0 / cap));
         const auto now = steady_clock::now();
-        pacing.due = pacing.due.time_since_epoch().count() == 0 || now > pacing.due + 2 * step ? now + step
+        pacing.due = pacing.due.time_since_epoch().count() == 0 || now > pacing.due + 2 * step ? now
                                                                                                : pacing.due + step;
     } else {
         pacing.due = {};
@@ -2075,15 +2075,24 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     // the game's time: the next tick's frame shows where the game got to. At most three in a row,
     // so that a picture still comes; a machine slower than that runs the game slow, as it must.
     constexpr int kMostSkipped = 3;
-    if (pacing.late > pacing.period && g->skipped < kMostSkipped && g->kept.has_camera && g->index > 1) {
-        if (g->skipped++ == 0 && pacing.cost > 0.8 * pacing.period.count()) {
-            static int said = 0;
-            if (said++ < 5) {
-                log::warn("the frame takes longer to draw ({:.1f} ms) than a game tick ({:.1f} ms): frames are "
-                          "left out to keep the game's speed. A lower render scale or fewer samples would help.",
-                          pacing.cost * 1000.0, pacing.period.count() * 1000.0);
-            }
+    // Said when it goes on (a quarter of a hundred ticks' frames left out), not for the odd tick
+    // that comes late after the system held the program up.
+    static int ticks = 0;
+    static int left_out = 0;
+    static int said = 0;
+    if (++ticks >= 100) {
+        if (left_out >= 25 && said++ < 3) {
+            log::warn("a frame takes longer to draw ({:.1f} ms) than a game tick lasts ({:.1f} ms): {} of the last "
+                      "{} ticks' frames were left out to keep the game's speed. A lower render scale or fewer "
+                      "samples a pixel would help.",
+                      pacing.cost * 1000.0, pacing.period.count() * 1000.0, left_out, ticks);
         }
+        ticks = 0;
+        left_out = 0;
+    }
+    if (pacing.late > pacing.period && g->skipped < kMostSkipped && g->kept.has_camera && g->index > 1) {
+        ++g->skipped;
+        ++left_out;
         return true;
     }
     g->skipped = 0;
