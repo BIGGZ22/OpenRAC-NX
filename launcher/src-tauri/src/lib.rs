@@ -335,74 +335,93 @@ fn open_saves_folder(app: AppHandle, serial: String) -> Result<(), String> {
     app.opener().open_path(dir.to_string_lossy(), None::<&str>).map_err(|e| e.to_string())
 }
 
+/// Writes `bytes` to `path` unless it already holds them; true when it wrote.
+#[cfg(target_os = "linux")]
+fn write_if_changed(path: &std::path::Path, bytes: &[u8]) -> bool {
+    if std::fs::read(path).map(|old| old == bytes).unwrap_or(false) {
+        return false;
+    }
+    std::fs::write(path, bytes).is_ok()
+}
+
+/// The menu entry and icons the desktop finds the launcher by. On Wayland the window's app id
+/// (the program's name, `openrac-launcher`) names the .desktop file the taskbar takes the icon
+/// from; `dev.openrac.launcher` is the bundle's identifier. Both entries are kept so either id
+/// finds the icon, but only one shows in the menu. Files are written, and the desktop's caches
+/// refreshed, only when something changed: nothing to do on most starts.
 #[cfg(target_os = "linux")]
 fn ensure_linux_desktop_integration() {
-    let icon_bytes_512 = include_bytes!("../icons/icon.png");
-    let icon_bytes_256 = include_bytes!("../icons/128x128@2x.png");
-    let icon_bytes_128 = include_bytes!("../icons/128x128.png");
-    let icon_bytes_64 = include_bytes!("../icons/64x64.png");
-    let icon_bytes_32 = include_bytes!("../icons/32x32.png");
+    let sizes: &[(&str, &[u8])] = &[
+        ("32x32", include_bytes!("../icons/32x32.png")),
+        ("64x64", include_bytes!("../icons/64x64.png")),
+        ("128x128", include_bytes!("../icons/128x128.png")),
+        ("256x256", include_bytes!("../icons/128x128@2x.png")),
+        ("512x512", include_bytes!("../icons/icon.png")),
+    ];
+    let Ok(home) = std::env::var("HOME") else { return };
+    let home_path = PathBuf::from(home);
+    let icons_base = home_path.join(".local/share/icons/hicolor");
+    let app_dir = home_path.join(".local/share/applications");
+    let _ = std::fs::create_dir_all(&app_dir);
 
-    if let Ok(home) = std::env::var("HOME") {
-        let home_path = PathBuf::from(home);
-        let icons_base = home_path.join(".local/share/icons/hicolor");
-        let app_dir = home_path.join(".local/share/applications");
-        let _ = std::fs::create_dir_all(&app_dir);
+    let mut icons_changed = false;
+    for (size, bytes) in sizes {
+        let dir = icons_base.join(size).join("apps");
+        let _ = std::fs::create_dir_all(&dir);
+        icons_changed |= write_if_changed(&dir.join("dev.openrac.launcher.png"), bytes);
+        icons_changed |= write_if_changed(&dir.join("openrac-launcher.png"), bytes);
+    }
 
-        let sizes: &[(&str, &[u8])] = &[
-            ("32x32", icon_bytes_32),
-            ("64x64", icon_bytes_64),
-            ("128x128", icon_bytes_128),
-            ("256x256", icon_bytes_256),
-            ("512x512", icon_bytes_512),
-        ];
+    let exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("openrac-launcher"));
+    let entry = |wm_class: &str, hidden: bool| {
+        format!(
+            "[Desktop Entry]\nType=Application\nName=OpenRAC Launcher\nComment=Set up, build and play the decompiled Ratchet & Clank games\nExec=\"{}\"\nIcon=dev.openrac.launcher\nTerminal=false\nCategories=Game;Development;\nStartupNotify=true\nStartupWMClass={}\n{}",
+            exe_path.to_string_lossy(),
+            wm_class,
+            if hidden { "NoDisplay=true\n" } else { "" }
+        )
+    };
+    let mut entries_changed = false;
+    entries_changed |= write_if_changed(
+        &app_dir.join("dev.openrac.launcher.desktop"),
+        entry("dev.openrac.launcher", false).as_bytes(),
+    );
+    entries_changed |=
+        write_if_changed(&app_dir.join("openrac-launcher.desktop"), entry("openrac-launcher", true).as_bytes());
 
-        for (sz, bytes) in sizes {
-            let dir = icons_base.join(sz).join("apps");
-            let _ = std::fs::create_dir_all(&dir);
-            let _ = std::fs::write(dir.join("dev.openrac.launcher.png"), bytes);
-            let _ = std::fs::write(dir.join("openrac-launcher.png"), bytes);
-        }
-
-        let main_icon = icons_base.join("128x128/apps/dev.openrac.launcher.png");
-        let icon_target = if main_icon.exists() {
-            main_icon.to_string_lossy().to_string()
-        } else {
-            "dev.openrac.launcher".to_string()
-        };
-
-        let exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("openrac-launcher"));
-        let exe_str = exe_path.to_string_lossy();
-
-        let desktop_content1 = format!(
-            "[Desktop Entry]\nType=Application\nName=OpenRAC Launcher\nComment=OpenRAC Launcher\nExec={}\nIcon={}\nTerminal=false\nCategories=Game;Development;\nStartupWMClass=openrac-launcher\n",
-            exe_str, icon_target
-        );
-        let desktop_content2 = format!(
-            "[Desktop Entry]\nType=Application\nName=OpenRAC Launcher\nComment=OpenRAC Launcher\nExec={}\nIcon={}\nTerminal=false\nCategories=Game;Development;\nStartupWMClass=dev.openrac.launcher\n",
-            exe_str, icon_target
-        );
-
-        let _ = std::fs::write(app_dir.join("openrac-launcher.desktop"), desktop_content1);
-        let _ = std::fs::write(app_dir.join("dev.openrac.launcher.desktop"), desktop_content2);
-
-        // Notify desktop environment and refresh icon caches silently
+    if icons_changed {
         let _ = std::process::Command::new("gtk-update-icon-cache").arg("-f").arg("-t").arg(&icons_base).status();
+    }
+    if entries_changed || icons_changed {
         let _ = std::process::Command::new("update-desktop-database").arg(&app_dir).status();
-        let _ = std::process::Command::new("kbuildsycoca6").arg("--noincremental").status();
+        let _ = std::process::Command::new("kbuildsycoca6").status();
+    }
 
-        // If Flatpak Discord is running, ensure standard XDG_RUNTIME_DIR socket symlink exists
-        if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
-            let standard_sock = PathBuf::from(&runtime_dir).join("discord-ipc-0");
-            let flatpak_sock = PathBuf::from(&runtime_dir).join("app/com.discordapp.Discord/discord-ipc-0");
-            if flatpak_sock.exists() && !standard_sock.exists() {
-                let _ = std::os::unix::fs::symlink(&flatpak_sock, &standard_sock);
-            }
+    // If Flatpak Discord is running, ensure standard XDG_RUNTIME_DIR socket symlink exists
+    if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
+        let standard_sock = PathBuf::from(&runtime_dir).join("discord-ipc-0");
+        let flatpak_sock = PathBuf::from(&runtime_dir).join("app/com.discordapp.Discord/discord-ipc-0");
+        if flatpak_sock.exists() && !standard_sock.exists() {
+            let _ = std::os::unix::fs::symlink(&flatpak_sock, &standard_sock);
         }
     }
 }
 
+/// WebKitGTK's DMA-BUF renderer draws a blank or flickering window under Wayland with NVIDIA's
+/// own driver; the launcher turns it off there (and only there), before GTK starts. A value the
+/// player set is left as it is.
+#[cfg(target_os = "linux")]
+fn tune_webkit_for_wayland() {
+    let wayland = std::env::var_os("WAYLAND_DISPLAY").is_some();
+    let nvidia = std::path::Path::new("/proc/driver/nvidia/version").exists();
+    if wayland && nvidia && std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
+}
+
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    tune_webkit_for_wayland();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
