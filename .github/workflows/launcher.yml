@@ -97,11 +97,54 @@ jobs:
           path: ${{ matrix.files }}
           if-no-files-found: error
 
-  # A tag `launcher-v*`: the installers of the three builds on a draft
+  # The launcher built on Fedora itself (the release players run), as an .rpm made against
+  # Fedora's own WebKitGTK and GTK.
+  fedora:
+    name: fedora
+    runs-on: ubuntu-latest
+    container: registry.fedoraproject.org/fedora:44
+    timeout-minutes: 60
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+    defaults:
+      run:
+        working-directory: launcher
+    steps:
+      - name: Tools and Tauri's system libraries
+        working-directory: /
+        run: |
+          dnf install -y --setopt=install_weak_deps=False git gcc gcc-c++ make curl file rpm-build \
+            nodejs npm webkit2gtk4.1-devel gtk3-devel librsvg2-devel libsoup3-devel openssl-devel
+          npm install -g corepack
+      - uses: actions/checkout@v4
+      - name: Yarn (the version package.json names, through Corepack)
+        run: corepack enable
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            launcher/target
+          key: launcher-fedora-${{ hashFiles('launcher/Cargo.lock') }}
+          restore-keys: launcher-fedora-
+
+      - name: Build the installer
+        run: |
+          yarn install --immutable
+          yarn tauri build --bundles rpm
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openrac-launcher-fedora
+          path: launcher/target/release/bundle/rpm/*.rpm
+          if-no-files-found: error
+
+  # A tag `launcher-v*`: the installers of all the builds on a draft
   # release. Nothing is published until someone publishes the draft.
   release:
     if: startsWith(github.ref, 'refs/tags/launcher-v')
-    needs: build
+    needs: [build, fedora]
     runs-on: ubuntu-latest
     permissions:
       contents: write

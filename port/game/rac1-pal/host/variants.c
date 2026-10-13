@@ -258,3 +258,17 @@ static int moby_block(gaddr moby, gaddr at) {
 
 int func_L00_0025D3C0(gaddr moby) { return moby_block(moby, 0x10); }
 int func_L00_00261448(gaddr moby) { return moby_block(moby, 8); }
+
+/* func_00216270's level places (32 bytes: a0 = an address, then one call) whose call is not
+ * func_0012F068(func_002177F0). The checkpoint restore (func_L00_002862E0) ends with the first:
+ * its level's checkpoint block after the snapshot, given to func_L00_002864E0. */
+void func_L00_00286598(void) { func_L00_002864E0(OPENRAC_LDATA(0, 0x001BB610u)); }
+
+/* The others, one level each: func_L03_00292AC0's copies and func_L18_00282F48 on that level's
+ * data. */
+void func_L03_002DDD58(void) { func_L03_00292AC0(0x001DC460u); }
+void func_L07_002F9418(void) { func_L03_00292AC0(0x001D36C0u); }
+void func_L07_0030E800(void) { func_L03_00292AC0(0x00208820u); }
+void func_L08_002DB448(void) { func_L03_00292AC0(0x001D7320u); }
+void func_L14_003047D8(void) { func_L03_00292AC0(0x001E9FA0u); }
+void func_L18_002FC168(void) { func_L18_00282F48(0x001DFED0u); }

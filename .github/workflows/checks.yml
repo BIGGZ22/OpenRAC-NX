@@ -129,6 +129,41 @@ jobs:
           SDL_VIDEO_DRIVER: offscreen
         run: ctest --preset release
 
+  # The native port on Fedora (the release players run): the program built as the launcher's
+  # "Build the game" builds it (tools/build_port.py), against the system's SDL3, Clang and CMake,
+  # then hostgen's tests and every test of the port on Mesa's software renderer.
+  port-fedora:
+    runs-on: ubuntu-latest
+    container: registry.fedoraproject.org/fedora:44
+    steps:
+      - name: Compilers and SDL3
+        run: |
+          dnf install -y --setopt=install_weak_deps=False git clang cmake ninja-build python3 \
+            SDL3-devel mesa-libGL-devel mesa-libEGL-devel mesa-dri-drivers \
+            libX11-devel libXext-devel libXrandr-devel libXcursor-devel libXi-devel libXScrnSaver-devel \
+            wayland-devel libxkbcommon-devel alsa-lib-devel pulseaudio-libs-devel
+      - uses: actions/checkout@v4
+
+      - name: Build openrac-rac1-pal as the launcher builds it
+        run: python3 tools/build_port.py rac1-pal
+
+      - name: hostgen
+        run: python3 -m unittest discover -s port/tools/hostgen
+
+      # Every test program (the *_test targets), not the whole port: rac1/ntsc's program calls a
+      # memchr nothing declares, which Clang 16 and later refuse.
+      - name: Build the tests
+        working-directory: port
+        run: |
+          targets=$(ninja -C build/release -t targets all | sed -n 's/^\([A-Za-z0-9_]*_test\): .*/\1/p' | sort -u)
+          cmake --build --preset release --target $targets
+
+      - name: Tests
+        working-directory: port
+        env:
+          SDL_VIDEO_DRIVER: offscreen
+        run: ctest --preset release
+
   # The native port on Windows: rac1/pal's program built as the launcher's
   # "Build the game" builds it (tools/build_port.py: Visual Studio's C++
   # libraries and the Windows SDK, Clang, Ninja), then the runtime's tests and
