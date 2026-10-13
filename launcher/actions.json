@@ -467,7 +467,7 @@
         "area": "port",
         "state": "planned",
         "docs": "port/game/README.md",
-        "todo": "openrac-rac1-ntsc builds from this version's decompilation (port/, cmake --preset release); before it runs it needs the game's main in port/game/rac1-ntsc/hostgen.json and its library table (port/game/README.md). rac1/pal is furthest along."
+        "todo": "openrac-rac1-ntsc builds (tools/build_port.py rac1-ntsc) and runs headless into its title loop with no function missing; in a window the title's logo and text are drawn but not the world behind them, and no level has been played. It also has no levels of its own to draw from: editor/extract.py reads the PAL disc only. port/game/rac1-ntsc/README.md lists what is carried from rac1/pal and what is left."
       }
     ],
     "rac2/ntsc": [
