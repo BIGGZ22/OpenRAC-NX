@@ -1383,11 +1383,17 @@ void apply_settings() {
     }
 }
 
-// The window's own keys: F11 and Alt+Return change between fullscreen and the window. True when
-// the event was one of them.
+// The window's own keys: F11 and Alt+Return change between fullscreen and the window, F9 and F10
+// turn the port's volume down and up a tenth. True when the event was one of them.
 bool window_key(const SDL_Event& event) {
     if (event.type != SDL_EVENT_KEY_DOWN || event.key.repeat) {
         return false;
+    }
+    if (event.key.key == SDLK_F9 || event.key.key == SDLK_F10) {
+        settings::set_volume(settings::get().volume + (event.key.key == SDLK_F10 ? 10 : -10));
+        settings::save();
+        log::info("volume {}", settings::get().volume);
+        return true;
     }
     const bool alt_return = (event.key.key == SDLK_RETURN || event.key.key == SDLK_KP_ENTER)
                             && (event.key.mod & SDL_KMOD_ALT) != 0;

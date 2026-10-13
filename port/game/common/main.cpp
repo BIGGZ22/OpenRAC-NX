@@ -510,6 +510,7 @@ int openrac_game_play_movie(uint32_t lsn, uint32_t bytes, int channel, int start
     };
     for (std::uint64_t blank = 0;; ++blank) {
         if (output) {
+            output->set_gain(settings::output_gain());
             const std::size_t got = player->read_audio(samples);
             if (got > 0) {
                 output->queue(std::span<const std::int16_t>(samples.data(), got * 2));
@@ -767,6 +768,12 @@ int main(int argc, char** argv) {
         static std::unique_ptr<platform::AudioOutput> sound_output =
             platform::AudioOutput::open(why, [](std::span<std::int16_t> samples) {
                 openrac_sound_render(samples.data(), samples.size() / 2);
+                // The player's volume (settings.h): at 0 the output is silence itself.
+                if (const float gain = settings::output_gain(); gain < 1.0f) {
+                    for (std::int16_t& sample : samples) {
+                        sample = static_cast<std::int16_t>(static_cast<float>(sample) * gain);
+                    }
+                }
             });
         if (!sound_output) {
             log::warn("no sound: {}", why);

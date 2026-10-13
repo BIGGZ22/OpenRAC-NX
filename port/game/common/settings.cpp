@@ -4,6 +4,7 @@
 #include "settings.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -16,6 +17,7 @@ namespace openrac::settings {
 namespace {
 
 Settings g_settings;
+std::atomic<float> g_gain{1.0f};  // g_settings.volume, read by the sound's thread
 std::filesystem::path g_file;
 
 // The names in the file, by value.
@@ -69,13 +71,21 @@ void load(const std::filesystem::path& file) {
             known = parse(value, kFrameRate, g_settings.frame_rate);
         } else if (key == "fullscreen") {
             g_settings.fullscreen = value == "1" || value == "true" || value == "on";
+        } else if (key == "volume") {
+            int volume = 0;
+            known = std::sscanf(value.c_str(), "%d", &volume) == 1 && volume >= 0 && volume <= 100;
+            if (known) {
+                g_settings.volume = volume;
+            }
         }
         if (!known) {
             log::warn("{}: {} = {} is not a value the port knows; the default is used", file.string(), key, value);
         }
     }
-    log::info("settings from {}: picture {}, frames {}, {}", file.string(), kAspect[static_cast<int>(g_settings.aspect)],
-              kFrameRate[static_cast<int>(g_settings.frame_rate)], g_settings.fullscreen ? "fullscreen" : "windowed");
+    g_gain = static_cast<float>(g_settings.volume) / 100.0f;
+    log::info("settings from {}: picture {}, frames {}, {}, volume {}", file.string(),
+              kAspect[static_cast<int>(g_settings.aspect)], kFrameRate[static_cast<int>(g_settings.frame_rate)],
+              g_settings.fullscreen ? "fullscreen" : "windowed", g_settings.volume);
 }
 
 void save() {
@@ -92,7 +102,17 @@ void save() {
     out << "# OpenRAC: the port's settings (the Video options page of the game's menu changes them)\n"
         << "aspect = " << kAspect[static_cast<int>(g_settings.aspect)] << "\n"
         << "frame_rate = " << kFrameRate[static_cast<int>(g_settings.frame_rate)] << "\n"
-        << "fullscreen = " << (g_settings.fullscreen ? 1 : 0) << "\n";
+        << "fullscreen = " << (g_settings.fullscreen ? 1 : 0) << "\n"
+        << "volume = " << g_settings.volume << "\n";
+}
+
+void set_volume(int volume) {
+    g_settings.volume = std::clamp(volume, 0, 100);
+    g_gain = static_cast<float>(g_settings.volume) / 100.0f;
+}
+
+float output_gain() {
+    return g_gain;
 }
 
 float aspect_ratio(Aspect aspect, int window_width, int window_height) {

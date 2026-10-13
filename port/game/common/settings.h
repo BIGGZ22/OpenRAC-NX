@@ -2,7 +2,7 @@
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // The player's settings for a native game: what the port adds to the game's own options (the
-// picture's shape, how many frames are drawn, fullscreen). They are kept in a small text file,
+// picture's shape, how many frames are drawn, fullscreen, how loud). They are kept in a small text file,
 // `key = value` a line, beside the memory cards (`--settings FILE` names another), read once at
 // start and written whenever one changes.
 #pragma once
@@ -40,6 +40,7 @@ struct Settings {
     Aspect aspect = Aspect::Standard;
     FrameRate frame_rate = FrameRate::Display;
     bool fullscreen = false;
+    int volume = 100;  // of everything the port plays, 0 (nothing at all) to 100 (as mixed)
 };
 
 // The settings in use.
@@ -50,6 +51,10 @@ void load(const std::filesystem::path& file);
 
 // Writes the settings to the file load() was given; nothing without one.
 void save();
+
+// Sets the volume (held to 0..100). output_gain() is it as a factor, for the sound's own thread.
+void set_volume(int volume);
+float output_gain();
 
 // Width over height of the picture for a window of that size.
 float aspect_ratio(Aspect aspect, int window_width, int window_height);
