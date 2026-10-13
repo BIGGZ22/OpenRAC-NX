@@ -188,6 +188,31 @@ class Translate(unittest.TestCase):
         })
         self.assertEqual(out, ["42"])
 
+    def test_a_result_passes_through_a_definition_that_ends_in_a_call(self):
+        # Matched as returning nothing, the wrappers still leave their last call's result in
+        # the register, and their callers (which declare them with a result) read it: through
+        # two of them here, a float and an integer, with an early return that leaves nothing.
+        out = self.run_program({
+            "callee.c": """
+                float height(void *p, int flags, float r) { return (float)flags + r; }
+                int count(int n) { return n + 1; }
+                void ground(void *p) { height(p, 0x20, 0.5f); }
+                void ground2(void *p) { ground(p); }
+                void counted(int n) { if (n < 0) return; count(n); }
+            """,
+            "caller.c": """
+                extern float ground2_f(void *) __asm__("ground2");
+                extern int counted_i(int) __asm__("counted");
+                int test_main(void) {
+                    test_print_float(ground2_f(0));
+                    test_print(counted_i(4));
+                    test_print(counted_i(-1));
+                    return 0;
+                }
+            """,
+        })
+        self.assertEqual(out, ["32.500", "5", "0"])
+
     def test_pass_through_of_a_record_parameter(self):
         # The callee is defined with three parameters and called with two: the
         # third register still held the caller's own third argument, a record.
