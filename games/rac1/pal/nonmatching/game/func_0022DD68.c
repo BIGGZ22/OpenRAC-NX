@@ -246,7 +246,7 @@ int func_0022DD68(void) {
             } else {
                 voice->position.f[2] -= 1.0f;
                 func_001F9BF0(&relative_velocity, &voice->moby->position, &voice->position);
-                voice->moby->position = voice->position;
+                voice->position = voice->moby->position;
                 voice->position.f[2] += 1.0f;
             }
         } else {
