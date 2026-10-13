@@ -21,6 +21,8 @@ export interface AppInfo {
   platform: Platform;
   /** Where launcher.json lives. */
   configFile: string | null;
+  /** The launcher works on the copy of OpenRAC it carries: only what a player does is offered. */
+  standalone: boolean;
 }
 
 /** core/src/config.rs */

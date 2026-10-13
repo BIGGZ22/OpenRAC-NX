@@ -21,6 +21,8 @@ struct AppState {
     config_file: Option<PathBuf>,
     jobs: Jobs,
     discord: Arc<Mutex<DiscordState>>,
+    /// The copy of OpenRAC this launcher carries, if it was built with one (detect::bundled_root).
+    bundled: Option<PathBuf>,
 }
 
 struct DiscordState {
@@ -35,6 +37,9 @@ struct AppInfo {
     platform: Platform,
     /// Where launcher.json is.
     config_file: Option<PathBuf>,
+    /// The launcher works on the copy of OpenRAC it carries: nothing to find or to build, and
+    /// only what a player does is offered.
+    standalone: bool,
 }
 
 #[tauri::command]
@@ -43,6 +48,7 @@ fn app_info(app: AppHandle, state: State<'_, AppState>) -> AppInfo {
         version: app.package_info().version.to_string(),
         platform: Platform::current(),
         config_file: state.config_file.clone(),
+        standalone: state.bundled.is_some() && state.config.lock().unwrap().root == state.bundled,
     }
 }
 
@@ -84,8 +90,11 @@ fn start_folders() -> Vec<PathBuf> {
 }
 
 #[tauri::command]
-async fn detect() -> Detected {
-    tauri::async_runtime::spawn_blocking(|| detect::detect_all(&start_folders())).await.unwrap_or_default()
+async fn detect(state: State<'_, AppState>) -> Result<Detected, String> {
+    let bundled = state.bundled.clone();
+    Ok(tauri::async_runtime::spawn_blocking(move || detect::detect_all(&start_folders(), bundled.as_deref()))
+        .await
+        .unwrap_or_default())
 }
 
 #[tauri::command]
@@ -443,6 +452,23 @@ pub fn run() {
                 config.install_dir = app.path().app_local_data_dir().ok();
             }
 
+            // The copy of OpenRAC the launcher carries. A folder that is gone (the copy of an
+            // earlier install: an AppImage is mounted at another place each time) or was never
+            // chosen gives way to it, and the same for its Python.
+            // A copy whose Python does not run here is not for this machine (an Intel Mac has the
+            // Apple silicon one): the launcher then works on a checkout, as it did.
+            let bundled = app.path().resource_dir().ok().and_then(|dir| detect::bundled_root(&dir)).filter(|dir| {
+                detect::bundled_python(dir).is_some_and(|python| detect::check_tool(Tool::Python, &python).ok)
+            });
+            if let Some(dir) = &bundled {
+                if !config.root.as_deref().is_some_and(openrac_launcher_core::is_openrac_root) {
+                    config.root = Some(dir.clone());
+                }
+                if config.root.as_ref() == Some(dir) && !config.python.as_deref().is_some_and(Path::is_file) {
+                    config.python = detect::bundled_python(dir);
+                }
+            }
+
             let client_id = config
                 .discord_client_id
                 .clone()
@@ -459,7 +485,7 @@ pub fn run() {
                 });
             }
 
-            app.manage(AppState { config: Mutex::new(config), config_file, jobs: Jobs::default(), discord });
+            app.manage(AppState { config: Mutex::new(config), config_file, jobs: Jobs::default(), discord, bundled });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

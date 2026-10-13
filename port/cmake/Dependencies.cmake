@@ -22,7 +22,12 @@ include(FetchContent)
 # A system SDL3 is used as it is (shared or static). A fetched one is built
 # static, without its test library, tests, examples or install rules: the
 # port links it into each program and ships no SDL of its own.
-find_package(SDL3 CONFIG QUIET)
+# OPENRAC_STATIC_SDL (the `standalone` preset): never the system's, so that the program an
+# installer carries needs no SDL on the player's machine.
+option(OPENRAC_STATIC_SDL "Build SDL3 into the programs even when the system has one" OFF)
+if(NOT OPENRAC_STATIC_SDL)
+  find_package(SDL3 CONFIG QUIET)
+endif()
 if(SDL3_FOUND)
   message(STATUS "SDL3: system (${SDL3_VERSION})")
 else()

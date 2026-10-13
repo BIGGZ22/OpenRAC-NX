@@ -59,7 +59,6 @@ target_link_libraries(openrac_platform PUBLIC openrac_common openrac_sdl3)
 openrac_warnings(openrac_platform)
 # macOS: the menu bar's name and menus (platform/macos_app.mm).
 if(APPLE)
-  enable_language(OBJCXX)
   target_sources(openrac_platform PRIVATE platform/macos_app.mm)
   target_link_libraries(openrac_platform PRIVATE "-framework Cocoa")
 endif()

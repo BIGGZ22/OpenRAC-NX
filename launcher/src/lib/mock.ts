@@ -375,6 +375,8 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
         version: "0.3.0-preview",
         platform,
         configFile: "~/.config/dev.openrac.launcher/launcher.json",
+        // ?standalone shows an installed launcher's pages: no checkout, nothing to find.
+        standalone: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("standalone"),
       });
     case "get_config":
       return delay({ ...config });

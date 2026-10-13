@@ -239,6 +239,25 @@ mod tests {
         }
     }
 
+    /// The copy an installer carries (tools/bundle_standalone.py), when one was put together in
+    /// build/standalone: its actions are valid, need no Python to play, and write nothing in it.
+    #[test]
+    fn a_carried_copy_offers_the_players_actions() {
+        let root = checkout().join("build").join("standalone");
+        if !root.join("STANDALONE").is_file() {
+            return; // not put together here
+        }
+        let catalog = crate::catalog::load(&root).unwrap();
+        let file = actions::load(&root).unwrap();
+        assert_eq!(file.problems(&catalog), Vec::<String>::new());
+        let scope = Scope::Version("rac1/pal".into());
+        let levels = file.find(&scope, "port-levels").expect("port-levels");
+        assert!(levels.args.iter().any(|a| a == "{data}/port"), "{:?}", levels.args);
+        let play = file.find(&scope, "play").expect("play");
+        assert!(play.needs.iter().all(|n| n.path.starts_with("{data}/")), "{:?}", play.needs);
+        assert!(file.find(&scope, "port-build").is_none() && file.repository.is_empty());
+    }
+
     #[test]
     fn play_runs_only_once_the_port_is_built() {
         let root = checkout();

@@ -47,13 +47,36 @@ pub struct Check {
 }
 
 /// Everything at once, for the first-run screen.
-pub fn detect_all(start: &[PathBuf]) -> Detected {
-    Detected {
-        roots: roots(start),
-        pythons: tool_candidates(Tool::Python),
-        godots: tool_candidates(Tool::Godot),
-        dockers: tool_candidates(Tool::Docker),
+pub fn detect_all(start: &[PathBuf], bundled: Option<&Path>) -> Detected {
+    let mut roots = roots(start);
+    let mut pythons = tool_candidates(Tool::Python);
+    // What an installed launcher carries (bundled_root): a checkout that is found goes first, so
+    // a contributor's launcher works on their tree; a player has only this one.
+    if let Some(dir) = bundled {
+        if !roots.iter().any(|c| c.path == dir) {
+            roots.push(Candidate { path: dir.to_path_buf(), source: "built in".into() });
+        }
+        if let Some(python) = bundled_python(dir) {
+            pythons.insert(0, Candidate { path: python, source: "built in".into() });
+        }
     }
+    Detected { roots, pythons, godots: tool_candidates(Tool::Godot), dockers: tool_candidates(Tool::Docker) }
+}
+
+/// The copy of OpenRAC an installed launcher carries in its resources (`openrac/`): the games'
+/// manifests, the set-up and level tools, a Python to run them and the game built for this
+/// system, put together by tools/bundle_standalone.py. With it a player needs only their disc
+/// image. `None` when the launcher was built without one (a contributor's `tauri dev`).
+pub fn bundled_root(resources: &Path) -> Option<PathBuf> {
+    let dir = resources.join("openrac");
+    (dir.join("STANDALONE").is_file() && is_openrac_root(&dir)).then_some(dir)
+}
+
+/// The Python a bundled copy carries (python-build-standalone's layout).
+pub fn bundled_python(root: &Path) -> Option<PathBuf> {
+    let rel = if cfg!(windows) { "python/python.exe" } else { "python/bin/python3" };
+    let path = crate::under(root, rel);
+    path.is_file().then_some(path)
 }
 
 /// OpenRAC checkouts: `OPENRAC_ROOT`, then each start folder and its parents
@@ -301,6 +324,31 @@ pub fn run(mut cmd: Command, timeout: Duration) -> Result<String, String> {
 mod tests {
     use super::*;
     use crate::testing::checkout;
+
+    /// A carried copy is one only with its marker; it goes after a checkout that is found, and
+    /// its Python before the system's.
+    #[test]
+    fn a_carried_copy_is_the_last_root_and_its_python_the_first() {
+        let tmp = std::env::temp_dir().join(format!("openrac-bundled-{}", std::process::id()));
+        let dir = tmp.join("openrac");
+        std::fs::create_dir_all(dir.join("tools")).unwrap();
+        std::fs::create_dir_all(dir.join("games")).unwrap();
+        std::fs::write(dir.join("tools").join("openrac.py"), "").unwrap();
+        assert_eq!(bundled_root(&tmp), None, "no marker, no copy");
+        std::fs::write(dir.join("STANDALONE"), "").unwrap();
+        assert_eq!(bundled_root(&tmp), Some(dir.clone()));
+
+        assert_eq!(bundled_python(&dir), None);
+        let python = crate::under(&dir, if cfg!(windows) { "python/python.exe" } else { "python/bin/python3" });
+        std::fs::create_dir_all(python.parent().unwrap()).unwrap();
+        std::fs::write(&python, "").unwrap();
+
+        let found = detect_all(&[checkout().join("launcher")], Some(&dir));
+        assert_eq!(found.roots.last().map(|c| c.path.clone()), Some(dir.clone()));
+        assert!(found.roots.len() >= 2, "the checkout comes first: {:?}", found.roots);
+        assert_eq!(found.pythons.first().map(|c| c.path.clone()), Some(python));
+        std::fs::remove_dir_all(&tmp).unwrap();
+    }
 
     #[test]
     fn finds_the_checkout_above_the_launcher() {
