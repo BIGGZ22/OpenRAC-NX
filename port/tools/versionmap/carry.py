@@ -72,6 +72,16 @@ class Target:
                     if name not in known:
                         known.append(name)
 
+    def add_splits(self, table: Path) -> None:
+        """The target's split_places.tsv (function, variant, places): each of those places is
+        the variant's, whatever the catalogue folds it into."""
+        for line in table.read_text().splitlines():
+            cols = line.split("\t")
+            if line.startswith("#") or len(cols) < 3:
+                continue
+            for item in cols[2].split(","):
+                self.names.setdefault(int(item[:2]), {})[int(item[3:], 16)] = [cols[1]]
+
     def name(self, address: int, overlay: int = -1) -> str | None:
         """The symbol the target has at ADDRESS: the one with C when two spell it."""
         found = self.names.get(overlay, {}).get(address)
@@ -91,10 +101,13 @@ def cname(symbol: str) -> str:
 
 
 class Carrier:
-    def __init__(self, map_path: Path, gen: Path, source: Path | None = None, places: Path | None = None):
+    def __init__(self, map_path: Path, gen: Path, source: Path | None = None, places: Path | None = None,
+                 splits: Path | None = None):
         self.map, self.target = Map(map_path), Target(gen)
         if source is not None:
             self.target.add_stubs(source, places)
+        if splits is not None and splits.is_file():
+            self.target.add_splits(splits)
         self.notes: list[str] = []
 
     def symbol(self, name: str) -> tuple[str | None, str]:
@@ -109,7 +122,9 @@ class Carrier:
             return None, "unpaired"
         there = self.target.name(hit[0], int(level) if level else -1)
         if there is None:
-            return None, f"no name at {hit[0]:08X}"
+            # Nothing of the target names the place (an entry inside a function, a place its
+            # catalogue folds into another function): a name by address, which hostgen reads.
+            return f"func_{'L' + level + '_' if level else ''}{hit[0]:08X}", f"{hit[1]}, named by address"
         return there, hit[1]
 
 
@@ -157,8 +172,8 @@ def carry_c(c: Carrier, text: str, low: int, high: int, keep_spelling: bool,
         if hit is None:
             notes.append(f"{m.group(0)}: unpaired")
             return m.group(0) + "__NOT_CARRIED"
-        if hit[1] != "same":
-            notes.append(f"{m.group(0)} -> {hit[0]:08X}: {hit[1]}")
+        if hit[1] != "same" or kind != "same":
+            notes.append(f"{m.group(0)} -> {hit[0]:08X}: {kind}")
         if keep_spelling:
             by_address = f"func_{'L' + level + '_' if level else ''}{hit[0]:08X}"
             if defined is not None:
@@ -229,6 +244,7 @@ def main() -> int:
         p.add_argument("gen", type=Path)
         p.add_argument("--source", type=Path, help="the target decompilation's src: its assembly stubs count as names too")
         p.add_argument("--places", type=Path, help="the target's table of level places (hostgen.json, \"places\")")
+        p.add_argument("--splits", type=Path, help="the target's split_places.tsv: its variants name their places")
         if name == "names":
             p.add_argument("names", nargs="+")
         elif name == "table":
@@ -243,7 +259,7 @@ def main() -> int:
             p.add_argument("--keep-spelling", action="store_true",
                            help="write functions as the decompilation names them (C that hostgen translates), not as their host C names")
     args = ap.parse_args()
-    c = Carrier(args.map, args.gen, args.source, args.places)
+    c = Carrier(args.map, args.gen, args.source, args.places, args.splits)
     return {"names": cmd_names, "table": cmd_table, "c": cmd_c}[args.cmd](c, args)
 
 

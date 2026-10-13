@@ -227,8 +227,8 @@ def main() -> int:
     b.add_argument("dst")
     b.add_argument("--out", type=Path, required=True)
     b.add_argument("--entries", type=Path, action="append", default=[],
-                   help="a file of the port (C, TSV, JSON): every func_ address it names is looked for "
-                        "by its instructions when the cut does not pair it")
+                   help="a file of the port (C, TSV, JSON): every func_ address and level place (NN:ADDRESS) it "
+                        "names is looked for by its instructions when the cut does not pair it")
     look = sub.add_parser("lookup")
     look.add_argument("map", type=Path)
     look.add_argument("addresses", nargs="+")
@@ -237,8 +237,11 @@ def main() -> int:
     if args.cmd == "build":
         entries: dict[str, list[int]] = {}
         for path in args.entries:
-            for level, address in re.findall(r"\bfunc_(?:L(\d\d)_)?([0-9A-F]{8})\b", path.read_text()):
+            text = path.read_text()
+            for level, address in re.findall(r"\bfunc_(?:L(\d\d)_)?([0-9A-F]{8})\b", text):
                 entries.setdefault(f"level:{level}" if level else "boot", []).append(int(address, 16))
+            for level, address in re.findall(r"\b(\d\d):([0-9A-F]{8})\b", text):      # a table's level places
+                entries.setdefault(f"level:{level}", []).append(int(address, 16))
         m = build(args.src, args.dst, entries)
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps(m, indent=0, sort_keys=True) + "\n")

@@ -39,6 +39,7 @@ layer and the renderer.
 | `places` | where each level function sits in each level (rac1/pal's `functions.tsv`) |
 | `groups` | parts of the tree that are separate programs over the same addresses (rac3's menu, `src/frontbin`, overlay 100) |
 | `overlay_hook` | true if `host/` provides `openrac_game_loaded_overlay` (which level's program is loaded) |
+| `hand`, `drafts` | C for functions the decompilation has as assembly: the port's own (`hand/hand.tsv`), and the decompilation's own drafts (`drafts.tsv`) ([hostgen](../tools/hostgen/README.md#a-games-configuration)) |
 | `roots` | where hostgen's frontier report starts |
 
 ## Moving a game on
