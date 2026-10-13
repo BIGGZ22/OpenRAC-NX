@@ -23,6 +23,7 @@
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
 #include "platform/input.h"
+#include "platform/pump.h"
 #include "platform/window.h"
 #include "renderer/direct.h"
 #include "renderer/effects.h"
@@ -1000,7 +1001,7 @@ bool show_picture(const std::uint8_t* rgba, int width, int height, float black) 
         return true;
     }
     SDL_Event event;
-    while (SDL_PollEvent(&event)) {
+    while (platform::poll_event(event)) {
         if (event.type == SDL_EVENT_QUIT
             || (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)) {
             return false;
@@ -1397,7 +1398,7 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         return true;
     }
     SDL_Event event;
-    while (SDL_PollEvent(&event)) {
+    while (platform::poll_event(event)) {
         if (event.type == SDL_EVENT_QUIT
             || (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)) {
             return false;
@@ -1820,7 +1821,7 @@ int between(std::chrono::steady_clock::time_point next_tick) {
         return 0;
     }
     SDL_Event event;
-    while (SDL_PollEvent(&event)) {
+    while (platform::poll_event(event)) {
         if (event.type == SDL_EVENT_QUIT
             || (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)) {
             return -1;

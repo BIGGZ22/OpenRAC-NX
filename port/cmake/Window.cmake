@@ -48,6 +48,7 @@ add_library(openrac_platform STATIC
   platform/clock.cpp
   platform/input.cpp
   platform/pad.cpp
+  platform/pump.cpp
   platform/window.cpp
 )
 target_link_libraries(openrac_platform PUBLIC openrac_common openrac_sdl3)

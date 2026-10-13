@@ -49,6 +49,7 @@
 #include "settings.h"
 #include "openrac/sound_engine.h"
 #include "platform/audio.h"
+#include "platform/pump.h"
 #include "renderer/texture.h"
 #include "viewer/moby_pose.h"
 #endif
@@ -781,7 +782,19 @@ int main(int argc, char** argv) {
 
     // What the console's start-up code did before main: the stack and heap are
     // the runtime's, .bss was zeroed by the loader.
-    if (!openrac_game_run()) {
+    int ran = 0;
+#ifdef OPENRAC_FRONTEND
+    if (g_window) {
+        // Beside the window's event pump, so the game goes on while the system holds the pump (a
+        // window being dragged or sized on Windows: platform/pump.h).
+        ran = platform::run_pumped([](void*) { return openrac_game_run(); }, nullptr);
+    } else {
+        ran = openrac_game_run();
+    }
+#else
+    ran = openrac_game_run();
+#endif
+    if (!ran) {
         log::error(
             "{}'s main is not known yet: port/game/{}/hostgen.json has no \"entry\"",
             openrac_game.title,
