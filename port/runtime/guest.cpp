@@ -944,6 +944,42 @@ gaddr openrac_call_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gad
     return result;
 }
 
+gaddr openrac_hook_in_copy(gaddr exe_fn, uint32_t size, int home, gaddr home_fn, gaddr stub, uint32_t k) {
+    const int overlay = current_overlay();
+    const gaddr fallback = OPENRAC_CODE(stub);
+    if (overlay == OPENRAC_OVERLAY_EXE || overlay < 0) {
+        return fallback;
+    }
+    const gaddr self = overlay == home ? home_fn : openrac_relocate_level_code(home, home_fn);
+    if (self == 0 || (self == home_fn && overlay != home)) {
+        return fallback;  // no place of this function in the loaded program
+    }
+    static std::map<std::tuple<int, gaddr, gaddr, std::uint32_t>, gaddr> found;
+    std::scoped_lock hold(g_relocate_lock);
+    const auto key = std::make_tuple(overlay, exe_fn, stub, k);
+    if (auto it = found.find(key); it != found.end()) {
+        return it->second;
+    }
+    gaddr result = fallback;
+    std::uint32_t seen = 0;
+    for (std::uint32_t i = 0; i * 4 < size; ++i) {
+        const std::uint32_t w = exe_word(exe_fn + i * 4);
+        if ((w >> 26) == 3 && ((w & 0x03FFFFFFu) << 2) == (stub & 0x0FFFFFFFu) && seen++ == k) {
+            std::uint32_t mine;
+            std::memcpy(&mine, G(self + i * 4), 4);
+            if ((mine >> 26) == 3) {
+                result = (self & 0xF0000000u) | ((mine & 0x03FFFFFFu) << 2);
+            }
+            break;
+        }
+    }
+    found.emplace(key, result);
+    if (std::getenv("OPENRAC_TRACE_RELOCATION") != nullptr) {
+        std::fprintf(stderr, "hook in copy %08X #%u: %08X -> %08X (level %d)\n", exe_fn, k, stub, result, overlay);
+    }
+    return result;
+}
+
 gaddr openrac_relocate_level_code(int from, gaddr address) {
     const int overlay = current_overlay();
     if (overlay == from || overlay == OPENRAC_OVERLAY_EXE) {

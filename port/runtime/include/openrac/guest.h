@@ -218,6 +218,14 @@ gaddr openrac_code_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gad
  * -1 is the executable. Without a place, `target` (OPENRAC_CODE's or OPENRAC_LCODE's). */
 gaddr openrac_call_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gaddr target);
 
+/* A call from the executable's own engine code to one of its empty hook stubs (stub.c: functions
+ * that only return), which every level's program fills with a function of its own. The executable's
+ * copy of the caller (`exe_fn`, `size` bytes) calls the stub at its k-th such call; the copy the
+ * loaded level carries (the place of the caller in level `home`, `home_fn`, relocated to the loaded
+ * program) calls that level's function at the same instruction. In the executable's own program,
+ * or where the copy does not call at that place, it is the stub (OPENRAC_CODE's). */
+gaddr openrac_hook_in_copy(gaddr exe_fn, uint32_t size, int home, gaddr home_fn, gaddr stub, uint32_t k);
+
 /* The EE FPU's divide, for the game's float `/`: no infinities or NaNs. A divisor of zero (or a
  * denormal, which the EE reads as zero) gives +-FLT_MAX with the operands' signs XORed, and a
  * quotient too large saturates the same way, where the host would give infinity (and NaN from

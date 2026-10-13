@@ -1371,7 +1371,19 @@ class Unit:
                 places = self._folded_places(sym)
                 copy = self._small_folded()
                 callee_places = self.program.code_places(sym) if copy is not None and not places else []
-                if not places and callee_places:
+                hook = self._level_hook(sym) if not places and not callee_places else None
+                if hook is not None:
+                    # A call to one of the executable's empty hook stubs, from engine code the level
+                    # programs carry: each level fills the hook with its own function (guest.h).
+                    exe_fn, size, home, home_fn, stub = hook
+                    calls = getattr(self.fn, "hook_calls", None)
+                    if calls is None:
+                        calls = self.fn.hook_calls = {}
+                    k = calls.get(sym, 0)
+                    calls[sym] = k + 1
+                    self.fn.report.calls.add(sym)
+                    fp = f"openrac_hook_in_copy({hexaddr(exe_fn)}, {size}u, {home}, {hexaddr(home_fn)}, {hexaddr(stub)}, {k}u)"
+                elif not places and callee_places:
                     # Inside a small function the catalogue folded (copies that differ in what they
                     # call): the function this copy's own call at that place calls (guest.h).
                     home, canon, size = copy
@@ -1415,6 +1427,24 @@ class Unit:
                             ft.variadic, ft.prototyped)
         values = [self.rv(a) for a in args]
         return f"GFN({ctype.fn_pointer(hostft)}, {fp})({', '.join(values)})"
+
+    def _level_hook(self, sym: str):
+        """For a call to a hook stub (the game's `level_hooks`) from a function of the executable
+        that the levels' programs also carry: that function's address in the executable, its size,
+        its first level place, and the stub's address; else None."""
+        fn = self.fn
+        if fn is None or sym not in getattr(self.program, "level_hooks", ()):
+            return None
+        size = getattr(self.program, "sizes", {}).get(fn.name)
+        if not size or not getattr(self.program, "relocate", None):
+            return None
+        places = self.program.code_places(fn.name)
+        exe = [a for o, a in places if o < 0]
+        levels = [(o, a) for o, a in places if o >= 0]
+        stub = [a for o, a in self.program.code_places(sym) if o < 0]
+        if not exe or not levels or not stub:
+            return None
+        return exe[0], size, levels[0][0], levels[0][1], stub[0]
 
     def _small_folded(self) -> tuple[int, int, int] | None:
         """For a small function (at most 64 bytes: a wrapper of a call or two) the catalogue folded
