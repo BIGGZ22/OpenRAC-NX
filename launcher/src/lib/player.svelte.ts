@@ -2,7 +2,8 @@
 // tile and the game's page, so the main button says and does the same thing in both.
 import type { ActionView, GameView, VersionView } from "./api";
 import type { IconName } from "$components/Icon.svelte";
-import { cancel, installGame, jobs, refresh, run, runChain } from "./app.svelte";
+import { pickFolder } from "./api";
+import { app, cancel, installGame, jobs, refresh, run, runChain, saveConfig, toast } from "./app.svelte";
 import type { Job } from "./queue";
 
 export type PlayerKind =
@@ -45,6 +46,57 @@ function jobOf(v: VersionView, ids: string[]): Job | null {
 
 const action = (v: VersionView, id: string): ActionView | null =>
   v.actions.find((a) => a.id === id && a.thisPlatform) ?? null;
+
+/** The image of GAME in the player's games folder, if it holds one. */
+export function foundDisc(game: string) {
+  return app.discs.find((d) => d.game === game) ?? null;
+}
+
+const fileName = (path: string) => path.split(/[\\/]/).pop() ?? path;
+
+/**
+ * Sets a game up and goes on to what playing needs next without being asked: the levels the game
+ * draws from, when the set-up's version has that step and it is not done. IMAGE: from the games
+ * folder; without one the player picks the image.
+ */
+export async function setUp(game: string, title: string, image?: string): Promise<boolean> {
+  if (!(await installGame(game, title, image))) return false;
+  await refresh();
+  const g = app.library?.games.find((x) => x.id === game);
+  const v = g ? playerVersion(g) : null;
+  const levels = v ? action(v, "port-levels") : null;
+  if (v && levels?.runnable && !levels.done) {
+    await runChain({ kind: "version", key: v.key }, [levels]);
+    await refresh();
+  }
+  return true;
+}
+
+/**
+ * The player names the folder their PlayStation 2 games are in; every game OpenRAC knows in it
+ * that can be played and is not set up yet is set up, one after the other. Resolves to how many
+ * games the folder holds (0: none found), or null when no folder was chosen.
+ */
+export async function chooseGamesFolder(): Promise<number | null> {
+  const dir = await pickFolder("Choose the folder with your PlayStation 2 games");
+  if (!dir || !app.config) return null;
+  await saveConfig({ ...app.config, discsDir: dir });
+  await refresh();
+  const found = [...app.discs];
+  if (!found.length) {
+    toast("No Ratchet & Clank disc image (.iso) was found in that folder.", "error");
+    return 0;
+  }
+  for (const disc of found) {
+    const game = app.library?.games.find((g) => g.id === disc.game);
+    const version = game?.versions.find((x) => x.key === disc.version);
+    const play = version ? action(version, "play") : null;
+    if (game && !game.install?.extracted && play && play.state !== "planned") {
+      await setUp(disc.game, disc.title, disc.path);
+    }
+  }
+  return found.length;
+}
 
 /** "PAL (Europe)" -> "Europe": a region in a player's words. */
 export function regionWords(v: VersionView): string {
@@ -93,14 +145,17 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
   }
   if (!setUp) {
     const planned = !play || play.state === "planned";
+    const found = foundDisc(v.game);
     return {
       ...base,
       kind: "set-up",
-      label: "Set up from your disc",
+      label: found ? "Set up" : "Set up from your disc",
       icon: "disc",
       hint: planned
         ? "This game cannot be played yet. You can set your disc up now, ready for when it can."
-        : "Choose the image (.iso) of your own disc. OpenRAC never downloads a game.",
+        : found
+          ? `Found in your games folder: ${fileName(found.path)}`
+          : "Choose the image (.iso) of your own disc. OpenRAC never downloads a game.",
       primary: !planned,
       status: planned ? "Not playable yet" : "Not set up",
       tone: planned ? "info" : "warn",
@@ -217,8 +272,7 @@ export async function playerAct(v: VersionView, state: PlayerState): Promise<voi
     return;
   }
   if (state.kind === "set-up") {
-    await installGame(v.game, v.title);
-    await refresh();
+    await setUp(v.game, v.title, foundDisc(v.game)?.path);
     return;
   }
   const levels = action(v, "port-levels");

@@ -7,6 +7,7 @@
   import Icon from "$components/Icon.svelte";
   import { api } from "$lib/api";
   import { app, guard, refresh } from "$lib/app.svelte";
+  import { chooseGamesFolder } from "$lib/player.svelte";
 
   const repo = { kind: "repository" } as const;
   const lib = $derived(app.library);
@@ -16,6 +17,16 @@
   );
   const versions = $derived(lib?.games.flatMap((g) => g.versions).length ?? 0);
   const developer = $derived(app.config?.developer ?? false);
+  // A player who has set nothing up and named no games folder is asked for one, once, here.
+  const nothingYet = $derived(!!lib && !lib.games.some((g) => g.install?.extracted));
+  const askFolder = $derived(nothingYet && !app.config?.discsDir);
+  const emptyFolder = $derived(nothingYet && !!app.config?.discsDir && app.discs.length === 0);
+  let looking = $state(false);
+  async function choose() {
+    looking = true;
+    await chooseGamesFolder();
+    looking = false;
+  }
 </script>
 
 <div class="page">
@@ -33,6 +44,30 @@
       <Icon name="warn" />
       <p class="grow">The games show, but no actions: {lib.actionsError}</p>
     </div>
+  {/if}
+
+  {#if lib && (askFolder || emptyFolder)}
+    <section class="panel folder">
+      <Icon name="folder" size={22} />
+      <div class="grow">
+        {#if askFolder}
+          <h2>Where are your PlayStation 2 games?</h2>
+          <p class="muted">
+            Choose the folder with your disc images (.iso). OpenRAC finds the Ratchet &amp; Clank games in it and sets
+            them up. Nothing is copied off your computer, and OpenRAC never downloads a game.
+          </p>
+        {:else}
+          <h2>No Ratchet &amp; Clank game found there</h2>
+          <p class="muted">
+            <span class="mono">{app.config?.discsDir}</span> holds no disc image (.iso) of a game OpenRAC knows. Choose another
+            folder, or set a game up from its tile and pick the image yourself.
+          </p>
+        {/if}
+      </div>
+      <button class="primary" disabled={looking} onclick={() => void choose()}>
+        {#if looking}<span class="spinner"></span>{/if}{askFolder ? "Choose folder" : "Choose another"}
+      </button>
+    </section>
   {/if}
 
   {#if lib}
@@ -93,6 +128,33 @@
     margin: 0;
     padding: 0;
     list-style: none;
+  }
+
+  .folder {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-color: color-mix(in srgb, var(--amber) 45%, transparent);
+  }
+
+  .folder h2 {
+    margin-bottom: 2px;
+  }
+
+  .folder p {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+
+  .folder button {
+    flex: none;
+  }
+
+  @media (max-width: 700px) {
+    .folder {
+      flex-direction: column;
+      align-items: stretch;
+    }
   }
 
   .notice {

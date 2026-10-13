@@ -25,6 +25,17 @@ export interface AppInfo {
   standalone: boolean;
 }
 
+/** core/src/discs.rs: a disc image in the games folder that is a game OpenRAC knows. */
+export interface FoundDisc {
+  path: string;
+  serial: string;
+  game: string;
+  /** `rac1/pal`. */
+  version: string;
+  title: string;
+  region: string;
+}
+
 /** core/src/config.rs */
 export interface Config {
   root: string | null;
@@ -33,6 +44,8 @@ export interface Config {
   docker: string | null;
   /** Where games are set up from the player's discs (OpenGOAL's install folder). */
   installDir: string | null;
+  /** The player's folder of PlayStation 2 disc images, looked through for the games OpenRAC knows. */
+  discsDir: string | null;
   /** Show what contributors use (builds, checks, progress); off, a player's three steps. */
   developer: boolean;
   setupComplete: boolean;
@@ -284,6 +297,8 @@ export const api = {
   installGame: (game: string, image: string) => call<Started>("install_game", { game, image }),
   /** Removes what setting a game up made (not the disc image, not the saves). */
   uninstallGame: (game: string) => call<null>("uninstall_game", { game }),
+  /** The games OpenRAC knows among the images in the games folder. */
+  scanDiscs: () => call<FoundDisc[]>("scan_discs"),
   syncProgressFromWeb: () => call<Library>("sync_progress_from_web"),
   applyProgressJson: (json: string) => call<Library>("apply_progress_json", { json }),
   setDiscordStatus: (status: DiscordStatus) => call<null>("set_discord_status", { status }),

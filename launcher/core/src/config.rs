@@ -23,6 +23,10 @@ pub struct Config {
     /// Where games are set up from the player's discs (OpenGOAL's install
     /// directory); unset: the launcher's per-user data folder.
     pub install_dir: Option<PathBuf>,
+    /// The player's folder of PlayStation 2 disc images, looked through for the games OpenRAC
+    /// knows (discs.rs): with it nobody picks an image by hand.
+    #[serde(default)]
+    pub discs_dir: Option<PathBuf>,
     /// The first-run setup was finished (or skipped).
     pub setup_complete: bool,
     /// The version the launcher showed last (`rac1/pal`).
@@ -43,6 +47,7 @@ impl Default for Config {
             godot: None,
             docker: None,
             install_dir: None,
+            discs_dir: None,
             developer: false,
             setup_complete: false,
             last_version: None,

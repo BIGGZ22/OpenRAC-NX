@@ -41,6 +41,10 @@
   const installFolder = (path: string): Promise<Check> =>
     Promise.resolve({ ok: true, version: null, message: `games are set up in ${path}/active/<game>/data` });
 
+  /** The games folder is looked through when it is saved; what it holds shows on the Games page. */
+  const gamesFolder = (path: string): Promise<Check> =>
+    Promise.resolve({ ok: true, version: null, message: `disc images (.iso) are looked for in ${path}` });
+
   async function save(finish: boolean) {
     saving = true;
     let customId: string | null = draft.discordClientId?.trim() ?? null;
@@ -91,6 +95,14 @@
         </p>
       {/if}
     {/if}
+    <PathField
+      label="Games folder"
+      hint="The folder with your PlayStation 2 disc images (.iso). OpenRAC finds its games in it."
+      folder
+      bind:value={draft.discsDir}
+      detail={draft.developer}
+      check={gamesFolder}
+    />
     <PathField
       label="Install folder"
       hint="Where your games are set up from your discs. A few GB per game."

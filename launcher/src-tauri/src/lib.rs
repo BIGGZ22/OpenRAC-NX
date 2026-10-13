@@ -278,6 +278,20 @@ fn install_game(app: AppHandle, state: State<'_, AppState>, game: String, image:
     })
 }
 
+/// The games OpenRAC knows among the images in the player's games folder (none when no folder
+/// is chosen).
+#[tauri::command]
+async fn scan_discs(state: State<'_, AppState>) -> Result<Vec<openrac_launcher_core::discs::FoundDisc>, String> {
+    let config = state.config.lock().unwrap().clone();
+    let (Some(dir), Some(root)) = (config.discs_dir, config.root) else { return Ok(Vec::new()) };
+    tauri::async_runtime::spawn_blocking(move || {
+        let catalog = openrac_launcher_core::catalog::load(&root)?;
+        Ok(openrac_launcher_core::discs::scan(&dir, &catalog))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// Removes what setting `game` up made (OpenGOAL's uninstall); the player's
 /// disc image and saves are left alone.
 #[tauri::command]
@@ -502,6 +516,7 @@ pub fn run() {
             open_url,
             install_game,
             uninstall_game,
+            scan_discs,
             sync_progress_from_web,
             apply_progress_json,
             set_discord_status,
