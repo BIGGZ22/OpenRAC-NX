@@ -22,6 +22,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+import clangast  # noqa: E402
 import ctype  # noqa: E402
 import hostgen  # noqa: E402
 import prep  # noqa: E402
@@ -433,6 +434,20 @@ class Translate(unittest.TestCase):
             """,
         }, config={"groups": [{"path": "src/menu", "suffix": "menu", "overlay": 100}]})
         self.assertEqual(out, ["1", "20"])
+
+
+class SupersededDeclarations(unittest.TestCase):
+    def test_header_declaration_a_definition_contradicts_is_dropped(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "include").mkdir()
+            (root / "include/h.h").write_text("int keep;\nextern void f(void *, int);\nint tail;\n")
+            text = '#include "include/h.h"\nvoid f(int *p, int n) {\n}\n'
+            err = ("a.c:2:6: error: conflicting types for 'f'\n"
+                   "include/h.h:2:13: note: previous declaration is here\n")
+            done = clangast.drop_superseded_declarations(root, "a.c", text, err)
+            self.assertEqual(len(done), 1)
+            self.assertEqual((root / "include/h.h").read_text(), "int keep;\n\nint tail;\n")
 
 
 class SharedLibraries(unittest.TestCase):
