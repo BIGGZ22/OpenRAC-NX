@@ -3,6 +3,7 @@
 
 #include "frontend.h"
 #include "debug_menu.h"
+#include "debug_overlay.h"
 #include "options_menu.h"
 #include "settings.h"
 
@@ -20,6 +21,7 @@
 #include <vector>
 
 #include "common/log.h"
+#include "common/stats.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
 #include "platform/input.h"
@@ -29,6 +31,7 @@
 #include "renderer/effects.h"
 #include "renderer/framebuffer.h"
 #include "renderer/gl.h"
+#include "renderer/gl_stats.h"
 #include "renderer/renderer.h"
 #include "viewer/game_state.h"
 #include "viewer/level.h"
@@ -889,6 +892,8 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
         error = "OpenGL functions missing: " + missing;
         return false;
     }
+    // [debug tools] The renderer's GL calls counted from here on (renderer/gl_stats.h).
+    renderer::gl_stats::install(platform::Window::gl_loader());
     return true;
 }
 
@@ -1036,9 +1041,13 @@ bool show_picture(const std::uint8_t* rgba, int width, int height, float black) 
             || (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)) {
             return false;
         }
+        if (debug_overlay::event(event)) {
+            continue;  // [debug tools]
+        }
         g->input.handle_event(event);
     }
     g->input.update();
+    stats::begin_frame(stats::FrameKind::Picture, g->index);  // [debug tools]
 
     // The fade, on the bytes as the chip's black quad blends them: C * (1 - coverage).
     std::vector<std::uint8_t> pixels(rgba, rgba + static_cast<std::size_t>(width) * height * 4);
@@ -1072,6 +1081,22 @@ bool show_picture(const std::uint8_t* rgba, int width, int height, float black) 
     }
     // The picture fills the frame the game's own frames fill; its first row is the top.
     present(g->picture.id(), width, height, window_width, window_height, true);
+    {
+        // [debug tools] The overlay over a picture too (no renderer or camera then).
+        const Box box = frame_box(window_width, window_height);
+        debug_overlay::Shown shown{};
+        shown.window = g->window->sdl();
+        shown.window_width = window_width;
+        shown.window_height = window_height;
+        shown.box_x = box.x;
+        shown.box_y = box.y;
+        shown.box_width = box.width;
+        shown.box_height = box.height;
+        shown.frame_width = width;
+        shown.frame_height = height;
+        shown.vsync = g->vsync;
+        debug_overlay::draw(shown);
+    }
     g->window->swap();
     return true;
 }
@@ -1224,13 +1249,17 @@ viewer::GameState blend_camera(const viewer::GameState& from, const viewer::Game
 
 }  // namespace
 
+// [debug tools] The picture being drawn is a paused game's (hold).
+static bool g_held = false;
+
 // Draws the kept tick, the camera and mobys `alpha` of the way from the last tick's to its own,
 // and shows it. `first`: the tick's own frame (shots, the frame read back by store_image).
 void draw_kept(bool first) {
     const auto started = std::chrono::steady_clock::now();
     const float alpha = interpolating() ? alpha_at(next_display(started)) : 1.0f;
+    debug_overlay::begin(first, g_held, alpha, g->kept.frame);  // [debug tools] the frame's measurements
     // OPENRAC_PACING: each frame shown, when (ms), how far between ticks, the refresh interval.
-    static const bool pacing_log = std::getenv("OPENRAC_PACING") != nullptr;
+    static const bool& pacing_log = stats::probe("OPENRAC_PACING", "each frame shown and when, in the log");
     if (pacing_log) {
         static const auto t0 = started;
         log::info("pace {} {:.2f} ms alpha {:.3f} {} refresh {:.2f} ms cost {:.2f} ms", g->kept.frame,
@@ -1359,12 +1388,15 @@ void draw_kept(bool first) {
         };
     }
     if (g->renderer) {
+        // [debug tools] The passes hidden in the overlay; the render timed (common/stats.h).
+        debug_overlay::before_render(g->renderer.get());
+        const stats::Scope render_scope("render");
         g->renderer->render(input, {g->frame.id(), width, height, picture_scale});
     }
     debug_menu::draw(g->frame.id(), width, height);
     // OPENRAC_SHOT=FRAME:FILE.png writes that frame (for checking without looking at the screen);
     // OPENRAC_SHOT_BETWEEN also writes the frames drawn between ticks (FILE<frame>_b<n>.png).
-    static const bool shot_between = std::getenv("OPENRAC_SHOT_BETWEEN") != nullptr;
+    static const bool& shot_between = stats::probe("OPENRAC_SHOT_BETWEEN", "OPENRAC_SHOT also writes the frames between ticks");
     static int between_index = 0;
     between_index = first ? 0 : between_index + 1;
     if (const char* shot = first || shot_between ? std::getenv("OPENRAC_SHOT") : nullptr) {
@@ -1383,6 +1415,12 @@ void draw_kept(bool first) {
         }
     }
     present(g->frame.id(), width, height, window_width, window_height, false, aspect);
+    // [debug tools] The overlay, over the frame in the window.
+    debug_overlay::draw({g->window->sdl(), window_width, window_height, box.x, box.y, box.width, box.height,
+                         g->renderer.get(), &input.camera, g->frame.width(), g->frame.height(),
+                         g->last_world.width(), g->last_world.height(), g->vsync, interpolating(), pacing.interval,
+                         pacing.cost, pacing.period.count()});
+    const stats::Scope swap_scope("swap");
     swapped(started);
 }
 
@@ -1448,8 +1486,9 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
             || (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)) {
             return false;
         }
-        if (window_key(event) || debug_menu::event(event, g->game.c_str(), openrac_game_loaded_overlay())) {
-            continue;  // the window's own keys; the port's debug menu (debug_menu.h)
+        if (window_key(event) || debug_overlay::event(event)
+            || debug_menu::event(event, g->game.c_str(), openrac_game_loaded_overlay())) {
+            continue;  // the window's own keys; the debug overlay's; the port's debug menu (debug_menu.h)
         }
         g->input.handle_event(event);
     }
@@ -1491,7 +1530,7 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     }
 
     // OPENRAC_CAM_LOG: the camera each frame is drawn from (position, forward, up), in the log.
-    static const bool cam_log = std::getenv("OPENRAC_CAM_LOG") != nullptr;
+    static const bool& cam_log = stats::probe("OPENRAC_CAM_LOG", "the camera each tick is drawn from, in the log");
     if (cam_log) {
         log::info("cam {} {:.3f} {:.3f} {:.3f} f {:.4f} {:.4f} {:.4f} u {:.4f} {:.4f} {:.4f} world {}", g->index,
                   state.camera_position[0], state.camera_position[1], state.camera_position[2], state.forward[0],
@@ -1509,7 +1548,7 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     }
 
     // OPENRAC_DEBUG: the game's state each 100 frames, for bring-up.
-    static const bool debug = std::getenv("OPENRAC_DEBUG") != nullptr;
+    static const bool& debug = stats::probe("OPENRAC_DEBUG", "the game's state each 100 ticks, in the log");
     if (debug && g->index % 100 == 0) {
         log::info(
             "frame {}: level {}, camera {:.1f} {:.1f} {:.1f}, forward {:.2f} {:.2f} {:.2f}, fov {:.3f}, {} mobys, layers drawn {:#x}",
@@ -1811,6 +1850,9 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
                       k.live.size());
         }
     }
+    // [debug tools] What the game holds this tick, for the overlay and the dump.
+    debug_overlay::tick({g->game.c_str(), ram, level, &k.state, k.draws, k.frame, k.packets.size(), k.ui_quads.size(),
+                         k.effects.size(), k.strips.size(), k.live.size()});
     // The tick's own frame (when frames are drawn between ticks, part way from the last tick's
     // scene, by the refresh it is shown at).
     draw_kept(true);
@@ -1871,7 +1913,8 @@ int between(std::chrono::steady_clock::time_point next_tick) {
             || (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)) {
             return -1;
         }
-        if (window_key(event) || debug_menu::event(event, g->game.c_str(), openrac_game_loaded_overlay())) {
+        if (window_key(event) || debug_overlay::event(event)
+            || debug_menu::event(event, g->game.c_str(), openrac_game_loaded_overlay())) {
             continue;
         }
         g->input.handle_event(event);
@@ -1881,6 +1924,34 @@ int between(std::chrono::steady_clock::time_point next_tick) {
     draw_kept(false);
     renderer::g_dump_draws = dump;
     return 1;
+}
+
+// [debug tools] While the overlay holds the game (pause): the last tick drawn again, the window's
+// events read, until it lets a tick through. False once the window was closed.
+bool hold() {
+    while (g && g->window && debug_overlay::holding()) {
+        SDL_Event event;
+        while (platform::poll_event(event)) {
+            if (event.type == SDL_EVENT_QUIT
+                || (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)) {
+                return false;
+            }
+            if (window_key(event) || debug_overlay::event(event)) {
+                continue;
+            }
+            g->input.handle_event(event);
+        }
+        const auto started = std::chrono::steady_clock::now();
+        const bool dump = renderer::g_dump_draws;
+        renderer::g_dump_draws = false;
+        g_held = true;
+        draw_kept(false);
+        g_held = false;
+        renderer::g_dump_draws = dump;
+        // No faster than 60 pictures a second, whatever the frame pacing does with a held tick.
+        std::this_thread::sleep_until(started + std::chrono::milliseconds(16));
+    }
+    return true;
 }
 
 bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
@@ -1918,6 +1989,7 @@ bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
     }
     if (port == 0) {
         debug_menu::filter_pad(*buttons, g->game.c_str(), openrac_game_loaded_overlay());
+        debug_overlay::pad(*buttons, analog);  // [debug tools]
     }
     if (std::getenv("OPENRAC_TRACE_INPUT") != nullptr) {
         static std::uint64_t last_frame[platform::kPadPorts]{};
@@ -1932,6 +2004,7 @@ bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
 
 void close() {
     if (g) {
+        debug_overlay::release();
         debug_menu::release();
         g->frame.release();
         g->picture.release();
