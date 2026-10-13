@@ -173,6 +173,11 @@ typedef struct openrac_game_ui_rect {
 
 int openrac_game_ui_quad(const openrac_game_ui_rect* quad);
 
+/* How far, in the game's screen pixels (512 across its 4:3 picture), the HUD's elements anchored to
+ * a side of the screen are moved out past that side: the width a wider picture gained there when
+ * the player's HUD setting is "Edges", else 0. */
+int openrac_game_hud_side(void);
+
 /* A live particle the game's particle renderer would draw (rac1: PartProc): its 0x40-byte record
  * (+0x01 bits 0-1 the render kind: 0 camera-facing sprite, 1 flat quad, 2 line, 3 ribbon; +0x03
  * ALPHA_1's low byte; +0x04 RGBA; +0x08 rotation, 256 steps a turn; +0x09 near (low nibble, 1/4

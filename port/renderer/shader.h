@@ -10,6 +10,7 @@
 
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 namespace openrac::renderer {
 
@@ -33,7 +34,9 @@ public:
 
     void use() const;
 
-    // -1 when the program has no such uniform (or the compiler removed it).
+    // -1 when the program has no such uniform (or the compiler removed it). The driver is asked
+    // once per name: a renderer looks its uniforms up by name every frame, and each lookup would
+    // otherwise be a call into the driver that compares strings.
     int uniform(const char* name) const;
 
     unsigned id() const { return m_program; }
@@ -43,6 +46,13 @@ public:
 
 private:
     unsigned m_program = 0;
+    // By the name's address (callers pass literals), with the name itself kept to tell a buffer
+    // that was written again apart.
+    struct Location {
+        std::string name;
+        int location = -1;
+    };
+    mutable std::unordered_map<const char*, Location> m_locations;
 };
 
 }  // namespace openrac::renderer

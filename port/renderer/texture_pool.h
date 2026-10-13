@@ -66,6 +66,13 @@ public:
     // (3D geometry), otherwise it has one level, filtered as each draw says.
     TextureHandle add(Rgba8Image image, AlphaScale scale, std::string name, bool mipmaps = false);
 
+    // The anisotropic filter of every texture with a mipmap chain (the world's): 1 is none, up to
+    // what the driver offers (max_anisotropy(); 1 when it has no such filter). The textures on the
+    // GPU now are set again; later ones get it as they are uploaded. The context must be current.
+    void set_anisotropy(float samples);
+    float anisotropy() const { return m_anisotropy; }
+    static float max_anisotropy();
+
     // The game has put `texture` at base pointer `tbp`; draws that sample
     // there get it, whatever their TEX0 says about format and CLUT.
     void place(std::uint32_t tbp, TextureHandle texture);
@@ -145,6 +152,7 @@ private:
     );
 
     std::vector<Entry> m_entries;  // handle - 1
+    float m_anisotropy = 1.0f;
     std::vector<TextureHandle> m_free;
     std::unordered_map<std::uint32_t, Stored> m_uploads;        // by base pointer
     std::unordered_map<std::uint32_t, TextureHandle> m_placed;  // by base pointer

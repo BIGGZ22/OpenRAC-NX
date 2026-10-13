@@ -130,6 +130,8 @@ inline constexpr GLenum GL_TEXTURE_WRAP_S = 0x2802;
 inline constexpr GLenum GL_TEXTURE_WRAP_T = 0x2803;
 inline constexpr GLenum GL_TEXTURE_MAX_LEVEL = 0x813D;
 inline constexpr GLenum GL_TEXTURE_MAX_ANISOTROPY = 0x84FE;
+inline constexpr GLenum GL_MAX_TEXTURE_MAX_ANISOTROPY = 0x84FF;
+inline constexpr GLenum GL_MAX_SAMPLES = 0x8D57;
 inline constexpr GLenum GL_NEAREST = 0x2600;
 inline constexpr GLenum GL_LINEAR = 0x2601;
 inline constexpr GLenum GL_LINEAR_MIPMAP_LINEAR = 0x2703;
@@ -163,6 +165,7 @@ inline constexpr GLenum GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
 #define OPENRAC_GL_FUNCTIONS(X)                                                                    \
     X(const GLubyte *, glGetString, (GLenum name))                                                 \
     X(void, glGetIntegerv, (GLenum pname, GLint *data))                                            \
+    X(void, glGetFloatv, (GLenum pname, GLfloat *data))                                            \
     X(GLenum, glGetError, (void))                                                                  \
     X(void, glEnable, (GLenum cap))                                                                \
     X(void, glDisable, (GLenum cap))                                                               \
@@ -193,6 +196,8 @@ inline constexpr GLenum GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
     X(void, glTexImage2D, (GLenum target, GLint level, GLint internal_format, GLsizei w,           \
                            GLsizei h, GLint border, GLenum format, GLenum type,                    \
                            const void *pixels))                                                    \
+    X(void, glTexSubImage2D, (GLenum target, GLint level, GLint xoff, GLint yoff, GLsizei w,       \
+                              GLsizei h, GLenum format, GLenum type, const void *pixels))          \
     X(void, glTexParameteri, (GLenum target, GLenum pname, GLint param))                           \
     X(void, glTexParameterf, (GLenum target, GLenum pname, GLfloat param))                         \
     X(void, glGenerateMipmap, (GLenum target))                                                     \
@@ -251,6 +256,8 @@ inline constexpr GLenum GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
     X(void, glDeleteRenderbuffers, (GLsizei n, const GLuint *renderbuffers))                       \
     X(void, glBindRenderbuffer, (GLenum target, GLuint renderbuffer))                              \
     X(void, glRenderbufferStorage, (GLenum target, GLenum format, GLsizei w, GLsizei h))           \
+    X(void, glRenderbufferStorageMultisample, (GLenum target, GLsizei samples, GLenum format,      \
+                                               GLsizei w, GLsizei h))                              \
     X(void, glBlitFramebuffer, (GLint sx0, GLint sy0, GLint sx1, GLint sy1, GLint dx0, GLint dy0,  \
                                 GLint dx1, GLint dy1, GLbitfield mask, GLenum filter))
 // clang-format on

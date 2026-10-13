@@ -4,6 +4,7 @@
 #include "frontend.h"
 #include "debug_menu.h"
 #include "debug_overlay.h"
+#include "fps_counter.h"
 #include "options_menu.h"
 #include "settings.h"
 
@@ -124,10 +125,21 @@ struct State {
     std::uint64_t last_world_tick = 0;
     bool last_tick_menu = false;
     bool hold_last_world = false;
-    // What the window is in now of the player's settings (apply_settings).
-    bool vsync = true;
-    bool fullscreen = false;
+    // What the window is in now of the player's settings (apply_settings): the display mode, the
+    // display and the fullscreen size; the picture's shape; the swap's wait as asked and as the
+    // driver took it; whether the sound is held silent (the window lost the keyboard).
+    settings::DisplayMode display_mode = settings::DisplayMode::Windowed;
+    int monitor = 0;
+    int fullscreen_width = 0;
+    int fullscreen_height = 0;
     settings::Aspect aspect = settings::Aspect::Standard;
+    int aspect_custom_x = 0;
+    int aspect_custom_y = 0;
+    platform::SwapInterval swap_asked = platform::SwapInterval::VSync;
+    platform::SwapInterval swap = platform::SwapInterval::VSync;
+    bool muted = false;
+    // The tick's own frame was left undrawn this many ticks in a row (frame(): the game is late).
+    int skipped = 0;
     Kept kept;
 };
 
@@ -438,7 +450,7 @@ Box frame_box(int window_width, int window_height, float aspect = kTvAspect) {
 
 // The picture's shape now: the player's setting, for the window as it is.
 float picture_aspect(int window_width, int window_height) {
-    return settings::aspect_ratio(settings::get().aspect, window_width, window_height);
+    return settings::aspect_ratio(settings::get(), window_width, window_height);
 }
 
 // The development switches that keep one frame a tick whatever the settings say.
@@ -447,9 +459,38 @@ bool one_frame_a_tick() {
     return on;
 }
 
-// A swap waits for a refresh only when the frames are drawn at the display's rate.
-bool wants_vsync() {
-    return !one_frame_a_tick() && settings::get().frame_rate == settings::FrameRate::Display;
+// Whether a swap waits for a refresh: the player's vsync setting, when frames are drawn between
+// ticks. With one frame a tick (the "Original" frame rate; OPENRAC_UNCAPPED, OPENRAC_NO_BLEND)
+// nothing waits for the display: the tick paces the frames, and 50 of them a second each held for
+// a refresh of a 60 or 120 Hz display would hold the tick up with them.
+platform::SwapInterval wanted_swap() {
+    const settings::Settings& s = settings::get();
+    if (one_frame_a_tick() || s.frame_rate == settings::FrameRate::Original || s.vsync == settings::VSync::Off) {
+        return platform::SwapInterval::Immediate;
+    }
+    return s.vsync == settings::VSync::Adaptive ? platform::SwapInterval::Adaptive : platform::SwapInterval::VSync;
+}
+
+platform::DisplayMode window_mode(settings::DisplayMode mode) {
+    switch (mode) {
+        case settings::DisplayMode::Borderless:
+            return platform::DisplayMode::Borderless;
+        case settings::DisplayMode::Fullscreen:
+            return platform::DisplayMode::Fullscreen;
+        default:
+            return platform::DisplayMode::Windowed;
+    }
+}
+
+// The size the frame is drawn at for a picture of box_width x box_height window pixels: the
+// player's render scale of it, held to what a texture can be on any card the port runs on.
+void frame_size(int box_width, int box_height, int& width, int& height) {
+    constexpr int kLargest = 8192;
+    const float scale = static_cast<float>(std::clamp(settings::get().render_scale, 25, 400)) / 100.0f;
+    const float fit = std::min(1.0f, static_cast<float>(kLargest)
+                                         / (scale * static_cast<float>(std::max({box_width, box_height, 1}))));
+    width = std::max(1, static_cast<int>(std::lround(static_cast<float>(box_width) * scale * fit)));
+    height = std::max(1, static_cast<int>(std::lround(static_cast<float>(box_height) * scale * fit)));
 }
 
 // Draws `framebuffer` (width x height) into the window's box, black around it; `flip`: its first
@@ -613,6 +654,23 @@ void effect_quad(std::span<const std::uint8_t> ram, const openrac_game_quad& qua
     } else if (quad.pixels != 0 || quad.clut != 0) {
         g->effects.push_back(q);
     }
+}
+
+int hud_side() {
+    if (!g || !g->window || settings::get().hud != settings::Hud::Edges) {
+        return 0;
+    }
+    int window_width = 0;
+    int window_height = 0;
+    g->window->drawable_size(window_width, window_height);
+    const Box box = frame_box(window_width, window_height, picture_aspect(window_width, window_height));
+    if (box.height <= 0) {
+        return 0;
+    }
+    // The picture is box.width / box.height wide where the game's is 4:3: each side gained half
+    // the difference, in pixels of which the game's picture has 512.
+    const float wider = static_cast<float>(box.width) / (kTvAspect * static_cast<float>(box.height));
+    return wider > 1.0f ? static_cast<int>(256.0f * (wider - 1.0f)) : 0;
 }
 
 void sky_sprite(const std::uint8_t* record, std::uint64_t tex0) {
@@ -859,9 +917,11 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
     g = std::make_unique<State>();
     g->game = game_id;
     g->levels = levels;
-    // Before SDL starts: on Wayland the app id names the program to the desktop.
+    // Before SDL starts: on Wayland the app id names the program to the desktop, and a machine
+    // with two graphics cards is asked for the fast one.
     const std::string app_id = "dev.openrac." + game_id;
     platform::set_app_metadata("OpenRAC: Ratchet & Clank", app_id.c_str());
+    platform::prefer_discrete_gpu();
     g->sdl = std::make_unique<platform::Platform>(platform::kVideo | platform::kGamepad | platform::kAudio);
     if (!g->sdl->ok()) {
         error = g->sdl->error();
@@ -872,27 +932,40 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
     config.width = 1280;
     config.height = 960;
     // The game ticks at its own rate (main.cpp: 50 Hz for PAL) and the window draws at the
-    // display's, the frames between ticks moving the scene on (between), each shown at a refresh.
-    // With one frame a tick (the "Original" frame rate; OPENRAC_UNCAPPED, OPENRAC_NO_BLEND) or a
-    // frame rate of the player's own, nothing waits for the display: 50 frames a second shown at
-    // 60 or 120 Hz stagger.
-    config.vsync = wants_vsync();
+    // display's, the frames between ticks moving the scene on (between), each shown at a refresh
+    // when the player's vsync is on (wanted_swap).
+    config.vsync = false;  // set below, as asked
     const settings::Settings& chosen = settings::get();
-    if (chosen.aspect != settings::Aspect::Standard && chosen.aspect != settings::Aspect::Window) {
+    if (chosen.window_width >= 320 && chosen.window_height >= 240) {
+        // The window as the player left it.
+        config.width = chosen.window_width;
+        config.height = chosen.window_height;
+    } else if (chosen.aspect != settings::Aspect::Standard && chosen.aspect != settings::Aspect::Window) {
         // A window of the picture's shape.
         config.width = static_cast<int>(std::lround(static_cast<float>(config.height) * picture_aspect(0, 0)));
     }
-    if (chosen.fullscreen) {
-        config.mode = platform::DisplayMode::Borderless;
-    }
+    config.mode = window_mode(chosen.display_mode);
+    config.display = chosen.monitor;
+    config.fullscreen_width = chosen.fullscreen_width;
+    config.fullscreen_height = chosen.fullscreen_height;
+    // The game is drawn by a graphics card or not at all: a software rasteriser shows a level at a
+    // few frames a second, which looks like a broken port (OPENRAC_SOFTWARE_GL=1: run it anyway).
+    config.software = std::getenv("OPENRAC_SOFTWARE_GL") != nullptr ? platform::SoftwareRenderer::Allow
+                                                                    : platform::SoftwareRenderer::Refuse;
     g->window = platform::Window::open(config, error);
     if (!g->window) {
         return false;
     }
     set_window_icon(*g->window);
-    g->vsync = config.vsync;
-    g->fullscreen = chosen.fullscreen;
+    g->swap_asked = wanted_swap();
+    g->swap = g->window->set_swap_interval(g->swap_asked);
+    g->display_mode = chosen.display_mode;
+    g->monitor = chosen.monitor;
+    g->fullscreen_width = chosen.fullscreen_width;
+    g->fullscreen_height = chosen.fullscreen_height;
     g->aspect = chosen.aspect;
+    g->aspect_custom_x = chosen.aspect_custom_x;
+    g->aspect_custom_y = chosen.aspect_custom_y;
     std::string missing;
     if (!gl::load(platform::Window::gl_loader(), missing)) {
         error = "OpenGL functions missing: " + missing;
@@ -900,6 +973,11 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
     }
     // [debug tools] The renderer's GL calls counted from here on (renderer/gl_stats.h).
     renderer::gl_stats::install(platform::Window::gl_loader());
+    log::info("graphics: up to {} samples a pixel, anisotropy up to {:.0f}; the swap {}", 
+              renderer::FrameBuffer::max_samples(), renderer::TexturePool::max_anisotropy(),
+              g->swap == platform::SwapInterval::Immediate ? "does not wait"
+              : g->swap == platform::SwapInterval::Adaptive ? "waits for the display (adaptive)"
+                                                            : "waits for the display");
     return true;
 }
 
@@ -965,7 +1043,7 @@ bool store_image(std::uint32_t base, std::uint32_t width_units, std::uint8_t psm
             glGenTextures(1, &snap.texture);
         }
         glBindTexture(GL_TEXTURE_2D, snap.texture);
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, source->id());
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, source->resolved());
         static int snap_w = 0;
         static int snap_h = 0;
         if (snap_w != source->width() || snap_h != source->height()) {
@@ -1100,7 +1178,7 @@ bool show_picture(const std::uint8_t* rgba, int width, int height, float black) 
         shown.box_height = box.height;
         shown.frame_width = width;
         shown.frame_height = height;
-        shown.vsync = g->vsync;
+        shown.vsync = g->swap != platform::SwapInterval::Immediate;
         debug_overlay::draw(shown);
     }
     g->window->swap();
@@ -1117,9 +1195,35 @@ struct Pacing {
     std::chrono::duration<double> period{0.02};
     std::chrono::steady_clock::time_point last_swap{};
     double interval = 0.0;  // seconds; 0 when the display does not say
-    int gap_count = 0;  // swaps, for reading the display's mode now and then
+    // The display's refresh rate is to be read again: at start, and whenever the window says its
+    // display or that display's mode changed (window_event), not by asking every so many frames.
+    bool interval_stale = true;
     double cost = 0.004;  // seconds
+    std::chrono::duration<double> late{0.0};  // how long after its time the tick came (set_tick)
+    float last_alpha = -1.0f;  // how far between ticks the last frame was drawn
+    std::chrono::steady_clock::time_point due{};  // when the frame cap lets the next frame start
+    // The kept tick has not been drawn yet (the cap held its own frame back): the next frame drawn
+    // is its first.
+    bool first_pending = false;
 } pacing;
+
+// Frames a second the port's own clock holds the frames between ticks to; 0: not held (one frame a
+// tick, which the tick paces; a display's rate kept by the swap's wait; unlimited).
+double frame_cap() {
+    if (!interpolating()) {
+        return 0.0;
+    }
+    const settings::Settings& s = settings::get();
+    switch (s.frame_rate) {
+        case settings::FrameRate::Capped:
+            return static_cast<double>(std::clamp(s.frame_cap, settings::kFrameCapMin, settings::kFrameCapMax));
+        case settings::FrameRate::Display:
+            // Without the swap's wait the display's rate is kept here.
+            return g->swap == platform::SwapInterval::Immediate && pacing.interval > 0.0 ? 1.0 / pacing.interval : 0.0;
+        default:
+            return 0.0;
+    }
+}
 
 // The frames between ticks show the game half a tick late, so that the next tick is ready before
 // the refresh that needs it.
@@ -1149,37 +1253,89 @@ void swapped(std::chrono::steady_clock::time_point started) {
     const auto before = steady_clock::now();
     g->window->swap();
     const auto after = steady_clock::now();
-    pacing.cost = 0.8 * pacing.cost + 0.2 * duration<double>(before - started).count();
-    // The refresh interval: the display's mode (read again now and then: the window may move).
-    if (pacing.gap_count++ % 120 == 0) {
-        const SDL_DisplayMode* mode = SDL_GetCurrentDisplayMode(SDL_GetDisplayForWindow(g->window->sdl()));
-        pacing.interval = mode != nullptr && mode->refresh_rate > 20.0f ? 1.0 / mode->refresh_rate : 0.0;
+    const double cost = duration<double>(before - started).count();
+    pacing.cost = 0.8 * pacing.cost + 0.2 * cost;
+    if (settings::get().show_fps) {
+        fps_counter::frame_drawn(after, cost);
     }
-    if (!g->vsync) {
-        // No refresh is waited for. One frame a tick: the tick paces it (main.cpp). A frame rate
-        // of the player's own: each frame is due that long after the last one was due, so a frame
-        // held up by the game's tick is made up for by the next ones; one more than a frame late
-        // starts the count again. Unlimited: the next frame starts now.
+    if (pacing.interval_stale) {
+        const float rate = g->window->refresh_rate();
+        pacing.interval = rate > 20.0f ? 1.0 / rate : 0.0;
+        pacing.interval_stale = false;
+    }
+    if (g->swap == platform::SwapInterval::Immediate) {
+        // No refresh is waited for: there is no phase to draw the next frame for.
         pacing.last_swap = {};
-        const int cap = interpolating() ? settings::frame_cap(settings::get().frame_rate) : 0;
-        if (cap > 0) {
-            static steady_clock::time_point due{};
-            const auto step = duration_cast<steady_clock::duration>(duration<double>(1.0 / cap));
-            due = due.time_since_epoch().count() == 0 || after > due + 2 * step ? after : due + step;
-            std::this_thread::sleep_until(due);
-        }
-        return;
-    }
-    // A swap that did not wait for a refresh gives no phase; the frames are then paced at the
-    // display's rate here.
-    if (duration<double>(after - before).count() < 0.0005) {
+    } else if (duration<double>(after - before).count() < 0.0005) {
+        // A swap that did not wait for a refresh (a driver or a compositor that ignores the swap
+        // interval; a window that is not shown) gives no phase; the frames are then paced at the
+        // display's rate here.
         pacing.last_swap = {};
         if (pacing.interval > 0.0) {
             std::this_thread::sleep_until(started + duration_cast<steady_clock::duration>(duration<double>(pacing.interval)));
         }
-        return;
+    } else {
+        pacing.last_swap = after;
     }
-    pacing.last_swap = after;
+    // A frame rate of the player's own (and the display's, when no swap waits): the next frame is
+    // due that long after this one was, so a frame held up by the game's tick is made up for by the
+    // next ones; one more than a frame late starts the count again. It holds beside the swap's
+    // wait: 60 frames a second on a 120 Hz display are every other refresh. Nothing sleeps here:
+    // the game's tick may be due before the next frame is (frame_due).
+    if (const double cap = frame_cap(); cap > 0.0) {
+        const auto step = duration_cast<steady_clock::duration>(duration<double>(1.0 / cap));
+        const auto now = steady_clock::now();
+        pacing.due = pacing.due.time_since_epoch().count() == 0 || now > pacing.due + 2 * step ? now
+                                                                                               : pacing.due + step;
+    } else {
+        pacing.due = {};
+    }
+}
+
+// Whether the frame cap lets a frame start now (within a millisecond: a sleep wakes that coarsely).
+bool frame_due(std::chrono::steady_clock::time_point now) {
+    return frame_cap() <= 0.0 || pacing.due.time_since_epoch().count() == 0
+           || now + std::chrono::milliseconds(1) >= pacing.due;
+}
+
+// OPENRAC_FRAME_COST=N: every N frames drawn (default 200), in the log, what a frame cost on
+// average and where: `scene` (the tick's mobys and poses moved between ticks and sent to their
+// buffers, on the CPU), `submit` (the renderers' OpenGL calls, on the CPU), `gpu` (the wait for the
+// graphics card to finish them: this switch calls glFinish after each frame, so that the card's
+// time is not counted into a later call; it lowers the frame rate a little) and `show` (the
+// frame scaled to the window, and the swap). With the draw calls and triangles of the last frame.
+struct FrameCost {
+    bool on = false;
+    int every = 200;
+    int frames = 0;
+    double scene = 0.0, submit = 0.0, gpu = 0.0, show = 0.0;
+    std::chrono::steady_clock::time_point mark{};
+
+    FrameCost() {
+        if (const char* v = std::getenv("OPENRAC_FRAME_COST")) {
+            on = true;
+            every = std::max(1, std::atoi(v) > 1 ? std::atoi(v) : 200);
+        }
+    }
+
+    // The seconds since the last call, added to `part`.
+    void lap(double& part) {
+        const auto now = std::chrono::steady_clock::now();
+        part += std::chrono::duration<double>(now - mark).count();
+        mark = now;
+    }
+} frame_cost;
+
+// OPENRAC_SLOW_FRAME=MS: every frame drawn takes that much longer, as on a graphics card too slow
+// for the settings, for checking that the game's time does not slow with it.
+void slow_frame() {
+    static const double ms = [] {
+        const char* v = std::getenv("OPENRAC_SLOW_FRAME");
+        return v != nullptr ? std::atof(v) : 0.0;
+    }();
+    if (ms > 0.0) {
+        std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(ms));
+    }
 }
 
 // A moby's matrix part way from the last tick's to this one's, or this one's when it moved too far
@@ -1264,6 +1420,8 @@ void draw_kept(bool first) {
     const auto started = std::chrono::steady_clock::now();
     const float alpha = interpolating() ? alpha_at(next_display(started)) : 1.0f;
     debug_overlay::begin(first, g_held, alpha, g->kept.frame);  // [debug tools] the frame's measurements
+    pacing.last_alpha = alpha;
+    frame_cost.mark = started;
     // OPENRAC_PACING: each frame shown, when (ms), how far between ticks, the refresh interval.
     static const bool& pacing_log = stats::probe("OPENRAC_PACING", "each frame shown and when, in the log");
     if (pacing_log) {
@@ -1314,19 +1472,37 @@ void draw_kept(bool first) {
         g->scene.set_instances(viewer::Layer::Mobys, live);
     }
 
+    if (frame_cost.on) {
+        frame_cost.lap(frame_cost.scene);
+    }
+
     int window_width = 0;
     int window_height = 0;
     g->window->drawable_size(window_width, window_height);
     const float aspect = picture_aspect(window_width, window_height);
     const Box box = frame_box(window_width, window_height, aspect);
-    const int width = box.width;
-    const int height = box.height;
+    // The frame: the picture's box in the window, at the player's render scale, with the player's
+    // samples a pixel. It is scaled to the box when it is shown (present).
+    int width = 0;
+    int height = 0;
+    frame_size(box.width, box.height, width, height);
     // How much of the frame's width the game's 4:3 picture is: all of it, or its middle.
-    const float picture_scale = aspect > kTvAspect && width > 0 && height > 0
-        ? std::min(1.0f, kTvAspect * static_cast<float>(height) / static_cast<float>(width)) : 1.0f;
+    const float picture_scale = aspect > kTvAspect && box.width > 0 && box.height > 0
+        ? std::min(1.0f, kTvAspect * static_cast<float>(box.height) / static_cast<float>(box.width)) : 1.0f;
     std::string error;
-    if (width > 0 && height > 0 && (g->frame.width() != width || g->frame.height() != height)) {
-        g->frame.create(width, height, error);
+    const int samples = std::clamp(settings::get().msaa, 1, renderer::FrameBuffer::max_samples());
+    if (box.width > 0 && box.height > 0
+        && (g->frame.width() != width || g->frame.height() != height || g->frame.samples() != samples)) {
+        if (!g->frame.create(width, height, error, samples) && samples > 1) {
+            // A card that refuses the samples it listed: the frame without them.
+            log::warn("{}; drawing without anti-aliasing", error);
+            g->frame.create(width, height, error, 1);
+        }
+        log::info("frame {}x{} for a picture of {}x{} pixels, {} sample(s) a pixel", g->frame.width(),
+                  g->frame.height(), box.width, box.height, g->frame.samples());
+    }
+    if (g->renderer) {
+        g->renderer->textures().set_anisotropy(static_cast<float>(settings::get().anisotropy));
     }
     renderer::FrameInput input;
     // No camera yet (loading, fades between programs): a black frame, not the level's background.
@@ -1397,9 +1573,23 @@ void draw_kept(bool first) {
         // [debug tools] The passes hidden in the overlay; the render timed (common/stats.h).
         debug_overlay::before_render(g->renderer.get());
         const stats::Scope render_scope("render");
-        g->renderer->render(input, {g->frame.id(), width, height, picture_scale});
+        renderer::RenderTarget target{g->frame.id(), width, height, picture_scale};
+        target.resolve_framebuffer = g->frame.resolve_target();
+        target.wide_2d = picture_scale < 1.0f && settings::get().hud == settings::Hud::Edges;
+        g->renderer->render(input, target);
     }
-    debug_menu::draw(g->frame.id(), width, height);
+    if (frame_cost.on) {
+        frame_cost.lap(frame_cost.submit);
+        gl::glFinish();
+        frame_cost.lap(frame_cost.gpu);
+    }
+    // What is shown: the frame with one sample a pixel (a multisampled one is resolved here, once),
+    // with the port's own overlays over it.
+    const unsigned shown = g->frame.resolved();
+    debug_menu::draw(shown, width, height);
+    if (settings::get().show_fps) {
+        fps_counter::draw(shown, width, height);
+    }
     // OPENRAC_SHOT=FRAME:FILE.png writes that frame (for checking without looking at the screen);
     // OPENRAC_SHOT_BETWEEN also writes the frames drawn between ticks (FILE<frame>_b<n>.png).
     static const bool& shot_between = stats::probe("OPENRAC_SHOT_BETWEEN", "OPENRAC_SHOT also writes the frames between ticks");
@@ -1416,50 +1606,110 @@ void draw_kept(bool first) {
         if (colon && every > 0 && input.frame % every == 0 && input.frame >= shot_from) {
             const std::string path = std::string(colon + 1) + std::to_string(input.frame)
                                      + (first ? std::string() : "_b" + std::to_string(between_index)) + ".png";
-            viewer::write_png(path, width, height, g->frame.read_rgba());
+            viewer::write_png(path, width, height, renderer::read_rgba(shown, width, height));
             log::info("frame {} written to {}", input.frame, path);
         }
     }
-    present(g->frame.id(), width, height, window_width, window_height, false, aspect);
+    slow_frame();
+    present(shown, width, height, window_width, window_height, false, aspect);
     // [debug tools] The overlay, over the frame in the window.
     debug_overlay::draw({g->window->sdl(), window_width, window_height, box.x, box.y, box.width, box.height,
                          g->renderer.get(), &input.camera, g->frame.width(), g->frame.height(),
-                         g->last_world.width(), g->last_world.height(), g->vsync, interpolating(), pacing.interval,
-                         pacing.cost, pacing.period.count()});
+                         g->last_world.width(), g->last_world.height(), g->swap != platform::SwapInterval::Immediate,
+                         interpolating(), pacing.interval, pacing.cost, pacing.period.count()});
     const stats::Scope swap_scope("swap");
     swapped(started);
+    if (frame_cost.on) {
+        frame_cost.lap(frame_cost.show);
+        if (++frame_cost.frames >= frame_cost.every) {
+            const double n = frame_cost.frames * 0.001;
+            const renderer::FrameStats stats = g->renderer ? g->renderer->last_stats() : renderer::FrameStats{};
+            log::info("cost tick {}: {:.3f} ms a frame over {} frames (scene {:.3f}, submit {:.3f}, gpu {:.3f}, "
+                      "show {:.3f}); {} draw calls, {} triangles, frame {}x{} x{}",
+                      g->kept.frame, (frame_cost.scene + frame_cost.submit + frame_cost.gpu + frame_cost.show) / n,
+                      frame_cost.frames, frame_cost.scene / n, frame_cost.submit / n, frame_cost.gpu / n,
+                      frame_cost.show / n, stats.draw_calls, stats.triangles, width, height, g->frame.samples());
+            frame_cost.frames = 0;
+            frame_cost.scene = frame_cost.submit = frame_cost.gpu = frame_cost.show = 0.0;
+        }
+    }
 }
 
 namespace {
 
-// The window as the player's settings want it: fullscreen (a window covering the desktop) or not,
-// each swap waiting for a refresh or not. Called when they may have changed.
+// The window as the player's settings want it: its display mode, display and fullscreen size, its
+// shape, and each swap waiting for a refresh or not. Called when they may have changed; all of
+// them take effect at once (the frame's size, its samples and the textures' filter follow the
+// settings by themselves, in draw_kept).
 void apply_settings() {
     const settings::Settings& s = settings::get();
-    if (s.fullscreen != g->fullscreen) {
-        g->window->set_display_mode(s.fullscreen ? platform::DisplayMode::Borderless : platform::DisplayMode::Windowed);
-        g->fullscreen = s.fullscreen;
+    if (s.display_mode != g->display_mode || s.monitor != g->monitor
+        || (s.display_mode == settings::DisplayMode::Fullscreen
+            && (s.fullscreen_width != g->fullscreen_width || s.fullscreen_height != g->fullscreen_height))) {
+        g->window->set_display_mode(window_mode(s.display_mode), s.fullscreen_width, s.fullscreen_height, s.monitor);
+        g->display_mode = s.display_mode;
+        g->monitor = s.monitor;
+        g->fullscreen_width = s.fullscreen_width;
+        g->fullscreen_height = s.fullscreen_height;
+        pacing.interval_stale = true;
+        // A change of mode may leave the driver's swap interval at its default: asked again below.
+        g->swap_asked = wanted_swap() == platform::SwapInterval::Immediate ? platform::SwapInterval::VSync
+                                                                           : platform::SwapInterval::Immediate;
     }
-    if (s.aspect != g->aspect) {
+    if (s.aspect != g->aspect || s.aspect_custom_x != g->aspect_custom_x || s.aspect_custom_y != g->aspect_custom_y) {
         g->aspect = s.aspect;
+        g->aspect_custom_x = s.aspect_custom_x;
+        g->aspect_custom_y = s.aspect_custom_y;
         // A window takes the picture's new shape, at the height it has.
         int w = 0;
         int h = 0;
-        if (!g->fullscreen && s.aspect != settings::Aspect::Window && SDL_GetWindowSize(g->window->sdl(), &w, &h)
-            && h > 0) {
+        if (g->display_mode == settings::DisplayMode::Windowed && s.aspect != settings::Aspect::Window
+            && SDL_GetWindowSize(g->window->sdl(), &w, &h) && h > 0) {
             SDL_SetWindowSize(g->window->sdl(), static_cast<int>(std::lround(static_cast<float>(h) * picture_aspect(w, h))), h);
         }
     }
-    if (wants_vsync() != g->vsync) {
-        g->vsync = wants_vsync();
-        g->window->set_vsync(g->vsync);
+    if (wanted_swap() != g->swap_asked) {
+        g->swap_asked = wanted_swap();
+        g->swap = g->window->set_swap_interval(g->swap_asked);
         pacing.last_swap = {};
     }
+}
+
+// The window's own events, which the game never sees: the window moved to another display or its
+// display changed mode (the refresh rate is read again), it was sized (the size is kept for the
+// next start), it lost or got the keyboard (the player's "mute in the background").
+void window_event(const SDL_Event& event) {
+    switch (event.type) {
+        case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
+        case SDL_EVENT_DISPLAY_CURRENT_MODE_CHANGED:
+        case SDL_EVENT_DISPLAY_DESKTOP_MODE_CHANGED:
+        case SDL_EVENT_WINDOW_ENTER_FULLSCREEN:
+        case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN:
+            pacing.interval_stale = true;
+            break;
+        case SDL_EVENT_WINDOW_RESIZED:
+            // Remembered in memory; written with the next setting saved and when the window closes.
+            if (g->display_mode == settings::DisplayMode::Windowed && event.window.data1 >= 320
+                && event.window.data2 >= 240) {
+                settings::get().window_width = event.window.data1;
+                settings::get().window_height = event.window.data2;
+            }
+            break;
+        case SDL_EVENT_WINDOW_FOCUS_LOST:
+        case SDL_EVENT_WINDOW_FOCUS_GAINED:
+            g->muted = event.type == SDL_EVENT_WINDOW_FOCUS_LOST;
+            break;
+        default:
+            break;
+    }
+    const bool muted = g->muted && settings::get().mute_unfocused;
+    settings::set_muted(muted);
 }
 
 // The window's own keys: F11 and Alt+Return change between fullscreen and the window, F9 and F10
 // turn the port's volume down and up a tenth. True when the event was one of them.
 bool window_key(const SDL_Event& event) {
+    window_event(event);
     if (event.type != SDL_EVENT_KEY_DOWN || event.key.repeat) {
         return false;
     }
@@ -1474,7 +1724,15 @@ bool window_key(const SDL_Event& event) {
     if (event.key.key != SDLK_F11 && !alt_return) {
         return false;
     }
-    settings::get().fullscreen = !settings::get().fullscreen;
+    // Between the window and the fullscreen kind last chosen (borderless until one was).
+    static settings::DisplayMode full = settings::DisplayMode::Borderless;
+    settings::Settings& s = settings::get();
+    if (s.display_mode == settings::DisplayMode::Windowed) {
+        s.display_mode = full;
+    } else {
+        full = s.display_mode;
+        s.display_mode = settings::DisplayMode::Windowed;
+    }
     settings::save();
     apply_settings();
     return true;
@@ -1886,14 +2144,49 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     debug_overlay::tick({g->game.c_str(), ram, level, &k.state, k.draws, k.frame, k.packets.size(), k.ui_quads.size(),
                          k.effects.size(), k.strips.size(), k.live.size()});
     // The tick's own frame (when frames are drawn between ticks, part way from the last tick's
-    // scene, by the refresh it is shown at).
+    // scene, by the refresh it is shown at). A tick that comes more than a tick late (set_tick: the
+    // machine draws frames slower than the game ticks) is not drawn, so that drawing never slows
+    // the game's time: the next tick's frame shows where the game got to. At most three in a row,
+    // so that a picture still comes; a machine slower than that runs the game slow, as it must.
+    constexpr int kMostSkipped = 3;
+    // Said when it goes on (a quarter of a hundred ticks' frames left out), not for the odd tick
+    // that comes late after the system held the program up.
+    static int ticks = 0;
+    static int left_out = 0;
+    static int said = 0;
+    if (++ticks >= 100) {
+        if (left_out >= 25 && said++ < 3) {
+            log::warn("a frame takes longer to draw ({:.1f} ms) than a game tick lasts ({:.1f} ms): {} of the last "
+                      "{} ticks' frames were left out to keep the game's speed. A lower render scale or fewer "
+                      "samples a pixel would help.",
+                      pacing.cost * 1000.0, pacing.period.count() * 1000.0, left_out, ticks);
+        }
+        ticks = 0;
+        left_out = 0;
+    }
+    if (pacing.late > pacing.period && g->skipped < kMostSkipped && g->kept.has_camera && g->index > 1) {
+        ++g->skipped;
+        ++left_out;
+        return true;
+    }
+    g->skipped = 0;
+    // The frame cap may hold the tick's own frame back: the tick is never made to wait for it. The
+    // frame is then drawn between ticks, when it is due (between), or not at all when the next
+    // tick comes first (a cap under the game's tick rate).
+    if (!frame_due(std::chrono::steady_clock::now())) {
+        pacing.first_pending = true;
+        return true;
+    }
+    pacing.first_pending = false;
     draw_kept(true);
     return true;
 }
 
-void set_tick(std::chrono::steady_clock::time_point tick, std::chrono::duration<double> period) {
+void set_tick(std::chrono::steady_clock::time_point tick, std::chrono::duration<double> period,
+              std::chrono::duration<double> late) {
     pacing.tick = tick;
     pacing.period = period;
+    pacing.late = late;
 }
 
 int ui_quad(const openrac_game_ui_rect& quad) {
@@ -1936,7 +2229,30 @@ int between(std::chrono::steady_clock::time_point next_tick) {
     }
     // A frame only for a refresh the kept tick is still shown at (the next tick's, with the lag).
     const auto lag = std::chrono::duration_cast<std::chrono::steady_clock::duration>(pacing.period * kLagTicks);
-    if (next_display(std::chrono::steady_clock::now()) >= next_tick + lag) {
+    auto now = std::chrono::steady_clock::now();
+    // The frame cap: a frame not due before the next tick is left to after it; one due sooner is
+    // waited for here.
+    if (!frame_due(now)) {
+        if (pacing.due >= next_tick) {
+            return 0;
+        }
+        std::this_thread::sleep_until(pacing.due);
+        now = std::chrono::steady_clock::now();
+    }
+    const auto display = next_display(now);
+    if (display >= next_tick + lag) {
+        return 0;
+    }
+    // Nothing waits for the display: a frame that would not be done by the next tick's time is not
+    // started, so that the tick comes on time whatever a frame costs (with the swap's wait the
+    // frame belongs to a refresh, and the tick after it is a little late and made up for).
+    if (g->swap == platform::SwapInterval::Immediate
+        && now + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(pacing.cost))
+               >= next_tick) {
+        return 0;
+    }
+    // The scene has arrived at the kept tick's: another frame would be the same picture again.
+    if (!pacing.first_pending && pacing.last_alpha >= 1.0f && alpha_at(display) >= 1.0f) {
         return 0;
     }
     SDL_Event event;
@@ -1953,7 +2269,9 @@ int between(std::chrono::steady_clock::time_point next_tick) {
     }
     const bool dump = renderer::g_dump_draws;
     renderer::g_dump_draws = false;
-    draw_kept(false);
+    const bool first = pacing.first_pending;
+    pacing.first_pending = false;
+    draw_kept(first);
     renderer::g_dump_draws = dump;
     return 1;
 }
@@ -2037,6 +2355,8 @@ bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
 void close() {
     if (g) {
         debug_overlay::release();
+        settings::save();  // the window's size, if it was changed
+        fps_counter::release();
         debug_menu::release();
         g->frame.release();
         g->picture.release();

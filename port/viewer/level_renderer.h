@@ -69,14 +69,31 @@ private:
         int count = 0;
     };
 
+    // One instance, as the vertex shader's per-instance attributes take it.
+    struct InstanceData {
+        float matrix[16];
+        float tint[4];
+        float palette;  // the first matrix of its joint palette; -1 none
+        float lights;   // a lit tie: the first of its 64 colours in the light texture; -1 none
+        float moby_light[4];    // a lit moby: sets, cross-fade, 1 (Instance::moby_light)
+        float moby_ambient[4];  // its ambient colour / 128
+    };
+
     void draw_sky(const renderer::FrameInput& input, renderer::RenderState& state);
-    void build_groups(Layer layer, const std::vector<Instance>& instances);
+    Group make_group(std::uint32_t model);
+    void fill_group(Group& g, const std::vector<InstanceData>& list, unsigned usage);
+    void build_groups(Layer layer, const std::vector<Instance>& instances, bool live);
 
     std::vector<Model> m_models;
     std::vector<Material> m_materials;
     std::vector<renderer::TextureHandle> m_textures;  // by image
     renderer::TextureHandle m_white = 0;
     std::array<std::vector<Group>, kLayerCount> m_groups;
+    // The groups a live layer does not draw this frame, kept for the frames it does (set_instances).
+    std::array<std::vector<Group>, kLayerCount> m_idle;
+    // build_groups' lists, by model, kept for their storage.
+    std::vector<std::pair<std::uint32_t, std::vector<InstanceData>>> m_grouping;
+    std::size_t m_palette_rows = 0;  // the palette texture's height now
     unsigned m_vertices = 0;
     unsigned m_indices = 0;
     unsigned m_palette = 0;  // RGBA32F texture, four texels per matrix

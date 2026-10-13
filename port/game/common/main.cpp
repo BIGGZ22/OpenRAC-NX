@@ -98,6 +98,13 @@ gaddr g_chain = 0;  // the display list sent this frame
 bool g_vsync_since_kick = true;  // a vertical blank was waited for since the last frame was sent
 bool g_window = false;
 std::chrono::steady_clock::time_point g_next_frame;
+// The game's ticks a second: the description's (hostgen.json's frame_rate) until the game sets a
+// video mode, then that mode's field rate (openrac_game_set_video_mode).
+int g_tick_rate = 0;
+
+int tick_rate() {
+    return g_tick_rate > 0 ? g_tick_rate : openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60;
+}
 
 std::string program_name() {
     return std::string("openrac-") + openrac_game.id;
@@ -255,7 +262,7 @@ static void apply_writes() {
 
 // [debug tools] The game's tick length, stretched by the overlay's slow motion (debug_overlay.h).
 static std::chrono::microseconds tick_period() {
-    auto period = std::chrono::microseconds(1000000 / (openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60));
+    auto period = std::chrono::microseconds(1000000 / tick_rate());
 #ifdef OPENRAC_FRONTEND
     if (g_window) {
         period = std::chrono::microseconds(
@@ -283,8 +290,14 @@ int openrac_game_vsync(void) {
         // count from it).
         const auto period = tick_period();
         const auto now = std::chrono::steady_clock::now();
+        // How late the tick is, for the window to leave a frame out rather than fall further behind
+        // (not after a long stop, a level loading: the count below starts again from now).
+        const bool counted = g_next_frame.time_since_epoch().count() != 0
+                             && now <= g_next_frame + std::chrono::milliseconds(100);
         frontend::set_tick(g_next_frame.time_since_epoch().count() == 0 || now > g_next_frame + period
-                               ? now : g_next_frame, period);
+                               ? now : g_next_frame, period,
+                           counted && now > g_next_frame ? std::chrono::duration<double>(now - g_next_frame)
+                                                         : std::chrono::duration<double>(0.0));
         const auto* ram = runtime::Memory::get().base();
         const std::uint32_t draws = g_reports_draws ? g_draws : ~0u;
         g_draws = 0;
@@ -355,7 +368,7 @@ int openrac_game_vsync(void) {
     static steady_clock::time_point last = now;
     if (hitch) {
         const double ms = duration<double, std::milli>(now - last).count();
-        if (ms > 1.25 * 1000.0 / (openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60)) {
+        if (ms > 1.25 * 1000.0 / tick_rate()) {
             log::info("frame {}: {:.1f} ms", g_frame, ms);
         }
     }
@@ -423,8 +436,17 @@ void openrac_game_set_display(const openrac_game_display* d) {
     }
 }
 
+// The video mode the game asks the console for (sceGsResetGraph, SetGsCrt): 2 is NTSC, 60 fields a
+// second, 3 is PAL, 50. The game's tick is one field: a PAL game that changes to its 60 Hz mode
+// counts its time in sixtieths from then on (rac1/pal: func_002157C0 sets the time base when a
+// level starts), so the port's tick follows the mode the game set, whatever the display shows.
 void openrac_game_set_video_mode(int interlace, int mode, int field_mode) {
-    log::info("video mode {:#x} (interlace {}, field mode {})", mode, interlace, field_mode);
+    const int rate = mode == 3 ? 50 : mode == 2 ? 60 : 0;
+    log::info("video mode {:#x} (interlace {}, field mode {}){}", mode, interlace, field_mode,
+              rate != 0 ? std::format(": the game ticks {} times a second", rate) : std::string());
+    if (rate != 0) {
+        g_tick_rate = rate;
+    }
 }
 
 void openrac_game_load_image(const openrac_game_image* image) {
@@ -528,7 +550,7 @@ int openrac_game_play_movie(uint32_t lsn, uint32_t bytes, int channel, int start
     if (!output) {
         log::warn("movie: no sound ({})", error);
     }
-    const int rate = openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60;
+    const int rate = tick_rate();
     const std::size_t per_blank = static_cast<std::size_t>(platform::kAudioRate / rate);
     std::vector<std::int16_t> samples(per_blank * 2);
     std::vector<std::uint8_t> rgba;
@@ -626,6 +648,15 @@ void openrac_game_effect_quad(const openrac_game_quad* quad) {
 #else
     (void)quad;
 #endif
+}
+
+int openrac_game_hud_side(void) {
+#ifdef OPENRAC_FRONTEND
+    if (g_window) {
+        return frontend::hud_side();
+    }
+#endif
+    return 0;
 }
 
 int openrac_game_ui_quad(const openrac_game_ui_rect* quad) {
