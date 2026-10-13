@@ -1389,3 +1389,47 @@ console-specific assembly, matching audits passing without new mismatches,
 and recorded native gameplay validation from New Game through the ending
 with save/reload, level transitions, controls, graphics, audio and cutscenes.
 Neither matching percentages alone nor a passing CTest suite proves this.
+
+### Settings, combat, sound and window fixes, 2026-10-12
+
+Seven reported problems, one commit or more each (subjects below). Built
+from the sibling `rac1-decomp` as it stood (no change made there), checked
+in level 0 through `OPENRAC_DIRECT` and on the normal New Game path, with
+`--no-card`, a scratch `--settings` file and scripted pad input.
+
+- Settings: `feat(renderer): a target wider than the game's 4:3 picture`,
+  `feat(port): picture shape, frame rate and fullscreen as the player's
+  settings`. Rows on the title's Options, Video page; port/README.md, "The
+  player's settings". The tick stays 50 a second: frames between ticks are
+  blended (camera, mobys, joint poses). The game's own 60 Hz video mode is
+  not followed by the port's tick.
+- Level 0's creatures and crates: `fix(hostgen): a definition that ends in
+  a call returns that call's result` (the ground height of every walking
+  creature was 0), `fix(rac1-pal): the collision queries test a posed
+  class's joint primitives`, `feat(rac1-pal): hit spheres, the toad's hits,
+  knockback, crates that break`.
+- `fix(port): a deleted moby is not drawn` (state 0xFD: the black bolt).
+- Sound effects: the hostgen fix above (distance volume and pan were 0),
+  then `feat(rac1-pal): the pan's clamp and the occlusion line's length, in
+  C`. Not listened to: checked by the commands the game sends
+  (`OPENRAC_SOUND_LOG`).
+- `fix(port): no blue strip as a story card ends`.
+- `fix(port): the game goes on while its window is dragged` (the game on a
+  fiber beside the event pump, Windows only).
+- `fix(rac1-pal): the hero stands on a crate he lands on` (the catalogue
+  folds three block accessors into func_L00_0025D390; split_places.tsv).
+
+Left for the decompilation: func_L00_002D6610's functional C tests the
+damage resolver's return value where retail tests its fifth argument (the
+port overrides it in hand/level_creature_hits.c); the near misses for
+func_L00_0025A8E8, func_L00_0025AA20, func_L00_0025D6F0, func_L00_002D1E68,
+func_L00_00261B00 and func_L00_002D4EC0 are used from hand/ and are not in
+nonmatching/functional.tsv; func_001F9BB0 and func_001F9E58 were written
+from their callers, not from their instructions. Still without C:
+func_L00_00254218 (the collision kernels' joint pose, replaced by the
+port's evaluator) and func_L00_002788E0 (called while the pause menu's
+pages are open: seen in these runs). Other levels' creatures were not
+tried.
+
+New switches: `OPENRAC_MOBY_LOG=N[:RADIUS]`, `OPENRAC_HIT_LOG`,
+`OPENRAC_SOUND_LOG`, `OPENRAC_NO_PUMP_FIBER`.
