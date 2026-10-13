@@ -1721,8 +1721,9 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     k.strip_vertices.clear();
     k.strips.clear();
     std::size_t before_world = SIZE_MAX;
-    k.packets = direct_packets(ram, viewer::shown_chain(ram, a), &k.strip_vertices, &k.strips, &g->effect_uploads,
-                               &before_world);
+    std::vector<std::uint8_t> packets = direct_packets(ram, viewer::shown_chain(ram, a), &k.strip_vertices, &k.strips,
+                                                       &g->effect_uploads, &before_world);
+    k.packets = std::move(packets);
     // Only a level's frame is ordered so: the boot program (title, main menu) starts VU1 programs
     // of its own before its 2D path, and draws its world natively, all of its 2D path after it.
     k.before_world = level >= 0 && level < 19 ? std::min(before_world, k.packets.size()) : 0;
@@ -1738,7 +1739,15 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     particle_quads(ram, state);
     k.effects = std::move(g->effects);
     k.effect_uploads = std::move(g->effect_uploads);
-    k.ui_quads = std::move(g->ui_quads);
+    // A tick on which the game drew no native quad keeps the last tick's. The game's FadeToBlack
+    // (after a story card, between scenes) sends the last display list again for each of its
+    // frames, with its black over it, and draws nothing itself: the markers in that list index the
+    // quads of the tick that built it. Without them the card's two lines were left out and only
+    // the band behind them was drawn, a blue strip across the picture for the fade's two frames.
+    // A list built without native quads has no markers, and the kept ones are not looked at.
+    if (!g->ui_quads.empty()) {
+        k.ui_quads = std::move(g->ui_quads);
+    }
     g->ui_quads.clear();
     g->effects.clear();
     g->effect_uploads.clear();
