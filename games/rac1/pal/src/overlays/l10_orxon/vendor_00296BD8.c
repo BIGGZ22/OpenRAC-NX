@@ -582,7 +582,21 @@ void func_L10_002CB030(struct Moby_CB030 *moby) {
     }
 }
 LINKER_REMNANT("asm/overlays", func_L10_002CF310);
-INCLUDE_ASM("asm/overlays", func_L10_002D8ED8);
+/* Moves the float at +0x18 toward target by at most 0.1f per call (the target itself when within 0.1f). */
+struct Moby_D8F40;
+void func_L10_002D8ED8(struct Moby_D8F40 *a, float target) {
+    char *p = (char *)a;
+    float cur = *(float *)(p + 0x18);
+    float diff = target - cur;
+    float step = 0.1f;
+    if (step < diff) {
+        *(float *)(p + 0x18) = cur + step;
+    } else if (diff < -0.1f) {
+        *(float *)(p + 0x18) = cur - step;
+    } else {
+        *(float *)(p + 0x18) = target;
+    }
+}
 INCLUDE_ASM("asm/overlays", func_L10_002D8F08);
 // stores a float into field 0x18
 void func_L10_002D8F34(char *a, float f) {

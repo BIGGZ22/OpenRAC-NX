@@ -669,7 +669,18 @@ int func_L00_00284E20(int id) {
     return -1;
 }
 INCLUDE_ASM("asm/overlays", func_L00_00284E5C);
-INCLUDE_ASM("asm/overlays", func_L00_00284E70);
+/* Looks for id in the five {id, flags} pairs at D_L00_001BA548; if found sets flags |= 4 and returns 0, else returns 1. Joined with func_L00_00284EA0 loop tail. */
+extern int D_L00_001BA548_84E70[] __asm__("D_L00_001BA548");
+int func_L00_00284E70(int id) {
+    int i;
+    for (i = 0; i < 5; i++) {
+        if (D_L00_001BA548_84E70[i * 2] == id) {
+            D_L00_001BA548_84E70[i * 2 + 1] |= 4;
+            return 0;
+        }
+    }
+    return 1;
+}
 INCLUDE_ASM("asm/overlays", func_L00_00284EA0);
 INCLUDE_ASM("asm/overlays", func_L00_00284EB8);
 typedef struct { int f[14]; } Rec;

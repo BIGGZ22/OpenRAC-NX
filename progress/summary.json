@@ -4,11 +4,11 @@
     "region": "PAL (Europe)",
     "serial": "SCES_509.16",
     "progress": {
-      "matched_code": 3011000,
+      "matched_code": 3011244,
       "total_code": 3712808,
-      "matched_functions": 4324,
+      "matched_functions": 4329,
       "total_functions": 5109,
-      "fuzzy_percent": 82.0,
+      "fuzzy_percent": 82.1,
       "date": "2026-10-13",
       "percent": 81.1
     },
