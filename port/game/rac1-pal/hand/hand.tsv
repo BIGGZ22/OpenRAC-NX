@@ -93,3 +93,5 @@ func_L00_0025D6F0	level_knockback.c
 func_L00_002D1E68	level_crate_break.c
 func_L00_00261B00	level_bolt_burst.c
 func_L00_002D4EC0	level_class639.c
+func_001F9BB0	game_sound_math.c
+func_001F9E58	game_sound_math.c
