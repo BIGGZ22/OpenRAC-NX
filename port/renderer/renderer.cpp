@@ -33,6 +33,19 @@ const char* bucket_name(Bucket bucket) {
     return "?";
 }
 
+unsigned readable(const RenderTarget& target) {
+    if (target.resolve_framebuffer == 0) {
+        return target.framebuffer;
+    }
+    glDisable(GL_SCISSOR_TEST);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, target.framebuffer);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target.resolve_framebuffer);
+    glBlitFramebuffer(0, 0, target.width, target.height, 0, 0, target.width, target.height, GL_COLOR_BUFFER_BIT,
+                      GL_NEAREST);
+    return target.resolve_framebuffer;
+}
+
 Renderer::~Renderer() = default;
 
 bool Renderer::init(std::string& error) {
