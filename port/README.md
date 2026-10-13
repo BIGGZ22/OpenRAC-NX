@@ -73,18 +73,22 @@ filled; [game/README.md](game/README.md) says what each needs.
 
 What the port adds to a game's own options is kept in a small text file,
 `<data home>/openrac/settings/<id>.ini` (`--settings FILE` names another):
+the window (a window, borderless or fullscreen; the monitor; the
+resolution), the picture (its shape up to 32:9, where the HUD goes in a wide
+one, the render scale), anti-aliasing and the textures' filter, vsync and the
+frame rate each on its own, a frame-rate counter, and the volume.
+[docs/port/SETTINGS.md](../docs/port/SETTINGS.md) lists every key and value,
+and says how the frames are paced against the game's tick, what the graphics
+card is checked for, where a frame's time goes, and how the settings compare
+with OpenGOAL's and ReRAC's.
 
-| Key | Values | |
-|---|---|---|
-| `aspect` | `4:3`, `16:10`, `16:9`, `21:9`, `window` | the picture's shape. A wider one keeps the game's vertical field of view and shows more of the world to the sides; the 2D layer (HUD, menus, text) keeps its shape in the middle, and only what covered the whole screen (fades, clears, the frame a menu draws back) covers the whole picture |
-| `frame_rate` | `original`, `display`, `60`, `120`, `144`, `240`, `unlimited` | how many frames are drawn. The game's tick stays its own (50 a second for PAL: its logic counts frames, so it cannot run faster and stay the same game); the frames between two ticks move the camera, the mobys and their poses from one tick to the next. `original` draws one frame a tick, `display` one a refresh |
-| `fullscreen` | `0`, `1` | a window covering the desktop (F11 or Alt+Return changes it while playing) |
-| `volume` | `0` to `100` | how loud everything the port plays is: sounds, music and the movies. `0` is silence itself, whatever the system's mixer does (F9 and F10 turn it down and up a tenth while playing) |
-
-In Ratchet & Clank (PAL) they are rows of the title menu's Options, Video
-page, beside the game's own video mode, drawn by the game's widgets
-([options_menu.cpp](game/common/options_menu.cpp)); Cross moves a row to its
-next value, which is applied and saved at once.
+In Ratchet & Clank (PAL) they are the rows of the title menu's Options,
+Video page, drawn by the game's widgets
+([options_menu.cpp](game/common/options_menu.cpp)): Cross or Right moves a
+row to its next value, Left to the one before, and the change is applied and
+saved at once. The game's own row there, the television's 50 or 60 Hz, is
+gone: the game ticks at its own rate (50 a second for PAL) and the window
+shows it at the display's.
 
 ## Direct level probes (RAC1 PAL)
 

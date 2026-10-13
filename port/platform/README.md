@@ -8,7 +8,7 @@ the screen, the pads, sound and time, replaced at the game's library calls
 
 | File | What |
 |---|---|
-| `window.h` | `Platform` (SDL for the life of the program) and `Window`: an OpenGL 4.1 core context, windowed, fullscreen at a resolution or borderless, vsync; a message box when OpenGL 4.1 is missing; SDL's offscreen driver for headless checks |
+| `window.h` | `Platform` (SDL for the life of the program) and `Window`: an OpenGL 4.1 core context, windowed, fullscreen at a resolution or borderless, on a chosen display, vsync on, off or adaptive; the graphics card named in the log, the fast one of two asked for, a software rasteriser refused when the program says so; a message box when OpenGL 4.1 is missing; SDL's offscreen driver for headless checks |
 | `pad.h` | `Pad`: one DualShock 2 as the game's pad library reports it, and the 32-byte read buffer |
 | `input.h` | keyboard and SDL gamepads into two pad ports, rumble |
 | `audio.h` | `AudioOutput`: one SDL audio stream, 48 kHz stereo signed 16-bit, pulled by a callback or pushed by `queue()` |
@@ -43,4 +43,6 @@ buttons map by position (the bottom face button is Cross).
 
 The replacements of the game's library calls themselves (`scePadRead`,
 989snd, `sceGsSyncV`) belong to the game's build; this layer is what they
-call. Settings (key remapping, display mode) are not saved yet.
+call. The display's settings are the program's
+([docs/port/SETTINGS.md](../../docs/port/SETTINGS.md)); key remapping is not
+a setting yet.
