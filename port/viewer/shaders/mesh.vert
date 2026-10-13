@@ -30,6 +30,7 @@ layout(location = 15) in vec4 moby_ambient;  // ambient RGB / 128; w: 1 + glow R
 
 uniform mat4 view_projection;
 uniform mat4 view;
+uniform float picture_scale;  // the game's 4:3 picture's width as a part of the target's (1: all of it)
 // The game's fog line (LevelScene::set_fog): F = depth x slope + offset, clamped to [z, w].
 uniform vec4 fog_params;
 uniform int skinning;
@@ -75,6 +76,11 @@ void main() {
     }
     vec4 world = model * p;
     gl_Position = view_projection * world;
+    // A moby of the 2D layer (a page menu's frame object, moby_light.w = 2) on a target wider than
+    // the game's picture: cut at the picture's sides, where the television's edge cut it.
+    bool in_picture = moby_light.w > 1.5 && picture_scale < 1.0;
+    gl_ClipDistance[0] = in_picture ? picture_scale * gl_Position.w - gl_Position.x : 1.0;
+    gl_ClipDistance[1] = in_picture ? picture_scale * gl_Position.w + gl_Position.x : 1.0;
     // Camera depth in the game's raw units (game units x 1024); the view looks down -Z.
     float depth = -(view * world).z * 1024.0;
     v_fog = trunc(clamp(depth * fog_params.x + fog_params.y, fog_params.z, fog_params.w)) / 255.0;

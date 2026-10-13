@@ -139,6 +139,11 @@ struct RenderTarget {
     unsigned framebuffer = 0;
     int width = 0;
     int height = 0;
+    // A target wider than the game's 4:3 picture (widescreen): the picture's width as a part of
+    // the target's, under 1. The world fills the target; the 2D path's picture is drawn in its
+    // middle, at the game's shape (DirectRenderer), and only what covers the whole picture (a
+    // fade, a clear, the frame drawn back) is drawn across the whole target.
+    float picture_scale_x = 1.0f;
 };
 
 struct FrameStats {

@@ -320,6 +320,9 @@ private:
     void apply(const DirectState& state, RenderState& render_state);
     void draw(const DirectDraw& draw, RenderState& render_state);
     bool m_background = false;  // flush(): the part before the world
+    // flush(), on a target wider than the picture: the triangles being drawn are the whole
+    // target's (what covered the whole screen), not the picture's in its middle.
+    bool m_whole_target = true;
 
     DirectConfig m_config;
     Input m_input;

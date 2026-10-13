@@ -92,6 +92,8 @@ inline constexpr GLenum GL_CULL_FACE = 0x0B44;
 inline constexpr GLenum GL_DEPTH_TEST = 0x0B71;
 inline constexpr GLenum GL_BLEND = 0x0BE2;
 inline constexpr GLenum GL_SCISSOR_TEST = 0x0C11;
+inline constexpr GLenum GL_CLIP_DISTANCE0 = 0x3000;
+inline constexpr GLenum GL_CLIP_DISTANCE1 = 0x3001;
 inline constexpr GLenum GL_MULTISAMPLE = 0x809D;
 inline constexpr GLenum GL_PRIMITIVE_RESTART = 0x8F9D;
 
