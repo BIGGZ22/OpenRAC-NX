@@ -70,6 +70,10 @@ pub struct Action {
     /// relative to the checkout. `{artifact}` in the arguments.
     #[serde(default)]
     pub artifact: Option<String>,
+    /// Files an earlier step makes and this one cannot run without, relative
+    /// to the checkout: each is `{"path": ..., "from": the step's label}`.
+    #[serde(default)]
+    pub needs: Vec<Need>,
     /// Start it and let it run on its own (the game, Godot), instead of
     /// as a job in Tasks whose output the launcher shows.
     #[serde(default)]
@@ -156,6 +160,14 @@ pub enum Requirement {
     Artifact,
 }
 
+/// A file an action needs and the step that makes it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Need {
+    pub path: String,
+    pub from: String,
+}
+
 /// Where an action belongs: the checkout, or one version.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "kind", content = "key")]
@@ -182,6 +194,8 @@ pub struct ActionView {
     pub runnable: bool,
     /// Why not, in words, one per missing thing.
     pub blockers: Vec<String>,
+    /// Its `artifact` exists: for a step that makes one, it has been done.
+    pub done: bool,
 }
 
 /// An action turned into a command line.
@@ -260,7 +274,8 @@ impl ActionFile {
                 if action.state == State::Planned && action.todo.is_none() {
                     problems.push(format!("{at}: planned, so it needs a todo saying what is missing"));
                 }
-                let texts = action.program.iter().chain(&action.args).chain(&action.cwd);
+                let needs = action.needs.iter().map(|n| &n.path);
+                let texts = action.program.iter().chain(&action.args).chain(&action.cwd).chain(needs);
                 for text in texts {
                     for name in placeholders(text) {
                         if !PLACEHOLDERS.contains(&name.as_str()) {
@@ -311,6 +326,7 @@ impl Action {
             this_platform: self.platforms.is_empty() || self.platforms.contains(&ctx.platform),
             runnable: blockers.is_empty(),
             blockers,
+            done: self.artifact_path(ctx).is_ok_and(|p| p.exists()),
         }
     }
 
@@ -349,6 +365,11 @@ impl Action {
                 };
             if let Some(what) = missing {
                 out.push(format!("needs {what}"));
+            }
+        }
+        for need in &self.needs {
+            if !fill(&need.path, ctx, None).is_ok_and(|p| abs(ctx.root, &p).exists()) {
+                out.push(format!("needs {}", need.from));
             }
         }
         out

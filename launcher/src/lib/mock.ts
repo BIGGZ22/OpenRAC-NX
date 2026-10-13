@@ -203,6 +203,8 @@ function view(action: RawAction, st: VersionStatus | null): ActionView {
     thisPlatform,
     runnable: blockers.length === 0,
     blockers,
+    // The mock has no files: nothing is built or made.
+    done: false,
   };
 }
 

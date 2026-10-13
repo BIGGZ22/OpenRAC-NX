@@ -279,6 +279,28 @@
         "todo": "Run it from the desktop app on each platform. tools/build_port.py ran from a shell on Windows 11 (Visual Studio 2026, Clang 21): an incremental build, a rerun of hostgen, nothing to do. Another copy of the decompilation is chosen once, with tools/build_port.py --source DIR; the launcher has no setting for it yet."
       },
       {
+        "id": "port-levels",
+        "label": "Get the levels ready",
+        "description": "Reads the levels from your disc into the form the game draws: the worlds behind the menus and all 19 levels, in assets/port/rac1. About half a minute and 1 GB, once.",
+        "kind": "build",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "editor/extract.py",
+          "port",
+          "{disc}",
+          "assets/port/rac1"
+        ],
+        "cwd": ".",
+        "requires": [
+          "disc",
+          "python"
+        ],
+        "artifact": "assets/port/rac1/level_99/manifest.json",
+        "docs": "editor/README.md",
+        "todo": "Run it from the desktop app. The same command from a shell on macOS wrote what the port draws from. It refuses a folder that exists: to redo it, remove assets/port/rac1 first."
+      },
+      {
         "id": "play",
         "label": "Play",
         "description": "The game as a native PC program: its decompiled C built for this computer, drawn by OpenRAC's own renderer, with the assets from your disc.",
@@ -288,14 +310,22 @@
         "args": [
           "--data",
           "{data}",
-          "--window"
+          "--window",
+          "--levels",
+          "{root}/assets/port/rac1"
         ],
         "requires": [
           "artifact"
         ],
         "artifact": "port/build/release/openrac-rac1-pal.exe",
         "docs": "port/game/rac1-pal/README.md",
-        "todo": "Built by port-build. The port also needs decompiler_out (openrac-extractor --decompile) and the levels (editor/extract.py port) in <data>/port. Runs on Windows, Linux and macOS: the port is one program for all three (it was listed for Windows and Linux only until 2026-10-13, though it had been built and run on macOS)."
+        "todo": "Built by port-build. The port also needs decompiler_out (openrac-extractor --decompile). It draws from the levels port-levels writes (--levels): without them the menus have no world behind them and a level has no scenery. Runs on Windows, Linux and macOS: the port is one program for all three (it was listed for Windows and Linux only until 2026-10-13, though it had been built and run on macOS).",
+        "needs": [
+          {
+            "path": "assets/port/rac1/level_99/manifest.json",
+            "from": "the levels (Get the levels ready)"
+          }
+        ]
       },
       {
         "id": "play-edited",
@@ -308,6 +338,8 @@
           "--data",
           "{data}",
           "--window",
+          "--levels",
+          "{root}/assets/port/rac1",
           "--mods",
           "{root}/assets/packed/rac1"
         ],
@@ -316,7 +348,13 @@
         ],
         "artifact": "port/build/release/openrac-rac1-pal.exe",
         "docs": "port/game/rac1-pal/README.md",
-        "todo": "Built by port-build; needs Pack your edited levels first. Run headless on macOS (--level 0 --frames 400): the port logged the sectors it took from the packed file and ran as it does without. Not run from the desktop app yet. Runs on Windows, Linux and macOS: the port is one program for all three (it was listed for Windows and Linux only until 2026-10-13, though it had been built and run on macOS)."
+        "todo": "Built by port-build; needs Pack your edited levels first. Run headless on macOS (--level 0 --frames 400): the port logged the sectors it took from the packed file and ran as it does without. Not run from the desktop app yet. Runs on Windows, Linux and macOS: the port is one program for all three (it was listed for Windows and Linux only until 2026-10-13, though it had been built and run on macOS).",
+        "needs": [
+          {
+            "path": "assets/port/rac1/level_99/manifest.json",
+            "from": "the levels (Get the levels ready)"
+          }
+        ]
       }
     ],
     "rac1/ntsc": [

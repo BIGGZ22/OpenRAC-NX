@@ -102,6 +102,8 @@ export interface ActionView {
   thisPlatform: boolean;
   runnable: boolean;
   blockers: string[];
+  /** Its artifact exists: a step that makes one has been done. */
+  done: boolean;
 }
 
 /** core/src/catalog.rs */

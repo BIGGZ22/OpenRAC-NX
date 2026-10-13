@@ -2,7 +2,7 @@
 // tile and the game's page, so the main button says and does the same thing in both.
 import type { ActionView, GameView, VersionView } from "./api";
 import type { IconName } from "$components/Icon.svelte";
-import { cancel, installGame, jobs, refresh, run } from "./app.svelte";
+import { cancel, installGame, jobs, refresh, run, runChain } from "./app.svelte";
 import type { Job } from "./queue";
 
 export type PlayerKind =
@@ -14,6 +14,7 @@ export type PlayerKind =
   | "building"
   | "play"
   | "build"
+  | "levels" // built, but the levels the game draws are not read from the disc yet
   | "blocked"; // a port exists but something it needs is missing
 
 export interface PlayerState {
@@ -72,6 +73,7 @@ export function isBuilt(game: GameView, v: VersionView): boolean {
 export function playerState(game: GameView, v: VersionView): PlayerState {
   const play = action(v, "play");
   const build = action(v, "port-build");
+  const levels = action(v, "port-levels");
   const setUp = game.install?.extracted ?? null;
   const other = setUp && setUp.version !== v.key ? (game.versions.find((o) => o.key === setUp.version) ?? null) : null;
   const installing = jobs.list.find((j) => j.actionId === `install:${v.game}` && live(j)) ?? null;
@@ -141,16 +143,20 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       tone: "ok",
     };
   }
-  const building = jobOf(v, ["port-build"]);
+  const building = jobOf(v, ["port-build", "port-levels"]);
   if (building) {
     return {
       ...base,
       kind: "building",
-      label: building.state === "queued" ? "Waiting…" : "Stop the build",
+      label: building.state === "queued" ? "Waiting…" : "Stop",
       icon: "x",
-      hint: building.lines.at(-1)?.line ?? "Building the game for this computer…",
+      hint:
+        building.lines.at(-1)?.line ??
+        (building.actionId === "port-levels"
+          ? "Reading the levels from your disc…"
+          : "Building the game for this computer…"),
       job: building,
-      status: "Building…",
+      status: building.actionId === "port-levels" ? "Getting ready…" : "Building…",
       tone: "warn",
     };
   }
@@ -166,7 +172,19 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       tone: "ok",
     };
   }
-  if (build?.runnable) {
+  if (play.done && levels?.runnable && !levels.done) {
+    return {
+      ...base,
+      kind: "levels",
+      label: "Get the levels ready",
+      icon: "disc",
+      hint: "Reads the levels from your disc so the game can draw them. About half a minute and 1 GB, once.",
+      primary: true,
+      status: "Needs its levels",
+      tone: "warn",
+    };
+  }
+  if (build?.runnable && !play.done) {
     return {
       ...base,
       kind: "build",
@@ -203,7 +221,14 @@ export async function playerAct(v: VersionView, state: PlayerState): Promise<voi
     await refresh();
     return;
   }
-  const id = state.kind === "play" ? "play" : state.kind === "build" ? "port-build" : null;
-  const act = id ? action(v, id) : null;
+  const levels = action(v, "port-levels");
+  if (state.kind === "build") {
+    // Building is not enough to play: the levels come with it, the first time.
+    const build = action(v, "port-build");
+    const steps = [build, levels && !levels.done ? levels : null].filter((a) => a !== null);
+    if (await runChain(scope, steps)) await refresh();
+    return;
+  }
+  const act = state.kind === "play" ? action(v, "play") : state.kind === "levels" ? levels : null;
   if (act) await run(scope, act);
 }

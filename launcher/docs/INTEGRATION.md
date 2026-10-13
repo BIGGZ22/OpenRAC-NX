@@ -173,12 +173,17 @@ actions, as rac1/pal has on Windows:
   On Windows it sets up Visual Studio's environment itself and finds Clang
   and Ninja, so a player never types a compiler's command. The game page
   offers it in place of Play until the game is built, and as Rebuild after.
-- `play`: the port's executable with `--data {data} --window`, the
-  version's install folder, as OpenGOAL's launcher starts `gk`.
+- `port-levels`: `editor/extract.py port {disc} assets/port/rac1`, the
+  levels in the form the port draws (the worlds behind the menus too). Half
+  a minute, once. Building runs it after the build the first time, and the
+  game page offers it by itself when the game is built but they are missing.
+- `play`: the port's executable with `--data {data} --window --levels
+{root}/assets/port/rac1`, as OpenGOAL's launcher starts `gk`. It `needs`
+  the levels: an action's `needs` lists files an earlier step makes, and it
+  stays blocked, naming that step, until they exist.
 
-To do here: make the assets the port reads from the set-up (`decompiler_out`
-from `openrac-extractor --decompile`, the levels from `editor/extract.py
-port` in `<data>/port`), the "Prepare the assets" step; a setting for the
+To do here: make `decompiler_out` (from `openrac-extractor --decompile`)
+part of the set-up, the "Prepare the assets" step; a setting for the
 copy of the decompilation to build from, which today is chosen once with
 `tools/build_port.py --source DIR`.
 
