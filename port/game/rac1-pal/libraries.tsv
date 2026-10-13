@@ -234,6 +234,8 @@ func_L00_002EDB68	game	func_L00_002EDB68	host	the tail of func_L00_002EDB58 (jr 
 func_L00_001EB6A8	game	func_L00_001EB6A8	host	the camera steer: retail returns FastAddRots in $f0, which the void matched C loses (host/camera.c)	float (unsigned int, float, float, float, float, float)
 func_L00_002A8A20	game	func_L00_002A8A20	host	the wrench trail draw callback: its state as host C, its quads left to the renderer (host/wrench.c); the source file declares it void (void)	void (unsigned int)
 func_L00_002D8898	game	func_L00_002D8898	host	an effect draw callback whose state only feeds its own quads: a no-op for now (host/fx.c); the source file declares it void (void)	void (unsigned int)
+func_L00_0025D3C0	game	func_L00_0025D3C0	host	a place the catalogue folds into another function although its code differs (split_places.tsv, host/variants.c)	int (unsigned int)
+func_L00_00261448	game	func_L00_00261448	host	a place the catalogue folds into another function although its code differs (split_places.tsv, host/variants.c)	int (unsigned int)
 func_L00_00232A00	game	func_L00_00232A00	host	a place the catalogue folds into another function although its code differs (split_places.tsv, host/variants.c)	void (void)
 func_L00_0020A870	game	func_L00_0020A870	host	a place the catalogue folds into another function although its code differs (split_places.tsv, host/variants.c)	void (float, float)
 func_L00_0020A888	game	func_L00_0020A888	host	a place the catalogue folds into another function although its code differs (split_places.tsv, host/variants.c)	void (float, float)
