@@ -110,6 +110,11 @@ std::vector<DisplaySize> fullscreen_sizes(int display);
 // the window's app id, by which the desktop finds the program's icon and groups its windows.
 void set_app_metadata(const char* name, const char* id);
 
+// macOS: the menus of the menu bar beside the ones the system gives (View, Sound, Developer),
+// whose items press the keys the port already answers (F2, F3, F5...), so they need no code of
+// their own in the game. Call once the window exists. Nothing on other systems.
+void install_app_menus(bool developer);
+
 struct WindowConfig {
     std::string title = "OpenRAC";
     // The client area when windowed. The PAL picture is 512 x 448 with

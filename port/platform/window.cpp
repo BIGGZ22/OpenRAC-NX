@@ -137,8 +137,18 @@ std::vector<DisplaySize> fullscreen_sizes(int display) {
     return sizes;
 }
 
+#if defined(__APPLE__)
+void macos_set_app_name(const char* name);  // macos_app.mm
+#else
+void install_app_menus(bool) {}
+#endif
+
 void set_app_metadata(const char* name, const char* id) {
     SDL_SetAppMetadata(name, nullptr, id);
+#if defined(__APPLE__)
+    // The menu bar would show the program file's name (openrac-rac1-pal).
+    macos_set_app_name("OpenRAC");
+#endif
 }
 
 Platform::Platform(unsigned subsystems) {

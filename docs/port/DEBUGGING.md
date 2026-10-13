@@ -28,8 +28,12 @@ the window's own resolution. Until it is first shown nothing of it exists
 | F7 / F8 | slower / faster: the game at 1/2, 1/4, 1/8, 1/16 of its speed |
 | F12 | write the window, overlay included, to `openrac_window_<tick>.png` in the working directory |
 
-F1, F9, F10, F11 and Escape keep their meanings (the level menu of
-developer mode, volume, fullscreen, quit). The mouse works on the overlay;
+F1, F2, F9, F10 and F11 keep their meanings (the level menu of developer
+mode, the frame counter, volume, fullscreen). Escape pauses, as Start does;
+the program ends when its window is closed (Cmd+Q on a Mac). On macOS the
+menu bar has the same keys as menus: View, Sound and Developer. On a Mac
+laptop the F keys need Fn held, unless "Use F1, F2, etc. keys as standard
+function keys" is on in the keyboard settings. The mouse works on the overlay;
 the game does not use it. Keys go to the game unless a text field of the
 overlay is being typed in.
 

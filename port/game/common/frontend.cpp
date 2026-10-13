@@ -962,6 +962,10 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
     if (!g->window) {
         return false;
     }
+    {
+        const char* developer = std::getenv("OPENRAC_DEVELOPER");
+        platform::install_app_menus(developer != nullptr && developer[0] != '\0' && developer[0] != '0');
+    }
     set_window_icon(*g->window);
     g->swap_asked = wanted_swap();
     g->swap = g->window->set_swap_interval(g->swap_asked);
@@ -1127,8 +1131,7 @@ bool show_picture(const std::uint8_t* rgba, int width, int height, float black) 
     }
     SDL_Event event;
     while (platform::poll_event(event)) {
-        if (event.type == SDL_EVENT_QUIT
-            || (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)) {
+        if (event.type == SDL_EVENT_QUIT) {
             return false;
         }
         if (debug_overlay::event(event)) {
@@ -1713,11 +1716,16 @@ void window_event(const SDL_Event& event) {
 }
 
 // The window's own keys: F11 and Alt+Return change between fullscreen and the window, F9 and F10
-// turn the port's volume down and up a tenth. True when the event was one of them.
+// turn the port's volume down and up a tenth, F2 shows or hides the frame counter. True when the event was one of them.
 bool window_key(const SDL_Event& event) {
     window_event(event);
     if (event.type != SDL_EVENT_KEY_DOWN || event.key.repeat) {
         return false;
+    }
+    if (event.key.key == SDLK_F2) {  // the frame counter, as the Video options' row
+        settings::get().show_fps = !settings::get().show_fps;
+        settings::save();
+        return true;
     }
     if (event.key.key == SDLK_F9 || event.key.key == SDLK_F10) {
         settings::set_volume(settings::get().volume + (event.key.key == SDLK_F10 ? 10 : -10));
@@ -1752,8 +1760,7 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     }
     SDL_Event event;
     while (platform::poll_event(event)) {
-        if (event.type == SDL_EVENT_QUIT
-            || (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)) {
+        if (event.type == SDL_EVENT_QUIT) {
             return false;
         }
         if (window_key(event) || debug_overlay::event(event)
@@ -2263,8 +2270,7 @@ int between(std::chrono::steady_clock::time_point next_tick) {
     }
     SDL_Event event;
     while (platform::poll_event(event)) {
-        if (event.type == SDL_EVENT_QUIT
-            || (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)) {
+        if (event.type == SDL_EVENT_QUIT) {
             return -1;
         }
         if (window_key(event) || debug_overlay::event(event)
@@ -2288,8 +2294,7 @@ bool hold() {
     while (g && g->window && debug_overlay::holding()) {
         SDL_Event event;
         while (platform::poll_event(event)) {
-            if (event.type == SDL_EVENT_QUIT
-                || (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)) {
+            if (event.type == SDL_EVENT_QUIT) {
                 return false;
             }
             if (window_key(event) || debug_overlay::event(event)) {
