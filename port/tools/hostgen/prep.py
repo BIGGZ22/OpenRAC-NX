@@ -13,6 +13,10 @@ where it was:
   matching build's object files (padding, sections).
 - A string literal that runs across lines, which GCC 2.95 accepted, becomes
   one literal per line, concatenated: the same string, the same lines.
+- A struct or union defined inside a cast, `((struct { ... } *)p)->field`,
+  gets a name and is defined on the first line of its function: Clang's JSON
+  leaves out a record defined inside an expression, so hostgen could not lay
+  it out and the whole function became a stub.
 - With candidates (hostgen.json "candidates"), a function the decompilation
   still has as an assembly stub gets the candidate's C at the end of its file
   (use_candidates).
@@ -166,8 +170,46 @@ def split_multiline_strings(text: str) -> str:
     return "".join(out)
 
 
+# A cast to a record defined on the spot, without a tag: "(struct { ... }".
+_CAST_RECORD = re.compile(r"\(\s*(struct|union)\s*\{([^{}]*)\}")
+# The first line of a function's definition (clangast's _FUNC_START).
+_FUNCTION_START = re.compile(r"^(?:static\s+|extern\s+)?[A-Za-z_][\w\s\*]*\b\w+\s*\(")
+
+
+def name_cast_records(text: str) -> str:
+    """A record defined inside a cast gets a name (openrac_cast_LINE_N) and its definition goes
+    to the start of the first line of the function around it; every line stays where it was."""
+    if not _CAST_RECORD.search(text):
+        return text
+    lines = text.split("\n")
+    out = []
+    last = 0
+    definitions: dict[int, list[str]] = {}
+    for m in _CAST_RECORD.finditer(text):
+        line = text.count("\n", 0, m.start())
+        start = None
+        for i in range(line, -1, -1):
+            if i != line and lines[i].startswith("}"):
+                break  # the end of the function before: this cast is in none
+            if _FUNCTION_START.match(lines[i]) and not lines[i].rstrip().endswith(";"):
+                start = i
+                break
+        if start is None:
+            continue  # not in a function (a macro in a header): left as it is
+        name = f"openrac_cast_{line + 1}_{len(definitions.get(start, []))}"
+        body = " ".join(m.group(2).split())
+        definitions.setdefault(start, []).append(f"{m.group(1)} {name} {{ {body} }};")
+        # The lines the record ran over are kept, empty.
+        out.append(text[last:m.start()] + f"({m.group(1)} {name}" + "\n" * m.group(0).count("\n"))
+        last = m.end()
+    lines = ("".join(out) + text[last:]).split("\n")
+    for start, records in definitions.items():
+        lines[start] = " ".join(records) + " " + lines[start]
+    return "\n".join(lines)
+
+
 def prepare(text: str) -> str:
-    return widen_long(split_multiline_strings(blank_file_scope_asm(text)))
+    return name_cast_records(widen_long(split_multiline_strings(blank_file_scope_asm(text))))
 
 
 _INCLUDE_ASM = re.compile(r'^[ \t]*(?:INCLUDE_ASM|ASM_FUNC|LINKER_REMNANT)\(\s*"[^"]*"\s*,\s*(\w+)\s*\)\s*;?[ \t]*(?:/\*.*?\*/)?[ \t]*$', re.M)

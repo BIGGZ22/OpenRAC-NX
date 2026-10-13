@@ -478,6 +478,26 @@ class Preparation(unittest.TestCase):
         self.assertNotIn("nop", out)
         self.assertIn('__asm__("sync")', out)
 
+    def test_a_record_defined_in_a_cast_is_named_before_its_function(self):
+        # Clang's JSON leaves such a record out; named and defined ahead of the function (the
+        # statement may be a loop's whole body), hostgen can lay it out.
+        src = ("int g;\n"
+               "void f(int i)\n"
+               "{\n"
+               "    for (i = 0; i < 8; i++)\n"
+               "        ((struct { char pad[8];\n"
+               "                   int v[8]; } *)&g)->v[i] = -1;\n"
+               "}\n"
+               "#define PEEK(p) ((struct { int x; } *)(p))\n")
+        out = prep.name_cast_records(src)
+        lines = out.split("\n")
+        self.assertEqual(len(lines), len(src.split("\n")))
+        self.assertEqual(lines[1], "struct openrac_cast_5_0 { char pad[8]; int v[8]; }; void f(int i)")
+        self.assertIn("((struct openrac_cast_5_0", lines[4])
+        self.assertEqual(lines[5].strip(), "*)&g)->v[i] = -1;")
+        self.assertEqual(lines[7], "#define PEEK(p) ((struct { int x; } *)(p))")  # no function: as it was
+        self.assertEqual(prep.name_cast_records("int a;\n"), "int a;\n")
+
 
 if __name__ == "__main__":
     unittest.main()
