@@ -23,15 +23,24 @@ the window's own resolution. Until it is first shown nothing of it exists
 | Key | |
 |---|---|
 | F3 | show or hide the overlay |
-| F5 | pause or resume the game (overlay shown) |
+| F5 | pause or resume the game |
 | F6 | run one tick, then pause again |
 | F7 / F8 | slower / faster: the game at 1/2, 1/4, 1/8, 1/16 of its speed |
-| F12 | write the window, overlay included, to `openrac_window_<tick>.png` in the working directory |
+| F12 | write the window as it is shown to `openrac_window_<tick>.png` in the working directory |
+
+F5 to F8 and F12 work whether the overlay is shown or not. While the game is
+paused or slowed, a line at the top of the picture says so and names the keys
+that undo it; a screenshot says where it went.
+
+The same keys are menus. On Windows and Linux a bar along the window's top
+has View, Sound and Developer, with a tick beside what is on; Alt by itself
+hides it and shows it again, and View > "Hide these menus" hides it (the
+`menu_bar` setting keeps the choice). On macOS the system's menu bar has
+those menus instead; `OPENRAC_MENU_BAR=1` shows the in-window bar there too.
 
 F1, F2, F9, F10 and F11 keep their meanings (the level menu of developer
 mode, the frame counter, volume, fullscreen). Escape pauses, as Start does;
-the program ends when its window is closed (Cmd+Q on a Mac). On macOS the
-menu bar has the same keys as menus: View, Sound and Developer. On a Mac
+the program ends when its window is closed (Cmd+Q on a Mac). On a Mac
 laptop the F keys need Fn held, unless "Use F1, F2, etc. keys as standard
 function keys" is on in the keyboard settings. The mouse works on the overlay;
 the game does not use it. Keys go to the game unless a text field of the

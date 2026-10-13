@@ -27,6 +27,7 @@
 
 #include "common/log.h"
 #include "common/stats.h"
+#include "settings.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
 #include "renderer/gl.h"
@@ -134,6 +135,10 @@ struct State {
     int shots = 0;
 
     std::string message;  // what the last action said (a reload, a file written)
+    std::string toast;    // the same for an action taken with the panel hidden, shown a moment
+    double toast_until = 0.0;
+    bool alt_alone = false;  // Alt went down and no other key since: its release toggles the menus
+    bool developer = false;  // the launcher's developer tools (OPENRAC_DEVELOPER): the level select
     std::string dump_path = "openrac_frames.jsonl";
 
     // The processor's load, measured each half second.
@@ -243,6 +248,9 @@ void configure() {
         return;
     }
     s.configured = true;
+    if (const char* developer = std::getenv("OPENRAC_DEVELOPER")) {
+        s.developer = developer[0] != '\0' && developer[0] != '0';
+    }
     // OPENRAC_OVERLAY: shown from the start; a list of names opens those sections ("all": every
     // one), "inspect" selects the hero and opens the inspector, "labels" names the mobys in view,
     // "memview" opens the memory viewer.
@@ -360,9 +368,6 @@ void configure() {
 void set_visible(bool on) {
     s.visible = on;
     stats::set_enabled(stats::Client::Overlay, on);
-    if (!on && s.paused && s.held_frames == 0) {
-        s.paused = false;  // a hidden overlay holds nothing
-    }
 }
 
 bool initialise(SDL_Window* window) {
@@ -1299,6 +1304,109 @@ void write_window(const std::string& path, int width, int height) {
     }
 }
 
+// The menus along the window's top, as OpenGOAL has them: on Windows and Linux. macOS has its own
+// menu bar, with the same menus (platform/macos_app.mm).
+#if defined(__APPLE__)
+constexpr bool kMenuBar = false;
+#else
+constexpr bool kMenuBar = true;
+#endif
+
+// OPENRAC_MENU_BAR=1 has them on macOS as well (for looking at them there).
+bool menu_bar_possible() {
+    static const bool forced = std::getenv("OPENRAC_MENU_BAR") != nullptr;
+    return kMenuBar || forced;
+}
+
+bool menu_bar_shown() {
+    return menu_bar_possible() && settings::get().menu_bar;
+}
+
+// A menu item presses the key the port already answers, as the macOS menus do.
+void press(SDL_Keycode key) {
+    SDL_Event event;
+    SDL_zero(event);
+    event.type = SDL_EVENT_KEY_DOWN;
+    event.key.key = key;
+    event.key.down = true;
+    SDL_PushEvent(&event);
+    event.type = SDL_EVENT_KEY_UP;
+    event.key.down = false;
+    SDL_PushEvent(&event);
+}
+
+void menu_bar() {
+    if (!ImGui::BeginMainMenuBar()) {
+        return;
+    }
+    if (ImGui::BeginMenu("View")) {
+        if (ImGui::MenuItem("Full screen", "F11")) press(SDLK_F11);
+        if (ImGui::MenuItem("Frame counter", "F2", settings::get().show_fps)) press(SDLK_F2);
+        ImGui::Separator();
+        if (ImGui::MenuItem("Hide these menus", "Alt")) {
+            settings::get().menu_bar = false;
+            settings::save();
+            s.toast = "Alt shows the menus again";
+            s.toast_until = ImGui::GetTime() + 4.0;
+        }
+        ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Sound")) {
+        if (ImGui::MenuItem("Volume up", "F10")) press(SDLK_F10);
+        if (ImGui::MenuItem("Volume down", "F9")) press(SDLK_F9);
+        ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Developer")) {
+        if (ImGui::MenuItem("Debug overlay", "F3", s.visible)) press(SDLK_F3);
+        ImGui::Separator();
+        if (ImGui::MenuItem("Pause", "F5", s.paused)) press(SDLK_F5);
+        if (ImGui::MenuItem("Step one tick", "F6")) press(SDLK_F6);
+        if (ImGui::MenuItem("Slower", "F7", false, s.stretch < 16.0)) press(SDLK_F7);
+        if (ImGui::MenuItem("Faster", "F8", false, s.stretch > 1.0)) press(SDLK_F8);
+        ImGui::Separator();
+        if (ImGui::MenuItem("Screenshot", "F12")) press(SDLK_F12);
+        if (s.developer) {
+            ImGui::Separator();
+            if (ImGui::MenuItem("Level select", "F1")) press(SDLK_F1);
+        }
+        ImGui::EndMenu();
+    }
+    ImGui::EndMainMenuBar();
+}
+
+// What the keys of pause and speed have set, said in the picture whether the panel is shown or
+// not: a game standing still or running at a quarter speed with nothing saying why is a puzzle.
+void status_badge() {
+    if (!s.toast.empty() && ImGui::GetTime() >= s.toast_until) {
+        s.toast.clear();
+    }
+    std::string line;
+    if (s.paused) {
+        line = "PAUSED    F5 resume    F6 one tick";
+    } else if (s.stretch != 1.0) {
+        line = std::format("SPEED 1/{}    F8 faster    F7 slower", static_cast<int>(s.stretch));
+    }
+    if (line.empty() && s.toast.empty()) {
+        return;
+    }
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + viewport->WorkSize.x * 0.5f, viewport->WorkPos.y + 10.0f),
+                            ImGuiCond_Always, ImVec2(0.5f, 0.0f));
+    ImGui::SetNextWindowBgAlpha(0.82f);
+    const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize
+                                   | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing
+                                   | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoInputs;
+    if (ImGui::Begin("OpenRAC status", nullptr, flags)) {
+        if (!line.empty()) {
+            text_coloured(s.paused ? kRed : kYellow, "{}", line);
+        }
+        if (!s.toast.empty()) {
+            text_coloured(kDim, "{}", s.toast);
+        }
+    }
+    ImGui::End();
+}
+
 }  // namespace
 
 void request() {
@@ -1318,31 +1426,45 @@ bool event(const SDL_Event& e) {
             s.wanted = false;
             return true;
         }
-        if (s.visible) {
-            switch (e.key.key) {
-                case SDLK_F5:
-                    s.paused = !s.paused;
-                    s.held_frames = 0;
-                    return true;
-                case SDLK_F6:
-                    s.paused = true;
-                    s.step = true;
-                    return true;
-                case SDLK_F7:
-                    s.stretch = std::min(s.stretch * 2.0, 16.0);
-                    return true;
-                case SDLK_F8:
-                    s.stretch = std::max(s.stretch / 2.0, 1.0);
-                    return true;
-                case SDLK_F12:
-                    s.shot_path = std::format("openrac_window_{}.png", s.tick);
-                    return true;
-                default:
-                    break;
-            }
+        // Pause, step, speed and the screenshot are their own: they work with the panel hidden,
+        // and say so in the picture (status_badge).
+        switch (e.key.key) {
+            case SDLK_F5:
+                s.paused = !s.paused;
+                s.held_frames = 0;
+                return true;
+            case SDLK_F6:
+                s.paused = true;
+                s.step = true;
+                return true;
+            case SDLK_F7:
+                s.stretch = std::min(s.stretch * 2.0, 16.0);
+                return true;
+            case SDLK_F8:
+                s.stretch = std::max(s.stretch / 2.0, 1.0);
+                return true;
+            case SDLK_F12:
+                s.shot_path = std::format("openrac_window_{}.png", s.tick);
+                return true;
+            default:
+                break;
         }
     }
-    if (!s.visible || !s.initialised) {
+    if (menu_bar_possible()) {
+        // Alt by itself hides and shows the menus (Alt+Return is fullscreen: another key in between
+        // makes it not by itself).
+        const bool alt = e.type == SDL_EVENT_KEY_DOWN || e.type == SDL_EVENT_KEY_UP
+                             ? e.key.key == SDLK_LALT || e.key.key == SDLK_RALT
+                             : false;
+        if (e.type == SDL_EVENT_KEY_DOWN) {
+            s.alt_alone = alt;
+        } else if (e.type == SDL_EVENT_KEY_UP && alt && s.alt_alone) {
+            s.alt_alone = false;
+            settings::get().menu_bar = !settings::get().menu_bar;
+            settings::save();
+        }
+    }
+    if (!(s.visible || menu_bar_shown()) || !s.initialised) {
         return false;
     }
     ImGui_ImplSDL3_ProcessEvent(&e);
@@ -1386,6 +1508,7 @@ void tick(const Tick& t) {
     stats::gauge("effect_quads", static_cast<double>(t.effect_quads));
     stats::gauge("packet_bytes", static_cast<double>(t.packet_bytes));
     stats::gauge("level", static_cast<double>(t.level));
+    s.tick = t.tick;  // a screenshot is named after it, with the panel shown or not
     if (!s.visible) {
         return;
     }
@@ -1444,12 +1567,14 @@ void draw(const Shown& shown) {
     }
     stats::lap("present");
     s.window = shown.window;
-    if (!s.visible || shown.window == nullptr || !initialise(shown.window)) {
+    const bool badge = s.paused || s.stretch != 1.0 || !s.toast.empty();
+    if (!(s.visible || menu_bar_shown() || badge || !s.shot_path.empty()) || shown.window == nullptr
+        || !initialise(shown.window)) {
         return;
     }
     const stats::Scope scope("overlay");
     // The processor's load, each half second.
-    if (const stats::Frame* f = stats::history(0); f != nullptr && f->start_s - s.cpu_wall >= 0.5) {
+    if (const stats::Frame* f = stats::history(0); s.visible && f != nullptr && f->start_s - s.cpu_wall >= 0.5) {
         const double seconds = stats::process_cpu_seconds();
         s.cpu_load = s.cpu_wall > 0.0 ? (seconds - s.cpu_seconds) / (f->start_s - s.cpu_wall) : 0.0;
         s.cpu_seconds = seconds;
@@ -1460,10 +1585,16 @@ void draw(const Shown& shown) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
-    panel(shown);
-    inspector_window();
-    memory_viewer_window();
-    picture_marks(shown);
+    if (menu_bar_shown()) {
+        menu_bar();
+    }
+    if (s.visible) {
+        panel(shown);
+        inspector_window();
+        memory_viewer_window();
+        picture_marks(shown);
+    }
+    status_badge();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     renderer::gl_stats::reset_binds();
@@ -1484,6 +1615,8 @@ void draw(const Shown& shown) {
     }
     if (!s.shot_path.empty()) {
         write_window(s.shot_path, shown.window_width, shown.window_height);
+        s.toast = "saved " + s.shot_path;
+        s.toast_until = ImGui::GetTime() + 2.5;
         s.shot_path.clear();
     }
 }

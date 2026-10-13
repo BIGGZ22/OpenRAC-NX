@@ -42,6 +42,7 @@ needs the game started again.
 | Frame rate | `frame_rate` | `display`, `original`, a number, `unlimited` | How many frames are drawn (section 2). The page offers 30, 60, 75, 90, 120, 144, 165, 240 and 360; a file may hold any number from 20 to 1000 |
 | Frame cap | `frame_rate` | | The same key from another side: turns the cap on and moves it five frames a second at a time, for a rate the list does not have |
 | Frame counter (F2) | `show_fps` | `0`, `1` | Frames shown a second and what drawing one costs, in the picture's corner |
+| (Alt) | `menu_bar` | `1`, `0` | The menus along the window's top on Windows and Linux (macOS has them in its own menu bar) |
 | Mute in background | `mute_unfocused` | `0`, `1` | Silence while another window has the keyboard |
 | (F9, F10) | `volume` | `100`, `0` to `100` | How loud everything the port plays is |
 

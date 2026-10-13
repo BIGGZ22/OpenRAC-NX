@@ -79,6 +79,7 @@ struct Settings {
     FrameRate frame_rate = FrameRate::Display;
     int frame_cap = 60;  // FrameRate::Capped's frames a second
     bool show_fps = false;  // the frame-rate counter in the picture's corner
+    bool menu_bar = true;   // the menus along the window's top (not on macOS, whose menu bar has them); Alt hides and shows it
     bool mute_unfocused = false;  // silence while another window has the keyboard
     int volume = 100;  // of everything the port plays, 0 (nothing at all) to 100 (as mixed)
 };

@@ -202,6 +202,8 @@ void load(const std::filesystem::path& file) {
             has_frame_rate = has_frame_rate || known;
         } else if (key == "show_fps") {
             known = parse_bool(value, s.show_fps);
+        } else if (key == "menu_bar") {
+            known = parse_bool(value, s.menu_bar);
         } else if (key == "mute_unfocused") {
             known = parse_bool(value, s.mute_unfocused);
         } else if (key == "volume") {
@@ -254,6 +256,7 @@ void save() {
         << "vsync = " << kVSync[static_cast<int>(s.vsync)] << "\n"
         << "frame_rate = " << frame_rate_value(s) << "\n"
         << "show_fps = " << (s.show_fps ? 1 : 0) << "\n"
+        << "menu_bar = " << (s.menu_bar ? 1 : 0) << "\n"
         << "mute_unfocused = " << (s.mute_unfocused ? 1 : 0) << "\n"
         << "volume = " << s.volume << "\n";
 }
