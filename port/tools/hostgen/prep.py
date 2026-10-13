@@ -208,8 +208,19 @@ def name_cast_records(text: str) -> str:
     return "\n".join(lines)
 
 
+# A 128-bit integer written as a type name: "int __attribute__((mode(TI)))" before a "*" or a ")".
+_WIDE_CAST = re.compile(r"\b(unsigned\s+)?int\s+__attribute__\(\(mode\(TI\)\)\)(?=\s*[*)])")
+
+
+def name_wide_casts(text: str) -> str:
+    """Clang keeps a mode attribute on a declaration and drops it from a type name, so a copy
+    through `*(int __attribute__((mode(TI))) *)p` moved 4 bytes of the 16. The type is written as
+    openrac_ti / openrac_uti (openrac_hostgen.h), which carry the attribute in their typedefs."""
+    return _WIDE_CAST.sub(lambda m: "openrac_uti" if m.group(1) else "openrac_ti", text)
+
+
 def prepare(text: str) -> str:
-    return name_cast_records(widen_long(split_multiline_strings(blank_file_scope_asm(text))))
+    return name_wide_casts(name_cast_records(widen_long(split_multiline_strings(blank_file_scope_asm(text)))))
 
 
 _INCLUDE_ASM = re.compile(r'^[ \t]*(?:INCLUDE_ASM|ASM_FUNC|LINKER_REMNANT)\(\s*"[^"]*"\s*,\s*(\w+)\s*\)\s*;?[ \t]*(?:/\*.*?\*/)?[ \t]*$', re.M)

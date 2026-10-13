@@ -523,6 +523,18 @@ class Preparation(unittest.TestCase):
         self.assertEqual(lines[7], "#define PEEK(p) ((struct { int x; } *)(p))")  # no function: as it was
         self.assertEqual(prep.name_cast_records("int a;\n"), "int a;\n")
 
+    def test_wide_cast_is_named(self):
+        """A 128-bit integer as a type name becomes openrac_ti: Clang drops the attribute there."""
+        src = ("*(int __attribute__((mode(TI))) *)a = *(unsigned int __attribute__((mode(TI))) *)(b + 0x10);\n"
+               "typedef int Quad __attribute__((mode(TI)));\n"
+               "int __attribute__((mode(TI))) whole;\n"
+               "print __attribute__((mode(TI))) *p;\n")
+        out = prep.name_wide_casts(src).split("\n")
+        self.assertEqual(out[0], "*(openrac_ti *)a = *(openrac_uti *)(b + 0x10);")
+        self.assertEqual(out[1], "typedef int Quad __attribute__((mode(TI)));")
+        self.assertEqual(out[2], "int __attribute__((mode(TI))) whole;")
+        self.assertEqual(out[3], "print __attribute__((mode(TI))) *p;")
+
 
 if __name__ == "__main__":
     unittest.main()
