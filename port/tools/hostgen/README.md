@@ -102,6 +102,8 @@ describes every key). What hostgen itself reads:
 | `places` | where each level function sits in each level (`config/overlays/functions.tsv` of rac1/pal) |
 | `groups` | parts of the tree that are programs of their own, loaded over part of the executable (Up Your Arsenal's menu, `src/frontbin`): their definitions are their own symbols (`func_00385750__frontbin`) in their own overlay, and their calls find their own functions first |
 | `candidates` | a table in the decompilation (`name<TAB>file` lines, the file relative to the decompilation) of C for functions it still has as assembly: near misses that do what the retail function does without matching its bytes. Each goes at the end of its file in place of the stub ([prep.py](prep.py)); the report counts them. A missing table means none. rac1/pal's is `nonmatching/functional.tsv`, the near misses its `tools/equiv.py` finds to be the same program |
+| `hand` | a table beside the game's configuration (`name<TAB>file`, the file relative to the table) of the port's own C for functions the decompilation has as assembly: placed like a candidate, and before one for the same function |
+| `drafts` | `{"guard": "NON_MATCHING", "units": "drafts.tsv"}`: files of the decompilation (one a line, from its top) whose own pending C, kept under the `#else` of `#ifndef <guard>` around the assembly stub, is read in place of the stub. For a decompilation that keeps drafts it never compiles (the NTSC decomp); a file whose stub a candidate replaced keeps the candidate |
 | `level_hooks` | stubs of the executable that only return, which every level's program fills with a function of its own (rac1/pal's `func_001E9780` to `func_001E97C0`). A call to one from engine code the levels also carry goes to what the loaded level's copy calls at the same instruction (`openrac_hook_in_copy`, [guest.h](../../runtime/include/openrac/guest.h)); in the executable's own program it is the stub |
 | `libraries` | the game's table of library entry points ([port/game/rac1-pal/libraries.tsv](../../game/rac1-pal/libraries.tsv)) |
 | `library_api` | the shared replacements' table, `../common/libraries.tsv` by default |
@@ -117,7 +119,8 @@ host version is still to be written (`todo`).
 
 Two spellings of one address (`FUN_0020c828` and `func_0020C828`) are one
 function: a call to a name without C goes to the function with C at the same
-place.
+place, and so does a call through the address (`functions.c` lists the one
+with C). A level function is one named `func_Lnn_...` or `FUN_Lnn_...`.
 
 ## Output
 
