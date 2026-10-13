@@ -60,6 +60,15 @@ class Compress(unittest.TestCase):
         for data in self.samples():
             self.assertEqual(wad(compress(data)), data)
 
+    def test_opens_as_the_retail_streams_do(self):
+        """With a literal packet or a match that copies nothing, never LZO's opening byte (a
+        literal count plus 0x11), which the port's decoder reads as a match with nothing before it."""
+        for data in list(self.samples()) + [b"ab", bytes(range(200)) * 3]:
+            stream = compress(data)
+            if data:
+                self.assertLessEqual(stream[16], 0x11, hex(stream[16]))
+            self.assertEqual(wad(stream), data)
+
     def test_blocks_as_the_game_reads_them(self):
         """No packet crosses a block's end; a block that is followed by another ends with a skip
         and room after it."""

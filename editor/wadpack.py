@@ -115,12 +115,10 @@ class _Writer:
             self.skip()
 
     def literals(self, data: bytes) -> None:
+        # The stream opens with an ordinary literal packet, as every retail one does (0x00, 0x06,
+        # 0x0a on the PAL disc's gameplay files): LZO's opening byte, a literal count plus 0x11,
+        # is a match to the port's decoder (port/assets/disc/wad.cpp), with nothing to copy from.
         while data:
-            if len(self.out) == HEADER and len(data) >= 1:
-                take = min(len(data), 238, BLOCK - len(SKIP) - ROOM - 1)
-                self.out += bytes((take + 0x11,)) + data[:take]
-                self.after_literals, self.trail, data = True, None, data[take:]
-                continue
             if len(data) <= 3 and self.trail is not None and not self.after_literals:
                 self.fit(len(data))
                 if self.trail is not None:            # still in the block of that match
