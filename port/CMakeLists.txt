@@ -42,6 +42,8 @@ enable_testing()
 # ---- common: the log and small helpers, no dependencies ----
 add_library(openrac_common STATIC
   common/log.cpp
+  common/process.cpp
+  common/stats.cpp
 )
 target_include_directories(openrac_common PUBLIC .)
 openrac_warnings(openrac_common)
