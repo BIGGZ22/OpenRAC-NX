@@ -288,6 +288,18 @@ int func_0012DDC0(void) {
             break;
         }
         const uint32_t reply = openrac_sound_command(command, batch + at + 4, size);
+        /* OPENRAC_SOUND_LOG: each command the game sends its sound driver, with its first words and
+         * the reply, on stderr. */
+        static int sound_log = -1;
+        if (sound_log < 0) {
+            sound_log = getenv("OPENRAC_SOUND_LOG") != NULL;
+        }
+        if (sound_log) {
+            uint32_t w[4] = {0, 0, 0, 0};
+            memcpy(w, batch + at + 4, size < sizeof w ? size : sizeof w);
+            fprintf(stderr, "[debug] sound command %#x (%u bytes): %#x %#x %#x %#x -> %#x\n", command, size, w[0],
+                    w[1], w[2], w[3], reply);
+        }
         at += (4u + size + 3u) & ~3u;
         if (callbacks[i].function != 0) {
             GFN(void (*)(int, long long), callbacks[i].function)((int)reply, (long long)callbacks[i].argument);

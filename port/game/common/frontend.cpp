@@ -1518,6 +1518,43 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
                   word_at(ram, 0x0015EFBC), word_at(ram, word_at(ram, 0x001517D0) + 8) & 0xFFFF);
     }
 
+    // OPENRAC_MOBY_LOG=N[:RADIUS]: every N ticks, the mobys within RADIUS game units of the hero
+    // (default 20) in the log: class, address, state, mode bits, animation, position, the distance,
+    // the collision radius and the update function, for seeing what an object is doing.
+    static const char* moby_log = std::getenv("OPENRAC_MOBY_LOG");
+    if (moby_log != nullptr && std::atoi(moby_log) > 0 && g->index % static_cast<std::uint64_t>(std::atoi(moby_log)) == 0) {
+        const char* colon = std::strchr(moby_log, ':');
+        const float radius = colon != nullptr ? static_cast<float>(std::atof(colon + 1)) : 20.0f;
+        const viewer::LiveMoby* hero = nullptr;
+        for (const viewer::LiveMoby& m : state.mobys) {
+            if (m.class_id == 0) {
+                hero = &m;
+                break;
+            }
+        }
+        for (const viewer::LiveMoby& m : state.mobys) {
+            if (hero == nullptr || m.address + 0x100 > ram.size()) {
+                continue;
+            }
+            const float dx = m.matrix[12] - hero->matrix[12], dy = m.matrix[13] - hero->matrix[13],
+                        dz = m.matrix[14] - hero->matrix[14];
+            const float d = std::sqrt(dx * dx + dy * dy + dz * dz);
+            if (d > radius) {
+                continue;
+            }
+            const std::uint8_t* b = ram.data() + m.address;
+            float sphere[4];
+            float t = 0.0f;
+            std::memcpy(sphere, b, sizeof sphere);
+            std::memcpy(&t, b + 0x54, 4);
+            log::info("moby {} class {} at {:#x}: state {} mode {:#06x} seq {} frame {} t {:.2f} pos {:.2f} {:.2f} {:.2f} "
+                      "dist {:.2f} radius {:.2f} update {:#x} pvars {:#x} draw {} {} {:#x}",
+                      g->index, m.class_id, m.address, b[0x20], static_cast<unsigned>(b[0x34] | b[0x35] << 8), b[0x52],
+                      b[0x50], t, m.matrix[12], m.matrix[13], m.matrix[14], d, sphere[3], word_at(ram, m.address + 0x74),
+                      word_at(ram, m.address + 0x78), b[0x30], b[0x31], static_cast<unsigned>(b[0x32] | b[0x33] << 8));
+        }
+    }
+
     // The live mobys, by class, each in the pose its animation fields give (viewer/moby_pose.h):
     // its joint palette goes to the scene, which skins the class's mesh with it. OPENRAC_ANIM=0
     // draws every moby in its bind pose.
