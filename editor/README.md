@@ -125,9 +125,18 @@ The disc image is never written. The native port reads the folder with
 launcher's Mods page does all three steps (edit, pack, play).
 
 What is packed today: **mobys that were moved, turned, scaled, given another
-class, or given other values** (the `rc1_*` metadata in the Inspector). A
-moby keeps one scale for all three axes. Not yet: mobys that were added or
-deleted (reported in `changes.txt` and left out), ties, shrubs and terrain.
+class, given other values** (the `rc1_*` metadata in the Inspector), **added
+or deleted**. A moby keeps one scale for all three axes. Not yet: ties,
+shrubs and terrain, and mobys of a class the level does not load.
+
+An added moby is a copy made in Godot (Ctrl+D) or one of the level's class
+scenes dropped under `Game/Mobys`. It takes after the moby it copies (or the
+level's first moby of its class): the same values, a spawn number of its own,
+a copy of that moby's pvars, and a place in its group. A deleted moby leaves
+the table, and the groups and pvar links that name mobys by their place in
+it follow ([gameplay.py](gameplay.py)). A level the game gives more mobys
+than it has room for is not caught yet: the room is what the level's own
+"spare" count and memory allow.
 
 How it stays exact ([pack.py](pack.py), [wadpack.py](wadpack.py)):
 

@@ -4,6 +4,7 @@ import math
 import struct
 import unittest
 
+import gameplay as gp
 from godot import transform
 from mobys import FIELDS, POINTER, RECORD, SIZE, USUAL, moby_instances
 from pack import pack_level, placement, scene_mobys
@@ -82,18 +83,85 @@ class PackLevel(unittest.TestCase):
         after = moby_instances(out)[2]
         self.assertEqual((after["class_id"], after["fields"]["spawn_id"], after["fields"]["draw_distance"]), (7, 99, 200))
 
-    def test_added_and_deleted_mobys_are_reported(self):
+
+
+def level() -> bytes:
+    """A gameplay file with what belongs to its mobys: three of them (the second with pvars, in
+    group 1 with the third), seven spare runtime mobys, two pvar blocks whose first word is a
+    moby's place in the table (a link) and whose second is a pointer into the block, and a
+    shared record for the second block."""
+    out = bytearray(gameplay([{"x": 1.0}, {"x": 2.0, "pvar_index": 1, "group": 1}, {"x": 3.0, "group": 1}]))
+    struct.pack_into("<i", out, 0x100 + 4, 7)
+
+    def section(pointer: int, data: bytes) -> None:
+        out.extend(bytes(-len(out) % 16))
+        struct.pack_into("<i", out, pointer, len(out))
+        out.extend(data)
+
+    section(gp.GROUPS, gp.write_groups([None, [1, 2]]))
+    section(gp.TABLE, struct.pack("<4i", 0, 16, 16, 16))
+    section(gp.DATA, struct.pack("<8i", 2, 4, 0, 0, 0, 8, 0x55, 0))
+    section(gp.LINKS, gp.write_fixups([(0, 0), (1, 0)]))
+    section(gp.POINTERS, gp.write_fixups([(1, 4)]))
+    section(gp.SHARED, gp.write_shared(b"\x07" * 16, [(1, 8, 4)]))
+    out.extend(bytes(-len(out) % 16))
+    return bytes(out)
+
+
+class AddAndDelete(unittest.TestCase):
+    def setUp(self):
+        self.data = level()
+
+    def pvar(self, data: bytes, index: int) -> tuple:
+        at, size = gp.pvar_table(data, index + 1)[index]
+        return struct.unpack_from(f"<{size // 4}i", data, gp.offset(data, gp.DATA) + at)
+
+    def test_a_copy_is_a_new_moby_with_a_spawn_number_pvars_and_a_place_in_its_group(self):
         def edit(index, node):
-            if index == 0:
-                return []                                             # deleted
-            if index == 2:
-                return node + ["", node[0].replace("Moby_0002", "Moby_0003")] + node[1:]   # duplicated
-            return node
+            if index != 1:
+                return node
+            copy = [node[0].replace("Moby_0001", "Moby_0003")] + node[1:]
+            copy[2] = "transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 8, 7)"
+            return node + [""] + copy
         out, changes, problems = pack_level(0, self.data, scene(self.data, edit))
-        self.assertEqual(out, self.data)
-        self.assertEqual(len(problems), 2)
-        self.assertIn("a copy of Moby_0002", problems[0])
-        self.assertIn("moby 0 of the level's table: deleted", problems[1])
+        self.assertEqual(problems, [])
+        self.assertEqual(changes, ["Moby_0003: added, after moby 1"])
+        mobys = moby_instances(out)
+        self.assertEqual(len(mobys), 4)
+        self.assertEqual(gp.records(out)[:3], gp.records(self.data))            # the table's own: as they were
+        self.assertEqual(struct.unpack_from("<i", out, gp.offset(out, gp.MOBYS) + 4)[0], 7)   # the spare mobys
+        new = mobys[3]["fields"]
+        self.assertEqual(mobys[3]["matrix"][12:15], [9.0, 8.0, 7.0])
+        self.assertEqual((new["spawn_id"], new["pvar_index"], new["group"]), (3, 2, 1))
+        self.assertEqual(gp.groups(out), [None, [1, 2, 3]])
+        self.assertEqual(self.pvar(out, 2), self.pvar(out, 1))                  # a block of its own, the same
+        self.assertNotEqual(gp.pvar_table(out, 3)[2][0], gp.pvar_table(out, 3)[1][0])
+        self.assertEqual(gp.pvar_table(out, 3)[2][0] % 16, 0)
+        self.assertEqual(gp.fixups(out, gp.LINKS), [(0, 0), (1, 0), (2, 0)])
+        self.assertEqual(gp.fixups(out, gp.POINTERS), [(1, 4), (2, 4)])
+        self.assertEqual(gp.shared(out), (b"\x07" * 16, [(1, 8, 4), (2, 8, 4)]))
+
+    def test_a_class_scene_dropped_in_takes_after_the_levels_first_moby_of_its_class(self):
+        text = scene(self.data) + ('\n[node name="Crate" parent="Game/Mobys" instance=ExtResource("moby_500")]\n'
+                                   "transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 5, 6)\n")
+        out, changes, problems = pack_level(0, self.data, text)
+        self.assertEqual((changes, problems), (["Crate: added, after moby 0"], []))
+        new = moby_instances(out)[3]
+        self.assertEqual((new["class_id"], new["matrix"][12:15], new["fields"]["spawn_id"]), (500, [4.0, 5.0, 6.0], 3))
+
+    def test_a_deleted_moby_closes_the_table_and_what_names_mobys_follows(self):
+        out, changes, problems = pack_level(0, self.data, scene(self.data, lambda i, node: [] if i == 1 else node))
+        self.assertEqual((changes, problems), (["BoltCrate_0001: deleted"], []))
+        self.assertEqual(gp.records(out), [gp.records(self.data)[0], gp.records(self.data)[2]])
+        self.assertEqual(gp.groups(out), [None, [1]])                           # the third moby is now the second
+        self.assertEqual(self.pvar(out, 0)[0], 1)                               # block 0 linked to it: follows
+        self.assertEqual(self.pvar(out, 1)[0], 0)                               # block 1's is the first: stays
+        self.assertEqual(len(out), len(self.data))                              # nothing grew: all in place
+
+    def test_a_link_to_a_deleted_moby_becomes_none(self):
+        out, _, _ = pack_level(0, self.data, scene(self.data, lambda i, node: [] if i == 2 else node))
+        self.assertEqual(self.pvar(out, 0)[0], -1)
+        self.assertEqual(gp.groups(out), [None, [1]])
 
 
 class Placement(unittest.TestCase):
