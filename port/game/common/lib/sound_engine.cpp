@@ -29,6 +29,16 @@ using namespace openrac;
 
 std::mutex g_lock;
 
+// A place on the disc image, which is larger than 2 GB: fseek takes a long, 32 bits on Windows,
+// where a sector past the first million (the music) would wrap.
+bool seek_disc(std::FILE* disc, std::uint64_t at) {
+#if defined(_WIN32)
+    return _fseeki64(disc, static_cast<long long>(at), SEEK_SET) == 0;
+#else
+    return fseeko(disc, static_cast<off_t>(at), SEEK_SET) == 0;
+#endif
+}
+
 // Never destroyed: the output's thread may still render while the program exits.
 audio::SoundPlayer& player() {
     static auto* p = new audio::SoundPlayer;
@@ -89,15 +99,15 @@ void read_track(std::uint32_t sector, std::shared_ptr<Track> track) {
     std::uint32_t rate = 0;
     if (std::FILE* disc =
             openrac_game_disc_image ? std::fopen(openrac_game_disc_image, "rb") : nullptr) {
-        const long at = static_cast<long>(sector) * 2048;
+        const std::uint64_t at = static_cast<std::uint64_t>(sector) * 2048;
         std::uint8_t header[0x30];
-        if (std::fseek(disc, at, SEEK_SET) == 0
+        if (seek_disc(disc, at)
             && std::fread(header, 1, sizeof header, disc) == sizeof header
             && std::memcmp(header, "VAGp", 4) == 0) {
             const std::uint32_t size = static_cast<std::uint32_t>(header[12]) << 24
                                        | header[13] << 16 | header[14] << 8 | header[15];
             std::vector<std::uint8_t> file(sizeof header + size);
-            if (size > 0 && size < 64u * 1024 * 1024 && std::fseek(disc, at, SEEK_SET) == 0
+            if (size > 0 && size < 64u * 1024 * 1024 && seek_disc(disc, at)
                 && std::fread(file.data(), 1, file.size(), disc) == file.size()) {
                 try {
                     const assets::VagFile vag = assets::parse_vag(file);
@@ -225,14 +235,14 @@ uint32_t openrac_sound_load_bank_from_disc(uint32_t sector, uint32_t offset) {
     if (disc == nullptr) {
         return 0;
     }
-    const long at = static_cast<long>(sector) * 2048 + static_cast<long>(offset);
+    const std::uint64_t at = static_cast<std::uint64_t>(sector) * 2048 + offset;
     std::uint8_t header[72];
     std::vector<std::uint8_t> file;
-    if (std::fseek(disc, at, SEEK_SET) == 0
+    if (seek_disc(disc, at)
         && std::fread(header, 1, sizeof header, disc) == sizeof header) {
         const std::size_t size = bank_size(header, sizeof header);
         file.resize(size);
-        if (size == 0 || std::fseek(disc, at, SEEK_SET) != 0
+        if (size == 0 || !seek_disc(disc, at)
             || std::fread(file.data(), 1, size, disc) != size) {
             file.clear();
         }
