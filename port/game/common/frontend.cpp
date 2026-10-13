@@ -150,7 +150,8 @@ std::vector<std::uint8_t> direct_packets(std::span<const std::uint8_t> ram, std:
                                          std::vector<renderer::EffectVertex>* strip_vertices = nullptr,
                                          std::vector<renderer::EffectStrip>* strips = nullptr,
                                          std::vector<renderer::ImageUpload>* uploads = nullptr,
-                                         std::size_t* before_world = nullptr) {
+                                         std::size_t* before_world = nullptr,
+                                         std::unordered_map<std::uint32_t, std::uint8_t>* sent = nullptr) {
     std::vector<std::uint8_t> vif;
     std::uint32_t tag_at = chain & 0x01FFFFF0;
     std::uint32_t stack[2] = {0, 0};
@@ -399,6 +400,11 @@ std::vector<std::uint8_t> direct_packets(std::span<const std::uint8_t> ram, std:
                 strips->push_back(strip);
             }
             strip_tag = false;
+        }
+    }
+    if (sent != nullptr) {
+        for (const auto& [block, image] : images) {
+            (*sent)[block] = image.dpsm;
         }
     }
     return gif;
@@ -1764,15 +1770,41 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     }
     // The 2D path: the frame's direct GIF data, drawn by the direct renderer.
     (void)chain;
-    k.strip_vertices.clear();
-    k.strips.clear();
+    std::vector<renderer::EffectVertex> strip_vertices;
+    std::vector<renderer::EffectStrip> strips;
     std::size_t before_world = SIZE_MAX;
-    std::vector<std::uint8_t> packets = direct_packets(ram, viewer::shown_chain(ram, a), &k.strip_vertices, &k.strips,
-                                                       &g->effect_uploads, &before_world);
-    k.packets = std::move(packets);
-    // Only a level's frame is ordered so: the boot program (title, main menu) starts VU1 programs
-    // of its own before its 2D path, and draws its world natively, all of its 2D path after it.
-    k.before_world = level >= 0 && level < 19 ? std::min(before_world, k.packets.size()) : 0;
+    std::unordered_map<std::uint32_t, std::uint8_t> sent;
+    std::vector<std::uint8_t> packets = direct_packets(ram, viewer::shown_chain(ram, a), &strip_vertices, &strips,
+                                                       &g->effect_uploads, &before_world, &sent);
+    // The 2D layer packs its textures and their palettes into blocks in the order they are asked
+    // for, and its list sends them before its draws. On the tick a texture joins or leaves (a
+    // message opens, the health changes), the quads drawn natively already name the new blocks
+    // while the list still sends the last tick's: a palette pointer lands on a block filled with
+    // indexed pixels, or a texture pointer on a palette. Drawn so, the health was rings of noise
+    // and a message lost its letters for one tick, every few seconds. The last tick's 2D layer
+    // stands in for that tick; the next list sends the new blocks.
+    const auto indexed = [](std::uint32_t psm) { return psm == 0x13 || psm == 0x14; };
+    const bool stale_textures = std::ranges::any_of(g->ui_quads, [&](const renderer::UiQuad& q) {
+        if (!indexed(static_cast<std::uint32_t>((q.tex0 >> 20) & 0x3F))) {
+            return false;
+        }
+        const auto palette = sent.find(static_cast<std::uint32_t>((q.tex0 >> 37) & 0x3FFF));
+        const auto pixels = sent.find(static_cast<std::uint32_t>(q.tex0 & 0x3FFF));
+        return (palette != sent.end() && indexed(palette->second)) || (pixels != sent.end() && !indexed(pixels->second));
+    });
+    const bool hold_2d = stale_textures && !k.packets.empty();
+    if (stale_textures && debug) {
+        log::info("frame {}: the 2D layer's quads name blocks its list does not send yet; {}", g->index,
+                  hold_2d ? "the last tick's layer stands in" : "nothing to stand in");
+    }
+    if (!hold_2d) {
+        k.strip_vertices = std::move(strip_vertices);
+        k.strips = std::move(strips);
+        k.packets = std::move(packets);
+        // Only a level's frame is ordered so: the boot program (title, main menu) starts VU1 programs
+        // of its own before its 2D path, and draws its world natively, all of its 2D path after it.
+        k.before_world = level >= 0 && level < 19 ? std::min(before_world, k.packets.size()) : 0;
+    }
     if (debug && k.frame % 100 == 0 && !k.strips.empty()) {
         int bare = 0;
         for (const auto& st : k.strips) {
@@ -1791,7 +1823,7 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     // quads of the tick that built it. Without them the card's two lines were left out and only
     // the band behind them was drawn, a blue strip across the picture for the fade's two frames.
     // A list built without native quads has no markers, and the kept ones are not looked at.
-    if (!g->ui_quads.empty()) {
+    if (!g->ui_quads.empty() && !hold_2d) {
         k.ui_quads = std::move(g->ui_quads);
     }
     g->ui_quads.clear();
