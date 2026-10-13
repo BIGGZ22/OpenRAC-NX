@@ -3,7 +3,10 @@
 
 #include "platform/window.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cstdlib>
+#include <filesystem>
 #include <format>
 
 #include <SDL3/SDL.h>
@@ -30,8 +33,109 @@ std::string gl_string(unsigned name) {
 
 constexpr unsigned kGlVersion = 0x1F02;
 constexpr unsigned kGlRenderer = 0x1F01;
+constexpr unsigned kGlVendor = 0x1F00;
+constexpr unsigned kGlShadingLanguageVersion = 0x8B8C;
+constexpr unsigned kGlFramebufferSrgb = 0x8DB9;
+
+// SDL's id of a display counted from 1 as displays() lists them; 0 when there is no such display.
+SDL_DisplayID display_id(int display) {
+    int count = 0;
+    SDL_DisplayID* ids = SDL_GetDisplays(&count);
+    SDL_DisplayID id = 0;
+    if (ids != nullptr && display >= 1 && display <= count) {
+        id = ids[display - 1];
+    }
+    SDL_free(ids);
+    return id;
+}
 
 }  // namespace
+
+#if defined(_WIN32)
+// A laptop with two graphics cards runs a program on the slow one unless the program exports these:
+// NVIDIA's Optimus and AMD's switchable graphics drivers look for them in the executable (their
+// public developer notes; OpenGOAL exports the same two, game/main.cpp).
+extern "C" {
+__declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
+__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
+#endif
+
+void prefer_discrete_gpu() {
+#if defined(__linux__) || defined(__FreeBSD__)
+    if (const char* gpu = std::getenv("OPENRAC_GPU"); gpu != nullptr && std::string(gpu) == "integrated") {
+        log::info("graphics card: the system's default (OPENRAC_GPU=integrated)");
+        return;
+    }
+    // Mesa: the second card of a PRIME pair (with one card it changes nothing). A value the
+    // player set stays.
+    setenv("DRI_PRIME", "1", 0);
+    // NVIDIA's driver beside an integrated card (PRIME render offload): only when its kernel
+    // driver is loaded, since naming a GLX vendor that is not installed leaves no OpenGL at all.
+    std::error_code none;
+    if (std::filesystem::exists("/proc/driver/nvidia/version", none)) {
+        setenv("__NV_PRIME_RENDER_OFFLOAD", "1", 0);
+        setenv("__GLX_VENDOR_LIBRARY_NAME", "nvidia", 0);
+        setenv("__VK_LAYER_NV_optimus", "NVIDIA_only", 0);
+    }
+#endif
+}
+
+bool is_software_renderer(const std::string& renderer, const std::string& vendor) {
+    std::string text = renderer + " " + vendor;
+    std::transform(text.begin(), text.end(), text.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    // Mesa's (llvmpipe, softpipe, swrast), Google's SwiftShader, Apple's software renderer,
+    // Windows' OpenGL 1.1 without a driver and its WARP adapter (through Mesa's D3D12 driver).
+    for (const char* name : {"llvmpipe", "softpipe", "swrast", "swiftshader", "software rasterizer",
+                             "software renderer", "gdi generic", "microsoft basic render"}) {
+        if (text.find(name) != std::string::npos) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::vector<DisplayInfo> displays() {
+    std::vector<DisplayInfo> list;
+    int count = 0;
+    SDL_DisplayID* ids = SDL_GetDisplays(&count);
+    for (int i = 0; ids != nullptr && i < count; ++i) {
+        DisplayInfo info;
+        if (const char* name = SDL_GetDisplayName(ids[i])) {
+            info.name = name;
+        }
+        if (const SDL_DisplayMode* mode = SDL_GetDesktopDisplayMode(ids[i])) {
+            info.width = mode->w;
+            info.height = mode->h;
+            info.refresh_rate = mode->refresh_rate;
+        }
+        list.push_back(std::move(info));
+    }
+    SDL_free(ids);
+    return list;
+}
+
+std::vector<DisplaySize> fullscreen_sizes(int display) {
+    std::vector<DisplaySize> sizes;
+    SDL_DisplayID id = display_id(display);
+    if (id == 0) {
+        id = SDL_GetPrimaryDisplay();
+    }
+    int count = 0;
+    SDL_DisplayMode** modes = SDL_GetFullscreenDisplayModes(id, &count);
+    for (int i = 0; modes != nullptr && i < count; ++i) {
+        const DisplaySize size{modes[i]->w, modes[i]->h};
+        if (std::find(sizes.begin(), sizes.end(), size) == sizes.end()) {
+            sizes.push_back(size);
+        }
+    }
+    SDL_free(modes);
+    std::sort(sizes.begin(), sizes.end(), [](const DisplaySize& a, const DisplaySize& b) {
+        return a.width != b.width ? a.width > b.width : a.height > b.height;
+    });
+    return sizes;
+}
 
 void set_app_metadata(const char* name, const char* id) {
     SDL_SetAppMetadata(name, nullptr, id);
@@ -83,28 +187,35 @@ void Window::set_icon(const unsigned char* rgba, int width, int height) {
 }
 
 std::unique_ptr<Window> Window::open(const WindowConfig& config, std::string& error) {
-    // Context attributes must be set before the window exists.
-    SDL_GL_ResetAttributes();
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, kGlMajor);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, kGlMinor);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    // macOS only gives a core context to a forward-compatible request.
-    int context_flags = SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG;
-    if (config.debug_context) {
-        context_flags |= SDL_GL_CONTEXT_DEBUG_FLAG;
-    }
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, context_flags);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    if (config.msaa_samples > 1) {
-        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, config.msaa_samples);
-    }
+    // Context attributes must be set before the window exists. The same request everywhere: 4.1
+    // core is the most macOS gives, and Mesa and Windows' drivers give a core context of that
+    // version or a later one that runs it.
+    const auto set_attributes = [&] {
+        SDL_GL_ResetAttributes();
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, kGlMajor);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, kGlMinor);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+        // macOS only gives a core context to a forward-compatible request.
+        int context_flags = SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG;
+        if (config.debug_context) {
+            context_flags |= SDL_GL_CONTEXT_DEBUG_FLAG;
+        }
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, context_flags);
+        SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+        SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+        SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+        SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+        SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+        SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+        SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+        // No sRGB conversion on the way to the window (see below, where it is turned off as well).
+        SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 0);
+        if (config.msaa_samples > 1) {
+            SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+            SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, config.msaa_samples);
+        }
+    };
+    set_attributes();
 
     SDL_WindowFlags flags = SDL_WINDOW_OPENGL | SDL_WINDOW_HIGH_PIXEL_DENSITY;
     if (config.resizable) {
@@ -132,13 +243,34 @@ std::unique_ptr<Window> Window::open(const WindowConfig& config, std::string& er
     };
 
     std::unique_ptr<Window> window(new Window());
-    window->m_window = SDL_CreateWindow(config.title.c_str(), config.width, config.height, flags);
+    // The first request is for the graphics card only (WGL's full acceleration, macOS's
+    // accelerated pixel formats); where the system cannot promise that, the context is made
+    // without the condition and its strings say below what it is.
+    SDL_GLContext context = nullptr;
+    for (const int accelerated : {1, -1}) {
+        if (accelerated > 0) {
+            SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+        } else {
+            // Back to "either": SDL has no call that clears one attribute.
+            set_attributes();
+        }
+        window->m_window = SDL_CreateWindow(config.title.c_str(), config.width, config.height, flags);
+        if (window->m_window != nullptr) {
+            context = SDL_GL_CreateContext(window->m_window);
+            if (context != nullptr) {
+                break;
+            }
+            if (accelerated > 0) {
+                SDL_DestroyWindow(window->m_window);
+                window->m_window = nullptr;
+            }
+        }
+    }
     if (window->m_window == nullptr) {
         // SDL fails here when the video driver has no OpenGL at all.
         no_opengl(nullptr);
         return nullptr;
     }
-    SDL_GLContext context = SDL_GL_CreateContext(window->m_window);
     if (context == nullptr) {
         no_opengl(window->m_window);
         return nullptr;
@@ -150,11 +282,62 @@ std::unique_ptr<Window> Window::open(const WindowConfig& config, std::string& er
     }
     window->m_gl_version = gl_string(kGlVersion);
     window->m_gl_renderer = gl_string(kGlRenderer);
-    log::info("OpenGL {} on {}", window->m_gl_version, window->m_gl_renderer);
+    window->m_gl_vendor = gl_string(kGlVendor);
+    window->m_software = is_software_renderer(window->m_gl_renderer, window->m_gl_vendor);
+    // What draws the game, said once and plainly: the first thing to read in a report of a slow or
+    // wrong picture.
+    {
+        int red = 0, depth = 0, stencil = 0, samples = 0, doublebuffer = 0;
+        SDL_GL_GetAttribute(SDL_GL_RED_SIZE, &red);
+        SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &depth);
+        SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &stencil);
+        SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &samples);
+        SDL_GL_GetAttribute(SDL_GL_DOUBLEBUFFER, &doublebuffer);
+        const char* driver = SDL_GetCurrentVideoDriver();
+        log::info("graphics: {} ({}), OpenGL {}, GLSL {}", window->m_gl_renderer, window->m_gl_vendor,
+                  window->m_gl_version, gl_string(kGlShadingLanguageVersion));
+        log::info("graphics: {} context through SDL's {} driver; the window's buffer {} bits a channel, depth {}, "
+                  "stencil {}, {} samples, {}",
+                  window->m_software ? "SOFTWARE (drawn on the CPU)" : "hardware", driver != nullptr ? driver : "?",
+                  red, depth, stencil, samples, doublebuffer != 0 ? "double buffered" : "single buffered");
+    }
+    if (window->m_software) {
+        const std::string what = std::format(
+            "OpenGL is being drawn on the CPU by a software rasteriser ({}), not by a graphics card: the game "
+            "would run at a few frames a second. Install or update the graphics driver; on a machine with two "
+            "graphics cards, check that the program is allowed the fast one. (OPENRAC_SOFTWARE_GL=1 in the "
+            "environment runs it anyway.)",
+            window->m_gl_renderer
+        );
+        if (config.software == SoftwareRenderer::Refuse) {
+            error = what;
+            log::error("{}", what);
+            if (!config.hidden) {
+                SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "OpenRAC", what.c_str(), window->m_window);
+            }
+            return nullptr;
+        }
+        log::warn("{}", what);
+    }
+    // The renderer blends and writes colours as the console's chip did, in the display's own
+    // (gamma) space: the window's buffer must never convert them as if they were linear. Off is
+    // OpenGL's default; some drivers start with it on for a buffer that can do sRGB.
+    {
+        using Disable = void (*)(unsigned);
+        if (auto disable = reinterpret_cast<Disable>(SDL_GL_GetProcAddress("glDisable"))) {
+            disable(kGlFramebufferSrgb);
+        }
+    }
 
     window->set_vsync(config.vsync);
+    if (config.display > 0 && config.mode == DisplayMode::Windowed) {
+        if (const SDL_DisplayID id = display_id(config.display)) {
+            SDL_SetWindowPosition(window->m_window, static_cast<int>(SDL_WINDOWPOS_CENTERED_DISPLAY(id)),
+                                  static_cast<int>(SDL_WINDOWPOS_CENTERED_DISPLAY(id)));
+        }
+    }
     if (config.mode != DisplayMode::Windowed) {
-        window->set_display_mode(config.mode, config.fullscreen_width, config.fullscreen_height);
+        window->set_display_mode(config.mode, config.fullscreen_width, config.fullscreen_height, config.display);
     }
     return window;
 }
@@ -168,8 +351,19 @@ Window::~Window() {
     }
 }
 
-bool Window::set_display_mode(DisplayMode mode, int width, int height) {
+bool Window::set_display_mode(DisplayMode mode, int width, int height, int display) {
     bool ok = true;
+    // Onto the display asked for first: fullscreen covers the display the window is on.
+    if (const SDL_DisplayID wanted = display_id(display);
+        wanted != 0 && mode != DisplayMode::Windowed && wanted != SDL_GetDisplayForWindow(m_window)) {
+        if (m_mode != DisplayMode::Windowed) {
+            SDL_SetWindowFullscreen(m_window, false);
+            SDL_SyncWindow(m_window);
+        }
+        SDL_SetWindowPosition(m_window, static_cast<int>(SDL_WINDOWPOS_CENTERED_DISPLAY(wanted)),
+                              static_cast<int>(SDL_WINDOWPOS_CENTERED_DISPLAY(wanted)));
+        SDL_SyncWindow(m_window);
+    }
     switch (mode) {
         case DisplayMode::Windowed:
             ok = SDL_SetWindowFullscreen(m_window, false);
@@ -219,6 +413,28 @@ bool Window::set_vsync(bool on) {
         return true;
     }
     return SDL_GL_SetSwapInterval(1);
+}
+
+SwapInterval Window::set_swap_interval(SwapInterval interval) {
+    if (interval == SwapInterval::Adaptive && SDL_GL_SetSwapInterval(-1)) {
+        return SwapInterval::Adaptive;
+    }
+    if (interval != SwapInterval::Immediate && SDL_GL_SetSwapInterval(1)) {
+        return SwapInterval::VSync;
+    }
+    if (!SDL_GL_SetSwapInterval(0)) {
+        log::warn("the swap interval could not be set: {}", SDL_GetError());
+    }
+    return SwapInterval::Immediate;
+}
+
+float Window::refresh_rate() const {
+    const SDL_DisplayMode* mode = SDL_GetCurrentDisplayMode(SDL_GetDisplayForWindow(m_window));
+    return mode != nullptr ? mode->refresh_rate : 0.0f;
+}
+
+bool Window::focused() const {
+    return (SDL_GetWindowFlags(m_window) & SDL_WINDOW_INPUT_FOCUS) != 0;
 }
 
 void Window::swap() {
