@@ -1433,3 +1433,27 @@ tried.
 
 New switches: `OPENRAC_MOBY_LOG=N[:RADIUS]`, `OPENRAC_HIT_LOG`,
 `OPENRAC_SOUND_LOG`, `OPENRAC_NO_PUMP_FIBER`.
+
+### The hero's walk, bolts and volume, 2026-10-12 continuation
+
+Three reports after the fixes above, each traced by measurement in level 0
+(scripted, silent, `--no-card`); the method and the recipes are in
+[RAC1_PAL_BUGFIX_GUIDE.md](RAC1_PAL_BUGFIX_GUIDE.md).
+
+- The hero froze and jumped forward, and a dying creature's body did not
+  move with its animation: `fix(sound): move a voice to its moby, not the
+  moby to its voice` (the candidate for func_0022DD68; in `rac1-decomp`
+  and in the in-tree copy). Found by bisecting the 150 functions of the
+  inherited-result change down to func_0022DB00, whose result made sounds
+  start. Stick held for 200 ticks: 0 ticks without movement, from about
+  130.
+- No bolts from crates or creatures: `fix(hostgen): keep a 128-bit cast
+  128 bits wide`. Two crates: 22 bolts collected; one class 749 creature:
+  6.
+- `feat(port): a volume setting that reaches silence` (`volume`, F9 and
+  F10). It does not explain the report behind it, music audible with the
+  Windows mixer at zero, which is open.
+
+Not a bug: the hero's standing pose is static until a random fidget.
+Open and next: the guide's last section. The wrench against the hand has
+not been looked at again; nobody has played these fixes yet.

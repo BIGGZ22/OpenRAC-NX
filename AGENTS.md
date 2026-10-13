@@ -11,7 +11,9 @@ Ratchet & Clank PAL and a fully playable native PC build. On a request to
 start, continue or resume the decomp, follow
 [RAC1_PAL_CAMPAIGN.md](docs/port/RAC1_PAL_CAMPAIGN.md): reproduce the current
 blocker, implement and verify a coherent fix, commit it locally, update the
-handoff and continue. Honor more specific user requests. Local commits of
+handoff and continue. [RAC1_PAL_BUGFIX_GUIDE.md](docs/port/RAC1_PAL_BUGFIX_GUIDE.md)
+is the practical side of it: the run recipes, the debugging method, how to
+backfill C, and the open problems. Honor more specific user requests. Local commits of
 each verified fix are explicitly authorized; no further confirmation is
 needed. The rule against unrequested pushes and publishing still applies.
 Preserve existing uncommitted work and only commit changes this task owns.
