@@ -15,6 +15,7 @@ import os
 import re
 import shutil
 import subprocess
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -307,9 +308,23 @@ def parse_unit(clang: str, root: Path, rel: str, flags: list[str], attempts: int
         fixed, more = fix_from_diagnostics(text, check.stderr, rel)
         if not more or fixed == text:
             return None, check.stderr
-        path.write_text(fixed, encoding="utf-8", errors="surrogateescape")
+        _write(path, fixed)
         fixes += more
     return None, "too many rounds of fixes"
+
+
+def _write(path: Path, text: str) -> None:
+    """Writes the prepared copy again. On Windows a file another program has open cannot be
+    written, and an editor's indexer or a virus scanner opens a file just written for a moment:
+    the write is tried again for a few seconds before it is given up."""
+    for attempt in range(60):
+        try:
+            path.write_text(text, encoding="utf-8", errors="surrogateescape")
+            return
+        except PermissionError:
+            if attempt == 59:
+                raise
+            time.sleep(0.05)
 
 
 def annotate(ast: dict) -> None:
