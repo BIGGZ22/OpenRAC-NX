@@ -65,10 +65,12 @@ jobs:
             os: windows-latest
             python: x86_64-pc-windows-msvc
             python_sha256: 11ed9f8a6ac64fb1b5a55e40e305a6744a3f77a70863c8f8197a6e4349abc64a
-          # Ubuntu 24.04: the oldest with a C++ library that has what the port uses (<format>).
-          # The game runs on systems of its age and newer.
+          # Ubuntu 22.04, with LLVM's compiler and its C++ library built into the game: the game
+          # then needs only the system's C library, glibc 2.34 or later (Ubuntu 22.04, Debian 12,
+          # Linux Mint 21, Fedora 35, SteamOS). Ubuntu 22.04's own C++ library is too old for the
+          # port (<format>), and one built on 24.04 asked for glibc 2.38.
           - name: linux
-            os: ubuntu-24.04
+            os: ubuntu-22.04
             python: x86_64-unknown-linux-gnu
             python_sha256: ffa8f85f1b56e88b687f08d743d817015524b86a9365fd921243132b80f1a36d
           # Apple silicon: the runner's own. An Intel Mac's launcher finds no game it can run in
@@ -87,7 +89,16 @@ jobs:
         if: matrix.name == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang ninja-build cmake pkg-config \
+          # LLVM 19 from apt.llvm.org: Clang, and libc++ to build into the game.
+          wget -qO "$RUNNER_TEMP/llvm.sh" https://apt.llvm.org/llvm.sh
+          sudo bash "$RUNNER_TEMP/llvm.sh" 19
+          sudo apt-get install -y libc++-19-dev libc++abi-19-dev
+          sudo ln -sf /usr/bin/clang-19 /usr/local/bin/clang
+          sudo ln -sf /usr/bin/clang++-19 /usr/local/bin/clang++
+          # CMake reads these when it first configures: libc++ and the compiler's runtime in the game.
+          echo "CXXFLAGS=-stdlib=libc++" >> "$GITHUB_ENV"
+          echo "LDFLAGS=-stdlib=libc++ -static-libstdc++ -static-libgcc -l:libc++abi.a" >> "$GITHUB_ENV"
+          sudo apt-get install -y ninja-build pkg-config \
             libgl1-mesa-dev libegl1-mesa-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
             libxss-dev libxfixes-dev libwayland-dev wayland-protocols libxkbcommon-dev libdecor-0-dev \
             libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev libdrm-dev libgbm-dev
@@ -141,6 +152,14 @@ jobs:
           "$py" build/standalone/editor/extract.py --help > /dev/null
           game=build/standalone/port/build/release/openrac-rac1-pal; [ -f "$game" ] || game="$game.exe"
           "$game" --help || true
+          # On Linux: what the game asks of the system (only libc and libm, glibc 2.34 at most).
+          if [ "${{ matrix.name }}" = linux ]; then
+            readelf -d "$game" | grep NEEDED
+            need=$(objdump -T "$game" | grep -oE 'GLIBC_2\.[0-9]+' | sort -t. -k2 -n | tail -1)
+            echo "needs $need"
+            case "$need" in GLIBC_2.3[5-9]|GLIBC_2.[4-9]*) echo "the game needs a newer glibc than 2.34"; exit 1;; esac
+            if readelf -d "$game" | grep -q 'libstdc++'; then echo "the game needs the system's libstdc++"; exit 1; fi
+          fi
           tar -czf openrac-standalone.tar.gz -C build/standalone .
 
       - uses: actions/upload-artifact@v4
