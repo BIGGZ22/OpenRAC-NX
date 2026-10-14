@@ -66,8 +66,8 @@ jobs:
             python: x86_64-pc-windows-msvc
             python_sha256: 11ed9f8a6ac64fb1b5a55e40e305a6744a3f77a70863c8f8197a6e4349abc64a
           # Ubuntu 22.04, with LLVM's compiler and its C++ library built into the game: the game
-          # then needs only the system's C library, glibc 2.34 or later (Ubuntu 22.04, Debian 12,
-          # Linux Mint 21, Fedora 35, SteamOS). Ubuntu 22.04's own C++ library is too old for the
+          # then needs only the system's C library, glibc 2.35 or later (Ubuntu 22.04, Debian 12,
+          # Linux Mint 21, Fedora 36, SteamOS). Ubuntu 22.04's own C++ library is too old for the
           # port (<format>), and one built on 24.04 asked for glibc 2.38.
           - name: linux
             os: ubuntu-22.04
@@ -152,12 +152,12 @@ jobs:
           "$py" build/standalone/editor/extract.py --help > /dev/null
           game=build/standalone/port/build/release/openrac-rac1-pal; [ -f "$game" ] || game="$game.exe"
           "$game" --help || true
-          # On Linux: what the game asks of the system (only libc and libm, glibc 2.34 at most).
+          # On Linux: what the game asks of the system (only libc and libm, glibc 2.35 at most, Ubuntu 22.04's own).
           if [ "${{ matrix.name }}" = linux ]; then
             readelf -d "$game" | grep NEEDED
             need=$(objdump -T "$game" | grep -oE 'GLIBC_2\.[0-9]+' | sort -t. -k2 -n | tail -1)
             echo "needs $need"
-            case "$need" in GLIBC_2.3[5-9]|GLIBC_2.[4-9]*) echo "the game needs a newer glibc than 2.34"; exit 1;; esac
+            case "$need" in GLIBC_2.3[6-9]|GLIBC_2.[4-9]*) echo "the game needs a newer glibc than 2.35"; exit 1;; esac
             if readelf -d "$game" | grep -q 'libstdc++'; then echo "the game needs the system's libstdc++"; exit 1; fi
           fi
           tar -czf openrac-standalone.tar.gz -C build/standalone .
