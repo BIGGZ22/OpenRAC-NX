@@ -20,8 +20,10 @@
 #include <csignal>
 #include <execinfo.h>
 #include <sys/mman.h>
-#include <ucontext.h>
 #include <unistd.h>
+#if defined(__linux__)
+#include <ucontext.h>
+#endif
 #endif
 
 namespace openrac::runtime {
