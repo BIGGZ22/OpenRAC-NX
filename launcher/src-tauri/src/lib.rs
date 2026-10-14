@@ -439,10 +439,10 @@ fn ensure_linux_desktop_integration() {
 #[cfg(target_os = "linux")]
 fn clean_appimage_python_env() {
     if let Ok(appdir) = std::env::var("APPDIR") {
-        if std::env::var("PYTHONHOME").map_or(false, |h| h.starts_with(&appdir)) {
+        if std::env::var("PYTHONHOME").is_ok_and(|h| h.starts_with(&appdir)) {
             std::env::remove_var("PYTHONHOME");
         }
-        if std::env::var("PYTHONPATH").map_or(false, |p| p.starts_with(&appdir)) {
+        if std::env::var("PYTHONPATH").is_ok_and(|p| p.starts_with(&appdir)) {
             std::env::remove_var("PYTHONPATH");
         }
     }

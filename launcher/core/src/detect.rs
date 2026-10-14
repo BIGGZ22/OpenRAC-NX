@@ -251,10 +251,10 @@ pub fn check_tool(tool: Tool, path: &Path) -> Check {
     cmd.args(args);
     if tool == Tool::Python {
         if let Ok(appdir) = std::env::var("APPDIR") {
-            if std::env::var("PYTHONHOME").map_or(false, |h| h.starts_with(&appdir)) {
+            if std::env::var("PYTHONHOME").is_ok_and(|h| h.starts_with(&appdir)) {
                 cmd.env_remove("PYTHONHOME");
             }
-            if std::env::var("PYTHONPATH").map_or(false, |p| p.starts_with(&appdir)) {
+            if std::env::var("PYTHONPATH").is_ok_and(|p| p.starts_with(&appdir)) {
                 cmd.env_remove("PYTHONPATH");
             }
         }

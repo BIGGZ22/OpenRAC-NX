@@ -64,10 +64,10 @@ fn environment(cmd: &mut Command, root: Option<&std::path::Path>) {
     // started from the AppImage (both the carried python in resources/openrac/python
     // and any system python). Clear them before running any tool.
     if let Ok(appdir) = std::env::var("APPDIR") {
-        if std::env::var("PYTHONHOME").map_or(false, |h| h.starts_with(&appdir)) {
+        if std::env::var("PYTHONHOME").is_ok_and(|h| h.starts_with(&appdir)) {
             cmd.env_remove("PYTHONHOME");
         }
-        if std::env::var("PYTHONPATH").map_or(false, |p| p.starts_with(&appdir)) {
+        if std::env::var("PYTHONPATH").is_ok_and(|p| p.starts_with(&appdir)) {
             cmd.env_remove("PYTHONPATH");
         }
     }
