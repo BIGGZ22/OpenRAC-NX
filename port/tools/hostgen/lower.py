@@ -457,12 +457,16 @@ class Unit:
             return []
         if isinstance(t, ctype.Base) and t.name in VA_NAMES:
             return [f"typedef va_list {name};"]
+        # typedef ... T __attribute__((aligned(16))): objects of T (a vector the game copies with
+        # lq/sq, which the host makes movaps) keep the alignment the console gave them.
+        aligned = [f"aligned({self._attr_value(c)})" for c in _inner(decl) if c.get("kind") == "AlignedAttr"]
+        attr = f" __attribute__(({', '.join(aligned)}))" if aligned else ""
         for c in _inner(decl):
             owned = c.get("ownedTagDecl")
             if owned and not owned.get("name") and isinstance(t, ctype.Base):
                 word = t.name.split(" ", 1)[0]
-                return [f"typedef {word} {self._renamed('openrac_td_' + name)} {self._renamed(name)};"]
-        return [f"typedef {self.declare(t, self._renamed(name))};"]
+                return [f"typedef {word} {self._renamed('openrac_td_' + name)} {self._renamed(name)}{attr};"]
+        return [f"typedef {self.declare(t, self._renamed(name))}{attr};"]
 
     def file_var(self, decl: dict) -> None:
         name = decl.get("name", "")

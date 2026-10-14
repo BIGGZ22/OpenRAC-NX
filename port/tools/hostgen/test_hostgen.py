@@ -164,7 +164,19 @@ class Translate(unittest.TestCase):
     def test_a_local_vector_or_matrix_starts_on_a_quadword(self):
         out = self.run_program({"a.c": """
             typedef float Vec[4] __attribute__((aligned(16)));
+            typedef struct { float f[4]; } Quad __attribute__((aligned(16)));
+            struct Holder { char c; Quad q; };
+            static void copy(Quad* to, Quad* from) { *to = *from; }
             int test_main(void) {
+                char pad4[9];
+                Quad qa, qb;
+                struct Holder h;
+                pad4[0] = 4;
+                qa.f[0] = 5.0f;
+                copy(&qb, &qa);
+                test_print((int)((unsigned long)&qa & 15));
+                test_print((int)((char*)&h.q - (char*)&h));
+                test_print((int)qb.f[0] + pad4[0] - 4);
                 char pad[3];
                 float v[4];
                 char pad2[5];
@@ -178,7 +190,7 @@ class Translate(unittest.TestCase):
                 return pad[0] - 1 + pad2[0] - 2 + pad3[0] - 3;
             }
         """})
-        self.assertEqual(out, ["0", "0", "0"])
+        self.assertEqual(out, ["0", "16", "5", "0", "0", "0"])
 
     def test_calls_follow_the_definition(self):
         # The caller declares the callee with its float and integer arguments
