@@ -106,6 +106,12 @@ void unknown_function() {
             g_unknown_target,
             g_overlay
         );
+        // Who made the call: the translated functions above this one.
+        for (int depth = 0; depth < 4; ++depth) {
+            char who[256];
+            openrac_host_caller(depth, who, sizeof(who));
+            error("  from {}", who);
+        }
     }
 }
 
@@ -538,8 +544,14 @@ void pair_code(WordReader reference, int program, gaddr exe, gaddr level, std::u
         }
         // What the instruction writes is no longer a known value (unless it is the address just
         // formed by addiu/ori); a call leaves only the callee-saved registers.
-        if (op == 0x00 || op == 0x1C) {
-            known[(we >> 11) & 31] = false;
+        const std::uint32_t funct = we & 0x3F, rd = (we >> 11) & 31;
+        if (op == 0x00 && (funct == 0x21 || funct == 0x25 || funct == 0x2D) && rt == 0 && rd != 0) {
+            // A move (addu, or, daddu with $zero): the value goes along.
+            ve[rd] = ve[rs];
+            vl[rd] = vl[rs];
+            known[rd] = known[rs];
+        } else if (op == 0x00 || op == 0x1C) {
+            known[rd] = false;
         } else if (op == 0x03) {  // jal
             for (int r = 1; r < 32; ++r) {
                 if (!((r >= 16 && r <= 23) || r == 28 || r == 29 || r == 30)) {
@@ -686,6 +698,12 @@ LevelMap& level_pair_map(int from, int loaded) {
     map.data.assign(pairs.begin(), pairs.end());
     info("level program {} for level {}'s functions: {} functions and {} global addresses relocated",
          loaded, from, map.code.size(), map.data.size());
+    // Which function asked first (the place a level's copy of another level's code starts running).
+    for (int depth = 1; depth < 4; ++depth) {
+        char who[256];
+        openrac_host_caller(depth, who, sizeof(who));
+        info("  for {}", who);
+    }
     return map;
 }
 
@@ -874,9 +892,135 @@ gaddr openrac_relocate_level_data(int from, gaddr address) {
 gaddr openrac_guest_last_entry = 0;
 openrac_host_fn openrac_guest_last_fn = nullptr;
 
+// Which lui each register's upper half came from, as a function's code runs straight through: a
+// register move (addu, daddu or or with $zero) carries it along, and any other write forgets it.
+struct UpperHalves {
+    std::uint32_t at[32] = {};
+    bool set[32] = {};
+
+    void step(std::uint32_t w, std::uint32_t i) {
+        const std::uint32_t op = w >> 26, rs = (w >> 21) & 31, rt = (w >> 16) & 31, rd = (w >> 11) & 31;
+        if (op == 0x0F) {
+            at[rt] = i;
+            set[rt] = true;
+        } else if (op == 0x00) {
+            const std::uint32_t funct = w & 0x3F;
+            if ((funct == 0x21 || funct == 0x25 || funct == 0x2D) && rt == 0) {
+                at[rd] = at[rs];
+                set[rd] = set[rs];
+            } else if (funct != 0x08 && funct != 0x0C && funct != 0x0D && funct != 0x11 && funct != 0x13
+                       && (funct < 0x18 || funct > 0x1F)) {
+                set[rd] = false;
+            }
+        } else if ((op >= 0x08 && op <= 0x0E) || (op >= 0x20 && op <= 0x27) || op == 0x1A || op == 0x1B
+                   || op == 0x1E || op == 0x37) {
+            set[rt] = false;
+        }
+        set[0] = false;
+    }
+};
+
+// The place of `canon`'s function (a level function at `canon` in level `from`'s program) in the
+// program loaded now, when it has exactly one there: a copy called directly from C knows no place
+// of its own (openrac_guest_entry gives 0), and this is the one its code would run at.
+gaddr own_place(int from, gaddr canon, int overlay) {
+    static std::map<std::tuple<int, gaddr, int>, gaddr> found;
+    const auto key = std::make_tuple(from, canon, overlay);
+    if (auto it = found.find(key); it != found.end()) {
+        return it->second;
+    }
+    gaddr place = 0;
+    auto source = g_overlays.find(from);
+    auto loaded = g_overlays.find(overlay);
+    if (source != g_overlays.end() && loaded != g_overlays.end()) {
+        auto entry = source->second.find(canon);
+        if (entry != source->second.end()) {
+            int count = 0;
+            for (const auto& [address, e] : loaded->second) {
+                if (e.fn == entry->second.fn) {
+                    place = address;
+                    ++count;
+                }
+            }
+            if (count != 1) {
+                place = 0;
+            }
+        }
+    }
+    found.emplace(key, place);
+    return place;
+}
+
+gaddr openrac_data_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gaddr target) {
+    const int overlay = current_overlay();
+    const gaddr fallback = openrac_relocate_level_data(from, target);
+    if (self == 0 && from >= 0 && overlay != from) {
+        std::scoped_lock hold(g_relocate_lock);
+        self = own_place(from, canon, overlay);
+    }
+    if (self == 0 || (self == canon && overlay == from)) {
+        return fallback;
+    }
+    static std::map<std::tuple<int, int, gaddr, gaddr, gaddr>, gaddr> found;
+    std::scoped_lock hold(g_relocate_lock);
+    const auto key = std::make_tuple(from, overlay, canon, self, target);
+    if (auto it = found.find(key); it != found.end()) {
+        return it->second;
+    }
+    const auto canon_word = [&](gaddr at) -> std::uint32_t {
+        if (overlay == from) {
+            std::uint32_t w;
+            std::memcpy(&w, G(at), 4);
+            return w;
+        }
+        return level_reader(from, at);
+    };
+    const auto self_word = [&](gaddr at) {
+        std::uint32_t w;
+        std::memcpy(&w, G(at), 4);
+        return w;
+    };
+    // addiu, ori, and the loads and stores (lb .. sw, lwc1, swc1, ld, sd, lq, sq) that take %lo.
+    const auto completes = [](std::uint32_t op) {
+        return op == 0x09 || op == 0x0D || (op >= 0x20 && op <= 0x2B) || op == 0x31 || op == 0x39
+               || op == 0x37 || op == 0x3F || op == 0x1E || op == 0x1F;
+    };
+    const auto formed = [](std::uint32_t hi, std::uint32_t lo) -> gaddr {
+        const std::uint32_t upper = (hi & 0xFFFFu) << 16;
+        const std::uint32_t imm = lo & 0xFFFFu;
+        return (lo >> 26) == 0x0D ? (upper | imm) : upper + static_cast<std::uint32_t>(static_cast<std::int16_t>(imm));
+    };
+    gaddr result = fallback;
+    std::uint32_t best = 0x101;
+    UpperHalves upper;
+    for (std::uint32_t i = 0; i * 4 < size; ++i) {
+        const std::uint32_t w = canon_word(canon + i * 4);
+        const std::uint32_t op = w >> 26, rs = (w >> 21) & 31;
+        if (completes(op) && upper.set[rs]) {
+            const gaddr at = formed(canon_word(canon + upper.at[rs] * 4), w);
+            const std::uint32_t distance = at > target ? at - target : target - at;
+            const std::uint32_t hi = self_word(self + upper.at[rs] * 4), lo = self_word(self + i * 4);
+            if (distance <= 0x100 && distance < best && (hi >> 26) == 0x0F && (lo >> 26) == op) {
+                best = distance;
+                result = formed(hi, lo) + (target - at);
+                if (distance == 0) {
+                    break;
+                }
+            }
+        }
+        upper.step(w, i);
+    }
+    found.emplace(key, result);
+    return result;
+}
+
 gaddr openrac_code_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gaddr target) {
     const int overlay = current_overlay();
     const gaddr fallback = openrac_relocate_level_code(from, target);
+    if (self == 0 && from >= 0 && overlay != from) {
+        std::scoped_lock hold(g_relocate_lock);
+        self = own_place(from, canon, overlay);
+    }
     if (self == 0 || (self == canon && overlay == from)) {
         return fallback;
     }
@@ -906,17 +1050,13 @@ gaddr openrac_code_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gad
         return (lo >> 26) == 0x0D ? (upper | imm) : upper + static_cast<std::uint32_t>(static_cast<std::int16_t>(imm));
     };
     gaddr result = fallback;
-    std::uint32_t hi_at[32] = {};
-    bool hi_set[32] = {};
-    for (std::uint32_t i = 0; i * 4 < size; ++i) {
+    UpperHalves upper;
+    for (std::uint32_t i = 0; i * 4 < size; upper.step(canon_word(canon + i * 4), i), ++i) {
         const std::uint32_t w = canon_word(canon + i * 4);
-        const std::uint32_t op = w >> 26, rs = (w >> 21) & 31, rt = (w >> 16) & 31;
-        if (op == 0x0F) {
-            hi_at[rt] = i;
-            hi_set[rt] = true;
-        } else if ((op == 0x09 || op == 0x0D) && hi_set[rs]
-                   && formed(canon_word(canon + hi_at[rs] * 4), w) == target) {
-            const std::uint32_t hi = self_word(self + hi_at[rs] * 4), lo = self_word(self + i * 4);
+        const std::uint32_t op = w >> 26, rs = (w >> 21) & 31;
+        if ((op == 0x09 || op == 0x0D) && upper.set[rs]
+                   && formed(canon_word(canon + upper.at[rs] * 4), w) == target) {
+            const std::uint32_t hi = self_word(self + upper.at[rs] * 4), lo = self_word(self + i * 4);
             if ((hi >> 26) == 0x0F && (lo >> 26) == op) {
                 result = formed(hi, lo);
             }
@@ -930,6 +1070,10 @@ gaddr openrac_code_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gad
 gaddr openrac_call_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gaddr target) {
     const int overlay = current_overlay();
     const gaddr fallback = from < 0 ? OPENRAC_CODE(target) : openrac_relocate_level_code(from, target);
+    if (self == 0 && from >= 0 && overlay != from) {
+        std::scoped_lock hold(g_relocate_lock);
+        self = own_place(from, canon, overlay);
+    }
     if (self == 0 || self == canon) {
         return fallback;
     }

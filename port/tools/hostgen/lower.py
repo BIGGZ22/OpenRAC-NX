@@ -1087,6 +1087,13 @@ class Unit:
             if level is not None and places[0][0] >= 0:
                 own = next((a for o, a in places if o == level), places[0][1])
                 return f"OPENRAC_LCODE({level}, {hexaddr(own)})"
+            # A function of one level only: the place of the other in that level (its program is
+            # loaded whenever this runs), not the first level's.
+            levels = {o for o, _ in self.program.code_places(self.fn.name)} if self.fn is not None else set()
+            if len(levels) == 1 and min(levels) >= 0:
+                here = next((a for o, a in places if o == min(levels)), None)
+                if here is not None:
+                    return hexaddr(here)
             return hexaddr(places[0][1])
         if n.get("kind") == "UnaryOperator" and n["opcode"] == "*":
             return self.rv(_inner(n)[0])
@@ -1300,9 +1307,31 @@ class Unit:
         else:
             level = self._shared_level()
             low = (getattr(self.program, "relocate", None) or LEVEL_RELOCATE)[0]
-            if level is not None and low <= address < LEVEL_RELOCATE[1]:
+            copies = self._copies_in_one_program()
+            if copies is not None and low <= address < LEVEL_RELOCATE[1]:
+                # Copies of this function in one program, each on its own globals: the one the
+                # running copy uses (guest.h).
+                home, canon, size = copies
+                self.fn.uses_self = True
+                addr = f"openrac_data_in_copy({home}, {hexaddr(canon)}, {size}u, openrac_self_, {addr})"
+            elif level is not None and low <= address < LEVEL_RELOCATE[1]:
                 addr = f"OPENRAC_LDATA({level}, {addr})"
         return LV(self.gref(t, addr), addr)
+
+    def _copies_in_one_program(self) -> tuple[int, int, int] | None:
+        """For a level function the catalogue places more than once in one program (the same code
+        on other globals): the program it is written for, its place there and its size."""
+        fn = self.fn
+        if fn is None or not getattr(self.program, "relocate", None) or not LEVEL_NAME.match(fn.name):
+            return None
+        places = [(o, a) for o, a in self.program.code_places(fn.name) if o >= 0]
+        overlays = [o for o, _ in places]
+        if len(overlays) == len(set(overlays)):
+            return None
+        level = self._shared_level()
+        home = level if level is not None else places[0][0]
+        canon = next((a for o, a in places if o == home), places[0][1])
+        return home, canon, getattr(self.program, "sizes", {}).get(fn.name) or 0x400
 
     def _shared_level(self) -> int | None:
         """For a function several levels' programs carry (func_LNN_..., placed in more than one
@@ -1499,8 +1528,9 @@ class Unit:
             # which one it calls.
             cache[sym] = self.program.code_places(sym) + self.program.splits[sym]
         if sym not in cache:
-            wrapper = 0 < (getattr(self.program, "sizes", {}).get(sym) or 0) <= 64
-            places = self.program.code_places(sym) if wrapper and getattr(self.program, "relocate", None) else []
+            # Any function with copies in one program: a wrapper's call other functions, a larger
+            # function's use other globals (_copies_in_one_program); the caller's jal says which.
+            places = self.program.code_places(sym) if getattr(self.program, "relocate", None) else []
             overlays = [o for o, _ in places]
             cache[sym] = places if len(overlays) != len(set(overlays)) else []
         return cache[sym]
@@ -1514,6 +1544,11 @@ class Unit:
         if level is not None:
             own = next((a for o, a in places if o == level), places[0][1])
             return f"OPENRAC_LCODE({level}, {hexaddr(own)})"
+        if len({o for o, _ in places}) > 1:
+            # Engine code at a place in the executable and one in each level program: the copy the
+            # loaded program has (the executable's is overwritten while a level is loaded).
+            literal = ", ".join(f"0x{(o + 1) << 24 | a:08X}u" for o, a in places)
+            return f"openrac_guest_nearest((const uint32_t[]){{{literal}}}, {len(places)}, 0u)"
         return hexaddr(places[0][1])
 
     def _canon_type(self, t: ctype.Type) -> ctype.Type:
