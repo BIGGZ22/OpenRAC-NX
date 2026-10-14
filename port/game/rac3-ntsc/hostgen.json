@@ -12,7 +12,9 @@
   "skip": [
     "src/libgcc",
     "src/i5bootn",
-    "src/boot_elf/core/libgcc"
+    "src/boot_elf/core/libgcc",
+    "src/boot_elf/text/3C65C8.c",
+    "src/frontbin/3C0E08.c"
   ],
   "includes": [
     "include",

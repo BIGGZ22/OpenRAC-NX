@@ -9,6 +9,7 @@ import {
   type ActionView,
   type AppInfo,
   type Config,
+  type FoundDisc,
   type Library,
   type Scope,
   type Started,
@@ -24,6 +25,8 @@ interface AppState {
   library: Library | null;
   /** Why the library could not be read (no checkout set, a broken game.json). */
   libraryError: string | null;
+  /** The games found in the player's games folder (api.scanDiscs). */
+  discs: FoundDisc[];
   page: Page;
   /** The version the game page shows (`rac1/pal`). */
   version: string | null;
@@ -35,6 +38,7 @@ export const app = $state<AppState>({
   config: null,
   library: null,
   libraryError: null,
+  discs: [],
   page: "library",
   version: null,
   toasts: [],
@@ -106,6 +110,11 @@ export async function refresh() {
     app.libraryError = null;
   } catch (e) {
     app.libraryError = errorText(e);
+  }
+  try {
+    app.discs = app.config.discsDir ? await api.scanDiscs() : [];
+  } catch {
+    app.discs = []; // a folder that went away: the tiles ask for an image as before
   }
 }
 
@@ -283,8 +292,9 @@ export async function runChain(scope: Scope, actions: ActionView[], level?: numb
  * player picks the image, the extractor copies its files out and checks them
  * against the build OpenRAC knows. Resolves to whether it worked.
  */
-export async function installGame(game: string, title: string): Promise<boolean> {
-  const image = await pickIso(`Select your legitimately obtained ISO file of ${title}`);
+export async function installGame(game: string, title: string, found?: string): Promise<boolean> {
+  // An image the games folder holds needs no picking.
+  const image = found ?? (await pickIso(`Select your legitimately obtained ISO file of ${title}`));
   if (!image) return false;
   const job = queue.add({ kind: "repository" }, `install:${game}`, `Set up ${title} from your disc`);
   starters[job.key] = () => api.installGame(game, image);

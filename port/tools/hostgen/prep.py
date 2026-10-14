@@ -223,7 +223,8 @@ def prepare(text: str) -> str:
     return name_wide_casts(name_cast_records(widen_long(split_multiline_strings(blank_file_scope_asm(text)))))
 
 
-_INCLUDE_ASM = re.compile(r'^[ \t]*(?:INCLUDE_ASM|ASM_FUNC|LINKER_REMNANT)\(\s*"[^"]*"\s*,\s*(\w+)\s*\)\s*;?[ \t]*(?:/\*.*?\*/)?[ \t]*$', re.M)
+# The path may be several adjacent strings over as many lines (the NTSC decomp's long paths).
+_INCLUDE_ASM = re.compile(r'^[ \t]*(?:INCLUDE_ASM|ASM_FUNC|LINKER_REMNANT)\(\s*(?:"[^"]*"\s*)+,\s*(\w+)\s*\)\s*;?[ \t]*(?:/\*.*?\*/)?[ \t]*$', re.M)
 
 
 # A file-scope declaration of a game symbol (data or function) with no assembler name of its own.
@@ -259,6 +260,42 @@ def own_declarations(text: str, tag: str) -> str:
     return text
 
 
+def without_definitions(text: str, names: set[str]) -> str:
+    """TEXT without the definitions of the functions NAMES (each from its first line to its closing
+    brace), a comment in the place of each.
+
+    One file of the port's own C can hold several functions (hand/): when the decompilation
+    matches one of them, the file it is put into for the others would define that one twice, and
+    Clang refuses the whole file. The matched C stands; the copy steps aside."""
+    for name in names:
+        while True:
+            m = re.search(r'^[A-Za-z_][\w \t\*]*?[ \t\*]' + re.escape(name) + r'\s*\([^;{}]*\)\s*\{', text, re.M)
+            if not m:
+                break
+            depth, at = 0, m.end() - 1
+            while at < len(text):
+                c = text[at]
+                if c == '"' or c == "'":            # a brace in a string or a character is not one
+                    close = at + 1
+                    while close < len(text) and text[close] != c:
+                        close += 2 if text[close] == "\\" else 1
+                    at = close
+                elif text.startswith("/*", at):
+                    at = text.find("*/", at) + 1
+                elif text.startswith("//", at):
+                    at = text.find("\n", at)
+                elif c == "{":
+                    depth += 1
+                elif c == "}":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                at += 1
+            text = (text[:m.start()] + f"/* hostgen: {name} is matched C in this file now; this copy is left out */"
+                    + text[at + 1:])
+    return text
+
+
 def use_candidates(text: str, candidates: dict[str, str], used: set[str]) -> str:
     """Puts candidate C in place of the assembly stubs it is written for.
 
@@ -268,6 +305,7 @@ def use_candidates(text: str, candidates: dict[str, str], used: set[str]) -> str
     file, after every declaration it may rely on, so no line of the file moves."""
     tail = []
     added: set[int] = set()
+    matched = set(_DEFINED.findall(text))   # what this file has as C of its own
 
     def blank(m: re.Match) -> str:
         name = m.group(1)
@@ -278,18 +316,30 @@ def use_candidates(text: str, candidates: dict[str, str], used: set[str]) -> str
         if id(text) not in added:   # one file of C for several functions goes in once
             added.add(id(text))
             tail.append(f"\n/* hostgen: {name} from a candidate, not the matched C */\n"
-                        f"{own_declarations(prepare(text), f'_hc{len(added)}')}")
-        return ""
+                        f"{own_declarations(without_definitions(prepare(text), matched), f'_hc{len(added)}')}")
+        return "\n" * m.group(0).count("\n")   # a stub over several lines: the lines stay
 
     text = _INCLUDE_ASM.sub(blank, text)
     return text + "".join(tail)
 
 
+def use_draft(text: str, guard: str) -> str:
+    """Takes a file's own draft in place of its assembly stub: a decompilation that keeps pending
+    C under the `#else` of `#ifndef GUARD` around the stub (the NTSC decomp's NON_MATCHING) has
+    that branch read. Only where the stub is still there: a candidate that replaced it stands."""
+    def swap(m: re.Match) -> str:
+        return f"#if 0 /* hostgen: the draft below, not the stub */{m.group(1)}" if _INCLUDE_ASM.search(m.group(1)) else m.group(0)
+    return re.sub(r"^#ifndef[ \t]+" + re.escape(guard) + r"\b[^\n]*(\n.*?^#else\b)", swap, text, flags=re.M | re.S)
+
+
 def copy_tree(src: Path, dst: Path, patterns=("*.c", "*.h", "*.inc"),
-              candidates: dict[str, str] | None = None, used: set[str] | None = None) -> int:
+              candidates: dict[str, str] | None = None, used: set[str] | None = None,
+              drafts: tuple[str, set[str]] | None = None, prefix: str = "") -> int:
     """Prepares every C file under src into dst; only rewrites what changed.
     candidates (function name -> C) replace their assembly stubs (use_candidates);
-    the names used are added to used."""
+    the names used are added to used. drafts (a guard macro, the files it applies to, named
+    from the decompilation's top with prefix as src's own name) has those files' own drafts
+    read (use_draft)."""
     count = 0
     for pattern in patterns:
         for path in src.rglob(pattern):
@@ -297,6 +347,8 @@ def copy_tree(src: Path, dst: Path, patterns=("*.c", "*.h", "*.inc"),
             text = prepare(path.read_text(encoding="utf-8", errors="surrogateescape"))
             if candidates and path.suffix == ".c":
                 text = use_candidates(text, candidates, used if used is not None else set())
+            if drafts and (Path(prefix) / path.relative_to(src)).as_posix() in drafts[1]:
+                text = use_draft(text, drafts[0])
             if not out.exists() or out.read_text(encoding="utf-8", errors="surrogateescape") != text:
                 out.parent.mkdir(parents=True, exist_ok=True)
                 out.write_text(text, encoding="utf-8", errors="surrogateescape")

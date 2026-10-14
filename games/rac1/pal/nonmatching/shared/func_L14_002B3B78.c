@@ -6,7 +6,7 @@
  *   Five-block GIF packet builder: each block copies a 16-byte matrix row from data+0x1E0/0x200/0x1F0/0x210/0x220 
  *   Would unblock it: a way to write the data-relative row copies so the compiler emits retail's addiu-then-lq pai
  */
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_2B3B78 __attribute__((mode(TI)));
 extern void func_001F9BF0(void *, void *, void *);
 extern void func_L00_001FF4B0(void *, void *, float);
 extern void func_001F9CA0(void *, void *, void *);
@@ -39,7 +39,7 @@ void func_L14_002B3B78(char *moby) {
     float *op, *mp;
 
     src = data + 0x1E0;
-    *(u128 *)(m + 12) = *(u128 *)src;
+    *(u128_2B3B78 *)(m + 12) = *(u128_2B3B78 *)src;
     m[15] = 1.0f;
     func_001F9BF0(m, D_L14_001675C0, m + 12);
     func_L00_001FF4B0(m, m, 1.0f);
@@ -75,7 +75,7 @@ void func_L14_002B3B78(char *moby) {
     func_L00_001FD1D8(pk.o, 0, 0);
 
     src = data + 0x200;
-    *(u128 *)(m + 12) = *(u128 *)src;
+    *(u128_2B3B78 *)(m + 12) = *(u128_2B3B78 *)src;
     pp = data + 0x220;
     func_001F9BF0(m, D_L14_001675C0, m + 12);
     q = data + 0x1F0;
@@ -100,7 +100,7 @@ void func_L14_002B3B78(char *moby) {
     } while (k >= 0);
     func_L00_001FD1D8(pk.o, 0, 0);
 
-    *(u128 *)(m + 12) = *(u128 *)q;
+    *(u128_2B3B78 *)(m + 12) = *(u128_2B3B78 *)q;
     func_001F9BF0(m, D_L14_001675C0, m + 12);
     func_L00_001FF4B0(m, m, 1.0f);
     k = 3;
@@ -124,7 +124,7 @@ void func_L14_002B3B78(char *moby) {
     } while (k >= 0);
     func_L00_001FD1D8(pk.o, 0, 0);
 
-    *(u128 *)(m + 12) = *(u128 *)r;
+    *(u128_2B3B78 *)(m + 12) = *(u128_2B3B78 *)r;
     func_001F9BF0(m, D_L14_001675C0, m + 12);
     func_L00_001FF4B0(m, m, 1.0f);
     k = 3;
@@ -148,7 +148,7 @@ void func_L14_002B3B78(char *moby) {
     } while (k >= 0);
     func_L00_001FD1D8(pk.o, 0, 0);
 
-    *(u128 *)(m + 12) = *(u128 *)pp;
+    *(u128_2B3B78 *)(m + 12) = *(u128_2B3B78 *)pp;
     func_001F9BF0(m, D_L14_001675C0, m + 12);
     func_L00_001FF4B0(m, m, 1.0f);
     k = 3;

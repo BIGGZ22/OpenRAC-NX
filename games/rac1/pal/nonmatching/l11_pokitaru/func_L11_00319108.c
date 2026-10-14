@@ -21,7 +21,7 @@ extern float D_L11_0015F660[] MACRO_ADDR;
 extern float D_0015EE70 MACRO_ADDR;
 extern short D_L11_001623C0;
 extern char D_0014171B[];
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_19108 __attribute__((mode(TI)));
 
 // shifts the moby's list down by one, rescoring and moving its tail entry
 void func_L11_00319108(char *moby) {

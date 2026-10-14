@@ -3,6 +3,7 @@
 
 #include "renderer/renderer.h"
 
+#include "common/stats.h"
 #include "renderer/direct.h"
 #include "renderer/gl.h"
 #include "renderer/subsystems.h"
@@ -31,6 +32,19 @@ const char* bucket_name(Bucket bucket) {
             break;
     }
     return "?";
+}
+
+unsigned readable(const RenderTarget& target) {
+    if (target.resolve_framebuffer == 0) {
+        return target.framebuffer;
+    }
+    glDisable(GL_SCISSOR_TEST);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, target.framebuffer);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target.resolve_framebuffer);
+    glBlitFramebuffer(0, 0, target.width, target.height, 0, 0, target.width, target.height, GL_COLOR_BUFFER_BIT,
+                      GL_NEAREST);
+    return target.resolve_framebuffer;
 }
 
 Renderer::~Renderer() = default;
@@ -99,6 +113,8 @@ void Renderer::render(const FrameInput& input, const RenderTarget& target) {
         }
         auto& r = m_renderers[i];
         if (r->enabled) {
+            // [debug tools] The pass, timed and counted for the overlay and the dump (common/stats.h).
+            const stats::Scope pass(r->name(), stats::kGpu);
             r->render(input, state);
         }
     }

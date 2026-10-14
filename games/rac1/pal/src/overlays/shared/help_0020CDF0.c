@@ -1521,7 +1521,12 @@ void func_L00_00211908(void) {
     FadeToBlack(scale_ticks(0x10));
     D_0013F450_11908.b20B1 = 1;
 }
-INCLUDE_ASM("asm/overlays", func_L00_00211A18);
+typedef struct { u8 pad[0xA6]; s16 oclass; } MobyClass_211A18;
+/* whether the moby is of class 0x47 (0 for none) */
+int func_L00_00211A18(MobyClass_211A18 *m) {
+    if (m == 0) return 0;
+    return m->oclass == 0x47;
+}
 extern float D_0015EE64 MACRO_ADDR;
 extern float D_0015EE6C MACRO_ADDR;
 extern float func_L00_0025C918(float *p, float *v, float t, float u1, float u2, float eps);

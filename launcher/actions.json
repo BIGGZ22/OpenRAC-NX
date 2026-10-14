@@ -297,7 +297,8 @@
           "editor/extract.py",
           "port",
           "{disc}",
-          "assets/port/rac1"
+          "assets/port/rac1",
+          "--replace"
         ],
         "cwd": ".",
         "requires": [
@@ -306,7 +307,37 @@
         ],
         "artifact": "assets/port/rac1/level_99/manifest.json",
         "docs": "editor/README.md",
-        "todo": "Run it from the desktop app. The same command from a shell on macOS wrote what the port draws from. It refuses a folder that exists: to redo it, remove assets/port/rac1 first."
+        "todo": "Run it from the desktop app. The same command from a shell on macOS wrote what the port draws from. --replace: run again, it puts a new export in the old one's place once the new one is whole."
+      },
+      {
+        "id": "port-levels-check",
+        "label": "Check the levels",
+        "description": "The game reads every level as it will when you play, without opening its window, and says which it cannot draw. A few seconds. Play waits for it: a level that is missing or cut short would be a black world.",
+        "kind": "build",
+        "area": "port",
+        "state": "unverified",
+        "program": "{artifact}",
+        "args": [
+          "--data",
+          "{data}",
+          "--levels",
+          "{root}/assets/port/rac1",
+          "--check-levels"
+        ],
+        "cwd": ".",
+        "requires": [
+          "artifact"
+        ],
+        "artifact": "port/build/release/openrac-rac1-pal.exe",
+        "makes": "assets/port/rac1/verified.json",
+        "needs": [
+          {
+            "path": "assets/port/rac1/level_99/manifest.json",
+            "from": "the levels (Get the levels ready)"
+          }
+        ],
+        "docs": "port/game/rac1-pal/README.md",
+        "todo": "Run it from the desktop app. From a shell on macOS it passed a whole export (21 levels) and named the two levels of one with a folder removed and a file emptied."
       },
       {
         "id": "play",
@@ -328,11 +359,11 @@
         ],
         "artifact": "port/build/release/openrac-rac1-pal.exe",
         "docs": "port/game/rac1-pal/README.md",
-        "todo": "Built by port-build. The port also needs decompiler_out (openrac-extractor --decompile). It draws from the levels port-levels writes (--levels): without them the menus have no world behind them and a level has no scenery. Runs on Windows, Linux and macOS: the port is one program for all three (it was listed for Windows and Linux only until 2026-10-13, though it had been built and run on macOS).",
+        "todo": "Built by port-build. The port reads each level's program from your disc image when decompiler_out (openrac-extractor --decompile) is not there. It draws from the levels port-levels writes (--levels): without them the menus have no world behind them and a level has no scenery. Runs on Windows, Linux and macOS: the port is one program for all three (it was listed for Windows and Linux only until 2026-10-13, though it had been built and run on macOS).",
         "needs": [
           {
-            "path": "assets/port/rac1/level_99/manifest.json",
-            "from": "the levels (Get the levels ready)"
+            "path": "assets/port/rac1/verified.json",
+            "from": "a check of the levels (Check the levels)"
           }
         ]
       },
@@ -361,8 +392,8 @@
         "todo": "Built by port-build; needs Pack your edited levels first. Run headless on macOS (--level 0 --frames 400): the port logged the sectors it took from the packed file and ran as it does without. Not run from the desktop app yet. Runs on Windows, Linux and macOS: the port is one program for all three (it was listed for Windows and Linux only until 2026-10-13, though it had been built and run on macOS).",
         "needs": [
           {
-            "path": "assets/port/rac1/level_99/manifest.json",
-            "from": "the levels (Get the levels ready)"
+            "path": "assets/port/rac1/verified.json",
+            "from": "a check of the levels (Check the levels)"
           }
         ]
       }
@@ -467,7 +498,7 @@
         "area": "port",
         "state": "planned",
         "docs": "port/game/README.md",
-        "todo": "openrac-rac1-ntsc builds from this version's decompilation (port/, cmake --preset release); before it runs it needs the game's main in port/game/rac1-ntsc/hostgen.json and its library table (port/game/README.md). rac1/pal is furthest along."
+        "todo": "openrac-rac1-ntsc builds (tools/build_port.py rac1-ntsc) and runs headless into its title loop with no function missing; in a window the title's logo and text are drawn but not the world behind them, and no level has been played. It also has no levels of its own to draw from: editor/extract.py reads the PAL disc only. port/game/rac1-ntsc/README.md lists what is carried from rac1/pal and what is left."
       }
     ],
     "rac2/ntsc": [

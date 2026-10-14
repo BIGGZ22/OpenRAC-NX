@@ -1,0 +1,62 @@
+# Files of the NTSC decomp whose own pending C (the #else of their NON_MATCHING guard) is read in
+# place of the assembly stub (hostgen.json "drafts"): drafts that decompilation never compiles, taken
+# where the port has nothing better (no C carried from rac1-pal for the function). A draft Clang
+# cannot read is left out. unit	functions
+src/assembly/sdk/callbacks/invoke_sif_file_command_callback.c	# FUN_0011b980
+src/assembly/sdk/callbacks/signal_native_cd_delay_alarm.c	# FUN_001205e8
+src/assembly/sdk/debug/kputchar.c	# kputchar
+src/assembly/sdk/debug/printf_impl.c	# _printf
+src/assembly/sdk/dma/csc_store_ref_image.c	# _csc_storeRefImage
+src/assembly/sdk/library/_getRef0.c	# _getRef0
+src/assembly/sdk/library/_sceFs_Rcv_Intr.c	# _sceFs_Rcv_Intr
+src/assembly/sdk/library/_updateRefImage.c	# _updateRefImage
+src/assembly/sdk/library/cmd_sem_init.c	# cmd_sem_init
+src/assembly/sdk/library/domc.c	# _doMC
+src/assembly/sdk/library/sceCdInit.c	# sceCdInit
+src/assembly/sdk/library/sceDbcCreateSocket.c	# sceDbcCreateSocket
+src/assembly/sdk/library/sequenceheader.c	# _sequenceHeader func_0012C4C8
+src/assembly/sdk/library/setdefaultqm.c	# _setDefaultQM
+src/assembly/sdk/rpc/sce_sif_init_cmd.c	# sceSifInitCmd
+src/assembly/textbin/fun_001fd748.c	# FUN_001fd748
+src/assembly/textbin/fun_00203b08.c	# FUN_00203b08
+src/assembly/textbin/fun_0021a328.c	# FUN_0021a328
+src/assembly/textbin/fun_0021b858.c	# FUN_0021b858
+src/assembly/textbin/fun_002256e8.c	# FUN_002256e8
+src/assembly/textbin/fun_00225e70.c	# FUN_00225e70
+src/assembly/textbin/fun_002271d0.c	# FUN_002271d0
+src/assembly/textbin/fun_0022abc0.c	# FUN_0022abc0
+src/assembly/textbin/fun_00237c80.c	# FUN_00237c80
+src/assembly/textbin/fun_00238310.c	# FUN_00238310
+src/assembly/textbin/fun_00238f08.c	# FUN_00238f08
+src/assembly/textbin/fun_00239780.c	# FUN_00239780
+src/assembly/textbin/gameplay/state/transition_do_transition.c	# FUN_001eb798
+src/assembly/textbin/rendering/init_dma.c	# FUN_0020b418
+src/assembly/textbin/runtime/memory/update_mode_freeze.c	# FUN_001fce28
+src/assembly/textbin/ui/map/draw_map_overlay.c	# FUN_00205640
+src/assembly/textbin/ui/text/font_print_window.c	# FUN_001f7090
+src/assembly/textbin/video/decoder/vi_buf_restart_dma.c	# FUN_0023c280
+src/overlays/l05/gameplay/entities/002d1688.c	# FUN_L05_002d1688
+src/overlays/l07/gameplay/entities/00312948.c	# FUN_L07_00317910
+src/overlays/l08/gameplay/entities/002deee0.c	# FUN_L08_002e2250
+src/overlays/l08/gameplay/entities/002e9b70.c	# FUN_L08_002f44c0
+src/overlays/l12/gameplay/vendor/003028c8.c	# FUN_L12_00303370
+src/overlays/l15/gameplay/entities/0029aff0.c	# FUN_L15_002a7880
+src/overlays/shared/audio/voices/00276368.c	# FUN_L00_00276368
+src/overlays/shared/gameplay/entities/002648e0.c	# FUN_L00_002648e0
+src/overlays/shared/gameplay/entities/00264e40.c	# FUN_L02_00264e70
+src/overlays/shared/gameplay/entities/002937a0.c	# FUN_L08_002d3878
+src/overlays/shared/gameplay/entities/00297d10.c	# FUN_L06_002d8738
+src/overlays/shared/gameplay/entities/002a4038.c	# FUN_L02_002d93e8
+src/overlays/shared/gameplay/entities/002b2100.c	# FUN_L00_002b49a8
+src/overlays/shared/gameplay/entities/002fdbd0.c	# FUN_L06_002feb40
+src/overlays/shared/gameplay/vendor/0029ead8.c	# FUN_L00_0029ead8
+src/overlays/shared/gameplay/vendor/003015d0.c	# FUN_L14_003017f8
+src/overlays/shared/input/pad/002678b8.c	# FUN_L00_002678b8
+src/overlays/shared/rendering/00250df8.c	# FUN_L00_00257218
+src/overlays/shared/rendering/debug/001f36f8.c	# FUN_L00_001f3770
+src/overlays/shared/rendering/effects/0023db30.c	# FUN_L00_0023db30
+src/overlays/shared/ui/fonts/001fc558.c	# FUN_L00_001fc558
+src/overlays/shared/ui/help/001ff938.c	# FUN_L15_001ff938
+src/overlays/shared/ui/help/00226f10.c	# FUN_L01_00234358
+src/overlays/shared/ui/menus/0027a6e0.c	# FUN_L00_002831c0
+src/overlays/shared/ui/text/00249738.c	# FUN_L06_00249738

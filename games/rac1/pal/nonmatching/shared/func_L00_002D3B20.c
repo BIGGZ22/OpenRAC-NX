@@ -25,7 +25,7 @@ extern int D_0015EE84 MACRO_ADDR;
 extern char D_0013E633[];
 extern char D_0013A5E0[];
 extern char D_0014171B[];
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_D3B20 __attribute__((mode(TI)));
 
 /* Decoy glove update: state machine on moby[0x20], per-object data block at moby[0x78]. Adapted from Lombyte (MIT) for PAL: none. */
 void func_L00_002D3B20(unsigned char *moby) {
@@ -37,12 +37,12 @@ void func_L00_002D3B20(unsigned char *moby) {
     float va[4];
     float vc[4];
     float vd[4];
-    u128 loc;
+    u128_D3B20 loc;
 
     if (moby == 0) return;
     d = *(char **)(moby + 0x78);
     if (d == 0) return;
-    *(u128 *)va = 0;
+    *(u128_D3B20 *)va = 0;
     va[1] = -0.19f;
     va[2] = -0.11f;
     func_L00_00250800(moby, 0, vb);
@@ -82,7 +82,7 @@ L3D10:
     func_L00_00234638(-1, 1);
     moby[0x20] = 3;
 L3D34:
-    *(u128 *)&loc = *(u128 *)(d + 0x40);
+    *(u128_D3B20 *)&loc = *(u128_D3B20 *)(d + 0x40);
     func_L00_002D3608(moby, d, &loc);
 
     switch (moby[0x20]) {

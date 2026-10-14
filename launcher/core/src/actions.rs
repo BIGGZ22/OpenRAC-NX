@@ -73,6 +73,10 @@ pub struct Action {
     /// relative to the checkout. `{artifact}` in the arguments.
     #[serde(default)]
     pub artifact: Option<String>,
+    /// A file the action leaves when it has done its work, when that is not its `artifact`
+    /// (a check run with the game's own program leaves a stamp): what `done` looks for.
+    #[serde(default)]
+    pub makes: Option<String>,
     /// Files an earlier step makes and this one cannot run without, relative
     /// to the checkout: each is `{"path": ..., "from": the step's label}`.
     #[serde(default)]
@@ -292,7 +296,8 @@ impl ActionFile {
                     problems.push(format!("{at}: planned, so it needs a todo saying what is missing"));
                 }
                 let needs = action.needs.iter().map(|n| &n.path);
-                let texts = action.program.iter().chain(&action.args).chain(&action.cwd).chain(needs);
+                let texts =
+                    action.program.iter().chain(&action.args).chain(&action.cwd).chain(needs).chain(&action.makes);
                 for text in texts {
                     for name in placeholders(text) {
                         if !PLACEHOLDERS.contains(&name.as_str()) {
@@ -344,7 +349,10 @@ impl Action {
             this_platform: self.platforms.is_empty() || self.platforms.contains(&ctx.platform),
             runnable: blockers.is_empty(),
             blockers,
-            done: self.artifact_path(ctx).is_ok_and(|p| p.exists()),
+            done: match &self.makes {
+                Some(made) => fill(made, ctx, None).is_ok_and(|p| abs(ctx.root, &p).exists()),
+                None => self.artifact_path(ctx).is_ok_and(|p| p.exists()),
+            },
         }
     }
 
@@ -408,6 +416,9 @@ impl Action {
             (None, Some(version)) => under(ctx.root, &version.dir),
             (None, None) => ctx.root.to_path_buf(),
         };
+        // A folder that is not there cannot be started in (Windows: "the directory name is
+        // invalid", error 267): the copy an installer carries has no folder for each version.
+        let cwd = if cwd.is_dir() { cwd } else { ctx.root.to_path_buf() };
         let title = match ctx.version {
             Some(v) => format!("{} · {} ({})", self.label, v.title, v.region),
             None => self.label.clone(),
@@ -602,5 +613,38 @@ mod tests {
         let plan = play.plan(&ctx(&installed)).unwrap();
         let data = Path::new("/games").join("active").join("rac1").join("data");
         assert_eq!(plan.args[1], data.display().to_string());
+    }
+
+    /// An action starts in a folder that is there. 0.4.0 started the game in the version's own
+    /// folder, which the copy an installer carries does not have: Windows refused it ("the
+    /// directory name is invalid", error 267) and Play did nothing.
+    #[test]
+    fn an_action_never_starts_in_a_folder_that_is_missing() {
+        let tmp = std::env::temp_dir().join(format!("openrac-cwd-{}", std::process::id()));
+        std::fs::create_dir_all(&tmp).unwrap();
+        let catalog = crate::catalog::load(&checkout()).unwrap();
+        let version = catalog.version("rac1/pal").unwrap();
+        let status = crate::status::version_status(&tmp, version);
+        let config = Config { python: Some("/usr/bin/python3".into()), ..Config::default() };
+        let ctx = Context {
+            root: &tmp, // a root without games/rac1/pal, as the carried copy is
+            config: &config,
+            version: Some(version),
+            status: Some(&status),
+            toolchains: false,
+            platform: Platform::current(),
+            level: None,
+        };
+        let play: Action = serde_json::from_str(
+            r#"{"id": "p", "label": "Play", "kind": "play", "state": "unverified", "program": "{python}"}"#,
+        )
+        .unwrap();
+        assert_eq!(play.plan(&ctx).unwrap().cwd, tmp);
+        let elsewhere: Action = serde_json::from_str(
+            r#"{"id": "q", "label": "Q", "kind": "play", "state": "unverified", "program": "{python}", "cwd": "no/such"}"#,
+        )
+        .unwrap();
+        assert_eq!(elsewhere.plan(&ctx).unwrap().cwd, tmp);
+        std::fs::remove_dir_all(&tmp).unwrap();
     }
 }

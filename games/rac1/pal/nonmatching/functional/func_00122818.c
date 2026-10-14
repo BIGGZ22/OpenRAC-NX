@@ -1,12 +1,12 @@
 /* functional: high. Same loads, stores, values and return as retail, in the same order; the only thing left out is the final `sync` (a memory barrier, which does not change any stored value) and the register save of $16 that the candidate's compile does not reproduce. */
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_22818 __attribute__((mode(TI)));
 
 // sceGsSetDefStoreImage: fills the GS store-image packet at p and returns 7.
 int func_00122818(void *p, int a1, int a2, int a3, int a4, int a5, int a6, int a7) {
     char *b = (char *)p;
     s64 v10, v18, v20, v30, v40;
 
-    *(u128 *)(b + 0x10) = 0;
+    *(u128_22818 *)(b + 0x10) = 0;
     v10 = *(s64 *)(b + 0x10);
     v18 = *(s64 *)(b + 0x18);
     v10 = (((v10 & ~0x7FFFLL) | 5 | 0x8000) & (~0ULL >> 4)) | (0x8000ULL << 45);

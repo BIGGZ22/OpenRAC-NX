@@ -99,6 +99,10 @@ let config: Config = {
   // ?setup opens the first-run screen.
   setupComplete: !new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("setup"),
   installDir: "/home/you/.local/share/dev.openrac.launcher",
+  // ?discs: a games folder is chosen.
+  discsDir: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("discs")
+    ? "/home/you/Games/PS2"
+    : null,
   lastVersion: null,
   discordRpc: true,
   layout: "compact",
@@ -106,15 +110,19 @@ let config: Config = {
 };
 
 /** Which games pretend to be set up from the player's disc, and as which version. */
-const installs: Record<string, BuildInfo | undefined> = {
-  rac1: {
-    serial: "SCES_509.16",
-    version: "rac1/pal",
-    elfSha1: "79956931bd62fafd8d20fa2eae796dbaf2e15e83",
-    files: 3,
-    image: "Ratchet & Clank.iso",
-  },
-};
+const fresh = new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("fresh");
+// ?fresh: nothing is set up yet, as on a player's first start.
+const installs: Record<string, BuildInfo | undefined> = fresh
+  ? {}
+  : {
+      rac1: {
+        serial: "SCES_509.16",
+        version: "rac1/pal",
+        elfSha1: "79956931bd62fafd8d20fa2eae796dbaf2e15e83",
+        files: 3,
+        image: "Ratchet & Clank.iso",
+      },
+    };
 
 function installState(game: string): InstallState {
   return {
@@ -372,9 +380,11 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
   switch (command) {
     case "app_info":
       return delay<AppInfo>({
-        version: "0.2.0-preview",
+        version: "0.4.3-preview",
         platform,
         configFile: "~/.config/dev.openrac.launcher/launcher.json",
+        // ?standalone shows an installed launcher's pages: no checkout, nothing to find.
+        standalone: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("standalone"),
       });
     case "get_config":
       return delay({ ...config });
@@ -396,6 +406,22 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       return delay(library());
     case "install_game":
       return delay(install(args.game as string, args.image as string));
+    case "scan_discs":
+      // ?discs: the games folder holds the first game's PAL disc.
+      return delay(
+        config.discsDir && new URLSearchParams(location.search).has("discs")
+          ? [
+              {
+                path: `${config.discsDir}/Ratchet & Clank (Europe).iso`,
+                serial: "SCES_509.16",
+                game: "rac1",
+                version: "rac1/pal",
+                title: "Ratchet & Clank",
+                region: "PAL (Europe)",
+              },
+            ]
+          : [],
+      );
     case "uninstall_game":
       installs[args.game as string] = undefined;
       return delay(null);

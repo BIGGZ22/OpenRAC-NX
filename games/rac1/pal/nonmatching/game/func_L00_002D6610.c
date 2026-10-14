@@ -49,8 +49,11 @@ void func_L00_002D6610(void *a0) {
     f20 = 0.0f;
     b = func_L00_0025B478_6610(a, 0x330000, 0);
     r1 = func_L00_0025B4D0_6610(a, b, d + 0x20, 0, &i10, &f14, 0, 4);
+    (void)r1;
 
-    if (r1 != 1 && *(unsigned char *)(a + 0x20) != 12 && f14 != 0.0f) {
+    /* Whether the hit counts is the resolver's fifth argument (1: none, or one still held off);
+       its return value is the reaction to play, 1 for a wrench hit. */
+    if (i10 != 1 && *(unsigned char *)(a + 0x20) != 12 && f14 != 0.0f) {
         f6 = D_L00_00161A40 * D_0015EE70;
         f5 = D_L00_00161A44 * D_0015EE70;
         f3 = D_L00_00161A48 * D_0015EE6C;

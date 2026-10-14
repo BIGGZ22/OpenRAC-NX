@@ -5,7 +5,97 @@
 #include "rnc/gameplay/entities/moby.h"
 #include "asm.h"
 
-INCLUDE_ASM("config/us/overlays/asm/FUN_L13_002ea8c8.s", FUN_L13_002ea8c8);
+#include "qcopy.h"
+#include "rnc/rendering/geometry_quad.h"
+
+extern u64 get_effect_texture(int) __asm__("FUN_001f44b8");
+extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
+extern void subtract_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a28");
+extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void clamp_vector_length(void *, void *, float) __asm__("FUN_001f9c90");
+extern float vector_length_xyz(void *) __asm__("FUN_001f9af0");
+extern void normalize_vector_xyz(void *, void *, float) __asm__("FUN_001f9bf8");
+extern void cross_vectors_xyz(void *, void *, void *) __asm__("FUN_001f9ad8");
+extern float convert_integer_to_float(int) __asm__("FUN_001fa6c0");
+extern int truncate_float_to_s32(float) __asm__("FUN_001fa6d0");
+extern void draw_geometry_quad(void *, void *, int) __asm__("FUN_001f7d30");
+extern int D_L13_0015F5CC;
+extern char D_L13_00160680[] __attribute__((section(".sdata")));
+
+void FUN_L13_002ea8c8(struct Moby *moby) {
+    char *vars = (char *)moby->pvars;
+    struct GeometryQuad quad;
+    float start[4];
+    float direction[4];
+    float position[4];
+    float offset[4];
+    float side[4];
+    float up[4];
+    float edge[4];
+    float length;
+    float step;
+    float distance;
+    float width;
+    float scale;
+    float zero = 0.0f;
+    float one = 1.0f;
+    u64 texture;
+
+    texture = get_effect_texture(0x34);
+    quad.colors[3] = 0x40808080;
+    quad.colors[2] = 0x40808080;
+    quad.colors[1] = 0x40808080;
+    quad.colors[0] = 0x40808080;
+    quad.texture = texture;
+    quad.texture_state = 0xFF9000000260LL;
+    quad.reserved.value = 4;
+    quad.primitive = 0x8000000048LL;
+    quad.texture_coordinates[0][0] = zero;
+    quad.texture_coordinates[2][0] = zero;
+    quad.texture_coordinates[1][0] = one;
+    quad.texture_coordinates[3][0] = one;
+    quad.texture_coordinates[0][1] = zero;
+    quad.texture_coordinates[1][1] = zero;
+    quad.texture_coordinates[2][1] = one;
+    quad.texture_coordinates[3][1] = one;
+    moby_point_position(moby, 0x13, start);
+    subtract_vector_xyz(direction, vars + 0x80, start);
+    clamp_vector_length(direction, direction, 100.0f);
+    length = vector_length_xyz(direction);
+    scale = length / 100.0f;
+    if (scale < 1.0f)
+        step = 1.0f;
+    else
+        step = scale;
+    normalize_vector_xyz(direction, direction, step);
+    qcopy(position, start);
+    distance = zero;
+    normalize_vector_xyz(offset, direction, convert_integer_to_float(D_L13_0015F5CC % 20) / 20.0f);
+    subtract_vector_xyz(position, position, offset);
+    while (distance < length) {
+        width = (distance * 0.0f) / (length + length) + 0.5f;
+        cross_vectors_xyz(side, direction, D_L13_00160680);
+        normalize_vector_xyz(side, side, width);
+        cross_vectors_xyz(up, direction, side);
+        normalize_vector_xyz(up, up, width);
+        subtract_vector_xyz(edge, position, up);
+        subtract_vector_xyz(&quad.positions[0], edge, side);
+        add_vector_xyz(&quad.positions[1], edge, side);
+        add_vector_xyz(edge, position, up);
+        subtract_vector_xyz(&quad.positions[2], edge, side);
+        add_vector_xyz(&quad.positions[3], edge, side);
+        if (10.0f < length && length - 10.0f < distance) {
+            int color = truncate_float_to_s32((length - distance) * 6.4f) << 24 | 0x808080;
+            quad.colors[3] = color;
+            quad.colors[2] = color;
+            quad.colors[1] = color;
+            quad.colors[0] = color;
+        }
+        draw_geometry_quad(&quad, 0, 1);
+        distance += step;
+        add_vector_xyz(position, position, direction);
+    }
+}
 #include "qcopy.h"
 
 /* Ported from rac1-decomp (src/overlays/l13_gemlik/vendor_002EBD00.c: func_L13_002EC038), where it is exact; names translated to the US level program. */
@@ -1041,19 +1131,94 @@ char *FUN_L13_002ecd10(char *src, int arg, int id) {
     }
     return moby;
 }
-INCLUDE_ASM("config/us/overlays/asm/FUN_L13_002ece00.s", FUN_L13_002ece00);
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L13_002ed158.s", FUN_L13_002ed158);
-#else
+extern int coll_sphere_ece00(void *, float, int, struct Moby *) __asm__("FUN_L00_001f0d60");
+extern void scale_vector_ece00(void *, void *, float) __asm__("FUN_001f9a68");
+extern void reflect_ece00(void *, void *, void *) __asm__("FUN_L00_001ff660");
+extern float fast_add_rotations_ece00(float, float) __asm__("FUN_001fa580");
+extern int tick_ece00(void *) __asm__("FUN_001f9740");
+extern void remove_ece00(struct Moby *) __asm__("FUN_0020c828");
+extern void burst_ece00(void *, void *, void *, float, float, int, int, int, float, float, float, int, float, float, int, int, int, int) __asm__("FUN_L00_0025e450");
+extern char D_L13_00174140[];
+
+struct PieceVars {
+    u8 pad0[0x10];
+    Vec4f vel;
+    u128 unk20;
+    f32 spin[3];
+    struct Moby *parent;
+    int timer;
+    int point;
+};
+
+void FUN_L13_002ece00(struct Moby *moby) {
+    struct PieceVars *vars = (struct PieceVars *)moby->pvars;
+    struct Moby *parent = vars->parent;
+    struct Moby *hit;
+    char *coll;
+    if (parent == 0 || parent->oclass != 0x184 || parent->state == 0xFE || parent->state == 0xFD) {
+        goto remove;
+    }
+    moby->flags = (moby->flags & 0xFFFC);
+    moby->flags = moby->flags | (vars->parent->flags & 3);
+    switch (moby->state) {
+    case 0:
+        moby->state = 1;
+        qzero(&vars->unk20);
+        break;
+    case 1:
+        moby->scale = moby->pclass->scale * vars->parent->scale / vars->parent->pclass->scale;
+        moby->spawn_frame = vars->parent->spawn_frame;
+        break;
+    case 2:
+        break;
+    case 3:
+        add_vector_xyz(&moby->pos, &moby->pos, &vars->vel);
+        scale_vector_ece00(&vars->vel, &vars->vel, 0.995f);
+        if (coll_sphere_ece00(&moby->pos, 2.0f, 0, moby) != 0) {
+            coll = D_L13_00174140;
+            hit = *(struct Moby **)(coll + 0x18);
+            if (hit == 0 || (hit->oclass != 0x191 && hit->oclass != 0x184 && hit->oclass != 0x185 &&
+                             hit->oclass != 0x186 && hit->oclass != 0x187 && hit->oclass != 0x188 &&
+                             hit->oclass != 0x189 && hit->oclass != 0x18A && hit->oclass != 0x18B &&
+                             hit->oclass != 0x18C && hit->oclass != 0x18F && hit->oclass != 0x190)) {
+                reflect_ece00(&vars->vel, &vars->vel, coll + 0x40);
+                moby->state = 4;
+            }
+        }
+        moby->rot.x = fast_add_rotations_ece00(moby->rot.x, vars->spin[0]);
+        moby->rot.y = fast_add_rotations_ece00(moby->rot.y, vars->spin[1]);
+        moby->rot.z = fast_add_rotations_ece00(moby->rot.z, vars->spin[2]);
+        vars->spin[0] *= 0.999f;
+        vars->spin[1] *= 0.999f;
+        vars->spin[2] *= 0.999f;
+        if (moby->pos.x < 10.0f || 1013.0f < moby->pos.x || moby->pos.y < 10.0f || 1013.0f < moby->pos.y ||
+            moby->pos.z < 10.0f || 1013.0f < moby->pos.z) {
+            goto remove;
+        }
+        if (tick_ece00(&vars->timer) == 0 || moby->visible != 0) {
+            break;
+        }
+    remove:
+        remove_ece00(moby);
+        break;
+    case 4:
+        burst_ece00(moby, &vars->vel, 0, 2.0f, 4.0f, 10, 3, 16, 4.0f, 2.0f, 9.0f, -1, 1.0f, 15.0f, 1, 1, -1, 0);
+        remove_ece00(moby);
+        break;
+    }
+}
+#include "types.h"
 extern void FUN_001fa2d8(void *, void *);
 extern void FUN_001f9d20(void *, void *, void *);
 extern void FUN_001f9a10(void *, void *, void *);
 extern void FUN_001f9a28(void *, void *, void *);
 extern void FUN_001fa030(void *, void *);
 extern void FUN_001f9cf8(void *, void *, void *);
-extern int collect_mobies_in_sphere(float, void *, int, void *, void *) __asm__("FUN_L00_001f2868");
+extern int collect_mobies_in_sphere(void *, float, int, void *, void *) __asm__("FUN_L00_001f2868");
 extern void FUN_L10_0024c7f0(float, void *, void *, int, void *);
 extern void *memcpy(void *, const void *, unsigned int);
+
+extern void *sphere_hits_ed158[] __asm__("D_L13_00178200");
 
 void FUN_L13_002ed158(void *moby, void *data) {
     float matrix[12];
@@ -1063,26 +1228,26 @@ void FUN_L13_002ed158(void *moby, void *data) {
     float rotation_matrix[16];
     float probe[4];
     void **candidates;
-    void **hit;
-    int count, hit_count, i;
+    int count, hit_count, i, j;
     char *candidate;
     short half_width, half_height, max_size;
+    float radius;
     float limit, tolerance, height_limit, height_tolerance;
 
     FUN_001fa030(matrix, moby + 0x40);
     max_size = *(short *)(data + 10) < *(short *)(data + 8) ?
         *(short *)(data + 8) : *(short *)(data + 10);
-    *(unsigned long long *)query = 0;
-    query[3] = 0.0f;
-    query[2] = (float)max_size * 0.5f;
+    radius = (float)max_size * 0.5f;
+    qzero(query);
+    query[2] = radius;
     FUN_001f9cf8(query, query, matrix);
     FUN_001f9a10(query, query, moby + 0x10);
-    count = collect_mobies_in_sphere((float)max_size * 0.5f, query, 0x10, moby, 0);
+    count = collect_mobies_in_sphere(query, radius, 0x10, moby, 0);
     if (count == 0) return;
     candidates = __builtin_alloca(((unsigned)count << 5) >> 3);
-    memcpy(candidates, (void *)0x178200, count * 4);
+    memcpy(candidates, sphere_hits_ed158, count * 4);
     for (i = 0; i < count; i++) {
-        candidate = candidates[i];
+        candidate = *(void **)((u32)candidates + (i << 2));
         if (candidate == 0 || (unsigned char)candidate[0x20] == 0xfe ||
             (unsigned char)candidate[0x20] == 0xfd) continue;
         FUN_001f9a28(candidate_pos, candidate + 0x10, moby + 0x10);
@@ -1102,19 +1267,13 @@ void FUN_L13_002ed158(void *moby, void *data) {
         probe[1] = 0.0f;
         FUN_001f9cf8(probe, probe, matrix);
         FUN_001f9a10(probe, probe, moby + 0x10);
-        hit_count = collect_mobies_in_sphere(0.7f, probe, 0x10, moby, 0);
-        if (hit_count > 0) {
-            hit = (void **)0x178200;
-            do {
-                if (*hit == candidate)
-                    FUN_L10_0024c7f0(1.0f, candidate, moby, 0x10001, probe);
-                hit_count--;
-                hit++;
-            } while (hit_count != 0);
+        hit_count = collect_mobies_in_sphere(probe, 0.7f, 0x10, moby, 0);
+        for (j = 0; j < hit_count; j++) {
+            if (sphere_hits_ed158[j] == candidate)
+                FUN_L10_0024c7f0(1.0f, candidate, moby, 0x10001, probe);
         }
     }
 }
-#endif
 /* Fades the moby in, waits for its linked moby to be collected or gone, fades out and kills it; spins it all the while. */
 extern int D_L13_0015FFD8_n __asm__("D_L13_0015FFD8");
 extern int D_0014C190_n[][64] __asm__("D_0014C190");

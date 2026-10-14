@@ -1356,7 +1356,15 @@ int func_L01_002F0F70(char *a) {
     a[0x20] = 14;
     return r;
 }
-INCLUDE_ASM("asm/overlays", func_L01_002F0FA0);
+/* slot 4 of the class tables of large_amoeboid (572) and small_amoeboid (866): the moby's pvars + 0xC0,
+   0 when there is no moby or no pvars */
+u8 *func_L01_002F0FA0(struct Moby *m) {
+    if (m != 0) {
+        if (m->pvars != 0) return m->pvars + 0xC0;
+        return 0;
+    }
+    return 0;
+}
 extern s32 D_L01_0015F6B0 MACRO_ADDR;
 
 /* Search backward for the first entry below the loaded threshold.
@@ -1407,7 +1415,16 @@ int func_L01_002F31A0(char *a) {
     a[0x20] = 7;
     return r;
 }
-INCLUDE_ASM("asm/overlays", func_L01_002F31D0);
+/* slot 4 of the class tables of peckbot, scoutbot, robosquawker, mine, chomper, robot_dog,
+   sand_shark, frog, puffoid and two unnamed classes: the moby's pvars + 0x60, 0 when there is
+   no moby or no pvars */
+u8 *func_L01_002F31D0(struct Moby *m) {
+    if (m != 0) {
+        if (m->pvars != 0) return m->pvars + 0x60;
+        return 0;
+    }
+    return 0;
+}
 extern float func_L00_00259148(float *vel, float cur, float target, float k, float d, float max);
 extern float D_0015EE70 MACRO_ADDR;
 extern char D_001405A8[];

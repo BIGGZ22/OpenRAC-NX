@@ -27,3 +27,7 @@ Thumbs.db
 # What a sync leaves when a hunk does not apply (tools/sources.py): resolve by hand, never commit
 *.rej
 *.orig
+
+# The copy of OpenRAC an installer carries (tools/bundle_standalone.py), built, not kept.
+/launcher/src-tauri/resources/openrac/*
+!/launcher/src-tauri/resources/openrac/README.txt

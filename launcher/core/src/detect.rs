@@ -47,13 +47,54 @@ pub struct Check {
 }
 
 /// Everything at once, for the first-run screen.
-pub fn detect_all(start: &[PathBuf]) -> Detected {
-    Detected {
-        roots: roots(start),
-        pythons: tool_candidates(Tool::Python),
-        godots: tool_candidates(Tool::Godot),
-        dockers: tool_candidates(Tool::Docker),
+pub fn detect_all(start: &[PathBuf], bundled: Option<&Path>) -> Detected {
+    let mut roots = roots(start);
+    let mut pythons = tool_candidates(Tool::Python);
+    // What an installed launcher carries (bundled_root): a checkout that is found goes first, so
+    // a contributor's launcher works on their tree; a player has only this one.
+    if let Some(dir) = bundled {
+        if !roots.iter().any(|c| c.path == dir) {
+            roots.push(Candidate { path: dir.to_path_buf(), source: "built in".into() });
+        }
+        if let Some(python) = bundled_python(dir) {
+            pythons.insert(0, Candidate { path: python, source: "built in".into() });
+        }
     }
+    Detected { roots, pythons, godots: tool_candidates(Tool::Godot), dockers: tool_candidates(Tool::Docker) }
+}
+
+/// The copy of OpenRAC an installed launcher carries in its resources (`openrac/`): the games'
+/// manifests, the set-up and level tools, a Python to run them and the game built for this
+/// system, put together by tools/bundle_standalone.py. With it a player needs only their disc
+/// image. `None` when the launcher was built without one (a contributor's `tauri dev`).
+pub fn bundled_root(resources: &Path) -> Option<PathBuf> {
+    let dir = resources.join("openrac");
+    (dir.join("STANDALONE").is_file() && is_openrac_root(&dir)).then_some(dir)
+}
+
+/// Which folder and Python the launcher works with, given the copy it carries (`bundled`).
+///
+/// A player always plays from that copy: nothing to install, nothing to build. A checkout is a
+/// contributor's, used only with developer tools on; a player who once cloned OpenRAC (the way
+/// in before the installers carried the game) is not sent back to it, where playing needs Python,
+/// compilers and a build. With developer tools on, the folder and Python chosen in Settings stand;
+/// one that is gone gives way to the carried copy.
+pub fn settle(config: &mut crate::config::Config, bundled: Option<&Path>) {
+    let Some(dir) = bundled else { return };
+    if !config.developer || !config.root.as_deref().is_some_and(is_openrac_root) {
+        config.root = Some(dir.to_path_buf());
+    }
+    let on_copy = config.root.as_deref() == Some(dir);
+    if on_copy && (!config.developer || !config.python.as_deref().is_some_and(Path::is_file)) {
+        config.python = bundled_python(dir);
+    }
+}
+
+/// The Python a bundled copy carries (python-build-standalone's layout).
+pub fn bundled_python(root: &Path) -> Option<PathBuf> {
+    let rel = if cfg!(windows) { "python/python.exe" } else { "python/bin/python3" };
+    let path = crate::under(root, rel);
+    path.is_file().then_some(path)
 }
 
 /// OpenRAC checkouts: `OPENRAC_ROOT`, then each start folder and its parents
@@ -301,6 +342,74 @@ pub fn run(mut cmd: Command, timeout: Duration) -> Result<String, String> {
 mod tests {
     use super::*;
     use crate::testing::checkout;
+
+    /// A carried copy is one only with its marker; it goes after a checkout that is found, and
+    /// its Python before the system's.
+    #[test]
+    fn a_carried_copy_is_the_last_root_and_its_python_the_first() {
+        let tmp = std::env::temp_dir().join(format!("openrac-bundled-{}", std::process::id()));
+        let dir = tmp.join("openrac");
+        std::fs::create_dir_all(dir.join("tools")).unwrap();
+        std::fs::create_dir_all(dir.join("games")).unwrap();
+        std::fs::write(dir.join("tools").join("openrac.py"), "").unwrap();
+        assert_eq!(bundled_root(&tmp), None, "no marker, no copy");
+        std::fs::write(dir.join("STANDALONE"), "").unwrap();
+        assert_eq!(bundled_root(&tmp), Some(dir.clone()));
+
+        assert_eq!(bundled_python(&dir), None);
+        let python = crate::under(&dir, if cfg!(windows) { "python/python.exe" } else { "python/bin/python3" });
+        std::fs::create_dir_all(python.parent().unwrap()).unwrap();
+        std::fs::write(&python, "").unwrap();
+
+        let found = detect_all(&[checkout().join("launcher")], Some(&dir));
+        assert_eq!(found.roots.last().map(|c| c.path.clone()), Some(dir.clone()));
+        assert!(found.roots.len() >= 2, "the checkout comes first: {:?}", found.roots);
+        assert_eq!(found.pythons.first().map(|c| c.path.clone()), Some(python));
+        std::fs::remove_dir_all(&tmp).unwrap();
+    }
+
+    /// A player plays from the carried copy even with a checkout set from before; a contributor's
+    /// choice stands with developer tools on, and a folder that is gone gives way.
+    #[test]
+    fn a_player_plays_from_the_carried_copy() {
+        let tmp = std::env::temp_dir().join(format!("openrac-settle-{}", std::process::id()));
+        let copy = tmp.join("openrac");
+        std::fs::create_dir_all(copy.join("tools")).unwrap();
+        std::fs::create_dir_all(copy.join("games")).unwrap();
+        std::fs::write(copy.join("tools").join("openrac.py"), "").unwrap();
+        let python = crate::under(&copy, if cfg!(windows) { "python/python.exe" } else { "python/bin/python3" });
+        std::fs::create_dir_all(python.parent().unwrap()).unwrap();
+        std::fs::write(&python, "").unwrap();
+        let checkout = checkout();
+
+        let mut player = crate::config::Config {
+            root: Some(checkout.clone()),
+            python: Some("/usr/bin/python3".into()),
+            ..crate::config::Config::default()
+        };
+        settle(&mut player, Some(&copy));
+        assert_eq!((player.root.as_deref(), player.python.as_deref()), (Some(copy.as_path()), Some(python.as_path())));
+
+        let mut contributor = crate::config::Config {
+            root: Some(checkout.clone()),
+            python: Some("/usr/bin/python3".into()),
+            developer: true,
+            ..crate::config::Config::default()
+        };
+        settle(&mut contributor, Some(&copy));
+        assert_eq!(contributor.root.as_deref(), Some(checkout.as_path()));
+        assert_eq!(contributor.python.as_deref(), Some(Path::new("/usr/bin/python3")));
+
+        let mut gone = crate::config::Config { root: Some(tmp.join("nothing")), developer: true, ..Default::default() };
+        settle(&mut gone, Some(&copy));
+        assert_eq!((gone.root.as_deref(), gone.python.as_deref()), (Some(copy.as_path()), Some(python.as_path())));
+
+        let mut no_copy = player.clone();
+        no_copy.root = Some(checkout.clone());
+        settle(&mut no_copy, None);
+        assert_eq!(no_copy.root.as_deref(), Some(checkout.as_path()), "without a copy nothing changes");
+        std::fs::remove_dir_all(&tmp).unwrap();
+    }
 
     #[test]
     fn finds_the_checkout_above_the_launcher() {

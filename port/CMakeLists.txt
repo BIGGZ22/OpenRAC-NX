@@ -10,6 +10,11 @@
 # that open a window need SDL3, found on the system or fetched by CMake.
 cmake_minimum_required(VERSION 3.24)
 project(openrac_port LANGUAGES C CXX)
+# macOS: the menu bar's code is Objective-C++ (platform/macos_app.mm), and an SDL3 that is built
+# here (Dependencies.cmake) is Objective-C. Enabled here, for every directory below.
+if(APPLE)
+  enable_language(OBJC OBJCXX)
+endif()
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -42,6 +47,8 @@ enable_testing()
 # ---- common: the log and small helpers, no dependencies ----
 add_library(openrac_common STATIC
   common/log.cpp
+  common/process.cpp
+  common/stats.cpp
 )
 target_include_directories(openrac_common PUBLIC .)
 openrac_warnings(openrac_common)

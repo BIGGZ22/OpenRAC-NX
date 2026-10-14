@@ -1151,7 +1151,15 @@ int func_L00_002D6C80(char *a) {
     a[0x20] = 9;
     return r;
 }
-INCLUDE_ASM("asm/overlays", func_L00_002D6CB0);
+/* slot 4 of the class tables of horny_toad (749) and gadgebot (1906): the moby's pvars + 0xD0,
+   0 when there is no moby or no pvars */
+u8 *func_L00_002D6CB0(struct Moby *m) {
+    if (m != 0) {
+        if (m->pvars != 0) return m->pvars + 0xD0;
+        return 0;
+    }
+    return 0;
+}
 extern s32 func_0022ED80_2D6CE0(s32, s32, void *) __asm__("func_0022ED80");
 typedef struct {
     u8 pad[0x454];

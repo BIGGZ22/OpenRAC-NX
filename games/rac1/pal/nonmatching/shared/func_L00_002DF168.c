@@ -6,7 +6,7 @@
  *   Camera matrix setup: picks 3 vec4 from the hero/camera by state, builds matrices via func_L00_001FF4B0, fills 
  *   Left: retail keeps the &s[3] pointer in $s0 plus a copy in $s4 for the loop (daddu $s4,$s0) and loop addresses
  */
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_DF168 __attribute__((mode(TI)));
 extern void func_001F9C30(void *, void *, float);
 extern void func_L00_001FF4B0(void *, void *, float);
 extern void func_001F9BD8(void *, void *, void *);
@@ -30,7 +30,7 @@ extern int D_L00_00161C28;
 
 // Builds the camera matrices and resets the camera effect state.
 void func_L00_002DF168(char *a, char *b) {
-    u128 s[7];
+    u128_DF168 s[7];
     char *g, *v, *h, *p, *q;
     short *w;
     int i, st;

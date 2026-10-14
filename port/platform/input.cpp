@@ -33,6 +33,8 @@ constexpr KeyBinding kKeyButtons[] = {
     {SDL_SCANCODE_C, Button::L3},
     {SDL_SCANCODE_V, Button::R3},
     {SDL_SCANCODE_RETURN, Button::Start},
+    // Escape pauses, as Start does: it used to end the program at once, a level's progress with it.
+    {SDL_SCANCODE_ESCAPE, Button::Start},
     {SDL_SCANCODE_BACKSPACE, Button::Select},
 };
 

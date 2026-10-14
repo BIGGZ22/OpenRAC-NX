@@ -22,6 +22,7 @@ pub mod catalog;
 pub mod config;
 pub mod detect;
 pub mod discord;
+pub mod discs;
 pub mod install;
 pub mod jobs;
 pub mod library;

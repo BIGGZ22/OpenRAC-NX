@@ -306,6 +306,9 @@ unsigned TexturePool::gl_texture(TextureHandle texture) {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(GL_LINEAR));
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, static_cast<GLint>(GL_REPEAT));
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, static_cast<GLint>(GL_REPEAT));
+            if (m_anisotropy > 1.0f) {
+                glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, m_anisotropy);
+            }
         } else {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(GL_NEAREST));
@@ -313,6 +316,35 @@ unsigned TexturePool::gl_texture(TextureHandle texture) {
         }
     }
     return e.gl;
+}
+
+float TexturePool::max_anisotropy() {
+    // The filter is an extension every desktop driver has (core since OpenGL 4.6); one without it
+    // answers the query with an error and leaves the value alone.
+    static float most = -1.0f;
+    if (most < 0.0f) {
+        while (glGetError() != GL_NO_ERROR) {
+        }
+        GLfloat value = 1.0f;
+        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &value);
+        most = glGetError() == GL_NO_ERROR && value >= 1.0f ? value : 1.0f;
+    }
+    return most;
+}
+
+void TexturePool::set_anisotropy(float samples) {
+    samples = std::clamp(samples, 1.0f, max_anisotropy());
+    if (samples == m_anisotropy) {
+        return;
+    }
+    m_anisotropy = samples;
+    for (const Entry& e : m_entries) {
+        if (e.live && e.mipmaps && e.gl != 0) {
+            glBindTexture(GL_TEXTURE_2D, e.gl);
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, m_anisotropy);
+        }
+    }
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void TexturePool::release_gl() {

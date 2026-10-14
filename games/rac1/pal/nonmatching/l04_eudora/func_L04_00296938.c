@@ -30,7 +30,7 @@ extern char D_L04_00174070[];
 extern float D_0015EE60 MACRO_ADDR;
 extern float D_0015EE6C MACRO_ADDR;
 extern float D_0015EE68 MACRO_ADDR;
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_96938 __attribute__((mode(TI)));
 
 /* Walk/steer update for a moby on level 04: blends heading and speed toward targets, runs the walk step and returns its flags. */
 int func_L04_00296938(char *m, char *s, float fa, float fb, float fc) {
@@ -173,7 +173,7 @@ int func_L04_00296938(char *m, char *s, float fa, float fb, float fc) {
         func_001F9BF0(v10, m + 0x10, ia);
         for (k = 0; k < 8;) {
             if (!func_L00_001F1D20(a94, a98, ia, 4, m)) break;
-            *(u128 *)ia = *(u128 *)D_L04_00174070;
+            *(u128_96938 *)ia = *(u128_96938 *)D_L04_00174070;
             r21 = r21 | 1;
             k++;
         }

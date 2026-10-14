@@ -6,7 +6,7 @@
  *   Pyrocitor update (class 176): state machine on m[0x20] with a 2.6 KB body, many float constants and gp-relativ
  *   Not run further: after three runs the first differences were in the save set and the frame, so a rewording wou
  */
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_B8AE8 __attribute__((mode(TI)));
 
 extern void func_L00_002B9528(unsigned char *m);
 extern void func_L00_00250800(void *, int, void *);
@@ -244,7 +244,7 @@ L8EE4:
     goto L8FEC;
 
 L8FA8:
-    *(u128 *)v20 = *(u128 *)buf;
+    *(u128_B8AE8 *)v20 = *(u128_B8AE8 *)buf;
     f0g = *(float *)&D_L00_001615F0 + f22;
     func_L00_001FF4B0(v10, D_0013E633 + 0x148D, f0g + 0.75f);
     func_001F9BD8(v30, v10, buf);
@@ -308,7 +308,7 @@ L8FEC:
     fa = func_001FA888(W[0x10]);
     vc.m = m;
     vc.x = 0x10000;
-    *(u128 *)vc.v = *(u128 *)v10;
+    *(u128_B8AE8 *)vc.v = *(u128_B8AE8 *)v10;
     vc.f = fa + f20;
     vc.a = f20;
     vc.b = 5627.9248046875f;
@@ -368,7 +368,7 @@ L94A8:
     p = *(unsigned char **)d;
     func_001FA4F0(p + 0xC0, m + 0xC0, p + 0xC0);
     p = *(unsigned char **)d;
-    *(u128 *)(p + 0x10) = *(u128 *)buf;
+    *(u128_B8AE8 *)(p + 0x10) = *(u128_B8AE8 *)buf;
     func_L00_00251E30_2b58d8(p);
 
 L94E4:

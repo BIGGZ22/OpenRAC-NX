@@ -28,7 +28,7 @@ extern short D_L05_001614C4;
 extern short D_L05_001614C8;
 extern short D_L05_001614CC;
 
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_D8B68 __attribute__((mode(TI)));
 
 // Builds 16 sprite records from the table at D_L05_001CE070, then walks the moby's draw list and calls the helpers for each matching entry
 void func_L05_002D8B68(unsigned char *moby) {
@@ -106,7 +106,7 @@ void func_L05_002D8B68(unsigned char *moby) {
         e = (char *)D_L05_00160098_0D3F0 + ((id & 0x7FFF) << 8);
         if (*(short *)(e + 0xA6) == 0x4F && (unsigned char)e[0x20] == 1) {
             d = *(char **)(e + 0x78);
-            *(u128 *)vp = *(u128 *)(e + 0x10);
+            *(u128_D8B68 *)vp = *(u128_D8B68 *)(e + 0x10);
             vp[3] = 20.0f;
             r = func_L00_00200290(vp, 512.0f);
             if (r != -1) {

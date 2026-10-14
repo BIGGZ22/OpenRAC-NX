@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* Native PAL hit spheres: func_L00_0025A8E8 (0x134 bytes) and func_L00_0025AA20
- * (0xA0 bytes, linked on levels 0, 6, 10, 16 and 18 only), which the decompilation
- * still has as assembly. Every attack that is a sphere goes through the first: the
+/* Native PAL hit spheres: func_L00_0025A8E8 (0x134 bytes), which the decompilation
+ * still has as assembly. (func_L00_0025AA20, the same sphere at a joint, was here too
+ * until the decompilation matched it on 2026-10-13: two definitions of one function
+ * make Clang reject the file they meet in, and hostgen then leaves that file out.) Every attack that is a sphere goes through the first: the
  * wrench's head, the hero's ground slams, a creature's bite. Not a PS2 match.
  *
  * Adapted from ReRAC (https://github.com/re-rac/rerac),
@@ -9,11 +10,9 @@
  * joint_hit): ISC License, Copyright (c) 2026 ReRAC contributors. ReRAC describes the
  * US release (NTSC-U level 1's 0x26e830 and level 0's 0x2599e8); the calls here are
  * PAL's own, read from the matched C around them: the template's set-up
- * (func_L00_0025A8C0), the sphere against mobys (func_L00_001F2BE8) and the joint's
- * point (func_L00_00250800). */
+ * (func_L00_0025A8C0) and the sphere against mobys (func_L00_001F2BE8). */
 extern void func_L00_0025A8C0(char *tmpl, int attacker, int flags, void *dir, float damage);
 extern int func_L00_001F2BE8(float radius, void *centre, int flags, void *ignore, void *tmpl);
-extern void func_L00_00250800(char *moby, int list, void *out);
 extern float func_001F9F90(float); /* FastCos */
 extern float func_001F9FA8(float); /* FastSin */
 
@@ -41,16 +40,4 @@ int func_L00_0025A8E8(char *moby, float radius, void *centre, int flags, float d
     tmpl[0x19] = subtype;
     *(unsigned short *)(tmpl + 0x1A) = *(unsigned short *)(moby + 0xA6);
     return func_L00_001F2BE8(radius, centre, sphere_flags, moby, tmpl);
-}
-
-/* The same sphere at the last joint of the attacker's joint list `list`, as it is
- * posed now; `n` is both the damage and the template's flags (one register serves
- * both in the retail code). The second float is not read. */
-int func_L00_0025AA20(char *moby, float radius, float unused, float push, int list, int n, int type,
-                      int subtype, int sphere_flags) {
-    float point[4] __attribute__((aligned(16)));
-
-    (void)unused;
-    func_L00_00250800(moby, list, point);
-    return func_L00_0025A8E8(moby, radius, point, n, (float)n, push, type, subtype, sphere_flags);
 }

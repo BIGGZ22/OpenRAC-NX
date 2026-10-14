@@ -41,6 +41,10 @@
   const installFolder = (path: string): Promise<Check> =>
     Promise.resolve({ ok: true, version: null, message: `games are set up in ${path}/active/<game>/data` });
 
+  /** The games folder is looked through when it is saved; what it holds shows on the Games page. */
+  const gamesFolder = (path: string): Promise<Check> =>
+    Promise.resolve({ ok: true, version: null, message: `disc images (.iso) are looked for in ${path}` });
+
   async function save(finish: boolean) {
     saving = true;
     let customId: string | null = draft.discordClientId?.trim() ?? null;
@@ -73,21 +77,32 @@
 
   <section class="panel">
     <h2>Folders</h2>
-    <PathField
-      label="OpenRAC folder"
-      hint="Your copy of OpenRAC: the folder with games/ and tools/ in it."
-      folder
-      bind:value={draft.root}
-      candidates={found?.roots}
-      detail={draft.developer}
-      check={root}
-    />
-    {#if !draft.root}
-      <p class="dim note">
-        No copy yet? <button class="link" onclick={() => void api.openUrl(REPO_URL)}>Get OpenRAC</button>, then choose
-        its folder here.
-      </p>
+    <!-- An installed launcher carries its own copy: the folder is a contributor's choice there. -->
+    {#if !app.info?.standalone || draft.developer}
+      <PathField
+        label="OpenRAC folder"
+        hint="Your copy of OpenRAC: the folder with games/ and tools/ in it."
+        folder
+        bind:value={draft.root}
+        candidates={found?.roots}
+        detail={draft.developer}
+        check={root}
+      />
+      {#if !draft.root}
+        <p class="dim note">
+          No copy yet? <button class="link" onclick={() => void api.openUrl(REPO_URL)}>Get OpenRAC</button>, then choose
+          its folder here.
+        </p>
+      {/if}
     {/if}
+    <PathField
+      label="Games folder"
+      hint="The folder with your PlayStation 2 disc images (.iso). OpenRAC finds its games in it."
+      folder
+      bind:value={draft.discsDir}
+      detail={draft.developer}
+      check={gamesFolder}
+    />
     <PathField
       label="Install folder"
       hint="Where your games are set up from your discs. A few GB per game."
@@ -98,38 +113,40 @@
     />
   </section>
 
-  <section class="panel">
-    <h2>Programs</h2>
-    <PathField
-      label="Godot"
-      hint="Godot 4.7 or newer, for the level editor. Optional."
-      bind:value={draft.godot}
-      candidates={found?.godots}
-      detail={draft.developer}
-      check={tool("godot")}
-    />
-    <!-- A player is asked for Python only when none was found; contributors always see it. -->
-    {#if draft.developer || setup || !app.config?.python}
+  {#if !app.info?.standalone || draft.developer}
+    <section class="panel">
+      <h2>Programs</h2>
       <PathField
-        label="Python"
-        hint="Python 3.10 or newer: OpenRAC's tools run with it."
-        bind:value={draft.python}
-        candidates={found?.pythons}
+        label="Godot"
+        hint="Godot 4.7 or newer, for the level editor. Optional."
+        bind:value={draft.godot}
+        candidates={found?.godots}
         detail={draft.developer}
-        check={tool("python")}
+        check={tool("godot")}
       />
-    {/if}
-    {#if draft.developer}
-      <PathField
-        label="Docker"
-        hint="The build container of Ratchet & Clank (PAL) and Deadlocked runs in it, on Linux and macOS. Optional."
-        bind:value={draft.docker}
-        candidates={found?.dockers}
-        detail={draft.developer}
-        check={tool("docker")}
-      />
-    {/if}
-  </section>
+      <!-- A player is asked for Python only when none was found; contributors always see it. -->
+      {#if draft.developer || setup || !app.config?.python}
+        <PathField
+          label="Python"
+          hint="Python 3.10 or newer: OpenRAC's tools run with it."
+          bind:value={draft.python}
+          candidates={found?.pythons}
+          detail={draft.developer}
+          check={tool("python")}
+        />
+      {/if}
+      {#if draft.developer}
+        <PathField
+          label="Docker"
+          hint="The build container of Ratchet & Clank (PAL) and Deadlocked runs in it, on Linux and macOS. Optional."
+          bind:value={draft.docker}
+          candidates={found?.dockers}
+          detail={draft.developer}
+          check={tool("docker")}
+        />
+      {/if}
+    </section>
+  {/if}
 
   {#if !setup}
     <section class="panel">

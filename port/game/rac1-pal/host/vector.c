@@ -30,3 +30,20 @@ void func_001252C0(gaddr out, gaddr v) {
 int func_L00_002EDB68(void) {
     return 0;
 }
+
+/* func_L00_0025C710 (mobyutil_00258BC8.c): out[i] = func_L00_0025C700(a[i], b[i], t) for four
+ * floats. The matched C declares a and b as 16-byte records passed by value; the PS2's calling
+ * convention hands those over by address, so every caller passes two pointers, and on a host the
+ * definition and its callers would not agree. The port's version takes the pointers. Both vectors
+ * are copied first, as retail copies them to its stack: out may be one of them. */
+void func_L00_0025C710(gaddr out, gaddr a, gaddr b, float t) {
+    float va[4];
+    float vb[4];
+    float r[4];
+    memcpy(va, G(a), sizeof(va));
+    memcpy(vb, G(b), sizeof(vb));
+    for (int i = 0; i < 4; ++i) {
+        r[i] = func_L00_0025C700(va[i], vb[i], t);
+    }
+    memcpy(G(out), r, sizeof(r));
+}

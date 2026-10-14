@@ -40,6 +40,10 @@ void effect_quad(std::span<const std::uint8_t> ram, const openrac_game_quad& qua
 // when the 2D layer is replayed from the game's packets.
 int ui_quad(const openrac_game_ui_rect& quad);
 
+// How far the HUD's side-anchored elements go out past the game's picture, in its 512ths of that
+// picture's width (openrac_game_hud_side): the player's "HUD: Edges" in a wider picture, else 0.
+int hud_side();
+
 // A sky sprite the game drew this frame (openrac_game_sky_sprite).
 void sky_sprite(const std::uint8_t* record, std::uint64_t tex0);
 
@@ -57,7 +61,10 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
 // tick's length. interpolating: it is on; wants_between: the latest tick has a world to move;
 // between: draws one if a refresh before `next_tick` (plus the lag) still shows this tick, and
 // reads the window's events: 1 drawn, 0 none due, -1 the window was closed.
-void set_tick(std::chrono::steady_clock::time_point tick, std::chrono::duration<double> period);
+// `late`: how long after its time the tick came (a machine that draws slower than the game ticks):
+// frame() leaves the frames of ticks that come more than a tick late undrawn.
+void set_tick(std::chrono::steady_clock::time_point tick, std::chrono::duration<double> period,
+              std::chrono::duration<double> late = std::chrono::duration<double>(0.0));
 bool interpolating();
 
 // The game's text lookup, asked for an id of the port's own (the rows it adds to the game's
@@ -95,6 +102,10 @@ bool show_picture(const std::uint8_t* rgba, int width, int height, float black);
 // The pad of a port as the game's pad library reads it: buttons active low, then the right and
 // left sticks (x, y each).
 bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]);
+
+// While the debug overlay holds the game (its pause): draws the last tick again and reads the
+// window's events until the overlay lets a tick through. False once the window was closed.
+bool hold();
 
 void close();
 

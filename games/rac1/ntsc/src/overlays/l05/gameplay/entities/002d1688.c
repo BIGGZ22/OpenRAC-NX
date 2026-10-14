@@ -282,8 +282,7 @@ state_zero:
 state_one:
     {
         path = D_L05_001B0930[*(int *)(data + 0x60)];
-        point = path + *(int *)(data + 0x68) * 16 + 0x10;
-        qcopy(v, point);
+        qcopy(v, path + *(int *)(data + 0x68) * 16 + 0x10);
         point = moby + 0x48;
         height = angle_2d1688(v[0] - *(float *)(moby + 0x10), v[1] - *(float *)(moby + 0x14));
         steer_2d1688(height, frame_time_sq * 3.1415927f, frame_time_sq * 3.1415927f,
@@ -342,49 +341,48 @@ set_timer:
         return;
     }
 state_three:
-    height = *(float *)(moby + 0x18);
-    if (hero.water_surface_z < height || *(float *)(data + 0x78) < 0.0f) {
-        if (hero.state.current != 0x72) {
-            qcopy(v, &hero.motion.pos);
-            v[2] = hero.water_surface_z;
-            FUN_L05_002d1fd8((int)moby, (char *)v);
-            set_camera_2d1688(&hero.motion.pos, &hero.motion.rot, 0x72, 0);
-        } else {
-            qcopy(&hero.motion.pos, moby + 0x10);
+    {
+        float speed;
+        if (hero.water_surface_z < *(float *)(moby + 0x18) || *(float *)(data + 0x78) < 0.0f) {
+            if (hero.state.current != 0x72) {
+                qcopy_nc(v, &hero.motion.pos);
+                v[2] = hero.water_surface_z;
+                FUN_L05_002d1fd8((int)moby, (char *)v);
+                set_camera_2d1688(&hero.motion.pos, &hero.motion.rot, 0x72, 0);
+            } else {
+                qcopy(&hero.motion.pos, moby + 0x10);
+            }
+            hero.unk20A5 = one;
+            hero.motion.pos.f[2] += 20.0f;
         }
-        hero.unk20A5 = one;
-        hero.motion.pos.f[2] += 20.0f;
-    }
-    height = *(float *)(moby + 0x18) + *(float *)(data + 0x78);
-    speed = frame_time_sq * 10.0f;
-    *(float *)(moby + 0x18) = height;
-    height = frame_time + frame_time;
-    speed = *(float *)(data + 0x78) - speed;
-    *(float *)(data + 0x78) = speed;
-    if (speed < height) {
-        fast_vec_normalize((*(float *)&D_L05_00161388), v, moby + 0xe0);
-        steer_2d1688(1.5533431f, frame_time_sq * 12.566371f,
-                      frame_time_sq * 12.566371f, frame_time * 25.132742f,
-                      moby + 0x44, data + 0x70);
-        copy_direction_2d1688(moby + 0xc0, moby + 0x40);
-        fast_vec_normalize((*(float *)&D_L05_00161388), w, moby + 0xe0);
-        fast_vec_sub(z, w, v);
-        fast_vec_sub(moby + 0x10, moby + 0x10, z);
-    }
-    if (*(float *)(data + 0x78) < 0.0f) {
-        if (*(float *)(moby + 0x18) < hero.water_surface_z && *(unsigned char *)(moby + 0xbc) == 0) {
-            *(unsigned char *)(moby + 0xbc) = 1;
-            effect_2d1688(0, 0, moby);
+        *(float *)(moby + 0x18) += *(float *)(data + 0x78);
+        speed = *(float *)(data + 0x78) - frame_time_sq * 10.0f;
+        *(float *)(data + 0x78) = speed;
+        if (speed < frame_time + frame_time) {
             fast_vec_normalize((*(float *)&D_L05_00161388), v, moby + 0xe0);
-            fast_vec_add(v, v, moby + 0x10);
-            v[2] = hero.water_surface_z;
-            FUN_L05_002d1fd8((int)moby, (char *)v);
+            steer_2d1688(1.5533431f, frame_time_sq * 12.566371f,
+                          frame_time_sq * 12.566371f, frame_time * 25.132742f,
+                          moby + 0x44, data + 0x70);
+            copy_direction_2d1688(moby + 0xc0, moby + 0x40);
+            fast_vec_normalize((*(float *)&D_L05_00161388), w, moby + 0xe0);
+            fast_vec_sub(z, w, v);
+            fast_vec_sub(moby + 0x10, moby + 0x10, z);
+        }
+        if (*(float *)(data + 0x78) < 0.0f) {
+            if (*(float *)(moby + 0x18) < hero.water_surface_z && *(unsigned char *)(moby + 0xbc) == 0) {
+                *(unsigned char *)(moby + 0xbc) = 1;
+                effect_2d1688(0, 0, moby);
+                fast_vec_normalize((*(float *)&D_L05_00161388), v, moby + 0xe0);
+                fast_vec_add(v, v, moby + 0x10);
+                v[2] = hero.water_surface_z;
+                FUN_L05_002d1fd8((int)moby, (char *)v);
+            }
         }
         if (*(float *)(data + 0x78) < 0.0f &&
             *(float *)(moby + 0x18) < *(float *)(data + 0x74) - 8.0f) sound_2d1688();
+        if ((*(unsigned char *)(moby + 0x70) & 2) != 0 && *(unsigned char *)(moby + 0x53) != 1)
+            set_action_2d1688(moby, 1, 0, timer_2d1688(10));
     }
-    if ((*(unsigned char *)(moby + 0x70) & 2) != 0 && *(unsigned char *)(moby + 0x53) != 1)
-        set_action_2d1688(moby, 1, 0, timer_2d1688(10));
 }
 #endif
 
@@ -815,7 +813,8 @@ void FUN_L05_002d7920(char *moby) {
             packet[i].uv[j][0] = D_L05_001CDD70[j][0];
             packet[i].uv[j][1] = D_L05_001CDD70[j][1];
             ratio = convert_integer_to_float(i + 1 - (j >> 1)) / (D_L05_001613E0 + phase);
-            ratio = ratio > 1.0f ? 1.0f : (ratio < 0.0f ? 0.0f : ratio);
+            if (ratio > 1.0f) ratio = 1.0f;
+            else if (ratio < 0.0f) ratio = 0.0f;
             packet[i].color[j] = interpolate_color_7920(ratio, D_L05_00161408, D_L05_0016140C);
         }
     }
@@ -833,17 +832,19 @@ void FUN_L05_002d7920(char *moby) {
                 for (frame = 0; frame < *(short *)(data + 0x320); frame++) {
                     int i;
                     int vertex_index;
-                    char *vertices = (char *)packet + frame * 0x90;
+                    int packet_offset = frame * 0x90;
                     vertex_index = (*(short *)(data + 0x322) - frame + 15) & 15;
                     for (i = 0; i < 3; i++) {
                         if (D_L05_001613F4 == 0) {
                             int k;
+                            char *vertices;
                             char *vertex_source = data + (i * 0x100 + 0x20);
                             for (k = 0; k < 4; k++) {
-                                transform_glow_vertex_7920(vertices + k * 0x10,
+                                transform_glow_vertex_7920((char *)packet + packet_offset + k * 0x10,
                                                            vertex_source + (((vertex_index + (k >> 1)) & 15) << 4),
                                                            (char *)matrix + (k & 1) * 0x10);
                             }
+                            vertices = (char *)packet + frame * 0x90;
                             draw_geometry_quad_7920(vertices, 0, 0);
                         }
                     }
@@ -1453,7 +1454,7 @@ extern void add_vector_304058(void *, void *, void *) __asm__("FUN_001f9a10");
 extern void fast_vec_cross(void *, void *, void *) __asm__("FUN_001f9ad8");
 extern float fast_vec_dot(void *, void *) __asm__("FUN_001f9ab0");
 extern float fast_vec_length(void *) __asm__("FUN_001f9af0");
-extern void scale_vector_304058(void *, void *, float) __asm__("FUN_001f9bf8");
+extern void scale_vector_304058(float, void *, void *) __asm__("FUN_001f9bf8");
 
 float FUN_L05_00304058(s32 path_index, void *position, void *out, float reach) {
     Vec4 segment, result, from_point, normal, projection, cross, offset;
@@ -1461,7 +1462,7 @@ float FUN_L05_00304058(s32 path_index, void *position, void *out, float reach) {
     float along;
     float segment_length;
     float best;
-    struct { s32 path_index; void *out; volatile int changed; } state;
+    struct { volatile s32 path_index; void *out; volatile int changed; } state;
     int i;
     int next_index;
     char *path;
@@ -1469,13 +1470,15 @@ float FUN_L05_00304058(s32 path_index, void *position, void *out, float reach) {
     char **path_entry;
 
     state.path_index = path_index;
-    state.out = out;
     state.changed = 0;
+    *(void * volatile *)&state.out = out;
     best = 512.0f;
     qcopy_nc(&from_point, position);
+    /* Retain the saved-index read; the first lookup uses the incoming index. */
+    (void)state.path_index;
     path_offset = path_index * 4;
-    i = 0;
-    if (state.changed < *(int *)*(char **)((char *)D_L05_001B0930 + path_offset) - 1) do {
+    i = state.changed;
+    if (i < *(int *)*(char **)((char *)D_L05_001B0930 + path_offset) - 1) do {
         int next;
         int segment_offset = i * 16;
         next_index = i + 1;
@@ -1492,7 +1495,7 @@ float FUN_L05_00304058(s32 path_index, void *position, void *out, float reach) {
         subtract_vector_304058(&normal, *path_entry + (segment_offset + 0x20),
                                *path_entry + next);
         normal.f[2] = 0.0f;
-        scale_vector_304058(&projection, &normal, 1.0f);
+        scale_vector_304058(1.0f, &projection, &normal);
         fast_vec_cross(&cross, &segment, &projection);
         separation = absolute_float_304058(cross.f[2]);
         if (separation < best)
@@ -1505,12 +1508,12 @@ float FUN_L05_00304058(s32 path_index, void *position, void *out, float reach) {
             if (!(fast_vec_length(&segment) < reach))
                 goto loop_next;
             state.changed = 1;
-            scale_vector_304058(&result, &segment, reach);
+            scale_vector_304058(reach, &result, &segment);
         } else {
             state.changed = 1;
-            scale_vector_304058(&offset, &projection, along);
+            scale_vector_304058(along, &offset, &projection);
             subtract_vector_304058(&result, &segment, &offset);
-            scale_vector_304058(&result, &result, reach);
+            scale_vector_304058(reach, &result, &result);
             add_vector_304058(&result, &result, &offset);
         }
         add_vector_304058(&from_point, &result,
@@ -1526,9 +1529,6 @@ loop_next:
 }
 #endif
 INCLUDE_ASM("config/us/overlays/asm/FUN_L05_00304320.s", FUN_L05_00304320);
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L05_00305178.s", FUN_L05_00305178);
-#else
 extern char *find_collision_part_305178(void *, int, int) __asm__("FUN_L00_0025a420");
 extern void *FUN_L05_002899f8(void *, void *, void *, int);
 extern void hit_update_305178(void *, void *, void *, int, int *, float *, int, int) __asm__("FUN_00213928");
@@ -1552,6 +1552,7 @@ extern float D_0013F3D0[];
 
 extern int D_L05_00161B74 __attribute__((sda));
 extern float D_L05_00161AF0 __attribute__((sda));
+extern const float frame_time_const __asm__("D_0015ED6C");
 extern float D_L05_00161AF4 __attribute__((sda));
 
 void FUN_L05_00305178(char *moby) {
@@ -1568,7 +1569,6 @@ void FUN_L05_00305178(char *moby) {
     float position[4] __attribute__((aligned(16)));
     char effect_data[16] __attribute__((aligned(16)));
     float speed;
-    float frame_scale;
     float angle;
     struct Hero *base;
 
@@ -1651,7 +1651,7 @@ mark_children:
         angle = FUN_001f9e90(base->motion.pos.f[0] - *(float *)(moby + 0x10),
                               base->motion.pos.f[1] - *(float *)(moby + 0x14));
         if (FUN_001fa688(*(float *)(moby + 0x48), angle) > 1.5707964f)
-            ((signed char *)data)[0xc4] = -((signed char *)data)[0xc4];
+            ((signed char *)data)[0xc4] *= -1;
     }
     if (tick_305178(data + 0x178) != 0)
         *(float *)(data + 0x174) = 20.0f;
@@ -1659,35 +1659,32 @@ mark_children:
         *(float *)(data + 0x174) = 14.0f;
     if (*(char **)(data + 0x184) != 0) {
         char *first;
+        float offset_scale;
         speed = vector_length_305178(data + 0x40);
-        frame_scale = frame_time;
-        frame_scale = frame_scale * D_L05_00161AF0;
-        speed /= frame_scale;
-        angle = D_L05_00161AF4;
+        speed /= D_L05_00161AF0 * frame_time_const;
+        offset_scale = D_L05_00161AF4;
         *(float *)(*(char **)(data + 0x184) + 0x58) = speed;
         *(float *)(*(char **)(data + 0x184) + 0x58) +=
-            *(float *)(data + 0x84) * angle;
+            *(float *)(data + 0x84) * offset_scale;
         first = *(char **)(data + 0x184);
         qcopy(first + 0x40, moby + 0x40);
         qcopy(first + 0x10, moby + 0x10);
     }
     if (*(char **)(data + 0x188) != 0) {
         char *second;
+        float offset_scale;
         speed = vector_length_305178(data + 0x40);
-        frame_scale = frame_time;
-        frame_scale = frame_scale * D_L05_00161AF0;
-        speed /= frame_scale;
-        angle = D_L05_00161AF4;
+        speed /= D_L05_00161AF0 * frame_time_const;
+        offset_scale = D_L05_00161AF4;
         *(float *)(*(char **)(data + 0x188) + 0x58) = speed;
         *(float *)(*(char **)(data + 0x188) + 0x58) -=
-            *(float *)(data + 0x84) * angle;
+            *(float *)(data + 0x84) * offset_scale;
         second = *(char **)(data + 0x188);
         qcopy(second + 0x40, moby + 0x40);
         qcopy(second + 0x10, moby + 0x10);
     }
     finish_motion_305178(moby, data + 0x60);
 }
-#endif
 /* Drops stale entries from the moby's 8 slots, then pushes each remaining one away from the hero. */
 /* Ported from rac1-decomp (src/overlays/l05_rilgar/vendor_002D28D0.c: func_L05_00306CF0), where it is exact; names translated to the US level program. */
 
@@ -2298,315 +2295,347 @@ void FUN_L05_0030bf98(char *moby)
         break;
     }
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L05_0030ca80.s", FUN_L05_0030ca80);
-#else
-extern char D_L05_001CAD00[];
-extern char D_L05_00180340[];
-extern char D_L05_0020B440[];
-extern unsigned short D_L05_0020B380[];
-extern int D_L05_0020B3E0[];
-extern float D_L05_0020B3F8[];
-extern int D_L05_0020B410[];
-extern float D_L05_0020B428[];
-extern int D_L05_00161D10 __attribute__((sda));
-extern unsigned short D_L05_00161D14 __attribute__((sda));
-extern int D_L05_00161D1C __attribute__((sda));
-extern int D_L05_00161D20 __attribute__((sda));
-extern float D_L05_00161D24 __attribute__((sda));
-extern float D_L05_00161D28 __attribute__((sda));
-extern int D_L05_00161D2C __attribute__((sda));
-extern float D_L05_00161D30 __attribute__((sda));
-extern float D_L05_00161D34 __attribute__((sda));
-extern char D_L05_001D6880[];
-extern float D_L05_0013F640;
-extern int D_L05_001413D4;
-extern int D_L05_001413DC;
-extern float D_0013F3D0[];
-extern float D_0013F3D8;
-extern int D_0013F64C;
-extern short D_0013F65E;
-extern int D_0015ED84;
-extern float D_0015ED70;
-extern float D_0015ED6C;
-extern unsigned char D_0014C050[];
-extern int current_level_index;
-extern void FUN_L05_0030d5c0(char *);
-extern void FUN_L05_0030d6a0(int);
+extern float frame_time_30ca80 __asm__("D_0015ED6C") __attribute__((section(".sdata")));
+extern float frame_time_sq_30ca80 __asm__("D_0015ED70");
+extern void enqueue_callback_list_1_30ca80(void (*)(void), void *) __asm__("FUN_001f4600");
+extern int scale_game_frames_30ca80(int) __asm__("FUN_001f96f8");
+extern float distance_xyz_30ca80(void *, void *) __asm__("FUN_001f9b48");
+extern float vector_distance_30ca80(void *, void *) __asm__("FUN_001f9b80");
+extern float fast_cos_30ca80(float) __asm__("FUN_001f9dc8");
+extern float fast_sin_30ca80(float) __asm__("FUN_001f9de0");
+extern float angle_atan2_30ca80(float, float) __asm__("FUN_001f9e90");
+extern int truncate_float_to_s32_30ca80(float) __asm__("FUN_001fa6d0");
+extern void mark_moby_for_removal_30ca80(void *) __asm__("FUN_0020c828");
+extern int random_integer_below_30ca80(int) __asm__("FUN_00213260");
+extern float random_float_between_30ca80(float, float) __asm__("FUN_002132a8");
+typedef struct {
+    float x;
+    float y;
+    float z;
+    char pad0C[0x12];
+    unsigned short h1E;
+    char rest[0x1170];
+} WaterRecord_30ca80;
+typedef struct {
+    float raised_z;
+    float lowered_z;
+    int starts_raised;
+    int rises;
+    int f10;
+    int record_index;
+    int timer;
+    int f1C;
+    float speed;
+    int moving;
+} WaterVars_30ca80;
+typedef struct {
+    float f0;
+    float f4;
+    float f8;
+    float fC;
+    float f10;
+    float f14;
+    float f18;
+    float f1C;
+    float f20;
+    int f24;
+    int f28;
+    int f2C;
+    float dir_x;
+    float dir_y;
+    float dir_z;
+    unsigned char b3C;
+    unsigned char b3D;
+} Light_30ca80;
+typedef struct {
+    char pad0[0x10];
+    float f10;
+    float f14;
+} Cam_30ca80;
+
+extern int current_level_index_30ca80 __asm__("D_0015ED84");
+extern unsigned char mission_states_30ca80[] __asm__("D_0014C050");
+extern WaterRecord_30ca80 water_records_30ca80[] __asm__("D_L05_001D6880");
+extern Cam_30ca80 D_L05_00180340_30ca80 __asm__("D_L05_00180340");
+extern Light_30ca80 light_30ca80 __asm__("D_L05_001CAD00");
+extern int D_L05_0020B440_30ca80[][4] __asm__("D_L05_0020B440");
+extern unsigned short record_draw_values_30ca80[] __asm__("D_L05_0020B380");
+extern int rise_frames_30ca80[] __asm__("D_L05_0020B3E0");
+extern float rise_speeds_30ca80[] __asm__("D_L05_0020B3F8");
+extern int base_rise_frames_30ca80[] __asm__("D_L05_0020B410");
+extern float base_rise_speeds_30ca80[] __asm__("D_L05_0020B428");
+extern int D_L05_001612D8_30ca80 __asm__("D_L05_001612D8") __attribute__((section(".sdata")));
+extern void *D_L05_001612D0_30ca80 __asm__("D_L05_001612D0") __attribute__((section(".sdata")));
+extern void *D_L05_001612D4_30ca80 __asm__("D_L05_001612D4") __attribute__((section(".sdata")));
+extern unsigned char D_L05_00161204_30ca80[] __asm__("D_L05_00161204") __attribute__((section(".sdata")));
+extern unsigned char D_L05_00161205_30ca80[] __asm__("D_L05_00161205") __attribute__((section(".sdata")));
+extern unsigned char D_L05_00161206_30ca80[] __asm__("D_L05_00161206") __attribute__((section(".sdata")));
+extern int D_L05_00161208_30ca80 __asm__("D_L05_00161208") __attribute__((section(".sdata")));
+extern float D_L05_0016120C_30ca80 __asm__("D_L05_0016120C") __attribute__((section(".sdata")));
+extern float D_L05_00161210_30ca80 __asm__("D_L05_00161210") __attribute__((section(".sdata")));
+extern float D_L05_00161214_30ca80 __asm__("D_L05_00161214") __attribute__((section(".sdata")));
+extern int D_L05_00161D10_30ca80 __asm__("D_L05_00161D10") __attribute__((sda));
+extern unsigned short D_L05_00161D14_30ca80 __asm__("D_L05_00161D14") __attribute__((sda));
+extern int hero_hits_30ca80 __asm__("D_L05_00161D1C") __attribute__((sda));
+extern int rise_step_30ca80 __asm__("D_L05_00161D20") __attribute__((sda));
+extern float rise_checkpoint_z_30ca80 __asm__("D_L05_00161D24") __attribute__((sda));
+extern float water_z_30ca80 __asm__("D_L05_00161D28") __attribute__((sda));
+extern int rise_checkpoint_hit_30ca80 __asm__("D_L05_00161D2C") __attribute__((sda));
+extern float move_speed_30ca80 __asm__("D_L05_00161D30") __attribute__((sda));
+extern float move_accel_30ca80 __asm__("D_L05_00161D34") __attribute__((sda));
 extern void initialize_slots_30ca80(void *, int) __asm__("FUN_L01_002b7a48");
 extern void initialize_slot_data_30ca80(float) __asm__("FUN_L01_002b7ef0");
-extern void copy_slot_30ca80(void *, void *) __asm__("FUN_L01_002b7c68");
-extern void finish_slots_30ca80(void *, int) __asm__("FUN_L01_002b7fe0");
-extern void move_slot_30ca80(float, float, float, float, void *, int, int) __asm__("FUN_L00_002a3ec8");
-extern float angle_30ca80(float, float) __asm__("FUN_001f9e90");
-extern float sine_30ca80(float) __asm__("FUN_001f9dc8");
-extern float cosine_30ca80(float) __asm__("FUN_001f9de0");
-extern int truncate_float_30ca80(float) __asm__("FUN_001fa6d0");
-extern int scale_game_frames_30ca80(int) __asm__("FUN_001f96f8");
-extern int tick_30ca80(float *) __asm__("FUN_001f9740");
-extern int random_integer_below_30ca80(int) __asm__("FUN_00213260");
-extern float random_float_30ca80(float, float) __asm__("FUN_002132a8");
-extern void move_scalar_30ca80(float *, float *, float, float, float, float) __asm__("FUN_00213f38");
+extern void copy_slot_30ca80(float *, int *) __asm__("FUN_L01_002b7c68");
+extern void FUN_L05_0030d6a0_30ca80(int) __asm__("FUN_L05_0030d6a0");
+extern void set_group_state_30ca80(int, int) __asm__("FUN_L01_0026e0e0");
+extern float advance_accelerated_scalar_30ca80(float *, float *, float, float, float, float) __asm__("FUN_00213f38");
 extern void update_group_30ca80(char *) __asm__("FUN_L05_0030d5c0");
-extern void set_action_30ca80(int, int) __asm__("FUN_L01_0026e0e0");
-extern void remove_moby_30ca80(char *) __asm__("FUN_0020c828");
-extern int check_moby_30ca80(float, char *) __asm__("FUN_L01_00275690");
-extern void register_callback_30ca80(void *, char *) __asm__("FUN_001f4600");
-extern void FUN_L05_0030d678(void);
-extern float distance_30ca80(void *, void *) __asm__("FUN_001f9b48");
-extern float distance_point_30ca80(void *, void *) __asm__("FUN_001f9b80");
+extern void pool_splash_30ca80(void *, int, int, float, float, float, float) __asm__("FUN_L00_002a3ec8");
+extern int FUN_L01_00275690_30ca80(char *, float) __asm__("FUN_L01_00275690");
+extern void finish_slots_30ca80(char *, int) __asm__("FUN_L01_002b7fe0");
+extern void FUN_L05_0030d678_30ca80(void) __asm__("FUN_L05_0030d678");
 
-void FUN_L05_0030ca80(char *moby) {
-    char *data = *(char **)(moby + 0x78);
-    char *slots;
-    char *slot_data;
-    char (*row)[0x1190];
-    char *light;
-    char *angle_data;
-    int *durations;
-    int *scaled_durations;
-    float *speeds;
-    float *scaled_speeds;
-    int slot;
-    float value;
-    float other;
-    float point[4];
-    switch (*(unsigned char *)(moby + 0x20)) {
+/* Update of the level 05 water mobys: sets up the 48-record water chain, moves the surface by state and keeps its record in step. */
+void FUN_L05_0030ca80(struct Moby *moby) {
+    WaterVars_30ca80 *d = *(WaterVars_30ca80 **)&moby->pvars;
+
+    switch (moby->state) {
     case 0:
-        if (*(int *)(data + 0x14) == 0) {
+        if (d->record_index == 0) {
             int i;
-            char *slots;
-            D_L05_00161D28 = *(float *)(moby + 0x18);
-            D_L05_00161D20 = 0;
-            D_L05_00161D2C = 0;
-            slots = D_L05_001D6880;
-            initialize_slots_30ca80(slots, 0x30);
+            int j;
+            float a;
+
+            water_z_30ca80 = moby->pos.z;
+            rise_step_30ca80 = 0;
+            rise_checkpoint_hit_30ca80 = 0;
+            initialize_slots_30ca80(water_records_30ca80, 0x30);
             initialize_slot_data_30ca80(1.0f);
-            light = D_L05_001CAD00;
-            angle_data = D_L05_00180340;
-            *(float *)(light + 0x0) = 16.0f;
-            *(float *)(light + 0x4) = 16.0f;
-            *(float *)(light + 0x8) = -8.0f;
-            *(float *)(light + 0xc) = -8.0f;
-            *(float *)(light + 0x10) = 1.0f;
-            *(float *)(light + 0x14) = 1.0f;
-            *(float *)(light + 0x18) = 0.9f;
-            *(float *)(light + 0x20) = 0.1f;
-            value = angle_30ca80(*(float *)(angle_data + 0x10), *(float *)(angle_data + 0x14));
-            *(float *)(light + 0x30) = sine_30ca80(value) * 0.57735f;
-            *(float *)(light + 0x34) = cosine_30ca80(value) * 0.57735f;
-            *(float *)(light + 0x38) = -0.57735f;
-            *(unsigned char *)(light + 0x3d) = 0x40;
-            *(int *)(light + 0x28) = 0x29;
-            *(int *)(light + 0x2c) = 0x2a;
-            *(unsigned char *)(light + 0x3c) = 0x1c;
-            *(int *)0x001612d8 = 0x30;
-            *(unsigned char *)0x00161205 = 0xb;
-            *(unsigned char *)0x00161206 = 0x3e;
-            *(float *)0x0016120c = 20480.0f;
-            *(float *)0x00161210 = 255.0f;
-            *(float *)0x00161214 = 26.0f;
-            *(char **)0x001612d0 = slots;
-            *(void **)0x001612d4 = D_L05_0020B440;
-            *(unsigned char *)0x00161204 = 0;
-            *(int *)0x00161208 = 0;
-            slot_data = D_L05_0020B440;
-            row = (char (*)[0x1190])slots;
-            i = 47;
-            do {
-                int selected_slot;
-                copy_slot_30ca80(row, slot_data);
-                slot_data += 0x10;
-                row++;
-                --i;
-                selected_slot = *(int *)(data + 0x14);
-                *(unsigned short *)(((char (*)[0x1190])slots)[selected_slot] + 0x1e) =
-                    D_L05_0020B380[selected_slot];
-            } while (i >= 0);
-            for (i = 0; i < 48; i++) FUN_L05_0030d6a0(i);
+            light_30ca80.f0 = 16.0f;
+            light_30ca80.f4 = 16.0f;
+            light_30ca80.f8 = -8.0f;
+            light_30ca80.fC = -8.0f;
+            light_30ca80.f10 = 1.0f;
+            light_30ca80.f14 = 1.0f;
+            light_30ca80.f18 = 0.9f;
+            light_30ca80.f20 = 0.1f;
+            a = angle_atan2_30ca80(D_L05_00180340_30ca80.f10, D_L05_00180340_30ca80.f14);
+            light_30ca80.dir_x = fast_cos_30ca80(a) * 0.57735002f;
+            light_30ca80.dir_y = fast_sin_30ca80(a) * 0.57735002f;
+            light_30ca80.dir_z = -0.57735002f;
+            light_30ca80.f28 = 0x29;
+            light_30ca80.f2C = 0x2A;
+            light_30ca80.b3C = 0x1C;
+            light_30ca80.b3D = 0x40;
+            D_L05_001612D0_30ca80 = water_records_30ca80;
+            D_L05_001612D4_30ca80 = D_L05_0020B440_30ca80;
+            D_L05_001612D8_30ca80 = 0x30;
+            D_L05_00161204_30ca80[0] = 0;
+            D_L05_00161205_30ca80[0] = 0xB;
+            D_L05_00161206_30ca80[0] = 0x3E;
+            D_L05_00161208_30ca80 = 0;
+            D_L05_0016120C_30ca80 = 20480.0f;
+            D_L05_00161210_30ca80 = 255.0f;
+            D_L05_00161214_30ca80 = 26.0f;
+            for (i = 0; i < 0x30; i++) {
+                copy_slot_30ca80(&water_records_30ca80[i].x, D_L05_0020B440_30ca80[i]);
+                water_records_30ca80[d->record_index].h1E = record_draw_values_30ca80[d->record_index];
+            }
+            for (j = 0; j < 0x30; j++) {
+                FUN_L05_0030d6a0_30ca80(j);
+            }
         }
-        *(short *)(moby + 0x32) = 0;
-        *(unsigned short *)(moby + 0x34) |= 1;
-        if (*(int *)(data + 0xc) != 0) {
-            if (*(int *)(data + 0x10) >= 0) {
-                *(unsigned char *)(moby + 0x30) = 255;
-                if (D_L05_00161D1C > 1) {
-                    int i;
-                    float scale = (float)(D_L05_00161D1C - 1) * 0.014285714f + 1.0f;
-                    if (scale > 1.4f) scale = 1.4f;
-                    durations = D_L05_0020B410;
-                    scaled_durations = D_L05_0020B3E0;
-                    speeds = D_L05_0020B428;
-                    scaled_speeds = D_L05_0020B3F8;
-                    for (i = 5; i >= 0; i--) {
-                        *scaled_durations++ = truncate_float_30ca80((float)*durations++ * scale);
-                        *scaled_speeds++ = *speeds++ / scale;
+        moby->draw_dist = 0;
+        moby->flags |= 1;
+        if (d->rises != 0) {
+            if (d->f10 >= 0) {
+                moby->update_dist = 0xFF;
+                if (hero_hits_30ca80 >= 2) {
+                    int k;
+                    float s = (float)(hero_hits_30ca80 - 1) * 0.014285714f + 1.0f;
+                    if (s > 1.4f) {
+                        s = 1.4f;
+                    }
+                    for (k = 0; k < 6; k++) {
+                        rise_frames_30ca80[k] = truncate_float_to_s32_30ca80((float)base_rise_frames_30ca80[k] * s);
+                        rise_speeds_30ca80[k] = base_rise_speeds_30ca80[k] / s;
                     }
                 }
             }
-            if (D_0014C050[current_level_index * 16 + (unsigned char)moby[0xb0]] == 255) {
-                moby[0x20] = 7;
-                *(float *)(moby + 0x18) = 44.0f;
+            if (mission_states_30ca80[moby->mission + (current_level_index_30ca80 << 4)] == 0xFF) {
+                moby->state = 7;
+                moby->pos.z = 44.0f;
             } else {
-                moby[0x20] = 3;
-                *(int *)(data + 0x18) = scale_game_frames_30ca80(60);
-                if (*(float *)(moby + 0x18) < *(float *)(data + 4))
-                    *(short *)(D_L05_001D6880 + *(int *)(data + 0x14) * 0x1190 + 0x1e) = 0;
-            }
-        } else {
-            if (*(int *)(data + 0x10) < 0) {
-                *(float *)(data + 4) = *(float *)(moby + 0x18);
-                *(float *)data = *(float *)(data + 4) + 4.5f;
-                if (*(int *)(data + 8) != 0) {
-                    moby[0x20] = 1;
-                    *(float *)(moby + 0x18) = *(float *)data;
-                    goto state_zero_done;
+                moby->state = 3;
+                d->timer = scale_game_frames_30ca80(0x3C);
+                if (moby->pos.z < d->lowered_z) {
+                    water_records_30ca80[d->record_index].h1E = 0;
                 }
             }
-            moby[0x20] = 2;
-            *(float *)(moby + 0x18) = *(float *)(data + 4);
+        } else {
+            if (d->f10 < 0) {
+                float z = moby->pos.z;
+                d->lowered_z = z;
+                d->raised_z = z + 4.5f;
+                if (d->starts_raised != 0) {
+                    moby->state = 1;
+                    moby->pos.z = d->raised_z;
+                } else {
+                    moby->state = 2;
+                    moby->pos.z = d->lowered_z;
+                }
+            } else {
+                moby->state = 2;
+                moby->pos.z = d->lowered_z;
+            }
         }
-    state_zero_done:
-        if (*(int *)(data + 0x14) == 47) *(int *)(moby + 0x94) = 0;
-        break;
-    case 1:
-        if (((unsigned char)moby[0xbc] & 8) == 0) moby[0xbc] = 2;
-        else {
-            *(int *)(data + 0x24) = 1;
-            set_action_30ca80((unsigned char)moby[0x21], 2);
-        }
-        if (*(int *)(data + 0x24) != 0) {
-            move_scalar_30ca80((float *)(moby + 0x18), (float *)(data + 0x20), *(float *)data,
-                                 D_L05_00161D30 * frame_time_sq,
-                                 D_L05_00161D30 * frame_time_sq,
-                                 D_L05_00161D34 * frame_time);
-            update_group_30ca80(moby);
-        }
-        if (random_integer_below_30ca80(200) == 0) {
-            slot = *(int *)(data + 0x14);
-            slots = D_L05_001D6880;
-            value = *(float *)(slots + *(int *)(data + 0x14) * 0x1190) + random_float_30ca80(-4.0f, 4.0f);
-            other = *(float *)(slots + *(int *)(data + 0x14) * 0x1190 + 4) + random_float_30ca80(-4.0f, 4.0f);
-            move_slot_30ca80(value, other, 1.0f, -0.05f,
-                                slots + *(int *)(data + 0x14) * 0x1190, 1, 1);
+        if (d->record_index == 0x2F) {
+            *(int *)&moby->collision = 0;
         }
         break;
     case 2:
-        if (((unsigned char)moby[0xbc] & 4) == 0) {
-            if (*(int *)(data + 0x10) >= 0) {
-                if (D_0014C050[current_level_index * 16 + (unsigned char)moby[0xb0]] == 255) {
-                    moby[0x20] = 1;
-                    *(float *)(moby + 0x18) = *(float *)data;
-                }
+        if (moby->command & 4) {
+            d->moving = 1;
+            set_group_state_30ca80(moby->group, 1);
+        } else if (d->f10 >= 0) {
+            if (mission_states_30ca80[moby->mission + (current_level_index_30ca80 << 4)] == 0xFF) {
+                moby->state = 1;
+                moby->pos.z = d->raised_z;
             }
+        }
+        if (d->moving != 0) {
+            advance_accelerated_scalar_30ca80(&moby->pos.z, &d->speed, d->lowered_z, move_speed_30ca80 * frame_time_sq_30ca80, move_speed_30ca80 * frame_time_sq_30ca80, move_accel_30ca80 * frame_time_30ca80);
+            update_group_30ca80((char *)moby);
+        }
+        moby->command = 1;
+        if (random_integer_below_30ca80(0xC8) == 0) {
+            float x = water_records_30ca80[d->record_index].x + random_float_between_30ca80(-4.0f, 4.0f);
+            float r = random_float_between_30ca80(-4.0f, 4.0f);
+            WaterRecord_30ca80 *e = &water_records_30ca80[d->record_index];
+            pool_splash_30ca80(e, 1, 1, x, e->y + r, 1.0f, -0.05f);
+        }
+        break;
+    case 1:
+        if (moby->command & 8) {
+            d->moving = 1;
+            set_group_state_30ca80(moby->group, 2);
         } else {
-            *(int *)(data + 0x24) = 1;
-            set_action_30ca80((unsigned char)moby[0x21], 1);
+            moby->command = 2;
         }
-        if (*(int *)(data + 0x24) != 0) {
-            move_scalar_30ca80((float *)(moby + 0x18), (float *)(data + 0x20), *(float *)(data + 4),
-                                 D_L05_00161D30 * frame_time_sq,
-                                 D_L05_00161D30 * frame_time_sq,
-                                 D_L05_00161D34 * frame_time);
-            update_group_30ca80(moby);
+        if (d->moving != 0) {
+            advance_accelerated_scalar_30ca80(&moby->pos.z, &d->speed, d->raised_z, move_speed_30ca80 * frame_time_sq_30ca80, move_speed_30ca80 * frame_time_sq_30ca80, move_accel_30ca80 * frame_time_30ca80);
+            update_group_30ca80((char *)moby);
         }
-        moby[0xbc] = 1;
-        if (random_integer_below_30ca80(200) == 0) {
-            slot = *(int *)(data + 0x14);
-            slots = D_L05_001D6880;
-            value = *(float *)(slots + *(int *)(data + 0x14) * 0x1190) + random_float_30ca80(-4.0f, 4.0f);
-            other = *(float *)(slots + *(int *)(data + 0x14) * 0x1190 + 4) + random_float_30ca80(-4.0f, 4.0f);
-            move_slot_30ca80(value, other, 1.0f, -0.05f,
-                                slots + *(int *)(data + 0x14) * 0x1190, 1, 1);
+        if (random_integer_below_30ca80(0xC8) == 0) {
+            float x = water_records_30ca80[d->record_index].x + random_float_between_30ca80(-4.0f, 4.0f);
+            float r = random_float_between_30ca80(-4.0f, 4.0f);
+            WaterRecord_30ca80 *e = &water_records_30ca80[d->record_index];
+            pool_splash_30ca80(e, 1, 1, x, e->y + r, 1.0f, -0.05f);
         }
         break;
     case 3:
-        value = distance_point_30ca80(moby + 0x10, &hero.motion.pos);
-        if (value < 16.0f && *(float *)(moby + 0x18) > hero.motion.pos.f[2] && hero.state.control_mode == 0x11)
-            if (hero.water_surface_z < *(float *)(moby + 0x18))
-                hero.water_surface_z = *(float *)(moby + 0x18);
-        if (*(int *)(data + 0x10) >= 0 && distance_point_30ca80(moby + 0x10, &hero.motion.pos) < 10.0f &&
-            hero.ground_moby != 0 && hero.air_frames.s == 0 && *(short *)((char *)hero.ground_moby + 0xa6) == 0x33e) {
-            *(float *)(data + 0x1c) = 0.0f;
-            moby[0x20] = 8;
-            D_L05_00161D20 = 0;
-            *(int *)(data + 0x18) = scale_game_frames_30ca80(D_L05_0020B3E0[0]);
+        if (vector_distance_30ca80(((float *)&moby->pos), hero.motion.pos.f) < 16.0f) {
+            Hero *h = &hero;
+            if (h->motion.pos.f[2] < moby->pos.z) {
+                if (h->state.control_mode == 0x11) {
+                    if (h->water_surface_z < moby->pos.z) {
+                        h->water_surface_z = moby->pos.z;
+                    }
+                }
+            }
         }
-        if (random_integer_below_30ca80(50) == 0) {
-            slot = *(int *)(data + 0x14);
-            slots = D_L05_001D6880;
-            value = *(float *)(slots + *(int *)(data + 0x14) * 0x1190) + random_float_30ca80(-4.0f, 4.0f);
-            other = *(float *)(slots + *(int *)(data + 0x14) * 0x1190 + 4) + random_float_30ca80(-4.0f, 4.0f);
-            move_slot_30ca80(value, other, 1.0f, -0.01f,
-                                slots + *(int *)(data + 0x14) * 0x1190, 1, 1);
+        if (d->f10 >= 0) {
+            if (vector_distance_30ca80(((float *)&moby->pos), hero.motion.pos.f) < 10.0f) {
+                Hero *h = &hero;
+                if (h->ground_moby != 0 && h->air_frames.s == 0 && h->ground_moby->oclass == 0x33E) {
+                    d->f1C = 0;
+                    moby->state = 8;
+                    rise_step_30ca80 = 0;
+                    d->timer = scale_game_frames_30ca80(rise_frames_30ca80[0]);
+                }
+            }
+        }
+        if (random_integer_below_30ca80(0x32) == 0) {
+            float x = water_records_30ca80[d->record_index].x + random_float_between_30ca80(-4.0f, 4.0f);
+            float r = random_float_between_30ca80(-4.0f, 4.0f);
+            WaterRecord_30ca80 *e = &water_records_30ca80[d->record_index];
+            pool_splash_30ca80(e, 1, 1, x, e->y + r, 1.0f, -0.01f);
         }
         break;
     case 7:
-        slot = *(int *)(data + 0x14);
-        slots = D_L05_001D6880;
-        if (*(int *)(data + 0x10) < 0) {
-            if (*(float *)data < *(float *)(moby + 0x18)) {
-                *(short *)(slots + *(int *)(data + 0x14) * 0x1190 + 0x1e) = 0;
-                remove_moby_30ca80(moby);
-                return;
+        if (d->f10 >= 0) {
+            Hero *h = &hero;
+            if (h->state.current == 0x6A && h->state_timer == 2) {
+                hero_hits_30ca80++;
             }
-        } else if (hero.state.current == 0x6a && hero.state_timer == 2) {
-            ++D_L05_00161D1C;
+        } else if (d->raised_z < moby->pos.z) {
+            water_records_30ca80[d->record_index].h1E = 0;
+            mark_moby_for_removal_30ca80(moby);
+            return;
         }
         break;
     case 8:
-        {
-            int i;
-            if (tick_30ca80((float *)(data + 0x18)) && D_L05_00161D20 < 5) {
-                i = ++D_L05_00161D20;
-                *(int *)(data + 0x18) = scale_game_frames_30ca80(D_L05_0020B3E0[i]);
+        if (func_001F9908_v(&d->timer) != 0) {
+            if (rise_step_30ca80 < 5) {
+                rise_step_30ca80++;
+                d->timer = scale_game_frames_30ca80(rise_frames_30ca80[rise_step_30ca80]);
             }
-            *(float *)(moby + 0x18) += D_L05_0020B3F8[D_L05_00161D20] * frame_time;
-            update_group_30ca80(moby);
-            D_L05_00161D28 = *(float *)(moby + 0x18);
-            point[0] = 211.0f;
-            point[1] = 338.0f;
-            point[2] = 25.0f;
-            point[3] = 0.0f;
-            if (distance_30ca80(point, &hero.motion.pos) < 6.0f) {
-                if (D_L05_00161D2C == 0) {
-                    D_L05_00161D2C = 1;
-                    if (D_L05_00161D24 < *(float *)(moby + 0x18)) D_L05_00161D20 = 5;
+        }
+        moby->pos.z += rise_speeds_30ca80[rise_step_30ca80] * frame_time_30ca80;
+        update_group_30ca80((char *)moby);
+        water_z_30ca80 = moby->pos.z;
+        {
+            Vec4 v;
+
+            v.q = 0;
+            v.f[0] = 211.0f;
+            v.f[1] = 338.0f;
+            v.f[2] = 25.0f;
+            if (distance_xyz_30ca80(v.f, &hero.motion.pos) < 6.0f) {
+                if (rise_checkpoint_hit_30ca80 == 0) {
+                    rise_checkpoint_hit_30ca80 = 1;
+                    if (moby->pos.z > rise_checkpoint_z_30ca80) {
+                        rise_step_30ca80 = 5;
+                    }
                 }
             }
-            if (*(int *)(data + 0x10) >= 0 && hero.state.current == 0x6a && hero.state_timer == 2)
-                ++D_L05_00161D1C;
-            if (*(float *)(moby + 0x18) >= 44.0f)
-                set_action_30ca80((unsigned char)moby[0x21], 7);
+        }
+        if (d->f10 >= 0) {
+            Hero *h = &hero;
+            if (h->state.current == 0x6A && h->state_timer == 2) {
+                hero_hits_30ca80++;
+            }
+        }
+        if (moby->pos.z >= 44.0f) {
+            set_group_state_30ca80(moby->group, 7);
         }
         break;
     }
-    slots = D_L05_001D6880;
-    slot = *(int *)(data + 0x14);
-    if (slot >= 0) {
-        float visible = 0.0f;
-        *(float *)(slots + *(int *)(data + 0x14) * 0x1190 + 8) = *(float *)(moby + 0x18);
-        if (check_moby_30ca80(48.0f, moby) != -1 &&
-            (((unsigned)(unsigned char)moby[0x20] - 3) >= 5 ||
-             (*(float *)(data + 4) < *(float *)(moby + 0x18) &&
-              *(float *)(moby + 0x18) < *(float *)data))) visible = 1.0f;
-        if (visible == 0.0f) {
-            *(unsigned short *)(slots + *(int *)(data + 0x14) * 0x1190 + 0x1e) = 0;
+    if (d->record_index >= 0) {
+        WaterRecord_30ca80 *e = &water_records_30ca80[d->record_index];
+        float t;
+
+        e->z = moby->pos.z;
+        t = 0.0f;
+        if (FUN_L01_00275690_30ca80((char *)moby, 48.0f) != -1
+            && (!(moby->state >= 3 && moby->state <= 7) || (moby->pos.z > d->lowered_z && moby->pos.z < d->raised_z))) {
+            t = 1.0f;
+        }
+        if (t == 0.0f) {
+            water_records_30ca80[d->record_index].h1E = 0;
         } else {
-            *(unsigned short *)(slots + *(int *)(data + 0x14) * 0x1190 + 0x1e) = D_L05_0020B380[*(int *)(data + 0x14)];
+            water_records_30ca80[d->record_index].h1E = record_draw_values_30ca80[d->record_index];
         }
-        if (*(int *)(data + 0x14) == 0) {
-            finish_slots_30ca80(slots, 0x30);
-            register_callback_30ca80(FUN_L05_0030d678, moby);
+        if (d->record_index == 0) {
+            finish_slots_30ca80((char *)water_records_30ca80, 0x30);
+            enqueue_callback_list_1_30ca80(FUN_L05_0030d678_30ca80, moby);
         }
-        if (*(int *)(data + 0x14) == D_L05_00161D10) {
-            *(short *)(slots + *(int *)(data + 0x14) * 0x1190 + 0x1e) = D_L05_00161D14;
-            D_L05_0020B380[*(int *)(data + 0x14)] = D_L05_00161D14;
+        if (d->record_index == D_L05_00161D10_30ca80) {
+            water_records_30ca80[d->record_index].h1E = D_L05_00161D14_30ca80;
+            record_draw_values_30ca80[d->record_index] = D_L05_00161D14_30ca80;
         }
     }
 }
-
-#endif
 /* Ported from rac1-decomp (src/overlays/l05_rilgar/vendor_002D28D0.c: func_L05_0030EA88), where it is exact; names translated to the US level program. */
 
 extern char D_L05_001D6880[];

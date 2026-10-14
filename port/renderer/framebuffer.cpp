@@ -16,10 +16,21 @@ FrameBuffer::~FrameBuffer() {
     // release() frees the GL objects while the context exists.
 }
 
-bool FrameBuffer::create(int width, int height, std::string& error) {
+int FrameBuffer::max_samples() {
+    static int most = 0;
+    if (most == 0) {
+        GLint value = 1;
+        glGetIntegerv(GL_MAX_SAMPLES, &value);
+        most = std::max(1, static_cast<int>(value));
+    }
+    return most;
+}
+
+bool FrameBuffer::create(int width, int height, std::string& error, int samples) {
     release();
     m_width = width;
     m_height = height;
+    m_samples = std::clamp(samples, 1, max_samples());
     glGenTextures(1, &m_colour);
     glBindTexture(GL_TEXTURE_2D, m_colour);
     glTexImage2D(
@@ -40,18 +51,32 @@ bool FrameBuffer::create(int width, int height, std::string& error) {
 
     glGenRenderbuffers(1, &m_depth);
     glBindRenderbuffer(GL_RENDERBUFFER, m_depth);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
-
     glGenFramebuffers(1, &m_framebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, m_framebuffer);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colour, 0);
+    if (m_samples > 1) {
+        glRenderbufferStorageMultisample(GL_RENDERBUFFER, m_samples, GL_DEPTH24_STENCIL8, width, height);
+        glGenRenderbuffers(1, &m_multisample);
+        glBindRenderbuffer(GL_RENDERBUFFER, m_multisample);
+        glRenderbufferStorageMultisample(GL_RENDERBUFFER, m_samples, GL_RGBA8, width, height);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, m_multisample);
+    } else {
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colour, 0);
+    }
     glFramebufferRenderbuffer(
         GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_depth
     );
-    const GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status == GL_FRAMEBUFFER_COMPLETE && m_samples > 1) {
+        glGenFramebuffers(1, &m_resolve);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_resolve);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colour, 0);
+        status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     if (status != GL_FRAMEBUFFER_COMPLETE) {
-        error = std::format("framebuffer {}x{} incomplete ({:#x})", width, height, status);
+        error = std::format("framebuffer {}x{} with {} sample(s) incomplete ({:#x})", width, height, m_samples,
+                            status);
         release();
         return false;
     }
@@ -63,6 +88,10 @@ void FrameBuffer::release() {
         glDeleteFramebuffers(1, &m_framebuffer);
         m_framebuffer = 0;
     }
+    if (m_resolve != 0) {
+        glDeleteFramebuffers(1, &m_resolve);
+        m_resolve = 0;
+    }
     if (m_colour != 0) {
         glDeleteTextures(1, &m_colour);
         m_colour = 0;
@@ -71,24 +100,50 @@ void FrameBuffer::release() {
         glDeleteRenderbuffers(1, &m_depth);
         m_depth = 0;
     }
+    if (m_multisample != 0) {
+        glDeleteRenderbuffers(1, &m_multisample);
+        m_multisample = 0;
+    }
+    m_samples = 1;
+    m_width = 0;
+    m_height = 0;
 }
 
-std::vector<std::uint8_t> FrameBuffer::read_rgba() const {
-    const auto row = static_cast<std::size_t>(m_width) * 4;
-    std::vector<std::uint8_t> pixels(row * static_cast<std::size_t>(m_height));
+unsigned FrameBuffer::resolved() const {
+    if (m_resolve == 0) {
+        return m_framebuffer;
+    }
+    // As blit_to: neither the scissor nor the colour mask applies to a copy.
+    glDisable(GL_SCISSOR_TEST);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, m_framebuffer);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_resolve);
+    glBlitFramebuffer(0, 0, m_width, m_height, 0, 0, m_width, m_height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    return m_resolve;
+}
+
+std::vector<std::uint8_t> read_rgba(unsigned framebuffer, int width, int height) {
+    const auto row = static_cast<std::size_t>(width) * 4;
+    std::vector<std::uint8_t> pixels(row * static_cast<std::size_t>(height));
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    glReadPixels(0, 0, m_width, m_height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
     // GL's rows run bottom to top.
-    for (int y = 0; y < m_height / 2; ++y) {
+    for (int y = 0; y < height / 2; ++y) {
         auto top = pixels.begin() + static_cast<std::ptrdiff_t>(static_cast<std::size_t>(y) * row);
         auto bottom =
             pixels.begin()
-            + static_cast<std::ptrdiff_t>(static_cast<std::size_t>(m_height - 1 - y) * row);
+            + static_cast<std::ptrdiff_t>(static_cast<std::size_t>(height - 1 - y) * row);
         std::swap_ranges(top, top + static_cast<std::ptrdiff_t>(row), bottom);
     }
     return pixels;
+}
+
+std::vector<std::uint8_t> FrameBuffer::read_rgba() const {
+    return renderer::read_rgba(resolved(), m_width, m_height);
 }
 
 void FrameBuffer::blit_to(unsigned target, int dst_width, int dst_height) const {
@@ -96,10 +151,15 @@ void FrameBuffer::blit_to(unsigned target, int dst_width, int dst_height) const 
     // (the renderers set both again for their own draws).
     glDisable(GL_SCISSOR_TEST);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, m_framebuffer);
+    // A multisampled target copies to one of another size only through its resolved colour.
+    const unsigned source = m_samples > 1 && (dst_width != m_width || dst_height != m_height) ? resolved()
+                                                                                              : m_framebuffer;
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, source);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target);
+    const bool same_size = dst_width == m_width && dst_height == m_height;
     glBlitFramebuffer(
-        0, 0, m_width, m_height, 0, 0, dst_width, dst_height, GL_COLOR_BUFFER_BIT, GL_LINEAR
+        0, 0, m_width, m_height, 0, 0, dst_width, dst_height, GL_COLOR_BUFFER_BIT,
+        same_size ? GL_NEAREST : GL_LINEAR
     );
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);

@@ -1120,11 +1120,8 @@ void FUN_L05_00253850(void) {
         }
     }
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L05_00253b48.s", FUN_L05_00253b48);
-#else
 extern s32 FUN_001f96f8(s32);
-extern s32 FUN_L00_001fefc8(u8 *, void *) __asm__("FUN_L00_001fefc8");
+extern s32 FUN_L00_001fefc8_c(u8 *) __asm__("FUN_L00_001fefc8");
 extern void FUN_001f9a28(void *, void *, void *);
 extern f32 FUN_001f99c0(f32);
 extern void FUN_001f9fc8(void *);
@@ -1134,14 +1131,13 @@ extern f32 FUN_001fa6c0(s32);
 extern f32 FUN_001f9de0(f32);
 extern s32 FUN_001fa6d0(f32);
 extern f32 FUN_001f9b48(void *, void *);
-extern void FUN_L00_002591d0(void **, s32, s32, s32);
-extern void FUN_L00_002592b8(void **, void *, s32, s32);
+extern s32 FUN_L00_002591d0(void **, s32, s32, s32);
+extern s32 FUN_L00_002592b8(void **, void *, s32, s32);
 extern s32 allocate_voice_for_target_entry(s32, s32, void *) __asm__("FUN_0022da68");
 extern s32 D_L00_0015F5CC __asm__("D_L00_0015F5CC");
 extern s32 D_0013D4B8;
 extern s32 weapon_ammo_counts[37] __asm__("D_0013D428");
 extern f32 D_0013F420[];
-extern f32 D_0013F3D0[];
 
 void FUN_L05_00253b48(void) {
     u8 *state;
@@ -1162,8 +1158,8 @@ void FUN_L05_00253b48(void) {
         if (first != 0) {
             do {
 
-                if (*(s16 *)(first + 0xA6) == 0x473 && FUN_L00_001fefc8(first + 0xBC, first) != 0) {
-                    FUN_001f9a28(delta, first + 0x10, D_0013F420);
+                if (*(s16 *)(first + 0xA6) == 0x473 && FUN_L00_001fefc8_c(first + 0xBC) != 0) {
+                    FUN_001f9a28(delta, first + 0x10, &hero.motion.unkD0);
                     FUN_001f9fc8(matrix);
                     FUN_001fa2d8(matrix, first + 0xC0);
                     FUN_001f9d20(delta, delta, matrix);
@@ -1192,16 +1188,13 @@ void FUN_L05_00253b48(void) {
         if (hero.unk8BC == 0) {
             FUN_L00_002591d0((void **)&second, *(s32 *)(state + 0x48), 0, 0);
             if (second != 0) {
-                u32 color = blue << 16;
-                color |= 0x80000000U;
-                color |= green << 8;
-                color |= red;
+                u32 color = (blue << 16) | (0x80000000U | (green << 8)) | red;
                 do {
                     if (*(s16 *)(second + 0xA6) == 0x474) {
                         *(u16 *)(second + 0x34) |= 0x10;
                         *(u32 *)(second + 0x90) = color;
-                        if (FUN_L00_001fefc8(second + 0xBC, second) != 0) {
-                            FUN_001f9a28(delta, second + 0x10, D_0013F3D0);
+                        if (FUN_L00_001fefc8_c(second + 0xBC) != 0) {
+                            FUN_001f9a28(delta, second + 0x10, &hero.motion.pos);
                             FUN_001f9fc8(matrix);
                             FUN_001fa2d8(matrix, second + 0xC0);
                             FUN_001f9d20(delta, delta, matrix);
@@ -1222,7 +1215,7 @@ void FUN_L05_00253b48(void) {
         FUN_L00_002591d0((void **)&third, *(s32 *)(state + 0x4C), 0, 0);
         while (third != 0) {
 
-            if (*(s16 *)(third + 0xA6) == 0x1D6 && FUN_L00_001fefc8(third + 0xBC, third) != 0 && FUN_001f9b48(D_0013F420, third + 0x10) < 1.5f) {
+            if (*(s16 *)(third + 0xA6) == 0x1D6 && FUN_L00_001fefc8_c(third + 0xBC) != 0 && FUN_001f9b48(&hero.motion.unkD0, third + 0x10) < 1.5f) {
                 struct Hero *g = &hero;
                 third[0xBC] = FUN_001f96f8(300);
                 if (*(s32 *)((u8 *)g + 0x10B8) != 0x24) {
@@ -1241,13 +1234,12 @@ void FUN_L05_00253b48(void) {
         }
     }
 }
-#endif
 #ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L05_00254058.s", FUN_L05_00254058);
 #else
 #include "rnc/gameplay/state/usage_stats.h"
 extern u8 D_0013D388;
-extern struct UsageStats D_00141848;
+
 extern s32 D_0015EEA4;
 extern s32 D_0015ED84 __attribute__((sda));
 extern s32 D_0015EEA4_sda __asm__("D_0015EEA4") __attribute__((sda));
@@ -1255,28 +1247,34 @@ extern f32 D_L05_002169F8[] __asm__("D_L05_002169F8");
 extern f32 FUN_001f96b0(f32) __asm__("FUN_L05_0022dbc8");
 
 void FUN_L05_00254058(void) {
+    s32 *counter;
     int i;
     int total;
     int step;
-    struct { f32 values[5]; } table;
+    struct ScoreTable { f32 values[5]; } table;
     f32 frames;
 
     if (D_0013D388 == 0) return;
-    if (*(s32 *)((char *)&hero + 0x8A8) != 0) {
+    if (hero.unk8A8 != 0) {
+        struct UsageStats *stats = (struct UsageStats *)D_00141848;
         s32 duration = D_0015EEA4_sda;
         s32 frame_count;
-        if (D_00141848.stat[30].count <= 0xFFFE) {
-            D_00141848.stat[30].count++;
+        s32 level;
+        if (stats->stat[30].count <= 0xFFFE) {
+            stats->stat[30].count++;
             duration = *(s32 *)0x0015EEA4;
         }
         frame_count = scale_game_frames(duration) / 600;
-        if (D_00141848.stat[30].unk2 < frame_count)
-            D_00141848.stat[30].unk2 = scale_game_frames(D_0015EEA4_sda) / 600;
-        D_00141848.stat[30].level_mask |= 1 << D_0015ED84;
-        D_00141848.stat[30].level_mask |= 0x80000000;
+        level = D_0015ED84;
+        if (stats->stat[30].unk2 < frame_count) {
+            stats->stat[30].unk2 = scale_game_frames(D_0015EEA4_sda) / 600;
+            level = *(s32 *)0x0015ED84;
+        }
+        stats->stat[30].level_mask |= 1U << level;
+        stats->stat[30].level_mask |= 0x80000000;
     }
     {
-        s32 *counter = (s32 *)((char *)&hero + 0x700);
+        counter = (s32 *)((char *)&hero + 0x700);
         for (i = 2; i >= 0; i--, counter++) {
             if (absolute_float(*(f32 *)(counter - 12)) > 3.3161256f) {
                 f32 rotation = *(f32 *)(counter - 12);
@@ -1288,34 +1286,54 @@ void FUN_L05_00254058(void) {
             }
         }
     }
-    *(s32 *)((char *)&hero + 0x70C) = 0;
-    for (i = 0; i < 3; i++) {
-        if (*(s32 *)((char *)&hero + 0x70C) < *(s32 *)((char *)&hero + 0x700 + i * 4))
-            *(s32 *)((char *)&hero + 0x70C) = *(s32 *)((char *)&hero + 0x700 + i * 4);
+    {
+        struct Hero *g = &hero;
+        *(s32 *)((char *)g + 0x70C) = 0;
+        {
+            counter = (s32 *)((char *)g + 0x700);
+            i = 2;
+            do {
+                if (*(s32 *)((char *)g + 0x70C) < *counter)
+                    *(s32 *)((char *)g + 0x70C) = *counter;
+                counter++;
+            } while (--i >= 0);
+        }
     }
-    *(s32 *)((char *)&hero + 0x710) = 0;
-    total = *(s32 *)((char *)&hero + 0x70C);
-    if (total > 0) {
+    {
+        struct Hero *g = &hero;
         step = 100;
-        i = total;
-        total = 0;
+        *(s32 *)((char *)g + 0x710) = 0;
+        total = *(s32 *)((char *)g + 0x70C);
+        if (total > 0) {
+            i = total;
+            total = 0;
+            do {
+                total += step;
+                step += 50;
+            } while (--i != 0);
+            *(s32 *)((char *)g + 0x710) = total;
+        }
+    }
+    {
+        struct Hero *g = &hero;
+        *(s32 *)((char *)g + 0x6F0) = 0;
+        counter = (s32 *)((char *)g + 0x6E0);
+        i = 3;
         do {
-            total += step;
-            step += 50;
-        } while (--i != 0);
-        *(s32 *)((char *)&hero + 0x710) = total;
+            if (*counter != 0) (*(s32 *)((char *)g + 0x6F0))++;
+            counter++;
+        } while (--i >= 0);
     }
-    *(s32 *)((char *)&hero + 0x6F0) = 0;
-    for (i = 0; i < 4; i++) {
-        if (*(s32 *)((char *)&hero + 0x6E0 + i * 4) != 0) (*(s32 *)((char *)&hero + 0x6F0))++;
+    {
+        struct Hero *g = &hero;
+        table = *(struct ScoreTable *)D_L05_002169F8;
+        *(f32 *)((char *)g + 0x6F4) = table.values[*(s32 *)((char *)g + 0x6F0)];
+        frames = FUN_001f96b0(1.0f);
+        *(s32 *)((char *)g + 0x6FC) = truncate_float_to_s32((f32)((*(s32 *)((char *)g + 0x6F8) * 100) / (s32)(frames * 60.0f)));
+        *(s32 *)((char *)g + 0x6FC) += *(s32 *)((char *)g + 0x6F0) * 25;
+        *(s32 *)((char *)g + 0x6FC) = truncate_float_to_s32((f32)*(s32 *)((char *)g + 0x6FC) * *(f32 *)((char *)g + 0x6F4));
+        *(s32 *)((char *)g + 0x714) = *(s32 *)((char *)g + 0x710) + *(s32 *)((char *)g + 0x6FC);
     }
-    table = *(typeof(table) *)D_L05_002169F8;
-    *(f32 *)((char *)&hero + 0x6F4) = table.values[*(s32 *)((char *)&hero + 0x6F0)];
-    frames = FUN_001f96b0(1.0f);
-    *(s32 *)((char *)&hero + 0x6FC) = truncate_float_to_s32((f32)((*(s32 *)((char *)&hero + 0x6F8) * 100) / (s32)(frames * 60.0f)));
-    *(s32 *)((char *)&hero + 0x6FC) += *(s32 *)((char *)&hero + 0x6F0) * 25;
-    *(s32 *)((char *)&hero + 0x6FC) = truncate_float_to_s32((f32)*(s32 *)((char *)&hero + 0x6FC) * *(f32 *)((char *)&hero + 0x6F4));
-    *(s32 *)((char *)&hero + 0x714) = *(s32 *)((char *)&hero + 0x710) + *(s32 *)((char *)&hero + 0x6FC);
 }
 #endif
 #ifndef NON_MATCHING
@@ -1357,12 +1375,12 @@ void FUN_L05_00254358(f32 *position, f32 *direction) {
         return;
     }
     path = (HelpPath *)D_L05_001B0930[*(s32 *)(*(char **)(g->unk86C + 0x78) + 0x24)];
-    height_limit = 4.0f;
     best = 9999999.0f;
     index = 0;
     selected = 0;
     p = path->points;
     if (path->count > 0) {
+        height_limit = 4.0f;
         cursor = path;
         do {
             f32 a;
@@ -1371,7 +1389,8 @@ void FUN_L05_00254358(f32 *position, f32 *direction) {
             a = FUN_001f9e90(cursor->points[0].x - *(f32 *)origin, cursor->points[0].y - *(f32 *)(origin + 4));
             next = (s32)((u32)index + ((u32)path->count + 2U)) % path->count;
             b = FUN_001f9e90(path->points[next].x - cursor->points[0].x, path->points[next].y - cursor->points[0].y);
-            if (fast_difference_between_rotations(a, b) > 1.5707964f) {
+            if (!(fast_difference_between_rotations(a, b) > 1.5707964f)) goto next_point;
+            {
                 if (current_level_index == 0x10 && g->unk8B4 != 0) {
                     f32 a = *(f32 *)((char *)g->unk8B4 + *(s16 *)((char *)g + 0x8C8) * 16 + 0x18);
                     f32 b = *(f32 *)((char *)g->unk8B4 + g->unk898 * 16 + 0x18);
@@ -1389,7 +1408,7 @@ void FUN_L05_00254358(f32 *position, f32 *direction) {
                 }
             }
 next_point:
-            index += 2;
+            index = (s32)((u32)((char *)cursor - (char *)path) / 16U) + 2;
             p += 2;
             cursor = (HelpPath *)((char *)cursor + 0x20);
         } while (index < path->count);
@@ -1403,7 +1422,281 @@ next_point:
     direction[2] = FUN_001f9e90(path->points[selected + 1].x - path->points[selected].x, path->points[selected + 1].y - path->points[selected].y);
 }
 #endif
-INCLUDE_ASM("config/us/overlays/asm/FUN_L05_00254608.s", FUN_L05_00254608);
+extern int D_0015ED84_254608 __asm__("D_0015ED84") __attribute__((section(".sdata")));
+extern int FUN_001f96f8_254608(int) __asm__("FUN_001f96f8");
+typedef int u128_254608 __attribute__((mode(TI)));
+typedef struct { float x, y, z, w; } __attribute__((aligned(16))) Node_254608;
+typedef struct { int n; int pad[3]; Node_254608 p[1]; } Path_254608;
+typedef struct {
+    char pad0[0x20];
+    int f20;
+    int f24;
+    int f28;
+    int f2C[5];
+    int f40;
+} Data_254608;
+typedef struct {
+    char pad0[0x10];
+    float pos[4];
+    char pad20[0x10];
+    unsigned char f30;
+    char pad31[0xBC - 0x31];
+    unsigned char fBC;
+    char padBD[0x43];
+} Ent_254608;
+typedef struct { char pad0[9]; unsigned char f9; } Flags_254608;
+
+extern unsigned char D_0013D388_254608[] __asm__("D_0013D388") __attribute__((section(".data")));
+extern unsigned char D_0013D408_254608[] __asm__("D_0013D408") __attribute__((section(".data")));
+extern unsigned char D_0013D4DF_254608 __asm__("D_0013D4DF") __attribute__((section(".data")));
+extern Path_254608 *D_L05_001B0930_254608[] __asm__("D_L05_001B0930");
+extern Ent_254608 *D_L05_0015FFD8_254608 __asm__("D_L05_0015FFD8") __attribute__((section(".sdata")));
+extern float D_0015ED60_254608 __asm__("D_0015ED60") __attribute__((section(".sdata")));
+extern int D_0015EE38_254608 __asm__("D_0015EE38") __attribute__((section(".sdata")));
+extern int D_0015EE3C_254608 __asm__("D_0015EE3C") __attribute__((section(".sdata")));
+extern int D_0015ED80_254608 __asm__("D_0015ED80") __attribute__((section(".sdata")));
+extern int D_0015EE58_254608[2] __asm__("D_0015EE58") __attribute__((section(".sdata")));
+extern int D_0015ED98_254608 __asm__("D_0015ED98") __attribute__((section(".sdata")));
+extern int D_0015EE68_254608[2] __asm__("D_0015EE68") __attribute__((section(".sdata")));
+extern int D_L05_0015F680_254608 __asm__("D_L05_0015F680") __attribute__((sda));
+extern int D_L05_0015F684_254608 __asm__("D_L05_0015F684") __attribute__((sda));
+extern float D_L05_0015F67C_254608 __asm__("D_L05_0015F67C") __attribute__((sda));
+extern int D_L05_0015F6A8_254608 __asm__("D_L05_0015F6A8") __attribute__((sda));
+extern float distance_xyz_254608(void *, void *) __asm__("FUN_001f9b48");
+extern float angle_atan2_254608(float, float) __asm__("FUN_001f9e90");
+extern float fast_difference_between_rotations_254608(float, float) __asm__("FUN_001fa688");
+extern void func_L05_00254B38_254608(void *, void *) __asm__("FUN_L05_00254358");
+extern void func_L00_00217718_254608(void *, void *, int, int) __asm__("FUN_L00_00216f90");
+extern int func_L01_0028C2D8_254608(void *, void *, float) __asm__("FUN_L01_0028b510");
+extern int allocate_voice_for_bank_entry_254608(int, int, int) __asm__("FUN_0022db10");
+extern void queue_dialogue_message_254608(int, int) __asm__("FUN_L00_00263d40");
+extern void mode_freeze_init_254608(int, void *) __asm__("FUN_001fbab8");
+extern void set_animation_parameter_254608(int, int) __asm__("FUN_001ff570");
+extern void func_001FFFA0_254608(void) __asm__("FUN_001ff768");
+
+/* Hoverboard race tick: advances the hero's and the opponents' path nodes and laps, handles wrong-way and fall resets, ranks everyone and finishes the race after three laps. */
+void FUN_L05_00254608(void) {
+    float v0[4] __attribute__((aligned(16)));
+    float v1[4] __attribute__((aligned(16)));
+    Data_254608 *d;
+    Path_254608 *path;
+    int near;
+    int j;
+    int k;
+    int m;
+    float ang;
+    float dir;
+
+    hero.unk894++;
+    if (((struct Moby *)hero.unk86C) == 0) {
+        return;
+    }
+    d = (Data_254608 *)((struct Moby *)hero.unk86C)->pvars;
+    if (d->f20 == -1) {
+        return;
+    }
+    path = D_L05_001B0930_254608[d->f20];
+    hero.unk8B4 = (void *)path;
+    if (D_0015ED84_254608 == 0x10) {
+        *(u128_254608 *)v0 = 0;
+        v0[0] = 163.0f;
+        v0[1] = 119.0f;
+        v0[2] = 80.0f;
+        if (distance_xyz_254608(hero.motion.pos.f, v0) < 11.0f) {
+            if (hero.unk898 < 3 || hero.unk898 > 0x46) {
+                if (hero.unk898 >= 3) {
+                    hero.unk89A++;
+                }
+                hero.unk898 = 0xD;
+            }
+        }
+        *(u128_254608 *)v1 = 0;
+        v1[0] = 223.0f;
+        v1[1] = 281.0f;
+        v1[2] = 93.0f;
+        if (distance_xyz_254608(hero.motion.pos.f, v1) < 7.0f) {
+            if (hero.unk898 < 0x3B) {
+                hero.unk898 = 0x3B;
+            }
+        }
+    }
+    {
+        int i;
+        int n1;
+        int next;
+
+        i = hero.unk898;
+        n1 = path->n + 1;
+        next = (i + n1) % path->n;
+        ang = angle_atan2_254608(path->p[next].x - path->p[i].x, path->p[next].y - path->p[i].y);
+        if (fast_difference_between_rotations_254608(ang, angle_atan2_254608(hero.motion.pos.f[0] - path->p[i].x, hero.motion.pos.f[1] - path->p[i].y)) < 1.5707964f) {
+            hero.unk898 = next;
+            if (next == 0) {
+                hero.unk89A++;
+            }
+        }
+    }
+    near = 0;
+    if (D_0015ED84_254608 == 0x10) {
+        if (hero.motion.pos.f[2] < path->p[hero.unk898].z - 2.0f) {
+            near = 1;
+            if (hero.unk8AE < FUN_001f96f8_254608(0x46)) {
+                hero.unk8AE = FUN_001f96f8_254608(0x46);
+            }
+        }
+    }
+    {
+        int i;
+        int n1;
+        int next;
+
+        i = hero.unk8C8;
+        n1 = path->n + 1;
+        next = (i + n1) % path->n;
+        dir = angle_atan2_254608(path->p[next].x - path->p[i].x, path->p[next].y - path->p[i].y);
+    }
+    if (near != 0 || (fast_difference_between_rotations_254608(hero.motion.rot.f[2], dir) > 1.5707964f && hero.unk88D == 0)) {
+        hero.unk8AE++;
+        if (hero.unk8AE > FUN_001f96f8_254608(0xB4)) {
+            if (D_L05_0015F680_254608 == 0) {
+                D_L05_0015F680_254608 = 1;
+                D_L05_0015F684_254608 = 0;
+                D_L05_0015F67C_254608 = D_0015ED60_254608 * 0.08f;
+            }
+            hero.unk8AF = 1;
+            if (D_L05_0015F684_254608 == 1) {
+                hero.unk8AF = 0;
+                func_L05_00254B38_254608(v0, v1);
+                hero.unk8AE = 0;
+                hero.unk874 = v1[2];
+                func_L00_00217718_254608(v0, v1, 0x6B, 1);
+                if (((Path_254608 *)hero.unk8B4) != 0) {
+                    int r = func_L01_0028C2D8_254608(hero.motion.pos.f, (Path_254608 *)hero.unk8B4, 0.0f);
+
+                    if (r < hero.unk898) {
+                        hero.unk898 = r;
+                    }
+                }
+            }
+        }
+    } else if (hero.unk8AF == 0) {
+        hero.unk8AE = 0;
+    }
+    for (j = 0; j < d->f40; j++) {
+        int i;
+        int n1;
+        int next;
+
+        i = hero.unk7B0[j];
+        n1 = path->n + 1;
+        next = (i + n1) % path->n;
+        ang = angle_atan2_254608(path->p[next].x - path->p[i].x, path->p[next].y - path->p[i].y);
+        qcopy(v0, D_L05_0015FFD8_254608[d->f2C[j]].pos);
+        if (fast_difference_between_rotations_254608(ang, angle_atan2_254608(v0[0] - path->p[i].x, v0[1] - path->p[i].y)) < 1.5707964f) {
+            hero.unk7B0[j] = next;
+            if (next == 0) {
+                hero.unk7A0[j]++;
+            }
+        }
+    }
+    hero.unk8C0 = 1;
+    for (j = 0; j < d->f40; j++) {
+        if (hero.unk89A < hero.unk7A0[j] || (hero.unk7A0[j] == hero.unk89A && hero.unk7B0[j] >= hero.unk898)) {
+            hero.unk8C0++;
+        }
+    }
+    for (k = 0; k < d->f40; k++) {
+        hero.unk7C0[k] = 1;
+        if (hero.unk89A > hero.unk7A0[k] || (hero.unk7A0[k] == hero.unk89A && hero.unk898 > hero.unk7B0[k])) {
+            hero.unk7C0[k] = 2;
+        }
+        for (m = 0; m < d->f40; m++) {
+            if (hero.unk7A0[k] < hero.unk7A0[m] || (hero.unk7A0[k] == hero.unk7A0[m] && hero.unk7B0[k] < hero.unk7B0[m])) {
+                hero.unk7C0[k]++;
+            }
+        }
+    }
+    if (hero.unk89A < 3) {
+        return;
+    }
+    if (*(D_0013D388_254608) != 0) {
+        D_L05_0015F6A8_254608 = 1;
+    }
+    if (D_0015ED84_254608 == 5) {
+        D_0015EE38_254608++;
+    } else if (D_0015ED84_254608 == 0x10) {
+        D_0015EE3C_254608++;
+    }
+    if (D_0015ED84_254608 == 5) {
+        int t;
+
+        if (D_0015ED80_254608 != 0) {
+            t = FUN_001f96f8_254608(0x1680);
+        } else {
+            t = FUN_001f96f8_254608(0x1644);
+        }
+        if (t >= hero.unk894) {
+            if (((Flags_254608 *)D_0013D408_254608)->f9 == 0) {
+                ((Flags_254608 *)D_0013D408_254608)->f9 = 1;
+                allocate_voice_for_bank_entry_254608(1, 0, 0);
+                queue_dialogue_message_254608(0x53D6, -1);
+            }
+        }
+        if (d->f28 == -1) {
+            return;
+        }
+        if (*(D_0013D388_254608) == 0 && hero.unk8C0 == 1) {
+            D_L05_0015FFD8_254608[d->f28].fBC = 1;
+        } else {
+            hero.unk890 = (u8 *)(&D_L05_0015FFD8_254608[d->f28]);
+            mode_freeze_init_254608(0, 0);
+        }
+        if (D_0015EE58_254608[0] == 0) {
+            D_0015EE58_254608[0] = hero.unk894;
+            D_0015ED98_254608 += 0x3E8;
+        } else if (hero.unk894 < D_0015EE58_254608[0]) {
+            D_0015EE58_254608[0] = hero.unk894;
+            D_0015ED98_254608 += 0x3E8;
+        }
+        if (D_0015EE68_254608[0] < hero.unk8A8) {
+            D_0015EE68_254608[0] = hero.unk8A8;
+            D_0015ED98_254608 += 0x3E8;
+        }
+        D_L05_0015FFD8_254608[d->f28].f30 = 0xFF;
+        if (hero.unk880 != -1) {
+            set_animation_parameter_254608(hero.unk880, 0);
+            hero.unk880 = -1;
+        }
+        func_001FFFA0_254608();
+    } else if (D_0015ED84_254608 == 0x10) {
+        if (d->f28 == -1) {
+            return;
+        }
+        if (D_0013D4DF_254608 == 0 && hero.unk8C0 == 1) {
+            D_L05_0015FFD8_254608[d->f28].fBC = 1;
+        } else {
+            hero.unk890 = (u8 *)(&D_L05_0015FFD8_254608[d->f28]);
+            mode_freeze_init_254608(0, 0);
+        }
+        if (D_0015EE58_254608[1] == 0) {
+            D_0015EE58_254608[1] = hero.unk894;
+            D_0015ED98_254608 += 0x3E8;
+        } else if (hero.unk894 < D_0015EE58_254608[1]) {
+            D_0015EE58_254608[1] = hero.unk894;
+            D_0015ED98_254608 += 0x3E8;
+        }
+        if (D_0015EE68_254608[1] < hero.unk8A8) {
+            D_0015EE68_254608[1] = hero.unk8A8;
+            D_0015ED98_254608 += 0x3E8;
+        }
+        D_L05_0015FFD8_254608[d->f28].f30 = 0xFF;
+        if (hero.unk880 != -1) {
+            set_animation_parameter_254608(hero.unk880, 0);
+            hero.unk880 = -1;
+        }
+        func_001FFFA0_254608();
+    }
+}
 #include "sda.h"
 
 /* Ported from rac1-decomp (src/overlays/shared/help_00237B00.c: func_L05_002559A0), where it is exact; names translated to the US level program. */

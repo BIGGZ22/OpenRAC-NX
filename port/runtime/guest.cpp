@@ -326,6 +326,31 @@ void openrac_guest_missing(const char* name) {
     warn("{} has no C in the port yet; it does nothing", name);
 }
 
+unsigned long openrac_guest_missing_calls(unsigned* functions) {
+    std::scoped_lock hold(g_missing_lock);
+    unsigned long calls = 0;
+    for (const auto& [name, count] : g_missing) {
+        calls += count;
+    }
+    if (functions != nullptr) {
+        *functions = static_cast<unsigned>(g_missing.size());
+    }
+    return calls;
+}
+
+const char* openrac_guest_missing_at(unsigned index, unsigned long* calls) {
+    std::scoped_lock hold(g_missing_lock);
+    if (index >= g_missing.size()) {
+        return nullptr;
+    }
+    auto it = g_missing.begin();
+    std::advance(it, index);
+    if (calls != nullptr) {
+        *calls = it->second;
+    }
+    return it->first.c_str();  // a map's keys do not move
+}
+
 void openrac_guest_stop_on_missing(int stop) {
     g_stop_on_missing = stop != 0;
 }

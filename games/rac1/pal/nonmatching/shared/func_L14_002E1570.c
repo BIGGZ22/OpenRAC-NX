@@ -10,7 +10,7 @@
  *   Left: register of the 0x31 byte store (ours $v1, retail $a0) and scheduling of the D_0015EE6C/D_L14_0015F7EC/2
  *   hq13/s08 (3 runs, p10-p12; best p11 at 33 of 584 bytes differing, from p9's 54): owner+0x48 is read after the 
  */
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_E1570 __attribute__((mode(TI)));
 extern char D_0013E633[];
 extern float D_0015EE6C MACRO_ADDR;
 extern float D_0015EE60 MACRO_ADDR;

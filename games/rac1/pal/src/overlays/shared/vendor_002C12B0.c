@@ -622,7 +622,259 @@ char *func_L00_002C6608(void *pos, int idx, int a2, int a3) {
     }
     return m;
 }
-INCLUDE_ASM("asm/overlays", func_L00_002C6720);
+typedef struct {
+    float x;
+    float y;
+    float z;
+    float w;
+} __attribute__((aligned(16))) FxVec;
+typedef struct {
+    char pad[0x34];
+    short sound_multiple;
+    short sound_single;
+    char pad2[0x14];
+} FxAmmoRecord;
+typedef struct {
+    char pad[0xE];
+    unsigned short max;
+    char pad2[8];
+} FxWeaponInfo;
+extern char D_0013D50F[];
+extern char D_0013DE6E[];
+extern char D_L00_00179BC0_6720[] __asm__("D_L00_00179BC0");
+extern FxVec D_L00_00173F70;
+extern FxVec D_L00_00173F60;
+extern float D_0015EE70 MACRO_ADDR;
+extern int D_L00_00161908 MACRO_ADDR;
+extern int func_001F9908(int *);
+extern int func_L00_001F10E0(float, void *, int, void *);
+extern int func_L00_001EFFF0(void *, void *, int, int, int);
+extern void func_001F9BC0(void *);
+extern float func_00214D28(void *, float, float);
+extern int func_001FA898(float);
+extern int func_L00_002346C0(int, int);
+extern void func_L00_00264E28(int, int, int);
+extern int func_001F9B70(int);
+extern int func_L00_0028EF68(int, int, int, int);
+extern float func_L00_00251468(void *, void *);
+extern void func_0020D678(void *);
+typedef struct {
+    int amount;
+    char pad4[2];
+    short recovery_timer;
+    int weapon;
+    char padC[4];
+    Vec4f velocity;
+    int timer;
+    float rise_speed;
+    float resting_height;
+} AmmoPickup_6720;
+
+/* Update ammunition pickup physics, collection, animation and scale.
+   Animation states share one stack value; index reloads follow calls. */
+void func_L00_002C6720(Moby *m) {
+    AmmoPickup_6720 *p;
+    unsigned int state;
+    FxVec position;
+    FxVec predicted;
+    float value;
+    float magnitude;
+    float current;
+    float target;
+    float step;
+    float remaining;
+    p = (AmmoPickup_6720 *)m->pvars;
+    func_001F9908(&p->timer);
+    state = m->state;
+    if (state == 1 || state == 4 || state == 3) {
+        magnitude = func_001F9CB8(&p->velocity);
+        if (magnitude != 0.0f) {
+            qcopy(&position, &m->pos);
+            position.z += 0.5f;
+            if (func_L00_001F10E0(0.4f, &position, 2, 0)) {
+                qcopy(&m->pos, &D_L00_00173F70);
+                m->pos.z -= 0.5f;
+            }
+        }
+        p->velocity.z -= D_0015EE70 * 4.9f;
+        func_001F9BD8(&predicted, &m->pos, &p->velocity);
+        p->velocity.z -= D_0015EE70 * 4.9f;
+        qcopy(&position, &m->pos);
+        position.z += 0.1f;
+        if (func_L00_001EFFF0(&position, &predicted, 2, 0, 0)) {
+            func_001F9BC0(&p->velocity);
+            qcopy(&m->pos, &D_L00_00173F60);
+        } else {
+            qcopy(&m->pos, &predicted);
+        }
+    }
+    switch (m->state) {
+    case 0:
+        m->state = 1;
+        break;
+    case 1: {
+        Hero *player;
+        float *value_ptr;
+        float height_delta;
+        float distance;
+        int duration;
+        int eligible;
+        int idx;
+        int sound_idx;
+        int account_idx;
+        int before;
+        int after;
+        int difference;
+        int sound;
+        int elapsed;
+        int random;
+        int max_ammo;
+        value_ptr = &value;
+        *value_ptr = (float)m->unk23;
+        duration = func_001F9850(30);
+        func_00214D28(value_ptr, 128.0f, (float)(128 / duration));
+        m->unk23 = func_001FA898(*value_ptr);
+        if (p->timer > 0)
+            return;
+        if (func_001F9CB8(&p->velocity) != 0.0f)
+            return;
+        player = (Hero *)(D_0013E633 + 0xE1D);
+        eligible = 1;
+        height_delta =
+            func_001F9B88(m->pos.z - player->motion.pos.f[2]);
+        if (player->unk228C < height_delta) {
+            eligible = 0;
+        } else {
+            distance = func_001F9D48(&m->pos, &player->motion.pos);
+            if (player->unk2288 < distance)
+                eligible = 0;
+        }
+        idx = p->weapon;
+        before = ((int *)(D_0013D50F + 0x21))[idx];
+        max_ammo = ((FxWeaponInfo *)D_L00_001C43B0)[idx].max;
+        if (before >= max_ammo)
+            eligible = 0;
+        if (m->pos.z < p->resting_height - 2.0f)
+            eligible = 1;
+        if (((Hero *)(D_0013E633 + 0xE1D))->health.hp == 0)
+            eligible = 0;
+        if (!eligible)
+            goto pickup_failed;
+
+        {
+            func_L00_002346C0(idx, p->amount);
+            sound_idx = p->weapon;
+            after = ((int *)(D_0013D50F + 0x21))[sound_idx];
+            if (before < after) {
+                difference = after - before;
+                if (difference == 1) {
+                    sound = ((FxAmmoRecord *)(D_L00_00179BC0_6720 + sound_idx * sizeof(FxAmmoRecord)))->sound_single;
+                } else {
+                    sound = ((FxAmmoRecord *)(D_L00_00179BC0_6720 + sound_idx * sizeof(FxAmmoRecord)))->sound_multiple;
+                }
+                func_L00_00264E28(sound, difference, -1);
+            }
+            account_idx = p->weapon;
+            ((int *)(D_0013DE6E + 0xA2))[account_idx] += ((int *)(D_0013D50F + 0x21))[account_idx] - before;
+            m->state = 2;
+            m->scale *= D_0015EE60 * 0.20000005f + 1.0f;
+            func_001F9BC0(&p->velocity);
+            elapsed = D_L00_0015F6B0 - D_L00_00161908;
+            p->rise_speed = D_0015EE6C * 8.0f;
+            random = func_001F9B70(elapsed);
+            if (func_001F9850(10) < random) {
+                func_L00_0028EF68(0, 0, (int)m, 0xD5);
+                D_L00_00161908 = D_L00_0015F6B0;
+            }
+            return;
+        }
+    pickup_failed:
+        if (m->unk23 < 0xFF)
+            ++m->unk23;
+        if (func_L00_00251468(m, ((Hero *)(D_0013E633 + 0xE1D))->moby) <= -0.2f) {
+            m->state = 3;
+            p->recovery_timer = func_001F9850(60);
+        }
+        return;
+    }
+    case 2: {
+        float limit;
+        float distance;
+        float factor;
+        float class_scale;
+        func_00214D28(&p->rise_speed, 0.0f, D_0015EE70 * 24.0f);
+        m->pos.z += p->rise_speed;
+        limit = func_001F9CB8(&p->velocity);
+        func_00214D28(&limit, D_0015EE6C * 64.0f, D_0015EE70 * 24.0f);
+        func_001F9BF0(&p->velocity, D_0013E633 + 0xEED, &m->pos);
+        if (m->scale == 0.0f || func_001F9CB8(&p->velocity) < limit) {
+            func_0020D678(m);
+            return;
+        }
+        func_L00_001FF4B0(&p->velocity, &p->velocity, limit);
+        func_001F9BD8(&m->pos, &m->pos, &p->velocity);
+        distance = func_001F9D10(&m->pos, D_0013E633 + 0xEED);
+        factor = (float)func_001F9850(30);
+        factor = factor * limit;
+        factor = factor + 0.01f;
+        distance = distance / factor;
+        if (1.0f < distance) {
+            distance = 1.0f;
+        } else if (distance < 0.3f) {
+            distance = 0.3f;
+        }
+        class_scale = m->pclass->scale;
+        func_00214D28(&m->scale, class_scale * distance, class_scale * 0.1f);
+        return;
+    }
+    case 3: {
+        float *value_ptr;
+        float angle;
+        float oscillation;
+        float target;
+        int phase;
+        int random;
+        int idx;
+        phase = D_L00_0015F6B0 % 60;
+        value = (float)m->unk23;
+        angle = (float)phase / 60.0f;
+        angle = angle * 6.28318f;
+        angle = angle - 3.14159f;
+        oscillation = func_001F9F90(angle);
+        oscillation = oscillation * 5.0f;
+        oscillation = oscillation + 5.0f;
+        target = (float)(func_001FA898(oscillation) + 10);
+        value_ptr = &value;
+        random = func_001F9850(30);
+        func_00214D28(value_ptr, target, (float)(128 / random));
+        m->unk23 = func_001FA898(*value_ptr);
+        if (func_L00_00251468(m, ((Hero *)D_0013F450)->moby) >= 0.0f) {
+            m->state = 1;
+            return;
+        }
+        idx = p->weapon;
+        if (((int *)(D_0013D50F + 0x21))[idx] <
+                ((FxWeaponInfo *)D_L00_001C43B0)[idx].max) {
+            m->state = 1;
+        }
+        return;
+    }
+    case 4:
+        current = m->scale;
+        target = m->pclass->scale;
+        step = D_0015EE60 * 0.03f;
+        current += (target - current) * step;
+        m->scale = current;
+        target = m->pclass->scale;
+        remaining = (target - current) / target;
+        if (remaining < 0.01f) {
+            m->scale = target;
+            m->state = 1;
+            m->unk94 = m->pclass->unk10;
+        }
+        break;
+    }
+}
 LINKER_REMNANT("asm/overlays", func_L00_002C6F40);
 extern int func_L00_002346C0(int, int);
 extern void func_L00_00264E28(int a, int b, int c);

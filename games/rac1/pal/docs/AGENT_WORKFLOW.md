@@ -318,6 +318,26 @@ Half of that 8-31 byte band was tails of larger functions, which neither
 model can match on their own; joins (`config/overlays/joined.tsv`) and
 the linker-remnant list have since taken many of them out of the pool.
 
+## When to stop, and the backfill
+
+A function that stopped is not owed another round at the same tier. OpenRAC's
+`docs/workflow/BACKFILL.md` has the whole procedure; what it says for this project:
+
+- **Not a function**: it reads a register it never sets, branches outside its own bytes, or has
+  no `jr $31`. A piece of its neighbour: join it (`config/overlays/joined.tsv`), write no C. 120
+  of the 241 small entries left on 2026-10-12 were this.
+- **Handwritten** (COP2/VU0 instructions, `$at` as a working register, a trapping `addi`): it
+  stays `ASM_FUNC`.
+- **A tie**: three wordings, the same bytes. Another compiler does not help either: SN 2.95.2,
+  SN 2.95.3 v1.36 and the NTSC decompilation's patched 2.9-ee fixed none of 492 near misses
+  (`build-sn/cctest/`, 2026-10-12).
+- **Out of budget**: stop, write the note, stage the near miss, and it goes up one tier.
+
+What the native port needs and no tier has matched is written as functional C: the same
+behaviour, not the same bytes, in `nonmatching/functional/` with a row in
+`nonmatching/functional.tsv`. It is never in `src/` and never in the report
+(docs/NONMATCHING.md).
+
 ## Matches without a model
 
 The cheapest match is the one no worker makes.

@@ -7,7 +7,7 @@
  *   Left: retail saves f20 for a 1.0f that it keeps across the aim call and reuses (mov.s $f12,$f20 / $f15,$f20); 
  *   Unblock: a source form that keeps 1.0 live in a saved float (retail may read it from a global), then the doubl
  */
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_1A410 __attribute__((mode(TI)));
 
 extern void func_L00_00260D30(void *, void *, float);
 extern float func_001F9D10(void *, void *);
@@ -87,7 +87,7 @@ void func_L07_0031A410(char *moby) {
         *(unsigned short *)(moby + 0x34) = *(unsigned short *)(moby + 0x34) | 0x1000;
         {
             char *src = moby + 0x10;
-            *(u128 *)(data + 0x60) = *(u128 *)src;
+            *(u128_1A410 *)(data + 0x60) = *(u128_1A410 *)src;
         }
         *(unsigned char *)(moby + 0x20) = 1;
         *(int *)(moby + 0x94) = *(int *)(*(char **)(moby + 0x24) + 0x10);
@@ -163,7 +163,7 @@ void func_L07_0031A410(char *moby) {
         }
         one = 1.0f;
         func_L00_0025A8C0(v80, moby, 0x10001, one, v70);
-        *(u128 *)vb0 = *(u128 *)(moby + 0x10);
+        *(u128_1A410 *)vb0 = *(u128_1A410 *)(moby + 0x10);
         vb0[2] = vb0[2] + 0.75f;
         if (func_L00_001F2BE8(0.75f, vb0, 0x10, moby, v80) != 0) {
             pp = D_L07_00173F58_p;
@@ -174,7 +174,7 @@ void func_L07_0031A410(char *moby) {
                 }
             }
         }
-        *(u128 *)vb0 = *(u128 *)(moby + 0x10);
+        *(u128_1A410 *)vb0 = *(u128_1A410 *)(moby + 0x10);
         vb0[2] = vb0[2] + 0.55f;
         if (func_L00_001F10E0(0.55f, vb0, 0, moby) != 0) {
             func_001F9BF0(vc0, D_L07_00173F70, vb0);

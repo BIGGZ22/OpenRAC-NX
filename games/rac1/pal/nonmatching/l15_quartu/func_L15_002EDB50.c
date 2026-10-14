@@ -52,7 +52,7 @@ extern int D_0015EE84 MACRO_ADDR;
 extern float D_0015EE64 MACRO_ADDR;
 extern unsigned char D_0015EEB0[] MACRO_ADDR;
 
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_EDB50 __attribute__((mode(TI)));
 
 /* update function of the ultramech scientist (moby class 1446) on level 15 */
 void func_L15_002EDB50(char *moby) {
@@ -290,7 +290,7 @@ void func_L15_002EDB50(char *moby) {
     }
     if (*(int *)(d + 0x274) != 0) {
         *(int *)(d + 0x274) = 0;
-        *(u128 *)(d + 0x260) = *(u128 *)(D_0013E633 + 0xEED);
+        *(u128_EDB50 *)(d + 0x260) = *(u128_EDB50 *)(D_0013E633 + 0xEED);
     }
 e1c4:
     if (func_001F9908(d + 0x278) == 0) {
@@ -308,13 +308,13 @@ e1c4:
     func_001F9BD8(d + 0x260, d + 0x260, moby + 0x10);
 e26c:
     if (*(int *)(d + 0x274) != 0) {
-        *(u128 *)v0 = *(u128 *)(D_0013E633 + 0xEED);
+        *(u128_EDB50 *)v0 = *(u128_EDB50 *)(D_0013E633 + 0xEED);
         f22 = 0.04f;
         f23 = 0.3f;
     } else {
-        *(u128 *)v0 = *(u128 *)(d + 0x260);
+        *(u128_EDB50 *)v0 = *(u128_EDB50 *)(d + 0x260);
     }
-    *(u128 *)v1 = *(u128 *)(moby + 0x10);
+    *(u128_EDB50 *)v1 = *(u128_EDB50 *)(moby + 0x10);
     v1[2] = v1[2] + 1.0f;
     func_001F9BF0(v2, v0, v1);
     f0 = func_L00_001FF860(v2[0], v2[1]);

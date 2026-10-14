@@ -7,6 +7,7 @@
 #include <cstring>
 #include <format>
 #include <fstream>
+#include <string_view>
 
 namespace openrac::viewer {
 
@@ -183,6 +184,42 @@ GameState read_game_state(std::span<const std::uint8_t> ram, const GameAddresses
 std::uint32_t shown_chain(std::span<const std::uint8_t> ram, const GameAddresses& a) {
     const auto building = at<std::uint32_t>(ram, a.chain_index) & 1;
     return at<std::uint32_t>(ram, a.chain_bases + 4 * (1 - building));
+}
+
+/*
+ * NTSC-U (SCUS-97199): the same globals, each found from PAL's by the version map
+ * (port/tools/versionmap): the address the same instruction of the same function forms in that
+ * version's program. The vertical factor is PAL's, not yet measured on NTSC-U.
+ */
+const GameAddresses kRac1Ntsc{0x00187080, 0x00187290, 0x0018CD00, 0x0015FF1C, 0x0015FF20, 0.756f, 0x00160EF8, 0x00160F10};
+const GameAddresses kRac1NtscLevels[19] = {
+    {0x00166DC0, 0x00166FD0, 0x0016CA40, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 0
+    {0x00167240, 0x00167450, 0x0016CEC0, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 1
+    {0x001673C0, 0x001675D0, 0x0016D040, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 2
+    {0x00166EC0, 0x001670D0, 0x0016CB40, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 3
+    {0x00166F40, 0x00167150, 0x0016CBC0, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 4
+    {0x001671C0, 0x001673D0, 0x0016CE40, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 5
+    {0x00167540, 0x00167750, 0x0016D1C0, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 6
+    {0x00166E40, 0x00167050, 0x0016CAC0, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 7
+    {0x001675C0, 0x001677D0, 0x0016D240, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 8
+    {0x00166F40, 0x00167150, 0x0016CBC0, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 9
+    {0x00167240, 0x00167450, 0x0016CEC0, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 10
+    {0x001677C0, 0x001679D0, 0x0016D440, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 11
+    {0x00167240, 0x00167450, 0x0016CEC0, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 12
+    {0x001670C0, 0x001672D0, 0x0016CD40, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 13
+    {0x001674C0, 0x001676D0, 0x0016D140, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 14
+    {0x001673C0, 0x001675D0, 0x0016D040, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 15
+    {0x001671C0, 0x001673D0, 0x0016CE40, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 16
+    {0x001676C0, 0x001678D0, 0x0016D340, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 17
+    {0x001677C0, 0x001679D0, 0x0016D440, 0x0015FFDC, 0x0015FFE0, 0.756f, 0x001611B8, 0x001611D0},  // 18
+};
+
+const GameAddresses& rac1_addresses(std::string_view game, int level) {
+    const bool ntsc = game == "rac1-ntsc";
+    if (level >= 0 && level < 19) {
+        return ntsc ? kRac1NtscLevels[level] : kRac1PalLevels[level];
+    }
+    return ntsc ? kRac1Ntsc : kRac1Pal;
 }
 
 const GameAddresses& rac1_pal_addresses(std::span<const std::uint8_t> ram) {

@@ -35,9 +35,6 @@ void FUN_L06_00307c48(unsigned char *a, unsigned char *m) {
         break;
     }
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L06_00307d30.s", FUN_L06_00307d30);
-#else
 #include "rnc/overlay/quad.h"
 extern void FUN_L06_00307578(void);
 extern float D_L06_00167540[];
@@ -47,7 +44,7 @@ extern float D_L06_001622E0 __attribute__((sda));
 extern float D_L06_001622E4 __attribute__((sda));
 extern float D_L06_001622E8 __attribute__((sda));
 extern float D_L06_001622EC __attribute__((sda));
-extern unsigned char D_001413F4;
+extern unsigned char D_001413F4 __attribute__((section(".data")));
 extern unsigned char D_0015EDB4;
 extern unsigned char D_0014C050[];
 extern int current_level_index __asm__("D_0015ED84");
@@ -61,7 +58,13 @@ extern float FUN_001f9b48(void *, void *);
 extern float random_angle_radians(void) __asm__("FUN_00213308");
 extern void enqueue_callback_list_1(int, int) __asm__("FUN_001f4600");
 extern void add_vectors(void *, void *, void *) __asm__("FUN_L00_001ff290");
-extern void draw_number(float, void *, void *, int, unsigned int, int, int, int) __asm__("FUN_L01_00285768");
+extern void draw_number(void *, void *, int, unsigned int, int, int, int, float) __asm__("FUN_L01_00285768");
+
+/* Fakematch: the blue channel goes through this inline; written in place, the
+   or is scheduled before the green one. */
+static inline unsigned int or_blue_channel(int blue, unsigned int color) {
+    return blue * 0x10000 | color;
+}
 
 void FUN_L06_00307d30(char *moby) {
     float *data = *(float **)(moby + 0x78);
@@ -102,11 +105,11 @@ void FUN_L06_00307d30(char *moby) {
             pos[2] += D_L06_001622DC * fast_cos(data[6]);
             value = truncate_float_to_s32(D_L06_001622E8 * fast_cos(data[10]));
             color_channels = (value / 2 + 120) * 0x100 | 0x20000000U;
-            color_channels = (value / 3 + 13) * 0x10000 | color_channels;
+            color_channels = or_blue_channel(value / 3 + 13, color_channels);
             color = color_channels | (value + 150U);
             if (D_001413F4 == 1) {
                 if (idata[5] < 10) {
-                    draw_number(0.5f, pos, moby, idata[5] + 2, color, 0x7f, 4, 0xff);
+                    draw_number(pos, moby, idata[5] + 2, color, 0x7f, 4, 0xff, 0.5f);
                 } else {
                     if (D_0015EDB4) {
                         angle = fast_add_rotations(*(float *)(moby + 0x48), 1.5707964f);
@@ -115,14 +118,14 @@ void FUN_L06_00307d30(char *moby) {
                         offset[1] = fast_sin(angle) * 0.15f;
                         offset[2] = 0.0f;
                         add_vectors(result, offset, pos);
-                        draw_number(0.5f, offset, moby, idata[5] / 10 + 2, color, 0x7f, 4, 0xff);
+                        draw_number(offset, moby, idata[5] / 10 + 2, color, 0x7f, 4, 0xff, 0.5f);
                         angle = fast_add_rotations(*(float *)(moby + 0x48), 1.5707964f);
                         offset[0] = fast_cos(angle) * -0.4f;
                         angle = fast_add_rotations(*(float *)(moby + 0x48), 1.5707964f);
                         offset[1] = fast_sin(angle) * -0.4f;
                         offset[2] = 0.0f;
                         add_vectors(result, offset, pos);
-                        draw_number(0.5f, offset, moby, idata[5] % 10 + 2, color, 0x7f, 4, 0xff);
+                        draw_number(offset, moby, idata[5] % 10 + 2, color, 0x7f, 4, 0xff, 0.5f);
                     } else {
                         angle = fast_add_rotations(*(float *)(moby + 0x48), 1.5707964f);
                         offset[0] = fast_cos(angle) * -0.4f;
@@ -130,14 +133,14 @@ void FUN_L06_00307d30(char *moby) {
                         offset[1] = fast_sin(angle) * -0.4f;
                         offset[2] = 0.0f;
                         add_vectors(result, offset, pos);
-                        draw_number(0.5f, offset, moby, idata[5] / 10 + 2, color, 0x7f, 4, 0xff);
+                        draw_number(offset, moby, idata[5] / 10 + 2, color, 0x7f, 4, 0xff, 0.5f);
                         angle = fast_add_rotations(*(float *)(moby + 0x48), 1.5707964f);
                         offset[0] = fast_cos(angle) * 0.15f;
                         angle = fast_add_rotations(*(float *)(moby + 0x48), 1.5707964f);
                         offset[1] = fast_sin(angle) * 0.15f;
                         offset[2] = 0.0f;
                         add_vectors(result, offset, pos);
-                        draw_number(0.5f, offset, moby, idata[5] % 10 + 2, color, 0x7f, 4, 0xff);
+                        draw_number(offset, moby, idata[5] % 10 + 2, color, 0x7f, 4, 0xff, 0.5f);
                     }
                 }
             }
@@ -158,7 +161,6 @@ void FUN_L06_00307d30(char *moby) {
         return;
     }
 }
-#endif
 #include "sda.h"
 #include "rnc/overlay/entities.h"
 
@@ -239,7 +241,7 @@ void FUN_L06_00309860(char *self) {
 /* UpdateMoby: state 0 deletes, state 1 draws and times out */
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002FF000.c: func_L06_0030D2A0), where it is exact; names translated to the US level program. */
 
-extern void FUN_L06_0030bfa8(void);
+void FUN_L06_0030bfa8(char *moby);
 void enqueue_callback_list_1(s32 arg0, s32 arg1) __asm__("FUN_001f4600");
 void mark_moby_for_removal(struct Obj *obj) __asm__("FUN_0020c828");
 
@@ -280,9 +282,6 @@ void FUN_L06_0030bef8(char *src, int a1, int a2, int a3) {
         m[0x20] = 1;
     }
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L06_0030bfa8.s", FUN_L06_0030bfa8);
-#else
 extern void vu1_add_g_sregister(s32, s64) __asm__("FUN_00233980");
 extern void project_to_screen(f32 *, void *) __asm__("FUN_001f2070");
 extern s32 truncate_float_to_s32(f32) __asm__("FUN_001fa6d0");
@@ -297,8 +296,7 @@ extern s32 D_L06_00162420 __attribute__((sda));
 extern s32 D_L06_00162424 __attribute__((sda));
 extern s32 D_L06_00162428 __attribute__((sda));
 
-#define FUN_L06_0030bfa8 FUN_L06_0030bfa8_c
-void FUN_L06_0030bfa8(char *moby) __asm__("FUN_L06_0030bfa8");
+/* Draws a screen-space sprite at the moby, grown and faded in by the first data float. */
 void FUN_L06_0030bfa8(char *moby) {
     float *d = *(float **)(moby + 0x78);
     OvlVec4 pos;
@@ -310,8 +308,6 @@ void FUN_L06_0030bfa8(char *moby) {
     float fade;
     s32 y, x, radius;
     s32 raw_x;
-    s32 left, right;
-    s64 upper_plus, upper_minus;
     u64 texture;
     u32 color;
     s32 *screen_center;
@@ -329,7 +325,7 @@ void FUN_L06_0030bfa8(char *moby) {
     raw_x = truncate_float_to_s32(screen[0] - (float)screen_center[4]);
     screen_offset = (float)screen_center[4];
     y = truncate_float_to_s32(screen[1] - screen_offset);
-    x = (s32)raw_x - 0x1000;
+    x = raw_x - 0x1000;
     y -= 0x1000;
     uvs[0] = D_L06_0016241C;
     uvs[1] = D_L06_00162420;
@@ -341,20 +337,22 @@ void FUN_L06_0030bfa8(char *moby) {
     colors[1] = color;
     colors[0] = color;
     radius = truncate_float_to_s32((float)(D_L06_00162418 << 4) * size);
-    upper_plus = 0xfffff080008000LL + (s64)(s32)((y + radius) << 16);
-    upper_minus = 0xfffff080008000LL + (s64)(s32)((y - radius) << 16);
-    right = x + radius;
-    left = x - radius;
-    corners[0] = upper_minus + right;
-    corners[2] = upper_plus + right;
-    corners[1] = upper_minus + left;
-    corners[3] = upper_plus + left;
-   texture = get_effect_texture(D_L06_00162414);
+    corners[3] = 0xfffff080008000LL;
+    corners[2] = 0xfffff080008000LL;
+    corners[1] = 0xfffff080008000LL;
+    corners[0] = 0xfffff080008000LL;
+    corners[0] += (y - radius) << 16;
+    corners[0] += x + radius;
+    corners[1] += (y - radius) << 16;
+    corners[1] += x - radius;
+    corners[2] += (y + radius) << 16;
+    corners[2] += x + radius;
+    corners[3] += (y + radius) << 16;
+    corners[3] += x - radius;
+    texture = get_effect_texture(D_L06_00162414);
     FUN_L02_0020bc88(corners, uvs, colors, texture, 1);
     vu1_add_g_sregister(0x47, 0x5360B);
 }
-#undef FUN_L06_0030bfa8
-#endif
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002FF000.c: func_L06_00317770), where it is exact; names translated to the US level program. */
 
 extern char *D_L06_0015EF50;

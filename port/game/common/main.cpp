@@ -38,19 +38,27 @@
 #include <thread>
 #include <vector>
 
+#include <cmath>
+
 #include "common/log.h"
+#ifdef OPENRAC_HAS_DISC
+#include "assets/disc/disc.h"
+#endif
+#include "common/stats.h"
 #include "openrac/elf.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
 #include "openrac/memory.h"
 
 #ifdef OPENRAC_FRONTEND
+#include "debug_overlay.h"
 #include "frontend.h"
 #include "settings.h"
 #include "openrac/sound_engine.h"
 #include "platform/audio.h"
 #include "platform/pump.h"
 #include "renderer/texture.h"
+#include "viewer/level.h"
 #include "viewer/moby_pose.h"
 #endif
 #ifdef OPENRAC_MOVIES
@@ -84,6 +92,9 @@ struct Options {
     fs::path levels;  // the extracted levels the window draws (level_00, ...)
     fs::path mods;  // levels edited in Godot and packed (editor/pack.py), read in place of the disc's
     fs::path settings;  // the player's settings (settings.h); in OpenRAC's data folder unless given
+    fs::path debug_dump;  // each frame's measurements, a JSON object a line (docs/port/DEBUGGING.md)
+    bool debug_overlay = false;  // the debug overlay shown from the start (F3 shows and hides it)
+    bool check_levels = false;  // read every extracted level as the window would, say what is wrong, and stop
 };
 
 Options g_options;
@@ -92,6 +103,13 @@ gaddr g_chain = 0;  // the display list sent this frame
 bool g_vsync_since_kick = true;  // a vertical blank was waited for since the last frame was sent
 bool g_window = false;
 std::chrono::steady_clock::time_point g_next_frame;
+// The game's ticks a second: the description's (hostgen.json's frame_rate) until the game sets a
+// video mode, then that mode's field rate (openrac_game_set_video_mode).
+int g_tick_rate = 0;
+
+int tick_rate() {
+    return g_tick_rate > 0 ? g_tick_rate : openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60;
+}
 
 std::string program_name() {
     return std::string("openrac-") + openrac_game.id;
@@ -100,7 +118,7 @@ std::string program_name() {
 [[noreturn]] void usage(const std::string& why) {
     log::error("{}", why);
     log::error(
-        "usage: {} --data <install>/active/{}/data [--cards DIR] [--frames N] [--stop-on-missing] [--level N] [--skip-movies] [--mods DIR] [--settings FILE]",
+        "usage: {} --data <install>/active/{}/data [--cards DIR] [--frames N] [--stop-on-missing] [--level N] [--skip-movies] [--mods DIR] [--settings FILE] [--debug-overlay] [--debug-dump FILE]",
         program_name(),
         openrac_game.game
     );
@@ -170,6 +188,12 @@ Options parse(int argc, char** argv) {
             o.keep_going = true;
         } else if (a == "--stop-on-missing") {
             o.keep_going = false;
+        } else if (a == "--debug-dump") {
+            o.debug_dump = value();
+        } else if (a == "--debug-overlay") {
+            o.debug_overlay = true;
+        } else if (a == "--check-levels") {
+            o.check_levels = true;
         } else if (a == "--help" || a == "-h") {
             usage(program_name() + ": " + openrac_game.title + ", native");
         } else {
@@ -243,7 +267,26 @@ static void apply_writes() {
     }
 }
 
+// [debug tools] The game's tick length, stretched by the overlay's slow motion (debug_overlay.h).
+static std::chrono::microseconds tick_period() {
+    auto period = std::chrono::microseconds(1000000 / tick_rate());
+#ifdef OPENRAC_FRONTEND
+    if (g_window) {
+        period = std::chrono::microseconds(
+            std::llround(static_cast<double>(period.count()) * frontend::debug_overlay::tick_stretch()));
+    }
+#endif
+    return period;
+}
+
 int openrac_game_vsync(void) {
+    // [debug tools] The game's own code stops here and goes on when this returns: its time is the
+    // tick's (common/stats.h). The tick's frame of measurements begins.
+    stats::game_yielded();
+    struct Resume {
+        ~Resume() { stats::game_resumed(); }
+    } resume;
+    stats::begin_frame(stats::FrameKind::Tick, static_cast<std::uint64_t>(g_frame));
     g_vsync_since_kick = true;
     apply_writes();
     // With a window, the renderer draws the frame from the game's memory; without one, a frame is
@@ -252,11 +295,16 @@ int openrac_game_vsync(void) {
     if (g_window) {
         // The tick about to be drawn was due at the time the last one set (frames between ticks
         // count from it).
-        const auto period = std::chrono::microseconds(
-            1000000 / (openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60));
+        const auto period = tick_period();
         const auto now = std::chrono::steady_clock::now();
+        // How late the tick is, for the window to leave a frame out rather than fall further behind
+        // (not after a long stop, a level loading: the count below starts again from now).
+        const bool counted = g_next_frame.time_since_epoch().count() != 0
+                             && now <= g_next_frame + std::chrono::milliseconds(100);
         frontend::set_tick(g_next_frame.time_since_epoch().count() == 0 || now > g_next_frame + period
-                               ? now : g_next_frame, period);
+                               ? now : g_next_frame, period,
+                           counted && now > g_next_frame ? std::chrono::duration<double>(now - g_next_frame)
+                                                         : std::chrono::duration<double>(0.0));
         const auto* ram = runtime::Memory::get().base();
         const std::uint32_t draws = g_reports_draws ? g_draws : ~0u;
         g_draws = 0;
@@ -297,7 +345,7 @@ int openrac_game_vsync(void) {
     // OPENRAC_FPS: the frames per second over each 300 frames, in the log. OPENRAC_UNCAPPED: no wait
     // for the next frame's time (the game then runs as fast as the machine allows: a measure, not a
     // way to play, since the game's tick is its frame).
-    static const bool fps = std::getenv("OPENRAC_FPS") != nullptr;
+    static const bool& fps = stats::probe("OPENRAC_FPS", "the ticks per second over each 300 ticks, in the log");
     static const bool uncapped = std::getenv("OPENRAC_UNCAPPED") != nullptr;
     static steady_clock::time_point fps_from = now;
     // OPENRAC_WATCH=ADDRESS:COUNT[:i],...: COUNT floats (or words, with i) from each ADDRESS, each
@@ -323,11 +371,11 @@ int openrac_game_vsync(void) {
         log::info("frame {} watch{}", g_frame, line);
     }
     // OPENRAC_HITCH: each frame that took more than twice the frame time, with how long, in the log.
-    static const bool hitch = std::getenv("OPENRAC_HITCH") != nullptr;
+    static const bool& hitch = stats::probe("OPENRAC_HITCH", "each tick that took over 1.25 tick times, in the log");
     static steady_clock::time_point last = now;
     if (hitch) {
         const double ms = duration<double, std::milli>(now - last).count();
-        if (ms > 1.25 * 1000.0 / (openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60)) {
+        if (ms > 1.25 * 1000.0 / tick_rate()) {
             log::info("frame {}: {:.1f} ms", g_frame, ms);
         }
     }
@@ -345,7 +393,7 @@ int openrac_game_vsync(void) {
     if (g_next_frame.time_since_epoch().count() == 0 || now > g_next_frame + milliseconds(100)) {
         g_next_frame = now;
     }
-    const auto period = microseconds(1000000 / (openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60));
+    const auto period = tick_period();
     g_next_frame += period;
 #ifdef OPENRAC_FRONTEND
     // Until the next tick is due, frames at the display's rate (each swap waits for a refresh),
@@ -358,7 +406,16 @@ int openrac_game_vsync(void) {
         }
     }
 #endif
-    std::this_thread::sleep_until(g_next_frame);
+    {
+        const stats::Scope wait("wait");  // [debug tools]
+        std::this_thread::sleep_until(g_next_frame);
+    }
+#ifdef OPENRAC_FRONTEND
+    // [debug tools] A paused game stays here, its last tick drawn again (frontend.h, hold).
+    if (g_window && !frontend::hold()) {
+        std::exit(0);
+    }
+#endif
     return static_cast<int>(g_frame & 1);
 }
 
@@ -386,8 +443,17 @@ void openrac_game_set_display(const openrac_game_display* d) {
     }
 }
 
+// The video mode the game asks the console for (sceGsResetGraph, SetGsCrt): 2 is NTSC, 60 fields a
+// second, 3 is PAL, 50. The game's tick is one field: a PAL game that changes to its 60 Hz mode
+// counts its time in sixtieths from then on (rac1/pal: func_002157C0 sets the time base when a
+// level starts), so the port's tick follows the mode the game set, whatever the display shows.
 void openrac_game_set_video_mode(int interlace, int mode, int field_mode) {
-    log::info("video mode {:#x} (interlace {}, field mode {})", mode, interlace, field_mode);
+    const int rate = mode == 3 ? 50 : mode == 2 ? 60 : 0;
+    log::info("video mode {:#x} (interlace {}, field mode {}){}", mode, interlace, field_mode,
+              rate != 0 ? std::format(": the game ticks {} times a second", rate) : std::string());
+    if (rate != 0) {
+        g_tick_rate = rate;
+    }
 }
 
 void openrac_game_load_image(const openrac_game_image* image) {
@@ -491,7 +557,7 @@ int openrac_game_play_movie(uint32_t lsn, uint32_t bytes, int channel, int start
     if (!output) {
         log::warn("movie: no sound ({})", error);
     }
-    const int rate = openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60;
+    const int rate = tick_rate();
     const std::size_t per_blank = static_cast<std::size_t>(platform::kAudioRate / rate);
     std::vector<std::int16_t> samples(per_blank * 2);
     std::vector<std::uint8_t> rgba;
@@ -591,6 +657,15 @@ void openrac_game_effect_quad(const openrac_game_quad* quad) {
 #endif
 }
 
+int openrac_game_hud_side(void) {
+#ifdef OPENRAC_FRONTEND
+    if (g_window) {
+        return frontend::hud_side();
+    }
+#endif
+    return 0;
+}
+
 int openrac_game_ui_quad(const openrac_game_ui_rect* quad) {
 #ifdef OPENRAC_FRONTEND
     if (g_window) {
@@ -668,18 +743,61 @@ int openrac_game_pad(int port, uint16_t* buttons, uint8_t analog[4]) {
 
 }  // extern "C"
 
-// A level's program as the extractor wrote it (decompiler_out/<game>/levels/NN/overlay.bin): the
-// pieces the game's ParseBin copies in, each a header (load address, size, a word, entry) and its
-// bytes, while the entry stays the same. For the runtime's level-to-level relocation.
+// A level's program straight from the player's image (<data>/iso_data/<game>/disc.iso, kept by the
+// set-up), for rac1, whose disc layout is known. The image is opened once.
+static bool level_program_from_disc(int level, std::vector<std::uint8_t>* bytes) {
+#ifdef OPENRAC_HAS_DISC
+    static std::optional<assets::disc::Disc> disc;
+    static bool tried = false;
+    if (!tried) {
+        tried = true;
+        const fs::path image = g_options.data / "iso_data" / openrac_game.game / "disc.iso";
+        if (std::string(openrac_game.game) == "rac1") {
+            try {
+                disc.emplace(assets::disc::Disc::open(image, assets::disc::rac1_layout()));
+            } catch (const std::exception& e) {
+                log::warn("the level programs cannot be read from {}: {}", image.string(), e.what());
+            }
+        }
+    }
+    if (!disc) {
+        return false;
+    }
+    try {
+        assets::disc::LevelFiles files = disc->level(static_cast<std::uint32_t>(level));
+        if (files.overlay) {
+            *bytes = std::move(*files.overlay);
+            return true;
+        }
+    } catch (const std::exception& e) {
+        log::warn("level {}'s program cannot be read from the disc image: {}", level, e.what());
+    }
+#else
+    (void)level;
+    (void)bytes;
+#endif
+    return false;
+}
+
+// A level's program: the pieces the game's ParseBin copies in, each a header (load address, size,
+// a word, entry) and its bytes, while the entry stays the same. For the runtime's level-to-level
+// relocation: a function several levels share reads its globals where the loaded level keeps
+// them, which the runtime finds by pairing the function's code in the two programs. Without it
+// such a function reads the address of the level its name gives, where the loaded level has
+// something else: the arctangent's tables were zero in a level, so the camera's angles were zero
+// and the stick moved the hero along the world's axes whatever way the camera faced.
+// From the extractor's copy when there is one (decompiler_out/<game>/levels/NN/overlay.bin), else
+// from the player's image.
 static void load_level_program(int level) {
     char name[8];
     std::snprintf(name, sizeof(name), "%02d", level);
     const fs::path path =
         g_options.data / "decompiler_out" / openrac_game.game / "levels" / name / "overlay.bin";
     std::vector<std::uint8_t> bytes;
-    if (!runtime::read_file(path, &bytes)) {
-        log::warn("level {}'s program is not in {}: its shared functions are not relocated",
-                  level, path.string());
+    if (!runtime::read_file(path, &bytes) && !level_program_from_disc(level, &bytes)) {
+        log::error("level {}'s program is in neither {} nor the disc image: the functions levels share are not "
+                   "relocated, and the game will misbehave (the hero's heading ignores the camera)",
+                   level, path.string());
         return;
     }
     std::uint32_t entry = 0;
@@ -703,6 +821,65 @@ extern "C" __declspec(dllimport) unsigned int __stdcall timeBeginPeriod(unsigned
 #pragma comment(lib, "winmm.lib")
 #endif
 
+#ifdef OPENRAC_FRONTEND
+// --check-levels: every level the window draws from (level_00 to level_18, the flight world 98 and
+// the title's 99) is read as the window reads it, without a window. A level that cannot be read,
+// or that has nothing to draw, is named with the reason; when all are whole, `verified.json` is
+// written beside them, which the launcher asks for before it offers Play. A game started over
+// levels that are missing or cut short shows its HUD over a black world and says nothing else.
+static int check_levels(const fs::path& levels) {
+    const fs::path stamp = levels / "verified.json";
+    std::error_code ignored;
+    fs::remove(stamp, ignored);
+    std::vector<int> ids;
+    for (int i = 0; i < 19; ++i) {
+        ids.push_back(i);
+    }
+    ids.push_back(98);
+    ids.push_back(99);
+    int bad = 0;
+    for (const int id : ids) {
+        const fs::path dir = levels / std::format("level_{:02d}", id);
+        viewer::LevelData level;
+        std::string error;
+        if (!viewer::load_level(dir, level, error)) {
+            log::error("level {:02d}: {}", id, error);
+            ++bad;
+            continue;
+        }
+        // The flight world has only its ships' textures; every other one has ground to stand on.
+        if (id != 98 && (level.vertices.empty() || level.models.empty())) {
+            log::error("level {:02d}: it has nothing to draw ({} models, {} vertices)", id, level.models.size(),
+                       level.vertices.size());
+            ++bad;
+            continue;
+        }
+        if (level.missing_images > 0) {
+            log::error("level {:02d}: {} of its textures are missing", id, level.missing_images);
+            ++bad;
+            continue;
+        }
+        log::info("level {:02d}: {} models, {} vertices, {} textures", id, level.models.size(), level.vertices.size(),
+                  level.images.size());
+    }
+    if (bad > 0) {
+        log::error("{} of {} levels in {} cannot be drawn: read them from the disc again (the launcher's "
+                   "\"Get the levels ready\"; editor/extract.py port --replace)",
+                   bad, ids.size(), levels.string());
+        return 1;
+    }
+    if (std::FILE* f = std::fopen(stamp.string().c_str(), "wb")) {
+        std::fprintf(f, "{\"format\": 1, \"levels\": %zu, \"program\": \"%s\"}\n", ids.size(), program_name().c_str());
+        std::fclose(f);
+    } else {
+        log::error("cannot write {}", stamp.string());
+        return 1;
+    }
+    log::info("all {} levels can be drawn: {}", ids.size(), stamp.string());
+    return 0;
+}
+#endif
+
 int main(int argc, char** argv) {
 #if defined(_WIN32)
     // Windows sleeps in steps of 15.6 ms unless a program asks for 1 ms: the wait for the next
@@ -710,6 +887,13 @@ int main(int argc, char** argv) {
     timeBeginPeriod(1);
 #endif
     g_options = parse(argc, argv);
+    if (g_options.check_levels) {
+#ifdef OPENRAC_FRONTEND
+        return check_levels(g_options.levels.empty() ? g_options.data / "port" : g_options.levels);
+#else
+        log::fatalf("--check-levels needs a build with the window (it reads the levels as the window does)");
+#endif
+    }
     const fs::path iso = g_options.data / "iso_data" / openrac_game.game;
     const fs::path exe = iso / openrac_game.serial;
     const fs::path disc = iso / "disc.iso";
@@ -764,6 +948,9 @@ int main(int argc, char** argv) {
             log::fatalf("no window: {}", why);
         }
         g_window = true;
+        if (g_options.debug_overlay) {
+            frontend::debug_overlay::request();
+        }
         // The game's sounds (openrac/sound_engine.h), rendered on the output's thread.
         static std::unique_ptr<platform::AudioOutput> sound_output =
             platform::AudioOutput::open(why, [](std::span<std::int16_t> samples) {
@@ -780,6 +967,22 @@ int main(int argc, char** argv) {
         }
     }
 #endif
+
+    // [debug tools] --debug-dump FILE (or OPENRAC_DEBUG_DUMP=FILE): each frame's measurements, with
+    // or without a window.
+    if (g_options.debug_dump.empty()) {
+        if (const char* env = std::getenv("OPENRAC_DEBUG_DUMP")) {
+            g_options.debug_dump = env;
+        }
+    }
+    if (!g_options.debug_dump.empty()) {
+        std::string why;
+        if (stats::open_dump(g_options.debug_dump.string(), why)) {
+            log::info("frame measurements are written to {}", g_options.debug_dump.string());
+        } else {
+            log::warn("--debug-dump: {}", why);
+        }
+    }
 
     openrac_game_register_functions();
     openrac_guest_set_overlay_source(openrac_game_loaded_overlay);

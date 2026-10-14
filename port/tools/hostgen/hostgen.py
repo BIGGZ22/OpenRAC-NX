@@ -131,6 +131,17 @@ def read_hand(config_dir: Path, cfg: dict) -> dict[str, str]:
     return read_table_of_c(config_dir / table)
 
 
+def read_drafts(config_dir: Path, cfg: dict) -> tuple[str, set[str]] | None:
+    """The files whose own pending C is read in place of their assembly stub (hostgen.json
+    "drafts": {"guard": the macro the decompilation keeps it under, "units": a list beside the
+    game's configuration, one file a line from the decompilation's top, # for comments})."""
+    drafts = cfg.get("drafts")
+    if not drafts or not (config_dir / drafts["units"]).is_file():
+        return None
+    units = {line.split("#")[0].strip() for line in (config_dir / drafts["units"]).read_text().splitlines()}
+    return drafts["guard"], units - {""}
+
+
 def read_candidates(source: Path, cfg: dict) -> dict[str, str]:
     """Candidate C for functions the decompilation still has as assembly
     (hostgen.json "candidates": a table in the decompilation, one
@@ -273,6 +284,11 @@ def write_program_files(program: Program, out: Path, game: str) -> dict:
     tables: dict[int, list[tuple[int, str]]] = {}
     for sym, f in sorted(program.functions.items()):
         if prototype(f, program.typedefs) is None:
+            continue
+        # Two spellings of one address (FUN_0020c828, func_0020C828): the one with C answers a
+        # call through the address too, not whichever sorts first.
+        own = program.canonical(sym)
+        if own != sym and prototype(program.functions[own], program.typedefs) is not None:
             continue
         for overlay, addr in program.code_places(sym):
             tables.setdefault(overlay, []).append((addr, sym))
@@ -461,6 +477,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--jobs", type=int, default=os.cpu_count() or 2)
     ap.add_argument("--only", action="append", default=[], help="translate only these units (for checks)")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--allow-unreadable", action="store_true",
+                    help="build without the source files Clang cannot read, instead of stopping")
     ap.add_argument("--list", action="store_true", help="print the files it would write, and stop (for the build)")
     args = ap.parse_args(argv)
 
@@ -479,9 +497,10 @@ def main(argv: list[str] | None = None) -> int:
     # candidate for the same function stands aside.
     candidates = {**read_candidates(source, cfg), **read_hand(args.game.parent, cfg)}
     used: set[str] = set()
+    drafts = read_drafts(args.game.parent, cfg)
     for d in sorted(set(cfg["sources"] + cfg["includes"])):
         if (source / d).is_dir():
-            prep.copy_tree(source / d, root / d, candidates=candidates, used=used)
+            prep.copy_tree(source / d, root / d, candidates=candidates, used=used, drafts=drafts, prefix=d)
     units = units_of(root, cfg)
     if args.only:
         units = [u for u in units if u in args.only]
@@ -539,6 +558,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"hostgen: {summary['units']} units, {summary['functions_translated']} functions translated, "
               f"{summary['functions_stubbed']} stubbed, {summary['functions_without_c']} without C, "
               f"in {time.time() - started:.0f} s; report in {out / 'report.md'}")
+    # A unit Clang cannot read is left out whole: every function in it goes missing and the game
+    # fails somewhere else, much later. So it stops the build here, with Clang's own words.
+    unreadable = [(r.unit, p) for r in reports for p in r.problems if p.startswith("Clang could not")]
+    if unreadable and not args.allow_unreadable:
+        for unit, problem in unreadable:
+            print(f"hostgen: {unit}: {problem[:600]}", file=sys.stderr)
+        print(f"hostgen: {len(unreadable)} source file(s) Clang cannot read; each would be left out of the game "
+              "with all its functions. Fix the declarations named above (--allow-unreadable builds without them).",
+              file=sys.stderr)
+        return 1
     return 0
 
 

@@ -230,13 +230,62 @@ mod tests {
         let file = actions::load(&checkout()).unwrap();
         let scope = Scope::Version("rac1/pal".into());
         let made = file.find(&scope, "port-levels").and_then(|a| a.artifact.clone()).expect("port-levels makes a file");
+        // Play waits for the check, which waits for the export: levels that are there but cannot
+        // be drawn (an export cut short, a file gone) were a black world behind the HUD.
+        let check = file.find(&scope, "port-levels-check").expect("port-levels-check");
+        let stamp = check.makes.clone().expect("the check leaves a stamp");
+        assert!(check.needs.iter().any(|n| n.path == made), "the check does not wait for {made}");
+        assert!(check.args.iter().any(|a| a == "--check-levels"));
         for id in ["play", "play-edited"] {
             let action = file.find(&scope, id).unwrap();
-            assert!(action.needs.iter().any(|n| n.path == made), "{id} does not wait for {made}");
+            assert!(action.needs.iter().any(|n| n.path == stamp), "{id} does not wait for {stamp}");
             let at = action.args.iter().position(|a| a == "--levels").unwrap_or_else(|| panic!("{id} has no --levels"));
             let dir = action.args[at + 1].trim_start_matches("{root}/");
-            assert!(made.starts_with(dir), "{id} draws from {dir}, port-levels writes {made}");
+            assert!(made.starts_with(dir) && stamp.starts_with(dir), "{id} draws from {dir}");
         }
+    }
+
+    /// The copy an installer carries (tools/bundle_standalone.py), when one was put together in
+    /// build/standalone: its actions are valid, need no Python to play, and write nothing in it.
+    #[test]
+    fn a_carried_copy_offers_the_players_actions() {
+        let root = checkout().join("build").join("standalone");
+        if !root.join("STANDALONE").is_file() {
+            return; // not put together here
+        }
+        let catalog = crate::catalog::load(&root).unwrap();
+        let file = actions::load(&root).unwrap();
+        assert_eq!(file.problems(&catalog), Vec::<String>::new());
+        let scope = Scope::Version("rac1/pal".into());
+        let levels = file.find(&scope, "port-levels").expect("port-levels");
+        assert!(levels.args.iter().any(|a| a == "{data}/port"), "{:?}", levels.args);
+        let play = file.find(&scope, "play").expect("play");
+        assert!(play.needs.iter().all(|n| n.path.starts_with("{data}/")), "{:?}", play.needs);
+        let check = file.find(&scope, "port-levels-check").expect("port-levels-check");
+        assert!(check.makes.as_deref().is_some_and(|m| m.starts_with("{data}/")), "{:?}", check.makes);
+        assert!(file.find(&scope, "port-build").is_none() && file.repository.is_empty());
+
+        // With a game set up (OPENRAC_TEST_INSTALL: an install folder whose active/rac1/data has
+        // the disc and the levels), Play is planned as the launcher plans it and started as it
+        // starts it, for a few frames: the program, its arguments and the folder it starts in
+        // are all the copy's own. 0.4.0 planned a folder the copy does not have.
+        let Some(install) = std::env::var_os("OPENRAC_TEST_INSTALL") else { return };
+        let config = Config {
+            root: Some(root.clone()),
+            install_dir: Some(install.into()),
+            python: crate::detect::bundled_python(&root),
+            ..Config::default()
+        };
+        let plan = plan(&config, &scope, "play", None).unwrap();
+        assert!(plan.cwd.is_dir(), "play would start in {}", plan.cwd.display());
+        assert!(plan.program.is_file(), "{}", plan.program.display());
+        let status = std::process::Command::new(&plan.program)
+            .args(&plan.args)
+            .args(["--frames", "120", "--skip-movies"])
+            .current_dir(&plan.cwd)
+            .status()
+            .unwrap();
+        assert!(status.success(), "the game ended with {status}");
     }
 
     #[test]

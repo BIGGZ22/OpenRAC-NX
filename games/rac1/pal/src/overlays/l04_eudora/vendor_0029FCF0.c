@@ -1821,7 +1821,15 @@ int func_L04_002C5450(char *m, int a, int b, float f) {
     }
     return r;
 }
-INCLUDE_ASM("asm/overlays", func_L04_002C5530);
+/* slot 4 of the class table of circular_saw_enemy (340): the moby's pvars + 0x180,
+   0 when there is no moby or no pvars */
+u8 *func_L04_002C5530(struct Moby *m) {
+    if (m != 0) {
+        if (m->pvars != 0) return m->pvars + 0x180;
+        return 0;
+    }
+    return 0;
+}
 typedef struct {
     u8 pad0[4];
     s32 mode; /* 0x04 */

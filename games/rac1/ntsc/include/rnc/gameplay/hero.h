@@ -63,6 +63,19 @@ struct MobyTrail {
 /* A manipulator record eased by FUN_L00_00205168: it moves rot and pos toward
    their targets, then rebuilds quat, scale3 and translation (the part
    attach_manipulator, FUN_0020cb10, hands to the moby) from them. */
+/* The first 0x40 bytes of a HeroEase: the part attach_manipulator reads. */
+struct HeroManipulator {
+    u8 unk0;                       /* 0x00 */
+    u8 attached;                   /* 0x01 */
+    u8 unk2;                       /* 0x02 */
+    u8 unk3;                       /* 0x03 */
+    u8 pad_4[0x8];
+    f32 unkC;                      /* 0x0C */
+    Vec4 quat;                     /* 0x10 */
+    Vec4 scale3;                   /* 0x20 */
+    Vec4 translation;              /* 0x30 */
+};
+
 struct HeroEase {
     u8 unk0;                       /* 0x00 */
     u8 attached;                   /* 0x01: attached to its moby (FUN_0020cb10 / FUN_0020cb88) */
@@ -99,13 +112,16 @@ struct HeroItemSlot {
     s32 unk20;                     /* 0x20 */
     s32 state;                     /* 0x24: 0 empty, 2 ready, 3 released */
     s32 item_id;                   /* 0x28: item in the slot */
-    u8 pad_2C[0x4];
+    f32 glow_phase;                /* 0x2C: phase of the item moby's colour pulse (FUN_L00_002080b0) */
     f32 unk30;                     /* 0x30 */
     f32 unk34;                     /* 0x34 */
     s32 unk38;                     /* 0x38 */
     s16 unk3C;                     /* 0x3C */
     u16 unk3E;                     /* 0x3E */
-    u8 pad_40[0x10];
+    s32 unk40;                     /* 0x40: on slot 6, nonzero makes the Ryno aim along unk4C */
+    u8 pad_44[0x4];
+    struct Moby *lock_target;      /* 0x48: on slot 6, the moby the weapons lock on to while unk40 is set */
+    f32 unk4C;                     /* 0x4C: yaw */
 };
 
 /*
@@ -484,7 +500,7 @@ struct Hero {
     f32 unk8A4;                    /* 0x8A4 */
     s32 unk8A8;                    /* 0x8A8: count shown on the HUD (FUN_L05_00266710) */
     s16 unk8AC;                    /* 0x8AC */
-    u8 pad_8AE[0x1];
+    u8 unk8AE;                     /* 0x8AE */
     u8 unk8AF;                     /* 0x8AF */
     s16 unk8B0;                    /* 0x8B0 */
     s16 unk8B2;                    /* 0x8B2 */
@@ -494,7 +510,7 @@ struct Hero {
     s16 unk8BE;                    /* 0x8BE */
     s32 unk8C0;                    /* 0x8C0: 1..3 picks the HUD rank string (FUN_L05_00266320) */
     s32 unk8C4;                    /* 0x8C4 */
-    u8 pad_8C8[0x2];
+    s16 unk8C8;                    /* 0x8C8 */
     s16 unk8CA;                    /* 0x8CA */
     s16 unk8CC;                    /* 0x8CC */
     u8 unk8CE;                     /* 0x8CE */
@@ -605,7 +621,9 @@ struct Hero {
     s32 unkD14;                    /* 0xD14 */
     u8 pad_D18[0x8];
     f32 unkD20;                    /* 0xD20 */
-    u8 pad_D24[0x2CC];
+    u8 pad_D24[0xC];
+    struct HeroManipulator manipulators[7]; /* 0xD30: attached by FUN_L00_002056a8 while rand_timer runs */
+    u8 pad_EF0[0x100];
     struct HeroRandTimer rand_timer;/* 0xFF0 */
     u8 pad_FFC[0x8];
     s32 unk1004;                   /* 0x1004 */
@@ -664,7 +682,8 @@ struct Hero {
     u8 pad_1618[0x8];
     void *unk1620;                 /* 0x1620 */
     void *unk1624;                 /* 0x1624 */
-    u8 pad_1628[0x8];
+    f32 glow_phase;                /* 0x1628: phase of the hero moby's colour pulse (FUN_L00_002080b0) */
+    u8 pad_162C[0x4];
     s32 unk1630;                   /* 0x1630 */
     s16 unk1634;                   /* 0x1634 */
     s16 unk1636;                   /* 0x1636 */
@@ -739,7 +758,8 @@ struct Hero {
     u8 unk20B2;                    /* 0x20B2 */
     u8 unk20B3;                    /* 0x20B3 */
     u8 unk20B4;                    /* 0x20B4 */
-    u8 pad_20B5[0x3];
+    u8 unk20B5;                    /* 0x20B5 */
+    u8 pad_20B6[0x2];
     s32 pending_item[7];           /* 0x20B8: per slot: item to switch to */
     s32 selected_item[7];          /* 0x20D4: per slot: item after a switch */
     s32 saved_item[7];             /* 0x20F0: per slot: item kept while another is forced in */

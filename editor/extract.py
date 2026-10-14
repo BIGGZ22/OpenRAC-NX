@@ -34,24 +34,33 @@ from port import PortLevelWriter
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def output_path(path: Path) -> Path:
-    """A new directory inside assets/ or build/, after resolving symlinks."""
+def output_path(path: Path, anywhere: bool = False, replace: bool = False) -> Path:
+    """A new directory inside assets/ or build/, after resolving symlinks. ANYWHERE: any new
+    directory (an installed launcher has no checkout to write in: it names its own data folder)."""
     resolved = path.resolve()
-    if not any(root in resolved.parents for root in (ROOT / "assets", ROOT / "build")):
+    if not anywhere and not any(root in resolved.parents for root in (ROOT / "assets", ROOT / "build")):
         raise FormatError("output must be a new directory under this repository's assets/ or build/")
-    if resolved.exists():
+    if resolved.exists() and not replace:
         raise FormatError(f"{resolved} already exists; choose a new directory")
     return resolved
 
 
-def publish(path: Path, build) -> Path:
-    """Run build(directory) in a temporary sibling, then rename it to path."""
-    dest = output_path(path)
+def publish(path: Path, build, anywhere: bool = False, replace: bool = False) -> Path:
+    """Run build(directory) in a temporary sibling, then rename it to path. REPLACE: a directory
+    already there gives way to the new one once that is whole (never before: a failed run leaves
+    the old one as it was)."""
+    dest = output_path(path, anywhere, replace)
     dest.parent.mkdir(parents=True, exist_ok=True)
     temporary = Path(tempfile.mkdtemp(prefix=f".{dest.name}-", dir=dest.parent))
     try:
         build(temporary)
-        temporary.rename(dest)
+        if dest.exists():
+            old = Path(tempfile.mkdtemp(prefix=f".{dest.name}-old-", dir=dest.parent))
+            dest.rename(old / dest.name)
+            temporary.rename(dest)
+            shutil.rmtree(old)
+        else:
+            temporary.rename(dest)
     finally:
         if temporary.exists():
             shutil.rmtree(temporary)
@@ -159,6 +168,10 @@ def main() -> None:
                         help="levels to export at once (default: one per CPU)")
     native.add_argument("--terrain-lod", type=int, choices=(0, 2), default=0,
                         help="terrain detail: 0 finest (default), 2 coarsest")
+    native.add_argument("--replace", action="store_true",
+                        help="OUT may exist: it is replaced by the new export once that is complete")
+    native.add_argument("--anywhere", action="store_true",
+                        help="OUT may be outside this repository (the installed launcher's data folder)")
     packing = commands.add_parser("pack")
     packing.add_argument("iso", type=Path)
     packing.add_argument("project", type=Path,
@@ -182,7 +195,8 @@ def main() -> None:
                 print(f"Godot project{'s, one per level' if args.split else ''}: {dest}")
             elif args.command == "port":
                 levels = sorted(set(args.level or range(LEVEL_COUNT)))
-                dest = publish(args.out, lambda out: port(args.iso, survey, levels, args.terrain_lod, max(1, args.jobs), out))
+                dest = publish(args.out, lambda out: port(args.iso, survey, levels, args.terrain_lod, max(1, args.jobs), out),
+                               args.anywhere, args.replace)
                 print(f"Levels for the port's viewer: {dest}")
             elif args.command == "pack":
                 # Its own output, written again after each edit: the one command that may write

@@ -798,7 +798,106 @@ void func_L06_002F69D0(Moby *m) {
 }
 INCLUDE_ASM("asm/overlays", func_L06_002F71A8);
 INCLUDE_ASM("asm/overlays", func_L06_002F78A0);
-INCLUDE_ASM("asm/overlays", func_L06_002F8200);
+typedef u32 u128_F8200 __attribute__((mode(TI), aligned(16)));
+typedef union {
+    u128_F8200 q;
+    f32 f[4];
+    s32 i[4];
+} Vec4_F8200;
+extern void func_001FA1C0(void *, float);
+extern void func_001FA540(void *, void *, void *);
+extern int func_001F4868(int);
+extern void func_00234C98(int, long);
+extern void func_001F7868(void);
+extern unsigned int func_001FA8A8_F8200(unsigned int, unsigned int, float) __asm__("func_001FA8A8");
+extern void func_L06_00216B38(int *, float *);
+extern short D_L06_00161E9C;
+extern short D_L06_00161E60;
+extern short D_L06_00161E64;
+extern short D_L06_00161E68;
+extern short D_L06_00161E6C;
+extern short D_L06_00161E80;
+extern short D_L06_00161E84;
+extern short D_L06_00161E88;
+extern short D_L06_00161E8C;
+extern int D_L06_00161EE0 MACRO_ADDR;
+extern int D_L06_00161EE4 MACRO_ADDR;
+extern int D_L06_00161ED0[] MACRO_ADDR;
+extern float D_L06_001DB320[];
+extern float D_L06_001DB3B0[];
+extern Vec4_F8200 D_L06_001DB440_F8200[4][30] __asm__("D_L06_001DB440");
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002b4770.c, FUN_L06_002f6dd0. */
+void func_L06_002F8200(char *moby) {
+    float base_matrix[16];
+    float yaw_matrix[16];
+    float segment_matrix[9][16];
+    float offset[4];
+    int params[9];
+    char *data = *(char **)(moby + 0x78);
+    float *matrix;
+    float *rotation;
+    float *offset_src;
+    float *translation;
+    float *first_matrix;
+    int *segment_params;
+    unsigned int color;
+    int first, second, fourth;
+    int *points, *sequence;
+    float seventh, eighth;
+    int i;
+    int j;
+
+    func_001FA218(base_matrix, moby + 0x40);
+    func_001FA1C0(yaw_matrix, (*(float *)&D_L06_00161E9C));
+    func_001FA540(base_matrix, base_matrix, yaw_matrix);
+    func_00234C98(6, func_001F4868(14));
+    func_00234C98(0x14, 0xFF9000000260L);
+    func_00234C98(8, 0);
+    func_00234C98(0x42, (long)(*(int *)&D_L06_00161E60) | ((long)(*(int *)&D_L06_00161E64) << 2) |
+                                  ((long)(*(int *)&D_L06_00161E68) << 4) | ((long)(*(int *)&D_L06_00161E6C) << 6) |
+                                  0x8000000000L);
+    func_001F7868();
+    first_matrix = segment_matrix[0];
+    segment_params = params;
+    rotation = D_L06_001DB3B0;
+    offset_src = D_L06_001DB320;
+    translation = segment_matrix[0] + 12;
+    matrix = first_matrix;
+    for (i = 8; i >= 0; i--) {
+        func_001FA218(matrix, rotation);
+        rotation += 4;
+        func_001FA540(matrix, base_matrix, matrix);
+        func_001F9EE8(offset, offset_src, base_matrix);
+        offset_src += 4;
+        func_001F9BD8(translation, offset, moby + 0x10);
+        matrix[15] = 1.0f;
+        matrix += 16;
+        translation += 16;
+    }
+    color = func_001FA8A8_F8200((*(int *)&D_L06_00161E80) & 0xFFFFFF, (*(int *)&D_L06_00161E80), *(float *)(data + 0x18));
+    first = D_L06_00161EE0;
+    points = (int *)D_L06_001DB440_F8200;
+    second = D_L06_00161EE4;
+    fourth = (*(int *)&D_L06_00161E84);
+    seventh = (*(float *)&D_L06_00161E88);
+    eighth = (*(float *)&D_L06_00161E8C);
+    sequence = D_L06_00161ED0;
+    params[0] = first;
+    params[2] = (int)sequence;
+    params[1] = second;
+    params[3] = color;
+    params[4] = fourth;
+    *(float *)&params[7] = seventh;
+    *(float *)&params[8] = eighth;
+    params[5] = 0x1E;
+    params[6] = (int)points;
+    matrix = first_matrix;
+    for (j = 8; j >= 0; j--) {
+        func_L06_00216B38(segment_params, matrix);
+        matrix += 16;
+    }
+}
 extern void func_001F9C30(void *, void *, f32);
 extern void func_L00_00258DB0_F8430(void *, f32, f32) __asm__("func_L00_00258DB0");
 extern f32 D_L06_00161EA0_F8430 SDATA(D_L06_00161EA0);

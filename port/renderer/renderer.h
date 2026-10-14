@@ -144,7 +144,20 @@ struct RenderTarget {
     // middle, at the game's shape (DirectRenderer), and only what covers the whole picture (a
     // fade, a clear, the frame drawn back) is drawn across the whole target.
     float picture_scale_x = 1.0f;
+    // A multisampled target (anti-aliasing) cannot be read or sampled: this is a framebuffer of
+    // the same size with one sample a pixel to resolve it into first (readable()); 0 for a plain
+    // target, which is read as it is.
+    unsigned resolve_framebuffer = 0;
+    // On a target wider than the picture: what the game cut at the television's sides (a scissor
+    // of the screen's whole width) is cut at the target's sides instead, so that the HUD's parts
+    // the game moved out past its picture's sides (the player's "HUD: Edges") are seen.
+    bool wide_2d = false;
 };
+
+// The framebuffer to read `target` from (glReadPixels, glCopyTexSubImage2D, a scaled blit): the
+// target itself, or its samples resolved now into its resolve_framebuffer. Leaves the read and
+// draw framebuffer bindings changed.
+unsigned readable(const RenderTarget& target);
 
 struct FrameStats {
     int draw_calls = 0;

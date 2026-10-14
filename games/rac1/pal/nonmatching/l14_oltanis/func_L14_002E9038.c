@@ -35,7 +35,7 @@ extern short D_L14_00161C5C;
 extern short D_L14_00161C58;
 extern short D_L14_00161C60;
 
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_002E9038 __attribute__((mode(TI)));
 
 /* Oltanis shuttle update (moby class 557): steers the shuttle along its route and eases its speed toward the target. */
 void func_L14_002E9038(char *moby) {
@@ -43,7 +43,7 @@ void func_L14_002E9038(char *moby) {
     char *q;
     char *other;
     char *p5;
-    u128 s0, s10, s20, s30, s40, s50;
+    u128_002E9038 s0, s10, s20, s30, s40, s50;
     char *sp0 = (char *)&s0;
     char *sp10 = (char *)&s10;
     char *sp20 = (char *)&s20;
@@ -93,11 +93,11 @@ void func_L14_002E9038(char *moby) {
     }
 
     p5 = moby + 0x10;
-    *(u128 *)sp0 = *(u128 *)p5;
-    *(u128 *)sp10 = *(u128 *)(moby + 0x40);
+    *(u128_002E9038 *)sp0 = *(u128_002E9038 *)p5;
+    *(u128_002E9038 *)sp10 = *(u128_002E9038 *)(moby + 0x40);
     if (moby[0x20] == 0) {
         tmp = D_L14_001B0F30[*(int *)(d + 0x74)];
-        *(u128 *)p5 = *(u128 *)(tmp + 0x10);
+        *(u128_002E9038 *)p5 = *(u128_002E9038 *)(tmp + 0x10);
         *(int *)(d + 0x200) = 0;
         *(int *)(d + 0x15C) = -1;
         *(unsigned short *)(d + 0x206) = 0;
@@ -116,7 +116,7 @@ void func_L14_002E9038(char *moby) {
     other = D_L14_00160098 + (*(int *)(d + 0x150) << 8);
     if (*(int *)(d + 0x158) == 0x3039) {
         if (*(int *)(d + 0x154) == -1) {
-            *(u128 *)sp30 = *(u128 *)p5;
+            *(u128_002E9038 *)sp30 = *(u128_002E9038 *)p5;
             tmp = sp30;
         } else {
             func_L00_00250800(moby, *(int *)(d + 0x154), sp30);
@@ -162,7 +162,7 @@ L92A8:
     goto L93A4;
 
 L93D8:
-    *(u128 *)sp30 = *(u128 *)(q + 0x80);
+    *(u128_002E9038 *)sp30 = *(u128_002E9038 *)(q + 0x80);
     func_001F9BF0(sp20, other + 0x10, sp30);
     *(int *)(sp20 + 8) = 0;
     {

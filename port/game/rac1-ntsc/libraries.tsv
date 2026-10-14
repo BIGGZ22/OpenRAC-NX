@@ -1,85 +1,265 @@
 # The libraries Ratchet & Clank (NTSC-U) calls, by entry point, and what the port does with
-# each: the same columns and port values as port/game/rac1-pal/libraries.tsv.
-# Seeded from the decompilation's config/us/symbol_addrs.txt: every function there whose name is one of the
-# replacements every game shares (port/game/common/libraries.tsv). Entry points
-# the game calls that are not here are stubs until a row binds them.
+# each: the same columns and port values as port/game/rac1-pal/libraries.tsv, whose rows
+# these are, carried to this version's addresses through the version map
+# (port/tools/versionmap; README.md). The symbol is what the NTSC decomp calls the function
+# at that address (its names are not always the library's); the notes keep PAL's symbol.
+# A row of rac1-pal's whose host C this game does not have yet is not here.
+#
+#   host: the port writes it: the shared replacement of that name
+#         (port/game/common/libraries.tsv, lib/*.c), or this game's own (host/*.c).
+#   game: the decompilation's C runs as it is (it only computes).
+#   wrap: the decompilation's C runs, as <symbol>__game, under a host function (host/*.c).
+#   todo: needs a host version that is not written yet; it stays a stub.
 #
 # symbol	library	name	port	notes	signature (optional)
-memcmp	libc	memcmp	host	at 0x001151B4
-memcpy	libc	memcpy	host	at 0x00115248
-memset	libc	memset	host	at 0x001153FC
-strchr	libc	strchr	host	at 0x00116428
-strcpy	libc	strcpy	host	at 0x001165B8 (the PAL survey has strcmp at this address; NTSC's libc is laid out differently after memset: to check)
-strlen	libc	strlen	host	at 0x001166CC
-strncpy	libc	strncpy	host	at 0x00116808
-AddIntcHandler	kernel	AddIntcHandler	host	at 0x00118790
-RemoveIntcHandler	kernel	RemoveIntcHandler	host	at 0x001187A0
-AddDmacHandler	kernel	AddDmacHandler	host	at 0x001187B0
-RemoveDmacHandler	kernel	RemoveDmacHandler	host	at 0x001187D0
-CreateThread	kernel	CreateThread	host	at 0x00118850
-DeleteThread	kernel	DeleteThread	host	at 0x00118860
-TerminateThread	kernel	TerminateThread	host	at 0x00118880
-ChangeThreadPriority	kernel	ChangeThreadPriority	host	at 0x001188A0
-RotateThreadReadyQueue	kernel	RotateThreadReadyQueue	host	at 0x001188C0
-GetThreadId	kernel	GetThreadId	host	at 0x001188E0
-CreateSema	kernel	CreateSema	host	at 0x00118970
-DeleteSema	kernel	DeleteSema	host	at 0x00118980
-SignalSema	kernel	SignalSema	host	at 0x00118990
-WaitSema	kernel	WaitSema	host	at 0x001189B0
-EnableCache	kernel	EnableCache	host	at 0x00118A60
-FlushCache	kernel	FlushCache	host	at 0x00118A80
-sceSifDmaStat	kernel	sceSifDmaStat	host	at 0x00118B10
-sceSifSetDma	kernel	sceSifSetDma	host	at 0x00118B20
-sceSifInitRpc	sif	sceSifInitRpc	host	at 0x0011AB20
-sceSifBindRpc	sif	sceSifBindRpc	host	at 0x0011AFF8
-sceSifCallRpc	sif	sceSifCallRpc	host	at 0x0011B1C8
-sceFsReset	fileio	sceFsReset	host	at 0x0011BC48
-sceOpen	fileio	sceOpen	host	at 0x0011BC80
-sceClose	fileio	sceClose	host	at 0x0011BF08
-sceLseek	fileio	sceLseek	host	at 0x0011C088
-sceRead	fileio	sceRead	host	at 0x0011C2C0
-sceWrite	fileio	sceWrite	host	at 0x0011C520
-sceSifInitIopHeap	sif	sceSifInitIopHeap	host	at 0x0011C840
-sceSifAllocIopHeap	sif	sceSifAllocIopHeap	host	at 0x0011C8C8
-sceSifSyncIop	sif	sceSifSyncIop	host	at 0x0011CF10
-sceSifRebootIop	sif	sceSifRebootIop	host	at 0x0011CF48
-DIntr	kernel	DIntr	host	at 0x0011D660
-sceCdSync	cdvd	sceCdSync	host	at 0x00120C30
-sceCdInit	cdvd	sceCdInit	host	at 0x00120EB0
-sceCdMmode	cdvd	sceCdMmode	host	at 0x00121388
-sceCdRead	cdvd	sceCdRead	host	at 0x00121450
-sceCdGetError	cdvd	sceCdGetError	host	at 0x00121630
-sceCdBreak	cdvd	sceCdBreak	host	at 0x001216C8
-sceCdReadClock	cdvd	sceCdReadClock	host	at 0x00121780
-sceGsResetGraph	graph	sceGsResetGraph	host	at 0x00121878
-sceGsSetDefDispEnv	graph	sceGsSetDefDispEnv	host	at 0x00121AC8
-sceGsPutDispEnv	graph	sceGsPutDispEnv	host	at 0x00121E40
-sceGsPutDrawEnv	graph	sceGsPutDrawEnv	host	at 0x001221B0
-sceGsSyncV	graph	sceGsSyncV	host	at 0x00122298
-sceGsSetDefLoadImage	graph	sceGsSetDefLoadImage	host	at 0x00122330
-sceGsExecLoadImage	graph	sceGsExecLoadImage	host	at 0x00122658
-sceGsSyncVCallback	graph	sceGsSyncVCallback	host	at 0x00122E68
-sceDmaReset	dma	sceDmaReset	host	at 0x00123008
-sceDmaSend	dma	sceDmaSend	host	at 0x001232C8
-sceMcInit	mc	sceMcInit	host	at 0x001233F0
-sceMcOpen	mc	sceMcOpen	host	at 0x001235B0
-sceMcMkdir	mc	sceMcMkdir	host	at 0x001236D8
-sceMcClose	mc	sceMcClose	host	at 0x00123710
-sceMcSeek	mc	sceMcSeek	host	at 0x001237C8
-sceMcRead	mc	sceMcRead	host	at 0x00123930
-sceMcWrite	mc	sceMcWrite	host	at 0x00123A48
-sceMcSync	mc	sceMcSync	host	at 0x00123C30
-sceMcGetInfo	mc	sceMcGetInfo	host	at 0x00123D68
-sceMcGetDir	mc	sceMcGetDir	host	at 0x00123EF0
-sceMcDelete	mc	sceMcDelete	host	at 0x001242D0
-sceDbcInit	dbc	sceDbcInit	host	at 0x00124510
-scePad2Init	pad2	scePad2Init	host	at 0x00124A48
-scePad2CreateSocket	pad2	scePad2CreateSocket	host	at 0x00124A88
-scePad2Read	pad2	scePad2Read	host	at 0x00124BD8
-scePad2GetButtonProfile	pad2	scePad2GetButtonProfile	host	at 0x00124CB0
-scePad2GetState	pad2	scePad2GetState	host	at 0x00124DA0
-sceVibGetProfile	vib	sceVibGetProfile	host	at 0x001250D8
-sceVu0RotMatrixZ	vu0	sceVu0RotMatrixZ	host	at 0x001252B8
-sceScfGetLanguage	scf	sceScfGetLanguage	host	at 0x0012D240
-sceScfGetLocalTimefromRTC	scf	sceScfGetLocalTimefromRTC	host	at 0x0012D6D8
-FUN_0012d8f8	boot	parse_bin	wrap	copies a level's program in: from then on, level code addresses mean that level's functions (host/boot.c)
+memcmp	libc	memcmp	host	PAL func_001151B4
+memcpy	libc	memcpy	host	PAL func_00115248
+memset	libc	memset	host	PAL func_001153FC
+func_001160C8	libc	srand	game	PAL func_001160C8
+rand	libc	rand	game	PAL func_001160D8
+sprintf	libc	sprintf	game	newlib's formatter, translated; PAL func_00116248
+strchr	libc	strchr	host	PAL func_00116428
+strcpy	libc	strcpy	host	PAL func_001166FC
+strlen	libc	strlen	host	PAL func_00116810
+strncpy	libc	strncpy	host	PAL func_00116B00
+FindSubstring	libc	strstr	game	PAL func_00116CC0, paired as called
+AddIntcHandler	kernel	AddIntcHandler	host	the vsync handler is called by the port's frame pacing; PAL func_00118A90
+RemoveIntcHandler	kernel	RemoveIntcHandler	host	PAL func_00118AA0
+AddDmacHandler	kernel	AddDmacHandler	host	PAL func_00118AB0
+RemoveDmacHandler	kernel	RemoveDmacHandler	host	PAL func_00118AD0
+CreateThread	kernel	CreateThread	host	only the movie player makes threads; it is replaced above libmpeg; PAL func_00118B50
+DeleteThread	kernel	DeleteThread	host	PAL func_00118B60
+_StartThread	kernel	StartThread	host	PAL func_00118B70
+TerminateThread	kernel	TerminateThread	host	PAL func_00118B80
+ChangeThreadPriority	kernel	ChangeThreadPriority	host	PAL func_00118BA0
+RotateThreadReadyQueue	kernel	RotateThreadReadyQueue	host	PAL func_00118BC0
+GetThreadId	kernel	GetThreadId	host	PAL func_00118BE0
+CreateSema	kernel	CreateSema	host	PAL func_00118C70
+DeleteSema	kernel	DeleteSema	host	PAL func_00118C80
+SignalSema	kernel	SignalSema	host	PAL func_00118C90
+WaitSema	kernel	WaitSema	host	PAL func_00118CB0
+EnableCache	kernel	EnableCache	host	PAL func_00118D60
+FlushCache	kernel	FlushCache	host	nothing to flush; PAL func_00118D80
+sceSifDmaStat	kernel	sceSifDmaStat	host	no IOP: transfers to it are done at once; PAL func_00118E10
+sceSifSetDma	kernel	sceSifSetDma	host	PAL func_00118E20
+FUN_00119028	kernel	EnableIntc	host	PAL func_00119328
+FUN_00119090	kernel	DisableIntc	host	PAL func_00119390
+FUN_001190f8	kernel	DisableDmac	host	PAL func_001193F8
+FUN_00119160	kernel	EnableDmac	host	PAL func_00119460
+sceSifInitRpc	sif	sceSifInitRpc	host	no IOP: its services are replaced at their EE libraries; PAL func_0011AE20
+sceSifBindRpc	sif	sceSifBindRpc	host	PAL func_0011B2F8
+sceSifCallRpc	sif	sceSifCallRpc	host	PAL func_0011B4C8
+SceSifCheckStatRpc	sif	sceSifCheckStatRpc	host	PAL func_0011B6B8
+sceFsReset	fileio	sceFsReset	host	PAL func_0011BF48
+sceOpen	fileio	sceOpen	host	debug and rom0: config only; no game asset is read this way; PAL func_0011BF80
+sceClose	fileio	sceClose	host	PAL func_0011C208
+sceLseek	fileio	sceLseek	host	PAL func_0011C388
+sceRead	fileio	sceRead	host	PAL func_0011C5C0
+sceWrite	fileio	sceWrite	host	PAL func_0011C820
+sceSifInitIopHeap	sif	sceSifInitIopHeap	host	PAL func_0011CB40
+sceSifAllocIopHeap	sif	sceSifAllocIopHeap	host	PAL func_0011CBC8
+InvokeStateInitializer	sif	sceSifFreeIopHeap	host	PAL func_0011CCB0
+InvokeIopStatus	sif	sceSifLoadModuleBuffer	host	PAL func_0011D078
+sceSifSyncIop	sif	sceSifSyncIop	host	PAL func_0011D210
+sceSifRebootIop	sif	sceSifRebootIop	host	PAL func_0011D248
+DIntr	kernel	DIntr	host	PAL func_0011D960
+EnableInterrupts	kernel	EIntr	host	PAL func_0011D9A8
+FUN_001204b8	vu	sceGsResetPath	host	PAL func_001207B8
+FUN_00120558	vu	sceGsSyncPath	host	PAL func_00120858
+UpdateRfuDispatchState	libgcc	__main	host	the host runs no global constructors for the game: it has none; PAL func_0011DFC8
+fptodp	libgcc	__extendsfdf2	host	float to double; libgcc is the host compiler's; PAL func_00120778
+sceCdSync	cdvd	sceCdSync	host	reads are done at once from the extracted disc image; PAL func_00120F30
+sceCdInit	cdvd	sceCdInit	host	PAL func_001211B0
+FUN_00121190	cdvd	sceCdDiskReady	host	PAL func_00121490
+sceCdMmode	cdvd	sceCdMmode	host	PAL func_00121688
+sceCdRead	cdvd	sceCdRead	host	PAL func_00121750
+sceCdGetError	cdvd	sceCdGetError	host	PAL func_00121930
+sceCdBreak	cdvd	sceCdBreak	host	PAL func_001219C8
+sceCdReadClock	cdvd	sceCdReadClock	host	PAL func_00121A80
+sceGsResetGraph	graph	sceGsResetGraph	host	the renderer's video mode; PAL func_00121B78
+sceGsSetDefDispEnv	graph	sceGsSetDefDispEnv	host	PAL func_00121DC8
+sceGsPutDispEnv	graph	sceGsPutDispEnv	host	the renderer's display state; PAL func_00122140, paired as called
+sceGsSetDefDrawEnv	graph	sceGsSetDefDrawEnv	game	PAL func_001222C8
+sceGsPutDrawEnv	graph	sceGsPutDrawEnv	host	the renderer's drawing state; PAL func_001224B0, paired as called
+sceGsSyncV	graph	sceGsSyncV	host	the end of a frame: present, pace, vsync handlers; PAL func_00122598
+sceGsSetDefLoadImage	graph	sceGsSetDefLoadImage	host	PAL func_00122630, paired as called
+FUN_00122518	graph	sceGsSetDefStoreImage	host	PAL func_00122818, paired as found
+sceGsExecLoadImage	graph	sceGsExecLoadImage	host	texture uploads go to the renderer's texture pool; PAL func_00122958
+FUN_001227d8	graph	sceGsExecStoreImage	host	readback from the renderer; PAL func_00122AD8, paired as found
+sceGsSyncVCallback	graph	sceGsSyncVCallback	host	PAL func_00123168, paired as called
+sceDmaGetChan	dma	sceDmaGetChan	game	PAL func_001232E0
+sceDmaReset	dma	sceDmaReset	host	PAL func_00123308
+sceDmaSend	dma	sceDmaSend	host	the hand-off: the renderer reads the game's display list here; PAL func_001235C8
+sceMcInit	mc	sceMcInit	host	the memory card is a folder of save files; PAL func_001236F0, paired as called
+sceMcOpen	mc	sceMcOpen	host	PAL func_001238B0
+sceMcMkdir	mc	sceMcMkdir	host	PAL func_001239D8
+sceMcClose	mc	sceMcClose	host	PAL func_00123A10
+sceMcSeek	mc	sceMcSeek	host	PAL func_00123AC8
+sceMcRead	mc	sceMcRead	host	PAL func_00123C30
+sceMcWrite	mc	sceMcWrite	host	PAL func_00123D48
+sceMcSync	mc	sceMcSync	host	PAL func_00123F30
+sceMcGetInfo	mc	sceMcGetInfo	host	PAL func_00124068
+sceMcGetDir	mc	sceMcGetDir	host	PAL func_001241F0
+SceMcFormat	mc	sceMcFormat	host	PAL func_00124340
+sceMcDelete	mc	sceMcDelete	host	PAL func_00124410
+SceMcUnformat	mc	sceMcUnformat	host	PAL func_00124528
+sceDbcInit	dbc	sceDbcInit	host	pads come from the platform layer; PAL func_00124650
+scePad2Init	pad2	scePad2Init	host	PAL func_00124B88
+scePad2CreateSocket	pad2	scePad2CreateSocket	host	PAL func_00124BC8
+scePad2Read	pad2	scePad2Read	host	PAL func_00124D18
+scePad2GetButtonProfile	pad2	scePad2GetButtonProfile	host	PAL func_00124DF0
+scePad2GetState	pad2	scePad2GetState	host	PAL func_00124EE0
+sceVibGetProfile	vib	sceVibGetProfile	host	PAL func_00125218, paired as found
+sceVu0UnitMatrix	vu0	(UnitMatrix or InterVector)	todo	which one it is decides its host version; PAL func_00125358, paired as called
+sceVu0RotMatrixZ	vu0	sceVu0RotMatrixZ	host	PAL func_001253F8
+FUN_00125360	vu0	sceVu0RotMatrixX	host	PAL func_001254A0
+FUN_00125408	vu0	sceVu0RotMatrixY	host	PAL func_00125548
+sceMpegDemuxPssRing	mpeg	sceMpegDemuxPssRing	todo	movies: the player above libmpeg is to be replaced as a whole; PAL func_0012AD10
+sceMpegAddStrCallback	mpeg	sceMpegAddStrCallback	todo	PAL func_0012B008
+sceMpegInit	mpeg	sceMpegInit	todo	PAL func_0012B870
+sceMpegCreate	mpeg	sceMpegCreate	todo	PAL func_0012B918
+func_0012B9E0	mpeg	sceMpegDelete	todo	PAL func_0012BB20
+sceMpegGetPicture	mpeg	sceMpegGetPicture	todo	PAL func_0012BB30
+sceMpegReset	mpeg	sceMpegReset?	todo	PAL func_0012BBA8
+AddMpegCallback	mpeg	sceMpegAddCallback	todo	PAL func_0012BC50
+sceScfGetLanguage	scf	sceScfGetLanguage	host	from the port's settings; PAL func_0012D380
+sceScfGetLocalTimefromRTC	scf	sceScfGetLocalTimefromRTC	host	PAL func_0012D818
+FUN_0012da28	989snd	snd_StartSoundSystem	host	the port's sound engine needs no start-up; PAL func_0012DB68
+FUN_0012dc80	989snd	SndFlushPal	host	the shared flush plus the PAL buffers marked sent (host/hand.c); PAL func_0012DDC0	int (void)
+FUN_0012df20	989snd	snd_BankLoadByLoc	host	PAL func_0012E060
+FUN_0012e088	989snd	snd_BankLoadFromEE_CB	host	PAL func_0012E1C8
+FUN_0012e1a8	989snd	snd_ResolveBankXREFS	host	PAL func_0012E2E8
+FUN_0012e1d8	989snd	snd_UnloadBank	host	PAL func_0012E318
+FUN_0012e208	989snd	snd_SetMasterVolume	host	PAL func_0012E348
+FUN_0012e240	989snd	snd_SetPlaybackMode	host	PAL func_0012E380
+FUN_0012e368	989snd	snd_StopSound	host	PAL func_0012E4A8
+FUN_0012e3b8	989snd	snd_StopAllSounds	host	PAL func_0012E4F8
+FUN_0012e3e8	989snd	snd_PauseAllSoundsInGroup	host	PAL func_0012E528
+FUN_0012e418	989snd	snd_ContinueAllSoundsInGroup	host	PAL func_0012E558
+FUN_0012e448	989snd	snd_SoundIsStillPlaying_CB	host	PAL func_0012E588
+FUN_0012eb00	989snd	snd_reset_state_and_flush_commands	host	PAL func_0012EC40
+FUN_0012eb20	989snd	snd_InitVAGStreamingEx	host	PAL func_0012EC60
+FUN_0012ebd0	989snd	snd_StopAllStreams	host	PAL func_0012ED10
+FUN_0012ec08	989snd	snd_PlayVAGStreamByLocEx_CB	host	PAL func_0012ED48
+FUN_0012ec70	989snd	snd_PauseVAGStream	host	PAL func_0012EDB0
+FUN_0012eca0	989snd	snd_ContinueVAGStream	host	PAL func_0012EDE0
+FUN_0012ecd0	989snd	snd_GetVAGStreamTimeRemaining_CB	host	PAL func_0012EE10
+FUN_0012ed00	989snd	snd_IsVAGStreamBuffered_CB	host	PAL func_0012EE40
+FUN_0012ed30	989snd	snd_StreamSafeCheckCDIdle	host	PAL func_0012EE70
+FUN_0012ed58	989snd	snd_StreamSafeCdRead	host	a disc read, through the cdvd replacement; PAL func_0012EE98
+FUN_0012ee08	989snd	snd_StreamSafeCdSync	host	PAL func_0012EF48
+FUN_0012eea8	989snd	snd_StreamSafeCdBreak	host	PAL func_0012EFE8
+FUN_0012eef0	989snd	snd_StreamSafeCdGetError	host	PAL func_0012F030
+FUN_0012ef28	989snd	snd_StreamSafeCdCallback	host	PAL func_0012F068
+FUN_0012efa8	989snd	snd_PreAllocReverbWorkArea	host	PAL func_0012F0E8
+FUN_0012efe0	989snd	snd_AutoReverb	host	PAL func_0012F120
+FUN_0012f0a8	989snd	snd_ResetMovieSound	host	PAL func_0012F1E8
+FUN_0012f108	989snd	snd_StartMovieSound	host	PAL func_0012F248
+FUN_0012f148	989snd	snd_UpdateMovieADPCM	host	PAL func_0012F288
+FUN_0012f178	989snd	snd_GetMovieNAX	host	PAL func_0012F2B8
+snd_get_doppler_pitch_mod	989snd	snd_GetDopplerPitchMod	host	PAL func_0012F2E0
+FUN_0012d8f8	boot	ParseBin	wrap	copies a level's program in: from then on, level code addresses mean that level's functions; PAL func_0012DA38
+FUN_001f4280	draw	SetupGifPaging	wrap	sets the four draw flags at 0x18A3D0 retail has on before its first frame (nothing in the game's code stores them by name); PAL func_001F4630
+FUN_00209370	memcard	NewGameInit	wrap	a new game starts in level 0; with --level N it starts in level N instead (host/boot.c); PAL func_00209DC0, paired as near
+FUN_0012f208	wad	wad_GetSectors	game	PAL func_0012F348
+FUN_0012f2b8	wad	load_disc_sectors_into_global_buffer	game	PAL func_0012F3F8
+FUN_0012f368	wad	read_file_entry_with_retry	game	PAL func_0012F4A8
+FUN_0020b618	game	WadDecompress	host	the WAD decompressor (hand-written assembly), answered with the asset readers' own; returns the size it made; PAL func_0020C468	int (int, int)
+FUN_001f7580	game	FontPrintWindow (mode 1)	host	the decompilation keeps GetEffectTex's 64-bit TEX0 in an int (matching C: on the console the register keeps all 64 bits); the port's passes it whole; PAL func_001F7560	void (unsigned int, unsigned int, unsigned int, unsigned int)
+FUN_001f75f0	game	FontPrintWindow (mode 2)	host	as func_001F7560, the small font; PAL func_001F75D0	void (unsigned int, unsigned int, unsigned int, unsigned int)
+SetGsCrt	kernel	SetGsCrt	host	system call 0x02; PAL func_00118A50
+_EnableIntc	kernel	EnableIntc	host	system call 0x14; PAL func_00118AE0
+_DisableIntc	kernel	DisableIntc	host	system call 0x15; PAL func_00118AF0
+_EnableDmac	kernel	EnableDmac	host	system call 0x16; PAL func_00118B00
+_DisableDmac	kernel	DisableDmac	host	system call 0x17; PAL func_00118B10
+GsPutIMR	kernel	GsPutIMR	host	system call 0x71; PAL func_00118DE0
+FUN_001f7d30	game	FUN_001f7d30	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_001F7EF8	void (unsigned int, int, int)
+FUN_001f89a4	game	FUN_001f89a4	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_001F8B6C	void (void)
+FUN_001f8ff0	game	FUN_001f8ff0	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_001F91B8	void (void)
+FUN_00203b08	game	FUN_00203b08	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00204340	void (unsigned int, unsigned int, unsigned int, unsigned int, int)
+FUN_00211408	game	FUN_00211408	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00212258	void (int)
+FUN_002116b8	game	FUN_002116b8	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00212508	void (void)
+FUN_00211728	game	FUN_00211728	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00212578	void (int, int)
+FUN_00211808	game	FUN_00211808	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00212658	int (int, int, int, int)
+FUN_00217c18	game	FUN_00217c18	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00218B10	void (void)
+FUN_00227740	game	FUN_00227740	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00228A58	void (void)
+FUN_00227a08	game	FUN_00227a08	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00228D20	void (unsigned int, int, int)
+FUN_00227d80	game	FUN_00227d80	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00229098	int (void)
+FUN_00227ed0	game	FUN_00227ed0	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_002291E8	int (void)
+FUN_00228520	game	FUN_00228520	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00229838	void (unsigned int, unsigned int)
+FUN_00228598	game	FUN_00228598	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_002298B0	void (int, int)
+FUN_00228be8	game	FUN_00228be8	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00229F00	void (void)
+FUN_0022a330	game	FUN_0022a330	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_0022B648	int (int)
+FUN_0022a5e0	game	FUN_0022a5e0	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_0022B8F8	void (unsigned int, unsigned int)
+FUN_0022b6e8	game	FUN_0022b6e8	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_0022CA00	void (unsigned int)
+FUN_0022b928	game	FUN_0022b928	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_0022CC40	void (unsigned int)
+FUN_0022bba0	game	FUN_0022bba0	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_0022CEB8	void (void)
+FUN_00233fb0	game	FUN_00233fb0	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_002352C8	void (void)
+FUN_00234bd8	game	FUN_00234bd8	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00235EF0	void (void)
+FUN_00234d48	game	FUN_00234d48	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00236060	int (int)
+FUN_00234f98	game	FUN_00234f98	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_002362B0	void (unsigned int)
+FUN_00235be8	game	FUN_00235be8	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00236F00	void (void)
+FUN_002370c0	game	FUN_002370c0	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_002383D8	int (int)
+FUN_00237370	game	FUN_00237370	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00238688	void (unsigned int, unsigned int)
+FUN_0020cef8	game	FUN_0020cef8	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_0020DD48	void (void)
+FUN_00228a30	game	FUN_00228a30	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00229D48	void (void)
+FUN_00233308	game	FUN_00233308	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00234620	void (void)
+FUN_00235780	game	FUN_00235780	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00236A98	void (void)
+FUN_001f7a98	game	FUN_001f7a98	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_001F7C60	int (void)
+func_001F7C10	game	func_001F7C10	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_001F7DD8	int (void)
+func_001F7CD0	game	func_001F7CD0	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_001F7E98	int (void)
+FUN_001f82e4	game	FUN_001f82e4	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_001F84AC	int (void)
+FUN_001f8364	game	FUN_001f8364	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_001F852C	int (void)
+FUN_001f83a4	game	FUN_001f83a4	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_001F856C	int (void)
+FUN_0022bf94	game	FUN_0022bf94	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_0022D2AC	int (int, int, int, int)
+FUN_0022c0e0	game	FUN_0022c0e0	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_0022D3F8	void (int, int, int, int)
+FUN_0022c208	game	FUN_0022c208	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_0022D520	void (int, int, int, int)
+FUN_0022c4c8	game	FUN_0022c4c8	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_0022D7E0	void (unsigned int, int, unsigned int)
+func_L00_001FD228	game	func_L00_001FD228	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_L00_001FD1D8	void (unsigned int, unsigned int, int)
+func_L00_001FE6D8	game	func_L00_001FE6D8	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_L00_001FE688	int (void)
+func_L00_0028C680	game	func_L00_0028C680	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_L00_0028D958	int (void)
+func_L00_00295100	game	func_L00_00295100	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_L00_002963D8	int (void)
+FUN_L00_00298840	game	FUN_L00_00298840	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_L00_00299B68, paired as near	void (int)
+FUN_002109b8	game	FUN_002109b8	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00211808	void (unsigned int, unsigned int)
+func_0020B418	game	func_0020B418	host	the port's own (host/hand.c); its signature decides the prototype; PAL func_0020C268	void (void)
+FUN_002334d8	game	FUN_002334d8	host	the port's own (host/hand.c); its signature decides the prototype; PAL func_002347F0	void (unsigned int)
+FUN_001f9dc8	game	FUN_001f9dc8	host	the port's own (host/hand.c); its signature decides the prototype; PAL func_001F9F90	float (float)
+FUN_001f9de0	game	FUN_001f9de0	host	the port's own (host/hand.c); its signature decides the prototype; PAL func_001F9FA8	float (float)
+FUN_0023a3b8	game	FUN_0023a3b8	host	the port's own (host/hand.c); its signature decides the prototype; PAL func_0023B670, paired as near	int (int, int, int, unsigned int, int)
+func_00233E00	game	func_00233E00	host	the port's own (host/hand.c); its signature decides the prototype; PAL func_00235118	void (void)
+printf	game	printf	host	the port's own (host/hand.c); its signature decides the prototype; PAL func_00116078	int (unsigned int, ...)
+FUN_002012b8	draw	draw_bootImage	wrap	the picture shown while a level loads goes into the frame buffer by an image transfer, which the 2D path keeps only as a texture: the port also draws it there (host/boot_picture.c); PAL func_00201AF0
+FUN_L00_001eb328	game	FUN_L00_001eb328	host	the camera steer: retail returns FastAddRots in $f0, which the void matched C loses (host/camera.c); PAL func_L00_001EB6A8	float (unsigned int, float, float, float, float, float)
+FUN_L00_002a7780	game	FUN_L00_002a7780	host	the wrench trail draw callback: its state as host C, its quads left to the renderer (host/wrench.c); the source file declares it void (void); PAL func_L00_002A8A20	void (unsigned int)
+FUN_L00_002d73e8	game	FUN_L00_002d73e8	host	an effect draw callback whose state only feeds its own quads: a no-op for now (host/fx.c); the source file declares it void (void); PAL func_L00_002D8898	void (unsigned int)
+func_L00_0025C368	game	func_L00_0025C368	host	a place the catalogue folds into another function although its code differs (split_places.tsv, host/variants.c); PAL func_L00_0025D3C0	int (unsigned int)
+func_L00_001EB9D8	game	func_L00_001EB9D8	host	a place the catalogue folds into another function although its code differs (split_places.tsv, host/variants.c); PAL func_L00_001EBD58	void (unsigned int)
+func_L00_00201350	game	func_L00_00201350	host	a place the catalogue folds into another function although its code differs (split_places.tsv, host/variants.c); PAL func_L00_00201300	void (void)
+func_L00_002A0D90	game	func_L00_002A0D90	host	a place the catalogue folds into another function although its code differs (split_places.tsv, host/variants.c); PAL func_L00_002A2020	void (void)
+func_L00_002A0EB8	game	func_L00_002A0EB8	host	a place the catalogue folds into another function although its code differs (split_places.tsv, host/variants.c); PAL func_L00_002A2148	void (void)
+func_L00_0024E01C	game	func_L00_0024E01C	host	a place the catalogue folds into another function although its code differs (split_places.tsv, host/variants.c); PAL func_L00_0024F054, paired as found	int (void)
+func_L00_00266238	game	func_L00_00266238	host	a place the catalogue folds into another function although its code differs (split_places.tsv, host/variants.c); PAL func_L00_00267080	void (int, long long)
+func_L00_002959F8	game	func_L00_002959F8	host	a place the catalogue folds into another function although its code differs (split_places.tsv, host/variants.c); PAL func_L00_00296CD0	void (void)
+func_L02_0020A390	game	func_L02_0020A390	host	a level's draw callback register for list 3, folded into func_001F49B0 by the catalogue (split_places.tsv, host/callback_lists.c); PAL func_L02_0020A690	void (unsigned int, unsigned int)
+func_L14_0020C760	game	func_L14_0020C760	host	a level's draw callback register for list 4, folded into func_001F49B0 by the catalogue (split_places.tsv, host/callback_lists.c); PAL func_L14_0020CAE0	void (unsigned int, unsigned int)
+func_L00_002A0DF0	game	func_L00_002A0DF0	host	a place the catalogue folds into another function although its code differs (split_places.tsv, host/variants.c); PAL func_L00_002A2080	void (void)
+func_L00_002A0E50	game	func_L00_002A0E50	host	a place the catalogue folds into another function although its code differs (split_places.tsv, host/variants.c); PAL func_L00_002A20E0	void (void)
+FUN_001f5450	draw	DrawTexturedQuad	wrap	the 2D layer's textured quad (host/ui2d.c), on the way to drawing the HUD and menus natively; PAL func_001F5800
+FUN_001f62b0	draw	FontPrint	wrap	a string, glyph by glyph: its quads are marked as glyphs (host/ui2d.c), drawn from the font's distance field; PAL func_001F6668
+FUN_001ffc30	hud	FUN_001ffc30	wrap	a HUD texture as a sprite: drawn natively (host/ui2d.c); PAL func_00200468
+FUN_001ffe18	hud	FUN_001ffe18	wrap	a HUD texture as a sprite turned a quarter: drawn natively (host/ui2d.c); PAL func_00200650
+FUN_00200080	hud	FUN_00200080	wrap	a HUD texture as a sprite, in 16ths of a pixel: drawn natively (host/ui2d.c); PAL func_002008B8
+FUN_00200258	hud	FUN_00200258	wrap	a HUD texture as a sprite with a texture window: drawn natively (host/ui2d.c); PAL func_00200A90
+FUN_00200468	hud	FUN_00200468	wrap	a sprite of a given texture: drawn natively (host/ui2d.c); PAL func_00200CA0
+FUN_00200600	hud	FUN_00200600	wrap	a rotated sprite: drawn natively (host/ui2d.c); PAL func_00200E38
+FUN_00200958	hud	FUN_00200958	wrap	a HUD texture as a sprite with explicit texel corners: drawn natively (host/ui2d.c); PAL func_00201190
+FUN_001efa68	game	FUN_001efa68	host	the port's own (host/collision.c); its signature decides the prototype; PAL func_001EFE10	int (unsigned int, unsigned int, int, int, int)
+func_L00_001EFC70	game	func_L00_001EFC70	host	the port's own (host/collision.c); its signature decides the prototype; PAL func_L00_001EFFF0	int (unsigned int, unsigned int, int, int, int)
+FUN_L00_001f0d60	game	FUN_L00_001f0d60	host	the port's own (host/collision.c); its signature decides the prototype; PAL func_L00_001F10E0	int (float, unsigned int, int, unsigned int)
+FUN_L00_001f19a0	game	FUN_L00_001f19a0	host	the port's own (host/collision.c); its signature decides the prototype; PAL func_L00_001F1D20	int (float, float, unsigned int, int, int)
+FUN_L00_001f2868	game	FUN_L00_001f2868	host	the port's own (host/collision.c); its signature decides the prototype; PAL func_L00_001F2BE8	int (float, unsigned int, int, unsigned int, unsigned int)
+FUN_L00_001f3170	game	FUN_L00_001f3170	host	the port's own (host/collision.c); its signature decides the prototype; PAL func_L00_001F34F0	int (float, unsigned int)
+FUN_00125180	game	FUN_00125180	host	the port's own (host/vector.c); its signature decides the prototype; PAL func_001252C0, paired as found	void (unsigned int, unsigned int)
+FUN_0020ede8	game	FUN_0020ede8	host	the port's own (host/anim.c); its signature decides the prototype; PAL func_0020FC38	void (unsigned int, int)
+func_L00_00251CE8	game	func_L00_00251CE8	host	the port's own (host/anim.c); its signature decides the prototype; PAL func_L00_00252D20	void (unsigned int, int)
+FUN_L00_0024d8d0	game	WadDecompress (the levels' copy)	host	the NTSC decomp's catalogue lists the levels' copy apart from the executable's FUN_0020b618 (host/hand.c)	int (int, int)

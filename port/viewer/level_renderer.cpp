@@ -3,7 +3,7 @@
 
 #include "viewer/level_renderer.h"
 
-#include <map>
+#include <algorithm>
 
 #include "renderer/gl.h"
 #include "viewer_shaders.h"
@@ -14,15 +14,6 @@ using namespace openrac::gl;
 using renderer::Bucket;
 
 namespace {
-
-struct InstanceData {
-    float matrix[16];
-    float tint[4];
-    float palette;  // the first matrix of its joint palette; -1 none
-    float lights;   // a lit tie: the first of its 64 colours in the light texture; -1 none
-    float moby_light[4];    // a lit moby: sets, cross-fade, 1 (Instance::moby_light)
-    float moby_ambient[4];  // its ambient colour / 128
-};
 
 // The joint palette texture: RGBA32F, four texels (columns) per matrix, this many texels a row.
 constexpr int kPaletteWidth = 1024;
@@ -108,21 +99,121 @@ bool LevelScene::upload(
         glBindTexture(GL_TEXTURE_2D, 0);
     }
     for (std::size_t layer = 0; layer < kLayerCount; ++layer) {
-        build_groups(static_cast<Layer>(layer), level.instances[layer]);
+        build_groups(static_cast<Layer>(layer), level.instances[layer], false);
     }
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     return true;
 }
 
-void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instances) {
-    // Instances grouped by class model, in first-seen order.
-    std::map<std::uint32_t, std::vector<InstanceData>> by_model;
-    std::vector<std::uint32_t> order;
+// A class model's vertex array: the level's vertices and indices, and an instance buffer of its own
+// (empty until fill_group).
+LevelScene::Group LevelScene::make_group(std::uint32_t model) {
+    Group g;
+    g.model = model;
+    glGenVertexArrays(1, &g.vao);
+    glBindVertexArray(g.vao);
+    glBindBuffer(GL_ARRAY_BUFFER, m_vertices);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indices);
+    constexpr auto stride = static_cast<GLsizei>(sizeof(Vertex));
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(
+        0, 3, GL_FLOAT, GL_FALSE, stride, offset(offsetof(Vertex, position))
+    );
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(
+        1, 3, GL_FLOAT, GL_FALSE, stride, offset(offsetof(Vertex, normal))
+    );
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, offset(offsetof(Vertex, uv)));
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(
+        3, 4, GL_FLOAT, GL_FALSE, stride, offset(offsetof(Vertex, colour))
+    );
+    glEnableVertexAttribArray(10);
+    glVertexAttribIPointer(10, 4, GL_UNSIGNED_BYTE, stride, offset(offsetof(Vertex, joints)));
+    glEnableVertexAttribArray(12);
+    glVertexAttribPointer(
+        12, 1, GL_FLOAT, GL_FALSE, stride, offset(offsetof(Vertex, light_slot))
+    );
+    glEnableVertexAttribArray(11);
+    glVertexAttribPointer(
+        11, 4, GL_FLOAT, GL_FALSE, stride, offset(offsetof(Vertex, weights))
+    );
+    glGenBuffers(1, &g.instances);
+    glBindBuffer(GL_ARRAY_BUFFER, g.instances);
+    constexpr auto instance_stride = static_cast<GLsizei>(sizeof(InstanceData));
+    for (GLuint column = 0; column < 4; ++column) {
+        glEnableVertexAttribArray(4 + column);
+        glVertexAttribPointer(
+            4 + column,
+            4,
+            GL_FLOAT,
+            GL_FALSE,
+            instance_stride,
+            offset(column * 4 * sizeof(float))
+        );
+        glVertexAttribDivisor(4 + column, 1);
+    }
+    glEnableVertexAttribArray(8);
+    glVertexAttribPointer(
+        8, 4, GL_FLOAT, GL_FALSE, instance_stride, offset(offsetof(InstanceData, tint))
+    );
+    glVertexAttribDivisor(8, 1);
+    glEnableVertexAttribArray(9);
+    glVertexAttribPointer(
+        9, 1, GL_FLOAT, GL_FALSE, instance_stride, offset(offsetof(InstanceData, palette))
+    );
+    glVertexAttribDivisor(9, 1);
+    glEnableVertexAttribArray(13);
+    glVertexAttribPointer(
+        13, 1, GL_FLOAT, GL_FALSE, instance_stride, offset(offsetof(InstanceData, lights))
+    );
+    glVertexAttribDivisor(13, 1);
+    glEnableVertexAttribArray(14);
+    glVertexAttribPointer(
+        14, 4, GL_FLOAT, GL_FALSE, instance_stride, offset(offsetof(InstanceData, moby_light))
+    );
+    glVertexAttribDivisor(14, 1);
+    glEnableVertexAttribArray(15);
+    glVertexAttribPointer(
+        15, 4, GL_FLOAT, GL_FALSE, instance_stride, offset(offsetof(InstanceData, moby_ambient))
+    );
+    glVertexAttribDivisor(15, 1);
+    return g;
+}
+
+// A group's instances, sent to its buffer. `usage`: GL_STATIC_DRAW for the level's own, sent once;
+// GL_STREAM_DRAW for the live ones, sent again every frame (the driver then gives the buffer new
+// storage rather than wait for the frame still drawing from the old one).
+void LevelScene::fill_group(Group& g, const std::vector<InstanceData>& list, unsigned usage) {
+    g.count = static_cast<int>(list.size());
+    glBindBuffer(GL_ARRAY_BUFFER, g.instances);
+    glBufferData(
+        GL_ARRAY_BUFFER,
+        static_cast<GLsizeiptr>(list.size() * sizeof(InstanceData)),
+        list.data(),
+        usage
+    );
+}
+
+void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instances, bool live) {
+    // Instances grouped by class model, in first-seen order. The lists are kept between calls (a
+    // live layer is grouped again every frame).
+    for (auto& [model, list] : m_grouping) {
+        list.clear();
+    }
+    std::size_t used = 0;
     for (const Instance& instance : instances) {
-        auto [it, fresh] = by_model.try_emplace(instance.model);
-        if (fresh) {
-            order.push_back(instance.model);
+        std::size_t at = 0;
+        while (at < used && m_grouping[at].first != instance.model) {
+            ++at;
+        }
+        if (at == used) {
+            if (used == m_grouping.size()) {
+                m_grouping.emplace_back();
+            }
+            m_grouping[used++].first = instance.model;
         }
         InstanceData data{};
         std::copy(instance.matrix.begin(), instance.matrix.end(), data.matrix);
@@ -131,89 +222,25 @@ void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instance
         data.lights = static_cast<float>(instance.lights);
         std::copy(instance.moby_light.begin(), instance.moby_light.end(), data.moby_light);
         std::copy(instance.moby_ambient.begin(), instance.moby_ambient.end(), data.moby_ambient);
-        it->second.push_back(data);
+        m_grouping[at].second.push_back(data);
     }
-    for (std::uint32_t model : order) {
-        const auto& list = by_model[model];
+    auto& groups = m_groups[static_cast<std::size_t>(layer)];
+    auto& idle = m_idle[static_cast<std::size_t>(layer)];
+    for (std::size_t i = 0; i < used; ++i) {
+        const std::uint32_t model = m_grouping[i].first;
+        // A live layer draws the same classes frame after frame: each keeps its vertex array and
+        // buffer, and only the instances are sent again.
+        auto kept = std::find_if(idle.begin(), idle.end(), [&](const Group& g) { return g.model == model; });
         Group g;
-        g.model = model;
-        g.count = static_cast<int>(list.size());
-        glGenVertexArrays(1, &g.vao);
-        glBindVertexArray(g.vao);
-        glBindBuffer(GL_ARRAY_BUFFER, m_vertices);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indices);
-        constexpr auto stride = static_cast<GLsizei>(sizeof(Vertex));
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(
-            0, 3, GL_FLOAT, GL_FALSE, stride, offset(offsetof(Vertex, position))
-        );
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(
-            1, 3, GL_FLOAT, GL_FALSE, stride, offset(offsetof(Vertex, normal))
-        );
-        glEnableVertexAttribArray(2);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, offset(offsetof(Vertex, uv)));
-        glEnableVertexAttribArray(3);
-        glVertexAttribPointer(
-            3, 4, GL_FLOAT, GL_FALSE, stride, offset(offsetof(Vertex, colour))
-        );
-        glEnableVertexAttribArray(10);
-        glVertexAttribIPointer(10, 4, GL_UNSIGNED_BYTE, stride, offset(offsetof(Vertex, joints)));
-        glEnableVertexAttribArray(12);
-        glVertexAttribPointer(
-            12, 1, GL_FLOAT, GL_FALSE, stride, offset(offsetof(Vertex, light_slot))
-        );
-        glEnableVertexAttribArray(11);
-        glVertexAttribPointer(
-            11, 4, GL_FLOAT, GL_FALSE, stride, offset(offsetof(Vertex, weights))
-        );
-        glGenBuffers(1, &g.instances);
-        glBindBuffer(GL_ARRAY_BUFFER, g.instances);
-        glBufferData(
-            GL_ARRAY_BUFFER,
-            static_cast<GLsizeiptr>(list.size() * sizeof(InstanceData)),
-            list.data(),
-            GL_STATIC_DRAW
-        );
-        constexpr auto instance_stride = static_cast<GLsizei>(sizeof(InstanceData));
-        for (GLuint column = 0; column < 4; ++column) {
-            glEnableVertexAttribArray(4 + column);
-            glVertexAttribPointer(
-                4 + column,
-                4,
-                GL_FLOAT,
-                GL_FALSE,
-                instance_stride,
-                offset(column * 4 * sizeof(float))
-            );
-            glVertexAttribDivisor(4 + column, 1);
+        if (kept != idle.end()) {
+            g = *kept;
+            *kept = idle.back();
+            idle.pop_back();
+        } else {
+            g = make_group(model);
         }
-        glEnableVertexAttribArray(8);
-        glVertexAttribPointer(
-            8, 4, GL_FLOAT, GL_FALSE, instance_stride, offset(offsetof(InstanceData, tint))
-        );
-        glVertexAttribDivisor(8, 1);
-        glEnableVertexAttribArray(9);
-        glVertexAttribPointer(
-            9, 1, GL_FLOAT, GL_FALSE, instance_stride, offset(offsetof(InstanceData, palette))
-        );
-        glVertexAttribDivisor(9, 1);
-        glEnableVertexAttribArray(13);
-        glVertexAttribPointer(
-            13, 1, GL_FLOAT, GL_FALSE, instance_stride, offset(offsetof(InstanceData, lights))
-        );
-        glVertexAttribDivisor(13, 1);
-        glEnableVertexAttribArray(14);
-        glVertexAttribPointer(
-            14, 4, GL_FLOAT, GL_FALSE, instance_stride, offset(offsetof(InstanceData, moby_light))
-        );
-        glVertexAttribDivisor(14, 1);
-        glEnableVertexAttribArray(15);
-        glVertexAttribPointer(
-            15, 4, GL_FLOAT, GL_FALSE, instance_stride, offset(offsetof(InstanceData, moby_ambient))
-        );
-        glVertexAttribDivisor(15, 1);
-        m_groups[static_cast<std::size_t>(layer)].push_back(g);
+        fill_group(g, m_grouping[i].second, live ? GL_STREAM_DRAW : GL_STATIC_DRAW);
+        groups.push_back(g);
     }
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -221,12 +248,10 @@ void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instance
 
 void LevelScene::set_instances(Layer layer, const std::vector<Instance>& instances) {
     auto& groups = m_groups[static_cast<std::size_t>(layer)];
-    for (Group& g : groups) {
-        glDeleteVertexArrays(1, &g.vao);
-        glDeleteBuffers(1, &g.instances);
-    }
+    auto& idle = m_idle[static_cast<std::size_t>(layer)];
+    idle.insert(idle.end(), groups.begin(), groups.end());
     groups.clear();
-    build_groups(layer, instances);
+    build_groups(layer, instances, true);
 }
 
 void LevelScene::set_palette(const std::vector<JointColumns>& matrices) {
@@ -246,17 +271,24 @@ void LevelScene::set_palette(const std::vector<JointColumns>& matrices) {
     m_palette_data.assign(rows * per_row, JointColumns{});
     std::copy(matrices.begin(), matrices.end(), m_palette_data.begin());
     glBindTexture(GL_TEXTURE_2D, m_palette);
-    glTexImage2D(
-        GL_TEXTURE_2D,
-        0,
-        static_cast<GLint>(kRgba32f),
-        kPaletteWidth,
-        static_cast<GLsizei>(rows),
-        0,
-        GL_RGBA,
-        GL_FLOAT,
-        m_palette_data.data()
-    );
+    // The texture keeps its storage while the palettes fit in it: only its texels are sent.
+    if (rows > m_palette_rows) {
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            static_cast<GLint>(kRgba32f),
+            kPaletteWidth,
+            static_cast<GLsizei>(rows),
+            0,
+            GL_RGBA,
+            GL_FLOAT,
+            m_palette_data.data()
+        );
+        m_palette_rows = rows;
+    } else {
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, kPaletteWidth, static_cast<GLsizei>(rows), GL_RGBA, GL_FLOAT,
+                        m_palette_data.data());
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -265,12 +297,15 @@ void LevelScene::release() {
         glDeleteTextures(1, &m_palette);
         m_palette = 0;
     }
-    for (auto& groups : m_groups) {
-        for (Group& g : groups) {
-            glDeleteVertexArrays(1, &g.vao);
-            glDeleteBuffers(1, &g.instances);
+    m_palette_rows = 0;
+    for (auto* all : {&m_groups, &m_idle}) {
+        for (auto& groups : *all) {
+            for (Group& g : groups) {
+                glDeleteVertexArrays(1, &g.vao);
+                glDeleteBuffers(1, &g.instances);
+            }
+            groups.clear();
         }
-        groups.clear();
     }
     if (m_vertices != 0) {
         glDeleteBuffers(1, &m_vertices);
@@ -401,6 +436,12 @@ void LevelScene::draw_layer(
     const int glow_pass = m_mesh.uniform("glow_pass");
     const int translucent_pass = m_mesh.uniform("translucent_pass");
     const int passes = layer == Layer::Mobys ? 3 : 2;
+    // The material state the program holds now (flush): none yet.
+    int set_material = -1;
+    unsigned set_texture = 0;
+    int set_cutout = -1;
+    decltype(Material::colour) set_colour{};
+    bool colour_set = false;
     for (int pass = 0; pass < passes; ++pass) {
         const bool translucent = pass == passes - 1;
         glUniform1i(glow_pass, layer == Layer::Mobys && pass == 1 ? 1 : 0);
@@ -413,27 +454,63 @@ void LevelScene::draw_layer(
         }
         for (const Group& g : groups) {
             glBindVertexArray(g.vao);
-            for (const Primitive& p : m_models[g.model].primitives) {
-                const Material& m = m_materials[static_cast<std::size_t>(p.material)];
-                if (translucent && !m.cutout) {
-                    continue;
+            // Primitives that follow one another in the index buffer with one material are one
+            // draw: the same triangles in the same order, in one call instead of several.
+            std::uint32_t run_first = 0;
+            std::uint32_t run_count = 0;
+            int run_material = -1;
+            const auto flush = [&] {
+                if (run_count == 0) {
+                    return;
                 }
-                const renderer::TextureHandle texture =
-                    m.image >= 0 ? m_textures[static_cast<std::size_t>(m.image)] : m_white;
-                glBindTexture(GL_TEXTURE_2D, state.textures.gl_texture(texture));
-                glUniform1i(cutout, m.cutout ? 1 : 0);
-                glUniform4f(colour, m.colour[0], m.colour[1], m.colour[2], m.colour[3]);
+                // The material's state is set only when it is not the last draw's: a model's parts
+                // mostly share a few, and each call into the driver costs more than the test.
+                if (run_material != set_material) {
+                    const Material& m = m_materials[static_cast<std::size_t>(run_material)];
+                    const renderer::TextureHandle texture =
+                        m.image >= 0 ? m_textures[static_cast<std::size_t>(m.image)] : m_white;
+                    const unsigned gl_texture = state.textures.gl_texture(texture);
+                    if (gl_texture != set_texture) {
+                        glBindTexture(GL_TEXTURE_2D, gl_texture);
+                        set_texture = gl_texture;
+                    }
+                    if (static_cast<int>(m.cutout) != set_cutout) {
+                        glUniform1i(cutout, m.cutout ? 1 : 0);
+                        set_cutout = static_cast<int>(m.cutout);
+                    }
+                    if (!colour_set || m.colour != set_colour) {
+                        glUniform4f(colour, m.colour[0], m.colour[1], m.colour[2], m.colour[3]);
+                        set_colour = m.colour;
+                        colour_set = true;
+                    }
+                    set_material = run_material;
+                }
                 glDrawElementsInstanced(
                     GL_TRIANGLES,
-                    static_cast<GLsizei>(p.index_count),
+                    static_cast<GLsizei>(run_count),
                     GL_UNSIGNED_INT,
-                    offset(p.first_index * sizeof(std::uint32_t)),
+                    offset(run_first * sizeof(std::uint32_t)),
                     g.count
                 );
                 ++state.stats.draw_calls;
                 state.stats.triangles +=
-                    static_cast<std::uint64_t>(p.index_count / 3) * static_cast<std::uint64_t>(g.count);
+                    static_cast<std::uint64_t>(run_count / 3) * static_cast<std::uint64_t>(g.count);
+                run_count = 0;
+            };
+            for (const Primitive& p : m_models[g.model].primitives) {
+                if (translucent && !m_materials[static_cast<std::size_t>(p.material)].cutout) {
+                    continue;
+                }
+                if (run_count != 0 && p.material == run_material && p.first_index == run_first + run_count) {
+                    run_count += p.index_count;
+                    continue;
+                }
+                flush();
+                run_first = p.first_index;
+                run_count = p.index_count;
+                run_material = p.material;
             }
+            flush();
         }
     }
     glDisable(GL_BLEND);

@@ -10,7 +10,8 @@
   // developer tools on it is a tab of its own, Tasks.
   const tabs = $derived<{ page: Page; label: string }[]>([
     { page: "library", label: "Games" },
-    { page: "mods", label: "Mods" },
+    // The level editor works in a checkout's folders: not from the copy an installed launcher carries.
+    ...(app.info?.standalone ? [] : [{ page: "mods" as Page, label: "Mods" }]),
     ...(app.config?.developer ? [{ page: "tasks" as Page, label: "Tasks" }] : []),
     { page: "settings", label: "Settings" },
   ]);

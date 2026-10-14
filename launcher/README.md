@@ -17,6 +17,15 @@ the toolchains, build, check, and see each decompilation's progress. Either
 way it runs the same commands a contributor types, from the user's own
 OpenRAC checkout, and shows their output live.
 
+**An installed launcher needs nothing but your disc image.** Its installer
+carries a copy of what the launcher uses: the game built for the system, the
+set-up and level tools and a Python to run them
+([tools/bundle_standalone.py](../tools/bundle_standalone.py); the
+[launcher workflow](../.github/workflows/launcher.yml) puts it together). The
+launcher uses that copy when it finds no OpenRAC checkout, and a contributor's
+checkout, when there is one, goes first. With the copy there is nothing to
+build: the steps are the disc, the levels, Play.
+
 It is a [Tauri 2](https://tauri.app/) app: a Rust side (`core/` and
 `src-tauri/`) that does every file and process operation, and a Svelte 5 UI
 (`src/`) styled after [openrac.dev](https://openrac.dev).
@@ -42,18 +51,29 @@ the launcher never downloads, uploads or bundles a game.
 
 OpenGOAL's flow, step for step ([docs/INTEGRATION.md](docs/INTEGRATION.md#setting-a-game-up)):
 
-1. **Set up from your disc** asks for the image (`.iso`) of the player's own
-   disc.
+1. On a first start the Games page asks for **the folder with your
+   PlayStation 2 games**. The launcher looks through it (two folders deep) for
+   images of games it knows, telling a disc by the boot program its
+   `SYSTEM.CNF` names, whatever the file is called
+   ([core/src/discs.rs](core/src/discs.rs)), and sets each playable one up
+   without further questions. The folder can be changed in Settings; a game's
+   own **Set up from your disc** still asks for a single image (`.iso`) when
+   the folder holds none.
 2. The launcher runs OpenRAC's extractor ([tools/extractor.py](../tools/extractor.py))
    as a job: it copies the disc's files into the install folder and checks
    the boot executable against the builds OpenRAC knows
    (`games/<game>/game.json`). An unknown or damaged image is refused, with
    OpenGOAL's error number for the same failure.
-3. **Build the game** runs [tools/build_port.py](../tools/build_port.py): it
+3. After the set-up the launcher goes on to **Get the levels ready** by itself
+   (the worlds the game draws from, read from the disc: half a minute, once),
+   and then has the game **check the levels**: it reads every one as it will
+   when played and names any it cannot draw. Play is offered only after that
+   check; levels that fail it are read from the disc again, once, and checked
+   again. Without it an export cut short was a black world behind the HUD.
+4. In a checkout, **Build the game** runs [tools/build_port.py](../tools/build_port.py): it
    compiles the native port for this computer (a few minutes the first time),
    and **Rebuild** compiles again what changed after an update.
-4. **Play** starts the port with the set-up data. Preparing the assets is
-   still "not available yet".
+5. **Play** starts the port with the set-up data.
 
 **Remove the set-up** deletes what set-up made, as OpenGOAL's uninstall does;
 the disc image and saves are kept.

@@ -21,6 +21,8 @@ struct AppState {
     config_file: Option<PathBuf>,
     jobs: Jobs,
     discord: Arc<Mutex<DiscordState>>,
+    /// The copy of OpenRAC this launcher carries, if it was built with one (detect::bundled_root).
+    bundled: Option<PathBuf>,
 }
 
 struct DiscordState {
@@ -35,6 +37,9 @@ struct AppInfo {
     platform: Platform,
     /// Where launcher.json is.
     config_file: Option<PathBuf>,
+    /// The launcher works on the copy of OpenRAC it carries: nothing to find or to build, and
+    /// only what a player does is offered.
+    standalone: bool,
 }
 
 #[tauri::command]
@@ -43,6 +48,7 @@ fn app_info(app: AppHandle, state: State<'_, AppState>) -> AppInfo {
         version: app.package_info().version.to_string(),
         platform: Platform::current(),
         config_file: state.config_file.clone(),
+        standalone: state.bundled.is_some() && state.config.lock().unwrap().root == state.bundled,
     }
 }
 
@@ -52,8 +58,10 @@ fn get_config(state: State<'_, AppState>) -> Config {
 }
 
 #[tauri::command]
-fn save_config(state: State<'_, AppState>, config: Config) -> Result<Config, String> {
+fn save_config(state: State<'_, AppState>, mut config: Config) -> Result<Config, String> {
     let file = state.config_file.as_deref().ok_or("no per-user config folder")?;
+    // Developer tools switched off: back to the carried copy (detect::settle).
+    detect::settle(&mut config, state.bundled.as_deref());
     config::save(file, &config)?;
     *state.config.lock().unwrap() = config.clone();
 
@@ -84,8 +92,11 @@ fn start_folders() -> Vec<PathBuf> {
 }
 
 #[tauri::command]
-async fn detect() -> Detected {
-    tauri::async_runtime::spawn_blocking(|| detect::detect_all(&start_folders())).await.unwrap_or_default()
+async fn detect(state: State<'_, AppState>) -> Result<Detected, String> {
+    let bundled = state.bundled.clone();
+    Ok(tauri::async_runtime::spawn_blocking(move || detect::detect_all(&start_folders(), bundled.as_deref()))
+        .await
+        .unwrap_or_default())
 }
 
 #[tauri::command]
@@ -269,6 +280,20 @@ fn install_game(app: AppHandle, state: State<'_, AppState>, game: String, image:
     })
 }
 
+/// The games OpenRAC knows among the images in the player's games folder (none when no folder
+/// is chosen).
+#[tauri::command]
+async fn scan_discs(state: State<'_, AppState>) -> Result<Vec<openrac_launcher_core::discs::FoundDisc>, String> {
+    let config = state.config.lock().unwrap().clone();
+    let (Some(dir), Some(root)) = (config.discs_dir, config.root) else { return Ok(Vec::new()) };
+    tauri::async_runtime::spawn_blocking(move || {
+        let catalog = openrac_launcher_core::catalog::load(&root)?;
+        Ok(openrac_launcher_core::discs::scan(&dir, &catalog))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// Removes what setting `game` up made (OpenGOAL's uninstall); the player's
 /// disc image and saves are left alone.
 #[tauri::command]
@@ -443,6 +468,14 @@ pub fn run() {
                 config.install_dir = app.path().app_local_data_dir().ok();
             }
 
+            // The copy of OpenRAC the launcher carries: what a player plays from (detect::settle).
+            // A copy whose Python does not run here is not for this machine (an Intel Mac has the
+            // Apple silicon one): the launcher then works on a checkout, as it did.
+            let bundled = app.path().resource_dir().ok().and_then(|dir| detect::bundled_root(&dir)).filter(|dir| {
+                detect::bundled_python(dir).is_some_and(|python| detect::check_tool(Tool::Python, &python).ok)
+            });
+            detect::settle(&mut config, bundled.as_deref());
+
             let client_id = config
                 .discord_client_id
                 .clone()
@@ -459,7 +492,7 @@ pub fn run() {
                 });
             }
 
-            app.manage(AppState { config: Mutex::new(config), config_file, jobs: Jobs::default(), discord });
+            app.manage(AppState { config: Mutex::new(config), config_file, jobs: Jobs::default(), discord, bundled });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -476,6 +509,7 @@ pub fn run() {
             open_url,
             install_game,
             uninstall_game,
+            scan_discs,
             sync_progress_from_web,
             apply_progress_json,
             set_discord_status,

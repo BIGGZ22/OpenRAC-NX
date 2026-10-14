@@ -40,7 +40,7 @@ extern void func_L00_002EBE88(void *);
 extern void func_L00_002EBEE0(void *);
 extern float func_00214D28(float *, float, float);
 extern void func_L00_002EC0C8(int);
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_002EB648 __attribute__((mode(TI)));
 
 /* Update function of moby class 1005 (tresspasser) on level 02, class 1016 (hydrodisplacer) on level 06: state machine. */
 void func_L02_002EB648(char *moby) {
@@ -133,10 +133,10 @@ void func_L02_002EB648(char *moby) {
             float a[16];
             float o[4];
             float w[4];
-            *(u128 *)&a[0] = 0;
-            *(u128 *)&a[4] = 0;
-            *(u128 *)&a[8] = 0;
-            *(u128 *)&a[12] = 0;
+            *(u128_002EB648 *)&a[0] = 0;
+            *(u128_002EB648 *)&a[4] = 0;
+            *(u128_002EB648 *)&a[8] = 0;
+            *(u128_002EB648 *)&a[12] = 0;
             a[0] = 91.2f;
             a[1] = 270.76f;
             a[2] = 64.85f;

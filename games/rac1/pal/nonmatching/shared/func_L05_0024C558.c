@@ -28,7 +28,7 @@ extern char D_L05_00174340[];
 extern u8 D_L05_00174360[];
 extern char D_L05_0017AC20[];
 
-typedef int u128 __attribute__((mode(TI)));
+typedef int u128_4C558 __attribute__((mode(TI)));
 
 // Runs the swing probe for the effect block: samples two points, then updates the timers and the effect pointer.
 void func_L05_0024C558(void) {
@@ -119,7 +119,7 @@ void func_L05_0024C558(void) {
     if ((unsigned int)(*(int *)(g3 + 0x208C) - 0x15) < 2) {
         if (*(char **)(g3 + 0x86C) != 0) {
             qcopy(*(char **)(g3 + 0x86C) + 0x10, g3 + 0x80);
-            *(u128 *)A = 0;
+            *(u128_4C558 *)A = 0;
             A[2] = 0.21f;
             func_001F9EC0(A, A, (void *)(*(int *)(g3 + 0x2080) + 0xC0));
             func_001FA218(E, D_L05_0017AC20);

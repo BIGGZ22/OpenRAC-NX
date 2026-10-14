@@ -89,23 +89,18 @@ int FUN_L00_0025fcb8(char *a, char *o, float best) {
     *(int *)(o + 0x44) = res;
     return res;
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_0025ff38.s", FUN_L00_0025ff38);
-#else
 extern int FUN_00214720_25ff38(void *, int) __asm__("FUN_00214720");
 extern int FUN_L00_00259740_25ff38(void *, void *, int) __asm__("FUN_L00_00259740");
-
-int FUN_L00_0025ff38(float best, char *a, char *o, int *excluded,
-                       int excluded_count, void *region, int region_count) {
+int FUN_L00_0025ff38(char *a, char *o, float best, int *list, int n, float *v, int nv) {
     struct Hero *g = &hero_data;
     char *m;
     char *p;
-    char *position;
+    char *q;
     int res;
     int i;
     int j;
     int k;
-    int valid;
+    int ok;
     float d;
 
     m = (char *)g->moby;
@@ -113,102 +108,82 @@ int FUN_L00_0025ff38(float best, char *a, char *o, int *excluded,
     if (g->state.control_mode == 0x18 || g->state.current == 0x72) {
         m = 0;
         res = 2;
-    } else if (excluded_count > 0) {
-        for (k = 0; k < excluded_count - 1; k++) {
-            if (FUN_00214720_25ff38(&g->motion.pos, excluded[k])) {
+    } else if (n > 0) {
+        for (k = 0; k < n - 1; k++) {
+            if (FUN_00214720_25ff38(&hero_data.motion.pos, list[k]) != 0) {
                 m = 0;
                 res = 2;
                 break;
             }
         }
-    } else if (region && region_count > 0 &&
-               !FUN_L00_00259740_25ff38(&g->motion.pos, region, region_count)) {
-        m = 0;
-        res = 2;
+    } else if (v != 0 && nv > 0) {
+        if (FUN_L00_00259740_25ff38(&hero_data.motion.pos, v, nv) == 0) {
+            m = 0;
+            res = 2;
+        }
     }
     for (i = 1; i <= D_L00_001B0830_25fcb8[0]; i++) {
         p = D_L00_0015FFD8_25fcb8 + (D_L00_001B0830_25fcb8[i] << 8);
-        if (p == 0)
-            continue;
-        if (*(short *)(p + 0xA6) != 0xCB && *(short *)(p + 0xA6) != 0x76C)
-            continue;
-        if (*(unsigned char *)(p + 0x20) == 0xFE)
-            continue;
-        if (*(unsigned char *)(p + 0x20) == 0xFD)
-            continue;
-        if (*(unsigned char *)(p + 0x20) != 3)
-            continue;
-        /* Retail reuses this position scratch as the exclusion counter. */
-        k = (int)(p + 0x10);
-        position = (char *)k;
-        valid = 1;
-        d = FUN_001f9b80_25fcb8(a + 0x10, (char *)k);
+        if (p == 0) continue;
+        if (*(short *)(p + 0xA6) != 0xCB && *(short *)(p + 0xA6) != 0x76C) continue;
+        if (*(unsigned char *)(p + 0x20) == 0xFE) continue;
+        if (*(unsigned char *)(p + 0x20) == 0xFD) continue;
+        if (*(unsigned char *)(p + 0x20) != 3) continue;
+        ok = 1;
+        d = FUN_001f9b80_25fcb8(a + 0x10, p + 0x10);
         if (best <= d) {
-            valid = 0;
-        } else {
-            if (excluded_count > 0) {
-                for (k = 0; k < excluded_count - 1; k++) {
-                    if (FUN_00214720_25ff38(position, excluded[k])) {
-                        valid = 0;
-                        break;
-                    }
+            ok = 0;
+        } else if (n > 0) {
+            for (k = 0; k < n - 1; k++) {
+                if (FUN_00214720_25ff38(p + 0x10, list[k]) != 0) {
+                    ok = 0;
+                    break;
                 }
-            } else if (region && region_count > 0 &&
-                       !FUN_L00_00259740_25ff38((char *)k, region, region_count)) {
-                valid = 0;
             }
+        } else if (v != 0 && nv > 0) {
+            if (FUN_L00_00259740_25ff38(p + 0x10, v, nv) == 0) ok = 0;
         }
-        if (valid) {
+        if (ok) {
             m = p;
-            best = d;
             res = 1;
+            best = d;
         }
     }
     for (j = 0; j < 20; j++) {
-        p = D_L00_001DD100_25fcb8[j];
-        if (p == 0)
-            continue;
-        if (*(short *)(p + 0xA6) != 0x10E)
-            continue;
-        if (*(unsigned char *)(p + 0x20) == 0xFE)
-            continue;
-        if (*(unsigned char *)(p + 0x20) == 0xFD)
-            continue;
-        if (*(unsigned char *)(p + 0xBC) == 0)
-            continue;
-        /* Retail reuses this position scratch as the exclusion counter. */
-        k = (int)(p + 0x10);
-        position = (char *)k;
-        valid = 1;
-        d = FUN_001f9b80_25fcb8(a + 0x10, (char *)k);
+        q = D_L00_001DD100_25fcb8[j];
+        if (q == 0) continue;
+        if (*(short *)(q + 0xA6) != 0x10E) continue;
+        if (*(unsigned char *)(q + 0x20) == 0xFE) continue;
+        if (*(unsigned char *)(q + 0x20) == 0xFD) continue;
+        if (*(unsigned char *)(q + 0xBC) == 0) continue;
+        ok = 1;
+        d = FUN_001f9b80_25fcb8(a + 0x10, q + 0x10);
         if (best <= d) {
-            valid = 0;
-        } else {
-            if (excluded_count > 0) {
-                for (k = 0; k < excluded_count - 1; k++) {
-                    if (FUN_00214720_25ff38(position, excluded[k])) {
-                        valid = 0;
-                        break;
-                    }
+            ok = 0;
+        } else if (n > 0) {
+            for (k = 0; k < n - 1; k++) {
+                if (FUN_00214720_25ff38(q + 0x10, list[k]) != 0) {
+                    ok = 0;
+                    break;
                 }
-            } else if (region && region_count > 0 &&
-                       !FUN_L00_00259740_25ff38((char *)k, region, region_count)) {
-                valid = 0;
             }
+        } else if (v != 0 && nv > 0) {
+            if (FUN_L00_00259740_25ff38(q + 0x10, v, nv) == 0) ok = 0;
         }
-        if (valid) {
-            m = p;
-            best = d;
+        if (ok) {
+            m = q;
             res = 1;
+            best = d;
         }
     }
     if (m != 0) {
         *(char **)(o + 0x40) = m;
         qcopy(o, m + 0x10);
         qcopy(o + 0x10, m + 0x40);
-        if (m == (char *)hero_data.moby) {
-            qcopy(o + 0x20, &hero_data.motion.unkC0);
-            qcopy(o + 0x30, &hero_data.motion.unkD0);
+        g = &hero_data;
+        if (m == (char *)g->moby) {
+            qcopy(o + 0x20, &g->motion.unkC0);
+            qcopy(o + 0x30, &g->motion.unkD0);
         } else {
             qcopy(o + 0x30, o);
             *(float *)(o + 0x38) += 0.6f;
@@ -217,14 +192,13 @@ int FUN_L00_0025ff38(float best, char *a, char *o, int *excluded,
     } else {
         *(char **)(o + 0x40) = 0;
         qzero(o);
+        qzero(o + 0x10);
         qzero(o + 0x30);
         qzero(o + 0x20);
-        qzero(o + 0x10);
     }
     *(int *)(o + 0x44) = res;
     return res;
 }
-#endif
 typedef float M4_260400[16] __attribute__((aligned(16)));
 extern char *c338_p(char *) __asm__("FUN_L00_002603d0");
 void FUN_001fa050(void *, void *);
@@ -463,6 +437,9 @@ extern int FUN_L00_00261b48_260a88(int, void *, void *, void *) __asm__("FUN_L00
 extern void FUN_002a7438_260a88(void *, void *, void *, int, int, int) __asm__("FUN_L00_002a7438");
 extern char *FUN_0025c338_260a88(char *) __asm__("FUN_002141f8");
 extern int FUN_001fef20_260a88(int) __asm__("FUN_001f96f8");
+extern char D_L00_001600A0_260a88[] __asm__("D_L00_001600A0");
+extern char D_L00_001600B0_260a88[] __asm__("D_L00_001600B0");
+extern char D_L00_001600C0_260a88[] __asm__("D_L00_001600C0");
 extern void FUN_001eb078_260a88(int, ...) __asm__("FUN_001e93b0");
 extern float FUN_00200240_260a88(int) __asm__("FUN_001fa6c0");
 extern double FUN_00120478_260a88(float) __asm__("FUN_00120478");
@@ -490,7 +467,7 @@ void FUN_L00_00260a88(char *moby, int lower, int upper, unsigned int flags, int 
     if (flags & 4) {
         path = FUN_0025c338_260a88(moby);
         if (path)
-            base = *(Vec_260a88 *)(path + 0x20);
+            qcopy(&base, path + 0x20);
     }
     if (lower < 1)
         lower = 1;
@@ -503,25 +480,26 @@ void FUN_L00_00260a88(char *moby, int lower, int upper, unsigned int flags, int 
             multiplier /= 2;
         if (multiplier < 150) {
             if (multiplier < 91) {
-                FUN_001eb078_260a88(0x1600a0);
+                FUN_001eb078_260a88((int)D_L00_001600A0_260a88);
                 count *= 5;
             } else {
-                multiplier = (190 - multiplier) / 20;
-                FUN_001eb078_260a88(0x1600b0, multiplier);
-                count *= multiplier;
+                lower = 190 - multiplier;
+                lower /= 20;
+                FUN_001eb078_260a88((int)D_L00_001600B0_260a88, lower);
+                count *= lower;
             }
             if (D_L00_0015EEA0_260a88) {
                 if (count > 1000) count = 1000;
             } else if (count > 500) count = 500;
         } else if (multiplier >= 301) {
-            if (multiplier < 352) {
+            if (multiplier >= 352) {
+                FUN_001eb078_260a88((int)D_L00_001600C0_260a88, 0x3fb99999a0000000LL);
+                count /= 10;
+            } else {
                 int span = 360 - multiplier;
                 float scale = FUN_00200240_260a88(span);
-                FUN_001eb078_260a88(0x1600c0, FUN_00120478_260a88(scale / 20.0f));
+                FUN_001eb078_260a88((int)D_L00_001600C0_260a88, FUN_00120478_260a88(scale / 20.0f));
                 count *= span / 80;
-            } else {
-                FUN_001eb078_260a88(0x1600c0, 0x3fb99999a0000000LL);
-                count /= 10;
             }
             if (count < 1) count = 1;
         }
@@ -575,14 +553,16 @@ void FUN_L00_00260a88(char *moby, int lower, int upper, unsigned int flags, int 
         }
     }
     while (large || medium || small || single) {
-        position = *(Vec_260a88 *)(moby + 0x10);
+        qcopy(&position, moby + 0x10);
         position.f[2] += 0.5f;
         time = FUN_00257cb0_260a88();
         velocity.f[0] = FUN_001ff7e8_260a88(time) * (FUN_00257be8_260a88(0.0f, 3.0f) * D_L00_0015ED6C_260a88);
         velocity.f[1] = FUN_001ff800_260a88(time) * (FUN_00257be8_260a88(0.0f, 3.0f) * D_L00_0015ED6C_260a88);
+        velocity.f[2] = 0.0f;
         velocity.f[2] = FUN_00257be8_260a88(3.7f, 6.0f) * D_L00_0015ED6C_260a88;
-        velocity.f[3] = 0.0f;
-        offset = velocity;
+        offset.f[0] = velocity.f[0];
+        offset.f[1] = velocity.f[1];
+        offset.f[2] = 0.0f;
         FUN_001ff500_260a88(0.5f, &offset, &offset);
         FUN_001ff278_260a88(&position, &position, &offset);
         if (path_index >= 0) {
@@ -604,11 +584,19 @@ void FUN_L00_00260a88(char *moby, int lower, int upper, unsigned int flags, int 
             velocity.f[1] = adjusted.f[1];
         }
         FUN_001ff278_260a88(&velocity, &velocity, &base);
-        if (large) { multiplier = 50; large--; }
-        else if (medium) { multiplier = 20; medium--; }
-        else if (small) { multiplier = 5; small--; }
-        else { multiplier = 1; single--; }
-        FUN_002a7438_260a88(moby, &position, &velocity, flags, multiplier, gated);
+        if (large) {
+            large--;
+            FUN_002a7438_260a88(moby, &position, &velocity, flags, 50, gated);
+        } else if (medium) {
+            medium--;
+            FUN_002a7438_260a88(moby, &position, &velocity, flags, 20, gated);
+        } else if (small) {
+            small--;
+            FUN_002a7438_260a88(moby, &position, &velocity, flags, 5, gated);
+        } else {
+            single--;
+            FUN_002a7438_260a88(moby, &position, &velocity, flags, 1, gated);
+        }
     }
 }
 #endif

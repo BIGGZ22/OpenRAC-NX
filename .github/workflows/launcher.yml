@@ -4,8 +4,12 @@
 # published by hand.
 #
 # They are not signed: Windows SmartScreen and macOS Gatekeeper warn about
-# them until the project has certificates. The launcher is only the desktop
-# app; it still works on an OpenRAC checkout, which it finds or asks for.
+# them until the project has certificates.
+#
+# An installer carries what a player needs beside their disc image: the game
+# built for the system, the set-up and level tools and a Python to run them
+# (the `game` job, tools/bundle_standalone.py). The launcher uses that copy
+# when it finds no OpenRAC checkout (launcher/core/src/detect.rs).
 name: launcher
 
 on:
@@ -14,10 +18,22 @@ on:
     tags: ["launcher-v*"]
     paths:
       - "launcher/**"
+      - "port/**"
+      - "editor/**"
+      - "games/rac1/pal/**"
+      - "tools/bundle_standalone.py"
+      - "tools/build_port.py"
+      - "tools/extractor.py"
       - ".github/workflows/launcher.yml"
   pull_request:
     paths:
       - "launcher/**"
+      - "port/**"
+      - "editor/**"
+      - "games/rac1/pal/**"
+      - "tools/bundle_standalone.py"
+      - "tools/build_port.py"
+      - "tools/extractor.py"
       - ".github/workflows/launcher.yml"
   workflow_dispatch:
 
@@ -29,8 +45,133 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # What an installer carries: the game built with SDL3 in it (the port's `standalone` preset), the
+  # tools and a Python, as one archive for each system (a tar: artifacts drop the files' modes).
+  game:
+    name: game (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      # python-build-standalone, a fixed release, each archive checked against its SHA-256.
+      PYTHON_RELEASE: "20261009"
+      PYTHON_VERSION: "3.12.15"
+      LLVM_VERSION: "21.1.4"
+      LLVM_SHA256: 8e39f8051cd10a163c1fab304f16d8e16a9c0f5e94b59d08853bbab630bd65dd
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows
+            os: windows-latest
+            python: x86_64-pc-windows-msvc
+            python_sha256: 11ed9f8a6ac64fb1b5a55e40e305a6744a3f77a70863c8f8197a6e4349abc64a
+          # Ubuntu 22.04, with LLVM's compiler and its C++ library built into the game: the game
+          # then needs only the system's C library, glibc 2.35 or later (Ubuntu 22.04, Debian 12,
+          # Linux Mint 21, Fedora 36, SteamOS). Ubuntu 22.04's own C++ library is too old for the
+          # port (<format>), and one built on 24.04 asked for glibc 2.38.
+          - name: linux
+            os: ubuntu-22.04
+            python: x86_64-unknown-linux-gnu
+            python_sha256: ffa8f85f1b56e88b687f08d743d817015524b86a9365fd921243132b80f1a36d
+          # Apple silicon: the runner's own. An Intel Mac's launcher finds no game it can run in
+          # its copy and works on a checkout, as before.
+          - name: macos
+            os: macos-latest
+            python: aarch64-apple-darwin
+            python_sha256: 233f8e15255b3e1d1fd47ea5dd5230dfed803f371138e896e54d98c60ae19f6f
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compilers and what SDL3 is built against (Linux)
+        if: matrix.name == 'linux'
+        run: |
+          sudo apt-get update
+          # LLVM 19 from apt.llvm.org: Clang, and libc++ to build into the game.
+          wget -qO "$RUNNER_TEMP/llvm.sh" https://apt.llvm.org/llvm.sh
+          sudo bash "$RUNNER_TEMP/llvm.sh" 19
+          sudo apt-get install -y libc++-19-dev libc++abi-19-dev
+          sudo ln -sf /usr/bin/clang-19 /usr/local/bin/clang
+          sudo ln -sf /usr/bin/clang++-19 /usr/local/bin/clang++
+          # CMake reads these when it first configures: libc++ and the compiler's runtime in the game.
+          echo "CXXFLAGS=-stdlib=libc++" >> "$GITHUB_ENV"
+          echo "LDFLAGS=-stdlib=libc++ -static-libstdc++ -static-libgcc -l:libc++abi.a" >> "$GITHUB_ENV"
+          sudo apt-get install -y ninja-build pkg-config \
+            libgl1-mesa-dev libegl1-mesa-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxss-dev libxfixes-dev libwayland-dev wayland-protocols libxkbcommon-dev libdecor-0-dev \
+            libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev libdrm-dev libgbm-dev
+
+      - name: Ninja (macOS)
+        if: matrix.name == 'macos'
+        run: brew install ninja
+
+      # As the port's own Windows job does (checks.yml): LLVM at a fixed version, checked, unpacked.
+      - name: Clang (Windows)
+        if: matrix.name == 'windows'
+        shell: pwsh
+        run: |
+          $ProgressPreference = "SilentlyContinue"
+          $installer = Join-Path $env:RUNNER_TEMP "llvm.exe"
+          $release = "https://github.com/llvm/llvm-project/releases/download"
+          Invoke-WebRequest "$release/llvmorg-${env:LLVM_VERSION}/LLVM-${env:LLVM_VERSION}-win64.exe" -OutFile $installer
+          $sha256 = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()
+          if ($sha256 -ne $env:LLVM_SHA256) { throw "LLVM ${env:LLVM_VERSION}: its SHA-256 is $sha256" }
+          $llvm = Join-Path $env:RUNNER_TEMP "llvm"
+          7z x $installer "-o$llvm" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "7z could not unpack LLVM's installer" }
+          "OPENRAC_CLANG=$llvm\bin\clang.exe" >> $env:GITHUB_ENV
+          "$llvm\bin" >> $env:GITHUB_PATH
+
+      - name: Build the game
+        run: python tools/build_port.py rac1-pal --preset standalone
+
+      - name: A Python for the tools
+        shell: bash
+        run: |
+          file="cpython-${PYTHON_VERSION}+${PYTHON_RELEASE}-${{ matrix.python }}-install_only_stripped.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/python.tar.gz" \
+            "https://github.com/astral-sh/python-build-standalone/releases/download/${PYTHON_RELEASE}/${file}"
+          python - "$RUNNER_TEMP/python.tar.gz" "${{ matrix.python_sha256 }}" <<'PY'
+          import hashlib, sys
+          got = hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest()
+          sys.exit(0 if got == sys.argv[2] else f"the Python archive's SHA-256 is {got}")
+          PY
+          # From inside the folder: on Windows tar reads "D:\..." as a host named D.
+          cd "$RUNNER_TEMP" && mkdir -p python && tar -xzf python.tar.gz -C python
+
+      - name: Put the copy together and try it
+        shell: bash
+        run: |
+          python tools/bundle_standalone.py build/standalone --game-build port/build/standalone \
+            --python "$RUNNER_TEMP/python/python"
+          # Its own Python runs its own tools, and the game starts far enough to say what it is.
+          py=build/standalone/python/bin/python3; [ -x "$py" ] || py=build/standalone/python/python.exe
+          "$py" build/standalone/tools/extractor.py --help > /dev/null
+          "$py" build/standalone/editor/extract.py --help > /dev/null
+          game=build/standalone/port/build/release/openrac-rac1-pal; [ -f "$game" ] || game="$game.exe"
+          "$game" --help || true
+          # On Linux: what the game asks of the system (only libc and libm, glibc 2.35 at most, Ubuntu 22.04's own).
+          if [ "${{ matrix.name }}" = linux ]; then
+            readelf -d "$game" | grep NEEDED
+            need=$(objdump -T "$game" | grep -oE 'GLIBC_2\.[0-9]+' | sort -t. -k2 -n | tail -1)
+            echo "needs $need"
+            case "$need" in GLIBC_2.3[6-9]|GLIBC_2.[4-9]*) echo "the game needs a newer glibc than 2.35"; exit 1;; esac
+            if readelf -d "$game" | grep -q 'libstdc++'; then echo "the game needs the system's libstdc++"; exit 1; fi
+          fi
+          tar -czf openrac-standalone.tar.gz -C build/standalone .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openrac-standalone-${{ matrix.name }}
+          path: openrac-standalone.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
   build:
     name: ${{ matrix.name }}
+    needs: game
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
@@ -86,6 +227,24 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev patchelf rpm file
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: openrac-standalone-${{ matrix.name }}
+          path: ${{ runner.temp }}/standalone
+      - name: The copy of OpenRAC the installer carries
+        shell: bash
+        run: |
+          # The archive by a relative name: on Windows tar reads "D:\..." as a host named D.
+          cp "$RUNNER_TEMP/standalone/openrac-standalone.tar.gz" openrac-standalone.tar.gz
+          tar -xzf openrac-standalone.tar.gz -C src-tauri/resources/openrac
+          rm openrac-standalone.tar.gz
+
+      # The cache above keeps target/, and with it the installers of the last version: without
+      # this a release carried 0.2.0's files beside 0.3.0's.
+      - name: No installers from an earlier build
+        shell: bash
+        run: rm -rf target/release/bundle target/universal-apple-darwin/release/bundle
+
       - name: Build the installers
         run: |
           yarn install --immutable
@@ -101,6 +260,7 @@ jobs:
   # Fedora's own WebKitGTK and GTK.
   fedora:
     name: fedora
+    needs: game
     runs-on: ubuntu-latest
     container: registry.fedoraproject.org/fedora:44
     timeout-minutes: 60
@@ -129,10 +289,28 @@ jobs:
           key: launcher-fedora-${{ hashFiles('launcher/Cargo.lock') }}
           restore-keys: launcher-fedora-
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: openrac-standalone-linux
+          path: ${{ runner.temp }}/standalone
+      - name: The copy of OpenRAC the installer carries
+        shell: bash
+        run: |
+          # The archive by a relative name: on Windows tar reads "D:\..." as a host named D.
+          cp "$RUNNER_TEMP/standalone/openrac-standalone.tar.gz" openrac-standalone.tar.gz
+          tar -xzf openrac-standalone.tar.gz -C src-tauri/resources/openrac
+          rm openrac-standalone.tar.gz
+
+      - name: No installers from an earlier build
+        run: rm -rf target/release/bundle
+
+      # Its file is named as the one built on Ubuntu is: "fc44" tells them apart on a release,
+      # which takes one file of a name.
       - name: Build the installer
         run: |
           yarn install --immutable
           yarn tauri build --bundles rpm
+          for f in target/release/bundle/rpm/*.x86_64.rpm; do mv "$f" "${f%.x86_64.rpm}.fc44.x86_64.rpm"; done
 
       - uses: actions/upload-artifact@v4
         with:
@@ -151,6 +329,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
+          pattern: openrac-launcher-*
           path: installers
           merge-multiple: true
       - name: Draft release

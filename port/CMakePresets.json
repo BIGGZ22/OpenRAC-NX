@@ -19,6 +19,12 @@
       "cacheVariables": {"CMAKE_BUILD_TYPE": "RelWithDebInfo"}
     },
     {
+      "name": "standalone",
+      "inherits": "base",
+      "displayName": "What an installer carries: SDL3 built in, nothing of the system's to find",
+      "cacheVariables": {"CMAKE_BUILD_TYPE": "RelWithDebInfo", "OPENRAC_STATIC_SDL": "ON"}
+    },
+    {
       "name": "debug",
       "inherits": "base",
       "displayName": "Debug",
@@ -33,6 +39,7 @@
   ],
   "buildPresets": [
     {"name": "release", "configurePreset": "release"},
+    {"name": "standalone", "configurePreset": "standalone"},
     {"name": "debug", "configurePreset": "debug"},
     {"name": "headless", "configurePreset": "headless"}
   ],

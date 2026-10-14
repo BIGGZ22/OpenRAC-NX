@@ -36,6 +36,8 @@ target_link_libraries(openrac_game_common PUBLIC openrac_runtime)
 # The asset readers the library replacements use (the WAD decompressor).
 if(TARGET openrac_assets_disc)
   target_link_libraries(openrac_game_common PUBLIC openrac_assets_disc)
+  # main.cpp reads a level's program from the player's image (load_level_program).
+  target_compile_definitions(openrac_game_common PUBLIC OPENRAC_HAS_DISC=1)
 endif()
 # The sound engine the sound library's replacement drives (lib/sound_engine.cpp).
 target_link_libraries(openrac_game_common PUBLIC openrac_audio)
@@ -146,9 +148,14 @@ function(openrac_add_game config)
   if(TARGET openrac_viewer_lib AND TARGET openrac_platform)
     target_sources(openrac-${id} PRIVATE "${OPENRAC_GAME_DIR}/common/frontend.cpp"
                                          "${OPENRAC_GAME_DIR}/common/debug_menu.cpp"
+                                         "${OPENRAC_GAME_DIR}/common/debug_overlay.cpp"
+                                         "${OPENRAC_GAME_DIR}/common/fps_counter.cpp"
                                          "${OPENRAC_GAME_DIR}/common/options_menu.cpp"
                                          "${OPENRAC_GAME_DIR}/common/settings.cpp")
-    target_link_libraries(openrac-${id} PRIVATE openrac_viewer_lib openrac_platform)
+    target_link_libraries(openrac-${id} PRIVATE openrac_viewer_lib openrac_platform openrac_imgui)
+    # The debug overlay's moby class names: the editor's table, as text.
+    openrac_moby_class_names(names_cpp)
+    target_sources(openrac-${id} PRIVATE "${names_cpp}")
     target_compile_definitions(openrac-${id} PRIVATE OPENRAC_FRONTEND=1)
     # The window's icon: OpenRAC's own, the launcher's, embedded as PNG bytes.
     openrac_window_icon(icon_c)
@@ -184,4 +191,22 @@ function(openrac_add_games)
   foreach(config IN LISTS configs)
     openrac_add_game("${config}")
   endforeach()
+endfunction()
+
+# The editor's moby class names (editor/moby_classes.tsv: class number, name, with its notice in
+# its first lines) as one string, openrac_moby_class_names, for the debug overlay's moby list.
+function(openrac_moby_class_names out)
+  set(tsv "${PROJECT_SOURCE_DIR}/../editor/moby_classes.tsv")
+  set(cpp "${CMAKE_BINARY_DIR}/generated/openrac_moby_class_names.cpp")
+  if(EXISTS "${tsv}")
+    file(READ "${tsv}" text)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${tsv}")
+  else()
+    set(text "")
+  endif()
+  file(CONFIGURE OUTPUT "${cpp}" CONTENT "// Generated from editor/moby_classes.tsv by cmake/Games.cmake.
+extern const char *const openrac_moby_class_names;
+const char *const openrac_moby_class_names = R\"tsv(${text})tsv\";
+" @ONLY)
+  set(${out} "${cpp}" PARENT_SCOPE)
 endfunction()

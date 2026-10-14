@@ -1368,9 +1368,10 @@ void DirectRenderer::apply(const DirectState& s, RenderState& render_state) {
                 m_frame_copy_width = w;
                 m_frame_copy_height = h;
             }
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, render_state.target.framebuffer);
+            // (A multisampled frame is resolved first: readable() leaves the bindings changed.)
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, readable(render_state.target));
             glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, w, h);
-            glBindFramebuffer(GL_READ_FRAMEBUFFER,
+            glBindFramebuffer(GL_FRAMEBUFFER,
                               s.target != 0 ? offscreen(s.target).framebuffer : render_state.target.framebuffer);
         } else {
             glBindTexture(GL_TEXTURE_2D, render_state.textures.gl_texture(s.texture));
@@ -1462,6 +1463,13 @@ void DirectRenderer::apply(const DirectState& s, RenderState& render_state) {
         const float middle = 0.5f * static_cast<float>(target_width);
         x0 = static_cast<GLint>(std::floor(middle + (static_cast<float>(s.scissor.x0) * sx - middle) * k));
         x1 = static_cast<GLint>(std::ceil(middle + (static_cast<float>(s.scissor.x1 + 1) * sx - middle) * k));
+        // The HUD at the target's sides (RenderTarget::wide_2d): the television's whole width is
+        // the target's whole width.
+        if (render_state.target.wide_2d && s.scissor.x0 <= 0
+            && s.scissor.x1 + 1 >= static_cast<int>(m_config.screen_width)) {
+            x0 = 0;
+            x1 = target_width;
+        }
     }
     const auto y0 = static_cast<GLint>(std::floor(static_cast<float>(s.scissor.y0) * sy));
     const auto y1 = static_cast<GLint>(std::ceil(static_cast<float>(s.scissor.y1 + 1) * sy));
