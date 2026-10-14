@@ -16,17 +16,22 @@ class PlayerActions(unittest.TestCase):
         self.assertEqual(self.actions["repository"], [])
         for key, actions in self.actions["versions"].items():
             self.assertLessEqual({a["id"] for a in actions}, set(bundle.KEEP), key)
-        self.assertEqual(set(self.pal), {"port-levels", "play"})
+        self.assertEqual(set(self.pal), {"port-levels", "port-levels-check", "play"})
 
     def test_levels_go_to_the_data_folder(self):
         levels = self.pal["port-levels"]
-        self.assertEqual(levels["args"][-2:], ["{data}/port", "--anywhere"])
+        self.assertEqual(levels["args"][-3:], ["{data}/port", "--anywhere", "--replace"])
         self.assertTrue(levels["artifact"].startswith("{data}/port/"))
 
     def test_play_reads_them_there(self):
         play = self.pal["play"]
         self.assertNotIn("--levels", play["args"])      # the game's own default is <data>/port
-        self.assertEqual([need["path"] for need in play["needs"]], [self.pal["port-levels"]["artifact"]])
+        # Play waits for the check's stamp, and the check for the export.
+        check = self.pal["port-levels-check"]
+        self.assertEqual(check["makes"], "{data}/port/verified.json")
+        self.assertNotIn("--levels", check["args"])
+        self.assertEqual([need["path"] for need in check["needs"]], [self.pal["port-levels"]["artifact"]])
+        self.assertEqual([need["path"] for need in play["needs"]], [check["makes"]])
         self.assertNotIn("python", play.get("requires", []))
 
     def test_every_action_starts_in_a_folder_the_copy_has(self):

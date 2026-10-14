@@ -36,7 +36,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # What a player's launcher offers for a version, from launcher/actions.json. The rest (the
 # decompilation's builds and checks, the level editor, building the port) needs a checkout.
-KEEP = ("port-levels", "play")
+KEEP = ("port-levels", "port-levels-check", "play")
 # Where the carried copy writes instead of the checkout's assets/: the game's own default.
 LEVELS = "{data}/port"
 GAMES = ("openrac-rac1-pal",)
@@ -58,15 +58,21 @@ def player_actions() -> dict:
                 args = action.get("args", [])
                 if action["id"] == "port-levels":
                     # editor/extract.py port DISC OUT: OUT is the data folder's, wherever it is.
-                    action["args"] = args[:3] + [LEVELS, "--anywhere"]
+                    action["args"] = args[:3] + [LEVELS, "--anywhere", "--replace"]
                     action["artifact"] = f"{LEVELS}/level_99/manifest.json"
                     action["description"] = ("Reads the levels from your disc into the form the game draws: the worlds "
                                              "behind the menus and all 19 levels. About half a minute and 1 GB, once.")
+                elif action["id"] == "port-levels-check":
+                    at = args.index("--levels")
+                    action["args"] = args[:at] + args[at + 2:]          # <data>/port, the game's own default
+                    action["makes"] = f"{LEVELS}/verified.json"
+                    action["needs"] = [{"path": f"{LEVELS}/level_99/manifest.json", "from": need["from"]}
+                                       for need in action.get("needs", [])]
                 else:
                     at = args.index("--levels") if "--levels" in args else -1
                     if at >= 0:
                         action["args"] = args[:at] + args[at + 2:]      # the game looks in <data>/port by itself
-                    action["needs"] = [{"path": f"{LEVELS}/level_99/manifest.json", "from": need["from"]}
+                    action["needs"] = [{"path": f"{LEVELS}/verified.json", "from": need["from"]}
                                        for need in action.get("needs", [])]
                     # The game is started in the data folder: what it writes beside itself (a
                     # screenshot) has a place there, and the copy has no folder for each version.

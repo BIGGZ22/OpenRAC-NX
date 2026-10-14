@@ -230,12 +230,18 @@ mod tests {
         let file = actions::load(&checkout()).unwrap();
         let scope = Scope::Version("rac1/pal".into());
         let made = file.find(&scope, "port-levels").and_then(|a| a.artifact.clone()).expect("port-levels makes a file");
+        // Play waits for the check, which waits for the export: levels that are there but cannot
+        // be drawn (an export cut short, a file gone) were a black world behind the HUD.
+        let check = file.find(&scope, "port-levels-check").expect("port-levels-check");
+        let stamp = check.makes.clone().expect("the check leaves a stamp");
+        assert!(check.needs.iter().any(|n| n.path == made), "the check does not wait for {made}");
+        assert!(check.args.iter().any(|a| a == "--check-levels"));
         for id in ["play", "play-edited"] {
             let action = file.find(&scope, id).unwrap();
-            assert!(action.needs.iter().any(|n| n.path == made), "{id} does not wait for {made}");
+            assert!(action.needs.iter().any(|n| n.path == stamp), "{id} does not wait for {stamp}");
             let at = action.args.iter().position(|a| a == "--levels").unwrap_or_else(|| panic!("{id} has no --levels"));
             let dir = action.args[at + 1].trim_start_matches("{root}/");
-            assert!(made.starts_with(dir), "{id} draws from {dir}, port-levels writes {made}");
+            assert!(made.starts_with(dir) && stamp.starts_with(dir), "{id} draws from {dir}");
         }
     }
 
@@ -255,6 +261,8 @@ mod tests {
         assert!(levels.args.iter().any(|a| a == "{data}/port"), "{:?}", levels.args);
         let play = file.find(&scope, "play").expect("play");
         assert!(play.needs.iter().all(|n| n.path.starts_with("{data}/")), "{:?}", play.needs);
+        let check = file.find(&scope, "port-levels-check").expect("port-levels-check");
+        assert!(check.makes.as_deref().is_some_and(|m| m.starts_with("{data}/")), "{:?}", check.makes);
         assert!(file.find(&scope, "port-build").is_none() && file.repository.is_empty());
 
         // With a game set up (OPENRAC_TEST_INSTALL: an install folder whose active/rac1/data has

@@ -73,6 +73,10 @@ pub struct Action {
     /// relative to the checkout. `{artifact}` in the arguments.
     #[serde(default)]
     pub artifact: Option<String>,
+    /// A file the action leaves when it has done its work, when that is not its `artifact`
+    /// (a check run with the game's own program leaves a stamp): what `done` looks for.
+    #[serde(default)]
+    pub makes: Option<String>,
     /// Files an earlier step makes and this one cannot run without, relative
     /// to the checkout: each is `{"path": ..., "from": the step's label}`.
     #[serde(default)]
@@ -292,7 +296,8 @@ impl ActionFile {
                     problems.push(format!("{at}: planned, so it needs a todo saying what is missing"));
                 }
                 let needs = action.needs.iter().map(|n| &n.path);
-                let texts = action.program.iter().chain(&action.args).chain(&action.cwd).chain(needs);
+                let texts =
+                    action.program.iter().chain(&action.args).chain(&action.cwd).chain(needs).chain(&action.makes);
                 for text in texts {
                     for name in placeholders(text) {
                         if !PLACEHOLDERS.contains(&name.as_str()) {
@@ -344,7 +349,10 @@ impl Action {
             this_platform: self.platforms.is_empty() || self.platforms.contains(&ctx.platform),
             runnable: blockers.is_empty(),
             blockers,
-            done: self.artifact_path(ctx).is_ok_and(|p| p.exists()),
+            done: match &self.makes {
+                Some(made) => fill(made, ctx, None).is_ok_and(|p| abs(ctx.root, &p).exists()),
+                None => self.artifact_path(ctx).is_ok_and(|p| p.exists()),
+            },
         }
     }
 

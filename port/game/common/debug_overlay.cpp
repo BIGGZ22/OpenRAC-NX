@@ -135,6 +135,7 @@ struct State {
     int shots = 0;
 
     std::string message;  // what the last action said (a reload, a file written)
+    std::string notice;   // kept in the picture until cleared (debug_overlay::notice)
     std::string toast;    // the same for an action taken with the panel hidden, shown a moment
     double toast_until = 0.0;
     bool alt_alone = false;  // Alt went down and no other key since: its release toggles the menus
@@ -1386,7 +1387,7 @@ void status_badge() {
     } else if (s.stretch != 1.0) {
         line = std::format("SPEED 1/{}    F8 faster    F7 slower", static_cast<int>(s.stretch));
     }
-    if (line.empty() && s.toast.empty()) {
+    if (line.empty() && s.toast.empty() && s.notice.empty()) {
         return;
     }
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -1402,6 +1403,9 @@ void status_badge() {
         }
         if (!s.toast.empty()) {
             text_coloured(kDim, "{}", s.toast);
+        }
+        if (!s.notice.empty()) {
+            text_coloured(kRed, "{}", s.notice);
         }
     }
     ImGui::End();
@@ -1567,7 +1571,7 @@ void draw(const Shown& shown) {
     }
     stats::lap("present");
     s.window = shown.window;
-    const bool badge = s.paused || s.stretch != 1.0 || !s.toast.empty();
+    const bool badge = s.paused || s.stretch != 1.0 || !s.toast.empty() || !s.notice.empty();
     if (!(s.visible || menu_bar_shown() || badge || !s.shot_path.empty()) || shown.window == nullptr
         || !initialise(shown.window)) {
         return;
@@ -1645,6 +1649,10 @@ bool holding() {
 double tick_stretch() {
     configure();
     return s.stretch;
+}
+
+void notice(const std::string& text) {
+    s.notice = text;
 }
 
 void release() {

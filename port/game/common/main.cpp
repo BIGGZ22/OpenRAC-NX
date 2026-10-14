@@ -58,6 +58,7 @@
 #include "platform/audio.h"
 #include "platform/pump.h"
 #include "renderer/texture.h"
+#include "viewer/level.h"
 #include "viewer/moby_pose.h"
 #endif
 #ifdef OPENRAC_MOVIES
@@ -93,6 +94,7 @@ struct Options {
     fs::path settings;  // the player's settings (settings.h); in OpenRAC's data folder unless given
     fs::path debug_dump;  // each frame's measurements, a JSON object a line (docs/port/DEBUGGING.md)
     bool debug_overlay = false;  // the debug overlay shown from the start (F3 shows and hides it)
+    bool check_levels = false;  // read every extracted level as the window would, say what is wrong, and stop
 };
 
 Options g_options;
@@ -190,6 +192,8 @@ Options parse(int argc, char** argv) {
             o.debug_dump = value();
         } else if (a == "--debug-overlay") {
             o.debug_overlay = true;
+        } else if (a == "--check-levels") {
+            o.check_levels = true;
         } else if (a == "--help" || a == "-h") {
             usage(program_name() + ": " + openrac_game.title + ", native");
         } else {
@@ -817,6 +821,65 @@ extern "C" __declspec(dllimport) unsigned int __stdcall timeBeginPeriod(unsigned
 #pragma comment(lib, "winmm.lib")
 #endif
 
+#ifdef OPENRAC_FRONTEND
+// --check-levels: every level the window draws from (level_00 to level_18, the flight world 98 and
+// the title's 99) is read as the window reads it, without a window. A level that cannot be read,
+// or that has nothing to draw, is named with the reason; when all are whole, `verified.json` is
+// written beside them, which the launcher asks for before it offers Play. A game started over
+// levels that are missing or cut short shows its HUD over a black world and says nothing else.
+static int check_levels(const fs::path& levels) {
+    const fs::path stamp = levels / "verified.json";
+    std::error_code ignored;
+    fs::remove(stamp, ignored);
+    std::vector<int> ids;
+    for (int i = 0; i < 19; ++i) {
+        ids.push_back(i);
+    }
+    ids.push_back(98);
+    ids.push_back(99);
+    int bad = 0;
+    for (const int id : ids) {
+        const fs::path dir = levels / std::format("level_{:02d}", id);
+        viewer::LevelData level;
+        std::string error;
+        if (!viewer::load_level(dir, level, error)) {
+            log::error("level {:02d}: {}", id, error);
+            ++bad;
+            continue;
+        }
+        // The flight world has only its ships' textures; every other one has ground to stand on.
+        if (id != 98 && (level.vertices.empty() || level.models.empty())) {
+            log::error("level {:02d}: it has nothing to draw ({} models, {} vertices)", id, level.models.size(),
+                       level.vertices.size());
+            ++bad;
+            continue;
+        }
+        if (level.missing_images > 0) {
+            log::error("level {:02d}: {} of its textures are missing", id, level.missing_images);
+            ++bad;
+            continue;
+        }
+        log::info("level {:02d}: {} models, {} vertices, {} textures", id, level.models.size(), level.vertices.size(),
+                  level.images.size());
+    }
+    if (bad > 0) {
+        log::error("{} of {} levels in {} cannot be drawn: read them from the disc again (the launcher's "
+                   "\"Get the levels ready\"; editor/extract.py port --replace)",
+                   bad, ids.size(), levels.string());
+        return 1;
+    }
+    if (std::FILE* f = std::fopen(stamp.string().c_str(), "wb")) {
+        std::fprintf(f, "{\"format\": 1, \"levels\": %zu, \"program\": \"%s\"}\n", ids.size(), program_name().c_str());
+        std::fclose(f);
+    } else {
+        log::error("cannot write {}", stamp.string());
+        return 1;
+    }
+    log::info("all {} levels can be drawn: {}", ids.size(), stamp.string());
+    return 0;
+}
+#endif
+
 int main(int argc, char** argv) {
 #if defined(_WIN32)
     // Windows sleeps in steps of 15.6 ms unless a program asks for 1 ms: the wait for the next
@@ -824,6 +887,13 @@ int main(int argc, char** argv) {
     timeBeginPeriod(1);
 #endif
     g_options = parse(argc, argv);
+    if (g_options.check_levels) {
+#ifdef OPENRAC_FRONTEND
+        return check_levels(g_options.levels.empty() ? g_options.data / "port" : g_options.levels);
+#else
+        log::fatalf("--check-levels needs a build with the window (it reads the levels as the window does)");
+#endif
+    }
     const fs::path iso = g_options.data / "iso_data" / openrac_game.game;
     const fs::path exe = iso / openrac_game.serial;
     const fs::path disc = iso / "disc.iso";

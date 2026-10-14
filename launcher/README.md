@@ -65,7 +65,11 @@ OpenGOAL's flow, step for step ([docs/INTEGRATION.md](docs/INTEGRATION.md#settin
    (`games/<game>/game.json`). An unknown or damaged image is refused, with
    OpenGOAL's error number for the same failure.
 3. After the set-up the launcher goes on to **Get the levels ready** by itself
-   (the worlds the game draws from, read from the disc: half a minute, once).
+   (the worlds the game draws from, read from the disc: half a minute, once),
+   and then has the game **check the levels**: it reads every one as it will
+   when played and names any it cannot draw. Play is offered only after that
+   check; levels that fail it are read from the disc again, once, and checked
+   again. Without it an export cut short was a black world behind the HUD.
 4. In a checkout, **Build the game** runs [tools/build_port.py](../tools/build_port.py): it
    compiles the native port for this computer (a few minutes the first time),
    and **Rebuild** compiles again what changed after an update.

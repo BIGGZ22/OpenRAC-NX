@@ -578,8 +578,13 @@ void use_level(int number) {
         edited = std::filesystem::path(openrac_game_mods_dir) / std::format("level_{:02d}", wanted)
                  / "placements.json";
     }
+    debug_overlay::notice({});
     if (!viewer::load_level(dir, g->level, error, edited)) {
         log::warn("level {}: {} (extract it with editor/extract.py port)", wanted, error);
+        // Said in the picture: the game goes on, its HUD over a black world, and a player takes
+        // that for the game being broken.
+        debug_overlay::notice("This level's scenery could not be read, so the world is black.\n"
+                              "Close the game and run \"Check the levels\" in the launcher (the log says which file).");
         g->renderer->add(std::make_unique<renderer::DirectRenderer>("hud", renderer::Bucket::Hud, renderer::DirectConfig{}, renderer::DirectRenderer::Input::Vif), error);
         if (fresh) {
             g->renderer->init(error);

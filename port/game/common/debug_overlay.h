@@ -19,6 +19,7 @@
 
 #include <cstdint>
 #include <span>
+#include <string>
 
 #include <SDL3/SDL.h>
 
@@ -87,6 +88,9 @@ bool holding();
 double tick_stretch();
 
 // GL objects and the ImGui context, before the window's context goes.
+// A line kept in the picture until it is cleared (an empty text): something the player has to
+// know and can do something about, such as a level whose scenery could not be read.
+void notice(const std::string& text);
 void release();
 
 }  // namespace openrac::frontend::debug_overlay

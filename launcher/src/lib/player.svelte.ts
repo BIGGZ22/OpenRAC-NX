@@ -64,11 +64,7 @@ export async function setUp(game: string, title: string, image?: string): Promis
   await refresh();
   const g = app.library?.games.find((x) => x.id === game);
   const v = g ? playerVersion(g) : null;
-  const levels = v ? action(v, "port-levels") : null;
-  if (v && levels?.runnable && !levels.done) {
-    await runChain({ kind: "version", key: v.key }, [levels]);
-    await refresh();
-  }
+  if (v && levelsNeeded(action(v, "port-levels"), action(v, "port-levels-check"))) await prepareLevels(v);
   return true;
 }
 
@@ -126,6 +122,7 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
   const play = action(v, "play");
   const build = action(v, "port-build");
   const levels = action(v, "port-levels");
+  const check = action(v, "port-levels-check");
   const setUp = game.install?.extracted ?? null;
   const other = setUp && setUp.version !== v.key ? (game.versions.find((o) => o.key === setUp.version) ?? null) : null;
   const installing = jobs.list.find((j) => j.actionId === `install:${v.game}` && live(j)) ?? null;
@@ -198,7 +195,7 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       tone: "ok",
     };
   }
-  const building = jobOf(v, ["port-build", "port-levels"]);
+  const building = jobOf(v, ["port-build", "port-levels", "port-levels-check"]);
   if (building) {
     return {
       ...base,
@@ -211,7 +208,7 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
           ? "Reading the levels from your disc…"
           : "Building the game for this computer…"),
       job: building,
-      status: building.actionId === "port-levels" ? "Getting ready…" : "Building…",
+      status: building.actionId === "port-build" ? "Building…" : "Getting ready…",
       tone: "warn",
     };
   }
@@ -227,13 +224,18 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       tone: "ok",
     };
   }
-  if (play.done && levels?.runnable && !levels.done) {
+  // The levels are ready when the game itself has read every one of them (the check's stamp),
+  // not when their folder is there: an export cut short was a black world behind the HUD.
+  if (play.done && levelsNeeded(levels, check)) {
+    const read = !!levels?.done;
     return {
       ...base,
       kind: "levels",
-      label: "Get the levels ready",
+      label: read ? "Check the levels" : "Get the levels ready",
       icon: "disc",
-      hint: "Reads the levels from your disc so the game can draw them. About half a minute and 1 GB, once.",
+      hint: read
+        ? "Makes sure every level was read from your disc whole, and reads them again if not. A few seconds."
+        : "Reads the levels from your disc so the game can draw them. About half a minute and 1 GB, once.",
       primary: true,
       status: "Needs its levels",
       tone: "warn",
@@ -264,6 +266,47 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
   };
 }
 
+/** Something of the levels is still to do: reading them, or (where the version has it) the check. */
+function levelsNeeded(levels: ActionView | null, check: ActionView | null): boolean {
+  if (levels?.runnable && !levels.done) return true;
+  return !!check && !check.done && (check.runnable || !!levels?.runnable);
+}
+
+/**
+ * Reads the levels from the disc if that is still to do, then has the game check them. Levels that
+ * are there but fail the check are read again, once, and checked again: a player is not left
+ * with a button that fails the same way each time.
+ */
+export async function prepareLevels(v: VersionView): Promise<boolean> {
+  const scope = { kind: "version" as const, key: v.key };
+  const fresh = () => app.library?.games.flatMap((g) => g.versions).find((x) => x.key === v.key) ?? v;
+  const levels = action(v, "port-levels");
+  const check = action(v, "port-levels-check");
+  if (!check) {
+    const ok = !!levels && (await runChain(scope, [levels]));
+    await refresh();
+    return ok;
+  }
+  if (levels && !levels.done && !(await runChain(scope, [levels]))) return false;
+  await refresh();
+  let again = action(fresh(), "port-levels-check");
+  if (again && (await runChain(scope, [again]))) {
+    await refresh();
+    return true;
+  }
+  // The check named levels it cannot draw: read them all again, in the old ones' place.
+  const reread = action(fresh(), "port-levels");
+  if (!reread?.runnable) return false;
+  toast("Some levels could not be drawn. Reading them from your disc again…");
+  if (!(await runChain(scope, [reread]))) return false;
+  await refresh();
+  again = action(fresh(), "port-levels-check");
+  const ok = !!again && (await runChain(scope, [again]));
+  await refresh();
+  if (!ok) toast("The levels still cannot be drawn: see Activity for which, and why.", "error");
+  return ok;
+}
+
 /** Does what the main button says. */
 export async function playerAct(v: VersionView, state: PlayerState): Promise<void> {
   const scope = { kind: "version" as const, key: v.key };
@@ -275,14 +318,20 @@ export async function playerAct(v: VersionView, state: PlayerState): Promise<voi
     await setUp(v.game, v.title, foundDisc(v.game)?.path);
     return;
   }
-  const levels = action(v, "port-levels");
   if (state.kind === "build") {
     // Building is not enough to play: the levels come with it, the first time.
     const build = action(v, "port-build");
-    const steps = [build, levels && !levels.done ? levels : null].filter((a) => a !== null);
-    if (await runChain(scope, steps)) await refresh();
+    if (build && (await runChain(scope, [build]))) {
+      await refresh();
+      const now = app.library?.games.flatMap((g) => g.versions).find((x) => x.key === v.key) ?? v;
+      if (levelsNeeded(action(now, "port-levels"), action(now, "port-levels-check"))) await prepareLevels(now);
+    }
     return;
   }
-  const act = state.kind === "play" ? action(v, "play") : state.kind === "levels" ? levels : null;
+  if (state.kind === "levels") {
+    await prepareLevels(v);
+    return;
+  }
+  const act = state.kind === "play" ? action(v, "play") : null;
   if (act) await run(scope, act);
 }
