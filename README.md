@@ -9,21 +9,23 @@ Each game is matched function by function until it compiles to a byte-identical
 copy of the original, and that C then runs on PC the way OpenGOAL brought Jak
 and Daxter there. No emulation.
 
-OpenRAC holds no game code or assets. You build everything from your own discs.
+OpenRAC holds none of the games' data: the models, textures, sound and levels
+come from your own disc.
 
 ![The OpenRAC launcher: the games, each version's progress and what is ready](launcher/docs/screenshots/library.webp)
 
 ## Play
 
-The launcher ([launcher/](launcher/README.md)) is the way in: it sets a game up
-from your disc, builds the native port and starts it, keeps your saves, and
-opens the levels in the editor. While you play, Discord shows the game and the
-planet you are on.
+1. **[Download the launcher](https://github.com/OpenRAC/OpenRAC/releases/latest)**
+   for your system and install it.
+2. Start it and choose the folder with your PlayStation 2 disc images (`.iso`).
+   It finds Ratchet & Clank there and gets it ready by itself.
+3. Press **Play**.
 
-```sh
-git clone https://github.com/OpenRAC/OpenRAC.git && cd OpenRAC/launcher
-corepack enable && yarn install && yarn tauri dev
-```
+Nothing else to install: the launcher carries the game, built for your system,
+and everything that prepares it. You need the image of your own disc; OpenRAC
+never downloads a game. The release page says which file to pick for your
+system, and what is known not to work yet.
 
 ![A game's page: build and play, the level editor, the memory card's save slots](launcher/docs/screenshots/game.webp)
 
@@ -67,6 +69,17 @@ own directory. The game pages ([games/](games/README.md)) explain how the
 versions relate and where to start.
 
 ## Decompiling
+
+Contributors work from a checkout. The launcher finds it, and with **developer
+tools** on in its Settings it builds the port from your tree and runs the
+decompilations' builds and checks; to run the launcher itself from source:
+
+```sh
+git clone https://github.com/OpenRAC/OpenRAC.git && cd OpenRAC/launcher
+corepack enable && yarn install && yarn tauri dev
+```
+
+The decompilations' own tools:
 
 ```sh
 # Put images of your own discs in baserom/ (see baserom/README.md), then:

@@ -58,8 +58,10 @@ fn get_config(state: State<'_, AppState>) -> Config {
 }
 
 #[tauri::command]
-fn save_config(state: State<'_, AppState>, config: Config) -> Result<Config, String> {
+fn save_config(state: State<'_, AppState>, mut config: Config) -> Result<Config, String> {
     let file = state.config_file.as_deref().ok_or("no per-user config folder")?;
+    // Developer tools switched off: back to the carried copy (detect::settle).
+    detect::settle(&mut config, state.bundled.as_deref());
     config::save(file, &config)?;
     *state.config.lock().unwrap() = config.clone();
 
@@ -466,22 +468,13 @@ pub fn run() {
                 config.install_dir = app.path().app_local_data_dir().ok();
             }
 
-            // The copy of OpenRAC the launcher carries. A folder that is gone (the copy of an
-            // earlier install: an AppImage is mounted at another place each time) or was never
-            // chosen gives way to it, and the same for its Python.
+            // The copy of OpenRAC the launcher carries: what a player plays from (detect::settle).
             // A copy whose Python does not run here is not for this machine (an Intel Mac has the
             // Apple silicon one): the launcher then works on a checkout, as it did.
             let bundled = app.path().resource_dir().ok().and_then(|dir| detect::bundled_root(&dir)).filter(|dir| {
                 detect::bundled_python(dir).is_some_and(|python| detect::check_tool(Tool::Python, &python).ok)
             });
-            if let Some(dir) = &bundled {
-                if !config.root.as_deref().is_some_and(openrac_launcher_core::is_openrac_root) {
-                    config.root = Some(dir.clone());
-                }
-                if config.root.as_ref() == Some(dir) && !config.python.as_deref().is_some_and(Path::is_file) {
-                    config.python = detect::bundled_python(dir);
-                }
-            }
+            detect::settle(&mut config, bundled.as_deref());
 
             let client_id = config
                 .discord_client_id
