@@ -380,7 +380,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
   switch (command) {
     case "app_info":
       return delay<AppInfo>({
-        version: "0.3.0-preview",
+        version: "0.4.0-preview",
         platform,
         configFile: "~/.config/dev.openrac.launcher/launcher.json",
         // ?standalone shows an installed launcher's pages: no checkout, nothing to find.
