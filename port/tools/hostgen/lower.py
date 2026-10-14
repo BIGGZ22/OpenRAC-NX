@@ -1319,6 +1319,26 @@ class Unit:
                 addr = f"OPENRAC_LDATA({level}, {addr})"
         return LV(self.gref(t, addr), addr)
 
+    def _variant_call(self, sym: str) -> tuple[int, int, int, int] | None:
+        """For a call from a level function placed in several levels to a level function missing
+        from some of them (a level whose copy of the caller calls a variant of its own there): the
+        level the caller is written for, its place there, its size, and the callee's place there."""
+        fn = self.fn
+        if fn is None or not getattr(self.program, "relocate", None) or not LEVEL_NAME.match(fn.name):
+            return None
+        caller = [(o, a) for o, a in self.program.code_places(fn.name) if o >= 0]
+        callee = [(o, a) for o, a in self.program.code_places(sym) if o >= 0]
+        caller_levels, callee_levels = {o for o, _ in caller}, {o for o, _ in callee}
+        if len(caller_levels) < 2 or not callee_levels or caller_levels <= callee_levels:
+            return None
+        level = self._shared_level()
+        home = level if level is not None else min(caller_levels)
+        if home not in callee_levels:
+            return None
+        canon = next(a for o, a in caller if o == home)
+        own = next(a for o, a in callee if o == home)
+        return home, canon, getattr(self.program, "sizes", {}).get(fn.name) or 0x400, own
+
     def _copies_in_one_program(self) -> tuple[int, int, int] | None:
         """For a level function the catalogue places more than once in one program (the same code
         on other globals): the program it is written for, its place there and its size."""
@@ -1442,6 +1462,13 @@ class Unit:
                     # call): the function this copy's own call at that place calls (guest.h).
                     home, canon, size = copy
                     own = next((a for o, a in callee_places if o == home), callee_places[0][1])
+                    self.fn.report.calls.add(sym)
+                    self.fn.uses_self = True
+                    fp = f"openrac_call_in_copy({home}, {hexaddr(canon)}, {size}u, openrac_self_, {hexaddr(own)})"
+                elif not places and (variant := self._variant_call(sym)) is not None:
+                    # Engine code several levels carry, calling a level function some of those levels
+                    # have another of in its place: the function this copy's own call calls.
+                    home, canon, size, own = variant
                     self.fn.report.calls.add(sym)
                     self.fn.uses_self = True
                     fp = f"openrac_call_in_copy({home}, {hexaddr(canon)}, {size}u, openrac_self_, {hexaddr(own)})"
