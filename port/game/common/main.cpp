@@ -371,6 +371,17 @@ int openrac_game_vsync(void) {
         }
         log::info("frame {} watch{}", g_frame, line);
     }
+    // OPENRAC_GUARD=FRAME:ADDRESS:BYTES[:SKIP]: from FRAME on, the first write (after SKIP) into
+    // those bytes of game memory ends the program with the host's stack (runtime::guard_writes), to find who corrupts it.
+    static const char* guard = std::getenv("OPENRAC_GUARD");
+    if (guard != nullptr) {
+        unsigned long from = 0, address = 0, bytes = 4, skip = 0;
+        std::sscanf(guard, "%lu:%lx:%lx:%lu", &from, &address, &bytes, &skip);
+        if (g_frame >= from) {
+            runtime::guard_writes(static_cast<gaddr>(address), static_cast<std::uint32_t>(bytes),
+                                  static_cast<std::uint32_t>(skip));
+        }
+    }
     // OPENRAC_HITCH: each frame that took more than twice the frame time, with how long, in the log.
     static const bool& hitch = stats::probe("OPENRAC_HITCH", "each tick that took over 1.25 tick times, in the log");
     static steady_clock::time_point last = now;

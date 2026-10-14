@@ -60,4 +60,9 @@ private:
 // program ends.
 void install_crash_handler();
 
+// A debugging aid (OPENRAC_GUARD): the write after the first `skip` into [address, address + bytes)
+// of game memory is reported with the host's stack and ends the program. Other writes to the same pages pass and
+// disarm it until it is called again (once a frame). POSIX only.
+void guard_writes(gaddr address, std::uint32_t bytes, std::uint32_t skip = 0);
+
 }  // namespace openrac::runtime

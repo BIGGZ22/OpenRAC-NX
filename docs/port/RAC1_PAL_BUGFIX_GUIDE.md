@@ -98,6 +98,7 @@ All are environment variables read by the game.
 | `OPENRAC_PRESS=FRAME:MASK:FRAMES[:LX:LY[:RX:RY]],...` | Scripted pad. Mask in hex: `8` Start, `4000` Cross, `8000` Square (the wrench). Sticks 0 to 255, 128 centred, 0 is left or up. The stick is relative to the camera, which turns as the hero moves, so it is poor for reaching a place |
 | `OPENRAC_WRITE=FRAME:ADDR:VALUE[:FRAMES],...` | Writes a 32-bit word (hex) into game memory. For getting somewhere in a test only, never as a fix |
 | `OPENRAC_WATCH=ADDR:COUNT[:i],...` | Logs COUNT floats (or ints with `:i`) from each address every frame, at most 32 per address |
+| `OPENRAC_GUARD=FRAME:ADDR:BYTES[:SKIP]` | From FRAME on, the first write (after SKIP) into those bytes of game memory stops the program with the host stack of the writer: who corrupts a value. Linux x86-64 |
 | `OPENRAC_MOBY_LOG=N[:RADIUS]` | Every N frames, one line per live moby within RADIUS of the hero: class, address, state, mode bits, animation sequence, frame and fraction, position, update function, pvars |
 | `OPENRAC_HIT_LOG=1` | Each damage sphere and the classes it listed |
 | `OPENRAC_SOUND_LOG=1` | Each command the game sends its sound driver, with the reply |
