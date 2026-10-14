@@ -285,6 +285,26 @@ class Translate(unittest.TestCase):
         self.assertEqual(out, ["42"])
         self.assertEqual(self.last_report["candidates_used"], ["func_00110100"])
 
+    def test_a_candidate_steps_aside_for_what_the_file_has_matched(self):
+        """One file of the port's own C for two functions; the decompilation has since matched one:
+        the copy of that one is left out, or the file would define it twice and not be read."""
+        source = (
+            'int func_00100000(int a) { return a + 1; }\n'
+            'INCLUDE_ASM("asm", func_00100010);\n'
+        )
+        both = (
+            'int func_00100010(int a) { return a * 2; }\n'
+            '/* the same at a joint: "}" in a string, and a brace in a comment } */\n'
+            'int func_00100000(int a) {\n    const char *s = "}";\n    if (a) { return a + 1; }\n    return s[0];\n}\n'
+        )
+        used = set()
+        text = prep.use_candidates(source, {"func_00100010": both, "func_00100000": both}, used)
+        self.assertEqual(used, {"func_00100010"})
+        self.assertEqual(text.count("int func_00100000(int a)"), 1)      # the matched one only
+        self.assertIn("return a * 2;", text)
+        self.assertIn("func_00100000 is matched C in this file now", text)
+        self.assertNotIn('const char *s = "}"', text)
+
     def test_function_pointers_by_code_address(self):
         out = self.run_program({"a.c": """
             int func_00110000(int x) { return x + 1; }
