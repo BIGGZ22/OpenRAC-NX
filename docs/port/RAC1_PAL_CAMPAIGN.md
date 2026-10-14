@@ -1498,3 +1498,22 @@ the Cross press the run waits on the menu at level -1 and shows nothing).
   func_L10_002BFBB8; 12 func_L01_0026EFB8; 13 func_L07_0031C2B0; 14 and 15
   func_L14_002B2A28; 16 func_L00_002CABC0; 18 func_L18_002F9D48.
 - Open and next: those blockers, in that order; level 17's hero freeze.
+
+### Every level past 3,000 ticks, 2026-10-14
+
+All 19 levels now run 3,000 scripted ticks (`OPENRAC_DIRECT`, `--keep-going`) with no crash, hang
+or call to an unknown code address. The fixes, each found by running a level:
+
+- `func_00216270`'s 25 other places (wrappers on other functions and data) split out
+  (`split_places.tsv`): the checkpoint restore crashed levels 2, 7, 9, 13 and 14.
+- hostgen keeps a typedef's `aligned` attribute and aligns typedef'd vector locals: misaligned
+  `movaps` in levels 1 and 4.
+- The game's code runs rounding toward zero, as the EE's FPU does: a scale stepped by 0.1 went
+  negative under round-to-nearest (level 6's grid assertion, level 11's stray calls).
+- `func_0020E3D0` reads a key's infinite rate as the EE does (0 * rate = 0, not NaN): level 9 hung.
+- Copies of one function in one program use their own globals (`openrac_data_in_copy`) and are
+  called through the caller's own `jal`; a function's own place is found when C calls it directly;
+  register moves are followed when pairing addresses: stray calls in levels 1, 11 and 13.
+
+Still open: functions without C met in levels 2, 4-8, 10 and 13-16 (1 to 4 each), and none of
+this is a playthrough. `OPENRAC_GUARD` (BUGFIX_GUIDE) finds who writes a corrupted value.
