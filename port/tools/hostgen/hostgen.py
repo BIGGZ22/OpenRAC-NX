@@ -400,6 +400,7 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         "functions_without_c": len(no_c),
         "functions_without_c_asm": sum(1 for f in no_c if f.asm),
         "arguments_passed_through": sum(f.passthrough for f in fns),
+        "arguments_filled_with_zero": {f.name: f.zero_args for f in fns if f.zero_args},
         "hardware_accesses": sum(f.hw for f in fns),
         "functions_touching_hardware": sorted(f.name for f in fns if f.hw),
         "stub_reasons": dict(sorted(reasons.items(), key=lambda kv: -kv[1])),
@@ -423,6 +424,8 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         f"| Functions from candidates (C that is not the matched C) | {len(extra.get('candidates_used', []))} |",
         f"| Functions by code address | {extra.get('addresses', 0)} |",
         f"| Arguments passed through from the caller's registers | {summary['arguments_passed_through']} |",
+        f"| Arguments a call leaves out, filled with 0 | "
+        f"{sum(len(v) for v in summary['arguments_filled_with_zero'].values())} |",
         f"| Accesses to hardware register addresses | {summary['hardware_accesses']} "
         f"in {len(summary['functions_touching_hardware'])} functions |",
         "",
@@ -431,6 +434,19 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         *[f"- {n} x {why}" for why, n in summary["stub_reasons"].items()],
         "",
     ]
+    if summary["arguments_filled_with_zero"]:
+        md += [
+            "## Calls short of arguments, filled with 0",
+            "",
+            "The callee takes more than the call passes, and the caller has no argument of its own in",
+            "that register. On the console the register held whatever the caller last left there, which",
+            "the C does not say: check each against the assembly, and pass the value explicitly.",
+            "",
+            "| Caller | Callee and argument |",
+            "|---|---|",
+            *[f"| {caller} | {', '.join(args)} |" for caller, args in sorted(summary["arguments_filled_with_zero"].items())],
+            "",
+        ]
     if frontier["roots"]:
         md += [
             "## The frontier: what the program reaches that has no C",

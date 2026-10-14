@@ -192,6 +192,21 @@ class Translate(unittest.TestCase):
         """})
         self.assertEqual(out, ["0", "16", "5", "0", "0", "0"])
 
+    def test_a_call_short_of_arguments_is_reported(self):
+        # The caller has no argument of its own for the callee's second: the register held
+        # whatever the caller left there, so the call is filled with 0 and listed.
+        out = self.run_program({
+            "callee.c": """
+                int two(int a, int b) { return a + b; }
+            """,
+            "caller.c": """
+                extern int two(int);
+                int test_main(void) { test_print(two(5)); return 0; }
+            """,
+        })
+        self.assertEqual(out, ["5"])
+        self.assertEqual(self.last_report["arguments_filled_with_zero"], {"test_main": ["two argument 2"]})
+
     def test_calls_follow_the_definition(self):
         # The caller declares the callee with its float and integer arguments
         # swapped, and with one argument fewer: on the EE that call still

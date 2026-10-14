@@ -81,6 +81,7 @@ class FnReport:
     status: str                  # "translated", "stub"
     reason: str = ""
     passthrough: int = 0         # arguments passed through from the caller's registers
+    zero_args: list = field(default_factory=list)  # calls short of arguments the caller had none for
     hw: int = 0                  # accesses to hardware register addresses
     calls: set = field(default_factory=set)  # functions it calls or takes the address of
 
@@ -1675,6 +1676,9 @@ class Unit:
                 else:
                     out.append(self._cast_to(regs[k], p))
             else:
+                # Nothing of the caller's own in that register either: on the console it held
+                # whatever the caller last put there, which C does not say (hostgen's report).
+                self.fn.report.zero_args.append(f"{sym} argument {len(out) + 1}")
                 out.append(self._cast_to("0", p))
         if sig.variadic:
             extra = {id(a) for a in ints[ni:] + floats[nf:]}
