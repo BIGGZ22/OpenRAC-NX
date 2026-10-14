@@ -3,32 +3,32 @@
 #include "rnc/ui/vendor/vendor_item_info.h"
 #include "rnc/gameplay/hero.h"
 #include "asm.h"
+#include "rnc/globals.h"
 
 /* Draws the weapon HUD tile: three-part frame, weapon icon and ammo text with shadow, faded by the slide-in timers. */
 /* Ported from rac1-decomp (src/overlays/shared/hud_00235960.c: func_L00_0023B140), where it is exact; names translated to the US level program. */
 
 extern char D_L00_0015F7C8[];
 extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
-extern int D_0015ED80;
 extern int FUN_001fa6e0(int, int, float);
 extern int find_valid_animation_frame_index_alt(int, int) __asm__("FUN_001ff960");
 extern int sprintf_alt(char *, const char *, ...) __asm__("FUN_00116248");
 extern s32 truncate_float_to_s32(f32) __asm__("FUN_001fa6d0");
-extern short D_L00_0015F91C_d __asm__("D_L00_0015F91C") __attribute__((sda));
-extern short D_L00_0015F920_d __asm__("D_L00_0015F920") __attribute__((sda));
-extern short D_L00_0015F924_d __asm__("D_L00_0015F924") __attribute__((sda));
-extern short D_L00_0015F928_d __asm__("D_L00_0015F928") __attribute__((sda));
-extern short D_L00_0015F92C_d __asm__("D_L00_0015F92C") __attribute__((sda));
-extern short D_L00_0015F930_d __asm__("D_L00_0015F930") __attribute__((sda));
-extern short D_L00_0015F934_d __asm__("D_L00_0015F934") __attribute__((sda));
-extern short D_L00_0015F938_d __asm__("D_L00_0015F938") __attribute__((sda));
-extern short D_L00_0015F93C_d __asm__("D_L00_0015F93C") __attribute__((sda));
-extern short D_L00_0015F940_d __asm__("D_L00_0015F940") __attribute__((sda));
+extern s32 D_L00_0015F91C_gp __asm__("D_L00_0015F91C") __attribute__((sda));
+extern s32 D_L00_0015F920_gp __asm__("D_L00_0015F920") __attribute__((sda));
 extern void hud_frame(char *, int, int, int, int, int) __asm__("FUN_L00_0023b120");
 void draw_hud_sprite(s32 id, s32 x, s32 y, s32 w, s32 h, s32 alpha) __asm__("FUN_001ffc30");
 void draw_hud_sprite_flipped(s32 id, s32 x, s32 y, s32 w, s32 h, s32 alpha) __asm__("FUN_001ffe18");
 void font_print_right(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4) __asm__("FUN_001f6940");
 
+extern short D_L00_0015F924 __attribute__((sda));
+extern short D_L00_0015F928 __attribute__((sda));
+extern short D_L00_0015F92C __attribute__((sda));
+extern short D_L00_0015F930 __attribute__((sda));
+extern short D_L00_0015F934 __attribute__((sda));
+extern short D_L00_0015F938 __attribute__((sda));
+extern short D_L00_0015F93C __attribute__((sda));
+extern short D_L00_0015F940 __attribute__((sda));
 int FUN_L00_0023a7a8(char *m) {
     char buf[16];
     char *q = m + 0x70;
@@ -36,20 +36,20 @@ int FUN_L00_0023a7a8(char *m) {
     int y = 0x12;
     int x, a, alpha, w, s16, tex, c1, wd, v74;
     float f21, f20;
-    if (D_0015ED80)
+    if (pal_mode)
         y = 0xA;
     x = *(int *)(m + 0x50);
     if (*(unsigned char *)(m + 0x70) == 0)
         return *(int *)(m + 0x58);
     {
         f20 = convert_integer_to_float(*(unsigned char *)(m + 0x70));
-        f21 = f20 / convert_integer_to_float(*(int *)&D_L00_0015F91C_d);
+        f21 = f20 / convert_integer_to_float(*(int *)&D_L00_0015F91C_gp);
         if (f21 > 1.0f)
             f21 = 1.0f;
         else if (f21 < 0.0f)
             f21 = 0.0f;
         f20 = convert_integer_to_float(*(unsigned char *)(q + 1));
-        f20 = f20 / convert_integer_to_float(*(int *)&D_L00_0015F920_d);
+        f20 = f20 / convert_integer_to_float(*(int *)&D_L00_0015F920_gp);
         if (f20 > 1.0f)
             f20 = 1.0f;
         else if (f20 < 0.0f)
@@ -57,9 +57,9 @@ int FUN_L00_0023a7a8(char *m) {
         alpha = truncate_float_to_s32(f21 * 128.0f);
         a = truncate_float_to_s32((float)alpha * 0.7f);
         if (*(int *)(m + 8) < 100)
-            w = *(int *)&D_L00_0015F924_d;
+            w = *(int *)&D_L00_0015F924;
         else
-            w = *(int *)&D_L00_0015F928_d;
+            w = *(int *)&D_L00_0015F928;
         x4 = x + 4;
         wd = x + truncate_float_to_s32((float)w * f21);
         draw_hud_sprite(find_valid_animation_frame_index_alt(0x7580, 1), x - 0x1C, y, 0x20, 0x20,
@@ -73,15 +73,15 @@ int FUN_L00_0023a7a8(char *m) {
         v74 = *(int *)(m + 0x74);
         sprintf_alt(buf, D_L00_0015F7C8, v74, *(int *)(m + 8));
         if (v74 != 0)
-            s16 = FUN_001fa6e0(*(int *)&D_L00_0015F92C_d, *(int *)&D_L00_0015F930_d, f20);
+            s16 = FUN_001fa6e0(*(int *)&D_L00_0015F92C, *(int *)&D_L00_0015F930, f20);
         else
-            s16 = FUN_001fa6e0(*(int *)&D_L00_0015F934_d, *(int *)&D_L00_0015F938_d, f20);
+            s16 = FUN_001fa6e0(*(int *)&D_L00_0015F934, *(int *)&D_L00_0015F938, f20);
         c1 = FUN_001fa6e0(0, 0x80000000, f20);
         {
-            int tx = x + *(int *)&D_L00_0015F93C_d + w;
-            font_print_right(tx + 1, y + *(int *)&D_L00_0015F940_d + 1, c1, buf, -1);
+            int tx = x + *(int *)&D_L00_0015F93C + w;
+            font_print_right(tx + 1, y + *(int *)&D_L00_0015F940 + 1, c1, buf, -1);
         }
-        font_print_right(x + *(int *)&D_L00_0015F93C_d + w, y + *(int *)&D_L00_0015F940_d, s16, buf,
+        font_print_right(x + *(int *)&D_L00_0015F93C + w, y + *(int *)&D_L00_0015F940, s16, buf,
                          -1);
     }
     return *(int *)(m + 0x58);
@@ -101,12 +101,12 @@ typedef struct {
     int p8;
     int start;
 } O_23aaa8;
-extern T_23aaa8 *D_L00_0017E4F4_23aaa8 __asm__("D_L00_0017E4F4") __attribute__((section(".data")));
 extern int D_L00_0015F5CC_23aaa8 __asm__("D_L00_0015F5CC");
 int FUN_001f96f8_23aaa8(int) __asm__("FUN_001f96f8");
 int FUN_00213260_23aaa8(int) __asm__("FUN_00213260");
+extern T_23aaa8 *D_L00_0017E4F4 __attribute__((section(".data")));
 int FUN_L00_0023aaa8(O_23aaa8 *o) {
-    T_23aaa8 *t = &D_L00_0017E4F4_23aaa8[o->id];
+    T_23aaa8 *t = &D_L00_0017E4F4[o->id];
     int r;
     int k, a;
     r = 0;
@@ -206,10 +206,10 @@ int FUN_L00_0023ac78(int call) {
     } while ((int)e < (int)(hud_elements + 13));
     return n;
 }
-extern int D_L00_0015F968_23adb8 __asm__("D_L00_0015F968") __attribute__((sda));
-extern int D_L00_0015F96C_23adb8 __asm__("D_L00_0015F96C");
-extern int D_L00_0015F970_23adb8 __asm__("D_L00_0015F970");
-extern int D_0013D428_23adb8[] __asm__("D_0013D428");
+extern int D_L00_0015F968_gp __asm__("D_L00_0015F968") __attribute__((sda));
+extern int D_L00_0015F96C;
+extern int D_L00_0015F970;
+extern int weapon_ammo_counts[] __asm__("D_0013D428");
 extern int FUN_001ff308_23adb8(int, int, void *, void *, void *, void *,
                                int) __asm__("FUN_001ff308");
 extern void FUN_001ff570_23adb8(int, int) __asm__("FUN_001ff570");
@@ -223,7 +223,7 @@ extern void FUN_L00_0023a640_23adb8(void) __asm__("FUN_L00_0023a640");
 void FUN_L00_0023adb8(void) {
     struct Hero *g;
     int n, mode, k;
-    if (D_L00_0015F968_23adb8 != 0) {
+    if (D_L00_0015F968_gp != 0) {
         return;
     }
     g = &hero;
@@ -232,33 +232,33 @@ void FUN_L00_0023adb8(void) {
     n = (&D_L00_001C40B0[0] + n)->h8 ? n : 0;
     n = mode ? 0 : n;
     if (n != 0) {
-        D_L00_0015F96C_23adb8 = n;
-        *(volatile int *)&D_L00_0015F970_23adb8 = FUN_001ff308_23adb8(
+        D_L00_0015F96C = n;
+        *(volatile int *)&D_L00_0015F970 = FUN_001ff308_23adb8(
             0x10, n + 60000, FUN_L00_0023a760_23adb8, FUN_L00_0023cdb8_23adb8,
-            FUN_L00_0023a7a8_23adb8, &D_0013D428_23adb8[n], D_L00_001C40B0[n].hE);
+            FUN_L00_0023a7a8_23adb8, &weapon_ammo_counts[n], D_L00_001C40B0[n].hE);
     } else if (k = -1, mode == 2) {
-        if (D_L00_0015F970_23adb8 != k) {
-            FUN_001ff570_23adb8(D_L00_0015F970_23adb8, 0);
-            D_L00_0015F970_23adb8 = k;
+        if (D_L00_0015F970 != k) {
+            FUN_001ff570_23adb8(D_L00_0015F970, 0);
+            D_L00_0015F970 = k;
         }
         g->unk1634 =
             FUN_001ff308_23adb8(0x10, 0xFFFF, FUN_L00_00235d80_23adb8, FUN_L00_00235ea0_23adb8,
                                 FUN_L00_0023a640_23adb8, &g->unk1630, 200);
     } else {
-        if (D_L00_0015F970_23adb8 != k) {
-            FUN_001ff570_23adb8(D_L00_0015F970_23adb8, 0);
-            D_L00_0015F970_23adb8 = k;
+        if (D_L00_0015F970 != k) {
+            FUN_001ff570_23adb8(D_L00_0015F970, 0);
+            D_L00_0015F970 = k;
         }
     }
 }
 void FUN_L00_00235878();
-extern int D_L00_0015F968 __attribute__((sda));
+extern int D_L00_0015F968_gp __asm__("D_L00_0015F968") __attribute__((sda));
 extern int D_L00_0015F970;
 extern int D_L00_0015F96C;
 /* Resets via FUN_L00_00235878, then sets the three state words to 1, -1 and 0. */
 void FUN_L00_0023aef8(void) {
     FUN_L00_00235878();
-    D_L00_0015F968 = 1;
+    D_L00_0015F968_gp = 1;
     D_L00_0015F970 = -1;
     D_L00_0015F96C = 0;
 }

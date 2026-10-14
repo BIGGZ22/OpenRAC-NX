@@ -5,12 +5,12 @@
 #include "asm.h"
 
 extern u8 D_L02_001CB9C0[];
-extern float D_L02_001CB500f[] __asm__("D_L02_001CB500");
 extern s32 D_L02_001612A0 __attribute__((sda));
 extern s32 D_L02_001612A4;
 extern s32 D_L02_001612A8;
 extern s32 D_L02_001612AC;
 
+extern float D_L02_001CB500[];
 void FUN_L02_002a4058(char *arg, int val, float scale) {
     int i;
     float *p;
@@ -22,7 +22,7 @@ void FUN_L02_002a4058(char *arg, int val, float scale) {
     *(s32 *)(D_L02_001CB9C0 + 0x8) = D_L02_001612A8;
     *(s32 *)(D_L02_001CB9C0 + 0xC) = D_L02_001612AC;
     p = (float *)(D_L02_001CB9C0 + 0x10);
-    base = D_L02_001CB500f;
+    base = D_L02_001CB500;
     q = base + 4;
     for (i = 0xF7; i >= 0; i--) {
         *p = *q * scale;
@@ -89,7 +89,7 @@ extern float D_L02_001612FC;
 extern float D_L02_00161300;
 extern float D_L02_00161304;
 extern char D_L02_001673C0[];
-extern char font_vu_program[] __asm__("D_0010E810");
+extern u8 font_vu_program[] __asm__("D_0010E810");
 extern char D_L02_001CB8F0[];
 extern QuadFrame D_L02_0016D780[];
 extern char *D_L02_0015F420;
@@ -250,11 +250,6 @@ void FUN_L02_002a40f0(QuadDrawArgs *arg) {
 
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002A5218.c: func_L02_002A58C0), where it is exact; names translated to the US level program. */
 
-extern char D_L02_0016D040[];
-extern float D_L02_001612F8;
-extern float D_L02_001612FC;
-extern float D_L02_00161300;
-extern float D_L02_00161304;
 extern int *D_L02_001611C0;
 extern void FUN_001f2260(void);
 extern void vu1_add_vif_code(int) __asm__("FUN_00233938");
@@ -421,31 +416,19 @@ typedef struct {
 
 extern char D_0013C940[];
 extern char D_0013FDE8[];
-extern char D_L02_00167280[];
 extern f32 advance_accelerated_scalar(f32 *, f32 *, f32, f32, f32, f32) __asm__("func_00213F38");
 extern f32 fast_add_rotations_c(f32, f32) __asm__("func_001FA580");
 extern f32 fast_subtract_rotations(f32, f32) __asm__("func_001FA5C8");
 extern float D_0015ED6C __attribute__((section(".sdata")));
 extern float D_0015ED70 __attribute__((section(".sdata")));
-extern float D_L02_00161AA0[4][4];
 extern float fast_difference_between_rotations(float, float) __asm__("func_001FA688");
-extern int D_0013F350; /* no foreign declaration */
-extern int D_0014C190; /* no foreign declaration */
 extern int D_0015ED84; /* no foreign declaration */
-extern int D_L02_00161AA4 __attribute__((sda)); /* no foreign declaration */
-extern int D_L02_00161AA8 __attribute__((sda)); /* no foreign declaration */
-extern int D_L02_00179A10; /* no foreign declaration */
-extern int D_L02_0017EB08; /* no foreign declaration */
-extern int D_L02_001BAAD0; /* no foreign declaration */
-extern int D_L02_001BB830; /* no foreign declaration */
-extern int D_L02_001D33B0_c __asm__("D_L02_001D33B0") ; /* no foreign declaration */
 extern int FUN_001f9770();
 extern int FUN_001f9a40();
 extern int FUN_L00_002323b8();
 extern int FUN_L02_0022b728();
 extern int scale_game_frames_alt(int) __asm__("FUN_001f96f8");
 extern s32 force_help_message(s32 arg0, s32 arg1) __asm__("FUN_002151d8");
-extern short D_L02_00161B1C_c __asm__("D_L02_00161B1C") __attribute__((sda));
 extern void allocate_voice_for_target_entry_alt(int, int, int) __asm__("FUN_0022da68");
 extern void enqueue_callback_list_1_alt(void (*)(void), void *) __asm__("FUN_001f4600");
 void FUN_L00_0025d538(s32 id, void *s);
@@ -479,7 +462,7 @@ extern int func_001F9938_2D9F08(void *) __asm__("FUN_001f9770");
 extern void func_L00_002EC0C8_2D9F08(int) __asm__("FUN_L00_002eac18");
 extern void func_L01_00240CE8_2D9F08(void) __asm__("FUN_L01_002405a0");
 extern void func_L00_0025E590_2D9F08(Moby *, Data_2D9F08 *) __asm__("FUN_L00_0025d538");
-extern float D_L02_001D3680_2D9F08[4][4] __asm__("D_L02_001D33B0");
+extern float D_L02_001D33B0[4][4];
 extern Lvl_2D9F08 D_L02_001BBB40_2D9F08 __asm__("D_L02_001BB830");
 extern int D_0015EE84_2D9F08 __asm__("D_0015ED84") __attribute__((section(".sdata")));
 extern char D_0014C290_2D9F08[] __asm__("D_0014C190");
@@ -490,7 +473,7 @@ extern int D_L02_0017EB88_2D9F08 __asm__("D_L02_0017EB08") __attribute__((sectio
 extern Cam_2D9F08 D_L02_00167300_2D9F08 __asm__("D_L02_00167280");
 extern Idle_2D9F08 D_L02_00179A90_2D9F08 __asm__("D_L02_00179A10");
 extern int D_L02_001BADE0_2D9F08[] __asm__("D_L02_001BAAD0");
-extern int D_L02_00161BAC_2D9F08 __asm__("D_L02_00161B1C") __attribute__((sda));
+extern int D_L02_00161B1C_gp __asm__("D_L02_00161B1C") __attribute__((sda));
 extern int D_L02_00161B38_2D9F08 __asm__("D_L02_00161AA8") __attribute__((sda));
 extern int D_L02_00161B34_2D9F08 __asm__("D_L02_00161AA4") __attribute__((sda));
 extern int D_L02_00161B30_2D9F08 __asm__("D_L02_00161AA0") __attribute__((sda));
@@ -511,15 +494,15 @@ void FUN_L02_002d8ad0(Moby *moby) {
     case 0:
         data->h12 = 0;
         moby->state = 1;
-        D_L02_001D3680_2D9F08[2][1] = 17.0f;
-        D_L02_001D3680_2D9F08[0][1] = 17.0f;
-        D_L02_001D3680_2D9F08[1][0] = 17.0f;
-        D_L02_001D3680_2D9F08[1][1] = -17.0f;
-        D_L02_001D3680_2D9F08[2][0] = -17.0f;
-        D_L02_001D3680_2D9F08[3][0] = -17.0f;
-        D_L02_001D3680_2D9F08[3][1] = -17.0f;
-        D_L02_001D3680_2D9F08[0][0] = 17.0f;
-        D_L02_00161BAC_2D9F08 = data->iEC;
+        D_L02_001D33B0[2][1] = 17.0f;
+        D_L02_001D33B0[0][1] = 17.0f;
+        D_L02_001D33B0[1][0] = 17.0f;
+        D_L02_001D33B0[1][1] = -17.0f;
+        D_L02_001D33B0[2][0] = -17.0f;
+        D_L02_001D33B0[3][0] = -17.0f;
+        D_L02_001D33B0[3][1] = -17.0f;
+        D_L02_001D33B0[0][0] = 17.0f;
+        D_L02_00161B1C_gp = data->iEC;
         if (moby->mission != 0xFF) {
             if (D_L02_001BBB40_2D9F08.collected[(short)moby->save_id] != 0
                 || (((int *)(D_0014C290_2D9F08 + (D_0015EE84_2D9F08 << 8)))[(short)moby->save_id >> 5] >> (moby->save_id & 0x1F)) & 1) {
@@ -747,7 +730,7 @@ void FUN_L02_002d93e8(char *moby) {
     int *second;
     int *third;
     u64 texture;
-    int i, state, first_step = 0, second_step = 0, third_step = 0;
+    int i, state, first_step, second_step, third_step;
     int index, other, slot, draw_second, color, degrees;
     float angle, distance, phase;
 
@@ -757,6 +740,9 @@ void FUN_L02_002d93e8(char *moby) {
     for (state = 11, first = markers; state >= 0; --state, ++first) {
         if (*first != 0) *first = 1;
     }
+    third_step = 0;
+    first_step = 0;
+    second_step = 0;
     if (*(float *)(data + 0xe4) > 0.31415927f) {
         state = *(int *)(data + 0xe0);
         if (state == 1) first_step = 1;
@@ -772,118 +758,137 @@ void FUN_L02_002d93e8(char *moby) {
     first = (int *)(data + 0x20);
     second = (int *)(data + 0x50);
     third = (int *)(data + 0x80);
-    for (i = 0; i < 12; ++i) {
-        phase = -0.31415927f;
-        if (*(int *)(data + 0xe0) == 1) phase = add_rotation_2d93e8(phase, *(float *)(data + 0xe4));
-        angle = add_rotation_2d93e8(phase, (float)(i * 30) * 0.017453292f);
-        index = i + *(int *)(data + 0x14);
-        slot = index % 12;
-        if (first[slot] == 2) {
-            other = i + *(int *)(data + 0x18) + first_step - second_step;
+    {
+        int i, index, other, slot, draw_second, color;
+        float angle, distance, phase;
+        for (i = 0; i != 12; ++i) {
             draw_second = 1;
+            phase = -0.31415927f;
+            if (*(int *)(data + 0xe0) == 1) phase = add_rotation_2d93e8(phase, *(float *)(data + 0xe4));
+            angle = add_rotation_2d93e8(phase, (float)(i * 30) * 0.017453292f);
+            index = i + *(int *)(data + 0x14);
+            slot = index % 12;
+            if (first[slot] == 2) {
+                color = D_L02_00161BAC;
+                other = i + *(int *)(data + 0x18) + first_step - second_step;
+
+                if (second[other % 12] != 0) distance = (float)D_L02_00161B44;
+                else {
+                    int third_index = i + *(int *)(data + 0x1c) + first_step - third_step;
+                    if (third[third_index % 12] != 0) distance = (float)D_L02_00161B38;
+                    else {
+                        int extent = D_L02_00161B38;
+                        if (third[(third_index + 6) % 12] == 0 &&
+                            (extent = D_L02_00161B44, second[(other + 6) % 12] == 0) &&
+                            (extent = D_L02_00161B50, first[(index + 6) % 12] == 0)) {
+                            distance = (float)-D_L02_00161B5C;
+                            draw_second = 0;
+                            if (markers[(i + first_step + 6) % 12] != 0) {
+                                first[slot] = 3;
+                                markers[(i + first_step + 6) % 12] = 2;
+                                color = D_L02_00161BB0;
+                            }
+                        } else distance = (float)-extent;
+                    }
+                }
+                phase = add_rotation_2d93e8(angle, 0.31415927f);
+                draw_bar_2d93e8(texture, phase, (float)D_L02_00161B50, distance, color);
+                if (draw_second) {
+                    phase = add_rotation_2d93e8(angle, 0.31415927f);
+                    draw_bar_2d93e8(texture, phase, distance, (float)D_L02_00161B50, D_L02_00161BB4);
+                }
+            }
+        }
+    }
+    {
+        int i, index, other, slot, draw_second, color;
+        float angle, distance, phase;
+        for (i = 0; i != 12; ++i) {
             color = D_L02_00161BAC;
-            if (second[other % 12] != 0) distance = (float)D_L02_00161B44;
-            else {
-                int third_index = i + *(int *)(data + 0x1c) + first_step - third_step;
-                if (third[third_index % 12] != 0) distance = (float)D_L02_00161B38;
+            draw_second = 1;
+            phase = -0.31415927f;
+            if (*(int *)(data + 0xe0) == 2) phase = add_rotation_2d93e8(phase, *(float *)(data + 0xe4));
+            angle = add_rotation_2d93e8(phase, (float)(i * 30) * 0.017453292f);
+            index = i + *(int *)(data + 0x18);
+            slot = index % 12;
+            if (second[slot] == 2) {
+                other = i + *(int *)(data + 0x1c) + second_step - third_step;
+
+                if (third[other % 12] != 0) distance = (float)D_L02_00161B38;
                 else {
                     int extent = D_L02_00161B38;
-                    if (third[(third_index + 6) % 12] == 0 &&
-                        (extent = D_L02_00161B44, second[(other + 6) % 12] == 0) &&
-                        (extent = D_L02_00161B50, first[(index + 6) % 12] == 0)) {
+                    if (third[(other + 6) % 12] == 0 &&
+                        (extent = D_L02_00161B44, second[(index + 6) % 12] == 0) &&
+                        (extent = D_L02_00161B50,
+                         first[(i + *(int *)(data + 0x14) + second_step - first_step + 6) % 12] == 0)) {
                         distance = (float)-D_L02_00161B5C;
                         draw_second = 0;
-                        if (markers[(i + first_step + 6) % 12] != 0) {
-                            first[slot] = 3;
-                            markers[(i + first_step + 6) % 12] = 2;
+                        if (markers[(i + second_step + 6) % 12] != 0) {
+                            second[slot] = 3;
+                            markers[(i + second_step + 6) % 12] = 2;
                             color = D_L02_00161BB0;
                         }
                     } else distance = (float)-extent;
                 }
-            }
-            phase = add_rotation_2d93e8(angle, 0.31415927f);
-            draw_bar_2d93e8(texture, phase, (float)D_L02_00161B50, distance, color);
-            if (draw_second) {
                 phase = add_rotation_2d93e8(angle, 0.31415927f);
-                draw_bar_2d93e8(texture, phase, distance, (float)D_L02_00161B50, D_L02_00161BB4);
+                draw_bar_2d93e8(texture, phase, (float)D_L02_00161B44, distance, color);
+                if (draw_second) {
+                    phase = add_rotation_2d93e8(angle, 0.31415927f);
+                    draw_bar_2d93e8(texture, phase, distance, (float)D_L02_00161B44, D_L02_00161BB4);
+                }
             }
         }
     }
-    for (i = 0; i < 12; ++i) {
-        phase = -0.31415927f;
-        if (*(int *)(data + 0xe0) == 2) phase = add_rotation_2d93e8(phase, *(float *)(data + 0xe4));
-        angle = add_rotation_2d93e8(phase, (float)(i * 30) * 0.017453292f);
-        index = i + *(int *)(data + 0x18);
-        slot = index % 12;
-        if (second[slot] == 2) {
-            other = i + *(int *)(data + 0x1c) + second_step - third_step;
-            draw_second = 1;
+    {
+        int i, index, other, slot, draw_second, color;
+        float angle, distance, phase;
+        for (i = 0; i != 12; ++i) {
             color = D_L02_00161BAC;
-            if (third[other % 12] != 0) distance = (float)D_L02_00161B38;
-            else {
+            draw_second = 1;
+            phase = -0.31415927f;
+            if (*(int *)(data + 0xe0) == 3) phase = add_rotation_2d93e8(phase, *(float *)(data + 0xe4));
+            angle = add_rotation_2d93e8(phase, (float)(i * 30) * 0.017453292f);
+            index = i + *(int *)(data + 0x1c);
+            slot = index % 12;
+            if (third[slot] == 2) {
                 int extent = D_L02_00161B38;
-                if (third[(other + 6) % 12] == 0 &&
-                    (extent = D_L02_00161B44, second[(index + 6) % 12] == 0) &&
+
+                if (third[(index + 6) % 12] != 0 ||
+                    (extent = D_L02_00161B44,
+                     second[(i + *(int *)(data + 0x18) + third_step - second_step + 6) % 12] != 0) ||
                     (extent = D_L02_00161B50,
-                     first[(i + *(int *)(data + 0x14) + second_step - first_step + 6) % 12] == 0)) {
+                     first[(i + *(int *)(data + 0x14) + third_step - first_step + 6) % 12] != 0)) {
+                    distance = (float)-extent;
+                } else {
                     distance = (float)-D_L02_00161B5C;
                     draw_second = 0;
-                    if (markers[(i + second_step + 6) % 12] != 0) {
-                        second[slot] = 3;
-                        markers[(i + second_step + 6) % 12] = 2;
+                    if (markers[(i + third_step + 6) % 12] != 0) {
+                        third[slot] = 3;
+                        markers[(i + third_step + 6) % 12] = 2;
                         color = D_L02_00161BB0;
                     }
-                } else distance = (float)-extent;
-            }
-            phase = add_rotation_2d93e8(angle, 0.31415927f);
-            draw_bar_2d93e8(texture, phase, (float)D_L02_00161B44, distance, color);
-            if (draw_second) {
-                phase = add_rotation_2d93e8(angle, 0.31415927f);
-                draw_bar_2d93e8(texture, phase, distance, (float)D_L02_00161B44, D_L02_00161BB4);
-            }
-        }
-    }
-    for (i = 0; i < 12; ++i) {
-        phase = -0.31415927f;
-        if (*(int *)(data + 0xe0) == 3) phase = add_rotation_2d93e8(phase, *(float *)(data + 0xe4));
-        angle = add_rotation_2d93e8(phase, (float)(i * 30) * 0.017453292f);
-        index = i + *(int *)(data + 0x1c);
-        slot = index % 12;
-        if (third[slot] == 2) {
-            int extent = D_L02_00161B38;
-            draw_second = 1;
-            color = D_L02_00161BAC;
-            if (third[(index + 6) % 12] == 0 &&
-                (extent = D_L02_00161B44,
-                 second[(i + *(int *)(data + 0x18) + third_step - second_step + 6) % 12] == 0) &&
-                (extent = D_L02_00161B50,
-                 first[(i + *(int *)(data + 0x14) + third_step - first_step + 6) % 12] == 0)) {
-                distance = (float)-D_L02_00161B5C;
-                draw_second = 0;
-                if (markers[(i + third_step + 6) % 12] != 0) {
-                    third[slot] = 3;
-                    markers[(i + third_step + 6) % 12] = 2;
-                    color = D_L02_00161BB0;
                 }
-            } else distance = (float)-extent;
-            phase = add_rotation_2d93e8(angle, 0.31415927f);
-            draw_bar_2d93e8(texture, phase, (float)D_L02_00161B38, distance, color);
-            if (draw_second) {
                 phase = add_rotation_2d93e8(angle, 0.31415927f);
-                draw_bar_2d93e8(texture, phase, distance, (float)D_L02_00161B38, D_L02_00161BB4);
+                draw_bar_2d93e8(texture, phase, (float)D_L02_00161B38, distance, color);
+                if (draw_second) {
+                    phase = add_rotation_2d93e8(angle, 0.31415927f);
+                    draw_bar_2d93e8(texture, phase, distance, (float)D_L02_00161B38, D_L02_00161BB4);
+                }
             }
         }
     }
 
 #define DRAW_RING(active, slots, offset, outer_start, outer_end, radius) \
-    for (i = 0; i < 12; ++i) { \
+    { int i, color; float angle, phase; \
+    for (i = 0; i != 12; ++i) { \
         int value; \
         int ring_index; \
         angle = -0.2617994f; \
         color = D_L02_00161BA4; \
         if (*(int *)(data + 0xe0) == (active)) { \
+            unsigned int color_mask = D_L02_00161BA0 & 0xffffff; \
             float wave = fast_sin_2d93e8((float)((D_L02_0015F5CC % 60) * 6) * 0.017453292f); \
-            color = fast_tween_color_2d93e8(D_L02_00161BA0, D_L02_00161BA0 & 0xffffff, wave * 0.5f + 0.5f); \
+            color = fast_tween_color_2d93e8(D_L02_00161BA0, color_mask, wave * 0.5f + 0.5f); \
             if (*(float *)(data + 0xe4) != 0.0f) angle = add_rotation_2d93e8(angle, *(float *)(data + 0xe4)); \
         } \
         angle = add_rotation_2d93e8(angle, (float)(i * 30) * 0.017453292f); \
@@ -892,31 +897,32 @@ void FUN_L02_002d93e8(char *moby) {
         ring_index = (i + *(int *)(data + (offset))) % 12; \
         value = (slots)[ring_index]; \
         if (value != 0) { \
-            if (value < 3) { \
-                phase = add_rotation_2d93e8(angle, 0.2617994f); \
-                draw_arrow_2d93e8(texture, D_L02_00161BA8, value == 2 ? 1 : 2, phase, (float)(radius)); \
-            } else { \
+            if (value >= 3) { \
                 phase = add_rotation_2d93e8(angle, 0.2617994f); \
                 draw_arrow_2d93e8(texture, D_L02_00161BA8, 0, phase, (float)(radius)); \
                 (slots)[(i + *(int *)(data + (offset))) % 12] = 2; \
+            } else if (value == 2) { \
+                phase = add_rotation_2d93e8(angle, 0.2617994f); \
+                draw_arrow_2d93e8(texture, D_L02_00161BA8, 1, phase, (float)(radius)); \
+            } else { \
+                phase = add_rotation_2d93e8(angle, 0.2617994f); \
+                draw_arrow_2d93e8(texture, D_L02_00161BA8, 2, phase, (float)(radius)); \
             } \
         } \
-    }
+    } }
     DRAW_RING(1, first, 0x14, D_L02_00161B4C, D_L02_00161B48, D_L02_00161B50);
     DRAW_RING(2, second, 0x18, D_L02_00161B40, D_L02_00161B3C, D_L02_00161B44);
     DRAW_RING(3, third, 0x1c, D_L02_00161B34, D_L02_00161B30, D_L02_00161B38);
 #undef DRAW_RING
 
     degrees = 0;
-    for (i = 0; i < 12; ++i, degrees += 30) {
+    for (i = 11; i >= 0; --i, degrees += 30) {
         angle = add_rotation_2d93e8(-0.08726646f, (float)degrees * 0.017453292f);
         phase = add_rotation_2d93e8(angle, 0.17453292f);
-        if (markers[i] != 0) {
-            color = D_L02_00161BC4;
-            if (markers[i] != 2) {
-                color = D_L02_00161BC0;
-                if ((*(int *)0x0013cae4 & 0x20) == 0) color = D_L02_00161BBC;
-            }
+        if (markers[11 - i] != 0) {
+            if (markers[11 - i] == 2) color = D_L02_00161BC4;
+            else if (D_0013CAE4 & 0x20) color = D_L02_00161BC0;
+            else color = D_L02_00161BBC;
             draw_arc_2d93e8(texture, color, angle, phase, (float)D_L02_00161B58, (float)D_L02_00161B54);
         }
     }
@@ -997,7 +1003,7 @@ extern int D_L02_00161ADC __attribute__((sda));
 extern int D_L02_00161AE0 __attribute__((sda));
 extern int D_L02_00161AE4 __attribute__((sda));
 extern int D_L02_00161AE8 __attribute__((sda));
-extern int D_L02_00161B1C __attribute__((sda));
+extern int D_L02_00161B1C_gp __asm__("D_L02_00161B1C") __attribute__((sda));
 extern int D_L02_00161B9C __attribute__((sda));
 extern void FUN_001fa050(void *, void *);
 extern void FUN_001fa378(void *, void *, void *);
@@ -1060,7 +1066,7 @@ void FUN_L02_002da6c0(int p0, int p1, int sel, float a, float s) {
     xy[2] += func_001FA898_r(M[2][1] * 16.0f);
     xy[3] += func_001FA898_r(M[3][0] * 16.0f) << 16;
     xy[3] += func_001FA898_r(M[3][1] * 16.0f);
-    tex = get_effect_texture(D_L02_00161B1C + 0x29);
+    tex = get_effect_texture(D_L02_00161B1C_gp + 0x29);
     FUN_L02_0020bc88(xy, uv, col, tex, 1);
     FUN_L02_0020bc88(xy, uv, col, tex, 1);
 }
@@ -1200,29 +1206,29 @@ void FUN_L02_002da938(void *unused, f32 a, f32 b, f32 c, s32 d) {
 }
 
 typedef struct { long a, b, c, d; } Q_2dae88;
-extern Q_2dae88 D_L02_001D3310_2dae88[] __asm__("D_L02_001D3310") NOT_SDA;
-extern int D_L02_00161B94_2dae88 __asm__("D_L02_00161B94") __attribute__((sda));
-extern int D_L02_00161AAC_2dae88 __asm__("D_L02_00161AAC") __attribute__((sda));
-extern int D_L02_00161AB0_2dae88 __asm__("D_L02_00161AB0") __attribute__((sda));
-extern int D_L02_00161AB4_2dae88 __asm__("D_L02_00161AB4") __attribute__((sda));
-extern int D_L02_00161AB8_2dae88 __asm__("D_L02_00161AB8") __attribute__((sda));
-extern int D_L02_00161B1C_2dae88 __asm__("D_L02_00161B1C") __attribute__((sda));
+extern int D_L02_00161B1C_gp __asm__("D_L02_00161B1C") __attribute__((sda));
 int tex_2dae88(int) __asm__("FUN_001f44b8");
 void f20bc88_2dae88(Q_2dae88 *, int *, int *, int, int) __asm__("FUN_L02_0020bc88");
+extern Q_2dae88 D_L02_001D3310[];
+extern int D_L02_00161B94 __attribute__((sda));
+extern int D_L02_00161AAC __attribute__((sda));
+extern int D_L02_00161AB0 __attribute__((sda));
+extern int D_L02_00161AB4 __attribute__((sda));
+extern int D_L02_00161AB8 __attribute__((sda));
 void FUN_L02_002dae88(void) {
     Q_2dae88 q;
     int c[4];
     int b[4];
-    Q_2dae88 *p = D_L02_001D3310_2dae88;
+    Q_2dae88 *p = D_L02_001D3310;
     int i;
     for (i = 3; i >= 0; i--) {
-        b[0] = D_L02_00161AAC_2dae88;
-        b[1] = D_L02_00161AB0_2dae88;
-        b[2] = D_L02_00161AB4_2dae88;
-        b[3] = D_L02_00161AB8_2dae88;
-        c[0] = c[1] = c[2] = c[3] = D_L02_00161B94_2dae88;
+        b[0] = D_L02_00161AAC;
+        b[1] = D_L02_00161AB0;
+        b[2] = D_L02_00161AB4;
+        b[3] = D_L02_00161AB8;
+        c[0] = c[1] = c[2] = c[3] = D_L02_00161B94;
         q = *p++;
-        f20bc88_2dae88(&q, b, c, tex_2dae88(D_L02_00161B1C_2dae88 + 0x28), 1);
+        f20bc88_2dae88(&q, b, c, tex_2dae88(D_L02_00161B1C_gp + 0x28), 1);
     }
 }
 
@@ -1426,17 +1432,17 @@ typedef struct {
     char *mobys[1];
 } Level02MobyList;
 
-extern Level02MobyList D_L02_0016CE60;
-extern int D_L02_0015F5C4;
+extern int level_game_mode __asm__("D_L02_0015F5C4");
 extern unsigned char D_0015EDB0;
 extern unsigned char D_L02_0017CA40[];
 void attach_manipulator(void *arg0, s32 arg1, void *arg2) __asm__("FUN_0020cb10");
 
+extern Level02MobyList talk_camera __asm__("D_L02_0016CE60");
 void FUN_L02_002e0cd8(char *moby) {
     int i;
-    if (D_L02_0015F5C4 == 2 && D_0015EDB0 != 0) {
-        for (i = 0; i < D_L02_0016CE60.count; i++) {
-            char *e = D_L02_0016CE60.mobys[i];
+    if (level_game_mode == 2 && D_0015EDB0 != 0) {
+        for (i = 0; i < talk_camera.count; i++) {
+            char *e = talk_camera.mobys[i];
             if (*(short *)(e + 0xA6) == *(short *)(moby + 0xA6)) {
                 unsigned char *s = D_L02_0017CA40;
                 if (s[1] == 0) {
@@ -1472,24 +1478,21 @@ extern float ea210_clamp(float, float) __asm__("FUN_001fa580");
 extern void ea210_draw(void *, void *, int, int, int) __asm__("FUN_L00_002eaaa0");
 extern void ea210_drawend(void *) __asm__("FUN_L00_002ea9d8");
 extern void ea210_drawflush(void *) __asm__("FUN_L00_002eaa30");
-extern void ea210_fade(float, float, void *) __asm__("FUN_00213ed8");
+extern float ea210_fade(float, float, void *) __asm__("FUN_00213ed8");
 extern void ea210_hide(int) __asm__("FUN_L00_002eac18");
 extern void ea210_audio(int, int) __asm__("FUN_0020b178");
 extern void ea210_destroy(char *) __asm__("FUN_0020c828");
 extern int D_L02_0015F5CC;
-extern int D_L02_0015F5C4;
+extern int level_game_mode __asm__("D_L02_0015F5C4");
 extern unsigned char D_001413F4 __attribute__((section(".data")));
 extern int D_L02_0015F640 __attribute__((sda));
 extern unsigned char items_acquired[] __asm__("D_0013D4E8");
 extern char D_0013F3D0[];
-extern float D_0013F3D8;
 extern float D_L02_00174468 __attribute__((section(".data")));
 extern int D_L02_00167400;
-extern int D_L02_00179A10 __attribute__((section(".data")));
 extern float D_0015ED70;
 extern float D_0015ED6C;
 extern float D_L02_0015F3FC;
-extern char D_0013F3E0[];
 
 void FUN_L02_002ea210(char *moby) {
     char *data;
@@ -1533,7 +1536,7 @@ void FUN_L02_002ea210(char *moby) {
         }
         return;
     case 3:
-        if (D_L02_0015F5C4 == 2) return;
+        if (level_game_mode == 2) return;
         if (D_001413F4 != 0) {
             if (which == 0x16) {
                 ea210_switch(0x16, 0);

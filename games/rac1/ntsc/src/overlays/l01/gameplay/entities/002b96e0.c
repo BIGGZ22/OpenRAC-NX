@@ -245,8 +245,8 @@ typedef struct {
     u8 mtx[0x40];
 } SplashMoby_u;
 
-extern SplashColors D_L01_0020AF50;
-extern SplashColors D_L01_0020AF68;
+SplashColors D_L01_0020AF50 = {{0x4f008fff, 0x4f008fff, 0x4f007fff, 0x4f006fff, 0x2fffffff, 0x2fffffff}};
+SplashColors D_L01_0020AF68 = {{0x2f005f7f, 0x2f004f7f, 0x2f003f7f, 0x2f00004f, 0x2f000000, 0x3f000000}};
 extern f32 random_float_between(f32, f32) __asm__("FUN_002132a8");
 extern s32 random_integer_below(s32) __asm__("FUN_00213260");
 extern void moby_point_position(void *, s32, void *) __asm__("FUN_L00_0024f7c8");
@@ -629,7 +629,6 @@ typedef struct {
 extern char *D_L01_001B0930_u[] __asm__("D_L01_001B0930");
 extern char *D_L01_001600EC;
 extern char *FUN_L01_002fa068(void *, void *, void *, float, float, int);
-extern char D_0013E533[];
 extern char D_L01_0020AF80[];
 extern float absolute_float(float) __asm__("func_001F99C0");
 extern float D_L01_0015F580[] __attribute__((section(".sdata")));
@@ -646,7 +645,7 @@ extern float fast_sin(float);
 extern float probe_ground_height(void *, int, float);
 extern float vector_length_xy_cf(void *) __asm__("FUN_001f9b20");
 extern float vector_length_xyz(void *);
-extern int D_L01_0015F404;
+extern int cutscene_active __asm__("D_L01_0015F404");
 extern int DebugPrint();
 extern int FUN_001efa68(void *, void *, int, void *, void *);
 extern int FUN_001f0b58(void);
@@ -940,7 +939,7 @@ void FUN_L01_002e6bf0(PeMoby *m) {
         if (v->w1C8 == 0 && v->w1C4 != -1) {
             FUN_L00_002eac18(0);
             hero_set_state(HERO_STATE_IDLE, 1);
-            D_L01_0015F404 = 0;
+            cutscene_active = 0;
             v->w1C4 = -1;
         }
         break;
@@ -954,7 +953,7 @@ void FUN_L01_002e6bf0(PeMoby *m) {
                 hero_set_state(0x1F, 0);
                 p = D_L01_001600EC + (v->w1C4 << 7);
                 FUN_L00_002eaaa0(p + 0x30, p + 0x70, 0, 0, 0);
-                D_L01_0015F404 = 1;
+                cutscene_active = 1;
                 v->w1C8 = scale_game_frames(0x168);
             }
             m->w94 = *(int *)(m->w24 + 0x10);
@@ -1460,12 +1459,12 @@ typedef struct {
     u8 pad44[0xC];
 } Mob577Target;
 
-extern s32 D_L01_0015F5C4;
+extern s32 cutscene_mode __asm__("D_L01_0015F5C4");
 extern f32 D_L01_00161A60 __attribute__((sda));
 extern f32 D_L01_00161A64 __attribute__((sda));
 extern f32 D_L01_00161A68 __attribute__((sda));
 extern f32 D_L01_00161A6C __attribute__((sda));
-extern s32 D_L01_00161A70 __attribute__((sda));
+s32 D_L01_00161A70 = 0x9020202;
 extern s32 D_L01_001B0930[];
 extern MobyNode *D_L01_0015FFE4;
 extern u8 D_L01_00161A80[] __attribute__((section(".sdata")));
@@ -1563,7 +1562,7 @@ void FUN_L01_002efc60(Mob577 *self) {
 
     v = self->vars;
     FUN_L00_00263ac8(self, 0, v->x230, 1.5f);
-    if (D_L01_0015F5C4 == 2) {
+    if (cutscene_mode == 2) {
         self->id = 0;
         self->flags |= 0x41;
         return;
@@ -2696,7 +2695,7 @@ typedef struct {
     u8 pad10[0x50];
 } BoundGroup;
 
-extern s32 D_L01_00161BA0 __attribute__((sda));
+s32 D_L01_00161BA0 = 0;
 extern BoundGroup D_L01_001E3380[];
 extern void FUN_001f9a10(void *, void *, void *);
 extern void FUN_001f9a68(void *, void *, float);
@@ -2908,7 +2907,7 @@ typedef struct {
 extern f32 gunship_min_scale __asm__("D_L01_00161BD0") __attribute__((sda));
 extern f32 gunship_far_dist __asm__("D_L01_00161BD4") __attribute__((sda));
 extern f32 gunship_near_dist __asm__("D_L01_00161BD8") __attribute__((sda));
-extern GunshipTargets gunship_no_targets __asm__("D_L01_00161BE0");
+GunshipTargets gunship_no_targets __asm__("D_L01_00161BE0") = {{-1, -1, -1, -1}};
 extern char camera_pos[] __asm__("D_L01_00167240");
 extern u8 gunship_banner_shown __asm__("D_0013D408") NOT_SDA;
 extern char gunship_no_path_fmt[] __asm__("D_L01_0020B4A0");
@@ -2916,8 +2915,6 @@ extern u8 moby_collected[] __asm__("D_L01_001BBB04");
 extern GunshipHit collision_hit __asm__("D_L01_001742C0");
 extern s32 level_moby_killed[][64] __asm__("D_0014C190");
 extern s32 moby_killed[] __asm__("D_L01_001BA950");
-extern s32 current_level_index __asm__("D_0015ED84") MACRO_ADDR;
-extern f32 frame_time __asm__("D_0015ED6C") MACRO_ADDR;
 extern s32 moby_array __asm__("D_L01_0015FFD8") MACRO_ADDR;
 extern char *camera_points __asm__("D_L01_001600EC") MACRO_ADDR;
 extern char *paths[] __asm__("D_L01_001B0930");
@@ -2946,6 +2943,8 @@ extern void moby_point_position(void *, s32, void *) __asm__("FUN_L00_0024f7c8")
 extern void normalize_vector_xyz(void *, void *, f32) __asm__("FUN_001f9bf8");
 extern GunshipMoby *spawn_beam(void *, void *, void *, void *, s32, s32) __asm__("FUN_L01_002f68a0");
 
+extern s32 current_level_index_macro __asm__("D_0015ED84") __attribute__((section(".sdata")));
+extern f32 frame_time_macro __asm__("D_0015ED6C") __attribute__((section(".sdata")));
 /* Ported from rac1-decomp src/overlays/l01_novalis/vendor_002BA898.c (func_L01_002F8B00) */
 void FUN_L01_002f7728(GunshipMoby *m) {
     GunshipVars *d = m->vars;
@@ -3029,7 +3028,7 @@ void FUN_L01_002f7728(GunshipMoby *m) {
             }
             if (d->cutscene_timer == -1 && is_point_inside_clip_volume(&hero.motion.pos, d->trigger_volume)) {
                 if (moby_collected[(short)m->uid] != 0
-                    || (level_moby_killed[current_level_index][(short)m->uid >> 5] >> (m->uid & 0x1F)) & 1) {
+                    || (level_moby_killed[current_level_index_macro][(short)m->uid >> 5] >> (m->uid & 0x1F)) & 1) {
                     for (j = 0; j < 4; j++) {
                         if (d->turrets[j] != -1) {
                             GunshipMoby *o = (GunshipMoby *)(moby_array + (d->turrets[j] << 8));
@@ -3057,7 +3056,7 @@ void FUN_L01_002f7728(GunshipMoby *m) {
                     cutscene_camera_stop(0);
                     hero_set_state(0, 1);
                     cutscene_active = 0;
-                    level_moby_killed[current_level_index][(short)m->uid >> 5] |= 1 << (m->uid & 0x1F);
+                    level_moby_killed[current_level_index_macro][(short)m->uid >> 5] |= 1 << (m->uid & 0x1F);
                     moby_killed[(short)m->uid >> 5] |= 1 << (m->uid & 0x1F);
                     mark_moby_for_removal(m);
                     return;
@@ -3132,7 +3131,7 @@ void FUN_L01_002f7728(GunshipMoby *m) {
                     d->gun_side ^= 1;
                     moby_point_position(m, d->gun_side, &pos);
                     subtract_vector_xyz(&dir, camera_points + (i << 7) + 0x30, &pos);
-                    normalize_vector_xyz(&dir, &dir, frame_time * 160.0f);
+                    normalize_vector_xyz(&dir, &dir, frame_time_macro * 160.0f);
                     col.q = *(u128 *)((i << 7) + (int)camera_points + 0x30);
                     bm = spawn_beam(m, &pos, &dir, &col, is_point_inside_clip_volume(&hero.motion.pos, d->beam_volume), d->trigger_volume != -1);
                     if (bm != 0) {
@@ -3266,15 +3265,15 @@ void FUN_L01_002f8268(HoverMoby *m) {
         m->pos.v.x = tgt.v.x;
         m->pos.v.y = tgt.v.y;
         m->pos.v.z = old.v.z;
-        if (FUN_001f9b48(&old, &m->pos) > D_L01_00161BFC * frame_time) {
+        if (FUN_001f9b48(&old, &m->pos) > D_L01_00161BFC * frame_time_macro) {
             FUN_001f9a28(&d, &m->pos, &old);
             step.q = d.q;
-            FUN_001f9bf8(&step, &step, D_L01_00161BFC * frame_time);
+            FUN_001f9bf8(&step, &step, D_L01_00161BFC * frame_time_macro);
             FUN_001f9a10(&d, &old, &step);
             m->pos.q = d.q;
         }
         dz = resolve_camera_surface_height(&m->pos, 0) - m->pos.v.z;
-        lim = frame_time * 3.0f;
+        lim = frame_time_macro * 3.0f;
         if (dz > lim) {
             dz = lim;
         } else if (dz < -lim) {
@@ -3313,7 +3312,7 @@ typedef struct {
     f32 floor_z;
 } SteamParticle;
 
-extern SteamColors D_L01_00161C08;
+SteamColors D_L01_00161C08 = {{0x2b8, 0x2b9, 0x2ba}};
 extern SteamColors D_L01_00161C18;
 extern int FUN_001f9770(void *);
 extern s32 FUN_001f9740(void *);
@@ -3348,8 +3347,8 @@ void FUN_L01_002f8c58(SteamMoby *m) {
     if (v->burst_timer == 0 && random_integer_below(100) < 5) {
         colors = D_L01_00161C08;
         pos.q = 0;
-        pos.f[0] = random_float_between(frame_time * -0.5f, frame_time * 0.5f);
-        pos.f[1] = random_float_between(frame_time * -0.5f, frame_time * 0.5f);
+        pos.f[0] = random_float_between(frame_time_macro * -0.5f, frame_time_macro * 0.5f);
+        pos.f[1] = random_float_between(frame_time_macro * -0.5f, frame_time_macro * 0.5f);
         vel.q = pos.q;
         r = random_float_between(0.0f, 0.25f);
         ang = random_angle_radians();
@@ -3364,9 +3363,9 @@ void FUN_L01_002f8c58(SteamMoby *m) {
     for (i = 0; i < 2; i++) {
         colors = D_L01_00161C18;
         puff.q = 0;
-        puff.f[0] = random_float_between(frame_time * -0.5f, frame_time * 0.5f);
-        puff.f[1] = random_float_between(frame_time * -0.5f, frame_time * 0.5f);
-        puff.f[2] = random_float_between(frame_time * 0.0f, frame_time * 3.0f);
+        puff.f[0] = random_float_between(frame_time_macro * -0.5f, frame_time_macro * 0.5f);
+        puff.f[1] = random_float_between(frame_time_macro * -0.5f, frame_time_macro * 0.5f);
+        puff.f[2] = random_float_between(frame_time_macro * 0.0f, frame_time_macro * 3.0f);
         vel.q = puff.q;
         r = random_float_between(0.0f, 0.25f);
         ang = random_angle_radians();
@@ -3374,7 +3373,7 @@ void FUN_L01_002f8c58(SteamMoby *m) {
         puff.f[1] = FUN_001f9de0(ang) * r;
         puff.f[2] = 0.0f;
         FUN_001f9a10(&puff, &puff, &m->pos);
-        r *= frame_time;
+        r *= frame_time_macro;
         r *= 8.0f;
         puff.f[2] += v->height;
         vel.f[2] += r;
@@ -3478,10 +3477,10 @@ typedef struct {
 
 extern CapLevelState D_L01_001BB6B0;
 extern CapCamera D_L01_00167100;
-extern CapColors D_L01_00161C40;
+CapColors D_L01_00161C40 = {{0x2b8, 0x2b9, 0x2ba}};
 extern s32 D_0014C190[][64];
-extern s32 D_L01_001BA950[];
-extern s32 D_L01_0015F404;
+extern s32 moby_killed[] __asm__("D_L01_001BA950");
+extern s32 cutscene_active __asm__("D_L01_0015F404");
 extern void clear_u64_value(void *) __asm__("FUN_001f99f8");
 void FUN_L01_002f9000(Obj *obj);
 extern void FUN_L00_002eac18(s32);
@@ -3501,8 +3500,8 @@ void FUN_L01_002f9080(CapMoby *m) {
 
         colors = D_L01_00161C40;
         pos.q = 0;
-        pos.f[0] = random_float_between(frame_time * -0.5f, frame_time * 0.5f);
-        pos.f[1] = random_float_between(frame_time * -0.5f, frame_time * 0.5f);
+        pos.f[0] = random_float_between(frame_time_macro * -0.5f, frame_time_macro * 0.5f);
+        pos.f[1] = random_float_between(frame_time_macro * -0.5f, frame_time_macro * 0.5f);
         vel.q = pos.q;
         r = random_float_between(2.0f, 3.0f);
         ang = random_angle_radians();
@@ -3522,7 +3521,7 @@ void FUN_L01_002f9080(CapMoby *m) {
         qcopy(&v->home, &m->pos);
         m->state = 1;
         if (D_L01_001BB6B0.collected[m->id] != 0 ||
-            (D_0014C190[current_level_index][m->id >> 5] >> (m->id & 0x1F)) & 1) {
+            (D_0014C190[current_level_index_macro][m->id >> 5] >> (m->id & 0x1F)) & 1) {
             clear_u64_value(&v->rot);
             m->state = 4;
             m->pos.f[2] = v->home.f[2] - 20.0f;
@@ -3567,8 +3566,8 @@ void FUN_L01_002f9080(CapMoby *m) {
             m->state = 4;
             allocate_voice_for_target_entry(0, 0, m);
             m->pos.f[2] = v->home.f[2] - 20.0f;
-            D_0014C190[current_level_index][m->id >> 5] |= 1 << (m->id & 0x1F);
-            D_L01_001BA950[m->id >> 5] |= 1 << (m->id & 0x1F);
+            D_0014C190[current_level_index_macro][m->id >> 5] |= 1 << (m->id & 0x1F);
+            moby_killed[m->id >> 5] |= 1 << (m->id & 0x1F);
         }
         m->pos.f[2] += 0.0f;
         break;
@@ -3577,7 +3576,7 @@ void FUN_L01_002f9080(CapMoby *m) {
         if (v->wait == 0 && v->music != -1) {
             FUN_L00_002eac18(0);
             hero_set_state(HERO_STATE_IDLE, 1);
-            D_L01_0015F404 = 0;
+            cutscene_active = 0;
             v->music = -1;
         }
         break;

@@ -8,6 +8,12 @@
 #include "rnc/gameplay/entities/moby.h"
 #include "asm.h"
 #include "qcopy.h"
+#include "rnc/data_labels.h"
+#include "rnc/audio/sound_state.h"
+#include "rnc/gameplay/state/game_globals.h"
+#include "rnc/rendering/render_globals.h"
+#include "rnc/globals.h"
+#include "rnc/overlay/level_labels.h"
 
 typedef struct {
     char *f0;     /* 0x00 */
@@ -53,13 +59,9 @@ extern Load252dd0 D_L18_00174800_252dd0 __asm__("D_L06_00174580");
 extern char *D_L18_00174840_252dd0[] __asm__("D_L06_001745C0");
 typedef struct { s16 a; s16 b; s32 *file; } Ldg252dd0;
 extern Ldg252dd0 D_0015EE48;
-extern s32 current_level_index __asm__("D_0015ED84");
-extern u8 D_0014C050[];
-extern u8 D_L18_0015FC88_252dd0[] __asm__("D_L06_0015FC88") __attribute__((section(".sdata")));
 extern s32 D_L06_0015F40C;
-extern s32 sound_bank_handle __asm__("D_0015ED5C");
 extern s32 D_L06_00160004;
-extern s32 D_0015EE8C;
+extern s32 gs_texture_allocation_base __asm__("D_0015EE8C");
 extern u64 D_L06_00182F40[3];
 extern u64 D_L06_00182F58[3];
 extern u64 D_L06_00182F70[3];
@@ -118,10 +120,8 @@ extern char *D_L18_0015FFD8_252dd0 __asm__("D_L06_0015FFD8");
 extern char *D_L18_0015FFE8_252dd0 __asm__("D_L06_0015FFE8");
 extern char *D_L18_00160108_252dd0 __asm__("D_L06_00160108");
 extern char *D_L18_0016016C_252dd0 __asm__("D_L06_0016016C");
-extern s32 D_0014EE90[16];
 typedef struct { u8 pad[0x10]; u32 v __attribute__((packed, aligned(1))); } Una252dd0;
 extern u8 D_L06_00179880[];
-extern s32 game_frame __asm__("D_L06_0015F5CC");
 
 extern void FUN_00202a98(void);
 extern void FUN_001f98d0(void *, void *, s32);
@@ -158,6 +158,7 @@ extern void FUN_L00_00264740(void);
      | ((u64)(cpsm) << 51) | ((u64)(csm) << 55) | ((u64)(csa) << 56) | ((u64)(cld) << 61))
 #define KB(x) (int_to_float((s32)(x)) * (1.0f / 1024.0f))
 
+extern u8 D_L06_0015FC88[] __attribute__((section(".sdata")));
 /* Reads the level's core data. Its index lists the object classes:
  *   0x18  moby classes, 0x20 bytes per entry
  *   0x20  tie classes, 0x20 bytes per entry
@@ -207,23 +208,23 @@ s32 FUN_L06_00252dd0(s32 full, s32 keep) {
     if (full) {
         FUN_001f98d0(h, (char *)(src[4] + (s32)src), src[5]);
         D_L06_0015F40C = 0;
-        FUN_001f9838_252dd0(D_L18_0015FC88_252dd0, D_0014C050 + current_level_index * 16, 0x10);
+        FUN_001f9838_252dd0(D_L06_0015FC88, visited52 + current_level_index * 16, 0x10);
         FUN_00203120((char *)(src[6] + (s32)src), h[0], (char *)h + h[1]);
         D_L06_00160004 = sound_bank_handle;
         FUN_00118a80(0);
         used = FUN_L00_0024d8d0_252dd0((char *)(src[0x14] + (s32)src), base);
         D_L06_0015F40C = (s32)(base + h[0x18]);
 
-        D_L06_00182F40[0] = GS_TEX0((D_0015EE8C + h[0x24]) >> 8, 2, 0x13, 7, 7, 1, 0,
-            (D_0015EE8C + h[0x25]) >> 8, 0, 0, 0, 4);
+        D_L06_00182F40[0] = GS_TEX0((gs_texture_allocation_base + h[0x24]) >> 8, 2, 0x13, 7, 7, 1, 0,
+            (gs_texture_allocation_base + h[0x25]) >> 8, 0, 0, 0, 4);
         D_L06_00182F40[1] = 0x0000FFA0000000E0;
         D_L06_00182F40[2] = 0x0040000400004000;
-        D_L06_00182F58[0] = GS_TEX0((D_0015EE8C + h[0x26]) >> 8, 1, 0x13, 6, 6, 1, 0,
-            (D_0015EE8C + h[0x27]) >> 8, 0, 0, 0, 4);
+        D_L06_00182F58[0] = GS_TEX0((gs_texture_allocation_base + h[0x26]) >> 8, 1, 0x13, 6, 6, 1, 0,
+            (gs_texture_allocation_base + h[0x27]) >> 8, 0, 0, 0, 4);
         D_L06_00182F58[1] = 0x0000FFA0000000E0;
         D_L06_00182F58[2] = 0x0040000400004000;
-        D_L06_00182F70[0] = GS_TEX0((D_0015EE8C + h[0x30]) >> 8, 2, 0x13, 7, 7, 1, 0,
-            (D_0015EE8C + h[0x31]) >> 8, 0, 0, 0, 4);
+        D_L06_00182F70[0] = GS_TEX0((gs_texture_allocation_base + h[0x30]) >> 8, 2, 0x13, 7, 7, 1, 0,
+            (gs_texture_allocation_base + h[0x31]) >> 8, 0, 0, 0, 4);
         D_L06_00182F70[1] = 0x0000FFA0000000E0;
         D_L06_00182F70[2] = 0x0040000400004000;
 
@@ -414,7 +415,7 @@ s32 FUN_L06_00252dd0(s32 full, s32 keep) {
     }
     ((Una252dd0 *)D_L06_00179880)->v = 0;
     FUN_L00_00264740();
-    game_frame++;
+    D_L06_0015F5CC++;
     return 0;
 }
 #include "qcopy.h"

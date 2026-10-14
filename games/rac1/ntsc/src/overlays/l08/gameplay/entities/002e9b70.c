@@ -10,6 +10,10 @@
 #include "rnc/gameplay/entities/moby.h"
 
 #include "rnc/overlay/swarm_path.h"
+#include "rnc/data_labels.h"
+#include "rnc/ui/menus/menu_globals.h"
+#include "rnc/gameplay/state/options.h"
+#include "rnc/gameplay/state/game_globals.h"
 
 typedef struct {
     SwarmPathFollower follow[2]; /* 0x00: [0] cruising (state 1), [1] circling (state 2) */
@@ -24,7 +28,6 @@ typedef struct {
 
 extern s32 D_L08_00161D40 __attribute__((sda));
 extern f32 D_L08_00161D34 __attribute__((sda));
-extern u8 D_0014C050[];
 extern SwarmPath *D_L08_001B0CB0[];
 extern struct Moby *D_L08_0015FFD8;
 
@@ -83,7 +86,7 @@ void FUN_L08_002e9b70(struct Moby *moby) {
     }
     switch (moby->state) {
     case 0:
-        if (D_0014C050[moby->mission + current_level_index * 16] == 0xFF) {
+        if (visited52[moby->mission + current_level_index * 16] == 0xFF) {
             mark_moby_for_removal(moby);
             return;
         }
@@ -207,7 +210,6 @@ void FUN_L08_002e9b70(struct Moby *moby) {
 }
 
 extern char *D_L08_0015FFD8_g __asm__("D_L08_0015FFD8");
-extern u8 D_0013D3BD_c __asm__("D_0013D3BD") __attribute__((section(".data")));
 extern int FUN_0022da68_c(int, int, char *) __asm__("FUN_0022da68");
 extern void FUN_00213ed8_c(char *, float, float) __asm__("FUN_00213ed8");
 
@@ -227,7 +229,7 @@ void FUN_L08_002ea398(char *m)
         o = (char *)((i << 8) + (int)D_L08_0015FFD8_g);
         if (*(short *)(o + 0xA6) == 0x267 || *(short *)(o + 0xA6) == 0x23F) {
             if (*(u8 *)(o + 0x20) != 4) break;
-            D_0013D3BD_c = 1;
+            menu_item_enabled_41 = 1;
             FUN_0022da68_c(0, 0, m);
             *(u8 *)(m + 0x20) = 2;
         } else {
@@ -368,14 +370,13 @@ void FUN_L08_002f0dc8(void) {
 extern Pair D_L08_00161E10[] __attribute__((section(".sdata")));
 extern Pair D_L08_00161E14[] __attribute__((section(".sdata")));
 extern Pair D_L08_00161E24[] __attribute__((section(".sdata")));
-extern Pair D_L08_00162408_c[] __asm__("D_L08_00161E20") __attribute__((section(".sdata")));
 extern Pair D_L08_001E8348[];
 extern Pair D_L08_00161E28;
 extern char D_L08_001675C0[];
-extern char D_L08_001DDF40[];
-extern char D_L08_001E2828[];
-extern char D_L08_001E2858[];
-extern char D_L08_001E8310[];
+extern s32 D_L08_001DDF40[];
+extern s32 D_L08_001E2828[];
+extern s32 D_L08_001E2858[];
+extern s32 D_L08_001E8310[];
 extern char D_L08_001E8350[];
 extern float D_L08_00161DC4;
 extern float D_L08_00161DC8;
@@ -386,8 +387,8 @@ extern int FUN_001fa728(char *, float);
 extern int truncate_float_to_s32() __asm__("FUN_001fa6d0");
 extern short D_L08_00161DC0 __attribute__((sda));
 extern short D_L08_00161E04 __attribute__((sda));
-extern char D_L08_001DDF20[];
-extern char D_L08_001DB518[];
+extern s32 D_L08_001DDF20[];
+extern s32 D_L08_001DB518[];
 extern void FUN_L08_002f0dc8(void);
 extern void FUN_L08_002f0f68(void *, int, void *, float, float, float, float, int);
 extern void FUN_L08_002f1158(void *, float, float, float, void *);
@@ -397,6 +398,7 @@ extern void enqueue_callback_list_1(void (*)(void), void *) __asm__("FUN_001f460
 extern void subtract_vector_xyz(void *, void *, void *);
 extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 
+extern Pair D_L08_00161E20[] __attribute__((section(".sdata")));
 void FUN_L08_002f1548(struct Moby *moby) {
     int i;
     float v[4];
@@ -423,7 +425,7 @@ void FUN_L08_002f1548(struct Moby *moby) {
             *(float *)&D_L08_00161E14[i].a = i * 0.4f;
         }
         for (i = 0; i < 1; i++) {
-            D_L08_00162408_c[i].a = 0;
+            D_L08_00161E20[i].a = 0;
             *(float *)&D_L08_00161E24[i].a = i * 0.4f;
         }
         break;
@@ -460,15 +462,9 @@ void FUN_L08_002f1548(struct Moby *moby) {
         break;
     }
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L08_002f44c0.s", FUN_L08_002f44c0);
-#else
-extern char D_0013F3D0[];
-extern char D_L08_0015F580[];
-extern s32 D_001413D4 __attribute__((section(".data")));
+extern f32 D_L08_0015F580[] __attribute__((section(".sdata")));
 extern struct Moby *D_0013F58C __attribute__((section(".data")));
 /* Retail loads gp - 0x4C90; GP 0x166C00 places this scalar at 0x161F70. */
-extern f32 D_0015B370 __asm__("D_L08_00161F70") __attribute__((sda));
 
 extern s32 find_moby_hit_44c0(struct Moby *, s32, s32) __asm__("FUN_L00_0025a420");
 extern f32 FUN_001f9b80_44c0(void *, void *) __asm__("FUN_001f9b80");
@@ -484,9 +480,10 @@ extern f32 approach_value_44c0(void *, f32, f32) __asm__("FUN_00213ed8");
 extern void mark_moby_for_removal_44c0(struct Moby *) __asm__("FUN_0020c828");
 extern void allocate_voice_for_target_entry_44c0(s32, s32, struct Moby *) __asm__("FUN_0022da68");
 extern void FUN_L00_00258278_44c0(struct Moby *, f32, f32 *, f32, f32, f32) __asm__("FUN_L00_00258278");
-extern void FUN_L00_0025e450_44c0(void *, void *, void *, f32, f32, s32, s32, s32,
-                         f32, f32, f32, f32, s32, f32, s32, s32, s32, s32) __asm__("FUN_L00_0025e450");
+extern void FUN_L00_0025e450_44c0(char *, void *, char *, f32, f32, s32, s32, s32,
+                         f32, f32, f32, f32, s32, f32, s32, s32, s32, u8) __asm__("FUN_L00_0025e450");
 
+extern f32 D_L08_00161F70 __attribute__((sda));
 void FUN_L08_002f44c0(struct Moby *moby)
 {
     SwarmPathFollower *follower = (SwarmPathFollower *)moby->pvars;
@@ -498,41 +495,37 @@ void FUN_L08_002f44c0(struct Moby *moby)
     f32 distance;
 
     switch (moby->state) {
-    case 0: goto state_zero;
-    case 1: goto state_one;
-    case 2: goto state_two;
-    case 3: goto state_three;
-    default: return;
-    }
-state_zero: {
+    case 0: {
         fade = moby->pos.z;
         moby->state = 1;
         moby->pos.z = fade + 0.4f;
         return;
     }
-state_one: {
+    case 1: {
         s32 active = find_moby_hit_44c0(moby, 0x330000, 0);
         distance = FUN_001f9b80_44c0(&moby->pos, D_0013F3D0);
         if ((distance < 2.0f && *(s32 *)(D_0013F3D0 + 0x2004) == 0x42) || *(struct Moby **)(D_0013F3D0 + 0x1bc) == moby) {
             allocate_voice_for_target_entry_44c0(0, 0, moby);
             FUN_L00_0025e450_44c0(moby, D_L08_0015F580, &moby->pos, 3.0f, 1.0f, 10, 20, 60,
                           3.0f, 5.0f, 9.0f, 1.0f, -1, 15.0f, 1, 1, -1, 0);
-        } else {
-            if (active == 0) return;
+            mark_moby_for_removal_44c0(moby);
+            return;
+        }
+        if (active != 0) {
             allocate_voice_for_target_entry_44c0(0, 0, moby);
             FUN_L00_0025e450_44c0(moby, D_L08_0015F580, &moby->pos, 0.0f, 0.0f, 10, 20, 60,
                           1.0f, 3.0f, 9.0f, 1.0f, -1, 15.0f, 1, 1, -1, 0);
+            mark_moby_for_removal_44c0(moby);
         }
-        mark_moby_for_removal_44c0(moby);
         return;
     }
-state_two: {
+    case 2: {
         moby->pos.z -= 0.4f;
         if (follower->path_id == -1 || follower->path->count == 0) {
             mark_moby_for_removal_44c0(moby);
             return;
         }
-        moby->rot.y = fast_add_rotations_44c0(moby->rot.y, D_0015B370 * 0.017453292f * frame_time);
+        moby->rot.y = fast_add_rotations_44c0(moby->rot.y, D_L08_00161F70 * 0.017453292f * frame_time);
         distance = FUN_001f9b80_44c0(&moby->pos, D_0013F3D0);
         if (distance < 2.0f && *(s32 *)(D_0013F3D0 + 0x2004) == 0x42) {
             clear_u64_value_44c0(&velocity);
@@ -568,15 +561,15 @@ state_two: {
         moby->pos.z += 0.4f;
         return;
     }
-state_three: {
+    case 3: {
         Vec4 timer;
         timer.f[0] = (f32)moby->alpha;
         approach_value_44c0(&timer, 0.0f, 128.0f / (f32)scale_game_frames_44c0(30));
         moby->alpha = (u8)(s32)timer.f[0];
         if (moby->alpha == 0) mark_moby_for_removal_44c0(moby);
     }
+    }
 }
-#endif
 #define NOT_SDA
 
 #define MACRO_ADDR
@@ -686,55 +679,61 @@ void FUN_L08_002f5e58(struct Moby *m) {
     FlickerDrawPacket packet;
     Vec4 velocity, offset, position, wave, sag;
     Vec4 *grid;
-    f32 *u, *v;
     f32 *weight;
-    f32 inv_x, inv_y, time, phase, amp_a, amp_b, phase_a, phase_b;
-    f32 phase_step, amp_step_a, amp_step_b, step_a, step_b, height_a, height_b;
-    f32 next_phase, next_amp_a, next_amp_b, next_a, next_b;
-    f32 x, y, noise_x, noise_y, angle, base, sine, shape, bend, a, c, t;
-    s32 i, j, k, stride, alpha, timer, count, lifetime;
+    s32 next_i;
+    f32 inv_x, inv_y;
+    f32 *u, *v;
+    f32 phase, phase_step, amp_a, amp_step_a, amp_b, amp_step_b;
+    f32 step_a, step_b, time, height_a, height_b, phase_a, phase_b;
+    f32 x, y, noise_x, angle, base, sine, shape, bend, a, c, t;
+    s32 stride, alpha, i, j, k, timer, count, lifetime;
     u32 color_a, color_b;
     s32 temp;
     u8 red, green, blue;
     s8 light;
     Vec4 *at;
+    void *mat_rot;
     if (m == NULL) return;
     d = (FlickerLightVars *)m->pvars;
     if (d == NULL) return;
     b = (u8 *)d;
     f = (f32 *)d;
+    mat_rot = &m->rot;
     stride = (b[8] + 1) * 16;
-    grid = __builtin_alloca(((u32)(b[8] + 1) * 128 * (b[9] + 1)) >> 3);
+    grid = __builtin_alloca((((u32)(b[8] + 1) << 7) * (b[9] + 1)) >> 3);
     inv_x = 1.0f / convert_integer_to_float(b[8]);
     inv_y = 1.0f / convert_integer_to_float(b[9]);
     u = __builtin_alloca((b[8] * 4 + 0x13) & 0x7f0);
     v = __builtin_alloca((b[9] * 4 + 0x13) & 0x7f0);
     time = convert_integer_to_float(D_L08_0015F3F8);
     {
-        f32 *current = d->levels_a;
         f32 *target = d->levels_b;
-        i = 7;
+        f32 *current = d->levels_a;
+        s32 i = 7;
         do {
             f32 value = *current;
             if (value < *target) {
-                value = value + f[0x22] * f[0x23];
-                *current = value;
-                if (*target <= value) *target = random_float_between(1.0f-f[0x22], 1.0f);
+                f32 t = value + f[0x22] * f[0x23];
+                *current = t;
+                if (*target <= t) *target = random_float_between(1.0f-f[0x22], 1.0f);
             } else {
-                value = value - f[0x22] * f[0x23];
-                *current = value;
-                if (value <= *target) *target = random_float_between(1.0f-f[0x22], 1.0f);
+                f32 t = value - f[0x22] * f[0x23];
+                *current = t;
+                if (t <= *target) *target = random_float_between(1.0f-f[0x22], 1.0f);
             }
             target++;
             i--;
             current++;
         } while (i >= 0);
     }
-    a = convert_integer_to_float(b[0x13]);
-    c = convert_integer_to_float(m->alpha);
-    alpha = truncate_float_to_s32_u(d->intensity * a * c * 0.0078125f) & 0xff;
-    if (b[0xd] == 0) b[0xf] = b[0xc];
-    else b[0xf] = b[0xc] + (D_L08_0015F3F8_gp / (b[0xe]+1)) % b[0xd];
+    {
+        f32 a, c;
+        a = convert_integer_to_float(b[0x13]);
+        c = convert_integer_to_float(m->alpha);
+        alpha = truncate_float_to_s32_u(d->intensity * a * c * 0.0078125f) & 0xff;
+    }
+    if (b[0xd] != 0) b[0xf] = b[0xc] + (D_L08_0015F3F8_gp / (b[0xe]+1)) % b[0xd];
+    else b[0xf] = b[0xc];
     temp = b[0xf];
     if (!(d->flags & 1)) temp += 0x28;
     packet.gs[1] = get_effect_texture(temp);
@@ -745,12 +744,14 @@ void FUN_L08_002f5e58(struct Moby *m) {
     packet.color[3] = (u32)b[0x13] << 24 | (u32)b[0x11] << 16 | (u32)b[0x12] << 8 | b[0x10];
     packet.color[0] = packet.color[1] = packet.color[2] = packet.color[3];
     corners[0].q = corners[1].q = corners[2].q = corners[3].q = 0;
-    t = d->size_x * 0.5f;
-    corners[1].f[0] = corners[3].f[0] = t;
-    corners[0].f[0] = corners[2].f[0] = -t;
+    {
+        f32 t = d->size_x * 0.5f;
+        corners[1].f[0] = corners[3].f[0] = t;
+        corners[0].f[0] = corners[2].f[0] = -t;
+    }
     corners[0].f[2] = f[0x20] + 0.01f;
     corners[1].f[2] = f[0x21] + 0.01f;
-    FUN_001fa050(mat, &m->rot);
+    FUN_001fa050(mat, mat_rot);
     FUN_001f9d20(&corners[0], &corners[0], mat);
     FUN_001f9d20(&corners[1], &corners[1], mat);
     FUN_001f9d20(&corners[2], &corners[2], mat);
@@ -774,83 +775,115 @@ void FUN_L08_002f5e58(struct Moby *m) {
     bend = d->levels_a[0];
     phase = f[5]; amp_a = f[7]; amp_b = f[8];
     phase_a = f[0x18]; phase_b = f[0x19];
-    for (i = 0; i <= b[9]; i++) {
-        y = convert_integer_to_float(i) / convert_integer_to_float(b[9]);
-        qcopy(&point, &edge[0]);
-        next_phase = phase + phase_step;
-        next_amp_b = amp_b + amp_step_b;
-        next_a = phase_a + step_a;
-        next_amp_a = amp_a + amp_step_a;
-        next_b = phase_b + step_b;
-        subtract_vector_xyz(&across, &edge[1], &edge[0]);
-        FUN_001f9a68(&across, &across, inv_x);
-        noise_y = FUN_L08_002f5d98(y, (char *)d);
-        k = i * stride;
-        weight = (f32 *)((char *)grid + k + 12);
-        for (j = 0; j <= b[8]; j++) {
-            x = convert_integer_to_float(j) / convert_integer_to_float(b[8]);
-            a = FUN_L00_0025e310(f[0x17] * time);
-            angle = x * 3.1415927f;
-            c = FUN_001f9de0(a);
-            base = time * phase + f[0x16] * c;
-            noise_x = FUN_L08_002f5d98(x, (char *)d);
-            base = base + (noise_x * f[0x34] + noise_y * f[0x35] + bend * f[0x36]);
-            shape = height_a * x + height_b * (1.0f-x);
-            a = FUN_L00_0025e310(base + phase_a + f[0xb] * x + f[0xd] * y);
-            c = FUN_L00_0025e310(base + phase_b + f[0xc] * y + f[0xe] * x);
-            sine = FUN_001f9988(FUN_001f9de0(angle));
-            shape = shape * sine * (1.0f-y);
-            t = FUN_001f9dc8(a);
-            normalize_vector_xyz(&velocity, &across, amp_a * t * sine * noise_x);
-            t = FUN_001f9de0(c);
-            normalize_vector_xyz(&offset, &down[0], amp_b * t * sine * noise_x);
-            a = FUN_001f9de0(y * 3.1415927f);
-            c = FUN_001f9de0(angle);
-            t = FUN_001f9de0(FUN_L00_0025e310(base + f[0xb] * x));
-            base = FUN_001f9de0(FUN_L00_0025e310(base + f[0xd] * y));
-            normalize_vector_xyz(&wave, &normal, a * c * (f[0x1e] * t + f[0x1f] * base));
-            normalize_vector_xyz(&sag, &down[0], shape);
-            add_vector_xyz(&position, &velocity, &offset);
-            add_vector_xyz(&position, &position, &wave);
-            subtract_vector_xyz(&position, &position, &sag);
-            add_vector_xyz((char *)grid + k + j*16, &point, &position);
-            *weight = 1.0f /
-                (((1.0f-f[0x56]) + f[0x56]*sine*sine*sine) * ((1.0f-f[0x57])+f[0x57]*y));
-            add_vector_xyz(&point, &point, &across);
-            weight += 4;
+    {
+        s32 i;
+        for (i = 0; i <= b[9]; i = next_i) {
+            f32 next_phase, next_amp_a, next_amp_b, next_a, next_b;
+            f32 noise_y;
+            y = convert_integer_to_float(i) / convert_integer_to_float(b[9]);
+            qcopy(&point, &edge[0]);
+            next_i = i + 1;
+            next_phase = phase + phase_step;
+            next_amp_b = amp_b + amp_step_b;
+            next_a = phase_a + step_a;
+            next_amp_a = amp_a + amp_step_a;
+            next_b = phase_b + step_b;
+            subtract_vector_xyz(&across, &edge[1], &edge[0]);
+            FUN_001f9a68(&across, &across, inv_x);
+            noise_y = FUN_L08_002f5d98(y, (char *)d);
+            k = i * stride;
+            weight = (f32 *)((char *)grid + k + 12);
+            for (j = 0; j <= b[8]; j++) {
+                f32 a, c, t, base, angle, shape;
+                x = convert_integer_to_float(j) / convert_integer_to_float(b[8]);
+                a = FUN_L00_0025e310(f[0x17] * time);
+                angle = x * 3.1415927f;
+                c = FUN_001f9de0(a);
+                t = f[0x16] * c;
+                base = time * phase + t;
+                noise_x = FUN_L08_002f5d98(x, (char *)d);
+                base = base + (noise_x * f[0x34] + noise_y * f[0x35] + bend * f[0x36]);
+                shape = height_a * x + height_b * (1.0f-x);
+                a = FUN_L00_0025e310(base + phase_a + f[0xb] * x + f[0xd] * y);
+                c = FUN_L00_0025e310(base + phase_b + f[0xc] * y + f[0xe] * x);
+                sine = FUN_001f9988(FUN_001f9de0(angle));
+                shape = shape * sine;
+                shape = shape * (1.0f-y);
+                t = FUN_001f9dc8(a);
+                normalize_vector_xyz(&velocity, &across, amp_a * t * sine * noise_x);
+                t = FUN_001f9de0(c);
+                normalize_vector_xyz(&offset, &down[0], amp_b * t * sine * noise_x);
+                a = FUN_001f9de0(y * 3.1415927f);
+                c = FUN_001f9de0(angle);
+                t = FUN_001f9de0(FUN_L00_0025e310(base + f[0xb] * x));
+                base = FUN_001f9de0(FUN_L00_0025e310(base + f[0xd] * y));
+                normalize_vector_xyz(&wave, &normal, a * c * (f[0x1e] * t + f[0x1f] * base));
+                normalize_vector_xyz(&sag, &down[0], shape);
+                add_vector_xyz(&position, &velocity, &offset);
+                add_vector_xyz(&position, &position, &wave);
+                subtract_vector_xyz(&position, &position, &sag);
+                add_vector_xyz((char *)grid + k + j*16, &point, &position);
+                *weight = 1.0f /
+                    (((1.0f-f[0x56]) + f[0x56]*sine*sine*sine) * ((1.0f-f[0x57])+f[0x57]*y));
+                add_vector_xyz(&point, &point, &across);
+                weight += 4;
+            }
+            add_vector_xyz(&edge[0], &edge[0], &down[0]);
+            phase = next_phase; amp_a = next_amp_a;
+            add_vector_xyz(&edge[1], &edge[1], &down[1]);
+            amp_b = next_amp_b; phase_a = next_a; phase_b = next_b;
         }
-        add_vector_xyz(&edge[0], &edge[0], &down[0]);
-        phase = next_phase; amp_a = next_amp_a;
-        add_vector_xyz(&edge[1], &edge[1], &down[1]);
-        amp_b = next_amp_b; phase_a = next_a; phase_b = next_b;
     }
-    a = FUN_001f9de0(FUN_L00_0025e310(time * f[0x12]));
-    a = FUN_L00_00200228(time*f[0x10] + f[0x11]*a, &temp);
-    for (i=0; i<=b[8]; i++) { u[i] = a; a = a + inv_x / d->period_a; }
-    a = FUN_001f9de0(FUN_L00_0025e310(time * f[0x15]));
-    a = FUN_L00_00200228(time*f[0x13] + f[0x14]*a, &temp);
-    for (i=0; i<=b[9]; i++) { v[i] = a; a = a + inv_y / d->period_b; }
+    {
+        f32 a;
+        s32 count;
+        f32 *weight;
+        a = FUN_001f9de0(FUN_L00_0025e310(time * f[0x12]));
+        a = FUN_L00_00200228(time*f[0x10] + f[0x11]*a, &temp);
+        weight = u;
+        for (count = 0; count <= b[8]; count++) {
+            *weight++ = a;
+            a = a + inv_x / d->period_a;
+        }
+        a = FUN_001f9de0(FUN_L00_0025e310(time * f[0x15]));
+        a = FUN_L00_00200228(time*f[0x13] + f[0x14]*a, &temp);
+        weight = v;
+        for (count = 0; count <= b[9]; count++) {
+            *weight++ = a;
+            a = a + inv_y / d->period_b;
+        }
+    }
     for (i=0; i<b[9]; i++) {
-        k = i * stride;
-        count = (i + 1) * stride;
-        for (j=0; j<b[8]; j++) {
-            packet.uv[0][0] = u[j]; packet.uv[0][1] = v[i];
-            packet.uv[1][0] = u[j+1]; packet.uv[1][1] = v[i];
-            packet.uv[2][0] = u[j]; packet.uv[2][1] = v[i+1];
-            packet.uv[3][0] = u[j+1]; packet.uv[3][1] = v[i+1];
-            add_vector_xyz(&packet.points[0], (char *)grid+(j*16+k), &m->pos);
-            add_vector_xyz(&packet.points[1], (char *)grid+((j+1)*16+k), &m->pos);
-            add_vector_xyz(&packet.points[2], (char *)grid+(j*16+count), &m->pos);
-            add_vector_xyz(&packet.points[3], (char *)grid+((j+1)*16+count), &m->pos);
-            temp = truncate_float_to_s32_u(((Vec4 *)((char *)grid+(j*16+k)))->f[3]);
-            packet.color[0] = (u32)(alpha/temp) << 24 | (u32)b[0x11] << 16 | (u32)b[0x12] << 8 | b[0x10];
-            temp = truncate_float_to_s32_u(((Vec4 *)((char *)grid+((j+1)*16+k)))->f[3]);
-            packet.color[1] = (u32)(alpha/temp) << 24 | (u32)b[0x11] << 16 | (u32)b[0x12] << 8 | b[0x10];
-            temp = truncate_float_to_s32_u(((Vec4 *)((char *)grid+(j*16+count)))->f[3]);
-            packet.color[2] = (u32)(alpha/temp) << 24 | (u32)b[0x11] << 16 | (u32)b[0x12] << 8 | b[0x10];
-            temp = truncate_float_to_s32_u(((Vec4 *)((char *)grid+((j+1)*16+count)))->f[3]);
-            packet.color[3] = (u32)(alpha/temp) << 24 | (u32)b[0x11] << 16 | (u32)b[0x12] << 8 | b[0x10];
-            FUN_001f7d30(&packet, NULL, 0);
+        {
+            Vec4 *current;
+            Vec4 *target;
+            f32 *current_v = v + i;
+            f32 *target_v = v + i + 1;
+            if (b[8]) {
+                k = i * stride;
+                count = (i + 1) * stride;
+                current = (Vec4 *)((char *)grid + k);
+                target = (Vec4 *)((char *)grid + count);
+                for (j=0; j<b[8]; j++) {
+                    packet.uv[0][0] = u[j]; packet.uv[0][1] = *current_v;
+                    packet.uv[1][0] = u[j+1]; packet.uv[1][1] = *current_v;
+                    packet.uv[2][0] = u[j]; packet.uv[2][1] = *target_v;
+                    packet.uv[3][0] = u[j+1]; packet.uv[3][1] = *target_v;
+                    add_vector_xyz(&packet.points[0], &current[j], &m->pos);
+                    add_vector_xyz(&packet.points[1], &current[j+1], &m->pos);
+                    add_vector_xyz(&packet.points[2], &target[j], &m->pos);
+                    add_vector_xyz(&packet.points[3], &target[j+1], &m->pos);
+                    timer = truncate_float_to_s32_u(((f32 *)((char *)grid + k + j*16))[3]);
+                    packet.color[0] = (u32)(alpha/timer) << 24 | (u32)b[0x11] << 16 | (u32)b[0x12] << 8 | b[0x10];
+                    timer = truncate_float_to_s32_u(((f32 *)((char *)grid + k + (j+1)*16))[3]);
+                    packet.color[1] = (u32)(alpha/timer) << 24 | (u32)b[0x11] << 16 | (u32)b[0x12] << 8 | b[0x10];
+                    timer = truncate_float_to_s32_u(((f32 *)((char *)grid + count + j*16))[3]);
+                    packet.color[2] = (u32)(alpha/timer) << 24 | (u32)b[0x11] << 16 | (u32)b[0x12] << 8 | b[0x10];
+                    timer = truncate_float_to_s32_u(((f32 *)((char *)grid + count + (j+1)*16))[3]);
+                    packet.color[3] = (u32)(alpha/timer) << 24 | (u32)b[0x11] << 16 | (u32)b[0x12] << 8 | b[0x10];
+                    FUN_001f7d30(&packet, NULL, 0);
+                }
+            }
         }
     }
     if (!(d->flags & 2)) return;
@@ -873,8 +906,10 @@ void FUN_L08_002f5e58(struct Moby *m) {
             t = random_float_between(f[0x39], f[0x3a]);
             lifetime = (s16)scale_game_frames(*(s16 *)(b+0xf0));
             red = b[0xec]; green = b[0xed]; blue = b[0xee];
-            temp = (u8)truncate_float_to_s32_u(convert_integer_to_float(b[0xef])*a);
-            FUN_L08_0027b450(m, &offset, &velocity, lifetime, red, green, blue, temp, t);
+            {
+                s32 temp = (u8)truncate_float_to_s32_u(convert_integer_to_float(b[0xef])*a);
+                FUN_L08_0027b450(m, &offset, &velocity, lifetime, red, green, blue, temp, t);
+            }
         } while (i < b[0xf2]);
     }
     if (tick_countdown_16((s16 *)(b+0x122))) {
@@ -909,9 +944,9 @@ void FUN_L08_002f5e58(struct Moby *m) {
             a = random_float_between((f32)-(s32)b[0x139], (f32)b[0x139]);
             a = (a+d->size_x)*0.5f;
             c = random_float_between((f32)-(s32)b[0x13a], (f32)b[0x13a]);
-            c = (c+d->size_y)*0.5f;
             normalize_vector_xyz(&velocity, &across, a);
-            normalize_vector_xyz(&offset, &down[0], -c);
+            a = (c+d->size_y)*0.5f;
+            normalize_vector_xyz(&offset, &down[0], -a);
             add_vector_xyz(&d->light_pos, &velocity, &offset);
             add_vector_xyz(&d->light_pos, &d->light_pos, &corners[0]);
             add_vector_xyz(&d->light_pos, &d->light_pos, &m->pos);
@@ -1069,7 +1104,6 @@ extern int FUN_L00_00266448(void *, void *);
 extern int FUN_L00_002668a0(void *, void *);
 extern int random_float_between_cf(float) __asm__("FUN_001fa6d0");
 extern int tick_countdown_32(int *);
-extern unsigned char D_0015EDB0_b __asm__("D_0015EDB0");
 extern void FUN_L00_002628d8(float, float, void *, void *, int);
 extern void subtract_vector_xyz_c(void *, void *, void *) __asm__("subtract_vector_xyz");
 extern L16WatchPlayer D_0013E633_watch __asm__("D_0013E533");
@@ -1099,14 +1133,12 @@ typedef struct {
     int moving_timer;
     int target_timer;
 } WD8;
-extern unsigned char D_0013DD4A_w __asm__("D_0013DD4A") __attribute__((section(".data")));
 extern unsigned char D_0013D3B4 __attribute__((section(".data")));
 extern char D_L08_001621E0[];
 extern int D_L08_001621D8 __attribute__((sda));
 extern char *D_L08_001600EC;
 extern void FUN_L00_00262d38(int);
 extern void FUN_L00_00284e50(void *, void *);
-extern unsigned char D_0014C050[];
 extern float D_L08_001675C0_c[] __asm__("D_L08_001675C0");
 extern void FUN_L08_00305138_c(void *) __asm__("FUN_L02_002e0cd8");
 extern void FUN_L00_0025a120(void *);
@@ -1135,7 +1167,7 @@ void FUN_L08_00302ce8(WM *m) {
         ((unsigned char *)m)[0x30] = 0xFF;
         if (m->animation != 1)
             blend_moby_animation(m, 1, 0, scale_game_frames(10));
-        if (D_0013DD4A_w && D_0014C050[((unsigned char *)m)[0xB0] + current_level_index * 16] == 0xFF) {
+        if (D_0013DD4A && visited52[((unsigned char *)m)[0xB0] + current_level_index * 16] == 0xFF) {
             mark_moby_for_removal(m);
             return;
         }
@@ -1247,7 +1279,7 @@ void FUN_L08_00302ce8(WM *m) {
         d->yaw = yaw * 0.6f;
         d->head_yaw = yaw * 0.4f;
     }
-    if (D_0015EDB0_b)
+    if (big_head_cheat_enabled)
         d->height = 2.75f;
     FUN_L00_002628d8(rate * frame_scale_sq, head_rate * frame_scale_sq, m, d->body, 0);
     FUN_L00_002628d8(rate * frame_scale_sq, head_rate * frame_scale_sq, m, d->head, 1);

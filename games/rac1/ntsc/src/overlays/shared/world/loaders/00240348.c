@@ -33,6 +33,7 @@ INCLUDE_ASM("config/us/overlays/asm/FUN_L00_00241788.s", FUN_L00_00241788);
 extern f32 convert_integer_to_float(s32) __asm__("FUN_001fa6c0");
 extern s32 truncate_float_to_s32(f32) __asm__("FUN_001fa6d0");
 extern f64 fptodp(f32);
+extern char D_L00_001E8640[];
 extern void stub_printf(const char *, ...) __asm__("FUN_001e93b0");
 
 struct MobySortEntry {
@@ -78,12 +79,15 @@ void FUN_L00_00241788(s32 *entries, s32 count) {
         }
     } while (!changed);
 
-    entry = sorted;
-    i = count;
-    while (i-- > 0) {
-        stub_printf((const char *)0x001e8640, truncate_float_to_s32(entry->id),
-                    fptodp(entry->value));
-        entry++;
+    if (count > 0) {
+        i = count;
+        entry = sorted;
+        do {
+            i--;
+            stub_printf(D_L00_001E8640, truncate_float_to_s32(entry->id),
+                        fptodp(entry->value));
+            entry++;
+        } while (i != 0);
     }
 }
 #endif
@@ -368,7 +372,7 @@ extern int D_L00_001600E8  MACRO_ADDR;
 extern int D_L00_001600F0  MACRO_ADDR;
 extern int D_L00_001600F8  MACRO_ADDR;
 extern int D_L00_00160100  MACRO_ADDR;
-extern char *D_L00_0015EF80 ;
+extern char *D_L00_0015EF80;
 extern char *D_L00_0015FBC0  MACRO_ADDR;
 extern char *D_L00_0015FB80  MACRO_ADDR;
 extern int D_L00_0015FB50  MACRO_ADDR;
@@ -379,7 +383,7 @@ extern Cuboid *D_L00_0015EF50 MACRO_ADDR;
 extern HeroSpawn D_0013F350;
 extern Light D_L00_0017EEC0[];
 extern LevelState16CB40 D_L00_0016CA40;
-extern LevelLoad173E00 D_L00_00173E00 ;
+extern LevelLoad173E00 D_L00_00173E00;
 /* Level load state at D_L00_00173E40; this function sets its header pointers (+0x4, +0x8) and clears +0xC..+0x14. */
 extern LevelLoad173E40 level_load __asm__("D_L00_00173E40");
 extern MobyInst *D_L00_0015FFD8 MACRO_ADDR;
@@ -400,13 +404,13 @@ extern TieInst *D_L00_00160FC0 MACRO_ADDR;
 extern TieInst *D_L00_00160FC4 MACRO_ADDR;
 extern TieMatrix *D_L00_00160FC8 MACRO_ADDR;
 extern char *D_L00_0015F310  MACRO_ADDR;
-extern char *D_L00_0015FFE8 MACRO_ADDR;
+extern char *D_L00_0015FFE8_macro __asm__("D_L00_0015FFE8") MACRO_ADDR;
 extern char *D_L00_001600E4 MACRO_ADDR;
 extern char *D_L00_001600EC MACRO_ADDR;
 extern char *D_L00_001600F4 MACRO_ADDR;
 extern char *D_L00_001600FC MACRO_ADDR;
-extern char *D_L00_00160108 MACRO_ADDR;
-extern char *D_L00_0016016C MACRO_ADDR;
+extern char *D_L00_00160108_macro __asm__("D_L00_00160108") MACRO_ADDR;
+extern char *D_L00_0016016C_macro __asm__("D_L00_0016016C") MACRO_ADDR;
 extern char *D_L00_0015F318  MACRO_ADDR;
 extern char *D_L00_001B04B0[];
 extern char *func_0020D348_m(int);
@@ -428,7 +432,6 @@ extern char D_L00_001E8708[];
 extern char D_L00_001E8740[];
 extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
 extern f32 vector_length_xyz(void *) __asm__("FUN_001f9af0");
-extern float D_0015ED60 MACRO_ADDR;
 extern float D_L00_0015F448 MACRO_ADDR;
 extern float D_L00_0015F44C MACRO_ADDR;
 extern float D_L00_0015F450 MACRO_ADDR;
@@ -439,22 +442,18 @@ extern float D_L00_00160F80 MACRO_ADDR;
 extern float D_L00_00160FE0 MACRO_ADDR;
 extern float FUN_001f99c8(float, float);
 extern float probe_ground_height(void *, int, float) __asm__("func_00213508");
-extern int D_0014C190[][64];
-extern int D_0015ED80 MACRO_ADDR;
 extern int D_0015ED84 MACRO_ADDR;
-extern int D_0015ED88 MACRO_ADDR;
-extern int D_0015EE50; /* no foreign declaration */
 extern int D_L00_0015EF54 MACRO_ADDR;
 extern char *level_root[2] __asm__("D_0015EE4C") MACRO_ADDR;
 extern int D_L00_0015F444 MACRO_ADDR;
 extern int D_L00_0015F445 MACRO_ADDR;
 extern int D_L00_0015F446 MACRO_ADDR;
 extern int D_L00_0015F5CC MACRO_ADDR;
-extern int D_L00_0015F600 ;
+extern int D_L00_0015F600;
 extern int D_L00_0015F710 MACRO_ADDR;
 extern int D_L00_0015FBC4 MACRO_ADDR;
 extern int D_L00_0015FFF0 MACRO_ADDR;
-extern int D_L00_0015FFF4 ;
+extern int D_L00_0015FFF4;
 extern int D_L00_00160104 MACRO_ADDR;
 extern int D_L00_00160170 MACRO_ADDR;
 extern int D_L00_00160174 MACRO_ADDR;
@@ -462,7 +461,7 @@ extern int D_L00_00160178 MACRO_ADDR;
 extern int D_L00_0016017C MACRO_ADDR;
 extern int D_L00_00160490 MACRO_ADDR;
 extern int D_L00_00160540 MACRO_ADDR;
-extern int D_L00_00160548[];
+extern int first_class_ids[] __asm__("D_L00_00160548");
 extern int D_L00_00160B70[];
 extern int D_L00_00160F50 MACRO_ADDR;
 extern int D_L00_00160FCC MACRO_ADDR;
@@ -482,7 +481,6 @@ extern unsigned char *D_L00_001604A0 MACRO_ADDR;
 extern unsigned char mission_state[] __asm__("D_L00_0015FC88") MACRO_ADDR;
 extern unsigned char D_L00_001802C0[];
 extern unsigned char D_L00_001804C0[];
-extern unsigned char moby_killed[] __asm__("D_L00_001BB684");
 extern unsigned char D_L00_001BC1B0[];
 extern unsigned char D_L00_001C5B00[];
 extern void enable_global_state_flag(void) __asm__("func_001F61E8");
@@ -520,6 +518,11 @@ extern void load(void *, int, int) __asm__("FUN_00216828");
 extern GameState137B80 D_00137B80;
 
 char *load_level_gameplay(int arg0) __asm__("FUN_L00_00241940");
+extern s32 D_0014C190_257218[][64] __asm__("D_0014C190");
+extern unsigned char D_L00_001BB684[];
+extern f32 frame_scale __asm__("D_0015ED60") MACRO_ADDR;
+extern s32 pal_mode __asm__("D_0015ED80") MACRO_ADDR;
+extern s32 game_language __asm__("D_0015ED88") MACRO_ADDR;
 char *load_level_gameplay(int arg0) {
     LevelHeader *hdr;
     char *mem;
@@ -530,7 +533,7 @@ char *load_level_gameplay(int arg0) {
     hdr = D_L00_00173E00.f4;
     mem = D_L00_00173E00.f18;
     if (arg0 == 0) {
-        if (D_0015ED80 != 0) {
+        if (pal_mode != 0) {
             load(mem, D_00137B80.f2978, D_00137B80.f297C);
         } else {
             load(mem, D_00137B80.f2970, D_00137B80.f2974);
@@ -544,12 +547,12 @@ char *load_level_gameplay(int arg0) {
     FillTransferWords(D_L00_00166C80, 0, 0x3A0);
     FillTransferWords(D_L00_0018EB40, 0, 0x180);
     set_global_state_slot(0x4D2);
-    if (D_0015ED80 != 0) {
-        if (D_0015ED60 == 1.0f) {
+    if (pal_mode != 0) {
+        if (frame_scale == 1.0f) {
             set_video_timing(1);
         }
     } else {
-        if (D_0015ED60 != 1.0f) {
+        if (frame_scale != 1.0f) {
             set_video_timing(0);
         }
     }
@@ -654,7 +657,7 @@ char *load_level_gameplay(int arg0) {
         }
     }
     if (hdr->f10[0] != 0) {
-        int lang = D_0015ED88 * 4;
+        int lang = game_language * 4;
         char *p = (char *)hdr + *(int *)((char *)hdr + lang + 0x10);
         int size;
         int i;
@@ -980,7 +983,7 @@ char *load_level_gameplay(int arg0) {
                 } else {
                     vis = 0xFF;
                 }
-                if (moby_killed[uid] != 0) {
+                if (D_L00_001BB684[uid] != 0) {
                     skip = 1;
                 } else if (flags & 3) {
                     if (mission_state[mission] == 0xFF) {
@@ -996,7 +999,7 @@ char *load_level_gameplay(int arg0) {
                         }
                     } else {
                         if (flags & 1) {
-                            if ((D_0014C190[D_0015ED84][uid >> 5] >> (uid & 0x1F)) & 1) {
+                            if ((D_0014C190_257218[D_0015ED84][uid >> 5] >> (uid & 0x1F)) & 1) {
                                 b2 = (bolts + 1) / 2;
                             }
                         } else {
@@ -1008,7 +1011,7 @@ char *load_level_gameplay(int arg0) {
                         skip = 1;
                     }
                 } else if ((flags & 0xC) == 4) {
-                    if ((D_0014C190[D_0015ED84][uid >> 5] >> (uid & 0x1F)) & 1) {
+                    if ((D_0014C190_257218[D_0015ED84][uid >> 5] >> (uid & 0x1F)) & 1) {
                         skip = 1;
                     }
                 }
@@ -1104,7 +1107,7 @@ char *load_level_gameplay(int arg0) {
         D_L00_0015FFDC = D_L00_0015FFD8 + count;
         D_L00_0015FFDC->f20 = 0xFF;
         mem += (count + n2) << 8;
-        D_L00_0015FFE8 = mem;
+        D_L00_0015FFE8_macro = mem;
         mem += n2 << 7;
         mem = (char *)(((u32)mem + 0x3F) & 0xFFFFFFC0);
         D_L00_0015FFE0 = (MobyInst *)((int)D_L00_0015FFD8 + ((count + n2) << 8) - 0x100);
@@ -1290,15 +1293,15 @@ char *load_level_gameplay(int arg0) {
         D_L00_00160104 = *(int *)q;
         src = q + *(int *)(q + 4);
         size = *(int *)(q + 8);
-        D_L00_00160108 = mem;
+        D_L00_00160108_macro = mem;
         mem += size;
         q += 0x10;
         mem = (char *)(((u32)mem + 0x3F) & 0xFFFFFFC0);
         if (size != 0) {
-            copy_blocks_16_forward(D_L00_00160108, src, size);
+            copy_blocks_16_forward(D_L00_00160108_macro, src, size);
         }
         for (i = 0; i < D_L00_00160104; i++) {
-            D_L00_001B04B0[i] = D_L00_00160108 + *(int *)q;
+            D_L00_001B04B0[i] = D_L00_00160108_macro + *(int *)q;
             q += 4;
         }
     }
@@ -1461,7 +1464,7 @@ char *load_level_gameplay(int arg0) {
             FUN_001f9838(D_L00_00160040, q, n * 0x30);
         }
     }
-    D_L00_0016016C = mem;
+    D_L00_0016016C_macro = mem;
     mem += 0x20000;
     D_L00_00160174 = -1;
     D_L00_00160170 = 0;
@@ -1474,7 +1477,7 @@ char *load_level_gameplay(int arg0) {
         if (D_0015ED84 == 13 && D_0013E030.f26 == 2) {
             if (D_L00_00160540 != 0) {
                 for (m = D_L00_0015FFD8; m->f20 != 0xFF; m++) {
-                    if (m->fA6 == D_L00_00160548[D_0013E030.f26]) {
+                    if (m->fA6 == first_class_ids[D_0013E030.f26]) {
                         FUN_L00_0028e8a0((char *)m);
                         set_moby_animation(m, 1, 0);
                         break;
@@ -1485,7 +1488,7 @@ char *load_level_gameplay(int arg0) {
         if (D_0013E030.f0 == 0) {
             float rot;
 
-            m = func_0020D348_m(D_L00_00160548[D_0013E030.f26]);
+            m = func_0020D348_m(first_class_ids[D_0013E030.f26]);
             m->f10 = ship[0];
             m->f14 = ship[1];
             m->f18 = ship[2];
@@ -1726,18 +1729,18 @@ typedef struct { s16 a; s16 b; s32 *file; } Ldg244110;
 extern Ldg244110 D_0015EE48;
 extern s32 current_level_index __asm__("D_0015ED84");
 extern u8 D_0014C050[];
-extern u8 D_L00_0015FC88_244110[] __asm__("D_L00_0015FC88") __attribute__((section(".sdata")));
+extern u8 mission_state_macro[] __asm__("D_L00_0015FC88") __attribute__((section(".sdata")));
 extern s32 D_L00_0015F40C;
 extern s32 sound_bank_handle __asm__("D_0015ED5C");
 extern s32 D_L00_00160004;
-extern s32 D_0015EE8C;
+extern s32 gs_texture_allocation_base __asm__("D_0015EE8C");
 extern u64 D_L00_001827C0[3];
 extern u64 D_L00_001827D8[3];
 extern u64 D_L00_001827F0[3];
 extern s32 D_L00_00160F54;
 extern s32 D_L00_001C4A00[];
-extern s32 D_L00_0015FFC8;
-extern s32 D_L00_00199A80[];
+extern s32 texture_count __asm__("D_L00_0015FFC8");
+extern u32 D_L00_00199A80[];
 extern u8 D_L00_001AEBC0[];
 extern s32 D_L00_00160FD4;
 extern s32 D_L00_001C6700[];
@@ -1757,8 +1760,8 @@ extern Q244110 D_L00_001AFCE0[];
 extern u8 D_L00_00197BC0[];
 extern char *D_L00_0015F420;
 extern s32 D_L00_0015F438;
-extern s32 D_L00_0015F43C;
-extern s32 D_L00_0015F440;
+extern u32 D_L00_0015F43C;
+extern u32 D_L00_0015F440;
 extern s32 D_L00_0015FC98;
 extern s32 D_L00_0015FC9C;
 extern s32 D_L00_0015FCA0;
@@ -1786,9 +1789,9 @@ extern char *D_L00_001BC030_244110[] __asm__("D_L00_001BC030");
 extern char *D_L00_00160FC0_244110 __asm__("D_L00_00160FC0");
 extern char *D_L00_00160494_244110 __asm__("D_L00_00160494");
 extern char *D_L00_0015FFD8_244110 __asm__("D_L00_0015FFD8");
-extern char *D_L00_0015FFE8_244110 __asm__("D_L00_0015FFE8");
-extern char *D_L00_00160108_244110 __asm__("D_L00_00160108");
-extern char *D_L00_0016016C_244110 __asm__("D_L00_0016016C");
+extern char *D_L00_0015FFE8;
+extern char *D_L00_00160108;
+extern char *D_L00_0016016C;
 extern s32 D_0014EE90[16];
 typedef struct { u8 pad[0x10]; u32 v __attribute__((packed, aligned(1))); } Una244110;
 extern u8 D_L00_00179100[];
@@ -1878,23 +1881,23 @@ s32 FUN_L00_00244110(s32 full, s32 keep) {
     if (full) {
         FUN_001f98d0(h, (char *)(src[4] + (s32)src), src[5]);
         D_L00_0015F40C = 0;
-        FUN_001f9838_244110(D_L00_0015FC88_244110, D_0014C050 + current_level_index * 16, 0x10);
+        FUN_001f9838_244110(mission_state_macro, D_0014C050 + current_level_index * 16, 0x10);
         FUN_00203120((char *)(src[6] + (s32)src), h[0], (char *)h + h[1]);
         D_L00_00160004 = sound_bank_handle;
         FUN_00118a80(0);
         used = FUN_L00_0024d8d0_244110((char *)(src[0x14] + (s32)src), base);
         D_L00_0015F40C = (s32)(base + h[0x18]);
 
-        D_L00_001827C0[0] = GS_TEX0((D_0015EE8C + h[0x24]) >> 8, 2, 0x13, 7, 7, 1, 0,
-            (D_0015EE8C + h[0x25]) >> 8, 0, 0, 0, 4);
+        D_L00_001827C0[0] = GS_TEX0((gs_texture_allocation_base + h[0x24]) >> 8, 2, 0x13, 7, 7, 1, 0,
+            (gs_texture_allocation_base + h[0x25]) >> 8, 0, 0, 0, 4);
         D_L00_001827C0[1] = 0x0000FFA0000000E0;
         D_L00_001827C0[2] = 0x0040000400004000;
-        D_L00_001827D8[0] = GS_TEX0((D_0015EE8C + h[0x26]) >> 8, 1, 0x13, 6, 6, 1, 0,
-            (D_0015EE8C + h[0x27]) >> 8, 0, 0, 0, 4);
+        D_L00_001827D8[0] = GS_TEX0((gs_texture_allocation_base + h[0x26]) >> 8, 1, 0x13, 6, 6, 1, 0,
+            (gs_texture_allocation_base + h[0x27]) >> 8, 0, 0, 0, 4);
         D_L00_001827D8[1] = 0x0000FFA0000000E0;
         D_L00_001827D8[2] = 0x0040000400004000;
-        D_L00_001827F0[0] = GS_TEX0((D_0015EE8C + h[0x30]) >> 8, 2, 0x13, 7, 7, 1, 0,
-            (D_0015EE8C + h[0x31]) >> 8, 0, 0, 0, 4);
+        D_L00_001827F0[0] = GS_TEX0((gs_texture_allocation_base + h[0x30]) >> 8, 2, 0x13, 7, 7, 1, 0,
+            (gs_texture_allocation_base + h[0x31]) >> 8, 0, 0, 0, 4);
         D_L00_001827F0[1] = 0x0000FFA0000000E0;
         D_L00_001827F0[2] = 0x0040000400004000;
 
@@ -1903,10 +1906,10 @@ s32 FUN_L00_00244110(s32 full, s32 keep) {
         for (c1 = 0; c1 < D_L00_00160F54; c1++)
             D_L00_001C4A00[c1] = D_L00_0015F40C + t1[c1].offset + (FUN_001f97a0(t1[c1].kind) << 28);
         tex = (TexRef244110 *)((char *)h + h[0xF]);
-        D_L00_0015FFC8 = h[0xE];
-        for (c2 = 0; c2 < D_L00_0015FFC8; c2++)
+        texture_count = h[0xE];
+        for (c2 = 0; c2 < texture_count; c2++)
             D_L00_00199A80[c2] = D_L00_0015F40C + tex[c2].offset + (FUN_001f97a0(tex[c2].kind) << 28);
-        FUN_001f98d0(D_L00_001AEBC0, tex, D_L00_0015FFC8 * 16);
+        FUN_001f98d0(D_L00_001AEBC0, tex, texture_count * 16);
         t3 = (TexRef244110 *)((char *)h + h[0x11]);
         D_L00_00160FD4 = h[0x10];
         for (c3 = 0; c3 < D_L00_00160FD4; c3++)
@@ -2063,12 +2066,12 @@ s32 FUN_L00_00244110(s32 full, s32 keep) {
         printf_1e93b0(D_L00_001E8988, KB(D_L00_00160FC0_244110 - D_L00_00197300[0]->seqs[0]));
         printf_1e93b0(D_L00_001E89A0, KB(D_L00_00160494_244110 - D_L00_00160FC0_244110));
         printf_1e93b0(D_L00_001E89B8, KB(D_L00_0015FFD8_244110 - D_L00_00160494_244110));
-        printf_1e93b0(D_L00_001E89D0, KB(D_L00_0015FFE8_244110 - D_L00_0015FFD8_244110));
-        printf_1e93b0(D_L00_001E89E8, KB(D_L00_00160108_244110 - D_L00_0015FFE8_244110));
-        printf_1e93b0(D_L00_001E8A00, KB(D_L00_0016016C_244110 - D_L00_00160108_244110));
+        printf_1e93b0(D_L00_001E89D0, KB(D_L00_0015FFE8 - D_L00_0015FFD8_244110));
+        printf_1e93b0(D_L00_001E89E8, KB(D_L00_00160108 - D_L00_0015FFE8));
+        printf_1e93b0(D_L00_001E8A00, KB(D_L00_0016016C - D_L00_00160108));
         printf_1e93b0(D_L00_001E8A18, 128.0);
         printf_1e93b0(D_L00_0015FC80);
-        printf_1e93b0(D_L00_001E8A30, int_to_float((s32)D_L00_0016016C_244110 + 0x20000) * (1.0f / 1048576.0f));
+        printf_1e93b0(D_L00_001E8A30, int_to_float((s32)D_L00_0016016C + 0x20000) * (1.0f / 1048576.0f));
         printf_1e93b0(D_L00_0015FC80);
         {
             char *lo = D_L00_00173E00_244110.f0 - 0x2D0000;
@@ -2102,7 +2105,6 @@ struct StreamLoader {
     u8 pad34[0x28];
     u8 *buf;                    /* 0x5C */
 };
-extern s32 D_0015ED80;
 extern struct SectorListTable disc_table __asm__("D_00137B80");
 extern struct StreamLoader D_L00_0016C860;
 extern s32 start_audio_stream_read(void *, s32, s32) __asm__("FUN_00216788");
@@ -2114,7 +2116,7 @@ s32 FUN_L00_002451b8(s32 i) {
     s32 start;
     s32 size;
 
-    if (D_0015ED80 != 0) {
+    if (pal_mode != 0) {
         size = disc_table.lists[D_L00_0016C860.list].y[i + 1] - disc_table.lists[D_L00_0016C860.list].y[i];
         start = disc_table.lists[D_L00_0016C860.list].y[i];
     } else {

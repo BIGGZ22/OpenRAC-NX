@@ -7,6 +7,8 @@
 #include "rnc/math/vector.h"
 #include "rnc/gameplay/state/usage_stats.h"
 #include "rnc/overlay/hero_tables.h"
+#include "rnc/data_labels.h"
+#include "rnc/input/pad_globals.h"
 
 struct MobyView {
     u8 pad0[0xC];
@@ -127,15 +129,11 @@ struct LevelTable_QS {
     s32 i168;
 };
 
-extern f32 D_0015ED64_a __asm__("D_0015ED64");
 extern f32 D_0015ED6C_a __asm__("D_0015ED6C");
-extern f32 D_0015ED70_a __asm__("D_0015ED70");
-extern s32 D_0015EEA4;
-extern u8 D_0013D4DC[];
 extern struct UsageStats D_00141848;
 #define S D_00141848
 extern s32 D_L05_0015F688 __attribute__((sda));
-extern s32 D_L05_0015F68C __attribute__((sda));
+s32 D_L05_0015F68C = 0;
 extern u8 D_L05_001671D8[];
 
 extern void FUN_L00_00209540(s32, s32);
@@ -191,7 +189,7 @@ struct VoiceSlot {
 extern u8 D_0013E550[];
 extern s32 D_L05_001612D0;
 extern s32 D_L05_001612D8;
-extern s32 D_L05_0015F5CC;
+extern s32 frame_number __asm__("D_L05_0015F5CC");
 extern u8 D_L05_0017C420[];
 
 extern void FUN_L00_00216e48(s32, struct MobyView *, s32);
@@ -250,7 +248,6 @@ extern f32 FUN_L00_00213350(void *);
 extern struct HeroTableRow2C D_L05_0017C088[];
 extern struct LevelTable_QS D_L05_00167080;
 #define Q D_L05_00167080
-extern s32 D_0013CAE0[];
 extern void FUN_L00_00233ba0(void *, void *, f32);
 extern void FUN_L00_00233b20(void *, void *, f32);
 extern void FUN_L00_002336e8(void *, void *, f32);
@@ -263,7 +260,6 @@ extern void FUN_L00_001ff290(void *, void *, void *);
 extern void FUN_L00_002a9b80(struct MobyView *, void *);
 extern s32 FUN_L00_002a96f8(struct MobyView *, void *, f32, f32, s32, f32, f32, f32);
 extern void FUN_L00_002335c8(void *, f32, f32, f32);
-extern f32 D_L00_001C3CF0[];
 extern s32 FUN_L00_002598b0(struct MobyView *, f32, void *, s32, f32, f32, s32, s32, s32);
 extern f32 FUN_001f9ab0(void *, void *);
 struct PlayerSpeedTuning {
@@ -278,7 +274,6 @@ extern s32 FUN_L00_00216de8(s32, s32);
 extern void FUN_L00_00233708(void *, void *, f32);
 extern void FUN_L00_00233810(void *, void *, f32);
 extern s32 FUN_001efa68(void *, void *, s32, struct MobyView *, s32);
-extern s32 D_0013CB14[];
 extern void FUN_L00_00215340(void);
 extern void FUN_L00_00233660(void *, f32, f32, f32);
 extern s32 FUN_L00_0025e3b8(s32);
@@ -302,7 +297,6 @@ extern s32 FUN_L00_0025d808(void *, void *, s32 *, f32 *, f32, s32) __asm__("FUN
 extern s32 FUN_L00_0025d7a0(void *, s32, s32, s32);
 extern f32 FUN_001f96b0(f32);
 extern void hero_integrate_velocity(void) __asm__("FUN_L00_00214108");
-extern u8 item_defs[] __asm__("D_L00_00179AC0");
 extern struct HeroAnimRow D_L00_00179AC0_t[] __asm__("D_L00_00179AC0");
 extern void FUN_L00_00271b18(void *, void *, f32);
 extern void FUN_L00_00215340(void);
@@ -631,10 +625,10 @@ void FUN_L05_00244a70(void) {
                 hero.unk90C = 0;
             }
             if (PD.u1A0.i1A4.v & 0x40) {
-                if (D_L05_0015F5CC - hero.unk914 < scale_game_frames(70)) {
+                if (frame_number - hero.unk914 < scale_game_frames(70)) {
                     hero.unk910++;
                 }
-                hero.unk914 = D_L05_0015F5CC;
+                hero.unk914 = frame_number;
             }
             if (hero.unk90E > scale_game_frames(70)) {
                 hero.unk910 = 0;
@@ -1563,7 +1557,7 @@ void FUN_L05_00244a70(void) {
             if (FUN_L00_00211870(84.0f) != 0) {
                 f32 a = fast_add_rotations(hero.motion.rot.f[2], 3.1415927f);
                 f32 s = frame_time * 2.5f;
-                if (D_0013CAE0[0] & 0xA) {
+                if (pad_held[0] & 0xA) {
                     s = frame_time * 3.0f;
                 }
                 hero.motion.velocity.f[0] += FUN_001f9dc8(a) * s;

@@ -10,6 +10,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 import shutil
 import struct
 import subprocess
@@ -332,7 +333,143 @@ class ProgressReportTests(unittest.TestCase):
             self.assertTrue(text.startswith(comment.MARKER))
             self.assertIn("1 newly matched function", text)
             self.assertIn("`P`", text)
+            self.assertIn("| All data |", text)
             self.assertIn("No report for main yet", comment.render({}, new, "main"))
+
+    def test_data_counts_blobs_c_entries_and_levels(self):
+        """Data totals come from the preserved blobs and the level records;
+        matched data from the *_OVERLAYS sizes and config/overlays/us/data.tsv."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self._repo(Path(tmp))
+            config = repo / "config" / "us" / "rnc1.us.yaml"
+            config.write_text(re.sub(
+                r"( +)- \[0x13680, textbin, text_gap_end\]",
+                r"\1- [0x13680, databin, core_data]\n\1- [0x13780, databin, lvl_vtbl]\n"
+                r"\1- [0x13800, databin, reg_info]\n\1- [0x13900, textbin, text_gap_end]",
+                config.read_text()))
+            (repo / "configure.py").write_text(
+                'DATA_OVERLAYS = {\n    "textbin/promoted": (0x112680, 0x13680, 16),\n'
+                '    "gone/unit": (0x112690, 0x13690, 8),\n}\n')
+            overlays = repo / "config" / "overlays" / "us"
+            overlays.mkdir(parents=True)
+            (overlays / "level-02.json").write_text(json.dumps({"sections": [
+                {"name": ".lit", "size": 64}, {"name": ".bss", "size": 999},
+                {"name": ".data", "size": 192}, {"name": ".text", "size": 4096}]}))
+            (overlays / "data.tsv").write_text("# name\tsize\nD_L02_00160000\t12\n")
+            report = self._build(repo, {})
+        self.assertEqual(report["measures"]["total_data"], str(0x100 + 0x80 + 64 + 192))
+        self.assertEqual(report["measures"]["matched_data"], str(16 + 12))
+        categories = {c["id"]: c["measures"] for c in report["categories"]}
+        self.assertEqual(categories["boot"]["matched_data"], "16")
+        self.assertEqual(categories["levels"]["total_data"], "256")
+        self.assertEqual(categories["overlays"]["matched_data"], "12")
+        self.assertNotIn("total_data", categories["game"])
+
+    def test_zero_data_counts_both_zero_forms(self):
+        """`= 0` and `= {0}` are zeros, placement attributes or not; a
+        D_XXXXXXXX row counts once per level."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            overlays = repo / "config" / "overlays" / "us"
+            overlays.mkdir(parents=True)
+            for level in (1, 2):
+                (overlays / f"level-{level:02d}.json").write_text("{}")
+            (overlays / "data.tsv").write_text(
+                "# name\tsize\nD_00160000\t4\nD_L01_00161000\t4\nD_L01_00161004\t16\n"
+                "D_L01_00161014\t4\nD_L01_00161018\t4\n")
+            src = repo / "src" / "overlays" / "l01"
+            src.mkdir(parents=True)
+            (src / "a.c").write_text(
+                "int D_00160000 = 0;\n"
+                "int D_L01_00161000 = {0};\n"
+                'float row_phase[4] __asm__("D_L01_00161004") __attribute__((section(".sdata"))) = {0};\n'
+                "int D_L01_00161014 = 8;\n"
+                "extern int D_L01_00161018;\n")
+            self.assertEqual(self.report.zero_level_data(repo), 4 * 2 + 4 + 16)
+
+
+class ConfigureDataLayoutTests(unittest.TestCase):
+    """configure.py cuts C-owned bytes out of the preserved data blobs."""
+
+    @classmethod
+    def setUpClass(cls):
+        if importlib.util.find_spec("splat") is None:
+            raise unittest.SkipTest("splat is not installed")
+        cls.configure = load_module("rnc_configure", ROOT / "configure.py")
+
+    def test_entry_must_name_one_configured_unit(self):
+        with mock.patch.object(self.configure, "C_DATA_TABLES",
+                               ((".data", "data", {"old/name": (0x100, 0x80, 4)}),)):
+            with self.assertRaises(SystemExit):
+                self.configure.c_data_sections(["new/name"])
+
+    def test_blob_is_linked_around_the_c_bytes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_dir = Path(tmp)
+            (config_dir / "assets").mkdir()
+            (config_dir / "asm" / "data").mkdir(parents=True)
+            (config_dir / "assets" / "data.databin.bin").write_bytes(bytes(0x40))
+            asm = config_dir / "asm" / "data" / "data.s"
+            asm.write_text('.include "macro.inc"\n\n.section .data, "wa"\n\n'
+                           'glabel D_00165480\n.incbin "assets/data.databin.bin"\n')
+            owned = [("u.data", "u", ".data", 0x165490, 0x66410, 0x10),
+                     ("v.data", "v", ".data", 0x1654A0, 0x66420, 0)]
+            sections = self.configure.preserved_data_sections(
+                config_dir, ".data", "data", 0x165480, 0x66400, owned)
+            text = asm.read_text()
+        self.assertEqual([vram for vram, _ in sections], [0x165480, 0x1654A0])
+        self.assertIn("glabel D_00165480", text)
+        self.assertIn('.incbin "assets/data.databin.bin", 0x0, 0x10', text)
+        self.assertIn('.incbin "assets/data.databin.bin", 0x20, 0x20', text)
+        self.assertIn("AT(0x66420)", sections[1][1])
+
+    def test_bss_is_cut_around_the_c_bss_twice_the_same(self):
+        """A label inside a C-owned bss range is dropped; a second configure
+        run reads the pieces it wrote and gives the same layout."""
+        with tempfile.TemporaryDirectory() as tmp:
+            config_dir = Path(tmp)
+            (config_dir / "asm" / "data").mkdir(parents=True)
+            asm = config_dir / "asm" / "data" / "bss.bss.s"
+            asm.write_text('.include "macro.inc"\n\n.section .bss, "wa"\n\n'
+                           "glabel D_00161280\n    /* 00161280 */ .space 0x10\n\n"
+                           "glabel D_00161290\n    /* 00161290 */ .space 0x8\n\n"
+                           "glabel D_00161298\n    /* 00161298 */ .space 0x8\n")
+            owned = [("u.bss", "u", ".bss", 0x161290, None, 0x8)]
+            first = self.configure.preserved_bss_sections(config_dir, ".bss", "bss.bss", 0x161280, owned)
+            once = asm.read_text()
+            second = self.configure.preserved_bss_sections(config_dir, ".bss", "bss.bss", 0x161280, owned)
+            twice = asm.read_text()
+        self.assertEqual(first, second)
+        self.assertEqual(once, twice)
+        self.assertEqual([vram for vram, _ in first], [0x161280, 0x161298])
+        self.assertNotIn("D_00161290", once)
+        self.assertIn("glabel D_00161298", once)
+
+
+class DataDeclarationTests(unittest.TestCase):
+    """No new data label may get a second type or name (scripts/data-decls.py)."""
+
+    # Labels that still disagree; lower it when you fix some, never raise it.
+    KNOWN_CONFLICTS = 720
+
+    def test_no_new_conflicting_declarations(self):
+        decls = load_module("rnc_data_decls", ROOT / "scripts" / "data-decls.py")
+        found = len(decls.conflicts(ROOT))
+        self.assertLessEqual(found, self.KNOWN_CONFLICTS,
+                             "a data label got a second type or name: run scripts/data-decls.py")
+
+    def test_aliases_with_a_placement_count_as_one_name(self):
+        decls = load_module("rnc_data_decls", ROOT / "scripts" / "data-decls.py")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "include").mkdir()
+            (root / "src").mkdir()
+            (root / "include" / "g.h").write_text('extern s32 frame_count __asm__("D_0015ED00");\n')
+            (root / "src" / "a.c").write_text(
+                'extern s32 frame_count_gp __asm__("D_0015ED00") __attribute__((sda));\n')
+            self.assertEqual(decls.conflicts(root), {})
+            (root / "src" / "b.c").write_text('extern short frame_count __asm__("D_0015ED00");\n')
+            self.assertEqual(list(decls.conflicts(root)), ["D_0015ED00"])
 
 
 class OverlaySourceStateTests(unittest.TestCase):

@@ -7,14 +7,14 @@
 
 #include "qcopy.h"
 #include "qzero.h"
-extern struct Hero hero_data __asm__("D_0013F350") __attribute__((section(".data")));
-extern short D_L00_001B0830_25fcb8[] __asm__("D_L00_001B0830") __attribute__((section(".data")));
 extern char *D_L00_0015FFD8_25fcb8 __asm__("D_L00_0015FFD8");
 extern char *D_L00_001DD100_25fcb8[] __asm__("D_L00_001DD100") __attribute__((section(".data")));
 extern float FUN_001f9b80_25fcb8(void *, void *) __asm__("FUN_001f9b80");
 
+extern struct Hero hero_lui __asm__("D_0013F350") __attribute__((section(".data")));
+extern short D_L00_001B0830_lui[]  __asm__("D_L00_001B0830")__attribute__((section(".data")));
 int FUN_L00_0025fcb8(char *a, char *o, float best) {
-    struct Hero *g = &hero_data;
+    struct Hero *g = &hero_lui;
     char *m;
     char *p;
     int res;
@@ -28,8 +28,8 @@ int FUN_L00_0025fcb8(char *a, char *o, float best) {
         m = 0;
         res = 2;
     }
-    for (i = 1; i <= D_L00_001B0830_25fcb8[0]; i++) {
-        p = D_L00_0015FFD8_25fcb8 + (D_L00_001B0830_25fcb8[i] << 8);
+    for (i = 1; i <= D_L00_001B0830_lui[0]; i++) {
+        p = D_L00_0015FFD8_25fcb8 + (D_L00_001B0830_lui[i] << 8);
         if (p == 0)
             continue;
         if (*(short *)(p + 0xA6) != 0xCB && *(short *)(p + 0xA6) != 0x76C)
@@ -70,7 +70,7 @@ int FUN_L00_0025fcb8(char *a, char *o, float best) {
         *(char **)(o + 0x40) = m;
         qcopy(o, m + 0x10);
         qcopy(o + 0x10, m + 0x40);
-        g = &hero_data;
+        g = &hero_lui;
         if (m == ((char *)g->moby)) {
             qcopy(o + 0x20, &g->motion.unkC0);
             qcopy(o + 0x30, &g->motion.unkD0);
@@ -92,7 +92,7 @@ int FUN_L00_0025fcb8(char *a, char *o, float best) {
 extern int FUN_00214720_25ff38(void *, int) __asm__("FUN_00214720");
 extern int FUN_L00_00259740_25ff38(void *, void *, int) __asm__("FUN_L00_00259740");
 int FUN_L00_0025ff38(char *a, char *o, float best, int *list, int n, float *v, int nv) {
-    struct Hero *g = &hero_data;
+    struct Hero *g = &hero_lui;
     char *m;
     char *p;
     char *q;
@@ -110,20 +110,20 @@ int FUN_L00_0025ff38(char *a, char *o, float best, int *list, int n, float *v, i
         res = 2;
     } else if (n > 0) {
         for (k = 0; k < n - 1; k++) {
-            if (FUN_00214720_25ff38(&hero_data.motion.pos, list[k]) != 0) {
+            if (FUN_00214720_25ff38(&hero_lui.motion.pos, list[k]) != 0) {
                 m = 0;
                 res = 2;
                 break;
             }
         }
     } else if (v != 0 && nv > 0) {
-        if (FUN_L00_00259740_25ff38(&hero_data.motion.pos, v, nv) == 0) {
+        if (FUN_L00_00259740_25ff38(&hero_lui.motion.pos, v, nv) == 0) {
             m = 0;
             res = 2;
         }
     }
-    for (i = 1; i <= D_L00_001B0830_25fcb8[0]; i++) {
-        p = D_L00_0015FFD8_25fcb8 + (D_L00_001B0830_25fcb8[i] << 8);
+    for (i = 1; i <= D_L00_001B0830_lui[0]; i++) {
+        p = D_L00_0015FFD8_25fcb8 + (D_L00_001B0830_lui[i] << 8);
         if (p == 0) continue;
         if (*(short *)(p + 0xA6) != 0xCB && *(short *)(p + 0xA6) != 0x76C) continue;
         if (*(unsigned char *)(p + 0x20) == 0xFE) continue;
@@ -180,7 +180,7 @@ int FUN_L00_0025ff38(char *a, char *o, float best, int *list, int n, float *v, i
         *(char **)(o + 0x40) = m;
         qcopy(o, m + 0x10);
         qcopy(o + 0x10, m + 0x40);
-        g = &hero_data;
+        g = &hero_lui;
         if (m == (char *)g->moby) {
             qcopy(o + 0x20, &g->motion.unkC0);
             qcopy(o + 0x30, &g->motion.unkD0);
@@ -304,19 +304,19 @@ void FUN_L00_00260738(char *out, OvlQuad *pos, void *m1, void *m2) {
     FUN_00214598(c, out);
     qcopy(out + 0x10, pos);
 }
-extern u8 D_0013DD40_2607d0[] __asm__("D_0013DD40");
+extern u8 level_available[] __asm__("D_0013DD40");
 extern s32 D_0013D510_2607d0[] __asm__("D_0013D510");
 void FUN_L00_00262d38(s32);
 void unlock_planet(s32 id) __asm__("FUN_L00_002607d0");
 void unlock_planet(s32 id) {
     s32 n, i;
     n = 0;
-    if (D_0013DD40_2607d0[id] == 0) {
+    if (level_available[id] == 0) {
         for (i = 0; i < 20; i++) {
-            if (D_0013DD40_2607d0[i])
+            if (level_available[i])
                 n++;
         }
-        D_0013DD40_2607d0[id] = 1;
+        level_available[id] = 1;
         D_0013D510_2607d0[n] = id;
         if (id != *(volatile s32 *)&current_level_index)
             FUN_L00_00262d38(id);
@@ -333,7 +333,7 @@ typedef struct {
 } ItemDef;
 
 extern ItemDef item_defs[] __asm__("D_L00_00179AC0") __attribute__((section(".data")));
-extern int D_0013D428[];
+extern int weapon_ammo_counts[] __asm__("D_0013D428");
 extern int pause_iop_sprite_lists[] __asm__("D_00141EA0");
 extern int D_L00_001B0340[] __attribute__((section(".data")));
 extern int D_L00_001C3E98[] __attribute__((section(".data")));
@@ -343,9 +343,9 @@ extern unsigned char items_acquired[] __asm__("D_0013D4E8");
 extern int D_00141408 __attribute__((section(".data")));
 extern int D_00141410 __attribute__((section(".data")));
 extern int D_00141414 __attribute__((section(".data")));
-extern unsigned char D_0015EDD0[] __attribute__((section(".sdata")));
 extern void queue_dialogue_message(int arg0, int arg1) __asm__("FUN_L00_00263d40");
 
+extern u8 D_0015EDD0_257218[] __asm__("D_0015EDD0") __attribute__((section(".sdata")));
 void FUN_L00_00260860(int id, int flag) {
     unsigned char *pa = &D_0013D4C0[id];
     unsigned char *pb = &items_acquired[id];
@@ -367,7 +367,7 @@ void FUN_L00_00260860(int id, int flag) {
         r = &D_L00_001C40B0[id];
         *pb = 1;
         if (r->h8 != 0) {
-            int *q = &D_0013D428[id];
+            int *q = &weapon_ammo_counts[id];
             int v = r->h12;
             if (v < *q) {
                 v = *q;
@@ -378,9 +378,9 @@ void FUN_L00_00260860(int id, int flag) {
             if (id != 0 && D_L00_001C3E98[i] == id) {
                 int j;
                 for (j = 0;; j++) {
-                    unsigned char b = D_0015EDD0[j];
+                    unsigned char b = D_0015EDD0_257218[j];
                     if ((b & 0x3F) == id || b == 0xFF) {
-                        D_0015EDD0[j] = id | 0x40;
+                        D_0015EDD0_257218[j] = id | 0x40;
                         break;
                     }
                 }
@@ -416,11 +416,11 @@ typedef OvlVec4 Vec_260a88;
 extern int D_L00_0015F598_260a88 __asm__("D_L00_0015F598");
 extern unsigned char D_L00_0015FC88_260a88[] __asm__("D_L00_0015FC88");
 extern int D_L00_0015EEA0_260a88 __asm__("D_0015EEA0");
-extern int D_L00_0015EE20_260a88 __asm__("D_0015EE20");
+extern int alternate_animation_sequence __asm__("D_0015EE20");
 extern int D_L00_0015EE28_260a88 __asm__("D_0015EE28");
 extern int D_L00_0015EE2C_260a88 __asm__("D_0015EE2C");
 extern float D_L00_0015ED6C_260a88 __asm__("D_0015ED6C");
-extern float D_L00_0015ED70_260a88 __asm__("D_0015ED70");
+extern float frame_time_sq __asm__("D_0015ED70");
 extern char *D_L00_001B04B0_260a88[] __asm__("D_L00_001B04B0");
 extern void FUN_001ff260_260a88(void *) __asm__("FUN_001f99f8");
 extern void FUN_001ff500_260a88(float, void *, void *) __asm__("FUN_001f9bf8");
@@ -448,6 +448,7 @@ void FUN_L00_00260a88(char *moby, int lower, int upper, unsigned int flags, int 
     Vec_260a88 base, position, velocity, offset, adjusted, difference, quarter;
     float crossings[2];
     float time;
+    float scale;
     int large = 0, medium = 0, small = 0, single;
     int count, remaining, multiplier, near_count, far_count;
     int near_large, near_medium, near_small, near_single;
@@ -472,11 +473,11 @@ void FUN_L00_00260a88(char *moby, int lower, int upper, unsigned int flags, int 
     if (lower < 1)
         lower = 1;
     count = FUN_00257b50_260a88(upper - lower + 1) + lower;
-    if (D_L00_0015EEA0_260a88 || D_L00_0015EE20_260a88)
+    if (D_L00_0015EEA0_260a88 || alternate_animation_sequence)
         count *= 2;
     if (count < 500 && gated && D_L00_0015EE28_260a88) {
         multiplier = (int)((float)FUN_001fef20_260a88(60) * 60.0f) * D_L00_0015EE2C_260a88 / D_L00_0015EE28_260a88;
-        if (D_L00_0015EEA0_260a88 || D_L00_0015EE20_260a88)
+        if (D_L00_0015EEA0_260a88 || alternate_animation_sequence)
             multiplier /= 2;
         if (multiplier < 150) {
             if (multiplier < 91) {
@@ -504,8 +505,9 @@ void FUN_L00_00260a88(char *moby, int lower, int upper, unsigned int flags, int 
             if (count < 1) count = 1;
         }
     }
-    remaining = count;
-    if (count >= 300) {
+    single = count;
+    remaining = single;
+    if (remaining >= 300) {
         do {
             remaining -= 50;
             large++;
@@ -520,31 +522,33 @@ void FUN_L00_00260a88(char *moby, int lower, int upper, unsigned int flags, int 
         int b_large = 0, b_medium = 0, b_small = 0, b_single = 3;
         near_value = 150;
         far_value = 3;
-        if (count < 150) {
-            int value_large = 150, value_medium = 0, value_small = 0, value_single = 0;
-            do {
-                if (a_large) {
-                    value_large -= 50; a_large--; value_medium += 20; a_medium++;
-                } else if (a_medium) {
-                    value_medium -= 20; a_medium--; value_small += 5; a_small++;
-                } else if (a_small) {
-                    value_small -= 5; a_small--; a_single++;
-                }
-                near_value = value_large + value_medium + value_small + a_single;
-            } while (count < near_value && near_value > 3);
-        }
-        if (count > 3) {
-            int value_large = 0, value_medium = 0, value_small = 0;
-            do {
-                if (b_single) {
-                    b_single--; value_small += 5; b_small++;
-                } else if (b_small) {
-                    value_small -= 5; b_small--; value_medium += 20; b_medium++;
-                } else if (b_medium) {
-                    value_medium -= 20; b_medium--; value_large += 50; b_large++;
-                }
-                far_value = value_large + value_medium + value_small + b_single;
-            } while (far_value < count && far_value < 150);
+        if (single + small + medium + large > 3) {
+            if (count < 150) {
+                int value_large = 150, value_medium = 0, value_small = 0, value_single = 0;
+                do {
+                    if (a_large) {
+                        value_large -= 50; a_large--; value_medium += 20; a_medium++;
+                    } else if (a_medium) {
+                        value_medium -= 20; a_medium--; value_small += 5; a_small++;
+                    } else if (a_small) {
+                        value_small -= 5; a_small--; a_single++;
+                    }
+                    near_value = value_large + value_medium + value_small + a_single;
+                } while (count < near_value && near_value > 3);
+            }
+            if (count > 3) {
+                int value_large = b_large * 50, value_medium = b_medium * 20, value_small = b_small * 5;
+                do {
+                    if (b_single) {
+                        b_single--; value_small += 5; b_small++;
+                    } else if (b_small) {
+                        value_small -= 5; b_small--; value_medium += 20; b_medium++;
+                    } else if (b_medium) {
+                        value_medium -= 20; b_medium--; value_large += 50; b_large++;
+                    }
+                    far_value = value_large + value_medium + value_small + b_single;
+                } while (far_value < count && far_value < 150);
+            }
         }
         if (near_value - count < count - far_value) {
             large = a_large; medium = a_medium; small = a_small; single = a_single;
@@ -556,8 +560,10 @@ void FUN_L00_00260a88(char *moby, int lower, int upper, unsigned int flags, int 
         qcopy(&position, moby + 0x10);
         position.f[2] += 0.5f;
         time = FUN_00257cb0_260a88();
-        velocity.f[0] = FUN_001ff7e8_260a88(time) * (FUN_00257be8_260a88(0.0f, 3.0f) * D_L00_0015ED6C_260a88);
-        velocity.f[1] = FUN_001ff800_260a88(time) * (FUN_00257be8_260a88(0.0f, 3.0f) * D_L00_0015ED6C_260a88);
+        scale = FUN_001ff7e8_260a88(time);
+        velocity.f[0] = scale * (FUN_00257be8_260a88(0.0f, 3.0f) * D_L00_0015ED6C_260a88);
+        scale = FUN_001ff800_260a88(time);
+        velocity.f[1] = scale * (FUN_00257be8_260a88(0.0f, 3.0f) * D_L00_0015ED6C_260a88);
         velocity.f[2] = 0.0f;
         velocity.f[2] = FUN_00257be8_260a88(3.7f, 6.0f) * D_L00_0015ED6C_260a88;
         offset.f[0] = velocity.f[0];
@@ -566,7 +572,7 @@ void FUN_L00_00260a88(char *moby, int lower, int upper, unsigned int flags, int 
         FUN_001ff500_260a88(0.5f, &offset, &offset);
         FUN_001ff278_260a88(&position, &position, &offset);
         if (path_index >= 0) {
-            float half = D_L00_0015ED70_260a88 * 10.8f * -0.5f;
+            float half = frame_time_sq * 10.8f * -0.5f;
             time = 120.0f;
             if ((float)FUN_002595a0_260a88(half, velocity.f[2] - half,
                 position.f[2] - *(float *)(D_L00_001B04B0_260a88[path_index] + 0x18),
@@ -586,17 +592,18 @@ void FUN_L00_00260a88(char *moby, int lower, int upper, unsigned int flags, int 
         FUN_001ff278_260a88(&velocity, &velocity, &base);
         if (large) {
             large--;
-            FUN_002a7438_260a88(moby, &position, &velocity, flags, 50, gated);
+            remaining = 50;
         } else if (medium) {
             medium--;
-            FUN_002a7438_260a88(moby, &position, &velocity, flags, 20, gated);
+            remaining = 20;
         } else if (small) {
             small--;
-            FUN_002a7438_260a88(moby, &position, &velocity, flags, 5, gated);
+            remaining = 5;
         } else {
             single--;
-            FUN_002a7438_260a88(moby, &position, &velocity, flags, 1, gated);
+            remaining = 1;
         }
+        FUN_002a7438_260a88(moby, &position, &velocity, flags, remaining, gated);
     }
 }
 #endif

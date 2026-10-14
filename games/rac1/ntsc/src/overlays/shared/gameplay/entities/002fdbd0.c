@@ -445,7 +445,7 @@ void FUN_L06_002feb40(struct Moby *moby) {
     struct Moby *other;
     struct Moby *fragment;
     s32 collision;
-    s32 fragment_count;
+
     struct {
         f32 position[4];
         f32 velocity[4];
@@ -516,7 +516,6 @@ void FUN_L06_002feb40(struct Moby *moby) {
         case 2:
             {
                 f32 speed;
-                f32 remaining;
                 moby->state = 16;
                 vel = vars->vel.f;
                 speed = D_L06_00161FB8 * D_0015ED6C;
@@ -530,7 +529,7 @@ void FUN_L06_002feb40(struct Moby *moby) {
             angle = FUN_001f9e90(other->pos.x, other->pos.y);
             FUN_0026b368(angle, moby, vel, 9, 1, 0);
             vel = scratch.velocity;
-            for (fragment_count = 9; fragment_count >= 0; fragment_count--) {
+            for (collision = 9; collision >= 0; collision--) {
                 qcopy(scratch.position, &moby->pos);
                 scratch.position[2] += 2.5f;
                 scratch.position[0] += FUN_00266908(0.0f, 0.2f);
@@ -586,12 +585,12 @@ extern f32 fast_add_rotations(f32, f32) __asm__("func_001FA580");
 extern f32 fast_cos(f32) __asm__("func_001F9DC8");
 extern f32 fast_sin_c(f32) __asm__("func_001F9DE0");
 extern float probe_ground_height(void *, int, float) __asm__("func_00213508");
-extern short D_L06_00161FD4_d __asm__("D_L06_00161FD4") __attribute__((sda));
-extern short D_L06_00161FD8_d __asm__("D_L06_00161FD8") __attribute__((sda));
 extern void add_vector_xyz_cf(void *, int, void *) __asm__("FUN_L00_0024f7c8");
 extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
 extern void normalize_vector_xyz(void *, void *, f32) __asm__("FUN_001f9bf8");
 
+extern short D_L06_00161FD4 __attribute__((sda));
+extern short D_L06_00161FD8 __attribute__((sda));
 void FUN_L06_002ff100(char *m) {
     char *d = *(char **)(m + 0x78);
     float v[4];
@@ -602,7 +601,7 @@ void FUN_L06_002ff100(char *m) {
     *(float *)(d + 0x218) = *(float *)(m + 0x18);
     for (i = 0; i < 16; i++) {
         float f = convert_integer_to_float(i) * 0.0625f - 0.5f;
-        f = f * (*(float *)&D_L06_00161FD4_d * 0.017453292f);
+        f = f * (*(float *)&D_L06_00161FD4 * 0.017453292f);
         v[0] = fast_cos(fast_add_rotations(f, *(float *)(m + 0x48))) * 0.2f;
         v[1] = fast_sin_c(fast_add_rotations(f, *(float *)(m + 0x48))) * 0.2f;
         v[2] = 0.15f;
@@ -614,7 +613,7 @@ void FUN_L06_002ff100(char *m) {
             *(float *)(d + 0x23C + i * 16) = 1.0f;
         }
     }
-    *(float *)(d + 0x21C) = (float)scale_game_frames(*(int *)&D_L06_00161FD8_d);
+    *(float *)(d + 0x21C) = (float)scale_game_frames(*(int *)&D_L06_00161FD8);
 }
 #ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L06_002ff2c8.s", FUN_L06_002ff2c8);
@@ -647,10 +646,10 @@ void FUN_L06_002ff2c8(char *moby) {
         return;
     }
     if (frames == 20) {
-        f32 *weight = (f32 *)(data + 0x230);
+        f32 *weight = (f32 *)(data + 0x23C);
         s32 remaining = 15;
         do {
-            f32 *value = weight + 3;
+            f32 *value = weight;
             if (*value >= 1.0f) {
                 *value = 0.98f;
             }
@@ -658,14 +657,15 @@ void FUN_L06_002ff2c8(char *moby) {
             weight += 4;
         } while (remaining >= 0);
     }
-    i = 0;
     offset = 0;
     {
+        s32 i = 0;
         f32 *entry = (f32 *)(data + 0x230);
         f32 *relative_ptr = relative;
         do {
             if (hero.vehicle_mode == 1) {
-                step = D_L06_00161FD0 * frame_time * 0.5f;
+                step = D_L06_00161FD0 * frame_time;
+                step *= 0.5f;
             } else {
                 step = D_L06_00161FD0 * frame_time;
             }
@@ -696,14 +696,14 @@ void FUN_L06_002ff2c8(char *moby) {
         f32 *next_entry;
         offset = i * 16;
         next = i + 1;
-        if (entry[3] >= 0.6f &&
+        if (*(f32 *)(data + i * 16 + 0x23C) >= 0.6f &&
             (next_entry = (f32 *)(data + 0x230 + next * 16), next_entry[3] >= 0.6f)) {
             point[0] = fast_cos(*(f32 *)(moby + 0x48));
             point[1] = fast_sin_c(*(f32 *)(moby + 0x48));
             point[2] = 1.0f;
             point[3] = 5627.925f;
             make_hit_descriptor(&shot, (struct Moby *)moby,
-                             entry[3] >= 1.0f && next_entry[3] >= 1.0f ? 0x10001 : 0x10000, point, 1.0f);
+                             *(f32 *)(data + i * 16 + 0x23C) >= 1.0f && next_entry[3] >= 1.0f ? 0x10001 : 0x10000, point, 1.0f);
             shot.unk18 = 0;
             shot.unk19 = 1;
             shot.oclass = *(s16 *)(moby + 0xA6);
@@ -899,14 +899,14 @@ void FUN_L06_002ff978(char *moby) {
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002FF000.c: func_L06_00301FE8), where it is exact; names translated to the US level program. */
 
 extern float fast_add_rotations(float, float) __asm__("FUN_001fa580");
-extern short D_L06_00162080_d __asm__("D_L06_00162080") __attribute__((sda));
+extern f32 D_L06_00162080_gp __asm__("D_L06_00162080") __attribute__((sda));
 extern void FUN_001f9a10(float *, float *, float *);
 
 void FUN_L06_00300b90(struct Moby *moby) {
     char *data;
     float t = frame_time_sq * 15.0f;
     moby->scale =
-        moby->pclass->scale * *(float *)&D_L06_00162080_d;
+        moby->pclass->scale * *(float *)&D_L06_00162080_gp;
     data = (char *)moby->pvars;
     *(float *)(data + 8) -= t;
     FUN_001f9a10(&moby->pos.x, &moby->pos.x, (float *)data);
@@ -922,8 +922,7 @@ void FUN_L06_00300b90(struct Moby *moby) {
 #include "eetypes.h"
 extern unsigned char *create_moby(int) __asm__("FUN_0020c4f8");
 extern void upd_a(unsigned char *) __asm__("FUN_L00_00250df8");
-extern float D_0015ED6C_300c60 __asm__("D_0015ED6C");
-extern float D_L06_00162080_300c60 __asm__("D_L06_00162080") __attribute__((sda));
+extern float D_L06_00162080_gp __asm__("D_L06_00162080") __attribute__((sda));
 extern int ftoi_300c60(float) __asm__("FUN_001fa6d0");
 extern float scale_time(float) __asm__("FUN_001f96b0");
 
@@ -942,15 +941,15 @@ unsigned char *FUN_L06_00300c60(char *m, float *pos, float *vel) {
 
     if (n != 0) {
         d = *(char **)(n + 0x78);
-        *(float *)(n + 0x2C) = *(float *)(*(char **)(n + 0x24) + 0x24) * D_L06_00162080_300c60;
+        *(float *)(n + 0x2C) = *(float *)(*(char **)(n + 0x24) + 0x24) * D_L06_00162080_gp;
         n[0x30] = 0xFF;
         *(short *)(n + 0x32) = 0x7E;
         n[0x31] = 1;
         qcopy(n + 0x10, pp);
         qcopy(d, pv);
-        *(float *)(d + 0x10) = random_float_between(-360.0f, 360.0f) * DEG_TO_RAD * D_0015ED6C_300c60;
-        *(float *)(d + 0x14) = random_float_between(-360.0f, 360.0f) * DEG_TO_RAD * D_0015ED6C_300c60;
-        *(float *)(d + 0x18) = random_float_between(-360.0f, 360.0f) * DEG_TO_RAD * D_0015ED6C_300c60;
+        *(float *)(d + 0x10) = random_float_between(-360.0f, 360.0f) * DEG_TO_RAD * frame_time;
+        *(float *)(d + 0x14) = random_float_between(-360.0f, 360.0f) * DEG_TO_RAD * frame_time;
+        *(float *)(d + 0x18) = random_float_between(-360.0f, 360.0f) * DEG_TO_RAD * frame_time;
         n[0xBC] = ftoi_300c60(scale_time(random_float_between(60.0f, 120.0f)));
         upd_a(n);
     }
@@ -959,7 +958,7 @@ unsigned char *FUN_L06_00300c60(char *m, float *pos, float *vel) {
 
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002FF000.c: func_L06_00303630), where it is exact; names translated to the US level program. */
 
-extern int D_L06_0015F5CC;
+extern int level_frame_count __asm__("D_L06_0015F5CC");
 extern short D_L06_001620C8 __attribute__((sda));
 extern short D_L06_001620CC __attribute__((sda));
 extern short D_L06_001620D0 __attribute__((sda));
@@ -990,7 +989,7 @@ void FUN_L06_003021d8(char *moby) {
     draw_ui_frame(W(D_L06_001620D8) + W(D_L06_001620CC), W(D_L06_001620DC) + W(D_L06_001620CC),
                 W(D_L06_001620E0) + W(D_L06_001620C8), W(D_L06_001620E4) + W(D_L06_001620C8),
                 W(D_L06_001620E8));
-    v = fast_sin(func_001FA888(D_L06_0015F5CC % 60) / 60.0f * 6.28318f) * 3.0f + 0.5f;
+    v = fast_sin(func_001FA888(level_frame_count % 60) / 60.0f * 6.28318f) * 3.0f + 0.5f;
     if (v > 1.0f) {
         v = 1.0f;
     } else if (v < 0.0f) {

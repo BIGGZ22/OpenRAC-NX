@@ -7,6 +7,12 @@
 #include "rnc/gameplay/entities/moby.h"
 #include "asm.h"
 #include "qcopy.h"
+#include "rnc/data_labels.h"
+#include "rnc/audio/sound_state.h"
+#include "rnc/gameplay/state/game_globals.h"
+#include "rnc/rendering/render_globals.h"
+#include "rnc/globals.h"
+#include "rnc/overlay/level_labels.h"
 
 typedef struct {
     char *f0;     /* 0x00 */
@@ -52,13 +58,9 @@ extern Load26b768 D_L18_00174800_26b768 __asm__("D_L07_00173E80");
 extern char *D_L18_00174840_26b768[] __asm__("D_L07_00173EC0");
 typedef struct { s16 a; s16 b; s32 *file; } Ldg26b768;
 extern Ldg26b768 D_0015EE48;
-extern s32 current_level_index __asm__("D_0015ED84");
-extern u8 D_0014C050[];
-extern u8 D_L18_0015FC88_26b768[] __asm__("D_L07_0015FC88") __attribute__((section(".sdata")));
 extern s32 D_L07_0015F40C;
-extern s32 sound_bank_handle __asm__("D_0015ED5C");
 extern s32 D_L07_00160004;
-extern s32 D_0015EE8C;
+extern s32 gs_texture_allocation_base __asm__("D_0015EE8C");
 extern u64 D_L07_00182840[3];
 extern u64 D_L07_00182858[3];
 extern u64 D_L07_00182870[3];
@@ -113,14 +115,12 @@ extern char *D_L18_001C6200_26b768[] __asm__("D_L07_001C5880");
 extern char *D_L18_001BCA30_26b768[] __asm__("D_L07_001BC0B0");
 extern char *D_L18_00160FC0_26b768 __asm__("D_L07_00160FC0");
 extern char *D_L18_00160494_26b768 __asm__("D_L07_00160494");
-extern char *D_L18_0015FFD8_26b768 __asm__("D_L07_0015FFD8");
+extern char *level_mobys __asm__("D_L07_0015FFD8");
 extern char *D_L18_0015FFE8_26b768 __asm__("D_L07_0015FFE8");
 extern char *D_L18_00160108_26b768 __asm__("D_L07_00160108");
 extern char *D_L18_0016016C_26b768 __asm__("D_L07_0016016C");
-extern s32 D_0014EE90[16];
 typedef struct { u8 pad[0x10]; u32 v __attribute__((packed, aligned(1))); } Una26b768;
 extern u8 D_L07_00179180[];
-extern s32 game_frame __asm__("D_L07_0015F5CC");
 
 extern void FUN_00202a98(void);
 extern void FUN_001f98d0(void *, void *, s32);
@@ -157,6 +157,7 @@ extern void FUN_L00_00264740(void);
      | ((u64)(cpsm) << 51) | ((u64)(csm) << 55) | ((u64)(csa) << 56) | ((u64)(cld) << 61))
 #define KB(x) (int_to_float((s32)(x)) * (1.0f / 1024.0f))
 
+extern u8 D_L07_0015FC88_macro[] __asm__("D_L07_0015FC88") __attribute__((section(".sdata")));
 /* Reads the level's core data. Its index lists the object classes:
  *   0x18  moby classes, 0x20 bytes per entry
  *   0x20  tie classes, 0x20 bytes per entry
@@ -206,23 +207,23 @@ s32 FUN_L07_0026b768(s32 full, s32 keep) {
     if (full) {
         FUN_001f98d0(h, (char *)(src[4] + (s32)src), src[5]);
         D_L07_0015F40C = 0;
-        FUN_001f9838_26b768(D_L18_0015FC88_26b768, D_0014C050 + current_level_index * 16, 0x10);
+        FUN_001f9838_26b768(D_L07_0015FC88_macro, visited52 + current_level_index * 16, 0x10);
         FUN_00203120((char *)(src[6] + (s32)src), h[0], (char *)h + h[1]);
         D_L07_00160004 = sound_bank_handle;
         FUN_00118a80(0);
         used = FUN_L00_0024d8d0_26b768((char *)(src[0x14] + (s32)src), base);
         D_L07_0015F40C = (s32)(base + h[0x18]);
 
-        D_L07_00182840[0] = GS_TEX0((D_0015EE8C + h[0x24]) >> 8, 2, 0x13, 7, 7, 1, 0,
-            (D_0015EE8C + h[0x25]) >> 8, 0, 0, 0, 4);
+        D_L07_00182840[0] = GS_TEX0((gs_texture_allocation_base + h[0x24]) >> 8, 2, 0x13, 7, 7, 1, 0,
+            (gs_texture_allocation_base + h[0x25]) >> 8, 0, 0, 0, 4);
         D_L07_00182840[1] = 0x0000FFA0000000E0;
         D_L07_00182840[2] = 0x0040000400004000;
-        D_L07_00182858[0] = GS_TEX0((D_0015EE8C + h[0x26]) >> 8, 1, 0x13, 6, 6, 1, 0,
-            (D_0015EE8C + h[0x27]) >> 8, 0, 0, 0, 4);
+        D_L07_00182858[0] = GS_TEX0((gs_texture_allocation_base + h[0x26]) >> 8, 1, 0x13, 6, 6, 1, 0,
+            (gs_texture_allocation_base + h[0x27]) >> 8, 0, 0, 0, 4);
         D_L07_00182858[1] = 0x0000FFA0000000E0;
         D_L07_00182858[2] = 0x0040000400004000;
-        D_L07_00182870[0] = GS_TEX0((D_0015EE8C + h[0x30]) >> 8, 2, 0x13, 7, 7, 1, 0,
-            (D_0015EE8C + h[0x31]) >> 8, 0, 0, 0, 4);
+        D_L07_00182870[0] = GS_TEX0((gs_texture_allocation_base + h[0x30]) >> 8, 2, 0x13, 7, 7, 1, 0,
+            (gs_texture_allocation_base + h[0x31]) >> 8, 0, 0, 0, 4);
         D_L07_00182870[1] = 0x0000FFA0000000E0;
         D_L07_00182870[2] = 0x0040000400004000;
 
@@ -390,8 +391,8 @@ s32 FUN_L07_0026b768(s32 full, s32 keep) {
             printf_1e93b0(D_L07_0020FC10, KB(D_L07_00197380[0]->seqs[0] - D_L18_001BCA30_26b768[0]));
         printf_1e93b0(D_L07_0020FC28, KB(D_L18_00160FC0_26b768 - D_L07_00197380[0]->seqs[0]));
         printf_1e93b0(D_L07_0020FC40, KB(D_L18_00160494_26b768 - D_L18_00160FC0_26b768));
-        printf_1e93b0(D_L07_0020FC58, KB(D_L18_0015FFD8_26b768 - D_L18_00160494_26b768));
-        printf_1e93b0(D_L07_0020FC70, KB(D_L18_0015FFE8_26b768 - D_L18_0015FFD8_26b768));
+        printf_1e93b0(D_L07_0020FC58, KB(level_mobys - D_L18_00160494_26b768));
+        printf_1e93b0(D_L07_0020FC70, KB(D_L18_0015FFE8_26b768 - level_mobys));
         printf_1e93b0(D_L07_0020FC88, KB(D_L18_00160108_26b768 - D_L18_0015FFE8_26b768));
         printf_1e93b0(D_L07_0020FCA0, KB(D_L18_0016016C_26b768 - D_L18_00160108_26b768));
         printf_1e93b0(D_L07_0020FCB8, 128.0);
@@ -413,6 +414,6 @@ s32 FUN_L07_0026b768(s32 full, s32 keep) {
     }
     ((Una26b768 *)D_L07_00179180)->v = 0;
     FUN_L00_00264740();
-    game_frame++;
+    D_L07_0015F5CC++;
     return 0;
 }

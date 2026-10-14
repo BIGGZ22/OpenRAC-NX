@@ -67,9 +67,8 @@ typedef struct {
     unsigned char mission;
 } L16WatchFlags;
 
-extern char D_0013E533[];
 extern char D_0013E633[], D_0014171B[], D_0013D24D[], D_L16_00167240[];
-extern float D_L16_001D96C0[8];
+float D_L16_001D96C0[8] = {300.73f, 206.04f, 123.22f, 0.0f, 0.0f, 0.11f, 0.0f, 0.0f};
 extern float FUN_001f96b0(float);
 extern float FUN_001f9b80(void *, void *);
 extern float FUN_001f9e90_cf(float, float) __asm__("FUN_001fa688");
@@ -87,7 +86,7 @@ extern int memcard_save_data(int, int) __asm__("FUN_0020b178");
 extern int random_float_between_cf(float) __asm__("FUN_001fa6d0");
 extern int scale_game_frames(int);
 extern int tick_countdown_32(int *);
-extern short D_L16_0015F5C4_u __asm__("D_L16_0015F5C4");
+extern s32 D_L16_0015F5C4 ;
 extern unsigned char D_0015EDB0_b __asm__("D_0015EDB0");
 extern void FUN_L00_00216f90(void *, void *, int, int);
 extern void FUN_L00_002502a0(int);
@@ -128,7 +127,7 @@ void FUN_L16_002e3190(L16WatchMoby *m) {
         break;
     }
     case 2:
-        if (*(int *)&D_L16_0015F5C4_u != 2) {
+        if (*(int *)&D_L16_0015F5C4 != 2) {
             char *player;
             m->state = 1;
             FUN_L00_00216f90(D_L16_001D96C0, D_L16_001D96C0 + 4, 0, 1);
@@ -330,7 +329,6 @@ typedef struct {
 extern char *D_L16_001B0930[];
 extern char *find_moby_hit(void *, int, int) __asm__("FUN_L00_0025a420");
 extern char *FUN_L14_002ffaf8(void *, void *);
-extern char D_0013E533[];
 extern char D_L16_001E86A0[], D_L16_001E89D8[], D_L16_001E8A20[], D_L16_001E8A58[], D_L16_001E8AA0[];
 extern char D_L16_001E89A0[], D_L16_001E86D8[], D_L16_001E8A20[], D_L16_001E8A58[], D_L16_001E8AA0[] __asm__("D_L16_001E8AA0");
 extern char D_L16_001E89A0[], D_L16_001E89D8[], D_L16_001E8720[], D_L16_001E8A58[], D_L16_001E8AA0[] __asm__("D_L16_001E8AA0");
@@ -344,10 +342,8 @@ extern int FUN_L00_0025c698(void *,void *);
 extern int FUN_L16_002e3fa0(struct Moby *moby);
 extern int is_point_inside_clip_volume(void *arg0, int arg1) __asm__("func_00214720");
 extern s32 scale_game_frames(s32) __asm__("func_001F96F8");
-extern short D_L16_00161D94;
-extern short D_L16_00161E58_u __asm__("D_L16_00161E58");
-extern short D_L16_00161E54_u __asm__("D_L16_00161E54") __attribute__((sda));
-extern short D_L16_00161D98 __attribute__((sda));
+extern f32 D_L16_00161D94;
+extern f32 D_L16_00161D98_gp __asm__("D_L16_00161D98") __attribute__((sda));
 extern void FUN_L00_00257470(void *, int, int);
 extern void FUN_L00_0025c558(void *, void *, int, int, int, float);
 extern void FUN_L00_0025d538(void *, void *);
@@ -473,9 +469,9 @@ void FUN_L16_002e37a0(L16CrateMoby *moby) {
             FUN_L14_002fec28(moby);
         qcopy(target, path + *(int *)path * 16);
         zero = 0.0f;
-        FUN_L00_0025b8c0(moby->position, &a->vx, target[0], *(float *)&D_L16_00161D94, *(float *)&D_L16_00161D98, zero);
-        FUN_L00_0025b8c0(moby->position + 1, &a->vy, target[1], *(float *)&D_L16_00161D94, *(float *)&D_L16_00161D98, zero);
-        FUN_L00_0025b8c0(moby->position + 2, &a->vz, target[2], *(float *)&D_L16_00161D94, *(float *)&D_L16_00161D98, zero);
+        FUN_L00_0025b8c0(moby->position, &a->vx, target[0], *(float *)&D_L16_00161D94, *(float *)&D_L16_00161D98_gp, zero);
+        FUN_L00_0025b8c0(moby->position + 1, &a->vy, target[1], *(float *)&D_L16_00161D94, *(float *)&D_L16_00161D98_gp, zero);
+        FUN_L00_0025b8c0(moby->position + 2, &a->vz, target[2], *(float *)&D_L16_00161D94, *(float *)&D_L16_00161D98_gp, zero);
         if ((moby->status & 2) && moby->frame == moby->animation) {
             if (a->mode == 1) {
                 moby->state = 1;
@@ -537,15 +533,15 @@ extern float FUN_001f9e90(float, float);
 extern float FUN_L00_0025b8c0(float *p, float *v, float t, float u1, float u2, float eps);
 extern int FUN_L00_0025d808() __asm__("FUN_L00_0025d808");
 extern float D_L16_00161D90 __attribute__((sda));
-extern float D_L16_00161D94_u __asm__("D_L16_00161D94") __attribute__((sda));
-extern float D_L16_00161D98_u __asm__("D_L16_00161D98") __attribute__((sda));
+extern float D_L16_00161D94_gp __asm__("D_L16_00161D94") __attribute__((sda));
+extern float D_L16_00161D98_gp __asm__("D_L16_00161D98") __attribute__((sda));
 extern void subtract_vector_xyz(void *, void *, void *);
 void FUN_L00_00258278(unsigned char *m, float *ptr, float t, float b, float c, float limit);
 extern int FUN_L00_0025d808_path54(char *, float *, float *, float *, int,
                                     float) __asm__("FUN_L00_0025d808");
 extern void func_L00_002592B0_path54(char *, float, float *, float, float,
                                      float) __asm__("FUN_L00_00258278");
-extern char *D_L16_001B0C30_path54[] __asm__("D_L16_001B0930");
+extern char *D_L16_001B0930[];
 
 int FUN_L16_002e3fa0(struct Moby *moby) {
     float pos[4];
@@ -555,21 +551,21 @@ int FUN_L16_002e3fa0(struct Moby *moby) {
     int r;
     char *path;
     if (moby->state == 5)
-        path = D_L16_001B0C30_path54[*(int *)(data + 0xDC)];
+        path = D_L16_001B0930[*(int *)(data + 0xDC)];
     else
-        path = D_L16_001B0C30_path54[*(int *)(data + 0xD8)];
+        path = D_L16_001B0930[*(int *)(data + 0xD8)];
     r = FUN_L00_0025d808_path54(path, pos, (float *)(data + 0xD0), (float *)(data + 0xD4), 0, t);
-    FUN_L00_0025b8c0(&moby->pos.x, (float *)(data + 0xE4), pos[0], D_L16_00161D94_u,
-                     D_L16_00161D98_u, 0.0f);
-    FUN_L00_0025b8c0(&moby->pos.y, (float *)(data + 0xE8), pos[1], D_L16_00161D94_u,
-                     D_L16_00161D98_u, 0.0f);
-    FUN_L00_0025b8c0(&moby->pos.z, (float *)(data + 0xEC), pos[2], D_L16_00161D94_u,
-                     D_L16_00161D98_u, 0.0f);
+    FUN_L00_0025b8c0(&moby->pos.x, (float *)(data + 0xE4), pos[0], D_L16_00161D94_gp,
+                     D_L16_00161D98_gp, 0.0f);
+    FUN_L00_0025b8c0(&moby->pos.y, (float *)(data + 0xE8), pos[1], D_L16_00161D94_gp,
+                     D_L16_00161D98_gp, 0.0f);
+    FUN_L00_0025b8c0(&moby->pos.z, (float *)(data + 0xEC), pos[2], D_L16_00161D94_gp,
+                     D_L16_00161D98_gp, 0.0f);
     subtract_vector_xyz(delta, pos, &moby->pos);
     if (absolute_float(delta[0]) > 0.01f) {
         if (absolute_float(delta[1]) > 0.01f) {
             func_L00_002592B0_path54(moby, FUN_001f9e90(delta[0], delta[1]), (float *)(data + 0xF0),
-                                     D_L16_00161D94_u, D_L16_00161D98_u, 0.0f);
+                                     D_L16_00161D94_gp, D_L16_00161D98_gp, 0.0f);
         }
     }
     return r;
@@ -602,7 +598,7 @@ extern float D_0015EE6C_u,
     D_0015ED70_c2 __asm__("D_0015ED70");
 extern int FUN_L00_0028d8c0(void *, int);
 extern int FUN_L05_003195f8(char *);
-extern short D_L16_0015F594;
+extern s32 D_L16_0015F594;
 extern unsigned char D_0013D4E1 __attribute__((section(".data")));
 extern void FUN_001f9a40(void *, void *, void *, float);
 extern void FUN_001f9d20(void *, void *, void *);
@@ -832,12 +828,9 @@ void FUN_L16_002e4a58(struct Moby *moby) {
 extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
 extern float D_L16_001D9750[];
 extern float fast_sin(float) __asm__("func_001F9DE0");
-extern int D_L16_0015F5CC_c __asm__("D_L16_0015F5CC");
+extern int D_L16_0015F5CC;
 extern int FUN_001fa6e0_u(float, int, int) __asm__("FUN_001fa6e0");
 extern s32 scale_game_frames(s32) __asm__("func_001F96F8");
-extern short D_L16_00161DD8_x __asm__("D_L16_00161DD8") __attribute__((sda));
-extern short D_L16_00161DDC_x __asm__("D_L16_00161DDC") __attribute__((sda));
-extern short D_L16_00161DE0_x __asm__("D_L16_00161DE0") __attribute__((sda));
 extern void FUN_001f9d20(void *, void *, void *);
 extern void FUN_001fa2d8(void *, void *);
 extern void allocate_voice_for_target_entry(int, int, void *) __asm__("FUN_0022da68");
@@ -845,6 +838,9 @@ extern void subtract_vector_xyz(void *out, void *a, void *b) __asm__("FUN_001f9a
 extern int tick_countdown_32_u(void *) __asm__("func_001F9740");
 extern int func_0022ED80_6478(int, int, void *) __asm__("FUN_0022da68");
 
+int D_L16_00161DD8 = 600;
+int D_L16_00161DDC = 0x80808080;
+int D_L16_00161DE0 = 0x80202020;
 void FUN_L16_002e5010(struct Moby *m) {
     char *d = (char *)m->pvars;
     char *g;
@@ -852,9 +848,9 @@ void FUN_L16_002e5010(struct Moby *m) {
     float mat[4];
     float f;
     int period = scale_game_frames(30);
-    f = convert_integer_to_float(D_L16_0015F5CC_c % period) / convert_integer_to_float(period);
+    f = convert_integer_to_float(D_L16_0015F5CC % period) / convert_integer_to_float(period);
     m->glow_color = FUN_001fa6e0_u(fast_sin(f * 6.28318f - 3.14159f) * 0.5f + 0.5f,
-                                        *(int *)&D_L16_00161DDC_x, *(int *)&D_L16_00161DE0_x);
+                                        D_L16_00161DDC, D_L16_00161DE0);
     switch (m->state) {
     case 0:
         m->state = 1;
@@ -871,7 +867,7 @@ void FUN_L16_002e5010(struct Moby *m) {
                 D_L16_001D9750[4] < mat[2] && mat[2] < D_L16_001D9750[5]) {
                 m->command = 1;
                 m->state = 2;
-                *(int *)d = scale_game_frames(*(int *)&D_L16_00161DD8_x);
+                *(int *)d = scale_game_frames(D_L16_00161DD8);
                 func_0022ED80_6478(1, 0, m);
             }
         }
@@ -887,17 +883,12 @@ void FUN_L16_002e5010(struct Moby *m) {
 /* Moves the moby through its trigger states and checks its local bounds. */
 /* Ported from rac1-decomp (src/overlays/l16_kalebo3/vendor_002A50F0.c: func_L16_002E66C0), where it is exact; names translated to the US level program. */
 
-extern char D_0013F3D0_q[] __asm__("D_0013F3D0") __attribute__((section(".data")));
 extern f32 convert_integer_to_float_q(s32) __asm__("FUN_001fa6c0");
-extern float D_L16_001D9768_q[] __asm__("D_L16_001D9768") __attribute__((section(".data")));
 extern float FUN_001f9b48_q(void *, void *) __asm__("FUN_001f9b48");
 extern float fast_sin_q(float) __asm__("FUN_001f9de0");
-extern int D_L16_0015F5CC_q __asm__("D_L16_0015F5CC");
+extern int D_L16_0015F5CC;
 extern int FUN_001fa6e0_q(float, int, int) __asm__("FUN_001fa6e0");
 extern s32 scale_game_frames_q(s32) __asm__("FUN_001f96f8");
-extern short D_L16_00161DE4_q __asm__("D_L16_00161DE4");
-extern short D_L16_00161DE8_q __asm__("D_L16_00161DE8") __attribute__((sda));
-extern short D_L16_00161DEC_q __asm__("D_L16_00161DEC") __attribute__((sda));
 extern void FUN_001f9d20_q(void *, void *, void *) __asm__("FUN_001f9d20");
 extern void FUN_001fa2d8_q(void *, void *) __asm__("FUN_001fa2d8");
 extern void FUN_0022da68_q(int, int, void *) __asm__("FUN_0022da68");
@@ -905,6 +896,11 @@ extern void subtract_vector_xyz_q(void *out, void *a, void *b) __asm__("FUN_001f
 extern int tick_countdown_32_q(void *) __asm__("FUN_001f9740");
 extern int func_0022ED80_66C0_q(int, int, void *) __asm__("FUN_0022da68");
 
+extern float D_L16_001D9768[] __attribute__((section(".data")));
+int D_L16_00161DE4 = 600;
+int D_L16_00161DE8 = 0x80202020;
+int D_L16_00161DEC = 0x80808080;
+extern char D_0013F3D0[] __attribute__((section(".data")));
 void FUN_L16_002e5258(struct Moby *m) {
     char *d = (char *)m->pvars;
     char *g;
@@ -912,28 +908,28 @@ void FUN_L16_002e5258(struct Moby *m) {
     float mat[4];
     float f;
     int period = scale_game_frames_q(30);
-    f = convert_integer_to_float_q(D_L16_0015F5CC_q % period) / convert_integer_to_float_q(period);
+    f = convert_integer_to_float_q(D_L16_0015F5CC % period) / convert_integer_to_float_q(period);
     m->glow_color = FUN_001fa6e0_q(fast_sin_q(f * 6.28318f - 3.14159f) * 0.5f + 0.5f,
-                                        *(int *)&D_L16_00161DE8_q, *(int *)&D_L16_00161DEC_q);
+                                        D_L16_00161DE8, D_L16_00161DEC);
     switch (m->state) {
     case 0:
         m->state = 1;
         m->update_dist = 0xFF;
         break;
     case 1:
-        g = D_0013F3D0_q;
+        g = D_0013F3D0;
         if (FUN_001f9b48_q(&m->pos, g) < 16.0f) {
             FUN_001fa2d8_q(pos, &m->rot_row0);
             subtract_vector_xyz_q(mat, g, &m->pos);
             mat[3] = 0.0f;
             FUN_001f9d20_q(mat, mat, pos);
-            if (D_L16_001D9768_q[0] < mat[0] && mat[0] < D_L16_001D9768_q[1] &&
-                D_L16_001D9768_q[2] < mat[1] && mat[1] < D_L16_001D9768_q[3] &&
-                D_L16_001D9768_q[4] < mat[2] && mat[2] < D_L16_001D9768_q[5]) {
+            if (D_L16_001D9768[0] < mat[0] && mat[0] < D_L16_001D9768[1] &&
+                D_L16_001D9768[2] < mat[1] && mat[1] < D_L16_001D9768[3] &&
+                D_L16_001D9768[4] < mat[2] && mat[2] < D_L16_001D9768[5]) {
                 func_0022ED80_66C0_q(1, 0, m);
                 m->command = 1;
                 m->state = 2;
-                *(int *)d = scale_game_frames_q(*(int *)&D_L16_00161DE4_q);
+                *(int *)d = scale_game_frames_q(D_L16_00161DE4);
             }
         }
         break;
@@ -967,7 +963,7 @@ extern float FUN_001fa580(float, float);
 extern float random_angle_radians_alt(void) __asm__("FUN_00213308");
 extern int FUN_001f9740(int *);
 extern int FUN_001fa6e0_u(float, int, int) __asm__("FUN_001fa6e0");
-extern short D_L16_00161DF0 __attribute__((sda));
+float D_L16_00161DF0[4] __attribute__((section(".sdata"))) = {0.0f, -1.0f, 1.0f, 0.0f};
 extern void FUN_001f9a10(void *, void *, void *);
 extern void FUN_001f9a28(void *, void *, void *);
 extern void FUN_001f9cf8(void *, void *, void *);
@@ -1067,7 +1063,6 @@ extern int FUN_L00_002dc9f0(void *, void *);
 extern s32 rand();
 extern s32 scale_game_frames(s32) __asm__("func_001F96F8");
 extern s32 truncate_float_to_s32(f32) __asm__("FUN_001fa6d0");
-extern short D_L16_00161E48_d __asm__("D_L16_00161E48") __attribute__((sda));
 extern void FUN_L00_00257470(void *, int, int);
 extern void FUN_L00_002599e8(void *, int, int, float, float, float, int, int, int);
 extern void FUN_L00_0025a120(void *);
@@ -1079,6 +1074,7 @@ void blend_moby_animation_u(MobyAnim *arg0, int arg1, int arg2, int arg3) __asm_
 void mark_moby_for_removal_u(struct Obj *obj) __asm__("FUN_0020c828");
 extern int func_001FA898_caa18(float) __asm__("FUN_001fa6d0");
 
+short D_L16_00161E48 = 0;
 void FUN_L16_002e5e08(struct Moby *m) {
     char *d = (char *)m->pvars;
     FUN_L16_002e6208(m);
@@ -1096,7 +1092,7 @@ void FUN_L16_002e5e08(struct Moby *m) {
         *(unsigned short *)(d + 0x24) = 1;
         *(unsigned char *)(d + 0x28) = 0;
         *(float *)(d + 0x20) = 1.0f;
-        *(int *)(d + 0xD0) = (int)&D_L16_00161E48_d;
+        *(int *)(d + 0xD0) = (int)&D_L16_00161E48;
         if (rand() & 1)
             m->flags |= 0x8000;
         qcopy(d + 0x1D0, &m->pos);
@@ -1221,7 +1217,6 @@ typedef struct {
 
 extern char *D_L16_001B0930[];
 extern char *find_moby_hit(void *, int, int) __asm__("FUN_L00_0025a420");
-extern float D_0015EE6C_c __asm__("D_0015EE6C");
 extern float D_L16_00161E58 __attribute__((sda));
 extern float D_0015EE70;
 extern float FUN_001f9b80(void*,void*);
@@ -1401,7 +1396,6 @@ typedef struct {
 } L16ChallengeScratch;
 
 extern char D_0013D50F[], D_0014161B[];
-extern char D_0013E533[];
 extern char D_L16_001D9840[];
 extern char D_L16_001671C0[];
 extern char D_L16_001D9860[];
@@ -1515,7 +1509,7 @@ void FUN_L16_002e6808(L16ChallengeMoby *m) {
         break;
     }
     case 2:
-        if (*(int *)&D_L16_0015F5C4_u != 2) {
+        if (*(int *)&D_L16_0015F5C4 != 2) {
             int previous;
             m->state = 1;
             previous = activation->previous;
@@ -1526,7 +1520,7 @@ void FUN_L16_002e6808(L16ChallengeMoby *m) {
         }
         break;
     case 4:
-        if (*(int *)&D_L16_0015F5C4_u == 0) {
+        if (*(int *)&D_L16_0015F5C4 == 0) {
             m->state = 1;
             FUN_L00_00260860(31, 1);
             memcard_save_data(0, -1);
@@ -1652,7 +1646,7 @@ void FUN_L16_002e6808(L16ChallengeMoby *m) {
 }
 /* Ported from rac1-decomp (src/overlays/l16_kalebo3/vendor_002E7C70.c: func_L16_002E8538), where it is exact; names translated to the US level program. */
 
-extern short D_L16_0015F638_u __asm__("D_L16_0015F638");
+extern f32 D_L16_0015F638 ;
 extern void FUN_L01_0027a248(int, int);
 extern void FUN_L13_002650a8(int, int, int, int);
 extern void FUN_L16_002de3b8(float f);
@@ -1670,7 +1664,7 @@ void FUN_L16_002e70c0(struct Moby *moby) {
         FUN_L13_002650a8(*p, 0, 0, 0);
         p++;
     }
-    *(float *)&D_L16_0015F638_u = 74.0f;
+    *(float *)&D_L16_0015F638 = 74.0f;
     FUN_L16_002de3b8(76.0f);
     FUN_L01_0027a248(2, 6);
 }
@@ -1872,11 +1866,6 @@ void FUN_L16_002e76b8(unsigned char *m) {
 
 extern float random_angle_radians(void) __asm__("FUN_00213308");
 extern int D_L16_0015F5CC;
-extern short D_L16_00161E98_d __asm__("D_L16_00161E98") __attribute__((sda));
-extern short D_L16_00161E9C_d __asm__("D_L16_00161E9C") __attribute__((sda));
-extern short D_L16_00161EA0_d __asm__("D_L16_00161EA0") __attribute__((sda));
-extern short D_L16_00161EA4_d __asm__("D_L16_00161EA4") __attribute__((sda));
-extern short D_L16_00161EA8_d __asm__("D_L16_00161EA8") __attribute__((sda));
 extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
 extern void scale_vector_xyz(void *out, void *a, f32 s) __asm__("FUN_001f9a68");
 void FUN_L00_0026ced0(OvlQuad *p, OvlQuad *q, int c, int d, int n, float s);
@@ -1884,6 +1873,11 @@ void build_spherical_offset_u(f32 *out, f32 scale, f32 a, f32 b) __asm__("FUN_00
 extern void func_L00_0026DD70_emit(void *, void *, int, int, float,
                                    int) __asm__("FUN_L00_0026ced0");
 
+int D_L16_00161E98 = 0x60d0d080;
+int D_L16_00161E9C = 0x801000;
+extern short D_L16_00161EA0 __attribute__((sda));
+extern short D_L16_00161EA4 __attribute__((sda));
+extern short D_L16_00161EA8 __attribute__((sda));
 void FUN_L16_002e7a30(unsigned char *m, void *v) {
     float input[4];
     float offset[4];
@@ -1898,8 +1892,8 @@ void FUN_L16_002e7a30(unsigned char *m, void *v) {
     if (!(FUN_001f9b48(m + 0x10, D_L16_001671C0) < 75.0f))
         return;
     r = FUN_001f9b48(m + 0x10, input);
-    scale_vector_xyz(out, m + 0xC0, *(float *)&D_L16_00161EA0_d * r);
-    size = *(float *)&D_L16_00161EA4_d;
+    scale_vector_xyz(out, m + 0xC0, *(float *)&D_L16_00161EA0 * r);
+    size = *(float *)&D_L16_00161EA4;
     size *= D_0015ED6C;
     normalize_vector_xyz(offset, m + 0xC0, -0.5f);
     add_vector_xyz(offset, offset, m + 0x10);
@@ -1907,9 +1901,9 @@ void FUN_L16_002e7a30(unsigned char *m, void *v) {
     b = random_angle_radians();
     build_spherical_offset_u(velocity, size, a, b);
     add_vector_xyz(velocity, velocity, out);
-    final_size = *(float *)&D_L16_00161EA8_d;
+    final_size = *(float *)&D_L16_00161EA8;
     final_size *= 210000.0f;
-    func_L00_0026DD70_emit(offset, velocity, *(int *)&D_L16_00161E98_d, *(int *)&D_L16_00161E9C_d,
+    func_L00_0026DD70_emit(offset, velocity, D_L16_00161E98, D_L16_00161E9C,
                            final_size, scale_game_frames(0x23));
 }
 
@@ -1937,11 +1931,6 @@ extern char *D_L16_001B0930[];
 extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
 extern f32 random_float_between(f32, f32) __asm__("func_002132A8");
 extern float D_0015ED6C;
-extern float D_L16_00161E70 __attribute__((sda)); /* no foreign declaration */
-extern float D_L16_00161E74 __attribute__((sda)); /* no foreign declaration */
-extern float D_L16_00161E7C __attribute__((sda)); /* no foreign declaration */
-extern float D_L16_00161E80 __attribute__((sda)); /* no foreign declaration */
-extern int D_L16_00161E90 __attribute__((sda)); /* no foreign declaration */
 extern float D_L16_00161E94 __attribute__((sda)); /* no foreign declaration */
 extern s32 random_integer_below(s32) __asm__("func_00213260");
 extern short *D_L16_001ABCC0[];
@@ -2105,7 +2094,7 @@ extern float D_L16_00161EAC __attribute__((sda)); /* no foreign declaration */
 extern float D_L16_00161EBC __attribute__((sda)); /* no foreign declaration */
 extern int FUN_L00_0028d8c0(void *, int);
 extern int allocate_voice_for_target_entry_alt(int, int, int) __asm__("FUN_0022da68");
-extern short D_L16_00161EB8 __attribute__((sda));
+extern f32 D_L16_00161EB8_gp __asm__("D_L16_00161EB8") __attribute__((sda));
 extern void FUN_L00_00260738(char *, void *, void *, void *);
 extern void FUN_L16_002e84e8(struct Moby *);
 extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
@@ -2182,11 +2171,11 @@ void FUN_L16_002e7f80(L16PlatformMoby *moby) {
                 || moby->position[2] < d->goal) {
                 speed = advance_accelerated_scalar(&moby->position[2], &d->speed, d->goal,
                                       D_L16_00161EBC * frame_time_sq, D_L16_00161EBC * frame_time_sq,
-                                      *(float *)&D_L16_00161EB8 * D_0015ED6C);
+                                      *(float *)&D_L16_00161EB8_gp * D_0015ED6C);
             } else {
                 speed = advance_accelerated_scalar(&moby->position[2], &d->speed, moby->position[2],
                                       D_L16_00161EBC * 4.0f * frame_time_sq, D_L16_00161EBC * 4.0f * frame_time_sq,
-                                      *(float *)&D_L16_00161EB8 * D_0015ED6C);
+                                      *(float *)&D_L16_00161EB8_gp * D_0015ED6C);
             }
             clear_u64_value(motion.v);
             motion.v[2] = speed;
@@ -2236,7 +2225,6 @@ typedef struct {
     L16RingVector position;
 } L16RingMatrix;
 
-extern char *D_L16_001600FC;
 extern float absolute_float(float) __asm__("func_001F99C0");
 extern float D_0015ED6C;
 extern float D_L16_001D9880[][2];
@@ -2244,16 +2232,16 @@ extern float fast_cos(float);
 extern float fast_sin(float);
 extern float wrap_angle(float);
 extern int D_L16_0015F5CC;
-extern float D_L16_00161EB8_u __asm__("D_L16_00161EB8") __attribute__((sda));
+extern float D_L16_00161EB8_gp __asm__("D_L16_00161EB8") __attribute__((sda));
 extern float D_L16_00161EC4 __attribute__((sda));
 extern float D_L16_00161EC8 __attribute__((sda));
 extern float D_L16_00161EE8 __attribute__((sda));
-extern int D_L16_00161ECC __attribute__((sda));
-extern int D_L16_00161ED0 __attribute__((sda));
-extern int D_L16_00161ED4 __attribute__((sda));
-extern int D_L16_00161ED8 __attribute__((sda));
-extern int D_L16_00161EDC __attribute__((sda));
-extern int D_L16_00161EE0 __attribute__((sda));
+int D_L16_00161ECC = 0;
+int D_L16_00161ED0 = 2;
+int D_L16_00161ED4 = 0;
+int D_L16_00161ED8 = 1;
+int D_L16_00161EDC = 0x408000;
+int D_L16_00161EE0 = 0x40c08030;
 extern int FUN_001fa6e0(int, int, float);
 extern int get_effect_texture(int) __asm__("FUN_001f44b8");
 extern void FUN_001fa298(void *, void *);
@@ -2280,7 +2268,7 @@ void FUN_L16_002e84e8(struct Moby *m) {
     lower += translation;
     color =
         FUN_001fa6e0(D_L16_00161EDC, D_L16_00161EE0,
-                     absolute_float((*(float *)((char *)d + 0xB0))) / (D_L16_00161EB8_u * D_0015ED6C));
+                     absolute_float((*(float *)((char *)d + 0xB0))) / (D_L16_00161EB8_gp * D_0015ED6C));
     FUN_001fa298(&matrix, &m->rot_row0);
     qcopy(matrix.position, &m->pos);
     matrix.position[2] = lower;
@@ -2502,22 +2490,34 @@ extern char D_L16_001DC600[][16] __attribute__((section(".data")));
 extern char D_L16_001DC630[] __attribute__((section(".data")));
 extern int FUN_001fa728(char *, float);
 extern int get_effect_texture_l16(int) __asm__("FUN_001f44b8");
-extern short D_L16_00161EF0 __attribute__((sda));
-extern short D_L16_00161F00 __attribute__((sda));
-extern short D_L16_00161F10 __attribute__((sda));
-extern short D_L16_00161F20 __attribute__((sda));
-extern short D_L16_00161F30 __attribute__((sda));
+int D_L16_00161EF0_gp[4] __asm__("D_L16_00161EF0") __attribute__((section(".sdata"))) = {148, 148, 25, 0};
+extern float D_L16_001D98D0[];
+extern float D_L16_001D9FC0[];
+extern float D_L16_001DA6B0[];
+float *D_L16_00161F00_gp[4] __asm__("D_L16_00161F00") __attribute__((section(".sdata"))) = {D_L16_001D98D0, D_L16_001D9FC0, D_L16_001DA6B0, 0};
+extern float D_L16_001DA7E0[];
+extern float D_L16_001DAC80[];
+extern float D_L16_001DB120[];
+float *D_L16_00161F10[4] __attribute__((section(".sdata"))) = {D_L16_001DA7E0, D_L16_001DAC80, D_L16_001DB120, 0};
+extern float D_L16_001DB1E8[];
+extern float D_L16_001DB8D8[];
+extern float D_L16_001DBFC8[];
+float *D_L16_00161F20[4] __attribute__((section(".sdata"))) = {D_L16_001DB1E8, D_L16_001DB8D8, D_L16_001DBFC8, 0};
+extern float D_L16_001DC0F8[];
+extern float D_L16_001DC348[];
+extern float D_L16_001DC598[];
+float *D_L16_00161F30[4] __attribute__((section(".sdata"))) = {D_L16_001DC0F8, D_L16_001DC348, D_L16_001DC598, 0};
 extern void font_queue_vu_state(void) __asm__("FUN_001f76a0");
 extern void FUN_L00_001fde98(int, int, int, char *, int);
 extern void FUN_L16_002e8b98_i(int, int, int, int, char *) __asm__("FUN_L16_002e8b98");
 extern void vu1_add_g_sregister_l16(int, long) __asm__("FUN_00233980");
 
 void FUN_L16_002e8d40(void) {
-    int *a = (int *)&D_L16_00161EF0;
-    int *b = (int *)&D_L16_00161F00;
-    int *c = (int *)&D_L16_00161F10;
-    int *d = (int *)&D_L16_00161F20;
-    int *e = (int *)&D_L16_00161F30;
+    int *a = (int *)D_L16_00161EF0_gp;
+    int *b = (int *)D_L16_00161F00_gp;
+    int *c = (int *)D_L16_00161F10;
+    int *d = (int *)D_L16_00161F20;
+    int *e = (int *)D_L16_00161F30;
     int i;
 
     vu1_add_g_sregister_l16(6, get_effect_texture_l16(0x29));
@@ -2538,8 +2538,8 @@ typedef struct {
 } L16SingleSphere_2e8e80;
 
 void enqueue_callback_list_1_2e8e80(int arg0, int arg1) __asm__("FUN_001f4600");
-extern short D_L16_00162000_bounds_2e8e80 __asm__("D_L16_00161EF0") __attribute__((sda));
-extern short D_L16_00162020_bounds_2e8e80 __asm__("D_L16_00161F00") __attribute__((sda));
+extern int D_L16_00161EF0_gp[] __asm__("D_L16_00161EF0") __attribute__((sda));
+extern float *D_L16_00161F00_gp[] __asm__("D_L16_00161F00") __attribute__((sda));
 extern L16SingleSphere_2e8e80 D_L16_00161F60_bounds_2e8e80[] __asm__("D_L16_001DC600")
     __attribute__((section(".data")));
 
@@ -2559,9 +2559,9 @@ void FUN_L16_002e8e80(struct Moby *m) {
             minx = miny = minz = 1024.0f;
             {
                 int k;
-                for (k = 0; k < ((int *)&D_L16_00162000_bounds_2e8e80)[i]; k++) {
+                for (k = 0; k < D_L16_00161EF0_gp[i]; k++) {
                     float x, y, z;
-                    verts = ((float **)&D_L16_00162020_bounds_2e8e80)[i] + k * 3;
+                    verts = ((float **)D_L16_00161F00_gp)[i] + k * 3;
                     x = verts[0];
                     if (x > maxx)
                         maxx = x;
@@ -2587,12 +2587,12 @@ void FUN_L16_002e8e80(struct Moby *m) {
                 sphere->y = (maxy + miny) * 0.5f;
                 sphere->z = (maxz + minz) * 0.5f;
             }
-            for (j = 0; j < ((int *)&D_L16_00162000_bounds_2e8e80)[i]; j++) {
+            for (j = 0; j < D_L16_00161EF0_gp[i]; j++) {
                 float dist;
                 out = (float *)(D_L16_00161F60_bounds_2e8e80 + i);
-                p[0] = ((float **)&D_L16_00162020_bounds_2e8e80)[i][j * 3 + 0];
-                p[1] = ((float **)&D_L16_00162020_bounds_2e8e80)[i][j * 3 + 1];
-                p[2] = ((float **)&D_L16_00162020_bounds_2e8e80)[i][j * 3 + 2];
+                p[0] = ((float **)D_L16_00161F00_gp)[i][j * 3 + 0];
+                p[1] = ((float **)D_L16_00161F00_gp)[i][j * 3 + 1];
+                p[2] = ((float **)D_L16_00161F00_gp)[i][j * 3 + 2];
                 dist = FUN_001f9b48(p, out);
                 if (dist > out[3])
                     out[3] = dist;
@@ -2609,22 +2609,26 @@ void FUN_L16_002e8e80(struct Moby *m) {
 /* Sets up the draw state, then draws the one entry of the level's table; same source as FUN_L16_002e8d40. */
 
 extern char D_L16_00161F80_t[][16] __asm__("D_L16_00161F80") __attribute__((section(".sdata")));
-extern char D_L16_001DDC80_t[] __asm__("D_L16_001DDC80") __attribute__((section(".data")));
 extern int get_effect_texture_2e9270(int) __asm__("FUN_001f44b8");
-extern short D_L16_00161F40_t __asm__("D_L16_00161F40") __attribute__((sda));
-extern short D_L16_00161F60_t __asm__("D_L16_00161F60") __attribute__((sda));
-extern short D_L16_00161F68_t __asm__("D_L16_00161F68") __attribute__((sda));
-extern short D_L16_00161F70_t __asm__("D_L16_00161F70") __attribute__((sda));
-extern short D_L16_00161F78_t __asm__("D_L16_00161F78") __attribute__((sda));
 extern void FUN_L16_002e8b98_t(int, int, int, int, char *) __asm__("FUN_L16_002e8b98");
 extern void vu1_add_g_sregister_2e9270(int, long) __asm__("FUN_00233980");
 
+extern char D_L16_001DDC80[] __attribute__((section(".data")));
+int D_L16_00161F40[2] = {125, 0};
+extern float D_L16_001DCAE0[];
+float *D_L16_00161F60[2] = {D_L16_001DCAE0, 0};
+extern float D_L16_001DD0C0[];
+float *D_L16_00161F68[2] = {D_L16_001DD0C0, 0};
+extern float D_L16_001DD4A8[];
+float *D_L16_00161F70[2] = {D_L16_001DD4A8, 0};
+extern float D_L16_001DDA88[];
+float *D_L16_00161F78[2] = {D_L16_001DDA88, 0};
 void FUN_L16_002e9270(void) {
-    int *a = (int *)&D_L16_00161F40_t;
-    int *b = (int *)&D_L16_00161F60_t;
-    int *c = (int *)&D_L16_00161F68_t;
-    int *d = (int *)&D_L16_00161F70_t;
-    int *e = (int *)&D_L16_00161F78_t;
+    int *a = (int *)D_L16_00161F40;
+    int *b = (int *)D_L16_00161F60;
+    int *c = (int *)D_L16_00161F68;
+    int *d = (int *)D_L16_00161F70;
+    int *e = (int *)D_L16_00161F78;
     int i;
 
     vu1_add_g_sregister_2e9270(6, get_effect_texture_2e9270(0x29));
@@ -2634,8 +2638,8 @@ void FUN_L16_002e9270(void) {
     font_queue_vu_state();
     for (i = 0; i < 1; i++) {
         if (FUN_001fa728(D_L16_00161F80_t[i], 512.0f) != -1) {
-            FUN_L16_002e8b98_t(a[i], d[i], b[i], c[i], D_L16_001DDC80_t);
-            FUN_L00_001fde98(a[i], b[i], e[i], D_L16_001DDC80_t, 1);
+            FUN_L16_002e8b98_t(a[i], d[i], b[i], c[i], D_L16_001DDC80);
+            FUN_L00_001fde98(a[i], b[i], e[i], D_L16_001DDC80, 1);
         }
     }
 }
@@ -2648,8 +2652,6 @@ typedef struct {
 
 extern void FUN_L16_002e9270_u(void) __asm__("FUN_L16_002e9270");
 void enqueue_callback_list_1_u(int arg0, int arg1) __asm__("FUN_001f4600");
-extern short D_L16_00162000_bounds __asm__("D_L16_00161F40") __attribute__((sda));
-extern short D_L16_00162020_bounds __asm__("D_L16_00161F60") __attribute__((sda));
 extern L16SingleSphere D_L16_00161F60_bounds[] __asm__("D_L16_00161F80")
     __attribute__((section(".sdata")));
 
@@ -2667,9 +2669,9 @@ void FUN_L16_002e93b0(unsigned char *m) {
             minx = miny = minz = 1024.0f;
             {
                 int k;
-                for (k = 0; k < ((int *)&D_L16_00162000_bounds)[i]; k++) {
+                for (k = 0; k < D_L16_00161F40[i]; k++) {
                     float x, y, z;
-                    verts = ((float **)&D_L16_00162020_bounds)[i] + k * 3;
+                    verts = ((float **)D_L16_00161F60)[i] + k * 3;
                     x = verts[0];
                     if (x > maxx)
                         maxx = x;
@@ -2694,12 +2696,12 @@ void FUN_L16_002e93b0(unsigned char *m) {
                 sphere->y = (maxy + miny) * 0.5f;
                 sphere->z = (maxz + minz) * 0.5f;
             }
-            for (j = 0; j < ((int *)&D_L16_00162000_bounds)[i]; j++) {
+            for (j = 0; j < D_L16_00161F40[i]; j++) {
                 float dist;
                 out = (float *)(D_L16_00161F60_bounds + i);
-                p[0] = ((float **)&D_L16_00162020_bounds)[i][j * 3 + 0];
-                p[1] = ((float **)&D_L16_00162020_bounds)[i][j * 3 + 1];
-                p[2] = ((float **)&D_L16_00162020_bounds)[i][j * 3 + 2];
+                p[0] = ((float **)D_L16_00161F60)[i][j * 3 + 0];
+                p[1] = ((float **)D_L16_00161F60)[i][j * 3 + 1];
+                p[2] = ((float **)D_L16_00161F60)[i][j * 3 + 2];
                 dist = FUN_001f9b48(p, out);
                 if (dist > out[3])
                     out[3] = dist;
@@ -2720,8 +2722,8 @@ typedef struct {
 } L16SingleSphere_2e98e0;
 
 void enqueue_callback_list_1_2e98e0(int arg0, int arg1) __asm__("FUN_001f4600");
-extern short D_L16_00162000_bounds_2e98e0 __asm__("D_L16_00161F90") __attribute__((sda));
-extern short D_L16_00162020_bounds_2e98e0 __asm__("D_L16_00161F98") __attribute__((sda));
+extern short D_L16_00161F90_gp __asm__("D_L16_00161F90") __attribute__((sda));
+extern short D_L16_00161F98_gp __asm__("D_L16_00161F98") __attribute__((sda));
 extern L16SingleSphere_2e98e0 D_L16_00161F60_bounds_2e98e0[] __asm__("D_L16_001DF2B0")
     __attribute__((section(".data")));
 
@@ -2739,9 +2741,9 @@ void FUN_L16_002e98e0(unsigned char *m) {
             minx = miny = minz = 1024.0f;
             {
                 int k;
-                for (k = 0; k < ((int *)&D_L16_00162000_bounds_2e98e0)[i]; k++) {
+                for (k = 0; k < ((int *)&D_L16_00161F90_gp)[i]; k++) {
                     float x, y, z;
-                    verts = ((float **)&D_L16_00162020_bounds_2e98e0)[i] + k * 3;
+                    verts = ((float **)&D_L16_00161F98_gp)[i] + k * 3;
                     x = verts[0];
                     if (x > maxx)
                         maxx = x;
@@ -2767,12 +2769,12 @@ void FUN_L16_002e98e0(unsigned char *m) {
                 sphere->y = (maxy + miny) * 0.5f;
                 sphere->z = (maxz + minz) * 0.5f;
             }
-            for (j = 0; j < ((int *)&D_L16_00162000_bounds_2e98e0)[i]; j++) {
+            for (j = 0; j < ((int *)&D_L16_00161F90_gp)[i]; j++) {
                 float dist;
                 out = (float *)(D_L16_00161F60_bounds_2e98e0 + i);
-                p[0] = ((float **)&D_L16_00162020_bounds_2e98e0)[i][j * 3 + 0];
-                p[1] = ((float **)&D_L16_00162020_bounds_2e98e0)[i][j * 3 + 1];
-                p[2] = ((float **)&D_L16_00162020_bounds_2e98e0)[i][j * 3 + 2];
+                p[0] = ((float **)&D_L16_00161F98_gp)[i][j * 3 + 0];
+                p[1] = ((float **)&D_L16_00161F98_gp)[i][j * 3 + 1];
+                p[2] = ((float **)&D_L16_00161F98_gp)[i][j * 3 + 2];
                 dist = FUN_001f9b48(p, out);
                 if (dist > out[3])
                     out[3] = dist;
@@ -2792,16 +2794,28 @@ void FUN_L16_002e98e0(unsigned char *m) {
 
 extern char D_L16_001E28D0[];
 extern int get_effect_texture_alt(int) __asm__("FUN_001f44b8");
-extern short D_L16_00161FB8_d[1] __asm__("D_L16_00161FB8") __attribute__((sda));
-extern short D_L16_00161FC8_d[1] __asm__("D_L16_00161FC8") __attribute__((sda));
-extern short D_L16_00161FD8_d[1] __asm__("D_L16_00161FD8") __attribute__((sda));
-extern short D_L16_00161FE8_d[1] __asm__("D_L16_00161FE8") __attribute__((sda));
-extern short D_L16_00161FF8_d[1] __asm__("D_L16_00161FF8") __attribute__((sda));
 extern void font_queue_vu_state(void) __asm__("FUN_001f76a0");
 extern void FUN_L00_001fde98(int, int, int, char *, int);
 void FUN_L16_002e8b98(int n, Vec3f *p1, Vec3f *p2, int unused, float *out);
 void vu1_add_g_sregister(s32 a0, s64 a1) __asm__("FUN_00233980");
 
+int D_L16_00161FB8[4] __attribute__((section(".sdata"))) = {148, 148, 53, 0};
+extern float D_L16_001DF7B0[];
+extern float D_L16_001DFEA0[];
+extern float D_L16_001E0590[];
+float *D_L16_00161FC8[4] __attribute__((section(".sdata"))) = {D_L16_001DF7B0, D_L16_001DFEA0, D_L16_001E0590, 0};
+extern float D_L16_001E0810[];
+extern float D_L16_001E0CB0[];
+extern float D_L16_001E1150[];
+float *D_L16_00161FD8[4] __attribute__((section(".sdata"))) = {D_L16_001E0810, D_L16_001E0CB0, D_L16_001E1150, 0};
+extern float D_L16_001E12F8[];
+extern float D_L16_001E19E8[];
+extern float D_L16_001E20D8[];
+float *D_L16_00161FE8[4] __attribute__((section(".sdata"))) = {D_L16_001E12F8, D_L16_001E19E8, D_L16_001E20D8, 0};
+extern float D_L16_001E2358[];
+extern float D_L16_001E25A8[];
+extern float D_L16_001E27F8[];
+float *D_L16_00161FF8[4] __attribute__((section(".sdata"))) = {D_L16_001E2358, D_L16_001E25A8, D_L16_001E27F8, 0};
 void FUN_L16_002e9ce0(void) {
     int i;
     vu1_add_g_sregister(6, get_effect_texture_alt(0x29));
@@ -2810,11 +2824,11 @@ void FUN_L16_002e9ce0(void) {
     vu1_add_g_sregister(0x14, 0xFF9000000260L);
     font_queue_vu_state();
     for (i = 0; i < 3; i++) {
-        FUN_L16_002e8b98(((int *)D_L16_00161FB8_d)[i], ((int *)D_L16_00161FE8_d)[i],
-                         ((int *)D_L16_00161FC8_d)[i], ((int *)D_L16_00161FD8_d)[i],
+        FUN_L16_002e8b98(D_L16_00161FB8[i], ((int *)D_L16_00161FE8)[i],
+                         ((int *)D_L16_00161FC8)[i], ((int *)D_L16_00161FD8)[i],
                          D_L16_001E28D0);
-        FUN_L00_001fde98(((int *)D_L16_00161FB8_d)[i], ((int *)D_L16_00161FC8_d)[i],
-                         ((int *)D_L16_00161FF8_d)[i], D_L16_001E28D0, 1);
+        FUN_L00_001fde98(D_L16_00161FB8[i], ((int *)D_L16_00161FC8)[i],
+                         ((int *)D_L16_00161FF8)[i], D_L16_001E28D0, 1);
     }
 }
 /* Bounding spheres for one mesh (two or three entries), then the renderer callback; same source as FUN_L16_002e93b0. */
@@ -2823,11 +2837,13 @@ typedef struct {
 } L16SingleSphere_2ea128;
 
 void enqueue_callback_list_1_2ea128(int arg0, int arg1) __asm__("FUN_001f4600");
-extern short D_L16_00162000_bounds_2ea128 __asm__("D_L16_00162008") __attribute__((sda));
-extern short D_L16_00162020_bounds_2ea128 __asm__("D_L16_00162018") __attribute__((sda));
-extern L16SingleSphere_2ea128 D_L16_00161F60_bounds_2ea128[] __asm__("D_L16_001E5390")
-    __attribute__((section(".data")));
 
+int D_L16_00162008[4] __attribute__((section(".sdata"))) = {148, 75, 45, 0};
+extern float D_L16_001E2DB0[];
+extern float D_L16_001E34A0[];
+extern float D_L16_001E3828[];
+float *D_L16_00162018[4] __attribute__((section(".sdata"))) = {D_L16_001E2DB0, D_L16_001E34A0, D_L16_001E3828, 0};
+extern L16SingleSphere_2ea128 D_L16_001E5390[] __attribute__((section(".data")));
 void FUN_L16_002ea128(unsigned char *m) {
     int i, j;
     float maxx, maxy, maxz, minx, miny, minz;
@@ -2842,9 +2858,9 @@ void FUN_L16_002ea128(unsigned char *m) {
             minx = miny = minz = 1024.0f;
             {
                 int k;
-                for (k = 0; k < ((int *)&D_L16_00162000_bounds_2ea128)[i]; k++) {
+                for (k = 0; k < D_L16_00162008[i]; k++) {
                     float x, y, z;
-                    verts = ((float **)&D_L16_00162020_bounds_2ea128)[i] + k * 3;
+                    verts = ((float **)D_L16_00162018)[i] + k * 3;
                     x = verts[0];
                     if (x > maxx)
                         maxx = x;
@@ -2863,19 +2879,19 @@ void FUN_L16_002ea128(unsigned char *m) {
                 }
             }
             {
-                L16SingleSphere_2ea128 *base = D_L16_00161F60_bounds_2ea128;
+                L16SingleSphere_2ea128 *base = D_L16_001E5390;
                 L16SingleSphere_2ea128 *sphere = base + i;
                 sphere->radius = 0.0f;
                 sphere->x = (maxx + minx) * 0.5f;
                 sphere->y = (maxy + miny) * 0.5f;
                 sphere->z = (maxz + minz) * 0.5f;
             }
-            for (j = 0; j < ((int *)&D_L16_00162000_bounds_2ea128)[i]; j++) {
+            for (j = 0; j < D_L16_00162008[i]; j++) {
                 float dist;
-                out = (float *)(D_L16_00161F60_bounds_2ea128 + i);
-                p[0] = ((float **)&D_L16_00162020_bounds_2ea128)[i][j * 3 + 0];
-                p[1] = ((float **)&D_L16_00162020_bounds_2ea128)[i][j * 3 + 1];
-                p[2] = ((float **)&D_L16_00162020_bounds_2ea128)[i][j * 3 + 2];
+                out = (float *)(D_L16_001E5390 + i);
+                p[0] = ((float **)D_L16_00162018)[i][j * 3 + 0];
+                p[1] = ((float **)D_L16_00162018)[i][j * 3 + 1];
+                p[2] = ((float **)D_L16_00162018)[i][j * 3 + 2];
                 dist = FUN_001f9b48(p, out);
                 if (dist > out[3])
                     out[3] = dist;

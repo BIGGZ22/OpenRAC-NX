@@ -320,9 +320,9 @@ typedef struct {
     float x, y, vx, vy;
 } StarInit_236268;
 extern StarInit_236268 star_init_array[] __asm__("D_L00_0017E660");
-extern float star_init_limit0 __asm__("D_L00_0015F750") __attribute__((sda));
-extern float star_init_limit1 __asm__("D_L00_0015F754") __attribute__((sda));
-extern float star_init_limit2 __asm__("D_L00_0015F758") __attribute__((sda));
+extern float star_init_limit0_gp __asm__("D_L00_0015F750") __attribute__((sda));
+extern float star_init_limit1_gp __asm__("D_L00_0015F754") __attribute__((sda));
+extern float star_init_limit2_gp __asm__("D_L00_0015F758") __attribute__((sda));
 extern int star_init_columns __asm__("D_L00_0015F75C") __attribute__((sda));
 extern float random_float_between(float, float) __asm__("FUN_002132a8");
 void FUN_L00_00236268(HudElem *e) {
@@ -336,10 +336,10 @@ void FUN_L00_00236268(HudElem *e) {
     FUN_L00_00235d80(e);
     vy = &star_init_array[0].vy;
     for (i = 0; i < 100; i++, vy += 4) {
-        limit = star_init_limit0;
+        limit = star_init_limit0_gp;
         if (i >= 10) {
-            limit = star_init_limit1;
-            if (i >= 20) limit = star_init_limit2;
+            limit = star_init_limit1_gp;
+            if (i >= 20) limit = star_init_limit2_gp;
         }
         step = (232.0f - (limit + limit)) / (float)star_init_columns;
         y = (limit - 116.0f) + (float)(i % star_init_columns) * step;
@@ -362,9 +362,9 @@ typedef struct {
 
 extern int D_L00_0015F3F8;
 extern Star_236458 D_L00_0017E660[];
-extern float D_L00_0015F750 __attribute__((sda));
-extern float D_L00_0015F754 __attribute__((sda));
-extern float D_L00_0015F758 __attribute__((sda));
+extern float star_init_limit0_gp __asm__("D_L00_0015F750") __attribute__((sda));
+extern float star_init_limit1_gp __asm__("D_L00_0015F754") __attribute__((sda));
+extern float star_init_limit2_gp __asm__("D_L00_0015F758") __attribute__((sda));
 void FUN_L00_00235ea0();
 
 /* Moves every other star by its velocity and bounces it off a box whose size
@@ -379,11 +379,11 @@ void FUN_L00_00236458(void) {
     i = D_L00_0015F3F8 % 2;
     for (; i < 100; i += 2, p += 2) {
         if (i < 10) {
-            lim = D_L00_0015F750;
+            lim = star_init_limit0_gp;
         } else if (i < 30) {
-            lim = D_L00_0015F754;
+            lim = star_init_limit1_gp;
         } else {
-            lim = D_L00_0015F758;
+            lim = star_init_limit2_gp;
         }
         hx = lim - 17.0f;
         hy = lim - 116.0f;
@@ -497,23 +497,23 @@ int FUN_L00_002365a8(HudElem *e) {
     FUN_001ff260(&first_step);
     FUN_001ff260(&second_step);
     FUN_001ff260(&third_step);
-    first_step.y = first_step.x = D_L00_0015F750 * 16.0f;
-    second_step.y = second_step.x = (D_L00_0015F754 - D_L00_0015F750) * 16.0f;
-    third_step.y = third_step.x = (D_L00_0015F758 - D_L00_0015F754) * 16.0f;
+    first_step.y = first_step.x = star_init_limit0_gp * 16.0f;
+    second_step.y = second_step.x = (star_init_limit1_gp - star_init_limit0_gp) * 16.0f;
+    third_step.y = third_step.x = (star_init_limit2_gp - star_init_limit1_gp) * 16.0f;
     star_width = 0;
     for (i = 0; i < 100; i++) {
         if (i == 0) {
             FUN_001ff2a8(&direction, &direction, &first_step);
-            offset += D_L00_0015F750;
-            star_width = (int)(D_L00_0015F750 * 32.0f);
+            offset += star_init_limit0_gp;
+            star_width = (int)(star_init_limit0_gp * 32.0f);
         } else if (i == 10) {
             FUN_001ff2a8(&direction, &direction, &second_step);
-            star_width = (int)(D_L00_0015F754 * 32.0f);
-            offset += D_L00_0015F754 - D_L00_0015F750;
+            star_width = (int)(star_init_limit1_gp * 32.0f);
+            offset += star_init_limit1_gp - star_init_limit0_gp;
         } else if (i == 30) {
             FUN_001ff2a8(&direction, &direction, &third_step);
-            star_width = (int)(D_L00_0015F758 * 32.0f);
-            offset += D_L00_0015F758 - D_L00_0015F754;
+            star_width = (int)(star_init_limit2_gp * 32.0f);
+            offset += star_init_limit2_gp - star_init_limit1_gp;
         }
         if (!(offset < D_L00_0017E660[i].y)) {
             FUN_L00_001ff348(&star_position, &D_L00_0017E660[i], &origin);
@@ -525,7 +525,78 @@ int FUN_L00_002365a8(HudElem *e) {
     return e->w;
 }
 #endif
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_00236e50.s", FUN_L00_00236e50);
+#else
+extern int D_L00_0015F760 __attribute__((sda));
+extern int D_L00_0015F764 __attribute__((sda));
+extern float D_L00_0015F768 __attribute__((sda));
+extern float D_L00_0015F76C __attribute__((sda));
+extern void *FUN_0023b208(int, int) __asm__("FUN_001ff960");
+extern void FUN_L00_0023bac0(void *, int, int, int, int, int);
+extern void FUN_L00_0023bd20(void *, int, int, int, int, int) __asm__("FUN_00200080");
+extern void FUN_L00_001ff348(void *, void *, void *);
+extern void FUN_001ff260(void *) __asm__("FUN_001f99f8");
+extern void FUN_001ff2a8(void *, void *, void *) __asm__("FUN_001f9a28");
+extern void FUN_001ff278(void *, void *, void *) __asm__("FUN_001f9a10");
+int FUN_L00_00236e50(HudElem *e) {
+    int x = e->unk50, y = e->unk54;
+    int i, star_width = 0;
+    float half_h, offset, half_w;
+    int xbase, ybase;
+    struct { float x, y, z, w; } origin, direction, first_step, second_step, third_step, star_position;
+    void *image;
+
+    e->w = D_L00_0015F760;
+    e->h = D_L00_0015F764;
+    FUN_L00_00235a70(e, &x, &y);
+    FUN_L00_00235ad8(e, &x, &y, e->unk6C, 0);
+    image = FUN_0023b208(*(int *)e, 0);
+    FUN_L00_0023bac0(image, x + e->unk48, y + e->unk4A,
+                       D_L00_0015F760, D_L00_0015F764, 0x80);
+    origin.z = 1.0f;
+    origin.w = 1.0f;
+    half_h = (float)D_L00_0015F764 * D_L00_0015F76C * 0.5f;
+    offset = (float)(10000 - e->unk74) / 10000.0f;
+    half_w = (float)D_L00_0015F760 * D_L00_0015F768 * 0.5f;
+    xbase = x + e->unk48;
+    ybase = y + e->unk4A;
+    origin.x = half_w / 17.0f;
+    origin.y = -half_h / 116.0f;
+    direction.z = 0.0f;
+    direction.w = 0.0f;
+    direction.y = half_h + (float)ybase;
+    direction.x = half_w + (float)xbase;
+    direction.x += (1.0f - D_L00_0015F768) * 0.5f * (float)D_L00_0015F760;
+    direction.y += (1.0f - D_L00_0015F76C) * 0.5f * (float)D_L00_0015F764;
+    direction.x *= 16.0f;
+    direction.y *= 16.0f;
+    origin.x *= 16.0f;
+    origin.y *= 16.0f;
+    offset = 116.0f - (offset + offset) * 116.0f;
+    image = FUN_0023b208(*(int *)e, 1);
+    FUN_001ff260(&first_step);
+    FUN_001ff260(&second_step);
+    FUN_001ff260(&third_step);
+    first_step.y = first_step.x = star_init_limit0_gp * 16.0f;
+    second_step.y = second_step.x = (star_init_limit1_gp - star_init_limit0_gp) * 16.0f;
+    third_step.y = third_step.x = (star_init_limit2_gp - star_init_limit1_gp) * 16.0f;
+    for (i = 0; i < 100; i++) {
+        if (i == 0) {
+            FUN_001ff2a8(&direction, &direction, &first_step);
+            offset += star_init_limit0_gp;
+            star_width = (int)(star_init_limit0_gp * 32.0f);
+        }
+        if (!(offset < D_L00_0017E660[i].y)) {
+            FUN_L00_001ff348(&star_position, &D_L00_0017E660[i], &origin);
+            FUN_001ff278(&star_position, &star_position, &direction);
+            FUN_L00_0023bd20(image, (int)star_position.x, (int)star_position.y,
+                              star_width, star_width, 0x80);
+        }
+    }
+    return e->w;
+}
+#endif
 void FUN_L00_00235ea0();
 /* Calls FUN_L00_00235ea0. */
 void FUN_L00_002371e0(void) {
@@ -535,13 +606,13 @@ void FUN_L00_002371e0(void) {
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_00237200.s", FUN_L00_00237200);
 #else
 extern int pal_mode __asm__("D_0015ED80");
-extern int current_level_index __asm__("D_0015ED84");
 extern int current_level_index_sda __asm__("D_0015ED84") __attribute__((sda));
 extern int D_L00_0015F770 __attribute__((sda));
 extern unsigned char D_L00_0017E530[];
-extern int freeze_stats_time_ref_a[] __asm__("D_0015EE58");
+extern int freeze_stats_time_ref[] __asm__("D_0015EE58");
 extern int freeze_stats_score_ref_a[] __asm__("D_0015EE68");
 extern float D_0013F3D0[];
+extern void *memcpy(void *, const void *, unsigned int);
 
 extern float FUN_00200240(unsigned int) __asm__("FUN_001fa6c0");
 extern float FUN_001fef10(float) __asm__("FUN_001f96b0");
@@ -552,6 +623,8 @@ extern void FUN_0023b4d8(void *, int, int, int, int, int) __asm__("FUN_001ffc30"
 extern void FUN_0023b860(void *, int, int, int, int, int) __asm__("FUN_001ffe18");
 extern void FUN_001fb9a8(int, int, int, const char *, int) __asm__("FUN_001f6af0");
 extern float FUN_001ff450(float *, float *) __asm__("FUN_001f9b48");
+extern const char freeze_stats_score_format[] __asm__("D_L00_0015F778");
+extern const char freeze_stats_time_format[] __asm__("D_L00_001E84C0");
 extern char *FUN_00203ad8(int) __asm__("FUN_001fdd10");
 extern int FUN_00116248(char *, const char *, ...);
 extern void FUN_0023cf80(int, int, int, char *) __asm__("FUN_00201200");
@@ -592,24 +665,29 @@ int FUN_L00_00237200(HudElem *e) {
         left = 0xe0 - (width >> 1);
         other_width = FUN_001fb090((const char *)&D_L00_0017E530[1] + i, -1);
         other_left = 0xe0 - (other_width >> 1);
-        if (left < other_left) {
-            other_left = left;
-        } else {
+        if (left >= other_left) {
             width = other_width;
+        } else {
+            other_left = left;
         }
         left = other_left;
-        FUN_0023b4d8(FUN_0023b208(0x7580, 0), left + 0x20, y, width, 0x36, alpha);
+        other_left = left + 0x20;
+        FUN_0023b4d8(FUN_0023b208(0x7580, 0), other_left, y, width, 0x36, alpha);
+        other_left = color;
         FUN_0023b4d8(FUN_0023b208(0x7580, 1), left, y, 0x20, 0x36, alpha);
-        FUN_0023b860(FUN_0023b208(0x7580, 1), left + (width + 0x20), y, 0x20, 0x36, alpha);
-        FUN_001fb9a8(0x100, text_y, color, (const char *)D_L00_0017E530, -1);
-        FUN_001fb9a8(0x100, y + 0x1b, color, (const char *)&D_L00_0017E530[1] + i, -1);
+        FUN_0023b860(FUN_0023b208(0x7580, 1), (width + 0x20) + left, y, 0x20, 0x36, alpha);
+        FUN_001fb9a8(0x100, text_y, other_left, (const char *)D_L00_0017E530, -1);
+        FUN_001fb9a8(0x100, y + 0x1b, other_left, (const char *)&D_L00_0017E530[1] + i, -1);
         level = current_level_index_sda;
     } else {
+        int width, left;
         width = FUN_001fb090((const char *)D_L00_0017E530, -1);
         left = 0xe0 - (width >> 1);
         FUN_0023b4d8(FUN_0023b208(0x7580, 1), left, y, 0x20, 0x20, alpha);
         FUN_0023b4d8(FUN_0023b208(0x7580, 0), left + 0x20, y, width, 0x20, alpha);
-        FUN_0023b860(FUN_0023b208(0x7580, 1), left + (width + 0x20), y, 0x20, 0x20, alpha);
+        line = FUN_0023b208(0x7580, 1);
+        width += 0x20;
+        FUN_0023b860((void *)line, left + width, y, 0x20, 0x20, alpha);
         FUN_001fb9a8(0x100, text_y, color, (const char *)D_L00_0017E530, -1);
         level = *(int *)0x15ed84;
     }
@@ -623,30 +701,31 @@ int FUN_L00_00237200(HudElem *e) {
         points[1].x = 115.7f;
         points[1].y = 287.0f;
         points[1].z = 119.5f;
-        if (level == 5) {
-            point = points[0];
-        } else {
-            point = points[1];
-        }
-        if (FUN_001ff450(D_0013F3D0, &point.x) < 5.0f) {
-            *(int *)0x15f648 = y + 100;
-            extra = 4;
-            if (current_level_index_sda != 0x10) extra = 0;
-            elapsed = *(int *)((char *)freeze_stats_time_ref_a + extra);
-            extra = *(int *)((char *)freeze_stats_score_ref_a + extra);
-            if (elapsed != 0) {
-                interval = pal_mode != 0 ? 3000 : 3600;
-                minute_scale = interval / 60;
-                seconds = elapsed / interval;
-                remainder = elapsed - seconds * interval;
-                width = remainder / minute_scale;
-                remainder = (remainder - width * minute_scale) * 100 / minute_scale;
-                line = (const char *)0x1e84c0;
-                FUN_00116248(text, line, FUN_00203ad8(0x531b), seconds, width, remainder);
-                FUN_0023cf80(0x100, y + 0x28, color, text);
-                if (extra != 0) {
-                    FUN_00116248(text, (const char *)0x15f778, FUN_00203ad8(0x531c), extra);
-                    FUN_0023cf80(0x100, y + 0x48, color, text);
+        {
+            float *point_data;
+            line = level == 5 ? memcpy(&point, &points[0], 16) : memcpy(&point, &points[1], 16);
+            point_data = (float *)line;
+            if (FUN_001ff450(D_0013F3D0, point_data) < 5.0f) {
+                *(int *)0x15f648 = y + 100;
+                extra = current_level_index_sda == 0x10 ? 1 : 0;
+                elapsed = freeze_stats_time_ref[extra];
+                extra = freeze_stats_score_ref_a[extra];
+                if (elapsed != 0) {
+                    const char *message;
+                    interval = pal_mode != 0 ? 3000 : 3600;
+                    seconds = elapsed / interval;
+                    other_width = interval / 60;
+                    remainder = elapsed - seconds * interval;
+                    other_left = remainder / other_width;
+                    remainder = (remainder - other_left * other_width) * 100 / other_width;
+                    line = freeze_stats_time_format;
+                    message = FUN_00203ad8(0x531b);
+                    FUN_00116248(text, line, message, seconds, other_left, remainder);
+                    FUN_0023cf80(0x100, y + 0x28, color, text);
+                    if (extra != 0) {
+                        FUN_00116248(text, freeze_stats_score_format, FUN_00203ad8(0x531c), extra);
+                        FUN_0023cf80(0x100, y + 0x48, color, text);
+                    }
                 }
             }
         }

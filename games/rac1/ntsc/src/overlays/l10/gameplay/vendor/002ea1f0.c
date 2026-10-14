@@ -3,10 +3,11 @@
 #include "rnc/globals.h"
 #include "rnc/gameplay/entities/moby.h"
 #include "asm.h"
+#include "rnc/overlay/level_globals.h"
+#include "rnc/overlay/level_labels.h"
 
 /* Ported from rac1-decomp (src/overlays/l10_orxon/vendor_002E30F8.c: func_L10_002EB5B0), where it is exact; names translated to the US level program. */
 
-extern char *D_L10_001B0930[];
 extern float probe_ground_height(void *, int, float) __asm__("func_00213508");
 extern void FUN_L10_002ea4e8_c(void *,short *,short *) __asm__("FUN_L10_002ea4e8");
 extern void FUN_L10_002ea7b0_c(void *,short *) __asm__("FUN_L10_002ea7b0");
@@ -63,7 +64,6 @@ void FUN_L10_002ea1f0(char *m) {
 }
 #include "qcopy.h"
 extern char *FUN_00218888(void *, void *, void *, int, int, int, int, int, int);
-extern char D_L10_00167240[];
 extern float FUN_001f9b48(void *, void *);
 extern float random_float_between(float a, float b) __asm__("FUN_002132a8");
 extern int FUN_001f9770(void *);
@@ -81,10 +81,10 @@ extern int D_L10_00161F84 __attribute__((sda));
 extern int D_L10_00161F88 __attribute__((sda));
 extern int D_L10_00161F8C __attribute__((sda));
 extern float D_L10_00161F90 __attribute__((sda));
-extern int D_L10_00161F94 __attribute__((sda));
-extern int D_L10_00161F98 __attribute__((sda));
-extern int D_L10_00161F9C __attribute__((sda));
-extern int D_L10_00161FA0 __attribute__((sda));
+int D_L10_00161F94 = 0x4000ff80;
+int D_L10_00161F98 = 0x4010ffff;
+int D_L10_00161F9C = 0x2000ff80;
+int D_L10_00161FA0 = 0x200080ff;
 extern int D_L10_00161FA4 __attribute__((sda));
 extern int D_L10_00161FA8 __attribute__((sda));
 extern int D_L10_00161FAC __attribute__((sda));
@@ -146,7 +146,6 @@ void FUN_L10_002ea4e8(void *pos, short *timer, short *burst) {
 /* Ported from rac1-decomp (src/overlays/l10_orxon/vendor_002E30F8.c: func_L10_002EBB70), where it is exact; names translated to the US level program. */
 
 extern char *FUN_00218888(void *, void *, void *, int, int, int, int, int, int);
-extern char D_L10_00167240[];
 extern float FUN_001f9b48(void *, void *);
 extern float random_float_between(float a, float b) __asm__("FUN_002132a8");
 extern int FUN_001f9770(void *);
@@ -167,10 +166,10 @@ extern int D_L10_00161FE0 __attribute__((sda));
 extern float D_L10_00161FE4 __attribute__((sda));
 extern int D_L10_00161FF8 __attribute__((sda));
 extern int D_L10_00161FFC __attribute__((sda));
-extern int D_L10_00161FE8 __attribute__((sda));
-extern int D_L10_00161FEC __attribute__((sda));
-extern int D_L10_00161FF0 __attribute__((sda));
-extern int D_L10_00161FF4 __attribute__((sda));
+int D_L10_00161FE8 = 0x400080ff;
+int D_L10_00161FEC = 0x4010ffff;
+int D_L10_00161FF0 = 0x2000c0ff;
+int D_L10_00161FF4 = 0x200080ff;
 extern void random_vector(float *, float, float) __asm__("FUN_L00_00257d78");
 extern void clear_u64_value(void *);
 extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
@@ -229,17 +228,17 @@ extern short D_L10_00162014 __attribute__((sda));
 extern short D_L10_00162018 __attribute__((sda));
 extern short D_L10_0016201C __attribute__((sda));
 extern short D_L10_00162020 __attribute__((sda));
-extern short D_L10_00162024 __attribute__((sda));
-extern short D_L10_00162028 __attribute__((sda));
-extern short D_L10_0016202C __attribute__((sda));
-extern short D_L10_00162030 __attribute__((sda));
+int D_L10_00162024 = 0x80002040;
+int D_L10_00162028 = 0x80104040;
+int D_L10_0016202C = 0x30002040;
+int D_L10_00162030 = 0x30004020;
 extern short D_L10_00162038 __attribute__((sda));
 extern short D_L10_00162034 __attribute__((sda));
 extern short D_L10_00162040 __attribute__((sda));
 extern short D_L10_0016203C __attribute__((sda));
 extern short D_L10_00162048 __attribute__((sda));
 extern short D_L10_00162044 __attribute__((sda));
-extern short D_L10_0016204C __attribute__((sda));
+int D_L10_0016204C = 24;
 extern short D_L10_00162050 __attribute__((sda));
 extern void random_vector(float *, float, float) __asm__("FUN_L00_00257d78");
 extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
@@ -273,8 +272,8 @@ void FUN_L10_002eaa08(void *pos, short *timer, short *burst, float height) {
     acc[2] -= *(float *)&D_L10_00162000 * frame_time_sq * (float)c;
     vel[3] = random_float_between(*(float *)&D_L10_00162008, *(float *)&D_L10_0016200C);
     acc[3] = random_float_between(*(float *)&D_L10_00162010, *(float *)&D_L10_00162014);
-    c1 = FUN_001fa6e0(*(int *)&D_L10_00162024, *(int *)&D_L10_00162028, random_float_between(0.0f, 1.0f));
-    FUN_00218888(pos, vel, acc, c1, FUN_001fa6e0(*(int *)&D_L10_0016202C, *(int *)&D_L10_00162030, random_float_between(0.0f, 1.0f)), a, c, b, *(int *)&D_L10_0016204C);
+    c1 = FUN_001fa6e0(D_L10_00162024, D_L10_00162028, random_float_between(0.0f, 1.0f));
+    FUN_00218888(pos, vel, acc, c1, FUN_001fa6e0(D_L10_0016202C, D_L10_00162030, random_float_between(0.0f, 1.0f)), a, c, b, D_L10_0016204C);
     *timer = func_001FA898_r(random_float_between((float)*(int *)&D_L10_00162034, (float)*(int *)&D_L10_00162038));
 }
 #define NOT_SDA
@@ -291,7 +290,6 @@ struct L10Data {
     int slot[4];
 };
 
-extern int D_L10_0015F5C4;
 extern struct L10Data D_L10_0016CCE0;
 extern void FUN_L00_002637f8(int);
 
@@ -302,7 +300,7 @@ void FUN_L10_002eacd8(struct Moby *m) {
         m->state = 1;
         break;
     case 1:
-        if (D_L10_0015F5C4 == 2) {
+        if (D_L10_0015F5C4_vendor == 2) {
             if (D_L10_0016CCE0.mode == 3 || D_L10_0016CCE0.mode == 5 || D_L10_0016CCE0.mode == 6 ||
                 D_L10_0016CCE0.mode == 7) {
                 int v = D_L10_0016CCE0.mode;

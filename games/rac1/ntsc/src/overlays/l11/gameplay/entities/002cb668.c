@@ -8,6 +8,8 @@
 #include "rnc/gameplay/state/item_state.h"
 #include "rnc/gameplay/state/usage_stats.h"
 #include "rnc/overlay/moby_anim.h"
+#include "rnc/data_labels.h"
+#include "rnc/gameplay/state/options.h"
 #define MOBY(p) ((struct Moby *)(p))
 
 #define NOT_SDA
@@ -17,11 +19,9 @@
 /* Per-frame update of a pickup moby: waits for the player to come near, then grants the item. */
 /* Ported from rac1-decomp (src/overlays/l11_pokitaru/vendor_002CC828.c: func_L11_002CC828), where it is exact; names translated to the US level program. */
 
-extern char D_0013E533[];
 extern float FUN_001f9b80(void *, void *);
 extern float fast_add_rotations(float, float) __asm__("FUN_001fa580");
 extern int help_request(int, int) __asm__("FUN_L00_00203908");
-extern unsigned char D_0013D4C2[];
 extern unsigned char D_0013D4E3[];
 int memcard_save_data(int slot, int flags) __asm__("FUN_0020b178");
 void mark_moby_for_removal(struct Moby *obj) __asm__("FUN_0020c828");
@@ -98,7 +98,6 @@ void FUN_L11_002cb810(struct Moby *moby) {
 
 /* Ported from rac1-decomp (src/overlays/l11_pokitaru/vendor_002CC828.c: func_L11_002CCB50), where it is exact; names translated to the US level program. */
 
-extern unsigned char D_0013D3E2[];
 
 void FUN_L11_002cb990(struct Moby *moby) {
     char *state = (char *)moby->pvars;
@@ -172,7 +171,6 @@ extern void FUN_L00_002039a0(void);
 extern int help_request(int, int) __asm__("FUN_L00_00203908");
 extern unsigned char D_0013D4C3 __attribute__((section(".data")));
 extern int D_L11_0015F5C4;
-extern char D_0013E533[];
 extern float FUN_001f9b80(void *, void *);
 extern float FUN_001f9e90(float, float);
 extern float fast_difference_between_rotations(float, float) __asm__("FUN_001fa688");
@@ -188,7 +186,6 @@ extern int truncate_float_to_s32(float) __asm__("FUN_001fa6d0");
 extern void FUN_00214db0(void *, float, float, float);
 extern void FUN_001f9a10(void *, void *, void *);
 extern void FUN_001f9a28(void *, void *, void *);
-extern unsigned char D_0015EDB0;
 extern void FUN_L00_002628d8(float, float, void *, void *, int);
 
 /* Watcher update, same routine as FUN_L08_00302ce8 with this level's states and data layout. */
@@ -284,7 +281,7 @@ void FUN_L11_002d0710(WM11 *m) {
         d->pitch = pitch;
         d->head_yaw = d->yaw = yaw * 0.5f;
     }
-    if (D_0015EDB0)
+    if (big_head_cheat_enabled)
         d->height = 2.75f;
     FUN_L00_002628d8(rate * frame_scale_sq, head_rate * frame_scale_sq, m, d->body, 0);
     FUN_L00_002628d8(rate * frame_scale_sq, head_rate * frame_scale_sq, m, d->head, 1);
@@ -328,8 +325,8 @@ extern void FUN_00212f90(void *, int, int, int);
 extern void FUN_001f99f8(void *);
 extern float D_0015ED70;
 extern float D_0015ED6C;
-extern float D_L11_001613E0 __attribute__((sda));
-extern int D_L11_001613F0 __attribute__((sda));
+float D_L11_001613E0 = 3.2f;
+int D_L11_001613F0 = 0;
 extern int D_L11_0016D260[];
 extern int D_L11_0015FFD8;
 
@@ -743,8 +740,7 @@ extern void FUN_001f9cf8(void *, void *, void *);
 extern void FUN_001f9a10(void *, void *, void *);
 extern float D_L11_001613D0 __attribute__((sda));
 extern float D_L11_001613D4 __attribute__((sda));
-extern float D_L11_001613E0 __attribute__((sda));
-extern float D_L11_00161400 __attribute__((sda));
+float D_L11_00161400 = -3.0f;
 extern int D_L11_0015FFD8;
 
 void FUN_L11_002d2088(struct Moby *moby, unsigned char state) {
@@ -872,7 +868,7 @@ int FUN_L11_002d2340(struct Moby *moby, char *other) {
 extern int D_L11_0015FFD8;
 extern int FUN_L11_00316128(char *);
 extern short *D_L11_001AC240[];
-extern int D_L11_0015FFF4_i __asm__("D_L11_0015FFF4");
+extern int D_L11_0015FFF4 ;
 extern float FUN_001f9b48(void *, void *);
 
 struct TargetSets {
@@ -895,7 +891,7 @@ int FUN_L11_002d2460(struct Moby *moby) {
 
     for (i = 0; i < 4; i++) {
         group = d->sets[d->set][i].group;
-        if (group < 0 || group > D_L11_0015FFF4_i)
+        if (group < 0 || group > D_L11_0015FFF4)
             break;
         p = D_L11_001AC240[group];
         if (p == 0)
@@ -1028,7 +1024,7 @@ void FUN_L11_002d27b0(WM11 *m) {
         d->yaw = yaw * 0.7f;
         d->head_yaw = yaw * 0.3f;
     }
-    if (D_0015EDB0)
+    if (big_head_cheat_enabled)
         d->height = 2.75f;
     FUN_L00_002628d8(rate * frame_scale_sq, head_rate * frame_scale_sq, m, d->body, 0);
     FUN_L00_002628d8(rate * frame_scale_sq, head_rate * frame_scale_sq, m, d->head, 1);
@@ -1057,7 +1053,6 @@ struct PokSentryVars {
 };
 
 extern unsigned char D_0013D50B __attribute__((section(".data")));
-extern int D_0015EEA4;
 extern int D_0015ED84;
 extern unsigned char D_0014C050[];
 extern char *D_L11_001600EC;
@@ -1183,26 +1178,22 @@ void FUN_L11_002f0e40(struct Moby *moby) {
         d->pitch = pitch;
         d->head_yaw = d->yaw = yaw * 0.5f;
     }
-    if (D_0015EDB0)
+    if (big_head_cheat_enabled)
         d->height = 2.75f;
     FUN_L00_002628d8(rate * frame_scale_sq, head_rate * frame_scale_sq, moby, d->body, 0);
     FUN_L00_002628d8(rate * frame_scale_sq, head_rate * frame_scale_sq, moby, d->head, 1);
 }
 #include "qcopy.h"
 
-extern float D_0013F3D8_2518 __asm__("D_0013F3D8") __attribute__((section(".data")));          /* hero z */
+extern float D_0013F3D8_lui __asm__("D_0013F3D8") __attribute__((section(".data")));          /* hero z */
 extern int D_0015ED84_2518 __asm__("D_0015ED84");
 extern unsigned char D_0014C050_2518[] __asm__("D_0014C050");
 extern int D_0013CAE4_2518 __asm__("D_0013CAE4") __attribute__((section(".data")));
 extern int D_L11_0015F594_2518 __asm__("D_L11_0015F594");
 extern char *D_L11_0015FFD8_2518 __asm__("D_L11_0015FFD8");
 extern unsigned char D_001413F5_2518 __asm__("D_001413F5") __attribute__((section(".data")));
-extern unsigned char D_0013D3DD_2518 __asm__("D_0013D3DD") __attribute__((section(".data")));
 extern float D_0015ED6C_2518 __asm__("D_0015ED6C");
 extern float D_0015ED70_2518 __asm__("D_0015ED70");
-extern float D_L11_00161910_2518 __asm__("D_L11_00161910") __attribute__((sda));
-extern float D_L11_00161914_2518 __asm__("D_L11_00161914") __attribute__((sda));
-extern float D_L11_00161918_2518 __asm__("D_L11_00161918") __attribute__((sda));
 extern char *create_moby_2518(int) __asm__("FUN_0020c4f8");
 extern float fast_add_rotations_2518(float, float) __asm__("FUN_001fa580");
 extern void FUN_L11_002f3040_2518(char *) __asm__("FUN_L11_002f3040");
@@ -1219,6 +1210,9 @@ extern void FUN_L00_00216f90_2518(void *, void *, int, int) __asm__("FUN_L00_002
 extern void FUN_L01_0027a248_2518(int, int) __asm__("FUN_L01_0027a248");
 extern int enqueue_callback_2518(void (*)(char *), char *) __asm__("FUN_001f4600");
 
+extern float D_L11_00161910 __attribute__((sda));
+extern float D_L11_00161914 __attribute__((sda));
+extern float D_L11_00161918 __attribute__((sda));
 /* L11 twin of FUN_L01_00308bd8: a three-part switch moby that, once the hero
  * stands on it in mission state 0xB and presses the button, swings its parts
  * open and moves the linked moby (or its fallback) along. */
@@ -1287,14 +1281,14 @@ void FUN_L11_002f2518(struct Moby *moby) {
         int r = FUN_L00_00233f38_2518();
         if (*(float *)(data + 0x20) < 1.0f) {
             advance_accelerated_scalar_2518((float *)(data + 0x20), (float *)(data + 0x28), 1.0f,
-                                            D_L11_00161910_2518 * D_0015ED70_2518,
-                                            D_L11_00161914_2518 * D_0015ED70_2518,
-                                            D_L11_00161918_2518 * D_0015ED6C_2518);
+                                            D_L11_00161910 * D_0015ED70_2518,
+                                            D_L11_00161914 * D_0015ED70_2518,
+                                            D_L11_00161918 * D_0015ED6C_2518);
         } else if (*(float *)(data + 0x24) < 1.0f) {
             advance_accelerated_scalar_2518((float *)(data + 0x24), (float *)(data + 0x2C), 1.0f,
-                                            D_L11_00161910_2518 * D_0015ED70_2518,
-                                            D_L11_00161914_2518 * D_0015ED70_2518,
-                                            D_L11_00161918_2518 * D_0015ED6C_2518);
+                                            D_L11_00161910 * D_0015ED70_2518,
+                                            D_L11_00161914 * D_0015ED70_2518,
+                                            D_L11_00161918 * D_0015ED6C_2518);
         } else if (D_L11_0015F594_2518 != 0xB || !(*(float *)(data + 0x20) > 0.25f)) {
             if (r == 2) {
                 *(float *)(data + 0x3C) = 1.95f;
@@ -1343,21 +1337,21 @@ void FUN_L11_002f2518(struct Moby *moby) {
         }
         break;
     case 4:
-        if (D_0013F3D8_2518 < 138.0f)
-            D_0013D3DD_2518 = 1;
+        if (D_0013F3D8_lui < 138.0f)
+            D_0013D3DD = 1;
         if (*(float *)(data + 0x3C) < 1.95f) {
             enqueue_callback_2518(FUN_L11_002f2d58_2518, moby);
             approach_value_2518((float *)(data + 0x3C), 1.95f, D_0015ED6C_2518 * 4.0f);
         } else if (0.0f < *(float *)(data + 0x24)) {
             advance_accelerated_scalar_2518((float *)(data + 0x24), (float *)(data + 0x28), 0.0f,
-                                            D_L11_00161910_2518 * D_0015ED70_2518,
-                                            D_L11_00161914_2518 * D_0015ED70_2518,
-                                            D_L11_00161918_2518 * D_0015ED6C_2518);
+                                            D_L11_00161910 * D_0015ED70_2518,
+                                            D_L11_00161914 * D_0015ED70_2518,
+                                            D_L11_00161918 * D_0015ED6C_2518);
         } else if (0.0f < *(float *)(data + 0x20)) {
             advance_accelerated_scalar_2518((float *)(data + 0x20), (float *)(data + 0x2C), 0.0f,
-                                            D_L11_00161910_2518 * D_0015ED70_2518,
-                                            D_L11_00161914_2518 * D_0015ED70_2518,
-                                            D_L11_00161918_2518 * D_0015ED6C_2518);
+                                            D_L11_00161910 * D_0015ED70_2518,
+                                            D_L11_00161914 * D_0015ED70_2518,
+                                            D_L11_00161918 * D_0015ED6C_2518);
         } else {
             moby->state = 1;
         }
@@ -1402,16 +1396,16 @@ extern unsigned long long get_effect_texture_2f2d58(int) __asm__("FUN_001f44b8")
 extern float fast_cos_2f2d58(float) __asm__("FUN_001f9dc8");
 extern float fast_sin_2f2d58(float) __asm__("FUN_001f9de0");
 extern void draw_quad_2f2d58(void *, void *, int) __asm__("FUN_001f7d30");
-extern int D_L11_00161920_2f2d58 __asm__("D_L11_00161920") __attribute__((sda));
-extern int D_L11_00161924_2f2d58 __asm__("D_L11_00161924") __attribute__((sda));
-extern int D_L11_00161928_2f2d58 __asm__("D_L11_00161928") __attribute__((sda));
-extern int D_L11_0016192C_2f2d58 __asm__("D_L11_0016192C") __attribute__((sda));
-extern int D_L11_00161930_2f2d58 __asm__("D_L11_00161930") __attribute__((sda));
-extern unsigned int D_L11_00161934_2f2d58 __asm__("D_L11_00161934") __attribute__((sda));
-extern float D_L11_00161938_2f2d58 __asm__("D_L11_00161938") __attribute__((sda));
 
 extern float D_L11_001D3530[];
 
+int D_L11_00161920 = 0;
+int D_L11_00161924 = 2;
+int D_L11_00161928 = 0;
+int D_L11_0016192C = 1;
+int D_L11_00161930 = 0x13;
+extern unsigned int D_L11_00161934 __attribute__((sda));
+extern float D_L11_00161938 __attribute__((sda));
 /* Draws a ring of 32 textured quads around the moby; the band widens as the radius at pvars+0x3C shrinks below 1.15. */
 void FUN_L11_002f2d58(struct Moby *moby) {
     QuadPacket_2f2d58 quad;
@@ -1423,11 +1417,11 @@ void FUN_L11_002f2d58(struct Moby *moby) {
 
     FUN_001fa298(matrix, &moby->rot_row0);
     qcopy(matrix + 12, &moby->pos);
-    quad.tag[1] = get_effect_texture_2f2d58(D_L11_00161930_2f2d58);
-    quad.tag[3] = (unsigned long long)D_L11_00161920_2f2d58 |
-                  (unsigned long long)D_L11_00161924_2f2d58 << 2 |
-                  (unsigned long long)D_L11_00161928_2f2d58 << 4 |
-                  (unsigned long long)D_L11_0016192C_2f2d58 << 6 | 0x8000000000ULL;
+    quad.tag[1] = get_effect_texture_2f2d58(D_L11_00161930);
+    quad.tag[3] = (unsigned long long)D_L11_00161920 |
+                  (unsigned long long)D_L11_00161924 << 2 |
+                  (unsigned long long)D_L11_00161928 << 4 |
+                  (unsigned long long)D_L11_0016192C << 6 | 0x8000000000ULL;
     quad.tag[2] = 0xff9000000260ULL;
     quad.tag[0] = 0;
     {
@@ -1443,7 +1437,7 @@ void FUN_L11_002f2d58(struct Moby *moby) {
             uv += 2;
             *dest1 = v;
             dest0 += 2;
-            *colors++ = D_L11_00161934_2f2d58;
+            *colors++ = D_L11_00161934;
             dest1 += 2;
             k--;
         } while (k >= 0);
@@ -1470,8 +1464,8 @@ void FUN_L11_002f2d58(struct Moby *moby) {
             corner[0] = fast_cos_2f2d58(angle) * *(float *)(data + 0x3c);
             corner[1] = fast_sin_2f2d58(angle) * *(float *)(data + 0x3c);
             corner[2] = 0.0f;
-            if (j & 1) corner[2] = D_L11_00161938_2f2d58 + width + 0.0f;
-            else corner[2] = D_L11_00161938_2f2d58 - width + 0.0f;
+            if (j & 1) corner[2] = D_L11_00161938 + width + 0.0f;
+            else corner[2] = D_L11_00161938 - width + 0.0f;
             corner[3] = 1.0f;
             j++;
         } while (j < 4);
@@ -1636,11 +1630,6 @@ struct PokPv_309ac0 {
 
 extern unsigned char D_0013E550_309ac0[] __asm__("D_0013E550");
 extern void *D_0013F64C_309ac0 __asm__("D_0013F64C") __attribute__((section(".data")));
-extern float D_L11_00161DD4_309ac0 __asm__("D_L11_00161DD4") __attribute__((sda));
-extern float D_L11_00161DD8_309ac0 __asm__("D_L11_00161DD8") __attribute__((sda));
-extern float D_L11_00161DDC_309ac0 __asm__("D_L11_00161DDC") __attribute__((sda));
-extern float D_L11_00161DEC_309ac0 __asm__("D_L11_00161DEC") __attribute__((sda));
-extern float D_L11_00161DF0_309ac0 __asm__("D_L11_00161DF0") __attribute__((sda));
 extern int check_slot_309ac0(void *, int) __asm__("FUN_L00_0028d8c0");
 extern void release_slot_309ac0(int, int) __asm__("FUN_0022d798");
 extern void FUN_001fa2d8_309ac0(void *, void *) __asm__("FUN_001fa2d8");
@@ -1657,6 +1646,11 @@ extern void FUN_L11_0030a500(struct Moby *);
 extern float sin_309ac0(float) __asm__("FUN_001f9de0");
 extern int FUN_L11_0030a850(struct Moby *);
 
+extern float D_L11_00161DD4 __attribute__((sda));
+extern float D_L11_00161DD8 __attribute__((sda));
+extern float D_L11_00161DDC __attribute__((sda));
+extern float D_L11_00161DEC __attribute__((sda));
+extern float D_L11_00161DF0 __attribute__((sda));
 void FUN_L11_00309ac0(struct Moby *moby) {
     struct PokPv_309ac0 *pv = (struct PokPv_309ac0 *)moby->pvars;
     float start_pos[4];
@@ -1742,7 +1736,7 @@ void FUN_L11_00309ac0(struct Moby *moby) {
                 }
                 pv->slot_c8 = -1;
             }
-            approach_value_2518(&pv->approach_d0, D_L11_00161DD4_309ac0 * frame_time, frame_time_sq * 6.0f);
+            approach_value_2518(&pv->approach_d0, D_L11_00161DD4 * frame_time, frame_time_sq * 6.0f);
         } else {
             if (!check_slot_309ac0(moby, pv->slot_c8)) {
                 pv->slot_c8 = allocate_voice_2518(0, 4, moby);
@@ -1762,7 +1756,7 @@ void FUN_L11_00309ac0(struct Moby *moby) {
         scale_vec_309ac0(diff, pv->approach_d0);
         add_vector_xyz(&moby->pos, &moby->pos, diff);
         if (pv->seg_d4 < pv->path_c4[0] - 1) {
-            if (distance_xyz(&moby->pos, target) < D_L11_00161DD4_309ac0 * frame_time) {
+            if (distance_xyz(&moby->pos, target) < D_L11_00161DD4 * frame_time) {
                 float *pt;
                 pv->seg_d4 += 1;
                 pt = (float *)((char *)pv->path_c4 + pv->seg_d4 * 16);
@@ -1792,12 +1786,12 @@ void FUN_L11_00309ac0(struct Moby *moby) {
             moby->state = 3;
         }
         FUN_L00_0025be00(&moby->rot.z, FUN_001f9e90(target[0] - moby->pos.x, target[1] - moby->pos.y), pv->vel_d8,
-                         D_L11_00161DD8_309ac0 * 0.017453292f * frame_time_sq,
-                         D_L11_00161DD8_309ac0 * 0.017453292f * frame_time_sq,
-                         D_L11_00161DDC_309ac0 * 0.017453292f * frame_time);
+                         D_L11_00161DD8 * 0.017453292f * frame_time_sq,
+                         D_L11_00161DD8 * 0.017453292f * frame_time_sq,
+                         D_L11_00161DDC * 0.017453292f * frame_time);
         if (pv->flag_c0 != 0) {
-            FUN_L00_002e8450_309ac0(0, D_L11_00161DEC_309ac0, 0.003f);
-            FUN_L00_002e84b8_309ac0(D_L11_00161DF0_309ac0, 0.003f);
+            FUN_L00_002e8450_309ac0(0, D_L11_00161DEC, 0.003f);
+            FUN_L00_002e84b8_309ac0(D_L11_00161DF0, 0.003f);
         }
         tab_a8 = D_L11_001B0EB0[pv->idx_a8];
         tab_ac = D_L11_001B0EB0[pv->idx_ac];
@@ -1827,7 +1821,7 @@ void FUN_L11_00309ac0(struct Moby *moby) {
     case 5:
         qcopy(target, (char *)pv->path_c4 + 0x10 + pv->seg_d4 * 16);
         if (pv->flag_b0 != 0) {
-            if (D_0013F3D8_2518 < moby->pos.z) {
+            if (D_0013F3D8_lui < moby->pos.z) {
                 advance_309ac0(&moby->pos.z, &pv->approach_d0, target[2] + 1.0f, frame_time_sq, frame_time_sq, frame_time);
             } else {
                 advance_309ac0(&moby->pos.z, &pv->approach_d0, target[2] + 8.0f, frame_time_sq, frame_time_sq, frame_time);
@@ -1879,7 +1873,7 @@ extern float randf_sym(float, float) __asm__("FUN_L00_00257c48");
 extern void FUN_L00_0026f080(float *, float *, float, float);
 extern float fast_cos_a500(float) __asm__("FUN_001f9dc8");
 extern float fast_sin_a500(float) __asm__("FUN_001f9de0");
-extern int D_L11_0015F5CC;
+extern int level_frame __asm__("D_L11_0015F5CC");
 
 struct PartA500 {
     u8 unk0;
@@ -1921,7 +1915,7 @@ void FUN_L11_0030a500(struct Moby *moby) {
     }
     if (FUN_001f9b80(&moby->pos, D_L11_001677C0) > 38.0f)
         return;
-    if (moby->state == 1 && (D_L11_0015F5CC & 1))
+    if (moby->state == 1 && (level_frame & 1))
         return;
     if (!(moby->pos.z < 224.5f))
         return;
@@ -1960,7 +1954,7 @@ void FUN_L11_0030a840(unsigned char *arg) {
 extern int D_L11_0015FFD8; /* no foreign declaration */
 extern int FUN_L11_00316128(char *);
 extern short *D_L11_001AC240[];
-extern short D_L11_0015FFF4;
+extern s32 D_L11_0015FFF4;
 
 int FUN_L11_0030a850(struct Moby *m) {
     int idx = *(short *)((char *)m->pvars + 0xB4);

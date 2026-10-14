@@ -1,4 +1,6 @@
 #include "types.h"
+#include "rnc/data_labels.h"
+#include "rnc/gameplay/camera/camera_globals.h"
 
 /* Lens flare: 16 sprites along the line from the flare source's screen
    position through the screen centre, faded by distance and by how far
@@ -23,7 +25,6 @@ typedef struct {
 } LensFlare;
 
 
-extern u8 D_00187080[];
 #include "rnc/rendering/screen.h"
 extern LensFlare effect_ribbon __asm__("D_00187300");
 
@@ -62,7 +63,7 @@ void FUN_001edc50(void) {
     if (effect_ribbon.intensity <= 0.0f) {
         return;
     }
-    dist = FUN_001f9b48(D_00187080, effect_ribbon.moby->pos);
+    dist = FUN_001f9b48(camera_position, effect_ribbon.moby->pos);
     ctr[0] = convert_integer_to_float(screen_extent.half_width);
     ctr[1] = convert_integer_to_float(screen_extent.half_height);
     project_to_screen(scr, effect_ribbon.moby->pos);

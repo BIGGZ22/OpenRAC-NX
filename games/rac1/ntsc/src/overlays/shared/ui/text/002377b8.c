@@ -113,8 +113,8 @@ typedef struct {
 extern s32 D_L00_0015FA90;
 extern void *D_L00_0015FAC0;
 extern s32 D_L00_0015F738 __attribute__((sda));
-extern s32 D_L00_0015F718 __attribute__((sda));
-extern s32 D_L00_0015F71C __attribute__((sda));
+extern s32 D_L00_0015F718_gp __asm__("D_L00_0015F718") __attribute__((sda));
+extern s32 D_L00_0015F71C_gp __asm__("D_L00_0015F71C") __attribute__((sda));
 extern s32 D_L00_0015F72C __attribute__((sda));
 extern D00237ae8 D_L00_0017DAC0[];
 extern E00237ae8 item_defs[] __asm__("D_L00_00179AC0");
@@ -129,8 +129,8 @@ void FUN_L00_00237ae8(O00237ae8 *o) {
     D_L00_0015FAC0 = &D_L00_0015F738;
     o->x48 = 0;
     o->x4a = 0;
-    o->x58 = D_L00_0015F718;
-    o->x5c = D_L00_0015F71C;
+    o->x58 = D_L00_0015F718_gp;
+    o->x5c = D_L00_0015F71C_gp;
     o->x74 = -2;
     o->x78 = FUN_001f96f8(0x1E);
     o->x70 = 0;
@@ -174,8 +174,8 @@ typedef struct {
 } G_t;
 extern G_t D_0013C940;
 extern int D_L00_0017E504 __attribute__((section(".data")));
-extern int D_L00_0015FA90_c __asm__("D_L00_0015FA90");
-extern int D_L00_0015F780 __attribute__((sda));
+extern int D_L00_0015FA90;
+extern int D_L00_0015F780_gp __asm__("D_L00_0015F780") __attribute__((sda));
 extern int D_L00_0015FA9C __attribute__((sda));
 extern Ent **D_L00_0015FAC0_c __asm__("D_L00_0015FAC0");
 extern int D_L00_0017DC38 __attribute__((section(".data")));
@@ -204,7 +204,6 @@ typedef struct {
     u16 hA2;
     int wA4;
 } Stats;
-extern struct Hero hero_data __asm__("D_0013F350") __attribute__((section(".data")));
 extern Stats D_00141848 __attribute__((section(".data")));
 extern int D_0013D428[] __attribute__((section(".data")));
 extern u8 D_00141622[] __attribute__((section(".data")));
@@ -222,6 +221,7 @@ extern float FUN_001fa688(float, float);
 extern int FUN_001fa6d0(float);
 extern float FUN_001fa610(float);
 
+extern struct Hero hero_lui __asm__("D_0013F350") __attribute__((section(".data")));
 /* Picks slot w74 from the stick angle (or steps it with the 0x1000-0x8000 pad bits), counts hold frames in b71/b70, records the slot's entry when released, and closes when b70 runs out. */
 void FUN_L00_00237ba0(Obj *p) {
     float x, y, mag, ang, a, f, r;
@@ -249,16 +249,16 @@ void FUN_L00_00237ba0(Obj *p) {
     old = p->w74;
     if ((p->w78 >> 24) == 1 && (D_0013C940.w1C0 & 0x10)) {
         if (mag > 0.9f) {
-            a = ang + 3.1415927f + 3.1415927f + 1.5707964f + 3.1415927f / (float)D_L00_0015FA90_c;
-            f = a * ((float)D_L00_0015FA90_c / 6.2831855f);
-            r = (float)old * 6.2831855f / FUN_001fa6c0(D_L00_0015FA90_c) - 3.1415927f;
+            a = ang + 3.1415927f + 3.1415927f + 1.5707964f + 3.1415927f / (float)D_L00_0015FA90;
+            f = a * ((float)D_L00_0015FA90 / 6.2831855f);
+            r = (float)old * 6.2831855f / FUN_001fa6c0(D_L00_0015FA90) - 3.1415927f;
             if (old == -1 || FUN_001fa688(r, FUN_001fa5c8(ang, 1.5707964f)) > 0.58904862f) {
-                s = (int)f % D_L00_0015FA90_c;
+                s = (int)f % D_L00_0015FA90;
                 if (((s ^ 1) & 1)) {
                     float fr = f - (float)FUN_001fa6d0(f);
                     if (fr > 1.0f - D_L00_0015F788) s++;
                     else if (fr < D_L00_0015F788) s--;
-                    s = (s + D_L00_0015FA90_c) % D_L00_0015FA90_c;
+                    s = (s + D_L00_0015FA90) % D_L00_0015FA90;
                 }
                 p->w74 = s;
                 n = -1;
@@ -278,31 +278,31 @@ void FUN_L00_00237ba0(Obj *p) {
             Ent *t = D_L00_0015FAC0_c[D_L00_0015F72C];
             int cur = p->w74;
             if (t[cur].f0 == 0 && n != 0) {
-                k = (cur + n) % D_L00_0015FA90_c;
+                k = (cur + n) % D_L00_0015FA90;
                 if (t[k].f0 != 0) p->w74 = k;
             }
         }
     }
     if (p->w74 != old) c[1] = 0;
-    else if (c[1] < D_L00_0015F780) c[1]++;
+    else if (c[1] < D_L00_0015F780_gp) c[1]++;
     if (!(D_0013C940.w1C0 & 0x10)) {
         int sel = p->w74;
         if (sel >= 0 && (id = D_L00_0015FAC0_c[D_L00_0015F72C][sel].f18) != 0) {
             VendorItemInfo *rr;
             int ri = id;
-            if (hero_data.items[0].item_id != id) {
+            if (hero_lui.items[0].item_id != id) {
                 if (D_00141848.hA0 < 0xFFFF) D_00141848.hA0++;
             }
             if (FUN_001f96f8(D_0015EEA4) / 600 > D_00141848.hA2)
                 D_00141848.hA2 = FUN_001f96f8(D_0015EEA4) / 600;
             D_00141848.wA4 = D_00141848.wA4 | (1 << current_level_index) | 0x80000000;
-            if (id == 0x18) hero_data.unk1FF5 = 1;
-            else hero_data.pending_item[0] = id;
+            if (id == 0x18) hero_lui.unk1FF5 = 1;
+            else hero_lui.pending_item[0] = id;
             rr = &D_L00_001C40B0[ri];
             if (rr->h8 && rr->hE < D_0013D428[id]) D_0013D428[id] = rr->hE;
         }
         if (c[0]) c[0]--;
-    } else if (c[0] < D_L00_0015F780) c[0]++;
+    } else if (c[0] < D_L00_0015F780_gp) c[0]++;
     if (c[0] == 0) {
         {
             int a = p->w78;
@@ -319,12 +319,12 @@ void FUN_L00_00237ba0(Obj *p) {
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_002382a0.s", FUN_L00_002382a0);
 #else
 extern s32 D_L00_0015F5CC;
-extern s32 D_L00_0015F718 __attribute__((sda));
-extern s32 D_L00_0015F71C __attribute__((sda));
+extern s32 D_L00_0015F718_gp __asm__("D_L00_0015F718") __attribute__((sda));
+extern s32 D_L00_0015F71C_gp __asm__("D_L00_0015F71C") __attribute__((sda));
 extern s32 D_L00_0015F720 __attribute__((sda));
 extern s32 D_L00_0015F724 __attribute__((sda));
 extern s32 D_L00_0015F72C __attribute__((sda));
-extern s32 D_L00_0015F780 __attribute__((sda));
+extern s32 D_L00_0015F780_gp __asm__("D_L00_0015F780") __attribute__((sda));
 extern s32 D_L00_0015F7B0 __attribute__((sda));
 extern f32 D_L00_0015F78C __attribute__((sda));
 extern f32 D_L00_0015F7C0 __attribute__((sda));
@@ -378,10 +378,10 @@ s32 FUN_L00_002382a0(char *rec) {
     u8 *q = (u8 *)rec + 0x70;
     char formatted[80];
 
-    open = convert_integer_to_float(q[0]) / convert_integer_to_float(D_L00_0015F780);
+    open = convert_integer_to_float(q[0]) / convert_integer_to_float(D_L00_0015F780_gp);
     if (1.0f < open) open = 1.0f;
     else if (open < 0.0f) open = 0.0f;
-    fade = convert_integer_to_float(q[1]) / convert_integer_to_float(D_L00_0015F780);
+    fade = convert_integer_to_float(q[1]) / convert_integer_to_float(D_L00_0015F780_gp);
     if (1.0f < fade) fade = 1.0f;
     else if (fade < 0.0f) fade = 0.0f;
     i = 0;
@@ -400,19 +400,19 @@ s32 FUN_L00_002382a0(char *rec) {
     x = *(s32 *)(rec + 0x50);
     y = *(s32 *)(rec + 0x54);
     FUN_L00_00235a70(rec, &x, &y);
-    half_w = D_L00_0015F718 / 2;
-    half_h = D_L00_0015F71C / 2;
+    half_w = D_L00_0015F718_gp / 2;
+    half_h = D_L00_0015F71C_gp / 2;
     draw_hud_sprite(get_icon_frame(0xe934, 0), x, y, half_w, half_h, alpha);
-    draw_hud_sprite(get_icon_frame(0xe934, 0), x + D_L00_0015F718,
-                    y + D_L00_0015F71C, -half_w, -half_h, alpha);
-    draw_hud_sprite(get_icon_frame(0xe934, 0), x + D_L00_0015F718,
+    draw_hud_sprite(get_icon_frame(0xe934, 0), x + D_L00_0015F718_gp,
+                    y + D_L00_0015F71C_gp, -half_w, -half_h, alpha);
+    draw_hud_sprite(get_icon_frame(0xe934, 0), x + D_L00_0015F718_gp,
                     y, -half_w, half_h, alpha);
     draw_hud_sprite(get_icon_frame(0xe934, 0), x,
-                    y + D_L00_0015F71C, half_w, -half_h, alpha);
+                    y + D_L00_0015F71C_gp, half_w, -half_h, alpha);
     if (D_L00_0015FA90 > 0) {
         entry_offset = 0;
-        marker_offset = 0;
         normal_offset = 0;
+        marker_offset = 0;
         for (; i < D_L00_0015FA90; i++) {
             angle = fast_add_rotations(((f32)i + (f32)i) * 3.1415927f /
                                        (f32)D_L00_0015FA90 - 3.1415927f, 1.5707964f);
@@ -420,30 +420,31 @@ s32 FUN_L00_002382a0(char *rec) {
                      (s32)(D_L00_0015F78C * fast_cos(angle) * D_L00_0015F7C4);
             icon_y = y + D_L00_0015F724 +
                      (s32)(D_L00_0015F78C * fast_sin(angle));
-            entry = D_L00_0015FAC0_c[D_L00_0015F72C];
-            if (*(s32 *)(rec + 0x74) == i && ((Ent *)(marker_offset + (char *)entry))->f0 != 0)
+            if (*(s32 *)(rec + 0x74) == i &&
+                ((Ent *)(marker_offset + (s32)D_L00_0015FAC0_c[D_L00_0015F72C]))->f0 != 0)
                 draw_hud_sprite(get_icon_frame(0xe99c, 0), icon_x - 0x13,
                                 icon_y - 0x13, 0x26, 0x26, marker_alpha);
-            entry = D_L00_0015FAC0_c[D_L00_0015F72C];
-            if (((Ent *)(normal_offset + (char *)entry))->f0 != 0) {
+            if (((Ent *)(normal_offset + (s32)D_L00_0015FAC0_c[D_L00_0015F72C]))->f0 != 0) {
                 s32 icon_alpha;
                 if (i != *(s32 *)(rec + 0x74))
                     icon_alpha = truncate_float_to_s32((f32)alpha * D_L00_0015F7C0);
                 else
                     icon_alpha = alpha;
                 entry = D_L00_0015FAC0_c[D_L00_0015F72C];
-                entry = (Ent *)(entry_offset + (char *)entry);
+                entry = (Ent *)(entry_offset + (s32)entry);
                 draw_hud_icon(rec, get_icon_frame(entry->f0,
                               D_0013E520[entry->f18] ? 4 : 0), icon_x, icon_y, 1, icon_alpha);
             }
             entry_offset += 0x1c;
-            marker_offset += 0x1c;
             normal_offset += 0x1c;
+            marker_offset += 0x1c;
         }
     }
     selected = *(s32 *)(rec + 0x74);
     if (selected >= 0 && D_L00_0015FAC0_c[D_L00_0015F72C][selected].f0 != 0) {
-        f32 opacity = open * fade;
+        f32 opacity;
+        open *= fade;
+        opacity = open;
         color = fast_tween_color_alpha_first(opacity, D_L00_0015F798, D_L00_0015F79C);
         id = pause_iop_sprite_lists[selected];
         if (D_L00_001C40B0[id].h8 != 0) {
@@ -468,8 +469,8 @@ s32 FUN_L00_002382a0(char *rec) {
                 id = ((TitleItem_2382a0 *)D_L00_00179AC0)[item].h46;
             text = get_text(id);
         }
-        if (text == 0) return *(s32 *)(rec + 0x58);
-        if (strlen_alt(text) == 0) return *(s32 *)(rec + 0x58);
+        if (text == 0) goto out;
+        if (strlen_alt(text) == 0) goto out;
         text_length = strlen_alt(text);
         suffix = text;
         j = 0;
@@ -479,7 +480,8 @@ s32 FUN_L00_002382a0(char *rec) {
                 suffix = text + 2;
                 prefix_length = 2;
             } else {
-                while (++j < text_length) {
+                while (j + 1 < text_length) {
+                    j++;
                     suffix++;
                     if (*(const u8 *)suffix == '-') {
                         prefix_length = j + 2;
@@ -491,21 +493,12 @@ s32 FUN_L00_002382a0(char *rec) {
         }
         if (prefix_length == 0) {
             suffix = text;
-            j = 0;
-            if (prefix_length < text_length) {
-                suffix = text + 1;
-                if ((u8)text[1] == ' ') {
-                    suffix = text + 2;
-                    prefix_length = 1;
-                } else {
-                    while (++j < text_length) {
-                        suffix++;
-                        if (*(const u8 *)suffix == ' ') {
-                            prefix_length = j + 1;
-                            suffix++;
-                            break;
-                        }
-                    }
+            for (j = 0; j < text_length; j++) {
+                suffix++;
+                if (*(const u8 *)suffix == ' ') {
+                    suffix++;
+                    prefix_length = j + 1;
+                    break;
                 }
             }
         }
@@ -527,13 +520,14 @@ s32 FUN_L00_002382a0(char *rec) {
             font_print_right_2382a0(x + D_L00_0015F720, text_y, shadow, text, -1);
         }
     }
+out:
     return *(s32 *)(rec + 0x58);
 }
 #endif
 extern int D_L00_0015FA90;
 extern void *D_L00_0015FAC0;
-extern int D_L00_0015F718 __attribute__((sda));
-extern int D_L00_0015F71C __attribute__((sda));
+extern int D_L00_0015F718_gp __asm__("D_L00_0015F718") __attribute__((sda));
+extern int D_L00_0015F71C_gp __asm__("D_L00_0015F71C") __attribute__((sda));
 extern int D_L00_0015F72C __attribute__((sda));
 extern int D_L00_0015F740 __attribute__((sda));
 int FUN_001f96f8(int);
@@ -541,8 +535,8 @@ void FUN_L00_00238b18(char *p) {
     int a, b;
     D_L00_0015FA90 = 4;
     D_L00_0015FAC0 = &D_L00_0015F740;
-    a = D_L00_0015F718;
-    b = D_L00_0015F71C;
+    a = D_L00_0015F718_gp;
+    b = D_L00_0015F71C_gp;
     *(short *)(p + 0x48) = 0;
     *(short *)(p + 0x4A) = 0;
     *(int *)(p + 0x58) = a;
@@ -577,7 +571,7 @@ void FUN_L00_00238b80(Obj *o) {
     old = o->w74;
     if (*((s8 *)o + 0x7B) == 1) {
         if (0.9f < len) {
-            n = D_L00_0015FA90_c;
+            n = D_L00_0015FA90;
             o->w74 = (int)((ang + 3.1415927f + 3.1415927f + 1.5707964f + 3.1415927f / (float)n) *
                            ((float)n / 6.2831855f)) %
                      n;
@@ -617,7 +611,7 @@ void FUN_L00_00238b80(Obj *o) {
     }
     if (o->w74 != old) {
         c[1] = 0;
-    } else if (c[1] < D_L00_0015F780) {
+    } else if (c[1] < D_L00_0015F780_gp) {
         c[1]++;
     }
     if (!(D_0013C940.w1C0 & 0x10)) {
@@ -627,7 +621,7 @@ void FUN_L00_00238b80(Obj *o) {
             D_00141610[0] = D_L00_0015FAC0_c[D_L00_0015F72C][o->w74].f18;
         if (c[0] != 0)
             c[0]--;
-    } else if (c[0] < D_L00_0015F780) {
+    } else if (c[0] < D_L00_0015F780_gp) {
         c[0]++;
     }
     if (c[0] == 0) {
@@ -683,17 +677,16 @@ typedef struct {
 } Elem_239918;
 
 extern char *get_help_message_text(s32) __asm__("func_001FDD10");
-extern char D_L00_0017E4D8[];
 extern f32 convert_integer_to_float_c(s32) __asm__("func_001FA6C0");
 extern f32 fast_add_rotations(f32, f32) __asm__("func_001FA580");
 extern f32 fast_cos(f32) __asm__("func_001F9DC8");
 extern f32 fast_sin(f32) __asm__("func_001F9DE0");
 extern int D_L00_0015F5CC;
-extern int D_L00_0015F718_c __asm__("D_L00_0015F718") __attribute__((sda));
-extern int D_L00_0015F71C_c __asm__("D_L00_0015F71C") __attribute__((sda));
+extern int D_L00_0015F718_gp __asm__("D_L00_0015F718") __attribute__((sda));
+extern int D_L00_0015F71C_gp __asm__("D_L00_0015F71C") __attribute__((sda));
 extern int D_L00_0015F720 __attribute__((sda)); /* no foreign declaration */
 extern int D_L00_0015F724 __attribute__((sda)); /* no foreign declaration */
-extern int D_L00_0015F780_c __asm__("D_L00_0015F780") __attribute__((sda));
+extern int D_L00_0015F780_gp __asm__("D_L00_0015F780") __attribute__((sda));
 extern float D_L00_0015F78C __attribute__((sda));
 extern int D_L00_0015F7B0 __attribute__((sda)); /* no foreign declaration */
 extern float D_L00_0015F7C0 __attribute__((sda));
@@ -701,7 +694,6 @@ extern float D_L00_0015F7C4 __attribute__((sda));
 extern int D_L00_0015F7D4 __attribute__((sda)); /* no foreign declaration */
 extern int D_L00_0015F7D8 __attribute__((sda)); /* no foreign declaration */
 extern int D_L00_0015F7DC __attribute__((sda)); /* no foreign declaration */
-extern int D_L00_0015F7E0;
 extern Ent_239918 **D_L00_0015FAC0_c2 __asm__("D_L00_0015FAC0");
 extern int FUN_001fa6e0(int, int, f32);
 extern s32 find_valid_animation_frame_index_alt(s32, s32) __asm__("func_001FF960");
@@ -737,7 +729,7 @@ int FUN_L00_00238f88(Elem_239918 *element) {
     counters = element->cnt;
     {
         float frames = func_001FA888_239918(element->cnt[0]);
-        open_fade = frames / func_001FA888_239918(D_L00_0015F780_c);
+        open_fade = frames / func_001FA888_239918(D_L00_0015F780_gp);
     }
     if (1.0f < open_fade) {
         open_fade = 1.0f;
@@ -746,7 +738,7 @@ int FUN_L00_00238f88(Elem_239918 *element) {
     }
     {
         float frames = func_001FA888_239918(counters[1]);
-        text_fade = frames / func_001FA888_239918(D_L00_0015F780_c);
+        text_fade = frames / func_001FA888_239918(D_L00_0015F780_gp);
     }
     if (1.0f < text_fade) {
         text_fade = 1.0f;
@@ -769,12 +761,12 @@ int FUN_L00_00238f88(Elem_239918 *element) {
     x = element->x;
     y = element->y;
     func_L00_00236400_239918(element, &x, &y);
-    half_width = D_L00_0015F718_c / 2;
-    half_height = D_L00_0015F71C_c / 2;
+    half_width = D_L00_0015F718_gp / 2;
+    half_height = D_L00_0015F71C_gp / 2;
     func_00200468_239918(func_00200198_239918(0xE934, 1), x, y, half_width, half_height, frame_alpha);
-    func_00200468_239918(func_00200198_239918(0xE934, 1), x + D_L00_0015F718_c, y + D_L00_0015F71C_c, -half_width, -half_height, frame_alpha);
-    func_00200468_239918(func_00200198_239918(0xE934, 1), x + D_L00_0015F718_c, y, -half_width, half_height, frame_alpha);
-    func_00200468_239918(func_00200198_239918(0xE934, 1), x, y + D_L00_0015F71C_c, half_width, -half_height, frame_alpha);
+    func_00200468_239918(func_00200198_239918(0xE934, 1), x + D_L00_0015F718_gp, y + D_L00_0015F71C_gp, -half_width, -half_height, frame_alpha);
+    func_00200468_239918(func_00200198_239918(0xE934, 1), x + D_L00_0015F718_gp, y, -half_width, half_height, frame_alpha);
+    func_00200468_239918(func_00200198_239918(0xE934, 1), x, y + D_L00_0015F71C_gp, half_width, -half_height, frame_alpha);
     for (i = 0; i < D_L00_0015FA90; i++) {
         int icon_x, icon_y;
         float angle = func_001FA748_239918((float)i * 2.0f * 3.1415927f / (float)D_L00_0015FA90 - 3.1415927f, 1.5707964f);
@@ -849,7 +841,7 @@ typedef struct {
 } HudCounter;
 
 extern int FUN_L00_0023aaa8(char *);
-extern short D_L00_0015F7F0_d __asm__("D_L00_0015F7F0") __attribute__((sda));
+extern s32 D_L00_0015F7F0_gp __asm__("D_L00_0015F7F0") __attribute__((sda));
 
 void FUN_L00_00239630(HudElem *e) {
     unsigned char *c = e->cnt;
@@ -896,9 +888,9 @@ void FUN_L00_00239630(HudElem *e) {
         e->unk74 = e->unk78;
     }
     if (e->unk7C >= FUN_001f96f8(5)) {
-        if (*(int *)&D_L00_0015F7F0_d > c[0]) {
+        if (*(int *)&D_L00_0015F7F0_gp > c[0]) {
             c[0]++;
-        } else if (c[1] < *(int *)&D_L00_0015F7F0_d) {
+        } else if (c[1] < *(int *)&D_L00_0015F7F0_gp) {
             c[1]++;
         }
     } else {
@@ -937,9 +929,9 @@ extern void draw_hud_sprite_flipped(s32, s32, s32, s32, s32, s32) __asm__("FUN_0
 extern void FUN_001ffc30_c(s32, s32, s32, s32, s32, s32) __asm__("FUN_001ffc30");
 extern void FUN_L00_0023b120_c(Hud *, s32, s32, s32, s32, s32) __asm__("FUN_L00_0023b120");
 extern s32 D_0015ED80_c __asm__("D_0015ED80");
-extern s32 D_0015EDA0;
+extern s32 hero_max_health __asm__("D_0015EDA0");
 extern s32 D_L00_0015F808 __attribute__((sda));
-extern s32 D_L00_0015F7F0 __attribute__((sda));
+extern s32 D_L00_0015F7F0_gp __asm__("D_L00_0015F7F0") __attribute__((sda));
 extern s32 D_L00_0015F820 __attribute__((sda));
 extern s32 D_L00_0015F810 __attribute__((sda));
 extern s32 D_L00_0015F80C __attribute__((sda));
@@ -984,12 +976,12 @@ s32 FUN_L00_00239810(Hud *m) {
     q = m->ab;
     if (q[0] == 0)
         goto out;
-    f21 = FUN_001fa6c0(q[0]) / FUN_001fa6c0(D_L00_0015F7F0);
+    f21 = FUN_001fa6c0(q[0]) / FUN_001fa6c0(D_L00_0015F7F0_gp);
     if (1.0f < f21)
         f21 = 1.0f;
     else if (f21 < 0.0f)
         f21 = 0.0f;
-    f22 = FUN_001fa6c0(q[1]) / FUN_001fa6c0(D_L00_0015F7F0);
+    f22 = FUN_001fa6c0(q[1]) / FUN_001fa6c0(D_L00_0015F7F0_gp);
     if (1.0f < f22)
         f22 = 1.0f;
     else if (f22 < 0.0f)
@@ -998,7 +990,7 @@ s32 FUN_L00_00239810(Hud *m) {
     w = truncate_float_to_s32((f32)D_L00_0015F820 * f21);
     p = m->p;
     sel = p[0] >> 1;
-    mode = D_0015EDA0;
+    mode = hero_max_health;
     if (cnt == 0)
         sel = 0x1E;
     if (hero.vehicle_mode == 1)
@@ -1076,8 +1068,8 @@ typedef struct T00239d00 {
     s32 thr;
     s16 *ctr;
 } T00239d00;
-extern s32 D_L00_0015F824 __attribute__((sda));
-extern s32 D_L00_0015F828 __attribute__((sda));
+extern s32 bolt_panel_open_steps_gp __asm__("D_L00_0015F824") __attribute__((sda));
+extern s32 bolt_text_fade_steps_gp __asm__("D_L00_0015F828") __attribute__((sda));
 extern s32 FUN_001f96f8_c(s32) __asm__("FUN_001f96f8");
 void FUN_L00_00239d00(T00239d00 *o) {
     u8 *p = &o->a;
@@ -1090,9 +1082,9 @@ void FUN_L00_00239d00(T00239d00 *o) {
         o->thr = FUN_001f96f8_c(90);
     }
     if (FUN_001f96f8_c(5) <= o->thr) {
-        if (o->a < D_L00_0015F824) {
+        if (o->a < bolt_panel_open_steps_gp) {
             o->a++;
-        } else if (p[1] < D_L00_0015F828) {
+        } else if (p[1] < bolt_text_fade_steps_gp) {
             p[1]++;
         }
     } else {
@@ -1109,7 +1101,7 @@ void FUN_L00_00239d00(T00239d00 *o) {
 /*
  * Draw callback of the bolt counter HUD element (queued by FUN_L00_00266448
  * with FUN_L00_00239cc8 / FUN_L00_00239d00): a panel that slides open by
- * cnt[0] / D_L00_0015F824, the spinning bolt icon (frame from *unk80), the
+ * cnt[0] / bolt_panel_open_steps_gp, the spinning bolt icon (frame from *unk80), the
  * bolt count with a drop shadow, and a thousands separator every three
  * digits (an apostrophe, or a dot for languages 3 and 5). Returns the element width.
  */
@@ -1117,22 +1109,14 @@ void FUN_L00_00239d00(T00239d00 *o) {
 extern s32 camera_secondary_mode __asm__("D_001413D4") __attribute__((section(".data")));
 /* read through a volatile one-element array: retail reloads it */
 extern volatile s32 pal_mode_reload[1] __asm__("D_0015ED80");
-extern s32 bolt_panel_open_steps __asm__("D_L00_0015F824") __attribute__((sda));
-extern s32 bolt_text_fade_steps __asm__("D_L00_0015F828") __attribute__((sda));
+extern s32 bolt_panel_open_steps_gp __asm__("D_L00_0015F824") __attribute__((sda));
+extern s32 bolt_text_fade_steps_gp __asm__("D_L00_0015F828") __attribute__((sda));
 extern s32 bolt_text_color_clear __asm__("D_L00_0015F82C") __attribute__((sda));
 extern s32 bolt_text_color_opaque __asm__("D_L00_0015F830") __attribute__((sda));
-extern s32 bolt_text_dx __asm__("D_L00_0015F834") __attribute__((sda));
-extern s32 bolt_text_dy __asm__("D_L00_0015F838") __attribute__((sda));
 /* separator offsets: apostrophe, then dot */
-extern s32 separator_apostrophe_dx __asm__("D_L00_0015F83C") __attribute__((sda));
-extern s32 separator_apostrophe_dy __asm__("D_L00_0015F840") __attribute__((sda));
-extern s32 separator_dot_dx __asm__("D_L00_0015F844") __attribute__((sda));
-extern s32 separator_dot_dy __asm__("D_L00_0015F848") __attribute__((sda));
 extern s32 digit_width __asm__("D_L00_0015F84C") __attribute__((sda));
 /* "%d" */
 extern char bolt_count_format[] __asm__("D_L00_0015F850") __attribute__((section(".data")));
-extern char separator_apostrophe[] __asm__("D_L00_0015F858") __attribute__((section(".data")));
-extern char separator_dot[] __asm__("D_L00_0015F860") __attribute__((section(".data")));
 
 extern f32 convert_integer_to_float(int) __asm__("FUN_001fa6c0");
 extern int fast_tween_color(int, int, f32) __asm__("FUN_001fa6e0");
@@ -1143,6 +1127,14 @@ extern void draw_hud_icon(void *, int, int, int, int, int) __asm__("FUN_L00_0023
 extern int sprintf_alt() __asm__("FUN_00116248");
 extern void font_print_right(int, int, int, char *, int) __asm__("FUN_001f6940");
 
+extern s32 D_L00_0015F834 __attribute__((sda));
+extern s32 D_L00_0015F838 __attribute__((sda));
+extern s32 D_L00_0015F83C __attribute__((sda));
+extern s32 D_L00_0015F840 __attribute__((sda));
+extern s32 D_L00_0015F844 __attribute__((sda));
+extern s32 D_L00_0015F848 __attribute__((sda));
+extern char D_L00_0015F858[] __attribute__((section(".data")));
+extern char D_L00_0015F860[] __attribute__((section(".data")));
 int FUN_L00_00239df8(HudElem *m)
 {
     char buf[16];
@@ -1164,12 +1156,12 @@ int FUN_L00_00239df8(HudElem *m)
     y = pal_mode_reload[0] ? 10 : 18;
     x = m->unk50;
 
-    open = convert_integer_to_float(m->cnt[0]) / convert_integer_to_float(bolt_panel_open_steps);
+    open = convert_integer_to_float(m->cnt[0]) / convert_integer_to_float(bolt_panel_open_steps_gp);
     if (1.0f < open)
         open = 1.0f;
     else if (open < 0.0f)
         open = 0.0f;
-    text = convert_integer_to_float(fade[1]) / convert_integer_to_float(bolt_text_fade_steps);
+    text = convert_integer_to_float(fade[1]) / convert_integer_to_float(bolt_text_fade_steps_gp);
     if (1.0f < text)
         text = 1.0f;
     else if (text < 0.0f)
@@ -1196,15 +1188,15 @@ int FUN_L00_00239df8(HudElem *m)
     color = fast_tween_color(bolt_text_color_clear, bolt_text_color_opaque, text);
     shadow = fast_tween_color(0, 0x80000000, text);
     sprintf_alt(buf, bolt_count_format, current_bolt_count);
-    font_print_right(x + bolt_text_dx + 1, y + bolt_text_dy + 1, shadow, buf, -1);
-    font_print_right(x + bolt_text_dx, y + bolt_text_dy, color, buf, -1);
+    font_print_right(x + D_L00_0015F834 + 1, y + D_L00_0015F838 + 1, shadow, buf, -1);
+    font_print_right(x + D_L00_0015F834, y + D_L00_0015F838, color, buf, -1);
 
     /* thousands separators */
     if (game_language != 3)
         apostrophe = game_language != 5;
-    sprintf_alt(buf, apostrophe ? separator_apostrophe : separator_dot);
-    dy = apostrophe ? separator_apostrophe_dy : separator_dot_dy;
-    dx = apostrophe ? separator_apostrophe_dx : separator_dot_dx;
+    sprintf_alt(buf, apostrophe ? D_L00_0015F858 : D_L00_0015F860);
+    dy = apostrophe ? D_L00_0015F840 : D_L00_0015F848;
+    dx = apostrophe ? D_L00_0015F83C : D_L00_0015F844;
     for (i = 3; i < digits; i += 3) {
         sx = x + dx;
         sy = y + dy;
@@ -1215,13 +1207,13 @@ int FUN_L00_00239df8(HudElem *m)
 }
 #include "sda.h"
 extern s32 D_00141398 NOT_SDA;
-extern s32 D_L00_0015F7F0 __attribute__((sda));
+extern s32 D_L00_0015F7F0_gp __asm__("D_L00_0015F7F0") __attribute__((sda));
 s32 FUN_001f96f8(s32);
 void FUN_L00_0023a218(u8 *m) {
     u8 *q = m + 0x70;
     if (D_00141398) {
         s32 r = FUN_001f96f8(10);
-        s32 lim = D_L00_0015F7F0;
+        s32 lim = D_L00_0015F7F0_gp;
         *(s32 *)(m + 0x7C) = r;
         if (m[0x70] < lim) {
             m[0x70]++;
@@ -1279,12 +1271,12 @@ s32 FUN_L00_0023a2d0(Hud *m) {
     if (q[0] == 0)
         return m->ret;
 
-    open = convert_integer_to_float(q[0]) / convert_integer_to_float(D_L00_0015F7F0);
+    open = convert_integer_to_float(q[0]) / convert_integer_to_float(D_L00_0015F7F0_gp);
     if (1.0f < open)
         open = 1.0f;
     else if (open < 0.0f)
         open = 0.0f;
-    text = convert_integer_to_float(q[1]) / convert_integer_to_float(D_L00_0015F7F0);
+    text = convert_integer_to_float(q[1]) / convert_integer_to_float(D_L00_0015F7F0_gp);
     if (1.0f < text)
         text = 1.0f;
     else if (text < 0.0f)

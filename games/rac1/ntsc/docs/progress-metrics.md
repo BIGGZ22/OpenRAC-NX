@@ -17,6 +17,18 @@ figures from the [progress map](https://github.com/lombyte-project/lombyte/blob/
 the [report](https://github.com/lombyte-project/lombyte/blob/progress/report.json), or from
 [decomp.dev](https://decomp.dev/lombyte-project/lombyte) — never from prose.
 
+## Data
+
+The report also counts data (`total_data`, `matched_data`): the executable's
+preserved data (`core_data` to `lvl_sndvtbl` in `config/us/rnc1.us.yaml`) and
+each level's `.lit`, `.data` and vtables; bss holds no bytes and is left out.
+Data is matched when C defines it and a proof checks it: an entry in
+`RODATA_OVERLAYS`, `SDATA_OVERLAYS` or `DATA_OVERLAYS` (`configure.py`) links
+the unit's section in place of the blob bytes, so the boot ELF hash covers it;
+a level object in `config/overlays/us/data.tsv` is compared by `make overlays`.
+A `D_XXXXXXXX` row counts in every level. `decomp_map.json` also gives
+`bytes_matching_c_zero`: the part of the matched data that is zeros.
+
 ## Exact bytes are not enough: the source must be C
 
 A promoted unit counts toward C_EXACT only when its source is C. Inline asm is
@@ -53,13 +65,14 @@ comparison against the original through `./verify-baseline.sh` (see
 ## The progress map
 
 The map (`decomp_map.svg`, published on the `progress` branch by CI) has two parts. The **drawer** at the top is the boot
-executable: its own C_EXACT percentage over its group treemap, dimmed to a
-texture (every logical group is a tile sized by its bytes; the colour is the
+executable on the left 3/4: its own C_EXACT percentage over its group
+treemap, dimmed to a texture (every logical group is a tile sized by its bytes; the colour is the
 group's state). Below it the **tree** lists the shared level code first and then
 the 19 levels in game order, each with its planet, a one-line description, its
 C_EXACT percentage and a bar of blocks, one per `src/overlays/` file, sized by
-bytes. The headline percentage in the header is the whole game. Everywhere the
-same scale applies: **orange** is all recoverable C matching exactly, **chrome**
+bytes. Right of the drawer's slanted cut sits the main figure, the C_EXACT of
+the whole game (exe + overlays in C), with data in C (see Data above) above
+it. Everywhere the same scale applies: **orange** is all recoverable C matching exactly, **chrome**
 is intentional low-level assembly only, and **dark steel** to **copper** is
 pending C by its exact coverage.
 
@@ -146,4 +159,5 @@ The report (`report.json`) keeps the executable and the overlays apart in its
 categories: `boot` (= `game` + `sdk`), `overlays` (= `shared` + `levels`), and
 one `level_NN` per level. `decomp_map.json` (schema
 `rnc-public-progress-v3`) has the same split as `boot`, `overlays` and
-`total`; its top-level fields describe the total.
+`total`; its top-level fields describe the total. Each part has a `data`
+object with the same data bytes the report counts.

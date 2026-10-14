@@ -4,6 +4,11 @@
 #include "rnc/gameplay/entities/moby.h"
 #include "asm.h"
 #include "qcopy.h"
+#include "rnc/data_labels.h"
+#include "rnc/audio/sound_state.h"
+#include "rnc/gameplay/state/game_globals.h"
+#include "rnc/rendering/render_globals.h"
+#include "rnc/globals.h"
 
 typedef struct {
     char *f0;     /* 0x00 */
@@ -49,13 +54,9 @@ extern Load2463f8 D_L18_00174800_2463f8 __asm__("D_L18_00174800");
 extern char *D_L18_00174840_2463f8[] __asm__("D_L18_00174840");
 typedef struct { s16 a; s16 b; s32 *file; } Ldg2463f8;
 extern Ldg2463f8 D_0015EE48;
-extern s32 current_level_index __asm__("D_0015ED84");
-extern u8 D_0014C050[];
-extern u8 D_L18_0015FC88_2463f8[] __asm__("D_L18_0015FC88") __attribute__((section(".sdata")));
 extern s32 D_L18_0015F40C;
-extern s32 sound_bank_handle __asm__("D_0015ED5C");
 extern s32 D_L18_00160004;
-extern s32 D_0015EE8C;
+extern s32 gs_texture_allocation_base __asm__("D_0015EE8C");
 extern u64 D_L18_001831C0[3];
 extern u64 D_L18_001831D8[3];
 extern u64 D_L18_001831F0[3];
@@ -114,7 +115,6 @@ extern char *D_L18_0015FFD8_2463f8 __asm__("D_L18_0015FFD8");
 extern char *D_L18_0015FFE8_2463f8 __asm__("D_L18_0015FFE8");
 extern char *D_L18_00160108_2463f8 __asm__("D_L18_00160108");
 extern char *D_L18_0016016C_2463f8 __asm__("D_L18_0016016C");
-extern s32 D_0014EE90[16];
 typedef struct { u8 pad[0x10]; u32 v __attribute__((packed, aligned(1))); } Una2463f8;
 extern u8 D_L18_00179B00[];
 extern s32 game_frame __asm__("D_L18_0015F5CC");
@@ -154,6 +154,7 @@ extern void FUN_L00_00264740(void);
      | ((u64)(cpsm) << 51) | ((u64)(csm) << 55) | ((u64)(csa) << 56) | ((u64)(cld) << 61))
 #define KB(x) (int_to_float((s32)(x)) * (1.0f / 1024.0f))
 
+extern u8 D_L18_0015FC88[] __attribute__((section(".sdata")));
 /* Reads the level's core data. Its index lists the object classes:
  *   0x18  moby classes, 0x20 bytes per entry
  *   0x20  tie classes, 0x20 bytes per entry
@@ -203,23 +204,23 @@ s32 FUN_L18_002463f8(s32 full, s32 keep) {
     if (full) {
         FUN_001f98d0(h, (char *)(src[4] + (s32)src), src[5]);
         D_L18_0015F40C = 0;
-        FUN_001f9838_2463f8(D_L18_0015FC88_2463f8, D_0014C050 + current_level_index * 16, 0x10);
+        FUN_001f9838_2463f8(D_L18_0015FC88, visited52 + current_level_index * 16, 0x10);
         FUN_00203120((char *)(src[6] + (s32)src), h[0], (char *)h + h[1]);
         D_L18_00160004 = sound_bank_handle;
         FUN_00118a80(0);
         used = FUN_L00_0024d8d0_2463f8((char *)(src[0x14] + (s32)src), base);
         D_L18_0015F40C = (s32)(base + h[0x18]);
 
-        D_L18_001831C0[0] = GS_TEX0((D_0015EE8C + h[0x24]) >> 8, 2, 0x13, 7, 7, 1, 0,
-            (D_0015EE8C + h[0x25]) >> 8, 0, 0, 0, 4);
+        D_L18_001831C0[0] = GS_TEX0((gs_texture_allocation_base + h[0x24]) >> 8, 2, 0x13, 7, 7, 1, 0,
+            (gs_texture_allocation_base + h[0x25]) >> 8, 0, 0, 0, 4);
         D_L18_001831C0[1] = 0x0000FFA0000000E0;
         D_L18_001831C0[2] = 0x0040000400004000;
-        D_L18_001831D8[0] = GS_TEX0((D_0015EE8C + h[0x26]) >> 8, 1, 0x13, 6, 6, 1, 0,
-            (D_0015EE8C + h[0x27]) >> 8, 0, 0, 0, 4);
+        D_L18_001831D8[0] = GS_TEX0((gs_texture_allocation_base + h[0x26]) >> 8, 1, 0x13, 6, 6, 1, 0,
+            (gs_texture_allocation_base + h[0x27]) >> 8, 0, 0, 0, 4);
         D_L18_001831D8[1] = 0x0000FFA0000000E0;
         D_L18_001831D8[2] = 0x0040000400004000;
-        D_L18_001831F0[0] = GS_TEX0((D_0015EE8C + h[0x30]) >> 8, 2, 0x13, 7, 7, 1, 0,
-            (D_0015EE8C + h[0x31]) >> 8, 0, 0, 0, 4);
+        D_L18_001831F0[0] = GS_TEX0((gs_texture_allocation_base + h[0x30]) >> 8, 2, 0x13, 7, 7, 1, 0,
+            (gs_texture_allocation_base + h[0x31]) >> 8, 0, 0, 0, 4);
         D_L18_001831F0[1] = 0x0000FFA0000000E0;
         D_L18_001831F0[2] = 0x0040000400004000;
 
@@ -414,18 +415,17 @@ s32 FUN_L18_002463f8(s32 full, s32 keep) {
     return 0;
 }
 #include "sda.h"
-#define W(x) (*(int *)&(x))
 
-extern int D_L18_0015F5CC;
-extern short D_L18_00161A1C __attribute__((sda));
-extern short D_L18_00161A20 __attribute__((sda));
-extern short D_L18_00161A24 __attribute__((sda));
-extern short D_L18_00161A28 __attribute__((sda));
-extern short D_L18_00161A2C __attribute__((sda));
-extern short D_L18_00161A30 __attribute__((sda));
-extern short D_L18_00161A34 __attribute__((sda));
-extern short D_L18_00161A38 __attribute__((sda));
-extern short D_L18_00161A3C __attribute__((sda));
+extern int game_frame __asm__("D_L18_0015F5CC");
+int timer_text_x __asm__("D_L18_00161A1C") = 260;
+int timer_text_y __asm__("D_L18_00161A20") = 80;
+int timer_color_dim __asm__("D_L18_00161A24") = 0x80c0c0c0;
+int timer_color_bright __asm__("D_L18_00161A28") = 0x804040ff;
+int timer_frame_top __asm__("D_L18_00161A2C") = -5;
+int timer_frame_bottom __asm__("D_L18_00161A30") = 20;
+int timer_frame_left __asm__("D_L18_00161A34") = -50;
+int timer_frame_right __asm__("D_L18_00161A38") = 52;
+int D_L18_00161A3C = 96;
 extern void draw_ui_frame(int, int, int, int, int) __asm__("FUN_001f5f18");
 extern float func_001FA888(int) __asm__("FUN_001fa6c0");
 extern float fast_sin(float) __asm__("FUN_001f9de0");
@@ -436,7 +436,6 @@ extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 extern void font_print_center_large(int a, int b, int c, int d, int e) __asm__("FUN_001f6af0");
 extern void font_print_center_large_001f6c20(int a, int b, int c, int d, int e) __asm__("FUN_001f6c20");
 
-#define W(x) (*(int *)&(x))
 
 /* Draws the level timer as "H:MM:SS.t" text with a pulsing colour. */
 void FUN_L18_002d8098(struct Moby *moby) {
@@ -445,16 +444,16 @@ void FUN_L18_002d8098(struct Moby *moby) {
     float v;
     int col;
 
-    draw_ui_frame(W(D_L18_00161A2C) + W(D_L18_00161A20), W(D_L18_00161A30) + W(D_L18_00161A20),
-                W(D_L18_00161A34) + W(D_L18_00161A1C), W(D_L18_00161A38) + W(D_L18_00161A1C),
-                W(D_L18_00161A3C));
-    v = fast_sin(func_001FA888(D_L18_0015F5CC % 60) / 60.0f * 6.28318f) * 3.0f + 0.5f;
+    draw_ui_frame(timer_frame_top + timer_text_y, timer_frame_bottom + timer_text_y,
+                timer_frame_left + timer_text_x, timer_frame_right + timer_text_x,
+                D_L18_00161A3C);
+    v = fast_sin(func_001FA888(game_frame % 60) / 60.0f * 6.28318f) * 3.0f + 0.5f;
     if (v > 1.0f) {
         v = 1.0f;
     } else if (v < 0.0f) {
         v = 0.0f;
     }
-    col = fast_tween_color(W(D_L18_00161A24), W(D_L18_00161A28), v);
+    col = fast_tween_color(timer_color_dim, timer_color_bright, v);
     buf[0] = 0x30;
     buf[1] = *(int *)(data + 0x6c) / scale_ticks(0xE10) + 0x30;
     buf[2] = 0x3A;
@@ -463,7 +462,7 @@ void FUN_L18_002d8098(struct Moby *moby) {
     buf[5] = 0x3A;
     buf[6] = *(int *)(data + 0x6c) % scale_ticks(0x3C) / scale_ticks(6) + 0x30;
     buf[7] = func_001FA898_r((float)random_integer_below(10)) + 0x30;
-    font_print_center_large_001f6c20(W(D_L18_00161A1C), W(D_L18_00161A20), col, (int)buf, 8);
+    font_print_center_large_001f6c20(timer_text_x, timer_text_y, col, (int)buf, 8);
 }
 
 extern void FUN_L02_002a4058_u(char *arg, int val) __asm__("FUN_L01_0026e0e0");

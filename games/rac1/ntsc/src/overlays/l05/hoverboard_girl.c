@@ -5,6 +5,8 @@
 #include "sda.h"
 #include "eetypes.h"
 #include "qcopy.h"
+#include "rnc/data_labels.h"
+#include "rnc/gameplay/state/options.h"
 
 /* Class 918 (hoverboard_girl), Rilgar / Blackwater City.
  * The update counts player action 11 at frame 15 when she faces the player.
@@ -43,7 +45,7 @@ typedef struct {
     s32 player_look_timer;
     s32 random_look_timer;
     HoverboardGirlVector look_target;
-    s32 breast_growth_count;
+    s32 breast_growth_count_gp;
 } HoverboardGirlState;
 
 typedef struct HoverboardGirlMoby {
@@ -83,12 +85,11 @@ typedef struct {
     f32 frame_scale;
     f32 movement_sampling_scale;
 } FrameTiming;
-extern u8 big_head_cheat_enabled __asm__("D_0015EDB0");
-extern s32 breast_growth_count __asm__("D_L05_00161ED0") __attribute__((sda));
+extern s32 breast_growth_count_gp __asm__("D_L05_00161ED0") __attribute__((sda));
 extern s32 game_mode __asm__("D_L05_0015F5C4");
 extern s32 game_mode_absolute __asm__("D_L05_0015F5C4");
 extern s32 frame_number __asm__("D_L05_0015F5CC");
-extern s32 frame_number_absolute __asm__("D_L05_0015F5CC");
+extern s32 frame_number __asm__("D_L05_0015F5CC");
 extern u8 race_completed __asm__("D_0013D388") NOT_SDA;
 extern HoverboardRaceGates race_gates __asm__("D_0013D5B0");
 extern HoverboardRaceEntry *race_entries[] __asm__("D_L05_001B1AF8");
@@ -135,7 +136,7 @@ void update_hoverboard_girl_boobs_animation(HoverboardGirlMoby *,
                                             HoverboardGirlState *) __asm__("FUN_L05_00316810");
 void update_hoverboard_girl(HoverboardGirlMoby *) __asm__("FUN_L05_00316ab8");
 
-extern f32 frame_delta __asm__("D_0015ED64");
+extern f32 frame_scale_sq __asm__("D_0015ED64");
 
 void FUN_L05_00316810(HoverboardGirlMoby *moby, HoverboardGirlState *state) {
     s32 joint_index = 0;
@@ -144,8 +145,8 @@ void FUN_L05_00316810(HoverboardGirlMoby *moby, HoverboardGirlState *state) {
     f32 animation_value;
 
     do {
-        if (breast_growth_count != 0) {
-            animation_value = (f32)breast_growth_count * 0.15f + 1.0f;
+        if (breast_growth_count_gp != 0) {
+            animation_value = (f32)breast_growth_count_gp * 0.15f + 1.0f;
             if (3.7f < animation_value) {
                 animation_value = 3.7f;
             }
@@ -154,8 +155,8 @@ void FUN_L05_00316810(HoverboardGirlMoby *moby, HoverboardGirlState *state) {
             state_window->joints[2].target_rotation[1] =
                 fast_cos(animation_value * 3.1415927f) * 0.61086524f;
         }
-        update_joint_animation(moby, joint, joint_index + 2, frame_delta * 0.05f,
-                               frame_delta * 0.3f);
+        update_joint_animation(moby, joint, joint_index + 2, frame_scale_sq * 0.05f,
+                               frame_scale_sq * 0.3f);
         joint_index++;
         joint++;
         state_window = (HoverboardGirlState *)((u8 *)state_window + 0x80);
@@ -201,7 +202,7 @@ void FUN_L05_00316ab8(HoverboardGirlMoby *moby) {
         if (state->dialogue_state == 3) {
             state->previous_dialogue_state = state->dialogue_state;
             state->dialogue_state = 2;
-            state->dialogue_state_frame = frame_number_absolute;
+            state->dialogue_state_frame = frame_number;
             moby->dialogue_event = 0;
             set_race_camera(&race_camera_vectors[0], &race_camera_vectors[1], 0, 1);
             qcopy(&saved_camera_vectors[0], &race_camera_vectors[2]);
@@ -214,7 +215,7 @@ void FUN_L05_00316ab8(HoverboardGirlMoby *moby) {
             if (race_completed == 0) {
                 state->previous_dialogue_state = state->dialogue_state;
                 state->dialogue_state = 4;
-                state->dialogue_state_frame = frame_number_absolute;
+                state->dialogue_state_frame = frame_number;
                 state->race_return_pending = 1;
             }
             moby->dialogue_event = 0;
@@ -325,29 +326,29 @@ void FUN_L05_00316ab8(HoverboardGirlMoby *moby) {
                           hero.motion.pos.f[1] - moby->position.component[1])) <
             1.2217305f) {
         if (hero.state.current == HERO_STATE_HIGH_JUMP && hero.state_timer == 15) {
-            state->breast_growth_count++;
-            if (state->breast_growth_count > 20)
-                state->breast_growth_count = 20;
-            breast_growth_count = state->breast_growth_count;
+            state->breast_growth_count_gp++;
+            if (state->breast_growth_count_gp > 20)
+                state->breast_growth_count_gp = 20;
+            breast_growth_count_gp = state->breast_growth_count_gp;
         }
         /* Action 4 eventually reduces the effect, one step
          * every tenth game frame. Keep the scaled-frame threshold. */
         if (hero.state.current == HERO_STATE_CROUCH && scale_frame_count(20) < hero.state_timer &&
             frame_number % 10 == 0) {
-            state->breast_growth_count--;
-            if (state->breast_growth_count < 0)
-                state->breast_growth_count = 0;
-            breast_growth_count = state->breast_growth_count;
+            state->breast_growth_count_gp--;
+            if (state->breast_growth_count_gp < 0)
+                state->breast_growth_count_gp = 0;
+            breast_growth_count_gp = state->breast_growth_count_gp;
         }
     }
     if (game_mode_absolute != 2) {
         update_hoverboard_girl_boobs_animation(moby, state);
         if (big_head_cheat_enabled != 0)
             state->joints[0].target_scale = 2.75f;
-        update_joint_animation(moby, &state->joints[0], 0, rotation_step * frame_delta,
-                               rotation_limit * frame_delta);
+        update_joint_animation(moby, &state->joints[0], 0, rotation_step * frame_scale_sq,
+                               rotation_limit * frame_scale_sq);
         update_joint_animation(moby, &state->joints[1], 1,
-                               rotation_step * frame_delta,
-                               rotation_limit * frame_delta);
+                               rotation_step * frame_scale_sq,
+                               rotation_limit * frame_scale_sq);
     }
 }

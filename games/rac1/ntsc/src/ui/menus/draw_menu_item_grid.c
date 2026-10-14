@@ -1,4 +1,7 @@
 #include "types.h"
+#include "rnc/data_labels.h"
+#include "rnc/ui/menus/menu_globals.h"
+#include "rnc/gameplay/state/game_globals.h"
 
 typedef struct {
     u8 pad_0[0x40];
@@ -21,8 +24,6 @@ typedef struct {
 
 extern ItemInfo D_001863D8[];
 #include "rnc/gameplay/state/item_state.h"
-extern s32 D_0015F438;
-extern s32 D_001601B0 __attribute__((sda));
 extern f32 D_00160290 __attribute__((sda));
 extern f32 D_00160294 __attribute__((sda));
 
@@ -94,12 +95,12 @@ s32 draw_menu_item_grid(struct MenuScreen *grid) {
             left = scale * x;
             right = left + icon_width;
             if (focused && grid->data.grid.selected_cell == cell - grid->data.grid.cells) {
-                color = ((SubtractIntegerWithClamp((D_0015F438 & 0x3F) - 0x20) + 0x40) * 0x10202) |
+                color = ((SubtractIntegerWithClamp((game_frame_counter & 0x3F) - 0x20) + 0x40) * 0x10202) |
                         0x80000000;
                 append_screen_sprite(left - 0x30, top - 0x30, right + 0x30, bottom + 0x30, color,
                                      1);
                 append_screen_sprite(left - 0x10, top - 0x10, right + 0x10, bottom + 0x10,
-                                     D_001601B0, 1);
+                                     panel_clear_color, 1);
             }
             if (cell->kind == 0 ? item_available[cell->id] : alternate_item_available[cell->id]) {
                 frame_offset = 0;

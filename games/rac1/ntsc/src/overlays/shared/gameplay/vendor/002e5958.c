@@ -5,6 +5,7 @@
 #include "rnc/globals.h"
 #include "asm.h"
 #include "rnc/overlay/entities.h"
+#include "rnc/overlay/level_labels.h"
 
 #ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L15_002e5958.s", FUN_L15_002e5958);
@@ -43,7 +44,7 @@ extern u8 D_0013F3D0[];
 extern s32 current_level_index __asm__("D_0015ED84");
 extern u8 D_L15_001BB830[];
 extern u32 D_0014C190[];
-extern u32 D_L15_001BAAD0[];
+extern s32 D_L15_001BAAD0[];
 
 void FUN_L15_002e5958(struct Moby *moby) {
     VendorVars_2e5958 *vars = (VendorVars_2e5958 *)moby->pvars;
@@ -101,8 +102,7 @@ void FUN_L15_002e5958(struct Moby *moby) {
             ((((s32)*(u32 *)(((((s16)save_id >> 5) << 2) + (current_level_index << 8)) + (u8 *)D_0014C190)) >> (save_id & 31)) & 1) != 0) {
             if (vars->enabled != 0) {
                 FUN_L01_0026e0e0(moby->group, 4);
-                save_id = vars->restart_timer;
-                vars->timer = save_id;
+                vars->timer = vars->restart_timer;
                 moby->state = 4;
                 break;
             }
@@ -124,7 +124,8 @@ void FUN_L15_002e5958(struct Moby *moby) {
             if (vars->child_count >= vars->notified_count) {
                 FUN_L01_0026e0e0(moby->group, 4);
                 allocate_voice_for_target_entry(1, 0x31, moby);
-                vars->timer = vars->restart_timer;
+                near_parent = (u16)vars->restart_timer;
+                vars->timer = near_parent;
                 moby->state = 4;
                 break;
             } else {
@@ -227,9 +228,7 @@ typedef struct {
 extern f32 fast_add_rotations(f32 a, f32 b) __asm__("FUN_001fa580");
 extern float FUN_001f9b48(void *, void *);
 extern int D_L15_0015F5C4;
-extern int D_L15_0015F640;
 extern s32 scale_game_frames(s32) __asm__("func_001F96F8");
-extern short D_L15_001621A0_d __asm__("D_L15_001621A0") __attribute__((sda));
 extern unsigned char D_0013D388_bd78[] __asm__("D_0013D388");
 extern void queue_dialogue_message(int arg0, int arg1) __asm__("FUN_L00_00263d40");
 extern void FUN_L00_00298840(int);
@@ -238,13 +237,14 @@ extern void FUN_L02_002ea8b0(char *);
 int memcard_save_data(int slot, int flags) __asm__("FUN_0020b178");
 void mark_moby_for_removal(struct Obj *obj) __asm__("FUN_0020c828");
 
+extern short D_L15_001621A0 __attribute__((sda));
 void FUN_L15_002ebd78(struct Moby *moby) {
     unsigned char *p;
     if (current_level_index != 0xF) {
         moby->rot.z =
             fast_add_rotations(moby->rot.z, frame_time * 1.5707964f);
         moby->scale =
-            moby->pclass->scale * *(float *)&D_L15_001621A0_d;
+            moby->pclass->scale * *(float *)&D_L15_001621A0;
         switch (moby->state) {
         case 0:
             FUN_L02_002ea7d0(moby);
@@ -288,14 +288,11 @@ INCLUDE_ASM("config/us/overlays/asm/FUN_L15_002ed068.s", FUN_L15_002ed068);
 extern struct Moby *D_L15_0015FFD8 __attribute__((sda));
 extern int D_L15_0015F594 __attribute__((sda));
 extern struct Moby *D_0013F64C;
-extern short D_0013F65E;
-extern int D_001413D4;
 extern int D_L15_0015F5C4;
 extern u8 D_0014C170[];
 extern u8 D_0014C050[];
 extern struct Moby *D_L15_0015FFD8_data __asm__("D_L15_0015FFD8") __attribute__((section(".data")));
 extern u8 D_0013F3D0[];
-extern u8 D_00141050[];
 extern u32 D_0013CAE4 __attribute__((section(".data")));
 extern void mark_moby_for_removal_002ed068(struct Moby *) __asm__("FUN_0020c828");
 extern void try_set_help_message(int, int) __asm__("FUN_00215130");

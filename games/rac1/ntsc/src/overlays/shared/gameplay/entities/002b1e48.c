@@ -2,6 +2,10 @@
 #include "types.h"
 #include "asm.h"
 #include "qcopy.h"
+#include "rnc/data_labels.h"
+#include "rnc/gameplay/state/game_globals.h"
+#include "rnc/globals.h"
+#include "rnc/overlay/level_labels.h"
 
 #define NOT_SDA
 
@@ -32,8 +36,6 @@ void FUN_L07_002f8058(unsigned char *moby) {
 
 
 
-extern int D_0013F350; /* no foreign declaration */
-extern int D_0015ED84;
 extern int FUN_001f9770();
 extern int FUN_001f9b80();
 extern int FUN_001f9fc8();
@@ -48,7 +50,6 @@ float absolute_float(float input) __asm__("func_001F99C0");
 void FUN_L00_002502a0(int idx);
 void FUN_L01_0026e090(int i, int v);
 void FUN_L01_0026e0e0(int list, int state);
-extern unsigned char D_0014C150_30D370[] __asm__("D_0014C050");
 extern char D_0013E633_30D370[] __asm__("D_0013F350") NOT_SDA;
 extern void func_L01_0026F090_30D370(int list, int state) __asm__("FUN_L01_0026e0e0");
 extern void func_L01_0026F040_30D370(int, int) __asm__("FUN_L01_0026e090");
@@ -81,7 +82,7 @@ void FUN_L07_0030bf90(unsigned char *moby)
     flag = 0;
     if (moby[0x20] < 6) {
         if (moby[0xB0] != 0xFF) {
-            if (D_0014C150_30D370[moby[0xB0] + (D_0015ED84 << 4)] == 0xFF)
+            if (visited52[moby[0xB0] + (current_level_index << 4)] == 0xFF)
                 func_L01_0026F090_30D370(moby[0x21], 6);
         }
     }
@@ -177,7 +178,7 @@ void FUN_L07_0030bf90(unsigned char *moby)
         break;
     case 7:
         if (moby[0xB0] != 0xFF) {
-            if (D_0014C150_30D370[moby[0xB0] + (D_0015ED84 << 4)] != 0xFF)
+            if (visited52[moby[0xB0] + (current_level_index << 4)] != 0xFF)
                 func_L00_002512D8_30D370(moby[0xB0]);
         }
         if (func_001F9938_30D370(d + 0xC)) {
@@ -206,15 +207,13 @@ void FUN_L07_0030bf90(unsigned char *moby)
         break;
     }
 }
-extern u8 *D_L07_0015FFD8_310df0 __asm__("D_L07_0015FFD8");
-extern f32 D_0015ED6C_310df0 __asm__("D_0015ED6C");
+extern char *level_mobys __asm__("D_L07_0015FFD8");
 extern void add_vector_xyz_310df0(void *, void *, void *) __asm__("FUN_001f9a10");
 extern f32 vector_length_xyz_310df0(void *) __asm__("FUN_001f9af0");
 extern void scale_vector_xyz_310df0(void *, void *, f32) __asm__("FUN_001f9bf8");
 extern void subtract_vector_xyz_310df0(void *, void *, void *) __asm__("FUN_001f9cf8");
 extern void play_sound_310df0(s32, s32, void *) __asm__("FUN_0022da68");
 
-extern s32 D_L07_00184528[] NOT_SDA;
 
 void FUN_L07_00310df0(u8 *moby)
 {
@@ -226,7 +225,7 @@ void FUN_L07_00310df0(u8 *moby)
     typedef u32 quadword __attribute__((mode(TI), aligned(16)));
 
     if (moby[0xb0] != 0xff &&
-        D_0014C150_30D370[moby[0xb0] + D_0015ED84 * 16] == 0xff)
+        visited52[moby[0xb0] + current_level_index * 16] == 0xff)
         *(s32 *)(data + 0x10) = -1;
 
     state = moby[0x20];
@@ -242,7 +241,7 @@ void FUN_L07_00310df0(u8 *moby)
         if (*(s32 *)(data + 0x38) != -1)
             D_L07_00184528[*(s32 *)(data + 0x38)] = 0;
         if (*(s32 *)(data + 0x10) != -1) {
-            other = D_L07_0015FFD8_310df0 + *(s32 *)(data + 0x10) * 0x100;
+            other = level_mobys + *(s32 *)(data + 0x10) * 0x100;
             if (other != 0 && other[0x20] != 0xfe && other[0x20] != 0xfd &&
                 other[0x20] != *(u32 *)(data + 0x14))
                 return;
@@ -261,7 +260,7 @@ void FUN_L07_00310df0(u8 *moby)
         if (*(s32 *)(data + 0x38) != -1)
             D_L07_00184528[*(s32 *)(data + 0x38)] = 1;
         if (*(s32 *)(data + 0x10) != -1) {
-            other = D_L07_0015FFD8_310df0 + *(s32 *)(data + 0x10) * 0x100;
+            other = level_mobys + *(s32 *)(data + 0x10) * 0x100;
             if (other != 0 && other[0x20] != 0xfe && other[0x20] != 0xfd &&
                 other[0x20] == *(u32 *)(data + 0x18)) {
                 if (*(s32 *)(data + 0x30) != -1)
@@ -276,9 +275,9 @@ void FUN_L07_00310df0(u8 *moby)
         vectors[6] = *(f32 *)(data + 0x24);
         *(quadword *)vectors = *(quadword *)(vectors + 4);
         subtract_vector_xyz_310df0(vectors, vectors, moby + 0xc0);
-        scale_vector_xyz_310df0(vectors + 4, vectors, *(f32 *)(data + 0x28) * D_0015ED6C_310df0);
+        scale_vector_xyz_310df0(vectors + 4, vectors, *(f32 *)(data + 0x28) * frame_time);
         add_vector_xyz_310df0(moby + 0x10, moby + 0x10, vectors + 4);
-        *(f32 *)(data + 0x0c) -= *(f32 *)(data + 0x28) * D_0015ED6C_310df0;
+        *(f32 *)(data + 0x0c) -= *(f32 *)(data + 0x28) * frame_time;
         if (!(*(f32 *)(data + 0x0c) < 0.0f))
             return;
         add_vector_xyz_310df0(moby + 0x10, data, vectors);
@@ -292,7 +291,7 @@ void FUN_L07_00310df0(u8 *moby)
             D_L07_00184528[*(s32 *)(data + 0x38)] = 1;
         if (*(s32 *)(data + 0x10) == -1)
             return;
-        other = D_L07_0015FFD8_310df0 + *(s32 *)(data + 0x10) * 0x100;
+        other = level_mobys + *(s32 *)(data + 0x10) * 0x100;
         if (other == 0 || other[0x20] == 0xfe || other[0x20] == 0xfd ||
             other[0x20] != *(u32 *)(data + 0x18))
             return;
@@ -305,7 +304,7 @@ void FUN_L07_00310df0(u8 *moby)
         if (*(s32 *)(data + 0x38) != -1)
             D_L07_00184528[*(s32 *)(data + 0x38)] = 0;
         if (*(s32 *)(data + 0x10) == -1 ||
-            (other = D_L07_0015FFD8_310df0 + *(s32 *)(data + 0x10) * 0x100) == 0 ||
+            (other = level_mobys + *(s32 *)(data + 0x10) * 0x100) == 0 ||
             other[0x20] == 0xfe || other[0x20] == 0xfd ||
             other[0x20] == *(u32 *)(data + 0x14)) {
             if (*(s32 *)(data + 0x30) != -1)
@@ -318,10 +317,10 @@ void FUN_L07_00310df0(u8 *moby)
             vectors[6] = *(f32 *)(data + 0x24);
             *(quadword *)vectors = *(quadword *)(vectors + 4);
             distance = vector_length_xyz_310df0(vectors);
-            scale_vector_xyz_310df0(vectors, vectors, -(*(f32 *)(data + 0x2c) * D_0015ED6C_310df0));
+            scale_vector_xyz_310df0(vectors, vectors, -(*(f32 *)(data + 0x2c) * frame_time));
             subtract_vector_xyz_310df0(vectors + 4, vectors, moby + 0xc0);
             add_vector_xyz_310df0(moby + 0x10, moby + 0x10, vectors + 4);
-            *(f32 *)(data + 0x0c) += *(f32 *)(data + 0x2c) * D_0015ED6C_310df0;
+            *(f32 *)(data + 0x0c) += *(f32 *)(data + 0x2c) * frame_time;
             if (!(distance < *(f32 *)(data + 0x0c)))
                 return;
             qcopy(moby + 0x10, data);
@@ -344,10 +343,8 @@ extern void scale_vector_xyz_alt_31aee0(f32, void *, void *) __asm__("FUN_001f9b
 extern void subtract_vector_xyz_31aee0(void *, void *, void *) __asm__("FUN_001f9cf8");
 extern void play_sound_31aee0(s32, s32, void *) __asm__("FUN_0022da68");
 extern void update_moby_motion_31aee0(void *, void *, void *, void *) __asm__("FUN_L00_00260738");
-extern u8 *D_L07_0015FFD8_31aee0 __asm__("D_L07_0015FFD8");
-extern f32 D_0015ED6C_31aee0 __asm__("D_0015ED6C");
+extern char *level_mobys __asm__("D_L07_0015FFD8");
 
-extern s32 D_L07_00184528[] NOT_SDA;
 void FUN_L07_0031aee0(u8 *moby)
 {
     u8 *data = *(u8 **)(moby + 0x78);
@@ -363,7 +360,7 @@ void FUN_L07_0031aee0(u8 *moby)
     qcopy(old_rotation, moby + 0x40);
 
     if (moby[0xb0] != 0xff &&
-        D_0014C150_30D370[moby[0xb0] + D_0015ED84 * 16] == 0xff)
+        visited52[moby[0xb0] + current_level_index * 16] == 0xff)
         *(s32 *)(data + 0xb0) = -1;
 
     state = moby[0x20];
@@ -377,7 +374,7 @@ void FUN_L07_0031aee0(u8 *moby)
         break;
     case 1:
         if (*(s32 *)(data + 0xb0) != -1) {
-            other = D_L07_0015FFD8_31aee0 + *(s32 *)(data + 0xb0) * 0x100;
+            other = level_mobys + *(s32 *)(data + 0xb0) * 0x100;
             if (other != 0 && other[0x20] != 0xfe && other[0x20] != 0xfd &&
                 other[0x20] != *(u32 *)(data + 0xb4))
                 break;
@@ -394,7 +391,7 @@ void FUN_L07_0031aee0(u8 *moby)
         break;
     case 2:
         if (*(s32 *)(data + 0xb0) != -1) {
-            other = D_L07_0015FFD8_31aee0 + *(s32 *)(data + 0xb0) * 0x100;
+            other = level_mobys + *(s32 *)(data + 0xb0) * 0x100;
             if (other != 0 && other[0x20] != 0xfe && other[0x20] != 0xfd &&
                 other[0x20] == *(u32 *)(data + 0xb8)) {
                 if (*(s32 *)(data + 0xd0) != -1)
@@ -409,9 +406,9 @@ void FUN_L07_0031aee0(u8 *moby)
         vectors[6] = *(f32 *)(data + 0xc4);
         *(quadword *)vectors = *(quadword *)(vectors + 4);
         subtract_vector_xyz_31aee0(vectors, vectors, moby + 0xc0);
-        scale_vector_xyz_alt_31aee0(*(f32 *)(data + 0xc8) * D_0015ED6C_31aee0, vectors + 4, vectors);
+        scale_vector_xyz_alt_31aee0(*(f32 *)(data + 0xc8) * frame_time, vectors + 4, vectors);
         add_vector_xyz_31aee0(moby + 0x10, moby + 0x10, vectors + 4);
-        *(f32 *)(data + 0xac) -= *(f32 *)(data + 0xc8) * D_0015ED6C_31aee0;
+        *(f32 *)(data + 0xac) -= *(f32 *)(data + 0xc8) * frame_time;
         if (*(f32 *)(data + 0xac) < 0.0f) {
             add_vector_xyz_31aee0(moby + 0x10, data + 0xa0, vectors);
             *(f32 *)(data + 0xac) = 0.0f;
@@ -424,7 +421,7 @@ void FUN_L07_0031aee0(u8 *moby)
         break;
     case 3:
         if (*(s32 *)(data + 0xb0) != -1) {
-            other = D_L07_0015FFD8_31aee0 + *(s32 *)(data + 0xb0) * 0x100;
+            other = level_mobys + *(s32 *)(data + 0xb0) * 0x100;
             if (other != 0 && other[0x20] != 0xfe && other[0x20] != 0xfd &&
                 other[0x20] == *(u32 *)(data + 0xb8)) {
                 *(s32 *)(data + 0xac) = 0;
@@ -436,7 +433,7 @@ void FUN_L07_0031aee0(u8 *moby)
         break;
     case 4:
         if (*(s32 *)(data + 0xb0) == -1 ||
-            (other = D_L07_0015FFD8_31aee0 + *(s32 *)(data + 0xb0) * 0x100) == 0 ||
+            (other = level_mobys + *(s32 *)(data + 0xb0) * 0x100) == 0 ||
             other[0x20] == 0xfe || other[0x20] == 0xfd ||
             other[0x20] == *(u32 *)(data + 0xb4)) {
             if (*(s32 *)(data + 0xd0) != -1)
@@ -449,10 +446,10 @@ void FUN_L07_0031aee0(u8 *moby)
             vectors[6] = *(f32 *)(data + 0xc4);
             *(quadword *)vectors = *(quadword *)(vectors + 4);
                 distance = vector_length_xyz_31aee0(vectors);
-            scale_vector_xyz_alt_31aee0(-(*(f32 *)(data + 0xcc) * D_0015ED6C_31aee0), vectors, vectors);
+            scale_vector_xyz_alt_31aee0(-(*(f32 *)(data + 0xcc) * frame_time), vectors, vectors);
             subtract_vector_xyz_31aee0(vectors + 4, vectors, moby + 0xc0);
             add_vector_xyz_31aee0(moby + 0x10, moby + 0x10, vectors + 4);
-            *(f32 *)(data + 0xac) += *(f32 *)(data + 0xcc) * D_0015ED6C_31aee0;
+            *(f32 *)(data + 0xac) += *(f32 *)(data + 0xcc) * frame_time;
             if (distance < *(f32 *)(data + 0xac)) {
                 qcopy(moby + 0x10, data + 0xa0);
                 if (*(s32 *)(data + 0xd0) != -1)

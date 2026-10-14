@@ -2,6 +2,9 @@
 #include "rnc/ui/menus/menu_system.h"
 #include "sda.h"
 #include "rnc/globals.h"
+#include "rnc/data_labels.h"
+#include "rnc/gameplay/state/options.h"
+#include "rnc/gameplay/state/game_globals.h"
 
 /* Preserves selected state across func_00209370 using scratchpad copies.
    Only listed bytes of item_available are restored; each D_00141EA0 entry is
@@ -29,13 +32,6 @@ typedef struct {
 
 extern Checkpoints D_0013D290;
 #include "rnc/gameplay/state/item_state.h"
-extern u8 D_0014BEC0[];
-extern s32 pause_iop_sprite_lists[] __asm__("D_00141EA0");
-extern u8 D_0015EDD0[] MACRO_ADDR;
-extern s32 D_0015EDA0;
-extern u8 D_0015EE1C;
-extern u8 D_0015EE1D;
-extern s32 D_0015EE20;
 extern u8 D_0015EE98[] MACRO_ADDR;
 extern s32 D_001D5BA0[];
 
@@ -45,6 +41,7 @@ extern void memcard_make_whole_save(s32) __asm__("func_0020ABB0");
 extern s32 sceCdReadClock(u8 *clock);
 extern void sceScfGetLocalTimefromRTC(u8 *clock);
 
+extern u8 D_0015EDD0_257218_macro[] __asm__("D_0015EDD0") MACRO_ADDR;
 void FUN_00226b08(s32 slot) {
     s32 saved;
     u32 count;
@@ -60,10 +57,10 @@ void FUN_00226b08(s32 slot) {
     func_001F9838((void *)0x70000060, weapon_ammo_counts, 0x94);
     func_001F9838((void *)0x70000100, D_0014BEC0, 0x50);
     func_001F9838((void *)0x70000150, pause_iop_sprite_lists, 0x20);
-    func_001F9838((void *)0x70000170, D_0015EDD0, 0xC);
+    func_001F9838((void *)0x70000170, D_0015EDD0_257218_macro, 0xC);
     func_001F9838((void *)0x70000180, item_unlocked, 0x20);
     saved = current_bolt_count;
-    count = D_0015EE20;
+    count = alternate_animation_sequence;
     flag4 = alternate_item_available[4] != 0;
     flag5 = alternate_item_available[5] != 0;
     bytes = (u8 *)0x70000030;
@@ -78,18 +75,18 @@ void FUN_00226b08(s32 slot) {
         s32 item = items[i];
         pause_iop_sprite_lists[i] = item_available[item] ? item : 0;
     }
-    func_001F9838(D_0015EDD0, (void *)0x70000170, 0xC);
+    func_001F9838(D_0015EDD0_257218_macro, (void *)0x70000170, 0xC);
     func_001F9838(item_unlocked, (void *)0x70000180, 0x20);
     current_bolt_count = saved;
     if (flag4) {
         alternate_item_available[4] = 1;
-        D_0015EDA0 = 5;
+        hero_max_health = 5;
     }
     if (flag5) {
         alternate_item_available[5] = 1;
-        D_0015EDA0 = 8;
+        hero_max_health = 8;
     }
-    D_0015EE20 = count + 1;
+    alternate_animation_sequence = count + 1;
     D_0015EE1C = 0;
     D_0015EE1D = 0;
     sceCdReadClock(D_0015EE98);

@@ -4,6 +4,7 @@
 #include "rnc/gameplay/hero.h"
 #include "rnc/globals.h"
 #include "asm.h"
+#include "rnc/overlay/level_labels.h"
 
 typedef struct {
     s32 a, b, c, d;
@@ -64,8 +65,8 @@ void FUN_L00_001f3770(s32 x, s32 y, s32 color, s32 text_address) {
     packet[2] = 0x10AB400000000001ULL;
     tags = packet + 2;
     tags[1] = 0xE;
-    tags[2] = 1;
     tags[3] = 0x14;
+    tags[2] = 1;
     tags[4] = 0x2400000000000001ULL;
     tags[5] = 0x61;
     ((u64 *)tags)[6] = color & 0xFFFFFFFFULL;
@@ -100,10 +101,10 @@ void FUN_L00_001f3770(s32 x, s32 y, s32 color, s32 text_address) {
         }
         x += *(s32 *)((u8 *)D_L00_00169B00 + glyph);
     }
-    ((u32 *)packet)[3] = quadwords | 0x50000000;
     ((u32 *)packet)[0] = quadwords | 0x10000000;
-    ((u32 *)packet)[1] = 0;
+    ((u32 *)packet)[3] = quadwords | 0x50000000;
     ((u32 *)packet)[2] = 0;
+    ((u32 *)packet)[1] = 0;
     *glyph_tag = (s64)(glyph_count | 0x8000) | 0x4400000000000000ULL;
 }
 #endif /* NON_MATCHING */
@@ -422,8 +423,6 @@ typedef struct {
     s32 rows[6];
 } DebugRowCounts;
 extern DebugRowCounts D_L00_001E7920;
-extern u32 D_0013CAE0 NOT_SDA;
-extern u32 D_0013CAE4 NOT_SDA;
 extern u16 occl_cam_param0 __asm__("D_001518D0") NOT_SDA;
 extern u16 occl_cam_param1 __asm__("D_001518D2") NOT_SDA;
 extern s32 D_0015ED84 MACRO_ADDR;
@@ -437,12 +436,12 @@ extern f32 D_L00_0015F454 MACRO_ADDR;
 extern s32 D_L00_0015F5C4 NOT_SDA;
 extern s32 D_L00_0015F600 MACRO_ADDR;
 extern s32 D_L00_0015F614 MACRO_ADDR;
-extern s8 mission_state[] __asm__("D_L00_0015FC88") NOT_SDA;
+extern u8 mission_state_lui[] __asm__("D_L00_0015FC88") NOT_SDA;
 extern s32 D_L00_0015FFF0 MACRO_ADDR;
 extern s32 D_L00_0016017C NOT_SDA;
-extern s32 D_L00_001604A4 MACRO_ADDR;
-extern s32 D_L00_00160F80 MACRO_ADDR;
-extern s32 D_L00_00160FE0 MACRO_ADDR;
+extern float D_L00_001604A4_macro __asm__("D_L00_001604A4") MACRO_ADDR;
+extern float D_L00_00160F80_macro __asm__("D_L00_00160F80") MACRO_ADDR;
+extern float D_L00_00160FE0_macro __asm__("D_L00_00160FE0") MACRO_ADDR;
 extern u8 D_L00_0016CA40[] NOT_SDA;
 #define D_L00_0016CC40 (*(f32 *)(D_L00_0016CA40 + 0x200))
 #define D_L00_0016CC44 (*(f32 *)(D_L00_0016CA40 + 0x204))
@@ -456,7 +455,7 @@ extern u8 item_defs[] __asm__("D_L00_00179AC0") NOT_SDA;
 #define D_L00_00179AFE ((s16 *)(item_defs + 0x3E))
 #include "rnc/ui/vendor/vendor_item_info.h"
 #define D_L00_001C40BE ((u16 *)((u8 *)D_L00_001C40B0 + 0xE))
-extern char D_0013D428[];
+extern s32 weapon_ammo_counts[] __asm__("D_0013D428");
 extern int D_0013E520[];
 extern u8 D_0014C050[];
 extern const char D_L00_0015EFE0[] __attribute__((sda));
@@ -581,12 +580,12 @@ void FUN_L00_001f4598(void) {
                     g_debug_menu.control_mode = 3;
                 }
                 switch (g_debug_menu.control_mode) {
-                case 1: {
-                    g_debug_menu.update_flags = 0;
-                break;
-                }
                 case 0: {
                     g_debug_menu.update_flags = 0xf;
+                    break;
+                }
+                case 1: {
+                    g_debug_menu.update_flags = 0;
                     break;
                 }
                 case 2: {
@@ -651,16 +650,16 @@ void FUN_L00_001f4598(void) {
                 enabled = g_debug_menu.draw_distance_override == 0;
                 g_debug_menu.draw_distance_override = (u32)enabled;
                 if (enabled) {
-                    D_L00_00160F80 = 0x47800000;
+                    (*(s32 *)&D_L00_00160F80_macro) = 0x47800000;
                     D_L00_0015FFF0 = 0x40;
-                    D_L00_00160FE0 = 0x42800000;
-                    D_L00_001604A4 = 0x42200000;
+                    (*(s32 *)&D_L00_00160FE0_macro) = 0x42800000;
+                    (*(s32 *)&D_L00_001604A4_macro) = 0x42200000;
                     D_L00_0016017C = 0x40000;
                 } else {
-                    D_L00_00160F80 = 0x48fa0000;
-                    D_L00_00160FE0 = 0x44340000;
+                    (*(s32 *)&D_L00_00160F80_macro) = 0x48fa0000;
+                    (*(s32 *)&D_L00_00160FE0_macro) = 0x44340000;
                     D_L00_0015FFF0 = 500;
-                    D_L00_001604A4 = 0x43fa0000;
+                    (*(s32 *)&D_L00_001604A4_macro) = 0x43fa0000;
                     D_L00_0016017C = 0x1f4000;
                 }
             }
@@ -731,7 +730,7 @@ void FUN_L00_001f4598(void) {
                         byte_value = 255;
                     }
                     *player_setting = byte_value;
-                    mission_state[index] = byte_value;
+                    mission_state_lui[index] = byte_value;
                 }
             } else if ((D_0013C940.buttons.w.pressed & 0x40) == 0) {
                 g_debug_menu.segment_index = g_debug_menu.segment_index + -1;
@@ -755,7 +754,7 @@ void FUN_L00_001f4598(void) {
     case 3:
         maximum_count = 999999;
         if ((int)g_debug_menu.selected_row < 0xd) {
-            counter = &((u32 *)D_0013D428)[D_L00_0015EFD0[g_debug_menu.selected_row]];
+            counter = &((u32 *)weapon_ammo_counts)[D_L00_0015EFD0[g_debug_menu.selected_row]];
             maximum_count = (u32) * (u16 *)((u8 *)D_L00_001C40BE +
                                             (u32)D_L00_0015EFD0[g_debug_menu.selected_row] * 0x18);
         } else {
@@ -882,8 +881,8 @@ void FUN_L00_001f4598(void) {
             byte_value = D_L00_0015F446;
             if ((D_L00_0015F446 < 0xFF) &&
                 ((D_0013C940.buttons.held_pressed & 0x800000040) != 0)) {
-                byte_value = byte_value + 1;
-                D_L00_0015F446 = byte_value;
+                D_L00_0015F446 = byte_value + 1;
+                byte_value = D_L00_0015F446;
             }
             if ((byte_value != '\0') &&
                 ((D_0013C940.buttons.held_pressed & 0x400000010) != 0)) {
@@ -899,9 +898,10 @@ void FUN_L00_001f4598(void) {
         if ((g_debug_menu.selected_row == 1) && ((D_0013C940.buttons.w.pressed & 0x50) != 0)) {
             g_debug_menu.actuator_enabled = (u32)(g_debug_menu.actuator_enabled == 0);
         }
-        if ((g_debug_menu.selected_row == 2) && (index = 0, (D_0013C940.buttons.w.pressed & 0xf0) != 0)) {
+        if ((g_debug_menu.selected_row == 2) && ((D_0013C940.buttons.w.pressed & 0xf0) != 0)) {
+            b32 enabled = FALSE;
+            s32 index = 0;
             f64 formatted_x, formatted_y, formatted_z;
-            enabled = FALSE;
             if (0 < D_L00_0015F614) {
                 f32 *capture_positions = D_L00_00173E20;
                 do {
@@ -1009,7 +1009,7 @@ extern char *D_L00_00160CE0[];
 extern char *D_L00_00160CF0[];
 extern char *D_L00_00160D08[];
 extern char *D_L00_001C3E28[];
-extern char D_0013D428[];
+extern s32 weapon_ammo_counts[] __asm__("D_0013D428");
 extern s32 D_0015ED84;
 extern char D_L00_0015F008[];
 extern char D_L00_0015F010[];
@@ -1076,7 +1076,6 @@ extern char D_L00_0015F298[];
 extern char D_L00_0015F2A8[];
 extern char D_L00_0015F2B8[];
 extern float D_L00_0015F448;
-extern char D_L00_0016C058_c[] __asm__("D_L00_0016C058");
 extern char D_L00_0015F248[];
 extern float D_L00_0015F44C;
 extern float D_L00_0015F450;
@@ -1084,9 +1083,7 @@ extern float D_L00_0015F454;
 extern int D_0013E520[];
 extern int fptodp(float) __asm__("FUN_00120478");
 extern int print_debug_text_centered(int,int,int,char*) __asm__("FUN_001f0c50");
-extern s32 D_0015ED98;
 extern char D_L00_0015F0F0[];
-extern s32 D_L00_0015F5D8;
 extern s32 sprintf(char *, const char *, ...);
 extern u8 D_0014C050[];
 extern u8 D_L00_0015F444;
@@ -1094,7 +1091,6 @@ extern u8 D_L00_0015F445;
 extern u8 D_L00_0015F446;
 extern void FUN_L00_001f36f8(void);
 extern void append_gif_transfer_packet() __asm__("func_001FB368");
-extern volatile s32 D_L00_001611A0;
 void print_debug_text(s32 x, s32 y, s32 color, char *text) __asm__("FUN_001f0bd0");
 extern DebugMenu60 debug_menu60 __asm__("D_L00_0016C058");
 extern double promote_float60(float) __asm__("FUN_00120478");
@@ -1206,7 +1202,7 @@ void FUN_L00_001f58e0(void) {
         sprintf(buf, D_L00_0015F0D8, (s32) weapon_order[0x19]);
         print_debug_text(0x7A, 0xD8, 0x80406080, buf);
         print_debug_text(0x14, 0xE7, 0x8000C0C0, D_L00_0015F1A0);
-        ammo = (AmmoDisplay60 *)(D_0013D428);
+        ammo = (AmmoDisplay60 *)(weapon_ammo_counts);
         sprintf(buf, D_L00_0015F0D8, ammo->ammo5C);
         print_debug_text(0x8C, 0xE7, 0x80F0F0F0, buf);
         print_debug_text(0x14, 0xF6, 0x8000C0C0, D_L00_0015F1B0);
@@ -1251,7 +1247,7 @@ void FUN_L00_001f58e0(void) {
         sprintf(buf, fmt, (s32) weapon_order[0xF]);
         print_debug_text(0x7A, 0x16E, 0x80406080, buf);
         print_debug_text(0x14, 0x17D, 0x8000C0C0, D_L00_0015F228);
-        sprintf(buf, fmt, D_0015ED98);
+        sprintf(buf, fmt, current_bolt_count);
         print_debug_text(0x8C, 0x17D, 0x80F0F0F0, buf);
         print_debug_text(0xBC, 0x100, 0x8000C000, D_L00_0015F230);
         print_debug_text(0xBC, 0x106, 0x8000C000, D_L00_0015F238);

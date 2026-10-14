@@ -3,6 +3,8 @@
 #include "rnc/globals.h"
 #include "rnc/math_consts.h"
 #include "asm.h"
+#include "rnc/data_labels.h"
+#include "rnc/gameplay/state/game_globals.h"
 
 typedef struct {
     u8 pad0[0x5C];
@@ -67,13 +69,10 @@ struct L01HelpRecord {
 extern struct L01HelpState help_state __asm__("D_L01_00179890");
 extern struct L01HelpRecord help_records[] __asm__("D_00141968");
 extern struct UsageStats usage_stats __asm__("D_00141848");
-extern s32 cutscene_mode __asm__("D_L01_0015F5C4") MACRO_ADDR;
+extern s32 cutscene_mode_macro __asm__("D_L01_0015F5C4") MACRO_ADDR;
 extern s32 D_L01_0015F688 MACRO_ADDR;
 extern s32 D_L01_0015F68C MACRO_ADDR;
 extern struct Moby *moby_list __asm__("D_L01_0015FFE4") MACRO_ADDR;
-extern s32 game_frame_count __asm__("D_0015EEA4") MACRO_ADDR;
-extern s32 current_level_index __asm__("D_0015ED84") MACRO_ADDR;
-extern s32 hero_max_health __asm__("D_0015EDA0");
 extern s32 tick_countdown_32(s32 *) __asm__("FUN_001f9740");
 extern s32 scale_game_frames(s32) __asm__("FUN_001f96f8");
 extern s32 is_point_inside_clip_volume(void *, s32) __asm__("FUN_00214720");
@@ -82,6 +81,8 @@ extern s32 help_request(s32, s32) __asm__("FUN_L00_00203908");
 extern s32 FUN_L00_002d8128(void *);
 extern s32 FUN_L01_00275690(f32, void *);
 
+extern int D_0015EEA4_macro __asm__("D_0015EEA4") MACRO_ADDR;
+extern s32 current_level_index_macro __asm__("D_0015ED84") MACRO_ADDR;
 /* Novalis tutorial hint triggers: plays help messages and counts usage stats. */
 void FUN_L01_0030acb8(struct Moby *moby) {
     s32 *data;
@@ -100,16 +101,16 @@ void FUN_L01_0030acb8(struct Moby *moby) {
         break;
     case 1:
         if (level_frame_count < scale_game_frames(400) && usage_stats.stat[12].count != 0 && usage_stats.stat[11].count == 0) {
-            if (scale_game_frames(game_frame_count) - usage_stats.stat[12].unk2 * 600 < scale_game_frames(1100) && help_records[0x51].v >= 0) {
+            if (scale_game_frames(D_0015EEA4_macro) - usage_stats.stat[12].unk2 * 600 < scale_game_frames(1100) && help_records[0x51].v >= 0) {
                 help_request(0x4E27, 0x51);
             }
         }
         if (level_frame_count < scale_game_frames(400) && usage_stats.stat[29].count != 0) {
-            if (scale_game_frames(game_frame_count) - usage_stats.stat[29].unk2 * 600 < scale_game_frames(1100) && help_records[0x72].v >= 0) {
+            if (scale_game_frames(D_0015EEA4_macro) - usage_stats.stat[29].unk2 * 600 < scale_game_frames(1100) && help_records[0x72].v >= 0) {
                 help_request(0x4E28, 0x72);
             }
         }
-        if (cutscene_mode == 0) {
+        if (cutscene_mode_macro == 0) {
             if (level_available[3] != 0 && level_available[2] == 0 && help_state.state == 0 &&
                 help_state.cur == -1 && help_records[4].id == 0) {
                 help_request(0x3E8, 4);
@@ -124,9 +125,9 @@ void FUN_L01_0030acb8(struct Moby *moby) {
         if (is_point_inside_clip_volume(&hero.motion.pos, data[15]) &&
             ((u32)hero.state.control_mode < 2 || hero.state.control_mode == 9) && help_state.state == 0 &&
             help_state.cur == -1) {
-            t = scale_game_frames(game_frame_count) - usage_stats.stat[9].unk2 * 600;
+            t = scale_game_frames(D_0015EEA4_macro) - usage_stats.stat[9].unk2 * 600;
             /* "< 1" rather than "!": cc1 would otherwise test the bit as (v >> level) & 1 */
-            if (scale_game_frames(216000) < t && (u32)(help_records[0x43].v & (1 << current_level_index)) < 1) {
+            if (scale_game_frames(216000) < t && (u32)(help_records[0x43].v & (1 << current_level_index_macro)) < 1) {
                 help_request(0x3EF, 0x43);
             }
         }
@@ -163,22 +164,22 @@ void FUN_L01_0030acb8(struct Moby *moby) {
                 if (usage_stats.stat[22].count < 0xFFFF) {
                     usage_stats.stat[22].count++;
                 }
-                t = scale_game_frames(game_frame_count) / 600;
+                t = scale_game_frames(D_0015EEA4_macro) / 600;
                 if (usage_stats.stat[22].unk2 < t) {
-                    usage_stats.stat[22].unk2 = scale_game_frames(game_frame_count) / 600;
+                    usage_stats.stat[22].unk2 = scale_game_frames(D_0015EEA4_macro) / 600;
                 }
-                usage_stats.stat[22].level_mask = usage_stats.stat[22].level_mask | (1 << current_level_index) | 0x80000000;
+                usage_stats.stat[22].level_mask = usage_stats.stat[22].level_mask | (1 << current_level_index_macro) | 0x80000000;
             } else if (is_point_inside_clip_volume(&hero.motion.pos, data[9]) && scale_game_frames(360) < data[11] &&
                        usage_stats.stat[23].count == 0) {
                 help_request(0x3F0, 0x44);
                 if (usage_stats.stat[23].count < 0xFFFF) {
                     usage_stats.stat[23].count++;
                 }
-                t = scale_game_frames(game_frame_count) / 600;
+                t = scale_game_frames(D_0015EEA4_macro) / 600;
                 if (usage_stats.stat[23].unk2 < t) {
-                    usage_stats.stat[23].unk2 = scale_game_frames(game_frame_count) / 600;
+                    usage_stats.stat[23].unk2 = scale_game_frames(D_0015EEA4_macro) / 600;
                 }
-                usage_stats.stat[23].level_mask = usage_stats.stat[23].level_mask | (1 << current_level_index) | 0x80000000;
+                usage_stats.stat[23].level_mask = usage_stats.stat[23].level_mask | (1 << current_level_index_macro) | 0x80000000;
             }
         } else if (hero.state.control_mode == 0x11) {
             help_records[0x44].id = 0xFFFF;
@@ -193,11 +194,11 @@ void FUN_L01_0030acb8(struct Moby *moby) {
                     if (usage_stats.stat[13].count < 0xFFFF) {
                         usage_stats.stat[13].count++;
                     }
-                    t = scale_game_frames(game_frame_count) / 600;
+                    t = scale_game_frames(D_0015EEA4_macro) / 600;
                     if (usage_stats.stat[13].unk2 < t) {
-                        usage_stats.stat[13].unk2 = scale_game_frames(game_frame_count) / 600;
+                        usage_stats.stat[13].unk2 = scale_game_frames(D_0015EEA4_macro) / 600;
                     }
-                    usage_stats.stat[13].level_mask = usage_stats.stat[13].level_mask | (1 << current_level_index) | 0x80000000;
+                    usage_stats.stat[13].level_mask = usage_stats.stat[13].level_mask | (1 << current_level_index_macro) | 0x80000000;
                     help_request(1, 1);
                 } else if (FUN_L01_00275690(255.0f, m2) != 0) {
                     help_request(2, 2);
@@ -461,7 +462,7 @@ void FUN_L01_0030c190(struct Moby *moby) {
         moby->state = 1;
         break;
     case 1:
-        if (cutscene_mode == 2) {
+        if (cutscene_mode_macro == 2) {
             if (fx_cutscene.scene == 1 || (fx_cutscene.scene == 2 && fx_cutscene.frame <= scale_game_frames(148)) ||
                 fx_cutscene.scene == 3 || fx_cutscene.scene == 4) {
                 s32 target = 3;
@@ -690,8 +691,7 @@ typedef struct {
     u8 state;
 } ScrollMoby;
 
-extern f32 D_L01_00162110[2];
-extern f32 D_0015ED7C;
+extern f32 frame_delta_time __asm__("D_0015ED7C");
 void FUN_L01_0030f0e0(void);
 void enqueue_callback_list_1(void *fn, void *arg) __asm__("FUN_001f4600");
 
@@ -705,7 +705,7 @@ void FUN_L01_0030f208(ScrollMoby *m) {
         m->state = 1;
         break;
     case 1:
-        d = D_0015ED7C * 0.025f;
+        d = frame_delta_time * 0.025f;
         D_L01_00162110[0] += d;
         D_L01_00162110[1] += d;
         if (D_L01_00162110[0] > 1.0f) {

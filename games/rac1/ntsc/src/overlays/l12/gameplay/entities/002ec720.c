@@ -4,6 +4,10 @@
 #include "rnc/globals.h"
 #include "rnc/gameplay/entities/moby.h"
 #include "asm.h"
+#include "rnc/data_labels.h"
+#include "rnc/input/pad_globals.h"
+#include "rnc/overlay/level_globals.h"
+#include "rnc/overlay/level_labels.h"
 
 extern float random_angle_radians(void) __asm__("FUN_00213308");
 extern int scale_game_frames_72(int) __asm__("FUN_001f96f8");
@@ -19,20 +23,19 @@ extern void *FUN_00218888_72(void *, float *, float *, int, int, int, int, int, 
 extern float approach_value_72(float, float, float *) __asm__("FUN_00213ed8");
 extern void enqueue_callback_list_1_72(void *, void *) __asm__("FUN_001f4600");
 extern void FUN_L12_002ecac0(struct Moby *);
-extern float D_0015ED6C_72 __asm__("D_0015ED6C");
 extern float D_L12_0015F3FC;
 extern float D_L12_001619CC __attribute__((sda));
-extern int D_L12_001619D0 __attribute__((sda));
+int D_L12_001619D0 = 105;
 extern float D_L12_001619D4 __attribute__((sda));
 extern float D_L12_001619D8 __attribute__((sda));
 extern int D_L12_001619DC __attribute__((sda));
 extern float D_L12_001619E0 __attribute__((sda));
 extern float D_L12_001619E4 __attribute__((sda));
-extern int D_L12_001619E8 __attribute__((sda));
+int D_L12_001619E8 = 1;
 extern int D_L12_001619EC __attribute__((sda));
-extern int D_L12_001619F0 __attribute__((sda));
-extern int D_L12_001619F4 __attribute__((sda));
-extern int D_L12_001619F8 __attribute__((sda));
+int D_L12_001619F0 = 1;
+int D_L12_001619F4 = 0x40404040;
+int D_L12_001619F8 = 0x10022;
 extern float D_L12_001619FC __attribute__((sda));
 extern float D_L12_00161A00 __attribute__((sda));
 extern float D_L12_00161A04 __attribute__((sda));
@@ -62,7 +65,7 @@ active:
         moby->command = 2;
         *(int *)&data[1] = scale_game_frames_72(D_L12_001619D0);
     }
-    data[0] = fast_add_rotations_72(data[0], D_L12_001619CC * 0.017453292f * D_0015ED6C_72);
+    data[0] = fast_add_rotations_72(data[0], D_L12_001619CC * 0.017453292f * frame_time);
 frame_active:
     frame_scale = D_L12_0015F3FC;
 update:
@@ -102,9 +105,9 @@ update:
             }
         }
         if ((moby->command & 1) && *(int *)&data[1] == 0) {
-            approach_value_72(-1.0f, D_L12_00161A08 * D_0015ED6C_72, &data[2]);
+            approach_value_72(-1.0f, D_L12_00161A08 * frame_time, &data[2]);
         } else if (moby->command & 2) {
-            approach_value_72(3.0f, D_L12_00161A08 * D_0015ED6C_72, &data[2]);
+            approach_value_72(3.0f, D_L12_00161A08 * frame_time, &data[2]);
         }
     }
     enqueue_callback_list_1_72(FUN_L12_002ecac0, moby);
@@ -130,12 +133,12 @@ extern float fast_cos(float);
 extern float fast_sin(float);
 extern int FUN_001fa6e0(int, int, float);
 extern int get_effect_texture(int) __asm__("FUN_001f44b8");
-extern short D_L12_00161A10 __attribute__((sda));
-extern short D_L12_00161A14 __attribute__((sda));
-extern short D_L12_00161A0C __attribute__((sda));
-extern short D_L12_00161A18 __attribute__((sda));
-extern short D_L12_00161A1C __attribute__((sda));
-extern short D_L12_00161A20 __attribute__((sda));
+int D_L12_00161A10 = 1;
+int D_L12_00161A14 = 0;
+int D_L12_00161A0C = 0;
+int D_L12_00161A18 = 1;
+int D_L12_00161A1C = 0x40602020;
+int D_L12_00161A20 = 0x40681818;
 extern short D_L12_00161A24 __attribute__((sda));
 extern void FUN_001fa298(void *, void *);
 extern void draw_geometry_quad(void *, void *, int);
@@ -154,10 +157,10 @@ void FUN_L12_002ecac0(struct Moby *moby) {
     q.g[1] = get_effect_texture(0x10);
     q.g[0] = 0;
     q.g[2] = 0xFF9000000260UL;
-    q.g[3] = (long)*(int *)&D_L12_00161A0C | ((long)*(int *)&D_L12_00161A10 << 2) |
-             ((long)*(int *)&D_L12_00161A14 << 4) | ((long)*(int *)&D_L12_00161A18 << 6) |
+    q.g[3] = (long)D_L12_00161A0C | ((long)D_L12_00161A10 << 2) |
+             ((long)D_L12_00161A14 << 4) | ((long)D_L12_00161A18 << 6) |
              (0x8000L << 24);
-    col = FUN_001fa6e0(*(int *)&D_L12_00161A1C, *(int *)&D_L12_00161A20,
+    col = FUN_001fa6e0(D_L12_00161A1C, D_L12_00161A20,
                        (fast_sin(*(float *)data) + 1.0f) * 0.5f);
     for (i = 0; i < 4; i++) {
         q.uv[i * 2] = 0.5f;
@@ -241,10 +244,6 @@ typedef struct {
 typedef struct { char pad0[0x18]; int moby; } ShotColl_ece00;
 extern ShotColl_ece00 D_L12_001742C0_ece00 __asm__("D_L12_001742C0") __attribute__((section(".data")));
 extern int camera_secondary_mode_ece00 __asm__("D_001413D4") __attribute__((section(".data")));
-extern int D_L12_00161F20;
-extern char D_L12_00167240_ece00[] __asm__("D_L12_00167240");
-extern int D_L12_0015F580;
-extern float D_0015ED6C_ece00 __asm__("D_0015ED6C");
 extern char *FUN_L00_0025a420_ece00(struct Moby *, int, int) __asm__("FUN_L00_0025a420");
 extern void mark_moby_for_removal_ece00(struct Moby *) __asm__("FUN_0020c828");
 extern void add_vector_ece00(void *, void *, void *) __asm__("FUN_001f9a10");
@@ -292,7 +291,7 @@ void FUN_L12_002ece00(struct Moby *moby) {
         qcopy(old_pos, &moby->pos);
         add_vector_ece00(&moby->pos, &moby->pos, vars);
         moby->rot.z = vars->yaw;
-        moby->rot.x = fast_add_rotations_72(moby->rot.x, D_0015ED6C_ece00 * 6.2831855f);
+        moby->rot.x = fast_add_rotations_72(moby->rot.x, frame_time * 6.2831855f);
         set_vector_length_ece00(side, vars, 0.2f);
         set_vector_length_ece00(back, vars, -0.2f);
         FUN_L00_001ff290(trail, back, &moby->pos);
@@ -324,11 +323,11 @@ void FUN_L12_002ece00(struct Moby *moby) {
         break;
     }
     case 2:
-        subtract_vector_ece00(old_pos, &moby->pos, D_L12_00167240_ece00);
+        subtract_vector_ece00(old_pos, &moby->pos, D_L12_00167240);
         set_vector_length_ece00(old_pos, old_pos, 0.4f);
         add_vector_ece00(&moby->pos, &moby->pos, old_pos);
         if (current_level_index == 12 && camera_secondary_mode_ece00 == 50) {
-            char *camera = D_L12_00167240_ece00 - 0x140;
+            char *camera = D_L12_00167240 - 0x140;
             FUN_L00_0025e450(moby, &D_L12_0015F580, 0, 0.0f, 0.0f, 3, 3, 5, 0.3f, 0.2f, 0.0f, 0.15f, -1, 0.0f, 0, 0,
                              -1, 0);
             *(float *)(camera + 0x160) = 0.025f;
@@ -344,9 +343,6 @@ void FUN_L12_002ece00(struct Moby *moby) {
  * awards them (one for staying airborne long enough). */
 /* Ported from rac1-decomp (src/overlays/l12_hoven/vendor_002EDAA0.c: func_L12_002EE600), where it is exact; names translated to the US level program. */
 
-extern char D_00141968[];
-extern int D_0015EEA4;
-extern int D_0013CAE0[];
 extern unsigned char D_0013D408_b[] __asm__("D_0013D408");
 extern char D_00141968_h[] __asm__("D_00141968");
 extern int FUN_L01_0026e008(int, int);
@@ -391,7 +387,7 @@ void FUN_L12_002ed280(struct Moby *m) {
             struct Hero *q = &hero;
             if (q->state.current == 0x81) {
                 d[1]++;
-                if ((D_0013CAE0[0] & 3) && 0.3f < q->unk229C) {
+                if ((pad_held[0] & 3) && 0.3f < q->unk229C) {
                     d[2]++;
                 } else {
                     d[2] = 0;

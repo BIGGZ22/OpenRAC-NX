@@ -23,7 +23,7 @@ typedef struct {
 extern int *D_L14_001B0BB0[];
 extern int D_L14_0015F70C;
 extern int FUN_L00_0025df68(void *, void *, float *, int *, float *, int, float, float, float);
-extern float D_L14_00161A38 __attribute__((sda));
+extern float D_L14_00161A38_gp __asm__("D_L14_00161A38") __attribute__((sda));
 
 void FUN_L14_002d6358(struct Moby *m) {
     char *d = (char *)m->pvars;
@@ -33,7 +33,7 @@ void FUN_L14_002d6358(struct Moby *m) {
     int k;
     float z;
     unsigned short n;
-    *(float *)(d + 0x74) = D_L14_00161A38;
+    *(float *)(d + 0x74) = D_L14_00161A38_gp;
     *(int *)(d + 0x68) = 0;
     *(int *)(d + 0x64) = 0;
     z = *(float *)(d + 0x68);
@@ -83,7 +83,7 @@ extern unsigned short *D_L14_001ABF40_6570[] __asm__("D_L14_001ABF40");
 extern char *D_L14_0015FFD8_6570 __asm__("D_L14_0015FFD8");
 extern char *D_L14_0015F70C_6570 __asm__("D_L14_0015F70C");
 extern char *D_L14_001B0BB0_6570[] __asm__("D_L14_001B0BB0");
-extern float D_L14_00161A38_6570 __asm__("D_L14_00161A38") __attribute__((sda));
+extern float D_L14_00161A38_gp __asm__("D_L14_00161A38") __attribute__((sda));
 typedef struct { char p[0x48]; float f48; } M_6570;
 typedef struct {
     char p0[0x80];
@@ -143,7 +143,7 @@ void FUN_L14_002d6570(struct Moby *m) {
         char *path = *(char **)(D_L14_0015F70C_6570 + *(int *)(od + 0x60) * 32 + 0x10);
         o[0x20] = 6;
         ((M_6570 *)o)->f48 = angle_atan2(hero.motion.pos.f[0] - m->pos.x, hero.motion.pos.f[1] - m->pos.y);
-        s = -D_L14_00161A38_6570;
+        s = -D_L14_00161A38_gp;
         *(int *)(od + 0x64) = hero.unk564;
         *(float *)(od + 0x68) = hero.unk568;
         FUN_L00_0025d808_6570(path, o + 0x10, od + 0x64, od + 0x68, 0, s);
@@ -176,8 +176,7 @@ typedef struct {
     int i20;
     int pad[3];
 } Ray_67e8;
-extern float D_L14_00161A3C_f __asm__("D_L14_00161A3C");
-extern int D_L14_00161A3C_67e8 __asm__("D_L14_00161A3C") __attribute__((sda));
+int D_L14_00161A3C = 0x8c;
 extern float D_L14_00161A40 __attribute__((sda));
 extern float D_L14_00161A44 __attribute__((sda));
 extern float D_L14_00161A48 __attribute__((sda));
@@ -185,7 +184,7 @@ extern float D_L14_00161A4C __attribute__((sda));
 extern float D_L14_00161A50 __attribute__((sda));
 extern float D_L14_00161A54 __attribute__((sda));
 extern float D_L14_00161A58 __attribute__((sda));
-extern char D_L14_001809C0_67e8[] __asm__("D_L14_001809C0");
+extern char D_L14_001809C0[];
 extern char D_L14_0015F580_67e8[] __asm__("D_L14_0015F580") __attribute__((section(".sdata")));
 extern void track_67e8(void *, void *, void *, void *, int, float) __asm__("FUN_L00_0025d808");
 extern void spring_67e8(void *, void *, float, float, float, float) __asm__("FUN_L00_0025b8c0");
@@ -247,7 +246,7 @@ void FUN_L14_002d67e8(struct Moby *m) {
         if (sum > 1.0f) {
             sum = 1.0f;
         }
-        *(float *)(d + 0x74) = D_L14_00161A38 + (-3.0f - D_L14_00161A38) * sum;
+        *(float *)(d + 0x74) = D_L14_00161A38_gp + (-3.0f - D_L14_00161A38_gp) * sum;
     }
     *(int *)(d + 0x68) = 0;
     *(int *)(d + 0x64) = 0;
@@ -267,7 +266,7 @@ void FUN_L14_002d67e8(struct Moby *m) {
         m->command = 1;
     }
     if (m->command == 1) {
-        *(int *)(d + 0x1C0) = frames_67e8(D_L14_00161A3C_67e8);
+        *(int *)(d + 0x1C0) = frames_67e8(D_L14_00161A3C);
         *(int *)(d + 0x1C4) = 0;
         m->command = 2;
         joint_matrix_67e8(m, 4, v);
@@ -288,7 +287,7 @@ void FUN_L14_002d67e8(struct Moby *m) {
         float k;
         joint_matrix_67e8(m, 0, d + 0xA0);
         blend = 1.0f;
-        t = itof_67e8(*(int *)(d + 0x1C0)) / itof_67e8(frames_67e8(D_L14_00161A3C_67e8));
+        t = itof_67e8(*(int *)(d + 0x1C0)) / itof_67e8(frames_67e8(D_L14_00161A3C));
         k = D_L14_00161A40;
         ti = ((RacerSeg_67e8 *)d)->seg;
         tf = ((RacerSeg_67e8 *)d)->frac;
@@ -402,7 +401,7 @@ void FUN_L14_002d67e8(struct Moby *m) {
                 *(int *)(d + 0xF0) = light_67e8(&ray.self, r, 0.0f, D_L14_00161A50, D_L14_00161A54, D_L14_00161A58);
             }
             if (*(int *)(d + 0xF0) >= 0) {
-                float *l = (float *)(D_L14_001809C0_67e8 + (*(int *)(d + 0xF0) << 5));
+                float *l = (float *)(D_L14_001809C0 + (*(int *)(d + 0xF0) << 5));
                 qcopy(l + 4, &ray.self);
                 l[7] = r;
                 l[0] = D_L14_00161A50;
@@ -429,14 +428,14 @@ void FUN_L14_002d67e8(struct Moby *m) {
 /* Ported from rac1-decomp (src/overlays/l14_oltanis/vendor_002ACCC0.c: func_L14_002D84A8), where it is exact; names translated to the US level program. */
 
 extern int D_L14_0015F70C;
-extern short D_L14_00161A30_d __asm__("D_L14_00161A30") __attribute__((sda));
 extern void FUN_L00_0025d808(int a, char *pos, char *b, char *c, int d, float f);
 
+extern short D_L14_00161A30 __attribute__((sda));
 void FUN_L14_002d7198(struct Moby *moby) {
     char *data = (char *)moby->pvars;
     int idx = *(int *)(data + 0x60);
     FUN_L00_0025d808(*(int *)((idx << 5) + D_L14_0015F70C + 0x10), &moby->pos, data + 0x64,
-                     data + 0x68, 0, *(float *)&D_L14_00161A30_d * frame_time);
+                     data + 0x68, 0, *(float *)&D_L14_00161A30 * frame_time);
 }
 /* Draws the racer's two glow quads, at its lamp (0xE0) and its tail (0x200), turned to face the camera. */
 typedef struct {
@@ -446,8 +445,12 @@ typedef struct {
     unsigned long a, b, c, d;
 } Pk_2d71f0;
 
-extern char D_L14_001674C0_g[] __asm__("D_L14_001674C0");
-extern float D_L14_001DE540[4][4];
+float D_L14_001DE540[4][4] = {
+    {0.0f, -1.0f, 1.0f, 1.0f},
+    {0.0f, -1.0f, -1.0f, 1.0f},
+    {0.0f, 1.0f, 1.0f, 1.0f},
+    {0.0f, 1.0f, -1.0f, 1.0f},
+};
 extern void scale_g(void *, void *, float) __asm__("FUN_001f9a68");
 extern void sub_g(void *, void *, void *) __asm__("FUN_001f9a28");
 extern void normalize_g(void *, void *, float) __asm__("FUN_001f9bf8");
@@ -464,7 +467,7 @@ void FUN_L14_002d71f0(struct Moby *m) {
     int j;
     qcopy(mat[3], d + 0xE0);
     mat[3][3] = 1.0f;
-    sub_g(mat[0], D_L14_001674C0_g, mat[3]);
+    sub_g(mat[0], D_L14_001674C0, mat[3]);
     normalize_g(mat[0], mat[0], 1.0f);
     cross_g(mat[1], mat[0], &hero.gravity_dir);
     normalize_g(mat[1], mat[1], -1.0f);
@@ -491,7 +494,7 @@ void FUN_L14_002d71f0(struct Moby *m) {
     }
     draw_g(&pk, 0, 0);
     qcopy(mat[3], d + 0x200);
-    sub_g(mat[0], D_L14_001674C0_g, mat[3]);
+    sub_g(mat[0], D_L14_001674C0, mat[3]);
     normalize_g(mat[0], mat[0], 1.0f);
     cross_g(mat[1], mat[0], &hero.gravity_dir);
     normalize_g(mat[1], mat[1], -1.0f);
@@ -615,7 +618,6 @@ void FUN_L14_002de1f8(struct Moby *moby) {
 
 typedef int u128_s07 __attribute__((mode(TI)));
 
-extern char D_0013E533[];
 extern f32 fast_arc_sin(f32) __asm__("func_001F9DF8");
 extern f32 dot_vectors_xyz(void *, void *) __asm__("func_001F9AB0");
 extern f32 vector_length_xyz(void *) __asm__("FUN_001f9af0");

@@ -431,7 +431,7 @@ typedef struct {
 extern Sys *D_L00_0016051C_c3 __asm__("D_L00_0016051C");
 extern u32 D_L00_00160500_c[1] __asm__("D_L00_00160500") __attribute__((sda));
 extern u32 D_L00_001604F0[1] __attribute__((sda));
-extern u8 D_L00_001BD7E0_c2[] __asm__("D_L00_001BD7E0") __attribute__((section(".data")));
+extern char D_L00_001BD7E0_c2[] __asm__("D_L00_001BD7E0") __attribute__((section(".data")));
 extern u8 D_L00_001BD7B0[] __attribute__((section(".data")));
 
 extern void FUN_001f9fc8(void *);
@@ -605,7 +605,7 @@ typedef union {
     OvlQuad q;
     f32 f[4];
 } V0028a2f0;
-extern u8 D_L00_001BD7E0_c[] __asm__("D_L00_001BD7E0");
+extern char D_L00_001BD7E0_c[] __asm__("D_L00_001BD7E0");
 extern u8 *D_L00_0016051C_c2 __asm__("D_L00_0016051C");
 extern s32 D_L00_0015F5CC_c __asm__("D_L00_0015F5CC");
 void FUN_001f9fc8(void *);
@@ -761,7 +761,7 @@ void FUN_L00_0028a998(void) {
     FUN_001fa070(D_L00_001BD7E0, v);
     FUN_0022b690(2);
 }
-extern u8 D_L00_001BD7E0_0028aa98[] __asm__("D_L00_001BD7E0");
+extern char D_L00_001BD7E0_0028aa98[] __asm__("D_L00_001BD7E0");
 extern u8 *D_L00_0016051C_0028aa98 __asm__("D_L00_0016051C");
 void FUN_001f9fc8_0028aa98(void *) __asm__("FUN_001f9fc8");
 void FUN_0022b690_0028aa98(s32) __asm__("FUN_0022b690");
@@ -936,14 +936,14 @@ typedef struct {
 extern S_28b1a0 *D_L00_0016051C_28b1a0 __asm__("D_L00_0016051C");
 extern unsigned char D_L00_001BD7E0_28b1a0[] __asm__("D_L00_001BD7E0")
     __attribute__((section(".data")));
-extern float D_L00_001604C0_28b1a0 __asm__("D_L00_001604C0") __attribute__((sda));
-extern OvlQuad D_L00_00160520_28b1a0 __asm__("D_L00_00160520") __attribute__((section(".sdata")));
 void FUN_001f9fc8_28b1a0(void *) __asm__("FUN_001f9fc8");
 void FUN_001f99f8_28b1a0(void *) __asm__("FUN_001f99f8");
 void FUN_001fa070_28b1a0(void *, void *) __asm__("FUN_001fa070");
 void FUN_001f9a80_28b1a0(void *, void *, float) __asm__("FUN_001f9a80");
 void FUN_0022b690_28b1a0(int) __asm__("FUN_0022b690");
 
+extern float D_L00_001604C0 __attribute__((sda));
+extern OvlQuad D_L00_00160520 __attribute__((section(".sdata")));
 void FUN_L00_0028b1a0(void) {
     float v[4] __attribute__((aligned(16)));
     int i = 0;
@@ -960,26 +960,26 @@ void FUN_L00_0028b1a0(void) {
         case 1:
             v[1] = 0.02f;
             k = 3.0f;
-            *p += D_L00_001604C0_28b1a0 * 0.55f;
+            *p += D_L00_001604C0 * 0.55f;
             break;
         case 2:
             v[1] = -0.02f;
             k = 2.5f;
-            *p += D_L00_001604C0_28b1a0 * 0.6f;
+            *p += D_L00_001604C0 * 0.6f;
             break;
         case 3:
             v[1] = 0.01f;
             k = 2.0f;
-            *p += D_L00_001604C0_28b1a0 * 0.7f;
+            *p += D_L00_001604C0 * 0.7f;
             break;
         case 4:
             v[1] = -0.01f;
             k = 1.5f;
-            *p += D_L00_001604C0_28b1a0 * 0.75f;
+            *p += D_L00_001604C0 * 0.75f;
             break;
         case 5:
             k = 1.25f;
-            *p += D_L00_001604C0_28b1a0 * 0.8f;
+            *p += D_L00_001604C0 * 0.8f;
             break;
         default:
             FUN_001f9fc8_28b1a0(D_L00_001BD7E0_28b1a0);
@@ -992,7 +992,7 @@ void FUN_L00_0028b1a0(void) {
             FUN_001f9a80_28b1a0(M, M, k);
             FUN_001f9a80_28b1a0(M + 0x10, M + 0x10, k);
             FUN_001f9a80_28b1a0(M + 0x20, M + 0x20, k);
-            qcopy(M + 0x30, &D_L00_00160520_28b1a0);
+            qcopy(M + 0x30, &D_L00_00160520);
         }
         FUN_0022b690_28b1a0(i);
     }

@@ -1,6 +1,6 @@
+#include "rnc/data_labels.h"
+#include "rnc/gameplay/state/game_globals.h"
 /* Enable the global state flag. */
-
-extern int GlobalStateFlag __asm__("D_0015F49C");
 
 void enable_global_state_flag(void) __asm__("func_001F61E8");
 

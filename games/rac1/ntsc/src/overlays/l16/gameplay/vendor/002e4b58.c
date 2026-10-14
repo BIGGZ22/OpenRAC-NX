@@ -7,6 +7,7 @@
 
 #include "qcopy.h"
 #include "sda.h"
+#include "rnc/overlay/level_labels.h"
 #ifndef __attribute__((section(".data")))
 #endif
 #ifndef __attribute__((section(".sdata")))
@@ -35,7 +36,6 @@ void FUN_L16_002e4b58(void *moby_v) {
 }
 /* Finds the listed moby whose data id at 0xAC matches, or returns null. */
 extern unsigned short *D_L16_001ABCC0_4be0[] __asm__("D_L16_001ABCC0");
-extern char *D_L16_0015FFD8_4be0 __asm__("D_L16_0015FFD8") __attribute__((sda));
 
 typedef struct {
     char pad[0x78];
@@ -43,12 +43,13 @@ typedef struct {
     char pad2[0x84];
 } M_4be0;
 
+extern char *D_L16_0015FFD8_gp __asm__("D_L16_0015FFD8") __attribute__((sda));
 char *FUN_L16_002e4be0(struct Moby *arg, int id) {
     unsigned short *p = D_L16_001ABCC0_4be0[arg->group];
     char *pool;
     int idx;
     if (p != 0) {
-        pool = D_L16_0015FFD8_4be0;
+        pool = D_L16_0015FFD8_gp;
         do {
             idx = *p & 0x7FFF;
             if (*(short *)(((M_4be0 *)pool)[idx].data + 0xAC) == id) {
@@ -58,7 +59,7 @@ char *FUN_L16_002e4be0(struct Moby *arg, int id) {
     }
     return 0;
 found:
-    return (char *)&((M_4be0 *)D_L16_0015FFD8_4be0)[idx];
+    return (char *)&((M_4be0 *)D_L16_0015FFD8_gp)[idx];
 }
 /* Advances a moby's path: steps the path position and returns whether it has reached the end. */
 
@@ -139,7 +140,6 @@ void FUN_L16_002e4d88(struct Moby *moby) {
 }
 /* Transforms the 7 vectors of a level table entry into the moby's space and records its index. */
 
-extern char *D_L16_001B0930[];
 extern char D_L16_001D96E0[];
 extern void FUN_001f9a10(void *, void *, void *);
 extern void FUN_001f9cf8(void *, void *, void *);
@@ -163,15 +163,18 @@ void FUN_L16_002e4f30(struct Moby *a) {
 }
 /* Sets up the draw state, then draws the three entries of the level's table. */
 
-extern char D_L16_001DF2B0[][16] __attribute__((section(".data")));
 extern char D_L16_001DF2D0[] __attribute__((section(".data")));
 extern int FUN_001fa728(char *, float);
 extern int get_effect_texture_l16(int) __asm__("FUN_001f44b8");
-extern short D_L16_00161F90 __attribute__((sda));
-extern short D_L16_00161F98 __attribute__((sda));
-extern short D_L16_00161FA0 __attribute__((sda));
-extern short D_L16_00161FA8 __attribute__((sda));
-extern short D_L16_00161FB0 __attribute__((sda));
+extern float D_L16_001DE720[];
+extern float D_L16_001DEA90[];
+float *D_L16_00161FA0[2] = {D_L16_001DE720, D_L16_001DEA90};
+extern float D_L16_001DEAF8[];
+extern float D_L16_001DF020[];
+float *D_L16_00161FA8[2] = {D_L16_001DEAF8, D_L16_001DF020};
+extern float D_L16_001DF0C0[];
+extern float D_L16_001DF278[];
+float *D_L16_00161FB0[2] = {D_L16_001DF0C0, D_L16_001DF278};
 extern void font_queue_vu_state(void) __asm__("FUN_001f76a0");
 extern void FUN_L00_001fde98(int, int, int, char *, int);
 extern void FUN_L16_002e8b98_i(int, int, int, int, char *) __asm__("FUN_L16_002e8b98");
@@ -180,9 +183,9 @@ extern void vu1_add_g_sregister_l16(int, long) __asm__("FUN_00233980");
 void FUN_L16_002e97a0(void) {
     int *a = (int *)&D_L16_00161F90;
     int *b = (int *)&D_L16_00161F98;
-    int *c = (int *)&D_L16_00161FA0;
-    int *d = (int *)&D_L16_00161FA8;
-    int *e = (int *)&D_L16_00161FB0;
+    int *c = (int *)D_L16_00161FA0;
+    int *d = (int *)D_L16_00161FA8;
+    int *e = (int *)D_L16_00161FB0;
     int i;
 
     vu1_add_g_sregister_l16(6, get_effect_texture_l16(0x29));

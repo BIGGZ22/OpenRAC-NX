@@ -61,6 +61,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gen_progress_report import data_totals, zero_level_data  # noqa: E402
 from overlay_units import category_of, load_levels, overlay_functions  # noqa: E402
 from progress_groups import (  # noqa: E402
     committed_function_scores,
@@ -94,8 +95,9 @@ LABEL_FILLS = {
 PARTIAL_ORANGE = "#d87620"
 # The executable's drawer: a warm, dim face (the page is already blue-black)
 # with sharp corners, edged in the bolt orange.
-DRAWER_FACE_TOP = "#3a2816"
-DRAWER_FACE_BOTTOM = "#2a1d10"
+DRAWER_FACE_TOP = "#231a12"
+DRAWER_FACE_BOTTOM = "#17110c"
+PANEL_FACE_TOP = "#3b2a1a"  # the dimmed boot treemap's brown, for the whole-game panel
 UNCLASSIFIED_LAYOUT_CAP_BYTES = 16 * 1024
 
 ROW_RE = re.compile(
@@ -893,11 +895,11 @@ def render_svg(
     *,
     width,
     margin,
-    header,
     footer,
     min_bytes,
     title,
     fuzzy_percent=None,
+    data=None,
     drawer_height=86,
     branch_height=44,
 ) -> tuple[str, int]:
@@ -906,12 +908,12 @@ def render_svg(
     Returns (svg, height)."""
     scale = 1.0
     text_scale = 1.0
-    margin_px, header_px, footer_px = margin, header, footer
+    # No header band: the drawer opens the map; the README carries the heading.
+    margin_px, header_px, footer_px = margin, margin, footer
     branches = overlay_branches(overlays, levels)
     tree_top = header_px + drawer_height + 26
     height = tree_top + branch_height * len(branches) + footer_px + margin_px
 
-    total_units = len(units)
     exact = [unit for unit in units if unit["category"] == "exact"]
     asm = [unit for unit in units if unit["category"] == "asm"]
     pending = [unit for unit in units if unit["category"] == "pending"]
@@ -922,11 +924,9 @@ def render_svg(
     boot_percent = (100.0 * boot_exact_bytes / boot_recoverable) if boot_recoverable else 0.0
     ov_bytes = sum(f["size"] for f in overlays)
     ov_exact_bytes = sum(f["size"] for f in overlays if f["exact"])
-    ov_exact = sum(1 for f in overlays if f["exact"])
     ov_percent = (100.0 * ov_exact_bytes / ov_bytes) if ov_bytes else 0.0
     total_bytes = boot_bytes + ov_bytes
     exact_bytes = boot_exact_bytes + ov_exact_bytes
-    pending_bytes = total_bytes - exact_bytes - asm_bytes
     recoverable = total_bytes - asm_bytes
     total_percent = (100.0 * exact_bytes / recoverable) if recoverable else 0.0
     exact_percent = (100.0 * exact_bytes / total_bytes) if total_bytes else 0.0
@@ -955,75 +955,65 @@ def render_svg(
         f'<stop offset="0" stop-color="{DRAWER_FACE_TOP}"/>'
         f'<stop offset="1" stop-color="{DRAWER_FACE_BOTTOM}"/>'
         '</linearGradient><radialGradient id="drawer-halo">'
-        f'<stop offset="0" stop-color="{BACKGROUND}" stop-opacity="0.8"/>'
-        f'<stop offset="0.6" stop-color="{BACKGROUND}" stop-opacity="0.55"/>'
+        f'<stop offset="0" stop-color="{BACKGROUND}" stop-opacity="0.6"/>'
         f'<stop offset="1" stop-color="{BACKGROUND}" stop-opacity="0"/>'
         "</radialGradient></defs>",
     ]
 
-    # Header: function count on the left, legend on the right. The README
-    # carries the heading, so the map has no title line of its own.
-    lines.append(
-        f'<text x="{margin_px}" y="24" font-family="{esc(FONT)}" '
-        f'font-size="12" '
-        f'fill="{MUTED}">{len(exact) + ov_exact:,} of {total_units + len(overlays):,} functions in C '
-        f"&#183; executable and 19 level overlays</text>"
-    )
-    legend_font = 10
-    swatch = 10
-    gap = 15
-    legend_rows = (
-        (ORANGE, f"matching C &#183; {exact_bytes:,} B"),
-        (CHROME, f"intentional asm &#183; {asm_bytes:,} B"),
-        ("url(#progress-range)", f"pending C &#183; {pending_bytes:,} B"),
-    )
-    widest = max(
-        len(html.unescape(text)) * legend_font * 0.56 for _, text in legend_rows
-    )
-    row_x = width - margin_px - round(widest) - gap
-    for offset, (color, text) in enumerate(legend_rows):
-        y = 9 + offset * 17  # three rows centred in the header band
-        row_title = (
-            '<title>Pending C: dark plate to copper shows C_EXACT coverage; '
-            'bolt orange marks 100% exact.</title>'
-            if color == "url(#progress-range)"
-            else ""
-        )
-        lines.append(
-            f'<rect x="{row_x}" y="{y}" width="{swatch}" height="{swatch}" rx="2" '
-            f'fill="{color}">{row_title}</rect>'
-        )
-        lines.append(
-            f'<text x="{row_x + gap}" y="{y + 9}" '
-            f'font-family="{esc(FONT)}" font-size="{legend_font}" fill="{MUTED}">{text}</text>'
-        )
-
-    # Hero stat: the whole game (executable + overlays), HUD-style.
-    status_x = row_x - 10
-    lines.append(
-        f'<text x="{status_x}" y="38" text-anchor="end" '
-        f'font-family="{esc(FONT)}" font-size="28" font-weight="800" '
-        f'fill="{ORANGE}">{total_percent:.1f}%</text>'
-    )
-    lines.append(
-        f'<text x="{status_x}" y="52" text-anchor="end" '
-        f'font-family="{esc(FONT)}" font-size="9" fill="{MUTED}">'
-        f"C_EXACT &#183; executable + overlays</text>"
-    )
-
-    # The drawer: the executable, its own percentage over its dimmed treemap.
+    # The drawer: the executable on the left 3/4, cut with a "\"; the whole
+    # game's figures (data, exe + overlays) on one centre axis right of the cut.
     dx0, dy0 = margin_px, header_px
-    ddx, ddy = width - 2 * margin_px, drawer_height
-    inset = 0  # the treemap fills the drawer edge to edge: no frame around it
+    full_dx, ddy = width - 2 * margin_px, drawer_height
+    slant, cut_gap = 56, 8
+    xt = dx0 + 0.75 * full_dx - slant / 2
+    xb = xt + slant
+    right = dx0 + full_dx
+    boot_poly = f"{dx0},{dy0} {xt:.1f},{dy0} {xb:.1f},{dy0 + ddy} {dx0},{dy0 + ddy}"
+    panel = (f"{xt + cut_gap:.1f},{dy0} {right},{dy0} {right},{dy0 + ddy} "
+             f"{xb + cut_gap:.1f},{dy0 + ddy}")
     lines.append(
-        f'<rect x="{dx0}" y="{dy0}" width="{ddx}" height="{ddy}" '
-        f'fill="url(#drawer-face)">'
-        f"<title>{esc(f'Boot ELF SCUS_971.99: {boot_exact_bytes:,} of {boot_recoverable:,} recoverable bytes are matching C ({boot_percent:.1f}%); {len(exact)} matching, {len(pending)} pending, {len(asm)} intentional asm units')}</title></rect>"
+        f'<defs><linearGradient id="panel-face" x1="0" y1="0" x2="1" y2="1">'
+        f'<stop offset="0" stop-color="{PANEL_FACE_TOP}"/><stop offset="1" stop-color="{DRAWER_FACE_BOTTOM}"/></linearGradient>'
+        f'<radialGradient id="panel-glow"><stop offset="0" stop-color="{ORANGE}" stop-opacity="0.28"/>'
+        f'<stop offset="1" stop-color="{ORANGE}" stop-opacity="0"/></radialGradient>'
+        f'<pattern id="panel-hatch" width="10" height="{ddy}" patternUnits="userSpaceOnUse" '
+        f'patternTransform="skewX({math.degrees(math.atan(slant / ddy)):.2f})">'
+        f'<rect width="3" height="{ddy}" fill="{ORANGE}" fill-opacity="0.05"/></pattern>'
+        f'<clipPath id="panel-clip"><polygon points="{panel}"/></clipPath></defs>'
     )
-    lines.append(f'<clipPath id="drawer-clip"><rect x="{dx0 + inset}" y="{dy0 + inset}" '
-                 f'width="{ddx - 2 * inset}" height="{ddy - 2 * inset}"/></clipPath>')
-    placements = layout_boot(units, dx0 + inset, dy0 + inset, ddx - 2 * inset, ddy - 2 * inset, min_bytes)
-    lines.append('<g clip-path="url(#drawer-clip)" opacity="0.75">')
+    lines.append(f'<polygon points="{panel}" fill="url(#panel-face)"/>')
+    lines.append(f'<polygon points="{panel}" fill="url(#panel-hatch)"/>')
+    lines.append('<g clip-path="url(#panel-clip)">')
+    lines.append(
+        f'<ellipse cx="{(xt + cut_gap + slant / 2 + right) / 2:.1f}" cy="{dy0 + ddy / 2 + 4:.1f}" '
+        f'rx="{(right - xb) * 0.55:.1f}" ry="{ddy * 0.7:.1f}" fill="url(#panel-glow)"/>'
+    )
+    lines.append("</g>")
+    pcx = (xt + cut_gap + slant / 2 + right) / 2
+    if data and data[0]:
+        lines.append(
+            f'<text x="{pcx:.1f}" y="{dy0 + 25}" text-anchor="middle" font-family="{esc(FONT)}" '
+            f'font-size="10" fill="{TEXT}"><tspan font-size="12" font-weight="800" fill="{CHROME}">'
+            f'{100.0 * data[1] / data[0]:.1f}%</tspan> data in C'
+            f'<title>Data in C: {data[1]:,} of {data[0]:,} B, of which {data[2]:,} B '
+            f'are zeros (zero-initialised level data).</title></text>'
+        )
+    lines.append(
+        f'<text x="{pcx:.1f}" y="{dy0 + 57}" text-anchor="middle" font-family="{esc(FONT)}" '
+        f'font-size="30" font-weight="800" fill="{ORANGE}">{total_percent:.1f}%</text>'
+    )
+    lines.append(
+        f'<text x="{pcx:.1f}" y="{dy0 + 73}" text-anchor="middle" font-family="{esc(FONT)}" '
+        f'font-size="10" fill="{TEXT}">exe + overlays in C</text>'
+    )
+    lines.append(
+        f'<polygon points="{boot_poly}" '
+        f'fill="url(#drawer-face)">'
+        f"<title>{esc(f'Boot ELF SCUS_971.99: {boot_exact_bytes:,} of {boot_recoverable:,} recoverable bytes are matching C ({boot_percent:.1f}%); {len(exact)} matching, {len(pending)} pending, {len(asm)} intentional asm units')}</title></polygon>"
+    )
+    lines.append(f'<clipPath id="drawer-clip"><polygon points="{boot_poly}"/></clipPath>')
+    placements = layout_boot(units, dx0, dy0, xb - dx0, ddy, min_bytes)
+    lines.append('<g clip-path="url(#drawer-clip)" opacity="0.24">')
     for tile, rect in placements:
         x, y = rect["x"], rect["y"]
         tdx, tdy = max(rect["dx"], 0.0), max(rect["dy"], 0.0)
@@ -1035,35 +1025,32 @@ def render_svg(
             f'shape-rendering="geometricPrecision"><title>{esc(tile_tooltip(tile))}</title></rect>'
         )
     lines.append("</g>")
+    lines.append(f'<polygon points="{boot_poly}" fill="url(#sheen)" pointer-events="none"/>')
+    cx, cy = (dx0 + xt) / 2, dy0 + ddy / 2
+    # A soft dark centre, then the whole-game panel's orange glow, behind the
+    # percentage.
     lines.append(
-        f'<rect x="{dx0 + inset}" y="{dy0 + inset}" width="{ddx - 2 * inset}" '
-        f'height="{ddy - 2 * inset}" fill="url(#sheen)" pointer-events="none"/>'
-    )
-    cx, cy = dx0 + ddx / 2, dy0 + ddy / 2
-    # A soft local shadow keeps the percentage legible over the brighter
-    # treemap without darkening the whole drawer.
-    lines.append(
-        f'<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="200" ry="{ddy * 0.62:.1f}" '
-        f'fill="url(#drawer-halo)" pointer-events="none"/>'
+        f'<g clip-path="url(#drawer-clip)" pointer-events="none">'
+        f'<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="{(xt - dx0) * 0.28:.1f}" ry="{ddy * 0.6:.1f}" '
+        f'fill="url(#drawer-halo)"/>'
+        f'<ellipse cx="{cx:.1f}" cy="{dy0 + ddy / 2 + 4:.1f}" rx="{(right - xb) * 0.55:.1f}" '
+        f'ry="{ddy * 0.7:.1f}" fill="url(#panel-glow)"/></g>'
     )
     lines.append(
         f'<text x="{dx0 + 12}" y="{dy0 + 17}" font-family="{esc(FONT)}" font-size="10" '
-        f'font-weight="700" fill="{CHROME}" style="paint-order:stroke" stroke="{BACKGROUND}" '
-        f'stroke-width="3.15" stroke-opacity="0.7">BOOT ELF &#183; SCUS_971.99</text>'
+        f'font-weight="700" fill="{CHROME}">BOOT ELF &#183; SCUS_971.99</text>'
     )
     lines.append(
         f'<text x="{cx:.1f}" y="{cy + 7:.1f}" text-anchor="middle" font-family="{esc(FONT)}" '
-        f'font-size="36" font-weight="800" fill="{ORANGE}" '
-        f'style="paint-order:stroke" stroke="{BACKGROUND}" stroke-width="2.1" stroke-opacity="0.6">'
+        f'font-size="30" font-weight="800" fill="{ORANGE}">'
         f"{boot_percent:.1f}%</text>"
     )
-    caption = "C_EXACT of the executable"
+    caption = "executable in C"
     if fuzzy_percent is not None:
         caption += f" &#183; C_FUZZY {fuzzy_percent:.1f}%"
     lines.append(
-        f'<text x="{cx:.1f}" y="{cy + 25:.1f}" text-anchor="middle" font-family="{esc(FONT)}" '
-        f'font-size="10" fill="{TEXT}" fill-opacity="0.95" style="paint-order:stroke" '
-        f'stroke="{BACKGROUND}" stroke-width="2.1" stroke-opacity="0.7">{caption}</text>'
+        f'<text x="{cx:.1f}" y="{cy + 23:.1f}" text-anchor="middle" font-family="{esc(FONT)}" '
+        f'font-size="10" fill="{TEXT}">{caption}</text>'
     )
 
     # The tree: a trunk on the left, one branch per line.
@@ -1180,12 +1167,6 @@ def main(argv=None) -> int:
                         help="height of the executable's drawer")
     parser.add_argument("--margin", type=int, default=10)
     parser.add_argument(
-        "--header",
-        type=int,
-        default=62,
-        help="header band above the map; must fit the three legend rows",
-    )
-    parser.add_argument(
         "--footer",
         type=int,
         default=22,
@@ -1265,17 +1246,19 @@ def main(argv=None) -> int:
     overlay_asm = [f for f in overlays if f["asm"]]
     overlays = [f for f in overlays if not f["asm"]]
     levels = load_levels(repo)
+    # Data bytes in C (the progress report's count); absent in a bare tree.
+    data = data_totals(repo) if (repo / "config" / "us" / "rnc1.us.yaml").is_file() else None
     svg, height = render_svg(
         units,
         overlays,
         levels,
         width=args.width,
         margin=args.margin,
-        header=args.header,
         footer=args.footer,
         min_bytes=args.min_bytes,
         title=args.title,
         fuzzy_percent=fuzzy_percent,
+        data=(*data["all"], zero_level_data(repo)) if data else None,
         drawer_height=args.drawer_height,
     )
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -1387,6 +1370,13 @@ def main(argv=None) -> int:
         "c_exact_percent_of_recoverable": round(100.0 * all_exact / all_recoverable, 4) if all_recoverable else 0.0,
         "c_fuzzy_percent_of_recoverable": round(total_fuzzy, 4) if total_fuzzy is not None else None,
     }
+    if data:
+        for section, key in ((boot, "boot"), (overlays_stats, "overlays"), (total_stats, "all")):
+            total, matched = data[key]
+            section["data"] = {"bytes_total": total, "bytes_matching_c": matched,
+                               "c_exact_percent": round(100.0 * matched / total, 4) if total else 0.0}
+            if key != "boot":  # zero-initialised level globals among the matched bytes
+                section["data"]["bytes_matching_c_zero"] = zero_level_data(repo)
     # The header fields describe the whole game (executable + overlays); the
     # executable alone is under "boot", as the drawer shows it.
     stats = {

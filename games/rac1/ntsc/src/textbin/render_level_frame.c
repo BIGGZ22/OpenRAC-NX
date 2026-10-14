@@ -4,6 +4,9 @@
 
 #include "types.h"
 #include "rnc/globals.h"
+#include "rnc/data_labels.h"
+#include "rnc/ui/text/font_state.h"
+#include "rnc/gameplay/state/game_globals.h"
 
 struct LevelProjectionState {
     u8 pad_0[0xB0];
@@ -12,9 +15,6 @@ struct LevelProjectionState {
 #include "rnc/storage/memory_card/memory_card_state.h"
 #include "rnc/gameplay/state/level_state.h"
 #include "rnc/rendering/screen.h"
-extern s32 game_frame_counter __asm__("D_0015F438");
-extern f32 sequence_fade __asm__("D_0015F43C");
-extern s32 font_state __asm__("D_0015F620");
 extern s32 D_0018CB54[];
 extern s32 D_0018CC98[];
 extern struct LevelProjectionState view_context __asm__("D_0018CD00");
@@ -103,11 +103,11 @@ void render_level_frame(void) {
                             get_effect_texture(3), rotation_angle);
     }
     do_gif_paging();
-    if (sequence_fade > 0.0f) {
-        if (sequence_fade > 1.0f) {
-            sequence_fade = 1.0f;
+    if (sequence > 0.0f) {
+        if (sequence > 1.0f) {
+            sequence = 1.0f;
         }
-        emit_rgba_draw_packet(0, 0, 0, truncate_float_to_s32(sequence_fade * 128.0f));
+        emit_rgba_draw_packet(0, 0, 0, truncate_float_to_s32(sequence * 128.0f));
     }
     vu1_sync_chain(0x10);
     patch_moby_gifs();

@@ -3,6 +3,8 @@
 #include "rnc/gameplay/hero.h"
 #include "rnc/globals.h"
 #include "asm.h"
+#include "rnc/data_labels.h"
+#include "rnc/overlay/level_labels.h"
 
 #define NOT_SDA
 
@@ -10,7 +12,6 @@
 
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002C99E0.c: func_L11_0030FB58), where it is exact; names translated to the US level program. */
 
-extern char D_L11_001DA880[];
 extern int D_L11_0015FFD8; /* no foreign declaration */
 extern short *D_L11_001AC240[];
 
@@ -63,19 +64,13 @@ extern unsigned char D_0014C190_r[] __asm__("D_0014C190");
 extern unsigned char D_0013F350_r[] __asm__("D_0013F350");
 extern unsigned char D_0014C050_r[] __asm__("D_0014C050");
 extern unsigned char D_0013F3D0_r[] __asm__("D_0013F3D0");
-extern char D_00141968_c[] __asm__("D_00141968");
 extern float FUN_001f9b80(void *, void *);
 extern int D_0014C050; /* no foreign declaration */
-extern int D_0015ED84;
-extern int D_0015EEA4;
 extern int D_L11_0015FC88; /* no foreign declaration */
-extern int D_L11_001BAFD0; /* no foreign declaration */
-extern int D_L11_001BBC30; /* no foreign declaration */
 extern int scale_game_frames_alt(int) __asm__("FUN_001f96f8");
 extern s32 allocate_voice_for_target_entry() __asm__("func_0022DA68");
 extern unsigned char D_0013F350[];
 s32 FUN_L00_00203908(s32 a, s32 b);
-extern char D_0013E633_3102C8[] __asm__("D_00141968");
 extern u8 D_0013D4C0[];
 extern unsigned char D_0014171B_3102C8[] __asm__("D_0013F350");
 extern LvState_3102C8 D_L11_001BBF40_3102C8 __asm__("D_L11_001BBC30");
@@ -92,7 +87,7 @@ void FUN_L11_0030ee00(Lock_3102C8 *moby)
 
     switch (moby->state) {
     case 0: {
-        int level = D_0015ED84;
+        int level = current_level_index;
         ((Stats_3102C8 *)(D_00141968_r))->count = 0;
         ((Stats_3102C8 *)(D_00141968_r))->best = 0;
         *(unsigned short *)(vars + 0x3E) |= 8;
@@ -111,14 +106,14 @@ void FUN_L11_0030ee00(Lock_3102C8 *moby)
     case 1:
         if (((void *)((Hero *)(D_0013F350_r))->ground_moby) == moby && D_0013D4C0[3] != 0 &&
             ((Hero *)(D_0013F350_r))->air_frames.s == 0 && ((Hero *)(D_0013F350_r))->state.current == 0x22) {
-            if (D_0015ED84 == 0xB && moby->bB0 != 0xFF) {
+            if (current_level_index == 0xB && moby->bB0 != 0xFF) {
                 int group;
                 int group_index;
                 D_L11_001BB2E0_3102C8.collected[(short)moby->uid] = moby->bB0 + 2;
                 group = moby->bB0;
                 group_index = group & 0xFF;
                 if (group == 0xFF || (D_L11_0015FD08_3102C8[group_index] != 0xFF &&
-                                  (D_0014C050_r)[group_index + (D_0015ED84 << 4)] == 0xFF)) {
+                                  (D_0014C050_r)[group_index + (current_level_index << 4)] == 0xFF)) {
                     D_L11_001BBF40_3102C8.collected[(short)moby->uid] = group + 2;
                 }
             }
@@ -170,7 +165,7 @@ void FUN_L11_0030ee00(Lock_3102C8 *moby)
                 }
             }
             ((Stats_3102C8 *)(D_00141968_r))->levels =
-                ((Stats_3102C8 *)(D_00141968_r))->levels | (1 << D_0015ED84) | 0x80000000;
+                ((Stats_3102C8 *)(D_00141968_r))->levels | (1 << current_level_index) | 0x80000000;
         }
         break;
     }
@@ -203,18 +198,18 @@ void FUN_L11_00310cf8(float x, float y, float width, float height, float angle, 
     float bottom_right[4];
     int *tag;
     unsigned long long *q;
-    int sx, sy;
-    unsigned long long packed_position;
-    volatile int saved_depth[2];
+    union { volatile int saved_depth[2]; volatile float scale[2]; } saved;
     unsigned long long packed_depth;
+    float scale;
 
-    saved_depth[0] = z_and_fog;
+    saved.saved_depth[0] = z_and_fog;
     center[0] = x;
     center[1] = y;
     vertical[0] = height * fast_sin(angle);
     vertical[1] = height * fast_cos(angle);
     horizontal[0] = width * fast_cos(angle);
-    horizontal[1] = -width * fast_sin(angle);
+    width = -width;
+    horizontal[1] = width * fast_sin(angle);
     add_vector_xyz(top_left, center, vertical);
     subtract_vector_xyz(top_left, top_left, horizontal);
     add_vector_xyz(bottom_left, center, vertical);
@@ -225,6 +220,9 @@ void FUN_L11_00310cf8(float x, float y, float width, float height, float angle, 
     ((int *)(*(volatile int *)&D_L11_001611C0_g))[0] = 0x10000007;
     ((int *)(*(volatile int *)&D_L11_001611C0_g))[1] = 0;
     ((int *)(*(volatile int *)&D_L11_001611C0_g))[2] = 0;
+    saved.saved_depth[1] = 0x41800000;
+    scale = saved.scale[1];
+    packed_depth = (unsigned long long)saved.saved_depth[0] << 32;
     ((int *)(*(volatile int *)&D_L11_001611C0_g))[3] = 0x50000007;
     tag = (int *)(*(volatile int *)&D_L11_001611C0_g);
     q = (unsigned long long *)(tag + 4);
@@ -236,53 +234,68 @@ void FUN_L11_00310cf8(float x, float y, float width, float height, float angle, 
     q[4] = (unsigned long long)(red & 0xff) | ((unsigned long long)(green & 0xff) << 8) |
            ((unsigned long long)(blue & 0xff) << 16) | ((unsigned long long)(alpha & 0xff) << 24);
     q[5] = 0x100010;
-    packed_depth = (unsigned long long)saved_depth[0] << 32;
     texture_width <<= 4;
     texture_height <<= 20;
-    sx = ftoi_g(top_left[0] * 16.0f);
-    sy = ftoi_g(top_left[1] * 16.0f);
-    sy += screen_extent[5];
-    sx += screen_extent[4];
-    sy -= 8;
-    sx -= 8;
-    q[7] = texture_width;
-    packed_position = (unsigned long long)sx;
-    packed_position |= (unsigned long long)sy << 16;
-    packed_position |= packed_depth;
-    q[6] = packed_position;
-    sx = ftoi_g(bottom_left[0] * 16.0f);
-    sy = ftoi_g(bottom_left[1] * 16.0f);
-    sy += screen_extent[5];
-    sx += screen_extent[4];
-    sy -= 8;
-    sx -= 8;
-    q[9] = texture_height;
-    packed_position = (unsigned long long)sx;
-    packed_position |= (unsigned long long)sy << 16;
-    packed_position |= packed_depth;
-    q[8] = packed_position;
-    sx = ftoi_g(top_right[0] * 16.0f);
-    sy = ftoi_g(top_right[1] * 16.0f);
-    sy += screen_extent[5];
-    sx += screen_extent[4];
-    sy -= 8;
-    sx -= 8;
-    q[11] = (texture_height) + (texture_width);
-    packed_position = (unsigned long long)sx;
-    packed_position |= (unsigned long long)sy << 16;
-    packed_position |= packed_depth;
-    q[10] = packed_position;
-    sx = ftoi_g(bottom_right[0] * 16.0f);
-    sy = ftoi_g(bottom_right[1] * 16.0f);
-    sy += screen_extent[5];
-    sx += screen_extent[4];
-    sy -= 8;
-    sx -= 8;
-    q[13] = 0;
-    packed_position = (unsigned long long)sx;
-    packed_position |= (unsigned long long)sy << 16;
-    packed_position |= packed_depth;
-    q[12] = packed_position;
+    {
+        int sx, sy;
+        unsigned long long packed_position;
+        sx = ftoi_g(top_left[0] * scale);
+        sy = ftoi_g(top_left[1] * scale);
+        sy += screen_extent[5];
+        sx += screen_extent[4];
+        sy -= 8;
+        sx -= 8;
+        q[7] = texture_width;
+        packed_position = (unsigned long long)sx;
+        packed_position |= (unsigned long long)sy << 16;
+        packed_position |= packed_depth;
+        q[6] = packed_position;
+    }
+    {
+        int sx, sy;
+        unsigned long long packed_position;
+        sx = ftoi_g(bottom_left[0] * scale);
+        sy = ftoi_g(bottom_left[1] * scale);
+        sy += screen_extent[5];
+        sx += screen_extent[4];
+        sy -= 8;
+        sx -= 8;
+        q[9] = texture_height;
+        packed_position = (unsigned long long)sx;
+        packed_position |= (unsigned long long)sy << 16;
+        packed_position |= packed_depth;
+        q[8] = packed_position;
+    }
+    {
+        int sx, sy;
+        unsigned long long packed_position;
+        sx = ftoi_g(top_right[0] * scale);
+        sy = ftoi_g(top_right[1] * scale);
+        sy += screen_extent[5];
+        sx += screen_extent[4];
+        sy -= 8;
+        sx -= 8;
+        q[11] = (texture_height) + (texture_width);
+        packed_position = (unsigned long long)sx;
+        packed_position |= (unsigned long long)sy << 16;
+        packed_position |= packed_depth;
+        q[10] = packed_position;
+    }
+    {
+        int sx, sy;
+        unsigned long long packed_position;
+        sx = ftoi_g(bottom_right[0] * scale);
+        sy = ftoi_g(bottom_right[1] * scale);
+        sy += screen_extent[5];
+        sx += screen_extent[4];
+        sy -= 8;
+        sx -= 8;
+        q[13] = 0;
+        packed_position = (unsigned long long)sx;
+        packed_position |= (unsigned long long)sy << 16;
+        packed_position |= packed_depth;
+        q[12] = packed_position;
+    }
     D_L11_001611C0_g = (*(volatile int *)&D_L11_001611C0_g) + 0x70;
 }
 #undef FUN_L11_00310cf8
@@ -317,7 +330,6 @@ void FUN_L11_00311048(unsigned char a, unsigned char b, unsigned char c, unsigne
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002C99E0.c: func_L11_003126D8), where it is exact; names translated to the US level program. */
 
 extern s32 truncate_float_to_s32(f32) __asm__("FUN_001fa6d0");
-extern unsigned char D_0013E05A[];
 extern void project_to_screen(f32 *, void *) __asm__("FUN_001f2070");
 extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 
@@ -336,16 +348,16 @@ void FUN_L11_00311210(void *pt, int *outx, int *outy, int yoff) {
 
 
 extern float random_float_between_alt(float, float) __asm__("FUN_002132a8");
-extern short D_L11_00161FF4_d __asm__("D_L11_00161FF4") __attribute__((sda));
-extern short D_L11_001621C8_d __asm__("D_L11_001621C8") __attribute__((sda));
-extern short D_L11_001621D8_d __asm__("D_L11_001621D8") __attribute__((sda));
-extern short D_L11_001621E8_d __asm__("D_L11_001621E8") __attribute__((sda));
-extern short D_L11_001621F8_d __asm__("D_L11_001621F8") __attribute__((sda));
-extern short D_L11_00162208_d __asm__("D_L11_00162208") __attribute__((sda));
+extern f32 D_L11_00161FF4_gp __asm__("D_L11_00161FF4") __attribute__((sda));
 extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
 extern void FUN_L00_0025f8e0(float *v, float s);
 extern void FUN_L01_0028a7a8(void *, float *, float *, void *, int);
 
+extern short D_L11_001621C8 __attribute__((sda));
+extern short D_L11_001621D8 __attribute__((sda));
+extern short D_L11_001621E8 __attribute__((sda));
+extern short D_L11_001621F8 __attribute__((sda));
+extern short D_L11_00162208 __attribute__((sda));
 void FUN_L11_003112b8(void *m, char *t) {
     int i;
     for (i = 1; i < 3; i++) {
@@ -357,7 +369,7 @@ void FUN_L11_003112b8(void *m, char *t) {
         float scale;
 
         *(OvlQuad *)vel = 0;
-        scale = *(float *)(t + 0x64) / *(float *)&D_L11_00161FF4_d;
+        scale = *(float *)(t + 0x64) / *(float *)&D_L11_00161FF4_gp;
         if (scale > 1.0f) {
             scale = 1.0f;
         } else if (scale < 0.35f) {
@@ -374,15 +386,15 @@ void FUN_L11_003112b8(void *m, char *t) {
         vel[0] =
             -((random_float_between_alt(6.0f, 7.0f) + *(float *)(t + 0xC4) * 2.0f) * frame_time) *
             scale;
-        FUN_L01_0028a7a8(m, a, vel, &D_L11_001621C8_d, 1);
+        FUN_L01_0028a7a8(m, a, vel, &D_L11_001621C8, 1);
         vel[0] =
             -((random_float_between_alt(6.0f, 7.0f) + *(float *)(t + 0xC4) * 3.0f) * frame_time) *
             scale;
-        FUN_L01_0028a7a8(m, b, vel, &D_L11_001621D8_d, 1);
+        FUN_L01_0028a7a8(m, b, vel, &D_L11_001621D8, 1);
         vel[0] =
             -((random_float_between_alt(6.0f, 7.0f) + *(float *)(t + 0xC4) * 4.0f) * frame_time) *
             scale;
-        FUN_L01_0028a7a8(m, c, vel, &D_L11_001621E8_d, 1);
+        FUN_L01_0028a7a8(m, c, vel, &D_L11_001621E8, 1);
         if (*(float *)(t + 0xC4) > 0.5f) {
             FUN_L00_0025f8e0(a, *(float *)(t + 0xC4) * 0.02f + 0.01f);
             FUN_L00_0025f8e0(b, *(float *)(t + 0xC4) * 0.02f + 0.01f);
@@ -390,23 +402,23 @@ void FUN_L11_003112b8(void *m, char *t) {
             vel[0] = -((random_float_between_alt(6.0f, 7.0f) + *(float *)(t + 0xC4) * 2.0f) *
                        frame_time) *
                      scale;
-            FUN_L01_0028a7a8(m, a, vel, &D_L11_001621C8_d, 1);
+            FUN_L01_0028a7a8(m, a, vel, &D_L11_001621C8, 1);
             vel[0] = -((random_float_between_alt(6.0f, 7.0f) + *(float *)(t + 0xC4) * 3.0f) *
                        frame_time) *
                      scale;
-            FUN_L01_0028a7a8(m, b, vel, &D_L11_001621D8_d, 1);
+            FUN_L01_0028a7a8(m, b, vel, &D_L11_001621D8, 1);
             vel[0] = -((random_float_between_alt(6.0f, 7.0f) + *(float *)(t + 0xC4) * 4.0f) *
                        frame_time) *
                      scale;
-            FUN_L01_0028a7a8(m, c, vel, &D_L11_001621E8_d, 1);
+            FUN_L01_0028a7a8(m, c, vel, &D_L11_001621E8, 1);
             vel[0] = -((random_float_between_alt(6.0f, 7.0f) + *(float *)(t + 0xC4) * 2.0f) *
                        frame_time) *
                      scale;
-            FUN_L01_0028a7a8(m, a, vel, &D_L11_001621F8_d, 1);
+            FUN_L01_0028a7a8(m, a, vel, &D_L11_001621F8, 1);
             vel[0] = -((random_float_between_alt(6.0f, 7.0f) + *(float *)(t + 0xC4) * 3.0f) *
                        frame_time) *
                      scale;
-            FUN_L01_0028a7a8(m, pos, vel, &D_L11_00162208_d, 1);
+            FUN_L01_0028a7a8(m, pos, vel, &D_L11_00162208, 1);
         }
     }
 }
@@ -422,7 +434,7 @@ extern int tween_color(float, int, int) __asm__("FUN_001fa6e0");
 extern void FUN_001153fc(void *, int, int);
 extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
 extern void draw_packet(void *, int, int) __asm__("FUN_001f7d30");
-extern int D_L11_0015F5CC;
+extern int level_frame __asm__("D_L11_0015F5CC");
 extern int D_L11_0015FFD8;
 extern short *D_L11_001AC240[];
 
@@ -430,7 +442,8 @@ int FUN_L11_003192c8(char *moby) {
     char stack_data[0x900] __attribute__((aligned(16)));
     float offset[8] __attribute__((aligned(16)));
     short *list;
-    int i, j;
+    int i;
+    short *next_list;
     float phase;
     float *position_base;
     float *position_y_base;
@@ -444,25 +457,26 @@ int FUN_L11_003192c8(char *moby) {
     } else {
         *(float *)&D_L11_001623F0_d = 5.0f;
     }
-    position_base = (float *)(stack_data + 0x50);
     position_y_base = (float *)(stack_data + 0x54);
+    position_base = (float *)(stack_data + 0x50);
     colors_base = (int *)(stack_data + 0x40);
     for (i = 0; i < 16; i++) {
         long long texture;
-        char *packet = stack_data + 0x40 + i * 0x90;
+        long long *packet = (long long *)(stack_data + 0x70);
         float *source;
         float *position;
         float *position_y;
         int *colors;
         float span;
+        int j;
         j = 0;
         texture = trail_effect_texture(0x13);
-        *(long long *)(packet + 0x38) = texture;
-        *(long long *)(packet + 0x48) = 0x8000000048LL;
-        *(long long *)(packet + 0x40) = 0xff9000000260LL;
-        *(long long *)(packet + 0x30) = 0;
+        packet[i * 18 + 1] = texture;
+        packet[i * 18 + 3] = 0x8000000048LL;
+        packet[i * 18 + 2] = 0xff9000000260LL;
+        packet[i * 18] = 0;
         span = *(float *)&D_L11_001623F0_d * 4.0f;
-        phase = integer_to_float((D_L11_0015F5CC + 3) & 3) / span;
+        phase = integer_to_float((level_frame + 3) & 3) / span;
         source = D_L11_001F1490;
         position = position_base + i * 0x24;
         position_y = position_y_base + i * 0x24;
@@ -486,6 +500,7 @@ int FUN_L11_003192c8(char *moby) {
         char *linked = (char *)(D_L11_0015FFD8 + ((entry & 0x7fff) << 8));
         int skip = *(short *)(linked + 0xa6) != *(short *)(moby + 0xa6);
         if (*(unsigned char *)(linked + 0x31) == 0) skip = 1;
+        next_list = list + 1;
         if (skip == 0) {
             char *trail = *(char **)(linked + 0x78);
             long limit = -1;
@@ -494,6 +509,7 @@ int FUN_L11_003192c8(char *moby) {
                 int a = next + 15;
                 int b = next + 30;
                 int start;
+                int j;
                 if (limit < a) b = a;
                 start = a - ((b >> 4) << 4);
                 for (j = 0; j < 2; j++) {
@@ -504,7 +520,8 @@ int FUN_L11_003192c8(char *moby) {
                         int n = start + (k >> 1);
                         int q = n + 15;
                         if (limit < n) q = n;
-                        n -= (q >> 4) << 4;
+                        q = (q >> 4) << 4;
+                        n = n - q;
                         add_vector_xyz((float *)stack_data + i * 0x24 + k * 4, points + n * 16,
                                        (char *)offset + (k & 1) * 16);
                     }
@@ -512,7 +529,8 @@ int FUN_L11_003192c8(char *moby) {
                 }
             }
         }
-        if (*list++ < 0) break;
+        if (*list < 0) break;
+        list = next_list;
     } while (1);
 }
 #endif
@@ -520,7 +538,7 @@ int FUN_L11_003192c8(char *moby) {
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002C99E0.c: func_L11_0031AAE0), where it is exact; names translated to the US level program. */
 
 
-extern int D_L11_0015F5CC;
+extern int level_frame __asm__("D_L11_0015F5CC");
 extern int FUN_L11_003192c8();
 extern short D_L11_001623F0_d __asm__("D_L11_001623F0") __attribute__((sda));
 extern void FUN_001f9cf8(void *, void *, void *);
@@ -534,7 +552,7 @@ void FUN_L11_00319670(char *moby) {
     float v[4];
     float w[4];
     int t;
-    if ((D_L11_0015F5CC & 3) == 0) {
+    if ((level_frame & 3) == 0) {
         int cnt;
         float lim = *(float *)&D_L11_001623F0_d;
         cnt = *(int *)(d + 0x2C0);
@@ -556,7 +574,7 @@ void FUN_L11_00319670(char *moby) {
     w[2] = 0.3f;
     FUN_001f9cf8(w, w, moby + 0xC0);
     add_vector_xyz(d + ((*(int *)(d + 0x2C4) << 4) + 0x1C0), w, moby + 0x10);
-    t = D_L11_0015F5CC;
+    t = level_frame;
     *(float *)(d + (*(int *)(d + 0x2C4) << 4) + 0x1CC) = 1.0f;
     if (t != 0) {
         int *p = *(int **)(d + 0x2C8);
@@ -576,7 +594,6 @@ void FUN_L11_00319670(char *moby) {
 
 extern char *find_moby_hit(void *, int, int) __asm__("FUN_L00_0025a420");
 extern int D_0015EE00;
-extern int D_0015EEA4;
 extern int coll_sphere(float, void *, int, void *) __asm__("FUN_L00_001f0d60");
 extern s32 scale_game_frames(s32) __asm__("func_001F96F8");
 extern unsigned char D_0013D408[];
@@ -647,12 +664,12 @@ void FUN_L11_0031a1c0(char *m) {
 /* Queues a GIF packet that draws a line strip through the given points, scaled and offset to the screen. */
 typedef unsigned int u128_ad0 __attribute__((mode(TI)));
 extern int D_L11_001611C0_g __asm__("D_L11_001611C0");
-extern u128_ad0 D_L11_001608E0_g __asm__("D_L11_001608E0");
-extern u128_ad0 D_L11_001608F0_g __asm__("D_L11_001608F0");
 extern int screen_extent[] __asm__("D_0013E500");
 extern float itof_g(int) __asm__("FUN_001fa6c0");
 extern int ftoi_g(float) __asm__("FUN_001fa6d0");
 
+extern u128_ad0 D_L11_001608E0;
+extern u128_ad0 D_L11_001608F0;
 void FUN_L11_00310ad0(short *pts, int n, float x0, float y0, unsigned int col, unsigned long long prim, float scale) {
     int q = (n + 1) / 2 + 3;
     unsigned long long *o;
@@ -665,7 +682,7 @@ void FUN_L11_00310ad0(short *pts, int n, float x0, float y0, unsigned int col, u
     {
         char *t1 = (char *)D_L11_001611C0_g;
         D_L11_001611C0_g = (int)(t1 + 0x10);
-        qcopy((void *)D_L11_001611C0_g, &D_L11_001608E0_g);
+        qcopy((void *)D_L11_001611C0_g, &D_L11_001608E0);
         *(short *)(t1 + 0x10) = -0x7FFF;
     }
     {
@@ -677,7 +694,7 @@ void FUN_L11_00310ad0(short *pts, int n, float x0, float y0, unsigned int col, u
     {
         char *t3 = (char *)D_L11_001611C0_g;
         D_L11_001611C0_g = (int)(t3 + 0x10);
-        qcopy((void *)D_L11_001611C0_g, &D_L11_001608F0_g);
+        qcopy((void *)D_L11_001611C0_g, &D_L11_001608F0);
         *(short *)(t3 + 0x10) = n - 0x8000;
     }
     D_L11_001611C0_g += 0x10;
@@ -689,7 +706,6 @@ void FUN_L11_00310ad0(short *pts, int n, float x0, float y0, unsigned int col, u
     }
     D_L11_001611C0_g += ((n + 1) / 2) * 16;
 }
-extern char D_L11_001B0EB0[];
 extern void clear_u64_value(void *) __asm__("FUN_001f99f8");
 extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
 extern void subtract_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a28");
@@ -711,7 +727,7 @@ extern float advance_accelerated_scalar(float *, float *, float, float, float, f
 void FUN_L11_0031a438(char *moby) {
     char *d = (char *)MOBY(moby)->pvars;
     int i = *(int *)(d + 0x64);
-    char *table = *(char **)(D_L11_001B0EB0 + *(int *)(d + 0x60) * 4);
+    char *table = *(char **)(path_table + *(int *)(d + 0x60) * 4);
     int count;
     float matrix[16];
     float a[4], b[4], c[4];

@@ -276,7 +276,6 @@ extern float FUN_001f9e90(float, float);
 extern float vector_length_xy(void *);
 extern float vector_length_xyz(void *);
 extern int D_L00_00173E40[];
-extern int D_L00_00173E60; /* no foreign declaration */
 extern int FUN_001efa68(void *, void *, int, int, int);
 extern int FUN_L00_001f0d60();
 extern void add_vector_xyz(void *, void *, void *);
@@ -390,8 +389,6 @@ typedef struct {
 } Glob;
 
 extern Glob D_L00_00173E40_c __asm__("D_L00_00173E40");
-extern f32 D_0015ED70 __attribute__((sda));
-extern f32 D_0015ED60 __attribute__((sda));
 
 extern void FUN_001f9a28(void *, void *, void *);
 extern f32 FUN_001f9b20(void *);
@@ -405,6 +402,8 @@ extern void FUN_001f9a68_c(void *, void *, f32) __asm__("FUN_001f9a68");
 extern s32 FUN_L00_00258ad0_c(void *, void *, f32, s32, f32, s32) __asm__("FUN_L00_00258ad0");
 extern f32 probe_ground_height(void *, s32, f32) __asm__("FUN_00213508");
 
+extern f32 frame_time_sq_gp __asm__("D_0015ED70") __attribute__((sda));
+extern f32 frame_scale __asm__("D_0015ED60") __attribute__((sda));
 s32 FUN_L00_00258b50(Obj *m, Ctl *c, void *v, Vec4 *out, f32 f) {
     Vec4 save;
     Vec4 d;
@@ -449,7 +448,7 @@ s32 FUN_L00_00258b50(Obj *m, Ctl *c, void *v, Vec4 *out, f32 f) {
         d.f[2] = 0.0f;
     } else {
         d.f[2] = c->f18;
-        c->f18 = c->f18 - D_0015ED70 * 9.0f;
+        c->f18 = c->f18 - frame_time_sq_gp * 9.0f;
     }
     lim = m->pos.f[2] + 0.04f;
     FUN_001f9a10(&p, &m->pos, &d);
@@ -490,7 +489,7 @@ done:
         FUN_001f9a68_c(&p, &d, 1.0f / l2);
         r = FUN_L00_00258ad0_c(m, &d, c->f04, c->i00, c->f30, c->i38);
         if (r & 2)
-            c->f18 = D_0015ED60 * -0.01f;
+            c->f18 = frame_scale * -0.01f;
         if (r & 1) {
             mask |= 1;
             if (d.f[0] * p.f[0] + d.f[1] * p.f[1] < l2 * 0.2f)
@@ -504,7 +503,7 @@ done:
         qcopy(out, &d);
     } else {
         if ((c->i38 ^ 1) & 1)
-            c->f18 = D_0015ED60 * -0.01f;
+            c->f18 = frame_scale * -0.01f;
     }
     if (len < c->f2C)
         mask |= 4;
@@ -544,11 +543,11 @@ int FUN_L00_00259028(unsigned char *m, char *c, float *tgt, void *out) {
     }
     return r;
 }
-extern int D_L00_0015FFF4_2591d0 __asm__("D_L00_0015FFF4");
+extern int D_L00_0015FFF4;
 extern unsigned short *D_L00_001AB840_2591d0[] __asm__("D_L00_001AB840");
-extern char *D_L00_00160114_2591d0 __asm__("D_L00_00160114");
+extern char *D_L00_00160114;
 extern unsigned short *D_L00_0016010C_2591d0 __asm__("D_L00_0016010C");
-extern short D_L00_00160110_2591d0 __asm__("D_L00_00160110");
+extern short D_L00_00160110;
 extern char *D_L00_0015FFD8_2591d0 __asm__("D_L00_0015FFD8");
 int f2592b8_2591d0(char **, char *) __asm__("FUN_L00_002592b8");
 /* Looks up table entry idx and makes it current; the flag test reads the
@@ -558,24 +557,24 @@ int FUN_L00_002591d0(char **out, int idx, int a, int b) {
     char *e;
     int c;
     int h;
-    if (idx < 0 || D_L00_0015FFF4_2591d0 < idx) {
+    if (idx < 0 || D_L00_0015FFF4 < idx) {
         *out = 0;
         return -1;
     }
     *out = 0;
-    D_L00_00160114_2591d0 = 0;
+    D_L00_00160114 = 0;
     v = D_L00_001AB840_2591d0[idx];
     D_L00_0016010C_2591d0 = v;
     if (v == 0) return -1;
     h = *v & 0x7FFF;
-    D_L00_00160110_2591d0 = h;
+    D_L00_00160110 = h;
     e = D_L00_0015FFD8_2591d0 + (h << 8);
-    D_L00_00160114_2591d0 = e;
+    D_L00_00160114 = e;
     *out = e;
-    c = (unsigned)(*(char *volatile *)&D_L00_00160114_2591d0)[0x20] >> 31;
+    c = (unsigned)(*(char *volatile *)&D_L00_00160114)[0x20] >> 31;
     if (!a) {
-        if (b || c) return f2592b8_2591d0(out, D_L00_00160114_2591d0);
-    } else if (b && !c) return f2592b8_2591d0(out, D_L00_00160114_2591d0);
+        if (b || c) return f2592b8_2591d0(out, D_L00_00160114);
+    } else if (b && !c) return f2592b8_2591d0(out, D_L00_00160114);
     return 0;
 }
 

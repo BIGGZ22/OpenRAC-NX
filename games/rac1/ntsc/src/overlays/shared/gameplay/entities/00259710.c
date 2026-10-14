@@ -66,7 +66,28 @@ void make_hit_descriptor(char *a, int b, int c, float d, void *q) {
     *(int *)(a + 0x20) = 1;
     qcopy(a, q);
 }
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_002598b0.s", FUN_L00_002598b0);
+#include "eetypes.h"
+#include "rnc/math/fast_math.h"
+extern int collect_mobies_in_sphere(void *, float, int, void *, void *) __asm__("FUN_L00_001f2868");
+int FUN_L00_002598b0(void *moby, void *position, int c, float d, float e, float f, int g, int h, int i) {
+    float direction[4] __attribute__((aligned(16)));
+    char descriptor[0x30] __attribute__((aligned(16)));
+    if (*(unsigned short *)((char *)moby + 0x34) & 0x100) {
+        qcopy(direction, (char *)moby + 0xc0);
+    } else {
+        direction[0] = fast_cos(*(float *)((char *)moby + 0x48));
+        direction[1] = fast_sin(*(float *)((char *)moby + 0x48));
+        direction[2] = 0.0f;
+    }
+    fast_vec_scale(direction, direction, f);
+    direction[2] = 1.0f;
+    direction[3] = 5627.9248046875f;
+    make_hit_descriptor(descriptor, (int)moby, c, e, direction);
+    descriptor[0x18] = g;
+    descriptor[0x19] = h;
+    *(unsigned short *)(descriptor + 0x1a) = *(unsigned short *)((char *)moby + 0xa6);
+    return collect_mobies_in_sphere(position, d, i, moby, descriptor);
+}
 extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
 extern int FUN_L00_002598b0(void *, void *, int, float, float, float, int, int, int);
 /* Calls FUN_L00_002598b0 at a moby point; the f13 argument is ignored and c is passed again as a float. */
@@ -233,29 +254,28 @@ typedef struct {
     u128 b;
 } E_259fe8_00259fe8;
 extern int D_L00_0015F434_00259fe8 __asm__("D_L00_0015F434");
-extern E_259fe8_00259fe8 D_L00_0016E080_00259fe8[] __asm__("D_L00_0016E080")
-    __attribute__((section(".data")));
 extern u128 D_L00_00173E80_00259fe8 __asm__("D_L00_00173E80") __attribute__((section(".data")));
 extern float FUN_00213508_00259fe8(void *, int, float) __asm__("FUN_00213508");
 extern int FUN_001f0b58_00259fe8(void) __asm__("FUN_001f0b58");
 extern float FUN_001f99c0_00259fe8(float) __asm__("FUN_001f99c0");
 
+extern E_259fe8_00259fe8 D_L00_0016E080[] __attribute__((section(".data")));
 void FUN_L00_00259fe8(unsigned char *m, float r) {
     float h, y;
     if (m[0x31] == 0)
         return;
     if (D_L00_0015F434_00259fe8 >= 32)
         return;
-    qcopy(&D_L00_0016E080_00259fe8[D_L00_0015F434_00259fe8].u_00259fe8.a_00259fe8, m + 0x10);
+    qcopy(&D_L00_0016E080[D_L00_0015F434_00259fe8].u_00259fe8.a_00259fe8, m + 0x10);
     h = FUN_00213508_00259fe8(m + 0x10, 0, 0.5f);
     if (FUN_001f0b58_00259fe8() == 0)
         return;
-    D_L00_0016E080_00259fe8[D_L00_0015F434_00259fe8].u_00259fe8.f[2] = h + 0.025f;
-    qcopy(&D_L00_0016E080_00259fe8[D_L00_0015F434_00259fe8].b, &D_L00_00173E80_00259fe8);
+    D_L00_0016E080[D_L00_0015F434_00259fe8].u_00259fe8.f[2] = h + 0.025f;
+    qcopy(&D_L00_0016E080[D_L00_0015F434_00259fe8].b, &D_L00_00173E80_00259fe8);
     y = (8.0f - FUN_001f99c0_00259fe8(*(float *)(m + 0x18) - h)) * 0.125f;
     if (y < 0.25f)
         y = 0.25f;
-    D_L00_0016E080_00259fe8[D_L00_0015F434_00259fe8].u_00259fe8.f[3] = r * y;
+    D_L00_0016E080[D_L00_0015F434_00259fe8].u_00259fe8.f[3] = r * y;
     D_L00_0015F434_00259fe8++;
 }
 /* Ported from rac1-decomp (src/overlays/shared/mobyutil_00258BC8.c: func_L00_0025B178), where it is exact; names translated to the US level program. */
@@ -352,7 +372,6 @@ typedef struct {
     u8 pad0[0x80];
     f32 x, y;
 } G_25a478;
-extern u8 D_0013E533[];
 extern f32 D_L00_00160080[2] __attribute__((sda));
 extern f32 D_L00_001B01C8[][8];
 extern u8 D_L00_001B0180[][4];
@@ -556,11 +575,9 @@ int FUN_L00_0025aca0(float density, unsigned char *entity, int maximum, Vec4_25a
     if (limit < 1) return limit;
     for (emitted = 0; emitted < limit; emitted++) {
         random = FUN_002132a8_25aca0(0.0f, total);
-        chosen = 0;
-        if (count > 0 && !(random < weights[0])) {
-            do {
-                random -= weights[chosen++];
-            } while (chosen < count && !(random < weights[chosen]));
+        for (chosen = 0; chosen < count; chosen++) {
+            if (random < weights[chosen]) break;
+            random -= weights[chosen];
         }
         entry = entries[chosen];
         switch (type = *entry) {
@@ -579,7 +596,8 @@ int FUN_L00_0025aca0(float density, unsigned char *entity, int maximum, Vec4_25a
                 FUN_001f9a68_25aca0(*(float *)(entity + 0x2c), &first, &first);
                 radius = *(float *)(entry + 0xc);
             }
-            extent = radius * *(float *)(entity + 0x2c) * 0.0009765625f;
+            extent = radius * *(float *)(entity + 0x2c);
+            extent = extent * 0.0009765625f;
             FUN_L00_001ff378_25aca0(1024.0f, &first, &first);
             do {
                 second.f[0] = FUN_002132a8_25aca0(-extent, extent);
@@ -613,14 +631,16 @@ int FUN_L00_0025aca0(float density, unsigned char *entity, int maximum, Vec4_25a
         }
         case 4: {
             float extent, weight;
-            FUN_001251e8_25aca0(*(float *)(entity + 0x2c), &first, (void *)(0x70000000 + (*(short *)(entry + 4) << 4)));
-            FUN_001251e8_25aca0(*(float *)(entity + 0x2c), &second, (void *)(0x70000000 + (*(short *)(entry + 6) << 4)));
+            list = entry + 4;
+            FUN_001251e8_25aca0(*(float *)(entity + 0x2c), &first, (void *)(0x70000000 + (*(short *)list << 4)));
+            FUN_001251e8_25aca0(*(float *)(entity + 0x2c), &second, (void *)(0x70000000 + (*(short *)(list + 2) << 4)));
             FUN_001f9a28_25aca0(&third, &second, &first);
             weight = FUN_002132a8_25aca0(0.0f, 1.0f);
             FUN_001f9a68_25aca0(weight, &third, &third);
             FUN_001f9a10_25aca0(&fourth, &third, &first);
             FUN_L00_001ff378_25aca0(1024.0f, &fourth, &fourth);
-            extent = *(float *)(entry + 0xc) * *(float *)(entity + 0x2c) * 0.0009765625f;
+            extent = *(float *)(entry + 0xc) * *(float *)(entity + 0x2c);
+            extent = extent * 0.0009765625f;
             do {
                 fifth.f[0] = FUN_002132a8_25aca0(-extent, extent);
                 fifth.f[1] = FUN_002132a8_25aca0(-extent, extent);

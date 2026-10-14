@@ -5,6 +5,9 @@
 #include "rnc/rendering/screen.h"
 #include "rnc/ui/text/text_region.h"
 #include "rnc/gameplay/hero.h"
+#include "rnc/data_labels.h"
+#include "rnc/gameplay/state/game_globals.h"
+#include "rnc/overlay/level_labels.h"
 
 /* State of the level's message box (D_L00_00173040). */
 typedef struct {
@@ -20,7 +23,6 @@ typedef struct {
 } MessageBox;
 
 extern MessageBox D_L00_00173040;
-extern s32 D_L00_0015F3F8;
 extern s32 D_L00_0015F4A8 __attribute__((sda));
 extern s32 D_L00_0015F4AC __attribute__((sda));
 extern s32 D_L00_0015F4B0 __attribute__((sda));
@@ -54,12 +56,9 @@ extern char D_L00_0015F540[];
 extern char D_L00_0015F548[];
 extern char D_L00_0015F550[];
 extern char D_L00_0015F560[];
-extern s32 D_L00_0015F5A8;
 extern u8 D_L00_001C3150[];
 extern struct TextRegion D_L00_001E7A50;
 extern struct TextRegion D_L00_001E7A68;
-extern s32 freeze_stats_time_ref_a[] __asm__("D_0015EE58") MACRO_ADDR;
-extern s32 freeze_stats_score_ref_a[] __asm__("D_0015EE68") MACRO_ADDR;
 
 extern void memset(void *, s32, s32) __asm__("FUN_001153fc");
 extern s32 sprintf(char *, const char *, ...) __asm__("FUN_00116248");
@@ -379,7 +378,7 @@ void FUN_L00_002018c8(void) {
             } else {
                 font_print_center(0x100, D_L00_0015F4DC, c3, line, -1);
             }
-            best = freeze_stats_time_ref_a[(current_level_index ^ 0x10) ? 0 : 1];
+            best = freeze_stats_time_ref[(current_level_index ^ 0x10) ? 0 : 1];
             if (best == hero.unk894) {
                 unit = pal_mode ? 3000 : 3600;
                 per = unit / 60;

@@ -455,8 +455,29 @@ class Placer:
                 return self.rodata_address(sym["st_value"] + addend)
             if secname and secname.startswith(".rodata.jtbl_"):
                 return resolve_symbol(secname[len(".rodata."):], self.level, near) + sym["st_value"] + addend
+            owned = self.own_data(sym, addend)
+            if owned is not None:
+                return resolve_symbol(owned[0], self.level, near) + owned[1]
             raise Unresolved(f"section {secname or sym['st_shndx']}")
         return resolve_symbol(sym.name, self.level, near) + addend
+
+    def gp0(self) -> int:
+        """The gp value the assembler assumed (.reginfo's ri_gp_value)."""
+        reginfo = self.elf.get_section_by_name(".reginfo")
+        return int.from_bytes(reginfo.data()[20:24], "little", signed=True) if reginfo else 0
+
+    def own_data(self, sym, addend: int):
+        """(label, offset) when SYM + ADDEND falls in level data this file defines
+        (the assembler points at the section, not at the object's name)."""
+        if not isinstance(sym["st_shndx"], int):
+            return None
+        where = sym["st_value"] + addend
+        for other in _symbols(self.elf):
+            if (other["st_shndx"] == sym["st_shndx"] and other["st_info"]["type"] == "STT_OBJECT"
+                    and other.name and (ov.OVERLAY_DATA.match(other.name) or ov.SHARED_DATA.match(other.name))
+                    and other["st_value"] <= where < other["st_value"] + max(other["st_size"], 1)):
+                return other.name, where - other["st_value"]
+        return None
 
     LITERAL_SECTIONS = (".sdata", ".lit4", ".lit8")
 
@@ -499,6 +520,8 @@ class Placer:
             hi_off = hi_rel["r_offset"]
             ahl = (hi_imm << 16) + sign16(lo_imm)
             literal = self.literal_section(self.sym_of(hi_rel))
+            if literal is not None and self.own_data(self.sym_of(hi_rel), ahl) is not None:
+                literal = None  # level data this file defines, not a literal
             try:
                 if literal is not None:
                     value = self.place_literal(literal, self.sym_of(hi_rel)["st_value"] + ahl,
@@ -557,7 +580,10 @@ class Placer:
                 ours[o:o + 4] = ((word & 0xFC000000) | ((target >> 2) & 0x03FFFFFF)).to_bytes(4, "little")
             elif rtype == R_MIPS_GPREL16:
                 try:
-                    s = self.resolve_address(self.sym_of(rel), near, sign16(word & 0xFFFF))
+                    addend = sign16(word & 0xFFFF)
+                    if self.sym_of(rel)["st_info"]["type"] == "STT_SECTION":
+                        addend += self.gp0()  # the assembler stored offset - gp0
+                    s = self.resolve_address(self.sym_of(rel), near, addend)
                 except Unresolved as e:
                     self.note_unresolved(str(e.what))
                     continue
@@ -727,3 +753,120 @@ def copy_check(obj_path, name: str, place: tuple[int, int]) -> dict:
             # build this place, it is another function the catalogue merged
             return {**full, "not_a_copy": i not in relocated}
     return {**full, "verdict": "EXACT", "exact": True, "differing_words": 0, "method": METHOD + "+copy"}
+
+
+DATA_METHOD = "overlay-data-bytes-v1"
+DATA_SECTIONS = (".data", ".sdata", ".rodata", ".bss", ".sbss")
+
+
+def data_symbols(elf: ELFFile) -> list:
+    """Every object the file defines in a data section: (symbol, section)."""
+    out = []
+    for sym in _symbols(elf):
+        if sym["st_info"]["type"] != "STT_OBJECT" or not isinstance(sym["st_shndx"], int):
+            continue
+        secname = section_name(elf, sym["st_shndx"])
+        if secname in DATA_SECTIONS:
+            out.append((sym, secname))
+    return out
+
+
+def check_shared_data(obj_path, name: str) -> dict:
+    """The verdict for D_XXXXXXXX defined in OBJ_PATH: data every level holds
+    at XXXXXXXX. Its bytes (no pointers) must equal what each level loads there."""
+    result = {"method": DATA_METHOD, "exact": False, "symbol": name}
+    address = int(ov.SHARED_DATA.match(name).group(1), 16)
+    elf = open_elf(obj_path)
+    found = [(sym, sec) for sym, sec in data_symbols(elf) if sym.name == name]
+    if not found:
+        result["verdict"] = f"LINK {name} is not defined in this file"
+        return result
+    sym, _secname = found[0]
+    size, start = sym["st_size"], sym["st_value"]
+    result.update(address=address, size=size)
+    section = elf.get_section(sym["st_shndx"])
+    ours = bytes(section.data()[start:start + size]) if section["sh_type"] != "SHT_NOBITS" else bytes(size)
+    for rel_sec in elf.iter_sections():
+        if isinstance(rel_sec, RelocationSection) and rel_sec["sh_info"] == sym["st_shndx"] and any(
+                start <= rel["r_offset"] < start + size for rel in rel_sec.iter_relocations()):
+            result["verdict"] = "LINK data in every level holds no pointers"
+            return result
+    for level in ov.level_ids():
+        retail = ov.level_data_bytes(level, address, size)
+        if retail is None:
+            result["verdict"] = f"LINK {address:#x}+{size} is not in level {level:02d} data"
+            return result
+        if retail != ours:
+            result["verdict"] = f"BYTES level {level:02d}"
+            return result
+    result.update(verdict="EXACT", exact=True)
+    return result
+
+
+def check_data(obj_path, name: str) -> dict:
+    """The verdict for level data NAME (D_LNN_XXXXXXXX) defined in OBJ_PATH.
+
+    Its bytes, with every pointer resolved to level NN's address of its
+    symbol, must equal what level NN loads at XXXXXXXX (a bss object: the
+    place must be bss). verdict is EXACT, BYTES n/size or LINK <what>."""
+    result = {"method": DATA_METHOD, "exact": False, "symbol": name}
+    m = ov.OVERLAY_DATA.match(name)
+    if not m:
+        result["verdict"] = f"LINK not a level data name: {name}"
+        return result
+    level, address = int(m.group(1)), int(m.group(2), 16)
+    elf = open_elf(obj_path)
+    found = [(sym, sec) for sym, sec in data_symbols(elf) if sym.name == name]
+    if not found:
+        result["verdict"] = f"LINK {name} is not defined in this file"
+        return result
+    sym, secname = found[0]
+    size, start = sym["st_size"], sym["st_value"]
+    result.update(level=level, address=address, size=size)
+    if secname in (".bss", ".sbss"):
+        # bss, or zeros the level loads (small bss sits in .lit)
+        bss = next((r for r in ov.manifest(level)["records"] if r["type"] == 8), None)
+        zeros = ov.level_data_bytes(level, address, size)
+        inside = (bss and bss["address"] <= address and address + size <= bss["address"] + bss["bytes"]
+                  or zeros is not None and not any(zeros))
+        result.update(verdict="EXACT" if inside else "LINK not bss or zeros in the level",
+                      exact=bool(inside))
+        return result
+    retail = ov.level_data_bytes(level, address, size)
+    if retail is None:
+        result["verdict"] = f"LINK {address:#x}+{size} is not in level {level:02d} data"
+        return result
+    section = elf.get_section(sym["st_shndx"])
+    ours = bytearray(section.data()[start:start + size])
+    unresolved = []
+    for rel_sec in elf.iter_sections():
+        if not isinstance(rel_sec, RelocationSection) or rel_sec["sh_info"] != sym["st_shndx"]:
+            continue
+        for rel in rel_sec.iter_relocations():
+            off = rel["r_offset"] - start
+            if not 0 <= off < size:
+                continue
+            target = _symbols(elf)[rel["r_info_sym"]]
+            if rel["r_info_type"] != R_MIPS_32:
+                unresolved.append(f"relocation type {rel['r_info_type']} at +0x{off:x}")
+                continue
+            if not _is_named(target):
+                unresolved.append(f"+0x{off:x} points into {section_name(elf, target['st_shndx'])}: "
+                                  "name the target D_/FUN_ so it has a level address")
+                continue
+            try:
+                value = resolve_symbol(target.name, level, address)
+            except Unresolved as e:
+                unresolved.append(e.what)
+                continue
+            addend = int.from_bytes(ours[off:off + 4], "little")
+            ours[off:off + 4] = ((value + addend) & 0xFFFFFFFF).to_bytes(4, "little")
+    if unresolved:
+        result["verdict"] = "LINK " + ", ".join(unresolved[:4])
+        return result
+    differing = [i for i in range(size) if ours[i] != retail[i]]
+    if differing:
+        result.update(verdict=f"BYTES {len(differing)}/{size}", first_difference=differing[0])
+        return result
+    result.update(verdict="EXACT", exact=True)
+    return result

@@ -9,6 +9,9 @@
 #define MACRO_ADDR
 
 #include "qcopy.h"
+#include "rnc/data_labels.h"
+#include "rnc/gameplay/state/options.h"
+#include "rnc/gameplay/state/game_globals.h"
 
 /* Ported from rac1-decomp (src/overlays/l17_fleet/help_0021ED38.c: func_L17_0021ED38), where it is exact; names translated to the US level program. */
 
@@ -33,12 +36,8 @@ typedef struct {
     float x, y, z, w;
 } __attribute__((aligned(16))) V4_21ED38;
 
-extern char D_L17_0017C860_e[] __asm__("D_L17_0017C860");
-extern char D_L17_0017C820_e[] __asm__("D_L17_0017C820");
-extern unsigned char opt_mirror_anim __asm__("D_0015EDB5");
 extern T2C_21ED38 D_L17_0017C528[];
 extern char *hero_slot_moby(int) __asm__("FUN_L00_0020d460");
-extern char D_00141680[];
 extern float absolute_float(float) __asm__("func_001F99C0");
 extern float D_L17_0017C6F0[][25];
 extern float FUN_001f9b48(void *, void *);
@@ -51,10 +50,8 @@ extern float dot_vectors_xyz(void *a, void *b);
 extern float fast_add_rotations(float, float) __asm__("FUN_001fa580");
 extern float vector_length_xy(void *);
 extern float vector_length_xyz(void *a);
-extern int D_0015ED80;
 extern int D_L17_001612D0;
 extern int D_L17_001612D8;
-extern int D_0015EEA4;
 extern int D_L17_0015F5C4;
 extern int FUN_L00_002050b8(int);
 extern int FUN_L00_0020d568(void);
@@ -67,10 +64,9 @@ extern int FUN_L17_002020a8(int a);
 extern int allocate_voice_for_target_entry(int, int, int) __asm__("FUN_0022da68");
 extern int scale_game_frames(int) __asm__("FUN_001f96f8");
 extern int truncate_float_to_s32(float) __asm__("FUN_001fa6d0");
-extern short D_L17_0015F6D8 __attribute__((sda));
+int D_L17_0015F6D8[4] __attribute__((section(".sdata"))) = {8, 0, 11, 16};
 extern short D_L17_0015F688 __attribute__((sda));
-extern short D_L17_0015F6E8 __attribute__((sda));
-extern unsigned char D_0013E533[];
+struct HeroVelocityKey D_L17_0015F6E8[1] __attribute__((section(".sdata"))) = {{48.0f, 0.0f, 1000}};
 extern unsigned char D_L17_0017C6D8[];
 extern void *find_moby_hit(void *, int, int) __asm__("FUN_L00_0025a420");
 extern void hero_change_health(int n) __asm__("FUN_L00_002050c0");
@@ -105,6 +101,8 @@ extern char D_00141848[];
 
 /* Sets hero.state.current to a: moves state, control_mode and state_timer into the prev_* fields, zeroes state_step, then sets up the new state; returns 0 when the change is refused. */
 extern int hero_set_state(int, int) __asm__("FUN_L17_0021e530");
+extern char D_L17_0017C860[];
+extern char D_L17_0017C820[];
 int hero_set_state(int a, int b) {
     int old2088;
     char *moby;
@@ -616,7 +614,7 @@ int hero_set_state(int a, int b) {
                 if (b) {
                     struct Hero *v = &hero;
                     set_hero_animation(v->state.step + 3,
-                                     ((int *)&D_L17_0015F6D8)[v->state.step], (float)n);
+                                     D_L17_0015F6D8[v->state.step], (float)n);
                 }
             }
         }
@@ -650,7 +648,7 @@ int hero_set_state(int a, int b) {
                 set_hero_animation(2, 0, (float)scale_game_frames(8));
             } else if (p->vehicle_mode == 0) {
                 set_hero_animation(p->state.step + 3,
-                                 ((int *)&D_L17_0015F6D8)[p->state.step],
+                                 D_L17_0015F6D8[p->state.step],
                                  (float)scale_game_frames(8));
             }
         }
@@ -748,7 +746,7 @@ int hero_set_state(int a, int b) {
         p->state.control_mode = 0xD;
         p->unk2284 = 7;
         {
-            char *h = ((char *)&D_00141680);
+            char *h = ((char *)&item_usage);
             if (*(unsigned short *)(h + 0x60) <= 0xFFFE) {
                 *(unsigned short *)(h + 0x60) = *(unsigned short *)(h + 0x60) + 1;
             }
@@ -796,7 +794,7 @@ int hero_set_state(int a, int b) {
         p->state.control_mode = 0xE;
         p->unk2284 = 7;
         {
-            char *h = ((char *)&D_00141680);
+            char *h = ((char *)&item_usage);
             if (*(unsigned short *)(h + 0x60) <= 0xFFFE) {
                 *(unsigned short *)(h + 0x60) = *(unsigned short *)(h + 0x60) + 1;
             }
@@ -1193,7 +1191,7 @@ int hero_set_state(int a, int b) {
                     u->unk3D8 = 0.0f;
                     u->unk3DC = 18.0f;
                     u->unk3E0 = scale_game_frames(0x28);
-                    u->unk3E4 = D_L17_0017C860_e;
+                    u->unk3E4 = D_L17_0017C860;
                 }
                 {
                     struct Hero *w = &hero;
@@ -1431,7 +1429,7 @@ int hero_set_state(int a, int b) {
                 u->unk3DC = 26.0f;
                 u->unk3D8 = 0.0f;
                 u->unk3E0 = scale_game_frames(0x2D);
-                u->unk3E4 = D_L17_0017C820_e;
+                u->unk3E4 = D_L17_0017C820;
                 u->unk4AE = 1;
             } else if (u->state.current == 0xF) {
                 u->unk430 = 1.9f;
@@ -1449,7 +1447,7 @@ int hero_set_state(int a, int b) {
                 u->unk4A6 = scale_game_frames(0x55);
                 u->unk1B0 = scale_game_frames(0x46);
                 u->unk41C = 1;
-                if (D_0015ED80 != 0) {
+                if (pal_mode != 0) {
                     u->unk3D0 = scale_game_frames(0x22);
                 } else {
                     u->unk3D0 = scale_game_frames(0x23);
@@ -1460,7 +1458,7 @@ int hero_set_state(int a, int b) {
                     w->unk3D8 = 29.0f;
                     w->unk3DC = 50.0f;
                     w->unk3E0 = scale_game_frames(0x56);
-                    w->unk3E4 = (char *)&D_L17_0015F6E8;
+                    w->unk3E4 = D_L17_0015F6E8;
                     w->unk4AE = 1;
                 }
             } else if (u->state.current == 0xE) {
@@ -1645,7 +1643,7 @@ int hero_set_state(int a, int b) {
             }
             *(unsigned int *)(h + 0xC) =
                 *(unsigned int *)(h + 0xC) | (1 << current_level_index) | 0x80000000;
-            h2 = D_00141680;
+            h2 = item_usage;
             if (*(unsigned short *)(h2 + 0x128) <= 0xFFFE) {
                 *(unsigned short *)(h2 + 0x128) = *(unsigned short *)(h2 + 0x128) + 1;
             }
@@ -1682,7 +1680,7 @@ int hero_set_state(int a, int b) {
             break;
         }
         case 0x13: {
-            char *h = ((char *)&D_00141680);
+            char *h = ((char *)&item_usage);
             struct Hero *q;
             T2C_21ED38 *e;
             int k;

@@ -27,12 +27,17 @@ Usage:
   python3 scripts/data-refs.py --level 0 --overlays DIR
                                                     # one level image, DIR is
                                                     # extracted/overlays/ from Tools
+  python3 scripts/data-refs.py --emit ADDR --into FILE
+                                                    # define the declared object in FILE
+  python3 scripts/data-refs.py --level 0 --emit ADDR --into FILE
+                                                    # the same for level data
 """
 
 from __future__ import annotations
 
 import argparse
 import bisect
+import functools
 import json
 import os
 import re
@@ -523,8 +528,9 @@ def type_size(kind: str) -> int:
 
 SCALARS = {"u8": "<B", "s8": "<b", "char": "<b", "u16": "<H", "s16": "<h", "u32": "<I",
            "s32": "<i", "int": "<i", "u64": "<Q", "s64": "<q", "f32": "<f", "float": "<f",
-           "f64": "<d", "double": "<d"}
-DATA_SECTIONS = ("core.data", ".data")  # PROGBITS sections a definition may fill
+           "f64": "<d", "double": "<d", "short": "<h", "unsigned short": "<H",
+           "unsigned char": "<B", "signed char": "<b", "unsigned int": "<I", "long": "<i",
+           "unsigned long": "<I", "long long": "<q", "unsigned long long": "<Q"}
 
 
 def layout_tree(dump: str, record: str) -> list | None:
@@ -562,8 +568,13 @@ def c_value(kind: str, raw: bytes, symbols: dict[int, str]) -> str:
     if fmt is None:
         raise ValueError(f"no scalar format for {kind!r}")
     value = struct.unpack(fmt, raw[:struct.calcsize(fmt)])[0]
-    if fmt in ("<f", "<d"):
-        return repr(value) + ("f" if fmt == "<f" else "")
+    if fmt == "<f":
+        # the shortest decimal that reads back as the same float
+        text = next(t for t in (f"{value:.{n}g}" for n in range(1, 10))
+                    if struct.pack("<f", float(t)) == raw[:4])
+        return (text if any(c in text for c in ".en") else text + ".0") + "f"
+    if fmt == "<d":
+        return repr(value)
     if value < -0xFFFF and fmt in ("<i", "<q"):
         return hex(value & (1 << 8 * struct.calcsize(fmt)) - 1)  # bit pattern, e.g. a packed color
     return str(value) if value < 0 or value < 10 else hex(value)
@@ -600,39 +611,84 @@ def c_initializer(members: list, size: int, raw: bytes, symbols: dict[int, str],
     return "{" + ", ".join(parts) + "}"
 
 
-def emit_data(addr: int, elf: Path, sections: list, into: Path) -> Path:
+# Where a boot definition goes, by retail section: the configure.py table
+# that places it and how the C is written.
+EMIT_TABLES = {"core.data": "DATA_OVERLAYS", ".data": "DATA_OVERLAYS",
+               "core.rdata": "RODATA_OVERLAYS", "core.lit": "SDATA_OVERLAYS",
+               ".lit": "SDATA_OVERLAYS", "core.bss": "BSS_OVERLAYS", ".bss": "BSS_OVERLAYS"}
+
+
+def find_declaration(label: str, files: list[Path]) -> tuple[Path, str, str] | None:
+    """(file, C name, type) of the declaration bound to LABEL."""
+    pattern = re.compile(
+        r'^[ \t]*(?:extern[ \t]+)?([^;=\n]*?[ \t*])([A-Za-z_]\w*)[ \t]*((?:\[[^\]]*\])*)[ \t]*'
+        rf'__asm__\("{label}"\)', re.M)
+    # or named by the label itself, at file scope: extern T D_x[N] <attributes>;
+    plain = re.compile(rf'^extern[ \t]+([^;=\n]*?[ \t*])({label})[ \t]*((?:\[[^\]]*\])*)[^;=\n(]*'
+                       rf'(?:\(\([^;=\n]*\)\))?[^;=\n]*;', re.M)
+    found = None
+    for path in files:
+        text = path.read_text(errors="replace")
+        for prefix, name, dims in pattern.findall(text) or plain.findall(text):
+            found = (path, name, " ".join((prefix + dims).split()))
+    return found
+
+
+@functools.lru_cache(maxsize=None)
+def level_symbols(level: int) -> dict[int, str]:
+    """address -> name a level pointer can be written as: the level's
+    functions and declared level data, and the executable's declarations."""
+    import rnc_overlays as ov
+    symbols = {a: n for a, (n, _t) in c_declarations().items() if a < ov.RESIDENT_MAX}
+    symbols.update(ov.places_index().get(level, {}))
+    tag = f"D_L{level:02d}_"
+    for path in sorted((ROOT / "src" / "overlays").rglob("*.c")):
+        for name, label in re.findall(rf'([A-Za-z_]\w*)[ \t]*(?:\[[^\]]*\])*[ \t]*__asm__\("({tag}[0-9A-Fa-f]{{8}})"\)',
+                                      path.read_text(errors="replace")):
+            symbols.setdefault(int(label[-8:], 16), name)
+    return symbols
+
+
+def emit_data(addr: int, elf: Path, sections: list, into: Path, level: int | None = None) -> Path:
     """Append the definition of the declared object at ``addr`` to ``into``,
-    the C file of the only unit that reads it (listed in DATA_OVERLAYS)."""
+    the C file of the only unit that reads it, and say where it is listed:
+    a configure.py table (boot) or config/overlays/us/data.tsv (level N)."""
     clang = shutil.which("clang")
     if clang is None:
         raise SystemExit("--emit needs clang to read the struct layout")
-    section = section_name(addr, sections)
-    if section not in DATA_SECTIONS:
-        raise SystemExit(f"0x{addr:08X} is in {section}, not a data section a file can fill")
-    header, name, ctype = None, None, None
-    for path in sorted((ROOT / "include").rglob("*.h")):
-        for prefix, found, dims, label in DECL_RE.findall(path.read_text(errors="replace")):
-            if int(label, 16) == addr:
-                header, name, ctype = path, found, " ".join((prefix + dims).split())
-    if header is None:
-        raise SystemExit(f"0x{addr:08X} has no declaration in include/: declare its type there first")
+    if level is None:
+        section = section_name(addr, sections)
+        if section not in EMIT_TABLES:
+            raise SystemExit(f"0x{addr:08X} is in {section}, not a data section a file can fill")
+        label = f"D_{addr:08X}"
+        files = sorted((ROOT / "include").rglob("*.h"))
+    else:
+        label = f"D_L{level:02d}_{addr:08X}"
+        files = sorted((ROOT / "include").rglob("*.h")) + [into]
+    declared = find_declaration(label, files)
+    if declared is None:
+        raise SystemExit(f"{label} has no declaration in include/"
+                         + ("" if level is None else f" or {shown(into)}") + ": declare its type first")
+    header, name, ctype = declared
     elem = " ".join(ctype.replace("extern", "").split()).rpartition("[")[0] if "[" in ctype else ctype
     elem = re.sub(r"\s*\[.*$", "", ctype.replace("extern", "")).strip()
     counts = [int(n, 0) for n in re.findall(r"\[(0x[0-9A-Fa-f]+|\d+)\]", ctype)]
     if ctype.count("[") != len(counts):
         raise SystemExit(f"{ctype!r} has no complete size")
     record = re.sub(r"^(struct|union)\s+", "", elem)
-    include = header.relative_to(ROOT / "include").as_posix()
+    include = (header.relative_to(ROOT / "include").as_posix()
+               if header.is_relative_to(ROOT / "include") else None)
     dump, members = "", None
     if elem.endswith("*") or elem in SCALARS:
         step = 4 if elem.endswith("*") else struct.calcsize(SCALARS[elem])
     else:
         with tempfile.TemporaryDirectory() as tmp:
             probe = Path(tmp) / "probe.c"
-            probe.write_text(f'#include "types.h"\n#include "{include}"\n'
+            source = f'#include "{include}"\n' if include else into.read_text()
+            probe.write_text(f'#include "types.h"\n{source}\n'
                              f"void *keep = (void *)&{name};\nint size = sizeof({name});\n")
             run = subprocess.run([clang, "--target=mipsel-linux-gnu", "-c", "-o", "/dev/null",
-                                  f"-I{ROOT / 'include'}", "-w", "-Xclang", "-fdump-record-layouts", str(probe)],
+                                  f"-I{ROOT / 'include'}", f"-I{ROOT / 'src'}", "-w", "-Xclang", "-fdump-record-layouts", str(probe)],
                                  capture_output=True, text=True, check=False)
         dump = run.stdout
         members = layout_tree(dump, record)
@@ -643,16 +699,29 @@ def emit_data(addr: int, elf: Path, sections: list, into: Path) -> Path:
     size = step
     for n in counts:
         size *= n
-    with elf.open("rb") as fh:
-        image = ELFFile(fh)
-        for seg in image.iter_segments():
-            if seg["p_type"] == "PT_LOAD" and seg["p_vaddr"] <= addr < seg["p_vaddr"] + seg["p_filesz"]:
-                fh.seek(seg["p_offset"] + addr - seg["p_vaddr"])
-                raw = fh.read(size)
-                break
-        else:
-            raise SystemExit(f"0x{addr:08X} has no file bytes")
-    symbols = {a: n for a, (n, _t) in c_declarations().items()}
+    if level is not None:
+        import rnc_overlays as ov
+        raw = ov.level_data_bytes(level, addr, size)  # None: no loaded bytes there
+        bss = next((r for r in ov.manifest(level)["records"] if r["type"] == 8), None)
+        in_bss = bss and bss["address"] <= addr and addr + size <= bss["address"] + bss["bytes"]
+        if raw is None and not in_bss:
+            raise SystemExit(f"{label}+{size} is not in level {level:02d}'s data or bss")
+        table = "bss" if raw is None else "data"
+    else:
+        table = EMIT_TABLES[section]
+        raw = None
+        if table != "BSS_OVERLAYS":
+            with elf.open("rb") as fh:
+                image = ELFFile(fh)
+                for seg in image.iter_segments():
+                    if seg["p_type"] == "PT_LOAD" and seg["p_vaddr"] <= addr < seg["p_vaddr"] + seg["p_filesz"]:
+                        fh.seek(seg["p_offset"] + addr - seg["p_vaddr"])
+                        raw = fh.read(size)
+                        break
+                else:
+                    raise SystemExit(f"0x{addr:08X} has no file bytes")
+    symbols = (level_symbols(level) if level is not None
+               else {a: n for a, (n, _t) in c_declarations().items()})
 
     def one(chunk: bytes) -> str:
         if members is None:
@@ -664,25 +733,62 @@ def emit_data(addr: int, elf: Path, sections: list, into: Path) -> Path:
             return one(chunk)
         width = len(chunk) // dims[0]
         rows = [nest(chunk[i * width:(i + 1) * width], dims[1:]) for i in range(dims[0])]
-        if members is not None and len(dims) == 1:  # one record per line
-            return "{\n    " + ",\n    ".join(rows) + ",\n}"
+        if len(dims) == len(counts) and (members is not None or len(dims) > 1):
+            return "{\n    " + ",\n    ".join(rows) + ",\n}"  # one record or row per line
         return "{" + ", ".join(rows) + "}"
 
-    body = "{0}" if not any(raw) else nest(raw, counts)
     out = into
     dims = "".join(f"[{n}]" for n in counts)
     text = out.read_text()
-    if re.search(rf"\b{name}\b[^;]*=", text):
+    # a definition sits at file scope (column 0); an indented `name = x;` is code
+    if re.search(rf"^(?!extern\b)[A-Za-z_][^;(\n]*\b{name}\b[^;(\n]*=", text, re.M):
         raise SystemExit(f"{shown(out)} already defines {name}")
     lines = text.rstrip("\n").splitlines()
-    last = max(i for i, line in enumerate(lines) if line.startswith("#include"))
-    if f'#include "{include}"' not in lines:
+    if include and f'#include "{include}"' not in lines:
+        last = max(i for i, line in enumerate(lines) if line.startswith("#include"))
         lines.insert(last + 1, f'#include "{include}"')
-    small = " NOT_SDA" if len(raw) <= 8 else ""
-    out.write_text("\n".join(lines) + f"\n\n{elem} {name}{dims}{small} = {body};\n")
+    decl = f"{elem}{'' if elem.endswith('*') else ' '}{name}{dims}"  # the label comes with the declaration
+    if raw is None:
+        # bss: in .bss in source order (a common symbol is placed by ld's own order)
+        definition = f'{decl} __attribute__((section(".bss")));'
+    else:
+        zero = "0" if not counts and members is None else "{0}"  # one value: plain 0
+        body = zero if not any(raw) else nest(raw, counts)
+        const = "const " if table == "RODATA_OVERLAYS" and not elem.startswith("const") else ""
+        in_lit = level is not None and ov.level_data_bytes(level, addr, size) is not None and any(
+            r["name"] == "lit" and r["address"] <= addr < r["address"] + r["bytes"]
+            for r in ov.manifest(level)["records"])
+        small = " NOT_SDA" if len(raw) <= 8 and table in ("DATA_OVERLAYS", "data") and not in_lit else ""
+        definition = f"{const}{decl}{small} = {body};"
+    if header == out:
+        # the file declared it itself: the definition replaces that extern
+        if name == label:
+            decl_re = re.compile(rf'^extern[^;=\n]*\b{label}\b[^;\n]*;[ \t]*$', re.M)
+        else:
+            decl_re = re.compile(rf'^extern[^;=\n]*\b{name}\b[^;=\n]*__asm__\("{label}"\)[^;\n]*;[ \t]*$', re.M)
+            definition = definition.replace(f"{name}{dims}", f'{name}{dims} __asm__("{label}")', 1)
+        text = "\n".join(lines) + "\n"
+        if decl_re.search(text):
+            out.write_text(decl_re.sub(lambda _m: definition, text, count=1))
+        else:  # declared only inside functions: define it after them, keep the externs
+            out.write_text(text + f"\n{definition}\n")
+    else:
+        out.write_text("\n".join(lines) + f"\n\n{definition}\n")
+    if level is not None:
+        catalogue = ROOT / "config" / "overlays" / "us" / "data.tsv"
+        entries = catalogue.read_text().splitlines()
+        notes = [entry for entry in entries if entry.startswith("#")]
+        rows = [entry for entry in entries if entry and not entry.startswith("#")]
+        if not any(row.startswith(label + "\t") for row in rows):
+            catalogue.write_text("\n".join(notes + sorted(rows + [f"{label}\t{size}"])) + "\n")
+        print(f"listed {label} ({size} bytes) in {shown(catalogue)}")
+        return out
     unit = os.path.relpath(out.resolve().with_suffix(""), ROOT / "src")
-    print(f'add to DATA_OVERLAYS in configure.py: "{unit}": '
-          f"(0x{addr:X}, 0x{addr - 0xFF080:X})")
+    if table == "BSS_OVERLAYS":
+        print(f'add to BSS_OVERLAYS in configure.py: "{unit}": (0x{addr:X}, {size})')
+    else:
+        print(f'add to {table} in configure.py: "{unit}": '
+              f"(0x{addr:X}, 0x{addr - 0xFF080:X}, {len(raw)})")
     return out
 
 
@@ -833,16 +939,22 @@ def main(argv=None) -> int:
     parser.add_argument("--emit", nargs="+", metavar="ADDR",
                         help="define the declared objects at these addresses (with --into)")
     parser.add_argument("--into", type=Path, metavar="FILE",
-                        help="with --emit: the C file of the only unit that reads them")
+                        help="with --emit: the C file of the only unit that reads them "
+                             "(with --level N: level N's data, listed in config/overlays/us/data.tsv)")
     args = parser.parse_args(argv)
 
     if args.emit:
         if args.into is None:
             parser.error("--emit needs --into FILE")
-        _code, data = read_sections(args.elf)
+        _code, data = ([], []) if args.level is not None else read_sections(args.elf)
+        failed = 0
         for addr in args.emit:
-            print(f"wrote {shown(emit_data(int(addr, 16), args.elf, data, args.into))}")
-        return 0
+            try:
+                print(f"wrote {shown(emit_data(int(addr, 16), args.elf, data, args.into, args.level))}")
+            except (SystemExit, ValueError) as e:  # report it and go on with the next address
+                print(f"{addr}: {e}", file=sys.stderr)
+                failed += 1
+        return 1 if failed else 0
 
     if args.level is None:
         if not args.elf.exists():

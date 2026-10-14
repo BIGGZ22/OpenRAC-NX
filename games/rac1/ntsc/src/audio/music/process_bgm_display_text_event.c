@@ -1,4 +1,7 @@
 #include "types.h"
+#include "rnc/data_labels.h"
+#include "rnc/ui/text/font_state.h"
+#include "rnc/gameplay/state/game_globals.h"
 
 struct Glyph {
     u8 u;
@@ -7,8 +10,6 @@ struct Glyph {
     s8 adv;
 };
 
-extern s32 D_0015F4A0;
-extern s32 D_0015F49C;
 #include "rnc/ui/text/font_palette.h"
 extern f32 func_001FA6C0(s32);
 extern void FUN_001f5808(f32, f32, f32, f32, s32, s32, s32, s32, u64, s32);
@@ -28,7 +29,7 @@ void process_bgm_display_text_event(u64 color, u8 *str, s32 n, s32 tex, struct G
     s32 avg;
     s32 mk;
 
-    if (D_0015F4A0 == 0) {
+    if (font_window_active == 0) {
         font_palette_colors[0] = color;
     }
     size = scale * 16.0f;
@@ -39,7 +40,7 @@ void process_bgm_display_text_event(u64 color, u8 *str, s32 n, s32 tex, struct G
     s = str;
     do {
         if ((u8)(*s - 8) < 8) {
-            if (D_0015F49C != 0) {
+            if (GlobalStateFlag != 0) {
                 color &= 0xFF000000;
                 color |= font_palette_colors[*s - 8] & 0xFFFFFF;
             }

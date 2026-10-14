@@ -22,8 +22,7 @@ INCLUDE_ASM("config/us/overlays/asm/FUN_L02_00264e70.s", FUN_L02_00264e70);
 #include "qcopy.h"
 extern int D_L00_0015F5CC;
 extern float D_0015ED6C;
-extern float D_0015ED68;
-extern float D_0015ED70;
+extern float frame_time_sq __asm__("D_0015ED70");
 extern float D_L02_00174460[] __attribute__((section(".data")));
 extern float D_L02_001600D0 __attribute__((sda));
 extern int D_L02_001600D4 __attribute__((sda));
@@ -51,8 +50,8 @@ void FUN_L02_00264e70(char *slots, float *position, float *direction, float dist
     float adjusted[4] __attribute__((aligned(16)));
     float velocity[4] __attribute__((aligned(16)));
     float offset[4] __attribute__((aligned(16)));
-    float travel_step = 0.0f;
     float speed = 0.0f;
+    float travel_step = 0.0f;
     float travel;
     float acceleration;
     int count;
@@ -71,9 +70,9 @@ void FUN_L02_00264e70(char *slots, float *position, float *direction, float dist
     } else {
         travel = distance;
     }
-    acceleration = D_0015ED70;
-    FUN_00213f38(&speed, &travel_step, travel, 1.0f, acceleration * 48.0f,
-                  D_L02_001600D0 * D_0015ED6C);
+    acceleration = D_L02_001600D0 * D_0015ED6C;
+    FUN_00213f38(&speed, &travel_step, travel, 1.0f, frame_time_sq * 48.0f,
+                  acceleration);
     FUN_001f9bf8(adjusted, adjusted, travel_step);
     first_count = D_L02_001600D4;
     if (travel < 4.0f) first_count = 1;
@@ -84,22 +83,23 @@ void FUN_L02_00264e70(char *slots, float *position, float *direction, float dist
         FUN_001f9a10(offset, offset, adjusted);
         FUN_001f9a68(velocity, adjusted, FUN_002132a8(0.0f, 1.0f));
         FUN_001f9a10(velocity, velocity, origin);
-        shot = FUN_L00_0026b230(velocity, offset, i < first_count ? 1ULL : 0ULL, travel);
+        shot = FUN_L00_0026b230(velocity, offset, i < first_count ? 1ULL : (unsigned long long)(i < first_count), travel);
         if (i == 2 && *(volatile int *)&save_shot) {
             int j;
+            char **slot = (char **)slots;
             for (j = 0; j < 7; j++) {
-                if (((char **)slots)[j] == 0) {
-                    ((char **)slots)[j] = shot;
+                if (*(char **)((char *)slot + (j << 2)) == 0) {
+                    *(char **)((char *)slot + (j << 2)) = shot;
                     break;
                 }
             }
         }
     }
     if (FUN_001f9770(slots + 0x1c)) {
-        speed = FUN_002132a8(10.0f, 30.0f);
-        speed = scale_timer_random(speed);
-        *(short *)(slots + 0x1c) = FUN_001fa6d0(speed);
-        random_vector(offset, 0.0f, D_0015ED6C + D_0015ED6C);
+        int timer = FUN_001fa6d0(scale_timer_random(FUN_002132a8(10.0f, 30.0f)));
+        acceleration = D_0015ED6C + D_0015ED6C;
+        *(short *)(slots + 0x1c) = timer;
+        random_vector(offset, 0.0f, acceleration);
         FUN_001f9a68(velocity, adjusted, FUN_002132a8(0.5f, 0.1f));
         FUN_001f9a10(velocity, velocity, offset);
         velocity[3] = 0.0f;

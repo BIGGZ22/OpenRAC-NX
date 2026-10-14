@@ -97,20 +97,20 @@ typedef struct
   u8 padE[0x1A];
   void *x28;
 } MobyClass;
-extern s32 D_0015EE8C;
+extern s32 gs_texture_allocation_base __asm__("D_0015EE8C");
 extern s64 D_0015EF48;
-extern s32 D_0015EF58;
+extern s32 intro_overlay_timer __asm__("D_0015EF58");
 extern s32 help_msg_data __asm__("D_0015EF60");
 extern s32 help_offset_table __asm__("D_0015EF64");
-extern s32 D_0015F460;
+extern s32 level_texture_payload_address __asm__("D_0015F460");
 extern TextEntry *help_msgs __asm__("D_0015F6A0");
 extern s32 D_0015FF00;
 extern s32 D_0015FF08;
-extern s32 D_001603CC;
+extern s32 registered_shrub_render_class_count __asm__("D_001603CC");
 extern s32 D_001603EC;
 extern s32 D_00160E94;
 extern s32 current_vu_chain __asm__("D_00160F0C");
-extern s32 D_00160F4C;
+extern s32 registered_object_render_class_count __asm__("D_00160F4C");
 extern s32 D_00160F64;
 extern u8 boot_sound_defs_b[] __asm__("D_001861E0");
 extern u8 D_00186310[];
@@ -154,7 +154,6 @@ extern s32 sceGsExecLoadImage(void *, u8 *);
 
 
 
-extern s32 D_0015EF64_far __asm__("D_0015EF64") __attribute__((section(".data")));
 void transition_load_wad(void) __asm__("FUN_001ea830");
 
 void transition_load_wad(void)
@@ -183,12 +182,12 @@ void transition_load_wad(void)
   register s32 adj;
   s64 t;
   s64 u;
-  D_0015EF58 = 0;
+  intro_overlay_timer = 0;
   i = 0;
   calculate_dma_transfer_address();
   init_mem_slots();
   current_vu_chain = 0x100000;
-  D_0015EE8C = 0x2C0000;
+  gs_texture_allocation_base = 0x2C0000;
   gs_texture_allocation_start = 0x2C0000;
   gs_texture_allocation_cursor = 0x2C0000;
   fill_transfer_words(D_00194180, 0x87654321, 0x10);
@@ -205,8 +204,8 @@ void transition_load_wad(void)
   FlushCache(0);
   hdr = (WadHeader *) D_001940C0.hdr;
   upload_texture_images(((u8 *) hdr) + hdr->x0, hdr->x8, ((u8 *) hdr) + hdr->xC);
-  t = ((s64) ((D_0015EE8C + hdr->x70) >> 8)) | 0x1D308000;
-  u = (((s64) ((D_0015EE8C + hdr->x74) >> 8)) << 37) | (((s64) 0xB800) << 19);
+  t = ((s64) ((gs_texture_allocation_base + hdr->x70) >> 8)) | 0x1D308000;
+  u = (((s64) ((gs_texture_allocation_base + hdr->x74) >> 8)) << 37) | (((s64) 0xB800) << 19);
   data = ((u8 *) hdr) + hdr->data;
   base = data + hdr->x60;
   special_material_template[0] = (t | u) | (((s64) (-1)) << 63);
@@ -259,8 +258,8 @@ void transition_load_wad(void)
   relocate_sky_definition(data + hdr->x14);
   c20 = (WadClass20 *) (((u8 *) hdr) + hdr->x1C);
   D_0015FF00 = 0;
-  D_00160F4C = 0;
-  D_001603CC = 0;
+  registered_object_render_class_count = 0;
+  registered_shrub_render_class_count = 0;
   for (k = 0; k < hdr->n18; k++)
   {
     register_moby_class((c20->offset != 0) ? (data + c20->offset) : (0), ((u8 *) hdr) + hdr->x3C, c20->x10, c20->x4);
@@ -281,7 +280,7 @@ void transition_load_wad(void)
     c30++;
   }
 
-  D_0015F460 = (s32) (data + hdr->x68);
+  level_texture_payload_address = (s32) (data + hdr->x68);
   unpack_point_records(((u8 *) hdr) + hdr->x5C, hdr->x58);
   new_var3 = data + hdr->x64;
   new_var4 = hdr->x54;

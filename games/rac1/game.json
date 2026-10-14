@@ -173,9 +173,9 @@
         "checkout": "~/Projects/rac1-decomp-ntsc",
         "license": "MIT (GPL-2.0 and newlib parts)",
         "exclude": [],
-        "commit": "e934c0aa83814274b9923b236e0847b72ef03189",
-        "date": "2026-10-13",
-        "imported": "2026-10-13"
+        "commit": "6db3f5530caf1b0276981611e8697ad3cda04b01",
+        "date": "2026-10-14",
+        "imported": "2026-10-14"
       },
       "build": {
         "host": "Linux or WSL; macOS through ./setup.sh --docker; toolchains downloaded and built by setup.sh",

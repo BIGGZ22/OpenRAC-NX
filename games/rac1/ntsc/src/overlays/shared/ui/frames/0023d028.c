@@ -3,20 +3,12 @@
 #include "rnc/gameplay/state/item_state.h"
 #include "rnc/globals.h"
 #include "asm.h"
+#include "rnc/data_labels.h"
+#include "rnc/rendering/render_globals.h"
 
-extern int D_0015EE8C_23d028 __asm__("D_0015EE8C");
-extern int D_0015EE78_23d028 __asm__("D_0015EE78_gp");
-extern int D_0015EE24_23d028 __asm__("D_0015EE24");
-extern char D_L00_00173EC0_23d028[] __asm__("D_L00_00173EC0") __attribute__((section(".data")));
-extern char D_L00_00197BC0_23d028[] __asm__("D_L00_00197BC0") __attribute__((section(".data")));
-extern char D_L00_0019A980_23d028[] __asm__("D_L00_0019A980") __attribute__((section(".data")));
-extern char D_L00_0019A280_23d028[] __asm__("D_L00_0019A280") __attribute__((section(".data")));
+extern u8 D_L00_00197BC0_lui[] __asm__("D_L00_00197BC0") __attribute__((section(".data")));
 extern char D_L00_001C5B00_23d028[] __asm__("D_L00_001C5B00") __attribute__((section(".data")));
-extern char D_L00_001C7700_23d028[] __asm__("D_L00_001C7700") __attribute__((section(".data")));
-extern char D_L00_001C6F00_23d028[] __asm__("D_L00_001C6F00") __attribute__((section(".data")));
 extern char D_L00_001BC1B0_23d028[] __asm__("D_L00_001BC1B0") __attribute__((section(".data")));
-extern char D_L00_001BD3B0_23d028[] __asm__("D_L00_001BD3B0") __attribute__((section(".data")));
-extern char D_L00_001BCDB0_23d028[] __asm__("D_L00_001BCDB0") __attribute__((section(".data")));
 void FUN_00215420_23d028(void) __asm__("FUN_00215420");
 void FUN_002335a0_23d028(void) __asm__("FUN_002335a0");
 void FUN_002015d8_23d028(void) __asm__("FUN_002015d8");
@@ -28,24 +20,31 @@ void FUN_L00_00268900_23d028(void) __asm__("FUN_L00_00268900");
 void FUN_00233d00_23d028(void) __asm__("FUN_00233d00");
 void FUN_L00_0023d198_23d028(void) __asm__("FUN_L00_0023d198");
 void FUN_L00_002607d0_23d028(int) __asm__("FUN_L00_002607d0");
+extern char D_L00_0019A980[] __attribute__((section(".data")));
+extern char D_L00_0019A280[] __attribute__((section(".data")));
+extern char D_L00_001C7700[] __attribute__((section(".data")));
+extern char D_L00_001C6F00[] __attribute__((section(".data")));
+extern char D_L00_001BD3B0[] __attribute__((section(".data")));
+extern char D_L00_001BCDB0[] __attribute__((section(".data")));
+extern char D_L00_00173EC0[] __attribute__((section(".data")));
 void FUN_L00_0023d028(void) {
     int t;
     FUN_00215420_23d028();
     FUN_002335a0_23d028();
     FUN_002015d8_23d028();
-    t = D_0015EE8C_23d028;
+    t = gs_texture_allocation_base;
     gs_texture_allocation_cursor = t;
-    D_0015EE78_23d028 = t;
-    FUN_001f97e8_23d028(D_L00_00173EC0_23d028, 0x87654321, 0x10);
-    FUN_001f97e8_23d028(D_L00_00197BC0_23d028, -1, 0x800);
-    FUN_001f97e8_23d028(D_L00_0019A980_23d028, -1, 0xE00);
-    FUN_001f97e8_23d028(D_L00_0019A280_23d028, 0, 0xE0);
+    D_0015EE78_gp = t;
+    FUN_001f97e8_23d028(D_L00_00173EC0, 0x87654321, 0x10);
+    FUN_001f97e8_23d028(D_L00_00197BC0_lui, -1, 0x800);
+    FUN_001f97e8_23d028(D_L00_0019A980, -1, 0xE00);
+    FUN_001f97e8_23d028(D_L00_0019A280, 0, 0xE0);
     FUN_001f97e8_23d028(D_L00_001C5B00_23d028, -1, 0xC00);
-    FUN_001f97e8_23d028(D_L00_001C7700_23d028, -1, 0x800);
-    FUN_001f97e8_23d028(D_L00_001C6F00_23d028, 0, 0x80);
+    FUN_001f97e8_23d028(D_L00_001C7700, -1, 0x800);
+    FUN_001f97e8_23d028(D_L00_001C6F00, 0, 0x80);
     FUN_001f97e8_23d028(D_L00_001BC1B0_23d028, -1, 0x400);
-    FUN_001f97e8_23d028(D_L00_001BD3B0_23d028, -1, 0x400);
-    FUN_001f97e8_23d028(D_L00_001BCDB0_23d028, 0, 0x40);
+    FUN_001f97e8_23d028(D_L00_001BD3B0, -1, 0x400);
+    FUN_001f97e8_23d028(D_L00_001BCDB0, 0, 0x40);
     FUN_001f2c60_23d028();
     FUN_001f2d98_23d028();
     FUN_002335d0_23d028();
@@ -55,13 +54,10 @@ void FUN_L00_0023d028(void) {
     if (current_level_index != 0) {
         FUN_L00_002607d0_23d028(current_level_index);
     }
-    D_0015EE24_23d028 += 0xB4;
+    D_0015EE24 += 0xB4;
 }
 extern int D_L00_001C3E98[];
 extern unsigned char D_0015EDD0[] __attribute__((sda));
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_0023d198.s", FUN_L00_0023d198);
-#else
 extern int D_00141660_23d028[] __asm__("D_00141660");
 void FUN_L00_00260860_23d028(int, int) __asm__("FUN_L00_00260860");
 void FUN_L00_0023d3d8(int i) __asm__("FUN_L00_0023d3d8");
@@ -76,27 +72,37 @@ void FUN_L00_0023d198(void) {
             items_acquired[i] = 1;
         }
         {
-            int table12 = 12, table13 = 13, table11 = 11;
-            int table17 = 17, table10 = 10, table16 = 16;
+            int entry0 = 0x4A;
+            int entry1 = 0x50;
+            int entry2 = 0x4F;
+            int entry3 = 0x54;
+            int entry4 = 0x51;
+            int entry5 = 0x4E;
+            int entry6 = 0x4B;
+            int entry7 = 0x52;
+            int entry8 = 0x4D;
+            int entry9 = 0x59;
+            int entry10 = 0x58;
+            int entry11 = 0x53;
             pause_iop_sprite_lists[0] = 15;
-            D_0015EDD0[0] = 0x4A;
-            D_0015EDD0[1] = 0x50;
-            D_0015EDD0[2] = 0x4F;
-            D_0015EDD0[3] = 0x54;
-            D_0015EDD0[4] = 0x51;
-            D_0015EDD0[5] = 0x4E;
-            D_0015EDD0[6] = 0x4B;
-            D_0015EDD0[7] = 0x52;
-            D_0015EDD0[8] = 0x4D;
-            D_0015EDD0[9] = 0x59;
-            D_0015EDD0[10] = 0x58;
-            D_0015EDD0[11] = 0x53;
-            pause_iop_sprite_lists[1] = table12;
-            pause_iop_sprite_lists[2] = table13;
-            pause_iop_sprite_lists[3] = table11;
-            pause_iop_sprite_lists[4] = table17;
-            pause_iop_sprite_lists[5] = table10;
-            pause_iop_sprite_lists[6] = table16;
+            D_0015EDD0[0] = entry0;
+            D_0015EDD0[1] = entry1;
+            D_0015EDD0[2] = entry2;
+            D_0015EDD0[3] = entry3;
+            D_0015EDD0[4] = entry4;
+            D_0015EDD0[5] = entry5;
+            D_0015EDD0[6] = entry6;
+            D_0015EDD0[7] = entry7;
+            D_0015EDD0[8] = entry8;
+            D_0015EDD0[9] = entry9;
+            D_0015EDD0[10] = entry10;
+            D_0015EDD0[11] = entry11;
+            pause_iop_sprite_lists[1] = 12;
+            pause_iop_sprite_lists[2] = 13;
+            pause_iop_sprite_lists[3] = 11;
+            pause_iop_sprite_lists[4] = 17;
+            pause_iop_sprite_lists[5] = 10;
+            pause_iop_sprite_lists[6] = 16;
             pause_iop_sprite_lists[7] = 19;
         }
     } else {
@@ -121,7 +127,6 @@ void FUN_L00_0023d198(void) {
         FUN_L00_0023d3d8(current_level_index);
     }
 }
-#endif
 /* Appends D_L00_001C3E98[i] to the 0xFF-terminated D_0015EDD0 list unless already present. */
 void FUN_L00_0023d3d8(int i) {
     int v = D_L00_001C3E98[i];

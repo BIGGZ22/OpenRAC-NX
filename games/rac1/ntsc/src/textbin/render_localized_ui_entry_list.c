@@ -2,11 +2,11 @@
 #include "rnc/ui/menus/menu_system.h"
 #include "rnc/ui/menus/menu_screen.h"
 #include "rnc/ui/text/font_metrics.h"
+#include "rnc/data_labels.h"
+#include "rnc/ui/text/font_state.h"
 
 
-extern s32 text_shadow_x __asm__("D_001601B8") __attribute__((sda));
 
-extern s32 text_shadow_y __asm__("D_001601BC") __attribute__((sda));
 extern void vu1_add_g_sregister(s32, long) __asm__("FUN_00233980");
 extern void setup_gif_paging(s32) __asm__("func_001F4280");
 extern void do_gif_paging(void) __asm__("func_001F4398");

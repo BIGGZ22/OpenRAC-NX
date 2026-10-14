@@ -1180,9 +1180,9 @@ f32 FUN_L00_00233d30(f32 *v) {
     return 0.0f;
 }
 extern s32 D_00140408[];
-extern s32 D_0013D428[];
+extern s32 weapon_ammo_counts[] __asm__("D_0013D428");
 extern s32 D_0013DEA0[];
-/* Moves amount from D_0013D428[idx] to D_0013DEA0[idx]; 0 if too little, else 1. */
+/* Moves amount from weapon_ammo_counts[idx] to D_0013DEA0[idx]; 0 if too little, else 1. */
 s32 use_ammo(s32 idx, s32 amount) __asm__("FUN_L00_00233db8");
 s32 use_ammo(s32 idx, s32 amount) {
     s32 n;
@@ -1196,11 +1196,11 @@ s32 use_ammo(s32 idx, s32 amount) {
     if (e->hE == 0) {
         return 1;
     }
-    v = D_0013D428[idx];
+    v = weapon_ammo_counts[idx];
     if (v < amount) {
         return 0;
     }
-    D_0013D428[idx] = v - amount;
+    weapon_ammo_counts[idx] = v - amount;
     D_0013DEA0[idx] = D_0013DEA0[idx] + amount;
     return 1;
 }
@@ -1225,7 +1225,7 @@ int add_ammo(int a, int b) {
 }
 extern s32 D_00140408_c __asm__("D_00140408") __attribute__((section(".data")));
 
-/* 1 if entry idx of D_L00_001C40B0 has no limit at 0xE, else D_0013D428[idx]; -1: D_00140408. */
+/* 1 if entry idx of D_L00_001C40B0 has no limit at 0xE, else weapon_ammo_counts[idx]; -1: D_00140408. */
 s32 get_ammo(s32 idx) __asm__("FUN_L00_00233e98");
 s32 get_ammo(s32 idx) {
     u8 *p;
@@ -1234,7 +1234,7 @@ s32 get_ammo(s32 idx) {
     p = ((u8 *)D_L00_001C40B0) + idx * 0x18;
     if (*(u16 *)(p + 0xE) == 0)
         return 1;
-    return D_0013D428[idx];
+    return weapon_ammo_counts[idx];
 }
 extern int hero_set_state(int, int) __asm__("FUN_L00_002223f8");
 /* Stores v, f and n in hero; calls 002223f8(0x65, 1) unless state is 0x65..0x67. */
@@ -1307,7 +1307,6 @@ typedef struct {
     int i3C;
 } Plat_234800;
 extern char hero_233f80[] __asm__("D_0013F350");
-extern float frame_time_sq __asm__("D_0015ED70") __attribute__((section(".sdata")));
 extern int scale_game_frames_233f80(int) __asm__("FUN_001f96f8");
 extern void scale_game_frames_v_233f80(int) __asm__("FUN_001f96f8");
 extern float f_001fa6c0(int) __asm__("FUN_001fa6c0");
@@ -1328,6 +1327,7 @@ extern void f_001f9a10(void *, void *, void *) __asm__("FUN_001f9a10");
 extern float f_001f9e90(float, float) __asm__("FUN_001f9e90");
 extern float fast_subtract_rotations(float, float) __asm__("FUN_001fa5c8");
 
+extern f32 frame_time_sq_macro __asm__("D_0015ED70") __attribute__((section(".sdata")));
 /* The hero on a moving platform: finds the platform the hero stands on or hangs from, tracks the platform's motion
    between frames (its attach points at 0x310-0x330) and carries the hero (position, facing, ledge-grab point) with it. */
 void FUN_L00_00233f80(void) {
@@ -1415,8 +1415,8 @@ void FUN_L00_00233f80(void) {
         sB4 = f_001f9b20(&((Hero_234800 *)hero_233f80)->v350);
         sB0 = ((Hero_234800 *)hero_233f80)->v350.z;
         if (!(plat->i3C & 2)) {
-            approach_value(&sB0, 0.0f, frame_time_sq * 25.0f * amt);
-            approach_value(&sB4, 0.0f, (frame_time_sq + frame_time_sq) * amt);
+            approach_value(&sB0, 0.0f, frame_time_sq_macro * 25.0f * amt);
+            approach_value(&sB4, 0.0f, (frame_time_sq_macro + frame_time_sq_macro) * amt);
             trooper_scale(&v20, &((Hero_234800 *)hero_233f80)->v350, sB4);
             v20.z = sB0;
         } else {
@@ -1495,7 +1495,6 @@ void FUN_L00_002347c0(void) {
     }
 }
 extern s32 D_L00_0015F5C4_234808 __asm__("D_L00_0015F5C4");
-extern f32 frame_time __asm__("D_0015ED6C");
 f32 FUN_001fa580_234808(f32, f32) __asm__("FUN_001fa580");
 f32 FUN_001f9de0_234808(f32) __asm__("FUN_001f9de0");
 s32 fast_tween_color(s32, s32, f32) __asm__("FUN_001fa6e0");
@@ -1640,9 +1639,9 @@ void FUN_L00_00234b38(void *a) {
     }
     FUN_L00_00234a50_00234b38(a);
 }
-extern char D_L00_0017A608[];
-extern char D_L00_0017C680[];
-extern char D_L00_0015F6A8[];
+extern u8 D_L00_0017A608[];
+extern u8 D_L00_0017C680[];
+extern u8 D_L00_0015F6A8[];
 void FUN_0020cca8(void *, int, void *);
 void FUN_001fa2b8(void *, void *);
 void FUN_0020e098(void *);
@@ -1688,7 +1687,6 @@ void FUN_L00_00234d40(void) {
 void FUN_L00_002395b0();
 void FUN_L00_00239630();
 void FUN_L00_00239810();
-extern u8 D_001415F8[];
 void queue_animation_update() __asm__("FUN_001ff308");
 /* Queues animation update 0x7535 with three FUN_L00_ callbacks and D_001415F8. */
 void show_health_hud(void) __asm__("FUN_L00_00234e00");

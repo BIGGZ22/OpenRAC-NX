@@ -37,7 +37,7 @@ extern struct M2c_D_00154E40 D_00154E40;
 extern u32 D_00154E54[];
 extern struct M2c_D_00154E58 D_00154E58;
 extern struct M2c_var_3_42 D_00154E80[32];
-extern s32 D_00154F80[32];
+extern s32 LookupTable[32] __asm__("D_00154F80");
 extern s32 AddDmacHandler();
 extern s32 DIntr();
 extern s32 EnableInterrupts();
@@ -50,7 +50,6 @@ extern void _sceSifCmdIntrHdlr();
 /* Initializes the fixed command state once, then submits a warm or cold SIF
  * handshake. The cold path polls register 4 until bit 0x20000 is set. */
 void sceSifInitCmd(void) {
-    s32 ipval;
     struct M2c_var_3_42 *var_3_42;
     struct M2c_var_3_42 *handlers;
     s32 *var_2_61;
@@ -59,8 +58,7 @@ void sceSifInitCmd(void) {
     s32 poll_value;
     s32 temp_5_29;
     s32 temp_6_30;
-    s32 var_16_46;
-    s32 var_16_59;
+    s32 ipval;
 
     DIntr();
     if (*(s32 *)D_0012FC04 == 0) {
@@ -70,40 +68,35 @@ void sceSifInitCmd(void) {
     return;
 block_3:
     *(s32 *)D_0012FC04 = 1;
-    ipval = 0x20;
     temp_6_30 = (s32)D_00154D80 | 0x20000000;
     temp_5_29 = (s32)D_00154E00 | 0x20000000;
+    handlers = D_00154E80;
+    D_00154E58.unk1C = LookupTable;
+    D_00154E58.unk10 = 0x20;
+    D_00154E58.unk14 = 0;
     D_00154E58.unk0 = (u8 *)temp_6_30;
     D_00154E58.unk4 = (u8 *)temp_5_29;
-    D_00154E58.unk1C = D_00154F80;
-    handlers = D_00154E80;
-    var_3_42 = handlers;
-    D_00154E58.unk8 = 0;
-
-    var_16_46 = 0x1F;
-    D_00154E58.unkC = D_00154E80;
-    D_00154E58.unk14 = 0;
     D_00154E58.unk18 = 0;
-    D_00154E58.unk10 = ipval;
+    D_00154E58.unk8 = 0;
+    D_00154E58.unkC = handlers;
+    ipval = 0x1F;
+    var_3_42 = handlers;
     do {
         var_3_42->unk0 = 0;
-        var_16_46 -= 1;
+        ipval -= 1;
         var_3_42->unk4 = 0;
         var_3_42 += 1;
-    } while (var_16_46 >= 0);
-    var_16_59 = 0x1F;
-    var_2_61 = D_00154F80 + 0x1F;
-loop_6:
-    *var_2_61 = 0;
-    var_16_59 -= 1;
-    var_2_61 -= 1;
-    if (var_16_59 >= 0) {
-        goto loop_6;
-    }
-    handlers[0].unk0 = FUN_0011a448;
-    handlers[1].unk0 = FUN_0011a428;
-    handlers[0].unk4 = &D_00154E58;
-    handlers[1].unk4 = &D_00154E58;
+    } while (ipval >= 0);
+    ipval = 0x1F;
+    do {
+        LookupTable[ipval] = 0;
+        ipval -= 1;
+    } while (ipval >= 0);
+    D_00154E80[0].unk0 = FUN_0011a448;
+    D_00154E80[1].unk0 = FUN_0011a428;
+    D_00154E80[0].unk4 = &D_00154E58;
+    D_00154E80[1].unk4 = &D_00154E58;
+    ipval = 0x20;
     EnableInterrupts();
     FlushCache(0);
     {

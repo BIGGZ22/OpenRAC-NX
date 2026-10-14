@@ -405,11 +405,10 @@ void FUN_L05_0023dc88(int i) {
         }
     }
 }
-extern int D_L05_0015F5CC;
+extern int frame_number __asm__("D_L05_0015F5CC");
 extern CollisionHit D_L05_00174240 __attribute__((section(".data")));
 extern u8 D_L05_00174260[] __attribute__((section(".data")));
 extern u8 D_L05_0017AB20[] __attribute__((section(".data")));
-extern u128 D_0013F3D0;
 extern int FUN_L05_002388a0(float, float, float *) __asm__("FUN_L00_0020a240");
 extern float FUN_L00_0022e0f0(void *) __asm__("FUN_001f9b20");
 extern float FUN_L00_0022e598(float, float) __asm__("FUN_001f9e90");
@@ -435,7 +434,7 @@ void FUN_L05_0024bdc0(void) {
     if (hero.unk20AD == 0) {
         FUN_L05_002413e0();
     }
-    if (D_L05_0015F5CC % 3 == 0) {
+    if (frame_number % 3 == 0) {
         hero.wall_probe_distance = 4.0f;
         hero.unk254 = 0;
         hero.unk255 = 0;
@@ -449,7 +448,7 @@ void FUN_L05_0024bdc0(void) {
             }
         }
     }
-    if (D_L05_0015F5CC % 5 == 0) {
+    if (frame_number % 5 == 0) {
         hero.unk260 = 0;
         hero.unk258 = 0.0f;
         if (hero.grounded_frames) {
@@ -489,7 +488,7 @@ void FUN_L05_0024bdc0(void) {
 /* Adapted from the exact FUN_L00_002279b0 (src/overlays/shared/ui/help/00221310.c): L05 has a wider head guard and its own level data. */
 
 extern float D_L05_00174268 __attribute__((section(".data")));
-extern int D_L05_0015F5CC;
+extern int frame_number __asm__("D_L05_0015F5CC");
 extern int FUN_001f0b58(void);
 extern int FUN_L00_00216de8_c(int a, int b) __asm__("FUN_L00_00216de8");
 extern int func_L00_001EFFF0(void *, void *, int, int, int) __asm__("FUN_001efa68");
@@ -558,9 +557,9 @@ int FUN_L05_002515d0(void) {
     u = &hero;
     if (u->state.control_mode - 0x11 >= 2u && u->state.control_mode != 7 &&
         u->state.control_mode != 0x14 && u->state.current != 0x12 &&
-        (D_L05_0015F5CC & 0xF) == 0) {
+        (frame_number & 0xF) == 0) {
         scale = 4.0f;
-        if ((D_L05_0015F5CC & 0x3F) == 0) {
+        if ((frame_number & 0x3F) == 0) {
             scale = 16.0f;
         }
         FUN_L00_002126b8(v1, v2, 0, scale, 1.3f);
@@ -615,19 +614,10 @@ typedef struct {
     int fDC;
 } Stats_2523C8;
 
-extern char D_0014161B[] __attribute__((section(".data")));
 extern float FUN_001f9b80(void *, void *);
 extern float FUN_001f9e90(float, float);
 extern float fast_difference_between_rotations(float, float) __asm__("func_001FA688");
-extern int D_0013C940_c __asm__("D_0013C940") ; /* no foreign declaration */
-extern int D_0013CAE0_c __asm__("D_0013CAE0") ; /* no foreign declaration */
-extern int D_0013F350; /* no foreign declaration */
-extern int D_00141660_c __asm__("D_00141660") ; /* no foreign declaration */
 extern int D_0015ED84; /* no foreign declaration */
-extern int D_0015EEA4; /* no foreign declaration */
-extern int D_L05_0015F674; /* no foreign declaration */
-extern int D_L05_0015FFD8; /* no foreign declaration */
-extern int D_L05_0017C088;
 extern int FUN_L00_001fefc8(void *);
 extern int help_request(int a, int b) __asm__("FUN_L00_00203908");
 extern int FUN_L00_0020d498(int);
@@ -660,7 +650,7 @@ extern int D_L05_0015F674_g __asm__("D_L05_0015F674") __attribute__((sda));
 extern int func_L05_0024D680_2523C8(int, int) __asm__("FUN_L05_0024cee8");
 extern int func_001F9908_2523C8(int *) __asm__("FUN_001f9740");
 extern Moby *D_L05_00160098_2523C8 __asm__("D_L05_0015FFD8") __attribute__((section(".sdata")));
-extern int D_0015EFA4_2523C8 __asm__("D_0015EEA4") __attribute__((section(".sdata")));
+extern int D_0015EEA4_macro __asm__("D_0015EEA4") __attribute__((section(".sdata")));
 extern int D_0015EE84_2523C8 __asm__("D_0015ED84") __attribute__((section(".sdata")));
 
 int FUN_L05_00251be8(void) {
@@ -1005,10 +995,10 @@ int FUN_L05_00251be8(void) {
             if (stats->hD8 < 0xFFFF) {
                 stats->hD8++;
             }
-            play_time = scale_game_frames_alt(D_0015EFA4_2523C8);
+            play_time = scale_game_frames_alt(D_0015EEA4_macro);
             unit = 600;
             if (play_time / unit > stats->hDA) {
-                stats->hDA = scale_game_frames_alt(D_0015EFA4_2523C8) / 600;
+                stats->hDA = scale_game_frames_alt(D_0015EEA4_macro) / 600;
             }
             stats->fDC = stats->fDC | (1 << D_0015EE84_2523C8) | 0x80000000;
             allocate_voice_for_target_entry_alt(0, 0, (int)item);
@@ -1137,7 +1127,6 @@ extern s32 allocate_voice_for_target_entry(s32, s32, void *) __asm__("FUN_0022da
 extern s32 D_L00_0015F5CC __asm__("D_L00_0015F5CC");
 extern s32 D_0013D4B8;
 extern s32 weapon_ammo_counts[37] __asm__("D_0013D428");
-extern f32 D_0013F420[];
 
 void FUN_L05_00253b48(void) {
     u8 *state;
@@ -1240,9 +1229,8 @@ INCLUDE_ASM("config/us/overlays/asm/FUN_L05_00254058.s", FUN_L05_00254058);
 #include "rnc/gameplay/state/usage_stats.h"
 extern u8 D_0013D388;
 
-extern s32 D_0015EEA4;
 extern s32 D_0015ED84 __attribute__((sda));
-extern s32 D_0015EEA4_sda __asm__("D_0015EEA4") __attribute__((sda));
+extern s32 D_0015EEA4_gp __asm__("D_0015EEA4") __attribute__((sda));
 extern f32 D_L05_002169F8[] __asm__("D_L05_002169F8");
 extern f32 FUN_001f96b0(f32) __asm__("FUN_L05_0022dbc8");
 
@@ -1257,7 +1245,7 @@ void FUN_L05_00254058(void) {
     if (D_0013D388 == 0) return;
     if (hero.unk8A8 != 0) {
         struct UsageStats *stats = (struct UsageStats *)D_00141848;
-        s32 duration = D_0015EEA4_sda;
+        s32 duration = D_0015EEA4_gp;
         s32 frame_count;
         s32 level;
         if (stats->stat[30].count <= 0xFFFE) {
@@ -1267,14 +1255,14 @@ void FUN_L05_00254058(void) {
         frame_count = scale_game_frames(duration) / 600;
         level = D_0015ED84;
         if (stats->stat[30].unk2 < frame_count) {
-            stats->stat[30].unk2 = scale_game_frames(D_0015EEA4_sda) / 600;
+            stats->stat[30].unk2 = scale_game_frames(D_0015EEA4_gp) / 600;
             level = *(s32 *)0x0015ED84;
         }
-        stats->stat[30].level_mask |= 1U << level;
-        stats->stat[30].level_mask |= 0x80000000;
+        stats->stat[30].level_mask = 0x80000000U | (1U << level) | stats->stat[30].level_mask;
     }
     {
-        counter = (s32 *)((char *)&hero + 0x700);
+        counter = (s32 *)((char *)&hero + 0x6D0);
+        counter += 12;
         for (i = 2; i >= 0; i--, counter++) {
             if (absolute_float(*(f32 *)(counter - 12)) > 3.3161256f) {
                 f32 rotation = *(f32 *)(counter - 12);
@@ -1290,7 +1278,8 @@ void FUN_L05_00254058(void) {
         struct Hero *g = &hero;
         *(s32 *)((char *)g + 0x70C) = 0;
         {
-            counter = (s32 *)((char *)g + 0x700);
+            s32 *counter = (s32 *)g;
+            counter += 0x700 / 4;
             i = 2;
             do {
                 if (*(s32 *)((char *)g + 0x70C) < *counter)
@@ -1316,6 +1305,7 @@ void FUN_L05_00254058(void) {
     }
     {
         struct Hero *g = &hero;
+        s32 *counter;
         *(s32 *)((char *)g + 0x6F0) = 0;
         counter = (s32 *)((char *)g + 0x6E0);
         i = 3;
@@ -1358,7 +1348,7 @@ typedef struct {
 } HelpPath;
 
 void FUN_L05_00254358(f32 *position, f32 *direction) {
-    struct Hero *g = &hero;
+    struct Hero *g;
     HelpPath *path;
     f32 height_limit;
     f32 best;
@@ -1367,40 +1357,47 @@ void FUN_L05_00254358(f32 *position, f32 *direction) {
     HelpPathPoint point;
     HelpPathPoint *p;
     HelpPath *cursor;
-    char *origin = (char *)g + 0x80;
 
-    if (g->unk86C == 0) {
-        *(HelpPathPoint *)position = *(HelpPathPoint *)origin;
-        *(HelpPathPoint *)direction = *(HelpPathPoint *)(origin + 0x10);
+
+    if (hero.unk86C == 0) {
+        qcopy(position, (char *)&hero + 0x80);
+        qcopy(direction, (char *)&hero + 0x90);
         return;
     }
-    path = (HelpPath *)D_L05_001B0930[*(s32 *)(*(char **)(g->unk86C + 0x78) + 0x24)];
+    path = (HelpPath *)D_L05_001B0930[*(s32 *)(*(char **)(hero.unk86C + 0x78) + 0x24)];
     best = 9999999.0f;
     index = 0;
     selected = 0;
-    p = path->points;
+
     if (path->count > 0) {
         height_limit = 4.0f;
+        p = path->points;
         cursor = path;
         do {
             f32 a;
             s32 next;
+            s32 count;
             f32 b;
-            a = FUN_001f9e90(cursor->points[0].x - *(f32 *)origin, cursor->points[0].y - *(f32 *)(origin + 4));
-            next = (s32)((u32)index + ((u32)path->count + 2U)) % path->count;
+            g = &hero;
+            a = FUN_001f9e90(cursor->points[0].x - g->motion.pos.f[0], cursor->points[0].y - g->motion.pos.f[1]);
+            count = path->count;
+            next = (s32)((u32)count + 2U);
+            next = (s32)((u32)index + (u32)next) % count;
             b = FUN_001f9e90(path->points[next].x - cursor->points[0].x, path->points[next].y - cursor->points[0].y);
             if (!(fast_difference_between_rotations(a, b) > 1.5707964f)) goto next_point;
             {
                 if (current_level_index == 0x10 && g->unk8B4 != 0) {
-                    f32 a = *(f32 *)((char *)g->unk8B4 + *(s16 *)((char *)g + 0x8C8) * 16 + 0x18);
-                    f32 b = *(f32 *)((char *)g->unk8B4 + g->unk898 * 16 + 0x18);
-                    f32 high = (a < b ? b : a) - cursor->points[0].z;
+                    f32 a = ((HelpPath *)g->unk8B4)->points[*(s16 *)((char *)g + 0x8C8)].z;
+                    f32 b = ((HelpPath *)g->unk8B4)->points[g->unk898].z;
+                    f32 high = cursor->points[0].z;
+                    if (a < b) high = b - high;
+                    else high = a - high;
                     if (absolute_float(high) > height_limit) {
                         goto next_point;
                     }
                 }
                 {
-                    f32 distance = FUN_001f9b80(origin, p);
+                    f32 distance = FUN_001f9b80((char *)&hero + 0x80, p);
                     if (distance < best) {
                         best = distance;
                         selected = index;
@@ -1408,14 +1405,13 @@ void FUN_L05_00254358(f32 *position, f32 *direction) {
                 }
             }
 next_point:
-            index = (s32)((u32)((char *)cursor - (char *)path) / 16U) + 2;
+            index += 2;
             p += 2;
             cursor = (HelpPath *)((char *)cursor + 0x20);
         } while (index < path->count);
     }
-    p = &path->points[selected];
-    *(HelpPathPoint *)position = *p;
-    point = *(HelpPathPoint *)position;
+    qcopy(position, &path->points[selected]);
+    qcopy(&point, position);
     point.z += 2.0f;
     position[2] = find_ground_height(0.5f, &point, 0);
     clear_u64_value(direction);
@@ -1451,17 +1447,10 @@ extern unsigned char D_0013D408_254608[] __asm__("D_0013D408") __attribute__((se
 extern unsigned char D_0013D4DF_254608 __asm__("D_0013D4DF") __attribute__((section(".data")));
 extern Path_254608 *D_L05_001B0930_254608[] __asm__("D_L05_001B0930");
 extern Ent_254608 *D_L05_0015FFD8_254608 __asm__("D_L05_0015FFD8") __attribute__((section(".sdata")));
-extern float D_0015ED60_254608 __asm__("D_0015ED60") __attribute__((section(".sdata")));
-extern int D_0015EE38_254608 __asm__("D_0015EE38") __attribute__((section(".sdata")));
-extern int D_0015EE3C_254608 __asm__("D_0015EE3C") __attribute__((section(".sdata")));
-extern int D_0015ED80_254608 __asm__("D_0015ED80") __attribute__((section(".sdata")));
-extern int D_0015EE58_254608[2] __asm__("D_0015EE58") __attribute__((section(".sdata")));
-extern int D_0015ED98_254608 __asm__("D_0015ED98") __attribute__((section(".sdata")));
-extern int D_0015EE68_254608[2] __asm__("D_0015EE68") __attribute__((section(".sdata")));
-extern int D_L05_0015F680_254608 __asm__("D_L05_0015F680") __attribute__((sda));
-extern int D_L05_0015F684_254608 __asm__("D_L05_0015F684") __attribute__((sda));
-extern float D_L05_0015F67C_254608 __asm__("D_L05_0015F67C") __attribute__((sda));
-extern int D_L05_0015F6A8_254608 __asm__("D_L05_0015F6A8") __attribute__((sda));
+extern int D_0015EE38_macro __asm__("D_0015EE38") __attribute__((section(".sdata")));
+extern int D_0015EE3C_macro __asm__("D_0015EE3C") __attribute__((section(".sdata")));
+extern int freeze_stats_time_ref_macro[2] __asm__("D_0015EE58") __attribute__((section(".sdata")));
+extern int freeze_stats_score_ref_a_macro[2] __asm__("D_0015EE68") __attribute__((section(".sdata")));
 extern float distance_xyz_254608(void *, void *) __asm__("FUN_001f9b48");
 extern float angle_atan2_254608(float, float) __asm__("FUN_001f9e90");
 extern float fast_difference_between_rotations_254608(float, float) __asm__("FUN_001fa688");
@@ -1474,6 +1463,13 @@ extern void mode_freeze_init_254608(int, void *) __asm__("FUN_001fbab8");
 extern void set_animation_parameter_254608(int, int) __asm__("FUN_001ff570");
 extern void func_001FFFA0_254608(void) __asm__("FUN_001ff768");
 
+extern int D_L05_0015F680 __attribute__((sda));
+extern int D_L05_0015F684 __attribute__((sda));
+extern float D_L05_0015F67C __attribute__((sda));
+extern int D_L05_0015F6A8 __attribute__((sda));
+extern f32 frame_scale __asm__("D_0015ED60") __attribute__((section(".sdata")));
+extern s32 pal_mode __asm__("D_0015ED80") __attribute__((section(".sdata")));
+extern s32 current_bolt_count_macro __asm__("D_0015ED98") __attribute__((section(".sdata")));
 /* Hoverboard race tick: advances the hero's and the opponents' path nodes and laps, handles wrong-way and fall resets, ranks everyone and finishes the race after three laps. */
 void FUN_L05_00254608(void) {
     float v0[4] __attribute__((aligned(16)));
@@ -1558,13 +1554,13 @@ void FUN_L05_00254608(void) {
     if (near != 0 || (fast_difference_between_rotations_254608(hero.motion.rot.f[2], dir) > 1.5707964f && hero.unk88D == 0)) {
         hero.unk8AE++;
         if (hero.unk8AE > FUN_001f96f8_254608(0xB4)) {
-            if (D_L05_0015F680_254608 == 0) {
-                D_L05_0015F680_254608 = 1;
-                D_L05_0015F684_254608 = 0;
-                D_L05_0015F67C_254608 = D_0015ED60_254608 * 0.08f;
+            if (D_L05_0015F680 == 0) {
+                D_L05_0015F680 = 1;
+                D_L05_0015F684 = 0;
+                D_L05_0015F67C = frame_scale * 0.08f;
             }
             hero.unk8AF = 1;
-            if (D_L05_0015F684_254608 == 1) {
+            if (D_L05_0015F684 == 1) {
                 hero.unk8AF = 0;
                 func_L05_00254B38_254608(v0, v1);
                 hero.unk8AE = 0;
@@ -1620,17 +1616,17 @@ void FUN_L05_00254608(void) {
         return;
     }
     if (*(D_0013D388_254608) != 0) {
-        D_L05_0015F6A8_254608 = 1;
+        D_L05_0015F6A8 = 1;
     }
     if (D_0015ED84_254608 == 5) {
-        D_0015EE38_254608++;
+        D_0015EE38_macro++;
     } else if (D_0015ED84_254608 == 0x10) {
-        D_0015EE3C_254608++;
+        D_0015EE3C_macro++;
     }
     if (D_0015ED84_254608 == 5) {
         int t;
 
-        if (D_0015ED80_254608 != 0) {
+        if (pal_mode != 0) {
             t = FUN_001f96f8_254608(0x1680);
         } else {
             t = FUN_001f96f8_254608(0x1644);
@@ -1651,16 +1647,16 @@ void FUN_L05_00254608(void) {
             hero.unk890 = (u8 *)(&D_L05_0015FFD8_254608[d->f28]);
             mode_freeze_init_254608(0, 0);
         }
-        if (D_0015EE58_254608[0] == 0) {
-            D_0015EE58_254608[0] = hero.unk894;
-            D_0015ED98_254608 += 0x3E8;
-        } else if (hero.unk894 < D_0015EE58_254608[0]) {
-            D_0015EE58_254608[0] = hero.unk894;
-            D_0015ED98_254608 += 0x3E8;
+        if (freeze_stats_time_ref_macro[0] == 0) {
+            freeze_stats_time_ref_macro[0] = hero.unk894;
+            current_bolt_count_macro += 0x3E8;
+        } else if (hero.unk894 < freeze_stats_time_ref_macro[0]) {
+            freeze_stats_time_ref_macro[0] = hero.unk894;
+            current_bolt_count_macro += 0x3E8;
         }
-        if (D_0015EE68_254608[0] < hero.unk8A8) {
-            D_0015EE68_254608[0] = hero.unk8A8;
-            D_0015ED98_254608 += 0x3E8;
+        if (freeze_stats_score_ref_a_macro[0] < hero.unk8A8) {
+            freeze_stats_score_ref_a_macro[0] = hero.unk8A8;
+            current_bolt_count_macro += 0x3E8;
         }
         D_L05_0015FFD8_254608[d->f28].f30 = 0xFF;
         if (hero.unk880 != -1) {
@@ -1678,16 +1674,16 @@ void FUN_L05_00254608(void) {
             hero.unk890 = (u8 *)(&D_L05_0015FFD8_254608[d->f28]);
             mode_freeze_init_254608(0, 0);
         }
-        if (D_0015EE58_254608[1] == 0) {
-            D_0015EE58_254608[1] = hero.unk894;
-            D_0015ED98_254608 += 0x3E8;
-        } else if (hero.unk894 < D_0015EE58_254608[1]) {
-            D_0015EE58_254608[1] = hero.unk894;
-            D_0015ED98_254608 += 0x3E8;
+        if (freeze_stats_time_ref_macro[1] == 0) {
+            freeze_stats_time_ref_macro[1] = hero.unk894;
+            current_bolt_count_macro += 0x3E8;
+        } else if (hero.unk894 < freeze_stats_time_ref_macro[1]) {
+            freeze_stats_time_ref_macro[1] = hero.unk894;
+            current_bolt_count_macro += 0x3E8;
         }
-        if (D_0015EE68_254608[1] < hero.unk8A8) {
-            D_0015EE68_254608[1] = hero.unk8A8;
-            D_0015ED98_254608 += 0x3E8;
+        if (freeze_stats_score_ref_a_macro[1] < hero.unk8A8) {
+            freeze_stats_score_ref_a_macro[1] = hero.unk8A8;
+            current_bolt_count_macro += 0x3E8;
         }
         D_L05_0015FFD8_254608[d->f28].f30 = 0xFF;
         if (hero.unk880 != -1) {
@@ -1724,7 +1720,143 @@ int FUN_L05_002551d0(void) {
 
 #define MACRO_ADDR
 
+#ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L05_00255208.s", FUN_L05_00255208);
+#else
+extern s32 current_level_index __asm__("D_0015ED84") __attribute__((sda));
+extern float frame_time __asm__("D_0015ED6C") __attribute__((section(".sdata")));
+extern void fast_vec_normalize(void *, void *, float) __asm__("FUN_001f9bf8");
+extern float fast_add_rotations(float, float) __asm__("FUN_001fa580");
+extern int FUN_L00_0025d7a0(void *, int, int, int);
+extern int D_L05_0015F698 __attribute__((sda));
+
+int FUN_L05_00255208(void) {
+    struct Hero *g = &hero;
+    float start[4] __attribute__((aligned(16)));
+    float end[4] __attribute__((aligned(16)));
+    float velocity[4] __attribute__((aligned(16)));
+    int level;
+    int state;
+    int can_fall;
+    if (frame_time * 12.0f < g->motion.unk164) {
+        FUN_L00_0025c9d8(start, 0.0f, 0.0f, 0.75f);
+        qcopy(end, start);
+        qcopy(velocity, &g->motion.velocity);
+        fast_vec_normalize(velocity, velocity, 0.55f);
+        fast_vec_add(velocity, velocity, &g->motion.velocity);
+        velocity[2] = 0.0f;
+        fast_vec_add(end, start, velocity);
+        if (FUN_L00_0021e8d8(start, end, 2, 0, 0) &&
+            D_L05_00174240.moby == 0 && D_L05_00174240.unk1C != 0) {
+            CollisionHit *wall = &D_L05_00174240;
+            if (1.2217305f < FUN_L00_0022e598(wall->normal_z, FUN_L00_0022e0f0(&wall->normal_x))) {
+                g->unk8A4 = fast_add_rotations(FUN_L00_0022e598(wall->normal_x, wall->normal_y), 3.1415927f);
+                if (fast_difference_between_rotations(FUN_L00_0022e598(g->motion.velocity.f[0], g->motion.velocity.f[1]), g->unk8A4) < 0.7853982f) {
+                    state = 0x6F;
+                    if (!(g->ground_distance < 1.0f)) state = 0x6D;
+                    goto change_state;
+                }
+            }
+        }
+    }
+    level = current_level_index;
+    if ((&hero)->wall_hit) {
+        float distance = FUN_L00_0022e0f0(&(&hero)->motion.displacement);
+        if (distance < FUN_L00_0022e0f0(&(&hero)->motion.velocity) * 0.25f) {
+            state = 0x6D;
+            goto change_state;
+        }
+        level = *(int *)0x0015ED84;
+    }
+    if (level == 5) {
+        if ((&hero)->motion.pos.f[2] < 61.4f) {
+            (&hero)->unk8A0 = 61.4f;
+            state = 0x6E;
+            goto change_state;
+        }
+    }
+    if (level == 0x10) {
+        if ((&hero)->motion.pos.f[2] < 76.0f) {
+            (&hero)->unk8A0 = 76.0f;
+            state = 0x6E;
+            goto change_state;
+        }
+        if ((&hero)->on_slip_ground && (&hero)->ground_distance < 0.1f) {
+            state = 0x6D;
+            goto change_state;
+        }
+    }
+    if ((&hero)->frames_off_ground.s == 0) {
+        if ((&hero)->unk8B4 != 0) {
+            int index = func_L01_0028C2D8_254608(&(&hero)->motion.pos, (&hero)->unk8B4, 0.0f);
+            int next = FUN_L00_0025d7a0((&hero)->unk8B4, index, -1, 1);
+            (&hero)->unk8C8 = index;
+            if (*(int *)0x0015ED84 == 5) {
+                Path_254608 *path = (Path_254608 *)(&hero)->unk8B4;
+                float height = path->p[index].z;
+                float other = path->p[next].z;
+                float distance;
+                float minimum;
+                if (height < other) minimum = height;
+                else minimum = other;
+                distance = FUN_001f9b80(&(&hero)->motion.pos, &path->p[index]);
+                if (0.5f < minimum - (&hero)->motion.pos.f[2] && 4.0f < distance) {
+                    state = 0x6D;
+                    goto change_state;
+                }
+            }
+        }
+        if ((&hero)->frames_off_ground.s == 0 && (&hero)->unk8BC && (&hero)->unk89C == 0 &&
+            (*((unsigned char *)(&hero)->moby + 0x53) == 0x55 || *((unsigned char *)(&hero)->moby + 0x53) == 0x7F) &&
+            *((unsigned char *)(&hero)->moby + 0x51) < 13) {
+            int animation = FUN_L05_002551b8();
+            int frames = FUN_001f96f8(7);
+            set_hero_animation(animation, 14, (float)frames);
+        }
+    }
+    can_fall = (&hero)->frames_off_ground.s == 0;
+    if ((&hero)->wall_hit && absolute_float((&hero)->unk210.f[2] - (&hero)->ground_z.f) < 0.05f) can_fall = 1;
+    if (!can_fall) return 0;
+    if ((&hero)->unk89C == 0) return 0;
+    if (!((&hero)->motion.velocity.f[2] < 0.0f)) return 0;
+    if (1.0471976f < absolute_float((&hero)->motion.rot.f[1])) { state = 0x6D; goto change_state; }
+    if (1.0471976f < absolute_float((&hero)->motion.rot.f[0])) { state = 0x6D; goto change_state; }
+    if (1.3962634f < fast_difference_between_rotations((&hero)->motion.rot.f[2], (&hero)->unk874)) { state = 0x6D; goto change_state; }
+    if ((unsigned)(*((unsigned char *)(&hero)->moby + 0x53) - 0x69) < 4 &&
+        (&hero)->anim_frame < (float)(&D_L05_0015F698)[(&hero)->unk88F]) { state = 0x6D; goto change_state; }
+    goto continue_fall;
+change_state:
+    hero_set_state(state, 1);
+    return 1;
+continue_fall:
+    if (D_0013D388_254608[0]) {
+        if (current_level_index == 5 && (&hero)->unk6E0[4] == 4 && *(int *)((char *)&hero + 0x70C) > 3 && D_0013D408_254608[7] == 0) {
+            D_0013D408_254608[7] = 1;
+            allocate_voice_for_bank_entry_254608(1, 0, 0);
+            queue_dialogue_message_254608(0x53D6, -1);
+        }
+        {
+            struct Hero *g = &hero;
+            *(int *)((char *)g + 0x714) = 0;
+        }
+    }
+    if ((&hero)->state.current == 0x6C) {
+        hero_set_state(0x6B, 0);
+        if (*((unsigned char *)(&hero)->moby + 0x53) != 0x55 && *((unsigned char *)(&hero)->moby + 0x53) != 0x7F) {
+            int animation = FUN_L05_002551b8();
+            int frames = FUN_001f96f8(7);
+            set_hero_animation(animation, 14, (float)frames);
+        }
+        return 1;
+    }
+    if (*((unsigned char *)(&hero)->moby + 0x53) != 0x55 && *((unsigned char *)(&hero)->moby + 0x53) != 0x7F) {
+        int animation = FUN_L05_002551b8();
+        int frames = FUN_001f96f8(7);
+        set_hero_animation(animation, 14, (float)frames);
+    }
+    return 0;
+}
+#endif
 /* Ported from rac1-decomp (src/overlays/shared/help_00237B00.c: func_L05_0025BDA8), where it is exact; names translated to the US level program. */
 
 extern char D_L05_0017C068[];

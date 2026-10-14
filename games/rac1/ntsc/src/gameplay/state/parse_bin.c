@@ -1,4 +1,6 @@
 #include "types.h"
+#include "rnc/data_labels.h"
+#include "rnc/gameplay/state/game_globals.h"
 
 struct Chunk {
     u8 *dst;
@@ -6,8 +8,6 @@ struct Chunk {
     s32 pad8;
     s32 id;
 };
-
-extern s32 *level_root __asm__("D_0015EE4C");
 
 s64 parse_bin(void) __asm__("FUN_0012d8f8");
 

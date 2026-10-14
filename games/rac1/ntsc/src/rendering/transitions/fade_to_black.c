@@ -2,7 +2,8 @@
 #include "rnc/rendering/dma_tag.h"
 
 #include "rnc/rendering/fs_aa_packets.h"
-extern s32 D_0015F438;
+#include "rnc/data_labels.h"
+#include "rnc/gameplay/state/game_globals.h"
 extern void put_draw_buffer_large(void) __asm__("func_001FB2D0");
 extern void append_gif_transfer_packet(void) __asm__("func_001FB368");
 extern void emit_rgba_draw_packet(s32, s32, s32, s32) __asm__("func_001F5210");
@@ -23,7 +24,7 @@ void fade_to_black(s32 n) {
 
     vu1_sync_chain(1);
     sceGsSyncV(0);
-    D_0015F438 += 1;
+    game_frame_counter += 1;
     vu1_init_chain();
     for (i = n - 1; i >= 0; i--) {
         put_draw_buffer_large();
@@ -38,13 +39,13 @@ void fade_to_black(s32 n) {
         render_packet_cursor.bytes = VP + 0x10;
         vu1_sync_chain(1);
         sceGsSyncV(0);
-        D_0015F438 += 1;
+        game_frame_counter += 1;
         vu1_send_chain();
         swap_render_buffer_chain();
     }
     vu1_sync_chain(1);
     sceGsSyncV(0);
-    D_0015F438 += 1;
+    game_frame_counter += 1;
     vu1_init_chain();
     put_draw_buffer_large();
     append_gif_transfer_packet();

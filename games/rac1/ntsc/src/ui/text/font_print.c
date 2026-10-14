@@ -1,4 +1,7 @@
 #include "types.h"
+#include "rnc/data_labels.h"
+#include "rnc/ui/text/font_state.h"
+#include "rnc/gameplay/state/game_globals.h"
 
 struct Glyph {
     u8 u;
@@ -7,8 +10,6 @@ struct Glyph {
     s8 adv;
 };
 
-extern s32 D_0015F4A0;
-extern s32 D_0015F49C;
 #include "rnc/ui/text/font_palette.h"
 extern void draw_textured_quad(s32, s32, s32, s32, s32, s32, s32, s32, s64,
                                s64) __asm__("func_001F5450");
@@ -25,7 +26,7 @@ void font_print(s32 x, s32 y, u64 color, u8 *text, s32 character_limit, s64 text
     s32 gray_value;
     s32 gray_color;
 
-    if (D_0015F4A0 == 0) {
+    if (font_window_active == 0) {
         font_palette_colors[0] = color;
     }
     character_count = 0;
@@ -36,7 +37,7 @@ void font_print(s32 x, s32 y, u64 color, u8 *text, s32 character_limit, s64 text
     do {
         /* Bytes 8..15 select a palette color, preserving the current alpha. */
         if ((u8)(*cursor - 8) < 8) {
-            if (D_0015F49C != 0) {
+            if (GlobalStateFlag != 0) {
                 color &= 0xFF000000;
                 color |= font_palette_colors[*cursor - 8] & 0xFFFFFF;
             }

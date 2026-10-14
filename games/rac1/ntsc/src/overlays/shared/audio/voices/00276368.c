@@ -3,6 +3,11 @@
 #include "rnc/gameplay/state/overlay_game_state.h"
 #include "rnc/globals.h"
 #include "asm.h"
+#include "rnc/data_labels.h"
+#include "rnc/gameplay/state/game_globals.h"
+#include "rnc/rendering/render_globals.h"
+#include "rnc/video/decoder/decoder_globals.h"
+#include "rnc/overlay/level_globals.h"
 
 #ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_00276368.s", FUN_L00_00276368);
@@ -12,7 +17,7 @@ typedef unsigned int u128_init __attribute__((mode(TI), aligned(16)));
 extern struct Own D_L00_001B71F0;
 extern s32 D_L00_00173E04;
 extern s32 D_L00_00173E08;
-extern u8 D_L00_00173E40[];
+extern u8 D_L00_00173E40[] __attribute__((section(".data")));
 extern void *D_L00_00197300[];
 extern s32 D_L00_0015F3F8_gp __asm__("D_L00_0015F3F8") __attribute__((sda));
 extern s32 frame_size __asm__("D_0013E504");
@@ -23,7 +28,7 @@ extern s32 D_L00_00180260[];
 extern s32 D_L00_001B9D30[];
 extern s32 D_L00_00141660_init[] __asm__("D_00141660");
 extern void *D_L00_001B9DE0;
-extern s32 D_L00_0015EE84 __asm__("D_0015EE84");
+extern s32 draw_buffer_address __asm__("D_0015EE84");
 extern s32 D_L00_0015EE78 __asm__("D_0015EE78");
 extern s32 D_L00_0015EED8 __asm__("D_0015EED8");
 extern s32 D_L00_0015F578 __attribute__((sda));
@@ -40,13 +45,14 @@ extern void *FUN_L00_002830d8(s32);
 extern void FUN_L00_002577c8(void *, s32, s32);
 extern void FUN_L00_00235668(s32);
 extern void FUN_L00_002a07f8(void);
-extern u8 D_L00_0016CAF0_raw[] __asm__("D_L00_0016CAF0");
 extern u8 D_L00_001B3518[];
 extern u8 D_L00_001B6088[];
 extern u8 D_L00_001B6B38[];
 extern u8 D_L00_001B86C8[];
 extern u8 D_L00_001B2588[];
 extern u8 D_L00_00180250[];
+extern u8 D_L00_00160280_init[] __asm__("D_L00_00160280") __attribute__((sda));
+extern u8 D_L00_00160290_init[] __asm__("D_L00_00160290") __attribute__((sda));
 extern f32 D_L00_00166DC0_init[] __asm__("D_L00_00166DC0");
 
 extern u8 D_L00_001841F0_init[] __asm__("D_L00_001841F0");
@@ -66,21 +72,25 @@ extern u8 D_L00_001841F0_init[] __asm__("D_L00_001841F0");
 #define D_L00_00184434 (*(s32 *)(D_L00_001841F0_init + 580))
 #define D_L00_00184430 (*(s32 *)(D_L00_001841F0_init + 576))
 #define D_L00_00184438 ((s32 *)(D_L00_001841F0_init + 584))
-#define D_L00_0016CC5C (*(f32 *)(D_L00_0016CAF0_raw + 364))
-#define D_L00_0016CC68 (*(f32 *)(D_L00_0016CAF0_raw + 376))
-#define D_L00_0016CC58 (*(s32 *)(D_L00_0016CAF0_raw + 360))
-#define D_L00_0016CC6C (*(s32 *)(D_L00_0016CAF0_raw + 380))
+#define D_L00_0016CC5C (*(f32 *)(D_L00_0016CA40 + 0x21c))
+#define D_L00_0016CC68 (*(f32 *)(D_L00_0016CA40 + 0x228))
+#define D_L00_0016CC58 (*(s32 *)(D_L00_0016CA40 + 0x218))
+#define D_L00_0016CC6C (*(s32 *)(D_L00_0016CA40 + 0x22c))
 #define D_L00_00180240 ((s32 *)(D_L00_00180250 + -16))
 
+extern u8 D_L00_0016CA40[];
+extern u8 D_L00_00166C80[];
 void FUN_L00_00276368(void) {
     s32 i;
     s32 special = 0;
+    f32 *source;
     s32 *handle;
     void *obj;
     u8 *table;
     s32 id;
+    struct Own *owner;
 
-    *(s32 *)(D_L00_00173E40 + 0x10) |= 0x80000000;
+    { s32 *table = (s32 *)D_L00_00173E40; table[4] |= 0x80000000; }
     D_L00_001B9CF0.unk124 = 0;
     D_L00_001B9CF0.unkD0 = 0;
     if (D_L00_001B9CF0.state == 10) {
@@ -118,14 +128,14 @@ void FUN_L00_00276368(void) {
         D_L00_001B9DE4 = 0;
         D_L00_001B9DE0 = 0;
     }
-    FUN_L00_001ff300(D_L00_00180250, (u8 *)0x00160280, 1.0f);
-    qcopy((void *)D_L00_00180240, (u8 *)0x00160290);
+    FUN_L00_001ff300(D_L00_00180250, D_L00_00160280_init, 1.0f);
+    qcopy((void *)D_L00_00180240, D_L00_00160290_init);
     *(volatile u128_init *)D_L00_00180260 = 0;
     *(volatile u128_init *)(D_L00_00180260 + 4) = 0;
     qcopy((void *)D_L00_001B9D30, (void *)D_L00_00166DC0_init);
     qcopy((void *)(D_L00_001B9D30 + 4), (void *)(D_L00_00166DC0_init + 4));
-    D_L00_001B9DD8 = *(s32 *)D_L00_0016CAF0_raw;
-    *(f32 *)D_L00_0016CAF0_raw = 0.63f;
+    *(f32 *)((u8 *)&D_L00_001B9CF0 + 0xe8) = *(f32 *)(D_L00_0016CA40 + 0xb0);
+    *(f32 *)(D_L00_0016CA40 + 0xb0) = 0.63f;
     D_L00_0016CC5C = 524288.0f;
     D_L00_0016CC68 = 255.0f;
     D_L00_0016CC58 = 0;
@@ -166,14 +176,14 @@ void FUN_L00_00276368(void) {
     } else {
         FUN_L00_00234fd0(0);
     }
-    FUN_L00_002a0f18(D_L00_001B9D00, D_L00_0015EE84, frame_size << 11);
+    FUN_L00_002a0f18(D_L00_001B9D00, draw_buffer_address, frame_size << 11);
     D_L00_001B9D08 = D_L00_0015EE78;
     if (D_L00_001B9CF0.state == 11 || D_L00_001B9CF0.state == 15) {
         s32 i;
         s32 *handle;
         D_L00_00184434 = D_L00_0015EE78 + 0x40000;
         D_L00_00184430 = D_L00_0015EE78;
-        D_L00_0015EE78 += 0x40400;
+        D_L00_0015EE78 = D_L00_00184434 + 0x400;
         handle = D_L00_00184438;
         i = 3;
         do {
@@ -208,6 +218,7 @@ void FUN_L00_00276368(void) {
         } while (i >= 0);
     }
     if (D_L00_001B9CF0.owner != 0) {
+        source = (f32 *)D_L00_00166C80;
         handle = D_L00_001B9E90_init;
         for (i = 0; i < 14; i++, handle++) {
             obj = FUN_L00_002830d8(0x472);
@@ -215,9 +226,9 @@ void FUN_L00_00276368(void) {
             if (obj != 0) {
                 *(u16 *)((u8 *)obj + 0x34) &= 0xfffd;
                 *(void **)((u8 *)*handle + 0x74) = (void *)0x002df638;
-                *(f32 *)((u8 *)*handle + 0x10) = D_L00_00166DC0_init[0];
-                *(f32 *)((u8 *)*handle + 0x14) = D_L00_00166DC0_init[1];
-                *(f32 *)((u8 *)*handle + 0x18) = D_L00_00166DC0_init[2];
+                *(f32 *)((u8 *)*handle + 0x10) = source[80];
+                *(f32 *)((u8 *)*handle + 0x14) = source[81];
+                *(f32 *)((u8 *)*handle + 0x18) = source[82];
                 *(s32 *)((u8 *)*handle + 0x40) = 0;
                 *(s32 *)((u8 *)*handle + 0x44) = 0;
                 *(s32 *)((u8 *)*handle + 0x48) = 0;
@@ -240,7 +251,6 @@ extern void FUN_L00_00239cc8(void);
 extern void FUN_L00_00239d00(void);
 extern void FUN_L00_00239df8(void);
 extern s32 D_00141660[];
-extern s32 D_00141408[];
 extern s32 D_0015EE78_gp __attribute__((sda));
 extern void *D_L00_00197300[];
 extern u8 D_L00_0017E4D8[] __attribute__((section(".data")));
@@ -280,19 +290,25 @@ void FUN_L00_00276908(void) {
             }
             D_L00_001B9CF0.owner = 0;
         }
-        for (i = 0; i < 4; i++) {
-            if (D_00141660[i] != ((s32 *)((u8 *)&D_L00_001B9CF0 + 0x30))[i]) {
-                hero.pending_item[i] =
-                    ((s32 *)((u8 *)&D_L00_001B9CF0 + 0x30))[i] != 0
-                        ? ((s32 *)((u8 *)&D_L00_001B9CF0 + 0x30))[i]
-                        : 0x26;
+        {
+            s32 i;
+            s32 value = 0x26;
+            for (i = 3; i >= 0; i--) {
+                if (D_00141660[3 - i] != ((s32 *)&D_L00_001B9CF0)[15 - i]) {
+                    hero.pending_item[3 - i] =
+                        ((s32 *)&D_L00_001B9CF0)[15 - i] != 0
+                            ? ((s32 *)&D_L00_001B9CF0)[15 - i]
+                            : value;
+                }
             }
         }
         {
             struct GameState *state = &D_L00_001B9CF0;
+            s32 value;
             table = D_L00_0017E4D8;
+            value = *(s32 *)((u8 *)*(void **)(table + 0x18) + 0x74);
             D_0015EE78_gp = *(s32 *)state->pad18;
-            hud_send_resident_bank(0, *(s32 *)((u8 *)*(void **)(table + 0x18) + 0x74), 0);
+            hud_send_resident_bank(0, value, 0);
         }
         FUN_L00_00235310(2);
         if (*(s32 *)((u8 *)*(void **)(table + 0x18) + 0x80) != 0) {
@@ -302,14 +318,11 @@ void FUN_L00_00276908(void) {
             FUN_L00_00235310(4);
         }
         {
-            s32 *saved;
             s32 remaining;
-            saved = (s32 *)((u32)&D_L00_001B9CF0 + 0x1a0);
             remaining = 13;
             do {
+                D_L00_001B9E90[13 - remaining] = delete_moby(D_L00_001B9E90[13 - remaining]);
                 remaining--;
-                *saved = (s32)delete_moby((struct Ent *)*saved);
-                saved++;
             } while (remaining >= 0);
         }
         handle = show_health_hud();
@@ -320,24 +333,23 @@ void FUN_L00_00276908(void) {
         D_L00_001B9CF0.state = 0x14;
         D_L00_001B9CF0.unk14 = 2;
         {
-            u8 *table;
-            value = *(s32 *)((u8 *)&D_L00_001B9CF0 + 0xcc);
-            table = (u8 *)D_L00_00197300[0];
-            if (value < table[0xc]) {
+            s32 value = *(s32 *)((u8 *)&D_L00_001B9CF0 + 0xcc);
+            if (value < ((u8 *)D_L00_00197300[0])[0xc]) {
                 do {
-                    table = (u8 *)D_L00_00197300[0];
-                    i = value++;
-                    *(s32 *)(table + 0x48 + i * 4) = 0;
-                    table = (u8 *)D_L00_00197300[0];
-                } while (value < table[0xc]);
+                    s32 *saved = (s32 *)(value * 4 + 0x48 + (u32)D_L00_00197300[0]);
+                    value++;
+                    *saved = 0;
+                } while (value < ((u8 *)D_L00_00197300[0])[0xc]);
             }
-            table = (u8 *)D_L00_00197300[0];
-            table[0xc] = *(u8 *)((u8 *)&D_L00_001B9CF0 + 0xcc);
+            {
+                struct GameState *state = &D_L00_001B9CF0;
+                ((u8 *)D_L00_00197300[0])[0xc] = *(u8 *)((u8 *)state + 0xcc);
+            }
         }
         D_L00_0015F5D8 = 1;
         {
-            u8 *table = D_L00_00173E40;
-            *(s32 *)(table + 0x10) &= 0x7fffffff;
+            s32 *table = (s32 *)D_L00_00173E40;
+            table[4] &= 0x7fffffff;
         }
         FUN_L00_002a08c8();
         FUN_L00_002a09d8(1);
@@ -403,15 +415,12 @@ extern Own D_L00_001B63F8;
 extern Own D_L00_001B78F0;
 extern Own D_L00_001B6820;
 extern G841F0 D_L00_001841F0;
-extern s16 D_001516D8[];
-extern s32 decode_mode __asm__("D_0015EED8");
 extern s32 D_L00_0015F5AC;
 extern s32 D_L00_0015F578 __attribute__((sda));
-extern s32 D_L00_0015F5C4;
 extern s32 level_timer __asm__("D_L00_0015F5C8") __attribute__((sda));
 extern s32 D_L00_0015F5D8;
 extern s32 D_L00_0016000C __attribute__((sda));
-extern f32 D_L00_0016CAF0 __attribute__((section(".data")));
+extern f32 D_L00_0016CAF0_lui __asm__("D_L00_0016CAF0") __attribute__((section(".data")));
 extern u8 D_L00_001E91B0[];
 
 extern void snd_flush_sound_commands(void) __asm__("FUN_0012dc80");
@@ -468,14 +477,14 @@ void FUN_L00_00276bd0(void) {
                 return;
             }
         }
-        if (D_001516D8[0] != 0) {
+        if (cd_read_active[0] != 0) {
             return;
         }
         D_L00_0015F578 = 0x1E000;
         FUN_002335a0();
         qcopy(&D_L00_00166DC0[0], &D_L00_001B9CF0.v40);
         qcopy(&D_L00_00166DC0[1], &D_L00_001B9CF0.v50);
-        D_L00_0016CAF0 = D_L00_001B9CF0.unkE8;
+        D_L00_0016CAF0_lui = D_L00_001B9CF0.unkE8;
         FUN_L00_00235668(0);
         if (D_L00_001B9CF0.unk140 != 0) {
             D_L00_0016000C = -1;
@@ -651,7 +660,7 @@ typedef struct VoiceRenderEntry {
 } VoiceRenderEntry;
 
 extern s32 frame_size __asm__("D_0013E504");
-extern s32 D_L00_0015EE84 __asm__("D_0015EE84");
+extern s32 draw_buffer_address __asm__("D_0015EE84");
 extern s32 D_L00_001B9E90_init[] __asm__("D_L00_001B9E90");
 extern s32 D_L00_001B23C0[] __asm__("D_L00_001B23C0");
 #define D_L00_001B9DC8 (*(s32 *)((u8 *)&D_L00_001B9CF0 + 0xd8))
@@ -670,7 +679,7 @@ extern void FUN_L00_00299f40(void *, void *, s32 *, s32 *, s32 *, s32 *) __asm__
 extern void FUN_L00_0023caa8_772c0(s32, s32, s32, s32, u64, s32) __asm__("FUN_00200e08");
 extern void FUN_L00_001fc928(f32, s32, s32, s32) __asm__("FUN_001f7888");
 extern void FUN_L00_0023cc30(s32, s32, s32, s32, u64, s32, s32) __asm__("FUN_00200f90");
-extern void FUN_L00_001fca18(void) __asm__("FUN_001f7978");
+extern void FUN_L00_001fca18(void) __asm__("FUN_L00_001fca18");
 extern void FUN_L00_001fa290(s32, s32, s32, s32, s32, s32, s32, s32, u64, u64) __asm__("FUN_001f5450");
 extern void FUN_L00_0024fe20(void) __asm__("FUN_L00_0024fe20");
 extern void FUN_L00_0024ff88(void) __asm__("FUN_L00_0024ff88");
@@ -691,7 +700,7 @@ void FUN_L00_002772c0(s32 param_1) {
     struct { u128d image_copy[4]; u128d unused[5]; u128d first, last; } copies;
 
     emit_fixed_dma_packet_if_cursor();
-    FUN_L00_002a0fc8_772c0(D_L00_001B9CF0.unk10, D_L00_0015EE84, frame_size << 11);
+    FUN_L00_002a0fc8_772c0(D_L00_001B9CF0.unk10, draw_buffer_address, frame_size << 11);
     if (param_1 != 0) {
         return;
     }
