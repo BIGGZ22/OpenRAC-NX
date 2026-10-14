@@ -29,6 +29,12 @@ class PlayerActions(unittest.TestCase):
         self.assertEqual([need["path"] for need in play["needs"]], [self.pal["port-levels"]["artifact"]])
         self.assertNotIn("python", play.get("requires", []))
 
+    def test_every_action_starts_in_a_folder_the_copy_has(self):
+        # 0.4.0 started the game in games/rac1/pal, which only a checkout has: Play failed with
+        # "the directory name is invalid".
+        self.assertEqual(self.pal["play"]["cwd"], "{data}")
+        self.assertIn(self.pal["port-levels"]["cwd"], (".", "{root}"))
+
     def test_nothing_writes_in_the_copy(self):
         for action in self.pal.values():
             for arg in action.get("args", []):

@@ -256,6 +256,28 @@ mod tests {
         let play = file.find(&scope, "play").expect("play");
         assert!(play.needs.iter().all(|n| n.path.starts_with("{data}/")), "{:?}", play.needs);
         assert!(file.find(&scope, "port-build").is_none() && file.repository.is_empty());
+
+        // With a game set up (OPENRAC_TEST_INSTALL: an install folder whose active/rac1/data has
+        // the disc and the levels), Play is planned as the launcher plans it and started as it
+        // starts it, for a few frames: the program, its arguments and the folder it starts in
+        // are all the copy's own. 0.4.0 planned a folder the copy does not have.
+        let Some(install) = std::env::var_os("OPENRAC_TEST_INSTALL") else { return };
+        let config = Config {
+            root: Some(root.clone()),
+            install_dir: Some(install.into()),
+            python: crate::detect::bundled_python(&root),
+            ..Config::default()
+        };
+        let plan = plan(&config, &scope, "play", None).unwrap();
+        assert!(plan.cwd.is_dir(), "play would start in {}", plan.cwd.display());
+        assert!(plan.program.is_file(), "{}", plan.program.display());
+        let status = std::process::Command::new(&plan.program)
+            .args(&plan.args)
+            .args(["--frames", "120", "--skip-movies"])
+            .current_dir(&plan.cwd)
+            .status()
+            .unwrap();
+        assert!(status.success(), "the game ended with {status}");
     }
 
     #[test]

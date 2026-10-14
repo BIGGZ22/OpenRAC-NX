@@ -68,6 +68,9 @@ def player_actions() -> dict:
                         action["args"] = args[:at] + args[at + 2:]      # the game looks in <data>/port by itself
                     action["needs"] = [{"path": f"{LEVELS}/level_99/manifest.json", "from": need["from"]}
                                        for need in action.get("needs", [])]
+                    # The game is started in the data folder: what it writes beside itself (a
+                    # screenshot) has a place there, and the copy has no folder for each version.
+                    action["cwd"] = "{data}"
                 action.pop("todo", None)
             kept.append(action)
         out["versions"][key] = kept
