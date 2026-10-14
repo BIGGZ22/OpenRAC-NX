@@ -59,6 +59,18 @@ fn environment(cmd: &mut Command, root: Option<&std::path::Path>) {
     if let Some(root) = root {
         cmd.env("OPENRAC_ROOT", root);
     }
+    // AppImageKit's AppRun unconditionally exports PYTHONHOME=$APPDIR/usr/ and
+    // PYTHONPATH=$APPDIR/usr/share/pyshared/:, which poisons any Python process
+    // started from the AppImage (both the carried python in resources/openrac/python
+    // and any system python). Clear them before running any tool.
+    if let Ok(appdir) = std::env::var("APPDIR") {
+        if std::env::var("PYTHONHOME").map_or(false, |h| h.starts_with(&appdir)) {
+            cmd.env_remove("PYTHONHOME");
+        }
+        if std::env::var("PYTHONPATH").map_or(false, |p| p.starts_with(&appdir)) {
+            cmd.env_remove("PYTHONPATH");
+        }
+    }
 }
 
 impl Jobs {
@@ -334,5 +346,20 @@ mod tests {
         jobs.cancel(started.id).unwrap();
         let exit = rx.recv_timeout(Duration::from_secs(10)).unwrap();
         assert!(matches!(exit, Event::Exit { cancelled: true, .. }), "{exit:?}");
+    }
+
+    #[test]
+    fn cleans_appimage_python_environment() {
+        std::env::set_var("APPDIR", "/tmp/.mount_test");
+        std::env::set_var("PYTHONHOME", "/tmp/.mount_test/usr/");
+        std::env::set_var("PYTHONPATH", "/tmp/.mount_test/usr/share/pyshared/:");
+        let mut cmd = Command::new("true");
+        environment(&mut cmd, None);
+        std::env::remove_var("APPDIR");
+        std::env::remove_var("PYTHONHOME");
+        std::env::remove_var("PYTHONPATH");
+        let envs: HashMap<_, _> = cmd.get_envs().collect();
+        assert_eq!(envs.get(std::ffi::OsStr::new("PYTHONHOME")), Some(&None));
+        assert_eq!(envs.get(std::ffi::OsStr::new("PYTHONPATH")), Some(&None));
     }
 }

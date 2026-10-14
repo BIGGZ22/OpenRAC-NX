@@ -249,6 +249,16 @@ pub fn check_tool(tool: Tool, path: &Path) -> Check {
     }
     let mut cmd = quiet(path);
     cmd.args(args);
+    if tool == Tool::Python {
+        if let Ok(appdir) = std::env::var("APPDIR") {
+            if std::env::var("PYTHONHOME").map_or(false, |h| h.starts_with(&appdir)) {
+                cmd.env_remove("PYTHONHOME");
+            }
+            if std::env::var("PYTHONPATH").map_or(false, |p| p.starts_with(&appdir)) {
+                cmd.env_remove("PYTHONPATH");
+            }
+        }
+    }
     match run(cmd, Duration::from_secs(10)) {
         Ok(out) => {
             let line = out.lines().map(str::trim).find(|l| !l.is_empty()).unwrap_or("").to_string();

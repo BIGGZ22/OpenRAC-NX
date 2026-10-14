@@ -432,6 +432,22 @@ fn ensure_linux_desktop_integration() {
     }
 }
 
+/// AppImageKit's AppRun unconditionally sets PYTHONHOME=$APPDIR/usr/ and
+/// PYTHONPATH=$APPDIR/usr/share/pyshared/:, which poisons any Python process
+/// started from the AppImage (both our carried python in resources/openrac/python
+/// and any system python). Clear them before anything runs.
+#[cfg(target_os = "linux")]
+fn clean_appimage_python_env() {
+    if let Ok(appdir) = std::env::var("APPDIR") {
+        if std::env::var("PYTHONHOME").map_or(false, |h| h.starts_with(&appdir)) {
+            std::env::remove_var("PYTHONHOME");
+        }
+        if std::env::var("PYTHONPATH").map_or(false, |p| p.starts_with(&appdir)) {
+            std::env::remove_var("PYTHONPATH");
+        }
+    }
+}
+
 /// WebKitGTK's DMA-BUF renderer draws a blank or flickering window under Wayland with NVIDIA's
 /// own driver; the launcher turns it off there (and only there), before GTK starts. A value the
 /// player set is left as it is.
@@ -445,6 +461,8 @@ fn tune_webkit_for_wayland() {
 }
 
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    clean_appimage_python_env();
     #[cfg(target_os = "linux")]
     tune_webkit_for_wayland();
     tauri::Builder::default()
