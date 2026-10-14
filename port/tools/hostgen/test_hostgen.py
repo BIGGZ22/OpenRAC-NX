@@ -454,7 +454,7 @@ class Translate(unittest.TestCase):
             int twice(int x) { return 2 * x; }
             extern int twice(int, int);
             int odd(void) { int r; __asm__("mfhi %0" : "=h"(r)); return r; }
-            int vla(int n) { int a[n]; a[0] = n; return a[0]; }
+            int vla(int n) { int a[n + 1]; a[0] = n; return a[0]; }
             int test_main(void) {
                 char *s = "two
             lines";
@@ -465,6 +465,30 @@ class Translate(unittest.TestCase):
         """}, stubs=2)
         self.assertEqual(out, ["8", "1"])
         self.assertIn("inline assembly Clang cannot read", self.last_report["stubbed"].values())
+
+    def test_variable_length_array_of_a_local_length(self):
+        # A one-dimensional array whose length is a local goes on the guest stack for its
+        # block, as on the console, and its address can be passed on.
+        out = self.run_program({"a.c": """
+            int sum(int *p, int n) { int s = 0; while (n--) s += *p++; return s; }
+            int fill(int count) {
+                int r = 0;
+                if (count != 0) {
+                    int found[count];
+                    int i;
+                    for (i = 0; i < count; i++) found[i] = i * 3;
+                    r = sum(found, count);
+                }
+                return r;
+            }
+            int test_main(void) {
+                test_print(fill(5));
+                test_print(fill(0));
+                test_print(fill(40));
+                return 0;
+            }
+        """})
+        self.assertEqual(out, ["30", "0", "2340"])
 
     def test_libraries_bind_to_shared_replacements(self):
         # The game's table binds an address to a shared replacement by name;

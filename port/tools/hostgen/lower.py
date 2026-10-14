@@ -103,6 +103,7 @@ class _Fn:
     params: list
     memory: dict = field(default_factory=dict)       # decl id -> frame field
     statics: dict = field(default_factory=dict)      # decl id -> static address variable
+    vla: dict = field(default_factory=dict)          # decl id -> guest address of a variable-length array
     host: dict = field(default_factory=dict)         # decl id -> host name
     frame: list = field(default_factory=list)        # (field, type)
     report: FnReport | None = None
@@ -604,6 +605,9 @@ class Unit:
             if d is not None and d.get("kind") == "VarDecl" and vid not in fn.memory:
                 if d.get("storageClass") == "static":
                     fn.statics[vid] = f"{d.get('name')}_at_"
+                elif self._vla_length(d) is not None:
+                    fn.vla[vid] = f"{d.get('name', 'v')}_vla{len(fn.vla)}"
+                    fn.memory[vid] = None
                 else:
                     fn.memory[vid] = self._frame_field(d, d.get("name", "v"))
         fn.wide = self._wide_locals(body)
@@ -637,6 +641,28 @@ class Unit:
         fn.frame.append((fname, self.ty(d)))
         return fname
 
+    def _vla_length(self, d: dict) -> str | None:
+        """The length of a one-dimensional variable-length array whose length is a local
+        or parameter by name (`struct Moby *found[count]`), else None."""
+        r = self.resolve(self.ty(d))
+        if not isinstance(r, ctype.Arr) or not r.vla or isinstance(self.resolve(r.of), ctype.Arr):
+            return None
+        return r.vla.strip() if re.fullmatch(r"[A-Za-z_]\w*", r.vla.strip()) else None
+
+    def _vla_decl(self, d: dict) -> str:
+        """Space for a variable-length array on the guest stack, given back when its block ends,
+        as the console's frame gives it back."""
+        fn = self.fn
+        length = self._vla_length(d)
+        ids = [i for i, h in fn.host.items() if self.decls.get(i, {}).get("name") == length]
+        ids += [i for i in fn.memory if fn.memory[i] is not None and self.decls.get(i, {}).get("name") == length]
+        if len(set(ids)) != 1:
+            raise Unsupported(f"variable-length array {d.get('name')}")
+        vid = ids[0]
+        n = self._mem_text(vid) if vid in fn.memory else fn.host[vid]
+        of = self.resolve(self.ty(d)).of
+        return f"GFRAME({fn.vla[d['id']]}, (uint32_t)({n}) * (uint32_t)sizeof({self.host(of)}));"
+
     def _mem_text(self, vid: str) -> str:
         d = self.decls[vid]
         return self.gref(self.ty(d), self._mem_addr(vid))
@@ -645,6 +671,8 @@ class Unit:
         fn = self.fn
         if vid in fn.statics:
             return fn.statics[vid]
+        if vid in fn.vla:
+            return fn.vla[vid]
         return f"(frame_ + (gaddr)offsetof(struct openrac_frame_{fn.name}, {fn.memory[vid]}))"
 
     def _static_init(self, d: dict, var: str) -> str:
@@ -885,6 +913,8 @@ class Unit:
             return []
         if d["id"] in fn.statics:
             return []  # set up in the prologue
+        if d["id"] in fn.vla:
+            return [pad + self._vla_decl(d)]
         if d["id"] in fn.memory:
             if init is None:
                 return []
