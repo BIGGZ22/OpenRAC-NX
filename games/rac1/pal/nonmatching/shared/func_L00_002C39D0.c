@@ -47,7 +47,7 @@ extern float func_001FA850(float, float);
 extern float func_001FA888(int);
 void func_L00_002C3790(float *a, float *b, float *out, float x, float y, float lim);
 extern char *func_L00_002AE110(int, void *);
-extern void func_L00_002AE278(void *);
+extern void func_L00_002AE278(void *, void *, void *);
 extern void func_0020D678(void *);
 
 void func_L00_002C39D0(unsigned char *m) {
@@ -274,7 +274,8 @@ L423C:
     } else {
         f14 = func_001FA888(D_0013E15A[0x4D0]) * 2.5f + 8.5f;
     }
-    func_L00_002C3790(W, Z, (float *)t2, f20, f14, 0.00000999999975f);
+    /* Retail: $f13 = 1e-5 and $f14 = the range, func_L00_002C3790's limit on the throw's distance. */
+    func_L00_002C3790(W, Z, (float *)t2, f20, 0.00000999999975f, f14);
 
 L42B0:
     switch (m[0x20]) {
@@ -293,7 +294,9 @@ L42B0:
             *(unsigned char **)(p + 0x50) = (unsigned char *)func_L00_002AE110((int)m, q);
             break;
         }
-        func_L00_002AE278(W);
+        /* Retail calls with the bomb t still in a1 and its variables loaded into a2 (the branch
+           likely's delay slot); the port needs them passed. */
+        func_L00_002AE278(W, t, *(void **)(t + 0x78));
         g2 = D_0014171B + 0x65;
         if (!(0xFFFE < *(unsigned short *)(g2 + 0x50))) *(unsigned short *)(g2 + 0x50) = *(unsigned short *)(g2 + 0x50) + 1;
         k = 600;

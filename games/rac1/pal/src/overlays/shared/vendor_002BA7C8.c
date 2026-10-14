@@ -1655,19 +1655,19 @@ char *func_L00_002C0098(char *self, float *position, float *angles, int unused, 
         short classId = classData ? *(short *)(classData + 0x46) : 0;
         if (classId != 5)
             continue;
-        distance = func_001F9D10(position, candidate + 0x10);
+        distance = FastVecDist(position, candidate + 0x10);
         if (distance > 40.0f)
             continue;
         if (distance > 30.0f)
             checkCollision = 0;
         qcopy(target, candidate + 0x10);
         target[2] += 0.4f;
-        angleError = func_001FA850(angles[2], func_L00_001FF860(target[0] - position[0], target[1] - position[1]));
+        angleError = FastDiffRots(angles[2], func_L00_001FF860(target[0] - position[0], target[1] - position[1]));
         angleError *= angleError;
-        heightError = func_001FA850(angles[1], func_L00_001FF860(distance, target[2] - position[2]));
+        heightError = FastDiffRots(angles[1], func_L00_001FF860(distance, target[2] - position[2]));
         heightError *= heightError;
         if (checkCollision) {
-            if (8.0f < func_001F9B88(*(float *)(candidate + 0x18) - *(float *)(self + 0x18)))
+            if (8.0f < FastAbsF(*(float *)(candidate + 0x18) - *(float *)(self + 0x18)))
                 valid = 1;
             else
                 valid = func_L00_001EFFF0_C0098(position, target, 6, candidate, 0) != 0;
@@ -1676,7 +1676,7 @@ char *func_L00_002C0098(char *self, float *position, float *angles, int unused, 
         }
         if (mode != 0 || !valid) {
             bonus = 0.0f;
-            score = func_001F9D10(position, target);
+            score = FastVecDist(position, target);
             if (*(float *)(candidate + 0x18) - *(float *)(self + 0x18) > 3.25f)
                 score += 15.0f;
             if (valid)
@@ -1691,7 +1691,7 @@ char *func_L00_002C0098(char *self, float *position, float *angles, int unused, 
         }
     }
     if (best == 0) {
-        char *playerPosition = D_0013F4D0;
+        char *playerPosition = gHeroPos;
         if (func_001F9D48(self + 0x10, playerPosition) > 3.2f)
             best = *(char **)(playerPosition + 0x2000);
     }

@@ -1368,7 +1368,7 @@ s32 func_L00_002DCDA8(u8 *moby, u8 *position, u8 *target) {
             {
                 u8 *seq = *(u8 **)(record + 0x70);
                 if (moby[0x53] != seq[2]) {
-                    func_00213DE0(moby, seq[2], 0, func_001F9850(10));
+                    func_00213DE0(moby, seq[2], 0, scale_ticks(10));
                 }
             }
             *(s32 *)(record + 0x6C) = 0;
@@ -1378,7 +1378,7 @@ s32 func_L00_002DCDA8(u8 *moby, u8 *position, u8 *target) {
         {
             u8 *seq = *(u8 **)(record + 0x70);
             if (moby[0x53] != seq[1]) {
-                func_00213DE0(moby, seq[1], 0, func_001F9850(10));
+                func_00213DE0(moby, seq[1], 0, scale_ticks(10));
             }
         }
         return 1;
@@ -1396,7 +1396,7 @@ s32 func_L00_002DCDA8(u8 *moby, u8 *position, u8 *target) {
         {
             u8 *seq = *(u8 **)(record + 0x70);
             if (moby[0x53] != seq[3]) {
-                func_00213DE0(moby, seq[3], 0, func_001F9850(10));
+                func_00213DE0(moby, seq[3], 0, scale_ticks(10));
             }
         }
         *(s16 *)(record + 0x68) = 3;
@@ -1408,7 +1408,7 @@ s32 func_L00_002DCDA8(u8 *moby, u8 *position, u8 *target) {
         {
             u8 *seq = *(u8 **)(record + 0x70);
             if (moby[0x53] != seq[1]) {
-                func_00213DE0(moby, seq[1], 0, func_001F9850(10));
+                func_00213DE0(moby, seq[1], 0, scale_ticks(10));
             }
         }
         *(s32 *)(record + 0x6C) = 0;
@@ -1417,7 +1417,7 @@ s32 func_L00_002DCDA8(u8 *moby, u8 *position, u8 *target) {
     }
     return 2;
 missing:
-    func_001E9730(D_L00_001EA3B0);
+    STUB_printf(D_L00_001EA3B0);
 fail:
     return 0;
 }

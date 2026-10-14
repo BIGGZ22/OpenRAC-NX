@@ -1110,17 +1110,17 @@ void func_L14_002EC9C8(struct Moby_EC9C8 *m) {
     int opacity;
     short *shade;
     float *pos;
-    dir[0] = func_001F9F90(m->rot.z);
-    dir[1] = func_001F9FA8(m->rot.z);
+    dir[0] = FastCos(m->rot.z);
+    dir[1] = FastSin(m->rot.z);
     dir[2] = 0.0f;
     qcopy(clip, &D_0013F450_EC9C8.motion.pos);
     clip[2] += 1.0f;
-    in_clip = func_00215570(clip, d->i504);
+    in_clip = is_point_inside_clip_volume(clip, d->i504);
     i = 0;
     pos = d->pos[0];
     shade = d->n3E0;
     do {
-        if (func_001F9938(&d->n320[i]) != 0) {
+        if (FastDecTimer(&d->n320[i]) != 0) {
             if (in_clip == 0 || i < 24) {
                 func_L14_002EC7E8_EC9C8(m, i, dir);
             }
@@ -1134,7 +1134,7 @@ void func_L14_002EC9C8(struct Moby_EC9C8 *m) {
                 first = first / func_001FA888(d->n380[i] - (*(int *)&D_L14_00161CFC));
             }
             {
-                int s = func_001FA898(((float)opacity - 0.0f) * first + 0.0f);
+                int s = truncate_float_to_s32(((float)opacity - 0.0f) * first + 0.0f);
                 *shade = s;
                 /* Fakematch: storing the shade again is a no-op that reload's cse drops; the
                  * extra uses rank `shade` above `m` for register allocation as in retail. */
@@ -1142,14 +1142,14 @@ void func_L14_002EC9C8(struct Moby_EC9C8 *m) {
                     *shade = s;
                 }
             }
-            func_001F9C30(work, dir, d->f440[i]);
-            func_001F9BD8(pos, pos, work);
+            FastVecScale(work, dir, d->f440[i]);
+            FastVecAdd(pos, pos, work);
             if (in_clip != 0 &&
-                func_001F9B88(pos[0] - D_L14_00167480.x) < 8.0f &&
-                func_001F9B88(pos[1] - D_L14_00167480.y) < 8.0f &&
-                func_001FA850(m->rot.z, D_L14_00167480.yaw) > 2.3561945f) {
-                if (d->n320[i] > func_001F9850(20)) {
-                    d->n320[i] = func_001F9850(20);
+                FastAbsF(pos[0] - D_L14_00167480.x) < 8.0f &&
+                FastAbsF(pos[1] - D_L14_00167480.y) < 8.0f &&
+                FastDiffRots(m->rot.z, D_L14_00167480.yaw) > 2.3561945f) {
+                if (d->n320[i] > scale_ticks(20)) {
+                    d->n320[i] = scale_ticks(20);
                 }
             }
         }
@@ -1157,7 +1157,7 @@ void func_L14_002EC9C8(struct Moby_EC9C8 *m) {
         shade++;
         i++;
     } while (i < 48);
-    func_001F49B0(func_L14_002ECC70_EC9C8, m);
+    AddDrawCallback(func_L14_002ECC70_EC9C8, m);
 }
 typedef struct {
     char pad0[0x14];
@@ -1297,31 +1297,31 @@ void func_L14_002EDC70(struct Moby *m) {
     switch (m->state) {
     case 0:
         if (d->path == -1) {
-            func_001E9730(D_L14_001FCE08, m->save_id);
-            func_0020D678(m);
+            STUB_printf(D_L14_001FCE08, m->save_id);
+            DeleteMoby(m);
             return;
         }
         path = D_L14_001B0F30_EDC70[d->path];
         if (path->count == 0) {
-            func_001E9730(D_L14_001FCE48, m->save_id);
-            func_0020D678(m);
+            STUB_printf(D_L14_001FCE48, m->save_id);
+            DeleteMoby(m);
             return;
         }
         for (i = 0; i < path->count; i++) {
-            f32 len = func_001F9D10(&((f32 *)path)[i * 4 + 4], &((f32 *)path)[((i + 1) % path->count) * 4 + 4]);
+            f32 len = FastVecDist(&((f32 *)path)[i * 4 + 4], &((f32 *)path)[((i + 1) % path->count) * 4 + 4]);
             char *pt = (char *)path + i * 16;
             *(f32 *)(pt + 0x1C) = len;
         }
         d->segment = 0;
         d->along = 0;
-        d->dir = func_002140B0(2) != 0 ? 1.0f : -1.0f;
+        d->dir = random_integer_below(2) != 0 ? 1.0f : -1.0f;
         qcopy(&m->pos, path->points[0].pos);
         m->state = 1;
-        d->spin[0] = func_002140F8(0.05235988f, 0.10471976f);
-        d->spin[1] = func_002140F8(0.034906585f, 0.06981317f);
-        d->spin[2] = func_002140F8(0.017453292f, 0.034906585f);
-        func_001F9BC0(d->vel);
-        d->phase = func_L00_00258C80(0.0f, 3.1415927f);
+        d->spin[0] = random_float_between(0.05235988f, 0.10471976f);
+        d->spin[1] = random_float_between(0.034906585f, 0.06981317f);
+        d->spin[2] = random_float_between(0.017453292f, 0.034906585f);
+        clear_u64_value(d->vel);
+        d->phase = randf_sym(0.0f, 3.1415927f);
         break;
     case 1:
         func_L00_0025E860_EDC70(D_L14_001B0F30_EDC70[d->path], v, &d->segment, &d->along, 1,
@@ -1332,22 +1332,22 @@ void func_L14_002EDC70(struct Moby *m) {
         hit = func_L00_0025B478(m, 0x230000, 0);
         func_L00_0025B4D0(m, hit, d->health, 0, &count, 0, 0, 4);
         if ((count >= 2 && hit != 0 && hit->moby->oclass != 0x283) || D_0013F450.coll_hit_moby == (u8 *)m) {
-            func_001F9BC0(&vel);
+            clear_u64_value(&vel);
             func_0022ED80(0, 0, m);
             if (D_0013F450.coll_hit_moby == (u8 *)m)
                 func_L00_0025F4A8(m, &vel, &m->pos, 3.0f, 1.0f, 10, 20, 60, 3.0f, 5.0f, 9.0f, 1.0f, -1, 15.0f, 1, 1, -1, 0);
             else
                 func_L00_0025F4A8(m, &vel, &m->pos, 0.0f, 0.0f, 10, 20, 60, 3.0f, 5.0f, 9.0f, 1.0f, -1, 15.0f, 1, 1, -1, 0);
-            func_0020D678(m);
+            DeleteMoby(m);
             return;
         }
-        m->rot.x = func_001FA748(m->rot.x, d->spin[0]);
-        m->rot.y = func_001FA748(m->rot.y, d->spin[1]);
-        m->rot.z = func_001FA748(m->rot.z, d->spin[2]);
-        d->phase = func_001FA748(d->phase, (*(f32 *)&D_L14_00161D18));
-        s = func_001F9FA8(d->phase);
-        r = func_001FA898(s * 48.0f) + 0xCF;
-        g = func_001FA898(s * 32.0f) + 0x30;
+        m->rot.x = FastAddRots(m->rot.x, d->spin[0]);
+        m->rot.y = FastAddRots(m->rot.y, d->spin[1]);
+        m->rot.z = FastAddRots(m->rot.z, d->spin[2]);
+        d->phase = FastAddRots(d->phase, (*(f32 *)&D_L14_00161D18));
+        s = FastSin(d->phase);
+        r = truncate_float_to_s32(s * 48.0f) + 0xCF;
+        g = truncate_float_to_s32(s * 32.0f) + 0x30;
         m->unk90 = g << 16 | (0xFF000000 | g << 8) | r;
         break;
     }
@@ -1524,7 +1524,7 @@ void func_L14_002EE260(struct Moby_EE260 *m) {
     int j;
 
     qcopy(&old, &m->pos);
-    func_001F9BD8(&m->pos, &m->pos, &v->vel);
+    FastVecAdd(&m->pos, &m->pos, &v->vel);
     qcopy(&target, &m->pos);
     ignore = v->ignore;
     qcopy(&aim, &v->vel);
@@ -1540,17 +1540,17 @@ void func_L14_002EE260(struct Moby_EE260 *m) {
         if (m->visible != 0) {
             for (i = 0; i < 3; i++) {
                 spark.q = 0;
-                spark.f[0] = func_002140F8(-1.0f, 1.0f);
-                spark.f[1] = func_002140F8(-1.0f, 1.0f);
-                spark.f[2] = func_002140F8(-1.0f, 1.0f);
+                spark.f[0] = random_float_between(-1.0f, 1.0f);
+                spark.f[1] = random_float_between(-1.0f, 1.0f);
+                spark.f[2] = random_float_between(-1.0f, 1.0f);
                 dir.q = spark.q;
-                func_L00_001FF4B0(&dir, &dir, func_001F9CB8(&spark) * 0.1f);
-                func_001F9BD8(&dir, &spark, &dir);
-                func_L00_001FF4B0(&dir, &dir, func_002140F8(D_0015EE6C + D_0015EE6C, D_0015EE6C * 4.0f));
+                func_L00_001FF4B0(&dir, &dir, FastVecLength(&spark) * 0.1f);
+                FastVecAdd(&dir, &spark, &dir);
+                func_L00_001FF4B0(&dir, &dir, random_float_between(D_0015EE6C + D_0015EE6C, D_0015EE6C * 4.0f));
                 func_L07_0029B070(&m->pos, &dir);
             }
         }
-        func_0020D678(m);
+        DeleteMoby(m);
         return;
     }
     while (tries < 3 && func_L00_001EFFF0(&old, &target, pass, ignore, 0) != 0) {
@@ -1566,25 +1566,25 @@ void func_L14_002EE260(struct Moby_EE260 *m) {
         if (m->visible != 0) {
             for (j = 0; j < 5; j++) {
                 spark.q = 0;
-                spark.f[0] = func_002140F8(-1.0f, 1.0f);
-                spark.f[1] = func_002140F8(-1.0f, 1.0f);
-                spark.f[2] = func_002140F8(-1.0f, 1.0f);
+                spark.f[0] = random_float_between(-1.0f, 1.0f);
+                spark.f[1] = random_float_between(-1.0f, 1.0f);
+                spark.f[2] = random_float_between(-1.0f, 1.0f);
                 dir.q = spark.q;
                 func_L00_001FF610(&spark, &v->vel, D_L14_00174680);
-                func_L00_001FF4B0(&dir, &dir, func_001F9CB8(&spark) * 0.5f);
-                func_001F9BD8(&dir, &spark, &dir);
-                func_L00_001FF4B0(&dir, &dir, func_002140F8(D_0015EE6C * 3.0f, D_0015EE6C * 6.0f));
+                func_L00_001FF4B0(&dir, &dir, FastVecLength(&spark) * 0.5f);
+                FastVecAdd(&dir, &spark, &dir);
+                func_L00_001FF4B0(&dir, &dir, random_float_between(D_0015EE6C * 3.0f, D_0015EE6C * 6.0f));
                 func_L00_0026EBC0((char *)&m->pos, (char *)&dir, 0x7F2F4F6F,
-                                 func_L00_00258BC8(func_001F9850(10), func_001F9850(15)), 30000.0f);
+                                 rand_range(scale_ticks(10), scale_ticks(15)), 30000.0f);
             }
         }
         func_0022ED80(0, 0, m);
-        func_0020D678(m);
+        DeleteMoby(m);
         return;
     }
     if (m->pos.x < 2.0f || m->pos.x > 1021.0f || m->pos.y < 2.0f || m->pos.y > 1021.0f ||
         m->pos.z < 2.0f || m->pos.z > 1021.0f) {
-        func_0020D678(m);
+        DeleteMoby(m);
     }
 }
 extern int D_0015EE84_m __asm__("D_0015EE84") MACRO_ADDR;
@@ -2179,13 +2179,13 @@ void func_L14_002F03E8(struct Moby *m) {
     int i;
 
     if (*(int *)(d + 0xA0) == -1) {
-        func_0020D678(m);
+        DeleteMoby(m);
         return;
     }
     e = (int *)D_L14_001B0F30[*(int *)(d + 0xA0)];
     if (*e == 0 || *(int *)(d + 0x114) == -1 ||
         *(int *)D_L14_001B0F30[*(int *)(d + 0x114)] != 11) {
-        func_0020D678(m);
+        DeleteMoby(m);
         return;
     }
 
@@ -2193,11 +2193,11 @@ void func_L14_002F03E8(struct Moby *m) {
     path = e;
     first = path + 4;
     for (i = 0; i < *path - 1; i++) {
-        ((f32 *)path)[i * 4 + 7] = func_001F9D10(&path[i * 4 + 4], &path[i * 4 + 8]);
+        ((f32 *)path)[i * 4 + 7] = FastVecDist(&path[i * 4 + 4], &path[i * 4 + 8]);
         *(float *)(d + 0xB4) += ((f32 *)path)[i * 4 + 7];
     }
     {
-        f32 len = func_001F9D10(&((f32 *)e)[i * 4 + 4], first);
+        f32 len = FastVecDist(&((f32 *)e)[i * 4 + 4], first);
         char *pt = (char *)e + i * 16;
         *(f32 *)(pt + 0x1C) = len;
     }
@@ -2205,11 +2205,11 @@ void func_L14_002F03E8(struct Moby *m) {
     path = (int *)D_L14_001B0F30[*(int *)(d + 0xB8)];
     *(float *)(d + 0xBC) = 0.0f;
     for (i = 0; i < *path - 1; i++) {
-        ((f32 *)path)[i * 4 + 7] = func_001F9D10(&path[i * 4 + 4], &path[i * 4 + 8]);
+        ((f32 *)path)[i * 4 + 7] = FastVecDist(&path[i * 4 + 4], &path[i * 4 + 8]);
         *(float *)(d + 0xBC) += ((f32 *)path)[i * 4 + 7];
     }
     {
-        f32 len = func_001F9D10(&((f32 *)path)[i * 4 + 4], path + 4);
+        f32 len = FastVecDist(&((f32 *)path)[i * 4 + 4], path + 4);
         char *pt = (char *)path + i * 16;
         *(f32 *)(pt + 0x1C) = len;
     }
@@ -2713,7 +2713,7 @@ void func_L14_002F24C8(char *m) {
     int i;
     d->picked = -1;
     for (i = 0; i < 5; i++) {
-        if (func_001F9D10(&moby->pos, D_L14_001601AC_p[d->points[i]].pos) < 1.0f) {
+        if (FastVecDist(&moby->pos, D_L14_001601AC_p[d->points[i]].pos) < 1.0f) {
             d->picked = i;
             break;
         }
@@ -3003,20 +3003,20 @@ void func_L14_002FD870(struct Moby *m) {
 
     if (m->state == 0 || m->state == 2 || m->unk31 == 0)
         return;
-    func_001F9C30(&step, &m->unkC0, (*(f32 *)&D_L14_00162000));
-    func_001F9BD8(&pos, &m->pos, &step);
-    func_001F9C30(&step, &m->unkE0, (*(f32 *)&D_L14_00162008));
-    func_001F9BD8(&pos, &pos, &step);
+    FastVecScale(&step, &m->unkC0, (*(f32 *)&D_L14_00162000));
+    FastVecAdd(&pos, &m->pos, &step);
+    FastVecScale(&step, &m->unkE0, (*(f32 *)&D_L14_00162008));
+    FastVecAdd(&pos, &pos, &step);
     qcopy(&base, &pos);
-    func_001F9C30(&step, &m->unkD0, (*(f32 *)&D_L14_00162004));
-    func_001F9BD8(&pos, &pos, &step);
+    FastVecScale(&step, &m->unkD0, (*(f32 *)&D_L14_00162004));
+    FastVecAdd(&pos, &pos, &step);
     for (j = 0; j < 2; j++) {
-        spin = func_002140B0(16);
-        puff = func_L00_0026DEA0_2FD870(&pos, 0.2f, 1.0f, 0.9f, func_002140B0(2) == 0 ? spin : -spin, D_L14_0015F660, 200000.0f, (*(s32 *)&D_L14_00162014));
+        spin = random_integer_below(16);
+        puff = func_L00_0026DEA0_2FD870(&pos, 0.2f, 1.0f, 0.9f, random_integer_below(2) == 0 ? spin : -spin, D_L14_0015F660, 200000.0f, (*(s32 *)&D_L14_00162014));
         if (puff != 0) {
             L14PuffTail_2FD870 *tail = &puff->tail;
-            puff->life = func_001F9850(12);
-            puff->frame = (m->unk32 >> 5 << 4) + func_001FA898(4.0f);
+            puff->life = scale_ticks(12);
+            puff->frame = (m->unk32 >> 5 << 4) + truncate_float_to_s32(4.0f);
             tail->mode = 2;
             tail->tint = 0x7F;
             tail->fade = puff->life;
@@ -3024,16 +3024,16 @@ void func_L14_002FD870(struct Moby *m) {
     }
     spin = 16;
     size = 100000.0f;
-    func_001F9C30(&step, &m->unkC0, (*(f32 *)&D_L14_0016200C));
-    func_001F9BD8(&pos, &pos, &step);
-    life = func_001F9850(2);
+    FastVecScale(&step, &m->unkC0, (*(f32 *)&D_L14_0016200C));
+    FastVecAdd(&pos, &pos, &step);
+    life = scale_ticks(2);
     for (i = 0; i < 3; i++) {
         puff = func_L00_0026DEA0_2FD870(&pos, 0.05f, 1.0f, 1.0f, spin, D_L14_0015F660, size, 0x7FFFFFFF);
         if (puff != 0) {
             L14PuffTail_2FD870 *tail = &puff->tail;
-            puff->frame = (m->unk32 >> 5 << 4) + func_001FA898(4.0f);
+            puff->frame = (m->unk32 >> 5 << 4) + truncate_float_to_s32(4.0f);
             puff->life = life;
-            puff->shade = func_002140B0(0xFF);
+            puff->shade = random_integer_below(0xFF);
             tail->mode = 2;
             tail->tint = 0x7F;
             tail->fade = puff->life;
@@ -3042,15 +3042,15 @@ void func_L14_002FD870(struct Moby *m) {
         life *= 2;
         size -= 20000.0f;
     }
-    func_001F9C30(&step, &m->unkD0, (*(f32 *)&D_L14_00162004));
-    func_001F9BF0(&pos, &base, &step);
+    FastVecScale(&step, &m->unkD0, (*(f32 *)&D_L14_00162004));
+    FastVecSub(&pos, &base, &step);
     for (j = 0; j < 2; j++) {
-        spin = func_002140B0(16);
-        puff = func_L00_0026DEA0_2FD870(&pos, 0.2f, 1.0f, 0.9f, func_002140B0(2) == 0 ? spin : -spin, D_L14_0015F660, 200000.0f, (*(s32 *)&D_L14_00162014));
+        spin = random_integer_below(16);
+        puff = func_L00_0026DEA0_2FD870(&pos, 0.2f, 1.0f, 0.9f, random_integer_below(2) == 0 ? spin : -spin, D_L14_0015F660, 200000.0f, (*(s32 *)&D_L14_00162014));
         if (puff != 0) {
             L14PuffTail_2FD870 *tail = &puff->tail;
-            puff->frame = (m->unk32 >> 5 << 4) + func_001FA898(4.0f);
-            puff->life = func_001F9850(12);
+            puff->frame = (m->unk32 >> 5 << 4) + truncate_float_to_s32(4.0f);
+            puff->life = scale_ticks(12);
             tail->mode = 2;
             tail->tint = 0x7F;
             tail->fade = puff->life;
@@ -3058,16 +3058,16 @@ void func_L14_002FD870(struct Moby *m) {
     }
     spin = 16;
     size = 100000.0f;
-    func_001F9C30(&step, &m->unkC0, (*(f32 *)&D_L14_0016200C));
-    func_001F9BD8(&pos, &pos, &step);
-    life = func_001F9850(2);
+    FastVecScale(&step, &m->unkC0, (*(f32 *)&D_L14_0016200C));
+    FastVecAdd(&pos, &pos, &step);
+    life = scale_ticks(2);
     for (i = 0; i < 3; i++) {
         puff = func_L00_0026DEA0_2FD870(&pos, 0.05f, 1.0f, 1.0f, spin, D_L14_0015F660, size, 0x7FFFFFFF);
         if (puff != 0) {
             L14PuffTail_2FD870 *tail = &puff->tail;
-            puff->frame = (m->unk32 >> 5 << 4) + func_001FA898(4.0f);
+            puff->frame = (m->unk32 >> 5 << 4) + truncate_float_to_s32(4.0f);
             puff->life = life;
-            puff->shade = func_002140B0(0xFF);
+            puff->shade = random_integer_below(0xFF);
             tail->mode = 2;
             tail->tint = 0x7F;
             tail->fade = puff->life;
@@ -3408,35 +3408,35 @@ void func_L14_002FE798(struct Moby *m) {
 
     if (m->state == 0 || m->state == 3 || m->state == 1)
         return;
-    func_001F9C30(&step, &m->unkC0, (*(f32 *)&D_L14_00162030));
-    func_001F9BD8(&pos, &m->pos, &step);
-    func_001F9C30(&step, &m->unkE0, (*(f32 *)&D_L14_00162038));
-    func_001F9BD8(&pos, &pos, &step);
+    FastVecScale(&step, &m->unkC0, (*(f32 *)&D_L14_00162030));
+    FastVecAdd(&pos, &m->pos, &step);
+    FastVecScale(&step, &m->unkE0, (*(f32 *)&D_L14_00162038));
+    FastVecAdd(&pos, &pos, &step);
     qcopy(&base, &pos);
-    func_001F9C30(&step, &m->unkD0, (*(f32 *)&D_L14_00162034));
-    func_001F9BD8(&pos, &pos, &step);
+    FastVecScale(&step, &m->unkD0, (*(f32 *)&D_L14_00162034));
+    FastVecAdd(&pos, &pos, &step);
     for (j = 0; j < 2; j++) {
-        spin = func_002140B0(16);
-        puff = func_L00_0026DEA0(&pos, 0.2f, 1.0f, 0.9f, func_002140B0(2) == 0 ? spin : -spin, D_L14_0015F660, 200000.0f, (*(s32 *)&D_L14_00162044));
+        spin = random_integer_below(16);
+        puff = func_L00_0026DEA0(&pos, 0.2f, 1.0f, 0.9f, random_integer_below(2) == 0 ? spin : -spin, D_L14_0015F660, 200000.0f, (*(s32 *)&D_L14_00162044));
         if (puff != 0) {
             L14PuffTail *tail = &puff->tail;
-            puff->life = func_001F9850(12);
+            puff->life = scale_ticks(12);
             tail->mode = 2;
             tail->tint = 0x7F;
             tail->fade = puff->life;
         }
     }
     size = 100000.0f;
-    func_001F9C30(&step, &m->unkC0, (*(f32 *)&D_L14_0016203C));
-    func_001F9BD8(&pos, &pos, &step);
+    FastVecScale(&step, &m->unkC0, (*(f32 *)&D_L14_0016203C));
+    FastVecAdd(&pos, &pos, &step);
     spin = 16;
-    life = func_001F9850(2);
+    life = scale_ticks(2);
     for (i = 0; i < 3; i++) {
         puff = func_L00_0026DEA0(&pos, 0.05f, 1.0f, 1.0f, spin, D_L14_0015F660, size, 0x7FFFFFFF);
         if (puff != 0) {
             L14PuffTail *tail = &puff->tail;
             puff->life = life;
-            puff->shade = func_002140B0(0xFF);
+            puff->shade = random_integer_below(0xFF);
             tail->mode = 2;
             tail->tint = 0x7F;
             tail->fade = puff->life;
@@ -3446,48 +3446,48 @@ void func_L14_002FE798(struct Moby *m) {
         size -= 20000.0f;
     }
     size = 300000.0f;
-    func_001F9C30(&step, &m->unkC0, (*(f32 *)&D_L14_00162040));
-    func_001F9BD8(&pos, &base, &step);
-    grey = func_L00_00258BC8(0x40, 0x80);
+    FastVecScale(&step, &m->unkC0, (*(f32 *)&D_L14_00162040));
+    FastVecAdd(&pos, &base, &step);
+    grey = rand_range(0x40, 0x80);
     grey = 0x7F000000 | grey << 16 | grey << 8 | grey;
-    if (func_002140B0(3) != 0) {
+    if (random_integer_below(3) != 0) {
         L14Puff *p;
-        spin = func_002140B0(4);
-        p = func_L00_0026DEA0(&pos, 0.05f, 1.0f, 1.0f, func_002140B0(2) == 0 ? spin : -spin, D_L14_0015F660, size, grey);
+        spin = random_integer_below(4);
+        p = func_L00_0026DEA0(&pos, 0.05f, 1.0f, 1.0f, random_integer_below(2) == 0 ? spin : -spin, D_L14_0015F660, size, grey);
         if (p != 0) {
             L14PuffTail *tail = &p->tail;
-            p->life = func_001F9850(60);
-            if (func_002140B0(2) != 0)
+            p->life = scale_ticks(60);
+            if (random_integer_below(2) != 0)
                 p->alpha = 0x44;
             tail->tint = 0x40;
             tail->mode = 2;
-            tail->fade = func_001F9850(60);
+            tail->fade = scale_ticks(60);
         }
     }
-    func_001F9C30(&step, &m->unkD0, (*(f32 *)&D_L14_00162034));
-    func_001F9BF0(&pos, &base, &step);
+    FastVecScale(&step, &m->unkD0, (*(f32 *)&D_L14_00162034));
+    FastVecSub(&pos, &base, &step);
     for (j = 0; j < 2; j++) {
-        spin = func_002140B0(16);
-        puff = func_L00_0026DEA0(&pos, 0.2f, 1.0f, 0.9f, func_002140B0(2) == 0 ? spin : -spin, D_L14_0015F660, 200000.0f, (*(s32 *)&D_L14_00162044));
+        spin = random_integer_below(16);
+        puff = func_L00_0026DEA0(&pos, 0.2f, 1.0f, 0.9f, random_integer_below(2) == 0 ? spin : -spin, D_L14_0015F660, 200000.0f, (*(s32 *)&D_L14_00162044));
         if (puff != 0) {
             L14PuffTail *tail = &puff->tail;
-            puff->life = func_001F9850(12);
+            puff->life = scale_ticks(12);
             tail->mode = 2;
             tail->tint = 0x7F;
             tail->fade = puff->life;
         }
     }
     size = 100000.0f;
-    func_001F9C30(&step, &m->unkC0, (*(f32 *)&D_L14_0016203C));
-    func_001F9BD8(&pos, &pos, &step);
+    FastVecScale(&step, &m->unkC0, (*(f32 *)&D_L14_0016203C));
+    FastVecAdd(&pos, &pos, &step);
     spin = 16;
-    life = func_001F9850(2);
+    life = scale_ticks(2);
     for (i = 0; i < 3; i++) {
         puff = func_L00_0026DEA0(&pos, 0.05f, 1.0f, 1.0f, spin, D_L14_0015F660, size, 0x7FFFFFFF);
         if (puff != 0) {
             L14PuffTail *tail = &puff->tail;
             puff->life = life;
-            puff->shade = func_002140B0(0xFF);
+            puff->shade = random_integer_below(0xFF);
             tail->mode = 2;
             tail->tint = 0x7F;
             tail->fade = puff->life;

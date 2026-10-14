@@ -409,17 +409,17 @@ int func_L01_002E7B68(void *arg, int *idx) {
         if (*idx == prev || *idx == i || *idx == next) {
             if (fast) {
                 qcopy(&pt, &f->path->pts[*idx]);
-                d = func_001F9D10(&target, &pt);
+                d = FastVecDist(&target, &pt);
                 if ((v->stops_only == 0 || pt.f[3] == 1.0f) && d < best_d) {
                     best = *idx;
                     best_d = d;
                 }
             } else {
                 qcopy(&pt, &f->path->pts[*idx]);
-                a = func_001FA850(func_L00_001FF860(pt.f[0] - m->pos.f[0], pt.f[1] - m->pos.f[1]),
+                a = FastDiffRots(func_L00_001FF860(pt.f[0] - m->pos.f[0], pt.f[1] - m->pos.f[1]),
                                                       func_L00_001FF860(target.pos.f[0] - m->pos.f[0],
                                                                    target.pos.f[1] - m->pos.f[1]));
-                d = func_001F9D10(&m->pos, &pt);
+                d = FastVecDist(&m->pos, &pt);
                 if (v->stops_only == 0 || pt.f[3] == 1.0f) {
                     if (a < 1.5707964f) {
                         if (best_a < a) {
@@ -2450,12 +2450,12 @@ void func_L01_002F5D38(CarrierMoby *m) {
         m->flags |= 0x41;
         return;
     case 1:
-        if (func_00215570(&D_0013F450_F5D38.motion.pos, n) != 0) {
+        if (is_point_inside_clip_volume(&D_0013F450_F5D38.motion.pos, n) != 0) {
             v->state = 2;
             m->flags &= ~0x41;
             if (v->camera != -1) {
                 cv = (CarrierCamVars *)D_L01_00160058_F5D38[v->camera].pvars;
-                cv->frames = func_001F9850(func_001FA898(v->seconds * 60.0f));
+                cv->frames = scale_ticks(truncate_float_to_s32(v->seconds * 60.0f));
                 D_L01_00160058_F5D38[v->camera].unkBC = 1;
             }
             if (v->path != -1) {
@@ -2474,11 +2474,11 @@ void func_L01_002F5D38(CarrierMoby *m) {
         if (v->camera != -1) {
             cv = (CarrierCamVars *)D_L01_00160058_F5D38[v->camera].pvars;
             a = func_L00_001FF860(m->pos.x - D_L01_00167180_F5D38.x, m->pos.y - D_L01_00167180_F5D38.y);
-            d = func_001FA790(D_L01_0016016C_F5D38[cv->node].yaw, a);
+            d = FastSubRots(D_L01_0016016C_F5D38[cv->node].yaw, a);
             if (d < 0.0f) {
                 a = D_L01_0016016C_F5D38[cv->node].yaw;
             } else if (v->max_deg * 0.017453292f < d) {
-                a = func_001FA748(D_L01_0016016C_F5D38[cv->node].yaw, -v->max_deg * 0.017453292f);
+                a = FastAddRots(D_L01_0016016C_F5D38[cv->node].yaw, -v->max_deg * 0.017453292f);
             }
             cv->x = D_L01_0016016C_F5D38[cv->node].x;
             cv->y = D_L01_0016016C_F5D38[cv->node].y;
@@ -2490,18 +2490,18 @@ void func_L01_002F5D38(CarrierMoby *m) {
             k = v->node;
             if (k == v->stop && v->arrived == 0) {
                 if (m->prev_seq != 2) {
-                    func_00213DE0(m, 2, 0, func_001F9850(0x14));
+                    func_00213DE0(m, 2, 0, scale_ticks(0x14));
                 }
                 v->timer = 0;
                 v->arrived = 1;
             } else if (k == p->count - 2 && v->keep == 0) {
-                func_0020D678(m);
+                DeleteMoby(m);
                 return;
             }
         }
         break;
     }
-    func_001F9938(&v->timer);
+    FastDecTimer(&v->timer);
     if (v->arrived == 0 || v->timer != 0 || m->seq != 2) {
         for (i = 0; i < 8; i++) {
             offs = D_L01_0020B650;
@@ -2510,11 +2510,11 @@ void func_L01_002F5D38(CarrierMoby *m) {
                     D_L01_00160058_F5D38[v->riders[i]].flags &= ~0x41;
                 }
                 func_001F9EC0(&offs.v[i], &offs.v[i], &m->unkC0);
-                func_001F9BD8(&D_L01_00160058_F5D38[v->riders[i]].pos, &m->pos, &offs.v[i]);
+                FastVecAdd(&D_L01_00160058_F5D38[v->riders[i]].pos, &m->pos, &offs.v[i]);
                 qcopy_nc(&D_L01_00160058_F5D38[v->riders[i]].rot, &m->rot);
                 D_L01_00160058_F5D38[v->riders[i]].rot.z =
-                    func_001FA748(D_L01_00160058_F5D38[v->riders[i]].rot.z, 3.1415927f);
-                func_L00_002514B8(&D_L01_00160058_F5D38[v->riders[i]]);
+                    FastAddRots(D_L01_00160058_F5D38[v->riders[i]].rot.z, 3.1415927f);
+                MobyAnimAdvance(&D_L01_00160058_F5D38[v->riders[i]]);
                 func_L00_00251E30(&D_L01_00160058_F5D38[v->riders[i]]);
                 D_L01_00160058_F5D38[v->riders[i]].flags |= 6;
             }
@@ -2525,7 +2525,7 @@ void func_L01_002F5D38(CarrierMoby *m) {
         if (v->riders[j] != -1) {
             tbl = D_L01_00160058_F5D38;
             tbl[v->riders[j]].flags &= ~6;
-            func_001F9BC0(&tbl[v->riders[j]].rot);
+            clear_u64_value(&tbl[v->riders[j]].rot);
             D_L01_00160058_F5D38[v->riders[j]].rot.z = func_L00_001FF860(D_0013F450_F5D38.motion.pos.f[0] - m->pos.x, D_0013F450_F5D38.motion.pos.f[1] - m->pos.y);
             switch (D_L01_00160058_F5D38[v->riders[j]].oclass) {
             case 0x154:
@@ -2537,17 +2537,17 @@ void func_L01_002F5D38(CarrierMoby *m) {
             case 0x1CB:
                 rv = (CarrierRiderVars *)D_L01_00160058_F5D38[v->riders[j]].pvars;
                 rv->dropped = 1;
-                rv->drop_timer = func_001F9850(0x1E);
-                func_001F9BF0(&rv->drop, &v->dropoff, &m->pos);
+                rv->drop_timer = scale_ticks(0x1E);
+                FastVecSub(&rv->drop, &v->dropoff, &m->pos);
                 break;
             }
             v->riders[j] = -1;
-            v->timer = func_L00_00258BC8(0x14, 0x1E);
+            v->timer = rand_range(0x14, 0x1E);
             return;
         }
     }
     if (m->prev_seq != 0) {
-        func_00213DE0(m, 0, 0, func_001F9850(0x14));
+        func_00213DE0(m, 0, 0, scale_ticks(0x14));
     }
 }
 extern void func_L00_00237B70(void *);

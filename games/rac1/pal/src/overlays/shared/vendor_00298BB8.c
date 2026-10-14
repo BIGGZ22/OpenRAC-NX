@@ -1546,7 +1546,7 @@ void func_L15_002A3B98(char *m) {
     short *p;
     char *c;
     int i, j, k;
-    g[1] = func_001F4868(8);
+    g[1] = GetEffectTex(8);
     g[2] = 0xFF9000000260L;
     g[3] = 0x8000000044L;
     g[0] = 0;
@@ -1569,7 +1569,7 @@ void func_L15_002A3B98(char *m) {
         if (*(unsigned char *)(o + 0x20) != 1) {
             char *pos = o + 0x10;
             float d;
-            func_001F9BC0(A);
+            clear_u64_value(A);
             A[2] = func_L00_001FF860(*(float *)(c + 0x140) - *(float *)(o + 0x10), *(float *)(c + 0x144) - *(float *)(o + 0x14));
             d = func_001F9D48((float *)pos, (float *)(c + 0x140));
             A[1] = -func_L00_001FF860(d, *(float *)(c + 0x148) - *(float *)(o + 0x18));
@@ -2682,7 +2682,7 @@ void func_L15_002BEFF8(struct Moby_BEFF8 *moby) {
     reversed = moby->oclass == 0xc4 || moby->oclass == 0x7a6;
     if (vars->trigger == -1 &&
         (vars->start_volume == -1 || vars->stop_volume == -1)) {
-        func_0020D678(moby);
+        DeleteMoby(moby);
         return;
     }
 
@@ -2711,12 +2711,12 @@ void func_L15_002BEFF8(struct Moby_BEFF8 *moby) {
         increment = (moby->scale * 3.0f / moby->pclass->scale) / 3.0f * D_0015EE6C;
         increment = reversed ? -increment : increment;
         vars->travel = travel + increment;
-        offset.f[0] = func_001F9F90(moby->rot.z) * vars->travel;
-        offset.f[1] = func_001F9FA8(moby->rot.z) * vars->travel;
+        offset.f[0] = FastCos(moby->rot.z) * vars->travel;
+        offset.f[1] = FastSin(moby->rot.z) * vars->travel;
         offset.f[2] = 0.0f;
-        func_001F9BD8(&next, &vars->origin, &offset);
+        FastVecAdd(&next, &vars->origin, &offset);
         *(u128_BEFF8 *)&moby->pos = next.q;
-        magnitude = func_001F9B88(vars->travel);
+        magnitude = FastAbsF(vars->travel);
         scale = moby->scale;
         triple.bits = 0x40400000;
         __builtin_memcpy(&step, &triple.bits, sizeof(step));
@@ -2732,14 +2732,14 @@ void func_L15_002BEFF8(struct Moby_BEFF8 *moby) {
         }
     case 4:
         vars->travel = 0.0f;
-        if (!func_00215570(&D_0013F450.motion.pos, vars->start_volume))
+        if (!is_point_inside_clip_volume(&D_0013F450.motion.pos, vars->start_volume))
             return;
         if (reversed)
             func_0022ED80(0, 0, (int)moby);
         moby->state = 2;
         break;
     case 5:
-        if (func_00215570(&D_0013F450.motion.pos, vars->stop_volume))
+        if (is_point_inside_clip_volume(&D_0013F450.motion.pos, vars->stop_volume))
             return;
         if (reversed)
             func_0022ED80(0, 0, (int)moby);
@@ -2749,7 +2749,7 @@ void func_L15_002BEFF8(struct Moby_BEFF8 *moby) {
         {
         f32 old_travel;
         f32 new_travel;
-        magnitude = func_001F9B88(vars->travel);
+        magnitude = FastAbsF(vars->travel);
         step = (moby->scale * 3.0f / moby->pclass->scale) / 3.0f * D_0015EE6C;
         if (step < magnitude) {
             old_travel = vars->travel;
@@ -2763,10 +2763,10 @@ void func_L15_002BEFF8(struct Moby_BEFF8 *moby) {
         } else {
             vars->travel = 0.0f;
         }
-        offset.f[0] = func_001F9F90(moby->rot.z) * vars->travel;
-        offset.f[1] = func_001F9FA8(moby->rot.z) * vars->travel;
+        offset.f[0] = FastCos(moby->rot.z) * vars->travel;
+        offset.f[1] = FastSin(moby->rot.z) * vars->travel;
         offset.f[2] = 0.0f;
-        func_001F9BD8(&next, &vars->origin, &offset);
+        FastVecAdd(&next, &vars->origin, &offset);
         *(u128_BEFF8 *)&moby->pos = next.q;
         if (vars->travel != 0.0f)
             return;

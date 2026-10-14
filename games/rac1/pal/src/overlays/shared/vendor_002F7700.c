@@ -1903,7 +1903,7 @@ void func_L01_0030D380(char *m) {
     local.src_corner[1].q = q1;
     local.src_corner[2].q = q2;
     local.src_corner[3].q = q3;
-    local.quad.tex = func_001F4868(0xB);
+    local.quad.tex = GetEffectTex(0xB);
     local.quad.unk88 = 0x8000000048L;
     local.quad.unk80 = 0xFF9000000260L;
     local.quad.unk70 = 5;
@@ -1916,17 +1916,17 @@ void func_L01_0030D380(char *m) {
     local.quad.unk68 = one;
     local.quad.unk6C = one;
 
-    func_001F9C30(&local.basis.offset, m + 0xc0, (*(f32 *)&D_L01_001620F4));
-    func_001F9C30(&local.basis.partial, m + 0xe0, (*(f32 *)&D_L01_001620FC));
-    func_001F9BD8(&local.basis.offset, &local.basis.offset, &local.basis.partial);
+    FastVecScale(&local.basis.offset, m + 0xc0, (*(f32 *)&D_L01_001620F4));
+    FastVecScale(&local.basis.partial, m + 0xe0, (*(f32 *)&D_L01_001620FC));
+    FastVecAdd(&local.basis.offset, &local.basis.offset, &local.basis.partial);
     src = &local.basis.mat0;
-    func_001F9BD8(&local.basis.point, &local.basis.offset, m + 0x10);
-    func_001F9BF0(src, D_L01_001672C0, &local.basis.point);
+    FastVecAdd(&local.basis.point, &local.basis.offset, m + 0x10);
+    FastVecSub(src, D_L01_001672C0, &local.basis.point);
     func_L00_001FF4B0(src, src, one);
     dst = &local.basis.mat1;
-    func_001F9CA0(dst, src, D_0013F6E0);
+    FastVecCross(dst, src, D_0013F6E0);
     func_L00_001FF4B0(dst, dst, -1.0f);
-    func_001F9CA0(&local.basis.mat2, dst, src);
+    FastVecCross(&local.basis.mat2, dst, src);
     basis = src;
 
     local.quad.color[3] = 0x202020FF;
@@ -1936,7 +1936,7 @@ void func_L01_0030D380(char *m) {
     src = local.src_corner;
     dst = local.quad.corner;
     do {
-        func_001F9C30(dst, src, 0.4f);
+        FastVecScale(dst, src, 0.4f);
         src++;
         func_001F9EE8(dst, dst, basis);
         dst++;
@@ -2021,7 +2021,7 @@ void func_L01_0030DD80(char *m) {
     if (*(f32 *)(m + 0x2c) < height)
         *(f32 *)(m + 0x2c) += D_0015EE60 * 0.21f * height;
 
-    if (*(s16 *)(e + 0x14) < func_001F9850(0x23) - func_001F9850(1)) {
+    if (*(s16 *)(e + 0x14) < scale_ticks(0x23) - scale_ticks(1)) {
         desired_yaw = *(f32 *)(e + 8);
         desired_pitch = *(f32 *)(e + 0xc);
     } else {
@@ -2046,41 +2046,41 @@ void func_L01_0030DD80(char *m) {
                                        *(f32 *)(m + 0x48), -pitch_result);
     }
     qcopy(&old_pos, pos);
-    func_001F9BD8(pos, pos, &offset);
+    FastVecAdd(pos, pos, &offset);
     if (*(f32 *)(m + 0x10) < 2.0f || *(f32 *)(m + 0x10) > 1021.0f ||
         *(f32 *)(m + 0x14) < 2.0f || *(f32 *)(m + 0x14) > 1021.0f ||
         *(f32 *)(m + 0x18) < 2.0f || *(f32 *)(m + 0x18) > 1021.0f ||
         *(f32 *)(m + 0x10) < 0.0f || *(f32 *)(m + 0x14) < 0.0f || *(f32 *)(m + 0x18) < 0.0f ||
         func_001F9D48(pos, D_L01_001672C0_0DD80) > 64.0f) {
-        func_0020D678(m);
+        DeleteMoby(m);
         return;
     }
     probe.owner = m;
     probe.flags = 0x10001;
     probe.scale = 0.5f;
     probe.count = 1;
-    func_001F9BF0(&probe.dir, pos, &D_0013F4D0_0DD80);
+    FastVecSub(&probe.dir, pos, &D_0013F4D0_0DD80);
     func_L00_001FF500(&probe.dir, &probe.dir, 1.0f);
     ((f32 *)&probe.dir)[2] = 1.0f;
     ((f32 *)&probe.dir)[3] = 5627.9248f;
     probe.b28 = 1;
     probe.b29 = 1;
     probe.id = *(u16 *)(m + 0xa6);
-    if (func_001F9938(e + 0x14)) {
-        func_0020D678(m);
+    if (FastDecTimer(e + 0x14)) {
+        DeleteMoby(m);
         return;
     }
     {
         if (!func_L00_001EFFF0_0DD80(&old_pos, pos, 0, *(void **)(e + 0x10), &probe))
             return;
-        if (!func_L00_001F3958()) {
-            if (*(s16 *)(e + 0x14) > func_001F9850(3))
-                *(s16 *)(e + 0x14) = func_001F9850(3);
+        if (!CollType()) {
+            if (*(s16 *)(e + 0x14) > scale_ticks(3))
+                *(s16 *)(e + 0x14) = scale_ticks(3);
             return;
         }
         qcopy(pos, &D_L01_00174360);
     }
-    func_0020D678(m);
+    DeleteMoby(m);
 }
 extern char D_0013E633[];
 extern void func_L00_001FF4B0(void *, void *, float);
@@ -2993,7 +2993,7 @@ void func_L01_003171B8(Camera_171B8 *cam) {
         path = D_L01_001B0C30_171B8[s->track_path];
         for (i = 0; i < path->count; i++) {
             next = (i + 1) % path->count;
-            path->pts[i].f[3] = func_001F9D10(&path->pts[i], &path->pts[next]);
+            path->pts[i].f[3] = FastVecDist(&path->pts[i], &path->pts[next]);
         }
     }
 
@@ -3009,11 +3009,11 @@ void func_L01_003171B8(Camera_171B8 *cam) {
             s32 count = path->count;
             next = seg + 1;
             if (next >= count) next = count - 1;
-            func_001F9BF0(&delta, &path->pts[next], &path->pts[seg]);
-            if (func_001F9CB8(&delta) != 0.0f && next != seg) {
+            FastVecSub(&delta, &path->pts[next], &path->pts[seg]);
+            if (FastVecLength(&delta) != 0.0f && next != seg) {
                 func_L00_001FF4B0(&delta, &delta, 1.0f);
-                func_001F9BF0(&to_camera, (char *)cam + 0x30, &D_0013F4D0_171B8);
-                if (0.0f < func_001F9C78(&to_camera, &delta))
+                FastVecSub(&to_camera, (char *)cam + 0x30, &D_0013F4D0_171B8);
+                if (0.0f < FastVecDot(&to_camera, &delta))
                     *(s16 *)((char *)s + 0x36) = 1;
             }
         }

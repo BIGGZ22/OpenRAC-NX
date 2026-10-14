@@ -116,7 +116,7 @@ void func_L00_00250120(ListOwner_24f0e8 *owner, ListNode_24f0e8 **slot) {
         if (p->next == *slot)
             p->next = (*slot)->next;
     }
-    func_001F99B0(*slot, 0, 0x40);
+    FastMemSet(*slot, 0, 0x40);
     *slot = 0;
 }
 extern void func_L00_00250478(void *, int, int, int);

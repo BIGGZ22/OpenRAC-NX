@@ -453,7 +453,7 @@ void func_L13_0030E280(void *moby) {
     int k, n;
 
     if ((D_0014C290[D_0015EE84][(short)*(unsigned short *)(m + 0xB2) >> 5] >> (*(unsigned short *)(m + 0xB2) & 0x1F)) & 1) {
-        func_0020D678(moby);
+        DeleteMoby(moby);
         return;
     }
     data = *(char **)(m + 0x78);
@@ -487,7 +487,7 @@ void func_L13_0030E280(void *moby) {
                 if (t[0x16] == 0) {
                     t[0x16] = r;
                     func_0022EE28(1, 0, 0);
-                    func_L00_00264DB8(0x53DB, -1);
+                    ShowBanner(0x53DB, -1);
                 }
             }
         }
@@ -500,12 +500,12 @@ void func_L13_0030E280(void *moby) {
                 qzero(tmp);
                 func_L00_00260958(tmp, 1.5f);
                 tmp[2] += 1.7f;
-                func_001F9BD8(tmp, tmp, m + 0x10);
+                FastVecAdd(tmp, tmp, m + 0x10);
                 func_L00_00265050(m, k, tmp, m + 0x40, 0, 0, D_L13_0015F660, D_L13_0015F660, 0.0f, D_L13_0015F660);
             }
         }
         func_L00_0025F4A8(moby, m + 0x10, 0, 0.0f, 0.0f, 0xA, 3, 0x10, 6.0f, 3.0f, 9.0f, 0, 1.1f, 15.0f, 1, 3, -1, 0);
-        func_0020D678(moby);
+        DeleteMoby(moby);
         break;
     }
     }

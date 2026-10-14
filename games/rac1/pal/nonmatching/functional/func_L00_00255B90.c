@@ -1,4 +1,7 @@
-/* functional: medium. Builds the joint matrices of an animated moby in the scratchpad: DMAs the bind data (record at a0->0x24) and two animation tables (a0->0x68 / 0x6C), writes per-joint quaternion (slot+0), scale (+0x10), translation vectors (+0x20/+0x30), blends the two tables by a0->0x54 (lerp, or normalised lerp when the frames differ), then applies the record chains at a0->0x60 / 0x64 (quaternion products and blends). VU0 arithmetic written lane by lane, not run against retail (hand-checked only); sqrtf stands in for vrsqrt. */
+/* functional: medium. Builds the joint matrices of an animated moby in the scratchpad: DMAs the bind data (record at a0->0x24) and two animation tables (a0->0x68 / 0x6C), writes per-joint quaternion (slot+0), scale (+0x10), translation vectors (+0x20/+0x30), blends the two tables by a0->0x54 (lerp, or normalised lerp when the frames differ), then applies the record chains at a0->0x60 / 0x64 (quaternion products and blends). VU0 arithmetic written lane by lane, not run against retail (hand-checked only); sqrtf stands in for vrsqrt.
+ * Each DMA transfer to the scratchpad is a copy made where retail starts it (spr_dma_255B90), which
+ * leaves the channel idle: the port has no DMA controller, and the waits for the transfers spun forever
+ * (the bomb glove froze the game). */
 extern float sqrtf(float);
 
 #define ST4(p, a, b, c, d) do { float *_p = (float *)(p); _p[0] = (a); _p[1] = (b); _p[2] = (c); _p[3] = (d); } while (0)
@@ -8,6 +11,18 @@ extern float sqrtf(float);
 #define SC0(e, i) ((float)(short)((e) >> (16 * (i))))
 #define NEG(d) ((*(unsigned int *)&(d)) >> 31)
 #define DOT4(v) ((((v)[1] + (v)[0]) + (v)[2]) + (v)[3])
+/* A transfer of QWC quadwords from MADR to the scratchpad at SADR, done at once. */
+static void spr_dma_255B90(unsigned int sadr, unsigned int madr, int qwc)
+{
+    int *dst = (int *)(0x70000000 + (sadr & 0x3FF0));
+    int *src = (int *)madr;
+    int i;
+
+    for (i = 0; i < qwc * 4; i++)
+        dst[i] = src[i];
+    *(volatile unsigned int *)0x1000D400 = 0;
+}
+
 #define LSQ4(v) ((((v)[0] * (v)[0] + (v)[1] * (v)[1]) + (v)[2] * (v)[2]) + (v)[3] * (v)[3])
 
 void func_L00_00255B90(char *s)
@@ -31,11 +46,8 @@ void func_L00_00255B90(char *s)
     char *slot;
 
     /* DMA 1: bind records into the scratchpad at 0x2000 */
-    *(volatile unsigned int *)0x1000D480 = 0x2000;
-    *(volatile unsigned int *)0x1000D410 = *(int *)(rec + 0x18);
-    *(volatile unsigned int *)0x1000D420 = n;
     *(long *)(sp + n * 16 + 0x1FF8) = 0;
-    *(volatile unsigned int *)0x1000D400 = 0x100;
+    spr_dma_255B90(0x2000, *(int *)(rec + 0x18), n);
 
     q1 = *(short *)(t1 + 6);
     cA = *(short *)(t1 + 0xA);
@@ -54,14 +66,9 @@ void func_L00_00255B90(char *s)
         k -= 2;
     } while (k > 0);
 
-    while (*(volatile long *)(sp + n * 16 + 0x1FF8) == 0) {
-    }
 
     /* DMA 2: table 1 into 0x3000 */
-    *(volatile unsigned int *)0x1000D480 = (unsigned int)(sp + 0x3000);
-    *(volatile unsigned int *)0x1000D410 = p1 + 0x10;
-    *(volatile unsigned int *)0x1000D420 = q1;
-    *(volatile unsigned int *)0x1000D400 = 0x100;
+    spr_dma_255B90(0x3000, p1 + 0x10, q1);
 
     /* copy the bind records to slot +0x20 (vector) and +0x30 (xyz, 0) */
     k = n;
@@ -98,13 +105,8 @@ void func_L00_00255B90(char *s)
         cD = *(short *)(t2 + 0xE);
         ST4(sp + q2 * 16 + 0x35F0, 0, 0, 0, 0);
 
-        while (*(volatile long *)(sp + q1 * 16 + 0x2FF0) == 0) {
-        }
         /* DMA 3: table 2 into 0x3600 */
-        *(volatile unsigned int *)0x1000D410 = p2 + 0x10;
-        *(volatile unsigned int *)0x1000D480 = (unsigned int)(sp + 0x3600);
-        *(volatile unsigned int *)0x1000D420 = q2;
-        *(volatile unsigned int *)0x1000D400 = 0x100;
+        spr_dma_255B90(0x3600, p2 + 0x10, q2);
 
         c = sp + 0x3D00; /* list of second-table slots */
         b = sp + 0x3C00; /* list of first-table slots */
@@ -145,8 +147,6 @@ void func_L00_00255B90(char *s)
             } while (cB > 0);
         }
 
-        while (*(volatile long *)(sp + q2 * 16 + 0x35F0) == 0) {
-        }
         a = sp + 0x3600 + n * 8;
 
         /* list C: unsigned vectors into slot+0x10 */
@@ -287,8 +287,6 @@ void func_L00_00255B90(char *s)
         /* no blend: table 1 only */
         char *w;
 
-        while (*(volatile long *)(sp + q1 * 16 + 0x2FF0) == 0) {
-        }
         a = sp + 0x3000 + n * 8;
         ent = *(unsigned long *)a;
         /* list A: unsigned vectors into slot+0x10 */
@@ -351,10 +349,7 @@ void func_L00_00255B90(char *s)
         float v6[4], v7[4], v8[4], v9[4], v10[4], v11[4], v12[4], v14[4];
         int tbits;
 
-        *(volatile unsigned int *)0x1000D480 = 0x2000;
-        *(volatile unsigned int *)0x1000D410 = *(int *)(r + 0x10);
-        *(volatile unsigned int *)0x1000D420 = w3 * 3;
-        *(volatile unsigned int *)0x1000D400 = 0x100;
+        spr_dma_255B90(0x2000, *(int *)(r + 0x10), w3 * 3);
         end = sp + 0x2000 + ((w3 * 3) << 4);
         tbits = *(int *)(r + 8);
         x4 = *(float *)&tbits;
@@ -362,8 +357,6 @@ void func_L00_00255B90(char *s)
         nrec = *(char **)(r + 0x1C);
         *(int *)(end + 0x2C) = (int)(sp + 0x2000);
         w4 = 1.0f - x4;
-        while (*(volatile unsigned int *)0x1000D400 & 0x100) {
-        }
         dst = *(char **)(recs + 0x2C);
         LD4(v9, recs);
         LD4(v10, recs + 0x10);

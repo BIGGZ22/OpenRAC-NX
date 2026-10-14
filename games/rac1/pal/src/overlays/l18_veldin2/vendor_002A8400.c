@@ -1036,7 +1036,7 @@ void func_L18_002D8F10(struct Moby *moby) {
             }
             *(int *)(data + 0x70) = -1;
         } else if (D_0013F450_D8F10.state.current != 0x72) {
-            func_001F49B0(func_L18_002D9488_D8F10, moby);
+            AddDrawCallback(func_L18_002D9488_D8F10, moby);
             if (func_001F9908((int *)(data + 0x6C)) != 0)
                 (*(unsigned int *)&D_L18_00162420) = 1;
         }
@@ -1054,16 +1054,16 @@ void func_L18_002D8F10(struct Moby *moby) {
             int one = 1;
             if ((help[0x2B02].level_mask & (one << D_0015EE84)) == 0) {
                 if (help[0x71].count != 0) {
-                    if (func_001F9850((*(unsigned int *)&D_0015EFA4)) - help[0x71].unk2 * 600 > (int)((float)func_001F9850(0x12) * 60.0f) ||
+                    if (scale_ticks((*(unsigned int *)&D_0015EFA4)) - help[0x71].unk2 * 600 > (int)((float)scale_ticks(0x12) * 60.0f) ||
                         help[0x71].unk2 * 600 == 0) {
-                        func_L00_00203F20(0x2B02, 0x71);
-                    } else if (func_001F9850((*(unsigned int *)&D_0015EFA4)) / 600 > help[0x71].unk2) {
-                        help[0x71].unk2 = func_001F9850((*(unsigned int *)&D_0015EFA4)) / 600;
+                        Help_Request(0x2B02, 0x71);
+                    } else if (scale_ticks((*(unsigned int *)&D_0015EFA4)) / 600 > help[0x71].unk2) {
+                        help[0x71].unk2 = scale_ticks((*(unsigned int *)&D_0015EFA4)) / 600;
                     }
                 } else {
                     help[0x71].count++;
-                    if (func_001F9850((*(unsigned int *)&D_0015EFA4)) / 600 > help[0x71].unk2) {
-                        help[0x71].unk2 = func_001F9850((*(unsigned int *)&D_0015EFA4)) / 600;
+                    if (scale_ticks((*(unsigned int *)&D_0015EFA4)) / 600 > help[0x71].unk2) {
+                        help[0x71].unk2 = scale_ticks((*(unsigned int *)&D_0015EFA4)) / 600;
                     }
                     help[0x71].level_mask = help[0x71].level_mask | (one << D_0015EE84) | 0x80000000;
                 }

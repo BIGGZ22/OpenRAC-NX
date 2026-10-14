@@ -108,7 +108,7 @@ void func_L00_00205278(void) {
 
     for (i = 0; i < 7; i++)
         save[i] = D_0013F450_05278.items[i].item_id;
-    func_001F99B0(&D_0013F450_05278, 0, 0x2310);
+    FastMemSet(&D_0013F450_05278, 0, 0x2310);
     for (i = 0; i < 7; i++)
         save[i] = D_0013F450_05278.items[i].item_id;
 
@@ -147,12 +147,12 @@ void func_L00_00205278(void) {
     /* the eight voice slots unk2218..unk2234 as one array, indexed from the hero base */
     for (i = 0; i < 8; i++)
         ((struct { u8 pad[0x2218]; s32 v[8]; } *)&D_0013F450_05278)->v[i] = -1;
-    D_0013F450_05278.health.hp = D_0015EEA0;
+    D_0013F450_05278.health.hp = gMaxNanotech;
     D_0013F450_05278.unk2288 = 2.125f;
     D_0013F450_05278.unk228C = 1.25f;
     D_0013F450_05278.health.unk22AC = 4;
     D_0013F450_05278.health.unk22B0 = D_0013F450_05278.health.hp;
-    D_0013F450_05278.unk1010 = func_L00_00258BC8(func_001F9850(0xB4), func_001F9850(0x12C));
+    D_0013F450_05278.unk1010 = rand_range(scale_ticks(0xB4), scale_ticks(0x12C));
     (*(f32 *)&D_0013F450_05278.pad_1014) = 0.007f;
     (*(f32 *)&D_0013F450_05278.pad_1014[4]) = 0.3f;
     (*(f32 *)&D_0013F450_05278.pad_D18[8]) = 0.97f;
@@ -1249,7 +1249,7 @@ void func_L00_00205CC0(void) {
             s32 i;
             for (i = 0; i < 7; i++) {
                 if (D_0013F450_05CC0.manipulators[i].attached != 0)
-                    func_0020D9D8((s32)D_0013F450_05CC0.moby, &D_0013F450_05CC0.manipulators[i]);
+                    DetachManipulator((s32)D_0013F450_05CC0.moby, &D_0013F450_05CC0.manipulators[i]);
             }
         } else {
             s32 i;
@@ -2524,10 +2524,10 @@ void func_L00_00207CC0(void) {
 
     blink = 0;
     if (D_0013F450_07CC0.state.current == 0x80 || D_0013F450_07CC0.state.current == 0x82) {
-        blink = D_0013F450_07CC0.state_timer < func_001F9850(0x1e);
+        blink = D_0013F450_07CC0.state_timer < scale_ticks(0x1e);
     }
     if ((D_0015EE84 == 0xf || D_0015EE84 == 0x11) &&
-        D_0013F450_07CC0.state.current == 0x76 && D_0013F450_07CC0.state_timer < func_001F9850(0x14)) {
+        D_0013F450_07CC0.state.current == 0x76 && D_0013F450_07CC0.state_timer < scale_ticks(0x14)) {
         blink = 1;
     }
     if (blink) {

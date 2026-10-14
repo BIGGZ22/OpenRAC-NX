@@ -411,7 +411,7 @@ float func_L01_0028C958(float a, float b, T_28b828 *path, int particles, void *m
             }
             func_L01_0028C848(t, &point, &currentNode, &nextNode, &previousTangent, &nextTangent);
             t += step;
-            segmentLength += func_001F9D10(&previousPoint, &point);
+            segmentLength += FastVecDist(&previousPoint, &point);
             previousPoint.q = point.q;
         } while (t <= 1.0f);
         total += segmentLength;

@@ -1790,7 +1790,7 @@ s32 func_L00_0025EFC0(s32 *path, OvlQuad *point, OvlQuad *nearest,
     distance = func_L00_0025EAC8_5EFC0(&work[0], &work[1], height_tolerance);
     best_segment = 0;
     if (*path == 0) {
-        func_001F9BC0(nearest);
+        clear_u64_value(nearest);
         return 0;
     }
 

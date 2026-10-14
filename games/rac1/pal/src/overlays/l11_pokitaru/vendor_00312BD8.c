@@ -1596,7 +1596,7 @@ void func_L11_00318730(char *moby) {
         int i;
         func_L11_00319510(moby, *(int *)(data + 0x60));
         if (((unsigned char *)(D_0014171B + 0xAA35))[*(unsigned char *)(moby + 0xB0) + (map_data_0015EE84 << 4)] == 0xFF) {
-            func_0020D678(moby);
+            DeleteMoby(moby);
             return;
         }
         *(unsigned char *)(moby + 0x30) = 0xFF;
@@ -1614,7 +1614,7 @@ void func_L11_00318730(char *moby) {
         h = (short *)(data + 0x90);
         q = (char **)(data + 0x70);
         for (i = 7; i >= 0; i--) {
-            char *s = func_0020D348(0x4F1);
+            char *s = CreateMoby(0x4F1);
             char *t;
             *q = s;
             *(short *)(s + 0x32) = 0x200;

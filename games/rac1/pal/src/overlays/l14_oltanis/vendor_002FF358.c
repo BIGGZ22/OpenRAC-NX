@@ -1829,7 +1829,7 @@ void func_L14_00308000(struct Moby_08000 *moby) {
 
     switch (moby->state) {
     case 0:
-        *(f32 *)(d + 3) = func_00214158();
+        *(f32 *)(d + 3) = random_angle_radians();
         moby->pos.z -= 0.35f;
         id = (s16)moby->save_id;
         if (D_L14_001BBCC0_08000.collected[id] != 0 ||
@@ -1856,9 +1856,9 @@ void func_L14_00308000(struct Moby_08000 *moby) {
         }
         break;
     case 1:
-        angle = func_001FA748(*(f32 *)(d + 3), D_0015EE6C * 6.2831855f);
+        angle = FastAddRots(*(f32 *)(d + 3), D_0015EE6C * 6.2831855f);
         *(f32 *)(d + 3) = angle;
-        color = func_001FA898((func_001F9FA8(angle) * 4.0f - 3.0f) * 128.0f);
+        color = truncate_float_to_s32((FastSin(angle) * 4.0f - 3.0f) * 128.0f);
         if (color > 0x80) color = 0x80;
         else if (color < 0x20) color = 0x20;
         shade = 0x80000000 | (color << 8);
@@ -3064,10 +3064,10 @@ int func_L14_00308AA8(struct Moby_08AA8 *moby) {
     func_L00_0025C918(&moby->pos.x, (f32 *)(d + 0x80), pos[0], (*(float *)&D_L14_0016233C), (*(float *)&D_L14_00162340), 0.0f);
     func_L00_0025C918(&moby->pos.y, (f32 *)(d + 0x84), pos[1], (*(float *)&D_L14_0016233C), (*(float *)&D_L14_00162340), 0.0f);
     func_L00_0025C918(&moby->pos.z, (f32 *)(d + 0x88), pos[2], (*(float *)&D_L14_0016233C), (*(float *)&D_L14_00162340), 0.0f);
-    func_001F9BF0(delta, pos, &moby->pos);
-    if (0.01f < func_001F9B88(delta[0]) && 0.01f < func_001F9B88(delta[1])) {
+    FastVecSub(delta, pos, &moby->pos);
+    if (0.01f < FastAbsF(delta[0]) && 0.01f < FastAbsF(delta[1])) {
         yaw = func_L00_001FF860(delta[0], delta[1]);
-        bank = func_001FA790(moby->rot.z, yaw);
+        bank = FastSubRots(moby->rot.z, yaw);
         func_L00_002592B0_08AA8(moby, yaw, (f32 *)(d + 0x98), (*(float *)&D_L14_0016233C), (*(float *)&D_L14_00162340), 0.0f);
         pitch = -func_L00_001FF860(func_001F9CE8(delta), delta[2]);
         func_L00_0025C918(&moby->rot.y, (f32 *)(d + 0x94), pitch, (*(float *)&D_L14_0016233C), (*(float *)&D_L14_00162340), 0.0f);
@@ -3261,22 +3261,22 @@ void func_L14_00316718(struct UpdateCam *cam) {
             t[2] = ofs[2];
             t[3] = 0.0f;
             func_001F9EC0(t, t, D_L14_001677D0);
-            func_001F9BD8(u, &o->pos, t);
-            func_001F9BF0(dir, u, &cam->pos);
+            FastVecAdd(u, &o->pos, t);
+            FastVecSub(dir, u, &cam->pos);
         } else {
-            func_001F9BF0(dir, pb + 0x10, &cam->pos);
+            FastVecSub(dir, pb + 0x10, &cam->pos);
         }
-        func_001F9C30(t, D_0013F6E0, -1.0f);
+        FastVecScale(t, D_0013F6E0, -1.0f);
         func_L00_001FF4B0(&cam->m0, dir, 1.0f);
-        func_001F9CA0(&cam->m1, &cam->m0, t);
+        FastVecCross(&cam->m1, &cam->m0, t);
         func_L00_001FF4B0(&cam->m1, &cam->m1, 1.0f);
-        func_001F9CA0(&cam->m2, &cam->m1, &cam->m0);
+        FastVecCross(&cam->m2, &cam->m1, &cam->m0);
         return;
     }
     path = D_L14_001B0F30[*(int *)(rec + 0x20)];
     qcopy(dir, &cam->pos);
     done = func_L00_0025E860_16718(path, &cam->pos.x, &q->seg, &q->t, 0, *(float *)(rec + 0x3C) * D_0015EE6C);
-    if (q->timer != 0 && func_001F9938(&q->timer) != 0)
+    if (q->timer != 0 && FastDecTimer(&q->timer) != 0)
         done = 1;
     if (*(u8 *)(rec + 0x39) != 0)
         done = 1;
@@ -3284,8 +3284,8 @@ void func_L14_00316718(struct UpdateCam *cam) {
         float ang = s->fov_end * 0.5f;
         char *hp;
         char *mb;
-        D_L14_0016D240.fB0 = func_001F9FA8(ang) / func_001F9F90(ang);
-        func_001F3140();
+        D_L14_0016D240.fB0 = FastSin(ang) / FastCos(ang);
+        UpdateViewContext();
         D_L14_001676D8 = 0.25f;
         cam->transition_state = 4;
         D_L14_0015F504 = 0;
@@ -3300,11 +3300,11 @@ void func_L14_00316718(struct UpdateCam *cam) {
         tt = D_0013F450.unk568;
         func_L00_0025E860_16718(hp, u, &seg, &tt, 0, 0.0f);
         u[2] += 1.5f;
-        func_001F9BF0(t, u, &cam->pos);
+        FastVecSub(t, u, &cam->pos);
         func_L00_001FF4B0(&cam->m0, t, 1.0f);
-        func_001F9CA0(&cam->m1, &cam->m0, &D_0013F450.unk290);
+        FastVecCross(&cam->m1, &cam->m0, &D_0013F450.unk290);
         func_L00_001FF4B0(&cam->m1, &cam->m1, -1.0f);
-        func_001F9CA0(&cam->m2, &cam->m1, &cam->m0);
+        FastVecCross(&cam->m2, &cam->m1, &cam->m0);
         return;
     }
     for (i = 0; i < 7 && s->seg[i] >= 0 && s->seg[i + 1] >= 0; i++) {
@@ -3322,11 +3322,11 @@ void func_L14_00316718(struct UpdateCam *cam) {
             for (n = q->seg; n < s->seg[i + 1]; n++)
                 total += *(float *)(path + (n * 16 + 0x1C));
             ang = func_00214220(s->fov[i], s->fov[i + 1], sum / total) * 0.017453292f * 0.5f;
-            D_L14_0016D240.fB0 = func_001F9FA8(ang) / func_001F9F90(ang);
-            func_001F3140();
+            D_L14_0016D240.fB0 = FastSin(ang) / FastCos(ang);
+            UpdateViewContext();
         }
     }
-    q->dist += func_001F9D10(dir, &cam->pos);
+    q->dist += FastVecDist(dir, &cam->pos);
     if (*(int *)(rec + 0x28) >= 0) {
         struct Moby *o = (struct Moby *)(D_L14_00160098 + *(int *)(rec + 0x28) * 256);
         float *ofs = (float *)(rec + 0x2C);
@@ -3335,20 +3335,20 @@ void func_L14_00316718(struct UpdateCam *cam) {
         u[2] = ofs[2];
         u[3] = 0.0f;
         func_001F9EC0(u, u, D_L14_001677D0);
-        func_001F9BD8(v, &o->pos, u);
-        func_001F9BF0(t, v, &cam->pos);
+        FastVecAdd(v, &o->pos, u);
+        FastVecSub(t, v, &cam->pos);
     } else {
         char *look = D_L14_001B0F30[*(int *)(rec + 0x24)];
         seg2 = 0;
         tt2 = 0.0f;
         func_L00_0025E860_16718(look, u, &seg2, &tt2, 0, q->dist / q->len_a * q->len_b);
-        func_001F9BF0(t, u, &cam->pos);
+        FastVecSub(t, u, &cam->pos);
     }
-    func_001F9C30(u, D_0013F6E0, -1.0f);
+    FastVecScale(u, D_0013F6E0, -1.0f);
     func_L00_001FF4B0(&cam->m0, t, 1.0f);
-    func_001F9CA0(&cam->m1, &cam->m0, u);
+    FastVecCross(&cam->m1, &cam->m0, u);
     func_L00_001FF4B0(&cam->m1, &cam->m1, 1.0f);
-    func_001F9CA0(&cam->m2, &cam->m1, &cam->m0);
+    FastVecCross(&cam->m2, &cam->m1, &cam->m0);
 }
 extern int func_L10_002F6E38(void *);
 extern char *D_L14_0015F050 MACRO_ADDR;

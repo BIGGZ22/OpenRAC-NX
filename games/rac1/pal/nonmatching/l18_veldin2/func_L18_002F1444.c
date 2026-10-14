@@ -16,10 +16,10 @@
 
 int func_L18_002F1444(int a0, int a1, void *src, int a3, int a4, short *list) {
     int ret = 1;
-    int val;
+    int val = a0; /* FIX: retail's $12 = a0 (set by func_L18_002F1420 at 002F1438) */
 again:
     {
-        unsigned char *moby = (unsigned char *)D_L18_0015F6A8 + ((*(unsigned short *)list & 0x7FFF) << 8);
+        unsigned char *moby = (unsigned char *)D_L18_00160058_m +  /* FIX: moby pool pointer is 0x160058 (retail 002F1450), not 0x15F6A8 */ ((*(unsigned short *)list & 0x7FFF) << 8);
         if (*(short *)(moby + 0xA6) == 0x54B && moby[0x20] == 1) {
             unsigned char *data = *(unsigned char **)(moby + 0x78);
             int n;

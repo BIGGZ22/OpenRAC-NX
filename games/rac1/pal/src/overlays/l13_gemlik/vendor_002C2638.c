@@ -1664,7 +1664,7 @@ void func_L13_002E5810(char *moby) {
                 data->unk7A = 0;
                 linked[0x20] = 2;
                 if (linked_data->unk7C > 0) {
-                    linked_data->unk70 = func_001F9850(data->unk7C);
+                    linked_data->unk70 = scale_ticks(data->unk7C);
                 }
             }
             linked_data->unk7A++;
@@ -1677,22 +1677,22 @@ void func_L13_002E5810(char *moby) {
                 func_L01_0026F090((unsigned char)moby[0x21], 4);
                 func_0022ED80_E5810(1, 0, moby);
                 data->unk70 = data->unk84;
-                func_001E9730(D_L13_001F5080, *(short *)(moby + 0xB2), *(short *)(moby + 0xA6), D_L13_0015F6B0);
+                STUB_printf(D_L13_001F5080, *(short *)(moby + 0xB2), *(short *)(moby + 0xA6), D_L13_0015F6B0);
                 moby[0x20] = 4;
             } else {
                 if (data->unk7C >= 0) {
-                    if (func_001F9938(&data->unk70) != 0) {
+                    if (FastDecTimer(&data->unk70) != 0) {
 
                         data->unk7A = 0;
                         data->unk74 = 0;
 
                         func_0022ED80_E5810(2, 0, moby);
                         func_L01_0026F090((unsigned char)moby[0x21], 3);
-                        func_001E9730(D_L13_001F50A0, *(short *)(moby + 0xB2), *(short *)(moby + 0xA6), D_L13_0015F6B0);
+                        STUB_printf(D_L13_001F50A0, *(short *)(moby + 0xB2), *(short *)(moby + 0xA6), D_L13_0015F6B0);
                         moby[0x20] = 3;
-                    } else if (func_001F9938(&data->unk72) != 0) {
+                    } else if (FastDecTimer(&data->unk72) != 0) {
                         func_0022ED80_E5810(0, 0, moby);
-                        data->unk72 = ((func_001F9850(0x2D)) < (func_001F9850(5) + data->unk70 / func_001F9850(0x28)) ? (func_001F9850(0x2D)) : (func_001F9850(5) + data->unk70 / func_001F9850(0x28)));
+                        data->unk72 = ((scale_ticks(0x2D)) < (scale_ticks(5) + data->unk70 / scale_ticks(0x28)) ? (scale_ticks(0x2D)) : (scale_ticks(5) + data->unk70 / scale_ticks(0x28)));
                     }
                 }
             }
@@ -1709,22 +1709,22 @@ void func_L13_002E5810(char *moby) {
         break;
     case 4:
         if (data->unk79 == 0 && data->unk70 != -1) {
-            if (func_001F9938(&data->unk70) != 0) {
+            if (FastDecTimer(&data->unk70) != 0) {
 
                 data->unk7A = 0;
                 data->unk74 = 0;
 
                 func_0022ED80_E5810(2, 0, moby);
                 func_L01_0026F090((unsigned char)moby[0x21], 3);
-                func_001E9730(D_L13_001F50C0, *(short *)(moby + 0xB2), *(short *)(moby + 0xA6), D_L13_0015F6B0);
+                STUB_printf(D_L13_001F50C0, *(short *)(moby + 0xB2), *(short *)(moby + 0xA6), D_L13_0015F6B0);
                 moby[0x20] = 3;
-            } else if (func_001F9938(&data->unk72) != 0) {
+            } else if (FastDecTimer(&data->unk72) != 0) {
                 func_0022ED80_E5810(0, 0, moby);
-                data->unk72 = ((func_001F9850(0x2D)) < (func_001F9850(5) + data->unk70 / func_001F9850(0x28)) ? (func_001F9850(0x2D)) : (func_001F9850(5) + data->unk70 / func_001F9850(0x28)));
+                data->unk72 = ((scale_ticks(0x2D)) < (scale_ticks(5) + data->unk70 / scale_ticks(0x28)) ? (scale_ticks(0x2D)) : (scale_ticks(5) + data->unk70 / scale_ticks(0x28)));
             }
         }
-        if (func_001F9938(&data->unk76) != 0) {
-            data->unk76 = func_001F9850(0x14);
+        if (FastDecTimer(&data->unk76) != 0) {
+            data->unk76 = scale_ticks(0x14);
             if (data->unk78 != 0) {
                 func_L00_00251328(moby, 0, 0xFF, 0);
                 data->unk78 = 0;
@@ -2382,7 +2382,7 @@ void func_L13_002EAC18(struct Moby_EAC18 *moby, char *vars, int *result) {
     func_L10_002F6E10(*(int *)(vars + 0x12C));
     moby->state = 7;
     *(float *)(vars + 0xAC) = D_0015EE6C * 80.0f;
-    *(int *)(vars + 0xF8) = func_001F9850(600);
+    *(int *)(vars + 0xF8) = scale_ticks(600);
     func_L13_002E9B30(moby, (unsigned char *)vars, 0x22, 1);
     *(short *)(vars + 0x138) = 0;
     vars[0x148] = 0;

@@ -365,10 +365,10 @@ void func_L04_00293F08(struct Moby_93F08 *moby, LegRig_93F08 *rig, int flags) {
         leg = &rig->legs[i];
         func_0020DAF8_93F08(moby, leg->joint, joint);
         heading = func_L00_001FF860(joint[4], joint[5]);
-        twist = func_001FA748(
-            func_001FA748(func_001FA790(leg->yaw, heading), leg->upper_turn),
+        twist = FastAddRots(
+            FastAddRots(FastSubRots(leg->yaw, heading), leg->upper_turn),
             leg->lower_turn);
-        base_yaw = func_001FA790(heading, twist);
+        base_yaw = FastSubRots(heading, twist);
         if (rig->unkB7 == 0 || (flags & mask) == 0) {
             leg->upper_turn = func_L00_00259148(leg->upper_turn, 0.0f, &rig->legs[i].upper_turn_speed, 0.1f, 0.1f,
                                            D_0015EE60 * 0.034906585f);
@@ -381,7 +381,7 @@ void func_L04_00293F08(struct Moby_93F08 *moby, LegRig_93F08 *rig, int flags) {
             else
                 leg->upper_turn = func_L00_00259148(leg->upper_turn, twist * 0.5f, &rig->legs[i].upper_turn_speed, 0.1f,
                                                0.1f, D_0015EE60 * 0.034906585f);
-            leg->lower_turn = func_001FA790(twist, leg->upper_turn);
+            leg->lower_turn = FastSubRots(twist, leg->upper_turn);
             leg->lower_turn_speed = 0.0f;
         }
         /* Fakematch: the later fields are read through the rig shifted by one leg stride. */
@@ -394,8 +394,8 @@ void func_L04_00293F08(struct Moby_93F08 *moby, LegRig_93F08 *rig, int flags) {
             row->legs[0].lower_turn = row->legs[0].angle_min;
         if (row->legs[0].lower_turn > row->legs[0].angle_max)
             row->legs[0].lower_turn = row->legs[0].angle_max;
-        row->legs[0].yaw = func_001FA748(row->legs[0].upper_turn, base_yaw);
-        row->legs[0].yaw = func_001FA748(row->legs[0].lower_turn, row->legs[0].yaw);
+        row->legs[0].yaw = FastAddRots(row->legs[0].upper_turn, base_yaw);
+        row->legs[0].yaw = FastAddRots(row->legs[0].lower_turn, row->legs[0].yaw);
         if (row->legs[0].manip_b.attached)
             func_L00_001FFED8(rig->legs[i].manip_b.rot, 2, row->legs[0].upper_turn);
         if (row->legs[0].manip_a.attached) {

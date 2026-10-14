@@ -1143,23 +1143,23 @@ void func_L12_00307730(struct Moby *moby, int slot) {
         offset = slot * 4;
     }
 
-    initial_speed = func_002140F8(D_0015EE70 * 3.7f, D_0015EE70 * 5.0f);
+    initial_speed = random_float_between(D_0015EE70 * 3.7f, D_0015EE70 * 5.0f);
     angle_scale = D_0015EE6C;
     {
         char *base = data + 0x570;
         speed = (float *)(base + offset);
     }
     *speed = initial_speed;
-    first_angle = func_L00_00258C80(angle_scale * 0.05235988f, angle_scale * 0.13962634f);
+    first_angle = randf_sym(angle_scale * 0.05235988f, angle_scale * 0.13962634f);
     second_scale = D_0015EE6C;
     slot_data = data + slot * 0x10;
     *(float *)(slot_data + 0x450) = first_angle;
-    *(float *)(slot_data + 0x454) = func_L00_00258C80(second_scale * 0.05235988f, second_scale * 0.17453292f);
+    *(float *)(slot_data + 0x454) = randf_sym(second_scale * 0.05235988f, second_scale * 0.17453292f);
     if (selected->oclass == 0x4fd) {
-        float variation = func_002140F8(0.001f, 0.0045f);
+        float variation = random_float_between(0.001f, 0.0045f);
         float speed_scale = D_0015EE70;
         *(float *)(slot_data + 0x45c) = variation;
-        *speed = func_002140F8(speed_scale * 5.5f, speed_scale * 9.0f);
+        *speed = random_float_between(speed_scale * 5.5f, speed_scale * 9.0f);
     } else if (selected->oclass == 0x500) {
         *speed = D_0015EE70 * 13.0f;
     }

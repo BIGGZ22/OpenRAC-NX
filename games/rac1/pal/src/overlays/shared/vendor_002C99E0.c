@@ -257,43 +257,43 @@ void func_L11_00309DA0(struct Moby_09DA0 *moby) {
     qcopy(old, &moby->pos);
     if (D_L11_0015F6B0 % 6 == (((char *)moby - D_L11_00160058) >> 8) % 6)
         vars->target = 0;
-    moby->alpha = func_001FA898(vars->size * 24.0f);
+    moby->alpha = truncate_float_to_s32(vars->size * 24.0f);
     copy_xyz_089d0(look, vars->target_pos);
     ((int *)look)[3] = 0;
     target = vars->target;
     if (target == 0 || target->state == 0xFE || target->state == 0xFD ||
-        func_001F9D10(&target->pos, look) > 3.0f)
+        FastVecDist(&target->pos, look) > 3.0f)
         vars->target = (struct Moby_09DA0 *)func_L11_00309A40((float *)&moby->pos, (float *)&moby->rot, 0.2617994f, 0.2617994f, 60.0f);
     if (vars->target != 0) {
         copy_xyz_089d0(vars->target_pos, (float *)&vars->target->pos);
-        speed = func_001F9CB8(vars);
-        yaw_off = func_001FA790(func_L00_001FF860(vars->target->pos.x - moby->pos.x, vars->target->pos.y - moby->pos.y), moby->rot.z);
-        yaw = func_001F9B88(yaw_off);
-        pitch_off = func_001FA790(-func_L00_001FF860(func_001F9D48(&moby->pos, &vars->target->pos), vars->target->pos.z - moby->pos.z), moby->rot.y);
-        pitch = func_001F9B88(pitch_off);
+        speed = FastVecLength(vars);
+        yaw_off = FastSubRots(func_L00_001FF860(vars->target->pos.x - moby->pos.x, vars->target->pos.y - moby->pos.y), moby->rot.z);
+        yaw = FastAbsF(yaw_off);
+        pitch_off = FastSubRots(-func_L00_001FF860(func_001F9D48(&moby->pos, &vars->target->pos), vars->target->pos.z - moby->pos.z), moby->rot.y);
+        pitch = FastAbsF(pitch_off);
         if (yaw < 0.2617994f && pitch < 0.2617994f) {
             max_yaw = D_0015EE6C * 0.87266463f;
             if (max_yaw < yaw) {
                 yaw_off /= yaw;
                 yaw_off *= max_yaw;
             }
-            moby->rot.z = func_001FA748(moby->rot.z, yaw_off);
+            moby->rot.z = FastAddRots(moby->rot.z, yaw_off);
             max_pitch = D_0015EE6C * 0.87266463f;
             if (max_pitch < pitch) {
                 pitch_off /= pitch;
                 pitch_off *= max_pitch;
             }
-            moby->rot.y = func_001FA748(moby->rot.y, pitch_off);
+            moby->rot.y = FastAddRots(moby->rot.y, pitch_off);
             func_00215C00(vars, speed, moby->rot.z, -moby->rot.y);
             func_001E9768(&moby->pos, &vars->target->pos);
         } else {
             vars->target = 0;
         }
     }
-    func_001F9BD8(&moby->pos, &moby->pos, vars);
+    FastVecAdd(&moby->pos, &moby->pos, vars);
     if (moby->pos.x < 2.0f || moby->pos.x > 1021.0f || moby->pos.y < 2.0f || moby->pos.y > 1021.0f ||
         moby->pos.z < 2.0f || moby->pos.z > 1021.0f) {
-        func_0020D678(moby);
+        DeleteMoby(moby);
         return;
     }
     func_L00_0025A890(1.0f, &hit, moby, 0x10000);
@@ -301,23 +301,23 @@ void func_L11_00309DA0(struct Moby_09DA0 *moby) {
     if (func_L00_001EFFF0(old, &moby->pos, 0, vars->owner, &hit)) {
         for (i = 0; i < 5; i++) {
             *(OvlQuad *)r = 0;
-            r[0] = func_002140F8(-1.0f, 1.0f);
-            r[1] = func_002140F8(-1.0f, 1.0f);
-            r[2] = func_002140F8(-1.0f, 1.0f);
+            r[0] = random_float_between(-1.0f, 1.0f);
+            r[1] = random_float_between(-1.0f, 1.0f);
+            r[2] = random_float_between(-1.0f, 1.0f);
             *(OvlQuad *)q = *(OvlQuad *)r;
             func_L00_001FF610(r, vars, D_L11_00174900);
-            func_L00_001FF4B0(q, q, func_001F9CB8(r) * 0.5f);
-            func_001F9BD8(q, r, q);
-            func_L00_001FF4B0(q, q, func_002140F8(D_0015EE6C * 5.0f, D_0015EE6C * 9.0f));
-            func_L00_0026EBC0_09DA0(&moby->pos, q, 0x7F2F4F6F, func_L00_00258BC8(func_001F9850(10), func_001F9850(15)), 90000.0f);
+            func_L00_001FF4B0(q, q, FastVecLength(r) * 0.5f);
+            FastVecAdd(q, r, q);
+            func_L00_001FF4B0(q, q, random_float_between(D_0015EE6C * 5.0f, D_0015EE6C * 9.0f));
+            func_L00_0026EBC0_09DA0(&moby->pos, q, 0x7F2F4F6F, rand_range(scale_ticks(10), scale_ticks(15)), 90000.0f);
         }
-        func_0020D678(moby);
+        DeleteMoby(moby);
         return;
     }
     if (func_001F9908(&vars->timer)) {
         vars->size *= 0.74f;
         if (vars->size < 0.02f)
-            func_0020D678(moby);
+            DeleteMoby(moby);
     }
 }
 extern char *func_0020D348(int);

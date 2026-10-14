@@ -5,6 +5,16 @@
    and the loop sound is refreshed (func_0020D790) on the frame-spread schedule of D_0015F6F0. */
 extern int func_0022ED80(int, int, int);
 
+/* A float as the EE FPU reads it: it has no infinity or NaN, and takes an all-ones exponent for a
+   number beyond FLT_MAX, which its arithmetic saturates to +-FLT_MAX. A key whose frame header
+   holds +inf's bits (level 9's class 193) gives t = 0 * rate = 0 there, not NaN. */
+static float ee_rate_0020E3D0(unsigned int bits) {
+    if ((bits & 0x7F800000) == 0x7F800000) {
+        bits = (bits & 0x80000000) | 0x7F7FFFFF;
+    }
+    return *(float *)&bits;
+}
+
 void func_0020E3D0(Moby *m) {
     unsigned char *mp = (unsigned char *)m;
     unsigned int speedBits = *(unsigned int *)(mp + 0x58);
@@ -83,9 +93,9 @@ void func_0020E3D0(Moby *m) {
                 flags |= 2;
             }
             newBptr = seq->frames[newB];
-            rate = *(float *)&ovr;
+            rate = ee_rate_0020E3D0((unsigned int)ovr);
             if (ovr == 0) {
-                rate = *(float *)(oldBptr);
+                rate = ee_rate_0020E3D0(*(unsigned int *)(oldBptr));
             }
             t = t * rate;
             mp[0x52] = seqA;
@@ -119,9 +129,9 @@ void func_0020E3D0(Moby *m) {
             }
             oldBptr = m->frameData;
             newAptr = seq->frames[newA];
-            rate = *(float *)&ovr;
+            rate = ee_rate_0020E3D0((unsigned int)ovr);
             if (ovr == 0) {
-                rate = *(float *)(newAptr);
+                rate = ee_rate_0020E3D0(*(unsigned int *)(newAptr));
             }
             t = t * rate;
             m->frameData = newAptr;

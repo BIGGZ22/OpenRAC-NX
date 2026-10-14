@@ -269,7 +269,7 @@ extern void func_0012EC30(void);
 /* Load */
 int func_002176C8(int arg0, int arg1, int arg2) {
     char *d;
-    int r = func_00217628(arg0, arg1, arg2);
+    int r = start_audio_stream_read(arg0, arg1, arg2);
     if (r != 0) {
         while (d = (char *)D_001517D0, *(short *)(d + 0x8) != 0) {
             func_00122598(0);

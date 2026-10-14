@@ -587,19 +587,19 @@ void func_L05_003108D0(char *moby, float k, float m) {
     float x, y;
     float s, x2, y2, d;
     if (*(char **)(g + 0x2FC) == moby && *(short *)(g + 0x30E) == 0) {
-        func_001F9BF0(v, g + 0x80, moby + 0x10);
-        d = func_001F9C78(v, moby + 0xC0);
-        x = -k * func_001F9C78(v, moby + 0xD0);
+        FastVecSub(v, g + 0x80, moby + 0x10);
+        d = FastVecDot(v, moby + 0xC0);
+        x = -k * FastVecDot(v, moby + 0xD0);
         y = k * d;
     } else {
         y = 0.0f;
         x = y;
     }
     s = 0.017453292f;
-    *(float *)(data + 0x98) = func_001FA748(*(float *)(data + 0x98), *(float *)(data + 0xA0));
-    *(float *)(data + 0x9C) = func_001FA748(*(float *)(data + 0x9C), *(float *)(data + 0xA4));
-    x2 = func_001FA748(x, func_001F9FA8(*(float *)(data + 0x98)) * k * *(float *)&D_L05_00161E98);
-    y2 = func_001FA748(y, func_001F9FA8(*(float *)(data + 0x9C)) * k * *(float *)&D_L05_00161E98);
+    *(float *)(data + 0x98) = FastAddRots(*(float *)(data + 0x98), *(float *)(data + 0xA0));
+    *(float *)(data + 0x9C) = FastAddRots(*(float *)(data + 0x9C), *(float *)(data + 0xA4));
+    x2 = FastAddRots(x, FastSin(*(float *)(data + 0x98)) * k * *(float *)&D_L05_00161E98);
+    y2 = FastAddRots(y, FastSin(*(float *)(data + 0x9C)) * k * *(float *)&D_L05_00161E98);
     func_L00_0025CE58_3108D0((float *)(moby + 0x40), x2, (float *)(data + 0x90),
                       *(float *)&D_L05_00161E9C * m * s * D_0015EE70,
                       *(float *)&D_L05_00161EA0 * m * s * D_0015EE70,
@@ -724,7 +724,7 @@ void func_L05_00310A90(struct Moby_10A90 *moby) {
     float speed;
     int j, spin;
     if (func_L00_0025B478(moby, 0xB30000, 0) != 0) {
-        piece = func_0020D348(0x3D4);
+        piece = CreateMoby(0x3D4);
         if (piece != 0) {
             char *vars;
             piece->spawn_frame = moby->spawn_frame;
@@ -734,10 +734,10 @@ void func_L05_00310A90(struct Moby_10A90 *moby) {
             piece->update_dist = 0x40;
             qcopy(&piece->pos, &moby->pos);
             qcopy(&piece->rot, &moby->rot);
-            speed = func_002140F8(5.0f, 12.0f);
-            func_001F9C30(vel, &moby->rot_row0, -(speed * D_0015EE6C));
-            func_001F9BC0(spin_vel);
-            func_L05_00319B58(piece, moby, vel, spin_vel, func_001F9850(60));
+            speed = random_float_between(5.0f, 12.0f);
+            FastVecScale(vel, &moby->rot_row0, -(speed * D_0015EE6C));
+            clear_u64_value(spin_vel);
+            func_L05_00319B58(piece, moby, vel, spin_vel, scale_ticks(60));
             *(int *)(vars + 0xC) = 0x200;
         }
         func_0022ED80(0, 0, piece);
@@ -745,32 +745,32 @@ void func_L05_00310A90(struct Moby_10A90 *moby) {
         {
             int i;
             for (i = 0; i < 6; i++) {
-                angle = func_001FA748(angle, 1.0471976f);
-                piece = func_0020D348(0x3D5);
+                angle = FastAddRots(angle, 1.0471976f);
+                piece = CreateMoby(0x3D5);
                 if (piece != 0) {
                     char *vars = (char *)piece->pvars;
                     *(u128_10A90 *)spin_vel = 0;
                     *(u128_10A90 *)drift = 0;
                     spin_vel[2] = 0.75f;
-                    drift[1] = func_001F9FA8(angle) * 1.4f;
-                    drift[2] = func_001F9F90(angle) * 1.4f;
+                    drift[1] = FastSin(angle) * 1.4f;
+                    drift[2] = FastCos(angle) * 1.4f;
                     *(u128_10A90 *)dir = *(u128_10A90 *)drift;
                     func_001F9EC0(dir, dir, &moby->rot_row0);
                     for (j = 0; j < 10; j++) {
                         float size;
-                        func_L00_00258DB0(drift, D_0015EE6C * 1.5f, D_0015EE6C * 2.0f);
-                        func_001F9C30(pos, drift, 5.0f);
-                        func_001F9BD8(pos, pos, dir);
-                        func_001F9BD8(pos, pos, &moby->pos);
-                        spin = func_002140B0(2);
+                        rand_vec(drift, D_0015EE6C * 1.5f, D_0015EE6C * 2.0f);
+                        FastVecScale(pos, drift, 5.0f);
+                        FastVecAdd(pos, pos, dir);
+                        FastVecAdd(pos, pos, &moby->pos);
+                        spin = random_integer_below(2);
                         if (spin == 0) {
                             spin--;
                         }
-                        size = func_002140F8(0.4f, 0.5f);
-                        func_L00_00272F00(pos, func_001F9850(25), size * 0.2f, size, 0x7F207F7F, 0, spin, drift,
+                        size = random_float_between(0.4f, 0.5f);
+                        func_L00_00272F00(pos, scale_ticks(25), size * 0.2f, size, 0x7F207F7F, 0, spin, drift,
                                          0.0f);
                         spin = -spin;
-                        func_L00_00272F00(pos, func_001F9850(25), size * 0.14f, size * 0.7f, 0x7F7F7F7F, 1, spin, drift,
+                        func_L00_00272F00(pos, scale_ticks(25), size * 0.14f, size * 0.7f, 0x7F7F7F7F, 1, spin, drift,
                                          0.0f);
                     }
                         piece->spawn_frame = moby->spawn_frame;
@@ -779,11 +779,11 @@ void func_L05_00310A90(struct Moby_10A90 *moby) {
                     piece->update_dist = 0x40;
                         qcopy(&piece->pos, &moby->pos);
                     qcopy(&piece->rot, &moby->rot);
-                    speed = func_002140F8(0.0f, 24.0f);
-                    life = func_002140F8(60.0f, 120.0f);
-                    func_001F9C30(vel, &moby->rot_row0, -(speed * D_0015EE6C));
-                    func_001F9BC0(spin_vel);
-                    func_L05_00319B58(piece, moby, vel, spin_vel, func_001FA898(func_001F9878(life)));
+                    speed = random_float_between(0.0f, 24.0f);
+                    life = random_float_between(60.0f, 120.0f);
+                    FastVecScale(vel, &moby->rot_row0, -(speed * D_0015EE6C));
+                    clear_u64_value(spin_vel);
+                    func_L05_00319B58(piece, moby, vel, spin_vel, truncate_float_to_s32(func_001F9878(life)));
                     *(int *)(vars + 0xC) = 0x200;
                     piece->rot.x = angle;
                     func_L00_00251E30_10A90(piece);
@@ -1352,10 +1352,10 @@ void func_L05_00317720(char *moby) {
             *(float *)(data + 0x60) = 0.0f;
             *(u8 *)(moby + 0x20) = 2;
             if (*(int *)(data + 0x50) != 0)
-                func_001F9C30(target, moby + 0xD0, 2.0f);
+                FastVecScale(target, moby + 0xD0, 2.0f);
             else
-                func_001F9C30(target, moby + 0xD0, -2.0f);
-            func_001F9BD8(moby + 0x10, moby + 0x10, target);
+                FastVecScale(target, moby + 0xD0, -2.0f);
+            FastVecAdd(moby + 0x10, moby + 0x10, target);
         } else {
             *(u8 *)(moby + 0x20) = 1;
             *(float *)(data + 0x60) = 0.5934119f;
@@ -1415,20 +1415,20 @@ void func_L05_00317720(char *moby) {
     case 3:
     case 4:
         if (*(u8 *)(moby + 0x20) == 3) {
-            func_001F9C30(target, moby + 0xD0, -1.9f);
-            func_001F9BD8(target, data, target);
+            FastVecScale(target, moby + 0xD0, -1.9f);
+            FastVecAdd(target, data, target);
         } else {
             qcopy(target, data);
         }
-        func_001F9BF0(delta, target, moby + 0x10);
+        FastVecSub(delta, target, moby + 0x10);
         stopped = 0.0f;
-        func_00214D88(func_001F9CB8(delta), D_0015EE70 * 6.0f,
+        func_00214D88(FastVecLength(delta), D_0015EE70 * 6.0f,
                                    D_0015EE70 * 12.0f, D_0015EE6C * 10.0f,
                                    &stopped, (float *)(data + 0x5C));
-        func_001F9BF0(delta, target, moby + 0x10);
+        FastVecSub(delta, target, moby + 0x10);
         func_L00_001FF4B0(delta, delta, *(float *)(data + 0x5C));
-        func_001F9BD8(moby + 0x10, moby + 0x10, delta);
-        if (!(func_001F9D10(moby + 0x10, target) < 0.0001f))
+        FastVecAdd(moby + 0x10, moby + 0x10, delta);
+        if (!(FastVecDist(moby + 0x10, target) < 0.0001f))
             return;
         if (*(u8 *)(moby + 0x20) == 3) {
             func_0022ED80(1, 0, moby);
@@ -1439,8 +1439,44 @@ void func_L05_00317720(char *moby) {
         break;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L05_00317B68);
-INCLUDE_ASM("asm/overlays", func_L05_00317CD8);
+/* Rotor update: vendor_00317B68.c. */
+extern float D_0015EE64 MACRO_ADDR;
+extern short D_L05_00161F90;
+extern void func_L00_00263950(char *, char *, int, float, float);
+
+typedef struct TrailEffect_317CD8 {
+    char pad0[0x64];
+    float pulse;
+    char pad68[8];
+    float width;
+    char pad74[0xC];
+} TrailEffect_317CD8;
+
+typedef struct TrailFields_317CD8 {
+    char pad0[0x140];
+    TrailEffect_317CD8 trail;
+} TrailFields_317CD8;
+
+/* Updates the two trails of the moby; with the cheat counter on, they get wider and pulse. */
+void func_L05_00317CD8(char *moby, int data_addr) {
+    char *t = (char *)data_addr;
+    int i;
+    for (i = 0; i < 2; i++) {
+        TrailFields_317CD8 *e = (TrailFields_317CD8 *)(t + i * 0x80);
+        if (*(int *)&D_L05_00161F90 != 0) {
+            float value = *(int *)&D_L05_00161F90 * 0.15f + 1.0f;
+            int frame;
+            if (3.7f < value) value = 3.7f;
+            frame = D_L05_0015F6B0;
+            e->trail.width = value;
+            value = (float)(frame & 0x7F);
+            value *= 0.0078125f;
+            value = FastSin(value * 3.1415927f);
+            e->trail.pulse = value * 0.61086524f;
+        }
+        func_L00_00263950(moby, (char *)&e->trail, i + 2, D_0015EE64 * 0.05f, D_0015EE64 * 0.3f);
+    }
+}
 typedef struct {
     char pad0[0x44];
     short n;

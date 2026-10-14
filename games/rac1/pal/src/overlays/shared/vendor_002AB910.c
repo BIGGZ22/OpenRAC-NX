@@ -2475,37 +2475,37 @@ void func_L00_002B30C8(unsigned char *o) {
     a.f[1] = -1.2f;
     a.f[3] = 1.0f;
     func_001F9EC0(&a, &a, o + 0xC0);
-    func_001F9BD8(&b, o + 0x10, &a);
-    for (i = 0; i < func_001FA898(24.0f); i++) {
-        angle = func_L00_00258C80(0.0f, 0.1308997f);
-        func_002156E0(&c, &D_0013FAB0, (char *)&D_0013FAB0 - 0x20,
+    FastVecAdd(&b, o + 0x10, &a);
+    for (i = 0; i < truncate_float_to_s32(24.0f); i++) {
+        angle = randf_sym(0.0f, 0.1308997f);
+        build_look_at_matrix(&c, &D_0013FAB0, (char *)&D_0013FAB0 - 0x20,
                          (float)i * 0.2617994f + angle);
-        func_L00_001FF4B0(&c, &c, func_002140F8(0.05f, 0.1f));
-        t = func_L00_00258BC8(0, 3);
-        if (func_002140B0(2) != 0)
+        func_L00_001FF4B0(&c, &c, random_float_between(0.05f, 0.1f));
+        t = rand_range(0, 3);
+        if (random_integer_below(2) != 0)
             t = -t;
         if (*(int *)((char *)&D_0013FAB0 - 0x360) != 0) {
-            func_001F9C30(&d, (char *)&D_0013FAB0 - 0x560, 1.7f);
-            func_001F9BD8(&c, &c, &d);
+            FastVecScale(&d, (char *)&D_0013FAB0 - 0x560, 1.7f);
+            FastVecAdd(&c, &c, &d);
         }
         {
-            int low = func_001F9850(30);
-            int high = func_001F9850(90);
-            func_L00_00272158(&b, &c, func_L00_00258BC8(low, high), 30, 0xFFFFFF, t,
+            int low = scale_ticks(30);
+            int high = scale_ticks(90);
+            func_L00_00272158(&b, &c, rand_range(low, high), 30, 0xFFFFFF, t,
                          60000.0f, 3000.0f, 0.85f, -0.001f, 0.0f);
         }
     }
-    for (j = 0; j < func_001FA898(6.0f); j++) {
-        angle = func_002140F8(0.0f, 0.7853982f);
-        func_002156E0(&c, &D_0013FAB0, (char *)&D_0013FAB0 - 0x20,
+    for (j = 0; j < truncate_float_to_s32(6.0f); j++) {
+        angle = random_float_between(0.0f, 0.7853982f);
+        build_look_at_matrix(&c, &D_0013FAB0, (char *)&D_0013FAB0 - 0x20,
                          (float)j * 1.0471976f + angle);
-        func_L00_001FF4B0(&c, &c, func_002140F8(0.05f, 0.1f));
+        func_L00_001FF4B0(&c, &c, random_float_between(0.05f, 0.1f));
         {
-            int low = func_001F9850(20);
-            int high = func_001F9850(60);
+            int low = scale_ticks(20);
+            int high = scale_ticks(60);
             func_L00_0026DA50(&b, &c, 0x4F007FFF, 0x1FFFFFFF,
-                         func_L00_00258BC8(low, high), 1, 10000.0f);
+                         rand_range(low, high), 1, 10000.0f);
         }
     }
-    o[0xBC] = func_001F9850(5);
+    o[0xBC] = scale_ticks(5);
 }

@@ -72,7 +72,7 @@ extern u8 D_0013D5DD NOT_SDA;
 extern int D_0013DC34 NOT_SDA;
 /* 2 when the byte at 0x13D5DD is set, else whether the word at 0x13DC34 is */
 int func_L00_0024F220(void) {
-    if (D_0013D5DD) return 2;
+    if (gHaveMorphORay) return 2;
     return D_0013DC34 != 0;
 }
 extern u8 D_0013D5C8[];

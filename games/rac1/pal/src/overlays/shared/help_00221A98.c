@@ -73,7 +73,7 @@ void func_L00_00221A98(void) {
             dist = 20.0f;
             hit = func_L00_001EFFF0_21A98(&first, &second, 2, D_0013F450_21A98.moby, 0);
             if (hit != 0) {
-                dist = func_001F9D10(&first, &D_L00_00173F40.point);
+                dist = FastVecDist(&first, &D_L00_00173F40.point);
                 if (!(3.0f < dist)) {
                     return;
                 }
@@ -84,7 +84,7 @@ void func_L00_00221A98(void) {
                which gives retail's two mov.s before the loop. */
             for (off = -0.4f; off < 0.5f; off += 0.1f) {
                 func_L00_00233EE0(&probe, off + 1.1f, 0.0f, 0.0f);
-                if (!func_L00_001F10E0(D_0013F450_21A98.unk234, &probe, 2, 0)) {
+                if (!coll_sphere(D_0013F450_21A98.unk234, &probe, 2, 0)) {
                     D_0013F450_21A98.unk260 = 1;
                     if (hit == 0) {
                         D_0013F450_21A98.unk258 = 20.0f;
@@ -3513,8 +3513,8 @@ int func_L00_00227F48(void) {
         if (D_0013D5C8[6] != 0) {
             decrement = 0;
         } else {
-            decrement = 10000 / (func_001F9850(0x3C) * 15);
-            func_001FFB38(4, 0x753F, func_L00_00236BF8,
+            decrement = 10000 / (scale_ticks(0x3C) * 15);
+            queue_animation_update(4, 0x753F, func_L00_00236BF8,
                 func_L00_00236DE8, func_L00_00236F38, &D_0013F450_27F48.unk22A0, 10000);
         }
         D_0013F450_27F48.unk22A0 -= decrement;

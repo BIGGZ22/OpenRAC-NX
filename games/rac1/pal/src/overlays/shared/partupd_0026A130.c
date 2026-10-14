@@ -519,7 +519,7 @@ extern unsigned char D_0013E620[];
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/00269290.c, FUN_L00_0026b230. */
 unsigned char *func_L00_0026C0D0(void *pos, void *vel, unsigned char flags, float size) {
     void *source = pos;
-    unsigned char *particle = func_L00_00268760(0xC, 0);
+    unsigned char *particle = CreatePart2(0xC, 0);
     if (particle) {
         unsigned char *motion = particle + 0x20;
         qcopy(particle + 0x10, source);
@@ -532,13 +532,13 @@ unsigned char *func_L00_0026C0D0(void *pos, void *vel, unsigned char flags, floa
             float lo = (float)(*(int *)&D_L00_001602A0);
             *(int *)(particle + 4) = (*(int *)&D_L00_00160288);
             *(float *)(particle + 0xC) = scale * 210000.0f;
-            *(short *)(particle + 0xA) = func_001FA898(func_001F9878(
-                func_002140F8(lo, hi)));
-            *(int *)(motion + 0x14) = func_001FA8A8((*(int *)&D_L00_00160288), (*(int *)&D_L00_0016028C),
-                                                          func_002140F8(zero, one));
-            *(int *)(motion + 0x18) = func_001FA8A8((*(int *)&D_L00_00160290),
+            *(short *)(particle + 0xA) = truncate_float_to_s32(func_001F9878(
+                random_float_between(lo, hi)));
+            *(int *)(motion + 0x14) = FastTweenColor((*(int *)&D_L00_00160288), (*(int *)&D_L00_0016028C),
+                                                          random_float_between(zero, one));
+            *(int *)(motion + 0x18) = FastTweenColor((*(int *)&D_L00_00160290),
                                                           (*(int *)&D_L00_00160294),
-                                                          func_002140F8(zero, one));
+                                                          random_float_between(zero, one));
             { unsigned char texture = *D_L00_001B2460;
               particle[3] = 0x48;
               particle[2] = texture; }
@@ -551,25 +551,25 @@ unsigned char *func_L00_0026C0D0(void *pos, void *vel, unsigned char flags, floa
             float lo = (float)(*(int *)&D_L00_00160280);
             *(int *)(particle + 4) = (*(int *)&D_L00_00160268);
             *(float *)(particle + 0xC) = scale * 210000.0f;
-            *(short *)(particle + 0xA) = func_001FA898(func_001F9878(
-                func_002140F8(lo, hi)));
-            *(int *)(motion + 0x14) = func_001FA8A8((*(int *)&D_L00_00160268), (*(int *)&D_L00_0016026C),
-                                                          func_002140F8(zero, one));
-            *(int *)(motion + 0x18) = func_001FA8A8((*(int *)&D_L00_00160270),
+            *(short *)(particle + 0xA) = truncate_float_to_s32(func_001F9878(
+                random_float_between(lo, hi)));
+            *(int *)(motion + 0x14) = FastTweenColor((*(int *)&D_L00_00160268), (*(int *)&D_L00_0016026C),
+                                                          random_float_between(zero, one));
+            *(int *)(motion + 0x18) = FastTweenColor((*(int *)&D_L00_00160270),
                                                           (*(int *)&D_L00_00160274),
-                                                          func_002140F8(zero, one));
+                                                          random_float_between(zero, one));
             if (flags & 4) {
                 offset = 8;
                 if (!D_0013E620[0x10])
                     offset = 0;
             }
-            particle[2] = D_L00_001B2430[func_002140B0(8) + offset];
+            particle[2] = D_L00_001B2430[random_integer_below(8) + offset];
             particle[3] = 0x44;
         }
-        particle[9] = func_001FA898(4.0f) + 0x40;
+        particle[9] = truncate_float_to_s32(4.0f) + 0x40;
         particle[1] = 0;
-        particle[8] = func_002140B0(0xFF);
-        motion[0x1E] = func_001FA898(func_L00_00258C80(1.0f, 4.0f));
+        particle[8] = random_integer_below(0xFF);
+        motion[0x1E] = truncate_float_to_s32(randf_sym(1.0f, 4.0f));
         *(float *)(motion + 0x10) = size;
         motion[0x1F] = flags;
         if (flags & 4) {

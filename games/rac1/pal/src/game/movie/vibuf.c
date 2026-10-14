@@ -87,17 +87,17 @@ int func_0023D090(ViBuf *vb) {
 
     for (i = 0; i < vb->count; i++) {
         unsigned int mask = 0x0FFFFFFF;
-        func_0023CFF0((unsigned long *)(vb->tags + i * 16), ((i << 11) + vb->base) & mask, 3, 0x80);
+        scTag2((unsigned long *)(vb->tags + i * 16), ((i << 11) + vb->base) & mask, 3, 0x80);
     }
     {
         unsigned int mask = 0x0FFFFFFF;
-        func_0023CFF0((unsigned long *)(vb->tags + i * 16), (unsigned int)vb->tags & mask, 2, 0);
+        scTag2((unsigned long *)(vb->tags + i * 16), (unsigned int)vb->tags & mask, 2, 0);
 
         *(volatile unsigned int *)0x1000B420 = 0;
         *(volatile unsigned int *)0x1000B410 = vb->base & mask;
         *(volatile unsigned int *)0x1000B430 = (unsigned int)vb->tags & mask;
     }
-    func_0023CF80(5);
+    setD4_CHCR(5);
     return 1;
 }
 /* viBufBeginPut(ViBuf *, unsigned char **, int *, unsigned char **, int *) */
@@ -174,7 +174,7 @@ int func_0023DBE0(ViBuf *vb, TimeStamp *ts) {
     int ret = 0;
     func_00118CB0(vb->sema);
     if (vb->f58 < vb->ntbl) {
-        func_0023DA88(vb, ts);
+        viBufModifyPts(vb, ts);
         if (ts->pts >= 0 || ts->dts >= 0) {
             ((TimeStamp *)vb->tbl)[vb->f5C].pts = ts->pts;
             ((TimeStamp *)vb->tbl)[vb->f5C].dts = ts->dts;

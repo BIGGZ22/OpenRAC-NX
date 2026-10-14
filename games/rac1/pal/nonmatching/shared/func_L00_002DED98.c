@@ -42,7 +42,7 @@ void func_L00_002DED98(void) {
     unsigned short y;
     unsigned int *o;
     s.t1 = func_001F4868(0x15);
-    s.t2 = 0xFF90000000000260L;
+    s.t2 = 0x0000FF9000000260L; /* FIX: retail is ori 0xFF90; dsll32 0; ori 0x260 = 0xFF90<<32 | 0x260 (was 0xFF90<<48) */
     s.t3 = 0x8000000048L;
     s.t0 = 0;
     a = *(float *)&D_L00_00161C18;

@@ -511,10 +511,10 @@ void func_L00_002472D0(void) {
     state->slot_29c = -1;
     state->slot_2a0 = -1;
     if (state->file_handle != -1) {
-        if (state->loaded == 0 && D_0013D5E9 != 0) {
+        if (state->loaded == 0 && gHaveMapOMatic != 0) {
             archive_index = state->archive_index;
             bytes = D_00137C80.render_archives[archive_index].size << 7;
-            func_00217628(buffer, D_00137C80.render_archives[archive_index].sector,
+            start_audio_stream_read(buffer, D_00137C80.render_archives[archive_index].sector,
                          D_00137C80.render_archives[archive_index].size);
             func_00217748(1);
             state->loaded = 1;
@@ -529,7 +529,7 @@ void func_L00_002472D0(void) {
         if (D_L00_001842F0.file_handle != -1) {
             D_L00_001842F0.last_transfer_bytes = D_L00_001842F0.transfer_bytes;
             func_00234238(D_L00_001842F0.buffer, D_L00_001842F0.file_handle, 0, D_L00_001842F0.transfer_bytes, 0);
-            D_L00_001842F0.level_slot = D_0013D5E9 != 0 ? D_0015EE84 + 0x100 : D_0015EE84;
+            D_L00_001842F0.level_slot = gHaveMapOMatic != 0 ? D_0015EE84 + 0x100 : D_0015EE84;
             D_L00_001842F0.active = 1;
             D_L00_001842F0.load_state = -2;
             return;

@@ -1683,7 +1683,7 @@ void func_L15_002ED420(char *moby) {
     if (idx != -1) {
         if (mb[0x20] != 0) {
             char *other = (char *)(D_L15_00160058_ED318 + idx * 256);
-            func_001F9BF0(vB, other + 0x10, data + 0x10);
+            FastVecSub(vB, other + 0x10, data + 0x10);
             *(u128 *)vA = *(u128 *)vB;
             func_L00_001FF240(vB, moby + 0x10, vA);
         }
@@ -1728,24 +1728,24 @@ void func_L15_002ED420(char *moby) {
     case 2: {
         float a;
         if (func_L15_002F8D30(*(int *)data) == 0) break;
-        a = func_001F9F90(func_001FA748(*(float *)(moby + 0x48), -1.5707964f));
+        a = FastCos(FastAddRots(*(float *)(moby + 0x48), -1.5707964f));
         *(float *)vA = a + a;
-        a = func_001F9FA8(func_001FA748(*(float *)(moby + 0x48), -1.5707964f));
+        a = FastSin(FastAddRots(*(float *)(moby + 0x48), -1.5707964f));
         *(float *)(vA + 4) = a + a;
         *(int *)(vA + 8) = 0;
         func_L00_001FF240(vC, vA, moby + 0x10);
-        func_001F9BC0(vB);
-        *(float *)(vB + 8) = func_001FA748(*(float *)(moby + 0x48), 1.5707964f);
+        clear_u64_value(vB);
+        *(float *)(vB + 8) = FastAddRots(*(float *)(moby + 0x48), 1.5707964f);
         *(float *)(vB + 4) = 1.5707964f;
         *(char **)(data + 4) = func_L15_002ECDD0(vA, vB);
         *(int *)(data + 8) = 0;
-        *(float *)vA = func_001F9F90(func_001FA748(*(float *)(moby + 0x48), -1.5707964f)) * 3.0f;
-        *(float *)(vA + 4) = func_001F9FA8(func_001FA748(*(float *)(moby + 0x48), -1.5707964f)) * 3.0f;
+        *(float *)vA = FastCos(FastAddRots(*(float *)(moby + 0x48), -1.5707964f)) * 3.0f;
+        *(float *)(vA + 4) = FastSin(FastAddRots(*(float *)(moby + 0x48), -1.5707964f)) * 3.0f;
         *(int *)(vA + 8) = 0;
         func_L00_001FF240(vC, vA, moby + 0x10);
         *(float *)(vA + 8) = func_00214358(vA, 0, 0.5f);
-        func_001F9BC0(vB);
-        *(float *)(vB + 8) = func_001FA748(*(float *)(moby + 0x48), 1.5707964f);
+        clear_u64_value(vB);
+        *(float *)(vB + 8) = FastAddRots(*(float *)(moby + 0x48), 1.5707964f);
         func_L00_00217718(vA, vB, 0x72, 0);
         {
             int d = *(int *)(data + 0x20);
@@ -1759,13 +1759,13 @@ void func_L15_002ED420(char *moby) {
         float f20v;
         if (*(char **)(data + 4) == 0) break;
         f20v = 360.0f / func_001F9878(360.0f);
-        *(float *)(data + 8) = func_001FA748(*(float *)(data + 8), f20v * 0.017453292f);
-        f20v = func_001F9F90(*(float *)(data + 8)) + 1.0f;
-        *(float *)vA = func_001F9F90(func_001FA748(*(float *)(moby + 0x48), -1.5707964f)) * f20v;
-        *(float *)(vA + 4) = func_001F9FA8(func_001FA748(*(float *)(moby + 0x48), -1.5707964f)) * f20v;
+        *(float *)(data + 8) = FastAddRots(*(float *)(data + 8), f20v * 0.017453292f);
+        f20v = FastCos(*(float *)(data + 8)) + 1.0f;
+        *(float *)vA = FastCos(FastAddRots(*(float *)(moby + 0x48), -1.5707964f)) * f20v;
+        *(float *)(vA + 4) = FastSin(FastAddRots(*(float *)(moby + 0x48), -1.5707964f)) * f20v;
         *(int *)(vA + 8) = 0;
         d4 = *(char **)(data + 4);
-        func_001F9BD8(vB, moby + 0x10, vA);
+        FastVecAdd(vB, moby + 0x10, vA);
         *(u128 *)(d4 + 0x10) = *(u128 *)vB;
         if (f20v < 0.5f) {
             {
@@ -1785,24 +1785,24 @@ void func_L15_002ED420(char *moby) {
         D_L15_00184B2C = 1;
         d4 = *(char **)(data + 4);
         if (d4 == 0) {
-            float a = func_001FA748(*(float *)(moby + 0x48), -1.5707964f);
-            *(float *)vA = func_001F9F90(a) * 0.5f;
-            *(float *)(vA + 4) = func_001F9FA8(func_001FA748(*(float *)(moby + 0x48), -1.5707964f)) * 0.5f;
+            float a = FastAddRots(*(float *)(moby + 0x48), -1.5707964f);
+            *(float *)vA = FastCos(a) * 0.5f;
+            *(float *)(vA + 4) = FastSin(FastAddRots(*(float *)(moby + 0x48), -1.5707964f)) * 0.5f;
             *(int *)(vA + 8) = 0;
             func_L00_001FF240(vC, vA, moby + 0x10);
-            func_001F9BC0(vB);
-            *(float *)(vB + 8) = func_001FA748(*(float *)(moby + 0x48), 1.5707964f);
+            clear_u64_value(vB);
+            *(float *)(vB + 8) = FastAddRots(*(float *)(moby + 0x48), 1.5707964f);
             *(float *)(vB + 4) = 1.5707964f;
             *(u128 *)vC = *(u128 *)(moby + 0x10);
             *(char **)(data + 4) = func_L15_002ECDD0(vC, vB);
         } else {
-            float a = func_001FA748(*(float *)(moby + 0x48), -1.5707964f);
-            *(float *)vA = func_001F9F90(a) * 0.5f;
-            *(float *)(vA + 4) = func_001F9FA8(func_001FA748(*(float *)(moby + 0x48), -1.5707964f)) * 0.5f;
+            float a = FastAddRots(*(float *)(moby + 0x48), -1.5707964f);
+            *(float *)vA = FastCos(a) * 0.5f;
+            *(float *)(vA + 4) = FastSin(FastAddRots(*(float *)(moby + 0x48), -1.5707964f)) * 0.5f;
             *(int *)(vA + 8) = 0;
             func_L00_001FF240(vC, vA, moby + 0x10);
-            func_001F9BC0(vB);
-            *(float *)(vB + 8) = func_001FA748(*(float *)(moby + 0x48), 1.5707964f);
+            clear_u64_value(vB);
+            *(float *)(vB + 8) = FastAddRots(*(float *)(moby + 0x48), 1.5707964f);
             *(float *)(vB + 4) = 1.5707964f;
             *(u128 *)(*(char **)(data + 4) + 0x10) = *(u128 *)vA;
             *(u128 *)(*(char **)(data + 4) + 0x40) = *(u128 *)vB;
@@ -1812,7 +1812,7 @@ void func_L15_002ED420(char *moby) {
             if (b[0x6D] == 0) {
                 if (func_L15_002ED3A0(*(int *)(data + 0x20)) >= 10) {
                     b[0x6D] = 1;
-                    D_0015EE98 += 0x3A98;
+                    gBolts += 0x3A98;
                 }
             }
         }

@@ -459,7 +459,7 @@ void func_L00_001F5C60(void) {
     AmmoDisplay60 *ammo;
     u8 *weapon_order;
 
-    func_001FB530();
+    framebuf_appendLargeSetup();
     if (D_L00_0015F6BC == 0) {
         func_001F0FF8(0x100, 0x10, 0x80C0C000, D_L00_0015F108);
         func_001F0FF8(0x100, 0x18, 0x80C0C000, D_L00_0015F110);
@@ -599,7 +599,7 @@ void func_L00_001F5C60(void) {
         func_00116248(buf, fmt, (s32) weapon_order[0xF]);
         func_001F0F78(0x7A, 0x16E, 0x80406080, buf);
         func_001F0F78(0x14, 0x17D, 0x8000C0C0, D_L00_0015F328);
-        func_00116248(buf, fmt, D_0015EE98);
+        func_00116248(buf, fmt, gBolts);
         func_001F0F78(0x8C, 0x17D, 0x80F0F0F0, buf);
         func_001F0F78(0xBC, 0x100, 0x8000C000, D_L00_0015F330);
         func_001F0F78(0xBC, 0x106, 0x8000C000, D_L00_0015F338);

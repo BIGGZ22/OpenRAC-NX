@@ -20,7 +20,7 @@ void func_L13_002EE590(void *mobyp, void *datap) {
     float rotation_matrix[16];
     Vec_2EE590 pv;
     float *probe = pv.v;
-    void **candidates;
+    void *candidates[1024]; /* retail copies the list onto the stack with alloca; the port's translator takes no alloca */
     int count, hit_count, i, j;
     char *candidate;
     short max_size;
@@ -36,7 +36,7 @@ void func_L13_002EE590(void *mobyp, void *datap) {
     func_001F9BD8(query, query, moby + 0x10);
     count = func_L00_001F2BE8_2EE590(radius, query, 0x10, moby, 0);
     if (count == 0) return;
-    candidates = (void **)__builtin_alloca(count * 4);
+    if (count > 1024) count = 1024;
     func_00115248_2EE590(candidates, D_L13_00178280_2EE590, count * 4);
     for (i = 0; i < count; i++) {
         candidate = (char *)candidates[i];

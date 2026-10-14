@@ -45,9 +45,9 @@ unsigned char *func_L07_0029C6A8(void *m, short index, float amount, float facto
     if (p != 0) {
         unsigned char *q = p + 0x20;
         *(void **)q = m;
-        *(short *)(p + 0xa) = func_001F9850(0x50);
+        *(short *)(p + 0xa) = scale_ticks(0x50);
         *(float *)(q + 4) = 0.0f;
-        *(float *)(q + 8) = func_002140F8(*(float *)(q + 4), 1.0f);
+        *(float *)(q + 8) = random_float_between(*(float *)(q + 4), 1.0f);
         {
             int random_index = func_001160D8() & 15;
             *(float *)(q + 0x14) = factor;
@@ -55,18 +55,18 @@ unsigned char *func_L07_0029C6A8(void *m, short index, float amount, float facto
         }
         p[8] = func_001160D8();
         *(int *)(p + 4) = 0x7f7f7f;
-        *(volatile unsigned char *)(p + 9) = func_001FA898(4.0f) + 0x40;
+        *(volatile unsigned char *)(p + 9) = truncate_float_to_s32(4.0f) + 0x40;
         *(volatile unsigned char *)(p + 3) = 0x48;
         *(volatile unsigned char *)(p + 1) = 0;
         *(volatile float *)(p + 0xc) = amount;
         p[2] = D_L07_001B24F4[*(short *)(q + 0xc)];
         *(float *)(q + 0x10) = D_0015EE60 * 0.015f;
         *(short *)(q + 0xe) = index;
-        p[8] = func_001FA898(*(float *)(q + 8) * 255.0f);
+        p[8] = truncate_float_to_s32(*(float *)(q + 8) * 255.0f);
         func_L00_00250800(*(void **)q, *(short *)(q + 0xe), v);
-        func_001F9BF0(t, D_L07_00166EC0, v);
+        FastVecSub(t, D_L07_00166EC0, v);
         func_L00_001FF4B0(t, t, *(float *)(q + 0x14));
-        func_001F9BD8(p + 0x10, v, t);
+        FastVecAdd(p + 0x10, v, t);
     }
     return p;
 }

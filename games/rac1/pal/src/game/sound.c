@@ -384,7 +384,7 @@ void func_0022DBE8(void) {
         p += 0x70;
     } while (p < end);
     func_0012DB68();
-    func_0012E380(D_0015EEE8 == 0);
+    func_0012E380(gStereo == 0);
     func_0012E3C0(0, 1);
     func_0012F0E8(2, 4);
     func_0012E3F8(1, 0x18, 0x2F);

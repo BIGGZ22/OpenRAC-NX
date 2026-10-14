@@ -72,12 +72,12 @@ void func_L06_002FE5D0(void) {
     second.color[0] = second.color[1] = second.color[2] = second.color[3] = (*(int *)&D_L06_00162028);
     i = 0;
     do {
-        func_001F9C30(vec1, D_L06_001F2960[i], (*(float *)&D_L06_0016202C));
+        FastVecScale(vec1, D_L06_001F2960[i], (*(float *)&D_L06_0016202C));
         func_001F9EE8(vec1, vec1, matrix);
-        func_001F9BF0(vec2, vec1, D_L06_00167640_FE5D0);
+        FastVecSub(vec2, vec1, D_L06_00167640_FE5D0);
         func_L00_001FF4B0(vec2, vec2, 1.0f);
         func_001F9EC0(vec1, D_L06_001F1D20[i], matrix_ptr);
-        func_001F9C78(vec2, vec1);
+        FastVecDot(vec2, vec1);
         j = 0;
         do {
             int a = D_L06_001F1570[i][j][0];
@@ -169,12 +169,12 @@ void func_L06_002FE890(void) {
     second.color[0] = (*(int *)&D_L06_00162028);
     i = 0;
     do {
-        func_001F9C30(vec1, D_L06_001F08B0[i], (*(float *)&D_L06_0016202C));
+        FastVecScale(vec1, D_L06_001F08B0[i], (*(float *)&D_L06_0016202C));
         func_001F9EE8(vec1, vec1, matrix);
-        func_001F9BF0(vec2, vec1, D_L06_00167640_FE890);
+        FastVecSub(vec2, vec1, D_L06_00167640_FE890);
         func_L00_001FF4B0(vec2, vec2, 1.0f);
         func_001F9EC0(vec1, D_L06_001EFF30[i], matrix_ptr);
-        facing = func_001F9C78(vec2, vec1);
+        facing = FastVecDot(vec2, vec1);
         if (facing > 0.0f) goto next;
         {
             j = 0;
@@ -182,7 +182,7 @@ void func_L06_002FE890(void) {
                 int a = D_L06_001EF660[i][j][0];
                 int b = D_L06_001EF660[i][j][1];
                 float u, v;
-                func_001F9C30(&first.v[j], D_L06_001EF080[a], (*(float *)&D_L06_0016202C));
+                FastVecScale(&first.v[j], D_L06_001EF080[a], (*(float *)&D_L06_0016202C));
                 qcopy(&second.v[j], &first.v[j]);
                 u = D_L06_001EFA00[b][0];
                 v = D_L06_001EFA00[b][1];
@@ -270,19 +270,19 @@ void func_L06_002FEB78(void) {
     second.color[0] = (*(int *)&D_L06_00162028);
     i = 0;
     do {
-        func_001F9C30(vec1, D_L06_001EBA80[i], (*(float *)&D_L06_0016202C));
+        FastVecScale(vec1, D_L06_001EBA80[i], (*(float *)&D_L06_0016202C));
         func_001F9EE8(vec1, vec1, matrix);
-        func_001F9BF0(vec2, vec1, D_L06_00167640_FEB78);
+        FastVecSub(vec2, vec1, D_L06_00167640_FEB78);
         func_L00_001FF4B0(vec2, vec2, 1.0f);
         func_001F9EC0(vec1, D_L06_001E4D80[i], matrix_ptr);
-        facing = func_001F9C78(vec2, vec1);
+        facing = FastVecDot(vec2, vec1);
         if (!(facing > 0.0f)) {
             j = 0;
             do {
                 int a = D_L06_001DFA40[i][j][0];
                 int b = D_L06_001DFA40[i][j][1];
                 float u, v;
-                func_001F9C30(&first.v[j], D_L06_001DC340[a], (*(float *)&D_L06_0016202C));
+                FastVecScale(&first.v[j], D_L06_001DC340[a], (*(float *)&D_L06_0016202C));
                 qcopy(&second.v[j], &first.v[j]);
                 u = D_L06_001E3040[b][0];
                 v = D_L06_001E3040[b][1];
@@ -1607,54 +1607,54 @@ void func_L06_00304FA8(struct Moby_04FA8 *moby) {
     center[0] = 426.0f;
     center[1] = 189.75f;
     center[2] = 173.07f;
-    func_L06_0030D338_04FA8(center, func_001F9850((*(int *)&D_L06_00162198_04FA8)), (*(int *)&D_L06_0016219C_04FA8),
+    func_L06_0030D338_04FA8(center, scale_ticks((*(int *)&D_L06_00162198_04FA8)), (*(int *)&D_L06_0016219C_04FA8),
                            (*(int *)&D_L06_001621A0_04FA8));
     largest = 0.0f;
-    func_001F9BC0(middle);
+    clear_u64_value(middle);
     list = D_L06_001AC340[*(int *)(vars + 0xCC)];
     count = 0;
     do {
         id = *list & 0x7FFF;
-        func_L00_00258DB0(push, 1.0f, 2.0f);
+        rand_vec(push, 1.0f, 2.0f);
         func_L06_00304B88(30.0f, moby, &((struct Moby_04FA8 *)(D_L06_00160058 + (id << 8)))->pos, push, 1);
-        func_001F9BD8(middle, middle, &((struct Moby_04FA8 *)(D_L06_00160058 + (id << 8)))->pos);
+        FastVecAdd(middle, middle, &((struct Moby_04FA8 *)(D_L06_00160058 + (id << 8)))->pos);
         count++;
         if (largest < ((struct Moby_04FA8 *)((id << 8) + (int)D_L06_00160058))->bsphere.w) {
             largest = ((struct Moby_04FA8 *)((id << 8) + (int)D_L06_00160058))->bsphere.w;
         }
     } while (*list++ >= 0);
-    func_001F9C30(middle, middle, 1.0f / func_001FA888(count));
+    FastVecScale(middle, middle, 1.0f / func_001FA888(count));
     list = D_L06_001AC340[*(int *)(vars + 0xCC)];
     do {
         float speed;
         id = *list & 0x7FFF;
-        func_001F9BF0(push, &((struct Moby_04FA8 *)(D_L06_00160058 + (id << 8)))->pos, middle);
+        FastVecSub(push, &((struct Moby_04FA8 *)(D_L06_00160058 + (id << 8)))->pos, middle);
         piece = (struct Moby_04FA8 *)((id << 8) + (int)D_L06_00160058);
         speed = D_0015EE6C * 30.0f;
         func_L00_001FF4B0(push, push, -((piece->bsphere.w - largest) / largest) * speed + speed);
         push[3] = 6.0f;
-        func_L00_00258DB0(spin, D_0015EE6C * 0.2617994f, D_0015EE6C * 0.08726646f);
+        rand_vec(spin, D_0015EE6C * 0.2617994f, D_0015EE6C * 0.08726646f);
         func_L06_003023C8((char *)(D_L06_00160058 + (id << 8)), push, spin);
         for (i = 0; i < (*(int *)&D_L06_00162220); i++) {
             piece = (struct Moby_04FA8 *)((id << 8) + (int)D_L06_00160058);
-            func_L00_00258DB0(pos, 0.0f, piece->bsphere.w * 0.00048828125f);
-            func_001F9BD8(pos, pos, &((struct Moby_04FA8 *)(D_L06_00160058 + (id << 8)))->pos);
-            func_L00_00258DB0(vel, 0.0f, (*(float *)&D_L06_001621EC) * D_0015EE6C);
-            func_001F9BC0(accel);
-            vel[3] = func_002140F8((*(float *)&D_L06_00162200), (*(float *)&D_L06_00162204));
-            accel[3] = func_002140F8((*(float *)&D_L06_00162208), (*(float *)&D_L06_0016220C));
+            rand_vec(pos, 0.0f, piece->bsphere.w * 0.00048828125f);
+            FastVecAdd(pos, pos, &((struct Moby_04FA8 *)(D_L06_00160058 + (id << 8)))->pos);
+            rand_vec(vel, 0.0f, (*(float *)&D_L06_001621EC) * D_0015EE6C);
+            clear_u64_value(accel);
+            vel[3] = random_float_between((*(float *)&D_L06_00162200), (*(float *)&D_L06_00162204));
+            accel[3] = random_float_between((*(float *)&D_L06_00162208), (*(float *)&D_L06_0016220C));
             particle = func_00219780(
                 pos, vel, accel,
-                func_001FA8A8((*(int *)&D_L06_00162210), (*(int *)&D_L06_00162214), func_002140F8(0.0f, 1.0f)),
-                func_001FA8A8((*(int *)&D_L06_00162218), (*(int *)&D_L06_0016221C), func_002140F8(0.0f, 1.0f)),
-                func_001FA898(func_001F9878((float)(*(int *)&D_L06_001621F0) * func_002140F8(0.0f, 1.0f) + 1.0f)),
-                func_001FA898(func_001F9878(
-                    (float)(*(int *)&D_L06_001621F4) * (func_002140F8(-(*(float *)&D_L06_001621FC), (*(float *)&D_L06_001621FC)) + 1.0f))),
-                func_001FA898(func_001F9878(
-                    (float)(*(int *)&D_L06_001621F8) * (func_002140F8(-(*(float *)&D_L06_001621FC), (*(float *)&D_L06_001621FC)) + 1.0f))),
+                FastTweenColor((*(int *)&D_L06_00162210), (*(int *)&D_L06_00162214), random_float_between(0.0f, 1.0f)),
+                FastTweenColor((*(int *)&D_L06_00162218), (*(int *)&D_L06_0016221C), random_float_between(0.0f, 1.0f)),
+                truncate_float_to_s32(func_001F9878((float)(*(int *)&D_L06_001621F0) * random_float_between(0.0f, 1.0f) + 1.0f)),
+                truncate_float_to_s32(func_001F9878(
+                    (float)(*(int *)&D_L06_001621F4) * (random_float_between(-(*(float *)&D_L06_001621FC), (*(float *)&D_L06_001621FC)) + 1.0f))),
+                truncate_float_to_s32(func_001F9878(
+                    (float)(*(int *)&D_L06_001621F8) * (random_float_between(-(*(float *)&D_L06_001621FC), (*(float *)&D_L06_001621FC)) + 1.0f))),
                 (*(int *)&D_L06_00162224));
             if (particle != 0) {
-                particle[9] = func_001FA898(4.0f) - 0x20;
+                particle[9] = truncate_float_to_s32(4.0f) - 0x20;
             }
         }
     } while (*list++ >= 0);
@@ -2880,13 +2880,13 @@ void func_L06_003097F0(struct Moby_097F0 *moby) {
     int i;
     int j;
     int elapsed;
-    if (D_00141A68[0x2A].count == 0 && func_00215570(&D_0013F450.motion.pos, vars[9])) {
-        func_L00_00203F20(0x1773, 0x2A);
+    if (D_00141A68[0x2A].count == 0 && is_point_inside_clip_volume(&D_0013F450.motion.pos, vars[9])) {
+        Help_Request(0x1773, 0x2A);
     }
     if (D_00141A68[0x29].count == 0) {
         for (i = 0; i < 6; i++) {
             if (vars[i] != -1 && ((struct Moby_097F0 *)(D_L06_00160058 + (vars[i] << 8)))->state != 1) {
-                func_L00_00203F20(0x1772, 0x29);
+                Help_Request(0x1772, 0x29);
             }
         }
     }
@@ -2894,43 +2894,43 @@ void func_L06_003097F0(struct Moby_097F0 *moby) {
         struct Moby_097F0 *target = (struct Moby_097F0 *)(D_L06_00160058 + (vars[10] << 8));
         if (target == 0 || target->state == 0xFE || target->state == 0xFD) {
             if (D_0013D5D6[0]) {
-                func_L00_00203F20(0x1777, 0x2E);
+                Help_Request(0x1777, 0x2E);
                 if (D_00141A68[0x2F].count <= 0xFFFE) {
                     D_00141A68[0x2F].count++;
                 }
-                if (func_001F9850(D_0015EFA4) / 600 > D_00141A68[0x2F].unk2) {
-                    D_00141A68[0x2F].unk2 = func_001F9850(D_0015EFA4) / 600;
+                if (scale_ticks(D_0015EFA4) / 600 > D_00141A68[0x2F].unk2) {
+                    D_00141A68[0x2F].unk2 = scale_ticks(D_0015EFA4) / 600;
                 }
                 D_00141A68[0x2F].level_mask = D_00141A68[0x2F].level_mask | (1 << D_0015EE84) | 0x80000000;
             } else {
-                func_L00_00203F20(0x1778, 0x2F);
+                Help_Request(0x1778, 0x2F);
                 if (D_00141A68[0x2E].count <= 0xFFFE) {
                     D_00141A68[0x2E].count++;
                 }
-                if (func_001F9850(D_0015EFA4) / 600 > D_00141A68[0x2E].unk2) {
-                    D_00141A68[0x2E].unk2 = func_001F9850(D_0015EFA4) / 600;
+                if (scale_ticks(D_0015EFA4) / 600 > D_00141A68[0x2E].unk2) {
+                    D_00141A68[0x2E].unk2 = scale_ticks(D_0015EFA4) / 600;
                 }
                 D_00141A68[0x2E].level_mask = D_00141A68[0x2E].level_mask | (1 << D_0015EE84) | 0x80000000;
             }
         }
     }
-    if (func_00215570(&D_0013F450.motion.pos, vars[8]) && func_L01_0026EFB8(vars[6], -1) == 0) {
+    if (is_point_inside_clip_volume(&D_0013F450.motion.pos, vars[8]) && func_L01_0026EFB8(vars[6], -1) == 0) {
         for (j = 0; j < 6; j++) {
             m = (struct Moby_097F0 *)(D_L06_00160058 + (vars[j] << 8));
             if (vars[j] != -1 && m != 0 && m->state != 0xFE && m->state != 0xFD && m->state != 1) {
                 if (D_00141A68[0x28].count != 0) {
-                    elapsed = func_001F9850(D_0015EFA4) - D_00141A68[0x28].unk2 * 600;
-                    if ((int)(func_001F9850(18) * 60.0f) < elapsed || D_00141A68[0x28].unk2 * 600 == 0) {
-                        func_L00_00203F20(0x1771, 0x28);
-                    } else if (func_001F9850(D_0015EFA4) / 600 > D_00141A68[0x28].unk2) {
-                        D_00141A68[0x28].unk2 = func_001F9850(D_0015EFA4) / 600;
+                    elapsed = scale_ticks(D_0015EFA4) - D_00141A68[0x28].unk2 * 600;
+                    if ((int)(scale_ticks(18) * 60.0f) < elapsed || D_00141A68[0x28].unk2 * 600 == 0) {
+                        Help_Request(0x1771, 0x28);
+                    } else if (scale_ticks(D_0015EFA4) / 600 > D_00141A68[0x28].unk2) {
+                        D_00141A68[0x28].unk2 = scale_ticks(D_0015EFA4) / 600;
                     }
                 } else {
                     if (D_00141A68[0x28].count <= 0xFFFE) {
                         D_00141A68[0x28].count++;
                     }
-                    if (func_001F9850(D_0015EFA4) / 600 > D_00141A68[0x28].unk2) {
-                        D_00141A68[0x28].unk2 = func_001F9850(D_0015EFA4) / 600;
+                    if (scale_ticks(D_0015EFA4) / 600 > D_00141A68[0x28].unk2) {
+                        D_00141A68[0x28].unk2 = scale_ticks(D_0015EFA4) / 600;
                     }
                     D_00141A68[0x28].level_mask = D_00141A68[0x28].level_mask | (1 << D_0015EE84) | 0x80000000;
                 }
@@ -2940,10 +2940,10 @@ void func_L06_003097F0(struct Moby_097F0 *moby) {
             }
         }
     }
-    if (D_0013D490[0x25] == 0) {
+    if (gSpecialItems[0x25] == 0) {
         struct Moby_097F0 *trigger = (struct Moby_097F0 *)(D_L06_00160058 + (vars[11] << 8));
         if (vars[11] != -1 && trigger->command != 0) {
-            D_0013D490[0x25] = 1;
+            gSpecialItems[0x25] = 1;
         }
     }
 }

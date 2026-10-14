@@ -610,9 +610,9 @@ void func_L08_002D7758(struct Moby_D7758 *moby) {
             if (other->state < 0x7f && other != moby) {
                 u16 class_id = other->oclass;
                 if ((u32)(class_id - 0x24c) < 0xb) {
-                    func_0020D678(other);
+                    DeleteMoby(other);
                 } else if ((s16)class_id == 0x1d8) {
-                    func_0020D678(other);
+                    DeleteMoby(other);
                 }
             }
             if (*list++ < -1)

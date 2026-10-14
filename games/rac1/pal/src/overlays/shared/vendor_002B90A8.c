@@ -199,9 +199,9 @@ void func_L01_002B9E68(f32 *pos, s32 index, s32 mode) {
         near_bits = 0;
         far_bits = 0;
         for (i = 0; i < 4; i++) {
-            func_001F9BF0(near_clip, corners[i], D_L01_001672C0);
-            func_001F9C30(far_clip, near_clip, 1024.0f);
-            func_001F9C30(near_clip, near_clip, 1024.0f);
+            FastVecSub(near_clip, corners[i], D_L01_001672C0);
+            FastVecScale(far_clip, near_clip, 1024.0f);
+            FastVecScale(near_clip, near_clip, 1024.0f);
             func_001F9EE8(far_clip, far_clip, D_L01_001672C0 - 0x80);
             func_001F9EE8(near_clip, near_clip, D_L01_001672C0 - 0x40);
             far_bits = (far_bits << 8) | func_001F9B20(far_clip);
@@ -512,14 +512,14 @@ void func_L01_002C8740(char *moby) {
     *(float *)(moby + 0x44) = -func_L00_001FF860(distance, *(float *)(camera + 0x148) - *(float *)(moby + 0x18));
     *(float *)(moby + 0x48) = func_L00_001FF860(*(float *)(camera + 0x140) - *(float *)(moby + 0x10),
                                              *(float *)(camera + 0x144) - *(float *)(moby + 0x14));
-    *(float *)(moby + 0x40) = func_001FA748(*(float *)(moby + 0x40), *(float *)(data + 3));
-    func_001F9BD8(moby + 0x10, moby + 0x10, data + 8);
+    *(float *)(moby + 0x40) = FastAddRots(*(float *)(moby + 0x40), *(float *)(data + 3));
+    FastVecAdd(moby + 0x10, moby + 0x10, data + 8);
     switch ((u8)moby[0x20]) {
     case 1:
         func_L01_00281738((*(s32 *)&D_L01_00161524), moby);
         func_L00_001FF4B0(normal, data + 8, 1.0f);
         func_L00_0025A8C0(hit, moby, 0, 0.0f, normal);
-        if (func_L00_001F2BE8((*(f32 *)&D_L01_0016152C), moby + 0x10, 0x10, data[6], hit) &&
+        if (coll_sphere_mobys((*(f32 *)&D_L01_0016152C), moby + 0x10, 0x10, data[6], hit) &&
             !func_001E97C8(moby)) {
             CollisionHit *contact = (CollisionHit *)D_L01_00174340;
             if (contact->moby != 0)
@@ -528,7 +528,7 @@ void func_L01_002C8740(char *moby) {
             goto remove;
         }
         if (func_001F9908(data)) {
-            data[0] = func_001F9850(0x1e);
+            data[0] = scale_ticks(0x1e);
             moby[0x20] = 2;
             if (data[4] != 0)
                 data[4] = 0;
@@ -539,10 +539,10 @@ void func_L01_002C8740(char *moby) {
     case 2:
         if (func_001F9908(data)) {
         remove:
-            func_0020D678(moby);
+            DeleteMoby(moby);
         } else {
-            int duration = func_001F9850(0x1e);
-            moby[0x23] = func_001FA898((float)data[0] * (127.0f / (float)duration));
+            int duration = scale_ticks(0x1e);
+            moby[0x23] = truncate_float_to_s32((float)data[0] * (127.0f / (float)duration));
         }
         break;
     }

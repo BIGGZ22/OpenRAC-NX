@@ -1112,15 +1112,15 @@ void func_L00_0029C070(void) {
     vec = (f32 *)((char *)g + 0xC0);
     func_001F9EC0(vec, &(*(s32 *)&D_L00_001611B0), g->moby + 0xC0);
     moby = (VendorMoby_29a6b0 *)g->moby;
-    func_001F9BD8(vec, vec, (char *)moby + 0x10);
+    FastVecAdd(vec, vec, (char *)moby + 0x10);
     *(f32 *)((char *)g + 0xC8) += 2.0f;
     *(f32 *)((char *)g + 0xC8) = func_00214358(0.5f, vec, 0);
-    func_001F9BC0((char *)g + 0xB0);
-    *(f32 *)((char *)g + 0xB8) = func_001FA748(((VendorMoby_29a6b0 *)g->moby)->rot.f[2], 3.1415927f);
+    clear_u64_value((char *)g + 0xB0);
+    *(f32 *)((char *)g + 0xB8) = FastAddRots(((VendorMoby_29a6b0 *)g->moby)->rot.f[2], 3.1415927f);
     func_001FA1F8((char *)g + 0x80, (char *)g + 0xB0);
-    func_001F99B0(&D_L00_0016C960, 0, 0x1C0);
-    func_001F99B0(D_L00_0017C440, 0, 0x40);
-    func_00234AC8(1);
+    FastMemSet(&D_L00_0016C960, 0, 0x1C0);
+    FastMemSet(D_L00_0017C440, 0, 0x40);
+    VU1_syncChain(1);
     func_002348B8();
     selected = (s32 *)((char *)g + 0x48);
     offset = D_L00_0016128C - 0x40000;
@@ -1143,7 +1143,7 @@ void func_L00_0029C070(void) {
     func_00205220(0);
     mode = D_001517D0.mode;
     while (mode != 3) {
-        func_0022DD68();
+        sound_update();
         func_00122598(0);
         mode = D_001517D0.mode;
     }

@@ -1474,7 +1474,7 @@ void func_L12_002E9B88(struct Moby *moby, float *target, float max_angle, float 
     distance = func_001F9D48(&moby->pos, target);
     if (distance > 6.5f && max_angle != 0.0f) {
         angle = func_L00_001FF860(target[0] - moby->pos.x, target[1] - moby->pos.y);
-        angle = func_001FA748(angle, max_angle);
+        angle = FastAddRots(angle, max_angle);
         func_L00_0025CE58(&moby->rot.z, data + 0x23c, angle, D_0015EE70 * 15.707963f,
                   D_0015EE70 * 12.566371f, D_0015EE6C * 25.132742f);
     } else {
@@ -1487,7 +1487,7 @@ void func_L12_002E9B88(struct Moby *moby, float *target, float max_angle, float 
         func_00214D28(data + 0xf4, approach_speed, D_0015EE70 * 7.0f);
     } else {
         angle = func_L00_001FF860(target[0] - moby->pos.x, target[1] - moby->pos.y);
-        if (func_001FA850(moby->rot.z, angle) < 1.5707964f && 6.0f < distance) {
+        if (FastDiffRots(moby->rot.z, angle) < 1.5707964f && 6.0f < distance) {
             func_00214D28(data + 0xf4, D_0015EE6C * 7.0f, D_0015EE70 * 7.0f);
         } else {
             func_00214D28(data + 0xf4, D_0015EE6C, D_0015EE70 * 7.0f);
@@ -1496,17 +1496,17 @@ void func_L12_002E9B88(struct Moby *moby, float *target, float max_angle, float 
     *(OvlQuad *)old = *(OvlQuad *)&moby->pos;
     func_L12_00272D90(moby, data + 0xd0);
     if (*(int *)(data + 0x26c) != -1) {
-        func_001F9BF0(delta, old, &moby->pos);
+        FastVecSub(delta, old, &moby->pos);
         func_L00_001FF4B0(delta, delta, 0.05f);
-        func_001F9BD8(next, old, delta);
+        FastVecAdd(next, old, delta);
         if (func_L00_00262BC0(*(int *)(data + 0x26c), &moby->pos, next, result)) {
             char *path = D_L12_001B0C30[*(int *)(data + 0x26c)];
             if (!func_L00_0025A778(&moby->pos, path + 0x10, *(int *)path))
                 *(OvlQuad *)&moby->pos = *(OvlQuad *)result;
-            if (func_001F9D10(&moby->pos, old) < D_0015EE6C * 0.5f) {
+            if (FastVecDist(&moby->pos, old) < D_0015EE6C * 0.5f) {
                 ++*(unsigned char *)(data + 0x243);
                 count = *(unsigned char *)(data + 0x243);
-                if (func_001F9850(15) < count)
+                if (scale_ticks(15) < count)
                     *(unsigned char *)(data + 0x242) = 1;
             } else {
                 *(unsigned char *)(data + 0x243) = 0;
@@ -1931,14 +1931,14 @@ void func_L12_002ED228(char *m) {
             qcopy(A, tbl + prev * 16 + 0x10);
             qcopy(B, tbl + cur * 16 + 0x10);
             qcopy(C, tbl + next * 16 + 0x10);
-            func_001F9BF0(A, B, A);
-            func_001F9BF0(B, C, B);
+            FastVecSub(A, B, A);
+            FastVecSub(B, C, B);
             h = func_L00_001FF860(A[0], A[1]);
-            h = func_001FA790(h, func_L00_001FF860(B[0], B[1]));
-            ang = h / func_001F9CB8(A);
-            *(float *)(m + 0x40) = func_001FA748(*(float *)(m + 0x40),
-                func_001FA790(ang * *(float *)&D_L12_00161A2C, *(float *)(m + 0x40)) / *(float *)&D_L12_00161A30);
-            if (func_001F9D10(m + 0x10, C) < *(float *)&D_L12_00161A28 * D_0015EE6C) {
+            h = FastSubRots(h, func_L00_001FF860(B[0], B[1]));
+            ang = h / FastVecLength(A);
+            *(float *)(m + 0x40) = FastAddRots(*(float *)(m + 0x40),
+                FastSubRots(ang * *(float *)&D_L12_00161A2C, *(float *)(m + 0x40)) / *(float *)&D_L12_00161A30);
+            if (FastVecDist(m + 0x10, C) < *(float *)&D_L12_00161A28 * D_0015EE6C) {
                 char *t3;
                 *(int *)(d + 0x60) = next;
                 t3 = *(char **)(p + 0x10);
@@ -1946,11 +1946,11 @@ void func_L12_002ED228(char *m) {
                     qcopy((m + 0x10), t3 + 0x10);
                 }
             }
-            func_001F9BF0(E, C, m + 0x10);
+            FastVecSub(E, C, m + 0x10);
             func_L00_001FF4B0(E, E, *(float *)&D_L12_00161A28 * D_0015EE6C);
-            func_001F9BD8(m + 0x10, m + 0x10, E);
-            *(float *)(m + 0x48) = func_001FA748(*(float *)(m + 0x48),
-                func_001FA790(func_L00_001FF860(E[0], E[1]), *(float *)(m + 0x48)) / *(float *)&D_L12_00161A30);
+            FastVecAdd(m + 0x10, m + 0x10, E);
+            *(float *)(m + 0x48) = FastAddRots(*(float *)(m + 0x48),
+                FastSubRots(func_L00_001FF860(E[0], E[1]), *(float *)(m + 0x48)) / *(float *)&D_L12_00161A30);
             *(float *)(m + 0x44) = 0.52359879f;
             break;
         }

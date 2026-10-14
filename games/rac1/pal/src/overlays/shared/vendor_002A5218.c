@@ -2553,10 +2553,10 @@ int func_L02_002FCA80(char *moby) {
         return (char *)D_0013F450.ground_moby == target;
     }
     if (*(unsigned char *)(data + 0x22) == 1) {
-        return func_001F9D10(&D_0013F450.motion.pos, target + 0x10) < *(float *)(data + 0x24);
+        return FastVecDist(&D_0013F450.motion.pos, target + 0x10) < *(float *)(data + 0x24);
     }
     if (*(int *)(data + 0xc) >= 0) {
-        result = func_00215570(&D_0013F450.motion.pos, *(int *)(data + 0xc));
+        result = is_point_inside_clip_volume(&D_0013F450.motion.pos, *(int *)(data + 0xc));
         if (result == 0) {
             goto rejected;
         }

@@ -211,7 +211,7 @@ void func_L07_0031C2B0(u8 *moby)
     u8 state;
     typedef u32 quadword __attribute__((mode(TI), aligned(16)));
 
-    func_001F9C30(-1.0f, delta, moby + 0x10);
+    FastVecScale(-1.0f, delta, moby + 0x10);
     qcopy(old_rotation, moby + 0x40);
 
     if (moby[0xb0] != 0xff &&
@@ -239,7 +239,7 @@ void func_L07_0031C2B0(u8 *moby)
         vectors[5] = *(f32 *)(data + 0xc0);
         vectors[6] = *(f32 *)(data + 0xc4);
         *(quadword *)vectors = *(quadword *)(vectors + 4);
-        *(f32 *)(data + 0xac) = func_001F9CB8(vectors);
+        *(f32 *)(data + 0xac) = FastVecLength(vectors);
         if (*(s32 *)(data + 0xd0) != -1)
             func_0022ED80(*(s32 *)(data + 0xd0), 0, moby);
         moby[0x20] = 2;
@@ -262,10 +262,10 @@ void func_L07_0031C2B0(u8 *moby)
         *(quadword *)vectors = *(quadword *)(vectors + 4);
         func_001F9EC0(vectors, vectors, moby + 0xc0);
         func_L00_001FF4B0(*(f32 *)(data + 0xc8) * D_0015EE6C, vectors + 4, vectors);
-        func_001F9BD8(moby + 0x10, moby + 0x10, vectors + 4);
+        FastVecAdd(moby + 0x10, moby + 0x10, vectors + 4);
         *(f32 *)(data + 0xac) -= *(f32 *)(data + 0xc8) * D_0015EE6C;
         if (*(f32 *)(data + 0xac) < 0.0f) {
-            func_001F9BD8(moby + 0x10, data + 0xa0, vectors);
+            FastVecAdd(moby + 0x10, data + 0xa0, vectors);
             *(f32 *)(data + 0xac) = 0.0f;
             if (*(s32 *)(data + 0xd8) != -1)
                 D_L07_001845A8[*(s32 *)(data + 0xd8)] = 1;
@@ -300,10 +300,10 @@ void func_L07_0031C2B0(u8 *moby)
             vectors[5] = *(f32 *)(data + 0xc0);
             vectors[6] = *(f32 *)(data + 0xc4);
             *(quadword *)vectors = *(quadword *)(vectors + 4);
-                distance = func_001F9CB8(vectors);
+                distance = FastVecLength(vectors);
             func_L00_001FF4B0(-(*(f32 *)(data + 0xcc) * D_0015EE6C), vectors, vectors);
             func_001F9EC0(vectors + 4, vectors, moby + 0xc0);
-            func_001F9BD8(moby + 0x10, moby + 0x10, vectors + 4);
+            FastVecAdd(moby + 0x10, moby + 0x10, vectors + 4);
             *(f32 *)(data + 0xac) += *(f32 *)(data + 0xcc) * D_0015EE6C;
             if (distance < *(f32 *)(data + 0xac)) {
                 qcopy(moby + 0x10, data + 0xa0);
@@ -318,6 +318,6 @@ void func_L07_0031C2B0(u8 *moby)
     case 5:
         break;
     }
-    func_001F9BD8(delta, delta, moby + 0x10);
+    FastVecAdd(delta, delta, moby + 0x10);
     func_L00_002617B0(data + 0x60, delta, old_rotation, moby + 0x40);
 }

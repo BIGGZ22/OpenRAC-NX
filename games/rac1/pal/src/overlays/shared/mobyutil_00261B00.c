@@ -125,11 +125,11 @@ s32 func_L00_00262DF0(f32 distance, s32 path_index, OvlVec4 *point, OvlVec4 *out
         segment.i[2] = 0;
         func_L00_001FF4B0_62DF0(&scaled_segment, &segment, 1.0f);
         func_001F9CA0_62DF0(&cross, &difference, &scaled_segment);
-        if (distance < func_001F9B88(cross.f[2]))
+        if (distance < FastAbsF(cross.f[2]))
             continue;
         {
             f32 segment_length = func_001F9CB8_62DF0(&segment);
-            f32 projection = func_001F9C78(&difference, &scaled_segment);
+            f32 projection = FastVecDot(&difference, &scaled_segment);
             if (segment_length < projection || projection < 0.0f) {
                 if (!(func_001F9CB8_62DF0(&difference) < distance))
                     continue;
@@ -618,7 +618,7 @@ void func_L00_00264870(u8 *m) {
     Effect_2637f8 *effect;
     if (*(s16 *)(m + 0xa6) == 0x2ee && m != 0) {
         func_0020DAF8(m, 0, vectors);
-        fraction = func_001F9CB8(vectors) / 1.026f;
+        fraction = FastVecLength(vectors) / 1.026f;
         if (1.0f < fraction)
             fraction = 1.0f;
         {
@@ -628,19 +628,19 @@ void func_L00_00264870(u8 *m) {
             size = fraction * 0.02f + 0.01f;
             w24 = 2;
             func_L00_001FF4B0(&scaled, &vectors[2], scale);
-            func_001F9BD8(&pos, &vectors[3], &scaled);
+            FastVecAdd(&pos, &vectors[3], &scaled);
             b2A = 0x50;
             count = 1;
             do {
                 s32 n;
-                n = func_002140B0(0x10);
-                if (func_002140B0(2) != 0)
+                n = random_integer_below(0x10);
+                if (random_integer_below(2) != 0)
                     n = -n;
                 effect = func_L00_0026DEA0(&pos, size, 1.0f, 0.75f, n,
                                                    D_L00_0015F660_64870, lifetime, 0x503030ff);
                 if (effect) {
                     EffectTail_2637f8 *tail = &effect->tail;
-                    effect->hA = func_001F9850(6);
+                    effect->hA = scale_ticks(6);
                     tail->w24 = w24;
                     tail->b2A = b2A;
                     tail->b2B = effect->hA;
@@ -656,15 +656,15 @@ void func_L00_00264870(u8 *m) {
             w24 = 2;
             b2A = 0x7f;
             func_L00_001FF4B0(&scaled, &vectors[2], scale);
-            func_001F9BD8(&pos, &vectors[3], &scaled);
+            FastVecAdd(&pos, &vectors[3], &scaled);
             count = 4;
             do {
                 effect = func_L00_0026DEA0(&pos, size, 1.0f, 1.0f, 0x10,
                                                    D_L00_0015F660_64870, lifetime, 0x7fffffff);
                 if (effect) {
                     EffectTail_2637f8 *tail = &effect->tail;
-                    effect->hA = func_001F9850(2);
-                    effect->b8 = func_002140B0(0xff);
+                    effect->hA = scale_ticks(2);
+                    effect->b8 = random_integer_below(0xff);
                     tail->w24 = w24;
                     tail->b2A = b2A;
                     tail->b2B = effect->hA;

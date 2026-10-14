@@ -1753,9 +1753,9 @@ void func_L14_00300AC8(struct Moby_00AC8 *moby) {
         vars->rest_z = -1.0f;
         if (vars->link == 0) {
             moby->pos.z = func_00214358(0.5f, &moby->pos, 0) + 0.7f;
-            vars->spin[0] = func_002140F8(0.010471975f, 0.020943951f);
-            vars->spin[1] = func_002140F8(0.006981317f, 0.013962634f);
-            vars->spin[2] = func_002140F8(0.0034906585f, 0.006981317f);
+            vars->spin[0] = random_float_between(0.010471975f, 0.020943951f);
+            vars->spin[1] = random_float_between(0.006981317f, 0.013962634f);
+            vars->spin[2] = random_float_between(0.0034906585f, 0.006981317f);
             moby->state = 1;
         } else if ((s8)vars->link->state < 0) {
             moby->state = 1;
@@ -1770,7 +1770,7 @@ void func_L14_00300AC8(struct Moby_00AC8 *moby) {
                 goto remove;
         }
         hit = func_L00_0025B478_00AC8(moby, 0x230000, 0);
-        func_001F99D8(&scratch.info, 0x40);
+        FastMemZero16(&scratch.info, 0x40);
         scratch.info.unk4 = 1;
         scratch.info.damage = 1.0f;
         scratch.info.unk10 = 0.5f;
@@ -1778,7 +1778,7 @@ void func_L14_00300AC8(struct Moby_00AC8 *moby) {
         scratch.info.unk3B = 0xFF;
         func_L00_0025B4D0_00AC8(moby, hit, &scratch.info, 0, &count, 0, 0, 4);
         if ((count >= 2 && hit != 0 && hit->moby->oclass != 0x283) || D_0013F450.coll_hit_moby == (u8 *)moby) {
-            func_001F9BC0(vel);
+            clear_u64_value(vel);
             func_0022ED80(0, 0, moby);
             if (D_0013F450.coll_hit_moby == (u8 *)moby)
                 func_L00_0025F4A8(moby, vel, &moby->pos, 3.0f, 1.0f, 10, 20, 60, 3.0f, 5.0f, 9.0f, 1.0f, -1, 15.0f, 1, 1, -1, 0);
@@ -1793,7 +1793,7 @@ void func_L14_00300AC8(struct Moby_00AC8 *moby) {
                 return;
             }
         remove:
-            func_0020D678(moby);
+            DeleteMoby(moby);
             return;
         }
         break;
@@ -1809,14 +1809,14 @@ void func_L14_00300AC8(struct Moby_00AC8 *moby) {
         break;
     }
     }
-    vars->phase = func_001FA748(vars->phase, (*(float *)&D_L14_001620D0));
-    s = func_001F9FA8(vars->phase);
-    r = func_001FA898(s * 48.0f) + 0xCF;
-    g = func_001FA898(s * 32.0f) + 0x30;
+    vars->phase = FastAddRots(vars->phase, (*(float *)&D_L14_001620D0));
+    s = FastSin(vars->phase);
+    r = truncate_float_to_s32(s * 48.0f) + 0xCF;
+    g = truncate_float_to_s32(s * 32.0f) + 0x30;
     moby->glow_color = g << 16 | (0xFF000000 | g << 8) | r;
-    moby->rot.x = func_001FA748(moby->rot.x, vars->spin[0]);
-    moby->rot.y = func_001FA748(moby->rot.y, vars->spin[1]);
-    moby->rot.z = func_001FA748(moby->rot.z, vars->spin[2]);
+    moby->rot.x = FastAddRots(moby->rot.x, vars->spin[0]);
+    moby->rot.y = FastAddRots(moby->rot.y, vars->spin[1]);
+    moby->rot.z = FastAddRots(moby->rot.z, vars->spin[2]);
 }
 extern float func_002140F8(float, float);
 

@@ -327,7 +327,134 @@ void func_L00_002D3330(M2d1e80 *m) {
     func_0020DAF8_2d3330(m, 0, v);
     if (m->vis) func_001F49B0_2d3330(func_L00_002D2E60_2d3330, m);
 }
-INCLUDE_ASM("asm/overlays", func_L00_002D3608);
+typedef int u128_2D3608 __attribute__((mode(TI)));
+typedef struct Moby_2D3608 {
+    char pad0[0x48];
+    float yaw;
+    char pad4C[4];
+    struct Moby_2D3608 *target;
+    char pad54[0x24];
+    float *data;
+} Moby_2D3608;
+
+typedef struct Hit_2D3608 {
+    char pad0[0x18];
+    void *moby;
+    int pad1C;
+    float point[4];
+} Hit_2D3608;
+
+typedef float Vec_2D3608[4] __attribute__((aligned(16)));
+typedef float Mat_2D3608[4][4] __attribute__((aligned(16)));
+typedef float Mat3_2D3608[3][4] __attribute__((aligned(16)));
+
+extern char D_L00_00166D80_2D3608[] __asm__("D_L00_00166D80");
+extern char D_L00_00166EC0_2D3608[] __asm__("D_L00_00166EC0");
+extern char D_L00_00173F40_2D3608[] __asm__("D_L00_00173F40");
+extern char D_0013E633_2D3608[] __asm__("D_0013E633");
+extern char D_0013A5E0_2D3608[] __asm__("D_0013A5E0");
+extern float D_0015EE70_2D3608 __asm__("D_0015EE70") MACRO_ADDR;
+extern void func_001FA480_2D3608(void *, void *) __asm__("func_001FA480");
+extern void func_001FA4A0_2D3608(void *, void *) __asm__("func_001FA4A0");
+extern void func_001F9EC0_2D3608(void *, void *, void *) __asm__("func_001F9EC0");
+extern float func_L00_001FF860_2D3608(float, float) __asm__("func_L00_001FF860");
+extern float func_001FA748_2D3608(float, float) __asm__("func_001FA748");
+extern float func_001FA790_2D3608(float, float) __asm__("func_001FA790");
+extern float func_001F9F90_2D3608(float) __asm__("func_001F9F90");
+extern float func_001F9FA8_2D3608(float) __asm__("func_001F9FA8");
+extern float func_001F9B50_2D3608(float) __asm__("func_001F9B50");
+extern void func_001F9BD8_2D3608(void *, void *, void *) __asm__("func_001F9BD8");
+extern void func_001F9C30_2D3608(void *, void *, float) __asm__("func_001F9C30");
+extern void func_001F9EE8_2D3608(void *, void *, void *) __asm__("func_001F9EE8");
+extern float func_001F9CE8_2D3608(void *) __asm__("func_001F9CE8");
+extern void func_00215C00_2D3608(void *, float, float, float) __asm__("func_00215C00");
+extern int func_L00_001EFFF0_2D3608(void *, void *, int, int, int) __asm__("func_L00_001EFFF0");
+extern void func_L00_002C8680_2D3608(float *pos, float *tgt, float *output, float speed, float unused, float range) __asm__("func_L00_002C8680");
+
+/* Same camera step as func_L00_002C88A8, writing the following vector in the target data. */
+void func_L00_002D3608(int collision_arg, Moby_2D3608 *carrier, float *position)
+{
+    Vec_2D3608 anchor;
+    Mat3_2D3608 rotation;
+    Mat_2D3608 inverse;
+    Vec_2D3608 direction, aim, launch, origin_copy, endpoint;
+    Moby_2D3608 *target;
+    float *output;
+    float value, distance, heading, vertical, pitch, length, fall_time;
+    int hit;
+    float range;
+    float *anchor_ptr = anchor;
+
+    *(u128_2D3608 *)anchor_ptr = *(u128_2D3608 *)position;
+    func_001FA480_2D3608(rotation, D_L00_00166D80_2D3608);
+    func_001FA4A0_2D3608(inverse, rotation);
+    target = carrier->target;
+    if (target == 0) return;
+    output = target->data;
+    *(u128_2D3608 *)direction = 0;
+    direction[0] = 1.0f;
+    func_001F9EC0_2D3608(direction, direction, D_0013E633_2D3608 + 0x145D);
+    {
+        Hero *h = (Hero *)(D_0013E633_2D3608 + 0xE1D);
+        anchor_ptr[0] = func_001F9F90_2D3608(func_001FA748_2D3608(-0.361968011f, func_L00_001FF860_2D3608(h->unk670, h->unk674))) * 0.859039009f;
+        anchor_ptr[1] = func_001F9FA8_2D3608(func_001FA748_2D3608(-0.361968011f, func_L00_001FF860_2D3608(h->unk670, h->unk674))) * 0.859039009f;
+        anchor_ptr[2] = 0.0f;
+        func_001F9BD8_2D3608(anchor_ptr, anchor_ptr, D_0013E633_2D3608 + 0xE9D);
+        anchor_ptr[2] = anchor_ptr[2] + 0.390819997f;
+        func_L00_001FF860_2D3608(direction[0], direction[1]);
+        range = (((PadState *)(D_0013A5E0_2D3608 + 0x2460))->held & 5) ? 3.5f : 2.5f;
+        func_001F9C30_2D3608(aim, direction, range);
+        func_001F9BD8_2D3608(aim, aim, anchor_ptr);
+        if ((((PadState *)(D_0013A5E0_2D3608 + 0x2460))->held & 5) && h->unk20AC == 0) {
+            *(u128_2D3608 *)launch = 0;
+            launch[2] = 1.0f;
+            func_001F9EE8_2D3608(launch, launch, inverse);
+            hit = 0;
+            func_001FA790_2D3608(((Moby_2D3608 *)h->moby)->yaw, func_L00_001FF860_2D3608(launch[0], launch[1]));
+            heading = func_L00_001FF860_2D3608(launch[0], launch[1]);
+            pitch = func_L00_001FF860_2D3608(func_001F9CE8_2D3608(launch), launch[2]);
+            if (0.593411922f < pitch) pitch = 0.593411922f;
+            if (pitch < -1.39626336f) pitch = -1.39626336f;
+            func_00215C00_2D3608(launch, (((PadState *)(D_0013A5E0_2D3608 + 0x2460))->held & 5) ? 3.5f : 2.5f, heading, pitch);
+            qcopy(origin_copy, D_L00_00166D80_2D3608 + 0x140);
+            length = func_001F9CE8_2D3608(launch);
+            {
+                float z = launch[2];
+                if (length != 0.0f) {
+                    value = z / length;
+                } else {
+                    value = z / 0.00999999978f;
+                }
+            }
+            fall_time = func_001F9B50_2D3608(D_0015EE70_2D3608 * 9.0f * ((((PadState *)(D_0013A5E0_2D3608 + 0x2460))->held & 5) ? 3.5f : 2.5f) * 0.5f);
+            distance = (fall_time + fall_time) * fall_time * (1.0f - value) / (D_0015EE70_2D3608 * 9.0f);
+            vertical = value * distance;
+            if (0.0f < distance) {
+                launch[0] = func_001F9F90_2D3608(heading) * distance;
+                launch[1] = func_001F9FA8_2D3608(heading) * distance;
+                launch[2] = vertical;
+                func_001F9BD8_2D3608(endpoint, D_L00_00166EC0_2D3608, launch);
+                if (func_L00_001EFFF0_2D3608(D_L00_00166EC0_2D3608, endpoint, 2, collision_arg, 0)
+                    && ((Hit_2D3608 *)D_L00_00173F40_2D3608)->moby != *(void **)(D_0013E633_2D3608 + 0x2E9D)) {
+                    qcopy(aim, ((Hit_2D3608 *)D_L00_00173F40_2D3608)->point);
+                    hit = 1;
+                    heading = func_L00_001FF860_2D3608(aim[0] - anchor_ptr[0], aim[1] - anchor_ptr[1]);
+                }
+                if (hit == 0) {
+                    value = 5.0f;
+                    aim[0] = func_001F9F90_2D3608(heading) * distance * value;
+                    aim[1] = func_001F9FA8_2D3608(heading) * distance * value;
+                    aim[2] = vertical * value;
+                    func_001F9BD8_2D3608(aim, aim, D_L00_00166EC0_2D3608);
+                }
+            }
+        } else {
+            *(int *)(D_0013E633_2D3608 + 0x186D) = 0;
+        }
+    }
+    func_L00_002C8680_2D3608(anchor_ptr, aim, output + 4, D_0015EE70_2D3608 * 9.0f, 0.00000999999975f,
+                             (((PadState *)(D_0013A5E0_2D3608 + 0x2460))->held & 5) ? 3.5f : 2.5f);
+}
 INCLUDE_ASM("asm/overlays", func_L00_002D3B20);
 typedef float Vec_2D3F40[4] __attribute__((aligned(16)));
 typedef int U128_2D3F40 __attribute__((mode(TI)));

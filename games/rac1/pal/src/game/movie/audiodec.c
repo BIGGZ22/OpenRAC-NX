@@ -230,7 +230,7 @@ void func_0023C390(AudioDec *dec) {
                 p[1] = 6;
                 p[0x11] = 2;
             }
-            func_0023C2E8(dec, (unsigned char *)D_001613B8, 0x400, (ch << 12) + d->pos);
+            sendToSPU(dec, (unsigned char *)D_001613B8, 0x400, (ch << 12) + d->pos);
         }
         v = d->pos + 0x400;
         w = (v > -1) ? v : v + 0xFFF;

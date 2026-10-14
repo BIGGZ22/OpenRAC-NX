@@ -508,7 +508,7 @@ char *func_L08_002E9288(int owner, float *position, float *rotation, int value) 
     *(u128_E9288 *)rotation_copy = *(u128_E9288 *)rotation;
     position = position_copy;
     rotation = rotation_copy;
-    moby = func_0020D348(0x1ca);
+    moby = CreateMoby(0x1ca);
     if (moby != 0) {
         data = *(char **)(moby + 0x78);
         *(int *)(data + 0x14) = owner;
@@ -535,30 +535,30 @@ char *func_L08_002E9288(int owner, float *position, float *rotation, int value) 
             offset_ptr = offset;
             matrix_row_ptr = matrix[1];
             do {
-                angle = func_00214158();
+                angle = random_angle_radians();
                 {
                     float spread = (*(float *)&D_L08_00161D94);
-                    magnitude = func_002140F8(spread, spread + spread) * D_0015EE6C;
+                    magnitude = random_float_between(spread, spread + spread) * D_0015EE6C;
                 }
-                func_L00_001FF4B0(velocity_ptr, particle_position_ptr, magnitude * func_001F9F90(angle));
-                func_L00_001FF4B0(offset_ptr, matrix_row_ptr, magnitude * func_001F9FA8(angle));
-                func_001F9BD8(velocity_ptr, velocity_ptr, offset_ptr);
+                func_L00_001FF4B0(velocity_ptr, particle_position_ptr, magnitude * FastCos(angle));
+                func_L00_001FF4B0(offset_ptr, matrix_row_ptr, magnitude * FastSin(angle));
+                FastVecAdd(velocity_ptr, velocity_ptr, offset_ptr);
                 qcopy(offset_ptr, velocity_ptr);
                 velocity[3] = (*(float *)&D_L08_00161DA4);
                 offset[3] = (*(float *)&D_L08_00161DA8);
                 i++;
                 func_L00_0026DA50(moby + 0x10, velocity_ptr, (*(int *)&D_L08_00161D88), (*(int *)&D_L08_00161D8C),
-                    func_L00_00258BC8(func_001F9850(10), func_001F9850(20)), 1, 20000.0f);
-                a = func_001FA898(func_001F9878(func_002140F8((float)(*(int *)&D_L08_00161D98), (float)(*(int *)&D_L08_00161D98) * 1.2f)));
-                b = func_001FA898(func_001F9878(func_002140F8((float)(*(int *)&D_L08_00161D9C), (float)(*(int *)&D_L08_00161D9C) * 1.2f)));
-                c = func_001FA898(func_001F9878(func_002140F8((float)(*(int *)&D_L08_00161DA0), (float)(*(int *)&D_L08_00161DA0) * 1.5f)));
+                    rand_range(scale_ticks(10), scale_ticks(20)), 1, 20000.0f);
+                a = truncate_float_to_s32(func_001F9878(random_float_between((float)(*(int *)&D_L08_00161D98), (float)(*(int *)&D_L08_00161D98) * 1.2f)));
+                b = truncate_float_to_s32(func_001F9878(random_float_between((float)(*(int *)&D_L08_00161D9C), (float)(*(int *)&D_L08_00161D9C) * 1.2f)));
+                c = truncate_float_to_s32(func_001F9878(random_float_between((float)(*(int *)&D_L08_00161DA0), (float)(*(int *)&D_L08_00161DA0) * 1.5f)));
                 func_00219780(moby + 0x10, velocity_ptr, offset_ptr, (*(int *)&D_L08_00161D80), (*(int *)&D_L08_00161D84), a, b, c, -1);
             } while ((float)i < (*(float *)&D_L08_00161D70));
         }
         if (D_0015EE84 == 12)
-            *(int *)(data + 0x18) = func_001F9850(120);
+            *(int *)(data + 0x18) = scale_ticks(120);
         else
-            *(int *)(data + 0x18) = func_001FA898(func_001F9878((*(float *)&D_L08_00161D68)));
+            *(int *)(data + 0x18) = truncate_float_to_s32(func_001F9878((*(float *)&D_L08_00161D68)));
         func_L00_00251E30(moby);
     }
     return moby;
@@ -607,39 +607,39 @@ void func_L08_002E95E8(char *moby) {
     char *target;
 
     qcopy(position_copy, position_ptr);
-    func_001F9BD8(position_ptr, position_ptr, data);
+    FastVecAdd(position_ptr, position_ptr, data);
     if (*(float *)(moby + 0x10) < 10.0f || *(float *)(moby + 0x14) < 10.0f ||
         *(float *)(moby + 0x18) < 10.0f || 500.0f < *(float *)(moby + 0x10) ||
         500.0f < *(float *)(moby + 0x14) || 500.0f < *(float *)(moby + 0x18)) {
-        func_0020D678(moby);
+        DeleteMoby(moby);
         return;
     }
-    func_001F9C30(direction, data, -1.0f / (*(float *)&D_L08_00161D6C));
+    FastVecScale(direction, data, -1.0f / (*(float *)&D_L08_00161D6C));
     qcopy(position, position_ptr);
     i = 0;
     timer_ptr = (int *)(data + 0x18);
     while ((float)i < (*(float *)&D_L08_00161D6C)) {
-        func_001F9BD8(position, position, direction);
-        angle = func_00214158();
+        FastVecAdd(position, position, direction);
+        angle = random_angle_radians();
         spread = (*(float *)&D_L08_00161D90);
-        magnitude = func_002140F8(0.0f, spread) * D_0015EE6C;
-        func_L00_001FF4B0(velocity, moby + 0xe0, magnitude * func_001F9F90(angle));
-        func_L00_001FF4B0(offset, moby + 0xd0, magnitude * func_001F9FA8(angle));
-        func_001F9BD8(velocity, velocity, offset);
+        magnitude = random_float_between(0.0f, spread) * D_0015EE6C;
+        func_L00_001FF4B0(velocity, moby + 0xe0, magnitude * FastCos(angle));
+        func_L00_001FF4B0(offset, moby + 0xd0, magnitude * FastSin(angle));
+        FastVecAdd(velocity, velocity, offset);
         qcopy(offset, offset);
         velocity[3] = (*(float *)&D_L08_00161DAC);
         offset[3] = (*(float *)&D_L08_00161DB0);
         i++;
-        a = func_001FA898(func_001F9878(func_002140F8(
+        a = truncate_float_to_s32(func_001F9878(random_float_between(
             (float)(*(int *)&D_L08_00161D98), (float)(*(int *)&D_L08_00161D98) * 1.2f)));
-        b = func_001FA898(func_001F9878(func_002140F8(
+        b = truncate_float_to_s32(func_001F9878(random_float_between(
             (float)(*(int *)&D_L08_00161D9C), (float)(*(int *)&D_L08_00161D9C) * 1.2f)));
-        c = func_001FA898(func_001F9878(func_002140F8(
+        c = truncate_float_to_s32(func_001F9878(random_float_between(
             (float)(*(int *)&D_L08_00161DA0), (float)(*(int *)&D_L08_00161DA0) * 1.5f)));
         func_00219780(position, velocity, offset, (*(int *)&D_L08_00161D78),
                                (*(int *)&D_L08_00161D7C), a, b, c, -1);
     }
-    *(float *)(moby + 0x40) = func_001FA748(*(float *)(moby + 0x40),
+    *(float *)(moby + 0x40) = FastAddRots(*(float *)(moby + 0x40),
         (*(float *)&D_L08_00161D74) * 0.017453292f * D_0015EE6C * (float)*(int *)(data + 0x1c));
     target = *(char **)(data + 0x10);
     if (target != 0) {
@@ -648,15 +648,15 @@ void func_L08_002E95E8(char *moby) {
         if (*(short *)(target + 0xa6) != 0x1b3) goto clear_target;
         {
             char *target_data = *(char **)(target + 0x78);
-            length = func_001F9CB8(data);
-            spread = func_001F9D10(moby + 0x10, *(char **)(data + 0x10) + 0x10);
-            func_001F9C30(position, target_data + 0x20, spread / length);
-            func_001F9BD8(position, position, *(char **)(data + 0x10) + 0x10);
-            func_001F9BF0(direction, position, moby + 0x10);
+            length = FastVecLength(data);
+            spread = FastVecDist(moby + 0x10, *(char **)(data + 0x10) + 0x10);
+            FastVecScale(position, target_data + 0x20, spread / length);
+            FastVecAdd(position, position, *(char **)(data + 0x10) + 0x10);
+            FastVecSub(direction, position, moby + 0x10);
             func_L00_001FF4B0(direction, direction, length);
-            func_001F9BF0(velocity, direction, data);
+            FastVecSub(velocity, direction, data);
             func_L00_002607A8(D_0015EE6C * 3.7f, velocity);
-            func_001F9BD8(data, data, velocity);
+            FastVecAdd(data, data, velocity);
             func_L00_001FF4B0(data, data, length);
         }
         goto target_done;
@@ -671,7 +671,7 @@ target_done:
     qcopy(position, data);
     if (func_001F9908(timer_ptr) == 0) goto collision;
 remove:
-    func_0020D678(moby);
+    DeleteMoby(moby);
     return;
 collision:
     if (func_L00_001EFFF0_E95E8(position_copy, moby + 0x10, 0, moby, position) == 0)
@@ -686,7 +686,7 @@ collision:
         func_L00_0025F4A8(moby, data, moby + 0x10, 3.0f, 3.0f, 0,
             10, 20, 5.0f, 3.0f, 9.0f, -1, 1.0f, radius, 1, 1, -1, 0);
     }
-    func_0020D678(moby);
+    DeleteMoby(moby);
 }
 typedef struct { int a, b; } Pair;
 extern int D_L08_001E8560[];

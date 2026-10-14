@@ -749,7 +749,7 @@ void func_L05_0031DDF0(struct Moby_1DDF0 *moby) {
     if (32.0f <= distance) {
         distance -= 32.0f;
         distance *= 0.0625f;
-        vars->alpha = func_001FA898(func_001FA888(vars->max_alpha) * (1.0f - distance));
+        vars->alpha = truncate_float_to_s32(func_001FA888(vars->max_alpha) * (1.0f - distance));
     } else {
         vars->alpha = vars->max_alpha;
     }
@@ -759,70 +759,70 @@ void func_L05_0031DDF0(struct Moby_1DDF0 *moby) {
     if (hit == 0) {
         return;
     }
-    func_001F9C30(&tip, &moby->rot_row2, (*(f32 *)&D_L05_00162088));
-    func_001F9BD8(&tip, &moby->pos, &tip);
-    if (!(*(s32 *)(hit + 0x24) & 0x800000) && !(func_001F9D10(&tip, hit) <= 0.8f)) {
+    FastVecScale(&tip, &moby->rot_row2, (*(f32 *)&D_L05_00162088));
+    FastVecAdd(&tip, &moby->pos, &tip);
+    if (!(*(s32 *)(hit + 0x24) & 0x800000) && !(FastVecDist(&tip, hit) <= 0.8f)) {
         if ((*(struct Moby_1DDF0 **)(hit + 0x20))->oclass != 0x47) {
             return;
         }
-        if (!(func_001F9D10(&tip, &(*(struct Moby_1DDF0 **)(hit + 0x20))->pos) <= 0.8f)) {
+        if (!(FastVecDist(&tip, &(*(struct Moby_1DDF0 **)(hit + 0x20))->pos) <= 0.8f)) {
             return;
         }
     }
     func_0022ED80(0, 0, moby);
     func_L05_0031E670((unsigned char *)moby);
-    debris = func_L00_00265050(D_0015EE70 * 12.0f, moby, 0x5ED, &moby->pos, &moby->rot, func_001F9850(0x5A), 0,
+    debris = func_L00_00265050(D_0015EE70 * 12.0f, moby, 0x5ED, &moby->pos, &moby->rot, scale_ticks(0x5A), 0,
                                D_L05_0015F660, D_L05_0015F660, D_L05_0015F660);
     if (debris != 0) {
         debris->spawn_frame = moby->spawn_frame;
     }
     func_L01_00279790(moby);
-    func_001F9C30(&vel, &moby->rot_row0, (*(f32 *)&D_L05_00162090) * D_0015EE60);
+    FastVecScale(&vel, &moby->rot_row0, (*(f32 *)&D_L05_00162090) * D_0015EE60);
     vel.f[2] += (*(f32 *)&D_L05_00162094) * D_0015EE60;
-    debris = func_L00_00265050(D_0015EE70 * 12.0f, moby, 0x5EE, &moby->pos, &moby->rot, func_001F9850(0x5A), 0,
+    debris = func_L00_00265050(D_0015EE70 * 12.0f, moby, 0x5EE, &moby->pos, &moby->rot, scale_ticks(0x5A), 0,
                                &vel, D_L05_0015F660, D_L05_0015F660);
     if (debris != 0) {
         debris->spawn_frame = moby->spawn_frame;
     }
     vel.f[0] = -vel.f[0];
     vel.f[1] = -vel.f[1];
-    moby->rot.z = func_001FA748(moby->rot.z, 3.1415927f);
-    debris = func_L00_00265050(D_0015EE70 * 12.0f, moby, 0x5EE, &moby->pos, &moby->rot, func_001F9850(0x5A), 0,
+    moby->rot.z = FastAddRots(moby->rot.z, 3.1415927f);
+    debris = func_L00_00265050(D_0015EE70 * 12.0f, moby, 0x5EE, &moby->pos, &moby->rot, scale_ticks(0x5A), 0,
                                &vel, D_L05_0015F660, D_L05_0015F660);
     if (debris != 0) {
         debris->spawn_frame = moby->spawn_frame;
     }
     for (i = 0; i < 24; i++) {
-        size = func_002140F8(0.3f, 4.0f);
-        sign = func_002140B0(2);
+        size = random_float_between(0.3f, 4.0f);
+        sign = random_integer_below(2);
         if (sign == 0) {
             sign--;
         }
-        yaw = func_00214158();
-        pitch = func_002140F8(0.34906584f, 1.5358897f);
-        func_00215C00(&dir, func_002140F8(0.05f, 0.1f) * D_0015EE60, yaw, pitch);
+        yaw = random_angle_radians();
+        pitch = random_float_between(0.34906584f, 1.5358897f);
+        func_00215C00(&dir, random_float_between(0.05f, 0.1f) * D_0015EE60, yaw, pitch);
         qcopy(&start, &tip);
-        start.f[0] += func_L00_00258C80(0.0f, 0.15f);
-        start.f[1] += func_L00_00258C80(0.0f, 0.15f);
-        start.f[2] += func_L00_00258C80(0.0f, 0.15f);
-        frames = func_001F9850(0x3C);
+        start.f[0] += randf_sym(0.0f, 0.15f);
+        start.f[1] += randf_sym(0.0f, 0.15f);
+        start.f[2] += randf_sym(0.0f, 0.15f);
+        frames = scale_ticks(0x3C);
         func_L00_00272F00(&start, frames, size * 0.1f, size, vars->color | 0x7F000000, 0, sign, &dir, 0.003f);
         sign = -sign;
-        frames = func_001F9850(0x3C);
+        frames = scale_ticks(0x3C);
         func_L00_00272F00(&start, frames, size * 0.07f, size * 0.7f, 0x7F7F7F7F, 1, sign, &dir, 0.003f);
         dir.f[1] = 0.0f;
         dir.f[0] = 0.0f;
-        dir.f[2] = func_002140F8(0.01f, 0.05f) * D_0015EE60;
-        speed = func_002140F8(60000.0f, 200000.0f);
-        turn = func_002140B0(2);
-        spark = func_L00_0026DEA0(&tip, 0.3f, 1.0f, 1.02f, func_002140B0(2) ? -turn : turn, &dir, speed, 0x407F7F7F);
+        dir.f[2] = random_float_between(0.01f, 0.05f) * D_0015EE60;
+        speed = random_float_between(60000.0f, 200000.0f);
+        turn = random_integer_below(2);
+        spark = func_L00_0026DEA0(&tip, 0.3f, 1.0f, 1.02f, random_integer_below(2) ? -turn : turn, &dir, speed, 0x407F7F7F);
         if (spark != 0) {
-            spark->life = func_001F9850(func_L00_00258BC8(0x5A, 0x78));
+            spark->life = scale_ticks(rand_range(0x5A, 0x78));
             draw = &spark->draw;
             draw->mode = 2;
-            draw->fade = func_L00_00258BC8(0x40, 0x60);
+            draw->fade = rand_range(0x40, 0x60);
             draw->life = spark->life;
-            if (func_002140B0(2) != 0) {
+            if (random_integer_below(2) != 0) {
                 spark->flags = 0x44;
             }
         }

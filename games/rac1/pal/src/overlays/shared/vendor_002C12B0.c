@@ -285,10 +285,10 @@ u8 *func_L00_002C48C8(s32 value, u128_C48C8 *position, u128_C48C8 *other_positio
         *(f32 *)(m + 0x2c) = *(f32 *)(*(u8 **)(m + 0x24) + 0x24) * (speed + 1.0f);
         *(f32 *)(data + 0x48) = (func_001FA888(flags[0x19]) + 1.0f) * 4.0f;
         if (m[0x53] != 0)
-            func_00213DE0_C48C8(m, 0, 0, func_001F9850(0));
+            func_00213DE0_C48C8(m, 0, 0, scale_ticks(0));
         *(s32 *)(m + 0x94) = 0;
         *(s32 *)(m + 0x98) = -1;
-        *(f32 *)(m + 0x48) = func_002140F8(-3.14159274f, 3.14159274f);
+        *(f32 *)(m + 0x48) = random_float_between(-3.14159274f, 3.14159274f);
         *(s32 *)(data + 0x58) = 0;
         *(s32 *)(data + 0x5c) = 0;
         while (D_L00_001B0BB0_C48C8[0] >= 6) {
@@ -687,22 +687,22 @@ void func_L00_002C6720(Moby *m) {
     func_001F9908(&p->timer);
     state = m->state;
     if (state == 1 || state == 4 || state == 3) {
-        magnitude = func_001F9CB8(&p->velocity);
+        magnitude = FastVecLength(&p->velocity);
         if (magnitude != 0.0f) {
             qcopy(&position, &m->pos);
             position.z += 0.5f;
-            if (func_L00_001F10E0(0.4f, &position, 2, 0)) {
+            if (coll_sphere(0.4f, &position, 2, 0)) {
                 qcopy(&m->pos, &D_L00_00173F70);
                 m->pos.z -= 0.5f;
             }
         }
         p->velocity.z -= D_0015EE70 * 4.9f;
-        func_001F9BD8(&predicted, &m->pos, &p->velocity);
+        FastVecAdd(&predicted, &m->pos, &p->velocity);
         p->velocity.z -= D_0015EE70 * 4.9f;
         qcopy(&position, &m->pos);
         position.z += 0.1f;
         if (func_L00_001EFFF0(&position, &predicted, 2, 0, 0)) {
-            func_001F9BC0(&p->velocity);
+            clear_u64_value(&p->velocity);
             qcopy(&m->pos, &D_L00_00173F60);
         } else {
             qcopy(&m->pos, &predicted);
@@ -731,17 +731,17 @@ void func_L00_002C6720(Moby *m) {
         int max_ammo;
         value_ptr = &value;
         *value_ptr = (float)m->unk23;
-        duration = func_001F9850(30);
+        duration = scale_ticks(30);
         func_00214D28(value_ptr, 128.0f, (float)(128 / duration));
-        m->unk23 = func_001FA898(*value_ptr);
+        m->unk23 = truncate_float_to_s32(*value_ptr);
         if (p->timer > 0)
             return;
-        if (func_001F9CB8(&p->velocity) != 0.0f)
+        if (FastVecLength(&p->velocity) != 0.0f)
             return;
         player = (Hero *)(D_0013E633 + 0xE1D);
         eligible = 1;
         height_delta =
-            func_001F9B88(m->pos.z - player->motion.pos.f[2]);
+            FastAbsF(m->pos.z - player->motion.pos.f[2]);
         if (player->unk228C < height_delta) {
             eligible = 0;
         } else {
@@ -778,11 +778,11 @@ void func_L00_002C6720(Moby *m) {
             ((int *)(D_0013DE6E + 0xA2))[account_idx] += ((int *)(D_0013D50F + 0x21))[account_idx] - before;
             m->state = 2;
             m->scale *= D_0015EE60 * 0.20000005f + 1.0f;
-            func_001F9BC0(&p->velocity);
+            clear_u64_value(&p->velocity);
             elapsed = D_L00_0015F6B0 - D_L00_00161908;
             p->rise_speed = D_0015EE6C * 8.0f;
             random = func_001F9B70(elapsed);
-            if (func_001F9850(10) < random) {
+            if (scale_ticks(10) < random) {
                 func_L00_0028EF68(0, 0, (int)m, 0xD5);
                 D_L00_00161908 = D_L00_0015F6B0;
             }
@@ -793,7 +793,7 @@ void func_L00_002C6720(Moby *m) {
             ++m->unk23;
         if (func_L00_00251468(m, ((Hero *)(D_0013E633 + 0xE1D))->moby) <= -0.2f) {
             m->state = 3;
-            p->recovery_timer = func_001F9850(60);
+            p->recovery_timer = scale_ticks(60);
         }
         return;
     }
@@ -804,17 +804,17 @@ void func_L00_002C6720(Moby *m) {
         float class_scale;
         func_00214D28(&p->rise_speed, 0.0f, D_0015EE70 * 24.0f);
         m->pos.z += p->rise_speed;
-        limit = func_001F9CB8(&p->velocity);
+        limit = FastVecLength(&p->velocity);
         func_00214D28(&limit, D_0015EE6C * 64.0f, D_0015EE70 * 24.0f);
-        func_001F9BF0(&p->velocity, D_0013E633 + 0xEED, &m->pos);
-        if (m->scale == 0.0f || func_001F9CB8(&p->velocity) < limit) {
-            func_0020D678(m);
+        FastVecSub(&p->velocity, D_0013E633 + 0xEED, &m->pos);
+        if (m->scale == 0.0f || FastVecLength(&p->velocity) < limit) {
+            DeleteMoby(m);
             return;
         }
         func_L00_001FF4B0(&p->velocity, &p->velocity, limit);
-        func_001F9BD8(&m->pos, &m->pos, &p->velocity);
-        distance = func_001F9D10(&m->pos, D_0013E633 + 0xEED);
-        factor = (float)func_001F9850(30);
+        FastVecAdd(&m->pos, &m->pos, &p->velocity);
+        distance = FastVecDist(&m->pos, D_0013E633 + 0xEED);
+        factor = (float)scale_ticks(30);
         factor = factor * limit;
         factor = factor + 0.01f;
         distance = distance / factor;
@@ -840,14 +840,14 @@ void func_L00_002C6720(Moby *m) {
         angle = (float)phase / 60.0f;
         angle = angle * 6.28318f;
         angle = angle - 3.14159f;
-        oscillation = func_001F9F90(angle);
+        oscillation = FastCos(angle);
         oscillation = oscillation * 5.0f;
         oscillation = oscillation + 5.0f;
-        target = (float)(func_001FA898(oscillation) + 10);
+        target = (float)(truncate_float_to_s32(oscillation) + 10);
         value_ptr = &value;
-        random = func_001F9850(30);
+        random = scale_ticks(30);
         func_00214D28(value_ptr, target, (float)(128 / random));
-        m->unk23 = func_001FA898(*value_ptr);
+        m->unk23 = truncate_float_to_s32(*value_ptr);
         if (func_L00_00251468(m, ((Hero *)D_0013F450)->moby) >= 0.0f) {
             m->state = 1;
             return;

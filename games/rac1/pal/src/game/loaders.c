@@ -431,8 +431,8 @@ void func_002035B0(u64 *packet,
     if (width_units_128 <= 0) {
         width_units_128 = 1;
     }
-    width_log2 = func_001F9968(texture->width);
-    height_log2 = func_001F9968(texture->height);
+    width_log2 = log2dim(texture->width);
+    height_log2 = log2dim(texture->height);
     gs_block_base = D_0015EF8C >> 8;
     mip_block_1 = texture->mip_block_offset_1 + gs_block_base;
     texture_block = texture->clut_block_offset + gs_block_base;

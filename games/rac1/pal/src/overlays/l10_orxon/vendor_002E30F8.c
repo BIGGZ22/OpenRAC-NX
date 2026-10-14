@@ -2133,7 +2133,7 @@ void func_L10_002EAA08(struct Moby_EAA08 *moby) {
                 return;
             }
         }
-        moby->rot.y = func_001FA748(moby->rot.y, -1.3962634f);
+        moby->rot.y = FastAddRots(moby->rot.y, -1.3962634f);
         moby->state = 3;
         return;
     case 1:
@@ -2143,11 +2143,11 @@ void func_L10_002EAA08(struct Moby_EAA08 *moby) {
         if (D_L10_001BB9C0.collected[(short)save_id] != 0 ||
             ((D_0014C290[D_0015EE84][(short)save_id >> 5] >> (save_id & 31)) & 1) != 0) {
         open:
-            moby->rot.y = func_001FA748(moby->rot.y, -1.3962634f);
+            moby->rot.y = FastAddRots(moby->rot.y, -1.3962634f);
             moby->state = 3;
             return;
         }
-        if (func_00215570(&D_0013F450.motion.pos, vars->clip_volume) == 0 && D_0013DE54[0] == 0)
+        if (is_point_inside_clip_volume(&D_0013F450.motion.pos, vars->clip_volume) == 0 && D_0013DE54[0] == 0)
             return;
         if (vars->unk0 <= 0 || vars->sound <= 0)
             return;
@@ -2155,13 +2155,13 @@ void func_L10_002EAA08(struct Moby_EAA08 *moby) {
         D_0014C290[D_0015EE84][(short)save_id >> 5] |= 1 << (save_id & 31);
         save_id = moby->save_id;
         D_L10_001BAC60[(short)save_id >> 5] |= 1 << (save_id & 31);
-        if (func_00215570(&D_0013F450.motion.pos, vars->clip_volume))
+        if (is_point_inside_clip_volume(&D_0013F450.motion.pos, vars->clip_volume))
             func_L10_002F6E10(vars->sound);
-        vars->timer = func_001FA898(func_001F9878(90.0f));
+        vars->timer = truncate_float_to_s32(func_001F9878(90.0f));
         moby->state = 2;
         return;
     case 2:
-        moby->rot.y = func_001FA748(moby->rot.y, -1.3962634f / func_001F9878(90.0f));
+        moby->rot.y = FastAddRots(moby->rot.y, -1.3962634f / func_001F9878(90.0f));
         if (func_001F9908_EAA08(&vars->timer))
             moby->state = 3;
         return;
@@ -2173,7 +2173,7 @@ void func_L10_002EAA08(struct Moby_EAA08 *moby) {
             return;
         if ((((D_0014C290[D_0015EE84][(short)save_id >> 5] >> (save_id & 31)) ^ 1) & 1) == 0)
             return;
-        moby->rot.y = func_001FA748(moby->rot.y, 1.3962634f);
+        moby->rot.y = FastAddRots(moby->rot.y, 1.3962634f);
         moby->state = 0;
         return;
     }

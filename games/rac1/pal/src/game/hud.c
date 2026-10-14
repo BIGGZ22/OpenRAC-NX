@@ -275,7 +275,7 @@ void func_001FF958(s32 bank, s32 base, s32 immediate) {
     s32 size;
 
     if (D_0019A4E8_FF958.header.counts->loaded[bank] == 0) {
-        func_001FF7F0(0, base);
+        LinkHudBank(0, base);
         address = D_0015EF88;
     } else {
         address = D_0015EF88;

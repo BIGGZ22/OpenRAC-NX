@@ -352,7 +352,411 @@ char *func_L00_002CA728(char *src) {
     return m;
 }
 LINKER_REMNANT("asm/overlays", func_L00_002CABB8);
-INCLUDE_ASM("asm/overlays", func_L00_002CABC0);
+extern float atan2_CB(float, float) __asm__("func_L00_001FF860");
+extern int st_CB(int) __asm__("func_001F9850");
+extern int rr_CB(int, int) __asm__("func_L00_00258BC8");
+extern void f264B40_CB(void *, int, void *, float) __asm__("func_L00_00264B40");
+extern int t32_CB(int *) __asm__("func_001F9908");
+extern int t16_CB(short *) __asm__("func_001F9938");
+extern int rnd_CB(int) __asm__("func_002140B0");
+extern float itof_CB(int) __asm__("func_001FA888");
+extern Moby *contact_CB(void *, int, int) __asm__("func_L00_0025B478");
+extern int sound_CB(int, int, Moby *) __asm__("func_0022ED80");
+extern float rfb_CB(float, float) __asm__("func_002140F8");
+extern float rang_CB(void) __asm__("func_00214158");
+extern void sph_CB(void *, float, float, float) __asm__("func_00215C00");
+extern void vadd_CB(void *, void *, void *) __asm__("func_001F9BD8");
+extern void f26DD70_CB(void *, void *, int, int, float, int) __asm__("func_L00_0026DD70");
+extern int ftoi_CB(float) __asm__("func_001FA898");
+extern void f25F4A8_CB(void *, void *, void *, float, float, int, int, int, float, float, float, float, int, float, int, int, int, int) __asm__("func_L00_0025F4A8");
+extern int f1F2BE8_CB(void *, float, int, void *, void *) __asm__("func_L00_001F2BE8");
+extern void f25BA50_CB(Moby *, void *, void *, int, int, int, int, int, float, float, float) __asm__("func_L00_0025BA50");
+extern char *debris_CB(void *, void *, void *) __asm__("func_L00_002CD3B8");
+extern float dist_CB(void *, void *) __asm__("func_001F9D48");
+extern float cos_CB(float) __asm__("func_001F9F90");
+extern float sin_CB(float) __asm__("func_001F9FA8");
+extern int f2594C8_CB(void *, void *, void *, int, float, float, float, float) __asm__("func_L00_002594C8");
+extern float angdiff_CB(float, float) __asm__("func_001FA850");
+extern float dist3_CB(void *, void *) __asm__("func_001F9D10");
+extern void f2592B0_CB(void *, float *, float, float, float, float) __asm__("func_L00_002592B0");
+extern float ground_CB(void *, int, float) __asm__("func_00214358");
+extern float fabs_CB(float) __asm__("func_001F9B88");
+extern int f2DDEA0_CB(void *, void *) __asm__("func_L00_002DDEA0");
+extern void vsub_CB(void *, void *, void *) __asm__("func_001F9BF0");
+extern float vlen_CB(void *) __asm__("func_001F9CB8");
+extern void vscale_CB(void *, void *, float) __asm__("func_L00_001FF4B0");
+extern float f25A748_CB(void *) __asm__("func_L00_0025A748");
+extern int f1F3958_CB(void) __asm__("func_L00_001F3958");
+extern float sqrt_CB(float) __asm__("func_001F9B50");
+extern float angsub_CB(float, float) __asm__("func_001FA790");
+extern float angadd_CB(float, float) __asm__("func_001FA748");
+extern void del_CB(Moby *) __asm__("func_0020D678");
+extern void anim_CB(Moby *, int, int, int) __asm__("func_00213DE0");
+
+extern float F6B4_CB __asm__("D_L00_0015F6B4") MACRO_ADDR;
+extern float F6B8_CB __asm__("D_L00_0015F6B8") MACRO_ADDR;
+extern float E6C_CB __asm__("D_0015EE6C") MACRO_ADDR;
+extern float E70_CB __asm__("D_0015EE70") MACRO_ADDR;
+extern float E60_CB __asm__("D_0015EE60") MACRO_ADDR;
+extern int G1920_CB SDATA(D_L00_00161920);
+extern float G1928_CB SDATA(D_L00_00161928);
+extern float G192C_CB SDATA(D_L00_0016192C);
+extern float G1930_CB SDATA(D_L00_00161930);
+extern float G1934_CB SDATA(D_L00_00161934);
+extern float G1938_CB SDATA(D_L00_00161938);
+extern float G193C_CB SDATA(D_L00_0016193C);
+extern float D_L00_00173F40_CB[] __asm__("D_L00_00173F40");
+extern char D_L00_00178000_CB[] __asm__("D_L00_00178000");
+extern char D_0013F450_CB[] __asm__("D_0013F450");
+extern unsigned char D_0013E633_CB[] __asm__("D_0013E633");
+
+typedef struct {
+    u8 pad0[0x10];
+    void *p10;
+    char *p14;
+    u8 pad18[8];
+    u8 v20[0x44];
+    short h64;
+    short h66;
+    float f68;
+    float f6C;
+    int i70;
+    int i74;
+    float f78;
+    int i7C;
+} Vars_2CABC0;
+
+/* Update for moby class 270 (morphoray chicken): wanders, pecks and flees from the hero, grows, and bursts into feathers when its health runs out. */
+void func_L00_002CABC0(Moby *m) {
+    Vec4A T;
+    Vec4A v;
+    Vec4A W;
+    Vec4A V;
+    Vars_2CABC0 *d;
+    char *h;
+    float save58;
+    float ang;
+    float s;
+    float speed;
+    float r;
+    float a;
+    int hit;
+    int i;
+    int j;
+    int n;
+    Moby *o;
+
+    hit = 0;
+    h = D_0013F450_CB;
+    d = (Vars_2CABC0 *)m->pvars;
+    save58 = m->unk58;
+    ang = atan2_CB(m->pos.x - *(float *)(h + 0x80), m->pos.y - *(float *)(h + 0x84));
+    if (m->state == 0) {
+        m->state = 1;
+        d->h66 = 0;
+        d->i70 = -1;
+        d->h64 = rr_CB(st_CB(0x78), st_CB(0x12C));
+        d->f78 = 1.0f;
+    }
+    if (m->state == 6) {
+        return;
+    }
+    if (D_0013E633_CB[2] != 0) {
+        f264B40_CB(m, G1920_CB, d->v20, 5.0f);
+    } else {
+        f264B40_CB(m, G1920_CB, d->v20, 7.7f);
+    }
+    qcopy(&T, &m->pos);
+    if (d->i70 >= 0 && t32_CB(&d->i70) != 0 && m->unk31 == 0) {
+        del_CB(m);
+        return;
+    }
+    if (d->i70 >= 0) {
+        if ((0.9f < F6B8_CB || 0.9f < F6B4_CB) && m->unk31 == 0 && d->i70 != -1) {
+            if (rnd_CB(0xC7) == 0) {
+                del_CB(m);
+                return;
+            }
+            d->i70 = rr_CB(0x14, 0x1E);
+        }
+        if (1.0f < F6B8_CB || 1.0f < F6B4_CB) {
+            if (m->unk31 != 0) {
+                if (rnd_CB(0x63) == 0) {
+                    d->f78 = 0.0f;
+                } else {
+                    d->i70 = rr_CB(0x14, 0x1E);
+                }
+            } else if (rnd_CB(0x18) == 0) {
+                del_CB(m);
+                return;
+            }
+        }
+    } else if (1.0f < F6B8_CB || 1.0f < F6B4_CB) {
+        if (m->unk31 == 0 && rnd_CB(9) == 0) {
+            d->i70 = 0;
+        } else {
+            d->i70 = rr_CB(0x1E, 0x32);
+        }
+    }
+    if (d->i74 > 0) {
+        m->scale += ((itof_CB(d->i74) * 3.0f + 1.0f) * m->pclass->scale - m->scale) * 0.1f;
+    }
+    s = m->scale / m->pclass->scale;
+    if (t32_CB(&d->i7C) != 0) {
+        o = contact_CB(m, -1, 0);
+        if (o != 0) {
+            sound_CB(1, 0, m);
+            d->f78 -= o->scale;
+            d->i7C = st_CB(0x19);
+        }
+    }
+    m->unkA4 = 0xFF;
+    if (d->f78 < 1.0f) {
+        if (d->i74 == 0) {
+            for (i = 0; i < ftoi_CB(s) * 20; i++) {
+                r = rfb_CB(0.0f, 0.37f) * s;
+                a = rang_CB();
+                sph_CB(&V, r, a, rang_CB());
+                V.z += rfb_CB(0.25f, 0.5f) * s;
+                vadd_CB(&V, &V, &T);
+                r = rfb_CB(E6C_CB * 0.1f, E6C_CB) * s;
+                a = rang_CB();
+                sph_CB(&W, r, a, rang_CB());
+                f26DD70_CB(&V, &W, 0x3F7F7F7F, 0x2F2F2F, s * 150000.0f, rr_CB(st_CB(0x1E), st_CB(0x39)));
+            }
+        } else {
+            *(VecQuad *)&V = 0;
+            V.x = E60_CB * 0.5f;
+            V.z = E60_CB * 0.7f;
+            V.y = E60_CB * 0.5f;
+            *(VecQuad *)&W = *(VecQuad *)&V;
+            f25F4A8_CB(m, &W, 0, 0.0f, 2.0f, 0, 0, 0, 4.0f, 3.0f, 9.0f, 1.0f, -1, 12.0f, 1, 1, -1, (unsigned char)d->i74);
+            n = f1F2BE8_CB(&m->pos, 3.0f, 0x10, m, 0);
+            *(VecQuad *)&V = *(VecQuad *)&m->pos;
+            f25BA50_CB(m, &V, D_L00_00178000_CB, n, 0, 0x830000, 2, 1, 1.0f, 1.0f, 1.0f);
+        }
+        n = rr_CB(5, 8);
+        if (0.85f < F6B4_CB || 0.85f < F6B8_CB) {
+            if (1.0f < F6B4_CB || 1.0f < F6B8_CB) {
+                n = 1;
+            } else {
+                n /= 2;
+            }
+        }
+        for (j = 0; j < n; j++) {
+            r = rfb_CB(G1938_CB, G193C_CB) * s;
+            a = rang_CB();
+            sph_CB(&V, r, a, rang_CB());
+            V.z += G1934_CB * s;
+            vadd_CB(&V, &V, &T);
+            a = rfb_CB(G192C_CB * E6C_CB, G1930_CB * E6C_CB);
+            sph_CB(&W, a, rang_CB(), G1928_CB * 0.017453292f);
+            W.z = rfb_CB(3.5f, 5.5f) * E6C_CB;
+            debris_CB(m, &V, &W);
+        }
+        sound_CB(1, 0, m);
+        if (d->i70 >= 0) {
+            del_CB(m);
+            return;
+        }
+        m->unk94 = 0;
+        m->flags = (m->flags & 0xEFFF) | 0x41;
+        d->i74 = 0;
+        m->state = 6;
+        m->unkBC = 0;
+        return;
+    }
+    if (t16_CB(&d->h64) != 0) {
+        sound_CB(rnd_CB(100) >= 75, 0, m);
+        d->h64 = rr_CB(st_CB(0x78), st_CB(0x12C));
+    }
+    if (d->i70 >= 0) {
+        speed = (E6C_CB + E6C_CB) * s;
+    } else {
+        speed = 0.333f;
+    }
+    switch (m->state) {
+    case 0:
+        break;
+    case 1:
+        if (m->unk70 & 2) {
+            anim_CB(m, rnd_CB(2) == 0, 0, st_CB(5));
+        }
+        if (t16_CB(&d->h66) != 0 && dist_CB(&m->pos, D_0013F450_CB + 0x80) < s * 5.0f) {
+            v.x = cos_CB(m->rot.z) * E6C_CB * s;
+            v.y = sin_CB(m->rot.z) * E6C_CB * s;
+            v.z = 0.0f;
+            vadd_CB(&v, &v, &T);
+            hit = f2594C8_CB(m, &T, &v, 0, s * 0.2f, s * 0.5f, speed, 0.2617994f);
+            if (hit != 0 || (angdiff_CB(m->rot.z, atan2_CB(T.x - m->pos.x, T.y - m->pos.y)) < 1.5707964f && dist3_CB(&m->pos, &T) > s * 0.01f)) {
+                m->state = 3;
+                anim_CB(m, 3, 0, st_CB(10));
+            } else {
+                d->h66 = rr_CB(st_CB(0x3C), st_CB(0xB4));
+            }
+        } else if (dist_CB(&m->pos, D_0013F450_CB + 0x80) < s * 5.0f && 0.5235988f < angdiff_CB(ang, m->rot.z)) {
+            f2594C8_CB(m, &T, &T, 0, s * 0.2f, s * 0.5f, speed, 0.2617994f);
+            m->state = 2;
+            anim_CB(m, 3, 0, st_CB(10));
+        } else {
+            f2594C8_CB(m, &T, &T, 0, s * 0.2f, s * 0.5f, speed, 0.2617994f);
+        }
+        break;
+    case 2:
+        f2592B0_CB(m, &d->f68, ang, E70_CB * 0.7853982f, E70_CB * 1.5707964f, E6C_CB * 0.7853982f);
+        f2594C8_CB(m, &T, &T, 0, s * 0.2f, s * 0.5f, speed, 0.2617994f);
+        if (t16_CB(&d->h66) != 0 && dist_CB(&m->pos, D_0013F450_CB + 0x80) < s * 5.0f) {
+            v.x = cos_CB(m->rot.z) * E6C_CB * s;
+            v.y = sin_CB(m->rot.z) * E6C_CB * s;
+            v.z = 0.0f;
+            vadd_CB(&v, &v, &T);
+            if (fabs_CB(ground_CB(&v, 0, 0.5f) - v.z) <= (E6C_CB + E6C_CB) * s) {
+                m->state = 3;
+                anim_CB(m, 3, 0, st_CB(10));
+            }
+        } else if (angdiff_CB(ang, m->rot.z) < 0.08726646f || dist_CB(&m->pos, D_0013F450_CB + 0x80) > s * 6.0f) {
+            m->state = 1;
+            d->h66 = rr_CB(st_CB(0x3C), st_CB(0xB4));
+            anim_CB(m, rnd_CB(2) == 0, 0, st_CB(5));
+        }
+        break;
+    case 3:
+        if (dist_CB(&m->pos, D_0013F450_CB + 0x80) > s * 6.0f) {
+            m->state = 1;
+            d->h66 = rr_CB(st_CB(0x3C), st_CB(0xB4));
+            anim_CB(m, rnd_CB(2) == 0, 0, st_CB(5));
+            f2594C8_CB(m, &T, &T, 0, s * 0.2f, s * 0.5f, speed, 0.2617994f);
+        } else if (dist_CB(&m->pos, D_0013F450_CB + 0x80) < s * 3.0f) {
+            f2592B0_CB(m, &d->f68, ang, E70_CB * 0.7853982f, E70_CB * 1.5707964f, E6C_CB * 0.7853982f);
+            v.x = cos_CB(m->rot.z) * (E6C_CB + E6C_CB);
+            v.y = sin_CB(m->rot.z) * (E6C_CB + E6C_CB);
+            v.z = 0.0f;
+            vadd_CB(&v, &v, &T);
+            hit = f2594C8_CB(m, &T, &v, 0, s * 0.2f, s * 0.5f, speed, 0.2617994f);
+            if (hit == 0 && (1.5707964f < angdiff_CB(m->rot.z, atan2_CB(T.x - m->pos.x, T.y - m->pos.y)) || dist3_CB(&m->pos, &T) < s * 0.01f)) {
+                m->state = 1;
+                d->h66 = rr_CB(st_CB(0x3C), st_CB(0xB4));
+                anim_CB(m, rnd_CB(2) == 0, 0, st_CB(5));
+            } else {
+                m->state = 4;
+                anim_CB(m, 2, 0, st_CB(10));
+            }
+        } else {
+            f2592B0_CB(m, &d->f68, ang, E70_CB * 0.7853982f, E70_CB * 1.5707964f, E6C_CB * 0.7853982f);
+            v.x = cos_CB(m->rot.z) * E6C_CB * s;
+            v.y = sin_CB(m->rot.z) * E6C_CB * s;
+            v.z = 0.0f;
+            vadd_CB(&v, &v, &T);
+            hit = f2594C8_CB(m, &T, &v, 0, s * 0.2f, s * 0.5f, speed, 0.2617994f);
+            if (hit == 0 && (1.5707964f < angdiff_CB(m->rot.z, atan2_CB(T.x - m->pos.x, T.y - m->pos.y)) || dist3_CB(&m->pos, &T) < s * 0.01f)) {
+                m->state = 1;
+                d->h66 = rr_CB(st_CB(0x3C), st_CB(0xB4));
+                anim_CB(m, rnd_CB(2) == 0, 0, st_CB(5));
+            }
+        }
+        break;
+    case 4:
+        if (t16_CB(&d->h66) != 0 && dist_CB(&m->pos, D_0013F450_CB + 0x80) > s * 4.0f) {
+            f2592B0_CB(m, &d->f68, ang, E70_CB * 0.7853982f, E70_CB * 1.5707964f, E6C_CB * 0.7853982f);
+            v.x = cos_CB(m->rot.z) * E6C_CB * s;
+            v.y = sin_CB(m->rot.z) * E6C_CB * s;
+            v.z = 0.0f;
+            vadd_CB(&v, &v, &T);
+            hit = f2594C8_CB(m, &T, &v, 0, s * 0.2f, s * 0.5f, speed, 0.2617994f);
+            if (hit == 0 && (1.5707964f < angdiff_CB(m->rot.z, atan2_CB(T.x - m->pos.x, T.y - m->pos.y)) || dist3_CB(&m->pos, &T) < s * 0.01f)) {
+                m->state = 1;
+                d->h66 = rr_CB(st_CB(0x3C), st_CB(0xB4));
+                anim_CB(m, rnd_CB(2) == 0, 0, st_CB(5));
+            } else {
+                m->state = 3;
+                anim_CB(m, 3, 0, st_CB(10));
+            }
+        } else {
+            f2592B0_CB(m, &d->f68, ang, E70_CB * 0.7853982f, E70_CB * 1.5707964f, E6C_CB * 0.7853982f);
+            v.x = cos_CB(m->rot.z) * (E6C_CB + E6C_CB) * s;
+            v.y = sin_CB(m->rot.z) * (E6C_CB + E6C_CB) * s;
+            v.z = 0.0f;
+            vadd_CB(&v, &v, &T);
+            hit = f2594C8_CB(m, &T, &v, 0, s * 0.2f, s * 0.5f, speed, 0.2617994f);
+            if (hit == 0 && (1.5707964f < angdiff_CB(m->rot.z, atan2_CB(T.x - m->pos.x, T.y - m->pos.y)) || dist3_CB(&m->pos, &T) < s * 0.01f)) {
+                m->state = 1;
+                d->h66 = rr_CB(st_CB(0x3C), st_CB(0xB4));
+                anim_CB(m, rnd_CB(2) == 0, 0, st_CB(5));
+            }
+        }
+        break;
+    case 5:
+        if (f2DDEA0_CB(m, d->p10) != 0) {
+            m->state = 0;
+            *(short *)(d->p14 + 0x68) = 0;
+        }
+        if (rnd_CB(4) != 0) {
+            return;
+        }
+        {
+            Vec4A *pv;
+            Vec4A *pw;
+            pv = &V;
+            r = rfb_CB(G1938_CB, G193C_CB) * s;
+            a = rang_CB();
+            sph_CB(pv, r, a, rang_CB());
+            V.z += G1934_CB * s;
+            vadd_CB(pv, pv, &T);
+            pw = &W;
+            a = rfb_CB(G192C_CB * E6C_CB, G1930_CB * E6C_CB);
+            sph_CB(pw, a, rang_CB(), G1928_CB * 0.017453292f);
+            W.z = rfb_CB(3.5f, 5.5f) * E6C_CB;
+            debris_CB(m, pv, pw);
+        }
+        return;
+    }
+    if (hit == 0) {
+        float len;
+        float max;
+        vsub_CB(&W, &T, &m->pos);
+        len = vlen_CB(&W);
+        max = E6C_CB * s;
+        if (max < len) {
+            vscale_CB(&W, &W, max);
+        }
+        vadd_CB(&T, &m->pos, &W);
+        if (fabs_CB(f25A748_CB(&T) - m->pos.z) <= E6C_CB * s) {
+            qcopy(&m->pos, &T);
+        }
+    } else {
+        qcopy(&m->pos, &T);
+    }
+    d->f6C += E70_CB * 9.8f;
+    m->pos.z -= d->f6C;
+    {
+        float g = ground_CB(&m->pos, 0, 0.5f);
+        if (m->pos.z < g && g < m->pos.z + s * 0.25f) {
+            d->f6C = 0.0f;
+            m->pos.z = g;
+        }
+    }
+    if (f1F3958_CB() == 0) {
+        d->f78 = 0.0f;
+    }
+    if (m->state != 5) {
+        float pitch;
+        float roll;
+        m->pos.z = D_L00_00173F40_CB[10];
+        qcopy(&W, &D_L00_00173F40_CB[16]);
+        V.x = W.x * cos_CB(m->rot.z) + W.y * sin_CB(m->rot.z);
+        V.y = W.y * cos_CB(m->rot.z) - W.x * sin_CB(m->rot.z);
+        V.z = W.z;
+        pitch = -atan2_CB(sqrt_CB(V.x * V.x + V.z * V.z), V.y);
+        roll = atan2_CB(V.z, V.x);
+        m->rot.x = angadd_CB(m->rot.x, angsub_CB(pitch, m->rot.x) * (E6C_CB * 6.2831855f));
+        m->rot.y = angadd_CB(m->rot.y, angsub_CB(roll, m->rot.y) * (E6C_CB * 6.2831855f));
+    }
+    if (m->pos.z < 0.0f) {
+        del_CB(m);
+    } else {
+        m->unk58 = save58;
+    }
+}
 extern int func_L00_002DCDA8(void *);
 int func_L00_002CC210(char *a) {
     int r = func_L00_002DCDA8(a);
