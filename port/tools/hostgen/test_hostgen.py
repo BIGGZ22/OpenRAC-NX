@@ -332,6 +332,18 @@ class Translate(unittest.TestCase):
         self.assertIn("func_00100000 is matched C in this file now", text)
         self.assertNotIn('const char *s = "}"', text)
 
+    def test_a_file_the_decompilation_moved_leaves_no_copy_behind(self):
+        """The NTSC decomp moved src/assembly/sdk/library/cmd_sem_init.c to src/sdk/library/:
+        the old copy, kept from an earlier build, defined cmd_sem_init a second time."""
+        with tempfile.TemporaryDirectory() as tmp:
+            src, dst = Path(tmp) / "src", Path(tmp) / "prep"
+            (src / "assembly").mkdir(parents=True)
+            (src / "assembly" / "f.c").write_text("int f(void) { return 1; }\n")
+            prep.copy_tree(src, dst)
+            (src / "assembly" / "f.c").rename(src / "f.c")
+            prep.copy_tree(src, dst)
+            self.assertEqual(sorted(p.relative_to(dst).as_posix() for p in dst.rglob("*.c")), ["f.c"])
+
     def test_function_pointers_by_code_address(self):
         out = self.run_program({"a.c": """
             int func_00110000(int x) { return x + 1; }

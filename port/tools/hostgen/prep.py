@@ -353,4 +353,11 @@ def copy_tree(src: Path, dst: Path, patterns=("*.c", "*.h", "*.inc"),
                 out.parent.mkdir(parents=True, exist_ok=True)
                 out.write_text(text, encoding="utf-8", errors="surrogateescape")
             count += 1
+    # A file the decompilation moved or removed leaves its old copy behind, which would define
+    # its functions a second time.
+    if dst.is_dir():
+        for pattern in patterns:
+            for out in dst.rglob(pattern):
+                if not (src / out.relative_to(dst)).exists():
+                    out.unlink()
     return count
