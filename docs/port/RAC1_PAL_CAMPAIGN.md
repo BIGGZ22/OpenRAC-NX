@@ -1517,3 +1517,33 @@ or call to an unknown code address. The fixes, each found by running a level:
 
 Still open: functions without C met in levels 2, 4-8, 10 and 13-16 (1 to 4 each), and none of
 this is a playthrough. `OPENRAC_GUARD` (BUGFIX_GUIDE) finds who writes a corrupted value.
+
+### Every level's start without a missing function, 2026-10-14 continuation
+
+Workers per `games/rac1/pal/docs/AGENT_WORKFLOW.md` (Opus on functions over 1 KB through
+`wave.py long`, one function each; Sonnet and Haiku on small ones), each told to end at
+`equiv.py` FUNCTIONAL when not EXACT. In `rac1-decomp` (branch `feat/port-backfill`):
+
+- EXACT, landed: func_L13_00309330, func_L06_002E9AA8, func_L06_002F91A8, func_L06_002FAE58,
+  func_L10_002E1568, func_L00_002CABC0, func_L02_002D5250, func_L13_002BB3E8.
+- Functional (near misses, `equiv.py` FUNCTIONAL or every flagged item read against retail):
+  func_L07_003109D0, func_L14_002B2A28, func_L15_002C6950, func_L10_002E5E48, func_L05_003033A0,
+  func_L05_00305778, func_002284E8, func_00220690.
+- `fix(nonmatching): func_L13_002EE590 without alloca` and `feat(hostgen): a variable-length
+  array whose length is a local` (func_L10_002CAD18 was a stub).
+
+All 19 levels run 3,000 scripted ticks with no crash; the only functions without C they meet are
+func_L02_00250A58 (levels 2 and 5) and func_L00_00254218 (level 4). Both are handwritten: the
+first builds a VU1 packet, which the renderer does not draw (it takes GIF and VIF DIRECT only),
+the second is the joint pose the port replaces. Exercised by a run: class 28 (Oltanis robots,
+func_L14_002B2A28) chase, attack, die to the wrench and drop bolts in levels 14 and 15; class 233
+(func_L15_002C6950) was only seen in its dormant state. Everything else is believed correct.
+
+Bugs: none found yet in the new functions by running them. Found on the way: a struct passed by
+value under another type name breaks the port build (fixed by a port copy of the candidate in
+`nonmatching/functional/`), and a worker found a wrong argument order in its own draft by
+matching. Not worth workers: the 29 small level entries the planner admitted were all fragments,
+VU0 or trap code; libmpeg and the movie player are SDK code the port does not need.
+
+Open: a playthrough; the frontier past each level's start (deeper scripted routes);
+func_L08_002F7318 and func_L12_00304038 are stubs (VLA lengths that are expressions).
