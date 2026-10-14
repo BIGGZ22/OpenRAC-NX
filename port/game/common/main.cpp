@@ -38,6 +38,7 @@
 #include <thread>
 #include <vector>
 
+#include <cfenv>
 #include <cmath>
 
 #include "common/log.h"
@@ -880,6 +881,17 @@ static int check_levels(const fs::path& levels) {
 }
 #endif
 
+// The game's code as the EE's floating point unit runs it: every operation rounds toward zero
+// (the EE has no other mode). A counter the game steps by 0.1 lands on the other side of zero
+// when rounded to nearest (a moby of rac1's level 6 shrank to a negative scale).
+// OPENRAC_ROUND_NEAREST=1 keeps the host's mode, to compare.
+static int run_game_as_the_ee() {
+    if (std::getenv("OPENRAC_ROUND_NEAREST") == nullptr) {
+        std::fesetround(FE_TOWARDZERO);
+    }
+    return openrac_game_run();
+}
+
 int main(int argc, char** argv) {
 #if defined(_WIN32)
     // Windows sleeps in steps of 15.6 ms unless a program asks for 1 ms: the wait for the next
@@ -997,12 +1009,12 @@ int main(int argc, char** argv) {
     if (g_window) {
         // Beside the window's event pump, so the game goes on while the system holds the pump (a
         // window being dragged or sized on Windows: platform/pump.h).
-        ran = platform::run_pumped([](void*) { return openrac_game_run(); }, nullptr);
+        ran = platform::run_pumped([](void*) { return run_game_as_the_ee(); }, nullptr);
     } else {
-        ran = openrac_game_run();
+        ran = run_game_as_the_ee();
     }
 #else
-    ran = openrac_game_run();
+    ran = run_game_as_the_ee();
 #endif
     if (!ran) {
         log::error(

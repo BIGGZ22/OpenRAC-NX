@@ -45,6 +45,11 @@ float game_openrac_rsqrt(float a, float b) {
  * game that failed. The console would stop in its exception handler; the port says so and stops. */
 void game_openrac_game_trap(void) {
     fprintf(stderr, "[error] the game raised a trap (a failed assertion of its own); stopping\n");
+    for (int depth = 0; depth < 6; ++depth) {
+        char who[256];
+        openrac_host_caller(depth, who, sizeof(who));
+        fprintf(stderr, "[error]   from %s\n", who);
+    }
     exit(3);
 }
 
