@@ -16,7 +16,25 @@ void func_L00_001EB508(void) {
     D_L00_0015F04C = 0;
 }
 INCLUDE_ASM("asm/overlays", func_L00_001EB564);
-INCLUDE_ASM("asm/overlays", func_L00_001EB578);
+extern u8 D_L00_00167250_1EB578[] __asm__("D_L00_00167250");
+/* the 0xA0-byte record at 0x167250 whose s16 at +0x86 is id, 0 when none. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/camera/001eb188.c, FUN_L00_001eb1f8. */
+char *func_L00_001EB578(int id) {
+    s32 p;
+    s32 e;
+    s16 v;
+    p = (s32)&D_L00_00167250_1EB578[0];
+    e = p + 0x1E00;
+    for (;;) {
+        v = *(s16 *)(p + 0x86);
+        if (v != id) {
+            p += 0xA0;
+            if (p < e)
+                continue;
+            return 0;
+        }
+        return (char *)p;
+    }
+}
 INCLUDE_ASM("asm/overlays", func_L00_001EB598);
 INCLUDE_ASM("asm/overlays", func_L00_001EB5A8);
 LINKER_REMNANT("asm/overlays", func_L00_001EB5B0);

@@ -60,9 +60,27 @@ INCLUDE_ASM("asm/overlays", func_L00_0024EF28);
 INCLUDE_ASM("asm/overlays", func_L00_0024F048);
 INCLUDE_ASM("asm/overlays", func_L00_0024F170);
 INCLUDE_ASM("asm/overlays", func_L00_0024F198);
-INCLUDE_ASM("asm/overlays", func_L00_0024F1C8);
-INCLUDE_ASM("asm/overlays", func_L00_0024F220);
-INCLUDE_ASM("asm/overlays", func_L00_0024F258);
+extern int D_0013D9B4 NOT_SDA;
+extern u8 D_0013D4B0 NOT_SDA;
+/* 0 when the word at 0x13D9B4 is 0, else 1 or 2 by whether the byte at 0x13D4B0 is set */
+int func_L00_0024F1C8(void) {
+    if (D_0013D9B4 == 0) return 0;
+    if (D_0013D4B0 == 0) return 1;
+    return 2;
+}
+extern u8 D_0013D5DD NOT_SDA;
+extern int D_0013DC34 NOT_SDA;
+/* 2 when the byte at 0x13D5DD is set, else whether the word at 0x13DC34 is */
+int func_L00_0024F220(void) {
+    if (D_0013D5DD) return 2;
+    return D_0013DC34 != 0;
+}
+extern u8 D_0013D5C8[];
+/* 2 when the byte at 0x13D5E7 is set, else whether the byte at 0x13D5E9 is */
+int func_L00_0024F258(void) {
+    if (D_0013D5C8[0x1F]) return 2;
+    return D_0013D5C8[0x21] != 0;
+}
 extern u8 * D_L00_0016009C MACRO_ADDR;
 extern u8 * D_L00_001600A0 MACRO_ADDR;
 extern u32 D_L00_0015F6B0 MACRO_ADDR;

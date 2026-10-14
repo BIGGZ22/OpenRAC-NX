@@ -386,7 +386,14 @@ int func_L00_002CC360(char *a) {
     a[0x20] = 5;
     return r;
 }
-INCLUDE_ASM("asm/overlays", func_L00_002CC390);
+/* the word at +0x14 of the moby's pvars, 0 when there is no moby or no pvars */
+int func_L00_002CC390(struct Moby *m) {
+    if (m != 0) {
+        if (m->pvars != 0) return ((int *)m->pvars)[5];
+        return 0;
+    }
+    return 0;
+}
 INCLUDE_ASM("asm/overlays", func_L00_002CC3C0);
 typedef struct {
     float x, y, z;

@@ -1675,7 +1675,81 @@ void func_L00_002E6CE0(char *m) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_002E72E8);
+/* Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay/vendor/002e5e38.c, follow_camera_approach (FUN_L00_002e5e38). */
+extern float D_L00_0015F044_2E72E8 __asm__("D_L00_0015F044") MACRO_ADDR;
+extern unsigned char D_L00_001690C0_2E72E8[] __asm__("D_L00_001690C0") NOT_SDA;
+extern int D_L00_0015F060_2E72E8 __asm__("D_L00_0015F060") MACRO_ADDR;
+extern float D_L00_00161DD4_2E72E8 SDATA(D_L00_00161DD4);
+extern float D_L00_00161DD8_2E72E8 SDATA(D_L00_00161DD8);
+extern float D_L00_00161D70_2E72E8 SDATA(D_L00_00161D70);
+extern float D_L00_00161DAC_2E72E8 SDATA(D_L00_00161DAC);
+extern float D_L00_00161DB0_2E72E8 SDATA(D_L00_00161DB0);
+extern float D_L00_00161DB4_2E72E8 SDATA(D_L00_00161DB4);
+extern float D_L00_00161DEC_2E72E8 SDATA(D_L00_00161DEC);
+typedef struct { char pad0[0x2C]; float unk2C; float unk30; char pad34[8]; short unk3C; short unk3E; union { int bits; float value; } unk40; char pad44[4]; float unk48; union { int bits; float value; } unk4C; float unk50; float unk54; float unk58; } CamOrbit_2E72E8;
+typedef struct { char pad0[0xB0]; float unkB0; union { int bits; float value; } unkB4; float unkB8; float unkBC; char padC0[0x16]; unsigned char unkD6; char padD7[3]; short unkDA; float unkDC; float unkE0; float unkE4; float unkE8; } CamTarget_2E72E8;
+typedef struct { char pad0[0x10]; short unk10; char pad12[0x10]; short unk22; } Cam_2E72E8;
+typedef struct { char pad0[0x3C]; float unk3C; float unk40; float unk44; int unk48; } CamSpring_2E72E8;
+typedef struct { char pad0[0x6]; short unk6; char pad8[4]; float unkC; } CamEnd_2E72E8;
+typedef struct { char pad0[0x10]; int unk10; float unk14; char pad18[4]; union { int bits; float value; } unk1C; int unk20, unk24; } CamInit_2E72E8;
+typedef struct { char pad0[0x70]; unsigned char *cam; } CamObject_2E72E8;
+float cam_interp_values(void *, float, float, float, float, float) __asm__("func_001EC120");
+
+void func_L00_002E72E8(unsigned char *moby) __asm__("func_L00_002E72E8");
+void func_L00_002E72E8(unsigned char *moby)
+{
+    unsigned char *init, *cam, *defaults, *orbit, *target, *default_target, *default_orbit, *reset;
+    CamSpring_2E72E8 *spring_reset;
+    init = ((CamObject_2E72E8 *)moby)->cam + 0x1A8;
+    ((CamInit_2E72E8 *)init)->unk14 = D_L00_0015F044_2E72E8;
+    ((CamInit_2E72E8 *)init)->unk1C.bits = 0;
+    ((CamInit_2E72E8 *)init)->unk20 = 0;
+    ((CamInit_2E72E8 *)init)->unk10 = 0;
+    ((CamInit_2E72E8 *)init)->unk24 = 0;
+    cam = ((CamObject_2E72E8 *)moby)->cam;
+    defaults = *(unsigned char **)D_L00_001690C0_2E72E8;
+    orbit = cam + 0x130;
+    target = cam + 0x40;
+    default_orbit = defaults + 0x130;
+    default_target = defaults + 0x40;
+    if (((CamOrbit_2E72E8 *)orbit)->unk3C) {
+        ((CamOrbit_2E72E8 *)orbit)->unk2C = cam_interp_values(cam + 0x174, ((CamOrbit_2E72E8 *)orbit)->unk2C, ((CamOrbit_2E72E8 *)orbit)->unk40.value, ((CamOrbit_2E72E8 *)orbit)->unk48, D_L00_00161DD4_2E72E8, ((CamInit_2E72E8 *)init)->unk1C.value);
+    } else {
+        ((CamOrbit_2E72E8 *)orbit)->unk2C = cam_interp_values(cam + 0x174, ((CamOrbit_2E72E8 *)orbit)->unk2C, ((CamOrbit_2E72E8 *)default_orbit)->unk2C, ((CamOrbit_2E72E8 *)orbit)->unk48, D_L00_00161DD4_2E72E8, ((CamInit_2E72E8 *)init)->unk1C.value);
+    }
+    if (((CamOrbit_2E72E8 *)orbit)->unk3E) {
+        ((CamOrbit_2E72E8 *)orbit)->unk30 = cam_interp_values(orbit + 0x50, ((CamOrbit_2E72E8 *)orbit)->unk30, ((CamOrbit_2E72E8 *)orbit)->unk4C.value, ((CamOrbit_2E72E8 *)orbit)->unk54, D_L00_00161DD8_2E72E8, 0.0f);
+    } else {
+        ((CamOrbit_2E72E8 *)orbit)->unk30 = cam_interp_values(orbit + 0x50, ((CamOrbit_2E72E8 *)orbit)->unk30, ((CamOrbit_2E72E8 *)default_orbit)->unk30, ((CamOrbit_2E72E8 *)orbit)->unk54, D_L00_00161DD8_2E72E8, 0.0f);
+    }
+    if (((CamTarget_2E72E8 *)target)->unkDA) {
+        ((CamTarget_2E72E8 *)target)->unkB0 = cam_interp_values(target + 0xBC, ((CamTarget_2E72E8 *)target)->unkB0, ((CamTarget_2E72E8 *)target)->unkB4.value, ((CamTarget_2E72E8 *)target)->unkB8, 0.2f, 0.0f);
+    } else {
+        ((CamTarget_2E72E8 *)target)->unkB0 = cam_interp_values(target + 0xBC, ((CamTarget_2E72E8 *)target)->unkB0, ((CamTarget_2E72E8 *)default_target)->unkB0, ((CamTarget_2E72E8 *)target)->unkB8, 0.2f, 0.0f);
+    }
+    ((CamOrbit_2E72E8 *)orbit)->unk3C = 0;
+    ((CamOrbit_2E72E8 *)orbit)->unk3E = 0;
+    ((CamOrbit_2E72E8 *)orbit)->unk40.bits = 0;
+    ((CamOrbit_2E72E8 *)orbit)->unk4C.bits = 0;
+    ((CamOrbit_2E72E8 *)orbit)->unk58 = ((CamOrbit_2E72E8 *)default_orbit)->unk2C;
+    ((CamTarget_2E72E8 *)target)->unkDA = 0;
+    ((CamTarget_2E72E8 *)target)->unkB4.bits = 0;
+    ((Cam_2E72E8 *)((CamObject_2E72E8 *)moby)->cam)->unk10 = 1;
+    ((Cam_2E72E8 *)((CamObject_2E72E8 *)moby)->cam)->unk22 = 0;
+    ((CamTarget_2E72E8 *)target)->unkDC = D_L00_00161D70_2E72E8;
+    ((CamTarget_2E72E8 *)target)->unkE4 = D_L00_00161D70_2E72E8;
+    ((CamTarget_2E72E8 *)target)->unkE0 = 0.2f;
+    ((CamTarget_2E72E8 *)target)->unkE8 = 0.2f;
+    ((CamTarget_2E72E8 *)target)->unkD6 = 0;
+    spring_reset = (CamSpring_2E72E8 *)(((CamObject_2E72E8 *)moby)->cam + 0x1D0);
+    spring_reset->unk44 = D_L00_00161DAC_2E72E8;
+    spring_reset->unk3C = D_L00_00161DB4_2E72E8;
+    spring_reset->unk40 = D_L00_00161DB0_2E72E8;
+    spring_reset->unk48 = D_L00_0015F060_2E72E8;
+    reset = ((CamObject_2E72E8 *)moby)->cam + 0x220;
+    ((CamEnd_2E72E8 *)reset)->unkC = D_L00_00161DEC_2E72E8;
+    ((CamEnd_2E72E8 *)reset)->unk6 = 0;
+}
 INCLUDE_ASM("asm/overlays", func_L00_002E74B0);
 extern char D_L00_00166D80[];
 extern float D_L00_00166F40[];
@@ -2483,7 +2557,21 @@ int func_L00_002E8EE0(char *m) {
 INCLUDE_ASM("asm/overlays", func_L00_002E91D0);
 /* Empty function that only reserves 0x50 bytes of stack. Adapted from Lombyte (MIT), FUN_L00_002e8378; the volatile buffer is what keeps the frame. */
 void func_L00_002E9828(int a) { volatile char buf[0x50]; }
-INCLUDE_ASM("asm/overlays", func_L00_002E9838);
+typedef struct { u8 pad[0x220]; s32 cur; } Owner_2E9838;
+typedef struct { u8 pad[0x70]; Owner_2E9838 *p; u8 pad2[0x86 - 0x74]; s16 f86; } Vendor_2E9838;
+extern Vendor_2E9838 *D_L00_00166F00_2E9838 __asm__("D_L00_00166F00");
+/* -1 when the vendor's +0x86 is set, else 1 after clearing its owner's +0x220 when that equals id, else 0. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/vendor/002df730.c, FUN_L00_002e8388. */
+s32 func_L00_002E9838(s32 id) {
+    Vendor_2E9838 *t = D_L00_00166F00_2E9838;
+    if (t->f86 != 0) {
+        return -1;
+    }
+    if (t->p->cur == id) {
+        t->p->cur = 0;
+        return 1;
+    }
+    return 0;
+}
 INCLUDE_ASM("asm/overlays", func_L00_002E9854);
 INCLUDE_ASM("asm/overlays", func_L00_002E9870);
 INCLUDE_ASM("asm/overlays", func_L00_002E988C);

@@ -1871,7 +1871,18 @@ void func_L06_00305BF8(char *arg) {
         func_0022ED80(0, 0, arg);
     }
 }
-INCLUDE_ASM("asm/overlays", func_L06_00305C38);
+/* 2 for a moby in state 7, 1 above state 3, else 0. Adapted from Lombyte (MIT) for PAL: src/overlays/l06/gameplay/entities/002fd1a0.c, FUN_L06_003047f8. */
+s32 func_L06_00305C38(const u8 *moby) {
+    u32 state = moby[0x20];
+
+    if (state == 7) {
+        return 2;
+    }
+    if (state > 3) {
+        return 1;
+    }
+    return 0;
+}
 typedef struct { int v[6]; } V6;
 extern void func_001F9BC0(void *);
 extern int func_002140B0(int);

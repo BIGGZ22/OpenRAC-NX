@@ -1521,7 +1521,12 @@ void func_L11_003173C8(char *m, float *p) {
 }
 INCLUDE_ASM("asm/overlays", func_L11_00317500);
 INCLUDE_ASM("asm/overlays", func_L11_00317518);
-INCLUDE_ASM("asm/overlays", func_L11_00317598);
+/* whether the moby is in state 20, 11, 18 or 12 */
+int func_L11_00317598(struct Moby *m) {
+    int s = m->state;
+    if (s == 20 || s == 11 || s == 18 || s == 12) return 1;
+    return 0;
+}
 struct Manip;
 struct GifEntry;
 struct AnimSeq;

@@ -1756,7 +1756,13 @@ typedef struct {
 float func_L18_002E0F80(Level18VendorFloatMoby *moby) {
     return moby->data->value;
 }
-INCLUDE_ASM("asm/overlays", func_L18_002E0F90);
+/* 1 when the byte at +0x20 is 2, 2 when it is 3, else 0 */
+int func_L18_002E0F90(u8 *p) {
+    int c = p[0x20];
+    if (c == 2) return 1;
+    if (c == 3) return 2;
+    return 0;
+}
 extern void func_001F9BC0(void *);
 
 char *func_L18_002E36B0(void *vector) {

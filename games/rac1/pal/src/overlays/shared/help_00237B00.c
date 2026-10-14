@@ -1263,7 +1263,19 @@ int func_L05_002559A0(void) {
         r = 0x55;
     return r;
 }
-INCLUDE_ASM("asm/overlays", func_L05_002559B8);
+extern struct Hero D_0013F450_2559B8 __asm__("D_0013F450");
+/* 0x52, 0x7D, 0x68 or 0x7E from the hero's +0x884 and +0x8CE. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/ui/help/00237488.c, FUN_L05_002551d0. */
+int func_L05_002559B8(void) {
+    struct Hero *p = &D_0013F450_2559B8;
+    int f = p->unk8CE;
+    if (p->unk884 == 0) {
+        int r = 0x7D;
+        if (f == 0)
+            r = 0x52;
+        return r;
+    }
+    { return f == 0 ? 0x68 : 0x7E; }
+}
 /* returns 0x7E when arg is nonzero, else 0x68 */
 int func_L05_002559DC(int arg) {
     int r = 0x7E;

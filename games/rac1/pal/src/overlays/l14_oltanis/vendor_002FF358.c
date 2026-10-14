@@ -960,7 +960,25 @@ char *func_L14_003075E0(char *owner)
     }
     return moby;
 }
-INCLUDE_ASM("asm/overlays", func_L14_00307660);
+/* steps the moby from state 0 to 1 and 2 to 3, setting its pvars. Adapted from Lombyte (MIT) for PAL: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_003061d8. */
+void func_L14_00307660(void *arg) {
+    char *moby = arg;
+    char *d;
+    switch ((unsigned char)moby[0x20]) {
+    case 0:
+        d = *(char **)(moby + 0x78);
+        d[0x28] = 4;
+        *(int *)(d + 0x20) = 0;
+        *(short *)(d + 0x24) = 0;
+        *(short *)(d + 0x3E) = 0;
+        moby[0x20] = 1;
+        break;
+    case 2:
+        *(short *)(*(char **)(moby + 0x78) + 0x3E) = 5;
+        moby[0x20] = 3;
+        break;
+    }
+}
 // Resets the moby's data block fields and sets its state to 1.
 void func_L14_00307680(int unused, char *moby) {
     char *d = *(char **)(moby + 0x78);

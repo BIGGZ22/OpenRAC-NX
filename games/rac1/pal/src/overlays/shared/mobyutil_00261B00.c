@@ -689,7 +689,14 @@ void func_L00_00264B40(float x, int a, int b, unsigned char *m) {
         DetachManipulator(a, m);
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_00264BB0);
+/* sets the float at p + 0x70 to x when the byte at 0x15EEB7 is set, else to 1. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/entities/002630b8.c, FUN_L00_00263b38. */
+void func_L00_00264BB0(char *p, float x) {
+    if (*(unsigned char *)0x15EEB7) {
+        *(float *)(p + 0x70) = x;
+        return;
+    }
+    *(float *)(p + 0x70) = 1.0f;
+}
 // Store 1.0 to offset 0x70
 void func_L00_00264BC8(char *arg) {
     *(float *)(arg + 0x70) = 1.0f;

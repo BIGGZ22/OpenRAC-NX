@@ -4,13 +4,13 @@
     "region": "PAL (Europe)",
     "serial": "SCES_509.16",
     "progress": {
-      "matched_code": 3011244,
+      "matched_code": 3013116,
       "total_code": 3712808,
-      "matched_functions": 4329,
+      "matched_functions": 4360,
       "total_functions": 5109,
-      "fuzzy_percent": 82.1,
+      "fuzzy_percent": 82.14,
       "date": "2026-10-13",
-      "percent": 81.1
+      "percent": 81.15
     },
     "note": "The boot executable and all 19 level programs. Handwritten assembly and linker remnants count as finished; staged near misses (nonmatching/) give the fuzzy figure."
   },

@@ -1207,7 +1207,15 @@ int func_L00_0025C498(char *m, char *p) {
 float func_L00_0025C700(float a, float b, float t) {
     return a + (b - a) * t;
 }
-INCLUDE_ASM("asm/overlays", func_L00_0025C710);
+typedef struct { float x, y, z, w; } Lerp_C710 __attribute__((aligned(16)));
+void func_L00_0025C710_r(Lerp_C710 *, Lerp_C710, Lerp_C710, float) __asm__("func_L00_0025C710");
+/* Interpolates four copied vector components through the scalar helper. */
+void func_L00_0025C710_r(Lerp_C710 *dst, Lerp_C710 a, Lerp_C710 b, float t) {
+    dst->x = func_L00_0025C700(a.x, b.x, t);
+    dst->y = func_L00_0025C700(a.y, b.y, t);
+    dst->z = func_L00_0025C700(a.z, b.z, t);
+    dst->w = func_L00_0025C700(a.w, b.w, t);
+}
 float func_L00_0025C7A8(float a, float b, float c) {
     float r = FastSubRots(b, a);
     return FastAddRots(a, r * c);

@@ -5,6 +5,8 @@
 The following functions adapt source from
 [Lombyte](https://github.com/mateuszklysz/Lombyte) for the PAL executable:
 
+- `src/overlays/shared/mobyfunc_0024FD50.c`: `func_L00_00250478` (animation frame packet builder; `overlays/shared/gameplay/state/0024eec0.c`, `FUN_L00_0024f440`)
+- `src/overlays/shared/vendor_002E1660.c`: `func_L00_002E72E8` (follow camera approach; `overlays/shared/gameplay/vendor/002e5e38.c`, `follow_camera_approach` / `FUN_L00_002e5e38`)
 - `src/core/00119328.c`: `func_001194C8` (`topThread`)
 - `src/game/stream.c`: `func_00217AE8` (menu entry transitions and message formatting; `src/ui/menus/fun_00216c48.c`)
 - `src/core/00119D88.c`: `func_0011C208` (`sceClose`)
@@ -754,6 +756,19 @@ One more is this project's own port of a function it has from Lombyte: `func_L00
 `include/moby.h`, the shared definition of the moby (the game's 0x100-byte object), its class header and
 the vector type, is adapted from Lombyte's `include/rnc/gameplay/entities/moby.h` at 88c78925, whose layout
 and field names come from the matched code it cites.
+
+Seven more were adapted by hand on 2026-10-13 from Lombyte's matched C for functions this project's
+catalogue splits into pieces, which is why no tool carried them over: the C is Lombyte's with every symbol
+renamed to its PAL address, each has its row in `config/overlays/joined.tsv`, and each passed this
+project's own check. In parentheses, Lombyte's name.
+
+- `src/overlays/shared/camera_001EB508.c`: `func_L00_001EB578` (`FUN_L00_001eb1f8`)
+- `src/overlays/shared/help_00237B00.c`: `func_L05_002559B8` (`FUN_L05_002551d0`)
+- `src/overlays/shared/mobyutil_00261B00.c`: `func_L00_00264BB0` (`FUN_L00_00263b38`)
+- `src/overlays/shared/vendor_002E1660.c`: `func_L00_002E9838` (`FUN_L00_002e8388`)
+- `src/overlays/l03_kerwan/vendor_002CB280.c`: `func_L03_002DDEF8` (`FUN_L03_002dcb30`)
+- `src/overlays/l06_blarg/vendor_002FE5D0.c`: `func_L06_00305C38` (`FUN_L06_003047f8`)
+- `src/overlays/l14_oltanis/vendor_002FF358.c`: `func_L14_00307660` (`FUN_L14_003061d8`)
 
 `include/hero.h` (the hero and the records inside it) and `include/vector.h` (the 16-byte vector) are
 adapted from Lombyte's `include/rnc/gameplay/hero.h` and `include/rnc/math/vector.h` at 42adb529, while

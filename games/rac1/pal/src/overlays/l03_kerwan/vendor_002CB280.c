@@ -691,7 +691,12 @@ char *func_L03_002CDC50(char *p, void *pos, float *dir) {
     m[0x20] = 1;
     return m;
 }
-INCLUDE_ASM("asm/overlays", func_L03_002D44A0);
+/* whether the moby is a taxi (class 0x330) in states 2 to 6 */
+s32 func_L03_002D44A0(u8 *object) {
+    struct Moby *m = (struct Moby *)object;
+    if (m->oclass != 0x330) return 0;
+    return m->state >= 2 && m->state < 7;
+}
 extern void func_00215F80(int, int);
 
 void func_L03_002D44C8(void *arg, int mode) {
@@ -1385,7 +1390,17 @@ INCLUDE_ASM("asm/overlays", func_L03_002DC920);
 INCLUDE_ASM("asm/overlays", func_L03_002DD158);
 INCLUDE_ASM("asm/overlays", func_L03_002DDE38);
 INCLUDE_ASM("asm/overlays", func_L03_002DDE9C);
-INCLUDE_ASM("asm/overlays", func_L03_002DDEF8);
+/* whether the moby is a taxi (class 0x3F4), active, with its pvars word at +0x7C equal to 1. Adapted from Lombyte (MIT) for PAL: src/overlays/l03/gameplay/entities/002c9eb8.c, FUN_L03_002dcb30. */
+int func_L03_002DDEF8(struct Moby *moby) {
+    char *data = (char *)moby->pvars;
+    if (moby->oclass != 0x3F4) {
+        return 0;
+    }
+    if (moby->state && *(int *)(data + 0x7C) == 1) {
+        return 1;
+    }
+    return 0;
+}
 int func_L03_002DDF10(unsigned char *moby, char *data) {
     if (moby[0x20] && *(int *)(data + 0x7C) == 1) {
         return 1;
