@@ -1485,7 +1485,40 @@ void func_L03_002DDD78(unsigned char *moby) {
         break;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L03_002DDDF8);
+typedef struct {
+    u8 pad[0x454];
+    u8 collected[1];
+} LevelCollected_2dddf8;
+extern LevelCollected_2dddf8 D_L03_001BB640;
+extern s32 D_0014C290[][64];
+extern s32 D_0015EE84 MACRO_ADDR;
+void func_L03_002DDDF8(struct Moby *m)
+{
+    Vec4 *target = (Vec4 *)m->pvars;
+    s16 idx;
+    u16 id;
+
+    switch (m->state) {
+    case 0:
+        target->q = ((Vec4 *)&m->pos)->q;
+        id = m->save_id;
+        idx = id;
+        if (D_L03_001BB640.collected[idx] == 0) {
+            if (!((D_0014C290[D_0015EE84][idx >> 5] >> (id & 0x1F)) & 1))
+                return;
+        }
+        m->state = 1;
+        return;
+    case 1:
+        m->pos.z += D_0015EE6C;
+        if (target->f[2] + 4.0f <= m->pos.z)
+            m->state = 2;
+        return;
+    case 2:
+        m->pos.z = target->f[2] + 4.0f;
+        return;
+    }
+}
 INCLUDE_ASM("asm/overlays", func_L03_002DDE28);
 INCLUDE_ASM("asm/overlays", func_L03_002DDED8);
 extern float D_0015EE70 MACRO_ADDR;

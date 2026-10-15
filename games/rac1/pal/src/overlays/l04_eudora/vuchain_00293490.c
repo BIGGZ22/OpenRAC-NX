@@ -25,7 +25,143 @@ void func_L04_00293530(void *unused, char *arg) {
     *(float *)(arg + 0x1BC) = -1.5707964f;
     *(float *)(arg + 0x1C0) = 0.19634955f;
 }
-INCLUDE_ASM("asm/overlays", func_L04_00293578);
+typedef struct {
+    unsigned char unk0;
+    unsigned char attached;
+    unsigned char pad2[0xE];
+    float rot[4];
+    unsigned char pad20[0x20];
+} LegRigManip_p;
+typedef struct {
+    unsigned char joint;
+    unsigned char joint2;
+    unsigned char slot_a;
+    unsigned char slot_b;
+    unsigned char pad4[4];
+    float yaw;
+    float lower_turn;
+    float lower_turn_speed;
+    float upper_turn;
+    float upper_turn_speed;
+    float angle_min;
+    float angle_max;
+    unsigned char pad24[0xC];
+    LegRigManip_p manip_a;
+    LegRigManip_p manip_b;
+} LegRigLeg_p;
+typedef struct {
+    float span[2];
+    float from[2];
+    float to[2];
+} LegRigPhase_p;
+typedef struct {
+    int id;
+    float unk4;
+    float rate;
+    float start;
+    float len;
+    unsigned char pad14[0xC];
+    LegRigPhase_p phase[2];
+} LegRigAnim_p;
+typedef struct {
+    float pts[6][4];
+    unsigned char pad60[0x10];
+    LegRigAnim_p *anims[13];
+    unsigned char padA4[0xC];
+    unsigned char unkB0;
+    unsigned char unkB1;
+    unsigned char unkB2;
+    unsigned char unkB3;
+    unsigned char jointB4;
+    unsigned char jointB5;
+    unsigned char mode;
+    unsigned char unkB7;
+    int unkB8;
+    int unkBC;
+    float speed;
+    float unkC4;
+    int unkC8;
+    float unkCC;
+    float unkD0;
+    float unkD4;
+    int unkD8;
+    float unkDC;
+    float unkE0;
+    int unkE4;
+    int unkE8;
+    short unkEC;
+    short unkEE;
+    LegRigLeg_p legs[2];
+} LegRig_p;
+extern char D_L04_001DB660[];
+extern char D_L04_001DB6F0[];
+extern void func_001E9730();
+extern void func_001F9978(void);
+extern float func_L04_00242868(int, int);
+extern float func_L04_002428C8(int, int);
+extern float func_001F9878(float);
+extern void func_0020DB98(struct Moby *m, int count, int *joints, void *out);
+extern void func_0020DAF8(struct Moby *m, int joint, float *mtx);
+extern float func_L00_001FF860(float, float);
+extern void func_0020D960(struct Moby *m, int slot, void *manip);
+void func_L04_00293578(struct Moby *moby, LegRig_p *rig) {
+    int joints[6];
+    float matrix[4][4];
+    int i;
+    int j;
+    LegRigLeg_p *leg;
+    int k;
+
+    for (i = 0; i < 13; i++) {
+        if (rig->anims[i]->id < 0) {
+            func_001E9730(D_L04_001DB660, i, moby->oclass);
+            func_001F9978();
+        }
+        rig->anims[i]->start = func_L04_00242868(moby->unk22, rig->anims[i]->id);
+        rig->anims[i]->len = func_L04_002428C8(moby->unk22, rig->anims[i]->id) - rig->anims[i]->start;
+        if (rig->anims[i]->len != 0.0f) {
+            for (j = 0; j < 2; j++) {
+                rig->anims[i]->phase[1].span[j] = rig->anims[i]->phase[1].from[j] <= rig->anims[i]->phase[1].to[j]
+                    ? rig->anims[i]->phase[1].to[j] - rig->anims[i]->phase[1].from[j]
+                    : rig->anims[i]->phase[1].to[j] + rig->anims[i]->len - rig->anims[i]->phase[1].from[j];
+                rig->anims[i]->phase[0].span[j] = rig->anims[i]->phase[0].from[j] <= rig->anims[i]->phase[0].to[j]
+                    ? rig->anims[i]->phase[0].to[j] - rig->anims[i]->phase[0].from[j]
+                    : rig->anims[i]->phase[0].to[j] + rig->anims[i]->len - rig->anims[i]->phase[0].from[j];
+            }
+            rig->anims[i]->rate = rig->anims[i]->unk4 / func_001F9878(rig->anims[i]->len + rig->anims[i]->len);
+        }
+    }
+    joints[0] = rig->legs[0].joint;
+    joints[1] = rig->legs[0].joint2;
+    joints[2] = rig->legs[1].joint;
+    joints[3] = rig->legs[1].joint2;
+    joints[4] = rig->jointB4;
+    joints[5] = rig->jointB5;
+    func_0020DB98(moby, 6, joints, rig);
+    for (k = 0; k < 2; k++) {
+        char *p = (char *)rig + k * 0xB0;
+        func_0020DAF8(moby, ((unsigned char *)p)[0xF0], matrix[0]);
+        *(int *)(p + 0x104) = 0;
+        *(int *)(p + 0xFC) = 0;
+        *(float *)(p + 0xF8) = func_L00_001FF860(matrix[1][0], matrix[1][1]);
+        if (((unsigned char *)p)[0x161] == 0)
+            func_0020D960(moby, ((unsigned char *)p)[0xF3], (LegRigManip_p *)(p + 0x160));
+        if (((unsigned char *)p)[0x121] == 0)
+            func_0020D960(moby, ((unsigned char *)p)[0xF2], (LegRigManip_p *)(p + 0x120));
+    }
+    rig->unkEE = 0;
+    rig->unkB7 = 0;
+    rig->unkB8 = 0;
+    rig->unkBC = 0;
+    rig->speed = 0.0f;
+    rig->unkC8 = 0;
+    rig->unkE8 = 0;
+    rig->unkD8 = 0;
+    rig->unkE4 = 0;
+    rig->unkEC = 0;
+    rig->mode = 5;
+    func_001E9730(D_L04_001DB6F0, 0x250);
+}
 extern int func_L00_002A2680(int *a, char *b);
 
 // Finds the entry of arg1's 13-pointer table whose first word equals arg0's byte at 0x52, then calls on it or returns a byte.
@@ -481,7 +617,7 @@ typedef struct {
 extern u8 D_L04_001CABB8[13][4];
 extern void func_0020DB98(struct Moby *m, int count, int *joints, void *out);
 extern void func_0020DAF8(struct Moby *m, int joint, float *mtx);
-extern void func_0020D960(struct Moby *m, int slot, LegRigManip *manip);
+extern void func_0020D960(struct Moby *m, int slot, void *manip);
 extern float func_L00_001FF860(float, float);
 extern float func_0020D830(struct Moby *);
 extern float func_001FA888(int);

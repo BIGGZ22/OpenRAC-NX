@@ -35,7 +35,56 @@ char *func_L05_002D53B0(int owner, char *pos, int arg, float f0, float f1) {
     return moby;
 }
 LINKER_REMNANT("asm/overlays", func_L05_002D54C0);
-INCLUDE_ASM("asm/overlays", func_L05_002F62E8);
+extern char *D_L05_001601AC MACRO_ADDR;
+void func_L05_002F62E8(int index, int trigger_arg, int inside) {
+    int moby = *(int *)((char *)&D_L05_001601AC - 0x114) + index * 0x100;
+    char *trigger = (char *)trigger_arg;
+    short kind;
+    unsigned int flags;
+
+    if (moby == 0) {
+        return;
+    }
+    if (inside) {
+        if (trigger[0x7c] > 0) {
+            *(unsigned short *)(moby + 0x34) &= 0xfffd;
+        } else if (trigger[0x7c] < 0) {
+            *(unsigned short *)(moby + 0x34) |= 2;
+        }
+        if (trigger[0x7d] > 0 && (kind = *(short *)(moby + 0xa6)) != 0x386 && kind != 0x3ae && kind != 0x4ef && kind != 0x571) {
+            *(char *)(moby + 0x31) = 1;
+            *(unsigned short *)(moby + 0x34) &= 0xfffe;
+        } else if (trigger[0x7d] < 0 && (kind = *(short *)(moby + 0xa6)) != 0x386 && kind != 0x3ae && kind != 0x4ef && kind != 0x571) {
+            *(char *)(moby + 0x31) = 0;
+            flags = *(unsigned short *)(moby + 0x34) | 1;
+            *(unsigned short *)(moby + 0x34) = flags;
+        }
+        if (trigger[0x7f] > 0 && *(int *)(moby + 0x24) != 0) {
+            *(int *)(moby + 0x94) = *(int *)(*(char **)(moby + 0x24) + 0x10);
+        } else if (trigger[0x7f] < 0 && *(int *)(moby + 0x24) != 0) {
+            *(int *)(moby + 0x94) = 0;
+        }
+    } else {
+        if (trigger[0x7c] > 0 && (kind = *(short *)(moby + 0xa6)) != 0x386 && kind != 0x3ae && kind != 0x4ef) {
+            *(unsigned short *)(moby + 0x34) |= 2;
+        } else if (trigger[0x7c] < 0 && (kind = *(short *)(moby + 0xa6)) != 0x386 && kind != 0x3ae && kind != 0x4ef) {
+            *(unsigned short *)(moby + 0x34) &= 0xfffd;
+        }
+        if (trigger[0x7d] > 0 && (kind = *(short *)(moby + 0xa6)) != 0x386 && kind != 0x3ae && kind != 0x4ef && kind != 0x571) {
+            *(char *)(moby + 0x31) = 0;
+            flags = *(unsigned short *)(moby + 0x34) | 1;
+            *(unsigned short *)(moby + 0x34) = flags;
+        } else if (trigger[0x7d] < 0 && (kind = *(short *)(moby + 0xa6)) != 0x386 && kind != 0x3ae && kind != 0x4ef && kind != 0x571) {
+            *(char *)(moby + 0x31) = 1;
+            *(unsigned short *)(moby + 0x34) &= 0xfffe;
+        }
+        if (trigger[0x7f] > 0) {
+            *(int *)(moby + 0x94) = 0;
+        } else if (trigger[0x7f] < 0) {
+            *(int *)(moby + 0x94) = *(int *)(*(char **)(moby + 0x24) + 0x10);
+        }
+    }
+}
 INCLUDE_ASM("asm/overlays", func_L05_002F63DC);
 INCLUDE_ASM("asm/overlays", func_L05_002F63FC);
 extern int *D_L05_001AC040[];
@@ -191,7 +240,155 @@ void func_L05_002F95B0(void *mv) {
         *(int *)(moby + 0x90) = *(int *)&D_L05_00161980;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L05_002F9BA0);
+extern void func_L05_0024D680(int, int);
+extern int func_L00_00203F20(int a, int b);
+extern void func_001F9BF0(void *, void *, void *);
+extern float func_001F9CB8(void *);
+extern void func_L00_00250800(void *, int, void *);
+extern float func_00214158(void);
+extern f32 func_001F9F90(f32);
+extern void func_L00_001FF4B0(void *, void *, float);
+extern void func_001F9BD8(void *, void *, void *);
+extern int func_L00_00258BC8(int, int);
+extern void func_L00_0026A7F8(void *, void *, int, int, int, int, int, int);
+extern void func_001F9C30(void *, void *, float);
+extern void func_L00_0026DA50(void *, void *, int, int, int, int, float);
+extern short D_L05_0015F6B0;
+extern int D_L05_0015F788 MACRO_ADDR;
+extern short D_L05_001619E8;
+extern short D_L05_001619CC;
+extern short D_L05_001619D0;
+extern unsigned char D_0013D355[];
+extern unsigned char D_0014171B[];
+
+/* func_L05_002F9BA0 -- src/overlays/shared/vendor_002CF2C0.c (functional C for the port, not a match)
+ * Hoverboard moby update (class 439, levels 05 and 16). State 0: when Ratchet comes within 5.5 (and
+ * the story flag D_L05_0015F6B0 is at least 4, and he is not in movement group 0x15 or 0x16) it
+ * becomes his board (hero +0x86C), plays sound 0x6B, saves its position as home (pvars +0x10) and
+ * goes to state 1. State 1: may play the 0x138F hint line; when Ratchet leaves group 0x16 it goes
+ * back to 0, returning home unless pvars +0x50. Every frame it then works out its velocity from the
+ * last position (pvars +0x00) and, when slow and not suppressed (+0xBC == 2), emits its hover
+ * exhaust particles (two kinds while moving, +0xBC != 0).
+ * From the staged near miss (nonmatching/shared/func_L05_002F9BA0.c); fixed: state 0 saves the
+ * position into pvars +0x10 (the near miss copied the other way), and the state tests.
+ * equiv: NEAR (all copies: retail rebuilds moby + 0x10 where this keeps it). */
+void func_L05_002F9BA0(unsigned char *moby) {
+#define pos ((char *)moby + 0x10)
+    char *data;
+    char *g;
+    char *gq;
+    char v0[16];
+    char v10[16];
+    char v20[16];
+    char v30[16];
+    char v40[16];
+    float f1;
+    int one = 1;
+    int st;
+
+    data = *(char **)(moby + 0x78);
+    st = moby[0x20];
+    switch (st) {
+    case 0:
+                g = D_0013E633 + 0xE9D;
+                if (func_001F9D10(g, pos) < 5.5f) {
+                    if (*(int *)&D_L05_0015F6B0 >= 4) {
+                        int grp;
+                        gq = g - 0x80;
+                        grp = *(int *)(gq + 0x208C);
+                        if (grp != 0x15) if (grp != 0x16) {
+                            *(unsigned char **)(gq + 0x86C) = moby;
+                            ((int (*)(int, int))func_L05_0024D680)(0x6B, 1);
+                            if (*(int *)(data + 0x50) == 0) {
+                                qcopy(data + 0x10, pos);
+                            }
+                            moby[0x20] = one;
+                            moby[0x30] = 0xFF;
+                        }
+                    }
+                }
+        break;
+    case 1: {
+        if (*(int *)(data + 0x50) == 0) {
+            if (D_0013D355[0x13B] != 0) {
+                if (*(unsigned short *)(D_0014171B + 0x31D) == 0) {
+                    if (D_L05_0015F788 != 0) {
+                        char *h = D_0013E633 + 0xE1D;
+                        int ret = func_001F9850(0x4B0);
+                        if (ret < *(int *)(h + 0x19C)) {
+                            extern unsigned short D_00141D60[];
+                            if (D_00141D60[0] == 0) {
+                                func_L00_00203F20(0x138F, 0x5F);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        {
+        char *h2 = D_0013E633 + 0xE1D;
+        if (*(int *)(h2 + 0x208C) != 0x16) {
+            moby[0x30] = 0x10;
+            if (*(int *)(data + 0x50) != 0) {
+                moby[0x20] = 0;
+            } else {
+                qcopy(pos, data + 0x10);
+                moby[0x20] = 0;
+            }
+        }
+        }
+        break;
+    }
+    case 2:
+        break;
+    }
+
+    func_001F9BF0(v0, pos, data);
+    qcopy(data, pos);
+    f1 = func_001F9CB8(v0);
+    if (moby[0xBC] != 2 && f1 < 2.0f) {
+        float f20;
+        float f21;
+        func_L00_00250800(moby, *(int *)&D_L05_0015F6B0 & 1, v10);
+        f21 = func_00214158();
+        f20 = D_0015EE6C * 0.25f;
+        func_L00_001FF4B0(v20, moby + 0xE0, f20 * func_001F9F90(f21));
+        func_L00_001FF4B0(v30, moby + 0xD0, f20 * func_001F9FA8(f21));
+        func_001F9BD8(v20, v20, v0);
+        func_001F9BD8(v20, v20, v30);
+        qcopy(v20, v0);
+        *(float *)(v20 + 0xC) = (float)*(int *)&D_L05_001619E8;
+        if (moby[0xBC] == 0) {
+            int a;
+            int b;
+            int c;
+            a = func_001F9850(10);
+            b = func_001F9850(13);
+            c = func_L00_00258BC8(a, b);
+            func_L00_0026A7F8(v10, v20, *(int *)&D_L05_001619CC, *(int *)&D_L05_001619D0, c, 15, 15, 1);
+        } else {
+            int a;
+            int b;
+            int c;
+            func_001F9C30(v40, v0, 0.92f);
+            a = func_001F9850(0xF);
+            b = func_001F9850(0x12);
+            c = func_L00_00258BC8(a, b);
+            func_L00_0026A7F8(v10, v40, 0x5032F0D2, *(int *)&D_L05_001619D0, c, 0x1E, 0x14, 1);
+            {
+                int a2;
+                int b2;
+                int c2;
+                a2 = func_001F9850(8);
+                b2 = func_001F9850(0x11);
+                c2 = func_L00_00258BC8(a2, b2);
+                func_L00_0026DA50(v10, v20, *(int *)&D_L05_001619CC, *(int *)&D_L05_001619D0, c2, 1, 15000.0f);
+            }
+        }
+    }
+    moby[0xBC] = 0;
+#undef pos
+}
 extern int func_001F9908(int *);
 extern int func_L00_0025A208(int *, int, int, int);
 extern int func_L00_0025A2F0(int *, int, int, int);
@@ -461,7 +658,29 @@ void func_L05_0031AA20(void *moby_v)
     }
     *(short *)(data + 0xB4) = *(unsigned short *)(data + 0xB6);
 }
-INCLUDE_ASM("asm/overlays", func_L05_0031AAA8);
+typedef struct {
+    char pad[0x78];
+    char *data;
+    char pad2[0x84];
+} M_p;
+#define POOL (*(char **)&D_L05_00160098)
+char *func_L05_0031AAA8(void *arg, int id) {
+    unsigned short *p = (unsigned short *)D_L05_001AC040[*((unsigned char *)arg + 0x21)];
+    char *pool;
+    int idx;
+    if (p != 0) {
+        pool = POOL;
+        do {
+            idx = *p & 0x7FFF;
+            if (*(short *)(((M_p *)pool)[idx].data + 0xB4) == id) {
+                goto found;
+            }
+        } while ((short)*p++ >= 0);
+    }
+    return 0;
+found:
+    return (char *)&((M_p *)POOL)[idx];
+}
 INCLUDE_ASM("asm/overlays", func_L05_0031AB00);
 extern float func_00214D88(float, float, float, float, float *, float *);
 extern void func_00215CA8(int *, int, void *, float *, int, float);

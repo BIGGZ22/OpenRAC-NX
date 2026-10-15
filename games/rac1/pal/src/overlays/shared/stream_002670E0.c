@@ -9,8 +9,112 @@ void func_L00_00267120(void *a0, unsigned char *a1) {
 }
 INCLUDE_ASM("asm/overlays", func_L00_00267130);
 INCLUDE_ASM("asm/overlays", func_L00_00267188);
-INCLUDE_ASM("asm/overlays", func_L00_00267290);
-INCLUDE_ASM("asm/overlays", func_L00_00267618);
+extern int D_L00_0015F6A8 MACRO_ADDR;
+extern char D_L00_00179200[];
+extern char D_L00_001C43B0[];
+extern int D_0015EE98 MACRO_ADDR;
+extern unsigned char D_0013D355[];
+extern char D_0013A5E0[];
+extern char D_0013E633[];
+extern short D_L00_001601F0;
+extern s32 func_L00_002676E8(void *p, u8 *out_p);
+extern float func_L00_001FF860(float, float);
+extern float func_001FA850(float, float);
+extern void func_00217AE8(void *, void *, int);
+extern void func_L00_0029A7D0(int);
+extern int func_001FFCB0(int);
+extern void func_L00_00299B68(int);
+extern int func_L00_002367A8(int, int);
+extern int func_001FFB38(int, int, void *, void *, void *, void *, int);
+extern int func_001F9850(int);
+extern void func_L00_00237B20(void);
+extern void func_L00_00237B70(void);
+extern void func_L00_00237B90(void);
+extern void func_L00_0023A658(void);
+extern void func_L00_0023A690(void);
+extern void func_L00_0023A788(void);
+extern char D_0013D605[];
+extern s32 D_L00_0015F6B0 MACRO_ADDR;
+int func_L00_00267290(char *p, char *q) {
+    extern float func_001F9D10(void *, void *);
+    extern s32 func_L00_00267618(void *);
+    char *g = D_0013E633 + 0xE1D;
+    char *x; char *e; char *y; char *tb; unsigned char *tb2;
+    int h4; float f, f0; int r, i, m; int *ptr;
+    if (*(int *)(g + 0x2084) == 0x1D || *(int *)(g + 0x22A8) == 0) return 0;
+    if (*(unsigned char *)(q + 9) == 0) func_L00_002676E8(p, q);
+    if (D_L00_0015F6A8 != 0) return 0;
+    if (q == 0) return 0;
+    if (*(short *)(q + 0x36) == -1) return 0;
+    if (*(unsigned char *)(q + 8) == 0xFF) return 0;
+    f0 = func_001F9D10(p + 0x10, g + 0x80);
+    f = *(float *)(q + 0xC);
+    f = f + f;
+    if (f < f0) return 0;
+    if (*(unsigned char *)(q + 8) == 0) {
+        f = func_L00_001FF860(*(float *)(g + 0x80) - *(float *)(p + 0x10), *(float *)(g + 0x84) - *(float *)(p + 0x14));
+        f = func_001FA850(f, *(float *)(p + 0x48));
+        if (*(float *)(q + 0xC) < f) return 0;
+        f = func_L00_001FF860(*(float *)(p + 0x10) - *(float *)(g + 0x80), *(float *)(p + 0x14) - *(float *)(g + 0x84));
+        f = func_001FA850(f, *(float *)(g + 0x98));
+        if (1.5700000524520874f < f) return 0;
+    }
+    func_00217AE8(p, q, 0);
+    x = D_L00_00179200;
+    if (D_L00_0015F6B0 < *(int *)(x + 0x10)) return 0;
+    if (*(unsigned char *)(q + 8) != 0 || (*(int *)(D_0013A5E0 + 0x2604) & 0x10) != 0) {
+        i = func_L00_00267618(p);
+        tb = D_0013D605 + 0xB3; tb = tb + 0xC;
+        ptr = (int *)(tb + (i << 4));
+        if (*ptr == 0) *ptr = 1;
+        *(int *)(x + 8) = (int)p; *(int *)(x + 0xC) = (int)q;
+        e = (char *)*(int *)(q + 0x3C) + *(short *)(q + 0x36) * 0x1C;
+        if (*(unsigned short *)(e + 0x10) & 8) {
+            if (*(short *)(e + 8) == 1) D_0015EE98 = D_0015EE98 - *(int *)(D_L00_001C43B0 + *(short *)(e + 0xA) * 0x18);
+            else if (*(short *)(e + 8) == 4) { tb2 = D_0013D355 + 0x13B; tb2[*(short *)(e + 0xA)] = 0; }
+        }
+        if (*(short *)(e + 4) == -1) { func_00217AE8(p, q, 1); return 1; }
+        y = (char *)&D_L00_00179200;
+        *(int *)(y + 8) = (int)p; *(int *)(y + 0xC) = (int)q;
+        if (*(unsigned short *)(e + 4) & 0x4000) { func_L00_0029A7D0((short)(*(unsigned short *)(e + 4) ^ 0x4000)); return 1; }
+        func_001FFCB0(*(int *)&D_L00_001601F0);
+        h4 = *(short *)(e + 4);
+        *(int *)&D_L00_001601F0 = -1;
+        func_L00_00299B68(h4);
+        return 1;
+    }
+    if (func_L00_002367A8(*(int *)&D_L00_001601F0, 0xA)) {
+        *(int *)&D_L00_001601F0 = func_001FFB38(0xC, 0, (void*)func_L00_00237B20, (void*)func_L00_00237B70, (void*)func_L00_00237B90, 0, 0);
+    }
+    {
+        char *e2 = (char *)*(int *)(q + 0x3C) + *(short *)(q + 0x36) * 0x1C;
+        if (*(short *)(e2 + 8) == 1 || *(short *)(e2 + 8) == 6) {
+            m = func_001FFB38(2, 0x754E, (void*)func_L00_0023A658, (void*)func_L00_0023A690, (void*)func_L00_0023A788, &D_0015EE98, 0x98967F);
+            func_L00_002367A8(m, func_001F9850(0x3C));
+        }
+    }
+    return 0;
+}
+extern s32 D_0015EE84 MACRO_ADDR;
+extern s32 D_L00_001C47B8[];
+extern s32 D_L00_001792B8[];
+s32 func_L00_00267618(s32 p, s32 unused) {
+    s32 n = D_0015EE84;
+    s32 lo;
+    s32 hi;
+    s32 i;
+    if ((u32)n >= 0x13) {
+        return 0;
+    }
+    lo = D_L00_001C47B8[n];
+    hi = D_L00_001C47B8[n + 1];
+    for (i = lo; i < hi; i++) {
+        if (D_L00_001792B8[i] == p) {
+            return i;
+        }
+    }
+    return -1;
+}
 INCLUDE_ASM("asm/overlays", func_L00_0026763C);
 typedef struct { int a, b, c, d; } E00266858;
 extern char D_0013D605[];
@@ -73,7 +177,23 @@ s32 func_L00_002676E8(void *p, u8 *out_p)
     out->f08 = ((u8 *)out->f3C)[out->f36 * 0x1C + (k = 0x10)] & 1;
     return i;
 }
-INCLUDE_ASM("asm/overlays", func_L00_00267BA8);
+typedef struct { char pad[0x18E]; s16 head; s32 count; char pad2[0x1E0-0x194]; u32 t[30]; char pad3[0x2D0-0x258]; f32 v[30]; } Hist_266e80;
+extern Hist_266e80 D_0013CA40;
+int func_L00_00267BA8(int mask, int n, int *out) {
+    int lim = D_0013CA40.count;
+    int i;
+    if (lim >= n)
+        lim = n;
+    for (i = 1; i < lim + 1; i++) {
+        int k = (D_0013CA40.head - i + 30) % 30;
+        if (D_0013CA40.t[k] & mask) {
+            if (out)
+                *out = i - 1;
+            return D_0013CA40.t[k] & mask;
+        }
+    }
+    return 0;
+}
 INCLUDE_ASM("asm/overlays", func_L00_00267C34);
 extern int func_L00_00267BA8(int, int, int *);
 extern int func_001F9B70(int);
@@ -87,7 +207,6 @@ int func_L00_00267C48(int a, int b, int c, int d) {
     }
     return r;
 }
-typedef struct { char pad[0x18E]; s16 head; s32 count; char pad2[0x2D0-0x194]; f32 v[30]; } Hist_266e80;
 extern Hist_266e80 D_0013CA40;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_menus_00266d60.c, FUN_L00_00266e80. */

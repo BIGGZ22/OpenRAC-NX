@@ -1,16 +1,15 @@
 /* NON_MATCHING func_L12_0030A880 -- src/overlays/l12_hoven/vendor_002EDAA0.c
- * Best so far: SIZE ours 136 / retail 152, checked 2026-10-09.
+ * Best so far: SIZE ours 144 / retail 152, checked 2026-10-15.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
  * What the last attempts found:
- *   variant tried (p6 to p10) moved it.
- *   3. Address at the call. Retail keeps the `lui` high part in `$4` (`daddu $4,$2,
- *   $0`) and rebuilds `addiu $2,$4,%lo` at the call; ours keeps the full address
- *   in `$6`. Two extra instructions in retail, from the same allocator tie.
- *   Verdict for the next worker: stop here unless a source form that keeps the
- *   state constant away from the index compare shows up. Three variants (p7, p8,
- *   p9) compiled to the same bytes, so this is the allocator tie the protocol
- *   describes. Not a known wall in LEVERS.md.
+ *   2026-10-15: the index select. Every plain form (ternary, default then override, if/else, short or int
+ *   index, function-scope index) compiles to xori/movn. Retail branches. A `static inline unsigned char`
+ *   helper returning 2 or 0 keeps the branch (the subreg lever in DECOMP_PROGRESS.md). With it inline in the
+ *   subscript (variant p) only two instructions are missing: retail keeps the %hi of D_L12_0016CD60 in $4 and
+ *   rebuilds the base at the call as `addiu %lo` then `addiu 0x178`. Ours folds both into one addiu. Putting
+ *   the index in its own local threads the jump (BYTES 10/152, same size). A list pointer at function scope
+ *   gets hoisted. Not tried: GCSE-sensitive forms that reference the global in two separate blocks.
  */
 #include "common.h"
 extern int D_L12_0015F6A8 MACRO_ADDR;
@@ -25,22 +24,22 @@ typedef struct {
 } Level12MobyList;
 extern Level12MobyList D_L12_0016CD60;
 
-/* Runs a selected callback while the level is in mode two. */
+static inline unsigned char func_L12_pick(int cur) {
+    if (cur == 1) return 2;
+    return 0;
+}
+
 void func_L12_0030A880(unsigned char *moby) {
-    int state = moby[0x20];
-    switch (state) {
+    switch (moby[0x20]) {
     case 0:
         moby[0x30] = 0xFF;
         moby[0x20] = 1;
         break;
     case 1:
         if (D_L12_0015F6A8 == 2) {
-            Level12MobyList *g = &D_L12_0016CD60;
-            int cur = g->current;
-            if (cur == state || cur == 7) {
-                int index = 0;
-                if (cur == state) index = 2;
-                func_L00_00264870((int)g->mobys[index]);
+            int cur = D_L12_0016CD60.current;
+            if (cur == 1 || cur == 7) {
+                func_L00_00264870((int)D_L12_0016CD60.mobys[func_L12_pick(cur)]);
             }
         }
         break;

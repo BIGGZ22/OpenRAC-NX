@@ -389,7 +389,102 @@ void func_L05_0023E348(int i) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L05_0024C558);
+typedef int u128_4C558 __attribute__((mode(TI)));
+typedef struct {
+    u8 pad0[0x18];
+    s32 moby;
+    s32 unk1C;
+    u8 pad20[0x20];
+    f32 normal_x;
+    f32 normal_y;
+    f32 normal_z;
+} CollisionHit_4C558;
+
+extern struct Hero D_0013F450_4C558 __asm__("D_0013F450");
+extern int D_L05_0015F6B0_4C558 __asm__("D_L05_0015F6B0") MACRO_ADDR;
+extern CollisionHit_4C558 D_L05_00174340_4C558 __asm__("D_L05_00174340") NOT_SDA;
+extern u8 D_L05_00174360_4C558[] __asm__("D_L05_00174360") NOT_SDA;
+extern u8 D_L05_0017AC20_4C558[] __asm__("D_L05_0017AC20") NOT_SDA;
+extern void func_L05_00241AA0_4C558(void) __asm__("func_L05_00241AA0");
+extern int func_L00_0020A8B8_4C558(float, float, float *) __asm__("func_L00_0020A8B8");
+extern float func_001F9CE8_4C558(void *) __asm__("func_001F9CE8");
+extern float func_L00_001FF860_4C558(float, float) __asm__("func_L00_001FF860");
+extern s32 func_L00_0025F410_4C558(s32) __asm__("func_L00_0025F410");
+extern void func_L00_00233EE0_4C558(float *, float, float, float) __asm__("func_L00_00233EE0");
+extern int func_L00_001EFFF0_4C558(void *, void *, int, void *, int) __asm__("func_L00_001EFFF0");
+extern float func_001F9D10_4C558(void *, void *) __asm__("func_001F9D10");
+extern int func_L00_001F10E0_4C558(float, void *, int, int) __asm__("func_L00_001F10E0");
+extern void func_001F9EC0_4C558(void *, void *, void *) __asm__("func_001F9EC0");
+extern void func_001FA218_4C558(void *, void *) __asm__("func_001FA218");
+extern void func_001F9EE8_4C558(void *, void *, void *) __asm__("func_001F9EE8");
+extern void func_001F9BD8_4C558(void *, void *, void *) __asm__("func_001F9BD8");
+extern void func_001FA460_4C558(void *, void *) __asm__("func_001FA460");
+extern void func_001FA540_4C558(void *, void *, void *) __asm__("func_001FA540");
+extern void func_001FA480_4C558(void *, void *) __asm__("func_001FA480");
+
+/* Adapted from Lombyte (MIT) for PAL: src/overlays/shared/ui/help/00237488.c, FUN_L05_0024bdc0. */
+void func_L05_0024C558(void) {
+    float start[4], end[4], probe[4];
+    u128_4C558 moby_rotation[4], rotation[4], combined[4];
+    float distance;
+    float offset;
+    int hit;
+    if (D_0013F450_4C558.unk20AD == 0) {
+        func_L05_00241AA0_4C558();
+    }
+    if (D_L05_0015F6B0_4C558 % 3 == 0) {
+        D_0013F450_4C558.unk248 = 4.0f;
+        D_0013F450_4C558.unk254 = 0;
+        D_0013F450_4C558.unk255 = 0;
+        if (func_L00_0020A8B8_4C558(0.7f, 4.0f, &D_0013F450_4C558.unk248)) {
+            CollisionHit_4C558 *wall = &D_L05_00174340_4C558;
+            float normal_xy = func_001F9CE8_4C558(&wall->normal_x);
+            D_0013F450_4C558.unk250 = func_L00_001FF860_4C558(wall->normal_z, normal_xy);
+            if (wall->moby != 0) {
+                D_0013F450_4C558.unk255 = 1;
+                if (func_L00_0025F410_4C558(wall->moby)) D_0013F450_4C558.unk254 = 1;
+            }
+        }
+    }
+    if (D_L05_0015F6B0_4C558 % 5 == 0) {
+        D_0013F450_4C558.unk260 = 0;
+        D_0013F450_4C558.unk258 = 0.0f;
+        if (D_0013F450_4C558.unk300) {
+            func_L00_00233EE0_4C558(start, 1.1f, 0.0f, 1.0f);
+            func_L00_00233EE0_4C558(end, 1.1f, 0.0f, -20.0f);
+            if (end[2] < 0.5f) end[2] = 0.5f;
+            distance = 20.0f;
+            hit = func_L00_001EFFF0_4C558(start, end, 2, D_0013F450_4C558.moby, 0);
+            if (hit)
+                distance = func_001F9D10_4C558(start, D_L05_00174360_4C558);
+            if (!hit || distance > 3.0f) {
+                for (offset = -0.4f; offset < 0.5f; offset += 0.1f) {
+                    func_L00_00233EE0_4C558(probe, 1.1f + offset, 0.0f, 0.0f);
+                    if (!func_L00_001F10E0_4C558(D_0013F450_4C558.unk234, probe, 2, 0)) {
+                        D_0013F450_4C558.unk260 = 1;
+                        if (!hit) D_0013F450_4C558.unk258 = 20.0f;
+                        else D_0013F450_4C558.unk258 = distance;
+                        D_0013F450_4C558.unk25C = D_0013F450_4C558.unk234 + offset;
+                        if (D_0013F450_4C558.unk25C < 0.0f) D_0013F450_4C558.unk25C = 0.0f;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    if ((unsigned)(D_0013F450_4C558.state.control_mode - 0x15) < 2 && D_0013F450_4C558.unk86C) {
+        qcopy(D_0013F450_4C558.unk86C + 0x10, (char *)&D_0013F450_4C558 + 0x80);
+        *(u128_4C558 *)start = 0;
+        start[2] = 0.21f;
+        func_001F9EC0_4C558(start, start, (char *)D_0013F450_4C558.moby + 0xc0);
+        func_001FA218_4C558(rotation, D_L05_0017AC20_4C558);
+        func_001F9EE8_4C558(start, start, rotation);
+        func_001F9BD8_4C558(D_0013F450_4C558.unk86C + 0x10, D_0013F450_4C558.unk86C + 0x10, start);
+        func_001FA460_4C558(moby_rotation, (char *)D_0013F450_4C558.moby + 0xc0);
+        func_001FA540_4C558(combined, moby_rotation, rotation);
+        func_001FA480_4C558(D_0013F450_4C558.unk86C + 0xc0, combined);
+    }
+}
 extern short D_L05_0015F6B0;
 extern float D_L05_00174368;
 extern float func_001F9B88(float);
@@ -978,7 +1073,117 @@ void func_L05_00254030(void) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L05_00254328);
+typedef unsigned char u8_a;
+extern int func_L00_0025A208(void **, int, int, int);
+extern int func_L00_0025A2F0(void **, void *, int, int);
+extern void func_001F9BF0(float *, void *, void *);
+extern void func_001FA190(float *);
+extern void func_001FA4A0(float *, void *);
+extern void func_001F9EE8(float *, float *, float *);
+extern float func_001F9D10(void *, void *);
+extern float func_001F9FA8(float);
+extern float func_001FA888(int);
+extern unsigned char D_0013D50F[] NOT_SDA;
+extern void func_L05_0023E348(int);
+
+#define HERO ((struct Hero *)((char *)D_0013E633 + 0xE1D))
+
+void func_L05_00254328(void) {
+    u8_a *state;
+    u8_a *first;
+    u8_a *second;
+    u8_a *third;
+    float delta[4];
+    float matrix[16];
+    int *ap;
+    int count, red, green, blue;
+    float period, wave, ratio;
+
+    if (HERO->unk86C == 0)
+        return;
+    state = *(u8_a **)(HERO->unk86C + 0x78);
+    if (*(int *)(state + 0x44) != -1) {
+        func_L00_0025A208((void **)&first, *(int *)(state + 0x44), 0, 0);
+        if (first != 0) {
+            do {
+                if (*(short *)(first + 0xA6) == 0x473 && func_L00_001FEF78(first + 0xBC) != 0) {
+                    func_001F9BF0(delta, first + 0x10, (char *)D_0013E633 + 0xEED);
+                    func_001FA190(matrix);
+                    func_001FA4A0(matrix, first + 0xC0);
+                    func_001F9EE8(delta, delta, matrix);
+                    if (func_001F9B88(delta[0]) < 0.5f && func_001F9B88(delta[1]) < 2.9f && func_001F9B88(delta[2]) < 2.9f) {
+                        HERO->unk8C4 += **(int **)(first + 0x78);
+                        first[0xBC] = func_001F9850(0x3C);
+                        if (HERO->unk86C != 0)
+                            func_0022ED80(1, 0, (int)HERO->unk86C);
+                    }
+                }
+                func_L00_0025A2F0((void **)&first, first, 0, 0);
+            } while (first != 0);
+        }
+    }
+    count = func_001F9850(0x32);
+    period = func_001FA888(count);
+    ratio = (float)(*(int *)&D_L05_0015F6B0 % count) / period;
+    ratio += ratio;
+    wave = func_001F9FA8(ratio * 3.1415927f + -3.1415927f);
+    red = func_001FA898(wave * 48.0f) + 0x68;
+    green = func_001FA898(wave * 64.0f) + 0xD0;
+    blue = func_001FA898(wave * 24.0f) + 0x3C;
+    if (green > 0xFF)
+        green = 0xFF;
+    if (*(int *)(state + 0x48) != -1) {
+        if (HERO->unk8BC == 0) {
+            func_L00_0025A208((void **)&second, *(int *)(state + 0x48), 0, 0);
+            if (second != 0) {
+                unsigned int color = (blue << 16) | (0x80000000U | (green << 8)) | red;
+                do {
+                    if (*(short *)(second + 0xA6) == 0x474) {
+                        *(unsigned short *)(second + 0x34) |= 0x10;
+                        *(unsigned int *)(second + 0x90) = color;
+                        if (func_L00_001FEF78(second + 0xBC) != 0) {
+                            func_001F9BF0(delta, second + 0x10, (char *)D_0013E633 + 0xE9D);
+                            func_001FA190(matrix);
+                            func_001FA4A0(matrix, second + 0xC0);
+                            func_001F9EE8(delta, delta, matrix);
+                            if (func_001F9B88(delta[0]) < 2.8f && func_001F9B88(delta[1]) < 1.25f && func_001F9B88(delta[2]) < 1.5f) {
+                                HERO->unk8C4 += **(int **)(second + 0x78);
+                                second[0xBC] = func_001F9850(0x3C);
+                                if (HERO->unk86C != 0)
+                                    func_0022ED80(1, 0, (int)HERO->unk86C);
+                            }
+                        }
+                    }
+                    func_L00_0025A2F0((void **)&second, second, 0, 0);
+                } while (second != 0);
+            }
+        }
+    }
+    if (*(int *)(state + 0x4C) != -1) {
+        func_L00_0025A208((void **)&third, *(int *)(state + 0x4C), 0, 0);
+        if (third != 0) {
+        ap = (int *)(D_0013D50F + 0x21);
+        do {
+            if (*(short *)(third + 0xA6) == 0x1D6 && func_L00_001FEF78(third + 0xBC) != 0 && func_001F9D10((char *)D_0013E633 + 0xEED, third + 0x10) < 1.5f) {
+                struct Hero *g = HERO;
+                third[0xBC] = func_001F9850(300);
+                if (*(int *)((u8_a *)g + 0x10B8) != 0x24) {
+                    *(int *)((u8_a *)g + 0x20B8) = 0x24;
+                    g->unk20AC = 0;
+                    func_L05_0023E348(0);
+                    g->unk20AC = 1;
+                }
+                g->unk8CE++;
+                if (g->unk8CE > 3)
+                    g->unk8CE = 3;
+                *(int *)((u8_a *)g + 0x20B8) = 0x24;
+                ap[36]++;
+            }
+            func_L00_0025A2F0((void **)&third, third, 0, 0);
+        } while (third != 0);
+        }
+    }
+}
 INCLUDE_ASM("asm/overlays", func_L05_00254838);
 INCLUDE_ASM("asm/overlays", func_L05_00254B38);
 typedef int u128_254DE8 __attribute__((mode(TI)));

@@ -66,7 +66,7 @@ extern void func_002027C0(int);
 extern void func_00204FC0(void *);
 extern int D_0018CC20 NOT_SDA;
 extern int D_001941C8 NOT_SDA;
-extern int D_0016100C;
+extern int D_0016100C MACRO_ADDR;
 extern int D_001A0468[];
 extern void func_00205830(int a, int b);
 extern PadSlots D_001A01F0_slots __asm__("D_001A01F0");
@@ -1469,7 +1469,373 @@ void func_00232200(void) {
     }
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_00232278);
+extern s32 D_0016100C MACRO_ADDR;
+typedef struct { long q[2]; } dummy_q;
+typedef struct {
+    s32 tex;         /* 0x00 */
+    s32 data_offset; /* 0x04 */
+    s32 texCount;    /* 0x08 */
+    s32 texInfo;     /* 0x0C */
+    s32 mobyCount;   /* 0x10 */
+    s32 mobys;       /* 0x14 */
+    s32 classCount;  /* 0x18 */
+    s32 classes;     /* 0x1C */
+    s32 partCount;   /* 0x20 */
+    s32 parts;       /* 0x24 */
+    s32 pointCount;  /* 0x28 */
+    s32 points;      /* 0x2C */
+    s32 unk30;
+    s32 unk34;
+    s32 unk38;
+    s32 unk3C;
+    s32 unk40;
+    s32 unk44;
+    s32 sky; /* 0x48 */
+    s32 unk4C;
+    s32 scenes[5]; /* 0x50 */
+    s32 sound;     /* 0x64 */
+} LevelHeader;
+
+typedef struct {
+    s32 offset;
+    u16 id;
+    u16 pad;
+    s32 pad8[2];
+} ClassEntry;
+
+typedef struct {
+    s32 offset;
+    s32 oclass;
+    s32 pad8[2];
+    u8 body[0x10];
+} MobyEntry;
+
+typedef struct {
+    s32 offset;
+    s32 size;
+} Chunk;
+
+typedef struct {
+    u8 pad0[4];
+    s32 unk4;
+    s32 unk8;
+    u8 padC[8];
+    u8 *buffer;
+    s32 unk18;
+} MemInfo;
+
+typedef struct {
+    u8 pad0[0x58];
+    s32 unk58;
+    s32 unk5C;
+    s32 chunks[70];
+} SceneInfo;
+
+typedef struct { s32 sector; s32 size; } DiscFile_q;
+typedef struct { u8 pad[0x13B8]; DiscFile_q unk13B8; } DiscTable_q;
+typedef struct {
+    s32 pad0, pad4, pad8, padC; s32 pad10;
+    s32 pad14;
+} Unused_q;
+typedef struct {
+    s32 state; s16 timer; u8 pad26[0x32]; s32 history_index; s32 history_count; s32 scene_mode; s32 scene_state;
+} LevelRenderTail_q;
+typedef struct {
+    u8 pad0[0x20];
+    s32 state;
+    s16 timer;
+    u8 pad26[0x2A];
+    s32 history_index;
+    s32 history_count;
+    s32 scene_mode;
+    s32 scene_state;
+} LevelRenderState_q;
+extern s32 D_0015F540 MACRO_ADDR;
+extern s32 D_0015EF8C MACRO_ADDR;
+extern s32 D_0015EF74 MACRO_ADDR;
+extern s32 D_0015EF78 MACRO_ADDR;
+extern s32 D_0015EE88 MACRO_ADDR;
+extern u8 D_00194280[];
+extern u8 D_001B6C00[0xE00];
+extern s32 D_001B6500[];
+struct CommonArchiveMemory;
+extern struct CommonArchiveMemory D_001941C0;
+struct DiscTable;
+extern struct DiscTable D_00137C80;
+extern u64 D_0019E7C0[3];
+extern s32 D_00160008 MACRO_ADDR;
+extern s32 D_001B5D00[];
+extern s32 D_00160000 MACRO_ADDR;
+extern s32 D_0015F560 MACRO_ADDR;
+extern char D_001CAE40[0x1000];
+extern u8 D_0019C2C0[];
+extern u8 D_0019C4C0[];
+extern char D_0019BEC0[];
+extern u8 D_001D9AD0[];
+extern u8 * D_00160018 MACRO_ADDR;
+extern u8 * D_0016001C MACRO_ADDR;
+extern u8 * D_00160028 MACRO_ADDR;
+extern u8 * D_001601AC MACRO_ADDR;
+extern s32 D_001601B4 MACRO_ADDR;
+extern u8 * D_00160020 MACRO_ADDR;
+extern s32 D_001601B0 MACRO_ADDR;
+extern s32 D_001601B8 MACRO_ADDR;
+extern u8 D_001CDB00[];
+extern s32 D_00160030 MACRO_ADDR;
+extern s32 D_001601BC MACRO_ADDR;
+extern short D_001605E0;
+extern u8 D_0013DE48[20] NOT_SDA;
+extern u8 D_00186410[];
+extern u8 D_00186450[];
+extern u32 D_0015EE5C MACRO_ADDR;
+extern void func_00201E10(void);
+extern void func_002348E8(void);
+extern s32 func_002175C8(void *buf, u32 lsn, u32 sectors);
+extern void func_001F4E08(s32 n);
+extern s32 func_0020C468(s32, s32);
+extern void func_00203958(s32 arg0, s32 count, s32 p);
+extern s32 func_001F9968(s32);
+extern void func_00203118(s32 f);
+extern void func_00203E78(s32 moby, s32 arg1, s32 arg2, s32 oclass);
+extern void func_00203038(s32 src, s32 count);
+extern void func_00202F00(s32 hdr, s32 base, s32 src, s32 count);
+extern s32 func_00202AA8(s32, void *);
+extern void func_001F99D8(void *, s32);
+extern void func_001F3B90(void);
+extern void func_00205220(s32 index);
+extern void func_0012E1C8(s32 cmd, void *arg, s64 data);
+extern void func_0022F090();
+#define sequence (*(f32 *)&D_0015F53C)
+#define D_001413D0 ((s32 *)&D_001414D0)
+#define current_vu_chain (*(s32 *)((u8 *)&D_00160000 + 0x100C))
+#define space_load_in_progress (*(s32 *)((u8 *)&D_0015F560 + 0x19C))
+#define D_0015F440 D_0015F540
+#define gs_texture_allocation_base D_0015EF8C
+#define gs_texture_allocation_cursor D_0015EF74
+#define gs_texture_allocation_start D_0015EF78
+#define current_level_index (*(s32 *)&D_0015EE84)
+#define game_language D_0015EE88
+#define D_00194180 D_00194280
+#define resident_class_slot_by_id ((u8 *)&D_001B3E40)
+#define resident_class_material_maps D_001B6C00
+#define D_001B6180 D_001B6500
+#define D_001941C0_q (*(MemInfo *)&D_001941C0)
+#define disc_table (*(DiscTable_q *)&D_00137C80)
+#define level_render_state (*(LevelRenderState_q *)&D_0013E130)
+#define special_material_template D_0019E7C0
+#define D_0015FF08 D_00160008
+#define D_001B5980 D_001B5D00
+#define D_0015FF00 D_00160000
+#define level_texture_payload_address D_0015F560
+#define resident_indexed_textures D_001CAE40
+#define D_00160580 (*(u64 *)&D_00160680)
+#define D_00160588 (*(s64 *)&D_00160688)
+#define point_lights D_0019C2C0
+#define point_light_data D_0019C4C0
+#define dir_lights D_0019BEC0
+#define D_001D9740 D_001D9AD0
+#define D_0015FF18 D_00160018
+#define moby_instance_end D_0016001C
+#define moby_vars D_00160028
+#define D_001600AC D_001601AC
+#define D_001600B4 D_001601B4
+#define moby_instance_perm_end D_00160020
+#define D_001600B0 D_001601B0
+#define D_001600B8 D_001601B8
+#define D_001CD780 D_001CDB00
+#define occl_fog_count D_00160030
+#define part_clip_dist D_001601BC
+#define D_001604E0 (*(s64 *)&D_001605E0)
+#define D_001604F0 (*(s64 *)&D_001605F0)
+#define level_available D_0013DE48
+#define D_0018CB20 (*(SceneInfo *)&D_0018CC20)
+#define D_00186310 D_00186410
+#define D_00186350 D_00186450
+#define sound_bank_handle D_0015EE5C
+#define init_mem_slots func_00201E10
+#define fill_transfer_words ((void (*)(void *dst, s32 value, s32 size))func_001F99B0)
+#define init_view_context ((void (*)(void))func_001F3008)
+#define update_view_context ((void (*)(void))func_001F3140)
+#define vu1_init_chain func_002348E8
+#define submit_audio_stream_io_request func_002175C8
+#define scale_game_frames ((s32 (*)(s32))func_001F98C0)
+#define fade_to_black func_001F4E08
+#define sceCdSync ((s32 (*)(s32))func_00120F30)
+#define FlushCache ((void (*)(s32))func_00118D80)
+#define func_0020B618(a, b) func_0020C468((s32)(a), (s32)(b))
+#define upload_texture_images func_00203958
+#define highest_set_bit_index func_001F9968
+#define copy_blocks_16_forward ((void (*)(void *, void *, s32))func_001F9A98)
+#define relocate_sky_definition func_00203118
+#define register_moby_class func_00203E78
+#define unpack_point_records func_00203038
+#define parse_particle_textures func_00202F00
+#define upload_mip_texture func_00202AA8
+#define clear_blocks_16 func_001F99D8
+#define reset_draw_globals func_001F3B90
+#define rand ((s32 (*)(void))func_001160D8)
+#define parse_space_scene_chunk func_00205220
+#define snd_bank_load_from_ee_cb func_0012E1C8
+#define store_async_sound_bank_handle func_0022F090
+#define sceGsSyncV ((s32 (*)(s32))func_00122598)
+#define snd_flush_sound_commands ((s32 (*)(void))func_0012DDC0)
+#define snd_resolve_bank_xrefs ((void (*)(void))func_0012E2E8)
+void func_00232278(void) {
+    s64 texture_packet[4];
+    LevelHeader *header;
+    s32 data_base;
+    s32 class_data_base;
+    ClassEntry *class_entries;
+    ClassEntry *class_entry;
+    s32 *output;
+    MobyEntry *moby_entry;
+    s32 *texture_offsets;
+    s32 language_index;
+    s32 archive_size;
+    u8 *allocation_cursor;
+    s32 *scene_offsets;
+    s32 *scene_offset;
+    Chunk *scene_chunk;
+    s32 i;
+    s32 j;
+    s32 k;
+    s32 texture_cursor;
+    s32 scene_variant;
+    s32 workspace_offset;
+
+    level_render_state.state = 4;
+    level_render_state.timer = -1;
+    sequence = 1.0f;
+    D_001413D0[0] = 0;
+    current_vu_chain = 0x100000;
+    space_load_in_progress = 0;
+    D_0015F440 = 0;
+    init_mem_slots();
+    gs_texture_allocation_cursor = gs_texture_allocation_base;
+    gs_texture_allocation_start = gs_texture_allocation_base;
+    fill_transfer_words(D_00194180, 0x87654321, 0x10);
+    fill_transfer_words(resident_class_slot_by_id, -1, 0x800);
+    fill_transfer_words(resident_class_material_maps, -1, 0xE00);
+    fill_transfer_words(D_001B6180, 0, 0xE0);
+    init_view_context();
+    update_view_context();
+    vu1_init_chain();
+    submit_audio_stream_io_request(D_001941C0_q.buffer + 0x400000, disc_table.unk13B8.sector,
+                                   disc_table.unk13B8.size);
+    fade_to_black(scale_game_frames(0xC));
+    sceCdSync(0);
+    FlushCache(0);
+    archive_size = func_0020B618(D_001941C0_q.buffer + 0x400000, D_001941C0_q.buffer);
+    FlushCache(0);
+    header = (LevelHeader *)D_001941C0_q.buffer;
+    upload_texture_images((s32)header + header->tex, header->texCount,
+                          (s32)header + header->texInfo);
+    data_base = (s32)header + header->data_offset;
+    class_data_base = data_base + header->unk30;
+    special_material_template[0] = (s32)((gs_texture_allocation_base + header->unk40) >> 8) | 0x1D308000 | ((s64)0xB800 << 19) |
+                    ((s64)((gs_texture_allocation_base + header->unk44) >> 8) << 37) | 0x8000000000000000LL;
+    special_material_template[1] = 0x0000FFA0000000E0LL;
+    special_material_template[2] = 0x0040000400004000LL;
+    class_entries = (ClassEntry *)((s32)header + header->classes);
+    D_0015FF08 = header->classCount;
+    for (i = 0; i < D_0015FF08; i++) {
+        D_001B5980[i] = class_data_base + class_entries[i].offset +
+                        (highest_set_bit_index(class_entries[i].id) << 28);
+    }
+    copy_blocks_16_forward(resident_indexed_textures, class_entries, D_0015FF08 * 16);
+    relocate_sky_definition(data_base + header->sky);
+    moby_entry = (MobyEntry *)((s32)header + header->mobys);
+    D_0015FF00 = 0;
+    for (j = 0; j < header->mobyCount; j++) {
+        register_moby_class(moby_entry->offset == 0 ? 0 : data_base + moby_entry->offset,
+                            (s32)header + header->classes, (s32)moby_entry->body,
+                            moby_entry->oclass);
+        moby_entry++;
+    }
+    level_texture_payload_address = data_base + header->unk38;
+    unpack_point_records((s32)header + header->points, header->pointCount);
+    {
+        s32 particle_data_base = data_base + header->unk34;
+        s32 particle_entries = (s32)header + header->parts;
+
+        parse_particle_textures((s32)header + header->unk3C, particle_data_base, particle_entries,
+                                header->partCount);
+    }
+    texture_offsets = (s32 *)(data_base + header->unk4C);
+    language_index = game_language - 1;
+    if (language_index < 0) {
+        language_index = 0;
+    }
+    upload_mip_texture((s32)texture_offsets + texture_offsets[current_level_index + 1], texture_packet);
+    D_00160580 = texture_packet[0];
+    upload_mip_texture((s32)texture_offsets +
+                           texture_offsets[language_index * 19 + current_level_index + 0x14],
+                       texture_packet);
+    texture_cursor = gs_texture_allocation_cursor + 0x2000;
+    allocation_cursor = D_001941C0_q.buffer + archive_size;
+    gs_texture_allocation_cursor = texture_cursor;
+    D_001941C0_q.unk18 = (s32)allocation_cursor;
+    gs_texture_allocation_start = texture_cursor;
+    D_00160588 = texture_packet[0];
+    clear_blocks_16(point_lights, 0x100);
+    clear_blocks_16(point_light_data, 0x180);
+    clear_blocks_16(dir_lights, 0x400);
+    copy_blocks_16_forward(dir_lights, D_001D9740, 0x40);
+    D_0015FF18 = allocation_cursor;
+    fill_transfer_words(allocation_cursor, 0, 0x4000);
+    allocation_cursor += 0x4000;
+    moby_instance_end = D_0015FF18;
+    D_0015FF18[0x20] = 0xFF;
+    moby_vars = allocation_cursor;
+    allocation_cursor += 0x2000;
+    D_001600AC = allocation_cursor;
+    D_001600B4 = -1;
+    moby_instance_perm_end = D_0015FF18 + 0x3F00;
+    D_001600B0 = 0;
+    D_001600B8 = 0;
+    clear_blocks_16(D_001CD780, 0x200);
+    reset_draw_globals();
+    occl_fog_count = 0x1F4;
+    part_clip_dist = 0x1F4000;
+    scene_variant = (rand() >> 16) & 3;
+    level_render_state.scene_state = 0;
+    level_render_state.scene_mode = scene_variant;
+    level_render_state.history_index = 0;
+    level_render_state.history_count = 0;
+    qcopy(&D_001604F0, &D_001604E0);
+    if (current_level_index == 0 || (current_level_index == 1 && level_available[3] == 0)) {
+        level_render_state.scene_mode = 4;
+        level_render_state.scene_state = 2;
+    }
+    fill_transfer_words(&D_0018CB20, 0, 0x1C0);
+    fill_transfer_words(D_00186310, 0, 0x40);
+    fill_transfer_words(D_00186350, 0, 0x40);
+    scene_offsets = header->scenes;
+    workspace_offset = D_0016100C - 0x60000;
+    scene_offset = &scene_offsets[level_render_state.scene_mode];
+    D_0018CB20.unk58 = D_001941C0_q.unk4 + workspace_offset;
+    D_0018CB20.unk5C = D_001941C0_q.unk8 + workspace_offset;
+    D_0016100C = workspace_offset;
+    scene_chunk = (Chunk *)(data_base + header->scenes[level_render_state.scene_mode]);
+    /* The archive list is terminated by a zero size and the resident table holds 70 entries. */
+    for (k = 0; k < 70 && scene_chunk->size != 0; k++) {
+        {
+            s32 chunk_offset = scene_chunk->offset + 0x800;
+            D_0018CB20.chunks[k] = data_base + *scene_offset + chunk_offset;
+        }
+        scene_chunk++;
+    }
+    parse_space_scene_chunk(0);
+    sound_bank_handle = 0xFFFFFFFF;
+    snd_bank_load_from_ee_cb(data_base + header->sound, store_async_sound_bank_handle,
+                             (u32)&sound_bank_handle);
+    do {
+        FlushCache(0);
+        sceGsSyncV(0);
+        snd_flush_sound_commands();
+    } while (sound_bank_handle == 0xFFFFFFFF);
+    snd_resolve_bank_xrefs();
+}
 
 typedef struct {
     int sector;

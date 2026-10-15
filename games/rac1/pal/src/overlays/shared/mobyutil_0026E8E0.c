@@ -19,7 +19,31 @@ void func_L01_0026E8E0(char *p)
     *(float *)(p + 0x2C) = 0.1f;
 }
 LINKER_REMNANT("asm/overlays", func_L01_0026EFA8);
-INCLUDE_ASM("asm/overlays", func_L01_0026EFB8);
+extern unsigned short *D_L01_001ABFC0[];
+extern char *D_L01_00160058 MACRO_ADDR;
+typedef struct {
+    char pad0[0x20];
+    signed char state;
+    char pad21[0xDF];
+} O_26e008;
+
+int func_L01_0026EFB8(int i, int st) {
+    unsigned short *p;
+    int n = 0;
+    O_26e008 *o;
+
+    if (D_L01_001ABFC0[i] == 0) {
+        return 0;
+    }
+    p = D_L01_001ABFC0[i];
+    do {
+        o = (O_26e008 *)(((*p & 0x7FFF) << 8) + (int)D_L01_00160058);
+        if (o->state >= 0 && (st == -1 || (unsigned char)o->state != st)) {
+            n++;
+        }
+    } while ((short)*p++ >= 0);
+    return n;
+}
 INCLUDE_ASM("asm/overlays", func_L01_0026EFDC);
 extern unsigned short *D_L01_001ABFC0[];
 extern char *D_L01_00160058 MACRO_ADDR;
@@ -215,7 +239,19 @@ s32 func_L01_00277FD8(s32 *ids, s32 n, s32 path_index, f32 radius,
     qcopy(out, target);
     return 1;
 }
-INCLUDE_ASM("asm/overlays", func_L01_00278FA8);
+extern char D_0013E633[];
+int func_L01_00278FA8(char *m) {
+    char *h = D_0013E633 + 0xE1D;
+
+    if (*(int *)(h + 0x208C) == 3 || *(int *)(h + 0x2084) == 0x1C) {
+        if (*(char **)(h + 0x4F8) == m) {
+            return 1;
+        }
+    } else if (*(short *)(h + 0x30E) == 0 && *(char **)(h + 0x2FC) == m) {
+        return 1;
+    }
+    return 0;
+}
 INCLUDE_ASM("asm/overlays", func_L01_00278FE0);
 typedef struct {
     char pad0[0x10];

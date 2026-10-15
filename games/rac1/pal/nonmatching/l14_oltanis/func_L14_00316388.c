@@ -1,11 +1,13 @@
 /* NON_MATCHING func_L14_00316388 -- src/overlays/l14_oltanis/vendor_002FF358.c
- * Best so far: SIZE ours 892 / retail 908, checked 2026-10-09.
+ * Best so far: SIZE ours 892 / retail 908, checked 2026-10-15.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
  * What the last attempts found:
  *   Camera activate (camera 20, level 14): clears the record, builds two 8-entry path tables from D_L14_001B0F30 w
  *   Left: retail keeps the moby pointer in $fp and reloads the count from memory at more points than ours; ours sp
  *   Unblock: which local retail keeps in $fp (the moby) and where it reloads the table count; the spills are the l
+ *   2026-10-15: compiles again. The file now declares D_L14_0016D240 as a struct, so the candidate reads it
+ *   through an alias of its own.
  */
 extern char *D_L14_0015F050 MACRO_ADDR;
 extern char *D_L14_001B0F30[];
@@ -13,7 +15,7 @@ extern int func_001F9850(int);
 extern float func_L00_001FF860(float, float);
 extern float func_001F9D10(void *, void *);
 extern float func_001FA888(int);
-extern char D_L14_0016D240[];
+extern char D_L14_0016D240_316388[] __asm__("D_L14_0016D240");
 extern char D_L14_00167480[];
 extern char *D_L14_001601AC_t __asm__("D_L14_001601AC") MACRO_ADDR;
 extern void func_001F9BC0(void *);
@@ -49,7 +51,7 @@ void func_L14_00316388(char *cam) {
         *(short *)(data + 0x58 + k * 2) = -1;
     }
 
-    *(float *)(data + 0x88) = func_L00_001FF860(1.0f, *(float *)(D_L14_0016D240 + 0xB0)) * 2.0f;
+    *(float *)(data + 0x88) = func_L00_001FF860(1.0f, *(float *)(D_L14_0016D240_316388 + 0xB0)) * 2.0f;
 
     if (*(int *)(obj + 0x20) >= 0) {
         ent = D_L14_001B0F30[*(int *)(obj + 0x20)];

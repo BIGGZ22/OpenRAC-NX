@@ -3247,7 +3247,81 @@ void func_L00_002098B8(int a) {
     t = D_L00_001E7F90;
     func_L00_00250928(a, 9, &t, D_0013E633 + 0x18DD);
 }
-INCLUDE_ASM("asm/overlays", func_L00_00209940);
+extern unsigned long func_L00_001FF718(int, float);
+extern void func_L00_00255B90(int);
+typedef struct {
+    unsigned short unk0, unk2, unk4, size, scale_offset, scale_count, translation_offset, translation_count;
+    unsigned long root_rotation;
+} PackedPose;
+#define PACKED_IDENTITY 0x7fff000000000000UL
+#define PACKED_UNIT_SCALE 0x100010001000UL
+#define PACKED_XYZ_MASK 0xffffffffffffUL
+#define SPR_JOINT_ROTATION 0x70000000
+#define SPR_JOINT_SCALE 0x70000010
+#define SPR_JOINT_TRANSLATION 0x70000020
+void func_L00_00209940(int *joints, PackedPose *pose, unsigned char *model, int padding, int context) {
+    unsigned long *out;
+    int rotation_count;
+    int scale_count;
+    int translation_count;
+    int i;
+    int joint;
+    int rotation_size;
+    unsigned long value;
+
+    if (context == 0)
+        context = *(int *)(D_0013E633 + 0x2E9D);
+    out = (unsigned long *)(pose + 1);
+    func_L00_00255B90(context);
+    pose->root_rotation = PACKED_IDENTITY;
+    rotation_count = 1;
+    for (i = 1; joints[i] >= 0; i++) {
+        *out++ = func_L00_001FF718((joints[i] << 6) + SPR_JOINT_ROTATION, 32768.0f);
+        rotation_count++;
+    }
+    if (padding > 0) {
+        int remaining = padding;
+        do {
+            *out = PACKED_IDENTITY;
+            remaining--;
+            out++;
+            rotation_count++;
+        } while (remaining != 0);
+    }
+    scale_count = 0;
+    i = 1;
+    rotation_size = rotation_count << 3;
+    for (; joints[i] >= 0; i++) {
+        value = func_L00_001FF718(SPR_JOINT_SCALE + (joints[i] << 6), 4096.0f);
+        if ((value & PACKED_XYZ_MASK) != PACKED_UNIT_SCALE) {
+            *out = value & PACKED_XYZ_MASK;
+            scale_count++;
+            *(unsigned short *)((unsigned char *)out + 6) = i | 0x8000;
+            out++;
+        }
+    }
+    translation_count = 0;
+    for (joint = 1; joints[joint] >= 0; joint++) {
+        value = func_L00_001FF718(SPR_JOINT_TRANSLATION + (joints[joint] << 6), 1.0f);
+        if ((value & PACKED_XYZ_MASK) !=
+            (func_L00_001FF718(*(int *)(model + 0x18) + (joint << 4), 1.0f) & PACKED_XYZ_MASK)) {
+            *out = value & PACKED_XYZ_MASK;
+            translation_count++;
+            *(unsigned short *)((unsigned char *)out + 6) = joint;
+            out++;
+        }
+    }
+    if ((unsigned)out & 0xf)
+        *out++ = 0;
+    pose->translation_count = translation_count;
+    pose->scale_offset = rotation_size;
+    pose->size = ((unsigned char *)out - (unsigned char *)&pose->root_rotation) >> 4;
+    pose->scale_count = scale_count;
+    pose->translation_offset = (rotation_count + scale_count) << 3;
+    pose->unk2 = 0;
+    pose->unk4 = 0;
+    pose->unk0 = 0;
+}
 extern float func_002140F8(float, float);
 extern unsigned char *func_L00_00272488(void *pos, int b, int color, float f, float g);
 

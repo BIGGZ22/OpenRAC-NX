@@ -1,13 +1,17 @@
 /* NON_MATCHING func_L00_002AE278 -- src/overlays/shared/vendor_002AB910.c
- * Best so far: SIZE ours 1060 / retail 1076, checked 2026-10-09.
+ * Best so far: BYTES 682/1076 (36.6% of the bytes match), checked 2026-10-15.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
  * What the last attempts found:
- *   Stopped after 5 runs (p0-p4; p3 closest). Moby steer: blends m+0x78 data with the level block at D_0013E633+0x
- *   Differences left: register numbering (retail pos=$19, m=$20, vel=$17, d=$18, g=$16, e=$30), the 0x12C join (re
- *   Would unblock: a source shape that gives retail's join order for the 0x208C==15 / 0x2FC test, and a way to ste
+ *   2026-10-15: the hero through Hero (state.control_mode, ground_moby, unk670/674, motion.pos, motion.unk100,
+ *   moby, state.current) and the first test turned round as in retail: `if (control_mode == 0xF ||
+ *   (ground_moby && func_L00_0025D390(ground_moby)))` takes the short unk100 branch first, and p60 is read
+ *   only in the else branch. Size 1076 = retail, BYTES 682/1076 (registers). Left: retail re-reads d + 0x60
+ *   before the first call and computes e's %hi in both branches, and keeps speed in f20 and the dot product in
+ *   f21 (ours swaps them and saves f22). Re-reading d + 0x60 everywhere gives 1092, dropping e gives 1084.
  */
-extern char D_0013E633[];
+#include "hero.h"
+extern Hero hero_2AE278 __asm__("D_0013F450");
 extern char D_0013E15A[];
 extern char D_0013A5E0[];
 extern char D_L00_00173F60[];
@@ -38,7 +42,6 @@ typedef union {
 /* Steers moby m toward pos and vel, blending its data at 0x78 with the level's global state. */
 void func_L00_002AE278(char *pos, char *m, char *vel) {
     char *d;
-    char *g;
     char *e;
     char *p;
     char *p60;
@@ -52,12 +55,13 @@ void func_L00_002AE278(char *pos, char *m, char *vel) {
     *(short *)(d + 0x6A) = func_001F9850(0x1E);
     m[0x20] = 1;
     qcopy(d, vel);
-    g = D_0013E633 + 0xE1D;
-    p60 = *(char **)(d + 0x60);
+    e = D_0013E15A + 0x4C6;
 
-    if (*(int *)(g + 0x208C) != 0xF
-        && (*(int *)(g + 0x2FC) == 0 || func_L00_0025D390(*(unsigned char **)(g + 0x2FC)) == 0)) {
-        e = D_0013E15A + 0x4C6;
+    if (hero_2AE278.state.control_mode == 0xF
+        || (hero_2AE278.ground_moby != 0 && func_L00_0025D390((unsigned char *)hero_2AE278.ground_moby) != 0)) {
+        func_001F9BD8(d, d, &hero_2AE278.motion.unk100);
+    } else {
+        p60 = *(char **)(d + 0x60);
         if (p60 != 0) {
             h = *(short *)(p60 + 0xA6);
             if (h == 0x56E || h == 0x58E) {
@@ -66,7 +70,7 @@ void func_L00_002AE278(char *pos, char *m, char *vel) {
                 p64 = *(char **)(d + 0x64);
                 if (p64 != 0) {
                     f20 = func_001F9CE8(vel);
-                    func_001F9BF0(&A, D_0013E633 + 0xE9D, p60 + 0x10);
+                    func_001F9BF0(&A, &hero_2AE278.motion.pos, p60 + 0x10);
                     func_L00_001FF4B0(&A, &A, 1.0f);
                     f21 = func_001F9C78(&A, d + 0x40);
                     f20 = f21 + f20;
@@ -79,19 +83,19 @@ void func_L00_002AE278(char *pos, char *m, char *vel) {
                     }
                     func_001F9BD8(&D, &B, p60 + 0x10);
                     B.q = D.q;
-                    t = func_001FA850(func_L00_001FF860(*(float *)(g + 0x670), *(float *)(g + 0x674)),
-                                      func_L00_001FF860(B.f[0] - *(float *)(g + 0x80), B.f[1] - *(float *)(g + 0x84)));
+                    t = func_001FA850(func_L00_001FF860(hero_2AE278.unk670, hero_2AE278.unk674),
+                                      func_L00_001FF860(B.f[0] - hero_2AE278.motion.pos.f[0], B.f[1] - hero_2AE278.motion.pos.f[1]));
                     if (1.5707964f < t) {
-                        f20 = func_001F9F90(func_L00_001FF860(*(float *)(g + 0x670), *(float *)(g + 0x674)));
-                        f20 = f20 * func_001F9D48(g + 0x80, &B);
+                        f20 = func_001F9F90(func_L00_001FF860(hero_2AE278.unk670, hero_2AE278.unk674));
+                        f20 = f20 * func_001F9D48(&hero_2AE278.motion.pos, &B);
                         f20 = f20 * 0.5f;
                         D.f[0] = f20;
-                        f20 = func_001F9FA8(func_L00_001FF860(*(float *)(g + 0x670), *(float *)(g + 0x674)));
-                        f20 = f20 * func_001F9D48(g + 0x80, &B);
+                        f20 = func_001F9FA8(func_L00_001FF860(hero_2AE278.unk670, hero_2AE278.unk674));
+                        f20 = f20 * func_001F9D48(&hero_2AE278.motion.pos, &B);
                         f20 = f20 * 0.5f;
                         D.f[1] = f20;
                         *(int *)&D.f[2] = 0;
-                        func_001F9BD8(&E, &D, g + 0x80);
+                        func_001F9BD8(&E, &D, &hero_2AE278.motion.pos);
                         B.q = E.q;
                     }
                     f20 = D_0015EE70 * 11.0f;
@@ -109,21 +113,19 @@ void func_L00_002AE278(char *pos, char *m, char *vel) {
                 }
             }
         }
-    } else {
-        func_001F9BD8(d, d, g + 0x100);
     }
     *(short *)(d + 0x54) = func_001F9850(0x12C);
     qcopy(m + 0x10, pos);
-    p = *(char **)(g + 0x2080);
+    p = (char *)hero_2AE278.moby;
     A.q = *(u128 *)(p + 0x10);
     A.f[2] = *(float *)(pos + 8);
-    ok = func_L00_001EFFF0(&A, pos, 0, *(int *)(g + 0x2080), 0);
+    ok = func_L00_001EFFF0(&A, pos, 0, (int)hero_2AE278.moby, 0);
     if (ok) {
         m[0xBC] = 1;
         qcopy(m + 0x10, D_L00_00173F60);
     }
     if (*(unsigned char *)(e + 0xA)) {
-        if (*(int *)(g + 0x2084) == 1) {
+        if (hero_2AE278.state.current == 1) {
             z = *(float *)(d + 8);
             func_001F9C30(d, d, 1.5f);
             *(float *)(d + 8) = z / 1.5f;

@@ -740,7 +740,76 @@ void func_L00_0029A8D0(int i) {
     }
     func_L00_0029A940(b, a, D_0015EE88);
 }
-INCLUDE_ASM("asm/overlays", func_L00_0029A940);
+extern char D_0013E650[];
+extern void func_00118D80(int);
+extern void func_0022EFE8(void);
+extern void func_00216D88(void);
+extern void func_L00_00203FB8(void);
+extern int func_00122630(void *, short, short, short, short, short, short, short);
+extern int func_00122958(void *, void *);
+extern int func_00120858(int, unsigned short);
+extern int func_001E9730(char *, int);
+extern void func_001F9978(void);
+typedef struct {
+    int sector;
+    int size;
+    int unk8;
+    int buf0;
+    int buf1;
+} MovieLoad;
+extern MovieLoad D_L00_00161108_m __asm__("D_L00_00161108") MACRO_ADDR;
+extern int D_0015EF78_29A940[6] __asm__("D_0015EF78") MACRO_ADDR;
+extern int D_L00_0015F50C MACRO_ADDR;
+extern int D_L00_00173F04;
+extern char D_L00_001E9800[];
+
+/* sets up a movie load, then uploads image data from the level buffer to GS memory in two runs of strips */
+void func_L00_0029A940(int sector, int size, int arg2) {
+    int image[24];
+    int big, small, gs_addr, src, i, j;
+    D_0013E650[0x6B] |= 8;
+    func_00118D80(0);
+    sound_StopAllSounds();
+    music_Stop();
+    D_L00_00161108_m.sector = sector;
+    D_L00_00161108_m.size = size;
+    D_L00_00161108_m.unk8 = arg2;
+    D_L00_0015F6BC = 1;
+    func_001F4E08(4);
+    func_L00_00203FB8();
+    D_L00_0015F6A8 = 1;
+    D_L00_00161108_m.buf0 = D_L00_00173F04;
+    D_L00_00161108_m.buf1 = D_L00_0015F50C;
+    big = D_0015EE80 != 0 ? 0xE : 0xD;
+    small = D_0015EE80 != 0 ? 0xE : 0x11;
+    src = D_L00_00161108_m.buf1;
+    gs_addr = D_0015EF78_29A940[4];
+    i = 0;
+    while (i < big) {
+        func_00122630(image, gs_addr >> 8, 2, 1, 0, 0, 0x80, 0x80);
+        i++;
+        gs_addr += 0x10000;
+        func_00118D80(0);
+        func_00122958(image, (void *)src);
+        src += 0xC000;
+        func_00120858(0, 0);
+    }
+    gs_addr = D_0015EF78_29A940[0];
+    j = 0;
+    while (j < small) {
+        func_00122630(image, gs_addr >> 8, 1, 0, 0, 0, 0x40, 0x40);
+        j++;
+        gs_addr += 0x4000;
+        func_00118D80(0);
+        func_00122958(image, (void *)src);
+        src += 0x4000;
+        func_00120858(0, 0);
+    }
+    if (gs_addr > 0x400000) {
+        func_001E9730(D_L00_001E9800, gs_addr - 0x400000);
+        func_001F9978();
+    }
+}
 INCLUDE_ASM("asm/overlays", func_L00_0029AB38);
 extern char D_0013D390[];
 extern void func_00118D80(int);
@@ -776,7 +845,41 @@ void func_L00_0029AD18(void) {
     func_00120F30(0);
     func_L00_0029AB38();
 }
-INCLUDE_ASM("asm/overlays", func_L00_0029ADD8);
+extern void func_001F99B0(void *, int, int);
+extern int func_00217628(int, int, int);
+extern int D_L00_0015F700[4] MACRO_ADDR;
+extern int D_L00_00173F00[];
+extern int D_L00_0016128C MACRO_ADDR;
+typedef struct { int a; int b; } LL9;
+typedef struct { char pad[0x16A8]; LL9 normal[20]; LL9 alt[20]; } G9;
+extern G9 D_00137C80;
+
+/* starts the slideshow: resets state, rebases the level data pointers, and starts the first two streams */
+void func_L00_0029ADD8(void) {
+    int t;
+    func_00217748(0);
+    func_001F4E08(8);
+    D_L00_0015F6BC = 1;
+    *(float *)&D_L00_0015F4FC = 1.0f;
+    D_L00_0015F6A8 = 7;
+    func_001F99B0(D_L00_0015F700, 0, 16);
+    t = D_L00_0016128C - 0xE0000;
+    D_L00_0015F700[2] = D_L00_00173F00[1] + t;
+    D_L00_0015F700[3] = D_L00_00173F00[2] + t;
+    D_L00_0016128C = t;
+    if (D_0015EE80 != 0) {
+        func_00217628(D_L00_0015F700[2], D_00137C80.alt[((short *)D_L00_0015F700)[1]].a, D_00137C80.alt[((short *)D_L00_0015F700)[1]].b);
+    } else {
+        func_00217628(D_L00_0015F700[2], D_00137C80.normal[((short *)D_L00_0015F700)[1]].a, D_00137C80.normal[((short *)D_L00_0015F700)[1]].b);
+    }
+    func_00217748(1);
+    ((short *)D_L00_0015F700)[1]++;
+    if (D_0015EE80 != 0) {
+        func_00217628(D_L00_0015F700[3], D_00137C80.alt[((short *)D_L00_0015F700)[1]].a, D_00137C80.alt[((short *)D_L00_0015F700)[1]].b);
+    } else {
+        func_00217628(D_L00_0015F700[3], D_00137C80.normal[((short *)D_L00_0015F700)[1]].a, D_00137C80.normal[((short *)D_L00_0015F700)[1]].b);
+    }
+}
 extern void func_00234AC8(int);
 extern void func_00217588(void);
 extern int D_L00_0015F4FC MACRO_ADDR;
@@ -789,4 +892,84 @@ void func_L00_0029AF70(void) {
     D_L00_0015F4FC = 0;
     func_002348B8();
 }
-INCLUDE_ASM("asm/overlays", func_L00_0029AFB8);
+extern void func_L00_0029AF70(void);
+extern void func_0022DD68(void);
+extern int D_L00_00173D00[];
+#define IST (((short *)D_L00_0015F700)[0])
+#define IIDX (((short *)D_L00_0015F700)[1])
+#define ICNT (((short *)D_L00_0015F700)[2])
+#define ITMR (((short *)D_L00_0015F700)[3])
+
+void func_L00_0029AFB8(void) {
+    int s0, t, i, r, one;
+    int *src, *dst;
+    float f;
+    func_00217748(0);
+    f = *(float *)&D_L00_0015F4FC - 0.05f;
+    *(float *)&D_L00_0015F4FC = f;
+    if (f < 0.0f) {
+        *(float *)&D_L00_0015F4FC = 0.0f;
+    }
+    s0 = *(unsigned char *)(D_0013A5E0 + 0x2CF2) == 0x41;
+    one = 1;
+    if (IST == 0) {
+        if (ITMR >= D_L00_00173D00[IIDX] - 0x24) {
+            if (*(short *)(D_0014171B + 0x100BD) != 0) {
+                func_00217748(1);
+            }
+            if (!s0 && IIDX == 0x29) {
+            quit:
+                func_L00_0029AF70();
+                return;
+            }
+            if (IIDX >= 0x2D) goto quit;
+            ICNT = -1;
+            IST = 1;
+        }
+    } else if (IST == one) {
+        func_00234AC8(1);
+        t = ICNT;
+        if (t < 0x20) {
+            src = (int *)D_L00_0015F700[3];
+            dst = (int *)D_L00_0015F700[2];
+            src += t;
+            dst += t;
+            for (i = 0; i <= 0x37FFF; i += 0x20) {
+                *dst = *src;
+                dst += 0x20;
+                src += 0x20;
+            }
+        } else if (t >= 0x24) {
+            if (!s0) {
+                if (IIDX == 8) {
+                    IIDX = 0x11;
+                    ITMR = 0x1590;
+                }
+            } else {
+                if (IIDX == 0x11) {
+                    IIDX = 0x1B;
+                    ITMR = 0x2238;
+                }
+                if (IIDX == 0x27) {
+                    IIDX = 0x29;
+                    ITMR = 0x32B4;
+                }
+            }
+            IST = 0;
+            ICNT = -1;
+            IIDX = IIDX + 1;
+            r = IIDX % 20;
+            if (D_0015EE80 != 0) {
+                func_00217628(D_L00_0015F700[3], D_00137C80.alt[r].a, D_00137C80.alt[r].b);
+            } else {
+                func_00217628(D_L00_0015F700[3], D_00137C80.normal[r].a, D_00137C80.normal[r].b);
+            }
+        }
+    }
+    ICNT = ICNT + 1;
+    ITMR = ITMR + 1;
+    if (*(int *)(D_0013A5E0 + 0x2604) & 0x800) {
+        func_L00_0029AF70();
+    }
+    func_0022DD68();
+}

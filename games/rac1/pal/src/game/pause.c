@@ -5197,7 +5197,84 @@ s32 func_00220DF0(struct MenuScreen_20DF0 *stream) {
     return 0;
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_00221380);
+typedef struct { short top, bottom, left, right, anchor_x, anchor_y, measured_width, rendered_height, line_advance; unsigned short flags; short sx, sy; } FontWindow_21380;
+struct Cell_21380 { char pad0[4]; short kind; short id; short se; };
+struct Grid_21380 { char pad0[0x48]; struct Cell_21380 *cells; };
+struct Focus_21380 { char pad0[0x40]; struct Grid_21380 *focus; };
+struct Stream_21380 { char pad0[0x20]; int width; int height; char pad28[0xC]; int flags; int tw; int th; char pad40[4]; int state; int buffer[2]; int loaded_entry[2]; };
+struct MS_21380 { char pad0[4]; struct Focus_21380 *current; char pad8[0x120]; int card_op_pending; int card_op_text; char pad130[0x24]; int ticks; };
+struct Card_21380 { char pad0[8]; int type; char padC[0xD0]; int state; char padE0[4]; int pending_state; };
+extern long func_00205520(int);
+
+int func_00221380(struct Stream_21380 *menu) {
+    FontWindow_21380 text_window;
+    short window_fields[12];
+    struct Cell_21380 *entry;
+    char *text;
+    int state = menu->state;
+    long texture;
+    extern void func_001F75D0(FontWindow_21380 *, long, char *, int);
+    int first;
+    unsigned char *tp;
+
+    if (state < 2) {
+        if (!(menu->flags & 0x100)) {
+            return 1;
+        }
+        if (((struct Card_21380 *)D_0013D390)->type != 2) {
+            goto done;
+        }
+        if (((struct Card_21380 *)D_0013D390)->state < 3 && ((struct Card_21380 *)D_0013D390)->pending_state < 0 && ((struct MS_21380 *)D_001D5F70)->ticks >= 0xB) {
+            goto done;
+        }
+        func_001F4630(0);
+        text = ((char *(*)(int))func_001FE540)(((struct MS_21380 *)D_001D5F70)->card_op_pending ? ((struct MS_21380 *)D_001D5F70)->card_op_text : 0x4FB9);
+        ((void *(*)(void *, int, unsigned int))func_001153FC)(window_fields, 0, sizeof(window_fields));
+        window_fields[1] = menu->height + 1;
+        window_fields[0] = 1;
+        window_fields[2] = 1;
+        window_fields[3] = menu->width + 1;
+        window_fields[4] = menu->width >> 1;
+        window_fields[5] = 5;
+        window_fields[8] = 16;
+        window_fields[9] = 5;
+        text_window = *(FontWindow_21380 *)window_fields;
+        func_001F75D0(&text_window, 0x80000000L, text, -1);
+        text_window.anchor_y = (menu->height - text_window.rendered_height) >> 1;
+        text_window.flags ^= 4;
+        func_001F75D0(&text_window, 0x80000000L, text, -1);
+        text_window.top--;
+        text_window.bottom--;
+        text_window.left--;
+        text_window.right--;
+        text_window.anchor_x--;
+        text_window.anchor_y--;
+        func_001F75D0(&text_window, 0x80FFA888L, text, -1);
+        func_001F4748();
+        goto done;
+    }
+    if (menu->flags & 4) {
+        first = state < 4;
+        entry = &((struct MS_21380 *)D_001D5F70)->current->focus->cells[menu->loaded_entry[first ^ 1]];
+        if (entry->kind == 0 && (tp = (unsigned char *)&D_0013D5C8, tp[entry->id] == 0)) {
+            return 1;
+        }
+        if (entry->kind == 1 && D_0013D490[entry->id] == 0) {
+            return 1;
+        }
+    }
+    func_001F4630(0);
+    if (menu->state < 4) {
+        texture = func_00205520(menu->buffer[0]);
+    } else {
+        texture = func_00205520(menu->buffer[1]);
+    }
+    func_001F5800(0, 0, D_00151880[0xB0], D_00151880[0xB1], 0, 0, menu->tw, menu->th, 0x80808080L, texture);
+    func_001F4748();
+    return 0x10;
+done:
+    return 2;
+}
 
 /* The per-controller request slots in D_00137C80 (declared above as a
    flat int array). */

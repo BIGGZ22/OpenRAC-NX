@@ -3,4 +3,82 @@
 #include "include_asm.h"
 
 LINKER_REMNANT("asm/overlays", func_L01_002649C8);
-INCLUDE_ASM("asm/overlays", func_L01_002649D8);
+typedef u32 u128 __attribute__((mode(TI), aligned(16)));
+typedef f32 sceVu0FVECTOR[4] __attribute__((aligned(16)));
+void func_001F9BD8(void *out, void *a, void *b);
+void func_001F9BF0(void *out, void *a, void *b);
+void func_001F9C30(void *out, void *a, f32 scale);
+f32 func_001F9CB8(void *a);
+extern void func_001FA218(void *matrix, void *rotation);
+extern void func_001F9EE8(void *out, void *in, void *matrix);
+extern void func_001F9C48(float scale, void *out, void *joint);
+extern void func_L00_00254218(void *moby, short joint, int flags);
+
+/* Joint positions in scratchpad, 16 bytes each.
+   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00263a28.c, FUN_L01_00263a28. */
+int func_L01_002649D8(char *moby, int index, unsigned int *type, float *result,
+                      float *radius, float *distance)
+{
+    char *entry;
+    float scale;
+    u128 matrix[4];
+    sceVu0FVECTOR first;
+    sceVu0FVECTOR second;
+    short *joints;
+
+    entry = *(char **)(moby + 0x94);
+    if (entry == 0) {
+        return 0;
+    }
+    entry += index * 0x20 + 0x10;
+    *type = *(unsigned char *)entry;
+    scale = *(float *)(moby + 0x2c) * 0.0009765625f;
+    func_001FA218(matrix, moby + 0x40);
+
+    if (*type < 2 || *type == 3) {
+        qcopy(result, entry + 0x10);
+        func_001F9C30(result, result, scale);
+        func_001F9EE8(result, result, matrix);
+        func_001F9BD8(result, result, moby + 0x10);
+        *radius = result[3] * scale;
+        if (*type < 2) {
+            *distance = 0.0f;
+        } else {
+            *distance = *(float *)(entry + 4) * scale;
+        }
+        return 1;
+    } else if (*type == 2) {
+        short joint = *(short *)(*(char **)(moby + 0x94) + 2);
+        if (joint != 0) {
+            func_L00_00254218(moby, joint, 0);
+        }
+        qcopy(result, (void *)(0x70000000 + *(int *)(entry + 4) * 0x10));
+        func_001F9C30(result, result, scale);
+        func_001F9EE8(result, result, matrix);
+        func_001F9BD8(result, result, moby + 0x10);
+        *radius = *(float *)(entry + 0xc) * scale;
+        *distance = 0.0f;
+        return 1;
+    } else if (*type == 4) {
+        short joint = *(short *)(*(char **)(moby + 0x94) + 2);
+        if (joint != 0) {
+            func_L00_00254218(moby, joint, 0);
+        }
+        joints = (short *)(entry + 4);
+        func_001F9C48(scale, first, (void *)(0x70000000 + joints[0] * 0x10));
+        func_001F9C48(scale, second, (void *)(0x70000000 + joints[1] * 0x10));
+        if (first[2] < second[2]) {
+            qcopy(result, first);
+        } else {
+            qcopy(result, second);
+        }
+        func_001F9EE8(result, result, matrix);
+        func_001F9BD8(result, result, moby + 0x10);
+        *radius = *(float *)(entry + 0xc) * scale;
+        func_001F9BF0(second, second, first);
+        *distance = func_001F9CB8(second);
+        return 1;
+    } else {
+        return 0;
+    }
+}

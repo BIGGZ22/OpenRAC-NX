@@ -75,3 +75,6 @@ func_0023CBE0	asm only	2026-10-09	cpy2area copy between ring buffer spans
 func_0023D090	asm only	2026-10-09	viBufReset tags, DMA registers and state reset
 func_0023D1F0	asm only	2026-10-09	viBufBeginPut ring buffer span split
 func_0023C390	asm only	2026-10-12	ADPCM ring to SPU transfer in 0x400-byte chunks
+func_0023D540	asm only	2026-10-15	viBufStopDMA waits for IPU idle and saves DMA/IPU registers
+func_0023D650	asm only	2026-10-15	viBufRestartDMA restores DMA/IPU registers and restarts the ring
+func_0023D018	asm only	2026-10-15	viBufCreate sets up the ring buffer, tags and semaphore

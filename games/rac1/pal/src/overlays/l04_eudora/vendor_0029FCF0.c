@@ -56,7 +56,186 @@ s32 func_L04_0029FCF0(struct Moby *m, PathPoints_eb20_9FCF0 *path, s32 i, s32 di
     func_001F9BD8_9FCF0(&m->pos, &seg, &path->point[i]);
     return i;
 }
-INCLUDE_ASM("asm/overlays", func_L04_0029FEC8);
+struct PMoby {
+    Vec4f bsphere;
+    Vec4f pos;
+    u8 state;
+    u8 pad21[3];
+    void *pclass;
+    struct PMoby *next;
+    f32 scale;
+    u8 update_dist;
+    u8 visible;
+    s16 draw_dist;
+    u8 pad34[0xC];
+    Vec4f rot;
+    u8 pad50[8];
+    f32 anim_speed;
+    u8 pad5C[0x1C];
+    u8 *pvars;
+    u8 pad7C[0x2A];
+    s16 oclass;
+};
+
+extern void *func_001153FC(void *, int, unsigned int);
+extern float func_001FA888(int);
+extern float func_001FA748(float, float);
+extern float func_001F9F90(float);
+extern float func_001F9FA8(float);
+extern float func_001F9D48(float *, float *);
+extern void func_001F9BC0(float *);
+extern char *func_0020D348(int);
+extern float func_002140F8(float, float);
+extern f32 func_00214158(void);
+extern void func_L00_00251E30(void *);
+extern void func_L04_001F39B0(f32, struct PMoby *, void *, void *);
+extern struct Path5BD0 *D_L04_001B0930[];
+extern f32 D_L04_001661B0[8];
+extern short D_L04_00161450;
+extern char *D_L04_00160064 MACRO_ADDR;
+extern float D_0015EE60 MACRO_ADDR;
+extern float D_0015EE64 MACRO_ADDR;
+
+typedef struct SwarmPartVars {
+    u8 pad0[0x10];
+    Vec4f velocity;
+    u8 pad20[0x20];
+    f32 unk40;
+    s16 unk44;
+    u8 pad46[2];
+    f32 unk48;
+    f32 unk4C;
+    s32 unk50;
+    Vec4f *leader_pos;
+    s32 unk58;
+    s16 unk5C;
+    s16 unk5E;
+    s16 oclass;
+    s16 unk62;
+    u8 pad64[0xC];
+    f32 unk70;
+    f32 unk74;
+    u8 pad78[0x18];
+    f32 unk90;
+    f32 unk94;
+} SwarmPartVars;
+
+typedef struct SwarmVars {
+    Vec4f origin;
+    struct PMoby *children[32];
+    s32 count;
+    s32 initialized;
+    f32 angle;
+    f32 radius;
+    s32 path_index;
+    s32 direction;
+    s32 child_count;
+} SwarmVars;
+
+void func_L04_0029FEC8(struct PMoby *moby) {
+    SwarmVars *data = (SwarmVars *)moby->pvars;
+    struct PMoby **children;
+    struct PMoby *other;
+    f32 distance;
+    f32 angle;
+    f32 angle2;
+    f32 speed;
+    f32 size;
+    f32 effect[8];
+
+    if (*(int *)&D_L04_00161450 == 0) {
+        f32 *effect_dest = D_L04_001661B0;
+        func_001153FC(effect, 0, 0x20);
+        effect[1] = func_001FA888(data->child_count) * 2.073f;
+        effect[3] = 2.0f;
+        effect[4] = 1.0f;
+        effect[5] = 1.0f;
+        *(int *)&D_L04_00161450 = 1;
+        __builtin_memcpy(effect_dest, effect, 0x20);
+    }
+    if (data->initialized == 0) {
+        qcopy(&data->origin, &moby->pos);
+        data->angle = 0.0f;
+    } else if (data->child_count == 0) {
+        for (other = (struct PMoby *)D_L04_00160064; other != 0; other = other->next) {
+            if ((s8)other->state >= 0 && other->oclass == 0x55) {
+                data->child_count++;
+            }
+        }
+        D_L04_001661B0[1] = func_001FA888(data->child_count) * 2.073f;
+    }
+    if (data->path_index == -1) {
+        data->angle = func_001FA748(data->angle, D_0015EE60 * 0.0034906587f);
+        moby->pos.x = data->origin.x + data->radius * func_001F9F90(data->angle);
+        moby->pos.y = data->origin.y + data->radius * func_001F9FA8(data->angle);
+    } else if (data->initialized != 0) {
+        s32 i;
+        distance = 10000.0f;
+        for (i = 0; i < data->count; i++) {
+            f32 d = func_001F9D48((float *)&moby->pos, (float *)&data->children[i]->pos);
+            if (d < distance) distance = d;
+        }
+        speed = 0.0f;
+        if (distance < 3.0f) speed = 3.0f - distance;
+        data->direction = func_L04_0029FCF0((struct Moby *)moby, (PathPoints_eb20_9FCF0 *)D_L04_001B0930[data->path_index], data->direction, 1, speed);
+    }
+    if (data->initialized == 0) {
+        s32 i;
+        struct PMoby *child;
+        data->initialized = 1;
+        data->child_count = 0;
+        for (i = 0; i < data->count; i++) {
+            data->children[i] = 0;
+            child = (struct PMoby *)func_0020D348(0x55);
+            if (child != 0) {
+                SwarmPartVars *part = (SwarmPartVars *)child->pvars;
+                data->children[i] = child;
+                child->update_dist = 0x7f;
+                child->draw_dist = 0x7f;
+                child->scale *= func_002140F8(0.7f, 1.3f);
+                child->rot.z = func_00214158();
+                child->anim_speed = func_002140F8(0.6f, 1.2f);
+                func_001F9BC0((float *)&part->velocity);
+                part->unk44 = 0;
+                part->unk4C = 10.0f;
+                qcopy(&child->pos, &moby->pos);
+                angle = func_00214158();
+                angle2 = func_00214158();
+                size = func_002140F8(0.6f, 0.9f);
+                child->pos.x += func_001F9F90(angle) * func_001F9FA8(angle2) * size;
+                child->pos.y += func_001F9FA8(angle) * func_001F9FA8(angle2) * size;
+                child->pos.z += func_001F9F90(angle2) * size;
+                part->unk50 = 0;
+                part->leader_pos = &moby->pos;
+                part->unk58 = 0;
+                part->unk70 = 1.694f;
+                part->unk74 = 1.694f;
+                part->unk48 = 1.056f;
+                part->unk5C = -1;
+                part->unk40 = 0.003f;
+                part->unk5E = 2;
+                part->oclass = 0x55;
+                part->unk90 = 1.0f;
+                part->unk62 = 0x1ee;
+                part->unk94 = 5.0f;
+                func_L00_00251E30(child);
+            }
+        }
+    } else {
+        s32 i;
+        struct PMoby *child;
+        for (i = 0; i < data->count; i++) {
+            void *part;
+            children = data->children;
+            child = children[i];
+            part = child->pvars;
+            D_L04_001661B0[6] = ((data->radius * 7.753f) / 1800.0f) * D_0015EE60 * ((child->anim_speed + 1.0f) * 0.5f) * 0.05f * D_0015EE64 * ((child->anim_speed + 1.0f) * 0.5f);
+            D_L04_001661B0[7] = (((data->radius * 7.753f) / 1800.0f) * D_0015EE60) * ((child->anim_speed + 1.0f) * 0.5f);
+            func_L04_001F3010(children, data->count, child, part, D_L04_001661B0);
+            func_L04_001F39B0(0.0f, child, part, D_L04_001661B0);
+        }
+    }
+}
 extern int func_001F9850(int);
 extern void func_00213DE0(void *, void *, void *, void *);
 extern int func_001160D8(void);

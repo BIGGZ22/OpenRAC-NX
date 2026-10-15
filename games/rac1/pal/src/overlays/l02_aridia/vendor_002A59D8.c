@@ -2218,7 +2218,46 @@ void func_L02_002DE418(char *m) {
     func_L00_0025E590(m, d + 0x60);
     func_L00_001FEF78(m + 0xBC);
 }
-INCLUDE_ASM("asm/overlays", func_L02_002DE6E0);
+typedef struct {
+    char pad0[0x20];
+    unsigned char state;
+    unsigned char group;
+    char pad22[0x84];
+    short type;
+    char padA8[0xC];
+    short hp;
+    char padB6[2];
+    void *target;
+    char padBC[0x44];
+} Level02GroupMoby;
+
+char *func_L02_002DE6E0(char *m) {
+    Level02GroupMoby *owner = (Level02GroupMoby *)m;
+    short *group_ids;
+    Level02GroupMoby *g;
+    Level02GroupMoby *mobys;
+    if (((volatile unsigned char *)m)[0x21] == 0xFF) {
+        return 0;
+    }
+    group_ids = (short *)D_L02_001AC140[((unsigned char *)m)[0x21]];
+    mobys = (Level02GroupMoby *)D_L02_00160058_m;
+    do {
+        int i = *(unsigned short *)group_ids & 0x7FFF;
+        if (mobys[i].type == 0x244 && mobys[i].state == 0x1A) {
+            mobys[i].target = owner;
+            if (owner->hp < mobys[i].hp) {
+                mobys[i].hp = owner->hp;
+            }
+            g = (Level02GroupMoby *)((char *)(i << 8) + D_L02_00160058_m);
+            owner->hp -= g->hp;
+            if (owner->hp <= 0) {
+                owner->hp = 1;
+            }
+            return (char *)g;
+        }
+    } while (*group_ids++ >= 0);
+    return 0;
+}
 INCLUDE_ASM("asm/overlays", func_L02_002DE6FC);
 INCLUDE_ASM("asm/overlays", func_L02_002DE798);
 /* four-state update: waits for a flag, plays a transition, and rolls a random heading on entering state 2 or 7 */
@@ -2262,7 +2301,384 @@ void func_L02_002DF038(char *moby)
     *(float *)(moby + 0x48) = FastAddRots(*(float *)(moby + 0x48), D_0015EE6C * 0.08726646f);
     func_L00_002617B0(data + 0x20, zero, pos, moby + 0x40);
 }
-INCLUDE_ASM("asm/overlays", func_L02_002DF0C0);
+extern short D_L02_00161CC0;
+extern short D_L02_00161CC4;
+extern s32 D_0015EE84 MACRO_ADDR;
+extern float D_0015EE6C;
+extern float D_0015EE70;
+extern int D_0015EFA4 MACRO_ADDR;
+extern void func_L02_002E03B8(char *);
+extern void func_L02_002E04E8(char *);
+extern short D_L02_00161CB0;
+extern short D_L02_00161CB4;
+extern short D_L02_00161CD0;
+extern short D_L02_00161CD4;
+extern short D_L02_00161CD8;
+extern short D_L02_00161CDC;
+extern short D_L02_00161CE0;
+extern short D_L02_00161CE4;
+extern short D_L02_00161CE8;
+extern short D_L02_00161CF0;
+typedef float OvlVec4[4] __attribute__((aligned(16)));
+typedef struct { float f[4]; } PVec4;
+typedef struct {
+    char pad0[0x20];
+    char riders[0x40];
+    int node_a;
+    int node_b;
+    int path;
+    int pad6C;
+    int gear[4];
+    int timer;
+    char *rail_a;
+    char *rail_b;
+    float rail_a_speed;
+    float rail_b_speed;
+    float rail_a_off;
+    float rail_b_off;
+    float speed;
+    int cam_goal;
+    float cam_pos;
+    float cam_speed;
+    int ride_timer;
+    float cam_accel;
+    float cam_max;
+} Varsdc88;
+typedef struct {
+    char pad0[0x30];
+    float pos[4];
+    char pad40[0x30];
+    float look[4];
+} Nodedc88;
+extern int D_L02_00160058 MACRO_ADDR;
+#define NODE(i) ((Nodedc88 *)(((i) << 7) + (int)D_L02_0016016C))
+extern void func_00215CA8(void *, int, void *, void *, int, float);
+extern char *func_0020D348(int);
+extern void func_L00_00203F20(int, int);
+extern void func_L00_00217718(void *, void *, int, int);
+extern void func_L00_00234768(void *, int, float);
+extern int func_L00_002347B8();
+extern void func_L00_002EBE88(void *);
+extern void func_L00_002EBEE0(void *);
+extern void func_L00_002EBF50(void *, void *, int, int, int);
+extern void func_L00_002EC0C8(int);
+extern void func_L01_00286530(void *, void *, int, int, int, int, int, float);
+extern void func_L02_0022BE40(int, int);
+extern void func_L02_00237C98(void);
+extern void func_L02_002F9E50(int, int);
+extern void func_L02_002F9ED8(float, float, float, float, float, float);
+
+typedef struct PPlayer { char pad0[0x2FC]; unsigned char *pod; char pad300[0xE]; short mode; char pad310[0x1D94]; unsigned char blocked; } PPlayer;
+#define G(i) ((char *)D_L02_00160058 + ((i) << 8))
+#define HP ((float *)(D_0013E633 + 0xE9D))
+void func_L02_002DF0C0(unsigned char *moby) {
+    Varsdc88 *d = *(Varsdc88 **)(moby + 0x78);
+    int i;
+    int *path;
+    int lim;
+    int t;
+    float s;
+    OvlVec4 delta;
+    OvlVec4 rot;
+    OvlVec4 a;
+    OvlVec4 b;
+    OvlVec4 c;
+    OvlVec4 e;
+
+    func_001F9C30(delta, moby + 0x10, -1.0f);
+    qcopy(rot, moby + 0x40);
+    if ((*(float *)&D_L02_00161CD4) != 0.0f) {
+        for (i = 0; i < *(int *)D_L02_001B0DB0[d->path]; i++) {
+            qcopy(a, D_L02_001B0DB0[d->path] + i * 0x10 + 0x10);
+            func_L01_00286530(a, moby, 4, 0x800000FF, 0x7F, 2, 0xFF, 0.1f);
+        }
+    }
+    switch (moby[0x20]) {
+    case 0:
+        moby[0x30] = 0xFF;
+        moby[0xBC] = 1;
+        qcopy(moby + 0x10, NODE(d->node_b)[0].pos);
+        moby[0x20] = 1;
+        *(float *)(moby + 0x18) -= 6.0f;
+        d->rail_a = func_0020D348(0x421);
+        *(short *)(d->rail_a + 0x32) = 0x40;
+        d->rail_a[0x31] = 1;
+        *(u64 *)(d->rail_a + 0x38) = *(u64 *)(moby + 0x38);
+        *(unsigned short *)(d->rail_a + 0x34) = *(unsigned short *)(moby + 0x34);
+        qcopy_nc(d->rail_a + 0x10, moby + 0x10);
+        qcopy_nc(d->rail_a + 0x40, moby + 0x40);
+        d->rail_b = func_0020D348(0x422);
+        *(short *)(d->rail_b + 0x32) = 0x40;
+        d->rail_b[0x31] = 1;
+        *(u64 *)(d->rail_b + 0x38) = *(u64 *)(moby + 0x38);
+        *(unsigned short *)(d->rail_b + 0x34) = *(unsigned short *)(moby + 0x34);
+        qcopy_nc(d->rail_b + 0x10, moby + 0x10);
+        qcopy_nc(d->rail_b + 0x40, moby + 0x40);
+        d->rail_a_off = -1.0f;
+        d->rail_b_off = -1.0f;
+        d->cam_max = D_0015EE70 * 0.1f * (float)*(int *)D_L02_001B0DB0[d->path];
+        d->cam_accel = D_0015EE6C * 0.3f * (float)*(int *)D_L02_001B0DB0[d->path];
+        func_L02_002E04E8((char *)moby);
+        break;
+    case 1:
+        if (((unsigned char *)D_0014171B + 0xAA35)[moby[0xB0] + (D_0015EE84 << 4)] == 0xFF) {
+            d->timer = func_001F9850(30);
+            moby[0x20] = 2;
+        }
+        break;
+    case 2:
+        s = D_0015EE6C * 5.0f;
+        func_L00_001FF4B0(a, G(d->gear[0]) + 0xC0, -s);
+        func_001F9BD8(G(d->gear[0]) + 0x10, G(d->gear[0]) + 0x10, a);
+        func_L00_001FF4B0(a, G(d->gear[1]) + 0xC0, s);
+        func_001F9BD8(G(d->gear[1]) + 0x10, G(d->gear[1]) + 0x10, a);
+        func_L00_001FF4B0(a, G(d->gear[2]) + 0xC0, -s);
+        func_001F9BD8(G(d->gear[2]) + 0x10, G(d->gear[2]) + 0x10, a);
+        func_L00_001FF4B0(a, G(d->gear[3]) + 0xC0, s);
+        func_001F9BD8(G(d->gear[3]) + 0x10, G(d->gear[3]) + 0x10, a);
+        func_L00_00251E30(G(d->gear[0]));
+        func_L00_00251E30(G(d->gear[1]));
+        func_L00_00251E30(G(d->gear[2]));
+        func_L00_00251E30(G(d->gear[3]));
+        if (func_001F9908(&d->timer)) {
+            moby[0x20] = 3;
+            func_0022ED80(1, 0, (int)moby);
+        }
+        break;
+    case 3:
+        func_00214D88((float *)(moby + 0x18), &d->speed, NODE(d->node_a)[0].pos[2],
+                     (*(float *)&D_L02_00161CC4) * D_0015EE70, (*(float *)&D_L02_00161CC4) * D_0015EE70,
+                     (*(float *)&D_L02_00161CC0) * D_0015EE6C);
+        func_L02_002E04E8((char *)moby);
+        if (NODE(d->node_a)[0].pos[2] - 0.0001f <= *(float *)(moby + 0x18)) {
+            moby[0x20] = 4;
+            func_0022ED80(0, 0, (int)moby);
+        }
+        break;
+    case 4:
+        d->rail_a_off = 2.0f;
+        d->rail_b_off = -4.0f;
+        func_L02_002E03B8((char *)moby);
+        if (func_001F9B88(*(float *)(d->rail_a + 0x18) - *(float *)(moby + 0x18) - 2.0f) < 0.0001f &&
+            func_001F9B88(*(float *)(d->rail_b + 0x18) - *(float *)(moby + 0x18) + 4.0f) < 0.0001f) {
+            moby[0x20] = 5;
+        }
+        break;
+    case 5:
+        if (moby[0xBC] == 0 &&
+            func_001F9D48(HP, (void *)(D_L02_0016016C + ((d->node_b) << 7) + 0x30)) < 16.0f) {
+            qcopy(moby + 0x10, NODE(d->node_b)[0].pos);
+            *(float *)(moby + 0x18) -= 6.0f;
+            d->rail_a_off = -1.0f;
+            d->rail_b_off = -1.0f;
+            func_L02_002E04E8((char *)moby);
+            moby[0x20] = 3;
+            moby[0xBC] = 1;
+            func_0022ED80(1, 0, (int)moby);
+        } else if (moby[0xBC] == 1 &&
+                   func_001F9D48(HP, (void *)(D_L02_0016016C + ((d->node_a) << 7) + 0x30)) < 16.0f) {
+            qcopy(moby + 0x10, NODE(d->node_a)[0].pos);
+            *(float *)(moby + 0x18) -= 6.0f;
+            d->rail_a_off = -1.0f;
+            d->rail_b_off = -1.0f;
+            func_L02_002E04E8((char *)moby);
+            moby[0xBC] = 0;
+            moby[0x20] = 3;
+            func_0022ED80(1, 0, (int)moby);
+        } else if (((PPlayer *)(D_0013E633 + 0xE1D))->pod == moby && ((PPlayer *)(D_0013E633 + 0xE1D))->mode == 0 &&
+                   ((PPlayer *)(D_0013E633 + 0xE1D))->blocked == 0) {
+            qcopy(b, moby + 0x10);
+            b[2] += 2.0f;
+            if (moby[0xBC] == 0) {
+                d->cam_goal = 0;
+                d->cam_pos = (float)(*(int *)D_L02_001B0DB0[d->path] - 1);
+                qcopy_nc(a, NODE(d->node_a)[0].look);
+                qcopy(c, D_L02_001B0DB0[d->path] + func_001FA898(d->cam_pos) * 0x10 + 0x10);
+                func_001F9BC0(e);
+                e[2] = func_L00_001FF860(b[0] - c[0], b[1] - c[1]);
+                e[1] = -func_L00_001FF860(func_001F9D48(c, b), b[2] - c[2]);
+            } else {
+                d->cam_goal = *(int *)D_L02_001B0DB0[d->path] - 1;
+                d->cam_pos = 0.0f;
+                qcopy_nc(a, NODE(d->node_b)[0].look);
+                qcopy(c, D_L02_001B0DB0[d->path] + func_001FA898(d->cam_pos) * 0x10 + 0x10);
+                func_001F9BC0(e);
+                e[2] = func_L00_001FF860(b[0] - c[0], b[1] - c[1]);
+                e[1] = -func_L00_001FF860(func_001F9D48(c, b), b[2] - c[2]);
+            }
+            moby[0x20] = 6;
+            d->ride_timer = func_001F9850(0xB4);
+            func_L00_00234768(moby + 0x10, 0, a[2]);
+            func_L00_002EBF50(D_L02_00167440, D_L02_00167440 + 0x10, 3, func_001F9850(0xF0), 0);
+            func_L02_002F9ED8((*(float *)&D_L02_00161CD8), (*(float *)&D_L02_00161CDC), (*(float *)&D_L02_00161CE0), (*(float *)&D_L02_00161CE4), (*(float *)&D_L02_00161CE8),
+                              (*(float *)&D_L02_00161CF0));
+            func_L00_002EBE88(c);
+            func_L00_002EBEE0(e);
+        }
+        break;
+    case 6: {
+        int r6 = func_L00_002347B8();
+        if (r6 == 2) {
+            moby[0x20] = 7;
+            func_0022ED80(2, 0, (int)moby);
+            func_L02_0022BE40(0x72, 0);
+        } else if (r6 == 0) {
+            func_L00_002EC0C8(2);
+            moby[0x20] = 0xD;
+        } else if (func_001F9908(&d->ride_timer)) {
+            func_L00_002EC0C8(2);
+            moby[0x20] = 0xD;
+            func_L02_00237C98();
+        }
+        break;
+    }
+    case 7:
+        d->rail_a_off = -1.0f;
+        d->rail_b_off = -1.0f;
+        func_L02_002E03B8((char *)moby);
+        if (func_001F9B88(*(float *)(d->rail_a + 0x18) - *(float *)(moby + 0x18) + 1.0f) < 0.01f &&
+            func_001F9B88(*(float *)(d->rail_b + 0x18) - *(float *)(moby + 0x18) + 1.0f) < 0.01f) {
+            moby[0x20] = 8;
+        }
+        break;
+    case 8:
+        func_00214D88((float *)(moby + 0x18), &d->speed,
+                     NODE(d->node_a)[0].pos[2] - 6.0f,
+                     (*(float *)&D_L02_00161CC4) * D_0015EE70, (*(float *)&D_L02_00161CC4) * D_0015EE70,
+                     (*(float *)&D_L02_00161CC0) * D_0015EE6C);
+        func_L02_002E04E8((char *)moby);
+        if (*(float *)(moby + 0x18) < NODE(d->node_a)[0].pos[2] - 5.999f) {
+            if (moby[0xBC] == 0) {
+                moby[0xBC] = 1;
+                qcopy_nc(moby + 0x10, NODE(d->node_b)[0].pos);
+                qcopy_nc(c, NODE(d->node_b)[0].look);
+                func_001F9BF0(a, D_L02_0016016C + (d->node_b << 7) + 0x30, D_L02_0016016C + (d->node_a << 7) + 0x30);
+            } else {
+                moby[0xBC] = 0;
+                qcopy_nc(moby + 0x10, NODE(d->node_a)[0].pos);
+                qcopy_nc(c, NODE(d->node_a)[0].look);
+                func_001F9BF0(a, D_L02_0016016C + (d->node_a << 7) + 0x30, D_L02_0016016C + (d->node_b << 7) + 0x30);
+            }
+            *(float *)(moby + 0x18) -= 6.0f;
+            func_001F9BD8(b, HP, a);
+            func_L00_00217718(b, c, 0x72, 0);
+            d->speed = -d->speed;
+            moby[0x20] = 9;
+            func_L02_002F9E50(2, func_001F9850(0xB4));
+        }
+        break;
+    case 9:
+        func_00214D88(&d->cam_pos, &d->cam_speed, (float)d->cam_goal, d->cam_max, d->cam_max, d->cam_accel);
+        if (d->cam_goal != 0 ? (float)d->cam_goal <= d->cam_pos : d->cam_pos <= (float)d->cam_goal) {
+            moby[0x20] = 10;
+        }
+        func_00215CA8(D_L02_001B0DB0[d->path], 0, c, b, 0, d->cam_pos);
+        qcopy(a, moby + 0x10);
+        a[2] += 8.0f;
+        func_001F9BC0(b);
+        b[2] = func_L00_001FF860(a[0] - c[0], a[1] - c[1]);
+        b[1] = -func_L00_001FF860(func_001F9D48(c, a), a[2] - c[2]);
+        func_L00_002EBE88(c);
+        func_L00_002EBEE0(b);
+        break;
+    case 10:
+        func_00214D88((float *)(moby + 0x18), &d->speed, NODE(d->node_a)[0].pos[2],
+                      (*(float *)&D_L02_00161CC4) * D_0015EE70, (*(float *)&D_L02_00161CC4) * D_0015EE70,
+                      (*(float *)&D_L02_00161CC0) * D_0015EE6C);
+        func_L02_002E04E8((char *)moby);
+        if (NODE(d->node_a)[0].pos[2] <= *(float *)(moby + 0x18)) {
+            moby[0x20] = 0xB;
+            func_0022ED80(0, 0, (int)moby);
+        }
+        break;
+    case 11:
+        d->rail_a_off = 2.0f;
+        d->rail_b_off = -4.0f;
+        func_L02_002E03B8((char *)moby);
+        if (func_001F9B88(*(float *)(d->rail_a + 0x18) - *(float *)(moby + 0x18) - 2.0f) < 0.01f &&
+            func_001F9B88(*(float *)(d->rail_b + 0x18) - *(float *)(moby + 0x18) + 4.0f) < 0.01f) {
+            {
+                extern unsigned short D_00141992[];
+                t = func_001F9850(D_0015EFA4) - D_00141992[0] * 600;
+            }
+            lim = func_001F9850(3600) * 60.0f;
+            if (!(lim < t) || (*(unsigned int *)(D_0014171B + 0x591) & (1 << D_0015EE84))) {
+            } else {
+                    func_L00_00203F20(0x7DD, 0x48);
+            }
+            moby[0x20] = 0xD;
+            func_L00_002EC0C8(2);
+            func_L02_0022BE40(0, 1);
+        }
+        break;
+    case 12:
+        ((struct { char p[0x18]; float z; } *)moby)->z += D_0015EE6C * 4.0f;
+        if (NODE(d->node_a)[0].pos[2] <= *(float *)(moby + 0x18)) {
+            moby[0x20] = 5;
+        }
+        break;
+    case 13:
+        if (*(unsigned char **)(D_0013E633 + 0x1119) != moby) {
+            moby[0x20] = 5;
+        }
+        break;
+    case 14:
+        d->rail_a = func_0020D348(0x421);
+        *(short *)(d->rail_a + 0x32) = 0x40;
+        d->rail_a[0x31] = 1;
+        *(u64 *)(d->rail_a + 0x38) = *(u64 *)(moby + 0x38);
+        *(unsigned short *)(d->rail_a + 0x34) = *(unsigned short *)(moby + 0x34);
+        qcopy_nc(d->rail_a + 0x10, moby + 0x10);
+        qcopy_nc(d->rail_a + 0x40, moby + 0x40);
+        d->rail_b = func_0020D348(0x422);
+        *(short *)(d->rail_b + 0x32) = 0x40;
+        d->rail_b[0x31] = 1;
+        *(u64 *)(d->rail_b + 0x38) = *(u64 *)(moby + 0x38);
+        *(unsigned short *)(d->rail_b + 0x34) = *(unsigned short *)(moby + 0x34);
+        qcopy_nc(d->rail_b + 0x10, moby + 0x10);
+        qcopy_nc(d->rail_b + 0x40, moby + 0x40);
+        moby[0x20] = 0xF;
+        break;
+    case 15:
+        {
+        float ha = (*(float *)&D_L02_00161CB0), hb = (*(float *)&D_L02_00161CB4);
+        d->rail_a_off = ha;
+        d->rail_b_off = hb;
+        }
+        func_L02_002E03B8((char *)moby);
+        if ((*(float *)&D_L02_00161CD0) != 0.0f) {
+            moby[0x20] = 0x10;
+        }
+        break;
+    case 16:
+        d->rail_a_off = 2.0f;
+        d->rail_b_off = -4.0f;
+        func_L02_002E03B8((char *)moby);
+        if ((*(float *)&D_L02_00161CD0) == 0.0f) {
+            moby[0x20] = 0xF;
+        } else if (func_001F9B88(*(float *)(d->rail_a + 0x18) - *(float *)(moby + 0x18) - 2.0f) < 0.01f &&
+                   func_001F9B88(*(float *)(d->rail_b + 0x18) - *(float *)(moby + 0x18) + 4.0f) < 0.01f) {
+            moby[0x20] = 0x11;
+        }
+        break;
+    case 17:
+        d->rail_a_off = -1.0f;
+        d->rail_b_off = -1.0f;
+        func_L02_002E03B8((char *)moby);
+        if ((*(float *)&D_L02_00161CD0) == 0.0f) {
+            moby[0x20] = 0xF;
+        } else if (func_001F9B88(*(float *)(d->rail_a + 0x18) - *(float *)(moby + 0x18) + 1.0f) < 0.01f &&
+                   func_001F9B88(*(float *)(d->rail_b + 0x18) - *(float *)(moby + 0x18) + 1.0f) < 0.01f) {
+            moby[0x20] = 0x10;
+        }
+        break;
+    }
+    func_001F9BD8(delta, delta, moby + 0x10);
+    if (func_001F9CB8(delta) > 4.0f) {
+        func_001F9BC0(delta);
+    }
+    func_L00_002617B0(d->riders, delta, rot, moby + 0x40);
+}
 extern float D_0015EE6C MACRO_ADDR;
 extern short D_L02_00161CC0;
 extern short D_L02_00161CC4;

@@ -185,7 +185,138 @@ void func_L07_0030D370(unsigned char *moby)
         break;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L07_003121D0);
+extern int D_0015EE84 MACRO_ADDR;
+extern unsigned char D_0014C150[];
+extern s32 D_L07_001845A8[];
+extern void func_001F9BD8(void *, void *, void *);
+extern f32 func_001F9CB8(void *);
+extern void func_L00_001FF4B0(f32, void *, void *);
+extern void func_001F9EC0(void *, void *, void *);
+extern void func_0022ED80(s32, s32, void *);
+extern u8 * D_L07_00160058 MACRO_ADDR;
+extern f32 D_0015EE6C MACRO_ADDR;
+
+void func_L07_003121D0(u8 *moby)
+{
+    u8 *data = *(u8 **)(moby + 0x78);
+    u8 *other;
+    f32 vectors[8];
+    f32 distance;
+    u8 state;
+    typedef u32 quadword __attribute__((mode(TI), aligned(16)));
+
+    if (moby[0xb0] != 0xff &&
+        D_0014C150[moby[0xb0] + D_0015EE84 * 16] == 0xff)
+        *(s32 *)(data + 0x10) = -1;
+
+    state = moby[0x20];
+    switch (state) {
+    case 0:
+        qcopy(data, moby + 0x10);
+        if (*(s32 *)(data + 0x38) != -1)
+            D_L07_001845A8[*(s32 *)(data + 0x38)] = 0;
+        moby[0x20] = 1;
+        *(s32 *)(data + 0x0c) = 0;
+        return;
+    case 1:
+        if (*(s32 *)(data + 0x38) != -1)
+            D_L07_001845A8[*(s32 *)(data + 0x38)] = 0;
+        if (*(s32 *)(data + 0x10) != -1) {
+            other = D_L07_00160058 + *(s32 *)(data + 0x10) * 0x100;
+            if (other != 0 && other[0x20] != 0xfe && other[0x20] != 0xfd &&
+                other[0x20] != *(u32 *)(data + 0x14))
+                return;
+        }
+        *(quadword *)(vectors + 4) = 0;
+        vectors[4] = *(f32 *)(data + 0x1c);
+        vectors[5] = *(f32 *)(data + 0x20);
+        vectors[6] = *(f32 *)(data + 0x24);
+        *(quadword *)vectors = *(quadword *)(vectors + 4);
+        *(f32 *)(data + 0x0c) = func_001F9CB8(vectors);
+        if (*(s32 *)(data + 0x30) != -1)
+            func_0022ED80(*(s32 *)(data + 0x30), 0, moby);
+        moby[0x20] = 2;
+        return;
+    case 2:
+        if (*(s32 *)(data + 0x38) != -1)
+            D_L07_001845A8[*(s32 *)(data + 0x38)] = 1;
+        if (*(s32 *)(data + 0x10) != -1) {
+            other = D_L07_00160058 + *(s32 *)(data + 0x10) * 0x100;
+            if (other != 0 && other[0x20] != 0xfe && other[0x20] != 0xfd &&
+                other[0x20] == *(u32 *)(data + 0x18)) {
+                if (*(s32 *)(data + 0x30) != -1)
+                    func_0022ED80(*(s32 *)(data + 0x30), 0, moby);
+                moby[0x20] = 4;
+                return;
+            }
+        }
+        *(quadword *)(vectors + 4) = 0;
+        vectors[4] = *(f32 *)(data + 0x1c);
+        vectors[5] = *(f32 *)(data + 0x20);
+        vectors[6] = *(f32 *)(data + 0x24);
+        *(quadword *)vectors = *(quadword *)(vectors + 4);
+        func_001F9EC0(vectors, vectors, moby + 0xc0);
+        func_L00_001FF4B0(*(f32 *)(data + 0x28) * D_0015EE6C, vectors + 4, vectors);
+        func_001F9BD8(moby + 0x10, moby + 0x10, vectors + 4);
+        *(f32 *)(data + 0x0c) -= *(f32 *)(data + 0x28) * D_0015EE6C;
+        if (!(*(f32 *)(data + 0x0c) < 0.0f))
+            return;
+        func_001F9BD8(moby + 0x10, data, vectors);
+        *(f32 *)(data + 0x0c) = 0.0f;
+        moby[0x20] = 3;
+        if (*(s32 *)(data + 0x34) != -1)
+            func_0022ED80(*(s32 *)(data + 0x30), 0, moby);
+        return;
+    case 3:
+        if (*(s32 *)(data + 0x38) != -1)
+            D_L07_001845A8[*(s32 *)(data + 0x38)] = 1;
+        if (*(s32 *)(data + 0x10) == -1)
+            return;
+        other = D_L07_00160058 + *(s32 *)(data + 0x10) * 0x100;
+        if (other == 0 || other[0x20] == 0xfe || other[0x20] == 0xfd ||
+            other[0x20] != *(u32 *)(data + 0x18))
+            return;
+        *(s32 *)(data + 0x0c) = 0;
+        if (*(s32 *)(data + 0x30) != -1)
+            func_0022ED80(*(s32 *)(data + 0x30), 0, moby);
+        moby[0x20] = 4;
+        return;
+    case 4:
+        if (*(s32 *)(data + 0x38) != -1)
+            D_L07_001845A8[*(s32 *)(data + 0x38)] = 0;
+        if (*(s32 *)(data + 0x10) == -1 ||
+            (other = D_L07_00160058 + *(s32 *)(data + 0x10) * 0x100) == 0 ||
+            other[0x20] == 0xfe || other[0x20] == 0xfd ||
+            other[0x20] == *(u32 *)(data + 0x14)) {
+            if (*(s32 *)(data + 0x30) != -1)
+                func_0022ED80(*(s32 *)(data + 0x30), 0, moby);
+            moby[0x20] = 2;
+        } else {
+            *(quadword *)(vectors + 4) = 0;
+            vectors[4] = *(f32 *)(data + 0x1c);
+            vectors[5] = *(f32 *)(data + 0x20);
+            vectors[6] = *(f32 *)(data + 0x24);
+            *(quadword *)vectors = *(quadword *)(vectors + 4);
+            distance = func_001F9CB8(vectors);
+            func_L00_001FF4B0(-(*(f32 *)(data + 0x2c) * D_0015EE6C), vectors, vectors);
+            func_001F9EC0(vectors + 4, vectors, moby + 0xc0);
+            func_001F9BD8(moby + 0x10, moby + 0x10, vectors + 4);
+            *(f32 *)(data + 0x0c) += *(f32 *)(data + 0x2c) * D_0015EE6C;
+            if (!(distance < *(f32 *)(data + 0x0c)))
+                return;
+            qcopy(moby + 0x10, data);
+            if (*(s32 *)(data + 0x30) != -1)
+                func_0022ED80(*(s32 *)(data + 0x34), 0, moby);
+            if (*(s32 *)(data + 0x38) != -1)
+                D_L07_001845A8[*(s32 *)(data + 0x38)] = 0;
+            moby[0x20] = 1;
+        }
+        break;
+    case 5:
+    default:
+        return;
+    }
+}
 extern int D_0015EE84 MACRO_ADDR;
 extern unsigned char D_0014C150[];
 extern s32 D_L07_001845A8[];

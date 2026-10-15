@@ -1,15 +1,15 @@
 /* NON_MATCHING func_L00_002DED98 -- src/overlays/shared/vendor_002D9438.c
- * Best so far: SIZE ours 956 / retail 948, checked 2026-10-09.
+ * Best so far: BYTES 4/948 (99.6% of the bytes match), checked 2026-10-15.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
  * What the last attempts found:
- *   func_L00_002DED98 (6 of 10 runs used; best p5.c, 956 vs 948 bytes): draws a 9x20 grid of quads (func_L00_001FD
- *   scroll angles D_L00_00161C18/1C/20; per quad: 4 qcopies from tables D_L00_001E6370/6230, vector math, dot-prod
- *   D_L00_001E6358. Packet struct is 0x90 bytes at sp+0 (note: sizeof(long)==8 and long long is 128-bit here, so t
- *   Structure, loop shape, delay slots and store orders all match. Two differences remain: (1) retail has no `mov.
- *   0.3f used by the pre-loop `a += 0.3f` and by the loop is one pseudo in $f24, ours keeps a separate temp and co
- *   stack-address spill slots (D8..F8) come out in a different order (ours rotates [ve,q1] to the end).
- *   Unblock: whatever source shape makes the pre-loop add share the loop-invariant 0.3f pseudo; then slot order ma
+ *   2026-10-15: BYTES 4/948. Three changes got here: the 0.3f step in a local (`step = 0.3f;` right before `a
+ *   += step`, so the pre-loop add and the loop share one register as in retail), the colour loop as an index
+ *   loop `for (k = 0; k < 2; k++)` over s.col[k * 2] (GCC derives the pointer and the down counter itself,
+ *   after the hoisted constants, as retail does), and the row reads in retail's order (y = D_L00_001E6358[i -
+ *   1] before v = [i]). Left: the spill slots of the two row pointers are swapped (ours [i-1] at 0xD0, retail
+ *   at 0xD4). Reading v first, other spellings of [i - 1] and declaration orders do not swap them. Retail
+ *   computes &D[i-1] first at the top of the row yet gives it the higher slot.
  */
 extern short D_L00_001E6358[];
 extern short D_L00_00161C18;
@@ -38,9 +38,9 @@ void func_L00_002DED98(void) {
     float ve[4];
     float vf[4];
     float a, a2, am, b, b2, dot;
+    float step;
     int i, j, k, v;
     unsigned short y;
-    unsigned int *o;
     s.t1 = func_001F4868(0x15);
     s.t2 = 0x0000FF9000000260L; /* FIX: retail is ori 0xFF90; dsll32 0; ori 0x260 = 0xFF90<<32 | 0x260 (was 0xFF90<<48) */
     s.t3 = 0x8000000048L;
@@ -48,17 +48,18 @@ void func_L00_002DED98(void) {
     a = *(float *)&D_L00_00161C18;
     *(float *)&D_L00_00161C18 = a + 0.001f;
     if (*(float *)&D_L00_00161C18 > 7.0f) *(float *)&D_L00_00161C18 -= 7.0f;
-    a += 0.3f;
+    step = 0.3f;
+    a += step;
     for (i = 1; i < 10; i++) {
         b = *(float *)&D_L00_00161C1C;
         *(float *)&D_L00_00161C1C = b + *(float *)&D_L00_00161C20;
         if (*(float *)&D_L00_00161C1C > 7.0f) *(float *)&D_L00_00161C1C -= 7.0f;
-        a2 = a + 0.3f;
+        a2 = a + step;
         for (j = 0; j < 20; j++) {
-            qcopy(s.q[0], D_L00_001E6370 + (i * 0x140 + j * 16));
-            qcopy(s.q[1], D_L00_001E6370 + (i * 0x140 + (j + 1) % 20 * 16));
-            qcopy(s.q[2], D_L00_001E6230 + (i * 0x140 + j * 16));
-            qcopy(s.q[3], D_L00_001E6230 + (i * 0x140 + (j + 1) % 20 * 16));
+            qcopy(s.q[0], D_L00_001E6370 + (j * 16 + i * 0x140));
+            qcopy(s.q[1], D_L00_001E6370 + ((j + 1) % 20 * 16 + i * 0x140));
+            qcopy(s.q[2], D_L00_001E6230 + (j * 16 + i * 0x140));
+            qcopy(s.q[3], D_L00_001E6230 + ((j + 1) % 20 * 16 + i * 0x140));
             func_001F9BF0(vc, s.q[0], s.q[1]);
             func_001F9BF0(vd, s.q[2], s.q[1]);
             func_001F9CA0(ve, vd, vc);
@@ -68,18 +69,16 @@ void func_L00_002DED98(void) {
                 b += 0.05f;
             } else {
                 b2 = b + 0.05f;
-                am = a - 0.3f;
-                v = D_L00_001E6358[i];
+                am = a - step;
                 y = D_L00_001E6358[i - 1];
-                o = s.col;
-                for (k = 1; k >= 0; k--) {
+                v = D_L00_001E6358[i];
+                for (k = 0; k < 2; k++) {
                     if (v < 0) v = 0;
                     if (v > 0x40) v = 0x40;
                     v = (v << 24) | 0x404040;
-                    o[0] = v;
-                    o[1] = v;
+                    s.col[k * 2] = v;
+                    s.col[k * 2 + 1] = v;
                     v = (short)y;
-                    o += 2;
                 }
                 if (i == 1) {
                     s.col[3] = 0x20404040;

@@ -118,7 +118,153 @@ unsigned char *func_L13_002E2F98(char *position, int moby_class)
     }
     return moby;
 }
-INCLUDE_ASM("asm/overlays", func_L13_002E3010);
+#include "hero.h"
+extern Hero D_0013F450;
+extern struct Moby *D_L13_00160058 MACRO_ADDR;
+extern float D_0015EE6C MACRO_ADDR;
+extern int D_L13_001741D8 __attribute__((section(".data")));
+extern int func_001F9908(void *);
+extern void func_L00_00250800(void *, int, void *);
+extern int func_L00_001F10E0(float, void *, int, void *);
+extern float func_001F9D10(void *, void *);
+extern float func_001F9B50(float);
+extern void func_001F9BF0(void *, void *, void *);
+extern void func_L00_001FF4B0(void *, void *, float);
+extern void func_001F9BD8(void *, void *, void *);
+extern void func_0022ED80(int, int, void *);
+extern void func_0020D678(void *);
+extern void func_L00_00263B78(float, float, void *, void *, void *);
+void func_L13_002E3010(char *moby) {
+    int *vars = *(int **)(moby + 0x78);
+    int hero_moby = ((char *)D_0013F450.ship_moby);
+    int hit = 0;
+    float distance = 100000.0f;
+    float position[4];
+    float direction[4];
+    float start_size, activated_size;
+    short cls;
+    float speed;
+    switch ((unsigned char)moby[0x20]) {
+    case 0:
+        if (*((unsigned char *)vars + 0xc) != 0) {
+            *(float *)(moby + 0x2c) = *(float *)(*(char **)(moby + 0x24) + 0x24);
+            moby[0x20] = 4;
+            break;
+        }
+        *(int *)(moby + 0x94) = 0;
+        moby[0x31] = 0;
+        *(unsigned short *)(moby + 0x34) |= 1;
+        start_size = *(float *)(*(char **)(moby + 0x24) + 0x24);
+        moby[0x20] = 1;
+        *(float *)(moby + 0x2c) = start_size * 0.1f;
+        break;
+    case 1:
+        if (vars[0] != -1) {
+            moby[0x20] = 2;
+            break;
+        }
+        moby[0x20] = 3;
+        break;
+    case 2: {
+        int target_index = vars[0];
+        int target_base = (int)D_L13_00160058;
+        struct Moby *target = (struct Moby *)(target_base + target_index * 0x100);
+        if (target != 0 && target->state != 0xfe && target->state != 0xfd &&
+            vars[1] != -1 && target->state != vars[1]) {
+            goto frame_tail;
+        }
+        moby[0x20] = 3;
+        break;
+    }
+    case 3:
+        if (vars[2] == -1 || func_001F9908(vars + 4)) {
+            moby[0x20] = 4;
+        }
+        if ((unsigned char)moby[0x20] != 4) goto frame_tail;
+        *(int *)(moby + 0x94) = *(int *)(*(char **)(moby + 0x24) + 0x10);
+        moby[0x31] = 1;
+        *(unsigned short *)(moby + 0x34) &= 0xfffe;
+        activated_size = *(float *)(*(char **)(moby + 0x24) + 0x24);
+        *(float *)(moby + 0x2c) = activated_size * 0.1f;
+        break;
+    case 4:
+        *(float *)(moby + 0x48) = func_001FA748(*(float *)(moby + 0x48), D_0015EE6C * 0.7853982f);
+        if (*(float *)(moby + 0x10) < 20.0f) *(float *)(moby + 0x10) = 20.0f;
+        if (1003.0f < *(float *)(moby + 0x10)) *(float *)(moby + 0x10) = 1003.0f;
+        if (*(float *)(moby + 0x14) < 20.0f) *(float *)(moby + 0x14) = 20.0f;
+        if (1003.0f < *(float *)(moby + 0x14)) *(float *)(moby + 0x14) = 1003.0f;
+        if (*(float *)(moby + 0x18) < 20.0f) *(float *)(moby + 0x18) = 20.0f;
+        if (1003.0f < *(float *)(moby + 0x18)) *(float *)(moby + 0x18) = 1003.0f;
+        func_L00_00250800(moby, 0, position);
+        *(float *)(moby + 0x2c) += (*(float *)(*(char **)(moby + 0x24) + 0x24) - *(float *)(moby + 0x2c)) * 0.1f;
+        if (func_L00_001F10E0(2.0f, position, 1, moby) && D_L13_001741D8 != 0) {
+            short cls = *(short *)(D_L13_001741D8 + 0xa6);
+            if (cls == 0x4da || cls == 0x45 || cls == 0x563) hit = 1;
+        }
+        if (D_0013F450.state.current == 0x32 && hero_moby != 0 &&
+            *(unsigned char *)(hero_moby + 0x20) != 0xfe && *(unsigned char *)(hero_moby + 0x20) != 0xfd) {
+            short cls = *(short *)(hero_moby + 0xa6);
+            if (cls == 0x4da || cls == 0x45 || cls == 0x563)
+                distance = func_001F9D10((void *)(hero_moby + 0x10), moby + 0x10);
+        }
+        if (hit || distance < 4.0f) {
+            cls = *(short *)(moby + 0xa6);
+            *(int *)(moby + 0x94) = 0;
+            if (cls == 0xe0) goto collect_ammo;
+            if (cls == 0xe4) goto collect_health;
+            goto collected;
+collect_ammo:
+            D_0013F450.ship_ammo += 5;
+            if (((char *)D_0013F450.ship_moby) != 0 && *(unsigned char *)(((char *)D_0013F450.ship_moby) + 0x20) != 0xfe &&
+                *(unsigned char *)(((char *)D_0013F450.ship_moby) + 0x20) != 0xfd) func_0022ED80(4, 0, D_0013F450.ship_moby);
+            if (D_0013F450.ship_ammo_max < D_0013F450.ship_ammo) D_0013F450.ship_ammo = D_0013F450.ship_ammo_max;
+            goto collected;
+collect_health:
+            D_0013F450.ship_hp += 10.0f;
+            if (((char *)D_0013F450.ship_moby) != 0 && *(unsigned char *)(((char *)D_0013F450.ship_moby) + 0x20) != 0xfe &&
+                *(unsigned char *)(((char *)D_0013F450.ship_moby) + 0x20) != 0xfd) func_0022ED80(5, 0, D_0013F450.ship_moby);
+            if (D_0013F450.ship_hp_max < D_0013F450.ship_hp) D_0013F450.ship_hp = D_0013F450.ship_hp_max;
+collected:
+            moby[0x20] = 5;
+            break;
+        } else if (distance < 40.0f && (*(unsigned char *)(moby + 0x31)) != 0) {
+            float step = 0.8f / func_001F9B50(distance);
+            func_001F9BF0(direction, (void *)(hero_moby + 0x10), moby + 0x10);
+            func_L00_001FF4B0(direction, direction, step);
+            func_001F9BD8(moby + 0x10, moby + 0x10, direction);
+        }
+        goto frame_tail;
+    case 5: {
+        float delta = *(float *)(*(char **)(moby + 0x24) + 0x24) - *(float *)(moby + 0x2c);
+        *(float *)(moby + 0x48) = func_001FA748(*(float *)(moby + 0x48), delta + delta);
+        *(float *)(moby + 0x2c) += (*(float *)(*(char **)(moby + 0x24) + 0x24) * 0.01f - *(float *)(moby + 0x2c)) * 0.3f;
+        if (*(float *)(moby + 0x2c) < *(float *)(*(char **)(moby + 0x24) + 0x24) * 0.05f)
+            moby[0x20] = 6;
+        break;
+    }
+    case 6:
+        if (*((unsigned char *)vars + 0xd) == 0) {
+            func_0020D678(moby);
+            return;
+        }
+        *(int *)(moby + 0x94) = 0;
+        moby[0x31] = 0;
+        *(unsigned short *)(moby + 0x34) |= 1;
+        *(float *)(moby + 0x2c) = *(float *)(*(char **)(moby + 0x24) + 0x24) * 0.1f;
+        vars[4] = vars[2];
+        moby[0x20] = 1;
+        break;
+    }
+frame_tail:
+    speed = D_0015EE6C;
+    func_L00_00263B78(0.7f, speed * 1.2217305f, moby, vars + 6, vars + 5);
+    if (*(float *)(moby + 0x10) < 20.0f) *(float *)(moby + 0x10) = 20.0f;
+    if (1003.0f < *(float *)(moby + 0x10)) *(float *)(moby + 0x10) = 1003.0f;
+    if (*(float *)(moby + 0x14) < 20.0f) *(float *)(moby + 0x14) = 20.0f;
+    if (1003.0f < *(float *)(moby + 0x14)) *(float *)(moby + 0x14) = 1003.0f;
+    if (*(float *)(moby + 0x18) < 20.0f) *(float *)(moby + 0x18) = 20.0f;
+    if (1003.0f < *(float *)(moby + 0x18)) *(float *)(moby + 0x18) = 1003.0f;
+}
 extern void *func_L00_0025D390(char *);
 extern void func_00215C00(void *, float, float, float);
 extern void func_00213DE0(void *, int, int, int);

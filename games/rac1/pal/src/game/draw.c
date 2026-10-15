@@ -537,7 +537,251 @@ void func_001F3008(void) {
 
 __asm__(".section .text\n\tnop\n");
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F3140); /* UpdateViewContext(void) */
+typedef u32 VecQuadP __attribute__((mode(TI), aligned(16)));
+typedef union { VecQuadP q; f32 f[4]; s32 i[4]; } Vec4P;
+struct ViewP {
+    s32 fog_color; s32 unk4; s32 unk8; s32 unkC;
+    Vec4P regs[5]; Vec4P gif[4];
+    f32 near_clip; f32 far_clip; f32 aspect_x; f32 aspect_y;
+    Vec4P fov; f32 proj[16]; f32 proj2[16]; f32 proj3[16];
+    Vec4P inverse_screen_scale, screen_scale, screen_bias, inverse_projection_scale, viewport_aspect, aspect_scale, clip_scale, clip_distances;
+    f32 half_width, half_height, scr_x, scr_y, fog_mul, fog_add, fog_near_dist, fog_far_dist, fog_slope, fog_base, fog_near_int, fog_far_int;
+    s32 fog_r, fog_g, fog_b;
+};
+#define view_context_p (*(struct ViewP *)&D_0018CE00)
+extern s32 D_0015EE80 MACRO_ADDR;
+#define pal_mode_p D_0015EE80
+struct FogRegs2P {
+    u8 pad0[0x28];
+    s32 mul;
+    s32 max;
+    s32 far_int;
+    s32 near_int;
+};
+struct ClipP {
+    Vec4P constants[3];
+};
+
+extern Vec4P D_0018D0C0[4];
+extern f32 D_00160820[4];
+extern f32 D_00160C30 MACRO_ADDR;
+extern f32 D_001E0250[];
+extern f32 D_001E6E70[];
+extern struct FogRegs2P D_001DED30;
+#define shrub_vu1_constants D_001DED30
+extern struct FogRegs2P D_001DED80;
+extern Vec4P D_001DEDC0[2];
+extern Vec4P D_001DEA90[3];
+extern struct {
+    u8 pad0[0x10];
+    s32 mul;
+    s32 far_int;
+    s32 near_int;
+    u8 pad1c[0x44];
+    Vec4P constants[3];
+    u8 pad90[0x10];
+    s32 x;
+    s32 y;
+} D_001DEAC0;
+#define tfrag_vu_const_block D_001DEAC0
+
+extern f32 func_001FA058(f32, f32);
+extern f32 func_001F9F90(f32);
+#define fast_cos func_001F9F90
+extern void func_001F9A00(void *, void *, s32);
+extern void func_00234380(void);
+#define set_tfrag_dists func_00234380
+
+/* Rebuilds the view state from the field of view, screen size and fog
+   endpoints: the clip constants at D_0018D0C0, the fog multiplier and the
+   fog packet registers, the projection matrices and the screen scale and
+   bias vectors that the renderers copy into their packets. */
+void func_001F3140(void) {
+    struct ViewP *view;
+    struct ViewP *packet_view;
+    f32 depth_scale;
+    f32 depth_bias;
+    f32 horizontal_clip_scale;
+    f32 vertical_clip_scale;
+    f32 fog_distance_range;
+    f32 fog_intensity_range;
+    f32 fog_distance_slope;
+    f32 near_clip;
+    f32 projection_near_clip;
+    f32 far_clip;
+    f32 fog_multiplier;
+    f32 projection_fog_multiplier;
+    f32 horizontal_fov;
+    f32 vertical_fov;
+    f32 viewport_width;
+    f32 viewport_height;
+    s32 near_bits;
+    s32 far_bits;
+    s32 mul_bits;
+
+    depth_scale = -8388080.0f;
+    depth_bias = 8388112.0f;
+    if (pal_mode_p != 0) {
+        view_context_p.fov.f[1] = view_context_p.fov.f[0] * 0.756f;
+    } else {
+        view_context_p.fov.f[1] = view_context_p.fov.f[0] * 0.775f;
+    }
+    view = &view_context_p;
+    view->aspect_x = view->scr_x / view->half_width;
+    view->aspect_y = view->scr_y / view->half_height;
+    view->fov.f[2] = 1.0f / fast_cos(func_001FA058(1.0f, view->fov.f[0]));
+    view->fov.f[3] = 1.0f / fast_cos(func_001FA058(1.0f, view->fov.f[1]));
+    horizontal_clip_scale = 1.0f / fast_cos(func_001FA058(1.0f, view->fov.f[0] * view->aspect_x));
+    vertical_clip_scale = 1.0f / fast_cos(func_001FA058(1.0f, view->fov.f[1] * view->aspect_y));
+    horizontal_clip_scale /= view->fov.f[2];
+    vertical_clip_scale /= view->fov.f[3];
+    view->aspect_scale.f[2] = 1.0f / view->aspect_x;
+    view->aspect_scale.f[3] = 1.0f / view->aspect_y;
+    view->clip_scale.f[0] = view->fov.f[2];
+    view->clip_scale.f[1] = view->fov.f[3];
+    view->clip_distances.f[0] = view->far_clip;
+    view->aspect_scale.f[0] = view->aspect_x;
+    view->aspect_scale.f[1] = view->aspect_y;
+    near_clip = view->near_clip;
+    view->clip_distances.f[1] = near_clip;
+    view->clip_scale.f[2] = (horizontal_clip_scale + vertical_clip_scale) * 0.5f;
+    qcopy(&D_0018D0C0[0], &view->fov);
+    qcopy(&D_0018D0C0[1], &view->aspect_scale);
+    qcopy(&D_0018D0C0[2], &view->clip_scale);
+    qcopy(&D_0018D0C0[3], &view->clip_distances);
+
+    /* Retail lw instructions carry the fog endpoint float bits into packet fields. */
+    far_bits = *(s32 *)&view->fog_far_int;
+    near_bits = *(s32 *)&view->fog_near_int;
+    fog_distance_range = view->fog_far_dist - view->fog_near_dist;
+    fog_intensity_range = view->fog_far_int - view->fog_near_int;
+    fog_multiplier = fog_intensity_range * near_clip / fog_distance_range;
+    fog_distance_slope = fog_intensity_range / (fog_distance_range / 1024.0f);
+    view->fog_add =
+        (view->fog_near_int * view->fog_far_dist - view->fog_far_int * view->fog_near_dist) /
+        fog_distance_range;
+    view->fog_slope = fog_distance_slope;
+    view->fog_base = view->fog_near_int - view->fog_near_dist / 1024.0f * fog_distance_slope;
+    view->fog_mul = fog_multiplier;
+    D_00160C30 = fog_multiplier;
+    D_001E0250[0] = fog_multiplier;
+    D_001E6E70[0] = fog_multiplier;
+    mul_bits = *(s32 *)&view->fog_mul;
+    tfrag_vu_const_block.mul = mul_bits;
+    tfrag_vu_const_block.far_int = far_bits;
+    tfrag_vu_const_block.near_int = near_bits;
+    shrub_vu1_constants.mul = mul_bits;
+    D_001DED80.mul = mul_bits;
+    shrub_vu1_constants.far_int = far_bits;
+    shrub_vu1_constants.near_int = near_bits;
+    D_001DED80.far_int = far_bits;
+    D_001DED80.near_int = near_bits;
+    shrub_vu1_constants.max = 0x437EFFFF;
+    D_001DED80.max = 0x437EFFFF;
+    set_tfrag_dists();
+
+    projection_near_clip = view->near_clip;
+    far_clip = view->far_clip;
+    horizontal_fov = view->fov.f[0];
+    vertical_fov = view->fov.f[1];
+    viewport_width = view->half_width;
+    viewport_height = view->half_height;
+    projection_fog_multiplier = view->fog_mul;
+    D_00160820[0] = 0.5f / 210000.0f;
+    D_00160820[1] = -0.5f / 210000.0f;
+    D_00160820[2] = 0.5f;
+    D_00160820[3] = viewport_width / (horizontal_fov * 210000.0f);
+    view->proj[0] = viewport_width / (horizontal_fov * projection_near_clip);
+    view->proj[1] = 0;
+    view->proj[2] = 0;
+    view->proj[3] = 0;
+    view->proj[4] = 0;
+    view->proj[5] = viewport_height / (vertical_fov * projection_near_clip);
+    view->proj[6] = 0;
+    view->proj[7] = 0;
+    view->proj[8] = 0;
+    view->proj[9] = 0;
+    view->proj[10] = (far_clip + projection_near_clip) /
+                     (projection_near_clip * (far_clip - projection_near_clip)) * depth_scale;
+    view->proj[11] = 1.0f / projection_near_clip * projection_fog_multiplier;
+    view->proj[12] = 0;
+    view->proj[13] = 0;
+    view->proj[14] = -2.0f * projection_near_clip * far_clip /
+                     (projection_near_clip * (far_clip - projection_near_clip)) * depth_scale;
+    view->proj[15] = 0;
+    func_001F9A00(view->proj2, view->proj, 0x40);
+    view->proj2[11] = 1.0f / view->near_clip;
+    func_001F9A00(view->proj3, view->proj2, 0x40);
+    view->proj3[0] /= view->scr_x;
+    view->proj3[5] /= view->scr_y;
+    view->proj3[10] /= depth_scale;
+    view->proj3[14] /= depth_scale;
+    view->inverse_screen_scale.f[0] = 1.0f / view->scr_x;
+    view->inverse_screen_scale.f[1] = 1.0f / view->scr_y;
+    view->inverse_screen_scale.f[2] = 1.0f / depth_scale;
+    view->inverse_screen_scale.f[3] = 1.0f / view->fog_mul;
+    view->screen_scale.f[0] = view->scr_x;
+    view->screen_scale.f[1] = view->scr_y;
+    view->screen_scale.f[2] = depth_scale;
+    view->screen_scale.f[3] = view->fog_mul;
+    view->inverse_projection_scale.f[0] = view->scr_x / view->proj[0];
+    view->inverse_projection_scale.f[1] = view->scr_y / view->proj[5];
+    view->inverse_projection_scale.f[2] = depth_scale / view->proj[10];
+    view->inverse_projection_scale.f[3] = view->fog_mul;
+    view->screen_bias.f[0] = 2048.0f;
+    view->screen_bias.f[1] = 2048.0f;
+    view->screen_bias.f[2] = depth_bias;
+    view->screen_bias.f[3] = view->fog_add;
+    view->viewport_aspect.f[0] = view->scr_x / view->half_width;
+    view->viewport_aspect.f[1] = view->scr_y / view->half_height;
+    view->viewport_aspect.f[2] = 1.0f;
+    view->viewport_aspect.f[3] = 1.0f;
+    view->fog_color = *(s32 *)&view->fog_far_int;
+    view->unk4 = 0x103E4000;
+    view->unk8 = 0xE;
+    view->unkC = 0;
+    qzero(&view->regs[0]);
+
+    packet_view = &view_context_p;
+    packet_view->gif[0].i[0] = *(s32 *)&packet_view->fog_mul;
+    packet_view->gif[0].i[1] = 0x303E4000;
+    packet_view->gif[0].i[2] = 0x412;
+    packet_view->gif[0].i[3] = 0x303EC000;
+    packet_view->gif[1].i[0] = *(s32 *)&packet_view->fog_mul;
+    packet_view->gif[1].i[1] = 0x302E4000;
+    packet_view->gif[1].i[2] = 0x412;
+    packet_view->gif[1].i[3] = 0x302EC000;
+    packet_view->gif[2].i[0] = *(s32 *)&packet_view->fog_mul;
+    packet_view->gif[2].i[1] = 0x20364000;
+    packet_view->gif[2].i[2] = 0x41;
+    packet_view->gif[2].i[3] = 0;
+    packet_view->gif[3].i[0] = *(s32 *)&packet_view->fog_mul;
+    packet_view->gif[3].i[1] = 0x20264000;
+    packet_view->gif[3].i[2] = 0x41;
+    packet_view->gif[3].i[3] = 0;
+    qcopy(&packet_view->regs[0], &packet_view->gif[0]);
+    qcopy(&packet_view->regs[1], &packet_view->viewport_aspect);
+    qcopy(&packet_view->regs[2], &packet_view->inverse_screen_scale);
+    qcopy(&packet_view->regs[3], &packet_view->screen_scale);
+    qcopy(&packet_view->regs[4], &packet_view->screen_bias);
+    qcopy(&D_001DEA90[0], &packet_view->screen_bias);
+    qcopy(&D_001DEA90[1], &packet_view->screen_scale);
+    qcopy(&D_001DEA90[2], &packet_view->viewport_aspect);
+    qcopy(&tfrag_vu_const_block.constants[0], &packet_view->screen_bias);
+    qcopy(&tfrag_vu_const_block.constants[1], &packet_view->inverse_screen_scale);
+    qcopy(&tfrag_vu_const_block.constants[2], &packet_view->screen_scale);
+    tfrag_vu_const_block.x = packet_view->viewport_aspect.i[0];
+    tfrag_vu_const_block.y = packet_view->viewport_aspect.i[1];
+    qcopy(&D_001DEDC0[0], &packet_view->screen_scale);
+    qcopy(&D_001DEDC0[1], &packet_view->screen_bias);
+}
+
+#undef view_context_p
+#undef pal_mode_p
+#undef shrub_vu1_constants
+#undef tfrag_vu_const_block
+#undef fast_cos
+#undef set_tfrag_dists
 
 extern int D_0013E600[];
 extern float func_001FA888(int);
@@ -1076,6 +1320,22 @@ void func_001F4748(void) {
 /* Retail carries 4 bytes of inter-function padding after this endlabel. */
 __asm__(".section .text\n\tnop\n");
 
+typedef struct EffectTexDef {
+    long tex0;
+    unsigned short texel_off;
+    unsigned short pal_off;
+    short wlog2;
+    short hlog2;
+} EffectTexDef;
+typedef struct TexUpload {
+    int clut_data;
+    short unk4;
+    short cbp;
+    int image_data;
+    unsigned char tw;
+    unsigned char th;
+    short tbp;
+} TexUpload;
 INCLUDE_ASM("asm/nonmatchings/text", func_001F4868); /* GetEffectTex(int, int) */
 
 /*
@@ -2234,7 +2494,54 @@ void func_001F7648(void *arg0, int a1, int a2, int a3, int a4, int a5, int a6, i
     s[11] = 0;
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F7680);
+extern int D_0015EF84 MACRO_ADDR;
+extern int D_0013E604[];
+#define PK ((unsigned char *)D_00161000)
+
+void func_001F7680(unsigned int source) {
+    int remaining = D_0013E604[0];
+    int destination = D_0015EF84 >> 8;
+    unsigned long count;
+    unsigned long transfer;
+    unsigned char *packet;
+    unsigned long *words;
+
+    do {
+        count = (long)remaining;
+        if (count > 0x80)
+            count = 0x80;
+        *(unsigned int *)(PK + 0) = 0x10000006;
+        remaining -= 0x80;
+        *(unsigned int *)(PK + 4) = 0;
+        *(unsigned int *)(PK + 8) = 0;
+        *(unsigned int *)(PK + 12) = 0x50000006;
+        packet = PK;
+        D_00161000 = (int *)(packet + 0x10);
+        transfer = (unsigned long)count << 7;
+        words = (unsigned long *)(packet + 0x10);
+        words[0] = 0x4000000000000001UL;
+        words[1] = 0x0eeeeeee;
+        words[2] = ((unsigned long)(unsigned int)destination << 32) | 0x8000000000000UL;
+        words[3] = 0x50;
+        words[4] = 0;
+        words[5] = 0x51;
+        words[6] = ((unsigned long)count << 32) | 0x200;
+        words[7] = 0x52;
+        words[8] = 0;
+        words[9] = 0x53;
+        words[10] = transfer | 0x0800000000008000UL;
+        words[11] = 0;
+        D_00161000 = (int *)(packet + 0x70);
+        *(unsigned int *)(packet + 0x70) = (unsigned int)(long)(int)(transfer | 0x30000000);
+        *(unsigned int *)(PK + 4) = source;
+        source += (int)(count * 0x800);
+        destination += (int)(count * 8);
+        *(unsigned int *)(PK + 8) = 0;
+        *(unsigned int *)(PK + 12) = (unsigned int)transfer | 0x50000000;
+        D_00161000 = (int *)(PK + 0x10);
+    } while (remaining > 0);
+    func_00234E80();
+}
 
 extern short D_0015F448;              /* SDA, gp -0x78B8 */
 extern unsigned short D_0010E800 NOT_SDA;

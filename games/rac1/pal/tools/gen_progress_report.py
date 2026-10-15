@@ -514,6 +514,90 @@ def match_results(funcs: dict, decompiled: set[str]) -> dict[str, float]:
     return out
 
 
+# Retail's initialised data (SCES_509.16's own section names). .bss and core.bss hold no bytes to
+# compare, and the level programs' data is not measured (yet): the data measures cover the
+# executable's data only.
+RETAIL_DATA_SECTIONS = ("core.data", "core.rdata", "core.lit", ".lit", ".data",
+                        "lvl.vtbl", "lvl.camvtbl", "lvl.sndvtbl")
+EXE_LABEL = re.compile(r"^(?:D|jtbl)_([0-9A-F]{8})$")
+
+
+def compiled_data() -> list[tuple[str, str, int]]:
+    """(object, input section, retail address) for every piece of retail's data that a compiled
+    object provides itself instead of the retail blobs in asm/data/: core_rdata's literals
+    (config/core_rodata.txt) and the switch jump tables of decompiled game functions
+    (tools/jump_tables.py). The link puts each in the hole cut for it at its first label, whose
+    name is its retail address."""
+    import core_rodata
+    import jump_tables
+    out = []
+    for obj, labels in core_rodata.entries():
+        out.append((obj, ".rodata", int(EXE_LABEL.match(labels[0]).group(1), 16)))
+    for label, _func, obj in jump_tables.provided():
+        m = EXE_LABEL.match(label)
+        if m:                                      # level code's tables live in the levels
+            out.append((obj, f".rodata.{label}", int(m.group(1), 16)))
+    return out
+
+
+def unit_of_object(obj: str) -> str:
+    """The report unit an object's code is counted under (see unit_of)."""
+    name = obj.rsplit("/", 1)[1][:-2]
+    if obj.startswith("build-sn/libgcc/"):
+        return "libgcc/" + name.removeprefix("l2_")
+    if obj.startswith("build-sn/core/"):
+        return f"core/{name}"
+    return obj[len("build-sn/"):-2]
+
+
+def data_results() -> tuple[int, list[tuple[str, int, bool]]]:
+    """(retail's initialised data in bytes, [(unit, size, exact), ...] for each piece compiled
+    objects provide). A piece is exact when the linked image holds retail's bytes at its retail
+    address; the blobs leave a hole exactly there, so those bytes are the object's."""
+    from elftools.elf.elffile import ELFFile
+
+    with open(BASEROM, "rb") as f:
+        retail = ELFFile(f)
+        total = sum(retail.get_section_by_name(n)["sh_size"] for n in RETAIL_DATA_SECTIONS)
+        seg = next(s for s in retail.iter_segments() if s["p_type"] == "PT_LOAD")
+        delta = seg["p_vaddr"] - seg["p_offset"]
+    raw = Path(BASEROM).read_bytes()
+    with open(LINKED_ELF, "rb") as f:
+        linked = [(s["sh_addr"], s.data()) for s in ELFFile(f).iter_sections()
+                  if s["sh_addr"] and s["sh_type"] == "SHT_PROGBITS"]
+
+    def ours(addr: int, size: int) -> bytes:
+        for base, data in linked:
+            if base <= addr and addr + size <= base + len(data):
+                return data[addr - base: addr - base + size]
+        sys.exit(f"*** no linked section holds {addr:#x}+{size:#x}")
+
+    pieces = []
+    for obj, section, addr in compiled_data():
+        with open(obj, "rb") as f:
+            sec = ELFFile(f).get_section_by_name(section)
+            if sec is None:
+                sys.exit(f"*** {obj} has no {section} section")
+            size = sec["sh_size"]
+        exact = ours(addr, size) == raw[addr - delta: addr - delta + size]
+        pieces.append((unit_of_object(obj), size, exact))
+    return total, pieces
+
+
+def data_measures(total: int, pieces: list[tuple[str, int, bool]], complete: set[str]) -> dict:
+    """total_data, matched_data and complete_data for the report's measures (uint64s as strings).
+    Data still assembled from retail's dumps is not matched: only what compiled objects bring."""
+    matched = sum(size for _u, size, exact in pieces if exact)
+    done = sum(size for u, size, exact in pieces if exact and u in complete)
+    return {
+        "total_data": str(total),
+        "matched_data": str(matched),
+        "matched_data_percent": 100.0 * matched / total if total else 0.0,
+        "complete_data": str(done),
+        "complete_data_percent": 100.0 * done / total if total else 0.0,
+    }
+
+
 def measures(items: list[tuple[int, float, bool]], units: int = 0, complete_units: int = 0,
              complete_code: int = 0) -> dict:
     """items: (size, fuzzy%, finished). uint64 fields are strings, as protobuf
@@ -562,12 +646,14 @@ def generate() -> dict:
     all_items, cat_items = [], {"game": [], "libgcc": []}
     cat_complete = {"game": 0, "libgcc": 0}
     complete_units = 0
+    complete_names = set()
     for uname, u in units.items():
         items = [(s, p, e) for _, _, s, p, e in u["fns"]]
         complete = all(e for _, _, e in items)
         code = sum(s for s, _, _ in items)
         if complete:
             complete_units += 1
+            complete_names.add(uname)
             cat_complete[u["cat"]] += code
         all_items += items
         cat_items[u["cat"]] += items
@@ -599,12 +685,17 @@ def generate() -> dict:
     (overlay_out_units, overlay_items, overlay_cat_items, overlay_cat_complete,
      overlay_complete_units, overlay_complete_code) = overlay_units(overlay_map, overlay_fuzzy)
 
+    # The executable's data: whole-image numbers, in the top-level measures and the
+    # executable's category (the retail dumps can't be split by unit, so units carry none).
+    data_total, data_pieces = data_results()
+    data = data_measures(data_total, data_pieces, complete_names)
+
     # The two halves of the game's code, each as one number: the
     # executable (SCES_509.16) and all level code (common + level-specific).
     categories = [
         {"id": "executable", "name": "Executable",
          "measures": measures(cat_items["game"] + cat_items["libgcc"],
-                              complete_code=cat_complete["game"] + cat_complete["libgcc"])},
+                              complete_code=cat_complete["game"] + cat_complete["libgcc"]) | data},
         {"id": "level_code", "name": "Level code",
          "measures": measures(overlay_cat_items["level_code"],
                               complete_code=overlay_cat_complete["level_code"])},
@@ -627,7 +718,7 @@ def generate() -> dict:
         "measures": measures(all_items + overlay_items,
                              len(units) + len(overlay_out_units),
                              complete_units + overlay_complete_units,
-                             sum(cat_complete.values()) + overlay_complete_code),
+                             sum(cat_complete.values()) + overlay_complete_code) | data,
         "units": out_units + overlay_out_units,
         "version": 2,
         "categories": categories,
@@ -705,7 +796,8 @@ def main() -> None:
     REPORT.write_text(json.dumps(report, indent=1) + "\n", newline="\n")
     m = report["measures"]
     print(f"wrote {REPORT}: {m['matched_functions']}/{m['total_functions']} functions finished, "
-          f"{m['matched_code_percent']:.2f}% code, {m['complete_units']}/{m['total_units']} units complete")
+          f"{m['matched_code_percent']:.2f}% code, {m['complete_units']}/{m['total_units']} units complete, "
+          f"{m['matched_data_percent']:.2f}% of the executable's data")
 
 
 if __name__ == "__main__":

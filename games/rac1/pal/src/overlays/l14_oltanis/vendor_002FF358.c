@@ -735,7 +735,97 @@ void func_L14_00306B08(char *moby) {
         *(float *)(o + 0x18) = lo + (a - lo) * t;
     } while (*p++ >= 0);
 }
-INCLUDE_ASM("asm/overlays", func_L14_00306BE0);
+extern struct Hero D_0013F450_06BE0 __asm__("D_0013F450");
+extern s32 D_0015EE84_06BE0 __asm__("D_0015EE84") MACRO_ADDR;
+extern u8 D_0014C150_06BE0[] __asm__("D_0014C150");
+extern u8 D_0013D5DD_06BE0 __asm__("D_0013D5DD") NOT_SDA;
+extern s32 D_L14_0015F6B0_06BE0 __asm__("D_L14_0015F6B0") MACRO_ADDR;
+extern s32 D_L14_0015F6A8_06BE0 __asm__("D_L14_0015F6A8") MACRO_ADDR;
+extern f32 D_L14_00174668_06BE0[] __asm__("D_L14_00174668");
+extern f32 D_L14_001622B8_06BE0 SDATA(D_L14_001622B8);
+extern f32 D_L14_001622BC_06BE0 SDATA(D_L14_001622BC);
+extern f32 D_L14_001622C0_06BE0 SDATA(D_L14_001622C0);
+extern void func_0020D678_06BE0(void *) __asm__("func_0020D678");
+extern void func_L14_00306EC0_06BE0(void *) __asm__("func_L14_00306EC0");
+extern f32 func_00214358_06BE0(void *, s32, f32) __asm__("func_00214358");
+extern f32 func_001FA748_06BE0(f32, f32) __asm__("func_001FA748");
+extern void func_001F9C30_06BE0(void *, void *, f32) __asm__("func_001F9C30");
+extern void func_001F9BD8_06BE0(void *, void *, void *) __asm__("func_001F9BD8");
+extern void func_L14_00306FA0_06BE0(struct Moby *) __asm__("func_L14_00306FA0");
+extern f32 func_001F9D48_06BE0(void *, void *) __asm__("func_001F9D48");
+extern f32 func_001F9B88_06BE0(f32) __asm__("func_001F9B88");
+extern void func_L00_002618D8_06BE0(s32, s32) __asm__("func_L00_002618D8");
+extern void func_L00_00299B68_06BE0(s32) __asm__("func_L00_00299B68");
+extern void func_L00_002512D8_06BE0(s32) __asm__("func_L00_002512D8");
+extern int func_0020BFC8_06BE0(s32, s32) __asm__("func_0020BFC8");
+extern void func_L00_00264DB8_06BE0(s32, s32) __asm__("func_L00_00264DB8");
+extern void func_L00_00203F20_06BE0(s32, s32) __asm__("func_L00_00203F20");
+extern f32 func_00214D28_06BE0(f32 *, f32, f32) __asm__("func_00214D28");
+
+/* Adapted from Lombyte (MIT) for PAL: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_00305758. */
+void func_L14_00306BE0(struct Moby *moby) {
+    u8 *o = (u8 *)moby;
+    u8 *d = (u8 *)moby->pvars;
+    f32 v[4];
+    u8 state = moby->state;
+
+    switch (state) {
+    case 0:
+        if (D_0014C150_06BE0[moby->unkB0 + D_0015EE84_06BE0 * 16] == 0xFF) {
+            func_0020D678_06BE0(moby);
+            return;
+        }
+        func_L14_00306EC0_06BE0((void *)moby);
+        func_00214358_06BE0(o + 0x10, 0, 0.5f);
+        moby->rot.x = 0.0f;
+        moby->rot.y = -1.5707964f;
+        moby->pos.z = D_L14_00174668_06BE0[0] + D_L14_001622B8_06BE0;
+        qcopy(d, o + 0x10);
+        moby->state = 1;
+        break;
+    case 1:
+        *(f32 *)(o + 0x48) = func_001FA748_06BE0(*(f32 *)(o + 0x48), D_L14_001622BC_06BE0);
+        qcopy(o + 0x10, d);
+        func_001F9C30_06BE0(v, o + 0xd0, D_L14_001622C0_06BE0);
+        func_001F9BD8_06BE0(o + 0x10, o + 0x10, v);
+        func_L14_00306FA0_06BE0(moby);
+        if (D_L14_0015F6B0_06BE0 % 10 != 0)
+            return;
+        if (!(func_001F9D48_06BE0(o + 0x10, D_0013F450_06BE0.motion.pos.f) < 1.0f))
+            return;
+        if (!(func_001F9B88_06BE0(*(f32 *)(o + 0x18) - D_0013F450_06BE0.motion.pos.f[2]) < 2.0f))
+            return;
+        if (D_0013D5DD_06BE0 != 0)
+            *(s32 *)(d + 0x18) = state;
+        else
+            *(s32 *)(d + 0x18) = 0;
+        func_L00_002618D8_06BE0(0x15, 1);
+        func_L00_00299B68_06BE0(6);
+        moby->state = 2;
+        break;
+    case 2:
+        if (D_L14_0015F6A8_06BE0 != state) {
+            if (D_0014C150_06BE0[moby->unkB0 + D_0015EE84_06BE0 * 16] != 0xFF) {
+                func_L00_002512D8_06BE0(moby->unkB0);
+                func_0020BFC8_06BE0(0, -1);
+            }
+            if (*(s32 *)(d + 0x18) != 0)
+                func_L00_00264DB8_06BE0(0x53e5, -1);
+            else
+                func_L00_00264DB8_06BE0(0x36b2, -1);
+            func_L00_00203F20_06BE0(0x36b0, 0x7a);
+            func_0020D678_06BE0(moby);
+            return;
+        }
+        *(u16 *)(o + 0x34) |= 0x41;
+        break;
+    case 3:
+        func_00214D28_06BE0((f32 *)(o + 0x2c), 0.0f, *(f32 *)(*(u8 **)(o + 0x24) + 0x24) * 0.02f);
+        if (*(f32 *)(o + 0x2c) == 0.0f)
+            func_0020D678_06BE0(moby);
+        break;
+    }
+}
 extern int func_002140B0(int);
 extern int func_001F9850(int);
 

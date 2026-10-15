@@ -5,6 +5,29 @@
 The following functions adapt source from
 [Lombyte](https://github.com/mateuszklysz/Lombyte) for the PAL executable:
 
+- `src/overlays/l04_eudora/vuchain_00293490.c`: `func_L04_00293578` (`src/overlays/l04/runtime/dma/002922d0.c`, `FUN_L04_002923b8`)
+- `src/overlays/l06_blarg/vendor_002B5990.c`: `func_L06_002FD3E0` (`src/overlays/l06/gameplay/entities/002b4770.c`, `FUN_L06_002fbfb0`)
+- `src/overlays/l06_blarg/vendor_002FE5D0.c`: `func_L06_003045A0` (`src/overlays/l06/gameplay/entities/002fd1a0.c`, `FUN_L06_00303160`)
+- `src/overlays/l07_umbris/vendor_00313D28.c`: `func_L07_00318CE0` (`src/overlays/l07/gameplay/entities/00312948.c`, `FUN_L07_00317910`)
+- `src/overlays/l08_batalia/vendor_002B9438.c`: `func_L08_002D68D0` (`src/overlays/l08/gameplay/entities/002b8228.c`, `FUN_L08_002d55c8`)
+- `src/overlays/l08_batalia/vendor_002B9438.c`: `func_L08_002DDD20` (`src/overlays/l08/gameplay/entities/002b8228.c`, `FUN_L08_002dc9a8`)
+- `src/overlays/l08_batalia/vendor_002EAF48.c`: `func_L08_002F5980` (`src/overlays/l08/gameplay/entities/002e9b70.c`, `FUN_L08_002f44c0`)
+- `src/overlays/l12_hoven/vendor_002EDAA0.c`: `func_L12_00304750` (`src/overlays/l12/gameplay/vendor/003028c8.c`, `FUN_L12_00303370`)
+- `src/overlays/l12_hoven/vendor_002EDAA0.c`: `func_L12_003061E0` (`src/overlays/l12/gameplay/vendor/003028c8.c`, `FUN_L12_00304e00`)
+- `src/overlays/l15_quartu/vendor_0029C1D0.c`: `func_L15_002A8AA8` (`src/overlays/l15/gameplay/entities/0029aff0.c`, `FUN_L15_002a7880`)
+- `src/overlays/l18_veldin2/vendor_002A8400.c`: `func_L18_002D96B0` (`src/overlays/l18/gameplay/entities/002a7220.c`, `FUN_L18_002d82c0`)
+- `src/overlays/l18_veldin2/vendor_002F9D48.c`: `func_L18_002FB318` (`src/overlays/l18/gameplay/vendor/002f88e8.c`, `FUN_L18_002f9eb8`)
+- `src/overlays/shared/mobyfunc_002649C8.c`: `func_L01_002649D8` (`src/overlays/shared/gameplay/state/00263a28.c`, `FUN_L01_00263a28`)
+- `src/overlays/shared/mobyutil_00258BC8.c`: `func_L00_0025A8E8` (`src/overlays/shared/gameplay/entities/00259710.c`, `FUN_L00_002598b0`)
+- `src/overlays/shared/mobyutil_00261B00.c`: `func_L00_002629E0` (`src/overlays/shared/gameplay/state/00261968.c`, `FUN_L00_00261968`)
+- `src/overlays/shared/mobyutil_00261B00.c`: `func_L00_002630A8` (`src/overlays/shared/gameplay/state/00261968.c`, `FUN_L00_00262030`)
+- `src/overlays/shared/vendor_002B2A28.c`: `func_L14_002DFA70` (`src/overlays/shared/gameplay/entities/002b17d8.c`, `FUN_L14_002de670`)
+- `src/overlays/shared/vendor_002B2A28.c`: `func_L14_002E1110` (`src/overlays/shared/gameplay/entities/002b17d8.c`, `FUN_L14_002dfd10`)
+- `src/overlays/shared/vendor_002B90A8.c`: `func_L01_002BA380` (`src/overlays/shared/gameplay/entities/002b8c08.c`, `FUN_L01_002b91c8`)
+- `src/overlays/shared/vendor_002B90A8.c`: `func_L01_002EF078` (`src/overlays/shared/gameplay/entities/002b8c08.c`, `FUN_L01_002edca0`)
+- `src/overlays/shared/vendor_002C12B0.c`: `func_L00_002C39D0` (`src/overlays/shared/gameplay/entities/002bffa8.c`, `FUN_L00_002c26c8`)
+- `src/overlays/shared/vendor_002C96D0.c`: `func_L00_002CD110` (`src/overlays/shared/gameplay/entities/002c8440.c`, `FUN_L00_002cbcc0`)
+- `src/overlays/shared/vendor_002D1168.c`: `func_L00_002D7298` (`src/overlays/shared/gameplay/entities/002cfcb8.c`, `FUN_L00_002d5de8`)
 - `src/overlays/l05_rilgar/vendor_002D28D0.c`: `func_L05_003054B0` (path collision and nearest wall distance; adapts this project's matched `func_L00_00262DF0`, based on Lombyte's `src/overlays/shared/gameplay/state/00261968.c`, `FUN_L00_00261d78`, MIT; the distance tracking and return follow the PAL assembly)
 - `src/overlays/shared/mobyfunc_0024FD50.c`: `func_L00_00250478` (animation frame packet builder; `overlays/shared/gameplay/state/0024eec0.c`, `FUN_L00_0024f440`)
 - `src/overlays/shared/vendor_002E1660.c`: `func_L00_002E72E8` (follow camera approach; `overlays/shared/gameplay/vendor/002e5e38.c`, `follow_camera_approach` / `FUN_L00_002e5e38`)
@@ -771,6 +794,43 @@ project's own check. In parentheses, Lombyte's name.
 - `src/overlays/l06_blarg/vendor_002FE5D0.c`: `func_L06_00305C38` (`FUN_L06_003047f8`)
 - `src/overlays/l14_oltanis/vendor_002FF358.c`: `func_L14_00307660` (`FUN_L14_003061d8`)
 
+Fifteen more were adapted by hand on 2026-10-14 from Lombyte's matched C. The C is Lombyte's with every
+symbol renamed to its PAL address, the level data at its PAL place and two dialogue ids at their PAL
+values, and each passed this project's own check. In parentheses, Lombyte's name.
+
+- `src/overlays/shared/vendor_002D9548.c`: `func_L06_002EAF90` (`FUN_L06_002e9b60`)
+- `src/overlays/shared/vendor_002FF000.c`: `func_L06_0030D3E8` (`FUN_L06_0030bfa8`)
+- `src/overlays/shared/mobyutil_00261B00.c`: `func_L00_002629E0` (`FUN_L00_00261968`)
+- `src/overlays/l09_gaspar/vendor_002C2B08.c`: `func_L09_002F1198` (`FUN_L09_002efe48`)
+- `src/overlays/shared/vendor_002F7700.c`: `func_L01_00303810` (`FUN_L01_00302438`)
+- `src/overlays/shared/help_0020CDF0.c`: `func_L00_0020D3A0` (`FUN_L00_0020cd08`)
+- `src/overlays/shared/vendor_002C6B30.c`: `func_L09_0030BB28` (`FUN_L09_0030a778`)
+- `src/overlays/l11_pokitaru/vendor_002CC828.c`: `func_L11_00310058` (`FUN_L11_0030eb90`)
+- `src/overlays/l14_oltanis/vendor_002ACCC0.c`: `func_L14_002D8500` (`FUN_L14_002d71f0`)
+- `src/overlays/l14_oltanis/vendor_002FF358.c`: `func_L14_00306BE0` (`FUN_L14_00305758`)
+- `src/overlays/l14_oltanis/vendor_002E0538.c`: `func_L14_002FD578` (`FUN_L14_002fc0f0`)
+- `src/overlays/shared/vendor_002B90A8.c`: `func_L01_002F0B48` (`FUN_L01_002ef770`)
+- `src/overlays/shared/vendor_002D9548.c`: `func_L06_002F3D40` (`FUN_L06_002f2910`)
+- `src/overlays/l18_veldin2/vendor_002F9D48.c`: `func_L18_002FABE0` (`FUN_L18_002f9780`)
+- `src/overlays/l13_gemlik/vendor_002EBD00.c`: `func_L13_002EBD00` (`FUN_L13_002ea8c8`)
+
+Six more were adapted by hand on 2026-10-14 from Lombyte's matched C. The C is Lombyte's with every symbol
+renamed to its PAL address and the level data at its PAL place, rewritten where Lombyte's form only steered the
+compiler, and each passed this project's own check. In parentheses, Lombyte's name.
+
+- `src/overlays/shared/vendor_002A5218.c`: `func_L02_002DDAE8` (`FUN_L02_002dc6b0`)
+- `src/overlays/shared/hud_00235960.c`: `func_L00_0023AC68` (`FUN_L00_0023a2d0`)
+- `src/overlays/shared/help_00237B00.c`: `func_L05_0024C558` (`FUN_L05_0024bdc0`)
+- `src/overlays/l11_pokitaru/vendor_00312BD8.c`: `func_L11_00319108` (`FUN_L11_00317c98`)
+- `src/overlays/l10_orxon/vendor_00296BD8.c`: `func_L10_002DB688` (`FUN_L10_002da2c8`)
+- `src/overlays/l01_novalis/vendor_002FABE8.c`: `func_L01_002FABE8` (`FUN_L01_002f9810`)
+
+Three more were adapted by hand on 2026-10-15 in the same way. In parentheses, Lombyte's name.
+
+- `src/overlays/l18_veldin2/vendor_002A8400.c`: `func_L18_002DCE10` (`FUN_L18_002dba20`)
+- `src/overlays/l18_veldin2/vendor_002A8400.c`: `func_L18_002DD8A8` (`FUN_L18_002dc4b8`)
+- `src/overlays/l12_hoven/vendor_002EDAA0.c`: `func_L12_002EE180` (`FUN_L12_002ece00`)
+
 `include/hero.h` (the hero and the records inside it) and `include/vector.h` (the 16-byte vector) are
 adapted from Lombyte's `include/rnc/gameplay/hero.h` and `include/rnc/math/vector.h` at 42adb529, while
 Lombyte was MIT licensed. `include/pad.h` (the controller state) is adapted from its
@@ -956,3 +1016,57 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+Forty-nine more were ported on 2026-10-14 from Lombyte's matched C and written as plain C (no `__asm__` symbol
+aliases, no inline-asm helpers): every symbol renamed to its PAL address, and each passed this project's own
+check. In parentheses, Lombyte's name.
+
+- `src/overlays/l01_novalis/vendor_002FABE8.c`: `func_L01_002FABE8` (`FUN_L01_002f9810`)
+- `src/overlays/l03_kerwan/vendor_002CB280.c`: `func_L03_002DD158` (`FUN_L03_002dbd90`)
+- `src/overlays/l04_eudora/mobyutil_0024D4A8.c`: `func_L04_0024D4A8` (`FUN_L04_0024c4f0`)
+- `src/overlays/l04_eudora/vuchain_00293490.c`: `func_L04_00293578` (`FUN_L04_002923b8`)
+- `src/overlays/l06_blarg/vendor_002B5990.c`: `func_L06_002EB2D0` (`FUN_L06_002e9ea0`)
+- `src/overlays/l06_blarg/vendor_002FE5D0.c`: `func_L06_003045A0` (`FUN_L06_00303160`)
+- `src/overlays/l08_batalia/vendor_002EAF48.c`: `func_L08_00308A00` (`FUN_L08_00307540`)
+- `src/overlays/l10_orxon/vendor_00296BD8.c`: `func_L10_002DB688` (`FUN_L10_002da2c8`)
+- `src/overlays/l11_pokitaru/vendor_002CC828.c`: `func_L11_0030F4F8` (`FUN_L11_0030e088`)
+- `src/overlays/l11_pokitaru/vendor_002CC828.c`: `func_L11_00310BF0` (`FUN_L11_0030f728`)
+- `src/overlays/l11_pokitaru/vendor_00312BD8.c`: `func_L11_00317500` (`FUN_L11_00316090`)
+- `src/overlays/l12_hoven/vendor_002EDAA0.c`: `func_L12_00304038` (`FUN_L12_00302c58`)
+- `src/overlays/l15_quartu/vendor_0029C1D0.c`: `func_L15_0029C1D0` (`FUN_L15_0029aff0`)
+- `src/overlays/l15_quartu/vendor_0029C1D0.c`: `func_L15_002AB4A8` (`FUN_L15_002aa280`)
+- `src/overlays/l15_quartu/vendor_0029C1D0.c`: `func_L15_002C62A8` (`FUN_L15_002c4f88`)
+- `src/overlays/l15_quartu/vendor_0029C1D0.c`: `func_L15_002ED3A0` (`FUN_L15_002ebfb0`)
+- `src/overlays/l18_veldin2/vendor_002A8400.c`: `func_L18_002F1780` (`FUN_L18_002f0390`)
+- `src/overlays/l18_veldin2/vendor_002F9D48.c`: `func_L18_002FABE0` (`FUN_L18_002f9780`)
+- `src/overlays/l18_veldin2/vendor_002F9D48.c`: `func_L18_002FDCA0` (`FUN_L18_002fc7e0`)
+- `src/overlays/shared/help_00203E98.c`: `func_L00_00209940` (`FUN_L00_002092c8`)
+- `src/overlays/shared/help_0020CDF0.c`: `func_L00_0020D3A0` (`FUN_L00_0020cd08`)
+- `src/overlays/shared/help_0020CDF0.c`: `func_L00_0020DC68` (`FUN_L00_0020d5d0`)
+- `src/overlays/shared/help_0020CDF0.c`: `func_L00_002147C0` (`FUN_L00_00214108`)
+- `src/overlays/shared/help_00232560.c`: `func_L00_002346C0` (`FUN_L00_00233e40`)
+- `src/overlays/shared/hud_00235960.c`: `func_L00_0023AC68` (`FUN_L00_0023a2d0`)
+- `src/overlays/shared/mobyutil_00258BC8.c`: `func_L00_0025F450` (`FUN_L00_0025e3f8`)
+- `src/overlays/shared/mobyutil_0026E8E0.c`: `func_L01_0026EFB8` (`FUN_L01_0026e008`)
+- `src/overlays/shared/mobyutil_0026E8E0.c`: `func_L01_00278FA8` (`FUN_L01_00277fb8`)
+- `src/overlays/shared/mobyutil_0028AA68.c`: `func_L05_0028AA68` (`FUN_L05_002899f8`)
+- `src/overlays/shared/pause_00277208.c`: `func_L00_002788E0` (`handle_menu_screen_buttons`)
+- `src/overlays/shared/pause_00277208.c`: `func_L00_00286498` (`FUN_L00_002851c0`)
+- `src/overlays/shared/stream_002670E0.c`: `func_L00_00267290` (`FUN_L00_00266448`)
+- `src/overlays/shared/stream_002670E0.c`: `func_L00_00267618` (`FUN_L00_002667d0`)
+- `src/overlays/shared/stream_002670E0.c`: `func_L00_00267BA8` (`FUN_L00_00266d60`)
+- `src/overlays/shared/vendor_00292AC0.c`: `func_L03_002DDDF8` (`FUN_L03_002dca30`)
+- `src/overlays/shared/vendor_002A5218.c`: `func_L02_002DDAE8` (`FUN_L02_002dc6b0`)
+- `src/overlays/shared/vendor_002B2A28.c`: `func_L14_002B4BF0` (`FUN_L14_002b39a0`)
+- `src/overlays/shared/vendor_002B2A28.c`: `func_L14_002DFA70` (`FUN_L14_002de670`)
+- `src/overlays/shared/vendor_002B8FC0.c`: `func_L13_002E3010` (`FUN_L13_002e1cc8`)
+- `src/overlays/shared/vendor_002C96D0.c`: `func_L00_002CD110` (`FUN_L00_002cbcc0`)
+- `src/overlays/shared/vendor_002CF2C0.c`: `func_L05_002F62E8` (`FUN_L05_002f4f60`)
+- `src/overlays/shared/vendor_002CF2C0.c`: `func_L05_0031AAA8` (`FUN_L16_002e4be0`)
+- `src/overlays/shared/vendor_002D1168.c`: `func_L00_002D7298` (`FUN_L00_002d5de8`)
+- `src/overlays/shared/vendor_002E1660.c`: `func_L00_002E74B0` (`FUN_L00_002e6000`)
+- `src/overlays/shared/vendor_002E1660.c`: `func_L00_002E91D0` (`FUN_L00_002e7d20`)
+- `src/overlays/shared/vendor_002E1660.c`: `func_L00_002E9870` (`FUN_L00_002e83c0`)
+- `src/overlays/shared/vendor_002E1660.c`: `func_L00_002EA4C0` (`FUN_L00_002e9010`)
+- `src/overlays/shared/vendor_002F7700.c`: `func_L01_00303810` (`FUN_L01_00302438`)
+- `src/overlays/shared/vendor_002FF000.c`: `func_L06_00309170` (`FUN_L06_00307d30`)

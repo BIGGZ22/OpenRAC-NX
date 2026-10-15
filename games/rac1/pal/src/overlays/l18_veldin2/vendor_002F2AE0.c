@@ -252,7 +252,7 @@ void func_L18_002F3108(int a, int b) {
     } while (++i < ((Blk *)D_L18_001C6480[D_L18_001C6780[a]])->n);
 }
 extern float D_0015EE6C MACRO_ADDR;
-extern void func_L18_002F33D8(void);
+extern void func_L18_002F33D8(struct Moby *);
 extern void func_001F49B0(void (*)(void), void *);
 extern int func_L00_0028EB98(void *, int);
 extern int func_0022ED80(int, int, int);
@@ -295,7 +295,99 @@ void func_L18_002F3268(unsigned char *m)
         break;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L18_002F33D8);
+struct GeometryQuad_33D8 {
+    Vec4 positions[4];
+    u32 colors[4];
+    f32 texture_coordinates[4][2];
+    union {
+        u64 value;
+        volatile u64 ordered;
+    } reserved;
+    u64 texture;
+    u64 texture_state;
+    u64 primitive;
+};
+struct GlowVars_33D8 {
+    u8 pad0[8];
+    f32 scroll;
+    f32 max_alpha;
+};
+extern short D_L18_00162358;
+extern short D_L18_0016235C;
+extern short D_L18_00162360;
+extern short D_L18_00162364;
+extern short D_L18_00162370;
+extern short D_L18_00162374;
+extern short D_L18_00162378;
+extern short D_L18_0016237C;
+extern short D_L18_00162380;
+extern float D_L18_00167840[];
+extern float D_L18_001DA620[4][2];
+typedef int Q33D8 __attribute__((mode(TI)));
+extern Q33D8 D_L18_001DA640[4];
+extern void func_001FA460(void *, void *);
+extern float func_001F9D10(void *, void *);
+extern int func_001F4868(int);
+extern int func_001FA8A8(int, int, float);
+extern void func_L00_001FD1D8(void *, void *, int);
+
+void func_L18_002F33D8(struct Moby *moby) {
+    struct GeometryQuad_33D8 quads[4];
+    float matrix[4][4] __attribute__((aligned(16)));
+    struct GlowVars_33D8 *vars;
+    float alpha;
+    float step;
+    float phase;
+    int color;
+    int i;
+    int j;
+    int pass;
+
+    vars = (struct GlowVars_33D8 *)moby->pvars;
+    func_001FA460(matrix, &moby->unkC0);
+    qcopy(matrix[3], &moby->pos);
+    matrix[3][3] = 1.0f;
+    vars->scroll += *(float *)&D_L18_00162370 * D_0015EE6C;
+    if (1.0f < vars->scroll) {
+        vars->scroll -= 1.0f;
+    }
+    alpha = (48.0f - func_001F9D10(&moby->pos, D_L18_00167840)) * 0.25f;
+    if (vars->max_alpha < alpha) {
+        alpha = vars->max_alpha;
+    } else if (alpha < 0.0f) {
+        alpha = 0.0f;
+    }
+    step = 0.25f;
+    for (i = 0; i < 4; i++) {
+        quads[i].texture = ((u64 (*)(int))func_001F4868)(0xE);
+        quads[i].reserved.value = 0;
+        quads[i].texture_state = 0xFF9000000260ULL;
+        quads[i].primitive = (u64)*(int *)&D_L18_00162374 | ((u64)*(int *)&D_L18_00162378 << 2) | ((u64)*(int *)&D_L18_0016237C << 4) |
+                             ((u64)*(int *)&D_L18_00162380 << 6) | 0x8000000000ULL;
+        phase = vars->scroll + i * step;
+        phase = phase - (float)func_001FA898_r(phase);
+        color = func_001FA8A8(*(int *)&D_L18_00162358, *(int *)&D_L18_0016235C, phase);
+        color = func_001FA8A8(color & 0xFFFFFF, color, alpha);
+        for (j = 0; j < 4; j++) {
+            quads[i].texture_coordinates[j][0] = D_L18_001DA620[j][0] + i * step;
+            quads[i].texture_coordinates[j][1] = D_L18_001DA620[j][1];
+            quads[i].colors[j] = color;
+            qcopy_nc(&quads[i].positions[j], &D_L18_001DA640[j]);
+            if (j & 1) {
+                quads[i].positions[j].f[2] += phase * *(float *)&D_L18_00162364;
+            } else {
+                quads[i].positions[j].f[2] -= phase * *(float *)&D_L18_00162364;
+            }
+        }
+    }
+    for (pass = 2; pass >= 0; pass--) {
+        matrix[3][2] += *(float *)&D_L18_00162360;
+        func_L00_001FD1D8(&quads[0], matrix, 0);
+        func_L00_001FD1D8(&quads[1], matrix, 0);
+        func_L00_001FD1D8(&quads[2], matrix, 0);
+        func_L00_001FD1D8(&quads[3], matrix, 0);
+    }
+}
 extern short D_L18_00162388;
 extern short D_L18_0016238C;
 extern short D_L18_00162398;

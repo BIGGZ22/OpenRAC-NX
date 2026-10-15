@@ -63,7 +63,50 @@ void func_0023CF80(unsigned int chcr) {
 void func_0023CFF0(unsigned long *tag, unsigned int a, unsigned int b, unsigned int c) {
     *tag = ((unsigned long)a << 32) | ((unsigned long)b << 28) | (unsigned long)c;
 }
-INCLUDE_ASM("asm/nonmatchings/text", func_0023D018); /* viBufCreate */
+/* video input buffer: 0x5C bytes as touched by the asm */
+typedef struct VB {
+    int f0;             /* 0x0 */
+    unsigned int f4;    /* 0x4 uncached address of the tag array */
+    int count;          /* 0x8 */
+    char padC[0xC];
+    int f18;            /* 0x18 count * 0x800 */
+    char pad1C[0x24];
+    int sema;           /* 0x40 */
+    int f44;
+    long f48;           /* 0x48 cleared with one sd */
+    int f50;            /* 0x50 */
+    int f54;            /* 0x54 */
+} VB;
+
+typedef struct SemaParam {
+    int f0;
+    int max;
+    int init;
+    int fC;
+    int f10;
+    int f14;
+} SemaParam;
+
+extern int func_00118C70(SemaParam *);
+extern int func_0023D090();
+
+/* viBufCreate: fill the header, make a semaphore (1/1), reset, clear 0x48 */
+int func_0023D018(VB *vb, int data, unsigned int tags, int count, int f50, int f54) {
+    SemaParam sp;
+
+    vb->f0 = data;
+    vb->f4 = (tags & 0x0FFFFFFF) | 0x20000000;
+    vb->count = count;
+    vb->f18 = count << 11;
+    vb->f50 = f50;
+    vb->f54 = f54;
+    sp.init = 1;
+    sp.max = 1;
+    vb->sema = func_00118C70(&sp);
+    func_0023D090(vb);
+    vb->f48 = 0;
+    return 1;
+}
 extern void func_0023CFF0(unsigned long *, unsigned int, unsigned int, unsigned int);
 extern void func_0023CF80(unsigned int);
 
@@ -135,8 +178,130 @@ void func_0023D2E8(ViBuf *vb, int size) {
     func_00118C90(vb->sema);
 }
 INCLUDE_ASM("asm/nonmatchings/text", func_0023D340); /* viBufAddDMA(ViBuf *) */
-INCLUDE_ASM("asm/nonmatchings/text", func_0023D540); /* viBufStopDMA(ViBuf *) */
-INCLUDE_ASM("asm/nonmatchings/text", func_0023D650); /* viBufRestartDMA(ViBuf *) */
+extern void func_0023CF10(unsigned int);
+
+/* Saved DMA/IPU register words at 0x1C-0x3C of the buffer. */
+typedef struct VbDmaSave {
+    char pad0[0x1C];
+    unsigned int d4_madr;   /* 0x1C */
+    unsigned int d4_tadr;   /* 0x20 */
+    unsigned int d4_qwc;    /* 0x24 */
+    unsigned int d4_chcr;   /* 0x28 */
+    unsigned int d3_madr;   /* 0x2C */
+    unsigned int d3_qwc;    /* 0x30 */
+    unsigned int d3_chcr;   /* 0x34 */
+    unsigned int ipu_top;   /* 0x38 */
+    unsigned int ipu_ctrl;  /* 0x3C */
+} VbDmaSave;
+
+/* viBufStopDMA(ViBuf *): clears f44, stops channel 4 and saves its registers, waits for
+ * the IPU_CTRL 0xF0 bits to clear, stops channel 3 and saves its registers plus
+ * IPU_TOP/IPU_CTRL. Returns 1. */
+int func_0023D540(ViBuf *vb) {
+    VbDmaSave *s = (VbDmaSave *)vb;
+
+    func_00118CB0(vb->sema);
+    vb->f44 = 0;
+    setD4_CHCR(5);
+    s->d4_madr = *(volatile unsigned int *)0x1000B410;
+    s->d4_tadr = *(volatile unsigned int *)0x1000B430;
+    s->d4_qwc = *(volatile unsigned int *)0x1000B420;
+    s->d4_chcr = *(volatile unsigned int *)0x1000B400;
+    for (;;) {
+        if (!(*(volatile unsigned int *)0x10002010 & 0xF0)) {
+            break;
+        }
+    }
+    func_0023CF10(0);
+    s->d3_madr = *(volatile unsigned int *)0x1000B010;
+    s->d3_qwc = *(volatile unsigned int *)0x1000B020;
+    s->d3_chcr = *(volatile unsigned int *)0x1000B000;
+    s->ipu_top = *(volatile unsigned int *)0x10002020;
+    s->ipu_ctrl = *(volatile unsigned int *)0x10002010;
+    func_00118C90(vb->sema);
+    return 1;
+}
+extern int func_0023CEC8(ViBuf *, unsigned int);
+
+
+/* (i - start) taken modulo count lies in [0, len) */
+#define VB_IN_RANGE(i, start, len, count) \
+    ((((i) + (count) - (start)) % (count)) >= 0 && (((i) + (count) - (start)) % (count)) < (len))
+
+/* viBufRestartDMA(ViBuf *): from the registers saved at 0x1C-0x3C, backs channel 4 up by
+ * the qwords still held in the IPU FIFO (IPU_TOP bits 8-11 and 16-17), rebuilds its
+ * MADR/TADR/QWC/CHCR, restarts channel 3 if it had a transfer, re-issues the IPU
+ * command with the saved bit position (IPU_TOP & 0x7F) when f10 is non-zero, restores
+ * IPU_CTRL and sets f44. Returns 1. */
+int func_0023D650(ViBuf *vb) {
+    VbDmaSave *s = (VbDmaSave *)vb;
+    int bp = s->ipu_top & 0x7F;
+    int fifo = ((s->ipu_top >> 16) & 3) + ((s->ipu_top >> 8) & 0xF);
+    unsigned int madr = s->d4_madr - (fifo << 4);
+    unsigned int qwc = s->d4_qwc + fifo;
+    unsigned int chcr = s->d4_chcr | 0x100;
+    unsigned int tadr = s->d4_tadr;
+
+    func_00118CB0(vb->sema);
+
+    if (madr < vb->base) {
+        int id;
+        qwc = (vb->base - madr) >> 4;
+        tadr = (unsigned int)vb->tags & 0x0FFFFFFF;
+        madr += vb->count << 11;
+        id = (s->d4_madr != vb->base && s->d4_madr != vb->base + (vb->count << 11)) ? 3 : 0;
+        chcr = (s->d4_chcr & 0x0FFFFFFF) | (id << 28) | 0x100;
+        if (!VB_IN_RANGE(0, vb->fC, vb->f10, vb->count)) {
+            vb->fC = vb->count - 1;
+            vb->f10++;
+        }
+    } else {
+        int a = func_0023CEC8(vb, s->d4_madr);
+        int b = func_0023CEC8(vb, madr);
+        if (a != b) {
+            int id;
+            int size = vb->count << 11;
+            qwc = (vb->base + (a << 11) - madr) >> 4;
+            tadr = ((a << 4) + (unsigned int)vb->tags) & 0x0FFFFFFF;
+            id = (vb->base + (s->d4_madr - vb->base) % size
+                  == vb->base + (((vb->fC + vb->f10) % vb->count) << 11)) ? 0 : 3;
+            chcr = (s->d4_chcr & 0x0FFFFFFF) | (id << 28) | 0x100;
+            if (!VB_IN_RANGE(b, vb->fC, vb->f10, vb->count)) {
+                vb->fC = b;
+                vb->f10++;
+            }
+        }
+    }
+
+    if (s->d3_madr != 0 && s->d3_qwc != 0) {
+        *(volatile unsigned int *)0x1000B010 = s->d3_madr;
+        *(volatile unsigned int *)0x1000B020 = s->d3_qwc;
+        func_0023CF10(s->d3_chcr | 0x100);
+    }
+    if (vb->f10 != 0) {
+        for (;;) {
+            if (*(volatile int *)0x10002010 >= 0) {
+                break;
+            }
+        }
+        *(volatile unsigned int *)0x10002000 = bp;
+        for (;;) {
+            if (*(volatile int *)0x10002010 >= 0) {
+                break;
+            }
+        }
+    }
+    *(volatile unsigned int *)0x1000B410 = madr;
+    *(volatile unsigned int *)0x1000B430 = tadr;
+    *(volatile unsigned int *)0x1000B420 = qwc;
+    if (vb->f10 != 0) {
+        setD4_CHCR(chcr);
+    }
+    *(volatile unsigned int *)0x10002010 = s->ipu_ctrl;
+    vb->f44 = 1;
+    func_00118C90(vb->sema);
+    return 1;
+}
 extern void func_00118C80(int);     /* DeleteSema */
 
 /* viBufDelete(ViBuf *) -- stops DMA channel 4 (setD4_CHCR(5)), zeroes its MADR/QWC/TADR

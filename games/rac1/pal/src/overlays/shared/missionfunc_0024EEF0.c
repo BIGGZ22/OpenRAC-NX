@@ -58,7 +58,21 @@ int func_L00_0024EEF0(int *out, int *mask, int *nums, int arg3) {
 }
 INCLUDE_ASM("asm/overlays", func_L00_0024EF28);
 INCLUDE_ASM("asm/overlays", func_L00_0024F048);
-INCLUDE_ASM("asm/overlays", func_L00_0024F170);
+typedef struct {
+    f32 x;
+    f32 y;
+    f32 z;
+    s32 flag;
+} MapPoint_24F170;
+extern MapPoint_24F170 D_0013D6B8_24F170[] __asm__("D_0013D6B8");
+extern unsigned char D_0013D5C8[];
+
+/* mission status from the flags of map points 20, 22 and 24 and item flag 2: 1, 2 or 0 */
+int func_L00_0024F170(void) {
+    if (D_0013D6B8_24F170[20].flag && !D_0013D6B8_24F170[24].flag) return 1;
+    if (D_0013D6B8_24F170[24].flag && D_0013D5C8[2] && !D_0013D6B8_24F170[22].flag) return 2;
+    return 0;
+}
 INCLUDE_ASM("asm/overlays", func_L00_0024F198);
 extern int D_0013D9B4 NOT_SDA;
 extern u8 D_0013D4B0 NOT_SDA;

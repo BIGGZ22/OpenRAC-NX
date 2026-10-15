@@ -553,7 +553,32 @@ void func_L00_002781D8(int arg0) {
     DoGifPaging();
 }
 LINKER_REMNANT("asm/overlays", func_L00_002788C8);
-INCLUDE_ASM("asm/overlays", func_L00_002788E0);
+struct MenuPageP { unsigned char pad0[0x38]; struct MenuPageP *back; unsigned char pad3C[4]; void *focus; };
+struct MenuSystemP { unsigned char pad0[4]; struct MenuPageP *current; struct MenuPageP *next; unsigned char pad0C[0x124 - 0xC]; int close_locked; };
+struct CtrlP { unsigned char pad[0x1C4]; unsigned int pressed_unmasked; };
+extern char D_L00_001BA070[] NOT_SDA;
+extern char D_0013CA40[];
+#define menu_system_p (*(struct MenuSystemP *)D_L00_001BA070)
+#define controller_state_p (*(struct CtrlP *)D_0013CA40)
+int func_L00_002788E0(void *screen) {
+    if (menu_system_p.current->focus != screen) {
+        return 0;
+    }
+    if ((controller_state_p.pressed_unmasked & 0xD00) && menu_system_p.close_locked == 0) {
+        return 1;
+    }
+    if (controller_state_p.pressed_unmasked & 0x10) {
+        struct MenuPageP *back = menu_system_p.current->back;
+        if (back != 0) {
+            menu_system_p.next = back;
+            return 0;
+        }
+        if (menu_system_p.close_locked == 0) {
+            return -1;
+        }
+    }
+    return 0;
+}
 INCLUDE_ASM("asm/overlays", func_L00_00278904);
 INCLUDE_ASM("asm/overlays", func_L00_00278930);
 INCLUDE_ASM("asm/overlays", func_L00_0027895C);
@@ -595,7 +620,39 @@ int func_L00_0027A398(char *arg0, int arg1) {
     return 0;
 }
 INCLUDE_ASM("asm/overlays", func_L00_0027A3AC);
-INCLUDE_ASM("asm/overlays", func_L00_0027D3D8);
+extern struct CtrlP D_0013CA40_27D3D8 __asm__("D_0013CA40");
+extern struct MenuSystemP D_L00_001BA070_27D3D8 __asm__("D_L00_001BA070");
+extern int D_0013D48C;
+extern int D_L00_00184514;
+extern int D_0015EE84_m __asm__("D_0015EE84") MACRO_ADDR;
+extern int D_L00_0015F6A4 MACRO_ADDR;
+extern int D_L00_0015F650 MACRO_ADDR;
+
+/* input of a pause menu entry: accept returns -1, cancel goes back a page or returns -1 when closing is allowed, and 0x20 sets the transition flags */
+int func_L00_0027D3D8(char *entry) {
+ unsigned int pressed = D_0013CA40_27D3D8.pressed_unmasked;
+ if (pressed & 0xD00) {
+  if (*(int *)(entry + 0x30) & 0x20) D_L00_00184514 = D_0015EE84_m;
+  return -1;
+ }
+ if (pressed & 0x10) {
+  struct MenuPageP *back;
+  if (*(int *)(entry + 0x30) & 0x20) D_L00_00184514 = D_0015EE84_m;
+  back = D_L00_001BA070_27D3D8.current->back;
+  if (back) {
+   D_L00_001BA070_27D3D8.next = back;
+   return 0;
+  }
+  if (!D_L00_001BA070_27D3D8.close_locked) return -1;
+ }
+ if (D_0013CA40_27D3D8.pressed_unmasked & 0x20) {
+  D_0013D48C = 0;
+  D_L00_0015F6A4 = -1;
+  D_L00_0015F650 = 1;
+  D_L00_0015F6BC = 1;
+ }
+ return 0;
+}
 INCLUDE_ASM("asm/overlays", func_L00_0027D454);
 INCLUDE_ASM("asm/overlays", func_L00_0027D464);
 INCLUDE_ASM("asm/overlays", func_L00_00280708);
@@ -618,7 +675,76 @@ int func_L00_00280740(void) {
     }
     return 0;
 }
-INCLUDE_ASM("asm/overlays", func_L00_00284410);
+extern void func_L00_00261848(int);
+extern int func_0022EE28(int, int, int);
+extern void func_L00_00264DB8(int, int);
+extern short D_L00_001BA838[];
+extern unsigned char D_L00_001B9F20[];
+extern short D_L00_001604B8;
+extern char D_0013D5EB[];
+extern unsigned char D_0013D50F[];
+extern char D_0013D355[];
+
+void func_L00_00284410(void) {
+    char *pad = (char *)D_0013A5E0 + 0x2460;
+    int lim0, lim;
+    int va, vb, vc;
+    int pressed, direction, count, j, code, index, matched;
+    if ((*(long *)(pad + 0x1C0) & 0xF) == 6) {
+        pressed = *(int *)(pad + 0x1C4);
+        if (!(pressed & 0xF0A0)) return;
+
+        if (*(int *)&D_L00_001604B8 >= 20) return;
+        if (pressed & 0x1000) direction = 0;
+        else if (pressed & 0x4000) direction = 1;
+        else if (pressed & 0x8000) direction = 2;
+        else if (pressed & 0x2000) direction = 3;
+        else direction = (pressed & 0x80) ? 4 : 5;
+        count = *(int *)&D_L00_001604B8;
+        D_L00_001BA838[count++] = direction;
+        *(int *)&D_L00_001604B8 = count;
+        if (count != 20) return;
+        code = -1;
+        index = 2;
+        lim0 = 0x93;
+        lim = *(int *)&lim0;
+        for (; index < lim; index++) {
+            matched = 1;
+            for (j = 0; j < 20; j++) {
+                if (D_L00_001BA838[j] != D_L00_001B9F20[(j * index + index) & 0xff]) {
+                    matched = 0;
+                    break;
+                }
+            }
+            if (matched) {
+                code = index - 2;
+                break;
+            }
+        }
+        if (code == -1) return;
+        va = code - 0x24;
+        vb = code - 0x37;
+        vc = code - 0x3d;
+        if (code < 0x25) {
+            (D_0013D50F + 0xB9)[code] = 1;
+            (D_0013D5EB + 5)[code] = 1;
+        } else if ((unsigned)(code - 0x25) < 0x12) {
+            func_L00_00261848(va);
+        } else if ((unsigned)vb < 6) {
+            char *p3 = D_0013D355 + 0x13B;
+            p3[vb] = 1;
+        } else if ((unsigned)vc < 0x1e) {
+            unsigned char *q = D_0013D50F + 1 + vc;
+            if (!*q) {
+                *q = 1;
+                func_0022EE28(1, 0, 0);
+                func_L00_00264DB8(0x53DB, -1);
+            }
+        }
+    } else {
+        *(int *)&D_L00_001604B8 = 0;
+    }
+}
 extern void *func_00226720_a(int) __asm__("func_00226720");
 extern int func_00226EA8(int);
 extern void func_001E9768(void *);
@@ -778,7 +904,16 @@ void func_L00_00286128(void *a0, void *a1)
     }
 }
 INCLUDE_ASM("asm/overlays", func_L00_002862E0);
-INCLUDE_ASM("asm/overlays", func_L00_00286498);
+extern unsigned char *D_L00_00160098 MACRO_ADDR;
+extern unsigned char *D_L00_0016009C MACRO_ADDR;
+int func_L00_00286498(int a, int id) {
+    unsigned char *p;
+    for (p = D_L00_00160098; p != D_L00_0016009C; p += 0x100) {
+        if (*(short *)(p + 0xB2) == id)
+            return (int)p;
+    }
+    return 0;
+}
 INCLUDE_ASM("asm/overlays", func_L00_002864CC);
 typedef struct { int off; int pad; unsigned short len; short kind; short a; short b; } Ent;
 extern int func_L00_00286498(int, int);

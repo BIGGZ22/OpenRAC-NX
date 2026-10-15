@@ -5,7 +5,347 @@
 #include "hero.h"
 #include "moby.h"
 
-INCLUDE_ASM("asm/overlays", func_L04_002CB800);
+/* NON_MATCHING func_L04_002CB800 -- src/overlays/l04_eudora/vendor_002CB800.c
+ * Best so far: BYTES 159/4972 (96.8% of the bytes match), checked 2026-10-09.
+ * Not built into anything: the retail assembly stays in the source file
+ * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
+ * What the last attempts found:
+ *   More on A (2026-10-09, later): $f20 is not used again until case 4's constants, so the zero is a variable that
+ *   GCSE did not propagate. cprop records each `(set (reg) (const))` pattern once, so the same constant set in bot
+ *   is still "available" and propagated; two different patterns that only later become the same `mtc1 $0` (cross-j
+ *   from both arms into the join after reload) would explain retail, but no such pair was found.
+ *   Declarations: private typedefs suffixed _2CB800; callee aliases `func_L01_002F6540` (func_L01_002F654
+ *   `func_L00_002592B0` (func_L00_002592B0), `func_0022ED80` (func_0022ED80, pointer third argument),
+ *   `func_L00_0025F4A8`; globals through MACRO_ADDR aliases. Not in alias form. The function is first in its f
+ *   Final check against the destination file as of 2026-10-09 15:30 (others had landed into these files): run 3, B
+ */
+#define MOBYS ((VehicleMoby_2CB800 *)D_L04_00160058)
+extern char *D_L04_00160058 MACRO_ADDR;
+extern void func_0022ED80(int, int, int);
+
+typedef int VehicleWide_2CB800 __attribute__((mode(TI)));
+typedef union { VehicleWide_2CB800 quad; float f[4]; } VehicleVec_2CB800;
+typedef union { s32 id; u8 token; } VehicleTrigger_2CB800;
+typedef struct {
+    char pad0[0x60];
+    char motion[0x14]; s32 path_id;
+    char pad78[4]; float turn_velocity;
+    char pad80[0x7C]; float speed;
+    char pad100[0x1C]; s32 moving_timer;
+    char pad120[0x18]; float start_speed;
+    char pad13C[4]; float angle0,angle1;
+    u8 selected, phase; s16 phase_timer;
+    float start_angle; VehicleTrigger_2CB800 paths[4];
+    VehicleVec_2CB800 start_pos;
+    s32 visibility_timer, visibility_active, shield, partner;
+    char matrix0[0x40],matrix1[0x40];
+} VehicleData_2CB800;
+typedef struct {
+    char pad0[0x10]; VehicleVec_2CB800 pos;
+    u8 state; char pad21[3]; char *metadata;
+    char pad28[8]; u8 alpha; char pad31; s16 shield; u16 flags;
+    char pad36[0xA]; VehicleVec_2CB800 rot;
+    char pad50[0x28]; VehicleData_2CB800 *data;
+    char pad7C[0x18]; s32 sort;
+    char pad98[0xC]; u8 draw_alpha; char padA5; s16 cls;
+    char padA8[0x18]; char matrix[0x40];
+} VehicleMoby_2CB800;
+typedef struct { char pad[0x30]; VehicleVec_2CB800 pos; char pad40[0x38]; float angle; char pad7C[4]; } VehiclePath_2CB800;
+typedef struct { VehicleVec_2CB800 vec; VehicleMoby_2CB800 *owner; s32 flags, unused; float strength; s32 result; } VehicleQuery_2CB800;
+extern s32 *D_L04_001B0930[];
+extern VehiclePath_2CB800 *D_L04_0016016C MACRO_ADDR;
+extern char D_L04_001DC110[];
+extern s32 D_0015EEF8 MACRO_ADDR;
+typedef struct { char pad[6]; u8 flag; } VehicleWeapon_2CB800;
+extern VehicleWeapon_2CB800 D_0013D510;
+extern float D_0015EE70 MACRO_ADDR;
+extern float D_0015EE6C MACRO_ADDR;
+extern float D_0015EE60 MACRO_ADDR;
+extern float D_L04_0015F660[] MACRO_ADDR;
+typedef struct { char pad[0x140]; float x,y,z; char pad14C[12]; float angle; } VehicleCamera_2CB800;
+extern VehicleCamera_2CB800 D_L04_00166E80;
+extern float func_001F9D10(void *,void *);
+extern s32 func_001FA898(float);
+extern s32 func_001E9730();
+extern void func_L01_002F6540(VehicleMoby_2CB800 *);
+extern void func_001F9938(void *);
+extern s32 func_00215570(void *,s32);
+extern void func_L00_002592B0(void *,void *,float,float,float,float);
+extern float func_001F9D48(void *,void *);
+extern float func_001FA850(float,float);
+extern s32 func_001F9850(s32);
+extern void func_001F9BF0(void *,void *,void *);
+extern void func_L00_001FF4B0(void *,void *,float);
+extern void func_001F9BD8(void *,void *,void *);
+extern float func_001F9CB8(void *);
+extern void func_0020D960(void *,s32,void *);
+extern float func_001FA748(float,float);
+extern void func_L00_001FFED8(void *,s32,float);
+extern void func_001F9EC0(void *,void *,void *);
+extern void func_L00_002514B8(void *);
+extern void func_L00_00251E30(void *);
+extern void func_0020EEE8(void *);
+extern char *func_L00_0025B478(void *,s32,s32);
+extern s32 func_0022EE28(s32,s32,s32);
+extern void func_L00_00264DB8(s32,s32);
+extern void func_001F9BC0(void *);
+extern void func_L00_001F2BE8(void *,float,s32,void *,void *);
+extern void func_L00_0025F4A8(void *,void *,void *,float,float,s32,s32,s32,float,float,float,float,s32,float,s32,s32,s32,s32);
+extern void func_L00_00250800(void *,s32,void *);
+extern void func_L00_00260108(void *,void *,s32,float,float);
+extern void func_001F9C30(void *,void *,float);
+extern void func_L00_00265050(void *,s32,void *,void *,s32,s32,float,void *,void *,void *);
+extern s32 func_001F9908(s32 *);
+extern float func_L00_001FF860(float,float);
+
+typedef float VehicleArr_2CB800[4] __attribute__((aligned(16)));
+typedef struct { char pad[0x14]; s32 path_id; } VehicleSub_2CB800;
+
+/* Moves generic vehicle mobys along triggered paths and updates their attached parts, damage effects and visibility. */
+void func_L04_002CB800(VehicleMoby_2CB800 *m) {
+    VehicleVec_2CB800 old, delta;
+    VehicleData_2CB800 *d=m->data;
+    u8 state=m->state;
+    VehicleSub_2CB800 *sub;
+    VehicleTrigger_2CB800 *trigger;
+    float zero; s32 izero;
+    qcopy(&old,&m->pos);
+    if (!d) return;
+    sub=(VehicleSub_2CB800 *)d->motion;
+    if (state==0) {
+        if (sub->path_id!=-1) {
+            s32 *path=D_L04_001B0930[sub->path_id];
+            if (func_001F9D10((char *)path+0x10,(char *)path+(*path<<4))<0.5f) --*path;
+        } else {
+            func_001E9730(D_L04_001DC110,m->cls,func_001FA898((float)((s32)((char *)m-(char *)MOBYS)>>8)));
+        }
+        m->shield=0x7F;
+        m->alpha=0xFF;
+        d->start_speed=d->speed;
+        d->shield=m->shield;
+    }
+    izero=0; zero=*(float *)&izero;
+    func_L01_002F6540(m);
+    if (m->cls!=0x1E4) {
+        func_001F9938(&d->phase_timer);
+        switch (d->phase) {
+        case 0: {
+            s32 i;
+            if (d->speed<d->start_speed) {
+                d->speed+=D_0015EE70*20.0f;
+                if (d->speed>d->start_speed) d->speed=d->start_speed;
+            }
+            for (i=0,trigger=d->paths;i<4;i++,trigger++) {
+                if (d->phase_timer==0 && d->paths[i].id!=-1 && func_00215570(&m->pos,d->paths[i].id)) {
+                    qcopy(&d->start_pos,&m->pos);
+                    d->selected=trigger->token;
+                    d->phase=1;
+                    d->start_angle=m->rot.f[2];
+                    d->turn_velocity=0;
+                    m->state=3;
+                    d->moving_timer=func_001F9850(0x8CA0);
+                    break;
+                }
+            }
+            break;
+        }
+        case 1:
+            func_L00_002592B0(m,&d->turn_velocity,D_L04_0016016C[d->selected].angle,D_0015EE70*1.0471976f,D_0015EE70*3.1415927f,D_0015EE6C*3.1415927f);
+            if (func_001F9D48(&m->pos,&D_L04_0016016C[d->selected].pos)<1.0f &&
+                func_001FA850(m->rot.f[2],D_L04_0016016C[d->selected].angle)<0.17453292f) {
+                d->phase=2;
+                d->phase_timer=func_001F9850(300);
+            }
+            func_001F9BF0(&delta,&D_L04_0016016C[d->selected].pos,&m->pos);
+            func_L00_001FF4B0(&delta,&delta,D_0015EE6C*3.0f);
+            func_001F9BD8(&m->pos,&m->pos,&delta);
+            break;
+        case 2:
+            if (d->phase_timer==0) { d->turn_velocity=zero; d->phase=3; }
+            break;
+        case 3: {
+            float length,step;
+            func_L00_002592B0(m,&d->turn_velocity,d->start_angle,D_0015EE70*1.0471976f,D_0015EE70*3.1415927f,D_0015EE6C*3.1415927f);
+            if (func_001F9D48(&m->pos,&d->start_pos)<1.0f && func_001FA850(m->rot.f[2],d->start_angle)<0.034906585f) {
+                d->phase=0;
+                d->phase_timer=func_001F9850(600);
+                d->speed=zero;
+                d->turn_velocity=zero;
+                d->moving_timer=0;
+            }
+            func_001F9BF0(&delta,&d->start_pos,&m->pos);
+            length=func_001F9CB8(&delta);
+            func_L00_001FF4B0(&delta,&delta,D_0015EE6C*3.0f>length ? length : D_0015EE6C*3.0f);
+            func_001F9BD8(&m->pos,&m->pos,&delta);
+            break;
+        }
+        }
+    }
+    if (state==0) {
+        switch ((s16)((u16)m->cls-0x1D2)) {
+        case 0:case 14:case 19:case 20:case 28:case 29:case 32:case 89:
+            func_0020D960(m,0,d->matrix0);d->angle0=0;break;
+        case 22:case 27:
+            func_0020D960(m,0,d->matrix0);d->angle0=0;
+            func_0020D960(m,1,d->matrix1);d->angle1=0;break;
+        }
+    } else {
+        switch ((s16)((u16)m->cls-0x1D2)) {
+        case 0:case 14:
+            d->angle0=func_001FA748(d->angle0,D_0015EE6C*12.566371f);
+            func_L00_001FFED8(d->matrix0+0x10,0,d->angle0);break;
+        case 19:case 20:case 28:case 29:case 32:case 89:
+            d->angle0=func_001FA748(d->angle0,D_0015EE6C*12.566371f);
+            func_L00_001FFED8(d->matrix0+0x10,2,d->angle0);break;
+        case 22:case 27:
+            d->angle0=func_001FA748(d->angle0,D_0015EE6C*12.566371f);
+            func_L00_001FFED8(d->matrix0+0x10,2,d->angle0);
+            d->angle1=func_001FA748(d->angle1,D_0015EE6C*12.566371f);
+            func_L00_001FFED8(d->matrix1+0x10,2,d->angle1);break;
+        }
+    }
+    if (d->partner!=-1) {
+        VehicleMoby_2CB800 *other=MOBYS+d->partner;
+        other->shield=0x7F;
+        switch (m->cls) {
+        case 0x1E0:
+            delta.quad=0;
+            delta.f[0]=0.5f;delta.f[2]=-5.0f;
+            func_001F9EC0(&delta,&delta,m->matrix);
+            func_001F9BD8(&other->pos,&m->pos,&delta);
+            qcopy(&other->rot,&m->rot);
+            other->rot.f[1]=func_001FA748(other->rot.f[1],1.5707964f);
+            func_L00_002514B8(other);func_L00_00251E30(other);func_0020EEE8(other);
+            other->flags|=6;
+            break;
+        case 0x1EE:
+            delta.quad=0;delta.f[2]=-2.0f;
+            func_001F9EC0(&delta,&delta,m->matrix);
+            func_001F9BD8(&other->pos,&m->pos,&delta);
+            qcopy(&other->rot,&m->rot);
+            func_L00_002514B8(other);func_L00_00251E30(other);func_0020EEE8(other);
+            other->flags|=6;
+            break;
+        }
+    }
+    if (func_L00_0025B478(m,0x210000,0)) {
+        if (++D_0015EEF8>=10 && D_0013D510.flag==0) {
+            D_0013D510.flag=1;
+            func_0022EE28(1,0,0);func_L00_00264DB8(0x53DB,-1);
+        }
+        switch ((s16)((u16)m->cls-0x1D2)) {
+        case 19:case 20: {
+            {
+                VehicleQuery_2CB800 query;
+                query.flags=0x810000;query.strength=1;query.owner=m;
+                func_001F9BC0(&query.vec);query.result=0;
+                func_L00_001F2BE8(&m->pos,4.0f,16,m,&query);
+            }
+        }
+        case 0:case 14:case 22:case 24:case 28:case 29:case 32:case 89: {
+            {
+                VehicleArr_2CB800 none;
+                delta.quad=0;delta.f[2]=0.75f;
+                func_001F9BC0(none);
+                func_001F9BD8(&delta,&delta,&m->pos);
+                func_L00_0025F4A8(m,none,&delta,0.0f,0.0f,10,3,4,2,1,100000,3,-1,15,1,1,-1,0);
+                if (m->cls==0x1F2 || m->cls==0x22B) func_0022ED80(0,0,(s32)m);
+                else if (m->cls!=0x1E6) func_0022ED80(1,0,(s32)m);
+                d->visibility_timer=func_001F9850(600);d->visibility_active=1;
+            }
+            break;
+        }
+        case 27: {
+            {
+                VehicleArr_2CB800 offset={0.0f,0.0f,0.75f};
+                VehicleArr_2CB800 none;
+                VehicleQuery_2CB800 query2;
+                func_001F9BC0(none);
+                func_L00_00250800(m,0,&delta);
+                func_001F9BD8(&delta,&delta,offset);
+                func_L00_00260108(m,&delta,-1,1.0f,13.0f);
+                func_L00_00250800(m,1,&delta);
+                func_001F9BD8(&delta,&delta,offset);
+                func_L00_00260108(m,&delta,-1,1.0f,13.0f);
+                func_001F9BD8(&delta,offset,&m->pos);
+                func_L00_0025F4A8(m,none,&delta,0.0f,0.0f,20,5,4,2,1,100000,3,-1,15,1,1,-1,0);
+                func_0022ED80(1,0,(s32)m);
+                query2.flags=0x810000;query2.strength=2;query2.owner=m;
+                func_001F9BC0(&query2.vec);query2.result=0;
+                func_L00_001F2BE8(&m->pos,6.0f,16,m,&query2);
+                d->visibility_timer=func_001F9850(600);d->visibility_active=1;
+            }
+            break;
+        }
+        }
+        func_001F9C30(&delta,m->matrix,D_0015EE60*0.075f);
+        delta.f[2]+=D_0015EE60*0.08f;
+        if (m->cls==0x1D2) {
+            func_L00_00265050(m,0x63F,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            func_L00_00265050(m,0x641,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            func_L00_00265050(m,0x642,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+        }
+        else if (m->cls==0x1E0) {
+            func_L00_00265050(m,0x642,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            func_L00_00265050(m,0x643,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            func_L00_00265050(m,0x644,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+        }
+        else if (m->cls==0x1E6) {
+            s32 i;
+            func_L00_00265050(m,0x645,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            for (i=0;i<6;i++) {
+            func_L00_00265050(m,0x646,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            }
+        }
+        else if (m->cls==0x1EA) {
+            func_L00_00265050(m,0x647,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            func_L00_00265050(m,0x648,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            func_L00_00265050(m,0x649,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+        }
+        else if (m->cls==0x1EE) {
+            func_L00_00265050(m,0x64D,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            func_L00_00265050(m,0x64E,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+        }
+        else if (m->cls==0x1EF) {
+            func_L00_00265050(m,0x64F,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            func_L00_00265050(m,0x650,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            func_L00_00265050(m,0x651,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            func_L00_00265050(m,0x658,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+        }
+        else if (m->cls==0x1F2) {
+            func_L00_00265050(m,0x652,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            func_L00_00265050(m,0x653,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            func_L00_00265050(m,0x654,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+        }
+        else if (m->cls==0x1ED) {
+            s32 j,k;
+            func_L00_00265050(m,0x793,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            func_L00_00265050(m,0x794,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            for (j=0;j<3;j++) {
+            func_L00_00265050(m,0x795,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            }
+            for (k=0;k<3;k++) {
+            func_L00_00265050(m,0x796,&m->pos,&m->rot,func_001F9850(90),0,D_0015EE70*12.0f,&delta,D_L04_0015F660,D_L04_0015F660);
+            }
+        }
+    }
+    m->draw_alpha=0xFF;
+    if (d->visibility_active) {
+        if (func_001F9908(&d->visibility_timer) &&
+            func_001FA850(D_L04_00166E80.angle,func_L00_001FF860(m->pos.f[0]-D_L04_00166E80.x,m->pos.f[1]-D_L04_00166E80.y))>1.5707964f) {
+            m->sort=*(s32 *)(m->metadata+0x10);
+            m->flags&=0xFFBE;
+            d->visibility_active=0;
+            if (d->partner!=-1) { VehicleMoby_2CB800 *other=MOBYS+d->partner; other->flags&=0xFFBE; }
+            m->flags|=0x1000;
+        } else {
+            m->sort=0;
+            m->flags|=0x41;
+            if (d->partner!=-1) { VehicleMoby_2CB800 *other=MOBYS+d->partner; other->flags|=0x41; }
+            m->flags&=0xEFFF;
+        }
+    }
+}
 extern char *D_L04_00160058_b __asm__("D_L04_00160058") MACRO_ADDR;
 extern short D_L04_001619EC;
 extern float D_0015EE6C_b __asm__("D_0015EE6C") MACRO_ADDR;
@@ -934,7 +1274,166 @@ void func_L04_002D8348(char *moby) {
     FastVecAdd(moby + 0x10, a, b);
     qcopy(dst + 0x10, moby + 0x10);
 }
-INCLUDE_ASM("asm/overlays", func_L04_002D9270);
+typedef unsigned int VecQuadP __attribute__((mode(TI), aligned(16)));
+typedef union { VecQuadP q; float f[4]; int i[4]; } Vec4P;
+struct MobyP {
+    unsigned char pad0[0x10];
+    Vec4P pos;
+    unsigned char state; unsigned char pad21[0xB];
+    float scale;
+    unsigned char update_dist; unsigned char pad31; short draw_dist;
+    unsigned char pad34[0xC];
+    struct { float x, y, z; } rot;
+    unsigned char pad4c[0x78 - 0x4C];
+    void *pvars;
+};
+#define frame_time D_0015EE6C
+#define fast_cos func_001F9F90
+#define fast_sin func_001F9FA8
+#define random_float_between func_002140F8
+#define fast_add_rotations func_001FA748
+#define normalize_vector_xyz func_L00_001FF4B0
+#define add_vector_xyz func_001F9BD8
+#define scale_vector_xyz func_001F9C30
+#define rib_p func_002140B0
+#define cif_p func_001FA888
+extern float func_001F9CE8(void *);
+#define vector_length_xy func_001F9CE8
+extern int func_001F9908(s32 *);
+extern int func_L00_00258BC8(int, int);
+#define random_int_between func_L00_00258BC8
+#define collision_line ((int (*)(void *, void *, int, void *, void *))(func_L00_001EFFF0))
+extern void func_L00_001FF610(void *, void *, void *);
+extern float D_L04_001CBBC0[6];
+extern char D_L04_00174060[];
+
+/* Three-state motion update. The saved position is restored when the timer expires. */
+void func_L04_002D9270(struct MobyP *moby) {
+    Vec4P random;
+    Vec4P old;
+    Vec4P work;
+    Vec4P initialDirection;
+    Vec4P direction;
+    char *data = (char *)moby->pvars;
+    float speed;
+    float amount;
+    int timer;
+    float *motion;
+
+    old.q = 0;
+    old.f[0] = random_float_between(-1.0f, 1.0f);
+    old.f[1] = random_float_between(-1.0f, 1.0f);
+    old.f[2] = random_float_between(-1.0f, 1.0f);
+    random.q = old.q;
+    speed = vector_length_xy(data);
+    qcopy(&old, &moby->pos);
+    switch (moby->state) {
+    case 0:
+        qcopy(data + 0x30, &moby->pos);
+        *(int *)(data + 0x40) = *(int *)(data + 0x44) = random_int_between(120, 2400);
+        *(float *)(data + 0x4c) = moby->scale * random_float_between(0.8f, 1.2f);
+        moby->state = 1;
+        break;
+    case 1:
+        if (!(func_001F9D48(&moby->pos, D_L04_00166FC0) < 32.0f))
+            return;
+        if (!func_001F9908((int *)(data + 0x44)))
+            return;
+        direction.q = 0;
+        direction.f[0] = random_float_between(-1.0f, 1.0f);
+        direction.f[1] = random_float_between(-1.0f, 1.0f);
+        direction.f[2] = random_float_between(-1.0f, 1.0f);
+        moby->update_dist = 0xff;
+        moby->draw_dist = 0x40;
+        moby->scale = 0.0f;
+        motion = (float *)moby->pvars;
+        initialDirection.q = direction.q;
+        normalize_vector_xyz(&initialDirection, &initialDirection, D_L04_001CBBC0[5] / 5.0f);
+        motion[0] = D_L04_001CBBC0[5] * fast_cos(D_L04_001CBBC0[1]);
+        { float sn = fast_sin(D_L04_001CBBC0[1]); float st = D_L04_001CBBC0[5]; float ft = frame_time;
+        motion[1] = st * sn;
+        motion[2] = ft * -0.5f; }
+        normalize_vector_xyz(&moby->rot, &initialDirection, 3.1415927f);
+        normalize_vector_xyz(motion + 8, &initialDirection, 0.098174773f);
+        normalize_vector_xyz(motion + 4, &initialDirection, D_L04_001CBBC0[5] * 0.5f);
+        *(int *)(motion + 16) = *(int *)(motion + 17) = random_int_between(720, 1200);
+        moby->state = 2;
+        return;
+    case 2:
+        func_001F9908((int *)(data + 0x44));
+        normalize_vector_xyz(&random, &random, D_L04_001CBBC0[5] / 10.0f);
+        add_vector_xyz(data + 0x10, data + 0x10, &random);
+        normalize_vector_xyz(&work, data + 0x10, 5.0f);
+        normalize_vector_xyz(data + 0x10, data + 0x10, D_L04_001CBBC0[5] * 0.5f);
+        add_vector_xyz(&work, &work, &moby->pos);
+        if (collision_line(&old, &work, 6, 0, 0) && !rib_p(8)) {
+            func_L00_001FF610(data + 0x10, data + 0x10, D_L04_00174060 + 0x20);
+            *(float *)(data + 0x18) += D_L04_001CBBC0[5] / 10.0f;
+        }
+        add_vector_xyz(data, data, data + 0x10);
+        work.f[0] = D_L04_001CBBC0[5] * fast_cos(D_L04_001CBBC0[1]);
+        work.f[1] = D_L04_001CBBC0[5] * fast_sin(D_L04_001CBBC0[1]);
+        work.f[2] = frame_time * -0.5f;
+        scale_vector_xyz(&work, &work, 0.4f);
+        scale_vector_xyz(data, data, 0.6f);
+        add_vector_xyz(data, &work, data);
+        add_vector_xyz(&moby->pos, &moby->pos, data);
+        if (collision_line(&old, &moby->pos, 6, 0, 0)) {
+            qcopy(&moby->pos, D_L04_00174060);
+            func_L00_001FF610(data, data, D_L04_00174060 + 0x20);
+            scale_vector_xyz(data, data, 0.25f);
+            add_vector_xyz(&moby->pos, &moby->pos, data);
+            *(float *)(data + 8) += D_L04_001CBBC0[5] / 5.0f;
+        }
+        if (D_L04_001CBBC0[5] < speed)
+            normalize_vector_xyz(data, data, D_L04_001CBBC0[5]);
+        {
+            float amount = frame_time * -0.5f;
+            if (amount < *(float *)(data + 8))
+                *(float *)(data + 8) += amount / 10.0f;
+            else
+                *(float *)(data + 8) = amount;
+        }
+        moby->rot.x = fast_add_rotations(moby->rot.x, *(float *)(data + 0x20));
+        moby->rot.y = fast_add_rotations(moby->rot.y, *(float *)(data + 0x24));
+        moby->rot.z = fast_add_rotations(moby->rot.z, *(float *)(data + 0x28));
+        if (*(int *)(data + 0x40) - func_001F9850(10) < *(int *)(data + 0x44)) {
+            amount = cif_p(*(int *)(data + 0x44) - *(int *)(data + 0x40));
+            moby->scale = (*(float *)(data + 0x4c) * amount) / func_001F9878(10.0f);
+        } else {
+            if (*(int *)(data + 0x44) < func_001F9850(100))
+                moby->scale *= 0.99f;
+            else
+                moby->scale = *(float *)(data + 0x4c);
+        }
+        if (*(int *)(data + 0x44) > 0)
+            return;
+        qcopy(&moby->pos, data + 0x30);
+        timer = random_int_between(120, 2400);
+        /* Preserve the retail ordering of the timer reload stores. */
+        *(volatile int *)(data + 0x40) = timer;
+        *(volatile int *)(data + 0x44) = timer;
+        moby->state = 1;
+        break;
+    default:
+        return;
+    }
+    moby->scale = 0.0f;
+}
+
+#undef frame_time
+#undef fast_cos
+#undef fast_sin
+#undef random_float_between
+#undef fast_add_rotations
+#undef normalize_vector_xyz
+#undef add_vector_xyz
+#undef scale_vector_xyz
+#undef rib_p
+#undef cif_p
+#undef vector_length_xy
+#undef random_int_between
+#undef collision_line
 INCLUDE_ASM("asm/overlays", func_L04_002E2B48);
 // Return float constant
 float func_L04_002E2B90(void) {

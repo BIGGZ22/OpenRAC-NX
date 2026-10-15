@@ -926,7 +926,268 @@ s32 func_L00_002EDC98(A_2ec7e8 *a) {
     if (o->f14 >= 0 && (v17 || func_L00_0025A778(&gHeroPos[0], D_L00_001B0830[o->f14] + 0x10, *(s32 *)D_L00_001B0830[o->f14]))) return 1;
     return 0;
 }
-INCLUDE_ASM("asm/overlays", func_L00_002EDE38);
+typedef struct { float x, y, z, w; } Vec4f;
+typedef float CameraVec[4] __attribute__((aligned(16)));
+typedef struct { f32 f[4]; } Vec4x;
+typedef struct {
+    f32 focus[4]; f32 velocity[4]; u8 pad60[0x20];
+    f32 look_target[4]; f32 eye[4]; f32 offset[4]; f32 lateral_ease[4]; f32 up_ease[4];
+    f32 unkD0[4]; u8 padE0[0x10]; f32 look_height; u8 padF4[0x22];
+    u8 blending_in; u8 pad117; s16 blend_timer; u8 pad11A[2];
+    f32 lateral_stiffness; f32 lateral_damping; f32 up_stiffness; f32 up_damping; u8 pad12C[4];
+} FollowCamBlock;
+typedef struct { u8 pad1A8[8]; f32 unk1B0; u8 pad1B4[4]; s32 flags; } FollowCamFlags;
+typedef struct { u8 pad1D0[0x20]; f32 unk1F0[4]; f32 unk200; u8 pad204[8]; } FollowCamSnap;
+typedef struct {
+    f32 unk130[4]; f32 unk140[4]; u8 pad150[0xC]; f32 unk15C; f32 distance; f32 unk164;
+    u8 pad168[0x40]; FollowCamFlags ctl; u8 pad1BC[0x10]; f32 unk1CC; FollowCamSnap snap;
+    f32 zoom_scale; f32 zoom; f32 zoom_range; u8 pad218[0xE]; s16 unk226; u8 pad228[4]; f32 unk22C; s32 mode;
+} FollowCamTail;
+typedef struct {
+    u8 pad20[2]; s16 unk22; f32 look_height; f32 distance; f32 unk2C; f32 unk30; f32 unk34; f32 unk38; u8 pad3C[4];
+} FollowCamReset;
+typedef struct FollowCamState {
+    f32 position[4]; s16 unk10; u8 pad12[0xE]; FollowCamReset reset; FollowCamBlock follow; FollowCamTail tail;
+} FollowCamState;
+struct UpdateCam {
+    u8 pad0[0x30];
+    Vec4f pos;
+    u8 pad40[0x24];
+    f32 prev_pos[3];
+    void *saved_state;
+    u8 pad74[0x10];
+    s16 descriptor_index;
+    s16 unk86;
+    u8 pad88[0x14];
+};
+#define FOLLOW_CAM_STATE(cam) ((FollowCamState *)(cam)->saved_state)
+typedef struct {
+    f32 swing; u8 pad04[4]; s32 volume_25faf0; s32 clip_volume; s32 volume_25fa38; s32 path; u8 pad18[8];
+    f32 pitch; f32 distance; f32 height; s16 type; s16 timer; f32 offset_scale; s16 keep_unk10; s16 check_yaw;
+    f32 lateral_stiffness; f32 lateral_damping; f32 start_lateral_stiffness; f32 start_lateral_damping;
+    s16 l_buttons_end; s16 done; s32 clip_volume2; f32 unk50; s16 set_flag1; s16 set_flag0;
+} SwingCameraParams;
+typedef struct { u8 pad0[0x18]; f32 yaw; SwingCameraParams *params; } CamDesc;
+typedef struct { u8 pad0[0x100]; f32 analog[4]; } PadSt;
+
+extern char *D_L00_0015F050 MACRO_ADDR;
+extern float D_L00_00166ED8 MACRO_ADDR;
+extern float D_L00_00166FB4;
+extern unsigned char D_0013A5E0[];
+#define pad_held ((s32 *)(D_0013A5E0 + 0x2600))
+#define controller_state (*(PadSt *)(D_0013A5E0 + 0x2460))
+
+extern int func_L00_002E9870(void *);
+extern void func_L00_002E9838(void *);
+extern f32 func_001FA850(f32, f32);
+extern void func_L00_001FF4B0(void *, void *, f32);
+extern void func_001F9C30(void *, void *, f32);
+extern f32 func_001F9CB8(void *);
+extern f32 func_001FA888(int);
+extern f32 func_001F9F90(f32);
+extern f32 func_001F9FA8(f32);
+extern void func_L00_002E9DC8(void *, f32, f32);
+extern void func_L00_002E9B30(void);
+extern void func_L00_002E9AD0(void);
+extern void func_L00_002E9AF8(void);
+extern void func_L00_002E9900(s32, f32, f32);
+extern void func_L00_002E9940(f32);
+extern void func_L00_002E9968(f32, f32);
+extern void func_L00_002E99A0(s32, f32, f32);
+extern void func_L00_002E99F0(f32);
+extern void func_L00_002E9A18(int);
+extern void func_L00_002E9A40(f32, f32);
+
+void func_L00_002EDE38(char *arg) {
+    struct UpdateCam *cam = (struct UpdateCam *)arg;
+    CameraVec dir;
+    SwingCameraParams *params;
+    struct UpdateCam *rec;
+    Vec4f *pos;
+    FollowCamState *rig;
+    FollowCamState *state;
+    FollowCamBlock *follow;
+    FollowCamTail *tail;
+    FollowCamSnap *snap;
+    FollowCamReset *reset;
+    s32 at_end;
+    f32 total;
+    f32 swing;
+    f32 t;
+
+    params = ((CamDesc *)D_L00_0015F050)[cam->descriptor_index].params;
+    if (params->type == 8 && FOLLOW_CAM_STATE(((struct UpdateCam *)D_L00_00166F00))->tail.mode == 0) {
+        return;
+    }
+    if (params->type == 6 && FOLLOW_CAM_STATE(((struct UpdateCam *)D_L00_00166F00))->tail.mode != 0) {
+        return;
+    }
+    if (func_L00_002EDC98((void *)cam) == 0) {
+        goto stop;
+    }
+    if (func_L00_002E9870(cam) <= 0) {
+        if (params->timer != 0) {
+            params->done = 1;
+        }
+        params->timer = 0;
+        return;
+    }
+    if (params->check_yaw != 0
+        && func_001FA850(((CamDesc *)D_L00_0015F050)[cam->descriptor_index].yaw, D_L00_00166ED8) >= 1.3962634f) {
+        goto stop;
+    }
+    if (params->l_buttons_end != 0 && params->type == 5 && (pad_held[0] & 5)) {
+stop:
+        if (params->timer != 0) {
+            params->done = 1;
+        }
+        params->timer = 0;
+        func_L00_002E9838(cam);
+        return;
+    }
+    if (params->timer == 0) {
+        u8 *g = (u8 *)&D_L00_00166D80;
+        params->start_lateral_stiffness = FOLLOW_CAM_STATE(*(struct UpdateCam **)(g + 0x180))->follow.lateral_stiffness;
+        params->start_lateral_damping = FOLLOW_CAM_STATE(*(struct UpdateCam **)(g + 0x180))->follow.lateral_damping;
+    }
+    if (*(s32 *)&params->type == 5) {
+        *(s32 *)&params->swing = 0;
+        rec = ((struct UpdateCam *)D_L00_00166F00);
+        rig = FOLLOW_CAM_STATE(rec);
+        follow = &rig->follow;
+        tail = &rig->tail;
+        snap = &rig->tail.snap;
+        state = rig;
+        reset = &state->reset;
+        func_L00_001FF4B0(tail->unk130, tail->unk130, params->distance);
+        tail->unk15C = params->distance;
+        tail->distance = params->height;
+        follow->look_height = params->offset_scale;
+        qcopy(state->tail.unk140, tail->unk130);
+        func_001F9C30(dir, (D_0013E633 + 0x10AD), -tail->distance);
+        pos = &rec->pos;
+        func_001F9BD8(state->follow.eye, (D_0013E633 + 0xE9D), dir);
+        func_001F9BD8(pos, state->follow.eye, tail->unk130);
+        func_001F9C30(dir, (D_0013E633 + 0x10AD), -follow->look_height);
+        func_001F9BD8(state->follow.look_target, (D_0013E633 + 0xE9D), dir);
+        qcopy(state->follow.unkD0, state->follow.look_target);
+        qcopy(follow->focus, (D_0013E633 + 0xE9D));
+        qcopy(state->follow.offset, follow->focus);
+        qcopy(state->position, pos);
+        qcopy(state->tail.snap.unk1F0, pos);
+        snap->unk200 = tail->unk15C - func_001F9CB8(tail->unk130);
+        *(s32 *)&reset->unk34 = 0;
+        reset->look_height = follow->look_height;
+        { f32 zero = reset->unk34;
+        f32 distance = tail->distance;
+        reset->distance = distance;
+        reset->unk38 = zero;
+        reset->unk30 = zero;
+        reset->unk2C = zero; }
+    }
+    at_end = 0;
+    total = func_001FA888(func_001F9850(200));
+    params->timer++;
+    if (params->type == 10) {
+        func_L00_002E9B30();
+        FOLLOW_CAM_STATE(((struct UpdateCam *)D_L00_00166F00))->tail.mode = 0x14D;
+    }
+    if (params->type == 11) {
+        func_L00_002E9B30();
+        FOLLOW_CAM_STATE(((struct UpdateCam *)D_L00_00166F00))->tail.mode = 2;
+    }
+    if (params->type == 2 || params->type == 4) {
+        { FollowCamFlags *ctl = &FOLLOW_CAM_STATE(((struct UpdateCam *)D_L00_00166F00))->tail.ctl; ctl->flags |= 3; }
+        if (params->timer > func_001F9850(200)) {
+            at_end = 1;
+            params->timer = func_001F9850(200);
+        }
+        func_L00_002E9AD0();
+    } else if (params->type == 1 || params->type == 7 || params->type == 10 || params->type == 9) {
+        PadSt *pad = &controller_state;
+        if (pad->analog[0] != 0.0f || pad->analog[1] != 0.0f) {
+            params->timer = func_001F9850(200);
+        }
+        if (params->timer >= func_001F9850(200)) {
+            at_end = 1;
+            if (D_L00_00166FB4 > 0.0f) {
+                params->timer = func_001F9850(200);
+            }
+        }
+        if (params->timer >= func_001F9850(400)) {
+            at_end = 0;
+            params->timer = 1;
+        }
+    } else if (params->type == 3) {
+        total = func_001FA888(func_001F9850(1));
+        if (params->timer > func_001F9850(1)) {
+            at_end = 1;
+            params->timer = func_001F9850(1);
+        }
+    } else {
+        if (params->timer > func_001F9850(200)) {
+            at_end = 1;
+            params->timer = func_001F9850(200);
+        }
+    }
+    dir[0] = func_001F9F90(((CamDesc *)D_L00_0015F050)[cam->descriptor_index].yaw);
+    dir[1] = func_001F9FA8(((CamDesc *)D_L00_0015F050)[cam->descriptor_index].yaw);
+    *(s32 *)&dir[2] = 0;
+    swing = params->swing * 0.017453292f * (params->timer / total);
+    if ((params->type != 1 && params->type != 7 && params->type != 9) || at_end == 0) {
+        func_L00_002E9DC8(dir, swing, params->pitch * 0.017453292f);
+    }
+    if (params->distance != 0.0f) {
+        if (params->type == 6 || params->type == 8) {
+            func_L00_002E9900(0, params->distance, 0.002f);
+            func_L00_002E9940(params->distance + 1.36f);
+        } else {
+            func_L00_002E9900(0, params->distance, 0.003f);
+            func_L00_002E9AD0();
+        }
+    }
+    if (params->height != 0.0f) {
+        if (params->type == 6 || params->type == 8) {
+            func_L00_002E9968(params->height, 0.002f);
+        } else {
+            func_L00_002E9968(params->height, 0.003f);
+        }
+    }
+    if (params->offset_scale != 0.0f) {
+        if (params->type == 6 || params->type == 8) {
+            func_L00_002E99A0(0, params->offset_scale, 0.002f);
+        } else {
+            func_L00_002E99A0(0, params->offset_scale, 0.005f);
+        }
+    }
+    if (params->unk50 != 0.0f) {
+        func_L00_002E99F0(params->unk50 * 0.017453292f);
+    }
+    if (params->set_flag1 != 0) {
+        { FollowCamFlags *ctl = &FOLLOW_CAM_STATE(((struct UpdateCam *)D_L00_00166F00))->tail.ctl; ctl->flags |= 2; }
+    }
+    if (params->set_flag0 != 0) {
+        { FollowCamFlags *ctl = &FOLLOW_CAM_STATE(((struct UpdateCam *)D_L00_00166F00))->tail.ctl; ctl->flags |= 1; }
+    }
+    if (params->keep_unk10 == 0) {
+        func_L00_002E9A18(0);
+    }
+    if (params->lateral_stiffness != 0.0f || params->lateral_damping != 0.0f) {
+        if (params->timer >= func_001F9850(120)) {
+            func_L00_002E9A40(params->lateral_stiffness, params->lateral_damping);
+        } else {
+            t = params->timer / func_001FA888(func_001F9850(120));
+            func_L00_002E9A40(
+                params->start_lateral_stiffness + (params->lateral_stiffness - params->start_lateral_stiffness) * t,
+                params->start_lateral_damping + (params->lateral_damping - params->start_lateral_damping) * t);
+        }
+    }
+    if (params->type == 1 || params->type == 7 || params->type == 10) {
+        func_L00_002E9AD0();
+        func_L00_002E9AF8();
+        func_L00_002E9A40(0.01f, 0.2f);
+    }
+}
 extern void func_L00_002EDE38(char *);
 extern short D_0015EE84;
 extern char *D_L00_0015F050 MACRO_ADDR;
@@ -987,7 +1248,167 @@ int func_L00_002EE7F8(void *arg) {
     *(short *)(p + 0x26) = 1;
     return 0;
 }
-INCLUDE_ASM("asm/overlays", func_L00_002EE948);
+extern int D_0013CBE0 NOT_SDA;
+extern int func_L00_002EE7F8(void *);
+typedef float CameraVec_ee[4] __attribute__((aligned(16)));
+typedef struct {
+    float focus[4]; float velocity[4]; unsigned char pad60[0x20];
+    float look_target[4]; float eye[4]; float offset[4]; float lateral_ease[4]; float up_ease[4];
+    float unkD0[4]; unsigned char padE0[0x10]; float look_height; unsigned char padF4[0x22];
+    unsigned char blending_in; unsigned char pad117; short blend_timer; unsigned char pad11A[2];
+    float lateral_stiffness, lateral_damping, up_stiffness, up_damping; unsigned char pad12C[4];
+} FollowCamBlock_ee;
+typedef struct { unsigned char pad1A8[8]; float unk1B0; unsigned char pad1B4[4]; int flags; } FollowCamFlags_ee;
+typedef struct { unsigned char pad1D0[0x20]; float unk1F0[4]; float unk200; unsigned char pad204[8]; } FollowCamSnap_ee;
+typedef struct {
+    float unk130[4]; float unk140[4]; unsigned char pad150[0xC]; float unk15C; float distance; float unk164;
+    unsigned char pad168[0x40]; FollowCamFlags_ee ctl; unsigned char pad1BC[0x10]; float unk1CC;
+    FollowCamSnap_ee snap; float zoom_scale; float zoom; float zoom_range; unsigned char pad218[0xE];
+    short unk226; unsigned char pad228[4]; float unk22C; int mode;
+} FollowCamTail_ee;
+typedef struct {
+    unsigned char pad20[2]; short unk22; float look_height; float distance; float unk2C; float unk30; float unk34;
+    float unk38; unsigned char pad3C[4];
+} FollowCamReset_ee;
+typedef struct {
+    float position[4]; short unk10; unsigned char pad12[0xE]; FollowCamReset_ee reset;
+    FollowCamBlock_ee follow; FollowCamTail_ee tail;
+} FollowCamState_ee;
+typedef struct {
+    int m0[4]; int pad[0x2C - 4];
+} Dummy_ee;
+struct UpdateCam_ee {
+    char pad0[0x30];
+    float pos[4];
+    unsigned char pad40[0x30];
+    void *saved_state;
+    unsigned char pad74[0x10];
+    short descriptor_index;
+};
+typedef struct {
+    unsigned char pad00[8]; int volume_25faf0; int clip_volume; int volume_25fa38; unsigned char pad14[0xC];
+    int timer; short keep_unk10; short done; float unk28; float angle; unsigned char pad30[4]; int need_still;
+    float distance; float height; float offset_scale; short not_in_mode_1; short only_in_mode_1;
+} AimCameraParams_ee;
+typedef struct {
+    float pos[3]; unsigned char pad0C[0xC]; float yaw; void *params;
+} CameraDescriptor_ee;
+
+#define FOLLOW_CAM_STATE_ee(cam) ((FollowCamState_ee *)(cam)->saved_state)
+typedef struct { unsigned char pad0[0x80]; struct { float pos[4]; } motion; unsigned char pad90[0x200]; float gravity_dir[4]; } HeroLike_ee;
+
+void func_L00_002EE948(void *cam_) {
+    struct UpdateCam_ee *cam = cam_;
+    CameraVec_ee pos;
+    CameraVec_ee to_pos;
+    CameraVec_ee tmp;
+    CameraVec_ee level;
+    AimCameraParams_ee *params;
+    struct UpdateCam_ee *rec;
+    float (*rec_pos)[4];
+    FollowCamState_ee *rig;
+    FollowCamState_ee *state;
+    FollowCamBlock_ee *follow;
+    FollowCamTail_ee *tail;
+    FollowCamSnap_ee *snap;
+    FollowCamReset_ee *reset;
+    float up;
+    float angle;
+
+    params = *(AimCameraParams_ee **)(D_L00_0015F050 + cam->descriptor_index * 32 + 0x1C);
+    if (func_L00_002EE7F8(cam)) {
+        if (func_L00_002E9870(cam) <= 0) {
+            if (params->timer) {
+                params->done = 1;
+            }
+            params->timer = 0;
+            return;
+        }
+        if (!(D_0013CBE0 & 5)) {
+            goto run;
+        }
+    }
+    if (params->timer) {
+        params->done = 1;
+    }
+    params->timer = 0;
+    func_L00_002E9838(cam);
+    return;
+run:
+    if (params->timer < 2) {
+        {
+            pos[0] = *(float *)(D_L00_0015F050 + cam->descriptor_index * 32 + 0);
+            pos[1] = *(float *)(D_L00_0015F050 + cam->descriptor_index * 32 + 4);
+            pos[2] = *(float *)(D_L00_0015F050 + cam->descriptor_index * 32 + 8);
+        }
+        *(int *)&pos[3] = 0;
+        func_001F9BF0(to_pos, pos, &(*(HeroLike_ee *)D_0013F450).motion.pos);
+        up = func_001F9C78(to_pos, (*(HeroLike_ee *)D_0013F450).gravity_dir);
+        func_001F9C30(tmp, (*(HeroLike_ee *)D_0013F450).gravity_dir, up);
+        func_001F9BF0(level, to_pos, tmp);
+        params->distance = func_001F9CB8(level);
+        params->height = -up;
+        angle = params->angle;
+        if (func_001F9B88(angle) == 1.5707964f) {
+            *(int *)&params->offset_scale = 0;
+        } else {
+            params->offset_scale = params->height - params->distance * (func_001F9FA8(angle) / func_001F9F90(angle));
+        }
+        rec = (struct UpdateCam_ee *)D_L00_00166F00;
+        rig = FOLLOW_CAM_STATE_ee(rec);
+        rec_pos = &rec->pos;
+        follow = &rig->follow;
+        tail = &rig->tail;
+        snap = &rig->tail.snap;
+        state = rig;
+        reset = &state->reset;
+        qcopy(rec_pos, pos);
+        tail->unk15C = params->distance;
+        tail->distance = params->height;
+        follow->look_height = params->offset_scale;
+        func_001F9C30(tmp, (*(HeroLike_ee *)D_0013F450).gravity_dir, -tail->distance);
+        func_001F9BD8(state->follow.eye, &(*(HeroLike_ee *)D_0013F450).motion.pos, tmp);
+        func_001F9BF0(tail->unk130, pos, state->follow.eye);
+        qcopy(state->tail.unk140, tail->unk130);
+        func_001F9C30(tmp, (*(HeroLike_ee *)D_0013F450).gravity_dir, -follow->look_height);
+        func_001F9BD8(state->follow.look_target, &(*(HeroLike_ee *)D_0013F450).motion.pos, tmp);
+        qcopy(state->follow.unkD0, state->follow.look_target);
+        qcopy(follow->focus, &(*(HeroLike_ee *)D_0013F450).motion.pos);
+        qcopy(state->follow.offset, follow->focus);
+        qcopy(state->position, rec_pos);
+        qcopy(state->tail.snap.unk1F0, rec_pos);
+        *(int *)&snap->unk200 = 0;
+        *(int *)&reset->unk34 = 0;
+        reset->look_height = follow->look_height;
+        { float zero = reset->unk34;
+        float distance = tail->distance;
+        reset->distance = distance;
+        reset->unk22 = 0;
+        reset->unk38 = zero;
+        reset->unk30 = zero;
+        reset->unk2C = zero; }
+    }
+    params->timer += 1;
+    if (func_001F9850(200) < params->timer) {
+        params->timer = func_001F9850(200);
+    }
+    if (params->distance != 0.0f) {
+        func_L00_002E9900(0, params->distance, 0.003f);
+        func_L00_002E9AD0();
+    }
+    if (params->height != 0.0f) {
+        func_L00_002E9968(params->height, 0.003f);
+    }
+    if (params->offset_scale != 0.0f) {
+        func_L00_002E99A0(0, params->offset_scale, 0.005f);
+    }
+    if (params->unk28 != 0.0f) {
+        func_L00_002E99F0(params->unk28 * 0.017453292f);
+    }
+    if (params->keep_unk10 == 0) {
+        func_L00_002E9A18(0);
+    }
+}
 extern char *D_L00_0015F050 MACRO_ADDR;
 extern int D_L00_0015F6A8 MACRO_ADDR;
 extern int func_L00_002EE7F8(void *);

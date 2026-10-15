@@ -1,18 +1,13 @@
 /* NON_MATCHING func_L00_002657B8 -- src/overlays/shared/mobyutil_00265558.c
- * Best so far: SIZE ours 264 / retail 260, checked 2026-10-09.
+ * Best so far: SIZE ours 256 / retail 260, checked 2026-10-15.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
  * What the last attempts found:
- *   `-mno-split-addresses`), so that lever doesn't apply here: the mismatch
- *   is a branch-likely/delay-slot-fill choice, not a saved-register or
- *   `lui` count difference. Not attempted.
- *   Everything else in the function -- the list-build loop, the sentinel
- *   checks, the `func_L00_002514B8` call and its own duplicated pointer
- *   load, the final list walk and both epilogue paths -- matches retail
- *   exactly.
- *   Stopping here per the three-tie rule with 5 of 10 runs used.
+ *   2026-10-15 cnobis: state read once per round (u8 local) and D_L00_001600A4/D_L00_00160098 MACRO_ADDR match
+ *   retail. Only the update call differs: retail "beqz fn; nop; daddu a0; jalr fn; nop", ours fills both slots
+ *   (beql + lhu). Tried fn local/cast/unprototyped, for/while/continue, if/else order, separate loop vars: all
+ *   256 of 260.
  */
-#include "common.h"
 
 /*
  * Builds the frame's moby update list from the level's moby array, then
@@ -32,8 +27,8 @@ typedef struct MobyRecord {
 } MobyRecord;
 
 extern int D_L00_001ABD80;
-extern MobyRecord *D_L00_001600A4;
-extern MobyRecord *D_L00_00160098;
+extern MobyRecord *D_L00_001600A4 MACRO_ADDR;
+extern MobyRecord *D_L00_00160098 MACRO_ADDR;
 
 extern void func_L00_002514B8(MobyRecord *);
 extern void func_L00_00251E30(MobyRecord *);
@@ -42,45 +37,46 @@ void func_L00_002657B8(void)
 {
     MobyRecord *cur;
     MobyRecord *prev;
+    unsigned char state;
+    MobyRecord *m;
+    void (*fn)(MobyRecord *);
 
     D_L00_001ABD80 = 0;
     D_L00_001600A4 = 0;
 
     cur = D_L00_00160098;
     prev = 0;
-    if ((unsigned char)cur->state != 0xFF) {
-        do {
-            if (!((unsigned char)cur->state & 0x80)) {
-                if (!(cur->flags & 0x2)) {
-                    if (prev == 0)
-                        D_L00_001600A4 = cur;
-                    else
-                        prev->next = cur;
-                    prev = cur;
-                }
-            }
-            cur = (MobyRecord *)((char *)cur + 0x100);
-        } while ((unsigned char)cur->state != 0xFF);
+    state = cur->state;
+    while (state != 0xFF) {
+        if (!(state & 0x80) && !(cur->flags & 0x2)) {
+            if (prev != 0)
+                prev->next = cur;
+            else
+                D_L00_001600A4 = cur;
+            prev = cur;
+        }
+        cur++;
+        state = cur->state;
     }
     if (prev != 0)
         prev->next = 0;
 
-    cur = D_L00_001600A4;
-    if (cur != 0) {
+    m = D_L00_001600A4;
+    if (m != 0) {
         do {
-            if (cur->state >= 0) {
-                if (!(cur->flags & 0x40)) {
-                    func_L00_002514B8(cur);
+            if (m->state >= 0) {
+                if (!(m->flags & 0x40)) {
+                    func_L00_002514B8(m);
                 }
-                if (cur->updateFn == 0) {
-                } else {
-                    cur->updateFn(cur);
+                fn = m->updateFn;
+                if (fn != 0) {
+                    fn(m);
                 }
-                if (!(cur->flags & 0x4)) {
-                    func_L00_00251E30(cur);
+                if (!(m->flags & 0x4)) {
+                    func_L00_00251E30(m);
                 }
             }
-            cur = cur->next;
-        } while (cur != 0);
+            m = m->next;
+        } while (m != 0);
     }
 }

@@ -1225,4 +1225,85 @@ void func_00205220(int arg0) {
     *(int *)(base + 0x5C) = D_001941C8 + D_0016100C_m;
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_00205270);
+typedef struct { char pad00[0x10]; int class_id; char pad14[0x38]; } GadgetRec_05270;
+typedef struct { char pad00[0x1A]; short runtime_index; int resource_tag; } ClassRuntimeEntry_05270;
+typedef struct { char *packet_data; int packed_packet_extent; char pad08[8]; } ClassRenderGroup_05270;
+typedef struct {
+    ClassRenderGroup_05270 *render_groups;
+    char pad04[2];
+    unsigned char third_render_group_count;
+    unsigned char patch_group_index;
+    char pad08[0x20];
+    ClassRuntimeEntry_05270 *runtime_table;
+    int original_field_2c;
+} ClassResourceHeader_05270;
+
+extern int D_00160044 MACRO_ADDR;
+extern int D_00160048 MACRO_ADDR;
+extern int D_0016004C MACRO_ADDR;
+extern int D_00160050 MACRO_ADDR;
+extern void func_0020C468();
+extern int D_001CBE40[];
+extern int D_001CBEA0[];
+extern short D_001CC0E0[][16];
+extern char D_001CBF60[][16];
+extern unsigned char D_001CAE40[];
+extern GadgetRec_05270 D_001864D0[];
+extern unsigned char D_0013E620[];
+extern long D_0019E7F0[];
+
+void func_00205270(int class_id, int buffer_index) {
+    int runtime_index;
+    int resource_table_index;
+    ClassResourceHeader_05270 *resource_data;
+    void **resource_table;
+    unsigned char class_slot;
+    int resource_tag;
+    int vendor_item_index;
+
+    if (D_0016004C >= 0 && D_001CBE40[D_0016004C] == class_id) {
+        return;
+    }
+    for (D_0016004C = 0; D_0016004C < D_00160048; D_0016004C++) {
+        if (D_001CBE40[D_0016004C] == class_id) {
+            break;
+        }
+    }
+    if (buffer_index == -1) {
+        buffer_index = D_00160050 == 0;
+    }
+    D_00160050 = buffer_index;
+    resource_data = (ClassResourceHeader_05270 *)((char *)D_001941C0[4] + buffer_index * 0x18000);
+    func_00118D80(0);
+    ((void (*)(int, void *))func_0020C468)(D_001CBEA0[D_0016004C], resource_data);
+    func_00118D80(0);
+    class_slot = D_001B3E40[class_id];
+    resource_table = D_001B3580;
+    resource_table[class_slot] = resource_data;
+    D_001B6500[class_slot] = resource_data->original_field_2c;
+    ((void (*)(void *, void *, void *, int))func_00203B70)(resource_data, D_001CAE40, D_001CBF60[D_0016004C], class_id);
+    resource_table_index = D_0016004C;
+    resource_tag = D_00160044;
+    for (runtime_index = 0; runtime_index < 16; runtime_index++) {
+        short e = D_001CC0E0[resource_table_index][runtime_index];
+        if (e >= 0) {
+            ((ClassResourceHeader_05270 *)resource_table[class_slot])->runtime_table[runtime_index].runtime_index = e;
+            ((ClassResourceHeader_05270 *)resource_table[class_slot])->runtime_table[runtime_index].resource_tag = resource_tag;
+        }
+    }
+    for (vendor_item_index = 0; vendor_item_index < 0x25; vendor_item_index++) {
+        if (((GadgetRec_05270 *)((char *)D_001864D0 + 0x10 - 0x10))[vendor_item_index].class_id == class_id) {
+            ClassResourceHeader_05270 *rh;
+            ClassRenderGroup_05270 *rg;
+            char *pp;
+            if (D_0013E620[vendor_item_index] == 0) return;
+            rh = (ClassResourceHeader_05270 *)D_001B3580[class_slot];
+            if (rh->third_render_group_count == 0) return;
+            rg = &rh->render_groups[rh->patch_group_index];
+            pp = rg->packet_data + (rg->packed_packet_extent - 4) * 0x10;
+            *(long *)(pp + 0x20) = D_0019E7F0[0];
+            *(long *)(pp + 0x30) = D_0019E7F0[2];
+            return;
+        }
+    }
+}

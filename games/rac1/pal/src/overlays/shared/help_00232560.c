@@ -1082,7 +1082,22 @@ int func_L00_00234638(int id, int amount) {
     return 1;
 }
 INCLUDE_ASM("asm/overlays", func_L00_00234674);
-INCLUDE_ASM("asm/overlays", func_L00_002346C0);
+int func_L00_002346C0(int a, int b) {
+    int *p = &D_0013D530[a];
+    unsigned short *q = (unsigned short *)((char *)D_L00_001C43B0 + a * 0x18);
+    int v = *p + b;
+    unsigned short t = q[7];
+    *p = v;
+    if (t != 0) {
+        t = q[7];
+        v = v - t;
+        if (v > 0) {
+            *p = t;
+            return v;
+        }
+    }
+    return 0;
+}
 /* the weapon's ammo (the current weapon for -1), or 1 when it has no ammo limit */
 int func_L00_00234718(int id) {
     AmmoInfo *e;

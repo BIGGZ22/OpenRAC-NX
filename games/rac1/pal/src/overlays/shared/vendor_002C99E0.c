@@ -420,7 +420,120 @@ void func_L11_0030A468(char *m) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L11_0030A8C8);
+struct PClass {
+    u8 pad[0x24];
+    f32 scale;
+};
+
+struct PMoby {
+    Vec4f bsphere;
+    Vec4f pos;
+    u8 state;
+    u8 pad21[3];
+    struct PClass *pclass;
+    struct PMoby *next;
+    f32 scale;
+    u8 pad30[0x10];
+    Vec4f rot;
+    u8 pad50[0x28];
+    u8 *pvars;
+    u8 pad7C[0x44];
+    Vec4f rot_row0;
+};
+
+typedef struct {
+    Vec4 step;
+    Vec4 target_pos;
+    void *collision;
+    struct PMoby *target;
+    s32 timer;
+    f32 speed;
+    f32 turn_speed;
+} Missile;
+
+extern float func_00214158(void);
+extern void func_001F9EC0(void *, void *, void *);
+extern void func_002156E0(void *, void *, void *, float);
+extern void func_L00_0026DA50(void *, void *, int, int, int, int, float);
+extern unsigned char *func_L00_00272158(void *, void *, int, int, int, int, float, float, float, float, float);
+extern float func_L00_0025CE58(float *, float *, float, float, float, float);
+extern void func_L00_00250800(void *, int, void *);
+extern void func_L00_0025F4A8(void *, void *, void *, float, float, int, int, int, float, float, float, float, int, float, int, int, int, int);
+extern char D_L11_001B2D80[];
+extern char D_L11_001748E0[];
+extern float D_0015EE70 MACRO_ADDR;
+extern float D_0015EE6C MACRO_ADDR;
+
+void func_L11_0030A8C8(struct PMoby *moby) {
+    Missile *data = (Missile *)moby->pvars;
+    Vec4f *pos;
+    Vec4 previous_pos, spray, offset, velocity, random;
+    float fraction;
+    struct PMoby *target;
+    char *texture;
+
+    qcopy(&previous_pos, &moby->pos);
+    moby->scale += (moby->pclass->scale - moby->scale) * 0.1f;
+    random.q = 0;
+    random.f[0] = func_002140F8(-1.0f, 1.0f);
+    random.f[1] = func_002140F8(-1.0f, 1.0f);
+    random.f[2] = func_002140F8(-1.0f, 1.0f);
+    velocity.q = random.q;
+    func_L00_001FF4B0(&velocity, &velocity, func_002140F8(0.1f, 0.2f) * D_0015EE6C);
+    func_L00_001FF4B0(&offset, &data->step, -func_002140F8(D_0015EE6C * 0.1f, D_0015EE6C));
+    func_001F9BD8(&velocity, &velocity, &offset);
+    func_L00_00272158(&moby->pos, &velocity, func_001F9850(6), 0x7f, 0xb0b0b0,
+               3, 40000.0f, 1000.0f, 1.0f, -0.0004f, 0.0f);
+    texture = D_L11_001B2D80;
+    for (fraction = 0.0f; fraction < 1.0f; fraction += 0.33333334f) {
+        unsigned char *p;
+        func_L00_001FF4B0(&offset, &data->step, func_002140F8(fraction, fraction + 0.33333334f) * data->speed);
+        func_001F9BD8(&offset, &offset, &moby->pos);
+        p = func_L00_00272158(&offset, &velocity, func_001F9850(60), 0x7f, 0x606060, 3, 40000.0f,
+                       1000.0f, 1.0f, -0.0002f, 0.0f);
+        if (p != 0) {
+            unsigned char *texture_pixels = *(unsigned char **)(texture + 0x5c);
+            unsigned char texture_pixel = texture_pixels[0];
+            p[3] = 0x44;
+            p[2] = texture_pixel;
+        }
+        random.q = 0;
+        random.f[2] = 0.02f;
+        func_001F9EC0(&random, &random, &moby->rot_row0);
+        func_002156E0(&random, &random, &moby->rot_row0, func_00214158());
+        func_L00_0026DA50(&offset, &random, 0x4f007fff, 0x1fffffff, func_001F9850(5), 1, 20000.0f);
+    }
+    pos = &moby->pos;
+    target = data->target;
+    if (target != 0 && target->state != 0xfe && target->state != 0xfd &&
+        func_001F9D10(&data->target_pos, &target->pos) < 3.0f) {
+        moby->rot.z = func_L00_001FF860(data->target->pos.x - moby->pos.x, data->target->pos.y - moby->pos.y);
+        moby->rot.y = -func_L00_001FF860(func_001F9D48(pos, &data->target->pos), data->target->pos.z - moby->pos.z);
+        qcopy(&data->target_pos, &data->target->pos);
+    } else {
+        func_L00_0025CE58(&moby->rot.z, &data->turn_speed, moby->rot.z, D_0015EE70 * 251.32741f,
+               D_0015EE70 * 251.32741f, D_0015EE6C * 2513.2742f);
+        func_L00_0025CE58(&moby->rot.y, &data->turn_speed, moby->rot.y, D_0015EE70 * 251.32741f,
+               D_0015EE70 * 251.32741f, D_0015EE6C * 2513.2742f);
+        data->target = 0;
+    }
+    func_00215C00(&data->step, data->speed, moby->rot.z, -moby->rot.y);
+    func_001F9BD8(pos, pos, &data->step);
+    if (moby->pos.x < 2.0f || 1021.0f < moby->pos.x || moby->pos.y < 2.0f || 1021.0f < moby->pos.y ||
+        moby->pos.z < 2.0f || 1021.0f < moby->pos.z) {
+        func_0020D678(moby);
+        return;
+    }
+    func_L00_00250800(moby, 1, &spray);
+    if (func_L00_001EFFF0(&previous_pos, &spray, 0, data->collision, 0)) {
+        func_L00_0025F4A8(moby, data, D_L11_001748E0, 2.0f, 10.0f, 10, 3, 0x10, 4.0f, 2.0f, 9.0f, 1.0f,
+                -1, 20.0f, 0, 1, -1, 0);
+        func_0020D678(moby);
+        return;
+    }
+    if (func_001F9908(&data->timer))
+        func_0020D678(moby);
+}
 typedef struct { float u, v; } UV_30BCD8;
 typedef struct { float x, y, z; } Pos_30BCD8;
 typedef struct {

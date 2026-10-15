@@ -455,7 +455,142 @@ void func_L00_002D3608(int collision_arg, Moby_2D3608 *carrier, float *position)
     func_L00_002C8680_2D3608(anchor_ptr, aim, output + 4, D_0015EE70_2D3608 * 9.0f, 0.00000999999975f,
                              (((PadState *)(D_0013A5E0_2D3608 + 0x2460))->held & 5) ? 3.5f : 2.5f);
 }
-INCLUDE_ASM("asm/overlays", func_L00_002D3B20);
+extern void func_L00_00250800(void *, int, void *);
+extern void func_L00_00260878(void *, void *);
+extern int func_L00_002C48C8(void *, void *, void *);
+extern void func_L00_00222B80(int, int);
+extern int func_001F9908(int *);
+extern int func_001F9850(int);
+extern int func_L00_00234718(int);
+extern int func_L00_00217570(int, int);
+extern int func_L00_00234638(int, int);
+
+extern void func_L00_002C4B90(float *, char *, void *);
+extern short D_L00_001B0BB0[];
+extern int D_0015EFA4 MACRO_ADDR;
+extern int D_0015EE84 MACRO_ADDR;
+extern char D_0013A5E0[];
+extern char D_0014171B[];
+typedef int u128_D3B20 __attribute__((mode(TI)));
+
+/* Decoy glove update: state machine on moby[0x20], per-object data block at moby[0x78]. Adapted from Lombyte (MIT) for PAL: none. */
+void func_L00_002D3B20(unsigned char *moby) {
+    extern void func_0020D678(void);
+    extern void func_001F9EE8();
+    extern void func_0022ED80(int, int, int);
+    char *d;
+    char *p;
+    char *g;
+    float vb[4];
+    float va[4];
+    float vc[4];
+    float vd[4];
+    float pad0[4];
+    float pad1[4];
+    float pad2[4];
+    u128_D3B20 loc;
+
+    if (moby == 0) return;
+    d = *(char **)(moby + 0x78);
+    if (d == 0) return;
+    *(u128_D3B20 *)va = 0;
+    va[1] = -0.19f;
+    va[2] = -0.11f;
+    func_L00_00250800(moby, 0, vb);
+    func_0020DAF8_2d3330(moby, 0, vd);
+    func_001F9EE8(vc, va, vd);
+    func_001F9BD8(d + 0x40, vb, vc);
+
+    p = *(char **)(d + 0x50);
+    if (p) {
+        *(int *)(p + 0x98) = 1;
+        if (*(unsigned char *)(D_0013E633 + 6) && *(short *)(*(char **)(d + 0x50) + 0xA6) != 0x76C) {
+            qzero(&loc);
+            func_L00_00260878(*(char **)(d + 0x50), D_L00_001B0BB0);
+            ((void (*)(void *))func_0020D678)(*(char **)(d + 0x50));
+            *(int *)(d + 0x50) = func_L00_002C48C8(moby, d + 0x40, &loc);
+        }
+        if (*(char **)(d + 0x50) != 0 &&
+            *(unsigned char *)(*(char **)(d + 0x50) + 0x20) != 0xFE &&
+            *(unsigned char *)(*(char **)(d + 0x50) + 0x20) != 0xFD)
+            goto target_valid;
+    }
+    *(int *)(d + 0x50) = 0;
+target_valid:
+    g = D_0013E633 + 0xE1D;
+    if (*(int *)(g + 0x2084) == 1) func_L00_00222B80(0x1E, 1);
+    if (func_001F9908((int *)(d + 0x54))) {
+        if (*(unsigned char *)(g + 0x20AC) == 0) {
+            if (*(unsigned char *)(g + 0x20A8) && *(int *)(g + 0x1BC) == func_001F9850(0x11)) goto L3D10;
+            if (*(int *)(D_0013A5E0 + 0x2604) & *(int *)(g + 0x10A0)) {
+                if (*(int *)(g + 0x2084) == 0x1E && func_L00_00234718(-1)) goto L3D10;
+            }
+            g = D_0013E633 + 0xE1D;
+            if (*(int *)(g + 0x2084) == 0x23 && *(int *)(g + 0x198) == func_001F9850(0x10)) goto L3D10;
+        }
+    }
+    goto L3D34;
+L3D10:
+    func_L00_00217570(0x1A, 0);
+    func_L00_00234638(-1, 1);
+    moby[0x20] = 3;
+L3D34:
+    *(u128_D3B20 *)&loc = *(u128_D3B20 *)(d + 0x40);
+    func_L00_002D3608((int)moby, (void *)d, (float *)&loc);
+
+    switch (moby[0x20]) {
+    case 0:
+        *(int *)(d + 0x50) = 0;
+        if (!(moby[0x70] & 2)) moby[0x20] = 1; else moby[0x20] = 2;
+    case 1:
+        if (moby[0x70] & 2) moby[0x20] = 2;
+        break;
+    case 2:
+        break;
+    case 3:
+        if (*(char **)(d + 0x50)) {
+            char *P = D_0014171B + 0x65;
+            if (*(unsigned short *)(P + 0xC8) <= 0xFFFE) *(unsigned short *)(P + 0xC8) = *(unsigned short *)(P + 0xC8) + 1;
+            if (func_001F9850(D_0015EFA4) / 600 > (int)*(unsigned short *)(P + 0xCA))
+                *(unsigned short *)(P + 0xCA) = func_001F9850(D_0015EFA4) / 600;
+            *(unsigned int *)(P + 0xCC) = (*(unsigned int *)(P + 0xCC) | (1 << D_0015EE84)) | 0x80000000;
+            func_L00_002C4B90((float *)(d + 0x40), *(char **)(d + 0x50), *(char **)(*(char **)(d + 0x50) + 0x78) + 0x10);
+            *(int *)(d + 0x50) = 0;
+        } else {
+            func_0022ED80(0, 0, (int)moby);
+        }
+        moby[0x20] = 4;
+        *(int *)(d + 0x54) = func_001F9850(0x14);
+        break;
+    case 4: {
+        char *h = D_0013E633 + 0xE1D;
+        if (*(int *)(h + 0x2084) != 0x23 && *(unsigned char *)(h + 0x20A8) == 0) moby[0x20] = 2;
+        break;
+    }
+    case 5:
+        moby[0x20] = 6;
+        break;
+    case 6:
+        return;
+    default:
+        break;
+    }
+
+    if (*(char **)(d + 0x50)) {
+        qcopy(*(char **)(d + 0x50) + 0x10, d + 0x40);
+        return;
+    }
+    if (func_L00_00234718(-1)) {
+        qzero(&loc);
+        *(int *)(d + 0x50) = func_L00_002C48C8(moby, d + 0x40, &loc);
+    } else {
+        char *h = D_0013E633 + 0xE1D;
+        if (*(unsigned char *)(h + 0x20A8)) {
+            qzero(&loc);
+            *(int *)(d + 0x50) = func_L00_002C48C8(moby, d + 0x40, &loc);
+        }
+    }
+}
 typedef float Vec_2D3F40[4] __attribute__((aligned(16)));
 typedef int U128_2D3F40 __attribute__((mode(TI)));
 typedef union Vu_2D3F40 {
@@ -1444,7 +1579,364 @@ void func_L00_002D6E38(Obj_6e38 *o, Path_6e38 *path, s32 p) {
     o->f40 = func_L00_00259148(&st->v64, o->f40, xb, k70 * 1.04719758f, k70 * 2.09439516f, D_0015EE6C * 1.57079637f); }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_002D7298);
+typedef unsigned int Q128 __attribute__((mode(TI), aligned(16)));
+typedef union {
+    Q128 q;
+    f32 f[4];
+    struct {
+        f32 x, y, z, w;
+    } v;
+} Vec;
+
+/* The moby position, read and written as one quadword. */
+#define MPOS(m) ((Vec *)&(m)->pos)
+
+typedef struct {
+    s32 count;
+    u8 pad4[0xC];
+    Vec pts[1]; /* pts[i].v.w: length of segment i */
+} Path;
+
+typedef struct {
+    s32 arrived;    /* 0x00 */
+    s32 planet;     /* 0x04 */
+    s32 cutscene;   /* 0x08 */
+    s8 msg0;        /* 0x0C */
+    s8 msg1;        /* 0x0D */
+    s8 msg2;        /* 0x0E */
+    u8 pad0F[0x41];
+    s32 attach;     /* 0x50 */
+    s32 carrier;    /* 0x54 */
+    s32 path;       /* 0x58 */
+    f32 bob;        /* 0x5C */
+    f32 speed;      /* 0x60 */
+    f32 spin[3];    /* 0x64: x, y, z turn rates */
+    s32 slots[8];   /* 0x70 */
+    u8 pad90[0x14];
+    f32 sway;       /* 0xA4 */
+    s32 seg;        /* 0xA8 */
+    f32 yaw;        /* 0xAC */
+    s32 waiting;    /* 0xB0 */
+    u8 padB4[0xC];
+    Q128 home;      /* 0xC0 */
+} Infobot;
+
+typedef struct {
+    Vec pos;
+    u8 pad10[0x2218];
+    s32 active;     /* 0x2228 */
+} Player;
+
+typedef struct {
+    u8 pad0[0x80];
+    Vec target;     /* 0x80 */
+} Camera;
+
+typedef struct {
+    u8 pad0[0x30];
+    Vec pos;        /* 0x30 */
+    u8 pad40[0x30];
+    Vec dir;        /* 0x70 */
+} Cutscene;         /* 0x80 */
+extern char D_0013F450[];
+#define CUTS ((Cutscene *)D_L00_001601AC)
+typedef struct { Vec4f v0, v1, v2; float pos[3]; float w; u8 pad[0x40]; } T;
+extern T * D_L00_001601AC MACRO_ADDR;
+extern void func_L00_002D80A0(char *);
+extern void func_L00_002D8180(char *);
+extern s32 func_L00_00261478(struct Moby *, struct Moby *, void *, void *, void *, void *);
+extern void func_L00_00261848(s32);
+extern void func_L00_002512D8(s32);
+extern void func_L00_00286128(void *, void *);
+extern void func_L00_00299B68(s32);
+extern void func_L00_0029A7D0(s32);
+extern void func_L00_00263DB0(s32);
+extern void func_L00_002676A0(struct Moby *, s32);
+extern void func_0020BFC8(s32, s32);
+extern void func_0020D678(void);
+extern f32 func_001F9D10(void *, void *);
+extern void func_001F9C30(void *, void *, f32);
+extern void func_L00_001FF4B0(void *, void *, f32);
+extern f32 func_001F9CB8(void *);
+extern f32 func_L00_001FF860(f32, f32);
+extern f32 func_001F9F90(f32);
+extern f32 func_001F9FA8(f32);
+extern f32 func_001FA748(f32, f32);
+extern f32 func_001FA790(f32, f32);
+extern s32 func_001FA898(f32);
+extern f32 func_001FA888(s32);
+extern Path *D_L00_001B0830[];
+extern u8 D_0013DE48[];
+extern Player D_0013F4D0;
+extern s32 D_L00_0015F6A8 MACRO_ADDR;
+static inline void measure_path(Path *path) {
+    s32 j;
+
+    for (j = 0; j < path->count - 2; j++) {
+        path->pts[j].v.w = func_001F9D10(&path->pts[j], &path->pts[j + 1]);
+    }
+}
+void func_L00_002D7298(struct Moby *moby)
+{
+    Vec offset;
+    Vec step;
+    Vec point;
+    s32 segment;
+    f32 fraction;
+    Infobot *infobot;
+    Path *path;
+    Vec *pos;
+    struct Moby *carrier;
+    Cutscene *scene;
+    s32 i;
+    f32 range;
+    f32 distance;
+    f32 end;
+    f32 accel;
+    f32 speed;
+    f32 heading;
+    f32 tilt_y;
+    f32 tilt_x;
+    f32 max_speed;
+
+    offset.q = 0;
+    infobot = (Infobot *)moby->pvars;
+    switch (moby->state) {
+    case 0:
+        moby->unk30 = 0xFF;
+        infobot->yaw = moby->rot.z;
+        infobot->home = MPOS(moby)->q;
+        if (infobot->arrived != 0) {
+            moby->state = 2;
+            func_L00_002D80A0((char *)moby);
+        } else {
+            if (infobot->waiting != 0) {
+                moby->state = 2;
+            } else {
+                moby->state = 1;
+            }
+            moby->flags |= 0x41;
+        }
+        if (infobot->attach != -1) {
+            moby->state = 5;
+            func_L00_002D80A0((char *)moby);
+            break;
+        }
+        if (infobot->slots[0] == -1) {
+            break;
+        }
+        for (i = 0; i < 8; i++) {
+            if (infobot->slots[i] == -1) {
+                continue;
+            }
+            measure_path(D_L00_001B0830[infobot->slots[i]]);
+        }
+        MPOS(moby)->q = D_L00_001B0830[infobot->slots[0]]->pts[0].q;
+        infobot->seg = 0;
+        moby->state = 3;
+        break;
+    case 1:
+        break;
+    case 2:
+        range = 1.0f;
+        if (infobot->waiting != 0 && (moby->flags & 1)) {
+            range = 3.0f;
+        }
+        if (infobot->planet == 0xC) {
+            range = 3.0f;
+        }
+        moby->rot.z = ((f32 (*)(f32, f32, f32, f32, f32, f32 *))func_L00_00259148)(moby->rot.z, infobot->yaw, 0.01f, 0.3f, 0.1f, &infobot->spin[2]);
+        moby->rot.y = ((f32 (*)(f32, f32, f32, f32, f32, f32 *))func_L00_00259148)(moby->rot.y, 0.0f, D_0015EE70 * 0.5235988f, D_0015EE70 * 1.0471976f, D_0015EE6C * 0.7853982f, &infobot->spin[1]);
+        moby->rot.x = ((f32 (*)(f32, f32, f32, f32, f32, f32 *))func_L00_00259148)(moby->rot.x, 0.0f, D_0015EE70 * 1.0471976f, D_0015EE70 * 2.0943952f, D_0015EE6C * 1.5707964f, &infobot->spin[0]);
+        func_L00_002D8180((char *)moby);
+        if (D_0013DE48[infobot->planet] != 0) {
+            ((void (*)(struct Moby *))func_0020D678)(moby);
+            return;
+        }
+        if (func_001F9D10(&D_0013F4D0, &moby->pos) < range && D_0013F4D0.active != 0) {
+            moby->state = 8;
+        }
+        break;
+    case 3:
+        func_L00_002D8180((char *)moby);
+        if (D_0013DE48[infobot->planet] != 0) {
+            ((void (*)(struct Moby *))func_0020D678)(moby);
+            return;
+        }
+        if (infobot->slots[infobot->seg] == -1) {
+            moby->state = 2;
+            break;
+        }
+        heading = func_L00_001FF860(((Camera *)D_0013F450)->target.v.x - moby->pos.x, ((Camera *)D_0013F450)->target.v.y - moby->pos.y);
+        moby->rot.z = ((f32 (*)(f32, f32, f32, f32, f32, f32 *))func_L00_00259148)(moby->rot.z, heading, 0.01f, 0.3f, 0.1f, &infobot->spin[2]);
+        moby->rot.y = ((f32 (*)(f32, f32, f32, f32, f32, f32 *))func_L00_00259148)(moby->rot.y, 0.0f, D_0015EE70 * 0.5235988f, D_0015EE70 * 1.0471976f, D_0015EE6C * 0.7853982f, &infobot->spin[1]);
+        moby->rot.x = ((f32 (*)(f32, f32, f32, f32, f32, f32 *))func_L00_00259148)(moby->rot.x, 0.0f, D_0015EE70 * 1.0471976f, D_0015EE70 * 2.0943952f, D_0015EE6C * 1.5707964f, &infobot->spin[0]);
+        if (func_001F9D10(&((Camera *)D_0013F450)->target, &moby->pos) < 8.0f) {
+            moby->state = 4;
+            func_L00_002676A0(moby, 1);
+        }
+        break;
+    case 4:
+        func_L00_002D6E38(moby, D_L00_001B0830[infobot->slots[infobot->seg]], 3);
+        func_L00_002D8180((char *)moby);
+        if (moby->state != 4) {
+            infobot->seg++;
+        }
+        break;
+    case 5:
+        func_L00_002D8180((char *)moby);
+        if (D_0013DE48[infobot->planet] != 0) {
+            ((void (*)(struct Moby *))func_0020D678)(moby);
+            return;
+        }
+        infobot->bob = func_001FA748(infobot->bob, D_0015EE6C * 3.1415927f);
+        offset.v.x = func_001F9F90(infobot->bob);
+        offset.v.y = func_001F9FA8(infobot->bob);
+        offset.v.z = 3.0f;
+        moby->rot.z = func_001FA748(infobot->bob, 1.5707964f);
+        if (infobot->carrier == -1) {
+            break;
+        }
+        if (((struct Moby *)D_L00_00160098)[infobot->carrier].oclass != 0x336) {
+            break;
+        }
+        if (((struct Moby *)D_L00_00160098)[infobot->carrier].unkBC != 6) {
+            break;
+        }
+        if (infobot->path == -1) {
+            break;
+        }
+        moby->state = 6;
+        infobot->attach = -1;
+        MPOS(moby)->q = D_L00_001B0830[infobot->path]->pts[0].q;
+        moby->rot.z = func_L00_001FF860(D_L00_001B0830[infobot->path]->pts[1].v.x - D_L00_001B0830[infobot->path]->pts[0].v.x,
+                                D_L00_001B0830[infobot->path]->pts[1].v.y - D_L00_001B0830[infobot->path]->pts[0].v.y);
+        measure_path(D_L00_001B0830[infobot->path]);
+        break;
+    case 6:
+        path = D_L00_001B0830[infobot->path];
+        pos = (Vec *)&moby->pos;
+        func_L00_002D8180((char *)moby);
+        func_L00_0025EFC0(path, pos, &point, &segment, &fraction, 0, 999.0f, 5.0f, 0.0f);
+        end = func_001FA888(segment) * path->pts[0].v.w + fraction + 2.0f;
+        distance = func_001F9D10(pos, &path->pts[path->count - 1]);
+        accel = D_0015EE70 * 16.0f;
+        speed = infobot->speed;
+        if (distance <= speed * speed / (accel + accel)) {
+            infobot->speed = speed - accel;
+            if (speed - accel < 0.0f) {
+                infobot->speed = 0.0f;
+            }
+        } else {
+            max_speed = D_0015EE6C * 16.0f;
+            infobot->speed = speed + accel;
+            if (max_speed < speed + accel) {
+                infobot->speed = max_speed;
+            }
+        }
+        segment = func_001FA898(end / path->pts[0].v.w);
+        fraction = (end - func_001FA888(segment) * path->pts[0].v.w) / path->pts[0].v.w;
+        if (segment >= path->count - 1) {
+            if (infobot->speed <= D_0015EE70 * 16.0f) {
+                MPOS(moby)->q = ((Vec *)path)[path->count].q;
+                moby->state = 7;
+                break;
+            }
+            segment = path->count - 2;
+            fraction = 1.0f;
+        }
+        func_001F9BF0(&point, &path->pts[segment + 1], &path->pts[segment]);
+        func_001F9C30(&point, &point, fraction);
+        func_001F9BD8(&point, &point, &path->pts[segment]);
+        heading = func_L00_001FF860(path->pts[segment + 1].v.x - path->pts[segment].v.x,
+                         path->pts[segment + 1].v.y - path->pts[segment].v.y);
+        moby->rot.z = ((f32 (*)(f32, f32, f32, f32, f32, f32 *))func_L00_00259148)(moby->rot.z, heading, 0.01f, 0.3f, 0.1f, &infobot->spin[2]);
+        pos = &step;
+        func_001F9BF0(pos, &point, MPOS(moby));
+        distance = func_001F9CB8(pos);
+        if (infobot->speed < distance) {
+            distance = infobot->speed;
+        }
+        func_L00_001FF4B0(pos, pos, distance);
+        func_001F9BD8(MPOS(moby), MPOS(moby), pos);
+        heading = func_001FA790(func_L00_001FF860(step.v.x, step.v.y), moby->rot.z);
+        tilt_y = infobot->speed * 0.34906584f * func_001F9F90(heading) / (D_0015EE6C * 16.0f);
+        tilt_x = infobot->speed * -0.34906584f * func_001F9FA8(heading) / (D_0015EE6C * 16.0f);
+        moby->rot.y = ((f32 (*)(f32, f32, f32, f32, f32, f32 *))func_L00_00259148)(moby->rot.y, tilt_y, D_0015EE70 * 0.5235988f, D_0015EE70 * 1.0471976f, D_0015EE6C * 0.7853982f, &infobot->spin[1]);
+        moby->rot.x = ((f32 (*)(f32, f32, f32, f32, f32, f32 *))func_L00_00259148)(moby->rot.x, tilt_x, D_0015EE70 * 1.0471976f, D_0015EE70 * 2.0943952f, D_0015EE6C * 1.5707964f, &infobot->spin[0]);
+        break;
+    case 7: {
+        Path *p = D_L00_001B0830[infobot->path];
+        func_L00_002D8180((char *)moby);
+        infobot->sway = infobot->sway + D_0015EE6C;
+        if (1.0f < infobot->sway) {
+            infobot->sway = 1.0f;
+        }
+        infobot->bob = func_001FA748(infobot->bob, D_0015EE6C * 3.1415927f);
+        offset.v.x = func_001F9F90(infobot->bob) * infobot->sway;
+        offset.v.y = func_001F9FA8(infobot->bob) * infobot->sway;
+        offset.v.z = 0.0f;
+        heading = func_001FA748(infobot->bob, 1.5707964f);
+        moby->rot.z = ((f32 (*)(f32, f32, f32, f32, f32, f32 *))func_L00_00259148)(moby->rot.z, heading, D_0015EE6C * 25.132742f, D_0015EE6C * 25.132742f, D_0015EE6C * 12.566371f, &infobot->spin[2]);
+        func_001F9BD8(&step, &offset, &p->pts[p->count - 1]);
+        MPOS(moby)->q = step.q;
+        if (func_001F9D10(&D_0013F4D0, &p->pts[p->count - 1]) < 2.0f && D_0013F4D0.active != 0) {
+            moby->state = 8;
+        }
+        moby->rot.y = ((f32 (*)(f32, f32, f32, f32, f32, f32 *))func_L00_00259148)(moby->rot.y, 0.0f, D_0015EE70 * 0.5235988f, D_0015EE70 * 1.0471976f, D_0015EE6C * 0.7853982f, &infobot->spin[1]);
+        moby->rot.x = ((f32 (*)(f32, f32, f32, f32, f32, f32 *))func_L00_00259148)(moby->rot.x, 0.0f, D_0015EE70 * 1.0471976f, D_0015EE70 * 2.0943952f, D_0015EE6C * 1.5707964f, &infobot->spin[0]);
+        break;
+    }
+    case 8:
+        moby->flags |= 0x41;
+        func_L00_00261848(infobot->planet);
+        func_L00_002512D8(moby->unkB0);
+        if (infobot->cutscene != -1) {
+            func_L00_00286128(&CUTS[infobot->cutscene].pos, &CUTS[infobot->cutscene].dir);
+        }
+        moby->state = 9;
+        if (infobot->msg0 != -1) {
+            func_L00_00299B68(infobot->msg0);
+        }
+        break;
+    case 9:
+        if (D_L00_0015F6A8 == 2) {
+            break;
+        }
+        moby->state = 10;
+        if (infobot->msg1 != -1) {
+            func_L00_0029A7D0(infobot->msg1);
+        }
+        break;
+    case 10:
+        if (D_L00_0015F6A8 == 2) {
+            break;
+        }
+        if (infobot->msg2 != -1) {
+            func_L00_00299B68(infobot->msg2);
+        }
+        moby->state = 11;
+        break;
+    case 11:
+        if (D_L00_0015F6A8 == 2) {
+            return;
+        }
+        func_0020BFC8(0, -1);
+        func_L00_00263DB0(infobot->planet);
+        ((void (*)(struct Moby *))func_0020D678)(moby);
+        return;
+    }
+    if (infobot->attach != -1 && infobot->carrier != -1) {
+        carrier = &((struct Moby *)D_L00_00160098)[infobot->carrier];
+        if (carrier->oclass == 0x336) {
+            step.q = 0;
+            func_L00_00261478(moby, carrier, &CUTS[infobot->attach].pos, &step,
+                             &CUTS[infobot->attach].pos, &step);
+            func_001F9BD8(&point, &offset, &CUTS[infobot->attach].pos);
+            MPOS(moby)->q = point.q;
+        }
+    }
+}
 
 /* Fills the random float, constant and random int slots of a moby's data block. */
 void func_L00_002D80A0(char *a) {
@@ -1547,11 +2039,9 @@ typedef struct {
     s16 flag42; /* 42 */
     float f44, f48, pad4C, f50;
 } Q;
-typedef struct { Vec4f v0, v1, v2; float pos[3]; float w; u8 pad[0x40]; } T;
 typedef struct { u8 pad0[4]; int x04; u8 pad08[2]; u8 b0A; u8 b0B; } E2;
 typedef struct { u8 pad0[3]; u8 b03; u8 pad4[6]; s16 h0A; u8 pad0C[0x14]; E2 sub; } E;
 typedef struct { u8 pad[0x10]; Vec4f pos; u8 state; u8 pad21[0xF]; u8 b30; u8 pad31[0x47]; Q *q; } P;
-extern T * D_L00_001601AC MACRO_ADDR;
 extern Vec4f D_L00_001CBAE0_D83D8[] __asm__("D_L00_001CBAE0");
 extern u8 D_L00_001D2B60[];
 extern s16 D_L00_001D5A40[];

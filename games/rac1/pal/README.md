@@ -3,8 +3,8 @@
 [![Website](https://img.shields.io/badge/Website-openrac.dev-ff8a00?logo=googlechrome&logoColor=white)](https://openrac.dev)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/Sfd2B54PDG)
 [![Progress report](https://github.com/OpenRAC/rac1-decomp/actions/workflows/progress.yml/badge.svg)](https://github.com/OpenRAC/rac1-decomp/actions/workflows/progress.yml)
-[![Code](https://decomp.dev/OpenRAC/rac1-decomp.svg?mode=shield&label=Code&measure=matched_code_percent)](https://decomp.dev/OpenRAC/rac1-decomp)
-[![Functions](https://decomp.dev/OpenRAC/rac1-decomp.svg?mode=shield&label=Functions&measure=matched_functions)](https://decomp.dev/OpenRAC/rac1-decomp)
+[![Code](https://bytematch.dev/OpenRAC/rac1-decomp.svg?mode=shield&label=Code&measure=matched_code_percent)](https://bytematch.dev/OpenRAC/rac1-decomp)
+[![Functions](https://bytematch.dev/OpenRAC/rac1-decomp.svg?mode=shield&label=Functions&measure=matched_functions)](https://bytematch.dev/OpenRAC/rac1-decomp)
 
 A work-in-progress **matching decompilation** of *Ratchet & Clank* (Insomniac Games, 2002) for the PlayStation 2 (`SCES_509.16`, PAL v2.00), part of the **[OpenRAC](https://openrac.dev)** initiative.
 
@@ -17,13 +17,13 @@ The objective is to produce C/C++ source code that, when compiled with the origi
 
 ## Progress
 
-Decompilation progress is tracked live on **[openrac.dev](https://openrac.dev)** and **[decomp.dev/OpenRAC/rac1-decomp](https://decomp.dev/OpenRAC/rac1-decomp)**.
+Decompilation progress is tracked live on **[openrac.dev](https://openrac.dev)** and **[bytematch.dev/OpenRAC/rac1-decomp](https://bytematch.dev/OpenRAC/rac1-decomp)**.
 
 | Version | Region | Target ID | Code Matched | Functions Matched |
 |---|---|---|---|---|
-| v2.00 | PAL (En, Fr, De, Es, It) | `SCES_509.16` | [![](https://decomp.dev/OpenRAC/rac1-decomp.svg?mode=shield&label=Code&measure=matched_code_percent)](https://decomp.dev/OpenRAC/rac1-decomp) | [![](https://decomp.dev/OpenRAC/rac1-decomp.svg?mode=shield&label=Functions&measure=matched_functions)](https://decomp.dev/OpenRAC/rac1-decomp) |
+| v2.00 | PAL (En, Fr, De, Es, It) | `SCES_509.16` | [![](https://bytematch.dev/OpenRAC/rac1-decomp.svg?mode=shield&label=Code&measure=matched_code_percent)](https://bytematch.dev/OpenRAC/rac1-decomp) | [![](https://bytematch.dev/OpenRAC/rac1-decomp.svg?mode=shield&label=Functions&measure=matched_functions)](https://bytematch.dev/OpenRAC/rac1-decomp) |
 
-Every function links at its original retail address. Functions not yet decompiled are built from disassembly, ensuring the full binary always links and matches retail byte-for-byte outside in-progress functions. For level overlays and breakdown details, see [decomp.dev](https://decomp.dev/OpenRAC/rac1-decomp) and [`docs/OVERLAYS.md`](docs/OVERLAYS.md).
+Every function links at its original retail address. Functions not yet decompiled are built from disassembly, ensuring the full binary always links and matches retail byte-for-byte outside in-progress functions. For level overlays and breakdown details, see [ByteMatch](https://bytematch.dev/OpenRAC/rac1-decomp) and [`docs/OVERLAYS.md`](docs/OVERLAYS.md).
 
 ---
 
@@ -102,7 +102,7 @@ This project builds upon years of dedicated reverse-engineering research and too
   - [splat](https://github.com/ethteck/splat) & [spimdisasm](https://github.com/Decompollaborate/spimdisasm) – Binary splitting and MIPS disassembly.
   - [m2c](https://github.com/matt-kempster/m2c) & [asm-differ](https://github.com/simonlindholm/asm-differ) – Assembly-to-C translation and diffing.
   - [objdiff](https://github.com/encounter/objdiff) – Object diffing tool.
-  - [decomp.dev](https://decomp.dev) & [decomp.wiki](https://decomp.wiki) – Progress tracking and decompilation knowledge base.
+  - [ByteMatch](https://bytematch.dev) & [decomp.wiki](https://decomp.wiki) – Progress tracking and decompilation knowledge base.
   - [AngheloAlf](https://github.com/AngheloAlf) – PS2 toolchain mirrors.
 
 ---

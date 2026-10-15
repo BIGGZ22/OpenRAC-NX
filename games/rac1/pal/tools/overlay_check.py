@@ -258,13 +258,14 @@ def text_record(manifest: dict) -> dict:
 def retail_jtbl(name: str, level: int) -> int | None:
     """The retail address of the jump table NAME's own asm/overlays/<name>.s
     uses (jtbl_LNN_Z, its own canonical level), or None if it has no .s
-    file or no such reference."""
-    p = ASM_OVERLAYS / f"{name}.s"
-    if not p.exists():
-        return None
-    for full, mm, z in JTBL_REF.findall(p.read_text()):
-        if int(mm) == level:
-            return int(z, 16)
+    file or no such reference. A joined function's table may be used in one of its pieces."""
+    for part in [name] + load_joined().get(name, []):
+        p = ASM_OVERLAYS / f"{part}.s"
+        if not p.exists():
+            continue
+        for full, mm, z in JTBL_REF.findall(p.read_text()):
+            if int(mm) == level:
+                return int(z, 16)
     return None
 
 

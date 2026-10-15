@@ -708,7 +708,136 @@ void func_L06_00309088(unsigned char *a, unsigned char *m) {
         break;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L06_00309170);
+/* functional: high. The NTSC decomp's matched C for the same instructions (FUN_L06_00307d30), carried to PAL's
+   names by OpenRAC's tools/port.py. Not a PAL match: PAL's compiler gives our 1680 bytes for retail's 1664 bytes. */
+void func_L06_00309088(unsigned char *a, unsigned char *m);
+typedef int OvlQuad_p __attribute__((mode(TI)));
+extern void func_L06_003089B8(void);
+extern short D_L06_0016236C;
+extern short D_L06_00162370;
+extern short D_L06_00162374;
+extern short D_L06_00162378;
+extern short D_L06_0016237C;
+extern unsigned char D_001414F4 NOT_SDA;
+extern int D_0015EEB4 MACRO_ADDR;
+extern unsigned char D_0014C150[];
+extern short D_0015EE84;
+extern short D_L06_00160058;
+extern int func_001FA898(float);
+extern float func_001F9D10(void *, void *);
+extern void func_001F49B0(void *, void *);
+extern void func_L00_001FF240(void *, void *, void *);
+extern void func_L01_00286530(void *, void *, int, unsigned int, int, int, int, float);
+static inline unsigned int or_blue_channel_p(int blue, unsigned int color) {
+    return blue * 0x10000 | color;
+}
+
+struct LockVars_p {
+    int id[4];
+    int init_cnt;
+    int cnt;
+    float f6;
+    int pad7[2];
+    float f9;
+    float f10;
+};
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/00307578.c, FUN_L06_00307d30. */
+void func_L06_00309170(char *moby) {
+    struct LockVars_p *data = *(struct LockVars_p **)(moby + 0x78);
+    float pos[4];
+    float offset[3];
+    float result[4];
+    float angle;
+    int value;
+    unsigned int color;
+    unsigned int color_channels;
+    int i;
+
+    if (data->id[0] == -1) return;
+    data->f10 = func_001FA748(data->f10, (360.0f / (*(float *)&D_L06_00162374)) * 0.017453292f * D_0015EE6C);
+    *(unsigned int *)(moby + 0x90) = ((unsigned int (*)(float, int, int))func_001FA8A8)((func_001F9F90(data->f10) + 1.0f) * 0.5f, 0x80464646, 0x80828282);
+    switch ((unsigned char)moby[0x20]) {
+    case 0:
+        data->cnt = data->init_cnt;
+        data->f6 = func_00214158();
+        data->f10 = func_00214158();
+        moby[0x20] = 1;
+        data->f9 = (*(float *)&D_L06_0016237C);
+        return;
+    case 1:
+        *(OvlQuad_p *)pos = *(OvlQuad_p *)(moby + 0x10);
+        pos[2] += 2.75f;
+        if (func_001F9D10(((float *)&D_L06_00167640), moby + 0x10) < 32.0f) {
+            float lim = (*(float *)&D_L06_0016237C);
+            data->f9 += D_0015EE6C + D_0015EE6C;
+            if (lim < data->f9) data->f9 = lim;
+        } else if (36.0f < func_001F9D10(((float *)&D_L06_00167640), moby + 0x10)) {
+            data->f9 -= D_0015EE6C + D_0015EE6C;
+            if (data->f9 < 0.0f) data->f9 = 0.0f;
+        }
+        if (0.0f < data->f9) {
+            func_001F49B0((void *)func_L06_003089B8, moby);
+            data->f6 = func_001FA748(data->f6, (360.0f / (*(float *)&D_L06_00162370)) * 0.017453292f * D_0015EE6C);
+            pos[2] += (*(float *)&D_L06_0016236C) * func_001F9F90(data->f6);
+            value = func_001FA898((*(float *)&D_L06_00162378) * func_001F9F90(data->f10));
+            color_channels = (value / 2 + 120) * 0x100 | 0x20000000U;
+            color_channels = or_blue_channel_p(value / 3 + 13, color_channels);
+            color = color_channels | (value + 150U);
+            if (D_001414F4 == 1) {
+                if (data->cnt < 10) {
+                    func_L01_00286530(pos, moby, data->cnt + 2, color, 0x7f, 4, 0xff, 0.5f);
+                } else {
+                    if (*(unsigned char *)&D_0015EEB4) {
+                        angle = func_001FA748(*(float *)(moby + 0x48), 1.5707964f);
+                        offset[0] = func_001F9F90(angle) * 0.15f;
+                        angle = func_001FA748(*(float *)(moby + 0x48), 1.5707964f);
+                        offset[1] = func_001F9FA8(angle) * 0.15f;
+                        offset[2] = 0.0f;
+                        func_L00_001FF240(result, offset, pos);
+                        func_L01_00286530(offset, moby, data->cnt / 10 + 2, color, 0x7f, 4, 0xff, 0.5f);
+                        angle = func_001FA748(*(float *)(moby + 0x48), 1.5707964f);
+                        offset[0] = func_001F9F90(angle) * -0.4f;
+                        angle = func_001FA748(*(float *)(moby + 0x48), 1.5707964f);
+                        offset[1] = func_001F9FA8(angle) * -0.4f;
+                        offset[2] = 0.0f;
+                        func_L00_001FF240(result, offset, pos);
+                        func_L01_00286530(offset, moby, data->cnt % 10 + 2, color, 0x7f, 4, 0xff, 0.5f);
+                    } else {
+                        angle = func_001FA748(*(float *)(moby + 0x48), 1.5707964f);
+                        offset[0] = func_001F9F90(angle) * -0.4f;
+                        angle = func_001FA748(*(float *)(moby + 0x48), 1.5707964f);
+                        offset[1] = func_001F9FA8(angle) * -0.4f;
+                        offset[2] = 0.0f;
+                        func_L00_001FF240(result, offset, pos);
+                        func_L01_00286530(offset, moby, data->cnt / 10 + 2, color, 0x7f, 4, 0xff, 0.5f);
+                        angle = func_001FA748(*(float *)(moby + 0x48), 1.5707964f);
+                        offset[0] = func_001F9F90(angle) * 0.15f;
+                        angle = func_001FA748(*(float *)(moby + 0x48), 1.5707964f);
+                        offset[1] = func_001F9FA8(angle) * 0.15f;
+                        offset[2] = 0.0f;
+                        func_L00_001FF240(result, offset, pos);
+                        func_L01_00286530(offset, moby, data->cnt % 10 + 2, color, 0x7f, 4, 0xff, 0.5f);
+                    }
+                }
+            }
+        }
+        if (data->cnt < 1 || D_0014C150[(unsigned char)moby[0xb0] + (*(int *)&D_0015EE84) * 16] == 0xff) {
+            for (i = 0; i < 4; i++) {
+                if (data->id[i] != -1) func_L06_00309088((unsigned char *)moby, (unsigned char *)((*(int *)&D_L06_00160058) + data->id[i] * 0x100));
+            }
+            moby[0x20] = 2;
+        }
+        break;
+    case 2:
+        data->f9 -= D_0015EE6C + D_0015EE6C;
+        if (data->f9 < 0.0f) data->f9 = 0.0f;
+        if (0.0f < data->f9) func_001F49B0((void *)func_L06_003089B8, moby);
+        return;
+    default:
+        return;
+    }
+}
 extern char *func_L00_0025B478(void *, int, int);
 extern void func_L01_00279790(void *);
 extern void func_L00_00265050(void *, int, void *, void *, int, int, float, void *, void *, void *);
@@ -764,7 +893,7 @@ void func_L06_0030ACA0(char *moby) {
 }
 extern void func_0020D678(void *);
 extern void func_001F49B0(void *, void *);
-extern void func_L06_0030D3E8(void);
+extern void func_L06_0030D3E8(char *);
 
 /* UpdateMoby: state 0 deletes, state 1 draws and times out */
 void func_L06_0030D2A0(char *m) {
@@ -803,7 +932,73 @@ void func_L06_0030D338(char *src, int a1, int a2, int a3) {
         m[0x20] = 1;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L06_0030D3E8);
+extern unsigned char D_0013E15A[];
+extern void func_001F2418(float *, void *);
+extern void func_L02_0020BF88(void *, void *, void *, u64, int);
+extern s32 D_L06_001624A4_FF000 SDATA(D_L06_001624A4);
+extern s32 D_L06_001624A8_FF000 SDATA(D_L06_001624A8);
+extern s32 D_L06_001624AC_FF000 SDATA(D_L06_001624AC);
+extern s32 D_L06_001624B0_FF000 SDATA(D_L06_001624B0);
+extern s32 D_L06_001624B4_FF000 SDATA(D_L06_001624B4);
+extern s32 D_L06_001624B8_FF000 SDATA(D_L06_001624B8);
+
+/* Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/vendor/00307578.c, FUN_L06_0030bfa8. */
+void func_L06_0030D3E8(char *moby) {
+    float *d = *(float **)(moby + 0x78);
+    Vec4f pos;
+    s64 corners[4];
+    u32 colors[4];
+    s32 uvs[4];
+    float screen[4];
+    float size;
+    float fade;
+    s32 y, x, radius;
+    s32 raw_x;
+    u64 texture;
+    u32 color;
+    s32 *screen_center;
+    float screen_offset;
+
+    qcopy(&pos, moby + 0x10);
+    size = d[0];
+    if (1.0f < size) size = 1.0f;
+    fade = d[0] - 1.0f;
+    if (1.0f < fade) fade = 1.0f;
+    else if (fade < 0.0f) fade = 0.0f;
+    func_00234C98(0x47, 0x5380B);
+    func_001F2418(screen, &pos);
+    screen_center = (s32 *)(D_0013E15A + 0x4A6);
+    raw_x = func_001FA898(screen[0] - (float)screen_center[4]);
+    screen_offset = (float)screen_center[4];
+    y = func_001FA898(screen[1] - screen_offset);
+    x = raw_x - 0x1000;
+    y -= 0x1000;
+    uvs[0] = D_L06_001624AC_FF000;
+    uvs[1] = D_L06_001624B0_FF000;
+    uvs[2] = D_L06_001624B4_FF000;
+    uvs[3] = D_L06_001624B8_FF000;
+    color = func_001FA8A8_00AB0(fade, *(s32 *)&d[2], *(s32 *)&d[3]);
+    colors[3] = color;
+    colors[2] = color;
+    colors[1] = color;
+    colors[0] = color;
+    radius = func_001FA898((float)(D_L06_001624A8_FF000 << 4) * size);
+    corners[3] = 0xfffff080008000LL;
+    corners[2] = 0xfffff080008000LL;
+    corners[1] = 0xfffff080008000LL;
+    corners[0] = 0xfffff080008000LL;
+    corners[0] += (y - radius) << 16;
+    corners[0] += x + radius;
+    corners[1] += (y - radius) << 16;
+    corners[1] += x - radius;
+    corners[2] += (y + radius) << 16;
+    corners[2] += x + radius;
+    corners[3] += (y + radius) << 16;
+    corners[3] += x - radius;
+    texture = func_001F4868(D_L06_001624A4_FF000);
+    func_L02_0020BF88(corners, uvs, colors, texture, 1);
+    func_00234C98(0x47, 0x5360B);
+}
 extern char *D_L06_0015F050 MACRO_ADDR;
 
 // If the moby's kind is 0x12, set a flag in the table entry it indexes.

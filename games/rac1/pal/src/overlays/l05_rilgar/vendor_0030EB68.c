@@ -1514,7 +1514,365 @@ void func_L05_00317E58(char *arg) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L05_00317F80);
+typedef union { unsigned long long q __attribute__((mode(TI))); float component[4]; } HGVec;
+struct HGMoby;
+typedef struct {
+    unsigned char attached_flags[2];
+    unsigned char pad02[0x5E];
+    float target_rotation[3];
+    unsigned char pad6C[4];
+    float target_scale;
+    unsigned char pad74[4];
+    struct HGMoby *owner;
+    unsigned char pad7C[4];
+} HGJoint;
+typedef struct {
+    unsigned char pad00[4];
+    short previous_dialogue_state;
+    unsigned char pad06[2];
+    unsigned char race_return_pending;
+    unsigned char pad09[0x17];
+    const char *dialogue_name;
+    unsigned char pad24[0x12];
+    short dialogue_state;
+    int dialogue_state_frame;
+    unsigned char pad3C[4];
+    HGJoint joints[4];
+    unsigned char pad240[4];
+    int idle_animation_timer;
+    int player_look_timer;
+    int random_look_timer;
+    HGVec look_target;
+    int breast_growth_count_gp;
+} HGState;
+typedef struct HGMoby {
+    unsigned char pad00[0x10];
+    HGVec position;
+    unsigned char state;
+    unsigned char pad21[0x27];
+    float yaw;
+    unsigned char pad4C[7];
+    unsigned char animation;
+    unsigned char pad54[0x1C];
+    unsigned char animation_flags;
+    unsigned char pad71[7];
+    HGState *data;
+    unsigned char pad7C[0x2A];
+    short class_id;
+    unsigned char padA8[0x14];
+    unsigned char dialogue_event;
+} HGMoby;
+typedef struct { unsigned char pad00[0x10C]; int first_gate; unsigned char pad110[0xC]; int second_gate; } HGGates;
+typedef struct { unsigned char pad00[4]; short state; } HGRaceEntry;
+typedef struct {
+    unsigned char pad00[0x80];
+    HGVec pos;
+    unsigned char pad90[0x40];
+    HGVec unkD0;
+    unsigned char padE0[0x20];
+    HGVec displacement;
+    unsigned char pad110[0x88];
+    int state_timer;
+    unsigned char pad19C[0x1EE8];
+    int state_current;
+    unsigned char pad2088[0x24];
+    unsigned char flag20AC;
+} HGHero;
+extern char D_0013D355[];
+extern unsigned char D_0013D50F[];
+extern unsigned char D_0013D605[];
+extern HGRaceEntry * D_L05_001B1E78[] ;
+extern const char D_L05_00161F98[] ;
+extern HGVec D_L05_00215F00[] ;
+extern unsigned char D_0015EEB0[];
+extern void func_00213DE0(void *, int, int, int);
+extern float func_00214358(void *, int, float);
+extern int func_L00_00267618();
+extern int func_L00_002676E8(void *, void *);
+extern void func_L02_0025D750(char *);
+extern int func_L00_00267290(void *, void *);
+extern void func_L01_00279398(float, void *);
+extern void func_L00_00217718();
+extern void func_L00_002664B0();
+extern void func_L00_00264DB8(int, int);
+extern int func_0020BFC8(int, int);
+extern float func_001FA850(float, float);
+extern void func_00215C00(void *, float, float, float);
+extern float func_001F9CE8(void *);
+extern void func_L05_00317E58();
+extern void func_0022EE28();
+#define breast_growth_count_gp_q (*(int*)&D_L05_00161F90)
+#define game_mode D_L05_0015F6A8
+#define frame_number D_L05_0015F6B0
+#define race_entries D_L05_001B1E78
+#define race_girl_name D_L05_00161F98
+#define race_camera_vectors D_L05_00215F00
+#define frame_scale_sq D_0015EE64
+#define scale_frame_count ((int(*)(int))(func_001F9850))
+#define scale_time ((float(*)(float))(func_001F9878))
+#define advance_timer ((int(*)(int *))(func_001F9908))
+#define truncate_time ((int(*)(float))(func_001FA898))
+#define random_float ((float(*)(float, float))(func_002140F8))
+#define random_remainder ((int(*)(int))(func_002140B0))
+#define blend_moby_animation ((void(*)(HGMoby *, int, int, int))(func_00213DE0))
+#define find_ground_height ((float(*)(float, HGVec *, int))(func_00214358))
+#define get_dialogue_entry ((int(*)(HGMoby *))(func_L00_00267618))
+#define initialize_npc_dialogue ((void(*)(HGMoby *, HGState *))(func_L00_002676E8))
+#define initialize_moby_grounding ((void(*)(HGMoby *))(func_L02_0025D750))
+#define update_npc_dialogue ((int(*)(HGMoby *, HGState *))(func_L00_00267290))
+#define begin_dialogue_camera_transition ((void(*)(float, HGMoby *))(func_L01_00279398))
+#define set_race_camera ((void(*)(HGVec *, HGVec *, int, int))(func_L00_00217718))
+#define set_race_camera_mode ((void(*)(int, int))(func_L00_002664B0))
+#define queue_dialogue_message ((void(*)(int, int))(func_L00_00264DB8))
+#define func_0020BFC8_x ((void(*)(int, int))(func_0020BFC8))
+#define vector_distance ((float(*)(void *, void *))(func_001F9D48))
+#define angle_from_xy ((float(*)(float, float))(func_L00_001FF860))
+#define absolute_angle_difference ((float(*)(float, float))(func_001FA850))
+#define vector_length ((float(*)(void *))(func_001F9CB8))
+#define add_angle ((float(*)(float, float))(func_001FA748))
+#define vector_from_angles ((void(*)(float, float, float, void *))(func_00215C00))
+#define add_vector ((void(*)(void *, void *, void *))(func_001F9BD8))
+#define subtract_vector ((void(*)(void *, void *, void *))(func_001F9BF0))
+#define signed_angle_difference ((float(*)(float, float))(func_001FA790))
+#define vector_length_xy ((float(*)(void *))(func_001F9CE8))
+#define update_joint_animation ((void(*)(HGMoby *, HGJoint *, int, float, float))(func_L00_00263950))
+#define update_hoverboard_girl_cutscene_instances ((void(*)(HGMoby *))(func_L05_00317E58))
+#define update_hoverboard_girl_boobs_animation ((void(*)(HGMoby *, HGState *))(func_L05_00317CD8))
+#define func_0022EE28_x ((void(*)(int, int, int))(func_0022EE28))
+
+void func_L05_00317F80(HGMoby *moby) {
+    HGState *state = moby->data;
+    HGVec target_position;
+    HGVec head_position;
+    HGVec direction;
+    int animation;
+    int look_enabled;
+    float rotation_step;
+    float rotation_limit;
+    float heading;
+    float yaw;
+    float pitch;
+    float delta;
+
+    update_hoverboard_girl_cutscene_instances(moby);
+    switch (moby->state) {
+    case 0:
+        if (moby->animation != 0) {
+            blend_moby_animation(moby, 0, 0, scale_frame_count(20));
+        }
+        moby->position.component[2] = find_ground_height(0.5f, &moby->position, 0);
+        if ((*(HGGates *)(D_0013D605 + 0xB3)).first_gate == 0 || (*(HGGates *)(D_0013D605 + 0xB3)).second_gate == 0) {
+            HGRaceEntry **entries = race_entries;
+            int entry = get_dialogue_entry(moby);
+            entries[entry]->state = 13;
+        }
+        state->dialogue_name = race_girl_name;
+        moby->state = 1;
+        initialize_npc_dialogue(moby, state);
+        initialize_moby_grounding(moby);
+        break;
+    case 1:
+        if ((*(HGHero *)(D_0013E633 + 0xE1D)).state_current != 0x1D) {
+        if (update_npc_dialogue(moby, state) != 0) {
+            begin_dialogue_camera_transition(2.0f, moby);
+            moby->state = 3;
+        }
+        if (state->dialogue_state == 3) {
+            state->previous_dialogue_state = state->dialogue_state;
+            state->dialogue_state = 2;
+            state->dialogue_state_frame = frame_number;
+            moby->dialogue_event = 0;
+            set_race_camera(&race_camera_vectors[0], &race_camera_vectors[1], 0, 1);
+            qcopy(&((HGVec *)(D_0013E633 + 0x2B1D))[0], &race_camera_vectors[2]);
+            qcopy(&((HGVec *)(D_0013E633 + 0x2B1D))[1], &race_camera_vectors[3]);
+            (*(HGHero *)(D_0013E633 + 0xE1D)).flag20AC = 1;
+            set_race_camera_mode(2, 6);
+        }
+        }
+        if (moby->dialogue_event == 1) {
+            set_race_camera(&race_camera_vectors[2], &race_camera_vectors[3], 0, 1);
+            set_race_camera_mode(0, 8);
+            if ((*(unsigned char *)(D_0013D355 + 0x13B)) == 0) {
+                state->previous_dialogue_state = state->dialogue_state;
+                state->dialogue_state = 4;
+                state->dialogue_state_frame = frame_number;
+                state->race_return_pending = 1;
+            }
+            moby->dialogue_event = 0;
+        }
+        if (moby->dialogue_event == 2) {
+            set_race_camera_mode(0, 8);
+            set_race_camera(&race_camera_vectors[2], &race_camera_vectors[3], 0, 1);
+            moby->dialogue_event = 0;
+        }
+        if (moby->dialogue_event == 3) {
+            set_race_camera_mode(0, 8);
+            moby->dialogue_event = 0;
+            set_race_camera(&race_camera_vectors[0], &race_camera_vectors[1], 0, 1);
+            qcopy(&((HGVec *)(D_0013E633 + 0x2B1D))[0], &race_camera_vectors[2]);
+            qcopy(&((HGVec *)(D_0013E633 + 0x2B1D))[1], &race_camera_vectors[3]);
+        }
+        if ((moby->animation == 0 || moby->animation == 2) &&
+            advance_timer(&state->idle_animation_timer)) {
+            state->idle_animation_timer = truncate_time(scale_time(random_float(1200.0f, 2400.0f)));
+            if (moby->animation != 1) {
+                blend_moby_animation(moby, 1, 0, scale_frame_count(10));
+            }
+        } else if (moby->animation_flags & 2) {
+            animation = random_remainder(2) != 0 ? 0 : 2;
+            if (moby->animation != animation) {
+                blend_moby_animation(moby, animation, 0, scale_frame_count(10));
+            }
+        }
+        break;
+    case 3:
+        if (game_mode != 2) {
+            moby->state = 1;
+            if (state->previous_dialogue_state == 4) {
+                (*(unsigned char *)(D_0013D355 + 0x13B)) = 1;
+                queue_dialogue_message(0x1395, scale_frame_count(300));
+                if (D_0013D50F[0xA] != 0) {
+                    func_0022EE28_x(1, 0, 0);
+                    queue_dialogue_message(0x53DB, -1);
+                }
+                func_0020BFC8_x(0, -1);
+            }
+        }
+        break;
+    default:
+        if (moby->dialogue_event != 0) {
+            set_race_camera(&race_camera_vectors[2], &race_camera_vectors[3], 0, 1);
+            moby->dialogue_event = 0;
+        }
+        break;
+    }
+
+    rotation_step = 0.02f;
+    rotation_limit = 0.3f;
+    look_enabled = 0;
+    if (moby->animation == 0 || moby->animation == 2) {
+        look_enabled = 1;
+        if (vector_distance(&moby->position, &(*(HGHero *)(D_0013E633 + 0xE1D)).pos) < 8.0f &&
+            absolute_angle_difference(
+                moby->yaw,
+                angle_from_xy((*(HGHero *)(D_0013E633 + 0xE1D)).unkD0.component[0] - moby->position.component[0],
+                              (*(HGHero *)(D_0013E633 + 0xE1D)).unkD0.component[1] -
+                                  moby->position.component[1])) < 1.5707964f) {
+            if (vector_length(&(*(HGHero *)(D_0013E633 + 0xE1D)).displacement) > 0.01f) {
+                state->player_look_timer = scale_frame_count(120);
+            } else {
+                advance_timer(&state->player_look_timer);
+            }
+        } else if (state->player_look_timer != 0) {
+            state->player_look_timer = 0;
+            qcopy(&state->look_target, &(*(HGHero *)(D_0013E633 + 0xE1D)).unkD0);
+        }
+        if (advance_timer(&state->random_look_timer)) {
+            state->random_look_timer = truncate_time(scale_time(random_float(180.0f, 300.0f)));
+            heading = add_angle(moby->yaw, random_float(-90.0f, 90.0f) * 0.017453292f);
+            pitch = random_float(0.0f, 30.0f) * 0.017453292f;
+            vector_from_angles(6.0f, heading, pitch, &state->look_target);
+            add_vector(&state->look_target, &state->look_target, &moby->position);
+        }
+        if (state->player_look_timer != 0) {
+            qcopy(&target_position, &(*(HGHero *)(D_0013E633 + 0xE1D)).unkD0);
+            rotation_step = 0.03f;
+            rotation_limit = 0.3f;
+        } else {
+            qcopy(&target_position, &state->look_target);
+        }
+    }
+    if (look_enabled) {
+        qcopy(&head_position, &moby->position);
+        head_position.component[2] += 1.0f;
+        subtract_vector(&direction, &target_position, &head_position);
+        yaw = signed_angle_difference(angle_from_xy(direction.component[0], direction.component[1]),
+                                      moby->yaw);
+        pitch = -angle_from_xy(vector_length_xy(&direction), direction.component[2]);
+        if (yaw > 1.5707964f)
+            yaw = 1.5707964f;
+        else if (yaw < -1.5707964f)
+            yaw = -1.5707964f;
+        if (pitch > 0.5235988f)
+            pitch = 0.5235988f;
+        else if (pitch < -0.5235988f)
+            pitch = -0.5235988f;
+        state->joints[0].target_rotation[1] = pitch;
+        state->joints[0].target_rotation[2] = yaw * 0.6f;
+        state->joints[1].target_rotation[2] = yaw * 0.4f;
+    }
+
+    if (vector_distance(&moby->position, &(*(HGHero *)(D_0013E633 + 0xE1D)).pos) < 15.0f &&
+        absolute_angle_difference(
+            moby->yaw,
+            angle_from_xy((*(HGHero *)(D_0013E633 + 0xE1D)).pos.component[0] - moby->position.component[0],
+                          (*(HGHero *)(D_0013E633 + 0xE1D)).pos.component[1] - moby->position.component[1])) <
+            1.2217305f) {
+        if ((*(HGHero *)(D_0013E633 + 0xE1D)).state_current == 11 && (*(HGHero *)(D_0013E633 + 0xE1D)).state_timer == 15) {
+            state->breast_growth_count_gp++;
+            if (state->breast_growth_count_gp > 20)
+                state->breast_growth_count_gp = 20;
+            breast_growth_count_gp_q = state->breast_growth_count_gp;
+        }
+        if ((*(HGHero *)(D_0013E633 + 0xE1D)).state_current == 4 && scale_frame_count(20) < (*(HGHero *)(D_0013E633 + 0xE1D)).state_timer &&
+            frame_number % 10 == 0) {
+            state->breast_growth_count_gp--;
+            if (state->breast_growth_count_gp < 0)
+                state->breast_growth_count_gp = 0;
+            breast_growth_count_gp_q = state->breast_growth_count_gp;
+        }
+    }
+    if (game_mode != 2) {
+        update_hoverboard_girl_boobs_animation(moby, state);
+        if ((D_0015EEB0[0]) != 0)
+            state->joints[0].target_scale = 2.75f;
+        update_joint_animation(moby, &state->joints[0], 0, rotation_step * frame_scale_sq,
+                               rotation_limit * frame_scale_sq);
+        {
+            float fs = frame_scale_sq;
+            update_joint_animation(moby, &state->joints[1], 1, rotation_step * fs, rotation_limit * fs);
+        }
+    }
+}
+
+#undef breast_growth_count_gp_q
+#undef game_mode
+#undef frame_number
+#undef race_entries
+#undef race_girl_name
+#undef race_camera_vectors
+#undef frame_scale_sq
+#undef scale_frame_count
+#undef scale_time
+#undef advance_timer
+#undef truncate_time
+#undef random_float
+#undef random_remainder
+#undef blend_moby_animation
+#undef find_ground_height
+#undef get_dialogue_entry
+#undef initialize_npc_dialogue
+#undef initialize_moby_grounding
+#undef update_npc_dialogue
+#undef begin_dialogue_camera_transition
+#undef set_race_camera
+#undef set_race_camera_mode
+#undef queue_dialogue_message
+#undef func_0020BFC8_x
+#undef vector_distance
+#undef angle_from_xy
+#undef absolute_angle_difference
+#undef vector_length
+#undef add_angle
+#undef vector_from_angles
+#undef add_vector
+#undef subtract_vector
+#undef signed_angle_difference
+#undef vector_length_xy
+#undef update_joint_animation
+#undef update_hoverboard_girl_cutscene_instances
+#undef update_hoverboard_girl_boobs_animation
+#undef func_0022EE28_x
 extern void func_L05_003188A8(char *);
 extern int func_L00_002676E8(void *, void *);
 extern void func_L02_0025D750(char *);
@@ -2085,7 +2443,247 @@ void func_L05_0031B138(char *moby) {
     }
 }
 INCLUDE_ASM("asm/overlays", func_L05_0031B15C);
-INCLUDE_ASM("asm/overlays", func_L05_0031D450);
+extern void func_L00_00203F20(int, int);
+extern void func_L00_002D6CE0(void *);
+#define hero (hero_a[0])
+#define D_001413DC (D_001413DC_a[0])
+#define D_0013D464 (D_0013D464_a[0])
+#define D_0013F64C (D_0013F64C_a[0])
+#define D_0013F65E (*(short *)(D_0013F3D0 + 0x28e))
+#define D_L05_0015FFD8 (D_L05_0015FFD8_a[0])
+extern int D_0015EFA4 MACRO_ADDR;
+typedef struct { unsigned short count, best; int flags; } VendorEventRecord;
+#define D_00141B8C (D_00141968[68].flags)
+#define D_00141BAC (D_00141968[72].flags)
+#define D_00141BF4 (D_00141968[81].flags)
+#define D_00141CFC (D_00141968[114].flags)
+#define D_00141A82 (D_00141968[35].best)
+#define D_00141A88 (D_00141968[36].count)
+#define D_00141A8A (D_00141968[36].best)
+#define D_00141A8C (D_00141968[36].flags)
+#define D_00141A90 (D_00141968[37].count)
+#define D_00141A92 (D_00141968[37].best)
+#define D_00141A94 (D_00141968[37].flags)
+#define D_00141A98 (D_00141968[38].count)
+#define D_00141A9C (D_00141968[38].flags)
+#define D_00141A78 (D_00141968[34].count)
+#define D_00141C58 (D_00141968[94].count)
+#define D_00141C5A (D_00141968[94].best)
+#define D_00141C5C (D_00141968[94].flags)
+#define D_00141B88 (D_00141968[68].count)
+#define D_00141BB8 (D_00141968[74].count)
+typedef struct {
+    unsigned char pad_0[74];
+    unsigned short D_00141892;
+    unsigned char pad_4c[12];
+    unsigned short D_001418A0;
+    unsigned char pad_5a[6];
+    unsigned short D_001418A8;
+    unsigned char pad_62[46];
+    unsigned short D_001418D8;
+    unsigned char pad_92[86];
+    unsigned short D_00141930;
+} L05Fields_00141848;
+#define l05_00141848 (l05_00141848_a[0])
+#define D_00141892 (l05_00141848.D_00141892)
+#define D_001418A8 (l05_00141848.D_001418A8)
+#define D_001418A0 (l05_00141848.D_001418A0)
+#define D_00141930 (l05_00141848.D_00141930)
+#define D_001418D8 (l05_00141848.D_001418D8)
+typedef struct {
+    unsigned char pad_0[82];
+    unsigned short D_00141772;
+    unsigned char pad_54[38];
+    unsigned short D_0014179A;
+    unsigned char pad_7c[6];
+    unsigned short D_001417A2;
+    unsigned char pad_84[6];
+    unsigned short D_001417AA;
+    unsigned char pad_8c[22];
+    unsigned short D_001417C2;
+} L05Fields_00141720;
+#define l05_00141720 (l05_00141720_a[0])
+#define D_001417A2 (l05_00141720.D_001417A2)
+#define D_0014179A (l05_00141720.D_0014179A)
+#define D_001417C2 (l05_00141720.D_001417C2)
+#define D_00141772 (l05_00141720.D_00141772)
+#define D_001417AA (l05_00141720.D_001417AA)
+typedef struct {
+    unsigned char D_0013D388;
+    unsigned char pad_1[12];
+    unsigned char menu_item_enabled_1;
+} L05Fields_0013D388;
+#define l05_0013D388 (l05_0013D388_a[0])
+#define D_0013D388 (l05_0013D388.D_0013D388)
+#define menu_item_enabled_1 (l05_0013D388.menu_item_enabled_1)
+typedef struct {
+    unsigned char pad_0[15];
+    unsigned char D_0013D4CF;
+    unsigned char pad_10[6];
+    unsigned char D_0013D4D6;
+} L05Fields_0013D4C0;
+#define l05_0013D4C0 (l05_0013D4C0_a[0])
+#define D_0013D4D6 (l05_0013D4C0.D_0013D4D6)
+#define D_0013D4CF (l05_0013D4C0.D_0013D4CF)
+#define D_0013E633_x ((char *)&D_0013E633)
+#define D_0014171B_x ((char *)&D_0014171B)
+#define D_0013D355_x D_0013D355
+#define D_0013D50F_x D_0013D50F
+#define is_point_inside_clip_volume ((int (*)(void *, int))func_00215570)
+#define scale_game_frames ((int (*)(int))func_001F9850)
+#define FUN_L00_00203908 func_L00_00203F20
+#define FUN_L00_002d5830 func_L00_002D6CE0
+#define FUN_001f99f8 ((void (*)(void *))func_001F9BC0)
+extern char D_0013F4D0[];
+#define D_0013F3D0 D_0013F4D0
+#define hero_a (&D_0013F450)
+extern int D_001414DC[];
+#define D_001413DC_a D_001414DC
+extern int D_0013D56C[];
+#define D_0013D464_a D_0013D56C
+#define D_0014C050 ((unsigned char *)D_0014C150)
+extern int D_0014EF90[];
+#define D_0014EE90 D_0014EF90
+extern int D_0013F74C[];
+#define D_0013F64C_a D_0013F74C
+#define frame_number (*(int *)&D_L05_0015F6B0)
+#define D_L05_0015FFD8_a ((int *)&D_L05_00160098)
+#define D_L05_0015ED84 (*(int *)&D_0015EE84)
+#define D_L05_0015EEA4 D_0015EFA4
+extern VendorEventRecord D_00141A68[];
+#define D_00141968 D_00141A68
+extern L05Fields_00141848 D_00141948[];
+#define l05_00141848_a D_00141948
+extern L05Fields_00141720 D_00141820[];
+#define l05_00141720_a D_00141820
+extern L05Fields_0013D388 D_0013D490[];
+#define l05_0013D388_a D_0013D490
+extern L05Fields_0013D4C0 D_0013D5C8[];
+#define l05_0013D4C0_a D_0013D5C8
+void func_L05_0031D450(unsigned char *moby) {
+    int *data = *(int **)(moby + 0x78);
+    int value, elapsed, limit;
+    char *pp;
+    moby[0x30] = 0xff;
+
+    if (is_point_inside_clip_volume(D_0013F3D0, data[20])) {
+        if (*(int *)(D_0013F3D0 + 0x200c) == 0x12 && data[26]++ > scale_game_frames(0x168)) {
+            if ((unsigned int)(D_00141B8C & (1 << D_L05_0015ED84)) < 1)
+                FUN_L00_00203908(0x3f0, 0x44);
+        } else if (D_001413DC == 0x11 || menu_item_enabled_1) {
+            D_00141B88 = 0xffff;
+        }
+    }
+    if (is_point_inside_clip_volume(D_0013F3D0, data[16])) {
+        elapsed = scale_game_frames(D_L05_0015EEA4) - D_00141892 * 600;
+        limit = (int)((float)scale_game_frames(0xe10) * 60.0f);
+        if (limit < elapsed && (unsigned int)(D_00141BAC & (1 << D_L05_0015ED84)) < 1)
+            FUN_L00_00203908(0x7dd, 0x48);
+    }
+    if (frame_number < scale_game_frames(60) && D_001418A8 && !D_001418A0 && D_00141BF4 >= 0)
+        FUN_L00_00203908(0x4e27, 0x51);
+    if (frame_number < scale_game_frames(60) && D_00141930) {
+        if (D_00141CFC >= 0) FUN_L00_00203908(0x4e28, 0x72);
+        D_00141930 = 0;
+    }
+    if (!D_0013D4D6) {
+        pp = D_0013F3D0;
+        if (is_point_inside_clip_volume(pp, data[9]) && !*(int *)(pp + 0x27c)) {
+            elapsed = scale_game_frames(D_L05_0015EEA4) - D_00141A82 * 600;
+            limit = (int)((float)scale_game_frames(18) * 60.0f);
+            if (limit < elapsed || D_00141A82 * 600 == 0)
+                FUN_L00_00203908(0x138a, 0x23);
+            else {
+                value = scale_game_frames(D_L05_0015EEA4) / 600;
+                if (D_00141A82 < value)
+                    D_00141A82 = scale_game_frames(D_L05_0015EEA4) / 600;
+            }
+        }
+    }
+    if (D_0013D4D6) {
+        pp = D_0013F3D0;
+        if (is_point_inside_clip_volume(pp, data[9]) && !*(int *)(pp + 0x27c)) {
+            if (D_00141A88 != 0) {
+                elapsed = scale_game_frames(D_L05_0015EEA4) - D_00141A8A * 600;
+                limit = (int)((float)scale_game_frames(18) * 60.0f);
+                if (limit < elapsed || D_00141A8A * 600 == 0)
+                    FUN_L00_00203908(0x138b, 0x24);
+                else {
+                    value = scale_game_frames(D_L05_0015EEA4) / 600;
+                    if (D_00141A8A < value)
+                        D_00141A8A = scale_game_frames(D_L05_0015EEA4) / 600;
+                }
+            } else {
+                D_00141A88++;
+                value = scale_game_frames(D_L05_0015EEA4) / 600;
+                if (D_00141A8A < value)
+                    D_00141A8A = scale_game_frames(D_L05_0015EEA4) / 600;
+                D_00141A8C = D_00141A8C | (1 << D_L05_0015ED84) | 0x80000000;
+            }
+        }
+        if (D_001413DC == 0x13) D_00141A88 = -1;
+    }
+    if (D_00141A98 < 2) {
+        if (D_0014C150[D_L05_0015ED84][data[8]] == 0xff) {
+            if (D_00141A90 < 0xffff)
+                D_00141A90 = D_00141A90 + 1;
+            value = scale_game_frames(D_L05_0015EEA4) / 600;
+            if (D_00141A92 < value)
+                D_00141A92 = scale_game_frames(D_L05_0015EEA4) / 600;
+            D_00141A94 = D_00141A94 | (1 << D_L05_0015ED84) | 0x80000000;
+        } else if (D_0014EE90[data[8]] > 2 && is_point_inside_clip_volume(D_0013F3D0, data[11])) {
+            elapsed = scale_game_frames(D_L05_0015EEA4) - D_001417A2 * 600;
+            if (scale_game_frames(18000) < elapsed) {
+                elapsed = scale_game_frames(D_L05_0015EEA4) - D_0014179A * 600;
+                if (scale_game_frames(18000) < elapsed) {
+                    elapsed = scale_game_frames(D_L05_0015EEA4) - D_001417C2 * 600;
+                    if (scale_game_frames(18000) < elapsed) {
+                        elapsed = scale_game_frames(D_L05_0015EEA4) - D_00141772 * 600;
+                        if (scale_game_frames(18000) < elapsed) {
+                            elapsed = scale_game_frames(D_L05_0015EEA4) - D_001417AA * 600;
+                            if (scale_game_frames(18000) < elapsed && D_00141A9C >= 0)
+                                FUN_L00_00203908(0x138d, 0x26);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (D_0013D388 && D_00141A78 == 0 && D_001413DC == 0x16)
+        FUN_L00_00203908(0x1389, 0x22);
+    if (D_00141C58 == 0) {
+        if (hero.state.current == 10 &&
+            (is_point_inside_clip_volume(&hero.motion.pos, data[13]) || is_point_inside_clip_volume(&hero.motion.pos, data[14]))) {
+            if (D_00141C58 < 0xffff)
+                D_00141C58 = D_00141C58 + 1;
+            value = scale_game_frames(D_L05_0015EEA4) / 600;
+            if (D_00141C5A < value)
+                D_00141C5A = scale_game_frames(D_L05_0015EEA4) / 600;
+            D_00141C5C = D_00141C5C | (1 << D_L05_0015ED84) | 0x80000000;
+        }
+        if (hero.state.control_mode == 0x12) {
+            if (is_point_inside_clip_volume(data + 4, data[13]) || is_point_inside_clip_volume(data + 4, data[14])) {
+                FUN_001f99f8(data + 4);
+                data[24]++;
+            }
+        } else if (data[24] > 1 &&
+                   (is_point_inside_clip_volume(&hero.motion.pos, data[13]) || is_point_inside_clip_volume(&hero.motion.pos, data[14])))
+            FUN_L00_00203908(0x138e, 0x5e);
+    }
+    if (!D_001418D8 && !D_00141BB8 && D_0013D4CF &&
+        is_point_inside_clip_volume(D_0013F3D0, data[18]) && D_0013D464 >= 20)
+        FUN_L00_00203908(20000, 0x4a);
+    value = data[21];
+    if (value != -1 && D_0014C150[D_L05_0015ED84][data[22]] == 0xff &&
+        D_0014C150[D_L05_0015ED84][data[8]] == 0xff &&
+        (frame_number < 5 || (D_0013F64C &&
+          (*(short *)(D_0013F64C + 0xa6) == 0x3e6 || *(short *)(D_0013F64C + 0xa6) == 0x33e)))) {
+        FUN_L00_002d5830((void *)(D_L05_0015FFD8 + value * 256));
+        data[21] = -1;
+    }
+    qcopy(data, D_0013F3D0);
+    if (!D_0013F65E) qcopy(data + 4, D_0013F3D0);
+}
 extern void func_L00_00264870(int);
 
 /* UpdateMoby_1550 (names.tsv role). State 0 arms it: state 1 and byte 0x30 = 0xFF. In state 1,

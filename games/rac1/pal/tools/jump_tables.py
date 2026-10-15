@@ -30,11 +30,28 @@ JTBL = re.compile(r"%hi\((jtbl_(?:L\d\d_)?[0-9A-F]{8})\)")
 def retail_tables(func: str) -> list[str]:
     """The jump tables retail's FUNC uses, in the order it first uses them."""
     p = Path(f"asm/nonmatchings/text/{func}.s")
-    if not p.exists():
-        p = Path(f"asm/overlays/{func}.s")        # level code (docs/OVERLAYS.md)
+    if p.exists():
+        return list(dict.fromkeys(JTBL.findall(p.read_text())))
+    # level code (docs/OVERLAYS.md): a joined function's pieces may hold its tables
+    found = []
+    for part in [func] + joined_pieces(func):
+        p = Path(f"asm/overlays/{part}.s")
+        if p.exists():
+            found += JTBL.findall(p.read_text())
+    return list(dict.fromkeys(found))
+
+
+def joined_pieces(func: str) -> list[str]:
+    """The catalogue entries config/overlays/joined.tsv joins to FUNC."""
+    p = Path("config/overlays/joined.tsv")
     if not p.exists():
         return []
-    return list(dict.fromkeys(JTBL.findall(p.read_text())))
+    for line in p.read_text().splitlines():
+        if line and not line.startswith("#"):
+            owner, pieces = line.split("\t", 1)
+            if owner == func:
+                return pieces.split()
+    return []
 
 
 def provided() -> list[tuple[str, str, str]]:

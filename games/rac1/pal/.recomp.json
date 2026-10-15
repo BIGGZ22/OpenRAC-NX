@@ -17,7 +17,7 @@
     { "name": "Lynder063", "link": "https://github.com/Lynder063" }
   ],
   "links": [
-    { "label": "Progress on decomp.dev", "url": "https://decomp.dev/OpenRAC/rac1-decomp" },
+    { "label": "Progress on ByteMatch", "url": "https://bytematch.dev/OpenRAC/rac1-decomp" },
     { "label": "Discord", "url": "https://discord.gg/Sfd2B54PDG" }
   ],
   "help": [
@@ -26,5 +26,5 @@
     "PS2 disassembly analysis"
   ],
   "tags": ["Insomniac Games", "Ratchet & Clank", "MIPS R5900"],
-  "notes": "The whole image links with every function at its retail address; functions not decompiled yet are included as assembly. Progress is tracked on decomp.dev."
+  "notes": "The whole image links with every function at its retail address; functions not decompiled yet are included as assembly. Progress is tracked on ByteMatch (bytematch.dev)."
 }

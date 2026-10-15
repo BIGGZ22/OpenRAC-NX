@@ -1063,7 +1063,138 @@ struct Moby *func_L00_002A86D8(struct Moby *src, void *pos, void *vel, int flags
     }
     return m;
 }
-INCLUDE_ASM("asm/overlays", func_L00_002A8A20);
+typedef int q_2a7780 __attribute__((mode(TI)));
+typedef struct {
+    short sel[4];
+    unsigned int col[4][4];
+    float f48;
+    q_2a7780 *verts;
+    short (*idx)[4][2];
+    float *uv;
+    short n;
+    float f5C;
+} E_2a7780;
+typedef struct {
+    q_2a7780 m[3];
+    q_2a7780 m30;
+    unsigned char pad[0x30];
+    float f70;
+    unsigned char pad2[4];
+    short h78;
+} R_2a7780;
+typedef struct { unsigned char pad[0x78]; R_2a7780 *r; } O_2a7780;
+typedef struct {
+    unsigned char pad[0x2080];
+    unsigned char *p2080;
+} P_2a7780;
+typedef struct {
+    q_2a7780 pos[4];
+    unsigned int col[4];
+    float uv[4][2];
+    unsigned long tag[4];
+} V_2a7780;
+extern int func_001F4868(int);
+extern int func_001FA898(float);
+extern void func_L00_001FD1D8(void *, void *, int);
+#define P_2a7780_G (*(P_2a7780 *)D_0013F450)
+extern char D_L00_001D95E8[];
+#define effects ((E_2a7780 *)D_L00_001D95E8)
+extern int D_L00_00161488 MACRO_ADDR;
+extern short D_L00_00161484;
+#define last_frame D_L00_00161488
+#define frame_2a7780 D_L00_0015F6B0
+#define uv_scale (*(float *)&D_L00_00161484)
+#define FUN_001f44b8_2a7780 func_001F4868
+#define FUN_001fa6d0_2a7780 func_001FA898
+#define FUN_001f9a68_2a7780 func_001F9C30
+#define FUN_001f7d30_2a7780 func_L00_001FD1D8
+
+void func_L00_002A8A20(void *op) {
+    O_2a7780 *o = (O_2a7780 *)op;
+    R_2a7780 *r;
+    E_2a7780 *e;
+    V_2a7780 v;
+    int sel0, sel1, sel2, sel3;
+    unsigned int color;
+    float scale, alpha;
+    int tex, idx, nv; int k;
+    int i, j, d, cur;
+    float t, w;
+
+    r = o->r;
+    if (r == 0) return;
+    if (r->f70 == 0.0f) return;
+    if (r->f70 == 1.0f) {
+        if (P_2a7780_G.p2080[0x52] != P_2a7780_G.p2080[0x53]) { r->f70 = 0.0f; return; }
+        if (P_2a7780_G.p2080[0x52] == 0xFF) { r->f70 = 0.0f; return; }
+    }
+    scale = 1.0f;
+    tex = 0x14;
+    nv = 1;
+    color = 0x808080;
+    alpha = scale;
+    if (!((unsigned)(P_2a7780_G.p2080[0x52] - 0x17) < 3 || P_2a7780_G.p2080[0x52] == 0x2B)) k = r->h78;
+    else k = P_2a7780_G.p2080[0x52];
+    if (k == 0x17) { r->h78 = k; idx = 0; }
+    else if (k == 0x18) { r->h78 = k; idx = 1; }
+    else if (k == 0x19) { r->h78 = k; idx = 2; }
+    else {
+        r->h78 = 0x2B;
+        alpha = 0.7f;
+        idx = 3;
+        scale = 1.25f;
+        tex = 0xC;
+        nv = 2;
+        color = 0x408080;
+    }
+    t = r->f70;
+    e = &effects[idx];
+    sel0 = e->sel[0];
+    sel1 = e->sel[1];
+    sel2 = e->sel[2];
+    sel3 = e->sel[3];
+    if (t == 1.0f) {
+        unsigned char *g = P_2a7780_G.p2080;
+        qcopy(&r->m[0], g + 0xC0);
+        qcopy(&r->m[1], g + 0xD0);
+        qcopy(&r->m[2], g + 0xE0);
+        last_frame = frame_2a7780;
+    }
+    cur = frame_2a7780;
+    d = cur - last_frame;
+    if (d <= 0) d = 1;
+    r->f70 = t + (float)d * e->f48;
+    last_frame = cur;
+    if ((float)(e->n * 2) <= r->f70) {
+        int k2 = P_2a7780_G.p2080[0x52];
+        if ((unsigned)(k2 - 0x17) < 3) return;
+        if (k2 != 0x2B) r->f70 = 0.0f;
+        return;
+    }
+    v.tag[1] = FUN_001f44b8_2a7780(tex);
+    v.tag[2] = 0xFF9000000260LL;
+    v.tag[0] = 5;
+    v.tag[3] = (nv << 2) | 0x8000000040LL;
+    qcopy(&r->m30, P_2a7780_G.p2080 + 0x10);
+    for (i = 0; i < e->n; i++) {
+        for (j = 0; j < 4; j++) {
+            int vi = e->idx[i][j][0];
+            float *uv;
+            if (i == sel0) v.col[j] = e->col[0][j];
+            else if (i == sel1) v.col[j] = e->col[1][j];
+            else if (i == sel2) v.col[j] = e->col[2][j];
+            else if (i == sel3) v.col[j] = e->col[3][j];
+            else v.col[j] = 0x50808080;
+            v.col[j] = (FUN_001fa6d0_2a7780(((int)v.col[j] >> 24) * alpha) << 24) | color;
+            FUN_001f9a68_2a7780(&v.pos[j], &e->verts[vi], scale);
+            uv = (float *)(e->idx[i][j][1] * 8 + (int)e->uv);
+            w = 1.0f - r->f70 * e->f5C;
+            v.uv[j][0] = (uv[0] - 0.5f) * uv_scale + 0.5f;
+            v.uv[j][1] = (uv[1] - 0.5f) * uv_scale + 0.5f + w;
+        }
+        FUN_001f7d30_2a7780(&v, r, 0);
+    }
+}
 extern char D_0013E633[];
 extern int func_001F9850(int);
 extern void func_0020D6D0_p(void *) __asm__("func_0020D6D0");
@@ -1280,7 +1411,7 @@ extern float D_0015EE70 MACRO_ADDR;
 extern float D_0015EE74 MACRO_ADDR;
 extern unsigned char D_0013E650[];
 extern void reticle48(int,int,float,float,int,int,int,float,int) __asm__("func_L00_001EE2E0");
-extern void func_L00_002A8A20(void);
+extern void func_L00_002A8A20(void *);
 extern int func_L00_001EFFF0(void*,void*,int,int,int);
 extern void func_L00_00250800(void*,int,void*);
 extern float func_001F9F90(float);
@@ -1554,7 +1685,84 @@ void func_L00_002A9768(Wrench48 *m) {
     default: break;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_002AA998);
+typedef int Q_2aa998 __attribute__((mode(TI)));
+typedef union { Q_2aa998 q; float f[4]; } BoltVector_2AA998;
+typedef struct { char pad[0x10]; BoltVector_2AA998 position; } BoltOwner_2AA998;
+extern short D_L00_0016148C;
+extern short D_L00_001B0AF0[];
+extern char *func_L00_00264140(void *, void *, void *, float *, float *, float *, float);
+extern int func_L00_001EFFF0(void *, void *, int, int, int);
+extern void func_L00_002607F8(void *, short *, int);
+
+/* Spawns a homing bolt (class 0x100) from owner at pos, aimed at tgt or at whatever lies along its heading. */
+char *func_L00_002AA998(void *owner, void *pos, float a, float b, float c, char *tgt, float rz, float ry) {
+    char *m;
+    char *d;
+    BoltVector_2AA998 t;
+    BoltVector_2AA998 p;
+    m = (char *)func_0020D348(0x100);
+    if (m != 0) {
+        ((unsigned char *)m)[0x30] = 0xFF;
+        m[0x31] = 1;
+        m[0x20] = 0;
+        *(float *)(m + 0x2C) *= *(float *)&D_L00_0016148C;
+        *(short *)(m + 0x32) = 0xFF;
+        d = *(char **)(m + 0x78);
+        *(float *)(m + 0x48) = rz;
+        *(float *)(m + 0x44) = ry;
+        if (tgt == 0) {
+            func_00215C00(&t, D_0015EE6C * 20.0f, rz, ry);
+            p.q = *(Q_2aa998 *)pos;
+            tgt = func_L00_00264140(owner, &p, &t, &a, &b, &c, 0.34906584f);
+        }
+        *(void **)(d + 0x10) = owner;
+        qcopy(m + 0x10, pos);
+        *(float *)(d + 0x34) = D_0015EE6C * 100.0f;
+        *(int *)(d + 0x38) = 1;
+        *(int *)(d + 0x24) = 0;
+        *(int *)(d + 0x28) = 0;
+        *(int *)(d + 0x20) = 0;
+        *(char **)(d + 0x18) = tgt;
+        if (tgt != 0) {
+            unsigned char *e = (unsigned char *)func_L00_0025D390(tgt);
+            if (e != 0) {
+                *(unsigned short *)(e + 0x1E) |= 0x80;
+                if (e[0xB] != 0) *(int *)(d + 0x38) = 0;
+                if (e[0xC] != 0) *(float *)(d + 0x34) = (float)e[0xC] * D_0015EE6C;
+            }
+        }
+        *(float *)(d + 0x2C) = a;
+        *(float *)(d + 0x30) = b;
+        *(int *)(d + 0x14) = func_001F9850(0x96);
+        if (tgt != 0) {
+            qcopy(d, tgt + 0x10);
+            *(float *)(d + 8) += c;
+            *(float *)(d + 0x1C) = c;
+        }
+        {
+            int r;
+            if (func_001F9CB8((float *)(D_0013F450 + 0x140)) > D_0015EE6C * 0.1f) {
+                r = func_001F9850(0x3C);
+                *(short *)(d + 0x3E) = r;
+                *(short *)(d + 0x3C) = r;
+            } else {
+                r = func_001F9850(1);
+                *(short *)(d + 0x3E) = r;
+                *(short *)(d + 0x3C) = r;
+            }
+        }
+        t.q = ((BoltOwner_2AA998 *)owner)->position.q;
+        t.f[2] = ((float *)pos)[2];
+        if (func_L00_001EFFF0(&t, pos, 0, *(int *)(D_0013E633 + 0x2E9D), 0) != 0) {
+            m[0xBC] = 1;
+            qcopy(m + 0x10, &D_L00_00173F60);
+        }
+        func_L00_00251E30(m);
+        func_L00_002607F8(m, D_L00_001B0AF0, 0x1F);
+        *(float *)(m + 0x2C) += *(float *)(m + 0x2C);
+    }
+    return m;
+}
 LINKER_REMNANT("asm/overlays", func_L00_002AAC48);
 
 /* Creates a moby at a position with a scale, colour and a few data fields. */

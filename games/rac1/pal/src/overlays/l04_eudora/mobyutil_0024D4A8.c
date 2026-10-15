@@ -2,7 +2,23 @@
 #include "common.h"
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/overlays", func_L04_0024D4A8);
+typedef struct {
+    float x, y, z, w;
+} V_24d4a8;
+
+int func_L04_0024D4A8(float *p, float *poly, int n) {
+    V_24d4a8 *v = (V_24d4a8 *)poly;
+    int i;
+
+    for (i = 0; i < n; i++) {
+        if ((v[(i + 1) % n].x - v[i].x) * (p[1] - v[i].y) -
+                (v[(i + 1) % n].y - v[i].y) * (p[0] - v[i].x) >
+            0.0f) {
+            return i + 1;
+        }
+    }
+    return 0;
+}
 INCLUDE_ASM("asm/overlays", func_L04_0024D534);
 extern void func_001F9BF0(void *, void *, void *);
 extern void func_001F9BD8(void *, void *, void *);

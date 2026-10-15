@@ -1,11 +1,16 @@
 /* NON_MATCHING func_L00_002DF168 -- src/overlays/shared/vendor_002D9438.c
- * Best so far: SIZE ours 664 / retail 680, checked 2026-10-09.
+ * Best so far: SIZE ours 672 / retail 680, checked 2026-10-15.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
  * What the last attempts found:
- *   Camera matrix setup: picks 3 vec4 from the hero/camera by state, builds matrices via func_L00_001FF4B0, fills 
- *   Left: retail keeps the &s[3] pointer in $s0 plus a copy in $s4 for the loop (daddu $s4,$s0) and loop addresses
+ *   2026-10-15: the hero through Hero (state.current, moby->flags, unk22C8, unk640[3]) and the transform loop
+ *   as an index loop over D_L00_001E6290/D_L00_001E6280 (i from 1 to 9) give 672 of 680 bytes. The loop body
+ *   now matches. Left: retail keeps a in $16, reuses $16 for &s[3] after a dies, then copies it to $20 for the
+ *   loop and counts in $16. Ours keeps &s[3] in its own saved register. Passing &s[3] directly instead of h
+ *   changes nothing.
  */
+#include "hero.h"
+extern Hero hero_2DF168 __asm__("D_0013F450");
 typedef int u128_DF168 __attribute__((mode(TI)));
 extern void func_001F9C30(void *, void *, float);
 extern void func_L00_001FF4B0(void *, void *, float);
@@ -31,31 +36,29 @@ extern int D_L00_00161C28;
 // Builds the camera matrices and resets the camera effect state.
 void func_L00_002DF168(char *a, char *b) {
     u128_DF168 s[7];
-    char *g, *v, *h, *p, *q;
+    char *v, *h, *p, *q;
     short *w;
     int i, st;
     if (*(int *)&D_L00_00161C10 == 0) return;
-    g = D_0013E633 + 0xE1D;
     D_L00_00161C54 = 1.7f;
     *(int *)&D_L00_00161C10 = 0;
-    st = *(int *)(g + 0x2084);
-    if ((st == 0x1E || st == 1) && (*(unsigned short *)(*(char **)(g + 0x2080) + 0x34) & 1)) {
+    st = hero_2DF168.state.current;
+    if ((st == 0x1E || st == 1) && (hero_2DF168.moby->flags & 1)) {
         qcopy((char *)s, D_L00_001670D0);
         qcopy((char *)s + 0x10, D_L00_001670D0 + 0x10);
         v = (char *)s + 0x20;
         qcopy(v, D_L00_001670D0 + 0x20);
     } else {
-        g = D_0013E633 + 0xE1D;
-        if (*(short *)(g + 0x22C8) == 1) {
+        if (hero_2DF168.unk22C8 == 1) {
             func_001F9C30(s, a + 0xD0, -1.0f);
             qcopy((char *)s + 0x10, a + 0xC0);
             v = (char *)s + 0x20;
             qcopy(v, a + 0xE0);
         } else {
-            qcopy((char *)s, g + 0x640);
-            qcopy((char *)s + 0x10, g + 0x650);
+            qcopy((char *)s, &hero_2DF168.unk640[0]);
+            qcopy((char *)s + 0x10, &hero_2DF168.unk640[1]);
             v = (char *)s + 0x20;
-            qcopy(v, g + 0x660);
+            qcopy(v, &hero_2DF168.unk640[2]);
         }
     }
     h = (char *)s + 0x30;
@@ -63,15 +66,9 @@ void func_L00_002DF168(char *a, char *b) {
     func_L00_001FF4B0((char *)s + 0x40, v, 1.0f);
     qcopy(D_L00_001E6290, b);
     D_L00_001E6358[0] = 0;
-    p = D_L00_001E6290 + 0x10;
-    q = D_L00_001E6280 + 0x10;
-    w = D_L00_001E6358 + 1;
-    for (i = 8; i >= 0; i--) {
-        func_001F9BD8(p, q, h);
-        q += 0x10;
-        p += 0x10;
-        *w = 0;
-        w++;
+    for (i = 1; i < 10; i++) {
+        func_001F9BD8(D_L00_001E6290 + i * 0x10, D_L00_001E6280 + i * 0x10, h);
+        D_L00_001E6358[i] = 0;
     }
     func_001F9BC0(D_L00_00161C30);
     s[5] = 0;

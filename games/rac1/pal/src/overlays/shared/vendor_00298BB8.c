@@ -1014,7 +1014,226 @@ void func_L15_0029B488(void *mv) {
     }
     func_L00_00263950(m, d + 0x220, 0, k1 * D_0015EE64, k2 * D_0015EE64);
 }
-INCLUDE_ASM("asm/overlays", func_L15_0029B750);
+extern char *func_L00_0025B478(void *, int, int);
+extern int func_L00_0025B4D0(void *, void *, void *, int, int *, float *, int, int);
+extern void func_L00_0025BBA0(void *, float *, void *, void *);
+extern void func_L00_0025D5B0(void *, void *, int, int, int, float);
+extern void func_L00_0025E4B0(void *, void *);
+extern void func_L00_0025E590(void *, void *);
+extern float func_002140F8(float, float);
+#define func_002140F8_r func_002140F8
+extern float func_001F9878(float);
+extern int func_L08_00211A38(void *);
+#define func_L08_00211A38_r func_L08_00211A38
+extern int func_001FA898(float);
+#define func_001FA898_r func_001FA898
+extern float func_001F9B88(float);
+#define func_L00_001EFFF0_r func_L00_001EFFF0
+extern int func_L00_00260FB0(void *, void *, float, int, int, void *, int);
+#define D_L15_00160058_m D_L15_00160058
+extern short D_L15_00161474;
+extern short D_L15_00161478;
+extern short D_L15_0016147C;
+extern short D_L15_00161480;
+extern short D_L15_00161484;
+extern short D_L15_00161488;
+extern short D_L15_0016148C;
+extern short D_L15_00161490;
+extern short D_L15_00161494;
+void func_L15_0029B750(void *object, int flag) {
+    unsigned char *moby = object;
+    unsigned char *data = *(unsigned char **)(moby + 0x78);
+    char *hit;
+    float impact;
+    int kind;
+    int code;
+    float angle;
+    float fall_angle;
+    float speed;
+    int amount;
+    float pos[4];
+    int *path;
+    int group;
+    unsigned char seen;
+
+    if (moby[0x20] == 0)
+        return;
+    *(float *)(moby + 0x2C) = *(float *)(*(char **)(moby + 0x24) + 0x24) * *(float *)&D_L15_00161474;
+    impact = 0.0f;
+    hit = func_L00_0025B478(moby, 0x330000, 0);
+    code = func_L00_0025B4D0(moby, hit, data + 0x20, 0, &kind, &impact, 0, 4);
+    if (kind != 1 && moby[0x20] != 0x17) {
+        if (*(unsigned char *)(D_0013E633 + 0x2EC1) == 0)
+            func_L15_0029B2B0(moby);
+        *(float *)(data + 0x20) -= impact;
+        if (*(short *)(*(char **)(hit + 0x20) + 0xA6) == 0x47)
+            code = 3;
+        if (*(float *)(data + 0x20) <= 0.0f)
+            code = 1;
+        amount = func_001FA898_r(512.0f);
+        speed = *(float *)&D_L15_00161478 * D_0015EE70;
+        *(int *)(data + 0x90) = amount;
+        *(float *)(data + 0x98) = 0.5f;
+        *(int *)(data + 0x94) = 9;
+        *(float *)(data + 0x80) = speed;
+        data[0xAD] = 0;
+        switch (code) {
+        case 0:
+        case 11:
+            break;
+        case 9:
+        case 10:
+            data[0x67] = 0xFA;
+            break;
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+            {
+                float step;
+                float step_sq;
+                float forward;
+                float lateral;
+                float vz;
+                float fall_speed;
+                step = D_0015EE6C;
+                fall_speed = *(float *)&D_L15_00161478;
+                step_sq = D_0015EE70;
+                fall_speed = fall_speed * step_sq;
+                forward = *(float *)&D_L15_00161484 * step;
+                lateral = *(float *)&D_L15_00161480 * step;
+                vz = *(float *)&D_L15_00161488 * step;
+                *(float *)(data + 0x80) = fall_speed;
+                *(float *)(data + 0x88) = forward;
+                *(float *)(data + 0x8C) = lateral;
+                *(float *)(data + 0x84) = vz;
+                *(float *)(data + 0xC0) = 5.0f;
+                *(float *)(data + 0xC4) = 10.0f;
+            }
+            {
+                float heading = func_L00_001FF860(*(float *)(moby + 0x10) - *(float *)(*(char **)(hit + 0x20) + 0x10),
+                                              *(float *)(moby + 0x14) - *(float *)(*(char **)(hit + 0x20) + 0x14));
+                *(VecQuad *)pos = *(VecQuad *)(hit + 0x10);
+                angle = heading;
+            }
+            func_L00_0025BBA0(pos, &angle, data + 0x88, data + 0x8C);
+            func_L00_0025D5B0(moby, data + 0x70, 7, 1, 0, angle);
+            moby[0x20] = 0x15;
+            moby[0xBC] = 2;
+            data[0x67] = 0x78;
+            break;
+        case 1:
+        case 2:
+            {
+                float step;
+                float step_sq;
+                float forward;
+                float lateral;
+                float vz;
+                float fall_speed;
+                step = D_0015EE6C;
+                fall_speed = *(float *)&D_L15_0016147C;
+                step_sq = D_0015EE70;
+                fall_speed = fall_speed * step_sq;
+                forward = *(float *)&D_L15_00161490 * step;
+                lateral = *(float *)&D_L15_0016148C * step;
+                vz = *(float *)&D_L15_00161494 * step;
+                *(unsigned short *)(moby + 0x34) &= 0xEFFF;
+                *(float *)(data + 0x80) = fall_speed;
+                *(float *)(data + 0x88) = forward;
+                *(float *)(data + 0x8C) = lateral;
+                *(float *)(data + 0x84) = vz;
+                *(float *)(data + 0xC0) = 8.0f;
+                *(float *)(data + 0xC4) = 16.0f;
+            }
+            {
+                float heading = func_L00_001FF860(*(float *)(moby + 0x10) - *(float *)(*(char **)(hit + 0x20) + 0x10),
+                                              *(float *)(moby + 0x14) - *(float *)(*(char **)(hit + 0x20) + 0x14));
+                *(VecQuad *)pos = *(VecQuad *)(hit + 0x10);
+                fall_angle = heading;
+            }
+            func_L00_0025BBA0(pos, &fall_angle, data + 0x88, data + 0x8C);
+            func_L00_0025D5B0(moby, data + 0x70, 8, 1, 0, fall_angle);
+            moby[0x20] = 0x17;
+            moby[0xBC] = 2;
+            data[0x67] = 0xF0;
+            break;
+        }
+        func_L00_0025E4B0(moby, data + 0x60);
+    }
+    moby[0xA4] = 0xFF;
+    func_L00_0025E590(moby, data + 0x60);
+    if (flag != 0)
+        return;
+    if (*(int *)(data + 0x38) != 0) {
+        float value;
+        int rounded;
+        value = func_002140F8_r(180.0f, 240.0f);
+        rounded = func_001FA898_r(func_001F9878(value));
+        *(int *)(data + 0x38) = 0;
+        *(float *)(data + 0x130) = (float)rounded;
+    }
+    func_L08_00211A38_r(data + 0x130);
+    if (func_001F9D10(moby + 0x10, (D_0013E633 + 0xEED)) < 64.0f) {
+        group = 0;
+        qcopy(pos, moby + 0x10);
+        pos[2] += 1.0f;
+        if (*(int *)(data + 0x12C) != -1)
+            group = D_L15_00160058_m + (*(int *)(data + 0x12C) << 8);
+        data[0x15A] = func_L00_001EFFF0_r(pos, (D_0013E633 + 0xEED), 2, (void *)group, 0) == 0;
+    } else {
+        data[0x15A] = 0;
+    }
+    path = D_L15_001B0DB0[*(int *)(data + 0x120)];
+    if (func_L00_00260FB0(moby, data + 0xD0, 128.0f, 0, 0, path + 4, *path) != 2) {
+        float target_angle;
+        seen = 0;
+        target_angle = func_L00_001FF860(*(float *)(data + 0xD0) - *(float *)(moby + 0x10),
+                              *(float *)(data + 0xD4) - *(float *)(moby + 0x14));
+        if ((func_001FA850(*(float *)(moby + 0x48), target_angle) < 1.5707964f &&
+             (*(short *)(D_0013E633 + 0x1125) == 0 || func_001F9B88(*(float *)(moby + 0x18) - *(float *)(data + 0xD8)) < 4.0f)) ||
+            moby[0x20] == 0x10 || moby[0x20] == 0x11) {
+            seen = data[0x15A];
+        }
+        if (*(int *)(data + 0x114) == 1)
+            data[0x15E] = data[0x15B] + 1;
+        else if (*(unsigned char *)(D_0013E633 + 0x2EC1) != 3)
+            data[0x15E] = 0;
+        else if (data[0x15E] >= 2)
+            data[0x15B] = 1;
+        data[0x19F] = 1;
+        if (seen == 0) {
+            if (data[0x15A] == 0)
+                data[0x15B] = 1;
+            data[0x19F] = 0;
+            *(int *)(data + 0x114) = 2;
+            *(short *)(data + 0x158) = 0;
+        } else if (((*(short *)(data + 0x156) == 0 || data[0x15B] != 0) &&
+                    *(unsigned char *)(D_0013E633 + 0x2EC1) == 3) ||
+                   (data[0x15E] != 0 && *(int *)(data + 0x114) != 1)) {
+            *(int *)(data + 0x114) = 2;
+            *(short *)(data + 0x158) = 1;
+        } else if (*(unsigned char *)(D_0013E633 + 0x2EC1) != 3 && *(int *)(data + 0x114) != 2) {
+            data[0x15B] = 0;
+        }
+        if (D_L15_0015F6A8 == 2)
+            *(int *)(data + 0x114) = 2;
+    } else {
+        data[0x19F] = 0;
+        data[0x15B] = 1;
+        *(short *)(data + 0x158) = 0;
+    }
+    if (*(int *)(data + 0x110) == 0)
+        *(int *)(data + 0x110) = *(int *)(D_0013E633 + 0x2E9D);
+}
+
+#undef func_002140F8_r
+#undef func_L08_00211A38_r
+#undef func_001FA898_r
+#undef func_L00_001EFFF0_r
+#undef D_L15_00160058_m
 extern void func_L00_00264690(void *, int, float, float);
 
 /* Applies the same effect to three consecutive 16-byte slots of a moby's data, tagged with its colour word. */

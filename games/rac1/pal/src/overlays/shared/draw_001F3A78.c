@@ -687,7 +687,44 @@ int func_L00_001F75F8(int x, int y, int z) {
     return (int)(base + l[cx + 2] * 128);
 }
 INCLUDE_ASM("asm/overlays", func_L00_001F767C);
-INCLUDE_ASM("asm/overlays", func_L00_001F8750);
+/* Clears the loader's seventeen state words. */
+extern int D_L00_0015F524 MACRO_ADDR;
+extern int D_L00_0015F52C MACRO_ADDR;
+extern int D_L00_0015F530 MACRO_ADDR;
+extern int D_L00_0015F528 MACRO_ADDR;
+extern int D_L00_0015F534 MACRO_ADDR;
+extern int D_L00_0015F3F0 MACRO_ADDR;
+extern int D_L00_0015F3F4 MACRO_ADDR;
+extern int D_L00_0015F504 MACRO_ADDR;
+extern int D_L00_0015F508 MACRO_ADDR;
+extern int D_L00_0015F6E8 MACRO_ADDR;
+extern int D_L00_00161390 MACRO_ADDR;
+extern int D_L00_00161394 MACRO_ADDR;
+extern int D_L00_00161398 MACRO_ADDR;
+extern int D_L00_0016139C MACRO_ADDR;
+extern int D_0015F40C_F8750 SDATA(D_L00_0015F40C);
+extern int D_0015F420_F8750 SDATA(D_L00_0015F420);
+extern int D_0015F430_F8750 SDATA(D_L00_0015F430);
+
+void func_L00_001F8750(void) {
+    D_L00_0015F524 = 0;
+    D_L00_0015F52C = 0;
+    D_L00_0015F530 = 0;
+    D_L00_0015F528 = 0;
+    D_L00_0015F534 = 0;
+    D_L00_0015F3F0 = 0;
+    D_L00_0015F3F4 = 0;
+    D_L00_0015F504 = 0;
+    D_L00_0015F508 = 0;
+    D_0015F40C_F8750 = 0;
+    D_0015F420_F8750 = 0;
+    D_0015F430_F8750 = 0;
+    D_L00_0015F6E8 = 0;
+    D_L00_00161390 = 0;
+    D_L00_00161394 = 0;
+    D_L00_00161398 = 0;
+    D_L00_0016139C = 0;
+}
 extern int D_L00_0015F6BC MACRO_ADDR;
 extern int D_L00_0015F6A8 MACRO_ADDR;
 extern int D_L00_0015F4F4 MACRO_ADDR;

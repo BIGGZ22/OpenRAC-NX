@@ -422,7 +422,192 @@ void func_L08_002D5FA8(Moby *m) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L08_002D68D0);
+typedef struct {
+    f32 x;
+    f32 y;
+    f32 z;
+    f32 w;
+} Vec4f_D68D0;
+struct Moby_D68D0;
+extern f32 D_0015EE6C MACRO_ADDR;
+extern f32 D_0015EE70 MACRO_ADDR;
+struct Manip;
+struct GifEntry;
+struct AnimSeq;
+struct MobyClass_D68D0 {
+    u8 pad_0[0xC];
+    u8 seq_count; /* number of entries in seqs[] (menu previews clamp the sequence to it) */
+    u8 pad_D[3];
+    u32 collision; /* collision data; copied into Moby.collision when a moby is (re)classed */
+    u8 pad_14[0x8];
+    void *retarget_table; /* retarget table: word table, indexed id * 4 + 4 (0024eec0) */
+    struct GifEntry *gifs; /* patched by patch_moby_gifs */
+    f32 scale; /* default draw scale: copied into Moby.scale, divides it */
+    s32 sound_defs; /* sound definitions, 0x20 bytes each */
+    void **callbacks; /* function-pointer table, called with the moby */
+    u8 pad_30[0x14];
+    u16 flags; /* initial Moby.flags */
+    s16 type; /* class type; 5 (a creature) is tested by targeting code */
+    struct AnimSeq *seqs[1]; /* animation sequences, indexed by Moby.seq */
+};
+struct Moby_D68D0 {
+    Vec4f_D68D0 bsphere;
+    Vec4f_D68D0 pos;
+    u8 state; /* >= 0xFE: dead, waiting to respawn */
+    u8 group; /* linked group: index into the level moby-list table D_Lxx_001ABCC0 (0xFF: none) */
+    u8 class_slot; /* class slot: pclass = D_L00_00197300[class_slot] (crate_update) */
+    u8 alpha; /* 0x80 by default; 0x40 for the smoke trail FUN_L09_00307ba8 spawns */
+    struct MobyClass_D68D0 *pclass;
+    struct Moby_D68D0 *next;
+    f32 scale; /* draw scale (FUN_L01_002fa068 halves it, FUN_L00_00215ef8 divides by it) */
+    u8 update_dist; /* update distance; 0xFF (always) or 0x7F for beams, set by spawners */
+    u8 visible; /* drawn last frame; set to 1 by spawners */
+    s16 draw_dist; /* draw distance; 0xFF (0x7F for beams), set by spawners */
+    u16 flags;
+    u16 occlusion; /* occlusion bits; 0x7F80 set by spawners */
+    u64 spawn_frame; /* frame count at which it may respawn */
+    Vec4f_D68D0 rot; /* z: yaw (FUN_L00_00266448 compares it with atan2 to the hero) */
+    u8 frame; /* animation frame */
+    u8 prev_frame; /* frame index in prev_seq */
+    u8 seq; /* animation sequence id */
+    u8 prev_seq;
+    f32 anim_time;
+    f32 anim_speed;
+    u8 pad5C[8];
+    struct Manip *manips;
+    void *cur_frame_data;
+    void *prev_frame_data;
+    u8 anim_flags;
+    u8 unk71; /* set to 0xFF when a moby changes class */
+    u8 unk72;
+    u8 unk73;
+    void (*update)(struct Moby_D68D0 *moby);
+    u8 *pvars;
+    u8 unk7C;
+    u8 sound_slot; /* 0x7D: D_0013E550 slot of its looping sound, 0xFF: none (FUN_L00_00232670) */
+    u8 anim_trigger_count;
+    u8 shadow_range; /* shadow range in units of 1024; 0x17 from FUN_L09_002c5990 near D_L09_00166F40 */
+    u8 pad80[6];
+    s16 unk86;
+    u8 pad88[8];
+    s32 glow_color; /* glow colour (class header + 0x40) */
+    u32 collision; /* collision data, from the class header (MobyClass.collision) */
+    s32 collision_disable; /* per-primitive collision disable bits; 1 while a carrier holds the moby (FUN_L00_002c7a58) */
+    u8 pad9C[8];
+    u8 hit_slot; /* hit-message slot (0xFF: none) */
+    u8 padA5;
+    s16 oclass;
+    u8 padA8[8];
+    u8 mission; /* 0xB0: index into the level's D_0014C050 row (0xFF: not spawned) */
+    u8 padB1;
+    u16 save_id; /* index into the level collected[]/killed[] tables and save bits D_0014C190[level][id >> 5] */
+    s16 unkB4;
+    u8 padB6[2];
+    void *parent; /* 0xB8: spawner (bolt source record); its byte 0xB1 is a per-level id (FUN_L00_002a6b70) */
+    u8 command; /* external command byte */
+    u8 padBD[3];
+    Vec4f_D68D0 rot_row0; /* 0xC0: rows of the matrix built from rot (FUN_001fa030) */
+    Vec4f_D68D0 rot_row1;
+    Vec4f_D68D0 rot_row2;
+    u8 padF0[0x10];
+};
+typedef struct Moby_D68D0 Moby_D68D0;
+extern int D_L08_001B0FB0[];
+extern char D_0013E650[];
+extern short D_L08_00161930;
+extern float func_L00_0025CE58(float *, float *, float, float, float, float);
+extern void func_00214D28_D68D0(float *, float, float) __asm__("func_00214D28");
+extern float func_001F9F90(float);
+extern float func_001F9FA8(float);
+extern void func_001F9BD8(void *, void *, void *);
+extern float func_00214358(void *, int, float);
+extern float func_001F9D48(void *, void *);
+extern float func_001F9CB8(void *);
+extern int func_L00_0028EB98(void *, int);
+extern int func_0022ED80(int, int, void *);
+extern void func_L00_0028F210(int, int);
+extern void func_L00_0028EBF0(int);
+typedef struct {
+    u8 pad0[0x80];
+    int volume;
+} SoundSlot_2d55c8;
+typedef struct {
+    u8 pad0[0x40];
+    float velocity[4];
+    u8 pad50[0x108];
+    float turn_speed;
+    int sound;
+    void *linked[2];
+    int point;
+    float target_speed;
+    u8 pad170[0x10];
+    float speed;
+} PathMoverVars_2d55c8;
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l08/gameplay/entities/002b8228.c, FUN_L08_002d55c8. */
+void func_L08_002D68D0(struct Moby_D68D0 *moby, int path_id) {
+    PathMoverVars_2d55c8 *vars = (PathMoverVars_2d55c8 *)moby->pvars;
+    int *path = (int *)D_L08_001B0FB0[path_id];
+    float point[4];
+    float step[3];
+    float scale;
+    float angle;
+    float speed;
+    float *heading;
+
+    qcopy(point, path + 4 + vars->point * 4);
+    heading = &moby->rot.z;
+    angle = func_L00_001FF860(point[0] - moby->pos.x, point[1] - moby->pos.y);
+    func_L00_0025CE58(heading, &vars->turn_speed, angle,
+        D_0015EE70 * 4.712389f, D_0015EE70 * 4.712389f, D_0015EE6C * 3.1415927f);
+    func_00214D28_D68D0(&vars->speed, vars->target_speed, D_0015EE70 + D_0015EE70);
+    step[0] = func_001F9F90(moby->rot.z) * vars->speed;
+    step[1] = func_001F9FA8(moby->rot.z) * vars->speed;
+    step[2] = 0.0f;
+    func_001F9BD8(&moby->pos, &moby->pos, step);
+    moby->pos.z = func_00214358(&moby->pos, 0, 0.5f);
+    if (func_001F9D48(&moby->pos, point) < 0.5f) {
+        vars->point = (vars->point + 1) % *path;
+    }
+    scale = vars->speed / ((*(float *)&D_L08_00161930) * D_0015EE6C);
+    if (scale > 2.0f) {
+        scale = 2.0f;
+    } else if (scale < 0.0f) {
+        scale = 0.0f;
+    }
+    if (vars->linked[0] != 0) {
+        char *linked;
+
+        *(float *)((char *)vars->linked[0] + 0x58) = scale;
+        linked = vars->linked[0];
+        qcopy(linked + 0x40, (char *)moby + 0x40);
+        qcopy(linked + 0x10, &moby->pos);
+    }
+    if (vars->linked[1] != 0) {
+        char *linked;
+
+        *(float *)((char *)vars->linked[1] + 0x58) = scale;
+        linked = vars->linked[1];
+        qcopy(linked + 0x40, (char *)moby + 0x40);
+        qcopy(linked + 0x10, &moby->pos);
+    }
+    speed = func_001F9CB8(vars->velocity);
+    if (D_0015EE6C * 0.1f < speed) {
+        if (func_L00_0028EB98(moby, vars->sound) == 0) {
+            vars->sound = func_0022ED80(1, 4, moby);
+            func_L00_0028F210(vars->sound, 1);
+        } else if (((SoundSlot_2d55c8 *)(D_0013E650 + (vars->sound) * 0x70))->volume < 0x400) {
+            func_L00_0028F210(vars->sound, ((SoundSlot_2d55c8 *)(D_0013E650 + (vars->sound) * 0x70))->volume + 0x400 / func_001F9850(60));
+        }
+    } else if (func_L00_0028EB98(moby, vars->sound) != 0) {
+        if (((SoundSlot_2d55c8 *)(D_0013E650 + (vars->sound) * 0x70))->volume < 0x100) {
+            func_L00_0028EBF0(vars->sound);
+            vars->sound = -1;
+        } else {
+            func_L00_0028F210(vars->sound, ((SoundSlot_2d55c8 *)(D_0013E650 + (vars->sound) * 0x70))->volume - 0x400 / func_001F9850(60));
+        }
+    }
+}
 extern void func_L00_00250800_2D6C58(void *, int, void *) __asm__("func_L00_00250800");
 extern void func_0020DAF8_2D6C58(char *, int, char *) __asm__("func_0020DAF8");
 extern float func_00214158_2D6C58(void) __asm__("func_00214158");
@@ -1115,7 +1300,251 @@ char *func_L08_002DDC18(char *src, char *pos, char *vec) {
     }
     return moby;
 }
-INCLUDE_ASM("asm/overlays", func_L08_002DDD20);
+typedef u32 u128_DDD20 __attribute__((mode(TI), aligned(16)));
+typedef struct {
+    f32 x;
+    f32 y;
+    f32 z;
+    f32 w;
+} Vec4f_DDD20;
+struct Moby_DDD20;
+extern f32 D_0015EE6C MACRO_ADDR;
+struct Manip;
+struct GifEntry;
+struct AnimSeq;
+struct MobyClass_DDD20 {
+    u8 pad_0[0xC];
+    u8 seq_count; /* number of entries in seqs[] (menu previews clamp the sequence to it) */
+    u8 pad_D[3];
+    u32 collision; /* collision data; copied into Moby.collision when a moby is (re)classed */
+    u8 pad_14[0x8];
+    void *retarget_table; /* retarget table: word table, indexed id * 4 + 4 (0024eec0) */
+    struct GifEntry *gifs; /* patched by patch_moby_gifs */
+    f32 scale; /* default draw scale: copied into Moby.scale, divides it */
+    s32 sound_defs; /* sound definitions, 0x20 bytes each */
+    void **callbacks; /* function-pointer table, called with the moby */
+    u8 pad_30[0x14];
+    u16 flags; /* initial Moby.flags */
+    s16 type; /* class type; 5 (a creature) is tested by targeting code */
+    struct AnimSeq *seqs[1]; /* animation sequences, indexed by Moby.seq */
+};
+struct Moby_DDD20 {
+    Vec4f_DDD20 bsphere;
+    Vec4f_DDD20 pos;
+    u8 state; /* >= 0xFE: dead, waiting to respawn */
+    u8 group; /* linked group: index into the level moby-list table D_Lxx_001ABCC0 (0xFF: none) */
+    u8 class_slot; /* class slot: pclass = D_L00_00197300[class_slot] (crate_update) */
+    u8 alpha; /* 0x80 by default; 0x40 for the smoke trail FUN_L09_00307ba8 spawns */
+    struct MobyClass_DDD20 *pclass;
+    struct Moby_DDD20 *next;
+    f32 scale; /* draw scale (FUN_L01_002fa068 halves it, FUN_L00_00215ef8 divides by it) */
+    u8 update_dist; /* update distance; 0xFF (always) or 0x7F for beams, set by spawners */
+    u8 visible; /* drawn last frame; set to 1 by spawners */
+    s16 draw_dist; /* draw distance; 0xFF (0x7F for beams), set by spawners */
+    u16 flags;
+    u16 occlusion; /* occlusion bits; 0x7F80 set by spawners */
+    u64 spawn_frame; /* frame count at which it may respawn */
+    Vec4f_DDD20 rot; /* z: yaw (FUN_L00_00266448 compares it with atan2 to the hero) */
+    u8 frame; /* animation frame */
+    u8 prev_frame; /* frame index in prev_seq */
+    u8 seq; /* animation sequence id */
+    u8 prev_seq;
+    f32 anim_time;
+    f32 anim_speed;
+    u8 pad5C[8];
+    struct Manip *manips;
+    void *cur_frame_data;
+    void *prev_frame_data;
+    u8 anim_flags;
+    u8 unk71; /* set to 0xFF when a moby changes class */
+    u8 unk72;
+    u8 unk73;
+    void (*update)(struct Moby_DDD20 *moby);
+    u8 *pvars;
+    u8 unk7C;
+    u8 sound_slot; /* 0x7D: D_0013E550 slot of its looping sound, 0xFF: none (FUN_L00_00232670) */
+    u8 anim_trigger_count;
+    u8 shadow_range; /* shadow range in units of 1024; 0x17 from FUN_L09_002c5990 near D_L09_00166F40 */
+    u8 pad80[6];
+    s16 unk86;
+    u8 pad88[8];
+    s32 glow_color; /* glow colour (class header + 0x40) */
+    u32 collision; /* collision data, from the class header (MobyClass.collision) */
+    s32 collision_disable; /* per-primitive collision disable bits; 1 while a carrier holds the moby (FUN_L00_002c7a58) */
+    u8 pad9C[8];
+    u8 hit_slot; /* hit-message slot (0xFF: none) */
+    u8 padA5;
+    s16 oclass;
+    u8 padA8[8];
+    u8 mission; /* 0xB0: index into the level's D_0014C050 row (0xFF: not spawned) */
+    u8 padB1;
+    u16 save_id; /* index into the level collected[]/killed[] tables and save bits D_0014C190[level][id >> 5] */
+    s16 unkB4;
+    u8 padB6[2];
+    void *parent; /* 0xB8: spawner (bolt source record); its byte 0xB1 is a per-level id (FUN_L00_002a6b70) */
+    u8 command; /* external command byte */
+    u8 padBD[3];
+    Vec4f_DDD20 rot_row0; /* 0xC0: rows of the matrix built from rot (FUN_001fa030) */
+    Vec4f_DDD20 rot_row1;
+    Vec4f_DDD20 rot_row2;
+    u8 padF0[0x10];
+};
+typedef struct Moby_DDD20 Moby_DDD20;
+typedef int OvlQuad __attribute__((mode(TI)));
+extern int func_L00_001F2BE8(void *, float, int, void *, void *);
+extern int func_L00_001EFFF0(void *, void *, int, void *, int);
+extern int func_001F9908(void *);
+extern void func_L00_001FF610(void *, void *, void *);
+extern void func_L00_001FF4B0_DDD20(float, void *, void *) __asm__("func_L00_001FF4B0");
+extern int func_L00_00237B70(float, int, int);
+extern void func_L00_0026CD70(void *, void *, int, int, float, int, int);
+extern void func_00215C00(void *, float, float, float);
+extern void func_0022ED80_DDD20(int, int, void *) __asm__("func_0022ED80");
+extern float D_0015EE6C_DDD20b __asm__("D_0015EE6C") MACRO_ADDR;
+typedef struct {
+    u8 pad0[0x18];
+    s32 moby; /* 0x18: passed to FUN_002141f8 (reads moby+0x34, moby+0x78); 0 when no moby was hit */
+    s32 unk1C; /* 0x1C: > 0 gates copying point and the normal into the hero (shared/ui/help/00226f10.c) */
+    union {
+        OvlQuad q;
+        f32 f[4];
+    } point; /* 0x20: f[2] is read as the ground height */
+    u8 pad30[0x10]; /* 0x30: position after push-out (copied into hero.motion.pos) */
+    f32 normal_x; /* 0x40: start of the surface normal; its angle is tested against 50 degrees (0.87266463) */
+    f32 normal_y; /* 0x44: FUN_001f9e90 (atan2) of normal_x, normal_y is stored in the hero */
+    f32 normal_z; /* 0x48: ledge probes compare atan2(normal_z, xy length) with 20 degrees */
+} CollisionHit;
+extern int D_L08_001746D8;
+typedef struct __attribute__((packed)) EffectVectorCopy_2DC9A8 {
+    unsigned long values[2];
+} EffectVectorCopy_2DC9A8;
+typedef struct EffectRecord_2DC9A8 {
+    float pos[4];
+    float velocity[4];
+    void *owner;
+    int flags;
+    int unknown;
+    float scale;
+    int state;
+} EffectRecord_2DC9A8;
+extern CollisionHit D_L08_001746C0;
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l08/gameplay/entities/002b8228.c, FUN_L08_002dc9a8. */
+void func_L08_002DDD20(struct Moby_DDD20 *moby) {
+    char *m = (char *)moby;
+    char *data = *(char **)(m + 0x78);
+    float original[4];
+    EffectRecord_2DC9A8 record;
+    float *position;
+    float effect[4];
+    float velocity[4];
+    float D_0015EE6C;
+    float radius;
+    int i, axis;
+    float angle;
+
+    if (func_L00_001F2BE8(m + 0x10, 0.5f, 0, m, 0) != 0 &&
+        D_L08_001746D8 != 0 &&
+        (D_L08_001746D8 != *(int *)(data + 0x20) || *(int *)(data + 0x14) != 0)) {
+        m[0x20] = 99;
+    }
+    switch ((unsigned char)m[0x20]) {
+    case 1: {
+        position = (float *)(m + 0x10);
+        qcopy(original, position);
+        func_001F9BD8(position, position, data);
+        *(float *)(data + 8) -= D_0015EE70 * 10.8f;
+        qcopy(record.pos, position);
+        record.owner = m;
+        record.flags = 0x810000;
+        record.state = 1;
+        record.scale = 1.0f;
+        qcopy(record.velocity, data);
+        if (func_L00_001EFFF0(original, &record, 0, m, 0) != 0) {
+            if (*(int *)(data + 0x20) != 0 &&
+                D_L08_001746C0.moby != *(int *)(data + 0x20)) {
+                m[0x20] = 99;
+                qcopy(position, D_L08_001746C0.point.f);
+                func_L00_001FF610(data, data, &D_L08_001746C0.normal_x);
+                func_L00_001FF4B0_DDD20(D_0015EE6C_DDD20b + D_0015EE6C_DDD20b, data, data);
+            }
+        } else {
+            if (func_001F9908(data + 0x10) != 0) m[0x20] = 99;
+        }
+    } break;
+    case 99: {
+        record.pos[0] = D_0015EE6C_DDD20b * 14.0f;
+        record.pos[1] = D_0015EE6C_DDD20b * 22.0f;
+        record.pos[2] = D_0015EE6C_DDD20b * 12.0f;
+        record.pos[3] = 0.0f;
+        *(EffectVectorCopy_2DC9A8 *)original = *(EffectVectorCopy_2DC9A8 *)record.pos;
+        record.owner = m;
+        record.flags = 0x810001;
+        record.scale = 1.0f;
+        func_001F9BC0(record.velocity);
+        record.state = 0;
+        func_L00_001F2BE8(m + 0x10, 1.0f, 9, m, record.velocity);
+        func_0022ED80_DDD20(0, 0, m);
+        for (i = 0; i < 50; i++) {
+            axis = i % 4;
+            *(u128_DDD20 *)velocity = 0;
+            velocity[0] = func_002140F8(D_0015EE6C_DDD20b * -0.5f,
+                                                    D_0015EE6C_DDD20b * 0.5f);
+            velocity[1] = func_002140F8(D_0015EE6C_DDD20b * -0.5f,
+                                                    D_0015EE6C_DDD20b * 0.5f);
+            velocity[2] = func_002140F8(D_0015EE6C_DDD20b * 4.0f,
+                                                    original[axis]);
+            *(u128_DDD20 *)effect = *(u128_DDD20 *)velocity;
+            radius = func_002140F8(0.0f, 0.25f);
+            angle = func_00214158();
+            record.pos[0] = func_001F9F90(angle) * radius;
+            record.pos[1] = func_001F9FA8(angle) * radius;
+            record.pos[2] = 0.0f;
+            func_001F9BD8(record.pos, record.pos, m + 0x10);
+            D_0015EE6C = radius * D_0015EE6C_DDD20b;
+            radius *= 0.717f;
+            record.pos[2] -= radius;
+            effect[2] -= D_0015EE6C * 8.0f;
+            position = effect;
+            switch (axis) {
+            case 0: {
+                int color, color2, alpha;
+                float size = func_002140F8(200000.0f, 300000.0f);
+                color = func_001F9850(60);
+                color2 = func_001F9850(120);
+                alpha = func_L00_00258BC8(color, color2);
+                func_L00_0026CD70(record.pos, position, 0x1f101820, 0x101010, size, alpha, 0);
+            } break;
+            case 2: {
+                int color, color2, alpha;
+                color = func_002140B0(100) < 40 ? 0x5ff8f8f8 : 0x2f486078;
+                color2 = func_001F9850(30);
+                alpha = func_001F9850(45);
+                func_L00_0026CD70(record.pos, position, color, 0x0f000020, 150000.0f,
+                                      func_L00_00258BC8(color2, alpha), 2);
+            } break;
+            case 3: {
+                int color, color2, alpha;
+                color = func_L00_00237B70(func_002140F8(0.25f, 1.0f),
+                                                  0x7f000000, 0x7f182030);
+                color2 = func_L00_00237B70(func_002140F8(0.5f, 1.0f),
+                                                   0, 0x5f5f5f);
+                radius = func_002140F8(0.0f, 1.0f) * D_0015EE6C_DDD20b;
+                func_00215C00(position, radius, angle,
+                                          func_00214158());
+                radius = func_002140F8(150000.0f, 200000.0f);
+                alpha = func_001F9850(60);
+                alpha = func_L00_00258BC8(alpha, func_001F9850(120));
+                func_L00_0026CD70(record.pos, position, color, color2, radius,
+                                      alpha, 3);
+            } break;
+            case 1: break;
+            }
+        }
+        func_0020D678(m);
+    } break;
+    }
+}
 typedef unsigned int Q46 __attribute__((mode(TI)));
 typedef float V46[4] __attribute__((aligned(16)));
 typedef struct M46 M46;

@@ -77,8 +77,123 @@ void func_L00_002626A8(char *moby, char *d, float a, float b) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_002629E0);
-INCLUDE_ASM("asm/overlays", func_L00_00262BC0);
+typedef struct {
+    s32 count;
+    u8 pad[12];
+    Vec4 points[1];
+} SegmentPath_2629E0;
+
+extern SegmentPath_2629E0 *D_L00_001B0830_2629E0[] __asm__("D_L00_001B0830");
+extern void func_001F9BF0_2629E0(Vec4 *, Vec4 *, Vec4 *) __asm__("func_001F9BF0");
+extern f32 func_001F9CB8_2629E0(Vec4 *) __asm__("func_001F9CB8");
+extern void func_L00_001FF4B0_2629E0(Vec4 *, Vec4 *, f32) __asm__("func_L00_001FF4B0");
+extern void func_001F9BC0_2629E0(Vec4 *) __asm__("func_001F9BC0");
+extern void func_001F9EC0_2629E0(Vec4 *, Vec4 *, Vec4 *) __asm__("func_001F9EC0");
+
+/* Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/state/00261968.c, FUN_L00_00261968. */
+s32 func_L00_002629E0(s32 path_index, Vec4 *start, Vec4 *end) {
+    Vec4 direction;
+    Vec4 axis;
+    Vec4 origin;
+    Vec4 first;
+    Vec4 next;
+    Vec4 *previous;
+    Vec4 *current;
+    SegmentPath_2629E0 **entry;
+    s32 i;
+    s32 offset;
+    f32 crossing;
+    f32 zero;
+
+    i = 1;
+    func_001F9BF0_2629E0(&direction, end, start);
+    direction.i[2] = 0;
+    func_L00_001FF4B0_2629E0(&direction, &direction, 1.0f / func_001F9CB8_2629E0(&direction));
+    func_001F9BC0_2629E0(&axis);
+    axis.f[0] = direction.f[1];
+    axis.f[1] = -direction.f[0];
+    func_001F9BC0_2629E0(&origin);
+    entry = &D_L00_001B0830_2629E0[path_index];
+    origin.f[2] = 1.0f;
+    func_001F9BF0_2629E0(&first, &(*entry)->points[0], start);
+    func_001F9EC0_2629E0(&first, &first, &direction);
+    previous = &first;
+    current = &next;
+    if (i < (*entry)->count) {
+        offset = 0x20;
+        zero = 0.0f;
+        do {
+            func_001F9BF0_2629E0(current, (Vec4 *)((u8 *)*entry + offset), start);
+            func_001F9EC0_2629E0(current, current, &direction);
+            if (first.f[3] != zero || next.f[3] != zero) {
+                if (next.f[1] * first.f[1] < 0.0f) {
+                    crossing = (first.f[0] - next.f[0]) / (first.f[1] - next.f[1]) * -next.f[1] + next.f[0];
+                    if (crossing > 0.0f && crossing < 1.0f)
+                        return 1;
+                }
+            }
+            qcopy(previous, current);
+            i++;
+            offset += 0x10;
+        } while (i < (*entry)->count);
+    }
+    return 0;
+}
+extern void func_001F9BF0(void *, void *, void *);
+extern float func_001F9CB8(void *);
+extern void func_L00_001FF4B0(void *, void *, float);
+extern void func_001F9BC0(void *);
+extern void func_001F9EC0(void *, void *, void *);
+extern void func_001F9C08(void *, void *, void *, float);
+
+int func_L00_00262BC0(int idx, void *a, void *b, void *c) {
+    float v[4], w[4], z[4], t[4], u[4];
+    float best;
+    float zero;
+    int found = 0;
+    int i = 1;
+    int offset;
+    float *prev;
+    float *cur;
+    func_001F9BF0(v, b, a);
+    v[2] = 0;
+    func_L00_001FF4B0(v, v, 1.0f / func_001F9CB8(v));
+    func_001F9BC0(w);
+    w[0] = v[1];
+    w[1] = -v[0];
+    func_001F9BC0(z);
+    z[2] = 1.0f;
+    best = 1.0f;
+    func_001F9BF0(t, (char *)D_L00_001B0830_2629E0[idx] + 0x10, a);
+    func_001F9EC0(t, t, v);
+    prev = t;
+    cur = u;
+    if (i < D_L00_001B0830_2629E0[idx]->count) {
+        offset = 0x20;
+        zero = 0.0f;
+        do {
+            func_001F9BF0(cur, (char *)D_L00_001B0830_2629E0[idx] + offset, a);
+            func_001F9EC0(cur, cur, v);
+            if (t[3] != zero || u[3] != zero) {
+                if (u[1] * t[1] < 0.0f) {
+                    float x = (t[0] - u[0]) / (t[1] - u[1]) * -u[1] + u[0];
+                    if (x > 0.0f && x < best) {
+                        best = x;
+                        found = 1;
+                        qcopy(prev, cur);
+                        goto next;
+                    }
+                }
+            }
+            qcopy(prev, cur);
+        next:
+            i++;
+            offset += 0x10;
+        } while (i < D_L00_001B0830_2629E0[idx]->count);
+    }
+    func_001F9C08(c, a, b, best);
+    return found;
+}
 LINKER_REMNANT("asm/overlays", func_L00_00262DE8);
 typedef int OvlQuad __attribute__((mode(TI)));
 typedef union {
@@ -152,7 +267,103 @@ s32 func_L00_00262DF0(f32 distance, s32 path_index, OvlVec4 *point, OvlVec4 *out
         qcopy(out, &working);
     return found;
 }
-INCLUDE_ASM("asm/overlays", func_L00_002630A8);
+typedef int OvlQuad_630A8 __attribute__((mode(TI)));
+typedef union {
+    OvlQuad_630A8 q;
+    f32 f[4];
+    s32 i[4];
+} OvlVec4_630A8;
+typedef struct {
+    s32 count;
+    u8 pad[12];
+    OvlVec4_630A8 points[1];
+} SegmentPath_262030;
+extern SegmentPath_262030 * D_L00_001B0830_630A8[] __asm__("D_L00_001B0830");
+extern OvlVec4_630A8 D_0013F6E0;
+extern void func_001F9BD8_630A8(OvlVec4_630A8 *, OvlVec4_630A8 *, OvlVec4_630A8 *) __asm__("func_001F9BD8");
+extern void func_001F9BF0_630A8(OvlVec4_630A8 *, OvlVec4_630A8 *, OvlVec4_630A8 *) __asm__("func_001F9BF0");
+extern f32 func_001F9C78_630A8(OvlVec4_630A8 *, OvlVec4_630A8 *) __asm__("func_001F9C78");
+extern void func_001F9CA0_630A8(OvlVec4_630A8 *, OvlVec4_630A8 *, OvlVec4_630A8 *) __asm__("func_001F9CA0");
+extern f32 func_001F9CB8_630A8(OvlVec4_630A8 *) __asm__("func_001F9CB8");
+extern void func_L00_001FF4B0_630A8(f32, OvlVec4_630A8 *, OvlVec4_630A8 *) __asm__("func_L00_001FF4B0");
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00261968.c, FUN_L00_00262030. */
+s32 func_L00_002630A8(f32 distance, s32 path_index, OvlVec4_630A8 *point, OvlVec4_630A8 *out) {
+    OvlVec4_630A8 difference;
+    OvlVec4_630A8 scaled_difference;
+    OvlVec4_630A8 working;
+    OvlVec4_630A8 segment;
+    OvlVec4_630A8 scaled_segment;
+    OvlVec4_630A8 cross;
+    OvlVec4_630A8 scaled_cross;
+    SegmentPath_262030 *entry;
+    OvlVec4_630A8 *height_axis;
+    OvlVec4_630A8 *current;
+    s32 next;
+    s32 i;
+    s32 offset;
+    OvlVec4_630A8 *saved_out;
+    s32 found;
+    f32 original_height;
+    f32 segment_length;
+    f32 projection;
+
+    found = 0;
+    saved_out = out;
+    qcopy(&working, point);
+    entry = D_L00_001B0830_630A8[path_index];
+    offset = (s32)&D_0013F6E0;
+    original_height = func_001F9C78_630A8(&working, (OvlVec4_630A8 *)offset);
+    i = 0;
+    if (entry->count - 1 > found) {
+        height_axis = (OvlVec4_630A8 *)offset;
+        do {
+            offset = i << 4;
+            next = i + 1;
+            if (((OvlVec4_630A8 *)((u8 *)entry + offset + 0x10))->f[3] != 0.0f || entry->points[next].f[3] != 0.0f) {
+                current = (OvlVec4_630A8 *)((u8 *)entry + (offset + 0x10));
+                func_001F9BF0_630A8(&difference, &working, current);
+                func_001F9BF0_630A8(&segment, (OvlVec4_630A8 *)((u8 *)entry + (offset + 0x20)), current);
+                projection = func_001F9C78_630A8(&difference, height_axis);
+                func_L00_001FF4B0_630A8(projection, &scaled_cross, height_axis);
+                func_001F9BF0_630A8(&difference, &difference, &scaled_cross);
+                projection = func_001F9C78_630A8(&segment, height_axis);
+                func_L00_001FF4B0_630A8(projection, &scaled_cross, height_axis);
+                func_001F9BF0_630A8(&segment, &segment, &scaled_cross);
+                func_L00_001FF4B0_630A8(1.0f, &scaled_segment, &segment);
+                func_001F9CA0_630A8(&cross, &difference, &scaled_segment);
+                segment_length = func_001F9B88(func_001F9C78_630A8(&cross, height_axis));
+                if (distance < segment_length)
+                    goto next_segment_262030;
+                segment_length = func_001F9CB8_630A8(&segment);
+                projection = func_001F9C78_630A8(&difference, &scaled_segment);
+                if (segment_length < projection || projection < 0.0f) {
+                    segment_length = func_001F9CB8_630A8(&difference);
+                    if (!(segment_length < distance))
+                        goto next_segment_262030;
+                    func_L00_001FF4B0_630A8(distance, &scaled_difference, &difference);
+                    func_001F9BD8_630A8(&working, &scaled_difference, current);
+                    found = 1;
+                } else {
+                    found = 1;
+                    func_L00_001FF4B0_630A8(projection, &scaled_cross, &scaled_segment);
+                    func_001F9BF0_630A8(&scaled_difference, &difference, &scaled_cross);
+                    func_L00_001FF4B0_630A8(distance, &scaled_difference, &scaled_difference);
+                    func_001F9BD8_630A8(&scaled_difference, &scaled_difference, &scaled_cross);
+                    func_001F9BD8_630A8(&working, &scaled_difference, current);
+                }
+            }
+next_segment_262030:
+            i = next;
+        } while (i < entry->count - 1);
+    }
+    if ((i = found)) {
+        projection = func_001F9C78_630A8(&working, &D_0013F6E0);
+        func_L00_001FF4B0_630A8(original_height - projection, &segment, &D_0013F6E0);
+        func_001F9BD8_630A8(saved_out, &working, &segment);
+    }
+    return found;
+}
 typedef struct {
     s32 count; /* 0x00 */
     u8 pad4[0xC];

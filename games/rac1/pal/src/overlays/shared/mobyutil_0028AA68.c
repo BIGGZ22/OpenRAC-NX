@@ -2,7 +2,38 @@
 #include "common.h"
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/overlays", func_L05_0028AA68);
+typedef struct { char pad[0x2C]; float f; } O_28aa68;
+
+O_28aa68 *func_L05_0028AA68(O_28aa68 *a, O_28aa68 *b, O_28aa68 *c, O_28aa68 *d) {
+    O_28aa68 *r = a;
+
+    if (r == 0) {
+        goto none;
+    }
+    if (b != 0 && !(r->f > b->f)) {
+        r = b;
+    }
+check_c:
+    if (c != 0 && !(r->f > c->f)) {
+        r = c;
+    }
+check_d:
+    if (d != 0 && !(r->f > d->f)) {
+        r = d;
+    }
+    return r;
+
+none:
+    if (b != 0) {
+        r = b;
+        goto check_c;
+    }
+    if (c != 0) {
+        r = c;
+        goto check_d;
+    }
+    return d;
+}
 INCLUDE_ASM("asm/overlays", func_L05_0028AADC);
 extern char *D_L05_001B0CB0[];
 extern int func_L00_002629E0(int, void *, void *);

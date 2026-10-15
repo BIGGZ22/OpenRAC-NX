@@ -139,7 +139,65 @@ void func_L00_002A0F60(void *m) {
     DrawMobyList((int)m, 1);
     DrawTexturedQuad(w, h, x, y, 0, 0, x, y, 0x80808080L, D_0015EFD0);
 }
-INCLUDE_ASM("asm/overlays", func_L00_002A11E8);
+extern void func_001F9EC0(void *, void *, void *);
+struct Quad { int a, b, c, d; };
+extern struct Quad D_L00_001CA780[];
+extern float D_L00_001CA680[][4];
+extern float D_L00_001CA710[][2];
+extern int D_L00_001CA758[];
+extern int D_L00_001CA7C0[];
+extern short D_L00_00161244;
+
+struct HoloPacket {
+    float pos[4][4];
+    int col[4];
+    float uv[4][2];
+    long hdr[4];
+};
+
+/* Draws the four quads of the hologram cone, scrolling the texture coordinates. */
+void func_L00_002A11E8(void) {
+    struct HoloPacket s;
+    float v[4][4];
+    int i;
+    *(float *)&D_L00_00161244 = *(float *)&D_L00_00161244 + 0.01f;
+    if (*(float *)&D_L00_00161244 > 1.0f) *(float *)&D_L00_00161244 = *(float *)&D_L00_00161244 - 1.0f;
+    s.hdr[2] = 1;
+    s.hdr[3] = 0x4000000044L;
+    s.hdr[0] = 0;
+    s.hdr[1] = func_001F4868(0x18);
+    for (i = 0; i < 4; i++) {
+        func_001F9EC0(v[0], D_L00_001CA680[D_L00_001CA780[i].a], (char *)D_L00_001CA7C0[7] + 0xC0);
+        func_001F9EC0(v[1], D_L00_001CA680[*(int *)((char *)D_L00_001CA780 + i * 16 + 4)], (char *)D_L00_001CA7C0[7] + 0xC0);
+        func_001F9EC0(v[2], D_L00_001CA680[*(int *)((char *)D_L00_001CA780 + i * 16 + 8)], (char *)D_L00_001CA7C0[7] + 0xC0);
+        func_001F9EC0(v[3], D_L00_001CA680[D_L00_001CA780[i].d], (char *)D_L00_001CA7C0[7] + 0xC0);
+        s.pos[0][0] = *(float *)((char *)D_L00_001CA7C0[7] + 0x10) + v[0][0];
+        s.pos[0][1] = *(float *)((char *)D_L00_001CA7C0[7] + 0x14) + v[0][1];
+        s.pos[0][2] = *(float *)((char *)D_L00_001CA7C0[7] + 0x18) + v[0][2];
+        s.pos[1][0] = *(float *)((char *)D_L00_001CA7C0[7] + 0x10) + v[1][0];
+        s.pos[1][1] = *(float *)((char *)D_L00_001CA7C0[7] + 0x14) + v[1][1];
+        s.pos[1][2] = *(float *)((char *)D_L00_001CA7C0[7] + 0x18) + v[1][2];
+        s.pos[2][0] = *(float *)((char *)D_L00_001CA7C0[7] + 0x10) + v[2][0];
+        s.pos[2][1] = *(float *)((char *)D_L00_001CA7C0[7] + 0x14) + v[2][1];
+        s.pos[2][2] = *(float *)((char *)D_L00_001CA7C0[7] + 0x18) + v[2][2];
+        s.pos[3][0] = *(float *)((char *)D_L00_001CA7C0[7] + 0x10) + v[3][0];
+        s.pos[3][1] = *(float *)((char *)D_L00_001CA7C0[7] + 0x14) + v[3][1];
+        s.pos[3][2] = *(float *)((char *)D_L00_001CA7C0[7] + 0x18) + v[3][2];
+        s.col[0] = D_L00_001CA758[D_L00_001CA780[i].a];
+        s.col[1] = D_L00_001CA758[*(int *)((char *)D_L00_001CA780 + i * 16 + 4)];
+        s.col[2] = D_L00_001CA758[*(int *)((char *)D_L00_001CA780 + i * 16 + 8)];
+        s.col[3] = D_L00_001CA758[D_L00_001CA780[i].d];
+        s.uv[0][0] = D_L00_001CA710[D_L00_001CA780[i].a][0];
+        s.uv[0][1] = D_L00_001CA710[D_L00_001CA780[i].a][1] + *(float *)&D_L00_00161244;
+        s.uv[1][0] = D_L00_001CA710[*(int *)((char *)D_L00_001CA780 + i * 16 + 4)][0];
+        s.uv[1][1] = D_L00_001CA710[*(int *)((char *)D_L00_001CA780 + i * 16 + 4)][1] + *(float *)&D_L00_00161244;
+        s.uv[2][0] = D_L00_001CA710[*(int *)((char *)D_L00_001CA780 + i * 16 + 8)][0];
+        s.uv[2][1] = D_L00_001CA710[*(int *)((char *)D_L00_001CA780 + i * 16 + 8)][1] + *(float *)&D_L00_00161244;
+        s.uv[3][0] = D_L00_001CA710[D_L00_001CA780[i].d][0];
+        s.uv[3][1] = D_L00_001CA710[D_L00_001CA780[i].d][1] + *(float *)&D_L00_00161244;
+        func_L00_001FD1D8(&s, 0, 1);
+    }
+}
 typedef int u128_2A1540 __attribute__((mode(TI)));
 typedef struct {
     char pad[0x8];

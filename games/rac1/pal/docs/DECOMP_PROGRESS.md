@@ -55,7 +55,7 @@ classes through, each caught only by luck:
    `st_size`.
 
 **Where the numbers live.** `progress/report.json` (published on
-[decomp.dev](https://decomp.dev/OpenRAC/rac1-decomp)) is the source of
+[ByteMatch](https://bytematch.dev/OpenRAC/rac1-decomp)) is the source of
 truth for what has source and what is finished. `tools/gen_progress_report.py`
 regenerates it from a from-scratch build, and CI fails when it is out of
 date with `src/` or the original-assembly manifests. The report counts
@@ -65,7 +65,22 @@ byte-verified handwritten assembly and dead-strip remnants as finished;
 It leaves out retail's linker fill (the `0xCDCDCDCD`
 runs between objects that splat also emits as 4-byte "functions"; 38 of
 them, 200 bytes): fill is not code, and the build reproduces it byte for
-byte. Totals written in prose go stale, so this file no
+byte.
+
+The report also measures the executable's **data** (`total_data`,
+`matched_data`, `complete_data`, in the top-level measures and the
+`executable` category). The total is retail's initialised data:
+`core.data`, `core.rdata`, `core.lit`, `.lit`, `.data` and the three
+`lvl.*vtbl` sections (`.bss` has no bytes to compare, and the level
+programs' data is not measured yet). Data still assembled from retail's
+dumps in `asm/data/` is not matched. Matched data is what compiled objects
+bring themselves (`config/core_rodata.txt`, and the jump tables of
+decompiled game functions, `tools/jump_tables.py`), counted when the linked
+image holds retail's bytes at its retail address; complete data is the part
+of it in complete units. Units carry no data measures, because the retail
+dumps can't be split by unit.
+
+Totals written in prose go stale, so this file no
 longer keeps a running count. Snapshot as of 2026-09-24 (`5c1d28b`):
 **926 functions have source; 903 are exact on size and bytes; 23 are
 same-size near-misses kept as C; 0 are size-mismatched; 26.69% of code

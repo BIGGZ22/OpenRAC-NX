@@ -270,7 +270,22 @@ void func_L00_00236750(HudElem *e) {
     e->h = 0x20;
     func_L00_00236610(e);
 }
-INCLUDE_ASM("asm/overlays", func_L00_002367A8);
+int func_L00_002367A8(int key, int val) {
+    int i;
+    int r;
+    HudBank *e;
+    r = 1;
+    for (i = 0; i < 13; i++) {
+        if (D_L00_0017DD50[i].unk64 == key)
+            break;
+    }
+    if (i < 13 && D_L00_0017DD50[i].unk68 == 0) {
+        e = D_L00_0017DD50 + i;
+        e->unk7C = (val < e->unk7C) ? e->unk7C : val;
+        return 0;
+    }
+    return 1;
+}
 
 /* Eases a counter's shown value toward its target and animates its two drifting digits. */
 void func_L00_00236830(HudElem *e) {
@@ -388,7 +403,40 @@ void func_L00_00236AB8(HudElem *e) {
     }
     func_L00_0023B440((char *)e + 0x40);
 }
-INCLUDE_ASM("asm/overlays", func_L00_00236BF8);
+extern float func_002140F8(float, float);
+extern float D_L00_0017E760[][4];
+extern short D_L00_0015F830;
+extern short D_L00_0015F834;
+extern short D_L00_0015F838;
+extern short D_L00_0015F83C;
+
+/* fills 100 hud particle records with randomised positions and drift */
+void func_L00_00236BF8(HudElem *e) {
+    int i;
+    float v, lo, span, hi;
+    int n;
+
+    func_L00_00236710(e);
+    for (i = 0; i < 100; i++) {
+        v = *(float *)&D_L00_0015F830;
+        if (i >= 10) {
+            v = *(float *)&D_L00_0015F834;
+            if (i >= 20) v = *(float *)&D_L00_0015F838;
+        }
+        n = *(int *)&D_L00_0015F83C;
+        span = (232.0f - (v + v)) / (float)n;
+        lo = (v - 116.0f) + (float)(i % n) * span;
+        hi = lo + span;
+        D_L00_0017E760[i][0] = func_002140F8(v - 17.0f, 17.0f - v);
+        D_L00_0017E760[i][1] = func_002140F8(lo, hi);
+        D_L00_0017E760[i][2] = func_002140F8(-0.4f, 0.4f);
+        D_L00_0017E760[i][3] = func_002140F8(-0.6f, 0.6f);
+        D_L00_0017E760[i][2] += func_002140F8(-0.4f, 0.4f);
+        D_L00_0017E760[i][3] += func_002140F8(-0.6f, 0.6f);
+        D_L00_0017E760[i][2] += func_002140F8(-0.4f, 0.4f);
+        D_L00_0017E760[i][3] += func_002140F8(-0.6f, 0.6f);
+    }
+}
 extern void func_L00_00236830_v(HudElem *) __asm__("func_L00_00236830");
 extern int D_L00_0015F4F8 MACRO_ADDR;
 extern float D_L00_0017E760[][4];
@@ -1370,7 +1418,83 @@ void func_L00_0023ABB0(HudElem *e) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_0023AC68);
+extern int D_0013E600[];
+extern int D_0015EE80 MACRO_ADDR;
+extern int D_L00_0015F6B0 MACRO_ADDR;
+extern short D_L00_0015F9CC;
+extern short D_L00_0015F9D0;
+extern short D_L00_0015F9D4;
+extern short D_L00_0015F9D8;
+extern short D_L00_0015F9DC;
+extern short D_L00_0015F9E0;
+extern short D_L00_0015F9E4;
+extern short D_L00_0015F9E8;
+extern char D_L00_0015F9F0[];
+extern int func_00116248(char *str, const char *fmt, ...);
+extern float func_001F9FA8(float);
+extern int func_001FA8A8(int, int, float);
+extern void func_L00_001FB7F8(int, int, int, char *, int);
+
+int func_L00_0023AC68(char *m) {
+    char buf[16];
+    unsigned char *q;
+    int x, y, panel_right, panel_left, slide, alpha, text_alpha;
+    int color, shadow, period, text_x, text_y;
+    float open, text, pulse, scaled_text;
+    char *g = D_0013F450;
+
+    {
+        int panel_y = D_0013E600[1] - 42;
+        int alternate_y = D_0013E600[1] - 50;
+        y = panel_y;
+        if (D_0015EE80 == 0)
+            y = alternate_y;
+    }
+    x = *(int *)(m + 0x50);
+    if (*(unsigned char *)(g + 0x20A4) == 2)
+        return *(int *)(m + 0x58);
+    if (*(int *)(g + 0x2084) == 50)
+        return *(int *)(m + 0x58);
+    q = (unsigned char *)(m + 0x70);
+    if (q[0] == 0)
+        return *(int *)(m + 0x58);
+
+    open = func_001FA888(q[0]) / func_001FA888(*(int *)&D_L00_0015F8D0);
+    if (1.0f < open)
+        open = 1.0f;
+    else if (open < 0.0f)
+        open = 0.0f;
+    text = func_001FA888(q[1]) / func_001FA888(*(int *)&D_L00_0015F8D0);
+    if (1.0f < text)
+        text = 1.0f;
+    else if (text < 0.0f)
+        text = 0.0f;
+
+    text_alpha = func_001FA898(text * 128.0f);
+    alpha = func_001FA898((float)*(int *)&D_L00_0015F9CC * open);
+    panel_right = x + *(int *)&D_L00_0015F9D4;
+    slide = func_001FA898((float)*(int *)&D_L00_0015F9D0 * open);
+    func_00200650(func_00200198(0x7580, 1), panel_right + 16, y, 32, 32, alpha);
+    panel_left = panel_right - slide;
+    func_00200468(func_00200198(0x7580, 0), panel_left, y, slide + 16, 32, alpha);
+    func_00200468(func_00200198(0x7580, 1), panel_left - 32, y, 32, 32, alpha);
+    func_L00_0023BAB8(m, func_00200198(0x754f, D_L00_0015F6B0 % 60 >> 1), x - 32, y, 0, text_alpha);
+
+    func_00116248(buf, D_L00_0015F9F0);
+    text_x = x + *(int *)&D_L00_0015F9D8;
+    text_y = y + *(int *)&D_L00_0015F9DC;
+    period = func_001F9850(*(int *)&D_L00_0015F9E8);
+    pulse = func_001F9FA8((float)(D_L00_0015F6B0 % period) /
+                     func_001FA888(period) * 6.28318f - 3.14159f) * 4.0f - 3.0f;
+    if (pulse < 0.0f)
+        pulse = 0.0f;
+    scaled_text = pulse * text;
+    shadow = func_001FA8A8(0, 0x80000000, scaled_text);
+    color = func_001FA8A8(*(int *)&D_L00_0015F9E0, *(int *)&D_L00_0015F9E4, scaled_text);
+    func_L00_001FB7F8(text_x + 1, text_y + 1, shadow, buf, -1);
+    func_L00_001FB7F8(text_x, text_y, color, buf, -1);
+    return *(int *)(m + 0x58);
+}
 extern short D_00140A86 NOT_SDA;
 extern int func_00200198(int, int);
 extern void func_L00_00236468(HudElem *, int *, int *, int, int);
@@ -1847,7 +1971,73 @@ void func_L00_0023D9C0(void) {
     }
     D_0015EF24 += 0xB4;
 }
-INCLUDE_ASM("asm/overlays", func_L00_0023DB30);
+/* NON_MATCHING func_L00_0023DB30 -- src/overlays/shared/hud_00235960.c
+ * Best so far: BYTES 36/572 (93.7% of the bytes match), checked 2026-10-09.
+ * Not built into anything: the retail assembly stays in the source file
+ * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
+ * What the last attempts found:
+ *   func_L00_0023DB30: vendor stock init. If D_0015EE84 >= 19 it fills two 0x25-byte flag arrays with 1, sets seve
+ *   Best candidate p7.c: schedule identical to retail (source order bytes, then ints 4..0x18, then the 0x1C store 
+ *   Would unblock: making the int-constant pseudos rank before the byte-constant pseudos without changing the sche
+ */
+extern unsigned char D_0015EED0[] MACRO_ADDR;
+extern int D_L00_001C4198[];
+extern void func_L00_0023DD70(int idx);
+extern unsigned char D_0013D5EB[] NOT_SDA;
+extern unsigned char D_0013D5CA[] NOT_SDA;
+extern unsigned char D_0014171B[] NOT_SDA;
+extern void func_L00_002618D8(int, int);
+
+/* Initialise the vendor stock list: fixed defaults once the level is at least 19, else prune unknown entries. */
+void func_L00_0023DB30(void) {
+    int i, j, v, k;
+    unsigned char c;
+    if (D_0015EE84 >= 0x13) {
+        for (k = 0; k < 0x25; k++) {
+            (D_0013D50F + 0xB9)[k] = 1;
+            (D_0013D5EB + 5)[k] = 1;
+        }
+        D_0015EED0[0] = 0x4A;
+        D_0015EED0[1] = 0x50;
+        D_0015EED0[2] = 0x4F;
+        D_0015EED0[3] = 0x54;
+        D_0015EED0[4] = 0x51;
+        D_0015EED0[5] = 0x4E;
+        D_0015EED0[6] = 0x4B;
+        D_0015EED0[7] = 0x52;
+        D_0015EED0[8] = 0x4D;
+        D_0015EED0[9] = 0x59;
+        D_0015EED0[10] = 0x58;
+        D_0015EED0[11] = 0x53;
+        *(int *)(D_0014171B + 0x885) = 0xF;
+        *(int *)(D_0014171B + 0x889) = 0xC;
+        *(int *)(D_0014171B + 0x88D) = 0xD;
+        *(int *)(D_0014171B + 0x891) = 0xB;
+        *(int *)(D_0014171B + 0x895) = 0x11;
+        *(int *)(D_0014171B + 0x899) = 0xA;
+        *(int *)(D_0014171B + 0x89D) = 0x10;
+        *(int *)(D_0014171B + 0x8A1) = 0x13;
+    } else {
+        if (D_0013D5CA[8] == 0) {
+            func_L00_002618D8(0xA, 1);
+            D_0015EED0[0] = 0x4A;
+            *(int *)(D_0014171B + 0x45) = 0xA;
+        }
+        for (i = 0; i < 12; i++) {
+            c = D_0015EED0[i];
+            if (c == 0xFF) continue;
+            v = c & 0x3F;
+            if (v == 10) continue;
+            for (j = 0; j < 19; j++) {
+                if (D_L00_001C4198[j] == v) break;
+            }
+            if (j == 19 || v == 0) {
+                D_0015EED0[i] = 0xFF;
+            }
+        }
+        func_L00_0023DD70(D_0015EE84);
+    }
+}
 extern int D_L00_001C4198[];
 extern unsigned char D_0015EED0[] MACRO_ADDR;
 

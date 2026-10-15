@@ -980,7 +980,51 @@ void func_L01_003015F8(struct Moby *moby) {
         moby->state = 1;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L01_00303810);
+typedef struct { int width; int height; int half_width; int half_height; } SE_303810p;
+extern SE_303810p D_0013E600;
+extern long func_001F4868(int);
+extern int func_001FA898(float);
+extern void func_001F5800(int, int, int, int, int, int, int, int, long, long);
+
+void func_L01_00303810(char *moby) {
+    int *vars = *(int **)(moby + 0x78);
+    int row_count;
+    int column_count;
+    int row;
+    int column;
+    float screen_center[2];
+    volatile float coordinate[2];
+    float opacity;
+    int color;
+    int texture_x;
+    int texture_y;
+    int draw_x;
+    int draw_y;
+    int tile_size = 32;
+    int tile_half;
+    long texture;
+
+    screen_center[0] = func_001FA888(D_0013E600.half_width);
+    screen_center[1] = func_001FA888(D_0013E600.half_height);
+    texture = func_001F4868(30);
+    row_count = D_0013E600.width / 32 + 1;
+    column_count = D_0013E600.height / 32 + 1;
+    for (row = 0; row < row_count; row++) {
+        int base_color = 0xff7f7f;
+        for (column = 0; column < column_count; column++) {
+            coordinate[0] = (float)(row * 32);
+            coordinate[1] = (float)(column * 32);
+            tile_half = tile_size >> 1;
+            opacity = func_001FA888(vars[0x50]) * 127.5f / func_001FA888(func_001F9850(90));
+            color = (func_001FA898(opacity) << 24) + base_color;
+            texture_x = func_002140B0(32);
+            texture_y = func_002140B0(32);
+            draw_x = func_001FA898(coordinate[0] - (float)tile_half);
+            draw_y = func_001FA898(coordinate[1] - (float)tile_half);
+            func_001F5800(draw_x, draw_y, 32, 32, texture_x, texture_y, 32, 32, color, texture);
+        }
+    }
+}
 extern char D_0013E633[];
 extern char *D_L01_00160064 MACRO_ADDR;
 extern char *D_L01_001B0C30[];
@@ -1855,7 +1899,129 @@ void func_L01_0030AC10(char *a) {
         q++;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L01_0030C9F0);
+typedef int OvlQuad_c9 __attribute__((mode(TI)));
+extern void func_L00_0025C710(void *, void *, void *, float);
+extern int func_L00_0023F0D0(void *, float, float, float, float, float);
+extern void func_L00_0023F1D0(int);
+extern char D_L01_001807C0[];
+
+void func_L01_0030C9F0(unsigned char *m) {
+    int state = m[0x20];
+    char *e = *(char **)(m + 0x78);
+    int i;
+    int current;
+    int next;
+    int slot;
+    float elapsed;
+    float active;
+    float phase;
+    float blend;
+    float cutoff;
+    OvlQuad_c9 first;
+    OvlQuad_c9 second;
+
+    switch (state) {
+    case 0:
+        if (*(int *)(e + 0x58) < 2) {
+            func_0020D678(m);
+            return;
+        }
+        {
+            int i;
+            for (i = 0; i < *(int *)(e + 0x58); i++) {
+                float *point = ((float *)e) + i * 4;
+                point[0] *= 0.00390625f;
+                point[1] *= 0.00390625f;
+                point[2] *= 0.00390625f;
+                point[3] *= 0.00390625f;
+            }
+        }
+        *(int *)(e + 0x68) = -1;
+        if (m[0x30] < func_001FA898(*(float *)(e + 0x5c)) + 4)
+            m[0x30] = func_001FA898(*(float *)(e + 0x5c)) + 4;
+        m[0x20] = 1;
+        return;
+    case 1:
+        break;
+    default:
+        return;
+    }
+
+    elapsed = func_001F9D48(m + 0x10, D_L01_001672C0);
+    active = elapsed < *(float *)(e + 0x5c) ? 1.0f : 0.0f;
+    if (active != 0.0f && *(int *)(e + 0x80) != -1) {
+        if (!func_00215570(D_L01_001672C0, *(int *)(e + 0x80)))
+            active = 0.0f;
+    }
+    i = *(int *)(e + 0x84);
+    if (i != -1 && *(signed char *)((D_L01_00160058 + 0x20) + i * 0x100) < 0) {
+        slot = *(int *)(e + 0x68);
+        if (slot != -1)
+            func_L00_0023F1D0(slot);
+        func_0020D678(m);
+        return;
+    }
+    if (active != 0.0f) {
+
+        if (func_001F9908(e + 0x6c)) {
+            current = func_L00_00258BC8(*(int *)(e + 0x50), *(int *)(e + 0x54));
+            *(int *)(e + 0x74) = *(int *)(e + 0x78);
+            *(int *)(e + 0x70) = current;
+            *(int *)(e + 0x6c) = current;
+            next = func_L00_00258BC8(1, *(int *)(e + 0x58) - 1);
+            i = (*(int *)(e + 0x78) + next) % *(int *)(e + 0x58);
+            *(int *)(e + 0x7c) = *(int *)(e + 0x7c) == 0;
+            *(int *)(e + 0x78) = i;
+        }
+        phase = func_001FA888(*(int *)(e + 0x70) - *(int *)(e + 0x6c));
+        phase = phase / func_001FA888(*(int *)(e + 0x70));
+        phase *= 3.1415927f;
+        blend = phase * 0.5f;
+        if (*(int *)(e + 0x7c) != 0)
+            blend += 1.5707964f;
+        blend = func_001F9FA8(blend);
+
+        if (*(int *)(e + 0x7c) != 0) {
+            first = ((OvlQuad_c9 *)e)[*(int *)(e + 0x78)];
+            second = ((OvlQuad_c9 *)e)[*(int *)(e + 0x74)];
+            func_L00_0025C710(e + 0x40, &first, &second, blend);
+        } else {
+            first = ((OvlQuad_c9 *)e)[*(int *)(e + 0x74)];
+            second = ((OvlQuad_c9 *)e)[*(int *)(e + 0x78)];
+            func_L00_0025C710(e + 0x40, &first, &second, blend);
+        }
+        cutoff = *(float *)(e + 0x5c) * 0.75f;
+        {
+            float denominator = *(float *)(e + 0x5c) - cutoff;
+            if (cutoff < elapsed) {
+                float fade = (elapsed - cutoff) / denominator;
+                qzero(&first);
+                second = *(OvlQuad_c9 *)(e + 0x40);
+                func_L00_0025C710(e + 0x40, &second, &first, fade);
+            }
+        }
+        slot = *(int *)(e + 0x68);
+        if (slot == -1) {
+            slot = func_L00_0023F0D0(m + 0x10, *(float *)(e + 0x60), *(float *)(e + 0x4c),
+                                  *(float *)(e + 0x40), *(float *)(e + 0x44),
+                                  *(float *)(e + 0x48));
+            *(int *)(e + 0x68) = slot;
+            return;
+        }
+        {
+            char *p = D_L01_001807C0 + slot * 0x20;
+            qcopy(p + 0x10, m + 0x10);
+            *(float *)(p + 0x1c) = *(float *)(e + 0x60);
+            qcopy(p, e + 0x40);
+        }
+    } else {
+        slot = *(int *)(e + 0x68);
+        if (slot != -1) {
+            func_L00_0023F1D0(slot);
+            *(int *)(e + 0x68) = -1;
+        }
+    }
+}
 typedef int OvlQuad_0D380 __attribute__((mode(TI)));
 typedef union {
     OvlQuad_0D380 q;

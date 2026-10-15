@@ -1137,7 +1137,87 @@ void func_L09_00309118(struct Moby *m)
     func_L00_001F2BE8_09118(1.1f, &m->pos, 0x10, m, probe);
     func_0020D678_09118(m);
 }
-INCLUDE_ASM("asm/overlays", func_L09_0030BB28);
+extern s32 func_L00_0025A208_BB28(struct Moby **, s32, s32, s32) __asm__("func_L00_0025A208");
+extern void func_00213D28_BB28(struct Moby *, s32, s32) __asm__("func_00213D28");
+extern struct Moby *func_L00_002DCD40_BB28(struct Moby *) __asm__("func_L00_002DCD40");
+extern void func_L00_0025E210_BB28(struct Moby *) __asm__("func_L00_0025E210");
+extern void func_L00_00251E30_BB28(struct Moby *) __asm__("func_L00_00251E30");
+extern s16 *func_L00_0025D390_BB28(struct Moby *) __asm__("func_L00_0025D390");
+extern void func_001E9730_BB28(char *, s32, s32) __asm__("func_001E9730");
+extern char D_L09_00209570_BB28[] __asm__("D_L09_00209570");
+extern s32 D_L09_0015F6B0_BB28 __asm__("D_L09_0015F6B0") MACRO_ADDR;
+
+/* Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/vendor/00307ba8.c, FUN_L09_0030a778. */
+struct Moby *func_L09_0030BB28(struct Moby *owner, Vec4 *pos)
+{
+    struct Moby *m;
+    struct Moby *other;
+    u8 *owner_vars;
+    s16 *data;
+    s32 left;
+    Vec4 pos_copy;
+    Vec4 *pos_ptr;
+    struct Moby *result;
+
+    pos_ptr = &pos_copy;
+    pos_copy.q = pos->q;
+
+    if (owner == 0)
+        return 0;
+    owner_vars = owner->pvars;
+    m = 0;
+    result = 0;
+    if (func_L00_0025A208_BB28(&m, *(s32 *)(owner_vars + 0x94), 1, 1) == 0) {
+        owner_vars[0x91] = owner_vars[0x91] + 1;
+        qcopy_nc(&m->pos, pos_ptr);
+        m->pos.w = 0.0f;
+        m->state = 0;
+        m->unkBC = 0;
+        m->flags = m->pclass->flags;
+        m->scale = m->pclass->scale;
+        m->unk30 = 0xff;
+        m->unk32 = 0xff;
+        m->unk31 = 1;
+        if (*(s32 *)((u8 *)m->pclass + 0x40) != 0)
+            m->flags |= 0x10;
+        if (*((u8 *)m->pclass + 0x0f) != 0)
+            m->flags |= 0x400;
+        m->unk36 = 0x7f80;
+        m->unk71 = 0xff;
+        m->unk72 = 0xff;
+        m->unkA4 = 0xff;
+        if (owner_vars[0x93] != 0)
+            m->scale = m->pclass->scale * 0.1f;
+        func_00213D28_BB28(m, 0, 0);
+        other = func_L00_002DCD40_BB28(m);
+        if (other != 0) {
+            *(s32 *)((u8 *)other + 0x94) = 0;
+            *(s16 *)((u8 *)other + 0x68) = 0;
+            *(s32 *)((u8 *)other + 0x6c) = 0;
+        }
+        if (owner->unkB4 < m->unkB4)
+            m->unkB4 = owner->unkB4;
+        if (m->unkB4 < 1)
+            m->unkB4 = 1;
+        left = (u16)owner->unkB4 - (u16)m->unkB4;
+        owner->unkB4 = left;
+        if ((s16)left < 0)
+            owner->unkB4 = 1;
+        m->unk94 = m->pclass->unk10;
+        func_L00_0025E210_BB28(m);
+        func_L00_00251E30_BB28(m);
+        result = m;
+        data = func_L00_0025D390_BB28(result);
+        if (data != 0) {
+            *(f32 *)((u8 *)data + 0x34) = 0.0f;
+            *(f32 *)((u8 *)data + 0x30) = 0.0f;
+            *(f32 *)data = (f32)data[2];
+        }
+    } else {
+        func_001E9730_BB28(D_L09_00209570_BB28, (s16)owner->save_id, D_L09_0015F6B0_BB28);
+    }
+    return result;
+}
 extern char *func_L00_0025B478(void *, int, int);
 extern int func_L00_0025B4D0(void *, void *, void *, int, int *, int, int, int);
 extern void func_L00_0025E4B0(void *m, short *p);

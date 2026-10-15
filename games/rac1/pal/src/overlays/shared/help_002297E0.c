@@ -2,7 +2,93 @@
 #include "common.h"
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/overlays", func_L00_002297E0);
+typedef struct { float f[4]; } __attribute__((aligned(16))) V4h;
+typedef struct {
+    char p0[0xD0]; V4h unkD0; char p1[0x198-0xE0]; int state_timer; char p2[0x1E8-0x19C]; short unk1E8;
+    char p3[0x2FC-0x1EA]; int ground_moby; char p4[0xA98-0x300]; int unkA98; char p5[0x2080-0xA9C]; int moby;
+    char p6[0x2094-0x2084]; int prev_control_mode; char p7[0x22A8-0x2098]; int hp;
+} HeroL;
+extern HeroL D_0013F450;
+typedef struct { char pad0[0x44]; int use_state_40; char pad48[8]; int item_id; char pad54[4]; float interval; char pad5c[4]; int duration_frames; char pad64[0xC]; } Ent;
+typedef struct { float f[4]; } __attribute__((aligned(16))) Vec4_r;
+extern Ent D_L00_00179990[] NOT_SDA;
+extern int D_L00_00179BB0 NOT_SDA;
+extern int D_0015EE84 MACRO_ADDR;
+extern char D_0013E633[];
+extern int func_L00_0020DB30(int);
+extern float func_002140F8(float, float);
+extern int func_L00_001EFFF0(void *, void *, int, int, int);
+extern int func_001F9850(int);
+extern float func_001F9878(float);
+
+int func_L00_002297E0(int *index) {
+    int choices[20];
+    Vec4_r end;
+    Vec4_r start;
+    Ent *entry;
+    Vec4_r *startp, *endp;
+    int i, item, count, j;
+    int *next;
+    Ent *table;
+    float total, pick;
+
+    count = 0;
+    if (D_0013F450.unk1E8 != 0) return 0;
+    if (D_0013F450.hp == 1) {
+        *index = 4;
+        if (D_L00_00179BB0 != 0) return 0;
+        if (!(D_0013F450.unkA98 & 2)) return 0;
+        return func_002140F8(0.0f, 1.0f) < 0.33f;
+    }
+    i = 0;
+    startp = &start;
+    endp = &end;
+    next = choices;
+    for (; i < 5; i++) {
+        table = D_L00_00179990;
+        entry = &table[i];
+        if (entry->duration_frames != 0) continue;
+        if (entry->interval == 0.0f) continue;
+        item = func_L00_0020DB30(0);
+        if (entry->item_id != -1 && entry->item_id != item) continue;
+        if (entry->use_state_40 != 0 && D_0013F450.ground_moby != 0) continue;
+        if (i == 3) {
+            if (D_0015EE84 != 12) continue;
+            if (func_L00_0020DB30(0) == 23) continue;
+            qcopy(startp, &D_0013F450.unkD0);
+            qcopy(endp, startp);
+            end.f[2] += 8.0f;
+            if (func_L00_001EFFF0(startp, endp, 2, D_0013F450.moby, 0)) continue;
+        }
+        if (i == 4) {
+            if (D_0013F450.prev_control_mode != 1) continue;
+            if (func_001F9850(50) < D_0013F450.state_timer) continue;
+            if (D_0013F450.hp >= 2) continue;
+        }
+        *next = i;
+        count++;
+        next++;
+    }
+    if (count == 0) return 0;
+    total = 0.0f;
+    for (i = 0; i < count; i++) {
+        Ent *choice = &D_L00_00179990[choices[i]];
+        total += 1.0f / (float)(int)(func_001F9878(choice->interval) * 60.0f);
+    }
+    pick = func_002140F8(0.0f, 1.0f);
+    if (pick < total) {
+        for (j = 0; j < count; j++) {
+            int picked = choices[j];
+            Ent *choice;
+            *index = picked;
+            choice = &D_L00_00179990[picked];
+            total -= 1.0f / (float)(int)(func_001F9878(choice->interval) * 60.0f);
+            if (total < pick) break;
+        }
+        return 1;
+    }
+    return 0;
+}
 extern char D_0013E633[];
 extern char D_0013A5E0_229B78[] __asm__("D_0013A5E0");
 extern int func_L00_00222B80(int, int);

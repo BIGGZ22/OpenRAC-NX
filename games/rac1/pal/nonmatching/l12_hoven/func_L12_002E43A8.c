@@ -1,12 +1,13 @@
 /* NON_MATCHING func_L12_002E43A8 -- src/overlays/l12_hoven/vendor_002C0310.c
- * Best so far: SIZE ours 924 / retail 900, checked 2026-10-08.
+ * Best so far: SIZE ours 924 / retail 900, checked 2026-10-15.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
- * No longer builds in its file (COMPILE failed, 2026-10-09): match its declarations to the file's first.
  * What the last attempts found:
  *   Level 12 hoven entry update: a count from D_L12_001618BC (scaled by 1.5 when state 15), then per entry a 3-vec
  *   Best candidates p0.c and p2.c: 924 bytes against retail 900, every call and branch shape is in place. Differen
  *   Unblock: the constant hold (f20-f24) and the spill order of the moby pointer; the 0.55 constant is 0x3F0CCCCD.
+ *   2026-10-15: compiles again. The file now declares it with a struct Moby * parameter, so the candidate
+ *   takes that and casts it to the char * it used.
  */
 extern short D_L12_001618BC;
 extern short D_L12_001618C0;
@@ -43,7 +44,8 @@ extern char *func_00219780(void *, void *, void *, int, int, int, int, int, int)
 extern void func_L00_00260958(float *v, float s);
 
 /* Level 12 hoven: per-entry update that places and blends a set of points around the moby; fills a 0x50-byte scratch area. */
-void func_L12_002E43A8(char *m) {
+void func_L12_002E43A8(struct Moby *moby) {
+    char *m = (char *)moby;
     u128 vv[5];
     float *fv;
     int cnt;

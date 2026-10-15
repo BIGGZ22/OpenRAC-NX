@@ -1,12 +1,13 @@
 /* NON_MATCHING func_L08_002E35C8 -- src/overlays/l08_batalia/vendor_002E0258.c
- * Best so far: SIZE ours 668 / retail 664, checked 2026-10-06.
+ * Best so far: SIZE ours 668 / retail 664, checked 2026-10-15.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
- * No longer builds in its file (COMPILE failed, 2026-10-09): match its declarations to the file's first.
  * What the last attempts found:
  *   Selects a damaged child moby, accumulates state credit, launches a chosen/random child, and advances parent st
  *   Remaining differences: prologue save/constant scheduling, selected path scale load moved into gp branch slot r
  *   A source form preserving the retail scale-load placement and pseudo lifetimes would unblock it; p7 preserves r
+ *   2026-10-15: compiles again. The file now declares it with a struct Moby * parameter, so the candidate
+ *   takes that and casts it to the char * it used.
  */
 extern void *func_L00_0025B478(void *, int, int);
 extern void func_L00_00260108(void *, void *, int, float, float);
@@ -16,7 +17,8 @@ extern float func_002140F8(float, float);
 extern int func_001FA898_r(float) __asm__("func_001FA898");
 extern float D_0015EE6C MACRO_ADDR;
 /* Selects a damaged child moby, launches it, and advances the parent's state. */
-void func_L08_002E35C8(char *parent) {
+void func_L08_002E35C8(struct Moby *moby) {
+    char *parent = (char *)moby;
  char *data=*(char **)(parent+0x78);
  char *entries=data+0x60;
  char *p=entries;

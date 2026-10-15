@@ -14,3 +14,5 @@ src/overlays/shared/camera_001ED6D8.c        -fno-force-mem
 src/overlays/shared/vendor_002E9D78.c        -fno-schedule-insns
 # func_L00_00207220 (voice-slot pruner) needs it; the file's other functions build the same either way
 src/overlays/shared/help_00203E98.c    -fno-sched-interblock
+src/overlays/shared/hud_00235960.c -fno-sched-interblock
+src/overlays/l12_hoven/vendor_002EDAA0.c -fno-sched-interblock

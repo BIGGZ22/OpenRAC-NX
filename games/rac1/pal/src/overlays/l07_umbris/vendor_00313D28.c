@@ -21,7 +21,110 @@ void func_L07_003141A8(char *moby)
     }
     func_L07_00313D28(moby, 0, 1.0f, 5.8f, ang, 1.0f, *(float *)(data + 0x1C8));
 }
-INCLUDE_ASM("asm/overlays", func_L07_00314250);
+/* functional: high. The NTSC decomp's matched C for the same instructions (FUN_L07_00312e70), carried to PAL's
+   names by OpenRAC's tools/port.py. Not a PAL match: its PAL file declares a symbol it uses with another type, so it was not built there. */
+typedef u32 u128 __attribute__((mode(TI), aligned(16)));
+typedef union {
+    u128 q;
+    f32 f[4];
+    s32 i[4];
+} Vec4_14250;
+struct GeometryQuad {
+    Vec4_14250 positions[4]; /* 0x00 */
+    u32 colors[4]; /* 0x40 */
+    f32 texture_coordinates[4][2]; /* 0x50 */
+    union {
+        u64 value;
+        volatile u64 ordered;
+    } reserved; /* 0x70 */
+    u64 texture; /* 0x78 */
+    u64 texture_state; /* 0x80 */
+    u64 primitive; /* 0x88 */
+};
+extern s32 D_L07_0015F6B0 MACRO_ADDR;
+extern float func_001FA888(int);
+extern int func_001FA898(float);
+extern int func_001F9850(int);
+extern u64 func_001F4868(int);
+extern void func_L00_001FD1D8(void *, int, int);
+extern float func_L00_0025F368(float);
+extern float func_001F9F90(float);
+extern float func_001F9FA8(float);
+extern void func_001F9EC0(void *, void *, void *);
+extern void func_001F9BD8(void *, void *, void *);
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/00312948.c, FUN_L07_00312e70. */
+void func_L07_00314250(void *mobyp, float radius, int phase, float speed, int color) {
+    char *moby = mobyp;
+    char *vars = *(char **)(moby + 0x78);
+    struct GeometryQuad quad;
+    struct GeometryQuad inner;
+    float offset[4];
+    float spin;
+    float step;
+    float angle;
+    float wrapped;
+    u64 texture;
+
+    spin = func_001FA888(D_L07_0015F6B0 + phase) * speed;
+    if (*(int *)(vars + 0x164) == 4) {
+        float alpha = func_001FA888(color >> 24);
+        float fade = func_001FA888(*(int *)(vars + 0x160));
+        fade = fade / func_001F9850(20);
+        alpha = alpha * fade;
+        if (alpha < 0.0f)
+            alpha = 0.0f;
+        color &= 0xFFFFFF;
+        color |= func_001FA898(alpha) << 24;
+    } else if (*(int *)(vars + 0x164) > 4) {
+        return;
+    }
+    step = 0.5235988f;
+    texture = func_001F4868(0x3D);
+    {
+        float zero = 0.0f;
+        float one = 1.0f;
+        float half = 0.5f;
+
+        quad.colors[3] = color;
+        quad.colors[2] = color;
+        quad.colors[1] = color;
+        quad.colors[0] = color;
+        quad.texture = texture;
+        quad.texture_state = 0xFF9000000260LL;
+        quad.reserved.value = 4;
+        quad.primitive = 0x8000000048LL;
+        quad.texture_coordinates[0][0] = zero;
+        quad.texture_coordinates[2][0] = zero;
+        quad.texture_coordinates[1][0] = one;
+        quad.texture_coordinates[3][0] = one;
+        quad.texture_coordinates[0][1] = zero;
+        quad.texture_coordinates[1][1] = zero;
+        quad.texture_coordinates[2][1] = half;
+        quad.texture_coordinates[3][1] = half;
+    }
+    qcopy(&quad.positions[1], vars + 0x110);
+    qcopy(&quad.positions[3], vars + 0x140);
+    inner = quad;
+    qcopy(&inner.positions[0], vars + 0x120);
+    qcopy(&inner.positions[1], vars + 0x120);
+    for (angle = -3.1415927f; angle < step + 3.1415927f; angle += step) {
+        qcopy(&quad.positions[0], &quad.positions[1]);
+        qcopy(&quad.positions[2], &quad.positions[3]);
+        wrapped = func_L00_0025F368(angle + spin * 0.02f);
+        offset[1] = radius * func_001F9F90(wrapped);
+        offset[2] = radius * func_001F9FA8(wrapped);
+        offset[0] = 0.0f;
+        func_001F9EC0(offset, offset, moby + 0xC0);
+        func_001F9BD8(&quad.positions[3], vars + 0x140, offset);
+        if (angle != -3.1415927f) {
+            func_L00_001FD1D8(&quad, 0, 1);
+            qcopy(&inner.positions[2], &quad.positions[2]);
+            qcopy(&inner.positions[3], &quad.positions[3]);
+            func_L00_001FD1D8(&inner, 0, 0);
+        }
+    }
+}
 extern void func_L00_001FF4B0(void *, void *, float);
 extern void func_001F9BD8(void *, void *, void *);
 extern void func_L07_00314250(void *, float, int, float, int);
@@ -1538,7 +1641,90 @@ void func_L07_00315528(unsigned char *m) {
     if (m[0x20] < 0xA) func_L00_0025B040(m, 2.5f);
     func_L07_00313530((char *)d);
 }
-INCLUDE_ASM("asm/overlays", func_L07_00318CE0);
+extern s32 D_0015EF88 MACRO_ADDR;
+typedef float RopeVec[4] __attribute__((aligned(16)));
+extern u64 func_001F4868(int);
+extern void func_00234C98(int, u64);
+extern void func_L00_001FD1D8(void *, int, int);
+extern short D_L07_00161C04;
+extern short D_L07_00161C08;
+extern short D_L07_00161C0C;
+extern short D_L07_0020DE88[];
+typedef struct {
+    RopeVec pos[4];
+    u32 color[4];
+    float uv[8];
+    u64 header[4];
+} L07RopeDrawPacket;
+extern RopeVec D_L07_0020DEA0[][20];
+
+/* Draws the rope grid as textured quads between neighbouring rows, each row faded by its level.
+   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/00312948.c, FUN_L07_00317910. */
+void func_L07_00318CE0(void) {
+    L07RopeDrawPacket packet;
+    float phase;
+    float row_phase;
+    float end_phase;
+    int row;
+    int column;
+    int k;
+    int color;
+    float phase_step;
+    float column_step;
+
+    packet.header[1] = func_001F4868(0x15);
+    packet.header[2] = 0xff9000000260ULL;
+    packet.header[3] = 0x8000000048ULL;
+    packet.header[0] = 0;
+    phase = (*(float *)&D_L07_00161C04);
+    (*(float *)&D_L07_00161C04) += 0.001f;
+    if ((*(float *)&D_L07_00161C04) > 7.0f) (*(float *)&D_L07_00161C04) -= 7.0f;
+    func_00234C98(0x47, 0x5301b);
+    phase_step = 0.3f;
+    phase += phase_step;
+    column_step = 0.05f;
+    func_00234C98(0x4e, (D_0015EF88 >> 13) | 0x1000000 | ((u64)0x8000 << 17));
+    for (row = 1; row < 10; row++) {
+        row_phase = (*(float *)&D_L07_00161C08);
+        (*(float *)&D_L07_00161C08) += (*(float *)&D_L07_00161C0C);
+        if ((*(float *)&D_L07_00161C08) > 7.0f) (*(float *)&D_L07_00161C08) -= 7.0f;
+        for (column = 0; column < 20; column++) {
+            qcopy(packet.pos[0], D_L07_0020DEA0[row][column]);
+            qcopy(packet.pos[1], D_L07_0020DEA0[row][(column + 1) % 20]);
+            qcopy(packet.pos[2], D_L07_0020DEA0[row - 1][column]);
+            qcopy(packet.pos[3], D_L07_0020DEA0[row - 1][(column + 1) % 20]);
+            end_phase = row_phase + column_step;
+            color = D_L07_0020DE88[row];
+            for (k = 0; k < 2; k++) {
+                if (color < 0) color = 0;
+                if (color > 64) color = 64;
+                color = (color << 24) | 0x404040;
+                packet.color[k * 2 + 1] = packet.color[k * 2] = color;
+                color = D_L07_0020DE88[row - 1];
+            }
+            if (row == 1) {
+                packet.color[3] = 0x20404040;
+                packet.color[2] = 0x20404040;
+            } else if (row == 9) {
+                packet.color[1] = 0x404040;
+                packet.color[0] = 0x404040;
+            }
+            packet.uv[0] = phase;
+            packet.uv[1] = row_phase;
+            packet.uv[2] = phase;
+            packet.uv[3] = end_phase;
+            packet.uv[4] = phase - phase_step;
+            packet.uv[5] = row_phase;
+            packet.uv[6] = phase - phase_step;
+            packet.uv[7] = end_phase;
+            row_phase = end_phase;
+            func_L00_001FD1D8(&packet, 0, 0);
+        }
+        phase += phase_step;
+    }
+    func_00234C98(0x4e, (s64)(D_0015EF88 >> 13) | 0x1000000);
+    func_00234C98(0x47, 0x5360b);
+}
 typedef int u128_319080 __attribute__((mode(TI)));
 typedef union {
     u128_319080 q;
@@ -1672,7 +1858,207 @@ void func_L07_0031A268(int arg0) {
     }
     func_L00_002E0490(arg0);
 }
-INCLUDE_ASM("asm/overlays", func_L07_0031A410);
+#define D_L07_00166EC0_p (*(Vec4 *)&D_L07_00166EC0)
+extern Vec4 D_L07_00173F70;
+#define D_L07_00173F70_p D_L07_00173F70
+#define D_0015EE6C_p D_0015EE6C
+#define D_0015EE70_p D_0015EE70
+#define D_0015EE60_p D_0015EE60
+#define sight_p ((int (*)(struct Moby *, void *, float))(func_L00_00260D30))
+#define dist_p func_001F9D10
+#define dist2_p func_001F9D48
+#define abs_p func_001F9B88
+#define shadow_p ((void (*)(struct Moby *))(func_L00_0025B178))
+extern char *func_L00_0025B478(struct Moby *, int, int);
+#define hit_lookup_p func_L00_0025B478
+extern int func_L00_0025B4D0(struct Moby *, char *, void *, int, int *, int, int, int);
+#define hit_test_p func_L00_0025B4D0
+extern void func_001F9BC0(void *);
+#define clear_p func_001F9BC0
+#define boom_p ((void (*)(void *, void *, void *, float, float, int, int, int, float, float, float, float, int, float, int, int, int, int))(func_L00_0025F4A8))
+#define snd_p func_L00_002584A8
+#define scale_ticks_p func_001F9850
+#define add_rot_p func_001FA748
+extern void func_L01_0026F090(int, int);
+#define voice_p func_L01_0026F090
+#define anim_p func_00213DE0
+#define tick_p func_001F9908
+#define sub_p func_001F9BF0
+#define norm_p func_L00_001FF4B0
+#define add_p func_001F9BD8
+#define desc_p func_L00_0025A8C0
+#define probe_p func_L00_001F2BE8
+extern int func_L00_001F10E0(float, void *, int, void *);
+#define coll_p func_L00_001F10E0
+#define remove_p func_0020D678
+#define fin_p ((void (*)(void *, float))(func_L00_0025B040))
+extern struct Moby *D_L07_00173F58 __attribute__((section(".data")));
+#define debris_p D_L07_00173F58
+
+typedef struct {
+    unsigned char pad0[0x20];
+    float health;
+    unsigned char pad24[0x14];
+    struct Moby *target;
+    unsigned char pad3C[0x24];
+    Vec4 home;
+    float speed;
+    int sound;
+    int timeout;
+    int bob_timer;
+} Mine_p;
+
+void func_L07_0031A410(struct Moby *moby);
+#define func_L07_0031A410_r func_L07_0031A410
+void func_L07_0031A410_r(struct Moby *moby) {
+    Mine_p *vars;
+    float *health;
+    char sight[0x50];
+    char *hit;
+    Vec4 dir;
+    unsigned char contact[0x30];
+    Vec4 probe;
+    Vec4 push;
+    int touching;
+    float speed;
+    float turn;
+    float new_speed;
+    float max_speed;
+    int timer;
+
+    if (moby == 0) return;
+    vars = (Mine_p *)moby->pvars;
+    if (vars == 0) return;
+
+    sight_p(moby, sight, 8.0f);
+    if (moby->unk31 && dist_p(&moby->pos, &D_L07_00166EC0_p) < 27.0f) {
+        shadow_p(moby);
+        moby->unk7F = 0x15;
+    }
+    health = &vars->health;
+    hit = hit_lookup_p(moby, 0x230000, 0);
+    hit_test_p(moby, hit, health, 0, &touching, 0, 0, 4);
+    if (touching >= 2 && hit != 0 && (*(struct Moby **)(hit + 0x20))->oclass != 0x456 &&
+        (*(struct Moby **)(hit + 0x20))->oclass != 0x365 && (*(struct Moby **)(hit + 0x20))->oclass != 0x367) {
+        clear_p(dir.f);
+        boom_p(moby, &dir, 0, 0.0f, 0.0f, 3, 3, 5, 2.0f, 1.0f, 4.0f, 1.0f, 2, 7.0f, 0, 1, -1, 0);
+        snd_p(moby, 0, -1);
+        remove_p(moby);
+        return;
+    }
+
+    switch (moby->state) {
+    case 0:
+        moby->flags |= 0x1000;
+        qcopy(&vars->home, &moby->pos);
+        moby->unk94 = moby->pclass->unk10;
+        moby->state = 1;
+        break;
+    case 1:
+        timer = scale_ticks_p(600);
+        turn = D_0015EE6C_p * 6.2831855f;
+        vars->timeout = timer;
+        moby->rot.z = add_rot_p(moby->rot.z, turn);
+        if ((vars->target != 0 &&
+             dist2_p(&moby->pos, &(vars->target)->pos) < 20.0f &&
+             abs_p(moby->pos.z - (vars->target)->pos.z) < 3.0f) ||
+            (*(int *)(sight + 0x40) != 0 && dist_p(&moby->pos, sight) < 8.0f)) {
+            vars->speed = 0.0f;
+            vars->timeout = scale_ticks_p(600);
+            moby->unkBC = 1;
+            vars->bob_timer = scale_ticks_p(7);
+            moby->state = 3;
+            if (vars->sound != -1) voice_p(vars->sound, 2);
+            moby->state = 2;
+        }
+        break;
+    case 2:
+        if (moby->prev_seq != 1) anim_p(moby, 1, 0, 10);
+        moby->state = 3;
+    case 3:
+        if ((moby->unk70 & 2) && moby->seq == 1 && moby->prev_seq != 2) {
+            anim_p(moby, 2, 0, 10);
+        }
+        speed = D_0015EE70_p;
+        new_speed = vars->speed + speed * 30.0f;
+        max_speed = D_0015EE6C_p * 6.0f;
+        vars->speed = new_speed;
+        if (max_speed < new_speed)
+            vars->speed = max_speed;
+        if (moby->unkBC == 1) {
+            moby->pos.z += D_0015EE60_p * 0.1f;
+            if (tick_p(&vars->bob_timer)) {
+                vars->bob_timer = scale_ticks_p(7);
+                moby->unkBC = 2;
+            }
+        } else if (moby->unkBC == 2) {
+            moby->pos.z -= D_0015EE60_p * 0.1f;
+            if (tick_p(&vars->bob_timer)) moby->unkBC = 0;
+        }
+        sub_p(&dir, sight, &moby->pos);
+        norm_p(&dir, &dir, vars->speed);
+        add_p(&moby->pos, &moby->pos, &dir);
+        if (dist_p(&moby->pos, &vars->home) > 64.0f) {
+            remove_p(moby);
+            return;
+        }
+        desc_p(contact, moby, 0x10001, 1.0f, &dir);
+        qcopy(&probe, &moby->pos);
+        probe.f[2] += 0.75f;
+        if (probe_p(0.75f, &probe, 0x10, moby, contact) &&
+            debris_p != 0 && debris_p->oclass != 0x363 &&
+            debris_p->oclass != 0x456 && debris_p->oclass != 0x458 &&
+            debris_p->oclass != 0x365 && debris_p->oclass != 0x367) {
+            boom_p(moby, &dir, 0, 0.0f, 0.0f, 3, 3, 5, 2.0f, 1.0f, 4.0f, 1.0f, 2, 7.0f, 0, 1, -1, 0);
+            remove_p(moby);
+            return;
+        }
+        qcopy(&probe, &moby->pos);
+        probe.f[2] += 0.55f;
+        if (coll_p(0.55f, &probe, 0, moby)) {
+            sub_p(&push, &D_L07_00173F70_p, &probe);
+            add_p(&moby->pos, &moby->pos, &push);
+        }
+        if (!tick_p(&vars->timeout)) break;
+        boom_p(moby, &dir, 0, 0.0f, 0.0f, 3, 3, 5, 2.0f, 1.0f, 4.0f, 1.0f, 2, 7.0f, 0, 1, -1, 0);
+        remove_p(moby);
+        return;
+    case 4:
+        break;
+    }
+    fin_p(moby, 0.7f);
+}
+
+#undef D_L07_00166EC0_p
+#undef D_L07_00173F70_p
+#undef D_0015EE6C_p
+#undef D_0015EE70_p
+#undef D_0015EE60_p
+#undef sight_p
+#undef dist_p
+#undef dist2_p
+#undef abs_p
+#undef shadow_p
+#undef hit_lookup_p
+#undef hit_test_p
+#undef clear_p
+#undef boom_p
+#undef snd_p
+#undef scale_ticks_p
+#undef add_rot_p
+#undef voice_p
+#undef anim_p
+#undef tick_p
+#undef sub_p
+#undef norm_p
+#undef add_p
+#undef desc_p
+#undef probe_p
+#undef coll_p
+#undef remove_p
+#undef fin_p
+#undef debris_p
+#undef func_L07_0031A410_r
 extern int func_001F9850(int);
 extern void func_0020D678(void *);
 
