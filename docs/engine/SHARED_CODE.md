@@ -273,3 +273,22 @@ extend the similarity step to level code; then give the library code that is in 
 home that every game's build compiles and checks. That last step needs each
 game's per-object compile recipe as a shared tool first: a library file
 matches only when built exactly as the game built it.
+
+## One source tree for several versions
+
+`tools/versions.py check FROM TO --build CHECKOUT` asks whether FROM's
+sources could build TO as well. It takes FROM's compiled objects (from a
+full build of its project), places each matched boot function at the
+address `xmap.py` pairs it with in TO, and checks that it comes out as TO's
+retail bytes: every instruction equal except the fields relocations fill,
+and every symbol needing a single value across all the functions placed.
+The values found are TO's address map, functions and data alike, written to
+`build/versions/FROM--TO.tsv`.
+
+First result, 2026-10-15, rac1/pal to rac1/ntsc: of 1,030 matched boot
+functions, 919 pair one to one, and 898 of those reproduce NTSC-U's bytes
+exactly with one consistent map of 1,765 symbols (865 of them data). The
+rest are 14 real instruction differences, 4 relocation pairings the checker
+does not read yet and 3 conflicts in one object. Level programs are not
+checked yet. This is the evidence for building PAL and NTSC-U from one tree
+with a per-version address map rather than keeping two source trees.
