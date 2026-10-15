@@ -37,6 +37,9 @@ Everything else is exactly as it was at that commit.
   and the docs at it.
 - `tools/docker/run.sh` mounts all of OpenRAC in the build container, so the
   editor, `baserom/` and `toolchains/` are reachable.
+- The tree lives at `games/rac1/` itself (the merged game; `"dir"` in
+  `games/rac1/game.json`), not `games/rac1/pal/`, so `tools/docker/run.sh`
+  looks two levels up for OpenRAC's top instead of three.
 - `tools/wave.py` names its own directory in worker prompts instead of a
   path on one machine, and gives its commits the `rac1/pal` scope.
 - `README.md`, `THIRD_PARTY_NOTICES.md`, `docs/ASSETS.md`, `docs/OVERLAYS.md`

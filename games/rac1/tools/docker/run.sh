@@ -11,7 +11,7 @@ repo=$(cd "$(dirname "$0")/../.." && pwd)
 # the shared editor/, baserom/ and toolchains/ at its top level are visible
 # in the container at the same paths.
 mount=$repo
-top=$(cd "$repo/../../.." && pwd)
+top=$(cd "$repo/../.." && pwd)
 if [ -f "$top/games/rac1/game.json" ] && [ "$top/games/rac1" = "$repo" ]; then
   mount=$top
 fi
