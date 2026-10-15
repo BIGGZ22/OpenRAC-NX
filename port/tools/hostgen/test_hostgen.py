@@ -437,10 +437,25 @@ class Translate(unittest.TestCase):
         """})
         self.assertEqual(out, ["missing", "func_00120000", "0"])
 
+    def test_later_global_declaration_keeps_local_extern_type(self):
+        out = self.run_program({"a.c": """
+            int func_00100000(void) {
+                extern int D_00200000;
+                return D_00200000;
+            }
+            extern unsigned int D_00200000;
+            int test_main(void) {
+                D_00200000 = 7;
+                test_print(func_00100000());
+                return 0;
+            }
+        """})
+        self.assertEqual(out, ["7"])
+
 
     def test_a_games_own_names_and_symbols(self):
-        # Going Commando names code LVL_<n>_<LEVEL>_FUN_<address>; a symbol
-        # file gives named globals their addresses.
+        # A game with non-default LVL/FUN names configures its patterns; a
+        # symbol file gives named globals their addresses.
         out = self.run_program({"a.c": """
             int LVL_3_ENDAKO_FUN_00300000(int x) { return x + 3; }
             int BOOT_FUN_00110000(int x) { return x * 2; }
@@ -576,6 +591,27 @@ class Places(unittest.TestCase):
                          [(-1, 0x001E94E8), (0, 0x001EB1B0), (1, 0x0020CD30)])
         self.assertEqual(program.code_places("func_L00_001EB0B0"), [(0, 0x001EB0B0), (1, 0x0020CCB0)])
         self.assertEqual(program.code_places("func_00112380"), [(-1, 0x00112380)])
+
+    @unittest.skipUnless(have_compiler(), "needs Clang on a POSIX host")
+    def test_shared_level_data_uses_the_games_relocation_range(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            src = root / "game"
+            (src / "src").mkdir(parents=True)
+            (src / "src" / "a.c").write_text(
+                "extern int D_L00_00410000;\n"
+                "int func_L00_00420000(void) { return D_L00_00410000; }\n")
+            (src / "functions.tsv").write_text(
+                "func_L00_00420000\tshared\t4\tfingerprint\t2\t00:00420000,01:00430000\n")
+            (root / "hostgen.json").write_text(json.dumps({
+                "sources": ["src"], "includes": [], "places": "functions.tsv",
+                "relocate": [0x1A7C80, 0x500000],
+            }))
+            out = root / "gen"
+            self.assertEqual(hostgen.main(["--game", str(root / "hostgen.json"),
+                                           "--source", str(src), "--out", str(out),
+                                           "--jobs", "1", "--quiet"]), 0)
+            self.assertIn("OPENRAC_LDATA(0, 0x00410000u)", (out / "a.c").read_text())
 
 
 class TypeStrings(unittest.TestCase):

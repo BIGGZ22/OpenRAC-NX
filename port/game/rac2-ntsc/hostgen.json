@@ -7,22 +7,16 @@
   "frame_rate": 60,
   "entry": null,
   "sources": [
-    "candidates"
+    "src"
   ],
   "skip": [],
   "includes": [
-    "include"
+    "include",
+    "src"
   ],
   "defines": [],
-  "names": {
-    "code": [
-      "^LVL_(?P<overlay>\\d+)_\\w+?_FUN_(?P<addr>[0-9A-Fa-f]{8})$",
-      "^(?:\\w+?_)?FUN_(?P<addr>[0-9A-Fa-f]{8})$"
-    ],
-    "data": [
-      "^(?:\\w+?_)?D_(?P<addr>[0-9A-Fa-f]{6,8})(?:_\\w*)?$"
-    ]
-  },
+  "places": "config/levels/functions.tsv",
+  "relocate": [1735808, 5242880],
   "libraries": "libraries.tsv",
   "roots": []
 }

@@ -98,6 +98,8 @@ def fix_from_diagnostics(text: str, stderr: str, rel: str) -> tuple[str, list[st
       earlier declaration (a shared header that says `void *` where the
       body takes `float *`): the alias is declared with f's symbol on the
       definition's own line, and the definition is the alias's.
+    - A later global declaration that contradicts a function-local extern
+      gets its own C name and the same assembler symbol.
     - An asm label Clang refuses (given after the function's first use, or
       a second spelling of one already given): removed from that
       declaration, and the name recorded as an alias of the label's symbol
@@ -119,6 +121,16 @@ def fix_from_diagnostics(text: str, stderr: str, rel: str) -> tuple[str, list[st
         msg = d["msg"]
         line = int(d["line"]) - 1
         col = int(d["col"]) - 1
+        m = re.match(r"redeclaration of '(\w+)' with a different type", msg)
+        if m and re.match(r"^\s*extern\b[^;{}()]*;\s*$", lines[line]):
+            name = m.group(1)
+            alias = f"{name}__openrac_decl_{line + 1}"
+            decl = re.sub(rf"\b{name}\b", alias, lines[line], count=1)
+            lines[line] = re.sub(r";\s*$", f' __asm__("{name}");', decl)
+            for j in range(line + 1, len(lines)):
+                lines[j] = re.sub(rf"\b{name}\b", alias, lines[j])
+            fixes.append(f"line {line + 1}: global declaration of {name} kept apart from a local extern")
+            continue
         m = re.match(r"conflicting types for '(\w+)'", msg)
         if m:
             name = m.group(1)
