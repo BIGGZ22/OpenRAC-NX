@@ -53,6 +53,16 @@
   {/if}
 
   <div class="end">
+    {#if app.update}
+      {@const update = app.update}
+      <button
+        class="update"
+        onclick={() => void api.openUrl(update.url)}
+        title={`Version ${update.tag} is available!\nClick to open download page.`}
+      >
+        ▲ Update {update.version}
+      </button>
+    {/if}
     {#if !inTauri}<span class="preview">Browser preview</span>{/if}
     <button class="site" onclick={() => void api.openUrl(SITE_URL)}>openrac.dev</button>
     <button class="discord" onclick={() => void api.openUrl(DISCORD_URL)}>Discord</button>
@@ -223,6 +233,25 @@
   .discord:hover {
     background: var(--bar-ink);
     color: #fff;
+  }
+
+  .update {
+    font-size: 13px;
+    font-weight: 700;
+    background: #00d26a;
+    color: #052611;
+    border: 1px solid rgb(0 0 0 / 0.15);
+    border-radius: 999px;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition:
+      transform 0.15s ease,
+      background 0.15s ease;
+  }
+
+  .update:hover {
+    background: #00ea76;
+    transform: scale(1.03);
   }
 
   /* A narrow window keeps the tabs: the site link and the tag give way first. */

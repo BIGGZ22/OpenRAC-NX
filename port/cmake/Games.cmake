@@ -157,8 +157,8 @@ function(openrac_add_game config)
     openrac_moby_class_names(names_cpp)
     target_sources(openrac-${id} PRIVATE "${names_cpp}")
     target_compile_definitions(openrac-${id} PRIVATE OPENRAC_FRONTEND=1)
-    # The window's icon: OpenRAC's own, the launcher's, embedded as PNG bytes.
-    openrac_window_icon(icon_c)
+    # The window's icon: the game's own or the launcher's, embedded as PNG bytes.
+    openrac_window_icon("${config_dir}" "${target_id}" icon_c)
     target_sources(openrac-${id} PRIVATE "${icon_c}")
     if(TARGET openrac_media)
       target_link_libraries(openrac-${id} PRIVATE openrac_media)
@@ -168,17 +168,20 @@ function(openrac_add_game config)
   openrac_warnings(openrac-${id})
 endfunction()
 
-# The launcher's 128x128 icon as a C array (openrac_icon_png, openrac_icon_png_size), written once
-# into the build folder and again when the picture changes.
-function(openrac_window_icon out)
-  set(png "${PROJECT_SOURCE_DIR}/../launcher/src-tauri/icons/128x128.png")
-  set(c "${CMAKE_BINARY_DIR}/generated/openrac_icon.c")
+# The window's icon as a C array (openrac_icon_png, openrac_icon_png_size): the game's icon if
+# present in port/game/<id>/icon.png, or OpenRAC's launcher icon as a fallback.
+function(openrac_window_icon game_dir target_id out)
+  set(png "${game_dir}/icon.png")
+  if(NOT EXISTS "${png}")
+    set(png "${PROJECT_SOURCE_DIR}/../launcher/src-tauri/icons/128x128.png")
+  endif()
+  set(c "${CMAKE_BINARY_DIR}/generated/openrac_icon_${target_id}.c")
   set_property(DIRECTORY "${PROJECT_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${png}")
   file(READ "${png}" hex HEX)
   string(LENGTH "${hex}" n)
   math(EXPR size "${n} / 2")
   string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," bytes "${hex}")
-  file(CONFIGURE OUTPUT "${c}" CONTENT "/* Generated from launcher/src-tauri/icons/128x128.png by cmake/Games.cmake. */
+  file(CONFIGURE OUTPUT "${c}" CONTENT "/* Generated from ${png} by cmake/Games.cmake. */
 const unsigned char openrac_icon_png[] = {${bytes}};
 const unsigned int openrac_icon_png_size = ${size}u;
 ")

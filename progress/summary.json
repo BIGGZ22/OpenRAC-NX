@@ -4,13 +4,13 @@
     "region": "PAL (Europe)",
     "serial": "SCES_509.16",
     "progress": {
-      "matched_code": 3013116,
+      "matched_code": 3059008,
       "total_code": 3712808,
-      "matched_functions": 4360,
+      "matched_functions": 4372,
       "total_functions": 5109,
-      "fuzzy_percent": 82.14,
-      "date": "2026-10-13",
-      "percent": 81.15
+      "fuzzy_percent": 84.35,
+      "date": "2026-10-14",
+      "percent": 82.39
     },
     "note": "The boot executable and all 19 level programs. Handwritten assembly and linker remnants count as finished; staged near misses (nonmatching/) give the fuzzy figure."
   },
@@ -54,7 +54,7 @@
       "matched_functions": 1292,
       "total_functions": 31316,
       "fuzzy_percent": 1.28,
-      "date": "2026-10-01",
+      "date": "2026-10-03",
       "percent": 1.28
     },
     "note": "The committed report is from 2026-10-01. At bfd8278, tools/pr_check.py --target all counts frontbin 1,800 of 1,867 entries final (1,419 functions in C), boot_elf 2,265 of 2,809 (1,580 in C) and i5bootn 191 of 199 (35 in C); the level programs are counted but not compiled yet."
@@ -69,7 +69,7 @@
       "matched_functions": 243,
       "total_functions": 15056,
       "fuzzy_percent": 0.51,
-      "date": "2026-10-05",
+      "date": "2026-10-04",
       "percent": 0.51
     },
     "note": "Functions are compared one by one with most 16-bit immediates masked (symbols, struct offsets and small constants are not checked), and nothing is linked yet, so this is a looser proof than the other games'. Overlay code identical to resident code is counted once."
