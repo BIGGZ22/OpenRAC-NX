@@ -29,19 +29,19 @@ extern long frm_clock_time __asm__("D_0015ED40");
 extern float D_L00_0015F5A8_e[] __asm__("D_L00_0015F5A8") MACRO_ADDR;
 
 extern void clear_blocks_16(void *, int) __asm__("FUN_001f9810");
-extern int FUN_001e93b0(void *);
-extern void FUN_00232d00(void);
+extern int debug_print(void *) __asm__("FUN_001e93b0");
+extern void init_stash(void) __asm__("FUN_00232d00");
 extern void FUN_L00_0023d028(void);
 extern int FUN_L00_00244110(int, int);
-extern void FUN_001f0b88(void);
+extern void clear_dma_queue_entry(void) __asm__("FUN_001f0b88");
 extern void FUN_L00_002464a8(void);
 extern void init_hud(void) __asm__("FUN_001fee88");
 extern void FUN_L00_00276078(void);
 extern void FUN_L00_0028eed0(void);
-extern int FUN_00122298(int);
+extern int sce_gs_sync_v(int) __asm__("FUN_00122298");
 extern void put_disp_buffer(void) __asm__("FUN_001fb2a8");
 extern void music_start_track(int, int, int) __asm__("FUN_00215c40");
-extern void FUN_001e93e8();
+extern void noop_main_callback() __asm__("FUN_001e93e8");
 extern void register_audio_stream_callback(void) __asm__("FUN_00215420");
 extern void FUN_L00_001f4598(void);
 extern void FUN_L00_001f58e0(void);
@@ -67,7 +67,7 @@ extern void append_palette_transfer_packet(void) __asm__("FUN_001fb6e0");
 extern void put_draw_buffer_large(void) __asm__("FUN_001fb2d0");
 extern int snd_flush_sound_commands(void) __asm__("FUN_0012dc80");
 extern void vu1_init_chain(void) __asm__("FUN_002335d0");
-extern void FUN_0012eaf0(void);
+extern void read_global_table_entry(void) __asm__("FUN_0012eaf0");
 extern void snd_reset_state_and_flush_commands(void) __asm__("FUN_0012eb00");
 extern void sound_stop_all_sounds(void) __asm__("FUN_0022dcd0");
 extern void music_stop(void) __asm__("FUN_00215ee8");
@@ -85,8 +85,8 @@ extern float convert_integer_to_float(int) __asm__("FUN_001fa6c0");
 extern int scale_game_frames(int) __asm__("FUN_001f96f8");
 extern void reset_gs_registers_pr(void) __asm__("FUN_001f3958");
 extern void do_space_transition(void) __asm__("FUN_00231ff0");
-extern void FUN_00216088(void);
-extern void FUN_00216050(int);
+extern void music_unpause(void) __asm__("FUN_00216088");
+extern void music_pause(int) __asm__("FUN_00216050");
 extern void vu1_send_chain(void) __asm__("FUN_L00_002a08c8");
 extern void vu1_sync_chain(int) __asm__("FUN_L00_002a09d8");
 extern void FUN_00226e08(void);
@@ -104,12 +104,12 @@ void FUN_L00_00245c28(void) {
     if (((D_L00_00165FB0 - D_L00_00161E00) & 0xF) == 0 && ((unsigned int)D_L00_00161E00 & 0xF) == 0) {
         clear_blocks_16(D_L00_00161E00, D_L00_00165FB0 - D_L00_00161E00);
     } else {
-        FUN_001e93b0(level_bss_clear_args);
+        debug_print(level_bss_clear_args);
         for (i = 0; i < D_L00_00165FB0 - D_L00_00161E00; i++) {
             D_L00_00161E00[i] = 0;
         }
     }
-    FUN_00232d00();
+    init_stash();
     level_timer = 0;
     D_L00_0015F5C4 = 6;
     one = 1;
@@ -121,20 +121,20 @@ void FUN_L00_00245c28(void) {
     g_debug_menu.scene_index = -1;
     g_debug_menu.selected_column = one;
     g_debug_menu.actuator_enabled = one;
-    FUN_001f0b88();
+    clear_dma_queue_entry();
     FUN_L00_002464a8();
     init_hud();
     FUN_L00_00276078();
     FUN_L00_0028eed0();
     D_L00_0015F3F8 = 0;
-    FUN_00122298(0);
+    sce_gs_sync_v(0);
     put_disp_buffer();
     music_start_track(music_stream_state.primary.track, 1, 0x400);
     if ((current_level_index == one && level_available[3] == 0) ||
         (current_level_index == 0 && D_0013D390 != 0)) {
-        FUN_00216088();
+        music_unpause();
     } else {
-        FUN_00216050(0);
+        music_pause(0);
     }
     if (level_visit_state[current_level_index] == 0) {
         level_visit_state[current_level_index] = 1;
@@ -148,7 +148,7 @@ void FUN_L00_00245c28(void) {
     }
     level_usage[current_level_index].level_mask =
         level_usage[current_level_index].level_mask | (1 << current_level_index) | 0x80000000;
-    FUN_0012eaf0();
+    read_global_table_entry();
 
     while (D_L00_0015F570 == 0) {
         quit = 0;
@@ -241,12 +241,12 @@ void FUN_L00_00245c28(void) {
         }
         D_L00_001B9CF0.unk13C = 0;
         FUN_L00_001f36f8();
-        FUN_001e93e8(level_frame_callback_args, 0x10);
-        FUN_001e93e8(level_frame_callback_args, 0x10);
+        noop_main_callback(level_frame_callback_args, 0x10);
+        noop_main_callback(level_frame_callback_args, 0x10);
         vu1_sync_chain(1);
         D_L00_0015F5D0 = convert_integer_to_float(*(volatile int *)0x10000800) / (pal_mode != 0 ? 11520.0f : 9600.0f);
         if (D_L00_0015F5C4 == 0 && g_debug_menu.profiler_mode != 0) {
-            FUN_001e93e8();
+            noop_main_callback();
         }
         if (hero.unk20B1 == 0) {
             int mode = D_L00_0015F5C4;
@@ -266,12 +266,12 @@ void FUN_L00_00245c28(void) {
                         FUN_L00_00298f90();
                     }
                 }
-                FUN_00122298(0);
+                sce_gs_sync_v(0);
                 D_L00_0015F3F8 = D_L00_0015F3F8 + 1;
                 FUN_00226e08();
                 D_L00_0015F5AC = 0;
             } else {
-                FUN_00122298(0);
+                sce_gs_sync_v(0);
                 D_L00_0015F3F8 = D_L00_0015F3F8 + 1;
                 FUN_00226e08();
                 D_L00_0015F5A8_e[1] = 0.0f;
@@ -337,12 +337,12 @@ extern RenderArchiveState D_L00_001841F0 __asm__("D_L00_001841F0");
 extern u8 D_0013D4E1 __attribute__((section(".data")));
 extern struct DiscFile D_00138438[];
 
-void FUN_001e93e8(void);
-void FUN_0020bf90(s32, s32);
-void FUN_00216788(s32, s32, s32);
-void FUN_002168a8(s32);
+void noop_main_callback(void) __asm__("FUN_001e93e8");
+void update_map_icons(s32, s32) __asm__("FUN_0020bf90");
+void start_audio_stream_read(s32, s32, s32) __asm__("FUN_00216788");
+void update_audio_stream_until_idle(s32) __asm__("FUN_002168a8");
 void FUN_L00_00293d38(s32, s32, s32, s32);
-void FUN_00232f20(s32, s32, s32, s32, s32);
+void stash_receive_data(s32, s32, s32, s32, s32) __asm__("FUN_00232f20");
 
 void FUN_L00_002468b8(void) {
     s32 first_base;
@@ -352,8 +352,8 @@ void FUN_L00_002468b8(void) {
     s32 archive_index;
     RenderArchiveState *state = &D_L00_001841F0;
 
-    FUN_001e93e8();
-    FUN_0020bf90(state->archive_index, 1);
+    noop_main_callback();
+    update_map_icons(state->archive_index, 1);
     first_base = D_L00_001B9CF0.first_base;
     second_base = D_L00_001B9CF0.second_base;
     buffer = first_base + 0x9a800;
@@ -375,9 +375,9 @@ void FUN_L00_002468b8(void) {
         if (state->loaded == 0 && D_0013D4E1 != 0) {
             archive_index = state->archive_index;
             bytes = disc_table.render_archives[archive_index].size << 7;
-            FUN_00216788(buffer, disc_table.render_archives[archive_index].sector,
+            start_audio_stream_read(buffer, disc_table.render_archives[archive_index].sector,
                          disc_table.render_archives[archive_index].size);
-            FUN_002168a8(1);
+            update_audio_stream_until_idle(1);
             state->loaded = 1;
             state->transfer_bytes = bytes;
             FUN_L00_00293d38(state->buffer, state->file_handle, 0, bytes);
@@ -389,7 +389,7 @@ void FUN_L00_002468b8(void) {
         }
         if (D_L00_001841F0.file_handle != -1) {
             D_L00_001841F0.last_transfer_bytes = D_L00_001841F0.transfer_bytes;
-            FUN_00232f20(D_L00_001841F0.buffer, D_L00_001841F0.file_handle, 0, D_L00_001841F0.transfer_bytes, 0);
+            stash_receive_data(D_L00_001841F0.buffer, D_L00_001841F0.file_handle, 0, D_L00_001841F0.transfer_bytes, 0);
             D_L00_001841F0.level_slot = D_0013D4E1 != 0 ? current_level_index + 0x100 : current_level_index;
             D_L00_001841F0.active = 1;
             D_L00_001841F0.load_state = -2;
@@ -430,6 +430,7 @@ void FUN_L00_00249f48(s32, void *, s32) __asm__("FUN_L00_00249f48");
 extern f32 D_L00_00182810[];
 extern f32 D_L00_00182A70[];
 extern u8 D_L00_00184394[];
+extern char D_00141EC0[];
 extern s32 D_L00_00183EF0[];
 extern char render_archive_source_file[] __asm__("D_L00_0015FE00");
 
@@ -450,11 +451,10 @@ void FUN_L00_002464a8(void) {
     struct DiscFile *file;
     u8 *level_data;
     u8 *mask;
-    RenderArchiveLoad *state = &D_L00_001841F0_load;
 
     D_L00_001841F0_load.initialized = 1;
+    destination = (s32 *)((u8 *)&D_L00_001841F0_load + 0x154);
     source = D_L00_00183EF0;
-    destination = (s32 *)((u8 *)state + 0x154);
     for (i = 0x13; i >= 0; i--) {
         word0 = source[0];
         word1 = source[1];
@@ -503,43 +503,41 @@ void FUN_L00_002464a8(void) {
         archive = (s32 *)((s32)archive_base + 0x9a800);
         scratch = file->size << 7;
         FUN_00266040(archive, file->sector, file->size);
-        state->file_handle = FUN_00293c58(archive, scratch, 0x4800, 0x1e8b00);
-        state->transfer_bytes = scratch;
+        D_L00_001841F0_load.file_handle = FUN_00293c58(archive, scratch, 0x4800, 0x1e8b00);
+        D_L00_001841F0_load.transfer_bytes = scratch;
         FUN_L00_0024d8d0(archive, archive_base);
         archive = archive_base;
         first_size = archive[1] - archive[0];
         D_L00_001841F0_load.first_data = FUN_002355f0(first_size, 0, heap_tag, 0x2db);
         hud_send_resident_bank(D_L00_001841F0_load.first_data, (s32)archive + archive[0], first_size);
         D_L00_001841F0_load.first_data += 8;
-        state->second_data = D_L00_001841F0_load.first_data;
+        D_L00_001841F0_load.second_data = D_L00_001841F0_load.first_data;
         second_size = archive[2] - archive[1];
-        state->second_raw = FUN_002355f0(second_size, 0, heap_tag, 0x2ec);
-        hud_send_resident_bank(state->second_raw, (s32)archive + archive[1], second_size);
-        state->scratch_data = FUN_002355f0(0x1000, 0, heap_tag, 0x2f3);
+        D_L00_001841F0_load.second_raw = FUN_002355f0(second_size, 0, heap_tag, 0x2ec);
+        hud_send_resident_bank(D_L00_001841F0_load.second_raw, (s32)archive + archive[1], second_size);
+        D_L00_001841F0_load.scratch_data = FUN_002355f0(0x1000, 0, heap_tag, 0x2f3);
         destination = (s32 *)0x184228;
         for (i = 0; i < 8; i++) {
             *(s32 *)((u8 *)destination - 8) = -1;
             *(s32 *)((u8 *)destination - 4) = -1;
-            destination[0] = state->scratch_data + i * 0x200;
+            destination[0] = D_L00_001841F0_load.scratch_data + i * 0x200;
             destination += 4;
         }
-        state->mask_data = FUN_002355f0(0x8000, 0, (s32)render_archive_source_file, 0x2fc);
-        level_data = (u8 *)(0x141ec0 + state->archive_index * 0x800);
-        if (level_data[0] == 0) {
-            FUN_L00_00248278(state->mask_data, D_L00_001841F0_load.first_data, state->second_data);
+        D_L00_001841F0_load.mask_data = FUN_002355f0(0x8000, 0, (s32)render_archive_source_file, 0x2fc);
+        level_data = (u8 *)D_00141EC0 + D_L00_001841F0_load.archive_index * 0x800;
+        if (level_data[0] != 0) {
+            FUN_L00_00249f48(D_L00_001841F0_load.mask_data, level_data, D_L00_001841F0_load.second_raw);
         } else {
-            FUN_L00_00249f48(state->mask_data, level_data, state->second_raw);
+            FUN_L00_00248278(D_L00_001841F0_load.mask_data, D_L00_001841F0_load.first_data, D_L00_001841F0_load.second_data);
         }
         mask = D_L00_00184394;
         for (y = 0; y < 32; y++) {
             for (x = 0; x < 32; x++) {
                 if ((15.5f - (f32)x) * (15.5f - (f32)x) +
                     (15.5f - (f32)y) * (15.5f - (f32)y) > 256.0f) {
-                    i = x / 8;
-                    mask[i] |= 1 << (x - i * 8);
+                    mask[x / 8 + y * 4] |= 1 << (x - (x / 8) * 8);
                 }
             }
-            mask += 4;
         }
     } else {
         D_L00_001841F0_load.first_data = 0;

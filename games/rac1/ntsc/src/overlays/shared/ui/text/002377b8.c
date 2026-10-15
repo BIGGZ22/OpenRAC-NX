@@ -5,6 +5,7 @@
 #include "rnc/globals.h"
 #include "asm.h"
 #include "rnc/overlay/hud.h"
+#include "rnc/gameplay/state/usage_stats.h"
 
 extern unsigned char D_0013E529[];
 void FUN_L00_00235ea0(char *);
@@ -43,8 +44,8 @@ int FUN_L00_00237840(char *rec) {
         h = D_L00_0015F764;
         x = *(int *)(rec + 0x50);
         y = *(int *)(rec + 0x54);
-        *(int *)(rec + 0x58) = w;
         *(int *)(rec + 0x5c) = h;
+        *(int *)(rec + 0x58) = w;
     }
     FUN_L00_00235a70(rec, &x, &y);
     FUN_L00_00235ad8(rec, &x, &y, *(int *)(rec + 0x6c), 0);
@@ -187,8 +188,8 @@ extern int D_L00_0015FA98 __attribute__((section(".sdata")));
 extern int D_L00_0015FA94;
 extern int D_L00_0015F3F8;
 extern int FUN_001f96f8(int);
-extern float FUN_001f9988(float);
-extern float FUN_001f9e90(float, float);
+extern float square_root(float) __asm__("FUN_001f9988");
+extern float fast_arc_tan(float, float) __asm__("FUN_001f9e90");
 extern int remove_hud_item(int) __asm__("FUN_001ff480");
 typedef struct {
     u8 p0[0x10B8];
@@ -198,14 +199,7 @@ typedef struct {
     u8 p1FF6[0x20B8 - 0x1FF6];
     int w20B8;
 } Progress;
-typedef struct {
-    u8 p0[0xA0];
-    u16 hA0;
-    u16 hA2;
-    int wA4;
-} Stats;
-extern Stats D_00141848 __attribute__((section(".data")));
-extern int D_0013D428[] __attribute__((section(".data")));
+extern s32 weapon_ammo_counts[] __asm__("D_0013D428");
 extern u8 D_00141622[] __attribute__((section(".data")));
 extern float D_L00_0015F788 __attribute__((sda));
 extern float D_L00_0015F784 __attribute__((sda));
@@ -214,12 +208,12 @@ extern int D_L00_0017DC1C __attribute__((section(".data")));
 extern int D_L00_0017DC20 __attribute__((section(".data")));
 extern int D_L00_0017DC24 __attribute__((section(".data")));
 extern int D_0015EEA4;
-extern int FUN_001f9770(void *);
+extern int fast_dec_timer_s16(void *) __asm__("FUN_001f9770");
 extern float FUN_001fa6c0(int);
 extern float FUN_001fa5c8(float, float);
 extern float FUN_001fa688(float, float);
 extern int FUN_001fa6d0(float);
-extern float FUN_001fa610(float);
+extern float fast_normalize_angle(float) __asm__("FUN_001fa610");
 
 extern struct Hero hero_lui __asm__("D_0013F350") __attribute__((section(".data")));
 /* Picks slot w74 from the stick angle (or steps it with the 0x1000-0x8000 pad bits), counts hold frames in b71/b70, records the slot's entry when released, and closes when b70 runs out. */
@@ -230,15 +224,15 @@ void FUN_L00_00237ba0(Obj *p) {
 
     p->w7C = FUN_001f96f8(0xB4);
     p->w6C = 0x18;
-    if (FUN_001f9770(D_00141622)) D_0013C940.w1CC = 2;
+    if (fast_dec_timer_s16(D_00141622)) D_0013C940.w1CC = 2;
     x = D_0013C940.f148;
     y = D_0013C940.f14C;
-    mag = FUN_001f9988(x * x + y * y);
+    mag = square_root(x * x + y * y);
     if (mag != 0.0f) {
         x /= mag;
         y /= mag;
     }
-    ang = FUN_001f9e90(x, y);
+    ang = fast_arc_tan(x, y);
     if ((p->w78 >> 24) == 0) {
         if ((D_0013C940.w1C4 & 0xF000) || mag < 0.5f || --p->w78 == -1) {
             p->w74 = -1;
@@ -262,7 +256,7 @@ void FUN_L00_00237ba0(Obj *p) {
                 }
                 p->w74 = s;
                 n = -1;
-                D_L00_0015F784 = FUN_001fa610(a - ((float)s * 0.7853982f + 0.39269909f));
+                D_L00_0015F784 = fast_normalize_angle(a - ((float)s * 0.7853982f + 0.39269909f));
                 if (D_L00_0015F784 > 0.0f) n = 1;
             }
         } else if (D_0013C940.w1D8 == 0 && (D_0013C940.w1C4 & 0xF000)) {
@@ -291,15 +285,15 @@ void FUN_L00_00237ba0(Obj *p) {
             VendorItemInfo *rr;
             int ri = id;
             if (hero_lui.items[0].item_id != id) {
-                if (D_00141848.hA0 < 0xFFFF) D_00141848.hA0++;
+                if (usage_stats.stat[20].count < 0xFFFF) usage_stats.stat[20].count++;
             }
-            if (FUN_001f96f8(D_0015EEA4) / 600 > D_00141848.hA2)
-                D_00141848.hA2 = FUN_001f96f8(D_0015EEA4) / 600;
-            D_00141848.wA4 = D_00141848.wA4 | (1 << current_level_index) | 0x80000000;
+            if (FUN_001f96f8(D_0015EEA4) / 600 > usage_stats.stat[20].unk2)
+                usage_stats.stat[20].unk2 = FUN_001f96f8(D_0015EEA4) / 600;
+            usage_stats.stat[20].level_mask = usage_stats.stat[20].level_mask | (1 << current_level_index) | 0x80000000;
             if (id == 0x18) hero_lui.unk1FF5 = 1;
             else hero_lui.pending_item[0] = id;
             rr = &D_L00_001C40B0[ri];
-            if (rr->h8 && rr->hE < D_0013D428[id]) D_0013D428[id] = rr->hE;
+            if (rr->h8 && rr->hE < weapon_ammo_counts[id]) weapon_ammo_counts[id] = rr->hE;
         }
         if (c[0]) c[0]--;
     } else if (c[0] < D_L00_0015F780_gp) c[0]++;
@@ -345,7 +339,6 @@ extern Ent **D_L00_0015FAC0_c __asm__("D_L00_0015FAC0");
 extern s32 D_L00_0017E504;
 extern s32 pause_iop_sprite_lists[] __asm__("D_00141EA0");
 extern E00237ae8 D_L00_00179AC0[];
-extern s32 D_0013D428[];
 extern u8 D_0013E520[];
 extern char D_L00_0015F7C8[];
 extern f32 convert_integer_to_float(s32) __asm__("FUN_001fa6c0");
@@ -357,7 +350,7 @@ extern s32 fast_tween_color_alpha_first(f32, s32, s32) __asm__("FUN_001fa6e0");
 extern s32 get_icon_frame(s32, s32) __asm__("FUN_001ff960");
 extern void draw_hud_sprite(s32, s32, s32, s32, s32, s32) __asm__("FUN_001ffc30");
 extern void draw_hud_icon(void *, s32, s32, s32, s32, s32) __asm__("FUN_L00_0023b120");
-extern void font_print_right_2382a0(s32, s32, s32, const char *, s32) __asm__("FUN_001f6af0");
+extern int font_print_center_2382a0(s32, s32, s32, const char *, s32) __asm__("FUN_001f6af0");
 extern const char *get_text(s32) __asm__("FUN_001fdd10");
 extern s32 strlen_alt(const char *) __asm__("FUN_001166cc");
 extern s32 sprintf_alt(char *, const char *, ...) __asm__("FUN_00116248");
@@ -449,14 +442,14 @@ s32 FUN_L00_002382a0(char *rec) {
         id = pause_iop_sprite_lists[selected];
         if (D_L00_001C40B0[id].h8 != 0) {
             s32 shadow, item;
-            item = D_0013D428[id];
+            item = weapon_ammo_counts[id];
             sprintf_alt(formatted, D_L00_0015F7C8, item, D_L00_001C40B0[id].hE);
             if (item != 0)
                 shadow = fast_tween_color_alpha_first(opacity, D_L00_0015F7A8, D_L00_0015F7AC);
             else
                 shadow = fast_tween_color_alpha_first(opacity, D_L00_0015F7A0, D_L00_0015F7A4);
-            font_print_right_2382a0(x + D_L00_0015F720 + 1, y + D_L00_0015F724 + 13, color, formatted, -1);
-            font_print_right_2382a0(x + D_L00_0015F720, y + D_L00_0015F724 + 12, shadow, formatted, -1);
+            font_print_center_2382a0(x + D_L00_0015F720 + 1, y + D_L00_0015F724 + 13, color, formatted, -1);
+            font_print_center_2382a0(x + D_L00_0015F720, y + D_L00_0015F724 + 12, shadow, formatted, -1);
         }
         prefix_length = 0;
         shadow = fast_tween_color_alpha_first(opacity, D_L00_0015F790, D_L00_0015F794);
@@ -510,14 +503,14 @@ s32 FUN_L00_002382a0(char *rec) {
         else
             text_y += D_L00_0015F7BC;
         if (prefix_length != 0) {
-            font_print_right_2382a0(x + D_L00_0015F720 + 1, text_y + 1, color, text, prefix_length);
-            font_print_right_2382a0(x + D_L00_0015F720, text_y, shadow, text, prefix_length);
+            font_print_center_2382a0(x + D_L00_0015F720 + 1, text_y + 1, color, text, prefix_length);
+            font_print_center_2382a0(x + D_L00_0015F720, text_y, shadow, text, prefix_length);
             text_y += 16;
-            font_print_right_2382a0(x + D_L00_0015F720 + 1, text_y + 1, color, suffix, -1);
-            font_print_right_2382a0(x + D_L00_0015F720, text_y, shadow, suffix, -1);
+            font_print_center_2382a0(x + D_L00_0015F720 + 1, text_y + 1, color, suffix, -1);
+            font_print_center_2382a0(x + D_L00_0015F720, text_y, shadow, suffix, -1);
         } else {
-            font_print_right_2382a0(x + D_L00_0015F720 + 1, text_y + 1, color, text, -1);
-            font_print_right_2382a0(x + D_L00_0015F720, text_y, shadow, text, -1);
+            font_print_center_2382a0(x + D_L00_0015F720 + 1, text_y + 1, color, text, -1);
+            font_print_center_2382a0(x + D_L00_0015F720, text_y, shadow, text, -1);
         }
     }
 out:
@@ -556,12 +549,12 @@ void FUN_L00_00238b80(Obj *o) {
     D_0013C940.w1CC = 2;
     x = D_0013C940.f148;
     y = D_0013C940.f14C;
-    len = FUN_001f9988(x * x + y * y);
+    len = square_root(x * x + y * y);
     if (len != 0.0f) {
         x /= len;
         y /= len;
     }
-    ang = FUN_001f9e90(x, y);
+    ang = fast_arc_tan(x, y);
     if ((o->w78 >> 24) == 0 && D_L00_0017E504 != 0) {
         if ((D_0013C940.w1C4 & 0xF000) || len < 0.5f || --o->w78 == -1) {
             o->w74 = -1;

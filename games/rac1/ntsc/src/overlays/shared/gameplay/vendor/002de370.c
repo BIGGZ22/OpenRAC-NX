@@ -43,7 +43,7 @@ INCLUDE_ASM("config/us/overlays/asm/FUN_L03_002e8628.s", FUN_L03_002e8628);
 #else
 #include "qcopy.h"
 extern int D_L03_0015EF50;
-extern void FUN_001f97b0(void);
+extern void raise_kernel_trap(void) __asm__("FUN_001f97b0");
 extern void rotation_matrix(void *, void *) __asm__("FUN_001fa050");
 
 void FUN_L03_002e8628(char *moby) {
@@ -56,16 +56,15 @@ void FUN_L03_002e8628(char *moby) {
     char *sub;
 
     *(float *)(params + 0x4c) = 1.5f;
-    *(int *)(params + 0x40) = 0;
+    *(int *)(*(char **)(moby + 0x70) + 0x80) = *(int *)(params + 0x40) = 0;
+    data = *(char **)(moby + 0x70);
     *(float *)(data + 4) = 0.02f;
     *(float *)(data + 8) = 0.1f;
-    *(int *)(*(char **)(moby + 0x70) + 0x80) = 0;
-    data = *(char **)(moby + 0x70);
     *(int *)(data + 0xc) = 0;
     entry = (char *)(table + (*(short *)(moby + 0x84) << 5));
     sub = *(char **)(entry + 0x1c);
     if (*(short *)(moby + 0x84) < 0)
-        FUN_001f97b0();
+        raise_kernel_trap();
     else
         *(float *)(params + 0x4c) = *(float *)(sub + 0x18);
     qcopy(moby + 0x30, entry);

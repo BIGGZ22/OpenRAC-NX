@@ -16,14 +16,14 @@ extern void memcard_update_state(void) __asm__("func_002093D8");
 extern void play_mpeg_movie(int, int, int, int, int) __asm__("func_0023A3B8");
 extern void sceCdSync(int);
 extern void sceGsSyncV(int);
-extern void FUN_00120558(int, int);
+extern void wait_for_graphics_pipeline_idle(int, int) __asm__("FUN_00120558");
 extern int count_vsync(void) __asm__("FUN_0012f1c8");
 extern void sceGsSyncVCallback(void (*)(void));
 extern void hud_send_texture(int, int, int, int, int, int) __asm__("func_00200B10");
 /* Start level `level`: pick its two load parameters from the level
    table in disc_table (the alternate set while D_0015ED80 is set), stop
-   sound and wait for the loader (func_002093D8) to go idle, then load it
-   (func_0023A3B8) and reset the display state. */
+   sound and wait for the loader (memcard_update_state) to go idle, then load it
+   (play_mpeg_movie) and reset the display state. */
 void start_level(int level) __asm__("FUN_001e9488");
 
 extern s32 pal_mode __asm__("D_0015ED80") MACRO_ADDR;
@@ -69,7 +69,7 @@ void start_level(int level) {
     play_mpeg_movie(b, a, t + 0x100000, t + 0x400000, 0);
     sceCdSync(0);
     sceGsSyncV(0);
-    FUN_00120558(0, 0);
+    wait_for_graphics_pipeline_idle(0, 0);
     sceGsSyncVCallback(count_vsync);
     hud_send_texture(0x1000000, depth_buffer_address, 0x1B, 6, 6, 1);
     decode_mode_macro = 0;

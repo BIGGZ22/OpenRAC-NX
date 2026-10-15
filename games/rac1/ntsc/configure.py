@@ -114,7 +114,7 @@ ROUTE_EXCEPTIONS = {
     "audio/rpc/snd_send_current_batch": "cc_sn",
     # fun_00208030: expand a 4bpp coverage map through the 16-entry weight table
     # into a 1bpp threshold mask (4 source rows per output row)
-    "ui/menus/fun_00208030": "cc_sn",
+    "ui/map/downsample_map_coverage": "cc_sn",
     "ui/menus/update_menu_cycle_selection": "cc_sn",
     # Game code still built by SN cc1 plus the SN assembler Ps2EeAs (the padless route).
     "rendering/packets/emit_rgba_draw_packet": "cc_sn_padless",
@@ -146,12 +146,12 @@ ROUTE_EXCEPTIONS = {
     # perturbs the local hard-register order into retail's, and declaring
     # func_001F6530 void removes the unused-return pseudo so its argument copies
     # emit in retail's order a2<-s0, a3<-v0, a1<-s2. NOTE:
-    # src/assembly/textbin/fun_001fd748.c still declares that callee as s32 in
+    # src/assembly/textbin/ui/map/draw_level_selection_map.c still declares that callee as s32 in
     # another translation unit.
-    "ui/menus/fun_00221460": "cc_sn_padless",
+    "ui/menus/draw_menu_choice_list": "cc_sn_padless",
     # fun_00232d00: bind the stash RPC server, read its IOP buffer and reset the
     # stash slots
-    "storage/cd/fun_00232d00": "cc_sn_padless",
+    "storage/stash/init_stash": "cc_sn_padless",
     # SDK code still built by the patched 991111 compiler (plus the SN assembler).
     # Retail uses classic mult/mflo; the frozen trees emit the R5900 rd-form.
     # 100/100/100 + patha linked-byte equal (0x12D3A0), 2026-09-12.
@@ -200,153 +200,156 @@ SN_FLAG_UNITS = {
 # Add a unit only when every C function in it stays exact under SN.
 # Kept sorted, one per line: scripts/sn/tryfn.py edits this block.
 OVERLAY_SN_UNITS = {
-    "l01/gameplay/entities/002b96e0.c",
-    "l01/gameplay/entities/002f9810.c",
+    "l01/gameplay/entities/birdbot.c",
+    "l01/gameplay/entities/rock_formation.c",
     "l01/gameplay/hero/00233de0.c",
-    "l01/gameplay/hero/0023cf98.c",
     "l01/gameplay/hero/00242930.c",
-    "l02/gameplay/entities/002400c8.c",
-    "l02/gameplay/entities/002e0dc0.c",
+    "l01/gameplay/hero/hero_set_state.c",
+    "l02/gameplay/entities/constructorbot.c",
+    "l02/gameplay/entities/sand_shark.c",
+    "l02/gameplay/entities/skids_agent.c",
     "l02/gameplay/hero/0021b698.c",
-    "l02/gameplay/hero/0022b728.c",
-    "l02/gameplay/vendor/002ebf20.c",
-    "l03/gameplay/entities/00292578.c",
-    "l03/gameplay/entities/002c9eb8.c",
+    "l02/gameplay/hero/hero_set_state.c",
+    "l03/gameplay/entities/metropolis_train_locomotive.c",
+    "l03/gameplay/entities/taxi.c",
     "l03/gameplay/hero/00205830.c",
-    "l03/gameplay/hero/00216648.c",
     "l03/gameplay/hero/0021c668.c",
+    "l03/gameplay/hero/hero_set_state.c",
     "l03/runtime/startup/0022c728.c",
     "l04/gameplay/entities/001f3038.c",
     "l04/gameplay/entities/0024c4f0.c",
-    "l04/gameplay/entities/0029eb20.c",
-    "l04/gameplay/entities/002ca420.c",
-    "l04/gameplay/vendor/002e3078.c",
+    "l04/gameplay/entities/big_axebot.c",
+    "l04/gameplay/entities/lieutenant.c",
+    "l04/gameplay/entities/snow_plow.c",
     "l04/runtime/dma/002922d0.c",
-    "l05/gameplay/entities/002d1688.c",
-    "l05/gameplay/entities/0030d6a0.c",
+    "l05/gameplay/entities/electric_gate.c",
+    "l05/gameplay/entities/sharkigator.c",
     "l05/gameplay/hero/00239fc0.c",
     "l05/gameplay/hero/00244a70.c",
-    "l05/gameplay/hero/0024cee8.c",
     "l05/gameplay/hero/00255960.c",
-    "l06/gameplay/entities/002b4770.c",
-    "l06/gameplay/entities/002fd1a0.c",
-    "l06/gameplay/hero/002356a0.c",
+    "l05/gameplay/hero/hero_set_state.c",
+    "l06/gameplay/entities/fred.c",
+    "l06/gameplay/entities/hangar_door.c",
     "l06/gameplay/hero/0023b440.c",
+    "l06/gameplay/hero/hero_set_state.c",
     "l06/world/loaders/00252dd0.c",
-    "l07/gameplay/entities/002cd2b0.c",
-    "l07/gameplay/entities/00312948.c",
+    "l07/gameplay/entities/snagglebeast.c",
+    "l07/gameplay/entities/taxi_platform.c",
     "l07/gameplay/vendor/0031d2e0.c",
     "l07/ui/map/00270248.c",
     "l07/world/loaders/0026b768.c",
-    "l08/gameplay/entities/002b8228.c",
-    "l08/gameplay/entities/002deee0.c",
-    "l08/gameplay/entities/002e9b70.c",
-    "l08/gameplay/hero/00230b38.c",
+    "l08/gameplay/entities/batalia_deserter.c",
+    "l08/gameplay/entities/bolt_thief.c",
+    "l08/gameplay/entities/bomb.c",
+    "l08/gameplay/entities/commando.c",
     "l08/gameplay/hero/002370d8.c",
-    "l08/gameplay/vendor/00305138.c",
+    "l08/gameplay/hero/hero_set_state.c",
     "l08/rendering/00279f00.c",
-    "l09/gameplay/entities/0021e538.c",
-    "l09/gameplay/entities/002c26c8.c",
-    "l09/gameplay/vendor/003033a0.c",
-    "l10/gameplay/entities/00295a38.c",
-    "l10/gameplay/vendor/002df270.c",
+    "l09/gameplay/entities/airship_part.c",
+    "l09/gameplay/entities/asteroid.c",
+    "l09/gameplay/entities/elevator.c",
+    "l10/gameplay/entities/platform.c",
+    "l10/gameplay/entities/screamer.c",
     "l10/gameplay/vendor/002ea1f0.c",
-    "l11/gameplay/entities/002cb668.c",
+    "l11/gameplay/entities/bob.c",
+    "l11/gameplay/entities/oil_tanker_front.c",
+    "l11/gameplay/entities/seesaw_platform.c",
     "l11/gameplay/hero/0023c7a0.c",
-    "l11/gameplay/hero/0024db50.c",
     "l11/gameplay/hero/00253a18.c",
-    "l11/gameplay/vendor/0030c788.c",
-    "l11/gameplay/vendor/00315968.c",
-    "l12/gameplay/entities/002bf140.c",
-    "l12/gameplay/entities/002ec720.c",
+    "l11/gameplay/hero/hero_set_state.c",
+    "l12/gameplay/entities/hoven_turret.c",
+    "l12/gameplay/entities/platform.c",
+    "l12/gameplay/entities/water_reservoir.c",
     "l12/gameplay/hero/0022de30.c",
-    "l12/gameplay/hero/002400d0.c",
     "l12/gameplay/hero/002461f0.c",
-    "l12/gameplay/vendor/003028c8.c",
-    "l13/gameplay/entities/002b0e80.c",
-    "l13/gameplay/entities/002c13b0.c",
-    "l13/gameplay/entities/002ea8c8.c",
-    "l13/gameplay/vendor/003058a8.c",
+    "l12/gameplay/hero/hero_set_state.c",
+    "l13/gameplay/entities/blarg_space_fighter.c",
+    "l13/gameplay/entities/elevator.c",
+    "l13/gameplay/entities/qwarks_starfighter_part.c",
+    "l13/gameplay/entities/rocket.c",
     "l13/rendering/002b8320.c",
-    "l14/gameplay/entities/002460f8.c",
-    "l14/gameplay/entities/002d6358.c",
-    "l14/gameplay/entities/002df080.c",
-    "l14/gameplay/entities/002fded0.c",
-    "l14/gameplay/hero/0022ff58.c",
+    "l14/gameplay/entities/blarg_heavy_interceptor.c",
+    "l14/gameplay/entities/bolt_thief.c",
+    "l14/gameplay/entities/jet.c",
+    "l14/gameplay/entities/platform.c",
     "l14/gameplay/hero/00235600.c",
-    "l15/gameplay/entities/0029aff0.c",
+    "l14/gameplay/hero/hero_set_state.c",
+    "l15/gameplay/entities/conveyor_belt.c",
+    "l15/gameplay/entities/gate.c",
     "l15/gameplay/hero/002044c8.c",
-    "l15/gameplay/hero/00216c38.c",
     "l15/gameplay/hero/0021d040.c",
-    "l15/gameplay/vendor/002e73c0.c",
-    "l16/gameplay/entities/002a3f38.c",
+    "l15/gameplay/hero/hero_set_state.c",
     "l16/gameplay/entities/002cfc00.c",
+    "l16/gameplay/entities/grindrail_gate.c",
+    "l16/gameplay/entities/rocket.c",
     "l16/gameplay/hero/002097a0.c",
-    "l16/gameplay/hero/0021e398.c",
     "l16/gameplay/hero/002270c8.c",
-    "l16/gameplay/vendor/002e3190.c",
-    "l17/gameplay/entities/002a8da0.c",
-    "l17/gameplay/hero/0021e530.c",
+    "l16/gameplay/hero/hero_set_state.c",
+    "l17/gameplay/entities/blarg_ship.c",
+    "l17/gameplay/entities/door.c",
+    "l17/gameplay/entities/dreks_fleet_turret.c",
     "l17/gameplay/hero/002258a8.c",
-    "l17/gameplay/vendor/002e87d8.c",
+    "l17/gameplay/hero/hero_set_state.c",
     "l17/gameplay/vendor/002ea418.c",
-    "l17/gameplay/vendor/002f26d0.c",
     "l17/ui/help/002020a8.c",
-    "l18/gameplay/entities/002a7220.c",
-    "l18/gameplay/hero/00227dd0.c",
+    "l18/gameplay/entities/deplanetizer_gun.c",
+    "l18/gameplay/entities/drek_fight_missile.c",
+    "l18/gameplay/entities/rocket.c",
     "l18/gameplay/hero/0022e8f8.c",
-    "l18/gameplay/vendor/002efb88.c",
-    "l18/gameplay/vendor/002f88e8.c",
+    "l18/gameplay/hero/hero_set_state.c",
     "l18/world/loaders/002463f8.c",
     "shared/audio/voices/00276368.c",
-    "shared/gameplay/animation/00235878.c",
-    "shared/gameplay/camera/001eb188.c",
     "shared/gameplay/camera/001fc008.c",
-    "shared/gameplay/entities/00278fd8.c",
-    "shared/gameplay/entities/00291918.c",
-    "shared/gameplay/entities/002937a0.c",
+    "shared/gameplay/camera/follow_camera_setup.c",
+    "shared/gameplay/camera/init_camera_system.c",
     "shared/gameplay/entities/00295100.c",
-    "shared/gameplay/entities/00297d10.c",
     "shared/gameplay/entities/0029f990.c",
-    "shared/gameplay/entities/002a09a0.c",
-    "shared/gameplay/entities/002a4038.c",
-    "shared/gameplay/entities/002a4830.c",
-    "shared/gameplay/entities/002aa670.c",
     "shared/gameplay/entities/002aee30.c",
-    "shared/gameplay/entities/002b17d8.c",
-    "shared/gameplay/entities/002b1e48.c",
-    "shared/gameplay/entities/002b2100.c",
-    "shared/gameplay/entities/002b3840.c",
-    "shared/gameplay/entities/002b7d50.c",
-    "shared/gameplay/entities/002b8c08.c",
-    "shared/gameplay/entities/002b94d0.c",
-    "shared/gameplay/entities/002bffa8.c",
-    "shared/gameplay/entities/002c5990.c",
-    "shared/gameplay/entities/002c8440.c",
-    "shared/gameplay/entities/002c8830.c",
-    "shared/gameplay/entities/002cfcb8.c",
     "shared/gameplay/entities/002d6810.c",
-    "shared/gameplay/entities/002d7f88.c",
-    "shared/gameplay/entities/002f6328.c",
-    "shared/gameplay/hero/00221310.c",
+    "shared/gameplay/entities/ammocrate.c",
+    "shared/gameplay/entities/armed_transport.c",
+    "shared/gameplay/entities/blarg_elite_commando.c",
+    "shared/gameplay/entities/blarg_helicopter.c",
+    "shared/gameplay/entities/bomb.c",
+    "shared/gameplay/entities/camera_object.c",
+    "shared/gameplay/entities/devastator.c",
+    "shared/gameplay/entities/gadgebot_spawn_container.c",
+    "shared/gameplay/entities/hoverboard_ring.c",
+    "shared/gameplay/entities/hydrodisplacer_faucet.c",
+    "shared/gameplay/entities/mine.c",
+    "shared/gameplay/entities/nanotech_ball.c",
+    "shared/gameplay/entities/novalis_elevator.c",
+    "shared/gameplay/entities/ocean_pokitaru.c",
+    "shared/gameplay/entities/plasmabot.c",
+    "shared/gameplay/entities/rock.c",
+    "shared/gameplay/entities/sandmouse.c",
+    "shared/gameplay/entities/scoutbot.c",
+    "shared/gameplay/entities/seeker.c",
+    "shared/gameplay/entities/sentrybot.c",
+    "shared/gameplay/entities/spawner.c",
+    "shared/gameplay/entities/thruster_pack_lock.c",
+    "shared/gameplay/entities/timed_activation_pads.c",
+    "shared/gameplay/entities/trackdrive_left.c",
+    "shared/gameplay/entities/trespasser.c",
+    "shared/gameplay/entities/veldin_ship.c",
+    "shared/gameplay/entities/vendor_orb.c",
+    "shared/gameplay/entities/walloper.c",
     "shared/gameplay/hero/00227778.c",
-    "shared/gameplay/hero/00229b70.c",
+    "shared/gameplay/hero/hero_check_damage.c",
+    "shared/gameplay/hero/hero_idle_sequence.c",
+    "shared/gameplay/hero/hero_set_state.c",
+    "shared/gameplay/hero/hero_update_transitions.c",
+    "shared/gameplay/hero/set_hero_animation.c",
     "shared/gameplay/state/0024eec0.c",
     "shared/gameplay/state/0024f190.c",
     "shared/gameplay/state/0027b268.c",
-    "shared/gameplay/vendor/002df730.c",
-    "shared/gameplay/vendor/002e22d8.c",
+    "shared/gameplay/state/unlock_planet.c",
     "shared/gameplay/vendor/002e3de8.c",
-    "shared/gameplay/vendor/002e5e38.c",
     "shared/gameplay/vendor/003015d0.c",
-    "shared/gameplay/vendor/00307ba8.c",
-    "shared/gameplay/vendor/0030b618.c",
-    "shared/gameplay/vendor/0030e690.c",
     "shared/gameplay/vendor/00316f48.c",
-    "shared/gameplay/vendor/0031abe0.c",
-    "shared/math/interpolation/00257ef0.c",
     "shared/math/interpolation/00258830.c",
     "shared/math/interpolation/0026d930.c",
+    "shared/math/interpolation/spring_turn.c",
     "shared/math/rotations/0025d238.c",
     "shared/math/rotations/002899f8.c",
     "shared/math/vectors/0025c230.c",
@@ -355,24 +358,21 @@ OVERLAY_SN_UNITS = {
     "shared/rendering/002712b8.c",
     "shared/rendering/0027f660.c",
     "shared/rendering/commands/0020bc88.c",
-    "shared/rendering/sky/00288ec0.c",
-    "shared/rendering/view/0025fcb8.c",
+    "shared/rendering/sky/update_sky_shells_animated.c",
     "shared/runtime/dma/002b7a48.c",
     "shared/ui/help/001fe778.c",
-    "shared/ui/help/00203b18.c",
     "shared/ui/help/00204c60.c",
-    "shared/ui/help/0020c758.c",
     "shared/ui/help/00215340.c",
     "shared/ui/help/0021d0a0.c",
-    "shared/ui/help/00231d08.c",
     "shared/ui/help/00232670.c",
     "shared/ui/help/00237488.c",
+    "shared/ui/hud/hud_keep_visible.c",
     "shared/ui/menus/002497f8.c",
     "shared/ui/menus/0027f448.c",
     "shared/ui/text/001fb470.c",
     "shared/ui/text/002377b8.c",
     "shared/world/loaders/0023fa00.c",
-    "shared/world/loaders/00240348.c",
+    "shared/world/loaders/load_level_gameplay.c",
 }
 
 # —— Retail link layout ——
@@ -397,7 +397,7 @@ RODATA_OVERLAYS = {
     "audio/banks/snd_bank_load_by_loc": (0x153DA8, 0x54D28, 77),  # its two error messages
     "audio/rpc/snd_send_iop_command_no_wait": (0x154010, 0x54F90, 96),  # its buffer-full message
     "rendering/image/jump_to_image_setup": (0x153AD8, 0x54A58, 16),  # its error message
-    "fun_0021fdc8": (0x1E87F0, 0xE9770, 28),  # stream-state switch table
+    "update_menu_resource_stream": (0x1E87F0, 0xE9770, 28),  # stream-state switch table
     # vfprintf_r: blanks/zeroes, the xdigs strings, the short literals (kept in
     # .rodata via section attributes, in source order) and its switch table.
     "runtime/newlib/vfprintf_r": (0x1524E0, 0x53460, 516),
@@ -405,7 +405,7 @@ RODATA_OVERLAYS = {
     "gameplay/missions/check_mission_condition": (0x1E8390, 0xE9310, 40),  # unlock-condition switch table
     "draw_menu_preview_objects": (0x1E87A0, 0xE9720, 48),  # item-handle release switch table
     "update_resident_gameplay_state": (0x1E8930, 0xE98B0, 36),  # gameplay-state switch table
-    "fun_00222768": (0x1E8860, 0xE97E0, 80),  # switch table
+    "draw_menu_text_box": (0x1E8860, 0xE97E0, 80),  # switch table
     "camera_activation_check_priority": (0x1E7730, 0xE86B0, 32),  # camera-mode switch table
     "ui/help/draw_help": (0x1E7A70, 0xE89F0, 28),  # switch table (migrated)
     "ui/help/dismiss_help": (0x1E7A20, 0xE89A0, 32),  # switch table (migrated)
@@ -419,9 +419,9 @@ RODATA_OVERLAYS = {
     "init_once": (0x1E7B30, 0xE8AB0, 20),  # switch table
     "actuator_calc_power": (0x1E7640, 0xE85C0, 24),  # switch table
     "fun_00213928": (0x1E84E0, 0xE9460, 128),  # switch table
-    "fun_00204428": (0x1E7CE0, 0xE8C60, 32),  # switch table
+    "service_level_archive_load": (0x1E7CE0, 0xE8C60, 32),  # switch table
     "mode_freeze_init": (0x1E78D0, 0xE8850, 28),  # switch table
-    "fun_0021abf8": (0x1E8770, 0xE96F0, 48),  # menu action switch table
+    "update_menu_entry_actions": (0x1E8770, 0xE96F0, 48),  # menu action switch table
     "draw_dialog_text": (0x1E7920, 0xE88A0, 124),  # switch table
 }
 
@@ -439,7 +439,7 @@ SDATA_OVERLAYS = {
     "runtime/callbacks/count_vsync": (0x15ED40, 0x5FCC0, 24),
     "runtime/time/set_video_timing": (0x15ED60, 0x5FCE0, 32),
     "ui/fonts/load_debug_font": (0x15EEC8, 0x5FE48, 8),
-    "gameplay/state/fun_00204428": (0x15EE50, 0x5FDD0, 8),
+    "gameplay/state/service_level_archive_load": (0x15EE50, 0x5FDD0, 8),
     "rendering/draw_debug_profiler": (0x15EE40, 0x5FDC0, 1),
     "gameplay/camera/camera_activation_check_priority": (0x15EF40, 0x5FEC0, 4),
     "gameplay/camera/execute_camera_post_update_callbacks": (0x15EF8C, 0x5FF0C, 4),
@@ -461,22 +461,22 @@ DATA_OVERLAYS = {
     "textbin/render_queued_rotated_sprites": (0x189300, 0x8A280, 196),
     "gameplay/camera/backup_current_cam": (0x1893D0, 0x8A350, 1920),
     "textbin/append_billboard_batch": (0x18ED00, 0x8FC80, 512),
-    "textbin/passes_projected_region_callback_0": (0x1A03B0, 0xA1330, 4),
+    "ui/map/map_filters": (0x1A03B0, 0xA1330, 4),
     "textbin/initialize_level_runtime": (0x1CAAC0, 0xCBA40, 4096),
     "textbin/world/data/select_world_object_resource_tables": (0x1CBBE0, 0xCCB60, 1152),
     "ui/menus/render_level_effects_and_screen_sprites": (0x1CE2C0, 0xCF240, 56),
     "textbin/gameplay/gadgets/load_hand_gadget": (0x1D52E8, 0xD6268, 1776),
-    "assembly/textbin/fun_00225e70": (0x1D6080, 0xD7000, 56),
-    "assembly/textbin/fun_00203b08": (0x1D8030, 0xD8FB0, 128),
+    "assembly/textbin/ui/menus/update_preview_animation_and_attachments": (0x1D6080, 0xD7000, 56),
+    "assembly/textbin/rendering/register_shrub_render_class": (0x1D8030, 0xD8FB0, 128),
     "gameplay/fun_0022e1b0": (0x1D9890, 0xDA810, 384),
-    "assembly/textbin/fun_0022e420": (0x1D9A10, 0xDA990, 32),
-    "assembly/textbin/fun_001fd748": (0x1DDE28, 0xDEDA8, 320),
-    "assembly/textbin/fun_00203730": (0x1E1900, 0xE2880, 256),
-    "assembly/textbin/fun_00238310": (0x1E6018, 0xE6F98, 512),
-    "assembly/textbin/fun_00239780": (0x1E6218, 0xE7198, 96),
+    "assembly/textbin/rendering/effects/build_resident_indexed_texture_warp_meshes": (0x1D9A10, 0xDA990, 32),
+    "assembly/textbin/ui/map/draw_level_selection_map": (0x1DDE28, 0xDEDA8, 320),
+    "assembly/textbin/rendering/register_object_render_class": (0x1E1900, 0xE2880, 256),
+    "assembly/textbin/gameplay/vendor/render_capture_scrolling_text": (0x1E6018, 0xE6F98, 512),
+    "assembly/textbin/gameplay/vendor/render_vendor_capture_pass_sequence": (0x1E6218, 0xE7198, 96),
     "textbin/render_vendor_capture_texture_overlays_pass": (0x1E6620, 0xE75A0, 64),
     "textbin/rebuild_configured_text_label_list": (0x1E8728, 0xE96A8, 60),
-    "textbin/fun_0021fdc8": (0x1E87D0, 0xE9750, 24),
+    "ui/menus/update_menu_resource_stream": (0x1E87D0, 0xE9750, 24),
     "textbin/video/player/init_all": (0x1E8AF0, 0xE9A70, 18),
 }
 
@@ -1069,32 +1069,60 @@ def apply_la_gprel_policy(assembly):
 
 
 def hoist_sda_externs(assembly, source):
-    """Move `.extern NAME, SIZE` ahead of the code for every small-data symbol.
+    """Move `.extern NAME, SIZE` up to where the source declares NAME small.
 
     SN cc1 writes its `.extern` directives at the end of the file and leaves
     the choice between $gp and lui to the assembler.  Ps2EeAs is single-pass:
     it relaxes a bare symbol access to $gp only when the size is already
     known.  The source says which globals retail reads through $gp: those
     declared `__attribute__((sda))` (the game compiler's spelling, ignored by
-    SN cc1); their directives go first, the others stay where cc1 put them.
-    A NON_MATCHING `#else` draft is not compiled, so its declarations do not
+    SN cc1); their directives go first.  When a `<name>_lui` alias of
+    the symbol is declared before its first sda declaration, the functions
+    in between read it through lui (retail mixes both when a unit joins files
+    that did and did not define the symbol), so the directive goes in front
+    of the first function defined after the sda declaration instead.  A
+    NON_MATCHING `#else` draft is not compiled, so its declarations do not
     count.
     """
     source = re.sub(r"^(#ifndef NON_MATCHING\n(?:INCLUDE_ASM[^\n]*\n)*)#else\n.*?^#endif",
                     r"\1#endif", source, flags=re.M | re.S)
-    sda = set()
-    for decl in re.findall(r"^extern[^;]*__attribute__\(\(sda\)\)[^;]*;", source, re.M):
+    sda = {}
+    for match in re.finditer(r"^extern[^;]*__attribute__\(\(sda\)\)[^;]*;", source, re.M):
+        decl = match.group(0)
         label = re.search(r'__asm__\s*\(\s*"([\w.$]+)"', decl)
         name = re.search(r"([A-Za-z_]\w*)\s*(?:\[[^\]]*\]\s*)*(?:__asm__|__attribute__)", decl)
-        if label:
-            sda.add(label.group(1))
-        elif name:
-            sda.add(name.group(1))
+        key = label.group(1) if label else name.group(1) if name else None
+        if key and key not in sda:
+            sda[key] = match.start()
+    absolute = {}
+    for match in re.finditer(r'^extern[^;(]*\b\w+_lui\s*__asm__\s*\(\s*"([\w.$]+)"\s*\)[^;]*;', source, re.M):
+        absolute.setdefault(match.group(1), match.start())
     lines = assembly.split("\n")
-    first = [l for l in lines if re.match(r"\s*\.extern\s+([\w.$]+)\s*,", l)
-             and re.match(r"\s*\.extern\s+([\w.$]+)", l).group(1) in sda]
-    rest = [l for l in lines if l not in first]
-    return "\n".join(first + rest)
+    functions = []  # (asm line of the function's .globl/.ent, source offset of its definition)
+    for index, line in enumerate(lines):
+        match = re.match(r"\s*\.ent\s+([\w.$]+)", line)
+        if not match:
+            continue
+        start = index
+        while start > 0 and re.match(r"\s*\.(?:globl|align|type)\b", lines[start - 1]):
+            start -= 1
+        body = re.search(r"^[^\n;#]*\b" + re.escape(match.group(1)) + r"\s*\([^;{]*\)\s*\{", source, re.M)
+        functions.append((start, body.start() if body else -1))
+    placed = {}
+    for line in lines:
+        match = re.match(r"\s*\.extern\s+([\w.$]+)\s*,", line)
+        if match and match.group(1) in sda:
+            symbol = match.group(1)
+            after = [start for start, offset in functions if offset > sda[symbol]]
+            late = absolute.get(symbol, len(source)) < sda[symbol] and after
+            placed.setdefault(min(after) if late else 0, []).append(line)
+    result = []
+    for index, line in enumerate(lines):
+        result.extend(placed.get(index, []))
+        match = re.match(r"\s*\.extern\s+([\w.$]+)\s*,", line)
+        if not (match and match.group(1) in sda):
+            result.append(line)
+    return "\n".join(result)
 
 
 def reference_assembly(assembly):

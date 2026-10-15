@@ -4,6 +4,7 @@
 #include "rnc/overlay/collision.h"
 #include "rnc/gameplay/hero.h"
 #include "asm.h"
+#include "rnc/gameplay/state/usage_stats.h"
 
 #define NOT_SDA
 
@@ -485,11 +486,11 @@ void FUN_L05_0024bdc0(void) {
         FUN_L00_0022e9c0(hero.unk86C + 0xc0, combined);
     }
 }
-/* Adapted from the exact FUN_L00_002279b0 (src/overlays/shared/ui/help/00221310.c): L05 has a wider head guard and its own level data. */
+/* Adapted from the exact FUN_L00_002279b0 (src/overlays/shared/gameplay/hero/hero_set_state.c): L05 has a wider head guard and its own level data. */
 
 extern float D_L05_00174268 __attribute__((section(".data")));
 extern int frame_number __asm__("D_L05_0015F5CC");
-extern int FUN_001f0b58(void);
+extern int collision_hit_material(void) __asm__("FUN_001f0b58");
 extern int FUN_L00_00216de8_c(int a, int b) __asm__("FUN_L00_00216de8");
 extern int func_L00_001EFFF0(void *, void *, int, int, int) __asm__("FUN_001efa68");
 extern void FUN_L00_002126b8(void *, void *, int, float, float);
@@ -564,7 +565,7 @@ int FUN_L05_002515d0(void) {
         }
         FUN_L00_002126b8(v1, v2, 0, scale, 1.3f);
         if (func_L00_001EFFF0(v1, v2, 2, *(int *)&u->moby, 0) != 0) {
-            int s = FUN_001f0b58();
+            int s = collision_hit_material();
             u->ground_type = s;
             if ((short)s == 0) {
                 v1[2] = D_L05_00174268 - 0.01f;
@@ -607,15 +608,8 @@ typedef struct {
     char p14[0x18];
 } Rec2C_2523C8;
 
-typedef struct {
-    char p0[0xD8];
-    unsigned short hD8;
-    unsigned short hDA;
-    int fDC;
-} Stats_2523C8;
-
-extern float FUN_001f9b80(void *, void *);
-extern float FUN_001f9e90(float, float);
+extern float vector_distance_xy(void *, void *) __asm__("FUN_001f9b80");
+extern float fast_arc_tan(float, float) __asm__("FUN_001f9e90");
 extern float fast_difference_between_rotations(float, float) __asm__("func_001FA688");
 extern int D_0015ED84; /* no foreign declaration */
 extern int FUN_L00_001fefc8(void *);
@@ -640,7 +634,6 @@ extern void FUN_L00_0029a6b0(void *);
 extern void FUN_L05_0024cee8(int, int);
 extern void FUN_L05_002d4168(void *, void *, void *, float, float);
 extern void tick_countdown_32(s32 *) __asm__("func_001F9740");
-extern char D_00141848[];
 extern Hero D_0013F450_h2523C8 __asm__("D_0013F350");
 extern PadState D_0013CA40_p2523C8 __asm__("D_0013C940");
 extern int D_00141760_2523C8 __asm__("D_00141660") __attribute__((section(".data")));
@@ -929,7 +922,7 @@ int FUN_L05_00251be8(void) {
         {
             Moby *item;
             Moby *best;
-            Stats_2523C8 *stats;
+            struct UsageStats *stats;
             int play_time, unit;
 
             if (D_0013F450_h2523C8.unk8CE != 0) {
@@ -972,11 +965,11 @@ int FUN_L05_00251be8(void) {
                         continue;
                     }
                     candidate = (Moby *)((char *)D_L05_00160098_2523C8 + (id << 8));
-                    yaw_error = fast_difference_between_rotations(D_0013F450_h2523C8.motion.rot.f[2], FUN_001f9e90(candidate->pos.x - D_0013F450_h2523C8.motion.pos.f[0], candidate->pos.y - D_0013F450_h2523C8.motion.pos.f[1]));
+                    yaw_error = fast_difference_between_rotations(D_0013F450_h2523C8.motion.rot.f[2], fast_arc_tan(candidate->pos.x - D_0013F450_h2523C8.motion.pos.f[0], candidate->pos.y - D_0013F450_h2523C8.motion.pos.f[1]));
                     if (!(yaw_error > 0.7853982f)) {
-                        pitch_error = fast_difference_between_rotations(FUN_001f9e90(FUN_001f9b80(D_0013F450_h2523C8.motion.pos.f, &candidate->pos), candidate->pos.z - D_0013F450_h2523C8.motion.pos.f[2]), 0.0f);
+                        pitch_error = fast_difference_between_rotations(fast_arc_tan(vector_distance_xy(D_0013F450_h2523C8.motion.pos.f, &candidate->pos), candidate->pos.z - D_0013F450_h2523C8.motion.pos.f[2]), 0.0f);
                         if (!(pitch_error > 0.7853982f)) {
-                            distance = FUN_001f9b80(&candidate->pos, D_0013F450_h2523C8.motion.pos.f);
+                            distance = vector_distance_xy(&candidate->pos, D_0013F450_h2523C8.motion.pos.f);
                             score = distance;
                             score += distance * yaw_error * 2.0f;
                             score += distance * pitch_error * 2.0f;
@@ -989,18 +982,18 @@ int FUN_L05_00251be8(void) {
                     i++;
                 }
             }
-            stats = (Stats_2523C8 *)(((char *)&D_00141848));
+            stats = &usage_stats;
             item->command = scale_game_frames_alt(7);
             D_0013F450_h2523C8.unk8CF = scale_game_frames_alt(0x32);
-            if (stats->hD8 < 0xFFFF) {
-                stats->hD8++;
+            if (stats->stat[27].count < 0xFFFF) {
+                stats->stat[27].count++;
             }
             play_time = scale_game_frames_alt(D_0015EEA4_macro);
             unit = 600;
-            if (play_time / unit > stats->hDA) {
-                stats->hDA = scale_game_frames_alt(D_0015EEA4_macro) / 600;
+            if (play_time / unit > stats->stat[27].unk2) {
+                stats->stat[27].unk2 = scale_game_frames_alt(D_0015EEA4_macro) / 600;
             }
-            stats->fDC = stats->fDC | (1 << D_0015EE84_2523C8) | 0x80000000;
+            stats->stat[27].level_mask = stats->stat[27].level_mask | (1 << D_0015EE84_2523C8) | 0x80000000;
             allocate_voice_for_target_entry_alt(0, 0, (int)item);
             FUN_L00_0024f7c8(item, 0, joint_pos);
             FUN_L05_002d4168(item, joint_pos, best, D_0013F450_h2523C8.motion.rot.f[2], D_0013F450_h2523C8.motion.rot.f[1]);
@@ -1112,13 +1105,13 @@ void FUN_L05_00253850(void) {
 }
 extern s32 FUN_001f96f8(s32);
 extern s32 FUN_L00_001fefc8_c(u8 *) __asm__("FUN_L00_001fefc8");
-extern void FUN_001f9a28(void *, void *, void *);
+extern void subtract_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a28");
 extern f32 FUN_001f99c0(f32);
-extern void FUN_001f9fc8(void *);
-extern void FUN_001fa2d8(void *, void *);
-extern void FUN_001f9d20(void *, void *, void *);
-extern f32 FUN_001fa6c0(s32);
-extern f32 FUN_001f9de0(f32);
+extern void set_identity_matrix(void *) __asm__("FUN_001f9fc8");
+extern void transpose_rotation_matrix(void *, void *) __asm__("FUN_001fa2d8");
+extern void transform_vector(void *, void *, void *) __asm__("FUN_001f9d20");
+extern f32 convert_integer_to_float(s32) __asm__("FUN_001fa6c0");
+extern f32 fast_sin(f32) __asm__("FUN_001f9de0");
 extern s32 FUN_001fa6d0(f32);
 extern f32 FUN_001f9b48(void *, void *);
 extern s32 FUN_L00_002591d0(void **, s32, s32, s32);
@@ -1148,10 +1141,10 @@ void FUN_L05_00253b48(void) {
             do {
 
                 if (*(s16 *)(first + 0xA6) == 0x473 && FUN_L00_001fefc8_c(first + 0xBC) != 0) {
-                    FUN_001f9a28(delta, first + 0x10, &hero.motion.unkD0);
-                    FUN_001f9fc8(matrix);
-                    FUN_001fa2d8(matrix, first + 0xC0);
-                    FUN_001f9d20(delta, delta, matrix);
+                    subtract_vector_xyz(delta, first + 0x10, &hero.motion.unkD0);
+                    set_identity_matrix(matrix);
+                    transpose_rotation_matrix(matrix, first + 0xC0);
+                    transform_vector(delta, delta, matrix);
                     if (FUN_001f99c0(delta[0]) < 0.5f && FUN_001f99c0(delta[1]) < 2.9f && FUN_001f99c0(delta[2]) < 2.9f) {
                         hero.unk8C4 += **(s32 **)(first + 0x78);
                         first[0xBC] = FUN_001f96f8(0x3C);
@@ -1164,10 +1157,10 @@ void FUN_L05_00253b48(void) {
         }
     }
     count = FUN_001f96f8(0x32);
-    period = FUN_001fa6c0(count);
+    period = convert_integer_to_float(count);
     ratio = (f32)(D_L00_0015F5CC % count) / period;
     ratio += ratio;
-    wave = FUN_001f9de0(ratio * 3.1415927f + -3.1415927f);
+    wave = fast_sin(ratio * 3.1415927f + -3.1415927f);
     red = FUN_001fa6d0(wave * 48.0f) + 0x68;
     green = FUN_001fa6d0(wave * 64.0f) + 0xD0;
     blue = FUN_001fa6d0(wave * 24.0f) + 0x3C;
@@ -1183,10 +1176,10 @@ void FUN_L05_00253b48(void) {
                         *(u16 *)(second + 0x34) |= 0x10;
                         *(u32 *)(second + 0x90) = color;
                         if (FUN_L00_001fefc8_c(second + 0xBC) != 0) {
-                            FUN_001f9a28(delta, second + 0x10, &hero.motion.pos);
-                            FUN_001f9fc8(matrix);
-                            FUN_001fa2d8(matrix, second + 0xC0);
-                            FUN_001f9d20(delta, delta, matrix);
+                            subtract_vector_xyz(delta, second + 0x10, &hero.motion.pos);
+                            set_identity_matrix(matrix);
+                            transpose_rotation_matrix(matrix, second + 0xC0);
+                            transform_vector(delta, delta, matrix);
                             if (FUN_001f99c0(delta[0]) < 2.8f && FUN_001f99c0(delta[1]) < 1.25f && FUN_001f99c0(delta[2]) < 1.5f) {
                                 hero.unk8C4 += **(s32 **)(second + 0x78);
                                 second[0xBC] = FUN_001f96f8(0x3C);
@@ -1226,7 +1219,6 @@ void FUN_L05_00253b48(void) {
 #ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L05_00254058.s", FUN_L05_00254058);
 #else
-#include "rnc/gameplay/state/usage_stats.h"
 extern u8 D_0013D388;
 
 extern s32 D_0015ED84 __attribute__((sda));
@@ -1244,7 +1236,7 @@ void FUN_L05_00254058(void) {
 
     if (D_0013D388 == 0) return;
     if (hero.unk8A8 != 0) {
-        struct UsageStats *stats = (struct UsageStats *)D_00141848;
+        struct UsageStats *stats = &usage_stats;
         s32 duration = D_0015EEA4_gp;
         s32 frame_count;
         s32 level;
@@ -1330,9 +1322,9 @@ void FUN_L05_00254058(void) {
 INCLUDE_ASM("config/us/overlays/asm/FUN_L05_00254358.s", FUN_L05_00254358);
 #else
 extern char *D_L05_001B0930[];
-extern f32 FUN_001f9e90(f32, f32);
+extern f32 fast_arc_tan(f32, f32) __asm__("FUN_001f9e90");
 extern f32 fast_difference_between_rotations(f32, f32) __asm__("FUN_001fa688");
-extern f32 FUN_001f9b80(void *, void *);
+extern f32 vector_distance_xy(void *, void *) __asm__("FUN_001f9b80");
 extern void clear_u64_value(void *) __asm__("FUN_001f99f8");
 extern f32 find_ground_height(f32, void *, s32) __asm__("FUN_00213508");
 extern s32 current_level_index __asm__("D_0015ED84") __attribute__((sda));
@@ -1379,11 +1371,11 @@ void FUN_L05_00254358(f32 *position, f32 *direction) {
             s32 count;
             f32 b;
             g = &hero;
-            a = FUN_001f9e90(cursor->points[0].x - g->motion.pos.f[0], cursor->points[0].y - g->motion.pos.f[1]);
+            a = fast_arc_tan(cursor->points[0].x - g->motion.pos.f[0], cursor->points[0].y - g->motion.pos.f[1]);
             count = path->count;
             next = (s32)((u32)count + 2U);
             next = (s32)((u32)index + (u32)next) % count;
-            b = FUN_001f9e90(path->points[next].x - cursor->points[0].x, path->points[next].y - cursor->points[0].y);
+            b = fast_arc_tan(path->points[next].x - cursor->points[0].x, path->points[next].y - cursor->points[0].y);
             if (!(fast_difference_between_rotations(a, b) > 1.5707964f)) goto next_point;
             {
                 if (current_level_index == 0x10 && g->unk8B4 != 0) {
@@ -1397,7 +1389,7 @@ void FUN_L05_00254358(f32 *position, f32 *direction) {
                     }
                 }
                 {
-                    f32 distance = FUN_001f9b80((char *)&hero + 0x80, p);
+                    f32 distance = vector_distance_xy((char *)&hero + 0x80, p);
                     if (distance < best) {
                         best = distance;
                         selected = index;
@@ -1415,10 +1407,10 @@ next_point:
     point.z += 2.0f;
     position[2] = find_ground_height(0.5f, &point, 0);
     clear_u64_value(direction);
-    direction[2] = FUN_001f9e90(path->points[selected + 1].x - path->points[selected].x, path->points[selected + 1].y - path->points[selected].y);
+    direction[2] = fast_arc_tan(path->points[selected + 1].x - path->points[selected].x, path->points[selected + 1].y - path->points[selected].y);
 }
 #endif
-extern int D_0015ED84_254608 __asm__("D_0015ED84") __attribute__((section(".sdata")));
+extern int D_0015ED84_lui __asm__("D_0015ED84") __attribute__((section(".sdata")));
 extern int FUN_001f96f8_254608(int) __asm__("FUN_001f96f8");
 typedef int u128_254608 __attribute__((mode(TI)));
 typedef struct { float x, y, z, w; } __attribute__((aligned(16))) Node_254608;
@@ -1493,7 +1485,7 @@ void FUN_L05_00254608(void) {
     }
     path = D_L05_001B0930_254608[d->f20];
     hero.unk8B4 = (void *)path;
-    if (D_0015ED84_254608 == 0x10) {
+    if (D_0015ED84_lui == 0x10) {
         *(u128_254608 *)v0 = 0;
         v0[0] = 163.0f;
         v0[1] = 119.0f;
@@ -1533,7 +1525,7 @@ void FUN_L05_00254608(void) {
         }
     }
     near = 0;
-    if (D_0015ED84_254608 == 0x10) {
+    if (D_0015ED84_lui == 0x10) {
         if (hero.motion.pos.f[2] < path->p[hero.unk898].z - 2.0f) {
             near = 1;
             if (hero.unk8AE < FUN_001f96f8_254608(0x46)) {
@@ -1618,12 +1610,12 @@ void FUN_L05_00254608(void) {
     if (*(D_0013D388_254608) != 0) {
         D_L05_0015F6A8 = 1;
     }
-    if (D_0015ED84_254608 == 5) {
+    if (D_0015ED84_lui == 5) {
         D_0015EE38_macro++;
-    } else if (D_0015ED84_254608 == 0x10) {
+    } else if (D_0015ED84_lui == 0x10) {
         D_0015EE3C_macro++;
     }
-    if (D_0015ED84_254608 == 5) {
+    if (D_0015ED84_lui == 5) {
         int t;
 
         if (pal_mode != 0) {
@@ -1664,7 +1656,7 @@ void FUN_L05_00254608(void) {
             hero.unk880 = -1;
         }
         func_001FFFA0_254608();
-    } else if (D_0015ED84_254608 == 0x10) {
+    } else if (D_0015ED84_lui == 0x10) {
         if (d->f28 == -1) {
             return;
         }
@@ -1720,9 +1712,6 @@ int FUN_L05_002551d0(void) {
 
 #define MACRO_ADDR
 
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L05_00255208.s", FUN_L05_00255208);
-#else
 extern s32 current_level_index __asm__("D_0015ED84") __attribute__((sda));
 extern float frame_time __asm__("D_0015ED6C") __attribute__((section(".sdata")));
 extern void fast_vec_normalize(void *, void *, float) __asm__("FUN_001f9bf8");
@@ -1731,29 +1720,29 @@ extern int FUN_L00_0025d7a0(void *, int, int, int);
 extern int D_L05_0015F698 __attribute__((sda));
 
 int FUN_L05_00255208(void) {
-    struct Hero *g = &hero;
+    struct Hero *player = &hero;
     float start[4] __attribute__((aligned(16)));
     float end[4] __attribute__((aligned(16)));
     float velocity[4] __attribute__((aligned(16)));
     int level;
     int state;
     int can_fall;
-    if (frame_time * 12.0f < g->motion.unk164) {
+    if (frame_time * 12.0f < player->motion.unk164) {
         FUN_L00_0025c9d8(start, 0.0f, 0.0f, 0.75f);
         qcopy(end, start);
-        qcopy(velocity, &g->motion.velocity);
+        qcopy(velocity, &player->motion.velocity);
         fast_vec_normalize(velocity, velocity, 0.55f);
-        fast_vec_add(velocity, velocity, &g->motion.velocity);
+        fast_vec_add(velocity, velocity, &player->motion.velocity);
         velocity[2] = 0.0f;
         fast_vec_add(end, start, velocity);
         if (FUN_L00_0021e8d8(start, end, 2, 0, 0) &&
             D_L05_00174240.moby == 0 && D_L05_00174240.unk1C != 0) {
             CollisionHit *wall = &D_L05_00174240;
             if (1.2217305f < FUN_L00_0022e598(wall->normal_z, FUN_L00_0022e0f0(&wall->normal_x))) {
-                g->unk8A4 = fast_add_rotations(FUN_L00_0022e598(wall->normal_x, wall->normal_y), 3.1415927f);
-                if (fast_difference_between_rotations(FUN_L00_0022e598(g->motion.velocity.f[0], g->motion.velocity.f[1]), g->unk8A4) < 0.7853982f) {
+                player->unk8A4 = fast_add_rotations(FUN_L00_0022e598(wall->normal_x, wall->normal_y), 3.1415927f);
+                if (fast_difference_between_rotations(FUN_L00_0022e598(player->motion.velocity.f[0], player->motion.velocity.f[1]), player->unk8A4) < 0.7853982f) {
                     state = 0x6F;
-                    if (!(g->ground_distance < 1.0f)) state = 0x6D;
+                    if (!(player->ground_distance < 1.0f)) state = 0x6D;
                     goto change_state;
                 }
             }
@@ -1799,7 +1788,7 @@ int FUN_L05_00255208(void) {
                 float minimum;
                 if (height < other) minimum = height;
                 else minimum = other;
-                distance = FUN_001f9b80(&(&hero)->motion.pos, &path->p[index]);
+                distance = vector_distance_xy(&(&hero)->motion.pos, &path->p[index]);
                 if (0.5f < minimum - (&hero)->motion.pos.f[2] && 4.0f < distance) {
                     state = 0x6D;
                     goto change_state;
@@ -1836,8 +1825,8 @@ continue_fall:
             queue_dialogue_message_254608(0x53D6, -1);
         }
         {
-            struct Hero *g = &hero;
-            *(int *)((char *)g + 0x714) = 0;
+            struct Hero *player = &hero;
+            *(int *)((char *)player + 0x714) = 0;
         }
     }
     if ((&hero)->state.current == 0x6C) {
@@ -1856,7 +1845,6 @@ continue_fall:
     }
     return 0;
 }
-#endif
 /* Ported from rac1-decomp (src/overlays/shared/help_00237B00.c: func_L05_0025BDA8), where it is exact; names translated to the US level program. */
 
 extern char D_L05_0017C068[];

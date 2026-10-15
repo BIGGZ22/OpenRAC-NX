@@ -68,7 +68,7 @@ void _sequenceHeader(struct MpegDecoder *mpeg) {
 
 extern s32 InitializeReferenceImage();
 extern s32 _initRefImages();
-extern s32 func_0012BC10();
+extern s32 copy_object_field_backward() __asm__("func_0012BC10");
 extern s32 reserve_aligned_buffer_space() __asm__("func_0012BC20");
 
 void func_0012C4C8(struct sceMpeg *arg0) {
@@ -122,13 +122,13 @@ void func_0012C4C8(struct sceMpeg *arg0) {
             return;
         }
         var_2_53 = ((u8 *)mpeg + 0x528);
+    } else {
+        var_2_53 = ((u8 *)mpeg + 0x528);
     }
-    sp40 = ((u8 *)mpeg + (0x4C0));
-    var_2_53 = sp40 + 0x68;
+    temp_17_63 = var_2_53 - 0x420;
     {
-        arg0->width = temp_23_51;
         arg0->height = temp_22_48;
-        temp_17_63 = ((u8 *)mpeg + (0x108));
+        arg0->width = temp_23_51;
         sp30 = ((u8 *)mpeg + (0x320));
         temp_19_67 = ((u8 *)mpeg + (0x1E8));
         sp34 = ((u8 *)mpeg + (0x388));
@@ -137,9 +137,10 @@ void func_0012C4C8(struct sceMpeg *arg0) {
         sp38 = ((u8 *)mpeg + (0x3F0));
         temp_16_77 = ((0x180U * (u32)temp_23_51) * (u32)temp_22_48) >> 8;
         sp3C = ((u8 *)mpeg + (0x458));
+        sp40 = ((u8 *)mpeg + (0x4C0));
         width = temp_23_51;
         height = temp_22_48;
-        func_0012BC10(temp_17_63);
+        copy_object_field_backward(temp_17_63);
         mpeg->frame_buffers[0] = reserve_aligned_buffer_space(mpeg, temp_17_63, temp_16_77, 0x40);
         mpeg->frame_buffers[1] = reserve_aligned_buffer_space(mpeg, temp_17_63, temp_16_77, 0x40);
         mpeg->frame_buffers[2] = reserve_aligned_buffer_space(mpeg, temp_17_63, temp_16_77, 0x40);

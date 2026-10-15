@@ -41,14 +41,13 @@ typedef struct {
 extern HeroTableRow2C D_L01_0017C0A8[];
 extern HeroAnimRow D_L01_00179F40[];
 extern HeroTableEntry70 D_L01_00179D10[];
-extern struct UsageStats D_00141848;
 extern S17AB80 D_L01_0017AB00;
 extern S17C2B8 D_L01_0017C238;
 extern char D_0013E550[];
 extern float absolute_float(float) __asm__("func_001F99C0");
 extern float D_L01_0015F638;
 extern float D_L01_00167258_lui __asm__("D_L01_00167258") __attribute__((section(".data")));
-extern float FUN_001f96b0(float);
+extern float multiply_global_factor_ed64(float) __asm__("FUN_001f96b0");
 extern float FUN_001f9b80(void *, void *);
 extern float fast_difference_between_rotations(float, float) __asm__("FUN_001fa688");
 extern float FUN_L00_00208f20(float a, float b, float c, float d);
@@ -64,10 +63,10 @@ extern float random_float_between(float a, float b) __asm__("FUN_002132a8");
 extern float vector_length_xy(void *);
 extern float vector_length_xyz(void *a);
 extern int D_00141660 __attribute__((section(".data")));
-extern int D_L01_0015F6DC_d __asm__("D_L01_0015F6DC");
+extern int D_L01_0015F6DC __asm__("D_L01_0015F6DC");
 extern int D_L01_0015F594 __attribute__((sda));
 extern int D_L01_0016CC00 __attribute__((section(".data")));
-extern int FUN_001f9770(void *);
+extern int fast_dec_timer_s16(void *) __asm__("FUN_001f9770");
 extern int FUN_L00_002050b8(int);
 extern int hero_slot_item_id(int) __asm__("FUN_L00_0020d498");
 extern int FUN_L00_00211360(void *);
@@ -176,8 +175,8 @@ void FUN_L01_00242930(void) {
                     hud_keep_visible(id, scale_game_frames(0xB4));
                 }
             }
-            FUN_001f9770(&hero.unk22D4);
-            FUN_001f9770(&hero.unk22D6);
+            fast_dec_timer_s16(&hero.unk22D4);
+            fast_dec_timer_s16(&hero.unk22D6);
             if (controller_state.pressed & 0x10) {
                 hero.unk22D4 = scale_game_frames(0x14);
             }
@@ -192,13 +191,13 @@ void FUN_L01_00242930(void) {
                         next = D_00141660;
                     }
                     if (next != 0 && cur != base) {
-                        if (D_00141848.stat[31].count < 0xFFFF) {
-                            D_00141848.stat[31].count++;
+                        if (usage_stats.stat[31].count < 0xFFFF) {
+                            usage_stats.stat[31].count++;
                         }
-                        if (scale_game_frames(D_0015EEA4) / 600 > D_00141848.stat[31].unk2) {
-                            D_00141848.stat[31].unk2 = scale_game_frames(D_0015EEA4) / 600;
+                        if (scale_game_frames(D_0015EEA4) / 600 > usage_stats.stat[31].unk2) {
+                            usage_stats.stat[31].unk2 = scale_game_frames(D_0015EEA4) / 600;
                         }
-                        D_00141848.stat[31].level_mask = D_00141848.stat[31].level_mask | (1 << current_level_index) | 0x80000000;
+                        usage_stats.stat[31].level_mask = usage_stats.stat[31].level_mask | (1 << current_level_index) | 0x80000000;
                         hero.pending_item[0] = next;
                         hero.unk22D4 = 0;
                         hero.unk22D6 = 0;
@@ -263,7 +262,7 @@ void FUN_L01_00242930(void) {
                                 hero.unk2270 = record_index;
                                 rec = &D_L01_00179D10[record_index];
                                 hero.fidget_cooldown = scale_game_frames(0x78);
-                                rec->duration_frames = FUN_001f96b0(rec->duration) * 60.0f;
+                                rec->duration_frames = multiply_global_factor_ed64(rec->duration) * 60.0f;
                                 if (rec->use_state_40 != 0) {
                                     hero_set_state(HERO_STATE_FIDGET, 1);
                                 } else {
@@ -1351,7 +1350,7 @@ void FUN_L01_00242930(void) {
                         hero_set_state(HERO_STATE_RUN, 0);
                         if (hero.state.current == HERO_STATE_RUN) {
                             hero.state.step = 1;
-                            set_hero_animation(4, D_L01_0015F6DC_d, scale_game_frames(0xC));
+                            set_hero_animation(4, D_L01_0015F6DC, scale_game_frames(0xC));
                         }
                         FUN_L00_00233288(0.016f, 0.002f, 5, 2, 1, 0);
                         break;
