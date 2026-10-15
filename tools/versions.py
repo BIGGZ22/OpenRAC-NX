@@ -110,6 +110,30 @@ def derive(code: bytes, relocs: list, address: int, retail: bytes, gp: int) -> t
     return values, None
 
 
+def place(obj: dict, obj_path: str, names: list, funcs: list, sym: dict, address: int, retail: bytes,
+          gp: int) -> tuple[dict, str | None]:
+    """derive() for function SYM of OBJ placed at ADDRESS, where RETAIL is the other version's code."""
+    section = obj["sections"][sym["section"]]
+    start, end = sym["value"], sym["value"] + sym["size"]
+    code = bytearray(section["data"][start:end])
+    relocs = []
+    for o, kind, i in obj["relocations"].get(sym["section"], []):
+        if not start <= o < end:
+            continue
+        name = names[i]
+        if kind == R_MIPS_26 and obj["symbols"][i]["type"] == STT_SECTION and obj["symbols"][i]["section"] == sym["section"]:
+            # A call within the object goes to a function of it: name that function, so a
+            # version whose object grew or shrank elsewhere still places the call.
+            w, = struct.unpack_from("<I", code, o - start)
+            to = (w & 0x3FFFFFF) << 2
+            callee = next((f for f in funcs if f["value"] <= to < f["value"] + max(f["size"], 1)), None)
+            if callee is not None:
+                struct.pack_into("<I", code, o - start, (w & 0xFC000000) | (to - callee["value"]) >> 2)
+                name = callee["name"]
+        relocs.append((o - start, kind, name))
+    return derive(bytes(code), relocs, address, retail, gp)
+
+
 def pairs(src_key: str, dst_key: str) -> dict[int, int]:
     """FROM's boot address -> TO's, for functions with the same code once in each boot."""
     src, dst = (json.loads((xmap.INDEX / f"{xmap.slug(k)}.json").read_text()) for k in (src_key, dst_key))
@@ -166,25 +190,7 @@ def check(src_key: str, dst_key: str, build: Path) -> None:
             if address is None:
                 outcome["not paired one to one"] += 1
                 continue
-            section = obj["sections"][sym["section"]]
-            start, end = sym["value"], sym["value"] + sym["size"]
-            code = bytearray(section["data"][start:end])
-            relocs = []
-            for o, kind, i in obj["relocations"].get(sym["section"], []):
-                if not start <= o < end:
-                    continue
-                name = names[i]
-                if kind == R_MIPS_26 and obj["symbols"][i]["type"] == STT_SECTION and obj["symbols"][i]["section"] == sym["section"]:
-                    # A call within the object goes to a function of it: name that function, so a
-                    # version whose object grew or shrank elsewhere still places the call.
-                    w, = struct.unpack_from("<I", code, o - start)
-                    to = (w & 0x3FFFFFF) << 2
-                    callee = next((f for f in funcs if f["value"] <= to < f["value"] + max(f["size"], 1)), None)
-                    if callee is not None:
-                        struct.pack_into("<I", code, o - start, (w & 0xFC000000) | (to - callee["value"]) >> 2)
-                        name = callee["name"]
-                relocs.append((o - start, kind, name))
-            found, why = derive(bytes(code), relocs, address, retail(address, sym["size"]), gp)
+            found, why = place(obj, obj_path, names, funcs, sym, address, retail(address, sym["size"]), gp)
             if why:
                 outcome[why] += 1
                 continue
@@ -220,6 +226,80 @@ def check(src_key: str, dst_key: str, build: Path) -> None:
         print(f"  {name}: {symbol} disagrees with {other}")
     for s in wrong[:10]:
         print(f"  {s}: {values[s]:08X}, xmap says {pal_to[int(s[5:], 16)]:08X}")
+    levels(src_key, dst_key, build, gp, values)
+
+
+def levels(src_key: str, dst_key: str, build: Path, gp: int, boot_values: dict) -> None:
+    """The same check for level code. Each level is a program of its own, with its own addresses,
+    and shared level code sits in several of them: a function is placed in every level where both
+    versions have it exactly once, and each level gets its own map. A reference from level code to
+    the boot executable has to agree with the boot's map."""
+    src, dst = (json.loads((xmap.INDEX / f"{xmap.slug(k)}.json").read_text()) for k in (src_key, dst_key))
+    fp_of = {m["name"]: fp for fp, m in src["matched"].items() if m["program"] != "boot"}
+    files = xmap.program_files(xmap.versions()[dst_key])
+    texts = {}
+
+    def retail(program: str, address: int, size: int) -> bytes:
+        if program not in texts:
+            path, fmt = files[program]
+            texts[program] = xmap.load(path, fmt).get(".text", (0, b""))
+        base, data = texts[program]
+        return data[address - base:address - base + size] if base <= address < base + len(data) else b""
+
+    def one(f: dict | None, program: str) -> int | None:
+        places = [a for p, a in (f or {"places": []})["places"] if p == program]
+        return places[0] if len(places) == 1 else None
+
+    # Levels load over part of the boot's memory and carry their own copies of what was there:
+    # only boot symbols below the lowest level code are the boot's in a level too.
+    low = min(xmap.load(*files[p]).get(".text", (1 << 32, b""))[0] for p in files if p.startswith("level:"))
+    boot_values = {k: v for k, v in boot_values.items() if v < low}
+    objects = sorted(p for d in ["shared", *[d.name for d in (build / "build-sn/overlays/report").glob("l??_*")]]
+                     for p in (build / "build-sn/overlays/report" / d).glob("*/obj.o"))
+    values, owner, outcome, placements = {}, {}, Counter(), 0
+    for path in objects:
+        obj = read_object(path)
+        rel = path.relative_to(build).as_posix()
+        names = [s["name"] if s["type"] != STT_SECTION else f"§{rel}:{obj['sections'][s['section']]['name']}"
+                 for s in obj["symbols"]]
+        funcs = [s for s in obj["symbols"] if s["type"] == STT_FUNC]
+        for sym in funcs:
+            fp = fp_of.get(sym["name"])
+            if fp is None or fp not in src["functions"]:
+                continue
+            programs = {p for p, _ in src["functions"][fp]["places"]}
+            placed_any = False
+            for program in sorted(programs):
+                at, there = one(src["functions"][fp], program), one(dst["functions"].get(fp), program)
+                if at is None or there is None:
+                    continue
+                placed_any = True
+                placements += 1
+                found, why = place(obj, rel, names, funcs, sym, there, retail(program, there, sym["size"]), gp)
+                if not why:
+                    why = next(("disagrees with the boot's map below the levels" for s, v in found.items()
+                                if s in boot_values and boot_values[s] != v), None)
+                if not why:
+                    clash = [k for k, v in found.items() if values.get((program, k), v) != v]
+                    why = "disagrees with another function" if clash else None
+                if why:
+                    outcome[why] += 1
+                    continue
+                for k, v in found.items():
+                    values.setdefault((program, k), v)
+                    owner.setdefault((program, k), sym["name"])
+                outcome["same bytes"] += 1
+            if not placed_any:
+                outcome["functions not paired one to one in any level"] += 1
+    out = OUT / f"{xmap.slug(src_key)}--{xmap.slug(dst_key)}.levels.tsv"
+    out.write_text(f"# {src_key} level symbol -> its value in {dst_key}'s level program (tools/versions.py)\n" + "".join(
+        f"{p}\t{k}\t{v:08X}\n" for (p, k), v in sorted(values.items()) if not k.startswith("§")))
+    tried = placements
+    print(f"levels: {len(fp_of)} matched level functions, {tried} placements tried")
+    for why, n in outcome.most_common():
+        print(f"  {n:5}  {why}")
+    print(f"symbols: {sum(1 for p, k in values if not k.startswith('§'))} (level, symbol) values; "
+          f"map written to {out.relative_to(ROOT)}")
 
 
 def main() -> None:

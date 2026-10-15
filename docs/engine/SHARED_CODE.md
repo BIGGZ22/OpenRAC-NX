@@ -289,6 +289,17 @@ First result, 2026-10-15, rac1/pal to rac1/ntsc: of 1,030 matched boot
 functions, 919 pair one to one, and 898 of those reproduce NTSC-U's bytes
 exactly with one consistent map of 1,765 symbols (865 of them data). The
 rest are 14 real instruction differences, 4 relocation pairings the checker
-does not read yet and 3 conflicts in one object. Level programs are not
-checked yet. This is the evidence for building PAL and NTSC-U from one tree
+does not read yet and 3 conflicts in one object.
+
+Level programs get the same check, each level with a map of its own (shared
+level code sits in several levels at different addresses): a function is
+placed in every level where both versions have it exactly once, and level
+code's references to the boot executable have to agree with the boot's map
+below the lowest level code (levels load over the rest of the boot's memory
+and carry their own copies of what was there). Of 5,561 placements of the
+3,069 matched level functions, 5,188 reproduce NTSC-U's bytes exactly
+(15,403 level symbol values, `build/versions/FROM--TO.levels.tsv`); 219
+disagree with another function's placement, 60 differ in an instruction, 93
+use relocations the checker does not read yet, and 184 functions have no
+one-to-one place in any level. This is the evidence for building PAL and NTSC-U from one tree
 with a per-version address map rather than keeping two source trees.
