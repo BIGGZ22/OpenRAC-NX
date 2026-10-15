@@ -140,37 +140,85 @@ def place(obj: dict, obj_path: str, names: list, funcs: list, sym: dict, address
     return found, why
 
 
-def variant_objects(src_key: str, dst_key: str, build: Path) -> list[tuple[str, Path]]:
-    """Compile TO's variant files and return (object path from the checkout's root, object).
+LEVEL_RUNNER = """\
+# Written and run by OpenRAC's tools/versions.py: builds variant level-code files the way
+# tools/gen_progress_report.py builds level files (try_func's "text" pipeline, the original
+# file's path and flags, the variant's text spliced over all of it).
+import sys
+from pathlib import Path
+sys.path.insert(0, "tools")
+import try_func
+import gen_progress_report as report
+from toolchain import start_wineserver
+start_wineserver()
+for orig, variant, work in zip(*[iter(sys.argv[1:])] * 3):
+    text = Path(variant).read_text()
+    names = [n for n, is_c in report.overlay_file_functions(Path(variant)) if is_c]
+    lines = Path(orig).read_text(errors="replace").splitlines()
+    obj = try_func.build(names[0], "text", Path(orig), 0, len(lines) - 1, text, Path(work))
+    if obj is None:
+        sys.exit(f"{orig}: " + (Path(work) / "log.txt").read_text(errors="replace")[-2000:])
+    print(f"OBJ {obj}")
+"""
+_compiled: dict = {}
+
+
+def variant_objects(src_key: str, dst_key: str, build: Path) -> list[tuple[str, Path, str]]:
+    """Compile TO's variant files: [(object path from the checkout's root, object, "boot" or
+    "level")], once per run.
 
     A function whose code differs in TO (other struct offsets, other constants) has a variant
     in versions/<TO's version>/src/ under FROM's tree, at the path of the file that holds it in
-    FROM. Only TO's build compiles it: FROM's own files stay as synced. Each variant file is
-    built the way FROM builds its counterpart, by FROM's own Makefile.sn run in a shadow
-    directory whose src/ holds only the variants (same compiler, per-file flags and assembler
-    steps), so the objects are what that file would give with the variant's C."""
+    FROM. Only TO's build compiles it: FROM's own files stay as synced. Each variant is built
+    the way FROM builds its counterpart: an executable file by FROM's own Makefile.sn run in a
+    shadow directory whose src/ holds only the variants, a level-code file (src/overlays/) by
+    the pipeline FROM's progress report builds level files with. Same compiler, per-file flags
+    and assembler steps, so the objects are what that file would give with the variant's C."""
+    key = (src_key, dst_key, str(build))
+    if key in _compiled:
+        return _compiled[key]
     version = dst_key.split("/")[1]
     root = build / "versions" / version / "src"
     files = sorted(root.rglob("*.c")) if root.is_dir() else []
-    if not files:
-        return []
-    import shutil
-    import subprocess
-    shadow = build / "build-sn" / f"variants-{version}"
-    if shadow.exists():
-        shutil.rmtree(shadow)
-    shadow.mkdir(parents=True)
-    for name in ("Makefile.sn", "include", "include-sn", "config", "tools", "toolchain", "asm"):
-        if (build / name).exists():
-            (shadow / name).symlink_to(Path("../..") / name)
-    shutil.copytree(root, shadow / "src")
-    targets = [f"build-sn/{f.relative_to(root).with_suffix('.o').as_posix()}" for f in files]
-    rel = shadow.relative_to(build).as_posix()
-    cmd = f"cd {rel} && . tools/toolchain.sh && make_sn {' '.join(targets)}"
-    run = subprocess.run(["bash", "tools/docker/run.sh", "bash", "-c", cmd], cwd=build, capture_output=True, text=True)
-    if run.returncode:
-        sys.exit("compiling the variants failed:\n" + (run.stdout + run.stderr)[-3000:])
-    return [(f"{rel}/{t}", shadow / t) for t in targets]
+    out = []
+    if files:
+        import shutil
+        import subprocess
+        shadow = build / "build-sn" / f"variants-{version}"
+        if shadow.exists():
+            shutil.rmtree(shadow)
+        shadow.mkdir(parents=True)
+        for name in ("Makefile.sn", "include", "include-sn", "config", "tools", "toolchain", "asm"):
+            if (build / name).exists():
+                (shadow / name).symlink_to(Path("../..") / name)
+        shutil.copytree(root, shadow / "src")
+        rel = shadow.relative_to(build).as_posix()
+        exe = [f for f in files if not f.relative_to(root).as_posix().startswith("overlays/")]
+        level = [f for f in files if f not in exe]
+        steps = []
+        if exe:
+            targets = [f"build-sn/{f.relative_to(root).with_suffix('.o').as_posix()}" for f in exe]
+            steps.append(f"(cd {rel} && . tools/toolchain.sh && make_sn {' '.join(targets)})")
+            out += [(f"{rel}/{t}", shadow / t, "boot") for t in targets]
+        if level:
+            (shadow / "levels.py").write_text(LEVEL_RUNNER)
+            args = []
+            for f in level:
+                r = f.relative_to(root)
+                work = f"{rel}/work/{r.parent.name}/{r.stem}"
+                args += [f"src/{r.as_posix()}", f"{rel}/src/{r.as_posix()}", work]
+            steps.append(f"python {rel}/levels.py {' '.join(args)}")
+        run = subprocess.run(["bash", "tools/docker/run.sh", "bash", "-c", " && ".join(steps)],
+                             cwd=build, capture_output=True, text=True)
+        if run.returncode:
+            sys.exit("compiling the variants failed:\n" + (run.stdout + run.stderr)[-3000:])
+        for line in run.stdout.splitlines():
+            if line.startswith("OBJ "):
+                obj = Path(line[4:])
+                path = obj if obj.is_absolute() else build / obj
+                out.append((path.relative_to(build).as_posix(), path, "level"))
+    _compiled[key] = out
+    return out
 
 
 def pairs(src_key: str, dst_key: str) -> dict[int, int]:
@@ -249,7 +297,9 @@ def check(src_key: str, dst_key: str, build: Path, boot_only: bool = False, ever
     # Variants: TO's own C for functions that differ, compiled from versions/<TO>/src/. They are
     # placed like FROM's functions and take the place of FROM's version of them.
     variant_failed = []
-    for obj_path, path in variant_objects(src_key, dst_key, build) if variants else []:
+    for obj_path, path, kind in variant_objects(src_key, dst_key, build) if variants else []:
+        if kind != "boot":
+            continue
         obj = read_object(path)
         names = [s["name"] if s["type"] != STT_SECTION else f"§{obj_path}:{obj['sections'][s['section']]['name']}"
                  for s in obj["symbols"]]
@@ -306,7 +356,8 @@ def check(src_key: str, dst_key: str, build: Path, boot_only: bool = False, ever
     return values, placed, objects, gp
 
 
-def levels(src_key: str, dst_key: str, build: Path, gp: int, boot_values: dict, collect: bool = False):
+def levels(src_key: str, dst_key: str, build: Path, gp: int, boot_values: dict, collect: bool = False,
+           variants: bool = True):
     """The same check for level code. Each level is a program of its own, with its own addresses,
     and shared level code sits in several of them: a function is placed in every level where both
     versions have it exactly once, and each level gets its own map. A reference from level code to
@@ -334,9 +385,12 @@ def levels(src_key: str, dst_key: str, build: Path, gp: int, boot_values: dict, 
     objects = sorted(p for d in ["shared", *[d.name for d in (build / "build-sn/overlays/report").glob("l??_*")]]
                      for p in (build / "build-sn/overlays/report" / d).glob("*/obj.o"))
     values, owner, outcome, placements, pieces = {}, {}, Counter(), 0, {}
-    for path in objects:
+    # FROM's level objects, then TO's level-code variants, which fill what FROM's could not place
+    inputs = [(p, p.relative_to(build).as_posix(), False) for p in objects]
+    inputs += [(p, r, True) for r, p, kind in (variant_objects(src_key, dst_key, build) if variants else [])
+               if kind == "level"]
+    for path, rel, is_variant in inputs:
         obj = read_object(path)
-        rel = path.relative_to(build).as_posix()
         names = [s["name"] if s["type"] != STT_SECTION else f"§{rel}:{obj['sections'][s['section']]['name']}"
                  for s in obj["symbols"]]
         funcs = [s for s in obj["symbols"] if s["type"] == STT_FUNC]
@@ -350,6 +404,8 @@ def levels(src_key: str, dst_key: str, build: Path, gp: int, boot_values: dict, 
                 at, there = one(src["functions"][fp], program), one(dst["functions"].get(fp), program)
                 if at is None or there is None:
                     continue
+                if is_variant and sym["name"] in pieces.get(program, {}):
+                    continue                   # FROM's own placed here: nothing to take from the variant
                 placed_any = True
                 placements += 1
                 found, why = place(obj, rel, names, funcs, sym, there, retail(program, there, sym["size"]), gp)
@@ -361,14 +417,14 @@ def levels(src_key: str, dst_key: str, build: Path, gp: int, boot_values: dict, 
                     clash = [k for k, v in found.items() if values.get((program, k), v) != v]
                     why = "disagrees with another function" if clash else None
                 if why:
-                    outcome[why] += 1
+                    outcome[f"variant: {why}" if is_variant else why] += 1
                     continue
                 for k, v in found.items():
                     values.setdefault((program, k), v)
                     owner.setdefault((program, k), sym["name"])
                 pieces.setdefault(program, {})[sym["name"]] = piece
-                outcome["same bytes"] += 1
-            if not placed_any:
+                outcome["same bytes (variant)" if is_variant else "same bytes"] += 1
+            if not placed_any and not is_variant:
                 outcome["functions not paired one to one in any level"] += 1
     out = OUT / f"{xmap.slug(src_key)}--{xmap.slug(dst_key)}.levels.tsv"
     out.write_text(f"# {src_key} level symbol -> its value in {dst_key}'s level program (tools/versions.py)\n" + "".join(
@@ -641,34 +697,41 @@ def variant(src_key: str, dst_key: str, build: Path, names: list[str]) -> None:
     The file gets FROM's declarations and the externs the functions use. Rerun `check`: the
     variant counts only when it compiles to TO's bytes."""
     import re
-    pal_to = pairs(src_key, dst_key)
-    want = {pal_to[int(n[5:], 16)]: n for n in names if xmap.NAME.match(n) and int(n[5:], 16) in pal_to}
-    if len(want) != len(names):
-        sys.exit(f"not paired one to one: {sorted(set(names) - set(want.values()))}")
-    diffs = {}
-    original = derive
+    wanted = set(names)
+    diffs, current = {}, [None]
+    original_place, original_derive = place, derive
+
+    def spy_place(obj, obj_path, sym_names, funcs, sym, *rest):
+        current[0] = sym["name"]
+        return original_place(obj, obj_path, sym_names, funcs, sym, *rest)
 
     def spy(code, relocs, address, retail, gp):
-        found = original(code, relocs, address, retail, gp)
-        if found[1] == "instruction differs" and address in want:
+        found = original_derive(code, relocs, address, retail, gp)
+        name = current[0]
+        if found[1] == "instruction differs" and name in wanted:
             touched = {o for o, _, _ in relocs}
             m = {}
             for at in range(0, len(code), 4):
                 a, b = (int.from_bytes(x[at:at + 4], "little") for x in (code, retail))
                 if at not in touched and a != b:
                     if a >> 16 != b >> 16:
-                        sys.exit(f"{want[address]}: more than an immediate differs at +{at:#x}")
+                        sys.exit(f"{name}: more than an immediate differs at +{at:#x}")
                     m[a & 0xFFFF] = b & 0xFFFF
-            diffs[want[address]] = m
+            # a level function has a place in several levels: they have to agree
+            for k, x in m.items():
+                if diffs.setdefault(name, {}).setdefault(k, x) != x:
+                    sys.exit(f"{name}: {k:#x} becomes {x:#x} in one level and {diffs[name][k]:#x} in another")
         return found
     import io
     import contextlib
-    globals()["derive"] = spy
+    globals()["place"], globals()["derive"] = spy_place, spy
     try:
         with contextlib.redirect_stdout(io.StringIO()):
-            check(src_key, dst_key, build, boot_only=True, variants=False)
+            values, _placed, _objects, gp = check(src_key, dst_key, build, boot_only=True, variants=False)
+            if any(xmap.NAME.match(n) and xmap.NAME.match(n).group(1) for n in names):
+                levels(src_key, dst_key, build, gp, values, variants=False)
     finally:
-        globals()["derive"] = original
+        globals()["place"], globals()["derive"] = original_place, original_derive
     missing = [n for n in names if n not in diffs]
     if missing:
         sys.exit(f"these do not differ only in immediates (or already match): {missing}")

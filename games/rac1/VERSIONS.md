@@ -89,3 +89,13 @@ from before `+0xC0` on (`menu.c`, `bmain.c` and `space.c` read fields past
 that point), and `missionfunc.c` uses another id (`0x523E` for PAL's
 `0x5243`). With them, 14 more functions reproduce NTSC-U, and all 20 NTSC-U
 programs still link identical to the disc.
+
+Level code works the same way: a variant of a file under `src/overlays/` is
+built with the pipeline PAL's progress report builds level files with, and
+placed in every level where PAL's version could not go. A shared level
+function sits in several levels, and NTSC-U's levels do not always agree on
+it, so a variant may place in some of its levels and not others. Five level
+files have variants so far (nine level placements). The level functions
+still differing are listed by `check`; most differ only in immediates the
+C does not write as hex literals (decimal values, other struct views), and
+need their variants written by hand.
