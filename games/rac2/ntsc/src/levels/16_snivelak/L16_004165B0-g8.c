@@ -5,6 +5,74 @@ typedef signed int s32;
 typedef unsigned int u32;
 typedef float f32;
 
+extern char *D_L16_001B2B1C __attribute__((sda));
+extern char D_00189EA0[];
+extern s32 func_00319BE8(char *, s32);
+
+/* runs the object's start-up state once and marks the four sub-objects it carries as alive */
+void func_L16_00418D28(char *arg0) {
+    char *st = *(char **)(arg0 + 0x68);
+    char *p;
+    u8 x;
+
+    if (*(u8 *)(arg0 + 0x20) == 0)
+        *(u8 *)(arg0 + 0x20) = 1;
+    if (*(u8 *)(arg0 + 0x20) != 1)
+        return;
+
+    p = (*(s32 *)st << 8) + *(char **)0x001B2B1C;
+    if (p != 0) {
+        x = *(u8 *)(p + 0x20);
+        if (x != 0xFE) {
+            if (x != 0xFD)
+                return;
+        }
+    }
+    if (func_00319BE8(D_00189EA0, *(s32 *)(st + 4)) == 0)
+        return;
+    if (*(s32 *)(st + 0x10) != -1)
+        *(u8 *)(D_L16_001B2B1C + (*(s32 *)(st + 0x10) << 8) + 0xBC) = 1;
+    if (*(s32 *)(st + 0x14) != -1)
+        *(u8 *)(D_L16_001B2B1C + (*(s32 *)(st + 0x14) << 8) + 0xBC) = 1;
+    if (*(s32 *)(st + 0x18) != -1)
+        *(u8 *)(D_L16_001B2B1C + (*(s32 *)(st + 0x18) << 8) + 0xBC) = 1;
+    if (*(s32 *)(st + 0x1C) != -1)
+        *(u8 *)(D_L16_001B2B1C + (*(s32 *)(st + 0x1C) << 8) + 0xBC) = 1;
+    *(u8 *)(arg0 + 0x20) = 2;
+}
+
+extern s32 D_L16_001B1FCC __attribute__((sda));
+extern s32 D_L16_001B1FC4 __attribute__((sda));
+extern s32 D_L16_001B1FC8 __attribute__((sda));
+extern s32 D_L16_001B1FD0 __attribute__((sda));
+extern s32 D_001B3AAC __attribute__((nosda));
+extern f32 D_L16_001B3AAC __attribute__((sda));
+extern s32 func_003219A0(char *);
+extern void func_00313DD0(char *, s32, s32);
+extern f32 func_002E73F8(f32);
+extern void func_0041ECF8(char *, f32);
+
+extern f32 D_L16_001B1C60 __attribute__((sda));
+extern f32 D_001B1C64 __attribute__((nosda));
+extern f32 D_001B1C68 __attribute__((nosda));
+extern f32 D_001B1C6C __attribute__((nosda));
+extern f32 D_L16_001B1C70 __attribute__((sda));
+extern f32 D_001B1C74 __attribute__((nosda));
+extern s32 D_L16_001B1C78 __attribute__((sda));
+extern s32 D_001B1C7C __attribute__((nosda));
+extern s32 D_L16_001B1C80 __attribute__((sda));
+extern s32 D_001B1C84 __attribute__((nosda));
+extern s32 D_001B1C88 __attribute__((nosda));
+extern s32 D_001B1C8C __attribute__((nosda));
+extern s32 D_L16_001B1C90 __attribute__((sda));
+extern void func_003140C0(char *, f32, f32);
+extern s32 func_00313EE0(s32, s32);
+extern s32 func_00313EA0(s32);
+extern s32 func_003320E0(char *, char *, u32, u32, f32, u32, u32);
+extern f32 func_00313F38(f32, f32);
+extern void func_002E7450(char *);
+extern void func_002E7488(char *, char *, char *);
+
 extern s32 D_0018B650 __attribute__((nosda));
 extern s32 D_L16_001B16C0 __attribute__((sda));
 extern void func_002C4368(s32);

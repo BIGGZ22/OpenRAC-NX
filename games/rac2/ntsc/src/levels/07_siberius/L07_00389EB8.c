@@ -129,8 +129,6 @@ void func_L07_003EBBE8(char *arg, int a1, int a2, int a3, int a4)
     func_L07_002E2090(arg, a1, a2, arg + 0xF0, r, a3, a4);
 }
 
-INCLUDE_ASM("asm/levels", func_L07_003EBC90);
-
 INCLUDE_ASM("asm/levels", func_L07_003EE3B0);
 
 INCLUDE_ASM("asm/levels", func_L07_003EE640);
@@ -149,6 +147,11 @@ void func_L07_003EEE08(char *arg)
 
 INCLUDE_ASM("asm/levels", func_L07_003EEE28);
 
+extern float func_002E5460(int);
+
+extern void func_003109C8(char *, int, int);
+
+/* Store the mode value and the inverse of the launch factor. */
 INCLUDE_ASM("asm/levels", func_L07_003EF1E0);
 
 INCLUDE_ASM("asm/levels", func_L07_003F3E80);

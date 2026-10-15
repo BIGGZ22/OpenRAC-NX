@@ -42,6 +42,22 @@ extern u8 D_L11_00188660[];
 
 extern u8 D_L11_001BA8C0[];
 
+extern s32 D_L11_001A8FF0 __attribute__((sda));
+
+extern s32 D_L11_001A8FF4 __attribute__((sda));
+
+typedef int TI128 __attribute__((mode(TI)));
+
+extern f32 func_002B04E0(u8 *a0, f32 *a1, s32 a2);
+
+extern f32 func_00282E80(u8 *a0, u8 *a1);
+
+extern void func_00282CF0(f32 *a0, const f32 *a1, const f32 *a2);
+
+extern u8 D_L11_00189EA0[];
+
+extern void func_L11_003F3CB8(u8 *arg0);
+
 INCLUDE_ASM("asm/levels", func_L11_003D6270);
 
 INCLUDE_ASM("asm/levels", func_L11_003D90C0);
@@ -89,10 +105,17 @@ INCLUDE_ASM("asm/levels", func_L11_003F1F48);
 
 INCLUDE_ASM("asm/levels", func_L11_003F2A30);
 
-INCLUDE_ASM("asm/levels", func_L11_003F2C28);
+/* func_L11_003F2C28 is defined in L11_003D6270-g8.c (this unit has no $gp access for it). */
 
 
-INCLUDE_ASM("asm/levels", func_L11_003F2E00);
+/* True when the engine's two global gates are both clear and the stage byte is not nine. */
+s32 func_L11_003F2E00(u8 *arg0) {
+    s32 v1 = 0;
+
+    if (D_L11_001A8FF0 == 0 || D_L11_001A8FF4 == 0)
+        v1 = *(u8 *)(arg0 + 0x20) != 9;
+    return v1;
+}
 
 void func_L11_003F2D18(u8 *arg0) {
     func_002A7750(arg0, 4, -1);

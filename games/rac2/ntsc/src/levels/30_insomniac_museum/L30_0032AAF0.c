@@ -8,6 +8,48 @@ extern void func_00115484(char *, int, int);
 extern int func_002ACBC8(char *);
 extern void func_002A7470(char *, int, int, int);
 extern void func_L00_0042A500(int);
+extern char D_001A63A8[];
+extern char D_001AEC98[];
+extern char D_001B9DC0[];
+extern char D_0018C0DC[];
+extern char D_00295BF0[];
+extern int func_2FB3C8(int);
+extern void func_3132D8(void *, unsigned int, int, int, int, int, int, int, int, int);
+extern void func_316DB8(char *);
+extern int func_32C0D0(char *, int);
+extern void func_320FD0(char *, int, int);
+
+typedef struct {
+    float x;
+    float y;
+    float z;
+    float u;
+    float v;
+    float w;
+} Vec6;
+
+typedef struct {
+    unsigned char pad[0x1E0];
+    unsigned short mode;
+    unsigned char pad2[0x1FB0 - 0x1E2];
+    float f1FB0;
+    float f1FB4;
+    unsigned char pad3[0x22BC - 0x1FB8];
+    unsigned char flag;
+} D00189E20_View;
+
+extern D00189E20_View D_00189E20;
+
+typedef struct {
+    unsigned char pad[0x124];
+    float f124;
+    float f128;
+    float f12C;
+} D00138180_View;
+
+extern D00138180_View D_00138180;
+
+extern float func_321018(float);
 
 INCLUDE_ASM("asm/levels", func_L30_0032AAF0);
 
@@ -33,17 +75,70 @@ INCLUDE_ASM("asm/levels", func_L30_00383928);
 
 INCLUDE_ASM("asm/levels", func_L30_003840E0);
 
-INCLUDE_ASM("asm/levels", func_L30_003842E0);
+void func_L30_003842E0(char *a0) {
+    char *st = *(char **)(a0 + 0x68);
+
+    switch (*(unsigned char *)(a0 + 0x20)) {
+    case 0:
+        if (*(int *)st == -1) {
+            func_316DB8(a0);
+        } else {
+            func_320FD0(a0, 1, -1);
+        }
+        break;
+    case 1:
+        if (func_32C0D0(D_001B9DC0, *(int *)st) != 0) {
+            *(unsigned char *)D_0018C0DC = 1;
+            func_320FD0(a0, 2, -1);
+        }
+        break;
+    case 2:
+        if (func_32C0D0(D_001B9DC0, *(int *)st) != 0) {
+            *(unsigned char *)D_0018C0DC = 1;
+        } else {
+            *(unsigned char *)D_0018C0DC = 0;
+            func_320FD0(a0, 1, -1);
+        }
+        break;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L30_003844C8);
 
 INCLUDE_ASM("asm/levels", func_L30_00384768);
 
-INCLUDE_ASM("asm/levels", func_L30_003847F8);
+void func_L30_003847F8(char *a0) {
+    char *st = *(char **)(a0 + 0x68);
+    Vec6 buf;
+    int v;
+
+    D_00189E20.mode = 5;
+    D_00189E20.flag = 1;
+    buf = *(Vec6 *)D_001AEC98;
+    v = func_2FB3C8(*(int *)(D_00295BF0 + *(int *)(st + 0x144) * 4));
+    func_3132D8(&buf, 0x80F0F0F0, v, 1, 0, -1, 0, 0, 0, 0);
+}
 
 INCLUDE_ASM("asm/levels", func_L30_003848B8);
 
-INCLUDE_ASM("asm/levels", func_L30_00384980);
+int func_L30_00384980(char *a0) {
+    char *st = *(char **)(a0 + 0x68);
+    char *g = (char *)D_001A63A8;
+    int idx;
+
+    if (*(int *)(g + 0x68) == 0 && *(int *)(g + 0x24) == -1) {
+        char *q;
+
+        idx = *(int *)(st + 0x144);
+        if (idx != -1) {
+            q = st + idx * 4;
+            *(int *)(g + 0x24) = (*(int *)(q + 0x70) & 0x3FFF) + 0xBB8;
+            *(int *)(g + 0x28) = 0;
+            return 1;
+        }
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L30_00386300);
 
@@ -55,7 +150,22 @@ INCLUDE_ASM("asm/levels", func_L30_003941D8);
 
 INCLUDE_ASM("asm/levels", func_L30_003B3C18);
 
-INCLUDE_ASM("asm/levels", func_L30_003B3E60);
+void func_L30_003B3E60(float *a0, float *a1, float *a2, float *a3) {
+    *a0 = -D_00189E20.f1FB0;
+    *a2 = -D_00189E20.f1FB4;
+    *a1 = func_321018(D_00138180.f128) - func_321018(D_00138180.f124);
+    *a3 = D_00138180.f12C;
+    if (*a0 > 1.0f) {
+        *a0 = 1.0f;
+    } else if (*a0 < -1.0f) {
+        *a0 = -1.0f;
+    }
+    if (*a1 > 1.0f) {
+        *a1 = 1.0f;
+    } else if (*a1 < -1.0f) {
+        *a1 = -1.0f;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L30_003B3F70);
 

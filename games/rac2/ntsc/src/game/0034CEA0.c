@@ -32,6 +32,10 @@ extern void F0a76d85b_FUN_00283360(char *p);
 
 extern void F0a76d85b_FUN_00279D18(void);
 
+extern void func_0034CEA0(void *);
+extern void func_0034E4B8(int);
+extern void func_0029CB58(void);
+
 typedef int s32;
 
 /* lot15 -- first CALL-BEARING body: the call family is now open. */
@@ -108,7 +112,7 @@ void func_0034E220(char *a0, int a1, int a2, int a3, int t0)
 
 INCLUDE_ASM("asm/game", func_0034E2E0);
 
-INCLUDE_ASM("asm/game", func_0034E478);
+
 
 void func_0034E4B8(int param_1)
 {
@@ -121,7 +125,7 @@ void func_0034E4D8(int param_1)
   return;
 }
 
-INCLUDE_ASM("asm/game", func_0034E4F8);
+
 
 void *func_0034E5B8(void *object) {
     return object;
@@ -162,7 +166,26 @@ INCLUDE_ASM("asm/game", func_0034ECA8);
 
 INCLUDE_ASM("asm/game", func_0034ECB0);
 
-INCLUDE_ASM("asm/game", func_0034EDB0);
+extern volatile int D_001A7350 __attribute__((sda));
+extern volatile int D_001A7354 __attribute__((sda));
+extern char D_L00_001AC820[];
+extern char *D_L00_001B2608[] __attribute__((sda));
+extern void func_00282B50(void *, void *, int);
+extern void func_002A0300(void *, int);
+void func_0034EDB0(void *unused, char *object)
+{
+    char *packet = D_L00_001AC820;
+    *(int *)(packet + 0x20) = D_001A7350 + *(short *)(object + 0xB4);
+    *(int *)(packet + 0x24) = D_001A7354 + *(short *)(object + 0xB6);
+    func_00282B50(D_L00_001B2608[0], packet, 48);
+    D_L00_001B2608[0] += 48;
+    func_002A0300(object, 1);
+    *(int *)(packet + 0x20) = D_001A7350;
+    *(int *)(packet + 0x24) = D_001A7354;
+    func_00282B50(D_L00_001B2608[0], packet, 48);
+    D_L00_001B2608[0] += 48;
+}
+
 
 INCLUDE_ASM("asm/game", func_0034EE78);
 
@@ -290,7 +313,17 @@ INCLUDE_ASM("asm/game", func_0034FFC0);
 
 INCLUDE_ASM("asm/game", func_00350190);
 
-INCLUDE_ASM("asm/game", func_003501E0);
+extern int func_001261F0(int);
+extern int D_001A7BB8 __attribute__((sda));
+extern volatile int D_001AE7D0[] __attribute__((sda));
+extern volatile int D_001AE7D4[] __attribute__((sda));
+
+void func_003501E0(int value)
+{
+    while (func_001261F0(0) == value && D_001A7BB8 == 0) {}
+    D_001AE7D0[0] = 1;
+    D_001AE7D4[0] = 0;
+}
 
 /* A19-sda-scalar-store-16 freshly exact-verified under family reservation */
 void func_00350230(void) { D_L00_001AEB10 = 0; }

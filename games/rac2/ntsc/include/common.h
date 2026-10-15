@@ -24,15 +24,4 @@ typedef double             f64;
 #define MACRO_ADDR __attribute__((section(".sdata")))
 #define SDATA(sym) __asm__(#sym "__gp") MACRO_ADDR
 
-/* Quadword copies and clears, as the game's macros wrote them (lq/sq). */
-static __inline__ void qcopy(void *dst, void *src) {
-    __asm__ __volatile__("lq $2,0x0(%1)\n\tsq $2,0x0(%0)" : : "r"(dst), "r"(src) : "$2", "memory");
-}
-static __inline__ void qcopy_nc(void *dst, void *src) {
-    __asm__ __volatile__("lq $2,0x0(%1)\n\tsq $2,0x0(%0)" : : "r"(dst), "r"(src) : "$2");
-}
-static __inline__ void qzero(void *p) {
-    __asm__ __volatile__("sq $0,0x0(%0)" : : "r"(p));
-}
-
 #endif /* COMMON_H */

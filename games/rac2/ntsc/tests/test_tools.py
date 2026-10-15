@@ -34,6 +34,27 @@ def code(*w):
     return struct.pack(f"<{len(w)}I", *w)
 
 
+class LevelExtents(unittest.TestCase):
+    def test_proven_entries_preserve_end_and_replay(self):
+        cases = ((0x354DE8, 288, 0x354DF8),
+                 (0x3D54A8, 4432, 0x3D54B0),
+                 (0x40EA98, 1548, 0x40EAA0))
+        for address, size, entry in cases:
+            with self.subTest(address=address):
+                new_address, new_size = levels.level_extent(0, address, size)
+                self.assertEqual(new_address, entry)
+                self.assertEqual(new_address + new_size, address + size)
+                self.assertEqual(levels.level_extent(0, new_address, new_size),
+                                 (new_address, new_size))
+
+    def test_same_address_in_another_level_is_unchanged(self):
+        self.assertEqual(levels.level_extent(7, 0x3D54A8, 4432), (0x3D54A8, 4432))
+
+    def test_invalid_corrected_extent_is_rejected(self):
+        with self.assertRaises(ValueError):
+            levels.level_extent(0, 0x354DE8, 16)
+
+
 class Identity(unittest.TestCase):
     def test_words_and_trim(self):
         self.assertEqual(levels.words(code(1, 2, 3)), (1, 2, 3))

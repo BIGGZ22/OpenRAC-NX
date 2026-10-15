@@ -236,7 +236,13 @@ void func_L00_0030C710(int argument)
         func_0034CE28(value + 0x376C8, argument);
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0030C748);
+void func_L00_0030C748(int a0, int a1)
+{
+    int value = D_L00_001A904C_1;
+
+    if (value != 0)
+        func_0034CAE8(value + 0x376C8, a0, a1);
+}
 
 /* Call the registered handler with a table pointer built from one module base word plus the constant 36808, forwarding the incoming argument; do nothing when the base word is zero. */
 void func_L00_0030C788(int argument)
@@ -256,7 +262,13 @@ void func_L00_0030C7C0(int argument)
         func_L00_004427D0(value + 0x376C8, argument);
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0030C7F8);
+void func_L00_0030C7F8(int argument)
+{
+    int value = D_L00_001A904C_1;
+
+    if (value != 0)
+        func_0034B000(value + 0x37EB0, argument);
+}
 
 /* Reads a word from a shared global; when it is non-zero, calls a one-argument helper with that word plus a fixed byte offset. */
 void func_L00_0030C930(void)
@@ -298,37 +310,151 @@ void func_L00_0030D1E0(void)
         func_0034E4F8(value + 0x36F28);
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0030D210);
+/* The wrappers below dispatch to a handler the object table names: the object's base word lives
+ * in a shared global, the handler for it at a fixed byte offset from that base. Same family as
+ * the one in src/game/0029BCC8.c, which reads D_001A8CFC instead. */
+extern void func_00348EC0(int);
+extern void func_003478F0(int);
+extern void func_003465D0(int);
+extern void func_00339590(int);
+extern void func_0033A3E0(int);
+extern void func_0033B910(int);
+extern void func_0033F030(int);
+extern void func_00345358(int);
+extern void func_00341C20(int);
+extern void func_003438E8(int);
+extern void func_L00_00433F50(int);
+extern void func_0033D970(int);
+extern void func_0033C738(int);
+extern void func_0033CC20(int);
+extern void func_0033D638(int);
+extern void func_0033C028(int);
+extern void func_0033C378(int);
 
-INCLUDE_ASM("asm/levels", func_L00_0030D240);
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D210(void)
+{
+    int value = D_L00_001A904C_2;
 
-INCLUDE_ASM("asm/levels", func_L00_0030D280);
+    if (value != 0)
+        func_00348EC0(value + 0x39140);
+}
 
-INCLUDE_ASM("asm/levels", func_L00_0030D2B0);
+int func_L00_0030D240(int argument)
+{
+    int value = D_L00_001A904C_2;
 
-INCLUDE_ASM("asm/levels", func_L00_0030D2E0);
+    if (value != 0)
+        return func_003489E8(value + 0x39140, argument);
+    return 0;
+}
 
-INCLUDE_ASM("asm/levels", func_L00_0030D368);
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D280(void)
+{
+    int value = D_L00_001A904C_2;
 
-INCLUDE_ASM("asm/levels", func_L00_0030D3A8);
+    if (value != 0)
+        func_003478F0(value + 0x39590);
+}
+
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D2B0(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_003465D0(value + 0x39A98);
+}
+
+int func_L00_0030D2E0(int argument)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        return func_00346C60(value + 0x39590, argument);
+    return 0;
+}
+
+int func_L00_0030D368(int argument)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        return func_00339320(value + 0x3B1F0, argument);
+    return 0;
+}
+
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D3A8(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_00339590(value + 0x3B1F0);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0030D3D8);
 
-INCLUDE_ASM("asm/levels", func_L00_0030D418);
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D418(void)
+{
+    int value = D_L00_001A904C_2;
 
-INCLUDE_ASM("asm/levels", func_L00_0030D448);
+    if (value != 0)
+        func_0033A3E0(value + 0x3ADE8);
+}
+
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D448(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_0033B910(value + 0x3B490);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0030D478);
 
-INCLUDE_ASM("asm/levels", func_L00_0030D4B8);
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D4B8(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_0033F030(value + 0x3B7C0);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0030D4E8);
 
-INCLUDE_ASM("asm/levels", func_L00_0030D528);
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D528(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_00345358(value + 0x39F38);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0030D558);
 
-INCLUDE_ASM("asm/levels", func_L00_0030D598);
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D598(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_00341C20(value + 0x3BE08);
+}
 
 /* Reads a bound global word; when it is non-zero it calls a helper with that value plus a fixed base offset as the first argument and the function's own argument as the second, otherwise returns 0. */
 int func_L00_0030D5C8(int a0)
@@ -341,7 +467,15 @@ int func_L00_0030D5C8(int a0)
     return 0;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0030D608);
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D608(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_00341C20(value + 0x3BE08);
+}
 
 /* Reads a bound global word; when it is non-zero it calls a helper with that value plus a fixed base offset as the first argument and the function's own argument as the second, otherwise returns 0. */
 int func_L00_0030D638(int a0)
@@ -354,57 +488,151 @@ int func_L00_0030D638(int a0)
     return 0;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0030D678);
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D678(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_003438E8(value + 0x3C108);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0030D6A8);
 
-INCLUDE_ASM("asm/levels", func_L00_0030D6E8);
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D6E8(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_L00_00433F50(value + 0x3C440);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0030D718);
 
-INCLUDE_ASM("asm/levels", func_L00_0030D758);
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D758(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_0033D970(value + 0x3CDB0);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0030D788);
 
 INCLUDE_ASM("asm/levels", func_L00_0030D7C8);
 
-INCLUDE_ASM("asm/levels", func_L00_0030D808);
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D808(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_0033C738(value + 0x3D060);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0030D838);
 
-INCLUDE_ASM("asm/levels", func_L00_0030D878);
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D878(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_0033CC20(value + 0x3D310);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0030D8A8);
 
-INCLUDE_ASM("asm/levels", func_L00_0030D8E8);
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D8E8(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_0033D638(value + 0x3D900);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0030D918);
 
-INCLUDE_ASM("asm/levels", func_L00_0030D958);
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D958(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_0033C028(value + 0x3DBB0);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0030D988);
 
-INCLUDE_ASM("asm/levels", func_L00_0030D9C8);
+/* Reads the object base from a shared global and, when it is non-zero, calls the handler at a
+ * fixed byte offset in it. */
+void func_L00_0030D9C8(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_0033C378(value + 0x3DE60);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0030D9F8);
 
-INCLUDE_ASM("asm/levels", func_L00_0030DA38);
+void func_L00_0030DA38(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_0033E428(value + 0x3EDB8);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0030DA68);
 
-INCLUDE_ASM("asm/levels", func_L00_0030DAA8);
+void func_L00_0030DAA8(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_0033D2C0(value + 0x3D5C0);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0030DAD8);
 
-INCLUDE_ASM("asm/levels", func_L00_0030DB18);
+void func_L00_0030DB18(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_0033DCC8(value + 0x3E5A8);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0030DB48);
 
-INCLUDE_ASM("asm/levels", func_L00_0030DB88);
+void func_L00_0030DB88(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_00342758(value + 0x3E1D8);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0030DBB8);
 
-INCLUDE_ASM("asm/levels", func_L00_0030DBF8);
+void func_L00_0030DBF8(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_00341F38(value + 0x3E430);
+}
 
 
 
@@ -419,7 +647,13 @@ void func_L00_0030DC80(int argument)
 
 INCLUDE_ASM("asm/levels", func_L00_0030DCB8);
 
-INCLUDE_ASM("asm/levels", func_L00_0030DCF8);
+void func_L00_0030DCF8(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_00340250(value + 0x3A388);
+}
 
 /* Reads a bound global word; when it is zero it returns its first argument, otherwise it calls a helper with that value plus a fixed base offset and both of its arguments. */
 int func_L00_0030DD70(int a0, int a1)
@@ -454,7 +688,13 @@ void func_L00_0030DE20(void)
 
 INCLUDE_ASM("asm/levels", func_L00_0030DF80);
 
-INCLUDE_ASM("asm/levels", func_L00_0030DFE0);
+void func_L00_0030DFE0(void)
+{
+    int value = D_L00_001A904C_2;
+
+    if (value != 0)
+        func_003399B0(value + 0x3CAA8);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0030E010);
 

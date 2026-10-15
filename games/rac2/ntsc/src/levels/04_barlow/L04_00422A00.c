@@ -8,6 +8,8 @@ typedef signed short s16;
 typedef signed int s32;
 typedef float f32;
 
+INCLUDE_ASM("asm/levels", func_L04_00422A00);
+
 extern u8 D_L04_001395C7;
 extern u8 D_L04_002CA518;
 
@@ -20,7 +22,8 @@ extern void func_345328(void *a0, void *a1, s32 a2, f32 f12, f32 f13);
 extern void func_348708(void *a0, void *a1, s32 a2, s32 a3, f32 f12);
 extern int func_34C4C8(void);
 extern void *func_33E6B0(void *a0, s32 a1, s32 a2);
-INCLUDE_ASM("asm/levels", func_L04_00422A00);
+extern void func_40A090(int a0, u8 *a1, u8 *a2, u8 *a3, u8 *a4, u8 *a5);
+
 INCLUDE_ASM("asm/levels", func_L04_00422D40);
 INCLUDE_ASM("asm/levels", func_L04_00422DA8);
 INCLUDE_ASM("asm/levels", func_L04_00423258);
@@ -30,7 +33,46 @@ INCLUDE_ASM("asm/levels", func_L04_004389C0);
 INCLUDE_ASM("asm/levels", func_L04_00438B50);
 INCLUDE_ASM("asm/levels", func_L04_00439870);
 INCLUDE_ASM("asm/levels", func_L04_00439950);
+extern void func_40A090(int a0, u8 *a1, u8 *a2, u8 *a3, u8 *a4, u8 *a5);
+
+extern u8 D_L04_001B12B0[] __attribute__((sda));
+extern u8 D_L04_001B12E8[] __attribute__((sda));
+extern u8 D_L04_001B1300[] __attribute__((sda));
+extern u8 D_L04_001B1330[] __attribute__((sda));
+extern u8 D_L04_001B1348[] __attribute__((sda));
+extern u8 D_L04_001B3280[] __attribute__((sda));
+extern u8 D_L04_001B32B0[] __attribute__((sda));
+extern u8 D_L04_001B32E0[] __attribute__((sda));
+extern u8 D_L04_001B3300[] __attribute__((sda));
+extern u8 D_L04_001B3320[] __attribute__((sda));
+extern u8 D_L04_001B3330[] __attribute__((sda));
+extern u8 D_L04_001B3360[] __attribute__((sda));
+extern u8 D_L04_001B3378[] __attribute__((sda));
+extern u8 D_L04_001B33A0[] __attribute__((sda));
+extern u8 D_L04_001B33B0[] __attribute__((sda));
+extern u8 D_L04_001B33B8[] __attribute__((sda));
+extern u8 D_L04_001B33D8[] __attribute__((sda));
+extern u8 D_L04_001B33E8[] __attribute__((sda));
+extern u8 D_L04_001B3418[] __attribute__((sda));
+extern u8 D_L04_001B3430[] __attribute__((sda));
+extern u8 D_L04_001B3458[] __attribute__((sda));
+extern u8 D_L04_001B3468[] __attribute__((sda));
+extern u8 D_L04_001B3470[] __attribute__((sda));
+extern u8 D_L04_001B3474[] __attribute__((sda));
+extern u8 D_L04_001B3478[] __attribute__((sda));
+extern u8 D_L04_001B347C[] __attribute__((sda));
+extern u8 D_L04_001B3480[] __attribute__((sda));
+extern u8 D_L04_001B3484[] __attribute__((sda));
+extern u8 D_L04_001B3488[] __attribute__((sda));
+extern u8 D_L04_0026D370[] __attribute__((sda));
+extern u8 D_L04_0026D3E0[] __attribute__((sda));
+extern u8 D_L04_0026D490[] __attribute__((sda));
+extern u8 D_L04_0026D4F0[] __attribute__((sda));
+extern u8 D_L04_002CA3E0[] __attribute__((sda));
+extern u8 D_L04_002CA438[] __attribute__((sda));
+
 INCLUDE_ASM("asm/levels", func_L04_0043ABE0);
+
 INCLUDE_ASM("asm/levels", func_L04_0043AD48);
 INCLUDE_ASM("asm/levels", func_L04_00441100);
 

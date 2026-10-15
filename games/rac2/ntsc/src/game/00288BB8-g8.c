@@ -43,3 +43,41 @@ s32 func_00288BE8(BarlowUtilityQueueView *queue) {
     }
     return 0;
 }
+
+/* The retail unit reaches its small-data words through $gp, so it is built -G8.  The two
+   control words at the top of the small-data area are declared sda; the resident word and
+   the mode word below are plain externs, whose .extern line the single-pass assembler only
+   sees after the body, so it expands them to the absolute lui/%lo form the retail shows. */
+typedef struct {
+    u8 pad00[0x18];
+    short field18;
+    u8 pad1A[0x17C - 0x1A];
+    s32 field17C;
+} BootData001393E0;
+
+extern BootData001393E0 D_001393E0;
+extern s32 D_001A8B84 __attribute__((sda));
+extern s32 D_001B1680 __attribute__((sda));
+extern s32 D_001A7424;
+extern s32 D_001B1680_1;
+extern void func_00288D68(void);
+extern void func_0029B3E0(s32, s32);
+
+void func_00288CB0(int a0, int a1)
+{
+    D_001A8B84 = 1;
+    D_001B1680 = a0;
+    if (a0 == -1) {
+        if (D_001393E0.field17C != 0) {
+            D_001393E0.field17C = 0;
+        }
+        if (D_001393E0.field18 >= 0) {
+            D_001393E0.field18 = (short)a0;
+        }
+        D_001A7424 &= ~0x200;
+    }
+    if (a1 != 0) {
+        func_00288D68();
+        func_0029B3E0(0, D_001B1680_1);
+    }
+}

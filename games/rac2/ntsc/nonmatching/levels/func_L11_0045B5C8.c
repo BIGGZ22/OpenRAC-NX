@@ -1,5 +1,5 @@
-/* func_L11_0045B5C8 -- brouillon w17 (vague 6, fichier src/levels/11_joba/L11_00453358.c)
- * Derniere ligne de tools/check.py : 11_joba: 252 bytes, expected 256 (1 instruction manquante: retail garde $a0/$a1 pour les deux globaux et met le store q->f0 dans le delay slot du beq)
+/* func_L11_0045B5C8 -- draft w17 (wave 6, file src/levels/11_joba/L11_00453358.c)
+ * last check.py line: 11_joba: 252 bytes, expected 256 (1 instruction missing: retail keeps $a0/$a1 for the two globals and puts the store q->f0 in the delay slot of the beq)
  */
 
 void func_L11_0045B5C8(char *p)

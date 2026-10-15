@@ -24,6 +24,12 @@ extern void func_314008(void *arg0);
 
 extern f32 func_2F2950(f32 x, f32 y);
 
+extern s32 D_L12_001B2E9C __attribute__((sda));
+
+extern s32 D_L12_001B2E9C_2;
+
+extern u16 *D_L12_001FB960[];
+
 INCLUDE_ASM("asm/levels", func_L12_00398E50);
 
 INCLUDE_ASM("asm/levels", func_L12_003A0F00);
@@ -43,7 +49,7 @@ INCLUDE_ASM("asm/levels", func_L12_003CC140);
 
 INCLUDE_ASM("asm/levels", func_L12_003D4110);
 
-INCLUDE_ASM("asm/levels", func_L12_003DE4B0);
+/* func_L12_003DE4B0 is defined in L12_00398E50-g8.c (this unit has no $gp access for it). */
 
 INCLUDE_ASM("asm/levels", func_L12_003DF9A0);
 
@@ -58,7 +64,28 @@ INCLUDE_ASM("asm/levels", func_L12_003E0BF0);
 INCLUDE_ASM("asm/levels", func_L12_003E1638);
 
 
-INCLUDE_ASM("asm/levels", func_L12_003E1AA8);
+/* Raises the measured flag on every record of the object's own table. */
+void func_L12_003E1AA8(s32 a0) {
+    s32 base;
+    s16 *p;
+    s16 *q;
+
+    if (*(u8 *)(a0 + 0x21) == 0xFF)
+        return;
+    q = D_L12_001FB960[*(u8 *)(a0 + 0x21)];
+    if (q == 0)
+        return;
+    p = q;
+    base = D_L12_001B2E9C;
+    do {
+        u32 v = (*(u16 *)p & 0x7FFF) << 8;
+
+        if (*(s8 *)(base + v + 0x20) >= 0) {
+            if (*(s16 *)(base + v + 0xAA) == 0xFB4)
+                *(u16 *)(*(u32 *)(base + v + 0x68) + 0x366) = 1;
+        }
+    } while (*p++ >= 0);
+}
 
 INCLUDE_ASM("asm/levels", func_L12_003E1B28);
 

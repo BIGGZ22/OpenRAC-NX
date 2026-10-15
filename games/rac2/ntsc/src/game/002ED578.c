@@ -65,7 +65,16 @@ INCLUDE_ASM("asm/game", func_002ED948);
 
 INCLUDE_ASM("asm/game", func_002ED9A8);
 
-INCLUDE_ASM("asm/game", func_002ED9C0);
+extern int D_00214F90[];
+
+void func_002ED9C0(unsigned char *owner)
+{
+    char *object = (char *)func_002ED688(owner);
+    if (object != 0 && *(int *)(object + 0x118) == 1) {
+        *(int *)(object + 0x118) = 0;
+        D_00214F90[3]--;
+    }
+}
 
 INCLUDE_ASM("asm/game", func_002EDA10);
 
@@ -74,5 +83,3 @@ INCLUDE_ASM("asm/game", func_002EE000);
 INCLUDE_ASM("asm/game", func_002EE238);
 
 INCLUDE_ASM("asm/game", func_002EE3B0);
-
-INCLUDE_ASM("asm/game", func_002EE610);

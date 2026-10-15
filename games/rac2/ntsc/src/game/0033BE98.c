@@ -71,11 +71,34 @@ char *func_0033C178(char *object)
 
 INCLUDE_ASM("asm/game", func_0033C1A8);
 
-INCLUDE_ASM("asm/game", func_0033C1B0);
+
 
 INCLUDE_ASM("asm/game", func_0033C2D8);
 
-INCLUDE_ASM("asm/game", func_0033C378);
+typedef struct { int ids[2]; } SolTextPair;
+extern SolTextPair D_L00_001AE110;
+extern char D_L00_001AE118[];
+/* Resident byte at 0x001A7BB1 is shared by all programs. */
+extern void func_0033AF48(void *);
+extern char *func_00288FB8(int);
+extern int func_00115DA8(char *, const char *, ...);
+extern void func_0027FAA8(int, int, unsigned long, char *, int);
+
+void func_0033C378(char *object)
+{
+    char buffer[128];
+    SolTextPair pair;
+    char *first;
+    char *second;
+    char *format;
+    func_0033AF48(object + 8);
+    pair = D_L00_001AE110;
+    format = D_L00_001AE118;
+    first = func_00288FB8(0x31E4);
+    second = func_00288FB8(pair.ids[*(unsigned char *)0x001A7BB1 != 0]);
+    func_00115DA8(buffer, format, first, second);
+    func_0027FAA8(0x100, 0xAA, 0x80F0F0F0UL, buffer, -1);
+}
 
 char *func_0033C430(char *object)
 {

@@ -40,6 +40,19 @@ INCLUDE_ASM("asm/game", func_0028DF80);
 
 INCLUDE_ASM("asm/game", func_0028E138);
 
-INCLUDE_ASM("asm/game", func_0028E260);
+typedef struct { char reserved00[0x1248]; int selected; char reserved124C[0x1068]; unsigned char blocked; } MapSelection;
+typedef struct { char reserved00[0x88]; unsigned short valid; char reserved8A[0x56]; } MapRecord;
+extern MapSelection D_00189E20;
+extern unsigned char D_00139568[];
+extern MapRecord ref_L00_0028E260_00[];
+int func_0028E260(void)
+{
+    int selected = D_00189E20.selected;
+    int blocked = D_00189E20.blocked;
+    unsigned int index = D_00139568[selected];
+    if (((MapRecord *)(index * 0xE0 + (unsigned int)ref_L00_0028E260_00))->valid == 0) selected = 0;
+    if (blocked) selected = 0;
+    return selected;
+}
 
 INCLUDE_ASM("asm/game", func_0028E2A8);

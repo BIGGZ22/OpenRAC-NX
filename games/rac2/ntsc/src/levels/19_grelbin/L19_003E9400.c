@@ -62,15 +62,7 @@ INCLUDE_ASM("asm/levels", func_L19_00420EF0);
 
 INCLUDE_ASM("asm/levels", func_L19_00421E80);
 
-void func_L19_00422178(char *a0, float *a1)
-{
-    float t = func_3183D8(0.0f, (*(float *)(a0 + 0x2C) / *(float *)(*(int *)(a0 + 0x24) + 0x24)) * 6.0f);
-    float r = func_3183D8(-3.14159274f, 3.14159274f);
-
-    qcopy(a1, a0 + 0x10);
-    a1[0] = a1[0] + t * func_2EBF18(r);
-    a1[1] = a1[1] + t * func_2EBF30(r);
-}
+INCLUDE_ASM("asm/levels", func_L19_00422178);
 
 INCLUDE_ASM("asm/levels", func_L19_00422238);
 

@@ -97,7 +97,16 @@ INCLUDE_ASM("asm/game", func_002EEBB0);
 
 INCLUDE_ASM("asm/game", func_002EEBC8);
 
-INCLUDE_ASM("asm/game", func_002EED08);
+void func_002EED08(void)
+{
+    int i;
+    D_001A7240.cursor = D_001A7240.start;
+    D_001A7240.count = 0;
+    for (i = 0; i < 64; i++) {
+        *(int *)(D_L03_00226150 + i * 16) = 0;
+        *(int *)(D_L03_00226150 + i * 16 + 4) = 0;
+    }
+}
 
 /* shared native body of family 5a29d35dd7a7809a */
 int func_002EED58(int p0, int p1, int p2, int p3)
@@ -127,7 +136,23 @@ int func_002EED58(int p0, int p1, int p2, int p3)
     return k;
 }
 
-INCLUDE_ASM("asm/game", func_002EEE50);
+typedef struct { int address, count, reserved[2]; } TransferRow16;
+extern TransferRow16 D_L00_002254D0[];
+
+int func_002EEE50(int tag, unsigned int index, int start, int count)
+{
+    int request[4];
+    if (index >= 64 || D_L00_002254D0[index].count == 0)
+        return -3;
+    if (D_L00_002254D0[index].count < start + count)
+        return -1;
+    request[0] = tag;
+    request[1] = D_L00_002254D0[index].address + start * 16;
+    request[2] = count * 16;
+    request[3] = 0;
+    func_0011AFE0(request, 1);
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002EEED0);
 

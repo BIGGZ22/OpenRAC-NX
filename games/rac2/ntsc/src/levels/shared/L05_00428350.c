@@ -1,5 +1,13 @@
 #include "include_asm.h"
 
+extern int D_001A7350 __attribute__((sda));
+
+extern int D_001A7354 __attribute__((sda));
+
+extern void func_2FC560(char *out, char *src);
+
+extern int func_307778(float value);
+
 extern void func_00282CF0_9(char *local, char *first, char *second);
 
 extern void func_00282CC0_14(char *target, char *first, char *local);
@@ -42,6 +50,47 @@ INCLUDE_ASM("asm/levels", func_L05_0042B2C0);
 
 INCLUDE_ASM("asm/levels", func_L05_0042BB10);
 
+extern char *func_328508(char *);
+
+extern void func_32AF08(char *);
+
+extern void func_3073E0(char *, char *);
+
+extern void func_3065F8(char *);
+
+extern void func_3066A0(char *, char *, float);
+
+extern void func_306630(char *, char *, char *);
+
+extern int func_2F9888(char *, int, char *, int, float);
+
+extern void func_2DCB60(int, int);
+
+extern void func_2EB6E8(void);
+
+extern int D_00221D94;
+
+extern int D_001A79F0;
+
+extern char *D_001B1EC4;
+
+extern char *D_001B251C;
+
+extern char D_00189E20[];
+
+extern char D_0019B2E8[];
+
+extern char D_001B3620[];
+
+extern char D_001BFB30[];
+
+#ifndef RAC2_T_TI128_15C4FA
+#define RAC2_T_TI128_15C4FA
+typedef int TI128 __attribute__((mode(TI)));
+#endif
+
+/* Creates the 0x1226 object, seeds its flags from the caller's two floats and copies the
+   caller's quadword into the object's transform slot. */
 INCLUDE_ASM("asm/levels", func_L05_0042BCE0);
 
 INCLUDE_ASM("asm/levels", func_L05_0042BDB0);
@@ -78,6 +127,7 @@ void func_L05_00430BF0(Vec16_Fc936841d *object, int index)
 
 INCLUDE_ASM("asm/levels", func_L05_00432078);
 
+/* Creates the 0x10E3 object and copies the caller's transforms into it. */
 INCLUDE_ASM("asm/levels", func_L05_00432080);
 
 INCLUDE_ASM("asm/levels", func_L05_00432158);
@@ -92,6 +142,7 @@ INCLUDE_ASM("asm/levels", func_L05_00441F30);
 
 INCLUDE_ASM("asm/levels", func_L05_00442398);
 
+/* Blends the negated angle into the object's transform through the level's matrix table. */
 INCLUDE_ASM("asm/levels", func_L05_004424B8);
 
 INCLUDE_ASM("asm/levels", func_L05_00442560);
@@ -114,6 +165,8 @@ INCLUDE_ASM("asm/levels", func_L05_004432E0);
 
 INCLUDE_ASM("asm/levels", func_L05_00443740);
 
+/* Folds the object's two turn rates out of its parent's rotation into the moby, then
+   rebuilds the three orientation blocks the driver reads. */
 INCLUDE_ASM("asm/levels", func_L05_00443C18);
 
 INCLUDE_ASM("asm/levels", func_L05_00443D08);
@@ -124,7 +177,19 @@ INCLUDE_ASM("asm/levels", func_L05_00444840);
 
 INCLUDE_ASM("asm/levels", func_L05_00444B20);
 
-INCLUDE_ASM("asm/levels", func_L05_00444D60);
+/* Converts a two-float record to the coordinate pair the level's bias words expect. */
+void func_L05_00444D60(char *a0, int *a1, int *a2, int a3)
+{
+    float local[2];
+    float bias;
+
+    func_2FC560((char *)local, a0);
+    bias = (float)D_001A7350;
+    *a1 = func_307778((local[0] - bias) * 0.0625f);
+    bias = (float)D_001A7354;
+    *a2 = func_307778((local[1] - bias) * 0.0625f) + a3;
+}
+
 
 INCLUDE_ASM("asm/levels", func_L05_00444DF8);
 
@@ -154,4 +219,5 @@ INCLUDE_ASM("asm/levels", func_L05_00445C38);
 
 INCLUDE_ASM("asm/levels", func_L05_00445D60);
 
+/* While the level is idle, checks the object's table bit before starting the encounter. */
 INCLUDE_ASM("asm/levels", func_L05_00445F90);

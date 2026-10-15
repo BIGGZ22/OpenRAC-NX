@@ -21,6 +21,9 @@ extern void func_32E480(char *a0, char *a1, float f12, float f13, float f14,
                         int a2, int a3, int a4, int a5);
 extern void func_2FD7E8(void *a0, int a1, void *a2, void *a3, int a4, int a5,
                         int a6, int a7, float f12);
+extern void func_32EB98(void *a0, void *a1);
+extern s32 func_441868(s32 a0, s32 a1);
+extern s32 func_33C800(char *a0, s32 a1, s32 a2, s32 a3, float f12, float f13);
 
 INCLUDE_ASM("asm/levels", func_L11_004465F8);
 
@@ -161,11 +164,17 @@ void func_L11_0044C0F0(char *a0)
     func_32E480(a0, a0 + 0x10, 1.3f, 1.0f, 1.0f, 0x4000000, 0, 1, 0);
 }
 
+/* advances the sub-object's ring cursor, hands the new slot of the 0x370 table to the scene
+   manager, and refreshes the matching slot of the 0x270 table from the live 0x4A4 record */
 INCLUDE_ASM("asm/levels", func_L11_0044C180);
 
 INCLUDE_ASM("asm/levels", func_L11_0044C220);
 
+/* state handler: clears the 0x490 word while the frame byte is out of the 0..3 window, otherwise
+   arms the 0x4CA gate through the 0xB8 handle and runs the 100-unit smash into it */
+/*W23B*/
 INCLUDE_ASM("asm/levels", func_L11_0044C268);
+/*W23E*/
 
 INCLUDE_ASM("asm/levels", func_L11_0044C328);
 
@@ -173,7 +182,14 @@ INCLUDE_ASM("asm/levels", func_L11_0044C4F0);
 
 INCLUDE_ASM("asm/levels", func_L11_0044C688);
 
-INCLUDE_ASM("asm/levels", func_L11_0044C818);
+void func_L11_0044C818(char *a0)
+{
+    char *p = *(char **)(a0 + 0x68);
+
+    *(u16 *)(p + 0x4CC) = *(u8 *)(a0 + 0x20);
+    *(u16 *)(p + 0x4CE) = *(u8 *)(a0 + 0x95);
+    func_32C9E0(a0, 6, 4);
+}
 
 INCLUDE_ASM("asm/levels", func_L11_0044C850);
 

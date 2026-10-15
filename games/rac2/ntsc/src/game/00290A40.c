@@ -22,7 +22,28 @@ void func_00290A40(char *a0)
 
 INCLUDE_ASM("asm/game", func_00290AA8);
 
-INCLUDE_ASM("asm/game", func_00290AB0);
+typedef struct { int source, length, destination, flags; } Request_290AB0;
+extern int func_0011AFE0(Request_290AB0 *, int);
+extern int func_0011AFC0(int);
+extern int func_0011ED08(int, int, int);
+
+int func_00290AB0(int source, int destination, int length)
+{
+    Request_290AB0 request;
+    int handle;
+    int result = 1;
+    request.source = source;
+    request.destination = destination;
+    request.length = length;
+    request.flags = 0;
+    handle = func_0011AFE0(&request, 1);
+    if (handle) {
+        while (func_0011AFC0(handle) >= 0) {}
+        if (func_0011ED08(length, 0, 0) < 0)
+            result = 0;
+    }
+    return result;
+}
 
 INCLUDE_ASM("asm/game", func_00290B48);
 
@@ -44,7 +65,7 @@ INCLUDE_ASM("asm/game", func_00291148);
 
 INCLUDE_ASM("asm/game", func_00291158);
 
-INCLUDE_ASM("asm/game", func_00291268);
+/* func_00291268 is in 00290A40-g8.c. */
 
 INCLUDE_ASM("asm/game", func_002912E8);
 

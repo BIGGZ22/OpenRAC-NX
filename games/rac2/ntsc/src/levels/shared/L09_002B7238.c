@@ -1,9 +1,19 @@
 #include "include_asm.h"
 
+typedef signed char s8;
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef signed short s16;
+typedef signed int s32;
+typedef unsigned int u32;
+typedef float f32;
+
+typedef int TI128 __attribute__((mode(TI)));
+
 /* index -> entry of a per-level table; a live entry's first word is a one-based id. */
 extern unsigned int D_L09_001FE6C0[];
 extern unsigned int D_L09_001FB560[];
-extern char *D_L09_001B285C;
+extern char *D_L09_001B285C __attribute__((sda));
 
 INCLUDE_ASM("asm/levels", func_L09_002B7238);
 
@@ -131,24 +141,74 @@ void func_L09_003AEE10(char *object)
 }
 
 
-INCLUDE_ASM("asm/levels", func_L09_003AEE80);
+extern void func_002AB668(void *a, void *b, float f);
+extern void func_00282D30(char *a, char *b, float f);
+extern void func_002ACDE8(char *a, char *b, char *c);
+extern float func_00283BE0(float a, float b);
+extern void func_L00_002E6CF0(char *table, char *object);
+extern char D_L09_003AEF78[];
+
+/* rebuilds the object's orientation matrix from its stored angles and hands it to the stage */
+void func_L09_003AEE80(char *object)
+{
+    char *p = *(char **)(object + 0x68);
+    float m[4];
+    char *q = object + 0x10;
+    char *r = p + 0x10;
+
+    func_00282F20((char *)m, p + 0x30, 1.0f);
+    func_002AB668(m, m, *(float *)(p + 0x5C));
+    func_00282D30(r, p, *(float *)(p + 0x50));
+    func_002ACDE8(r, r, (char *)m);
+    *(float *)(p + 0x20) = -*(float *)(p + 0x10);
+    *(float *)(p + 0x24) = -*(float *)(p + 0x14);
+    *(float *)(p + 0x28) = -*(float *)(p + 0x18);
+    func_00282CC0(r, q, r);
+    func_00282CC0(p + 0x20, q, p + 0x20);
+    *(float *)(p + 0x5C) = func_00283BE0(*(float *)(p + 0x5C), 0.3141593039035797f);
+    func_L00_002E6CF0(D_L09_003AEF78, object);
+}
 
 INCLUDE_ASM("asm/levels", func_L09_003AF060);
 
 INCLUDE_ASM("asm/levels", func_L09_003AF508);
 
+extern void func_003AEFD0(void *out);
+extern float func_00316AC0(float lo, float hi);
+extern void func_002EA4D0(char *dst, char *src, char *extra, float f);
+extern int func_002E2828(int id);
+extern int func_001163B0(void);
+extern int func_00316A68(int lo, int hi);
+extern float func_002EAB28(float a, float b);
+extern float func_00316B88(float f);
+extern void func_002EACF0(char *dst, char *src);
+extern void func_002E6C68(char *dst, char *src, int flag);
+extern void func_003AF9E8(char *object, char *v);
+
+typedef unsigned long long u64;
+
+/* builds the effect's frame, colour word and query box, then hands the result to the stage */
 INCLUDE_ASM("asm/levels", func_L09_003AF6B0);
 
 INCLUDE_ASM("asm/levels", func_L09_003AF9E8);
 
 INCLUDE_ASM("asm/levels", func_L09_003B6550);
 
+extern void func_0031F728(char *object, char *a1, char *a2, float f1, float f2, float f3);
+extern void func_0031F7E0(char *object, char *a1, char *a2, float f1, float f2, float f3);
+extern float func_002EB478(float a, float b);
+
+/* snapshots the object's frame and re-seeds its four steering angles from the new one */
 INCLUDE_ASM("asm/levels", func_L09_003E99E0);
 
 INCLUDE_ASM("asm/levels", func_L09_003E9AA0);
 
 INCLUDE_ASM("asm/levels", func_L09_003E9E60);
 
+extern int func_L09_0033E8B0_1(char *object, int index, void *out, int a, int b, float f);
+extern void func_L09_003E9E60(char *object, void *buf, float f);
+
+/* steps the run's frame index and hands the sample it lands on to the linked stage */
 INCLUDE_ASM("asm/levels", func_L09_003EA058);
 
 INCLUDE_ASM("asm/levels", func_L09_003EA108);
@@ -157,7 +217,20 @@ INCLUDE_ASM("asm/levels", func_L09_003EA108);
 extern int func_L06_00382850_1(char *object, unsigned int entry, float value);
 extern int func_002B6228_1(char *object, unsigned int entry, int value, int flag);
 
-INCLUDE_ASM("asm/levels", func_L09_003EA2D0);
+int func_L09_003EA2D0(char *object, int index, int value)
+{
+    unsigned int entry = D_L09_001FE6C0[index];
+    char *p = *(char **)(object + 0x68);
+    int result;
+
+    if (entry != 0) {
+        result = func_L06_00382850_1(object + 0x10, entry, 0.0f);
+        result = func_002B6228_1(object, entry, value, result);
+        return *(short *)(p + 0x118);
+    }
+    *(short *)(p + 0x118) = 0;
+    return -1;
+}
 
 
 INCLUDE_ASM("asm/levels", func_L09_003EA360);
@@ -184,7 +257,20 @@ INCLUDE_ASM("asm/levels", func_L09_003EAA18);
 
 INCLUDE_ASM("asm/levels", func_L09_003EAB20);
 
-INCLUDE_ASM("asm/levels", func_L09_003EAF60);
+extern void func_002E5CF8(int a, int b, char *c);
+extern void func_002A6C58(char *a, int b, int c);
+extern void func_0029F338(void *entry);
+extern void func_0032C700(void *p, int a1, int a2, int a3, int a4, int a5, int a6, int a7,
+                          float f1, float f2, int s1, int s2, int s3, int s4);
+
+void func_L09_003EAF60(char *object)
+{
+    func_002E5CF8(2, 0, object);
+    func_002A6C58(object, 0, 3);
+    func_0032C700(object + 0x10, 1, 0x19, 0x14, 0x14, 0x14, 0x2D, 1,
+                  1.0f, 20.0f, 1, 1, 0, 0);
+    func_0029F338(object);
+}
 
 INCLUDE_ASM("asm/levels", func_L09_003F65E0);
 
@@ -208,6 +294,7 @@ INCLUDE_ASM("asm/levels", func_L09_003F71C8);
 
 INCLUDE_ASM("asm/levels", func_L09_003F72A8);
 
+/* spawns one measured stage with the object's placement lifted by DY */
 INCLUDE_ASM("asm/levels", func_L09_003F7370);
 
 
@@ -334,6 +421,9 @@ void func_L09_003F77D0(char *object)
 
 INCLUDE_ASM("asm/levels", func_L09_003F7840);
 
+extern float func_00282E80(char *a, char *b);
+
+/* reports whether the index still names a reachable entry, or whether the frame moved close enough */
 INCLUDE_ASM("asm/levels", func_L09_003F7A88);
 
 INCLUDE_ASM("asm/levels", func_L09_003F7B28);
@@ -350,7 +440,24 @@ INCLUDE_ASM("asm/levels", func_L09_003F7CE0);
 INCLUDE_ASM("asm/levels", func_L09_003F8598);
 
 
-INCLUDE_ASM("asm/levels", func_L09_003F87D8);
+void func_L09_003F87D8(char *unused, int index)
+{
+    unsigned int entry;
+    unsigned short *q;
+
+    if (index == 0xFF)
+        return;
+    entry = D_L09_001FB560[index];
+    if (entry == 0)
+        return;
+    q = (unsigned short *)entry;
+    do {
+        char *r = D_L09_001B285C + ((q[0] & 0x7FFF) << 8);
+
+        if (*(signed char *)(r + 0x20) >= 0 && *(short *)(r + 0xAA) == 0xD0F)
+            *(unsigned char *)(*(int *)(r + 0x68) + 0x2EA) = 1;
+    } while ((short)*q++ >= 0);
+}
 
 
 

@@ -1,17 +1,17 @@
-/* w13 LABANDON (presque) — func_L01_00397950, 212 o, 23 places.
- * Derniere ligne de check.py (5e compilation) :
+/* w13 ABANDON (almost) — func_L01_00397950, 212 bytes, 23 places.
+ * last check.py line (5th compilation):
  *   func_L01_00397950: 0 of 23 places match
  *   (retail) "instruction at +0x8 differs"
- * Corps identique au retail instruction par instruction (deux boucles, ordre
- * des 4 stores flottants 0x50/0x54/0x58/0x5C corrige), SAUF l'allocation des
- * deux callee-saved : le retail met le pointeur d'entite ($68) dans $s1 et le
- * compteur de boucle dans $s2 ; ce candidat fait l'inverse. $s0 (float *) est
- * correct dans les deux. Aucun levier de source trouve : l'ordre de
- * declaration (compteur en premier, en dernier) ne change rien a l'allocation.
+ * Body identical to the retail instruction by instruction (two loops, order
+ * of the 4 float stores 0x50/0x54/0x58/0x5C corrected), EXCEPT the allocation
+ * of the two callee-saved: the retail puts the entity pointer ($68) in $s1
+ * and the loop counter in $s2; this candidate does the opposite. $s0 (float *)
+ * is correct in both. No source lever found: the declaration order (counter
+ * first, last) changes nothing in the allocation.
  *
- * Ordre des stores 0x50..0x5C (regle mesuree) : la source [50, 54, 5C, 58]
- * donne l'emission retail [5C, 58, 50, 54] (rotation de 2) ; l'ordre naif
- * [50,54,58,5C] et l'ordre inverse donnaient tous deux un desaccord.
+ * Order of the stores 0x50..0x5C (measured rule): the source [50, 54, 5C, 58]
+ * gives the retail emission [5C, 58, 50, 54] (rotation by 2); the naive order
+ * [50,54,58,5C] and the inverse order both gave a mismatch.
  */
 extern int func_002A77E0(int);
 

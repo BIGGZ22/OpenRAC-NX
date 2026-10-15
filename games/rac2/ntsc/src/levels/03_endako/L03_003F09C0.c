@@ -17,6 +17,31 @@ extern float func_2F0048(float f0, float f1);
 extern void func_324210(void *entity, void *target, int a, float f0, float f1);
 extern u32 func_31CFF8(void *a, void *b, u32 c);
 extern int func_3437D8(int index, void *a, void *out, float f);
+extern void func_3A2F48(void *entry);
+extern int func_31BA30(int a, int b);
+extern float func_2F0148(int a);
+extern void func_2FD088(int a, int b, float f);
+extern void func_2E77F0(void *fn, void *entity);
+
+/* The entity's per-frame sub-states; several are still INCLUDE_ASM markers
+ * further down this file, hence the prototypes that repeat their definition. */
+extern void func_L03_003F5B70(u8 *entity);
+extern void func_L03_003F6158(u8 *entity);
+extern void func_L03_003F64E8(u8 *entity);
+extern void func_L03_003F6610(u8 *entity);
+extern void func_L03_003F6748(u8 *entity);
+extern void func_L03_003F6948(u8 *entity);
+extern void func_L03_003F6BA8(u8 *entity);
+
+/* `lui $v0,%hi ; lw $v0,%lo($v0)` in the retail: one register, no HIGH/LO_SUM
+ * split, which is what the sda attribute (SYMBOL_REF_FLAG) gives in -G0. */
+extern u8 *D_L03_001B2A1C __attribute__((sda));
+extern u8 *D_L03_001FB5A0[];
+
+/* One word of a stream: bits 0..14 name a record, bit 15 ends the walk. */
+typedef struct {
+    u16 raw;
+} StreamEntry;
 
 /* Measured partial layouts; the original types and game roles are unknown. */
 typedef struct {
@@ -53,7 +78,27 @@ INCLUDE_ASM("asm/levels", func_L03_003F5590);
 
 INCLUDE_ASM("asm/levels", func_L03_003F5B70);
 
-INCLUDE_ASM("asm/levels", func_L03_003F6080);
+/* ticks the entity's sub-states, feeds the 0x95 counter to the engine and
+ * re-arms its 200-second timer */
+void func_L03_003F6080(u8 *entity) {
+    u8 *state = *(u8 **)(entity + 0x68);
+    u32 timer;
+
+    func_320318(entity, state + 0x70);
+    func_L03_003F5B70(entity);
+    func_L03_003F64E8(entity);
+    func_L03_003F6610(entity);
+    func_L03_003F6748(entity);
+    func_L03_003F6158(entity);
+    if (*(u8 *)(entity + 0x95) >= 2)
+        func_2FD088(5, 0, *(float *)(state + 0x20) / func_2F0148(*(s16 *)(state + 0x24)));
+    if (*(s32 *)(state + 0x3BC) != 0)
+        func_2E77F0(func_L03_003F6948, entity);
+    if (*(u8 *)(entity + 0x31) != 0)
+        func_2E77F0(func_L03_003F6BA8, entity);
+    timer = *(u16 *)(entity + 0x96);
+    if (timer <= 0xFFFE) *(u16 *)(entity + 0x96) = (u16)(timer + 1);
+}
 
 INCLUDE_ASM("asm/levels", func_L03_003F6158);
 
@@ -88,7 +133,21 @@ void func_L03_003F6610(u8 *entity) {
     func_324210(entity, state + 0x190, 1, 0.03f, 0.3f);
 }
 
-INCLUDE_ASM("asm/levels", func_L03_003F66D8);
+/* hands every record of the stream at slot 0xAC to func_3A2F48 */
+void func_L03_003F66D8(u8 *entity) {
+    u8 *state = *(u8 **)(entity + 0x68);
+    s32 index = *(s32 *)(state + 0xAC);
+    StreamEntry *entry;
+
+    if (index == -1) return;
+    entry = (StreamEntry *)D_L03_001FB5A0[index];
+    if (entry == 0) return;
+    do {
+        func_3A2F48(D_L03_001B2A1C + ((entry->raw & 0x7FFF) << 8));
+        if ((s16)entry->raw < 0) break;
+        entry++;
+    } while (1);
+}
 
 INCLUDE_ASM("asm/levels", func_L03_003F6748);
 
@@ -102,7 +161,11 @@ void func_L03_003F68E8(u8 *entity, u32 value) {
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L03_003F6918);
+void func_L03_003F6918(u8 *entity, s32 index) {
+    LevelState *state = *(LevelState **)(entity + 0x68);
+
+    state->entries[index] = state->entries[--state->count];
+}
 
 INCLUDE_ASM("asm/levels", func_L03_003F6948);
 
@@ -126,9 +189,37 @@ INCLUDE_ASM("asm/levels", func_L03_0041CA78);
 
 INCLUDE_ASM("asm/levels", func_L03_0041CEB0);
 
-INCLUDE_ASM("asm/levels", func_L03_0041D0A8);
+/* func_L03_0041D0A8 lives in L03_003F09C0-g8.c (it reaches D_L03_001B2A1C
+ * through $gp). */
 
-INCLUDE_ASM("asm/levels", func_L03_0041D128);
+/* func_L03_003F6918 has a near miss in drafts/L03_003F09C0-w29-nearmiss.c: the
+ * body is byte-identical except that the two `addu` come out (index, base)
+ * instead of the retail's (base, index). */
+
+/* walks entity's stream, asking func_31BA30 for the value it stores at +0x2D8
+ * of every record whose halfword at +0xAA is 0xFF3 */
+void func_L03_0041D128(u8 *entity) {
+    StreamEntry *entry;
+    StreamEntry *p;
+    u8 *record;
+
+    if (entity[0x21] == 0xFF) return;
+    entry = (StreamEntry *)D_L03_001FB5A0[entity[0x21]];
+    if (entry == 0) return;
+    p = entry;
+    do {
+        record = D_L03_001B2A1C + ((p->raw & 0x7FFF) << 8);
+        if (*(signed char *)(record + 0x20) >= 0) {
+            if (*(short *)(record + 0xAA) == 0xFF3) {
+                u8 *owner = *(u8 **)(record + 0x68);
+
+                *(int *)(owner + 0x2D8) = func_31BA30(0x28, 0x32);
+            }
+        }
+        if ((s16)p->raw < 0) break;
+        p++;
+    } while (1);
+}
 
 /* asks the current entry to resolve; 1 when it consumed the query */
 u32 func_L03_0041D1D8(u8 *entity) {
@@ -153,7 +244,7 @@ INCLUDE_ASM("asm/levels", func_L03_0041DCE0);
 
 INCLUDE_ASM("asm/levels", func_L03_0041DFA8);
 
-INCLUDE_ASM("asm/levels", func_L03_0041E240);
+/* func_L03_0041E240 lives in L03_003F09C0-g8.c (same $gp access). */
 
 INCLUDE_ASM("asm/levels", func_L03_0041E2D8);
 

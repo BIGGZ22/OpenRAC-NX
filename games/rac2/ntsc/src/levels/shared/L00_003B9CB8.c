@@ -1,5 +1,8 @@
 #include "include_asm.h"
 
+/* The 128-bit unit four of these bodies copy whole. */
+typedef int Rac2TI128 __attribute__((mode(TI)));
+
 /* Measured partial layouts; original type and game roles are unknown. */
 typedef struct Rac2Native_86f665335d9cb905_AnalysisOwner {
     unsigned char prefix_00[0x68];
@@ -81,9 +84,48 @@ INCLUDE_ASM("asm/levels", func_L00_003BB080);
 
 INCLUDE_ASM("asm/levels", func_L00_003BB1F8);
 
-INCLUDE_ASM("asm/levels", func_L00_003BB600);
+extern void func_002FC560(unsigned int reg, unsigned long value);
 
-INCLUDE_ASM("asm/levels", func_L00_003BB668);
+extern float func_002A7940(void);
+
+extern void func_00281EB8(char *a, int b, unsigned int c, int d, float e, float f,
+                          float g);
+
+extern void func_L00_003BBF48(char *a0);
+
+extern void func_L00_003BCDC0(char *a0);
+
+/* Opens the block, lays seven oriented sprites over it from two helper draws and the shared
+   colour word, then runs the two slot-table passes and closes the block. */
+void func_L00_003BB668(char *a0)
+{
+    char *ctx;
+
+    ctx = *(char **)(a0 + 0x68);
+    func_002FC560(0x47, 0x00053001);
+
+    func_00281EB8(a0 + 0x10, 0x2C,
+                  (func_002A7820_1(0x80, 0xC8) << 24) | 0x72FF, 1,
+                  func_002A7878_2(0.38500002f, 0.415f) * *(float *)(ctx + 0x4C),
+                  -0.01f, func_002A7940());
+    func_00281EB8(a0 + 0x10, 0x2D,
+                  (func_002A7820_1(4, 0x28) << 24) | 0x00DDB973, 1,
+                  *(float *)(ctx + 0x4C) * 1.225f, 0.0f, func_002A7940());
+    func_00281EB8(a0 + 0x10, 0x29,
+                  (func_002A7820_1(4, 0x28) << 24) | 0x00DDB973, 1,
+                  *(float *)(ctx + 0x4C) * 0.6f, 0.0f, func_002A7940());
+    func_00281EB8(a0 + 0x10, 0x2A,
+                  (func_002A7820_1(4, 0x2D) << 24) | 0x00DDB973, 1,
+                  func_002A7878_2(0.975f, 1.025f) * *(float *)(ctx + 0x4C),
+                  0.0f, func_002A7940());
+    func_00281EB8(a0 + 0x10, 0x2A,
+                  (func_002A7820_1(4, 0x2D) << 24) | 0x00DDB973, 1,
+                  func_002A7878_2(0.975f, 1.025f) * *(float *)(ctx + 0x4C),
+                  0.0f, func_002A7940());
+    func_L00_003BBF48(a0);
+    func_L00_003BCDC0(a0);
+    func_002FC560(0x47, 0x0005360B);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003BB8B8);
 
@@ -219,7 +261,29 @@ INCLUDE_ASM("asm/levels", func_L00_003C1FC8);
 
 INCLUDE_ASM("asm/levels", func_L00_003C27A0);
 
-INCLUDE_ASM("asm/levels", func_L00_003C2DE8);
+extern void func_L00_003263D0(char *a, char *b, float h, int c, int d, char *e, float i,
+                               int f, int g, float j, float k);
+
+/* Twenty rounds of four bound helpers on three 16-byte scratch vectors, the first of which
+   starts as the second argument's record; each round ends with the eleven-argument emitter. */
+void func_L00_003C2DE8(char *a0, char *a1, float fa, float fb)
+{
+    char v0[16];
+    char v1[16];
+    char v2[16];
+    char *pv0 = v0;
+    int i;
+
+    *(Rac2TI128 *)pv0 = *(Rac2TI128 *)a1;
+    i = 0x13;
+    do {
+        func_002A7A00(v1, fa, fa);
+        func_00282F20_2(v2, v1, func_002A7878_2(fb * 0.75f, fb * 1.25f));
+        func_00282CC0_6(v1, v1, pv0);
+        func_L00_003263D0(a0, v1, 0.0f, 1, 0, v2, 0.0f, 0x50804040, 0, 2.0f, 5.0f);
+        i--;
+    } while (i >= 0);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003C2F10);
 
@@ -236,7 +300,18 @@ void func_L00_003C33E0(Rac2Native_9cdc323a4d0c2fbd_AnalysisOwner *owner)
 
 INCLUDE_ASM("asm/levels", func_L00_003C3418);
 
-INCLUDE_ASM("asm/levels", func_L00_003C37A0);
+/* The 0x68 context block starts with two words and a halfword that this body clears. */
+void func_L00_003C37A0(char *p)
+{
+    char *q = *(char **)(p + 0x68);
+
+    if (*(unsigned char *)(p + 0x20) == 0) {
+        *(int *)(q + 0x8) = 0;
+        *(short *)(q + 0xE) = 0;
+        *(int *)(q + 0x0) = 0;
+        *(unsigned char *)(p + 0x20) = 1;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003C37C8);
 
@@ -286,8 +361,6 @@ INCLUDE_ASM("asm/levels", func_L00_003C4B98);
 INCLUDE_ASM("asm/levels", func_L00_003C4F78);
 
 INCLUDE_ASM("asm/levels", func_L00_003C5310);
-
-INCLUDE_ASM("asm/levels", func_L00_003C58E0);
 
 INCLUDE_ASM("asm/levels", func_L00_003C58E8);
 

@@ -65,15 +65,91 @@ f32 func_L08_003277C0(s32 n, f32 x) {
     return r;
 }
 
-INCLUDE_ASM("asm/levels", func_L08_003289D0);
+extern u8 *D_L08_001B29DC __attribute__((sda));
+extern u8 *D_L08_001B29E0 __attribute__((sda));
 
-INCLUDE_ASM("asm/levels", func_L08_00328AE0);
+/* Counts the 0x100-byte records between the two pointers whose halfword at +0xAA equals A0
+   and whose byte at +0x20 is neither 0xFE nor 0xFD. */
+s32 func_L08_003289D0(s32 a0) {
+    u8 *p = D_L08_001B29DC;
+    s32 n = 0;
 
-INCLUDE_ASM("asm/levels", func_L08_00328B80);
+    for (; p < D_L08_001B29E0; p += 0x100) {
+        if (p != 0 && *(s16 *)(p + 0xAA) == a0) {
+            if (*(u8 *)(p + 0x20) != 0xFE) {
+                if (*(u8 *)(p + 0x20) != 0xFD)
+                    n++;
+            }
+        }
+    }
+    return n;
+}
+
+/* Switches three flags of one record; -1 leaves a group alone, 0 clears it and anything
+   else sets it. */
+void func_L08_00328AE0(void *a0v, s32 a1, s32 a2, s32 a3) {
+    u8 *a0 = a0v;
+    u8 kind;
+
+    if (a0 == 0)
+        return;
+    kind = *(u8 *)(a0 + 0x20);
+    if (kind == 0xFE)
+        return;
+    if (kind == 0xFD)
+        return;
+    if (a1 != -1) {
+        if (a1 != 0)
+            *(u16 *)(a0 + 0x34) &= 0xFFFD;
+        else
+            *(u16 *)(a0 + 0x34) |= 2;
+    }
+    if (a2 != -1) {
+        if (a2 != 0) {
+            *(u8 *)(a0 + 0x31) = 1;
+            *(u16 *)(a0 + 0x34) &= 0xFFFE;
+        } else {
+            *(u8 *)(a0 + 0x31) = 0;
+            *(u16 *)(a0 + 0x34) |= 1;
+        }
+    }
+    if (a3 != -1) {
+        if (a3 != 0)
+            *(s32 *)(a0 + 0x98) = *(s32 *)(*(s32 *)(a0 + 0x24) + 0x10);
+        else
+            *(s32 *)(a0 + 0x98) = 0;
+    }
+}
+
+extern u8 *D_L08_001B29DC __attribute__((sda));
+extern void func_L08_00328AE0(void *, s32, s32, s32);
+
+void func_L08_00328B80(s32 a0, s32 a1, s32 a2, s32 a3) {
+    if (a0 == -1)
+        return;
+    func_L08_00328AE0(D_L08_001B29DC + (a0 << 8), a1, a2, a3);
+}
 
 INCLUDE_ASM("asm/levels", func_L08_00328BB0);
 
-INCLUDE_ASM("asm/levels", func_L08_0032A4D0);
+extern f32 func_00283248(f32, f32);
+extern f32 func_00282E20(void *);
+
+/* Splits a four-float vector: two components give an angle, 0x45AFDF66 marks an
+   already-resolved vector. */
+void func_L08_0032A4D0(u8 *a0, f32 *a1, f32 *a2, f32 *a3) {
+    f32 v[4];
+
+    *(TI128 *)v = *(TI128 *)a0;
+    if (v[3] != 5627.9248046875f) {
+        *a1 = func_00283248(v[0], v[1]);
+        return;
+    }
+    *a1 = func_00283248(v[0], v[1]);
+    *a2 = *a2 * func_00282E20(v);
+    v[3] = 0;
+    *a3 = *a3 * v[2];
+}
 
 INCLUDE_ASM("asm/levels", func_L08_0032C0D8);
 
@@ -97,7 +173,14 @@ s32 func_L08_003391C0(u8 *p, s32 a1, s32 a2, u8 *out, f32 f1, f32 f2) {
 
 INCLUDE_ASM("asm/levels", func_L08_00339220);
 
-INCLUDE_ASM("asm/levels", func_L08_0033CD18);
+extern void func_L01_00324410(s32, s32, void *);
+
+/* The float varargs entry: 2.95.3 spills $a2-$a3, $t0-$t3 (eight bytes each)
+   and $f12-$f18; the work is done by the shared worker on that save area. */
+void func_L08_0033CD18(s32 a0, s32 a1, ...) {
+    func_L01_00324410(a0, a1, (char *)__builtin_next_arg(a1) - 0x30);
+}
+
 INCLUDE_ASM("asm/levels", func_L08_0034A078);
 
 INCLUDE_ASM("asm/levels", func_L08_00363320);
@@ -139,12 +222,7 @@ INCLUDE_ASM("asm/levels", func_L08_003CD488);
 extern u8 *D_0018C0B0;
 extern void func_002A0F48();
 
-void func_L08_003CD600(u8 *ctx) {
-    u8 *s = D_0018C0B0;
-    qcopy(ctx + 0x10, s + 0x10);
-    qcopy(ctx + 0xF0, s + 0xF0);
-    func_002A0F48(ctx);
-}
+INCLUDE_ASM("asm/levels", func_L08_003CD600);
 
 INCLUDE_ASM("asm/levels", func_L08_003CD648);
 
@@ -152,12 +230,7 @@ INCLUDE_ASM("asm/levels", func_L08_003CD6C8);
 
 INCLUDE_ASM("asm/levels", func_L08_003CD708);
 
-void func_L08_003CDB38(u8 *p) {
-    u8 *s = *(u8 **)(p + 0x68);
-    qcopy(p + 0x10, s);
-    qcopy(p + 0xF0, s + 0x10);
-    func_002A0F48(p);
-}
+INCLUDE_ASM("asm/levels", func_L08_003CDB38);
 
 INCLUDE_ASM("asm/levels", func_L08_003CDB78);
 

@@ -176,4 +176,41 @@ INCLUDE_ASM("asm/levels", func_L04_004027B0);
 
 INCLUDE_ASM("asm/levels", func_L04_004029D8);
 
-INCLUDE_ASM("asm/levels", func_L04_00402C88);
+extern float func_00282E48(char *arg0, char *arg1);
+
+extern char *D_001FE340[];
+
+void func_L04_00402C88(char *arg0) {
+    char *state = *(char **)(arg0 + 0x68);
+    char *obj;
+
+    {
+        int *slot;
+        int i;
+
+        slot = (int *)(state + 0x54);
+        for (i = 5; i >= 0; i--, slot++) {
+            if (*slot != -1) {
+                obj = D_001FE340[*slot];
+                *(float *)(obj + 0x1C) = func_00282E48(obj + 0x10, obj + 0x20);
+            }
+        }
+    }
+    {
+        int none = -1;
+        int *slot;
+        int i;
+
+        slot = (int *)(state + 0x6C);
+        for (i = 3; i >= 0; i--, slot++) {
+            if (*slot != none) {
+                obj = D_001FE340[*slot];
+                *(float *)(obj + 0x1C) = func_00282E48(obj + 0x10, obj + 0x20);
+            }
+        }
+    }
+    if (*(int *)(state + 0x7C) != -1) {
+        obj = D_001FE340[*(int *)(state + 0x7C)];
+        *(float *)(obj + 0x1C) = func_00282E48(obj + 0x10, obj + 0x20);
+    }
+}

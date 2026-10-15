@@ -97,7 +97,7 @@ describes every key). What hostgen itself reads:
 |---|---|
 | `sources`, `skip` | the C to translate (`src`, without `src/libgcc`: the host compiler has its own) |
 | `includes`, `defines` | how to read it, relative to the decompilation |
-| `names` | how the decompilation names code and data by address: regular expressions with an `addr` group (and `overlay` for a level's code). rac1/pal's `func_`, `func_Lnn_` and `D_` by default; Going Commando's `LVL_<n>_<LEVEL>_FUN_` and `BOOT_D_`, for example, are its own |
+| `names` | how the decompilation names code and data by address: regular expressions with an `addr` group (and `overlay` for a level's code). The defaults (`func_`, `func_Lnn_`, `D_`, `D_Lnn_`) also cover Going Commando's current `master` |
 | `symbols` | splat symbol files (`name = 0x00123456;`): named globals and functions with their addresses |
 | `places` | where each level function sits in each level (`config/overlays/functions.tsv` of rac1/pal) |
 | `groups` | parts of the tree that are programs of their own, loaded over part of the executable (Up Your Arsenal's menu, `src/frontbin`): their definitions are their own symbols (`func_00385750__frontbin`) in their own overlay, and their calls find their own functions first |

@@ -12,7 +12,21 @@ extern int func_002A77E0(int);
 
 extern void func_L00_00325AE8(void *, int, float, float);
 
+extern void func_00282C88(void *);
+
 extern int D_L02_001B01B0 __attribute__((sda));
+
+extern int D_L02_001B0344 __attribute__((sda));
+
+extern int D_L02_001B0350 __attribute__((sda));
+
+extern int D_L02_001B0360 __attribute__((sda));
+
+void func_L02_003D69F0(void) {
+    D_L02_001B0344 = 0;
+    func_00282C88(&D_L02_001B0360);
+    func_00282C88(&D_L02_001B0350);
+}
 
 int func_L02_003D4D68(char *arg0) {
     char *state = *(char **)(arg0 + 0x68);

@@ -1,5 +1,7 @@
 #include "common.h"
 
+typedef int TI128 __attribute__((mode(TI)));
+
 extern void func_00282D30_2(char *dst, char *src, float scale);
 extern void func_002A7750(void *a0, int a1, int a2);
 extern void func_002AB8C0(void *a0, void *a1);
@@ -13,6 +15,42 @@ extern float func_00283248(float a, float b);
 extern float func_002A7878(float a, float b);
 extern float func_00283180(float x);
 extern float func_00283198(float x);
+
+extern void func_002A7470(void *a0, int a1, int a2, int a3);
+
+extern void func_002A05A8(void *a0);
+
+extern void func_L11_00441978(char *p, int id);
+
+extern int func_L11_00441868(char *p, int id);
+
+extern int func_002B3BA8(void *a0, int a1, int a2, int a3, float f12, float f13);
+
+extern void func_002B60B0(void *a0, float f12, float f13, float f14, float f15);
+
+extern float func_002A7820(int a0, int a1);
+
+extern float func_002A7940(void);
+
+extern void func_00281EB8(void *a0, void *a1, void *a2, float f12, float f13,
+                          float f14, int a3);
+
+extern void func_002B3380(void *a0, void *a1, void *a2, int a3);
+
+extern void func_002A0F48(void *a0);
+
+extern void func_L00_002E6CF0(void *a0, void *a1);
+
+extern void func_L11_0045B6C8(char *p);
+
+extern int D_L11_001CAE40;
+
+extern int D_L11_001B46D4;
+
+extern int D_L11_001B30C8;
+
+extern void func_L11_00458DF0(char *a0, void *a1, void *a2, int a3, int t0, float f12,
+                              float f13);
 
 INCLUDE_ASM("asm/levels", func_L11_00453358);
 
@@ -39,6 +77,7 @@ void func_L11_00454AE0(char *p)
 
 INCLUDE_ASM("asm/levels", func_L11_00454B60);
 
+
 INCLUDE_ASM("asm/levels", func_L11_00454C78);
 
 INCLUDE_ASM("asm/levels", func_L11_00454DD8);
@@ -62,23 +101,25 @@ INCLUDE_ASM("asm/levels", func_L11_00456378);
 
 INCLUDE_ASM("asm/levels", func_L11_00456438);
 
-INCLUDE_ASM("asm/levels", func_L11_00456540);
-
-void func_L11_004565D8(char *p, char *a1)
+/* Retires the state's counter and drops the object to its idle flag block. */
+void func_L11_00456540(char *p)
 {
-    float dx = *(float *)(p + 0x10) - *(float *)(a1 + 0x0);
-    float dz = *(float *)(p + 0x14) - *(float *)(a1 + 0x4);
-    float ang = func_00283248(dx, dz);
-    char *q;
-    float amp;
+    char *q = *(char **)(p + 0x68);
 
-    ang = ang + func_002A7878(-0.78539825f, 0.78539825f);
-    amp = func_002A7878(-2.0f, 2.0f) + 8.0f;
-    q = *(char **)(p + 0x68);
-    qcopy(q + 0x230, a1);
-    *(float *)(q + 0x230) = *(float *)(q + 0x230) + amp * func_00283180(ang);
-    *(float *)(q + 0x234) = *(float *)(q + 0x234) + amp * func_00283198(ang);
+    if (*(short *)(q + 0x256) == 1) {
+        func_L11_00441978(*(char **)(p + 0xB8), 0xDF9);
+    }
+    *(short *)(q + 0x256) = 0;
+    *(int *)(q + 0x240) = 0;
+    func_002A7470(p, 0, 0, 3);
+    func_002A05A8(p);
+    func_002A7750(p, 1, 0);
+    *(int *)(p + 0x98) = 0;
+    *(unsigned short *)(p + 0x34) = (*(unsigned short *)(p + 0x34) & 0xEFFF) | 0x47;
+    *(char *)(p + 0x31) = 0;
 }
+
+INCLUDE_ASM("asm/levels", func_L11_004565D8);
 
 INCLUDE_ASM("asm/levels", func_L11_004566C0);
 
@@ -122,7 +163,7 @@ INCLUDE_ASM("asm/levels", func_L11_004590F0);
 
 INCLUDE_ASM("asm/levels", func_L11_00459640);
 
-INCLUDE_ASM("asm/levels", func_L11_00459D48);
+/* func_L11_00459D48 lives in the sibling small-data unit (L11_00453358-g8.c). */
 
 void func_L11_00459E48(char *p)
 {

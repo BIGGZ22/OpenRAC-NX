@@ -102,7 +102,7 @@ INCLUDE_ASM("asm/game", func_00330BC0);
 
 INCLUDE_ASM("asm/game", func_00330CA0);
 
-INCLUDE_ASM("asm/game", func_00330E48);
+/* func_00330E48 is in 0032EB28-g8.c. */
 
 INCLUDE_ASM("asm/game", func_00330EC0);
 
@@ -152,9 +152,32 @@ INCLUDE_ASM("asm/game", func_003334B0);
 
 INCLUDE_ASM("asm/game", func_00333AF8);
 
-INCLUDE_ASM("asm/game", func_00334050);
+extern unsigned short *D_001EE5A0[];
+extern char *D_001B1B5C __attribute__((sda));
 
-INCLUDE_ASM("asm/game", func_003340A8);
+void func_00334050(int index, int value)
+{
+    unsigned short *list = D_001EE5A0[index];
+    if (list != 0) {
+        unsigned short *entry = list;
+        int key;
+        do {
+            char *object = (char *)(((*entry & 0x7FFF) << 8) + (unsigned int)D_001B1B5C);
+            *(unsigned char *)(*(char **)(object + 0x68) + 0x15) = value;
+            key = *(short *)entry++;
+        } while (key >= 0);
+    }
+}
+
+extern void func_002FDBD8(void *, void *, int, float);
+
+void func_003340A8(char *object)
+{
+    char *data = *(char **)(object + 0x68);
+    unsigned int mode = *(unsigned char *)(object + 0x20);
+    if (mode - 2 < 2 && *(int *)(data + 0x40) != 0)
+        func_002FDBD8(data + 0x10, data + 0x20, 0, 1.0f);
+}
 
 INCLUDE_ASM("asm/game", func_003340F0);
 
@@ -427,7 +450,25 @@ void func_00335FC8(Obj_F7b2f1854 *o, int a1, int count)
 
 INCLUDE_ASM("asm/game", func_003360F0);
 
-INCLUDE_ASM("asm/game", func_003360F8);
+extern char D_001ADA78[] __attribute__((sda));
+extern void func_00336DA0(void *);
+
+void func_003360F8(char *object, int flags)
+{
+    *(char **)(object + 0x30) = D_001ADA78;
+    if (*(int *)(object + 0x2C)) {
+        if (*(int *)(object + 0x14) == 0)
+            func_00336ED0(*(int *)(object + 0x2C), *(int *)object);
+        if (*(int *)(object + 0x1C) == 0)
+            func_00336ED0(*(int *)(object + 0x2C), *(int *)(object + 8));
+        if (*(int *)(object + 0x18) == 0)
+            func_00336ED0(*(int *)(object + 0x2C), *(int *)(object + 4));
+        if (*(int *)(object + 0x20) == 0)
+            func_00336ED0(*(int *)(object + 0x2C), *(int *)(object + 12));
+    }
+    if (flags & 1)
+        func_00336DA0(object);
+}
 
 extern void *func_00335FB0(void *);
 extern char D_001ADA58[] __attribute__((sda));
@@ -477,7 +518,7 @@ INCLUDE_ASM("asm/game", func_00336308);
 /* Measured target: byte-identical across all 27 levels. */
 s32 func_00336318(u8 *a0) { return *(s32 *)(a0 + 0x38); }
 
-INCLUDE_ASM("asm/game", func_00336320);
+
 
 extern int func_00336D50(int, int);
 

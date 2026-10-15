@@ -1,8 +1,8 @@
-/* Draft (2 essais, 460 o sur 508 attendus) - func_L19_00423CC0.
-   Derniere ligne check.py : "19_grelbin: 460 bytes, expected 508".
-   Corps reconstruit complet mais l arbre de dispatch du switch (ordre/forme des
-   4 branches de tete) ne se reproduit pas avec switch a 2 cas ni avec les cas
-   permutes. A reprendre : forme exacte de test de tete. */
+/* Draft (2 attempts, 460 bytes out of 508 expected) - func_L19_00423CC0.
+   last check.py line: "19_grelbin: 460 bytes, expected 508".
+   Body reconstructed in full but the switch dispatch tree (order/shape of the
+   4 head branches) does not reproduce with a 2-case switch nor with the cases
+   permuted. To retake: exact head test shape. */
 
 extern void func_30DFE8();
 

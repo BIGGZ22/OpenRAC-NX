@@ -1,4 +1,5 @@
 #include "include_asm.h"
+#include "common.h"
 
 extern void func_321F58();
 extern char *func_328768();
@@ -12,9 +13,21 @@ extern void func_2F5C68();
 extern void func_2F6498();
 extern void func_2F5CC0();
 extern void func_31A618();
+extern void func_4209A0();
+extern int func_420C68();
+extern float func_2F6C80(float a, float b);
+extern float func_2F6240(float a);
+extern void func_2F5F18(void *dst, void *src, float s);
+extern void func_2F5D68(void *dst, void *src, void *mtx);
+extern void func_3910E0(char *a0, char *a1, int a2, int a3, int t0, int t1, int t2,
+                        float f12, float f13, float f14, float f15, float f16);
+
+extern char D_0018A0E0[];
+extern char D_L14_00237B00[];
+
 INCLUDE_ASM("asm/levels", func_L14_00304190);
 
-INCLUDE_ASM("asm/levels", func_L14_00304280);
+/* func_L14_00304280 lives in the -g8 sibling file (it reaches a global through $gp). */
 
 INCLUDE_ASM("asm/levels", func_L14_00304588);
 
@@ -36,7 +49,25 @@ INCLUDE_ASM("asm/levels", func_L14_00390DF8);
 
 INCLUDE_ASM("asm/levels", func_L14_00390EC0);
 
-INCLUDE_ASM("asm/levels", func_L14_00390FE8);
+void func_L14_00390FE8(char *arg0) {
+    char *s0 = *(char **)(arg0 + 0x68);
+    char *base = D_L14_00237B00;
+    char *base2 = base + 0x400;
+    int i;
+
+    for (i = 0; i < 4; i++) {
+        func_3910E0(arg0, (char *)(((*(int *)(s0 + 0xDC) + i) << 8) + (unsigned int)base),
+                    *(int *)(s0 + 0x38), *(int *)(s0 + 0x40),
+                    *(int *)(s0 + 0x60), *(int *)(s0 + 0x44), *(int *)(s0 + 0x64),
+                    *(float *)(s0 + 0x50), *(float *)(s0 + 0x70), *(float *)(s0 + 0x54),
+                    *(float *)(s0 + 0x74), 0.9f);
+        func_3910E0(arg0, (char *)(((*(int *)(s0 + 0xDC) + i) << 8) + (unsigned int)base2),
+                    *(int *)(s0 + 0x38), *(int *)(s0 + 0x48),
+                    *(int *)(s0 + 0x68), *(int *)(s0 + 0x4C), *(int *)(s0 + 0x6C),
+                    *(float *)(s0 + 0x58), *(float *)(s0 + 0x78), *(float *)(s0 + 0x5C),
+                    *(float *)(s0 + 0x7C), 0.1f);
+    }
+}
 
 void func_L14_00391B58(char *arg0) {
     char buf[16];
@@ -123,7 +154,7 @@ INCLUDE_ASM("asm/levels", func_L14_003DE9B0);
 
 INCLUDE_ASM("asm/levels", func_L14_003DECE0);
 
-INCLUDE_ASM("asm/levels", func_L14_003DF100);
+/* func_L14_003DF100 lives in the -g8 sibling file (its calls pass floats, so it needs real prototypes). */
 
 INCLUDE_ASM("asm/levels", func_L14_003DF200);
 
@@ -138,17 +169,42 @@ void func_L14_003DF650(unsigned char *arg0) {
     *(int *)(arg0 + 0x64) = (int)func_3DF6A0;
 }
 
-INCLUDE_ASM("asm/levels", func_L14_003DF690);
+void func_L14_003DF690(char *arg0, int arg1) {
+    *(int *)(*(int *)(arg0 + 0x68) + 0x7C) = arg1;
+}
 
 INCLUDE_ASM("asm/levels", func_L14_003DF6A0);
 
-INCLUDE_ASM("asm/levels", func_L14_003DF7F8);
+/* func_L14_003DF7F8 is defined in L14_00304190-g8.c (this unit has no $gp access for it). */
 
-INCLUDE_ASM("asm/levels", func_L14_003DFA10);
+void func_L14_003DFA10(char *arg0, char *arg1) {
+    char buf[16];
+    char *v = *(char **)(arg0 + 0x68);
+
+    func_2F5C38(buf, arg0 + 0xC0, arg0 + 0x10);
+    func_4209A0(*(int *)(v + 0x0), buf, arg1);
+}
 
 INCLUDE_ASM("asm/levels", func_L14_003DFA60);
 
-INCLUDE_ASM("asm/levels", func_L14_003E1DD0);
+void func_L14_003E1DD0(char *arg0) {
+    char *s0 = *(char **)(arg0 + 0x68);
+    unsigned char st = *(unsigned char *)(arg0 + 0x20);
+
+    switch (st) {
+    case 0:
+        *(float *)(s0 + 0x4) = *(float *)(arg0 + 0x18);
+        *(int *)(s0 + 0x8) = 0;
+        func_321F58(arg0, 1, -1);
+        break;
+    case 1:
+        *(float *)(arg0 + 0xF8) = func_2F6C80(*(float *)(arg0 + 0xF8), *(float *)(s0 + 0x0));
+        *(float *)(s0 + 0x8) = func_2F6C80(*(float *)(s0 + 0x8), *(float *)(s0 + 0xC));
+        *(float *)(arg0 + 0x18) = *(float *)(s0 + 0x4)
+                                  + *(float *)(s0 + 0x10) * func_2F6240(*(float *)(s0 + 0x8));
+        break;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L14_003E1E78);
 
@@ -163,13 +219,37 @@ void func_L14_003E2238(char *arg0) {
     func_31A618(arg0);
 }
 
-INCLUDE_ASM("asm/levels", func_L14_003E22A8);
+float func_L14_003E22A8(char *arg0) {
+    char *v = *(char **)(arg0 + 0x68);
+    unsigned int s = *(unsigned char *)(arg0 + 0x20);
+
+    if (s == 4) {
+        return (float)*(int *)(v + 0x7C) / (float)*(int *)(v + 0x78);
+    }
+    if (s == 2) {
+        return 1.0f - (float)*(int *)(v + 0x7C) / (float)*(int *)(v + 0x70);
+    }
+    if (s == 1) {
+        return 0.0f;
+    }
+    return 1.0f;
+}
 
 INCLUDE_ASM("asm/levels", func_L14_003E2328);
 
 INCLUDE_ASM("asm/levels", func_L14_003E2688);
 
-INCLUDE_ASM("asm/levels", func_L14_003E28E8);
+float func_L14_003E28E8(float arg0) {
+    float f = arg0;
+
+    while (6.2831855f < f) {
+        f = f - 6.2831855f;
+    }
+    while (f < 0.0f) {
+        f = f + 6.2831855f;
+    }
+    return f;
+}
 
 INCLUDE_ASM("asm/levels", func_L14_003E2980);
 
@@ -181,7 +261,7 @@ INCLUDE_ASM("asm/levels", func_L14_003E4BA0);
 
 INCLUDE_ASM("asm/levels", func_L14_003E4EA0);
 
-INCLUDE_ASM("asm/levels", func_L14_003E5030);
+/* func_L14_003E5030 lives in the -g8 sibling file (it reaches a global through $gp). */
 
 INCLUDE_ASM("asm/levels", func_L14_003E50B8);
 
@@ -194,7 +274,23 @@ void func_L14_003E5190(char *arg0) {
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L14_003E51B0);
+void func_L14_003E51B0(char *arg0) {
+    char *v0 = *(char **)(arg0 + 0x68);
+    char *v1 = *(char **)(v0 + 0x30);
+
+    if (v1 != 0) {
+        char *v2 = *(char **)(v1 + 0x68);
+
+        *(int *)(v2 + 0x48) = ((unsigned int)*(s16 *)(v0 + 0x44) << 16)
+                              | ((unsigned int)*(s16 *)(v0 + 0x42) << 8)
+                              | (unsigned int)*(s16 *)(v0 + 0x40);
+        *(int *)(v2 + 0x4C) = ((unsigned int)*(s16 *)(v0 + 0x4A) << 16)
+                              | ((unsigned int)*(s16 *)(v0 + 0x48) << 8)
+                              | (unsigned int)*(s16 *)(v0 + 0x46);
+        *(int *)(v2 + 0x3C) = 1;
+        *(int *)(v2 + 0x34) = *(int *)(v0 + 0x18);
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L14_003E5218);
 

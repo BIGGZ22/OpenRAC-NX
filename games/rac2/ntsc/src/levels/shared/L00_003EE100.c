@@ -182,7 +182,12 @@ INCLUDE_ASM("asm/levels", func_L00_003EEE90);
 
 INCLUDE_ASM("asm/levels", func_L00_003EF3E0);
 
-INCLUDE_ASM("asm/levels", func_L00_003EF548);
+extern int D_L00_001B0838 __attribute__((sda));
+
+void func_L00_003EF548(void)
+{
+    D_L00_001B0838 = 0;
+}
 
 extern int D_L00_001B0838 __attribute__((sda));
 
@@ -198,26 +203,7 @@ INCLUDE_ASM("asm/levels", func_L00_003EF560);
 
 extern int func_00283DB8(char *local, float value);
 
-void func_L00_003EFA00(char *obj)
-{
-    char local[16];
-    int r;
-
-    r = func_002B4038(*(short *)(obj + 0xAA), *(int *)(*(int *)(obj + 0x68) + 0x28));
-    if (r == 0) {
-        func_L00_003EF550();
-        func_0029F338(obj);
-        return;
-    }
-    qcopy(local, obj + 0x10);
-    *(float *)(local + 0xC) = 2.0f;
-    r = func_00283DB8(local, 100.0f);
-    if (r == -1)
-        return;
-    func_L00_003EFA98(obj);
-    func_L00_003EFD00(obj);
-    func_L00_003F0130(obj);
-}
+INCLUDE_ASM("asm/levels", func_L00_003EFA00);
 
 INCLUDE_ASM("asm/levels", func_L00_003EFA98);
 
@@ -337,7 +323,12 @@ INCLUDE_ASM("asm/levels", func_L00_003F0CC8);
 
 INCLUDE_ASM("asm/levels", func_L00_003F1300);
 
-INCLUDE_ASM("asm/levels", func_L00_003F1448);
+extern int D_L00_001B08D0 __attribute__((sda));
+
+void func_L00_003F1448(void)
+{
+    D_L00_001B08D0 = 0;
+}
 
 /* resets a state record: zero words, plus/minus one float flags and two 64-bit fields in the retail store order */
 void func_L00_003F1DC8(char *p)
@@ -394,16 +385,7 @@ void func_L00_003F28A0(Vec16_Fc936841d *object, int index)
 
 INCLUDE_ASM("asm/levels", func_L00_003F3160);
 
-void func_L00_003F34D8(char *src, int *src4, char *dst16, int *dst4, int *count)
-{
-    int i = *count;
-
-    if (i < 0x46) {
-        qcopy(dst16 + i * 16, src);
-        dst4[i] = *src4;
-        (*count)++;
-    }
-}
+INCLUDE_ASM("asm/levels", func_L00_003F34D8);
 
 INCLUDE_ASM("asm/levels", func_L00_003F3518);
 

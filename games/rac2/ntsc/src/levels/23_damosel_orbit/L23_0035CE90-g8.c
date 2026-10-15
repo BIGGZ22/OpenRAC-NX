@@ -24,6 +24,18 @@ void func_L23_003C1AE8(char *arg0) {
                                             D_L23_001AFAA0 * 0.000290888245f);
 }
 
+extern int D_L23_001B36B0;
+
+extern float D_L23_001AFA34 __attribute__((sda));
+
+extern char D_00189EA0[];
+
+extern void func_2F8190(char *out, char *in, char *base);
+
+extern void func_2F8440(char *out, char *in, float scale);
+
+extern float func_2F8268(char *out, char *in);
+
 void func_L23_00415FC8(char *arg0) {
     char *state = *(char **)(arg0 + 0x68);
     unsigned char kind = *(unsigned char *)(arg0 + 0x20);
@@ -48,3 +60,5 @@ void func_L23_00415FC8(char *arg0) {
     }
     func_L23_004160B0(arg0);
 }
+
+INCLUDE_ASM("asm/levels", func_L23_003C19E0);

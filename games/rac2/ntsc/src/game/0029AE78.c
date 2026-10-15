@@ -25,7 +25,30 @@ s32 func_0029AE78(s32 *a0) {
  return n+8;
 }
 
-INCLUDE_ASM("asm/game", func_0029AEB0);
+extern int D_00256138[];
+
+int func_0029AEB0(char *data, int length)
+{
+    char *end;
+    unsigned int crc;
+    if (func_0029AE78(D_00256138) < length)
+        return 0;
+    end = data + length;
+    crc = 0xEDB88320;
+    while (data < end) {
+        int bit;
+        char *next = data + 1;
+        crc ^= (unsigned char)*data << 8;
+        for (bit = 7; bit >= 0; bit--) {
+            if (crc & 0x8000)
+                crc = (crc << 1) ^ 0x1F45;
+            else
+                crc <<= 1;
+        }
+        data = next;
+    }
+    return crc & 0xFFFF;
+}
 
 int func_0029AF58(char *a0)
 {

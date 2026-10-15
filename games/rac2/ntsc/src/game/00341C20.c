@@ -49,11 +49,12 @@ INCLUDE_ASM("asm/game", func_00341CD0);
 /* Measured target: byte-identical across all 27 levels. */
 void func_00341CD8(u8 *a0, s32 a1) { *(s32 *)(a0 + 0x8) = a1; }
 
-INCLUDE_ASM("asm/game", func_00341CE0);
+
 
 INCLUDE_ASM("asm/game", func_00341E50);
 
-INCLUDE_ASM("asm/game", func_00341E58);
+extern void func_00341E90(char *);
+
 
 extern void func_00348128(void *);
 
@@ -67,7 +68,16 @@ void func_00341EB0(unsigned char *owner, float *records)
     *(float **)(owner + 0xD8) = records;
 }
 
-INCLUDE_ASM("asm/game", func_00341EE8);
+extern char *func_00347F80(char *, int);
+extern void func_003480F0(char *, float, float);
+
+long func_00341EE8(char *object, int arg)
+{
+    char *child = object + 0x10;
+    func_00347F80(child, arg);
+    func_003480F0(child, (*(float **)object)[0], (*(float **)object)[1]);
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_00341F38);
 
@@ -104,11 +114,24 @@ void func_00342420(void)
 {
 }
 
-INCLUDE_ASM("asm/game", func_00342428);
 
-INCLUDE_ASM("asm/game", func_003424C0);
 
-INCLUDE_ASM("asm/game", func_003425B8);
+
+
+void func_003425B8(char *object)
+{
+    extern int func_002A9588(unsigned int, unsigned int, int, int, int);
+    extern int *func_00335E20(char *);
+    extern void func_00336320(char *);
+    extern int D_00138344;
+    int *slot;
+    if (D_00138344 & 0x5000)
+        func_002A9588(0, 0, 1, 0, 1);
+    object += 0xE4;
+    slot = func_00335E20(object);
+    *slot = func_002A9588(0x60442D00, 0x70FFFEED, 20, 0, 0);
+    func_00336320(object);
+}
 
 void func_00342648(int param_1)
 {

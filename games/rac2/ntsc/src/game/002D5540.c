@@ -52,7 +52,7 @@ long long func_002D5540(void)
     return 0;
 }
 
-INCLUDE_ASM("asm/game", func_002D5570);
+/* func_002D5570 is matched in 002D5540-g8.c (-G8 small data). */
 
 int func_002D55D8(void) {
     return 0;
@@ -69,7 +69,19 @@ int func_002D5718(void) {
     return 0;
 }
 
-INCLUDE_ASM("asm/game", func_002D5748);
+extern char *D_001A8CFC[] __attribute__((sda));
+extern void func_00341CD8(char *, int);
+extern void func_00341EB0(char *, char *);
+extern char D_00261540[];
+
+int func_002D5748(void)
+{
+    if (D_001A8CFC[0] != 0) {
+        func_00341CD8(D_001A8CFC[0] + 0x3E430, 1);
+        func_00341EB0(D_001A8CFC[0] + 0x3E430, D_00261540);
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002D57A0);
 
@@ -82,7 +94,18 @@ int func_002D5870(void) {
     return 0;
 }
 
-INCLUDE_ASM("asm/game", func_002D58A0);
+extern void func_003423A8(char *, int);
+extern void func_00342380(char *, char *);
+extern char D_00261590[];
+
+int func_002D58A0(void)
+{
+    if (D_001A8CFC[0] != 0) {
+        func_003423A8(D_001A8CFC[0] + 0x3E1D8, 1);
+        func_00342380(D_001A8CFC[0] + 0x3E1D8, D_00261590);
+    }
+    return 0;
+}
 
 extern int D_00138344;
 extern void func_0029C3A0(int);

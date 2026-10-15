@@ -4,7 +4,19 @@ INCLUDE_ASM("asm/levels", func_L05_003008C0);
 
 INCLUDE_ASM("asm/levels", func_L05_00302CE8);
 
-INCLUDE_ASM("asm/levels", func_L05_00303000);
+extern int func_002FEF40(int);
+
+extern int func_L05_00302CE8(int, int, int, int, int, int, int, int, char *);
+
+extern char D_L05_002A2DB0[];
+
+/* Forward the seven arguments with a fresh step and the shared table. */
+void func_L05_00303000(int a0, int a1, int a2, int a3, int a4, int a5, int a6)
+{
+    int step = func_002FEF40(2);
+
+    func_L05_00302CE8(a0, a1, a2, a3, a4, a5, a6, step, D_L05_002A2DB0);
+}
 
 INCLUDE_ASM("asm/levels", func_L05_00304B40);
 
@@ -58,7 +70,7 @@ int *func_L05_00379EB8(void) {
     return D_L05_00225DD0;
 }
 
-INCLUDE_ASM("asm/levels", func_L05_00379ED0);
+/* func_L05_00379ED0 is defined in L05_003008C0-g8.c (this unit has no $gp access for it). */
 
 extern int D_L05_00221D10[];
 
@@ -111,7 +123,22 @@ INCLUDE_ASM("asm/levels", func_L05_0037AC40);
 
 INCLUDE_ASM("asm/levels", func_L05_0037AC80);
 
-INCLUDE_ASM("asm/levels", func_L05_0037ADD8);
+/* Add an argument to the stored value and clamp it into [8, 15]. */
+void func_L05_0037ADD8(float arg)
+{
+    float *p = (float *)D_L05_00221D10;
+    float v = p[12] + arg;
+    float lim = 15.0f;
+
+    p[12] = v;
+    if (v > lim) {
+        p[12] = lim;
+    } else {
+        lim = 8.0f;
+        if (v < lim)
+            p[12] = lim;
+    }
+}
 
 float func_L05_0037AE28(void) {
     return ((float *)D_L05_00221D10)[12];
@@ -119,4 +146,23 @@ float func_L05_0037AE28(void) {
 
 INCLUDE_ASM("asm/levels", func_L05_0037AE38);
 
-INCLUDE_ASM("asm/levels", func_L05_0037AE40);
+extern char *func_L05_00379CA0(char *);
+
+extern void func_L05_0037B838(char *);
+
+/* Hand the object over, then clear its action state and step the shared counter. */
+void func_L05_0037AE40(char *arg)
+{
+    char *o = func_L05_00379CA0(arg);
+
+    if (o == 0)
+        return;
+    func_L05_0037B838(arg);
+    *(unsigned short *)(arg + 0x32) = 0;
+    *(unsigned short *)(arg + 0x34) = *(unsigned short *)(arg + 0x34) | 3;
+    *(unsigned char *)(arg + 0x30) = 0;
+    *(int *)(arg + 0x98) = 0;
+    *(int *)(o + 0x110) = 0;
+    if (D_L05_00221D10[4] != 0)
+        D_L05_00221D10[4] = D_L05_00221D10[4] - 1;
+}

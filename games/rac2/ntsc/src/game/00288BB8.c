@@ -36,6 +36,3 @@ void func_00288BB8(void *param)
   func_00288B18(param);
 }
 extern s32 func_00288BE8(BarlowUtilityQueueView *queue);
-
-
-INCLUDE_ASM("asm/game", func_00288CB0);

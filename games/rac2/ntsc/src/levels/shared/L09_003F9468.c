@@ -85,7 +85,21 @@ INCLUDE_ASM("asm/levels", func_L09_003F9568);
 
 INCLUDE_ASM("asm/levels", func_L09_003F9708);
 
-INCLUDE_ASM("asm/levels", func_L09_003F9928);
+extern s32 func_33E658(s32 a0);
+
+/* Refreshes the cached 16-bit handle of the state's 0x2DC entry. */
+s32 func_L09_003F9928(char *a0)
+{
+    char *s0 = *(char **)(a0 + 0x68);
+    short v0 = *(short *)(s0 + 0x1CA);
+
+    if (v0 != 0) {
+        *(short *)(s0 + 0x1CA) = 0;
+        return 0;
+    }
+    *(short *)(s0 + 0x1CA) = func_33E658(*(s32 *)(s0 + 0x2DC));
+    return 1;
+}
 
 INCLUDE_ASM("asm/levels", func_L09_003F9970);
 
@@ -117,7 +131,7 @@ INCLUDE_ASM("asm/levels", func_L09_00410200);
 
 INCLUDE_ASM("asm/levels", func_L09_00410608);
 
-INCLUDE_ASM("asm/levels", func_L09_00410B40);
+/* func_L09_00410B40 lives in the sibling small-data unit (L09_003F9468-g8.c). */
 
 INCLUDE_ASM("asm/levels", func_L09_00410BC8);
 

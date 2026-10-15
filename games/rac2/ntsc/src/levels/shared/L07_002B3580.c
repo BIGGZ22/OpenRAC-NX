@@ -1,5 +1,8 @@
 #include "include_asm.h"
 
+extern char D_L07_001FDEC0[];
+extern void func_338D68();
+
 INCLUDE_ASM("asm/levels", func_L07_002B3580);
 
 INCLUDE_ASM("asm/levels", func_L07_002B5738);
@@ -10,7 +13,18 @@ INCLUDE_ASM("asm/levels", func_L07_00323038);
 
 INCLUDE_ASM("asm/levels", func_L07_00323350);
 
-INCLUDE_ASM("asm/levels", func_L07_00338D20);
+int func_L07_00338D20(int a0)
+{
+    char *p;
+
+    if (a0 == -1)
+        return -1;
+    p = *(char **)(D_L07_001FDEC0 + a0 * 4);
+    if (p == 0)
+        return -1;
+    func_338D68(p);
+    return 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L07_0034AEC8);
 

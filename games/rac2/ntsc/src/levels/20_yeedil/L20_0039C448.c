@@ -20,44 +20,11 @@ extern void func_L20_0039CC10(void);
 
 extern char D_L20_001C0420[];
 
-void func_L20_0039C448(char *arg0) {
-    char *s0 = arg0 + 0x10;
-    char *s3 = *(char **)(arg0 + 0x68);
-    char *s1;
-    char buf[0x30];
-
-    qcopy(s3, s0);
-    s1 = s3 + 0x10;
-    func_00282CC0(s0, s0, s1);
-    func_002A8C00(buf, (int)arg0, 0x10001, s1, *(float *)(s3 + 0x2C));
-    if (func_002761F8(s3, s0, 0, *(int *)(arg0 + 0xB8), buf) != 0
-        || func_00282948(s3 + 0x20) != 0) {
-        func_L20_0039C8C8(D_L20_001C0420, 0x14, 1);
-        func_002E5DA0(2, 0, arg0, 0x12EF);
-        func_0029F338((int)arg0);
-    } else {
-        func_L20_0039C5D0(arg0);
-        func_L00_002E6EF8(func_L20_0039CC10, (int)arg0);
-    }
-}
+INCLUDE_ASM("asm/levels", func_L20_0039C448);
 
 extern char *func_0029EFD0(int);
 
-char *func_L20_0039C540(char *arg0, char *arg1, char *arg2, float f12) {
-    char *v;
-    char *o = func_0029EFD0(0x12F2);
-
-    if (o != 0) {
-        *(int *)(o + 0xB8) = (int)arg0;
-        qcopy(o + 0x10, arg1);
-        v = *(char **)(o + 0x68);
-        *(unsigned char *)(o + 0x30) = 0xFF;
-        qcopy(v + 0x10, arg2);
-        *(float *)(v + 0x2C) = f12;
-        *(int *)(v + 0x20) = 0x12C;
-    }
-    return o;
-}
+INCLUDE_ASM("asm/levels", func_L20_0039C540);
 
 INCLUDE_ASM("asm/levels", func_L20_0039C5D0);
 
@@ -70,6 +37,18 @@ INCLUDE_ASM("asm/levels", func_L20_0039CF58);
 INCLUDE_ASM("asm/levels", func_L20_0039D340);
 
 INCLUDE_ASM("asm/levels", func_L20_0039D680);
+
+extern int D_L20_001B2AC8;
+
+extern void func_L20_0039DF18(char *, int);
+
+extern void func_L20_0039D880(char *);
+
+extern void func_L20_0039D680(char *);
+
+extern float func_00283BE0(float, float);
+
+extern void func_002AAA00(char *, char *, int, float, float, float, float);
 
 INCLUDE_ASM("asm/levels", func_L20_0039D7B0);
 
@@ -92,7 +71,29 @@ INCLUDE_ASM("asm/levels", func_L20_0039DCF8);
 
 extern void func_0029F338(int);
 
-INCLUDE_ASM("asm/levels", func_L20_0039DE88);
+extern void func_002A7750(char *, int, int);
+
+void func_L20_0039DE88(char *arg0) {
+    char *state = *(char **)(arg0 + 0x68);
+    char **p;
+    int i;
+
+    func_002A7750(arg0, 6, 2);
+    *(unsigned short *)(arg0 + 0x34) = (*(unsigned short *)(arg0 + 0x34) | 0x41) & 0xEFFF;
+    *(int *)(arg0 + 0x98) = 0;
+    if (*(int *)(state + 0x254) != 0) {
+        func_0029F338(*(int *)(state + 0x254));
+        *(int *)(state + 0x254) = 0;
+    }
+    p = (char **)(state + 0x258);
+    for (i = 1; i >= 0; i--) {
+        if (*p != 0) {
+            func_0029F338(*p);
+            *p = 0;
+        }
+        p++;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L20_0039DF18);
 
@@ -102,30 +103,13 @@ extern void func_002B3BA8(char *, int, float, float, int, int);
 
 extern char *func_L20_004448A8(char *, char *);
 
-void func_L20_0039E158(char *arg0) {
-    char *state = *(char **)(arg0 + 0x68);
-    char *v;
-
-    if (*(int *)(state + 0x27C) != 0) {
-        *(int *)(state + 0x280) = 0;
-        func_002B3BA8(arg0, *(int *)(state + 0x230), 0.0f, 0.0f, 0, 0);
-    } else {
-        *(char **)(state + 0x280) = func_L20_004448A8(*(char **)(arg0 + 0xB8), arg0);
-        if (*(char **)(state + 0x280) == 0) {
-            *(char **)(state + 0x280) = *(char **)(arg0 + 0xB8);
-        }
-        v = *(char **)(state + 0x280);
-        *(int *)(state + 0x200) = (int)v;
-        qcopy(state + 0x1F0, v + 0x10);
-    }
-}
+INCLUDE_ASM("asm/levels", func_L20_0039E158);
 
 INCLUDE_ASM("asm/levels", func_L20_0039E1E8);
 
 INCLUDE_ASM("asm/levels", func_L20_0039E368);
 
 INCLUDE_ASM("asm/levels", func_L20_0039E5F0);
-
 INCLUDE_ASM("asm/levels", func_L20_0039E770);
 
 INCLUDE_ASM("asm/levels", func_L20_0039E890);
@@ -138,14 +122,7 @@ INCLUDE_ASM("asm/levels", func_L20_0039ED78);
 
 INCLUDE_ASM("asm/levels", func_L20_0039EEC8);
 
-void func_L20_0039F210(char *arg0, char *arg1, int arg2) {
-    char *state;
-
-    qcopy(arg0 + 0x10, arg1);
-    state = *(char **)(arg0 + 0x68);
-    *(int *)(state + 0x0) = 5;
-    *(int *)(state + 0xC) = arg2;
-}
+INCLUDE_ASM("asm/levels", func_L20_0039F210);
 
 extern void func_L20_0039F268(char *);
 
@@ -179,6 +156,16 @@ INCLUDE_ASM("asm/levels", func_L20_003C0048);
 
 INCLUDE_ASM("asm/levels", func_L20_003C02D0);
 
+extern char *D_L20_001FBB20[];
+
+extern char *D_L20_001B2F9C;
+
+extern float D_L20_0023E670[];
+
+extern float func_00283CE0(int);
+
+extern float func_002A7AA8(float, float, float, float, float);
+
 INCLUDE_ASM("asm/levels", func_L20_003C0350);
 
 INCLUDE_ASM("asm/levels", func_L20_003E6728);
@@ -189,24 +176,13 @@ INCLUDE_ASM("asm/levels", func_L20_00408D98);
 
 INCLUDE_ASM("asm/levels", func_L20_00409480);
 
-INCLUDE_ASM("asm/levels", func_L20_004095D0);
+/* func_L20_004095D0 is defined in L20_0039C448-g8.c (this unit has no $gp access for it). */
 
 INCLUDE_ASM("asm/levels", func_L20_00435178);
 
 INCLUDE_ASM("asm/levels", func_L20_00438F98);
 
 INCLUDE_ASM("asm/levels", func_L20_004395B0);
-
-void func_L20_0043D470(char *arg0) {
-    char *state = *(char **)(arg0 + 0x68);
-
-    *(float *)(*(char **)(state + 0x84) + 0x0) = 8.0f;
-    *(float *)(*(char **)(state + 0x84) + 0x4) = 2.5f;
-    *(unsigned char *)(*(char **)(state + 0x84) + 0x18) = 1;
-    *(unsigned short *)(*(char **)(state + 0x84) + 0x1A) = 0;
-    *(unsigned char *)(*(char **)(state + 0x84) + 0x1E) = 1;
-    *(unsigned char *)(*(char **)(state + 0x84) + 0x1F) = 0;
-    qcopy(*(char **)(state + 0x84) + 0x20, state + 0x60);
-}
+INCLUDE_ASM("asm/levels", func_L20_0043D470);
 
 INCLUDE_ASM("asm/levels", func_L20_0043D4D8);

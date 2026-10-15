@@ -22,7 +22,22 @@ unsigned int func_00285850(void)
     return D_001BAD08;
 }
 
-INCLUDE_ASM("asm/game", func_00285860);
+extern int func_002B49C8(int);
+extern void func_00132B28(int);
+extern void func_002B7320(void);
+extern void func_00132028(void);
+extern void func_002B8518(void);
+
+void func_00285860(void)
+{
+    if (func_002B49C8(3) == 0) {
+        func_00132B28(0x5D);
+        func_002B7320();
+        func_00132028();
+    }
+    func_002B8518();
+    D_001BACC0 = 0;
+}
 
 void func_002858B0(int param_1)
 {

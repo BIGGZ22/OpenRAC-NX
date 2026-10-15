@@ -1337,15 +1337,15 @@ class Unit:
             addr = f"OPENRAC_DATA({addr})"
         else:
             level = self._shared_level()
-            low = (getattr(self.program, "relocate", None) or LEVEL_RELOCATE)[0]
+            low, high = getattr(self.program, "relocate", None) or LEVEL_RELOCATE
             copies = self._copies_in_one_program()
-            if copies is not None and low <= address < LEVEL_RELOCATE[1]:
+            if copies is not None and low <= address < high:
                 # Copies of this function in one program, each on its own globals: the one the
                 # running copy uses (guest.h).
                 home, canon, size = copies
                 self.fn.uses_self = True
                 addr = f"openrac_data_in_copy({home}, {hexaddr(canon)}, {size}u, openrac_self_, {addr})"
-            elif level is not None and low <= address < LEVEL_RELOCATE[1]:
+            elif level is not None and low <= address < high:
                 addr = f"OPENRAC_LDATA({level}, {addr})"
         return LV(self.gref(t, addr), addr)
 

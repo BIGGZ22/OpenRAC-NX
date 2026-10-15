@@ -1,10 +1,13 @@
 #include "include_asm.h"
+#include "common.h"
 
 INCLUDE_ASM("asm/levels", func_L02_003DB310);
 
 INCLUDE_ASM("asm/levels", func_L02_003DB6D8);
 
-INCLUDE_ASM("asm/levels", func_L02_003DB870);
+void func_L02_003DB870(char *arg0, int arg1) {
+    *(int *)(*(char **)(arg0 + 0x68) + 0x264) = arg1;
+}
 
 INCLUDE_ASM("asm/levels", func_L02_003DB880);
 
@@ -97,7 +100,20 @@ INCLUDE_ASM("asm/levels", func_L02_003E9BB0);
 
 INCLUDE_ASM("asm/levels", func_L02_003EA180);
 
-INCLUDE_ASM("asm/levels", func_L02_003EA488);
+extern void func_31E6A0(char *, int, int);
+
+/* Re-arms the actor's sub-object and clears the low bits of its flags. */
+void func_L02_003EA488(char *arg0) {
+    char *p = *(char **)(arg0 + 0x68);
+
+    if (*(unsigned char *)(arg0 + 0x20) != 0)
+        return;
+    *(int *)(p + 0x5C) |= 4;
+    func_31E6A0(arg0, 1, -1);
+    *(int *)(arg0 + 0x98) = 0;
+    *(unsigned short *)(arg0 + 0x34) =
+        (*(unsigned short *)(arg0 + 0x34) & 0xEFFF) | 0x43;
+}
 
 INCLUDE_ASM("asm/levels", func_L02_003EA4E0);
 
@@ -131,17 +147,84 @@ INCLUDE_ASM("asm/levels", func_L02_003F0798);
 
 INCLUDE_ASM("asm/levels", func_L02_003F1298);
 
-INCLUDE_ASM("asm/levels", func_L02_003F1578);
+extern void func_002B0990(char *, char *, float, int, int);
+
+extern void func_002A8C28(char *, char *, int, float, float, float, int, int, int);
+
+void func_L02_003F1578(char *arg0) {
+    char *state = *(char **)(arg0 + 0x68);
+
+    if (*(unsigned short *)(arg0 + 0x96) < 0xFFFF)
+        (*(unsigned short *)(arg0 + 0x96))++;
+    func_002B0990(arg0, state + 0x220, 2.5f, 7, 1);
+    func_002A8C28(arg0, arg0 + 0x10, 0x4000000, 1.3f, 1.0f, 1.0f, 0, 1, 0);
+}
+
+extern void func_002A91F0(char *, char *);
 
 INCLUDE_ASM("asm/levels", func_L02_003F1608);
 
-INCLUDE_ASM("asm/levels", func_L02_003F16A8);
+/* func_L02_003F16A8 is defined in L02_003DB310-g8.c (this unit has no $gp access for it). */
 
 INCLUDE_ASM("asm/levels", func_L02_003F16F0);
 
 INCLUDE_ASM("asm/levels", func_L02_003F17B0);
 
-INCLUDE_ASM("asm/levels", func_L02_003F18E8);
+extern void func_31E3C0(char *, int, int, int);
+
+extern void func_316220(char *);
+
+extern void func_31EA58(char *, float, float);
+
+extern void func_32B068(char *, int, char *, float, float, float, float, int);
+
+extern void func_2F1F70(void *, void *, void *);
+
+extern void func_3FC1B0(int, int);
+
+extern void func_41F230(char *, int, int, int, int, int, int, int, float, float, int, int, int, int);
+
+extern void func_366BD8(int, int, char *, int);
+
+/* Tears the actor down: stops its effect, clears its sub-objects, resets flags. */
+void func_L02_003F18E8(char *arg0) {
+    char *state = *(char **)(arg0 + 0x68);
+    char buffer[0x10];
+    int i;
+
+    if (*(short *)(state + 0x4EA) == 1)
+        func_3FC1B0(*(int *)(arg0 + 0xB8), 0xB22);
+    *(short *)(state + 0x4EA) = 0;
+    *(int *)(state + 0x4B0) = 0;
+    *(unsigned char *)(state + 0x7A) = 0;
+    *(unsigned char *)(state + 0x2E) = 1;
+    if (*(unsigned char *)(arg0 + 0x31) != 0) {
+        func_41F230(arg0 + 0x10, 0, 0x1E, 5, 5, 5, 0x2D, 1, 0.5f, 0.0f, 1, 0, 0, 0);
+        func_366BD8(0, 0, arg0, 0xC3E);
+        func_31EA58(buffer, 0.033333335071802139f, 0.083333335816860199f);
+        func_2F1F70(buffer, buffer, state + 0xE0);
+        func_32B068(arg0, 0x7F, buffer, 3.0f, 6.0f, 3.0f, 6.0f, 0xFF);
+    }
+    {
+        char **slot = (char **)(state + 0x4C0);
+
+        for (i = 1; i >= 0; i--) {
+            if (*slot != 0) {
+                *(unsigned short *)(*slot + 0x34) |= 1;
+                *(unsigned char *)(*slot + 0x31) = 0;
+                *(int *)(*slot + 0x98) = 0;
+            }
+            slot++;
+        }
+    }
+    func_31E3C0(arg0, 0, 0, 3);
+    func_316220(arg0);
+    func_31E6A0(arg0, 1, 0);
+    *(unsigned char *)(arg0 + 0x31) = 0;
+    *(int *)(arg0 + 0x98) = 0;
+    *(unsigned short *)(arg0 + 0x34) =
+        (*(unsigned short *)(arg0 + 0x34) & 0xEFFF) | 0x47;
+}
 
 INCLUDE_ASM("asm/levels", func_L02_003F1A88);
 

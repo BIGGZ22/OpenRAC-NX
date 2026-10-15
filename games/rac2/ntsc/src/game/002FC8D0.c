@@ -118,7 +118,37 @@ void func_002FC990(int a0, int a1, int a2)
 
 INCLUDE_ASM("asm/game", func_002FCB00);
 
-INCLUDE_ASM("asm/game", func_002FCD18);
+/* The guard reads the cell at 0x001B22C0/0x001B22C4: the read view is volatile (every use is a
+   fresh load), and the write of the initialiser's result is an ordinary store, which is what
+   leaves the first call's `lui` in the `bne` delay slot instead of duplicating it.  Both cells
+   are reached with retail's one-instruction macro form, so they carry the `sda` attribute. */
+extern int D_001B22C0 __attribute__((sda));
+
+extern int D_001B22C4 __attribute__((sda));
+
+extern void func_002FCE18(void);
+
+extern void func_002FCF18(void);
+
+extern int func_0011A930(int, void (*)(void), int);
+
+extern void func_0011B6C0(int);
+
+void func_002FCD18(void)
+{
+    if (D_001B22C0 != 0) {
+        return;
+    }
+    if (D_001B22C4 != 0) {
+        return;
+    }
+    if ((*(volatile unsigned int *)0x1000E010 & 0x20000) == 0) {
+        *(unsigned int *)0x1000E010 = 0x20000;
+    }
+    D_001B22C0 = func_0011A930(1, func_002FCE18, 0);
+    D_001B22C4 = func_0011A930(15, func_002FCF18, 0);
+    func_0011B6C0(1);
+}
 
 /* shared native body of family 349daa693c44d158 */
 void func_002FCDA8(void)
@@ -186,7 +216,17 @@ INCLUDE_ASM("asm/game", func_002FDF40);
 
 INCLUDE_ASM("asm/game", func_002FE5A0);
 
-INCLUDE_ASM("asm/game", func_002FE880);
+extern void func_002FE8D8(void *, float *);
+extern void func_00282D30(float *, float *, float);
+extern void func_00282CF0(float *, float *, float *);
+
+void func_002FE880(void *object, float *destination, float scale)
+{
+    float vector[4];
+    func_002FE8D8(object, vector);
+    func_00282D30(vector, vector, scale);
+    func_00282CF0(destination, destination, vector);
+}
 
 INCLUDE_ASM("asm/game", func_002FE8D8);
 
@@ -201,9 +241,47 @@ void *func_002FEC50(int index) {
     return result;
 }
 
-INCLUDE_ASM("asm/game", func_002FEC78);
+extern void func_0029F978(unsigned char *, unsigned int, unsigned char *);
 
-INCLUDE_ASM("asm/game", func_002FED28);
+int func_002FEC78(unsigned char *object, unsigned int flags)
+{
+    char *p = D_0021F9C0;
+    int i = 0;
+    do {
+        if (*(unsigned char **)(p + 0x40) != 0) {
+            i++;
+            p += 0x50;
+            continue;
+        } else {
+            *(int *)(p + 4) = -1;
+            *(unsigned char **)(p + 0x40) = object;
+            p[3] = 0;
+            p[0] = 0;
+            *(int *)(p + 0xC) = 0;
+            *(int *)(p + 8) = 0;
+            *(int *)(p + 0x10) = 0;
+            *(int *)(p + 0x14) = 0;
+            *(int *)(p + 0x18) = 0;
+            *(int *)(p + 0x1C) = 0;
+            *(int *)(p + 0x30) = 0;
+            *(int *)(p + 0x34) = 0;
+            *(int *)(p + 0x38) = 0;
+            *(int *)(p + 0x3C) = 0;
+            p[2] = 0;
+            *(int *)(p + 0x20) = 0;
+            *(int *)(p + 0x24) = 0;
+            *(int *)(p + 0x28) = 0;
+            *(int *)(p + 0x2C) = 0;
+            p[1] = 0;
+            func_0029F978(object, flags, (unsigned char *)p);
+            break;
+        }
+    } while (i < 64);
+    return i;
+}
+
+extern void func_0029F9F0(char *, char *);
+void func_002FED28(unsigned int index) { if (index < 64u) { char *p = D_0021F9C0 + index * 0x50; func_0029F9F0(*(char **)(p + 0x40), p); *(char **)(p + 0x40) = 0; } }
 
 INCLUDE_ASM("asm/game", func_002FED78);
 
@@ -228,11 +306,39 @@ void func_002FF288(void)
 {
 }
 
-INCLUDE_ASM("asm/game", func_002FF290);
+extern void func_0029F0C8(void *, int);
+extern void func_00282A60(unsigned int *, unsigned int, int);
+extern void func_002A0F48(void *);
+extern char *ref_L00_002FF290_00 __attribute__((sda));
+extern char *ref_L00_002FF290_01 __attribute__((sda));
+void func_002FF290(char *object, int kind)
+{
+    char *data;
+    func_0029F0C8(object, kind);
+    data = ref_L00_002FF290_01 + (((int)object - (int)ref_L00_002FF290_00) >> 8) * 128;
+    *(char **)(object + 0x68) = data;
+    func_00282A60((unsigned int *)data, 0, 128);
+    if ((*(unsigned short *)(object + 0x34) & 4) == 0)
+        func_002A0F48(object);
+}
 
 INCLUDE_ASM("asm/game", func_002FF300);
 
-INCLUDE_ASM("asm/game", func_002FF3F8);
+extern char *D_001B2348 __attribute__((sda));
+extern void func_002FF290(char *, int);
+
+void func_002FF3F8(void)
+{
+    char *object;
+    func_002FF290(D_001B2348, 0x3EF);
+    object = D_001B2348;
+    *(unsigned char *)(object + 0x30) = 255;
+    *(unsigned short *)(object + 0x34) |= 0x43;
+    *(int *)(object + 0x98) = 0;
+    *(float *)(object + 0x18) = 5.0f;
+    *(float *)(object + 0x14) = 5.0f;
+    *(float *)(object + 0x10) = 5.0f;
+}
 
 INCLUDE_ASM("asm/game", func_002FF450);
 

@@ -2,11 +2,20 @@
 
 extern void func_00282D30_2(char *dst, char *src, float scale);
 
+extern void func_L02_00333480(char *a, char *b, char *c);
+
+extern float func_00282C10(float a);
+
+extern void func_00283CF0(float a);
+
 INCLUDE_ASM("asm/levels", func_L11_002C5E80);
 
 INCLUDE_ASM("asm/levels", func_L11_002CDE10);
 
-INCLUDE_ASM("asm/levels", func_L11_003404E0);
+void func_L11_003404E0(char *a0)
+{
+    func_L02_00333480(a0, a0 + 0x10, a0 + 0xC0);
+}
 
 INCLUDE_ASM("asm/levels", func_L11_00397C08);
 
@@ -27,7 +36,12 @@ void func_L11_0041E460(char *p, float scale)
     func_00282D30_2(p + 48, p + 48, scale);
 }
 
-INCLUDE_ASM("asm/levels", func_L11_00439D78);
+void func_L11_00439D78(float a, float b, float c, float d)
+{
+    float v = (d + d) * (a - b);
+
+    func_00283CF0((c + func_00282C10(c * c + v)) / d);
+}
 
 INCLUDE_ASM("asm/levels", func_L11_0044FFA0);
 
@@ -140,6 +154,8 @@ INCLUDE_ASM("asm/levels", func_L11_0046BC08);
 
 INCLUDE_ASM("asm/levels", func_L11_0046BD18);
 
+
+
 INCLUDE_ASM("asm/levels", func_L11_0046C118);
 
 INCLUDE_ASM("asm/levels", func_L11_0046C1E0);
@@ -177,7 +193,26 @@ void func_L11_00472008(char *p)
 
 INCLUDE_ASM("asm/levels", func_L11_00472090);
 
-INCLUDE_ASM("asm/levels", func_L11_00474888);
+extern int func_002ACBC8(void *a, int b);
+
+extern void func_002829D8(void *a);
+
+extern unsigned char D_L11_00189EA0[];
+
+void func_L11_00474888(char *a0)
+{
+    if (func_002ACBC8(D_L11_00189EA0, *(int *)(*(char **)(a0 + 0x68))) == 0) return;
+    if (*(int *)(D_L11_00189EA0 + 0x2214) != 0x82) return;
+    func_002829D8(D_L11_00189EA0 + 0x530);
+    func_002829D8(D_L11_00189EA0 + 0x530);
+    func_002829D8(D_L11_00189EA0 + 0x530);
+    func_002829D8(D_L11_00189EA0 + 0x530);
+    func_002829D8(D_L11_00189EA0 + 0x530);
+    func_002829D8(D_L11_00189EA0 + 0x530);
+    func_002829D8(D_L11_00189EA0 + 0x530);
+    func_002829D8(D_L11_00189EA0 + 0x530);
+    func_002829D8(D_L11_00189EA0 + 0x530);
+}
 
 /* resets a state record: zero words, plus/minus one float flags and two 64-bit fields in the retail store order */
 void func_L11_00478EF0(char *p)

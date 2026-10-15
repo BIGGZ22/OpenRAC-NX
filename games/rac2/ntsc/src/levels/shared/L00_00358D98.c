@@ -68,50 +68,86 @@ INCLUDE_ASM("asm/levels", func_L00_0035CC98);
 
 INCLUDE_ASM("asm/levels", func_L00_0035D168);
 
-INCLUDE_ASM("asm/levels", func_L00_0035F5A0);
+extern int D_001B19E8 __attribute__((sda));
+
+extern int D_001B19EC __attribute__((sda));
+
+extern int D_001B8F0C __attribute__((sda));
+
+extern char D_00188660_3[];
+
+extern int func_002E5AD0(char *a0, int a1, int a2, int a3, int a4);
+
+/* Shared slot table: the first free record of a 112-byte table is filled with the index and the
+ * caller's value; returns the record number, or -1 when the index is out of range. */
+int func_L00_0035F5A0(int index, int a1, int a2)
+{
+    int r;
+    char *p;
+
+    if (D_001B19EC == 0)
+        return -1;
+    index = index + D_001B8F0C;
+    if (index >= D_001B19E8)
+        return -1;
+    r = func_002E5AD0((char *)(D_001B19EC + index * 32), a1, a2, 0, 1024);
+    if (r >= 0) {
+        p = D_00188660_3 + r * 112;
+        *(int *)(p + 136) = a2;
+        *(short *)(p + 126) = index;
+    }
+    return r;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0035F640);
 
-INCLUDE_ASM("asm/levels", func_L00_0035F6D8);
-
-/* shared native body of family 32fd6f604b71fbbf */
-void func_L00_0035F7E8(Query *query)
+/* Builds a slot index out of three weight/kind arguments and fills the same 112-byte record as
+ * above; the record's value word comes from the fifth argument, the helper's from the sixth. */
+int func_L00_0035F6D8(int a0, int a1, int a2, int a3, int a4, int a5)
 {
-    int i;
+    int index;
+    int sum;
+    int r;
+    char *p;
 
-    i = 0;
-    while (D_L07_002A4100[i].key != -1 && D_L07_002A4100[i].key != query->key)
-        i++;
-    query->index = i;
-    query->value = D_L07_002A4100[i].value;
+    if (a0 == 0xFFFFFFFFU)
+        return -1;
+    sum = a0 * 4 + a1 * 2;
+    sum += a2;
+    index = sum + D_001B8F0C;
+    if (index >= D_001B19E8)
+        return -1;
+    r = func_002E5AD0((char *)(D_001B19EC + index * 32), a3, a4, 0, a5);
+    if (r >= 0) {
+        p = D_00188660_3 + r * 112;
+        *(int *)(p + 136) = a4;
+        *(short *)(p + 126) = index;
+    }
+    return r;
 }
 
-/* Update fields at offsets 0x60 through 0x6A and set the corresponding dirty bits when selector, value, axis or mode changes; original game role is unknown. */
-void func_L00_0035F8D0(unsigned int value, unsigned int selector, int other,
-                        unsigned int axis, unsigned int mode)
+INCLUDE_ASM("asm/levels", func_L00_0035F7E8);
+
+void func_L00_0035F8D0(int value60, int selector68, int value64, int axis69, int mode6A)
 {
     Rac2Native_acdcf1600d770d3b_ScalarConfigure116State *state = D_00188660_2;
-    state->value_60 = value;
-    if (state->selector_68 != selector) {
+    state->value_60 = value60;
+    if (state->selector_68 != selector68) {
+        state->selector_68 = selector68;
         state->dirty_6b |= 1;
-        state->selector_68 = selector;
     }
-    if (state->value_64 != other) {
+    if (state->value_64 != value64) {
+        state->value_64 = value64;
         state->dirty_6b |= 4;
-        state->value_64 = other;
     }
-    if (state->axis_69 != axis || state->mode_6a != mode) {
+    if (state->axis_69 != axis69 || state->mode_6a != mode6A) {
+        state->mode_6a = mode6A;
+        state->axis_69 = axis69;
         state->dirty_6b |= 2;
-        state->axis_69 = axis;
-        state->mode_6a = mode;
     }
 }
 
-void func_L00_0035F9F0(int value, long address) {
-    int *target = (int *)(int)address;
-    if (target != 0)
-        *target = value;
-}
+INCLUDE_ASM("asm/levels", func_L00_0035F9F0);
 
 INCLUDE_ASM("asm/levels", func_L00_0035FA80);
 
@@ -119,7 +155,35 @@ INCLUDE_ASM("asm/levels", func_L00_003603C0);
 
 INCLUDE_ASM("asm/levels", func_L00_00364EE0);
 
-INCLUDE_ASM("asm/levels", func_L00_00364EE8);
+extern void func_002B7B18(int value, char *target);
+
+extern void func_002B7CE0(int value);
+
+extern int D_L00_001BCAC0[];
+
+extern int D_0014B540[];
+
+/* Same body as func_L00_003046D0: compares two words of a 332-byte-stride table and calls the
+ * two helpers when the entry ahead is greater; returns 1. */
+int func_L00_00364EE8(int index)
+{
+    int j = index + 1;
+    int *d = D_L00_001BCAC0;
+    int *b = D_0014B540;
+    int *t = (int *)((char *)b + 16040);
+    int n = d[12] * 332;
+    int hold = d[28];
+    int j4 = j * 4;
+    int cur = *(int *)((char *)t + (n + index * 4));
+    int next = *(int *)((char *)t + (j4 + n));
+
+    n = next - cur;
+    if (n > 0) {
+        func_002B7B18(hold, (char *)(cur + b[3977]));
+        func_002B7CE0(0);
+    }
+    return 1;
+}
 
 extern unsigned short D_00152C26;
 
@@ -140,7 +204,7 @@ int func_L00_00367720(void) {
 
 INCLUDE_ASM("asm/levels", func_L00_00368F58);
 
-INCLUDE_ASM("asm/levels", func_L00_0036ADB0);
+
 
 INCLUDE_ASM("asm/levels", func_L00_0036AE00);
 
@@ -179,16 +243,28 @@ INCLUDE_ASM("asm/levels", func_L00_00373F48);
 
 INCLUDE_ASM("asm/levels", func_L00_00374348);
 
-INCLUDE_ASM("asm/levels", func_L00_00374708);
+extern int D_0022F810;
 
-extern void func_002F93B0(void);
-
-void func_L00_00374B78(void)
+/* Dispatch on a mode word: mode 1 goes through the recording wrapper, the other modes replay. */
+void func_L00_00374B98(void)
 {
-    func_002F93B0();
+    switch (D_0022F810) {
+    case 0:
+        func_002F93B0();
+        break;
+    case 1:
+        func_L00_00374B78();
+        break;
+    case 2:
+        func_002F93B0();
+        break;
+    case 3:
+        func_002F93B0();
+        break;
+    }
 }
 
-INCLUDE_ASM("asm/levels", func_L00_00374B98);
+INCLUDE_ASM("asm/levels", func_L00_00374B78);
 
 INCLUDE_ASM("asm/levels", func_L00_00374C18);
 

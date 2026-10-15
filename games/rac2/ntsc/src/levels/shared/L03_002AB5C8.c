@@ -1,5 +1,9 @@
 #include "include_asm.h"
 
+typedef int TI128 __attribute__((mode(TI)));
+
+extern int func_2B3760(int);
+
 INCLUDE_ASM("asm/levels", func_L03_002AB5C8);
 
 INCLUDE_ASM("asm/levels", func_L03_002AD540);
@@ -60,8 +64,6 @@ INCLUDE_ASM("asm/levels", func_L03_00329EF0);
 
 INCLUDE_ASM("asm/levels", func_L03_0032AB20);
 
-INCLUDE_ASM("asm/levels", func_L03_0032AD10);
-
 INCLUDE_ASM("asm/levels", func_L03_00339128);
 
 extern int func_2EEC20(void *);
@@ -79,17 +81,41 @@ INCLUDE_ASM("asm/levels", func_L03_003564C0);
 
 INCLUDE_ASM("asm/levels", func_L03_0038A6D8);
 
-INCLUDE_ASM("asm/levels", func_L03_0038A9D0);
-
 INCLUDE_ASM("asm/levels", func_L03_0038AB30);
 
-INCLUDE_ASM("asm/levels", func_L03_0038B238);
+/* func_L03_0038B238 is defined in L03_002AB5C8-g8.c (this unit has no $gp access for it). */
+
+extern TI128 D_001A8F20;
+extern void func_2EEFB0(void *, void *, void *);
+extern void func_2EF020(void *, float);
 
 INCLUDE_ASM("asm/levels", func_L03_0038B2E8);
 
-INCLUDE_ASM("asm/levels", func_L03_0038B390);
+extern void func_2ECA50(unsigned char *, int, int, int);
+
+void func_L03_0038B390(unsigned char *a0, int a1, int a2, int a3) {
+    unsigned char *p = a0;
+    int v = a3;
+
+    func_2ECA50(a0, a1, a2, 0x80);
+    *(int *)(p + 0x4C) = v;
+    *(int *)(p + 0x48) = v;
+    *(int *)(p + 0x44) = v;
+    *(int *)(p + 0x40) = v;
+    *(int *)(p + 0x50) = 0;
+    *(int *)(p + 0x54) = 0;
+    *(int *)(p + 0x58) = 0;
+    *(float *)(p + 0x5C) = 1.0f;
+    *(float *)(p + 0x60) = 1.0f;
+    *(int *)(p + 0x64) = 0;
+    *(float *)(p + 0x68) = 1.0f;
+    *(float *)(p + 0x6C) = 1.0f;
+    *(long long *)(p + 0x70) = 5;
+}
 
 INCLUDE_ASM("asm/levels", func_L03_0038B408);
+
+extern int D_001AEF60 __attribute__((sda));
 
 INCLUDE_ASM("asm/levels", func_L03_0038B4E8);
 
@@ -164,4 +190,16 @@ INCLUDE_ASM("asm/levels", func_L03_003C5668);
 
 INCLUDE_ASM("asm/levels", func_L03_003C58F0);
 
-INCLUDE_ASM("asm/levels", func_L03_003C5AB8);
+extern float func_2EF670(float, float);
+
+float func_L03_003C5AB8(unsigned char *a0) {
+    unsigned char *p = *(unsigned char **)(a0 + 0x68);
+    float x = func_2EF670(*(float *)(p + 0x1DC), 1.5f);
+    float s;
+
+    if (x > 1.4959966f)
+        x = 1.4959966f;
+    x = x * 0.2f;
+    s = (float)*(int *)(p + 0x360);
+    return x * s;
+}

@@ -3,6 +3,12 @@
 
 extern float D_L01_001AF87C __attribute__((sda));
 
+extern float D_L01_001AFE18 __attribute__((sda));
+
+float func_L01_003BAFB0(void) {
+    return D_L01_001AFE18;
+}
+
 extern char *D_L01_001B255C __attribute__((sda));
 
 extern char D_L01_001BF930[];

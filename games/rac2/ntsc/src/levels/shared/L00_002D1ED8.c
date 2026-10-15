@@ -122,7 +122,12 @@ void func_L00_002D2470(Rac2Native_28c929cadd7aca24_s32 selected, Rac2Native_28c9
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L00_002D24B8);
+/* Marks no slot as running and parks the cursor past the end of the list. */
+void func_L00_002D24B8(void) {
+    char *b = D_00189E20_8;
+    *(int *)(b + 0xC40) = -1;
+    *(int *)(b + 0xC48) = 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002D24D0);
 

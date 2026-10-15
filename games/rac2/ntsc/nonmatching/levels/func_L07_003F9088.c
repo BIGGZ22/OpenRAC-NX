@@ -1,5 +1,5 @@
-/* func_L07_003F9088 -- meilleur essai (vague 3, worker w05, fichier src/levels/07_siberius/L07_003F4578.c)
- * Jumeau de 003F9028 (constantes 3/9 au lieu de 2/8). Meme residuel: lbu dans $a1 au lieu de $v1.
+/* func_L07_003F9088 -- best attempt (wave 3, worker w05, file src/levels/07_siberius/L07_003F4578.c)
+ * Twin of 003F9028 (constants 3/9 instead of 2/8). Same residual: lbu into $a1 instead of $v1.
  */
 extern void func_002A7470(u8 *a0, s32 a1, s32 a2, s32 a3);
 

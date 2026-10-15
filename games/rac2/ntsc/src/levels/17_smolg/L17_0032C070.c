@@ -1,4 +1,4 @@
-#include "include_asm.h"
+#include "common.h"
 
 extern char D_00189E20[];
 
@@ -204,7 +204,11 @@ INCLUDE_ASM("asm/levels", func_L17_003C70E0);
 
 INCLUDE_ASM("asm/levels", func_L17_003C71B0);
 
-INCLUDE_ASM("asm/levels", func_L17_003C7250);
+/* Stores the second argument in the object's sub-record at 0xA4. */
+void func_L17_003C7250(char *a0, int a1)
+{
+    *(int *)(*(char **)(a0 + 0x68) + 0xA4) = a1;
+}
 
 INCLUDE_ASM("asm/levels", func_L17_003C7260);
 

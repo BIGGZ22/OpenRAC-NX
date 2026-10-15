@@ -1,22 +1,21 @@
-/* DRAFT w49 — meilleur essai, NE MATCHE PAS : 236 o attendus, 236 o produits,
-   seule difference = permutation des registres $s1/$s2 (pa/i).
-   Derniere ligne check.py : func_L00_003ECC90: 0 of 27 places match
+/* DRAFT w49 — best attempt, DOES NOT MATCH: 236 bytes expected, 236 bytes produced,
+   only difference = swap of registers $s1/$s2 (pa/i).
+   last check.py line: func_L00_003ECC90: 0 of 27 places match
    00_aranos_tutorial: instruction at +0x18 differs
 
-   TOUT le reste est identique au retail mot pour mot, y compris les paires
-   lui/addiu des symboles, le movn, la boucle et le bloc de queue.
-   Retail : $s1 = i, $s2 = a/pa. Ici : $s1 = pa, $s2 = i. Le compteur de boucle
-   doit gagner le registre callee-saved le plus bas avant le pointeur ; ni
-   l'ordre de declaration (done, i, pa, bv, base) ni des copies explicites des
-   parametres (pa = a; bv = b;) ni la forme do/while ne l'ont change.
-   Piste restante : le compteur gagne si son pseudo est cree avant celui du
-   parametre (priorite local-alloc), p.ex. en utilisant `a` directement sans
-   copie locale ET en declarin i avant tout usage de a.
+   EVERYTHING else is identical to the retail word for word, including the
+   lui/addiu pairs of the symbols, the movn, the loop and the tail block.
+   Retail: $s1 = i, $s2 = a/pa. Here: $s1 = pa, $s2 = i. The loop counter must
+   win the lowest callee-saved register before the pointer; neither the
+   declaration order (done, i, pa, bv, base) nor explicit copies of the
+   parameters (pa = a; bv = b;) nor the do/while form changed it.
+   Remaining lead: the counter wins if its pseudo is created before the
+   parameter's (local-alloc priority), e.g. by using `a` directly without a
+   local copy AND declaring i before any use of a.
 
-   Les adresses 0x18A020, 0x189EA0 (resident) et 0x1D9F00, 0x1DA860 (donnees de
-   niveau) DOIVENT etre des symboles : le retail emet `addiu` sur la moitie
-   basse (ori serait emis pour un litteral). Les valeurs ci-dessus sont celles
-   du niveau 0. */
+   The addresses 0x18A020, 0x189EA0 (resident) and 0x1D9F00, 0x1DA860 (level
+   data) MUST be symbols: the retail emits `addiu` on the low half (ori would
+   be emitted for a literal). The values above are those of level 0. */
 extern char D_0018A020[];
 extern char D_00189EA0[];
 extern char D_L00_001D9F00[];

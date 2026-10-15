@@ -45,7 +45,18 @@ INCLUDE_ASM("asm/game", func_002FAD30);
 
 INCLUDE_ASM("asm/game", func_002FAD68);
 
-INCLUDE_ASM("asm/game", func_002FADB0);
+extern volatile int D_001A7A20[] __attribute__((sda));
+extern void func_002FAD68(int);
+
+void func_002FADB0(void)
+{
+    if (D_001A7A20[0] & 1) func_002FAD68(12);
+    if (D_001A7A20[0] & 2) func_002FAD68(53);
+    if (D_001A7A20[0] & 4) func_002FAD68(17);
+    if (D_001A7A20[0] & 8) func_002FAD68(14);
+    if (D_001A7A20[0] & 16) func_002FAD68(18);
+    D_001A7A20[0] &= ~128;
+}
 
 INCLUDE_ASM("asm/game", func_002FAE68);
 
@@ -56,7 +67,22 @@ void func_002FB170(void) { func_002B7AD0(); ref_L00_002FB170_00[0x23] = 0; ref_L
 
 INCLUDE_ASM("asm/game", func_002FB1A0);
 
-INCLUDE_ASM("asm/game", func_002FBFB8);
+typedef struct { int key; int value; } Func002FBFB8Entry;
+extern Func002FBFB8Entry D_00264F70[];
+
+int func_002FBFB8(int key)
+{
+    if (D_00264F70[0].key >= 0) {
+        Func002FBFB8Entry *entry = D_00264F70;
+        Func002FBFB8Entry *end = entry + 28;
+        do {
+            if (key == entry->key)
+                return entry->value;
+            entry++;
+        } while (((int)entry < (int)end) & (entry->key >= 0));
+    }
+    return -1;
+}
 
 INCLUDE_ASM("asm/game", func_002FC008);
 
@@ -84,11 +110,11 @@ void func_002FC070(int mask)
         Fbbb7bee1_FUN_00282A38(16);
 }
 
-INCLUDE_ASM("asm/game", func_002FC138);
+/* func_002FC138 is matched in 002F9BC0-g8.c (-G8 small data). */
 
-INCLUDE_ASM("asm/game", func_002FC190);
+/* func_002FC190 is matched in 002F9BC0-g8.c (-G8 small data). */
 
-INCLUDE_ASM("asm/game", func_002FC1D8);
+/* func_002FC1D8 is matched in 002F9BC0-g8.c (-G8 small data). */
 
 /* shared native body of family 74e6a904f3b4f71c (default profile) */
 void func_002FC220(void)

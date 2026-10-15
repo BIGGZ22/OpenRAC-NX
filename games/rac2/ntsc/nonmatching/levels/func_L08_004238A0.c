@@ -1,20 +1,20 @@
-/* func_L08_004238A0 (204 o) — meilleur essai, NON MATCHÉ (vague 6, w04, 2026-10-12)
+/* func_L08_004238A0 (204 bytes) — best attempt, NOT MATCHED (wave 6, w04, 2026-10-12)
  *
- * Dernière ligne de check.py : "08_tabora: instruction at +0x38 differs"
- * 202 des 204 octets identiques (prologue, appels, ordre des blocs, littéraux : tout
- * colle). Unique écart, une paire d'instructions :
- *   mine   : lw $v1,0x24($s1) ; lwc1 $f0,0x24($v1)
- *   retail : lw $v0,0x24($s1) ; lwc1 $f0,0x24($v0)
- * pur choix de registre temporaire ($v0 contre $v1). Formes essayées sans effet :
- * expression imbriquée `((Sub24 *)a0->f24)->f24`, variable locale `Sub24 *q;`.
+ * last check.py line: "08_tabora: instruction at +0x38 differs"
+ * 202 of the 204 bytes identical (prologue, calls, block order, literals: everything
+ * fits). Only deviation, one pair of instructions:
+ *   mine  : lw $v1,0x24($s1) ; lwc1 $f0,0x24($v1)
+ *   retail: lw $v0,0x24($s1) ; lwc1 $f0,0x24($v0)
+ * pure temporary-register choice ($v0 against $v1). Forms tried with no effect:
+ * nested expression `((Sub24 *)a0->f24)->f24`, local variable `Sub24 *q;`.
  *
- * Deux leçons mesurées, valables ailleurs dans le fichier :
- *  - `if (m->f20 <= 0.0f) { A } else { B }` (et non `if (f20 > 0)`) est ce qui donne
- *    `c.ole.s $f1,$f0` + `bc1f` ET l'ordre de blocs retail (then en ligne, else au
- *    saut) ; la polarité inverse donnait `c.olt.s $f0,$f1`.
- *  - le littéral flottant doit s'écrire 0.8377582f : le cc1 du dépôt convertit les
- *    décimales avec un biais d'environ +7 ulp (0.83775866f donne 0x3F56775A,
- *    0.837758f donne 0x3F56774F, 0.8377582f donne le 0x3F567752 attendu).
+ * Two measured lessons, valid elsewhere in the file:
+ *  - `if (m->f20 <= 0.0f) { A } else { B }` (and not `if (f20 > 0)`) is what gives
+ *    `c.ole.s $f1,$f0` + `bc1f` AND the retail block order (then inline, else at the
+ *    jump); the inverse polarity gave `c.olt.s $f0,$f1`.
+ *  - the float literal must be written 0.8377582f: the repo's cc1 converts the
+ *    decimals with a bias of about +7 ulp (0.83775866f gives 0x3F56775A,
+ *    0.837758f gives 0x3F56774F, 0.8377582f gives the expected 0x3F567752).
  */
 typedef unsigned char u8;
 typedef unsigned short u16;

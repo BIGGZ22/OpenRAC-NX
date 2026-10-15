@@ -71,7 +71,25 @@ void func_00350878(unsigned long *a0,unsigned long a1,unsigned long a2,unsigned 
  *a0=(a1<<32)|((a2<<32)>>4)|((a3<<32)>>32);
 }
 
-INCLUDE_ASM("asm/game", func_003508A0);
+extern int func_0011AC20(int *);
+extern int func_00350918(int *);
+
+int func_003508A0(int *object, int address, unsigned int buffer, int count, int *records, int capacity)
+{
+    int semaphore[5];
+    object[0] = address;
+    object[1] = (buffer & 0x0FFFFFFF) | 0x20000000;
+    object[20] = (int)records;
+    object[21] = capacity;
+    object[2] = count;
+    object[6] = count << 11;
+    semaphore[2] = 1;
+    semaphore[1] = 1;
+    object[16] = func_0011AC20(semaphore);
+    func_00350918(object);
+    *(long long *)(object + 18) = 0;
+    return 1;
+}
 
 int func_00350918(int *p)
 {

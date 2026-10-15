@@ -264,7 +264,14 @@ float func_002A7CA0(struct family_27f9_object *a0,
     return out;
 }
 
-INCLUDE_ASM("asm/game", func_002A7E08);
+extern float func_00283248(float, float);
+float func_002A7E08(struct family_27f9_object *object, float *target, float *value,
+                   float speed, float damping, float limit)
+{
+    float angle = func_00283248(target[4] - ((float *)object)[4],
+                               target[5] - ((float *)object)[5]);
+    return func_002A7CA0(object, value, angle, speed, damping, limit);
+}
 
 INCLUDE_ASM("asm/game", func_002A7E90);
 
@@ -276,7 +283,35 @@ INCLUDE_ASM("asm/game", func_002A8240);
 
 INCLUDE_ASM("asm/game", func_002A84E0);
 
-INCLUDE_ASM("asm/game", func_002A8508);
+extern unsigned short *D_001EE5A0[];
+extern char *D_001B1B5C __attribute__((sda));
+
+/* Counts the entries of the 0x7FFF-masked id list at table[index] whose class
+   byte (0x20) is not value; an entry with the high bit of the id set ends the
+   list, and value -1 counts every entry with a class byte below 0x80. */
+int func_002A8508(int index, int value) {
+    unsigned short *list;
+    unsigned short *entry;
+    short key;
+    char *object;
+    int count;
+    if (index == -1)
+        return 0;
+    list = D_001EE5A0[index];
+    count = 0;
+    if (list == 0)
+        return 0;
+    entry = list;
+    do {
+        object = (char *)(((*entry & 0x7FFF) << 8) + (unsigned int)D_001B1B5C);
+        if (object[0x20] >= 0) {
+            if (value == -1 || (unsigned char)object[0x20] != value)
+                count++;
+        }
+        key = *entry++;
+    } while (key >= 0);
+    return count;
+}
 
 #define MACRO_ADDR __attribute__((section(".sdata")))
 
@@ -367,7 +402,15 @@ void func_002A8C00(char *a, int b, int c, float d, Quad16 *q) {
 
 INCLUDE_ASM("asm/game", func_002A8C28);
 
-INCLUDE_ASM("asm/game", func_002A8D70);
+extern void func_0029FCC0(void *, void *, float *);
+extern int func_002A8C28(void *, float, float *, int, float, float, int, int, int);
+
+int func_002A8D70(float x, float y, float z, void *object, void *source, int mode, int first, int second, int third)
+{
+    float vector[4];
+    func_0029FCC0(object, source, vector);
+    return func_002A8C28(object, x, vector, mode, y, z, first, second, third);
+}
 
 INCLUDE_ASM("asm/game", func_002A8E18);
 
@@ -381,7 +424,19 @@ INCLUDE_ASM("asm/game", func_002A90F0);
 
 INCLUDE_ASM("asm/game", func_002A90F8);
 
-INCLUDE_ASM("asm/game", func_002A91F0);
+extern void func_002837D0(void *, void *, void *);
+extern void func_00283898(void *, int, float);
+
+void func_002A91F0(void *a0, float *a1) {
+    float v2[4];
+    float v1[4];
+    float v0[4];
+    func_00283898(v0, 0, a1[0]);
+    func_00283898(v1, 1, a1[1]);
+    func_00283898(v2, 2, a1[2]);
+    func_002837D0(a0, v0, v1);
+    func_002837D0(a0, a0, v2);
+}
 
 INCLUDE_ASM("asm/game", func_002A9288);
 
@@ -399,7 +454,7 @@ int func_002A9568(int first, int second, float amount) {
     return func_00283D38(first, second, amount);
 }
 
-INCLUDE_ASM("asm/game", func_002A9588);
+
 
 INCLUDE_ASM("asm/game", func_002A9640);
 
@@ -539,4 +594,22 @@ float func_002AA458(void *a0, void *a1, void *a2, float f1, float f2, float f3)
 
 INCLUDE_ASM("asm/game", func_002AA548);
 
-INCLUDE_ASM("asm/game", func_002AA738);
+extern float func_00283BE0(void);
+extern float func_00282C48(float);
+
+f32 func_002AA738(s32 a0)
+{
+    f32 base = func_00283BE0();
+
+    if (a0 == 0 || base * (f32)a0 > 0.0f)
+        return base;
+    {
+        f32 zero = 0.0f;
+
+        if (func_00282C48(base) <= 0.001745329471305012702941895f)
+            return zero;
+        if (base > zero)
+            return base - 6.2831859588623046875f;
+        return base + 6.2831859588623046875f;
+    }
+}

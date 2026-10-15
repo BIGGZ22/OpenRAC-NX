@@ -225,11 +225,24 @@ INCLUDE_ASM("asm/game", func_00294180);
 
 INCLUDE_ASM("asm/game", func_002942A0);
 
-INCLUDE_ASM("asm/game", func_00294398);
+extern void func_002942A0(int, int, int, int);
+
+void func_00294398(int value, int index)
+{
+    int i = 0;
+    if (Fee2b87d1_D_0014B540.slots[0].w == value) goto after;
+    while (++i < 48) {
+        if (Fee2b87d1_D_0014B540.slots[i].w == value) break;
+    }
+after:
+    if (i == 48) return;
+    if (Fee2b87d1_D_00152CD0.slots[index] == i) return;
+    func_002942A0(i, index, (int)((char *)&Fee2b87d1_D_00152CD0 + 0x40 + index * 0xC800), 0);
+}
 
 INCLUDE_ASM("asm/game", func_00294420);
 
-extern void func_00294398(void *a0, void *a1);
+extern void func_00294398(int a0, int a1);
 
 void func_002945E8(void *a0, void *a1)
 {

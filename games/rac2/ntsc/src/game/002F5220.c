@@ -148,22 +148,69 @@ void func_002F5CB8(int first, int second) {
     D_001A8C84 = second;
 }
 
-INCLUDE_ASM("asm/game", func_002F5CC8);
+extern float D_001A8C7C __attribute__((sda));
+extern float D_001B15A0;
+extern void func_0027D330(int);
 
-INCLUDE_ASM("asm/game", func_002F5D10);
+/* Publishes the slow-down factor and, while the frame rate is below one, asks
+   for the six-frame path. */
+void func_002F5CC8(void)
+{
+    D_001A8C7C = 1.2f;
+    if (D_001B15A0 < 1.0f)
+        func_0027D330(6);
+}
+
+int func_002F5D10(void)
+{
+    return D_L05_001A8F08 == 2 || D_L05_001A8F00 == 2;
+}
 
 INCLUDE_ASM("asm/game", func_002F5D40);
 
 INCLUDE_ASM("asm/game", func_002F5E20);
 
-INCLUDE_ASM("asm/game", func_002F5EF8);
+extern int D_001A7478;
+extern int D_001B221C;
+extern unsigned char D_00188660[];
+extern int D_001BAD78[];
+extern int D_001A8BB8;
+extern void (*ref_L00_002F5EF8_00)(int);
+extern int ref_L00_002F5EF8_01;
+extern void func_002B6E78(int, int, int);
+extern void func_002B7320(void);
+extern void func_002FC1D8(void);
+
+void func_002F5EF8(void)
+{
+    if (D_001A7478 == 2)
+        *(volatile int *)&D_001A7478 = 0;
+    func_0027D330(4);
+    func_002B6E78(D_001B221C, 1, 0x400);
+    func_002B7320();
+    D_00188660[0x6B] |= 0x10;
+    func_002FC1D8();
+    if (ref_L00_002F5EF8_00 != 0 && D_001BAD78[0] == 0) {
+        if (D_001A8BB8 == 2)
+            goto done;
+        if (D_001A8BB8 == 1)
+            goto done;
+        {
+            ref_L00_002F5EF8_00(D_001A8C84);
+            *(void (*volatile *)(int))&ref_L00_002F5EF8_00 = 0;
+            *(volatile int *)&ref_L00_002F5EF8_01 = 0;
+        }
+    }
+done:
+    ;
+}
 
 INCLUDE_ASM("asm/game", func_002F5FB8);
 
 extern void func_288CB0(int, int);
 void func_002F6458(void) { char *base = D_00138180 + 0x1260; int index = *(int *)(base + 0x148); if (index != -1) { if (*(short *)(base + index * 0xA0 + 0x18) >= 0) *(int *)(base + 0x17C) = 1; } func_288CB0(0, 0); }
 
-INCLUDE_ASM("asm/game", func_002F64A8);
+
 
 INCLUDE_ASM("asm/game", func_002F6510);
 

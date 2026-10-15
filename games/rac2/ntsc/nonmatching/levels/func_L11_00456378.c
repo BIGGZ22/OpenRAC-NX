@@ -1,9 +1,9 @@
-/* func_L11_00456378 -- brouillon w17 (vague 6, fichier src/levels/11_joba/L11_00453358.c)
- * MEILLEUR ESSAI (log2) : 11_joba: 184 bytes, expected 192 -- allocation de registres
- * CONFORME au retail (p->$s1, q->$s0) et tout le corps identique SAUF la forme de branche
- * (moi `beq $v0,$s2` + nop, retail `bnel $v0,$s2` avec delay slot utile) et le bloc
- * "then" place du mauvais cote. Variante 1 appel = 160 o, variante 2 appels = 200 o (2 jal).
- * Retail = 192 o avec UN SEUL jal partage par les deux chemins.
+/* func_L11_00456378 -- draft w17 (wave 6, file src/levels/11_joba/L11_00453358.c)
+ * BEST ATTEMPT (log2): 11_joba: 184 bytes, expected 192 -- register allocation
+ * CONFORMING to the retail (p->$s1, q->$s0) and the whole body identical EXCEPT the branch
+ * form (mine `beq $v0,$s2` + nop, retail `bnel $v0,$s2` with a useful delay slot) and the
+ * "then" block placed on the wrong side. Variant 1 call = 160 bytes, variant 2 calls = 200 bytes (2 jal).
+ * Retail = 192 bytes with A SINGLE jal shared by the two paths.
  */
 
 void func_L11_00456378(char *p)

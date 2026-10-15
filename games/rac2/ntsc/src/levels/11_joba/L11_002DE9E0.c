@@ -12,6 +12,9 @@ INCLUDE_ASM("asm/levels", func_L11_00332EE0);
 
 INCLUDE_ASM("asm/levels", func_L11_00335B88);
 
+extern void func_00282CF0(void *, void *, void *);
+extern void func_L02_00333480(char *, char *, void *);
+
 INCLUDE_ASM("asm/levels", func_L11_00340500);
 
 INCLUDE_ASM("asm/levels", func_L11_00369700);

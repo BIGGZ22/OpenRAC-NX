@@ -76,7 +76,32 @@ void func_00344160(DobboGridState312 *state, unsigned int buttons)
     state->index = state->column + state->row * 2;
 }
 
-INCLUDE_ASM("asm/game", func_00344298);
+extern short D_L00_001AAB76;
+void func_00344298(char *object, unsigned int buttons)
+{
+    if (buttons & 0x1000) {
+        func_002E5E58(3, 0, 0);
+        *(int *)(object + 0x448) = 2;
+        *(int *)(object + 0x440) = 1;
+        *(int *)(object + 0x43C) = 3;
+    } else if (buttons & 0x4000) {
+        func_002E5E58(3, 0, 0);
+        *(int *)(object + 0x448) = 2;
+        *(int *)(object + 0x43C) = 3;
+        *(int *)(object + 0x440) = 0;
+    } else if (buttons & 0x8000) {
+        func_002E5E58(3, 0, 0);
+        *(int *)(object + 0x448) = 0;
+        *(int *)(object + 0x43C) = 1;
+        *(int *)(object + 0x440) = 0;
+    } else if (buttons & 0x2000) {
+        func_002E5E58(3, 0, 0);
+        *(int *)(object + 0x440) = 0;
+        *(int *)(object + 0x448) = 3;
+        *(int *)(object + 0x43C) = 0;
+    }
+    *(int *)(object + 0x444) = D_L00_001AAB76;
+}
 
 INCLUDE_ASM("asm/game", func_00344378);
 

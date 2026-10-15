@@ -61,7 +61,16 @@ INCLUDE_ASM("asm/game", func_002E7570);
 
 INCLUDE_ASM("asm/game", func_002E76C0);
 
-INCLUDE_ASM("asm/game", func_002E7B48);
+extern unsigned int D_001A7AF0 __attribute__((sda));
+extern void func_002E76C0(void *, int, int);
+
+void func_002E7B48(void *object)
+{
+    int count = ((D_001A7AF0 >> 4) & 1) ? 3 : 1;
+    int index;
+    for (index = 0; index < count; index++)
+        func_002E76C0(object, index, 0);
+}
 
 INCLUDE_ASM("asm/game", func_002E7BC0);
 
@@ -71,7 +80,26 @@ INCLUDE_ASM("asm/game", func_002E80B0);
 
 INCLUDE_ASM("asm/game", func_002E8190);
 
-INCLUDE_ASM("asm/game", func_002E82C8);
+extern void func_002FC560(unsigned int, unsigned long long);
+extern void func_0027E018(int, char *, int, int, int, int, int, int, unsigned long long, unsigned long long);
+extern char *D_001A7344 __attribute__((sda));
+extern unsigned long long D_001B2168 __attribute__((sda));
+
+void func_002E82C8(int alpha)
+{
+    unsigned long long color;
+    unsigned long long packet;
+    char *dst;
+
+    func_002FC560(0x47, 0x31801ULL);
+    func_002FC560(0x42, 0x8000000044ULL);
+    color = (alpha << 24) | 0x00808080;
+    packet = D_001B2168;
+    dst = D_001A7344;
+    func_0027E018(0x20, dst - 0x58, 0x100, 0x20, 0, 0, 0x100, 0x20, color, packet);
+    func_002FC560(0x47, 0x5360BULL);
+}
+
 
 INCLUDE_ASM("asm/game", func_002E8368);
 
@@ -83,7 +111,28 @@ INCLUDE_ASM("asm/game", func_002E9110);
 
 INCLUDE_ASM("asm/game", func_002E9268);
 
-INCLUDE_ASM("asm/game", func_002EA8E8);
+extern short D_00152C20;
+extern int D_001B1594 __attribute__((sda));
+extern void func_0027C480(void);
+extern void func_0027BD70(void);
+extern void func_002E8BA8(void);
+
+void func_002EA8E8(void)
+{
+    switch (D_00152C20) {
+    case 0:
+    case 3:
+        func_0027C480();
+        break;
+    case 1:
+        D_001B1594 = 127;
+        func_0027BD70();
+        break;
+    case 2:
+        func_002E8BA8();
+        break;
+    }
+}
 
 INCLUDE_ASM("asm/game", func_002EA968);
 
@@ -110,7 +159,26 @@ INCLUDE_ASM("asm/game", func_002EAB18);
 
 INCLUDE_ASM("asm/game", func_002EB150);
 
-INCLUDE_ASM("asm/game", func_002EB158);
+typedef struct { char pad[0x30]; int selected; char gap[0x3C]; int destination; } State2EB158;
+extern State2EB158 D_001B8840;
+extern char D_0014B540[];
+extern int func_002B7B18(int, int, int);
+extern void func_002B7CE0(int);
+
+int func_002EB158(int index)
+{
+    char *table = D_0014B540;
+    int row = D_001B8840.selected * 0x14C;
+    int destination = D_001B8840.destination;
+    int base = (int)(table + 0x3EA8);
+    int first = *(int *)((index << 2) + row + base);
+    int count = *(int *)(((index + 1) << 2) + row + base) - first;
+    if (count > 0) {
+        func_002B7B18(destination, first + *(int *)(table + 0x3E24), count);
+        func_002B7CE0(0);
+    }
+    return 1;
+}
 
 INCLUDE_ASM("asm/game", func_002EB1E0);
 

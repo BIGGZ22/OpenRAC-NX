@@ -1,10 +1,10 @@
-/* func_L07_0040FC50 -- meilleur essai (vague 3, worker w05, fichier src/levels/07_siberius/L07_003F4578.c)
- * Residuel: taille OK (52 o). Seules les DEUX premieres instructions sont transposees:
+/* func_L07_0040FC50 -- best attempt (wave 3, worker w05, file src/levels/07_siberius/L07_003F4578.c)
+ * Residual: size OK (52 bytes). Only the FIRST TWO instructions are transposed:
  *   retail : addiu $v1,$zero,0xF ; lui $v0,0x1B ; addiu $v0,$v0,0x31AF
- *   candidat: lui $v0,0x1B ; addiu $v1,$zero,0xF ; addiu $v0,$v0,0x31AF
- * Le reste (dont le nop de rembourrage a +0xC et le bgez/sb) est identique.
- * Essayes: initialiseur de declaration, expression virgule dans le for, do/while explicite --
- * le planificateur place toujours le lui en tete.
+ *   candidate: lui $v0,0x1B ; addiu $v1,$zero,0xF ; addiu $v0,$v0,0x31AF
+ * The rest (including the padding nop at +0xC and the bgez/sb) is identical.
+ * Tried: declaration initialiser, comma expression in the for, explicit do/while --
+ * the scheduler always puts the lui at the front.
  */
 extern u8 D_L07_001B31AF;
 

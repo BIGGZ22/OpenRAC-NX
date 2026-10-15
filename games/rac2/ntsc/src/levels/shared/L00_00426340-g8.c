@@ -37,3 +37,17 @@ void func_L00_0042B6C8(char *a0)
     *(char **)a0 = D_L00_001ADC48;
     func_L00_0042B408(a0);
 }
+
+extern int D_L00_001B15DC __attribute__((sda));
+
+extern int D_L00_001B2700 __attribute__((sda));
+
+int func_L00_004272A0(void)
+{
+    return D_L00_001B15DC;
+}
+
+int func_L00_0042B730(void)
+{
+    return D_L00_001B2700;
+}

@@ -100,7 +100,27 @@ int func_L23_003C0DF8(int arg0, unsigned long long v, int *arg2, int arg3) {
     return n;
 }
 
-INCLUDE_ASM("asm/levels", func_L23_003C0E98);
+extern int *D_L23_001B36A8 __attribute__((sda));
+
+extern int *D_L23_001FF300[];
+
+extern char D_L23_002595C8[];
+
+extern int func_419070(long long v, char *arg);
+
+int func_L23_003C0E98(int arg0, int index, char *arg) {
+    int v;
+    int w;
+    int n;
+
+    v = D_L23_001B36A8[index];
+    if (func_419070(*(long long *)(D_L23_002595C8 + (v << 4)), arg) != 0)
+        return 0;
+    w = D_L23_001B36A8[index];
+    n = *D_L23_001FF300[w] - 1;
+    func_419070(*(long long *)(D_L23_002595C8 + (w << 4) + 8), arg);
+    return n;
+}
 
 void func_L23_003C0F48(char *arg0, short arg1) {
     char *p = *(char **)(arg0 + 0x68);
@@ -144,7 +164,7 @@ void func_L23_003C1988(char *arg0) {
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L23_003C19E0);
+/* func_L23_003C19E0 is defined in L23_0035CE90-g8.c (this unit has no $gp access for it). */
 
 void func_L23_003C1AB0(int arg0) {
     func_3242D0(arg0, 9, 2);

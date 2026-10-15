@@ -107,7 +107,24 @@ void func_0027C480(void) {
     func_0027BD70();
 }
 
-INCLUDE_ASM("asm/game", func_0027C4A8);
+extern unsigned int func_00285850(void);
+extern void func_00284F40(int);
+extern int D_001B1594 __attribute__((sda));
+extern void func_0027BD70(void);
+extern void func_002CBC58(int);
+extern void func_002859C8(void);
+
+void func_0027C4A8(void)
+{
+    if (func_00285850() == 1) {
+        func_00284F40(0);
+        D_001B1594 = 0x100FF;
+        func_0027BD70();
+    } else if (func_00285850() == 0) {
+        func_002CBC58(1);
+    }
+    func_002859C8();
+}
 
 INCLUDE_ASM("asm/game", func_0027C510);
 

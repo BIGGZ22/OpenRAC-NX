@@ -7,9 +7,35 @@ extern void func_32C010();
 extern void func_32C328(char *a0, char *a1, s32 a2);
 extern void *func_31DD78(char *a0, s32 a1, s32 a2);
 extern s32  func_32AB10(char *a0);
-extern void func_360A80(s32 a0, s32 a1, char *a2);
+extern s32  func_360A80(s32 a0, s32 a1, char *a2);
 extern void func_311758(void *a0);
 extern void func_L03_003D11E0(char *a0);
+extern void func_31B920(char *a0, s32 a1, s32 a2);
+extern f32  func_31BAE8(f32 a0, f32 a1);
+extern f32  func_2F0000(f32 a0, f32 a1);
+extern char D_L03_00188660[];
+extern s32  func_312898(s32 a0, s32 a1, void *a2);
+extern void func_2EEFE0(char *a0, char *a1, void *a2);
+extern u8  *D_L03_001B2A1C;
+extern f32  D_00189E20_19;
+extern u8   D_001395BF;
+extern void func_2BEE78(char *a0, char *a1, s32 a2, s32 a3);
+extern void func_2B8300(s32 a0, s32 a1, char *a2);
+extern void func_43B870(s32 a0);
+extern void func_32F140(s32 a0, s32 a1);
+extern char D_00189E20_11[];
+extern u8   D_001395C0;
+extern u8   D_001A7AFA;
+extern u8   D_001A7B32;
+extern u8   D_001A7AFB;
+extern u8   D_001A7B33;
+extern u8   D_001A7AFC;
+extern u8   D_001A7B34;
+extern void func_2B8510(s32 a0);
+extern void func_313378(s32 a0);
+extern void func_359FD0(char *a0, char *a1);
+extern void func_30D710(s32 a0, s32 a1);
+typedef int TI128 __attribute__((mode(TI)));
 
 INCLUDE_ASM("asm/levels", func_L03_00399230);
 
@@ -44,13 +70,7 @@ void func_L03_003C7A88(char *a0)
     *(s32 *)(a0 + 0x9C) = 1;
 }
 
-void func_L03_003C7AA0(char *a0, char *a1)
-{
-    char *a2 = *(char **)(a0 + 0x68);
-
-    qcopy(a1, a0 + 0x10);
-    *(f32 *)(a1 + 8) = *(f32 *)(a2 + 0xF8);
-}
+INCLUDE_ASM("asm/levels", func_L03_003C7AA0);
 
 INCLUDE_ASM("asm/levels", func_L03_003C7AC0);
 
@@ -58,21 +78,13 @@ INCLUDE_ASM("asm/levels", func_L03_003C7E20);
 
 INCLUDE_ASM("asm/levels", func_L03_003C85F8);
 
-void func_L03_003C8660(char *a0, char *a1)
-{
-    char *v1 = *(char **)(a0 + 0x68);
-
-    *(s32 *)(v1 + 0xAC) = 0;
-    *(s32 *)(v1 + 0xA0) = 0;
-    qcopy(v1 + 0x80, a1);
-    func_002A7750(a0, 3, -1);
-}
+INCLUDE_ASM("asm/levels", func_L03_003C8660);
 
 INCLUDE_ASM("asm/levels", func_L03_003C8698);
 
 /* func_L03_003CA938 lives in the -G8 sibling L03_00399230-g8.c. */
 
-INCLUDE_ASM("asm/levels", func_L03_003CACA8);
+/* func_L03_003CACA8 is defined in L03_00399230-g8.c (this unit has no $gp access for it). */
 
 INCLUDE_ASM("asm/levels", func_L03_003CAD78);
 
@@ -80,7 +92,34 @@ INCLUDE_ASM("asm/levels", func_L03_003CB398);
 
 INCLUDE_ASM("asm/levels", func_L03_003CBC40);
 
-INCLUDE_ASM("asm/levels", func_L03_003CBD70);
+/* Picks the actor's next motion slot: case 0 draws a random turn rate, case 1
+   re-checks the 0x70-stride table entry before refreshing the aim. */
+void func_L03_003CBD70(char *a0)
+{
+    char *s0 = a0;
+    char *s1 = *(char **)(s0 + 0x68);
+
+    switch (*(u8 *)(s0 + 0x20)) {
+    case 0:
+        func_31B920(s0, 1, -1);
+        *(f32 *)(s1 + 4) = func_31BAE8(60.0f, 90.0f) * 0.000290888245f;
+        *(s32 *)(s1 + 8) = -1;
+        break;
+    case 1: {
+        s32 v = *(s32 *)s1;
+
+        if (v != 0) {
+            char *p = D_L03_00188660 + *(s32 *)(s1 + 8) * 0x70;
+
+            if (*(char **)(p + 0x88) != s0 || *(u8 *)(p + 0x74) == 0)
+                *(s32 *)(s1 + 8) = func_360A80(0, 4, s0);
+        }
+        *(f32 *)(s0 + 0xF8) = func_2F0000(*(f32 *)(s0 + 0xF8),
+            *(f32 *)(s1 + 4));
+        break;
+    }
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L03_003CBE58);
 
@@ -142,7 +181,7 @@ INCLUDE_ASM("asm/levels", func_L03_003D11E0);
 
 INCLUDE_ASM("asm/levels", func_L03_003D1548);
 
-INCLUDE_ASM("asm/levels", func_L03_003D18F8);
+/* func_L03_003D18F8 is defined in L03_00399230-g8.c (this unit has no $gp access for it). */
 
 INCLUDE_ASM("asm/levels", func_L03_003D19C8);
 

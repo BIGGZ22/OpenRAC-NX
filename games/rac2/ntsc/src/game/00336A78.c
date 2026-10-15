@@ -73,7 +73,19 @@ void func_00336A78(char *o)
 /* Complete boot bodies from liolu PRs #72 and #75; refreshed in one combined batch. */
 void func_00336B90(u8 *a0, s32 a1) { *(s32 *)(a0 + 0x40) = a1; }
 
-INCLUDE_ASM("asm/game", func_00336B98);
+void func_00336B98(char *object, int value)
+{
+    unsigned int limit = *(unsigned int *)(object + 0x40);
+    unsigned int clamped;
+    if (limit < (unsigned int)value) clamped = limit;
+    else clamped = value;
+    if ((float)limit == 0.0f) {
+        **(float **)(object + 4) = 0.0f;
+        return;
+    }
+    **(float **)(object + 4) = ((float)clamped / (float)*(unsigned int *)(object + 0x40)) * (float)*(unsigned int *)(object + 0x3C);
+}
+
 
 /* Measured target: byte-identical across all 27 levels. */
 void func_00336CC0(u8 *a0, s32 a1) { *(s32 *)(a0 + 0x38) = a1; }
@@ -86,7 +98,18 @@ void func_00336CE0(u8 *object, s32 value) {
     *(s32 *)(object + 0x44) = value;
 }
 
-INCLUDE_ASM("asm/game", func_00336CE8);
+extern void func_00300618(void *);
+
+void func_00336CE8(char *object)
+{
+    int count = *(int *)(object + 0x18);
+    int i;
+    int *row = (int *)(object + 0x1C);
+    for (i = 0; i < count; i++) {
+        row[i * 2 + 1] += (int)object;
+        func_00300618((void *)row[i * 2 + 1]);
+    }
+}
 
 s32 func_00336D50(u8 *a0,s32 a1) {
  s32 count=*(s32 *)(a0+0x18); s32 i,out=0;u8 *base=a0+0x1c;

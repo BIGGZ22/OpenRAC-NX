@@ -64,7 +64,21 @@ INCLUDE_ASM("asm/game", func_002CD950);
 
 INCLUDE_ASM("asm/game", func_002CDA20);
 
-INCLUDE_ASM("asm/game", func_002CDAB0);
+extern void func_00341540(char *, char *, char *, char *);
+extern void func_00341610(char *, int);
+extern char D_002615F8[];
+extern char D_00261698[];
+extern char D_00261750[];
+
+int func_002CDAB0(void)
+{
+    if (D_001A8CFC[0] != 0) {
+        func_00341550(D_001A8CFC[0] + 0x3BE08, 1);
+        func_00341540(D_001A8CFC[0] + 0x3BE08, D_002615F8, D_00261698, D_00261750);
+        func_00341610(D_001A8CFC[0] + 0x3BE08, 0);
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002CDB30);
 
@@ -151,7 +165,7 @@ INCLUDE_ASM("asm/game", func_002D16C8);
 
 INCLUDE_ASM("asm/game", func_002D1970);
 
-INCLUDE_ASM("asm/game", func_002D1CB0);
+/* func_002D1CB0 is built from 002CD8C0-g8.c for small-data accesses. */
 
 INCLUDE_ASM("asm/game", func_002D1D20);
 

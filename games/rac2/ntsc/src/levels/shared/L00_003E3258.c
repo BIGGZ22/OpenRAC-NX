@@ -101,7 +101,12 @@ INCLUDE_ASM("asm/levels", func_L00_003E4BF0);
 
 INCLUDE_ASM("asm/levels", func_L00_003E51C0);
 
-INCLUDE_ASM("asm/levels", func_L00_003E5328);
+extern int D_L00_001B05DC_2 __attribute__((sda));
+
+void func_L00_003E5328(void)
+{
+    D_L00_001B05DC_2 = 0;
+}
 
 extern int D_L00_001B2B50_1 __attribute__((sda));
 
@@ -139,32 +144,7 @@ extern void func_L00_003E6030(char *object);
 
 extern void func_L00_003E6710(char *object);
 
-void func_L00_003E5650(char *object)
-{
-    char *data;
-    Vec16_Fc936841d local;
-    int result;
-
-    data = *(char **)(object + 0x68);
-    if (func_002B4038(*(short *)(object + 0xAA), *(int *)(data + 0x28)) == 0) {
-        func_L00_003E5330();
-        func_0029F338(object);
-    } else {
-        qcopy(&local, object + 0x10);
-        local.w = 2.0f;
-        result = func_00283DB8(&local, 100.0f);
-        if (result != -1) {
-            if (*(unsigned char *)(object + 0x20) != 6) {
-                func_L00_003E5710(object);
-                func_L00_003E5978(object);
-                func_L00_003E55B0(object);
-            }
-            func_L00_003E5BD8(object);
-            func_L00_003E6030(object);
-            func_L00_003E6710(object);
-        }
-    }
-}
+INCLUDE_ASM("asm/levels", func_L00_003E5650);
 
 
 INCLUDE_ASM("asm/levels", func_L00_003E5710);
@@ -179,7 +159,24 @@ INCLUDE_ASM("asm/levels", func_L00_003E64F8);
 
 INCLUDE_ASM("asm/levels", func_L00_003E6628);
 
-INCLUDE_ASM("asm/levels", func_L00_003E6710);
+extern void func_L00_003E6F48(char *object);
+
+void func_L00_003E6710(char *object)
+{
+    char *rec;
+    int i;
+    int offset;
+
+    offset = 0;
+    i = 0;
+    do {
+        i--;
+        rec = (char *)(offset + (int)D_L00_001B2B50_1);
+        if (*(int *)(rec + 0x30) == (int)object)
+            func_L00_003E6F48(rec);
+        offset += 0x50;
+    } while (i >= 0);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003E6778);
 
@@ -241,7 +238,35 @@ INCLUDE_ASM("asm/levels", func_L00_003E7C88);
 
 INCLUDE_ASM("asm/levels", func_L00_003E7E40);
 
-INCLUDE_ASM("asm/levels", func_L00_003E80A8);
+typedef struct {
+    void *object;
+    int index;
+    int unused0;
+    float scale;
+    int unused1[4];
+} Entry_24efc0;
+
+extern int func_00283CF0(float value);
+
+extern int func_00283D38(char *object, int index, float scale);
+
+extern void func_002A0488(int handle, int a, int b, int c);
+
+extern Entry_24efc0 D_L00_0024EFC0[];
+
+void func_L00_003E80A8(int index, char *object)
+{
+    int r;
+    int high;
+
+    *(char *)((char *)D_L00_0024EFC0[index].object + 0x23) =
+        func_00283CF0(D_L00_0024EFC0[index].scale * 96.0f);
+    r = func_00283D38(object, D_L00_0024EFC0[index].index,
+                      D_L00_0024EFC0[index].scale);
+    high = (r >> 16) & 0xFF;
+    func_002A0488((int)D_L00_0024EFC0[index].object, r & 0xFF, (r >> 8) & 0xFF,
+                  high);
+}
 
 
 INCLUDE_ASM("asm/levels", func_L00_003E8180);

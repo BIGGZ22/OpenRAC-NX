@@ -107,6 +107,6 @@ INCLUDE_ASM("asm/levels", func_L01_003B5878);
 
 INCLUDE_ASM("asm/levels", func_L01_003B9F30);
 
-INCLUDE_ASM("asm/levels", func_L01_003BAFB0);
+/* func_L01_003BAFB0 lives in the -g8 sibling file (it reads a float through $gp). */
 
 INCLUDE_ASM("asm/levels", func_L01_003BAFB8);

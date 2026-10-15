@@ -17,9 +17,27 @@ extern void func_327E68(s32, s32, s32, s32, f32);
 extern s32 func_31B160(s32);
 extern f32 func_2EF0B0(s32, s32);
 
+extern s32 D_L17_001B2748 __attribute__((sda));
+extern s32 func_2F0108(u32, u32, f32);
+extern f32 func_2EF4E0(f32);
+
+extern s32 D_L17_001B2C1C __attribute__((sda));
+
+extern s32 D_L17_001C0018;
+extern s32 func_2DF570(s32, s32, s32, s32, s32);
+
 INCLUDE_ASM("asm/levels", func_L17_003C7C70);
 
-INCLUDE_ASM("asm/levels", func_L17_003C8248);
+void func_L17_003C8248(s32 a0)
+{
+    f32 t = (f32)(D_L17_001B2748 % 150) * (1.0f / 150.0f);
+    f32 ang = (t + t) * 3.1415927f;
+
+    if (ang > 3.1415927f)
+        ang = ang - 6.2831855f;
+    *(s32 *)(a0 + 0x78) = func_2F0108(0x80464646u, 0x80828282u,
+                                      (func_2EF4E0(ang) + 1.0f) * 0.5f);
+}
 
 INCLUDE_ASM("asm/levels", func_L17_003CC6A8);
 
@@ -55,7 +73,16 @@ INCLUDE_ASM("asm/levels", func_L17_003E48E0);
 
 INCLUDE_ASM("asm/levels", func_L17_003E6DE8);
 
-INCLUDE_ASM("asm/levels", func_L17_003E6F20);
+void func_L17_003E6F20(s32 a0)
+{
+    s32 obj = *(s32 *)(a0 + 0x68);
+    s32 *p = *(s32 **)(obj + 0x720);
+
+    if (*p == (a0 - D_L17_001B2C1C) >> 8) {
+        *p = -1;
+        *(s32 *)(*(s32 *)(obj + 0x748)) = 0;
+    }
+}
 
 s32 func_L17_003E6F58(s32 a0) {
     s32 s0;

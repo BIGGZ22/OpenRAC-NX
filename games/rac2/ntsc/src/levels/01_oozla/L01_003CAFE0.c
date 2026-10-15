@@ -6,6 +6,9 @@ typedef unsigned int   u32;
 typedef signed int     s32;
 typedef float          f32;
 
+/* Quadword copies and clears, the spelling that reaches lq/sq. */
+typedef int TI128 __attribute__((mode(TI)));
+
 extern void func_00282948(void *a0);
 
 extern void func_00282978(void *a0);
@@ -20,6 +23,18 @@ extern s32 func_3120A8(void *a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5,
                       u32 a6, f32 f12, f32 f13);
 
 extern s32 func_355780(u32 a0, u32 a1, void *a2);
+
+extern s32 func_2E45B8(f32 a0);
+
+extern void func_3377C8(u32 a0);
+
+extern void func_310060(u8 *a0, s32 a1, s32 a2);
+
+extern void func_310418(u8 *a0, s32 a1, s32 a2);
+
+extern u8 *D_L01_001B255C;
+
+extern u32 D_L01_001FFE80[];
 
 INCLUDE_ASM("asm/levels", func_L01_003CAFE0);
 
@@ -78,6 +93,7 @@ INCLUDE_ASM("asm/levels", func_L01_003CC930);
 
 INCLUDE_ASM("asm/levels", func_L01_003CDB40);
 
+/* Sends the timer string and steps the 0x2E/0x28/0x2A state fields of the owner. */
 INCLUDE_ASM("asm/levels", func_L01_003CDD00);
 
 /* Releases the three sub-objects at 0xBC, 0xB4 and 0x26, first bumping the counter at 0x96. */

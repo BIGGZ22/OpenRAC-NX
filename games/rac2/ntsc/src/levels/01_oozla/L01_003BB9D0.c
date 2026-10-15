@@ -1,8 +1,68 @@
 #include "include_asm.h"
 
+typedef int TI128 __attribute__((mode(TI)));
+
 extern int func_00282948(void *);
 
 extern void func_00291450(int);
+
+extern float func_002A7878(float, float);
+
+extern void func_002A0F48(char *);
+
+extern void *func_0029EFD0(int);
+
+extern float func_00283180(float);
+
+extern float func_00283198(float);
+
+extern void func_00282CC0(void *, void *, void *);
+
+extern void func_00282CF0(void *, void *, void *);
+
+extern void func_00282F20(void *, void *, float);
+
+extern char D_00189EA0[];
+
+extern void func_L01_003BDBE8(void *);
+
+extern float func_002A7940(void);
+
+extern int func_002A7820(int, int);
+
+extern void func_L01_0032EF38(void *, int, int, int, float, float);
+
+typedef struct L01_003BDF28_BUF {
+    float x;
+    float y;
+    int z;
+} L01_003BDF28_BUF;
+
+void func_L01_003BDF28(char *a0)
+{
+    char *s2 = a0;
+    char *s0 = *(char **)(s2 + 0x68);
+    char *s1 = s0 + 0x1E0;
+    L01_003BDF28_BUF buf;
+
+    *(float *)(s0 + 0x1E0) = func_00283180(func_002A7878(-3.1415927f, 3.1415927f)) * (float)*(unsigned char *)(s0 + 0x201);
+    *(float *)(s0 + 0x1E4) = func_00283198(func_002A7878(-3.1415927f, 3.1415927f)) * (float)*(unsigned char *)(s0 + 0x201);
+    *(int *)(s0 + 0x1E8) = 0;
+    func_00282CC0(s1, s1, s0 + 0x1D0);
+    *(float *)(s0 + 0x1E8) = *(float *)(s0 + 0x1E8) + 1.7f;
+    if (*(int *)(s0 + 0x23C) != 0) {
+        func_00282CF0(&buf, s1, D_00189EA0);
+        buf.z = 0;
+        func_00282F20(&buf, &buf, 8.0f);
+        func_00282CC0(s1, s1, &buf);
+    }
+    func_L01_003BDBE8(s2);
+}
+
+typedef struct L01_003BC490_OBJ {
+    char pad[0x10];
+    TI128 f10;
+} L01_003BC490_OBJ;
 
 
 extern void func_002A7470();
@@ -54,8 +114,6 @@ void func_L01_003BDBB0(L01_003BDBB0_OBJ *a0)
 }
 
 INCLUDE_ASM("asm/levels", func_L01_003BDBE8);
-
-INCLUDE_ASM("asm/levels", func_L01_003BDF28);
 
 INCLUDE_ASM("asm/levels", func_L01_003BE058);
 
