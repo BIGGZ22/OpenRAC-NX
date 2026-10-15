@@ -298,7 +298,7 @@ impl DiscordIpc {
                 }),
                 ..Default::default()
             },
-            DiscordStatus::ViewingGame { title, region, progress_pct, game_id: _ } => {
+            DiscordStatus::ViewingGame { title, region, progress_pct, game_id } => {
                 let state_str = match progress_pct {
                     Some(p) => format!("{region} · {p:.1}% matched"),
                     None => region.clone(),
@@ -308,10 +308,10 @@ impl DiscordIpc {
                     state: Some(state_str),
                     timestamps: Some(ActivityTimestamps { start: Some(app_start), end: None }),
                     assets: Some(ActivityAssets {
-                        large_image: Some(OPENRAC_IMAGE.into()),
-                        large_text: Some("OpenRAC Launcher".into()),
-                        small_image: None,
-                        small_text: None,
+                        large_image: Some(game_image_url(game_id)),
+                        large_text: Some(format!("{title} ({region})")),
+                        small_image: Some(OPENRAC_IMAGE.into()),
+                        small_text: Some("OpenRAC".into()),
                     }),
                     ..Default::default()
                 }
