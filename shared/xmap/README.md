@@ -10,8 +10,8 @@ Distinct functions: a function that repeats in several levels counts once.
 
 | Version | Programs | Distinct functions | Code bytes | Core | Network | Resident game | Level-only | Matched by its project |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| `rac1/pal` (SCES_509.16) | 20 | 4,827 | 3,655,984 | 116,560 | 0 | 343,964 | 3,195,460 | 3,118 functions, 2,111,160 (57.7%) |
-| `rac1/ntsc` (SCUS_971.99) | 20 | 4,827 | 3,646,376 | 116,240 | 0 | 339,884 | 3,190,252 | 3,056 functions, 2,116,864 (58.1%) |
+| `rac1/pal` (SCES_509.16) | 20 | 4,827 | 3,655,984 | 116,560 | 0 | 343,964 | 3,195,460 | 4,123 functions, 3,187,340 (87.2%) |
+| `rac1/ntsc` (SCUS_971.99) | 20 | 4,827 | 3,646,376 | 116,240 | 0 | 339,884 | 3,190,252 | 3,800 functions, 3,040,748 (83.4%) |
 | `rac2/ntsc` (SCUS_972.68) | 28 | 8,056 | 5,053,396 | 122,120 | 0 | 903,244 | 4,028,032 | 311 functions, 27,224 (0.5%) |
 | `rac3/ntsc` (SCUS_973.53) | 53 | 14,436 | 7,020,256 | 153,024 | 0 | 443,392 | 6,423,840 | 1,179 functions, 269,252 (3.8%) |
 | `rac4/ntsc` (SCUS_974.65) | 48 | 15,235 | 5,393,756 | 285,896 | 447,848 | 1,354,380 | 3,305,632 | 239 functions, 26,100 (0.5%) |
@@ -79,16 +79,16 @@ what each project calls it and whether it has matched it.
 
 ## Port candidates
 
-Across all projects, 4,750 distinct functions (3,140,124 bytes) are matched in
+Across all projects, 5,759 distinct functions (4,334,392 bytes) are matched in
 at least one. What each version could take from the others together, each function counted once:
 
 | Version | Functions matched elsewhere, present and open here | Bytes | Against what its project has matched |
 |---|---:|---:|---:|
-| `rac1/pal` | 133 | 56,904 | 2.7% of 2,111,160 |
-| `rac1/ntsc` | 185 | 36,624 | 1.7% of 2,116,864 |
-| `rac2/ntsc` | 480 | 75,020 | 275.6% of 27,224 |
-| `rac3/ntsc` | 222 | 28,816 | 10.7% of 269,252 |
-| `rac4/ntsc` | 324 | 44,000 | 168.6% of 26,100 |
+| `rac1/pal` | 49 | 23,496 | 0.7% of 3,187,340 |
+| `rac1/ntsc` | 352 | 149,536 | 4.9% of 3,040,748 |
+| `rac2/ntsc` | 515 | 79,596 | 292.4% of 27,224 |
+| `rac3/ntsc` | 234 | 29,556 | 11.0% of 269,252 |
+| `rac4/ntsc` | 328 | 44,372 | 170.0% of 26,100 |
 
 Functions the row version's project has matched in C that the column version's code also
 contains and its project has not matched: count and bytes of the same function, and in
@@ -97,8 +97,8 @@ lists them.
 
 | Matched in | Open in `rac1/pal` | Open in `rac1/ntsc` | Open in `rac2/ntsc` | Open in `rac3/ntsc` | Open in `rac4/ntsc` |
 |---|---:|---:|---:|---:|---:|
-| `rac1/pal` | – | 170 / 35,648 B (+6 / 1,420 B) | 327 / 55,448 B (+54 / 10,552 B) | 162 / 23,836 B (+47 / 8,668 B) | 145 / 21,328 B (+45 / 9,444 B) |
-| `rac1/ntsc` | 117 / 55,936 B (+16 / 22,336 B) | – | 292 / 48,144 B (+55 / 12,356 B) | 138 / 16,424 B (+47 / 9,112 B) | 135 / 16,200 B (+47 / 10,028 B) |
-| `rac2/ntsc` | 12 / 624 B (+1 / 120 B) | 2 / 176 B (+0 / 0 B) | – | 43 / 3,884 B (+3 / 472 B) | 42 / 3,976 B (+8 / 1,020 B) |
-| `rac3/ntsc` | 23 / 1,180 B (+14 / 744 B) | 14 / 816 B (+10 / 496 B) | 139 / 16,868 B (+109 / 27,408 B) | – | 188 / 23,104 B (+104 / 18,124 B) |
-| `rac4/ntsc` | 1 / 32 B (+0 / 0 B) | 2 / 1,868 B (+0 / 0 B) | 36 / 5,776 B (+1 / 52 B) | 51 / 6,672 B (+5 / 288 B) | – |
+| `rac1/pal` | – | 338 / 148,720 B (+9 / 5,800 B) | 362 / 60,696 B (+69 / 14,516 B) | 174 / 24,576 B (+56 / 11,860 B) | 155 / 21,880 B (+51 / 12,436 B) |
+| `rac1/ntsc` | 33 / 22,528 B (+0 / 0 B) | – | 300 / 51,332 B (+57 / 12,960 B) | 138 / 16,424 B (+50 / 11,552 B) | 135 / 16,200 B (+50 / 12,468 B) |
+| `rac2/ntsc` | 1 / 24 B (+0 / 0 B) | 1 / 16 B (+0 / 0 B) | – | 43 / 3,884 B (+3 / 472 B) | 42 / 3,976 B (+8 / 1,020 B) |
+| `rac3/ntsc` | 16 / 968 B (+10 / 496 B) | 14 / 816 B (+10 / 496 B) | 139 / 16,868 B (+109 / 27,408 B) | – | 188 / 23,104 B (+104 / 18,124 B) |
+| `rac4/ntsc` | 0 / 0 B (+0 / 0 B) | 2 / 1,868 B (+0 / 0 B) | 36 / 5,776 B (+1 / 52 B) | 51 / 6,672 B (+5 / 288 B) | – |
