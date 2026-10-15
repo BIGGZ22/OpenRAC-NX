@@ -68,6 +68,31 @@ Each version is a self-contained project that you build and work on from its
 own directory. The game pages ([games/](games/README.md)) explain how the
 versions relate and where to start.
 
+## Level editor
+
+OpenRAC includes a level editor powered by **Godot 4** ([editor/](editor/README.md)) that
+turns the levels from your own disc into Godot projects:
+
+1. **Extract**: Turn your disc's 19 levels into separate Godot projects in about 20 seconds:
+   ```sh
+   python3 editor/extract.py godot baserom/SCES_509.16.iso assets/levels/rac1 --split
+   ```
+2. **Edit**: Open any level in the Godot 4 editor (e.g. Veldin):
+   ```sh
+   godot --path assets/levels/rac1/level_00 -e
+   ```
+   Move, turn, scale, add, or delete mobys (enemies, crates, vendors, bolts, obstacles)
+   and scenery (ties and shrubs) using Godot's visual scene editor.
+3. **Pack & Play**: Pack your edits back into game data without altering your disc:
+   ```sh
+   python3 editor/extract.py pack baserom/SCES_509.16.iso assets/levels/rac1 assets/packed/rac1
+   ```
+   The native PC port plays your edited levels directly (`--mods assets/packed/rac1`).
+
+The desktop launcher also includes a built-in **Mods** tab that handles extracting,
+launching Godot, packing your changes, and playing your modded levels in one click.
+See [editor/README.md](editor/README.md) for moby class data, pvars, and GDScript behaviour details.
+
 ## Decompiling
 
 Contributors work from a checkout. The launcher finds it, and with **developer
@@ -92,13 +117,6 @@ proprietary and not included: [toolchains/README.md](toolchains/README.md) says
 what each game needs. Then follow the game's README, for example
 [games/rac1/pal](games/rac1/pal/README.md). The launcher runs the same builds
 and checks with its developer tools on.
-
-The level editor turns your disc's levels into a Godot 4 project
-([editor/README.md](editor/README.md)):
-
-```sh
-python3 editor/extract.py godot baserom/SCES_509.16.iso assets/godot
-```
 
 ## Repository layout
 
