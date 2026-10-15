@@ -316,3 +316,14 @@ function that changed between the versions); 23 of them come out identical
 reproduces 1,284 functions, the matched C and the unchanged retail assembly
 alike. So a build of both versions from one tree has to place functions
 individually, as rac2's `tools/build.py` does, not whole files.
+
+`tools/versions.py build` is that build for the boot executable. Each
+function `check` places goes in as an object of its own (its bytes and
+relocations cut from FROM's compiled file, with each `%hi` before its `%lo`
+as GNU as orders them, because SN's ld pairs a `%hi` with the relocation
+after it), and everything else is TO's own retail bytes, standing in for
+its assembly. The toolchain's `ee-ld` links it with the address map, every
+symbol defined inside the section that holds it, and each loaded section is
+compared with TO's executable. For rac1/pal to rac1/ntsc, 2026-10-15: 898
+of PAL's functions (223,072 bytes of code) link into NTSC-U's layout and all
+11 loaded sections come out identical to SCUS_971.99.

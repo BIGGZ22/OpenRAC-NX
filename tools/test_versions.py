@@ -35,5 +35,34 @@ class Derive(unittest.TestCase):
         self.assertEqual(why, "a symbol needs two values")
 
 
+class Paired(unittest.TestCase):
+    HI, LO, J = versions.R_MIPS_HI16, versions.R_MIPS_LO16, versions.R_MIPS_26
+
+    def test_each_hi_goes_before_its_lo(self):
+        relocs = [(0x44, self.LO, "D"), (0x14, self.HI, "D"), (0x1C, self.J, "f")]
+        self.assertEqual(versions.paired(relocs), [(0x14, self.HI, "D"), (0x44, self.LO, "D"), (0x1C, self.J, "f")])
+
+    def test_two_his_share_one_lo(self):
+        relocs = [(0xDC, self.HI, "D"), (0xE4, self.LO, "D"), (0x120, self.HI, "D")]
+        self.assertEqual(versions.paired(relocs),
+                         [(0xDC, self.HI, "D"), (0x120, self.HI, "D"), (0xE4, self.LO, "D")])
+
+
+class WriteObject(unittest.TestCase):
+    def test_round_trip(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "p.o"
+            versions.write_object(path, words(0x0C000000, 0x03E00008), {"f": 0},
+                                  [(0, versions.R_MIPS_26, "g")], 4)
+            obj = versions.read_object(path)
+        text = next(i for i, s in enumerate(obj["sections"]) if s["name"] == ".text")
+        self.assertEqual(obj["sections"][text]["data"], words(0x0C000000, 0x03E00008))
+        names = [s["name"] for s in obj["symbols"]]
+        self.assertEqual(names, ["", "f", "g"])
+        self.assertEqual(obj["relocations"][text], [(0, versions.R_MIPS_26, 2)])
+
+
 if __name__ == "__main__":
     unittest.main()

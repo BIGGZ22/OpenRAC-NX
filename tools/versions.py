@@ -8,6 +8,7 @@ single value. The values found are the address map the second version would link
 
   python3 tools/versions.py check rac1/pal rac1/ntsc --build ~/Projects/RAC/rac1-decomp
   python3 tools/versions.py link rac1/pal rac1/ntsc --build ~/Projects/RAC/rac1-decomp
+  python3 tools/versions.py build rac1/pal rac1/ntsc --build ~/Projects/RAC/rac1-decomp
 
 --build is a checkout of FROM's project after a full build: its config/core_text.objects and
 config/text.objects list the objects. Only functions FROM's project has matched are placed (the
@@ -132,7 +133,10 @@ def place(obj: dict, obj_path: str, names: list, funcs: list, sym: dict, address
                 struct.pack_into("<I", code, o - start, (w & 0xFC000000) | (to - callee["value"]) >> 2)
                 name = callee["name"]
         relocs.append((o - start, kind, name))
-    return derive(bytes(code), relocs, address, retail, gp)
+    found, why = derive(bytes(code), relocs, address, retail, gp)
+    if why is None:
+        found["\0code"], found["\0relocs"] = bytes(code), relocs     # for build(): the piece as placed
+    return found, why
 
 
 def pairs(src_key: str, dst_key: str) -> dict[int, int]:
@@ -177,7 +181,7 @@ def check(src_key: str, dst_key: str, build: Path, boot_only: bool = False, ever
 
     objects = [line.split()[0] for name in ("core_text.objects", "text.objects")
                for line in (build / "config" / name).read_text().splitlines() if line.strip() and not line.startswith("#")]
-    values, owner, outcome, conflicts, placed = {}, {}, Counter(), [], {}
+    values, owner, outcome, conflicts, placed, pieces = {}, {}, Counter(), [], {}, {}
     for obj_path in objects:
         obj = read_object(build / obj_path)
         names = [s["name"] if s["type"] != STT_SECTION else f"§{obj_path}:{obj['sections'][s['section']]['name']}"
@@ -195,6 +199,7 @@ def check(src_key: str, dst_key: str, build: Path, boot_only: bool = False, ever
             if why:
                 outcome[why] += 1
                 continue
+            piece = (found.pop("\0code"), found.pop("\0relocs"))
             clash = [s for s, v in found.items() if values.get(s, v) != v]
             if clash:
                 outcome["disagrees with another function"] += 1
@@ -204,6 +209,7 @@ def check(src_key: str, dst_key: str, build: Path, boot_only: bool = False, ever
                 values.setdefault(s, v)
                 owner.setdefault(s, sym["name"])
             placed[sym["name"]] = address
+            pieces[sym["name"]] = piece
             outcome["same bytes"] += 1
     # A function's name says where it is in FROM: in TO it has to be where xmap pairs it.
     wrong = []
@@ -230,6 +236,7 @@ def check(src_key: str, dst_key: str, build: Path, boot_only: bool = False, ever
         print(f"  {s}: {values[s]:08X}, xmap says {pal_to[int(s[5:], 16)]:08X}")
     if not boot_only:
         levels(src_key, dst_key, build, gp, values)
+    check.pieces = pieces
     return values, placed, objects, gp
 
 
@@ -280,6 +287,7 @@ def levels(src_key: str, dst_key: str, build: Path, gp: int, boot_values: dict) 
                 placed_any = True
                 placements += 1
                 found, why = place(obj, rel, names, funcs, sym, there, retail(program, there, sym["size"]), gp)
+                found.pop("\0code", None), found.pop("\0relocs", None)
                 if not why:
                     why = next(("disagrees with the boot's map below the levels" for s, v in found.items()
                                 if s in boot_values and boot_values[s] != v), None)
@@ -374,10 +382,159 @@ def link(src_key: str, dst_key: str, build: Path) -> None:
         print(f"  {n:5}  objects left out: {why}")
 
 
+def write_object(path: Path, data: bytes, defined: dict[str, int], relocs: list, align: int) -> None:
+    """A relocatable ELF32 (little-endian MIPS) with DATA as its .text: DEFINED symbols at their
+    offsets, RELOCS as (offset, type, symbol name) in REL form (addends in place)."""
+    names = list(defined) + sorted({n for _, _, n in relocs} - set(defined))
+    strtab, at = b"\0", {}
+    for n in names:
+        at[n] = len(strtab)
+        strtab += n.encode() + b"\0"
+    symtab = bytes(16) + b"".join(
+        struct.pack("<IIIBBH", at[n], defined.get(n, 0), 0, 0x10 | (STT_FUNC if n in defined else 0), 0,
+                    1 if n in defined else 0) for n in names)
+    index = {n: i + 1 for i, n in enumerate(names)}
+    rel = b"".join(struct.pack("<II", o, index[n] << 8 | kind) for o, kind, n in relocs)
+    shstr = b"\0.text\0.rel.text\0.symtab\0.strtab\0.shstrtab\0"
+    body = [data, rel, symtab, strtab, shstr]
+    offsets, off = [], 52
+    for b in body:
+        off = (off + 3) & ~3
+        offsets.append(off)
+        off += len(b)
+    shoff = (off + 3) & ~3
+    headers = [bytes(40),
+               struct.pack("<10I", 1, 1, 6, 0, offsets[0], len(data), 0, 0, align, 0),
+               struct.pack("<10I", 7, SHT_REL, 0, 0, offsets[1], len(rel), 3, 1, 4, 8),
+               struct.pack("<10I", 17, SHT_SYMTAB, 0, 0, offsets[2], len(symtab), 4, 1, 4, 16),
+               struct.pack("<10I", 25, 3, 0, 0, offsets[3], len(strtab), 0, 0, 1, 0),
+               struct.pack("<10I", 33, 3, 0, 0, offsets[4], len(shstr), 0, 0, 1, 0)]
+    out = bytearray(struct.pack("<4s5B7x", b"\x7fELF", 1, 1, 1, 0, 0))
+    out += struct.pack("<HHIIIIIHHHHHH", 1, 8, 1, 0, 0, shoff, 0x20924001, 52, 0, 0, 40, len(headers), 5)
+    for o, b in zip(offsets, body):
+        out += bytes(o - len(out)) + b
+    out += bytes(shoff - len(out)) + b"".join(headers)
+    path.write_bytes(bytes(out))
+
+
+def paired(relocs: list) -> list:
+    """RELOCS with each %hi moved to just before its first %lo, as GNU as orders them: SN's ld
+    pairs a %hi with the relocation that follows it."""
+    rest = sorted(relocs)
+    out = []
+    while rest:
+        r = rest.pop(0)
+        if r[1] == R_MIPS_HI16:
+            j = next((k for k, x in enumerate(rest) if x[1] == R_MIPS_LO16 and x[2] == r[2]), None)
+            if j is not None:
+                # the %lo goes first in line, the relocations between keep their order after it
+                out += [r, rest.pop(j)]
+                continue
+            # a second %hi sharing a %lo already placed: it goes just before that %lo
+            k = next((k for k in range(len(out) - 1, -1, -1) if out[k][1] == R_MIPS_LO16 and out[k][2] == r[2]), None)
+            if k is not None:
+                out.insert(k, r)
+                continue
+        out.append(r)
+    return out
+
+
+def build(src_key: str, dst_key: str, build_dir: Path) -> None:
+    """TO's boot executable linked from FROM's compiled functions, placed one by one.
+
+    Every function check() places goes in as a piece of its own (its bytes and relocations, cut
+    from FROM's object, calls within the object resolved to the function they reach) at its
+    address in TO; everything else stays TO's own: its retail bytes, standing in for its assembly.
+    SN's ee-ld links it all with the address map as the symbols' values, and every section of the
+    result is compared with TO's executable."""
+    values, placed, _objects, gp = check(src_key, dst_key, build_dir, boot_only=True)
+    pieces = check.pieces
+    boot, _gp = boot_of(dst_key)
+    b = boot.read_bytes()
+    shoff, = struct.unpack_from("<I", b, 0x20)
+    entsize, count, names_at = struct.unpack_from("<3H", b, 0x2E)
+    strtab = struct.unpack_from("<6I", b, shoff + names_at * entsize)[4]
+    retail = []           # (name, address, bytes) of every loaded section with contents
+    for i in range(count):
+        name, kind, flags, addr, off, size = struct.unpack_from("<6I", b, shoff + i * entsize)
+        if kind in (1, 8) and addr and flags & 2 and size:      # SHT_PROGBITS or SHT_NOBITS, SHF_ALLOC
+            retail.append((b[strtab + name:b.index(b"\0", strtab + name)].decode(), addr,
+                           b[off:off + size] if kind == 1 else None, size))
+    work = build_dir / "build-sn/vb"
+    if work.exists():
+        for f in work.iterdir():
+            f.unlink()
+    work.mkdir(parents=True, exist_ok=True)
+    alias = {}             # a section symbol's name in the map -> a name the linker script can hold
+    sym = lambda n: alias.setdefault(n, f"__section_{len(alias)}") if n.startswith("§") else n
+    skipped = Counter()
+    script = ['OUTPUT_FORMAT("elf32-littlemips")', "SECTIONS", "{", f"  _gp = 0x{gp:08X};"]
+    files = 0
+
+    def emit(data: bytes, defined: dict, relocs: list, align: int) -> str:
+        nonlocal files
+        files += 1
+        path = work / f"{files}.o"
+        write_object(path, data, defined, relocs, align)
+        return f"build-sn/vb/{files}.o(.text)"
+    provide = {**{k: v for k, v in values.items() if not k.startswith("§")}}
+    # Symbols are defined inside the output section that holds their address, relative to its
+    # start: SN's ld computes %hi wrongly against absolute symbols (PROVIDE outside a section).
+    inside = {n: sorted((v - addr, k) for k, v in provide.items() if addr <= v < addr + size)
+              for n, (_name, addr, _data, size) in enumerate(retail)}
+    for n, (name, addr, data, size) in enumerate(retail):
+        start = [f"    {sym(k) if k.startswith('§') else k} = . + 0x{o:X};" for o, k in inside[n]]
+        if data is None:                       # .bss: no bytes, only the symbols in it
+            script.append(f"  .s{n} 0x{addr:08X} (NOLOAD) : {{")
+            script += start + [f"    . = . + 0x{size:X};", "  }"]
+            continue
+        here = sorted((placed[f], f) for f in pieces if addr <= placed[f] < addr + len(data))
+        inputs, at = [], addr
+        for where, f in here:
+            code, relocs = pieces[f]
+            if any(kind == R_MIPS_LITERAL for _, kind, _ in relocs):
+                skipped["uses a literal-pool relocation (left as retail)"] += 1
+                continue
+            if where > at:
+                inputs.append(emit(data[at - addr:where - addr], {}, [], 1))
+            inputs.append(emit(code, {f: 0}, paired([(o, kind, sym(t)) for o, kind, t in relocs]), 4))
+            at = where + len(code)
+        if at < addr + len(data):
+            inputs.append(emit(data[at - addr:], {}, [], 1))
+        script.append(f"  .s{n} 0x{addr:08X} : {{")
+        script += start + [f"    {i}" for i in inputs]
+        script.append("  }")
+    placed_in = {k for ks in inside.values() for _o, k in ks}
+    rest = {k: v for k, v in provide.items() if k not in placed_in}
+    rest.update({alias[k]: v for k, v in values.items() if k in alias})
+    script[4:4] = [f"  PROVIDE({k} = 0x{v:08X});" for k, v in sorted(rest.items())]
+    script += ["  /DISCARD/ : { *(*) }", "}"]
+    (work / "link.ld").write_text("\n".join(script) + "\n")
+    import subprocess
+    run = subprocess.run(["bash", "tools/docker/run.sh", "bash", "-c",
+                          '. tools/toolchain.sh && sn "$TC/ee-ld.exe" -T build-sn/vb/link.ld -o build-sn/vb/out.elf'],
+                         cwd=build_dir, capture_output=True, text=True)
+    if run.returncode:
+        sys.exit("the link failed:\n" + (run.stdout + run.stderr)[-3000:])
+    out = {a: d for _n, (a, d, _f) in mips.elf_sections(work / "out.elf").items()}
+    retail = [(name, addr, data) for name, addr, data, _size in retail if data is not None]
+    same = [name for name, addr, data in retail if out.get(addr) == data]
+    differ = [(name, addr, data) for name, addr, data in retail if out.get(addr) != data]
+    c_bytes = sum(len(pieces[f][0]) for f in pieces)
+    print(f"{dst_key} boot linked from {len(pieces)} placed {src_key} functions ({c_bytes:,} bytes) "
+          f"and its own bytes elsewhere: {len(same)} of {len(retail)} sections identical to retail")
+    for why, k in skipped.most_common():
+        print(f"  {k:5}  {why}")
+    for name, addr, data in differ:
+        got = out.get(addr, b"")
+        first = next((i for i in range(min(len(got), len(data))) if got[i] != data[i]), min(len(got), len(data)))
+        print(f"  differs: {name} at {addr:#x}, first at +{first:#x} ({len(got)} bytes linked, {len(data)} retail)")
+
+
 def main() -> None:
     args = sys.argv[1:]
-    if len(args) == 5 and args[0] in ("check", "link") and args[3] == "--build":
-        (check if args[0] == "check" else link)(args[1], args[2], Path(args[4]).expanduser())
+    if len(args) == 5 and args[0] in ("check", "link", "build") and args[3] == "--build":
+        {"check": check, "link": link, "build": build}[args[0]](args[1], args[2], Path(args[4]).expanduser())
     else:
         sys.exit(__doc__)
 
