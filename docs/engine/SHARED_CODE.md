@@ -327,3 +327,10 @@ symbol defined inside the section that holds it, and each loaded section is
 compared with TO's executable. For rac1/pal to rac1/ntsc, 2026-10-15: 898
 of PAL's functions (223,072 bytes of code) link into NTSC-U's layout and all
 11 loaded sections come out identical to SCUS_971.99.
+
+The level programs link the same way, each with its own map plus the boot's
+symbols below the lowest level code. With them, all 20 of NTSC-U's programs
+(the boot executable and the 19 levels) come out identical to retail from
+5,862 placements of PAL's compiled functions. 161 level pieces overlap the
+piece before them (one C function covering several catalogued pieces) and
+stay retail for now.

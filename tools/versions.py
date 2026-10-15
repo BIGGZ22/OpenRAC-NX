@@ -240,7 +240,7 @@ def check(src_key: str, dst_key: str, build: Path, boot_only: bool = False, ever
     return values, placed, objects, gp
 
 
-def levels(src_key: str, dst_key: str, build: Path, gp: int, boot_values: dict) -> None:
+def levels(src_key: str, dst_key: str, build: Path, gp: int, boot_values: dict, collect: bool = False):
     """The same check for level code. Each level is a program of its own, with its own addresses,
     and shared level code sits in several of them: a function is placed in every level where both
     versions have it exactly once, and each level gets its own map. A reference from level code to
@@ -267,7 +267,7 @@ def levels(src_key: str, dst_key: str, build: Path, gp: int, boot_values: dict) 
     boot_values = {k: v for k, v in boot_values.items() if v < low}
     objects = sorted(p for d in ["shared", *[d.name for d in (build / "build-sn/overlays/report").glob("l??_*")]]
                      for p in (build / "build-sn/overlays/report" / d).glob("*/obj.o"))
-    values, owner, outcome, placements = {}, {}, Counter(), 0
+    values, owner, outcome, placements, pieces = {}, {}, Counter(), 0, {}
     for path in objects:
         obj = read_object(path)
         rel = path.relative_to(build).as_posix()
@@ -287,7 +287,7 @@ def levels(src_key: str, dst_key: str, build: Path, gp: int, boot_values: dict) 
                 placed_any = True
                 placements += 1
                 found, why = place(obj, rel, names, funcs, sym, there, retail(program, there, sym["size"]), gp)
-                found.pop("\0code", None), found.pop("\0relocs", None)
+                piece = (found.pop("\0code", None), found.pop("\0relocs", None), there)
                 if not why:
                     why = next(("disagrees with the boot's map below the levels" for s, v in found.items()
                                 if s in boot_values and boot_values[s] != v), None)
@@ -300,6 +300,7 @@ def levels(src_key: str, dst_key: str, build: Path, gp: int, boot_values: dict) 
                 for k, v in found.items():
                     values.setdefault((program, k), v)
                     owner.setdefault((program, k), sym["name"])
+                pieces.setdefault(program, {})[sym["name"]] = piece
                 outcome["same bytes"] += 1
             if not placed_any:
                 outcome["functions not paired one to one in any level"] += 1
@@ -312,6 +313,11 @@ def levels(src_key: str, dst_key: str, build: Path, gp: int, boot_values: dict) 
         print(f"  {n:5}  {why}")
     print(f"symbols: {sum(1 for p, k in values if not k.startswith('§'))} (level, symbol) values; "
           f"map written to {out.relative_to(ROOT)}")
+    if collect:
+        maps = {}
+        for (program, k), v in values.items():
+            maps.setdefault(program, {})[k] = v
+        return maps, pieces, files, low
 
 
 def link(src_key: str, dst_key: str, build: Path) -> None:
@@ -439,32 +445,15 @@ def paired(relocs: list) -> list:
     return out
 
 
-def build(src_key: str, dst_key: str, build_dir: Path) -> None:
-    """TO's boot executable linked from FROM's compiled functions, placed one by one.
+def prepare(work: Path, rel: str, retail: list, pieces: dict, values: dict, gp: int) -> Counter:
+    """Write one program's link into WORK (REL: the same directory from the build checkout's root):
+    an object per placed piece, TO's own bytes between them, and link.ld.
 
-    Every function check() places goes in as a piece of its own (its bytes and relocations, cut
-    from FROM's object, calls within the object resolved to the function they reach) at its
-    address in TO; everything else stays TO's own: its retail bytes, standing in for its assembly.
-    SN's ee-ld links it all with the address map as the symbols' values, and every section of the
-    result is compared with TO's executable."""
-    values, placed, _objects, gp = check(src_key, dst_key, build_dir, boot_only=True)
-    pieces = check.pieces
-    boot, _gp = boot_of(dst_key)
-    b = boot.read_bytes()
-    shoff, = struct.unpack_from("<I", b, 0x20)
-    entsize, count, names_at = struct.unpack_from("<3H", b, 0x2E)
-    strtab = struct.unpack_from("<6I", b, shoff + names_at * entsize)[4]
-    retail = []           # (name, address, bytes) of every loaded section with contents
-    for i in range(count):
-        name, kind, flags, addr, off, size = struct.unpack_from("<6I", b, shoff + i * entsize)
-        if kind in (1, 8) and addr and flags & 2 and size:      # SHT_PROGBITS or SHT_NOBITS, SHF_ALLOC
-            retail.append((b[strtab + name:b.index(b"\0", strtab + name)].decode(), addr,
-                           b[off:off + size] if kind == 1 else None, size))
-    work = build_dir / "build-sn/vb"
-    if work.exists():
-        for f in work.iterdir():
-            f.unlink()
+    RETAIL: (name, address, bytes or None for .bss, size) per loaded section. PIECES: name ->
+    (code, relocations, address). VALUES: symbol -> value in this program."""
     work.mkdir(parents=True, exist_ok=True)
+    for f in work.iterdir():
+        f.unlink()
     alias = {}             # a section symbol's name in the map -> a name the linker script can hold
     sym = lambda n: alias.setdefault(n, f"__section_{len(alias)}") if n.startswith("§") else n
     skipped = Counter()
@@ -474,26 +463,26 @@ def build(src_key: str, dst_key: str, build_dir: Path) -> None:
     def emit(data: bytes, defined: dict, relocs: list, align: int) -> str:
         nonlocal files
         files += 1
-        path = work / f"{files}.o"
-        write_object(path, data, defined, relocs, align)
-        return f"build-sn/vb/{files}.o(.text)"
-    provide = {**{k: v for k, v in values.items() if not k.startswith("§")}}
+        write_object(work / f"{files}.o", data, defined, relocs, align)
+        return f"{rel}/{files}.o(.text)"
+    provide = {k: v for k, v in values.items() if not k.startswith("§")}
     # Symbols are defined inside the output section that holds their address, relative to its
-    # start: SN's ld computes %hi wrongly against absolute symbols (PROVIDE outside a section).
+    # start, as the projects' own builds define them.
     inside = {n: sorted((v - addr, k) for k, v in provide.items() if addr <= v < addr + size)
               for n, (_name, addr, _data, size) in enumerate(retail)}
-    for n, (name, addr, data, size) in enumerate(retail):
-        start = [f"    {sym(k) if k.startswith('§') else k} = . + 0x{o:X};" for o, k in inside[n]]
+    for n, (_name, addr, data, size) in enumerate(retail):
+        start = [f"    {k} = . + 0x{o:X};" for o, k in inside[n]]
         if data is None:                       # .bss: no bytes, only the symbols in it
-            script.append(f"  .s{n} 0x{addr:08X} (NOLOAD) : {{")
-            script += start + [f"    . = . + 0x{size:X};", "  }"]
+            script += [f"  .s{n} 0x{addr:08X} (NOLOAD) : {{", *start, f"    . = . + 0x{size:X};", "  }"]
             continue
-        here = sorted((placed[f], f) for f in pieces if addr <= placed[f] < addr + len(data))
         inputs, at = [], addr
-        for where, f in here:
-            code, relocs = pieces[f]
+        for where, f in sorted((p[2], f) for f, p in pieces.items() if addr <= p[2] < addr + len(data)):
+            code, relocs, _ = pieces[f]
             if any(kind == R_MIPS_LITERAL for _, kind, _ in relocs):
                 skipped["uses a literal-pool relocation (left as retail)"] += 1
+                continue
+            if where < at:
+                skipped["overlaps the piece before it (left as retail)"] += 1
                 continue
             if where > at:
                 inputs.append(emit(data[at - addr:where - addr], {}, [], 1))
@@ -501,34 +490,81 @@ def build(src_key: str, dst_key: str, build_dir: Path) -> None:
             at = where + len(code)
         if at < addr + len(data):
             inputs.append(emit(data[at - addr:], {}, [], 1))
-        script.append(f"  .s{n} 0x{addr:08X} : {{")
-        script += start + [f"    {i}" for i in inputs]
-        script.append("  }")
+        script += [f"  .s{n} 0x{addr:08X} : {{", *start, *[f"    {i}" for i in inputs], "  }"]
     placed_in = {k for ks in inside.values() for _o, k in ks}
     rest = {k: v for k, v in provide.items() if k not in placed_in}
     rest.update({alias[k]: v for k, v in values.items() if k in alias})
     script[4:4] = [f"  PROVIDE({k} = 0x{v:08X});" for k, v in sorted(rest.items())]
     script += ["  /DISCARD/ : { *(*) }", "}"]
     (work / "link.ld").write_text("\n".join(script) + "\n")
-    import subprocess
-    run = subprocess.run(["bash", "tools/docker/run.sh", "bash", "-c",
-                          '. tools/toolchain.sh && sn "$TC/ee-ld.exe" -T build-sn/vb/link.ld -o build-sn/vb/out.elf'],
-                         cwd=build_dir, capture_output=True, text=True)
-    if run.returncode:
-        sys.exit("the link failed:\n" + (run.stdout + run.stderr)[-3000:])
-    out = {a: d for _n, (a, d, _f) in mips.elf_sections(work / "out.elf").items()}
-    retail = [(name, addr, data) for name, addr, data, _size in retail if data is not None]
-    same = [name for name, addr, data in retail if out.get(addr) == data]
-    differ = [(name, addr, data) for name, addr, data in retail if out.get(addr) != data]
-    c_bytes = sum(len(pieces[f][0]) for f in pieces)
-    print(f"{dst_key} boot linked from {len(pieces)} placed {src_key} functions ({c_bytes:,} bytes) "
-          f"and its own bytes elsewhere: {len(same)} of {len(retail)} sections identical to retail")
+    return skipped
+
+
+def compare(label: str, out_elf: Path, retail: list, pieces: dict, skipped: Counter) -> bool:
+    out = {a: d for _n, (a, d, _f) in mips.elf_sections(out_elf).items()}
+    loaded = [(name, addr, data) for name, addr, data, _size in retail if data is not None]
+    same = [name for name, addr, data in loaded if out.get(addr) == data]
+    left = sum(skipped.values())
+    code = sum(len(p[0]) for p in pieces.values())
+    print(f"{label}: {len(pieces) - left} placed functions linked ({left} left as retail), "
+          f"{len(same)} of {len(loaded)} sections identical to retail")
+    compare.linked = compare.__dict__.get("linked", 0) + len(pieces) - left
     for why, k in skipped.most_common():
         print(f"  {k:5}  {why}")
-    for name, addr, data in differ:
+    for name, addr, data in loaded:
         got = out.get(addr, b"")
-        first = next((i for i in range(min(len(got), len(data))) if got[i] != data[i]), min(len(got), len(data)))
-        print(f"  differs: {name} at {addr:#x}, first at +{first:#x} ({len(got)} bytes linked, {len(data)} retail)")
+        if got != data:
+            first = next((i for i in range(min(len(got), len(data))) if got[i] != data[i]), min(len(got), len(data)))
+            print(f"  differs: {name} at {addr:#x}, first at +{first:#x} ({len(got)} bytes linked, {len(data)} retail)")
+    return len(same) == len(loaded)
+
+
+def build(src_key: str, dst_key: str, build_dir: Path) -> None:
+    """TO's boot executable and level programs linked from FROM's compiled functions, placed one by
+    one.
+
+    Every function check() places goes in as a piece of its own (its bytes and relocations, cut
+    from FROM's object, calls within the object resolved to the function they reach) at its
+    address in TO; everything else stays TO's own: its retail bytes, standing in for its assembly.
+    SN's ee-ld links each program with its address map as the symbols' values, and every loaded
+    section of the result is compared with TO's program."""
+    values, placed, _objects, gp = check(src_key, dst_key, build_dir, boot_only=True)
+    boot_pieces = {f: (*check.pieces[f], placed[f]) for f in check.pieces}
+    boot, _gp = boot_of(dst_key)
+    b = boot.read_bytes()
+    shoff, = struct.unpack_from("<I", b, 0x20)
+    entsize, count, names_at = struct.unpack_from("<3H", b, 0x2E)
+    strtab = struct.unpack_from("<6I", b, shoff + names_at * entsize)[4]
+    boot_retail = []
+    for i in range(count):
+        name, kind, flags, addr, off, size = struct.unpack_from("<6I", b, shoff + i * entsize)
+        if kind in (1, 8) and addr and flags & 2 and size:      # SHT_PROGBITS or SHT_NOBITS, SHF_ALLOC
+            boot_retail.append((b[strtab + name:b.index(b"\0", strtab + name)].decode(), addr,
+                                b[off:off + size] if kind == 1 else None, size))
+    root = build_dir / "build-sn/vb"
+    jobs = [("boot", boot_retail, boot_pieces, prepare(root / "boot", "build-sn/vb/boot", boot_retail,
+                                                     boot_pieces, values, gp))]
+    level_maps, level_pieces, files, low = levels(src_key, dst_key, build_dir, gp, values, collect=True)
+    below = {k: v for k, v in values.items() if v < low and not k.startswith("§")}
+    for program in sorted(p for p in level_pieces if p.startswith("level:")):
+        path, fmt = files[program]
+        text = xmap.load(path, fmt)[".text"]
+        retail = [(".text", text[0], text[1], len(text[1]))]
+        tag = program.replace(":", "_")
+        prog_values = {**below, **level_maps.get(program, {})}
+        jobs.append((program, retail, level_pieces[program],
+                     prepare(root / tag, f"build-sn/vb/{tag}", retail, level_pieces[program], prog_values, gp)))
+    import subprocess
+    links = " && ".join(f'sn "$TC/ee-ld.exe" -T build-sn/vb/{j[0].replace(":", "_")}/link.ld '
+                        f'-o build-sn/vb/{j[0].replace(":", "_")}/out.elf' for j in jobs)
+    run = subprocess.run(["bash", "tools/docker/run.sh", "bash", "-c", f". tools/toolchain.sh && {links}"],
+                         cwd=build_dir, capture_output=True, text=True)
+    if run.returncode:
+        sys.exit("a link failed:\n" + (run.stdout + run.stderr)[-3000:])
+    ok = 0
+    for program, retail, pieces, skipped in jobs:
+        ok += compare(f"{dst_key} {program}", root / program.replace(":", "_") / "out.elf", retail, pieces, skipped)
+    print(f"{ok} of {len(jobs)} programs identical to retail, {compare.linked:,} function placements linked")
 
 
 def main() -> None:
