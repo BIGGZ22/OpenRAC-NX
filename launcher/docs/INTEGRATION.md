@@ -79,7 +79,7 @@ Placeholders (anything else is rejected by the tests):
 | Placeholder           | Value                                                    |
 | --------------------- | -------------------------------------------------------- |
 | `{root}`              | the checkout, absolute                                   |
-| `{dir}`               | the version's folder, absolute (`…/games/rac1`)      |
+| `{dir}`               | the version's folder, absolute (`…/games/rac1`)          |
 | `{python}`, `{godot}` | the paths in Settings (refused while unset)              |
 | `{docker}`            | the path in Settings, or `docker` from PATH              |
 | `{disc}`              | the disc image found for the version (absolute)          |
