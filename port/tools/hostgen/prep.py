@@ -332,6 +332,93 @@ def use_draft(text: str, guard: str) -> str:
     return re.sub(r"^#ifndef[ \t]+" + re.escape(guard) + r"\b[^\n]*(\n.*?^#else\b)", swap, text, flags=re.M | re.S)
 
 
+def apply_decomp_workarounds(rel: str, text: str) -> str:
+    """Temporary workarounds for upstream decompilation syntax issues.
+
+    FIXME: These conflicting declarations must be fixed upstream in rac1-decomp.
+    This is a temporary workaround so that the native port builds cleanly without
+    modifying the decompilation repository. Once fixed upstream, this function should be removed.
+    """
+    if rel.endswith("src/overlays/l13_gemlik/vendor_002EBD00.c"):
+        # func_L00_001F2BE8 has conflicting prototypes in local block vs file scope
+        idx = text.find("void func_L13_002EE590(")
+        end_idx = text.find("extern void func_L00_00251328(", idx) if idx != -1 else -1
+        if idx != -1 and end_idx != -1:
+            chunk = text[idx:end_idx]
+            chunk = re.sub(
+                r"extern\s+int\s+func_L00_001F2BE8\s*\(void\s*\*,\s*float,\s*int,\s*void\s*\*,\s*void\s*\);",
+                '/* Temporary workaround (FIXME: fix in rac1-decomp) */\n    extern int func_L00_001F2BE8_loc(void *, float, int, void *, void *) __asm__("func_L00_001F2BE8");',
+                chunk,
+            )
+            chunk = chunk.replace("func_L00_001F2BE8(", "func_L00_001F2BE8_loc(")
+            text = text[:idx] + chunk + text[end_idx:]
+
+    elif rel.endswith("src/overlays/l14_oltanis/vendor_002E0538.c"):
+        # Local declarations in func_L14_002EE990 conflict with file-scope declarations later
+        idx = text.find("void func_L14_002EE990(")
+        end_idx = text.find("func_001F49B0(func_L14_002EF078", idx) if idx != -1 else -1
+        if idx != -1 and end_idx != -1:
+            chunk = text[idx:end_idx]
+            for sym in ("D_L14_001E00D0", "D_L14_001E0350", "D_L14_001E03A0", "D_L14_001E06A0", "D_L14_00161D40"):
+                chunk = re.sub(
+                    r"extern\s+([A-Za-z0-9_]+)\s+" + sym + r"(\[[^\]]*\])?(\[[^\]]*\])?(\[[^\]]*\])?;",
+                    r'/* Temporary workaround (FIXME: fix in rac1-decomp) */\n    extern \1 ' + sym + r'_loc\2\3\4 __asm__("' + sym + r'");',
+                    chunk,
+                )
+                chunk = re.sub(r"\b" + sym + r"\b(?!_loc|\s*__asm__)", sym + "_loc", chunk)
+            text = text[:idx] + chunk + text[end_idx:]
+
+    elif rel.endswith("src/overlays/l18_veldin2/vendor_002F9D48.c"):
+        # Local ML_9780 D_L18_0016D2E0 conflicts with ML D_L18_0016D2E0 at line 581
+        idx = text.find("void func_L18_002FABE0(")
+        end_idx = text.find("extern int func_001FA8A8(", idx) if idx != -1 else -1
+        if idx != -1 and end_idx != -1:
+            chunk = text[idx:end_idx]
+            chunk = re.sub(
+                r"extern\s+ML_9780\s+D_L18_0016D2E0;",
+                '/* Temporary workaround (FIXME: fix in rac1-decomp) */\n    extern ML_9780 D_L18_0016D2E0_loc __asm__("D_L18_0016D2E0");',
+                chunk,
+            )
+            chunk = re.sub(r"\bD_L18_0016D2E0\b(?!_loc|\s*__asm__)", "D_L18_0016D2E0_loc", chunk)
+            text = text[:idx] + chunk + text[end_idx:]
+
+    elif rel.endswith("src/overlays/shared/map_002465F8.c"):
+        # Local int D_L00_001842F0[] and char D_00137C80[] conflict with file-scope struct declarations
+        idx = text.find("void func_L00_00246EC0(")
+        end_idx = text.find("typedef u32 u128", idx) if idx != -1 else -1
+        if idx != -1 and end_idx != -1:
+            chunk = text[idx:end_idx]
+            chunk = re.sub(
+                r"extern\s+int\s+D_L00_001842F0\[\];",
+                '/* Temporary workaround (FIXME: fix in rac1-decomp) */\n    extern int D_L00_001842F0_loc[] __asm__("D_L00_001842F0");',
+                chunk,
+            )
+            chunk = re.sub(
+                r"extern\s+char\s+D_00137C80\[\];",
+                '/* Temporary workaround (FIXME: fix in rac1-decomp) */\n    extern char D_00137C80_loc[] __asm__("D_00137C80");',
+                chunk,
+            )
+            chunk = re.sub(r"\bD_L00_001842F0\b(?!_loc|\s*__asm__)", "D_L00_001842F0_loc", chunk)
+            chunk = re.sub(r"\bD_00137C80\b(?!_loc|\s*__asm__)", "D_00137C80_loc", chunk)
+            text = text[:idx] + chunk + text[end_idx:]
+
+    elif rel.endswith("src/overlays/shared/update_0029B6A0.c"):
+        # Local s32 D_L00_00173F00[] conflicts with file-scope struct declaration
+        idx = text.find("void func_L00_0029BA20(")
+        end_idx = text.find("extern void func_001FFDA0(", idx) if idx != -1 else -1
+        if idx != -1 and end_idx != -1:
+            chunk = text[idx:end_idx]
+            chunk = re.sub(
+                r"extern\s+s32\s+D_L00_00173F00\[\];",
+                '/* Temporary workaround (FIXME: fix in rac1-decomp) */\n    extern s32 D_L00_00173F00_loc[] __asm__("D_L00_00173F00");',
+                chunk,
+            )
+            chunk = re.sub(r"\bD_L00_00173F00\b(?!_loc|\s*__asm__)", "D_L00_00173F00_loc", chunk)
+            text = text[:idx] + chunk + text[end_idx:]
+
+    return text
+
+
 def copy_tree(src: Path, dst: Path, patterns=("*.c", "*.h", "*.inc"),
               candidates: dict[str, str] | None = None, used: set[str] | None = None,
               drafts: tuple[str, set[str]] | None = None, prefix: str = "") -> int:
@@ -349,6 +436,8 @@ def copy_tree(src: Path, dst: Path, patterns=("*.c", "*.h", "*.inc"),
                 text = use_candidates(text, candidates, used if used is not None else set())
             if drafts and (Path(prefix) / path.relative_to(src)).as_posix() in drafts[1]:
                 text = use_draft(text, drafts[0])
+            rel = (Path(prefix) / path.relative_to(src)).as_posix()
+            text = apply_decomp_workarounds(rel, text)
             if not out.exists() or out.read_text(encoding="utf-8", errors="surrogateescape") != text:
                 out.parent.mkdir(parents=True, exist_ok=True)
                 out.write_text(text, encoding="utf-8", errors="surrogateescape")
