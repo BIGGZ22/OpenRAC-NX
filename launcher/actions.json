@@ -463,6 +463,27 @@
         "todo": "Find the executable make elf writes (config/us/build/SCUS_971.99 per docs/building.md) and add it as the artifact; macOS runs make through host/run.sh."
       },
       {
+        "id": "build-merged",
+        "label": "Build from the merged tree",
+        "description": "Links NTSC-U's boot executable and 19 level programs from the merged games/rac1 tree's compiled functions, placed at NTSC-U's addresses, and compares each with your disc. Build the PAL tree and run tools/xmap.py scan rac1/pal rac1/ntsc first.",
+        "kind": "build",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "tools/versions.py",
+          "build",
+          "rac1/pal",
+          "rac1/ntsc"
+        ],
+        "cwd": "{root}",
+        "requires": [
+          "python",
+          "inputs",
+          "toolchains"
+        ],
+        "docs": "games/rac1/VERSIONS.md"
+      },
+      {
         "id": "verify",
         "label": "Verify the build",
         "description": "Rebuilds and compares the whole executable's SHA-256 with retail (verify-baseline.sh).",

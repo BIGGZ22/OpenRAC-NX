@@ -6,11 +6,11 @@ every instruction equal except the fields relocations fill in, and every symbol 
 single value. The values found are the address map the second version would link with
 (functions and data alike), written to build/versions/FROM--TO.tsv.
 
-  python3 tools/versions.py check rac1/pal rac1/ntsc --build ~/Projects/RAC/rac1-decomp
-  python3 tools/versions.py link rac1/pal rac1/ntsc --build ~/Projects/RAC/rac1-decomp
-  python3 tools/versions.py build rac1/pal rac1/ntsc --build ~/Projects/RAC/rac1-decomp
+  python3 tools/versions.py check rac1/pal rac1/ntsc [--build DIR]
+  python3 tools/versions.py link rac1/pal rac1/ntsc [--build DIR]
+  python3 tools/versions.py build rac1/pal rac1/ntsc [--build DIR]
 
---build is a checkout of FROM's project after a full build: its config/core_text.objects and
+--build is a checkout of FROM's project after a full build (default: FROM's tree here, games/rac1): its config/core_text.objects and
 config/text.objects list the objects. Only functions FROM's project has matched are placed (the
 rest are still retail assembly), and only where tools/xmap.py pairs them one to one in the boot
 executable (`xmap.py scan` both versions first). Resident boot code only: no level programs yet.
@@ -569,10 +569,21 @@ def build(src_key: str, dst_key: str, build_dir: Path) -> None:
 
 def main() -> None:
     args = sys.argv[1:]
-    if len(args) == 5 and args[0] in ("check", "link", "build") and args[3] == "--build":
-        {"check": check, "link": link, "build": build}[args[0]](args[1], args[2], Path(args[4]).expanduser())
+    if len(args) in (3, 5) and args[0] in ("check", "link", "build") and (len(args) == 3 or args[3] == "--build"):
+        # Without --build: FROM's own tree in this checkout (games/rac1 for rac1/pal), built there.
+        build_dir = Path(args[4]).expanduser() if len(args) == 5 else source_dir(args[1])
+        for key in args[1:3]:
+            if not (xmap.INDEX / f"{xmap.slug(key)}.json").exists():
+                sys.exit(f"{key} is not indexed: run `python3 tools/xmap.py scan {args[1]} {args[2]}` first")
+        {"check": check, "link": link, "build": build}[args[0]](args[1], args[2], build_dir)
     else:
         sys.exit(__doc__)
+
+
+def source_dir(key: str) -> Path:
+    """A version's tree in this checkout: its "dir" in game.json, else games/<game>/<version>."""
+    game, name = key.split("/")
+    return ROOT / xmap.versions()[key].get("dir", f"games/{game}/{name}")
 
 
 if __name__ == "__main__":
