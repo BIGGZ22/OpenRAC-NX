@@ -303,3 +303,16 @@ disagree with another function's placement, 60 differ in an instruction, 93
 use relocations the checker does not read yet, and 184 functions have no
 one-to-one place in any level. This is the evidence for building PAL and NTSC-U from one tree
 with a per-version address map rather than keeping two source trees.
+
+`tools/versions.py link` then asks the build-system question: can whole
+compiled files go into the other version's layout, as rac1/pal's build links
+them? It links every boot object whose functions all place at the same
+offsets in TO with the toolchain's own `ee-ld`, the map as symbol
+definitions, and compares the result with TO's executable. For rac1/pal to
+rac1/ntsc only 25 of 124 boot objects qualify (nearly every file holds a
+function that changed between the versions); 23 of them come out identical
+(62,628 bytes of code), and the other 2 start at an address their section's
+16-byte alignment does not allow in NTSC-U. Placing functions one at a time
+reproduces 1,284 functions, the matched C and the unchanged retail assembly
+alike. So a build of both versions from one tree has to place functions
+individually, as rac2's `tools/build.py` does, not whole files.

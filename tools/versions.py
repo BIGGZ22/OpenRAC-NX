@@ -7,6 +7,7 @@ single value. The values found are the address map the second version would link
 (functions and data alike), written to build/versions/FROM--TO.tsv.
 
   python3 tools/versions.py check rac1/pal rac1/ntsc --build ~/Projects/RAC/rac1-decomp
+  python3 tools/versions.py link rac1/pal rac1/ntsc --build ~/Projects/RAC/rac1-decomp
 
 --build is a checkout of FROM's project after a full build: its config/core_text.objects and
 config/text.objects list the objects. Only functions FROM's project has matched are placed (the
@@ -164,7 +165,7 @@ def boot_of(key: str) -> tuple[Path, int]:
     sys.exit(f"{path}: no .reginfo")
 
 
-def check(src_key: str, dst_key: str, build: Path) -> None:
+def check(src_key: str, dst_key: str, build: Path, boot_only: bool = False, every: bool = False) -> tuple:
     pal_to = pairs(src_key, dst_key)
     matched = {m["name"] for m in json.loads((xmap.INDEX / f"{xmap.slug(src_key)}.json").read_text())["matched"].values()
                if m["program"] == "boot"}
@@ -176,14 +177,14 @@ def check(src_key: str, dst_key: str, build: Path) -> None:
 
     objects = [line.split()[0] for name in ("core_text.objects", "text.objects")
                for line in (build / "config" / name).read_text().splitlines() if line.strip() and not line.startswith("#")]
-    values, owner, outcome, conflicts = {}, {}, Counter(), []
+    values, owner, outcome, conflicts, placed = {}, {}, Counter(), [], {}
     for obj_path in objects:
         obj = read_object(build / obj_path)
         names = [s["name"] if s["type"] != STT_SECTION else f"§{obj_path}:{obj['sections'][s['section']]['name']}"
                  for s in obj["symbols"]]
         funcs = [s for s in obj["symbols"] if s["type"] == STT_FUNC]
         for sym in obj["symbols"]:
-            if sym["type"] != STT_FUNC or sym["name"] not in matched:
+            if sym["type"] != STT_FUNC or not (every or sym["name"] in matched):
                 continue
             m = xmap.NAME.match(sym["name"])
             address = pal_to.get(int(m.group(2), 16)) if m else None
@@ -202,6 +203,7 @@ def check(src_key: str, dst_key: str, build: Path) -> None:
             for s, v in found.items():
                 values.setdefault(s, v)
                 owner.setdefault(s, sym["name"])
+            placed[sym["name"]] = address
             outcome["same bytes"] += 1
     # A function's name says where it is in FROM: in TO it has to be where xmap pairs it.
     wrong = []
@@ -216,7 +218,7 @@ def check(src_key: str, dst_key: str, build: Path) -> None:
     out.write_text(f"# {src_key} symbol -> its value in {dst_key} (tools/versions.py)\n" + "".join(
         f"{s}\t{v:08X}\n" for s, v in sorted(values.items()) if not s.startswith("§")))
     total = sum(outcome.values())
-    print(f"{src_key} -> {dst_key}: {total} matched boot functions tried")
+    print(f"{src_key} -> {dst_key}: {total} {'' if every else 'matched '}boot functions tried")
     for why, n in outcome.most_common():
         print(f"  {n:5}  {why}")
     data = sum(1 for s in values if not s.startswith(("§", "func_")))
@@ -226,7 +228,9 @@ def check(src_key: str, dst_key: str, build: Path) -> None:
         print(f"  {name}: {symbol} disagrees with {other}")
     for s in wrong[:10]:
         print(f"  {s}: {values[s]:08X}, xmap says {pal_to[int(s[5:], 16)]:08X}")
-    levels(src_key, dst_key, build, gp, values)
+    if not boot_only:
+        levels(src_key, dst_key, build, gp, values)
+    return values, placed, objects, gp
 
 
 def levels(src_key: str, dst_key: str, build: Path, gp: int, boot_values: dict) -> None:
@@ -302,10 +306,78 @@ def levels(src_key: str, dst_key: str, build: Path, gp: int, boot_values: dict) 
           f"map written to {out.relative_to(ROOT)}")
 
 
+def link(src_key: str, dst_key: str, build: Path) -> None:
+    """Link FROM's whole boot objects into TO's layout with SN's own linker and compare.
+
+    An object goes in when every function in it placed cleanly and at the same offsets in TO (the
+    file is one unit in TO too); its read-only data goes where check() found it, and every other
+    symbol gets its value from the map. The objects are linked by FROM's toolchain, run by FROM's
+    checkout (rac1-decomp's tools/docker/run.sh), into build-sn/versions/, and each object's
+    linked bytes are compared with TO's retail executable."""
+    # Every function of an object, its retail assembly too: the file is the unit that is linked.
+    values, placed, objects, gp = check(src_key, dst_key, build, boot_only=True, every=True)
+    boot, _gp = boot_of(dst_key)
+    sections = [(a, d) for a, d, _ in mips.elf_sections(boot).values()]
+    retail = lambda address, size: next((d[address - a:address - a + size] for a, d in sections
+                                         if a <= address < a + len(d)), b"")
+    work = build / "build-sn/versions"
+    work.mkdir(parents=True, exist_ok=True)
+    units, skipped = [], Counter()
+    for obj_path in objects:
+        obj = read_object(build / obj_path)
+        text = next((i for i, sec in enumerate(obj["sections"]) if sec["name"] == ".text"), None)
+        funcs = [f for f in obj["symbols"] if f["type"] == STT_FUNC and f["section"] == text and f["size"]]
+        if not funcs:
+            continue
+        bases = {placed[f["name"]] - f["value"] if f["name"] in placed else None for f in funcs}
+        if None in bases or len(bases) != 1:
+            skipped["not every function placed, or not at the same offsets"] += 1
+            continue
+        data = {}
+        for i, rel in obj["relocations"].items():
+            for _o, _k, sym in rel:
+                s = obj["symbols"][sym]
+                if s["type"] == STT_SECTION and s["section"] != text:
+                    name = obj["sections"][s["section"]]["name"]
+                    data[name] = values.get(f"§{obj_path}:{name}")
+        if None in data.values():
+            skipped["read-only data with no place found"] += 1
+            continue
+        units.append((obj_path, bases.pop(), len(obj["sections"][text]["data"]), data))
+    script = ["SECTIONS", "{", f"  _gp = 0x{gp:08X};"]
+    script += [f"  PROVIDE({k} = 0x{v:08X});" for k, v in sorted(values.items()) if not k.startswith("§")]
+    for n, (obj_path, base, _size, data) in enumerate(units):
+        script.append(f"  .t{n} 0x{base:08X} : {{ {obj_path}(.text) }}")
+        script += [f"  .d{n}_{k} 0x{a:08X} : {{ {obj_path}({sec}) }}" for k, (sec, a) in enumerate(sorted(data.items()))]
+    script += ["  /DISCARD/ : { *(*) }", "}"]
+    (work / "link.ld").write_text("\n".join(script) + "\n")
+    (work / "objects.txt").write_text("".join(f"{u[0]}\n" for u in units))
+    import subprocess
+    cmd = ('. tools/toolchain.sh && sn "$TC/ee-ld.exe" -T build-sn/versions/link.ld '
+           '$(cat build-sn/versions/objects.txt) -o build-sn/versions/link.elf')
+    run = subprocess.run(["bash", "tools/docker/run.sh", "bash", "-c", cmd], cwd=build, capture_output=True, text=True)
+    if run.returncode:
+        sys.exit("the link failed:\n" + (run.stdout + run.stderr)[-3000:])
+    out = {name: (a, d) for name, (a, d, _f) in mips.elf_sections(work / "link.elf").items()}
+    same = differ = 0
+    size_same = 0
+    for n, (obj_path, base, size, data) in enumerate(units):
+        pieces = [(f".t{n}", base)] + [(f".d{n}_{k}", a) for k, (_s, a) in enumerate(sorted(data.items()))]
+        ok = all(name in out and out[name][1] == retail(a, len(out[name][1])) for name, a in pieces if name in out or name.startswith(".t"))
+        same, differ = same + ok, differ + (not ok)
+        size_same += size if ok else 0
+        if not ok:
+            print(f"  differs: {obj_path}")
+    print(f"linked {len(units)} whole objects with SN's ee-ld at their {dst_key} addresses: "
+          f"{same} identical to retail ({size_same:,} bytes of code), {differ} not")
+    for why, n in skipped.most_common():
+        print(f"  {n:5}  objects left out: {why}")
+
+
 def main() -> None:
     args = sys.argv[1:]
-    if len(args) == 5 and args[0] == "check" and args[3] == "--build":
-        check(args[1], args[2], Path(args[4]).expanduser())
+    if len(args) == 5 and args[0] in ("check", "link") and args[3] == "--build":
+        (check if args[0] == "check" else link)(args[1], args[2], Path(args[4]).expanduser())
     else:
         sys.exit(__doc__)
 
