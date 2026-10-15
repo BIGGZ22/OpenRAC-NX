@@ -27,9 +27,26 @@ void func_0033E368(unsigned char *owner, float *records)
     *(float **)(owner + 0x378) = records;
 }
 
-INCLUDE_ASM("asm/game", func_0033E3A0);
+extern void func_0033AE28(char *);
+extern void func_0033B018(char *, float, float);
+extern char *func_00347F80(char *, int);
+extern void func_003480F0(char *, float, float);
 
-INCLUDE_ASM("asm/game", func_0033E428);
+int func_0033E3A0(char *object, int flags)
+{
+    char *first = object + 8;
+    char *second;
+    float *position;
+    func_0033AE28(first);
+    second = object + 0x2B0;
+    position = *(float **)(object + 0x37C);
+    func_0033B018(first, position[0], position[1]);
+    func_00347F80(second, flags);
+    func_003480F0(second, (*(float **)(object + 0x37C))[0], (*(float **)(object + 0x37C))[1]);
+    return (flags >> 6) & 1;
+}
+
+
 
 extern void func_0033AB50(void *);
 extern void *func_00336968(void *);
@@ -42,7 +59,7 @@ char *func_0033E480(char *object) {
 
 INCLUDE_ASM("asm/game", func_0033E4B8);
 
-INCLUDE_ASM("asm/game", func_0033E4C0);
+
 
 extern void func_0033AE28(char *p);
 extern void func_0033B018(char *p, float x, float y);

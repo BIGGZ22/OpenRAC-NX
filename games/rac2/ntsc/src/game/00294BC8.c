@@ -157,7 +157,21 @@ int func_00295680(int arg)
 
 INCLUDE_ASM("asm/game", func_002956E8);
 
-INCLUDE_ASM("asm/game", func_00295788);
+void func_00295788(int a0, int a1)
+{
+    extern int D_001C4FA0[];
+    extern void func_00282B50(void *, void *, int);
+    int *base = D_001C4FA0;
+    int *lo = (int *)((char *)base + 0x288);
+    int *hi = (int *)((char *)base + 0x2B4);
+    int *out;
+
+    func_00282B50((void *)lo[a0], (void *)lo[a1], hi[a1] << 4);
+    out = (int *)((char *)base + 0x29C);
+    out[a0] = out[a1];
+    hi[a0] = hi[a1];
+    out[a1] = -1;
+}
 
 int func_00295828(int id) {
     extern int D_001C4FA0[];
@@ -271,7 +285,7 @@ INCLUDE_ASM("asm/game", func_00297668);
 
 INCLUDE_ASM("asm/game", func_00297670);
 
-INCLUDE_ASM("asm/game", func_00297730);
+
 
 INCLUDE_ASM("asm/game", func_002977A8);
 

@@ -10,7 +10,14 @@ typedef float f32;
 
 /* Level data. */
 extern s32 D_L12_001B2E9C __attribute__((sda));
+extern s32 D_L12_001A8FF0 __attribute__((sda));
+extern u8 D_L12_001A63A8[];
+extern u8 D_L12_001FEAC0[];
 extern s16 *D_L12_001FB960[];
+
+extern void func_331870();
+extern void func_32F848();
+extern void func_32F978(f32);
 
 extern void func_L12_00322AF8(s32, s32);
 extern void func_L12_00400900();
@@ -101,7 +108,23 @@ INCLUDE_ASM("asm/levels", func_L12_0041A578);
 
 INCLUDE_ASM("asm/levels", func_L12_0041A6D0);
 
-INCLUDE_ASM("asm/levels", func_L12_0041A730);
+void func_L12_0041A730(s32 a0) {
+    s16 *p = D_L12_001FB960[a0];
+    s32 base;
+
+    if (p == 0)
+        return;
+    base = D_L12_001B2E9C;
+    do {
+        u32 v = (*(u16 *)p & 0x7FFF) << 8;
+
+        if (*(s16 *)(base + v + 0xAA) == 0xBB8) {
+            u8 *r = (u8 *)*(u32 *)(base + v + 0x68);
+
+            *(u32 *)(r + 0x798) = *(u32 *)(r + 0x798) + 1;
+        }
+    } while (*p++ >= 0);
+}
 
 INCLUDE_ASM("asm/levels", func_L12_00424078);
 

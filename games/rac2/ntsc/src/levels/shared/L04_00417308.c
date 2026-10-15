@@ -90,7 +90,39 @@ f32 func_L04_004554F8(f32 value) {
     return squared * value;
 }
 
-INCLUDE_ASM("asm/levels", func_L04_00456748);
+extern void func_33B9B0(char *a0, int a1, int a2);
+
+extern int func_33E6B0(char *a0, int a1, int a2);
+
+extern void func_348788(char *a0, int a1, float f12);
+
+extern void func_382DF8(int a0, int a1, char *a2);
+
+extern void func_345860(char *a0, int a1, float f12, float f13, float f14, float f15);
+
+extern void func_3317E8(char *a0);
+
+void func_L04_00456748(char *s0)
+{
+    char *s1 = *(char **)(s0 + 0x68);
+
+    switch (*(unsigned char *)(s0 + 0x20)) {
+    case 0:
+        func_33B9B0(s0, 1, -1);
+        break;
+    case 1:
+        if (func_33E6B0(s0, 0x4010000, 0) != 0 && *(int *)s1 == 0)
+            func_33B9B0(s0, 2, -1);
+        *(unsigned char *)(s0 + 0xA8) = 0xFF;
+        break;
+    case 2:
+        func_348788(s0, 1, 0.0f);
+        func_382DF8(0, 0, s0);
+        func_345860(s0, 0x1E, 0.4f, 4.4f, 1.0f, 0.083333333f);
+        func_3317E8(s0);
+        break;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L04_00456860);
 
@@ -103,7 +135,7 @@ int func_L04_0046B740(void *arg0) {
     return 0;
 }
 
-INCLUDE_ASM("asm/levels", func_L04_0046CD68);
+/* func_L04_0046CD68 is defined in L04_00417308-g8.c (this unit has no $gp access for it). */
 
 INCLUDE_ASM("asm/levels", func_L04_0046CE68);
 

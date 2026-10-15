@@ -69,7 +69,7 @@ INCLUDE_ASM("asm/game", func_00327A60);
 
 INCLUDE_ASM("asm/game", func_00327B40);
 
-INCLUDE_ASM("asm/game", func_00327D08);
+/* func_00327D08 is matched in 00327038-g8.c (-G8 small data). */
 
 INCLUDE_ASM("asm/game", func_00327D50);
 
@@ -83,7 +83,31 @@ INCLUDE_ASM("asm/game", func_003286D0);
 
 INCLUDE_ASM("asm/game", func_00328758);
 
-INCLUDE_ASM("asm/game", func_00328848);
+extern float func_002A7878(float, float);
+extern void func_00282F20(float *, float *, float);
+extern char D_0022B0A0[];
+
+void func_00328848(char *a0)
+{
+    char *rec = D_0022B0A0;
+    int *owner = *(int **)(a0 + 0x68);
+    int i;
+
+    for (i = 0; i < 100; i++) {
+        if (*(int *)(rec + 0x34) != 0) {
+            rec += 0x40;
+            continue;
+        }
+        *(int *)(rec + 0x34) = (int)a0;
+        *(int *)(rec + 0x30) = 0;
+        *(float *)(rec + 0x0) = func_002A7878(-1.0f, 1.0f);
+        *(float *)(rec + 0x4) = func_002A7878(-1.0f, 1.0f);
+        *(float *)(rec + 0x8) = func_002A7878(-1.0f, 1.0f);
+        func_00282F20((float *)rec, (float *)rec, 0.1275f);
+        owner[0x48 / 4]++;
+        break;
+    }
+}
 
 INCLUDE_ASM("asm/game", func_00328918);
 
@@ -211,7 +235,25 @@ INCLUDE_ASM("asm/game", func_0032A130);
 
 INCLUDE_ASM("asm/game", func_0032A140);
 
-INCLUDE_ASM("asm/game", func_0032A978);
+extern char D_L00_00252C40[][16];
+extern char D_L00_00189F00[];
+extern float func_002A7878(float, float);
+extern void func_002AF000(void *, float, float, float);
+extern void func_00282CC0(void *, void *, void *);
+
+void func_0032A978(void)
+{
+    int i;
+    char *row = (char *)D_L00_00252C40;
+    for (i = 49; i >= 0; i--) {
+        float first = func_002A7878(0.01f, 7.0f);
+        float second = func_002A7940();
+        float third = func_002A7878(0.0f, 3.1415927f);
+        func_002AF000(row, first, second, third);
+        func_00282CC0(row, row, D_L00_00189F00);
+        row += 16;
+    }
+}
 
 INCLUDE_ASM("asm/game", func_0032AA30);
 

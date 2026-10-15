@@ -335,7 +335,18 @@ int func_002C9B88 (int *p)
   return 0;
 }
 
-INCLUDE_ASM("asm/game", func_002C9C20);
+extern char D_001F2840[];
+
+int func_002C9C20(void)
+{
+    char *b = D_001F2840;
+    int value = -1;
+    int *p = (int *)(b + 0x1BC);
+    int i;
+
+    for (i = 0x13; i >= 0; i--)
+        *p-- = value;
+}
 
 INCLUDE_ASM("asm/game", func_002C9C60);
 
@@ -372,7 +383,21 @@ void func_002CAA88(void) {
     p->b = 0;
 }
 
-INCLUDE_ASM("asm/game", func_002CAAA0);
+extern void func_0027DDC0(int, int, int, int);
+
+void func_002CAAA0(void)
+{
+    int *p;
+
+    func_0027DDC0(0, 0, 0, 0x38);
+    p = (int *)D_001F2840;
+    if (p[1] == 0)
+        p[1] = 1;
+    p[0] = 4;
+    p[5] = p[6];
+    p[6] = 0;
+    p[1] = 0;
+}
 
 INCLUDE_ASM("asm/game", func_002CAB00);
 
@@ -390,7 +415,18 @@ INCLUDE_ASM("asm/game", func_002CB510);
 
 INCLUDE_ASM("asm/game", func_002CB648);
 
-INCLUDE_ASM("asm/game", func_002CB7D0);
+extern int func_002D5B38(int, char *);
+extern char D_0025BA90[];
+
+int func_002CB7D0(int mode)
+{
+    int result = 0;
+    switch (mode) {
+    case 0: result = 1; break;
+    case 1: result = func_002D5B38(3, D_0025BA90); break;
+    }
+    return result;
+}
 
 INCLUDE_ASM("asm/game", func_002CB820);
 
@@ -398,13 +434,61 @@ INCLUDE_ASM("asm/game", func_002CB8A0);
 
 INCLUDE_ASM("asm/game", func_002CB950);
 
-INCLUDE_ASM("asm/game", func_002CBA58);
+extern short D_0018A000[];
+extern void func_0029CE80(void);
+
+int func_002CBA58(int mode)
+{
+    int result = 0;
+    switch (mode) {
+    case 0: D_0018A000[0] = 10; result = 1; break;
+    case 1: result = func_002D5B38(3, D_0025BA90); break;
+    case 2: func_0029CE80(); result = 1; break;
+    }
+    return result;
+}
 
 INCLUDE_ASM("asm/game", func_002CBAE0);
 
 INCLUDE_ASM("asm/game", func_002CBC58);
 
-INCLUDE_ASM("asm/game", func_002CC490);
+typedef struct {
+    char reserved00[0x14];
+    char *source;
+    int value;
+    char reserved1c[0x118];
+    int fallback;
+} CallbackState_2CC490;
+
+typedef struct {
+    char reserved00[0x1C4];
+    int flags;
+} GameState_2CC490;
+
+extern char D_00138180[];
+
+int func_002CC490(int a0)
+{
+    if (*(int *)(((CallbackState_2CC490 *)D_001F2840)->source + 0xE8) != a0)
+        return 0;
+    if ((((GameState_2CC490 *)D_00138180)->flags & 0x900) != 0 &&
+        ((CallbackState_2CC490 *)D_001F2840)->fallback == 0)
+        return 1;
+    if ((((GameState_2CC490 *)D_00138180)->flags & 0x10) != 0) {
+        int value = *(int *)(((CallbackState_2CC490 *)D_001F2840)->source + 0xE0);
+        int result;
+        if (value != 0)
+            ((CallbackState_2CC490 *)D_001F2840)->value = value;
+        else if (((CallbackState_2CC490 *)D_001F2840)->fallback == 0) {
+            result = -1;
+            goto done;
+        }
+        result = 0;
+done:
+        return result;
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002CC528);
 

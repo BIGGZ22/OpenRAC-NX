@@ -1,5 +1,5 @@
-/* func_L11_00456540 -- brouillon w17 (vague 6, fichier src/levels/11_joba/L11_00453358.c)
- * Derniere ligne de tools/check.py : 11_joba: instruction at +0x8 differs (meme taille 148 o; seuls les deux registres callee-saved sont echanges: retail p->s0, q->s1, moi p->s1, q->s0)
+/* func_L11_00456540 -- draft w17 (wave 6, file src/levels/11_joba/L11_00453358.c)
+ * last check.py line: 11_joba: instruction at +0x8 differs (same size 148 bytes; only the two callee-saved registers are swapped: retail p->s0, q->s1, mine p->s1, q->s0)
  */
 
 void func_L11_00456540(char *p)

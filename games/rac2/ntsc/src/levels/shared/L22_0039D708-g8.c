@@ -30,3 +30,30 @@ void func_L22_003A2A08(void) {
 void func_L22_003A3C70(int a0, int a1) {
     ref_L22_003A3C70_00(D_L22_001AF314, a0, a1, 0);
 }
+
+/* ---- 0x003A48F8 / 0x003A4C68: the same scan of the small-data table at
+ * $gp+0x3C0, bounded by the count at 0x001B2AD4 (absolute, hence `nosda`).
+ * No guard in the source: retail's leading `blez` is the loop's own entry
+ * test, which is what splits the count between $v0 (the load) and $a2 (the
+ * loop's bound copy). ---- */
+
+extern int D_L22_001B2AD4 __attribute__((nosda));
+extern int D_L22_001AF3B0[1] __attribute__((sda));
+
+int func_L22_003A48F8(int key) {
+    int i;
+    for (i = 0; i < D_L22_001B2AD4; i++) {
+        if (D_L22_001AF3B0[i] == key) return 0;
+    }
+    return 1;
+}
+
+/* The same scan, looking for the second argument and reporting the opposite
+ * way. */
+int func_L22_003A4C68(int unused, int key) {
+    int i;
+    for (i = 0; i < D_L22_001B2AD4; i++) {
+        if (D_L22_001AF3B0[i] == key) return 1;
+    }
+    return 0;
+}

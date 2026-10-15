@@ -10,8 +10,6 @@ INCLUDE_ASM("asm/levels", func_L23_0041E418);
 
 INCLUDE_ASM("asm/levels", func_L23_0041E538);
 
-INCLUDE_ASM("asm/levels", func_L23_0041E570);
-
 INCLUDE_ASM("asm/levels", func_L23_0041E5B0);
 
 INCLUDE_ASM("asm/levels", func_L23_00422540);

@@ -1,18 +1,18 @@
-/* func_L11_0044C220 (68 o, a placer dans le frere L11_004465F8-g8.c) -- MEILLEUR ESSAI
- * check.py : 11_joba: instruction at +0x14 differs
- * Ecart restant = ordonnancement des 8 arguments entiers et allocation de la
- * base 0x68 (retail $v0, nous $a3). La carte argument->registre est correcte :
+/* func_L11_0044C220 (68 bytes, to be placed in the L11_004465F8-g8.c sibling) -- BEST ATTEMPT
+ * check.py: 11_joba: instruction at +0x14 differs
+ * Remaining deviation = scheduling of the 8 integer arguments and allocation of the
+ * 0x68 base (retail $v0, ours $a3). The argument->register map is correct:
  *   a0=&D_L11_001B1C10 (gp+0x2C20), a1=4, a2=v0+0x270, a3=v0+0x370,
  *   a4(t0)=*(4B4), a5(t1)=*(4B0), a6(t2)=D_L11_001B1C50, a7(t3)=*(0x1B1C54),
  *   f12=*(4B8).
- * Consequence utile : l'ABI retail est n64/n32 -- 8 registres d'arguments
- * entiers a0-a3 + t0-t3, plus f12-f19 pour les flottants (flux independants).
- * C'est ce qui expliquait les "chargements morts" t2/t3/t0/t1.
- * gp = 0x001AEFF0 (tools/build.py), donc gp+0x2C60 -> D_L11_001B1C50 (sda),
- * gp+0x2C20 -> adresse de D_L11_001B1C10 (sda), 0x001B1C54 -> D_L11_001B1C54
- * (nosda : le retail le charge en lui/lw absolu, pas en $gp).
- * Le fichier -g8 a ete retire du depot (marqueur remis dans le fichier principal),
- * le marqueur de func_L11_0044C220 est restaure.
+ * Useful consequence: the retail ABI is n64/n32 -- 8 integer argument
+ * registers a0-a3 + t0-t3, plus f12-f19 for the floats (independent flows).
+ * That is what explained the "dead loads" t2/t3/t0/t1.
+ * gp = 0x001AEFF0 (tools/build.py), so gp+0x2C60 -> D_L11_001B1C50 (sda),
+ * gp+0x2C20 -> address of D_L11_001B1C10 (sda), 0x001B1C54 -> D_L11_001B1C54
+ * (nosda: the retail loads it as absolute lui/lw, not through $gp).
+ * The -g8 file has been removed from the repo (marker put back in the main file),
+ * the marker of func_L11_0044C220 is restored.
  */
 #include "common.h"
 

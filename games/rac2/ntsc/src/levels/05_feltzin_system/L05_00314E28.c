@@ -1,6 +1,9 @@
 #include "include_asm.h"
 #include "common.h"
 
+/* Quadword copies, the spelling that reaches lq/sq. */
+typedef int TI128 __attribute__((mode(TI)));
+
 extern void func_3065F8(char *block);
 
 extern void func_306630(char *dst, char *src, char *src2);
@@ -12,6 +15,8 @@ extern void func_3066A0(char *dst, char *src, float value);
 extern void func_306AD8(char *dst, char *src, char *object);
 
 extern char *func_328508(int id);
+
+extern char *func_L05_00416D68(char *a0, int a1);
 
 extern int func_332AB8(int kind);
 
@@ -38,11 +43,55 @@ extern void func_37AEC0(char *object, int flag);
 
 extern void func_L05_00416E08(char *object);
 
+extern int func_379860(char *object);
+
+extern void func_379E60(char *object, int a1, int a2, int a3);
+
+extern void func_332708(char *object, int a1, int a2, int a3);
+
+extern void func_37C160(char *object);
+
+extern void func_37B538(char *object, int a1, int a2, int a3);
+
+extern void func_37B948(char *object, int a1, float a2);
+
+extern int func_37B888(char *object);
+
+extern void func_37B6D0(char *object);
+
+extern void func_3062A0(char *block);
+
+extern int func_307840(char *buf, float value);
+
+extern void func_2FF698(void *fn, char *object);
+
+extern void func_L00_003E4948(void);
+
+extern char D_L05_002681E0[];
+
+extern char D_L05_001B251C[];
+
+extern void func_L05_0041CB68(char *object);
+
+extern void func_L05_0041CE00(char *object);
+
+extern void func_L05_0041CA70(char *obj);
+
+extern int func_2F6C50(char *a0, char *a1, int a2, char *a3, int a4);
+
+extern void func_329960(char *object, int a1, char *out);
+
+extern void func_37AC80(float value);
+
+extern char D_L05_001BFB00[];
+
+extern char D_L05_001B9580[];
+
 extern char D_L05_002659E0[];
 
 extern int D_L05_00221D10[];
 
-extern char *D_L05_001B2614;
+extern char *D_L05_001B2614 __attribute__((sda));
 
 INCLUDE_ASM("asm/levels", func_L05_00314E28);
 
@@ -60,7 +109,28 @@ INCLUDE_ASM("asm/levels", func_L05_00414F90);
 
 INCLUDE_ASM("asm/levels", func_L05_004155A0);
 
-INCLUDE_ASM("asm/levels", func_L05_004157B0);
+void func_L05_004157B0(char *obj)
+{
+    char *sub = *(char **)(obj + 0x68);
+    char *table;
+    float a, b, c;
+
+    *(unsigned char *)(obj + 0x20) = 1;
+    *(unsigned short *)(obj + 0x34) = *(unsigned short *)(obj + 0x34) | 0x100;
+    *(int *)(func_379CA0(obj) + 0x148) = 0x14;
+    func_37AEC0(obj, 1);
+    table = D_L05_001B2614 + D_L05_00221D10[0] * 128;
+    *(int *)(sub + 0x26C) = -1;
+    *(int *)(sub + 0x270) = -1;
+    *(float *)(sub + 0x180) = 20.0f;
+    *(int *)(sub + 0x268) = 0;
+    *(float *)(obj + 0x2C) = 0.02f;
+    a = func_332B50(0.0f, *(float *)table);
+    b = func_332C18();
+    c = func_332C18();
+    func_33B330(obj + 0x10, a, b, c);
+    func_306630(obj + 0x10, table + 0x30, obj + 0x10);
+}
 
 /* Runs the object's pending effect when three guards clear, then marks the run. */
 void func_L05_004158B0(char *object)
@@ -85,9 +155,49 @@ INCLUDE_ASM("asm/levels", func_L05_00415958);
 INCLUDE_ASM("asm/levels", func_L05_00415B38);
 
 /* Clears one int field of each of 128 strided records. */
-INCLUDE_ASM("asm/levels", func_L05_00415D70);
+void func_L05_00415D70(void)
+{
+    char *base = D_L05_002659E0;
+    int *p = (int *)(base + 0x27F0);
+    int i = 0x7F;
 
-INCLUDE_ASM("asm/levels", func_L05_00415DA8);
+    do {
+        *p = 0;
+        p -= 0x14;
+        i--;
+    } while (i >= 0);
+}
+
+void func_L05_00415DA8(char *obj)
+{
+    char *sub = *(char **)(obj + 0x68);
+    char *r;
+    char *table;
+    float a, b, c;
+
+    *(unsigned char *)(obj + 0x20) = 1;
+    *(unsigned short *)(obj + 0x34) = *(unsigned short *)(obj + 0x34) | 0x100;
+    r = func_379CA0(obj);
+    *(int *)(r + 0x148) = 5;
+    func_37AEC0(obj, 1);
+    table = D_L05_001B2614 + D_L05_00221D10[0] * 128;
+    *(int *)(sub + 0x274) = -1;
+    *(float *)(sub + 0x180) = 5.0f;
+    *(int *)(sub + 0x268) = 0;
+    a = func_332B50(0.0f, *(float *)table);
+    b = func_332C18();
+    c = func_332C18();
+    func_33B330(obj + 0x10, a, b, c);
+    func_306630(obj + 0x10, table + 0x30, obj + 0x10);
+    if (*(int *)(r + 0x110) == 1) {
+        *(int *)(sub + 0x26C) = func_L05_00416D68(obj, 0);
+        *(int *)(sub + 0x270) = func_L05_00416D68(obj, 1);
+    } else {
+        *(int *)(sub + 0x26C) = 0;
+        *(int *)(sub + 0x270) = 0;
+    }
+    *(float *)(obj + 0x2C) = 0.02f;
+}
 
 /* Clears one of two state words on the object's sub-record, by mode. */
 void func_L05_00415EE8(int object, int mode)
@@ -154,30 +264,43 @@ char *func_L05_00416D68(char *a0, int a1)
     return obj;
 }
 
-void func_L05_00416E08(char *object)
-{
-    char *sub = *(char **)(object + 0x68);
-    char *src = *(char **)(sub + 0x50);
+INCLUDE_ASM("asm/levels", func_L05_00416E08);
 
-    qcopy(object + 0x10, src + 0x10);
-    switch (*(int *)(sub + 0x54)) {
-    case 0:
-        qcopy(object + 0xC0, src + 0xC0);
-        qcopy(object + 0xD0, src + 0xD0);
-        break;
-    case 1:
-        qcopy(object + 0xC0, src + 0xC0);
-        func_3066A0(object + 0xD0, src + 0xD0, -1.0f);
-        break;
-    default:
-        return;
-    }
-    qcopy(object + 0xE0, src + 0xE0);
-}
-
+/* Builds the sub-record's three planes and blends them onto the object's transform. */
 INCLUDE_ASM("asm/levels", func_L05_00416EC0);
 
-INCLUDE_ASM("asm/levels", func_L05_00416F80);
+/* Blends the sub-record into the object's transform once three guards clear. */
+void func_L05_00416F80(char *object, char *arg1)
+{
+    char *sub = *(char **)(object + 0x68);
+    char buf[16];
+    char buf2[16];
+    char *r;
+    char *base;
+    int value;
+
+    r = func_379CA0(*(char **)(sub + 0x50));
+    func_329960(object, 0, buf);
+    func_306660(buf2, buf, object + 0x10);
+    if (func_2F6C50(arg1, buf, 0, object, 0) == 0)
+        return;
+    base = D_L05_001BFB00;
+    value = *(int *)(base + 0x18);
+    if (value == 0)
+        return;
+    if (value != *(int *)(r + 0x120))
+        return;
+    func_306630(object + 0x10, buf2, base + 0x20);
+    func_37AC80(2.0f);
+    {
+        char *state = D_L05_001B9580;
+
+        *(float *)(state + 0x160) = 0.05f;
+        *(int *)(state + 0x168) = 0x1E;
+        *(int *)(state + 0x16C) = 0;
+    }
+    *(unsigned char *)(object + 0x20) = 4;
+}
 
 int func_L05_00417088(char *object)
 {
@@ -190,7 +313,26 @@ int func_L05_00417088(char *object)
 
 INCLUDE_ASM("asm/levels", func_L05_0041C860);
 
-INCLUDE_ASM("asm/levels", func_L05_0041CA70);
+void func_L05_0041CA70(char *obj)
+{
+    char *sub = *(char **)(obj + 0x68);
+    char *table;
+    float a, b, c;
+
+    *(unsigned char *)(obj + 0x20) = 1;
+    *(unsigned short *)(obj + 0x34) = *(unsigned short *)(obj + 0x34) | 0x100;
+    *(int *)(func_379CA0(obj) + 0x148) = 5;
+    func_37AEC0(obj, 1);
+    table = D_L05_001B2614 + D_L05_00221D10[0] * 128;
+    *(int *)(sub + 0x268) = 0;
+    *(float *)(sub + 0x180) = 5.0f;
+    *(float *)(obj + 0x2C) = 0.08f;
+    a = func_332B50(0.0f, *(float *)table);
+    b = func_332C18();
+    c = func_332C18();
+    func_33B330(obj + 0x10, a, b, c);
+    func_306630(obj + 0x10, table + 0x30, obj + 0x10);
+}
 
 INCLUDE_ASM("asm/levels", func_L05_0041CB68);
 
@@ -229,9 +371,9 @@ INCLUDE_ASM("asm/levels", func_L05_0041DF58);
 
 INCLUDE_ASM("asm/levels", func_L05_0041EF00);
 
-INCLUDE_ASM("asm/levels", func_L05_0041FC60);
+/* func_L05_0041FC60 is built with -G8: see L05_00314E28-g8.c. */
 
-INCLUDE_ASM("asm/levels", func_L05_0041FD48);
+/* func_L05_0041FD48 is built with -G8: see L05_00314E28-g8.c. */
 
 INCLUDE_ASM("asm/levels", func_L05_0041FE98);
 

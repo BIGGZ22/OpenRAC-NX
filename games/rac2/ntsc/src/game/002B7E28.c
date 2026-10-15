@@ -230,7 +230,35 @@ void func_002B7FF0(int value, long address)
         *(short *)(p + 10) = 7;
 }
 
-INCLUDE_ASM("asm/game", func_002B8048);
+typedef struct {
+    char pad00[0x2C];
+    short state;
+    char pad2E[2];
+    int value;
+    int quarter;
+} FileLoadVoiceState_002B8048;
+extern FileLoadVoiceState_002B8048 g_fileLoadVoiceState;
+
+void func_002B8048(int value, long address)
+{
+    char *p = (char *)(int)address;
+    int stored = value;
+    if (p == 0)
+        return;
+    *(int *)(p + 0x18) = stored;
+    if (*(short *)(p + 0x10) == 0)
+        return;
+    {
+        FileLoadVoiceState_002B8048 *state = &g_fileLoadVoiceState;
+        if (state->state != 1)
+            return;
+        if (stored == 0)
+            return;
+        state->state = 2;
+        state->value = *(int *)(p + 0x18);
+        state->quarter = *(int *)(p + 0x18) / 4;
+    }
+}
 
 INCLUDE_ASM("asm/game", func_002B80B8);
 

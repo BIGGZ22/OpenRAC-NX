@@ -156,7 +156,31 @@ void func_002AAF40(int *a, int *b, int *c, int mask) {
     if (mask & 4) { x = *a; y = *c; *c = x; *a = y; }
 }
 
-INCLUDE_ASM("asm/game", func_002AAFA0);
+/* Scales four float arguments by 255, converts each through the same routine, masks each result to a byte and packs the four bytes into one word, low byte first. */
+
+
+int func_002AAFA0(unsigned int color, int mask)
+{
+    int tmp[3];
+    int mid;
+    unsigned int a;
+    int result;
+
+    if (mask == 0)
+        return color;
+
+    tmp[0] = color & 0xFF;
+    mid = color & 0xFF00;
+    tmp[1] = mid >> 8;
+    tmp[2] = (color >> 16) & 0xFF;
+    a = color >> 24;
+    func_002AAF40(tmp, tmp + 1, tmp + 2, mask);
+    result = a << 24;
+    result |= tmp[2] << 16;
+    result |= tmp[1] << 8;
+    result |= tmp[0];
+    return result;
+}
 
 void func_002AB028(float (*m)[4])
 {
@@ -186,7 +210,21 @@ float func_002AB0E8(int a0, int a1, int a2, int a3)
 	return m[a3];
 }
 
-INCLUDE_ASM("asm/game", func_002AB168);
+extern void func_00282F20(float *, float);
+extern float func_00282DB0(void *, void *);
+extern void func_00282D30(void *, void *, float);
+extern void func_00282CF0(void *, void *, void *);
+
+void func_002AB168(float *out, float *vector, float *axis, float amount)
+{
+    float scaled[4];
+    float unit[4];
+    float dot;
+    ((void (*)(float *, float *, float))func_00282F20)(unit, axis, 1.0f);
+    dot = func_00282DB0(unit, vector);
+    func_00282D30(scaled, unit, dot * amount);
+    func_00282CF0(out, vector, scaled);
+}
 
 s32 func_002AB1F0(u8 *a0) {
  if(a0==0) return 0;
@@ -303,7 +341,22 @@ INCLUDE_ASM("asm/game", func_002ABB18);
 
 INCLUDE_ASM("asm/game", func_002ABB70);
 
-INCLUDE_ASM("asm/game", func_002ABB78);
+extern char *g_mobyTableBase __attribute__((sda));
+extern char *g_mobyTableEnd __attribute__((sda));
+
+int func_002ABB78(char *object)
+{
+    if (object != 0)
+        goto check;
+fail:
+    return 0;
+check:
+    if ((unsigned int)object < (unsigned int)g_mobyTableBase)
+        goto fail;
+    if ((unsigned int)g_mobyTableEnd < (unsigned int)object)
+        goto fail;
+    return (unsigned int)(*(unsigned short *)(object + 0xAA) - 500) < 41;
+}
 
 INCLUDE_ASM("asm/game", func_002ABBB8);
 
@@ -358,7 +411,27 @@ void func_002ACB48(float *vector, float scale)
     vector[2] = vector[2] + func_002A7878(negative, scale);
 }
 
-INCLUDE_ASM("asm/game", func_002ACBC8);
+extern char *D_001B1C4C __attribute__((sda));
+extern void func_00283098(char *, char *, char *);
+
+int func_002ACBC8(void *point, int index)
+{
+    float local[4];
+    float transformed[4];
+    char *record;
+
+    if (index != -1) {
+        record = D_001B1C4C + (index << 7);
+        func_00282CF0(local, point, record + 0x30);
+        local[3] = 0.0f;
+        func_00283098((char *)transformed, (char *)local, record + 0x40);
+        if (transformed[0] >= -1.0f && transformed[0] <= 1.0f &&
+            transformed[1] >= -1.0f && transformed[1] <= 1.0f &&
+            transformed[2] >= -1.0f && transformed[2] <= 1.0f)
+            return 1;
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002ACCA0);
 
@@ -366,7 +439,22 @@ INCLUDE_ASM("asm/game", func_002ACCA8);
 
 INCLUDE_ASM("asm/game", func_002ACD30);
 
-INCLUDE_ASM("asm/game", func_002ACD38);
+typedef struct { int selected, reserved04, reserved08, count; } MatchRange;
+extern MatchRange ref_L00_002ACD38_00;
+extern float ref_L00_002ACD38_01[][4];
+extern int func_00283D80(void *, void *, void *);
+int func_002ACD38(void *object)
+{
+    int found = 0;
+    int i;
+    for (i = ref_L00_002ACD38_00.count - 1; i >= 0; i--) {
+        if (func_00283D80(object, ref_L00_002ACD38_01[i], ref_L00_002ACD38_01[i + 2])) {
+            found = i + 1;
+            break;
+        }
+    }
+    return found == ref_L00_002ACD38_00.selected;
+}
 
 INCLUDE_ASM("asm/game", func_002ACDC8);
 
@@ -472,7 +560,17 @@ INCLUDE_ASM("asm/game", func_002AE8C0);
 
 INCLUDE_ASM("asm/game", func_002AEAE0);
 
-INCLUDE_ASM("asm/game", func_002AEB60);
+extern float func_0029F530(void *);
+extern float func_002AEAE0(int, float);
+int func_002AEB60(char *object, float threshold)
+{
+    float current = func_002AEAE0(4, func_0029F530(object));
+    float difference = current - threshold;
+    float step = func_002AEAE0(4, *(float *)(object + 0x48) * *(float *)(object + 0x4C));
+    if (threshold <= current)
+        return difference < step;
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002AEBF0);
 
@@ -596,6 +694,19 @@ void func_002AFDD8(char *a0, char *a1, char *a2, char *a3)
 
 INCLUDE_ASM("asm/game", func_002AFE40);
 
-INCLUDE_ASM("asm/game", func_002AFE58);
+extern void func_00282F70(char *, char *, float);
+extern void func_00283098(char *, char *, char *);
 
-INCLUDE_ASM("asm/game", func_002AFEB8);
+void func_002AFE58(char *object, char *out, char *in, char *transform, float scale)
+{
+    func_002AFDD8(object, out, in, transform);
+    func_00282F70(out, out, scale);
+    func_00283098(out, out, object + 0xC0);
+}
+
+void func_002AFEB8(char *object, char *out, char *in, char *transform, float z)
+{
+    func_002AFDD8(object, out, in, transform);
+    *(float *)(out + 8) = z;
+    func_00283098(out, out, object + 0xC0);
+}

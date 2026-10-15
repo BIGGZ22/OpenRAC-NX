@@ -13,3 +13,18 @@ int func_L01_002F1888(void) {
     }
     return D_L01_001A90D0;
 }
+
+extern int D_001B2088;
+extern int D_001B2458;
+
+int func_L01_00305E18(int a0)
+{
+    int a1 = a0;
+    int p;
+
+    if (D_001B2088 < 5 || (p = D_001B2458) == 0)
+        return -1;
+    return *(short *)(p + a1 * 0x28 + 0x24);
+}
+
+/* func_L01_002F1F70 is defined in L01_002A7248.c (this unit has no $gp access for it). */

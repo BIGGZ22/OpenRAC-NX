@@ -1,6 +1,6 @@
-/* meilleur essai -- dernier check.py : "00_aranos_tutorial: instruction at +0x8 differs"
-   Tout est exact sauf la paire %hi/%lo de D_L00_001B1844 (registre unique chez retail).
-   L'ordre des deux magasins est deja celui de retail. */
+/* best attempt -- last check.py line: "00_aranos_tutorial: instruction at +0x8 differs"
+   Everything is exact except the %hi/%lo pair of D_L00_001B1844 (single register in retail).
+   The order of the two stores is already the retail one. */
 int func_L00_0042A460(char *a0)
 {
     char *p = *(char **)(D_L00_001B1844 + *(short *)(a0 + 0x84) * 32 + 0x1C);

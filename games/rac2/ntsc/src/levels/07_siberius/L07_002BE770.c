@@ -16,6 +16,6 @@ INCLUDE_ASM("asm/levels", func_L07_00378AE0);
 
 INCLUDE_ASM("asm/levels", func_L07_00379020);
 
-INCLUDE_ASM("asm/levels", func_L07_00379180);
+/* func_L07_00379180 is defined in L07_002BE770-g8.c (this unit has no $gp access for it). */
 
 INCLUDE_ASM("asm/levels", func_L07_003791E8);

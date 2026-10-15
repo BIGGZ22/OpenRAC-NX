@@ -125,8 +125,33 @@ INCLUDE_ASM("asm/game", func_002742E8);
 
 INCLUDE_ASM("asm/game", func_00274500);
 
-INCLUDE_ASM("asm/game", func_002746C8);
+/* Collision-hit nudge subject: geometry plane at 0x20, scale 0x2C, data pointer 0x54. */
+typedef struct {
+    u8 pad000[0x20];
+    u8 at020[0xC];
+    f32 f02C;
+    u8 pad030[0x24];
+    char *p054;
+} HitNudge_002746C8;
 
+extern int func_00277258(float *out, int mode, float scale, char *data);
+
+extern float D_001BAFB0[];
+
+int func_002746C8(Obj_F4778f810 *obj)
+{
+    V4_F4778f810 tmp[2];
+    HitNudge_002746C8 *p = (HitNudge_002746C8 *)obj->p068;
+
+    func_00283098((char *)&tmp[0], (char *)p + 0x20, (char *)obj + 0xC0);
+    func_00282CC0((char *)&tmp[0], (char *)&tmp[0], (char *)obj + 0x10);
+    if (func_00277258((float *)&tmp[0], 2, p->f02C, p->p054) != 0) {
+        func_00282CF0((char *)&tmp[1], (char *)D_001BAFB0, (char *)&tmp[0]);
+        func_00282CC0((char *)obj + 0x10, (char *)obj + 0x10, (char *)&tmp[1]);
+        return 1;
+    }
+    return 0;
+}
 /* appendindexbyte59/count5C descriptor68, originalthreeGPR geometricupdate inclincomingdirectionA2, ifcount!=1 originalpointdifference24/transform40/bound80 andterminalcountbyte return */
 unsigned int func_00274768(OozlaAppendObject164 *object, unsigned int index, const float *direction)
 {
@@ -147,7 +172,14 @@ INCLUDE_ASM("asm/game", func_00274810);
 
 INCLUDE_ASM("asm/game", func_00274A88);
 
-INCLUDE_ASM("asm/game", func_00274B58);
+extern void func_002ACE78(float *, float *, float);
+void func_00274B58(OozlaAppendObject164 *a0, float *a1, const float *a2) {
+    float tmp[4];
+    float value;
+    func_00282F20_16(tmp, (void *)a2, 1.0f);
+    value = func_00282DB0_3(tmp, a1);
+    func_002ACE78(a1, tmp, value);
+}
 
 /* Keeps the float one helper returns, and when a later helper reports a ratio above 0.7 scales it by a factor with a floor, hands it to a setter through a local, then reports whether the kept value is non-zero. */
 int func_00274BA8(void *p, void *q, void *r, float f12, float f13)
@@ -169,7 +201,39 @@ int func_00274BA8(void *p, void *q, void *r, float f12, float f13)
     return 0;
 }
 
-INCLUDE_ASM("asm/game", func_00274C90);
+extern float func_00283CE0(int);
+extern void func_00282D30(void *, void *, float);
+int func_00274C90(char *object, float *output, int limit)
+{
+    char *data = *(char **)(*(char **)(object + 0x24) + 0x10);
+    char *entry, *base;
+    float scale;
+    int count, remaining;
+    float *cursor;
+    if (!data)
+        return 0;
+    count = *(int *)(data + 0xC) / 8;
+    base = data + *(int *)(data + 4);
+    scale = *(float *)(object + 0x2C) * (1.0f / 1024.0f);
+    if (limit < count)
+        count = limit;
+    entry = base + 16;
+    if (count > 0) {
+    cursor = output;
+    remaining = count;
+    do {
+        remaining--;
+        cursor[0] = func_00283CE0(*(short *)entry);
+        cursor[1] = func_00283CE0(*(short *)(entry + 2));
+        cursor[2] = func_00283CE0(*(short *)(entry + 4));
+        entry += 8;
+        func_00282D30(cursor, cursor, scale);
+        cursor[3] = 1.0f;
+        cursor += 4;
+    } while (remaining);
+    }
+    return count;
+}
 
 INCLUDE_ASM("asm/game", func_00274D90);
 
@@ -290,7 +354,18 @@ int func_0027A1D0(float x, int a, int b, int c, int d, int e, int g)
 
 INCLUDE_ASM("asm/game", func_0027A288);
 
-INCLUDE_ASM("asm/game", func_0027A9A0);
+extern int D_001B1710 __attribute__((sda));
+extern char D_001BADC0[];
+extern void func_00282A60(void *, int, int);
+extern void func_0027A288(void);
+
+void func_0027A9A0(void)
+{
+    if (D_001B1710 == 0)
+        func_00282A60(D_001BADC0, -1, 0x80);
+    else if (D_001B1710 == 2)
+        func_0027A288();
+}
 
 INCLUDE_ASM("asm/game", func_0027A9F0);
 

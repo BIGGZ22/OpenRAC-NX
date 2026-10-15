@@ -22,6 +22,14 @@ extern void func_L05_0037BF48(char *);
 
 extern float func_332B50(float, float);
 
+extern char *func_379CA0(char *);
+
+extern void func_379FA0(char *, int, int, int, float, float, float, float, int, int, int);
+
+extern int func_332AB8(int);
+
+extern void func_3719A8(int, int, char *, int);
+
 extern void func_306AD8(void *, void *, void *);
 
 extern void func_306630(void *, void *, void *);
@@ -147,7 +155,6 @@ int func_L05_0037CEB8(char *obj)
 
 INCLUDE_ASM("asm/levels", func_L05_0037CEE0);
 
-INCLUDE_ASM("asm/levels", func_L05_0037D608);
 
 INCLUDE_ASM("asm/levels", func_L05_0037D6E8);
 
@@ -242,7 +249,24 @@ INCLUDE_ASM("asm/levels", func_L05_003D15E8);
 
 INCLUDE_ASM("asm/levels", func_L05_003D18E0);
 
-INCLUDE_ASM("asm/levels", func_L05_003D19F0);
+/* Spawns the object's effect after three guards, then runs the timer. */
+void func_L05_003D19F0(char *object)
+{
+    char *s1 = *(char **)(object + 0x68);
+    char *r;
+
+    r = func_379CA0(object);
+    if (r == 0)
+        return;
+    if (*(int *)(r + 0x120) == 0)
+        return;
+    if (*(int *)(s1 + 0x268) != 0)
+        return;
+    func_379FA0(object, 0x60000090, 1, 0, 0.6f, 2.0f, 1.0f, 1.3f, 0, -1, 0);
+    if (func_332AB8(3) == 0)
+        func_3719A8(0, 0, object, 0x97C);
+    *(int *)(s1 + 0x268) = 0x3C;
+}
 
 INCLUDE_ASM("asm/levels", func_L05_003D1AB8);
 

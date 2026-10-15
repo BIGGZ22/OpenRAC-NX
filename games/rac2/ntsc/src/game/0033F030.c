@@ -39,7 +39,49 @@ void func_0033F030(char *p)
     func_0033ED88(p);
 }
 
-INCLUDE_ASM("asm/game", func_0033F0A0);
+extern void *func_003361A8(void *);
+extern char *func_00336968(char *);
+extern void *func_003363D0(void *);
+extern void *func_003366D0(void *);
+char *func_0033F0A0(char *object)
+{
+    char *cursor;
+    int i;
+    char *a, *b, *c, *d, *e, *g, *f;
+    func_003361A8(object);
+    func_003361A8(object + 0x4C);
+    func_003361A8(object + 0x98);
+    func_003361A8(object + 0xE4);
+    func_003361A8(object + 0x130);
+    func_003361A8(object + 0x17C);
+    func_003361A8(object + 0x1C8);
+    func_003361A8(object + 0x214);
+    func_003363D0(object + 0x260);
+    func_003361A8(object + 0x2A8);
+    func_003361A8(object + 0x2F4);
+    cursor = object + 0x340;
+    for (i = 7; i != -1; i--, cursor += 0x4C) func_003361A8(cursor);
+    func_003361A8(object + 0x5A0);
+    cursor = object + 0x5EC;
+    i = 7;
+    f = object + 0x948;
+    a = object + 0x7D0;
+    b = object + 0x828;
+    g = object + 0x990;
+    c = object + 0x870;
+    d = object + 0x8B8;
+    e = object + 0x900;
+    for (; i != -1; i--, cursor += 0x3C) func_003366D0(cursor);
+    func_003366D0(a);
+    func_00336968(b);
+    func_00336968(c);
+    func_00336968(d);
+    func_00336968(e);
+    func_00336968(f);
+    func_00336968(g);
+    return object;
+}
+
 
 INCLUDE_ASM("asm/game", func_0033F210);
 
@@ -112,5 +154,3 @@ INCLUDE_ASM("asm/game", func_00341610);
 void func_003417C8(void)
 {
 }
-
-INCLUDE_ASM("asm/game", func_003417D0);

@@ -114,7 +114,12 @@ INCLUDE_ASM("asm/levels", func_L00_003B1270);
 
 INCLUDE_ASM("asm/levels", func_L00_003B14D0);
 
-INCLUDE_ASM("asm/levels", func_L00_003B1A08);
+/* A variadic forwarder whose whole retail body is the register save area the EE compiler
+   emits for a variadic function: four named integer arguments consume $a0-$a3, so the
+   variadic ones are saved out of $t0-$t3 and $f12/$f18. Nothing else is left of it. */
+void func_L00_003B1A08(int a0, int a1, int a2, int a3, ...)
+{
+}
 
 /* resets a state record: zero words, plus/minus one float flags and two 64-bit fields in the retail store order */
 void func_L00_003B2900(char *p)

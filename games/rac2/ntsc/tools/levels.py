@@ -221,6 +221,22 @@ def fingerprint(b: bytes, address: int = 0) -> str:
 BOOT_FUNCTIONS = ROOT / "config/boot/functions.tsv"
 BOOT_PAIRS = ROOT / "config/levels/boot_pairs.tsv"
 
+# The level's data/vtables point past these trailing instructions of the
+# preceding bodies. Preserve each extent's end; the prefix remains assembly.
+LEVEL_ENTRY_OFFSETS = {
+    (0, 0x00354DE8): 16,  # data pointer at 0x00287070 -> 0x00354DF8
+    (0, 0x003D54A8): 8,   # vtbl pointer at 0x002A3370 -> 0x003D54B0
+    (0, 0x0040EA98): 8,   # vtbl pointer at 0x002A3718 -> 0x0040EAA0
+}
+
+
+def level_extent(number: int, address: int, size: int) -> tuple[int, int]:
+    """Correct measured level entry boundaries without moving their ends."""
+    skip = LEVEL_ENTRY_OFFSETS.get((number, address), 0)
+    if size <= skip:
+        raise ValueError(f"{number}:{address:08X}: no body after {skip} entry bytes")
+    return address + skip, size - skip
+
 
 def boot_image() -> tuple[bytes, list[tuple[int, int, int]]]:
     """The boot executable and its loadable segments (vaddr, file offset, file size)."""
@@ -307,6 +323,7 @@ def catalogue() -> None:
     for number in sorted(extents):
         base, data = level_text(DUMP / level_dir(number))
         for a, n in sorted(extents[number]):
+            a, n = level_extent(number, a, n)
             body = data[a - base:a - base + n]
             if not trim(body):
                 continue

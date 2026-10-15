@@ -153,6 +153,66 @@ INCLUDE_ASM("asm/levels", func_L00_003918C8);
 
 INCLUDE_ASM("asm/levels", func_L00_00392530);
 
+/* Gates on the sub-object's tag byte, mirrors one status bit from that object into its own
+ * halfword, clamps the wrapped value at +4 against a signed window and finishes with the
+ * three transform helpers; original game role is unknown. */
+extern int D_0018B060;
+
+extern void func_310440(char *object);
+
+extern void func_310838(char *object, int mode, int delta);
+
+extern float func_31A7C0(float low, float high);
+
+extern float func_31F1C8(float angle);
+
+extern float func_2EF0F8(float value, float amount);
+
+extern void func_312D18(char *object);
+
+void func_L00_003952E0(char *object)
+{
+    char *s1 = *(char **)(object + 0x68);
+    char *other = *(char **)(s1 + 8);
+    unsigned char tag = *(unsigned char *)(other + 0x20);
+
+    if (tag == 0 || (tag & 0xF0) == 0xF0) {
+        func_310440(object);
+        return;
+    }
+    if (other != 0) {
+        if ((*(unsigned short *)(object + 0x34) & 1) != (*(unsigned short *)(other + 0x34) & 1)) {
+            unsigned short bits = *(unsigned short *)(object + 0x34) & 0xFFFE;
+
+            *(unsigned short *)(object + 0x34) = bits;
+            bits |= *(unsigned short *)(*(char **)(s1 + 8) + 0x34) & 1;
+            *(unsigned short *)(object + 0x34) = bits;
+        }
+    }
+    if (D_0018B060 < 0x19)
+        *(unsigned short *)(object + 0x34) |= 0x41;
+    {
+        int current = *(int *)(s1 + 4);
+        int next = current - 0xC0;
+        int delta = -0xC0;
+
+        *(int *)(s1 + 4) = next;
+        if (next >= 0x1001) {
+            delta = -0x10C0;
+            *(int *)(s1 + 4) = current - 0x10C0;
+        } else if (next < 0) {
+            delta = 0xF40;
+            *(int *)(s1 + 4) = current + 0xF40;
+        }
+        func_310838(*(char **)(object + 0x24), 0, delta);
+    }
+    *(float *)(object + 0x2C) = *(float *)(*(char **)(object + 0x24) + 0x24)
+                                * *(float *)(s1 + 0xC) * func_31A7C0(0.5f, 1.0f);
+    *(float *)(object + 0xF4) = func_2EF0F8(*(float *)(object + 0xF4),
+                                             func_31F1C8(*(float *)(s1 + 0xC)));
+    func_312D18(object);
+}
+
 /* Builds the object for type 0xB3 and, when the constructor returns one, fills its fields,
  * clears a quad at +0xF0, records the argument in the sub-object at +0x68 and copies three
  * quads from the argument before running two helpers. Returns the object. */
@@ -179,8 +239,6 @@ char *func_L00_00395240(char *arg)
     }
     return object;
 }
-
-INCLUDE_ASM("asm/levels", func_L00_003952E0);
 
 INCLUDE_ASM("asm/levels", func_L00_00395428);
 

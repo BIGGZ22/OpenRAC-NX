@@ -1,7 +1,7 @@
-/* func_L07_003F9028 -- meilleur essai (vague 3, worker w05, fichier src/levels/07_siberius/L07_003F4578.c)
- * Residuel: 92 o, 3 instructions sur 23. L'octet de 0x43($a0) est lu dans $a1 au lieu de $v1
- * (le retail reutilise le registre du drapeau, mort apres le bnez). Branche et agencement OK.
- * Essayes: u8 c, s32 c, declaration avant le pointeur -- toujours $a1.
+/* func_L07_003F9028 -- best attempt (wave 3, worker w05, file src/levels/07_siberius/L07_003F4578.c)
+ * Residual: 92 bytes, 3 instructions out of 23. The byte at 0x43($a0) is loaded into $a1 instead of $v1
+ * (the retail reuses the flag register, dead after the bnez). Branch and layout OK.
+ * Tried: u8 c, s32 c, declaration before the pointer -- always $a1.
  */
 extern void func_002A7470(u8 *a0, s32 a1, s32 a2, s32 a3);
 

@@ -45,9 +45,18 @@ instructions with different padding are two functions, and a level function take
 function's name only when the pairing is unambiguous or recorded in
 `config/levels/boot_pairs.tsv`.
 
-The 27 programs hold 106,337 placements (47.4 MB); they are 7,766 distinct functions
+The 27 programs hold 106,337 placements (47.4 MB); they are 7,765 distinct functions
 (5.3 MB), 2,055 of them copies of boot functions. With the boot, the game is about 9,100
 distinct functions, 5.5 MB of code.
+
+An inferred function extent can start inside the preceding function's epilogue.
+`tools/levels.py` corrects three measured Aranos entries before fingerprinting:
+`00354DE8` to `00354DF8`, `003D54A8` to `003D54B0`, and `0040EA98` to `0040EAA0`.
+Retail data and virtual-table pointers reference the corrected entries; the original
+end addresses stay unchanged, and the skipped prefixes remain assembly in the build.
+Correcting the second entry also groups it with Siberius's `003EBC90`, so the two
+places share one definition. These corrections apply to level 00 only; regenerate
+the catalogue with `tools/levels.py catalogue`, rather than editing its rows.
 
 ## The C
 

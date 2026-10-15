@@ -5,14 +5,11 @@ INCLUDE_ASM("asm/levels", func_L01_00397110);
 INCLUDE_ASM("asm/levels", func_L01_003973A0);
 
 INCLUDE_ASM("asm/levels", func_L01_00397870);
-
 INCLUDE_ASM("asm/levels", func_L01_00397950);
 
 INCLUDE_ASM("asm/levels", func_L01_00397A28);
 
 INCLUDE_ASM("asm/levels", func_L01_00397C98);
-
-INCLUDE_ASM("asm/levels", func_L01_00397EB0);
 
 extern int D_001A79F0 __attribute__((sda));
 
@@ -48,8 +45,6 @@ void func_L01_00398008(char *a2)
 
 INCLUDE_ASM("asm/levels", func_L01_003980D0);
 
-INCLUDE_ASM("asm/levels", func_L01_00398938);
-
 INCLUDE_ASM("asm/levels", func_L01_00398A90);
 
 INCLUDE_ASM("asm/levels", func_L01_00398B50);
@@ -74,10 +69,6 @@ void func_L01_00399098(char *a0)
 
 INCLUDE_ASM("asm/levels", func_L01_003990E8);
 
-INCLUDE_ASM("asm/levels", func_L01_00399170);
-
-INCLUDE_ASM("asm/levels", func_L01_003993C8);
-
 INCLUDE_ASM("asm/levels", func_L01_00399510);
 
 INCLUDE_ASM("asm/levels", func_L01_003B2598);
@@ -98,15 +89,34 @@ INCLUDE_ASM("asm/levels", func_L01_003D4270);
 
 INCLUDE_ASM("asm/levels", func_L01_003D6B00);
 
-INCLUDE_ASM("asm/levels", func_L01_003E9CF8);
-
 INCLUDE_ASM("asm/levels", func_L01_003E9E40);
 
 INCLUDE_ASM("asm/levels", func_L01_003EE5F8);
 
 INCLUDE_ASM("asm/levels", func_L01_003EE6F0);
 
-INCLUDE_ASM("asm/levels", func_L01_003EE8E0);
+extern int func_002A9640(char *, int, int);
+
+extern void func_002A8598(int, int);
+
+/* revives the round a moby belongs to and drops what it was carrying */
+void func_L01_003EE8E0(char *a0)
+{
+    char *r = (char *)func_002A9640(a0, 0x10000, 0);
+
+    if (r != 0) {
+        char *q = *(char **)(r + 0x20);
+
+        if (q != 0) {
+            if (*(short *)(q + 0xAA) == 0x825) {
+                if (*(unsigned char *)(a0 + 0x21) != 0xFF)
+                    func_002A8598(*(unsigned char *)(a0 + 0x21), 2);
+            }
+        }
+    }
+
+    *(unsigned char *)(a0 + 0xA8) = 0xFF;
+}
 
 INCLUDE_ASM("asm/levels", func_L01_003FFFE8);
 
@@ -140,17 +150,32 @@ void func_L01_004110E0(char *a0)
 
 INCLUDE_ASM("asm/levels", func_L01_004132D8);
 
-INCLUDE_ASM("asm/levels", func_L01_00417090);
-
-INCLUDE_ASM("asm/levels", func_L01_0041C890);
-
 INCLUDE_ASM("asm/levels", func_L01_00423990);
+
+extern char *D_001B9510;
+
+extern float func_2E3618(char *);
 
 INCLUDE_ASM("asm/levels", func_L01_0042A568);
 
-INCLUDE_ASM("asm/levels", func_L01_0042A6F0);
+extern char D_001B9380[];
+
+extern char D_00189EA0[];
+
+extern void func_2CF938(char *, char *);
+
+typedef int TI128 __attribute__((mode(TI)));
+
 
 INCLUDE_ASM("asm/levels", func_L01_0042DE20);
+
+extern void func_2E34A0(void *, char *, char *);
+
+extern void func_2E3918(void *, void *, char *);
+
+extern float func_2E33E0(float);
+
+extern void func_323310(int, int);
 
 INCLUDE_ASM("asm/levels", func_L01_0042E0A8);
 

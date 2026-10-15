@@ -160,13 +160,57 @@ INCLUDE_ASM("asm/game", func_00298BB8);
 
 INCLUDE_ASM("asm/game", func_00298D10);
 
-INCLUDE_ASM("asm/game", func_00298D28);
+extern char D_001A9970[];
+extern void func_0029B168(char *, int, int *);
+extern void func_0029B628(void);
+extern void func_0026FEB8(void *);
+extern int D_00256138[];
+extern char D_00250000[];
+extern int func_0029AE78(int *);
+
+void func_00298D28(int *a0)
+{
+    int len1 = func_0029AE78(D_00256138);
+    int len2 = func_0029AE78((int *)(D_00250000 + 0x6368));
+    int size = a0[0];
+    int i;
+
+    if (size != len1 || a0[1] != len2) {
+        func_0026FEB8(D_001A9970);
+        return;
+    }
+    a0 = (int *)((char *)a0 + 8);
+    func_0029B168((char *)a0, 0, D_00256138);
+    a0 = (int *)((char *)a0 + size);
+    for (i = 0; i < 0x1C; i++) {
+        func_0029B168((char *)a0, i, (int *)(D_00250000 + 0x6368));
+        a0 = (int *)((char *)a0 + len2);
+    }
+    func_0029B628();
+}
 
 INCLUDE_ASM("asm/game", func_00298E08);
 
 INCLUDE_ASM("asm/game", func_00298F00);
 
-INCLUDE_ASM("asm/game", func_0029ADA0);
+extern int D_00256138[];
+extern char D_00250000[];
+extern int func_0029AE78(int *);
+extern int func_0029AF98(char *, int, int *);
+
+void func_0029ADA0(char *a0)
+{
+    char *out = a0;
+    int i = 0;
+
+    *(int *)(out + 0) = func_0029AE78(D_00256138);
+    *(int *)(out + 4) = func_0029AE78((int *)(D_00250000 + 0x6368));
+    out += 8;
+    out += func_0029AF98(out, 0, D_00256138);
+    for (i = 0; i < 0x1C; i++) {
+        out += func_0029AF98(out, i, (int *)(D_00250000 + 0x6368));
+    }
+}
 
 extern int func_00127348(void);
 extern char D_001A9A28[];

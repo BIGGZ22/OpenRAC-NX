@@ -459,7 +459,43 @@ int func_L00_0034C060(void)
     return 0;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0034C090);
+/* Callback state read by the guarded update below: a source pointer the value is taken from, the
+   value itself and the fallback word that decides the -1 result. */
+typedef struct {
+    char reserved00[0x14];
+    char *source;
+    int value;
+    char reserved1c[0x118];
+    int fallback;
+} CallbackStateL001FEC40;
+
+extern CallbackStateL001FEC40 D_L00_001FEC40;
+
+extern void func_L00_0030D788(int);
+
+/* Guarded callback update: with the pending-input bit set, refreshes the value from its source and reports it (or the fallback's -1), otherwise reports a configured input or runs the setup call. */
+int func_L00_0034C090(void)
+{
+    int result = 0;
+    int flags = D_00138344;
+    if (flags & 0x10) {
+        int value = *(int *)(D_L00_001FEC40.source + 0xE0);
+        if (value != 0)
+            D_L00_001FEC40.value = value;
+        else if (D_L00_001FEC40.fallback == 0) {
+            value = -1;
+            goto return_value;
+        }
+        value = 0;
+return_value:
+        return value;
+    }
+    if (flags & 0x900)
+        result = 1;
+    else
+        func_L00_0030D788(flags);
+    return result;
+}
 
 /* Run the three measured setup calls with an explicit long zero, then return the defined integer zero. */
 int func_L00_0034C118(void)
@@ -479,7 +515,31 @@ unsigned long long func_L00_0034C288(void)
     return 0;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0034C2B8);
+extern void func_L00_0030D838(int);
+
+/* Guarded callback update: with the pending-input bit set, refreshes the value from its source and reports it (or the fallback's -1), otherwise reports a configured input or runs the setup call. */
+int func_L00_0034C2B8(void)
+{
+    int result = 0;
+    int flags = D_00138344;
+    if (flags & 0x10) {
+        int value = *(int *)(D_L00_001FEC40.source + 0xE0);
+        if (value != 0)
+            D_L00_001FEC40.value = value;
+        else if (D_L00_001FEC40.fallback == 0) {
+            value = -1;
+            goto return_value;
+        }
+        value = 0;
+return_value:
+        return value;
+    }
+    if (flags & 0x900)
+        result = 1;
+    else
+        func_L00_0030D838(flags);
+    return result;
+}
 
 /* Run the three measured setup calls with an explicit long zero, then return the defined integer zero. */
 unsigned long long func_L00_0034C340(void)
@@ -490,7 +550,31 @@ unsigned long long func_L00_0034C340(void)
     return 0;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0034C370);
+extern void func_L00_0030D8A8(int);
+
+/* Guarded callback update: with the pending-input bit set, refreshes the value from its source and reports it (or the fallback's -1), otherwise reports a configured input or runs the setup call. */
+int func_L00_0034C370(void)
+{
+    int result = 0;
+    int flags = D_00138344;
+    if (flags & 0x10) {
+        int value = *(int *)(D_L00_001FEC40.source + 0xE0);
+        if (value != 0)
+            D_L00_001FEC40.value = value;
+        else if (D_L00_001FEC40.fallback == 0) {
+            value = -1;
+            goto return_value;
+        }
+        value = 0;
+return_value:
+        return value;
+    }
+    if (flags & 0x900)
+        result = 1;
+    else
+        func_L00_0030D8A8(flags);
+    return result;
+}
 int func_L00_0034C3F8(void)
 {
     func_0027C540(0);
@@ -499,7 +583,31 @@ int func_L00_0034C3F8(void)
     return 0;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0034C428);
+extern void func_L00_0030DAD8(int);
+
+/* Guarded callback update: with the pending-input bit set, refreshes the value from its source and reports it (or the fallback's -1), otherwise reports a configured input or runs the setup call. */
+int func_L00_0034C428(void)
+{
+    int result = 0;
+    int flags = D_00138344;
+    if (flags & 0x10) {
+        int value = *(int *)(D_L00_001FEC40.source + 0xE0);
+        if (value != 0)
+            D_L00_001FEC40.value = value;
+        else if (D_L00_001FEC40.fallback == 0) {
+            value = -1;
+            goto return_value;
+        }
+        value = 0;
+return_value:
+        return value;
+    }
+    if (flags & 0x900)
+        result = 1;
+    else
+        func_L00_0030DAD8(flags);
+    return result;
+}
 extern void func_L00_0030DB18(void);
 
 /* Run the three measured setup calls with an explicit long zero, then return the defined integer zero. */
@@ -511,7 +619,31 @@ int func_L00_0034C4B0(void)
     return 0;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0034C4E0);
+extern void func_L00_0030DA68(int);
+
+/* Guarded callback update: with the pending-input bit set, refreshes the value from its source and reports it (or the fallback's -1), otherwise reports a configured input or runs the setup call. */
+int func_L00_0034C4E0(void)
+{
+    int result = 0;
+    int flags = D_00138344;
+    if (flags & 0x10) {
+        int value = *(int *)(D_L00_001FEC40.source + 0xE0);
+        if (value != 0)
+            D_L00_001FEC40.value = value;
+        else if (D_L00_001FEC40.fallback == 0) {
+            value = -1;
+            goto return_value;
+        }
+        value = 0;
+return_value:
+        return value;
+    }
+    if (flags & 0x900)
+        result = 1;
+    else
+        func_L00_0030DA68(flags);
+    return result;
+}
 extern void func_L00_0030DAA8(void);
 
 /* Run the three measured setup calls with an explicit long zero, then return the defined integer zero. */
@@ -534,7 +666,31 @@ int func_L00_0034C638(void)
     return 0;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0034C668);
+extern void func_L00_0030D988(int);
+
+/* Guarded callback update: with the pending-input bit set, refreshes the value from its source and reports it (or the fallback's -1), otherwise reports a configured input or runs the setup call. */
+int func_L00_0034C668(void)
+{
+    int result = 0;
+    int flags = D_00138344;
+    if (flags & 0x10) {
+        int value = *(int *)(D_L00_001FEC40.source + 0xE0);
+        if (value != 0)
+            D_L00_001FEC40.value = value;
+        else if (D_L00_001FEC40.fallback == 0) {
+            value = -1;
+            goto return_value;
+        }
+        value = 0;
+return_value:
+        return value;
+    }
+    if (flags & 0x900)
+        result = 1;
+    else
+        func_L00_0030D988(flags);
+    return result;
+}
 /* Run the three measured setup calls with an explicit long zero, then return the defined integer zero. */
 /* Implementation matching decompiled output */
 long func_L00_0034C6F0(void)
@@ -704,8 +860,32 @@ INCLUDE_ASM("asm/levels", func_L00_00358670);
 
 INCLUDE_ASM("asm/levels", func_L00_003586A0);
 
-INCLUDE_ASM("asm/levels", func_L00_003588A8);
+extern void func_00282A60(unsigned int *dst, unsigned int val, int size);
+
+extern char D_L00_0021D140[];
+extern char D_L00_0021DDB0[];
+extern char D_L00_001B2370[] __attribute__((sda));
+
+/* Zeroes the three measured work areas, the two 0xC70-byte ones and a 0x40-byte one. */
+void func_L00_003588A8(void)
+{
+    func_00282A60((unsigned int *)D_L00_0021D140, 0, 0xC70);
+    func_00282A60((unsigned int *)D_L00_0021DDB0, 0, 0xC70);
+    func_00282A60((unsigned int *)D_L00_001B2370, 0, 0x40);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00358B30);
 
-INCLUDE_ASM("asm/levels", func_L00_00358D50);
+extern char *D_L00_001B1E9C __attribute__((sda));
+extern char *D_L00_001B1EA0 __attribute__((sda));
+
+/* Walks the 0x100-byte records between the two list bounds and returns the first whose 16-bit key at 0xB2 matches, or null. */
+char *func_L00_00358D50(int a0, int key)
+{
+    char *cur;
+    for (cur = D_L00_001B1E9C; cur != D_L00_001B1EA0; cur += 0x100) {
+        if (*(short *)(cur + 0xB2) == key)
+            return cur;
+    }
+    return 0;
+}

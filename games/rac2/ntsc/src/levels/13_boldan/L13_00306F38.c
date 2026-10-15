@@ -17,6 +17,12 @@ extern char D_00189EA0[];
 extern f32 D_L13_001B2568 __attribute__((sda));
 extern u32 D_L13_001B291C[] __attribute__((sda));
 extern u8 D_L13_001B1E60[];
+extern void func_2F8A20(u8 *, u8 *, f32);
+extern u8 D_0019B2E8[];
+extern s32 D_001A79F0 __attribute__((sda));
+extern u8 *D_L13_001B2A0C __attribute__((sda));
+extern u8 *D_L13_001B291C_2;
+extern u8 D_00189E20[];
 
 INCLUDE_ASM("asm/levels", func_L13_00306F38);
 
@@ -118,6 +124,9 @@ INCLUDE_ASM("asm/levels", func_L13_004230B0);
 INCLUDE_ASM("asm/levels", func_L13_00424728);
 
 INCLUDE_ASM("asm/levels", func_L13_004267B0);
+
+/* func_L13_0042BE60: the catalogue entry starts 8 bytes before the body (a stray
+   "addiu $sp,$sp,0x190 ; nop" tail). Not a function start — left as retail asm. */
 
 INCLUDE_ASM("asm/levels", func_L13_0042BE60);
 

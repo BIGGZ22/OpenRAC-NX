@@ -146,14 +146,34 @@ INCLUDE_ASM("asm/levels", func_L09_00402D50);
 
 INCLUDE_ASM("asm/levels", func_L09_00403100);
 
-INCLUDE_ASM("asm/levels", func_L09_004031D8);
+extern char D_L09_001B9C30[];
+extern f32 func_2EA578(char *a0, char *a1);
+extern f32 func_2EA3E0(f32 x);
+extern void func_2EACD0(char *a0, char *a1);
+
+void func_L09_0040B008(char *a0) {
+    char *s1 = a0;
+    char *s2 = s1 + 0xC0;
+    char *s3 = *(char **)(s1 + 0x68);
+    f32 a, b;
+    *(s32 *)(s3 + 0x8) = 0;
+    *(s32 *)(s3 + 0xC) = 0;
+    *(f32 *)(s3 + 0x0) = 0.2f;
+    *(f32 *)(s3 + 0x4) = 0.2f;
+    func_2EACD0(s2, s1 + 0xF0);
+    a = func_2EA3E0(func_2EA578(s2, D_L09_001B9C30));
+    b = func_2EA3E0(func_2EA578(s1 + 0xD0, D_L09_001B9C30));
+    if (b < a) {
+        *(s32 *)(s3 + 0x14) = 1;
+    } else {
+        *(s32 *)(s3 + 0x14) = 0;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L09_00403270);
 
 INCLUDE_ASM("asm/levels", func_L09_00403398);
-
 INCLUDE_ASM("asm/levels", func_L09_00403700);
-
 
 INCLUDE_ASM("asm/levels", func_L09_00403798);
 
@@ -168,7 +188,6 @@ INCLUDE_ASM("asm/levels", func_L09_004052F8);
 INCLUDE_ASM("asm/levels", func_L09_00405490);
 
 INCLUDE_ASM("asm/levels", func_L09_00405610);
-
 INCLUDE_ASM("asm/levels", func_L09_00406BF8);
 
 void func_L09_00406C90(char *a0) {
@@ -181,16 +200,56 @@ void func_L09_00406C90(char *a0) {
     *(s32 *)(a1 + 0x5C) = -1;
 }
 
+
 INCLUDE_ASM("asm/levels", func_L09_00406CC0);
 
 INCLUDE_ASM("asm/levels", func_L09_00406E78);
 
 INCLUDE_ASM("asm/levels", func_L09_00406FC8);
-
 INCLUDE_ASM("asm/levels", func_L09_00408058);
 
-INCLUDE_ASM("asm/levels", func_L09_00408138);
+extern void func_L09_00408058(char *a0, s32 a1, s32 a2, s32 a3);
 
+/* Sets an entity's colour key, or hands an off-kind entity to the shared body. */
+void func_L09_00408138(char *a0, char *a1, s32 a2, s32 a3, s32 a4)
+{
+    u8 c;
+    s16 kind;
+    char *p;
+
+    if (a1 == 0) {
+        return;
+    }
+    c = *(u8 *)(a1 + 0x20);
+    if (c == 0xFE) {
+        return;
+    }
+    if (c == 0xFD) {
+        return;
+    }
+    kind = *(s16 *)(a1 + 0xAA);
+    if (kind == 0xD0F) {
+        p = *(char **)(a1 + 0x68);
+        *(u8 *)(p + 0x31C) = a2;
+        c = *(u8 *)(a1 + 0x30);
+        if (c != 0xFF) {
+            *(u8 *)(p + 0x31E) = c;
+        }
+        if (a2 != 0) {
+            *(u8 *)(a1 + 0x30) = 0xFF;
+        }
+        return;
+    }
+    if (kind == 0xD09 || kind == 0xCEA) {
+        func_L09_00408058(a1, 0, a3, a4);
+        return;
+    }
+    if (kind == 0xDE0) {
+        *(u8 *)(a1 + 0x95) = *(u8 *)(a0 + 0x95);
+        return;
+    }
+    func_L09_00408058(a1, a2, a3, a4);
+}
 INCLUDE_ASM("asm/levels", func_L09_004081F0);
 
 INCLUDE_ASM("asm/levels", func_L09_004082D0);
@@ -204,8 +263,6 @@ INCLUDE_ASM("asm/levels", func_L09_00409308);
 INCLUDE_ASM("asm/levels", func_L09_0040A2E8);
 
 INCLUDE_ASM("asm/levels", func_L09_0040AC48);
-
-INCLUDE_ASM("asm/levels", func_L09_0040B008);
 
 INCLUDE_ASM("asm/levels", func_L09_0040B0C8);
 

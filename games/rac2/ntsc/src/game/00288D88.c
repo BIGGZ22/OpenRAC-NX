@@ -44,11 +44,64 @@ void func_00288D88(void)
 
 INCLUDE_ASM("asm/game", func_00288D90);
 
-INCLUDE_ASM("asm/game", func_00288E18);
+typedef struct { int active; char reserved04[0x20]; int key; int selection; char reserved2C[0x14]; int value40; int value44; } SelectorState;
+typedef struct { char reserved00[0x24]; int key; char reserved28[0x40]; int active;
+                short unk6C; char reserved6E[4]; unsigned short unk72; } SelectorOwner;
+typedef struct { unsigned short key; char reserved02[10]; } SelectorRow;
+extern SelectorState ref_L00_00288E18_00;
+extern SelectorOwner D_001A63A8;
+extern SelectorRow D_0018C958[];
+int func_00288E18(int key, int selection)
+{
+    SelectorState *state = &ref_L00_00288E18_00;
+    if (state->active == 0 && state->key == -1 && D_001A63A8.active == 0 &&
+        D_001A63A8.key == -1 && D_0018C958[selection].key != 65535) {
+        state->key = key;
+        state->selection = selection;
+        state->value40 = 0;
+        state->value44 = 0;
+        return 1;
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_00288E98);
 
-INCLUDE_ASM("asm/game", func_00288EA0);
+typedef struct {
+    int active;
+    int timer;
+    char pad08[0x18];
+    int entryIndex;
+    int unk24;
+} SubtitleState;
+
+typedef struct { int unk00; int unk04; int id; int unk0C; } TextEntry;
+
+typedef struct { char pad00[0x2A20]; int unk2A20[1]; } DiscToc;
+
+extern SubtitleState D_00254E78;
+extern TextEntry *D_001B1840 __attribute__((sda));
+extern DiscToc D_0014B540;
+
+void func_00288EA0(void)
+{
+    int idx;
+
+    if (D_00254E78.active == 0)
+        return;
+    if (D_00254E78.entryIndex != -1) {
+        idx = D_001B1840[D_00254E78.entryIndex].id;
+        if (idx != -1 && D_0014B540.unk2A20[idx] != 0 &&
+            idx == D_001A63A8.unk6C - 6000) {
+            if (D_001A63A8.unk72 != 6 && D_001A63A8.unk72 != 7)
+                D_001A63A8.unk72 = 5;
+        }
+    }
+    D_00254E78.active = 0;
+    D_00254E78.unk24 = -1;
+    D_00254E78.entryIndex = -1;
+    D_00254E78.timer = 0;
+}
 
 INCLUDE_ASM("asm/game", func_00288F48);
 
@@ -66,7 +119,21 @@ void func_00289AA0(void)
 
 INCLUDE_ASM("asm/game", func_00289AA8);
 
-INCLUDE_ASM("asm/game", func_00289FC8);
+extern short D_00254EC8[][2];
+
+int func_00289FC8(short key, int field, unsigned short *out)
+{
+    int i;
+
+    for (i = 0; i < 170; i++) {
+        if (D_00254EC8[i][field] == key) {
+            if (out != 0)
+                *out = (unsigned short)D_00254EC8[i][field ? 0 : 1];
+            return i;
+        }
+    }
+    return -1;
+}
 
 INCLUDE_ASM("asm/game", func_0028A030);
 
@@ -104,11 +171,34 @@ INCLUDE_ASM("asm/game", func_0028AFE8);
 
 INCLUDE_ASM("asm/game", func_0028B160);
 
-INCLUDE_ASM("asm/game", func_0028B288);
+extern char *D_001BAF3C;
+extern char * volatile D_001B1880 __attribute__((sda));
+extern char * volatile D_001B1884 __attribute__((sda));
 
-INCLUDE_ASM("asm/game", func_0028B2B8);
+void func_0028B288(void)
+{
+    char *p = D_001BAF3C;
+    D_001B1880 = p;
+    D_001B1884 = p + 0x64000;
+}
 
-INCLUDE_ASM("asm/game", func_0028B338);
+char *func_0028B2B8(int size)
+{
+    char *end;
+    char *cursor;
+
+    if (D_001B1880 == 0)
+        func_0028B288();
+    end = D_001B1884;
+    cursor = D_001B1880;
+    if (end - cursor < size)
+        return 0;
+    size = (size + 15) & 0xFFFFFFF0u;
+    D_001B1880 = cursor + size;
+    return cursor;
+}
+
+/* func_0028B338 is in 00288D88-g8.c. */
 
 INCLUDE_ASM("asm/game", func_0028B3D0);
 
@@ -130,9 +220,39 @@ void func_0028B4D8(char *p)
     *(int *)(p + 104) = 0;
 }
 
-INCLUDE_ASM("asm/game", func_0028B540);
+typedef struct { unsigned char pad00[0x64]; int key; unsigned char pad68[0x28]; } SearchRow_28B5D0;
+extern SearchRow_28B5D0 D_00255330[];
+extern void func_0028B3D0(int, int, int, int, int, int, int);
 
-INCLUDE_ASM("asm/game", func_0028B5D0);
+void func_0028B540(void)
+{
+    char *row = (char *)D_00255330;
+    int *field = (int *)(row + 0x6c);
+    int i = 0;
+    do {
+        func_0028B3D0(i, 0xffff, 0, 0, 0, 0, 1);
+        i++;
+        field[4] = 0;
+        field[0] = -6;
+        func_0028B4D8(row);
+        row += 0x90;
+        field = (int *)((char *)field + 0x90);
+    } while (i < 13);
+}
+
+int func_0028B5D0(int key)
+{
+    int i;
+    for (i = 0; i < 13; i++) {
+        if (D_00255330[i].key == key)
+            break;
+    }
+    if (i < 13) {
+        func_0028B3D0(i, 0xffff, 0, 0, 0, 0, 0);
+        return 1;
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_0028B650);
 

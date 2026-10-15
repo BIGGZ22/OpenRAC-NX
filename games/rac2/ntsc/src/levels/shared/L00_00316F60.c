@@ -95,6 +95,9 @@ extern void func_0029F338_3(void *object);
 
 typedef unsigned int u32;
 
+extern u8 D_L00_00268E20;
+extern s32 D_L00_001A902C __attribute__((sda));
+
 typedef struct {
     u8 prefix[0x40];
     void *payload;
@@ -204,7 +207,15 @@ INCLUDE_ASM("asm/levels", func_L00_0031EC88);
 
 INCLUDE_ASM("asm/levels", func_L00_0031F1C0);
 
-INCLUDE_ASM("asm/levels", func_L00_0031F220);
+extern int func_002ABB78(char *);
+
+int func_L00_0031F220(const unsigned char *entity) {
+    if (entity == 0)
+        return 0;
+    if (func_002ABB78((char *)entity) != 0)
+        return *(const signed short *)(entity + 0xAA) == 0x1F6;
+    return 1;
+}
 
 /* One fixed ordinary scalar query. Signed halfword width, offset and
    equality constant are measured; no original class or field-name claim. */
@@ -331,9 +342,27 @@ void func_L00_00323E48(GornRecordWrite64 *record, u32 selector,
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L00_00323F28);
+extern void func_002AF000(void *);
+extern void func_00282CC0(void *, void *, void *);
 
-INCLUDE_ASM("asm/levels", func_L00_00323F70);
+void func_L00_00323F28(void *a0, void *a1) {
+    int buf[4];
+    func_002AF000(buf);
+    func_00282CC0(a0, buf, a1);
+}
+
+extern int D_001A7350 __attribute__((sda));
+extern int D_001A7354 __attribute__((sda));
+extern void func_00279BD8(void *, void *);
+extern int func_00283CF0(f32);
+
+void func_L00_00323F70(void *input, int *out_x, int *out_y) {
+    u8 temporary[8];
+
+    func_00279BD8(temporary, input);
+    *out_x = func_00283CF0(((*(f32 *)temporary) - (f32)D_001A7350) * 0.0625f);
+    *out_y = func_00283CF0(((*(f32 *)(temporary + 4)) - (f32)D_001A7354) * 0.0625f);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00324120);
 
@@ -343,7 +372,17 @@ INCLUDE_ASM("asm/levels", func_L00_00324E48);
 
 INCLUDE_ASM("asm/levels", func_L00_00324F10);
 
-INCLUDE_ASM("asm/levels", func_L00_00324F18);
+extern void func_00283098(char *, char *, char *);
+extern void func_00282D30(void *, void *, float);
+
+void func_L00_00324F18(char *a0, char *a1, float f12, float f13, float f14) {
+    *(float *)(a1 + 0) = f12;
+    *(float *)(a1 + 4) = f13;
+    *(float *)(a1 + 8) = f14;
+    func_00283098(a1, a1, a0 + 0xC0);
+    func_00282D30(a1, a1, *(float *)(a0 + 0x2C));
+    func_00282CC0(a1, a1, a0 + 0x10);
+}
 
 extern void func_002AFFD8(u8 *);
 
@@ -370,7 +409,13 @@ void func_L00_003253A0(u8 *a0)
 
 INCLUDE_ASM("asm/levels", func_L00_003255A0);
 
-INCLUDE_ASM("asm/levels", func_L00_00325600);
+extern void func_002B0408(void *, void *, void *);
+
+void func_L00_00325600(void *a0, void *a1, void *a2) {
+    int buf[4];
+    func_00282D30(buf, a1, -1.0f);
+    func_002B0408(a0, buf, a2);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00325760);
 
@@ -381,14 +426,16 @@ INCLUDE_ASM("asm/levels", func_L00_00325CC0);
 INCLUDE_ASM("asm/levels", func_L00_00325FC0);
 
 /* stores a wrapped angle back into the caller field and forwards its [0,1] rescaled value (x*0.5+0.5) with two pointer arguments to a second callee */
-void func_L00_00325FC8(f32 *a0, s32 a1, s32 a2, f32 a3) {
+int func_L00_00325FC8(f32 *a0, s32 a1, s32 a2, f32 a3) {
     f32 v = func_00283198_4(a0[0]);
     f32 s = v * 0.5f + 0.5f;
     a0[0] = func_00283B98_4(a0[0], a3);
     func_00283D38_2(a1, a2, s);
 }
 
-INCLUDE_ASM("asm/levels", func_L00_00326048);
+void func_L00_00326048(char *a0, f32 *a1, s32 a2, s32 a3, f32 f) {
+    *(int *)(a0 + 0x78) = func_L00_00325FC8(a1, a2, a3, f);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00326080);
 
@@ -409,7 +456,7 @@ INCLUDE_ASM("asm/levels", func_L00_00326620);
 
 INCLUDE_ASM("asm/levels", func_L00_003266D8);
 
-INCLUDE_ASM("asm/levels", func_L00_003268E8);
+
 
 extern unsigned char D_001395B8[];
 extern int func_L00_003269F0(void);
@@ -446,11 +493,21 @@ INCLUDE_ASM("asm/levels", func_L00_0032A088);
 
 INCLUDE_ASM("asm/levels", func_L00_0032A0B8);
 
-INCLUDE_ASM("asm/levels", func_L00_0032A0E8);
+void func_L00_0032A0E8(void) {
+    u8 *current = &D_L00_00268E20;
+    u8 *end = current + 0x14860;
 
-INCLUDE_ASM("asm/levels", func_L00_0032A138);
+    D_L00_001A902C = 0;
+    do {
+        *(s32 *)(current + 4) = -1;
+        *(s32 *)current = 0;
+        current += 0xA430;
+    } while ((s32)current < (s32)end);
+}
 
-INCLUDE_ASM("asm/levels", func_L00_0032A170);
+
+
+
 
 INCLUDE_ASM("asm/levels", func_L00_0032A1A8);
 

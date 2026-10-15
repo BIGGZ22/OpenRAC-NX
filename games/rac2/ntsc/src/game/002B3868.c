@@ -28,7 +28,32 @@ s32 func_002B38B8(u8 *m) {
     return m[0xBE] & 4;
 }
 
-INCLUDE_ASM("asm/game", func_002B38C8);
+extern float func_00282E80(char *, float *);
+extern float func_00282E48(char *, char *);
+extern float func_00283248(float, float);
+extern float func_00283C80(float, float);
+extern int D_001A8CA0 __attribute__((sda));
+extern int D_0018C0B0;
+
+float func_002B38C8(char *object, char *target)
+{
+    char *position = object + 0x10;
+    char *destination = target + 0x10;
+    float distance;
+    float value = func_00282E80(position, (float *)destination);
+    if (D_001A8CA0 != 0)
+        value = func_00282E48(position, destination);
+    distance = value;
+    if (D_001A8CA0 == 0) {
+        float angle = func_00283248(*(float *)(target + 0x10) - *(float *)(object + 0x10),
+                                  *(float *)(target + 0x14) - *(float *)(object + 0x14));
+        angle = func_00283C80(angle, *(float *)(object + 0xF8));
+        distance = distance + angle * distance;
+    }
+    if (target == (char *)D_0018C0B0)
+        distance += 42.0f;
+    return distance;
+}
 
 INCLUDE_ASM("asm/game", func_002B39A0);
 

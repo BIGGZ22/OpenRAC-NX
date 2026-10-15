@@ -69,6 +69,24 @@ extern void func_L00_00426680(char *);
 
 extern void func_0035F3A8(int, int, int);
 
+extern void *func_00335FB0(void *);
+
+extern void func_L00_00426560(char *);
+
+#define SDA_OBJ __attribute__((section(".sdata")))
+
+extern char *D_L00_001B1844 SDA_OBJ;
+
+extern char *D_L00_001B8E10;
+
+extern char D_L00_001ADD98[] SDA_OBJ;
+
+extern char D_L00_001ADD38[] SDA_OBJ;
+
+extern char D_L00_001ADD78[] SDA_OBJ;
+
+extern char D_L00_001ADD58[] SDA_OBJ;
+
 typedef struct Rac2Native_6af85cabb56d3b41_SmallConditional52Global {
     unsigned char unknown_00[0x2294];
     int mode_2294;
@@ -124,7 +142,25 @@ void func_L00_00426480(char *object)
 
 INCLUDE_ASM("asm/levels", func_L00_00426560);
 
-INCLUDE_ASM("asm/levels", func_L00_00426680);
+/* clears the seven words of the sub-object at +0x70 (the last after a refresh call), then
+   clears the flag word and the identity word-16 of the table entry and the owner's +0x7E. */
+void func_L00_00426680(char *self)
+{
+    char *p = *(char **)(self + 0x70);
+    char *q;
+
+    *(int *)(p + 0x0) = 0;
+    *(int *)(p + 0x8) = 0;
+    *(int *)(p + 0x4) = 0;
+    *(int *)(p + 0xC) = 0;
+    *(int *)(p + 0x10) = 0;
+    *(int *)(p + 0x14) = 0;
+    *(int *)(p + 0x18) = 0;
+    func_L00_00426560(self);
+    q = *(char **)(D_L00_001B1844 + *(short *)(self + 0x84) * 0x20 + 0x1C);
+    *(short *)(q + 0x26) = 0;
+    *(short *)(self + 0x7E) = 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_004266E8);
 
@@ -151,13 +187,23 @@ void func_L00_00427008(char *self)
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L00_00427078);
+/* when the mode halfword at +0x86 is 4 or 0x51, raises the flag halfword of the table entry
+   selected by the owner's index halfword at +0x84. */
+void func_L00_00427078(void)
+{
+    char *p = D_L00_001B8E10;
+    short mode = *(short *)(p + 0x86);
+    char *q;
+
+    if (mode == 4 || mode == 0x51) {
+        q = *(char **)(D_L00_001B1844 + *(short *)(p + 0x84) * 0x20 + 0x1C);
+        *(short *)(q + 0x26) = 1;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_004270C0);
 
 INCLUDE_ASM("asm/levels", func_L00_00427290);
-
-INCLUDE_ASM("asm/levels", func_L00_004272A0);
 
 INCLUDE_ASM("asm/levels", func_L00_00427620);
 
@@ -276,7 +322,6 @@ int func_L00_004284A8(void) {
 
 INCLUDE_ASM("asm/levels", func_L00_004284B0);
 
-
 void func_L00_00428580(void)
 {
 }
@@ -331,7 +376,35 @@ INCLUDE_ASM("asm/levels", func_L00_004291A0);
 
 INCLUDE_ASM("asm/levels", func_L00_00429568);
 
-INCLUDE_ASM("asm/levels", func_L00_00429C18);
+extern int D_0018C0BC;
+extern int D_0018C0B4;
+extern int func_L00_004290C0(char *, char *);
+
+int func_L00_00429C18(char *self, char *target)
+{
+    char *entry = *(char **)(D_L00_001B1844 + *(short *)(self + 0x84) * 0x20 + 0x1C);
+
+    if (*(unsigned char *)(entry + 0x39) != 0) {
+        return -1;
+    }
+    if (*(unsigned char *)(entry + 0x38) != 0 && *(short *)(target + 0x86) != 0x13) {
+        return 1;
+    }
+    if (target != 0 && *(short *)(target + 0x7E) == 0 &&
+        *(unsigned char *)(target + 0x7C) >= *(unsigned char *)(self + 0x7C)) {
+        return 0;
+    }
+    if (func_L00_004290C0(self, target) == 0) {
+        return 0;
+    }
+    if (*(int *)(entry + 0x48) >= 0 && D_0018C0BC != *(int *)(entry + 0x48)) {
+        return 0;
+    }
+    if (*(int *)(entry + 0x44) >= 0 && D_0018C0B4 != *(int *)(entry + 0x44)) {
+        return 0;
+    }
+    return 1;
+}
 
 void func_L00_00429CE0(void)
 {
@@ -345,7 +418,15 @@ INCLUDE_ASM("asm/levels", func_L00_0042A460);
 
 INCLUDE_ASM("asm/levels", func_L00_0042A4E8);
 
-INCLUDE_ASM("asm/levels", func_L00_0042A500);
+/* clears the word at +0x20 and the halfword at +0x26 of the table entry selected by the
+   index argument. */
+void func_L00_0042A500(int i)
+{
+    char *q = *(char **)(D_L00_001B1844 + i * 0x20 + 0x1C);
+
+    *(short *)(q + 0x26) = 0;
+    *(int *)(q + 0x20) = 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0042A520);
 
@@ -361,31 +442,48 @@ void func_L00_0042AB48(void)
 {
 }
 
-
 INCLUDE_ASM("asm/levels", func_L00_0042AC18);
 
 INCLUDE_ASM("asm/levels", func_L00_0042AD98);
 
 INCLUDE_ASM("asm/levels", func_L00_0042B038);
 
-
-INCLUDE_ASM("asm/levels", func_L00_0042B730);
-
 INCLUDE_ASM("asm/levels", func_L00_0042B840);
 
 INCLUDE_ASM("asm/levels", func_L00_0042BA18);
 
-INCLUDE_ASM("asm/levels", func_L00_0042BAD0);
+/* refreshes the object, installs the block at +0x30 and returns the object. */
+char *func_L00_0042BAD0(char *a0)
+{
+    func_00335FB0(a0);
+    *(char **)(a0 + 0x30) = D_L00_001ADD98;
+    return a0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0042BC30);
 
-INCLUDE_ASM("asm/levels", func_L00_0042BCF8);
+char *func_L00_0042BCF8(char *a0)
+{
+    func_00335FB0(a0);
+    *(char **)(a0 + 0x30) = D_L00_001ADD38;
+    return a0;
+}
 
-INCLUDE_ASM("asm/levels", func_L00_0042BFF8);
+char *func_L00_0042BFF8(char *a0)
+{
+    func_00335FB0(a0);
+    *(char **)(a0 + 0x30) = D_L00_001ADD78;
+    return a0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0042C030);
 
-INCLUDE_ASM("asm/levels", func_L00_0042C290);
+char *func_L00_0042C290(char *a0)
+{
+    func_00335FB0(a0);
+    *(char **)(a0 + 0x30) = D_L00_001ADD58;
+    return a0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0042C2C8);
 

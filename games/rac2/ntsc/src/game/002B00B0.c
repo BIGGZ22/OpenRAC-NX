@@ -141,7 +141,19 @@ void func_002B0408(void *a0, void *a1, void *a2)
 
 INCLUDE_ASM("asm/game", func_002B04D8);
 
-INCLUDE_ASM("asm/game", func_002B04E0);
+extern void func_002AFDD8(char *a0, char *a1, char *a2, char *a3);
+extern float func_00283248(float a, float b);
+
+typedef int V4_002B04E0 __attribute__((mode(TI)));
+
+float func_002B04E0(char *a0, float *src, char *third)
+{
+    float local[4];
+
+    *(V4_002B04E0 *)local = *(V4_002B04E0 *)src;
+    func_002AFDD8(a0, (char *)local, (char *)local, third);
+    return func_00283248(local[0], local[1]);
+}
 
 INCLUDE_ASM("asm/game", func_002B0518);
 

@@ -29,6 +29,14 @@ extern int D_L23_001B1694 __attribute__((sda));
 
 extern int D_L23_001B1698 __attribute__((sda));
 
+extern float D_L23_001B14E4 __attribute__((sda));
+
+extern void func_31A108(int);
+
+extern void func_L23_0041A648(char *);
+
+extern void func_L23_0042AC70(void);
+
 /* Reports whether a word of the object reached through the pointer global is set. */
 int func_L23_0041B948(void) {
     return *(int *)(*(char **)(D_L23_001B1484 + 0x68) + 0x604) != 0;
@@ -88,3 +96,55 @@ void func_L23_0041E3C8(void) {
                   (D_L23_001B15A4 - D_L23_001B3788) * D_L23_001B178C / D_L23_001B15A4);
 }
 
+/* Stores the incoming float in the level global reached through $gp. */
+void func_L23_0041B960(float arg0) { D_L23_001B14E4 = arg0; }
+
+/* Copies the measured word of every live slot into the object the argument names. */
+void func_L23_0041C040(char *arg0) {
+    char *state = *(char **)(D_L23_001B1484 + 0x68);
+    char *slot;
+    char **p;
+    int i;
+
+    slot = *(char **)(state + 0x610);
+    if (slot != 0)
+        *(int *)(slot + 0x98) = *(int *)(*(char **)(slot + 0x24) + 0x10);
+    slot = *(char **)(state + 0x614);
+    if (slot != 0)
+        *(int *)(slot + 0x98) = *(int *)(*(char **)(slot + 0x24) + 0x10);
+    p = (char **)(state + 0x358);
+    for (i = 4; i >= 0; i--) {
+        if (*p != 0)
+            *(int *)(*p + 0x98) = *(int *)(*(char **)(*p + 0x24) + 0x10);
+        p++;
+    }
+    *(int *)(arg0 + 0x98) = *(int *)(*(char **)(arg0 + 0x24) + 0x10);
+}
+
+/* Releases the three measured handles of the level state. */
+void func_L23_0041D930(void) {
+    char *state;
+
+    func_L23_0041A648(D_L23_001B1484);
+    state = *(char **)(D_L23_001B1484 + 0x68);
+    if (*(char **)(state + 0x620) != 0) {
+        func_31A108((int)*(char **)(state + 0x620));
+        *(char **)(state + 0x620) = 0;
+    }
+    if (*(char **)(state + 0x624) != 0) {
+        func_L23_0042AC70();
+        func_31A108((int)*(char **)(state + 0x624));
+        *(char **)(state + 0x624) = 0;
+    }
+    if (*(char **)(state + 0x614) != 0) {
+        func_31A108((int)*(char **)(state + 0x614));
+        *(char **)(state + 0x614) = 0;
+    }
+}
+
+/* Zero while the counter is negative. */
+int func_L23_0041C0B0(void) {
+    if (D_L23_001B1694 < 0)
+        return 1;
+    return 0;
+}

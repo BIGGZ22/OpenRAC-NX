@@ -1,15 +1,15 @@
-/* w13 ABANDON — func_L01_003EE8E0, 112 o, 7 places.
- * Derniere ligne de check.py (3e compilation) :
+/* w13 ABANDON — func_L01_003EE8E0, 112 bytes, 7 places.
+ * last check.py line (3rd compilation):
  *   func_L01_003EE8E0: 0 of 7 places missing -> "instruction at +0x1c differs"
- *   (116 octets produits contre 112 attendus)
- * Toute la structure colle : les trois beql/bne avec `addiu $v0,$zero,0xFF`
- * dans les cases de delai, le call, le magasin final `sb $v0,0xA8($s0)` et le
- * retour 0xFF partagent bien $v0. Il reste UNE instruction de trop :
+ *   (116 bytes produced against 112 expected)
+ * The whole structure fits: the three beql/bne with `addiu $v0,$zero,0xFF`
+ * in the delay slots, the call, the final store `sb $v0,0xA8($s0)` and the
+ * 0xFF return do share $v0. ONE instruction too many is left:
  *   retail : addiu $v0,$0,0xFF ; ld $ra ; sb $v0,0xA8($s0) ; ld $s0 ; jr
- *   ici    : addiu $v0,$0,0xFF ; sb $v0,0xA8($s0) ; ld $s0 ; addiu $v0,$0,0xFF(!!) ; ld $ra ; jr
- * gcc rematerialise la constante pour le retour au lieu de reutiliser $v0.
- * Essaye aussi : `return 0xFF;` litteral (donne $v1 pour le store, 4
- * materialisations), et un `r = 0xFF; return r;` unique.
+ *   here   : addiu $v0,$0,0xFF ; sb $v0,0xA8($s0) ; ld $s0 ; addiu $v0,$0,0xFF(!!) ; ld $ra ; jr
+ * gcc rematerialises the constant for the return instead of reusing $v0.
+ * Also tried: literal `return 0xFF;` (gives $v1 for the store, 4
+ * materialisations), and a single `r = 0xFF; return r;`.
  */
 extern char *func_002A9640(char *, int, int);
 

@@ -28,8 +28,6 @@ extern void func_L13_004094D0(char *a0, char *a1, char *a2);
 
 extern int ref_L13_0040A480_00(void *);
 
-extern void func_L13_0040A3B0(void *, void *, void *, void *);
-
 extern char D_00189EA0[];
 
 extern void func_002AFFD8(void *, void *, int);
@@ -80,7 +78,18 @@ void func_L13_004095A8(void *self, void *base, void *arg)
 
 INCLUDE_ASM("asm/levels", func_L13_004095F8);
 
+extern int func_L13_004094C0(char *, char *);
+
+extern void func_003357C8(char *, char *, int, int);
+
+extern void func_L13_004095F8(char *, char *);
+
+extern float func_002F8938(char *, char *);
+
+extern int D_001A79F0;
+
 INCLUDE_ASM("asm/levels", func_L13_00409840);
+
 
 void func_L13_00409AB8(char *a0, char *a1)
 {
@@ -130,7 +139,20 @@ INCLUDE_ASM("asm/levels", func_L13_0040A0A0);
 
 INCLUDE_ASM("asm/levels", func_L13_0040A2C8);
 
+extern float func_0032E870(char *, void *, char *);
+
+extern float func_003281B8(void *, char *, int, float, float, float, float);
+
+extern void func_002F8FA0(void *, void *);
+
+extern void func_002F92E8(char *, char *, void *);
+
+extern float func_002F86B0(float);
+
+typedef int TI128 __attribute__((mode(TI)));
+
 INCLUDE_ASM("asm/levels", func_L13_0040A3B0);
+
 
 void func_L13_0040A480(char *a0)
 {
@@ -181,7 +203,6 @@ INCLUDE_ASM("asm/levels", func_L13_0040D930);
 
 INCLUDE_ASM("asm/levels", func_L13_0040DC20);
 
-INCLUDE_ASM("asm/levels", func_L13_0040DE50);
 
 INCLUDE_ASM("asm/levels", func_L13_0040DFC0);
 

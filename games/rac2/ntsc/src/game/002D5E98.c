@@ -79,11 +79,43 @@ INCLUDE_ASM("asm/game", func_002D5EC0);
 
 INCLUDE_ASM("asm/game", func_002D6230);
 
-INCLUDE_ASM("asm/game", func_002D68D8);
+/* func_002D68D8 is in 002D5E98-g8.c. */
 
 INCLUDE_ASM("asm/game", func_002D6970);
 
-INCLUDE_ASM("asm/game", func_002D6E78);
+typedef struct { char pad[4]; short mode; } Mode2D6E78;
+typedef struct { char pad[0x29C]; int flags[5]; int selected; } Map2D6E78;
+typedef struct { char pad[0xDB]; unsigned char active; } State2D6E78;
+extern Mode2D6E78 D_001A63A8;
+extern Map2D6E78 D_001C4FA0;
+extern State2D6E78 D_001F2840;
+extern unsigned char D_001F291B;
+extern void func_002B7AD0(void);
+
+int func_002D6E78(void)
+{
+    if (D_001A63A8.mode == 0) {
+        Map2D6E78 *map = &D_001C4FA0;
+        int index = map->selected;
+        if (index != -1) {
+            D_001F291B = 0;
+            map->flags[index] ^= 0x1000;
+            map->selected = -1;
+        }
+    }
+    if (D_001A63A8.mode != 0) {
+        State2D6E78 *state = &D_001F2840;
+        if (state->active != 0) {
+            Map2D6E78 *map;
+            func_002B7AD0();
+            state->active = 0;
+            map = &D_001C4FA0;
+            map->flags[map->selected] = -1;
+            map->selected = -1;
+        }
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002D6F38);
 
@@ -124,7 +156,25 @@ int func_002D81A8(void) {
 
 INCLUDE_ASM("asm/game", func_002D81B0);
 
-INCLUDE_ASM("asm/game", func_002D82C8);
+extern short D_001A63AC;
+extern void func_002B7AD0(void);
+extern int D_001B1840 __attribute__((sda));
+extern int D_00254EA4;
+
+int func_002D82C8(char *object)
+{
+    if (D_001A63AC != 0 && *(int *)(object + 0x50) == 1)
+        func_002B7AD0();
+    func_002DE3A0(1);
+    {
+        int value = *(int *)(object + 0x54);
+        if (value != 0) {
+            D_00254EA4 = *(int *)(object + 0x38);
+            D_001B1840 = value;
+        }
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002D8338);
 
@@ -215,7 +265,7 @@ int func_002D9798(int *arg0)
 
 INCLUDE_ASM("asm/game", func_002D99E8);
 
-INCLUDE_ASM("asm/game", func_002D9CF8);
+
 
 INCLUDE_ASM("asm/game", func_002D9DA0);
 
@@ -265,7 +315,7 @@ INCLUDE_ASM("asm/game", func_002DA9A8);
 
 INCLUDE_ASM("asm/game", func_002DAD18);
 
-INCLUDE_ASM("asm/game", func_002DAE90);
+/* func_002DAE90 is in 002D5E98-g8.c. */
 
 INCLUDE_ASM("asm/game", func_002DAF68);
 
@@ -309,7 +359,29 @@ undefined8 func_002DBB48(int param_1)
   return 0;
 }
 
-INCLUDE_ASM("asm/game", func_002DBB78);
+extern int D_001A7420 __attribute__((sda));
+extern unsigned int D_00138344;
+typedef struct { char reserved00[0x14]; char *object; int value; char reserved1C[0xC8]; int clear; } SceneState;
+extern SceneState ref_L00_002DBB78_00;
+int func_002DBB78(void)
+{
+    if (D_001A7420 != 16 && D_001A7420 != 1) {
+        ref_L00_002DBB78_00.value = *(int *)(ref_L00_002DBB78_00.object + 0xE0);
+        return 0;
+    }
+    {
+        unsigned int flags = D_00138344;
+        if (flags & 0x20) {
+            ref_L00_002DBB78_00.clear = 0;
+            ref_L00_002DBB78_00.value = *(int *)(ref_L00_002DBB78_00.object + 0xE0);
+            *(int *)(ref_L00_002DBB78_00.object + 0x12C) = 1;
+        } else if (flags & 0x10) {
+            ref_L00_002DBB78_00.value = *(int *)(ref_L00_002DBB78_00.object + 0xE0);
+            *(int *)(ref_L00_002DBB78_00.object + 0x12C) = 0;
+        }
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002DBC10);
 
@@ -363,7 +435,7 @@ INCLUDE_ASM("asm/game", func_002DC720);
 
 INCLUDE_ASM("asm/game", func_002DC900);
 
-INCLUDE_ASM("asm/game", func_002DCAB8);
+/* func_002DCAB8 is built from 002D5E98-g8.c for small-data access. */
 
 int func_002DCB28(Handles_2DCB28 *object) {
     object->first = func_002DE618(object->first);

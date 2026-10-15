@@ -207,7 +207,7 @@ INCLUDE_ASM("asm/game", func_0028FF50);
 
 INCLUDE_ASM("asm/game", func_00290008);
 
-INCLUDE_ASM("asm/game", func_00290010);
+/* func_00290010 is in the -G8 sibling. */
 
 INCLUDE_ASM("asm/game", func_002900B8);
 

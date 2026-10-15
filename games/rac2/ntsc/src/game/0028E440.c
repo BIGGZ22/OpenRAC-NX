@@ -10,7 +10,31 @@ void func_0028E440(void)
 
 INCLUDE_ASM("asm/game", func_0028E458);
 
-INCLUDE_ASM("asm/game", func_0028E588);
+extern int func_0028AB20(int);
+extern unsigned short *D_001B188C;
+extern short *D_001B1890;
+extern unsigned int *D_001B1898;
+extern unsigned int *D_001B1894;
+
+int func_0028E588(int key, int index)
+{
+    int number = func_0028AB20(key);
+    unsigned short *row = (unsigned short *)(number * 8 + (unsigned int)D_001B188C);
+    if (row[0] == 65535)
+        goto fail;
+    if (index >= row[1])
+        goto fail;
+    {
+        unsigned int mask = 0x80000000u;
+        int offset = row[2] + index;
+        short *pair = (short *)(offset * 4 + (unsigned int)*(short *volatile *)&D_001B1890);
+        if (D_001B1898[pair[0] * 2] & mask)
+            goto fail;
+        return (D_001B1894[pair[1] * 2] & mask) ? 0 : offset;
+    }
+fail:
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_0028E640);
 

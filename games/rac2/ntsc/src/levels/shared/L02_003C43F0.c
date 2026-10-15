@@ -1,4 +1,43 @@
 #include "include_asm.h"
+#include "common.h"
+
+typedef int TI128 __attribute__((mode(TI)));
+
+extern void func_00282978(void *);
+
+extern void func_00282CF0(float *, const float *, const float *);
+
+extern void func_002AFDD8(unsigned char *, unsigned char *, unsigned char *, int);
+
+extern float func_00283248(float, float);
+
+extern float func_00282E20(char *);
+
+extern float func_002A7878(void *, void *, float, float);
+
+extern float func_002A7940(void);
+
+extern float func_00283180(float);
+
+extern float func_00283198(float);
+
+extern void func_00282CC0(void *, void *, void *);
+
+extern void func_002AEC48(void *, void *, int, float, float);
+
+extern void func_002B0990(void *, void *, int, float, int);
+
+extern void func_L02_002F1FB8(void *, void *, void *);
+
+extern void func_00282F20(char *, char *, float);
+
+extern void func_00282DB0(void *, void *);
+
+extern char *D_L02_001FF1C0[];
+
+extern char *D_L02_001B359C __attribute__((sda));
+
+extern char *D_L02_001FC060[];
 
 extern float func_00283C80_3(float, float);
 
@@ -38,7 +77,7 @@ extern void func_002B4FF0(float);
 
 extern struct S_001A63A8 D_001A63A8;
 
-extern int D_L02_001A8FF0;
+extern int D_L02_001A8FF0 __attribute__((sda));
 
 extern void func_002B60B0(void *, float, float, float, float);
 
@@ -107,12 +146,16 @@ void func_L02_003C46E0(struct Outer *p)
         func_002E5DA0(1, 0, g->arr[0], 2198);
 }
 
+/* Clears the sub-object flags of three inline pointer arrays, turns a frame counter into a
+   rotation, and pushes each element's 128-bit block one object forward. */
 INCLUDE_ASM("asm/levels", func_L02_003C4848);
 
 INCLUDE_ASM("asm/levels", func_L02_003C49A0);
 
 INCLUDE_ASM("asm/levels", func_L02_003C4C80);
 
+/* Reads three angles through a helper, converts them, and hands them to the placement call
+   together with the object's own angle. */
 INCLUDE_ASM("asm/levels", func_L02_003C4E18);
 
 INCLUDE_ASM("asm/levels", func_L02_003C4ED8);
@@ -153,17 +196,67 @@ INCLUDE_ASM("asm/levels", func_L02_003CD970);
 
 INCLUDE_ASM("asm/levels", func_L02_003CE4D0);
 
-INCLUDE_ASM("asm/levels", func_L02_003CE8B0);
+/* Runs the kind's entry hook: the first when the level flag is set, the second when the third
+   argument is clear, the third with the object's own angle otherwise. */
+void func_L02_003CE8B0(char *a0, int a1, int a2) {
+    char *p = *(char **)(a0 + 0x68);
 
-INCLUDE_ASM("asm/levels", func_L02_003CE908);
+    if (D_L02_001A8FF0)
+        func_L02_00333438();
+    else if (a2 == 0)
+        func_L01_00321178();
+    else
+        func_002B4FF0(*(float *)(p + 0x31C));
+}
 
+/* Clears the two angle words at +0x310 and +0x312 and counts up the +0x96 word, then runs the
+   two placement helpers on the sub-object at +0x260. */
+void func_L02_003CE908(char *a0) {
+    char *p = *(char **)(a0 + 0x68);
+    char *q;
+    unsigned short n;
+
+    func_00282978(p + 0x310);
+    func_00282978(p + 0x312);
+    n = *(unsigned short *)(a0 + 0x96);
+    if (n <= 0xFFFE)
+        *(unsigned short *)(a0 + 0x96) = n + 1;
+    q = p + 0x260;
+    func_002AEC48(a0, q, 0, 0.03f, 0.3000000119209289550781250f);
+    func_002B0990(a0, q, 0, 1.79999995231628417968750f, 1);
+}
+
+/* Near miss (see work/wave7-20261013/w04/drafts): the loop, both branch-likely tests and the
+   duplicated `lh` delay-slot loads are retail's; two register copies are missing because this
+   compiler gives the kind byte the other register. 116 bytes against 124. */
 INCLUDE_ASM("asm/levels", func_L02_003CE9A8);
 
 INCLUDE_ASM("asm/levels", func_L02_003CEA28);
 
 INCLUDE_ASM("asm/levels", func_L02_003CEBB8);
 
-INCLUDE_ASM("asm/levels", func_L02_003CEC70);
+/* Reads the object's basis, clamps its pitch and yaw, and stores them back. */
+void func_L02_003CEC70(char *a0) {
+    char *p = *(char **)(a0 + 0x68);
+    float v[4];
+    float x;
+    float y;
+
+    func_00282CF0(v, (const float *)(p + 0x1F0), (const float *)(a0 + 0x10));
+    func_002AFDD8((unsigned char *)a0, (unsigned char *)v, (unsigned char *)v, 0);
+    x = func_00283248(v[0], v[1]);
+    *(float *)(p + 0x2C0) = x;
+    if (x > 0.7853982448577881f)
+        *(float *)(p + 0x2C0) = 0.7853982448577881f;
+    else if (x < -0.7853982448577881f)
+        *(float *)(p + 0x2C0) = -0.7853982448577881f;
+    y = -func_00283248(func_00282E20((char *)v), v[2]);
+    *(float *)(p + 0x2C8) = y;
+    if (y > 0.523598849773407f)
+        *(float *)(p + 0x2C8) = 0.523598849773407f;
+    else if (y < -0.523598849773407f)
+        *(float *)(p + 0x2C8) = -0.523598849773407f;
+}
 
 INCLUDE_ASM("asm/levels", func_L02_003CED70);
 
@@ -191,11 +284,20 @@ void func_L02_003D1610(char *a0) {
         func_002A7470(a0, 6, 0, 5);
 }
 
-INCLUDE_ASM("asm/levels", func_L02_003D1820);
+/* Builds three quadwords on the stack from A1 and A0+0xD0, then normalises and rotates them. */
+void func_L02_003D1820(char *a0, char *a1) {
+    TI128 v[3];
+
+    v[0] = *(TI128 *)a1;
+    v[1] = *(TI128 *)(a0 + 0xD0);
+    func_L02_002F1FB8((char *)&v[2], (char *)&v[0], a0 + 0x10);
+    func_00282F20((char *)&v[2], (char *)&v[2], 1.0f);
+    func_00282DB0((char *)&v[1], (char *)&v[2]);
+}
 
 INCLUDE_ASM("asm/levels", func_L02_003D1FA0);
 
-INCLUDE_ASM("asm/levels", func_L02_003D28E0);
+/* func_L02_003D28E0 lives in the -g8 sibling: it reads five $gp-relative scalars. */
 
 /* When the +0x3C counter of the object at +0x68 is clear, runs the reset, then the dispatch. */
 void func_L02_003D29D0(char *a0) {
@@ -216,18 +318,40 @@ INCLUDE_ASM("asm/levels", func_L02_003D7040);
 
 INCLUDE_ASM("asm/levels", func_L02_003D7140);
 
-INCLUDE_ASM("asm/levels", func_L02_003D7300);
+int func_L02_003D7300(char *a0) {
+    return *(int *)(*(char **)(a0 + 0x68) + 0xBC);
+}
 
 void func_L02_003D7310(char *a0) {
     BatchA_A17_s32 p = (BatchA_A17_s32)*(BatchA_A17_s32 *)(a0 + 0x68);
     *(BatchA_A17_s32 *)((char *)p + 0xBC) = 1;
 }
 
-INCLUDE_ASM("asm/levels", func_L02_003D7320);
+void func_L02_003D7320(char *a0) {
+    *(int *)(*(char **)(a0 + 0x68) + 0xBC) = 0;
+}
 
-INCLUDE_ASM("asm/levels", func_L02_003D77B8);
+/* True when any of the three words at +0x10, +0x14, +0x18 of the object at +0x68 is set. */
+int func_L02_003D77B8(char *a0) {
+    char *p = *(char **)(a0 + 0x68);
+    int r = 0;
 
-INCLUDE_ASM("asm/levels", func_L02_003D77F8);
+    if (*(unsigned char *)(a0 + 0x20) == 2) {
+        if (*(int *)(p + 0x10) == 0 || *(int *)(p + 0x14) == 0 || *(int *)(p + 0x18) == 0)
+            r = 1;
+    }
+    return r;
+}
+
+/* True when any of the three words at +0x10, +0x14, +0x18 of the object at +0x68 is set. */
+int func_L02_003D77F8(char *a0) {
+    char *p = *(char **)(a0 + 0x68);
+    int r = 0;
+
+    if (*(int *)(p + 0x10) || *(int *)(p + 0x14) || *(int *)(p + 0x18))
+        r = 1;
+    return r;
+}
 
 /* Of kind two, reports whether the helper found nothing. */
 int func_L02_003D7830(char *a0) {
@@ -238,7 +362,19 @@ int func_L02_003D7830(char *a0) {
     return r;
 }
 
-INCLUDE_ASM("asm/levels", func_L02_003D7868);
+/* True when the first free of the three words at +0x10, +0x14, +0x18 of the object at +0x68
+   exists; A1 goes there and its kind byte is set to two. */
+void func_L02_003D7868(char *a0, char *a1) {
+    char *p = *(char **)(a0 + 0x68);
+
+    if (*(int *)(p + 0x10) == 0)
+        *(int *)(p + 0x10) = (int)a1;
+    else if (*(int *)(p + 0x14) == 0)
+        *(int *)(p + 0x14) = (int)a1;
+    else if (*(int *)(p + 0x18) == 0)
+        *(int *)(p + 0x18) = (int)a1;
+    *(char *)(a1 + 0x20) = 2;
+}
 
 /* Resets the +0x48 float to one, then moves A0 from kind two to kind three. */
 void func_L02_003D78A8(char *a0) {
@@ -248,8 +384,13 @@ void func_L02_003D78A8(char *a0) {
     func_002A7750(a0, 3, -1);
 }
 
+/* Near miss (see work/wave7-20261013/w04/drafts): retail sequence and store order reproduced,
+   same register-permutation wall as func_L02_003DBEC8. 152 bytes against 148. */
 INCLUDE_ASM("asm/levels", func_L02_003D7B88);
 
+/* Near miss (see work/wave7-20261013/w04/drafts): the whole body compiles to the retail
+   instruction sequence; only the register permutation differs (the parameter copy and p land in
+   a2/a3 the other way round). 124 bytes against 120. */
 INCLUDE_ASM("asm/levels", func_L02_003DBEC8);
 
 void func_L02_003DED08(void) {
@@ -278,9 +419,7 @@ void func_L02_003FC248(void *a0) {
     func_002A6C58(a0, 0, 3);
 }
 
-INCLUDE_ASM("asm/levels", func_L02_003FCDF8);
-
-INCLUDE_ASM("asm/levels", func_L02_003FCF08);
+/* The two entry scalers live in the -g8 sibling: retail reads the table through $gp. */
 
 INCLUDE_ASM("asm/levels", func_L02_003FE768);
 
@@ -307,7 +446,7 @@ INCLUDE_ASM("asm/levels", func_L02_00400D08);
 
 INCLUDE_ASM("asm/levels", func_L02_004012A0);
 
-INCLUDE_ASM("asm/levels", func_L02_004013C0);
+/* func_L02_004013C0 lives in the -g8 sibling: it reads a $gp-relative scalar. */
 
 INCLUDE_ASM("asm/levels", func_L02_00401480);
 
@@ -317,9 +456,11 @@ INCLUDE_ASM("asm/levels", func_L02_00401ED8);
 
 INCLUDE_ASM("asm/levels", func_L02_00402300);
 
-INCLUDE_ASM("asm/levels", func_L02_00402440);
+/* func_L02_00402440 lives in the -g8 sibling: it reads four $gp-relative scalars. */
 
-INCLUDE_ASM("asm/levels", func_L02_004024A0);
+int func_L02_004024A0(char *a0) {
+    return *(short *)(*(char **)(a0 + 0x68) + 0x30);
+}
 
 /* A17-ptr-store-16 freshly exact-verified under family reservation */
 void func_L02_004024B0(char *a0) {
@@ -327,7 +468,9 @@ void func_L02_004024B0(char *a0) {
     *(BatchA_A17_BatchAs16 *)((char *)p + 0x30) = 1;
 }
 
-INCLUDE_ASM("asm/levels", func_L02_004024C0);
+void func_L02_004024C0(char *a0) {
+    *(short *)(*(char **)(a0 + 0x68) + 0x30) = 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L02_00404410);
 

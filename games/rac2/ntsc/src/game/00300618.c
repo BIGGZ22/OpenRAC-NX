@@ -145,7 +145,16 @@ void func_00300968 (char *object, int flags, float a, float b, float c, float d)
     }
 }
 
-INCLUDE_ASM("asm/game", func_00300A00);
+void func_00300A00(char *object, int flags, float a, float b, float c, float d, float e)
+{
+    float local[16];
+    if (flags >> 24) {
+        func_00283388(local);
+        local[0] = c * *(float *)(object + 12);
+        local[10] = d * *(float *)(object + 12);
+        func_00300AA8(object, a, b, flags, e, local);
+    }
+}
 
 INCLUDE_ASM("asm/game", func_00300AA8);
 
@@ -364,7 +373,16 @@ void func_00307330(char *object)
     F6eb4f363_FUN_002BF728(object + 16, local, F6eb4f363_FUN_002A7878(0.05f, 0.1f) * 210000.0f, base);
 }
 
-INCLUDE_ASM("asm/game", func_003073E0);
+extern void func_0029FCC0(void *, int, void *);
+extern int func_00277258(void *, int, void *, float);
+extern int D_001BAF9C;
+void func_003073E0(void *owner)
+{
+    char local[16];
+    func_0029FCC0(owner, 0, local);
+    if (func_00277258(local, 2, owner, 0.25f) && D_001BAF9C > 0)
+        *((unsigned char *)owner + 0x20) = 8;
+}
 
 INCLUDE_ASM("asm/game", func_00307440);
 

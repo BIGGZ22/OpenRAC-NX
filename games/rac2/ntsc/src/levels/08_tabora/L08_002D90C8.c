@@ -11,7 +11,27 @@ void func_L08_00329EC0(float value, float *object) {
     object[28] = value - object[6];
 }
 
-INCLUDE_ASM("asm/levels", func_L08_0032EA60);
+typedef float f32;
+
+extern void func_2F9E60(void *, void *, f32);
+extern void func_2F9DF0(void *, void *, void *);
+extern f32 func_2F9FD0(void *, void *);
+
+f32 func_L08_0032EA60(char *a0, char *a1, char *a2, f32 f0, f32 f1, f32 f2, f32 f3) {
+    f32 out[4];
+    f32 t[4];
+    f32 r;
+
+    func_2F9E60(t, a1, f1);
+    func_2F9DF0(out, a2, t);
+    func_2F9E60(t, a1 + 0x10, f2);
+    func_2F9DF0(out, out, t);
+    func_2F9E60(t, a1 + 0x20, f3);
+    func_2F9DF0(out, out, t);
+    r = func_2F9FD0(a0, out);
+    if (f0 < r) f0 = r;
+    return f0;
+}
 
 INCLUDE_ASM("asm/levels", func_L08_0032EB48);
 

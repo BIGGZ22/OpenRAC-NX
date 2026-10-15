@@ -1,10 +1,10 @@
-/* func_L07_003F8C38 -- meilleur essai (vague 3, worker w05, fichier src/levels/07_siberius/L07_003F4578.c)
- * Residuel: taille ET allocation de registres IDENTIQUES (s0=a0, s2=0x68, s1=resultat,
- * obtenus en declarant le resultat avant le pointeur). Il ne reste que des transpositions
- * d'ordonnancement de quelques instructions independantes:
- *   * addiu $a0,0x5 / daddu $a1,0 inverse pour l'appel func_002E5CF8(5,0,a0)
- *   * la base de table est chargee dans $a1 au lieu de $v0 (d'ou addu $v1,$v1,$a1 vs $v0)
- *   * daddu $a0,$s1 place apres le chargement de la table au lieu d'avant
+/* func_L07_003F8C38 -- best attempt (wave 3, worker w05, file src/levels/07_siberius/L07_003F4578.c)
+ * Residual: size AND register allocation IDENTICAL (s0=a0, s2=0x68, s1=result,
+ * obtained by declaring the result before the pointer). Only scheduling transpositions
+ * of a few independent instructions are left:
+ *   * addiu $a0,0x5 / daddu $a1,0 reversed for the call func_002E5CF8(5,0,a0)
+ *   * the table base is loaded into $a1 instead of $v0 (hence addu $v1,$v1,$a1 vs $v0)
+ *   * daddu $a0,$s1 placed after the table load instead of before
  */
 typedef struct { u8 pad38[0x38]; f32 f38; u8 rest[128 - 0x3C]; } SibRec128;
 extern SibRec128 *D_L07_001B23CC;

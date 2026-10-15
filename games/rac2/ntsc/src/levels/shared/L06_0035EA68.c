@@ -51,6 +51,9 @@ INCLUDE_ASM("asm/levels", func_L06_0039A2F0);
 
 INCLUDE_ASM("asm/levels", func_L06_003E0D88);
 
+/* func_L06_003E1040: the catalogue entry starts 8 bytes before the body (a stray
+   "addiu $sp,$sp,0x20 ; nop" tail). Not a function start — left as retail asm. */
+
 INCLUDE_ASM("asm/levels", func_L06_003E1040);
 
 INCLUDE_ASM("asm/levels", func_L06_003E11A0);

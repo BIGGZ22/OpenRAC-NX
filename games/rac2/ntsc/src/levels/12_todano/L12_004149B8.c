@@ -18,7 +18,31 @@ extern void func_00282F20(f32 *, void *, f32);
 
 INCLUDE_ASM("asm/levels", func_L12_0041BDF8);
 
-INCLUDE_ASM("asm/levels", func_L12_0041BE60);
+extern void func_L12_0041BED8(u8 *);
+
+/* Returns 1 as soon as one of the two bound sub-objects carries a live state word. */
+s32 func_L12_0041BE60(u8 *a0)
+{
+    u8 *a1 = a0;
+    u8 *s0;
+    u8 **p;
+    s32 i;
+
+    if (a1 == 0)
+        return 0;
+    if (*(s16 *)(a1 + 0xAA) != 0xFAE)
+        return 0;
+    s0 = *(u8 **)(a1 + 0x68);
+    func_L12_0041BED8(a1);
+    p = (u8 **)(s0 + 8);
+    for (i = 0; i < 2; i++, p++) {
+        if (*p != 0) {
+            if (*(s32 *)(*p + 0x98) != 0)
+                return 1;
+        }
+    }
+    return 0;
+}
 
 /* --- func_L12_0041A698 (52 B) ------------------------------------------------------ */
 
@@ -83,7 +107,64 @@ void func_L12_0041BDA8(u8 *a0)
 
 /* ---------------------------------------------------------------------------------- */
 
-INCLUDE_ASM("asm/levels", func_L12_004149B8);
+extern void func_326F10(void *, void *, s32, s32);
+
+extern void func_L09_003F7788(void *, void *);
+
+/* the two bound sub-objects of the moby this driver walks */
+typedef struct {
+    char pad00[0x20];
+    u8 f20;                 /* 0x20 */
+    char pad21[0x31 - 0x21];
+    u8 f31;                 /* 0x31 */
+    char pad32[0x34 - 0x32];
+    u16 f34;                /* 0x34 */
+    char pad36[0xAA - 0x36];
+    s16 fAA;                /* 0xAA */
+} Sub114B;
+
+typedef struct {
+    char pad00[0x2F0];
+    Sub114B *f2F0[2];       /* 0x2F0 */
+    Sub114B *f2F8;          /* 0x2F8 */
+} Moby49B8;
+
+typedef struct {
+    char pad00[0x31];
+    u8 f31;                 /* 0x31 */
+    char pad32[0x68 - 0x32];
+    Moby49B8 *f68;          /* 0x68 */
+} Ent49B8;
+
+/* Walks the moby's two sub-objects, re-arms each one's parent link and releases it. */
+void func_L12_004149B8(Ent49B8 *a0)
+{
+    Moby49B8 *moby = a0->f68;
+    Sub114B *head = moby->f2F8;
+    s32 i;
+
+    if (head == 0)
+        return;
+    if (head->fAA != 0x114B)
+        return;
+    if (head->f20 == 0xFE)
+        return;
+    if (head->f20 == 0xFD)
+        return;
+    for (i = 0; i < 2; i++) {
+        if (moby->f2F0[i] != 0) {
+            func_326F10(moby->f2F8, moby->f2F0[i], i, (i ^ 1) ? 0 : 6);
+            if (a0->f31 != 0) {
+                moby->f2F0[i]->f34 = moby->f2F0[i]->f34 & 0xFFFE;
+                moby->f2F0[i]->f31 = 1;
+            } else {
+                moby->f2F0[i]->f34 = moby->f2F0[i]->f34 | 1;
+                moby->f2F0[i]->f31 = 0;
+            }
+            func_L09_003F7788(a0, moby->f2F0[i]);
+        }
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L12_00414AB8);
 

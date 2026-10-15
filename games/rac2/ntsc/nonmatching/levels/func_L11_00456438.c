@@ -1,5 +1,5 @@
-/* func_L11_00456438 -- brouillon w17 (vague 6, fichier src/levels/11_joba/L11_00453358.c)
- * Derniere ligne de tools/check.py : 11_joba: 268 bytes, expected 264 (1 instruction de trop: la constante 1 est materialisee deux fois ($t0 pour les sb, $a3 pour l'argument) alors que le retail reutilise $a3)
+/* func_L11_00456438 -- draft w17 (wave 6, file src/levels/11_joba/L11_00453358.c)
+ * last check.py line: 11_joba: 268 bytes, expected 264 (1 instruction too many: the constant 1 is materialised twice ($t0 for the sb, $a3 for the argument) whereas the retail reuses $a3)
  */
 
 void func_L11_00456438(char *p, int a1)

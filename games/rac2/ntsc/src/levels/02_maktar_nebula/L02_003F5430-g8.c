@@ -18,14 +18,8 @@ extern void func_00282C88(void *);
 
 extern void func_00335438(char *, char *, int, int, int);
 
-extern void func_L01_0042A6F0(int, int);
+INCLUDE_ASM("asm/levels", func_L01_0042A6F0);
 
-extern void func_00335370(char *);
-
-extern void func_003353C8(char *);
-
-/* Same shape as the matched wrap in src/game/002B7E28.c (func_002BD398):
-   f = p[i] + product; p[i] = f; if (f > 1.0f) p[i] = f - 1.0f;  */
 void func_L02_003F56C0(void) {
     int v0 = D_L02_001AD410;
     float *p = (float *)((char *)v0 + 0x74);
@@ -45,3 +39,8 @@ void func_L02_003FD770(void) {
     func_00335370(D_L02_001B11D0);
     func_003353C8(D_L02_001B11E0);
 }
+
+extern char *D_L02_001B1190[] __attribute__((sda));
+
+/* Whether the pair of table entries the object names still agree with its own four words. */
+INCLUDE_ASM("asm/levels", func_L02_003FCBF0);

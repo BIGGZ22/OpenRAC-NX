@@ -18,7 +18,19 @@ INCLUDE_ASM("asm/game", func_00320550);
 
 INCLUDE_ASM("asm/game", func_003216E8);
 
-INCLUDE_ASM("asm/game", func_00321E28);
+extern void func_0029F338(void *);
+extern void func_00321F60(char *);
+
+void func_00321E28(char *object)
+{
+    char *data = *(char **)(object + 0x68);
+    char *child = *(char **)(data + 0x2AC);
+    if (child != 0 && *(short *)(child + 0xAA) == 0xAB7) {
+        func_0029F338(child);
+        *(char **)(data + 0x2AC) = 0;
+    }
+    func_00321F60(object);
+}
 
 INCLUDE_ASM("asm/game", func_00321E80);
 
@@ -74,7 +86,21 @@ INCLUDE_ASM("asm/game", func_00322CC0);
 
 INCLUDE_ASM("asm/game", func_003248A8);
 
-INCLUDE_ASM("asm/game", func_003250F8);
+extern void func_00325D30(char *, char *);
+extern void func_00325320(char *);
+
+void func_003250F8(char *object)
+{
+    char *data = *(char **)(object + 0x68);
+    char *child;
+    func_00325D30(object, data + 0x2A0);
+    child = *(char **)(data + 0x2E0);
+    if (child != 0 && *(short *)(child + 0xAA) == 0xAB7) {
+        func_0029F338(child);
+        *(char **)(data + 0x2E0) = 0;
+    }
+    func_00325320(object);
+}
 
 INCLUDE_ASM("asm/game", func_00325158);
 
@@ -120,13 +146,23 @@ INCLUDE_ASM("asm/game", func_003258C0);
 
 INCLUDE_ASM("asm/game", func_00325A88);
 
-INCLUDE_ASM("asm/game", func_00325B28);
+/* func_00325B28 is in the -G8 sibling. */
 
 INCLUDE_ASM("asm/game", func_00325B70);
 
 INCLUDE_ASM("asm/game", func_00325C50);
 
-INCLUDE_ASM("asm/game", func_00325D30);
+void func_00325D30(char *object, char *entries)
+{
+    int count = 1;
+    do {
+        char *child = *(char **)entries;
+        count--;
+        entries += 4;
+        if (child != 0 && *(short *)(child + 0xAA) == 0xAA2)
+            func_0029F338(child);
+    } while (count >= 0);
+}
 
 INCLUDE_ASM("asm/game", func_00325DA0);
 
@@ -138,7 +174,7 @@ INCLUDE_ASM("asm/game", func_00326A10);
 
 INCLUDE_ASM("asm/game", func_00326BD0);
 
-INCLUDE_ASM("asm/game", func_00326BD8);
+
 
 INCLUDE_ASM("asm/game", func_00326CA8);
 
@@ -173,6 +209,6 @@ void func_00326CB8(char *obj)
     *(float *)(e + 48) = func_00282DF0(buf);
 }
 
-INCLUDE_ASM("asm/game", func_00326D90);
+
 
 INCLUDE_ASM("asm/game", func_00326EC0);

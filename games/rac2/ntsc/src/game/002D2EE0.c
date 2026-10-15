@@ -161,7 +161,38 @@ int func_002D3108(void) {
     return 0;
 }
 
-INCLUDE_ASM("asm/game", func_002D3138);
+extern int func_0029C840(int);
+extern void func_002D5B58(short, int, int *);
+
+int func_002D3138(void) {
+    int result = 0;
+    int flags = D_00138344;
+    if (flags & 0x10) {
+        int value = *(int *)(D_001F2840.source + 0xE0);
+        if (value != 0)
+            D_001F2840.value = value;
+        else if (D_001F2840.fallback == 0) {
+            value = -1;
+            goto return_value;
+        }
+        value = 0;
+return_value:
+        return value;
+    }
+    if (flags & 0x900)
+        result = 1;
+    else
+    {
+        int request;
+        if (func_0029C840(flags)) {
+            request = 0;
+            func_002D5B58(13, 0, &request);
+        }
+    }
+    return result;
+}
+
+
 
 extern void func_0029C880(void);
 

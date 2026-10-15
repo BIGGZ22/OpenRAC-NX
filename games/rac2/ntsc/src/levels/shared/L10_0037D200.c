@@ -28,7 +28,15 @@ int func_L10_0037F510(void)
 
 INCLUDE_ASM("asm/levels", func_L10_0039D5E0);
 
-INCLUDE_ASM("asm/levels", func_L10_0039D728);
+extern void func_L10_0039D760(void);
+extern void func_L00_002E6EF8(void *, void *);
+extern u8 D_L10_0039D9C0[];
+
+/* Refreshes and then hands the constructor at 0x0039D9C0 to the callback list. */
+void func_L10_0039D728(void *a0) {
+    func_L10_0039D760();
+    func_L00_002E6EF8(D_L10_0039D9C0, a0);
+}
 
 INCLUDE_ASM("asm/levels", func_L10_0039D760);
 

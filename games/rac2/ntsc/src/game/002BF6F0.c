@@ -315,7 +315,17 @@ INCLUDE_ASM("asm/game", func_002C2C80);
 
 INCLUDE_ASM("asm/game", func_002C2FD8);
 
-INCLUDE_ASM("asm/game", func_002C30F8);
+extern char D_00189EA0[];
+extern void func_00282CC0(char *, char *, char *);
+
+void func_002C30F8(char *self)
+{
+    char *part = self + 0x20;
+    if (*(int *)(part + 0x10) == 1)
+        func_00282CC0(self + 0x10, D_00189EA0, part);
+    if (func_00282978((short *)(self + 0xA)) != 0)
+        func_002B9180(self);
+}
 
 INCLUDE_ASM("asm/game", func_002C3150);
 
@@ -453,7 +463,7 @@ INCLUDE_ASM("asm/game", func_002C4D18);
 
 INCLUDE_ASM("asm/game", func_002C4F08);
 
-INCLUDE_ASM("asm/game", func_002C5020);
+
 
 INCLUDE_ASM("asm/game", func_002C5068);
 

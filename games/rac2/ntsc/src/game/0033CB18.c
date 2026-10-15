@@ -88,7 +88,7 @@ char *func_0033CD80(char *object)
 
 INCLUDE_ASM("asm/game", func_0033CDC0);
 
-INCLUDE_ASM("asm/game", func_0033CDC8);
+
 
 INCLUDE_ASM("asm/game", func_0033D028);
 
@@ -102,7 +102,7 @@ char *func_0033D440(char *object)
 
 INCLUDE_ASM("asm/game", func_0033D470);
 
-INCLUDE_ASM("asm/game", func_0033D478);
+
 
 int func_0033D5A0 (char *object, int flags)
 {
@@ -124,7 +124,33 @@ int func_0033D5A0 (char *object, int flags)
   return (flags >> 6) & 1;
 }
 
-INCLUDE_ASM("asm/game", func_0033D638);
+typedef struct { int ids[2]; } SolTextPair;
+extern SolTextPair D_L00_001AE110;
+extern char D_L00_001AE118[];
+/* Resident byte at 0x001A7BB2 is shared by all programs. */
+extern void func_0033AF48(void *);
+extern char *func_00288FB8(int);
+extern int func_00115DA8(char *, const char *, ...);
+extern void func_0027FAA8(int, int, unsigned long, char *, int);
+
+void func_0033D638(char *object)
+{
+    char buffer[128];
+    SolTextPair pair;
+    char *first;
+    char *second;
+    char *format;
+    int color;
+    func_0033AF48(object + 8);
+    color = *(int *)(object + 0x2A8) == 0 ? (int)0x80D0D0D0 : 0x70808080;
+    pair = D_L00_001AE110;
+    format = D_L00_001AE118;
+    first = func_00288FB8(0x2D99);
+    second = func_00288FB8(pair.ids[*(unsigned char *)0x001A7B96 != 0]);
+    func_00115DA8(buffer, format, first, second);
+    func_0027FAA8(0x100, 0xAA, color, buffer, -1);
+}
+
 
 char *func_0033D708(char *object)
 {
@@ -134,7 +160,7 @@ char *func_0033D708(char *object)
 
 INCLUDE_ASM("asm/game", func_0033D738);
 
-INCLUDE_ASM("asm/game", func_0033D740);
+
 
 int func_0033D868(char *a0, int a1)
 {
@@ -177,7 +203,7 @@ char *func_0033DAD0(char *object)
 
 INCLUDE_ASM("asm/game", func_0033DB00);
 
-INCLUDE_ASM("asm/game", func_0033DB08);
+
 
 int func_0033DC30(char *object, int flags)
 {
@@ -196,7 +222,24 @@ int func_0033DC30(char *object, int flags)
     return (flags >> 6) & 1;
 }
 
-INCLUDE_ASM("asm/game", func_0033DCC8);
+
+void func_0033DCC8(char *object)
+{
+    char buffer[128];
+    SolTextPair pair;
+    char *first;
+    char *second;
+    char *format;
+    func_0033AF48(object + 8);
+    pair = D_L00_001AE110;
+    format = D_L00_001AE118;
+    first = func_00288FB8(0x2D9A);
+    second = func_00288FB8(pair.ids[*(unsigned char *)0x001A7BB2 != 0]);
+    func_00115DA8(buffer, format, first, second);
+    func_0027FAA8(0x100, 0xAA, 0x80F0F0F0UL, buffer, -1);
+}
+
+
 
 char *func_0033DD80(char *object)
 {
@@ -206,7 +249,7 @@ char *func_0033DD80(char *object)
 
 INCLUDE_ASM("asm/game", func_0033DDB0);
 
-INCLUDE_ASM("asm/game", func_0033DDB8);
+
 
 int func_0033DEE0(char *object, int flags)
 {
@@ -233,7 +276,7 @@ char *func_0033DF78(char *object)
 
 INCLUDE_ASM("asm/game", func_0033DFA8);
 
-INCLUDE_ASM("asm/game", func_0033DFB0);
+
 
 int func_0033E0D8(char *object, int flags)
 {
@@ -261,7 +304,7 @@ void* func_0033E170(void* param_1)
 
 INCLUDE_ASM("asm/game", func_0033E1A8);
 
-INCLUDE_ASM("asm/game", func_0033E1B0);
+
 
 int func_0033E310(int owner)
 {

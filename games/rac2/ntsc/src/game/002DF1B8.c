@@ -19,8 +19,6 @@ INCLUDE_ASM("asm/game", func_002DF1F0);
 
 INCLUDE_ASM("asm/game", func_002DF1F8);
 
-INCLUDE_ASM("asm/game", func_002DF2E0);
-
 INCLUDE_ASM("asm/game", func_002DF380);
 
 INCLUDE_ASM("asm/game", func_002DF3F8);
@@ -29,9 +27,7 @@ INCLUDE_ASM("asm/game", func_002DF630);
 
 INCLUDE_ASM("asm/game", func_002DF640);
 
-INCLUDE_ASM("asm/game", func_002DF750);
-
-INCLUDE_ASM("asm/game", func_002DF7A8);
+/* func_002DF7A8 is matched in 002DF1B8-g8.c (-G8 small data). */
 
 INCLUDE_ASM("asm/game", func_002DF838);
 

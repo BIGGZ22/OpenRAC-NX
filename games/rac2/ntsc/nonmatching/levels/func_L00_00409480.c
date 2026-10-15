@@ -1,13 +1,13 @@
-/* func_L00_00409480 — NON MATCHE, meilleur essai — 212 o attendus, 27 placements.
- * Derniere ligne check.py : "00_aranos_tutorial: 216 bytes, expected 212"
- * puis "func_L00_00409480: 0 of 27 places match".
+/* func_L00_00409480 — NOT MATCHED, best attempt — 212 bytes expected, 27 places.
+ * last check.py line: "00_aranos_tutorial: 216 bytes, expected 212"
+ * then "func_L00_00409480: 0 of 27 places match".
  *
- * Seule difference : la valeur `c` nait dans $v1 puis est copiee dans $a2 pour
- * l'appel (un `daddu $a2,$v1,$zero` de trop), alors que le retail la fait naitre
- * dans $a2 (`addiu $a2,$zero,0x80; subu $a2,$a2,$v0`). Tout le reste — y compris
- * l'ordre des shifts/or et les 4 appels — est identique.
- * (Mettre l'appel avant le calcul de rgba fait vivre `c` a travers l'appel :
- * cc1 la place alors dans $s0 et le corps passe a 224 o. Pire.)
+ * Only difference: the value `c` is born in $v1 then copied into $a2 for the
+ * call (one `daddu $a2,$v1,$zero` too many), whereas the retail births it in
+ * $a2 (`addiu $a2,$zero,0x80; subu $a2,$a2,$v0`). Everything else — including
+ * the order of the shifts/or and the 4 calls — is identical.
+ * (Putting the call before the rgba computation keeps `c` alive across the
+ * call: cc1 then places it in $s0 and the body grows to 224 bytes. Worse.)
  */
 
 extern int func_002EF250(float x);

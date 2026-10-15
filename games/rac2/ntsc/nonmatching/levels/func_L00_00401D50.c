@@ -1,21 +1,22 @@
-/* func_L00_00401D50 — NON MATCHE, meilleur essai — 212 o attendus, 27 placements.
- * Derniere ligne check.py : "00_aranos_tutorial: 204 bytes, expected 212"
- * puis "func_L00_00401D50: 0 of 27 places match".
+/* func_L00_00401D50 — NOT MATCHED, best attempt — 212 bytes expected, 27 places.
+ * last check.py line: "00_aranos_tutorial: 204 bytes, expected 212"
+ * then "func_L00_00401D50: 0 of 27 places match".
  *
- * Corps quasi identique : il manque exactement la paire
- *   beql $s0,$zero, <test de boucle>  ;  lw $s0,0x28($s0)   (delay)
- * que le retail emet AVANT le chargement de node->obj, c'est-a-dire un test
- * `if (node == 0) goto next` redondant a l'interieur du corps. Teste sans
- * l'obtenir : boucle `while`, boucle `for(;node;node=node->next)`, chaine de
- * `&&`, `continue` separes. Le reste (etat 0xFE/0xFD, obj==0, *(s16*)(obj+0x46)
- * ==0x13, appel flottant, duplication de node=node->next sur chaque sortie)
- * est reproduit instruction par instruction.
+ * Body almost identical: exactly the pair
+ *   beql $s0,$zero, <loop test>  ;  lw $s0,0x28($s0)   (delay)
+ * is missing, which the retail emits BEFORE the load of node->obj, that is a
+ * redundant `if (node == 0) goto next` test inside the body. Tried without
+ * obtaining it: `while` loop, `for(;node;node=node->next)` loop, chain of
+ * `&&`, separate `continue`. The rest (state 0xFE/0xFD, obj==0,
+ * *(s16*)(obj+0x46)==0x13, floating-point call, duplication of
+ * node=node->next on every exit) is reproduced instruction by instruction.
  *
- * ATTENTION : ce corps doit vivre dans le frere -g8.c — le retail charge le
- * flottant en `lwc1 $f1,0x1CA0($gp)` en flot ordinaire (=> fichier -G8), tout
- * en gardant $gp libre pour lui. Les deux entiers du corps sont en absolu
- * (lui + lw replie), obtenus ici en les declarant comme des TABLEAUX (>8 octets
- * donc hors small-data a -G8), la ou D_L00_001B0C90 (float, 4 o) est en sda.
+ * WARNING: this body must live in the -g8.c sibling — the retail loads the
+ * float as `lwc1 $f1,0x1CA0($gp)` in ordinary flow (=> -G8 file), while
+ * keeping $gp free for itself. The two integers of the body are absolute
+ * (folded lui + lw), obtained here by declaring them as ARRAYS (>8 bytes
+ * hence outside small-data at -G8), where D_L00_001B0C90 (float, 4 bytes) is
+ * in sda.
  */
 
 typedef struct Node Node;

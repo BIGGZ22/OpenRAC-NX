@@ -105,7 +105,25 @@ INCLUDE_ASM("asm/game", func_003130F0);
 
 INCLUDE_ASM("asm/game", func_00313210);
 
-INCLUDE_ASM("asm/game", func_00313548);
+extern char D_L00_0023A670[][16];
+extern void func_002ACEC0(void *, void *, void *, float);
+extern void func_00282F20(void *, void *, float);
+extern void func_00282CC0(void *, void *, void *);
+
+typedef struct { char pad[0x30]; char *entries[1]; } SolEmitterData;
+
+void func_00313548(unsigned char *object, float *out, int index)
+{
+    char local[16];
+    char *data = *(char **)(object + 0x68);
+    char *entry;
+    func_002ACEC0(local, D_L00_0023A670[index], data + 0x20, *(float *)(data + 0x2C));
+    entry = ((SolEmitterData *)data)->entries[index];
+    if (entry && object[0x20] == 2)
+        func_00282F20(local, local, *(float *)(entry + 0x28));
+    func_00282CC0(out, data + 0x10, local);
+    out[2] += *(float *)data;
+}
 
 INCLUDE_ASM("asm/game", func_00313600);
 
@@ -184,5 +202,3 @@ void func_00316DA0(Vec16_Fc936841d *object, int index)
 INCLUDE_ASM("asm/game", func_00316E08);
 
 INCLUDE_ASM("asm/game", func_003172D0);
-
-INCLUDE_ASM("asm/game", func_00317390);

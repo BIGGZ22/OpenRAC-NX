@@ -81,9 +81,52 @@ INCLUDE_ASM("asm/levels", func_L14_00423240);
 
 INCLUDE_ASM("asm/levels", func_L14_00423358);
 
+extern void func_002B5278(char *object, float factor);
+
+extern void func_002B5258(char *object);
+
+extern void func_002B50E0(char *object, char *bone, float factor);
+
+extern void func_002B4FF0(char *object, char *bone, float factor);
+
+/* Dispatches on the owner's animation step and plays the matching bone animation. */
 INCLUDE_ASM("asm/levels", func_L14_00423B30);
 
-INCLUDE_ASM("asm/levels", func_L14_00423BD8);
+extern char D_L14_001B9500[];
+
+extern void func_80326928(char *a0, void *a1);
+
+extern void func_8032AA20(char *a0, void *a1, int a2, float a3, float a4);
+
+extern float func_802F5DF8(char *a0, void *a1);
+
+extern void func_803240F8(char *a0);
+
+/* Restarts the owner's animation: two timed fades, the counter, then the panic state. */
+void func_L14_00423BD8(char *a0)
+{
+    char *s1;
+    float f20;
+    float f21;
+
+    s1 = *(char **)(a0 + 0x68);
+    f21 = 0.03f;
+    f20 = 0.3f;
+    func_80326928(a0, s1 + 0x50);
+    func_8032AA20(a0, s1 + 0x680, 1, f21, f20);
+    func_8032AA20(a0, s1 + 0x600, 0, f21, f20);
+    if (*(unsigned short *)(a0 + 0x96) <= 0xFFFE)
+        *(unsigned short *)(a0 + 0x96) = *(unsigned short *)(a0 + 0x96) + 1;
+    *(unsigned short *)(s1 + 0x776) = 0;
+    *(unsigned short *)(s1 + 0x778) = 0;
+    *(unsigned short *)(s1 + 0x77A) = 0;
+    if (*(unsigned char *)(a0 + 0x31) != 0) {
+        if (func_802F5DF8(a0 + 0x10, D_L14_001B9500) < 24.0f) {
+            func_803240F8(a0);
+            *(unsigned char *)(a0 + 0x6F) = 0x16;
+        }
+    }
+}
 
 extern void func_318ED0();
 extern void func_2F5C68();
@@ -118,9 +161,25 @@ INCLUDE_ASM("asm/levels", func_L14_004265B8);
 
 INCLUDE_ASM("asm/levels", func_L14_00426D18);
 
-INCLUDE_ASM("asm/levels", func_L14_00426DE8);
+extern short D_001A6480[];
 
-INCLUDE_ASM("asm/levels", func_L14_00426E60);
+extern void func_385CB8(unsigned int reg, unsigned long value);
+
+extern void func_2EF6D8(int, int, int, int, int);
+
+/* Queues the level jingle for the owner with the volume its state block asks for. */
+void func_L14_00426DE8(char *a0)
+{
+    char *v0;
+    int s0;
+
+    v0 = *(char **)(a0 + 0x68);
+    s0 = ((int)((1.0f - *(float *)(v0 + 0x68)) * 128.0f)) << 24;
+    func_385CB8(0x42, 9);
+    func_2EF6D8(0, D_001A6480[0xA9], 0, D_001A6480[0xA8], s0);
+}
+
+/* func_L14_00426E60 lives in the -g8 sibling file (it reads two floats through $gp). */
 
 INCLUDE_ASM("asm/levels", func_L14_00426F28);
 
@@ -148,7 +207,35 @@ INCLUDE_ASM("asm/levels", func_L14_004298F0);
 
 INCLUDE_ASM("asm/levels", func_L14_00429A18);
 
-INCLUDE_ASM("asm/levels", func_L14_0042D018);
+extern void *func_801234F0(float scale);
+
+extern long long func_80131430(long long value);
+
+extern long long func_80122B00(long long a, long long b);
+
+extern void *func_80122DA8(void *a, long long b);
+
+extern float func_80123298(long long a);
+
+extern void func_80321F58(char *a0, int a1, int a2);
+
+/* Fills the owner's screen slot with the width the display state reports. */
+void func_L14_0042D018(char *a0)
+{
+    char *p;
+    void *s0;
+    long long v;
+
+    p = *(char **)(a0 + 0x68);
+    if (*(unsigned char *)(a0 + 0x20) != 0)
+        return;
+    s0 = func_801234F0(*(float *)(a0 + 0xC));
+    v = func_80131430(0x4000000000000000LL);
+    v = func_80122B00(v, 0x4090000000000000LL);
+    v = func_80122DA8(s0, v);
+    *(float *)(p + 0x10) = func_80123298(v);
+    func_80321F58(a0, 1, -1);
+}
 
 INCLUDE_ASM("asm/levels", func_L14_0042FB10);
 

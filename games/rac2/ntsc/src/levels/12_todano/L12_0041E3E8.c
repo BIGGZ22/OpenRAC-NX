@@ -1,8 +1,10 @@
-#include "include_asm.h"
+#include "common.h"
 
 INCLUDE_ASM("asm/levels", func_L12_0041E3E8);
 
-INCLUDE_ASM("asm/levels", func_L12_0041E8E8);
+s32 func_L12_0041E8E8(u8 *a0) {
+    return *(u8 *)(a0 + 0x20) == 3;
+}
 
 INCLUDE_ASM("asm/levels", func_L12_0041E8F8);
 

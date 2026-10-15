@@ -1,17 +1,17 @@
-/* func_L08_003D8A28 (132 o) — meilleur essai, NON MATCHÉ (vague 6, w04, 2026-10-12)
+/* func_L08_003D8A28 (132 bytes) — best attempt, NOT MATCHED (wave 6, w04, 2026-10-12)
  *
- * Dernière ligne de check.py : "08_tabora: instruction at +0x68 differs"
- * 128 des 132 octets identiques. Unique écart : le store final
+ * last check.py line: "08_tabora: instruction at +0x68 differs"
+ * 128 of the 132 bytes identical. Only deviation: the final store
  *   mine  00422B?8/003D8A8C : addiu $v0,$zero,1 ; sb $v0,0xBC($s1) ; ld $s0,0x0($sp)
- *   retail                   : addiu $v0,$zero,1 ; ld $s0,0x0($sp) ; sb $v0,0xBC($s1)
- * (ordonnancement sched2 du store face au restore d'épilogue : une seule position).
- * Le corps jumeau func_L08_00422AD8 est identique à un champ près (0x1D8/0x1DC au
- * lieu de 0x484/0x488) et échoue au même endroit (+0x68).
- * À noter : la forme `if (v0 == -1) v0 = 1; else { call; v0 = 1; }` est celle qui
- * reproduit le mieux le retail (beq + addiu dans le slot de délai) ; l'échange
- * if/else a été essayé et ne change pas la position du sb.
+ *   retail                  : addiu $v0,$zero,1 ; ld $s0,0x0($sp) ; sb $v0,0xBC($s1)
+ * (sched2 scheduling of the store against the epilogue restore: a single position).
+ * The twin body func_L08_00422AD8 is identical but for one field (0x1D8/0x1DC
+ * instead of 0x484/0x488) and fails at the same place (+0x68).
+ * Note: the form `if (v0 == -1) v0 = 1; else { call; v0 = 1; }` is the one that
+ * best reproduces the retail (beq + addiu in the delay slot); the if/else swap
+ * was tried and does not change the position of the sb.
  *
- * Contexte : placement 1 (08_tabora), à définir dans src/levels/08_tabora/L08_003D8348.c.
+ * Context: place 1 (08_tabora), to be defined in src/levels/08_tabora/L08_003D8348.c.
  */
 typedef unsigned char u8;
 typedef unsigned short u16;

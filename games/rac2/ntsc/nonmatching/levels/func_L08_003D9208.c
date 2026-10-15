@@ -1,23 +1,23 @@
-/* func_L08_003D9208 (208 o) et func_L08_004237F0 (172 o) — meilleurs essais, NON MATCHÉS
- * (vague 6, w04, 2026-10-12)
+/* func_L08_003D9208 (208 bytes) and func_L08_004237F0 (172 bytes) — best attempts, NOT MATCHED
+ * (wave 6, w04, 2026-10-12)
  *
- * Dernières lignes de check.py :
+ * last check.py lines:
  *   func_L08_003D9208 : "08_tabora: instruction at +0x4 differs"
  *   func_L08_004237F0 : "08_tabora: 176 bytes, expected 172"
  *
- * Cause identifiée, la même pour les deux : l'allocation « registre callee-saved ».
- *   retail : $s1 = la copie du paramètre (l'entrée), $s0 = le pointeur de moby (a0->f68)
- *   mon code : $s0 = le paramètre, $s1 = le pointeur de moby
- * Le corps est identique partout ailleurs (mêmes instructions, mêmes offsets) ; tout
- * l'écart découle de l'échange s0/s1 (le premier diff est au +0x4, le `sd` du
- * prologue). Les variantes essayées sans effet : déclarer la copie du paramètre en
- * premier (`Ent *a1 = a0;`), la déclarer après le pointeur de moby, utiliser le
- * paramètre directement. La même forme avait pourtant donné le bon ordre dans
- * func_L08_003D8A28 (matchée) : c'est un arbitrage de priorité d'allocno, pas une
- * règle d'ordre de déclaration.
+ * Cause identified, the same for both: the "callee-saved register" allocation.
+ *   retail: $s1 = the copy of the parameter (the input), $s0 = the moby pointer (a0->f68)
+ *   my code: $s0 = the parameter, $s1 = the moby pointer
+ * The body is identical everywhere else (same instructions, same offsets); the whole
+ * deviation comes from the s0/s1 swap (the first diff is at +0x4, the `sd` of the
+ * prologue). The variants tried with no effect: declaring the parameter copy
+ * first (`Ent *a1 = a0;`), declaring it after the moby pointer, using the
+ * parameter directly. Yet the same form had given the right order in
+ * func_L08_003D8A28 (matched): it is an allocno-priority arbitration, not a
+ * declaration-order rule.
  *
- * Autre écart réel corrigé au passage dans func_L08_004237F0 : la constante du test
- * de saturation est 0x7FFD (retail `sltiu $v0,$v1,0x7FFD`), pas 0xFFFD.
+ * Another real deviation fixed in passing in func_L08_004237F0: the constant of
+ * the saturation test is 0x7FFD (retail `sltiu $v0,$v1,0x7FFD`), not 0xFFFD.
  */
 
 typedef unsigned char u8;
@@ -84,7 +84,7 @@ extern s32 func_2F9A60();
 extern s32 func_327898(s32, s32);
 extern void func_2F9A90();
 
-/* func_L08_003D9208 : seul écart = $s0/$s1 échangés (offset 0x7FFD correct ici) */
+/* func_L08_003D9208: only deviation = $s0/$s1 swapped (offset 0x7FFD correct here) */
 
 void func_L08_003D9208(Ent *a0)
 {

@@ -77,6 +77,25 @@ Mark a function `ASM_FUNC` only on evidence, never because it resisted matching:
 
 Say which in the commit. A function that is merely hard is a near miss, not handwritten.
 
+## When to stop on a function
+
+Some functions cannot be matched from C, and some have cost enough. Know which before another
+attempt; OpenRAC's `docs/workflow/BACKFILL.md` has the measurements and the full procedure.
+
+- **Not a function.** It reads a register it never sets, branches outside its own bytes, or has
+  no `jr $ra`: a piece of its neighbour that the catalogue split off. Do not write C; report it,
+  it is a fix in `tools/levels.py`.
+- **Handwritten.** COP2/VU0 instructions, `$at` as a working register, a live instruction after
+  the return's delay slot, a trapping `addi`: see "Handwritten assembly" above.
+- **A tie.** Three different wordings that compile to the same bytes: a fourth will too. So will
+  another compiler or another flag: on rac1, three other compilers fixed none of 492 near misses.
+- **Out of budget.** About ten compiles without getting closer.
+
+Then stop: put the marker back, leave the attempt in `nonmatching/<area>/` with what differs and
+what would unblock it, and let it go up one model tier (docs/AGENT_WORKFLOW.md). Stopping is a
+normal result. C that behaves like the function without matching it is useful to the native port,
+never to `src/` or the progress report.
+
 ## Use the machine
 
 Builds and checks are the slow part of this work, and most of them are independent. Run them
@@ -102,6 +121,9 @@ each have their own worktree for that reason (docs/AGENT_WORKFLOW.md).
   prototype discs may be cited, naming the build, never as the evidence for a match. OpenRAC's
   docs/policy/SOURCING.md is the full policy.
 - **Plain C.** No inline assembly in a function, no register pins, no artificial barriers.
+- **English.** Everything that lands here is in English: code, comments, commit messages,
+  issues, pull requests, reviews, and the notes kept in `nonmatching/`. Translate before it is
+  published.
 - **Flags per file, never per function** (`config/cflags.txt`). If one function needs other flags,
   it belongs in a file of its own with those flags.
 - **Nothing edits compiler output.** The build only does what the retail assembler and linker did.
@@ -126,8 +148,10 @@ work in. It was removed on purpose. Do not recreate any of it:
   evidence or binding archives, no code-reuse reports. Anything regenerated belongs in `build/`.
 - **No proofs, receipts, attestations or hash ledgers** for matches. The build is the proof and
   anyone can rerun it.
-- **No campaign machinery**: no queues, registers, reservations, lots, "owner-local" publication
-  routes, merge-queue scripts or PR-description validators.
+- **No in-repository campaign machinery**: no committed queues, registers, reservation databases,
+  lots, "owner-local" publication routes, merge-queue scripts or PR-description validators.
+  Contributor scope coordination through issue #152 is separate from this rule and must not be
+  represented by committed reservation files or databases.
 - **No document per batch of work** ("Nth C lot", evidence notes, experiment registers). Put what
   was learned in a commit message, or in an existing doc if it is lasting knowledge.
 - **No progress that counts a function more than once.** `tools/progress.py` counts each distinct
@@ -170,8 +194,10 @@ regenerates them conflicts with every other one. So pull requests do not touch t
 5. Never force-push a shared branch, never rewrite `master`, never merge your own PR unless you
    are a maintainer and the checks pass.
 
-If several agents work at once, give each its own branch (or worktree) and its own functions;
-they meet in pull requests, not in a shared queue or reservation system.
+If several agents work at once, give each its own branch (or worktree) and its own functions.
+Coordinate contributor scopes through issue #152; agents within the same contributor's claimed
+scope may divide work locally. Their code meets in pull requests, not through committed queues or
+reservation files.
 
 ## Which model does what
 
@@ -223,6 +249,23 @@ A scope may be:
 - one source directory;
 - one source file;
 - a related group of source files.
+
+### Active scopes are exclusive
+
+Before starting matching work, read the current comments in issue #152.
+
+Do not work inside another contributor's active scope unless they explicitly agree. A directory
+claim includes the files and functions beneath it.
+
+Before claiming a new scope, fetch `origin/master`, check issue #152, update your existing comment,
+then re-check for overlap before starting.
+
+Claims remain active until the work reaches `master` or the contributor explicitly abandons them.
+
+Prefer level, directory, file, or related-file scopes; use individual functions only when necessary.
+
+These rules apply to all matching work, including AI/automated matching and matches carried from
+another OpenRAC decompilation.
 
 For example:
 

@@ -1,22 +1,22 @@
 /*
- func_L06_003E4F08 (152 o, -g8) — reste 4 octets : la constante est gardée
-   dans un registre FPR callee-saved ($f20 + sauvegarde) alors que le retail
-   la re-matérialise à chaque appel.
+ func_L06_003E4F08 (152 bytes, -g8) — 4 bytes left: the constant is kept
+   in a callee-saved FPR ($f20 + save) whereas the retail
+   re-materialises it on every call.
 
-   Corps conforme mot pour mot (allocations $s1/$s0, ordre des appels, les 5
-   flottants atteints par $gp avec __attribute__((sda)), le littéral
-   0.000290888245f en lui+ori+mtc1) SAUF ceci :
-     retail : lui/ori/mtc1 $f13 avant l'appel 1, puis lui/ori/mtc1 $f14 avant
-              l'appel 2 (la constante sert deux fois dans l'appel 2) ; pas de
-              sauvegarde FPR ; cadre -0x20 ; 38 mots.
-     nôtre  : une seule matérialisation en $f20 conservée à travers l'appel 1
-              (le CSE hisse le constant_double), + swc1/lwc1 $f20, cadre -0x30 ;
-              37 mots.
-   Essayé sans effet : littéral à gauche dans la multiplication, ordre des
-   arguments, attribut sda. Même famille que le mur de hissage constaté sur
+   Body conforming word for word (allocations $s1/$s0, call order, the 5
+   floats reached through $gp with __attribute__((sda)), the literal
+   0.000290888245f as lui+ori+mtc1) EXCEPT this:
+     retail : lui/ori/mtc1 $f13 before call 1, then lui/ori/mtc1 $f14 before
+              call 2 (the constant is used twice in call 2); no
+              FPR save; frame -0x20; 38 words.
+     ours   : a single materialisation in $f20 kept across call 1
+              (the CSE hoists the constant_double), + swc1/lwc1 $f20, frame -0x30;
+              37 words.
+   Tried with no effect: literal on the left of the multiplication, argument
+   order, sda attribute. Same family as the hoisting wall observed on
    func_L06_003E4FA0.
 
-   Dernière ligne de check.py :
+   last check.py line:
      func_L06_003E4F08: 0 of 5 places match (src/levels/shared/L06_0035EA68-g8.c)
      06_notak: 148 bytes, expected 152
 

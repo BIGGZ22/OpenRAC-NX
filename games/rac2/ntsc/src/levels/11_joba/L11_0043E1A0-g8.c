@@ -2,6 +2,14 @@
 
 typedef int s32;
 
+typedef unsigned int u32;
+
+typedef unsigned char u8;
+
+typedef unsigned short u16;
+
+typedef short s16;
+
 /* Small-data controls: the four measured globals the level's script hooks share. */
 extern s32 D_L11_001B1530 __attribute__((sda));
 
@@ -21,6 +29,20 @@ extern void func_4881A8(void *);
 
 extern void func_488200(void *);
 
+extern u32 D_L11_001B32E8[];
+
+extern u8 D_L11_001BA8C0[];
+
+extern u8 *D_L11_001B359C __attribute__((sda));
+
+extern u8 *D_L11_001FC420[];
+
+extern float func_282E48(void *, void *);
+
+extern void func_32C9E0();
+
+extern void func_440C90(u8 *);
+
 /* arms the script bridge over the measured buffers and starts it on the shared slot */
 void func_L11_00443380(void) {
     s32 buffer[4];
@@ -30,3 +52,4 @@ void func_L11_00443380(void) {
     func_4881A8(&D_L11_001B1530);
     func_488200(&D_L11_001B1540);
 }
+

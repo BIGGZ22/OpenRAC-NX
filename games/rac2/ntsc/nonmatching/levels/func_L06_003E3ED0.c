@@ -1,22 +1,22 @@
 /*
- func_L06_003E3ED0 (88 o) — reste 8 octets : if-conversion du couple return 0/1.
+ func_L06_003E3ED0 (88 bytes) — 8 bytes left: if-conversion of the return 0/1 pair.
 
-   Le retail garde une BRANCHE explicite pour le corps :
+   The retail keeps an explicit BRANCH for the body:
      003E3EF4 lw  $v0,0x588($a1)
-     003E3EF8 bne $v0,$a0, -> épilogue partagé
-     003E3EFC daddu $v0,$zero,$zero      (slot de délai)
+     003E3EF8 bne $v0,$a0, -> shared epilogue
+     003E3EFC daddu $v0,$zero,$zero      (delay slot)
      003E3F00 jr  $ra
-     003E3F04 addiu $v0,$zero,0x1        (slot de délai)
-   Notre chaîne replie ce `if (x != a0) return 0; return 1;` en
+     003E3F04 addiu $v0,$zero,0x1        (delay slot)
+   Our chain folds this `if (x != a0) return 0; return 1;` into
      `lw v0,0x588 ; xor v0,v0,a0 ; jr $ra ; sltiu v0,v0,1`
-   => 80 o au lieu de 88. Essayé sans succès : les deux polarités
-   (`!= → return 0; return 1;` et `== → return 1; return 0;`), `||` simple,
-   et les blocs dupliqués (cross-jump) : la fusion revient chaque fois.
-   Les autres blocs (tests 0x229C/0x2294/0x34E/0x33C, épilogue partagé) sont
-   reproduits correctement ; seul ce couple 0/1 est replié.
-   Mur « if-conversion » du BRIEF.
+   => 80 bytes instead of 88. Tried without success: both polarities
+   (`!= → return 0; return 1;` and `== → return 1; return 0;`), plain `||`,
+   and the duplicated blocks (cross-jump): the merge comes back every time.
+   The other blocks (tests 0x229C/0x2294/0x34E/0x33C, shared epilogue) are
+   reproduced correctly; only this 0/1 pair is folded.
+   "if-conversion" wall of the BRIEF.
 
-   Dernière ligne de check.py :
+   last check.py line:
      func_L06_003E3ED0: 0 of 4 places match (src/levels/shared/L06_0035EA68.c)
      06_notak: 80 bytes, expected 88
 */

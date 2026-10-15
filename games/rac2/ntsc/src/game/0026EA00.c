@@ -59,9 +59,51 @@ extern void Fdb046c5d_FUN_002E5F00(int, void *);
 
 extern char Fdb046c5d_D_001BAFC0[];
 
+extern char D_001BAEC0[];
+extern int D_001A72DC[] __attribute__((sda));
+extern void func_0029D4D0(int, void *);
+extern int func_0011AEA0(int);
+extern void func_002FC1D8(void);
+extern void func_002FCB00(void *, int, int, int);
+extern void func_0027B858(void);
+extern void func_00284FC0(void);
+extern void func_00285338(void);
+extern void func_002FC280(void);
+extern void func_002FC3C0(int);
+extern int func_001244B8(int, int);
+extern int func_001261F0(int);
+
 INCLUDE_ASM("asm/game", func_0026EA00);
 
-INCLUDE_ASM("asm/game", func_0026EAC8);
+extern void func_002FCD18(void);
+extern void func_00284E18(int, int, int);
+extern void func_00284EA8(void);
+extern void func_00284F40(int);
+extern void func_002FCDA8(void);
+
+void func_0026EAC8(int arg)
+{
+    char *state = D_001BAEC0;
+    int *data;
+    func_0029D4D0(arg, *(void **)(state + 20));
+    func_0011AEA0(0);
+    func_002FC1D8();
+    func_002FCD18();
+    func_00284E18(0, 0, 0);
+    func_00284EA8();
+    func_00284F40(0);
+    data = *(int **)(state + 20);
+    func_002FCB00(data + 4, D_001A72DC[0], data[0], data[1]);
+    func_0027B858();
+    func_00284FC0();
+    func_00285338();
+    func_0011AEA0(0);
+    func_002FC280();
+    func_002FC3C0(1);
+    func_001244B8(0, 0);
+    func_001261F0(0);
+    func_002FCDA8();
+}
 
 extern int func_002A77E0(int);
 
@@ -240,7 +282,22 @@ INCLUDE_ASM("asm/game", func_0026FC70);
 
 INCLUDE_ASM("asm/game", func_0026FC78);
 
-INCLUDE_ASM("asm/game", func_0026FE48);
+typedef struct { char pad[0x32C]; int base; int offset; int count; } Table26FE48;
+extern Table26FE48 D_0014B540;
+extern char D_001C5540[];
+extern int D_001A730C __attribute__((sda));
+extern unsigned long long D_001A7468 __attribute__((sda));
+extern int func_002B7C80(char *, int, int);
+extern void func_0026FC78(char *, unsigned long long *, int, int);
+
+void func_0026FE48(void)
+{
+    unsigned long long local[4];
+    char *data = D_001C5540;
+    func_002B7C80(data, D_0014B540.offset + D_0014B540.base, D_0014B540.count);
+    func_0026FC78(data, local, D_001A730C, 0x3FFC00);
+    *(volatile unsigned long long *)&D_001A7468 = local[0];
+}
 
 void func_0026FEB8(const char *format,...) {
 }
@@ -253,7 +310,17 @@ INCLUDE_ASM("asm/game", func_00270018);
 
 INCLUDE_ASM("asm/game", func_002701A8);
 
-INCLUDE_ASM("asm/game", func_002701B0);
+extern void func_00282B50(void *, void *, int);
+extern char *D_001B5390;
+extern char D_001B7550[];
+extern char D_001B7C30[];
+
+void func_002701B0(void)
+{
+    func_00282B50(D_001B7550, D_001B5390, 0xA0);
+    func_00282B50(D_001B7C30, D_001B7C30 - 0x500, 0x280);
+    *(char **)(D_001B7550 + 0x70) = D_001B7C30;
+}
 
 /* shared native body of family 34e74db3063e7a24 */
 void func_00270210(void)
@@ -335,7 +402,23 @@ void func_002704D0(void) {
  D_L24_001B8580.object[0x7d]=0;
 }
 
-INCLUDE_ASM("asm/game", func_002704F0);
+extern char D_001B53A0[];
+extern void *func_00302A20(void *);
+extern void func_0029F338(void *);
+
+void func_002704F0(char *p)
+{
+    char *base = D_001B53A0;
+    if (*(short *)(p + 0x86) == 0) {
+        if (*(void **)(base + 0xC4) == 0)
+            *(void **)(base + 0xC4) = func_00302A20(base - 0x60);
+    } else {
+        if (*(void **)(base + 0xC4) != 0) {
+            func_0029F338(*(void **)(base + 0xC4));
+            *(void **)(base + 0xC4) = 0;
+        }
+    }
+}
 
 typedef void (*ObjectDispatch)(void *);
 typedef struct { ObjectDispatch entries[5]; } ObjectDispatchRecord;

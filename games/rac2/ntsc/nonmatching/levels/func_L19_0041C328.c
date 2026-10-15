@@ -1,9 +1,9 @@
-/* Draft (1 essai, 160 o sur 176 attendus) - func_L19_0041C328.
-   Derniere ligne check.py : "19_grelbin: 160 bytes, expected 176".
-   Code et flux reconstruits ; seul l ORDRE DES BLOCS differe : le retail place
-   le corps (0x41C358) AVANT le bloc de tests (0x41C380) et l entree saute aux
-   tests ; ma version place les tests en tete. Le reste (chargements, $gp, tables)
-   est conforme. A reprendre : forme de boucle qui fait sortir ce layout. */
+/* Draft (1 attempt, 160 bytes out of 176 expected) - func_L19_0041C328.
+   last check.py line: "19_grelbin: 160 bytes, expected 176".
+   Code and flow reconstructed; only the ORDER OF BLOCKS differs: the retail places
+   the body (0x41C358) BEFORE the test block (0x41C380) and the entry jumps to the
+   tests; my version puts the tests first. The rest (loads, $gp, tables)
+   conforms. To retake: a loop form that produces this layout. */
 
 extern char *D_L19_001FB5A0[];
 

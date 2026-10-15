@@ -101,11 +101,64 @@ INCLUDE_ASM("asm/levels", func_L00_0037F7E8);
 
 INCLUDE_ASM("asm/levels", func_L00_0037FA90);
 
-INCLUDE_ASM("asm/levels", func_L00_0037FE08);
+typedef struct {
+    char *entry[64][4];
+    int count;
+    int best;
+} L00_0037FE08_Pool;
+
+extern L00_0037FE08_Pool D_L00_00231540;
+
+extern char D_00189EA0[];
+
+extern float func_00282EB0(char *origin, char *point);
+
+/* Keep the pool entry nearest to the fixed origin: the count is re-read every
+ * pass, so the loop bound stays live in memory. */
+void func_L00_0037FE08(void)
+{
+    float best;
+    int i;
+
+    if (D_L00_00231540.count != 0) {
+        best = 100000000.0f;
+        for (i = 0; i < D_L00_00231540.count; i++) {
+            float distance = func_00282EB0(D_00189EA0, D_L00_00231540.entry[i][0] + 0x10);
+
+            if (distance < best) {
+                D_L00_00231540.best = i;
+                best = distance;
+            }
+        }
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0037FF98);
 
-INCLUDE_ASM("asm/levels", func_L00_00380058);
+extern int func_00303E20(int object, char *name, int first, int second);
+
+/* 16-slot object table searched for the first entry the name resolver accepts.
+ * The `sda` attribute (SYMBOL_REF_FLAG) suppresses gcc's HIGH/LO_SUM split: its
+ * `lui`/`addiu` pair is one RTL insn, so the address stays in the single
+ * callee-saved register that retail uses instead of taking an extra one. */
+extern int *D_L00_001B26B8[] __attribute__((sda));
+
+int func_L00_00380058(char *name)
+{
+    int i = 0;
+    int **slot = D_L00_001B26B8;
+
+    do {
+        int object = *slot;
+        if (object == 0)
+            break;
+        if (func_00303E20(object, name, 0, 0))
+            return 1;
+        i++;
+        slot++;
+    } while (i < 16);
+    return 0;
+}
 
 void func_L00_00380A88(void)
 {
@@ -470,7 +523,31 @@ INCLUDE_ASM("asm/levels", func_L00_0038BA80);
 
 INCLUDE_ASM("asm/levels", func_L00_0038BD00);
 
-INCLUDE_ASM("asm/levels", func_L00_0038BE70);
+extern float D_00189EB8;
+
+extern float func_00283248(float first, float second);
+
+extern float func_00283C80(float value, float angle);
+
+extern float func_00282DF0(char *object);
+
+extern void func_00282F20(char *object, char *other, float value);
+
+/* Fold an angle into the measured 1.8325959 ceiling, ease the remaining gap and
+ * hand the result to the setter. */
+void func_L00_0038BE70(char *object)
+{
+    float limit = 1.83259594440460205078125f;
+    float base = func_00283248(*(float *)object, *(float *)(object + 4));
+    float scaled = func_00283C80(D_00189EB8, base);
+    float angle;
+
+    if (limit < scaled)
+        scaled = limit;
+    angle = func_00282DF0(object);
+    func_00282F20(object, object,
+        angle * ((limit - scaled) * 0.1637022197246551513671875f + 0.699999988079071044921875f));
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0038BF18);
 

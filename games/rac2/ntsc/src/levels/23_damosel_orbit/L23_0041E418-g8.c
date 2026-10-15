@@ -135,3 +135,22 @@ void func_L23_0042ACC0(void *arg0) {
     }
     func_L23_0042AD90(arg0);
 }
+
+
+extern s32 D_L23_001B3714;
+
+extern s32 D_L23_001B13E8 __attribute__((sda));
+
+extern void func_002E5CF8(int, int, u8 *);
+
+/* publishes the boot stamp once, seeding the shared state first */
+void func_L23_0041E570(void) {
+    if (D_L23_001B3714 == 0) {
+        u8 *state = D_L23_001B1484;
+
+        if (state != 0) {
+            func_002E5CF8(0x10, 0, state);
+        }
+    }
+    D_L23_001B3714 = D_L23_001B13E8;
+}

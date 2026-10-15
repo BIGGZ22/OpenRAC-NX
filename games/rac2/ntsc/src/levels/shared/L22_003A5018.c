@@ -43,7 +43,17 @@ void func_L22_003A6470(u8 *a0, int a1) {
 
 INCLUDE_ASM("asm/levels", func_L22_003A64E8);
 
-INCLUDE_ASM("asm/levels", func_L22_003A65E0);
+/* A three-label switch, the third one sharing the default's body: with only two cases cc1
+ * emits a comparison chain, and the third label is what makes it build the decision tree
+ * (`beq` on the high case, then an `slti` guard on the range, then `bne` on the low one). */
+f32 func_L22_003A65E0(u8 *a0) {
+    switch (*(short *)(a0 + 0xAA)) {
+    case 0xE3A: return *(f32 *)(*(u8 **)(a0 + 0x68) + 0x2C);
+    case 0xE3B: return *(f32 *)(*(u8 **)(a0 + 0x68) + 0x44);
+    case 0xE3C:
+    default: return *(f32 *)(*(u8 **)(a0 + 0x68) + 0x44);
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L22_003A6640);
 
@@ -132,4 +142,12 @@ INCLUDE_ASM("asm/levels", func_L22_003FDB90);
 
 INCLUDE_ASM("asm/levels", func_L22_0040DD40);
 
-INCLUDE_ASM("asm/levels", func_L22_0040E2B0);
+extern f32 func_002A7878(f32 low, f32 high);
+
+extern void func_0032C700(void *a0, int a1, int a2, int a3, int a4, int a5, int a6, int a7,
+                          int a8, int a9, int a10, int a11, f32 f12, f32 f13);
+
+void func_L22_0040E2B0(u8 *a0) {
+    f32 f = func_002A7878(0.8f, 1.2f);
+    func_0032C700(a0, 0, 5, 4, 4, 4, 4, 0, 0, 0, 0, 0, f, 20.0f);
+}

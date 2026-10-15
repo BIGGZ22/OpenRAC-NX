@@ -24,13 +24,20 @@ extern float func_002A7878(float, float);
 extern float func_00283248(float, float);
 extern float func_00283180(float);
 extern float func_00283198(float);
+extern void func_31E6A0(void *, int, int);
+extern char D_L02_00188660[];
+extern void func_41F230(void *, int, int, int, int, int, int, int, int, int,
+                        int, int, float, float);
+extern void func_366BD8(int, int, void *, int);
+extern void func_31EA58(void *, float, float);
+extern void func_2F1F70(void *, void *, void *);
+extern void func_32B068(void *, int, void *, int, float, float, float, float);
+extern void func_31E3C0(void *, int, int, int);
+extern void func_316220(void *);
+extern void func_366830(int);
+extern void func_3FC1B0(int, int);
 
 typedef int TI128 __attribute__((mode(TI)));
-
-/* Quadword copy, as the game's own macro wrote it (lq/sq through a materialised address). */
-static __inline__ void qcopy(void *dst, void *src) {
-    __asm__ __volatile__("lq $2,0x0(%1)\n\tsq $2,0x0(%0)" : : "r"(dst), "r"(src) : "$2", "memory");
-}
 
 INCLUDE_ASM("asm/levels", func_L02_0040A4A8);
 
@@ -89,22 +96,16 @@ void func_L02_0040B868(u8 *a0, int a1) {
 INCLUDE_ASM("asm/levels", func_L02_0040B980);
 
 /* sweeps the two effect tracks of the actor relative to a head position */
-void func_L02_0040BAB8(u8 *a0, float *a1) {
-    float v, t, h, k;
-    u8 *q;
+INCLUDE_ASM("asm/levels", func_L02_0040BAB8);
 
-    v = func_00283248(*(float *)(a0 + 0x10) - a1[0], *(float *)(a0 + 0x14) - a1[1]);
-    v = v + func_002A7878(-0.7853982448577881f, 0.7853982448577881f);
-    t = func_002A7878(-2.0f, 2.0f) + 8.0f;
-    q = *(u8 **)(a0 + 0x68);
-    qcopy(q + 0x2C0, a1);
-    h = t * func_00283180(v);
-    *(float *)(q + 0x2C0) = *(float *)(q + 0x2C0) + h;
-    k = func_00283198(v);
-    *(float *)(q + 0x2C4) = *(float *)(q + 0x2C4) + t * k;
+/* records the actor's two shot counters, then arms it */
+void func_L02_0040BBA0(u8 *a0) {
+    u8 *t = *(u8 **)(a0 + 0x68);
+
+    *(u16 *)(t + 0x2E4) = *(u8 *)(a0 + 0x20);
+    *(u16 *)(t + 0x2E6) = *(u8 *)(a0 + 0x95);
+    func_31E6A0(a0, 6, 3);
 }
-
-INCLUDE_ASM("asm/levels", func_L02_0040BBA0);
 
 INCLUDE_ASM("asm/levels", func_L02_0040BBD8);
 

@@ -1,7 +1,7 @@
-/* meilleur essai -- dernier check.py : "00_aranos_tutorial: %hi at +0x38 differs"
-   Les sept magasins sont exacts (l'ordre source doit etre 0,2,1,3,4,5,6 : cc1 applique une
-   rotation qui envoie le dernier magasin en tete et l'avant-dernier dans le creneau de jal).
-   Il ne reste que la paire %hi/%lo de D_L00_001B1844. */
+/* best attempt -- last check.py line: "00_aranos_tutorial: %hi at +0x38 differs"
+   The seven stores are exact (the source order must be 0,2,1,3,4,5,6: cc1 applies a
+   rotation that sends the last store to the front and the second-to-last into the jal slot).
+   Only the %hi/%lo pair of D_L00_001B1844 is left. */
 void func_L00_00426680(char *a0)
 {
     int *p = *(int **)(a0 + 0x70);

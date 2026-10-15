@@ -101,3 +101,20 @@ void func_L12_00413F68(u8 *object) {
         *(u16 *)(object + 0x96) = counter + 1;
     func_3296A8(*(void **)(state + 0x2F8), state + 0x420, 3, D_L12_001B1858, 1);
 }
+
+extern u8 *D_L12_001B090C __attribute__((sda));
+
+/* Whether the tracked object is in a state that still counts as open. */
+s32 func_L12_003DE4B0(void) {
+    u8 *object = D_L12_001B090C;
+    s32 result = 1;
+
+    if (object == 0) {
+        result = 0;
+    } else {
+        if (*(u8 *)(object + 0x20) == 6 || *(s8 *)(object + 0x20) < 0
+            || *(u8 *)(object + 0x20) == 8)
+            result = 0;
+    }
+    return result;
+}

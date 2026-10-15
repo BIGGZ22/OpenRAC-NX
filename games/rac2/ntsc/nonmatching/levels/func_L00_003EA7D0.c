@@ -1,20 +1,19 @@
-/* DRAFT w49 — meilleur essai, NE MATCHE PAS : 140 o attendus, 140 o produits,
-   une seule instruction de place differente (voir note).
-   Derniere ligne check.py : func_L00_003EA7D0: 0 of 27 places match
+/* DRAFT w49 — best attempt, DOES NOT MATCH: 140 bytes expected, 140 bytes produced,
+   a single instruction in the wrong place (see note).
+   last check.py line: func_L00_003EA7D0: 0 of 27 places match
    00_aranos_tutorial: instruction at +0x34 differs
 
-   L'adresse 0x1B2BA0 doit etre un SYMBOLE (le retail utilise `addiu` pour la
-   moitie basse, ori serait emis pour une constante litterale). Toute forme
-   symbolique essayee (scalaire ou tableau, `char*` ou `unsigned int`) fait
-   tomber l'adresse dans un registre separe ($s0/$s1) et fait grossir la trame
-   a 144/148/152 o ; le litteral garde 140 o mais emet `ori` ET ordonnance
-   `lui $a1,0x1B` un cran trop tot dans le PREMIER appel seulement (le second
-   appel est identique au retail). Reste a resoudre : placer la paire
-   lui/addiu du 2e argument dans le registre d'argument sans registre
-   intermediaire.
+   The address 0x1B2BA0 must be a SYMBOL (the retail uses `addiu` for the low
+   half, ori would be emitted for a literal constant). Every symbolic form
+   tried (scalar or array, `char*` or `unsigned int`) drops the address into a
+   separate register ($s0/$s1) and grows the frame to 144/148/152 bytes; the
+   literal keeps 140 bytes but emits `ori` AND schedules `lui $a1,0x1B` one
+   step too early in the FIRST call only (the second call is identical to the
+   retail one). Remaining to solve: place the lui/addiu pair of the 2nd
+   argument in the argument register with no intermediate register.
 
-   Le reste du corps (prologue, beql+delay slot, appels 1 et 3) est identique
-   au retail mot pour mot. */
+   The rest of the body (prologue, beql+delay slot, calls 1 and 3) is identical
+   to the retail word for word. */
 void func_L00_0037B508(unsigned int a, unsigned long b);
 
 extern void func_L00_003EA8C8(char *a, unsigned int b, unsigned int c, float d);

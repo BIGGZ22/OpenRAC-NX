@@ -96,9 +96,21 @@ INCLUDE_ASM("asm/game", func_0027F2A8);
 
 INCLUDE_ASM("asm/game", func_0027F530);
 
-INCLUDE_ASM("asm/game", func_0027F538);
+extern int func_0027C878(int);
+extern void func_0027F2A8(int, int, int, u8 *, int, int, u8 *);
 
-INCLUDE_ASM("asm/game", func_0027F5B8);
+void func_0027F538(int x, int y, int style, u8 *text, int length)
+{
+    int font = func_0027C878(1);
+    func_0027F2A8(x, y, style, text, length, font, D_00263B50);
+}
+
+void func_0027F5B8(int x, int y, int style, u8 *text, int length)
+{
+    int font = func_0027C878(2);
+    func_0027F2A8(x, y, style, text, length, font, D_00263EF0);
+}
+
 
 INCLUDE_ASM("asm/game", func_0027F638);
 
@@ -106,25 +118,42 @@ INCLUDE_ASM("asm/game", func_0027F640);
 
 INCLUDE_ASM("asm/game", func_0027F968);
 
-INCLUDE_ASM("asm/game", func_0027F980);
+/* func_0027F980 is matched in 0027F980.c. */
 
-INCLUDE_ASM("asm/game", func_0027FA10);
+/* func_0027FA10 is matched in 0027F980.c. */
+
 
 INCLUDE_ASM("asm/game", func_0027FAA0);
 
-INCLUDE_ASM("asm/game", func_0027FAA8);
+/* func_0027FAA8 is matched in 0027F980.c. */
 
-INCLUDE_ASM("asm/game", func_0027FB40);
+/* func_0027FB40 is matched in 0027F980.c. */
 
-INCLUDE_ASM("asm/game", func_0027FBD8);
+
+/* func_0027FBD8 is matched in 0027F980.c. */
 
 INCLUDE_ASM("asm/game", func_0027FC70);
 
-INCLUDE_ASM("asm/game", func_00280190);
+extern void func_0027FC70(int, int, u8 *, int, int, u8 *);
 
-INCLUDE_ASM("asm/game", func_00280200);
+void func_00280190(int x, int y, u8 *text, int length)
+{
+    int font = func_0027C878(1);
+    func_0027FC70(x, y, text, length, font, D_00263B50);
+}
 
-INCLUDE_ASM("asm/game", func_00280270);
+void func_00280200(int x, int y, u8 *text, int length)
+{
+    int font = func_0027C878(2);
+    func_0027FC70(x, y, text, length, font, D_00263EF0);
+}
+
+
+void func_00280270(int x, int y, u8 *text, int length)
+{
+    int font = func_0027C878(3);
+    func_0027FC70(x, y, text, length, font, D_00264290);
+}
 
 void func_002802E0(unsigned short *a0,s32 a1,s32 a2,s32 a3,s32 a4,s32 a5,s32 a6,s32 a7,s32 a8) {
  a0[0]=a1;a0[1]=a2;a0[2]=a3;a0[3]=a4;
@@ -148,7 +177,7 @@ void func_00280600(void) {
     func_0027AB40();
 }
 
-INCLUDE_ASM("asm/game", func_00280630);
+/* func_00280630 -- see src/game/0027F128-g8.c (built with -G8). */
 
 INCLUDE_ASM("asm/game", func_00280660);
 

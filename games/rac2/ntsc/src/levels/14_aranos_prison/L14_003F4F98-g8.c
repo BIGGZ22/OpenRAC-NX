@@ -20,3 +20,17 @@ void func_L14_00427250(char *a0)
     func_3030C0(0, 0, 600, 500, s0, 0);
     func_385CB8(0x4E, 0x1000000UL | (D_001A72E0 >> 13));
 }
+
+extern float D_L14_001B17B8 __attribute__((sda));
+extern float D_L14_001B17BC __attribute__((sda));
+
+extern char D_00189EA0[];
+
+extern int func_00282948(void *table);
+
+extern void *func_L00_002D70A0(int size);
+
+extern void func_L00_002D7140(void *block);
+
+/* Rewinds the step timer, then respawns the effect the first live slot names, or frees it. */
+INCLUDE_ASM("asm/levels", func_L14_00426E60);

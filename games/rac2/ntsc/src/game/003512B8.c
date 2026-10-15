@@ -41,7 +41,7 @@ INCLUDE_ASM("asm/game", func_00351468);
 
 INCLUDE_ASM("asm/game", func_00351578);
 
-INCLUDE_ASM("asm/game", func_00351720);
+/* func_00351720 is matched in 00351720.c. */
 
 INCLUDE_ASM("asm/game", func_00351820);
 
@@ -82,7 +82,19 @@ s32 func_003518D8(u8 *a0) { return *(s32 *)(a0 + 0xa8); }
 
 s32 func_003518E0(u8 *a0, s32 a1) { s32 vieux = *(s32 *)(a0 + 0xa8); *(s32 *)(a0 + 0xa8) = a1; return vieux; }
 
-INCLUDE_ASM("asm/game", func_003518F0);
+typedef struct { unsigned long long first, second; int offset, count; } Transfer_3518F0;
+extern char *D_001B23CC[] __attribute__((sda));
+extern int func_00351468(void *, Transfer_3518F0 *, int);
+
+int func_003518F0(char *object, unsigned long long first, unsigned long long second, int end, int count)
+{
+    Transfer_3518F0 transfer;
+    transfer.first = first;
+    transfer.second = second;
+    transfer.offset = end - *(int *)(object + 0x48);
+    transfer.count = count;
+    return func_00351468(D_001B23CC[0] + 0xD9090, &transfer, *(int *)(object + 0x48));
+}
 
 int func_00351938(unsigned char *owner)
 {
@@ -95,9 +107,25 @@ INCLUDE_ASM("asm/game", func_00351960);
 
 extern int func_0012F9B8(void *);
 
-INCLUDE_ASM("asm/game", func_00351A38);
 
-INCLUDE_ASM("asm/game", func_00351A80);
+
+extern void func_00350918(void *);
+extern void func_00351E48(u8 *);
+extern void func_00351B20(void *);
+void func_00351A80(unsigned char *object)
+{
+    char *base;
+    func_00350918(object + 0x48);
+    func_00351E48(D_001B23CC[0] + 0xD9168);
+    func_00351B20(object);
+    base = D_001B23CC[0];
+    while (*(int *)(base + 0xD9174)) {
+        if (func_003518D8(object) == 1) break;
+        base = D_001B23CC[0];
+    }
+    func_003518E0(object, 3);
+}
+
 
 INCLUDE_ASM("asm/game", func_00351B20);
 

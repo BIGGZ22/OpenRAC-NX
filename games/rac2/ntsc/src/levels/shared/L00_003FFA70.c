@@ -68,6 +68,7 @@ INCLUDE_ASM("asm/levels", func_L00_004003F0);
 
 INCLUDE_ASM("asm/levels", func_L00_004005B0);
 
+
 INCLUDE_ASM("asm/levels", func_L00_00400F30);
 
 
@@ -75,7 +76,6 @@ INCLUDE_ASM("asm/levels", func_L00_00401168);
 
 INCLUDE_ASM("asm/levels", func_L00_00401668);
 
-INCLUDE_ASM("asm/levels", func_L00_00401D50);
 
 INCLUDE_ASM("asm/levels", func_L00_00402068);
 
@@ -105,11 +105,28 @@ INCLUDE_ASM("asm/levels", func_L00_00403730);
 
 extern int D_L00_001B2C6C __attribute__((nosda));
 
-INCLUDE_ASM("asm/levels", func_L00_00403BF8);
+extern int D_L00_001B2C30[] __attribute__((sda));
 
-extern int D_L00_001B2C30[] __attribute__((nosda));
+/* clears the 16 words ending at D_L00_001B2C6C, from the top down */
+void func_L00_00403BF8(void)
+{
+    int i;
 
-INCLUDE_ASM("asm/levels", func_L00_00403C30);
+    for (i = 15; i >= 0; i--)
+        D_L00_001B2C30[i] = 0;
+}
+
+/* true when none of the 16 words is zero */
+int func_L00_00403C30(void)
+{
+    int i;
+
+    for (i = 0; i < 16; i++) {
+        if (D_L00_001B2C30[i] == 0)
+            return 0;
+    }
+    return 1;
+}
 
 extern int func_0031A728(int range);
 extern void func_L00_00403900(int value);
@@ -127,33 +144,8 @@ extern void func_00310440(char *arg);
 extern void func_L00_00404168(char *arg);
 extern void func_L00_00403F90(char *arg, void *p);
 
-void func_L00_00403D58(char *arg)
-{
-    int *o = *(int **)(arg + 104);
-    unsigned char state = *(unsigned char *)(arg + 32);
-    TI128 tmp;
+INCLUDE_ASM("asm/levels", func_L00_00403D58);
 
-    switch (state) {
-    case 0:
-        arg[32] = 1;
-    case 1:
-        qcopy(&tmp, arg + 16);
-        func_002EE108(arg + 16, o, arg + 16);
-        func_0037F9A0(arg + 16, arg + 16);
-        func_0037E1D8(o[7], o, 0);
-        func_L00_00403F90(arg, &tmp);
-        if (func_002EDD48((char *)o + 16) != 0)
-            arg[32] = 2;
-        break;
-    case 2:
-        func_0037E1B8(o[7]);
-        func_00310440(arg);
-        return;
-    default:
-        break;
-    }
-    func_002E6EF8(func_L00_00404168, arg);
-}
 
 INCLUDE_ASM("asm/levels", func_L00_00403F90);
 
@@ -170,24 +162,8 @@ extern void func_00310440(char *arg);
 extern int func_002DE4B0(void *a, void *b, int c, void *d, int e);
 extern void func_0035F450(int a, int b, void *c, int d);
 
-void func_L00_00404DD8(char *arg, void *a1)
-{
-    if (*(float *)(arg + 16) < 2.0f || *(float *)(arg + 16) > 1021.0f ||
-        *(float *)(arg + 20) < 2.0f || *(float *)(arg + 20) > 1021.0f ||
-        *(float *)(arg + 24) < 2.0f || *(float *)(arg + 24) > 1021.0f) {
-        func_00310440(arg);
-        return;
-    }
-    {
-        char *p = arg + 16;
+INCLUDE_ASM("asm/levels", func_L00_00404DD8);
 
-        if (func_002DE4B0(a1, p, 0, arg, 0) != 0) {
-            qcopy(p, &D_L00_001BF220);
-            arg[32] = 2;
-            func_0035F450(5, 0, arg, 3705);
-        }
-    }
-}
 
 INCLUDE_ASM("asm/levels", func_L00_00404ED8);
 
@@ -196,6 +172,7 @@ INCLUDE_ASM("asm/levels", func_L00_004051C8);
 INCLUDE_ASM("asm/levels", func_L00_00405808);
 
 INCLUDE_ASM("asm/levels", func_L00_00406040);
+
 
 INCLUDE_ASM("asm/levels", func_L00_00406150);
 
@@ -212,6 +189,8 @@ INCLUDE_ASM("asm/levels", func_L00_00407E38);
 INCLUDE_ASM("asm/levels", func_L00_00408800);
 
 INCLUDE_ASM("asm/levels", func_L00_00408E58);
+
+INCLUDE_ASM("asm/levels", func_L00_00409480);
 
 /* shared native body of family af5b3bc3a678ed5c */
 void func_L00_00409420(char *object)
@@ -233,6 +212,5 @@ void func_L00_00409420(char *object)
     *(float *)(o + 44) = *(float *)(*(int *)(o + 36) + 36) * 0.8f;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_00409480);
 
 INCLUDE_ASM("asm/levels", func_L00_00409558);

@@ -35,11 +35,11 @@ void func_00338A60(char *a0)
 
 INCLUDE_ASM("asm/game", func_00338AD8);
 
-void func_00338F50(void)
+void func_00338F50(char *object)
 {
 }
 
-INCLUDE_ASM("asm/game", func_00338F58);
+/* func_00338F58 is matched in 00338F58.c. */
 
 /* Initialises eight sub-objects at byte offsets 8, 84, 160, 236 (step 76) and 312, 384, 456, 528 (step 72) of the argument with two different helpers and returns the argument. */
 void *func_00339008(char *a0)
