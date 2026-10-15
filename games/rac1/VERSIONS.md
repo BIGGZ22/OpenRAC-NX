@@ -63,3 +63,29 @@ its container's own Wine cannot run the project's Windows tools there, and
 that folder runs them under rac1/pal's Wine instead. Both of its gates pass
 that way, the boot ELF and all 1,540 overlay functions.
 The level editor ([editor/](../../editor/README.md)) reads the PAL disc.
+
+## Where versions differ: variants
+
+When a function's code differs in NTSC-U, its NTSC-U version is a variant:
+`versions/ntsc/src/<path>` holds NTSC-U's copy of the PAL file `src/<path>`,
+with only the differing functions changed. Only NTSC-U's build compiles it,
+so the PAL tree stays exactly as rac1-decomp has it and its syncs keep
+applying. The copy is the whole file, so it compiles as the same translation
+unit PAL's does (`tools/versions.py` builds it with PAL's own `Makefile.sn`
+in a shadow directory: same compiler, per-file flags and assembler steps),
+and NTSC-U's link takes from it only the functions PAL's own objects could
+not place.
+
+For a function whose code differs only in immediates (struct offsets,
+constants), `python3 tools/versions.py variant rac1/pal rac1/ntsc NAME ...`
+writes the variant from the bytes NTSC-U has: each immediate that differs is
+rewritten in the function's C, and a struct the function uses gets the
+padding before a moved field resized. Rerun it when the PAL file changes;
+`python3 tools/versions.py check rac1/pal rac1/ntsc` says whether each
+variant reproduces NTSC-U.
+
+The first variants: the record at `D_0013D390` is 8 bytes shorter in NTSC-U
+from before `+0xC0` on (`menu.c`, `bmain.c` and `space.c` read fields past
+that point), and `missionfunc.c` uses another id (`0x523E` for PAL's
+`0x5243`). With them, 14 more functions reproduce NTSC-U, and all 20 NTSC-U
+programs still link identical to the disc.

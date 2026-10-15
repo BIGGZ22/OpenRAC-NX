@@ -9,6 +9,7 @@ single value. The values found are the address map the second version would link
   python3 tools/versions.py check rac1/pal rac1/ntsc [--build DIR]
   python3 tools/versions.py link rac1/pal rac1/ntsc [--build DIR]
   python3 tools/versions.py build rac1/pal rac1/ntsc [--build DIR]
+  python3 tools/versions.py variant rac1/pal rac1/ntsc NAME ...   (functions that differ only in immediates)
 
 --build is a checkout of FROM's project after a full build (default: FROM's tree here, games/rac1): its config/core_text.objects and
 config/text.objects list the objects. Only functions FROM's project has matched are placed (the
@@ -139,6 +140,39 @@ def place(obj: dict, obj_path: str, names: list, funcs: list, sym: dict, address
     return found, why
 
 
+def variant_objects(src_key: str, dst_key: str, build: Path) -> list[tuple[str, Path]]:
+    """Compile TO's variant files and return (object path from the checkout's root, object).
+
+    A function whose code differs in TO (other struct offsets, other constants) has a variant
+    in versions/<TO's version>/src/ under FROM's tree, at the path of the file that holds it in
+    FROM. Only TO's build compiles it: FROM's own files stay as synced. Each variant file is
+    built the way FROM builds its counterpart, by FROM's own Makefile.sn run in a shadow
+    directory whose src/ holds only the variants (same compiler, per-file flags and assembler
+    steps), so the objects are what that file would give with the variant's C."""
+    version = dst_key.split("/")[1]
+    root = build / "versions" / version / "src"
+    files = sorted(root.rglob("*.c")) if root.is_dir() else []
+    if not files:
+        return []
+    import shutil
+    import subprocess
+    shadow = build / "build-sn" / f"variants-{version}"
+    if shadow.exists():
+        shutil.rmtree(shadow)
+    shadow.mkdir(parents=True)
+    for name in ("Makefile.sn", "include", "include-sn", "config", "tools", "toolchain", "asm"):
+        if (build / name).exists():
+            (shadow / name).symlink_to(Path("../..") / name)
+    shutil.copytree(root, shadow / "src")
+    targets = [f"build-sn/{f.relative_to(root).with_suffix('.o').as_posix()}" for f in files]
+    rel = shadow.relative_to(build).as_posix()
+    cmd = f"cd {rel} && . tools/toolchain.sh && make_sn {' '.join(targets)}"
+    run = subprocess.run(["bash", "tools/docker/run.sh", "bash", "-c", cmd], cwd=build, capture_output=True, text=True)
+    if run.returncode:
+        sys.exit("compiling the variants failed:\n" + (run.stdout + run.stderr)[-3000:])
+    return [(f"{rel}/{t}", shadow / t) for t in targets]
+
+
 def pairs(src_key: str, dst_key: str) -> dict[int, int]:
     """FROM's boot address -> TO's, for functions with the same code once in each boot."""
     src, dst = (json.loads((xmap.INDEX / f"{xmap.slug(k)}.json").read_text()) for k in (src_key, dst_key))
@@ -169,7 +203,8 @@ def boot_of(key: str) -> tuple[Path, int]:
     sys.exit(f"{path}: no .reginfo")
 
 
-def check(src_key: str, dst_key: str, build: Path, boot_only: bool = False, every: bool = False) -> tuple:
+def check(src_key: str, dst_key: str, build: Path, boot_only: bool = False, every: bool = False,
+          variants: bool = True) -> tuple:
     pal_to = pairs(src_key, dst_key)
     matched = {m["name"] for m in json.loads((xmap.INDEX / f"{xmap.slug(src_key)}.json").read_text())["matched"].values()
                if m["program"] == "boot"}
@@ -211,6 +246,35 @@ def check(src_key: str, dst_key: str, build: Path, boot_only: bool = False, ever
             placed[sym["name"]] = address
             pieces[sym["name"]] = piece
             outcome["same bytes"] += 1
+    # Variants: TO's own C for functions that differ, compiled from versions/<TO>/src/. They are
+    # placed like FROM's functions and take the place of FROM's version of them.
+    variant_failed = []
+    for obj_path, path in variant_objects(src_key, dst_key, build) if variants else []:
+        obj = read_object(path)
+        names = [s["name"] if s["type"] != STT_SECTION else f"§{obj_path}:{obj['sections'][s['section']]['name']}"
+                 for s in obj["symbols"]]
+        funcs = [s for s in obj["symbols"] if s["type"] == STT_FUNC]
+        for sym in funcs:
+            if sym["name"] in placed:          # the same as FROM's: nothing to take from the variant
+                continue
+            m = xmap.NAME.match(sym["name"])
+            address = pal_to.get(int(m.group(2), 16)) if m else None
+            if address is None:
+                continue
+            found, why = place(obj, obj_path, names, funcs, sym, address, retail(address, sym["size"]), gp)
+            if why:
+                outcome[f"variant: {why}"] += 1
+                variant_failed.append((sym["name"], why))
+                continue
+            piece = (found.pop("\0code"), found.pop("\0relocs"))
+            if any(values.get(k, x) != x for k, x in found.items()):
+                outcome["variant disagrees with another function"] += 1
+                continue
+            for k, x in found.items():
+                values.setdefault(k, x)
+            placed[sym["name"]] = address
+            pieces[sym["name"]] = piece
+            outcome["same bytes (variant)"] += 1
     # A function's name says where it is in FROM: in TO it has to be where xmap pairs it.
     wrong = []
     for s, v in values.items():
@@ -232,6 +296,8 @@ def check(src_key: str, dst_key: str, build: Path, boot_only: bool = False, ever
           f"{len(wrong)} functions not where xmap puts them; map written to {out.relative_to(ROOT)}")
     for name, symbol, other in conflicts[:10]:
         print(f"  {name}: {symbol} disagrees with {other}")
+    for name, why in variant_failed[:10]:
+        print(f"  variant {name}: {why}")
     for s in wrong[:10]:
         print(f"  {s}: {values[s]:08X}, xmap says {pal_to[int(s[5:], 16)]:08X}")
     if not boot_only:
@@ -567,6 +633,96 @@ def build(src_key: str, dst_key: str, build_dir: Path) -> None:
     print(f"{ok} of {len(jobs)} programs identical to retail, {compare.linked:,} function placements linked")
 
 
+def variant(src_key: str, dst_key: str, build: Path, names: list[str]) -> None:
+    """Write TO's variant of FROM's functions NAMES (all in one source file) whose code differs in
+    TO only in instruction immediates: struct offsets, constants. Each immediate FROM's compiled
+    function has where TO's bytes have another is rewritten in a copy of the function's C (a hex
+    literal, or an int-array index for a word offset), into versions/<TO>/src/<the same path>.
+    The file gets FROM's declarations and the externs the functions use. Rerun `check`: the
+    variant counts only when it compiles to TO's bytes."""
+    import re
+    pal_to = pairs(src_key, dst_key)
+    want = {pal_to[int(n[5:], 16)]: n for n in names if xmap.NAME.match(n) and int(n[5:], 16) in pal_to}
+    if len(want) != len(names):
+        sys.exit(f"not paired one to one: {sorted(set(names) - set(want.values()))}")
+    diffs = {}
+    original = derive
+
+    def spy(code, relocs, address, retail, gp):
+        found = original(code, relocs, address, retail, gp)
+        if found[1] == "instruction differs" and address in want:
+            touched = {o for o, _, _ in relocs}
+            m = {}
+            for at in range(0, len(code), 4):
+                a, b = (int.from_bytes(x[at:at + 4], "little") for x in (code, retail))
+                if at not in touched and a != b:
+                    if a >> 16 != b >> 16:
+                        sys.exit(f"{want[address]}: more than an immediate differs at +{at:#x}")
+                    m[a & 0xFFFF] = b & 0xFFFF
+            diffs[want[address]] = m
+        return found
+    import io
+    import contextlib
+    globals()["derive"] = spy
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            check(src_key, dst_key, build, boot_only=True, variants=False)
+    finally:
+        globals()["derive"] = original
+    missing = [n for n in names if n not in diffs]
+    if missing:
+        sys.exit(f"these do not differ only in immediates (or already match): {missing}")
+    defines = lambda text, n: re.search(rf"^(?!extern\b)[A-Za-z][^\n;]*\b{n}\([^\n;]*$", text, re.M)
+    files = {f for f in (build / "src").rglob("*.c") if any(defines(f.read_text(errors="replace"), n) for n in names)}
+    if len(files) != 1:
+        sys.exit(f"the functions should be in one source file, found {sorted(map(str, files))}")
+    src = files.pop()
+    text = src.read_text()
+    for n in names:
+        found = re.search(rf"^(?!extern\b)[A-Za-z][^\n;]*\b{n}\([^;{{]*?\)\s*\{{.*?^\}}\n", text, re.M | re.S)
+        m = diffs[n]
+
+        def sub(x, m=m):
+            val = int(x.group(1), 16)
+            if x.group(0).startswith("[") and val * 4 in m:
+                return f"[0x{m[val * 4] // 4:X}]"
+            return f"0x{m[val]:X}" if val in m and not x.group(0).startswith("[") else x.group(0)
+        body = re.sub(r"\[0x([0-9A-Fa-f]+)\]", sub, found.group(0))
+        body = re.sub(r"(?<![\[\w])0x([0-9A-Fa-f]+)", sub, body)
+        text = text[:found.start()] + body + text[found.end():]
+        print(f"{n}: " + ", ".join(f"{k:#x} -> {v:#x}" for k, v in m.items()))
+    # Fields reached through a struct: the types the functions use (directly, or as the type of an
+    # extern they read) whose padding before a moved field is one of the moved offsets get that
+    # padding resized, which moves the field as TO has it.
+    moved = {}
+    for n in names:
+        moved.update(diffs[n])
+    bodies = "".join(re.search(rf"^(?!extern\b)[A-Za-z][^\n;]*\b{n}\([^;{{]*?\)\s*\{{.*?^\}}\n",
+                               text, re.M | re.S).group(0) for n in names)
+    used = set(re.findall(r"\b[A-Za-z_]\w*\b", bodies))
+    for decl in re.finditer(r"^extern\s+(?:struct\s+)?(\w+)\s+(\w+)", text, re.M):
+        if decl.group(2) in used:
+            used.add(decl.group(1))
+    def resize(t):
+        head, body, tail = t.group(1), t.group(2), t.group(3)
+        if not ({w for w in re.findall(r"\w+", head + tail)} & used):
+            return t.group(0)
+        body = re.sub(r"\[0x([0-9A-Fa-f]+)\]",
+                      lambda x: f"[0x{moved[int(x.group(1), 16)]:X}]" if int(x.group(1), 16) in moved else x.group(0), body)
+        return head + body + tail
+    text = re.sub(r"^((?:typedef\s+)?struct\s*\w*\s*\{)(.*?)(^\}\s*\w*\s*;)", resize, text, flags=re.M | re.S)
+    rel = src.relative_to(build / "src")
+    out = build / "versions" / dst_key.split("/")[1] / "src" / rel
+    out.parent.mkdir(parents=True, exist_ok=True)
+    # The whole file, so it compiles as the same translation unit FROM's does; only NAMES differ.
+    note = (f"/* {dst_key}'s copy of src/{rel.as_posix()}, made by tools/versions.py variant: {src_key}'s\n"
+            f" * file with the immediates {dst_key}'s code has instead in {' '.join(names)}.\n"
+            f" * Only {dst_key}'s build compiles it and takes only those functions from it\n"
+            f" * (games/rac1/VERSIONS.md); rerun the command when src/{rel.as_posix()} changes. */\n")
+    out.write_text(note + text)
+    print(f"wrote {out.relative_to(ROOT)}")
+
+
 def main() -> None:
     args = sys.argv[1:]
     if len(args) in (3, 5) and args[0] in ("check", "link", "build") and (len(args) == 3 or args[3] == "--build"):
@@ -576,6 +732,8 @@ def main() -> None:
             if not (xmap.INDEX / f"{xmap.slug(key)}.json").exists():
                 sys.exit(f"{key} is not indexed: run `python3 tools/xmap.py scan {args[1]} {args[2]}` first")
         {"check": check, "link": link, "build": build}[args[0]](args[1], args[2], build_dir)
+    elif len(args) >= 4 and args[0] == "variant":
+        variant(args[1], args[2], source_dir(args[1]), args[3:])
     else:
         sys.exit(__doc__)
 
