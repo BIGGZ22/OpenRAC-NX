@@ -6,7 +6,7 @@ are comparable within a game, not between games.
 
 | Game | Version | Code matched | Functions | Fuzzy | Report date |
 |---|---|---:|---:|---:|---|
-| Ratchet & Clank | SCES_509.16 ([`games/rac1/pal`](../games/rac1/pal)) | 88.30% (3,278,504 / 3,712,808 bytes) | 4,595 / 5,109 | 89.47% | 2026-10-15 |
+| Ratchet & Clank | SCES_509.16 ([`games/rac1`](../games/rac1)) | 88.30% (3,278,504 / 3,712,808 bytes) | 4,595 / 5,109 | 89.47% | 2026-10-15 |
 | Ratchet & Clank | SCUS_971.99 ([`games/rac1/ntsc`](../games/rac1/ntsc)) | 86.55% (3,069,248 / 3,546,268 bytes) | 3,933 / 4,233 | 87.88% | 2026-10-13 |
 | Ratchet & Clank: Going Commando | SCUS_972.68 ([`games/rac2/ntsc`](../games/rac2/ntsc)) | 5.75% (318,088 / 5,533,600 bytes) | 2,941 / 9,100 | 5.75% | 2026-10-15 |
 | Ratchet & Clank: Up Your Arsenal | SCUS_973.53 ([`games/rac3/ntsc`](../games/rac3/ntsc)) | 1.28% (164,764 / 12,838,776 bytes) | 1,292 / 31,316 | 1.28% | 2026-10-03 |

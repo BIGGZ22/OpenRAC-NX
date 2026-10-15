@@ -45,7 +45,7 @@ decompilation and is remembered by the build folder.
 ## How a game is built
 
 ```
-games/rac1/pal (the decompilation, read only)
+games/rac1 (the decompilation, read only)
    │  hostgen: Clang reads each file as the console's C,
    │  hostgen writes it again for game memory
    ▼

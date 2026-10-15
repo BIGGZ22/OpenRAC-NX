@@ -37,23 +37,23 @@ the first table; go to a game's documents when you work on that game.
 | [launcher/README.md](../launcher/README.md) | The desktop launcher: developing it, and [connecting a game](../launcher/docs/INTEGRATION.md) to it |
 | [LICENSE.md](../LICENSE.md), [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md), [CREDITS.md](../CREDITS.md) | Licensing by directory, third-party work, the people behind each project |
 
-## Ratchet & Clank, PAL ([games/rac1/pal](../games/rac1/pal))
+## Ratchet & Clank, PAL ([games/rac1](../games/rac1))
 
 | Document | For |
 |---|---|
-| [README.md](../games/rac1/pal/README.md), [CONTRIBUTING.md](../games/rac1/pal/CONTRIBUTING.md), [LEGAL.md](../games/rac1/pal/LEGAL.md) | Setup and build, contributing, what the project contains |
-| [docs/WORKFLOW.md](../games/rac1/pal/docs/WORKFLOW.md) | From an `INCLUDE_ASM` stub to matched C, step by step |
-| [docs/LEVERS.md](../games/rac1/pal/docs/LEVERS.md), [docs/DECOMP_PROGRESS.md](../games/rac1/pal/docs/DECOMP_PROGRESS.md) | Matching levers; the knowledge base of solved questions and dead ends |
-| [docs/TOOLCHAIN.md](../games/rac1/pal/docs/TOOLCHAIN.md) | What builds the image and why (SN ProDG, flags, pipeline) |
-| [docs/OVERLAYS.md](../games/rac1/pal/docs/OVERLAYS.md) | The 19 level programs, variants, the US to PAL map |
-| [docs/ASSETS.md](../games/rac1/pal/docs/ASSETS.md) | Disc, WAD and level data formats, with evidence; what the editor reads |
-| [docs/NAMES.md](../games/rac1/pal/docs/NAMES.md), [docs/NONMATCHING.md](../games/rac1/pal/docs/NONMATCHING.md), [docs/ASM_CLASSIFICATION.md](../games/rac1/pal/docs/ASM_CLASSIFICATION.md) | Symbol names, near-miss staging, handwritten assembly |
-| [docs/AGENT_WORKFLOW.md](../games/rac1/pal/docs/AGENT_WORKFLOW.md), [docs/QUEUE.md](../games/rac1/pal/docs/QUEUE.md), [docs/WORKER.md](../games/rac1/pal/docs/WORKER.md), [docs/LONG_FUNCTIONS.md](../games/rac1/pal/docs/LONG_FUNCTIONS.md), [docs/LLM_DECOMP_INSTRUCTIONS.md](../games/rac1/pal/docs/LLM_DECOMP_INSTRUCTIONS.md) | AI agent waves, worker protocols, claims (the last in Czech) |
-| [docs/PERMUTER.md](../games/rac1/pal/docs/PERMUTER.md), [docs/CONTAINERS.md](../games/rac1/pal/docs/CONTAINERS.md) | decomp-permuter; the build and Ghidra containers |
-| [docs/SIBLING_DECOMPS.md](../games/rac1/pal/docs/SIBLING_DECOMPS.md) | The other projects and how to port from them |
-| [docs/DATAMINED_REVERSE_ENGINEERING.md](../games/rac1/pal/docs/DATAMINED_REVERSE_ENGINEERING.md) | A generated Ghidra datamining report |
-| [notes/](../games/rac1/pal/notes) | Dated investigation logs and per-function write-ups (60 files) |
-| [nonmatching/README.md](../games/rac1/pal/nonmatching/README.md) | Index of staged near misses (generated) |
+| [README.md](../games/rac1/README.md), [CONTRIBUTING.md](../games/rac1/CONTRIBUTING.md), [LEGAL.md](../games/rac1/LEGAL.md) | Setup and build, contributing, what the project contains |
+| [docs/WORKFLOW.md](../games/rac1/docs/WORKFLOW.md) | From an `INCLUDE_ASM` stub to matched C, step by step |
+| [docs/LEVERS.md](../games/rac1/docs/LEVERS.md), [docs/DECOMP_PROGRESS.md](../games/rac1/docs/DECOMP_PROGRESS.md) | Matching levers; the knowledge base of solved questions and dead ends |
+| [docs/TOOLCHAIN.md](../games/rac1/docs/TOOLCHAIN.md) | What builds the image and why (SN ProDG, flags, pipeline) |
+| [docs/OVERLAYS.md](../games/rac1/docs/OVERLAYS.md) | The 19 level programs, variants, the US to PAL map |
+| [docs/ASSETS.md](../games/rac1/docs/ASSETS.md) | Disc, WAD and level data formats, with evidence; what the editor reads |
+| [docs/NAMES.md](../games/rac1/docs/NAMES.md), [docs/NONMATCHING.md](../games/rac1/docs/NONMATCHING.md), [docs/ASM_CLASSIFICATION.md](../games/rac1/docs/ASM_CLASSIFICATION.md) | Symbol names, near-miss staging, handwritten assembly |
+| [docs/AGENT_WORKFLOW.md](../games/rac1/docs/AGENT_WORKFLOW.md), [docs/QUEUE.md](../games/rac1/docs/QUEUE.md), [docs/WORKER.md](../games/rac1/docs/WORKER.md), [docs/LONG_FUNCTIONS.md](../games/rac1/docs/LONG_FUNCTIONS.md), [docs/LLM_DECOMP_INSTRUCTIONS.md](../games/rac1/docs/LLM_DECOMP_INSTRUCTIONS.md) | AI agent waves, worker protocols, claims (the last in Czech) |
+| [docs/PERMUTER.md](../games/rac1/docs/PERMUTER.md), [docs/CONTAINERS.md](../games/rac1/docs/CONTAINERS.md) | decomp-permuter; the build and Ghidra containers |
+| [docs/SIBLING_DECOMPS.md](../games/rac1/docs/SIBLING_DECOMPS.md) | The other projects and how to port from them |
+| [docs/DATAMINED_REVERSE_ENGINEERING.md](../games/rac1/docs/DATAMINED_REVERSE_ENGINEERING.md) | A generated Ghidra datamining report |
+| [notes/](../games/rac1/notes) | Dated investigation logs and per-function write-ups (60 files) |
+| [nonmatching/README.md](../games/rac1/nonmatching/README.md) | Index of staged near misses (generated) |
 
 ## Ratchet & Clank, NTSC-U ([games/rac1/ntsc](../games/rac1/ntsc))
 

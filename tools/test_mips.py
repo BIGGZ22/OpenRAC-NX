@@ -103,7 +103,7 @@ class SameRulesAsRac1PalTests(unittest.TestCase):
     def test_fingerprints_and_cuts_agree(self):
         import importlib.util
         import sys
-        tools = mips.Path(__file__).resolve().parent.parent / "games/rac1/pal/tools"
+        tools = mips.Path(__file__).resolve().parent.parent / "games/rac1/tools"
         spec = importlib.util.spec_from_file_location("rac1_pal_overlays", tools / "overlays.py")
         sys.path.insert(0, str(tools))
         try:

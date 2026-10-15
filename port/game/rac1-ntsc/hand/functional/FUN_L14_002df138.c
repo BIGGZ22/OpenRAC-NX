@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/l14_oltanis/func_L14_002E0538.c (games/rac1/pal) through the version
+/* Carried from the PAL decompilation's nonmatching/l14_oltanis/func_L14_002E0538.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"

@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/game/func_L00_00251E30.c (games/rac1/pal) through the version
+/* Carried from the PAL decompilation's nonmatching/game/func_L00_00251E30.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"

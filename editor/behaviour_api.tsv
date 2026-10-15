@@ -1,7 +1,7 @@
 # The engine API a moby script sees: the C helpers update functions call most (counted over the
 # 554 update functions that are C, see `behaviour.py census`), what each is called in rc1/rc_engine.gd
 # and what it does. kind: func = a call, data = a global read as RcEngine.<name>.
-# Names are the decompilation's (games/rac1/pal/include/names.h, config/names.tsv) where it has one;
+# Names are the decompilation's (games/rac1/include/names.h, config/names.tsv) where it has one;
 # meanings come from reading the C and from ReRAC (ISC) docs/plan/moby_update_catalogue.md.
 # kind	symbol	gd name	meaning
 func	qcopy	qcopy	copy a 16-byte vector or struct: qcopy(dst, src)

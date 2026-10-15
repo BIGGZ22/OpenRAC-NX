@@ -12,8 +12,8 @@ OpenGOAL draws Jak and Daxter ([OPENGOAL_NOTES.md](OPENGOAL_NOTES.md)).
 
 Sources: [RAC1_PAL_SURVEY.md](RAC1_PAL_SURVEY.md) (sections 1 to 4 and 10),
 [VU_PROGRAMS.md](VU_PROGRAMS.md), [OPENGOAL_NOTES.md](OPENGOAL_NOTES.md),
-[ASSETS.md](../../games/rac1/pal/docs/ASSETS.md), the editor's readers
-([editor/](../../editor/README.md)) and the C in `games/rac1/pal/src/game`
+[ASSETS.md](../../games/rac1/docs/ASSETS.md), the editor's readers
+([editor/](../../editor/README.md)) and the C in `games/rac1/src/game`
 (`vuchain.c`, `draw.c`, `framebuf.c`, `tfragfunc.c`, `tiefunc.c`,
 `shrubfunc.c`, `mobyfunc.c`, `skyfunc.c`, `lights.c`, `effects.c`). Names
 come from `config/names.tsv` and `include/names.h`; addresses are PAL. A

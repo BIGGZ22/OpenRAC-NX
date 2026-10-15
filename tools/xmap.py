@@ -120,7 +120,7 @@ def known(key: str, version: dict) -> dict[str, list[tuple[int, int, str, bool]]
     out: dict[str, list] = {}
     if not cfg:
         return out
-    base = GAMES / key
+    base = ROOT / version.get("dir", f"games/{key}")
 
     def add(level, addr, size, name, done=True):
         prog = f"level:{int(level):02d}" if level is not None else cfg.get("program", "boot")

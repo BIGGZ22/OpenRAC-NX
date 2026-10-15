@@ -126,4 +126,4 @@ segment with flag 2; bolts and crates use segments and spheres with 0x22.
 Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/plan/collision_queries.md`,
 `docs/formats/collision_rac1.md` section 6b; PAL names from
-`games/rac1/pal/config/overlays/us_map.tsv`.
+`games/rac1/config/overlays/us_map.tsv`.

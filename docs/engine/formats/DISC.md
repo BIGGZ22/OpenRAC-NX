@@ -5,7 +5,7 @@ system, a table of contents at a fixed sector, and one header per level that
 points at everything the level streams. The layouts are ReRAC's, written from
 Wrench's reader and checked by ReRAC on the NTSC-U disc (`SCUS_971.99`); the
 PAL column gives what OpenRAC measured on `SCES_509.16` where it has
-([ASSETS.md](../../../games/rac1/pal/docs/ASSETS.md)).
+([ASSETS.md](../../../games/rac1/docs/ASSETS.md)).
 
 **Games.** Everything below is measured on RAC1. The comparison with the
 sequels in the last sections is Wrench's knowledge as ReRAC records it
@@ -32,7 +32,7 @@ The file system exists for the console's boot ROM. Once the executable runs,
 the game reads everything else by absolute sector, so its content cannot be
 listed by walking directories.
 
-| File | NTSC-U | PAL ([ASSETS.md](../../../games/rac1/pal/docs/ASSETS.md#the-disc)) |
+| File | NTSC-U | PAL ([ASSETS.md](../../../games/rac1/docs/ASSETS.md#the-disc)) |
 |---|---|---|
 | `SYSTEM.CNF` | root, LBA 289 | LBA 289, 58 bytes |
 | Boot executable | `SCUS_971.99` | `SCES_509.16`, LBA 290 |
@@ -142,7 +142,7 @@ The field sizes sum to exactly 0x2960, which confirms the offsets. The same
 bytes read as `SectorRange[479]`, `Sector32[240]`, `SectorRange[167]`,
 `SectorByteRange[88]`, `Sector32[900]`, `SectorRange[19]` after the two header
 words; a tool that moves sectors relocates them as one block. OpenRAC's PAL
-table of the groups in use is in [ASSETS.md](../../../games/rac1/pal/docs/ASSETS.md#table-of-contents-groups).
+table of the groups in use is in [ASSETS.md](../../../games/rac1/docs/ASSETS.md#table-of-contents-groups).
 
 **Sizes of bare start sectors.** For a `Sector32`, read the data: a VAG
 header (`VAGp`, big-endian payload size at +0x0C) gives 0x30 + that size; a
@@ -199,7 +199,7 @@ header; the size field is not used (Wrench writes 1). On PAL, `func_0012F4A8`
 
 ## 6. Level sector ranges
 
-PAL figures are in [ASSETS.md](../../../games/rac1/pal/docs/ASSETS.md#level-ranges).
+PAL figures are in [ASSETS.md](../../../games/rac1/docs/ASSETS.md#level-ranges).
 ReRAC's disc reader gives byte-identical level lumps to its earlier extractor
 on all 19 NTSC-U levels (an image of 2,057,664 sectors).
 
@@ -252,5 +252,5 @@ construction and OpenRAC does not rely on it.
 Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/formats/disc_layout.md` and
 `docs/formats/wad_layouts_rac1.md` sections 0–1; PAL facts from
-[ASSETS.md](../../../games/rac1/pal/docs/ASSETS.md) and
-`games/rac1/pal/config/overlays/us_map.tsv`.
+[ASSETS.md](../../../games/rac1/docs/ASSETS.md) and
+`games/rac1/config/overlays/us_map.tsv`.

@@ -15,7 +15,7 @@ is the moby.** Everything else is in its state:
 
 | Part | Where | Example |
 |---|---|---|
-| header: position, rotation, scale, state byte (0x20), flags, class, animation (seq, frame) | `struct Moby`, [moby.h](../games/rac1/pal/include/moby.h) | `moby->state = 1` |
+| header: position, rotation, scale, state byte (0x20), flags, class, animation (seq, frame) | `struct Moby`, [moby.h](../games/rac1/include/moby.h) | `moby->state = 1` |
 | private variables (pvars) | `moby->pvars` (+0x78), a per-class struct from the level's gameplay file | `pv->rider`, `data->velocity` |
 | mode / state bits | `moby->state` is the class's own state machine (a `switch` on it); `flags` has engine bits | `moby->flags \|= 0x41` |
 | animation | `moby->seq`, `set_animation(moby, seq, frame, blend)` | `func_00213DE0` |
@@ -92,7 +92,7 @@ script, so a bad script breaks one class, not the game.
 **c. Keep the behaviour in C, expose data.** The editor can already show
 `rc1_update` and `rc1_source`. What is missing is exposing per-class parameters.
 Candidates are pvars (typed structs exist for about two dozen classes in
-[moby_pvars.h](../games/rac1/pal/include/moby_pvars.h); the translated scripts
+[moby_pvars.h](../games/rac1/include/moby_pvars.h); the translated scripts
 declare them for the three prototype classes), tables and constants in the C
 (speeds, ranges, timers: the crate's `0x1F9` class numbers, the toad's
 distances). A modder changes numbers in Godot, the packer writes them into the

@@ -100,7 +100,7 @@ _logic = None
 def moby_logic(level: int) -> dict[int, dict]:
     """class -> {"function", "file", "decompiled"} for the classes LEVEL updates: the function
     the game calls for each moby of the class every frame, where it is in the decompilation
-    (games/rac1/pal), and whether it is C there yet. From that project's
+    (games/rac1), and whether it is C there yet. From that project's
     config/overlays/names.tsv (the UpdateMoby_<class> roles) and its src/. Empty when the
     decompilation is not in this checkout."""
     global _logic

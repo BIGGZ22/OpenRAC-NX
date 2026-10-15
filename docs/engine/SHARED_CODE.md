@@ -26,7 +26,7 @@ them, with which ones the project has matched in C, so "matched there, open
 here" can be answered whatever the two projects call a function.
 
 The rules are the ones that built rac1/pal's US to PAL map
-([OVERLAYS.md](../../games/rac1/pal/docs/OVERLAYS.md)). The strict figure is a
+([OVERLAYS.md](../../games/rac1/docs/OVERLAYS.md)). The strict figure is a
 floor: that map pairs 84% of the US code by identical fingerprint and most of
 the rest by similarity between those anchors.
 
@@ -225,7 +225,7 @@ depend least on the compiler question.
 
 | Version | What it reads | Produced by |
 |---|---|---|
-| rac1/pal | `games/rac1/pal/baserom/SCES_509.16`, `baserom/overlays/level_*` | `openrac.py setup rac1/pal`, then `python3 tools/overlays.py dump` there |
+| rac1/pal | `games/rac1/baserom/SCES_509.16`, `baserom/overlays/level_*` | `openrac.py setup rac1/pal`, then `python3 tools/overlays.py dump` there |
 | rac1/ntsc | `games/rac1/ntsc/config/us/SCUS_971.99`, `config/us/overlays/level_*` | `openrac.py setup rac1/ntsc`, then its `setup.sh` |
 | rac2/ntsc | `games/rac2/ntsc/baserom/SCUS_972.68`, `baserom/levels/*_*` | `python3 tools/levels.py dump` there |
 | rac3/ntsc | `build/rac3/wrench_out/uya_scus_973_53/` | the Wrench unpack on [rac3's page](../../games/rac3/README.md#getting-started) |

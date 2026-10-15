@@ -199,5 +199,5 @@ Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/plan/moby_skinning_lighting.md`,
 `docs/plan/moby_render_notes.md`, `docs/plan/moby_untextured.md`,
 `docs/formats/moby_rac1.md`; PAL names from
-`games/rac1/pal/config/overlays/us_map.tsv` and
+`games/rac1/config/overlays/us_map.tsv` and
 [RENDERER.md](../../port/RENDERER.md).

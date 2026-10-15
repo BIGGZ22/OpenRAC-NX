@@ -9,7 +9,7 @@ program 104691, the animation evaluator), checked on every class of the
 NTSC-U disc (2,968 class blobs; 22,227 high-detail, 3,435 low-detail and
 1,123 metal packets). OpenRAC's editor reads the high-detail mesh, skeleton
 and animations on PAL and passes every check on all 19 levels
-([ASSETS.md](../../../games/rac1/pal/docs/ASSETS.md#moby-classes)). How the
+([ASSETS.md](../../../games/rac1/docs/ASSETS.md#moby-classes)). How the
 game draws and animates them: [MOBY_RENDERING.md](../systems/MOBY_RENDERING.md),
 [MOBY_ANIMATION.md](../systems/MOBY_ANIMATION.md).
 
@@ -222,4 +222,4 @@ Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/formats/moby_rac1.md`,
 `docs/plan/moby_skinning_lighting.md`, `docs/plan/moby_animation.md`,
 `docs/plan/moby_untextured.md`; PAL names from
-`games/rac1/pal/config/overlays/us_map.tsv`.
+`games/rac1/config/overlays/us_map.tsv`.

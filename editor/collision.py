@@ -1,6 +1,6 @@
 """Static collision: the level's baked world mesh, as triangles with surface types.
 
-The layout follows ReRAC's notes on the format (games/rac1/pal/docs/ASSETS.md, "Collision").
+The layout follows ReRAC's notes on the format (games/rac1/docs/ASSETS.md, "Collision").
 A three-level tree (Z, then Y, then X) of 4-unit cells leads to leaves; each
 leaf has its own packed vertices and the faces that touch the cell, so a face
 that spans several cells is stored once per cell and is merged here.

@@ -36,7 +36,7 @@ class Reading(unittest.TestCase):
         self.assertEqual(build_port.source_variable("rac1-pal"), "OPENRAC_RAC1_PAL_SOURCE")
         self.assertEqual(build_port.targets(["rac1-pal"]), ["openrac-rac1-pal", "openrac-extractor"])
         self.assertIn("rac1-pal", build_port.games())
-        self.assertEqual(build_port.default_source("rac1-pal"), build_port.ROOT / "games" / "rac1" / "pal")
+        self.assertEqual(build_port.default_source("rac1-pal"), build_port.ROOT / "games" / "rac1")
 
     def test_clang_is_looked_for_in_order(self):
         env = {"OPENRAC_CLANG": "X:/mine/clang.exe", "PROGRAMFILES": "X:/PF", "USERPROFILE": "X:/me", "PATH": ""}

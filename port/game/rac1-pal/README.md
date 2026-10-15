@@ -1,7 +1,7 @@
 # openrac-rac1-pal: Ratchet & Clank (PAL), native
 
 The native program of Ratchet & Clank (PAL), built from the decompilation
-in [games/rac1/pal](../../../games/rac1/pal) by
+in [games/rac1](../../../games/rac1) by
 [hostgen](../../tools/hostgen/README.md). It is one of the port's games
 ([port/game](../README.md)): what is particular to it is here, the rest
 (the library replacements, the program) is shared ([common](../common)).

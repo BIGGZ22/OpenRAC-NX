@@ -7,12 +7,12 @@
 #   bash tools/docker/run.sh bash tools/build_sn.sh
 set -euo pipefail
 repo=$(cd "$(dirname "$0")/../.." && pwd)
-# Inside OpenRAC (games/rac1/pal), mount the whole repository instead, so
+# Inside OpenRAC (games/rac1), mount the whole repository instead, so
 # the shared editor/, baserom/ and toolchains/ at its top level are visible
 # in the container at the same paths.
 mount=$repo
 top=$(cd "$repo/../../.." && pwd)
-if [ -f "$top/games/rac1/game.json" ] && [ "$top/games/rac1/pal" = "$repo" ]; then
+if [ -f "$top/games/rac1/game.json" ] && [ "$top/games/rac1" = "$repo" ]; then
   mount=$top
 fi
 CONTAINER_CLI="${CONTAINER_CLI:-}"

@@ -78,7 +78,7 @@ FUN_001f99e8	game_sound_math.c
 FUN_001f9c90	game_sound_math.c
 # Written for this version (the NTSC decomp keeps it as assembly; PAL's decompilation has it in C).
 func_001FA6C0	game_int_to_float.c
-# The PAL decompilation's functional C (games/rac1/pal/nonmatching/functional.tsv), carried the same way:
+# The PAL decompilation's functional C (games/rac1/nonmatching/functional.tsv), carried the same way:
 # C that does what the function does without matching its bytes, for functions the NTSC decomp still has as assembly.
 memcmp	functional/memcmp.c
 memmove	functional/memmove.c

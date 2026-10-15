@@ -3,7 +3,7 @@
 Third-party code and data used by OpenRAC's shared components. Each game
 directory lists its own in its `THIRD_PARTY_NOTICES.md` and source comments:
 
-- [games/rac1/pal/THIRD_PARTY_NOTICES.md](games/rac1/pal/THIRD_PARTY_NOTICES.md):
+- [games/rac1/THIRD_PARTY_NOTICES.md](games/rac1/THIRD_PARTY_NOTICES.md):
   functions adapted from Lombyte, ReRAC's notes in `config/overlays/rerac_notes.tsv`.
 - [games/rac1/ntsc/THIRD_PARTY_NOTICES.md](games/rac1/ntsc/THIRD_PARTY_NOTICES.md):
   libgcc and soft-float, newlib, David Gay's dtoa, code ported from rac1-decomp,
@@ -33,18 +33,18 @@ and notes:
 
 - `editor/mobys.py`: the moby instance record and what the level loader does
   with each field, from `crates/rc-formats/src/gameplay.rs` and
-  `docs/plan/moby_render_notes.md`; described in [ASSETS.md](games/rac1/pal/docs/ASSETS.md) ("Mobys").
+  `docs/plan/moby_render_notes.md`; described in [ASSETS.md](games/rac1/docs/ASSETS.md) ("Mobys").
 - `editor/moby_class.py`: the moby class header and model format (packets,
   vertex cache, skinning slots, normals, untextured faces), from
   `docs/formats/moby_rac1.md` §1-§2 and `crates/rc-formats/src/moby.rs`;
-  described in [ASSETS.md](games/rac1/pal/docs/ASSETS.md) ("Moby classes").
+  described in [ASSETS.md](games/rac1/docs/ASSETS.md) ("Moby classes").
 - `editor/moby_anim.py`: moby skeletons and animation sequences, from
   `docs/formats/moby_rac1.md` §3-§4, `docs/plan/moby_animation.md` and
   `crates/rc-formats/src/moby_anim.rs`.
 - `editor/collision.py`: the collision block (cell tree, packed vertices,
   faces and surface bytes), from `docs/formats/collision_rac1.md`,
   `docs/plan/collision_queries.md` and `crates/rc-formats/src/collision.rs`;
-  described in [ASSETS.md](games/rac1/pal/docs/ASSETS.md) ("Collision").
+  described in [ASSETS.md](games/rac1/docs/ASSETS.md) ("Collision").
 - `editor/lighting.py`: the terrain and tie lighting passes (`LightTfrags`,
   `LightTies`) and the PS2 float arithmetic they run on, from
   `crates/rc-formats/src/tfrag_light.rs` and `tie_light.rs`; their checks from

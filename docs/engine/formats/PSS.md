@@ -9,7 +9,7 @@ decoder of its own, checked against an independent MPEG-2 decoder. Which game
 code plays which slot: [CUTSCENES.md](../systems/CUTSCENES.md#5-movies).
 
 The movie player in the executable is to be decompiled from the retail
-assembly alone; [MOVIE.md](../../../games/rac1/pal/docs/MOVIE.md) gives the
+assembly alone; [MOVIE.md](../../../games/rac1/docs/MOVIE.md) gives the
 rules. This page describes the files, not the player's code.
 
 **Games.** RAC1 (NTSC-U surveyed; the PAL disc's copies are among them).

@@ -6,7 +6,7 @@ evaluation, the joint chain, and the attachment of one moby to another's
 joint. ReRAC read it from the NTSC-U code (`SCUS_971.99`) and checked it on
 every sequence of the 19 levels; OpenRAC's editor decodes the same data on
 PAL and poses classes with it
-([ASSETS.md](../../../games/rac1/pal/docs/ASSETS.md#moby-skeletons-and-animations)).
+([ASSETS.md](../../../games/rac1/docs/ASSETS.md#moby-skeletons-and-animations)).
 The data layout is in [MOBY.md](../formats/MOBY.md#6-sequences-and-frames).
 
 **Games.** RAC1. Wrench reads RAC2 and RAC3 frames with the same header and
@@ -142,4 +142,4 @@ called by about 40 classes), searchlights and missile fins.
 Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/plan/moby_animation.md`,
 `docs/formats/moby_rac1.md` section 0.4; PAL names from
-`games/rac1/pal/config/overlays/us_map.tsv`.
+`games/rac1/config/overlays/us_map.tsv`.

@@ -6,7 +6,7 @@ core index that tie them together. Also the standalone PIF images of the
 global data. The layouts are ReRAC's, written from Wrench and checked by
 ReRAC on all 9,104 level textures of the NTSC-U disc; OpenRAC's extractor
 reads the same layout on PAL, where the game's upload is `func_00203958`
-(NTSC-U 0x203120) ([ASSETS.md](../../../games/rac1/pal/docs/ASSETS.md#textures)).
+(NTSC-U 0x203120) ([ASSETS.md](../../../games/rac1/docs/ASSETS.md#textures)).
 
 **Games.** RAC1, measured. Wrench's code paths say the sequels differ
 (**reference**): RAC2, RAC3 and Deadlocked keep some moby textures resident
@@ -142,4 +142,4 @@ CLAMP_1 = 0) and bilinear filtering.
 Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/formats/textures_rac1.md` and
 `docs/plan/moby_render_notes.md` section 4; PAL facts from
-[ASSETS.md](../../../games/rac1/pal/docs/ASSETS.md).
+[ASSETS.md](../../../games/rac1/docs/ASSETS.md).

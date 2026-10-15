@@ -126,4 +126,4 @@ fight the baked shade.
 Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/plan/shadows.md` sections 0–5,
 `docs/plan/hardware_fidelity_layers.md`; PAL addresses from
-`games/rac1/pal/config/overlays/us_map.tsv`.
+`games/rac1/config/overlays/us_map.tsv`.

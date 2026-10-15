@@ -82,7 +82,7 @@ class ManifestTests(unittest.TestCase):
             self.assertNotIn(version["serial"], serials)
             serials.add(version["serial"])
             if version.get("source"):
-                self.assertTrue((openrac.GAMES / game["id"] / name).is_dir(), f"{game['id']}/{name}")
+                self.assertTrue((openrac.ROOT / openrac.vdir(game, name)).is_dir(), f"{game['id']}/{name}")
                 self.assertRegex(version["source"]["commit"], r"^[0-9a-f]{40}$")
 
 

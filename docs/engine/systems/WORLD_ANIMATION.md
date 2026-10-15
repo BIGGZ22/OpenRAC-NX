@@ -115,4 +115,4 @@ A shared engine module: a wave simulation on 16 × 16-unit patches.
 
 Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/plan/world_animation.md`; PAL names from
-`games/rac1/pal/config/overlays/us_map.tsv`.
+`games/rac1/config/overlays/us_map.tsv`.

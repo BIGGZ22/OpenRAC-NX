@@ -4,7 +4,7 @@ The decompiled C reproduces MIPS code for the PlayStation 2's compiler. This
 page counts what in it assumes the console (32-bit pointers, the retail
 memory layout, the console's types and arithmetic, the tricks that make the
 compiler emit the retail bytes) and records what a PC build has to do about
-each. It is about Ratchet & Clank (PAL), `games/rac1/pal`; paths are
+each. It is about Ratchet & Clank (PAL), `games/rac1`; paths are
 relative to it unless they start at the repository root.
 
 How it was counted, on 2026-10-09 at `7954152`: regular-expression passes

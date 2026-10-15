@@ -1,6 +1,6 @@
 """Static terrain (tfrags) at LOD 0 or 2, read without running VIF or VU code.
 
-Layouts follow Wrench's tfrag reader (games/rac1/pal/docs/ASSETS.md); the stream
+Layouts follow Wrench's tfrag reader (games/rac1/docs/ASSETS.md); the stream
 selection is confirmed by func_002352C8. Only the packet programs seen
 on this disc are accepted; anything else raises FormatError.
 """

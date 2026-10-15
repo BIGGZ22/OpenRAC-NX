@@ -35,7 +35,7 @@ plan, open to change), **open** (needs a decision).
    ([LICENSE.md](../../LICENSE.md)). Nothing from the games (code bytes,
    data, microcode, media) is ever committed
    ([SOURCING.md](../policy/SOURCING.md)).
-6. **First game: Ratchet & Clank (PAL)**, `games/rac1/pal`, whose
+6. **First game: Ratchet & Clank (PAL)**, `games/rac1`, whose
    decompilation is the furthest along.
 7. **Pointers are OpenGOAL's offsets** (decided 2026-10-09; open decision 1
    below). Game memory is one 4 GB reservation whose offsets are the

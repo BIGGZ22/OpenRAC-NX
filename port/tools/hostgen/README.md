@@ -7,7 +7,7 @@ meaning while moving it to a 64-bit PC.
 
 ```sh
 python3 port/tools/hostgen/hostgen.py --game port/game/rac1-pal/hostgen.json \
-    --source games/rac1/pal --out build/hostgen/rac1
+    --source games/rac1 --out build/hostgen/rac1
 python3 -m unittest discover -s port/tools/hostgen     # its tests (needs Clang)
 ```
 

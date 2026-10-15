@@ -93,7 +93,7 @@
         "requires": [
           "inputs"
         ],
-        "docs": "games/rac1/pal/README.md"
+        "docs": "games/rac1/README.md"
       },
       {
         "id": "build",
@@ -109,8 +109,8 @@
           "inputs",
           "toolchains"
         ],
-        "artifact": "games/rac1/pal/build-sn/rac1.elf",
-        "docs": "games/rac1/pal/README.md"
+        "artifact": "games/rac1/build-sn/rac1.elf",
+        "docs": "games/rac1/README.md"
       },
       {
         "id": "editor-preview",
@@ -148,7 +148,7 @@
         "requires": [
           "python"
         ],
-        "docs": "games/rac1/pal/docs/WORKFLOW.md"
+        "docs": "games/rac1/docs/WORKFLOW.md"
       },
       {
         "id": "editor-extract",

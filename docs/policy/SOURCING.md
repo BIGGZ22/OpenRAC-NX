@@ -3,8 +3,8 @@
 This policy applies to everything in OpenRAC: every game, the editor, the tools
 and the documentation. A game's own rules may be stricter; none may be looser.
 It merges the rules the four sister projects already followed (for example
-[rac1/pal's CONTRIBUTING.md](../../games/rac1/pal/CONTRIBUTING.md) and
-[LEGAL.md](../../games/rac1/pal/LEGAL.md)).
+[rac1/pal's CONTRIBUTING.md](../../games/rac1/CONTRIBUTING.md) and
+[LEGAL.md](../../games/rac1/LEGAL.md)).
 
 ## What goes into the repository
 
@@ -52,7 +52,7 @@ SDK-style names or macros.
 ## Prerelease builds
 
 Several projects cite publicly distributed demo, preview and prototype discs
-as references (for example [rac1/pal's notes/beta_builds_research.md](../../games/rac1/pal/notes/beta_builds_research.md),
+as references (for example [rac1/pal's notes/beta_builds_research.md](../../games/rac1/notes/beta_builds_research.md),
 [rac1/ntsc's docs/engine-source-layout.md](../../games/rac1/ntsc/docs/engine-source-layout.md)
 and [rac2's docs/PROTOTYPE-BUILDS.md](../../games/rac2/ntsc/docs/PROTOTYPE-BUILDS.md)).
 Until the group decides otherwise ([open questions](OPEN_QUESTIONS.md)):

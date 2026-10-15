@@ -290,7 +290,7 @@ export const api = {
   runAction: (scope: Scope, id: string, level?: number) =>
     call<Started>("run_action", { scope, id, level: level ?? null }),
   cancelJob: (id: number) => call<null>("cancel_job", { id }),
-  /** A file or folder in the checkout, relative to it (`games/rac1/pal/README.md`). */
+  /** A file or folder in the checkout, relative to it (`games/rac1/README.md`). */
   openPath: (path: string) => call<null>("open_path", { path }),
   openUrl: (url: string) => call<null>("open_url", { url }),
   /** Sets a game up from the image of the player's disc: the extractor, as a job. */

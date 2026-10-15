@@ -8,7 +8,7 @@ Each game's own docs decide how a match is proven. This page links to them and
 copies their commands as they stood when the projects were imported
 (2026-10-03). If a command here disagrees with a game's docs, the game's docs
 win. Run game commands from that game's directory (for example
-`games/rac1/pal/`). Run [`tools/openrac.py`](../../tools/openrac.py) from the
+`games/rac1/`). Run [`tools/openrac.py`](../../tools/openrac.py) from the
 OpenRAC root.
 
 ## 1. The common loop
@@ -48,7 +48,7 @@ agents, [AGENTS.md](../../AGENTS.md). In short:
   [docs/commit-messages.md](../../games/rac1/ntsc/docs/commit-messages.md),
   rac2's [AGENTS.md](../../games/rac2/ntsc/AGENTS.md) and
   [.gitmessage](../../games/rac2/ntsc/.gitmessage), and the format in rac1/pal's
-  [LLM_DECOMP_INSTRUCTIONS.md](../../games/rac1/pal/docs/LLM_DECOMP_INSTRUCTIONS.md).
+  [LLM_DECOMP_INSTRUCTIONS.md](../../games/rac1/docs/LLM_DECOMP_INSTRUCTIONS.md).
   The projects' own examples carry over directly: Lombyte's
   `decomp: promote fun_002212b8 (424 B)` becomes
   `feat(rac1/ntsc): promote fun_002212b8 (424 B)`, and rac1/pal's
@@ -108,17 +108,17 @@ Each `games/*/game.json` has a `setup` line with the remaining steps.
 [toolchains/README.md](../../toolchains/README.md) says where to get the
 compilers, and [docs/toolchains](../toolchains/README.md) compares them.
 
-### rac1/pal: `games/rac1/pal`
+### rac1/pal: `games/rac1`
 
 On macOS and Linux, run the `python`, `sh` and `bash` commands through
 `bash tools/docker/run.sh`, as the setup row shows
-([CONTRIBUTING.md](../../games/rac1/pal/CONTRIBUTING.md)). Commands written
+([CONTRIBUTING.md](../../games/rac1/CONTRIBUTING.md)). Commands written
 with `python3` run on the host.
 
 | Step | Command |
 |---|---|
 | Set up | `bash tools/docker/run.sh bash tools/setup_asm.sh`, then `bash tools/docker/run.sh bash tools/build_sn.sh` |
-| List | `python tools/triage.py`, `python tools/rank_candidates.py`, `python3 tools/lombyte.py todo`; near misses in [nonmatching/README.md](../../games/rac1/pal/nonmatching/README.md) |
+| List | `python tools/triage.py`, `python tools/rank_candidates.py`, `python3 tools/lombyte.py todo`; near misses in [nonmatching/README.md](../../games/rac1/nonmatching/README.md) |
 | Sketch | `sh tools/gen_ctx.sh`, then `python tools/m2c.py func_XXXXXXXX` |
 | Try | `python tools/try_func.py func_XXXXXXXX candidate.c --diff` |
 | In context | Executable: `bash tools/build_sn.sh`. Level code: `try_func` is already strict; `python tools/overlay_file_check.py [FILE ...]` re-checks whole files |
@@ -166,19 +166,19 @@ On hosts without the tools, prefix any step with `bash tools/docker/run.sh`.
 
 ### rac1/pal: Ratchet & Clank PAL (from rac1-decomp)
 
-- **Setup** ([README.md](../../games/rac1/pal/README.md)). The SN toolchain
+- **Setup** ([README.md](../../games/rac1/README.md)). The SN toolchain
   comes from two community mirrors. The build runs in a linux/386 container
   with Wine, which mounts all of OpenRAC. Host scripts such as `wave.py` need
-  Python 3.10 or newer ([QUEUE.md](../../games/rac1/pal/docs/QUEUE.md)).
-- **Procedure.** [docs/WORKFLOW.md](../../games/rac1/pal/docs/WORKFLOW.md) is
+  Python 3.10 or newer ([QUEUE.md](../../games/rac1/docs/QUEUE.md)).
+- **Procedure.** [docs/WORKFLOW.md](../../games/rac1/docs/WORKFLOW.md) is
   the manual loop. Its step 0 asks whether the function is library code with
-  an open-source original. [LEVERS.md](../../games/rac1/pal/docs/LEVERS.md) is
+  an open-source original. [LEVERS.md](../../games/rac1/docs/LEVERS.md) is
   the one-page cheat sheet: try `tools/lombyte.py` first, list every global
   and how retail reaches it, and check the known walls.
 - **Two kinds of function.** For an executable function, `try_func` masks
   relocations, so its `EXACT` is only a filter and the full build's audit
   decides. For a level function (`func_LNN_X`,
-  [OVERLAYS.md](../../games/rac1/pal/docs/OVERLAYS.md)), `try_func` links the
+  [OVERLAYS.md](../../games/rac1/docs/OVERLAYS.md)), `try_func` links the
   file so the function sits at its address in its level and compares every
   byte and relocation. After a landing, `overlay_file_check.py` catches
   neighbours that stopped matching.
@@ -186,7 +186,7 @@ On hosts without the tools, prefix any step with `bash tools/docker/run.sh`.
   register pins, empty-asm barriers, inline asm, `while (0)`, expression
   aliases and a `#define` in a candidate. Write a level address as the symbol
   the assembly names, never as a number.
-- **Build fidelity** ([BUILD_FIDELITY.md](../../games/rac1/pal/docs/BUILD_FIDELITY.md)). No build step may change what the compiler
+- **Build fidelity** ([BUILD_FIDELITY.md](../../games/rac1/docs/BUILD_FIDELITY.md)). No build step may change what the compiler
   emitted, and options apply to whole files (`config/file_cflags.txt`); a
   function that needs an option its neighbours do not goes in a file of its
   own. A function that only matches through a new build step or a flag of
@@ -194,11 +194,11 @@ On hosts without the tools, prefix any step with `bash tools/docker/run.sh`.
   in `gen_progress_report.py --check`, so CI enforces it.
 - **What counts as finished without C.** Handwritten functions and linker
   remnants are retail assembly, counted as finished
-  ([ASM_CLASSIFICATION.md](../../games/rac1/pal/docs/ASM_CLASSIFICATION.md)); a
+  ([ASM_CLASSIFICATION.md](../../games/rac1/docs/ASM_CLASSIFICATION.md)); a
   run of remnants qualifies under one rule (`tools/overlay_remnants.py`). A
   level function the catalogue cut into pieces is written whole and listed in
   `config/overlays/joined.tsv`.
-- **Near misses** ([NONMATCHING.md](../../games/rac1/pal/docs/NONMATCHING.md)).
+- **Near misses** ([NONMATCHING.md](../../games/rac1/docs/NONMATCHING.md)).
   The best attempt at each level function is kept as
   `nonmatching/<dir>/<func>.c`, with its verdict and the last notes in a
   header. Nothing builds these files, and the report scores them as
@@ -208,9 +208,9 @@ On hosts without the tools, prefix any step with `bash tools/docker/run.sh`.
 - **Before committing.** Run the full build, stage files by name (never
   `git add -A`), and put code ported from another project in a commit of its
   own that credits it
-  ([AGENT_WORKFLOW.md](../../games/rac1/pal/docs/AGENT_WORKFLOW.md)). There is
-  no pull-request template. See also [NAMES.md](../../games/rac1/pal/docs/NAMES.md)
-  and [CONTAINERS.md](../../games/rac1/pal/docs/CONTAINERS.md) (Ghidra over MCP).
+  ([AGENT_WORKFLOW.md](../../games/rac1/docs/AGENT_WORKFLOW.md)). There is
+  no pull-request template. See also [NAMES.md](../../games/rac1/docs/NAMES.md)
+  and [CONTAINERS.md](../../games/rac1/docs/CONTAINERS.md) (Ghidra over MCP).
 
 ### rac1/ntsc: Ratchet & Clank NTSC-U (from Lombyte)
 
@@ -321,18 +321,18 @@ smaller version of the same tooling ([CONTRIBUTING.md](../../games/rac4/ntsc/CON
 
 ## 5. Working with AI agents
 
-**rac1/pal's agent waves** ([AGENT_WORKFLOW.md](../../games/rac1/pal/docs/AGENT_WORKFLOW.md)).
+**rac1/pal's agent waves** ([AGENT_WORKFLOW.md](../../games/rac1/docs/AGENT_WORKFLOW.md)).
 A lead model plans waves, launches workers, reviews their matches and lands
 them; it matches nothing itself. Work flows up the tiers measured on
-2026-10-07 ([AGENT_WORKFLOW.md](../../games/rac1/pal/docs/AGENT_WORKFLOW.md), "Model tiers"): tools that need no model first
+2026-10-07 ([AGENT_WORKFLOW.md](../../games/rac1/docs/AGENT_WORKFLOW.md), "Model tiers"): tools that need no model first
 (`tools/port.py`, `overlay_variants.py`), then a swarm of small, cheap workers
 (Haiku) on level functions of about 400 bytes and under, then Opus on their
 near misses and on functions over 1 KB
-([LONG_FUNCTIONS.md](../../games/rac1/pal/docs/LONG_FUNCTIONS.md)), each tier
+([LONG_FUNCTIONS.md](../../games/rac1/docs/LONG_FUNCTIONS.md)), each tier
 starting from the notes and best candidate of the one below. Sonnet is used
 only for library code with an answer key. Queue workers follow
-[QUEUE.md](../../games/rac1/pal/docs/QUEUE.md); the subagent type is
-[.claude/agents/match-worker.md](../../games/rac1/pal/.claude/agents/match-worker.md).
+[QUEUE.md](../../games/rac1/docs/QUEUE.md); the subagent type is
+[.claude/agents/match-worker.md](../../games/rac1/.claude/agents/match-worker.md).
 
 ```
 python3 tools/wave.py plan q6 --queue --overlay --family --count 64 --min-size 32 --max-size 600 --budget 6
@@ -353,7 +353,7 @@ bash tools/docker/run.sh python tools/overlay_variants.py clone   # variants, no
 
 **Several agents in one checkout.** rac1/pal's `tools/claims.py` lets agents
 and people share a working tree
-([Several agents at once](../../games/rac1/pal/docs/AGENT_WORKFLOW.md#several-agents-at-once)):
+([Several agents at once](../../games/rac1/docs/AGENT_WORKFLOW.md#several-agents-at-once)):
 
 ```
 python3 tools/claims.py claim gpt func_L05_002559DC     # "claimed", or "taken by <owner>" (exit 1)
@@ -376,7 +376,7 @@ set no rules for agents beyond the pull-request rules.
 
 | Project | Rule in its own docs |
 |---|---|
-| rac1/pal | Commit messages end with one `Co-Authored-By` trailer naming the model ([WORKFLOW.md](../../games/rac1/pal/docs/WORKFLOW.md), "Publish") |
+| rac1/pal | Commit messages end with one `Co-Authored-By` trailer naming the model ([WORKFLOW.md](../../games/rac1/docs/WORKFLOW.md), "Publish") |
 | rac1/ntsc | No agent trailers or session links. Its optional hook strips them and rejects AI identities as author or committer ([commit-messages.md](../../games/rac1/ntsc/docs/commit-messages.md)) |
 | rac2 | Not addressed |
 | rac3 | Contributors remove AI `Co-authored-by:` lines before pushing, and maintainers delete any left when squash-merging ([Pull-Requests.md](../../games/rac3/ntsc/docs/wiki/Pull-Requests.md)) |
@@ -406,17 +406,17 @@ best starting point for the other.
 - **The map.** `python3 tools/overlays.py us-map` (rac1/pal) pairs every US
   function with its PAL counterpart from the code alone, using ReRAC's
   extraction of the US disc. It writes
-  [config/overlays/us_map.tsv](../../games/rac1/pal/config/overlays/us_map.tsv)
-  ([OVERLAYS.md, "US map"](../../games/rac1/pal/docs/OVERLAYS.md#us-map)).
+  [config/overlays/us_map.tsv](../../games/rac1/config/overlays/us_map.tsv)
+  ([OVERLAYS.md, "US map"](../../games/rac1/docs/OVERLAYS.md#us-map)).
 - **Pairing.** `python3 tools/lombyte.py func_X` gives the counterpart, its
   status and its C file, and `todo` lists what Lombyte matched and PAL has not
-  ([SIBLING_DECOMPS.md](../../games/rac1/pal/docs/SIBLING_DECOMPS.md)). It
+  ([SIBLING_DECOMPS.md](../../games/rac1/docs/SIBLING_DECOMPS.md)). It
   looks in `$LOMBYTE`, else `games/rac1/ntsc` inside OpenRAC (else
   `~/Projects/Lombyte`), and reads Lombyte's report from its tree
   (`build/progress/report.json`, which `make check` writes) or from OpenRAC's
   `progress/sources/rac1-ntsc.json` (`openrac.py progress --fetch`).
-- **Porting a function** ([SIBLING_DECOMPS.md](../../games/rac1/pal/docs/SIBLING_DECOMPS.md#porting-a-function),
-  [QUEUE.md](../../games/rac1/pal/docs/QUEUE.md#lombyte-ports)). Keep the
+- **Porting a function** ([SIBLING_DECOMPS.md](../../games/rac1/docs/SIBLING_DECOMPS.md#porting-a-function),
+  [QUEUE.md](../../games/rac1/docs/QUEUE.md#lombyte-ports)). Keep the
   control flow, statement order and types, and rename functions through
   `lombyte.py`. Map globals by position: the n-th `%hi`/`%lo` or `$gp` access
   in one build is the n-th in the other. The level boundary and `$gp` differ
@@ -431,7 +431,7 @@ best starting point for the other.
   one function at a time.
 - **Provenance.** On PAL, the comment above a port ends with
   `Adapted from Lombyte (MIT) for PAL: <its file under src/>, <its name>.`,
-  and [THIRD_PARTY_NOTICES.md](../../games/rac1/pal/THIRD_PARTY_NOTICES.md)
+  and [THIRD_PARTY_NOTICES.md](../../games/rac1/THIRD_PARTY_NOTICES.md)
   lists each port. On Lombyte, a ported file's first line reads
   `Ported from rac1-decomp, the PAL decompilation (<file>, <function>)`
   ([THIRD_PARTY_NOTICES.md](../../games/rac1/ntsc/THIRD_PARTY_NOTICES.md));
@@ -483,7 +483,7 @@ already does.
   credit as a fuzzy score. rac3's drafts stay in localdecomp's local state,
   and rac2's trial evidence stays on its author's disk. A staged-attempts
   directory with a generated index
-  ([NONMATCHING.md](../../games/rac1/pal/docs/NONMATCHING.md)) would work for
+  ([NONMATCHING.md](../../games/rac1/docs/NONMATCHING.md)) would work for
   both.
 - **Make the inner loop relocation-aware.** rac3's `try_func.py` resolves
   relocations, and rac1/pal's level check links for real. rac1/pal's
@@ -497,7 +497,7 @@ already does.
   break the build, and rac2's `doctor.py` tells a newcomer what their machine
   can do. rac1/pal's `gen_progress_report.py --check` and Lombyte's
   `make check` need no game data.
-- **Share permuter setups.** rac1/pal ([PERMUTER.md](../../games/rac1/pal/docs/PERMUTER.md),
+- **Share permuter setups.** rac1/pal ([PERMUTER.md](../../games/rac1/docs/PERMUTER.md),
   plus `tools/permute.py` for exhaustive reordering) and rac3
   ([permuter.md](../../games/rac3/ntsc/docs/permuter.md), plus `regalloc.py`
   for allocation ties) both wire decomp-permuter to their real compile

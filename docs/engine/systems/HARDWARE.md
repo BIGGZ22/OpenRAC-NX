@@ -149,4 +149,4 @@ Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/plan/hardware_fidelity_layers.md` (sections A, B,
 D, "Result-level reproductions", "Tolerances", "Reproduced game quirks"),
 `docs/plan/tfrag_lighting.md` section 6, `docs/plan/decisions.md`; PAL names
-from `games/rac1/pal/config/overlays/us_map.tsv`.
+from `games/rac1/config/overlays/us_map.tsv`.

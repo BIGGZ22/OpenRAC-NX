@@ -18,7 +18,7 @@ each verified fix are explicitly authorized; no further confirmation is
 needed. The rule against unrequested pushes and publishing still applies.
 Preserve existing uncommitted work and only commit changes this task owns.
 When using the sibling `../rac1-decomp/`, read its `AGENTS.md`; the configured
-local build uses that checkout rather than `games/rac1/pal/`.
+local build uses that checkout rather than `games/rac1/`.
 
 ## What this repository is
 
@@ -37,7 +37,7 @@ to play a game. Start with [docs/LAYOUT.md](docs/LAYOUT.md).
 | Working on | Read |
 |---|---|
 | Anything | [docs/policy/SOURCING.md](docs/policy/SOURCING.md), [docs/LAYOUT.md](docs/LAYOUT.md), [CONTRIBUTING.md](CONTRIBUTING.md) |
-| rac1/pal | [games/rac1/pal/README.md](games/rac1/pal/README.md), [docs/WORKFLOW.md](games/rac1/pal/docs/WORKFLOW.md), [docs/BUILD_FIDELITY.md](games/rac1/pal/docs/BUILD_FIDELITY.md), [docs/AGENT_WORKFLOW.md](games/rac1/pal/docs/AGENT_WORKFLOW.md), [docs/LLM_DECOMP_INSTRUCTIONS.md](games/rac1/pal/docs/LLM_DECOMP_INSTRUCTIONS.md) |
+| rac1/pal | [games/rac1/README.md](games/rac1/README.md), [docs/WORKFLOW.md](games/rac1/docs/WORKFLOW.md), [docs/BUILD_FIDELITY.md](games/rac1/docs/BUILD_FIDELITY.md), [docs/AGENT_WORKFLOW.md](games/rac1/docs/AGENT_WORKFLOW.md), [docs/LLM_DECOMP_INSTRUCTIONS.md](games/rac1/docs/LLM_DECOMP_INSTRUCTIONS.md) |
 | rac1/ntsc | [games/rac1/ntsc/CONTRIBUTING.md](games/rac1/ntsc/CONTRIBUTING.md), [docs/decompilation-tips.md](games/rac1/ntsc/docs/decompilation-tips.md), [docs/building.md](games/rac1/ntsc/docs/building.md) |
 | rac2 | [games/rac2/ntsc/AGENTS.md](games/rac2/ntsc/AGENTS.md), [docs/AGENT_WORKFLOW.md](games/rac2/ntsc/docs/AGENT_WORKFLOW.md), [docs/BUILDING.md](games/rac2/ntsc/docs/BUILDING.md), [CONTRIBUTING.md](games/rac2/ntsc/CONTRIBUTING.md) |
 | rac3 | [games/rac3/ntsc/CONTRIBUTING.md](games/rac3/ntsc/CONTRIBUTING.md), [docs/targets.md](games/rac3/ntsc/docs/targets.md), [docs/wiki/Workflow.md](games/rac3/ntsc/docs/wiki/Workflow.md), [docs/wiki/Matching-Patterns.md](games/rac3/ntsc/docs/wiki/Matching-Patterns.md) |
@@ -67,7 +67,7 @@ to play a game. Start with [docs/LAYOUT.md](docs/LAYOUT.md).
    They live in ignored directories (`baserom/`, `toolchains/`, `assets/`,
    `build/`, each game's `asm/` and build directories).
 4. **Work inside one game version.** Run its commands from its directory
-   (`games/<game>/<version>/`); its paths are relative to it. Do not make
+   (`games/<game>/<version>/`, or the `dir` in its `game.json`: rac1's PAL tree is `games/rac1/`); its paths are relative to it. Do not make
    one game's build depend on another's files.
 5. **Plain C in matches.** Follow the game's matching rules. In rac1/pal:
    no register pins, no inline assembly in functions, no artificial
@@ -76,7 +76,7 @@ to play a game. Start with [docs/LAYOUT.md](docs/LAYOUT.md).
    check, or both) before a function counts as matched. In rac1/pal the build
    also never edits compiler output and takes options per whole file only; a
    function that matches only through a new build step or a flag of its own is
-   not matched ([BUILD_FIDELITY.md](games/rac1/pal/docs/BUILD_FIDELITY.md)).
+   not matched ([BUILD_FIDELITY.md](games/rac1/docs/BUILD_FIDELITY.md)).
 6. **Commits.** Conventional Commits, `type(scope): summary`, with the types
    and scopes in [CONTRIBUTING.md](CONTRIBUTING.md#commits): for example
    `feat(rac1/pal): func_L05_002D48B8 exact match` or

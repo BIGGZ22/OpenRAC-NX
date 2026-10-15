@@ -41,7 +41,7 @@ pub struct Version {
     pub title: String,
     pub region: String,
     pub serial: String,
-    /// The project's directory, relative to the checkout (`games/rac1/pal`).
+    /// The project's directory, relative to the checkout (`games/rac1`).
     pub dir: String,
     pub disc: Option<FileSpec>,
     pub boot: Option<FileSpec>,
@@ -128,6 +128,10 @@ struct RawGame {
 
 #[derive(Deserialize)]
 struct RawVersion {
+    /// Where the version's tree lives, when not games/<game>/<version> (rac1's PAL tree is the
+    /// merged games/rac1 itself).
+    #[serde(default)]
+    dir: Option<String>,
     #[serde(default)]
     region: String,
     #[serde(default)]
@@ -222,7 +226,7 @@ fn game(raw: RawGame, summary: &BTreeMap<String, RawSummaryRow>) -> Result<Game,
             let progress = summary.get(&key).map(|row| Progress { note: row.note.clone(), ..row.progress.clone() });
             Version {
                 title: raw.titles.get(&name).cloned().unwrap_or_else(|| raw.title.clone()),
-                dir: format!("games/{}/{}", raw.id, name),
+                dir: v.dir.clone().unwrap_or_else(|| format!("games/{}/{}", raw.id, name)),
                 game: raw.id.clone(),
                 region: v.region,
                 serial: v.serial,
@@ -366,7 +370,7 @@ mod tests {
         assert_eq!(catalog.version_keys(), ["rac1/pal", "rac1/ntsc", "rac2/ntsc", "rac3/ntsc", "rac4/ntsc"]);
         let pal = catalog.version("rac1/pal").unwrap();
         assert_eq!(pal.serial, "SCES_509.16");
-        assert_eq!(pal.dir, "games/rac1/pal");
+        assert_eq!(pal.dir, "games/rac1");
         assert!(pal.disc.as_ref().is_some_and(|d| d.size.is_some() && d.sha1.is_some()));
     }
 

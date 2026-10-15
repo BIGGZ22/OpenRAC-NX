@@ -23,7 +23,7 @@ You need:
   OpenRAC ([baserom/README.md](../baserom/README.md)). `baserom/` is ignored by git.
 
 The RAC1 PAL build only needs the executable from that image
-([games/rac1/pal/README.md](../games/rac1/pal/README.md)).
+([games/rac1/README.md](../games/rac1/README.md)).
 The extractor reads the whole image, and it stops unless the executable
 inside matches PAL v2.00.
 
@@ -90,7 +90,7 @@ class is and what runs it, in its tooltip in the Scene dock and as metadata:
 |---|---|
 | `rc1_class`, `rc1_class_name` | the class number and name |
 | `rc1_update` | the function the game calls for each moby of the class, every frame |
-| `rc1_source` | where that function is in the decompilation ([games/rac1/pal](../games/rac1/pal)), and the tooltip says whether it is C there yet |
+| `rc1_source` | where that function is in the decompilation ([games/rac1](../games/rac1)), and the tooltip says whether it is C there yet |
 
 That function is the moby's behaviour: an enemy's attack pattern, a crate
 breaking, a vendor's menu. It is ordinary C in the decompilation, and the
@@ -99,7 +99,7 @@ that function and building the port again** (the launcher's Build the game).
 There is no scripting layer on top of it yet: no way to change behaviour
 from Godot or without a compiler. The table comes from the decompilation's
 `config/overlays/names.tsv` (its `UpdateMoby_<class>` roles), per level, so
-it is only written when `games/rac1/pal` is in the checkout.
+it is only written when `games/rac1` is in the checkout.
 
 ## Moby behaviour as GDScript (prototype)
 
@@ -265,7 +265,7 @@ To edit a level:
     `rc1_spawn_flags` (0), `rc1_draw_distance` and `rc1_update_distance`
     (64), `rc1_mode_bits` (32), `rc1_occlusion` (1), `rc1_light` (0),
     `rc1_unknown_74` (-1), and a few unknown fields
-    ([ASSETS.md](../games/rac1/pal/docs/ASSETS.md#mobys)).
+    ([ASSETS.md](../games/rac1/docs/ASSETS.md#mobys)).
 - Textures are ordinary PNGs. Editing one changes every mesh that uses it.
 
 Run a level (F6) to fly around it:
@@ -366,7 +366,7 @@ Approximations:
   to the sky at run time are not included.
 
 Not yet extracted: low-detail moby meshes, hero collision, audio, video
-and each level's code overlay. [ASSETS.md](../games/rac1/pal/docs/ASSETS.md) describes
+and each level's code overlay. [ASSETS.md](../games/rac1/docs/ASSETS.md) describes
 the formats and the evidence for them.
 
 ## Code
@@ -392,7 +392,7 @@ The decoders accept only the layouts found on this disc and raise
 - **[Wrench](https://github.com/chaoticgd/wrench)** by chaoticgd and
   contributors (GPL-3.0-or-later). Most of what the extractor knows about
   terrain, ties, shrubs, the sky, textures and placements comes from
-  reading its source. [ASSETS.md](../games/rac1/pal/docs/ASSETS.md#sources-and-credits)
+  reading its source. [ASSETS.md](../games/rac1/docs/ASSETS.md#sources-and-credits)
   lists which files each format came from.
 - **[Replanetizer](https://github.com/RatchetModding/Replanetizer)** by
   RatchetModding contributors, consulted for what fields mean.
@@ -401,7 +401,7 @@ The decoders accept only the layouts found on this disc and raise
   class format (packets, vertex cache, skinning slots, normals, the
   untextured faces, skeletons and animation sequences), and the collision
   block and the meaning of its surface bytes
-  ([ASSETS.md](../games/rac1/pal/docs/ASSETS.md#collision)).
+  ([ASSETS.md](../games/rac1/docs/ASSETS.md#collision)).
 - **[Lombyte](https://github.com/lombyte-project/Lombyte)** (MIT): the moby
   class names on the labels (`moby_classes.tsv`, see its header).
 - **[OpenGOAL's jak-project](https://github.com/open-goal/jak-project)**,

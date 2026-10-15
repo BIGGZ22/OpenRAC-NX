@@ -21,7 +21,7 @@ Nothing from the games is ever committed: no code bytes, data, microcode or
 media taken from a disc ([SOURCING.md](../policy/SOURCING.md)). The player
 supplies their disc; the port reads what was extracted from it.
 
-The port starts with Ratchet & Clank (PAL), [games/rac1/pal](../../games/rac1/pal),
+The port starts with Ratchet & Clank (PAL), [games/rac1](../../games/rac1),
 whose matching decompilation is the furthest along. The sequels follow,
 sharing the renderer where their engines agree
 ([docs/engine](../engine/README.md)).

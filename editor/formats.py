@@ -1,4 +1,4 @@
-"""Bounded readers for the containers on the PAL disc. Evidence: games/rac1/pal/docs/ASSETS.md.
+"""Bounded readers for the containers on the PAL disc. Evidence: games/rac1/docs/ASSETS.md.
 
 Every reader checks sizes and offsets before using them and raises
 FormatError on anything outside the layouts we have evidence for.

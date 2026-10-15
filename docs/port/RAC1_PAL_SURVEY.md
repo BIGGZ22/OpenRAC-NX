@@ -7,7 +7,7 @@ Sony library surface and what stands between the C as written and a host
 compiler. [DESIGN.md](DESIGN.md) is built on it.
 
 Measured on 2026-10-08 on rac1-decomp at `a35ffbee` (5,109 functions, 3,686
-matched, 60.98 % of code), the tree [games/rac1/pal](../../games/rac1/pal/README.md)
+matched, 60.98 % of code), the tree [games/rac1](../../games/rac1/README.md)
 is a copy of. Paths such as `src/game/vuchain.c`, `docs/ASSETS.md` and
 `config/names.tsv` are relative to that directory. Every address is a PAL
 address ([docs/engine/README.md](../../docs/engine/README.md), section 1). No

@@ -7,7 +7,7 @@ as ReRAC describes them; the draw rules are ReRAC's reading of the NTSC-U
 code (`SCUS_971.99`) and VU1 programs 56467 and 912339. ReRAC checked them on
 all 19 NTSC-U levels (551 shrub classes, 5,374 packets, 25,572 instances, 83
 billboards; 75 sky shells, 1,700 clusters). OpenRAC's editor reads shrubs
-and the sky on PAL ([ASSETS.md](../../../games/rac1/pal/docs/ASSETS.md#shrubs)).
+and the sky on PAL ([ASSETS.md](../../../games/rac1/docs/ASSETS.md#shrubs)).
 
 **Games.** RAC1, measured. Per Wrench (**reference**): the sky header is the
 same in all four games; RAC1 and RAC2 shells have an 8-byte header with no
@@ -270,4 +270,4 @@ macro code and sends finished GIF packets through VIF1 DIRECT.
 Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/formats/shrub_sky_rac1.md`,
 `docs/plan/shrub_lighting.md`, `docs/plan/sky_render_notes.md`; PAL names
-from `games/rac1/pal/config/overlays/us_map.tsv`.
+from `games/rac1/config/overlays/us_map.tsv`.

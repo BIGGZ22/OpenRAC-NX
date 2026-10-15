@@ -3,91 +3,91 @@
     {
       "what": "GCC's libgcc sources (GPL with the runtime exception), built unchanged by both games: the library",
       "copies": [
-        "games/rac1/pal/src/libgcc/libgcc2.c",
+        "games/rac1/src/libgcc/libgcc2.c",
         "games/rac4/ntsc/src/libgcc/libgcc2.c"
       ]
     },
     {
       "what": "GCC's libgcc sources (GPL with the runtime exception), built unchanged by both games: soft float",
       "copies": [
-        "games/rac1/pal/src/libgcc/fp-bit.c",
+        "games/rac1/src/libgcc/fp-bit.c",
         "games/rac4/ntsc/src/libgcc/fp-bit.c"
       ]
     },
     {
       "what": "GCC's libgcc sources (GPL with the runtime exception), built unchanged by both games: multi-word arithmetic macros",
       "copies": [
-        "games/rac1/pal/src/libgcc/longlong.h",
+        "games/rac1/src/libgcc/longlong.h",
         "games/rac4/ntsc/src/libgcc/longlong.h"
       ]
     },
     {
       "what": "GCC's libgcc sources (GPL with the runtime exception), built unchanged by both games: constructor declarations",
       "copies": [
-        "games/rac1/pal/src/libgcc/gbl-ctors.h",
+        "games/rac1/src/libgcc/gbl-ctors.h",
         "games/rac4/ntsc/src/libgcc/gbl-ctors.h"
       ]
     },
     {
       "what": "Stand-in header for the libgcc build (not part of GCC's source)",
       "copies": [
-        "games/rac1/pal/src/libgcc/include/defaults.h",
+        "games/rac1/src/libgcc/include/defaults.h",
         "games/rac4/ntsc/src/libgcc/include/defaults.h"
       ]
     },
     {
       "what": "Stand-in header for the libgcc build (not part of GCC's source)",
       "copies": [
-        "games/rac1/pal/src/libgcc/include/limits.h",
+        "games/rac1/src/libgcc/include/limits.h",
         "games/rac4/ntsc/src/libgcc/include/limits.h"
       ]
     },
     {
       "what": "Stand-in header for the libgcc build (not part of GCC's source)",
       "copies": [
-        "games/rac1/pal/src/libgcc/include/machmode.h",
+        "games/rac1/src/libgcc/include/machmode.h",
         "games/rac4/ntsc/src/libgcc/include/machmode.h"
       ]
     },
     {
       "what": "Stand-in header for the libgcc build (not part of GCC's source)",
       "copies": [
-        "games/rac1/pal/src/libgcc/include/stddef.h",
+        "games/rac1/src/libgcc/include/stddef.h",
         "games/rac4/ntsc/src/libgcc/include/stddef.h"
       ]
     },
     {
       "what": "Stand-in header for the libgcc build (not part of GCC's source)",
       "copies": [
-        "games/rac1/pal/src/libgcc/include/stdlib.h",
+        "games/rac1/src/libgcc/include/stdlib.h",
         "games/rac4/ntsc/src/libgcc/include/stdlib.h"
       ]
     },
     {
       "what": "Stand-in header for the libgcc build (not part of GCC's source)",
       "copies": [
-        "games/rac1/pal/src/libgcc/include/tconfig.h",
+        "games/rac1/src/libgcc/include/tconfig.h",
         "games/rac4/ntsc/src/libgcc/include/tconfig.h"
       ]
     },
     {
       "what": "Stand-in header for the libgcc build (not part of GCC's source)",
       "copies": [
-        "games/rac1/pal/src/libgcc/include/unistd.h",
+        "games/rac1/src/libgcc/include/unistd.h",
         "games/rac4/ntsc/src/libgcc/include/unistd.h"
       ]
     },
     {
       "what": "Rewrites `dli` the way SN's assembler expands 64-bit constants",
       "copies": [
-        "games/rac1/pal/tools/ps2eeas_dli.py",
+        "games/rac1/tools/ps2eeas_dli.py",
         "games/rac4/ntsc/tools/ps2eeas_dli.py"
       ]
     },
     {
       "what": "splat's assembler macros",
       "copies": [
-        "games/rac1/pal/include/macro.inc",
+        "games/rac1/include/macro.inc",
         "games/rac4/ntsc/include/macro.inc"
       ]
     },
@@ -101,14 +101,14 @@
     {
       "what": "asm-differ settings",
       "copies": [
-        "games/rac1/pal/diff_settings.py",
+        "games/rac1/diff_settings.py",
         "games/rac4/ntsc/diff_settings.py"
       ]
     },
     {
       "what": "Pinned Python packages for splat and the build container",
       "copies": [
-        "games/rac1/pal/requirements.txt",
+        "games/rac1/requirements.txt",
         "games/rac4/ntsc/requirements.txt"
       ]
     }
@@ -116,28 +116,28 @@
   "related": [
     {
       "files": [
-        "games/rac1/pal/tools/ps2eeas_nops.py",
+        "games/rac1/tools/ps2eeas_nops.py",
         "games/rac4/ntsc/tools/ps2eeas_nops.py"
       ],
       "why": "The same imitation of SN's assembler padding; rac4 pads loops shorter than 5 instructions where rac1/pal uses 6, and has no list of noreorder objects."
     },
     {
       "files": [
-        "games/rac1/pal/tools/docker/run.sh",
+        "games/rac1/tools/docker/run.sh",
         "games/rac4/ntsc/tools/docker/run.sh"
       ],
       "why": "The same container wrapper; each names its own game directory and image."
     },
     {
       "files": [
-        "games/rac1/pal/include/include_asm.h",
+        "games/rac1/include/include_asm.h",
         "games/rac4/ntsc/include/include_asm.h"
       ],
       "why": "rac1/pal adds ASM_FUNC and LINKER_REMNANT for handwritten assembly and linker remnants."
     },
     {
       "files": [
-        "games/rac1/pal/include/labels.inc",
+        "games/rac1/include/labels.inc",
         "games/rac4/ntsc/include/labels.inc"
       ],
       "why": "rac4's is rac3's, patched for SN's ee-as (.aent, jlabel visibility); rac1/pal's is splat's."
@@ -145,13 +145,13 @@
     {
       "files": [
         "tools/mips.py",
-        "games/rac1/pal/tools/overlays.py"
+        "games/rac1/tools/overlays.py"
       ],
       "why": "tools/mips.py was lifted from the masking, fingerprint and split functions of rac1/pal's overlays.py, which keeps its own so the project stays standalone; tools/test_mips.py checks they still agree."
     },
     {
       "files": [
-        "games/rac1/pal/src/libgcc/README.md",
+        "games/rac1/src/libgcc/README.md",
         "games/rac4/ntsc/src/libgcc/README.md"
       ],
       "why": "Each describes its own game's libgcc addresses and unmatched functions."
