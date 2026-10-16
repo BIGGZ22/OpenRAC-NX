@@ -120,6 +120,10 @@ struct State {
     std::vector<std::pair<std::array<std::uint8_t, 0x20>, std::uint64_t>> sky_sprites;
     // The 2D layer's quads drawn natively since the last frame (ui_quad), by marker index.
     std::vector<renderer::UiQuad> ui_quads;
+    // The quads of the last ticks that drew any, by generation: a marker names the generation of
+    // the tick that recorded it (ui_quad), and a list is drawn with that tick's quads (frame).
+    std::uint32_t ui_generation = 0;
+    std::array<std::pair<std::uint32_t, std::vector<renderer::UiQuad>>, 4> ui_kept{};
     // The last world drawn (last_world): the tick it was drawn on; whether the last tick was a page
     // menu's with its snapshot; whether this tick's frames go over the last world (draw_kept).
     std::uint64_t last_world_tick = 0;
@@ -165,8 +169,7 @@ std::vector<std::uint8_t> direct_packets(std::span<const std::uint8_t> ram, std:
                                          std::vector<renderer::EffectVertex>* strip_vertices = nullptr,
                                          std::vector<renderer::EffectStrip>* strips = nullptr,
                                          std::vector<renderer::ImageUpload>* uploads = nullptr,
-                                         std::size_t* before_world = nullptr,
-                                         std::unordered_map<std::uint32_t, std::uint8_t>* sent = nullptr) {
+                                         std::size_t* before_world = nullptr) {
     std::vector<std::uint8_t> vif;
     std::uint32_t tag_at = chain & 0x01FFFFF0;
     std::uint32_t stack[2] = {0, 0};
@@ -415,11 +418,6 @@ std::vector<std::uint8_t> direct_packets(std::span<const std::uint8_t> ram, std:
                 strips->push_back(strip);
             }
             strip_tag = false;
-        }
-    }
-    if (sent != nullptr) {
-        for (const auto& [block, image] : images) {
-            (*sent)[block] = image.dpsm;
         }
     }
     return gif;
@@ -1759,6 +1757,19 @@ bool window_key(const SDL_Event& event) {
 
 }  // namespace
 
+// The generation the first native-quad marker in a 2D list names (ui_quad): an A+D write of
+// kUiQuadMarker to the NOP register. None when the list has no marker.
+std::optional<std::uint32_t> marker_generation(std::span<const std::uint8_t> packets) {
+    for (std::size_t at = 0; at + 9 <= packets.size(); at += 8) {
+        std::uint64_t value = 0;
+        std::memcpy(&value, packets.data() + at, 8);
+        if ((value >> 48) == renderer::GifInterpreter::kUiQuadMarker && packets[at + 8] == 0x7F) {
+            return static_cast<std::uint32_t>(value >> 24) & 0x3F;
+        }
+    }
+    return std::nullopt;
+}
+
 bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t draws) {
     if (!g) {
         return true;
@@ -2088,38 +2099,39 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     std::vector<renderer::EffectVertex> strip_vertices;
     std::vector<renderer::EffectStrip> strips;
     std::size_t before_world = SIZE_MAX;
-    std::unordered_map<std::uint32_t, std::uint8_t> sent;
     std::vector<std::uint8_t> packets = direct_packets(ram, viewer::shown_chain(ram, a), &strip_vertices, &strips,
-                                                       &g->effect_uploads, &before_world, &sent);
-    // The 2D layer packs its textures and their palettes into blocks in the order they are asked
-    // for, and its list sends them before its draws. On the tick a texture joins or leaves (a
-    // message opens, the health changes), the quads drawn natively already name the new blocks
-    // while the list still sends the last tick's: a palette pointer lands on a block filled with
-    // indexed pixels, or a texture pointer on a palette. Drawn so, the health was rings of noise
-    // and a message lost its letters for one tick, every few seconds. The last tick's 2D layer
-    // stands in for that tick; the next list sends the new blocks.
-    const auto indexed = [](std::uint32_t psm) { return psm == 0x13 || psm == 0x14; };
-    const bool stale_textures = std::ranges::any_of(g->ui_quads, [&](const renderer::UiQuad& q) {
-        if (!indexed(static_cast<std::uint32_t>((q.tex0 >> 20) & 0x3F))) {
-            return false;
+                                                       &g->effect_uploads, &before_world);
+    // The markers in a list index the quads of the tick that built it, and the list shown is the
+    // one the last tick built (the game builds the next while this one is sent), one tick behind
+    // the quads just recorded; FadeToBlack sends an old list again. Drawn with this tick's quads, a
+    // marker named another quad whenever they changed, and the HUD (the bolts, the health, a
+    // HelpDesk frame) and the menus flashed for a tick: the white flicker, and the palettes landing
+    // on pixels that 8587dcfa held the last layer for. Each marker names its tick's generation
+    // (ui_quad); the quads of the last four ticks that drew any are kept, and the list is drawn
+    // with the ones it names.
+    if (!g->ui_quads.empty()) {
+        const std::uint32_t generation = g->ui_generation & 0x3F;
+        g->ui_kept[generation & 3] = {generation, std::move(g->ui_quads)};
+        ++g->ui_generation;
+    }
+    const std::vector<renderer::UiQuad>* named_quads = nullptr;
+    if (const auto named = marker_generation(packets)) {
+        for (const auto& [generation, quads] : g->ui_kept) {
+            if (generation == *named && !quads.empty()) {
+                named_quads = &quads;
+            }
         }
-        const auto palette = sent.find(static_cast<std::uint32_t>((q.tex0 >> 37) & 0x3FFF));
-        const auto pixels = sent.find(static_cast<std::uint32_t>(q.tex0 & 0x3FFF));
-        return (palette != sent.end() && indexed(palette->second)) || (pixels != sent.end() && !indexed(pixels->second));
-    });
-    const bool hold_2d = stale_textures && !k.packets.empty();
-    if (stale_textures && debug) {
-        log::info("frame {}: the 2D layer's quads name blocks its list does not send yet; {}", g->index,
-                  hold_2d ? "the last tick's layer stands in" : "nothing to stand in");
+        if (debug && !named_quads) {
+            log::info("frame {}: the 2D list names the quads of generation {}, no longer kept; the last ones stand in",
+                      g->index, *named);
+        }
     }
-    if (!hold_2d) {
-        k.strip_vertices = std::move(strip_vertices);
-        k.strips = std::move(strips);
-        k.packets = std::move(packets);
-        // Only a level's frame is ordered so: the boot program (title, main menu) starts VU1 programs
-        // of its own before its 2D path, and draws its world natively, all of its 2D path after it.
-        k.before_world = level >= 0 && level < 19 ? std::min(before_world, k.packets.size()) : 0;
-    }
+    k.strip_vertices = std::move(strip_vertices);
+    k.strips = std::move(strips);
+    k.packets = std::move(packets);
+    // Only a level's frame is ordered so: the boot program (title, main menu) starts VU1 programs
+    // of its own before its 2D path, and draws its world natively, all of its 2D path after it.
+    k.before_world = level >= 0 && level < 19 ? std::min(before_world, k.packets.size()) : 0;
     if (debug && k.frame % 100 == 0 && !k.strips.empty()) {
         int bare = 0;
         for (const auto& st : k.strips) {
@@ -2132,14 +2144,14 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     particle_quads(ram, state);
     k.effects = std::move(g->effects);
     k.effect_uploads = std::move(g->effect_uploads);
-    // A tick on which the game drew no native quad keeps the last tick's. The game's FadeToBlack
-    // (after a story card, between scenes) sends the last display list again for each of its
-    // frames, with its black over it, and draws nothing itself: the markers in that list index the
-    // quads of the tick that built it. Without them the card's two lines were left out and only
-    // the band behind them was drawn, a blue strip across the picture for the fade's two frames.
-    // A list built without native quads has no markers, and the kept ones are not looked at.
-    if (!g->ui_quads.empty() && !hold_2d) {
-        k.ui_quads = std::move(g->ui_quads);
+    // The list's own tick's quads (above). The game's FadeToBlack (after a story card, between
+    // scenes) sends the last display list again for each of its frames, with its black over it,
+    // and draws nothing itself: its markers still name the tick that built it, which is kept.
+    // Without those quads the card's two lines were left out and only the band behind them was
+    // drawn, a blue strip across the picture for the fade's two frames. A list whose tick is no
+    // longer kept keeps the quads last drawn; a list without markers does not look at them.
+    if (named_quads) {
+        k.ui_quads = *named_quads;
     }
     g->ui_quads.clear();
     g->effects.clear();
@@ -2211,7 +2223,7 @@ int ui_quad(const openrac_game_ui_rect& quad) {
     // The 2D layer's quads are drawn natively (on the way off the GS packets); OPENRAC_UI_REPLAY
     // replays the game's packets instead, for comparing.
     static const bool native = std::getenv("OPENRAC_UI_REPLAY") == nullptr;
-    if (!g || !native || g->ui_quads.size() >= 0xFFFFFFu) {
+    if (!g || !native || g->ui_quads.size() >= 0xFFFFFFu) {  // the marker's index is 24 bits
         return -1;
     }
     renderer::UiQuad q;
@@ -2226,7 +2238,7 @@ int ui_quad(const openrac_game_ui_rect& quad) {
     q.tex0 = quad.tex0;
     q.flags = quad.flags;
     g->ui_quads.push_back(q);
-    return static_cast<int>(g->ui_quads.size() - 1);
+    return static_cast<int>((g->ui_quads.size() - 1) | (g->ui_generation & 0x3F) << 24);
 }
 
 bool interpolating() {
