@@ -710,11 +710,11 @@ void GifInterpreter::kick(bool draw) {
     if (g_dump_draws && m_prim.kind != gs::PrimKind::Sprite) {
         const gs::Alpha& al = context().alpha;
         log::info(
-            "prim {} ({},{}) uv ({},{}) stq ({},{},{}) fst {} rgba {:02x}{:02x}{:02x}{:02x} tme {} psm {:#x} cbp {:#x} tbw {} tbp {:#x} tw {} th {} abe {} alpha {}{}{}{} fbp {:#x} fbmsk {:#x} test {}",
+            "prim {} ({},{}) uv ({},{}) stq ({},{},{}) fst {} rgba {:02x}{:02x}{:02x}{:02x} tme {} psm {:#x} cbp {:#x} tbw {} tbp {:#x} tw {} th {} abe {} alpha {}{}{}{} fix {:#x} fbp {:#x} fbmsk {:#x} test {}",
             static_cast<int>(m_prim.kind), m_current.x / 16.0, m_current.y / 16.0, m_current.u / 16.0, m_current.v / 16.0, m_current.s, m_current.t, m_current.q, attributes().fst, m_current.rgba[0],
             m_current.rgba[1], m_current.rgba[2], m_current.rgba[3], attributes().tme,
             context().tex0.psm, context().tex0.cbp, context().tex0.tbw, context().tex0.tbp0, context().tex0.width(), context().tex0.height(), attributes().abe,
-            al.a, al.b, al.c, al.d, context().frame.fbp, context().frame.fbmsk, test_text(context().test)
+            al.a, al.b, al.c, al.d, al.fix, context().frame.fbp, context().frame.fbmsk, test_text(context().test)
         );
     }
     switch (m_prim.kind) {
@@ -950,9 +950,11 @@ void GifInterpreter::ensure_draw() {
         s.fbmsk = c.frame.fbmsk;
         // A texture nothing has been put at yet (the game draws before its upload arrives): the
         // chip would show whatever its memory held, so the draw writes nothing, rather than the
-        // placeholder's magenta (OPENRAC_SHOW_MISSING shows it, for finding missing textures).
+        // placeholder's magenta (OPENRAC_SHOW_MISSING shows it, for finding missing textures). A
+        // draw of an off-screen target or of the frame has no texture of the pool (its handle is
+        // the placeholder's 0) and is drawn.
         static const bool show_missing = std::getenv("OPENRAC_SHOW_MISSING") != nullptr;
-        if (s.textured && s.texture == m_textures.placeholder() && !show_missing) {
+        if (s.textured && s.source == 0 && !s.frame_source && s.texture == m_textures.placeholder() && !show_missing) {
             s.fbmsk = 0xFFFFFFFFu;
             s.depth_write = false;
         }
