@@ -58,7 +58,9 @@ void main() {
         out_colour = vec4(e, clamp(c.a, 0.0, 1.0));
         return;
     }
-    if (cutout != 0 && translucent_pass == 0 && c.a < 0.99) {
+    // The glow pass blends every texel at its alpha (the Gadgetron hologram's lettering is mostly
+    // part-transparent texels); only the solid pass leaves a cutout's part-transparent texels out.
+    if (cutout != 0 && translucent_pass == 0 && glow_pass == 0 && c.a < 0.99) {
         discard;
     }
     if (translucent_pass != 0 && (cutout == 0 || c.a >= 0.99 || c.a < 0.02)) {
