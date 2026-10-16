@@ -71,6 +71,13 @@
       {/if}
       {#if v.progress.date}· {v.progress.date}{/if}
     </p>
+    {#if v.progress.functional}
+      <!-- Not progress: C that behaves like retail without matching its bytes (ByteMatch's line under the Code bar). -->
+      <p class="count functional">
+        Functional C: {pct(v.progress.functional.percent)} of the code · {grouped(v.progress.functional.functions)} functions,
+        not counted as matched
+      </p>
+    {/if}
   {/if}
   <ul>
     {#each decomp as action (action.id)}<ActionRow {action} {scope} />{/each}
@@ -162,6 +169,11 @@
 </details>
 
 <style>
+  .count.functional {
+    margin-top: -4px;
+    opacity: 0.8;
+  }
+
   /* Which version (each disc's build) the panel shows: one control, the chosen half filled. */
   .versions .choices {
     display: inline-flex;

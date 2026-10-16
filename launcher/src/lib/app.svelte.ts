@@ -126,31 +126,14 @@ export async function refresh() {
   }
 }
 
-/** Fetches every project's latest progress from bytematch.dev; the Rust side keeps a copy under build/ for offline use. */
+/** Fetches every game's latest progress from bytematch.dev (the matched figures and the functional
+ *  C beside them); the Rust side fetches and keeps a copy under build/ for offline use. */
 export async function syncProgressWeb() {
   if (!app.config?.root) return;
   try {
-    const res = await fetch("https://bytematch.dev/api/v1/projects?per_page=500", {
-      signal: AbortSignal.timeout(4000),
-    });
-    if (res.ok) {
-      const text = await res.text();
-      try {
-        localStorage.setItem("openrac_progress_cache", text);
-      } catch {
-        // ignore localStorage errors
-      }
-      app.library = await api.applyProgressJson(text);
-      return;
-    }
-  } catch {
-    // Offline or a network error: let the Rust side try, or keep what was read at start.
-  }
-
-  try {
     app.library = await api.syncProgressFromWeb();
   } catch {
-    // Offline: keep cached library
+    // Offline: keep what was read at start (the kept copy)
   }
 }
 

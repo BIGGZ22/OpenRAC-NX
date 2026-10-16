@@ -154,6 +154,8 @@ export interface Progress {
   percent: number;
   date: string | null;
   note: string | null;
+  /** Functional C: does what retail does without matching its bytes; never counted as matched. */
+  functional?: { functions: number; code: number; percent: number } | null;
 }
 
 /** core/src/status.rs */

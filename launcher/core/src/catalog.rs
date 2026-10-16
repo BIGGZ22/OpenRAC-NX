@@ -108,6 +108,19 @@ pub struct Progress {
     /// What the project counts, from game.json's progress note.
     #[serde(default)]
     pub note: Option<String>,
+    /// Functional C: functions that do what retail's do without matching its bytes (ByteMatch's
+    /// figure from the project's functional list). Never part of the matched numbers.
+    #[serde(default)]
+    pub functional: Option<FunctionalProgress>,
+}
+
+/// How much of the code has functional C (not matched; ByteMatch shows it under the Code bar).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all(serialize = "camelCase", deserialize = "snake_case"))]
+pub struct FunctionalProgress {
+    pub functions: u64,
+    pub code: u64,
+    pub percent: f64,
 }
 
 // --- game.json as it is on disk -------------------------------------------------
@@ -276,17 +289,38 @@ struct ByteMatchMeasures {
     matched_code_percent: f64,
 }
 
+/// The functional summary in a project's own JSON (bytematch.dev/{owner}/{repo}.json).
+#[derive(Deserialize)]
+struct ByteMatchProjectJson {
+    #[serde(default)]
+    functional: Option<ByteMatchFunctional>,
+}
+
+#[derive(Deserialize)]
+struct ByteMatchFunctional {
+    #[serde(default)]
+    functions: u64,
+    #[serde(default)]
+    code: u64,
+    #[serde(default)]
+    code_percent: f64,
+}
+
 /// Where the website publishes every project's progress (ByteMatch, bytematch.dev).
 pub const BYTEMATCH_PROJECTS: &str = "https://bytematch.dev/api/v1/projects?per_page=500";
 
-/// Keeps the latest figures from bytematch.dev's project list (in build/launcher/, for the next
-/// start without a network) and returns the reloaded Catalog. A version takes the project its
-/// game.json names (`"bytematch": "owner/repo"`), else the one project whose version is its disc's
-/// serial. The checkout's progress/summary.json is read, never written.
-pub fn update_progress_from_bytematch(root: &Path, projects_json: &str) -> Result<Catalog, String> {
+/// A project's own JSON on bytematch.dev, which also carries its functional C summary.
+pub fn bytematch_project_url(slug: &str) -> String {
+    format!("https://bytematch.dev/{slug}.json")
+}
+
+/// The game versions of the checkout and the bytematch.dev project each takes from PROJECTS_JSON
+/// (the one game.json names, else the one project whose version is the disc's serial):
+/// [(version key, "owner/repo")].
+pub fn bytematch_projects_for(root: &Path, projects_json: &str) -> Result<Vec<(String, String)>, String> {
     let projects: Vec<ByteMatchProject> =
         serde_json::from_str(projects_json).map_err(|e| format!("invalid project list from bytematch.dev: {e}"))?;
-    let mut rows = serde_json::Map::new();
+    let mut out = Vec::new();
     let games_dir = root.join("games");
     let manifests = std::fs::read_dir(&games_dir).map_err(|e| format!("cannot read {}: {e}", games_dir.display()))?;
     for entry in manifests.filter_map(|e| e.ok()) {
@@ -300,24 +334,50 @@ pub fn update_progress_from_bytematch(root: &Path, projects_json: &str) -> Resul
                 Some(slug) => format!("{}/{}", p.owner, p.repo).eq_ignore_ascii_case(slug),
                 None => !serial.is_empty() && p.version.as_deref() == Some(serial),
             });
-            let (Some(project), None) = (found.next(), found.next()) else { continue };
-            let Some(m) = &project.measures else { continue };
-            rows.insert(
-                format!("{id}/{name}"),
-                serde_json::json!({
-                    "progress": {
-                        "matched_code": m.matched_code,
-                        "total_code": m.total_code,
-                        "matched_functions": m.matched_functions,
-                        "total_functions": m.total_functions,
-                        "fuzzy_percent": m.fuzzy_match_percent,
-                        "percent": m.matched_code_percent,
-                        "date": project.timestamp.as_deref().map(|t| t.get(..10).unwrap_or(t)),
-                    },
-                    "source": format!("bytematch.dev/{}/{}", project.owner, project.repo),
-                }),
-            );
+            if let (Some(project), None) = (found.next(), found.next()) {
+                out.push((format!("{id}/{name}"), format!("{}/{}", project.owner, project.repo)));
+            }
         }
+    }
+    Ok(out)
+}
+
+/// Keeps the latest figures from bytematch.dev's project list, with the functional C summary of
+/// each project's own JSON in PROJECT_JSONS ("owner/repo" -> its JSON), in build/launcher/ for the
+/// next start without a network, and returns the reloaded Catalog. A version takes the project
+/// bytematch_projects_for gives it. The checkout's progress/summary.json is read, never written.
+pub fn update_progress_from_bytematch(
+    root: &Path,
+    projects_json: &str,
+    project_jsons: &BTreeMap<String, String>,
+) -> Result<Catalog, String> {
+    let projects: Vec<ByteMatchProject> =
+        serde_json::from_str(projects_json).map_err(|e| format!("invalid project list from bytematch.dev: {e}"))?;
+    let mut rows = serde_json::Map::new();
+    for (key, slug) in bytematch_projects_for(root, projects_json)? {
+        let Some(project) = projects.iter().find(|p| format!("{}/{}", p.owner, p.repo) == slug) else { continue };
+        let Some(m) = &project.measures else { continue };
+        let functional = project_jsons
+            .get(&slug)
+            .and_then(|text| serde_json::from_str::<ByteMatchProjectJson>(text).ok())
+            .and_then(|p| p.functional)
+            .map(|f| serde_json::json!({"functions": f.functions, "code": f.code, "percent": f.code_percent}));
+        rows.insert(
+            key,
+            serde_json::json!({
+                "progress": {
+                    "matched_code": m.matched_code,
+                    "total_code": m.total_code,
+                    "matched_functions": m.matched_functions,
+                    "total_functions": m.total_functions,
+                    "fuzzy_percent": m.fuzzy_match_percent,
+                    "percent": m.matched_code_percent,
+                    "date": project.timestamp.as_deref().map(|t| t.get(..10).unwrap_or(t)),
+                    "functional": functional,
+                },
+                "source": format!("bytematch.dev/{slug}"),
+            }),
+        );
     }
     let summary_path = site_cache(root);
     if let Some(dir) = summary_path.parent() {
@@ -415,12 +475,19 @@ mod tests {
              "measures": {"matched_code": 1, "total_code": 2, "matched_code_percent": 50.0}}
         ]"#;
 
-        let catalog = update_progress_from_bytematch(dir.path(), site_json).unwrap();
+        let mut jsons = BTreeMap::new();
+        jsons.insert(
+            "OpenRAC/rac1-decomp".to_string(),
+            r#"{"functional": {"code": 370968, "code_percent": 9.99, "functions": 389}}"#.to_string(),
+        );
+        let catalog = update_progress_from_bytematch(dir.path(), site_json, &jsons).unwrap();
         // By serial, and the site's figure wins over the checkout's.
         let pal = catalog.version("rac1/pal").unwrap().progress.as_ref().unwrap();
         assert_eq!(pal.percent, 86.18);
         assert_eq!(pal.matched_functions, Some(4595));
         assert_eq!(pal.date.as_deref(), Some("2026-10-16"));
+        let functional = pal.functional.as_ref().unwrap();
+        assert_eq!((functional.functions, functional.code, functional.percent), (389, 370968, 9.99));
         // By the project game.json names, though another project has the same serial.
         assert_eq!(catalog.version("rac1/ntsc").unwrap().progress.as_ref().unwrap().percent, 89.75);
 
