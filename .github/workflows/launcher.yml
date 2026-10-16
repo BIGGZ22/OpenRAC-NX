@@ -262,7 +262,7 @@ jobs:
             const path = require("path");
             const tempDir = process.env.RUNNER_TEMP || "/tmp";
             const keyPath = path.resolve(tempDir, "updater.key");
-            fs.writeFileSync(keyPath, process.env.RAW_KEY.trim() + "\n");
+            fs.writeFileSync(keyPath, process.env.RAW_KEY.trim());
             fs.appendFileSync(process.env.GITHUB_ENV, `TAURI_SIGNING_PRIVATE_KEY=${keyPath}\n`);
           '
 
@@ -338,7 +338,7 @@ jobs:
             const path = require("path");
             const tempDir = process.env.RUNNER_TEMP || "/tmp";
             const keyPath = path.resolve(tempDir, "updater.key");
-            fs.writeFileSync(keyPath, process.env.RAW_KEY.trim() + "\n");
+            fs.writeFileSync(keyPath, process.env.RAW_KEY.trim());
             fs.appendFileSync(process.env.GITHUB_ENV, `TAURI_SIGNING_PRIVATE_KEY=${keyPath}\n`);
           '
 
