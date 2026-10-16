@@ -23,7 +23,7 @@ layer and the renderer.
 |---|---|
 | `hostgen.json` | what the game is and how to read its decompilation (below) |
 | `libraries.tsv` | every library entry point the game calls that the port answers itself: symbol, library, name, port (`host`, `game`, `wrap`, `todo`), notes, optional signature. A `host` row binds the address to the shared replacement of that name ([common/libraries.tsv](common/libraries.tsv)) |
-| `host/*.c` | only if the game needs C of its own: `wrap` functions, its overlay hook |
+| `host/*.c` | only if the game needs C of its own: `wrap` functions, its overlay hook. A game's versions share theirs (`"host_shared"`: rac1's in [rac1/host](rac1/README.md)), each with a table of its names and addresses |
 
 `hostgen.json`:
 
@@ -53,6 +53,6 @@ layer and the renderer.
    [common/libraries.tsv](common/libraries.tsv)); a library the shared code
    does not have yet gets a replacement in `common/lib/` and a row there.
 4. If its levels load their own programs (overlays), give it an overlay hook
-   as rac1-pal does ([rac1-pal/host/boot.c](rac1-pal/host/boot.c)).
+   as rac1 does ([rac1/host/boot.c](rac1/host/boot.c)).
 
 A new game version is a new directory with these files; the build finds it.

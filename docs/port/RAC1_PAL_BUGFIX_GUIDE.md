@@ -18,7 +18,7 @@ counts as a fix and how to commit. Written 2026-10-12.
 | The decompilation | sibling checkout `../rac1-decomp` (branch `main`) | Matching C in `src/`, assembly for the rest, and C for the port only in `nonmatching/` |
 | The in-tree copy | `games/rac1/` | A copy of the decompilation synced from the sibling. **This machine's build does not read it** |
 | hostgen | `port/tools/hostgen/` | Reads the decompilation's C with Clang (`--target=mipsel-linux-gnu`) and writes host C in which a game pointer is a `gaddr` |
-| The port's own C | `port/game/rac1-pal/hand/` (game functions, translated by hostgen) and `port/game/rac1-pal/host/` (host C, compiled as it is) | Functions the decompilation has no usable C for, and the console's side of things |
+| The port's own C | `port/game/rac1-pal/hand/` (game functions, translated by hostgen) and `port/game/rac1/host/` (host C, compiled as it is, shared with NTSC-U: [port/game/rac1](../../port/game/rac1/README.md)) | Functions the decompilation has no usable C for, and the console's side of things |
 | The runtime and frontend | `port/runtime/`, `port/game/common/`, `port/platform/`, `port/viewer/`, `port/renderer/` | Guest memory, the window, input, sound output, drawing |
 | A reference port | sibling checkout `../rerac` | The US release rewritten in Rust (ISC). Useful for what a function is meant to do |
 
@@ -35,7 +35,7 @@ Where a function's C comes from, later entries winning:
    does what retail does without matching its bytes; 323 entries);
 3. `port/game/rac1-pal/hand/hand.tsv` (the port's own C, translated like
    the rest; 95 entries);
-4. a definition in `port/game/rac1-pal/host/*.c` replaces the function
+4. a definition in `port/game/rac1/host/*.c` (or `port/game/rac1-pal/host/*.c`) replaces the function
    outright with host C.
 
 `port/build/release/games/rac1-pal/gen/report.md` (and `report.json`) is

@@ -50,7 +50,8 @@ games/rac1 (the decompilation, read only)
    │  hostgen writes it again for game memory
    ▼
 build/.../games/rac1-pal/gen/*.c  +  game/common/lib/*.c (library replacements, shared)
-                                 +  game/rac1-pal/host/*.c (the game's own, if any)
+                                 +  game/rac1-pal/host/*.c (the game's own, if any;
+                                    rac1's versions share game/rac1/host)
    │  compiled as C, linked with runtime/
    ▼
 openrac-rac1-pal --data <install>/active/rac1/data

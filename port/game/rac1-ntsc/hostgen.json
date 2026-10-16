@@ -33,6 +33,7 @@
   ],
   "places": "config/overlays/us/functions.tsv",
   "libraries": "libraries.tsv",
+  "host_shared": ["../rac1/host"],
   "overlay_hook": true,
   "roots": [
     "FUN_0012d9d8",

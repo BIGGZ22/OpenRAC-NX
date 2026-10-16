@@ -21,6 +21,7 @@
   "split_places": "split_places.tsv",
   "symbols": ["config/port_symbols.txt"],
   "libraries": "libraries.tsv",
+  "host_shared": ["../rac1/host"],
   "overlay_hook": true,
   "relocate": [1437696, 2424832],
   "returns_64": ["func_001F4868"],

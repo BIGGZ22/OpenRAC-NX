@@ -128,8 +128,23 @@ function(openrac_add_game config)
 
   # The game: generated C, and the game's own host C if it has any.
   file(GLOB host CONFIGURE_DEPENDS "${config_dir}/host/*.c")
+  # Host C one game shares between its versions ("host_shared": directories relative to the game's,
+  # rac1's ../rac1/host): compiled into each version's program on its own, finding that version's
+  # names and addresses in the version's host/ (rac1_version.h).
+  set(shared_includes "")
+  string(JSON shared_count ERROR_VARIABLE no_shared LENGTH "${json}" host_shared)
+  if(NOT no_shared AND shared_count GREATER 0)
+    math(EXPR last "${shared_count} - 1")
+    foreach(i RANGE ${last})
+      string(JSON shared_dir GET "${json}" host_shared ${i})
+      file(GLOB shared_host CONFIGURE_DEPENDS "${config_dir}/${shared_dir}/*.c")
+      list(APPEND host ${shared_host})
+      list(APPEND shared_includes "${config_dir}/${shared_dir}")
+    endforeach()
+  endif()
   add_library(openrac_${target_id}_game STATIC ${sources} ${host})
   target_include_directories(openrac_${target_id}_game PUBLIC "${gen}")
+  target_include_directories(openrac_${target_id}_game PRIVATE "${config_dir}/host" ${shared_includes})
   target_link_libraries(openrac_${target_id}_game PUBLIC openrac_game_common)
   if(UNIX)
     target_link_libraries(openrac_${target_id}_game PUBLIC m)  # host maths the games call (fabsf...)

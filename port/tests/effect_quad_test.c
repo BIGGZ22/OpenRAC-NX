@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../game/rac1-pal/host/effect_quad.c"
+#include "../game/rac1/host/effect_quad.c"
 #define CHECK(c) do { if (!(c)) { fprintf(stderr, "%d: %s\n", __LINE__, #c); exit(1); } } while (0)
 static unsigned char ram[0x400000];
 uint8_t* openrac_guest_base=ram;
