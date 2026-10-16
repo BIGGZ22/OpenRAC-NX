@@ -42,8 +42,9 @@ from ties import tie_classes, tie_instances, tie_slot_normals
 
 # The export's format: the port reads only its own (viewer/level.h kManifestFormat), and its level
 # check names the format in the stamp the launcher waits for, so levels exported before a change
-# are read from the disc again. 2: the mobys' metal packets and the chrome and glass maps.
-FORMAT = 2
+# are read from the disc again. 2: the mobys' metal packets and the chrome and glass maps. 3: the
+# gadget classes whose bind pose collapses a joint (the Blaster, the Pyrocitor).
+FORMAT = 3
 
 
 def sky_glb(data: Sky, texture_uri) -> bytes:

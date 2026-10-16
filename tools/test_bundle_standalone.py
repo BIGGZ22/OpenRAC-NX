@@ -28,7 +28,7 @@ class PlayerActions(unittest.TestCase):
         self.assertNotIn("--levels", play["args"])      # the game's own default is <data>/port
         # Play waits for the check's stamp, and the check for the export.
         check = self.pal["port-levels-check"]
-        self.assertEqual(check["makes"], "{data}/port/verified-2.json")
+        self.assertEqual(check["makes"], "{data}/port/verified-3.json")
         self.assertNotIn("--levels", check["args"])
         self.assertEqual([need["path"] for need in check["needs"]], [self.pal["port-levels"]["artifact"]])
         self.assertEqual([need["path"] for need in play["needs"]], [check["makes"]])

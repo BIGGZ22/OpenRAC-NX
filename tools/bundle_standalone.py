@@ -65,14 +65,14 @@ def player_actions() -> dict:
                 elif action["id"] == "port-levels-check":
                     at = args.index("--levels")
                     action["args"] = args[:at] + args[at + 2:]          # <data>/port, the game's own default
-                    action["makes"] = f"{LEVELS}/verified-2.json"
+                    action["makes"] = f"{LEVELS}/verified-3.json"
                     action["needs"] = [{"path": f"{LEVELS}/level_99/manifest.json", "from": need["from"]}
                                        for need in action.get("needs", [])]
                 else:
                     at = args.index("--levels") if "--levels" in args else -1
                     if at >= 0:
                         action["args"] = args[:at] + args[at + 2:]      # the game looks in <data>/port by itself
-                    action["needs"] = [{"path": f"{LEVELS}/verified-2.json", "from": need["from"]}
+                    action["needs"] = [{"path": f"{LEVELS}/verified-3.json", "from": need["from"]}
                                        for need in action.get("needs", [])]
                     # The game is started in the data folder: what it writes beside itself (a
                     # screenshot) has a place there, and the copy has no folder for each version.
