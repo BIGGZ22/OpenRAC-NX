@@ -7,3 +7,7 @@ target/
 .svelte-check/
 # Tauri writes these when it builds
 src-tauri/gen/
+# Updater signing keys
+*.key
+*.key.pub
+updater.key
