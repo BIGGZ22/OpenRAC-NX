@@ -160,6 +160,8 @@ private:
     TextureHandle m_placeholder = 0;
     std::uint64_t m_frame = 0;
     std::unordered_map<std::uint64_t, TextureHandle> m_distance_fields;  // by the source's content
+    // The field last given for a handle, with a sample of its texels (distance_field).
+    std::unordered_map<TextureHandle, std::pair<std::uint64_t, TextureHandle>> m_field_of_handle;
 };
 
 // FNV-1a, for the cache keys.
