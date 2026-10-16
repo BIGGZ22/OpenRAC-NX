@@ -162,8 +162,9 @@ public:
     bool gif(std::span<const std::uint8_t> input);
 
     // The 2D layer's quads drawn natively: a marker in the 2D path (an A+D write to the NOP
-    // register, kUiQuadMarker in the value's top 16 bits, the index in its low bits) draws
-    // quads[index] there, in the context the packets before it set up.
+    // register, kUiQuadMarker in the value's top 16 bits, the index in its low 24 bits; bits 24-29
+    // name the tick that recorded it, which the frontend reads) draws quads[index] there, in the
+    // context the packets before it set up.
     void set_ui_quads(std::span<const UiQuad> quads) { m_ui_quads = quads; }
     static constexpr std::uint64_t kUiQuadMarker = 0x4E55;
 

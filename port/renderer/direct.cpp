@@ -324,8 +324,8 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
     Context& c2 = m_context[1];
     switch (address) {
         case 0x7F:  // NOP; the port's marker for a quad of the 2D layer drawn natively
-            if ((value >> 48) == kUiQuadMarker && (value & 0xFFFFFFFFu) < m_ui_quads.size()) {
-                native_quad(m_ui_quads[value & 0xFFFFFFFFu]);
+            if ((value >> 48) == kUiQuadMarker && (value & 0xFFFFFFu) < m_ui_quads.size()) {
+                native_quad(m_ui_quads[value & 0xFFFFFFu]);
             }
             return;
         case gs::kPrim:
