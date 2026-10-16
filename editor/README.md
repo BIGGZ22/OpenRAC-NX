@@ -214,8 +214,8 @@ put has not been looked at in the running game yet.
 ## Models and textures for modders
 
 ```sh
-python3 editor/assets.py export assets/port/rac1 build/my-export --level 0 --what mobys
-python3 editor/assets.py import build/my-export --levels assets/port/rac1 --out build/my-pack
+python3 editor/assets.py export assets/port/rac1/pal build/my-export --level 0 --what mobys
+python3 editor/assets.py import build/my-export --levels assets/port/rac1/pal --out build/my-pack
 ```
 
 Exports a level's moby, tie and shrub models as glTF (mesh, UVs, vertex
@@ -238,12 +238,15 @@ python3 editor/extract.py port baserom/SCES_509.16.iso build/port-levels --level
 ([port/viewer](../port/viewer/README.md)): the same meshes and textures as
 the Godot export, the sky as a mesh, and the placements as JSON. Its
 manifests say which disc they came from (`"version": "pal"` or `"ntsc"`);
-the format is the same for both. The launcher keeps each version's export
-apart: `assets/port/rac1` for PAL, `assets/port/rac1-ntsc` for NTSC-U (in an
-installed launcher, `<data>/port` and `<data>/port-ntsc`).
+the format is the same for both. Each version's export has a folder of its
+own under one root: `assets/port/rac1/pal` and `assets/port/rac1/ntsc` in a
+checkout, `<data>/port/pal` and `<data>/port/ntsc` in an installed launcher
+(the game reads `<data>/port/<version>` without `--levels`). An export made
+before that layout, straight in `assets/port/rac1` or `<data>/port`, moves
+into `pal/` the next time the PAL levels are extracted with `--replace`.
 
 ```sh
-python3 editor/extract.py port baserom/SCUS_971.99.iso assets/port/rac1-ntsc   # NTSC-U, every level
+python3 editor/extract.py port baserom/SCUS_971.99.iso assets/port/rac1/ntsc   # NTSC-U, every level
 ```
 
 `raw` writes one level's sections as stored on the disc and decompressed,

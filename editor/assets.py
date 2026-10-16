@@ -6,7 +6,7 @@ and read edited ones back as an overrides pack the native port loads.
   assets.py import EDITED --levels LEVELS (--out PACK | --into OVERRIDES) [--name NAME] [--author WHO]
 
 LEVELS is the levels folder the port draws from (`editor/extract.py port`:
-assets/port/rac1, or <data>/port for an installed launcher). Exporting reads
+assets/port/rac1/pal, or <data>/port/pal for an installed launcher). Exporting reads
 it and never writes there; importing reads the edited folder and writes a
 new pack (overrides.py), never the levels themselves.
 
@@ -1098,7 +1098,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest="command", required=True)
     out = commands.add_parser("export", help="models and textures as glTF and PNG files")
-    out.add_argument("levels", type=Path, help="the extracted levels (assets/port/rac1, or <data>/port)")
+    out.add_argument("levels", type=Path, help="the extracted levels (assets/port/rac1/pal, or <data>/port/pal)")
     out.add_argument("out", type=Path, help="a new folder for the export")
     out.add_argument("--level", type=int, action="append", required=True, help="a level (repeatable)")
     out.add_argument("--what", choices=WHAT, default="mobys",

@@ -77,6 +77,41 @@ are what readers see.
   `rac4`, and `editor`, `launcher`, `port`, `tools`, `docs`, `progress` for the top level
   ([CONTRIBUTING.md](../CONTRIBUTING.md#commits)).
 
+## The decompilations, the port, and what is built from your disc
+
+The arrangement follows OpenGOAL's (`jak-project`):
+
+| OpenGOAL | OpenRAC | |
+|---|---|---|
+| `goal_src/<game>` | `games/<game>/<version>` | the decompiled game code |
+| `game/` (kernel, graphics, sound, overlord) | `port/` (runtime, renderer, audio, platform) | the PC runtime that hosts it |
+| `goalc/` | `port/tools/hostgen` | what makes the game code a PC program |
+| `out/<game>/` | `assets/port/<game>/<version>`, `build/` | what is built from your disc |
+
+One difference shapes the rest. OpenGOAL edits its decompiled source for the
+PC directly (`#when PC_PORT`), so there is one copy of the game. `games/`
+holds C that still builds the PS2 executable byte for byte, most of it
+followed from projects of its own (rac1-decomp, Lombyte), so the PC's
+changes to the game live beside it, in `port/game/<game>-<version>/`
+(`hand/`, `host/`, `libraries.tsv`, `split_places.tsv`), applied by hostgen.
+Each version needs its own copy of those changes.
+
+Where it goes from here:
+
+- `port/` stays: it is the engine, OpenGOAL's `game/`.
+- `port/game/<game>-<version>/` shrinks over time. A change the game's own C
+  needs on the PC (an argument the PS2 passed in a register, a call through
+  an address) goes into `games/` as C that builds the same PS2 bytes, and is
+  offered to the project the tree follows; changes kept only in OpenRAC's
+  copy are listed in that tree's `OPENRAC_PATCHES.md` so a sync keeps them.
+  What can only be PC code goes under `#ifdef OPENRAC_PC` in `games/` once
+  that project takes it; until then it stays in `port/game/`.
+- What is built from a disc has one root per game and a folder per
+  version: the levels the port draws are `assets/port/<game>/<version>` in a
+  checkout and `<data>/port/<version>` in an installed launcher, where the
+  game also looks without `--levels`. No version gets a sibling folder of
+  its own name beside them.
+
 ## Where this is heading
 
 The layout keeps each project buildable as it was. Later steps the group has

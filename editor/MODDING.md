@@ -95,13 +95,13 @@ ready" runs again with a newer OpenRAC, export again and redo the edit.
 ## From a shell
 
 ```sh
-python3 editor/assets.py export assets/port/rac1 build/my-export --level 0 --what mobys [--class 0]
-python3 editor/assets.py import build/my-export --levels assets/port/rac1 --out build/my-pack --name "My pack" --author me
+python3 editor/assets.py export assets/port/rac1/pal build/my-export --level 0 --what mobys [--class 0]
+python3 editor/assets.py import build/my-export --levels assets/port/rac1/pal --out build/my-pack --name "My pack" --author me
 python3 editor/overrides.py check build/my-pack          # what a pack holds, and what is wrong with it
 python3 editor/overrides.py add build/my-pack --into build/overrides
 python3 editor/overrides.py list --into build/overrides
 python3 editor/overrides.py stack --into build/overrides --out build/mods [--packed assets/packed/rac1]
-port/build/release/openrac-rac1-pal --data <data> --window --levels assets/port/rac1 --mods build/mods
+port/build/release/openrac-rac1-pal --data <data> --window --levels assets/port/rac1/pal --mods build/mods
 python3 editor/overrides.py zip my-pack my-pack.zip --into build/overrides
 ```
 

@@ -37,7 +37,7 @@ From `games/rac1`:
 D="$HOME/Library/Application Support/dev.openrac.launcher/active/rac1/data"
 SDL_AUDIODRIVER=dummy OPENRAC_UNCAPPED=1 OPENRAC_DIRECT=1 \
 OPENRAC_PRESS=100:4000:5 \
-  ../../port/build/release/openrac-rac1-pal --data "$D" --levels ../../assets/port/rac1 \
+  ../../port/build/release/openrac-rac1-pal --data "$D" --levels ../../assets/port/rac1/pal \
   --window --no-card --level 1 --skip-movies --frames 2300 > run.log 2>&1
 ```
 
