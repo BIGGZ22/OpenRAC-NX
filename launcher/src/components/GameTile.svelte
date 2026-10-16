@@ -11,11 +11,13 @@
 
   let { game, delay = 0 }: { game: GameView; delay?: number } = $props();
 
-  const MEDIA: Record<string, { bg: string; gif: string }> = {
-    rac1: { bg: "/img/rac1-bg.webp", gif: "/img/rac1-gameplay.gif" },
-    rac2: { bg: "/img/gc-bg.webp", gif: "/img/rac2-gameplay.gif" },
-    rac3: { bg: "/img/uya-bg.webp", gif: "/img/rac3-gameplay.gif" },
-    rac4: { bg: "/img/deadlocked-bg.webp", gif: "/img/rac4-gameplay.gif" },
+  // Each game's still picture; the tile zooms in on it a little while it has the pointer or the
+  // focus (a gameplay clip played there was blurry at tile size).
+  const MEDIA: Record<string, { bg: string }> = {
+    rac1: { bg: "/img/rac1-bg.webp" },
+    rac2: { bg: "/img/gc-bg.webp" },
+    rac3: { bg: "/img/uya-bg.webp" },
+    rac4: { bg: "/img/deadlocked-bg.webp" },
   };
 
   const media = $derived(MEDIA[game.id] ?? null);
@@ -23,7 +25,6 @@
   const next = $derived(v ? playerState(game, v) : null);
   /** The tile offers the next step itself only when there is one to take. */
   const offers = $derived(!!next && !next.disabled && next.kind !== "installing" && (next.primary || !!next.job));
-  let hovered = $state(false);
   /** With developer tools on: how far each version's decompilation is. */
   const matched = $derived(
     app.config?.developer
@@ -33,15 +34,9 @@
 </script>
 
 {#if v && next}
-  <article
-    class="tile rise"
-    style={`${themeStyle(game.id)}; animation-delay: ${delay}ms`}
-    onmouseenter={() => (hovered = true)}
-    onmouseleave={() => (hovered = false)}
-  >
+  <article class="tile rise" style={`${themeStyle(game.id)}; animation-delay: ${delay}ms`}>
     {#if media}
       <img class="art" src={media.bg} alt="" />
-      {#if hovered}<img class="art clip-art" src={media.gif} alt="" />{/if}
     {/if}
     <div class="shade"></div>
 
@@ -98,6 +93,23 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .tile:hover .art,
+  .tile:focus-within .art {
+    transform: scale(1.06);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .art {
+      transition: none;
+    }
+
+    .tile:hover .art,
+    .tile:focus-within .art {
+      transform: none;
+    }
   }
 
   .shade {

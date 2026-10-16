@@ -33,11 +33,12 @@
   const playGodot = $derived(action("editor-preview"));
   const extract = $derived(action("editor-extract"));
 
-  const GAME_MEDIA: Record<string, { bg: string; gif?: string }> = {
-    rac1: { bg: "/img/rac1-bg.webp", gif: "/img/rac1-gameplay.gif" },
-    rac2: { bg: "/img/gc-bg.webp", gif: "/img/rac2-gameplay.gif" },
-    rac3: { bg: "/img/uya-bg.webp", gif: "/img/rac3-gameplay.gif" },
-    rac4: { bg: "/img/deadlocked-bg.webp", gif: "/img/rac4-gameplay.gif" },
+  // Each game's still picture (a gameplay clip here was blurry at this size).
+  const GAME_MEDIA: Record<string, { bg: string }> = {
+    rac1: { bg: "/img/rac1-bg.webp" },
+    rac2: { bg: "/img/gc-bg.webp" },
+    rac3: { bg: "/img/uya-bg.webp" },
+    rac4: { bg: "/img/deadlocked-bg.webp" },
   };
   const media = $derived(v ? GAME_MEDIA[v.game] : null);
 
@@ -94,7 +95,7 @@
     <section class="hero rise" aria-label={v.title}>
       {#if media}
         <div class="hero-backdrop" aria-hidden="true">
-          <img src={media.gif ?? media.bg} alt="" class="hero-bg" />
+          <img src={media.bg} alt="" class="hero-bg" />
           <div class="hero-overlay"></div>
         </div>
       {/if}
