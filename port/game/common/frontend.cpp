@@ -1042,11 +1042,11 @@ bool store_image(std::uint32_t base, std::uint32_t width_units, std::uint8_t psm
         return false;
     }
     // The last frame drawn, read once per frame however many strips the game reads: kept at full
-    // resolution for drawing it back, and scaled to the chip's 512 x 448 for the answer.
+    // resolution for drawing it back, and scaled to the chip's 512 x (the draw buffer's lines) for the answer.
     static std::uint64_t read_at = ~0ull;
-    static std::vector<std::uint8_t> chip;  // 512 x 448 RGBA, top row first
+    static std::vector<std::uint8_t> chip;  // 512 x the draw buffer's lines, RGBA, top row first
     constexpr int kChipWidth = 512;
-    const int lines = renderer::kDrawBufferLines;
+    const int lines = renderer::g_draw_buffer_lines;
     if (read_at != g->index) {
         using namespace openrac::gl;
         read_at = g->index;

@@ -139,14 +139,17 @@ struct FrameSnapshot {
 };
 inline FrameSnapshot g_frame_snapshot;
 
-// The draw buffer the games draw the frame in, read back and write into: 8 x 64 pixels wide, 448
-// lines, right after the display buffer. Where that is follows the display the game sets
-// (set_draw_buffer_block): PAL Ratchet & Clank's 512-line display puts it at block 0x1000, and the
-// 448-line one of its 60 Hz mode (and of the NTSC games) at 0xE00.
+// The draw buffer the games draw the frame in, read back and write into: 8 x 64 pixels wide, right
+// after the display buffer. Where it is and how tall follow the display the game sets
+// (set_draw_buffer_block): PAL Ratchet & Clank's 512-line display puts it at block 0x1000, 448
+// lines tall; the 448-line display of its 60 Hz mode (and of the NTSC games) at 0xE00, 416 lines.
 inline std::uint32_t g_draw_buffer_block = 0x1000;
-inline void set_draw_buffer_block(std::uint32_t block) { g_draw_buffer_block = block; }
+inline int g_draw_buffer_lines = 448;
 inline constexpr std::uint32_t kDrawBufferWidth = 8;
-inline constexpr int kDrawBufferLines = 448;
+inline void set_draw_buffer_block(std::uint32_t block, int lines) {
+    g_draw_buffer_block = block;
+    g_draw_buffer_lines = lines;
+}
 
 // Where pixel (x, y) of a PSMCT32 rectangle at block `base`, `width` 64-pixel units wide, is in the
 // draw buffer: through the chip's 64 x 32 pixel pages (the same pages whichever buffer width the

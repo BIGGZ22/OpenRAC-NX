@@ -541,7 +541,7 @@ void GifInterpreter::image_data(std::span<const std::uint8_t> data) {
         }
         std::erase_if(m_frame_copies, [&](const FrameCopy& f) { return f.dbp == m_upload.dbp; });
         if (m_upload.dpsm == gs::kPsmct32 && m_upload.dbp >= g_draw_buffer_block
-            && m_upload.dbp < g_draw_buffer_block + kDrawBufferWidth * (kDrawBufferLines / 32) * 32) {
+            && m_upload.dbp < g_draw_buffer_block + kDrawBufferWidth * (g_draw_buffer_lines / 32) * 32) {
             draw_frame_upload(m_upload);
         }
         m_textures.upload(std::move(m_upload));
@@ -558,7 +558,7 @@ bool frame_pixel(std::uint32_t base, std::uint32_t width, int x, int y, int& fra
     const int page = static_cast<int>((base - g_draw_buffer_block) / 32) + (y / 32) * static_cast<int>(width) + x / 64;
     frame_x = (page % static_cast<int>(kDrawBufferWidth)) * 64 + x % 64;
     frame_y = (page / static_cast<int>(kDrawBufferWidth)) * 32 + y % 32;
-    return frame_y < kDrawBufferLines;
+    return frame_y < g_draw_buffer_lines;
 }
 
 void GifInterpreter::draw_frame_upload(const ImageUpload& upload) {
@@ -631,11 +631,12 @@ void GifInterpreter::draw_frame_upload(const ImageUpload& upload) {
                 const int i = k & 1;
                 const int j = k >> 1;
                 v.x = xs[i] / static_cast<float>(m_config.screen_width) * 2.0f - 1.0f;
-                v.y = 1.0f - ys[j] / static_cast<float>(m_config.screen_height) * 2.0f;
+                // The draw buffer fills the picture whatever its height (416 lines in a 60 Hz mode).
+                v.y = 1.0f - ys[j] / static_cast<float>(g_draw_buffer_lines) * 2.0f;
                 v.z = -1.0f;
                 if (snapshot) {
                     v.s = xs[i] / static_cast<float>(m_config.screen_width);
-                    v.t = 1.0f - ys[j] / static_cast<float>(kDrawBufferLines);
+                    v.t = 1.0f - ys[j] / static_cast<float>(g_draw_buffer_lines);
                 } else {
                     v.s = us[i] / tw;
                     v.t = vs[j] / th;
