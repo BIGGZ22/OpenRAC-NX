@@ -1695,7 +1695,66 @@ unsigned char *func_L00_002767B0(void *pos, int s, int col, int mode, int b, flo
     }
     return m;
 }
-INCLUDE_ASM("asm/overlays", func_L00_00276940);
+extern void func_001F9CA0(void *, void *, void *);
+extern short D_L00_0016030C;
+
+static __inline__ void vcopy_276940(float *d, float *s) {
+    d[0] = s[0];
+    d[1] = s[1];
+    d[2] = s[2];
+    *(int *)&d[3] = 0;
+}
+
+// Particle update (type 0x78): ramps the size and alpha, moves by a velocity vector, steers it away from a nearby moby and kills the particle when its timer expires.
+void func_L00_00276940(char *m) {
+    char *v = m + 0x20;
+    char *p;
+    float f4;
+    float a[4] __attribute__((aligned(16)));
+    float d[4] __attribute__((aligned(16)));
+    float e[4] __attribute__((aligned(16)));
+    float *w;
+    int al;
+    m[8] += v[0xA];
+    if (*(short *)(v + 8) - *(short *)(m + 0xA) < 6) {
+        int c;
+        int c2;
+        f4 = (float)(*(short *)(v + 8) - *(short *)(m + 0xA)) / 5.0f;
+        *(float *)(m + 0xC) = *(float *)(v + 4) + ((*(float *)(m + 0x20) + *(float *)(v + 4)) * 0.5f - *(float *)(v + 4)) * f4;
+        c2 = (unsigned char)v[0xB] >> 1;
+        c = (unsigned char)v[0xB];
+        al = func_001FA898((float)c + (float)(c2 - c) * f4);
+    } else {
+        f4 = (float)*(short *)(m + 0xA) / func_001FA888(*(short *)(v + 8) - 6);
+        *(float *)(m + 0xC) = *(float *)(m + 0x20) + ((*(float *)(m + 0x20) + *(float *)(v + 4)) * 0.5f - *(float *)(m + 0x20)) * f4;
+        al = func_001FA898((float)((unsigned char)v[0xB] >> 1) * f4 + 0.0f);
+    }
+    p = m + 0x10;
+    *(int *)(m + 4) = (al << 24) | (*(int *)(m + 4) & 0xFFFFFF);
+    vcopy_276940(a, (float *)(v + 0xC));
+    func_001F9BD8(p, p, a);
+    if (*(int *)(v + 0x18) != 0) {
+        func_001F9BF0(d, *(char **)(v + 0x18) + 0x10, p);
+        if (d[0] <= 2.0f && d[1] <= 2.0f) {
+            func_001F9CA0(e, d, D_0013E633 + 0x10AD);
+            func_L00_001FF4B0(e, e, *(float *)&D_L00_0016030C);
+            func_001F9BD8(p, p, e);
+            if (d[0] <= 0.5f && d[1] <= 0.5f) {
+                func_L00_001FF4B0(a, d, 0.03f);
+            } else {
+                func_L00_001FF4B0(a, d, func_001F9CB8(a));
+            }
+            w = (float *)(v + 0xC);
+            *(float *)(v + 0xC) = a[0];
+            w[1] = a[1];
+            a[2] = a[2] + 0.02f;
+            w[2] = a[2];
+        }
+    }
+    if (func_001F9938(m + 0xA)) {
+        func_L00_002688A8(m);
+    }
+}
 // Particle update: move by velocity, fade color over remaining lifetime.
 void func_L00_00276C08(char *m) {
     char *v = m + 0x20;

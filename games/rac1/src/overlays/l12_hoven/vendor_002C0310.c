@@ -733,7 +733,93 @@ int func_L12_002E41C8(char *moby, float target) {
     }
     return r;
 }
-INCLUDE_ASM("asm/overlays", func_L12_002E43A8);
+extern short D_L12_001618BC;
+extern short D_L12_001618C0;
+extern short D_L12_001618C4;
+extern short D_L12_001618C8;
+extern short D_L12_001618CC;
+extern short D_L12_001618D0;
+extern short D_L12_001618D4;
+extern short D_L12_001618D8;
+extern short D_L12_001618DC;
+extern short D_L12_001618E0;
+extern short D_L12_001618E4;
+extern short D_L12_001618E8;
+extern short D_L12_001618EC;
+extern short D_L12_001618F0;
+extern short D_L12_001618F4;
+extern short D_L12_001618F8;
+extern short D_L12_001618FC;
+extern short D_L12_00161900;
+extern short D_L12_00161904;
+extern void func_L00_00260958(float *v, float s);
+extern void func_001F9C30(void *, void *, float);
+extern int func_001FA8A8(int, int, float);
+extern float func_001F9878(float);
+
+/* Level 12 hoven: spawns a burst of particles around the moby (port of func_L10_002E4E50's shape). */
+void func_L12_002E43A8(struct Moby *mp) {
+    char *arg0 = (char *)mp;
+    float v[4];
+    float a[4];
+    float b[4];
+    float o[4];
+    char *d;
+    float f20;
+    float f21;
+    float f22;
+    float r;
+    int n = *(int *)&D_L12_001618BC;
+    int i;
+    int j;
+    int k;
+    int x16, x17, x18, x19, r7;
+    d = *(char **)(arg0 + 0x78);
+    if (((unsigned char)arg0[0x20]) == 0xF) {
+        n = func_001FA898_r((float)n * 1.5f);
+    }
+    for (i = 0; i < n; i++) {
+        { float *dst = v; char *src = arg0 + 0x10; float *d2 = dst; qcopy_nc(d2, src); }
+        func_L00_00260958(v, (*(float *)&D_L12_001618C4));
+        v[2] = v[2] + 0.55f;
+        f22 = func_00214158();
+        f20 = func_002140F8((*(float *)&D_L12_001618D0), (*(float *)&D_L12_001618D4));
+        f21 = func_002140F8((*(float *)&D_L12_001618D8), (*(float *)&D_L12_001618DC));
+        if (((unsigned char)arg0[0x20]) == 0xF) {
+            f20 = f20 * 0.55f;
+            f21 = f21 * 0.55f;
+            v[2] = v[2] - 0.2f;
+        }
+        r = func_001F9F90(f22);
+        a[0] = r * (f20 * D_0015EE6C);
+        r = func_001F9FA8(f22);
+        a[1] = r * (f20 * D_0015EE6C);
+        a[2] = (f21 * D_0015EE6C) + 0.0f;
+        func_001F9C30(o, d + 0x120, 0.5f);
+        o[2] = 0.0f;
+        func_001F9BD8(a, a, o);
+        qcopy(b, a);
+        k = func_001F9850((*(int *)&D_L12_00161900));
+        b[2] = b[2] - ((*(float *)&D_L12_001618E0) * D_0015EE70) * (float)k;
+        for (j = 0; j < (*(int *)&D_L12_001618C0); j++) {
+            r = func_002140F8(0.5f, 1.5f);
+            a[3] = r * *(float *)&D_L12_001618E4;
+            b[3] = r * *(float *)&D_L12_001618E8;
+            func_L00_00260958(v, (*(float *)&D_L12_001618C8));
+            func_L00_00260958(b, (*(float *)&D_L12_001618CC) * D_0015EE6C);
+            r = func_002140F8(0.0f, 1.0f);
+            x19 = func_001FA8A8((*(int *)&D_L12_001618EC), (*(int *)&D_L12_001618F4), r);
+            r = func_002140F8(0.0f, 1.0f);
+            x18 = func_001FA8A8((*(int *)&D_L12_001618F0), (*(int *)&D_L12_001618F8), r);
+            x17 = func_001F9850((*(int *)&D_L12_001618FC));
+            x16 = func_001F9850((*(int *)&D_L12_00161900));
+            r = func_002140F8((float)(*(int *)&D_L12_00161904) * 0.5f, (float)(*(int *)&D_L12_00161904) * 2.5f);
+            r = func_001F9878(r);
+            r7 = func_001FA898_r(r);
+            func_00219780(v, a, b, x19, x18, x17, x16, r7, -1);
+        }
+    }
+}
 typedef struct {
     u8 pad0[0x20];
     f32 health; /* 0x20 */
@@ -1443,7 +1529,469 @@ extern void func_L00_00260460(void *, void *, int, float, float);
 void func_L12_002E8610(void *a, void *b) {
     func_L00_00260460(a, b, -1, 1.0f, 10.0f);
 }
-INCLUDE_ASM("asm/overlays", func_L12_002E8640);
+/* functional: high. Same reads, writes, calls and arguments as retail; the jump table is a switch, the shared exits are gotos, quad copies are four-float copies, and the two DeleteMoby calls pass the pointer that retail leaves in $a0. No COP2/VU0 instructions in this function. */
+/* Level 12 (Hoven) moby update, one call per frame per moby. data = moby+0x78 is its state block, hero = the target
+ * moby found by func_L00_00260D30 (or the hero global when none). Runs func_L00_00264BB0 on data+0x120, hides or shows
+ * the moby (flags +0x34 |= 0x41 or &= 0xFFBE) from the near test against the hero and the clip volume, runs the
+ * shared update func_L12_002E9560, then a state machine on moby+0x20: 0 setup, 1 walk along a waypoint row of
+ * D_L12_001B0C30, 2 wait/spawn check, 3 wander and face the hero, 4 and 9 dying/explode checks, 5 to 8 idle,
+ * attack-ready and chase steering. The tail (state-independent) animates the two bone controllers. */
+extern int D_L12_0015F6A8 MACRO_ADDR;
+extern float D_L12_0015F660[] MACRO_ADDR;
+extern char * D_L12_00178400[] ;
+extern void func_L00_00264BB0(void *, float);
+extern void func_L12_002E9560(char *moby);
+extern void func_L00_00260D30(char *, float *, float);
+extern void func_L01_0026E8E0(void *);
+extern int func_001160D8(void);
+extern int func_L00_00258BC8(int, int);
+extern float func_L00_00258C80(float, float);
+extern float func_00214358(void *, int, float);
+extern void func_00213F28(void *, int, int, int, int);
+extern int func_L12_0027C8D8(void *, void *, float, float, float);
+extern int func_L00_001EFFF0(void *, void *, int, void *, void *);
+extern int func_L01_0028C2D8(void *, void *, float);
+extern void func_L12_002E9B88(struct Moby *moby, float *target, float max_angle, float approach_speed);
+extern void func_L12_002E9988(char *moby, float *pos);
+extern void func_L12_002E9B30(char *moby);
+extern void func_L12_002E9A50();
+extern void func_L12_002E9AA0(unsigned char *moby);
+extern int func_L00_001F2BE8(void *, int, void *, int, float);
+extern int func_L00_0025F410(void *);
+extern void func_L00_0025AC00(void *, int, int, void *, void *, float);
+extern int func_00215B18(void *, float);
+extern void func_L00_00250800(void *, int, void *);
+extern void func_0022ED80(int, int, int);
+extern int func_001FA898(float);
+extern void func_L04_002B0068(void *, void *, void *, int);
+extern int func_L00_0025D6F0(void *, void *);
+extern void func_L00_00263950(char *, char *, int, float, float);
+
+#define M_U8(p, o) (*(unsigned char *)((char *)(p) + (o)))
+#define M_U16(p, o) (*(unsigned short *)((char *)(p) + (o)))
+#define M_I(p, o) (*(int *)((char *)(p) + (o)))
+#define M_F(p, o) (*(float *)((char *)(p) + (o)))
+#define M_P(p, o) (*(char **)((char *)(p) + (o)))
+
+typedef int u128_2E8640 __attribute__((mode(TI)));
+
+#define COPY4(dst, src) qcopy((void *)(dst), (void *)(src))
+
+void func_L12_002E8640(char *moby) {
+    char *data;
+    char *hero;
+    char *B;
+    char *obj;
+    char *row;
+    char *arr;
+    int *q;
+    float buf[20] __attribute__((aligned(16)));
+    float v50[4] __attribute__((aligned(16)));
+    float v60[4] __attribute__((aligned(16)));
+    float f20;
+    float f21;
+    float f;
+    float g;
+    int st;
+    int n;
+    int r;
+    int i;
+    char **pp;
+
+    data = M_P(moby, 0x78);
+    func_L00_00264BB0(data + 0x120, 3.0f);
+
+    if (D_L12_0015F6A8 == 2) {
+        goto hide;
+    }
+    if (M_U8(moby, 0x20) >= 3) {
+        M_U16(moby, 0x34) = M_U16(moby, 0x34) & 0xFFBE;
+        {
+            char *o = M_P(data, 0x248);
+            if (o != 0) {
+                M_U16(o, 0x34) = M_U16(o, 0x34) & 0xFFBE;
+            }
+        }
+    }
+    if (M_U8(data, 0x269) != 0) {
+        char *b0 = ((char *)D_0013E633) + 0xE1D;
+        if (M_I(b0, 0x2084) == 0 && M_I(b0, 0x2090) == 0x67) {
+            if (((float (*)(void *, void *))func_001F9D48)(moby + 0x10, b0 + 0x80) < 30.0f) {
+                goto finish;
+            }
+        }
+    }
+    if (M_I(data, 0x270) != -1) {
+        if (((int (*)(void *, int))func_00215570)(((char *)D_L12_001672C0), M_I(data, 0x270)) == 0) {
+        hide:
+            M_U16(moby, 0x34) = M_U16(moby, 0x34) | 0x41;
+            {
+                char *o = M_P(data, 0x248);
+                if (o != 0) {
+                    M_U16(o, 0x34) = M_U16(o, 0x34) | 0x41;
+                }
+            }
+            return;
+        }
+        M_U16(moby, 0x34) = M_U16(moby, 0x34) & 0xFFBE;
+        {
+            char *o = M_P(data, 0x248);
+            if (o != 0) {
+                M_U16(o, 0x34) = M_U16(o, 0x34) & 0xFFBE;
+            }
+        }
+    }
+    if (M_U8(data, 0x2E) == 2) {
+        goto finish;
+    }
+
+    ((void (*)(void *))func_L12_002E9560)(moby);
+    ((int (*)(void *, void *, float))func_L00_00260D30)(moby, buf, M_F(data, 0x230));
+    hero = M_P(buf, 0x40);
+    if (hero == 0) {
+        char *B2 = ((char *)D_0013E633) + 0xE1D;
+        hero = M_P(B2, 0x2080);
+        COPY4(buf + 8, (float *)(B2 + 0xD0));
+    }
+
+    st = M_U8(moby, 0x20);
+    switch (st) {
+    case 0:
+        f = M_F(data, 0x230);
+        M_U8(data, 0x29) = 1;
+        M_U8(data, 0x58) = 8;
+        M_F(data, 0x20) = 2.0f;
+        *(short *)(data + 0x24) = 2;
+        M_U8(data, 0x5A) = 8;
+        M_F(data, 0x28C) = f;
+        M_I(data, 0x90) = 0x200;
+        M_F(data, 0x98) = 0.5f;
+        M_U8(data, 0x2E) = 1;
+        func_L01_0026E8E0(data + 0xD0);
+        {
+        float k = (*(float *)&D_0015EE6C) * 5.5f;
+        M_F(data, 0xDC) = 1.0f;
+        M_I(data, 0xD0) = 0x38D;
+        M_F(data, 0xD8) = 1.0f;
+        M_I(data, 0x108) = 0x18;
+        M_F(data, 0xF4) = k;
+        }
+        COPY4((float *)(data + 0x220), (float *)(moby + 0x10));
+        if (M_U8(moby, 0x21) != 0xFF) {
+            if (*(int *)M_P(data, 0x24C) == 1) {
+                M_U16(moby, 0x34) = M_U16(moby, 0x34) | 0x8000;
+            }
+            *(int *)M_P(data, 0x24C) = (*(int *)M_P(data, 0x24C) == 0);
+        } else {
+            if (func_001160D8() & 1) {
+                M_U16(moby, 0x34) = M_U16(moby, 0x34) | 0x8000;
+            }
+        }
+        if (M_I(data, 0x274) != 0) {
+            r = func_L00_00258BC8(0, 300);
+            M_I(data, 0x288) = ((int (*)(int))func_001F9850)(r);
+        }
+        M_I(moby, 0x40) = 0;
+        M_I(moby, 0x44) = 0;
+        if (M_F(data, 0x244) == M_F(moby, 0x40)) {
+            if (M_U8(moby, 0x21) != 0xFF) {
+                q = *(int **)(data + 0x250);
+                M_F(data, 0x244) = (float)*q;
+                r = *q;
+                if (r > 0) {
+                    *q = -r;
+                } else {
+                    *q = r + 0x14;
+                }
+            } else {
+                M_F(data, 0x244) = func_L00_00258C80(15.0f, 35.0f);
+            }
+        }
+        M_F(data, 0x244) = M_F(data, 0x244) * 0.0174532924f;
+        M_F(moby, 0x18) = ((float (*)(void *, int, float))func_00214358)(moby + 0x10, 0, 0.5f);
+        if (M_U8(data, 0x268) != 0) {
+            M_U16(moby, 0x34) = M_U16(moby, 0x34) | 0x41;
+            {
+                char *o = M_P(data, 0x248);
+                if (o != 0) {
+                    M_U16(o, 0x34) = M_U16(o, 0x34) | 0x41;
+                }
+            }
+        }
+        M_U8(moby, 0x20) = 2;
+        break;
+
+    case 2:
+        if (((float (*)(void *, void *))func_001F9D10)(moby + 0x10, ((char *)D_0013E633) + 0xE9D) > 64.0f) {
+            return;
+        }
+        if (M_U8(moby, 0x53) != 0) {
+            if (M_U8(moby, 0x52) == M_U8(moby, 0x53)) {
+                func_00213F28(moby, 0, 0, ((int (*)(int))func_001F9850)(8), 5);
+            }
+        }
+        r = func_L12_0027C8D8(moby, hero + 0x10, M_F(data, 0x230), 3.0f, 0.0f);
+        if (r == 0) {
+            if (M_I(data, 0x25C) != -1) {
+                if (((int (*)(void *, int))func_00215570)(hero + 0x10, M_I(data, 0x25C)) == 0) {
+                    if (M_U8(moby, 0xBC) == 0) {
+                        goto tail;
+                    }
+                }
+            } else if (M_U8(moby, 0xBC) == 0) {
+                goto tail;
+            }
+        }
+        if (M_U16(moby, 0x34) & 1) {
+            COPY4(v50, (float *)(moby + 0x10));
+            v50[2] = v50[2] + 0.5f;
+            if (func_L00_001EFFF0(v50, ((char *)D_L12_001672C0), 2, moby, 0) != 0) {
+                M_U16(moby, 0x34) = M_U16(moby, 0x34) & 0xFFBE;
+                {
+                    char *o = M_P(data, 0x248);
+                    if (o != 0) {
+                        M_U16(o, 0x34) = M_U16(o, 0x34) & 0xFFBE;
+                    }
+                }
+            } else {
+                obj = M_P(data, 0x248);
+                if (obj != 0) {
+                    ((void (*)(void *))func_0020D678)(obj);
+                }
+                ((void (*)(void *))func_0020D678)(moby);
+                return;
+            }
+        }
+        if (M_U8(moby, 0x21) != 0xFF) {
+            ((void (*)(int, int))func_L01_0026F040)(M_U8(moby, 0x21), 1);
+        }
+        if (M_I(data, 0x254) == -1) {
+            M_U8(moby, 0x20) = 3;
+            break;
+        }
+        M_I(data, 0x260) = func_L01_0028C2D8(moby + 0x10, ((char * *)D_L12_001B0C30)[M_I(data, 0x254)], 0.0f);
+        M_U8(moby, 0x20) = 1;
+        break;
+
+    case 1:
+        if (((int (*)(void *))func_001F9908)(data + 0x258) == 0) {
+            break;
+        }
+        if (M_U8(moby, 0x53) != 8 && M_U8(moby, 0x52) == M_U8(moby, 0x53)) {
+            func_00213F28(moby, 8, 0, ((int (*)(int))func_001F9850)(11), 5);
+        }
+        row = ((char * *)D_L12_001B0C30)[M_I(data, 0x254)];
+        if (((float (*)(void *, void *))func_001F9D48)(moby + 0x10, row + ((M_I(data, 0x260) << 4) + 0x10)) < 3.0f) {
+            M_I(data, 0x260) = M_I(data, 0x260) + 1;
+        }
+        {
+            int last = *(int *)row - 1;
+            if (last < M_I(data, 0x260)) {
+                M_I(data, 0x260) = last;
+            }
+        }
+        ((void (*)(void *, void *, float, float))func_L12_002E9B88)(moby, row + ((M_I(data, 0x260) << 4) + 0x10), 0.0f, (*(float *)&D_0015EE6C) * 8.0f);
+        if (M_I(data, 0x260) == *(int *)row - 1) {
+            M_U8(moby, 0x20) = 3;
+            break;
+        }
+        if (((float (*)(void *, void *))func_001F9D48)(moby + 0x10, hero + 0x10) < M_F(data, 0x264)) {
+            M_U8(moby, 0x20) = 3;
+        }
+        break;
+
+    case 3:
+        if (M_U8(data, 0x268) == 1) {
+            COPY4(v50, (float *)(moby + 0x10));
+            v50[0] = v50[0] + ((float (*)(float))func_001F9F90)(M_F(moby, 0x48));
+            v50[1] = v50[1] + ((float (*)(float))func_001F9FA8)(M_F(moby, 0x48));
+            n = func_L00_001F2BE8(v50, 0, moby, 0, 1.5f);
+            if (n != 0) {
+                COPY4(v60, D_L12_0015F660);
+                if (n > 0) {
+                    pp = D_L12_00178400;
+                    B = ((char *)D_0013E633) + 0xE1D;
+                    i = n;
+                    do {
+                        if (func_L00_0025F410(*pp) != 0) {
+                            f = ((float (*)(float))func_001F9B88)(M_F(moby, 0x18) - M_F(*pp, 0x18));
+                            if (f < 0.7f) {
+                                ((void (*)(void *, void *, int, void *, void *, float))func_L00_0025AC00)(*pp, M_P(B, 0x2080), 0x10000, moby + 0x10, v60, 1.0f);
+                            }
+                        }
+                        pp++;
+                    } while (--i);
+                }
+            }
+        }
+        {
+        float a = ((float (*)(float, float))func_001FA790)(((float (*)(float, float))func_L00_001FF860)(M_F(hero, 0x10) - M_F(moby, 0x10), M_F(hero, 0x14) - M_F(moby, 0x14)), M_F(moby, 0x48));
+        if (a > 0.959931076f) {
+            a = 0.959931076f;
+        } else if (a < -0.959931076f) {
+            a = -0.959931076f;
+        }
+        {
+            float h = a * 0.5f;
+            M_F(data, 0x188) = h;
+            M_F(data, 0x208) = h;
+        }
+        }
+        ((void (*)(void *, void *, float, float))func_L12_002E9B88)(moby, hero + 0x10, M_F(data, 0x244), 0.0f);
+        if (((float (*)(void *, void *))func_001F9D48)(moby + 0x10, hero + 0x10) < 5.5f || M_U8(data, 0x242) != 0) {
+            f = ((float (*)(float, float))func_001FA850)(M_F(moby, 0x48), ((float (*)(float, float))func_L00_001FF860)(M_F(hero, 0x10) - M_F(moby, 0x10), M_F(hero, 0x14) - M_F(moby, 0x14)));
+            if (f < 0.0872664601f) {
+                M_U8(moby, 0x20) = 5;
+                break;
+            }
+        }
+        if (M_U8(moby, 0x53) != 8 && M_U8(moby, 0x52) == M_U8(moby, 0x53)) {
+            func_00213F28(moby, 8, 0, ((int (*)(int))func_001F9850)(11), 5);
+        }
+        goto tail;
+
+    case 5:
+        if (M_F(data, 0x28C) < 8.0f) {
+            M_F(data, 0x28C) = 8.0f;
+        }
+        ((void (*)(void *, void *))func_L12_002E9988)(moby, hero + 0x10);
+        ((void (*)(void *))func_L12_002E9B30)(moby);
+        if (M_U8(moby, 0x53) != 2 && M_U8(moby, 0x52) == M_U8(moby, 0x53)) {
+            func_00213F28(moby, 2, 0, ((int (*)(int))func_001F9850)(8), 5);
+        }
+        if (M_U8(moby, 0x70) & 2) {
+            if (M_U8(moby, 0x53) != 10 && M_U8(moby, 0x52) == M_U8(moby, 0x53)) {
+                func_00213F28(moby, 10, 0, ((int (*)(int))func_001F9850)(5), 5);
+            }
+            M_U8(moby, 0x20) = 6;
+        }
+        break;
+
+    case 6:
+        ((void (*)(void *, void *))func_L12_002E9988)(moby, hero + 0x10);
+        ((void (*)(void *))func_L12_002E9B30)(moby);
+        if (M_P(data, 0x248) != 0) {
+            if (func_00215B18(moby, 0.0f) != 0) {
+                ((void (*)(void *, int, void *))func_L00_00250800)(M_P(data, 0x248), 0, v50);
+                ((void (*)(void *, void *, void *))func_001F9BF0)(v60, buf + 8, v50);
+                f21 = ((float (*)(float, float))func_L00_001FF860)(v60[0], v60[1]);
+                f20 = ((float (*)(float, float))func_001FA748)(M_F(moby, 0x48), M_F(data, 0x208));
+                f21 = (((float (*)(float, float))func_001FA850)(f21, f20) > 0.226892799f) ? f20 : f21;
+                g = ((float (*)(void *))func_001F9CE8)(v60);
+                g = ((float (*)(float, float))func_L00_001FF860)(g, v60[2]);
+                ((void (*)(void *, float, float, float))func_00215C00)(v60, (*(float *)&D_0015EE6C) * 15.0f, f21, g);
+                ((int (*)(int, int, void *))func_0022ED80)(0, 0, moby);
+                n = func_001FA898(18.0f / ((*(float *)&D_0015EE6C) * 15.0f));
+                func_L04_002B0068(moby, v50, v60, n);
+            }
+        }
+        if (M_U8(moby, 0x70) & 2) {
+            if (M_U8(moby, 0x53) != 5 && M_U8(moby, 0x52) == M_U8(moby, 0x53)) {
+                func_00213F28(moby, 5, 0, ((int (*)(int))func_001F9850)(8), 5);
+            }
+            M_U8(moby, 0x20) = 7;
+        }
+        break;
+
+    case 7:
+        ((void (*)(void *, void *))func_L12_002E9988)(moby, hero + 0x10);
+        ((void (*)(void *))func_L12_002E9B30)(moby);
+        if (M_U8(moby, 0x53) != 5 || (M_U8(moby, 0x70) & 2)) {
+            if (M_U8(moby, 0x53) != 0 && M_U8(moby, 0x52) == M_U8(moby, 0x53)) {
+                func_00213F28(moby, 0, 0, ((int (*)(int))func_001F9850)(8), 5);
+            }
+        }
+        if (((int (*)(int))func_002140B0)(9) == 0) {
+            M_U8(moby, 0x20) = 5;
+            break;
+        }
+        if (((float (*)(void *, void *))func_001F9D48)(moby + 0x10, hero + 0x10) > 10.5f && M_U8(data, 0x242) == 0) {
+            M_U8(moby, 0x20) = 3;
+            break;
+        }
+        f = ((float (*)(float, float))func_001FA850)(M_F(moby, 0x48), ((float (*)(float, float))func_L00_001FF860)(M_F(hero, 0x10) - M_F(moby, 0x10), M_F(hero, 0x14) - M_F(moby, 0x14)));
+        if (f > 0.488692194f) {
+            M_U8(moby, 0x20) = 3;
+        }
+        break;
+
+    case 8:
+        ((void (*)(void *, void *, float, float))func_L12_002E9B88)(moby, data + 0x220, 0.0f, 0.0f);
+        f = M_F(data, 0x23C) * 30.0f;
+        if (f > 0.785398185f) {
+            f = 0.785398185f;
+        } else if (f < -0.785398185f) {
+            f = -0.785398185f;
+        }
+        M_F(data, 0x188) = f * 0.699999988f;
+        M_F(data, 0x208) = f * 0.400000006f;
+        if (((float (*)(void *, void *))func_001F9D48)(moby + 0x10, data + 0x220) < 1.0f) {
+            M_U8(moby, 0x20) = 2;
+        }
+        goto tail;
+
+    case 4:
+        M_U16(moby, 0x34) = M_U16(moby, 0x34) & 0xFFBE;
+        r = func_L00_0025D6F0(moby, data + 0x70);
+        if (r & 0x60) {
+            if (((float (*)(void *, void *))func_001F9D48)(moby + 0x10, hero + 0x10) < 6.0f || M_U8(data, 0x242) != 0) {
+                f = ((float (*)(float, float))func_001FA850)(M_F(moby, 0x48), ((float (*)(float, float))func_L00_001FF860)(M_F(hero, 0x10) - M_F(moby, 0x10), M_F(hero, 0x14) - M_F(moby, 0x14)));
+                if (f < 0.122173049f) {
+                    M_U8(moby, 0x20) = 5;
+                    break;
+                }
+            }
+            M_U8(moby, 0x20) = 3;
+            break;
+        }
+        if (!(M_F(moby, 0x18) < 2.0f)) {
+            goto tail;
+        }
+        goto finish;
+
+    case 9:
+        r = func_L00_0025D6F0(moby, data + 0x70);
+        if (r & 0x60) {
+            func_L00_002584A8(moby, 0, -1);
+            ((void (*)(void *, void *))func_L12_002E8610)(moby, moby + 0x10);
+            goto finish;
+        }
+        if (M_F(moby, 0x18) < 2.0f) {
+            func_L00_002584A8(moby, 0, -1);
+        finish:
+            ((void (*)(void *))func_L12_002E9A50)(moby);
+            return;
+        }
+        break;
+    }
+
+tail:
+    if (M_U8(moby, 0x31) == 0) {
+        char *o = M_P(data, 0x248);
+        if (o == 0) {
+            return;
+        }
+        if (M_U8(o, 0x31) == 0) {
+            return;
+        }
+    }
+    ((void (*)(void *))func_L12_002E9AA0)(moby);
+    if (M_U16(moby, 0x34) & 0x8000) {
+        M_F(data, 0x188) = -M_F(data, 0x188);
+        M_F(data, 0x208) = -M_F(data, 0x208);
+    }
+    ((void (*)(void *, void *, int, float, float))func_L00_00263950)(moby, data + 0x120, 5, (*(float *)&D_0015EE64) * 0.0179999992f, (*(float *)&D_0015EE64) * 0.300000012f);
+    ((void (*)(void *, void *, int, float, float))func_L00_00263950)(moby, data + 0x1A0, 6, (*(float *)&D_0015EE64) * 0.0240000002f, (*(float *)&D_0015EE64) * 0.300000012f);
+    return;
+
+}
+
+#undef M_U8
+#undef M_U16
+#undef M_I
+#undef M_F
+#undef M_P
+#undef COPY4
 extern int func_001F9938(void *);
 extern int func_L01_0026EFB8(int, int);
 extern float func_001FA748(float, float);

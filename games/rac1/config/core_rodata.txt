@@ -11,5 +11,7 @@ build-sn/libgcc/l2_divdi3.o D_00152B18
 build-sn/libgcc/l2_moddi3.o D_00152C18
 build-sn/libgcc/l2_udivdi3.o D_00152D18
 build-sn/libgcc/l2_umoddi3.o D_00152E18
+build-sn/core/00122630.o jtbl_001531E0
+build-sn/core/00122AD8.o jtbl_001533F0
 build-sn/core/00125630.o D_001539B8
 build-sn/core/0012AC80.o jtbl_00153BA0

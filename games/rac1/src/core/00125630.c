@@ -124,7 +124,98 @@ typedef struct {
 extern Ent330 D_0015B640[];
 extern void func_00119288(void *a, void *b);
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_00125630);
+struct MpegDecoder;
+extern void func_0012C430(void *, char *, int);
+extern void func_00125880(struct MpegDecoder *d, int bx, int by, int mb_type, int motion_type,
+                          int pmv[2][2][2], int mvfs[2][2], int *dmvector);
+extern void func_0012A0F8(void *);
+extern char D_001537E8[];
+
+typedef struct {
+    char pad0[0x128];
+    int unk128;
+    int unk12C;
+    int unk130;
+    int unk134;
+    int unk138;
+    int unk13C;
+} Elem00125630;
+
+typedef struct {
+    int unk0;
+    int pad4[3];
+    int unk10;
+} Ref00125630;
+
+typedef struct {
+    char pad0[0x11C];
+    int unk11C;
+    char pad120[0xC];
+    int unk12C;
+    char pad130[0x44];
+    int unk174;
+    char pad178[0x48];
+    Ref00125630 *unk1C0;
+    char pad1C4[0xC];
+    Ref00125630 *unk1D0;
+    char pad1D4[0xC];
+    Ref00125630 *unk1E0;
+    char pad1E4[0x3AC];
+    Elem00125630 e[2];
+    int unk810;
+} Dec00125630;
+
+/* Motion-compensate one macroblock (or wait for the intra IDCT) and record its output slot. */
+int func_00125630(void *arg0, int mbAddr, int arg2, int mbType, int motionType,
+                  void *pmv, void *mvfs, void *dmv) {
+    Dec00125630 *d = (Dec00125630 *)arg0;
+    int intra;
+    int x;
+    int y;
+    int bx;
+    int by;
+    Ref00125630 *ref;
+
+    intra = mbType & 1;
+    y = mbAddr / d->unk12C;
+    x = mbAddr % d->unk12C;
+    by = y * 16;
+    bx = x * 16;
+    if (intra) {
+        while ((*(volatile unsigned int *)0x1000D400 >> 8) & 1)
+            ;
+        d->e[d->unk810].unk138 = 0;
+    } else {
+        if ((unsigned int)(motionType - 1) >= 3) {
+            func_0012C430(d, D_001537E8, motionType);
+            d->unk11C = 1;
+            return 0;
+        }
+        func_00125880((struct MpegDecoder *)d, bx, by, mbType, motionType,
+                      pmv, mvfs, dmv);
+        while ((*(volatile unsigned int *)0x1000D400 >> 8) & 1)
+            ;
+        func_0012A0F8(d);
+        d->e[d->unk810].unk138 = 1;
+    }
+    if (arg2 == 1 && (mbType & 2)) {
+        d->e[d->unk810].unk134 = arg2;
+    } else {
+        d->e[d->unk810].unk134 = 0;
+    }
+    d->e[d->unk810].unk130 = intra;
+    if (d->unk174 == 3) {
+        d->e[d->unk810].unk128 = d->unk1C0->unk0 + (x * d->unk1C0->unk10 + y) * 0x180;
+    } else {
+        if (d->unk174 == 2) {
+            ref = d->unk1E0;
+        } else {
+            ref = d->unk1D0;
+        }
+        d->e[d->unk810].unk128 = ref->unk0 + (x * ref->unk10 + y) * 0x180;
+    }
+    return 1;
+}
 
 struct MpegDecoder;
 struct sceMpeg {
@@ -390,7 +481,58 @@ void func_00125880(struct MpegDecoder *d, int bx, int by, int mb_type, int motio
 
 INCLUDE_ASM("asm/nonmatchings/core_text", func_00125F88);
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_001263A8);
+extern void func_0012C468(void *, void *);
+extern void func_00127318(int, int);
+extern void func_001272B8(int, int, int);
+extern char D_00153870[];
+
+typedef struct {
+    int unk0;
+    int unk4;
+    char pad8[0x20];
+    void (*fa[4])(void *);
+    void (*fb[4])(void *);
+    char a[4][0x1C];
+    char b[4][0x1C];
+    int unk128;
+    int count;
+    int unk130;
+    int pad134;
+    int unk138;
+    int unk13C;
+} Elem001263A8;
+
+typedef struct {
+    char pad0[0x590];
+    Elem001263A8 e[2];
+    char pad810[0xC];
+    int unk81C;
+} Dec001263A8;
+
+void func_001263A8_r(void *arg0, int idx) __asm__("func_001263A8");
+
+/* Run a channel's per-block callbacks, then hand its buffer to the output routine. */
+void func_001263A8_r(void *arg0, int idx) {
+    Dec001263A8 *p = (Dec001263A8 *)arg0;
+    int i;
+
+    if (p->e[idx].unk138 != 0) {
+        for (i = 0; i < p->e[idx].count; i++) {
+            p->e[idx].fa[i](p->e[idx].a[i]);
+            p->e[idx].fb[i](p->e[idx].b[i]);
+        }
+    }
+    if (p->e[idx].unk130 != 0 && p->e[idx].unk13C != 0) {
+        func_0012C468(p, D_00153870);
+    }
+    if (p->e[idx].unk130 != 0) {
+        func_00127318(p->e[idx].unk128, p->e[idx].unk4);
+    } else if (p->e[idx].unk13C != 0) {
+        func_00127318(p->e[idx].unk128, p->unk81C);
+    } else {
+        func_001272B8(p->e[idx].unk128, p->unk81C, p->e[idx].unk4);
+    }
+}
 
 ASM_FUNC("asm/handwritten/core_text", func_001265C8);
 
@@ -1971,9 +2113,75 @@ int func_00129C78(void *arg0) {
     return r;
 }
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_00129CA0);
+long func_00129CA0(void *arg0, void *arg1, void *arg2, void *arg3, void *arg4) {
+    char *s = arg0;
+    char *t = arg1;
+    long *o1 = arg2;
+    long v;
+    long packed;
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_00129E30);
+    if (*(int *)(s + 0x70) != 0) {
+        int base;
+        extern long func_0011EEC8(long, long);
+        v = *(long *)(t + 0x18);
+        if (v >= 0 || (base = *(int *)(s + 0x80)) < 0) {
+            *o1 = v;
+        } else {
+            int n = *(long *)(s + 0x88);
+            long r = func_0011EEC8(n & 1, *(long *)(s + 0x78) & 1);
+            int cnt = *(int *)(s + 0x90);
+            int a = func_0011EEC8(r, cnt & 1);
+            *o1 = base + ((int)(func_0011EEC8(*(long *)(s + 0x78), n) >> 1) + a);
+            if (func_0011EEC8(n & 1, *(long *)(s + 0x78) & 1)) {
+                *(int *)(s + 0x90) = cnt + 1;
+            }
+        }
+    } else {
+        *o1 = *(long *)(t + 0x18);
+    }
+    if (*(int *)(s + 0xF8) == 2 && (v = *(long *)(s + 0xF0)) >= 0) {
+        *o1 = v;
+        *(int *)(s + 0xF8) = 0;
+        *(long *)(s + 0xF0) = -1;
+    }
+    *(long *)arg3 = *(long *)(t + 0x20);
+    packed = ((long)*(int *)(t + 0x34) << 8) | ((long)*(int *)(t + 0x38) << 7)
+           | ((long)*(int *)(t + 0x3C) << 6) | ((long)*(int *)(t + 0x40) << 5)
+           | ((long)*(int *)(t + 0x30) << 3) | *(int *)(t + 0x2C);
+    *(long *)arg4 = packed;
+    return packed;
+}
+
+extern long func_00129CA0(void *s, void *t, void *o1, void *o3, void *o4);
+extern unsigned int D_00132F98[];
+extern void func_0012A7E8(void *arg0, void *arg1);
+void func_00129E30(char *s, char *t) {
+    char *base;
+    long x;
+
+    base = *(char **)(s + 0x858);
+    func_00129CA0(s, t, base + 0x10, base + 0x18, base + 0x20);
+    base = *(char **)(s + 0x858);
+    x = *(long *)(base + 0x20);
+    *(int *)(s + 0x80) = *(int *)(base + 0x10);
+    *(unsigned long *)(s + 0x88) = D_00132F98[(int)(x >> 5) & 0xF];
+    *(int *)(s + 0xCC) = *(int *)(t + 0x5C);
+    *(int *)(s + 0xD0) = *(int *)(t + 0x60);
+    *(int *)(s + 0xB4) = *(int *)(t + 0x44);
+    *(int *)(s + 0xB8) = *(int *)(t + 0x48);
+    *(int *)(s + 0xBC) = *(int *)(t + 0x4C);
+    *(int *)(s + 0xC0) = *(int *)(t + 0x50);
+    *(int *)(s + 0xC4) = *(int *)(t + 0x54);
+    *(int *)(s + 0xC8) = *(int *)(t + 0x58);
+    if (func_00129948(s, t) == 0) return;
+    if (*(int *)(t + 0x28) != 1) return;
+    if (*(int *)(s + 0xB0) != 0) {
+        func_0012A7E8(s, t);
+    } else {
+        func_001299E8((void *)s, (void *)t);
+    }
+    func_00129C78(s);
+}
 
 extern long func_00129CA0(void *s, void *t, void *o1, void *o3, void *o4);
 extern void func_0012A7E8(void *arg0, void *arg1);
@@ -2045,7 +2253,59 @@ void func_00129F40(char *s, char *a1, char *a2) {
     func_00129C78(s);
 }
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_0012A0F8);
+extern char D_0015E940[];
+
+struct DmaEnt {
+    int unk0;
+    int unk4;
+    int a[4];
+    int b[69];
+    int n;
+    int pad[4];
+};
+
+struct DmaObj {
+    unsigned char pad_0[0x590];
+    struct DmaEnt e[2];
+    int unk810;
+};
+
+/* Builds a DMA tag chain (two 64-bit tags per entry) at the uncached alias of D_0015E940, then starts DMA channel 0x1000D400 on it. */
+void func_0012A0F8(void *arg0) {
+    struct DmaObj *s = arg0;
+    int m;
+    int n;
+    int i;
+    long *p;
+    long tag;
+    int lo;
+    int hi;
+    int r;
+
+    m = s->unk810;
+    p = (long *)(((unsigned int)D_0015E940 & 0x0FFFFFFF) | 0x20000000);
+    n = s->e[m].n;
+    i = 0;
+    if (n > 0) do {
+        lo = s->e[m].a[i] & 0x0FFFFFFF;
+        hi = s->e[m].b[i] & 0x0FFFFFFF;
+        tag = 3;
+        if (i == n - 1)
+            tag = 0;
+        p[0] = ((long)lo << 32) | 0x30000030;
+        p[2] = ((long)hi << 32) | (tag << 28) | 0x30;
+        p += 4;
+    } while (++i < n);
+    r = func_0011D960();
+    __asm__ __volatile__("sync");
+    *(volatile int *)0x1000D480 = s->e[s->unk810].unk0;
+    *(volatile int *)0x1000D430 = (int)D_0015E940;
+    *(volatile int *)0x1000D420 = 0;
+    *(volatile int *)0x1000D400 = 0x105;
+    if (r != 0) {
+        func_0011D9A8();
+    }
+}
 
 
 /* receiveDataFromIPU (libmpeg.a:mpc.o): kicks off an IPU->main-memory DMA

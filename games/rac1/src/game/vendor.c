@@ -299,7 +299,103 @@ extern char D_001E8DA0[];
 extern void func_001FFE88(void *arg0);
 extern void func_0020DB98(char *arg0, int arg1, void *arg2, char *arg3);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_00239628);
+/* functional: medium. The NTSC decomp's pending C for the same instructions (a draft it has not matched
+   yet), carried to PAL's names by OpenRAC's tools/port.py. Never compared with retail's bytes here. */
+extern s32 D_001E6318[64];
+extern s32 D_001E6418[64];
+extern s32 D_0015F538 MACRO_ADDR;
+extern void func_001F5800(s32, s32, s32, s32, s32, s32, s32, s32, s64, s64);
+extern s32 func_001F98C0(s32);
+extern f32 func_001FA888(s32);
+#define TRUNC(x) ((s32 (*)(f32))func_001FA898)(x)
+extern u64 func_00200248(s32);
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/assembly/textbin/fun_00238310.c, render_capture_scrolling_text. */
+void func_00239628(char *text, s32 start_x, s32 start_y, f32 scale) {
+    s64 texture;
+    s32 cursor_x;
+    s32 cursor_y;
+    s32 glyph_index;
+    s32 blink_next_glyph;
+    s32 skip_draw;
+    s32 long_blink_period;
+    s32 short_blink_period;
+    s32 blink_period;
+    s32 blink_remainder;
+    char *cursor_text;
+    s32 packed_coordinates;
+    s32 texture_v;
+    s32 texture_u;
+    s32 glyph_width;
+    s32 glyph_height;
+    u8 character;
+
+    blink_next_glyph = 0;
+    cursor_text = text;
+    texture = func_00200248(func_00200198(0xE935, 0));
+    cursor_x = start_x;
+    cursor_y = start_y;
+
+    for (;;) {
+        skip_draw = 0;
+        if (*(u8 *)cursor_text == 0) {
+            return;
+        }
+        character = (u8)*cursor_text++;
+        glyph_index = (s32)character - 0x20;
+
+        if (glyph_index == 0x42) {
+            blink_next_glyph = 1;
+        }
+        /* Retail retains this branch even though an unsigned byte minus 0x20 cannot reach 0xEA. */
+        if (glyph_index == 0xEA) {
+            cursor_x = start_x;
+            cursor_y += 9;
+        }
+
+        if (glyph_index < 0x3B) {
+            {
+                s32 *glyph_entry;
+                glyph_entry = D_001E6318 + glyph_index;
+                if (*glyph_entry != -1 || glyph_index == 0) {
+                    if (blink_next_glyph != 0) {
+                        skip_draw = 0;
+                        blink_next_glyph = 0;
+                        long_blink_period = func_001F98C0(0x1E);
+                        short_blink_period = func_001F98C0(0xA);
+                        blink_period = long_blink_period + short_blink_period;
+                        blink_remainder = D_0015F538 % blink_period;
+                        long_blink_period = func_001F98C0(0xA);
+                        if (blink_remainder < long_blink_period) {
+                            skip_draw = 1;
+                        }
+                    }
+
+                    if (glyph_index != 0 && skip_draw == 0) {
+                        packed_coordinates = *glyph_entry;
+                        texture_v = (u32)packed_coordinates >> 0x14;
+                        texture_u = (packed_coordinates & 0xFFFF) >> 4;
+
+                        if (cursor_x + 9 > 0) {
+                            if (cursor_x < 0x100) {
+                                glyph_width =
+                                    TRUNC(func_001FA888(9) * scale);
+                                glyph_height =
+                                    TRUNC(func_001FA888(9) * scale);
+                                func_001F5800(cursor_x, cursor_y, glyph_width, glyph_height,
+                                                   texture_u, texture_v, 9, 9, (s64)0x80404040,
+                                                   texture);
+                            }
+                        }
+                    }
+
+                    cursor_x += TRUNC(
+                        func_001FA888(D_001E6418[glyph_index]) * scale);
+                }
+            }
+        }
+    }
+}
 
 extern int func_00116810_s(char *) __asm__("func_00116810");
 extern int func_002140B0(int);
@@ -699,7 +795,128 @@ void func_0023AA08(void) {
     UpdateViewContext();
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_0023AA38);
+typedef int u128_3AA38 __attribute__((mode(TI)));
+extern float D_001E6518[][4];
+extern int D_00161398 MACRO_ADDR;
+extern short D_001613A0;
+extern short D_0016139C;
+extern short D_00161394;
+extern int D_0015EE80 MACRO_ADDR;
+extern long D_0015EFD0 MACRO_ADDR;
+extern float func_001F9CB8(void *);
+extern void func_00238F98(void *, void *, float *, float *, float *, float *);
+extern void func_001FB908(int, int);
+extern void func_00234E80(void);
+extern int func_001FA898_3AA38(float) __asm__("func_001FA898");
+extern void func_00239838_3AA38(char *) __asm__("func_00239838");
+extern void func_00239CF8_3AA38(char *) __asm__("func_00239CF8");
+extern void func_00239948_3AA38(char *) __asm__("func_00239948");
+extern void func_0023A220(char *, int, int);
+extern void func_0023A478_3AA38(char *) __asm__("func_0023A478");
+extern void func_00239A00_3AA38(char *) __asm__("func_00239A00");
+
+/* Renders the six vendor monitor screens: projects each screen's joint box, renders its view off-screen and draws it back. */
+void func_0023AA38(char *m) {
+    float len;
+    float f;
+    float g;
+    int i;
+    long tex;
+
+    for (i = 0; i < 6; i++) {
+        u128_3AA38 d1[1];
+        u128_3AA38 d2[1];
+        u128_3AA38 base[1];
+        u128_3AA38 out[3];
+        int ids[3] = { i * 4, i * 4 + 1, i * 4 + 2 };
+        u128_3AA38 tmp[1];
+        u128_3AA38 c[4];
+        u128_3AA38 pad[5];
+        u128_3AA38 a[1];
+        u128_3AA38 b[1];
+        float sx, sy, sw, sh;
+        float x, y, w, h;
+        func_0020DB98(m, 3, ids, (char *)out);
+        qcopy(base, out);
+        func_001F9BF0(d1, &out[1], out);
+        func_001F9BF0(d2, &out[2], out);
+        len = func_001F9CB8(d1);
+        func_001F9DC0(tmp, d1, D_001E6518[i][0]);
+        func_001F9BD8(base, base, tmp);
+        func_001F9DC0(d1, d1, len - 2.0f * D_001E6518[i][2]);
+        len = func_001F9CB8(d2);
+        func_001F9DC0(tmp, d2, D_001E6518[i][1]);
+        func_001F9BD8(base, base, tmp);
+        func_001F9DC0(d2, d2, len - 2.0f * D_001E6518[i][3]);
+        func_001F9BD8(tmp, base, d1);
+        func_001F9BD8(tmp, tmp, d2);
+        func_00238F98(base, tmp, &sx, &sy, &sw, &sh);
+        if (D_00161398 != 0 || *(int *)&D_001613A0 != 0) {
+            f = 1.0f;
+            if (*(int *)&D_001613A0 != 0) {
+                f = func_001FA888(8 - *(int *)&D_0016139C) * 0.125f;
+            }
+            if (D_00161398 != 0) {
+                f = func_001FA888(*(int *)&D_00161394) * 0.125f;
+            }
+            len = func_001F9CB8(d1);
+            g = 1.0f - f;
+            func_001F9DC0(tmp, d1, len * g * 0.5f);
+            func_001F9DC0(d1, d1, len * f);
+            func_001F9BD8(base, base, tmp);
+            len = func_001F9CB8(d2);
+            func_001F9DC0(tmp, d2, len * g * 0.5f);
+            func_001F9DC0(d2, d2, len * f);
+            func_001F9BD8(base, base, tmp);
+        }
+        qcopy(&c[0], base);
+        func_001F9BD8(&c[1], base, d1);
+        func_001F9BD8(&c[2], base, d2);
+        func_001F9BD8(&c[3], &c[2], d1);
+        a[0] = c[0];
+        b[0] = c[3];
+        func_00238F98(a, b, &x, &y, &w, &h);
+        func_0023A948(9, 7, 1.0f);
+        func_001FB908(0x200, 0x200);
+        func_00234C98_l(0x42, 0x8000000064L);
+        switch (i) {
+        case 0:
+            func_00239838_3AA38(m);
+            break;
+        case 1:
+            func_00239CF8_3AA38(m);
+            break;
+        case 2:
+            func_00239948_3AA38(m);
+            break;
+        case 3:
+            func_0023A220(m, (int)x, (int)y);
+            break;
+        case 4:
+            func_0023A478_3AA38(m);
+            break;
+        case 5:
+            func_00239A00_3AA38(m);
+            break;
+        }
+        func_0023A5E0(i, x, y);
+        func_0023AA08();
+        func_001FB908(0x200, 0x200);
+        func_00234C98_l(0x42, 0x8000000064L);
+        func_00234C98_l(8, 5);
+        func_00234E80();
+        tex = D_0015EFD0;
+        if (D_0015EE80 != 0) {
+            func_001F5988(w, h, x, y, 0, 0, (int)(sx - 1.0f),
+                          func_001FA898_3AA38(sy * 0.92857146f - 1.0f),
+                          0x80808080, tex);
+        } else {
+            func_001F5988(w, h, x, y, 0, 0, (int)(sx - 1.0f), (int)(sy - 1.0f),
+                          0x80808080, tex);
+        }
+        func_00234C98_l(8, 0);
+    }
+}
 
 LINKER_REMNANT("asm/remnants/text", func_0023B008);
 

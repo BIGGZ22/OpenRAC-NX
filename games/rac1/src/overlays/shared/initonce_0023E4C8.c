@@ -3,7 +3,157 @@
 #include "callees.h"
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/overlays", func_L00_0023E4C8);
+extern long GetEffectTex64(int) __asm__("func_001F4868");
+extern void func_0020DAF8(char *arg0, int arg1, char *arg2);
+extern void func_002156E0(void *dst, void *vec, void *axis, float angle);
+extern void func_001F9CA0(void *, void *, void *);
+extern void func_L00_001FF4B0(void *, void *, float);
+extern void func_001F9C30(void *, void *, float);
+extern void func_001F9BD8(void *, void *, void *);
+extern void func_001F9BC0(float *);
+extern void func_L00_001FD1D8(void *, void *, int);
+extern float D_L00_0015FBC0;
+typedef struct {
+    int c[4];
+    float f[8];
+    long l[4];
+} Pkt_23e4c8;
+
+/* Builds the object's tilted frame and emits three batches of four quads offset around it. */
+void func_L00_0023E4C8(char *moby)
+{
+    float q[4][4] __attribute__((aligned(16)));
+    Pkt_23e4c8 pk;
+    float m[4][4] __attribute__((aligned(16)));
+    float a[4] __attribute__((aligned(16)));
+    float b[4] __attribute__((aligned(16)));
+    float c[4] __attribute__((aligned(16)));
+    float d[4] __attribute__((aligned(16)));
+    int i;
+    float *p;
+    float x, y;
+    float sc;
+    long tex;
+
+    tex = GetEffectTex64(0xE);
+    pk.c[0] = 0x3FF08080;
+    pk.c[1] = 0x3FF08080;
+    pk.c[2] = 0x3FF08030;
+    pk.c[3] = 0x3FF08030;
+    pk.f[0] = 0.0f;
+    pk.f[1] = 0.0f;
+    pk.f[2] = 1.0f;
+    pk.f[3] = 0.0f;
+    pk.f[4] = 0.0f;
+    pk.f[5] = 1.0f;
+    pk.f[6] = 1.0f;
+    pk.f[7] = 1.0f;
+    pk.l[1] = tex;
+    pk.l[2] = 0xFF9000000260L;
+    pk.l[0] = 5;
+    pk.l[3] = 0x8000000048L;
+    func_0020DAF8(moby, 0, (char *)m);
+    sc = 4.0f;
+    func_002156E0(m[0], m[0], m[1], -0.34906584f);
+    func_001F9CA0(m[1], m[0], m[2]);
+    func_L00_001FF4B0(m[1], m[1], 1.0f);
+    func_001F9CA0(m[2], m[1], m[0]);
+    m[3][3] = 1.0f;
+    func_001F9C30(a, m[0], sc);
+    a[3] = 1.0f;
+    func_001F9BD8(b, a, m[3]);
+    qcopy(c, m[0]);
+    func_001F9BD8(d, c, m[0]);
+    c[3] = 0.25f;
+    d[3] = 0.5f;
+
+    func_001F9BC0(q[0]);
+    q[0][2] = 0.0f;
+    q[0][3] = 1.0f;
+    qcopy(q[1], c);
+    q[1][2] = q[1][2] + -0.25f;
+    q[1][3] = 1.0f;
+    q[1][0] = c[3] * sc;
+    func_001F9BC0(q[2]);
+    q[2][2] = 0.0f;
+    q[2][3] = 1.0f;
+    qcopy(q[3], c);
+    q[3][2] = q[3][2] + 0.25f;
+    q[3][3] = 1.0f;
+    q[3][0] = c[3] * sc;
+    func_L00_001FD1D8(q, m, 1);
+    for (i = 1; i < 4; i += 2) {
+        p = q[i];
+        if (i < 2) {
+            p[1] = p[1] + -0.25f;
+            p[2] = p[2] + 0.25f;
+        } else {
+            p[1] = p[1] + 0.25f;
+            p[2] = p[2] + -0.25f;
+        }
+    }
+    func_L00_001FD1D8(q, m, 1);
+
+    qcopy(q[0], c);
+    x = sc * c[3];
+    q[0][2] = q[0][2] + -0.25f;
+    q[0][3] = 1.0f;
+    q[0][0] = x;
+    qcopy(q[1], d);
+    y = sc * d[3];
+    q[1][2] = q[1][2] + -0.25f;
+    q[1][3] = 1.0f;
+    q[1][0] = y;
+    qcopy(q[2], c);
+    q[2][0] = x;
+    q[2][2] = q[2][2] + 0.25f;
+    q[2][3] = 1.0f;
+    qcopy(q[3], d);
+    q[3][0] = y;
+    q[3][2] = q[3][2] + 0.25f;
+    q[3][3] = 1.0f;
+    func_L00_001FD1D8(q, m, 1);
+    for (i = 0; i < 4; i++) {
+        p = q[i];
+        if (i < 2) {
+            p[1] = p[1] + -0.25f;
+            p[2] = p[2] + 0.25f;
+        } else {
+            p[1] = p[1] + 0.25f;
+            p[2] = p[2] + -0.25f;
+        }
+    }
+    func_L00_001FD1D8(q, m, 1);
+
+    qcopy(q[0], d);
+    q[0][2] = q[0][2] + -0.25f;
+    q[0][3] = 1.0f;
+    q[0][0] = sc * d[3];
+    func_001F9BC0(q[1]);
+    q[1][3] = 1.0f;
+    q[1][2] = q[1][2] + D_L00_0015FBC0;
+    q[1][0] = sc * c[3] * 3.0f;
+    qcopy(q[2], d);
+    q[2][2] = q[2][2] + 0.25f;
+    q[2][3] = 1.0f;
+    q[2][0] = sc * d[3];
+    func_001F9BC0(q[3]);
+    q[3][3] = 1.0f;
+    q[3][2] = 0.0f;
+    q[3][0] = sc * c[3] * 3.0f;
+    func_L00_001FD1D8(q, m, 1);
+    for (i = 0; i < 4; i += 2) {
+        p = q[i];
+        if (i < 2) {
+            p[1] = p[1] + -0.25f;
+            p[2] = p[2] + 0.25f;
+        } else {
+            p[1] = p[1] + 0.25f;
+            p[2] = p[2] + -0.25f;
+        }
+    }
+    func_L00_001FD1D8(q, m, 1);
+}
 typedef int ti_23e008 __attribute__((mode(TI)));
 extern float D_0015EE60_23e008 __asm__("D_0015EE60") MACRO_ADDR;
 extern void getpos_23e008(void *, int, void *) __asm__("func_L00_00250800");

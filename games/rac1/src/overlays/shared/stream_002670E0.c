@@ -2,7 +2,35 @@
 #include "common.h"
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/overlays", func_L00_002670E0);
+typedef struct {
+    int value;
+    char pad4[6];
+    short state;
+    char padC[4];
+    short flag;
+} Slot_2670E0;
+extern short D_001517F0 NOT_SDA;
+
+/* stores value in the slot passed as a 64-bit argument; a zero value resets the slot's state,
+   otherwise a slot in state 1 moves to 4 and, with its flag set, D_001517F0 becomes 1 */
+void func_L00_002670E0(int value, long arg) {
+    Slot_2670E0 *s = (Slot_2670E0 *)arg;
+
+    if (s == 0) {
+        return;
+    }
+    s->value = value;
+    if (value != 0) {
+        if (s->state == 1) {
+            s->state = 4;
+            if (s->flag != 0) {
+                D_001517F0 = 1;
+            }
+        }
+    } else {
+        s->state = 0;
+    }
+}
 /* Clear the 16-bit field at offset 0xA; volatile keeps the store before the return delay slot. */
 void func_L00_00267120(void *a0, unsigned char *a1) {
     *(volatile unsigned short *)(a1 + 0xA) = 0;

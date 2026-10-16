@@ -1,62 +1,59 @@
 /* NON_MATCHING func_L00_00273090 -- src/overlays/shared/partupd_00272158.c
- * Best so far: SIZE ours 568 / retail 576, checked 2026-10-09.
+ * Best so far: SIZE ours 572 / retail 576, checked 2026-10-16.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
  * What the last attempts found:
- *   PartType53Update: tweens a particle's size (m+0xC) and alpha over its life (first 5 ticks ramp, then 1/func_00
- *   Stopped at budget: ours 568 bytes vs retail 576 (2 instrs short). Retail has two extra `daddu $3,$2,$0` regist
- *   Best candidate p7.c/p8.c (all else matches structurally). Unblock: find a typing of v[0xB] and of the alpha re
- *   Hint for a retry (no budget left): m/v were char*; the later function func_L00_0025E590 only matched once its 
+ *   Type 53 particle (spawned by func_L00_00272F00): data at +0x20 as a struct (sizes, life, spin, alpha, vel, fal
+ *   Alpha is a lerp. Written ((a >> 1) - a) * t + a, CSE leaves retail's first daddu copy (568 -> 572).
+ *   Size 0 is read through m + 0x20 as retail does, not through the struct pointer.
+ *   Left: retail copies the truncate_float_to_s32 result to $3 before the shift and loads the mask into $2.
+ *   Tried for it: setter inline (int, u8, float param), u8/unsigned locals, mask first, & 0xFF. All 572.
  */
-extern float func_001FA888(int);
-extern int func_001FA898(float);
-extern void func_001F9BD8(void *, void *, void *);
-extern void func_L00_002688A8(void *);
-extern int func_001F9938(void *);
+typedef struct {
+    float size0;
+    float size1;
+    short life;
+    unsigned char spin;
+    unsigned char alpha;
+    float vel[3];
+    float fall;
+} Part53_273090;
 
-/* particle update: tween size/alpha over its life, drift, kill when out of range */
+/* type 53 particle: spins, grows from size1 toward the middle of size0 and size1 while its alpha
+   halves over the first five ticks, then shrinks back toward size0 and fades out; drifts and
+   falls, and dies outside 2..1021 or when its timer runs out */
 void func_L00_00273090(char *m) {
-    char *v = m + 0x20;
-    int a;
+    Part53_273090 *q = (Part53_273090 *)(m + 0x20);
+    int age;
     float t;
-    float f;
-    unsigned c;
-    unsigned char u;
-    float *p;
-    float vec[4];
-    m[8] += v[0xA];
-    a = *(short *)(v + 8);
-    if (a - *(short *)(m + 0xA) < 6) {
-        float s;
-        t = (float)(a - *(short *)(m + 0xA)) / 5.0f;
-        s = *(float *)(v + 4);
-        *(float *)(m + 0xC) = s + ((*(float *)(m + 0x20) + s) * 0.5f - s) * t;
-        u = v[0xB];
-        f = (float)u + (float)((u >> 1) - u) * t;
-    } else {
-        float s;
-        float q = func_001FA888(a - 6);
-        s = *(float *)(m + 0x20);
-        t = (float)*(short *)(m + 0xA) / q;
-        *(float *)(m + 0xC) = s + ((s + *(float *)(v + 4)) * 0.5f - s) * t;
-        u = v[0xB];
-        f = (float)(u >> 1) * t + 0.0f;
-    }
-    c = func_001FA898(f);
-    *(int *)(m + 4) = (c << 24) | (*(int *)(m + 4) & 0xFFFFFF);
-    p = (float *)(v + 0xC);
-    vec[0] = p[0];
-    vec[1] = p[1];
+    float a;
+    float *w;
+    float v[4];
 
-    vec[3] = 0;
-    vec[2] = p[2];
-    func_001F9BD8(m + 0x10, m + 0x10, vec);
-    *(float *)(v + 0x14) -= *(float *)(v + 0x18);
+    m[8] += q->spin;
+    age = q->life - *(short *)(m + 0xA);
+    if (age < 6) {
+        t = age / 5.0f;
+        *(float *)(m + 0xC) = q->size1 + ((*(float *)(m + 0x20) + q->size1) * 0.5f - q->size1) * t;
+        a = ((q->alpha >> 1) - q->alpha) * t + q->alpha;
+    } else {
+        t = *(short *)(m + 0xA) / func_001FA888(q->life - 6);
+        *(float *)(m + 0xC) = *(float *)(m + 0x20) + ((*(float *)(m + 0x20) + q->size1) * 0.5f - *(float *)(m + 0x20)) * t;
+        a = (q->alpha >> 1) * t + 0.0f;
+    }
+    *(int *)(m + 4) = (truncate_float_to_s32(a) << 24) | (*(int *)(m + 4) & 0xFFFFFF);
+    w = q->vel;
+    v[0] = w[0];
+    v[1] = w[1];
+    v[3] = 0.0f;
+    v[2] = w[2];
+    FastVecAdd(m + 0x10, m + 0x10, v);
+    q->vel[2] -= q->fall;
     if (*(float *)(m + 0x10) < 2.0f || *(float *)(m + 0x10) > 1021.0f ||
         *(float *)(m + 0x14) < 2.0f || *(float *)(m + 0x14) > 1021.0f ||
         *(float *)(m + 0x18) < 2.0f || *(float *)(m + 0x18) > 1021.0f) {
-        func_L00_002688A8(m);
-    } else if (func_001F9938(m + 0xA)) {
-        func_L00_002688A8(m);
+        KillPart(m);
+    } else if (FastDecTimer(m + 0xA)) {
+        KillPart(m);
     }
 }

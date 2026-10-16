@@ -1,68 +1,67 @@
 /* NON_MATCHING func_L14_00303270 -- src/overlays/shared/vendor_002B2A28.c
- * Best so far: SIZE ours 448 / retail 444, checked 2026-10-09.
+ * Best so far: BYTES 16/444 (96.4% of the bytes match), checked 2026-10-16.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
  * What the last attempts found:
- *   Chain of vectors advanced per tick (func_001F9BD8 loops), copies 4 indexed quads, then interpolates a value fr
- *   p4.c is 436 vs 444 bytes: remaining diffs are two small moves (retail `daddu $v0,$v1,$zero` in the j loop arou
+ *   The pvars as one struct of vec4 arrays (keys, pos, vel, cur, ring[4][4], spin[3][4]): right size first try.
+ *   The copy loop needs its own counter (k), else it lands in a saved register.
+ *   Left: the ring/spin loop. Retail forms d + j*16, copies it, then adds 0x460 and 0x560 (two givs, CSE copy).
+ *   Ours forms j*16 + 0x460 and adds d. Same for ring[i][j], row pointers, d->ring[i] + j, Mtx rows.
+ *   A cast column base gets the order but not the copy (13/444). Flat vec4 indexing grows to 452.
  */
-typedef int u128_03270 __attribute__((mode(TI)));
+typedef struct { float x, y, z, w; } Vec4_303270;
+typedef struct {
+    char pad0[0x12];
+    short count;
+    int color;
+    unsigned char order[4];
+    char pad1C[4];
+    Vec4_303270 keys[4];
+    Vec4_303270 pos[32];
+    Vec4_303270 vel[28];
+    Vec4_303270 cur[4];
+    Vec4_303270 ring[4][4];
+    Vec4_303270 spin[3][4];
+    int start;
+} Chain_303270;
 extern void func_001F9BD8(void *, void *, void *);
-extern float func_001FA888(int);
 extern int func_001FA8A8(int, int, float);
-extern short D_L14_00162194;
-extern short D_L14_00162198;
-extern short D_L14_001621C4;
-extern short D_L14_001621C0;
-extern short D_L14_001621C8;
+extern float func_001FA888_303270(int) __asm__("func_001FA888");
+extern int D_L14_00162194 SDATA(D_L14_00162194);
+extern int D_L14_00162198_i SDATA(D_L14_00162198);
+extern int D_L14_001621C0 SDATA(D_L14_001621C0);
+extern int D_L14_001621C4 SDATA(D_L14_001621C4);
+extern int D_L14_001621C8 SDATA(D_L14_001621C8);
 
-// advances a timed chain of vectors and picks an interpolation value
+/* while the count runs, moves 23 points by their velocities, turns three rows of four by their
+   spins and copies four keys in their order; then tweens the color over the count's two stages */
 void func_L14_00303270(char *moby) {
-    char *d = *(char **)(moby + 0x78);
-    if (*(short *)(d + 0x12) != 0) {
-        int i;
-        int j;
-        int k;
-        char *p;
-        char *q;
-        u128_03270 *dst;
-        unsigned char *idx = (unsigned char *)(d + 0x18);
-        *(short *)(d + 0x12) = *(short *)(d + 0x12) - 1;
-        p = d + 0x260;
-        q = d + 0x60;
-        for (i = 0x16; i >= 0; i--) {
-            func_001F9BD8(q, q, p);
-            q += 0x10;
-            p += 0x10;
+    Chain_303270 *d = *(Chain_303270 **)(moby + 0x78);
+    int i, j, k;
+
+    if (d->count != 0) {
+        d->count--;
+        for (i = 0; i < 23; i++) {
+            func_001F9BD8(&d->pos[i], &d->pos[i], &d->vel[i]);
         }
-        j = 0;
-        do {
-            char *base = d + j * 16;
-            char *a = base + 0x460;
-            char *b = base + 0x560;
-            j++;
-            for (i = 2; i >= 0; i--) {
-                func_001F9BD8(a, a, b);
-                a += 0x40;
-                b += 0x40;
+        for (j = 0; j < 4.0f; j++) {
+            for (i = 0; i < 3; i++) {
+                func_001F9BD8(&d->ring[i][j], &d->ring[i][j], &d->spin[i][j]);
             }
-        } while ((float)j < 4.0f);
-        dst = (u128_03270 *)(d + 0x420);
+        }
         for (k = 0; k < 4; k++) {
-            *dst = ((u128_03270 *)(d + 0x20))[idx[k]];
-            dst++;
+            qcopy(&d->cur[k], &d->keys[d->order[k]]);
         }
     }
-    {
-        int h = *(short *)(d + 0x12);
-        if (*(int *)&D_L14_00162194 < h) {
-            float f = func_001FA888(h - *(int *)&D_L14_00162194) / func_001FA888(*(int *)(d + 0x620) - *(int *)&D_L14_00162194);
-            *(int *)(d + 0x14) = func_001FA8A8(*(int *)&D_L14_001621C4, *(int *)&D_L14_001621C0, f);
-        } else if (*(int *)&D_L14_00162198 < h) {
-            float f = func_001FA888(h - *(int *)&D_L14_00162198) / func_001FA888(*(int *)&D_L14_00162194 - *(int *)&D_L14_00162198);
-            *(int *)(d + 0x14) = func_001FA8A8(*(int *)&D_L14_001621C8, *(int *)&D_L14_001621C4, f);
-        } else {
-            *(int *)(d + 0x14) = 0;
-        }
+    if (D_L14_00162194 < d->count) {
+        d->color = func_001FA8A8(D_L14_001621C4, D_L14_001621C0,
+                                func_001FA888_303270(d->count - D_L14_00162194) /
+                                func_001FA888_303270(d->start - D_L14_00162194));
+    } else if (D_L14_00162198_i < d->count) {
+        d->color = func_001FA8A8(D_L14_001621C8, D_L14_001621C4,
+                                func_001FA888_303270(d->count - D_L14_00162198_i) /
+                                func_001FA888_303270(D_L14_00162194 - D_L14_00162198_i));
+    } else {
+        d->color = 0;
     }
 }

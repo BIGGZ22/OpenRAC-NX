@@ -1,4 +1,4 @@
-/* functional: medium. Builds a 4x4 rotation matrix (4 rows of 4 floats at out) from three angle floats at ang[2], ang[1], ang[0] (applied in that order: first a rotation about z, then y, then x; an angle whose bits are 0 is skipped). Starts from identity. sin/cos come from the joined polynomial func_L00_001FFB78 (range-reduce to +-pi/2, then x + c5 x^3 + c6 x^5 + c7 x^7 + c8 x^9; cos(a) = sin(a + pi/2)); written inline. VU0 rounding and the FPU's no-NaN behaviour not checked against hardware. */
+/* functional: medium. Builds a 4x4 rotation matrix (4 rows of 4 floats at out) from three angle floats at ang[2], ang[1], ang[0] (applied in that order: first a rotation about z, then y, then x; an angle whose bits are 0 is skipped). Starts from identity. sin/cos come from the joined polynomial func_L00_001FFB78 (range-reduce to +-pi/2 by one reflection, both tests on the unreduced angle as retail's delay slot does, then x + c5 x^3 + c6 x^5 + c7 x^7 + c8 x^9; cos(a) = sin(a + pi/2)); written inline. VU0 rounding and the FPU's no-NaN behaviour not checked against hardware. */
 void func_L00_001FFA40(float *out, int *ang) {
     float m[4][4];
     float pi = 3.1415927410125732f;
@@ -18,8 +18,8 @@ void func_L00_001FFA40(float *out, int *ang) {
         b = a + hp;
         /* sin(a) */
         x = a;
-        if (!(x < hp)) x = pi - x;
-        if (x < mhp) x = mpi - x;
+        if (!(a < hp)) x = pi - a;
+        if (a < mhp) x = mpi - a;
         x2 = x * x;
         p3 = x * x2;
         p5 = p3 * x2;
@@ -32,8 +32,8 @@ void func_L00_001FFA40(float *out, int *ang) {
         s = s + p9 * 2.601886990305502e-06f;
         /* sin(a + pi/2) = cos(a) */
         x = b;
-        if (!(x < hp)) x = pi - x;
-        if (x < mhp) x = mpi - x;
+        if (!(b < hp)) x = pi - b;
+        if (b < mhp) x = mpi - b;
         x2 = x * x;
         p3 = x * x2;
         p5 = p3 * x2;

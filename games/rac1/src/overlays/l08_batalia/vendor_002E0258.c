@@ -957,7 +957,72 @@ void func_L08_002E33F0(char *moby) {
         if (m != 0) func_L00_00251E30(m);
     }
 }
-INCLUDE_ASM("asm/overlays", func_L08_002E35C8);
+extern void *func_L00_0025B478(void *, int, int);
+extern void func_L00_00260108(void *, void *, int, float, float);
+extern s32 func_0022ED80(s32, s32, struct Moby *);
+/* Selects a damaged child moby, launches it, and advances the parent's state. */
+void func_L08_002E35C8(struct Moby *moby) {
+    char *data = *(char **)((char *)moby + 0x78);
+    char *entries = data + 0x60;
+    char *p = entries;
+    int i;
+    int score = 0;
+    int state = -1;
+    int chosen = 0;
+    char *base;
+    for (i = 0; i < 34; i++, p += 16) {
+        char *m = *(char **)p;
+        if (m != 0 && func_L00_0025B478(m, 0x10000, 0) != 0) {
+            if (i < 7) {
+                if (score <= 0) { score = 1; state = 1; }
+            } else if (i < 10) {
+                if (score < 2) { score = 2; state = 1; }
+            } else {
+                if (score < 4) { score += 4; chosen = i; state = 2; }
+            }
+            (*(unsigned char **)p)[0xA4] = 0xFF;
+        }
+    }
+    *(short *)(data + 0x28C) += score;
+    if (*(short *)(data + 0x28C) >= 8) {
+        state = 0;
+        *(short *)(data + 0x28C) = *(short *)(data + 0x28C) % 8;
+        if (chosen != 0) {
+            int off = chosen * 16;
+            char *entry;
+            char *v;
+            base = entries;
+            entry = base + off;
+            v = *(char **)(*(char **)entry + 0x78);
+            func_L00_00260108(moby, *(char **)entry + 0x10, -1, 2.0f, 13.0f);
+            func_001F9BF0(v, *(char **)entry + 0x10, *(char **)(data + off + 0x64) + 0x10);
+            func_L00_001FF4B0(v, v, D_0015EE6C * 10.0f);
+            (*(char **)entry)[0x20] = 1;
+            *(char **)entry = 0;
+            return;
+        } else {
+            int start = func_001FA898(func_002140F8(0.0f, 23.0f));
+            for (i = 0; i < 24; i++) {
+                int off = ((i + start) % 24 + 10) * 16;
+                char *entry;
+                char *v;
+                base = entries;
+                entry = base + off;
+                if (*(char **)entry != 0) {
+                    v = *(char **)(*(char **)entry + 0x78);
+                    func_L00_00260108(moby, *(char **)entry + 0x10, -1, 2.0f, 13.0f);
+                    func_001F9BF0(v, *(char **)entry + 0x10, *(char **)(data + off + 0x64) + 0x10);
+                    func_L00_001FF4B0(v, v, D_0015EE6C * 10.0f);
+                    (*(char **)entry)[0x20] = 1;
+                    *(char **)entry = 0;
+                    return;
+                }
+            }
+            ((char *)moby)[0x20] = 99;
+        }
+    }
+    if (state >= 0) func_0022ED80(state, 0, moby);
+}
 void func_L08_002E30E8_E3860(struct Moby *moby) __asm__("func_L08_002E30E8");
 extern f32 func_L00_001FF860(f32, f32);
 typedef struct {

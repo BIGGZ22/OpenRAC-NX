@@ -24,7 +24,90 @@ INCLUDE_ASM("asm/overlays", func_L00_00257F4C);
 INCLUDE_ASM("asm/overlays", func_L00_00257FB4);
 INCLUDE_ASM("asm/overlays", func_L00_0025804C);
 INCLUDE_ASM("asm/overlays", func_L00_0025805C);
-INCLUDE_ASM("asm/overlays", func_L00_00258250);
+typedef struct {
+    unsigned char pad[0xE];
+    unsigned short count;
+    unsigned char tail[8];
+} ItemCount_258250;
+extern ItemCount_258250 D_L00_001C43B0[];
+extern int func_002140B0(int);
+extern unsigned char D_0015EED0[] MACRO_ADDR;
+extern unsigned char D_0013D5C8[];
+extern int D_0013D530[];
+extern char D_0014171B[];
+
+int func_L00_00258250(unsigned char *m, int *item) {
+    extern short D_0015EE84;
+    int shortfall = 0;
+    int available = 0;
+    int stocked = 0;
+    int i;
+    int choice;
+    int scan_index;
+    unsigned int id;
+    unsigned int selected_item;
+    unsigned char *entry;
+
+    if (*item <= 0 || (m != 0 &&
+        ((*(int *)(D_0014171B + 0xAB75 + ((short)*(unsigned short *)(m + 0xB2) >> 5) * 4 + *(int *)&D_0015EE84 * 256) >>
+          (*(unsigned short *)(m + 0xB2) & 31)) & 1))) {
+        {
+            for (scan_index = 0; scan_index < 12 && D_0015EED0[scan_index] != 0xFF; scan_index++) {
+                id = D_0015EED0[scan_index] & 0x3F;
+                if (D_0013D5C8[id]) {
+                    ItemCount_258250 *count = &D_L00_001C43B0[id];
+                    available++;
+                    if (count->count != 0) {
+                        stocked++;
+                    }
+                    shortfall += D_0013D530[id] < count->count;
+                }
+            }
+        }
+        i = -1;
+        if (shortfall != 0) {
+            scan_index = func_002140B0(shortfall);
+            if (scan_index >= 0) {
+                i = -1;
+                while (1) {
+                    ++i;
+                    id = D_0015EED0[i] & 0x3F;
+                    if (D_0013D5C8[id]) {
+                        ItemCount_258250 *count = &D_L00_001C43B0[id];
+                        scan_index -= D_0013D530[id] < count->count;
+                    }
+                    if (scan_index < 0) break;
+                }
+            }
+            *item = D_0015EED0[i] & 0x3F;
+        } else if (available != 0) {
+            {
+                scan_index = func_002140B0(stocked);
+                if (scan_index >= 0) {
+                    i = -1;
+                    while (1) {
+                        i++;
+                        id = D_0015EED0[i] & 0x3F;
+                        if (D_0013D5C8[id]) {
+                            ItemCount_258250 *count = &D_L00_001C43B0[id];
+                            if (count->count != 0) scan_index--;
+                        }
+                        if (scan_index < 0) break;
+                    }
+                }
+                *item = D_0015EED0[i] & 0x3F;
+            }
+        } else {
+            *item = 10;
+        }
+    }
+    {
+        int t = func_002140B0(5);
+        int two = 2;
+        int one = 1;
+        return t == 0 ? two : one;
+    }
+}
 extern int D_0015EE84 MACRO_ADDR;
 extern int D_0015EE84_584A8b __asm__("D_0015EE84") MACRO_ADDR;
 extern int D_L00_0016007C MACRO_ADDR;

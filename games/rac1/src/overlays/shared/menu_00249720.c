@@ -2,7 +2,26 @@
 #include "common.h"
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/overlays", func_L00_00249720);
+extern int D_001414DC;
+extern unsigned char D_0013D49E[];
+static inline unsigned char is_set_249720(unsigned char v) {
+    if (v != 0) return 1;
+    return 0;
+}
+
+/* item < 256: whether D_0013D49E is set; else 58 <= x <= 86 while the hero's control mode
+   (D_001414DC) is not 16 (the joined tail) */
+int func_L00_00249720(int item, float a, float b, float x) {
+    int locked = D_001414DC == 16;
+
+    if (item < 256) {
+        return is_set_249720(D_0013D49E[0]);
+    }
+    if (x >= 58.0f && x <= 86.0f) {
+        if (locked == 0) return 1;
+    }
+    return 0;
+}
 /* Menu hit test: x in [58, 86] and a flag clear. */
 int func_L00_00249750(float a, float b, float x) {
     int flag;
@@ -13,7 +32,29 @@ int func_L00_00249750(float a, float b, float x) {
     }
     return 0;
 }
-INCLUDE_ASM("asm/overlays", func_L00_002497A0);
+typedef struct {
+    unsigned char pad0[0x12E4];
+    unsigned char base_condition;
+    unsigned char pad12E5[0x208C - 0x12E5];
+    int control_mode;
+} Hero_2497A0;
+extern Hero_2497A0 D_0013F450_2497A0 __asm__("D_0013F450");
+
+/* item < 256: whether the hero is in control mode 0x11 or 0x12 or has base condition 1;
+   else x >= 95.0f (the joined tail) */
+int func_L00_002497A0(int item, float a, float b, float x) {
+    int r;
+
+    if (item < 256) {
+        r = 0;
+        if (D_0013F450_2497A0.control_mode == 0x11 || D_0013F450_2497A0.control_mode == 0x12 ||
+            D_0013F450_2497A0.base_condition == 1) {
+            r = 1;
+        }
+        return r;
+    }
+    return x >= 95.0f;
+}
 int func_L00_002497E0(float a, float b, float x) { return x >= 95.0f; }
 INCLUDE_ASM("asm/overlays", func_L00_00249EE0);
 INCLUDE_ASM("asm/overlays", func_L00_00249F40);
@@ -25,7 +66,11 @@ int func_L00_0024A110(int unused, int value) {
     return D_0013D4C5 != 0;
 }
 INCLUDE_ASM("asm/overlays", func_L00_0024A12C);
-INCLUDE_ASM("asm/overlays", func_L00_0024A140);
+/* a < 224: x >= 47.75f; else x < 29.0f (the joined tail). */
+int func_L00_0024A140(int a, float b, float c, float x) {
+    if (a < 224) return x >= 47.75f;
+    return x < 29.0f;
+}
 int func_L00_0024A170(float a, float b, float x) { return x < 29.0f; }
 /* tests the vertical menu range according to the integer selection */
 int func_L00_0024A198(int a, float b, float c, float x) {
@@ -39,7 +84,12 @@ int func_L00_0024A210(int item, float a, float b, float x) {
  return x >= 39.0f;
 }
 INCLUDE_ASM("asm/overlays", func_L00_0024A25C);
-INCLUDE_ASM("asm/overlays", func_L00_0024A320);
+extern unsigned char D_0013D4E0[];
+/* a >= 190: D_0013D4E0 != 0; else x >= 58.5f (the joined tail). */
+int func_L00_0024A320(int a, float b, float c, float x) {
+    if (a >= 190) return D_0013D4E0[0] != 0;
+    return x >= 58.5f;
+}
 int func_L00_0024A338(float a, float b, float x) { return x >= 58.5f; }
 /* a < 221: 232.0f <= x <= 235.0f and D_0013D4E6 != 0; else x <= 180.0f (the joined tail). */
 extern unsigned char D_0013D4E6[];
@@ -48,8 +98,12 @@ int func_L00_0024A3B0(int a, float b, float c, float x) {
     return x <= 180.0f;
 }
 int func_L00_0024A404(float a, float b, float x) { return x <= 180.0f; }
-INCLUDE_ASM("asm/overlays", func_L00_0024A430);
 extern unsigned char D_0013D4E7[];
+/* a < 221: x >= 242.0f; else x <= 180.0f and D_0013D4E7 != 0 (the joined tail). */
+int func_L00_0024A430(int a, float b, float c, float x) {
+    if (a < 221) return x >= 242.0f;
+    return x <= 180.0f && D_0013D4E7[0] != 0;
+}
 int func_L00_0024A460(float a, float b, float x) {
     return x <= 180.0f && D_0013D4E7[0] != 0;
 }
@@ -59,8 +113,21 @@ int func_L00_0024A490(int a, float b, float c, float x) {
 }
 /* Joined to func_L00_0024A490. */
 INCLUDE_ASM("asm/overlays", func_L00_0024A4DC);
-INCLUDE_ASM("asm/overlays", func_L00_0024A510);
 extern unsigned char D_0013D4EA[];
+/* item < 351: the hero flag of func_L00_002497A0 while x >= 200.0f; else 233.0f <= x <= 235.0f
+   with D_0013D4EA set (the joined tail) */
+int func_L00_0024A510(int item, float a, float b, float x) {
+    int r = 0;
+
+    if (D_0013F450_2497A0.control_mode == 0x11 || D_0013F450_2497A0.control_mode == 0x12 ||
+        D_0013F450_2497A0.base_condition == 1) {
+        r = 1;
+    }
+    if (item < 351) {
+        return x >= 200.0f ? r : 0;
+    }
+    return x >= 233.0f && x <= 235.0f && D_0013D4EA[0] != 0;
+}
 int func_L00_0024A570(float a, float b, float x) {
     return x >= 233.0f && x <= 235.0f && D_0013D4EA[0] != 0;
 }
@@ -153,7 +220,16 @@ void func_L00_0024BA10(void) {
     }
 }
 INCLUDE_ASM("asm/overlays", func_L00_0024BA60);
-INCLUDE_ASM("asm/overlays", func_L00_0024BA70);
+/* sets the menu state to 3 while D_0013D390[7] is set, else to 10 when flag 2 or 4 is up */
+void func_L00_0024BA70(void) {
+    if (D_0013D390[7] != 0) {
+        D_0015EFB0 = 3;
+        return;
+    }
+    if (D_0015EFB4 & 6) {
+        D_0015EFB0 = 10;
+    }
+}
 extern int D_0015EFB0;
 
 INCLUDE_ASM("asm/overlays", func_L00_0024BA8C);
@@ -169,7 +245,31 @@ INCLUDE_ASM("asm/overlays", func_L00_0024BB5C);
 INCLUDE_ASM("asm/overlays", func_L00_0024BB90);
 INCLUDE_ASM("asm/overlays", func_L00_0024BB98);
 INCLUDE_ASM("asm/overlays", func_L00_0024BBCC);
-INCLUDE_ASM("asm/overlays", func_L00_0024BBE8);
+extern int D_L00_0015F688 MACRO_ADDR;
+/* while D_0013D390[7] is set the menu state is 3; else flag 0x20 is taken down with state 24
+   (D_L00_0015F688 set) or 12, or flag 0x10 with state 14 */
+void func_L00_0024BBE8(void) {
+    int flags;
+
+    if (D_0013D390[7] != 0) {
+        D_0015EFB0 = 3;
+        return;
+    }
+    flags = D_0015EFB4;
+    if (flags & 0x20) {
+        D_0015EFB4 = flags ^ 0x20;
+        if (D_L00_0015F688 != 0) {
+            D_0015EFB0 = 24;
+            return;
+        }
+        D_0015EFB0 = 12;
+        return;
+    }
+    if (flags & 0x10) {
+        D_0015EFB4 = flags ^ 0x10;
+        D_0015EFB0 = 14;
+    }
+}
 INCLUDE_ASM("asm/overlays", func_L00_0024BC04);
 // Stores 12 into the word global D_0015EFB0.
 void func_L00_0024BC2C(void) {
@@ -198,6 +298,18 @@ void func_L00_0024BD18(void) {
 }
 INCLUDE_ASM("asm/overlays", func_L00_0024BD84);
 INCLUDE_ASM("asm/overlays", func_L00_0024BDB8);
-INCLUDE_ASM("asm/overlays", func_L00_0024BF30);
+/* while D_0013D390[55] < 3 and D_0013D390[57] < 0: with D_0013D390[59] set, D_0013D390[63] is
+   cleared, the state becomes 21 and flags 0x40 and 0x400 go up; else the state becomes 1 */
+void func_L00_0024BF30(void) {
+    if (D_0013D390[55] < 3 && D_0013D390[57] < 0) {
+        if (D_0013D390[59] != 0) {
+            D_0013D390[63] = 0;
+            D_0015EFB0 = 21;
+            D_0015EFB4 |= 0x440;
+        } else {
+            D_0015EFB0 = 1;
+        }
+    }
+}
 INCLUDE_ASM("asm/overlays", func_L00_0024BFB8);
 INCLUDE_ASM("asm/overlays", func_L00_0024BFFC);

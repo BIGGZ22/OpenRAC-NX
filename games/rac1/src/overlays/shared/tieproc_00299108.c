@@ -247,7 +247,111 @@ void func_L00_00299250(void) {
     if (D_L00_0016C158.w18 == 5) func_001E9768_b();
     if (D_L00_0016C158.w18 == 6) func_001E9768_b();
 }
-INCLUDE_ASM("asm/overlays", func_L00_00299B68);
+typedef struct { char p0[0x20]; unsigned char st; char p1[0x13]; unsigned short flags; char p2[0x70]; short type; char p3[0x58]; } Obj;
+extern int D_L00_0015F6BC MACRO_ADDR;
+extern int D_L00_0015F4FC MACRO_ADDR;
+extern Obj *D_L00_0016009C MACRO_ADDR;
+extern int D_L00_0015F500 MACRO_ADDR;
+extern int D_L00_0016128C MACRO_ADDR;
+extern float D_L00_0015F67C MACRO_ADDR;
+extern char D_L00_0016C960[];
+extern char D_L00_0017C540[];
+extern char D_L00_0017C440[];
+extern char D_L00_0017C480[];
+extern char D_L00_0017C500[];
+extern char D_L00_0017C4C0[];
+extern int D_L00_00173F00[];
+extern unsigned char D_L00_00166D80[];
+extern char *D_L00_00179208;
+extern char *D_L00_001BA15C;
+extern void func_L00_00211908(void);
+extern void func_00216EF0(int);
+extern void func_001F99B0(void *, int, int);
+extern void func_L00_00203FB8(void);
+extern void func_L00_00233868(void);
+extern void func_L00_00245B88(int);
+extern int func_001F9850(int);
+extern void func_001F4E08(int);
+extern void func_0022DD68(void);
+extern void func_00216960(void);
+extern int func_00217748(int);
+extern void func_00204FC0(void);
+extern int func_L00_00222B80(int, int);
+extern int func_00122598(int);
+
+typedef struct { char pad[0x30]; int a30; } Vd;
+
+// Sets up the vendor screen state from the requested entry and runs it until the screen closes.
+void func_L00_00299B68(int arg) {
+    char *d;
+    Obj *p;
+    char *h;
+    char *q;
+    char *qq;
+    int i;
+    int v;
+    float one;
+    if (arg < 0) return;
+    if (D_L00_0015F6A8 == 2) return;
+    d = (char *)D_0013E633 + 0xE1D;
+    if (*(int *)(d + 0x22A8) == 0) {
+        func_L00_00211908();
+        return;
+    }
+    func_00216EF0(0);
+    func_00217748(0);
+    D_L00_0015F6BC = 1;
+    func_001F99B0(D_L00_0016C960, 0, 0x1C0);
+    func_001F99B0(D_L00_0017C540, 0, 0x40);
+    func_001F99B0(D_L00_0017C440, 0, 0x40);
+    func_001F99B0(D_L00_0017C480, 0, 0x40);
+    func_001F99B0(D_L00_0017C500, 0, 0x40);
+    func_001F99B0(D_L00_0017C4C0, 0, 0x40);
+    *(int *)(D_L00_0016C960 + 0x30) = arg;
+    v = D_L00_0016128C - 0x3C000;
+    one = 1.0f;
+    D_L00_0015F67C = one;
+    *(int *)((char *)&D_L00_0015F67C + 4) = 0;
+    *(int *)(D_L00_0016C960 + 0x34) = 0;
+    *(int *)(D_L00_0016C960 + 0x3C) = 0;
+    D_L00_0016128C = v;
+    *(int *)(D_L00_0016C960 + 0x58) = D_L00_00173F00[1] + v;
+    *(int *)(D_L00_0016C960 + 0x5C) = D_L00_00173F00[2] + v;
+    func_L00_00203FB8();
+    *(float *)&D_L00_0015F4FC = one;
+    D_L00_0015F6A8 = 2;
+    D_L00_0016C960[0x4B] = D_L00_00166D80[0x394];
+    *(int *)(D_L00_00166D80 + 0x394) = 0;
+    D_L00_0015F500 = 0;
+    func_L00_00222B80(0x64, 2);
+    d[0x20A5] = 1;
+    func_L00_00233868();
+    if (D_L00_00179208 != 0) *(unsigned short *)(D_L00_00179208 + 0x34) |= 1;
+    if (D_L00_001BA15C != 0) *(unsigned short *)(D_L00_001BA15C + 0x34) |= 1;
+    func_L00_00245B88(0);
+    func_001F4E08(func_001F9850(6));
+    func_00217748(1);
+    func_00204FC0();
+    for (p = D_L00_0016009C; p->st != 0xFF; p++) {
+        if (p->st & 0x80) continue;
+        if (p->type == 0x4A || p->type == 0xCB) {
+            p->flags |= 0x80;
+        }
+    }
+    h = (char *)D_0014171B + 0x100B5;
+    *(int *)(h + 0x1C) = ((Vd *)D_L00_0016C960)->a30;
+    while (qq = (char *)D_0014171B + 0x100B5, *(short *)(qq + 0x5A) != 3) {
+        func_0022DD68();
+        func_00122598(0);
+    }
+    q = D_L00_0016C960;
+    *(short *)(q + 0x46) = -3;
+    ((int (*)(void))func_00216960)();
+    ((int (*)(int))func_L00_00245B88)(1);
+    for (i = 0; *(short *)(q + 0x46) < i; i--) {
+        func_00122598(0);
+    }
+}
 extern void func_002348B8(void);
 extern void func_001F4E08(int);
 extern void func_L00_00299108(void);
@@ -267,18 +371,14 @@ typedef struct { unsigned char cnt; } MC;
 typedef struct { char pad[0xC]; unsigned char n; char pad2[0x3B]; int x48[1]; } MCls;
 typedef struct { char pad[0x24]; MCls *cls; } Mob;
 typedef struct { char pad[0x10]; float v[4]; char pad2[0x24]; short n; char pad3[4]; unsigned char x4a; unsigned char x4b; char pad4[0x12A]; Mob *m[1]; } CT;
-typedef struct { char p0[0x20]; unsigned char st; char p1[0x13]; unsigned short flags; char p2[0x70]; short type; char p3[0x58]; } Obj;
 typedef struct { char pad[0x34]; unsigned short flags; } Fl;
 typedef struct { char pad[8]; Fl *a; void *b; } AB;
 typedef struct { char pad[0xEC]; Fl *p; } PP;
 typedef struct { char pad[0x20A5]; char x20a5; } Hd;
 
 extern CT D_L00_0016C960_c __asm__("D_L00_0016C960");
-extern int D_L00_0015F6BC MACRO_ADDR;
 extern float D_L00_0016CBF0;
 extern int D_L00_00167114 NOT_SDA;
-extern int D_L00_0015F4FC MACRO_ADDR;
-extern Obj *D_L00_0016009C MACRO_ADDR;
 extern char D_L00_0016C970[];
 extern AB D_L00_00179200;
 extern PP D_L00_001BA070 NOT_SDA;

@@ -232,7 +232,71 @@ void func_L08_002EAF48(struct Moby *moby) {
         break;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L08_002EB770);
+void func_L08_002EB770(char *m)
+{
+    extern unsigned char D_0013D355[];
+    extern char func_00214D28[];
+    extern unsigned short *D_L08_001AC340[];
+    int k;
+    char *d = *(char **)(m + 0x78);
+    char *o;
+    unsigned short *p;
+    int i;
+    int t;
+    unsigned char *g = D_0013D355 + 0x13B;
+    unsigned char *g2;
+    if (g[0x2E] != 0 && *(int *)(d + 8) < 0) {
+        o = (char *)&D_L08_001AC340[*(unsigned char *)(m + 0x21)];
+        p = *(unsigned short **)o;
+        k = 0x1D8;
+        if (p == 0)
+            return;
+        for (;;) {
+            char *e;
+            t = *p & 0x7FFF;
+            e = (char *)D_L08_00160058_2EAF48 + (t << 8);
+            if (*(unsigned char *)(e + 0x20) < 0x7F && e != m) {
+                if ((unsigned short)(*(unsigned short *)(e + 0xA6) - 0x24C) < 0xB) {
+                    func_0020D678_2EAF48(e);
+                } else if (*(short *)(e + 0xA6) == k) {
+                    func_0020D678_2EAF48(e);
+                }
+            }
+            t = *(short *)p;
+            if (t < -1)
+                break;
+            p++;
+        }
+        func_0020D678_2EAF48(m);
+        return;
+    }
+    switch (*(unsigned char *)(m + 0x20)) {
+    case 0:
+        *(float *)(d + 4) = *(float *)(m + 0x18);
+        *(unsigned char *)(m + 0x20) = 1;
+        break;
+    case 1:
+        {
+        extern short D_L08_00160058;
+        i = *(int *)(d + 8);
+        if (i < 0) break;
+        o = (char *)((i << 8) + *(int *)&D_L08_00160058);
+        }
+        if (*(short *)(o + 0xA6) == 0x267 || *(short *)(o + 0xA6) == 0x23F) {
+            if (*(unsigned char *)(o + 0x20) != 4) break;
+            g2 = D_0013D355 + 0x13B;
+            g2[0x35] = 1;
+            func_0022ED80_2EAF48(0, 0, (struct Moby *)m);
+            *(unsigned char *)(m + 0x20) = 2;
+        } else {
+            ((void (*)(char *, float, float))(void *)func_00214D28)(m + 0x18, (*(float *)d - *(float *)(d + 4)) * **(float **)(o + 0x78) + *(float *)(d + 4), D_0015EE6C_2EAF48 * 10.0f);
+        }
+        break;
+    case 2:
+        ((void (*)(char *, float, float))(void *)func_00214D28)(m + 0x18, *(float *)d, D_0015EE6C_2EAF48 * 10.0f);
+        break;
+    }
+}
 typedef u32 u128 __attribute__((mode(TI), aligned(16)));
 struct Manip;
 struct GifEntry;

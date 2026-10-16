@@ -1339,7 +1339,7 @@ typedef struct {
 } P_234808;
 extern P_234808 D_0013F450_35088 __asm__("D_0013F450");
 extern s32 D_L00_0015F6A8 MACRO_ADDR;
-extern short D_0015EE6C;
+extern float D_0015EE6C MACRO_ADDR;
 f32 func_001FA748(f32, f32);
 f32 func_001F9FA8(f32);
 s32 func_001FA8A8(s32, s32, f32);
@@ -1421,7 +1421,66 @@ void func_L00_002352D0(int a0) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_002353B8);
+extern short D_0015EF14;
+extern int D_0015EE84 MACRO_ADDR;
+extern char D_L00_0017C440[];
+extern char D_0013E633[] NOT_SDA;
+extern float func_001FA748(float, float);
+extern int func_001FA8A8(int, int, float);
+
+// Sets up the hero's camera-shake/glow object: clamps a scale, scales attached objects and sets a colour from a wobble.
+void func_L00_002353B8(char *obj) {
+    float f20 = *(float *)&D_0015EF14;
+    char *s0;
+    char *q;
+    char *q2;
+    char *b;
+    int c1, c0;
+    float t;
+    if (D_L00_0015F6A8 == 6) {
+        if (1.33f < f20) f20 = 1.33f;
+    }
+    s0 = D_L00_0017C440;
+    if (*(unsigned char *)(s0 + 1) == 0) {
+        func_0020D960(obj, 0x18, s0);
+        *(float *)(s0 + 0x20) = f20;
+        *(float *)(s0 + 0x24) = f20;
+        *(float *)(s0 + 0x28) = f20;
+    }
+    if (D_0015EE84 == 2 || D_0015EE84 == 9 || D_0015EE84 == 0xB || D_0015EE84 == 0xD) {
+        int i;
+                char *qq;
+        for (i = 0; qq = D_L00_0016C960, i < *(short *)(qq + 0x44); i++) {
+            char *m = ((char **)(D_L00_0016C960 + 0x178))[i];
+            if (m != 0) {
+                int h = *(short *)(m + 0xA6);
+                if (h == 0x1B1 || h == 0x50A || h == 0x509) {
+                    *(float *)(m + 0x2C) = *(float *)(*(char **)(m + 0x24) + 0x24) * f20;
+                }
+            }
+        }
+    }
+    q = D_0013E633 + 0xE1D;
+    c1 = 0x806E8C6E;
+    c0 = 0x805A3232;
+    *(float *)(q + 0x1628) = func_001FA748(*(float *)(q + 0x1628), D_0015EE6C * 2.0943951f);
+    if (D_0015EE84 == 0) {
+        b = D_L00_0016C960;
+        if (*(int *)(b + 0x30) == 0) {
+            if (*(int *)(b + 0x34) >= func_001F9850(0x343)) {
+                if (*(int *)(b + 0x34) <= func_001F9850(0x438)) {
+                    c1 = 0x806EAAFA;
+                    c0 = 0x80326E5A;
+                    *(float *)(q + 0x1628) = func_001FA748(*(float *)(q + 0x1628), D_0015EE6C * 5.9341192245f);
+                }
+            }
+        }
+    }
+    q2 = D_0013E633 + 0xE1D;
+    t = func_001F9FA8(*(float *)(q2 + 0x1628));
+    *(int *)(obj + 0x90) = func_001FA8A8(c1, c0, t * 0.5f + 0.5f);
+    func_L00_002352D0((int)obj);
+}
 extern void func_0020DAF8(int, int, void *);
 extern void func_001FA480(void *, void *);
 extern void func_0020EEE8(void *);

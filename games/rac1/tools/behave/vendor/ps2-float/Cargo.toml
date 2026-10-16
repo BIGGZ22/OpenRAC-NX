@@ -1,0 +1,23 @@
+[package]
+name = "ps2-float"
+description = "PlayStation 2 arithmetic, bit for bit: the EE FPU, VU0, the SDK's fdlibm and its random generators"
+version = "0.3.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/FIZL0/ps2-float"
+publish = false
+
+# No dependencies by default, deliberately: every result this crate produces must be identical on every
+# host, so it may not reach for the host's libm (whose accuracy differs per platform) or for a crate that
+# might. Everything here is integer ops plus the four basic IEEE operations, which are exact by spec.
+[dependencies]
+# Opt-in: `Rand`/`Mt` derive Serialize/Deserialize, for a port that snapshots its RNG state (a netplay
+# resync, a save). Off by default, so a dependent with a no-crates.io rule never pulls it in.
+serde = { version = "1", features = ["derive"], default-features = false, optional = true }
+
+[features]
+serde = ["dep:serde"]
+
+# The tests make hundreds of thousands of calls; release-speed arithmetic keeps them to seconds.
+[profile.test]
+opt-level = 2

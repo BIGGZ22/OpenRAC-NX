@@ -780,4 +780,140 @@ void func_L15_002ED168(unsigned char *moby) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L15_002EE458);
+#include "hero.h"
+#include "pad.h"
+extern Hero D_0013F450_2EE458 __asm__("D_0013F450");
+extern PadState D_0013CA40_2EE458 __asm__("D_0013CA40");
+extern void func_00215F80(int, int);
+extern void func_L15_002092E0(void);
+extern void func_00213D28(void *, int, int);
+extern float func_00214358(void *, int, float);
+extern void func_L00_00286128(void *, void *);
+extern void func_L00_00217718(void *, void *, int, int);
+extern void func_L00_002110C0(int, int, char *);
+extern void func_L00_002664B0(int, int);
+typedef struct PadMoby_2EE458 {
+    char pad0[0x20];
+    unsigned char state;
+    char pad21[3];
+    char *unk24;
+    char pad28[9];
+    unsigned char unk31;
+    char pad32[2];
+    unsigned short unk34;
+    char pad36[0x5E];
+    int unk94;
+    char pad98[0x68];
+} PadMoby_2EE458;
+extern PadMoby_2EE458 *D_L15_00160058_m __asm__("D_L15_00160058") MACRO_ADDR;
+extern int D_L15_0015F674 MACRO_ADDR;
+extern char D_0014171B[] NOT_SDA;
+typedef int u128_2EE458 __attribute__((mode(TI)));
+
+// Update for the giant Clank pad moby: a small state machine that sets up its effect block and its timers.
+void func_L15_002EE458(char *m) {
+    char *data = *(char **)(m + 0x78);
+    PadMoby_2EE458 *other;
+    PadMoby_2EE458 *p0;
+    int ns;
+    int one;
+    char *o3;
+    PadMoby_2EE458 *o2;
+    unsigned char *x;
+    unsigned char *b;
+    float V[4];
+    float f;
+    int st;
+    int idx;
+    int v;
+    int gm;
+
+    st = ((unsigned char *)m)[0x20];
+    switch (st) {
+    case 0:
+        idx = *(int *)(data + 0x60);
+        if (idx == -1) {
+            func_0020D678(m);
+            return;
+        }
+        p0 = &D_L15_00160058_m[idx];
+        p0->unk34 = p0->unk34 | 1;
+        p0->unk94 = 0;
+        p0->unk31 = 0;
+        if (D_0015EE84 != 0x12 || (b = (unsigned char *)D_0014171B + 0xAA35, x = b + ((unsigned char *)m)[0xB0], x[0x120] != 0xFF)) {
+            ns = 1;
+        } else {
+            ns = 3;
+        }
+        m[0x20] = ns;
+        *(int *)(data + 0x68) = -1;
+        return;
+    case 1:
+        m[0x20] = 2;
+        return;
+    case 2:
+        if ((char *)D_0013F450_2EE458.ground_moby != m) break;
+        if (D_0013F450_2EE458.air_frames.s != 0) break;
+        if (D_L15_0015F6A8 == st) break;
+        if (D_0013F450_2EE458.state.current == 0x1D) break;
+        v = D_0013F450_2EE458.unk20A4;
+        if (v == 0) {
+            func_00215F80(4, 0x3AA4);
+        } else if (v == st) {
+            if (D_0015EE84 != 0x12) func_00215F80(4, 0x3AA5);
+        }
+        if ((D_0013CA40_2EE458.pressed & 0x10) == 0) return;
+        if (D_L15_0015F674 != 4) return;
+        if (D_0013F450_2EE458.unk20A4 == 2 && (gm = D_0015EE84) == 0xF) {
+            other = D_L15_00160058_m;
+            other += *(int *)(data + 0x60);
+            other->unk34 = other->unk34 | 1;
+            other->unk94 = 0;
+            other->unk31 = 0;
+            func_L15_002092E0();
+            func_00213D28(other, 0, 0);
+            if (D_0015EE84 == 0xF) {
+                func_L00_00299B68(9);
+                func_L00_002664B0(0, 5);
+            }
+            return;
+        }
+        if (D_0013F450_2EE458.unk20A4 != 0) return;
+
+        other = &D_L15_00160058_m[*(int *)(data + 0x60)];
+        if (*(int *)(data + 0x70) != -1) {
+            o2 = &D_L15_00160058_m[*(int *)(data + 0x70)];
+            if (o2 != 0 && o2->state != 0xFE && o2->state != 0xFD) {
+                func_0020D678(o2);
+                *(int *)(data + 0x70) = -1;
+            }
+        }
+        *(u128_2EE458 *)V = *(u128_2EE458 *)(m + 0x10);
+        f = func_00214358(V, 0, 0.5f);
+        V[2] = f + 0.1f;
+        if (D_0015EE84 == 0xF) func_L00_00286128(V, m + 0x40);
+        func_L00_00217718(V, m + 0x40, 0, 1);
+        o3 = other->unk24;
+        other->unk94 = *(int *)(o3 + 0x10);
+        other->unk31 = 1;
+        other->unk34 = other->unk34 & 0xFFFE;
+        func_L00_002110C0(2, 0x5A, (char *)other);
+        if (D_0015EE84 == 0xF) {
+            func_L00_00299B68(8);
+            *(u128_2EE458 *)D_0013F450_2EE458.unk1D00 = *(u128_2EE458 *)&D_0013F450_2EE458.motion.pos;
+            *(u128_2EE458 *)(D_0013F450_2EE458.unk1D00 + 0x10) = *(u128_2EE458 *)&D_0013F450_2EE458.motion.rot;
+            func_L00_002664B0(2, 4);
+            return;
+        }
+        if (D_0015EE84 == 0x12) {
+            func_L00_00299B68(6);
+            *(u128_2EE458 *)D_0013F450_2EE458.unk1D00 = *(u128_2EE458 *)&D_0013F450_2EE458.motion.pos;
+            *(u128_2EE458 *)(D_0013F450_2EE458.unk1D00 + 0x10) = *(u128_2EE458 *)&D_0013F450_2EE458.motion.rot;
+            m[0x20] = 3;
+        }
+        return;
+    default:
+        return;
+    }
+    *(int *)(data + 0x68) = -1;
+}

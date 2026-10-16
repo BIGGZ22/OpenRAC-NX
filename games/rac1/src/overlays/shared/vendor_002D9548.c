@@ -2081,7 +2081,134 @@ void func_L06_002F3D40(void *moby_arg) {
     }
     d->target_searched = 1;
 }
-INCLUDE_ASM("asm/overlays", func_L06_002F4058);
+/* functional: medium. Level 6 hit/collision callback of the spark emitters (classes 0x15F 0x3B1 0x515 spray two bursts of 10 sparks around the hero context ctx and spawn through func_L00_0028EF68/00272F00; 0x400 and 0x516 only set ctx state 8); from the staged near miss, compared with the assembly through equiv.py. */
+extern float func_001FA7D8_26410(f32) __asm__("func_001FA7D8");
+extern char *D_L06_00160058_F4058 __asm__("D_L06_00160058") MACRO_ADDR;
+typedef int u128_F4058 __attribute__((mode(TI)));
+
+/* Spark emitter hit check: for classes 0x15F/0x3B1/0x515 sprays two bursts of ten sparks around ctx; for 0x400/0x516 sets ctx state 8. */
+int func_L06_002F4058(char *ctx, char *ow, char *moby, int a3, int *out) {
+    float v0[4];
+    float vB[4];
+    float vA[4];
+    float vC[4];
+    float vD[4];
+    int v58;
+    int k;
+    char *st;
+    char *g;
+    float f20;
+
+    if (*(short *)(moby + 0xA6) != 0x515 && *(short *)(moby + 0xA6) != 0x15F) {
+        func_001F9BD8(v0, moby + 0x10, moby + 0xC0);
+    } else {
+        *(u128_F4058 *)v0 = *(u128_F4058 *)(moby + 0x10);
+    }
+
+    switch (*(short *)(moby + 0xA6)) {
+    case 0x15F:
+    case 0x3B1:
+    case 0x515:
+        if (!(func_001F9D48(ctx + 0x10, v0) < 1.0f)) return 0;
+        st = *(char **)(moby + 0x78);
+        if (*(int *)st < 0) return 0;
+        v58 = 0;
+        if (*(short *)(moby + 0xA6) == 0x3B1) {
+            v58 = *(int *)(st + 4);
+            *(int *)(st + 4) = v58 + 1;
+        } else if (*(short *)(moby + 0xA6) == 0x515 || *(short *)(moby + 0xA6) == 0x15F) {
+            v58 = *(int *)(st + 4);
+            *(int *)(st + 4) = v58 + 1;
+        }
+        if (*(short *)(moby + 0xA6) == 0x515) {
+            func_L00_0028EF68(0, 0, (int)moby, 0x515);
+        }
+
+        for (k = 0; k < 10; k++) {
+            int r16, r17, r18, r2, gc;
+            float f0, f1, f20, f21;
+            f21 = func_002140F8(0.1f, 1.0f);
+            r18 = func_L00_00258BC8(0x40, 0xFF);
+            r17 = func_L00_00258BC8(0x40, 0xFF);
+            r16 = func_L00_00258BC8(0x40, 0xFF);
+            f20 = func_001F9F90(func_00214158()) * func_002140F8(0.0f, 0.25f);
+            vA[0] = f20;
+            f20 = func_001F9FA8_D9970b(func_00214158());
+            f20 = f20 * func_002140F8(0.0f, 0.25f);
+            vA[2] = 0.0f;
+            vA[1] = f20;
+            f1 = vA[2] + func_002140F8(0.0f, 0.5f);
+            vA[2] = f1;
+            func_L00_001FF240(vC, vA, ctx + 0x10);
+            f0 = func_002140F8(0.0f, *(float *)&D_0015EE6C);
+            func_L00_001FF4B0(vB, vB, f0);
+            f0 = func_002140F8(*(float *)&D_0015EE6C * 2.5f, *(float *)&D_0015EE6C * 5.0f);
+            vB[2] = f0;
+            r2 = func_001F9850(func_L00_00258BC8(0xF, 0x1E));
+            gc = (r17 << 8) | 0x7F000000;
+            func_L00_00272F00(vA, r2, f21 * 0.07f, f21 * 0.7f, (r16 << 16) | gc | r18, 0, func_002140B0(2) ? 1 : -1, D_0015EE70 * 15.0f, vB);
+        }
+
+        g = D_L06_00160058_F4058 + (*(int *)st << 8);
+        f20 = func_001FA7D8_26410(func_001FA888(v58) * 60.0f * 0.017453292f);
+        vB[0] = func_001F9F90(func_001FA748(*(float *)(g + 0x48), f20));
+        vB[1] = func_001F9FA8_D9970b(func_001FA748(*(float *)(g + 0x48), f20));
+        vB[2] = 0.0f;
+        func_001F9BD8(ctx + 0x10, vB, g + 0x10);
+        *(u128_F4058 *)(ow + 0x2F0) = *(u128_F4058 *)(ow + 0x2E0) = *(u128_F4058 *)(ctx + 0x10);
+
+        for (k = 0; k < 10; k++) {
+            int r16, r17, r18, r2, gc;
+            float f0, f1, f20, f21;
+            f21 = func_002140F8(0.1f, 1.0f);
+            r18 = func_L00_00258BC8(0x40, 0xFF);
+            r17 = func_L00_00258BC8(0x40, 0xFF);
+            r16 = func_L00_00258BC8(0x40, 0xFF);
+            f20 = func_001F9F90(func_00214158()) * func_002140F8(0.0f, 0.25f);
+            vC[0] = f20;
+            f20 = func_001F9FA8_D9970b(func_00214158());
+            f20 = f20 * func_002140F8(0.0f, 0.25f);
+            vC[2] = 0.0f;
+            vC[1] = f20;
+            f1 = vC[2] + func_002140F8(0.0f, 0.5f);
+            vC[2] = f1;
+            func_L00_001FF240(vD, vC, ctx + 0x10);
+            f0 = func_002140F8(0.0f, *(float *)&D_0015EE6C);
+            func_L00_001FF4B0(vA, vA, f0);
+            f0 = func_002140F8(*(float *)&D_0015EE6C * 2.5f, *(float *)&D_0015EE6C * 5.0f);
+            vA[2] = f0;
+            r2 = func_001F9850(func_L00_00258BC8(0xF, 0x1E));
+            gc = (r17 << 8) | 0x7F000000;
+            func_L00_00272F00(vC, r2, f21 * 0.07f, f21 * 0.7f, (r16 << 16) | gc | r18, 0, func_002140B0(2) ? 1 : -1, D_0015EE70 * 15.0f, vA);
+        }
+
+        *(char *)(ctx + 0x20) = 4;
+        *out = 1;
+        if (*(int *)(ow + 0x310) >= 2) {
+            int idx;
+            int *ids = (int *)(ow + 0x1E0);
+            int *cnt = (int *)(ow + 0x220);
+            for (idx = 0; idx < 16; idx++) {
+                if (ids[idx] >= 0) {
+                    if (func_L01_00277A38(0.0f, (int *)(ow + 0x1E0) + idx, 1, cnt[idx], ctx + 0x10) != 0) {
+                        *(int *)(ow + 0x27C) = idx;
+                    }
+                }
+            }
+        }
+        return 0;
+    case 0x400:
+    case 0x516:
+        if (a3 != 0) return 0;
+        if (*(unsigned char *)(moby + 0x20) == 2) return 0;
+        if (!(func_001F9D48(ctx + 0x10, v0) < 1.0f)) return 0;
+        *(char *)(ctx + 0x20) = 8;
+        *(int *)(ow + 0x304) = (int)moby;
+        *out = 2;
+        return 0;
+    }
+    return 0;
+}
 extern int func_L00_0025A208(int *, int, int, int);
 extern int func_L00_0025A2F0(int *, int, int, int);
 extern int func_L06_002F4058_2F4720(char *, char *, int, int, int *) __asm__("func_L06_002F4058");

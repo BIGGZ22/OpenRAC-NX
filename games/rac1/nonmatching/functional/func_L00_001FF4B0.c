@@ -7,10 +7,12 @@ void func_L00_001FF4B0(float *out, float *v, float a) {
         out[0] = 0.0f;
         out[1] = 0.0f;
         out[2] = 0.0f;
+        out[3] = v[3];
         return;
     }
     s = a / sqrtf(len2);
     out[0] = v[0] * s;
     out[1] = v[1] * s;
     out[2] = v[2] * s;
+    out[3] = v[3];
 }

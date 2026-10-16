@@ -1742,7 +1742,7 @@ void func_L13_002B6288(RsMoby *m) {
     }
 }
 extern int func_001F4868(int);
-extern void func_L11_003121C0(float, float, float, float, float, int, int, int, int, int, int, int, int);
+extern void func_L11_003121C0(float, float, float, float, float, int, int, long, int, int, int, int, int);
 extern float func_001FA748(float, float);
 void func_L13_002B9590(unsigned char a, unsigned char b, unsigned char c, unsigned char d, float x, float y, float s, float ang) {
     int h;

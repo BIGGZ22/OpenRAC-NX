@@ -4,7 +4,123 @@
 #include "vector.h"
 
 INCLUDE_ASM("asm/overlays", func_L00_00277208);
-INCLUDE_ASM("asm/overlays", func_L00_002777C0);
+extern char D_L00_001BA070[] NOT_SDA;
+extern int D_L00_0015F6BC MACRO_ADDR;
+extern unsigned char D_0014171B NOT_SDA;
+extern unsigned char D_0013E633 NOT_SDA;
+extern int D_0015EE98 MACRO_ADDR;
+extern short D_0015EF78;
+extern struct HEnt *D_L00_001BA220[];
+extern char *D_L00_00197680[] NOT_SDA;
+extern unsigned char D_L00_0017E5D8[];
+extern unsigned char D_L00_00173F40[];
+extern void func_00234AC8(int);
+extern void func_002348E8(void);
+extern void func_001FF958(int, int, int);
+extern void func_L00_00235CA0(int);
+extern struct HEnt *func_002267C0(struct HEnt *);
+extern int func_L00_00235790(void);
+extern int func_001F9850(int);
+extern int func_L00_002367A8(int, int);
+extern int func_001FFB38(int, int, void *, void *, void *, void *, int);
+extern void func_002349B8(void);
+extern void func_L00_0023A658(void);
+extern void func_L00_0023A690(void);
+extern void func_L00_0023A788(void);
+
+void func_L00_002777C0(void) {
+    int i;
+    int value;
+    int handle;
+    char *obj;
+    void (*callback)(char *, int);
+    unsigned char *table;
+    char *st = D_L00_001BA070;
+
+    if (*(int *)(st + 0x110) >= 10) {
+        func_00234AC8(1);
+        func_002348E8();
+        if (*(int *)(st + 4) != 0) {
+            {
+                for (i = 0; i < 14; i++) {
+                    char *s = D_L00_001BA070;
+                    obj = (*(struct { char p[0x44]; char *a[14]; } **)(s + 4))->a[i];
+                    if (obj != 0) {
+                        callback = *(void (**)(char *, int))(obj + 0xC);
+                        if (callback != 0) {
+                            callback(obj, 0);
+                        }
+                    }
+                }
+            }
+            {
+                char *s = D_L00_001BA070;
+                *(int *)(s + 4) = 0;
+            }
+        }
+        {
+            int i;
+            int value = 0x26;
+            for (i = 3; i >= 0; i--) {
+                char *s = D_L00_001BA070;
+                char *h = (char *)&D_0013E633 + 0xE1D;
+                if (((int *)(&D_0014171B + 0x45))[3 - i] != ((int *)s)[15 - i]) {
+                    ((int *)(h + 0x20B8))[3 - i] =
+                        ((int *)s)[15 - i] != 0
+                            ? ((int *)s)[15 - i]
+                            : value;
+                }
+            }
+        }
+        {
+            char *state = D_L00_001BA070;
+            int value;
+            table = D_L00_0017E5D8;
+            value = *(int *)(*(char **)(table + 0x18) + 0x74);
+            *(int *)&D_0015EF78 = *(int *)(state + 0x18);
+            func_001FF958(0, value, 0);
+        }
+        func_L00_00235CA0(2);
+        if (*(int *)(*(char **)(table + 0x18) + 0x80) != 0) {
+            func_L00_00235CA0(3);
+        }
+        if (*(int *)(*(char **)(table + 0x18) + 0x84) != 0) {
+            func_L00_00235CA0(4);
+        }
+        {
+            int k;
+            for (k = 0; k < 14; k++) {
+                D_L00_001BA220[k] = func_002267C0(D_L00_001BA220[k]);
+            }
+        }
+        handle = func_L00_00235790();
+        func_L00_002367A8(handle, func_001F9850(0xB4));
+        handle = func_001FFB38(2, 0x754E, func_L00_0023A658, func_L00_0023A690,
+                               func_L00_0023A788, &D_0015EE98, 9999999);
+        func_L00_002367A8(handle, func_001F9850(0xB4));
+        {
+            char *s = D_L00_001BA070;
+            *(int *)s = 0x14;
+            *(int *)(s + 0x14) = 2;
+            value = *(int *)(s + 0xCC);
+            while (value < ((unsigned char *)D_L00_00197680[0])[0xC]) {
+                ((struct { char p[0x48]; char *a[1]; } *)D_L00_00197680[0])->a[value] = 0;
+                value++;
+            }
+        }
+        {
+            char *s = D_L00_001BA070;
+            ((unsigned char *)D_L00_00197680[0])[0xC] = *(unsigned char *)(s + 0xCC);
+        }
+        D_L00_0015F6BC = 1;
+        {
+            int *tbl = (int *)D_L00_00173F40;
+            ((struct { int p[4]; int f; } *)tbl)->f &= 0x7FFFFFFF;
+        }
+        func_002349B8();
+        func_00234AC8(1);
+    }
+}
 typedef unsigned int PQ __attribute__((mode(TI), aligned(16)));
 
 typedef struct Mth Mth;
@@ -655,7 +771,45 @@ int func_L00_0027D3D8(char *entry) {
 }
 INCLUDE_ASM("asm/overlays", func_L00_0027D454);
 INCLUDE_ASM("asm/overlays", func_L00_0027D464);
-INCLUDE_ASM("asm/overlays", func_L00_00280708);
+struct MenuPage_280708 {
+    unsigned char pad0[0x38];
+    struct MenuPage_280708 *back;
+    unsigned char pad3C[0x84 - 0x3C];
+    int unk84;
+};
+struct MenuSystem_280708 {
+    unsigned char pad0[4];
+    struct MenuPage_280708 *current;
+    struct MenuPage_280708 *next;
+    unsigned char pad0C[0xD4 - 0xC];
+    int unkD4;
+};
+struct Pad_280708 { unsigned char pad[0x1A4]; unsigned int pressed; };
+extern struct MenuSystem_280708 D_L00_001BA070_280708 __asm__("D_L00_001BA070");
+extern struct Pad_280708 D_0013CA40_280708 __asm__("D_0013CA40");
+extern int D_0015EFB0_280708 __asm__("D_0015EFB0") MACRO_ADDR;
+
+/* goes back a page, but in menu state 0x10 or 1 only on button 0x20 (setting the page flag at
+   +0x84 and clearing +0xD4) or 0x10 (clearing the page flag) */
+int func_L00_00280708(void) {
+    int state = D_0015EFB0_280708;
+    unsigned int pressed;
+
+    if (state != 0x10 && state != 1) {
+        D_L00_001BA070_280708.next = D_L00_001BA070_280708.current->back;
+        return 0;
+    }
+    pressed = D_0013CA40_280708.pressed;
+    if (pressed & 0x20) {
+        D_L00_001BA070_280708.unkD4 = 0;
+        D_L00_001BA070_280708.next = D_L00_001BA070_280708.current->back;
+        D_L00_001BA070_280708.current->unk84 = 1;
+    } else if (pressed & 0x10) {
+        D_L00_001BA070_280708.next = D_L00_001BA070_280708.current->back;
+        D_L00_001BA070_280708.current->unk84 = 0;
+    }
+    return 0;
+}
 extern unsigned char D_0013A5E0[] NOT_SDA;
 extern char D_L00_001BA070[] NOT_SDA;
 int func_L00_00280740(void) {
@@ -808,7 +962,17 @@ int func_L00_00284E70(int id) {
     return 1;
 }
 INCLUDE_ASM("asm/overlays", func_L00_00284EA0);
-INCLUDE_ASM("asm/overlays", func_L00_00284EB8);
+/* Looks for id in the five {id, flags} pairs at D_L00_001BA548; if found clears flag 4 and returns 0, else returns 1. Joined with the copy of func_L00_00284EA0 after it. */
+int func_L00_00284EB8(int id) {
+    int i;
+    for (i = 0; i < 5; i++) {
+        if (D_L00_001BA548_84E70[i * 2] == id) {
+            D_L00_001BA548_84E70[i * 2 + 1] &= ~4;
+            return 0;
+        }
+    }
+    return 1;
+}
 typedef struct { int f[14]; } Rec;
 extern int D_L00_001604D0 MACRO_ADDR;
 extern Rec D_L00_001BA350[];
@@ -838,7 +1002,26 @@ int func_L00_00285698(int a0, int a1, int a2, int a3, int a4, int a5, int a6, in
     r->f[13] = s4;
     return 0;
 }
-INCLUDE_ASM("asm/overlays", func_L00_00286068);
+typedef struct { short uid; short bolts; } BoltSource_286068;
+extern BoltSource_286068 D_0014D690[][64];
+
+/* the bolt tally slot of moby uid in level lvl: scanning down from slot 63, the first slot that
+   holds uid (stored as uid + 1) or is free, which it claims; -1 when there is none or uid < 0 */
+int func_L00_00286068(int lvl, int uid) {
+    int k = -1;
+
+    if (uid >= 0) {
+        uid++;
+        k = 63;
+        while (k >= 0 && D_0014D690[lvl][k].uid != uid && D_0014D690[lvl][k].uid != 0) {
+            k--;
+        }
+        if (k >= 0) {
+            D_0014D690[lvl][k].uid = uid;
+        }
+    }
+    return k;
+}
 extern void func_L00_001FF040(int, void *, unsigned short);
 
 /* level data, not declared anywhere else yet */
@@ -903,7 +1086,71 @@ void func_L00_00286128(void *a0, void *a1)
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_002862E0);
+extern char D_L00_001BA960[] NOT_SDA;
+extern unsigned char *D_L00_00160098 MACRO_ADDR;
+extern unsigned char *D_L00_0016009C MACRO_ADDR;
+extern void func_001F99B0(void *, int, int);
+extern void func_001F9978(void);
+extern void func_L00_002110C0(int, int, char *);
+extern void func_L00_00251E30(void *);
+extern void func_001FA1F8(void *, void *);
+extern void func_L00_001ED600(void);
+extern void func_00216270(void);
+
+/* loads the saved pause-menu state block into the game globals */
+void func_L00_002862E0(void) {
+    char *p = (char *)D_L00_001BB5C0;
+    unsigned char *g;
+    unsigned char *b;
+    char *e;
+    int k, s, i;
+    if (*(int *)D_L00_001BB5C0 == 0) {
+        func_001F99B0(D_L00_001BA960, 0, 0xC60);
+        return;
+    }
+    func_L00_001FF040((int)D_L00_001BA960, p, 0xC60);
+    qcopy(D_0013F450 + 0x80, p + 0x10);
+    qcopy(D_0013F450 + 0x90, p + 0x20);
+    g = (unsigned char *)D_0013F450;
+    *(int *)(*(char **)(g + 0x2080) + 0x38) = *(int *)(p + 0x30);
+    *(int *)(*(char **)(g + 0x2080) + 0x3C) = *(int *)(p + 0x34);
+    *(int *)(*(char **)(g + 0x2080) + 0x80) = *(int *)(p + 0x38);
+    b = (unsigned char *)D_0013E650;
+    *(int *)(b + 0x64) = *(int *)(p + 0x3C);
+    b[0x68] = p[0x40];
+    b[0x69] = p[0x41];
+    b[0x6A] = p[0x42];
+    *(unsigned short *)(&D_0014171B + 0x100ED) = *(unsigned short *)(p + 0xC54);
+    b[0x6B] |= 7;
+    k = *(int *)(p + 0x44);
+    if (k == 0 || k == 3) goto done;
+    s = 0;
+    switch (k) {
+    case 1:
+        s = 0x57;
+        break;
+    case 2:
+        s = 0x1A3;
+        break;
+    default:
+        func_001F9978();
+    }
+    for (i = 0; (e = (char *)D_L00_00160098 + (i << 8)) < (char *)D_L00_0016009C; i++) {
+        if (*(short *)(e + 0xA6) == s) {
+            int *q = (int *)D_L00_001BB5C0;
+            func_L00_002110C0(q[0x11], q[0x13], e);
+            break;
+        }
+    }
+done:
+    {
+        char *h = D_0013F450;
+        func_L00_00251E30(*(void **)(h + 0x2080));
+        func_001FA1F8(*(char **)(h + 0x2080) + 0xC0, h + 0x90);
+    }
+    func_L00_001ED600();
+    func_00216270();
+}
 extern unsigned char *D_L00_00160098 MACRO_ADDR;
 extern unsigned char *D_L00_0016009C MACRO_ADDR;
 int func_L00_00286498(int a, int id) {

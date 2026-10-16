@@ -6,6 +6,7 @@ at asm/nonmatchings keep the differ and retail inventory tools working.
 """
 
 import os
+import shutil
 import re
 from pathlib import Path
 
@@ -43,10 +44,16 @@ def main():
             if source.is_symlink():
                 if source.resolve() != target or not target.is_file():
                     raise SystemExit(f"stale assembly link: {source}")
+            elif source.is_file() and target.is_file() and source.read_bytes() == target.read_bytes():
+                pass  # a copy left by the fallback below
             elif source.is_file() and not target.exists():
                 target.parent.mkdir(parents=True, exist_ok=True)
                 source.rename(target)
-                source.symlink_to(os.path.relpath(target, source.parent))
+                try:
+                    source.symlink_to(os.path.relpath(target, source.parent))
+                except OSError:
+                    # Windows without Developer Mode cannot create symlinks.
+                    shutil.copyfile(target, source)
             else:
                 raise SystemExit(f"missing or duplicate generated assembly: {source}")
             count += 1

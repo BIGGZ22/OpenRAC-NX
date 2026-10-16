@@ -121,4 +121,14 @@ static __inline__ void qzero(void *p) {
     __asm__ __volatile__("sq $0,0x0(%0)" : : "r"(p));
 }
 
+/*
+ * Privileged/ordering CPU instructions the retail C emitted through the SDK's
+ * own inline helpers. Kept here as the only place for them, like qcopy();
+ * functions call these, never write the asm themselves.
+ */
+static __inline__ void CpuSync(void) { __asm__ __volatile__("sync"); }
+static __inline__ void CpuSyncP(void) { __asm__ __volatile__("sync.p"); }
+static __inline__ void CpuEnableInt(void) { __asm__ __volatile__("ei"); }
+static __inline__ void CpuDisableInt(void) { __asm__ __volatile__("di"); }
+
 #endif /* COMMON_H */

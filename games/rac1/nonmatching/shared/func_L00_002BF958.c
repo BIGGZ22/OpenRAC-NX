@@ -1,13 +1,14 @@
 /* NON_MATCHING func_L00_002BF958 -- src/overlays/shared/vendor_002BA7C8.c
- * Best so far: SIZE ours 568 / retail 576, checked 2026-10-05.
+ * Best so far: SIZE ours 568 / retail 576, checked 2026-10-15.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
- * No longer builds in its file (COMPILE failed, 2026-10-09): match its declarations to the file's first.
  * What the last attempts found:
  *   Draws up to three billboard quads (QuadPkt from func_L00_002ADE90): per active slot i, builds an orthogonal fr
  *   Best: p5.c (ours 568 bytes, retail 576). Whole body matches structurally; the only difference is loop-top sche
  *   Wordings tried with identical bytes: continue vs if-wrapped body, array index vs char* offset, i++ vs explicit
  *   w01 round: the candidate must reach D_L00_001DC220 as `extern float D_L00_001DC220_c[][4] __asm__("D_L00_001DC
+ *   2026-10-15: compiles again. The file now declares it with a void * argument, which retail never reads (it
+ *   sets a0 before any use), so the candidate takes an unused parameter.
  */
 typedef struct {
     float v[4][4];
@@ -34,7 +35,7 @@ extern short D_L00_00161834;
 extern short D_L00_00161830;
 
 /* Draws up to three billboard quads, each a scaled corner template placed around a point and oriented to the camera. */
-void func_L00_002BF958(void) {
+void func_L00_002BF958(void *unused) {
     QuadPkt q;
     Vq A, B, C, D, E;
     int base;

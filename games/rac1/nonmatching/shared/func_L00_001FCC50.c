@@ -1,17 +1,21 @@
 /* NON_MATCHING func_L00_001FCC50 -- src/overlays/shared/draw_001F3A78.c
- * Best so far: SIZE ours 744 / retail 748, checked 2026-10-09.
+ * Best so far: SIZE ours 744 / retail 748, checked 2026-10-15.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
  * What the last attempts found:
  *   Text-entry fade/draw (r = record: shorts at +4,+6,+8,+0xA,+0xC,+0xE; t = scroll position): computes two fade f
  *   Best candidate p8.c (size 736 vs 748, structure matches retail in both branches except the post-skip tail); p9
  *   Remaining: branch 1 is ~3 insns short (retail copies c with daddu into $4 and reloads at both loop entries; co
+ *   2026-10-15: takes void *line now, since func_L00_001F92E8 (matched) declares it so, and reads it through
+ *   char *r. Retail reads the text with lbu and keeps c in a register it masks with andi 0xFF; an unsigned
+ *   char c alone and two other loop shapes do not change the size (744, 712).
  */
 #include "common.h"
 extern unsigned char *func_001FE540(int);
 
 /* Draws a line-wrapped text entry with fade-in/out at its scroll edges (newline codes become " - " or start a new row). */
-void func_L00_001FCC50(char *r, int t) {
+void func_L00_001FCC50(void *line, int t) {
+    char *r = line;
     int x8 = *(short *)(r + 8);
     int end = x8 + *(short *)(r + 0xA);
     float f21, f20;

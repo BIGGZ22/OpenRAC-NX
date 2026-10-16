@@ -663,8 +663,38 @@ int func_L00_00247478(int reverse) {
     return -1;
 }
 INCLUDE_ASM("asm/overlays", func_L00_002474C4);
-INCLUDE_ASM("asm/overlays", func_L00_00247620);
+typedef struct {
+    char pad0[0x278];
+    int active[5];
+    int key[5];
+} ArchiveSlots_247620;
+extern ArchiveSlots_247620 D_L00_001842F0_247620 __asm__("D_L00_001842F0");
+
+/* returns the first active slot whose key is id, or -1 */
+int func_L00_00247620(int id) {
+    int i;
+    for (i = 0; i < 5; i++) {
+        if (D_L00_001842F0_247620.active[i] != 0 && D_L00_001842F0_247620.key[i] == id) {
+            return i;
+        }
+    }
+    return -1;
+}
 INCLUDE_ASM("asm/overlays", func_L00_00247650);
-INCLUDE_ASM("asm/overlays", func_L00_002477A0);
+extern int *D_L00_00160360 MACRO_ADDR;
+
+/* Returns the index of key in the zero-terminated id list (at most 20 entries), or -1. */
+int func_L00_002477A0(int key) {
+    int *list = D_L00_00160360;
+    int *p = list;
+    int i;
+
+    for (i = 0; *p != 0 && i < 20; i++, p++) {
+        if (list[i] == key) {
+            return i;
+        }
+    }
+    return -1;
+}
 INCLUDE_ASM("asm/overlays", func_L00_002477D0);
 INCLUDE_ASM("asm/overlays", func_L00_00248EF8);

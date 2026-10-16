@@ -80,3 +80,9 @@ dataset*.jsonl
 # Ghidra local datamining cache (generate on demand via tools/datamine_ghidra.py)
 config/ghidra_*.json
 .agents/
+
+# Written in CI by tools/gen_functional_list.py, not committed
+progress/functional.json
+
+# tools/behave build output
+tools/behave/target/

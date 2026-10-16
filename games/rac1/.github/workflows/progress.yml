@@ -65,9 +65,17 @@ jobs:
                     % (c["name"], cm["matched_code_percent"], cm["matched_functions"]))
           PY
 
+      # Functional C (nonmatching/functional.tsv) rides along as its own file:
+      # ByteMatch shows it under the Code bar, apart from the matched numbers,
+      # and never counts it as progress. Nothing else reads it.
+      - name: List the functional C
+        run: python tools/gen_functional_list.py
+
       - name: Upload the progress report
         uses: actions/upload-artifact@v4
         with:
           name: SCES_509.16_report
-          path: progress/report.json
+          path: |
+            progress/report.json
+            progress/functional.json
           if-no-files-found: error

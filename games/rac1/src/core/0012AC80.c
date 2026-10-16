@@ -1361,7 +1361,22 @@ void func_0012C4E0(void *arg0) {
 
 INCLUDE_ASM("asm/nonmatchings/core_text", func_0012C608);
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_0012C8B0);
+void func_0012C8B0(unsigned int *o0, unsigned int *o1, unsigned int *o2, unsigned int *o3,
+                   unsigned int *o4, unsigned int *o5, unsigned int *o6, unsigned int *o7,
+                   unsigned int *o8, int a, int b, int c, int w, int h) {
+    unsigned int x = (a & 0xFFFFFFF) | 0x20000000;
+    unsigned int y = (b & 0xFFFFFFF) | 0x20000000;
+    unsigned int z = (c & 0xFFFFFFF) | 0x20000000;
+    int q = (w * h) / 512;
+    int s6, s7, s8;
+    s6 = q * 384; s6 += a;
+    s7 = q * 384; s7 += b;
+    s8 = q * 384; s8 += c;
+    *o0 = x; *o1 = y; *o2 = z; *o3 = x; *o4 = y; *o5 = z;
+    *o6 = (s6 & 0xFFFFFFF) | 0x20000000;
+    *o7 = (s7 & 0xFFFFFFF) | 0x20000000;
+    *o8 = (s8 & 0xFFFFFFF) | 0x20000000;
+}
 
 /* _setDefaultQM: tell the callback (type 2) that the default quantiser
    matrix load starts, then with the IPU idle and reset, DMA the matrix

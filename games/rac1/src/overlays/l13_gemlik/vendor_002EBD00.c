@@ -1871,7 +1871,132 @@ char *func_L13_00307660(float speed, float *pos, float *dir, void *arg)
     }
     return m;
 }
-INCLUDE_ASM("asm/overlays", func_L13_00307798);
+extern void func_L00_0025AAC0(void *, void *);
+struct L13Ent00178480 {
+    char pad0[0x24];
+    int i24;
+    unsigned char b28;
+    unsigned char b29;
+    unsigned short s2A;
+    float f2C;
+    int pad30;
+    char *p34;
+    char pad38[8];
+};
+extern struct L13Ent00178480 D_L13_00178480[];
+
+// Gemlik moby (class 1238) update: moves along its velocity, hands its hit to a tracked target, sparks on impact
+void func_L13_00307798(struct Moby *moby) {
+    char *data = (char *)moby->pvars;
+    struct {
+        L13Vec_p old_pos;
+        char hit[48];
+        L13Vec_p velocity;
+        L13Vec_p direction;
+        L13Vec_p random_direction;
+    } work;
+    int i;
+    int flags;
+    int stationary;
+    unsigned char *base;
+    char *ent;
+    struct L13Ent00178480 *e;
+
+    qcopy(&work.old_pos, &moby->pos);
+    func_001F9BD8(&moby->pos, &moby->pos, data);
+    qcopy(&work.velocity, data);
+    work.velocity.z = 0.0f;
+    func_L00_001FF500(&work.velocity, &work.velocity, 1.0f);
+    work.velocity.z = 1.0f;
+    flags = 0x10001;
+    base = (unsigned char *)D_0013E633 + 0xE1D;
+    if (base[0x1FF6] != 0 && *(float *)(data + 0xC) != 31337.6015625f &&
+        func_001F9D10(&moby->pos, base + 0x80) < 2.0f) {
+        func_L00_001FF4B0(data, data, 0.5f);
+        func_001F9BF0(&moby->pos, &moby->pos, data);
+        qzero(data);
+        *(int *)(data + 0x2C) = 5;
+        *(float *)(data + 0xC) = 31337.6015625f;
+        for (i = 0; i < 6; i++) {
+            unsigned char *b = (unsigned char *)D_0013E633 + 0xE1D;
+            ent = ((char **)(b + 0x2020))[i];
+            if (ent != 0) {
+                int f2 = flags | 1;
+                func_L00_0025A8C0(work.hit, moby, f2, 1.0f, &work.velocity);
+                work.hit[0x18] = 1;
+                *(unsigned short *)(work.hit + 0x1A) = *(unsigned short *)((char *)moby + 0xA6);
+                work.hit[0x19] = 1;
+                if ((unsigned char)ent[0xA4] == 0xFF || (e = &D_L13_00178480[(unsigned char)ent[0xA4]])->p34 != ent) {
+                    func_L00_0025AAC0(ent, work.hit);
+                } else {
+                    e->f2C += 1.0f;
+                    D_L13_00178480[(unsigned char)ent[0xA4]].b28 = 1;
+                    D_L13_00178480[(unsigned char)ent[0xA4]].b29 = 1;
+                    D_L13_00178480[(unsigned char)ent[0xA4]].s2A = *(unsigned short *)((char *)moby + 0xA6);
+                    { struct L13Ent00178480 *t = &D_L13_00178480[(unsigned char)ent[0xA4]]; t->i24 = f2; }
+                }
+                break;
+            }
+        }
+    }
+
+    func_L00_0025A8C0(work.hit, moby, 0x10001, 1.0f, &work.velocity);
+    *(unsigned short *)(work.hit + 0x1A) = *(unsigned short *)((char *)moby + 0xA6);
+    work.hit[0x18] = 1;
+    work.hit[0x19] = 1;
+    stationary = *(int *)(data + 0x24) == 0;
+    if (*(float *)(data + 0x28) < func_001F9D48(&moby->pos, data + 0x10) || func_001F9908(data + 0x2C) != 0) {
+        if (moby->unk31 != 0) {
+            int i;
+            for (i = 0; i < 3; i++) {
+                *(OvlQuad_p *)&work.random_direction = 0;
+                work.random_direction.x = func_002140F8(-1.0f, 1.0f);
+                work.random_direction.y = func_002140F8(-1.0f, 1.0f);
+                work.random_direction.z = func_002140F8(-1.0f, 1.0f);
+                *(OvlQuad_p *)&work.direction = *(OvlQuad_p *)&work.random_direction;
+                func_L00_001FF4B0(&work.direction, &work.direction, func_001F9CB8(&work.random_direction) * 0.1f);
+                func_001F9BD8(&work.direction, &work.random_direction, &work.direction);
+                func_L00_001FF4B0(&work.direction, &work.direction,
+                    func_002140F8(D_0015EE6C + D_0015EE6C, D_0015EE6C * 4.0f));
+                func_L07_0029B070(&moby->pos, &work.direction);
+            }
+        }
+        goto remove;
+    }
+    if (func_L00_001EFFF0(&work.old_pos, &moby->pos, stationary, *(void **)(data + 0x20), work.hit) == 0)
+        goto bounds;
+    qcopy(&moby->pos, &(*(L13Hit_p *)D_L13_001741C0).pos);
+    if (moby->unk31 != 0) {
+        int i;
+        for (i = 0; i < 5; i++) {
+            *(OvlQuad_p *)&work.random_direction = 0;
+            work.random_direction.x = func_002140F8(-1.0f, 1.0f);
+            work.random_direction.y = func_002140F8(-1.0f, 1.0f);
+            work.random_direction.z = func_002140F8(-1.0f, 1.0f);
+            *(OvlQuad_p *)&work.direction = *(OvlQuad_p *)&work.random_direction;
+            func_L00_001FF610(&work.random_direction, data, &(*(L13Hit_p *)D_L13_001741C0).matrix);
+            func_L00_001FF4B0(&work.direction, &work.direction, func_001F9CB8(&work.random_direction) * 0.5f);
+            func_001F9BD8(&work.direction, &work.random_direction, &work.direction);
+            func_L00_001FF4B0(&work.direction, &work.direction,
+                func_002140F8(D_0015EE6C * 3.0f, D_0015EE6C * 6.0f));
+            func_L00_0026EBC0(&moby->pos, &work.direction, 0x7F2F4F6F,
+                func_L00_00258BC8(func_001F9850(10), func_001F9850(15)), 30000.0f);
+        }
+    }
+    {
+        struct Moby *target = (*(L13Hit_p *)D_L13_001741C0).moby;
+        if (target != 0 && *(short *)((char *)target + 0xA6) == 0)
+            func_0022ED80(0, 0, (int)moby);
+    }
+remove:
+    func_0020D678(moby);
+    return;
+bounds:
+    if (moby->pos.x < 2.0f || moby->pos.x > 1021.0f ||
+        moby->pos.y < 2.0f || moby->pos.y > 1021.0f ||
+        moby->pos.z < 2.0f || moby->pos.z > 1021.0f)
+        func_0020D678(moby);
+}
 INCLUDE_ASM("asm/overlays", func_L13_00308860);
 extern char *func_L00_0025B478(void *, int, int);
 extern int func_L00_0025B4D0(void *, void *, void *, int, int *, float *, int, int);

@@ -1,5 +1,5 @@
 /* NON_MATCHING func_L00_00242120 -- src/overlays/shared/loaders_00240398.c
- * Best so far: SIZE ours 428 / retail 432, checked 2026-10-09.
+ * Best so far: SIZE ours 428 / retail 432, checked 2026-10-16.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
  * What the last attempts found:
@@ -7,6 +7,8 @@
  *   Best: p0.c (428 vs 432 bytes, struct array with i++ in the for header). Loops 2 and 3 already match; the diffe
  *   recomputes sp+$s0 for the key store, uses a hoisted sp+4 ($s4) for arr[i].val and a fresh `addiu $6,$sp,4` for
  *   ours CSEs the sentinel at arr[i]+8 (extra $s5, frame 0x1080) or strength-reduces to a pointer IV (i++ inside t
+ *   2026-10-16: the print loop is a plain for (k = 0; k < n; k++) over arr[k] (retail's bnel k != 0 is GCC's
+ *   reversal). Left: loop 1 derives the val stores from &arr[i] (CSE), also with float arr[512][2].
  */
 extern float func_001FA888(int);
 extern int func_001FA898_r(float) __asm__("func_001FA898");
@@ -51,9 +53,8 @@ void func_L00_00242120(int *p, int n) {
             }
         }
     } while (!sorted);
-    q = arr;
-    for (k = n; k > 0; k--, q++) {
-        int a = func_001FA898_r(q->key);
-        func_001E9730(D_L00_001E89C0, a, func_00120778(q->val));
+    for (k = 0; k < n; k++) {
+        int a = func_001FA898_r(arr[k].key);
+        func_001E9730(D_L00_001E89C0, a, func_00120778(arr[k].val));
     }
 }

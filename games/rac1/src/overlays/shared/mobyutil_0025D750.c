@@ -21,7 +21,98 @@ void func_L02_00265E58(char *moby) {
     }
     *(short *)(moby + 0x1C) = 0;
 }
-INCLUDE_ASM("asm/overlays", func_L02_00265E88);
+extern int D_L02_0015F6B0 MACRO_ADDR;
+extern float D_0015EE6C MACRO_ADDR;
+extern float D_0015EE70 MACRO_ADDR;
+extern float D_L02_001744E0[];
+extern short D_L02_00160150;
+extern short D_L02_00160154;
+extern short D_L02_00160158;
+extern short D_L02_0016015C;
+extern short D_L02_00160160;
+extern int func_L00_001EFFF0(void *, void *, int, int, int);
+extern float func_001F9D10(void *, void *);
+extern void func_L00_001FF4B0(void *, void *, float);
+extern void func_001F9BD8(void *, void *, void *);
+extern void func_001F9C30(void *, void *, float);
+extern void func_00214D88(float *, float *, float, float, float, float);
+extern void func_L00_00258DB0(float *, float, float);
+extern float func_002140F8(float, float);
+extern float func_001F9878(float);
+extern int func_001FA898(float);
+extern int func_001F9938(void *);
+extern char *func_L00_0026C0D0(void *, void *, unsigned long, float);
+extern void func_L00_0026E438(void *, void *, int);
+
+typedef struct { char *p[7]; short timer; } Slots_265E88;
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00264e40.c, FUN_L02_00264e70. */
+void func_L02_00265E88(char *slots, float *position, float *direction, float distance) {
+    float origin[4] __attribute__((aligned(16)));
+    float end[4] __attribute__((aligned(16)));
+    float adjusted[4] __attribute__((aligned(16)));
+    float velocity[4] __attribute__((aligned(16)));
+    float offset[4] __attribute__((aligned(16)));
+    float travel_step = 0.0f;
+    float speed = 0.0f;
+    float travel;
+    float acceleration;
+    int n;
+    int first_count;
+    int i;
+    int save_shot;
+    char *shot;
+    unsigned long fl;
+
+    {
+        int phase = D_L02_0015F6B0 & 3;
+        save_shot = phase == 0;
+    }
+    qcopy(origin, position);
+    func_L00_001FF4B0(adjusted, direction, distance + 0.75f);
+    func_001F9BD8(end, adjusted, origin);
+    if (func_L00_001EFFF0(origin, end, 2, 0, 0)) {
+        travel = func_001F9D10(origin, D_L02_001744E0) - 0.75f;
+        if (travel < 0.0f) travel = 0.0f;
+    } else {
+        travel = distance;
+    }
+    acceleration = D_0015EE70;
+    func_00214D88(&speed, &travel_step, travel, 1.0f, acceleration * 48.0f,
+                  (*(float *)&D_L02_00160150) * D_0015EE6C);
+    ((float (*)(void *, void *, float))func_L00_001FF4B0)(adjusted, adjusted, travel_step);
+    n = (*(int *)&D_L02_00160158);
+    first_count = (*(int *)&D_L02_00160154);
+    if (travel < 4.0f) first_count = 1;
+    for (i = 0; i < n + first_count; i++) {
+        func_L00_00258DB0(offset, 0.0f,
+            (((*(float *)&D_L02_0016015C) - (*(float *)&D_L02_00160160)) * (travel / distance) + (*(float *)&D_L02_00160160)) * D_0015EE6C);
+        func_001F9BD8(offset, offset, adjusted);
+        func_001F9C30(velocity, adjusted, func_002140F8(0.0f, 1.0f));
+        func_001F9BD8(velocity, velocity, origin);
+        if (i < first_count) fl = 1; else fl = 0;
+        shot = func_L00_0026C0D0(velocity, offset, fl, travel);
+        if (i == 2 && save_shot) {
+            int j;
+            for (j = 0; j < 7; j++) {
+                if (((Slots_265E88 *)slots)->p[j] == 0) {
+                    ((Slots_265E88 *)slots)->p[j] = shot;
+                    break;
+                }
+            }
+        }
+    }
+    if (func_001F9938(slots + 0x1c)) {
+        float sp2 = func_002140F8(10.0f, 30.0f);
+        sp2 = func_001F9878(sp2);
+        ((Slots_265E88 *)slots)->timer = func_001FA898(sp2);
+        func_L00_00258DB0(offset, 0.0f, D_0015EE6C + D_0015EE6C);
+        func_001F9C30(velocity, adjusted, func_002140F8(0.5f, 0.1f));
+        func_001F9BD8(velocity, velocity, offset);
+        velocity[3] = 0.0f;
+        func_L00_0026E438(position, velocity, 0);
+    }
+}
 extern int func_L00_001F2BE8(float, void *, int, int, int);
 
 // Retires up to seven slot entries whose effect finished, spawning a burst for live ones.

@@ -6,6 +6,7 @@ executable's alike.
 
   bash tools/docker/run.sh python tools/equiv.py FUNC CANDIDATE.c [--show]
   bash tools/docker/run.sh python tools/equiv.py --staged [--jobs N]   every staged near miss
+  bash tools/behave.sh FUNC CANDIDATE.c [--trials N]  run both instead (tools/behave): VU0 code too
 
 A near miss can be wrong (a constant, a test, an argument, a call) or right
 with other registers and another instruction order, and its byte count does
@@ -36,6 +37,11 @@ DIFFERENT (an operation one has and the other lacks: a real difference to
 fix before the port can use it). It is a static comparison with known
 blind spots (it cannot see which of two equal values went where after a
 move); the port's run-time check against retail is the proof.
+
+It cannot follow retail's VU0 code against a candidate's float C (NOT
+COMPARABLE). tools/behave.sh runs the two instead, on random state, and
+compares what they write, call and return; --behave here writes what it
+needs (build-sn/try/FUNC/equiv/behave.txt).
 """
 from __future__ import annotations
 
@@ -316,11 +322,13 @@ def executable_code(name: str, obj_path: Path) -> tuple[bytes, bytes, int]:
     return bytes(filled[off:off + osize]), raw[vram - delta:vram - delta + rsize], vram
 
 
-def compare(name: str, obj_path: Path) -> tuple[str, list[str], list[str]]:
+def codes(name: str, obj_path: Path) -> tuple[bytes, bytes, int, int]:
+    """The candidate relocated to retail's address, retail's bytes, the address and the level (-1 for the
+    executable)."""
     m = oc.OVERLAY_NAME.match(name)
     if not m:
         ours, retail, vram = executable_code(name, obj_path)
-        return judge(collections.Counter(tokens(ours, vram)), collections.Counter(tokens(retail, vram)))
+        return ours, retail, vram, -1
     level, address = int(m.group(1)), int(m.group(2), 16)
     catalogue = oc.load_catalogue()
     _kind, csize, _places = catalogue[name]
@@ -335,9 +343,12 @@ def compare(name: str, obj_path: Path) -> tuple[str, list[str], list[str]]:
     trec = oc.text_record(oc.level_manifest(level))
     raw = (oc.DUMP / f"level_{level:02d}/text.bin").read_bytes()
     retail = raw[address - trec["address"]: address - trec["address"] + csize]
-    a = collections.Counter(tokens(bytes(ours[placer.off:placer.off + placer.size]), address, level))
-    b = collections.Counter(tokens(retail, address, level))
-    return judge(a, b)
+    return bytes(ours[placer.off:placer.off + placer.size]), retail, address, level
+
+
+def compare(name: str, obj_path: Path) -> tuple[str, list[str], list[str]]:
+    ours, retail, vram, level = codes(name, obj_path)
+    return judge(collections.Counter(tokens(ours, vram, level)), collections.Counter(tokens(retail, vram, level)))
 
 
 def judge(a: collections.Counter, b: collections.Counter) -> tuple[str, list[str], list[str]]:
@@ -354,12 +365,78 @@ def judge(a: collections.Counter, b: collections.Counter) -> tuple[str, list[str
     return f"DIFFERENT ({len(missing)} missing, {len(extra)} extra)", missing, extra
 
 
+DECL = re.compile(r"(?:^|[;}{\n])\s*(?:extern\s+|static\s+)?([\w\s\*]*?)\b(\w+)\s*\(([^()]*)\)\s*"
+                  r"(?:__asm__\s*\(\s*\"(\w+)\"\s*\))?\s*;")
+ADDRESS = re.compile(r"func_(?:L\d\d_)?([0-9A-Fa-f]{8})$")
+
+
+def kind(text: str) -> str:
+    """int, long, float or void: how a C type comes back (or goes in), by its register."""
+    t = text.replace("const", "").replace("volatile", "").strip()
+    if "*" in t:
+        return "int"
+    words = set(re.findall(r"\w+", t))
+    if words & {"float", "f32", "double"}:
+        return "float"
+    if words & {"long", "s64", "u64"}:     # long is 64 bits on the EE
+        return "long"
+    if words <= {"void", "static", "inline"} and "void" in words:
+        return "void"
+    return "int"
+
+
+def behave_manifest(name: str, candidate: Path, obj: Path, work: Path) -> Path:
+    """What tools/behave runs: the program, the regions to make random, retail's function and the
+    candidate's bytes, its return type and its callees' arguments (from the candidate's declarations)."""
+    ours, retail, vram, level = codes(name, obj)
+    text = candidate.read_text(errors="replace")
+    (work / "cand.bin").write_bytes(ours)
+    root = oc.ROOT
+    lines = [f"elf {root / 'baserom/SCES_509.16'}", f"gp {oc.GP:#x}"]
+    with open(root / "baserom/SCES_509.16", "rb") as f:
+        for s in ELFFile(f).iter_sections():     # core.bss, core.data, .bss, .data...
+            if not s["sh_addr"] or not s["sh_size"]:
+                continue
+            if s["sh_type"] == "SHT_NOBITS" or s.name.endswith(".bss"):
+                lines.append(f"fill {s['sh_addr']:#x} {s['sh_size']:#x}")
+            elif s.name.endswith("data") and not s.name.endswith("rdata"):
+                lines.append(f"data {s['sh_addr']:#x} {s['sh_size']:#x}")
+    if level >= 0:
+        for r in oc.level_manifest(level)["records"]:
+            path = oc.DUMP / f"level_{level:02d}/{r['name']}.bin"
+            lines.append(f"fill {r['address']:#x} {r['bytes']:#x}" if r["name"] == "bss"
+                         else f"load {r['address']:#x} {path}")
+            if r["name"] in ("data", "lit"):
+                lines.append(f"data {r['address']:#x} {r['bytes']:#x}")
+    lines.append(f"func {vram:#x} {len(retail):#x}")
+    lines.append(f"cand {(work / 'cand.bin').resolve()}")
+    d = re.search(rf"^([^\n;#]*?)\b{name}\s*\(", text, re.M)
+    lines.append(f"ret {kind(d.group(1)) if d else 'int'}")
+    sig = re.search(rf"\b{name}\s*\(([^()]*)\)\s*\{{", text)
+    if sig:
+        ps = [p for p in sig.group(1).split(",") if p.strip() and p.strip() != "void"]
+        lines.append("params " + " ".join("p" if "*" in p else "i" for p in ps if kind(p) != "float"))
+    for m in DECL.finditer(text):
+        ret, fname, params, label = m.groups()
+        a = ADDRESS.match(label or fname)
+        if not a or "..." in params or fname == name:
+            continue
+        ps = [p for p in params.split(",") if p.strip() and p.strip() != "void"]
+        nf = sum(1 for p in ps if kind(p) == "float")
+        lines.append(f"arity {int(a.group(1), 16):#x} {len(ps) - nf} {nf}")
+    out = work / "behave.txt"
+    out.write_text("\n".join(lines) + "\n")
+    return out
+
+
 def run(name: str, candidate: Path, work: Path) -> str:
     import try_func
     seg, src, first, last = try_func.find_stub(name)
     obj = try_func.build(name, seg, src, first, last, candidate.read_text(errors="replace"), work)
     if obj is None:
         return "COMPILE failed"
+    if "--behave" in sys.argv:
+        return f"behave manifest {behave_manifest(name, candidate, obj, work)}"
     if oc.OVERLAY_NAME.match(name) and oc.check(obj, name) == "EXACT":
         return "EXACT"
     try:

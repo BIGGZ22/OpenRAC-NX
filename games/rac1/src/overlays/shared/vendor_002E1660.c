@@ -3059,7 +3059,23 @@ void func_L00_002E9968(float x, float y) {
         *(float *)(q + 0x54) = y;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_002E99A0);
+extern char *D_L00_001690C0;
+
+/* Sets the follow camera's offset (relative to its current one if add) and scale, unless the camera is locked.
+   Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/vendor/002df730.c, FUN_L00_002e84f0. */
+void func_L00_002E99A0(int add, float a, float b) {
+    char *p = D_L00_00166F00;
+    if (*(short *)(p + 0x86) == 0) {
+        char *q = *(char **)(p + 0x70) + 0x40;
+        *(short *)(q + 0xDA) = 1;
+        *(float *)(q + 0xB8) = b;
+        if (add) {
+            *(float *)(q + 0xB4) = *(float *)(D_L00_001690C0 + 0xF0) + a;
+        } else {
+            *(float *)(q + 0xB4) = a;
+        }
+    }
+}
 /* From Lombyte (MIT), FUN_L00_002e8534 (PR #66), adapted to PAL. */
 void func_L00_002E99E4(void *u, char *p, float a) { *(volatile float *)(p + 0xB4) = a; }
 void func_L00_002E99F0(float value) {

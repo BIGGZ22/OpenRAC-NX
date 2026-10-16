@@ -1,117 +1,82 @@
 /* NON_MATCHING func_L14_002E0538 -- src/overlays/l14_oltanis/vendor_002E0538.c
- * Best so far: SIZE ours 788 / retail 796, checked 2026-10-09.
+ * Best so far: BYTES 148/796 (81.4% of the bytes match), checked 2026-10-16.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
  * What the last attempts found:
- *   - What it does: per-frame update of the level 14 moby's 19-entry ring table (sin/cos-like helpers func_001FA74
- *   - Best candidate p3/p4/p5: 788 of 796 bytes. Loop 3 and the first two loops match in order, but: (1) retail co
- *   - Unblock: a way to keep the run-time `(4 << 4) + 8` in the source without folding, or a regalloc change that 
- *   - Note: run 3 was an accidental duplicate of p1 (same file, try_func run twice); no other run repeats.
+ *   Plain rewrite: d as float pts[29][4] plus angles and spacing, loops over element pointers p = d->pts[i].
+ *   Loop 2's runtime (4 << 4) + 8 is a second counter j = 4 set before loop 1 (loop.c then uses its register).
+ *   Products before a call are separate statements (GCC evaluates all calls of an expression first).
+ *   Left: float register order (retail: step f22, fi f20, z f21, 1.0 f23) and loop 2 reading pts[j][2]
+ *   as (j << 4) + (d + 8) where retail has ((j << 4) + 8) + d. Loop 3's pointer starts at d + 0xA0, retail d.
  */
-extern float func_001FA748(float, float);
-extern float func_001FA790(float, float);
+typedef struct {
+    float pts[29][4];
+    char pad1D0[0x10];
+    float ang[3];
+    float pad1EC;
+    float spacing;
+} RingData_2E0538;
+extern float FastAddRots(float, float);
+extern float FastSubRots(float, float);
 extern float func_001FA888(int);
 extern float func_L00_0025F368(float);
-extern float func_001F9FA8(float);
-extern float func_L00_00258C80(float, float);
-extern float func_001F9F90(float x);
-extern void func_001F49B0(void (*)(void), void *);
+extern float FastSin(float);
+extern float randf_sym(float, float);
+extern float FastCos(float);
+extern void AddDrawCallback_2e0538(void (*)(char *), char *) __asm__("func_001F49B0");
 void func_L14_002E0858(char *m);
 
-// Per-frame update for the level 14 moby: refreshes its ring table and hands the table to func_001F49B0.
-void func_L14_002E0538(char *moby)
-{
-    char *d = *(char **)(moby + 0x78);
-    char *o;
-    char *p;
-    int i;
-    int k;
-    float c1;
-    float c16;
-    float one;
-    float f20;
-    float f21;
-    float f22;
-    float a;
-    float b;
-    float c;
-    float e;
-    float g;
-    float one2;
-    float c16b;
-    float one3;
-    float c39;
-    float k99;
-    float k20;
-    float k75;
-    float k50;
+/* turns the moby's three angles, lays out a ring of ten points (the second five mirror the first
+   five's wobble) and a wave of nineteen, then queues func_L14_002E0858 to draw them */
+void func_L14_002E0538(char *moby) {
+    RingData_2E0538 *d = *(RingData_2E0538 **)(moby + 0x78);
+    float wobble = 0.1f;
+    float base = 1.6f;
+    float one = 1.0f;
+    float *p;
+    float step, fi, z, a, b;
+    int i, j, k;
 
-    c1 = 0.1f;
-    c16 = 1.6f;
-    one = 1.0f;
-    *(float *)(d + 0x1E0) = func_001FA748(*(float *)(d + 0x1E0), 0.17453292f);
-    *(float *)(d + 0x1E4) = func_001FA790(*(float *)(d + 0x1E4), 0.80285144f);
-    *(float *)(d + 0x1E8) = func_001FA748(*(float *)(d + 0x1E8), 0.05236f);
-    f22 = 360.0f / (func_001FA888(10) * 0.5f) * 0.017453292f;
-
-    o = d;
+    d->ang[0] = FastAddRots(d->ang[0], 0.17453292f);
+    d->ang[1] = FastSubRots(d->ang[1], 0.80285144f);
+    d->ang[2] = FastAddRots(d->ang[2], 0.05236f);
+    step = 360.0f / (func_001FA888(10) * 0.5f) * 0.017453292f;
+    j = 4;
     for (i = 0; i < 5; i++) {
-        func_001FA888(i);
-        func_001FA888(10);
+        func_001FA888(i) / func_001FA888(10);
         if (i == 0) {
-            f20 = 0.0f;
-            f21 = f20;
+            fi = 0.0f;
+            z = fi;
         } else {
-            f20 = (float)i;
-            f21 = func_001F9FA8(func_L00_0025F368(*(float *)(d + 0x1E0) + f20 * f22)) * c1;
-            f21 = f21 + func_L00_00258C80(0.0f, 0.2f);
+            fi = i;
+            z = FastSin(func_L00_0025F368(d->ang[0] + fi * step)) * wobble;
+            z += randf_sym(0.0f, 0.2f);
         }
-        *(float *)(o + 0x8) = f21;
-        *(int *)(o + 0x4) = 0;
-        f21 = *(float *)(d + 0x1F0) * f20 + c16;
-        *(float *)(o + 0xC) = one;
-        *(float *)o = f21;
-        o += 0x10;
+        p = d->pts[i];
+        p[2] = z;
+        p[1] = 0.0f;
+        p[3] = one;
+        p[0] = d->spacing * fi + base;
     }
-
-    c16b = 1.6f;
-    p = d + 0x48;
-    one2 = 1.0f;
-    k = 5;
-    o = d + 0x50;
-    for (; k < 10; k++) {
-        *(float *)(o + 0x8) = *(float *)p;
-        *(int *)(o + 0x4) = 0;
-        *(float *)(o + 0xC) = one2;
-        *(float *)o = *(float *)(d + 0x1F0) * (float)k + c16b;
-        p -= 0x10;
-        o += 0x10;
+    for (k = 5; k < 10; k++) {
+        p = d->pts[k];
+        p[2] = d->pts[j][2];
+        p[1] = 0.0f;
+        p[3] = 1.0f;
+        p[0] = d->spacing * k + 1.6f;
+        j--;
     }
-
-    k99 = 0.99483764f;
-    k20 = 0.20944f;
-    k75 = 0.75f;
-    k50 = 0.5f;
-    c39 = 0.39f;
-    one3 = 1.0f;
-    o = d;
     for (i = 0; i < 19; i++) {
-        f22 = (float)i;
-        *(int *)(o + 0xA8) = 0;
-        a = func_L00_0025F368(*(float *)(d + 0x1E4) + f22 * k99);
-        b = func_L00_0025F368(*(float *)(d + 0x1E8) + f22 * k20);
-        c = func_001F9FA8(b) * k75;
-        e = func_001F9FA8(a);
-        g = func_L00_00258C80(0.0f, 0.2f);
-        f20 = c * e + g;
-        *(float *)(o + 0xA8) = *(float *)(o + 0xA8) + f20;
-        f20 = func_001F9F90(a) * k50;
-        *(float *)(o + 0xAC) = one3;
-        f22 = f22 * c39;
-        *(float *)(o + 0xA4) = f20;
-        *(float *)(o + 0xA0) = f22;
-        o += 0x10;
+        p = d->pts[i + 10];
+        fi = i;
+        p[2] = 0.0f;
+        a = func_L00_0025F368(d->ang[1] + fi * 0.99483764f);
+        b = func_L00_0025F368(d->ang[2] + fi * 0.20944f);
+        z = FastSin(b) * 0.75f;
+        p[2] += z * FastSin(a) + randf_sym(0.0f, 0.2f);
+        p[3] = 1.0f;
+        p[1] = FastCos(a) * 0.5f;
+        p[0] = fi * 0.39f;
     }
-
-    func_001F49B0((void (*)(void))func_L14_002E0858, moby);
+    AddDrawCallback_2e0538(func_L14_002E0858, moby);
 }

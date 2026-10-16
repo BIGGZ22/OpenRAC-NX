@@ -1120,7 +1120,7 @@ char *func_L17_002EAFC8(char *src, char *pos, float *v, float f) {
     return r;
 }
 extern int func_001F4868(int);
-extern void func_L11_003121C0(float, float, float, float, float, int, int, int, int, int, int, int, int);
+extern void func_L11_003121C0(float, float, float, float, float, int, int, long, int, int, int, int, int);
 void func_L17_002EBF08(unsigned char a, unsigned char b, unsigned char c, unsigned char d, float x, float y, float s, float ang) {
     int h;
     float w;

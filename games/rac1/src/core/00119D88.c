@@ -236,7 +236,88 @@ int func_0011A758(int arg0) {
 
 LINKER_REMNANT("asm/remnants/core_text", func_0011A770);
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_0011A780);
+extern int D_0012FD04;
+extern int D_00154F54;
+typedef struct { void (*f)(void *, void *); void *arg; } Hnd;
+typedef struct {
+    void *a0;
+    void *a1;
+    int a2;
+    void *a3;
+    int a4;
+    int a5;
+    int a6;
+    int *a7;
+} CmdData;
+typedef struct { char pad[0xC]; int pad2; void *u10; } CmdPkt;
+extern int func_0011D960(void);
+extern void func_0011D9A8(void);
+extern void func_00118D80(int);
+extern void func_00118E40(void);
+extern int func_00118AB0(int, void *, int);
+extern void func_00119460(int);
+extern void func_0011AC48(void);
+extern unsigned char D_00154E80[];
+extern unsigned char D_00154F00[];
+extern CmdData D_00154F58;
+extern Hnd D_00154F80[];
+extern CmdPkt D_00154F40;
+
+void func_0011A780(void) {
+    int i;
+    unsigned t5, t6;
+    func_0011D960();
+    if (D_0012FD04 != 0) {
+        func_0011D9A8();
+        return;
+    }
+    D_0012FD04 = 1;
+    t6 = (unsigned)D_00154E80 | 0x20000000;
+    t5 = (unsigned)D_00154F00 | 0x20000000;
+    D_00154F58.a0 = (void *)t6;
+    D_00154F58.a1 = (void *)t5;
+    D_00154F58.a2 = 0;
+    D_00154F58.a3 = D_00154F80;
+    D_00154F58.a4 = 0x20;
+    D_00154F58.a5 = 0;
+    D_00154F58.a6 = 0;
+    D_00154F58.a7 = D_00155080;
+    for (i = 0; i < 32; i++) {
+        D_00154F80[i].f = 0;
+        D_00154F80[i].arg = 0;
+    }
+    for (i = 0; i < 32; i++) {
+        D_00155080[i] = 0;
+    }
+    D_00154F80[0].f = (void (*)(void *, void *))func_0011A748;
+    D_00154F80[1].f = (void (*)(void *, void *))func_0011A728;
+    D_00154F80[0].arg = &D_00154F58;
+    D_00154F80[1].arg = &D_00154F58;
+    func_0011D9A8();
+    func_00118D80(0);
+    if (*(volatile unsigned *)0x1000E010 & 0x20) {
+        *(volatile unsigned *)0x1000E010 = 0x20;
+    }
+    if (!(*(volatile unsigned *)0x1000C000 & 0x100)) {
+        func_00118E40();
+    }
+    D_00154F54 = func_00118AB0(5, func_0011AC48, 0);
+    func_00119460(5);
+    D_00154F58.a2 = ((int (*)(unsigned))func_00118E70)(0x80000000);
+    if (D_00154F58.a2 != 0) {
+        D_00154F40.u10 = D_00154E80;
+        func_0011ABC8(0x80000000, (int)&D_00154F40, 0x14, 0, 0, 0);
+        return;
+    }
+    do {
+    } while (!(func_00118E70(4) & 0x20000));
+    D_00154F58.a2 = func_00118E70(2);
+    func_00118E60(0x80000000, D_00154F58.a2);
+    func_00118E60(0x80000001, (int)&D_00154F58);
+    D_00154F40.u10 = D_00154E80;
+    D_00154F40.pad2 = 0;
+    func_0011ABC8(0x80000002, (int)&D_00154F40, 0x14, 0, 0, 0);
+}
 
 extern void func_001193F8(int);
 extern void func_00118AD0(int, int);

@@ -106,7 +106,206 @@ void func_L00_002C2C30(float a, float b, float c, float *p, float *q, float *out
     out[1] = FastSin(ang) * s;
     out[2] = s;
 }
-INCLUDE_ASM("asm/overlays", func_L00_002C2DD8);
+extern struct Hero D_0013F450_2DD8 __asm__("D_0013F450");
+extern struct PadState D_0013CA40_2DD8 __asm__("D_0013CA40");
+extern u32 D_0013CBE4;
+extern struct { u8 pad0[0x11]; u8 unk11; } D_0013E620_2DD8 __asm__("D_0013E620");
+extern struct { u8 pad0[0x88]; u16 deliveries; u16 unk8A; u32 levels; } D_00141780_2DD8 __asm__("D_00141780");
+extern struct { u8 pad0[0x18]; s32 moby; u8 pad1C[4]; Vec4 point; } D_L00_00173F40_2DD8 __asm__("D_L00_00173F40");
+extern Vec4 D_L00_00166EC0_2DD8 __asm__("D_L00_00166EC0");
+extern char D_L00_00166D80_2DD8[] __asm__("D_L00_00166D80");
+extern short D_L00_001B0B30[];
+extern float D_0015EE6C MACRO_ADDR;
+extern float D_0015EE68 MACRO_ADDR;
+extern float D_0015EE70_2DD8 __asm__("D_0015EE70") MACRO_ADDR;
+extern int D_0015EFA4_2DD8 __asm__("D_0015EFA4") MACRO_ADDR;
+extern int D_0015EE84_2DD8 __asm__("D_0015EE84") MACRO_ADDR;
+extern int func_001F9850(int);
+extern void func_001FA480(void *, void *);
+extern void func_001FA4A0(void *, void *);
+extern void func_L00_00250800(void *, int, void *);
+extern void func_0020DAF8(void *, int, void *);
+extern void func_001F9EE8(void *, void *, void *);
+extern int func_L00_00222B80(int, int);
+extern int func_001F9908(int *);
+extern int func_L00_00234718(int);
+extern int func_L00_00217570(int, int);
+extern int func_L00_00234638(int, int);
+extern void func_001F9EC0(void *, void *, void *);
+extern float func_001FA748(float, float);
+extern float func_001FA790(float, float);
+extern void func_001F9C30(void *, void *, float);
+extern float func_001F9CE8(void *);
+extern void func_00215C00(void *, float, float, float);
+extern int func_L00_001EFFF0_2DD8(void *, void *, int, void *, int) __asm__("func_L00_001EFFF0");
+extern void func_L00_002AB2A8(void *, void *, void *);
+extern void func_L00_002607F8(void *, void *, int);
+extern void func_0020D678(void *);
+extern struct Moby *func_L00_002AB170(void *, void *, void *);
+
+typedef struct {
+    u8 pad0[0x40];
+    Vec4 grip;
+    struct Moby *held;
+    s32 timer54;
+    s32 timer58;
+    s32 delay;
+} GloveVars_2DD8;
+
+/* update function of moby class 190 (mine_glove): aims the glove, throws a mine at the target */
+void func_L00_002C2DD8(struct Moby *moby) {
+    GloveVars_2DD8 *vars;
+    Vec4 saved, offset, rotatedOffset;
+    Vec4 local[4];
+    Vec4 pos, target;
+    Vec4 basis[3];
+    Vec4 matrix[4];
+    Vec4 launch, arc, probe;
+    float *out;
+    float angle, slope, horizontal, vertical, radius, root;
+    s32 hit;
+
+    if (moby == 0)
+        return;
+    vars = (GloveVars_2DD8 *)moby->pvars;
+    if (vars->delay < 3) {
+        ++vars->delay;
+        return;
+    }
+    offset.q = 0;
+    offset.f[1] = -0.09f;
+    offset.f[2] = -0.02f;
+    func_001FA480(basis, D_L00_00166D80_2DD8);
+    func_001FA4A0(matrix, basis);
+    if (vars == 0)
+        return;
+    func_L00_00250800(moby, 0, &saved);
+    func_0020DAF8(moby, 0, local);
+    func_001F9EE8(&rotatedOffset, &offset, local);
+    func_001F9BD8(&vars->grip, &saved, &rotatedOffset);
+    if (vars->held != 0)
+        vars->held->unk98 = 1;
+    if (vars->held == 0 || vars->held->state == 0xFE || vars->held->state == 0xFD)
+        vars->held = 0;
+    if (D_0013F450_2DD8.state.current == 1)
+        func_L00_00222B80(0x1E, 1);
+    if (func_001F9908(&vars->timer58) && !D_0013F450_2DD8.unk20AC) {
+        if ((D_0013F450_2DD8.unk20A8 && D_0013F450_2DD8.unk1BC == func_001F9850(0x11)) ||
+            ((D_0013CBE4 & D_0013F450_2DD8.items[0].button_mask) &&
+             D_0013F450_2DD8.state.current == 0x1E && func_L00_00234718(-1)) ||
+            (D_0013F450_2DD8.state.current == 0x23 && D_0013F450_2DD8.state_timer == func_001F9850(0x10))) {
+            func_L00_00217570(0x1A, 0);
+            func_L00_00234638(-1, 1);
+            moby->state = 3;
+        }
+    }
+    if (vars->held != 0 && !D_0013F450_2DD8.unk20AC) {
+        out = (float *)vars->held->pvars;
+        arc.q = 0;
+        arc.f[0] = D_0015EE6C * (D_0013E620_2DD8.unk11 ? ((D_0013CA40_2DD8.held & 5) ? 12.0f : 4.0f) : ((D_0013CA40_2DD8.held & 5) ? 6.0f : 4.0f));
+        launch = arc;
+        func_001F9EC0(&launch, &launch, D_0013F450_2DD8.unk640);
+        pos.f[0] = func_001F9F90(func_001FA748(-0.361968011f, func_L00_001FF860(D_0013F450_2DD8.unk670, D_0013F450_2DD8.unk674))) * 0.859039009f;
+        pos.f[1] = func_001F9FA8(func_001FA748(-0.361968011f, func_L00_001FF860(D_0013F450_2DD8.unk670, D_0013F450_2DD8.unk674))) * 0.859039009f;
+        pos.f[2] = 0.0f;
+        func_001F9BD8(&pos, &pos, &D_0013F450_2DD8.motion.pos);
+        pos.f[2] += 0.490819991f;
+        angle = func_L00_001FF860(launch.f[0], launch.f[1]);
+        func_001F9C30(&target, &launch, D_0015EE68 * 60.0f);
+        func_001F9BD8(&target, &target, &pos);
+        if (D_0013CA40_2DD8.held & 5) {
+            probe.q = 0;
+            probe.f[2] = D_0013E620_2DD8.unk11 ? ((D_0013CA40_2DD8.held & 5) ? 12.0f : 4.0f) : ((D_0013CA40_2DD8.held & 5) ? 6.0f : 4.0f);
+            arc = probe;
+            hit = 0;
+            func_001F9EE8(&arc, &arc, matrix);
+            func_001FA790(D_0013F450_2DD8.moby->rot.z, func_L00_001FF860(arc.f[0], arc.f[1]));
+            angle = func_L00_001FF860(arc.f[0], arc.f[1]);
+            slope = func_L00_001FF860(func_001F9CE8(&arc), arc.f[2]);
+            if (0.593411922f < slope) slope = 0.593411922f;
+            if (slope < -1.39626336f) slope = -1.39626336f;
+            func_00215C00(&arc, D_0013E620_2DD8.unk11 ? ((D_0013CA40_2DD8.held & 5) ? 12.0f : 4.0f) : ((D_0013CA40_2DD8.held & 5) ? 6.0f : 4.0f), angle, slope);
+            {
+                float distance = func_001F9CE8(&arc);
+                float z = arc.f[2];
+                if (distance != 0.0f) horizontal = z / distance;
+                else horizontal = z / 0.01f;
+            }
+            root = func_001F9B50(D_0015EE70_2DD8 * 9.8f * (D_0013E620_2DD8.unk11 ? ((D_0013CA40_2DD8.held & 5) ? 12.0f : 4.0f) : ((D_0013CA40_2DD8.held & 5) ? 6.0f : 4.0f)) * 0.5f);
+            radius = (root + root) * root * (1.0f - horizontal) / (D_0015EE70_2DD8 * 9.8f);
+            vertical = horizontal * radius;
+            if (0.0f < radius) {
+                arc.f[0] = func_001F9F90(angle) * radius;
+                arc.f[1] = func_001F9FA8(angle) * radius;
+                arc.f[2] = vertical;
+                func_001F9BD8(&probe, &D_L00_00166EC0_2DD8, &arc);
+                if (func_L00_001EFFF0_2DD8(&D_L00_00166EC0_2DD8, &probe, 2, moby, 0) && D_L00_00173F40_2DD8.moby != (s32)D_0013F450_2DD8.moby) {
+                    qcopy(&target, &D_L00_00173F40_2DD8.point);
+                    hit = 1;
+                    angle = func_L00_001FF860(target.f[0] - pos.f[0], target.f[1] - pos.f[1]);
+                }
+                if (!hit) {
+                    target.f[0] = func_001F9F90(angle) * radius * 5.0f;
+                    target.f[1] = func_001F9FA8(angle) * radius * 5.0f;
+                    target.f[2] = vertical * 5.0f;
+                    func_001F9BD8(&target, &target, &D_L00_00166EC0_2DD8);
+                }
+            }
+        }
+        func_L00_002C2C30(D_0015EE70_2DD8 * 9.8f, 1.0f, D_0013E620_2DD8.unk11 ? ((D_0013CA40_2DD8.held & 5) ? 12.0f : 4.0f) : ((D_0013CA40_2DD8.held & 5) ? 6.0f : 4.0f), pos.f, target.f, out);
+    }
+    switch (moby->state) {
+    case 0:
+        vars->held = 0;
+        if (!(moby->unk70 & 2))
+            moby->state = 1;
+        else
+            moby->state = 2;
+    case 1:
+        if (moby->unk70 & 2)
+            moby->state = 2;
+        break;
+    case 3:
+        if (vars->held != 0) {
+            func_L00_002AB2A8(&pos, vars->held, vars->held->pvars);
+            if (D_00141780_2DD8.deliveries <= 0xfffe)
+                ++D_00141780_2DD8.deliveries;
+            {
+                s32 frames = func_001F9850(D_0015EFA4_2DD8);
+                frames /= 600;
+                if (D_00141780_2DD8.unk8A < frames)
+                    D_00141780_2DD8.unk8A = func_001F9850(D_0015EFA4_2DD8) / 600;
+            }
+            D_00141780_2DD8.levels = (D_00141780_2DD8.levels | (1u << D_0015EE84_2DD8)) | 0x80000000;
+            func_L00_002607F8(vars->held, D_L00_001B0B30, 0x3F);
+            vars->held = 0;
+            vars->timer54 = func_001F9850(10);
+        }
+        moby->state = 4;
+        vars->timer58 = func_001F9850(0x14);
+        break;
+    case 4:
+        if (D_0013F450_2DD8.state.current != 0x23 && !D_0013F450_2DD8.unk20A8)
+            moby->state = 2;
+        break;
+    case 5:
+        moby->state = 6;
+        break;
+    case 6:
+        if (vars->held != 0) {
+            func_0020D678(vars->held);
+            vars->held = 0;
+        }
+        break;
+    }
+    func_001F9908(&vars->timer54);
+    if (vars->held != 0) {
+        qcopy(&vars->held->pos, &vars->grip);
+    } else if (vars->timer54 == 0 && func_L00_00234718(-1)) {
+        qzero(&launch);
+        vars->held = func_L00_002AB170(moby, &vars->grip, &launch);
+    }
+}
 extern float D_0015EE6C MACRO_ADDR;
 extern float func_001FA850(float, float);
 extern float func_L00_0025BC48(float *a, float *b, float speed, float g, float *out);

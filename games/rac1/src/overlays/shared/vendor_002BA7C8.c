@@ -666,7 +666,123 @@ void func_L00_002BD4A8(int arg) {
     }
     func_L00_001FD1D8(q, 0, 0);
 }
-INCLUDE_ASM("asm/overlays", func_L00_002BD6B8);
+extern char *D_L00_001ABD80[];
+extern short D_L00_001617AC;
+extern short D_L00_001617A8;
+extern Vec4 D_L00_00173F60;
+extern int D_L00_00173F40[];
+extern float func_L00_001FF860(float, float);
+extern float func_001F9D48(void *, void *);
+extern float func_001FA850(float, float);
+extern float func_001F9D10(void *, void *);
+extern float func_001F9B88(float);
+extern float func_001F9FC0(float);
+extern int func_L00_0025D390(char *);
+extern void func_00215C00(void *, float, float, float);
+extern int func_L00_001EFFF0(Vec4f *, Vec4f *, int, void *, int);
+
+char *func_L00_002BD6B8(char *self, float *position, float *heading, float *pitch) {
+    float start[4] __attribute__((aligned(16)));
+    float end[4] __attribute__((aligned(16)));
+    float target[4] __attribute__((aligned(16)));
+    float offset[4] __attribute__((aligned(16)));
+    char *candidate;
+    char *data;
+    char *moby;
+    int collision;
+    int a0s[1];
+    int res[1];
+    float distance, angle, elevation, headingError, limit, apparentAngle, radius, reduction;
+    int i;
+    char *g;
+    char *m0;
+
+    limit = *(float *)&D_L00_001617AC;
+    a0s[0] = (int)self;
+    *(VecQuad *)start = *(VecQuad *)position;
+    g = D_0013E633 + 0xE1D;
+    m0 = *(char **)(g + 0x2080);
+    *(VecQuad *)end = *(VecQuad *)(m0 + 0x10);
+    position = start;
+    end[2] = position[2];
+    collision = func_L00_001EFFF0((Vec4f *)end, (Vec4f *)position, 6, m0, 0);
+    res[0] = 0;
+    if (collision) {
+        qcopy(position, &D_L00_00173F60);
+        return 0;
+    }
+    i = 0;
+    if ((candidate = D_L00_001ABD80[i]) != 0) do {
+        if (*(signed char *)(candidate + 0x20) < 0 || *(short *)(candidate + 0xA6) == 0x58E ||
+            *(short *)(candidate + 0xA6) == 0x452)
+            continue;
+        qcopy(target, candidate + 0x10);
+        data = (char *)func_L00_0025D390(candidate);
+        if (!data)
+            continue;
+        target[2] += *(float *)(data + 0x10);
+        if (!candidate || !*(char **)(candidate + 0x24) ||
+            *(short *)(*(char **)(candidate + 0x24) + 0x46) != 5)
+            continue;
+        angle = func_L00_001FF860(target[0] - position[0], target[1] - position[1]);
+        distance = func_001F9D48(position, target);
+        elevation = func_L00_001FF860(distance, target[2] - position[2]);
+        headingError = func_001FA850(*heading, angle);
+        distance = func_001F9D10(position, target);
+        if (distance < 2.5f) {
+            float toward;
+            char *g1 = D_0013E633 + 0xE1D;
+            moby = *(char **)(g1 + 0x2080);
+            toward = func_L00_001FF860(*(float *)(candidate + 0x10) - *(float *)(g1 + 0x80),
+                                   *(float *)(candidate + 0x14) - *(float *)(g1 + 0x84));
+            if (func_001FA850(*(float *)(moby + 0x48), toward) < 1.0471976f &&
+                func_001F9B88(position[2] - target[2]) < 2.0f &&
+                !func_L00_001EFFF0((Vec4f *)position, (Vec4f *)target, 6, *(char **)(g1 + 0x2080), 0)) {
+                res[0] = (int)candidate;
+                *pitch = -elevation;
+                *heading = angle;
+                goto done;
+            }
+        }
+        if (distance > limit)
+            continue;
+        {
+            char *g2 = D_0013E633 + 0xE1D;
+            func_00215C00(offset, distance, *heading, *pitch + *(float *)(g2 + 0x2E4) * 0.5f);
+        }
+        func_001F9BD8(offset, offset, position);
+        apparentAngle = func_001F9FC0(func_001F9D10(offset, target) / (distance + distance));
+        apparentAngle += apparentAngle;
+        if (*(float *)&D_L00_001617A8 * 0.017453292f < apparentAngle) {
+            data = (char *)func_L00_0025D390(candidate);
+            if (data) {
+                radius = func_001FA888(*(unsigned char *)(data + 10)) * 0.125f;
+                reduction = func_001F9FC0(radius / distance);
+                if (radius < distance) {
+                    apparentAngle -= reduction;
+                    if (apparentAngle < 0.0f)
+                        apparentAngle = 0.0f;
+                }
+            }
+        }
+        if (apparentAngle < *(float *)&D_L00_001617A8 * 0.017453292f) {
+            int valid = 1;
+            if (func_L00_001EFFF0((Vec4f *)position, (Vec4f *)target, 6, self, 0)) {
+                if (!D_L00_00173F40[6] || (char *)D_L00_00173F40[6] != candidate)
+                    valid = 0;
+            }
+            if (valid) {
+                *pitch = -elevation;
+                limit = distance;
+                if (headingError < 0.17453292f)
+                    *heading = angle;
+                res[0] = (int)candidate;
+            }
+        }
+    } while ((candidate = D_L00_001ABD80[++i]) != 0);
+done:
+    return (char *)res[0];
+}
 typedef int u128_2BDAF0 __attribute__((mode(TI)));
 typedef struct Vq_2BDAF0 { float x, y, z, w; } __attribute__((aligned(16))) Vq_2BDAF0;
 typedef struct Ray_2BDAF0 {

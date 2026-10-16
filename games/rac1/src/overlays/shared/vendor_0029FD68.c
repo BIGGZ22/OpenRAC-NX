@@ -2,7 +2,104 @@
 #include "common.h"
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/overlays", func_L00_0029FD68);
+extern void func_001FBAB8(int, int, int, int, int, int, int);
+extern void *func_001153FC(void *, int, int);
+extern void func_0020E180(int, int);
+extern char *func_001FE540(int);
+extern void func_001F75D0(void *, long, char *, int);
+extern int func_00116248(char *str, const char *fmt, ...);
+extern void func_001F6968(int, int, long, char *, int);
+extern void func_001F6D88(int, int, long, char *, int);
+typedef struct { int i0; int i4; unsigned short h8; unsigned short hA; unsigned short hC; unsigned short hE; int i10; int i14; } Row;
+typedef struct { short unused0, y, unused4, x, half_x, half_y, left, top, width, style; unsigned char rest[4]; } TBox;
+typedef struct { int fD0; int fD4; char pad[12]; } DRow;
+typedef struct { char pad0[0x20]; int f20; char pad24[0x1c]; int f40; char pad44[0x14]; int f58; char pad5c[0x74]; DRow rows[16]; } DMenu;
+extern int D_L00_001CA7C0[];
+#define MENU (*(DMenu *)D_L00_001CA7C0)
+extern Row D_L00_001C43B0[] NOT_SDA;
+extern int D_0013D530[] NOT_SDA;
+extern unsigned char D_0013D5EB NOT_SDA;
+extern int D_0015EE98 MACRO_ADDR;
+extern char D_L00_00161220[];
+extern int D_L00_00161F30 MACRO_ADDR;
+extern char D_L00_00161228[];
+extern char D_L00_00161230[];
+
+void func_L00_0029FD68(void *m, int x, int y) {
+    TBox box;
+    char text[256];
+    int cost;
+    int message_id;
+    int text_x;
+    unsigned short ammo_cost;
+    char *fmt;
+    int total;
+
+    func_001FBAB8(0, 0, 0x200, 0x80, 0x200, 0x80, 0);
+    { int n = sizeof(box); func_001153FC((void *)&box, 0, n); }
+    box.half_x = x / 2;
+    box.half_y = y / 2;
+    box.left = x - 8;
+    box.top = y - 8;
+    box.width = 0x10;
+    box.style = 3;
+    box.y = (short)y;
+    box.x = (short)x;
+
+    if (MENU.rows[MENU.f58].fD4 == 1 && D_0013D530[MENU.rows[MENU.f58].fD0] >= D_L00_001C43B0[MENU.rows[MENU.f58].fD0].hE) {
+        message_id = 0x523B;
+        goto message;
+    }
+    if (MENU.rows[MENU.f58].fD4 != 1)
+        goto purchase;
+    if (MENU.f40)
+        ammo_cost = D_L00_001C43B0[MENU.rows[MENU.f58].fD0].hA;
+    else
+        ammo_cost = D_L00_001C43B0[MENU.rows[MENU.f58].fD0].h8;
+    if (D_0015EE98 < ammo_cost)
+        goto no_money;
+    func_0020E180(MENU.f20 + 0x500, 1);
+    box.half_y = 6;
+    box.style = 1;
+    func_001F75D0((void *)&box, 0x80f0f0f0L, func_001FE540(0x523C), -1);
+    func_00116248(text, D_L00_00161220, D_L00_00161F30);
+    if (D_L00_00161F30 >= 100)
+        text_x = 0x17;
+    else {
+        if (D_L00_00161F30 < 10)
+            goto quantity_small;
+        text_x = 0x1e;
+    }
+    func_001F6968(text_x, 0x32, 0x80f0f0f0L, text, -1);
+    goto quantity_done;
+quantity_small:
+    func_001F6968(0x25, 0x32, 0x80f0f0f0L, text, -1);
+quantity_done:
+    func_001F6968(0xc, 0x32, 0x80f0f0f0L, D_L00_00161228, -1);
+    func_001F6968(0x40, 0x32, 0x80f0f0f0L, D_L00_00161230, -1);
+    fmt = D_L00_00161220;
+    if (MENU.f40)
+        total = D_L00_00161F30 * D_L00_001C43B0[MENU.rows[MENU.f58].fD0].hA;
+    else
+        total = D_L00_00161F30 * D_L00_001C43B0[MENU.rows[MENU.f58].fD0].h8;
+    func_00116248(text, fmt, total);
+    func_001F6D88(0x40, 0x4c, 0x80f0f0f0L, text, -1);
+    return;
+no_money:
+    message_id = 0x523D;
+message:
+    func_001F75D0((void *)&box, 0x80f0f0f0L, func_001FE540(message_id), -1);
+    return;
+purchase:
+    cost = D_0013D5EB ? D_L00_001C43B0[MENU.rows[MENU.f58].fD0].i4 : D_L00_001C43B0[MENU.rows[MENU.f58].fD0].i0;
+    if (D_0015EE98 >= cost) {
+        func_001F6968(6, 6, 0x80f0f0f0L, func_001FE540(0x523E), -1);
+        func_001F6968(2, 0x20, 0x80f0f0f0L, func_001FE540(0x5239), -1);
+        func_001F6968(2, 0x3e, 0x80f0f0f0L, func_001FE540(0x5250), -1);
+    } else {
+        func_001F75D0((void *)&box, 0x80f0f0f0L, func_001FE540(0x523D), -1);
+    }
+}
 typedef struct {
     float v[4][4];
     int rgba[4];

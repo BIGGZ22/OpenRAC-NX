@@ -536,8 +536,12 @@ def sketches(names: list[str]) -> None:
     for n in names:
         (ROOT / "build-sn/try" / n).mkdir(parents=True, exist_ok=True)
     # m2c can exit non-zero and still leave a usable sketch, so check each file.
-    subprocess.run(["bash", "tools/docker/run.sh", "sh", "-c", loop], cwd=ROOT,
-                   stdout=subprocess.DEVNULL)
+    if sys.platform == "win32":
+        # Windows runs the tools natively (README.md); no container.
+        subprocess.run(["bash", "-c", loop], cwd=ROOT, stdout=subprocess.DEVNULL)
+    else:
+        subprocess.run(["bash", "tools/docker/run.sh", "sh", "-c", loop], cwd=ROOT,
+                       stdout=subprocess.DEVNULL)
     for n in names:
         sketch = ROOT / "build-sn/try" / n / "m2c.c"
         if "{" not in sketch.read_text(errors="replace"):

@@ -2,7 +2,21 @@
 #include "common.h"
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/overlays", func_L00_00203970);
+extern int D_L00_00173F00[];
+extern int D_L00_0016128C MACRO_ADDR;
+
+/* for an offset up to 0x20000, *a and *b become words 1 and 2 of D_L00_00173F00 plus
+   D_L00_0016128C less the offset (returns 0); beyond it both are cleared (returns -1) */
+int func_L00_00203970(unsigned int off, int *a, int *b) {
+    if (off > 0x20000) {
+        *a = 0;
+        *b = 0;
+        return -1;
+    }
+    *a = D_L00_00173F00[1] + D_L00_0016128C - off;
+    *b = D_L00_00173F00[2] + D_L00_0016128C - off;
+    return 0;
+}
 // clears two out-parameters and returns -1
 int func_L00_002039C4(int a, int b, int *c, int d, int *e) {
     *e = 0;

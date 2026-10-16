@@ -758,6 +758,11 @@ TRAILER = "Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 
 def docker(*command: str) -> subprocess.CompletedProcess:
+    if sys.platform == "win32":
+        # Windows runs the toolchain natively (README.md); no container.
+        if command[0] == "python":
+            command = (sys.executable, *command[1:])
+        return subprocess.run(list(command), cwd=ROOT, capture_output=True, text=True)
     return subprocess.run(["bash", "tools/docker/run.sh", *command], cwd=ROOT,
                           capture_output=True, text=True)
 

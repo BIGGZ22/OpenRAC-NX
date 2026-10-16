@@ -1342,7 +1342,78 @@ void func_L00_002CD660(char *m) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_002CD7B0);
+extern int D_L00_001ABD80[];
+extern float func_001F9D48(void *, void *);
+extern float func_001FA850(float, float);
+
+/* Finds the best-scoring target moby in the target list within range and angle limits. */
+char *func_L00_002CD7B0(float *pos, float *lim, int *skip, float maxy, float maxp, float maxd) {
+    char *best = 0;
+    float bestScore = 1e9f;
+    int i = 0;
+    char *m = (char *)D_L00_001ABD80[0];
+    while (m != 0) {
+        int n = i + 1;
+        if (*(short *)(m + 0x32) != 0) {
+            if (skip != 0) {
+                int found = 0;
+                int k;
+                for (k = 0; k < 7; k++) {
+                    if (skip[k] == (int)m) { found = 1; break; }
+                }
+                if (found) goto next;
+            } else if (*(unsigned char *)(m + 0x31) == 0) {
+                goto next;
+            }
+            {
+                float *r = (float *)func_L00_0025D390(m);
+                if (r != 0 && !(r[0] < 0.0f) && (*(unsigned short *)(m + 0x34) & 0x1000) && m != 0
+                    && *(int *)(m + 0x24) != 0 && *(short *)(*(int *)(m + 0x24) + 0x46) == 5) {
+                    float e;
+                    float *p = (float *)(m + 0x10);
+                    float d = func_001F9D48(pos, p);
+                    if (d < maxd) {
+                        float v[4];
+                        float a, b, g;
+                        int t, u;
+                        qcopy(v, p);
+                        v[2] = v[2] + (r[4] + 0.1f);
+                        a = func_L00_001FF860(v[0] - pos[0], v[1] - pos[1]);
+                        a = func_001FA850(lim[2], a);
+                        e = a * a;
+                        if (e < maxy * maxy) {
+                            b = func_L00_001FF860(d, v[2] - pos[2]);
+                            b = func_001FA850(lim[1], b);
+                            g = b * b;
+                            if (g < maxp * maxp) {
+                                if (d > 5.0f) { e = e * g * d; e = e + d; }
+                                else e = d / 5.0f;
+                                if (e < bestScore) {
+                                    if (func_L00_001EFFF0(pos, v, 2, (int)m, 0) != 0) {
+                                        t = D_L00_00173F40[6];
+                                        if (t == 0) goto next;
+                                        if ((u = *(int *)(t + 0x24)) != 0 && *(short *)(u + 0x46) == 5) goto accept;
+                                        if ((u = *(int *)(t + 0x24)) == 0 || *(short *)(u + 0x46) != 0xF) goto next;
+                                    }
+                                accept:
+                                    bestScore = e;
+                                    best = m;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    next:
+        {
+            int *pp = D_L00_001ABD80;
+            i = n;
+            m = (char *)pp[i];
+        }
+    }
+    return best;
+}
 typedef struct { float m[3][4]; } __attribute__((aligned(16))) Mat3_2CDAB8;
 typedef struct { float m[4][4]; } __attribute__((aligned(16))) Mat4_2CDAB8;
 typedef struct {
@@ -1654,7 +1725,221 @@ unsigned char *func_L00_002CE390(int a, V4 *pos, unsigned char *tgt, float f12, 
     }
     return m;
 }
-INCLUDE_ASM("asm/overlays", func_L00_002CE6A0);
+extern float D_0015EE64 MACRO_ADDR;
+extern void func_001F9BF0(void *dst, void *a, void *b);
+extern float func_L00_001FF3E0(void *);
+extern float func_001F9B50(float);
+extern float func_L00_00259148(float *vel, float cur, float target, float k, float d, float max);
+extern void func_L00_0026A7F8(void *, void *, int, int, int, int, int, int);
+extern void func_001FA218(void *, void *);
+extern void func_001F9EE8(void *, void *, void *);
+extern void func_L00_001FF500(void *, void *, float);
+
+typedef struct { float x, y, z, w; char *p; int c; unsigned char b18; unsigned char b19; unsigned short s; float e; int i; } RocketHit;
+
+/* Rocket moby update: steers the rocket toward its target, moves it with collision retries, then checks hits and range. */
+void func_L00_002CE6A0(char *m) {
+    char *d;
+    char *q;
+    char *p;
+    char *gg;
+    V4 v20;
+    V4 dir;
+    V4 z;
+    V4 v50;
+    union { struct { V4 a; V4 b; V4 c; } v; RocketHit h; } u;
+    V4 v90;
+    V4 va0[4];
+    int r;
+    unsigned char flag;
+    float t;
+    float s;
+    float k;
+    float k60;
+    float a;
+    float g;
+    float sp;
+    float zf;
+
+    if (m == 0) return;
+    d = *(char **)(m + 0x78);
+    if (d == 0) return;
+
+    a = *(float *)(m + 0x2C);
+    k = D_0015EE6C;
+    *(u128 *)&z = 0;
+    z.f[2] = k * 8.0f;
+    *(u128 *)&dir = *(u128 *)&z;
+    k60 = D_0015EE60;
+    {
+        float k64 = D_0015EE64;
+        *(float *)(m + 0x2C) = a + (*(float *)(*(char **)(m + 0x24) + 0x24) - a) * (k60 * 0.05f);
+        {
+            float e = *(float *)(d + 0x30);
+            *(float *)(d + 0x30) = e + (k * 20.0f - e) * (k60 * 0.1f) * k64;
+        }
+    }
+    r = func_001F9850(250);
+    r -= func_001F9850(5);
+    if (*(int *)(d + 0x24) < r) {
+        q = *(char **)(d + 0x28);
+        if (q == 0 || *(short *)(q + 0xA6) != *(int *)(d + 0x58) || *(unsigned char *)(q + 0x20) == 0xFE || *(unsigned char *)(q + 0x20) == 0xFD) {
+            *(float *)(d + 0x44) = *(float *)(d + 0x44) + D_0015EE60 * 0.1f;
+            *(int *)(d + 0x28) = 0;
+            r = func_001F9850(250);
+            r -= func_001F9850(100);
+            if (*(int *)(d + 0x24) < r) {
+                *(float *)(m + 0x44) = func_001FA748(*(float *)(m + 0x44), func_001F9FA8(*(float *)(d + 0x48)) * (D_0015EE60 * 0.04f));
+            }
+            *(float *)(m + 0x48) = func_001FA748(*(float *)(m + 0x48), func_001F9F90(*(float *)(d + 0x48)) * (D_0015EE60 * 0.05f));
+        } else {
+            qcopy(&u.v.c, q + 0x10);
+            u.v.c.f[2] = u.v.c.f[2] + *(float *)(d + 0x2C);
+            func_001F9BF0(&u.v.b, &u.v.c, d);
+            func_001F9BF0(&u.v.a, &u.v.c, d + 0x10);
+            qcopy(d, &u.v.c);
+            {
+                float r1 = func_L00_001FF3E0(&u.v.b);
+                float fB = (u.v.b.f[0] * u.v.a.f[0] + u.v.b.f[1] * u.v.a.f[1] + u.v.b.f[2] * u.v.a.f[2]) * -2.0f;
+                float fA = *(float *)(d + 0x30) * *(float *)(d + 0x30) - r1;
+                float r2f = func_L00_001FF3E0(&u.v.a);
+                float sq = func_001F9B50(fB * fB - (4.0f * fA) * (-r2f));
+                float t1 = (-fB + sq) / (fA + fA);
+                float t2 = (-fB - sq) / (fA + fA);
+                if (0.0f < t1 && 0.0f < t2) {
+                    t = (t2 < t1) ? t1 : t2;
+                } else if (0.0f < t1) {
+                    t = t1;
+                } else if (0.0f < t2) {
+                    t = t2;
+                } else {
+                    t = -1.0f;
+                }
+            }
+            if (0.0f < t) {
+                func_001F9C30(&v90, &u.v.b, t);
+                func_001F9BD8(&v90, &v90, &u.v.a);
+                g = func_L00_001FF860(v90.f[0], v90.f[1]);
+                *(float *)(m + 0x48) = func_L00_00259148((float *)(d + 0x34), *(float *)(m + 0x48), g, D_0015EE70 * 188.49556f, 0.0f, 0.0f);
+                g = func_L00_001FF860(func_001F9CE8(&v90), v90.f[2]);
+                *(float *)(m + 0x44) = func_L00_00259148((float *)(d + 0x38), *(float *)(m + 0x44), -g, D_0015EE70 * 188.49556f, 0.0f, 0.0f);
+            }
+            s = func_001F9CB8(&u.v.a);
+            if (s < 6.0f) {
+                *(float *)(d + 0x44) = *(float *)(d + 0x44) * (s / 6.0f);
+            } else {
+                *(float *)(d + 0x44) = *(float *)(d + 0x44) + D_0015EE60 * 0.1f;
+            }
+        }
+    }
+
+    func_00215C00(&v50, *(float *)(d + 0x30), *(float *)(m + 0x48), -*(float *)(m + 0x44));
+    *(u128 *)&u.v.b = 0;
+    u.v.b.f[0] = func_002140F8(-1.0f, 1.0f);
+    u.v.b.f[1] = func_002140F8(-1.0f, 1.0f);
+    u.v.b.f[2] = func_002140F8(-1.0f, 1.0f);
+    *(u128 *)&u.v.a = *(u128 *)&u.v.b;
+    func_L00_001FF4B0(&u.v.a, &u.v.a, func_002140F8(0.1f, 0.2f) * D_0015EE6C);
+    func_L00_001FF4B0(&z, &v50, -func_002140F8(D_0015EE6C * 0.1f, D_0015EE6C));
+    func_001F9BD8(&u.v.a, &u.v.a, &z);
+    func_L00_001FF4B0(&z, &v50, func_002140F8(0.0f, 1.0f) * *(float *)(d + 0x30));
+    func_001F9BD8(&z, &z, m + 0x10);
+    {
+        int c1 = func_001F9850(func_L00_00258BC8(0x1C, 0x28));
+        func_L00_0026A7F8(&z, &u.v.a, 0x6F00AFFF, 0x100000FF, c1, 0x28, func_L00_00258BC8(0x28, 0x46), 1);
+    }
+    qcopy(&v20, m + 0x10);
+    func_001F9BD8(d + 0x10, d + 0x10, &v50);
+    *(float *)(d + 0x48) = func_001FA748(*(float *)(d + 0x48), *(float *)(d + 0x50));
+    *(float *)(d + 0x4C) = func_001FA748(*(float *)(d + 0x4C), *(float *)(d + 0x54));
+    *(float *)(d + 0x48) = func_001FA748(*(float *)(d + 0x48), func_001F9FA8(*(float *)(d + 0x4C)) * 0.15f);
+    if (0.9f < *(float *)(d + 0x44)) *(float *)(d + 0x44) = 0.9f;
+
+    flag = 0;
+    goto body;
+    for (;;) {
+        float a1;
+        if (!(0.1f < sp)) goto done;
+    body:
+        a1 = func_001F9FA8(*(float *)(d + 0x48));
+        u.v.a.f[1] = *(float *)(d + 0x44) * a1 * func_001F9F90(*(float *)(d + 0x4C));
+        a1 = func_001F9F90(*(float *)(d + 0x48));
+        u.v.a.f[2] = *(float *)(d + 0x44) * a1 * func_001F9F90(*(float *)(d + 0x4C));
+        zf = 0.0f;
+        u.v.a.f[3] = zf;
+        u.v.a.f[0] = zf;
+        func_001FA218(va0, m + 0x40);
+        func_001F9EE8(&u.v.a, &u.v.a, va0);
+        func_001F9BD8(m + 0x10, d + 0x10, &u.v.a);
+        if (func_L00_001EFFF0(&v20, m + 0x10, 6, (int)m, 0) == 0) goto done;
+        goto hit;
+    top:;
+    }
+hit:
+    flag = 1;
+    sp = *(float *)(d + 0x44) * 0.7f;
+    *(float *)(d + 0x44) = sp;
+    goto top;
+done:
+
+    if (flag) {
+        *(float *)(m + 0x48) = func_L00_001FF860(*(float *)(m + 0x10) - v20.f[0], *(float *)(m + 0x14) - v20.f[1]);
+        *(float *)(m + 0x44) = -func_L00_001FF860(func_001F9D48(&v20, m + 0x10), *(float *)(m + 0x18) - v20.f[2]);
+        *(int *)(d + 0x34) = 0;
+        *(int *)(d + 0x38) = 0;
+    }
+
+    if (*(float *)(m + 0x10) < 0.0f || *(float *)(m + 0x14) < 0.0f || *(float *)(m + 0x18) < 0.0f) goto del;
+    u.h.c = 0x830000;
+    u.h.e = 3.0f;
+    u.h.p = m;
+    u.h.i = 1;
+    qcopy(&u.v.a, &v50);
+    func_L00_001FF500(&u.v.a, &u.v.a, 1.0f);
+    u.h.z = 1.0f;
+    u.h.b18 = 3;
+    u.h.w = 5627.925f;
+    u.h.b19 = 3;
+    u.h.s = *(unsigned short *)(m + 0xA6);
+    if (func_L00_001EFFF0(&v20, m + 0x10, 0, (int)m, (int)&u.v.a)) {
+        gg = (char *)D_L00_00173F40;
+        p = *(char **)(gg + 0x18);
+        if (p != 0) {
+            if (p == *(char **)(D_0013E633 + 0x2E9D) || p == *(char **)(d + 0x20)
+                || *(short *)(p + 0xA6) == 0x1C9 || *(short *)(p + 0xA6) == 0) goto keep;
+            m[0xBC] = 2;
+            qcopy(m + 0x10, gg + 0x20);
+            func_L00_001FF610(&dir, &v50, gg + 0x40);
+            func_L00_001FF4B0(&dir, &dir, D_0015EE6C + D_0015EE6C);
+            func_L00_0025F4A8_alt(m, &dir, 0, 0.0f, 0.0f, 10, 3, 9, 4.0f, 2.0f, 9.0f, 1.0f, 0, 15.0f, 1, 1, -1, 0);
+            func_0020D678(m);
+            return;
+        } else {
+            if (*(int *)(gg + 0x1C) <= 0) goto keep;
+            m[0xBC] = 1;
+            qcopy(m + 0x10, gg + 0x20);
+            func_L00_001FF610(&dir, &v50, gg + 0x40);
+            func_L00_001FF4B0(&dir, &dir, D_0015EE6C + D_0015EE6C);
+            func_L00_0025F4A8_alt(m, &dir, 0, 0.0f, 1.0f, 10, 3, 9, 4.0f, 2.0f, 9.0f, 1.0f, 0, 15.0f, 1, 1, -1, 0);
+            func_0020D678(m);
+            return;
+        }
+    } else {
+        if (func_001F9908((int *)(d + 0x24)) == 0
+            && !(200.0f < func_001F9D48(m + 0x10, *(char **)(D_0013E633 + 0x2E9D) + 0x10))) goto keep;
+    }
+del:
+    func_0020D678(m);
+    return;
+keep:
+    if (*(int *)(d + 0x24) % func_001F9850(0x20) != 0) return;
+    if (func_001160D8() & 1) {
+        *(float *)(d + 0x50) = *(float *)(d + 0x50) * func_002140F8(-0.7f, -1.5f);
+    }
+    if (func_001160D8() & 1) {
+        *(float *)(d + 0x54) = *(float *)(d + 0x54) * func_002140F8(-0.6f, -1.6f);
+    }
+}
 typedef struct {
     unsigned char pad0[0x80];
     float v80[4];

@@ -817,7 +817,99 @@ void func_L06_002F69D0(Moby *m) {
         break;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L06_002F71A8);
+extern void func_001F9EC0(void *, void *, void *);
+extern float D_L06_00161E00 SDATA(D_L06_00161E00);
+extern float D_L06_00161E04 SDATA(D_L06_00161E04);
+extern Vec_2F69D0 D_L06_00161DE0 SDATA(D_L06_00161DE0);
+extern Vec_2F69D0 D_L06_00161DF0 SDATA(D_L06_00161DF0);
+
+/* Blarg drawbridge pieces: places and rotates the 20 + 10 chained segment mobys. */
+void func_L06_002F71A8(Moby *m)
+{
+    Vec_2F69D0 v, w, x;
+    Data_2F69D0 *s = (Data_2F69D0 *)m->pvars;
+    int i, j;
+    float t, ang, a, b, c, d;
+
+    for (i = 0; i < 20; i++) {
+        t = D_L06_00161E08_2F69D0 - (float)i;
+        if (t < 0.0f) t = 0.0f;
+        func_L00_001FF4B0(&w, &m->unkC0, t);
+        func_001F9EC0(&v, &D_L06_00161DE0, &m->unkC0);
+        func_001F9BD8(&v, &v, &m->pos);
+        func_001F9BD8(&v, &v, &w);
+        qcopy(&s->a[i]->pos, &v);
+        func_001F9EC0(&v, &D_L06_00161DF0, &m->unkC0);
+        func_001F9BD8(&v, &v, &m->pos);
+        func_001F9BD8(&v, &v, &w);
+        qcopy(&s->b[i]->pos, &v);
+        ang = D_L06_00161E0C_2F69D0 * 0.017453292f - (float)(i * 45) * 0.017453292f;
+        if (ang > 1.5707964f) ang = 1.5707964f;
+        else if (ang < 0.0f) ang = 0.0f;
+        s->a[i]->rot.x = -ang;
+        s->b[i]->rot.x = ang;
+        func_L00_00251E30(s->a[i]);
+        func_L00_00251E30(s->b[i]);
+    }
+
+    for (j = 0; j < 10; j++) {
+        b = D_L06_00161E00 + (float)(4 - j) * D_L06_00161E04;
+        t = D_L06_00161E08_2F69D0 - j * 2.0f;
+        c = t - 1.0f;
+        if (t < b) t = b;
+        if (c < b) c = b;
+        func_L00_001FF4B0(&w, &m->unkC0, t);
+        func_L00_001FF4B0(&x, &m->unkC0, c);
+        func_001F9EC0(&v, &D_L06_00161DE0, &m->unkC0);
+        func_001F9BD8(&v, &v, &m->pos);
+        func_001F9BD8(&v, &v, &w);
+        qcopy(&s->c[j]->pos, &v);
+        func_001F9EC0(&v, &D_L06_00161DF0, &m->unkC0);
+        func_001F9BD8(&v, &v, &m->pos);
+        func_001F9BD8(&v, &v, &x);
+        qcopy(&s->d[j]->pos, &v);
+
+        a = D_L06_00161E0C_2F69D0 * 0.017453292f - (float)(j * 2) * 0.7853982f;
+        d = a - D_L06_00161E30_2F69D0 * 0.017453292f;
+        if (a > 1.5707964f) a = 1.5707964f;
+        else if (a < 0.0f) a = 0.0f;
+        if (d > 1.5707964f) d = 1.5707964f;
+        else if (d < 0.0f) d = 0.0f;
+        if (a != 0.0f && d == 0.0f) func_0022ED80_2F69D0(1, 0, s->c[j]);
+
+        c = D_L06_00161E0C_2F69D0 * 0.017453292f - (float)(j * 2) * 0.7853982f - 0.7853982f;
+        d = c - D_L06_00161E30_2F69D0 * 0.017453292f;
+        if (c > 1.5707964f) c = 1.5707964f;
+        else if (c < 0.0f) c = 0.0f;
+        if (d > 1.5707964f) d = 1.5707964f;
+        else if (d < 0.0f) d = 0.0f;
+        if (c != 0.0f && d == 0.0f) func_0022ED80_2F69D0(1, 0, s->d[j]);
+
+        s->c[j]->rot.x = -a;
+        s->d[j]->rot.x = c;
+
+        a = D_L06_00161E10_2F69D0 * 0.017453292f - (float)(j * 2) * 0.7853982f;
+        d = a - D_L06_00161E34_2F69D0 * 0.017453292f;
+        if (a > 1.5707964f) a = 1.5707964f;
+        else if (a < 0.0f) a = 0.0f;
+        if (d > 1.5707964f) d = 1.5707964f;
+        else if (d < 0.0f) d = 0.0f;
+        if (a != 0.0f && d == 0.0f) func_0022ED80_2F69D0(2, 0, s->c[j]);
+
+        c = D_L06_00161E10_2F69D0 * 0.017453292f - (float)(j * 2) * 0.7853982f - 0.7853982f;
+        d = a - D_L06_00161E34_2F69D0 * 0.017453292f;
+        if (c > 1.5707964f) c = 1.5707964f;
+        else if (c < 0.0f) c = 0.0f;
+        if (d > 1.5707964f) d = 1.5707964f;
+        else if (d < 0.0f) d = 0.0f;
+        if (c != 0.0f && d == 0.0f) func_0022ED80_2F69D0(2, 0, s->d[j]);
+
+        s->c[j]->rot.y = -a;
+        s->d[j]->rot.y = -c;
+        func_L00_00251E30(s->c[j]);
+        func_L00_00251E30(s->d[j]);
+    }
+}
 INCLUDE_ASM("asm/overlays", func_L06_002F78A0);
 typedef u32 u128_F8200 __attribute__((mode(TI), aligned(16)));
 typedef union {

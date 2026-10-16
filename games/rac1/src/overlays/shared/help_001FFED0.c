@@ -7,7 +7,143 @@
 #include "hero.h"
 #include "moby.h"
 
-INCLUDE_ASM("asm/overlays", func_L15_001FFED0);
+extern unsigned char D_0013E633[];
+extern unsigned char D_0015EEB0[] MACRO_ADDR;
+extern unsigned char D_0013D5DD[];
+extern int D_L15_0015F6B0 MACRO_ADDR;
+extern short D_0015EF18;
+extern float D_L15_0017C0EC, D_L15_0017C24C;
+extern void func_L00_00232EF0(void);
+extern void func_L00_00211D28(void);
+extern void func_L15_00204AC0(void);
+extern void func_L15_0021D7A8(void);
+extern void func_L00_00217698(void);
+extern void func_L00_00205B00(void);
+extern void func_L00_00209088(void);
+extern void func_L00_00208260(void);
+extern void func_L00_00208070(void);
+extern void func_L00_00248EF8(void *);
+extern void func_L00_00205FF0(void);
+extern void func_L00_00206808(void);
+extern void func_L00_00250800(void *, int, void *);
+extern void func_L00_00208318(void);
+extern int func_001F9850(int);
+extern float func_001FA888(int);
+extern float func_001F9FA8(float);
+extern int func_001FA898(float);
+extern unsigned int func_001FA8A8(float, unsigned int, unsigned int);
+extern void func_L00_00217570(int, int);
+extern void func_L00_002091D8(void);
+extern void func_L00_0025805C(void *);
+
+void func_L15_001FFED0(void) {
+    unsigned char *b0, *b1, *b2, *b3, *b4, *b5, *b6;
+    unsigned char *moby;
+    unsigned int copy[4] __attribute__((aligned(16)));
+    int period, red, green, blue, alpha, i;
+    unsigned int color;
+    float pulse;
+
+    func_L00_00232EF0();
+    func_L00_00211D28();
+    func_L15_00204AC0();
+    func_L15_0021D7A8();
+    b0 = D_0013E633 + 0xE1D;
+    if (b0[0x20A4] == 0)
+        return;
+    func_L00_00217698();
+    func_L00_00205B00();
+    if (b0[0x20A4] == 0)
+        return;
+    func_L00_00209088();
+    func_L00_00208260();
+    func_L00_00208070();
+    func_L00_00248EF8(b0 + 0x80);
+
+    if (b0[0x20A4] == 2) {
+        if (D_0015EEB0[3] != 0)
+            D_L15_0017C0EC = (*(float *)&D_0015EF18) * 1.4f;
+        func_L00_00205FF0();
+        func_L00_00206808();
+        {
+        unsigned char *m = *(unsigned char **)(b0 + 0x2080);
+        if (((*(unsigned short *)(m + 0x34) ^ 1) & 1) != 0) {
+            func_L00_00250800(m, 6, copy);
+            qcopy(b0 + 0x1D80, copy);
+            func_L00_00208318();
+        }
+        }
+    }
+
+    b1 = D_0013E633 + 0xE1D;
+    if (b1[0x20A4] == 3) {
+        if (D_0015EEB0[1] != 0)
+            D_L15_0017C24C = 1.9f;
+        alpha = 0x80;
+        period = func_001F9850(0xAA);
+        if (*(short *)(b1 + 0x22E0) == 2)
+            period = func_001F9850(0x32);
+        else if (*(short *)(b1 + 0x22E0) == 1)
+            period = func_001F9850(0x5A);
+        pulse = func_001F9FA8((((float)(D_L15_0015F6B0 % period) / func_001FA888(period)) * 2.0f) * 3.1415927f + -3.1415927f);
+        red = func_001FA898(pulse * 20.0f) + 0x32;
+        green = func_001FA898(pulse * 70.0f) + 0xB4;
+        blue = func_001FA898(pulse * 10.0f);
+        b2 = D_0013E633 + 0xE1D;
+        moby = *(unsigned char **)(b2 + 0x2080);
+        if (red > 0xFF) red = 0xFF;
+        if (green > 0xFF) green = 0xFF;
+        blue += 0x14;
+        *(unsigned short *)(moby + 0x34) |= 0x10;
+        if (*(short *)(b2 + 0x22E0) == 2)
+            color = (alpha << 24) | (blue << 16) | ((red / 2) << 8) | green;
+        else
+            color = (alpha << 24) | (blue << 16) | (green << 8) | red;
+        b3 = D_0013E633 + 0xE1D;
+        *(unsigned int *)(*(unsigned char **)(b3 + 0x2080) + 0x90) =
+            func_001FA8A8(0.1f, *(unsigned int *)(*(unsigned char **)(b3 + 0x2080) + 0x90), color);
+        for (i = 0; i < 3; i++)
+        {
+            b4 = D_0013E633 + 0xE1D;
+            func_L00_00250800(*(void **)(b4 + 0x2080), i, b4 + 0x1D50 + i * 16);
+        }
+        alpha = 0x30;
+        b4 = D_0013E633 + 0xE1D;
+        {
+            unsigned char *mb = *(unsigned char **)(b4 + 0x2080);
+            blue = mb[0x92];
+            green = mb[0x91];
+            red = mb[0x90];
+        }
+        if (*(short *)(b4 + 0x22DE) != 0)
+            alpha = func_001FA898((func_001FA888(*(short *)(b4 + 0x22DE)) / func_001FA888(0x12)) * (float)alpha);
+        *(unsigned int *)(b4 + 0x22E4) = (alpha << 24) | (blue << 16) | (green << 8) | red;
+        func_L00_00208318();
+        *(short *)(b4 + 0x22E0) = 0;
+        if (b4[0x20A4] == 3) {
+            int pending = *(int *)(b4 + 0x20B8);
+            if (pending != 0 && pending != 0x1F) {
+                if (*(short *)(b4 + 0x22DE) == 0) {
+                    func_L00_00217570(0x19, 0);
+                    *(short *)(b4 + 0x22DE) = 0x12;
+                    *(short *)(b4 + 0x22DC) = 1;
+                }
+            } else {
+                b5 = D_0013E633 + 0xE1D;
+                *(int *)(b5 + 0x20B8) = 0;
+                if (b5[0x12E7] != 0 && *(int *)(b5 + 0x300) != 0 && D_0013D5DD[7] != 0 &&
+                    *(short *)(b5 + 0x22DE) == 0) {
+                    func_L00_00217570(0x19, 0);
+                    *(short *)(b5 + 0x22DE) = 0x12;
+                    *(short *)(b5 + 0x22DC) = 1;
+                }
+            }
+        }
+    }
+    func_L00_002091D8();
+    b6 = D_0013E633 + 0xE1D;
+    func_L00_0025805C(*(void **)(b6 + 0x2080));
+}
 extern unsigned char D_0013E633[];
 extern unsigned char D_0013E15A[];
 extern void func_L00_00207948(int, int);

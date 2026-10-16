@@ -336,7 +336,9 @@ A function that stopped is not owed another round at the same tier. OpenRAC's
 What the native port needs and no tier has matched is written as functional C: the same
 behaviour, not the same bytes, in `nonmatching/functional/` with a row in
 `nonmatching/functional.tsv`. It is never in `src/` and never in the report
-(docs/NONMATCHING.md).
+(docs/NONMATCHING.md). CI uploads the list beside the report as `functional.json`
+(`tools/gen_functional_list.py`, which reads each file's `functional:` line for its
+confidence); ByteMatch shows it on its own line under the Code bar and never as progress.
 
 ## Matches without a model
 

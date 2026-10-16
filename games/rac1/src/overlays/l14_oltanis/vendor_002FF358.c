@@ -576,7 +576,228 @@ void func_L14_00300468(char *m) {
         func_L00_00263950(m, d + 0xD0, 1, sx * D_0015EE64, sy * D_0015EE64);
     }
 }
-INCLUDE_ASM("asm/overlays", func_L14_00302288);
+typedef struct {
+    char pad0[0x10];
+    Vec4f vel;
+    int fade;
+    int owner;
+    short trail;
+    short bounces;
+    float fade_rate;
+} Spark_2288;
+typedef struct {
+    char pad0[0x18];
+    int owner;
+    int pad1C;
+    Vec4f hit;
+    Vec4f pad30;
+    Vec4f normal;
+} Coll_2288;
+typedef struct { float r, g, b; } Rgb_2288;
+typedef unsigned int u128_2288 __attribute__((mode(TI)));
+extern Coll_2288 D_L14_00174640;
+extern int D_L14_00174658 __attribute__((section(".data")));
+extern short D_L14_0016215C;
+extern short D_L14_00162158;
+extern short D_L14_00162160;
+extern short D_L14_00162164;
+extern short D_L14_00162170;
+extern short D_L14_00162174;
+extern int func_L00_001F10E0(void *, int, void *, float);
+extern int func_001F9908(int *);
+extern int func_001F9938(short *);
+extern void func_L00_0025C710(void *, void *, void *, float);
+extern int func_002140B0(int);
+extern float func_001FA888(int);
+extern int func_L00_001EFFF0(void *, void *, int, void *, int);
+extern void func_L00_001FF4B0(void *, void *, float);
+extern void func_L00_001FF610(void *, void *, void *);
+extern int func_0022ED80();
+extern void func_L00_001FF500(void *, void *, float);
+extern int func_001FA898(float);
+extern void func_L00_0025F4A8(void *, void *, void *, float, float, int, int, int, float, float, float, int, float, float, int, int, int, int);
+extern Rgb_2288 D_L14_00162178;
+extern float D_0015EE60 MACRO_ADDR;
+
+void func_L14_00302288(Moby *m)
+{
+  Spark_2288 *d = (Spark_2288 *) m->pvars;
+  Vec4f next;
+  Vec4f t;
+  Vec4f from;
+  float speed;
+  float lo;
+  float hi;
+  if (((func_L00_001F10E0(&m->pos, 0, m, 0.65f) != 0) && (D_L14_00174658 != 0)) && (D_L14_00174658 != d->owner))
+  {
+    m->state = 3;
+  }
+  if (func_001F9908(&d->fade) != 0)
+  {
+    m->state = 3;
+  }
+  switch (m->state)
+  {
+    case 0:
+
+    case 1:
+    {
+      func_001F9BD8(&next, &m->pos, &d->vel);
+      d->vel.z -= d->vel.w;
+      if ((m->state == 1) && (d->vel.z < 0.0f))
+      {
+        m->state = 0;
+      }
+      func_001F9938(&d->trail);
+      if (d->trail != 0)
+      {
+        int i;
+        for (i = 0; i < 3; i++)
+        {
+          float one = 1.0f;
+          float third = 0.3333f;
+          int spin;
+          char *p;
+          *((u128_2288 *) (&from)) = *((u128_2288 *) (&m->pos));
+          func_L00_0025C710(&t, &from, &next, ((float) i) * third);
+          spin = func_002140B0(6);
+          if (func_002140B0(2) != 0)
+          {
+            spin = -spin;
+          }
+          p = (char *)func_L00_0026DEA0_2FF358(&t, 0.025f, one, one, spin, D_L14_0015F660_2FF358, ((((float) d->trail) / func_001FA888(func_001F9850(*(int *)&D_L14_0016215C))) * 45000.0f) + 5000.0f, 0x80808080);
+          if (p != 0)
+          {
+            char *q = p + 0x20;
+            short fr = func_001F9850(0x78);
+            *((short *) (p + 0xA)) = fr;
+            *((int *) (q + 4)) = 2;
+            q[0xA] = 0x7F;
+            q[0xB] = p[0xA];
+          }
+        }
+
+      }
+      if ((func_L00_001EFFF0(&m->pos, &next, 0, m, 0) != 0) && ((D_L14_00174640.owner == 0) || (D_L14_00174640.owner != d->owner)))
+      {
+        qcopy(&m->pos, &D_L14_00174640.hit);
+      }
+      else
+      {
+        qcopy(&m->pos, &next);
+      }
+      if (((func_L00_001F10E0(&m->pos, 0, m, *(float *)&D_L14_00162158) != 0) && ((m->state == 0) || ((m->pos.z - D_L14_00174640.hit.z) < 0.0f))) && ((D_L14_00174640.owner == 0) || (D_L14_00174640.owner != d->owner)))
+      {
+        func_L00_001FF4B0(&t, &D_L14_00174640.normal, *(float *)&D_L14_00162158);
+        func_001F9BD8(&m->pos, &D_L14_00174640.hit, &t);
+        func_L00_001FF610(&d->vel, &d->vel, &D_L14_00174640.normal);
+        func_0022ED80(1, 0, m);
+        if (m->state == 0)
+        {
+          m->state = 1;
+          if ((++d->bounces) == 1)
+          {
+            func_L00_001FF500(&d->vel, &d->vel, *(float *)&D_L14_00162174 * D_0015EE6C);
+            d->vel.z = d->vel.z * *(float *)&D_L14_00162170;
+          }
+          else
+          {
+            func_001F9C30_2FF358(&from, &d->vel, *(float *)&D_L14_00162170);
+            if (func_001F9CE8(&from) < (*(float *)&D_L14_00162160 * D_0015EE6C))
+            {
+              func_L00_001FF500(&d->vel, &d->vel, *(float *)&D_L14_00162160 * D_0015EE6C);
+              d->vel.z *= *(float *)&D_L14_00162170;
+            }
+            else
+            {
+              qcopy(&d->vel, &from);
+            }
+          }
+        }
+        if (d->bounces >= 4)
+        {
+          float min;
+          float w;
+          float c;
+          m->state = 2;
+          d->vel.z = 0.0f;
+          w = func_001F9CE8(&d->vel);
+          c = *(float *)&D_L14_00162170;
+          min = *(float *)&D_L14_00162160;
+          d->vel.w = w;
+          min *= D_0015EE6C;
+          d->vel.w *= c;
+          if (d->vel.w < min)
+          {
+            d->vel.w = min;
+          }
+          func_L00_001FF4B0(&d->vel, &d->vel, d->vel.w);
+          d->fade_rate = 1.0f / func_001FA888(d->fade);
+        }
+      }
+      break;
+    }
+
+    case 2:
+    {
+      float f;
+      int r;
+      int g;
+      int b;
+      float k;
+      float min;
+      *((Rgb_2288 *) (&next)) = D_L14_00162178;
+      f = ((float) d->fade) * d->fade_rate;
+      r = func_001FA898(((((Rgb_2288 *) (&next))->r - 255.0f) * f) + 255.0f);
+      g = func_001FA898(((((Rgb_2288 *) (&next))->g - 0.0f) * f) + 0.0f);
+      b = func_001FA898(((((Rgb_2288 *) (&next))->b - 0.0f) * f) + 0.0f);
+      k = ((*(float *)&D_L14_00162164 - 1.0f) * D_0015EE60) + 1.0f;
+      min = *(float *)&D_L14_00162160 * D_0015EE6C;
+      m->unk90 = 0xFF000000;
+      m->unk90 = (((b << 16) | m->unk90) | (g << 8)) | r;
+      d->vel.w *= k;
+      if (d->vel.w < min)
+      {
+        d->vel.w = min;
+      }
+      func_L00_001FF4B0(&d->vel, &d->vel, d->vel.w);
+      func_001F9BD8(&m->pos, &m->pos, &d->vel);
+      break;
+    }
+
+    case 3:
+      func_L00_0025F4A8(m, &d->vel, &m->pos, 2.0f, 1.0f, 5, 2, 4, 2.0f, 1.0f, 9.0f, 0, 1.0f, 15.0f, 1, 1, -1, 0);
+      func_0020D678(m);
+      return;
+
+  }
+
+  if (m->state < 2)
+  {
+    speed = func_001F9CE8(&d->vel);
+  }
+  else
+    if (m->state == 2)
+  {
+    speed = d->vel.w;
+  }
+  else
+  {
+    return;
+  }
+  lo = D_0015EE6C * 0.2f;
+  hi = D_0015EE6C * 6.0f;
+  if (speed < lo)
+  {
+    speed = lo;
+  }
+  if (hi < speed)
+  {
+    speed = hi;
+  }
+  speed -= lo;
+  m->rot.y = func_001FA748((((speed / (hi - lo)) * 7.0f) + 1.0f) * 0.017453292f, m->rot.y);
+}
 extern char *func_0020D348(int);
 extern float func_L00_001FF860(float, float);
 extern void func_L00_00251E30(void *);
@@ -3251,7 +3472,138 @@ void func_L14_00314A40(int value)
     }
 }
 LINKER_REMNANT("asm/overlays", func_L14_003162A0);
-INCLUDE_ASM("asm/overlays", func_L14_00316388);
+extern char *D_L14_0015F050 MACRO_ADDR;
+typedef struct { char pad0[0x184]; char *p184; } Cam_316388;
+extern Cam_316388 D_L14_00167480_c __asm__("D_L14_00167480");
+extern void func_L00_00217718(void *, void *, int, int);
+
+typedef struct { char pad0[0xB0]; float fB0; } View_316388;
+extern View_316388 D_L14_0016D240_v __asm__("D_L14_0016D240");
+typedef int u128_316388 __attribute__((mode(TI)));
+typedef struct {
+    int n;
+    int pad[3];
+    float pts[1][4];
+} Path_316388;
+typedef struct {
+    s32 seg;
+    f32 t;
+    f32 len_a;
+    f32 len_b;
+    f32 dist;
+    s16 started;
+    s16 timer;
+} Run_316388;
+typedef struct {
+    s16 seg[8];
+    f32 fov[8];
+    f32 fov_end;
+} Stops_316388;
+
+/* Activate function of camera 20 (level 14): clears the record, builds the path tables and copies the camera vectors. */
+void func_L14_00316388(char *cam) {
+    float v[4] __attribute__((aligned(16)));
+    char *obj;
+    char *data;
+    Run_316388 *q;
+    Stops_316388 *s;
+    Path_316388 *ent;
+    char *p;
+    char *p10, *p20, *p30;
+    int i, k, m;
+    float *row;
+    short *so;
+    float d, f0, f20, f21;
+
+    obj = *(char **)(D_L14_0015F050 + *(short *)(cam + 0x84) * 32 + 0x1C);
+    obj[0x38] = 3;
+    q = (Run_316388 *)(*(char **)(cam + 0x70) + 0x40);
+    q->seg = 0;
+    q->t = 0;
+    q->len_a = 0;
+    q->len_b = 0;
+    q->dist = 0;
+    q->started = 0;
+    q->timer = func_001F9850(*(short *)(obj + 0x3A));
+
+    s = (Stops_316388 *)(*(char **)(cam + 0x70) + 0x58);
+    for (k = 0; k < 8; k++) {
+        s->fov[k] = 0;
+        s->seg[k] = -1;
+    }
+
+    p30 = cam + 0x30;
+    p10 = cam + 0x10;
+    p20 = cam + 0x20;
+    s->fov_end = func_L00_001FF860(1.0f, D_L14_0016D240_v.fB0) * 2.0f;
+
+    if (*(int *)(obj + 0x20) >= 0) {
+        ent = (Path_316388 *)D_L14_001B0F30[*(int *)(obj + 0x20)];
+        k = 0;
+        for (i = 0; i < ent->n; i = m) {
+            {
+                row = (float *)((char *)ent + i * 16);
+                f0 = row[7];
+                if (0.0f < f0) {
+                    s->fov[k] = f0;
+                    s->seg[k] = i;
+                    k++;
+                }
+                m = i + 1;
+                d = func_001F9D10(ent->pts[i], ent->pts[m % ent->n]);
+                row[7] = d;
+                if (i < ent->n - 1) {
+                    q->len_a += d;
+                }
+            }
+        }
+    }
+
+    if (*(short *)(obj + 0x3A) > 0) {
+        f0 = func_001FA888(func_001F9850(*(short *)(obj + 0x3A)));
+        *(float *)(obj + 0x3C) = q->len_a / f0 * 60.0f;
+    }
+
+    if (*(int *)(obj + 0x24) >= 0) {
+        ent = (Path_316388 *)D_L14_001B0F30[*(int *)(obj + 0x24)];
+        for (i = 0; i < ent->n;) {
+            {
+                float *r;
+                int n;
+                n = i + 1;
+                d = func_001F9D10(ent->pts[i], ent->pts[n % ent->n]);
+                r = (float *)((char *)ent + i * 16);
+                r[7] = d;
+                if (i < ent->n - 1) {
+                    q->len_b += d;
+                }
+                i = n;
+            }
+        }
+    }
+
+    f20 = 0.03f;
+    f21 = 0.2f;
+    data = *(char **)(cam + 0x70);
+    *(float *)(data + 0) = f20;
+    *(float *)(data + 4) = f21;
+    func_001F9BC0(data + 0x10);
+    data = *(char **)(cam + 0x70);
+    *(float *)(data + 0x20) = f20;
+    *(float *)(data + 0x24) = f21;
+    func_001F9BC0(data + 0x30);
+
+    p = D_L14_00167480_c.p184;
+    qcopy(p30, p + 0x30);
+    qcopy(cam, p);
+    qcopy(p10, p + 0x10);
+    qcopy(p20, p + 0x20);
+
+    p = D_L14_001601AC_300468 + *(int *)(obj + 0x54) * 128 + 0x30;
+    *(u128_316388 *)v = 0;
+    v[3] = 1.0f;
+    func_L00_00217718(p, v, 0x72, 0);
+}
 typedef u32 u128 __attribute__((mode(TI), aligned(16)));
 typedef struct {
     f32 x;

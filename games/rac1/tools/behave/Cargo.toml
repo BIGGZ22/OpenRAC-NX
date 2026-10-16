@@ -1,0 +1,15 @@
+[package]
+name = "behave"
+description = "Run a retail function and a candidate side by side on random state and compare what they do"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+publish = false
+
+# ps2-oracle (MIT, FIZL0) interprets R5900 code, VU0 macro and micro mode included, with ps2-float's
+# arithmetic: the same model for retail's VU0 code and a candidate's FPU code.
+[dependencies]
+ps2-oracle = { path = "vendor/ps2-oracle" }
+
+[profile.release]
+opt-level = 3

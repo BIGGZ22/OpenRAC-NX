@@ -39,6 +39,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -51,10 +52,12 @@ import rabbitizer as rz  # noqa: E402
 from elftools.elf.elffile import ELFFile  # noqa: E402
 from elftools.elf.relocation import RelocationSection  # noqa: E402
 
-CC = "toolchain/sn-prodg-24/local/sce/ee/gcc/bin/ee-gcc2953.exe"
+# Absolute: Windows' CreateProcess won't resolve a relative forward-slash
+# path to an .exe (tools/toolchain.py).
+CC = str(Path("toolchain/sn-prodg-24/local/sce/ee/gcc/bin/ee-gcc2953.exe").resolve())
 # Sony SDK sources built with the SDK's 2.9-ee (Makefile.sn's EE29_CORE: the
 # objects marked `ee29` in config/core_text.objects).
-CC29 = "toolchain/sn-prodg-24/local/sce/ee/gcc/bin/ee-gcc.exe"
+CC29 = str(Path("toolchain/sn-prodg-24/local/sce/ee/gcc/bin/ee-gcc.exe").resolve())
 EE29_INC = "-Itoolchain/sn-prodg-24/local/sce/ee/gcc/lib/gcc-lib/ee/2.9-ee-991111/include"
 EE29_SOURCES = ee29_sources()
 CFLAGS = ["-O2", "-G2", "-Iinclude", "-Wa,-I,."] + os.environ.get("TRY_CFLAGS", "").split()  # extra flags for experiments
@@ -138,7 +141,7 @@ def build(name, seg, src, first, last, candidate, work):
     extra = file_cflags.flags_for(src)
     with open(work / "log.txt", "w") as log:
         s = [work / f"{n}.s" for n in "abcd"]
-        if str(src) in EE29_SOURCES:
+        if Path(src).as_posix() in EE29_SOURCES:
             if not run(sn(CC29, *CFLAGS, *extra, EE29_INC, "-S", "-o", str(s[0]), str(c)), log):
                 return None
             shutil.copy(s[0], s[3])
@@ -186,6 +189,37 @@ def build(name, seg, src, first, last, candidate, work):
 GP = 0x166D00
 _ADDRS = None
 
+
+
+def build_dumping(name, seg, src, first, last, candidate, work):
+    """build(), but with dump flags (-d...) in TRY_CFLAGS: GCC writes its dumps to the
+    current directory as src.c.<pass>, so hold tools/regalloc.py's lock and move them
+    into WORK, or concurrent runs take each other's dumps."""
+    if not any(f.startswith("-d") for f in os.environ.get("TRY_CFLAGS", "").split()):
+        return build(name, seg, src, first, last, candidate, work)
+    lock = Path("build-sn/regalloc/.lock")
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    while True:
+        try:
+            lock.mkdir()
+            break
+        except FileExistsError:
+            try:
+                if time.time() - lock.stat().st_mtime > 600:
+                    lock.rmdir()
+            except OSError:
+                pass
+            time.sleep(1)
+    try:
+        for d in Path(".").glob("src.c.*"):
+            d.unlink()
+        obj = build(name, seg, src, first, last, candidate, work)
+        work.mkdir(parents=True, exist_ok=True)
+        for d in Path(".").glob("src.c.*"):
+            d.replace(work / d.name)
+    finally:
+        lock.rmdir()
+    return obj
 
 def symbol_address(name):
     """A symbol's retail address: config/symbol_addrs.txt, then the address a
@@ -323,7 +357,7 @@ def main():
     for cand in cands:
         # Several candidates: label each line, and keep going past failures.
         label = f"{Path(cand).name:10s} " if len(cands) > 1 else ""
-        obj = build(name, seg, src, first, last, Path(cand).read_text(), work)
+        obj = build_dumping(name, seg, src, first, last, Path(cand).read_text(), work)
         if obj is None:
             verdict = "COMPILE failed"
         elif is_overlay:

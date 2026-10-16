@@ -320,7 +320,15 @@ void func_L00_0020D9C8(void) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_0020DAF8);
+/* the moby of item slot i while the slot is ready (state 2), else 0 */
+char *func_L00_0020DAF8(int i) {
+    char *e = (D_0013E633 + 0xE1D) + i * 0x50;
+
+    if (*(int *)(e + 0x10B4) == 2) {
+        return *(char **)(e + 0x1090);
+    }
+    return 0;
+}
 // Returns field from argument at offset 0x1090
 int func_L00_0020DB1C(char *arg) {
     return *(int *)(arg + 0x1090);
@@ -752,7 +760,130 @@ float func_L00_0020F750(float *a, float *b) {
     }
     return s;
 }
-INCLUDE_ASM("asm/overlays", func_L00_0020F7F8);
+extern short D_L00_0015F774;
+extern void func_001FA480();
+extern void func_00214F78(void *);
+extern void func_001F9BC0(void *);
+extern float func_L00_0020F750(float *a, float *b);
+extern void func_001F9BD8(void *, void *, void *);
+extern void func_001F9C30(void *, void *, float);
+extern void func_002153E8(void *, void *);
+
+typedef struct { float x, y, z, w; } __attribute__((aligned(16))) V4_F7F8;
+
+/* Advances the 16-slot history ring, scores slots against each other and averages the agreeing ones into arg+0x40. */
+void func_L00_0020F7F8(char *arg) {
+    V4_F7F8 vv[4];
+    float fa[16];
+    int ri;
+    int cnt;
+    float *fp;
+    char *out;
+    int n, i, k, acc;
+    float mx;
+
+    {
+    char *b = D_0013E633 + 0xE1D;
+    func_001FA480(D_0013E633 + 0xE1D + 0x12F0 + *(int *)(b + 0x21B8) * 0x30);
+    func_00214F78(D_0013E633 + 0xE1D + 0x12F0 + *(int *)(b + 0x21B8) * 0x30);
+
+    *(int *)(b + 0x21B8) = (*(int *)(b + 0x21B8) + 1) % 16;
+    *(int *)(b + 0x21BC) = *(int *)(b + 0x21BC) + 1;
+    if (*(int *)(b + 0x21BC) > 16) {
+        *(int *)(b + 0x21BC) = 16;
+    }
+    }
+
+    for (k = 0; k < 3; k++) {
+        func_001F9BC0(&vv[k]);
+    }
+
+    {
+    char *b = D_0013E633 + 0xE1D;
+    if (*(int *)(b + 0x208C) == 0x16) {
+        *(int *)&D_L00_0015F774 = 14;
+    } else if (*(int *)(b + 0x2084) == 2) {
+        *(int *)&D_L00_0015F774 = 5;
+    } else {
+        *(int *)&D_L00_0015F774 = 11;
+    }
+    }
+
+    {
+    char *b = D_0013E633 + 0xE1D;
+    if (*(int *)(b + 0x21C0) < *(int *)&D_L00_0015F774) {
+        *(int *)(b + 0x21C0) = *(int *)(b + 0x21C0) + 1;
+    } else if (*(int *)&D_L00_0015F774 < *(int *)(b + 0x21C0)) {
+        *(int *)(b + 0x21C0) = *(int *)(b + 0x21C0) - 1;
+    }
+    }
+
+    {
+    char *b = D_0013E633 + 0xE1D;
+    n = *(int *)(b + 0x21C0);
+    if (n < 2) {
+        n = 2;
+    }
+    if (*(int *)(b + 0x21BC) < n) {
+        return;
+    }
+    }
+
+    out = arg + 0x40;
+    cnt = 0;
+
+    for (i = 0; i < n; i++) {
+        char *b = D_0013E633 + 0xE1D;
+        int t;
+        fp = fa;
+        t = i - 15;
+        ri = (*(int *)(b + 0x21B8) - t) % 16;
+        for (k = 0; k < n; k++) {
+            if (i != k) {
+                char *b = D_0013E633 + 0xE1D;
+                int u = k - 15;
+                int rj = (*(int *)(b + 0x21B8) - u) % 16;
+                *(float *)((char *)fp - (-(i * 4))) += func_L00_0020F750(
+                    (float *)(D_0013E633 + 0xE1D + 0x12F0 + ri * 0x30),
+                    (float *)(D_0013E633 + 0xE1D + 0x12F0 + rj * 0x30));
+            }
+        }
+    }
+
+    mx = 0.0f;
+    for (i = 0; i < n; i++) {
+        if (mx < fa[i]) {
+            mx = fa[i];
+        }
+    }
+
+    for (i = 0; i < n; i++) {
+        if (mx * 0.2f < fa[i]) {
+            cnt++;
+        }
+    }
+
+    acc = 0;
+    for (i = 0; i < n; i++) {
+        if (mx * 0.2f < fa[i] && cnt > 0 && cnt < 3) {
+            continue;
+        }
+        acc++;
+        {
+        char *b = D_0013E633 + 0xE1D;
+        int t = i - 15;
+        ri = (*(int *)(b + 0x21B8) - t) % 16;
+        for (k = 0; k < 3; k++) {
+            func_001F9BD8(&vv[k], &vv[k], D_0013E633 + 0xE1D + 0x12F0 + ri * 0x30 + k * 16);
+        }
+        }
+    }
+
+    for (k = 0; k < 3; k++) {
+        func_001F9C30(&vv[k], &vv[k], 1.0f / (float)acc);
+    }
+    func_002153E8(vv, out);
+}
 INCLUDE_ASM("asm/overlays", func_L00_0020FC18);
 extern char D_0013E633[];
 extern void func_0020D678(void *);

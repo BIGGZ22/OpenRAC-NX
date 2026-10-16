@@ -1,11 +1,11 @@
-/* functional: medium. Reads the 8 bytes at obj+0x38 (b0, b1, b2); table D_L00_0017FFC0 has 64-byte entries whose first quad is a colour/vector. If b2 == 0 copies entry b0's quad to out; else out.xyz = e0.xyz*(1-t) + e1.xyz*t with t = b2/256 (e0 = entry b0, e1 = entry b1) and out.w = e0.w. Joined with func_L00_00251438; VU rounding (ACC then madd) written as separate float operations; not run. */
+/* functional: medium. Reads bytes 0-2 of the 8 at obj+0x38 (b0, b1, b2; retail loads all 8 and shifts); table D_L00_0017FFC0 has 64-byte entries whose first quad is a colour/vector. If b2 == 0 copies entry b0's quad to out; else out.xyz = e0.xyz*(1-t) + e1.xyz*t with t = b2/256 (e0 = entry b0, e1 = entry b1) and out.w = e0.w. Joined with func_L00_00251438; VU rounding (ACC then madd) written as separate float operations; not run. */
 extern char D_L00_0017FFC0_513F8[] __asm__("D_L00_0017FFC0");
 
 void func_L00_002513F8(char *obj, float *out) {
-    unsigned long long v = *(unsigned long long *)(obj + 0x38);
-    unsigned int b0 = (unsigned int)(v & 0xFF);
-    unsigned int b1 = (unsigned int)((v >> 8) & 0xFF);
-    unsigned int b2 = (unsigned int)((v >> 16) & 0xFF);
+    unsigned char *v = (unsigned char *)(obj + 0x38);
+    unsigned int b0 = v[0];
+    unsigned int b1 = v[1];
+    unsigned int b2 = v[2];
     float *e0 = (float *)(D_L00_0017FFC0_513F8 + (b0 << 6));
 
     if ((int)b2 <= 0) {

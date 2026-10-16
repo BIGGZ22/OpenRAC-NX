@@ -1547,7 +1547,45 @@ void func_L03_002DF738(char *moby) {
         DeleteMoby(moby);
     }
 }
-INCLUDE_ASM("asm/overlays", func_L03_002E99F0);
+extern int D_L03_0015F050 MACRO_ADDR;
+extern void func_001F9978(void);
+extern void func_001FA218(void *, void *);
+
+typedef struct { char pad0[0x40]; int x40; char pad1[8]; float x4C; } CamSub;
+typedef struct { char pad0[4]; float f4; float f8; int fC; CamSub sub; char pad1[0x20]; int x80; } CamInfo;
+
+void func_L03_002E99F0(char *cam) {
+    float v[4] __attribute__((aligned(16)));
+    float mat[16] __attribute__((aligned(16)));
+    CamSub *a = &(*(CamInfo **)(cam + 0x70))->sub;
+    CamInfo *d;
+    char *ent;
+    int idx;
+    char *p;
+    a->x4C = 1.5f;
+    a->x40 = 0;
+    (*(CamInfo **)(cam + 0x70))->x80 = 0;
+    d = *(CamInfo **)(cam + 0x70);
+    d->f4 = 0.02f;
+    d->f8 = 0.1f;
+    d->fC = 0;
+    idx = *(short *)(cam + 0x84);
+    ent = (char *)D_L03_0015F050 + (idx << 5);
+    p = *(char **)(ent + 0x1C);
+    if (idx < 0) {
+        func_001F9978();
+    } else {
+        a->x4C = *(float *)(p + 0x18);
+    }
+    qcopy(cam + 0x30, ent);
+    qcopy(v, ent + 0x10);
+    func_001FA218(mat, v);
+    qcopy(cam, mat);
+    qcopy(cam + 0x10, mat + 4);
+    qcopy(cam + 0x20, mat + 8);
+    qcopy(cam + 0x40, cam);
+    *(short *)(cam + 0x7E) = 0;
+}
 extern float D_0013F4D0[];
 extern float D_L03_00166FB0[];
 extern void func_001F9BF0(void *,void *,void *);

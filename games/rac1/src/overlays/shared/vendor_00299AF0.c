@@ -350,7 +350,209 @@ int func_L10_002F6E38(char *moby, char *unused)
     return 0;
 }
 INCLUDE_ASM("asm/overlays", func_L10_002F6F18);
-INCLUDE_ASM("asm/overlays", func_L10_002F72D8);
+extern char *D_L10_0015F050 MACRO_ADDR;
+extern float D_L10_0015F4FC MACRO_ADDR;
+extern char *D_L10_00160058 MACRO_ADDR;
+extern char *D_L10_001B0C30[];
+extern int D_L10_0015F504 MACRO_ADDR;
+extern float D_L10_0016CFF0;
+extern float D_L10_001673D8;
+extern char D_L10_0016CF40[];
+extern float D_L10_001674D0[];
+extern void func_001F9EC0(void *, void *, void *);
+extern void func_001F9CA0(void *, void *, void *);
+extern void func_001F3140(void);
+extern void func_L00_00222B80(int, int);
+extern int func_L00_0025E860(void *, void *, int *, float *, float, int);
+extern int func_001F9938(void *);
+extern float func_00214220(float, float, float);
+extern void func_001E9768(void *, void *);
+
+struct CamK_72D8 {
+    short ids[8];
+    float vals[9];
+};
+
+/* Camera 19 update: advances the blend state and aims the camera each frame. */
+void func_L10_002F72D8(char *moby) {
+    float va[4];
+    float v1[4];
+    float v2[4];
+    float v3[4];
+    int ia;
+    float ib;
+    char *dat;
+    char *f;
+    struct CamK_72D8 *k;
+    char *e;
+    char *g;
+    short st;
+    float t;
+
+    dat = *(char **)(moby + 0x70);
+    f = dat + 0x40;
+    k = (struct CamK_72D8 *)(dat + 0x58);
+    e = *(char **)(D_L10_0015F050 + *(short *)(moby + 0x84) * 0x20 + 0x1C);
+    st = *(short *)(f + 0x14);
+
+    if (st == 0) {
+        char *a;
+        char *b;
+        char *pm;
+        char *gb;
+        float *c3;
+        D_L10_0015F4FC += 0.05f;
+        if (1.0f <= D_L10_0015F4FC) {
+            a = D_L10_001B0C30[*(int *)(e + 0x20)];
+            b = D_L10_001B0C30[*(int *)(e + 0x24)];
+            pm = moby + 0x30;
+            D_L10_0015F4FC = 1.0f;
+            a = a + 0x10;
+            D_L10_0015F504 = 1;
+            *(short *)(f + 0x14) = 1;
+            qcopy(pm, a);
+            if (*(int *)(e + 0x28) >= 0) {
+                gb = D_L10_00160058 + (*(int *)(e + 0x28) << 8);
+                c3 = (float *)(e + 0x2C);
+                v1[0] = c3[0];
+                v1[1] = c3[1];
+                v1[2] = c3[2];
+                v1[3] = 0.0f;
+                func_001F9EC0(v1, v1, D_L10_001674D0);
+                func_001F9BD8_99AF0(v2, gb + 0x10, v1);
+                func_001F9BF0(va, v2, pm);
+            } else {
+                func_001F9BF0(va, b + 0x10, pm);
+            }
+            func_001F9C30(v1, D_0013E633 + 0x10AD, -1.0f);
+            func_L00_001FF4B0(moby, va, 1.0f);
+            func_001F9CA0(moby + 0x10, moby, v1);
+            func_L00_001FF4B0(moby + 0x10, moby + 0x10, 1.0f);
+            func_001F9CA0(moby + 0x20, moby + 0x10, moby);
+        }
+        return;
+    }
+    if (st == 2) {
+        float x;
+        float aa;
+        float bb;
+        D_L10_0015F4FC += 0.05f;
+        if (1.0f <= D_L10_0015F4FC) {
+            *(short *)(f + 0x14) = 3;
+            D_L10_0015F4FC = 1.0f;
+            x = k->vals[8] * 0.5f;
+            aa = func_001F9FA8(x);
+            bb = func_001F9F90(x);
+            D_L10_0016CFF0 = aa / bb;
+            func_001F3140();
+            *(unsigned char *)(e + 0x39) = 1;
+            D_L10_001673D8 = 0.05f;
+            *(short *)(moby + 0x7E) = 4;
+            D_L10_0015F504 = 0;
+            if (*(int *)(e + 0x4C) == 0) {
+                func_L00_00222B80(0, 1);
+            }
+        }
+        if (*(int *)(e + 0x40) == 0) {
+            return;
+        }
+    } else if (st == 3) {
+        return;
+    } else {
+        D_L10_0015F4FC -= 0.05f;
+        if (D_L10_0015F4FC < 0.0f) {
+            D_L10_0015F4FC = 0.0f;
+        }
+    }
+
+    {
+        float d;
+        float nv;
+        int rr;
+        int i;
+
+        g = D_L10_001B0C30[*(int *)(e + 0x20)];
+        qcopy(va, (moby + 0x30));
+        rr = func_L00_0025E860(g, (moby + 0x30), (int *)f, (float *)(f + 4), *(float *)(e + 0x3C) * D_0015EE6C, 0);
+        if (*(short *)(f + 0x16) != 0) {
+            if (func_001F9938(f + 0x16) != 0) {
+                rr = 1;
+            } else if (*(int *)(e + 0x40) != 0) {
+                short s16 = *(short *)(f + 0x16);
+                if (s16 < func_001F9850(func_001FA898(20.0f))) {
+                    rr = 1;
+                }
+            }
+        }
+        if (*(unsigned char *)(e + 0x39) != 0) {
+            rr = 1;
+        }
+        if (rr != 0) {
+            *(short *)(f + 0x14) = 2;
+            if (*(int *)(e + 0x40) == 0) {
+                return;
+            }
+        }
+        for (i = 0; i < 7 && k->ids[i] >= 0 && k->ids[i + 1] >= 0; i++) {
+            if (*(int *)f >= k->ids[i] && *(int *)f < k->ids[i + 1]) {
+                char *cam;
+                float sum = 0.0f;
+                float fv = *(float *)(f + 4);
+                float total;
+                float r;
+                float m;
+                float aa;
+                float bb;
+                int j;
+                int j2;
+                for (j = k->ids[i]; j < *(int *)f; j++) {
+                    sum = sum + *(float *)(g + j * 16 + 0x1C);
+                }
+                total = sum;
+                sum = sum + fv;
+                for (j2 = *(int *)f; j2 < k->ids[i + 1]; j2++) {
+                    total = total + *(float *)(g + j2 * 16 + 0x1C);
+                }
+                r = func_00214220(k->vals[i], k->vals[i + 1], sum / total);
+                m = r * 0.017453292f * 0.5f;
+                aa = func_001F9FA8(m);
+                bb = func_001F9F90(m);
+                cam = D_L10_0016CF40;
+                *(float *)(cam + 0xB0) = aa / bb;
+                func_001F3140();
+            }
+        }
+        d = func_001F9D10(va, (moby + 0x30));
+        nv = *(float *)(f + 0x10) + d;
+        *(float *)(f + 0x10) = nv;
+        if (*(int *)(e + 0x28) >= 0) {
+            char *b17 = D_L10_00160058 + (*(int *)(e + 0x28) << 8);
+            float *c3 = (float *)(e + 0x2C);
+            v2[0] = c3[0];
+            v2[1] = c3[1];
+            v2[2] = c3[2];
+            v2[3] = 0.0f;
+            func_001F9EC0(v2, v2, D_L10_001674D0);
+            func_001F9BD8_99AF0(v3, b17 + 0x10, v2);
+            func_001F9BF0(v1, v3, (moby + 0x30));
+        } else {
+            char *h;
+            d = (nv / *(float *)(f + 8)) * *(float *)(f + 0xC);
+            h = D_L10_001B0C30[*(int *)(e + 0x24)];
+            ia = 0;
+            ib = 0.0f;
+            func_L00_0025E860(h, v2, &ia, &ib, d, 0);
+            ((void (*)(void *, float))func_001E9768)(v2, 0.2f);
+            func_001E9768(h + 0x10, h + (*(int *)h << 4));
+            func_001F9BF0(v1, v2, (moby + 0x30));
+        }
+        func_001F9C30(v2, D_0013E633 + 0x10AD, -1.0f);
+        func_L00_001FF4B0(moby, v1, 1.0f);
+        func_001F9CA0(moby + 0x10, moby, v2);
+        func_L00_001FF4B0(moby + 0x10, moby + 0x10, 1.0f);
+        func_001F9CA0(moby + 0x20, moby + 0x10, moby);
+    }
+}
 extern char *D_L10_0015F050 MACRO_ADDR;
 
 // Decides whether a moby's camera target passes the checks; -1 disabled, 0 no, 1 yes.
