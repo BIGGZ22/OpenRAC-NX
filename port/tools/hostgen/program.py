@@ -147,13 +147,28 @@ class Program:
         """Every function with C (or the port's own) by where it sits, so that
         two spellings of one address (FUN_0020c828, func_0020C828) meet."""
         self.by_place = {}
+        self.host_place = {}
+        for sym in sorted(self.host):
+            if sym:
+                # The port's own function replaces whatever the decompilation has at its place,
+                # under any spelling (a table carried from another version names it func_<addr>
+                # where this decompilation has FUN_<addr> with C of its own).
+                for place in self.code_places(sym):
+                    self.host_place.setdefault(place, sym)
+                    self.by_place[place] = self.host_place[place]
         for sym, f in sorted(self.functions.items()):
-            if f.unit is not None or sym in self.host:
+            if f.unit is not None:
                 for place in self.code_places(sym):
                     self.by_place.setdefault(place, sym)
 
     def canonical(self, symbol: str) -> str:
-        """The symbol with C at the same place as symbol, or symbol."""
+        """The symbol with C at the same place as symbol, or symbol: the port's own function
+        there before the decompilation's C."""
+        if symbol not in self.host:
+            for place in self.code_places(symbol):
+                other = getattr(self, "host_place", {}).get(place)
+                if other is not None and other != symbol:
+                    return other
         f = self.functions.get(symbol)
         if f is not None and (f.unit is not None or symbol in self.host):
             return symbol

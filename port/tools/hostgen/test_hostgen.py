@@ -241,6 +241,26 @@ class Translate(unittest.TestCase):
         })
         self.assertEqual(out, ["42", "1.500"])
 
+    def test_the_ports_own_function_replaces_another_spelling_of_its_place(self):
+        # The decompilation has C for 0x00100100 under one spelling; the port's own function
+        # (host_functions) names the same place another way. Calls by either name, and through the
+        # address, reach the port's.
+        out = self.run_program({
+            "a.c": """
+                int FUN_00100100(void) { return 1; }
+                extern int func_00100100(void);
+                int test_main(void) {
+                    int (*p)(void) = (int (*)(void))0x00100100;
+                    test_print(FUN_00100100());
+                    test_print(p());
+                    return 0;
+                }
+            """,
+        }, config={"host_functions": HOST_FUNCTIONS + ["func_00100100"],
+                   "names": {"code": [r"^func_(?P<addr>[0-9A-Fa-f]{8})$", r"^FUN_(?P<addr>[0-9A-Fa-f]{8})$"]}},
+           host_c="int func_00100100(void) { return 2; }")
+        self.assertEqual(out, ["2", "2"])
+
     def test_pass_through(self):
         out = self.run_program({
             "callee.c": "int two(int a, int b) { return a * 10 + b; }",
