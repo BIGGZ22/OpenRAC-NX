@@ -56,8 +56,8 @@ cells and surfaces differ, and level 17 loads four moby classes fewer
 ## Extract
 
 ```sh
-python3 editor/extract.py godot baserom/SCES_509.16.iso assets/levels/rac1 --split
-godot --path assets/levels/rac1/level_00 -e
+python3 editor/extract.py godot baserom/SCES_509.16.iso assets/levels/rac1/pal --split
+godot --path assets/levels/rac1/pal/level_00 -e
 ```
 
 `--split` writes a Godot project per level, `level_00` to `level_18`, each
@@ -143,8 +143,8 @@ the `RcEngine` stub in `rc1/` for reading and preview; the port still runs the C
 ## Pack your edits
 
 ```sh
-python3 editor/extract.py pack baserom/SCES_509.16.iso assets/levels/rac1 assets/packed/rac1
-python3 editor/extract.py pack baserom/SCUS_971.99.iso assets/levels/rac1-ntsc assets/packed/rac1-ntsc
+python3 editor/extract.py pack baserom/SCES_509.16.iso assets/levels/rac1/pal assets/packed/rac1/pal
+python3 editor/extract.py pack baserom/SCUS_971.99.iso assets/levels/rac1/ntsc assets/packed/rac1/ntsc
 ```
 
 Turns what was edited in Godot back into the game's level data (the folder
@@ -154,7 +154,7 @@ disc it writes that level's gameplay file as the game stores it, compressed,
 and the list of disc sectors it replaces:
 
 ```
-assets/packed/rac1/
+assets/packed/rac1/pal/
   level_NN/gameplay_<version>.wad   one per level whose mobys were edited, the size of its place on the disc
   level_NN/placements.json    one per level whose ties or shrubs were edited, for the native port
   patches.tsv                 first sector, sector count, file
@@ -170,7 +170,7 @@ Mods page stacks it for that disc and leaves it out for the other
 ([overrides.py](overrides.py)).
 
 The disc image is never written. The native port reads the folder with
-`--mods assets/packed/rac1` and serves those sectors from the files
+`--mods assets/packed/rac1/pal` and serves those sectors from the files
 ([port/game/common/lib/cdvd.c](../port/game/common/lib/cdvd.c)); the
 launcher's Mods page does all three steps (edit, pack, play).
 

@@ -75,19 +75,19 @@ turns the levels from your own disc into Godot projects:
 
 1. **Extract**: Turn your disc's 19 levels into separate Godot projects in about 20 seconds:
    ```sh
-   python3 editor/extract.py godot baserom/SCES_509.16.iso assets/levels/rac1 --split
+   python3 editor/extract.py godot baserom/SCES_509.16.iso assets/levels/rac1/pal --split
    ```
 2. **Edit**: Open any level in the Godot 4 editor (e.g. Veldin):
    ```sh
-   godot --path assets/levels/rac1/level_00 -e
+   godot --path assets/levels/rac1/pal/level_00 -e
    ```
    Move, turn, scale, add, or delete mobys (enemies, crates, vendors, bolts, obstacles)
    and scenery (ties and shrubs) using Godot's visual scene editor.
 3. **Pack & Play**: Pack your edits back into game data without altering your disc:
    ```sh
-   python3 editor/extract.py pack baserom/SCES_509.16.iso assets/levels/rac1 assets/packed/rac1
+   python3 editor/extract.py pack baserom/SCES_509.16.iso assets/levels/rac1/pal assets/packed/rac1/pal
    ```
-   The native PC port plays your edited levels directly (`--mods assets/packed/rac1`).
+   The native PC port plays your edited levels directly (`--mods assets/packed/rac1/pal`).
 
 The desktop launcher also includes a built-in **Mods** tab that handles extracting,
 launching Godot, packing your changes, and playing your modded levels in one click.

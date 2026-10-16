@@ -1,7 +1,7 @@
 """Pack the levels edited in Godot back into the game's level data.
 
-    python3 editor/extract.py pack baserom/SCES_509.16.iso assets/levels/rac1 assets/packed/rac1
-    python3 editor/extract.py pack baserom/SCUS_971.99.iso assets/levels/rac1-ntsc assets/packed/rac1-ntsc
+    python3 editor/extract.py pack baserom/SCES_509.16.iso assets/levels/rac1/pal assets/packed/rac1/pal
+    python3 editor/extract.py pack baserom/SCUS_971.99.iso assets/levels/rac1/ntsc assets/packed/rac1/ntsc
 
 For each level whose scene differs from the disc, writes that level's
 gameplay file (the placements) as the game stores it, and a list of the disc

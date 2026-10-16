@@ -266,19 +266,19 @@ in the order a user takes it. The Mods page shows it for the version the
 game page plays (`playerVersion`: the disc the player set up), so both discs
 go the same way and no region is named; developer mode names the version.
 
-| Action            | State (PAL / NTSC-U)   | What it does                                                                                       |
-| ----------------- | ---------------------- | -------------------------------------------------------------------------------------------------- |
-| `editor-extract`  | unverified             | the disc's 19 levels into Godot projects, `assets/levels/rac1` (NTSC-U: `assets/levels/rac1-ntsc`) |
-| `editor-import`   | unverified             | Godot reads one level's meshes and textures once, headless, so the first open is quick             |
-| `editor-open`     | unverified             | the Godot editor on one level's project                                                            |
-| `editor-pack`     | unverified             | edited scenes back into that disc's level data, `assets/packed/rac1` (`assets/packed/rac1-ntsc`)   |
-| `editor-preview`  | connected / unverified | Godot's player on an extracted level (Godot showing the editor's scenes, not the game)             |
-| `editor-tests`    | unverified (PAL)       | the unit tests of `editor/`                                                                        |
-| `assets-export`   | unverified             | a level's models and textures from `assets/port/rac1/<version>` into `{data}/exports`              |
-| `assets-import`   | unverified             | an edited export back as an overrides pack in `{data}/overrides`                                   |
-| `overrides-add`   | unverified             | a pack (.zip or folder) into `{data}/overrides`                                                    |
-| `overrides-stack` | unverified             | the packed levels and the packs that are on into `{data}/mods/<version>`, for that disc's levels   |
-| `play-edited`     | unverified / planned   | the game with `--mods {data}/mods/<version>`; NTSC-U's waits for its Play                          |
+| Action            | State (PAL / NTSC-U)   | What it does                                                                                           |
+| ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------ |
+| `editor-extract`  | unverified             | the disc's 19 levels into Godot projects, `assets/levels/rac1/pal` (NTSC-U: `assets/levels/rac1/ntsc`) |
+| `editor-import`   | unverified             | Godot reads one level's meshes and textures once, headless, so the first open is quick                 |
+| `editor-open`     | unverified             | the Godot editor on one level's project                                                                |
+| `editor-pack`     | unverified             | edited scenes back into that disc's level data, `assets/packed/rac1/pal` (`assets/packed/rac1/ntsc`)   |
+| `editor-preview`  | connected / unverified | Godot's player on an extracted level (Godot showing the editor's scenes, not the game)                 |
+| `editor-tests`    | unverified (PAL)       | the unit tests of `editor/`                                                                            |
+| `assets-export`   | unverified             | a level's models and textures from `assets/port/rac1/<version>` into `{data}/exports`                  |
+| `assets-import`   | unverified             | an edited export back as an overrides pack in `{data}/overrides`                                       |
+| `overrides-add`   | unverified             | a pack (.zip or folder) into `{data}/overrides`                                                        |
+| `overrides-stack` | unverified             | the packed levels and the packs that are on into `{data}/mods/<version>`, for that disc's levels       |
+| `play-edited`     | unverified / planned   | the game with `--mods {data}/mods/<version>`; NTSC-U's waits for its Play                              |
 
 Exports and packs are the game's, shared by its versions: a pack records
 what each file replaces, and `overrides-stack` (`editor/overrides.py stack

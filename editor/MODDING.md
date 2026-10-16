@@ -135,7 +135,7 @@ python3 editor/assets.py import build/my-export --levels assets/port/rac1/pal --
 python3 editor/overrides.py check build/my-pack          # what a pack holds, and what is wrong with it
 python3 editor/overrides.py add build/my-pack --into build/overrides
 python3 editor/overrides.py list --into build/overrides
-python3 editor/overrides.py stack --into build/overrides --out build/mods/pal --levels assets/port/rac1/pal [--packed assets/packed/rac1]
+python3 editor/overrides.py stack --into build/overrides --out build/mods/pal --levels assets/port/rac1/pal [--packed assets/packed/rac1/pal]
 port/build/release/openrac-rac1-pal --data <data> --window --levels assets/port/rac1/pal --mods build/mods/pal
 python3 editor/overrides.py zip my-pack my-pack.zip --into build/overrides
 ```

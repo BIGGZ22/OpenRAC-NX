@@ -220,10 +220,10 @@ mod tests {
         let scope = Scope::Version("rac1/pal".into());
         // Listed without a level, an action stands for level 00.
         let err = plan(&config, &scope, "editor-preview", &Inputs::default()).unwrap_err();
-        assert!(err.contains("assets/levels/rac1/level_00/project.godot"), "{err}");
+        assert!(err.contains("assets/levels/rac1/pal/level_00/project.godot"), "{err}");
 
         // Each level is a project of its own: the one asked for is the one opened.
-        let project = dir.path().join("assets/levels/rac1/level_07");
+        let project = dir.path().join("assets/levels/rac1/pal/level_07");
         std::fs::create_dir_all(&project).unwrap();
         std::fs::write(project.join("project.godot"), "").unwrap();
         assert!(
@@ -233,7 +233,7 @@ mod tests {
         let plan = plan(&config, &scope, "editor-preview", &Inputs { level: Some(7), ..Inputs::default() }).unwrap();
         assert_eq!(plan.program, PathBuf::from("/usr/bin/godot"));
         assert!(plan.detached);
-        assert_eq!(plan.args, ["--path", "assets/levels/rac1/level_07", "res://levels/level_07/level_07.tscn"]);
+        assert_eq!(plan.args, ["--path", "assets/levels/rac1/pal/level_07", "res://levels/level_07/level_07.tscn"]);
     }
 
     /// The port is one program for Windows, Linux and macOS: building it and playing it are
