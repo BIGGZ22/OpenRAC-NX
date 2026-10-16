@@ -10,13 +10,16 @@
   import Menu, { type MenuItem } from "$components/Menu.svelte";
   import SaveManagerBlock from "$components/SaveManagerBlock.svelte";
   import { api, type ActionView } from "$lib/api";
-  import { app, currentVersion, guard, openVersion, run, uninstallGame } from "$lib/app.svelte";
-  import { isBuilt, playerAct, playerState } from "$lib/player.svelte";
-  import { regionLabel } from "$lib/labels";
+  import { app, currentVersion, guard, run, uninstallGame } from "$lib/app.svelte";
+  import { isBuilt, playerAct, playerState, playerVersion } from "$lib/player.svelte";
   import { themeStyle } from "$lib/themes";
 
-  const v = $derived(currentVersion());
-  const game = $derived(app.library?.games.find((g) => g.id === v?.game) ?? null);
+  // One game, whatever the region: a player gets the version their disc is (playerVersion);
+  // with developer tools on, the version chosen in the developer panel.
+  const developer = $derived(app.config?.developer ?? false);
+  const opened = $derived(currentVersion());
+  const game = $derived(app.library?.games.find((g) => g.id === opened?.game) ?? null);
+  const v = $derived(game && !developer ? playerVersion(game) : opened);
   const scope = $derived({ kind: "version" as const, key: v?.key ?? "" });
   const action = (id: string): ActionView | null => v?.actions.find((a) => a.id === id && a.thisPlatform) ?? null;
 
@@ -31,7 +34,6 @@
     rac4: { bg: "/img/deadlocked-bg.webp", gif: "/img/rac4-gameplay.gif" },
   };
   const media = $derived(v ? GAME_MEDIA[v.game] : null);
-  const developer = $derived(app.config?.developer ?? false);
 
   const next = $derived(v && game ? playerState(game, v) : null);
   const setUp = $derived(game?.install?.extracted ?? null);
@@ -94,22 +96,6 @@
         {v.title}
         {#if game.year}<small>{game.year}</small>{/if}
       </div>
-      <!-- Players never pick a region: the game is the version their disc is (playerVersion). With
-           developer tools on, every version of the game can be opened. -->
-      {#if developer && game.versions.length > 1}
-        <div class="versions" role="tablist" aria-label="Version">
-          {#each game.versions as other (other.key)}
-            <button
-              role="tab"
-              aria-selected={other.key === v.key}
-              class:on={other.key === v.key}
-              onclick={() => {
-                openVersion(other.key);
-              }}>{regionLabel(other.name)} · {other.serial}</button
-            >
-          {/each}
-        </div>
-      {/if}
 
       <div class="go">
         <div class="go-row">
@@ -291,32 +277,6 @@
     font-size: 13px;
     letter-spacing: 0.04em;
     color: var(--tx2);
-  }
-
-  /* The disc's region: one control with two halves, the chosen one filled. */
-  .versions {
-    display: inline-flex;
-    padding: 3px;
-    border-radius: 999px;
-    background: rgb(0 0 0 / 0.5);
-    border: 1px solid rgb(255 255 255 / 0.18);
-  }
-
-  .versions button {
-    border: 0;
-    background: none;
-    font-size: 13px;
-    color: var(--tx2);
-    padding: 6px 16px;
-  }
-
-  .versions button:hover {
-    color: #fff;
-  }
-
-  .versions button.on {
-    background: var(--bd);
-    color: #fff;
   }
 
   .go {

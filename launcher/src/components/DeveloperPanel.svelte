@@ -3,9 +3,9 @@
   // game's two builds kept apart (the PC port, and the decompilation it comes
   // from), the level editor's checks, and the files and facts of the version.
   import { api, type ActionKind, type GameView, type VersionView } from "$lib/api";
-  import { app, guard } from "$lib/app.svelte";
+  import { app, guard, openVersion } from "$lib/app.svelte";
   import { grouped, matchedLine, pct, size } from "$lib/format";
-  import { DISC, INPUT } from "$lib/labels";
+  import { DISC, INPUT, regionLabel } from "$lib/labels";
   import ActionRow from "./ActionRow.svelte";
   import Icon from "./Icon.svelte";
   import ProgressBar from "./ProgressBar.svelte";
@@ -26,6 +26,25 @@
   const editorRows = $derived(editor.filter((a) => a.kind === "check" || a.state === "planned"));
   const canEdit = $derived(editor.some((a) => a.kind === "edit" && a.state !== "planned"));
 </script>
+
+{#if game.versions.length > 1}
+  <!-- The game is one game; its versions (each disc's build) are a developer's choice only. -->
+  <section class="panel versions">
+    <h2>Version</h2>
+    <div class="choices" role="radiogroup" aria-label="Version">
+      {#each game.versions as other (other.key)}
+        <button
+          role="radio"
+          aria-checked={other.key === v.key}
+          class:on={other.key === v.key}
+          onclick={() => {
+            openVersion(other.key);
+          }}>{regionLabel(other.name)} · <span class="mono">{other.serial}</span></button
+        >
+      {/each}
+    </div>
+  </section>
+{/if}
 
 {#if port.length}
   <section class="panel">
@@ -143,6 +162,32 @@
 </details>
 
 <style>
+  /* Which version (each disc's build) the panel shows: one control, the chosen half filled. */
+  .versions .choices {
+    display: inline-flex;
+    padding: 3px;
+    border-radius: 999px;
+    border: 1px solid var(--bd);
+  }
+
+  .versions button {
+    border: 0;
+    background: none;
+    font-size: 13px;
+    color: var(--tx2);
+    padding: 6px 16px;
+    border-radius: 999px;
+  }
+
+  .versions button:hover {
+    color: var(--tx1, #fff);
+  }
+
+  .versions button.on {
+    background: var(--bd);
+    color: #fff;
+  }
+
   .blurb {
     margin: 2px 0 12px;
     font-size: 14px;
