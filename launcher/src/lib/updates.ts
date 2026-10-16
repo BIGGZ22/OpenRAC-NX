@@ -124,7 +124,7 @@ export async function installUpdate(onProgress?: UpdateProgressCallback): Promis
       });
     } else if (event.event === "Progress") {
       downloadedBytes += event.data.chunkLength;
-      const percent = totalBytes > 0 ? Math.min(100, Math.round((downloadedBytes / totalBytes) * 100)) : 50;
+      const percent = totalBytes > 0 ? Math.min(100, Math.round((downloadedBytes / totalBytes) * 100)) : 0;
       onProgress?.({
         stage: "downloading",
         percent,

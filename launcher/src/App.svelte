@@ -30,6 +30,18 @@
       }
       const page = params.get("page") as Page | null;
       if (page) app.page = page;
+      if (params.get("modal") === "update") {
+        app.update = {
+          version: "0.5.3",
+          tag: "v0.5.3",
+          url: "https://github.com/OpenRAC/OpenRAC/releases",
+          name: "OpenRAC Launcher v0.5.3",
+          body: "OpenRAC Launcher release 0.5.3",
+          publishedAt: "2026-10-16",
+          canInstallDirectly: true,
+        };
+        app.showUpdateModal = true;
+      }
     });
     // Pick up what changed outside the launcher (a build in a terminal, a new disc).
     const onFocus = () => void refresh();
