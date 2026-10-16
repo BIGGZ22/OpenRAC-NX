@@ -7,6 +7,7 @@
   let installing = $state(false);
   let statusText = $state("");
   let percent = $state(0);
+  let indeterminate = $state(false);
   let error = $state<string | null>(null);
 
   async function handleInstall() {
@@ -15,12 +16,19 @@
     error = null;
     statusText = "Downloading update...";
     percent = 0;
+    indeterminate = true;
 
     try {
       await installUpdate((progress) => {
         percent = progress.percent;
+        indeterminate = progress.stage === "downloading" && progress.totalBytes === 0;
         if (progress.stage === "downloading") {
-          statusText = `Downloading update (${progress.percent}%)...`;
+          if (progress.totalBytes > 0) {
+            statusText = `Downloading update (${progress.percent}%)...`;
+          } else {
+            const mb = (progress.downloadedBytes / (1024 * 1024)).toFixed(1);
+            statusText = `Downloading update (${mb} MB)...`;
+          }
         } else if (progress.stage === "installing") {
           statusText = "Installing update...";
         } else {
@@ -29,6 +37,7 @@
       });
     } catch (e) {
       installing = false;
+      indeterminate = false;
       error = e instanceof Error ? e.message : String(e);
       statusText = "";
     }
@@ -82,11 +91,13 @@
         {#if installing}
           <div class="progress-section">
             <div class="progress-bar-bg">
-              <div class="progress-fill" style="width: {percent}%"></div>
+              <div class="progress-fill" class:indeterminate style={indeterminate ? "" : `width: ${percent}%`}></div>
             </div>
             <div class="status-row">
               <span class="status-msg">{statusText}</span>
-              <span class="percent-msg">{percent}%</span>
+              {#if !indeterminate}
+                <span class="percent-msg">{percent}%</span>
+              {/if}
             </div>
           </div>
         {/if}
@@ -129,7 +140,11 @@
   .backdrop {
     position: absolute;
     inset: 0;
+    width: 100%;
+    height: 100%;
     border: none;
+    border-radius: 0;
+    padding: 0;
     background: rgba(10, 10, 16, 0.75);
     backdrop-filter: blur(4px);
     cursor: default;
@@ -272,6 +287,20 @@
     background: linear-gradient(90deg, var(--bar-top), var(--amber));
     border-radius: 4px;
     transition: width 0.2s ease-out;
+  }
+
+  .progress-fill.indeterminate {
+    width: 40%;
+    animation: indeterminate-slide 1.4s ease-in-out infinite alternate;
+  }
+
+  @keyframes indeterminate-slide {
+    from {
+      margin-left: 0;
+    }
+    to {
+      margin-left: 60%;
+    }
   }
 
   .status-row {

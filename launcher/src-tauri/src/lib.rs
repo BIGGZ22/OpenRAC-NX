@@ -55,7 +55,7 @@ fn app_info(app: AppHandle, state: State<'_, AppState>) -> AppInfo {
 
 #[tauri::command]
 fn relaunch_app(app: AppHandle) {
-    app.restart();
+    tauri::process::restart(&app.env());
 }
 
 #[tauri::command]
