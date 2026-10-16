@@ -224,6 +224,23 @@ class Translate(unittest.TestCase):
         })
         self.assertEqual(out, ["3", "1.500", "0"])
 
+    def test_a_callee_typedef_the_caller_does_not_know(self):
+        # The callee's file names its float and its pointer by typedefs the caller's file does
+        # not have: the call still passes the float in a float register and the pointer in an
+        # integer one, and the float result comes back.
+        out = self.run_program({
+            "callee.c": """
+                typedef float real_t;
+                typedef int word_t;
+                real_t half(word_t *p, word_t n, real_t x) { test_print(*p + n); return x * 0.5f; }
+            """,
+            "caller.c": """
+                extern float half(void *p, void *n, float x);
+                int test_main(void) { int v = 40; test_print_float(half(&v, (void *)2, 3.0f)); return 0; }
+            """,
+        })
+        self.assertEqual(out, ["42", "1.500"])
+
     def test_pass_through(self):
         out = self.run_program({
             "callee.c": "int two(int a, int b) { return a * 10 + b; }",

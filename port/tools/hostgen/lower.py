@@ -221,6 +221,23 @@ class Unit:
             return "rec"
         return "int"
 
+    def sig_cls(self, t: ctype.Type) -> str:
+        """cls of a type from another unit's signature (a callee's parameter or result): a typedef
+        this unit does not declare (the callee's file has `f32`, the caller's only `float`) is
+        read through the whole program's typedefs, so a float stays a float and a pointer a
+        pointer, as the registers the console used for them."""
+        c = self.cls(t)
+        r = self.resolve(t)
+        if c == "int" and isinstance(r, ctype.Base) and r.name not in self.typedefs and r.name not in ctype.INT_NAMES:
+            k = canon(r, self.program.typedefs)
+            if k in ctype.FLOAT_NAMES:
+                return "float"
+            if k == "gaddr":
+                return "ptr"
+            if k in ("double", "long double"):
+                return "double"
+        return c
+
     def host(self, t: ctype.Type) -> str:
         if isinstance(t, ctype.Base) and t.name in VA_NAMES:
             return "va_list"
@@ -1679,7 +1696,7 @@ class Unit:
         result_cls = self.cls(result_t)
         values = self._match_args(sym, sig, args)
         text = f"{cname(sym)}({', '.join(values)})"
-        ret_cls = self.cls(sig.ret)
+        ret_cls = self.sig_cls(sig.ret)
         if result_cls == "void":
             return text
         if ret_cls == "void" or self._reg_class(ret_cls) != self._reg_class(result_cls) or ret_cls == "rec" != result_cls:
@@ -1709,7 +1726,7 @@ class Unit:
         if not sig.prototyped:
             return [self.rv(a) for a in args]
         classes = [self._arg_class(a) for a in args]
-        pcls = [("agg" if self.cls(p) == "rec" else self._reg_class(self.cls(p))) for p in sig.params]
+        pcls = [("agg" if self.sig_cls(p) == "rec" else self._reg_class(self.sig_cls(p))) for p in sig.params]
         if "agg" in classes or "agg" in pcls:
             if len(args) != len(sig.params):
                 raise Unsupported(f"call to {sym} with records, and {len(args)} arguments for {len(sig.params)}")
