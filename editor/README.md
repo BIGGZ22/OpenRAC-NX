@@ -181,6 +181,21 @@ file five bytes from the disc's, all in that moby's record; the port ran
 level 0 for 400 frames from it. Whether the moved moby shows where it was
 put has not been looked at in the running game yet.
 
+## Models and textures for modders
+
+```sh
+python3 editor/assets.py export assets/port/rac1 build/my-export --level 0 --what mobys
+python3 editor/assets.py import build/my-export --levels assets/port/rac1 --out build/my-pack
+```
+
+Exports a level's moby, tie and shrub models as glTF (mesh, UVs, vertex
+colours, materials, skeleton, inverse bind matrices, weights, animations) and
+its textures as PNG, each with a manifest; reads the edited files back as an
+overrides pack ([overrides.py](overrides.py)) that the port loads with
+`--mods`. [MODDING.md](MODDING.md) is the guide: editing in Blender,
+upscaling, re-importing, the pack format. The launcher's Mods page does it
+all.
+
 ## Other commands
 
 ```sh
@@ -382,6 +397,8 @@ The GDScript files follow [`GDSCRIPT_CONVENTIONS.md`](GDSCRIPT_CONVENTIONS.md).
 | `terrain.py`, `ties.py`, `shrubs.py`, `sky.py`, `collision.py` | Geometry and placements |
 | `mobys.py`, `moby_class.py`, `moby_anim.py` | Moby placements, class meshes, skeletons and animations |
 | `mesh.py`, `gltf.py` | The mesh type and the GLB writer |
+| `gltf_read.py`, `pngio.py` | Reading glTF and PNG files back (a modder's edits) |
+| `assets.py`, `overrides.py` | Export for modding and re-import; overrides packs ([MODDING.md](MODDING.md)) |
 | `godot.py` | Project, scenes and level.json |
 
 The decoders accept only the layouts found on this disc and raise
