@@ -317,6 +317,15 @@ export async function pickFolder(title: string): Promise<string | null> {
   return typeof picked === "string" ? picked : null;
 }
 
+/** Restart the launcher application (e.g. after installing an update). */
+export async function relaunchApp(): Promise<void> {
+  if (inTauri) {
+    await invoke("relaunch_app");
+  } else {
+    window.location.reload();
+  }
+}
+
 /** A file picker (a program); null when cancelled (or in the browser preview). */
 export async function pickFile(title: string): Promise<string | null> {
   if (!inTauri) return null;

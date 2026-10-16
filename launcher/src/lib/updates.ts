@@ -1,4 +1,7 @@
-// Checks GitHub releases for launcher updates.
+// In-app and GitHub release updater for OpenRAC Launcher.
+import { inTauri, relaunchApp } from "./api";
+import type { Update, DownloadEvent } from "@tauri-apps/plugin-updater";
+
 export interface UpdateInfo {
   version: string;
   tag: string;
@@ -6,15 +9,17 @@ export interface UpdateInfo {
   name: string;
   body: string;
   publishedAt: string;
+  canInstallDirectly: boolean;
 }
 
-interface GitHubReleaseResponse {
-  tag_name?: string;
-  html_url?: string;
-  name?: string;
-  body?: string;
-  published_at?: string;
-}
+export type UpdateProgressCallback = (progress: {
+  stage: "downloading" | "installing" | "ready";
+  percent: number;
+  downloadedBytes: number;
+  totalBytes: number;
+}) => void;
+
+let activeTauriUpdate: Update | null = null;
 
 export function isNewerVersion(current: string, latest: string): boolean {
   const parse = (v: string) =>
@@ -29,6 +34,14 @@ export function isNewerVersion(current: string, latest: string): boolean {
   if (lMaj !== cMaj) return lMaj > cMaj;
   if (lMin !== cMin) return lMin > cMin;
   return lPatch > cPatch;
+}
+
+interface GitHubReleaseResponse {
+  tag_name?: string;
+  html_url?: string;
+  name?: string;
+  body?: string;
+  published_at?: string;
 }
 
 export async function checkGitHubRelease(currentVersion: string): Promise<UpdateInfo | null> {
@@ -51,10 +64,89 @@ export async function checkGitHubRelease(currentVersion: string): Promise<Update
         name: data.name ?? tag,
         body: data.body ?? "",
         publishedAt: data.published_at ?? "",
+        canInstallDirectly: false,
       };
     }
     return null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Checks for updates using the official Tauri updater plugin first.
+ * Falls back to checking GitHub Releases API if running in browser or if updater is unavailable.
+ */
+export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo | null> {
+  if (inTauri) {
+    try {
+      const { check } = await import("@tauri-apps/plugin-updater");
+      const update = await check();
+      if (update) {
+        activeTauriUpdate = update;
+        return {
+          version: update.version,
+          tag: `v${update.version}`,
+          url: "https://github.com/OpenRAC/OpenRAC/releases",
+          name: `OpenRAC Launcher v${update.version}`,
+          body: update.body ?? "",
+          publishedAt: update.date ?? "",
+          canInstallDirectly: true,
+        };
+      }
+    } catch (e) {
+      console.warn("Tauri updater check failed, falling back to GitHub release check:", e);
+    }
+  }
+
+  return checkGitHubRelease(currentVersion);
+}
+
+/**
+ * Downloads and installs the update in-place, then restarts the application.
+ */
+export async function installUpdate(onProgress?: UpdateProgressCallback): Promise<void> {
+  if (!activeTauriUpdate) {
+    throw new Error("No downloaded update available to install");
+  }
+
+  let totalBytes = 0;
+  let downloadedBytes = 0;
+
+  await activeTauriUpdate.downloadAndInstall((event: DownloadEvent) => {
+    if (event.event === "Started") {
+      totalBytes = event.data.contentLength ?? 0;
+      onProgress?.({
+        stage: "downloading",
+        percent: 0,
+        downloadedBytes: 0,
+        totalBytes,
+      });
+    } else if (event.event === "Progress") {
+      downloadedBytes += event.data.chunkLength;
+      const percent = totalBytes > 0 ? Math.min(100, Math.round((downloadedBytes / totalBytes) * 100)) : 50;
+      onProgress?.({
+        stage: "downloading",
+        percent,
+        downloadedBytes,
+        totalBytes,
+      });
+    } else {
+      onProgress?.({
+        stage: "installing",
+        percent: 100,
+        downloadedBytes,
+        totalBytes,
+      });
+    }
+  });
+
+  onProgress?.({
+    stage: "ready",
+    percent: 100,
+    downloadedBytes,
+    totalBytes,
+  });
+
+  await relaunchApp();
 }

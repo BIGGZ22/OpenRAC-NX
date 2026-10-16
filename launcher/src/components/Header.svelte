@@ -57,8 +57,8 @@
       {@const update = app.update}
       <button
         class="update"
-        onclick={() => void api.openUrl(update.url)}
-        title={`Version ${update.tag} is available!\nClick to open download page.`}
+        onclick={() => (app.showUpdateModal = true)}
+        title={`Version ${update.tag} is available!\nClick to inspect or update.`}
       >
         ▲ Update {update.version}
       </button>

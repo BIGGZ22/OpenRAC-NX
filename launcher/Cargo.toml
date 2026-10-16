@@ -20,3 +20,7 @@ codegen-units = 1
 lto = true
 opt-level = "s"
 strip = true
+
+[patch.crates-io]
+zip = { git = "https://github.com/zip-rs/zip2", tag = "v4.6.1" }
+

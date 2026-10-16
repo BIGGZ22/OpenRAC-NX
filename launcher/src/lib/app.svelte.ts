@@ -16,7 +16,7 @@ import {
   type VersionView,
 } from "./api";
 import { Queue, type Job } from "./queue";
-import { checkGitHubRelease, type UpdateInfo } from "./updates";
+import { checkForUpdate, type UpdateInfo } from "./updates";
 
 export type Page = "library" | "game" | "mods" | "tasks" | "settings";
 
@@ -33,6 +33,7 @@ interface AppState {
   version: string | null;
   toasts: { id: number; text: string; kind: "info" | "error" }[];
   update: UpdateInfo | null;
+  showUpdateModal: boolean;
 }
 
 export const app = $state<AppState>({
@@ -45,6 +46,7 @@ export const app = $state<AppState>({
   version: null,
   toasts: [],
   update: null,
+  showUpdateModal: false,
 });
 
 /** The time, once a second: what a running job's elapsed time is counted against. One timer for
@@ -100,7 +102,7 @@ export async function start() {
   await refresh();
   void syncProgressWeb();
   if (app.info.version) {
-    void checkGitHubRelease(app.info.version).then((up) => {
+    void checkForUpdate(app.info.version).then((up) => {
       if (up) app.update = up;
     });
   }
