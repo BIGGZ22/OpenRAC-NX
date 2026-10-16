@@ -18,6 +18,7 @@ import type {
   GameView,
   JobEvent,
   Library,
+  PackView,
   Platform,
   Progress,
   Scope,
@@ -303,7 +304,68 @@ function findAction(scope: Scope, id: string): RawAction | undefined {
   return list.find((a) => a.id === id);
 }
 
-function start(scope: Scope, id: string): Started {
+/** What a few actions print at the end in the preview, so the pages that read it can be tried. */
+function lastLines(id: string, args: Record<string, unknown>): string[] {
+  const data = `${config.installDir ?? ""}/active/rac1/data`;
+  const level = String(typeof args.level === "number" ? args.level : 0).padStart(2, "0");
+  const path = typeof args.path === "string" ? args.path : "";
+  const name =
+    path
+      .split(/[\\/]/)
+      .at(-1)
+      ?.replace(/\.zip$/i, "") ?? "pack";
+  switch (id) {
+    case "assets-export":
+      return [
+        `level ${level}: 215 models, 414 textures`,
+        `Exported 215 models and 414 textures: ${data}/exports/level_${level}-${String(args.option)}`,
+      ];
+    case "assets-import":
+      mockPacks.push({ ...samplePack(name), id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-") });
+      return [
+        "texture moby_0000 (1024 x 1024) replaces the game's in 20 places (the same picture in 19 more)",
+        "refused: level 00 texture tie_0004.png is 300 x 200, but the game's tie_0004 is 64 x 64 (1:1); keep that shape, for example 128 x 128, 256 x 256",
+        `Imported 19 model file(s) and 80 texture file(s) into ${data}/overrides as ${name}; 1 refused (see above)`,
+      ];
+    case "overrides-add":
+      mockPacks.push({ ...samplePack(name), id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-") });
+      return [`Added ${name} as ${name.toLowerCase()}, on, last in the order.`];
+    case "overrides-stack":
+      return [`Stacked ${mockPacks.filter((p) => p.enabled).length + 1} layer(s), 99 file(s): ${data}/mods`];
+    default:
+      return ["\u2714 step one", "\u2714 step two", "done"];
+  }
+}
+
+function samplePack(name: string): PackView {
+  return {
+    id: name,
+    name,
+    author: "you",
+    description: "",
+    enabled: true,
+    levels: 19,
+    textures: 80,
+    models: 19,
+    levelFiles: 0,
+  };
+}
+
+/** The overrides packs the preview pretends are added. */
+const mockPacks: PackView[] = [
+  {
+    ...samplePack("hd-textures"),
+    name: "HD textures",
+    author: "someone",
+    description: "Every texture of Veldin, 4x.",
+    levels: 1,
+    textures: 414,
+    models: 0,
+  },
+  { ...samplePack("green-ratchet"), name: "Green Ratchet", enabled: false },
+];
+
+function start(scope: Scope, id: string, args: Record<string, unknown> = {}): Started {
   const action = findAction(scope, id);
   if (!action) throw new Error(`no action ${id}`);
   const lib = library();
@@ -316,14 +378,7 @@ function start(scope: Scope, id: string): Started {
   const command = [action.program ?? "?", ...(action.args ?? [])].join(" ");
   if (action.detached) return { id: 0, title: action.label, command, detached: true };
 
-  const lines = [
-    `$ ${command}`,
-    "(browser preview: nothing really runs)",
-    "working…",
-    "\u2714 step one",
-    "\u2714 step two",
-    "done",
-  ];
+  const lines = [`$ ${command}`, "(browser preview: nothing really runs)", "working…", ...lastLines(id, args)];
   return fakeJob(action.label, command, lines, () => undefined);
 }
 
@@ -429,7 +484,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
     case "apply_progress_json":
       return delay(library());
     case "run_action":
-      return delay(start(args.scope as Scope, args.id as string));
+      return delay(start(args.scope as Scope, args.id as string, args));
     case "cancel_job": {
       const id = args.id as number;
       clearInterval(timers.get(id));
@@ -442,6 +497,24 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       console.info(`[preview] ${command}`, args);
       return delay(null);
     case "set_discord_status":
+      return delay(null);
+    case "overrides_list":
+      return delay([...mockPacks]);
+    case "overrides_set_enabled":
+    case "overrides_move":
+    case "overrides_remove": {
+      const at = mockPacks.findIndex((p) => p.id === args.id);
+      const pack = mockPacks[at];
+      if (!pack) throw new Error(`no pack ${String(args.id)}`);
+      mockPacks.splice(at, 1);
+      if (command === "overrides_set_enabled") mockPacks.splice(at, 0, { ...pack, enabled: !!args.enabled });
+      if (command === "overrides_move") {
+        mockPacks.splice(Math.max(0, Math.min(mockPacks.length, at + (args.up ? -1 : 1))), 0, pack);
+      }
+      return delay([...mockPacks]);
+    }
+    case "open_game_folder":
+      console.info(`[preview] ${command}`, args);
       return delay(null);
     case "inspect_saves": {
       const serial = typeof args.serial === "string" ? args.serial : "SCES_509.16";

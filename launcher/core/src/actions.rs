@@ -20,8 +20,10 @@ use crate::under;
 pub const FILE: &str = "launcher/actions.json";
 
 /// The only `{name}` placeholders an argument, `program` or `cwd` may hold.
-pub const PLACEHOLDERS: &[&str] =
-    &["root", "dir", "python", "godot", "docker", "disc", "boot", "artifact", "serial", "key", "data", "level"];
+pub const PLACEHOLDERS: &[&str] = &[
+    "root", "dir", "python", "godot", "docker", "disc", "boot", "artifact", "serial", "key", "data", "level", "path",
+    "option",
+];
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -92,6 +94,11 @@ pub struct Action {
     /// Not shown to players.
     #[serde(default)]
     pub todo: Option<String>,
+    /// The values `{option}` may take, one of which the UI chooses when it runs the action (what
+    /// to export: `mobys`, `textures`...). An action with `{option}` lists them; anything else is
+    /// refused.
+    #[serde(default)]
+    pub options: Vec<String>,
 }
 
 /// What an action works on. A game has two builds, and the launcher keeps them apart.
@@ -243,6 +250,19 @@ pub struct Context<'a> {
     /// projects). None while an action is only listed: `{level}` is then level 00, so that
     /// "is the project there" has an answer.
     pub level: Option<u32>,
+    /// A file or folder the player chose for this run (`{path}`: a pack to add, an edited export
+    /// to import), absolute. None while an action is only listed.
+    pub path: Option<&'a str>,
+    /// The choice `{option}` stands for, one of the action's `options`.
+    pub option: Option<&'a str>,
+}
+
+/// What the UI gives a run besides the action's name: the level, a chosen path, an option.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Inputs {
+    pub level: Option<u32>,
+    pub path: Option<String>,
+    pub option: Option<String>,
 }
 
 pub fn load(root: &Path) -> Result<ActionFile, String> {
@@ -307,6 +327,10 @@ impl ActionFile {
                             problems.push(format!("{at}: {{{name}}} needs a version"));
                         }
                     }
+                }
+                let uses_option = action.args.iter().any(|a| placeholders(a).iter().any(|n| n == "option"));
+                if uses_option && action.options.is_empty() {
+                    problems.push(format!("{at}: uses {{option}} but lists no options"));
                 }
                 if action.requires.contains(&Requirement::Artifact) && action.artifact.is_none() {
                     problems.push(format!("{at}: requires an artifact but names none"));
@@ -408,6 +432,11 @@ impl Action {
             return Err(format!("{}: {}", self.label, blockers.join("; ")));
         }
         let program = self.program.as_deref().ok_or_else(|| format!("{} has no program", self.label))?;
+        if let Some(option) = ctx.option {
+            if !self.options.iter().any(|o| o == option) {
+                return Err(format!("{}: {option:?} is not one of {}", self.label, self.options.join(", ")));
+            }
+        }
         let fill = |text: &str| fill(text, ctx, self.artifact_path(ctx).ok().as_deref());
         let program = PathBuf::from(fill(program)?);
         let args = self.args.iter().map(|a| fill(a)).collect::<Result<Vec<_>, _>>()?;
@@ -503,6 +532,16 @@ fn value(name: &str, ctx: &Context) -> Result<String, String> {
             crate::install::data_dir(install, &version()?.game).display().to_string()
         }
         "level" => format!("{:02}", ctx.level.unwrap_or(0)),
+        // A chosen file or folder: absolute and there, so a relative one cannot reach into the
+        // working folder.
+        "path" => {
+            let path = ctx.path.ok_or("choose a file or folder first")?;
+            if !Path::new(path).is_absolute() || !Path::new(path).exists() {
+                return Err(format!("{path} is not there"));
+            }
+            path.to_string()
+        }
+        "option" => ctx.option.ok_or("{option} needs a choice")?.to_string(),
         other => return Err(format!("unknown placeholder {{{other}}}")),
     })
 }
@@ -580,6 +619,8 @@ mod tests {
             toolchains: false,
             platform: Platform::Linux,
             level: None,
+            path: None,
+            option: None,
         };
         let view = action.view(&ctx(&blocked));
         assert!(!view.runnable && view.this_platform);
@@ -615,6 +656,46 @@ mod tests {
         assert_eq!(plan.args[1], data.display().to_string());
     }
 
+    /// `{path}` is a chosen file or folder that is there; `{option}` one of the action's options.
+    #[test]
+    fn path_and_option_are_checked() {
+        let root = checkout();
+        let catalog = crate::catalog::load(&root).unwrap();
+        let version = catalog.version("rac1/pal").unwrap();
+        let status = crate::status::version_status(&root, version);
+        let config = Config { python: Some("/usr/bin/python3".into()), ..Config::default() };
+        let action: Action = serde_json::from_str(
+            r#"{"id": "x", "label": "Export", "kind": "edit", "state": "unverified", "program": "{python}",
+                "args": ["{path}", "--what", "{option}"], "options": ["mobys", "textures"]}"#,
+        )
+        .unwrap();
+        let here = root.canonicalize().unwrap().display().to_string();
+        let ctx = |path, option| Context {
+            root: &root,
+            config: &config,
+            version: Some(version),
+            status: Some(&status),
+            toolchains: false,
+            platform: Platform::Linux,
+            level: None,
+            path,
+            option,
+        };
+        let plan = action.plan(&ctx(Some(&here), Some("textures"))).unwrap();
+        assert_eq!(plan.args, [here.as_str(), "--what", "textures"]);
+        assert!(action.plan(&ctx(Some(&here), Some("--evil"))).is_err());
+        assert!(action.plan(&ctx(None, Some("mobys"))).is_err());
+        assert!(action.plan(&ctx(Some("relative/path"), Some("mobys"))).is_err());
+        assert!(action.plan(&ctx(Some("/no/such/folder"), Some("mobys"))).is_err());
+        let catalog = crate::catalog::load(&root).unwrap();
+        let file = parse(
+            r#"{"format": 1, "versions": {"rac1/pal": [{"id": "y", "label": "Y", "kind": "edit", "state": "unverified",
+                "program": "{python}", "args": ["{option}"]}]}}"#,
+        )
+        .unwrap();
+        assert!(file.problems(&catalog).iter().any(|p| p.contains("lists no options")));
+    }
+
     /// An action starts in a folder that is there. 0.4.0 started the game in the version's own
     /// folder, which the copy an installer carries does not have: Windows refused it ("the
     /// directory name is invalid", error 267) and Play did nothing.
@@ -634,6 +715,8 @@ mod tests {
             toolchains: false,
             platform: Platform::current(),
             level: None,
+            path: None,
+            option: None,
         };
         let play: Action = serde_json::from_str(
             r#"{"id": "p", "label": "Play", "kind": "play", "state": "unverified", "program": "{python}"}"#,

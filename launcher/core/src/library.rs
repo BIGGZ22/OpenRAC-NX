@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use serde::Serialize;
 
-use crate::actions::{self, ActionFile, ActionView, Context, Plan, Platform, Scope};
+use crate::actions::{self, ActionFile, ActionView, Context, Inputs, Plan, Platform, Scope};
 use crate::catalog::{self, Version};
 use crate::config::Config;
 use crate::install::{self, InstallState};
@@ -75,7 +75,17 @@ pub fn library(config: &Config) -> Result<Library, String> {
         list.map(|l| l.iter().map(|a| a.view(ctx)).collect()).unwrap_or_default()
     };
 
-    let repo_ctx = Context { root: &root, config, version: None, status: None, toolchains, platform, level: None };
+    let repo_ctx = Context {
+        root: &root,
+        config,
+        version: None,
+        status: None,
+        toolchains,
+        platform,
+        level: None,
+        path: None,
+        option: None,
+    };
     let repository = views(file.as_ref().map(|f| &f.repository), &repo_ctx);
     let games = catalog
         .games
@@ -95,6 +105,8 @@ pub fn library(config: &Config) -> Result<Library, String> {
                         toolchains,
                         platform,
                         level: None,
+                        path: None,
+                        option: None,
                     };
                     let actions = views(file.as_ref().and_then(|f| f.versions.get(&version.key)), &ctx);
                     VersionView { version, status, actions }
@@ -110,16 +122,25 @@ pub fn library(config: &Config) -> Result<Library, String> {
 
 /// The command line for action `id` in `scope`, checked against the
 /// checkout as it is now (not as the UI last saw it).
-pub fn plan(config: &Config, scope: &Scope, id: &str, level: Option<u32>) -> Result<Plan, String> {
+pub fn plan(config: &Config, scope: &Scope, id: &str, inputs: &Inputs) -> Result<Plan, String> {
+    let (level, path, option) = (inputs.level, inputs.path.as_deref(), inputs.option.as_deref());
     let root = config.root()?;
     let file: ActionFile = actions::load(root)?;
     let action = file.find(scope, id).ok_or_else(|| format!("no action {id:?} for {scope:?}"))?;
     let toolchains = status::toolchains_present(root);
     let platform = Platform::current();
     match scope {
-        Scope::Repository => {
-            action.plan(&Context { root, config, version: None, status: None, toolchains, platform, level })
-        }
+        Scope::Repository => action.plan(&Context {
+            root,
+            config,
+            version: None,
+            status: None,
+            toolchains,
+            platform,
+            level,
+            path,
+            option,
+        }),
         Scope::Version(key) => {
             let catalog = catalog::load(root)?;
             let version = catalog.version(key).ok_or_else(|| format!("no version {key}"))?;
@@ -132,6 +153,8 @@ pub fn plan(config: &Config, scope: &Scope, id: &str, level: Option<u32>) -> Res
                 toolchains,
                 platform,
                 level,
+                path,
+                option,
             })
         }
     }
@@ -160,15 +183,15 @@ mod tests {
     #[test]
     fn plans_are_refused_until_their_needs_are_met() {
         let config = Config { root: Some(checkout()), ..Config::default() };
-        let err = plan(&config, &Scope::Repository, "discs", None).unwrap_err();
+        let err = plan(&config, &Scope::Repository, "discs", &Inputs::default()).unwrap_err();
         assert!(err.contains("Python"), "{err}");
         let python = crate::detect::which("python3").unwrap_or_else(|| "/usr/bin/python3".into());
         let config = Config { python: Some(python.clone()), ..config };
-        let plan = plan(&config, &Scope::Repository, "discs", None).unwrap();
+        let plan = plan(&config, &Scope::Repository, "discs", &Inputs::default()).unwrap();
         assert_eq!(plan.program, python);
         assert_eq!(plan.args, ["tools/openrac.py", "discs"]);
-        assert!(super::plan(&config, &Scope::Repository, "nope", None).is_err());
-        assert!(super::plan(&config, &Scope::Version("rac9/pal".into()), "build", None).is_err());
+        assert!(super::plan(&config, &Scope::Repository, "nope", &Inputs::default()).is_err());
+        assert!(super::plan(&config, &Scope::Version("rac9/pal".into()), "build", &Inputs::default()).is_err());
     }
 
     /// A copy of the checkout's game manifests and actions in a temporary
@@ -196,15 +219,18 @@ mod tests {
             Config { root: Some(dir.path().to_path_buf()), godot: Some("/usr/bin/godot".into()), ..Config::default() };
         let scope = Scope::Version("rac1/pal".into());
         // Listed without a level, an action stands for level 00.
-        let err = plan(&config, &scope, "editor-preview", None).unwrap_err();
+        let err = plan(&config, &scope, "editor-preview", &Inputs::default()).unwrap_err();
         assert!(err.contains("assets/levels/rac1/level_00/project.godot"), "{err}");
 
         // Each level is a project of its own: the one asked for is the one opened.
         let project = dir.path().join("assets/levels/rac1/level_07");
         std::fs::create_dir_all(&project).unwrap();
         std::fs::write(project.join("project.godot"), "").unwrap();
-        assert!(plan(&config, &scope, "editor-preview", Some(3)).is_err(), "level 03 was not extracted");
-        let plan = plan(&config, &scope, "editor-preview", Some(7)).unwrap();
+        assert!(
+            plan(&config, &scope, "editor-preview", &Inputs { level: Some(3), ..Inputs::default() }).is_err(),
+            "level 03 was not extracted"
+        );
+        let plan = plan(&config, &scope, "editor-preview", &Inputs { level: Some(7), ..Inputs::default() }).unwrap();
         assert_eq!(plan.program, PathBuf::from("/usr/bin/godot"));
         assert!(plan.detached);
         assert_eq!(plan.args, ["--path", "assets/levels/rac1/level_07", "res://levels/level_07/level_07.tscn"]);
@@ -276,7 +302,7 @@ mod tests {
             python: crate::detect::bundled_python(&root),
             ..Config::default()
         };
-        let plan = plan(&config, &scope, "play", None).unwrap();
+        let plan = plan(&config, &scope, "play", &Inputs::default()).unwrap();
         assert!(plan.cwd.is_dir(), "play would start in {}", plan.cwd.display());
         assert!(plan.program.is_file(), "{}", plan.program.display());
         let status = std::process::Command::new(&plan.program)

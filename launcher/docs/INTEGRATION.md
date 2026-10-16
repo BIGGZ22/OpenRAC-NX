@@ -73,20 +73,24 @@ One action:
 | `detached`    | default false                                                         | start it and let it run (the game, an editor) instead of a job in Tasks                                                                                |
 | `docs`        |                                                                       | the document for this step, relative to the checkout (`#anchor` allowed); the Docs button opens it                                                     |
 | `todo`        | required while `planned`                                              | for contributors: what is left to do or check                                                                                                          |
+| `options`     | required with `{option}`                                              | the values `{option}` may take; the UI picks one, anything else is refused                                                                             |
 
 Placeholders (anything else is rejected by the tests):
 
-| Placeholder           | Value                                                    |
-| --------------------- | -------------------------------------------------------- |
-| `{root}`              | the checkout, absolute                                   |
-| `{dir}`               | the version's folder, absolute (`…/games/rac1`)          |
-| `{python}`, `{godot}` | the paths in Settings (refused while unset)              |
-| `{docker}`            | the path in Settings, or `docker` from PATH              |
-| `{disc}`              | the disc image found for the version (absolute)          |
-| `{boot}`              | the boot executable `openrac.py setup` placed for it     |
-| `{artifact}`          | the action's `artifact`, absolute                        |
-| `{serial}`, `{key}`   | `SCES_509.16`, `rac1/pal`                                |
-| `{data}`              | the game's set-up folder, `<install>/active/<game>/data` |
+| Placeholder           | Value                                                             |
+| --------------------- | ----------------------------------------------------------------- |
+| `{root}`              | the checkout, absolute                                            |
+| `{dir}`               | the version's folder, absolute (`…/games/rac1`)                   |
+| `{python}`, `{godot}` | the paths in Settings (refused while unset)                       |
+| `{docker}`            | the path in Settings, or `docker` from PATH                       |
+| `{disc}`              | the disc image found for the version (absolute)                   |
+| `{boot}`              | the boot executable `openrac.py setup` placed for it              |
+| `{artifact}`          | the action's `artifact`, absolute                                 |
+| `{serial}`, `{key}`   | `SCES_509.16`, `rac1/pal`                                         |
+| `{data}`              | the game's set-up folder, `<install>/active/<game>/data`          |
+| `{level}`             | the level a run is for, two digits (00 while listed)              |
+| `{path}`              | a file or folder the player chose for the run, absolute and there |
+| `{option}`            | one of the action's `options`, chosen for the run                 |
 
 `cargo test -p openrac-launcher-core` checks the file against the checkout:
 known versions, unique ids, known placeholders (and no version placeholders in

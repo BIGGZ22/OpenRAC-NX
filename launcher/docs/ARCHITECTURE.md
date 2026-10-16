@@ -93,23 +93,26 @@ container or compiler goes with it.
 All in `src-tauri/src/lib.rs`; types in `core/src` (serde, camelCase) and
 mirrored in `src/lib/api.ts`.
 
-| Command                      | Arguments                         | Returns                                                                               |
-| ---------------------------- | --------------------------------- | ------------------------------------------------------------------------------------- |
-| `app_info`                   |                                   | `{version, platform, configFile}`                                                     |
-| `get_config` / `save_config` | `{config}`                        | `Config` (`core/src/config.rs`)                                                       |
-| `detect`                     |                                   | candidates for the checkout, Python, Godot, Docker                                    |
-| `check_root`                 | `{path}`                          | `{ok, version, message}`: is it an OpenRAC checkout                                   |
-| `check_tool`                 | `{tool, path}`                    | the same, after running the tool's version flag                                       |
-| `library`                    |                                   | `Library` (`core/src/library.rs`)                                                     |
-| `install_game`               | `{game, image}`                   | the extractor's job, `{id, title, command, detached}`                                 |
-| `uninstall_game`             | `{game}`                          | removes the game's `iso_data`, `decompiler_out` and `out`                             |
-| `run_action`                 | `{scope, id}`                     | `{id, title, command, detached}`                                                      |
-| `cancel_job`                 | `{id}`                            |                                                                                       |
-| `open_path`                  | `{path}` relative to the checkout | opens it with the system; refuses paths outside the checkout                          |
-| `open_url`                   | `{url}`                           | opens an `https://` address in the browser                                            |
-| `sync_progress_from_web`     |                                   | fetches openrac.dev's progress, writes `progress/summary.json`, returns the catalogue |
-| `apply_progress_json`        | `{json}`                          | the same from JSON the page fetched                                                   |
-| `set_discord_status`         | `{status}`                        | sets Discord Rich Presence (idle, viewing, playing)                                   |
+| Command                                                         | Arguments                                               | Returns                                                                                          |
+| --------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `app_info`                                                      |                                                         | `{version, platform, configFile}`                                                                |
+| `get_config` / `save_config`                                    | `{config}`                                              | `Config` (`core/src/config.rs`)                                                                  |
+| `detect`                                                        |                                                         | candidates for the checkout, Python, Godot, Docker                                               |
+| `check_root`                                                    | `{path}`                                                | `{ok, version, message}`: is it an OpenRAC checkout                                              |
+| `check_tool`                                                    | `{tool, path}`                                          | the same, after running the tool's version flag                                                  |
+| `library`                                                       |                                                         | `Library` (`core/src/library.rs`)                                                                |
+| `install_game`                                                  | `{game, image}`                                         | the extractor's job, `{id, title, command, detached}`                                            |
+| `uninstall_game`                                                | `{game}`                                                | removes the game's `iso_data`, `decompiler_out` and `out`                                        |
+| `run_action`                                                    | `{scope, id, level, path, option}`                      | `{id, title, command, detached}`; `level`, `path`, `option` fill `{level}`, `{path}`, `{option}` |
+| `overrides_list`                                                | `{game}`                                                | the game's overrides packs (`core/src/overrides.rs`), in order                                   |
+| `overrides_set_enabled` / `overrides_move` / `overrides_remove` | `{game, id, enabled}` / `{game, id, up}` / `{game, id}` | the packs again, changed                                                                         |
+| `open_game_folder`                                              | `{game, path}`                                          | opens a folder inside the game's set-up folder (an export); refuses anything else                |
+| `cancel_job`                                                    | `{id}`                                                  |                                                                                                  |
+| `open_path`                                                     | `{path}` relative to the checkout                       | opens it with the system; refuses paths outside the checkout                                     |
+| `open_url`                                                      | `{url}`                                                 | opens an `https://` address in the browser                                                       |
+| `sync_progress_from_web`                                        |                                                         | fetches openrac.dev's progress, writes `progress/summary.json`, returns the catalogue            |
+| `apply_progress_json`                                           | `{json}`                                                | the same from JSON the page fetched                                                              |
+| `set_discord_status`                                            | `{status}`                                              | sets Discord Rich Presence (idle, viewing, playing)                                              |
 
 | Event        | Payload                                                    |
 | ------------ | ---------------------------------------------------------- |

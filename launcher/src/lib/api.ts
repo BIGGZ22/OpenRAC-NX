@@ -208,6 +208,26 @@ export interface Library {
   actionsError: string | null;
 }
 
+/** What a run gives an action besides its name: `{level}`, `{path}`, `{option}`. */
+export interface RunInputs {
+  level?: number;
+  path?: string;
+  option?: string;
+}
+
+/** core/src/overrides.rs: an overrides pack (replacement textures and models). */
+export interface PackView {
+  id: string;
+  name: string;
+  author: string;
+  description: string;
+  enabled: boolean;
+  levels: number;
+  textures: number;
+  models: number;
+  levelFiles: number;
+}
+
 /** core/src/jobs.rs */
 export interface Started {
   /** 0 for a detached launch (the game, Godot), which has no job. */
@@ -288,9 +308,16 @@ export const api = {
   checkRoot: (path: string) => call<Check>("check_root", { path }),
   checkTool: (tool: Tool, path: string) => call<Check>("check_tool", { tool, path }),
   library: () => call<Library>("library"),
-  /** `level`: which level a per-level action is for (the level editor's projects, one each). */
-  runAction: (scope: Scope, id: string, level?: number) =>
-    call<Started>("run_action", { scope, id, level: level ?? null }),
+  /** `inputs`: which level a per-level action is for (the level editor's projects, one each), a
+   *  file or folder the player chose (`{path}`), one of the action's options (`{option}`). */
+  runAction: (scope: Scope, id: string, inputs: RunInputs = {}) =>
+    call<Started>("run_action", {
+      scope,
+      id,
+      level: inputs.level ?? null,
+      path: inputs.path ?? null,
+      option: inputs.option ?? null,
+    }),
   cancelJob: (id: number) => call<null>("cancel_job", { id }),
   /** A file or folder in the checkout, relative to it (`games/rac1/README.md`). */
   openPath: (path: string) => call<null>("open_path", { path }),
@@ -308,6 +335,14 @@ export const api = {
   backupSaves: (serial: string, note?: string) => call<SaveBackupInfo>("backup_saves", { serial, note }),
   restoreBackup: (serial: string, backupName: string) => call<null>("restore_backup", { serial, backupName }),
   openSavesFolder: (serial: string) => call<null>("open_saves_folder", { serial }),
+  /** A game's overrides packs (core/src/overrides.rs), in the order they apply. */
+  overridesList: (game: string) => call<PackView[]>("overrides_list", { game }),
+  overridesSetEnabled: (game: string, id: string, enabled: boolean) =>
+    call<PackView[]>("overrides_set_enabled", { game, id, enabled }),
+  overridesMove: (game: string, id: string, up: boolean) => call<PackView[]>("overrides_move", { game, id, up }),
+  overridesRemove: (game: string, id: string) => call<PackView[]>("overrides_remove", { game, id }),
+  /** A folder inside the game's set-up folder (an export), opened with the system. */
+  openGameFolder: (game: string, path: string) => call<null>("open_game_folder", { game, path }),
 };
 
 /** A folder picker; null when cancelled (or in the browser preview). */
@@ -331,6 +366,31 @@ export async function pickFile(title: string): Promise<string | null> {
   if (!inTauri) return null;
   const picked = await open({ directory: false, multiple: false, title });
   return typeof picked === "string" ? picked : null;
+}
+
+/** A picker for an overrides pack's .zip; null when cancelled (in the browser preview, a made-up one). */
+export async function pickZip(title: string): Promise<string | null> {
+  if (!inTauri) return "/home/you/Downloads/HD Ratchet.zip";
+  const picked = await open({
+    directory: false,
+    multiple: false,
+    title,
+    filters: [{ name: "Zip", extensions: ["zip"] }],
+  });
+  return typeof picked === "string" ? picked : null;
+}
+
+/** Files and folders dropped on the window, while `handler` is listening (the desktop app only). */
+export async function onDrop(
+  handler: (paths: string[]) => void,
+  hovering: (over: boolean) => void = () => undefined,
+): Promise<() => void> {
+  if (!inTauri) return () => undefined;
+  const { getCurrentWebview } = await import("@tauri-apps/api/webview");
+  return getCurrentWebview().onDragDropEvent((event) => {
+    if (event.payload.type === "drop") handler(event.payload.paths);
+    else hovering(event.payload.type !== "leave");
+  });
 }
 
 /** A picker for a disc image; null when cancelled (or in the browser preview). */

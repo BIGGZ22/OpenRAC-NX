@@ -12,6 +12,7 @@ use openrac_launcher_core::detect::{self, Check, Detected, Tool};
 use openrac_launcher_core::install;
 use openrac_launcher_core::jobs::{Event, Jobs, Started};
 use openrac_launcher_core::library::{self, Library};
+use openrac_launcher_core::overrides::{self, PackView};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_opener::OpenerExt;
@@ -129,9 +130,12 @@ fn run_action(
     scope: Scope,
     id: String,
     level: Option<u32>,
+    path: Option<String>,
+    option: Option<String>,
 ) -> Result<Started, String> {
     let config = state.config.lock().unwrap().clone();
-    let plan = library::plan(&config, &scope, &id, level)?;
+    let inputs = openrac_launcher_core::actions::Inputs { level, path, option };
+    let plan = library::plan(&config, &scope, &id, &inputs)?;
     let is_play = if let Scope::Version(_) = &scope {
         if let Some(root) = &config.root {
             if let Ok(file) = openrac_launcher_core::actions::load(root) {
@@ -368,6 +372,53 @@ fn restore_backup(serial: String, backup_name: String) -> Result<(), String> {
     openrac_launcher_core::saves::restore_backup(&serial, &backup_name)
 }
 
+/// A game's overrides folder (`<data>/overrides`), from the install folder in Settings.
+fn overrides_dir(state: &State<'_, AppState>, game: &str) -> Result<PathBuf, String> {
+    let install = state.config.lock().unwrap().install_dir.clone().ok_or("no install folder (Settings)")?;
+    Ok(overrides::dir(&install, game))
+}
+
+/// The game's overrides packs, in the order they apply.
+#[tauri::command]
+fn overrides_list(state: State<'_, AppState>, game: String) -> Result<Vec<PackView>, String> {
+    overrides::list(&overrides_dir(&state, &game)?)
+}
+
+#[tauri::command]
+fn overrides_set_enabled(
+    state: State<'_, AppState>,
+    game: String,
+    id: String,
+    enabled: bool,
+) -> Result<Vec<PackView>, String> {
+    overrides::set_enabled(&overrides_dir(&state, &game)?, &id, enabled)
+}
+
+#[tauri::command]
+fn overrides_move(state: State<'_, AppState>, game: String, id: String, up: bool) -> Result<Vec<PackView>, String> {
+    overrides::move_pack(&overrides_dir(&state, &game)?, &id, up)
+}
+
+#[tauri::command]
+fn overrides_remove(state: State<'_, AppState>, game: String, id: String) -> Result<Vec<PackView>, String> {
+    overrides::remove(&overrides_dir(&state, &game)?, &id)
+}
+
+/// Opens a folder inside a game's set-up folder (an export, the overrides): folders only, and
+/// only there, so the page cannot open anything else with it.
+#[tauri::command]
+fn open_game_folder(app: AppHandle, state: State<'_, AppState>, game: String, path: String) -> Result<(), String> {
+    let install = state.config.lock().unwrap().install_dir.clone().ok_or("no install folder (Settings)")?;
+    let data = install::data_dir(&install, &game);
+    let _ = std::fs::create_dir_all(data.join("exports"));
+    let data = std::fs::canonicalize(&data).map_err(|e| format!("{}: {e}", data.display()))?;
+    let target = std::fs::canonicalize(Path::new(&path)).map_err(|e| format!("{path}: {e}"))?;
+    if !target.starts_with(&data) || !target.is_dir() {
+        return Err(format!("{path} is not a folder of the game's set-up"));
+    }
+    app.opener().open_path(target.to_string_lossy(), None::<&str>).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 fn open_saves_folder(app: AppHandle, serial: String) -> Result<(), String> {
     let dir = openrac_launcher_core::saves::get_memcard_dir(&serial);
@@ -554,6 +605,11 @@ pub fn run() {
             backup_saves,
             restore_backup,
             open_saves_folder,
+            overrides_list,
+            overrides_set_enabled,
+            overrides_move,
+            overrides_remove,
+            open_game_folder,
         ])
         .run(tauri::generate_context!())
         .expect("the launcher failed to start");

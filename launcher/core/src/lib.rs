@@ -15,6 +15,7 @@
 //! - [`detect`]: finding the checkout, Python, Godot and Docker.
 //! - [`install`]: setting a game up from the player's disc, OpenGOAL's way.
 //! - [`jobs`]: running an action as a child process and streaming its output.
+//! - [`overrides`]: a game's overrides packs (replacement textures and models): list, order, on/off.
 //! - [`library`]: all of the above, put together for the UI.
 
 pub mod actions;
@@ -26,6 +27,7 @@ pub mod discs;
 pub mod install;
 pub mod jobs;
 pub mod library;
+pub mod overrides;
 pub mod saves;
 pub mod status;
 

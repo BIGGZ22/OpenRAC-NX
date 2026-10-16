@@ -11,6 +11,7 @@ import {
   type Config,
   type FoundDisc,
   type Library,
+  type RunInputs,
   type Scope,
   type Started,
   type VersionView,
@@ -233,15 +234,16 @@ export function updateDiscordPresence(page: Page = app.page, version: string | n
 const starters: Record<number, (() => Promise<Started>) | undefined> = {};
 
 /** Runs an action: a detached one (the game, Godot) at once, anything else through the queue. */
-export async function run(scope: Scope, action: ActionView, level?: number) {
+export async function run(scope: Scope, action: ActionView, given?: number | RunInputs) {
+  const inputs = typeof given === "number" ? { level: given } : given;
   if (action.detached) {
-    const started = await guard(api.runAction(scope, action.id, level));
+    const started = await guard(api.runAction(scope, action.id, inputs));
     if (started) toast(`Started: ${started.title}`);
     updateDiscordPresence();
     return;
   }
   const job = queue.add(scope, action.id, action.label);
-  if (level !== undefined) starters[job.key] = () => api.runAction(scope, action.id, level);
+  if (inputs !== undefined) starters[job.key] = () => api.runAction(scope, action.id, inputs);
   jobs.selected = job.key;
   toast(queue.running() ? `Queued: ${action.label}` : `Started: ${action.label}`);
   pump();
@@ -261,15 +263,16 @@ function settle(key: number, succeeded: boolean) {
  * action (the editor) is started and not waited for. Resolves to whether
  * every step ran.
  */
-export async function runChain(scope: Scope, actions: ActionView[], level?: number): Promise<boolean> {
+export async function runChain(scope: Scope, actions: ActionView[], given?: number | RunInputs): Promise<boolean> {
+  const inputs = typeof given === "number" ? { level: given } : given;
   for (const action of actions) {
     if (action.detached) {
-      const started = await guard(api.runAction(scope, action.id, level));
+      const started = await guard(api.runAction(scope, action.id, inputs));
       if (!started) return false;
       continue;
     }
     const job = queue.add(scope, action.id, action.label);
-    if (level !== undefined) starters[job.key] = () => api.runAction(scope, action.id, level);
+    if (inputs !== undefined) starters[job.key] = () => api.runAction(scope, action.id, inputs);
     jobs.selected = job.key;
     const ended = new Promise<boolean>((resolve) => {
       waiting[job.key] = resolve;

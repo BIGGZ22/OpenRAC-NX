@@ -3,6 +3,7 @@
   // in order. Edit the levels in Godot, pack the edits into the game's own
   // level data, play the game with them. The disc image is never changed.
   // With developer tools on: the folders and the commands behind each step.
+  import AssetsPanel from "$components/AssetsPanel.svelte";
   import Icon from "$components/Icon.svelte";
   import { api, pickFile, type ActionView, type GameView, type VersionView } from "$lib/api";
   import { app, guard, jobs, run, runChain, saveConfig, toast } from "$lib/app.svelte";
@@ -33,6 +34,14 @@
   const needs = (a: ActionView | null) => (a?.blockers ?? []).map((b) => b.replace(/^needs /, ""));
 
   let opening = $state<string | null>(null);
+
+  /** Puts the packed levels and the packs that are on together, then starts the game with them. */
+  async function playModded(v: VersionView) {
+    const play = action(v, "play-edited");
+    const stack = action(v, "overrides-stack");
+    if (!play) return;
+    await runChain({ kind: "version", key: v.key }, stack ? [stack, play] : [play]);
+  }
   /** The level the editor opens, per game. Each level is a Godot project of its own. */
   const level = $state<Record<string, number>>({});
 
@@ -158,12 +167,12 @@
           </li>
           <li>
             <div class="grow">
-              <h3>Play with your edits</h3>
+              <h3>Play with your mods</h3>
               <p class="muted clip">
                 {#if !play}
                   Playing is not available on this computer yet.
                 {:else if play.runnable}
-                  Starts the game with your packed levels in place of the disc's.
+                  Starts the game with your packed levels and the packs that are on (below).
                 {:else}
                   Build the game first, on its page.
                 {/if}
@@ -172,7 +181,7 @@
             <button
               class:primary={!!result && !result.failed}
               disabled={!play?.runnable}
-              onclick={() => play && void run(scope, play)}><Icon name="play" size={16} />Play</button
+              onclick={() => void playModded(v)}><Icon name="play" size={16} />Play</button
             >
           </li>
         </ol>
@@ -186,7 +195,8 @@
             </p>
             <pre>python3 editor/extract.py godot &lt;disc.iso&gt; assets/levels/{game.id} --split
 python3 editor/extract.py pack &lt;disc.iso&gt; assets/levels/{game.id} assets/packed/{game.id}
-openrac-{v.key.replace("/", "-")} --data &lt;data&gt; --mods assets/packed/{game.id}</pre>
+python3 editor/overrides.py stack --into &lt;data&gt;/overrides --out &lt;data&gt;/mods --packed assets/packed/{game.id}
+openrac-{v.key.replace("/", "-")} --data &lt;data&gt; --mods &lt;data&gt;/mods</pre>
             <div class="row">
               <button class="small" onclick={() => void guard(api.openPath(`assets/levels/${game.id}`))}
                 ><Icon name="folder" size={14} />Level projects</button
@@ -201,6 +211,7 @@ openrac-{v.key.replace("/", "-")} --data &lt;data&gt; --mods assets/packed/{game
           </div>
         {/if}
       </section>
+      <AssetsPanel version={v} />
     {/if}
   {/each}
 </div>
