@@ -240,13 +240,27 @@ def setup(only: list[str]) -> None:
 
 # --- Progress -------------------------------------------------------------------
 
+def source_checkout(version: dict) -> Path | None:
+    """Where the version's sister project is checked out: $OPENRAC_SOURCE_<GAME>_<VERSION> when set
+    (as tools/sources.py reads it), else the path its game.json names."""
+    source = version.get("source")
+    if not source:
+        return None
+    for game, name, other in versions():
+        if other == version:
+            env = os.environ.get(f"OPENRAC_SOURCE_{game['id']}_{name}".upper())
+            if env:
+                return Path(env)
+    return Path(os.path.expanduser(source["checkout"]))
+
+
 def fetch_reports() -> None:
     """Copy reports that a sister project publishes outside its tree (progress.fetch)."""
     for game, name, version in versions():
         fetch = version.get("progress", {}).get("fetch")
         if not fetch:
             continue
-        repo = Path(os.path.expanduser(version["source"]["checkout"]))
+        repo = source_checkout(version)
         key = f"{game['id']}/{name}"
         try:
             subprocess.run(["git", "-C", str(repo), "fetch", "-q", "origin", fetch["branch"]], check=True)
@@ -292,7 +306,7 @@ def report_date(version: dict, path: Path) -> str:
     """When the report last changed: in its sister project's history when the checkout is
     there and the file came from it, else in OpenRAC's."""
     source = version.get("source")
-    for repo, rel in ((Path(os.path.expanduser(source["checkout"])) if source else None, None), (ROOT, path)):
+    for repo, rel in ((source_checkout(version), None), (ROOT, path)):
         if repo is None or not (repo / ".git").exists():
             continue
         if rel is None:
