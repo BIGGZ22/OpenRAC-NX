@@ -90,7 +90,7 @@ void func_00201AF0(unsigned int image) {
 /* func_001F7680 (the decompilation's functional C): the same transfer of a screen-high picture,
  * every frame of the boot loop (the memory card warning, the loading pictures), then a
  * texture flush (VU1_texFlush). */
-void func_001F7680(int image) {
+void func_001F7680(unsigned int image) {
     func_001F7680__game(image);
     draw_picture((gaddr)image, GREF(int32_t, OPENRAC_DATA(SCREEN_LINES)));
 }
