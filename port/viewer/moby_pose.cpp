@@ -146,7 +146,42 @@ std::vector<rac1::JointMatrix> evaluate_moby(std::span<const std::uint8_t> ram, 
         }
         mods.push_back(m);
     }
-    return rac1::evaluate_keys(anim, &*a, b ? &*b : nullptr, t, plain, mods);
+    // The pose layers (moby +0x60, each node's next at +0x1C, PAL func_L00_00250060 links them in
+    // front): Ratchet's weapon arm, its keys at +0x38 / +0x3C ready in his joint layout. Without them
+    // his arms kept the unarmed idle and a gun hung from his lowered hand.
+    std::vector<rac1::MobyFrame> layer_keys;
+    layer_keys.reserve(16);
+    std::vector<rac1::PoseLayer> layers;
+    for (std::uint32_t node = at<std::uint32_t>(ram, moby + 0x60); inside(ram, node, 0x40) && layers.size() < 6;
+         node = at<std::uint32_t>(ram, node + 0x1C)) {
+        const auto count = at<std::uint16_t>(ram, node + 2);
+        const auto list = at<std::uint32_t>(ram, node + 0x0C);
+        if (count == 0 || count > kMaxJoints || !inside(ram, list, count)) {
+            continue;
+        }
+        rac1::PoseLayer l;
+        l.joints.assign(ram.begin() + list, ram.begin() + list + count);
+        l.weight = at<float>(ram, node + 0x08);
+        l.t = at<float>(ram, node + 0x24);
+        if (!(l.t > 0.0f && l.t <= 1.0f)) {
+            l.t = 0.0f;
+        }
+        l.plain = at<std::uint8_t>(ram, node + 0x22) == at<std::uint8_t>(ram, node + 0x23)
+                  && at<std::uint8_t>(ram, node + 0x21) == at<std::uint8_t>(ram, node + 0x20) + 1;
+        auto ka = key_at(ram, at<std::uint32_t>(ram, node + 0x38), joints);
+        auto kb = l.t != 0.0f ? key_at(ram, at<std::uint32_t>(ram, node + 0x3C), joints) : std::nullopt;
+        if (!ka || (l.t != 0.0f && !kb)) {
+            continue;
+        }
+        layer_keys.push_back(std::move(*ka));
+        l.a = &layer_keys.back();
+        if (kb) {
+            layer_keys.push_back(std::move(*kb));
+            l.b = &layer_keys.back();
+        }
+        layers.push_back(std::move(l));
+    }
+    return rac1::evaluate_keys(anim, &*a, b ? &*b : nullptr, t, plain, mods, layers);
 }
 
 }  // namespace

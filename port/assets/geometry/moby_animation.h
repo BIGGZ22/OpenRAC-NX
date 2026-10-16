@@ -218,13 +218,30 @@ struct JointModifier {
     std::array<f32, 3> trans{0.0f, 0.0f, 0.0f};
 };
 
+// A pose layer of a moby's +0x60 list (the 0x40-byte nodes PAL func_L00_00250060 links in, through
+// +0x1C): Ratchet's weapon arm. Its own two keys (+0x38 / +0x3C, already in the moby's joint
+// layout: a key of an animation-only class is retargeted into the node's buffer by the game), t
+// (+0x24), whether they are consecutive keys of one sequence (+0x20..+0x23), the weight (+8), and
+// the joints it covers (+0xC, +2 of them: the second byte list of its class joint list). It is
+// blended over those joints after the moby's own keys, before the modifiers. After ReRAC's
+// PoseLayer, layer_local and apply_layers (moby_anim.rs; ISC License, Copyright (c) 2026 ReRAC
+// contributors).
+struct PoseLayer {
+    std::vector<u8> joints;
+    const MobyFrame* a = nullptr;
+    const MobyFrame* b = nullptr;
+    f32 t = 0.0f;
+    bool plain = false;
+    f32 weight = 0.0f;
+};
+
 // The palette for two given keys, as MobyAnimEval takes them from the moby
 // (+0x68 / +0x6c, +0x54): key A, key B (read only when t is not 0), t, and
 // whether A and B are consecutive keys of one sequence (a plain lerp, no
 // normalisation). Identity for every joint when a key it needs is missing.
 std::vector<JointMatrix> evaluate_keys(
     const MobyAnimClass& anim, const MobyFrame* a, const MobyFrame* b, f32 t, bool plain,
-    std::span<const JointModifier> mods = {}
+    std::span<const JointModifier> mods = {}, std::span<const PoseLayer> layers = {}
 );
 
 // The blend snapshot (0x20ede8 / PAL func_0020FC38 with flags 0x300, after ReRAC's moby_anim.rs
