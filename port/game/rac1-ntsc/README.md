@@ -24,7 +24,7 @@ give (`OPENRAC_PRESS`, [port/README.md](../../README.md)).
 | | |
 |---|---|
 | Builds and links | yes: 1,836 files of the NTSC decomp read, 10 left out (below) |
-| Title | the title world, the logo, the menu and its dialogs; the menu's panels sit higher on the screen than PAL's, and PRESS START is not shown |
+| Title | the title world, the logo, the menu and its dialogs; the menu's text sits near the top of the screen and its panels lower left (PAL's are centred together), and PRESS START was not seen |
 | New game | title -> New Game -> "Continue anyway?" -> the opening captions -> Veldin's opening scene -> play, with no function without C called |
 | Veldin (0) | plays: Ratchet walks, swings and throws the wrench, the follow camera frames him, the HelpDesk speaks; Start skips the opening scene |
 | Novalis (1), Kerwan (3) | direct start (`OPENRAC_DIRECT=1 --level N`): the flight between planets (Start skips it), the arrival scene, then play. On Kerwan a particle callback (level 0's 0x267BE8) is called with no function |
@@ -78,10 +78,11 @@ otherwise.
 
 ## What is left
 
-1. **The title's layout.** The menu's panels and their text sit near the
-   top of the screen (PAL's are centred) and PRESS START is missing.
+1. **The title's layout.** The menu's text sits near the top of the
+   screen and its panels lower left (PAL's are centred together), and
+   PRESS START was not seen. The menu works.
 2. **Play every level.** Veldin, Novalis and Kerwan play; the others are
-   not tried. hostgen's report lists 283 calls short of an argument
+   not tried. hostgen's report lists 97 calls short of an argument
    (filled with 0): each is a call in the NTSC decomp's C that relies on
    a register the C does not set; fix them in its C as
    [OPENRAC_PATCHES.md](../../../games/rac1/ntsc/OPENRAC_PATCHES.md)
