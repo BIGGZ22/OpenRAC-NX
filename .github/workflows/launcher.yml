@@ -130,7 +130,7 @@ jobs:
           "$llvm\bin" >> $env:GITHUB_PATH
 
       - name: Build the game
-        run: python tools/build_port.py rac1-pal --preset standalone
+        run: python tools/build_port.py rac1-pal rac1-ntsc --preset standalone
 
       - name: A Python for the tools
         shell: bash
@@ -157,6 +157,10 @@ jobs:
           "$py" build/standalone/editor/extract.py --help > /dev/null
           game=build/standalone/port/build/release/openrac-rac1-pal; [ -f "$game" ] || game="$game.exe"
           "$game" --help || true
+          # Every disc's program is carried: the launcher plays the one the player's disc is.
+          us=build/standalone/port/build/release/openrac-rac1-ntsc; [ -f "$us" ] || us="$us.exe"
+          [ -f "$us" ] || { echo "the copy carries no openrac-rac1-ntsc"; exit 1; }
+          "$us" --help || true
           # On Linux: what the game asks of the system (only libc and libm, glibc 2.35 at most on x86_64 Ubuntu 22.04).
           if [ "${{ matrix.name }}" = linux ]; then
             readelf -d "$game" | grep NEEDED

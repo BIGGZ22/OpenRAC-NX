@@ -814,9 +814,27 @@
         "description": "The game as a native PC program: its decompiled C built for this computer, drawn by OpenRAC's own renderer, with the assets from your disc.",
         "kind": "play",
         "area": "port",
-        "state": "planned",
-        "docs": "port/game/README.md",
-        "todo": "openrac-rac1-ntsc builds (tools/build_port.py rac1-ntsc) and runs headless into its title loop with no function missing; in a window the title's logo and text are drawn but not the world behind them, and no level has been played. Its levels: port-levels writes them to assets/port/rac1/ntsc (beside PAL's assets/port/rac1/pal) and port-levels-check stamps them (verified-3.json). To switch Play on: \"state\": \"unverified\", \"program\": \"{artifact}\", \"args\": [\"--data\", \"{data}\", \"--window\", \"--levels\", \"{root}/assets/port/rac1/ntsc\"], \"requires\": [\"artifact\"], \"artifact\": \"port/build/release/openrac-rac1-ntsc.exe\", \"needs\": [{\"path\": \"assets/port/rac1/ntsc/verified-3.json\", \"from\": \"a check of the levels (Check the levels)\"}], and docs port/game/rac1-ntsc/README.md. Every action names its folder (assets/port/rac1/<version>; an installer's {data}/port/<version>). port/game/rac1-ntsc/README.md lists what is carried from rac1/pal and what is left."
+        "state": "unverified",
+        "docs": "port/game/rac1-ntsc/README.md",
+        "todo": "Run from the desktop app on each platform. Plays from the title through a new game into Veldin, and Novalis and Kerwan by direct start (2026-10-16); the other levels are not tried yet (port/game/rac1-ntsc/README.md).",
+        "program": "{artifact}",
+        "requires": [
+          "artifact"
+        ],
+        "args": [
+          "--data",
+          "{data}",
+          "--window",
+          "--levels",
+          "{root}/assets/port/rac1/ntsc"
+        ],
+        "artifact": "port/build/release/openrac-rac1-ntsc.exe",
+        "needs": [
+          {
+            "path": "assets/port/rac1/ntsc/verified-3.json",
+            "from": "a check of the levels (Check the levels)"
+          }
+        ]
       },
       {
         "id": "assets-export",
@@ -941,9 +959,29 @@
         "description": "The game with your mods: the levels you packed and the overrides packs you switched on (textures, models), read in place of the disc's. Without any it plays the disc's.",
         "kind": "play",
         "area": "port",
-        "state": "planned",
-        "docs": "port/game/README.md",
-        "todo": "Switch on with Play (planned until the NTSC-U port plays): \"state\": \"unverified\", \"program\": \"{artifact}\", \"args\": [\"--data\", \"{data}\", \"--window\", \"--levels\", \"{root}/assets/port/rac1/ntsc\", \"--mods\", \"{data}/mods/ntsc\"], \"requires\": [\"artifact\"], \"artifact\": \"port/build/release/openrac-rac1-ntsc.exe\", \"needs\": [{\"path\": \"assets/port/rac1/ntsc/verified-3.json\", \"from\": \"a check of the levels (Check the levels)\"}], docs port/game/rac1-ntsc/README.md. The Mods page runs overrides-stack first, which writes {data}/mods/ntsc from the packed levels (assets/packed/rac1/ntsc) and the packs that are on."
+        "state": "unverified",
+        "docs": "port/game/rac1-ntsc/README.md",
+        "todo": "Built by port-build. The Mods page runs overrides-stack first, which writes {data}/mods/ntsc from the packed levels (assets/packed/rac1/ntsc) and the packs that are on. Not run from the desktop app yet.",
+        "program": "{artifact}",
+        "args": [
+          "--data",
+          "{data}",
+          "--window",
+          "--levels",
+          "{root}/assets/port/rac1/ntsc",
+          "--mods",
+          "{data}/mods/ntsc"
+        ],
+        "requires": [
+          "artifact"
+        ],
+        "artifact": "port/build/release/openrac-rac1-ntsc.exe",
+        "needs": [
+          {
+            "path": "assets/port/rac1/ntsc/verified-3.json",
+            "from": "a check of the levels (Check the levels)"
+          }
+        ]
       }
     ],
     "rac2/ntsc": [
