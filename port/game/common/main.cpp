@@ -104,12 +104,10 @@ gaddr g_chain = 0;  // the display list sent this frame
 bool g_vsync_since_kick = true;  // a vertical blank was waited for since the last frame was sent
 bool g_window = false;
 std::chrono::steady_clock::time_point g_next_frame;
-// The game's ticks a second: the description's (hostgen.json's frame_rate) until the game sets a
-// video mode, then that mode's field rate (openrac_game_set_video_mode).
-int g_tick_rate = 0;
-
+// The game's ticks a second: 60 for every version. The PAL game runs in its own 60 Hz mode
+// (options_menu.cpp keeps it there), so its time base is a sixtieth of a second too.
 int tick_rate() {
-    return g_tick_rate > 0 ? g_tick_rate : openrac_game.frame_rate > 0 ? openrac_game.frame_rate : 60;
+    return 60;
 }
 
 std::string program_name() {
@@ -458,14 +456,11 @@ void openrac_game_set_display(const openrac_game_display* d) {
 // The video mode the game asks the console for (sceGsResetGraph, SetGsCrt): 2 is NTSC, 60 fields a
 // second, 3 is PAL, 50. The game's tick is one field: a PAL game that changes to its 60 Hz mode
 // counts its time in sixtieths from then on (rac1/pal: func_002157C0 sets the time base when a
-// level starts), so the port's tick follows the mode the game set, whatever the display shows.
+// level starts). The port keeps the PAL game in that mode and ticks every game 60 times a second.
 void openrac_game_set_video_mode(int interlace, int mode, int field_mode) {
-    const int rate = mode == 3 ? 50 : mode == 2 ? 60 : 0;
+    // Logged only: the port paces every game at 60 Hz whatever the mode (tick_rate()).
     log::info("video mode {:#x} (interlace {}, field mode {}){}", mode, interlace, field_mode,
-              rate != 0 ? std::format(": the game ticks {} times a second", rate) : std::string());
-    if (rate != 0) {
-        g_tick_rate = rate;
-    }
+              mode == 3 ? " (PAL 50 Hz: the port keeps 60)" : "");
 }
 
 void openrac_game_load_image(const openrac_game_image* image) {

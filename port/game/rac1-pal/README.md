@@ -66,7 +66,7 @@ list hand-off), `kernel.c` (interrupt handlers, no IOP), `pad.c`, `snd.c`
 
 | | |
 |---|---|
-| Window and renderer | the program paces frames at 50 Hz and logs what the game hands the hardware; the window ([port/platform](../../platform)) and the renderer ([port/renderer](../../renderer)) are to be connected at `openrac_game_vsync`, `openrac_game_dma_send`, `openrac_game_set_display` and `openrac_game_load_image` ([common/main.cpp](../common/main.cpp)) |
+| Window and renderer | the program paces frames at 60 Hz (the PAL game is kept in its own 60 Hz mode) and logs what the game hands the hardware; the window ([port/platform](../../platform)) and the renderer ([port/renderer](../../renderer)) are to be connected at `openrac_game_vsync`, `openrac_game_dma_send`, `openrac_game_set_display` and `openrac_game_load_image` ([common/main.cpp](../common/main.cpp)) |
 | Pads | what `scePad2Read` fills in is to be read from the game's own reader (`func_00217F68`) |
 | Sound | 989snd is replaced at its API but silent |
 | Movies | libmpeg is `todo`: the movie player is to be replaced above it |

@@ -12,7 +12,7 @@ the screen, the pads, sound and time, replaced at the game's library calls
 | `pad.h` | `Pad`: one DualShock 2 as the game's pad library reports it, and the 32-byte read buffer |
 | `input.h` | keyboard and SDL gamepads into two pad ports, rumble |
 | `audio.h` | `AudioOutput`: one SDL audio stream, 48 kHz stereo signed 16-bit, pulled by a callback or pushed by `queue()` |
-| `clock.h` | a monotonic clock and `FramePacer`, which holds the loop to the console's 50 Hz (PAL) or 59.94 Hz (NTSC) field rate |
+| `clock.h` | a monotonic clock and `FramePacer`, which holds the loop to the rate it is given (the games run at 60 Hz) |
 | `pump.h` | `run_pumped` and `poll_event`: the program beside the window's event pump on one thread (a fiber on Windows), so it goes on drawing while Windows holds the pump in its own loop (the window dragged by its title bar, sized, a menu open) |
 
 As in OpenGOAL ([OPENGOAL_NOTES.md](../../docs/port/OPENGOAL_NOTES.md),
