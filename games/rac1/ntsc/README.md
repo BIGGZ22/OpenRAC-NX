@@ -17,7 +17,7 @@
 </p>
 <p align="center">
     A work-in-progress, byte-matching decompilation of Ratchet &amp; Clank (2002) for PlayStation 2.<br>
-    Reconstructing the original game code in readable C, with a native Rust port as the long-term goal.
+    Reconstructing the original game code in readable C.
 </p>
 
 > [!NOTE]
@@ -56,7 +56,7 @@ Only this release is targeted; other releases and the PlayStation 3 remaster are
 You can help improve matching C, recovered names, types, and documentation. See [CONTRIBUTING.md](CONTRIBUTING.md) for more...
 <p align="center">
   <a href="https://lombyte-project.github.io/namingdesk">
-    <img src="https://raw.githubusercontent.com/lombyte-project/lombyte/progress/naming-desk-card.svg" alt="Open the Naming Desk" width="100%">
+    <img src="assets/naming-desk-card.svg" alt="Open the Naming Desk" width="100%">
   </a>
 </p>
 

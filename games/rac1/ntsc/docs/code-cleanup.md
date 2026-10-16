@@ -40,11 +40,22 @@ make it clearer, add a comment that explains why it looks odd.
 
 **Never:**
 
-- add inline assembly (other than the name label);
+- add inline assembly (other than the name label); for `ei`, `di`, `sync`,
+  `mfc0` or `syscall` use the macros in `include/kernel.h`;
 - use `#ifdef` tricks;
 - change which compiler a unit uses;
 - edit files in `asm/`;
 - fix bugs from the original game.
+
+## Fakematches
+
+A fakematch is code that only steers the compiler: `x++; x--;`, `x = x;`, a
+`do { } while (0)` outside a macro, an `if (0)` branch, a dead store. It is
+allowed until someone finds the real form, but it needs a comment that starts
+with `Fakematch:` and says what it changes, ending at most three lines above
+it. `check-cleanup.py` finds the first four shapes without that comment (not
+dead stores or `x += 1; x -= 1;`, so mark those yourself). If
+removing the trick does not change the code, it is not a fakematch: delete it.
 
 ## Names
 
@@ -127,6 +138,10 @@ edit fails at once.
   `config/overlays/us/data.tsv`. `data-refs.py --emit ADDR --into FILE`
   (`--level N` for level data) writes both. Shared data and raw bytes stay in
   assembly, with their type in a header.
+- **Never guess a size.** When `--emit` stops (no declaration, `T x[]` with no
+  size, a type it cannot write), the data stays in assembly. Code or bytes
+  written as a C array of numbers are not data in C; `check-cleanup.py` flags
+  byte arrays of more than 16 values.
 - A variable defined in C is removed from `config/us/symbol_addrs.txt`.
 
 ## Moving files

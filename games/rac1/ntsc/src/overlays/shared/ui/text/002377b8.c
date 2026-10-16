@@ -23,72 +23,90 @@ void FUN_L00_002377b8(char *p) {
         *(int *)(p + 0x7C) = 30;
     }
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_00237840.s", FUN_L00_00237840);
-#else
+/* Draws a HUD gauge frame. */
+/* Ported from rac1-decomp (src/overlays/shared/hud_00235960.c: func_L00_002381D0), where it is exact; names translated to the US level program. */
+
+typedef struct {
+    char pad0[0x8];
+    int unk08;
+    int *unk0C;
+    char pad10[0x38];
+    short unk48;
+    short unk4A;
+    char pad4C[0x4];
+    int unk50;
+    int unk54;
+    int w;
+    int h;
+    int flags;
+    char pad64[0x8];
+    int unk6C;
+    unsigned char cnt[4];
+    int unk74;
+    int unk78;
+    int unk7C;
+    void *unk80;
+} HudElem_237840;
+
+extern s32 find_valid_animation_frame_index_alt(s32, s32) __asm__("func_001FF960");
 extern int D_L00_0015F760 __attribute__((sda));
 extern int D_L00_0015F764 __attribute__((sda));
-extern int FUN_L00_00235a70(char *, int *, int *);
-extern void FUN_L00_00235ad8(char *, int *, int *, int, int);
-extern void FUN_L00_0023caa8(int, int, int, int, unsigned long, int);
-extern int FUN_L00_0023b208(int, int);
+extern void FUN_L00_00235ad8_c(HudElem_237840 *, int *, int *, int, int) __asm__("FUN_L00_00235ad8");
 extern void FUN_L00_0023bac0(int, int, int, int, int, int);
+extern void append_screen_rect_packet(s32, s32, s32, s32, u64, s32) __asm__("func_00200E08");
+int FUN_L00_00235a70_c2(HudElem_237840 *rec, int *x, int *y) __asm__("FUN_L00_00235a70");
 
-int FUN_L00_00237840(char *rec) {
-    int x, y;
-    int left, top, right, bottom;
-    int w, h, bar_height, step, i, xbase, ybase;
+int FUN_L00_00237840(HudElem_237840 *e) {
+    int pos[2];
+    int left, top, right, bottom, w, h, bh, step, i;
     {
-        int w, h;
-        w = D_L00_0015F760;
-        h = D_L00_0015F764;
-        x = *(int *)(rec + 0x50);
-        y = *(int *)(rec + 0x54);
-        *(int *)(rec + 0x5c) = h;
-        *(int *)(rec + 0x58) = w;
+        int ww = D_L00_0015F760;
+        pos[0] = e->unk50;
+        pos[1] = e->unk54;
+        e->w = ww;
+        {
+            int *src = (int *)&(*(short *)&D_L00_0015F764);
+            int *dst = &e->h;
+            __builtin_memcpy(dst, src, 4);
+        }
     }
-    FUN_L00_00235a70(rec, &x, &y);
-    FUN_L00_00235ad8(rec, &x, &y, *(int *)(rec + 0x6c), 0);
-    w = D_L00_0015F760 * 0xd0;
-    h = D_L00_0015F764 * 0xa0;
-    bar_height = D_L00_0015F760 * 0x260;
-    bottom = D_L00_0015F764 * 0xea0;
-    left = (x + *(short *)(rec + 0x48)) << 4;
-    top = (y + *(short *)(rec + 0x4a)) << 4;
+    FUN_L00_00235a70_c2(e, &pos[0], &pos[1]);
+    FUN_L00_00235ad8_c(e, &pos[0], &pos[1], e->unk6C, 0);
+    w = D_L00_0015F760 * 0xD0;
+    h = D_L00_0015F764 * 0xA0;
+    bh = D_L00_0015F760 * 0x260;
+    bottom = D_L00_0015F764 * 0xEA0;
+    left = (pos[0] + e->unk48) << 4;
+    top = (pos[1] + e->unk4A) << 4;
     left += w / 64;
     top += h / 256;
-    right = left + bar_height / 64;
+    right = left + bh / 64;
     bottom = top + bottom / 256;
-    FUN_L00_0023caa8(left, top, right, bottom, 0x80000000UL, 1);
+    append_screen_rect_packet(left, top, right, bottom, 0x80000000, 1);
     {
-        int step;
-        step = D_L00_0015F764 * 0xea0;
+        int st = D_L00_0015F764 * 0xEA0;
         h = D_L00_0015F764;
-        top = (y + *(short *)(rec + 0x4a)) << 4;
-        top += (h * 0xf40) / 256;
-        bar_height = (*(int *)(rec + 0x74) * step) / (*(int *)(rec + 8) << 8);
-        FUN_L00_0023caa8(left, top, right, top - bar_height, 0x80829e00UL, 1);
+        top = (pos[1] + e->unk4A) << 4;
+        top += (h * 0xF40) / 256;
+        bh = (e->unk74 * st) / (e->unk08 << 8);
+        append_screen_rect_packet(left, top, right, top - bh, 0x80829E00, 1);
     }
     i = 1;
-    if (i < *(int *)(rec + 0x74)) do {
-        int h;
-        h = D_L00_0015F764;
-        top = (y + *(short *)(rec + 0x4a)) << 4;
-        top += (h * 0xf40) / 256;
-        step = D_L00_0015F764 * 0xea0;
-        step = i * step / (*(int *)(rec + 8) << 8);
+    if (i < e->unk74) do {
+        int hh = D_L00_0015F764;
+        top = (pos[1] + e->unk4A) << 4;
+        top += (hh * 0xF40) / 256;
+        step = D_L00_0015F764 * 0xEA0;
+        step = i * step / (e->unk08 << 8);
         i++;
         top -= step;
         top -= 16;
-        FUN_L00_0023caa8(left, top, right, top + 32, 0x80000000UL, 1);
-
-    } while (i < *(int *)(rec + 0x74));
-    w = FUN_L00_0023b208(*(int *)rec, 0);
-    FUN_L00_0023bac0(w, x + *(short *)(rec + 0x48), y + *(short *)(rec + 0x4a),
-                       D_L00_0015F760, D_L00_0015F764, 0x80);
-    return *(int *)(rec + 0x58);
+        append_screen_rect_packet(left, top, right, top + 32, 0x80000000, 1);
+    } while (i < e->unk74);
+    w = find_valid_animation_frame_index_alt(*(int *)e, 0);
+    FUN_L00_0023bac0(w, pos[0] + e->unk48, pos[1] + e->unk4A, D_L00_0015F760, D_L00_0015F764, 0x80);
+    return e->w;
 }
-#endif
 typedef struct {
     u8 pad[0x48];
     s16 x48;
@@ -147,7 +165,7 @@ void FUN_L00_00237ae8(O00237ae8 *o) {
     }
 }
 typedef struct {
-    int f0, f4, f8, fC, f10, f14, f18;
+    int unk0, unk4, unk8, unkC, unk10, unk14, unk18;
 } Ent;
 typedef struct {
     u8 p0[0x64];
@@ -163,8 +181,8 @@ typedef struct {
 } Obj;
 typedef struct {
     u8 p0[0x148];
-    float f148;
-    float f14C;
+    float unk148;
+    float unk14C;
     u8 p150[0x70];
     int w1C0;
     int w1C4;
@@ -225,8 +243,8 @@ void FUN_L00_00237ba0(Obj *p) {
     p->w7C = FUN_001f96f8(0xB4);
     p->w6C = 0x18;
     if (fast_dec_timer_s16(D_00141622)) D_0013C940.w1CC = 2;
-    x = D_0013C940.f148;
-    y = D_0013C940.f14C;
+    x = D_0013C940.unk148;
+    y = D_0013C940.unk14C;
     mag = square_root(x * x + y * y);
     if (mag != 0.0f) {
         x /= mag;
@@ -262,18 +280,18 @@ void FUN_L00_00237ba0(Obj *p) {
         } else if (D_0013C940.w1D8 == 0 && (D_0013C940.w1C4 & 0xF000)) {
             int w;
             w = old;
-            if (D_0013C940.w1C4 & 0x1000) { int t; if (w == -1) t = D_L00_0017DC20; else t = D_L00_0015FAC0_c[D_L00_0015F72C][w].f10; w = t; }
-            if (D_0013C940.w1C4 & 0x4000) { int t; if (w == -1) t = D_L00_0017DC24; else t = D_L00_0015FAC0_c[D_L00_0015F72C][w].f14; w = t; }
-            if (D_0013C940.w1C4 & 0x8000) { int t; if (w == -1) t = D_L00_0017DC18; else t = D_L00_0015FAC0_c[D_L00_0015F72C][w].f8; w = t; }
-            if (D_0013C940.w1C4 & 0x2000) { int t; if (w == -1) t = D_L00_0017DC1C; else t = D_L00_0015FAC0_c[D_L00_0015F72C][w].fC; w = t; }
+            if (D_0013C940.w1C4 & 0x1000) { int t; if (w == -1) t = D_L00_0017DC20; else t = D_L00_0015FAC0_c[D_L00_0015F72C][w].unk10; w = t; }
+            if (D_0013C940.w1C4 & 0x4000) { int t; if (w == -1) t = D_L00_0017DC24; else t = D_L00_0015FAC0_c[D_L00_0015F72C][w].unk14; w = t; }
+            if (D_0013C940.w1C4 & 0x8000) { int t; if (w == -1) t = D_L00_0017DC18; else t = D_L00_0015FAC0_c[D_L00_0015F72C][w].unk8; w = t; }
+            if (D_0013C940.w1C4 & 0x2000) { int t; if (w == -1) t = D_L00_0017DC1C; else t = D_L00_0015FAC0_c[D_L00_0015F72C][w].unkC; w = t; }
             p->w74 = w;
         }
         {
             Ent *t = D_L00_0015FAC0_c[D_L00_0015F72C];
             int cur = p->w74;
-            if (t[cur].f0 == 0 && n != 0) {
+            if (t[cur].unk0 == 0 && n != 0) {
                 k = (cur + n) % D_L00_0015FA90;
-                if (t[k].f0 != 0) p->w74 = k;
+                if (t[k].unk0 != 0) p->w74 = k;
             }
         }
     }
@@ -281,7 +299,7 @@ void FUN_L00_00237ba0(Obj *p) {
     else if (c[1] < D_L00_0015F780_gp) c[1]++;
     if (!(D_0013C940.w1C0 & 0x10)) {
         int sel = p->w74;
-        if (sel >= 0 && (id = D_L00_0015FAC0_c[D_L00_0015F72C][sel].f18) != 0) {
+        if (sel >= 0 && (id = D_L00_0015FAC0_c[D_L00_0015F72C][sel].unk18) != 0) {
             VendorItemInfo *rr;
             int ri = id;
             if (hero_lui.items[0].item_id != id) {
@@ -414,10 +432,10 @@ s32 FUN_L00_002382a0(char *rec) {
             icon_y = y + D_L00_0015F724 +
                      (s32)(D_L00_0015F78C * fast_sin(angle));
             if (*(s32 *)(rec + 0x74) == i &&
-                ((Ent *)(marker_offset + (s32)D_L00_0015FAC0_c[D_L00_0015F72C]))->f0 != 0)
+                ((Ent *)(marker_offset + (s32)D_L00_0015FAC0_c[D_L00_0015F72C]))->unk0 != 0)
                 draw_hud_sprite(get_icon_frame(0xe99c, 0), icon_x - 0x13,
                                 icon_y - 0x13, 0x26, 0x26, marker_alpha);
-            if (((Ent *)(normal_offset + (s32)D_L00_0015FAC0_c[D_L00_0015F72C]))->f0 != 0) {
+            if (((Ent *)(normal_offset + (s32)D_L00_0015FAC0_c[D_L00_0015F72C]))->unk0 != 0) {
                 s32 icon_alpha;
                 if (i != *(s32 *)(rec + 0x74))
                     icon_alpha = truncate_float_to_s32((f32)alpha * D_L00_0015F7C0);
@@ -425,8 +443,8 @@ s32 FUN_L00_002382a0(char *rec) {
                     icon_alpha = alpha;
                 entry = D_L00_0015FAC0_c[D_L00_0015F72C];
                 entry = (Ent *)(entry_offset + (s32)entry);
-                draw_hud_icon(rec, get_icon_frame(entry->f0,
-                              D_0013E520[entry->f18] ? 4 : 0), icon_x, icon_y, 1, icon_alpha);
+                draw_hud_icon(rec, get_icon_frame(entry->unk0,
+                              D_0013E520[entry->unk18] ? 4 : 0), icon_x, icon_y, 1, icon_alpha);
             }
             entry_offset += 0x1c;
             normal_offset += 0x1c;
@@ -434,7 +452,7 @@ s32 FUN_L00_002382a0(char *rec) {
         }
     }
     selected = *(s32 *)(rec + 0x74);
-    if (selected >= 0 && D_L00_0015FAC0_c[D_L00_0015F72C][selected].f0 != 0) {
+    if (selected >= 0 && D_L00_0015FAC0_c[D_L00_0015F72C][selected].unk0 != 0) {
         f32 opacity;
         open *= fade;
         opacity = open;
@@ -455,7 +473,7 @@ s32 FUN_L00_002382a0(char *rec) {
         shadow = fast_tween_color_alpha_first(opacity, D_L00_0015F790, D_L00_0015F794);
         {
             s32 item, id;
-            item = D_L00_0015FAC0_c[D_L00_0015F72C][selected].f18;
+            item = D_L00_0015FAC0_c[D_L00_0015F72C][selected].unk18;
             if (D_0013E520[item])
                 id = ((TitleItem_2382a0 *)D_L00_00179AC0)[item].h48;
             else
@@ -547,8 +565,8 @@ void FUN_L00_00238b80(Obj *o) {
     o->w7C = FUN_001f96f8(0xB4);
     o->w6C = 0x18;
     D_0013C940.w1CC = 2;
-    x = D_0013C940.f148;
-    y = D_0013C940.f14C;
+    x = D_0013C940.unk148;
+    y = D_0013C940.unk14C;
     len = square_root(x * x + y * y);
     if (len != 0.0f) {
         x /= len;
@@ -575,28 +593,28 @@ void FUN_L00_00238b80(Obj *o) {
                 if (cur == -1)
                     t = D_L00_0017DC40;
                 else
-                    t = D_L00_0015FAC0_c[D_L00_0015F72C][cur].f10;
+                    t = D_L00_0015FAC0_c[D_L00_0015F72C][cur].unk10;
                 cur = t;
             }
             if (D_0013C940.w1C4 & 0x4000) {
                 if (cur == -1)
                     t = D_L00_0017DC44;
                 else
-                    t = D_L00_0015FAC0_c[D_L00_0015F72C][cur].f14;
+                    t = D_L00_0015FAC0_c[D_L00_0015F72C][cur].unk14;
                 cur = t;
             }
             if (D_0013C940.w1C4 & 0x8000) {
                 if (cur == -1)
                     t = D_L00_0017DC38;
                 else
-                    t = D_L00_0015FAC0_c[D_L00_0015F72C][cur].f8;
+                    t = D_L00_0015FAC0_c[D_L00_0015F72C][cur].unk8;
                 cur = t;
             }
             if (D_0013C940.w1C4 & 0x2000) {
                 if (cur == -1)
                     t = D_L00_0017DC3C;
                 else
-                    t = D_L00_0015FAC0_c[D_L00_0015F72C][cur].fC;
+                    t = D_L00_0015FAC0_c[D_L00_0015F72C][cur].unkC;
                 cur = t;
             }
             o->w74 = cur;
@@ -611,7 +629,7 @@ void FUN_L00_00238b80(Obj *o) {
         if (o->w74 == -1)
             D_00141610[0] = 0;
         else
-            D_00141610[0] = D_L00_0015FAC0_c[D_L00_0015F72C][o->w74].f18;
+            D_00141610[0] = D_L00_0015FAC0_c[D_L00_0015F72C][o->w74].unk18;
         if (c[0] != 0)
             c[0]--;
     } else if (c[0] < D_L00_0015F780_gp) {
@@ -653,11 +671,11 @@ typedef struct {
     void *unk80;
 } HudElem_238f88;
 
-typedef struct { int f0, f4, f8, fC, f10, f14, f18; } Ent_239918;
+typedef struct { int unk0, unk4, unk8, unkC, unk10, unk14, unk18; } Ent_239918;
 
 typedef struct { int v[4]; } Ids_239918;
 
-typedef struct { char pad0[0x2C]; int f2C; } Arena_239918;
+typedef struct { char pad0[0x2C]; int unk2C; } Arena_239918;
 
 typedef struct {
     char pad0[0x50];
@@ -765,26 +783,26 @@ int FUN_L00_00238f88(Elem_239918 *element) {
         float angle = func_001FA748_239918((float)i * 2.0f * 3.1415927f / (float)D_L00_0015FA90 - 3.1415927f, 1.5707964f);
         icon_x = x + D_L00_0015F720 + (int)(D_L00_0015F78C * func_001F9F90_239918(angle) * D_L00_0015F7C4);
         icon_y = y + D_L00_0015F724 + (int)(D_L00_0015F78C * func_001F9FA8_239918(angle));
-        if (element->sel == i && D_L00_0015FAC0_c2[D_L00_0015F72C][i].f0 != 0) {
+        if (element->sel == i && D_L00_0015FAC0_c2[D_L00_0015F72C][i].unk0 != 0) {
             func_00200468_239918(func_00200198_239918(0xE99C, 0), icon_x - 0x13, icon_y - 0x13, 0x26, 0x26, pulse_alpha);
         }
-        if (D_L00_0015FAC0_c2[D_L00_0015F72C][i].f0 != 0) {
+        if (D_L00_0015FAC0_c2[D_L00_0015F72C][i].unk0 != 0) {
             if (i != element->sel) {
                 alpha = func_001FA898_239918((float)frame_alpha * D_L00_0015F7C0);
             } else {
                 alpha = frame_alpha;
             }
-            if (((Arena_239918 *)D_L00_0017E5D8_239918)->f2C != 0) {
-                func_L00_0023BAB8_239918(element, func_00200198_239918(D_L00_0015FAC0_c2[D_L00_0015F72C][i].f0, D_L00_0015FAC0_c2[D_L00_0015F72C][i].f4), icon_x, icon_y, 1, alpha);
+            if (((Arena_239918 *)D_L00_0017E5D8_239918)->unk2C != 0) {
+                func_L00_0023BAB8_239918(element, func_00200198_239918(D_L00_0015FAC0_c2[D_L00_0015F72C][i].unk0, D_L00_0015FAC0_c2[D_L00_0015F72C][i].unk4), icon_x, icon_y, 1, alpha);
             } else {
-                func_L00_0023BAB8_239918(element, func_00200198_239918(D_L00_0015FAC0_c2[D_L00_0015F72C][i].f0, D_L00_0015FAC0_c2[D_L00_0015F72C][i].f4 + 4), icon_x, icon_y, 1, frame_alpha);
+                func_L00_0023BAB8_239918(element, func_00200198_239918(D_L00_0015FAC0_c2[D_L00_0015F72C][i].unk0, D_L00_0015FAC0_c2[D_L00_0015F72C][i].unk4 + 4), icon_x, icon_y, 1, frame_alpha);
             }
         }
     }
     selected = element->sel;
-    if (selected >= 0 && D_L00_0015FAC0_c2[D_L00_0015F72C][selected].f0 != 0) {
+    if (selected >= 0 && D_L00_0015FAC0_c2[D_L00_0015F72C][selected].unk0 != 0) {
         text_ids = D_L00_0015F8C0_239918;
-        if (D_L00_0015FAC0_c2[D_L00_0015F72C][selected].f0 != 0) {
+        if (D_L00_0015FAC0_c2[D_L00_0015F72C][selected].unk0 != 0) {
             text = func_001FE540_239918(text_ids.v[selected]);
             if (text != 0 && func_00116810_239918(text) != 0) {
                 float fade = text_fade * open_fade;
@@ -921,7 +939,7 @@ extern s32 FUN_001ff960_c(s32, s32) __asm__("FUN_001ff960");
 extern void draw_hud_sprite_flipped(s32, s32, s32, s32, s32, s32) __asm__("FUN_001ffe18");
 extern void FUN_001ffc30_c(s32, s32, s32, s32, s32, s32) __asm__("FUN_001ffc30");
 extern void FUN_L00_0023b120_c(Hud *, s32, s32, s32, s32, s32) __asm__("FUN_L00_0023b120");
-extern s32 D_0015ED80_c __asm__("D_0015ED80");
+extern int pal_mode __asm__("D_0015ED80");
 extern s32 hero_max_health __asm__("D_0015EDA0");
 extern s32 D_L00_0015F808 __attribute__((sda));
 extern s32 D_L00_0015F7F0_gp __asm__("D_L00_0015F7F0") __attribute__((sda));
@@ -937,8 +955,8 @@ s32 FUN_L00_00239810(Hud *m) {
     s32 x;
     s32 y;
     s32 cnt;
-    f32 f21;
-    f32 f22;
+    f32 ratio_x;
+    f32 ratio_y;
     s32 alpha;
     s32 w;
     s16 *p;
@@ -961,7 +979,7 @@ s32 FUN_L00_00239810(Hud *m) {
     if (hero.state.current == 0x32)
         goto out;
     x = m->x;
-    if (D_0015ED80_c != 0)
+    if (pal_mode != 0)
         y = D_L00_0015F808 + 10;
     else
         y = D_L00_0015F808 + 0x12;
@@ -969,18 +987,18 @@ s32 FUN_L00_00239810(Hud *m) {
     q = m->ab;
     if (q[0] == 0)
         goto out;
-    f21 = FUN_001fa6c0(q[0]) / FUN_001fa6c0(D_L00_0015F7F0_gp);
-    if (1.0f < f21)
-        f21 = 1.0f;
-    else if (f21 < 0.0f)
-        f21 = 0.0f;
-    f22 = FUN_001fa6c0(q[1]) / FUN_001fa6c0(D_L00_0015F7F0_gp);
-    if (1.0f < f22)
-        f22 = 1.0f;
-    else if (f22 < 0.0f)
-        f22 = 0.0f;
-    alpha = truncate_float_to_s32(f22 * 128.0f);
-    w = truncate_float_to_s32((f32)D_L00_0015F820 * f21);
+    ratio_x = FUN_001fa6c0(q[0]) / FUN_001fa6c0(D_L00_0015F7F0_gp);
+    if (1.0f < ratio_x)
+        ratio_x = 1.0f;
+    else if (ratio_x < 0.0f)
+        ratio_x = 0.0f;
+    ratio_y = FUN_001fa6c0(q[1]) / FUN_001fa6c0(D_L00_0015F7F0_gp);
+    if (1.0f < ratio_y)
+        ratio_y = 1.0f;
+    else if (ratio_y < 0.0f)
+        ratio_y = 0.0f;
+    alpha = truncate_float_to_s32(ratio_y * 128.0f);
+    w = truncate_float_to_s32((f32)D_L00_0015F820 * ratio_x);
     p = m->p;
     sel = p[0] >> 1;
     mode = hero_max_health;
@@ -990,16 +1008,16 @@ s32 FUN_L00_00239810(Hud *m) {
         mode = hero.health.unk22AC;
     if (mode == 8) {
         tab = D_L00_0017E478;
-        a = truncate_float_to_s32(f21 * 48.0f);
-        b = truncate_float_to_s32(f21 * 48.0f);
+        a = truncate_float_to_s32(ratio_x * 48.0f);
+        b = truncate_float_to_s32(ratio_x * 48.0f);
     } else if (mode == 5) {
         tab = D_L00_0017E460;
-        a = truncate_float_to_s32(f21 * 32.0f);
-        b = truncate_float_to_s32(f21 * 16.0f);
+        a = truncate_float_to_s32(ratio_x * 32.0f);
+        b = truncate_float_to_s32(ratio_x * 16.0f);
     } else {
         b = 0;
         tab = (Pt *)D_L00_0015F7F8;
-        a = truncate_float_to_s32(f21 * 48.0f);
+        a = truncate_float_to_s32(ratio_x * 48.0f);
     }
     yy = y + D_L00_0015F810;
     h1 = FUN_001ff960_c(0x7580, 1);
@@ -1022,7 +1040,7 @@ s32 FUN_L00_00239810(Hud *m) {
             FUN_L00_0023b120_c(m, r, x + tab[i].x, y + tab[i].y, 1, alpha);
             r = FUN_001ff960_c(0x7536, 0x1F);
             FUN_001ffc30_c(r, x + tab[i].x + 0xE, y + tab[i].y - 0x11, 0x22, 0x22,
-                           truncate_float_to_s32((f32)(p[1] >> 4) * f22));
+                           truncate_float_to_s32((f32)(p[1] >> 4) * ratio_y));
             if (cnt == i + 1)
                 sel = 0x1E;
             else

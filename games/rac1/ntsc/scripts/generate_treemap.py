@@ -390,8 +390,9 @@ def load_categories(path: Path | None):
 # solely as a label binding a declaration to its linked name
 # (`__asm__("FUN_00202d10")`). Any other asm in the file (instructions, empty
 # memory barriers, `.extern` directives, register pins) keeps the unit pending
-# however exact its bytes are. include/qcopy.h and include/qzero.h are the approved exceptions and
-# lives in a header, not in the unit.
+# however exact its bytes are. The approved exceptions live in headers, not in
+# units: include/qcopy.h and include/qzero.h (the quadword idiom) and
+# include/kernel.h (privileged instructions: ei, di, sync, mfc0, syscall).
 _ASM_START_RE = re.compile(r"\b(?:__asm__|__asm|asm)\b(?:\s*(?:__volatile__|volatile))?\s*\(")
 _ASM_LABEL_RE = re.compile(r'\s*"[A-Za-z_.$][\w.$]*"\s*')
 _COMMENT_RE = re.compile(r"/\*.*?\*/|//[^\n]*", re.S)
@@ -1021,6 +1022,55 @@ def render_svg(
         f'<text x="{cx:.1f}" y="{dy0 + 73}" text-anchor="middle" font-family="{esc(FONT)}" '
         f'font-size="10" fill="{TEXT}">exe + overlays in C</text>'
     )
+    # Legend: the colour key in the drawer's top-right corner, over a shade
+    # so it reads over the dimmed treemap.
+    legend_font = 10
+    swatch = 10
+    gap = 15
+    legend_rows = (
+        (ORANGE, f"matching C &#183; {exact_bytes:,} B"),
+        (CHROME, f"intentional asm &#183; {asm_bytes:,} B"),
+        ("url(#progress-range)", f"pending C &#183; {recoverable - exact_bytes:,} B"),
+    )
+    # 0.47 em per character fits the system sans (SF, Inter, Segoe UI).
+    widest = max(
+        len(html.unescape(text)) * legend_font * 0.47 for _, text in legend_rows
+    )
+    inset, pad, row_step = 8, 10, 19
+    plate_width = round(pad + gap + widest + pad)
+    plate_x = right - inset - plate_width
+    row_x = plate_x + pad
+    plate_height = ddy - 2 * inset
+    rows_height = row_step * (len(legend_rows) - 1) + swatch
+    # The shade fades in from the left and runs to the drawer's edge, so no
+    # edge can cut the text when the font is wider than estimated.
+    shade_x = plate_x - 60
+    lines.append(
+        f'<linearGradient id="legend-shade" x1="0" x2="1" y1="0" y2="0">'
+        f'<stop offset="0" stop-color="{BACKGROUND}" stop-opacity="0"/>'
+        f'<stop offset="0.4" stop-color="{BACKGROUND}" stop-opacity="0.5"/>'
+        f'<stop offset="1" stop-color="{BACKGROUND}" stop-opacity="0.5"/></linearGradient>'
+    )
+    lines.append(
+        f'<rect x="{shade_x}" y="{dy0}" width="{right - shade_x}" height="{ddy}" '
+        f'fill="url(#legend-shade)" clip-path="url(#drawer-clip)" pointer-events="none"/>'
+    )
+    for offset, (color, text) in enumerate(legend_rows):
+        y = dy0 + inset + (plate_height - rows_height) / 2 + offset * row_step
+        row_title = (
+            '<title>Pending C: dark plate to copper shows C_EXACT coverage; '
+            'bolt orange marks 100% exact.</title>'
+            if color == "url(#progress-range)"
+            else ""
+        )
+        lines.append(
+            f'<rect x="{row_x}" y="{y}" width="{swatch}" height="{swatch}" rx="2" '
+            f'fill="{color}">{row_title}</rect>'
+        )
+        lines.append(
+            f'<text x="{row_x + gap}" y="{y + 9}" '
+            f'font-family="{esc(FONT)}" font-size="{legend_font}" fill="{TEXT}">{text}</text>'
+        )
 
     # The executable leads the tree, above the shared code.
     group_tiles = sorted(build_group_tiles(units), key=lambda tile: tile["address"])

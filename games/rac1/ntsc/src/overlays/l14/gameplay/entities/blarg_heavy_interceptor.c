@@ -977,7 +977,12 @@ extern void rotmat_b(void *, void *) __asm__("FUN_001fa030");
 extern void xform_b(void *, void *, void *) __asm__("FUN_001f9d20");
 extern void draw_b(void *, int, int) __asm__("FUN_001f7d30");
 
-extern float D_L14_001D8600[4][4];
+float D_L14_001D8600[4][4] = {
+    {0.0f, -1.0f, 1.0f, 1.0f},
+    {0.0f, -1.0f, -1.0f, 1.0f},
+    {0.0f, 1.0f, 1.0f, 1.0f},
+    {0.0f, 1.0f, -1.0f, 1.0f},
+};
 void FUN_L14_002add48(char *moby) {
     char *d = *(char **)(moby + 0x78);
     float src[4][4];
@@ -1151,7 +1156,12 @@ typedef struct {
 } Pk_2af4a0;
 
 extern char D_L14_001674C0_d[] __asm__("D_L14_001674C0") __attribute__((section(".data")));
-extern float D_L14_001D8640[4][4];
+float D_L14_001D8640[4][4] = {
+    {-1.0f, 1.0f, 0.0f, 1.0f},
+    {-1.0f, -1.0f, 0.0f, 1.0f},
+    {1.0f, 1.0f, 0.0f, 1.0f},
+    {1.0f, -1.0f, 0.0f, 1.0f},
+};
 extern float vector_length_xyz(void *a);
 extern void add_vector_xyz(void *, void *, void *);
 extern void draw_geometry_quad(void *, void *, int);
@@ -2090,13 +2100,13 @@ typedef struct Data_2B5938 {
 
 char *FUN_L14_003014e0(int a0, float *pos, float *a2, int a3, float f);
 extern char D_0013E550_c[] __asm__("D_0013E550");
-extern char D_L14_001FBDF0[];
-extern char D_L14_001FBE18[];
-extern char D_L14_001FBE58[];
-extern char D_L14_001FBE80[];
-extern char D_L14_001FBEC0[];
-extern char D_L14_001FBEE8[];
-extern char D_L14_001FBF20[];
+char D_L14_001FBDF0[] = "Hovertank with no introPath. UID: %d\n";
+char D_L14_001FBE18[] = "Hovertank with a intro path that has no points. UID: %d\n";
+char D_L14_001FBE58[] = "Hovertank with no boundPath. UID: %d\n";
+char D_L14_001FBE80[] = "Hovertank with a bound path that has no points. UID: %d\n";
+char D_L14_001FBEC0[] = "Hovertank with no bombPath. UID: %d\n";
+char D_L14_001FBEE8[] = "Hovertank with a bomb path that has no points. UID: %d\n";
+char D_L14_001FBF20[] = "Hovertank with no exit Path. UID: %d\n";
 extern char D_L14_001FBF48[];
 extern f32 distance_xyz(void *, void *) __asm__("func_001F9B48");
 extern f32 fast_add_rotations_c(f32, f32) __asm__("func_001FA580");

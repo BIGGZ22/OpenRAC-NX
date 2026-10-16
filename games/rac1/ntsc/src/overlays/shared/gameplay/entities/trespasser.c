@@ -1967,9 +1967,6 @@ ret0:
     /* a second return 0 block, as in retail */
     return 0;
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_002c4380.s", FUN_L00_002c4380);
-#else
 extern char *D_0015FFD8_2c4380 __asm__("D_L00_0015FFD8");
 extern float D_0015ED60_2c4380 __asm__("D_0015ED60");
 extern float D_0015ED70_2c4380 __asm__("D_0015ED70");
@@ -2017,7 +2014,7 @@ void FUN_L00_002c4380(char *moby) {
     char *target;
     float v[4] __attribute__((aligned(16)));
     struct { float w[4]; float x[4]; } scratch __attribute__((aligned(16)));
-    float c[4] __attribute__((aligned(16)));
+    float rotated_normal[4] __attribute__((aligned(16)));
     float len, angle, cos_angle, sin_angle, rate;
     int i, hit, state;
     short *ids;
@@ -2141,14 +2138,14 @@ void FUN_L00_002c4380(char *moby) {
                             qcopy(scratch.x, &coll_hit.normal_x);
                             cos_angle = FUN_001ff7e8_2c4380(*(float *)(moby + 0x48));
                             sin_angle = FUN_001ff800_2c4380(*(float *)(moby + 0x48));
-                            c[0] = scratch.x[0] * cos_angle + scratch.x[1] * sin_angle;
+                            rotated_normal[0] = scratch.x[0] * cos_angle + scratch.x[1] * sin_angle;
                             cos_angle = FUN_001ff7e8_2c4380(*(float *)(moby + 0x48));
                             sin_angle = FUN_001ff800_2c4380(*(float *)(moby + 0x48));
-                            c[1] = scratch.x[1] * cos_angle - scratch.x[0] * sin_angle;
-                            c[2] = scratch.x[2];
+                            rotated_normal[1] = scratch.x[1] * cos_angle - scratch.x[0] * sin_angle;
+                            rotated_normal[2] = scratch.x[2];
                             *(float *)(vars + 0x4c) = -FUN_001ff8b0_2c4380(
-                                FUN_001ff1e0_2c4380(c[0] * c[0] + c[2] * c[2]), c[1]);
-                            *(float *)(vars + 0x50) = FUN_001ff8b0_2c4380(c[2], c[0]);
+                                FUN_001ff1e0_2c4380(rotated_normal[0] * rotated_normal[0] + rotated_normal[2] * rotated_normal[2]), rotated_normal[1]);
+                            *(float *)(vars + 0x50) = FUN_001ff8b0_2c4380(rotated_normal[2], rotated_normal[0]);
                             rate = 0.1f;
                             *(float *)(moby + 0x40) = FUN_002000e8_2c4380(*(float *)(moby + 0x40),
                                 FUN_00200130_2c4380(*(float *)(vars + 0x4c), *(float *)(moby + 0x40)) *
@@ -2188,8 +2185,10 @@ void FUN_L00_002c4380(char *moby) {
             if (*(int *)(target + 0x20) != *(int *)(vars + 0x58) ||
                 *(int *)(vars + 0x5c) <= 0) {
                 *(int *)(vars + 0x58) = *(int *)(target + 0x20);
-                *(volatile int *)(vars + 0x5c) = FUN_001fef20_2c4380(30);
-                if (*(volatile short *)(vars + 0x6c) == 0) {
+                *(int *)(vars + 0x5c) = FUN_001fef20_2c4380(30);
+                /* Fakematch: the empty loop keeps the timer read below the cooldown store. */
+                do {} while (0);
+                if (*(short *)(vars + 0x6c) == 0) {
                     if (*(u16 *)(target + 0x28) == 0x101 &&
                         ((*(u64 *)(vars + 0x68) & 0xffffff00000000ULL) == 0)) {
                         *(short *)(vars + 0x6c) = FUN_001fef20_2c4380(100);
@@ -2303,7 +2302,6 @@ void FUN_L00_002c4380(char *moby) {
         moby[0x20] = 0;
     }
 }
-#endif
 extern int D_L00_0015F5CC_2c53c0 __asm__("D_L00_0015F5CC") __attribute__((section(".sdata")));
 extern float D_0015ED60_2c53c0 __asm__("D_0015ED60") __attribute__((section(".sdata")));
 extern float D_0015ED6C_2c53c0 __asm__("D_0015ED6C") __attribute__((section(".sdata")));

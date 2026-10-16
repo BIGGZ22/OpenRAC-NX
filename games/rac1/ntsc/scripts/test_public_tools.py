@@ -477,7 +477,7 @@ class DataDeclarationTests(unittest.TestCase):
     """No new data label may get a second type or name (scripts/data-decls.py)."""
 
     # Labels that still disagree; lower it when you fix some, never raise it.
-    KNOWN_CONFLICTS = 610
+    KNOWN_CONFLICTS = 602
 
     def test_no_new_conflicting_declarations(self):
         decls = load_module("rnc_data_decls", ROOT / "scripts" / "data-decls.py")
@@ -2096,6 +2096,43 @@ class CleanupCheckTests(unittest.TestCase):
                       "[forbidden] local path"):
             self.assertIn(check, out)
 
+    def test_raw_bytes_in_c_fail(self):
+        blob = ", ".join(["0x27"] * 20)
+        self.write("src/new_helper.c", "void new_helper(void) __asm__(\"FUN_00100100\");\nvoid new_helper(void) {\n}\n"
+                   f"u8 D_00130328[20] = {{{blob}}};\nchar message[] = \"hello\";\n"
+                   "u8 small_table[4] = {1, 2, 3, 4};\n")
+        code, out = self.check()
+        self.assertEqual(code, 1)
+        self.assertIn("[raw-bytes] D_00130328 is 20 raw bytes", out)
+        self.assertNotIn("message", out)
+        self.assertNotIn("small_table", out)
+
+    def test_fakematch_needs_a_comment(self):
+        self.write("src/new_helper.c", textwrap.dedent("""\
+            #define ONCE(x) do { x; } while (0)
+            void new_helper(s32 count) __asm__("FUN_00100100");
+            void new_helper(s32 count) {
+                count++;
+                count--;
+                ONCE(count = 1);
+                do {
+                    count = 2;
+                } while (0);
+                /* Fakematch: the pair keeps count in its own register. */
+                count--;
+                count++;
+            #ifndef NON_MATCHING
+            #else
+                count = count;
+            #endif
+            }
+        """))
+        code, out = self.check()
+        self.assertEqual(code, 1)
+        self.assertIn("src/new_helper.c:4: [fakematch] x++; x--", out)
+        self.assertIn("src/new_helper.c:7: [fakematch] do { } while (0)", out)
+        self.assertEqual(out.count("[fakematch]"), 2)
+
     def test_recovered_names_format_and_config(self):
         entry = {"unit": "missing", "source_path": "src/missing.c", "address": "0x00100000",
                  "current_name": "FUN_00100000", "proposed_name": "OldHelper", "logical_group": "EE/x",
@@ -2120,6 +2157,16 @@ class CleanupCheckTests(unittest.TestCase):
         self.assertIn("[commit-message]", out)
         self.assertIn("pull request description: [forbidden] agent trailer", out)
         self.assertNotIn("pull request title", out)
+
+    def test_person_credit_is_not_an_agent_trailer(self):
+        body = Path(self.tmp.name + "-body.md")
+        self.addCleanup(body.unlink)
+        body.write_text("Co-authored-by: someone <12345+someone@users.noreply.github.com>\n")
+        code, out = self.check("--title", "decomp: name the helper", "--body-file", str(body))
+        self.assertNotIn("agent trailer", out)
+        body.write_text("Co-authored-by: Claude <noreply@anthropic.com>\n")
+        code, out = self.check("--title", "decomp: name the helper", "--body-file", str(body))
+        self.assertIn("pull request description: [forbidden] agent trailer", out)
 
 
 if __name__ == "__main__":

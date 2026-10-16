@@ -1,18 +1,8 @@
 #include "types.h"
-#include "eetypes.h"
-#include "asm.h"
-
-#ifndef NON_MATCHING
-/* Exact SDK/library unit sceGsSetDefLoadImage; symbolic expected assembly retained pending source recovery. */
-INCLUDE_ASM(
-    "config/us/expected/asm/assembly/sdk/dma/sce_gs_set_def_load_image/sceGsSetDefLoadImage.s",
-    sceGsSetDefLoadImage);
-#else
-#include "types.h"
 #include "rnc/sdk/libgraph.h"
 #include "eetypes.h"
+#include "kernel.h"
 extern void scePrintf(const char *message, ...);
-extern void __sync_synchronize(void);
 
 s32 sceGsSetDefLoadImage(sceGsLoadImage *image, s16 destination_base,
                          s16 destination_width, s16 pixel_format,
@@ -70,7 +60,6 @@ s32 sceGsSetDefLoadImage(sceGsLoadImage *image, s16 destination_base,
     ((struct GifTag *)&image->q[10])->NLOOP = size;
     ((struct GifTag *)&image->q[10])->EOP = 1;
     ((struct GifTag *)&image->q[10])->FLG = 2;
-    __sync_synchronize();
+    CpuSync();
     return 6;
 }
-#endif /* NON_MATCHING */

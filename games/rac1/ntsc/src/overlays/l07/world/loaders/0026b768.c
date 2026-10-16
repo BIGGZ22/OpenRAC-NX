@@ -100,16 +100,34 @@ extern s32 D_L07_0015F5F0;
 extern s32 D_L07_0015FFC0;
 extern s16 D_L07_00197A80[];
 extern u16 D_L07_001AFEE0[][16];
-extern char D_L07_0020FA20[], D_L07_0020FA40[], D_L07_0020FA70[], D_L07_0020FA88[],
-    D_L07_0020FAA0[], D_L07_0020FAB8[], D_L07_0020FAD0[], D_L07_0020FAE8[],
-    D_L07_0020FB00[], D_L07_0020FB18[], D_L07_0020FB30[], D_L07_0020FB50[],
-    D_L07_0020FB68[], D_L07_0020FB80[], D_L07_0020FB98[], D_L07_0020FBB0[],
-    D_L07_0020FBC8[], D_L07_0020FBE0[], D_L07_0020FBF8[], D_L07_0020FC10[],
-    D_L07_0020FC28[], D_L07_0020FC40[], D_L07_0020FC58[], D_L07_0020FC70[],
-    D_L07_0020FC88[], D_L07_0020FCA0[], D_L07_0020FCB8[], D_L07_0020FCD0[],
+extern char D_L07_0020FA20[], D_L07_0020FA70[], D_L07_0020FB30[], D_L07_0020FCB8[],
     D_L07_0020FCE8[];
 extern char D_L07_0015FC80[];
 extern char D_L07_0032C980[];
+char D_L07_0020FA40[] = "internal moby sound mismatch on moby %d\n";
+char D_L07_0020FA88[] = "os:             %.1fK\n";
+char D_L07_0020FAA0[] = "code mem:       %.1fK\n";
+char D_L07_0020FAB8[] = "dead space:     %.1fK\n";
+char D_L07_0020FAD0[] = "vu chain bufs:  %.1fK\n";
+char D_L07_0020FAE8[] = "hud:            %.1fK\n";
+char D_L07_0020FB00[] = "gadget buffer:  %.1fK\n";
+char D_L07_0020FB18[] = "tfrag geom:     %.1fK\n";
+char D_L07_0020FB50[] = "occlusion:      %.1fK\n";
+char D_L07_0020FB68[] = "sky:            %.1fK\n";
+char D_L07_0020FB80[] = "collision:      %.1fK\n";
+char D_L07_0020FB98[] = "shared vram:    %.1fK\n";
+char D_L07_0020FBB0[] = "particle vram:  %.1fK\n";
+char D_L07_0020FBC8[] = "effects vram:   %.1fK\n";
+char D_L07_0020FBE0[] = "mobys:          %.1fK\n";
+char D_L07_0020FBF8[] = "ties:           %.1fK\n";
+char D_L07_0020FC10[] = "shrubs:         %.1fK\n";
+char D_L07_0020FC28[] = "ratchett seqs:  %.1fK\n";
+char D_L07_0020FC40[] = "tie insts:      %.1fK\n";
+char D_L07_0020FC58[] = "shrub insts:    %.1fK\n";
+char D_L07_0020FC70[] = "moby insts:     %.1fK\n";
+char D_L07_0020FC88[] = "moby pvars:     %.1fK\n";
+char D_L07_0020FCA0[] = "paths:          %.1fK\n";
+char D_L07_0020FCD0[] = "end of mem:     %.1fM\n";
 extern s32 D_L07_001B1B00[];
 extern char *D_L18_001C6200_26b768[] __asm__("D_L07_001C5880");
 extern char *D_L18_001BCA30_26b768[] __asm__("D_L07_001BC0B0");

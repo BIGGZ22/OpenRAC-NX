@@ -39,9 +39,6 @@ void FUN_L14_002df080(u8 *moby) {
     d[0x1E8 / 4] = 0.0f;
     d[0x1EC / 4] = 0.0f;
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L14_002df138.s", FUN_L14_002df138);
-#else
 extern float fast_add_rotations(float, float) __asm__("FUN_001fa580");
 extern float fast_subtract_rotations(float, float) __asm__("FUN_001fa5c8");
 extern float fast_cos(float) __asm__("FUN_001f9dc8");
@@ -52,87 +49,88 @@ extern float spread_l14(float, float) __asm__("FUN_L00_00257c48");
 extern void enqueue_callback_l14(void *, void *) __asm__("FUN_001f4600");
 void FUN_L14_002df458(struct Moby *);
 
+/* 0x002DF138, 796 bytes.  Advances the three rotation phases and rebuilds
+ * both vector tables: the first half of table 0 is a sine ripple, the second
+ * half mirrors it (entry 5+n copies the Z of entry 4-n); table 1 is a cosine
+ * sweep.  Then re-queues the update callback.
+ *
+ * Shape notes (ee-gcc 2.95.2 is sensitive to all of these):
+ * - `j = 4` is set before the first loop so loop.c never sees it as the
+ *   mirror pointer's initial value (the backward scan for biv inits stops at a
+ *   label); update_equiv_regs then sinks the set-once/used-once constant to
+ *   its single use, which yields retail's `li v0,4; sll; addiu 8; addu`.
+ * - The mirror loop sits inside a `do { } while (0)` so flow's loop-depth
+ *   weighting (REG_N_REFS += loop_depth) ranks the read pointer above the
+ *   counter in global alloc ($a0/$a1 as in retail).  The pointers, counter and
+ *   float constants are initialised before the dummy loop because loop.c
+ *   treats a label-less loop as "phony" and would otherwise leave the hoisted
+ *   insns after the LOOP_BEG note, where haifa turns the note into a
+ *   scheduling barrier.
+ * - rp is formed as an integer sum so fold keeps `d` as the last operand
+ *   (`addu a0, v0, s1`), the way loop.c's giv init would have emitted it. */
 void FUN_L14_002df138(u8 *moby) {
     f32 *d = *(f32 **)(moby + 0x78);
-    f32 *p;
-    f32 *mirror;
-    f32 *tail;
     f32 step;
-    f32 angle;
-    f32 height;
-    f32 wave_height;
-    f32 mirror_height;
-    f32 index;
-    f32 mirror_index;
+    f32 a;
+    f32 b;
+    f32 t;
+    f32 u;
+    f32 c;
     s32 i;
     s32 j;
-
-    d[0x78] = fast_add_rotations(d[0x78], 0.17453292f);
-    d[0x79] = fast_subtract_rotations(d[0x79], 0.80285144f);
-    d[0x7a] = fast_add_rotations(d[0x7a], 0.05236f);
-    step = 360.0f / (integer_to_float_l14(10) * 0.5f) * 0.017453292f;
-    p = d;
-    i = 0;
-    do {
-        integer_to_float_l14(i);
-        integer_to_float_l14(10);
+    s32 k;
+    f32 *rp;
+    f32 *wp;
+    f32 sixteen;
+    f32 one;
+    j = 4;
+    d[0x1E0 / 4] = fast_add_rotations(d[0x1E0 / 4], 0.17453292f);
+    d[0x1E4 / 4] = fast_subtract_rotations(d[0x1E4 / 4], 0.80285144f);
+    d[0x1E8 / 4] = fast_add_rotations(d[0x1E8 / 4], 0.05236f);
+    step = (360.0f / (integer_to_float_l14(10) * 0.5f)) * 0.017453292f;
+    for (i = 0; i < 5; i++) {
+        t = integer_to_float_l14(i) / integer_to_float_l14(10);
         if (i == 0) {
-            index = 0.0f;
-            height = 0.0f;
+            b = 0.0f;
         } else {
-            angle = normalize_rotation_l14(d[0x78] + (f32)i * step);
-            height = fast_sin(angle);
-            height *= 0.1f;
-            height += spread_l14(0.0f, 0.2f);
-            index = (f32)i;
+            a = (f32)i;
+            b = fast_sin(normalize_rotation_l14(d[0x1E0 / 4] + (a * step))) * 0.1f;
+            b += spread_l14(0.0f, 0.2f);
         }
-        p[2] = height;
-        i++;
-        p[1] = 0.0f;
-        p[0] = d[0x7c] * index + 1.6f;
-        p[3] = 1.0f;
-        p += 4;
-    } while (i < 5);
-
-    mirror = (f32 *)((s32)((i - 1) * 16) + (s32)(d + 2));
-    j = 5;
-    tail = d + 0x14;
+        d[(i * 4) + 2] = b;
+        d[(i * 4) + 1] = 0.0f;
+        d[(i * 4) + 0] = (d[0x1F0 / 4] * ((f32)i)) + 1.6f;
+        d[(i * 4) + 3] = 1.0f;
+    }
+    k = 5;
+    rp = (f32 *)((j * 16) + (u32)(d + 2));
+    wp = &d[20];
+    sixteen = 1.6f;
+    one = 1.0f;
+    /* Fakematch: the extra loop level rematerialises the 4 and ranks the read
+       pointer above the counter in register allocation, as in retail. */
     do {
-        mirror_height = *mirror;
-        mirror_index = (f32)j;
-        tail[1] = 0.0f;
-        j++;
-        tail[2] = mirror_height;
-        mirror -= 4;
-        tail[0] = d[0x7c] * mirror_index + 1.6f;
-        tail[3] = 1.0f;
-        tail += 4;
-    } while (j < 10);
-
-    i = 0;
-    p = d;
-    do {
-        f32 index2 = (f32)i;
-        f32 yaw;
-        f32 pitch;
-        f32 spread;
-        f32 yaw_sine;
-        p[0x2a] = 0.0f;
-        i++;
-        yaw = normalize_rotation_l14(d[0x79] + index2 * 0.99483764f);
-        pitch = normalize_rotation_l14(d[0x7a] + index2 * 0.20944f);
-        wave_height = fast_sin(pitch) * 0.75f;
-        yaw_sine = fast_sin(yaw);
-        spread = spread_l14(0.0f, 0.2f);
-        p[0x2a] += (wave_height * yaw_sine + spread);
-        p[0x29] = fast_cos(yaw) * 0.5f;
-        p[0x28] = index2 * 0.39f;
-        p[0x2b] = 1.0f;
-        p += 4;
-    } while (i < 19);
+        for (; k < 10; k++) {
+            wp[2] = *rp;
+            wp[1] = 0.0f;
+            wp[0] = (d[0x1F0 / 4] * ((f32)k)) + sixteen;
+            wp[3] = one;
+            wp += 4;
+            rp -= 4;
+        }
+    } while (0);
+    for (i = 0; i < 19; i++) {
+        c = (f32)i;
+        d[(i * 4) + (0xA8 / 4)] = 0.0f;
+        t = normalize_rotation_l14(d[0x1E4 / 4] + (c * 0.99483764f));
+        u = fast_sin(normalize_rotation_l14(d[0x1E8 / 4] + (c * 0.20944f))) * 0.75f;
+        d[(i * 4) + (0xA8 / 4)] += (u * fast_sin(t)) + spread_l14(0.0f, 0.2f);
+        d[(i * 4) + (0xA4 / 4)] = fast_cos(t) * 0.5f;
+        d[(i * 4) + (0xA0 / 4)] = c * 0.39f;
+        d[(i * 4) + (0xAC / 4)] = 1.0f;
+    }
     enqueue_callback_l14(FUN_L14_002df458, moby);
 }
-#endif
 #define NOT_SDA
 
 #define MACRO_ADDR
@@ -559,9 +557,9 @@ extern f32 D_0015ED6C_w __asm__("D_0015ED6C");
 extern struct { f32 v; } D_L14_00162230, D_L14_00162234;
 extern s32 D_L14_00162238;
 extern f32 D_L14_00162240;
-extern char D_L14_001FC980[];
-extern char D_L14_001FC9E0[];
-extern char D_L14_001FCA38[];
+char D_L14_001FC980[] = "*Error: Moby 610 (wind-control) with no cuboid index (wind pushing hero area). UID: %d - RAR\n";
+char D_L14_001FC9E0[] = "*Error: Moby 610 (wind-control) with no fxArea cuboid (fx drawing area). UID: %d - RAR\n";
+char D_L14_001FCA38[] = "*Error: Moby 610 (wind-control) with no fxAct cuboid (fx activation area). UID: %d - RAR\n";
 extern void wind_print(const char *, short) __asm__("FUN_001e93b0");
 extern void wind_remove(struct Moby *) __asm__("FUN_0020c828");
 extern float wind_length(void *) __asm__("FUN_001f9af0");
@@ -832,7 +830,12 @@ extern void xform_m(void *, void *, void *) __asm__("FUN_001f9d20");
 extern void draw_m(void *, int, int) __asm__("FUN_001f7d30");
 
 extern int D_L14_00161C0C __attribute__((sda));
-extern float D_L14_001DFD40[4][4];
+float D_L14_001DFD40[4][4] = {
+    {0.0f, 1.0f, 1.0f, 1.0f},
+    {0.0f, 1.0f, -1.0f, 1.0f},
+    {0.0f, -1.0f, 1.0f, 1.0f},
+    {0.0f, -1.0f, -1.0f, 1.0f},
+};
 void FUN_L14_002eb810(struct Moby *m) {
     Spk_k *d = (Spk_k *)m->pvars;
     Pk_m pk;
@@ -2833,8 +2836,8 @@ extern int D_0015EE08;
 extern struct { char pad[0x18]; unsigned char flag; } D_0013D408;
 extern s32 D_L14_00161F5C __attribute__((sda));
 extern char D_0013E550[];
-extern char D_L14_001FCE10[];
-extern char D_L14_001FCE48[];
+char D_L14_001FCE10[] = "Enemy Fighter (moby908) with no flyPath. UID: %d - RAR\n";
+char D_L14_001FCE48[] = "Enemy Fighter (moby908) with a flyPath that has no points. UID: %d - RAR\n";
 extern char *D_L14_001B0BB0_cart[] __asm__("D_L14_001B0BB0");
 
 typedef struct {

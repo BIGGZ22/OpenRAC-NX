@@ -257,6 +257,7 @@ OVERLAY_SN_UNITS = {
     "l11/gameplay/hero/0023c7a0.c",
     "l11/gameplay/hero/00253a18.c",
     "l11/gameplay/hero/hero_set_state.c",
+    "l12/gameplay/entities/003054b0.c",
     "l12/gameplay/entities/hoven_turret.c",
     "l12/gameplay/entities/platform.c",
     "l12/gameplay/entities/water_reservoir.c",
@@ -301,7 +302,9 @@ OVERLAY_SN_UNITS = {
     "shared/audio/voices/00276368.c",
     "shared/gameplay/camera/001fc008.c",
     "shared/gameplay/camera/follow_camera_setup.c",
+    "shared/gameplay/camera/follow_camera_update.c",
     "shared/gameplay/camera/init_camera_system.c",
+    "shared/gameplay/entities/00264e40.c",
     "shared/gameplay/entities/00295100.c",
     "shared/gameplay/entities/0029f990.c",
     "shared/gameplay/entities/002aee30.c",
@@ -397,6 +400,7 @@ RODATA_OVERLAYS = {
     "audio/banks/snd_bank_load_by_loc": (0x153DA8, 0x54D28, 77),  # its two error messages
     "audio/rpc/snd_send_iop_command_no_wait": (0x154010, 0x54F90, 96),  # its buffer-full message
     "rendering/image/jump_to_image_setup": (0x153AD8, 0x54A58, 16),  # its error message
+    "sdk/dma/sce_gs_set_def_load_image": (0x1530B0, 0x54030, 284),  # its error message and switch table
     "update_menu_resource_stream": (0x1E87F0, 0xE9770, 28),  # stream-state switch table
     # vfprintf_r: blanks/zeroes, the xdigs strings, the short literals (kept in
     # .rodata via section attributes, in source order) and its switch table.
@@ -423,6 +427,21 @@ RODATA_OVERLAYS = {
     "mode_freeze_init": (0x1E78D0, 0xE8850, 28),  # switch table
     "update_menu_entry_actions": (0x1E8770, 0xE96F0, 48),  # menu action switch table
     "draw_dialog_text": (0x1E7920, 0xE88A0, 124),  # switch table
+    "sdk/rpc/sce_sif_reboot_iop": (0x152960, 0x538E0, 11),
+    "sdk/storage/cd_check_ncmd": (0x152EB0, 0x53E30, 39),
+    "sdk/storage/cd_check_scmd": (0x152F10, 0x53E90, 39),
+    "sdk/library/checkModelVersion": (0x153030, 0x53FB0, 12),
+    "sdk/dma/wait_dma": (0x1533E0, 0x54360, 22),
+    "sdk/library/sceDbcInit": (0x153518, 0x54498, 57),
+    "sdk/library/mb_address_increment": (0x1537A8, 0x54728, 50),
+    "sdk/library/slicea0": (0x153800, 0x54780, 38),
+    "sdk/library/_quantMatrixExtension": (0x153910, 0x54890, 44),
+    "sdk/library/is_out_size_ok": (0x153980, 0x54900, 41),
+    "sdk/callbacks/report_mpeg_sequence_scalable_unsupported": (0x153B48, 0x54AC8, 48),
+    "sdk/callbacks/report_unknown_mpeg_extension": (0x153B78, 0x54AF8, 18),
+    "sdk/callbacks/report_mpeg_picture_spatial_scalable_unsupported": (0x153B90, 0x54B10, 50),
+    "sdk/callbacks/report_mpeg_picture_temporal_scalable_unsupported": (0x153BC8, 0x54B48, 51),
+    "sdk/library/GetRomName": (0x153C00, 0x54B80, 12),
 }
 
 # Recovered C units that define the small-data variables their original
@@ -472,12 +491,17 @@ DATA_OVERLAYS = {
     "assembly/textbin/rendering/effects/build_resident_indexed_texture_warp_meshes": (0x1D9A10, 0xDA990, 32),
     "assembly/textbin/ui/map/draw_level_selection_map": (0x1DDE28, 0xDEDA8, 320),
     "assembly/textbin/rendering/register_object_render_class": (0x1E1900, 0xE2880, 256),
-    "assembly/textbin/gameplay/vendor/render_capture_scrolling_text": (0x1E6018, 0xE6F98, 512),
+    "gameplay/vendor/render_capture_scrolling_text": (0x1E6018, 0xE6F98, 512),
     "assembly/textbin/gameplay/vendor/render_vendor_capture_pass_sequence": (0x1E6218, 0xE7198, 96),
     "textbin/render_vendor_capture_texture_overlays_pass": (0x1E6620, 0xE75A0, 64),
     "textbin/rebuild_configured_text_label_list": (0x1E8728, 0xE96A8, 60),
     "ui/menus/update_menu_resource_stream": (0x1E87D0, 0xE9750, 24),
     "textbin/video/player/init_all": (0x1E8AF0, 0xE9A70, 18),
+    "rendering/view/update_view_context": (0x18CFC0, 0x8DF40, 64),
+    "input/pad/init_pads": (0x1CD760, 0xCE6E0, 16),
+    "ui/menus/fun_002223f0": (0x1D5298, 0xD6218, 3),
+    "gameplay/vendor/fun_00237ed0": (0x1E63FC, 0xE737C, 4),
+    "rendering/draw_dialog_text": (0x1E78F0, 0xE8870, 48),
 }
 
 # Uninitialised variables a unit defines.  `.sbss` (small ones) sits in the
@@ -2088,13 +2112,14 @@ def build_overlays() -> Path:
     ninja_path = OVERLAYS_BUILD / "build.ninja"
     ninja = ninja_syntax.Writer(open(str(ninja_path), "w"), width=9999)
     # obj/ only checks that the file compiles as written; its code is never
-    # compared.  -G0 keeps GNU as from relaxing bare symbol accesses, which
-    # it asserts on (tc-mips.c:11454) when one sits in a noreorder delay slot
-    # and an unsized symbol is loaded later in the same frag.
+    # compared.  GNU as can assert (tc-mips.c:11454) on a bare symbol access
+    # in a noreorder delay slot, with -G0 on some files and without it on
+    # others, so a file passes when it assembles either way.
+    overlay_cc = f"{game_root}/ee-gcc -c {includes} {LANG_DEFINE} {COMPILER_FLAGS} $in -o $out"
     ninja.rule(
         "overlay-cc",
         description="overlay-cc $in",
-        command=f"{game_root}/ee-gcc -c {includes} -Wa,-G0 {LANG_DEFINE} {COMPILER_FLAGS} $in -o $out",
+        command=f"{overlay_cc.replace(' -c ', ' -c -Wa,-G0 ', 1)} 2>/dev/null || {overlay_cc}",
     )
     ninja.rule(
         "c-only",

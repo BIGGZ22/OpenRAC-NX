@@ -916,8 +916,8 @@ extern int FUN_L00_0028d8c0_6ee0(void *, int) __asm__("FUN_L00_0028d8c0");
 extern int play_sound_6ee0(int, int, void *) __asm__("FUN_0022da68");
 extern void FUN_L14_003135b8_6ee0(void *) __asm__("FUN_L14_003135b8");
 extern Path_6ee0 *D_L14_001B0BB0_6ee0[] __asm__("D_L14_001B0BB0");
-extern char D_L14_001FD118[];
-extern char D_L14_001FD150[];
+char D_L14_001FD118[] = "Flying Car (moby1417) with no flyPath. UID: %d - RAR\n";
+char D_L14_001FD150[] = "Flying Car (moby1417) with a flyPath that has no points. UID: %d - RAR\n";
 extern int D_L14_0016227C __attribute__((sda));
 extern float D_L14_00162290 __attribute__((sda));
 extern float D_L14_00162294 __attribute__((sda));
@@ -1267,129 +1267,124 @@ void FUN_L14_003087c0(struct Moby *moby) {
         break;
     }
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L14_00314f00.s", FUN_L14_00314f00);
-#else
-extern char *D_L14_0015EF50;
-extern char *D_L14_001B0BB0[];
-extern char *D_L14_001600EC;
-extern char *D_L14_00167504;
-extern struct { char pad0[0x184]; char *copy_source; } D_L14_00167380;
-extern float D_L14_0016D1F0;
-extern int scale_game_frames_14f00(int) __asm__("FUN_001f96f8");
-extern void clear_u64_value_14f00(void *) __asm__("FUN_001f99f8");
-extern float FUN_001f9b48_14f00(void *, void *) __asm__("FUN_001f9b48");
-extern float FUN_001f9e90_14f00(float, float) __asm__("FUN_001f9e90");
-extern float FUN_001fa6c0_14f00(int) __asm__("FUN_001fa6c0");
-extern void FUN_L00_00216f90_14f00(void *, void *, int, int) __asm__("FUN_L00_00216f90");
+extern char *D_L14_0015EF50 __asm__("D_L14_0015EF50");
+extern char *D_L14_001600EC __asm__("D_L14_001600EC");
+typedef struct {
+    char pad0[0x184];
+    char *start;
+} VendorSet_4f00;
+extern VendorSet_4f00 D_L14_00167380 __asm__("D_L14_00167380");
+extern s32 scale_game_frames_4f00(s32) __asm__("FUN_001f96f8");
+extern f32 ConvertIntegerToFloat_4f00(s32) __asm__("FUN_001fa6c0");
+extern float atan2_4f00(float, float) __asm__("FUN_001f9e90");
+extern float FUN_001f9b48(void *, void *);
+extern void clear_4f00(void *) __asm__("FUN_001f99f8");
+extern void place_4f00(void *, void *, int, int) __asm__("FUN_L00_00216f90");
 
-void FUN_L14_00314f00(char *moby) {
-    char *rec = *(char **)(D_L14_0015EF50 + *(short *)(moby + 0x84) * 32 + 0x1C);
-    char *motion;
+typedef struct {
+    s16 seg[8];
+    f32 fov[8];
+    f32 fov_end;
+} Stops_4f00;
+typedef struct {
+    s32 seg;
+    f32 t;
+    f32 len_a;
+    f32 len_b;
+    f32 dist;
+    s16 started;
+    s16 timer;
+} Run_4f00;
+void FUN_L14_00314f00(char *a) {
+    u128 stand;
+    char *rec = *(char **)(D_L14_0015EF50 + *(short *)(a + 0x84) * 32 + 0x1C);
+    char *p;
+    char *p2;
     char *path;
-    char *vector10;
-    char *vector20;
-    char *vector30;
-    short *indices;
-    float *lengths;
-    float length;
+    char *m;
+    int *q;
+    int *w;
+    short *s;
+    Stops_4f00 *st;
+    float *wf;
+    short *ss;
+    float len;
     int i;
-    int count;
-    int next;
-    float identity[4];
+    int n;
 
-    rec[0x38] = 3;
-    motion = *(char **)(moby + 0x70) + 0x40;
-    *(int *)(motion + 0) = 0;
-    *(int *)(motion + 4) = 0;
-    *(int *)(motion + 8) = 0;
-    *(int *)(motion + 0xC) = 0;
-    *(int *)(motion + 0x10) = 0;
-    *(short *)(motion + 0x14) = 0;
-    *(short *)(motion + 0x16) = scale_game_frames_14f00(*(short *)(rec + 0x3A));
-    indices = (short *)(*(char **)(moby + 0x70) + 0x58);
-    lengths = (float *)(*(char **)(moby + 0x70) + 0x68);
-    for (count = 7; count >= 0; count--) {
-        lengths[7 - count] = 0.0f;
-        indices[7 - count] = -1;
+    (*&rec)[0x38] = 3;
+    p = *(char **)(a + 0x70);
+    *(int *)(p + 0x40) = 0;
+    q = (int *)(p + 0x40);
+    q[1] = 0;
+    q[2] = 0;
+    q[3] = 0;
+    q[4] = 0;
+    *(short *)(q + 5) = 0;
+    *((short *)(q + 5) + 1) = scale_game_frames_4f00(*(short *)(rec + 0x3A));
+    p2 = *(char **)(a + 0x70);
+    st = (Stops_4f00 *)(p2 + 0x58);
+    {
+        int k;
+        for (k = 0; k < 8; k++) {
+            st->fov[k] = 0.0f;
+            st->seg[k] = -1;
+        }
     }
-    vector30 = moby + 0x30;
-    vector10 = moby + 0x10;
-    vector20 = moby + 0x20;
-    *(float *)((char *)indices + 0x30) = FUN_001f9e90_14f00(1.0f, D_L14_0016D140.fB0) * 2.0f;
-
+    /* Fakematch: the dead update rotates the three address temps around
+       the atan2 call into retail's v0/a0/a1. */
+    D_L14_001600EC++;
+    D_L14_001600EC--;
+    st->fov_end = atan2_4f00(1.0f, D_L14_0016D140.fB0) * 2.0f;
     if (*(int *)(rec + 0x20) >= 0) {
-        int count;
         path = D_L14_001B0BB0[*(int *)(rec + 0x20)];
-        i = 0;
-        if (*(int *)path > 0) {
-            short *saved_indices = indices;
-            float *saved_lengths = lengths;
-            do {
-                char *p = path + i * 16;
-                float previous_length = *(float *)(p + 0x1C);
-                if (previous_length > 0.0f) {
-                    *saved_lengths++ = previous_length;
-                    *saved_indices++ = i;
-                }
-                count = *(int *)path;
-                length = FUN_001f9b48_14f00(path + (i * 16 + 0x10),
-                    path + (((i + 1) % count) * 16 + 0x10));
-                *(float *)(p + 0x1C) = length;
-                if (i < *(int *)path - 1)
-                    *(float *)(motion + 8) += length;
-                i++;
-            } while (i < *(int *)path);
+        n = 0;
+        for (i = 0; i < *(int *)path; i++) {
+            char *seg = path + i * 16;
+            if (0.0f < *(float *)(seg + 0x1C)) {
+                st->fov[n] = *(float *)(seg + 0x1C);
+                st->seg[n] = i;
+                n++;
+            }
+            len = FUN_001f9b48(path + (i * 16 + 0x10), path + (((i + 1) % *(int *)path) * 16 + 0x10));
+            *(float *)(seg + 0x1C) = len;
+            if (i < *(int *)path - 1)
+                *(float *)(q + 2) += len;
         }
     }
     if (*(short *)(rec + 0x3A) > 0) {
-        length = FUN_001fa6c0_14f00(scale_game_frames_14f00(*(short *)(rec + 0x3A)));
-        *(float *)(rec + 0x3C) = (*(float *)(motion + 8) / length) * 60.0f;
+        *(float *)(rec + 0x3C) =
+            *(float *)(q + 2) / ConvertIntegerToFloat_4f00(scale_game_frames_4f00(*(short *)(rec + 0x3A))) * 60.0f;
     }
     if (*(int *)(rec + 0x24) >= 0) {
-        int count;
         path = D_L14_001B0BB0[*(int *)(rec + 0x24)];
-        count = *(int *)path;
-        if (count > 0) {
-            i = 0;
-            do {
-                next = i + 1;
-                length = FUN_001f9b48_14f00(path + (i * 16 + 0x10),
-                    path + ((next % count) * 16 + 0x10));
-                *(float *)(path + i * 16 + 0x1C) = length;
-                if (i < *(int *)path - 1)
-                    *(float *)(motion + 0xC) += length;
-                count = *(int *)path;
-                i = next;
-            } while (i < count);
+        for (i = 0; i < *(int *)path; i++) {
+            char *seg;
+            len = FUN_001f9b48(path + (i * 16 + 0x10), path + (((i + 1) % *(int *)path) * 16 + 0x10));
+            seg = path + i * 16;
+            *(float *)(seg + 0x1C) = len;
+            if (i < *(int *)path - 1)
+                *(float *)(q + 3) += len;
         }
     }
-    {
-        char *motion = *(char **)(moby + 0x70);
-        *(float *)motion = 0.03f;
-        *(float *)(motion + 4) = 0.2f;
-        clear_u64_value_14f00(motion + 0x10);
-    }
-    {
-        char *motion = *(char **)(moby + 0x70);
-        *(float *)(motion + 0x20) = 0.03f;
-        *(float *)(motion + 0x24) = 0.2f;
-        clear_u64_value_14f00(motion + 0x30);
-    }
-    {
-        char *copy_source = D_L14_00167380.copy_source;
-        qcopy(vector30, copy_source + 0x30);
-        qcopy(moby, copy_source);
-        qcopy(vector10, copy_source + 0x10);
-        qcopy(vector20, copy_source + 0x20);
-    }
-    path = D_L14_001600EC + *(int *)(rec + 0x54) * 0x80 + 0x30;
-    *(u128 *)identity = 0;
-    identity[3] = 1.0f;
-    FUN_L00_00216f90_14f00(path,
-        identity, 0x72, 0);
+    p = *(char **)(a + 0x70);
+    *(float *)(p + 0x0) = 0.03f;
+    *(float *)(p + 0x4) = 0.2f;
+    clear_4f00(p + 0x10);
+    p = *(char **)(a + 0x70);
+    *(float *)(p + 0x20) = 0.03f;
+    *(float *)(p + 0x24) = 0.2f;
+    clear_4f00(p + 0x30);
+    m = D_L14_00167380.start;
+    qcopy(a + 0x30, m + 0x30);
+    qcopy(a, m);
+    qcopy(a + 0x10, m + 0x10);
+    qcopy(a + 0x20, m + 0x20);
+    path = D_L14_001600EC + *(int *)(rec + 0x54) * 128 + 0x30;
+    stand = 0;
+    ((float *)&stand)[3] = 1.0f;
+    place_4f00(path, &stand, 0x72, 0);
 }
-#endif
 #include "rnc/gameplay/camera/update_cam.h"
 /* Runs the vendor camera along its slot path: on the first frame it starts at the path head looking at the
  * slot target; then it advances along the path, blends the field of view between the path stops, and keeps

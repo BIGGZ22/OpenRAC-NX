@@ -94,7 +94,7 @@ extern s32 truncate_float_to_s32(f32) __asm__("FUN_001fa6d0");
 extern void FUN_001f9a10(void *, void *, void *);
 extern void FUN_L00_00267a08(void *);
 float absolute_float(float input) __asm__("FUN_001f99c0");
-extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
+extern int truncate_float_to_s32(float) __asm__("FUN_001fa6d0");
 
 void FUN_L00_002694f8(char *m) {
     char *p = m + 0x20;
@@ -167,9 +167,9 @@ after:
     if (d < 8.0f || d > 96.0f)
         goto kill;
     if (d < 16.0f) {
-        k = func_001FA898_r(convert_integer_to_float_c(k) * (d - 8.0f) * 0.125f);
+        k = truncate_float_to_s32(convert_integer_to_float_c(k) * (d - 8.0f) * 0.125f);
     } else if (d > 80.0f) {
-        k = func_001FA898_r(convert_integer_to_float_c(k) * (96.0f - d) * 0.0625f);
+        k = truncate_float_to_s32(convert_integer_to_float_c(k) * (96.0f - d) * 0.0625f);
     }
     *(int *)(m + 4) = (k << 24) | (*(int *)(m + 4) & 0xFFFFFF);
     if (FUN_001f9770(m + 0xA)) {
@@ -264,7 +264,7 @@ extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
 extern int D_L00_001B2094 __attribute__((section(".data")));
 extern s32 truncate_float_to_s32(f32) __asm__("func_001FA6D0");
 extern void *FUN_L00_002678b8(int);
-extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
+extern int truncate_float_to_s32(float) __asm__("FUN_001fa6d0");
 
 void FUN_L00_00269b70(void *pos, unsigned char red, unsigned char green, unsigned char blue, int target, float a, float b) {
     char *particle;
@@ -275,7 +275,7 @@ void FUN_L00_00269b70(void *pos, unsigned char red, unsigned char green, unsigne
             qcopy(particle + 0x10, pos);
             *(int *)(particle + 4) = 0x7F000000 | (blue << 16) | (green << 8) | red;
             q = (float *)(particle + 0x20);
-            particle[9] = func_001FA898_r(4.0f) - 0x60;
+            particle[9] = truncate_float_to_s32(4.0f) - 0x60;
             particle[3] = 0x48;
             *(float *)(particle + 0xC) = b;
             particle[1] = 0;
@@ -657,7 +657,7 @@ extern void FUN_001f9a68(void *, void *, float);
 extern void fast_vec_normalize(void *, void *, float) __asm__("FUN_001f9bf8");
 extern void FUN_L00_0026a9f0_u(void *, void *, int, int, int, int, int, float, int,
                                float) __asm__("FUN_L00_0026a9f0");
-extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
+extern int truncate_float_to_s32(float) __asm__("FUN_001fa6d0");
 
 void FUN_L00_0026ac78(char *m) {
     char *p = m + 0x20;
@@ -674,10 +674,10 @@ void FUN_L00_0026ac78(char *m) {
                 s = 0.6f;
             FUN_001f9a68(p, p, s);
         }
-        if (*(short *)(m + 0xA) == func_001FA898_r((float)(unsigned char)p[0x1B] * 0.85f) &&
+        if (*(short *)(m + 0xA) == truncate_float_to_s32((float)(unsigned char)p[0x1B] * 0.85f) &&
             (unsigned char)p[0x1A] < 2 && !(p[0x19] & 4)) {
             for (i = 4; i >= 0; i--) {
-                int a = func_001FA898_r((float)(unsigned char)p[0x1B] *
+                int a = truncate_float_to_s32((float)(unsigned char)p[0x1B] *
                                         random_float_between_alt(0.9f, 1.1f));
                 int k = (unsigned char)p[0x18];
                 float g = random_float_between_alt(0.85f, 1.0f);
@@ -735,8 +735,8 @@ void FUN_L00_0026ac78(char *m) {
             }
         }
     } else {
-        int n1 = func_001FA898_r((float)(unsigned char)p[0x1B] * 0.75f) + 1;
-        int n2 = func_001FA898_r((float)(unsigned char)p[0x1B] * 0.25f) + 1;
+        int n1 = truncate_float_to_s32((float)(unsigned char)p[0x1B] * 0.75f) + 1;
+        int n2 = truncate_float_to_s32((float)(unsigned char)p[0x1B] * 0.25f) + 1;
         int life;
         *(float *)(p + 8) += frame_time_sq * 3.0f;
         FUN_001f9a10(m + 0x10, m + 0x10, p);
@@ -848,76 +848,62 @@ unsigned char *FUN_L00_0026b230(void *pos, void *vel, unsigned char flags, float
     }
     return particle;
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_0026b500.s", FUN_L00_0026b500);
-#else
-extern void FUN_001f9a10_26b500(void *, void *, void *) __asm__("FUN_001f9a10");
-extern float FUN_001f9af0_26b500(void *) __asm__("FUN_001f9af0");
-extern void FUN_001f9bf8_26b500(void *, void *, float) __asm__("FUN_001f9bf8");
-extern void advance_accelerated_scalar_26b500(float, float, float, float, float *, float *)
-    __asm__("FUN_00213f38");
-extern float FUN_001fa6c0_26b500(int) __asm__("FUN_001fa6c0");
-extern int FUN_001fa6e0_26b500(int, int, float) __asm__("FUN_001fa6e0");
-extern int FUN_001f96f8_26b500(int) __asm__("FUN_001f96f8");
-extern int FUN_001f9770_26b500(void *) __asm__("FUN_001f9770");
-extern void FUN_L00_00267a08_26b500(void *) __asm__("FUN_L00_00267a08");
-extern unsigned char D_0013E530_26b500 __asm__("D_0013E530") __attribute__((section(".data")));
-extern float D_L00_001601B8_gp __asm__("D_L00_001601B8") __attribute__((sda));
-extern float D_L00_001601BC_26b500 __asm__("D_L00_001601BC") __attribute__((sda));
-extern float D_L00_001601D8_gp __asm__("D_L00_001601D8") __attribute__((sda));
-extern float D_L00_001601DC_26b500 __asm__("D_L00_001601DC") __attribute__((sda));
-extern float D_L00_001601E8_gp __asm__("D_L00_001601E8") __attribute__((sda));
-extern float D_L00_001601EC_26b500 __asm__("D_L00_001601EC") __attribute__((sda));
+/* per-frame update of a spinning particle: fades, scales and kills it when out of range */
+/* Ported from rac1-decomp (src/overlays/shared/partupd_0026A130.c: func_L00_0026C3A0), where it is exact; names translated to the US level program. */
+
+extern f32 advance_accelerated_scalar(f32 *, f32 *, f32, f32, f32, f32) __asm__("func_00213F38");
+extern f32 fast_vec_length_c(void *) __asm__("func_001F9AF0");
+extern float D_0015ED6C;
+extern float D_0015ED70;
+extern s32 fast_tween_color_c(s32, s32, f32) __asm__("func_001FA6E0");
+extern s32 scale_game_frames_c(s32) __asm__("func_001F96F8");
+extern float D_L00_001601B8 __attribute__((sda));
+extern float D_L00_001601BC __attribute__((sda));
+extern float D_L00_001601D8 __attribute__((sda));
+extern float D_L00_001601DC __attribute__((sda));
+extern float D_L00_001601E8 __attribute__((sda));
+extern float D_L00_001601EC __attribute__((sda));
+extern unsigned char D_0013E05A[];
+extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void fast_vec_normalize_c(void *, void *, f32) __asm__("FUN_001f9bf8");
 
 void FUN_L00_0026b500(unsigned char *m) {
     unsigned char *p = m + 0x20;
-    float rotation;
-    float scale = 1.0f;
-    float life, duration, start, end;
-    float t;
-
-    m[8] += p[0x1e];
-    if (p[0x1f] & 4)
-        scale += FUN_001fa6c0_26b500(D_0013E530_26b500) * 0.5f;
-
-    FUN_001f9a10_26b500(m + 0x10, m + 0x10, p);
-    rotation = -FUN_001f9af0_26b500(p);
-    advance_accelerated_scalar_26b500(0.0f, 0.0f,
-                                       D_L00_001601E8_gp * frame_time_sq,
-                                       rotation, (float *)(p + 0x10), &rotation);
-    FUN_001f9bf8_26b500(p, p, -rotation);
-    *(float *)(m + 0x18) += D_L00_001601EC_26b500 * frame_time;
-
-    life = FUN_001fa6c0_26b500(*(short *)(m + 0xa));
-    duration = FUN_001fa6c0_26b500(p[0x1d]);
-    t = life / duration;
-    end = D_L00_001601B8_gp;
-    start = D_L00_001601BC_26b500;
-    if (p[0x1f] & 1) {
-        end = D_L00_001601D8_gp;
-        start = D_L00_001601DC_26b500;
+    float r;
+    float w = 1.0f;
+    float ratio;
+    m[8] = m[8] + p[0x1E];
+    if (p[0x1F] & 4) {
+        w = convert_integer_to_float(D_0013E05A[0x4D6]) * 0.5f + w;
     }
-    scale = start * scale;
-    *(float *)(m + 0xc) = ((end - scale) * t + scale) * 210000.0f;
-    *(int *)(m + 4) = FUN_001fa6e0_26b500(*(int *)(p + 0x18), *(int *)(p + 0x14), t);
-    if (*(short *)(m + 0xa) < FUN_001f96f8_26b500(15)) {
-        int color;
-        life = FUN_001fa6c0_26b500(*(short *)(m + 0xa));
-        duration = FUN_001fa6c0_26b500(FUN_001f96f8_26b500(10));
-        color = *(int *)(m + 4);
-        *(int *)(m + 4) = FUN_001fa6e0_26b500(color & 0xffffff, color, life / duration);
+    add_vector_xyz(m + 0x10, m + 0x10, p);
+    r = -fast_vec_length_c(p);
+    advance_accelerated_scalar((float *)(m + 0x30), &r, 0.0f, 0.0f, D_L00_001601E8 * D_0015ED70, r);
+    fast_vec_normalize_c(p, p, -r);
+    *(float *)(m + 0x18) = *(float *)(m + 0x18) + D_L00_001601EC * D_0015ED6C;
+    ratio = convert_integer_to_float(*(short *)(m + 0xA)) / convert_integer_to_float(p[0x1D]);
+    if (p[0x1F] & 1) {
+        float lo = D_L00_001601DC * w;
+        *(float *)(m + 0xC) = ((D_L00_001601D8 - lo) * ratio + lo) * 210000.0f;
+    } else {
+        float lo = D_L00_001601BC * w;
+        *(float *)(m + 0xC) = ((D_L00_001601B8 - lo) * ratio + lo) * 210000.0f;
     }
-
-    if (*(float *)(m + 0x10) < 2.0f || 1021.0f < *(float *)(m + 0x10) ||
-        *(float *)(m + 0x14) < 2.0f || 1021.0f < *(float *)(m + 0x14) ||
-        *(float *)(m + 0x18) < 2.0f || 1021.0f < *(float *)(m + 0x18) ||
-        FUN_001f9770_26b500(m + 0xa)) {
-        FUN_L00_00267a08_26b500(m);
+    *(int *)(m + 4) = fast_tween_color_c(*(int *)(p + 0x18), *(int *)(p + 0x14), ratio);
+    if (*(short *)(m + 0xA) < scale_game_frames_c(15)) {
+        float q = convert_integer_to_float(*(short *)(m + 0xA));
+        float t = q / convert_integer_to_float(scale_game_frames_c(10));
+        *(int *)(m + 4) = fast_tween_color_c(*(int *)(m + 4) & 0xFFFFFF, *(int *)(m + 4), t);
+    }
+    if (*(float *)(m + 0x10) < 2.0f || *(float *)(m + 0x10) > 1021.0f ||
+        *(float *)(m + 0x14) < 2.0f || *(float *)(m + 0x14) > 1021.0f ||
+        *(float *)(m + 0x18) < 2.0f || *(float *)(m + 0x18) > 1021.0f ||
+        FUN_001f9770(m + 0xA) != 0) {
+        FUN_L00_00267a08(m);
     } else if (*(float *)(p + 0x10) < 0.01f) {
-        *(short *)(m + 0xa) -= 1;
+        *(short *)(m + 0xA) = *(short *)(m + 0xA) - 1;
     }
 }
-#endif
 unsigned char *FUN_L00_002678b8_26b790(int) __asm__("FUN_L00_002678b8");
 int FUN_001fa6d0_26b790(float) __asm__("FUN_001fa6d0");
 float FUN_L00_00257c48_26b790(float, float) __asm__("FUN_L00_00257c48");
@@ -1492,7 +1478,7 @@ char *FUN_L00_0026cbb0(void *pos, void *dir, int c, int d, int n, int k, float f
     if (p) {
         qcopy(p + 0x10, pos);
         *(int *)(p + 4) = c;
-        v = func_001FA898_r(4.0f) - 0x60;
+        v = truncate_float_to_s32(4.0f) - 0x60;
         p[1] = 0;
         *(float *)(p + 0xC) = f;
         p[3] = 0x48;
@@ -3025,7 +3011,7 @@ typedef struct {
     s32 f14;
     s32 f18;
     f32 f1C;
-    s32 f20;
+    s32 unk20;
     char pad[0xC];
 } S_26ff10;
 
@@ -3123,7 +3109,7 @@ void FUN_L00_0026ff10(Moby_26ff10 *p) {
         c.v_26ff10.q_26ff10 = *(U128 *)pv;
         if (fl & 0x40)
             FUN_001f99f8_26ff10(&c);
-        c.f20 = 1;
+        c.unk20 = 1;
         col = pv->f1C;
         aux = &c;
         pa = v1u.f;
@@ -3236,7 +3222,7 @@ void *FUN_L00_00270758(char *a, char *b, unsigned char c, int d) {
         qcopy(p + 0x10, a);
         qcopy(q, b);
         *(int *)(p + 4) = FUN_L00_0025bfe0(0.7f, 0.7f, 0.7f, 0.08f);
-        p[9] = (char)(func_001FA898_r(4.0f) + 0x40);
+        p[9] = (char)(truncate_float_to_s32(4.0f) + 0x40);
         p[1] = 0;
         p[3] = 0x44;
         f = random_float_between_alt(0.0f, 1.0f);
@@ -3401,11 +3387,11 @@ void FUN_L00_00270948(M_270948 *m) {
         e->v.f[1] *= 0.95f;
     }
     {
-        u8 f2 = e->b18;
+        u8 flags = e->b18;
         s = -1.0f;
-        if (f2 & 1)
+        if (flags & 1)
             s = 1.0f;
-        if (f2 & 8) {
+        if (flags & 8) {
             e->v.f[2] += frame_scale_sq * 0.008f;
             e->x10 += s * (D_0015ED60 * -0.01f) / FUN_001fa6c0_c(e->h16);
         } else {
