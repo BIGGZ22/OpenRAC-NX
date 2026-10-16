@@ -44,6 +44,15 @@
   </screenshots>
 
   <releases>
+    <release version="0.5.3" date="2026-10-16">
+      <description>
+        <p>OpenRAC Launcher 0.5.3 release:</p>
+        <ul>
+          <li>Fixed updater URL formatting on GitHub Releases.</li>
+          <li>Refined Linux ARM64 auto-update delivery.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.2" date="2026-10-16">
       <description>
         <p>OpenRAC Launcher 0.5.2 release:</p>
