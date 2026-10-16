@@ -1155,9 +1155,47 @@ gaddr openrac_relocate_level_code(int from, gaddr address) {
         return address;
     }
     std::scoped_lock hold(g_relocate_lock);
-    const LevelMap& map = level_pair_map(from, overlay);
+    LevelMap& map = level_pair_map(from, overlay);
     auto it = map.code.find(address);
-    return it == map.code.end() ? address : it->second;
+    if (it != map.code.end()) {
+        return it->second;
+    }
+    // A function the catalogue lists in `from` only, whose copy in the loaded level it names
+    // otherwise (two fingerprints of the same code): the loaded level's function whose instructions,
+    // without their address fields, are the same. Searched once, kept either way.
+    auto known = map.searched.find(address);
+    if (known != map.searched.end()) {
+        return known->second != 0 ? known->second : address;
+    }
+    gaddr twin = 0;
+    auto source = g_overlays.find(from);
+    auto level = g_overlays.find(overlay);
+    if (source != g_overlays.end() && level != g_overlays.end() && source->second.count(address) != 0) {
+        gaddr next = 0;
+        for (const auto& [other, entry] : source->second) {
+            if (other > address && (next == 0 || other < next)) {
+                next = other;
+            }
+        }
+        const std::uint32_t size = next != 0 ? std::min<std::uint32_t>(next - address, 0x2000) : 0x100;
+        for (const auto& [place, entry] : level->second) {
+            bool same = size >= 8;
+            for (std::uint32_t off = 0; same && off < size; off += 4) {
+                std::uint32_t w;
+                std::memcpy(&w, G(place + off), 4);
+                same = without_addresses(w) == without_addresses(level_reader(from, address + off));
+            }
+            if (same) {
+                twin = place;
+                break;
+            }
+        }
+        if (std::getenv("OPENRAC_TRACE_RELOCATION") != nullptr) {
+            std::fprintf(stderr, "level %d's %08X in level %d: %08X\n", from, address, overlay, twin);
+        }
+    }
+    map.searched.emplace(address, twin);
+    return twin != 0 ? twin : address;
 }
 
 }  // extern "C"

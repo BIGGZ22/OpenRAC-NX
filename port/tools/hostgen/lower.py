@@ -1536,6 +1536,12 @@ class Unit:
                     self.fn.report.calls.add(sym)
                     self.fn.uses_self = True
                     fp = f"openrac_call_in_copy({home}, {hexaddr(canon)}, {size}u, openrac_self_, {hexaddr(own)})"
+                elif not places and (cross := self._cross_level(sym)) is not None:
+                    # A function of one level's program calling, by name, a function the catalogue
+                    # lists in other levels only (the decompilation names the copy by its twin):
+                    # the loaded level's own copy of it (OPENRAC_LCODE, guest.h).
+                    self.fn.report.calls.add(sym)
+                    fp = f"OPENRAC_LCODE({cross[0]}, {hexaddr(cross[1])})"
                 elif not places:
                     return self.direct_call(sym, args, result_t)
                 elif (sym in getattr(self.program, "splits", {})
@@ -1574,6 +1580,19 @@ class Unit:
                             ft.variadic, ft.prototyped)
         values = [self.rv(a) for a in args]
         return f"GFN({ctype.fn_pointer(hostft)}, {fp})({', '.join(values)})"
+
+    def _cross_level(self, sym: str) -> tuple[int, int] | None:
+        """For a call from a function of some levels' programs to a level function placed in none
+        of those levels: the callee's first place; else None."""
+        if self.fn is None:
+            return None
+        mine = self.program.code_places(self.fn.name)
+        theirs = self.program.code_places(sym)
+        if not mine or not theirs or any(o < 0 for o, _ in mine) or any(o < 0 for o, _ in theirs):
+            return None
+        if {o for o, _ in mine} & {o for o, _ in theirs}:
+            return None
+        return min(theirs)
 
     def _level_hook(self, sym: str):
         """For a call to a hook stub (the game's `level_hooks`) from a function of the executable
