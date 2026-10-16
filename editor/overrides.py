@@ -48,13 +48,15 @@ import sys
 import tempfile
 import zipfile
 
+import disc
 from port import FORMAT
 
 MANIFEST = "openrac-mod.json"
 STATE = "overrides.json"
 MARKER = ".openrac-stack"
 PACK_FORMAT = 1
-GAME, VERSION = "rac1", "pal"
+GAME = "rac1"
+VERSIONS = tuple(v.key for v in disc.VERSIONS)  # the discs a pack's files can come from: pal, ntsc
 LEVELS_FORMAT = FORMAT
 # The oldest levels format whose models a pack's models are drawn with: 2 gave the mobys their
 # metal packets and chrome and glass maps; 3 only added classes (port.py FORMAT).
@@ -96,9 +98,9 @@ def read_manifest(data: bytes, where: str) -> dict:
         raise PackError(f"{where}: {MANIFEST} is not a JSON object")
     if manifest.get("format") != PACK_FORMAT:
         raise PackError(f"{where}: pack format {manifest.get('format')!r}; this OpenRAC reads {PACK_FORMAT}")
-    if (manifest.get("game"), manifest.get("version")) != (GAME, VERSION):
-        raise PackError(f"{where} is for {manifest.get('game')}/{manifest.get('version')}, not "
-                        f"Ratchet & Clank PAL ({GAME}/{VERSION})")
+    if manifest.get("game") != GAME or manifest.get("version", "pal") not in VERSIONS:
+        raise PackError(f"{where} is not a pack for Ratchet & Clank ({manifest.get('game')}/"
+                        f"{manifest.get('version')})")
     name = manifest.get("name")
     if not isinstance(name, str) or not name.strip() or len(name) > 120:
         raise PackError(f"{where}: {MANIFEST} needs a \"name\" (up to 120 characters)")

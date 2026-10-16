@@ -49,10 +49,11 @@ def moby_mesh(key) -> Mesh:
     return mesh
 
 
-def write_levels(root: Path) -> Path:
-    """Two levels for the port, each with Ratchet (class 0, two joints) and tie class 3."""
+def write_levels(root: Path, version: str = "pal", keys=((0, ("moby", 3)), (1, ("moby", 7)))) -> Path:
+    """Two levels for the port, each with Ratchet (class 0, two joints) and tie class 3. KEYS: each
+    level's texture for Ratchet (another disc may number the same picture otherwise)."""
     data = fixture()
-    for number, moby_key in ((0, ("moby", 3)), (1, ("moby", 7))):
+    for number, moby_key in keys:
         writer = LevelWriter(root, Level(number))
         moby = MobyClass(0.5, moby_mesh(moby_key), 2, [], skeleton(data, class_sequences(data)))
         writer.moby_glb("mobys/moby_0.glb", moby)
@@ -62,7 +63,7 @@ def write_levels(root: Path) -> Path:
         (writer.dir / "textures").mkdir(parents=True, exist_ok=True)
         for name, tex in writer.textures.items():
             (writer.dir / "textures" / f"{name}.png").write_bytes(tex.png())
-        manifest = {"format": assets.LEVELS_FORMAT, "game": "rac1", "version": "pal", "level": number,
+        manifest = {"format": assets.LEVELS_FORMAT, "game": "rac1", "version": version, "level": number,
                     "classes": {"moby": {"0": {"mesh": "mobys/moby_0.glb", "scale": 0.5, "name": "ratchet"},
                                          "1": {"mesh": None, "scale": 1.0}},
                                 "tie": {"3": {"mesh": "ties/tie_3.glb"}}, "shrub": {}},
@@ -120,6 +121,25 @@ class AssetTests(unittest.TestCase):
         self.assertEqual(textures["moby_0003"]["size"], [4, 2])
         self.assertTrue((self.export / "level_00/ties/tie_3/tie_3.gltf").is_file())
         self.assertTrue((self.export / "README.txt").is_file())
+        self.assertNotIn("PAL", (self.export / "README.txt").read_text())
+
+    def test_either_discs_levels_export_and_import_alike(self):
+        levels = write_levels(self.root / "us", "ntsc")
+        export = self.root / "us-export"
+        quiet(assets.export, levels, export, [0], "all")
+        for path in (export / "export.json", export / "level_00/textures/textures.json",
+                     export / "level_00/mobys/moby_0_ratchet/asset.json"):
+            self.assertEqual(json.loads(path.read_text())["version"], "ntsc", path)
+        self.assertNotIn("NTSC", (export / "README.txt").read_text())
+        big = rgb_png(16, 8, (255, 255, 0))
+        (export / "level_00/textures/moby_0003.png").write_bytes(big)
+        report = assets.Report()
+        pack, _ = quiet(assets.import_edits, export, levels, report)
+        self.assertEqual((pack.version, report.refused), ("ntsc", 0))
+        self.assertEqual(pack.files["level_01/textures/moby_0007.png"], big)
+        # An export is read back with the levels it came from, not another disc's.
+        with self.assertRaisesRegex(assets.AssetError, "another disc"):
+            quiet(assets.import_edits, export, self.levels, assets.Report())
 
     def test_export_turns_into_gltf_axes_at_the_class_scale(self):
         document = gltf_read.read(self.model())

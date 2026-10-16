@@ -81,7 +81,7 @@ class PackTests(unittest.TestCase):
     def test_wrong_game_or_nothing_inside_is_refused(self):
         other = write_pack(self.root / "uya", "UYA", {"level_00/textures/a.png": rgb_png(2, 2, (0, 0, 0))},
                            game="rac3")
-        with self.assertRaisesRegex(overrides.PackError, "not Ratchet & Clank PAL"):
+        with self.assertRaisesRegex(overrides.PackError, "not a pack for Ratchet & Clank"):
             overrides.check(other)
         empty = write_pack(self.root / "empty", "Empty", {"README.txt": b"x"})
         with self.assertRaisesRegex(overrides.PackError, "replaces nothing"):

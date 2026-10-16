@@ -6,9 +6,11 @@ and read edited ones back as an overrides pack the native port loads.
   assets.py import EDITED --levels LEVELS (--out PACK | --into OVERRIDES) [--name NAME] [--author WHO]
 
 LEVELS is the levels folder the port draws from (`editor/extract.py port`:
-assets/port/rac1/pal, or <data>/port/pal for an installed launcher). Exporting reads
-it and never writes there; importing reads the edited folder and writes a
-new pack (overrides.py), never the levels themselves.
+assets/port/rac1/<version>, or <data>/port/<version> for an installed launcher),
+read from either disc. Exporting reads it and never writes there; importing
+reads the edited folder and writes a new pack (overrides.py), never the levels
+themselves. Which disc the levels came from is kept in the manifests only
+("version"); an export is imported with the levels it was made from.
 
 What an export holds (OUT, one folder per level):
 
@@ -56,6 +58,7 @@ import struct
 import sys
 import tempfile
 
+import disc
 import gltf_read
 from gltf import Gltf
 from gltf_read import GltfError, invert, multiply, point, vector
@@ -65,7 +68,8 @@ from pngio import PngError
 from port import FORMAT as LEVELS_FORMAT  # the levels these assets come from
 
 ASSET_FORMAT = 1
-GAME, VERSION = "rac1", "pal"
+GAME = "rac1"
+VERSIONS = tuple(v.key for v in disc.VERSIONS)  # the discs levels are read from: pal, ntsc
 ROOT = Path(__file__).resolve().parents[1]
 WHAT = ("mobys", "textures", "scenery", "all")
 FAMILIES = {"mobys": ("moby",), "scenery": ("tie", "shrub"), "textures": (), "all": ("moby", "tie", "shrub")}
@@ -76,7 +80,7 @@ Q_TO_GLTF = (-HALF, 0.0, 0.0, HALF)  # the same turn as a quaternion: -90 degree
 JOINT = re.compile(r"^joint_(\d{3})(?:_post)?$")
 MAX_SIDE = 8192
 README = """\
-Ratchet & Clank (PAL) assets, exported by OpenRAC for modding.
+Ratchet & Clank assets, exported by OpenRAC for modding.
 
 Never share these files: they are your disc's data. Share the overrides
 pack you make from them only with people who own the game (the pack is
@@ -148,6 +152,15 @@ def level_manifest(levels: Path, level: int) -> dict:
         raise AssetError(f"level {level:02} in {levels} was extracted by another version (format "
                          f"{manifest.get('format')}, this tool reads {LEVELS_FORMAT}): get the levels ready again")
     return manifest
+
+
+def levels_version(manifest: dict) -> str:
+    """The disc a level was read from (its manifest's "version"; levels from before it was
+    written are PAL's)."""
+    version = manifest.get("version", "pal")
+    if version not in VERSIONS:
+        raise AssetError(f"level {manifest.get('level')} was read from a disc this tool does not know ({version})")
+    return version
 
 
 # ---- encoding accessors -------------------------------------------------------------------
@@ -283,6 +296,7 @@ class LevelExport:
     level: int
     levels: Path
     dir: Path
+    version: str = "pal"
     textures: dict = field(default_factory=dict)  # name -> entry of textures.json
 
     def texture(self, source: Path) -> str:
@@ -326,7 +340,7 @@ def export_model(export: LevelExport, family: str, class_id: int, entry: dict) -
         names = [document.list("nodes")[j].get("name", "") for j in document.list("skins")[0]["joints"]]
         skeleton = {"joints": len({JOINT.match(n).group(1) for n in names if JOINT.match(n)}), "names": names}
     manifest = {
-        "format": ASSET_FORMAT, "game": GAME, "version": VERSION, "levels_format": LEVELS_FORMAT,
+        "format": ASSET_FORMAT, "game": GAME, "version": export.version, "levels_format": LEVELS_FORMAT,
         "level": export.level, "kind": family, "class": class_id, "name": name,
         "source": entry["mesh"], "source_sha256": sha256(data),
         "scale": scale, "model": f"{stem}.gltf",
@@ -355,11 +369,15 @@ def export(levels: Path, out: Path, level_ids: list[int], what: str, classes: li
         raise AssetError(f"--what is one of {', '.join(WHAT)}")
     out = output_dir(out)
     manifests = {level: level_manifest(levels, level) for level in level_ids}
+    versions = {levels_version(m) for m in manifests.values()}
+    if len(versions) != 1:
+        raise AssetError(f"{levels} holds levels read from different discs: get the levels ready again")
+    version = versions.pop()
     temporary = Path(tempfile.mkdtemp(prefix=f".{out.name}-", dir=out.parent if out.parent.exists() else None))
     counts = {"models": 0, "textures": 0}
     try:
         for level, manifest in manifests.items():
-            export_level = LevelExport(level, levels, temporary / f"level_{level:02}")
+            export_level = LevelExport(level, levels, temporary / f"level_{level:02}", version)
             export_level.dir.mkdir(parents=True)
             for family in FAMILIES[what]:
                 for key, entry in sorted(manifest["classes"].get(family, {}).items(), key=lambda kv: int(kv[0])):
@@ -369,7 +387,7 @@ def export(levels: Path, out: Path, level_ids: list[int], what: str, classes: li
             if what in ("textures", "all"):
                 for name in manifest.get("textures", []):
                     export_level.texture(levels / f"level_{level:02}" / name)
-            textures = {"format": ASSET_FORMAT, "game": GAME, "version": VERSION, "levels_format": LEVELS_FORMAT,
+            textures = {"format": ASSET_FORMAT, "game": GAME, "version": version, "levels_format": LEVELS_FORMAT,
                         "level": level, "textures": dict(sorted(export_level.textures.items()))}
             (export_level.dir / "textures").mkdir(exist_ok=True)
             (export_level.dir / "textures" / "textures.json").write_text(json.dumps(textures, indent=1) + "\n")
@@ -378,7 +396,7 @@ def export(levels: Path, out: Path, level_ids: list[int], what: str, classes: li
                   f"{len(export_level.textures)} textures", flush=True)
         if counts["models"] == 0 and counts["textures"] == 0:
             raise AssetError("nothing to export: no class with a model was chosen")
-        summary = {"format": ASSET_FORMAT, "tool": "openrac-assets", "game": GAME, "version": VERSION,
+        summary = {"format": ASSET_FORMAT, "tool": "openrac-assets", "game": GAME, "version": version,
                    "levels_format": LEVELS_FORMAT, "id": os.urandom(8).hex(), "what": what,
                    "levels": sorted(level_ids), **counts}
         (temporary / "export.json").write_text(json.dumps(summary, indent=1) + "\n")
@@ -427,6 +445,8 @@ class LevelsIndex:
                 continue
             if manifest.get("format") == LEVELS_FORMAT and isinstance(manifest.get("level"), int):
                 self.manifests[manifest["level"]] = manifest
+        # The disc they were read from: one per folder (extract.py port writes each version's own).
+        self.version = next((m.get("version", "pal") for m in self.manifests.values()), None)
         self._by_hash = None
         self._skeletons = {}
 
@@ -474,6 +494,7 @@ class Pack:
     """The pack being written: files by path inside it, and what they replace."""
     files: dict = field(default_factory=dict)        # "level_NN/textures/x.png" -> bytes
     sources: dict = field(default_factory=dict)      # the same path -> the asset it came from
+    version: str = "pal"                             # the disc the levels it replaces were read from
 
     def put(self, path: str, data: bytes, source: str, report: Report) -> None:
         if path in self.files and self.files[path] != data:
@@ -1049,12 +1070,16 @@ def import_edits(edited: Path, levels: Path, report: Report) -> Pack:
         raise AssetError(f"{edited} is not an export of OpenRAC's (it has no export.json): choose the folder "
                          "the export made")
     summary = read_json(summary_path)
-    if (summary.get("game"), summary.get("version")) != (GAME, VERSION):
-        raise AssetError(f"{edited} holds {summary.get('game')}/{summary.get('version')}, not {GAME}/{VERSION}")
+    if summary.get("game") != GAME or summary.get("version", "pal") not in VERSIONS:
+        raise AssetError(f"{edited} is not an export of Ratchet & Clank's levels")
     if summary.get("format") != ASSET_FORMAT:
         raise AssetError(f"{edited} was exported in format {summary.get('format')}; this tool reads {ASSET_FORMAT}")
     index = LevelsIndex(levels)
-    pack = Pack()
+    if index.version is not None and index.version != summary.get("version", "pal"):
+        # The export names the levels' own files and pictures; another disc's differ.
+        raise AssetError(f"{edited} was exported from levels read from another disc than {levels}: import it with "
+                         "the levels it came from, or export again from these")
+    pack = Pack(version=summary.get("version", "pal"))
     for level in summary.get("levels", []):
         if level not in index.manifests:
             raise AssetError(f"{levels} has no level {level:02} of format {LEVELS_FORMAT}: get the levels ready")
@@ -1080,7 +1105,7 @@ def write_pack(pack: Pack, out: Path, name: str, author: str, description: str, 
     """The pack folder (overrides.py's format) with its openrac-mod.json."""
     import overrides
     replaces = overrides.describe(pack.files)
-    manifest = {"format": overrides.PACK_FORMAT, "game": GAME, "version": VERSION, "name": name,
+    manifest = {"format": overrides.PACK_FORMAT, "game": GAME, "version": pack.version, "name": name,
                 "author": author, "description": description, "levels_format": LEVELS_FORMAT,
                 "replaces": replaces}
     if source_id:
@@ -1098,7 +1123,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest="command", required=True)
     out = commands.add_parser("export", help="models and textures as glTF and PNG files")
-    out.add_argument("levels", type=Path, help="the extracted levels (assets/port/rac1/pal, or <data>/port/pal)")
+    out.add_argument("levels", type=Path, help="the extracted levels (assets/port/rac1/<version>, or <data>/port/<version>)")
     out.add_argument("out", type=Path, help="a new folder for the export")
     out.add_argument("--level", type=int, action="append", required=True, help="a level (repeatable)")
     out.add_argument("--what", choices=WHAT, default="mobys",
