@@ -44,3 +44,8 @@ func_00216270	func_L07_0030E800	07:0030E800
 func_00216270	func_L08_002DB448	08:002DB448
 func_00216270	func_L14_003047D8	14:003047D8
 func_00216270	func_L18_002FC168	18:002FC168
+# Ratchet's animation advance (func_L00_00232EF0) starts with a call the catalogue folds into
+# func_L00_00211F68 (which clears the hero's speed). In 17 levels that call goes to func_L00_00232A00
+# (above); in levels 05 and 16 it goes to their own 64-byte routine, func_L05_0025BDA8, which is not
+# in that fold, so the call fell back to the speed-clearing place and Ratchet crawled on Rilgar.
+func_L00_00211F68	func_L05_0025BDA8	05:0025BDA8,16:0022E428
