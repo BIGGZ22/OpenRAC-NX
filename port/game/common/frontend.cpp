@@ -129,6 +129,12 @@ struct State {
     std::uint64_t last_world_tick = 0;
     bool last_tick_menu = false;
     bool hold_last_world = false;
+    // Ticks in a row on which the game drew no world while its 2D list was a page menu's (the
+    // picture read back, at least kSnapshotBytes): the ticks after the pause menu closes. The
+    // picture they would make is the menu without its framed models, then the dimmed picture
+    // alone; the console keeps showing its last frame meanwhile, and so does the port (frame).
+    int menu_gap_ticks = 0;
+    bool repeat_frame = false;
     // What the window is in now of the player's settings (apply_settings): the display mode, the
     // display and the fullscreen size; the picture's shape; the swap's wait as asked and as the
     // driver took it; whether the sound is held silent (the window lost the keyboard).
@@ -1564,7 +1570,8 @@ void draw_kept(bool first) {
     } else if (first) {
         g->hold_last_world = false;
     }
-    if (g->hold_last_world && g->last_world.width() == width && g->last_world.height() == height) {
+    if (g->hold_last_world && !g->repeat_frame && g->last_world.width() == width
+        && g->last_world.height() == height) {
         g->last_world.blit_to(g->frame.id(), width, height);
         input.keep_colour = true;
     }
@@ -1581,7 +1588,7 @@ void draw_kept(bool first) {
             g->last_world_tick = k.frame;
         };
     }
-    if (g->renderer) {
+    if (g->renderer && !g->repeat_frame) {
         // [debug tools] The passes hidden in the overlay; the render timed (common/stats.h).
         debug_overlay::before_render(g->renderer.get());
         const stats::Scope render_scope("render");
@@ -2132,6 +2139,12 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     // Only a level's frame is ordered so: the boot program (title, main menu) starts VU1 programs
     // of its own before its 2D path, and draws its world natively, all of its 2D path after it.
     k.before_world = level >= 0 && level < 19 ? std::min(before_world, k.packets.size()) : 0;
+    const bool menu_gap = (k.draws & 0x1Fu) == 0 && k.before_world >= 0x40000;
+    g->menu_gap_ticks = menu_gap ? g->menu_gap_ticks + 1 : 0;
+    g->repeat_frame = menu_gap && g->menu_gap_ticks <= 3 && g->frame.id() != 0;
+    if (g->repeat_frame && debug) {
+        log::info("frame {}: no world under a page menu's list; the last frame stands", g->index);
+    }
     if (debug && k.frame % 100 == 0 && !k.strips.empty()) {
         int bare = 0;
         for (const auto& st : k.strips) {
