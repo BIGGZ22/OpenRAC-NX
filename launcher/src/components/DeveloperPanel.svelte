@@ -1,7 +1,8 @@
 <script lang="ts">
   // What a contributor needs under a game's page, with developer tools on: the
-  // game's two builds kept apart (the PC port, and the decompilation it comes
-  // from), the level editor's checks, and the files and facts of the version.
+  // decompilation of the chosen version, the level editor's checks, and the
+  // files and facts of the version. Playing is the page's top buttons only:
+  // the version chosen here never changes what Play starts.
   import { api, type ActionKind, type GameView, type VersionView } from "$lib/api";
   import { app, guard, openVersion } from "$lib/app.svelte";
   import { grouped, matchedLine, pct, size } from "$lib/format";
@@ -17,9 +18,7 @@
   const here = $derived(
     v.actions.filter((a) => a.thisPlatform).toSorted((a, b) => ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind)),
   );
-  const elsewhere = $derived(v.actions.filter((a) => !a.thisPlatform));
-  // The page's main button is Play: its row shows only while there is no port to start.
-  const port = $derived(here.filter((a) => a.area === "port" && (a.id !== "play" || a.state === "planned")));
+  const elsewhere = $derived(v.actions.filter((a) => !a.thisPlatform && a.area !== "port"));
   const decomp = $derived(here.filter((a) => a.area === "decomp"));
   const editor = $derived(here.filter((a) => a.area === "editor"));
   // Editing itself is under Mods; here, the editor's checks and what is not connected.
@@ -28,7 +27,8 @@
 </script>
 
 {#if game.versions.length > 1}
-  <!-- The game is one game; its versions (each disc's build) are a developer's choice only. -->
+  <!-- The game is one game; its versions (each disc's build) are a developer's choice only, for the
+       decompilation's progress and files below. Play always starts the version the disc gives. -->
   <section class="panel versions">
     <h2>Version</h2>
     <div class="choices" role="radiogroup" aria-label="Version">
@@ -43,16 +43,6 @@
         >
       {/each}
     </div>
-  </section>
-{/if}
-
-{#if port.length}
-  <section class="panel">
-    <h2>PC port</h2>
-    <p class="blurb">The game built for this computer. The button at the top runs these steps in order.</p>
-    <ul>
-      {#each port as action (action.id)}<ActionRow {action} {scope} />{/each}
-    </ul>
   </section>
 {/if}
 
