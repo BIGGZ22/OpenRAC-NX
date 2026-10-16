@@ -78,6 +78,19 @@ int material_index(const cgltf_material* source, const fs::path& base, LevelData
             }
         }
     }
+    // A moby texture with texels below full alpha is drawn by the GS as the cutout materials are
+    // (TEST 0x5360b: texels at 0x80 written with depth, the others blended, colour only), whatever
+    // the export's alpha mode says: Kalebo III's glass sheets (class 800, alpha 0x32..0x53) came
+    // out as solid teal walls when drawn opaque.
+    if (!m.cutout && m.image >= 0 && base.filename() == "mobys") {
+        const auto& pixels = level.images[static_cast<std::size_t>(m.image)].pixels;
+        for (std::size_t i = 3; i < pixels.size(); i += 4) {
+            if (pixels[i] < 250) {
+                m.cutout = true;
+                break;
+            }
+        }
+    }
     for (std::size_t i = 0; i < level.materials.size(); ++i) {
         const Material& o = level.materials[i];
         if (o.image == m.image && o.cutout == m.cutout && o.blend == m.blend
