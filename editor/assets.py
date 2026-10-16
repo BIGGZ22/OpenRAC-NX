@@ -62,10 +62,10 @@ from gltf_read import GltfError, invert, multiply, point, vector
 from mesh import Mesh
 import pngio
 from pngio import PngError
+from port import FORMAT as LEVELS_FORMAT  # the levels these assets come from
 
 ASSET_FORMAT = 1
 GAME, VERSION = "rac1", "pal"
-LEVELS_FORMAT = 2  # editor/port.py FORMAT: the levels these assets come from
 ROOT = Path(__file__).resolve().parents[1]
 WHAT = ("mobys", "textures", "scenery", "all")
 FAMILIES = {"mobys": ("moby",), "scenery": ("tie", "shrub"), "textures": (), "all": ("moby", "tie", "shrub")}

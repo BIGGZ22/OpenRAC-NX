@@ -71,6 +71,13 @@ class PackTests(unittest.TestCase):
         self.assertEqual(overrides.describe(used),
                          {"level_00": {"models": ["moby_0"], "textures": ["moby_0001"]}})
 
+    def test_models_of_levels_before_the_metal_packets_are_flagged(self):
+        for made, flagged in ((1, True), (2, False), (overrides.LEVELS_FORMAT, False)):
+            pack = write_pack(self.root / f"made-{made}", "Old", {"level_00/mobys/moby_0.glb": glb()},
+                              levels_format=made)
+            problems = overrides.check(pack)[3]
+            self.assertEqual(any("levels of format" in p for p in problems), flagged, made)
+
     def test_wrong_game_or_nothing_inside_is_refused(self):
         other = write_pack(self.root / "uya", "UYA", {"level_00/textures/a.png": rgb_png(2, 2, (0, 0, 0))},
                            game="rac3")
