@@ -41,7 +41,7 @@ pub struct Version {
     pub title: String,
     pub region: String,
     pub serial: String,
-    /// The project's directory, relative to the checkout (`games/rac1/pal`).
+    /// The project's directory, relative to the checkout (`games/rac1`).
     pub dir: String,
     pub disc: Option<FileSpec>,
     pub boot: Option<FileSpec>,
@@ -108,6 +108,19 @@ pub struct Progress {
     /// What the project counts, from game.json's progress note.
     #[serde(default)]
     pub note: Option<String>,
+    /// Functional C: functions that do what retail's do without matching its bytes (ByteMatch's
+    /// figure from the project's functional list). Never part of the matched numbers.
+    #[serde(default)]
+    pub functional: Option<FunctionalProgress>,
+}
+
+/// How much of the code has functional C (not matched; ByteMatch shows it under the Code bar).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all(serialize = "camelCase", deserialize = "snake_case"))]
+pub struct FunctionalProgress {
+    pub functions: u64,
+    pub code: u64,
+    pub percent: f64,
 }
 
 // --- game.json as it is on disk -------------------------------------------------
@@ -128,6 +141,10 @@ struct RawGame {
 
 #[derive(Deserialize)]
 struct RawVersion {
+    /// Where the version's tree lives, when not games/<game>/<version> (rac1's PAL tree is the
+    /// merged games/rac1 itself).
+    #[serde(default)]
+    dir: Option<String>,
     #[serde(default)]
     region: String,
     #[serde(default)]
@@ -186,7 +203,7 @@ pub fn load(root: &Path) -> Result<Catalog, String> {
     Ok(Catalog { games })
 }
 
-/// Where the figures fetched from openrac.dev are kept between runs: under build/, which git
+/// Where the figures fetched from bytematch.dev are kept between runs: under build/, which git
 /// does not track. progress/summary.json belongs to the checkout (`openrac.py progress` writes
 /// it) and the launcher never changes it.
 fn site_cache(root: &Path) -> std::path::PathBuf {
@@ -197,13 +214,12 @@ fn read_rows(path: &Path) -> BTreeMap<String, RawSummaryRow> {
     std::fs::read_to_string(path).ok().and_then(|text| serde_json::from_str(&text).ok()).unwrap_or_default()
 }
 
-/// The checkout's own figures, with the website's where those are further along (a player's
-/// checkout may be older than the site; a contributor's is usually newer).
+/// The checkout's own figures, with bytematch.dev's in their place wherever the site has a
+/// version: the site is what every project's CI last reported, so it is the current figure.
 fn read_summary(root: &Path) -> BTreeMap<String, RawSummaryRow> {
     let mut rows = read_rows(&root.join("progress").join("summary.json"));
     for (key, site) in read_rows(&site_cache(root)) {
         match rows.get_mut(&key) {
-            Some(own) if own.progress.matched_code >= site.progress.matched_code => {}
             Some(own) => own.progress = site.progress,
             None => {
                 rows.insert(key, site);
@@ -222,7 +238,7 @@ fn game(raw: RawGame, summary: &BTreeMap<String, RawSummaryRow>) -> Result<Game,
             let progress = summary.get(&key).map(|row| Progress { note: row.note.clone(), ..row.progress.clone() });
             Version {
                 title: raw.titles.get(&name).cloned().unwrap_or_else(|| raw.title.clone()),
-                dir: format!("games/{}/{}", raw.id, name),
+                dir: v.dir.clone().unwrap_or_else(|| format!("games/{}/{}", raw.id, name)),
                 game: raw.id.clone(),
                 region: v.region,
                 serial: v.serial,
@@ -243,102 +259,132 @@ fn game(raw: RawGame, summary: &BTreeMap<String, RawSummaryRow>) -> Result<Game,
     Ok(Game { id: raw.id, title: raw.title, year: raw.year, titles: raw.titles, versions })
 }
 
+/// One project of bytematch.dev's /api/v1/projects: where it is, the version its figures are for,
+/// when, and its measures (objdiff's names).
 #[derive(Deserialize)]
-struct SiteProgressResponse {
+struct ByteMatchProject {
+    owner: String,
+    repo: String,
     #[serde(default)]
-    projects: Vec<SiteProject>,
+    version: Option<String>,
+    #[serde(default)]
+    timestamp: Option<String>,
+    #[serde(default)]
+    measures: Option<ByteMatchMeasures>,
 }
 
 #[derive(Deserialize)]
-struct SiteProject {
-    id: String,
+struct ByteMatchMeasures {
     #[serde(default)]
-    progress: Option<SiteProgressData>,
+    matched_code: u64,
+    #[serde(default)]
+    total_code: u64,
+    #[serde(default)]
+    matched_functions: Option<u64>,
+    #[serde(default)]
+    total_functions: Option<u64>,
+    #[serde(default)]
+    fuzzy_match_percent: Option<f64>,
+    #[serde(default)]
+    matched_code_percent: f64,
+}
+
+/// The functional summary in a project's own JSON (bytematch.dev/{owner}/{repo}.json).
+#[derive(Deserialize)]
+struct ByteMatchProjectJson {
+    #[serde(default)]
+    functional: Option<ByteMatchFunctional>,
 }
 
 #[derive(Deserialize)]
-struct SiteProgressData {
-    #[serde(rename = "codePercent", default)]
+struct ByteMatchFunctional {
+    #[serde(default)]
+    functions: u64,
+    #[serde(default)]
+    code: u64,
+    #[serde(default)]
     code_percent: f64,
-    code: SiteCodeBytes,
-    #[serde(default)]
-    functions: Option<SiteFunctions>,
 }
 
-#[derive(Deserialize)]
-struct SiteCodeBytes {
-    #[serde(default)]
-    done: u64,
-    #[serde(default)]
-    total: u64,
+/// Where the website publishes every project's progress (ByteMatch, bytematch.dev).
+pub const BYTEMATCH_PROJECTS: &str = "https://bytematch.dev/api/v1/projects?per_page=500";
+
+/// A project's own JSON on bytematch.dev, which also carries its functional C summary.
+pub fn bytematch_project_url(slug: &str) -> String {
+    format!("https://bytematch.dev/{slug}.json")
 }
 
-#[derive(Deserialize)]
-struct SiteFunctions {
-    #[serde(default)]
-    done: Option<u64>,
-    #[serde(default)]
-    total: Option<u64>,
-}
-
-/// Keeps the latest figures from openrac.dev /progress.json (in build/launcher/, for the next
-/// start without a network) and returns the reloaded Catalog. The checkout's
-/// progress/summary.json is read, never written.
-pub fn update_progress_from_openrac_dev(root: &Path, site_json: &str) -> Result<Catalog, String> {
-    let site: SiteProgressResponse =
-        serde_json::from_str(site_json).map_err(|e| format!("invalid progress json from openrac.dev: {e}"))?;
-    let summary_path = site_cache(root);
-    let mut current_summary = serde_json::json!({});
-
-    for p in site.projects {
-        let key = match p.id.as_str() {
-            "rac1" => "rac1/pal",
-            "gc" => "rac2/ntsc",
-            "uya" => "rac3/ntsc",
-            "deadlocked" => "rac4/ntsc",
-            _ => continue,
-        };
-
-        if let Some(pr) = p.progress {
-            let (m_funcs, t_funcs) = match pr.functions {
-                Some(f) => (f.done, f.total),
-                None => (None, None),
-            };
-
-            if let Some(entry) = current_summary.get_mut(key) {
-                if let Some(prog) = entry.get_mut("progress") {
-                    prog["matched_code"] = serde_json::json!(pr.code.done);
-                    prog["total_code"] = serde_json::json!(pr.code.total);
-                    prog["percent"] = serde_json::json!(pr.code_percent);
-                    if let Some(md) = m_funcs {
-                        prog["matched_functions"] = serde_json::json!(md);
-                    }
-                    if let Some(td) = t_funcs {
-                        prog["total_functions"] = serde_json::json!(td);
-                    }
-                }
-            } else {
-                current_summary[key] = serde_json::json!({
-                    "progress": {
-                        "matched_code": pr.code.done,
-                        "total_code": pr.code.total,
-                        "percent": pr.code_percent,
-                        "matched_functions": m_funcs,
-                        "total_functions": t_funcs,
-                        "fuzzy_percent": null,
-                        "date": null
-                    }
-                });
+/// The game versions of the checkout and the bytematch.dev project each takes from PROJECTS_JSON
+/// (the one game.json names, else the one project whose version is the disc's serial):
+/// [(version key, "owner/repo")].
+pub fn bytematch_projects_for(root: &Path, projects_json: &str) -> Result<Vec<(String, String)>, String> {
+    let projects: Vec<ByteMatchProject> =
+        serde_json::from_str(projects_json).map_err(|e| format!("invalid project list from bytematch.dev: {e}"))?;
+    let mut out = Vec::new();
+    let games_dir = root.join("games");
+    let manifests = std::fs::read_dir(&games_dir).map_err(|e| format!("cannot read {}: {e}", games_dir.display()))?;
+    for entry in manifests.filter_map(|e| e.ok()) {
+        let Ok(text) = std::fs::read_to_string(entry.path().join("game.json")) else { continue };
+        let Ok(raw) = serde_json::from_str::<serde_json::Value>(&text) else { continue };
+        let (Some(id), Some(versions)) = (raw["id"].as_str(), raw["versions"].as_object()) else { continue };
+        for (name, version) in versions {
+            let named = version["bytematch"].as_str();
+            let serial = version["serial"].as_str().unwrap_or_default();
+            let mut found = projects.iter().filter(|p| match named {
+                Some(slug) => format!("{}/{}", p.owner, p.repo).eq_ignore_ascii_case(slug),
+                None => !serial.is_empty() && p.version.as_deref() == Some(serial),
+            });
+            if let (Some(project), None) = (found.next(), found.next()) {
+                out.push((format!("{id}/{name}"), format!("{}/{}", project.owner, project.repo)));
             }
         }
     }
+    Ok(out)
+}
 
+/// Keeps the latest figures from bytematch.dev's project list, with the functional C summary of
+/// each project's own JSON in PROJECT_JSONS ("owner/repo" -> its JSON), in build/launcher/ for the
+/// next start without a network, and returns the reloaded Catalog. A version takes the project
+/// bytematch_projects_for gives it. The checkout's progress/summary.json is read, never written.
+pub fn update_progress_from_bytematch(
+    root: &Path,
+    projects_json: &str,
+    project_jsons: &BTreeMap<String, String>,
+) -> Result<Catalog, String> {
+    let projects: Vec<ByteMatchProject> =
+        serde_json::from_str(projects_json).map_err(|e| format!("invalid project list from bytematch.dev: {e}"))?;
+    let mut rows = serde_json::Map::new();
+    for (key, slug) in bytematch_projects_for(root, projects_json)? {
+        let Some(project) = projects.iter().find(|p| format!("{}/{}", p.owner, p.repo) == slug) else { continue };
+        let Some(m) = &project.measures else { continue };
+        let functional = project_jsons
+            .get(&slug)
+            .and_then(|text| serde_json::from_str::<ByteMatchProjectJson>(text).ok())
+            .and_then(|p| p.functional)
+            .map(|f| serde_json::json!({"functions": f.functions, "code": f.code, "percent": f.code_percent}));
+        rows.insert(
+            key,
+            serde_json::json!({
+                "progress": {
+                    "matched_code": m.matched_code,
+                    "total_code": m.total_code,
+                    "matched_functions": m.matched_functions,
+                    "total_functions": m.total_functions,
+                    "fuzzy_percent": m.fuzzy_match_percent,
+                    "percent": m.matched_code_percent,
+                    "date": project.timestamp.as_deref().map(|t| t.get(..10).unwrap_or(t)),
+                    "functional": functional,
+                },
+                "source": format!("bytematch.dev/{slug}"),
+            }),
+        );
+    }
+    let summary_path = site_cache(root);
     if let Some(dir) = summary_path.parent() {
         let _ = std::fs::create_dir_all(dir);
     }
-    let formatted = serde_json::to_string_pretty(&current_summary).map_err(|e| e.to_string())?;
+    let formatted = serde_json::to_string_pretty(&rows).map_err(|e| e.to_string())?;
     std::fs::write(&summary_path, formatted).map_err(|e| format!("cannot write {}: {e}", summary_path.display()))?;
-
     load(root)
 }
 
@@ -366,7 +412,7 @@ mod tests {
         assert_eq!(catalog.version_keys(), ["rac1/pal", "rac1/ntsc", "rac2/ntsc", "rac3/ntsc", "rac4/ntsc"]);
         let pal = catalog.version("rac1/pal").unwrap();
         assert_eq!(pal.serial, "SCES_509.16");
-        assert_eq!(pal.dir, "games/rac1/pal");
+        assert_eq!(pal.dir, "games/rac1");
         assert!(pal.disc.as_ref().is_some_and(|d| d.size.is_some() && d.sha1.is_some()));
     }
 
@@ -401,42 +447,53 @@ mod tests {
     }
 
     #[test]
-    fn updates_progress_from_openrac_dev_and_caches_offline() {
+    fn updates_progress_from_bytematch_and_caches_offline() {
         let dir = tempfile::tempdir().unwrap();
         let game = dir.path().join("games").join("rac1");
         std::fs::create_dir_all(&game).unwrap();
         std::fs::write(
             game.join("game.json"),
-            r#"{"id": "rac1", "title": "Ratchet & Clank", "versions": {"pal": {"region": "PAL", "serial": "SCES_509.16"}}}"#,
+            r#"{"id": "rac1", "title": "Ratchet & Clank", "versions": {
+                "pal": {"region": "PAL", "serial": "SCES_509.16"},
+                "ntsc": {"region": "NTSC-U", "serial": "SCUS_971.99", "bytematch": "lombyte-project/Lombyte"}}}"#,
+        )
+        .unwrap();
+        std::fs::create_dir_all(dir.path().join("progress")).unwrap();
+        std::fs::write(
+            dir.path().join("progress").join("summary.json"),
+            r#"{"rac1/pal": {"progress": {"matched_code": 99, "total_code": 100, "percent": 99.0}}}"#,
         )
         .unwrap();
 
-        let site_json = r#"{
-            "projects": [
-                {
-                    "id": "rac1",
-                    "progress": {
-                        "codePercent": 61.17,
-                        "code": {"done": 2271268, "total": 3712808},
-                        "functions": {"done": 3702, "total": 5109}
-                    }
-                }
-            ]
-        }"#;
+        let site_json = r#"[
+            {"owner": "OpenRAC", "repo": "rac1-decomp", "version": "SCES_509.16", "timestamp": "2026-10-16T01:00:00.000Z",
+             "measures": {"matched_code": 3199668, "total_code": 3712808, "matched_functions": 4595,
+                          "total_functions": 5109, "fuzzy_match_percent": 88.9, "matched_code_percent": 86.18}},
+            {"owner": "lombyte-project", "repo": "Lombyte", "version": "SCUS_971.99",
+             "measures": {"matched_code": 3300000, "total_code": 3677000, "matched_code_percent": 89.75}},
+            {"owner": "someone", "repo": "fork", "version": "SCUS_971.99",
+             "measures": {"matched_code": 1, "total_code": 2, "matched_code_percent": 50.0}}
+        ]"#;
 
-        let catalog = update_progress_from_openrac_dev(dir.path(), site_json).unwrap();
-        let pal = catalog.version("rac1/pal").unwrap();
-        let prog = pal.progress.as_ref().unwrap();
-        assert_eq!(prog.percent, 61.17);
-        assert_eq!(prog.matched_code, 2271268);
-        assert_eq!(prog.matched_functions, Some(3702));
+        let mut jsons = BTreeMap::new();
+        jsons.insert(
+            "OpenRAC/rac1-decomp".to_string(),
+            r#"{"functional": {"code": 370968, "code_percent": 9.99, "functions": 389}}"#.to_string(),
+        );
+        let catalog = update_progress_from_bytematch(dir.path(), site_json, &jsons).unwrap();
+        // By serial, and the site's figure wins over the checkout's.
+        let pal = catalog.version("rac1/pal").unwrap().progress.as_ref().unwrap();
+        assert_eq!(pal.percent, 86.18);
+        assert_eq!(pal.matched_functions, Some(4595));
+        assert_eq!(pal.date.as_deref(), Some("2026-10-16"));
+        let functional = pal.functional.as_ref().unwrap();
+        assert_eq!((functional.functions, functional.code, functional.percent), (389, 370968, 9.99));
+        // By the project game.json names, though another project has the same serial.
+        assert_eq!(catalog.version("rac1/ntsc").unwrap().progress.as_ref().unwrap().percent, 89.75);
 
-        // The checkout's own file is not created or changed.
-        assert!(!dir.path().join("progress").join("summary.json").exists());
-        // Offline, the kept copy is read again.
-        let offline_catalog = load(dir.path()).unwrap();
-        let offline_prog = offline_catalog.version("rac1/pal").unwrap().progress.as_ref().unwrap();
-        assert_eq!(offline_prog.percent, 61.17);
-        assert_eq!(offline_prog.matched_code, 2271268);
+        // The checkout's own file is not changed; offline, the kept copy is read again.
+        assert!(std::fs::read_to_string(dir.path().join("progress").join("summary.json")).unwrap().contains("99.0"));
+        let offline = load(dir.path()).unwrap();
+        assert_eq!(offline.version("rac1/pal").unwrap().progress.as_ref().unwrap().percent, 86.18);
     }
 }

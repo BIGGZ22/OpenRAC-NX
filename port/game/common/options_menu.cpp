@@ -246,7 +246,8 @@ void step_value(int row, int by) {
  * of the television's field rate (it sets D_0016044C, which the title loop func_001EBB48 makes the
  * video mode, sceGsResetGraph's 3 or 2, and the next level's time base, func_002157C0). The port's
  * window shows the game at the display's own rate whatever the game's tick is, so the choice means
- * nothing here: the game stays in the mode its disc starts in.
+ * nothing here, and the port keeps the PAL game in its 60 Hz mode (update(); main.cpp's tick
+ * rate is 60 for every version).
  *
  * The page's frame is too low for all the rows, so the list the game is given is a window of
  * kShown rows onto them, which moves with the cursor: at the window's last row with more below, the
@@ -380,6 +381,12 @@ bool g_pal = false;
 
 bool update(const char* game_id, int loaded_overlay) {
     g_pal = is_pal(game_id);
+    if (g_pal) {
+        // The port runs every version at 60 Hz: the PAL game is kept in its own 60 Hz mode
+        // (D_0016044C 0; nonzero is 50 Hz), which its title loop makes the video mode and the
+        // next level's time base, as choosing 60 Hz in its menu would.
+        GREF(std::uint8_t, 0x0016044Cu) = 0;
+    }
     if (!g_pal || loaded_overlay != OPENRAC_OVERLAY_EXE) {
         return false;
     }

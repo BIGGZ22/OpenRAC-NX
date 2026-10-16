@@ -309,21 +309,33 @@ async fn sync_progress_from_web(state: State<'_, AppState>) -> Result<Library, S
     let config = state.config.lock().unwrap().clone();
     let root = config.root.clone().ok_or("the OpenRAC folder is not set")?;
 
-    // Attempt to fetch latest numbers from openrac.dev using curl (available across all Linux distros)
-    let output = std::process::Command::new("curl")
-        .arg("-s")
-        .arg("--connect-timeout")
-        .arg("4")
-        .arg("https://openrac.dev/progress.json")
-        .output();
-
-    if let Ok(out) = output {
-        if out.status.success() {
-            if let Ok(json_str) = String::from_utf8(out.stdout) {
-                let _ = openrac_launcher_core::catalog::update_progress_from_openrac_dev(&root, &json_str);
+    // Every project's latest progress from bytematch.dev, and each game's project JSON for its
+    // functional C, with curl (on Linux, macOS and Windows 10+). Offline, the kept copy is read.
+    let root_for_fetch = root.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        use openrac_launcher_core::catalog;
+        let fetch = |url: &str| -> Option<String> {
+            let out = std::process::Command::new("curl")
+                .args(["-s", "-f", "--connect-timeout", "4", "--max-time", "10", url])
+                .output()
+                .ok()?;
+            if out.status.success() {
+                String::from_utf8(out.stdout).ok()
+            } else {
+                None
+            }
+        };
+        let Some(list) = fetch(catalog::BYTEMATCH_PROJECTS) else { return };
+        let mut jsons = std::collections::BTreeMap::new();
+        for (_key, slug) in catalog::bytematch_projects_for(&root_for_fetch, &list).unwrap_or_default() {
+            if let Some(text) = fetch(&catalog::bytematch_project_url(&slug)) {
+                jsons.insert(slug, text);
             }
         }
-    }
+        let _ = catalog::update_progress_from_bytematch(&root_for_fetch, &list, &jsons);
+    })
+    .await
+    .map_err(|e| e.to_string())?;
 
     tauri::async_runtime::spawn_blocking(move || library::library(&config)).await.map_err(|e| e.to_string())?
 }
@@ -332,7 +344,7 @@ async fn sync_progress_from_web(state: State<'_, AppState>) -> Result<Library, S
 async fn apply_progress_json(state: State<'_, AppState>, json: String) -> Result<Library, String> {
     let config = state.config.lock().unwrap().clone();
     let root = config.root.clone().ok_or("the OpenRAC folder is not set")?;
-    openrac_launcher_core::catalog::update_progress_from_openrac_dev(&root, &json)?;
+    openrac_launcher_core::catalog::update_progress_from_bytematch(&root, &json, &Default::default())?;
     tauri::async_runtime::spawn_blocking(move || library::library(&config)).await.map_err(|e| e.to_string())?
 }
 

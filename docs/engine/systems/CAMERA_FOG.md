@@ -122,4 +122,4 @@ and far distance and density).
 Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/plan/game_camera_fog.md`,
 `docs/plan/world_animation.md` sections 5–6, `docs/plan/sky_render_notes.md`
-section 5; PAL names from `games/rac1/pal/config/overlays/us_map.tsv`.
+section 5; PAL names from `games/rac1/config/overlays/us_map.tsv`.

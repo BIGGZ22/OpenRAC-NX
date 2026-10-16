@@ -161,5 +161,5 @@ ReRAC contributors), `docs/plan/tfrag_lighting.md`,
 `docs/plan/tie_lighting.md`, `docs/plan/shrub_lighting.md`,
 `docs/plan/moby_skinning_lighting.md`, `docs/plan/moby_render_notes.md`,
 `docs/formats/tfrag_rac1.md` section 4.1; PAL names from
-`games/rac1/pal/config/overlays/us_map.tsv` and
+`games/rac1/config/overlays/us_map.tsv` and
 [RENDERER.md](../../port/RENDERER.md).

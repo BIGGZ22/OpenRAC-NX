@@ -1,6 +1,6 @@
 """Ties (static instanced meshes): LOD-0 class meshes and PAL placements.
 
-Layouts follow Wrench's tie reader (games/rac1/pal/docs/ASSETS.md); func_00236A98
+Layouts follow Wrench's tie reader (games/rac1/docs/ASSETS.md); func_00236A98
 confirms the GIF table pointer, material count and 80-byte stride.
 """
 

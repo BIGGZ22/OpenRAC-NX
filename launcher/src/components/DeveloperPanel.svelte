@@ -1,11 +1,12 @@
 <script lang="ts">
   // What a contributor needs under a game's page, with developer tools on: the
-  // game's two builds kept apart (the PC port, and the decompilation it comes
-  // from), the level editor's checks, and the files and facts of the version.
+  // decompilation of the chosen version, the level editor's checks, and the
+  // files and facts of the version. Playing is the page's top buttons only:
+  // the version chosen here never changes what Play starts.
   import { api, type ActionKind, type GameView, type VersionView } from "$lib/api";
-  import { app, guard } from "$lib/app.svelte";
+  import { app, guard, openVersion } from "$lib/app.svelte";
   import { grouped, matchedLine, pct, size } from "$lib/format";
-  import { DISC, INPUT } from "$lib/labels";
+  import { DISC, INPUT, regionLabel } from "$lib/labels";
   import ActionRow from "./ActionRow.svelte";
   import Icon from "./Icon.svelte";
   import ProgressBar from "./ProgressBar.svelte";
@@ -17,9 +18,7 @@
   const here = $derived(
     v.actions.filter((a) => a.thisPlatform).toSorted((a, b) => ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind)),
   );
-  const elsewhere = $derived(v.actions.filter((a) => !a.thisPlatform));
-  // The page's main button is Play: its row shows only while there is no port to start.
-  const port = $derived(here.filter((a) => a.area === "port" && (a.id !== "play" || a.state === "planned")));
+  const elsewhere = $derived(v.actions.filter((a) => !a.thisPlatform && a.area !== "port"));
   const decomp = $derived(here.filter((a) => a.area === "decomp"));
   const editor = $derived(here.filter((a) => a.area === "editor"));
   // Editing itself is under Mods; here, the editor's checks and what is not connected.
@@ -27,13 +26,23 @@
   const canEdit = $derived(editor.some((a) => a.kind === "edit" && a.state !== "planned"));
 </script>
 
-{#if port.length}
-  <section class="panel">
-    <h2>PC port</h2>
-    <p class="blurb">The game built for this computer. The button at the top runs these steps in order.</p>
-    <ul>
-      {#each port as action (action.id)}<ActionRow {action} {scope} />{/each}
-    </ul>
+{#if game.versions.length > 1}
+  <!-- The game is one game; its versions (each disc's build) are a developer's choice only, for the
+       decompilation's progress and files below. Play always starts the version the disc gives. -->
+  <section class="panel versions">
+    <h2>Version</h2>
+    <div class="choices" role="radiogroup" aria-label="Version">
+      {#each game.versions as other (other.key)}
+        <button
+          role="radio"
+          aria-checked={other.key === v.key}
+          class:on={other.key === v.key}
+          onclick={() => {
+            openVersion(other.key);
+          }}>{regionLabel(other.name)} · <span class="mono">{other.serial}</span></button
+        >
+      {/each}
+    </div>
   </section>
 {/if}
 
@@ -44,7 +53,11 @@
   </div>
   <p class="blurb">The original PlayStation 2 program, rebuilt from the C and compared with your disc.</p>
   {#if v.progress}
-    <ProgressBar percent={v.progress.percent} label={`${v.title} code matched`} />
+    <ProgressBar
+      percent={v.progress.percent}
+      functional={v.progress.functional?.percent ?? null}
+      label={`${v.title} code matched`}
+    />
     <p class="count">
       {matchedLine(v.progress.matchedCode, v.progress.totalCode)}
       {#if v.progress.matchedFunctions !== null && v.progress.totalFunctions !== null}
@@ -52,6 +65,13 @@
       {/if}
       {#if v.progress.date}· {v.progress.date}{/if}
     </p>
+    {#if v.progress.functional}
+      <!-- Not progress: C that behaves like retail without matching its bytes (ByteMatch's line under the Code bar). -->
+      <p class="count functional">
+        Functional C: {pct(v.progress.functional.percent)} of the code · {grouped(v.progress.functional.functions)} functions,
+        not counted as matched
+      </p>
+    {/if}
   {/if}
   <ul>
     {#each decomp as action (action.id)}<ActionRow {action} {scope} />{/each}
@@ -143,6 +163,37 @@
 </details>
 
 <style>
+  .count.functional {
+    margin-top: -4px;
+    opacity: 0.8;
+  }
+
+  /* Which version (each disc's build) the panel shows: one control, the chosen half filled. */
+  .versions .choices {
+    display: inline-flex;
+    padding: 3px;
+    border-radius: 999px;
+    border: 1px solid var(--bd);
+  }
+
+  .versions button {
+    border: 0;
+    background: none;
+    font-size: 13px;
+    color: var(--tx2);
+    padding: 6px 16px;
+    border-radius: 999px;
+  }
+
+  .versions button:hover {
+    color: var(--tx1, #fff);
+  }
+
+  .versions button.on {
+    background: var(--bd);
+    color: #fff;
+  }
+
   .blurb {
     margin: 2px 0 12px;
     font-size: 14px;

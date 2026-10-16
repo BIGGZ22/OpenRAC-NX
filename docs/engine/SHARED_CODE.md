@@ -26,7 +26,7 @@ them, with which ones the project has matched in C, so "matched there, open
 here" can be answered whatever the two projects call a function.
 
 The rules are the ones that built rac1/pal's US to PAL map
-([OVERLAYS.md](../../games/rac1/pal/docs/OVERLAYS.md)). The strict figure is a
+([OVERLAYS.md](../../games/rac1/docs/OVERLAYS.md)). The strict figure is a
 floor: that map pairs 84% of the US code by identical fingerprint and most of
 the rest by similarity between those anchors.
 
@@ -225,7 +225,7 @@ depend least on the compiler question.
 
 | Version | What it reads | Produced by |
 |---|---|---|
-| rac1/pal | `games/rac1/pal/baserom/SCES_509.16`, `baserom/overlays/level_*` | `openrac.py setup rac1/pal`, then `python3 tools/overlays.py dump` there |
+| rac1/pal | `games/rac1/baserom/SCES_509.16`, `baserom/overlays/level_*` | `openrac.py setup rac1/pal`, then `python3 tools/overlays.py dump` there |
 | rac1/ntsc | `games/rac1/ntsc/config/us/SCUS_971.99`, `config/us/overlays/level_*` | `openrac.py setup rac1/ntsc`, then its `setup.sh` |
 | rac2/ntsc | `games/rac2/ntsc/baserom/SCUS_972.68`, `baserom/levels/*_*` | `python3 tools/levels.py dump` there |
 | rac3/ntsc | `build/rac3/wrench_out/uya_scus_973_53/` | the Wrench unpack on [rac3's page](../../games/rac3/README.md#getting-started) |
@@ -273,3 +273,64 @@ extend the similarity step to level code; then give the library code that is in 
 home that every game's build compiles and checks. That last step needs each
 game's per-object compile recipe as a shared tool first: a library file
 matches only when built exactly as the game built it.
+
+## One source tree for several versions
+
+`tools/versions.py check FROM TO --build CHECKOUT` asks whether FROM's
+sources could build TO as well. It takes FROM's compiled objects (from a
+full build of its project), places each matched boot function at the
+address `xmap.py` pairs it with in TO, and checks that it comes out as TO's
+retail bytes: every instruction equal except the fields relocations fill,
+and every symbol needing a single value across all the functions placed.
+The values found are TO's address map, functions and data alike, written to
+`build/versions/FROM--TO.tsv`.
+
+First result, 2026-10-15, rac1/pal to rac1/ntsc: of 1,030 matched boot
+functions, 919 pair one to one, and 898 of those reproduce NTSC-U's bytes
+exactly with one consistent map of 1,765 symbols (865 of them data). The
+rest are 14 real instruction differences, 4 relocation pairings the checker
+does not read yet and 3 conflicts in one object.
+
+Level programs get the same check, each level with a map of its own (shared
+level code sits in several levels at different addresses): a function is
+placed in every level where both versions have it exactly once, and level
+code's references to the boot executable have to agree with the boot's map
+below the lowest level code (levels load over the rest of the boot's memory
+and carry their own copies of what was there). Of 5,561 placements of the
+3,069 matched level functions, 5,188 reproduce NTSC-U's bytes exactly
+(15,403 level symbol values, `build/versions/FROM--TO.levels.tsv`); 219
+disagree with another function's placement, 60 differ in an instruction, 93
+use relocations the checker does not read yet, and 184 functions have no
+one-to-one place in any level. This is the evidence for building PAL and NTSC-U from one tree
+with a per-version address map rather than keeping two source trees.
+
+`tools/versions.py link` then asks the build-system question: can whole
+compiled files go into the other version's layout, as rac1/pal's build links
+them? It links every boot object whose functions all place at the same
+offsets in TO with the toolchain's own `ee-ld`, the map as symbol
+definitions, and compares the result with TO's executable. For rac1/pal to
+rac1/ntsc only 25 of 124 boot objects qualify (nearly every file holds a
+function that changed between the versions); 23 of them come out identical
+(62,628 bytes of code), and the other 2 start at an address their section's
+16-byte alignment does not allow in NTSC-U. Placing functions one at a time
+reproduces 1,284 functions, the matched C and the unchanged retail assembly
+alike. So a build of both versions from one tree has to place functions
+individually, as rac2's `tools/build.py` does, not whole files.
+
+`tools/versions.py build` is that build for the boot executable. Each
+function `check` places goes in as an object of its own (its bytes and
+relocations cut from FROM's compiled file, with each `%hi` before its `%lo`
+as GNU as orders them, because SN's ld pairs a `%hi` with the relocation
+after it), and everything else is TO's own retail bytes, standing in for
+its assembly. The toolchain's `ee-ld` links it with the address map, every
+symbol defined inside the section that holds it, and each loaded section is
+compared with TO's executable. For rac1/pal to rac1/ntsc, 2026-10-15: 898
+of PAL's functions (223,072 bytes of code) link into NTSC-U's layout and all
+11 loaded sections come out identical to SCUS_971.99.
+
+The level programs link the same way, each with its own map plus the boot's
+symbols below the lowest level code. With them, all 20 of NTSC-U's programs
+(the boot executable and the 19 levels) come out identical to retail from
+5,862 placements of PAL's compiled functions. 161 level pieces overlap the
+piece before them (one C function covering several catalogued pieces) and
+stay retail for now.

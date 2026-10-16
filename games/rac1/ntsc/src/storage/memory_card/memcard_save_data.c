@@ -7,8 +7,8 @@ extern int mc_leveldata[] __asm__("D_001A07C0");
 extern int memcard_prepare_data(void *dst, int i, int *table) __asm__("func_0020AD78");
 extern void sceCdReadClock(void *);
 extern void sceScfGetLocalTimefromRTC(void *);
-extern void FUN_00208770(void);
-extern void func_00207B08(void *);
+extern void copy_level_object_positions(void) __asm__("FUN_00208770");
+extern void save_map_coverage(void *) __asm__("func_00207B08");
 extern char D_0015EE98[] MACRO_ADDR;
 extern char D_00141EC0[];
 #include "rnc/gameplay/state/level_state.h"
@@ -18,14 +18,14 @@ extern int mode_freeze_flags __asm__("D_0015EEB4") MACRO_ADDR;
 extern u8 D_0014EED0[];
 extern u8 D_001506D0[];
 /* memcard_save_data(slot, flags): starts the save (sceCdReadClock/sceScfGetLocalTimefromRTC
-   on D_0015EE98, FUN_00208770, func_00207B08 on the D_00141EC0 page for
+   on D_0015EE98, copy_level_object_positions, save_map_coverage on the D_00141EC0 page for
    D_0015ED84). With no valid card slot (D_0013D290+0xC8, its record's
    +0x14) it returns whether `slot` is 0. Otherwise it ORs `slot` into the
    pending mask (+0xFC); unless nothing is pending, a save is running
    (+0xDC >= 3) or a result is waiting (+0xE4 >= 0), it stamps +0xD0 with
    D_0015ED84 (temporarily switching D_0015ED84 to `flags` and setting that
    level_visit_state byte), fills entry e[+0x14] (four globals and the 8-byte
-   name), serialises both tables (func_0020AD78), restores the byte and
+   name), serialises both tables (memcard_prepare_data), restores the byte and
    D_0015ED84, and sets result 0xF. Returns whether the result is 0xF.
    D_0015EE98 is MACRO_ADDR (retail rebuilds its address at each use), the
    name field is reached from a `q + 0x30` base, and each block reads
@@ -39,8 +39,8 @@ int memcard_save_data(int slot, int flags) {
 
     sceCdReadClock(D_0015EE98);
     sceScfGetLocalTimefromRTC(D_0015EE98);
-    FUN_00208770();
-    func_00207B08(D_00141EC0 + (current_level_index << 11));
+    copy_level_object_positions();
+    save_map_coverage(D_00141EC0 + (current_level_index << 11));
     {
         char *p = D_0013D290;
         int active = *(int *)(p + 0xC0);

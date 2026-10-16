@@ -7,8 +7,10 @@
   },
   "versions": {
     "pal": {
+      "dir": "games/rac1",
       "region": "PAL (Europe)",
       "serial": "SCES_509.16",
+      "bytematch": "OpenRAC/rac1-decomp",
       "disc": {
         "file": "SCES_509.16.iso",
         "volume": "RATCHETANDCLANK",
@@ -40,63 +42,63 @@
           "tools/extract",
           "docs/GDSCRIPT_CONVENTIONS.md"
         ],
-        "commit": "e1ee2ee37ba5b1ad8110132c1717ef94cb39acb0",
-        "date": "2026-10-14",
-        "imported": "2026-10-14"
+        "commit": "3c552b887547e2258ea9e47868de457cdaa9272e",
+        "date": "2026-10-15",
+        "imported": "2026-10-15"
       },
       "build": {
         "host": "macOS or Linux through Docker (linux/386 image with Wine); SN ProDG toolchain you supply",
-        "readme": "games/rac1/pal/README.md"
+        "readme": "games/rac1/README.md"
       },
       "progress": {
-        "report": "games/rac1/pal/progress/report.json",
+        "report": "games/rac1/progress/report.json",
         "format": "objdiff",
         "note": "The boot executable and all 19 level programs. Handwritten assembly and linker remnants count as finished; staged near misses (nonmatching/) give the fuzzy figure."
       },
       "inputs": [
         {
           "from": "disc",
-          "path": "games/rac1/pal/baserom/SCES_509.16.iso"
+          "path": "games/rac1/baserom/SCES_509.16.iso"
         },
         {
           "from": "boot",
-          "path": "games/rac1/pal/baserom/SCES_509.16"
+          "path": "games/rac1/baserom/SCES_509.16"
         },
         {
           "from": "toolchains",
-          "path": "games/rac1/pal/toolchain"
+          "path": "games/rac1/toolchain"
         }
       ],
-      "setup": "in games/rac1/pal: bash tools/docker/run.sh bash tools/setup_asm.sh, then bash tools/docker/run.sh bash tools/build_sn.sh (its README; toolchains/README.md for the compilers)",
+      "setup": "in games/rac1: bash tools/docker/run.sh bash tools/setup_asm.sh, then bash tools/docker/run.sh bash tools/build_sn.sh (its README; toolchains/README.md for the compilers)",
       "xmap": {
         "code": [
           {
             "program": "boot",
-            "path": "games/rac1/pal/baserom/SCES_509.16",
+            "path": "games/rac1/baserom/SCES_509.16",
             "format": "elf"
           },
           {
             "program": "level",
-            "glob": "games/rac1/pal/baserom/overlays/level_*",
+            "glob": "games/rac1/baserom/overlays/level_*",
             "format": "rac1-level"
           }
         ],
         "matched": {
           "kind": "objdiff",
-          "report": "games/rac1/pal/progress/report.json",
+          "report": "games/rac1/progress/report.json",
           "not_c": [
-            "games/rac1/pal/config/handwritten_asm.txt",
-            "games/rac1/pal/config/linker_remnants.txt"
+            "games/rac1/config/handwritten_asm.txt",
+            "games/rac1/config/linker_remnants.txt"
           ],
-          "names": "games/rac1/pal/config/names.tsv"
+          "names": "games/rac1/config/names.tsv"
         },
-        "setup": "python3 tools/openrac.py setup rac1/pal, then python3 tools/overlays.py dump in games/rac1/pal"
+        "setup": "python3 tools/openrac.py setup rac1/pal, then python3 tools/overlays.py dump in games/rac1"
       },
       "port": {
-        "root": "games/rac1/pal",
+        "root": "games/rac1",
         "gp": "0x166D00",
-        "catalogue": "games/rac1/pal/config/overlays/functions.tsv",
-        "report": "games/rac1/pal/progress/report.json",
+        "catalogue": "games/rac1/config/overlays/functions.tsv",
+        "report": "games/rac1/progress/report.json",
         "level_data_from": "0x15F000",
         "check": {
           "command": "bash tools/docker/run.sh python tools/integrate.py {manifest}",
@@ -108,11 +110,11 @@
           "shared/port/rac1-pal.undecided.txt"
         ],
         "never_sources": [
-          "games/rac1/pal/src/game/movie"
+          "games/rac1/src/game/movie"
         ],
-        "sources": "games/rac1/pal/src",
+        "sources": "games/rac1/src",
         "include": [
-          "games/rac1/pal/include"
+          "games/rac1/include"
         ],
         "defines": [],
         "shared_headers": [
@@ -146,6 +148,7 @@
     "ntsc": {
       "region": "NTSC-U (North America)",
       "serial": "SCUS_971.99",
+      "bytematch": "lombyte-project/Lombyte",
       "disc": {
         "file": "SCUS_971.99.iso",
         "volume": "RATCHETANDCLANK",
@@ -173,9 +176,9 @@
         "checkout": "~/Projects/rac1-decomp-ntsc",
         "license": "MIT (GPL-2.0 and newlib parts)",
         "exclude": [],
-        "commit": "6db3f5530caf1b0276981611e8697ad3cda04b01",
-        "date": "2026-10-14",
-        "imported": "2026-10-14"
+        "commit": "879d6f4a2950bb8f41ba9c272b72a0b478cafda4",
+        "date": "2026-10-15",
+        "imported": "2026-10-15"
       },
       "build": {
         "host": "Linux or WSL; macOS through ./setup.sh --docker; toolchains downloaded and built by setup.sh",

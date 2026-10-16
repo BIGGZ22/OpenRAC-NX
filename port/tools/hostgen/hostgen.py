@@ -4,7 +4,7 @@
 """hostgen: a decompilation's C, written again to run natively in the port.
 
     python3 port/tools/hostgen/hostgen.py --game port/game/rac1-pal/hostgen.json \\
-        --source games/rac1/pal --out build/port/rac1/gen
+        --source games/rac1 --out build/port/rac1/gen
 
 reads every C file of the decompilation (as the console's C, through Clang),
 and writes, under --out:

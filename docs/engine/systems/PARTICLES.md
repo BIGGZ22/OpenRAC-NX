@@ -132,4 +132,4 @@ Sky stars use the same program and packet ([SHRUB_SKY.md](../formats/SHRUB_SKY.m
 
 Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/plan/particles.md` sections 1–10 and "Update types";
-PAL names from `games/rac1/pal/config/overlays/us_map.tsv`.
+PAL names from `games/rac1/config/overlays/us_map.tsv`.

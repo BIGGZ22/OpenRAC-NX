@@ -6,14 +6,14 @@ apart from this file); each game's docs say where its builders get them.
 [docs/toolchains](../docs/toolchains/README.md) collects what is known about
 which compiler built what.
 
-## Ratchet & Clank, PAL (`games/rac1/pal`)
+## Ratchet & Clank, PAL (`games/rac1`)
 
 The build uses two public community mirrors, cloned here:
 
 ```sh
 git clone https://github.com/AngheloAlf/SN-Systems-ProDG_for_PS2_3.01 toolchains/sn-prodg-3.01
 git clone https://github.com/AngheloAlf/sce_ps2_sdk_24 toolchains/sn-prodg-24
-python3 tools/openrac.py setup rac1/pal   # links games/rac1/pal/toolchain to this directory
+python3 tools/openrac.py setup rac1/pal   # links games/rac1/toolchain to this directory
 ```
 
 - `sn-prodg-3.01`: `make`, the assembler and the linker.
@@ -34,8 +34,8 @@ python3 tools/openrac.py setup rac1/pal   # links games/rac1/pal/toolchain to th
 
 The build runs in a Linux container with Wine on macOS and Linux; it mounts
 all of OpenRAC, so the link resolves inside it. Details:
-[games/rac1/pal/README.md](../games/rac1/pal/README.md) and
-[docs/TOOLCHAIN.md](../games/rac1/pal/docs/TOOLCHAIN.md).
+[games/rac1/README.md](../games/rac1/README.md) and
+[docs/TOOLCHAIN.md](../games/rac1/docs/TOOLCHAIN.md).
 
 ## Ratchet & Clank, NTSC-U (`games/rac1/ntsc`)
 

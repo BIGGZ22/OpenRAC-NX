@@ -12,96 +12,66 @@ INCLUDE_ASM("config/us/overlays/asm/FUN_L00_00252990.s", FUN_L00_00252990);
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_00254b58.s", FUN_L00_00254b58);
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_00256f14.s", FUN_L00_00256f14);
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_00257024.s", FUN_L00_00257024);
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_00257218.s", FUN_L00_00257218);
-#else
-#include "rnc/gameplay/state/item_state.h"
 
 typedef struct {
-    u8 pad[0xE];
-    u16 count;
-    u8 tail[8];
-} ItemCount_257218;
-extern ItemCount_257218 D_L00_001C40B0[] __asm__("D_L00_001C40B0");
-extern s32 random_integer_below(s32) __asm__("FUN_00213260");
+    u8 pad0[0xE];
+    u16 max_ammo;
+    u8 pad10[8];
+} Item257218;
+typedef struct {
+    u8 pad0[0xB2];
+    u16 uid;
+} Moby257218;
+extern int D_0015ED84;
+extern int D_0014C190[][64];
+extern u8 D_0015EDD0_257218[] __asm__("D_0015EDD0") __attribute__((section(".sdata")));
+extern u8 D_0013D4C0[];
+extern int weapon_ammo_counts[] __asm__("D_0013D428");
+extern Item257218 D_L00_001C40B0[] __attribute__((section(".data")));
+int FUN_00213260(int);
+int FUN_L00_00257218_u3(Moby257218 *, int *) __asm__("FUN_L00_00257218");
 
-int FUN_L00_00257218(u8 *m, s32 *item) {
-    s32 shortfall = 0;
-    s32 available = 0;
-    s32 stocked = 0;
-    s32 i;
-    s32 choice;
-    s32 scan_index;
-    u32 id;
-    u32 selected_item;
-    u8 *entry;
+/* Picks the weapon whose ammo a pickup gives (*out), preferring owned weapons that are not full, and returns how many pickups to drop (1 or 2). */
+int FUN_L00_00257218_u3(Moby257218 *m, int *out) {
+    int i, idx, x;
+    int not_full = 0, owned = 0, with_max = 0;
+    int one;
 
-    if (*item <= 0 || (m != 0 &&
-        ((D_0014C190_257218[current_level_index][(s16)*(u16 *)(m + 0xB2) >> 5] >>
-          (*(u16 *)(m + 0xB2) & 31)) & 1))) {
-        {
-            scan_index = 0;
-            if (D_0015EDD0_257218[0] != 0xFF) {
-                entry = D_0015EDD0_257218;
-                while (1) {
-                    id = *entry & 0x3F;
-                    if (item_available[id]) {
-                        ItemCount_257218 *count = &D_L00_001C40B0[id];
-                        available++;
-                        if (count->count != 0) {
-                            stocked++;
-                        }
-                        shortfall += weapon_ammo_counts[id] < count->count;
-                    }
-                    entry++;
-                    if (++scan_index >= 12 || *entry == 0xFF) break;
-                }
+    /* Fakematch: the constant 1 of the final return lives in a local set first, so its register comes before the 2's. */
+    one = 1;
+    if (*out <= 0 || (m != 0 && (D_0014C190[D_0015ED84][(s16)m->uid >> 5] >> (m->uid & 0x1F)) & 1)) {
+        for (i = 0; i < 12 && D_0015EDD0_257218[i] != 0xFF; i++) {
+            x = D_0015EDD0_257218[i] & 0x3F;
+            if (D_0013D4C0[x]) {
+                if (((Item257218 *)(x * 0x18 + (u8 *)D_L00_001C40B0))->max_ammo) with_max++;
+                owned++;
+                not_full += weapon_ammo_counts[x] < ((Item257218 *)(x * 0x18 + (u8 *)D_L00_001C40B0))->max_ammo;
             }
         }
-        /* Retail also uses list index -1 when the random selection is negative. */
-        i = -1;
-        if (shortfall != 0) {
-            scan_index = random_integer_below(shortfall);
-            if (scan_index >= 0) {
-                i = -1;
-                while (1) {
-                    ++i;
-                    id = D_0015EDD0_257218[i] & 0x3F;
-                    if (item_available[id]) {
-                        ItemCount_257218 *count = &D_L00_001C40B0[id];
-                        scan_index -= weapon_ammo_counts[id] < count->count;
-                    }
-                    if (scan_index < 0) break;
-                }
+        idx = -1;
+        if (not_full) {
+            i = FUN_00213260(not_full);
+            while (i >= 0) {
+                idx++;
+                x = D_0015EDD0_257218[idx] & 0x3F;
+                if (D_0013D4C0[x]) i -= ((Item257218 *)(x * 0x18 + (u8 *)D_L00_001C40B0))->max_ammo > weapon_ammo_counts[x];
             }
-            selected_item = *(D_0015EDD0_257218 + i);
+            *out = D_0015EDD0_257218[idx] & 0x3F;
+        } else if (owned) {
+            i = FUN_00213260(with_max);
+            while (i >= 0) {
+                idx++;
+                x = D_0015EDD0_257218[idx] & 0x3F;
+                if (D_0013D4C0[x] && ((Item257218 *)(x * 0x18 + (u8 *)D_L00_001C40B0))->max_ammo) i--;
+            }
+            *out = D_0015EDD0_257218[idx] & 0x3F;
         } else {
-            selected_item = 10;
-            if (available != 0) {
-                scan_index = random_integer_below(stocked);
-                if (scan_index >= 0) {
-                    i = -1;
-                    while (1) {
-                        i++;
-                        id = D_0015EDD0_257218[i] & 0x3F;
-                        if (item_available[id]) {
-                            ItemCount_257218 *count = &D_L00_001C40B0[id];
-                            if (count->count != 0) scan_index--;
-                        }
-                        if (scan_index < 0) break;
-                    }
-                }
-                selected_item = D_0015EDD0_257218[i] & 0x3F;
-            }
+            *out = 10;
         }
-        *item = selected_item & 0x3F;
     }
-    choice = random_integer_below(5);
-    if (choice) choice = 1;
-    else choice = 2;
-    return choice;
+    if (FUN_00213260(5)) { return one; }
+    return 2;
 }
-#endif
 extern int D_0015ED84_257470 __asm__("D_0015ED84");
 extern int D_0015ED84_257470b __asm__("D_0015ED84");
 extern unsigned char D_0014C050_257470[][16] __asm__("D_0014C050")

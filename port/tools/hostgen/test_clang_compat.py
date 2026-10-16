@@ -49,6 +49,47 @@ class ClangCompatibility(unittest.TestCase):
             ], capture_output=True, text=True)
             self.assertEqual(compiled.returncode, 0, compiled.stderr)
 
+    def test_gcc_label_and_redeclaration_leniencies(self):
+        # What GCC 2.95 took and Clang refuses (rac1/ntsc's synced tree, 2026-10-15): a variable
+        # given a second asm label (GCC kept the first), a label repeating a variable's name after
+        # its use, a function labelled one way here and another way in a header included after
+        # its use, and an extern of an anonymous struct contradicting a function-local one.
+        with tempfile.TemporaryDirectory(prefix="hostgen leniencies ") as tmp:
+            root = Path(tmp)
+            source = root / "source"
+            (source / "src").mkdir(parents=True)
+            (source / "include").mkdir()
+            (source / "include/fast_math.h").write_text('float absolute_float(float x) __asm__("FUN_001f99c0");\n')
+            (source / "src/example.c").write_text(
+                'extern float ref __asm__("D_0015ED6C");\n'
+                'extern float table[];\n'
+                'float absolute_float(float input) __asm__("func_001F99C0");\n'
+                "int func_00100000(void) {\n"
+                "  extern struct { char pad[0x18]; int moby; } D_00174140;\n"
+                "  return (int)(absolute_float(table[0]) + D_00174140.moby);\n"
+                "}\n"
+                'extern float ref __asm__("D_0015EE6C");\n'
+                'extern float table[] __asm__("table");\n'
+                "extern struct { char pad[0x28]; float height; } D_00174140;\n"
+                '#include "fast_math.h"\n'
+                "float func_00100040(void) {\n"
+                "  return ref * 2.0f + D_00174140.height + absolute_float(-1.0f);\n"
+                "}\n"
+            )
+            config = root / "game.json"
+            config.write_text(json.dumps({"name": "leniencies", "sources": ["src"],
+                                          "includes": ["include"], "defines": []}))
+            output = root / "generated"
+            self.assertEqual(hostgen.main([
+                "--game", str(config), "--source", str(source), "--out", str(output),
+                "--jobs", "2", "--quiet",
+            ]), 0)
+            report = json.loads((output / "report.json").read_text())
+            self.assertEqual(report["units_unreadable"], [])
+            text = (output / "example.c").read_text()
+            self.assertIn("func_00100040(", text)
+            self.assertNotIn("D_0015EE6C", text)   # the first label is the variable's
+
     def test_a_definition_that_contradicts_a_shared_header(self):
         # A header shared by the callers says `void *` and `void` where the definitions take
         # `float *` and return int (rac1/pal's include/callees.h against its candidates): the

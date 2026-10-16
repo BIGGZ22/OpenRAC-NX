@@ -627,7 +627,7 @@ mod tests {
         let status = crate::status::version_status(&tmp, version);
         let config = Config { python: Some("/usr/bin/python3".into()), ..Config::default() };
         let ctx = Context {
-            root: &tmp, // a root without games/rac1/pal, as the carried copy is
+            root: &tmp, // a root without games/rac1, as the carried copy is
             config: &config,
             version: Some(version),
             status: Some(&status),

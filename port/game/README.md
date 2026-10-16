@@ -1,12 +1,12 @@
 # The games
 
 Each game version the port builds is a directory here, named as its
-decompilation is under `games/` (`games/rac1/pal` is `rac1-pal`). The build
+decompilation is under `games/` (`games/rac1` is `rac1-pal`). The build
 makes `openrac-<id>` for every one whose decompilation is present:
 
 | Directory | Game | Decompilation | Entry (`main`) | Library table |
 |---|---|---|---|---|
-| [rac1-pal](rac1-pal/README.md) | Ratchet & Clank (PAL) | `games/rac1/pal` | `func_0012DB18` | complete, from [the survey](../../docs/port/RAC1_PAL_SURVEY.md) |
+| [rac1-pal](rac1-pal/README.md) | Ratchet & Clank (PAL) | `games/rac1` | `func_0012DB18` | complete, from [the survey](../../docs/port/RAC1_PAL_SURVEY.md) |
 | [rac1-ntsc](rac1-ntsc/README.md) | Ratchet & Clank (NTSC-U) | `games/rac1/ntsc` | `FUN_0012d9d8` | carried from rac1-pal's ([versionmap](../tools/versionmap/README.md)); runs into its title loop |
 | rac2-ntsc | Going Commando (NTSC-U) | `games/rac2/ntsc` (`src/`, with level placements from `config/levels/functions.tsv`) | not known yet | empty |
 | rac3-ntsc | Up Your Arsenal (NTSC-U) | `games/rac3/ntsc` (without `i5bootn`, the online program; the menu, `frontbin`, as a group of its own) | not known yet | empty |

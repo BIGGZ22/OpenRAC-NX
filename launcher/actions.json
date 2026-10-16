@@ -93,7 +93,7 @@
         "requires": [
           "inputs"
         ],
-        "docs": "games/rac1/pal/README.md"
+        "docs": "games/rac1/README.md"
       },
       {
         "id": "build",
@@ -109,8 +109,8 @@
           "inputs",
           "toolchains"
         ],
-        "artifact": "games/rac1/pal/build-sn/rac1.elf",
-        "docs": "games/rac1/pal/README.md"
+        "artifact": "games/rac1/build-sn/rac1.elf",
+        "docs": "games/rac1/README.md"
       },
       {
         "id": "editor-preview",
@@ -148,7 +148,7 @@
         "requires": [
           "python"
         ],
-        "docs": "games/rac1/pal/docs/WORKFLOW.md"
+        "docs": "games/rac1/docs/WORKFLOW.md"
       },
       {
         "id": "editor-extract",
@@ -461,6 +461,27 @@
         ],
         "docs": "games/rac1/ntsc/docs/building.md",
         "todo": "Find the executable make elf writes (config/us/build/SCUS_971.99 per docs/building.md) and add it as the artifact; macOS runs make through host/run.sh."
+      },
+      {
+        "id": "build-merged",
+        "label": "Build from the merged tree",
+        "description": "Links NTSC-U's boot executable and 19 level programs from the merged games/rac1 tree's compiled functions, placed at NTSC-U's addresses, and compares each with your disc. Build the PAL tree and run tools/xmap.py scan rac1/pal rac1/ntsc first.",
+        "kind": "build",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "tools/versions.py",
+          "build",
+          "rac1/pal",
+          "rac1/ntsc"
+        ],
+        "cwd": "{root}",
+        "requires": [
+          "python",
+          "inputs",
+          "toolchains"
+        ],
+        "docs": "games/rac1/VERSIONS.md"
       },
       {
         "id": "verify",

@@ -20,7 +20,7 @@ The configured parent workspace contains two independent Git repositories:
 
 `OPENRAC_RAC1_PAL_SOURCE` in `port/build/release/CMakeCache.txt` points to the
 sibling `rac1-decomp/`. Check that binding at startup. Editing the imported
-`games/rac1/pal/` does not change this local build. On a different machine,
+`games/rac1/` does not change this local build. On a different machine,
 use the actual configured source path and its instructions.
 
 Before editing, read both repositories' instructions, inspect their Git
@@ -1350,7 +1350,7 @@ Two Windows LLVM MinGW release configurations of the committed tree pass
 the full PAL build and 61/61 committed CTest tests:
 - Sibling rac1-decomp source: 3816 translated functions, no hostgen problems.
   Strict direct startup stops at func_L00_00251E30, frame 939, exit 2.
-- Bundled games/rac1/pal source (import 6127cb448010): 3934 translated,
+- Bundled games/rac1 source (import 6127cb448010): 3934 translated,
   no hostgen problems. Strict 2700-frame Veldin probe exits 0. Respawn at
   (132.09,115.48,31.43), subsequent walking, jump z=30.80 at frame 2400,
   landing z=29.48 by 2500, joints finite. This clean checkout demonstrates
@@ -1520,7 +1520,7 @@ this is a playthrough. `OPENRAC_GUARD` (BUGFIX_GUIDE) finds who writes a corrupt
 
 ### Every level's start without a missing function, 2026-10-14 continuation
 
-Workers per `games/rac1/pal/docs/AGENT_WORKFLOW.md` (Opus on functions over 1 KB through
+Workers per `games/rac1/docs/AGENT_WORKFLOW.md` (Opus on functions over 1 KB through
 `wave.py long`, one function each; Sonnet and Haiku on small ones), each told to end at
 `equiv.py` FUNCTIONAL when not EXACT. In `rac1-decomp` (branch `feat/port-backfill`):
 

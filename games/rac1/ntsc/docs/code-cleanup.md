@@ -16,6 +16,9 @@ to make that code easier to read. To decompile new code, see
    must still say the unit matches.
 5. Run `make elf` and `make overlays`. Both must end with `PASS`. If one
    fails, find the change that broke it and undo it.
+   `python3 scripts/check-cleanup.py` lists the rules below that your change
+   breaks. CI runs it on every pull request; older code on `main` does not
+   count.
 6. Commit each area on its own and say what became easier to read.
 
 ## What you can change
@@ -51,7 +54,12 @@ make it clearer, add a comment that explains why it looks odd.
 - **Functions:** `lower_snake_case`, verb first (`draw_hud`), with a
   subsystem prefix when it helps (`hud_`, `save_card_`). Recovered CamelCase
   names become clear snake_case. Sony SDK names stay as they are. Keep
-  `FUN_<addr>` only in the asm label.
+  `FUN_<addr>` only in the asm label, and use the same name the function's
+  own file uses in every file that calls it.
+- **Files:** a boot file is named after the function it holds; a level code
+  file after the moby class or function it holds
+  ([overlays.md](overlays.md#sources-and-the-proof)). Keep `fun_<addr>.c`
+  until the name is proven.
 - **Renaming:** use the tool, one function at a time, so callers in level
   code are updated too:
   `python3 scripts/rename-function-proposals.py --address 0x... --apply`
@@ -100,6 +108,8 @@ edit fails at once.
 - **One name, one type.** Each variable has one definition and one `extern`
   in a header. A file that needs another placement keeps one alias,
   `<name>_gp` (sda), `<name>_lui` (`NOT_SDA`) or `<name>_macro` (`MACRO_ADDR`).
+  In an SN unit, functions above the first `sda` declaration keep `lui` when
+  they read a `<name>_lui` alias declared before it.
   File suffixes (`_28efc8`, `_t`) and level prefixes on main-ELF data go.
   `scripts/data-decls.py` lists the labels that still disagree; fix the type
   when you move that data to C, and lower the count in `test_public_tools.py`.

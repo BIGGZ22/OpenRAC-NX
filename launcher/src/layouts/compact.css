@@ -3,7 +3,7 @@
    launcher looks exactly as it did before. To remove the layout, delete this
    file and its import in main.ts. */
 
-/* ---- The game page: the title, the versions and Play on one band ---- */
+/* ---- The game page: the title and Play on one band ---- */
 
 :root[data-layout="compact"] .page:has(> .hero) {
   max-width: 1040px;
@@ -14,7 +14,6 @@
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
     "title go"
-    "versions go"
     "steps steps";
   align-items: center;
   justify-items: start;
@@ -28,9 +27,6 @@
   padding: 12px 22px;
   border-width: 5px;
   text-align: left;
-}
-:root[data-layout="compact"] .hero > .versions {
-  grid-area: versions;
 }
 :root[data-layout="compact"] .hero > .go {
   grid-area: go;
@@ -57,7 +53,7 @@
 @media (max-width: 860px) {
   :root[data-layout="compact"] .hero {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "title" "versions" "go" "steps";
+    grid-template-areas: "title" "go" "steps";
     justify-items: center;
   }
   :root[data-layout="compact"] .hero > .go {

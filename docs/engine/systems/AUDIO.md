@@ -173,4 +173,4 @@ the last play ends.
 
 Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/plan/audio.md`; PAL names from
-`games/rac1/pal/config/overlays/us_map.tsv`.
+`games/rac1/config/overlays/us_map.tsv`.

@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://decomp.dev/lombyte-project/lombyte"><img src="https://img.shields.io/badge/decomp.dev-Progress-de812f?style=flat-square&logo=hackthebox&logoColor=de812f&labelColor=0d1117" alt="decomp.dev progress"></a>
+  <a href="https://bytematch.dev/lombyte-project/Lombyte"><img src="https://img.shields.io/badge/bytematch.dev-Progress-de812f?style=flat-square&logo=hackthebox&logoColor=de812f&labelColor=0d1117" alt="bytematch.dev progress"></a>
   <a href="https://discord.gg/XVdFrwKuw"><img src="https://img.shields.io/badge/Discord-Community-5865F2?style=flat-square&logo=discord&logoColor=5865F2&labelColor=0d1117" alt="Community Discord"></a>
   <a href="docs/building.md"><img src="https://img.shields.io/badge/Build-Guide-c3cbd8?style=flat-square&logo=gnubash&logoColor=c3cbd8&labelColor=0d1117" alt="Build guide"></a>
   <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/Contributing-Guide-c3cbd8?style=flat-square&logo=github&logoColor=c3cbd8&labelColor=0d1117" alt="Contributing guide"></a>
@@ -32,7 +32,7 @@
 <h3>Decompilation progress</h3>
 
 <p align="center">
-  <a href="https://decomp.dev/lombyte-project/lombyte">
+  <a href="https://bytematch.dev/lombyte-project/Lombyte">
     <img src="https://raw.githubusercontent.com/lombyte-project/lombyte/progress/decomp_map.svg" alt="Lombyte decompilation progress" width="100%">
   </a>
 </p>
@@ -49,11 +49,16 @@ Expected SHA-256 of the boot executable:
 e050581032e4bb3f20341307da5b69b76f1574910519155380ea771e55c3c0c9
 ```
 
-Only this release is currently targeted. PAL, NTSC-J, and the PlayStation 3 remaster are not supported.
+Only this release is targeted; other releases and the PlayStation 3 remaster are not supported.
 
 <h3>Contributing</h3>
 
-Contributions to matching C, recovered names, types, and documentation are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and verification requirements.
+You can help improve matching C, recovered names, types, and documentation. See [CONTRIBUTING.md](CONTRIBUTING.md) for more...
+<p align="center">
+  <a href="https://lombyte-project.github.io/namingdesk">
+    <img src="https://raw.githubusercontent.com/lombyte-project/lombyte/progress/naming-desk-card.svg" alt="Open the Naming Desk" width="100%">
+  </a>
+</p>
 
 <h4>Quick setup</h4>
 

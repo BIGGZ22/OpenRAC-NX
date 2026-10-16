@@ -9,7 +9,7 @@ and checked them on every class, packet and instance of the NTSC-U disc
 (1,804 classes, 42,725 packets, 1,662,131 triangles, 44,712 instances).
 OpenRAC's editor reads LOD 0 and the placements on PAL; PAL's
 `func_00236A98` confirms the material table pointer, count and stride
-([ASSETS.md](../../../games/rac1/pal/docs/ASSETS.md#ties)).
+([ASSETS.md](../../../games/rac1/docs/ASSETS.md#ties)).
 
 **Games.** RAC1, measured. Wrench gives the sequels a larger class header
 with different offsets and a 0x60-byte instance without the colours
@@ -163,5 +163,5 @@ see [LIGHTING.md](../systems/LIGHTING.md#2-ties-lightties). Colours clamp at
 
 Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/formats/tie_rac1.md`, `docs/plan/tie_lighting.md`;
-PAL names from `games/rac1/pal/config/overlays/us_map.tsv` and
+PAL names from `games/rac1/config/overlays/us_map.tsv` and
 [RENDERER.md](../../port/RENDERER.md).

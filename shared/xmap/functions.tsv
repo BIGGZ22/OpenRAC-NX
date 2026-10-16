@@ -5,7 +5,7 @@
 fingerprint	size	class	games	name	rac1/pal	rac1/pal name	rac1/pal state	rac1/ntsc	rac1/ntsc name	rac1/ntsc state	rac2/ntsc	rac2/ntsc name	rac2/ntsc state	rac3/ntsc	rac3/ntsc name	rac3/ntsc state	rac4/ntsc	rac4/ntsc name	rac4/ntsc state
 23544f079bcf1dbd	7592	core	2											boot:00137CC8		open	boot:00144208	func_00144208	open
 7a517467c16fc196	3348	core	2											boot:00120908		open	boot:00128698	func_00128698	open
-b36819ac54955164	1796	core	2	_getAllRefs	boot:00125880	func_00125880	open	boot:00125740	_getAllRefs	open	boot:001296A0		open						
+b36819ac54955164	1796	core	2	_getAllRefs	boot:00125880	func_00125880	matched	boot:00125740	_getAllRefs	matched	boot:001296A0		open						
 9a0c5c5be8324707	1796	core	2											boot:00130398		open	boot:0013C8D8	func_0013C8D8	open
 22583695f5b130ff	1772	core	4		boot:0011DFE8	func_0011DFE8	matched	boot:0011DCE8		open	boot:0011FC68		open	boot:001260F0		open	boot:0012EF00	func_0012EF00	matched
 084b5428ad5c4d54	1704	core	2											boot:00137620		open	boot:00143B60	func_00143B60	open
@@ -68,11 +68,11 @@ e8195e5bf1e8ab1b	520	core	4	_sceSifLoadModuleBuffer	boot:0011CE70	func_0011CE70	
 22d04e8ff6ba98dc	516	core	2	sceFsInit	boot:0011BCB0	func_0011BCB0	open	boot:0011B9B0	sceFsInit	open	boot:0011DE08		open						
 a2f06da35589004d	512	core	2											boot:00122810		open	boot:0012A718	func_0012A718	open
 88d070b1cf2cd9f1	508	core	2	_waitBdecOut	boot:001273A0	func_001273A0	matched	boot:00127260	_waitBdecOut	matched	boot:0012B1C0		open						
-1766369c5c0efa92	504	core	2		boot:00121490	func_00121490	open	boot:00121190	FUN_00121190	open	boot:001250E8		open						
+1766369c5c0efa92	504	core	2	sceCdDiskReady	boot:00121490	func_00121490	matched	boot:00121190	sceCdDiskReady	matched	boot:001250E8		open						
 f8aabccbae588e8e	500	core	4		boot:0011D4E0	func_0011D4E0	open	boot:0011D1E0		open	boot:0011F170		open	boot:001245A0		open	boot:0012D098	func_0012D098	open
 4fdb1a02a0789ff0	496	core	2	_slice0	boot:00127A90	func_00127A90	matched	boot:00127950	_slice0	matched	boot:0012B8B0		open						
 8d8d2e9c56da06ec	496	core	2	_pictureCodingExtension	boot:00128F90	func_00128F90	matched	boot:00128E50	_pictureCodingExtension	matched	boot:0012CDB0		open						
-2be537034545dc0b	492	core	2	sceSifCallRpc	boot:0011B4C8	func_0011B4C8	open	boot:0011B1C8	sceSifCallRpc	matched	boot:0011D620		open						
+2be537034545dc0b	492	core	2	sceSifCallRpc	boot:0011B4C8	func_0011B4C8	matched	boot:0011B1C8	sceSifCallRpc	matched	boot:0011D620		open						
 4742d4e35d0ab192	488	core	4		boot:0012262C		open	boot:0012232C		open	boot:00126284		open	boot:0012C99C		open	boot:00138E04	func_00138E04	open
 4adeac5fa376babd	488	core	2								boot:00132028		open	boot:0013B620		open			
 4476452f142e855b	484	core	4	sceGsSetDefDrawEnv	boot:001222C8	func_001222C8	matched	boot:00121FC8	sceGsSetDefDrawEnv	matched	boot:00125F20		open	boot:0012C638		open	boot:00138AA0	func_00138AA0	open
@@ -89,7 +89,7 @@ bfe10b0f816f2410	452	core	2											boot:00135988		open	boot:00141EC8	func_001
 197bcff701e75aab	448	core	2		boot:0012A558	func_0012A558	open	boot:0012A418		open	boot:0012E378		open						
 bfe20757b017875b	448	core	2											boot:00136B90		open	boot:001430D0	func_001430D0	open
 03a3036359216547	444	core	2		boot:001236E8		open	boot:001233E8		open	boot:00127340		open						
-a59fed6fd20d98f3	440	core	2	PrepareMpegPictureFieldTransfers	boot:00129F40	func_00129F40	open	boot:00129E00	PrepareMpegPictureFieldTransfers	matched	boot:0012DD60		open						
+a59fed6fd20d98f3	440	core	2	PrepareMpegPictureFieldTransfers	boot:00129F40	func_00129F40	matched	boot:00129E00	PrepareMpegPictureFieldTransfers	matched	boot:0012DD60		open						
 e284e9477b9fc6c4	440	core	2								boot:00115908		open				boot:0011AE10		open
 ebb55cdd16197cb0	436	core	2											boot:001353A8		open	boot:001418E8	func_001418E8	open
 7eab3169fe0ba093	424	core	2		boot:00116958		open							boot:0011B9B0		open			
@@ -121,7 +121,7 @@ e4d54198e9c9148d	372	core	2											boot:00120278		open	boot:00128008	func_001
 079e0c6bef492ed3	368	core	2	_getpic	boot:0012BDD0	func_0012BDD0	matched	boot:0012BC90	_getpic	matched	boot:0012FBF0		open						
 d16cfab409b61719	368	core	2											boot:00135818		open	boot:00141D58	func_00141D58	open
 9aa72beac014bb8b	364	core	2		boot:0012A0F8	func_0012A0F8	open	boot:00129FB8		open	boot:0012DF18		open						
-d3dc69a4a089be49	360	core	2	printfloat	boot:00119F38	func_00119F38	matched	boot:00119C38	printfloat	open	boot:0011C090		open						
+d3dc69a4a089be49	360	core	2	printfloat	boot:00119F38	func_00119F38	matched	boot:00119C38	printfloat	matched	boot:0011C090		open						
 14e54593bc72a0fe	360	core	4	dpdiv	boot:001201B0	func_001201B0	matched	boot:0011FEB0	dpdiv	matched	boot:00122DA8		open	boot:00129238		open	boot:00131138	func_00131138	matched
 8039093caa25f69f	360	core	2											boot:001325A0		open	boot:0013EAE0	func_0013EAE0	open
 5dd4f04fb6f29a60	348	core	2	_decodeOrSkipField	boot:0012C0A0	func_0012C0A0	matched	boot:0012BF60	_decodeOrSkipField	matched	boot:0012FEC0		open						
@@ -318,7 +318,7 @@ bdbfc83eb9d894a4	168	core	2											boot:00130210		open	boot:0013C750		open
 f93267a436ce70f3	168	core	2											boot:0013CA30		open	boot:00159130	func_00159130	open
 47c611cbccdab542	164	core	4	VSync2	boot:00118F60	func_00118F60	matched	boot:00118C60	VSync2	matched	boot:0011B140		open	boot:0011F340		open	boot:001270C0	func_001270C0	open
 f4c16fc23f7cab38	164	core	4		boot:001191E0	func_001191E0	open	boot:00118EE0		open	boot:0011B328		open	boot:0011F5F0		open	boot:00127390	func_00127390	open
-4c6a8529c195c358	164	core	4		boot:001253F8	func_001253F8	open	boot:001252B8	FUN_001252b8	open	boot:00129218		open	boot:0012FFE0		open	boot:0013C518	func_0013C518	open
+4c6a8529c195c358	164	core	4		boot:001253F8	func_001253F8	open	boot:001252B8		open	boot:00129218		open	boot:0012FFE0		open	boot:0013C518	func_0013C518	open
 0d812c730393d1c7	164	core	2	_waitIpuIdle	boot:00128590	func_00128590	matched	boot:00128450	_waitIpuIdle	matched	boot:0012C3B0		open						
 01d1b4391a98482e	164	core	4	SubtractDate	boot:0012D688	func_0012D688	matched	boot:0012D548	SubtractDate	matched	boot:00131908		open	boot:0013ABC8		open	boot:00155908	func_00155908	open
 6bfbbb38d31da1f3	164	core	3		boot:00123164		open	boot:00122E64		open	boot:00126DBC		open	boot:0012D4D4		open			
@@ -375,7 +375,7 @@ bcceaf2aec5f07d7	140	core	2											boot:00134DB8		open	boot:001412F8	func_001
 967f4fb23634bf33	136	core	4	new_iob	boot:0011B770	func_0011B770	matched	boot:0011B470	new_iob	matched	boot:0011D8C8		open	boot:00122AE0		open	boot:0012A9E8	func_0012A9E8	open
 d9c98c3853801f7b	136	core	4	sceSifInitIopHeap	boot:0011CB40	func_0011CB40	open	boot:0011C840	sceSifInitIopHeap	matched	boot:0011E7A0		open	boot:00123B10		open	boot:0012C1B8	func_0012C1B8	open
 54fce08731a1046c	136	core	2	decode_motion_vector	boot:001281E8	func_001281E8	matched	boot:001280A8	decode_motion_vector	matched	boot:0012C008		open						
-577dca6fabb05778	136	core	2	_type2id	boot:0012AC80	func_0012AC80	open	boot:0012AB40	_type2id	open	boot:0012EAA0		open						
+577dca6fabb05778	136	core	2	_type2id	boot:0012AC80	func_0012AC80	open	boot:0012AB40	_type2id	matched	boot:0012EAA0		open						
 4dc4b070ef6081ea	136	core	2		boot:00125210		open	boot:001250D0		open	boot:00128F48		open						
 417cafa8b0cd61a7	136	core	2								boot:00120A30		open	boot:00126EB8		open			
 3a80ac1c7054b268	136	core	2								boot:00123978		open	boot:00129EA0		open			
@@ -389,7 +389,7 @@ aa79e64c7abbb384	128	core	2											boot:00121760		open	boot:001294F0	func_001
 13419ba3029124ac	124	core	4	write	boot:00119008	func_00119008	matched	boot:00118D08	write	matched	boot:0011B1E8		open	boot:0011F3E8		open	boot:00127168	func_00127168	open
 b09e2fdcf29ccb60	124	core	4		boot:00119288	func_00119288	open	boot:00118F88		open	boot:0011B3D0		open	boot:0011F698		open	boot:00127438	func_00127438	open
 5642c5468587fa71	124	core	2	_nextStartCode	boot:00128BA8	func_00128BA8	matched	boot:00128A68	_nextStartCode	matched	boot:0012C9C8		open						
-a9024d406702fea1	124	core	2	_lastFrame	boot:0012C278	func_0012C278	open	boot:0012C138	_lastFrame	open	boot:00130098		open						
+a9024d406702fea1	124	core	2	_lastFrame	boot:0012C278	func_0012C278	open	boot:0012C138	_lastFrame	matched	boot:00130098		open						
 c8e9c867117e53cb	124	core	2								boot:00120AB8		open	boot:00126F40		open			
 afe73c4d80b5ecf6	124	core	2											boot:001254B8		open	boot:0012DFB8		open
 1c21c4f5b5a8f9e4	124	core	2											boot:00125B68		open	boot:0012E7C8	func_0012E7C8	open
@@ -552,7 +552,7 @@ ff44f2a05fdf84eb	60	core	3	QueuePeekReadDone	boot:001198D0	func_001198D0	matched
 b2bae5c0d87600d7	60	core	3								boot:00133788		open	boot:0013CFF8		open	boot:00159670	func_00159670	open
 131550b37589c425	60	core	3								boot:00133850		open	boot:0013D080		open	boot:00159718		open
 95ee8a47e0bf6d5a	60	core	2											boot:00135D00		open	boot:00142240	func_00142240	open
-d80aa97253021772	56	core	3	ClassifyDoubleNaN	boot:001161B0	func_001161B0	matched	boot:001161B0	ClassifyDoubleNaN	matched	boot:001313C8		open				boot:00135358	func_00135358	matched
+d80aa97253021772	56	core	3	classify_double_nan	boot:001161B0	func_001161B0	matched	boot:001161B0	classify_double_nan	matched	boot:001313C8		open				boot:00135358	func_00135358	matched
 2b7ca6473db17a09	56	core	4	kputchar	boot:00119D88	func_00119D88	matched	boot:00119A88	kputchar	open	boot:0011BEE0		open	boot:00120580		open	boot:00128310	func_00128310	open
 130aec7fde6742b5	56	core	2	kprintf	boot:0011A690	func_0011A690	matched	boot:0011A390	kprintf	matched	boot:0011C7E8		open						
 37947232b0a2aff8	56	core	3		boot:0011D098	func_0011D098	open	boot:0011CD98		open	boot:0011ED28		open	boot:00124100		open			
@@ -640,11 +640,11 @@ c205583003ac8efd	40	core	2								boot:00133490		open	boot:0013CD00		open
 f5a9bf4a1d0db656	40	core	2											boot:0011FEB8		open	boot:00127C48	func_00127C48	open
 89acbd238b594305	40	core	2											boot:00121678		open	boot:00129408	func_00129408	open
 90858e26e668b489	40	core	2											boot:00124290		open	boot:0012CD88	func_0012CD88	open
-962b2bfbb1cb7206	36	core	3	GetStateResourceWrapper	boot:001144F0	func_001144F0	matched	boot:001144F0	GetStateResourceWrapper	matched				level:39:00687008		open	boot:0011A1C8	func_0011A1C8	open
+962b2bfbb1cb7206	36	core	3	get_state_resource_wrapper	boot:001144F0	func_001144F0	matched	boot:001144F0	get_state_resource_wrapper	matched				level:39:00687008		open	boot:0011A1C8	func_0011A1C8	open
 1d0d558ded4d1a7a	36	core	4	SceDeci2Poll	boot:00119798	func_00119798	matched	boot:00119498	SceDeci2Poll	matched	boot:0011B9F8		open	boot:0011FF60		open	boot:00127CF0	func_00127CF0	open
 cd6fc4ceb3d296fd	36	core	4	Kputs	boot:00119840	func_00119840	matched	boot:00119540	Kputs	matched	boot:0011BAA0		open	boot:00120010		open	boot:00127DA0	func_00127DA0	open
-736dc104b31cf53d	36	core	4	InitBlockFn	boot:00119868	func_00119868	matched	boot:00119568	InitBlockFn	matched	boot:0011BAC8		open	boot:00120038		open	boot:00127DC8	func_00127DC8	open
-ed6463e651f65ed7	36	core	4	ResetRpcCommandState	boot:0011AFC0	func_0011AFC0	matched	boot:0011ACC0	ResetRpcCommandState	matched	boot:0011D118		open	boot:00122188		open	boot:00129F30	func_00129F30	open
+736dc104b31cf53d	36	core	4	init_block_fn	boot:00119868	func_00119868	matched	boot:00119568	init_block_fn	matched	boot:0011BAC8		open	boot:00120038		open	boot:00127DC8	func_00127DC8	open
+ed6463e651f65ed7	36	core	4	reset_rpc_command_state	boot:0011AFC0	func_0011AFC0	matched	boot:0011ACC0	reset_rpc_command_state	matched	boot:0011D118		open	boot:00122188		open	boot:00129F30	func_00129F30	open
 ad849324198c2b60	36	core	2		boot:00123EC0	func_001208E8	open	boot:00123BC0	FUN_001205e8	open	boot:00124540		open						
 dcca04d840821fc0	36	core	2	AddMpegCallback	boot:0012BC50	func_0012BC50	matched	boot:0012BB10	AddMpegCallback	matched	boot:0012FA70		open						
 bacf8caa61d30456	36	core	2	DispatchMpegCallbackNoData	boot:0012BCC8	func_0012BCC8	matched	boot:0012BB88	DispatchMpegCallbackNoData	matched	boot:0012FAE8		open						
@@ -665,7 +665,7 @@ e1acfaf0ce165be5	36	core	3								boot:00133960		open	boot:0013D1B0		open	boot:0
 704afddb5ba864ec	36	core	2											boot:00135EE0		open	boot:00142420	func_00142420	open
 bf1f90d4a7b06ee0	36	core	2											boot:00136080		open	boot:001425C0	func_001425C0	open
 e64e49d59d183b91	36	core	2											boot:0013D158		open	boot:001597F0	func_001597F0	open
-8b6fe9aff1f135c3	32	core	2	Func00116408	boot:00116408	func_00116408	matched	boot:00116408	Func00116408	matched							boot:0011DB90	func_0011DB90	matched
+8b6fe9aff1f135c3	32	core	2	fun_00116408	boot:00116408	func_00116408	matched	boot:00116408	fun_00116408	matched							boot:0011DB90	func_0011DB90	matched
 c3876796ef149314	32	core	4	__main	boot:0011DFC8	func_0011DFC8	matched	boot:0011DCC8	UpdateRfuDispatchState	matched	boot:0011FC48		open	boot:001260D0		open	boot:0012EEE0	func_0012EEE0	matched
 c58dd4785ec4210b	32	core	2	InitializeReferenceImage	boot:0012C4C0	func_0012C4C0	matched	boot:0012C380	InitializeReferenceImage	matched	boot:001302E0		open						
 5d679b42c674c5b3	32	core	4	BcdToTime	boot:0012D4E0	func_0012D4E0	matched	boot:0012D3A0	BcdToTime	matched	boot:00131760		open	boot:0013AA20		open	boot:00155760	func_00155760	open
@@ -679,8 +679,8 @@ b11d9aa80883f3d8	32	core	4		boot:001232E0		open	boot:00122FE0		open	boot:00126F3
 24d1eae6b109a3b8	32	core	2											boot:00125878		open	boot:0012E3F0		open
 ad72fa0716f3d318	32	core	2											boot:0013C2A0		open	boot:00158988		open
 8c030130a877fd6e	28	core	4		boot:0011A728	func_0011A728	matched	boot:0011A428	FUN_0011a428	matched	boot:0011C880	FUN_0011C880	matched	boot:00121860		open	boot:001295F0	func_001295F0	open
-9eb531b872c12cca	28	core	4	Func0011AD90	boot:0011B090	func_0011B090	matched	boot:0011AD90	Func0011AD90	matched	boot:0011D1E8		open	boot:00122258		open	boot:0012A000	func_0012A000	open
-7ba17f652620d1a8	28	core	4	InvokeStateInitializer	boot:0011CCB0	func_0011CCB0	matched	boot:0011C9B0	InvokeStateInitializer	matched	boot:0027BA48	LVL_24_SHIP_SHACK_FUN_002E48B0	matched	boot:00381C40	func_0037DCB0	matched	boot:0011D6F0	func_0011D6F0	matched
+9eb531b872c12cca	28	core	4	fun_0011ad90	boot:0011B090	func_0011B090	matched	boot:0011AD90	fun_0011ad90	matched	boot:0011D1E8		open	boot:00122258		open	boot:0012A000	func_0012A000	open
+7ba17f652620d1a8	28	core	4	invoke_state_initializer	boot:0011CCB0	func_0011CCB0	matched	boot:0011C9B0	invoke_state_initializer	matched	boot:0027BA48	LVL_24_SHIP_SHACK_FUN_002E48B0	matched	boot:00381C40	func_0037DCB0	matched	boot:0011D6F0	func_0011D6F0	matched
 17046b8835f55db4	28	core	4	InvokeIopStatus	boot:0011D078	func_0011D078	matched	boot:0011CD78	InvokeIopStatus	matched	boot:0011ED08		open	boot:001240E0		open	boot:0012CBC0	func_0012CBC0	open
 d106d0e5877df3dc	28	core	4		boot:00123630	func_00123630	open	boot:00123330		open	boot:00127288		open	boot:0012D9A0		open	boot:00139E08	func_00139E08	open
 a34c218f4d24516d	28	core	4	InitializeMemoryCardDirectory	boot:001275A0	func_001275A0	matched	boot:00127460	InitializeMemoryCardDirectory	matched	boot:0012B3C0		open	level:07:003AF720		open	boot:01EEBC54	func_01EEBC54	open
@@ -693,14 +693,14 @@ dfe2bae788b63b38	28	core	4		boot:00120370		open	boot:00120070		open	boot:00122F6
 6bada2bb849d017f	28	core	2		boot:0012BB78		open	boot:0012BA38		open	boot:0012F998		open						
 e31cf0885b9b5144	28	core	3								boot:001329F0		open	boot:0013C098		open	boot:00158760		open
 041bda1122f973f9	28	core	2											boot:001347D0		open	boot:00140D10		open
-f17faf3a61115735	24	core	4	LookupIndex	boot:0011A758	func_0011A758	matched	boot:0011A458	LookupIndex	matched	boot:0011C8B0		open	boot:00121890		open	boot:00129620	func_00129620	open
+f17faf3a61115735	24	core	4	lookup_index	boot:0011A758	func_0011A758	matched	boot:0011A458	lookup_index	matched	boot:0011C8B0		open	boot:00121890		open	boot:00129620	func_00129620	open
 34ff265caf27067a	24	core	4		boot:0011D9A8	func_0011D9A8	open	boot:0011D6A8		open	boot:0011F628		open	boot:00124970		open	boot:0012D470	func_0012D470	open
 3aaa448b6e5ac165	24	core	2		boot:00115768		open	boot:00115768		open							boot:0011F7A0		open
 f170cfa202ecf9b0	24	core	4		boot:0011FBA0		open	boot:0011F8A0		open	boot:00122798		open	boot:00128C28		open	boot:00130B28		open
 f49e4e78590ee300	24	core	4		boot:0012038C		open	boot:0012008C		open	boot:00122F84		open	boot:00129414		open	boot:00131314		open
 cacacc74ee0c40e7	24	core	2								boot:001163E0		open				boot:00122160		open
 bb93a85afe90b4ec	24	core	2											boot:00121C1C		open	boot:001299C4		open
-fda567efdbaf7dbe	20	core	3	InitializeObject	boot:001191C8	func_001191C8	matched	boot:00118EC8	InitializeObject	matched				boot:0011F5A8		open	boot:00127348	func_00127348	open
+fda567efdbaf7dbe	20	core	3	initialize_object	boot:001191C8	func_001191C8	matched	boot:00118EC8	initialize_object	matched				boot:0011F5A8		open	boot:00127348	func_00127348	open
 9704913f957ab637	20	core	4		boot:0011B6F8	func_0011B6F8	open	boot:0011B3F8		open	boot:0011D850		open	boot:00122A50		open	boot:0012A958	func_0012A958	open
 bd580aa885ab9855	20	core	4	InitializeStateRecord	boot:0012BD28	func_0012BD28	matched	boot:0012BBE8	InitializeStateRecord	matched	boot:0012FB48		open	boot:00135FD8		open	boot:00142518	func_00142518	open
 00a2f083b4210410	20	core	4		boot:0012E490	func_0012E490	open	boot:0012E350		open	boot:00132A58		open	boot:0013C100	func_00393DB0	open	boot:001587C8		open
@@ -712,7 +712,7 @@ fc828e0cb49810bc	20	core	4		boot:0011FC24		open	boot:0011F924		open	boot:0012281
 c7c54284ccaf8d7e	20	core	2											boot:00121620		open	boot:001293B0		open
 c94d088c8dab6f77	20	core	2											boot:0012DC88		open	boot:0013A148		open
 d99a6aa37a930079	20	core	2											boot:0012FCD0		open	boot:0013C268	func_0013C268	open
-435f71dbfa5255fc	16	core	2	srand	boot:001160C8	func_001160C8	matched	boot:001160C8	SetGlobalStateSlot	matched	boot:001163A0		open						
+435f71dbfa5255fc	16	core	2	srand	boot:001160C8	func_001160C8	matched	boot:001160C8	set_global_state_slot	matched	boot:001163A0		open						
 1d1ceff620343758	16	core	4		boot:00118A50	func_00118A50	open	boot:00118750		open	boot:0011A820		open	boot:0011EA20		open	boot:001267A0	func_001267A0	open
 17b6e13653295d8b	16	core	4		boot:00118A60	func_00118A60	open	boot:00118760		open	boot:0011A840		open	boot:0011EA40		open	boot:001267C0	func_001267C0	open
 52af5d8550db725b	16	core	4		boot:00118A70	func_00118A70	open	boot:00118770		open	boot:0011A880		open	boot:0011EA80		open	boot:00126800	func_00126800	open
@@ -789,7 +789,7 @@ d744d459fd69b0aa	16	core	4		boot:0011D3A8	func_0011D3A8	open	boot:0011D0A8		open
 2a666d86b234ef62	16	core	4		boot:0011D3B8	func_0011D3B8	open	boot:0011D0B8		open	boot:0011AFA0		open	boot:0011F1A0		open	boot:00126F20	func_00126F20	open
 97e890721d80a6f3	16	core	4		boot:0011DA80	func_0011DA80	open	boot:0011D780		open	boot:0011F700		open	boot:00124A68		open	boot:0012D568	func_0012D568	open
 f99b3f7ebb8b1708	16	core	4		boot:00121DB8	func_00121DB8	open	boot:00121AB8		open	boot:00125A10		open	boot:0012C128		open	boot:00138590	func_00138590	open
-fbebccc0544e9781	16	core	4	Func0012BA58	boot:0012BB98	func_0012BB98	matched	boot:0012BA58	Func0012BA58	matched	boot:0012F9B8		open	boot:00135CF0		open	boot:00142230	func_00142230	open
+fbebccc0544e9781	16	core	4	fun_0012ba58	boot:0012BB98	func_0012BB98	matched	boot:0012BA58	fun_0012ba58	matched	boot:0012F9B8		open	boot:00135CF0		open	boot:00142230	func_00142230	open
 ee87e26cace34f85	16	core	4	JumpToImageSetup	boot:0012C420	func_0012C420	matched	boot:0012C2E0	JumpToImageSetup	matched	boot:00130240		open	boot:00139F80		open	boot:001464C0	func_001464C0	open
 ba6b039fc91fb704	16	core	4		boot:00115D04		open	boot:00115D04		open	boot:00122F58		open	boot:001293E8		open	boot:0011FCF4		open
 15930ff54522dd79	16	core	3		boot:00116948		open							boot:0011B9A0		open	boot:0011AE00		open
@@ -974,7 +974,7 @@ e6d5ca92eae2f1f9	264	game	3								boot:002F0D00		open	boot:003D0C58	func_003CB4
 4f320c1382396912	264	game	3								boot:002F5118		open	boot:003DEC68	func_003D94A8	open	boot:004E4B48	func_004E4B48	open
 dff7eefa90c8f14f	264	game	2											boot:003B23F0	func_003ACC30	matched	boot:004F1848	func_004F1848	open
 b6f19147f5f2978c	264	game	2											boot:003DEF88	func_003D97C8	matched	level:00:00666CE8	func_L00_00666CE8	open
-9d2ad2cc921791b6	260	game	4	PatchShrubGifs	boot:00229D48	func_00229D48	matched	boot:00228A30	FUN_00228a30	matched	boot:002E10B8	LVL_7_SIBERIUS_FUN_003509C8	matched	boot:003DF090	func_003D98D0	matched	level:00:00666DF0	func_L00_00666DF0	open
+9d2ad2cc921791b6	260	game	4	PatchShrubGifs	boot:00229D48	func_00229D48	matched	boot:00228A30	patch_shrub_gifs	matched	boot:002E10B8	LVL_7_SIBERIUS_FUN_003509C8	matched	boot:003DF090	func_003D98D0	matched	level:00:00666DF0	func_L00_00666DF0	open
 83d5a86ae8107578	260	game	2								boot:002C9E60		open	level:01:0047A350		open			
 cfaff7ab2741fc0a	260	game	2								boot:002C9F68		open	level:01:0047A458		open			
 1efa6943157e7982	260	game	2								boot:0031E2A0		open	level:01:0030CC18		open			
@@ -1036,7 +1036,7 @@ b292b8f8505626fd	188	game	2								boot:002B63C0		open	level:01:00459E50		open
 e33746a88e4f4796	184	game	2								boot:002AEE70		open	level:01:0044B860		open			
 a3378d2637031b42	184	game	2											boot:00389FD0	func_00385570	matched	boot:00449298		open
 083b835669a74b34	180	game	3	VU1_addGSregister	boot:00234C98	func_00234C98	matched	boot:00233980	vu1_add_g_sregister	matched	boot:002FC560	LVL_6_NOTAK_FUN_003BC960	matched	boot:003A96B0	func_003A3EF0	matched			
-8f0e3eec0946c516	180	game	2	audioDecEndPut	boot:0023C1F8	func_0023C1F8	open	boot:0023AE28	audio_dec_end_put	matched	boot:0034FA30	FUN_0034FA30	matched						
+8f0e3eec0946c516	180	game	2	audioDecEndPut	boot:0023C1F8	func_0023C1F8	matched	boot:0023AE28	audio_dec_end_put	matched	boot:0034FA30	FUN_0034FA30	matched						
 3504515c9f69043e	180	game	2											boot:0038E140		open	boot:00453FA8		open
 bc0fc1c7514ef62b	176	game	2								boot:002ED4B8		open	boot:003A8708	func_003A3028	matched			
 f4bea94f39827b80	176	game	2								boot:002FEC78		open	level:01:004C4548		open			
@@ -1132,10 +1132,10 @@ a271996c747b5fd4	116	game	2											boot:003E7110	func_003E1950	matched	boot:0
 e5cecc29417aa250	112	game	3								boot:00335CC0		open	boot:003AAFC0	func_003A5800	matched	boot:004EEB28	func_004EEB28	open
 c480d7cf39fac0ab	112	game	2											boot:003A2BF8	func_0039D8B0	matched	boot:00489CC0	func_00489CC0	open
 11d741613e101473	112	game	2											boot:003B2E98	func_003AD6D8	matched	boot:004F22F0	func_004F22F0	open
-7043b5fb429d87cc	108	game	4	PutDrawBufferSmall	boot:001FB598	func_001FB598	matched	boot:001FB3D0	append_draw_buffer_packet	matched	boot:00284FC0	LVL_6_NOTAK_FUN_0032FA90	matched	boot:003926F0	func_0038DB98	matched	boot:004596E0		open
+7043b5fb429d87cc	108	game	4	PutDrawBufferSmall	boot:001FB598	func_001FB598	matched	boot:001FB3D0	put_draw_buffer_small	matched	boot:00284FC0	LVL_6_NOTAK_FUN_0032FA90	matched	boot:003926F0	func_0038DB98	matched	boot:004596E0		open
 035b4c2641aad7af	108	game	3	Help_FindIndex	boot:001FE4D0	func_001FE4D0	matched	boot:001FDCA0	find_help_message_index	matched	boot:00288F48		open	boot:00382380	func_0037DF28	matched			
 720f21e1440eced9	108	game	4	MusicTimeRemainingCallback	boot:00217A60	func_00217A60	matched	boot:00216BC0	music_remaining_time_callback	matched	boot:002B8048		open	boot:003A2DA8	func_0039DA60	matched	boot:00489E80	func_00489E80	open
-9e7381516440a547	108	game	2		boot:00209750	func_L00_0024BD18	open				boot:00298838		open						
+9e7381516440a547	108	game	2		boot:00209750	func_L00_0024BD18	matched				boot:00298838		open						
 d34d3693e52a93a4	108	game	3								boot:00350798	FUN_00350798	matched	boot:003B1790	func_003ABFD0	matched	boot:004F0BE8	func_004F0BE8	open
 6b3cf6577305fc5a	108	game	3								boot:00350808	FUN_00350808	matched	boot:003B1800	func_003AC040	matched	boot:004F0C58	func_004F0C58	open
 2e912107a1ccc9cf	108	game	2								boot:002857B8		open	boot:003B6718	func_003B0F58	matched			
@@ -1168,7 +1168,7 @@ fb4a92b5730acc13	96	game	3								boot:002C4788		open	level:01:0046A538		open	le
 cf40d5f5167b236f	96	game	3								boot:002F3DE0		open	boot:003DD940		open	level:00:006740C8	func_L00_006740C8	open
 bc3c1dd891976b2f	96	game	2								boot:00304C18		open	level:01:0032BA28		open			
 03a15cfdca61614d	96	game	2											boot:003C3AA0	func_003BE2E0	matched	boot:0046D340	func_0046D340	open
-9cb0b69714703295	92	game	4	AA_BlurPass	boot:001FB848	func_001FB848	matched	boot:001FB680	append_texture_transfer_packet	matched	boot:002852D8		open	boot:00392A08	func_0038DEB0	matched	boot:00459758	func_004E7B88	open
+9cb0b69714703295	92	game	4	AA_BlurPass	boot:001FB848	func_001FB848	matched	boot:001FB680	vu1_tex_flush	matched	boot:002852D8		open	boot:00392A08	func_0038DEB0	matched	boot:00459758	func_004E7B88	open
 79550a87987eb97e	92	game	2								boot:002AFE58		open	level:01:0044DDC8		open			
 06ed21edcf7aaa87	92	game	3								boot:003073E0		open	level:01:0032EBE0		open	level:01:0046F7E8	func_L01_0046F7E8	open
 6a5586dffeef124a	92	game	2								boot:00334100		open	level:01:0034BF38		open			
@@ -1202,7 +1202,7 @@ b01154b680220f2f	84	game	2								boot:002DF750		open	boot:003D1228	func_003CBA6
 50629b5b99f333f8	80	game	2		boot:001FA4A0	func_001FA4A0	open	boot:001FA2D8		open	boot:00283698		open						
 0011966ce3245a88	80	game	3		boot:001FA4F0	func_001FA4F0	open	boot:001FA328		open	boot:00283738		open	boot:0038D918	func_00388EB8	matched			
 a5b5c7dc08e88697	80	game	2		boot:00228110	func_00228110	matched	boot:00226E08	FUN_00226e08	matched	level:00:003584B0		open						
-e35cdadc31fde7e1	80	game	2		boot:00209448	func_L00_0024BA10	open	boot:00208B28		open	boot:00298540		open						
+e35cdadc31fde7e1	80	game	2		boot:00209448	func_L00_0024BA10	matched	boot:00208B28		open	boot:00298540		open						
 bbca3fc9997409f6	80	game	2		boot:002096D8	func_L00_0024BCA0	matched	boot:00208D60		open	boot:002987C0		open						
 f13caa18c175beb2	80	game	4		boot:0020E990	func_L00_00251A78	open	boot:0020DB40		open	boot:002A0B88		open	boot:003C7AD0		open	boot:00470338	func_00470338	open
 2cad3c18b4e958e0	80	game	2								boot:00300540	FUN_00300540	matched	level:01:004C73B0		open			
@@ -1220,7 +1220,7 @@ cfabe036a9a662e1	80	game	2								boot:00300190		open	level:01:004C6EC8		open
 6f9a7c23375c6f91	80	game	2											boot:003E6E28	func_003E1668	matched	boot:00501090	func_00501090	open
 2d5b1e0eaed9c2bd	76	game	4	VU1_addDataRef	boot:00234B48	func_00234B48	matched	boot:00233830	vu1_add_data_ref	matched	boot:002FC410		open	boot:003A95A8	func_003A3DE8	matched	boot:004E7878	func_004E7878	open
 803a4c2494b2ca3e	76	game	3		boot:00203908	func_L00_00240DE0	matched	boot:002030D0		open	boot:00292FB0		open	boot:00399818		open			
-ba27c811487b4496	76	game	3		boot:00205728	func_L00_00247478	open	boot:00204EF8		open	boot:00295680		open	level:01:0042B360		open			
+ba27c811487b4496	76	game	3		boot:00205728	func_L00_00247478	matched	boot:00204EF8		open	boot:00295680		open	level:01:0042B360		open			
 3938b16992de02ec	76	game	3								boot:00351268	FUN_00351268	matched	boot:003B2218	func_003ACA58	matched	boot:004F1670	func_004F1670	open
 ddea0b86d3399207	76	game	2								boot:00294130		open	boot:0039AA10	func_00395958	matched			
 8a5fb3a186fd8722	76	game	2								boot:002AB600		open	boot:003C4A60	func_003BF2A0	matched			
@@ -1232,11 +1232,11 @@ d198aac8fe68835d	76	game	2											boot:003B11A8	func_003AB9E8	matched	boot:00
 c3e0e12d7284b635	76	game	2											boot:003BE6B8	func_003B8EF8	matched	boot:004F5620	func_004F5620	open
 ac4897e7a61462c9	76	game	2											boot:00392E68		open	boot:0045C878		open
 4761b888881f99c5	72	game	3	sce_vu0_mul_matrix	boot:001FA540	func_001FA540	open	boot:001FA378		open	boot:00283788		open	boot:0038D968	func_00388F08	open			
-68714cb4ff46017c	72	game	4	FastAddRots	boot:001FA748	func_001FA748	open	boot:001FA580	fast_add_rotations	open	boot:00283B98		open	boot:0038DDE0	func_00389380	open	boot:00453B10		open
-1b0a964a54687aff	72	game	4	FastSubRots	boot:001FA790	func_001FA790	open	boot:001FA5C8	fast_subtract_rotations	open	boot:00283BE0		open	boot:0038DE28	func_003893C8	open	boot:00453B58		open
+68714cb4ff46017c	72	game	4	FastAddRots	boot:001FA748	func_001FA748	open	boot:001FA580		open	boot:00283B98		open	boot:0038DDE0	func_00389380	open	boot:00453B10		open
+1b0a964a54687aff	72	game	4	FastSubRots	boot:001FA790	func_001FA790	open	boot:001FA5C8		open	boot:00283BE0		open	boot:0038DE28	func_003893C8	open	boot:00453B58		open
 8bc35df5d8be55ea	72	game	3	FastTweenColor	boot:001FA8A8	func_001FA8A8	open	boot:001FA6E0		open	boot:00283D38		open	boot:0038DF00	func_003894A0	open			
 02e0e959a2a14851	72	game	3	vu1_add_vif_code	boot:00234C50	func_00234C50	matched	boot:00233938	vu1_add_vif_code	matched	boot:002FC518		open	level:01:004C1FA0		open			
-88cdbbf80ded5eaf	72	game	2	readBufBeginGet	boot:0023CDA8	func_0023CDA8	open	boot:0023B9D8	read_buf_begin_get	matched	boot:00350628	FUN_00350628	matched						
+88cdbbf80ded5eaf	72	game	2	readBufBeginGet	boot:0023CDA8	func_0023CDA8	matched	boot:0023B9D8	read_buf_begin_get	matched	boot:00350628	FUN_00350628	matched						
 16f320d8e05484a9	72	game	4		boot:001F2ABC	func_L00_001F767C	matched	boot:001F2714		open	boot:0027A17C		open	boot:003869DC		open	boot:00447444		open
 9720c8d38c3a51b0	72	game	4		boot:00217970	func_L00_00267130	open	boot:00216AD0		open	boot:002B7F58		open	boot:003A2CB8		open	boot:00489D80	func_00489D80	open
 589d92855070192a	72	game	2		boot:001FF4F8		open	boot:001FECC8		open	boot:00289FC8		open						
@@ -1255,7 +1255,7 @@ fe0c85a6df8d9b4b	72	game	2								boot:002B0E90		open	level:01:0044F5A0		open
 98c546490736c243	72	game	2											boot:003B2C98	func_003AD4D8	matched	boot:004F20F0	func_004F20F0	open
 3cfde00867ded48d	72	game	2											boot:003E8550	func_003E2D90	matched	boot:00505AD8	func_00505AD8	open
 fe44d6628fdb1b1c	72	game	2											boot:003B0688		open	boot:004EFAD0	func_004EFAD0	open
-a59382f806988370	68	game	2	readBufEndPut	boot:0023CD60	func_0023CD60	open	boot:0023B990	read_buf_end_put	matched	boot:003505E0	FUN_003505E0	matched						
+a59382f806988370	68	game	2	readBufEndPut	boot:0023CD60	func_0023CD60	matched	boot:0023B990	read_buf_end_put	matched	boot:003505E0	FUN_003505E0	matched						
 5d8e588af5514515	68	game	3								boot:0034F918	FUN_0034F918	matched	boot:003B03E8	func_003AAC28	matched	boot:004EF830	func_004EF830	open
 072bd8f0b4be61f7	68	game	3								boot:00270550		open	boot:003831B0	func_0037EB20	matched	boot:0043A988		open
 a30e1d9dfa9fbbb1	68	game	3								boot:002A0180		open	boot:003C3890	func_003BE0D0	matched	boot:0046D0C8	func_0046D0C8	open
@@ -1285,7 +1285,7 @@ f34985d1ac55b887	64	game	2											boot:003C3B80	func_003BE3C0	matched	boot:00
 31bb3120eddb3d8d	64	game	2											boot:003B06D0		open	boot:004EFB18	func_004EFB18	open
 833875f805ace8b9	60	game	3		boot:001FA9E8	func_001FA9E8	open	boot:001FA820		open	boot:00283EB0		open	level:01:0040D1B8		open			
 8c2ff43f15c0b358	60	game	2		boot:00222D70	func_00222D70	matched	boot:00221D28	FUN_00221d28	matched	boot:002DBE80		open						
-e5a5d589e88fc871	60	game	2		boot:0023CEC8	func_L00_002F0A30	open	boot:0023BAF8		open	boot:00350750		open						
+e5a5d589e88fc871	60	game	2		boot:0023CEC8	func_L00_002F0A30	matched	boot:0023BAF8		open	boot:00350750		open						
 890e7c5ba6cd4821	60	game	2								boot:002934B8	FUN_002934B8	matched	boot:00399CD0	func_00394C18	matched			
 e3410a4fcb44add9	60	game	2								boot:002A7750	FUN_002A7750	matched	level:01:00441FB8		open			
 6981cb60babc4c9e	60	game	2								boot:003364C8	FUN_003364C8	matched	level:01:004C9188		open			
@@ -1311,8 +1311,8 @@ e021138472a567e6	56	game	2	STUB_printf	boot:001E9730	func_001E9730	matched	boot:
 64ec61b2a1d5faf2	56	game	4	FontSetWindow	boot:001F7648	func_001F7648	matched	boot:001F7668	font_set_window	matched	boot:002802E0	FUN_002802E0	matched	boot:0038FD08	func_0038B1B0	matched	boot:00455E40		open
 22d051aaa18264eb	56	game	3	FastVecDist	boot:001F9D10	func_001F9D10	open	boot:001F9B48		open	boot:00282E48		open	boot:0038D228	func_003887C8	open			
 14bf80906a1ff203	56	game	3		boot:001FA1C0	func_001FA1C0	open	boot:001F9FF8		open	boot:002833B8		open	boot:0038D5F8	func_00388B98	matched			
-1ad1112489d5e314	56	game	4	FastDiffRots	boot:001FA850	func_001FA850	open	boot:001FA688	fast_difference_between_rotations	open	boot:00283C80		open	boot:0038DEC8	func_00389468	matched	boot:00453BF8		open
-5ab93e3879818cf1	56	game	4	memcard_GetDataSize	boot:0020BAD8	func_0020BAD8	matched	boot:0020AC88	GetDmaPacketSpanBytes	matched	boot:0029AE78	FUN_0029AE78	matched	boot:0039E970	func_00399710	matched	boot:00468B40		open
+1ad1112489d5e314	56	game	4	FastDiffRots	boot:001FA850	func_001FA850	open	boot:001FA688		open	boot:00283C80		open	boot:0038DEC8	func_00389468	matched	boot:00453BF8		open
+5ab93e3879818cf1	56	game	4	memcard_GetDataSize	boot:0020BAD8	func_0020BAD8	matched	boot:0020AC88	get_dma_packet_span_bytes	matched	boot:0029AE78	FUN_0029AE78	matched	boot:0039E970	func_00399710	matched	boot:00468B40		open
 be728f9cad0035c9	56	game	4	DmaToSprSync	boot:0020C230	func_0020C230	open	boot:0020B3E0	dma_to_spr_sync	open	boot:0029CF78		open	boot:003A0440	func_0039B200	open	boot:00469800		open
 09d8ef34799b0a19	56	game	3		boot:001F9E10	func_L00_001FF500	open	boot:001F9C48		open	boot:00282F70		open	boot:0038D2E0		open			
 766483dbe9f7eaa3	56	game	2		boot:00209188	func_L00_0024B750	matched	boot:002088D0		open	boot:00298298		open						
@@ -1332,7 +1332,7 @@ dd320501220c9088	56	game	2											boot:003A04C0		open	boot:00469880		open
 b4a535a97bd5dea5	56	game	2											boot:003B0710		open	boot:004EFB58	func_004EFB58	open
 ef05ebe87d7825ea	52	game	3	music_Pause	boot:00216EF0	func_00216EF0	matched	boot:00216050	music_pause	matched	boot:002B72E8		open	level:01:0045BF98		open			
 e7d3672b6f329ff0	52	game	4	Vif1ChainCmd	boot:00235290	func_00235290	matched	boot:00233F78	AppendDmaTag	matched	boot:002FCF90		open	boot:003A9EE0	func_003A4720	matched	boot:004E8298	func_004E8298	open
-46fd55b148d56f56	52	game	2		boot:002097BC	func_L00_0024BD84	open				boot:002988A4		open						
+46fd55b148d56f56	52	game	2		boot:002097BC	func_L00_0024BD84	matched				boot:002988A4		open						
 90c4f9366d05f9e9	52	game	2								boot:00349498	FUN_00349498	matched	boot:003AD608	func_003A7E48	matched			
 b36c02b8071d414a	52	game	2	LVL_0_ARANOS_TUTORIAL_FUN_0043EF08							boot:003495D8	LVL_0_ARANOS_TUTORIAL_FUN_0043EF08	matched	boot:003AD750	func_003A7F90	matched			
 8b1664d5e376edc3	52	game	2								boot:002A9640		open	level:01:00444358		open			
@@ -1357,13 +1357,13 @@ fc2443ff9acb0c1c	48	game	3		boot:001F9EE8	func_001F9EE8	open	boot:001F9D20		open
 dc09bcb9d348d11c	48	game	4	FastCountChars	boot:001F9F60	func_001F9F60	open	boot:001F9D98		open	boot:00283150		open	level:39:0058F888		open	boot:004538F8		open
 735acf3e0691785c	48	game	3		boot:001FA190	func_001FA190	open	boot:001F9FC8		open	boot:00283388		open	boot:0038D5C8	func_00388B68	matched			
 1807c11233f1d835	48	game	3	music_channel_ready_callback	boot:00217830	func_00217830	matched	boot:00216990	music_channel_ready_callback	matched	boot:002B7DF8	FUN_002B7DF8	matched	boot:003A2B48	func_0039D800	matched			
-1daf5579a4531368	48	game	4	readBufBeginPut	boot:0023CD30	func_0023CD30	open	boot:0023B960	GetStateOffsetAddress	matched	boot:003505B0	FUN_003505B0	matched	boot:003B1540	func_003ABD80	matched	boot:004F0998	func_004F0998	open
+1daf5579a4531368	48	game	4	readBufBeginPut	boot:0023CD30	func_0023CD30	matched	boot:0023B960	get_state_offset_address	matched	boot:003505B0	FUN_003505B0	matched	boot:003B1540	func_003ABD80	matched	boot:004F0998	func_004F0998	open
 ecd84ee11818cd80	48	game	3		boot:001FE478	func_L00_00203ED8	open	boot:001FDC48		open	boot:00288DD0		open	level:01:00417F18		open			
 d24d4e4a129db7b4	48	game	3		boot:002058D0	func_L00_00247620	open	boot:002050A0		open	boot:00295828		open	level:01:0042B508		open			
 663ae9f29308aba9	48	game	3		boot:0020E3A0	func_L00_002513C8	open	boot:0020D550		open	boot:002A0528		open	level:01:004389A8		open			
 53045ca1dd76d67a	48	game	3		boot:0020FC04	func_L00_00252CEC	open	boot:0020EDB4		open	boot:002A241C		open	boot:003C8D34		open			
-a806d059988ca7a6	48	game	2		boot:0022F0A8	func_L00_0028F3E0	matched	boot:0022DD90		open	boot:002E60A0		open						
 9405a5de7f8ca2ff	48	game	3	MusicStartCallback	boot:002179C8	func_L00_00267188	open	boot:00216B28		open	boot:002B7FB0		open	boot:003A2D10		open			
+a806d059988ca7a6	48	game	2		boot:0022F0A8	func_L00_0028F3E0	matched	boot:0022DD90		open	boot:002E60A0		open						
 572f6592da85bb15	48	game	2	LVL_0_ARANOS_TUTORIAL_FUN_002F3410							boot:00287E18	LVL_0_ARANOS_TUTORIAL_FUN_002F3410	matched	boot:003E4030	func_003DE870	matched			
 8af04d01dbf1381c	48	game	3								boot:00280630		open	level:01:00405400		open	level:00:005B2AF0	func_L00_005B2AF0	open
 e4d354e43a9df5fd	48	game	3								boot:00288BB8		open	boot:00392F68	func_0038E410	matched	boot:0045C960		open
@@ -1395,8 +1395,8 @@ cf309a36abd17a43	44	game	2											boot:00382868	func_0037E1D8	matched	boot:00
 d741f8a5663460f8	44	game	2											boot:003B05C0		open	boot:004EFA08	func_004EFA08	open
 3caf49f4cc86ebd0	44	game	2											boot:003E6F48		open	boot:005011C0	func_005011C0	open
 6a3c0a54b591c39b	44	game	2											boot:003F2460		open	boot:00510AC8	func_00510AC8	open
-fd6bad17f21559cb	40	game	3	scale_ticks	boot:001F9850	func_001F9850	open	boot:001F9688	scale_game_frames	open	boot:00282890		open	boot:0038CD40	func_003882E0	open			
-15d1ca224f2fff13	40	game	4	FastMemSet	boot:001F99B0	func_001F99B0	open	boot:001F97E8	FillTransferWords	open	boot:00282A60		open	boot:0038CEA0	func_00388440	open	boot:00453608		open
+fd6bad17f21559cb	40	game	3	scale_ticks	boot:001F9850	func_001F9850	open	boot:001F9688		open	boot:00282890		open	boot:0038CD40	func_003882E0	open			
+15d1ca224f2fff13	40	game	4	FastMemSet	boot:001F99B0	func_001F99B0	open	boot:001F97E8		open	boot:00282A60		open	boot:0038CEA0	func_00388440	open	boot:00453608		open
 60ce9f6aae913598	40	game	4	FastMemZero16	boot:001F99D8	func_001F99D8	open	boot:001F9810		open	boot:00282A88		open	boot:0038CEC8	func_00388468	open	boot:00453630		open
 dd9573b344bd66f5	40	game	3	FastMemCopy	boot:001F9A98	func_001F9A98	open	boot:001F98D0		open	boot:00282B50		open	boot:0038D050	func_003885F0	open			
 a23b1763d6a8697d	40	game	2		boot:001F9B20	func_001F9B20	open	boot:001F9958		open	boot:00282BE0		open						
@@ -1418,7 +1418,7 @@ df3324676396e69c	40	game	3		boot:001FA168	func_001FA168	open	boot:001F9FA0		open
 490458fa752fab50	40	game	2		boot:00209670	func_L00_0024BC38	open	boot:00208CF8		open	boot:00298758		open						
 fc4c7f41dc915013	40	game	2		boot:002099F0	func_L00_0024BFB8	open	boot:00208FC0		open	boot:00298B48		open						
 533ceccab75c980c	40	game	2		boot:00209A34	func_L00_0024BFFC	open	boot:00209004		open	boot:00298B8C		open						
-280dfc33385dc440	40	game	4		boot:0020C758	func_L00_0024EBF8	open	boot:0020B908	FUN_L00_0024dbc0	open	boot:0029D7C0		open	boot:003A0D10		open	boot:00469F50		open
+280dfc33385dc440	40	game	4		boot:0020C758	func_L00_0024EBF8	open	boot:0020B908		open	boot:0029D7C0		open	boot:003A0D10		open	boot:00469F50		open
 a85d97aa9b6d45e1	40	game	2	save_card_state_warning				boot:00208980	save_card_state_warning	matched	boot:00298380		open						
 a98a006076e66deb	40	game	2								boot:00282EB0		open	level:01:0040C018		open			
 33bf756cbe3db2b7	40	game	3								boot:002A01C8		open	boot:003C38D8	func_003BE118	matched	boot:0046D110	func_0046D110	open
@@ -1440,9 +1440,9 @@ e76b0240cf1483af	40	game	2											boot:003E72D8	func_003E1B18	matched	boot:00
 f3d432fd94c948c1	40	game	2											boot:00392E40		open	boot:0045C850		open
 19fe460fd3acfba0	40	game	2											boot:003A0DD0		open	boot:0046A010		open
 47e07ac1cb8243ab	40	game	2											boot:003C76A8		open	boot:00470238	func_00470238	open
-c3404c68a67476d4	36	game	4	readBufEndGet	boot:0023CDF0	func_0023CDF0	open	boot:0023BA20	read_buf_end_get	matched	boot:00350670	FUN_00350670	matched	boot:003B15F0	func_003ABE30	matched	boot:004F0A48	func_004F0A48	open
-4761cb33c6386635	36	game	4	scTag2	boot:0023CFF0	func_0023CFF0	open	boot:0023BC20	sc_tag2	matched	boot:00350878	FUN_00350878	matched	boot:003B1870	func_003AC0B0	matched	boot:004F0CC8	func_004F0CC8	open
-7331f7d2cebb84ec	36	game	2		boot:0021ACD8	func_L00_002788E0	open	boot:00219D80		open	boot:002CC490		open						
+c3404c68a67476d4	36	game	4	readBufEndGet	boot:0023CDF0	func_0023CDF0	matched	boot:0023BA20	read_buf_end_get	matched	boot:00350670	FUN_00350670	matched	boot:003B15F0	func_003ABE30	matched	boot:004F0A48	func_004F0A48	open
+4761cb33c6386635	36	game	4	scTag2	boot:0023CFF0	func_0023CFF0	matched	boot:0023BC20	sc_tag2	matched	boot:00350878	FUN_00350878	matched	boot:003B1870	func_003AC0B0	matched	boot:004F0CC8	func_004F0CC8	open
+7331f7d2cebb84ec	36	game	2		boot:0021ACD8	func_L00_002788E0	matched	boot:00219D80		open	boot:002CC490		open						
 1b3f061c5fb20500	36	game	2	save_card_state_no_card				boot:002089A8	save_card_state_no_card	matched	boot:002983A8		open						
 4d9ba960e580d76a	36	game	2	save_card_state_format_failed				boot:00208E68	save_card_state_format_failed	matched	boot:002988F0		open						
 87aac227e57ee591	36	game	2								boot:00335E38	FUN_00335E38	matched	boot:003AB0E8	func_003A5928	matched			
@@ -1464,12 +1464,12 @@ ccaf65ebc1337820	32	game	2	vec_length	boot:001F9B50	func_001F9B50	open	boot:001F
 487a7f62a92cca1e	32	game	2		boot:001FA1F8	func_001FA1F8	open	boot:001FA030		open	boot:002833F0		open						
 a15bb06997308866	32	game	2	euler_to_matrix	boot:001FA218	func_001FA218	open	boot:001FA050		open	boot:00283410		open						
 84cc443846e84b3f	32	game	3		boot:001FA460	func_001FA460	open	boot:001FA298		open	boot:00283658		open	boot:0038D898	func_00388E38	open			
-fcb9969803bc62a1	32	game	2	matrix_copy_rows	boot:001FA480	func_001FA480	open	boot:001FA2B8	FUN_001fa2b8	open	boot:00283678		open						
+fcb9969803bc62a1	32	game	2	matrix_copy_rows	boot:001FA480	func_001FA480	open	boot:001FA2B8		open	boot:00283678		open						
 7f7849c211fc7d62	32	game	2	save_card_state_no_room	boot:002098A8	func_002098A8	matched	boot:00208EB8	save_card_state_no_room	matched	boot:00298940		open						
 a89b04ef259be3a6	32	game	3	DmaToSpr	boot:0020C210	func_0020C210	open	boot:0020B3C0	WriteDmaChannelRegisters	open	boot:0029CF58		open				boot:004697C0		open
 ce8604365db068e3	32	game	4		boot:0020C738	func_0020C738	open	boot:0020B8E8		open	boot:0029D7A0		open	boot:003A0CF0	func_0039BA30	open	boot:00469F30		open
-3c25bae11e23f2e5	32	game	4	PackRenderCommandFields	boot:0020E340	func_0020E340	matched	boot:0020D4F0	PackRenderCommandFields	matched	boot:002A0468		open	boot:003C7200	func_003C1A40	matched	boot:00470090	func_00470090	open
-5b26d22e75664df2	32	game	4	voBufDecCount	boot:0023E710	func_0023E710	open	boot:0023D340	vo_buf_dec_count	matched	boot:00351FA0	FUN_00351FA0	matched	boot:003B2FB8	func_003AD7F8	matched	boot:004F2410	func_004F2410	matched
+3c25bae11e23f2e5	32	game	4	pack_render_command_fields	boot:0020E340	func_0020E340	matched	boot:0020D4F0	pack_render_command_fields	matched	boot:002A0468		open	boot:003C7200	func_003C1A40	matched	boot:00470090	func_00470090	open
+5b26d22e75664df2	32	game	4	voBufDecCount	boot:0023E710	func_0023E710	matched	boot:0023D340	vo_buf_dec_count	matched	boot:00351FA0	FUN_00351FA0	matched	boot:003B2FB8	func_003AD7F8	matched	boot:004F2410	func_004F2410	matched
 346c9ffa777d11f3	32	game	2		boot:00209358	func_L00_0024B920	matched	boot:00208A38		open	boot:00298440		open						
 19f84135911378d3	32	game	2		boot:00209398	func_L00_0024B960	open	boot:00208A78		open	boot:00298490		open						
 97264b8677b0003a	32	game	3		boot:00234350	func_L00_002951A8	matched	boot:00233038		open	boot:002EEFE0		open	level:01:004AD788		open			
@@ -1525,15 +1525,15 @@ a917f496e1a2ad69	24	game	2	FastVecSub	boot:001F9BF0	func_001F9BF0	open	boot:001F
 d02d9b1c86a1d19c	24	game	3	FastVectorFromPackedChars	boot:001F9F18	func_001F9F18	open	boot:001F9D50		open	boot:002830F0		open	level:01:0040C328		open			
 ee3d3d24605497e8	24	game	2	FastCos	boot:001F9F90	func_001F9F90	open	boot:001F9DC8		open	boot:00283180		open						
 a21d5083bf99191a	24	game	2	FastSin	boot:001F9FA8	func_001F9FA8	open	boot:001F9DE0		open	boot:00283198		open						
-4d7bd050b4158e28	24	game	3	DecrementResourceCounter	boot:001FFFA0	func_001FFFA0	matched	boot:001FF768	DecrementResourceCounter	matched	boot:0028E440		open	level:01:0041D738		open			
+4d7bd050b4158e28	24	game	3	decrement_resource_counter	boot:001FFFA0	func_001FFFA0	matched	boot:001FF768	decrement_resource_counter	matched	boot:0028E440		open	level:01:0041D738		open			
 5c040962afad2528	24	game	3		boot:0020CCB8	func_0020CCB8	matched	boot:0020BE68	FUN_0020be68	matched				level:01:00490878		open	boot:004E7428	func_004E7428	open
 26a0ad415bfd8ded	24	game	4	store_sound_bank_handle_callback	boot:0022F090	func_0022F090	matched	boot:0022DD78	store_sound_bank_handle_callback	matched	boot:002B6770	FUN_002B6770	matched	boot:003A1440	func_0039C158	matched	boot:004E2440	func_004E2440	open
-450fbf438e9d4c49	24	game	4	readBufCreate	boot:0023CD10	func_0023CD10	open	boot:0023B940	InitializeStateFields	matched	boot:00350590	FUN_00350590	matched	boot:003B1520	func_003ABD60	matched	boot:004F0978	func_004F0978	open
+450fbf438e9d4c49	24	game	4	readBufCreate	boot:0023CD10	func_0023CD10	matched	boot:0023B940	initialize_state_fields	matched	boot:00350590	FUN_00350590	matched	boot:003B1520	func_003ABD60	matched	boot:004F0978	func_004F0978	open
 b88cdd7aa9c85e74	24	game	3		boot:001FE4A8	func_L00_00203F08	open	boot:001FDC78		open	boot:00288E00		open	level:01:00417F48		open			
-26ab1e9fd67c0405	24	game	3		boot:00205774	func_L00_002474C4	open	boot:00204F44		open	boot:002956CC		open	level:01:0042B3AC		open			
+26ab1e9fd67c0405	24	game	3		boot:00205774	func_L00_002474C4	matched	boot:00204F44		open	boot:002956CC		open	level:01:0042B3AC		open			
 97cc351284ca83a4	24	game	2		boot:00209340	func_L00_0024B908	matched				boot:00298428		open						
-7a935a62d764e688	24	game	2		boot:002095D0	func_L00_0024BB98	open	boot:00208C54		open	boot:002986B4		open						
-314168710e3929c2	24	game	3		boot:002097F0	func_L00_0024BDB8	open	boot:00208E4C		open	boot:002988D8		open	boot:0039BB80		open			
+7a935a62d764e688	24	game	2		boot:002095D0	func_L00_0024BB98	matched	boot:00208C54		open	boot:002986B4		open						
+314168710e3929c2	24	game	3		boot:002097F0	func_L00_0024BDB8	matched	boot:00208E4C		open	boot:002988D8		open	boot:0039BB80		open			
 1751e51372335242	24	game	4		boot:0023C17C	func_L00_002EFCE4	matched	boot:0023ADAC		open	boot:0034F9B4		open	boot:003B0484		open	boot:004EF8CC	func_004EF8CC	open
 ccdb3328322e9708	24	game	2								boot:00336CC8	FUN_00336CC8	matched	boot:003ABF30	func_003A6770	matched			
 55951fb25b7467ae	24	game	2								boot:00283130		open	boot:0038D3A8	func_00388948	matched			
@@ -1547,9 +1547,9 @@ e410945b5b7d0ebd	24	game	2								boot:00349610		open	boot:003AD788	func_003A7FC
 def5c3d19e15e186	24	game	2											boot:003E7388	func_003E1BC8	matched	boot:005015C8	func_005015C8	open
 405c646b7f3b8c36	24	game	2											boot:003A0E50		open	boot:0046A090		open
 4520155511050228	24	game	2											boot:003A0E70		open	boot:0046A0A8		open
-06102fd96acbf6bd	20	game	2	pad_resetState	boot:00217EC0	func_00217EC0	matched	boot:00217020	ResetGlobalStateFields	matched	boot:002B8518		open						
+06102fd96acbf6bd	20	game	2	pad_resetState	boot:00217EC0	func_00217EC0	matched	boot:00217020	reset_global_state_fields	matched	boot:002B8518		open						
 4fbf6c92aa9ae023	20	game	2		boot:0021DAC8	func_0021DAC8	matched	boot:0021CAC8	FUN_0021cac8	matched	boot:002D5950		open						
-e6d5fb380281c5e0	20	game	4	voBufIsFull	boot:0023E5C8	func_0023E5C8	open	boot:0023D1F8	vo_buf_is_full	matched	boot:00351E58	FUN_00351E58	matched	boot:003B2E80	func_003AD6C0	matched	boot:004F22D8	func_004F22D8	open
+e6d5fb380281c5e0	20	game	4	voBufIsFull	boot:0023E5C8	func_0023E5C8	matched	boot:0023D1F8	vo_buf_is_full	matched	boot:00351E58	FUN_00351E58	matched	boot:003B2E80	func_003AD6C0	matched	boot:004F22D8	func_004F22D8	open
 605bc7ecf3d34c56	20	game	3		boot:00205900	func_L00_00247650	open	boot:002050D0		open	boot:00295858		open	level:01:0042B538		open			
 da2af192bfba4ac8	20	game	2		boot:0022F0D8	func_L00_0028F410	matched	boot:0022DDC0		open	boot:002E60D0		open						
 90fe10779a7632e5	20	game	2								boot:00336498	FUN_00336498	matched	boot:003AB748	func_003A5F88	matched			
@@ -1582,19 +1582,19 @@ f7726f28f2ed2839	20	game	2											boot:003A57F8		open	boot:004E2488	func_004E
 1790bad58d9bbe87	16	game	2		boot:001F9BA0	func_001F9BA0	open	boot:001F99D8		open	boot:00282C58		open						
 e9f572c8ac113d0f	16	game	2		boot:001F9BB0	func_001F9BB0	open	boot:001F99E8		open	boot:00282C68		open						
 1051629d87815565	16	game	2		boot:001F9BC8	func_001F9BC8	open	boot:001F9A00		open	boot:00282C98		open						
-c458766ca8555004	16	game	2		boot:001FA888	func_001FA888	matched	boot:001FA6C0	func_001FA6C0	open	boot:00283CE0	FUN_00283CE0	matched						
+c458766ca8555004	16	game	2		boot:001FA888	func_001FA888	matched	boot:001FA6C0		open	boot:00283CE0	FUN_00283CE0	matched						
 339674bbbe3b46d9	16	game	2	truncate_float_to_s32	boot:001FA898	func_001FA898	open	boot:001FA6D0		open	boot:00283CF0		open						
 c15c93cbd8a78fd2	16	game	3		boot:002071D0	func_002071D0	matched	boot:002069A0	FUN_002069a0	matched				level:01:00417EA0		open	boot:0015C818	func_0015C818	open
 1b71b60bb2ced3ae	16	game	2		boot:0021B288	func_0021B288	matched	boot:0021A318	FUN_0021a318	matched	boot:002CC6A0	FUN_002CC6A0	matched						
-f5a9eadfd1589073	16	game	2	audioDecIsPageFull	boot:0023C2B0	func_0023C2B0	matched	boot:0023AEE0	IsStateFieldLarge	matched	boot:0034FAE8	FUN_0034FAE8	matched						
+f5a9eadfd1589073	16	game	2	audioDecIsPageFull	boot:0023C2B0	func_0023C2B0	matched	boot:0023AEE0	is_state_field_large	matched	boot:0034FAE8	FUN_0034FAE8	matched						
 d1c9e69b8db05bfa	16	game	4	endDisplay	boot:0023C9B0	func_0023C9B0	matched	boot:0023B5E0	end_display	matched	boot:00350230		open	boot:003B11F8	func_003ABA38	matched	boot:004F0650	func_004F0650	open
-08b6f6b6559c53f7	16	game	2	SetStateFields	boot:0023CE18	func_0023CE18	matched	boot:0023BA48	SetStateFields	matched	boot:00350698	FUN_00350698	matched						
-283c85709a61434f	16	game	4	voBufReset	boot:0023E5B8	func_0023E5B8	open	boot:0023D1E8	ClearStateFields	matched	boot:00351E48	FUN_00351E48	matched	boot:003B2E70	func_003AD6B0	matched	boot:004F22C8	func_004F22C8	open
+08b6f6b6559c53f7	16	game	2	set_state_fields	boot:0023CE18	func_0023CE18	matched	boot:0023BA48	set_state_fields	matched	boot:00350698	FUN_00350698	matched						
+283c85709a61434f	16	game	4	voBufReset	boot:0023E5B8	func_0023E5B8	matched	boot:0023D1E8	clear_state_fields	matched	boot:00351E48	FUN_00351E48	matched	boot:003B2E70	func_003AD6B0	matched	boot:004F22C8	func_004F22C8	open
 b8d0ae458c8a87ca	16	game	4		boot:001F99A0	func_L00_001FEFE0	open	boot:001F97D8		open	boot:00282A50		open	boot:0038CE90		open	boot:004535F8		open
 5e938cac69697b88	16	game	3		boot:001F9E00	func_L00_001FF4F0	open	boot:001F9C38		open	boot:00282F60		open	boot:0038D2D0		open			
 83b11540a4d20c77	16	game	3		boot:001F9E48	func_L00_001FF538	open	boot:001F9C80		open	boot:00282FA8		open	boot:0038D318		open			
-397a8395e1f8d947	16	game	3		boot:00209498	func_L00_0024BA60	open	boot:00208B78		open	boot:00298590		open	boot:0039B41C		open			
-a53614c4f314404b	16	game	4		boot:00215048	func_L00_0025D390	open	boot:002141F8		open	boot:002AB1F0		open	boot:003C4FA8		open	boot:00476660	func_00476660	open
+397a8395e1f8d947	16	game	3		boot:00209498	func_L00_0024BA60	matched	boot:00208B78		open	boot:00298590		open	boot:0039B41C		open			
+a53614c4f314404b	16	game	4		boot:00215048	func_L00_0025D390	matched	boot:002141F8		open	boot:002AB1F0		open	boot:003C4FA8		open	boot:00476660	func_00476660	open
 c4ad975b26c9aff8	16	game	2		boot:0022D8B0	func_L00_0028DA28	open	boot:0022C598		open	boot:002E4468		open						
 b20c4d6f321cb3e6	16	game	2								boot:00282C78		open	boot:0038D110	func_003886B0	matched			
 e4c8dc5fe93a75d3	16	game	2								boot:00290748		open	boot:00397FA0	func_00393448	matched			
@@ -2109,7 +2109,7 @@ ac8b335d84b7d4b4	256	level	2											level:39:004FF2A0		open	level:00:0053B2B0
 2c11adff46ebc27e	252	level	2											level:39:0050C6E8		open	boot:0040A468		open
 cf3aba6d4b4136b4	252	level	2											level:39:00517108		open	boot:00413E80		open
 f6ad2299fc8d4a6c	252	level	2											level:39:0066FDB0		open	level:00:006FEDE8	func_L00_006FEDE8	open
-a0bdf6d8bf7dccfd	248	level	4		level:00:0025A344	func_L00_0025A344	open	level:00:0025930C		open	boot:002A873C		open	level:01:00442C4C		open	level:01:005923C4	func_L01_005923C4	open
+a0bdf6d8bf7dccfd	248	level	4		level:00:0025A344	func_L00_0025A344	matched	level:00:0025930C		open	boot:002A873C		open	level:01:00442C4C		open	level:01:005923C4	func_L01_005923C4	open
 6d87b72ffb072699	248	level	2											level:39:004CB938		open	level:00:00507938	func_L00_00507938	open
 7a2df294fa161f3f	248	level	2											level:39:004E0548		open	level:00:0051C548	func_L00_0051C548	open
 5ed182d7d8a8b40e	248	level	2											level:39:004EF150		open	level:00:0052B150	func_L00_0052B150	open
@@ -2427,7 +2427,7 @@ ead7ee6b7f6319f2	152	level	2											level:39:005082A8		open	boot:00408490		op
 f70c900ad0ea3a4b	152	level	2											level:39:00508898		open	boot:00408A80		open
 a476ccdca111b0e1	152	level	2											level:39:00608DC8		open	boot:004F3800	func_004F3800	open
 49b5941dde5e6c6c	152	level	2											level:39:0065F0B0		open	level:00:006EAA88	func_L00_006EAA88	open
-0bdee9e0920cb2cd	148	level	2		level:00:00235FF8	func_L00_00235FF8	open	level:00:00235668	FUN_L00_00235668	open	boot:0028B338		open						
+0bdee9e0920cb2cd	148	level	2		level:00:00235FF8	func_L00_00235FF8	matched	level:00:00235668	FUN_L00_00235668	matched	boot:0028B338		open						
 9f60d3c59a1d4491	148	level	2								level:00:002A5480		open	level:01:004DC870		open			
 b6fde005f8411705	148	level	2								level:00:003A8060		open	level:01:00346CF8		open			
 1134c13cbe758981	148	level	2											level:01:00460C20		open	level:00:0060A1B8	func_L00_0060A1B8	open
@@ -2468,8 +2468,8 @@ b6b8acf84d4331cd	144	level	2											level:39:00514668		open	boot:004123E8		op
 12b1de5ee43e069f	144	level	2											level:39:00516DD8		open	boot:00413B50		open
 501029509c64dee5	144	level	2											level:39:005944B0		open	level:00:005C1618	func_L00_005C1618	open
 faea97c9f1b1013e	144	level	2											level:39:0067A3C8		open	level:00:00733BE0	func_L00_00733BE0	open
-60d573d54faf54e7	140	level	2	PadPressedWithin	level:00:00267BA8	func_L00_00267BA8	open	level:00:00266D60		open	level:00:0032EF10		open						
-c4f0472728c35e3e	140	level	2		level:04:0024D4A8	func_L04_0024D4A8	open	level:04:0024C4F0		open	boot:002A8A50		open						
+60d573d54faf54e7	140	level	2	PadPressedWithin	level:00:00267BA8	func_L00_00267BA8	matched	level:00:00266D60		open	level:00:0032EF10		open						
+c4f0472728c35e3e	140	level	2		level:04:0024D4A8	func_L04_0024D4A8	matched	level:04:0024C4F0		open	boot:002A8A50		open						
 2b5e79afe15320a5	140	level	3	LVL_5_FELTZIN_SYSTEM_FUN_00328478							level:00:00310048	LVL_5_FELTZIN_SYSTEM_FUN_00328478	matched	level:01:00435DE0		open	level:00:005DCF70	func_L00_005DCF70	open
 8dad2cf01319124d	140	level	2								level:00:002D3BD8		open	level:01:0050D5B0		open			
 e423e8c671d46d5f	140	level	2											level:01:003EF248		open	level:00:00595640	func_L00_00595640	open
@@ -2531,7 +2531,7 @@ ac080dee57b9c868	132	level	2											level:39:004F9FA0		open	level:00:00535FB0
 c36f793e4b2c8a29	132	level	2											level:39:0050D928		open	boot:0040B6A8		open
 5ce58a4192573e44	132	level	2											level:39:00512288		open	boot:00410008		open
 a6b680f79c44b676	132	level	2											level:39:00624138		open	boot:00517B28	func_00517B28	matched
-a089746a2da8a975	128	level	2		level:00:002367A8	func_L00_002367A8	open	level:00:00235E18		open	level:00:002F7298		open						
+a089746a2da8a975	128	level	2		level:00:002367A8	func_L00_002367A8	matched	level:00:00235E18		open	level:00:002F7298		open						
 0e41c6770119cced	128	level	2	RippleLerpBuffers	level:01:00262D28	func_L01_00262D28	open	level:01:00261D78		open	level:04:0032F340		open						
 e1a50c33dd35a694	128	level	2								level:00:002D3B58		open	level:01:0050D530		open			
 f84a4729f154cd6d	128	level	3								level:00:002FD400		open	level:01:004223F0		open	level:00:005CC4C0	func_L00_005CC4C0	open
@@ -2645,7 +2645,7 @@ d01b0e0badd80442	112	level	2											level:39:0050F338		open	boot:0040D0B8		op
 2b2973eaa63f00b7	112	level	2											level:39:00518E58		open	level:00:00566950	func_L00_00566950	open
 776bf5f1f051f9cf	112	level	2											level:39:006461A8		open	boot:00526FD8	func_00526FD8	open
 548b6e2361df1f7e	112	level	2											level:40:0042F678		open	level:41:004177F0	func_L41_004177F0	open
-14e5e3745a3c0220	108	level	2		level:15:002F8D30	func_L15_002F8D30	open	level:15:002F78E0		open	level:00:00429048		open						
+14e5e3745a3c0220	108	level	2		level:15:002F8D30	func_L15_002F8D30	matched	level:15:002F78E0		open	level:00:00429048		open						
 ab5bc6cc97987b92	108	level	2								level:00:002B2C58		open	level:01:004E9A68		open			
 7ef9e721a434afc3	108	level	2								level:00:002FE268		open	level:01:00422F28		open			
 bd27b4087b627703	108	level	2											level:01:00456C00		open	boot:0047EF38	func_0047EF38	open
@@ -2662,7 +2662,7 @@ db24811605d43f3a	108	level	2											level:39:004F4968		open	boot:003FD188		op
 40c7d1270c3c429a	108	level	2											level:39:005C1BE0		open	level:00:00607228	func_L00_00607228	open
 ea659753c7b6a777	108	level	2											level:39:0066B030		open	boot:00540700	func_00540700	open
 fc12490ae24a2d8a	104	level	2		level:00:00236400	func_L00_00236400	matched	level:00:00235A70	FUN_L00_00235a70	matched	boot:0028B740	FUN_0028B740	matched						
-ad95809cb22ba3ee	104	level	2		level:02:001FC308	func_L02_001FC308	open	level:02:001FC008	FUN_L02_001fc008	open	level:03:002D84F0		open						
+ad95809cb22ba3ee	104	level	2		level:02:001FC308	func_L02_001FC308	matched	level:02:001FC008	FUN_L02_001fc008	matched	level:03:002D84F0		open						
 e0974bd4a2d8b728	104	level	2	LVL_0_ARANOS_TUTORIAL_FUN_003EA860							level:00:003EA860	LVL_0_ARANOS_TUTORIAL_FUN_003EA860	matched	level:01:003059F0		open			
 8c694f04e5fac22f	104	level	3	LVL_5_FELTZIN_SYSTEM_FUN_00392F70							level:00:0037DD80	LVL_5_FELTZIN_SYSTEM_FUN_00392F70	matched	level:01:004C46A8		open	boot:004EA658	func_004EA658	open
 69eca20f9935025c	104	level	2								level:00:002CA478		open	level:01:005028C8		open			
@@ -2738,7 +2738,7 @@ fb9661077e4d7b62	100	level	2											level:39:004ED620		open	level:00:00529620
 ce5591b59146d6f5	100	level	2											level:39:00517D48		open	level:00:00553D58	func_L00_00553D58	open
 74776516fccdbbff	100	level	2											level:39:00517DB8		open	level:00:00553DC8	func_L00_00553DC8	open
 8b6748680439858d	96	level	3		level:00:001FF610	func_L00_001FF610	open	level:00:001FF660		open	boot:00283028		open	level:01:0040C260		open			
-39d506e7d606663a	96	level	3		level:00:0026763C	func_L00_0026763C	open	level:00:002667F4		open	level:01:0032471C		open	level:04:0046CA0C		open			
+39d506e7d606663a	96	level	3		level:00:0026763C	func_L00_0026763C	matched	level:00:002667F4		open	level:01:0032471C		open	level:04:0046CA0C		open			
 07b038571dac0a51	96	level	2								level:00:002EE4D8		open	level:01:0040C1F8		open			
 ff3c1975d8af777d	96	level	3								level:00:0036EF68		open	level:01:004B4480		open	level:01:0062F6A8	func_L01_0062F6A8	open
 7c9a20277e6c7ab1	96	level	2								level:00:003F56F0		open	level:01:00347888		open			
@@ -2842,7 +2842,7 @@ f2203226d9c52a46	88	level	2											level:39:00593EDC		open	level:00:005C0F94	
 38d5fc73c5695eaa	88	level	2											level:39:006D72B8		open	level:00:00776E88	func_L00_00776E88	open
 4c0ebfcea0a760f1	88	level	2											level:39:006D7AD0		open	level:00:00777750	func_L00_00777750	open
 fb1420e48cd47938	88	level	2											level:39:006DEAE8		open	level:00:0077D0F0	func_L00_0077D0F0	matched
-1852427a7014cc0f	84	level	4		level:00:0025A2F0	func_L00_0025A2F0	open	level:00:002592B8		open	boot:002A86E8		open	level:01:00442BF8		open	level:01:00592370	func_L01_00592370	open
+1852427a7014cc0f	84	level	4		level:00:0025A2F0	func_L00_0025A2F0	matched	level:00:002592B8		open	boot:002A86E8		open	level:01:00442BF8		open	level:01:00592370	func_L01_00592370	open
 f6ee68716beb9c27	84	level	2	LVL_4_BARLOW_FUN_0046B4E8	level:02:002FBBA8	func_L02_002FBBA8	matched	level:02:002FA770	FUN_L02_002fa770	matched	level:03:0043ACD8	LVL_4_BARLOW_FUN_0046B4E8	matched						
 efb788f87064a33e	84	level	2								level:00:002EA668		open	level:01:00405438		open			
 1cbbe36719f74e95	84	level	2								level:00:0040DF00		open	level:01:0034F510		open			
@@ -3099,7 +3099,7 @@ cff616c533dc53a6	64	level	2											level:39:00507E3C		open	boot:00408024		ope
 b2e25fef116d654e	64	level	2											level:39:006D6538		open	level:00:00774D10		open
 5e4bc863b43c6481	64	level	2											level:39:006D6670		open	level:00:00774E48		open
 634c5f6c5f6cfc86	60	level	2		level:00:0020AB78	func_L00_0020AB78	matched	level:00:0020A500	FUN_L00_0020a500	matched	level:00:002AB3E0		open						
-819d35665f9b9d32	60	level	2		level:00:0020DCB4	func_L00_0020DCB4	open	level:00:0020D61C		open				level:01:004E55F4		open			
+819d35665f9b9d32	60	level	2		level:00:0020DCB4	func_L00_0020DCB4	matched	level:00:0020D61C		open				level:01:004E55F4		open			
 4d1b4b48453bb57e	60	level	3		level:00:00232A3C	func_L00_00232A3C	matched	level:00:002321E4		open	level:00:002D1F9C		open	level:01:0050B874		open			
 2fd3d92e7917bd08	60	level	2		level:00:002E9900	func_L00_002E9900	matched	level:00:002E8450	FUN_L00_002e8450	matched	level:00:00424A08		open						
 10ba203901553db6	60	level	3								level:00:002D6900		open	level:01:003EFFE0		open	boot:00438C90		open
@@ -3222,10 +3222,10 @@ ef6c984e016b3962	52	level	2											level:39:00675508		open	boot:0054B280	func
 8910e462572fc77b	52	level	2											level:39:006D4DA0		open	level:00:007731F8	func_L00_007731F8	open
 7f4a4e5bea197ae4	48	level	4		level:00:001FEF78	func_L00_001FEF78	open	level:00:001FEFC8		open	boot:002829A8		open	level:01:0040BAF0		open	boot:00453568	func_L00_005BCA18	open
 ea56be88f420aece	48	level	2		level:00:002366DC	func_L00_002366DC	matched	level:00:00235D4C		open	boot:0028BA1C		open						
-c0307fe4717e75ae	48	level	3		level:00:00251328	func_L00_00251328	open	level:00:002502F0	FUN_L00_002502f0	open	boot:002A0488		open	level:01:00438908		open			
-42a9fcbdf27556fe	48	level	3		level:00:00251358	func_L00_00251358	open	level:00:00250320	FUN_L00_00250320	open	boot:002A04B8		open	boot:003C7220	func_003C1A60	open			
+c0307fe4717e75ae	48	level	3		level:00:00251328	func_L00_00251328	open	level:00:002502F0		open	boot:002A0488		open	level:01:00438908		open			
+42a9fcbdf27556fe	48	level	3		level:00:00251358	func_L00_00251358	open	level:00:00250320		open	boot:002A04B8		open	boot:003C7220	func_003C1A60	open			
 6acdacc092af6e81	48	level	2		level:00:0025E7F8	func_L00_0025E7F8	matched	level:00:0025D7A0		open	level:00:003417B8		open						
-15d99f378f09261c	48	level	2		level:00:00286498	func_L00_00286498	open	level:00:002851C0		open	level:00:00358D50		open						
+15d99f378f09261c	48	level	2		level:00:00286498	func_L00_00286498	matched	level:00:002851C0		open	level:00:00358D50		open						
 85ed92db53b90848	48	level	4		level:08:00211A38	func_L08_00211A38	open	level:08:00211B08		open	boot:002829D8		open	level:01:0040BB20		open	boot:004535A0		open
 07136ceb877671e9	48	level	2								level:00:0037DDE8		open	level:01:004C4710		open			
 9791e1deb18eb4b3	48	level	2								level:00:0037E60C		open	level:01:004C57CC		open			
@@ -3280,7 +3280,7 @@ b4e0a8dbfa6b5c30	48	level	2											level:39:006633E8		open	level:00:006EE7B0	
 f08516b5066603cd	48	level	2											level:39:0067C0E0		open	level:00:00708228	func_L00_00708228	open
 5b19289b5ba3b8f0	48	level	2											level:39:00688E10		open	level:00:00755A20	func_L00_00755A20	open
 30b943431bda6a7a	48	level	2											level:39:006D6338		open	level:00:00774AE0	func_L00_00774AE0	open
-32ac9ba0aeaaf40d	44	level	3	GetClankModule	level:00:0020DB30	func_L00_0020DB30	open	level:00:0020D498		open	level:00:002ADEA0		open	level:01:004E5470		open			
+32ac9ba0aeaaf40d	44	level	3	GetClankModule	level:00:0020DB30	func_L00_0020DB30	matched	level:00:0020D498		open	level:00:002ADEA0		open	level:01:004E5470		open			
 ad6266093b373515	44	level	3		level:00:0020DAF8		open	level:00:0020D460		open	level:00:002ADE68		open	level:01:004E5438		open			
 3cbf014235743ec3	44	level	2								level:00:002B42D8		open	level:01:004EB460		open			
 bebf4075a8d4ae7d	44	level	2								level:00:002E36F8		open	level:01:003FE150		open			
@@ -3439,7 +3439,7 @@ b20283783080e72c	36	level	2											level:39:0060EF10		open	level:00:0069D2F0	
 4a3b284e9685ec45	36	level	2											level:39:0061AA38		open	level:00:006AA0D8	func_L00_006AA0D8	open
 ea5e838c5ecd751c	36	level	2											level:39:0066FEB0		open	level:00:006FEEE8	func_L00_006FEEE8	open
 3999d1c0018c1ffc	36	level	2											level:40:003D5680		open	level:41:003D4E88		open
-2dc9e1dc77b671c1	32	level	2		level:00:001EB578	func_L00_001EB578	open	level:00:001EB1F8		open	boot:00270280		open						
+2dc9e1dc77b671c1	32	level	2		level:00:001EB578	func_L00_001EB578	matched	level:00:001EB1F8		open	boot:00270280		open						
 e6603ca91bd5f7e3	32	level	2	LVL_24_SHIP_SHACK_FUN_002D6CF8	level:00:001EB7C8	func_L00_001EB7C8	matched	level:00:001EB448	FUN_L00_001eb448	matched	boot:002704D0	LVL_24_SHIP_SHACK_FUN_002D6CF8	matched						
 3be1ed6ed30f8164	32	level	3		level:00:001FF328	func_L00_001FF328	open	level:00:001FF378		open	boot:00282D90		open	level:01:0040BED8		open			
 520b757f589c5a98	32	level	3		level:00:001FF3E0	func_L00_001FF3E0	open	level:00:001FF430		open	level:00:002EE290		open	level:01:0040BF90		open			
@@ -3497,9 +3497,9 @@ b70439f7b6352ac0	32	level	2											level:39:00518000		open	level:00:00554010	
 d212883c33c1ddcc	32	level	2											level:39:00660120		open	boot:0053CA80	func_0053CA80	open
 15ab528bd85bc171	32	level	2											level:39:006D46A0		open	boot:0054A850	func_0054A850	open
 ff2b20c0b956d54b	28	level	4		level:00:002608D0	func_L00_002608D0	matched	level:00:0025F858		open	boot:002ACB28		open	level:01:00448CA8		open	boot:00477B68	func_00477B68	open
-868793f485181a35	28	level	3		level:00:00267618	func_L00_00267618	open	level:00:002667D0		open	level:01:003246F8		open	level:04:0046C9E8		open			
-5f913fa36bad94b0	28	level	2		level:00:002E9838	func_L00_002E9838	open	level:00:002E8388		open	level:00:00424940		open						
-96fc3ac6b146036d	28	level	2		level:00:002E9870	func_L00_002E9870	open	level:00:002E83C0		open	level:00:00424978		open						
+868793f485181a35	28	level	3		level:00:00267618	func_L00_00267618	matched	level:00:002667D0		open	level:01:003246F8		open	level:04:0046C9E8		open			
+5f913fa36bad94b0	28	level	2		level:00:002E9838	func_L00_002E9838	matched	level:00:002E8388		open	level:00:00424940		open						
+96fc3ac6b146036d	28	level	2		level:00:002E9870	func_L00_002E9870	matched	level:00:002E83C0		open	level:00:00424978		open						
 0d3e28332fc504aa	28	level	2		level:03:002C8000	func_L03_002C8000	matched	level:03:002C6C38		open							boot:004FD248		open
 06a640b4655c2219	28	level	2	LVL_24_SHIP_SHACK_FUN_002D2878							level:00:002D3778	LVL_24_SHIP_SHACK_FUN_002D2878	matched	level:01:0050D180		open			
 ef36607613897e44	28	level	3	LVL_24_SHIP_SHACK_FUN_002D5840							level:00:002D6788	LVL_24_SHIP_SHACK_FUN_002D5840	matched	level:01:003EF860		open	level:00:00595E88		open
@@ -3554,10 +3554,10 @@ f0a58729a3226016	28	level	2											level:39:006D8BD8		open	level:00:007789D0	
 805ae4aa55e5c963	24	level	2		level:00:001FF270	func_L00_001FF270	open	level:00:001FF2C0		open	level:04:0030EDE0		open						
 29fa2b23760e0f8f	24	level	3		level:00:001FF2C8	func_L00_001FF2C8	open	level:00:001FF318		open	boot:00282D48		open	boot:0038D160	func_00388700	matched			
 e41a634bc1077b0b	24	level	2		level:00:001FF2F8	func_L00_001FF2F8	open	level:00:001FF348		open	level:22:002F3B38		open						
-e32b219f6c6b1ac1	24	level	2		level:00:002001D8	func_L00_002001D8	open	level:00:00200228	FUN_L00_00200228	open	boot:00283CC8		open						
+e32b219f6c6b1ac1	24	level	2		level:00:002001D8	func_L00_002001D8	open	level:00:00200228		open	boot:00283CC8		open						
 c21769e81a2d3b04	24	level	3		level:00:00232A18	func_L00_00232A18	matched	level:00:002321C0		open	level:00:002D1F78		open	level:01:0050B850		open			
 7937687c2ef8eff1	24	level	3		level:00:00232EA8	func_L00_00232EA8	matched	level:00:00232628	FUN_L00_00232628	matched	level:00:002D24B8		open	level:01:0050BF28		open			
-38428071382f2d2a	24	level	4		level:00:0025A43C	func_L00_0025A43C	open	level:00:00259404		open	boot:002A8834		open	level:01:00442D44		open	level:01:005924BC	func_L01_005924BC	open
+38428071382f2d2a	24	level	4		level:00:0025A43C	func_L00_0025A43C	matched	level:00:00259404		open	boot:002A8834		open	level:01:00442D44		open	level:01:005924BC	func_L01_005924BC	open
 9f3e2df820e2f4e9	24	level	2		level:00:002E5618	func_L00_002E5618	matched	level:00:002E4168	FUN_L00_002e4168	matched	boot:00334710		open						
 84d1e1d6d40e3fbd	24	level	3		level:01:002490E0	func_L01_002490E0	matched	level:01:002488E8	FUN_L01_002488e8	matched	level:01:002C8990		open	level:02:004DCEC0		open			
 7ea005025ef6541a	24	level	3		level:01:002490F8	func_L01_002490F8	matched	level:01:00248900	FUN_L01_00248900	matched	level:01:002C89A8		open	level:02:004DCED8		open			
@@ -3608,12 +3608,12 @@ f5d86f88a563563a	24	level	2											level:39:006DB288		open	level:00:0077C368	
 15fbf0293e28bccb	20	level	4		level:00:00211F68	func_L00_00211F68	matched	level:00:002118B0	FUN_L00_002321a8	matched	boot:002C9A60		open	level:01:004EAA60		open	boot:0015C730	func_0015C730	open
 c4854841bdd9cdd7	20	level	3		level:00:00217680	func_L00_00217680	matched	level:00:00216EF8		open	level:00:002B9C90		open	level:01:004F11F0		open			
 093caae9bc1c628d	20	level	3		level:00:0025E210	func_L00_0025E210	matched	level:00:0025D1B8	FUN_L00_0025d1b8	matched	boot:002AB650	FUN_002AB650	matched	level:01:004475D0		open			
-1c2705bf08a280eb	20	level	2		level:00:00267C34	func_L00_00267C34	open	level:00:00266DEC		open	level:00:0032EF9C		open						
+1c2705bf08a280eb	20	level	2		level:00:00267C34	func_L00_00267C34	matched	level:00:00266DEC		open	level:00:0032EF9C		open						
 4114752c5942889e	20	level	2		level:00:002A6058	func_L00_002A6058	matched	level:00:002A4DC8	FUN_L00_002a4dc8	matched	level:04:003C70C8		open						
 432bdfb4cf7ce64d	20	level	2		level:03:00292B18	func_L03_00292B18	matched	level:03:00291970		open				boot:003E5938	func_003E0178	open			
-b3fde52740cb7e68	20	level	2		level:04:0024D534	func_L04_0024D534	open	level:04:0024C57C		open	boot:002A8ADC		open						
+b3fde52740cb7e68	20	level	2		level:04:0024D534	func_L04_0024D534	matched	level:04:0024C57C		open	boot:002A8ADC		open						
 bc80e77abe3e449a	20	level	2		level:05:0031B15C	func_L05_0031B15C	matched	level:05:00319C4C		open							level:01:004BDE74	func_L01_004BDE74	open
-731739a3f343a006	20	level	2		level:07:002B3050	func_L07_002B3050	matched	level:07:002B1E48	FUN_L01_0029efa8	open	level:03:0038AA20		open						
+731739a3f343a006	20	level	2		level:07:002B3050	func_L07_002B3050	matched	level:07:002B1E48		open	level:03:0038AA20		open						
 6083776120e5c9f1	20	level	2		level:08:00315068	func_L08_00315068	matched	level:08:00313BA8	FUN_L08_00313ba8	matched	level:11:004885A0		open						
 ecf47267e6c3096f	20	level	2		level:00:001EB598		open	level:00:001EB218		open	boot:002702A0		open						
 7fec4d5b46509478	20	level	2		level:06:00216EE4		open	level:06:00216F34		open				level:01:0040B9C4		open			
@@ -3687,12 +3687,12 @@ e6f165efbf0b6556	20	level	2											level:39:006BBA68		open	level:00:007295D0	
 8292b09943e738fa	20	level	2											level:39:006D1890		open	level:00:0076F1E0	func_L00_0076F1E0	open
 8fdd2eec0966a73e	20	level	2											level:39:006D67A8		open	level:00:00776680	func_L00_00776680	open
 db939863696b0cea	20	level	2											level:40:004E13F0		open	boot:00511048	func_00511048	open
-376bfe6956d9325a	16	level	2		level:00:001FF200	func_L00_001FF200	open	level:00:001FF250	FUN_L00_001ff250	open	level:00:002EE0C0		open						
+376bfe6956d9325a	16	level	2		level:00:001FF200	func_L00_001FF200	matched	level:00:001FF250	FUN_L00_001ff250	matched	level:00:002EE0C0		open						
 0e35c62097d0cf4e	16	level	3		level:00:001FF670	func_L00_001FF670	open	level:00:001FF6C0		open	boot:00283088		open	level:01:0040C2C0		open			
 a60b155290fed080	16	level	3		level:00:00205768	func_L00_00205768	matched	level:00:00205150		open	level:00:002A5030		open	level:01:004DC468		open			
 86043772e82db72b	16	level	4		level:00:0025C700	func_L00_0025C700	matched	level:00:0025B6A8	FUN_L00_0025b6a8	matched	boot:002AA140	FUN_002AA140	matched	boot:003C4308	func_003BEB48	matched	boot:004756D0	func_004756D0	open
 7a1848a6278b17d8	16	level	3		level:00:0025F410	func_L00_0025F410	matched	level:00:0025E3B8		open	boot:002ABB78		open	level:39:005B6970		open			
-7657ea57cee7b1d3	16	level	2		level:00:002864CC	func_L00_002864CC	open	level:00:002851F4		open	level:00:00358D84		open						
+7657ea57cee7b1d3	16	level	2		level:00:002864CC	func_L00_002864CC	matched	level:00:002851F4		open	level:00:00358D84		open						
 e9468df34df3d4aa	16	level	4		level:00:002D95D8	func_L00_002D95D8	matched	level:00:002D8128	FUN_L00_002d8128	matched	boot:00312E10	FUN_00312E10	matched	level:01:003015E0		open	level:01:003D3EA0	func_L01_003D3EA0	open
 2082eb5b53d263ef	16	level	3		level:00:002E89D0	func_L00_002E89D0	matched	level:00:002E7520	FUN_L00_002e7520	matched	level:00:00423BB0		open	level:01:003E5C20		open			
 25203226820bc979	16	level	2		level:00:002E98A8	func_L00_002E98A8	open	level:00:002E83F8		open	level:00:004249B0		open						
@@ -3788,7 +3788,7 @@ abf7208e37f3d448	212		3	ParseOcclGrid	boot:001F2A38	func_001F2A38	matched	boot:0
 61ad9563c1bf27f7	208		3	audioDecBeginPut	boot:0023C128	func_0023C128	matched	boot:0023AD58	audio_dec_begin_put	matched	boot:0034F960	FUN_0034F960	matched	frontbin:003AAC70	func_003AAC70	matched			
 7e0351a4c2ef731e	192		2	CountTrailingZeroBits	boot:00115748	func_00115748	matched	boot:00115748	CountTrailingZeroBits	matched							boot:0011F780	func_0011F780	open
 f46e66cea73f077f	160		2		boot:001EFD70	func_001EFD70	open							frontbin:003CE6A0	func_003CE6A0	open			
-eb2eb844427a5db9	160		2					level:04:0024C4F0	FUN_L04_0024c4f0	open	boot:002A8A50	FUN_002A8A50	matched						
+eb2eb844427a5db9	160		2					level:04:0024C4F0	FUN_L04_0024c4f0	matched	boot:002A8A50	FUN_002A8A50	matched						
 1a95e69885eb9fe2	156		2	__unpack_d	boot:0011FB68	func_0011FB68	matched	boot:0011F868	__unpack_d	matched							boot:00130AF0	func_00130AF0	matched
 0ba37c83649d64ee	148		2		boot:001151B4	func_001151B4	open										boot:0011A2DC	func_0011A2DC	open
 90246e26b693c3b5	144		2	ftoi	boot:00119EA8	func_00119EA8	open	boot:00119BA8	ftoi	open							boot:00128430	func_00128430	open
@@ -3808,7 +3808,7 @@ d9d35c0352f71983	76		2	SearchSvdata	boot:0011B1F8	func_0011B1F8	matched	boot:001
 f1f397ef8452f06e	72		2	sceScfGetLocalTimefromRTC	boot:0012D818	func_0012D818	matched	boot:0012D6D8	sceScfGetLocalTimefromRTC	matched							boot:00155A98	func_00155A98	open
 9f0c4b4159a5ad4f	72		2		boot:001F9E10	func_001F9E10	open							frontbin:00388880	func_00388880	matched			
 8bc81f8a4779a44e	68		2	voice_start_callback	boot:0022F0A8	func_0022F0A8	matched	boot:0022DD90	voice_start_callback	matched	boot:002E60A0	FUN_002E60A0	matched						
-a62856eb9b49f8b3	68		2	getFIFOindex	boot:0023CEC8	func_0023CEC8	open	boot:0023BAF8	get_fifo_index	matched	boot:00350750	FUN_00350750	matched						
+a62856eb9b49f8b3	68		2	getFIFOindex	boot:0023CEC8	func_0023CEC8	matched	boot:0023BAF8	get_fifo_index	matched	boot:00350750	FUN_00350750	matched						
 9b7a5d32777dce4a	60		2	SceSifCheckStatRpc	boot:0011B6B8	func_0011B6B8	matched	boot:0011B3B8	SceSifCheckStatRpc	matched							boot:0012A918	func_0012A918	open
 4dc1aee31e60cb8d	60		3	music_primary_start_callback	boot:002179C8	func_002179C8	matched	boot:00216B28	music_primary_start_callback	matched	boot:002B7FB0	FUN_002B7FB0	matched	frontbin:0039D9C8	func_0039D9C8	matched			
 61d2aa2e834c2c80	52		2	LVL_0_ARANOS_TUTORIAL_FUN_002ADE68				level:00:0020D460	FUN_L00_0020d460	matched	level:00:002ADE68	LVL_0_ARANOS_TUTORIAL_FUN_002ADE68	matched						

@@ -1,0 +1,55 @@
+# NTSC-U's boot executable (SCUS_971.99) split by splat, for the merged tree's NTSC-U build
+# (tools/versions.py; games/rac1/VERSIONS.md): PAL's config/splat.yaml with NTSC-U's section
+# offsets and addresses. Run from games/rac1: python -m splat split versions/ntsc/splat.yaml
+# (tools/versions.py asm does it). Output: versions/ntsc/asm/, ignored like PAL's asm/.
+name: rac1-ntsc
+sha1: 72fd1de379dafd8f243dceeb3be50980f3fd3cd5
+options:
+  basename: SCUS_971.99
+  target_path: baserom/SCUS_971.99
+  base_path: ../..
+  compiler: EEGCC
+  generate_asm_macros_files: False
+  disassemble_all: True
+  matchings_path: nonmatchings
+  create_c_files: False
+  find_file_boundaries: True
+  platform: ps2
+  asm_path: versions/ntsc/asm
+  src_path: versions/ntsc/src
+  build_path: build-sn/ntsc-splat
+  ld_script_path: build-sn/ntsc-splat/SCUS_971.99.ld
+  undefined_funcs_auto_path: build-sn/ntsc-splat/undefined_funcs_auto.txt
+  undefined_syms_auto_path: build-sn/ntsc-splat/undefined_syms_auto.txt
+  extensions_path: tools/splat_ext
+  asset_path: versions/ntsc/assets
+
+segments:
+  - name: core
+    type: code
+    start: 0x1000
+    vram: 0x100080
+    bss_size: 0xab80
+    subsegments:
+      - [0x1000, bin, vutext]
+      - [0x13300, c, core_text]
+      - [0x30400, data, core_data]
+      - [0x53180, rodata, core_rdata]
+      - [0x55080, bss, core_bss]
+      - [0x5fc00]
+  - name: main
+    type: code
+    start: 0x5fc00
+    vram: 0x15ec80
+    bss_size: 0x4200
+    subsegments:
+      - [0x5fc00, rodata, core_lit]
+      - [0x5fe80, rodata, lit]
+      - [0x62200, bss, bss]
+      - [0x66400, data, data]
+      - [0xe9b00, data, lvl_vtbl]
+      - [0xe9b80, data, lvl_camvtbl]
+      - [0xe9c00, data, lvl_sndvtbl]
+      - [0xe9c80, c, text]
+      - [0x13e2e0]
+  - [0x13e2e0]

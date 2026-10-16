@@ -20,7 +20,7 @@ never counted as a match.
 | Counted in the progress report | yes | never |
 | Read by | the matching build and the port | the port only |
 
-`games/rac1/pal` has this in place (321 functions listed on 2026-10-13); the
+`games/rac1` has this in place (321 functions listed on 2026-10-13); the
 port reads the list through `port/game/rac1-pal/hostgen.json` ("candidates").
 A decompilation without the list yet should add the same two paths, not a new
 scheme.
@@ -175,4 +175,4 @@ no tier left, or the port needs it now              -> functional C, with its co
 
 The measurements behind this page are in the commit history of 2026-10-12
 (the compiler comparison, the small-function sweep and its joins) and in
-[games/rac1/pal/docs/NONMATCHING.md](../../games/rac1/pal/docs/NONMATCHING.md).
+[games/rac1/docs/NONMATCHING.md](../../games/rac1/docs/NONMATCHING.md).

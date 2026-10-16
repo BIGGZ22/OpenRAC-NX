@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// Time: a monotonic clock, and the frame pacer that holds the game to the
-// console's field rate. A PAL game runs its loop once per 50 Hz field and an
-// NTSC one per 59.94 Hz field; the game's own timing (animation steps, the
-// frame skip it applies when a frame runs long) assumes that rate, so the port
-// paces the loop to it whatever the monitor's refresh. Vsync, when on, only
+// Time: a monotonic clock, and the frame pacer that holds the game loop to its
+// tick rate. The port runs every game at 60 Hz (the PAL game in its own 60 Hz
+// mode); the game's own timing (animation steps, the frame skip it applies when
+// a frame runs long) assumes that rate, so the port paces the loop to it
+// whatever the monitor's refresh. Vsync, when on, only
 // keeps the picture from tearing.
 
 #pragma once

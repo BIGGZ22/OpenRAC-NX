@@ -940,7 +940,7 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
     config.title = "OpenRAC: Ratchet & Clank (native)";
     config.width = 1280;
     config.height = 960;
-    // The game ticks at its own rate (main.cpp: 50 Hz for PAL) and the window draws at the
+    // The game ticks 60 times a second (main.cpp, every version) and the window draws at the
     // display's, the frames between ticks moving the scene on (between), each shown at a refresh
     // when the player's vsync is on (wanted_swap).
     config.vsync = false;  // set below, as asked

@@ -7,7 +7,7 @@ extern void copy_blocks_16_forward(void *, void *, int) __asm__("FUN_001f98d0");
 extern int get_effect_texture(int) __asm__("FUN_001f44b8");
 extern void scale_vector_xyz(void *, void *, float) __asm__("FUN_001f9a68");
 extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
-extern void FUN_001f9cf8(void *, void *, void *);
+extern void transform_vector_by_basis(void *, void *, void *) __asm__("FUN_001f9cf8");
 typedef struct {
     float positions[4][4];          /* 0x00 */
     int colors[4];                  /* 0x40 */
@@ -16,15 +16,15 @@ typedef struct {
 } FlareQuad;
 extern void draw_geometry_quad(void *, int, int) __asm__("func_001F7D30");
 extern int scale_game_frames(int) __asm__("FUN_001f96f8");
-extern void FUN_001f9a80(void *, void *, float);
+extern void scale_vector(void *, void *, float) __asm__("FUN_001f9a80");
 extern int FUN_001fa820(void *, int *, float);
 extern float probe_ground_height(void *, int, float) __asm__("func_00213508");
 extern float D_001D97D0[][4][4];
 /* Draws a light flare quad at arg0's position (+0x00; the matrix is at
    +0xC0) when FUN_001fa820 finds it on screen, with the alpha it
    returns. In D_0015F604 mode 6 with flare set 3, the flare fades as
-   level_render_state's level passes FUN_001f96f8(150), and its depth comes from
-   func_00213508. The corners are D_001D97D0[set]. */
+   level_render_state's level passes scale_game_frames(150), and its depth comes from
+   probe_ground_height. The corners are D_001D97D0[set]. */
 void draw_light_flare(char *object) __asm__("FUN_0022df40");
 
 extern s32 game_mode_macro __asm__("D_0015F604") MACRO_ADDR;
@@ -37,7 +37,7 @@ void draw_light_flare(char *object) {
     int corner_index;
 
     alpha = 0;
-    FUN_001f9a80(scaled_position, object, 1.0f / 1024.0f);
+    scale_vector(scaled_position, object, 1.0f / 1024.0f);
     if (FUN_001fa820(scaled_position, &alpha, 32.0f) < 0) {
         return;
     }
@@ -63,7 +63,7 @@ void draw_light_flare(char *object) {
 
         quad.colors[corner_index] = ((alpha >> 1) << 24) | 0x808080;
         vertex_position = quad.positions[corner_index];
-        FUN_001f9cf8(vertex_position, D_001D97D0[level_render_state.content_variant][corner_index],
+        transform_vector_by_basis(vertex_position, D_001D97D0[level_render_state.content_variant][corner_index],
                      object + 0xC0);
         add_vector_xyz(vertex_position, vertex_position, object + 0x10);
         vertex_position[2] = depth;

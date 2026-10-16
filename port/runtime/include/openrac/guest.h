@@ -278,7 +278,7 @@ void openrac_host_caller(int depth, char* text, size_t size);
 /* ---- What the game's own inline assembly did ----
  *
  * The decompilation keeps three quadword helpers as inline assembly
- * (games/rac1/pal/include/common.h): qcopy, qcopy_nc and qzero. */
+ * (games/rac1/include/common.h): qcopy, qcopy_nc and qzero. */
 static inline void openrac_qcopy(gaddr dst, gaddr src) {
     memmove(G(dst), G(src), 16);
 }

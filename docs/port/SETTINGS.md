@@ -111,7 +111,7 @@ display or the display changed mode, not polled.
 
 The PAL game has a "Video mode" row on this same page: 50 Hz, or 60 Hz for a
 television that can show it. In the game's code
-([games/rac1/pal](../../games/rac1/pal)):
+([games/rac1](../../games/rac1)):
 
 - `InitOnce` reads the disc's region and sets `D_0015EE80` (1: PAL, 50 Hz),
   then calls `sceGsResetGraph` with video mode 3 (PAL) or 2 (NTSC).

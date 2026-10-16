@@ -55,6 +55,12 @@ def git(repo: Path, *args: str, binary: bool = False):
     return run.stdout if binary else run.stdout.decode().strip()
 
 
+def version_dir(game: dict, version: str) -> Path:
+    """Where a version's tree lives: its "dir" in game.json (rac1's PAL tree is games/rac1 itself,
+    the merged game), else games/<game>/<version>."""
+    return ROOT / game["versions"][version].get("dir", f"games/{game['id']}/{version}")
+
+
 def excluded(path: str, exclude: list[str]) -> bool:
     return any(path == e or path.startswith(e.rstrip("/") + "/") for e in exclude)
 
@@ -63,7 +69,7 @@ def do_import(key: str, rev: str | None) -> None:
     path, game = manifests()[key]
     version = key.split("/")[1]
     source = game["versions"][version]["source"]
-    repo, dest = checkout(key, source), GAMES / key
+    repo, dest = checkout(key, source), version_dir(game, version)
     if dest.exists() and any(p.name != ".gitkeep" for p in dest.iterdir()):
         sys.exit(f"{dest.relative_to(ROOT)} is not empty: use sync")
     commit = git(repo, "rev-parse", rev or "HEAD")
@@ -83,7 +89,7 @@ def do_sync(key: str, rev: str | None) -> None:
     path, game = manifests()[key]
     version = key.split("/")[1]
     source = game["versions"][version]["source"]
-    repo, dest = checkout(key, source), GAMES / key
+    repo, dest = checkout(key, source), version_dir(game, version)
     commit = git(repo, "rev-parse", rev or "HEAD")
     if commit == source["commit"]:
         print(f"{key}: already at {commit[:10]}")

@@ -1,8 +1,8 @@
 # How far the decompiled code is from a native build
 
-What [games/rac1/pal](../../games/rac1/pal/README.md) holds today, counted
+What [games/rac1](../../games/rac1/README.md) holds today, counted
 for the question the port asks: how much of the game is C that a PC compiler
-could build, and what is not. Paths below are relative to `games/rac1/pal`
+could build, and what is not. Paths below are relative to `games/rac1`
 unless they start at the repository root.
 
 Counted on 2026-10-09 over this repository at `7954152` (rac1/pal synced
@@ -110,7 +110,7 @@ replaces the executable's main segment when the level loads (`ParseBin`
 the executable's own code (their C is in `src/game`), 1,963 are shared by
 several levels (1.197 MB), 1,468 belong to one level (2.05 MB, about 107 KB
 per level). No level program is linked by the build yet
-([OVERLAYS.md](../../games/rac1/pal/docs/OVERLAYS.md), "Per-level rebuild").
+([OVERLAYS.md](../../games/rac1/docs/OVERLAYS.md), "Per-level rebuild").
 
 C share of each level's own code: levels 00, 16 and 17 100 %; 18 84 %;
 01 78 %; 15 74 %; 02 69 %; 03, 05, 06 about 64 %; 11, 12 60 %; 04 58 %;

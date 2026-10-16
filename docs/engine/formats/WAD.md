@@ -8,7 +8,7 @@ an archive.
 **Games.** RAC1, measured: ReRAC decodes every one of the 4,674 streams on
 the NTSC-U disc, and OpenRAC's extractor every stream it reads on PAL, where
 the game's decoder is `func_0020C468` (NTSC-U 0x20B618)
-([ASSETS.md](../../../games/rac1/pal/docs/ASSETS.md#wad-compression)). The
+([ASSETS.md](../../../games/rac1/docs/ASSETS.md#wad-compression)). The
 sequels use the same magic: RAC2's prerelease level data holds `"WAD"`
 containers ([LEVEL-ARCHIVE-FORMAT.md](../../../games/rac2/ntsc/docs/LEVEL-ARCHIVE-FORMAT.md)),
 and RAC3 and Deadlocked wrap their boot image in one (Wrench, **reference**).
@@ -65,7 +65,7 @@ flag byte. P is the output length when the packet is decoded.
 The game decompresses from the scratchpad and refills it by DMA one block at
 a time, so no packet may straddle a block boundary.
 
-- **PAL code:** the block is 0x2000 bytes ([ASSETS.md](../../../games/rac1/pal/docs/ASSETS.md#wad-compression)).
+- **PAL code:** the block is 0x2000 bytes ([ASSETS.md](../../../games/rac1/docs/ASSETS.md#wad-compression)).
 - **Wrench's reader** aligns the skip to 0x1000 and its writer pads to
   0x2000 (to offset 0x10 of the next 0x2000 block, counting the header).
   ReRAC reads with 0x1000, which accepts both; on the discs measured every
@@ -86,4 +86,4 @@ far match. ReRAC's writer uses a 32,768-entry hash chain over three bytes.
 Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/formats/disc_layout.md` sections 3 and 5 and
 `docs/formats/wad_layouts_rac1.md` section 0.3; PAL facts from
-[ASSETS.md](../../../games/rac1/pal/docs/ASSETS.md).
+[ASSETS.md](../../../games/rac1/docs/ASSETS.md).

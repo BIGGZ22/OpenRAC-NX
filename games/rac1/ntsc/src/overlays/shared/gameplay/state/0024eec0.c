@@ -19,19 +19,19 @@ typedef struct {
     char h[0x10];
     Ent32 e[1];
 } Tbl;
-void FUN_001fa2d8(Mtx *, void *);
-void FUN_001f9a28(Vec4 *, void *, void *);
-void FUN_001f9d20(Vec4 *, Vec4 *, Mtx *);
-void FUN_001f9a68(Vec4 *, Vec4 *, float);
+void transpose_rotation_matrix(Mtx *, void *) __asm__("FUN_001fa2d8");
+void subtract_vector_xyz(Vec4 *, void *, void *) __asm__("FUN_001f9a28");
+void transform_vector(Vec4 *, Vec4 *, Mtx *) __asm__("FUN_001f9d20");
+void fast_vec_scale(Vec4 *, Vec4 *, float) __asm__("FUN_001f9a68");
 void FUN_L00_0024eed8(char *p, int idx, void *v, float a, float b) {
     Mtx m;
     Vec4 t;
     Ent32 *e = &(*(Tbl **)(p + 0x94))->e[idx];
     float k = 1024.0f / *(float *)(p + 0x2C);
-    FUN_001fa2d8(&m, p + 0xC0);
-    FUN_001f9a28(&t, v, p + 0x10);
-    FUN_001f9d20(&t, &t, &m);
-    FUN_001f9a68(&t, &t, k);
+    transpose_rotation_matrix(&m, p + 0xC0);
+    subtract_vector_xyz(&t, v, p + 0x10);
+    transform_vector(&t, &t, &m);
+    fast_vec_scale(&t, &t, k);
     qcopy(&e->v, &t);
     e->b = b * k;
     e->v.w = a * k;
@@ -83,7 +83,27 @@ typedef struct Slot {
 } Slot;
 
 extern Slot D_L00_0018EB40[];
-extern char D_L00_00186D40[];
+/* One 0x1500-byte buffer per slot of D_L00_0018EB40, at each level's own address. */
+typedef u8 SlotBuffer[0x1500];
+SlotBuffer slot_buffers[6] __asm__("D_L00_00186D40") = {{0}};
+SlotBuffer slot_buffers_l01[6] __asm__("D_L01_001871C0") = {{0}};
+SlotBuffer slot_buffers_l02[6] __asm__("D_L02_00187340") = {{0}};
+SlotBuffer slot_buffers_l03[6] __asm__("D_L03_00186E40") = {{0}};
+SlotBuffer slot_buffers_l04[6] __asm__("D_L04_00186EC0") = {{0}};
+SlotBuffer slot_buffers_l05[6] __asm__("D_L05_001871C0") = {{0}};
+SlotBuffer slot_buffers_l06[6] __asm__("D_L06_001874C0") = {{0}};
+SlotBuffer slot_buffers_l07[6] __asm__("D_L07_00186DC0") = {{0}};
+SlotBuffer slot_buffers_l08[6] __asm__("D_L08_00187540") = {{0}};
+SlotBuffer slot_buffers_l09[6] __asm__("D_L09_00186EC0") = {{0}};
+SlotBuffer slot_buffers_l10[6] __asm__("D_L10_001871C0") = {{0}};
+SlotBuffer slot_buffers_l11[6] __asm__("D_L11_00187740") = {{0}};
+SlotBuffer slot_buffers_l12[6] __asm__("D_L12_001871C0") = {{0}};
+SlotBuffer slot_buffers_l13[6] __asm__("D_L13_00187040") = {{0}};
+SlotBuffer slot_buffers_l14[6] __asm__("D_L14_00187440") = {{0}};
+SlotBuffer slot_buffers_l15[6] __asm__("D_L15_00187340") = {{0}};
+SlotBuffer slot_buffers_l16[6] __asm__("D_L16_001871C0") = {{0}};
+SlotBuffer slot_buffers_l17[6] __asm__("D_L17_00187640") = {{0}};
+SlotBuffer slot_buffers_l18[6] __asm__("D_L18_00187740") = {{0}};
 
 Slot *FUN_L00_0024f028(char *o, int id) {
     int i = 0;
@@ -95,7 +115,7 @@ Slot *FUN_L00_0024f028(char *o, int id) {
     s->used = 1;
     s->id = id;
     id = (short)id;
-    s->p10 = D_L00_00186D40 + i * 0x1500;
+    s->p10 = slot_buffers[i];
     s->p14 = *(int *)(o + 0x24);
     r = *(unsigned char **)(*(char **)(*(char **)(o + 0x24) + 0x1C) + id * 4 + 4);
     s->s2 = r[2];

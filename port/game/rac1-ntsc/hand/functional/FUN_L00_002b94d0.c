@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/shared/func_L00_002BA7C8.c (games/rac1/pal) through the version
+/* Carried from the PAL decompilation's nonmatching/shared/func_L00_002BA7C8.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
  * The two versions' code differs here: func_L00_002BA7C8 (near) was paired by place; read it against NTSC-U before trusting it. */
 #include "types.h"

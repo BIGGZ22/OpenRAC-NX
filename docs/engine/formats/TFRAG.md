@@ -8,7 +8,7 @@ with them (texture setup, level-of-detail choice, morph, lighting) is
 ReRAC's reading of the NTSC-U code (`SCUS_971.99`) and of VU1 program 55907,
 checked on all 20,016 tfrags of the 19 NTSC-U levels. OpenRAC's editor reads
 LOD 0 and 2 on PAL; PAL's `TfragProc` `func_002352C8` confirms the streams
-and DMA sizes ([ASSETS.md](../../../games/rac1/pal/docs/ASSETS.md#terrain-tfrags)).
+and DMA sizes ([ASSETS.md](../../../games/rac1/docs/ASSETS.md#terrain-tfrags)).
 
 **Games.** RAC1, measured. Wrench uses one reader for all four games and
 branches on the game in two places only: Deadlocked's header slot 0x32 and
@@ -258,5 +258,5 @@ block and the clipping program are in [VU1.md](../systems/VU1.md#terrain-55907-a
 Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/formats/tfrag_rac1.md`,
 `docs/plan/vu1_tfrag_analysis.md`, `docs/plan/tfrag_lighting.md`; PAL names
-from `games/rac1/pal/config/overlays/us_map.tsv` and
+from `games/rac1/config/overlays/us_map.tsv` and
 [RENDERER.md](../../port/RENDERER.md).

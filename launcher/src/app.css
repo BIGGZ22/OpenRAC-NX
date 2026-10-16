@@ -295,6 +295,7 @@ input[type="text"] {
 
 /* The site's progress bar: a gradient fill with a light sweeping across it. */
 .bar {
+  display: flex;
   height: 14px;
   overflow: hidden;
   border-radius: 7px;
@@ -305,6 +306,7 @@ input[type="text"] {
 .bar > i {
   position: relative;
   display: block;
+  flex: none;
   height: 100%;
   overflow: hidden;
   border-radius: 6px;
@@ -319,6 +321,31 @@ input[type="text"] {
   background: linear-gradient(to right, transparent, rgb(255 255 255 / 0.45), transparent);
   transform: translateX(-100%);
   animation: sweep 2.6s ease-in-out 1.6s infinite;
+}
+
+/* Functional C after the matched part: stripes of the game's colour, muted, since it is not
+   progress (ByteMatch's hatching under its Code bar). */
+.bar > b.functional {
+  display: block;
+  flex: none;
+  height: 100%;
+  margin-left: -6px; /* tucked under the matched part's rounded end */
+  padding-left: 6px;
+  box-sizing: content-box;
+  border-radius: 0 6px 6px 0;
+  opacity: 0.85;
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--tx2, var(--brand)) 70%, transparent) 0 4px,
+    color-mix(in srgb, var(--tx2, var(--brand)) 22%, transparent) 4px 8px
+  );
+  transition: width 1.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.bar > b.functional.alone {
+  margin-left: 0;
+  padding-left: 0;
+  border-radius: 6px;
 }
 
 @keyframes sweep {

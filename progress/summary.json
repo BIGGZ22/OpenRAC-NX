@@ -4,13 +4,13 @@
     "region": "PAL (Europe)",
     "serial": "SCES_509.16",
     "progress": {
-      "matched_code": 3059008,
+      "matched_code": 3278504,
       "total_code": 3712808,
-      "matched_functions": 4372,
+      "matched_functions": 4595,
       "total_functions": 5109,
-      "fuzzy_percent": 84.35,
-      "date": "2026-10-14",
-      "percent": 82.39
+      "fuzzy_percent": 89.47,
+      "date": "2026-10-15",
+      "percent": 88.3
     },
     "note": "The boot executable and all 19 level programs. Handwritten assembly and linker remnants count as finished; staged near misses (nonmatching/) give the fuzzy figure."
   },
@@ -34,13 +34,13 @@
     "region": "NTSC-U (North America)",
     "serial": "SCUS_972.68",
     "progress": {
-      "matched_code": 240404,
-      "total_code": 5538056,
-      "matched_functions": 2350,
-      "total_functions": 9101,
-      "fuzzy_percent": 4.34,
-      "date": "2026-10-12",
-      "percent": 4.34
+      "matched_code": 318088,
+      "total_code": 5533600,
+      "matched_functions": 2941,
+      "total_functions": 9100,
+      "fuzzy_percent": 5.75,
+      "date": "2026-10-15",
+      "percent": 5.75
     },
     "note": "Every distinct function of the boot executable and the 27 level programs counted once (a function many levels share is one function); matched when its C links into a program that equals retail."
   },

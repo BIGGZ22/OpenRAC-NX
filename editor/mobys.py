@@ -92,7 +92,7 @@ def node_name(class_id: int, index: int, names: dict[int, str]) -> str:
     return f"{kind}_{index:04}"
 
 
-DECOMPILATION = Path(__file__).resolve().parents[1] / "games" / "rac1" / "pal"
+DECOMPILATION = Path(__file__).resolve().parents[1] / "games" / "rac1"
 _UPDATE = re.compile(r"UpdateMoby_(\d+):([\d/]+)")
 _logic = None
 
@@ -100,7 +100,7 @@ _logic = None
 def moby_logic(level: int) -> dict[int, dict]:
     """class -> {"function", "file", "decompiled"} for the classes LEVEL updates: the function
     the game calls for each moby of the class every frame, where it is in the decompilation
-    (games/rac1/pal), and whether it is C there yet. From that project's
+    (games/rac1), and whether it is C there yet. From that project's
     config/overlays/names.tsv (the UpdateMoby_<class> roles) and its src/. Empty when the
     decompilation is not in this checkout."""
     global _logic
@@ -124,5 +124,5 @@ def moby_logic(level: int) -> dict[int, dict]:
                     for lv in levels.split("/"):
                         _logic.setdefault(int(lv), {})[int(class_id)] = {
                             "function": function, "decompiled": is_c,
-                            "file": path.relative_to(DECOMPILATION.parents[2]).as_posix() if path else None}
+                            "file": path.relative_to(DECOMPILATION.parents[1]).as_posix() if path else None}
     return _logic.get(level, {})

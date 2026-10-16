@@ -3,7 +3,7 @@
   "title": "Ratchet & Clank (PAL)",
   "game": "rac1",
   "serial": "SCES_509.16",
-  "source": "games/rac1/pal",
+  "source": "games/rac1",
   "frame_rate": 50,
   "entry": "func_0012DB18",
   "sources": [

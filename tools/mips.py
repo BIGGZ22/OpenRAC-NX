@@ -3,7 +3,7 @@ R5900 code helpers shared by OpenRAC's tools: finding function boundaries in a
 block of code, and fingerprints that say when two functions are the same code
 at different addresses. Standard library only.
 
-Lifted from games/rac1/pal/tools/overlays.py (rac1-decomp, while it was MIT), where the
+Lifted from games/rac1/tools/overlays.py (rac1-decomp, while it was MIT), where the
 same rules pair 99.7% of the US build's code with the PAL build's. Nothing
 here knows about one game.
 """

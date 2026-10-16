@@ -5,7 +5,7 @@ together. The original repositories keep the full history of who wrote what
 ([docs/SOURCES.md](docs/SOURCES.md)). Names below are as they appear in each
 project's commits up to the sync of 2026-10-07, most commits first.
 
-## Ratchet & Clank, PAL: rac1-decomp (`games/rac1/pal`)
+## Ratchet & Clank, PAL: rac1-decomp (`games/rac1`)
 
 - Kryštof "Lynder063" Malinda: creator and maintainer (commits as Lynder063,
   lynderjekokot and Kryštof Malinda)

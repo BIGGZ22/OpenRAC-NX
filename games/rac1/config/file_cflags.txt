@@ -1,0 +1,18 @@
+# Extra compiler flags for whole source files: one file per line, its path
+# from the repository root, then the flags. GCC 2.95 takes options per
+# translation unit, so this is the only granularity a flag has
+# (docs/BUILD_FIDELITY.md, "Flags"). Makefile.sn and tools/try_func.py read it
+# through tools/file_cflags.py.
+#
+#   src/path/file.c  -flag ...
+
+src/game/movie/disp.c                        -mno-split-addresses
+src/overlays/l15_quartu/vendor_002F9FF8.c    -fno-force-mem
+src/overlays/l16_kalebo3/vendor_002A50F0.c   -fno-sched-interblock
+src/overlays/l18_veldin2/vendor_002FAEF8.c   -mno-split-addresses
+src/overlays/shared/camera_001ED6D8.c        -fno-force-mem
+src/overlays/shared/vendor_002E9D78.c        -fno-schedule-insns
+# func_L00_00207220 (voice-slot pruner) needs it; the file's other functions build the same either way
+src/overlays/shared/help_00203E98.c    -fno-sched-interblock
+src/overlays/shared/hud_00235960.c -fno-sched-interblock
+src/overlays/l12_hoven/vendor_002EDAA0.c -fno-sched-interblock

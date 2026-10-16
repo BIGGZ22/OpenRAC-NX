@@ -30,7 +30,7 @@ OpenRAC/
 
 ## The rules that keep it organised
 
-**A game version is a self-contained project.** `games/<game>/<version>/`
+**A game version is a self-contained project.** `games/<game>/<version>/` (or the `dir` its `game.json` entry names: rac1 is being merged into one tree at `games/rac1/`, the PAL tree, with NTSC-U built from it; see games/rac1/VERSIONS.md)
 has its own README, license, build, tools and docs, and you work on it from
 inside that directory: its paths are relative to it, and its build never
 reaches into another game. Its own docs are the authority on how a match is

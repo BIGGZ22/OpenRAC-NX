@@ -9,6 +9,7 @@
     "ntsc": {
       "region": "NTSC-U (North America)",
       "serial": "SCUS_972.68",
+      "bytematch": "OpenRAC/rac2-gc-decomp",
       "disc": {
         "file": "SCUS_972.68.iso",
         "volume": "RATCHETANDCLANK2",

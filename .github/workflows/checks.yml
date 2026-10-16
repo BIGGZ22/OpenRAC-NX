@@ -36,7 +36,7 @@ jobs:
         run: python tools/shared.py check
 
       - name: rac1/pal progress report is current with its source
-        working-directory: games/rac1/pal
+        working-directory: games/rac1
         run: python tools/gen_progress_report.py --check
 
       - name: rac4 progress report is current with its source
@@ -99,7 +99,7 @@ jobs:
 
   # The native port (port/): hostgen's tests, then the whole port built with
   # Clang (SDL3 fetched by CMake) and its tests, the OpenGL ones on Mesa's
-  # software renderer. The rac1 program is built from games/rac1/pal's C.
+  # software renderer. The rac1 program is built from games/rac1's C.
   port:
     runs-on: ubuntu-latest
     steps:

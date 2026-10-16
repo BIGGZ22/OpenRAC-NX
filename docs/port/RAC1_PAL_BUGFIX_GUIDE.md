@@ -13,7 +13,7 @@ counts as a fix and how to commit. Written 2026-10-12.
 | Piece | Where | What it is |
 |---|---|---|
 | The decompilation | sibling checkout `../rac1-decomp` (branch `main`) | Matching C in `src/`, assembly for the rest, and C for the port only in `nonmatching/` |
-| The in-tree copy | `games/rac1/pal/` | A copy of the decompilation synced from the sibling. **This machine's build does not read it** |
+| The in-tree copy | `games/rac1/` | A copy of the decompilation synced from the sibling. **This machine's build does not read it** |
 | hostgen | `port/tools/hostgen/` | Reads the decompilation's C with Clang (`--target=mipsel-linux-gnu`) and writes host C in which a game pointer is a `gaddr` |
 | The port's own C | `port/game/rac1-pal/hand/` (game functions, translated by hostgen) and `port/game/rac1-pal/host/` (host C, compiled as it is) | Functions the decompilation has no usable C for, and the console's side of things |
 | The runtime and frontend | `port/runtime/`, `port/game/common/`, `port/platform/`, `port/viewer/`, `port/renderer/` | Guest memory, the window, input, sound output, drawing |
@@ -22,7 +22,7 @@ counts as a fix and how to commit. Written 2026-10-12.
 Which decompilation a build reads is `OPENRAC_RAC1_PAL_SOURCE` in
 `port/build/release/CMakeCache.txt`. Here it is the sibling `rac1-decomp`.
 A fix to decompilation C therefore goes into `../rac1-decomp` first, and the
-same change into `games/rac1/pal/` so the two do not drift; commit each in
+same change into `games/rac1/` so the two do not drift; commit each in
 its own repository with the same message.
 
 Where a function's C comes from, later entries winning:
@@ -55,7 +55,7 @@ executable. Close the game (and do not use the launcher's Rebuild at the
 same time) before building. To force hostgen to run again, delete
 `port/build/release/games/rac1-pal/gen/hostgen.stamp`.
 
-Run level 0 (Veldin) directly, from `games/rac1/pal`:
+Run level 0 (Veldin) directly, from `games/rac1`:
 
 ```
 OPENRAC_DIRECT=1 OPENRAC_PRESS=100:4000:5 \
