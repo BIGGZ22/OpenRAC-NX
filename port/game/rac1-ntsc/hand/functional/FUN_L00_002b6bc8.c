@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/shared/func_L00_002B7EC0.c (games/rac1) through the version
+/* Carried from the PAL decompilation's src/overlays/shared/vendor_002B33E8.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
@@ -12,20 +12,7 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* NON_MATCHING FUN_L00_002b6bc8 -- src/overlays/shared/vendor_002B33E8.c
- * Best so far: BYTES 47/840 (94.4% of the bytes match), checked 2026-10-09.
- * Not built into anything: the retail assembly stays in the source file
- * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
- * What the last attempts found:
- *   Left: in the second `dist < r` block retail rebuilds D_0013E533+0xE1D with its own lui/addiu after the func_L0
- *   call (base + 0x98 read through a second base register), ours shares one saved base; and the third loop keeps
- *   the full address (lui+addiu) in a saved register across the loop where ours hoists only the lui. p2.c (separat
- *   bases) folded the 0x80/0x84 offsets into the symbol instead (200 bytes differ). Unblock: a source form that gi
- *   a pointer base in block 2 that is not CSE'd with the 0x98 read.
- *   Round q28: best.c compiled only as int func_L00_002B7EC0_i(char *, float) __asm__("FUN_L00_002b6bc8") (the ca
- *   hq13/n04: p12.c is the closest (size 840 = retail, BYTES 47/840; p9-p15, 1 run unused). best.c did not compile
- *   Left: only the saved-register order of c/&q/d (retail: g=s1, c=s2, d=s3, &q=s4 = `addiu $s4,$sp,0x10` placed i
- */
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
 extern int func_00213260(int);
 extern unsigned char *func_L00_0025C338(void *);
 extern float func_001F9B80(void *, void *);
@@ -37,19 +24,18 @@ extern void func_L00_00259BC8(void *, int, int, void *, void *, float);
 extern int func_L00_00257B90(int, int);
 extern int func_001F9688(int);
 extern char D_0013E533[];
-extern char D_0013E633_b[] __asm__("D_0013E533");
 extern char *D_L00_001ABA00[];
 extern short D_L00_001B07B0[];
 extern int D_L00_0015FFD8 MACRO_ADDR;
 typedef struct { float x, y, z, w; } __attribute__((aligned(16))) Vx_c2b6bc8;
 
 // Finds mobys near a position that face it within a cone, claims them for this moby and returns how many.
-int func_L00_002B7EC0_i(char *m, float r) __asm__("FUN_L00_002b6bc8");
-int func_L00_002B7EC0_i(char *m, float r) {
+int func_L00_002B7EC0_r(char *m, float r) __asm__("FUN_L00_002b6bc8");
+
+
+int func_L00_002B7EC0_r(char *m, float r) {
     int count = 0;
-    int *pp;
     int *d;
-    char **pe;
     char *e;
     Vx_c2b6bc8 pos;
     Vx_c2b6bc8 q;
@@ -63,7 +49,7 @@ int func_L00_002B7EC0_i(char *m, float r) {
     n = d[5];
     lim = func_00213260(n > 0 ? n : 1);
     d[5] = 0;
-    for (pe = D_L00_001ABA00; (e = *pe) != 0; pe++) {
+    for (i = 0; (e = D_L00_001ABA00[i]) != 0; i++) {
         c = func_L00_0025C338(e);
         if (c) {
             dist = func_001F9B80(&pos, e + 0x10);
@@ -84,13 +70,14 @@ int func_L00_002B7EC0_i(char *m, float r) {
             }
             if (dist < r) {
                 float f1;
-                char *g2;
                 char *gb = D_0013E533 + 0xE1D;
                 f1 = func_L00_001FF8B0(*(float *)(e + 0x10) - *(float *)(gb + 0x80), *(float *)(e + 0x14) - *(float *)(gb + 0x84));
-                g2 = D_0013E633_b + 0xE1D;
-                if (func_001FA688(*(float *)(g2 + 0x98), f1) < 0.9599311f) {
+                if (func_001FA688(*(float *)(gb + 0x98), f1) < 0.9599311f) {
                     char *h = *(char **)(c + 0x18);
-                    if (h == 0 || dist < func_001F9B80(h + 0x10, e + 0x10)) {
+                    if (h == 0) {
+                        *(char **)(c + 0x18) = m;
+                        count++;
+                    } else if (dist < func_001F9B80(h + 0x10, e + 0x10)) {
                         *(char **)(c + 0x18) = m;
                         count++;
                     }

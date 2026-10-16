@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/game/func_L00_0023DB30.c (games/rac1) through the version
+/* Carried from the PAL decompilation's src/overlays/shared/hud_00235960.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
@@ -12,43 +12,37 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* What the PAL file this was written in declares before it. */
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
 extern int D_0015ED84 MACRO_ADDR;
 extern char D_0013D407[];
-extern int D_0014171B_i[] __asm__("D_0014161B");
-
-/* Veldin level code: vendor stock-level table setup (retail FUN_L00_0023d198, 0x23C bytes).
- * With the level number below 19 it fills the id list at D_0015EDD0 from the table D_L00_001C3E98
- * (ids in the low six bits, 0xFF ends the list), dropping ids the table lacks; otherwise it fills two
- * flag arrays and the 8-word record at D_0014161B + 0x885. Ends with func_L00_0023D3D8 on the level. */
-extern unsigned char D_0013D4C2[];
-extern char D_0013D4E3[];
-extern int D_L00_001C3E98[];
+/* NON_MATCHING FUN_L00_0023d198 -- src/overlays/shared/hud_00235960.c
+ * Best so far: BYTES 36/572 (93.7% of the bytes match), checked 2026-10-09.
+ * Not built into anything: the retail assembly stays in the source file
+ * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
+ * What the last attempts found:
+ *   FUN_L00_0023d198: vendor stock init. If D_0015ED84 >= 19 it fills two 0x25-byte flag arrays with 1, sets seve
+ *   Best candidate p7.c: schedule identical to retail (source order bytes, then ints 4..0x18, then the 0x1C store 
+ *   Would unblock: making the int-constant pseudos rank before the byte-constant pseudos without changing the sche
+ */
 extern unsigned char D_0015EDD0[] MACRO_ADDR;
-void func_L00_00260860(int, int);
-void func_L00_0023D3D8(int);
+extern int D_L00_001C3E98[];
+extern void func_L00_0023D3D8(int idx);
+extern unsigned char D_0013D4E3[] NOT_SDA;
+extern unsigned char D_0013D4C2[] NOT_SDA;
+extern unsigned char D_0014161B[] NOT_SDA;
+extern void func_L00_00260860(int, int);
 
+
+
+/* Initialise the vendor stock list: fixed defaults once the level is at least 19, else prune unknown entries. */
 void FUN_L00_0023d198(void) {
-    int lvl = D_0015ED84;
-    int i;
-
-    if (lvl >= 0x13) {
-        char *b7 = D_0013D407 + 0xB9;
-        char *b6 = D_0013D4E3 + 5;
-        int *s = (int *)((char *)D_0014171B_i + 0x885);
-
-        for (i = 0; i < 0x25; i++) {
-            b7[i] = 1;
-            b6[i] = 1;
+    int i, j, v, k;
+    unsigned char c;
+    if (D_0015ED84 >= 0x13) {
+        for (k = 0; k < 0x25; k++) {
+            (D_0013D407 + 0xB9)[k] = 1;
+            (D_0013D4E3 + 5)[k] = 1;
         }
-        s[0] = 0xF;
-        s[1] = 0xC;
-        s[2] = 0xD;
-        s[3] = 0xB;
-        s[4] = 0x11;
-        s[5] = 0xA;
-        s[6] = 0x10;
-        s[7] = 0x13;
         D_0015EDD0[0] = 0x4A;
         D_0015EDD0[1] = 0x50;
         D_0015EDD0[2] = 0x4F;
@@ -61,40 +55,31 @@ void FUN_L00_0023d198(void) {
         D_0015EDD0[9] = 0x59;
         D_0015EDD0[10] = 0x58;
         D_0015EDD0[11] = 0x53;
+        *(int *)(D_0014161B + 0x885) = 0xF;
+        *(int *)(D_0014161B + 0x889) = 0xC;
+        *(int *)(D_0014161B + 0x88D) = 0xD;
+        *(int *)(D_0014161B + 0x891) = 0xB;
+        *(int *)(D_0014161B + 0x895) = 0x11;
+        *(int *)(D_0014161B + 0x899) = 0xA;
+        *(int *)(D_0014161B + 0x89D) = 0x10;
+        *(int *)(D_0014161B + 0x8A1) = 0x13;
     } else {
-        int *t = D_L00_001C3E98;
-
         if (D_0013D4C2[8] == 0) {
             func_L00_00260860(0xA, 1);
             D_0015EDD0[0] = 0x4A;
-            *(int *)((char *)D_0014171B_i + 0x45) = 0xA;
+            *(int *)(D_0014161B + 0x45) = 0xA;
         }
-        i = 0;
-        while (i < 12) {
-            int v = D_0015EDD0[i];
-            int v4;
-            int k;
-
-            if (v == 0xFF) {
-                i++;
-                continue;
+        for (i = 0; i < 12; i++) {
+            c = D_0015EDD0[i];
+            if (c == 0xFF) continue;
+            v = c & 0x3F;
+            if (v == 10) continue;
+            for (j = 0; j < 19; j++) {
+                if (D_L00_001C3E98[j] == v) break;
             }
-            v4 = v & 0x3F;
-            if (v4 == 0xA) {
-                i++;
-                continue;
-            }
-            if (t[0] == v4) {
-                k = 0;
-            } else {
-                for (k = 1; k < 0x13; k++) {
-                    if (t[k] == v4)
-                        break;
-                }
-            }
-            if (k == 0x13 || v4 == 0)
+            if (j == 19 || v == 0) {
                 D_0015EDD0[i] = 0xFF;
-            i++;
+            }
         }
         func_L00_0023D3D8(D_0015ED84);
     }

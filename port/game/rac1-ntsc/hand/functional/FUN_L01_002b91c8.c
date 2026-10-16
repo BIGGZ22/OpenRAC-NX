@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/shared/func_L01_002BA380.c (games/rac1) through the version
+/* Carried from the PAL decompilation's src/overlays/shared/vendor_002B90A8.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
@@ -12,193 +12,165 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* NON_MATCHING FUN_L01_002b91c8 -- src/overlays/shared/vendor_002B90A8.c
- * Best so far: SIZE ours 1284 / retail 1272, checked 2026-10-09.
- * Not built into anything: the retail assembly stays in the source file
- * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
- * What the last attempts found:
- *   Stopped at budget (10 of 10). Ripple quad-builder: 4-vertex stack quad, three calls per vertex, per-bit tile e
- *   Remaining differences: retail keeps the next-entry pointer (p+0x1190) in a register it spills to nothing, whil
- */
-extern float D_L01_001CAD00[];
-extern char D_L01_00167240[];
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
 extern short D_L01_00161220;
+extern f32 D_L01_001CAD00[];
+extern void func_001F9A28(void *, void *, void *);
+extern void func_001F9D20(void *, void *, void *);
+extern u32 func_001F9958(void *);
+struct DmaTag_c2b91c8 {
+    u32 tag;
+    u32 addr;
+    u32 vif0;
+    u32 vif1;
+};
+union PacketCursor_c2b91c8 {
+    struct DmaTag_c2b91c8 *tag;
+    struct GifTag *gif;
+    s32 *words;
+    u8 *bytes;
+    s32 addr;
+};
+extern union PacketCursor_c2b91c8 D_L01_001611C0 MACRO_ADDR;
+extern void func_001F9A68(void *, void *, float);
+extern char D_L01_00167240[];
+void func_L01_002B8C08(f32 *pos);
+void func_L01_002B8CB0(f32 *pos, s32 index, s32 mode);
 extern short D_L01_00161228;
 extern short D_L01_0016122C;
 extern short D_L01_00161230;
 extern short D_L01_00161234;
-extern char *D_L01_001611C0 MACRO_ADDR;
-extern void func_L01_002B8F98(char *a, int b);
-extern void func_L01_00261DF8(char *a);
-extern void func_L01_002B8CB0(char *a, int b, int c);
-extern void func_001F9A28(void *, void *, void *);
-extern void func_001F9A68(void *, void *, float);
-extern void func_001F9D20(void *, void *, void *);
-extern int func_001F9958(float *);
-extern void func_L01_00261C10(char *a, char *b);
-extern void func_L01_002B8C08(float *pos);
-extern void func_L01_002B80D0(float *m);
-extern int func_001F44B8(int);
+void func_L01_002B8F98(void);
+extern void func_L01_00262BC0_BA380(void *, void *) __asm__("func_L01_00261C10");
+extern void func_L01_00261DF8(f32 *);
+extern void func_L01_002B80D0(f32 *);
+extern u64 func_001F44B8(s32);
 
-// Draws the active ripple patches: transforms each quad, emits its tiles to the GS packet buffer.
-void FUN_L01_002b91c8(char *base, int n) {
-    char *p;
-    char *nx;
-    int i;
-    int k;
-    unsigned int id21;
-    unsigned int id23;
-    float quad[16];
-    float oa[4];
-    float ob[4];
-    char *v;
-    char *tex;
-    int f19;
-    char *g;
-    int j;
-    int cnt;
-    char *a;
-    float fx, fy, fz, d2, d3, x0, x1, y0, y1;
-    int ra, rb;
 
-    func_L01_002B8F98(base, n);
-    p = base;
-    for (i = 0; i < n; i++, p = nx) {
-        nx = p + 0x1190;
-        if (*(unsigned short *)(p + 0x1E) != 0) {
-            tex = D_L01_00167240;
-            id21 = 0;
-            id23 = 0;
-            fx = *(float *)p;
-            d2 = D_L01_001CAD00[2];
-            d3 = D_L01_001CAD00[3];
-            fy = *(float *)(p + 4);
-            fz = *(float *)(p + 8);
-            x0 = fx + d2;
-            x1 = fx - d2;
-            y0 = fy + d3;
-            y1 = fy - d3;
-            quad[0] = x0;
-            quad[1] = y0;
-            quad[5] = y0;
-            quad[8] = x0;
-            quad[12] = x1;
-            quad[13] = y1;
-            quad[14] = fz;
-            quad[2] = fz;
-            quad[3] = 1.0f;
-            quad[4] = x1;
-            quad[6] = fz;
-            quad[7] = 1.0f;
-            quad[9] = y1;
-            quad[10] = fz;
-            quad[11] = 1.0f;
-            quad[15] = 1.0f;
-            v = (char *)quad;
-            k = 3;
-            do {
-                func_001F9A28(oa, v, tex);
-                v += 0x10;
-                k--;
-                func_001F9A68(ob, oa, 1024.0f);
-                func_001F9A68(oa, oa, 1024.0f);
-                func_001F9D20(ob, ob, tex - 0x80);
-                func_001F9D20(oa, oa, tex - 0x40);
-                ra = func_001F9958(ob);
-                id23 = (id23 << 8) | ra;
-                rb = func_001F9958(oa);
-                id21 = (id21 << 8) | rb;
-            } while (k >= 0);
-            if (!(((id21 & 0x1010101) == 0x1010101) || ((id21 & 0x2020202) == 0x2020202) ||
-                  ((id21 & 0x4040404) == 0x4040404) || ((id21 & 0x8080808) == 0x8080808) ||
-                  ((id21 & 0x20202020) == 0x20202020))) {
-                func_L01_00261C10((char *)0x70000000, p + (*(int *)&D_L01_00161220 * 0x5C0 + 0x50));
-                func_L01_00261DF8(p);
-                func_L01_002B8C08((float *)p);
-                func_L01_002B80D0((float *)p);
-                if (*(int *)(p + 0x44) & 1) {
-                    a = (char *)0x70002008;
-                    j = 0x10;
-                    do {
-                        j--;
-                        *(float *)a = *(float *)(p + 8);
-                        a += 0xC;
-                    } while (j >= 0);
-                }
-                if (*(int *)(p + 0x44) & 2) {
-                    a = (char *)0x700020C8;
-                    j = 0x10;
-                    do {
-                        j--;
-                        *(float *)a = *(float *)(p + 8);
-                        a += 0xCC;
-                    } while (j >= 0);
-                }
-                if (*(int *)(p + 0x44) & 4) {
-                    a = (char *)0x70002CC8;
-                    j = 0x10;
-                    do {
-                        j--;
-                        *(float *)a = *(float *)(p + 8);
-                        a += 0xC;
-                    } while (j >= 0);
-                }
-                if (*(int *)(p + 0x44) & 8) {
-                    a = (char *)0x70002008;
-                    j = 0x10;
-                    do {
-                        j--;
-                        *(float *)a = *(float *)(p + 8);
-                        a += 0xCC;
-                    } while (j >= 0);
-                }
-                f19 = (id23 & 0x2F2F2F2F) != 0;
-                if (!f19) {
-                    f19 = 2;
-                    if ((id21 & 0x2F2F2F2F) == 0) {
-                        f19 = 0;
-                    }
-                }
-                cnt = *(unsigned short *)(p + 0x1E);
-                if (!(*(int *)(p + 0x14) == *(int *)&D_L01_00161228 &&
-                      *(int *)(p + 0x18) == *(int *)&D_L01_0016122C &&
-                      *(unsigned char *)(p + 0x1C) == *(int *)&D_L01_00161230 &&
-                      *(unsigned char *)(p + 0x1D) == *(int *)&D_L01_00161234)) {
-                    *(int *)D_L01_001611C0 = 0x10000005;
-                    *(int *)(D_L01_001611C0 + 4) = 0;
-                    *(int *)(D_L01_001611C0 + 8) = 0x11000000;
-                    *(int *)(D_L01_001611C0 + 0xC) = 0x50000005;
-                    g = D_L01_001611C0;
-                    D_L01_001611C0 = g + 0x10;
-                    *(u64 *)(g + 0x10) = ((u64)0x8000 << 47) | 0x8001;
-                    *(u64 *)(g + 0x18) = 0xEEEE;
-                    *(u64 *)(g + 0x20) = ((u64)*(unsigned char *)(p + 0x1D) << 32) | 0x64;
-                    *(u64 *)(g + 0x28) = 0x42;
-                    *(u64 *)(g + 0x30) = ((u64)*(unsigned char *)(p + 0x1C) << 32) | 0x64;
-                    *(u64 *)(g + 0x38) = 0x43;
-                    *(u64 *)(g + 0x40) = (u64)func_001F44B8(*(int *)(p + 0x18));
-                    *(u64 *)(g + 0x48) = 6;
-                    *(u64 *)(g + 0x50) = (u64)func_001F44B8(*(int *)(p + 0x14));
-                    *(u64 *)(g + 0x58) = 7;
-                    g += 0x60;
-                    D_L01_001611C0 = g;
-                    *(int *)&D_L01_00161228 = *(int *)(p + 0x14);
-                    *(int *)&D_L01_0016122C = *(int *)(p + 0x18);
-                    *(int *)&D_L01_00161230 = *(unsigned char *)(p + 0x1C);
-                    *(int *)&D_L01_00161234 = *(unsigned char *)(p + 0x1D);
-                }
-                for (j = 0; j < 16; j++) {
-                    if (cnt & 1) {
-                        func_L01_002B8CB0(p, j, f19);
-                    }
-                    cnt = cnt >> 1;
-                }
-            }
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b8c08.c, FUN_L01_002b91c8. */
+void FUN_L01_002b91c8(f32 *pos, s32 count) {
+    f32 corners[4][4];
+    f32 near_clip[4];
+    f32 far_clip[4];
+    f32 x_offset, y_offset, x_end, y_end, z;
+    u32 near_bits, far_bits;
+    s32 mask;
+    s32 i, j, mode;
+    s32 height_index, index;
+    f32 *height;
+    u32 *packet;
+    u64 *data;
+
+    func_L01_002B8F98();
+    i = 0;
+    if (count > 0) do {
+        f32 *next_pos = pos + 0x464;
+        u16 active = *(u16 *)((u8 *)pos + 0x1e);
+        if (active == 0) goto next_entity;
+        x_offset = pos[0] + D_L01_001CAD00[2];
+        x_end = pos[0] - D_L01_001CAD00[2];
+        corners[0][0] = x_offset;
+        y_offset = pos[1] + D_L01_001CAD00[3];
+        y_end = pos[1] - D_L01_001CAD00[3];
+        corners[0][1] = y_offset;
+        z = pos[2];
+        corners[0][2] = z;
+        corners[0][3] = 1.0f;
+        corners[1][0] = x_end;
+        corners[1][1] = y_offset;
+        corners[1][2] = z;
+        corners[1][3] = 1.0f;
+        corners[2][0] = x_offset;
+        corners[2][1] = y_end;
+        corners[2][2] = z;
+        corners[2][3] = 1.0f;
+        corners[3][0] = x_end;
+        corners[3][1] = y_end;
+        corners[3][2] = z;
+        corners[3][3] = 1.0f;
+        near_bits = 0;
+        far_bits = 0;
+        for (j = 0; j < 4; j++) {
+            func_001F9A28(near_clip, corners[j], D_L01_00167240);
+            func_001F9A68(far_clip, near_clip, 1024.0f);
+            func_001F9A68(near_clip, near_clip, 1024.0f);
+            func_001F9D20(far_clip, far_clip, D_L01_00167240 - 0x80);
+            func_001F9D20(near_clip, near_clip, D_L01_00167240 - 0x40);
+            far_bits = (far_bits << 8) | func_001F9958(far_clip);
+            near_bits = (near_bits << 8) | func_001F9958(near_clip);
         }
-    }
-    *(int *)D_L01_001611C0 = 0x10000000;
-    *(int *)(D_L01_001611C0 + 4) = 0;
-    *(int *)(D_L01_001611C0 + 8) = 0x13000000;
-    *(int *)(D_L01_001611C0 + 0xC) = 0;
-    D_L01_001611C0 = D_L01_001611C0 + 0x10;
+        if ((near_bits & 0x01010101) == 0x01010101) goto next_entity;
+        if ((near_bits & 0x02020202) == 0x02020202) goto next_entity;
+        if ((near_bits & 0x04040404) == 0x04040404) goto next_entity;
+        if ((near_bits & 0x08080808) == 0x08080808) goto next_entity;
+        if ((near_bits & 0x20202020) == 0x20202020) goto next_entity;
+
+        func_L01_00262BC0_BA380((void *)0x70000000, (u8 *)pos + ((*(s32 *)&D_L01_00161220) * 0x5c0 + 0x50));
+        func_L01_00261DF8(pos);
+        func_L01_002B8C08(pos);
+        func_L01_002B80D0(pos);
+        if (*(u32 *)(pos + 0x11) & 1) {
+            height = (f32 *)0x70002008;
+            for (height_index = 0x10; height_index >= 0; height_index--, height += 3) *height = pos[2];
+        }
+        if (*(u32 *)(pos + 0x11) & 2) {
+            height = (f32 *)0x700020c8;
+            for (height_index = 0x10; height_index >= 0; height_index--, height += 0x33) *height = pos[2];
+        }
+        if (*(u32 *)(pos + 0x11) & 4) {
+            height = (f32 *)0x70002cc8;
+            for (height_index = 0x10; height_index >= 0; height_index--, height += 3) *height = pos[2];
+        }
+        if (*(u32 *)(pos + 0x11) & 8) {
+            height = (f32 *)0x70002008;
+            for (height_index = 0x10; height_index >= 0; height_index--, height += 0x33) *height = pos[2];
+        }
+        mode = (far_bits & 0x2f2f2f2f) != 0;
+        if (!mode) {
+            mode = 2;
+            if (!(near_bits & 0x2f2f2f2f)) mode = 0;
+        }
+        mask = *(u16 *)((u8 *)pos + 0x1e);
+        if (*(u32 *)(pos + 5) != (*(u32 *)&D_L01_00161228) || *(u32 *)(pos + 6) != (*(u32 *)&D_L01_0016122C) ||
+            *(u8 *)(pos + 7) != (*(u32 *)&D_L01_00161230) || *(u8 *)((u8 *)pos + 0x1d) != (*(u32 *)&D_L01_00161234)) {
+            D_L01_001611C0.words[0] = 0x10000005;
+            D_L01_001611C0.words[1] = 0;
+            D_L01_001611C0.words[2] = 0x11000000;
+            D_L01_001611C0.words[3] = 0x50000005;
+            packet = D_L01_001611C0.words;
+            D_L01_001611C0.words += 4;
+            data = (u64 *)(packet + 4);
+            data[0] = 0x4000000000008001ULL;
+            data[1] = 0xeeee;
+            data[2] = ((u64)*(u8 *)((u8 *)pos + 0x1d) << 32) | 100;
+            data[3] = 0x42;
+            data[4] = ((u64)*(u8 *)(pos + 7) << 32) | 100;
+            data[5] = 0x43;
+            data[6] = func_001F44B8(*(s32 *)(pos + 6));
+            data[7] = 6;
+            data[8] = func_001F44B8(*(s32 *)(pos + 5));
+            data[9] = 7;
+            D_L01_001611C0.words = packet + 0x18;
+            {
+                u32 texture_id = *(u32 *)(pos + 5);
+                u32 second_texture_id = *(u32 *)(pos + 6);
+                (*(u32 *)&D_L01_00161228) = texture_id;
+                (*(u32 *)&D_L01_0016122C) = second_texture_id;
+            }
+            (*(u32 *)&D_L01_00161230) = *(u8 *)(pos + 7);
+            (*(u32 *)&D_L01_00161234) = *(u8 *)((u8 *)pos + 0x1d);
+        }
+        for (index = 0; index < 16; index++, mask = (s32)mask >> 1) {
+            if (mask & 1) func_L01_002B8CB0(pos, index, mode);
+        }
+next_entity:
+        i++;
+        pos = next_pos;
+    } while (i < count);
+    D_L01_001611C0.words[0] = 0x10000000;
+    D_L01_001611C0.words[1] = 0;
+    D_L01_001611C0.words[2] = 0x13000000;
+    D_L01_001611C0.words[3] = 0;
+    D_L01_001611C0.words += 4;
 }

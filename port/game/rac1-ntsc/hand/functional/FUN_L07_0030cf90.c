@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/functional/func_L07_0030E370.c (games/rac1) through the version
+/* Carried from the PAL decompilation's src/overlays/l07_umbris/vendor_002CE470.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
@@ -12,180 +12,155 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* functional: high. The near miss with its look-alike global fixed (state 2's step rate is the float D_0015ED60, read through $gp, not D_0013ED60) and host-safe aliased declarations; the rest differs from retail only in compiler choices (tail merging of the two identical step-and-move tails, a range test for states 0xFD/0xFE, folded offsets, registers). */
-/* Level 07 (Umbris) update for a moby that shuttles between a home position and a point tied to
- * another moby's state. Its data (moby+0x78) holds the home position (+0x0..+0x8), a rider slot
- * (+0xC), two sound ids (+0xE, +0xF), the index of a watched moby (+0x10), a flag slot in
- * D_L07_00184528 (+0x14), two states of the watched moby (+0x16, +0x18) and a travel distance
- * (+0x1C). A level table at D_0014161B+0xAA35 clears the watched index when its entry is 0xFF.
- * State 0 records the home position; 1 waits for the watched moby to leave state +0x16, plays
- * sound +0xE; 2 steps along its local y (rotated by the matrix at +0xC0; direction flipped for
- * classes 0x3F5 and 0x429) by D_0015ED60*0.01 per frame until it is farther than +0x1C from home
- * (sound +0xF, flag = 1, state 3), or plays +0xE and goes to 4 when the watched moby reaches
- * state +0x18; 3 waits for that state; 4 steps back and, once home, snaps there, releases the
- * rider (func_L00_0028D918) if it rides this moby, plays sound +0xF, clears the flag, state 1.
- * The step vectors are 128-bit values as in retail (por/sq/lq); only their y float is set. */
-extern int func_0022ED80_30E370(int, int, int) __asm__("func_0022DA68");
-extern float func_001F9D48_30E370(void *, void *) __asm__("func_001F9B80");
-extern void func_001F9EC0_30E370(void *, void *, void *) __asm__("func_001F9CF8");
-extern void func_001F9BD8_30E370(void *, void *, void *) __asm__("func_001F9A10");
-extern void func_L00_0028EBF0_30E370(int) __asm__("func_L00_0028D918");
-extern int D_0015EE84_30E370 __asm__("D_0015ED84") MACRO_ADDR;
-extern char D_0014171B_30E370[] __asm__("D_0014161B");
-extern int D_L07_001845A8_30E370[] __asm__("D_L07_00184528");
-extern char *D_L07_00160058_30E370 __asm__("D_L07_0015FFD8") MACRO_ADDR;
-extern float D_0015EE60_30E370 __asm__("D_0015ED60") MACRO_ADDR;
-extern char D_0013E633_30E370[] __asm__("D_0013E533");
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
+extern float func_001F9B80(void *, void *);
+extern void func_L00_0028D918(int);
+extern int func_0022DA68(int, int, int);
+extern void func_001F9A10(void *, void *, void *);
+extern char D_0013E533[];
+typedef int Q30E370_c30cf90 __attribute__((mode(TI)));
+extern void func_001F9CF8(void *, void *, void *);
+extern int D_0015ED84 MACRO_ADDR;
+extern char D_0014161B[];
+extern int D_L07_00184528[];
+extern char *D_L07_0015FFD8 MACRO_ADDR;
+extern float D_0015ED60 MACRO_ADDR;
+typedef struct {
+    float origin_x;
+    float origin_y;
+    float origin_z;
+    short sound_slot;
+    signed char trigger_sound;
+    signed char arrival_sound;
+    int target_index;
+    short flag_index;
+    short target_state;
+    int target_state_word;
+    float radius;
+} Vars30E370_c30cf90;
 
-typedef int u128_30E370_c30cf90 __attribute__((mode(TI), aligned(16)));
 
-void FUN_L07_0030cf90(char *moby) {
-    char *p = *(char **)(moby + 0x78);
-    float v[4];
-    u128_30E370_c30cf90 t10;
-    u128_30E370_c30cf90 t20;
-    int id;
-    unsigned char s;
-    float d;
 
-    v[0] = *(float *)p;
-    v[1] = *(float *)(p + 4);
-    v[2] = *(float *)(p + 8);
-    v[3] = 0;
+void FUN_L07_0030cf90(unsigned char *moby) {
+    Vars30E370_c30cf90 *vars = *(Vars30E370_c30cf90 **)(moby + 0x78);
+    float origin[4];
+    float rotated[4] __attribute__((aligned(16)));
+    float step[4] __attribute__((aligned(16)));
+    unsigned char *target;
+    short voice;
+    float distance;
+    float step_size;
 
-    if ((unsigned char)moby[0xB0] != 0xFF) {
-        if ((unsigned char)D_0014171B_30E370[(unsigned char)moby[0xB0] + (D_0015EE84_30E370 << 4) + 0xAA35] == 0xFF) {
-            *(int *)(p + 0x10) = -1;
-        }
-    }
+    origin[0] = vars->origin_x;
+    origin[1] = vars->origin_y;
+    origin[2] = vars->origin_z;
+    origin[3] = 0.0f;
+    if (moby[0xB0] != 0xff && ((unsigned char *)(D_0014161B + 0xAA35))[moby[0xB0] + (D_0015ED84 << 4)] == 0xff)
+        vars->target_index = -1;
 
-    switch ((unsigned char)moby[0x20]) {
+    switch (moby[0x20]) {
     case 0:
-        *(float *)p = *(float *)(moby + 0x10);
-        *(float *)(p + 4) = *(float *)(moby + 0x14);
-        *(short *)(p + 0xC) = -1;
-        *(float *)(p + 8) = *(float *)(moby + 0x18);
-        id = *(short *)(p + 0x14);
-        if (id != -1) {
-            D_L07_001845A8_30E370[id] = 0;
-        }
+    {
+        float *pos = (float *)(moby + 0x10);
+        vars->origin_x = pos[0];
+        vars->origin_y = pos[1];
+        vars->origin_z = pos[2];
+        vars->sound_slot = -1;
+        if (vars->flag_index != -1)
+            D_L07_00184528[vars->flag_index] = 0;
         moby[0x20] = 1;
         break;
-
+    }
     case 1:
-        id = *(int *)(p + 0x10);
-        if (id != -1) {
-            if (D_L07_00160058_30E370 + (id << 8) != 0) {
-                s = (unsigned char)(D_L07_00160058_30E370 + (id << 8))[0x20];
-                if (s != 0xFE && s != 0xFD && (int)s != *(short *)(p + 0x16)) {
-                    return;
-                }
-            }
+        if (vars->target_index != -1) {
+            target = (unsigned char *)(D_L07_0015FFD8 + vars->target_index * 0x100);
+            if (target != 0 && target[0x20] != 0xfe && target[0x20] != 0xfd &&
+                target[0x20] != vars->target_state)
+                return;
         }
-        if ((signed char)p[0xE] != -1) {
-            func_0022ED80_30E370((signed char)p[0xE], 0, (int)moby);
-        }
+        if (vars->trigger_sound != -1)
+            func_0022DA68(vars->trigger_sound, 0, (int)moby);
         moby[0x20] = 2;
         break;
-
     case 2:
-        id = *(int *)(p + 0x10);
-        if (id != -1 && D_L07_00160058_30E370 + (id << 8) != 0) {
-            s = (unsigned char)(D_L07_00160058_30E370 + (id << 8))[0x20];
-            if (s != 0xFE && s != 0xFD && (int)s == *(int *)(p + 0x18)) {
-                func_0022ED80_30E370((signed char)p[0xE], 0, (int)moby);
-                moby[0x20] = 4;
-                break;
-            }
+        if (vars->target_index != -1 &&
+            (target = (unsigned char *)(D_L07_0015FFD8 + vars->target_index * 0x100)) != 0 &&
+            target[0x20] != 0xfe && target[0x20] != 0xfd &&
+            target[0x20] == vars->target_state_word) {
+            func_0022DA68(vars->trigger_sound, 0, (int)moby);
+            moby[0x20] = 4;
+            break;
         }
-        d = func_001F9D48_30E370(moby + 0x10, v);
-        if (*(float *)(p + 0x1C) < d) {
-            if ((signed char)p[0xF] != -1) {
-                func_0022ED80_30E370((signed char)p[0xF], 0, (int)moby);
-            }
-            id = *(short *)(p + 0x14);
-            if (id != -1) {
-                D_L07_001845A8_30E370[id] = 1;
-            }
+        distance = func_001F9B80((float *)(moby + 0x10), origin);
+        if (vars->radius < distance) {
+            if (vars->arrival_sound != -1)
+                func_0022DA68(vars->arrival_sound, 0, (int)moby);
+            if (vars->flag_index != -1)
+                D_L07_00184528[vars->flag_index] = 1;
             moby[0x20] = 3;
         } else {
-            /* retail: lwc1 -0x7EA0($gp) = D_0015ED60, the rate state 4 also reads */
-            float k = D_0015EE60_30E370 * 0.01f;
-            t20 = 0;
-            ((float *)&t20)[1] = -k;
-            t10 = t20;
-            if (*(short *)(moby + 0xA6) == 0x3F5 || *(short *)(moby + 0xA6) == 0x429) {
-                ((float *)&t10)[1] = -((float *)&t10)[1];
-            }
-            func_001F9EC0_30E370(&t20, &t10, moby + 0xC0);
-            func_001F9BD8_30E370(moby + 0x10, moby + 0x10, &t20);
+            *(Q30E370_c30cf90 *)step = 0;
+            step[1] = -(D_0015ED60 * 0.01f);
+            *(Q30E370_c30cf90 *)rotated = *(Q30E370_c30cf90 *)step;
+            if (*(short *)(moby + 0xA6) == 0x3f5 || *(short *)(moby + 0xA6) == 0x429)
+                rotated[1] = -rotated[1];
+            func_001F9CF8(step, rotated, moby + 0xC0);
+            func_001F9A10(moby + 0x10, moby + 0x10, step);
+            return;
         }
         break;
-
     case 3:
-        id = *(int *)(p + 0x10);
-        if (id != -1 && D_L07_00160058_30E370 + (id << 8) != 0) {
-            s = (unsigned char)(D_L07_00160058_30E370 + (id << 8))[0x20];
-            if (s != 0xFE && s != 0xFD) {
-                if ((int)s != *(int *)(p + 0x18)) {
+        if (vars->target_index != -1) {
+            target = (unsigned char *)(D_L07_0015FFD8 + vars->target_index * 0x100);
+            if (target != 0 && target[0x20] != 0xfe && target[0x20] != 0xfd) {
+                if (target[0x20] != vars->target_state_word)
                     return;
-                }
-                if ((signed char)p[0xE] != -1) {
-                    func_0022ED80_30E370((signed char)p[0xE], 0, (int)moby);
-                }
+                if (vars->trigger_sound != -1)
+                    func_0022DA68(vars->trigger_sound, 0, (int)moby);
                 moby[0x20] = 4;
             }
         }
         break;
-
     case 4:
-        id = *(int *)(p + 0x10);
-        if (id != -1 && D_L07_00160058_30E370 + (id << 8) != 0) {
-            s = (unsigned char)(D_L07_00160058_30E370 + (id << 8))[0x20];
-            if (s != 0xFE && s != 0xFD && (int)s != *(short *)(p + 0x16)) {
-                d = func_001F9D48_30E370(moby + 0x10, v);
-                if (d <= D_0015EE60_30E370 * 0.01f) {
-                    *(float *)(moby + 0x10) = *(float *)p;
-                    *(float *)(moby + 0x14) = *(float *)(p + 4);
-                    *(int *)(moby + 0x1C) = 0;
-                    *(float *)(moby + 0x18) = *(float *)(p + 8);
-                    id = *(short *)(p + 0xC);
-                    if (id != -1) {
-                        char *t = D_0013E633_30E370 + 0x1D + id * 0x70;
-                        if (*(int *)(t + 0x88) == (int)moby && *(unsigned char *)(t + 0x74) != 0) {
-                            func_L00_0028EBF0_30E370(id);
-                        }
-                    }
-                    *(short *)(p + 0xC) = -1;
-                    if ((signed char)p[0xF] != -1) {
-                        func_0022ED80_30E370((signed char)p[0xF], 0, (int)moby);
-                    }
-                    id = *(short *)(p + 0x14);
-                    if (id != -1) {
-                        D_L07_001845A8_30E370[id] = 0;
-                    }
-                    moby[0x20] = 1;
-                } else {
-                    t20 = 0;
-                    ((float *)&t20)[1] = D_0015EE60_30E370 * 0.01f;
-                    t10 = t20;
-                    if (*(short *)(moby + 0xA6) == 0x3F5 || *(short *)(moby + 0xA6) == 0x429) {
-                        ((float *)&t10)[1] = -((float *)&t10)[1];
-                    }
-                    func_001F9EC0_30E370(&t20, &t10, moby + 0xC0);
-                    func_001F9BD8_30E370(moby + 0x10, moby + 0x10, &t20);
-                }
-                return;
-            }
-            func_0022ED80_30E370((signed char)p[0xE], 0, (int)moby);
+        if (vars->target_index == -1 ||
+            (target = (unsigned char *)(D_L07_0015FFD8 + vars->target_index * 0x100)) == 0 ||
+            target[0x20] == 0xfe || target[0x20] == 0xfd ||
+            target[0x20] == vars->target_state) {
+            func_0022DA68(vars->trigger_sound, 0, (int)moby);
             moby[0x20] = 2;
-        } else {
-            func_0022ED80_30E370((signed char)p[0xE], 0, (int)moby);
-            moby[0x20] = 2;
+            return;
         }
+        distance = func_001F9B80((float *)(moby + 0x10), origin);
+        step_size = D_0015ED60 * 0.01f;
+        if (distance <= step_size) {
+            float *p = (float *)(moby + 0x10);
+            p[0] = vars->origin_x;
+            p[1] = vars->origin_y;
+            p[2] = vars->origin_z;
+            p[3] = 0.0f;
+            voice = vars->sound_slot;
+            if (voice != -1) {
+                unsigned char *slot = (unsigned char *)D_0013E533 + 0x1D + voice * 0x70;
+                if (*(unsigned char **)(slot + 0x88) == moby && slot[0x74] != 0)
+                    func_L00_0028D918(voice);
+            }
+            vars->sound_slot = -1;
+            if (vars->arrival_sound != -1)
+                func_0022DA68(vars->arrival_sound, 0, (int)moby);
+            if (vars->flag_index != -1)
+                D_L07_00184528[vars->flag_index] = 0;
+            moby[0x20] = 1;
+            break;
+        }
+        *(Q30E370_c30cf90 *)step = 0;
+        step[1] = step_size;
+        *(Q30E370_c30cf90 *)rotated = *(Q30E370_c30cf90 *)step;
+        if (*(short *)(moby + 0xA6) == 0x3f5 || *(short *)(moby + 0xA6) == 0x429)
+            rotated[1] = -rotated[1];
+        func_001F9CF8(step, rotated, moby + 0xC0);
+        func_001F9A10(moby + 0x10, moby + 0x10, step);
         break;
-
-    default:
+    case 5:
         break;
     }
 }

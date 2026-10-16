@@ -1,0 +1,153 @@
+/* Carried from the PAL decompilation's nonmatching/functional/func_L06_003089B8.c (games/rac1) through the version
+ * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
+#include "types.h"
+#include "qcopy.h"
+#include "qzero.h"
+#ifndef MACRO_ADDR
+#define MACRO_ADDR
+#endif
+#ifndef NOT_SDA
+#define NOT_SDA
+#endif
+#ifndef SDATA
+#define SDATA(symbol) __asm__(#symbol)
+#endif
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
+/* functional: medium. Draws a spinning 4-quad textured cage plus a fading inner quad around the moby (data at moby+0x78: scale at 0x24, uv scroll at 0x1C, fade at 0x20; both advance 0.01 per call and wrap at 1.0): corners come from the level tables D_L06_001FE8D0/ECB0/ECF8/ED20 rotated by a matrix built from D_L06_00167400+0x158, each quad submitted with func_L00_001FD228. Written from the asm alone (no NTSC draft); the packet layout (pos 0x00, colour 0x40, uv 0x50, tags 0x70) follows its stores. Nothing unchecked. */
+typedef struct {
+    float pos[4][4];
+    int col[4];
+    float uv[8];
+    long tag[4];
+} Pkt_089B8_c307578 __attribute__((aligned(16)));
+extern void func_001FA1F8_089B8(void *, void *) __asm__("func_001FA030");
+extern long func_001F4868_089B8(int) __asm__("func_001F44B8");
+extern void func_001F9EC0_089B8(void *, void *, void *) __asm__("func_001F9CF8");
+extern void func_L00_001FD1D8_089B8(void *, void *, int) __asm__("func_L00_001FD228");
+extern char D_L06_00167500_089B8[] __asm__("D_L06_00167400");
+extern int D_L06_001FED20_089B8[] __asm__("D_L06_001FE9D0");
+extern float D_L06_001FECB0_089B8[] __asm__("D_L06_001FE960");
+extern char D_L06_001FEC20_089B8[] __asm__("D_L06_001FE8D0");
+extern int D_L06_001FECF8_089B8[] __asm__("D_L06_001FE9A8");
+
+
+
+void FUN_L06_00307578(char *o) {
+    Pkt_089B8_c307578 pk;
+    float mat[16] __attribute__((aligned(16)));
+    float axis[4] __attribute__((aligned(16)));
+    float v[4][4] __attribute__((aligned(16)));
+    float w[4][4] __attribute__((aligned(16)));
+    char *data = *(char **)(o + 0x78);
+    float f;
+    int i, k;
+    int idx[4];
+    int *row;
+
+    axis[2] = *(float *)(D_L06_00167500_089B8 + 0x158);
+    axis[0] = 0.0f;
+    axis[1] = 0.0f;
+    func_001FA1F8_089B8(mat, axis);
+    f = *(float *)(data + 0x1C) + 0.01f;
+    *(float *)(data + 0x1C) = f;
+    if (1.0f < f) {
+        *(float *)(data + 0x1C) = f - 1.0f;
+    }
+    pk.tag[3] = 0x4000000044L;
+    pk.tag[2] = 1;
+    pk.tag[0] = 0;
+    pk.tag[1] = func_001F4868_089B8(0x18);
+    for (i = 0; i < 4; i++) {
+        row = D_L06_001FED20_089B8 + i * 4;
+        idx[0] = row[0];
+        idx[1] = row[1];
+        idx[2] = row[2];
+        idx[3] = row[3];
+        func_001F9EC0_089B8(v[0], D_L06_001FEC20_089B8 + idx[0] * 16, mat);
+        func_001F9EC0_089B8(v[1], D_L06_001FEC20_089B8 + idx[1] * 16, mat);
+        func_001F9EC0_089B8(v[2], D_L06_001FEC20_089B8 + idx[2] * 16, mat);
+        func_001F9EC0_089B8(v[3], D_L06_001FEC20_089B8 + idx[3] * 16, mat);
+        pk.pos[0][0] = *(float *)(o + 0x10) + v[0][0] * *(float *)(data + 0x24);
+        pk.pos[0][1] = *(float *)(o + 0x14) + v[0][1] * *(float *)(data + 0x24);
+        pk.pos[0][2] = *(float *)(o + 0x18) + v[0][2];
+        pk.pos[1][0] = *(float *)(o + 0x10) + v[1][0] * *(float *)(data + 0x24);
+        pk.pos[1][1] = *(float *)(o + 0x14) + v[1][1] * *(float *)(data + 0x24);
+        pk.pos[1][2] = *(float *)(o + 0x18) + v[1][2];
+        pk.pos[2][0] = *(float *)(o + 0x10) + v[2][0] * *(float *)(data + 0x24);
+        pk.pos[2][1] = *(float *)(o + 0x14) + v[2][1] * *(float *)(data + 0x24);
+        pk.pos[2][2] = *(float *)(o + 0x18) + v[2][2];
+        pk.pos[3][0] = *(float *)(o + 0x10) + v[3][0] * *(float *)(data + 0x24);
+        pk.pos[3][1] = *(float *)(o + 0x14) + v[3][1] * *(float *)(data + 0x24);
+        pk.pos[3][2] = *(float *)(o + 0x18) + v[3][2];
+        pk.col[0] = D_L06_001FECF8_089B8[idx[0]];
+        pk.uv[0] = D_L06_001FECB0_089B8[idx[0] * 2];
+        pk.uv[1] = D_L06_001FECB0_089B8[idx[0] * 2 + 1] + *(float *)(data + 0x1C);
+        pk.col[1] = D_L06_001FECF8_089B8[idx[1]];
+        pk.uv[2] = D_L06_001FECB0_089B8[idx[1] * 2];
+        pk.uv[3] = D_L06_001FECB0_089B8[idx[1] * 2 + 1] + *(float *)(data + 0x1C);
+        pk.col[2] = D_L06_001FECF8_089B8[idx[2]];
+        pk.uv[4] = D_L06_001FECB0_089B8[idx[2] * 2];
+        pk.uv[5] = D_L06_001FECB0_089B8[idx[2] * 2 + 1] + *(float *)(data + 0x1C);
+        pk.col[3] = D_L06_001FECF8_089B8[idx[3]];
+        pk.uv[6] = D_L06_001FECB0_089B8[idx[3] * 2];
+        pk.uv[7] = D_L06_001FECB0_089B8[idx[3] * 2 + 1] + *(float *)(data + 0x1C);
+        func_L00_001FD1D8_089B8(&pk, 0, 1);
+    }
+    pk.tag[1] = func_001F4868_089B8(0x1B);
+    f = *(float *)(data + 0x20) + 0.01f;
+    *(float *)(data + 0x20) = f;
+    if (1.0f < f) {
+        *(int *)(data + 0x20) = 0;
+    }
+    w[0][0] = 0.0f; w[0][1] = 0.0f; w[0][2] = 0.0f; w[0][3] = 0.0f;
+    w[1][0] = 0.0f; w[1][1] = 0.0f; w[1][2] = 0.0f; w[1][3] = 0.0f;
+    w[2][0] = 0.0f; w[2][1] = 0.0f; w[2][2] = 0.0f; w[2][3] = 0.0f;
+    w[3][0] = 0.0f; w[3][1] = 0.0f; w[3][2] = 0.0f; w[3][3] = 0.0f;
+    w[0][0] = (-*(float *)(data + 0x20) * 1.2f) * *(float *)(data + 0x24);
+    w[0][1] = (-*(float *)(data + 0x20) * 1.2f) * *(float *)(data + 0x24);
+    w[0][2] = *(float *)(data + 0x20) * 1.4f + 1.1f;
+    w[1][0] = (*(float *)(data + 0x20) * 1.2f) * *(float *)(data + 0x24);
+    w[1][1] = (-*(float *)(data + 0x20) * 1.2f) * *(float *)(data + 0x24);
+    w[1][2] = *(float *)(data + 0x20) * 1.4f + 1.1f - 0.2f;
+    w[2][0] = (-*(float *)(data + 0x20) * 1.2f) * *(float *)(data + 0x24);
+    w[2][1] = (*(float *)(data + 0x20) * 1.2f) * *(float *)(data + 0x24);
+    w[2][2] = *(float *)(data + 0x20) * 1.4f + 1.1f;
+    w[3][0] = (*(float *)(data + 0x20) * 1.2f) * *(float *)(data + 0x24);
+    w[3][1] = (*(float *)(data + 0x20) * 1.2f) * *(float *)(data + 0x24);
+    w[3][2] = *(float *)(data + 0x20) * 1.4f + 1.1f - 0.2f;
+    axis[2] = *(float *)(D_L06_00167500_089B8 + 0x158);
+    axis[0] = 0.0f;
+    axis[1] = 0.0f;
+    func_001FA1F8_089B8(mat, axis);
+    func_001F9EC0_089B8(v[0], w[0], mat);
+    func_001F9EC0_089B8(v[1], w[1], mat);
+    func_001F9EC0_089B8(v[2], w[2], mat);
+    func_001F9EC0_089B8(v[3], w[3], mat);
+    pk.pos[0][0] = *(float *)(o + 0x10) + v[0][0];
+    pk.pos[0][1] = *(float *)(o + 0x14) + v[0][1];
+    pk.pos[0][2] = *(float *)(o + 0x18) + v[0][2];
+    pk.pos[1][0] = *(float *)(o + 0x10) + v[1][0];
+    pk.pos[1][1] = *(float *)(o + 0x14) + v[1][1];
+    pk.pos[1][2] = *(float *)(o + 0x18) + v[1][2];
+    pk.pos[2][0] = *(float *)(o + 0x10) + v[2][0];
+    pk.pos[2][1] = *(float *)(o + 0x14) + v[2][1];
+    pk.pos[2][2] = *(float *)(o + 0x18) + v[2][2];
+    pk.pos[3][0] = *(float *)(o + 0x10) + v[3][0];
+    pk.pos[3][1] = *(float *)(o + 0x14) + v[3][1];
+    pk.pos[3][2] = *(float *)(o + 0x18) + v[3][2];
+    i = (int)((1.0f - *(float *)(data + 0x20)) * 128.0f);
+    i = (i << 24) | 0x808080;
+    pk.col[0] = i;
+    pk.col[1] = i;
+    pk.col[2] = i;
+    pk.col[3] = i;
+    pk.uv[0] = 0.0f;
+    pk.uv[1] = 0.0f;
+    pk.uv[2] = 1.0f;
+    pk.uv[3] = 0.0f;
+    pk.uv[4] = 0.0f;
+    pk.uv[5] = 1.0f;
+    pk.uv[6] = 1.0f;
+    pk.uv[7] = 1.0f;
+    func_L00_001FD1D8_089B8(&pk, 0, 1);
+}

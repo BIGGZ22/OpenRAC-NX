@@ -12,6 +12,7 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
 /* FUN_0022e420 -- src/game/space.c (functional C for the port, not a match)
  * The ship's two engine trails in the space scenes (DrawSpaceScene, func_0022F288): each trail is
  * the ring of 32 positions at D_0013E0F0 + 0x200 * trail (the newest at D_0013E030 +0x50, the count
@@ -31,7 +32,6 @@ typedef struct {
     unsigned long long tex1;
     unsigned long long alpha;
 } TrailQuad_22F738_c22e420 __attribute__((aligned(16)));
-
 extern int D_0015F604;
 extern char D_0013E030[];
 extern float D_0013E0F0[64][4];
@@ -46,8 +46,7 @@ extern void func_001F9A28(void *, void *, void *);
 extern void func_001F9AD8(void *, void *, void *);
 extern void func_001F9BF8(void *, void *, float);
 extern void func_001F7D30(void *, void *, int);
-
-static void trail_quad_22F738(TrailQuad_22F738_c22e420 *q, float (*dirs)[4], int age, int k, float *trail, int tint) {
+static void trail_quad_22F738_c22e420(TrailQuad_22F738_c22e420 *q, float (*dirs)[4], int age, int k, float *trail, int tint) {
     int ship = *(short *)(D_0013E030 + 0x26);
     int m;
     for (m = 0; m < 4; m++) {
@@ -60,6 +59,8 @@ static void trail_quad_22F738(TrailQuad_22F738_c22e420 *q, float (*dirs)[4], int
     }
     func_001F7D30(q, 0, 0);
 }
+
+
 
 void FUN_0022e420(int ship) {
     TrailQuad_22F738_c22e420 q;
@@ -105,8 +106,8 @@ void FUN_0022e420(int ship) {
             func_001F9AD8(side[1], across[1], along[0]);
             func_001F9AD8(side[2], across[2], along[1]);
             func_001F9AD8(side[3], across[3], along[1]);
-            trail_quad_22F738(&q, side, i + 1, k, trail, 1);
-            trail_quad_22F738(&q, across, i + 1, k, trail, 0);
+            trail_quad_22F738_c22e420(&q, side, i + 1, k, trail, 1);
+            trail_quad_22F738_c22e420(&q, across, i + 1, k, trail, 0);
         }
     }
 }

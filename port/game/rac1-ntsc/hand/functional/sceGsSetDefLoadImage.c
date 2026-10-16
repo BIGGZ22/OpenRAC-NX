@@ -1,6 +1,5 @@
-/* Carried from the PAL decompilation's nonmatching/core/func_00122630.c (games/rac1) through the version
- * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
- * The two versions' code differs here: func_00122630 (called) was paired by place; read it against NTSC-U before trusting it. */
+/* Carried from the PAL decompilation's src/core/00122630.c (matched C there) (games/rac1) through the version
+ * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
 #include "qzero.h"
@@ -13,80 +12,84 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
 /*
- * Builds a 6-quadword GS image transfer packet at buf: the BITBLTBUF, TRXPOS, TRXREG and
- * TRXDIR registers from seven shorts. arg3 selects a scale of arg6 * arg7 (a shift or
- * 3x shift); a result above 0x7FFF is reported and the function returns 0, otherwise 6.
+ * Privileged/ordering CPU instructions the retail C emitted through the SDK's
+ * own inline helpers. Kept here as the only place for them, like qcopy();
+ * functions call these, never write the asm themselves.
  */
+static __inline__ void CpuSync_cscegssetdefloadimage(void) { __asm__ __volatile__("sync"); }
+extern void func_0011A3C8(void *);
 extern char D_001530B0[];
-extern void func_0011A3C8();
+typedef int u128_li_cscegssetdefloadimage __attribute__((mode(TI)));
+typedef struct {
+    unsigned long NLOOP:15; unsigned long EOP:1; unsigned long pad16:30; unsigned long PRE:1;
+    unsigned long PRIM:11; unsigned long FLG:2; unsigned long NREG:4;
+    unsigned long REGS0:4; unsigned long REGS1:4; unsigned long REGS2:4; unsigned long REGS3:4;
+    unsigned long REGS4:4; unsigned long REGS5:4; unsigned long REGS6:4; unsigned long REGS7:4;
+    unsigned long REGS8:4; unsigned long REGS9:4; unsigned long REGS10:4; unsigned long REGS11:4;
+    unsigned long REGS12:4; unsigned long REGS13:4; unsigned long REGS14:4; unsigned long REGS15:4;
+} LiGifTag_cscegssetdefloadimage __attribute__((aligned(16)));
+typedef struct {
+    LiGifTag_cscegssetdefloadimage giftag0;
+    unsigned long bitbltbuf; long bitbltbufaddr;
+    unsigned long trxpos; long trxposaddr;
+    unsigned long trxreg; long trxregaddr;
+    unsigned long trxdir; long trxdiraddr;
+    LiGifTag_cscegssetdefloadimage giftag1;
+} LiLoadImage_cscegssetdefloadimage __attribute__((aligned(16)));
 
-int sceGsSetDefLoadImage(void *buf, short a1, short a2, short a3, short a4, short a5, short a6, short a7)
+
+
+int sceGsSetDefLoadImage(LiLoadImage_cscegssetdefloadimage *lp, short dbp, short dbw, short dpsm, short x, short y, short w, short h)
 {
-    u64 *q = (u64 *)buf;
-    s64 s1 = a1, s2 = a2, s3 = a3, s4 = a4, s5 = a5, s6 = a6, s7 = a7;
-    int p = (int)a6 * (int)a7;
-    s64 v6 = 0;
-    u64 v3, pat, r4, r5, r6, r9, r10, r11;
+    int size = 0;
 
-    if (s3 >= 0 && s3 < 0x3B) {
-        switch (s3) {
-        case 0: case 48:
-            v6 = p >> 2;
-            break;
-        case 1: case 49:
-            v6 = (int)((unsigned)p * 3u) >> 4;
-            break;
-        case 2: case 10: case 50: case 58:
-            v6 = p >> 3;
-            break;
-        case 19: case 27:
-            v6 = p >> 4;
-            break;
-        case 20: case 36: case 44:
-            v6 = p >> 5;
-            break;
-        default:
-            v6 = 0;
-            break;
-        }
+    switch (dpsm) {
+    case 0x00:
+    case 0x30:
+        size = (w * h) >> 2;
+        break;
+    case 0x01:
+    case 0x31:
+        size = (w * h * 3) >> 4;
+        break;
+    case 0x02:
+    case 0x0A:
+    case 0x32:
+    case 0x3A:
+        size = (w * h) >> 3;
+        break;
+    case 0x13:
+    case 0x1B:
+        size = (w * h) >> 4;
+        break;
+    case 0x14:
+    case 0x24:
+    case 0x2C:
+        size = (w * h) >> 5;
+        break;
     }
-
-    if (v6 > 0x7FFF) {
+    if (size > 0x7FFF) {
         func_0011A3C8(D_001530B0);
         return 0;
     }
-
-    v3 = (u64)v6 & 0x7FFF;
-    q[10] = 0;                 /* sq zero, 0x50 */
-    q[11] = 0;
-    q[0] = 0;                  /* sq zero, 0x00 */
-    q[1] = 0;
-    pat = 0xFFFFFFFFF3FFFFFFULL;
-    pat = (pat << 16) | 0xFFFFULL;
-    pat = (pat << 16) | 0xFFFFULL;
-
-    r4 = ((0 & ~0x7FFFULL) | v3) | 0x8000ULL;
-    r4 &= pat;
-    r4 |= 1ULL << 59;
-    r5 = (0 & ~0x7FFFULL) | 4ULL;
-    r5 &= 0x0FFFFFFFFFFFFFFFULL;
-    r5 |= 1ULL << 60;
-    r11 = (0 & ~0xFULL) | 0xEULL;
-    r6 = ((u64)s1 << 32) | ((u64)s2 << 48) | ((u64)s3 << 56);
-    r10 = (u64)s6 | ((u64)s7 << 32);
-    r9 = ((u64)s4 << 32) | ((u64)s5 << 48);
-
-    q[10] = r4;
-    q[0] = r5;
-    q[1] = r11;
-    q[2] = r6;
-    q[3] = 0x50;
-    q[4] = r9;
-    q[5] = 0x51;
-    q[6] = r10;
-    q[7] = 0x52;
-    q[9] = 0x53;
-    q[8] = 0;
+    *(u128_li_cscegssetdefloadimage *)&lp->giftag0 = (u128_li_cscegssetdefloadimage)0;
+    lp->giftag0.NLOOP = 4;
+    lp->giftag0.NREG = 1;
+    lp->giftag0.REGS0 = 0xE;
+    lp->bitbltbuf = ((unsigned long)dbp << 32) | ((unsigned long)dbw << 48) | ((unsigned long)dpsm << 56);
+    lp->bitbltbufaddr = 0x50;
+    lp->trxpos = ((unsigned long)x << 32) | ((unsigned long)y << 48);
+    lp->trxposaddr = 0x51;
+    lp->trxreg = (unsigned long)w | ((unsigned long)h << 32);
+    lp->trxregaddr = 0x52;
+    lp->trxdir = 0;
+    lp->trxdiraddr = 0x53;
+    *(u128_li_cscegssetdefloadimage *)&lp->giftag1 = (u128_li_cscegssetdefloadimage)0;
+    lp->giftag1.NLOOP = size;
+    lp->giftag1.EOP = 1;
+    lp->giftag1.FLG = 2;
+    CpuSync_cscegssetdefloadimage();
     return 6;
 }

@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/l07_umbris/func_L07_00313298.c (games/rac1) through the version
+/* Carried from the PAL decompilation's src/overlays/l07_umbris/vendor_002CE470.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
@@ -12,6 +12,8 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
+extern float func_001FA6C0(int);
 /* NON_MATCHING FUN_L07_00311eb8 -- src/overlays/l07_umbris/vendor_002CE470.c
  * Best so far: BYTES 38/544 (93.0% of the bytes match), checked 2026-10-09.
  * Not built into anything: the retail assembly stays in the source file
@@ -22,14 +24,14 @@
  *   Note: file declares the function with int pa and unsigned color, so the candidate uses aliases/casts.
  */
 extern int func_L00_0023E5E0(float *, float, float, int);
-extern float func_001FA6C0(int);
 extern char D_L07_00180340[];
 
+
+
 // Sets or updates a dynamic light slot (id at +0x280) with position, color, radius and fade.
-void FUN_L07_00311eb8(float radius, void *moby_, void *obj_, int pa_, void *pos, short b, unsigned int color, int ca) {
+void FUN_L07_00311eb8(float radius, void *moby_, void *obj_, short pa, void *pos, short b, unsigned int color, int ca) {
     char *moby = moby_;
     char *obj = obj_;
-    short pa = pa_;
     float v[4];
     char *e;
     int y;
@@ -60,14 +62,21 @@ void FUN_L07_00311eb8(float radius, void *moby_, void *obj_, int pa_, void *pos,
                 *(short *)(obj + 0x284) = b;
                 *(short *)(obj + 0x286) = b;
             }
-        } else if (b != *(short *)(obj + 0x282)) {
-            y = *(short *)(obj + 0x286) * 7 / 8;
-            if (!(y < *(short *)(obj + 0x284))) {
-                *(short *)(obj + 0x284) = y;
+            if (radius != -1.0f) {
+                *(float *)(e + 0x1C) = radius;
             }
-        }
-        if (radius != -1.0f) {
-            *(float *)(e + 0x1C) = radius;
+        } else {
+            if (b != -1) {
+                y = *(short *)(obj + 0x286) * 7 / 8;
+                if (!(y < *(short *)(obj + 0x284))) {
+                    *(short *)(obj + 0x284) = y;
+                }
+                if (radius != -1.0f) {
+                    *(float *)(e + 0x1C) = radius;
+                }
+            } else if (radius != -1.0f) {
+                *(float *)(e + 0x1C) = radius;
+            }
         }
         if ((int)color != -1) {
             *(int *)(obj + 0x288) = color;

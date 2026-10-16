@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/l15_quartu/func_L15_002EDB50.c (games/rac1) through the version
+/* Carried from the PAL decompilation's src/overlays/l15_quartu/vendor_002EDB50.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
@@ -12,15 +12,7 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* NON_MATCHING FUN_L15_002ec760 -- src/overlays/l15_quartu/vendor_002EDB50.c
- * Best so far: SIZE ours 2332 / retail 2312, checked 2026-10-09.
- * Not built into anything: the retail assembly stays in the source file
- * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
- * What the last attempts found:
- *   s23 (hq11, 11 of 16 runs, not EXACT): update function of moby class 1446 on level 15: a state switch (9 cases,
- *   Remaining difference: our frame is 256 bytes, retail 240 (one 16-byte stack slot holds a spilled moby+0x10 poi
- *   s23 later runs (15 of 16 used): dropping the unused A-base local and the B-pointer hoists brought the best to 
- */
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
 extern void func_L12_002E6B60(char *);
 extern void func_L02_0025C758(char *);
 extern int func_L00_002668A0(void *, void *);
@@ -66,42 +58,32 @@ extern int D_0015ED84 MACRO_ADDR;
 extern float D_0015ED64 MACRO_ADDR;
 extern unsigned char D_0015EDB0[] MACRO_ADDR;
 
-typedef int u128_EDB50_c2ec760 __attribute__((mode(TI)));
 
-/* update function of the ultramech scientist (moby class 1446) on level 15 */
+
+/* Update function of moby class 1446 (ultramech scientist): state switch, then the head look-at block shaped like func_L11_002D0710's (doit flag guards the vector part). */
 void FUN_L15_002ec760(char *moby) {
     char *d;
     char *b;
     char *p;
-    char *base;
-    char *pos;
-    char *a278;
-    char *a160;
-    float v0[4];
-    float v1[4];
-    float v2[4];
-    float f0;
-    float f2;
-    float f20;
-    float f21;
-    float f22;
-    float f23;
     int v;
 
-    func_L12_002E6B60(moby);
     d = *(char **)(moby + 0x78);
+    func_L12_002E6B60(moby);
     if (*(int *)(d + 0x14C) == -1) {
         return;
     }
-    if (((unsigned char *)D_0013E533)[0xE1D + 0x20A4] != 2) {
-        base = (char *)D_L15_0015FFD8;
-        *(int *)(base + (*(int *)(d + 0x14C) << 8) + 0x94) = 0;
-        *(unsigned short *)(base + (*(int *)(d + 0x14C) << 8) + 0x34) |= 0x41;
+    {
+        char *g0 = D_0013E533 + 0xE1D;
+        if (*(unsigned char *)(g0 + 0x20A4) != 2) {
+            int ib = D_L15_0015FFD8;
+            *(int *)((*(int *)(d + 0x14C) << 8) + ib + 0x94) = 0;
+            *(unsigned short *)((*(int *)(d + 0x14C) << 8) + ib + 0x34) |= 0x41;
+        }
     }
     if (*(unsigned char *)(moby + 0x20) == 9) {
-        *(unsigned short *)(moby + 0x34) |= 0x41;
         *(unsigned char *)(moby + 0x30) = 0;
         *(int *)(moby + 0x94) = 0;
+        *(unsigned short *)(moby + 0x34) |= 0x41;
         return;
     }
     if (D_L15_0015F5C4 == 2) {
@@ -113,13 +95,10 @@ void FUN_L15_002ec760(char *moby) {
         func_L02_0025C758(moby);
     }
 
-    pos = moby + 0x10;
-    a278 = d + 0x278;
-    a160 = d + 0x160;
     switch (*(unsigned char *)(moby + 0x20)) {
     case 0:
-        *(unsigned char *)(moby + 0x30) = 0xFF;
         *(unsigned char *)(moby + 0x20) = 1;
+        *(unsigned char *)(moby + 0x30) = 0xFF;
         *(float *)(d + 0xC) = 20.0f;
         func_L00_002668A0(moby, d);
         if (((unsigned char *)(D_0014161B + 0xAA35))[*(int *)(d + 0x280) + (D_0015ED84 << 4)] != 0xFF) {
@@ -204,27 +183,32 @@ void FUN_L15_002ec760(char *moby) {
             break;
         }
         *(float *)(moby + 0x58) = 1.0f;
-        if (*(short *)(d + 0x4) != 0) {
+        if (*(short *)(d + 0x4) == 0) {
+            if (*(int *)(d + 0x150) != -1) {
+                char *bb = D_L15_001600EC;
+                func_L00_00284E50(bb + (*(int *)(d + 0x150) << 7) + 0x30, bb + (*(int *)(d + 0x150) << 7) + 0x70);
+            }
+            *(unsigned char *)(moby + 0x20) = 3;
+        } else {
             *(unsigned char *)(moby + 0x20) = 9;
-            break;
         }
-        if (*(int *)(d + 0x150) != -1) {
-            base = D_L15_001600EC;
-            func_L00_00284E50(base + (*(int *)(d + 0x150) << 7) + 0x30, base + (*(int *)(d + 0x150) << 7) + 0x70);
-        }
-        *(unsigned char *)(moby + 0x20) = 3;
         break;
     case 3:
-    if (((unsigned char *)D_0013E533)[0xE1D + 0x20A4] != 2) {
-            break;
+        {
+            char *g3 = D_0013E533 + 0xE1D;
+            if (*(unsigned char *)(g3 + 0x20A4) != 2) {
+                break;
+            }
         }
         if (*(int *)(d + 0x158) != -1) {
-            p = (char *)D_L15_0015FFD8 + (*(int *)(d + 0x158) << 8);
-            if (p != 0) {
-                v = *(unsigned char *)(p + 0x20);
-                if (v != 0xFE && v != 0xFD) {
-                    func_0020C828(p);
-                    *(int *)(d + 0x158) = -1;
+            char *q = (char *)D_L15_0015FFD8 + (*(int *)(d + 0x158) << 8);
+            if (q != 0) {
+                int w = *(unsigned char *)(q + 0x20);
+                if (w != 0xFE) {
+                    if (w != 0xFD) {
+                        func_0020C828(q);
+                        *(int *)(d + 0x158) = -1;
+                    }
                 }
             }
         }
@@ -243,17 +227,18 @@ void FUN_L15_002ec760(char *moby) {
         }
         func_L15_00208CA8();
         func_00212ED8((char *)D_L15_0015FFD8 + (*(int *)(d + 0x14C) << 8), 0, 0);
+        *(int *)(d + 0x140) = 1;
         *(short *)(d + 0x36) = 1;
         *(unsigned char *)(d + 0x8) = 1;
-        *(int *)(d + 0x140) = 1;
         func_L00_002607D0(0x10);
         func_L00_002502A0(*(int *)(d + 0x284));
         func_L00_002664B0__NOT_CARRIED(0, 5);
         if (*(int *)(d + 0x154) != -1) {
-            base = D_L15_001600EC;
-            func_L00_00216F90(base + (*(int *)(d + 0x154) << 7) + 0x30, base + (*(int *)(d + 0x154) << 7) + 0x70, 0, 1);
-            base = D_L15_001600EC;
-            func_L00_00284E50(base + (*(int *)(d + 0x154) << 7) + 0x30, base + (*(int *)(d + 0x154) << 7) + 0x70);
+            char *b1 = D_L15_001600EC;
+            char *b2;
+            func_L00_00216F90(b1 + (*(int *)(d + 0x154) << 7) + 0x30, b1 + (*(int *)(d + 0x154) << 7) + 0x70, 0, 1);
+            b2 = D_L15_001600EC;
+            func_L00_00284E50(b2 + (*(int *)(d + 0x154) << 7) + 0x30, b2 + (*(int *)(d + 0x154) << 7) + 0x70);
         }
         *(unsigned char *)(moby + 0x20) = 5;
         break;
@@ -285,15 +270,29 @@ void FUN_L15_002ec760(char *moby) {
         break;
     }
 
-    b = D_0013E533 + 0xE9D;
+    {
+    char *g;
+    float v0[4];
+    float v1[4];
+    float v2[4];
+    float f0;
+    float f2;
+    float f20;
+    float f21;
+    float yaw;
+    float f22;
+    float f23;
+    int doit = 0;
     f22 = 0.02f;
     f23 = 0.3f;
-    f0 = func_001F9B80((float *)pos, (float *)b);
+    doit = 1;
+    f0 = func_001F9B80((float *)(moby + 0x10), (float *)(D_0013E533 + 0xE9D));
     if (f0 < 8.0f) {
-        f0 = func_L00_001FF8B0(*(float *)(b + 0x50) - *(float *)(moby + 0x10), *(float *)(b + 0x54) - *(float *)(moby + 0x14));
+        g = D_0013E533 + 0xE1D;
+        f0 = func_L00_001FF8B0(*(float *)(g + 0xD0) - *(float *)(moby + 0x10), *(float *)(g + 0xD4) - *(float *)(moby + 0x14));
         f0 = func_001FA688(*(float *)(moby + 0x48), f0);
-        if (f0 < 1.5707963f) {
-            f0 = func_001F9AF0(b + 0x80);
+        if (f0 < 1.5707964f) {
+            f0 = func_001F9AF0(g + 0x100);
             if (0.01f < f0) {
                 *(int *)(d + 0x274) = func_001F9688(120);
             } else {
@@ -304,7 +303,7 @@ void FUN_L15_002ec760(char *moby) {
     }
     if (*(int *)(d + 0x274) != 0) {
         *(int *)(d + 0x274) = 0;
-        *(u128_EDB50_c2ec760 *)(d + 0x260) = *(u128_EDB50_c2ec760 *)(D_0013E533 + 0xEED);
+        qcopy(d + 0x260, D_0013E533 + 0xE1D + 0xD0);
     }
 e1c4:
     if (func_001F9740(d + 0x278) == 0) {
@@ -315,20 +314,20 @@ e1c4:
     f0 = func_001F96B0(f0);
     *(int *)(d + 0x278) = func_001FA6D0(f0);
     f0 = func_002132A8(-90.0f, 90.0f);
-    func_001FA580(*(float *)(moby + 0x48), f0 * f21);
+    yaw = func_001FA580(*(float *)(moby + 0x48), f0 * f21);
     f0 = func_002132A8(0.0f, 30.0f);
-    f20 = f0;
-    func_00214DB0(d + 0x260, 6.0f, f20, f0 * f21);
+    func_00214DB0(d + 0x260, 6.0f, yaw, f0 * f21);
     func_001F9A10(d + 0x260, d + 0x260, moby + 0x10);
 e26c:
     if (*(int *)(d + 0x274) != 0) {
-        *(u128_EDB50_c2ec760 *)v0 = *(u128_EDB50_c2ec760 *)(D_0013E533 + 0xEED);
+        qcopy(v0, D_0013E533 + 0xE1D + 0xD0);
         f22 = 0.04f;
         f23 = 0.3f;
     } else {
-        *(u128_EDB50_c2ec760 *)v0 = *(u128_EDB50_c2ec760 *)(d + 0x260);
+        qcopy(v0, d + 0x260);
     }
-    *(u128_EDB50_c2ec760 *)v1 = *(u128_EDB50_c2ec760 *)(moby + 0x10);
+    if (doit != 0) {
+    qcopy(v1, moby + 0x10);
     v1[2] = v1[2] + 1.0f;
     func_001F9A28(v2, v0, v1);
     f0 = func_L00_001FF8B0(v2[0], v2[1]);
@@ -336,22 +335,24 @@ e26c:
     f0 = func_001F9B20(v2);
     f0 = func_L00_001FF8B0(f0, v2[2]);
     f2 = -f0;
-    if (f20 > 1.5707963f) {
-        f20 = 1.5707963f;
-    } else if (f20 < -1.5707963f) {
-        f20 = -1.5707963f;
+    if (f20 > 1.5707964f) {
+        f20 = 1.5707964f;
+    } else if (f20 < -1.5707964f) {
+        f20 = -1.5707964f;
     }
     if (f2 > 0.5235988f) {
         f2 = 0.5235988f;
     } else if (f2 < -0.5235988f) {
         f2 = -0.5235988f;
     }
-    *(float *)(d + 0x248) = f20 * 0.5f;
-    *(float *)(d + 0x1C4) = f2 * 1.25f;
     *(float *)(d + 0x1C8) = f20 * 0.5f;
+    *(float *)(d + 0x1C4) = f2 * 1.25f;
+    *(float *)(d + 0x248) = f20 * 0.5f;
+    }
     if (D_0015EDB0[0] != 0) {
         *(float *)(d + 0x1D0) = 2.75f;
     }
     func_L00_002628D8(moby, d + 0x160, 1, f22 * D_0015ED64, f23 * D_0015ED64);
     func_L00_002628D8(moby, d + 0x1E0, 0, f22 * D_0015ED64, f23 * D_0015ED64);
+    }
 }

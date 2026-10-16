@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/functional/func_L04_002CB800.c (games/rac1) through the version
+/* Carried from the PAL decompilation's src/overlays/l04_eudora/vendor_002CB800.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
  * The two versions' code differs here: func_L04_002CB800 (near) was paired by place; read it against NTSC-U before trusting it. */
 #include "types.h"
@@ -13,19 +13,10 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* functional: high. Same reads, writes and calls as retail; the only differences tools/equiv.py reports are the three stores of 0.0f (turn velocity, speed), which retail writes from a zeroed $f20 and this build writes as integer zero, the same 32 bits in memory. */
-/* FUN_L04_002ca420 (level 4, Eudora): update of the generic vehicle mobys (written from the retail
- * instructions; not a match). On the first call (state 0) it either steps back the index of its path
- * (D_L04_001B0630) when near its point or calls func_001E93B0 with its index, sets shield and alpha and
- * remembers its start speed. Then, unless the class is 0x1E4, it runs a
- * four-phase drive: 0 accelerates back to the start speed and waits until func_00214720 accepts the
- * position for one of its four ids,
- * 1 turns and drives to the triggered path point, 2 waits, 3 returns to the start position and angle.
- * It sets up (state 0) or spins (later) the matrices at data+0x180/+0x1C0 for some classes, carries the partner
- * moby (classes 0x1E0, 0x1EE), and when func_L00_0025A420(m, 0x210000, 0) is nonzero (presumably hit)
- * counts it in D_0015EDF8 (a one-off event at 10), explodes with debris and sound depending on the class, spawns the class's pieces
- * (func_L00_00263FD8), and, while its visibility timer runs, keeps it drawn (flags 0x41) until the timer
- * ends with the camera facing more than 90 degrees away, then restores its sort value and flags. */
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
+#define MOBYS ((VehicleMoby_2CB800_c2ca420 *)D_L04_0015FFD8)
+extern char *D_L04_0015FFD8 MACRO_ADDR;
+extern void func_0022DA68(int, int, int);
 typedef int VehicleWide_2CB800_c2ca420 __attribute__((mode(TI)));
 typedef union { VehicleWide_2CB800_c2ca420 quad; float f[4]; } VehicleVec_2CB800_c2ca420;
 typedef union { s32 id; u8 token; } VehicleTrigger_2CB800_c2ca420;
@@ -56,25 +47,24 @@ typedef struct {
 typedef struct { char pad[0x30]; VehicleVec_2CB800_c2ca420 pos; char pad40[0x38]; float angle; char pad7C[4]; } VehiclePath_2CB800_c2ca420;
 typedef struct { VehicleVec_2CB800_c2ca420 vec; VehicleMoby_2CB800_c2ca420 *owner; s32 flags, unused; float strength; s32 result; } VehicleQuery_2CB800_c2ca420;
 extern s32 *D_L04_001B0630[];
-extern VehicleMoby_2CB800_c2ca420 *vehicle_mobys_2CB800 __asm__("D_L04_0015FFD8") MACRO_ADDR;
-extern VehiclePath_2CB800_c2ca420 *vehicle_paths_2CB800 __asm__("D_L04_001600EC") MACRO_ADDR;
+extern VehiclePath_2CB800_c2ca420 *D_L04_001600EC MACRO_ADDR;
 extern char D_L04_001DBE10[];
 extern s32 D_0015EDF8 MACRO_ADDR;
 typedef struct { char pad[6]; u8 flag; } VehicleWeapon_2CB800_c2ca420;
-extern VehicleWeapon_2CB800_c2ca420 vehicle_weapon_flags_2CB800 __asm__("D_0013D408");
+extern VehicleWeapon_2CB800_c2ca420 D_0013D408;
 extern float D_0015ED70 MACRO_ADDR;
 extern float D_0015ED6C MACRO_ADDR;
 extern float D_0015ED60 MACRO_ADDR;
 extern float D_L04_0015F580[] MACRO_ADDR;
 typedef struct { char pad[0x140]; float x,y,z; char pad14C[12]; float angle; } VehicleCamera_2CB800_c2ca420;
-extern VehicleCamera_2CB800_c2ca420 vehicle_camera_2CB800 __asm__("D_L04_00166E00");
+extern VehicleCamera_2CB800_c2ca420 D_L04_00166E00;
 extern float func_001F9B48(void *,void *);
 extern s32 func_001FA6D0(float);
-extern s32 func_001E9730_2CB800(char *, s32, s32) __asm__("func_001E93B0");
-extern void vehicle_base_update_2CB800(VehicleMoby_2CB800_c2ca420 *) __asm__("func_L01_002F5168");
+extern s32 func_001E93B0();
+extern void func_L01_002F5168(VehicleMoby_2CB800_c2ca420 *);
 extern void func_001F9770(void *);
 extern s32 func_00214720(void *,s32);
-extern void vehicle_turn_2CB800(void *,void *,float,float,float,float) __asm__("func_L00_00258278");
+extern void func_L00_00258278(void *,void *,float,float,float,float);
 extern float func_001F9B80(void *,void *);
 extern float func_001FA688(float,float);
 extern s32 func_001F9688(s32);
@@ -94,17 +84,17 @@ extern s32 func_0022DB10(s32,s32,s32);
 extern void func_L00_00263D40(s32,s32);
 extern void func_001F99F8(void *);
 extern void func_L00_001F2868(void *,float,s32,void *,void *);
-extern void func_L00_0025F4A8_alt(void *,void *,void *,float,float,s32,s32,s32,float,float,float,float,s32,float,s32,s32,s32,s32) __asm__("func_L00_0025E450");
-extern void vehicle_sound_2CB800(s32,s32,void *) __asm__("func_0022DA68");
+extern void func_L00_0025E450(void *,void *,void *,float,float,s32,s32,s32,float,float,float,float,s32,float,s32,s32,s32,s32);
 extern void func_L00_0024F7C8(void *,s32,void *);
 extern void func_L00_0025F090(void *,void *,s32,float,float);
 extern void func_001F9A68(void *,void *,float);
 extern void func_L00_00263FD8(void *,s32,void *,void *,s32,s32,float,void *,void *,void *);
 extern s32 func_001F9740(s32 *);
 extern float func_L00_001FF8B0(float,float);
-
 typedef float VehicleArr_2CB800_c2ca420[4] __attribute__((aligned(16)));
 typedef struct { char pad[0x14]; s32 path_id; } VehicleSub_2CB800_c2ca420;
+
+
 
 /* Moves generic vehicle mobys along triggered paths and updates their attached parts, damage effects and visibility. */
 void FUN_L04_002ca420(VehicleMoby_2CB800_c2ca420 *m) {
@@ -113,7 +103,7 @@ void FUN_L04_002ca420(VehicleMoby_2CB800_c2ca420 *m) {
     u8 state=m->state;
     VehicleSub_2CB800_c2ca420 *sub;
     VehicleTrigger_2CB800_c2ca420 *trigger;
-    float zero;
+    float zero; s32 izero;
     qcopy(&old,&m->pos);
     if (!d) return;
     sub=(VehicleSub_2CB800_c2ca420 *)d->motion;
@@ -122,15 +112,15 @@ void FUN_L04_002ca420(VehicleMoby_2CB800_c2ca420 *m) {
             s32 *path=D_L04_001B0630[sub->path_id];
             if (func_001F9B48((char *)path+0x10,(char *)path+(*path<<4))<0.5f) --*path;
         } else {
-            func_001E9730_2CB800(D_L04_001DBE10,m->cls,func_001FA6D0((float)((s32)((char *)m-(char *)vehicle_mobys_2CB800)>>8)));
+            func_001E93B0(D_L04_001DBE10,m->cls,func_001FA6D0((float)((s32)((char *)m-(char *)MOBYS)>>8)));
         }
         m->shield=0x7F;
         m->alpha=0xFF;
         d->start_speed=d->speed;
         d->shield=m->shield;
     }
-    zero=0.0f;
-    vehicle_base_update_2CB800(m);
+    izero=0; zero=*(float *)&izero;
+    func_L01_002F5168(m);
     if (m->cls!=0x1E4) {
         func_001F9770(&d->phase_timer);
         switch (d->phase) {
@@ -155,13 +145,13 @@ void FUN_L04_002ca420(VehicleMoby_2CB800_c2ca420 *m) {
             break;
         }
         case 1:
-            vehicle_turn_2CB800(m,&d->turn_velocity,vehicle_paths_2CB800[d->selected].angle,D_0015ED70*1.0471976f,D_0015ED70*3.1415927f,D_0015ED6C*3.1415927f);
-            if (func_001F9B80(&m->pos,&vehicle_paths_2CB800[d->selected].pos)<1.0f &&
-                func_001FA688(m->rot.f[2],vehicle_paths_2CB800[d->selected].angle)<0.17453292f) {
+            func_L00_00258278(m,&d->turn_velocity,D_L04_001600EC[d->selected].angle,D_0015ED70*1.0471976f,D_0015ED70*3.1415927f,D_0015ED6C*3.1415927f);
+            if (func_001F9B80(&m->pos,&D_L04_001600EC[d->selected].pos)<1.0f &&
+                func_001FA688(m->rot.f[2],D_L04_001600EC[d->selected].angle)<0.17453292f) {
                 d->phase=2;
                 d->phase_timer=func_001F9688(300);
             }
-            func_001F9A28(&delta,&vehicle_paths_2CB800[d->selected].pos,&m->pos);
+            func_001F9A28(&delta,&D_L04_001600EC[d->selected].pos,&m->pos);
             func_L00_001FF500(&delta,&delta,D_0015ED6C*3.0f);
             func_001F9A10(&m->pos,&m->pos,&delta);
             break;
@@ -170,12 +160,12 @@ void FUN_L04_002ca420(VehicleMoby_2CB800_c2ca420 *m) {
             break;
         case 3: {
             float length,step;
-            vehicle_turn_2CB800(m,&d->turn_velocity,d->start_angle,D_0015ED70*1.0471976f,D_0015ED70*3.1415927f,D_0015ED6C*3.1415927f);
+            func_L00_00258278(m,&d->turn_velocity,d->start_angle,D_0015ED70*1.0471976f,D_0015ED70*3.1415927f,D_0015ED6C*3.1415927f);
             if (func_001F9B80(&m->pos,&d->start_pos)<1.0f && func_001FA688(m->rot.f[2],d->start_angle)<0.034906585f) {
                 d->phase=0;
                 d->phase_timer=func_001F9688(600);
-                d->turn_velocity=zero;
                 d->speed=zero;
+                d->turn_velocity=zero;
                 d->moving_timer=0;
             }
             func_001F9A28(&delta,&d->start_pos,&m->pos);
@@ -210,7 +200,7 @@ void FUN_L04_002ca420(VehicleMoby_2CB800_c2ca420 *m) {
         }
     }
     if (d->partner!=-1) {
-        VehicleMoby_2CB800_c2ca420 *other=vehicle_mobys_2CB800+d->partner;
+        VehicleMoby_2CB800_c2ca420 *other=MOBYS+d->partner;
         other->shield=0x7F;
         switch (m->cls) {
         case 0x1E0:
@@ -234,8 +224,8 @@ void FUN_L04_002ca420(VehicleMoby_2CB800_c2ca420 *m) {
         }
     }
     if (func_L00_0025A420(m,0x210000,0)) {
-        if (++D_0015EDF8>=10 && vehicle_weapon_flags_2CB800.flag==0) {
-            vehicle_weapon_flags_2CB800.flag=1;
+        if (++D_0015EDF8>=10 && D_0013D408.flag==0) {
+            D_0013D408.flag=1;
             func_0022DB10(1,0,0);func_L00_00263D40(0x53DB,-1);
         }
         switch ((s16)((u16)m->cls-0x1D2)) {
@@ -253,9 +243,9 @@ void FUN_L04_002ca420(VehicleMoby_2CB800_c2ca420 *m) {
                 delta.quad=0;delta.f[2]=0.75f;
                 func_001F99F8(none);
                 func_001F9A10(&delta,&delta,&m->pos);
-                func_L00_0025F4A8_alt(m,none,&delta,0.0f,0.0f,10,3,4,2,1,100000,3,-1,15,1,1,-1,0);
-                if (m->cls==0x1F2 || m->cls==0x22B) vehicle_sound_2CB800(0,0,m);
-                else if (m->cls!=0x1E6) vehicle_sound_2CB800(1,0,m);
+                func_L00_0025E450(m,none,&delta,0.0f,0.0f,10,3,4,2,1,100000,3,-1,15,1,1,-1,0);
+                if (m->cls==0x1F2 || m->cls==0x22B) func_0022DA68(0,0,(s32)m);
+                else if (m->cls!=0x1E6) func_0022DA68(1,0,(s32)m);
                 d->visibility_timer=func_001F9688(600);d->visibility_active=1;
             }
             break;
@@ -273,8 +263,8 @@ void FUN_L04_002ca420(VehicleMoby_2CB800_c2ca420 *m) {
                 func_001F9A10(&delta,&delta,offset);
                 func_L00_0025F090(m,&delta,-1,1.0f,13.0f);
                 func_001F9A10(&delta,offset,&m->pos);
-                func_L00_0025F4A8_alt(m,none,&delta,0.0f,0.0f,20,5,4,2,1,100000,3,-1,15,1,1,-1,0);
-                vehicle_sound_2CB800(1,0,m);
+                func_L00_0025E450(m,none,&delta,0.0f,0.0f,20,5,4,2,1,100000,3,-1,15,1,1,-1,0);
+                func_0022DA68(1,0,(s32)m);
                 query2.flags=0x810000;query2.strength=2;query2.owner=m;
                 func_001F99F8(&query2.vec);query2.result=0;
                 func_L00_001F2868(&m->pos,6.0f,16,m,&query2);
@@ -337,16 +327,16 @@ void FUN_L04_002ca420(VehicleMoby_2CB800_c2ca420 *m) {
     m->draw_alpha=0xFF;
     if (d->visibility_active) {
         if (func_001F9740(&d->visibility_timer) &&
-            func_001FA688(vehicle_camera_2CB800.angle,func_L00_001FF8B0(m->pos.f[0]-vehicle_camera_2CB800.x,m->pos.f[1]-vehicle_camera_2CB800.y))>1.5707964f) {
+            func_001FA688(D_L04_00166E00.angle,func_L00_001FF8B0(m->pos.f[0]-D_L04_00166E00.x,m->pos.f[1]-D_L04_00166E00.y))>1.5707964f) {
             m->sort=*(s32 *)(m->metadata+0x10);
             m->flags&=0xFFBE;
             d->visibility_active=0;
-            if (d->partner!=-1) { VehicleMoby_2CB800_c2ca420 *other=vehicle_mobys_2CB800+d->partner; other->flags&=0xFFBE; }
+            if (d->partner!=-1) { VehicleMoby_2CB800_c2ca420 *other=MOBYS+d->partner; other->flags&=0xFFBE; }
             m->flags|=0x1000;
         } else {
             m->sort=0;
             m->flags|=0x41;
-            if (d->partner!=-1) { VehicleMoby_2CB800_c2ca420 *other=vehicle_mobys_2CB800+d->partner; other->flags|=0x41; }
+            if (d->partner!=-1) { VehicleMoby_2CB800_c2ca420 *other=MOBYS+d->partner; other->flags|=0x41; }
             m->flags&=0xEFFF;
         }
     }

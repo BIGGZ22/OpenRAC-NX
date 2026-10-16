@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/shared/func_L11_003121C0.c (games/rac1) through the version
+/* Carried from the PAL decompilation's src/overlays/shared/vendor_002C99E0.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
@@ -12,25 +12,19 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* NON_MATCHING FUN_L11_00310cf8 -- src/overlays/shared/vendor_002C99E0.c
- * Best so far: SIZE ours 852 / retail 848, checked 2026-10-09.
- * Not built into anything: the retail assembly stays in the source file
- * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
- * What the last attempts found:
- *   Shared DMA-packet builder (levels 11, 13, 17): float args f12..f16 then eight ints, four FA898 table lookups f
- *   Note: the vendor file declares FUN_L11_00310cf8 later with float-first arguments and D_0013E05A as unsigned c
- *   Unblock: the allocator's choice of homes for the two arguments, and the position of the extra lui/lw pair near
- */
-extern float func_001F9DE0(float);
-extern float func_001F9DC8(float);
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
+extern float func_001F9FA8_0031B8A8(float) __asm__("func_001F9DE0");
+extern float func_001F9F90_0031B8A8(float) __asm__("func_001F9DC8");
 extern void func_001F9A10(void *, void *, void *);
 extern void func_001F9A28(void *, void *, void *);
 extern int func_001FA898_r(float) __asm__("func_001FA6D0");
 extern unsigned char D_0013E05A[];
-extern char *D_L11_00161240_m __asm__("D_L11_00161240_m") MACRO_ADDR;
+extern int D_L11_001611C0 MACRO_ADDR;
 
-/* Builds one GIF/DMA packet for a level-11 effect and advances the packet pointer. */
-void FUN_L11_00310cf8(float fa, float fb, float fc, float fd, float fe, int a0, int a1, int a2, int a3,
+
+
+/* Builds one GIF packet for a rotated textured sprite and advances the packet pointer. */
+void FUN_L11_00310cf8(float fa, float fb, float fc, float fd, float fe, int a0, int a1, long a2, int a3,
                        int a4, int a5, int a6, int a7) {
     float s[4];
     float t[4];
@@ -39,90 +33,99 @@ void FUN_L11_00310cf8(float fa, float fb, float fc, float fd, float fe, int a0, 
     float x[4];
     float y[4];
     float z[4];
-    u64 v19;
-    u64 v20;
-    u64 v21;
-    u64 v22;
-    u64 v4;
-    u64 v7;
-    u64 v8;
-    long v6;
+    unsigned long c0;
+    unsigned long c1;
+    unsigned long c2;
+    unsigned long c3;
+    unsigned long pa2;
+    int q;
+    unsigned long hi;
+    unsigned long v7;
+    unsigned long v4;
+    unsigned long v6;
+    unsigned long v8;
     int v5;
-    long v23;
+    int u0;
+    int u1;
     char *old;
-    char *n;
-    unsigned char *tb;
+    unsigned long *n;
+    int *g;
     float k;
-    int r1;
-    int r2;
 
-    v19 = a4 & 0xFF;
-    v20 = a5 & 0xFF;
-    v21 = a6 & 0xFF;
-    v22 = a7 & 0xFF;
+    c0 = a4 & 0xFF;
+    c1 = a5 & 0xFF;
+    c2 = a6 & 0xFF;
+    c3 = a7 & 0xFF;
+    pa2 = a2;
+    q = a3;
 
     v[0] = fa;
     v[1] = fb;
-    s[0] = fd * func_001F9DE0(fa);
-    s[1] = fd * func_001F9DC8(fe);
-    t[0] = fc * func_001F9DC8(fe);
-    t[1] = -fc * func_001F9DE0(fe);
+    s[0] = fd * func_001F9FA8_0031B8A8(fe);
+    s[1] = fd * func_001F9F90_0031B8A8(fe);
+    t[0] = fc * func_001F9F90_0031B8A8(fe);
+    t[1] = -fc * func_001F9FA8_0031B8A8(fe);
     func_001F9A10(w, v, s);
     func_001F9A28(w, w, t);
     func_001F9A10(x, v, s);
     func_001F9A28(y, v, t);
     qcopy(z, v);
 
-    *(int *)D_L11_00161240_m = 0x10000007;
-    v20 = v20 << 8;
-    v19 = v19 | v20;
+    *(int *)(D_L11_001611C0 + 0) = 0x10000007;
+    c1 = c1 << 8;
+    c0 = c0 | c1;
     v5 = 0x50000007;
-    v7 = ((u64)0xB400 << 48) | 0x8001;
-    v4 = ((((u64)0xA6A6 << 16) | 0xA6A6) << 11) | 0x106;
-    *(int *)(D_L11_00161240_m + 4) = 0;
-    v21 = v21 << 16;
-    v19 = v19 | v21;
-    v22 = v22 << 24;
-    v19 = v19 | v22;
+    v4 = 0x53535353106;
+    *(int *)(D_L11_001611C0 + 4) = 0;
+    c2 = c2 << 16;
+    c0 = c0 | c2;
+    c3 = c3 << 24;
     v6 = 0x154;
     v8 = 0x100010;
-    *(int *)(D_L11_00161240_m + 8) = 0;
+    v7 = 0xB400000000008001;
+    c0 = c0 | c3;
+    *(int *)(D_L11_001611C0 + 8) = 0;
     k = 16.0f;
-    v21 = a0 << 4;
-    v23 = a1 << 20;
-    v20 = (long)a3 << 32;
-    *(int *)(D_L11_00161240_m + 0xC) = v5;
-    old = D_L11_00161240_m;
-    n = old + 0x10;
-    D_L11_00161240_m = n;
-    *(u64 *)(old + 0x10) = v7;
-    *(u64 *)(n + 0x8) = v4;
-    *(u64 *)(n + 0x18) = v6;
-    *(u64 *)(n + 0x28) = v8;
-    *(u64 *)(n + 0x20) = v19;
-    *(u64 *)(n + 0x10) = (long)a2;
+    u0 = a0 << 4;
+    u1 = a1 << 20;
+    hi = (unsigned long)q << 32;
+    *(int *)(D_L11_001611C0 + 12) = v5;
+    old = (char *)D_L11_001611C0;
+    n = (unsigned long *)(old + 0x10);
+    D_L11_001611C0 = (int)n;
+    *(unsigned long *)(old + 0x10) = v7;
+    n[1] = v4;
+    n[2] = pa2;
+    n[3] = v6;
+    n[4] = c0;
+    n[5] = v8;
 
-    tb = D_0013E05A + 0x4A6;
-    r1 = func_001FA898_r(w[0] * k);
-    r2 = func_001FA898_r(w[1] * k);
-    *(u64 *)(n + 0x38) = v21;
-    *(u64 *)(n + 0x30) = ((long)(r2 + *(int *)(tb + 0x14) - 8) << 16) | (long)(r1 + *(int *)(tb + 0x10) - 8) | v20;
+    {
+        int a = func_001FA898_r(w[0] * k);
+        int b = func_001FA898_r(w[1] * k);
+        g = (int *)(D_0013E05A + 0x4A6);
+        n[6] = (unsigned long)(a + g[4] - 8) | ((unsigned long)(b + g[5] - 8) << 16) | hi;
+        n[7] = u0;
+    }
+    {
+        int a = func_001FA898_r(x[0] * k);
+        int b = func_001FA898_r(x[1] * k);
+        n[8] = (unsigned long)(a + g[4] - 8) | ((unsigned long)(b + g[5] - 8) << 16) | hi;
+        n[9] = u1;
+    }
+    {
+        int a = func_001FA898_r(y[0] * k);
+        int b = func_001FA898_r(y[1] * k);
+        u1 = u1 + u0;
+        n[10] = (unsigned long)(a + g[4] - 8) | ((unsigned long)(b + g[5] - 8) << 16) | hi;
+        n[11] = u1;
+    }
+    {
+        int a = func_001FA898_r(z[0] * k);
+        int b = func_001FA898_r(z[1] * k);
+        n[12] = (unsigned long)(a + g[4] - 8) | ((unsigned long)(b + g[5] - 8) << 16) | hi;
+        n[13] = 0;
+    }
 
-    r1 = func_001FA898_r(x[0] * k);
-    r2 = func_001FA898_r(x[1] * k);
-    *(u64 *)(n + 0x48) = v23;
-    *(u64 *)(n + 0x40) = ((long)(r2 + *(int *)(tb + 0x14) - 8) << 16) | (long)(r1 + *(int *)(tb + 0x10) - 8) | v20;
-
-    r1 = func_001FA898_r(y[0] * k);
-    r2 = func_001FA898_r(y[1] * k);
-    v23 = v23 + v21;
-    *(u64 *)(n + 0x58) = v23;
-    *(u64 *)(n + 0x50) = ((long)(r2 + *(int *)(tb + 0x14) - 8) << 16) | (long)(r1 + *(int *)(tb + 0x10) - 8) | v20;
-
-    r1 = func_001FA898_r(z[0] * k);
-    r2 = func_001FA898_r(z[1] * k);
-    *(u64 *)(n + 0x68) = 0;
-    *(u64 *)(n + 0x60) = ((long)(r2 + *(int *)(tb + 0x14) - 8) << 16) | (long)(r1 + *(int *)(tb + 0x10) - 8) | v20;
-
-    D_L11_00161240_m = D_L11_00161240_m + 0x70;
+    D_L11_001611C0 += 0x70;
 }

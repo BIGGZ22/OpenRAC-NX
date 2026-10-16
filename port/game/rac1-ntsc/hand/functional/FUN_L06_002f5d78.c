@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/l06_blarg/func_L06_002F71A8.c (games/rac1) through the version
+/* Carried from the PAL decompilation's src/overlays/l06_blarg/vendor_002B5990.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
@@ -12,158 +12,211 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* NON_MATCHING FUN_L06_002f5d78 -- src/overlays/l06_blarg/vendor_002B5990.c
- * Best so far: SIZE ours 1764 / retail 1784, checked 2026-10-09.
- * Not built into anything: the retail assembly stays in the source file
- * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
- * What the last attempts found:
- *   Blarg moby sway: two loops (20 slots over the data+0x70/+0xC0 pointer arrays, then 10 slots over +0x110/+0x138
- *   Left over: retail saves $fp/$s6..$s1/$ra and f20-f25; ours keeps an extra saved float ($f26) and a different p
- *   Would unblock with a rewording that makes the saved-register set match retail's (six saved floats, $s0-$s7), w
- */
-extern void func_L00_001FF500(void *, void *, float);
-extern void func_001F9CF8(void *, void *, void *);
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
+/* A float vector with 4-byte alignment (no 128-bit member). */
+typedef struct {
+    f32 x;
+    f32 y;
+    f32 z;
+    f32 w;
+} Vec4f_c2f5d78;
+/* A moby class header, pointed to by Moby.pclass. Size unknown;
+   only fields some matched function reads are named. */
+struct MobyClass_c2f5d78 {
+    u8 pad_0[0xC];
+    u8 seq_count;                     /* number of entries in seqs[] (menu previews clamp the sequence to it) */
+    u8 pad_D[3];
+    u32 unk10;                        /* copied into Moby.unk94 when a moby is (re)classed */
+    u8 pad_14[0x8];
+    void *unk1C;                      /* word table, indexed id * 4 + 4 (0024eec0) */
+    struct GifEntry *gifs;            /* patched by patch_moby_gifs */
+    f32 scale;                        /* default draw scale: copied into Moby.scale, divides it */
+    s32 unk28;
+    void **callbacks;                 /* function-pointer table, called with the moby */
+    u8 pad_30[0x14];
+    u16 flags;                        /* initial Moby.flags */
+    s16 unk46;                        /* class category; 5 is tested by targeting code */
+    struct AnimSeq *seqs[1];          /* animation sequences, indexed by Moby.seq */
+};
+struct Moby_c2f5d78 {
+    Vec4f_c2f5d78 bsphere;
+    Vec4f_c2f5d78 pos;
+    u8 state;                         /* >= 0xFE: dead, waiting to respawn */
+    u8 group;                         /* linked group: index into the level moby-list table D_Lxx_001ABCC0 (0xFF: none) */
+    u8 unk22;                         /* class slot: pclass = D_L00_00196F80[unk22] (FUN_L00_002cf218) */
+    u8 unk23;                         /* 0x40 for the smoke trail FUN_L09_00307ba8 spawns */
+    struct MobyClass_c2f5d78 *pclass;
+    struct Moby_c2f5d78 *next;
+    f32 scale;                        /* draw scale (FUN_L01_002fa068 halves it, FUN_L00_00215ef8 divides by it) */
+    u8 unk30;                         /* set to 0xFF (0x7F for beams) by spawners */
+    u8 unk31;                         /* set to 1 by spawners */
+    s16 unk32;                        /* set to 0xFF (0x7F for beams) by spawners */
+    u16 flags;
+    u16 unk36;                        /* set to 0x7F80 by spawners */
+    u64 spawn_frame;                  /* frame count at which it may respawn */
+    Vec4f_c2f5d78 rot;                        /* z: yaw (FUN_L00_00266448 compares it with atan2 to the hero) */
+    u8 frame;                         /* animation frame */
+    u8 prev_frame;                    /* frame index in prev_seq */
+    u8 seq;                           /* animation sequence id */
+    u8 prev_seq;
+    f32 unk54;
+    f32 unk58;
+    u8 pad5C[8];
+    struct Manip *manips;
+    void *cur_frame_data;
+    void *prev_frame_data;
+    u8 unk70;
+    u8 unk71;                         /* set to 0xFF when a moby changes class */
+    u8 unk72;
+    u8 unk73;
+    void (*update)(struct Moby_c2f5d78 *moby);
+    u8 *pvars;
+    u8 unk7C;
+    u8 pad7D;
+    u8 unk7E;
+    u8 unk7F;                         /* set to 0x17 by FUN_L09_002c5990 near D_L09_00166EC0 */
+    s32 unk80;                        /* colour from the level's moby records, c2 << 16 | c1 << 8 | c0 (func_L00_00241940) */
+    u8 pad84[2];
+    s16 unk86;                        /* compared with 5 (func_L02_002D8AD0) */
+    u8 pad88[8];
+    s32 unk90;
+    u32 unk94;                        /* set from the class header's word 0x10 */
+    s32 unk98;                        /* set to 1 while a carrier holds the moby (FUN_L00_002c7a58) */
+    u8 pad9C[8];
+    u8 unkA4;
+    u8 padA5;
+    s16 oclass;
+    u8 padA8[8];
+    u8 unkB0;                         /* 0xB0: index into the level's D_0014BF50 row (0xFF: not spawned) */
+    u8 unkB1;                         /* set from the level's moby records (func_L00_00241940) */
+    u16 save_id;                      /* index into the level collected[]/killed[] tables and save bits D_0014C090[level][id >> 5] */
+    s16 unkB4;
+    s16 unkB6;                        /* set from the level's moby records (func_L00_00241940) */
+    void *unkB8;                      /* 0xB8: bolt source record; its byte 0xB1 is a per-level id (FUN_L00_002a6b70) */
+    u8 unkBC;
+    u8 padBD[3];
+    Vec4f_c2f5d78 unkC0;                      /* 0xC0: first row of a matrix built from rot (FUN_001fa030) */
+    Vec4f_c2f5d78 unkD0;
+    Vec4f_c2f5d78 unkE0;
+    u8 padF0[0x10];
+};
+typedef struct Moby_c2f5d78 Moby_c2f5d78;
+typedef struct MobyClass_c2f5d78 MobyClass_c2f5d78;
 extern void func_001F9A10(void *, void *, void *);
+extern void func_L00_001FF500(void *, void *, float);
 extern void func_L00_00250DF8(void *);
-extern void func_0022DA68(int, int, int);
-extern short D_L06_00161D70;
-extern short D_L06_00161D74;
-extern short D_L06_00161D78;
-extern short D_L06_00161D7C;
-extern short D_L06_00161D80;
-extern short D_L06_00161DA0;
-extern short D_L06_00161DA4;
-extern short D_L06_00161D50;
-extern short D_L06_00161D60;
+typedef struct {
+    float x, y, z, w;
+} __attribute__((aligned(16))) Vec_2F69D0_c2f5d78;
+typedef struct Data_2F69D0_c2f5d78 {
+    char p0[0x60];
+    int i60;
+    int i64;
+    int i68;
+    float f6C;
+    Moby_c2f5d78 *a[20];
+    Moby_c2f5d78 *b[20];
+    Moby_c2f5d78 *c[10];
+    Moby_c2f5d78 *d[10];
+} Data_2F69D0_c2f5d78;
+extern float D_L06_00161E08_2F69D0 SDATA(D_L06_00161D78);
+extern float D_L06_00161E0C_2F69D0 SDATA(D_L06_00161D7C);
+extern float D_L06_00161E10_2F69D0 SDATA(D_L06_00161D80);
+extern float D_L06_00161E30_2F69D0 SDATA(D_L06_00161DA0);
+extern float D_L06_00161E34_2F69D0 SDATA(D_L06_00161DA4);
+extern int func_0022ED80_2F69D0(int, int, Moby_c2f5d78 *) __asm__("func_0022DA68");
+extern void func_001F9CF8(void *, void *, void *);
+extern float D_L06_00161D70 SDATA(D_L06_00161D70);
+extern float D_L06_00161D74 SDATA(D_L06_00161D74);
+extern Vec_2F69D0_c2f5d78 D_L06_00161D50 SDATA(D_L06_00161D50);
+extern Vec_2F69D0_c2f5d78 D_L06_00161D60 SDATA(D_L06_00161D60);
 
-/* Blarg moby sway: updates two sets of 20 and 10 sample slots from the angle curves. */
-void FUN_L06_002f5d78(char *moby)
+
+
+/* Blarg drawbridge pieces: places and rotates the 20 + 10 chained segment mobys. */
+void FUN_L06_002f5d78(Moby_c2f5d78 *m)
 {
-    char *data;
-    char *c0;
-    char *mb;
-    char *s1;
-    char *s2;
-    char **pa;
-    char **pb;
-    float v[4];
-    float wa[4];
-    float xa[4];
-    char *w;
-    char *x;
-    int i;
-    int j;
-    int off;
-    int r2;
-    float f0, f1, f2, f20, f21, a, b, q;
+    Vec_2F69D0_c2f5d78 v, w, x;
+    Data_2F69D0_c2f5d78 *s = (Data_2F69D0_c2f5d78 *)m->pvars;
+    int i, j;
+    float t, ang, a, b, c, d;
 
-    w = (char *)wa;
-    c0 = moby + 0xC0;
-    mb = moby + 0x10;
-    x = (char *)xa;
-    data = *(char **)(moby + 0x78);
-    off = 0;
     for (i = 0; i < 20; i++) {
-        s1 = data + 0x70;
-        s2 = data + 0xC0;
-        f1 = *(float *)&D_L06_00161D78 - (float)i;
-        if (f1 < 0.0f) f1 = 0.0f;
-        func_L00_001FF500(w, c0, f1);
-        func_001F9CF8(v, &D_L06_00161D50, c0);
-        func_001F9A10(v, v, moby + 0x10);
-        func_001F9A10(v, v, w);
-        qcopy(*(char **)(s1 + off) + 0x10, v);
-        func_001F9CF8(v, &D_L06_00161D60, c0);
-        func_001F9A10(v, v, moby + 0x10);
-        func_001F9A10(v, v, w);
-        qcopy(*(char **)(s2 + off) + 0x10, v);
-        f1 = *(float *)&D_L06_00161D7C * 0.017453292f;
-        f0 = (float)(i * 45) * 0.017453292f;
-        f1 = f1 - f0;
-        if (1.5707964f < f1) f1 = 1.5707964f;
-        else if (f1 < 0.0f) f1 = 0.0f;
-        *(float *)(*(char **)(s1 + off) + 0x40) = -f1;
-        *(float *)(*(char **)(s2 + off) + 0x40) = f1;
-        func_L00_00250DF8(*(char **)(s1 + off));
-        func_L00_00250DF8(*(char **)(s2 + off));
-        off += 4;
+        t = D_L06_00161E08_2F69D0 - (float)i;
+        if (t < 0.0f) t = 0.0f;
+        func_L00_001FF500(&w, &m->unkC0, t);
+        func_001F9CF8(&v, &D_L06_00161D50, &m->unkC0);
+        func_001F9A10(&v, &v, &m->pos);
+        func_001F9A10(&v, &v, &w);
+        qcopy(&s->a[i]->pos, &v);
+        func_001F9CF8(&v, &D_L06_00161D60, &m->unkC0);
+        func_001F9A10(&v, &v, &m->pos);
+        func_001F9A10(&v, &v, &w);
+        qcopy(&s->b[i]->pos, &v);
+        ang = D_L06_00161E0C_2F69D0 * 0.017453292f - (float)(i * 45) * 0.017453292f;
+        if (ang > 1.5707964f) ang = 1.5707964f;
+        else if (ang < 0.0f) ang = 0.0f;
+        s->a[i]->rot.x = -ang;
+        s->b[i]->rot.x = ang;
+        func_L00_00250DF8(s->a[i]);
+        func_L00_00250DF8(s->b[i]);
     }
 
-    pa = (char **)(data + 0x110);
-    pb = (char **)(data + 0x138);
     for (j = 0; j < 10; j++) {
-        r2 = j + j;
-        f1 = (float)j + (float)j;
-        f0 = (float)(4 - j) * *(float *)&D_L06_00161D74;
-        a = *(float *)&D_L06_00161D78 - f1;
-        b = *(float *)&D_L06_00161D70 + f0;
-        q = a;
-        if (a < b) q = b;
-        func_L00_001FF500(w, c0, q);
-        f20 = a - 1.0f;
-        if (f20 < b) f20 = b;
-        func_L00_001FF500(x, c0, f20);
-        func_001F9CF8(v, &D_L06_00161D50, c0);
-        func_001F9A10(v, v, moby + 0x10);
-        func_001F9A10(v, v, w);
-        qcopy(*pa + 0x10, v);
-        func_001F9CF8(v, &D_L06_00161D60, c0);
-        func_001F9A10(v, v, moby + 0x10);
-        func_001F9A10(v, v, x);
-        qcopy(*pb + 0x10, v);
+        b = D_L06_00161D70 + (float)(4 - j) * D_L06_00161D74;
+        t = D_L06_00161E08_2F69D0 - j * 2.0f;
+        c = t - 1.0f;
+        if (t < b) t = b;
+        if (c < b) c = b;
+        func_L00_001FF500(&w, &m->unkC0, t);
+        func_L00_001FF500(&x, &m->unkC0, c);
+        func_001F9CF8(&v, &D_L06_00161D50, &m->unkC0);
+        func_001F9A10(&v, &v, &m->pos);
+        func_001F9A10(&v, &v, &w);
+        qcopy(&s->c[j]->pos, &v);
+        func_001F9CF8(&v, &D_L06_00161D60, &m->unkC0);
+        func_001F9A10(&v, &v, &m->pos);
+        func_001F9A10(&v, &v, &x);
+        qcopy(&s->d[j]->pos, &v);
 
-        f0 = *(float *)&D_L06_00161D7C * 0.017453292f;
-        f1 = (float)r2 * 0.78539819f;
-        f2 = *(float *)&D_L06_00161DA0 * 0.017453292f;
-        f21 = f0 - f1;
-        f0 = f21 - f2;
-        if (1.5707964f < f21) f21 = 1.5707964f;
-        else if (f21 < 0.0f) f21 = 0.0f;
-        if (1.5707964f < f0) f0 = 1.5707964f;
-        else if (f0 < 0.0f) f0 = 0.0f;
-        if (f21 != 0.0f && f0 == 0.0f) func_0022DA68(1, 0, (int)*pa);
+        a = D_L06_00161E0C_2F69D0 * 0.017453292f - (float)(j * 2) * 0.7853982f;
+        d = a - D_L06_00161E30_2F69D0 * 0.017453292f;
+        if (a > 1.5707964f) a = 1.5707964f;
+        else if (a < 0.0f) a = 0.0f;
+        if (d > 1.5707964f) d = 1.5707964f;
+        else if (d < 0.0f) d = 0.0f;
+        if (a != 0.0f && d == 0.0f) func_0022ED80_2F69D0(1, 0, s->c[j]);
 
-        f1 = *(float *)&D_L06_00161D7C * 0.017453292f;
-        f0 = (float)r2 * 0.78539819f;
-        f1 = f1 - f0;
-        f20 = f1 - 0.78539819f;
-        f2 = *(float *)&D_L06_00161DA0 * 0.017453292f;
-        f0 = f20 - f2;
-        if (1.5707964f < f20) f20 = 1.5707964f;
-        else if (f20 < 0.0f) f20 = 0.0f;
-        if (1.5707964f < f0) f0 = 1.5707964f;
-        else if (f0 < 0.0f) f0 = 0.0f;
-        if (f20 != 0.0f && f0 == 0.0f) func_0022DA68(1, 0, (int)*pb);
+        c = D_L06_00161E0C_2F69D0 * 0.017453292f - (float)(j * 2) * 0.7853982f - 0.7853982f;
+        d = c - D_L06_00161E30_2F69D0 * 0.017453292f;
+        if (c > 1.5707964f) c = 1.5707964f;
+        else if (c < 0.0f) c = 0.0f;
+        if (d > 1.5707964f) d = 1.5707964f;
+        else if (d < 0.0f) d = 0.0f;
+        if (c != 0.0f && d == 0.0f) func_0022ED80_2F69D0(1, 0, s->d[j]);
 
-        *(float *)(*pa + 0x40) = -f21;
-        *(float *)(*pb + 0x40) = f20;
-        f0 = *(float *)&D_L06_00161D80 * 0.017453292f;
-        f1 = *(float *)&D_L06_00161DA4 * 0.017453292f;
-        f2 = (float)r2 * 0.78539819f;
-        f21 = f0 - f2;
-        f0 = f21 - f1;
-        if (1.5707964f < f21) f21 = 1.5707964f;
-        else if (f21 < 0.0f) f21 = 0.0f;
-        if (1.5707964f < f0) f0 = 1.5707964f;
-        else if (f0 < 0.0f) f0 = 0.0f;
-        if (f21 != 0.0f && f0 == 0.0f) func_0022DA68(2, 0, (int)*pa);
+        s->c[j]->rot.x = -a;
+        s->d[j]->rot.x = c;
 
-        f1 = *(float *)&D_L06_00161D80 * 0.017453292f;
-        f2 = *(float *)&D_L06_00161DA4 * 0.017453292f;
-        f0 = (float)r2 * 0.78539819f;
-        f1 = f1 - f0;
-        f20 = f1 - 0.78539819f;
-        f0 = f21 - f2;
-        if (1.5707964f < f20) f20 = 1.5707964f;
-        else if (f20 < 0.0f) f20 = 0.0f;
-        if (1.5707964f < f0) f0 = 1.5707964f;
-        else if (f0 < 0.0f) f0 = 0.0f;
-        if (f20 != 0.0f && f0 == 0.0f) func_0022DA68(2, 0, (int)*pb);
-        *(float *)(*pa + 0x44) = -f21;
-        *(float *)(*pb + 0x44) = -f20;
-        func_L00_00250DF8(*pa);
-        func_L00_00250DF8(*pb);
-        pa++;
-        pb++;
+        a = D_L06_00161E10_2F69D0 * 0.017453292f - (float)(j * 2) * 0.7853982f;
+        d = a - D_L06_00161E34_2F69D0 * 0.017453292f;
+        if (a > 1.5707964f) a = 1.5707964f;
+        else if (a < 0.0f) a = 0.0f;
+        if (d > 1.5707964f) d = 1.5707964f;
+        else if (d < 0.0f) d = 0.0f;
+        if (a != 0.0f && d == 0.0f) func_0022ED80_2F69D0(2, 0, s->c[j]);
+
+        c = D_L06_00161E10_2F69D0 * 0.017453292f - (float)(j * 2) * 0.7853982f - 0.7853982f;
+        d = a - D_L06_00161E34_2F69D0 * 0.017453292f;
+        if (c > 1.5707964f) c = 1.5707964f;
+        else if (c < 0.0f) c = 0.0f;
+        if (d > 1.5707964f) d = 1.5707964f;
+        else if (d < 0.0f) d = 0.0f;
+        if (c != 0.0f && d == 0.0f) func_0022ED80_2F69D0(2, 0, s->d[j]);
+
+        s->c[j]->rot.y = -a;
+        s->d[j]->rot.y = -c;
+        func_L00_00250DF8(s->c[j]);
+        func_L00_00250DF8(s->d[j]);
     }
 }

@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/shared/func_L00_002CD110.c (games/rac1) through the version
+/* Carried from the PAL decompilation's src/overlays/shared/vendor_002C96D0.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
@@ -12,68 +12,86 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* NON_MATCHING FUN_L00_002cbcc0 -- src/overlays/shared/vendor_002C96D0.c
- * Best so far: SIZE ours 688 / retail 680, checked 2026-10-09.
- * Not built into anything: the retail assembly stays in the source file
- * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
- * What the last attempts found:
- *   Clears 17 particle slots of the moby, then emits 5 sparks (func_L00_0026DD20) and 3 smoke puffs (func_L00_0026
- *   Best p2.c (688 vs 680 bytes): remaining diffs are the $a1=0x80 hoist before loop 3, f12/f13 setup order of the
- *   third func_002132A8 call, the final `if (rand(2)) n[3]=0x44` coming out as bnel instead of beqz+delay-slot
- *   li, and one extra saved-register store ordering. Zero V4 in loop 3 needed a compound literal into shared b.
- */
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
+/* The quadword. Not called u128: source files declare their own u128,
+   and a second typedef of one name is an error. */
+typedef u32 VecQuad_c2cbcc0 __attribute__((mode(TI), aligned(16)));
+typedef union {
+    VecQuad_c2cbcc0 q;
+    f32 f[4];
+    s32 i[4];
+} Vec4_c2cbcc0;
 extern void func_L00_00267A08(void *);
-extern float func_002132A8(float, float);
-extern void func_L00_001FF500(void *, void *, float);
-extern int func_001F9688(int);
-extern int func_L00_00257B90(int, int);
-extern char *func_L00_0026DD20(char *pos, char *vel, int c, int d, float f);
-extern int func_00213260(int);
-extern void *func_L00_0026D000(void *pos, int spd, void *pos2, int col, float a, float b, float c, float d);
+extern f32 func_002132A8(f32, f32);
+extern void func_L00_001FF500(void *, void *, f32);
+extern s32 func_001F9688(s32);
+extern s32 func_L00_00257B90(s32, s32);
+extern void *func_L00_0026DD20(void *, void *, u32, s32, f32);
+extern s32 func_00213260(s32);
+extern u8 *func_L00_0026D000(void *, s32, f32, f32, void *, u32, f32, f32);
 extern float D_0015ED6C MACRO_ADDR;
 extern float D_0015ED60 MACRO_ADDR;
-typedef struct { float x, y, z, w; } __attribute__((aligned(16))) W4_c2cbcc0;
 
-// Clears the particle slots of a moby and emits a burst of sparks and smoke when requested.
-void FUN_L00_002cbcc0(char *m, int flag) {
-    int **p = (int **)(*(char **)(m + 0x78) + 0x2C);
-    int i;
-    int j;
-    W4_c2cbcc0 b;
+
+
+void FUN_L00_002cbcc0(u8 *m, s32 enabled)
+{
+    s32 i;
+    s32 j;
+    void **handle;
+    u8 *pos;
+    Vec4_c2cbcc0 vectors[2];
+    s32 lifetime;
+    s32 color;
+    s32 sign;
+    u8 *effect;
+    s32 alpha;
+
+    handle = (void **)(*(u8 **)(m + 0x78) + 0x2c);
     for (i = 16; i >= 0; i--) {
-        if (*p) func_L00_00267A08(*p);
-        *p = 0;
-        p++;
+        if (*handle != 0)
+            func_L00_00267A08(*handle);
+        *handle++ = 0;
     }
-    if (flag) {
+    pos = m + 0x10;
+
+    if (enabled != 0) {
+        Vec4_c2cbcc0 *vector = &vectors[1];
         for (j = 4; j >= 0; j--) {
-            W4_c2cbcc0 r = {0};
-            r.x = func_002132A8(-1.0f, 1.0f);
-            r.y = func_002132A8(-1.0f, 1.0f);
-            r.z = func_002132A8(-1.0f, 1.0f);
-            b = r;
-            func_L00_001FF500(&r, &b, func_002132A8(D_0015ED6C * 3.0f, D_0015ED6C * 6.0f));
-            func_L00_0026DD20(m + 0x10, (char *)&r, 0x7F2F4F6F, func_L00_00257B90(func_001F9688(10), func_001F9688(15)), 35000.0f);
+            vectors[1].q = 0;
+            vectors[1].f[0] = func_002132A8(-1.0f, 1.0f);
+            vectors[1].f[1] = func_002132A8(-1.0f, 1.0f);
+            vectors[1].f[2] = func_002132A8(-1.0f, 1.0f);
+            vectors[0].q = vectors[1].q;
+            func_L00_001FF500(vector, &vectors[0],
+                func_002132A8(D_0015ED6C * 3.0f, D_0015ED6C * 6.0f));
+            lifetime = func_L00_00257B90(func_001F9688(10), func_001F9688(15));
+            func_L00_0026DD20(pos, vector, 0x7f2f4f6f, lifetime, 35000.0f);
         }
     }
-    for (j = 2; j >= 0; j--) {
-        int col = (func_L00_00257B90(0x20, 0x80) << 24) | 0x606060;
-        int k = 1;
-        char *s;
-        char *n;
-        if (func_00213260(2)) k = -1;
-        b = (W4_c2cbcc0){0};
-        b.z = 1.0f;
-        b.w = 1.0f;
-        b.z = func_002132A8(0.01f, 0.025f) * D_0015ED60;
-        n = func_L00_0026D000(m + 0x10, k, &b, col, 0.2f, 1.0f, 1.02f, 140000.0f);
-        if (n) {
-            s = n + 0x20;
-            *(short *)(n + 0xA) = func_001F9688(func_L00_00257B90(0x32, 0x50));
-            *(int *)(s + 4) = 2;
-            s[0xA] = col >> 24;
-            s[0xB] = n[0xA];
-            if (func_00213260(2)) n[3] = 0x44;
+
+    {
+        s32 j;
+        for (j = 2; j >= 0; j--) {
+            color = ((u32)func_L00_00257B90(0x20, 0x80) << 24) | 0x606060;
+            sign = func_00213260(2) ? -1 : 1;
+            vectors[0].q = 0;
+            vectors[0].f[2] = 1.0f;
+            vectors[0].f[3] = 1.0f;
+            vectors[0].f[2] = func_002132A8(0.01f, 0.025f) * D_0015ED60;
+            effect = func_L00_0026D000(pos, sign, 0.2f, 1.0f, &vectors[0], color, 1.02f, 140000.0f);
+            if (effect != 0) {
+                *(s16 *)(effect + 0xa) = func_001F9688(func_L00_00257B90(50, 80));
+                i = (s32)(effect + 0x20);
+                *(s32 *)(i + 4) = 2;
+                ((u8 *)i)[0xa] = color >> 24;
+                ((u8 *)i)[0xb] = effect[0xa];
+                alpha = func_00213260(2);
+                if (alpha) {
+                    alpha = 0x44;
+                    effect[3] = alpha;
+                }
+            }
         }
     }
 }

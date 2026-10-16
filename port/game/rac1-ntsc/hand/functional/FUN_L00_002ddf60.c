@@ -12,27 +12,11 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* NON_MATCHING FUN_L00_002ddf60 -- src/overlays/shared/vendor_002D9438.c
- * Best so far: SIZE ours 4216 / retail 4220, checked 2026-10-09.
- * Not built into anything: the retail assembly stays in the source file
- * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
- * What the last attempts found:
- *   - Run 7: p6.c SIZE ours 4160 / retail 4220
- *   - Run 8: p7.c SIZE ours 4200 / retail 4220
- *   - Run 9: p8.c SIZE ours 4208 / retail 4220
- *   - Run 10: p9.c SIZE ours 4208 / retail 4220
- *   - Run 11: p10.c SIZE ours 4216 / retail 4220
- *   Further trials: p10 captures the old vertex index before increment (4216 bytes, still reverses the counter and
- *   Final: stop after 18/30 trials because p15, p16 and p17 compile to identical function instructions and branch 
- *   p13's aggregate initializer emitted memset calls and is unsuitable. p14's returning-vector constructor reserve
- */
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
+extern short D_L00_00161B54;
+extern short D_L00_00161B58;
 typedef unsigned int Q41_c2ddf60 __attribute__((mode(TI)));
 typedef union { struct { float x,y,z,w; } f; Q41_c2ddf60 q; } V41_c2ddf60 __attribute__((aligned(16)));
-typedef struct {
-    V41_c2ddf60 step, up, orient[3], ray_end;
-    V41_c2ddf60 start,end,axis,tmp_a,tmp_b,cross_b,cross_a,basis,tmp_c,motion;
-    V41_c2ddf60 tmp_d,tmp_e,interp,cross_c,basis_c,tmp_f;
-} Work41_c2ddf60;
 typedef struct {
     u8 pad0[0x34]; u16 flags; u8 pad36[0x8A]; V41_c2ddf60 basis[3];
 } M41_c2ddf60;
@@ -65,7 +49,6 @@ extern V41_c2ddf60 D_L00_001E4B40[];
 extern V41_c2ddf60 D_L00_001E6020[];
 extern V41_c2ddf60 D_L00_001E5EE0[];
 extern float D_L00_001E5FE0[];
-extern char D_L00_001E4C94[],D_L00_001E4C84[],D_L00_001E4C90[];
 extern Entry41_c2ddf60 entries41[] __asm__("D_L00_001E4C80");
 extern float D_0015ED60 MACRO_ADDR;
 extern void func_L00_002DDCB8(void *,void *);
@@ -98,14 +81,15 @@ extern Particle41_c2ddf60 *new_particle41(void *,int,void *,int,float,float,floa
 extern void func_001F99F8(void *);
 extern void func_L00_00267A08(void *);
 extern void func_L00_0025B6B8(void *,void *,void *,float);
-
-static __inline__ void clear_vectors41(V41_c2ddf60 *dst_a,V41_c2ddf60 *dst_b) {
+static __inline__ void clear_vectors41_c2ddf60(V41_c2ddf60 *dst_a,V41_c2ddf60 *dst_b) {
     register V41_c2ddf60 a,b;
     a.q=0;
     b.q=0;
     dst_a->q=a.q;
     dst_b->q=b.q;
 }
+
+
 
 /* Form the Suck Cannon's bending suction tube and update its particles. */
 void FUN_L00_002ddf60(void *moby,void *position) {
@@ -168,7 +152,7 @@ void FUN_L00_002ddf60(void *moby,void *position) {
     if(tick41>=func_001F9688(60)) {
         qcopy(&D_L00_00161B60,&D_L00_00161B70);
         func_L00_001FF500(&axis,orientation,D_L00_00161B84);
-        clear_vectors41(&tmp_a,&tmp_b);
+        clear_vectors41_c2ddf60(&tmp_a,&tmp_b);
         tmp_a.f.z=0.1f; tmp_a.f.w=1.0f;
         tmp_b.f.x=1.0f; tmp_b.f.w=1.0f;
         angle=func_001FA580(D_L00_00161B80,func_002132A8(45.0f,315.0f)*0.0174532924f);

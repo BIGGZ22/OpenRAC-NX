@@ -12,19 +12,15 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* NON_MATCHING FUN_L00_001fcca0 -- src/overlays/shared/draw_001F3A78.c
- * Best so far: SIZE ours 744 / retail 748, checked 2026-10-09.
- * Not built into anything: the retail assembly stays in the source file
- * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
- * What the last attempts found:
- *   Text-entry fade/draw (r = record: shorts at +4,+6,+8,+0xA,+0xC,+0xE; t = scroll position): computes two fade f
- *   Best candidate p8.c (size 736 vs 748, structure matches retail in both branches except the post-skip tail); p9
- *   Remaining: branch 1 is ~3 insns short (retail copies c with daddu into $4 and reloads at both loop entries; co
- */
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
+void func_L00_001FCB28(int x, int y, int mode, unsigned char *p, float scale, float alpha);
 extern unsigned char *func_001FDD10(int);
 
+
+
 /* Draws a line-wrapped text entry with fade-in/out at its scroll edges (newline codes become " - " or start a new row). */
-void FUN_L00_001fcca0(char *r, int t) {
+void FUN_L00_001fcca0(void *line, int t) {
+    char *r = line;
     int x8 = *(short *)(r + 8);
     int end = x8 + *(short *)(r + 0xA);
     float f21, f20;

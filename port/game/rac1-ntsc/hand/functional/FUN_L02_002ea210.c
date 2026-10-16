@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/shared/func_L02_002EB648.c (games/rac1) through the version
+/* Carried from the PAL decompilation's src/overlays/shared/vendor_002A5218.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
@@ -12,33 +12,26 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* NON_MATCHING FUN_L02_002ea210 -- src/overlays/shared/vendor_002A5218.c
- * Best so far: SIZE ours 1472 / retail 1468, checked 2026-10-09.
- * Not built into anything: the retail assembly stays in the source file
- * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
- * What the last attempts found:
- *   Stopped after 10 runs (budget spent). Best candidate p7.c: SIZE 1472 vs 1468, case 3 branch layout and the pro
- *   Unblock: the scheduler's placement of the case 0 sb/lwc1 pair and of the D_L02_00179A10 test in case 4; a diff
- */
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
+extern float func_001FA580(float, float);
+extern float func_001FA5C8(float, float);
 extern char D_0013E533[];
+extern float D_0015ED6C MACRO_ADDR;
+extern int func_001F9688(int);
+extern float func_001F99C0(float);
+extern float D_0015ED70 MACRO_ADDR;
+extern int D_L02_0015F5C4 MACRO_ADDR;
 extern char D_0013D4E3[];
 extern float D_L02_00174468;
 extern float D_L02_0015F3FC MACRO_ADDR;
 extern int D_L02_0015F5CC MACRO_ADDR;
-extern int D_L02_0015F5C4 MACRO_ADDR;
 extern int D_L02_0015F640 MACRO_ADDR;
-extern int D_L02_00179A10 MACRO_ADDR;
+extern int D_L02_00179A10;
 extern char *D_L02_00167400;
-extern float D_0015ED6C MACRO_ADDR;
-extern float D_0015ED70 MACRO_ADDR;
-extern int func_001F9688(int);
 extern void func_L02_002EA7D0(char *moby);
 extern float func_00213508(void *, int, float);
-extern float func_001FA580(float, float);
-extern float func_001FA5C8(float, float);
 extern void func_L02_002EA8B0(char *m);
 extern float func_001F9B80(void *, void *);
-extern float func_001F99C0(float);
 extern void func_L00_00298840(int);
 extern void func_L00_00260860(int, int);
 extern void func_L00_00263D40(int, int);
@@ -56,6 +49,8 @@ extern float func_00213ED8(float *, float, float);
 extern void func_L00_002EAC18(int);
 typedef int u128_002EB648_c2ea210 __attribute__((mode(TI)));
 
+
+
 /* Update function of moby class 1005 (tresspasser) on level 02, class 1016 (hydrodisplacer) on level 06: state machine. */
 void FUN_L02_002ea210(char *moby) {
     char *d;
@@ -68,6 +63,7 @@ void FUN_L02_002ea210(char *moby) {
     float t;
     float e70;
     float e6c;
+    float k;
 
     sel = 0x16;
     d = *(char **)(moby + 0x78);
@@ -80,15 +76,16 @@ void FUN_L02_002ea210(char *moby) {
     case 0:
         func_L02_002EA7D0(moby);
         q = (unsigned char *)(D_0013D4E3 + 5);
+        k = 0.2f;
         if (q[sel] != 0) {
             func_0020C828(moby);
             break;
         }
         func_00213508(moby + 0x10, 0, 0.5f);
-        *(float *)(moby + 0x44) = 3.1415927f;
         *(float *)(moby + 0x40) = 1.5707964f;
+        *(float *)(moby + 0x44) = 3.1415927f;
+        *(float *)(moby + 0x18) = D_L02_00174468 + k;
         moby[0x20] = 1;
-        *(float *)(moby + 0x18) = D_L02_00174468 + 0.2f;
         break;
     case 1:
         *(float *)(moby + 0x48) = func_001FA580(*(float *)(moby + 0x48), r);
@@ -152,17 +149,17 @@ void FUN_L02_002ea210(char *moby) {
             *(u128_002EB648_c2ea210 *)&a[8] = 0;
             *(u128_002EB648_c2ea210 *)&a[12] = 0;
             a[0] = 91.2f;
-            a[1] = 270.76f;
+            a[1] = 270.21f;
             a[2] = 64.85f;
             a[4] = 106.98f;
             a[5] = 273.46f;
-            a[6] = 62.4f;
+            a[6] = 62.65f;
+            a[8] = 0.07f;
             a[9] = 0.33f;
             a[10] = 0.55f;
             a[12] = 0.07f;
             a[13] = 0.43f;
             a[14] = 0.72f;
-            a[8] = 0.07f;
             e70 = D_0015ED70 * 0.15f;
             e6c = D_0015ED6C * 0.15f;
             func_00213F38((float *)(d + 0x40), (float *)(d + 0x44), 1.0f, e70, e70, e6c);
@@ -186,8 +183,7 @@ void FUN_L02_002ea210(char *moby) {
                 func_00213ED8(&D_L02_0015F3FC, 0.0f, D_0015ED6C * 4.0f);
             }
             if (D_L02_0015F3FC == 1.0f) {
-                g = D_0013E533 + 0xE9D;
-                func_L00_00216F90(g, g + 0x10, 0, 0);
+                func_L00_00216F90(D_0013E533 + 0xE9D, D_0013E533 + 0xE9D + 0x10, 0, 0);
                 func_L00_002EAC18(0);
                 moby[0x20] = 5;
             }

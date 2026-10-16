@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/functional/func_L00_002777C0.c (games/rac1) through the version
+/* Carried from the PAL decompilation's src/overlays/shared/pause_00277208.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
@@ -12,142 +12,123 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* FUN_L00_00276908 -- src/overlays/shared/pause_00277208.c (functional C for the port, not a match)
- * Page-menu close, run from the menu tick once the menu state (+0x110) reaches 10: syncs the VU1
- * chain, runs each of the current page's 14 objects' close handlers (+0xC, (obj, 0)) and clears the
- * page, writes back the four changed equipped items (menu +0x30 vs D_0014161B + 0x45, 0 becomes 0x26)
- * into the hero block (+0x20B8), restores the stream base (D_0015EE78) and the HUD panels, frees the
- * 14 preview mobys, starts the two close fades (func_L00_00235E18), sets the menu to state 0x14,
- * clears the counter slots the menu added, re-enables the camera and resumes the game.
- * From the staged near miss (nonmatching/shared/FUN_L00_00276908.c), made self-contained.
- * equiv: DIFFERENT by shape only: retail rebuilds D_L00_001B9E90's address after a label (so the
- * free loop's base, load and store show as unknown) where this keeps its high half in a saved
- * register; the slot-clearing loop is rotated with one more `sll`; one branch-likely naming. Every
- * call, argument, store and loop bound is the same. */
-typedef struct {
-    int state;
-    int *page;
-    int *next;
-    int unkC;
-    int unk10;
-    int unk14;
-    int unk18;
-    unsigned char pad1C[0x30 - 0x1C];
-    int items[4];
-    unsigned char pad40[0xCC - 0x40];
-    int unkCC;
-    unsigned char padD0[0x110 - 0xD0];
-    int closing;
-} Menu_2777C0_c276908;
-typedef struct {
-    unsigned char pad0[0xC];
-    void (*close)(void *, int);
-} Obj_2777C0_c276908;
-typedef struct {
-    unsigned char pad0[0x74];
-    int f74;
-    unsigned char pad78[0x80 - 0x78];
-    int f80;
-    int f84;
-} Hud_2777C0_c276908;
-typedef struct {
-    unsigned char pad0[0xC];
-    unsigned char count;
-    unsigned char padD[0x48 - 0xD];
-    int slots[1];
-} Cnt_2777C0_c276908;
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
+extern char D_L00_001B9CF0[] NOT_SDA;
+extern int D_L00_0015F5D8 MACRO_ADDR;
+extern unsigned char D_0014161B NOT_SDA;
+extern unsigned char D_0013E533 NOT_SDA;
+extern int D_0015ED98 MACRO_ADDR;
+extern short D_0015EE78;
+extern struct HEnt *D_L00_001B9E90[];
+extern char *D_L00_00197300[] NOT_SDA;
+extern unsigned char D_L00_0017E4D8[];
+extern unsigned char D_L00_00173E40[];
+extern void func_002337B0(int);
+extern void func_002335D0(void);
+extern void func_001FF128(int, int, int);
+extern void func_L00_00235310(int);
+extern struct HEnt *func_00225530(struct HEnt *);
+extern int func_L00_00234E00(void);
+extern int func_001F9688(int);
+extern int func_L00_00235E18(int, int);
+extern int func_001FF308(int, int, void *, void *, void *, void *, int);
+extern void func_002336A0(void);
+extern void func_L00_00239CC8(void);
+extern void func_L00_00239D00(void);
+extern void func_L00_00239DF8(void);
 
-extern Menu_2777C0_c276908 M_2777C0 __asm__("D_L00_001B9CF0");
-extern char D_L00_0017E5D8_2777C0[] __asm__("D_L00_0017E4D8");
-extern Cnt_2777C0_c276908 *D_L00_00197680_2777C0 __asm__("D_L00_00197300");
-extern int D_L00_00173F40_2777C0[] __asm__("D_L00_00173E40");
-extern char D_00141760_2777C0[] __asm__("D_00141660");
-extern char D_0013F450_2777C0[] __asm__("D_0013F350");
-extern int D_0015EE98_2777C0 __asm__("D_0015ED98");
-extern int D_0015EF78_2777C0 SDATA(D_0015EE78);
-extern int D_L00_0015F6BC_2777C0 __asm__("D_L00_0015F5D8") MACRO_ADDR;
-extern void *D_L00_001BA220_2777C0[] __asm__("D_L00_001B9E90");
 
-extern void func_00234AC8_2777C0(int) __asm__("func_002337B0");
-extern void func_002348E8_2777C0(void) __asm__("func_002335D0");
-extern void func_001FF958_2777C0(int, int, int) __asm__("func_001FF128");
-extern void func_L00_00235CA0_2777C0(int) __asm__("func_L00_00235310");
-extern void *func_002267C0_2777C0(void *) __asm__("func_00225530");
-extern int func_L00_00235790_2777C0(void) __asm__("func_L00_00234E00");
-extern int func_001F9850_2777C0(int) __asm__("func_001F9688");
-extern void func_L00_002367A8_2777C0(int, int) __asm__("func_L00_00235E18");
-extern int func_001FFB38_2777C0(int, int, void *, void *, void *, void *, int) __asm__("func_001FF308");
-extern void func_002349B8_2777C0(void) __asm__("func_002336A0");
-extern void func_L00_0023A658_2777C0(void) __asm__("func_L00_00239CC8");
-extern void func_L00_0023A690_2777C0(void) __asm__("func_L00_00239D00");
-extern void func_L00_0023A788_2777C0(void) __asm__("func_L00_00239DF8");
 
 void FUN_L00_00276908(void) {
-    int i, x, o;
-    int *dst, *src, *cur;
-    Hud_2777C0_c276908 *h;
+    int i;
+    int value;
+    int handle;
+    char *obj;
+    void (*callback)(char *, int);
+    unsigned char *table;
+    char *st = D_L00_001B9CF0;
 
-    if (M_2777C0.closing < 10) {
-        return;
-    }
-    func_00234AC8_2777C0(1);
-    func_002348E8_2777C0();
-    if (M_2777C0.page != 0) {
-        for (i = 0; i < 14; i++) {
-            Obj_2777C0_c276908 *obj = ((Obj_2777C0_c276908 **)((char *)M_2777C0.page + 0x44))[i];
-            if (obj != 0 && obj->close != 0) {
-                obj->close(obj, 0);
+    if (*(int *)(st + 0x110) >= 10) {
+        func_002337B0(1);
+        func_002335D0();
+        if (*(int *)(st + 4) != 0) {
+            {
+                for (i = 0; i < 14; i++) {
+                    char *s = D_L00_001B9CF0;
+                    obj = (*(struct { char p[0x44]; char *a[14]; } **)(s + 4))->a[i];
+                    if (obj != 0) {
+                        callback = *(void (**)(char *, int))(obj + 0xC);
+                        if (callback != 0) {
+                            callback(obj, 0);
+                        }
+                    }
+                }
+            }
+            {
+                char *s = D_L00_001B9CF0;
+                *(int *)(s + 4) = 0;
             }
         }
-        M_2777C0.page = 0;
-    }
-    /* D_0013E533 + 0xE1D + 0x20B8: the hero block's equipped items */
-    {
-        char *gp_ = D_0013F450_2777C0;
-        gp_ += 0x20B8;
-        dst = (int *)gp_;
-    }
-    src = (int *)((char *)&M_2777C0 + 0x30);
-    cur = (int *)D_00141760_2777C0;
-    for (i = 3; i >= 0; i--) {
-        x = *src;
-        if (*cur != x) {
-            *dst = x ? x : 0x26;
+        {
+            int i;
+            int value = 0x26;
+            for (i = 3; i >= 0; i--) {
+                char *s = D_L00_001B9CF0;
+                char *h = (char *)&D_0013E533 + 0xE1D;
+                if (((int *)(&D_0014161B + 0x45))[3 - i] != ((int *)s)[15 - i]) {
+                    ((int *)(h + 0x20B8))[3 - i] =
+                        ((int *)s)[15 - i] != 0
+                            ? ((int *)s)[15 - i]
+                            : value;
+                }
+            }
         }
-        dst++;
-        src++;
-        cur++;
-    }
-    h = *(Hud_2777C0_c276908 **)(D_L00_0017E5D8_2777C0 + 0x18);
-    D_0015EF78_2777C0 = M_2777C0.unk18;
-    func_001FF958_2777C0(0, h->f74, 0);
-    func_L00_00235CA0_2777C0(2);
-    if ((*(Hud_2777C0_c276908 **)(D_L00_0017E5D8_2777C0 + 0x18))->f80 != 0) {
-        func_L00_00235CA0_2777C0(3);
-    }
-    if ((*(Hud_2777C0_c276908 **)(D_L00_0017E5D8_2777C0 + 0x18))->f84 != 0) {
-        func_L00_00235CA0_2777C0(4);
-    }
-    {
-        void **p = D_L00_001BA220_2777C0;
-        for (i = 13; i >= 0; i--) {
-            *p = func_002267C0_2777C0(*p);
-            p++;
+        {
+            char *state = D_L00_001B9CF0;
+            int value;
+            table = D_L00_0017E4D8;
+            value = *(int *)(*(char **)(table + 0x18) + 0x74);
+            *(int *)&D_0015EE78 = *(int *)(state + 0x18);
+            func_001FF128(0, value, 0);
         }
+        func_L00_00235310(2);
+        if (*(int *)(*(char **)(table + 0x18) + 0x80) != 0) {
+            func_L00_00235310(3);
+        }
+        if (*(int *)(*(char **)(table + 0x18) + 0x84) != 0) {
+            func_L00_00235310(4);
+        }
+        {
+            int k;
+            for (k = 0; k < 14; k++) {
+                D_L00_001B9E90[k] = func_00225530(D_L00_001B9E90[k]);
+            }
+        }
+        handle = func_L00_00234E00();
+        func_L00_00235E18(handle, func_001F9688(0xB4));
+        handle = func_001FF308(2, 0x754E, func_L00_00239CC8, func_L00_00239D00,
+                               func_L00_00239DF8, &D_0015ED98, 9999999);
+        func_L00_00235E18(handle, func_001F9688(0xB4));
+        {
+            char *s = D_L00_001B9CF0;
+            *(int *)s = 0x14;
+            *(int *)(s + 0x14) = 2;
+            value = *(int *)(s + 0xCC);
+            while (value < ((unsigned char *)D_L00_00197300[0])[0xC]) {
+                ((struct { char p[0x48]; char *a[1]; } *)D_L00_00197300[0])->a[value] = 0;
+                value++;
+            }
+        }
+        {
+            char *s = D_L00_001B9CF0;
+            ((unsigned char *)D_L00_00197300[0])[0xC] = *(unsigned char *)(s + 0xCC);
+        }
+        D_L00_0015F5D8 = 1;
+        {
+            int *tbl = (int *)D_L00_00173E40;
+            ((struct { int p[4]; int f; } *)tbl)->f &= 0x7FFFFFFF;
+        }
+        func_002336A0();
+        func_002337B0(1);
     }
-    o = func_L00_00235790_2777C0();
-    func_L00_002367A8_2777C0(o, func_001F9850_2777C0(0xB4));
-    o = func_001FFB38_2777C0(2, 0x754E, func_L00_0023A658_2777C0, func_L00_0023A690_2777C0,
-                             func_L00_0023A788_2777C0, &D_0015EE98_2777C0, 9999999);
-    func_L00_002367A8_2777C0(o, func_001F9850_2777C0(0xB4));
-    M_2777C0.state = 0x14;
-    M_2777C0.unk14 = 2;
-    for (i = M_2777C0.unkCC; i < D_L00_00197680_2777C0->count; i++) {
-        *(int *)((char *)D_L00_00197680_2777C0 + i * 4 + 0x48) = 0;
-    }
-    D_L00_00197680_2777C0->count = M_2777C0.unkCC;
-    D_L00_0015F6BC_2777C0 = 1;
-    D_L00_00173F40_2777C0[4] &= 0x7FFFFFFF;
-    func_002349B8_2777C0();
-    func_00234AC8_2777C0(1);
 }

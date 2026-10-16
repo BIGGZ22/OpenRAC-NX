@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/game/func_L00_00246EC0.c (games/rac1) through the version
+/* Carried from the PAL decompilation's src/overlays/shared/map_002465F8.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
@@ -12,153 +12,119 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* Level-start map setup (an earlier worker's C, build-sn/fill/FUN_L00_002464a8; the buffer address
-   now taken after the file pointer is read): fills the map's colour/fade tables, derives the 19 per-level
-   world-to-map scale/offset pairs, then (when this level has a map) streams the map file
-   in, unpacks its two parts and allocates the reveal buffers, and marks the cells of the
-   32x32 reveal mask that lie outside the radius-16 disc. */
-extern char D_L00_001841F0[];
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
+extern int D_0015EE84_2465F8 __asm__("D_0015ED84") MACRO_ADDR;
+int func_00232E40(int arg0, int arg1, int arg2, int arg3);
+extern void func_001F98D0(void *, void *, int);
+extern void func_00207BB0(void *arg0, unsigned char *arg1, int arg2);
+extern void func_00206710(int *dst, unsigned char *src, short *offs);
 extern int D_L00_00183EF0[];
 extern float D_L00_00182810[];
 extern float D_L00_00182A70[];
-extern unsigned char D_L00_00184394[];
-extern int D_L00_00173E08;
 extern char D_L00_0015FE00[];
+extern int *D_L00_00173E08;
 extern char D_L00_001E8B00[];
-extern int D_0015ED84;
-extern char D_0013D50F_m[] __asm__("D_0013D407");
-extern char D_00137C80_m[] __asm__("D_00137B80");
-extern char D_0014171B_m[] __asm__("D_0014161B");
-extern int func_002176C8_m(int, int, int) __asm__("func_00216828");
-extern int func_00234158_m(int, int, int, int) __asm__("func_00232E40");
-extern int func_0020C468_m(int, int) __asm__("func_0020B618");
-extern char *func_001FFAB8_m(int, int, char *, int) __asm__("func_001FF288");
-extern void func_001F9A98_m(void *, void *, int) __asm__("func_001F98D0");
-extern void func_002083E0_m(void *, unsigned char *, int) __asm__("func_00207BB0");
-extern void func_00206F40_m(void *, int, int) __asm__("func_00206710");
+extern unsigned char D_L00_00184394[];
+extern unsigned char D_0013D407[] NOT_SDA;
+extern unsigned char D_0014161B[] NOT_SDA;
 
+
+
+/* Sets up the map's tables, loads its data from disc and builds the circular mask. */
 void FUN_L00_002464a8(void) {
-    char *base = D_L00_001841F0;
-    int *src;
-    float *s;
-    float *d;
-    int *entry;
-    int level;
     int i, j;
+    int *gl;
+    int *q;
+    int v;
+    int *e;
+    int *data;
+    int n, len;
+    int heap_tag, first_size, second_size, scratch;
+    int *archive, *archive_base;
+    unsigned char *mask, *level_data;
+    int x, y, w;
+    float lim;
+    unsigned char *pp;
+    extern int D_L00_001841F0[];
+    extern char D_00137B80[];
 
-    *(int *)(base + 0x10) = 1;
-    src = D_L00_00183EF0;
-    {
-        int *w = (int *)(base + 0x154);
-        for (i = 19; i >= 0; i--) {
-            w[-20] = src[0];
-            w[0] = src[1];
-            src += 2;
-            ((float *)w)[-40] = 0.65f;
-            w++;
-        }
-    }
-
-    level = D_0015ED84;
-    *(int *)(base + 0x22C) = -1;
-    if (level > 0x12) {
-        level = 0;
-    }
-    *(int *)(base + 0x224) = level;
-
-    s = D_L00_00182810;
-    d = D_L00_00182A70;
+    D_L00_001841F0[4] = 1;
+    { int i;
+    for (i = 0; i < 20; i++) {
+        D_L00_001841F0[0x41 + i] = D_L00_00183EF0[i * 2];
+        ((float *)D_L00_001841F0)[0x2D + i] = 0.65f;
+        D_L00_001841F0[0x55 + i] = D_L00_00183EF0[i * 2 + 1];
+    } }
+    v = D_0015EE84_2465F8;
+    D_L00_001841F0[0x8B] = -1;
+    D_L00_001841F0[0x89] = v > 18 ? 0 : v;
+    { int i;
     for (i = 0; i < 19; i++) {
-        float x0 = s[0], y0 = s[1], x1 = s[2], y1 = s[3];
-        float u0 = s[4], v0 = s[5], u1 = s[6], v1 = s[7];
-        float sx = (u0 - u1) / (x0 - x1);
-        float sy = (v0 - v1) / (y0 - y1);
-        d[1] = sx;
-        d[3] = sy;
-        d[0] = u0 - sx * x0;
-        d[2] = v0 - sy * y0;
-        s += 8;
-        d += 4;
-    }
-
-    if (*(unsigned char *)(D_0013D50F_m + 0xB9 + 0x21) != 0) {
-        *(int *)(base + 0x230) = 1;
-        entry = (int *)(D_00137C80_m + 0x8B8 + *(int *)(base + 0x224) * 8);
+        float a = D_L00_00182810[i * 8], b = D_L00_00182810[i * 8 + 1], c = D_L00_00182810[i * 8 + 2], dd = D_L00_00182810[i * 8 + 3];
+        float ee = D_L00_00182810[i * 8 + 4], f = D_L00_00182810[i * 8 + 5], gg = D_L00_00182810[i * 8 + 6], h = D_L00_00182810[i * 8 + 7];
+        float p = (ee - gg) / (a - c);
+        float r = (f - h) / (b - dd);
+        D_L00_00182A70[i * 4 + 1] = p;
+        D_L00_00182A70[i * 4 + 3] = r;
+        D_L00_00182A70[i * 4] = ee - p * a;
+        D_L00_00182A70[i * 4 + 2] = f - r * b;
+    } }
+    pp = (unsigned char *)D_0013D407 + 0xB9;
+    if (pp[0x21] != 0) {
+        D_L00_001841F0[0x8C] = 1;
+        e = (int *)(D_00137B80 + 0x8B8) + D_L00_001841F0[0x89] * 2;
     } else {
-        *(int *)(base + 0x230) = 0;
-        entry = (int *)(D_00137C80_m + 0x820 + *(int *)(base + 0x224) * 8);
+        D_L00_001841F0[0x8C] = 0;
+        e = (int *)(D_00137B80 + 0x820) + D_L00_001841F0[0x89] * 2;
     }
-
-    if (entry[1] == 0) {
-        *(int *)(base + 0x0) = 0;
-        *(int *)(base + 0x28) = 0;
-        *(int *)(base + 0x8) = 0;
-        *(int *)(base + 0xC) = 0;
-        *(int *)(base + 0x4) = 0;
-        return;
-    }
-
-    {
-        int file;
-        int sectors = entry[1];
-        int buf;
-        int n;
-        char *p;
-        unsigned char *rec;
-
-        *(int *)(base + 0x28) = 1;
-        file = D_L00_00173E08;
-        buf = file + 0x9A800;
-        func_002176C8_m(buf, entry[0], sectors);
-        n = func_00234158_m(buf, sectors << 7, 0x4800, (int)D_L00_001E8B00);
-        *(int *)(base + 0x22C) = n;
-        *(int *)(base + 0x234) = sectors << 7;
-        func_0020C468_m(buf, file);
-
-        n = ((int *)file)[1] - ((int *)file)[0];
-        p = func_001FFAB8_m(n, 0, D_L00_0015FE00, 0x2DB);
-        *(char **)(base + 0x0) = p;
-        func_001F9A98_m(p, (char *)file + ((int *)file)[0], n);
-        p = *(char **)(base + 0x0) + 8;
-        *(char **)(base + 0x4) = p;
-        *(char **)(base + 0x0) = p;
-
-        n = ((int *)file)[2] - ((int *)file)[1];
-        p = func_001FFAB8_m(n, 0, D_L00_0015FE00, 0x2EC);
-        *(char **)(base + 0x14) = p;
-        func_001F9A98_m(p, (char *)file + ((int *)file)[1], n);
-
-        p = func_001FFAB8_m(0x1000, 0, D_L00_0015FE00, 0x2F3);
-        *(char **)(base + 0x8) = p;
-        {
-            int *q = (int *)(base + 0x38);
-            for (i = 0; i < 8; i++) {
-                q[-2] = -1;
-                q[-1] = -1;
-                q[0] = *(int *)(base + 0x8) + (i << 9);
-                q += 4;
-            }
+    if (e[1] != 0) {
+        gl = D_L00_001841F0;
+        gl[10] = 1;
+        heap_tag = (int)D_L00_0015FE00;
+        archive_base = D_L00_00173E08;
+        archive = (int *)((int)archive_base + 0x9A800);
+        scratch = e[1] << 7;
+        func_00216828(archive, e[0], e[1]);
+        gl[0x8B] = func_00232E40((int)archive, scratch, 0x4800, (int)D_L00_001E8B00);
+        gl[0x8D] = scratch;
+        func_0020B618((int)archive, (int)archive_base);
+        archive = archive_base;
+        first_size = archive[1] - archive[0];
+        gl[0] = func_001FF288(first_size, 0, (char *)heap_tag, 0x2DB);
+        func_001F98D0((void *)gl[0], (char *)archive + archive[0], first_size);
+        gl[0] += 8;
+        gl[1] = gl[0];
+        second_size = archive[2] - archive[1];
+        gl[5] = func_001FF288(second_size, 0, (char *)heap_tag, 0x2EC);
+        func_001F98D0((void *)gl[5], (char *)archive + archive[1], second_size);
+        gl[2] = func_001FF288(0x1000, 0, (char *)heap_tag, 0x2F3);
+        for (i = 0; i < 8; i++) {
+            D_L00_001841F0[12 + i * 4] = -1;
+            D_L00_001841F0[13 + i * 4] = -1;
+            D_L00_001841F0[14 + i * 4] = D_L00_001841F0[2] + i * 0x200;
         }
-
-        p = func_001FFAB8_m(0x8000, 0, D_L00_0015FE00, 0x2FC);
-        *(char **)(base + 0xC) = p;
-        rec = (unsigned char *)(D_0014171B_m + 0x8A5 + (*(int *)(base + 0x224) << 11));
-        if (*rec != 0) {
-            func_002083E0_m(p, rec, *(int *)(base + 0x14));
+        w = func_001FF288(0x8000, 0, D_L00_0015FE00, 0x2FC);
+        level_data = D_0014161B + 0x8A5 + D_L00_001841F0[0x89] * 0x800;
+        D_L00_001841F0[3] = w;
+        if (level_data[0] != 0) {
+            func_00207BB0((void *)D_L00_001841F0[3], level_data, D_L00_001841F0[5]);
         } else {
-            func_00206F40_m(p, *(int *)(base + 0x0), *(int *)(base + 0x4));
+            func_00206710((int *)D_L00_001841F0[3], (unsigned char *)D_L00_001841F0[0], (short *)D_L00_001841F0[1]);
         }
-    }
-
-    for (i = 0; i < 32; i++) {
-        float di = 15.5f - (float)i;
-        float di2 = di * di;
-        for (j = 0; j < 32; j++) {
-            float dj = 15.5f - (float)j;
-            float r2 = dj * dj + di2;
-            if (256.0f < r2) {
-                D_L00_00184394[i * 4 + j / 8] |= (unsigned char)(1 << (j - (j / 8) * 8));
+        lim = 256.0f;
+        for (y = 0; y < 32; y++) {
+            for (x = 0; x < 32; x++) {
+                if ((15.5f - (float)x) * (15.5f - (float)x) +
+                    (15.5f - (float)y) * (15.5f - (float)y) > lim) {
+                    D_L00_00184394[x / 8 + y * 4] |= 1 << (x - (x / 8) * 8);
+                }
             }
         }
+    } else {
+        D_L00_001841F0[0] = 0;
+        D_L00_001841F0[2] = 0;
+        D_L00_001841F0[3] = 0;
+        D_L00_001841F0[1] = 0;
+        D_L00_001841F0[10] = 0;
     }
 }

@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/game/func_L00_0020B060.c (games/rac1) through the version
+/* Carried from the PAL decompilation's src/overlays/shared/help_00203E98.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
@@ -12,86 +12,70 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* What the PAL file this was written in declares before it. */
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
+extern s32 func_001F9688(s32);
 extern unsigned char D_0013E533[] NOT_SDA;
+extern f32 func_002132A8(f32 a, f32 b);
+extern s32 func_L00_00257B90(s32, s32);
 extern char D_L00_0017A680[];
 extern int func_001F9740(int *);
-extern float func_L00_00257C48(float lo, float hi);
-extern int func_001F9688(int);
-extern s32 func_L00_00257B90(s32, s32);
-extern float func_002132A8(float, float);
+extern float func_L00_00257C48(float, float);
 
-/* Four slots of random-angle pairs in the state at D_0013E533 + 0xE1D: each slot i checks
-   func_001F9740 on its word at +0x1060 + 4i and, if that is nonzero, draws a float (and a
-   sign-folded float for slot 3) and words from the random helpers, then copies the slot's two
-   floats (+0x1024, +0x1028, stride 16) into the 176-byte records of D_L00_0017A680 at 13 + i.
-   Returns at once when the word at +0x2084 is set or the byte at +0x2080 -> +0x53 is set. */
+
+/* NON_MATCHING FUN_L00_0020a9e8 -- src/overlays/shared/help_00203E98.c
+ * Best so far: SIZE ours 680 / retail 684, checked 2026-10-09.
+ * Not built into anything: the retail assembly stays in the source file
+ * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
+ * What the last attempts found:
+ *   FUN_L00_0020a9e8: re-rolls four random motion records (shared help): for i in 0..3, if func_001F9740(&q[i]) t
+ *   Best p5: 680 vs 684 bytes (q as a named int * with q[1], q[2], q[i]); p7 (same size) adds j=i+13 but registers
+ */
+
+/* Re-rolls four random motion parameters and copies each pair into its 0xB0-byte record. */
 void FUN_L00_0020a9e8(void) {
-    unsigned char *g = (unsigned char *)D_0013E533 + 0xE1D;
-    unsigned char *B = g + 0x1060;
-    unsigned char *A = (unsigned char *)D_L00_0017A680;
-    int i;
+    char *base = (char *)D_0013E533 + 0xE1D;
+    int *q;
+    char *g;
+    int i, j;
+    char *tbl;
 
-    if (*(int *)(g + 0x2084) != 0) {
-        return;
-    }
-    if (*(unsigned char *)(*(int *)(g + 0x2080) + 0x53) != 0) {
-        return;
-    }
+    if (*(int *)(base + 0x2084) != 0) return;
+    if (*(unsigned char *)(*(int *)(base + 0x2080) + 0x53) != 0) return;
+    q = (int *)(base + 0x1060);
+    g = base;
+    tbl = D_L00_0017A680;
     for (i = 0; i < 4; i++) {
-        unsigned char *p20 = B + 4 * i;
-        unsigned char *p17 = g + 16 * i;
-        int rec_index = i + 13;
-        float f0;
-        float f1;
-        int r;
-
-        if (func_001F9740((int *)p20) != 0) {
-            if (i == 0 || i == 1) {
-                float x = func_L00_00257C48(0.17453292f, 0.52359879f);
-                int a, b;
-                if (i == 0) {
-                    *(float *)(g + 0x1028) = x;
-                    a = func_001F9688(70);
-                    b = func_001F9688(150);
-                    r = func_L00_00257B90(a, b);
-                    *(int *)(D_0013E533 + 0x1E7D) = r;
-                } else {
-                    *(float *)(B - 0x28) = x;
-                    a = func_001F9688(40);
-                    b = func_001F9688(90);
-                    r = func_L00_00257B90(a, b);
-                    *(int *)(B + 4) = r;
-                }
+        char *f;
+        if (func_001F9740(&q[i])) {
+            if (i == 0) {
+                int *s;
+                *(float *)(g + 0x1028) = func_L00_00257C48(0.17453292f, 0.5235988f);
+                s = (int *)(D_0013E533 + 0x1E7D);
+                *s = func_L00_00257B90(func_001F9688(0x46), func_001F9688(0x96));
+            } else if (i == 1) {
+                *(float *)((char *)q - 0x28) = func_L00_00257C48(0.17453292f, 0.5235988f);
+                q[1] = func_L00_00257B90(func_001F9688(0x28), func_001F9688(0x5A));
             } else if (i == 2) {
-                float x = func_L00_00257C48(0.261799395f, 0.87266463f);
-                int a, b;
-                *(float *)(B - 0x18) = x;
-                a = func_001F9688(40);
-                b = func_001F9688(90);
-                r = func_L00_00257B90(a, b);
-                *(int *)(B + 8) = r;
+                *(float *)((char *)q - 0x18) = func_L00_00257C48(0.2617994f, 0.87266463f);
+                q[2] = func_L00_00257B90(func_001F9688(0x28), func_001F9688(0x5A));
             } else {
-                float w = func_002132A8(-0.0872664601f, 0.52359879f);
-                float old;
-                float v;
-                int a, b;
-                *(float *)(p17 + 0x1024) = w;
-                old = *(float *)(p17 + 0x1028);
-                v = func_L00_00257C48(0.34906584f, 0.959931076f);
-                if ((old <= 0.0f && v <= 0.0f) || (old >= 0.0f && v >= 0.0f)) {
-                    v = -v;
-                }
-                *(float *)(p17 + 0x1028) = v;
-                a = func_001F9688(35);
-                b = func_001F9688(70);
-                r = func_L00_00257B90(a, b);
-                *(int *)(p20) = r;
+                float old, nw;
+                *(float *)(g + i * 0x10 + 0x1024) = func_002132A8(-0.08726646f, 0.5235988f);
+                old = *(float *)(g + i * 0x10 + 0x1028);
+                nw = func_L00_00257C48(0.34906584f, 0.95993108f);
+                *(float *)(g + i * 0x10 + 0x1028) = nw;
+                if ((old <= 0 && nw <= 0) || (old >= 0 && nw >= 0))
+                    *(float *)(g + i * 0x10 + 0x1028) = -*(float *)(g + i * 0x10 + 0x1028);
+                q[i] = func_L00_00257B90(func_001F9688(0x23), func_001F9688(0x46));
             }
         }
-        f1 = *(float *)(p17 + 0x1028);
-        f0 = *(float *)(p17 + 0x1024);
-        *(float *)(A + rec_index * 0xB0 + 0x64) = f0;
-        *(float *)(A + rec_index * 0xB0 + 0x68) = f1;
+        f = g + i * 0x10;
+        j = i + 13;
+        base = (char *)(j * 0xB0);
+        {
+            char *r = tbl + (int)base;
+            *(float *)(r + 0x68) = *(float *)(f + 0x1028);
+            *(float *)(r + 0x64) = *(float *)(f + 0x1024);
+        }
     }
 }

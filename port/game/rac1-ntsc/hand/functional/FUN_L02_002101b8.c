@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/functional/func_L02_002100E8.c (games/rac1) through the version
+/* Carried from port/game/rac1-pal/hand/level_liquid_grid.c through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
@@ -12,11 +12,16 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* functional: high. Written from the assembly, not compiled. Same stores in the same order (a1 to +0x80, a0 to +0x10, a2 to +0x20, 0x100 to +0x0 of the DMA block at 0x1000D400), then the read of 0x20100000 ored with 1. Retail leaves that value in $v1 rather than $v0; a caller that reads $v1 needs checking. */
-int FUN_L02_002101b8(int a0, int a1, int a2) {
-    *(volatile int *)0x1000D480 = a1;
-    *(volatile int *)0x1000D410 = a0;
-    *(volatile int *)0x1000D420 = a2;
-    *(volatile int *)0x1000D400 = 0x100;
-    return *(volatile int *)0x20100000 | 1;
+/*
+ * FUN_L02_002101b8(from, to, quadwords): a transfer into the scratchpad on the toSPR DMA channel
+ * (0x1000D400: SADR, MADR, QWC, then CHCR started), retail's 0x30 bytes of assembly. The port has
+ * no DMA: the copy is done at once (the channel is idle by the time anything reads the scratchpad).
+ * The liquid grid sends its strip order to 0x70002800 with it.
+ */
+void FUN_L02_002101b8(unsigned char *from, unsigned int to, int quadwords) {
+    unsigned char *out = (unsigned char *)(0x70000000u | (to & 0x3FF0u));
+    int i;
+    for (i = 0; i < quadwords * 16; i++) {
+        out[i] = from[i];
+    }
 }

@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/functional/func_L15_002A8090.c (games/rac1) through the version
+/* Carried from the PAL decompilation's src/overlays/shared/vendor_00298BB8.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
@@ -12,197 +12,195 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* FUN_L15_002a6e68 -- src/overlays/shared/vendor_00298BB8.c (functional C for the port, not a match)
- * Update of the swinging laser (class 123, levels 15 and 17). The emitter moves about its placed
- * point (pvars +0x00) by its kind (+0x20): 0 circles at radius r (+0x24) in the vertical plane across
- * its yaw (+0x2C), 1-2 slide r*cos t along its heading or up and down, 3-4 swing as a pendulum
- * (4 a quarter turned); t (+0x28) advances at the speed (+0x30) along the path and the animation
- * speed follows. Every frame its beam runs 12 along the moby's z row: a hit line (damage 1,
- * 0x10001) hits what it crosses, a world line ends it (+0x10 = the end), D_L15_00161558 sparks run
- * along it, and the draw callback func_L15_002A7628 puts the beam quad on it.
- * Adapted with ReRAC's swing_laser.rs (ISC), which documents the US twin (level15 0x2a5c88);
- * shaped after an earlier worker's attempt (build-sn/try/FUN_L15_002a6e68/p2.c).
- * equiv: DIFFERENT by shape only: in state 0 the kind-0 test has the other branch polarity and the
- * constant 3 for the state is set before a label in retail; this rebuilds m + 0xC0 and the frame
- * address +0x40 once more than retail. */
-typedef unsigned int Q_2A8090_c2a6e68 __attribute__((mode(TI), aligned(16)));
-#define FB_2A8090 u_2A8090.c
-#define FQ_2A8090(o) (*(Q_2A8090_c2a6e68 *)(FB_2A8090 + (o)))
-#define FF_2A8090(o) (*(float *)(FB_2A8090 + (o)))
-#define DF_2A8090(o) (*(float *)(d + (o)))
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
+extern float func_001FA580(float, float);
+extern float func_001FA6C0(int);
+extern void func_001F9A28(void *dst, void *a, void *b);
+extern float func_001F9AF0(void *);
+extern void func_L00_001FF500(void *, void *, float);
+extern float func_001F9DE0(float);
+extern void func_001F4600(void (*)(void), void *);
+extern float D_0015ED6C MACRO_ADDR;
+extern float func_001FA5C8(float, float);
+extern float func_001F9DC8(float x);
+extern int func_L00_001EFC70(void *, void *, int, void *, void *);
+extern int func_00213260(int);
+extern int func_001FA6D0(float);
+extern void func_001F9A68(void *, void *, float);
+extern void func_001F9A10(void *, void *, void *);
+extern float func_001F96B0(float);
+extern void func_00214DB0(void *, float, float, float);
+extern void func_00214890(void *dst, void *vec, void *axis, float angle);
+extern void func_L00_001FF290(void *, void *, void *);
+extern float func_002132A8(float, float);
+extern void func_001FA050(float *, float *);
+extern void func_001F9EC0_2A3DD0(void *, void *, void *) __asm__("func_001F9CF8");
+typedef int u128_2A8090_c2a6e68 __attribute__((mode(TI)));
+typedef struct {
+    float v[2];
+    float f8;
+    float fC;
+    unsigned char *moby;
+    int flags;
+    unsigned char b18;
+    unsigned char b19;
+    short h1A;
+    float f1C;
+    int i20;
+    int pad24[3];
+} Ray_2A8090_c2a6e68;
+extern void func_001FA2B8(void *, void *);
+extern void func_00214128(void *);
+extern float func_001FA610(float);
+extern int func_001160D8(void);
+extern u8 D_L15_00174460[];
+extern short D_L15_00161558;
+extern short D_L15_0016155C;
+extern short D_L15_00161560;
+extern void func_L15_002A7628();
+extern unsigned char *func_L00_00273F80_r(float *pos, char *vel, int color, unsigned char life, unsigned char b, int mode, float scale) __asm__("func_L00_002730E0");
 
-extern Q_2A8090_c2a6e68 D_L15_001744E0_2A8090 __asm__("D_L15_00174460");
-extern float D_0015EE6C_2A8090 __asm__("D_0015ED6C") MACRO_ADDR;
-extern int D_L15_001615D8_2A8090 SDATA(D_L15_00161558);
-extern float D_L15_001615DC_2A8090 SDATA(D_L15_0016155C);
-extern float D_L15_001615E0_2A8090 SDATA(D_L15_00161560);
 
-extern float func_001FA748_2A8090(float, float) __asm__("func_001FA580");
-extern float func_001F9F90_2A8090(float) __asm__("func_001F9DC8");
-extern float func_001F9FA8_2A8090(float) __asm__("func_001F9DE0");
-extern void func_002156E0_2A8090(void *, void *, void *, float) __asm__("func_00214890");
-extern void func_001F9BD8_2A8090(void *, void *, void *) __asm__("func_001F9A10");
-extern void func_001FA218_2A8090(void *, void *) __asm__("func_001FA050");
-extern void func_001FA480_2A8090(void *, void *) __asm__("func_001FA2B8");
-extern void func_00214F78_2A8090(void *) __asm__("func_00214128");
-extern float func_001FA7D8_2A8090(float) __asm__("func_001FA610");
-extern float func_001FA790_2A8090(float, float) __asm__("func_001FA5C8");
-extern void func_00215C00_2A8090(void *, float, float, float) __asm__("func_00214DB0");
-extern void func_001F9EC0_2A8090(void *, void *, void *) __asm__("func_001F9CF8");
-extern void func_L00_001FF4B0_2A8090(void *, void *, float) __asm__("func_L00_001FF500");
-extern void func_001F9BF0_2A8090(void *, void *, void *) __asm__("func_001F9A28");
-extern int func_L00_001EFFF0_2A8090(void *, void *, int, void *, void *) __asm__("func_L00_001EFC70");
-extern int func_001160D8_2A8090(void) __asm__("func_001160D8");
-extern float func_002140F8_2A8090(float, float) __asm__("func_002132A8");
-extern float func_001F9878_2A8090(float) __asm__("func_001F96B0");
-extern int func_001FA898_2A8090(float) __asm__("func_001FA6D0");
-extern void func_001F9C30_2A8090(void *, void *, float) __asm__("func_001F9A68");
-extern float func_001F9CB8_2A8090(void *) __asm__("func_001F9AF0");
-extern void func_L00_001FF240_2A8090(void *, void *, void *) __asm__("func_L00_001FF290");
-extern float func_001FA888_2A8090(int) __asm__("func_001FA6C0");
-extern int func_002140B0_2A8090(int) __asm__("func_00213260");
-extern void func_L00_00273F80_2A8090(void *, void *, int, int, int, int, float) __asm__("func_L00_002730E0");
-extern void func_001F49B0_2A8090(void (*)(void), void *) __asm__("func_001F4600");
-extern void func_L15_002A8850_2A8090(void) __asm__("func_L15_002A7628");
 
-void FUN_L15_002a6e68(unsigned char *m) {
-    union {
-        Q_2A8090_c2a6e68 q[10];
-        char c[0xA0];
-    } u_2A8090;
-    char *d;
-    float rate, a0, a1, s, len, sc;
-    int k, life, life8;
-
-    FQ_2A8090(0x00) = *(Q_2A8090_c2a6e68 *)(m + 0x10);
-    d = *(char **)(m + 0x78);
-    switch (m[0x20]) {
+/* Spiderbot update: steps the walk/turn state, then probes ahead and sprays sparks along the path. */
+void FUN_L15_002a6e68(unsigned char *moby) {
+    float old[4];
+    float A[4];
+    float B[4];
+    float C[4];
+    unsigned char *d = *(unsigned char **)(moby + 0x78);
+    *(u128_2A8090_c2a6e68 *)old = *(u128_2A8090_c2a6e68 *)(moby + 0x10);
+    {
+    float D[4];
+    float M[16];
+    float T[4];
+    switch (moby[0x20]) {
     case 0:
-        *(Q_2A8090_c2a6e68 *)d = FQ_2A8090(0x00);
-        *(float *)(m + 0x58) = DF_2A8090(0x30) / 1.5f;
-        DF_2A8090(0x28) = DF_2A8090(0x28) * 0.017453292f;
+        *(u128_2A8090_c2a6e68 *)d = *(u128_2A8090_c2a6e68 *)old;
+        *(float *)(moby + 0x58) = *(float *)(d + 0x30) / 1.5f;
+        *(float *)(d + 0x28) = *(float *)(d + 0x28) * 0.017453292f;
         if (*(int *)(d + 0x20) == 0) {
-            DF_2A8090(0x2C) = *(float *)(m + 0x48);
-            m[0x20] = 1;
-        } else if (*(int *)(d + 0x20) < 3) {
-            m[0x20] = 3;
+            moby[0x20] = 1;
+            *(float *)(d + 0x2C) = *(float *)(moby + 0x48);
+        } else if (*(int *)(d + 0x20) >= 3) {
+            moby[0x20] = 2;
+            *(float *)(d + 0x2C) = *(float *)(moby + 0x48);
         } else {
-            m[0x20] = 2;
-            DF_2A8090(0x2C) = *(float *)(m + 0x48);
+            moby[0x20] = 3;
         }
         break;
-    case 1:
-        FQ_2A8090(0x30) = 0;
-        FQ_2A8090(0x40) = 0;
-        FF_2A8090(0x38) = DF_2A8090(0x24);
-        FQ_2A8090(0x20) = FQ_2A8090(0x30);
-        rate = 360.0f / (DF_2A8090(0x24) * 6.2831855f / DF_2A8090(0x30)) * 0.017453292f * D_0015EE6C_2A8090;
-        DF_2A8090(0x28) = func_001FA748_2A8090(DF_2A8090(0x28), rate);
-        *(float *)(m + 0x58) = DF_2A8090(0x30) / 1.5f;
-        FF_2A8090(0x30) = func_001F9F90_2A8090(DF_2A8090(0x2C));
-        FF_2A8090(0x34) = func_001F9FA8_2A8090(DF_2A8090(0x2C));
-        *(int *)(FB_2A8090 + 0x38) = 0;
-        func_002156E0_2A8090(FB_2A8090 + 0x10, FB_2A8090 + 0x20, FB_2A8090 + 0x30, DF_2A8090(0x28));
-        func_001F9BD8_2A8090(FB_2A8090 + 0x90, d, FB_2A8090 + 0x10);
-        *(Q_2A8090_c2a6e68 *)(m + 0x10) = FQ_2A8090(0x90);
-        FF_2A8090(0x48) = func_001FA748_2A8090(DF_2A8090(0x2C), 1.5707964f);
-        FF_2A8090(0x44) = func_001FA748_2A8090(-DF_2A8090(0x28), 3.1415927f);
-        func_001FA218_2A8090(FB_2A8090 + 0x50, FB_2A8090 + 0x40);
-        func_001FA480_2A8090(m + 0xC0, FB_2A8090 + 0x50);
-        func_00214F78_2A8090(m + 0xC0);
-        *(unsigned short *)(m + 0x34) |= 0x100;
-        break;
-    case 2:
-        FQ_2A8090(0x30) = 0;
-        FQ_2A8090(0x40) = 0;
-        FF_2A8090(0x38) = -DF_2A8090(0x24);
-        FQ_2A8090(0x20) = FQ_2A8090(0x30);
-        a0 = func_001FA7D8_2A8090(func_001F9F90_2A8090(DF_2A8090(0x28)) * 1.5707964f);
-        a0 = func_001FA748_2A8090(a0, *(int *)(d + 0x20) != 4 ? 0.0f : 1.5707964f);
-        rate = 360.0f / (DF_2A8090(0x24) * 6.2831855f / DF_2A8090(0x30)) * 0.017453292f * D_0015EE6C_2A8090;
-        s = func_001FA748_2A8090(DF_2A8090(0x28), rate);
-        DF_2A8090(0x28) = s;
-        a1 = func_001FA7D8_2A8090(func_001F9F90_2A8090(s) * 1.5707964f);
-        a1 = func_001FA748_2A8090(a1, *(int *)(d + 0x20) != 4 ? 0.0f : 1.5707964f);
-        s = func_001FA790_2A8090(a1, a0);
-        *(float *)(m + 0x58) = DF_2A8090(0x24) * s / (D_0015EE6C_2A8090 * 1.5f);
-        FF_2A8090(0x30) = func_001F9F90_2A8090(DF_2A8090(0x2C));
-        FF_2A8090(0x34) = func_001F9FA8_2A8090(DF_2A8090(0x2C));
-        *(int *)(FB_2A8090 + 0x38) = 0;
-        func_002156E0_2A8090(FB_2A8090 + 0x10, FB_2A8090 + 0x20, FB_2A8090 + 0x30, a1);
-        func_001F9BD8_2A8090(FB_2A8090 + 0x90, d, FB_2A8090 + 0x10);
-        *(Q_2A8090_c2a6e68 *)(m + 0x10) = FQ_2A8090(0x90);
-        FF_2A8090(0x48) = func_001FA748_2A8090(DF_2A8090(0x2C), 1.5707964f);
-        FF_2A8090(0x44) = func_001FA748_2A8090(-a1, 0.0f);
-        func_001FA218_2A8090(FB_2A8090 + 0x50, FB_2A8090 + 0x40);
-        func_001FA480_2A8090(m + 0xC0, FB_2A8090 + 0x50);
-        func_00214F78_2A8090(m + 0xC0);
-        *(unsigned short *)(m + 0x34) |= 0x100;
-        break;
-    case 3:
-        a0 = func_001F9F90_2A8090(DF_2A8090(0x28)) * DF_2A8090(0x24);
-        rate = 360.0f / (DF_2A8090(0x24) * 6.2831855f / DF_2A8090(0x30)) * 0.017453292f * D_0015EE6C_2A8090;
-        s = func_001FA748_2A8090(DF_2A8090(0x28), rate);
-        DF_2A8090(0x28) = s;
-        a1 = func_001F9F90_2A8090(s) * DF_2A8090(0x24);
-        *(float *)(m + 0x58) = (a1 - a0) / (D_0015EE6C_2A8090 * 1.5f);
-        func_00215C00_2A8090(FB_2A8090 + 0x10, a1, *(int *)(d + 0x20) == 2 ? 0.0f : *(float *)(m + 0x48),
-                             *(int *)(d + 0x20) == 2 ? 1.5707964f : 0.0f);
-        func_001F9BD8_2A8090(FB_2A8090 + 0x20, d, FB_2A8090 + 0x10);
-        *(Q_2A8090_c2a6e68 *)(m + 0x10) = FQ_2A8090(0x20);
+    case 1: {
+        *(u128_2A8090_c2a6e68 *)C = 0;
+        C[2] = *(float *)(d + 0x24);
+        *(u128_2A8090_c2a6e68 *)D = 0;
+        *(u128_2A8090_c2a6e68 *)B = *(u128_2A8090_c2a6e68 *)C;
+        *(float *)(d + 0x28) = func_001FA580(*(float *)(d + 0x28),
+            360.0f / (*(float *)(d + 0x24) * 6.2831855f / *(float *)(d + 0x30)) * 0.017453292f * D_0015ED6C);
+        *(float *)(moby + 0x58) = *(float *)(d + 0x30) / 1.5f;
+        C[0] = func_001F9DC8(*(float *)(d + 0x2C));
+        C[1] = func_001F9DE0(*(float *)(d + 0x2C));
+        C[2] = 0.0f;
+        func_00214890(A, B, C, *(float *)(d + 0x28));
+        func_001F9A10(T, d, A);
+        *(u128_2A8090_c2a6e68 *)(moby + 0x10) = *(u128_2A8090_c2a6e68 *)T;
+        D[2] = func_001FA580(*(float *)(d + 0x2C), 1.5707964f);
+        D[1] = func_001FA580(-*(float *)(d + 0x28), 3.1415927f);
+        func_001FA050(M, D);
+        func_001FA2B8(moby + 0xC0, M);
+        func_00214128(moby + 0xC0);
+        *(unsigned short *)(moby + 0x34) |= 0x100;
         break;
     }
-
-    /* the beam: 12 along the z row, a hit line, a world line, the sparks */
-    FQ_2A8090(0x20) = 0;
-    FF_2A8090(0x28) = 12.0f;
-    func_001F9EC0_2A8090(FB_2A8090 + 0x20, FB_2A8090 + 0x20, m + 0xC0);
-    func_001F9BD8_2A8090(FB_2A8090 + 0x40, m + 0x10, FB_2A8090 + 0x20);
-    FQ_2A8090(0x10) = FQ_2A8090(0x40);
-    *(int *)(FB_2A8090 + 0x54) = 0x10001;
-    *(unsigned char **)(FB_2A8090 + 0x50) = m;
-    FF_2A8090(0x5C) = 1.0f;
-    *(int *)(FB_2A8090 + 0x60) = 1;
-    func_L00_001FF4B0_2A8090(FB_2A8090 + 0x40, FB_2A8090 + 0x20, 1.0f);
-    *(unsigned short *)(FB_2A8090 + 0x5A) = *(unsigned short *)(m + 0xA6);
-    FF_2A8090(0x48) = 1.0f;
-    FF_2A8090(0x4C) = 5627.9248f;
-    FB_2A8090[0x59] = 1;
-    FB_2A8090[0x58] = 1;
-    func_001F9BF0_2A8090(FB_2A8090 + 0x70, m + 0x10, FB_2A8090);
-    FQ_2A8090(0x30) = FQ_2A8090(0x70);
-    func_L00_001EFFF0_2A8090(m + 0x10, FB_2A8090 + 0x10, 9, m, FB_2A8090 + 0x40);
-    if (func_L00_001EFFF0_2A8090(m + 0x10, FB_2A8090 + 0x10, 2, 0, 0) != 0) {
-        *(Q_2A8090_c2a6e68 *)(d + 0x10) = D_L15_001744E0_2A8090;
-    } else {
-        *(Q_2A8090_c2a6e68 *)(d + 0x10) = FQ_2A8090(0x10);
+    case 2: {
+        float b1;
+        float b2;
+        *(u128_2A8090_c2a6e68 *)C = 0;
+        C[2] = -*(float *)(d + 0x24);
+        *(u128_2A8090_c2a6e68 *)D = 0;
+        *(u128_2A8090_c2a6e68 *)B = *(u128_2A8090_c2a6e68 *)C;
+        b1 = func_001FA580(func_001FA610(func_001F9DC8(*(float *)(d + 0x28)) * 1.5707964f),
+                           *(int *)(d + 0x20) == 4 ? 1.5707964f : 0.0f);
+        *(float *)(d + 0x28) = func_001FA580(*(float *)(d + 0x28),
+            360.0f / (*(float *)(d + 0x24) * 6.2831855f / *(float *)(d + 0x30)) * 0.017453292f * D_0015ED6C);
+        b2 = func_001FA580(func_001FA610(func_001F9DC8(*(float *)(d + 0x28)) * 1.5707964f),
+                           *(int *)(d + 0x20) == 4 ? 1.5707964f : 0.0f);
+        *(float *)(moby + 0x58) = *(float *)(d + 0x24) * func_001FA5C8(b2, b1) / (D_0015ED6C * 1.5f);
+        C[0] = func_001F9DC8(*(float *)(d + 0x2C));
+        C[1] = func_001F9DE0(*(float *)(d + 0x2C));
+        C[2] = 0.0f;
+        func_00214890(A, B, C, b2);
+        func_001F9A10(T, d, A);
+        *(u128_2A8090_c2a6e68 *)(moby + 0x10) = *(u128_2A8090_c2a6e68 *)T;
+        D[2] = func_001FA580(*(float *)(d + 0x2C), 1.5707964f);
+        D[1] = func_001FA580(-b2, 0.0f);
+        func_001FA050(M, D);
+        func_001FA2B8(moby + 0xC0, M);
+        func_00214128(moby + 0xC0);
+        *(unsigned short *)(moby + 0x34) |= 0x100;
+        break;
     }
-    for (k = 0; k < D_L15_001615D8_2A8090; ) {
-        sc = (func_001160D8_2A8090() & 1) ? 1.0f : -1.0f;
-        life = func_001FA898_2A8090(
-            func_001F9878_2A8090(func_002140F8_2A8090(D_L15_001615E0_2A8090 * 0.5f, D_L15_001615E0_2A8090)));
-        func_001F9BF0_2A8090(FB_2A8090 + 0x70, d + 0x10, m + 0x10);
-        FQ_2A8090(0x20) = FQ_2A8090(0x70);
-        func_001F9C30_2A8090(FB_2A8090 + 0x20, FB_2A8090 + 0x20, sc);
-        len = func_001F9CB8_2A8090(FB_2A8090 + 0x20);
-        if (sc < 0.0f) {
-            FQ_2A8090(0x10) = *(Q_2A8090_c2a6e68 *)(d + 0x10);
+    case 3: {
+        float w;
+        float x;
+        w = func_001F9DC8(*(float *)(d + 0x28)) * *(float *)(d + 0x24);
+        *(float *)(d + 0x28) = func_001FA580(*(float *)(d + 0x28),
+            360.0f / (*(float *)(d + 0x24) * 6.2831855f / *(float *)(d + 0x30)) * 0.017453292f * D_0015ED6C);
+        x = func_001F9DC8(*(float *)(d + 0x28)) * *(float *)(d + 0x24);
+        *(float *)(moby + 0x58) = (x - w) / (D_0015ED6C * 1.5f);
+        func_00214DB0(A, x, *(int *)(d + 0x20) != 2 ? *(float *)(moby + 0x48) : 0.0f,
+                      *(int *)(d + 0x20) == 2 ? 1.5707964f : 0.0f);
+        func_001F9A10(B, d, A);
+        *(u128_2A8090_c2a6e68 *)(moby + 0x10) = *(u128_2A8090_c2a6e68 *)B;
+        break;
+    }
+    }
+    }
+    {
+        Ray_2A8090_c2a6e68 R;
+        float T2[4];
+        int i;
+        *(u128_2A8090_c2a6e68 *)B = 0;
+        B[2] = 12.0f;
+        func_001F9EC0_2A3DD0(B, B, moby + 0xC0);
+        func_001F9A10(R.v, moby + 0x10, B);
+        *(u128_2A8090_c2a6e68 *)A = *(u128_2A8090_c2a6e68 *)R.v;
+        R.flags = 0x10001;
+        R.moby = moby;
+        R.f1C = 1.0f;
+        R.i20 = 1;
+        func_L00_001FF500(R.v, B, 1.0f);
+        R.h1A = *(unsigned short *)(moby + 0xA6);
+        R.f8 = 1.0f;
+        R.fC = 5627.9248f;
+        R.b18 = 1;
+        R.b19 = 1;
+        func_001F9A28(T2, moby + 0x10, old);
+        *(u128_2A8090_c2a6e68 *)C = *(u128_2A8090_c2a6e68 *)T2;
+        func_L00_001EFC70(moby + 0x10, A, 9, moby, &R);
+        if (func_L00_001EFC70(moby + 0x10, A, 2, 0, 0)) {
+            *(u128_2A8090_c2a6e68 *)(d + 0x10) = *(u128_2A8090_c2a6e68 *)D_L15_00174460;
         } else {
-            FQ_2A8090(0x10) = *(Q_2A8090_c2a6e68 *)(m + 0x10);
+            *(u128_2A8090_c2a6e68 *)(d + 0x10) = *(u128_2A8090_c2a6e68 *)A;
         }
-        life8 = life & 0xFF;
-        k++;
-        func_001F9C30_2A8090(FB_2A8090 + 0x20, FB_2A8090 + 0x20, func_002140F8_2A8090(0.0f, 0.9f));
-        func_L00_001FF240_2A8090(FB_2A8090 + 0x70, FB_2A8090 + 0x10, FB_2A8090 + 0x20);
-        s = D_0015EE6C_2A8090 * 10.0f;
-        func_L00_001FF4B0_2A8090(FB_2A8090 + 0x20, FB_2A8090 + 0x20,
-                                 func_002140F8_2A8090(s, len / func_001FA888_2A8090(life << 2)));
-        func_L00_00273F80_2A8090(FB_2A8090 + 0x10, FB_2A8090 + 0x20, 0x604040FF, life8, func_002140B0_2A8090(0xFF) & 0xFF, 0,
-                                 D_L15_001615DC_2A8090);
+        for (i = 0; i < *(int *)&D_L15_00161558; i++) {
+            float s;
+            float len;
+            int k;
+            unsigned char life;
+            s = -1.0f;
+            if (func_001160D8() & 1) s = 1.0f;
+            k = func_001FA6D0(func_001F96B0(func_002132A8(*(float *)&D_L15_00161560 * 0.5f, *(float *)&D_L15_00161560)));
+            func_001F9A28(T2, d + 0x10, moby + 0x10);
+            *(u128_2A8090_c2a6e68 *)B = *(u128_2A8090_c2a6e68 *)T2;
+            func_001F9A68(B, B, s);
+            len = func_001F9AF0(B);
+            *(u128_2A8090_c2a6e68 *)A = s < 0.0f ? *(u128_2A8090_c2a6e68 *)(d + 0x10) : *(u128_2A8090_c2a6e68 *)(moby + 0x10);
+            life = k;
+            func_001F9A68(B, B, func_002132A8(0.0f, 0.9f));
+            func_L00_001FF290(T2, A, B);
+            func_L00_001FF500(B, B, func_002132A8(D_0015ED6C * 10.0f, len / func_001FA6C0(k * 4)));
+            func_L00_00273F80_r(A, (char *)B, 0x604040FF, life, func_00213260(0xFF), 0, *(float *)&D_L15_0016155C);
+        }
     }
-    func_001F49B0_2A8090(func_L15_002A8850_2A8090, m);
+    func_001F4600(func_L15_002A7628, moby);
 }
-#undef FB_2A8090
-#undef FQ_2A8090
-#undef FF_2A8090
-#undef DF_2A8090

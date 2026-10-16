@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/shared/func_L00_00262BC0.c (games/rac1) through the version
+/* Carried from the PAL decompilation's src/overlays/shared/mobyutil_00261B00.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
@@ -12,54 +12,74 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* NON_MATCHING FUN_L00_00261b48 -- src/overlays/shared/mobyutil_00261B00.c
- * Best so far: SIZE ours 552 / retail 548, checked 2026-10-09.
- * Not built into anything: the retail assembly stays in the source file
- * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
- * What the last attempts found:
- *   Finds the nearest crossing of a polyline (vertices in D_L00_001B04B0[idx], count at +0, 16-byte vertices from 
- *   Best candidate p9.c: same size (548), loop shape right (i=$19 and giv j=$18 via `i * 0x10 + 0x10` in one paren
- *   Would unblock: a source form where the `t[3]/u[3] != 0` zero is a hoisted constant but the `< 0`/`x > 0` zero 
- */
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
+/* The quadword. Not called u128: source files declare their own u128,
+   and a second typedef of one name is an error. */
+typedef u32 VecQuad_c261b48 __attribute__((mode(TI), aligned(16)));
+typedef union {
+    VecQuad_c261b48 q;
+    f32 f[4];
+    s32 i[4];
+} Vec4_c261b48;
+typedef struct {
+    s32 count;
+    u8 pad[12];
+    Vec4_c261b48 points[1];
+} SegmentPath_2629E0_c261b48;
+extern SegmentPath_2629E0_c261b48 *D_L00_001B0830_2629E0[] __asm__("D_L00_001B04B0");
 extern void func_001F9A28(void *, void *, void *);
 extern float func_001F9AF0(void *);
 extern void func_L00_001FF500(void *, void *, float);
 extern void func_001F99F8(void *);
 extern void func_001F9CF8(void *, void *, void *);
 extern void func_001F9A40(void *, void *, void *, float);
-extern char *D_L00_001B04B0[];
 
-/* Finds where a polyline crosses the y=0 plane nearest the start; returns whether it did. */
+
+
 int FUN_L00_00261b48(int idx, void *a, void *b, void *c) {
     float v[4], w[4], z[4], t[4], u[4];
     float best;
-    float z0 = 0;
+    float zero;
     int found = 0;
-    int i;
+    int i = 1;
+    int offset;
+    float *prev;
+    float *cur;
     func_001F9A28(v, b, a);
     v[2] = 0;
     func_L00_001FF500(v, v, 1.0f / func_001F9AF0(v));
-    best = 1.0f;
     func_001F99F8(w);
     w[0] = v[1];
     w[1] = -v[0];
     func_001F99F8(z);
     z[2] = 1.0f;
-    func_001F9A28(t, D_L00_001B04B0[idx] + 0x10, a);
+    best = 1.0f;
+    func_001F9A28(t, (char *)D_L00_001B0830_2629E0[idx] + 0x10, a);
     func_001F9CF8(t, t, v);
-    for (i = 1; i < *(int *)D_L00_001B04B0[idx]; i++) {
-        func_001F9A28(u, D_L00_001B04B0[idx] + (i * 0x10 + 0x10), a);
-        func_001F9CF8(u, u, v);
-        if (t[3] != z0 || u[3] != z0) {
-            if (u[1] * t[1] < 0) {
-                float x = u[0] + (t[0] - u[0]) / (t[1] - u[1]) * -u[1];
-                if (x > 0 && x < best) {
-                    best = x;
-                    found = 1;
+    prev = t;
+    cur = u;
+    if (i < D_L00_001B0830_2629E0[idx]->count) {
+        offset = 0x20;
+        zero = 0.0f;
+        do {
+            func_001F9A28(cur, (char *)D_L00_001B0830_2629E0[idx] + offset, a);
+            func_001F9CF8(cur, cur, v);
+            if (t[3] != zero || u[3] != zero) {
+                if (u[1] * t[1] < 0.0f) {
+                    float x = (t[0] - u[0]) / (t[1] - u[1]) * -u[1] + u[0];
+                    if (x > 0.0f && x < best) {
+                        best = x;
+                        found = 1;
+                        qcopy(prev, cur);
+                        goto next;
+                    }
                 }
             }
-        }
-        qcopy(t, u);
+            qcopy(prev, cur);
+        next:
+            i++;
+            offset += 0x10;
+        } while (i < D_L00_001B0830_2629E0[idx]->count);
     }
     func_001F9A40(c, a, b, best);
     return found;

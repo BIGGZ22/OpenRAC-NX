@@ -1,4 +1,4 @@
-/* Carried from the PAL decompilation's nonmatching/shared/func_L00_002AA998.c (games/rac1) through the version
+/* Carried from the PAL decompilation's src/overlays/shared/vendor_002A5138.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"
@@ -12,37 +12,28 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* What the PAL file this was written in declares before it. */
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
 extern void *func_0020C4F8(int oClass);
-extern float D_0015ED6C MACRO_ADDR;
-extern char *func_L00_0025C338(void *);
-extern float func_001F9AF0(float *);
-extern char D_0013E533[];
 extern void func_L00_00250DF8(void *);
-
-/* NON_MATCHING FUN_L00_002a96f8 -- src/overlays/shared/vendor_002A5138.c
- * Best so far: SIZE ours 692 / retail 688, checked 2026-10-09.
- * Not built into anything: the retail assembly stays in the source file
- * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
- * What the last attempts found:
- *   Spawns class0x100, resolves a target, initializes projectile data and collision, registers and scales the moby
- *   mini12 a01 named wall: retail loads D_0015ED6C via repeated lui at +0x90, +0x100, +0x1dc (three distinct acces
- *   No run; unblock needs matching per-function compiler flags.
- *   Offset correction: D_0015ED6C lui instructions are +0x94, +0xfc and +0x1d0; all are explicit repeated symbol l
- *   mini42 main-only: current staged candidate confirms39/688. p1 union vectors plus owner layout and real float d
- */
-extern char D_0013E633_f5d[] __asm__("D_0013E533");
+extern char D_0013F350[];
+extern float D_0015ED6C MACRO_ADDR;
+extern int func_001F9688(int);
+extern char *func_L00_0025C338(void *);
+extern void func_00214DB0(void *, float, float, float);
+typedef float V_c2a96f8[4] __attribute__((aligned(16)));
+extern V_c2a96f8 D_L00_00173E60;
+extern char D_0013E533[] NOT_SDA;
+extern float func_001F9AF0(float *);
 typedef int Q_2aa998_c2a96f8 __attribute__((mode(TI)));
 typedef union { Q_2aa998_c2a96f8 q; float f[4]; } BoltVector_2AA998_c2a96f8;
 typedef struct { char pad[0x10]; BoltVector_2AA998_c2a96f8 position; } BoltOwner_2AA998_c2a96f8;
-extern float D_L00_001613C4;
-extern char D_L00_00173F60_c[] __asm__("D_L00_00173E60");
+extern short D_L00_001613C4;
 extern short D_L00_001B0770[];
-extern void func_00214DB0(void *, float, float, float);
 extern char *func_L00_002630C8(void *, void *, void *, float *, float *, float *, float);
-extern int func_001F9688(int);
 extern int func_L00_001EFC70(void *, void *, int, int, int);
-extern void func_L00_002607F8_c(void *, short *, int) __asm__("func_L00_0025F780");
+extern void func_L00_0025F780(void *, short *, int);
+
+
 
 /* Spawns a homing bolt (class 0x100) from owner at pos, aimed at tgt or at whatever lies along its heading. */
 char *FUN_L00_002a96f8(void *owner, void *pos, float a, float b, float c, char *tgt, float rz, float ry) {
@@ -55,7 +46,7 @@ char *FUN_L00_002a96f8(void *owner, void *pos, float a, float b, float c, char *
         ((unsigned char *)m)[0x30] = 0xFF;
         m[0x31] = 1;
         m[0x20] = 0;
-        *(float *)(m + 0x2C) *= D_L00_001613C4;
+        *(float *)(m + 0x2C) *= *(float *)&D_L00_001613C4;
         *(short *)(m + 0x32) = 0xFF;
         d = *(char **)(m + 0x78);
         *(float *)(m + 0x48) = rz;
@@ -90,22 +81,25 @@ char *FUN_L00_002a96f8(void *owner, void *pos, float a, float b, float c, char *
             *(float *)(d + 0x1C) = c;
         }
         {
-            int n;
             int r;
-            if (func_001F9AF0((float *)(D_0013E633_f5d + 0xF5D)) > D_0015ED6C * 0.1f) n = 0x3C;
-            else n = 1;
-            r = func_001F9688(n);
-            *(short *)(d + 0x3E) = r;
-            *(short *)(d + 0x3C) = r;
+            if (func_001F9AF0((float *)(D_0013F350 + 0x140)) > D_0015ED6C * 0.1f) {
+                r = func_001F9688(0x3C);
+                *(short *)(d + 0x3E) = r;
+                *(short *)(d + 0x3C) = r;
+            } else {
+                r = func_001F9688(1);
+                *(short *)(d + 0x3E) = r;
+                *(short *)(d + 0x3C) = r;
+            }
         }
         t.q = ((BoltOwner_2AA998_c2a96f8 *)owner)->position.q;
         t.f[2] = ((float *)pos)[2];
         if (func_L00_001EFC70(&t, pos, 0, *(int *)(D_0013E533 + 0x2E9D), 0) != 0) {
             m[0xBC] = 1;
-            qcopy(m + 0x10, D_L00_00173F60_c);
+            qcopy(m + 0x10, &D_L00_00173E60);
         }
         func_L00_00250DF8(m);
-        func_L00_002607F8_c(m, D_L00_001B0770, 0x1F);
+        func_L00_0025F780(m, D_L00_001B0770, 0x1F);
         *(float *)(m + 0x2C) += *(float *)(m + 0x2C);
     }
     return m;

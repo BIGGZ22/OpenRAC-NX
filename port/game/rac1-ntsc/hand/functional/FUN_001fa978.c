@@ -12,11 +12,12 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* FUN_001fa978: fills the full-screen anti-aliasing buffer record (display and storage sizes,
+/* What the PAL file this was written in declares before it (its unit, and its own file). */
+/* SetupFS_AA_buffer: fills the full-screen anti-aliasing buffer record (display and storage sizes,
  * pixel formats, frame, storage and depth buffer pages), sets its display environment and its two
  * drawing environments, and builds the GS packets that copy, resample, draw and clear the frame in
  * sixteen strips.
- * Functional C for the native port, written from the NTSC decomp's non-matching draft for the US version
+ * Functional C for the native port, written from Lombyte's non-matching draft for the US version
  * (MIT: src/assembly/textbin/rendering/buffers/setup_fs_aa_buffer.c, setup_fs_aa_buffer) and the
  * PAL code, whose globals all sit 0x100 above the US ones. It does what the retail function does;
  * it does not match its bytes. */
@@ -45,7 +46,6 @@ typedef struct {
     short zbp;
     int reserved170;            /* 0x170 */
 } FsAa_FAB40_c1fa978;
-
 extern FsAa_FAB40_c1fa978 buffer_FAB40 __asm__("D_00151780");
 extern FsAa_FAB40_c1fa978 *active_FAB40 __asm__("D_0015EEB8");
 extern int display_address_FAB40 __asm__("D_0015EE80");
@@ -59,21 +59,18 @@ extern unsigned long resample_packet_FAB40[74] __asm__("D_00151DF0");
 extern unsigned long clear_packet_FAB40[42] __asm__("D_00152040");
 extern void set_def_disp_env_FAB40(void *, short, short, short, short, short) __asm__("func_00121AC8");
 extern int set_def_draw_env_FAB40(void *, short, short, short, short, short) __asm__("func_00121FC8");
-
 /* A GIF tag of eight loops, one register (A+D), end of packet. */
-static __inline__ void gif_tag_FAB40(unsigned long *tag) {
+static __inline__ void gif_tag_FAB40_c1fa978(unsigned long *tag) {
     tag[0] = 8 | (1UL << 15) | (1UL << 60);
     tag[1] = 0xE;
 }
-
 /* The FRAME register word the copy and draw packets start with. */
-static __inline__ unsigned long frame_word_FAB40(FsAa_FAB40_c1fa978 *b) {
+static __inline__ unsigned long frame_word_FAB40_c1fa978(FsAa_FAB40_c1fa978 *b) {
     return ((unsigned long)b->fbp0 << 5) | ((unsigned long)((b->display_width >> 6) & 0x3F) << 14) |
            ((unsigned long)b->psm << 20) | 0xEA8000000UL;
 }
-
 /* Sixteen strips of two corners each over a height: the clear packets' body. */
-static __inline__ void clear_strips_FAB40(unsigned long *p, int height) {
+static __inline__ void clear_strips_FAB40_c1fa978(unsigned long *p, int height) {
     int i, left = 0x6FF8, next = 0x71F8;
     for (i = 0; i < 16; i++) {
         *p++ = left | ((unsigned long)(0x7FF8 - (height << 3)) << 16);
@@ -82,6 +79,8 @@ static __inline__ void clear_strips_FAB40(unsigned long *p, int height) {
         next += 0x200;
     }
 }
+
+
 
 void FUN_001fa978(int display_width, int display_height, int storage_width, int storage_height,
                    int display_offset_x, int display_offset_y) {
@@ -112,12 +111,12 @@ void FUN_001fa978(int display_width, int display_height, int storage_width, int 
                            buffer_FAB40.display_height, 3, buffer_FAB40.zpsm);
     b->draw0[0] = (b->draw0[0] & ~0x1FFUL) | (buffer_FAB40.fbp0 & 0x1FF);
     b->draw0[2] = (unsigned long)buffer_FAB40.zbp | ((unsigned long)(buffer_FAB40.zpsm & 0xF) << 24);
-    gif_tag_FAB40(b->giftag0);
+    gif_tag_FAB40_c1fa978(b->giftag0);
     set_def_draw_env_FAB40(b->draw1, buffer_FAB40.storage_psm, buffer_FAB40.storage_width,
                            buffer_FAB40.storage_height, 0, 0);
     b->draw1[2] = 1UL << 32;
     b->draw1[0] = (b->draw1[0] & ~0x1FFUL) | (buffer_FAB40.fbp1 & 0x1FF);
-    gif_tag_FAB40(b->giftag1);
+    gif_tag_FAB40_c1fa978(b->giftag1);
 
     p = transfer_packet_FAB40;
     p[0] = 0x408B400000000001UL;
@@ -128,7 +127,7 @@ void FUN_001fa978(int display_width, int display_height, int storage_width, int 
     p[5] = 8;
     p[6] = 0x100000261UL;
     p[7] = 0x14;
-    p[8] = frame_word_FAB40(b);
+    p[8] = frame_word_FAB40_c1fa978(b);
     p[9] = 6;
     p[10] = 0x4400000000008010UL;
     p[11] = 0x5353;
@@ -155,7 +154,7 @@ void FUN_001fa978(int display_width, int display_height, int storage_width, int 
     p[3] = 0x47;
     p[4] = 0x100000261UL;
     p[5] = 0x14;
-    p[6] = frame_word_FAB40(b);
+    p[6] = frame_word_FAB40_c1fa978(b);
     p[7] = 6;
     p[8] = 0x4400000000008010UL;
     p[9] = 0x5353;
@@ -180,7 +179,7 @@ void FUN_001fa978(int display_width, int display_height, int storage_width, int 
     p[5] = 8;
     p[6] = 0x100000261UL;
     p[7] = 0x14;
-    p[8] = frame_word_FAB40(b);
+    p[8] = frame_word_FAB40_c1fa978(b);
     p[9] = 6;
     p[10] = 0x4400000000008010UL;
     p[11] = 0x5353;
@@ -209,7 +208,7 @@ void FUN_001fa978(int display_width, int display_height, int storage_width, int 
     p[7] = 0x80008000UL;
     p[8] = 0x2400000000008010UL;
     p[9] = 0x44;
-    clear_strips_FAB40(&clear_packet_FAB40[10], b->display_height);
-    clear_strips_FAB40(&first_clear_FAB40[8], b->display_height);
-    clear_strips_FAB40(&second_clear_FAB40[8], b->storage_height);
+    clear_strips_FAB40_c1fa978(&clear_packet_FAB40[10], b->display_height);
+    clear_strips_FAB40_c1fa978(&first_clear_FAB40[8], b->display_height);
+    clear_strips_FAB40_c1fa978(&second_clear_FAB40[8], b->storage_height);
 }
