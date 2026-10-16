@@ -23,7 +23,7 @@ You need:
   `baserom/SCES_509.16.iso` (PAL) or `baserom/SCUS_971.99.iso` (NTSC-U)
   ([baserom/README.md](../baserom/README.md)). `baserom/` is ignored by git.
   The commands below name the PAL image; every one of them reads the NTSC-U
-  image the same way, except `pack` (below).
+  image the same way.
 
 The RAC1 PAL build only needs the executable from that image
 ([games/rac1/README.md](../games/rac1/README.md)).
@@ -144,24 +144,30 @@ the `RcEngine` stub in `rc1/` for reading and preview; the port still runs the C
 
 ```sh
 python3 editor/extract.py pack baserom/SCES_509.16.iso assets/levels/rac1 assets/packed/rac1
+python3 editor/extract.py pack baserom/SCUS_971.99.iso assets/levels/rac1-ntsc assets/packed/rac1-ntsc
 ```
 
 Turns what was edited in Godot back into the game's level data (the folder
-of per-level projects, or a single project with every level). For each
-level whose scene differs from the disc it writes that level's gameplay file
-as the game stores it, compressed, and the list of disc sectors it replaces:
+of per-level projects, or a single project with every level), from the disc
+the project was extracted from. For each level whose scene differs from the
+disc it writes that level's gameplay file as the game stores it, compressed,
+and the list of disc sectors it replaces:
 
 ```
 assets/packed/rac1/
-  level_NN/gameplay_pal.wad   one per level whose mobys were edited, the size of its place on the disc
+  level_NN/gameplay_<version>.wad   one per level whose mobys were edited, the size of its place on the disc
   level_NN/placements.json    one per level whose ties or shrubs were edited, for the native port
   patches.tsv                 first sector, sector count, file
   changes.txt                 what changed, in words
+  packed.json                 the disc it was packed from
 ```
 
-Packing reads the PAL disc only: the packed file takes the place of the
-PAL gameplay copy, and mod packs are PAL's ([overrides.py](overrides.py)).
-`pack` stops on the NTSC-U image.
+Each level header has a gameplay copy per version, and each disc's game
+loads its own (`gameplay_pal` or `gameplay_ntsc`, the table above): the
+packer reads and replaces that one, so the sectors in `patches.tsv` are the
+disc's own. A packed folder serves the disc it was packed from only; the
+Mods page stacks it for that disc and leaves it out for the other
+([overrides.py](overrides.py)).
 
 The disc image is never written. The native port reads the folder with
 `--mods assets/packed/rac1` and serves those sectors from the files
@@ -209,7 +215,11 @@ Checked on 2026-10-12: all 19 gameplay files round-trip through the
 compressor; a scene re-saved by Godot 4.7.2 with one moby moved packs to a
 file five bytes from the disc's, all in that moby's record; the port ran
 level 0 for 400 frames from it. Whether the moved moby shows where it was
-put has not been looked at in the running game yet.
+put has not been looked at in the running game yet. Checked on 2026-10-16
+on the NTSC-U disc: level 0 extracted from it, one bolt moved in the scene,
+packed to `level_00/gameplay_ntsc.wad` at the NTSC copy's sectors, which
+reads back as the disc's copy but for two bytes of that bolt's record; all
+19 NTSC gameplay copies round-trip through the compressor too.
 
 ## Models and textures for modders
 

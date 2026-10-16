@@ -1,14 +1,18 @@
 """Pack the levels edited in Godot back into the game's level data.
 
-    python3 editor/extract.py pack baserom/SCES_509.16.iso assets/godot assets/packed/rac1
+    python3 editor/extract.py pack baserom/SCES_509.16.iso assets/levels/rac1 assets/packed/rac1
+    python3 editor/extract.py pack baserom/SCUS_971.99.iso assets/levels/rac1-ntsc assets/packed/rac1-ntsc
 
 For each level whose scene differs from the disc, writes that level's
 gameplay file (the placements) as the game stores it, and a list of the disc
-sectors each file replaces:
+sectors each file replaces. Either disc: each level header holds a gameplay
+copy per version, and each disc's game loads its own (disc.Version.gameplay),
+so that copy is the one read and replaced:
 
-    <out>/level_NN/gameplay_pal.wad   the level's gameplay file, compressed
+    <out>/level_NN/gameplay_<version>.wad   the level's gameplay file, compressed
     <out>/patches.tsv                 first sector, sector count, file: one line per file
     <out>/changes.txt                 what was changed, in words
+    <out>/packed.json                 the disc it was packed from (overrides.py stacks it for that disc only)
 
 The disc image is never written. The native port reads `patches.tsv` (its
 `--mods` option) and serves those sectors from the files instead of the disc.
@@ -314,7 +318,7 @@ def pack_level(level_id: int, gameplay: bytes, scene: str) -> tuple[bytes, list[
 
 
 def pack(disc, survey: dict, project: Path, out: Path) -> tuple[int, int]:
-    """Writes OUT from the scenes of PROJECT. Returns (levels packed, mobys changed)."""
+    """Writes OUT from the scenes of PROJECT, for DISC's version. Returns (levels packed, mobys changed)."""
     import scenery          # it reads the scene with this module's reader
     patches, report, packed, total = [], [], 0, 0
     for info in survey["levels"]:
@@ -324,7 +328,7 @@ def pack(disc, survey: dict, project: Path, out: Path) -> tuple[int, int]:
                                   project / name / "levels" / name / f"{name}.tscn") if s.is_file()), None)
         if scene is None:
             continue
-        place = info["ranges"]["gameplay_pal"]
+        place = info["ranges"][disc.version.gameplay]
         stored = disc.sectors(place["lba"], place["sectors"])
         gameplay = decoded(stored)
         text = scene.read_text()
@@ -352,7 +356,7 @@ def pack(disc, survey: dict, project: Path, out: Path) -> tuple[int, int]:
         if len(stream) > room:
             raise FormatError(f"level {info['id']}: the packed gameplay file is {len(stream)} bytes, "
                               f"{len(stream) - room} more than its place on the disc")
-        name = f"{name}/gameplay_pal.wad"
+        name = f"{name}/gameplay_{disc.version.key}.wad"
         (out / name).parent.mkdir(parents=True, exist_ok=True)
         (out / name).write_bytes(stream + bytes(room - len(stream)))
         patches.append(f"{place['lba']}\t{place['sectors']}\t{name}")
@@ -361,4 +365,5 @@ def pack(disc, survey: dict, project: Path, out: Path) -> tuple[int, int]:
     out.mkdir(parents=True, exist_ok=True)
     (out / "patches.tsv").write_text("# first sector\tsectors\tfile (beside this list)\n" + "".join(p + "\n" for p in patches))
     (out / "changes.txt").write_text("\n".join(report) + "\n" if report else "No level differs from the disc.\n")
+    (out / "packed.json").write_text(json.dumps({"format": 1, "game": "rac1", "version": disc.version.key}) + "\n")
     return packed, total

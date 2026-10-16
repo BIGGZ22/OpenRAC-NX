@@ -2,7 +2,8 @@
 
 The format is LZO-like (formats.wad has the packets). What the game needs
 beyond a stream that decodes, measured on every level's gameplay file of the
-PAL disc (1,299 blocks):
+PAL disc (1,299 blocks; the NTSC-U disc's gameplay copies open the same way,
+and all 19 of each disc round-trip within 91% of their room):
 
 - the stream is read in 0x2000-byte blocks, refilled by DMA: no packet
   crosses a block's end, and every block ends with a skip packet (a

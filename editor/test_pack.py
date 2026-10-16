@@ -201,5 +201,43 @@ class Names(unittest.TestCase):
         self.assertEqual(pack_level(0, data, text), (data, [], []))
 
 
+class PackDisc(unittest.TestCase):
+    """pack.pack on either disc: the copy its game loads is the one replaced."""
+
+    def test_each_disc_packs_its_own_gameplay_copy(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        import disc
+        from formats import wad
+        from pack import pack
+        from wadpack import compress
+        data = gameplay([{"x": 1.0}, {"x": 2.0}])
+        stored = compress(data)
+        sectors = -(-len(stored) // disc.SECTOR)
+        survey = {"levels": [{"id": 0, "ranges": {"gameplay_ntsc": {"lba": 100, "sectors": sectors},
+                                                  "gameplay_pal": {"lba": 200, "sectors": sectors}}}]}
+
+        def move(index, node):
+            if index == 1:
+                node[2] = "transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 6, 7)"
+            return node
+        for version, lba in ((disc.NTSC, 100), (disc.PAL, 200)):
+            class Disc:
+                pass
+            image = Disc()
+            image.version = version
+            image.sectors = lambda first, count: stored + bytes(count * disc.SECTOR - len(stored))
+            with tempfile.TemporaryDirectory() as tmp:
+                project, out = Path(tmp) / "levels", Path(tmp) / "packed"
+                (project / "level_00/levels/level_00").mkdir(parents=True)
+                (project / "level_00/levels/level_00/level_00.tscn").write_text(scene(data, move))
+                self.assertEqual(pack(image, survey, project, out), (1, 1))
+                name = f"level_00/gameplay_{version.key}.wad"
+                self.assertEqual((out / "patches.tsv").read_text().splitlines()[1], f"{lba}\t{sectors}\t{name}")
+                self.assertEqual(moby_instances(wad((out / name).read_bytes()))[1]["matrix"][12:15], [5.0, 6.0, 7.0])
+                self.assertEqual(json.loads((out / "packed.json").read_text())["version"], version.key)
+
+
 if __name__ == "__main__":
     unittest.main()

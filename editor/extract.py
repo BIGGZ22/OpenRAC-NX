@@ -229,10 +229,6 @@ def main() -> None:
                                args.anywhere, args.replace)
                 print(f"Levels for the port's viewer: {dest}")
             elif args.command == "pack":
-                if disc.version.key != "pal":
-                    # The packed file replaces the PAL gameplay copy, and mod packs are PAL's
-                    # (overrides.py); the NTSC-U copy is not packed yet.
-                    raise FormatError(f"packing edits reads the PAL disc only for now, not {disc.version.label}")
                 # Its own output, written again after each edit: the one command that may write
                 # into a directory that exists.
                 dest = args.out.resolve()
