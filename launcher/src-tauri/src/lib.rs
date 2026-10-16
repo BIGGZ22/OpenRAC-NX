@@ -53,6 +53,11 @@ fn app_info(app: AppHandle, state: State<'_, AppState>) -> AppInfo {
 }
 
 #[tauri::command]
+fn relaunch_app(app: AppHandle) {
+    app.restart();
+}
+
+#[tauri::command]
 fn get_config(state: State<'_, AppState>) -> Config {
     state.config.lock().unwrap().clone()
 }
@@ -480,6 +485,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             #[cfg(target_os = "linux")]
             ensure_linux_desktop_integration();
@@ -527,6 +533,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             app_info,
+            relaunch_app,
             get_config,
             save_config,
             detect,

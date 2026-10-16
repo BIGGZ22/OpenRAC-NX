@@ -119,6 +119,10 @@ struct FrameInput {
     // The frame's world effect quads, in the order the game drew them.
     std::span<const EffectQuad> effects{};
     std::span<const ImageUpload> effect_uploads{};
+    // The sky shells' matrices as the game drew them (bit k of sky_shell_mask: shell k has one),
+    // in the sky's own units; a shell without one is drawn as it is stored.
+    std::array<Mat4, 8> sky_shells{};
+    unsigned sky_shell_mask = 0;
     std::span<const EffectVertex> strip_vertices{};
     std::span<const EffectStrip> strips{};
     // The 2D layer's quads drawn natively (UiQuad), indexed by their markers in the 2D path.

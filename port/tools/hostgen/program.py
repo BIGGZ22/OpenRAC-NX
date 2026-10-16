@@ -78,6 +78,7 @@ class Program:
     places: dict[str, list[tuple[int, int]]] = field(default_factory=dict)  # symbol -> (overlay, addr)
     sizes: dict[str, int] = field(default_factory=dict)  # catalogued symbol -> bytes
     splits: dict[str, list] = field(default_factory=dict)  # symbol -> places split off to variants
+    split_parent: dict[str, str] = field(default_factory=dict)  # a variant -> the symbol it was split from
     symbols: dict[str, int] = field(default_factory=dict)  # other named globals -> address
     typedefs: dict[str, set] = field(default_factory=dict)  # name -> desugared type strings
     host: set = field(default_factory=set)  # functions the port writes by hand (port/game/<game>/)
@@ -364,6 +365,7 @@ def read_split_places(path: Path, program: Program) -> int:
         if name in program.sizes:
             program.sizes[variant] = program.sizes[name]
         program.splits.setdefault(name, []).extend(places)
+        program.split_parent[variant] = name
         count += 1
     return count
 

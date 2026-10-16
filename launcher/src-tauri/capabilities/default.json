@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "The launcher window: its own commands and the folder and file pickers. Links and folders are opened by the Rust side (open_url, open_path), so no opener permission is granted to the page.",
   "windows": ["main"],
-  "permissions": ["core:default", "dialog:allow-open"]
+  "permissions": ["core:default", "dialog:allow-open", "updater:default"]
 }

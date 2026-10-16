@@ -57,7 +57,6 @@ func_L00_002D1168	level_crate_init.c
 func_002116A0	game_joint_matrices.c
 func_00218928	game_particle_allocate.c
 func_00218930	game_particle_allocate.c
-func_L00_00267290	level_stream_request.c
 func_L00_00232EF0	level_hero_animation.c
 func_L00_00205FF0	level_hero_effects.c
 func_L00_0020F118	level_hero_items.c
@@ -96,3 +95,5 @@ func_L00_00261B00	level_bolt_burst.c
 func_L00_002D4EC0	level_class639.c
 func_001F9BB0	game_sound_math.c
 func_001F9E58	game_sound_math.c
+func_L00_002DACC0	level_nanotech_glow.c
+func_L00_00299B68	level_scene_start.c

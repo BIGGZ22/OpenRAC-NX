@@ -77,6 +77,8 @@ struct Kept {
     std::vector<renderer::EffectStrip> strips;
     std::vector<renderer::EffectQuad> effects;
     std::vector<renderer::ImageUpload> effect_uploads;
+    std::array<renderer::Mat4, 8> sky_shells{};
+    unsigned sky_shell_mask = 0;
     std::vector<renderer::UiQuad> ui_quads;
     std::uint32_t draws = 0;
     bool has_camera = false;
@@ -109,6 +111,9 @@ struct State {
     // The world effect quads the game drew since the last frame (effect_quad).
     std::vector<renderer::EffectQuad> effects;
     std::vector<renderer::ImageUpload> effect_uploads;  // the quads' textures (EffectQuad::uploads)
+    // The sky shells the game drew since the last frame, with their matrices (sky_shell).
+    std::array<renderer::Mat4, 8> sky_shells{};
+    unsigned sky_shell_mask = 0;
     // The live particles the game drew since the last frame (particle): record, texture source.
     struct Particle {
         std::array<std::uint8_t, 0x40> record;
@@ -116,6 +121,10 @@ struct State {
         int log2_side;
     };
     std::vector<Particle> particles;
+    // The particle textures decoded so far (particle_texture): pixels and palette hash -> pool key,
+    // for the renderer that holds them.
+    std::unordered_map<std::uint64_t, std::uint32_t> particle_textures;
+    const void* particle_textures_for = nullptr;
     // The sky sprites the game drew since the last frame (sky_sprite): record, TEX0.
     std::vector<std::pair<std::array<std::uint8_t, 0x20>, std::uint64_t>> sky_sprites;
     // The 2D layer's quads drawn natively since the last frame (ui_quad), by marker index.
@@ -129,6 +138,12 @@ struct State {
     std::uint64_t last_world_tick = 0;
     bool last_tick_menu = false;
     bool hold_last_world = false;
+    // Ticks in a row on which the game drew no world while its 2D list was a page menu's (the
+    // picture read back, at least kSnapshotBytes): the ticks after the pause menu closes. The
+    // picture they would make is the menu without its framed models, then the dimmed picture
+    // alone; the console keeps showing its last frame meanwhile, and so does the port (frame).
+    int menu_gap_ticks = 0;
+    bool repeat_frame = false;
     // What the window is in now of the player's settings (apply_settings): the display mode, the
     // display and the fullscreen size; the picture's shape; the swap's wait as asked and as the
     // driver took it; whether the sound is held silent (the window lost the keyboard).
@@ -660,9 +675,20 @@ void effect_quad(std::span<const std::uint8_t> ram, const openrac_game_quad& qua
         g->effect_uploads.push_back(std::move(palette));
         g->effect_uploads.push_back(std::move(image));
         g->effects.push_back(q);
-    } else if (quad.pixels != 0 || quad.clut != 0) {
+    } else {
+        // No paging record: a texture the game put in the GS itself (the flight's planet picture,
+        // loaded with the transition's data), resolved from the pool at TEX0's blocks; the
+        // renderer leaves the quad out when nothing is there.
         g->effects.push_back(q);
     }
+}
+
+void sky_shell(int shell, const float* matrix) {
+    if (!g || shell < 0 || shell >= static_cast<int>(g->sky_shells.size())) {
+        return;
+    }
+    std::memcpy(g->sky_shells[static_cast<std::size_t>(shell)].data(), matrix, sizeof(float) * 16);
+    g->sky_shell_mask |= 1u << shell;
 }
 
 int hud_side() {
@@ -761,6 +787,41 @@ void particle(std::span<const std::uint8_t> ram, const std::uint8_t* record, std
     g->particles.push_back(p);
 }
 
+// A particle texture's pool key: its 32 x 32 PSMT8 pixels and its 16 x 16 CSM1 palette (both in game
+// memory) decoded to RGBA once, in the chip's alpha units (0x80 = opaque), and placed at a key of its
+// own, kept while the renderer lives. Earlier the pixels and palette went through the pool as
+// uploads at keys handed out per frame in pool order: a key named one texture this frame and
+// another the next, and the conversions the pool kept mixed them up (the nanotech crates' orbs as
+// white squares). 0 when the addresses are not in memory.
+// Refactor note: other effect textures (effect_quad) still go through uploads at their GS blocks.
+std::uint32_t particle_texture(std::span<const std::uint8_t> ram, std::uint32_t pixels, std::uint32_t clut) {
+    constexpr std::uint32_t kParticleTextureKey = 0x30000;  // past the sky's (kSkyTextureKey)
+    constexpr std::size_t kSide = 32;
+    if (!g->renderer || pixels == 0 || clut == 0 || pixels + kSide * kSide > ram.size() || clut + 1024 > ram.size()) {
+        return 0;
+    }
+    if (g->particle_textures_for != g->renderer.get()) {  // a new renderer (a level loaded): a new pool
+        g->particle_textures.clear();
+        g->particle_textures_for = g->renderer.get();
+    }
+    const std::span<const std::uint8_t> indices = ram.subspan(pixels, kSide * kSide);
+    const std::span<const std::uint8_t> colours = ram.subspan(clut, 1024);
+    const std::uint64_t id = renderer::hash_bytes(indices.data(), indices.size())
+                             ^ (renderer::hash_bytes(colours.data(), colours.size()) * 0x9E3779B97F4A7C15ull);
+    if (const auto found = g->particle_textures.find(id); found != g->particle_textures.end()) {
+        return found->second;
+    }
+    const renderer::gs::Texa texa{0, false, 0x80};
+    const std::vector<std::uint32_t> palette = renderer::clut_csm1(colours, 0x00, 16, 256, texa);
+    renderer::Rgba8Image image = renderer::convert_t8(indices, kSide, kSide, palette, renderer::AlphaScale::Gs);
+    const renderer::TextureHandle h = g->renderer->textures().add(
+        std::move(image), renderer::AlphaScale::Gs, std::format("particle {:#x}/{:#x}", pixels, clut));
+    const std::uint32_t key = kParticleTextureKey + static_cast<std::uint32_t>(g->particle_textures.size());
+    g->renderer->textures().place(key, h);
+    g->particle_textures.emplace(id, key);
+    return key;
+}
+
 // The frame's particles as effect quads, as the game's VU1 sprite program draws them (ReRAC's
 // particle notes, docs/plan/particles.md section 7; ISC License, Copyright (c) 2026 ReRAC
 // contributors): culled and faded by depth (the record's near and far, at most 500 units), back to
@@ -787,7 +848,6 @@ void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& 
         renderer::EffectQuad quad;
     };
     std::vector<Item> items;
-    std::unordered_map<std::uint32_t, std::uint32_t> slots;  // pixels address -> pool key
     for (const State::Particle& p : g->particles) {
         const std::uint8_t* r = p.record.data();
         const int kind = r[1] & 3;
@@ -868,35 +928,17 @@ void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& 
             q.rgba[2] = c2;
             q.rgba[3] = c2;
         }
-        // Its texture: 32 x 32 PSMT8 and a 16 x 16 CLUT, kept at a pool key of its own per pixels.
-        const auto [slot, added] = slots.try_emplace(p.pixels, 0x10000u + static_cast<std::uint32_t>(slots.size()) * 8);
-        const std::uint32_t side = 1u << p.log2_side;
-        q.tbp = slot->second + 4;
-        q.cbp = slot->second;
-        q.tex0 = 1ull << 14 | 0x13ull << 20 | static_cast<std::uint64_t>(p.log2_side) << 26
-                 | static_cast<std::uint64_t>(p.log2_side) << 30 | 1ull << 34 | 4ull << 61;
+        // Its texture: 32 x 32 PSMT8 with a 256-colour CSM1 palette, decoded here and kept in the pool
+        // at a key of its own (particle_texture).
+        q.tbp = particle_texture(ram, p.pixels, p.clut);
+        q.cbp = 0;
+        if (q.tbp == 0) {
+            continue;
+        }
+        q.tex0 = 1ull << 34;  // TCC, MODULATE; the texture is the one placed at q.tbp
         q.clamp = 5;
         q.tex1 = 0xFF9000000120ull;
         q.alpha = r[3];
-        if (added && p.pixels + side * side <= ram.size() && p.clut + 1024 <= ram.size()) {
-            renderer::ImageUpload palette;
-            palette.dbp = q.cbp;
-            palette.dbw = 1;
-            palette.dpsm = 0x00;
-            palette.width = 16;
-            palette.height = 16;
-            palette.data.assign(ram.data() + p.clut, ram.data() + p.clut + 1024);
-            renderer::ImageUpload image;
-            image.dbp = q.tbp;
-            image.dbw = 1;
-            image.dpsm = 0x13;
-            image.width = side;
-            image.height = side;
-            image.data.assign(ram.data() + p.pixels, ram.data() + p.pixels + side * side);
-            q.uploads = static_cast<int>(g->effect_uploads.size());
-            g->effect_uploads.push_back(std::move(palette));
-            g->effect_uploads.push_back(std::move(image));
-        }
         items.push_back({z, q});
     }
     std::stable_sort(items.begin(), items.end(), [](const Item& a, const Item& b) { return a.depth > b.depth; });
@@ -1042,11 +1084,11 @@ bool store_image(std::uint32_t base, std::uint32_t width_units, std::uint8_t psm
         return false;
     }
     // The last frame drawn, read once per frame however many strips the game reads: kept at full
-    // resolution for drawing it back, and scaled to the chip's 512 x 448 for the answer.
+    // resolution for drawing it back, and scaled to the chip's 512 x (the draw buffer's lines) for the answer.
     static std::uint64_t read_at = ~0ull;
-    static std::vector<std::uint8_t> chip;  // 512 x 448 RGBA, top row first
+    static std::vector<std::uint8_t> chip;  // 512 x the draw buffer's lines, RGBA, top row first
     constexpr int kChipWidth = 512;
-    const int lines = renderer::kDrawBufferLines;
+    const int lines = renderer::g_draw_buffer_lines;
     if (read_at != g->index) {
         using namespace openrac::gl;
         read_at = g->index;
@@ -1547,6 +1589,8 @@ void draw_kept(bool first) {
     input.packets[static_cast<std::size_t>(renderer::Bucket::Hud)] =
         std::span<const std::uint8_t>(k.packets).subspan(k.before_world);
     input.effects = k.effects;
+    input.sky_shells = k.sky_shells;
+    input.sky_shell_mask = k.sky_shell_mask;
     input.effect_uploads = k.effect_uploads;
     input.ui_quads = k.ui_quads;
     // A tick that draws no world and has no picture of its own to put under its 2D (the page
@@ -1564,7 +1608,8 @@ void draw_kept(bool first) {
     } else if (first) {
         g->hold_last_world = false;
     }
-    if (g->hold_last_world && g->last_world.width() == width && g->last_world.height() == height) {
+    if (g->hold_last_world && !g->repeat_frame && g->last_world.width() == width
+        && g->last_world.height() == height) {
         g->last_world.blit_to(g->frame.id(), width, height);
         input.keep_colour = true;
     }
@@ -1581,7 +1626,7 @@ void draw_kept(bool first) {
             g->last_world_tick = k.frame;
         };
     }
-    if (g->renderer) {
+    if (g->renderer && !g->repeat_frame) {
         // [debug tools] The passes hidden in the overlay; the render timed (common/stats.h).
         debug_overlay::before_render(g->renderer.get());
         const stats::Scope render_scope("render");
@@ -1960,6 +2005,21 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
             continue;
         }
         viewer::Instance instance{cls->second.first, m.matrix, {1, 1, 1, 1}};
+        // How MobyProc blends it (ReRAC's MobyBlend, from the game's moby draw): mode bit 0x200
+        // (+0x34) adds it; an alpha (+0x23) below 0x80 blends it at that alpha (the explosions'
+        // flashes start at 0x20..0x40 and fade out; a fireball can be spawned below 0x80).
+        if (m.address + 0x36 <= ram.size()) {
+            const std::uint8_t* b = ram.data() + m.address;
+            const unsigned mode = b[0x34] | b[0x35] << 8;
+            const unsigned alpha = b[0x23];
+            if ((mode & 0x200) != 0) {
+                instance.blend = 2;
+                instance.tint[3] = static_cast<float>(alpha) / 128.0f;
+            } else if (alpha < 0x80) {
+                instance.blend = 1;
+                instance.tint[3] = static_cast<float>(alpha) / 128.0f;
+            }
+        }
         // Its light word (+0x38: set 0, set 1, the cross-fade) and ambient colour (+0x3C), as
         // MobyProc reads them to light it.
         if (!g->level.light_sets.empty() && m.address + 0x100 <= ram.size()) {
@@ -2132,6 +2192,12 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     // Only a level's frame is ordered so: the boot program (title, main menu) starts VU1 programs
     // of its own before its 2D path, and draws its world natively, all of its 2D path after it.
     k.before_world = level >= 0 && level < 19 ? std::min(before_world, k.packets.size()) : 0;
+    const bool menu_gap = (k.draws & 0x1Fu) == 0 && k.before_world >= 0x40000;
+    g->menu_gap_ticks = menu_gap ? g->menu_gap_ticks + 1 : 0;
+    g->repeat_frame = menu_gap && g->menu_gap_ticks <= 3 && g->frame.id() != 0;
+    if (g->repeat_frame && debug) {
+        log::info("frame {}: no world under a page menu's list; the last frame stands", g->index);
+    }
     if (debug && k.frame % 100 == 0 && !k.strips.empty()) {
         int bare = 0;
         for (const auto& st : k.strips) {
@@ -2144,6 +2210,8 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     particle_quads(ram, state);
     k.effects = std::move(g->effects);
     k.effect_uploads = std::move(g->effect_uploads);
+    k.sky_shells = g->sky_shells;
+    k.sky_shell_mask = std::exchange(g->sky_shell_mask, 0u);
     // The list's own tick's quads (above). The game's FadeToBlack (after a story card, between
     // scenes) sends the last display list again for each of its frames, with its black over it,
     // and draws nothing itself: its markers still name the tick that built it, which is kept.
@@ -2396,3 +2464,4 @@ void close() {
 }
 
 }  // namespace openrac::frontend
+

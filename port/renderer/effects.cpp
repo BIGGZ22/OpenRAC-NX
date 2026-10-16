@@ -93,12 +93,21 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
         state.stats.triangles += strip.count - 2;
     }
     vertices.resize(4);
+    // Every quad's texture before any quad is drawn. A texture's upload rides on the first quad that
+    // named it (frontend::particle_quads hands out the pool keys per frame, in pool order), but the
+    // quads are drawn back to front: one drawn before that quad sampled what the key held last frame,
+    // another texture, and the nanotech crates' orbs came out as opaque white quads.
+    // Refactor note: the uploads could travel as a list of their own instead of riding on quads.
     for (const EffectQuad& q : input.effects) {
         if (q.uploads >= 0 && static_cast<std::size_t>(q.uploads) + 1 < input.effect_uploads.size()) {
             state.textures.upload(input.effect_uploads[static_cast<std::size_t>(q.uploads)]);
             state.textures.upload(input.effect_uploads[static_cast<std::size_t>(q.uploads) + 1]);
         }
-        apply(q.tex0, q.tex1, q.clamp, q.alpha, state, q.tbp, q.cbp);
+    }
+    for (const EffectQuad& q : input.effects) {
+        if (!apply(q.tex0, q.tex1, q.clamp, q.alpha, state, q.tbp, q.cbp)) {
+            continue;
+        }
 
         for (int k = 0; k < 4; ++k) {
             Vertex& v = vertices[static_cast<std::size_t>(k)];
@@ -123,7 +132,7 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
     glDepthMask(GL_TRUE);
 }
 
-void EffectRenderer::apply(std::uint64_t tex0_bits, std::uint64_t tex1_bits, std::uint64_t clamp_bits,
+bool EffectRenderer::apply(std::uint64_t tex0_bits, std::uint64_t tex1_bits, std::uint64_t clamp_bits,
                            std::uint64_t alpha_bits, RenderState& state, std::uint32_t tbp, std::uint32_t cbp) {
     const gs::Texa texa{0, false, 0x80};
     gs::Tex0 tex0 = gs::Tex0::decode(tex0_bits);
@@ -156,6 +165,7 @@ void EffectRenderer::apply(std::uint64_t tex0_bits, std::uint64_t tex1_bits, std
     glBlendEquation(b.equation);
     glBlendFuncSeparate(b.src, b.dst, GL_ONE, GL_ZERO);
     glBlendColor(0.0f, 0.0f, 0.0f, b.constant);
+    return texture != state.textures.placeholder();
 }
 
 void EffectRenderer::release() {

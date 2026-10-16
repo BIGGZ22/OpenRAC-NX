@@ -524,6 +524,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tauri-apps/plugin-updater@npm:^2.14.0":
+  version: 2.14.0
+  resolution: "@tauri-apps/plugin-updater@npm:2.14.0"
+  dependencies:
+    "@tauri-apps/api": "npm:^2.12.0"
+  checksum: 10c0/6fe90e33d5a11749331e4e0862e7be7e95aed7319011b39850354392883f4f9d46aad0a8b28ce72cb0b53459422915562de53a0cf0d607f68100ca0187f9f57d
+  languageName: node
+  linkType: hard
+
 "@tsconfig/svelte@npm:^5.0.8":
   version: 5.0.8
   resolution: "@tsconfig/svelte@npm:5.0.8"
@@ -1647,6 +1656,7 @@ __metadata:
     "@tauri-apps/api": "npm:^2.12.1"
     "@tauri-apps/cli": "npm:^2.12.1"
     "@tauri-apps/plugin-dialog": "npm:^2.8.0"
+    "@tauri-apps/plugin-updater": "npm:^2.14.0"
     "@tsconfig/svelte": "npm:^5.0.8"
     eslint: "npm:^10.11.0"
     eslint-plugin-svelte: "npm:^3.23.0"

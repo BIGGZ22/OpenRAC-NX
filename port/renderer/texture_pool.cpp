@@ -446,16 +446,26 @@ TextureHandle TexturePool::distance_field(TextureHandle source) {
     if (src.width <= 0 || src.height <= 0) {
         return source;
     }
-    // Looked up by the source and a sample of its texels (a handle can be given again to another
-    // texture once its own is dropped); the full field is made only when that misses.
-    std::uint64_t hash = (static_cast<std::uint64_t>(source) << 32) ^ static_cast<std::uint64_t>(src.width * 65536 + src.height);
+    // Looked up first by the handle and a sample of its texels (cheap: this runs for every text
+    // draw), then by the source's whole contents: the pool gives the same glyph page a new handle
+    // whenever it converts the page again, and a field keyed by handle alone was made again each
+    // time, about 15 ms of CPU for a 256 x 128 page (the frame drops while running around Veldin,
+    // 30 ms where two pages came back at once). The full field is made only for new contents.
+    std::uint64_t sample = static_cast<std::uint64_t>(src.width * 65536 + src.height);
     const std::size_t step = std::max<std::size_t>(4, src.pixels.size() / 256 / 4 * 4);
     for (std::size_t i = 0; i < src.pixels.size(); i += step) {
         std::uint32_t texel_word;
         std::memcpy(&texel_word, &src.pixels[i], 4);
-        hash = (hash ^ texel_word) * 1099511628211ull;
+        sample = (sample ^ texel_word) * 1099511628211ull;
     }
+    if (auto seen = m_field_of_handle.find(source); seen != m_field_of_handle.end() && seen->second.first == sample) {
+        return seen->second.second;
+    }
+    const std::uint64_t shape = static_cast<std::uint64_t>(src.width) << 32 | static_cast<std::uint64_t>(src.height) << 1
+                                | (alpha_scale(source) == AlphaScale::Full ? 1u : 0u);
+    const std::uint64_t hash = hash_bytes(src.pixels.data(), src.pixels.size()) ^ (shape * 0x9E3779B97F4A7C15ull);
     if (auto it = m_distance_fields.find(hash); it != m_distance_fields.end()) {
+        m_field_of_handle[source] = {sample, it->second};
         return it->second;
     }
     constexpr int kScale = 4;
@@ -532,6 +542,7 @@ TextureHandle TexturePool::distance_field(TextureHandle source) {
     }
     const TextureHandle handle = add(std::move(out), AlphaScale::Full, name(source) + " (distance field)");
     m_distance_fields.emplace(hash, handle);
+    m_field_of_handle[source] = {sample, handle};
     return handle;
 }
 

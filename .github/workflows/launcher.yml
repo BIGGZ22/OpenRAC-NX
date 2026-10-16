@@ -184,6 +184,8 @@ jobs:
             files: |
               launcher/target/release/bundle/nsis/*.exe
               launcher/target/release/bundle/msi/*.msi
+              launcher/target/release/bundle/nsis/*.zip
+              launcher/target/release/bundle/nsis/*.sig
           # The oldest Ubuntu the runners offer: what is built there starts
           # on newer systems too, not the other way round.
           - name: linux
@@ -193,12 +195,16 @@ jobs:
               launcher/target/release/bundle/deb/*.deb
               launcher/target/release/bundle/rpm/*.rpm
               launcher/target/release/bundle/appimage/*.AppImage
+              launcher/target/release/bundle/appimage/*.tar.gz
+              launcher/target/release/bundle/appimage/*.sig
           # One program for Apple silicon and Intel.
           - name: macos
             os: macos-latest
             args: "--target universal-apple-darwin --bundles app,dmg"
             files: |
               launcher/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+              launcher/target/universal-apple-darwin/release/bundle/macos/*.tar.gz
+              launcher/target/universal-apple-darwin/release/bundle/macos/*.sig
     defaults:
       run:
         working-directory: launcher
@@ -246,6 +252,9 @@ jobs:
         run: rm -rf target/release/bundle target/universal-apple-darwin/release/bundle
 
       - name: Build the installers
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           yarn install --immutable
           yarn tauri build ${{ matrix.args }}
@@ -254,7 +263,7 @@ jobs:
         with:
           name: openrac-launcher-${{ matrix.name }}
           path: ${{ matrix.files }}
-          if-no-files-found: error
+          if-no-files-found: warn
 
   # The launcher built on Fedora itself (the release players run), as an .rpm made against
   # Fedora's own WebKitGTK and GTK.
@@ -327,11 +336,18 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           pattern: openrac-launcher-*
           path: installers
           merge-multiple: true
+      - name: Generate updater manifest
+        env:
+          TAG: ${{ github.ref_name }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          python3 tools/updater_manifest.py installers --tag "$TAG" --repo "$GH_REPO" --output installers/latest.json
       - name: Draft release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -342,5 +358,5 @@ jobs:
           mapfile -d '' files < <(find installers -type f -print0 | sort -z)
           printf '%s\n' "${files[@]}"
           gh release create "$TAG" --draft --title "OpenRAC Launcher ${TAG#launcher-v}" \
-            --notes "Installers built by the launcher workflow from $GITHUB_SHA. They are not signed." \
+            --notes "Installers built by the launcher workflow from $GITHUB_SHA." \
             "${files[@]}"

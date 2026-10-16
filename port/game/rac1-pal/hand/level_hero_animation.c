@@ -31,6 +31,39 @@ extern void hero_anim_rebind(void) __asm__("func_L00_00232B78");
 extern void hero_anim_update_a(void) __asm__("func_L00_00232980");
 extern void hero_anim_update_b(void) __asm__("func_L00_00232B20");
 extern int hero_anim_truncate(float) __asm__("func_001FA898");
+
+/* The EE FPU's divide (openrac_fdiv in the runtime's guest.h, which this file is built without in
+ * the tests): a zero divisor gives +-FLT_MAX with the operands' signs XORed, never an infinity. */
+/* A float as the EE's FPU takes it: no infinities or NaNs, an exponent of 255 is a number beyond
+ * FLT_MAX that its arithmetic saturates to +-FLT_MAX. The restart rate (D_L00_0015F7E8) is
+ * 0x7F800000, "at once" to the EE and infinity to the host, where it made the fraction NaN and
+ * froze Ratchet in the wrench throw's pose. */
+static float hero_anim_ee(float a) {
+    union { float f; unsigned int u; } x;
+    x.f = a;
+    if ((x.u & 0x7F800000u) == 0x7F800000u) {
+        return (x.u & 0x80000000u) != 0 ? -3.40282347e38f : 3.40282347e38f;
+    }
+    return a;
+}
+
+static float hero_anim_divide(float a, float b) {
+    union { float f; unsigned int u; } x, y;
+    float q;
+    x.f = a;
+    y.f = b;
+    if ((y.u & 0x7F800000u) == 0) {  /* zero or a denormal, which the EE reads as zero */
+        return ((x.u ^ y.u) & 0x80000000u) != 0 ? -3.40282347e38f : 3.40282347e38f;
+    }
+    q = a / b;
+    if (q > 3.40282347e38f) {
+        return 3.40282347e38f;
+    }
+    if (q < -3.40282347e38f) {
+        return -3.40282347e38f;
+    }
+    return q;
+}
 extern int hero_anim_play(int, int, void*) __asm__("func_0022ED80");
 extern void hero_anim_stop(int) __asm__("func_L00_0028EBF0");
 extern float hero_anim_position(void*) __asm__("func_0020D830");
@@ -55,7 +88,7 @@ void func_L00_00232EF0(void) {
     old = r->fraction;
     same = r->sequence == r->next_sequence;
     if (same) {
-        r->fraction = old + *(float*)(g + 0xA90) * *(float*)(g + 0xA94);
+        r->fraction = hero_anim_ee(old + *(float*)(g + 0xA90) * *(float*)(g + 0xA94));
     } else if (*(int*)(g + 0xAA0) >= 0) {
         i = *(int*)(g + 0xAA4);
         r->fraction = hero_anim_curves[*(int*)(g + 0xAA0) * 25 + i];
@@ -72,7 +105,7 @@ void func_L00_00232EF0(void) {
     delta = r->fraction - old;
 
     if (r->fraction >= 1.0f) {
-        restart_rate = hero_anim_restart_rate;
+        restart_rate = hero_anim_ee(hero_anim_restart_rate);
         while (r->fraction >= 1.0f) {
             if (r->sequence != r->next_sequence) {
                 r->sequence = r->next_sequence;
@@ -105,7 +138,9 @@ void func_L00_00232EF0(void) {
                 }
                 r->fraction -= 1.0f;
                 r->next_key_data = hero_anim_key(r, r->next_key);
-                r->fraction /= *(float*)(g + 0xA94);
+                /* The EE's divide (a rate of 0 gives FLT_MAX, not infinity): hand C is compiled
+                 * as it is, not lowered by hostgen, which does this for the game's own C. */
+                r->fraction = hero_anim_divide(r->fraction, *(float*)(g + 0xA94));
                 *(float*)(g + 0xA94) = *r->key_data;
                 r->fraction *= *(float*)(g + 0xA94);
             }
