@@ -114,6 +114,15 @@ throws), `800` R1, `400` L1, `100` L2, `200` R2. Sticks 0 to 255, 128 centred,
 | 1 | (168, 135, 60.3) | Facing the Gadgetron vendor (class 11 at (169.95, 140.44, 60)) and its hologram (class 1143, 2.95 above) |
 | 1 | (168.8, 137.6, 60.3), stick up briefly, Triangle | Opens the vendor's store (mode 5) |
 | 16 | after landing, camera turned | The glass sheets (class 800) by the landing |
+| 1 | (168.8, 137.6, 60.3), Triangle at 2200, Left 2300, Cross 2350 | The store's buy flow on the ammo entry ("You can't afford it!" with no bolts) |
+| 1 | pause, then Down N times and Cross | The pause pages in order: Weapons, Gadgets, Quick Select, Items, Help, Options (Save and Load show the no-card notice with `--no-card`) |
+| 1 | Triangle held 80 frames / Select | In-game quick select / the planet map |
+| 3 | (252.0, 99.0, 55.5) at 2400, Triangle at 2450 | Enters the ship: take-off (mode 6), then the Galactic Map (mode 3) |
+
+On Novalis the parked ship stays hidden after a direct start: the Agnogg
+dropship's update (classes 730, 731, 790) hides it every tick until Ratchet
+walks up to its drop point. That is the game's own code; use Kerwan for the
+ship.
 
 Find others: `OPENRAC_MOBY_LOG=N:RADIUS` lists every moby within RADIUS of
 the hero each N frames (class, address, state, mode bits, animation, position,
@@ -159,6 +168,13 @@ in ReRAC's `docs/plan/class_census.md` and the planet pages.
   a full frame at thumbnail size hides most bugs.
 - Make one strip or grid per run (a few lines of Pillow) instead of
   reading frames one by one.
+- A contact sheet of a run's frames (a few lines of Pillow: 640 x 480 tiles,
+  the frame number on each) shows a whole menu walk at once; take shots
+  every 25 or 50 frames and pick the ones after each press.
+- Mobys the game renders into a texture (the vendor's screens, the pause
+  pages' 3D Ratchet and item previews) are drawn at moby markers in the 2D
+  list (`GifInterpreter::kMobyMarker`); a panel that stays empty while its
+  text shows is that path.
 - `OPENRAC_HIDE_PASSES=sky,terrain,ties,shrubs,mobys,effects,hud` hides
   renderer passes: the fastest way to learn which one draws a wrong thing.
 - `OPENRAC_SHOW_MISSING=1` draws textures the 2D path cannot find in magenta;

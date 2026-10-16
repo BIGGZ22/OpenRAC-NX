@@ -1027,9 +1027,9 @@ void GifInterpreter::emit_sprite(const GsVertex& a, const GsVertex& b) {
         const gs::Alpha& al = context().alpha;
         const gs::Scissor& sc = context().scissor;
         log::info(
-            "sprite ({},{})-({},{}) rgba {:02x}{:02x}{:02x}{:02x} tme {} psm {:#x} cbp {:#x} tbw {} tbp {:#x} abe {} alpha {}{}{}{} fix {:#x} scissor {}-{}x{}-{} fbp {:#x} fbmsk {:#x} test {}",
-            a.x / 16.0, a.y / 16.0, b.x / 16.0, b.y / 16.0, b.rgba[0], b.rgba[1], b.rgba[2], b.rgba[3],
-            attributes().tme, context().tex0.psm, context().tex0.cbp, context().tex0.tbw, context().tex0.tbp0, attributes().abe, al.a, al.b, al.c, al.d, al.fix,
+            "sprite ({},{})-({},{}) uv ({},{})-({},{}) rgba {:02x}{:02x}{:02x}{:02x} tme {} psm {:#x} cbp {:#x} tbw {} tbp {:#x} mag {} min {} abe {} alpha {}{}{}{} fix {:#x} scissor {}-{}x{}-{} fbp {:#x} fbmsk {:#x} test {}",
+            a.x / 16.0, a.y / 16.0, b.x / 16.0, b.y / 16.0, a.u / 16.0, a.v / 16.0, b.u / 16.0, b.v / 16.0, b.rgba[0], b.rgba[1], b.rgba[2], b.rgba[3],
+            attributes().tme, context().tex0.psm, context().tex0.cbp, context().tex0.tbw, context().tex0.tbp0, context().tex1.mmag, context().tex1.mmin, attributes().abe, al.a, al.b, al.c, al.d, al.fix,
             sc.x0, sc.x1, sc.y0, sc.y1, context().frame.fbp, context().frame.fbmsk, test_text(context().test)
         );
     }
