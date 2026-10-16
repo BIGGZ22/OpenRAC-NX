@@ -4,6 +4,7 @@
 #include "assets/geometry/moby_animation.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 namespace openrac::assets::rac1 {
@@ -491,7 +492,8 @@ std::vector<JointMatrix> evaluate(const MobyAnimClass& anim, const AnimState& s)
 }
 
 std::vector<JointMatrix> evaluate_keys(
-    const MobyAnimClass& anim, const MobyFrame* fa, const MobyFrame* fb, f32 t_value, bool plain
+    const MobyAnimClass& anim, const MobyFrame* fa, const MobyFrame* fb, f32 t_value, bool plain,
+    std::span<const JointModifier> mods
 ) {
     const std::size_t jc = anim.joint_count;
     if (jc == 0) {
@@ -609,6 +611,59 @@ std::vector<JointMatrix> evaluate_keys(
             const V4 qb = quat_bits(fb->quat_at(j));
             rec[j][0] = plain ? lanes_lerp(qa, qb, u, t, 4, qa) : nlerp_flip(qa, qb, u, t);
         }
+    }
+
+    // The joint-modifier list, head first, on the local records (MobyProc applies it after the
+    // keys, before the matrices). Native float arithmetic, as ReRAC's apply_modifiers: mode 0
+    // composes, any other mode blends toward the node by its weight. A scale applies only where
+    // the joint has one (its presence word is kept).
+    for (const JointModifier& m : mods) {
+        const std::size_t j = m.joint;
+        if (j >= n) {
+            continue;
+        }
+        const auto f = [](u32 bits) { f32 x; std::memcpy(&x, &bits, 4); return x; };
+        const auto b = [](f32 x) { u32 bits; std::memcpy(&bits, &x, 4); return bits; };
+        const std::array<f32, 4> q{f(rec[j][0][0]), f(rec[j][0][1]), f(rec[j][0][2]), f(rec[j][0][3])};
+        std::array<f32, 4> nq{};
+        std::array<f32, 3> ns{}, nt{};
+        if (m.mode == 0) {
+            const auto& r = m.quat;
+            nq = {q[3] * r[0] + r[3] * q[0] + (q[1] * r[2] - q[2] * r[1]),
+                  q[3] * r[1] + r[3] * q[1] + (q[2] * r[0] - q[0] * r[2]),
+                  q[3] * r[2] + r[3] * q[2] + (q[0] * r[1] - q[1] * r[0]),
+                  q[3] * r[3] - (q[0] * r[0] + q[1] * r[1] + q[2] * r[2])};
+            for (std::size_t k = 0; k < 3; ++k) {
+                ns[k] = f(rec[j][1][k]) * m.scale[k];
+                nt[k] = f(rec[j][2][k]) + m.trans[k];
+            }
+        } else {
+            const f32 w = m.weight;
+            const f32 u = 1.0f - w;
+            std::array<f32, 4> va{}, vb{};
+            f32 d = 0.0f;
+            for (std::size_t k = 0; k < 4; ++k) {
+                va[k] = q[k] * u;
+                vb[k] = m.quat[k] * w;
+                d += va[k] * vb[k];
+            }
+            f32 len = 0.0f;
+            for (std::size_t k = 0; k < 4; ++k) {
+                nq[k] = d < 0.0f ? va[k] - vb[k] : va[k] + vb[k];
+                len += nq[k] * nq[k];
+            }
+            len = std::sqrt(len);
+            for (std::size_t k = 0; k < 4 && len > 0.0f; ++k) {
+                nq[k] /= len;
+            }
+            for (std::size_t k = 0; k < 3; ++k) {
+                ns[k] = f(rec[j][1][k]) * u + m.scale[k] * w;
+                nt[k] = f(rec[j][2][k]) * u + m.trans[k] * w;
+            }
+        }
+        rec[j][0] = V4{b(nq[0]), b(nq[1]), b(nq[2]), b(nq[3])};
+        rec[j][1] = V4{b(ns[0]), b(ns[1]), b(ns[2]), rec[j][1][3]};
+        rec[j][2] = V4{b(nt[0]), b(nt[1]), b(nt[2]), rec[j][2][3]};
     }
 
     // Local matrices and the parent chain, joints in index order.

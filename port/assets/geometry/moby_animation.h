@@ -203,12 +203,28 @@ std::vector<u8> post_scale_list(std::span<const u8> a, std::span<const u8> b);
 // class without joints; identity for every joint when a key is missing).
 std::vector<JointMatrix> evaluate(const MobyAnimClass& anim, const AnimState& state);
 
+// A node of a moby's joint-modifier list (moby +0x64, linked through +8; AttachManipulator
+// func_0020D960 links one in front): what spins the vendors' holograms, turns an NPC's head, and so
+// on. joint: the joint it acts on (+4, a scratchpad joint record 0x70000000 + 0x40 * joint); mode
+// (+3): 0 composes (q = q * quat, scale * scale, translation + trans), else blends toward the node
+// by weight (+0xC); quat (+0x10), scale (+0x20), trans (+0x30). After ReRAC's JointModifier and
+// apply_modifiers (moby_anim.rs; ISC License, Copyright (c) 2026 ReRAC contributors).
+struct JointModifier {
+    u8 joint = 0;
+    u8 mode = 0;
+    f32 weight = 0.0f;
+    std::array<f32, 4> quat{0.0f, 0.0f, 0.0f, 1.0f};
+    std::array<f32, 3> scale{1.0f, 1.0f, 1.0f};
+    std::array<f32, 3> trans{0.0f, 0.0f, 0.0f};
+};
+
 // The palette for two given keys, as MobyAnimEval takes them from the moby
 // (+0x68 / +0x6c, +0x54): key A, key B (read only when t is not 0), t, and
 // whether A and B are consecutive keys of one sequence (a plain lerp, no
 // normalisation). Identity for every joint when a key it needs is missing.
 std::vector<JointMatrix> evaluate_keys(
-    const MobyAnimClass& anim, const MobyFrame* a, const MobyFrame* b, f32 t, bool plain
+    const MobyAnimClass& anim, const MobyFrame* a, const MobyFrame* b, f32 t, bool plain,
+    std::span<const JointModifier> mods = {}
 );
 
 // The blend snapshot (0x20ede8 / PAL func_0020FC38 with flags 0x300, after ReRAC's moby_anim.rs

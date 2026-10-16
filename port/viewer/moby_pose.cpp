@@ -124,7 +124,29 @@ std::vector<rac1::JointMatrix> evaluate_moby(std::span<const std::uint8_t> ram, 
         anim.rest[j] = {at<float>(ram, rec), at<float>(ram, rec + 4), at<float>(ram, rec + 8)};
         anim.parent_word[j] = at<std::uint32_t>(ram, rec + 0xC);
     }
-    return rac1::evaluate_keys(anim, &*a, b ? &*b : nullptr, t, plain);
+    // The joint-modifier list (moby +0x64, each node's next at +8): what spins a vendor's
+    // hologram and its logo's text, turns an NPC's head. Its order is the game's, head first.
+    std::vector<rac1::JointModifier> mods;
+    for (std::uint32_t node = at<std::uint32_t>(ram, moby + 0x64); inside(ram, node, 0x40) && mods.size() < 32;
+         node = at<std::uint32_t>(ram, node + 8)) {
+        const std::uint32_t record = at<std::uint32_t>(ram, node + 4);
+        if (record < 0x70000000u || ((record - 0x70000000u) & 0x3F) != 0) {
+            continue;
+        }
+        rac1::JointModifier m;
+        m.joint = static_cast<std::uint8_t>((record - 0x70000000u) / 0x40);
+        m.mode = at<std::uint8_t>(ram, node + 3);
+        m.weight = at<float>(ram, node + 0xC);
+        for (std::size_t k = 0; k < 4; ++k) {
+            m.quat[k] = at<float>(ram, node + 0x10 + static_cast<std::uint32_t>(4 * k));
+        }
+        for (std::size_t k = 0; k < 3; ++k) {
+            m.scale[k] = at<float>(ram, node + 0x20 + static_cast<std::uint32_t>(4 * k));
+            m.trans[k] = at<float>(ram, node + 0x30 + static_cast<std::uint32_t>(4 * k));
+        }
+        mods.push_back(m);
+    }
+    return rac1::evaluate_keys(anim, &*a, b ? &*b : nullptr, t, plain, mods);
 }
 
 }  // namespace
