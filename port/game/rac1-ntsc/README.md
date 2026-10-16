@@ -19,15 +19,17 @@ port/build/release/openrac-rac1-ntsc --data <data> --cards <a folder> --window -
 shows its no-card warning and waits for a button, which only a window can
 give (`OPENRAC_PRESS`, [port/README.md](../../README.md)).
 
-## Where it is (2026-10-13)
+## Where it is (2026-10-16)
 
 | | |
 |---|---|
-| Builds and links | yes: 1,882 files of the NTSC decomp read, 10 left out (below) |
-| Headless | the boot stage, the boot movie (skipped), the first sound bank, then the title loop for 3,000 frames with no function missing and no crash |
-| Window, title | the logo and PRESS START are drawn and the camera, the five mobys and the hero's pose are read (the same values PAL's has); **the world behind them is not drawn and the frame is not cleared**, so the 2D layer smears. Not found yet why |
-| Menus, new game, a level | not tried in a window. Before the title loop had C, the program fell through it into level 0's start: its program was copied in and relocated (737 functions, 1,284 global addresses) and it stopped in the level's set-up |
-| Levels to draw from | its own, from the NTSC-U disc (2026-10-16): `python3 editor/extract.py port baserom/SCUS_971.99.iso assets/port/rac1-ntsc` (the launcher's rac1/ntsc "Get the levels ready"; an installed launcher writes `<data>/port-ntsc`), then `--levels assets/port/rac1-ntsc`. Pass `--levels` always: without it the program reads `<data>/port`, PAL's. `--check-levels` passes all 21. Same format as PAL's; the manifests say `"version": "ntsc"` ([editor/README.md](../../../editor/README.md#the-two-discs) says how the two discs' levels differ) |
+| Builds and links | yes: 1,836 files of the NTSC decomp read, 10 left out (below) |
+| Title | the title world, the logo, the menu and its dialogs; the menu's panels sit higher on the screen than PAL's, and PRESS START is not shown |
+| New game | title -> New Game -> "Continue anyway?" -> the opening captions -> Veldin's opening scene -> play, with no function without C called |
+| Veldin (0) | plays: Ratchet walks, swings and throws the wrench, the follow camera frames him, the HelpDesk speaks; Start skips the opening scene |
+| Novalis (1), Kerwan (3) | direct start (`OPENRAC_DIRECT=1 --level N`): the flight between planets (Start skips it), the arrival scene, then play. On Kerwan a particle callback (level 0's 0x267BE8) is called with no function |
+| Other levels | not tried |
+| Levels to draw from | its own, from the NTSC-U disc: the launcher's rac1/ntsc "Get the levels ready" writes `assets/port/rac1/ntsc` (`<data>/port/ntsc` in an installer); without `--levels` the program reads `<data>/port/ntsc`. The tests here passed `--levels ../../build/ntsc-levels`. Same format as PAL's; the manifests say `"version": "ntsc"` ([editor/README.md](../../../editor/README.md#the-two-discs) says how the two discs' levels differ) |
 
 It is not offered by the launcher yet (`play` is `planned` in
 [launcher/actions.json](../../../launcher/actions.json)).
@@ -41,14 +43,14 @@ the two versions have the same instructions for it (only addresses differ),
 
 | File | From | |
 |---|---|---|
-| [libraries.tsv](libraries.tsv) | rac1-pal's | 251 rows; each note keeps PAL's symbol. `strcmp` and `strncmp` have no counterpart (NTSC-U's libc is laid out otherwise) |
-| [hostgen.json](hostgen.json) | rac1-pal's lists | `relocate` from 0x15EF00 (every section from `core.lit` on is 0x100 under PAL's), the nine level hooks, `returns_64`, `host_functions` |
-| [split_places.tsv](split_places.tsv) | rac1-pal's | 23 rows: only where the NTSC decomp's catalogue folds the same places into one name; where it names a place apart, the NTSC decomp's own function stands |
+| [libraries.tsv](libraries.tsv) | rac1-pal's | 273 rows (carried again on 2026-10-16: the flight's update and the sky shells wrapped, the scene start written for this version, the checkpoint variants); each note keeps PAL's symbol. `strcmp` and `strncmp` have no counterpart (NTSC-U's libc is laid out otherwise) |
+| [hostgen.json](hostgen.json) | rac1-pal's lists | `relocate` from 0x15EF00 (every section from `core.lit` on is 0x100 under PAL's), the eleven level hooks, `returns_64`, `host_functions` |
+| [split_places.tsv](split_places.tsv) | rac1-pal's | 30 rows: only where the NTSC decomp's catalogue folds the same places into one name; where it names a place apart, the NTSC decomp's own function stands |
 | [host/boot.c](host/boot.c) | by hand | the overlay hook, the relocation, the draw flags, the direct start |
 | [host/hand.c](host/hand.c), [host/vector.c](host/vector.c) | rac1-pal's, read through | the hardware routines; the levels' copy of WadDecompress is bound apart (this catalogue lists it apart) |
 | the other `host/*.c` | rac1-pal's, as carried | the native 2D and world hand-off, collision, variants. Each compiles against this version's prototypes; none is checked in play |
 | [hand/*.c](hand) | rac1-pal's `hand/` | 76 functions the NTSC decomp has as assembly (one, the integer as a float, written here) |
-| [hand/functional/](hand/functional) | the PAL decompilation's functional C and, for eight functions, its matched C | 228 functions the NTSC decomp has as assembly; 8 of them `near` (their header says so) |
+| [hand/functional/](hand/functional) | the PAL decompilation's functional C and its matched C (rac1-pal's `hand/` where it has its own) | 277 files for functions the NTSC decomp has only as assembly, refreshed on 2026-10-16 from what PAL has then (111 of them PAL's matched C now); 9 of them `near` (their header says so). Some entries (about 100 of the first carry) no longer replace anything: the NTSC decomp has its own C for them since |
 | [drafts.tsv](drafts.tsv) | the NTSC decomp itself | 58 files whose own pending C (the `#else` of their `NON_MATCHING` guard) is read in place of the stub: where rac1-pal has nothing for the function, and for the six `near` functions that have a draft (the title loop is one). That decompilation never compiles these |
 
 `options.c` (PAL's rows on the Video options page) is not carried: the page
@@ -76,19 +78,16 @@ otherwise.
 
 ## What is left
 
-1. **The title's world.** Find why the world layers draw nothing here
-   (`OPENRAC_DEBUG=1` logs the same camera and "layers drawn" as PAL's):
-   compare the display-list hand-off (`host/render_native.c`) and the
-   paging flags (`host/boot.c`) with PAL's run, frame by frame.
-2. **Its own levels.** `editor/disc.py` accepts `SCES_509.16` only: NTSC-U
-   needs its executable's name and size, its table of contents checked, the
-   `gameplay_ntsc` lump in place of `gameplay_pal`, and the (cos, sin) table
-   at 0x165500. Its output must go beside PAL's, not over it
-   (`assets/port/rac1` is PAL's today).
-3. **Play it.** New game and each level, with `--stop-on-missing`: every
-   carried file is unproven until then. hostgen's report
-   (`port/build/release/games/rac1-ntsc/gen/report.md`) lists 38
-   functions still without C that the boot, title and level loops reach.
+1. **The title's layout.** The menu's panels and their text sit near the
+   top of the screen (PAL's are centred) and PRESS START is missing.
+2. **Play every level.** Veldin, Novalis and Kerwan play; the others are
+   not tried. hostgen's report lists 283 calls short of an argument
+   (filled with 0): each is a call in the NTSC decomp's C that relies on
+   a register the C does not set; fix them in its C as
+   [OPENRAC_PATCHES.md](../../../games/rac1/ntsc/OPENRAC_PATCHES.md)
+   records, worst first.
+3. **Stale carried entries.** hand.tsv still lists about 100 functions the
+   NTSC decomp has matched since; they replace nothing and can go.
 4. **The shared code's PAL addresses.** The viewer's address tables and two
    words in the front end have NTSC-U values now; `debug_menu.cpp` and
    `options_menu.cpp` are still PAL's and only act for `rac1-pal`. The
