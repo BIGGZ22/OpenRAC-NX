@@ -26,6 +26,10 @@
   const action = (id: string): ActionView | null => v?.actions.find((a) => a.id === id && a.thisPlatform) ?? null;
 
   const build = $derived(action("port-build"));
+  const levels = $derived(action("port-levels"));
+  const levelsCheck = $derived(action("port-levels-check"));
+  /** The levels were read from the disc and, where the version has the check, the game read them all. */
+  const levelsReady = $derived(levelsCheck ? levelsCheck.done : !!levels?.done);
   const playGodot = $derived(action("editor-preview"));
   const extract = $derived(action("editor-extract"));
 
@@ -119,6 +123,7 @@
           <li class:done={!!setUp}>Disc set up</li>
           {#if next.kind !== "unavailable" && (next.kind !== "set-up" || next.primary)}
             <li class:done={built}>Game built</li>
+            {#if levels}<li class:done={levelsReady}>Levels ready</li>{/if}
           {/if}
         </ol>
       {/if}

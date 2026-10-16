@@ -55,16 +55,16 @@ export function foundDisc(game: string) {
 const fileName = (path: string) => path.split(/[\\/]/).pop() ?? path;
 
 /**
- * Sets a game up and goes on to what playing needs next without being asked: the levels the game
- * draws from, when the set-up's version has that step and it is not done. IMAGE: from the games
- * folder; without one the player picks the image.
+ * Sets a game up and goes on to what playing needs next without being asked (prepare: the build,
+ * then the levels), stopping when it is ready to play. IMAGE: from the games folder; without one
+ * the player picks the image.
  */
 export async function setUp(game: string, title: string, image?: string): Promise<boolean> {
   if (!(await installGame(game, title, image))) return false;
   await refresh();
   const g = app.library?.games.find((x) => x.id === game);
   const v = g ? playerVersion(g) : null;
-  if (v && levelsNeeded(action(v, "port-levels"), action(v, "port-levels-check"))) await prepareLevels(v);
+  if (v && action(v, "play")?.state !== "planned") await prepare(v);
   return true;
 }
 
@@ -234,11 +234,11 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
     return {
       ...base,
       kind: "levels",
-      label: read ? "Check the levels" : "Get the levels ready",
+      label: read ? "Check the levels and play" : "Get the levels and play",
       icon: "disc",
       hint: read
-        ? "Makes sure every level was read from your disc whole, and reads them again if not. A few seconds."
-        : "Reads the levels from your disc so the game can draw them. About half a minute and 1 GB, once.",
+        ? "Makes sure every level was read from your disc whole (reading them again if not), then starts the game. A few seconds."
+        : "Reads the levels from your disc so the game can draw them, then starts the game. About half a minute and 1 GB, once.",
       primary: true,
       status: "Needs its levels",
       tone: "warn",
@@ -248,9 +248,9 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
     return {
       ...base,
       kind: "build",
-      label: "Build the game",
+      label: "Build and play",
       icon: "build",
-      hint: "Compiles the game for this computer. A few minutes the first time.",
+      hint: "Compiles the game for this computer, gets its levels from your disc, then starts it. A few minutes the first time.",
       primary: true,
       status: "Needs building",
       tone: "warn",
@@ -275,6 +275,28 @@ function levelsNeeded(levels: ActionView | null, check: ActionView | null): bool
   return !!check && !check.done && (check.runnable || !!levels?.runnable);
 }
 
+const freshVersion = (v: VersionView) =>
+  app.library?.games.flatMap((g) => g.versions).find((x) => x.key === v.key) ?? v;
+
+/**
+ * Everything playing still needs, in order: the game built for this computer when it is not (the
+ * levels' check runs the game, so it comes first), then the levels read and checked
+ * (prepareLevels). True when the game can be played.
+ */
+export async function prepare(v: VersionView): Promise<boolean> {
+  const scope = { kind: "version" as const, key: v.key };
+  const build = action(v, "port-build");
+  if (!action(v, "play")?.done && build?.runnable) {
+    if (!(await runChain(scope, [build]))) return false;
+    await refresh();
+  }
+  const now = freshVersion(v);
+  if (levelsNeeded(action(now, "port-levels"), action(now, "port-levels-check")) && !(await prepareLevels(now))) {
+    return false;
+  }
+  return !!action(freshVersion(v), "play")?.runnable;
+}
+
 /**
  * Reads the levels from the disc if that is still to do, then has the game check them. Levels that
  * are there but fail the check are read again, once, and checked again: a player is not left
@@ -282,7 +304,7 @@ function levelsNeeded(levels: ActionView | null, check: ActionView | null): bool
  */
 export async function prepareLevels(v: VersionView): Promise<boolean> {
   const scope = { kind: "version" as const, key: v.key };
-  const fresh = () => app.library?.games.flatMap((g) => g.versions).find((x) => x.key === v.key) ?? v;
+  const fresh = () => freshVersion(v);
   const levels = action(v, "port-levels");
   const check = action(v, "port-levels-check");
   if (!check) {
@@ -321,20 +343,22 @@ export async function playerAct(v: VersionView, state: PlayerState): Promise<voi
     await setUp(v.game, v.title, foundDisc(v.game)?.path);
     return;
   }
-  if (state.kind === "build") {
-    // Building is not enough to play: the levels come with it, the first time.
-    const build = action(v, "port-build");
-    if (build && (await runChain(scope, [build]))) {
-      await refresh();
-      const now = app.library?.games.flatMap((g) => g.versions).find((x) => x.key === v.key) ?? v;
-      if (levelsNeeded(action(now, "port-levels"), action(now, "port-levels-check"))) await prepareLevels(now);
+  if (state.kind === "build" || state.kind === "levels") {
+    // One press gets the game ready (the build, then its levels) and starts it.
+    if (await prepare(v)) {
+      const play = action(freshVersion(v), "play");
+      if (play?.runnable) await run(scope, play);
     }
     return;
   }
-  if (state.kind === "levels") {
-    await prepareLevels(v);
-    return;
+  if (state.kind !== "play") return;
+  // A computer that builds the game builds it again first: only what changed is redone (a moment
+  // when nothing did), so Play always starts the game as its sources are now, never an old build.
+  const build = action(v, "port-build");
+  if (build?.runnable) {
+    if (!(await runChain(scope, [build]))) return;
+    await refresh();
   }
-  const act = state.kind === "play" ? action(v, "play") : null;
-  if (act) await run(scope, act);
+  const act = action(freshVersion(v), "play");
+  if (act?.runnable) await run(scope, act);
 }
