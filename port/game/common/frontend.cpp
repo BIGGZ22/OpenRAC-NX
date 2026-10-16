@@ -2228,9 +2228,15 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     k.before_world = level >= 0 && level < 19 ? std::min(before_world, k.packets.size()) : 0;
     const bool menu_gap = (k.draws & 0x1Fu) == 0 && k.before_world >= 0x40000;
     g->menu_gap_ticks = menu_gap ? g->menu_gap_ticks + 1 : 0;
-    g->repeat_frame = menu_gap && g->menu_gap_ticks <= 3 && g->frame.id() != 0;
+    // A tick that draws its world with no 2D list at all (the first tick of the vendor's fly-in,
+    // the first after a scene) is one whose list the game has not finished: drawn, it showed the
+    // world unfaded between the black of a fade's ticks (the flicker on opening the vendor). The
+    // last frame stands for it, as the console's screen did.
+    const bool unfinished = k.has_camera && (k.draws & 0x1Fu) != 0 && k.packets.empty();
+    g->repeat_frame = ((menu_gap && g->menu_gap_ticks <= 3) || unfinished) && g->frame.id() != 0;
     if (g->repeat_frame && debug) {
-        log::info("frame {}: no world under a page menu's list; the last frame stands", g->index);
+        log::info("frame {}: {}; the last frame stands", g->index,
+                  unfinished ? "a world without its 2D list" : "no world under a page menu's list");
     }
     if (debug && k.frame % 100 == 0 && !k.strips.empty()) {
         int bare = 0;
