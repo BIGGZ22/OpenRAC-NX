@@ -206,6 +206,8 @@ void load(const std::filesystem::path& file) {
             known = parse_bool(value, s.menu_bar);
         } else if (key == "mute_unfocused") {
             known = parse_bool(value, s.mute_unfocused);
+        } else if (key == "skip_cutscenes") {
+            known = parse_bool(value, s.skip_cutscenes);
         } else if (key == "volume") {
             known = parse_int(value, 0, 100, s.volume);
         }
@@ -258,6 +260,7 @@ void save() {
         << "show_fps = " << (s.show_fps ? 1 : 0) << "\n"
         << "menu_bar = " << (s.menu_bar ? 1 : 0) << "\n"
         << "mute_unfocused = " << (s.mute_unfocused ? 1 : 0) << "\n"
+        << "skip_cutscenes = " << (s.skip_cutscenes ? 1 : 0) << "\n"
         << "volume = " << s.volume << "\n";
 }
 

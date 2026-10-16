@@ -96,9 +96,16 @@ static int bolts(void) {
     return GREF(int, 0x0015EE98u);
 }
 
+/* An in-game cutscene plays while the game mode (D_L00_0015F6A8, level data: relocated from level
+ * 0's address to the loaded level's) is 2. */
+static int in_cutscene(void) {
+    return loaded_level >= 0 && loaded_level < LEVELS && GREF(int, OPENRAC_LDATA(0, 0x0015F6A8u)) == 2;
+}
+
 __attribute__((constructor)) static void install_direct_start(void) {
     openrac_game_on_frame = direct_start;
     openrac_game_bolts = bolts;
+    openrac_game_in_cutscene = in_cutscene;
 }
 
 void func_00209DC0(void) {
