@@ -96,3 +96,4 @@ func_L00_00261B00	level_bolt_burst.c
 func_L00_002D4EC0	level_class639.c
 func_001F9BB0	game_sound_math.c
 func_001F9E58	game_sound_math.c
+func_L00_002DACC0	level_nanotech_glow.c
