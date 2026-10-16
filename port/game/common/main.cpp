@@ -675,6 +675,17 @@ void openrac_game_effect_quad(const openrac_game_quad* quad) {
 #endif
 }
 
+void openrac_game_sky_shell(int shell, const float* matrix) {
+#ifdef OPENRAC_FRONTEND
+    if (g_window) {
+        frontend::sky_shell(shell, matrix);
+    }
+#else
+    (void)shell;
+    (void)matrix;
+#endif
+}
+
 int openrac_game_hud_side(void) {
 #ifdef OPENRAC_FRONTEND
     if (g_window) {

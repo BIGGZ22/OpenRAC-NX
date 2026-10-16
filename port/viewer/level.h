@@ -59,6 +59,7 @@ struct Primitive {
     std::uint32_t first_index = 0;
     std::uint32_t index_count = 0;
     int material = 0;
+    int shell = -1;  // a sky's: the game's shell number (its node Sky_N), for the shell's matrix
 };
 
 struct Model {

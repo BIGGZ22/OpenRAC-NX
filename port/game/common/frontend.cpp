@@ -77,6 +77,8 @@ struct Kept {
     std::vector<renderer::EffectStrip> strips;
     std::vector<renderer::EffectQuad> effects;
     std::vector<renderer::ImageUpload> effect_uploads;
+    std::array<renderer::Mat4, 8> sky_shells{};
+    unsigned sky_shell_mask = 0;
     std::vector<renderer::UiQuad> ui_quads;
     std::uint32_t draws = 0;
     bool has_camera = false;
@@ -109,6 +111,9 @@ struct State {
     // The world effect quads the game drew since the last frame (effect_quad).
     std::vector<renderer::EffectQuad> effects;
     std::vector<renderer::ImageUpload> effect_uploads;  // the quads' textures (EffectQuad::uploads)
+    // The sky shells the game drew since the last frame, with their matrices (sky_shell).
+    std::array<renderer::Mat4, 8> sky_shells{};
+    unsigned sky_shell_mask = 0;
     // The live particles the game drew since the last frame (particle): record, texture source.
     struct Particle {
         std::array<std::uint8_t, 0x40> record;
@@ -670,9 +675,20 @@ void effect_quad(std::span<const std::uint8_t> ram, const openrac_game_quad& qua
         g->effect_uploads.push_back(std::move(palette));
         g->effect_uploads.push_back(std::move(image));
         g->effects.push_back(q);
-    } else if (quad.pixels != 0 || quad.clut != 0) {
+    } else {
+        // No paging record: a texture the game put in the GS itself (the flight's planet picture,
+        // loaded with the transition's data), resolved from the pool at TEX0's blocks; the
+        // renderer leaves the quad out when nothing is there.
         g->effects.push_back(q);
     }
+}
+
+void sky_shell(int shell, const float* matrix) {
+    if (!g || shell < 0 || shell >= static_cast<int>(g->sky_shells.size())) {
+        return;
+    }
+    std::memcpy(g->sky_shells[static_cast<std::size_t>(shell)].data(), matrix, sizeof(float) * 16);
+    g->sky_shell_mask |= 1u << shell;
 }
 
 int hud_side() {
@@ -1573,6 +1589,8 @@ void draw_kept(bool first) {
     input.packets[static_cast<std::size_t>(renderer::Bucket::Hud)] =
         std::span<const std::uint8_t>(k.packets).subspan(k.before_world);
     input.effects = k.effects;
+    input.sky_shells = k.sky_shells;
+    input.sky_shell_mask = k.sky_shell_mask;
     input.effect_uploads = k.effect_uploads;
     input.ui_quads = k.ui_quads;
     // A tick that draws no world and has no picture of its own to put under its 2D (the page
@@ -2177,6 +2195,8 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     particle_quads(ram, state);
     k.effects = std::move(g->effects);
     k.effect_uploads = std::move(g->effect_uploads);
+    k.sky_shells = g->sky_shells;
+    k.sky_shell_mask = std::exchange(g->sky_shell_mask, 0u);
     // The list's own tick's quads (above). The game's FadeToBlack (after a story card, between
     // scenes) sends the last display list again for each of its frames, with its black over it,
     // and draws nothing itself: its markers still name the tick that built it, which is kept.

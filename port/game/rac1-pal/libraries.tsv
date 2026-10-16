@@ -227,6 +227,7 @@ func_001F9FA8	game	func_001F9FA8	host	the port's own (host/hand.c); its signatur
 func_0023B670	game	func_0023B670	host	the port's own (host/hand.c); its signature decides the prototype	int (int, int, int, unsigned int, int)
 func_00235118	game	func_00235118	host	the port's own (host/hand.c); its signature decides the prototype	void (void)
 func_00116078	game	func_00116078	host	the port's own (host/hand.c); its signature decides the prototype	int (unsigned int, ...)
+func_0022C9A8	draw	SkyDrawShell	wrap	the shell's matrix (D_001D9A70, built by the sky code before each shell) goes to the window, which draws the shells natively (host/render_native.c)	void (int)
 func_00201AF0	draw	draw_bootImage	wrap	the picture shown while a level loads goes into the frame buffer by an image transfer, which the 2D path keeps only as a texture: the port also draws it there (host/boot_picture.c)
 func_001F7680	draw	func_001F7680	wrap	the boot loop's screen-high picture goes into the frame buffer by an image transfer, which the 2D path keeps only as a texture: the port also draws it there (host/boot_picture.c)
 func_L00_002EDB68	game	func_L00_002EDB68	host	the tail of func_L00_002EDB58 (jr ra; v0 = 0), which the game calls by address as a do-nothing callback (host/vector.c)	int (void)

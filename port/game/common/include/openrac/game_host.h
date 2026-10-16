@@ -157,6 +157,11 @@ typedef struct openrac_game_quad {
 
 void openrac_game_effect_quad(const openrac_game_quad* quad);
 
+/* A sky shell the game drew this frame (rac1: SkyDrawShell) and the matrix it was drawn with: 16
+ * floats, the game's rows (x, y, z axes, then the translation, in the sky's own units), each row
+ * one column of the window's column-major matrix. */
+void openrac_game_sky_shell(int shell, const float* matrix);
+
 /* A textured quad of the 2D layer (rac1: DrawTexturedQuad, the HUD's sprite routines): four corners
  * in strip order (0-1-2, 1-2-3) in the chip's 12.4 screen coordinates as the game computes them,
  * their texel coordinates (12.4 both ways), the depth, the colour (RGBAQ's low word) and the

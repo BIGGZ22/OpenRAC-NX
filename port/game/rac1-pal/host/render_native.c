@@ -217,6 +217,18 @@ void func_0022B8F8(gaddr a0, gaddr a1) {
     (void)a1;
 }
 
+/*
+ * SkyDrawShell(shell): the sky code (the levels' skies, the flight's DrawSkyShells) builds each
+ * shell's matrix at D_001D9A70 before drawing it: its turn, scale and, in the flight, the
+ * translation that moves the stars past the ship. The window draws the shells natively with it.
+ */
+void func_0022C9A8(int shell) {
+    float m[16];
+    memcpy(m, G(OPENRAC_DATA(0x001D9A70u)), sizeof(m));
+    openrac_game_sky_shell(shell, m);
+    func_0022C9A8__game(shell);
+}
+
 /* SkyDrawShellTextured */
 void func_0022CA00(gaddr a0) {
     openrac_game_draw(OPENRAC_DRAW_SKY);

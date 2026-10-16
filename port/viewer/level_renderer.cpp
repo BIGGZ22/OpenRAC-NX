@@ -360,6 +360,18 @@ void LevelScene::draw_sky(const renderer::FrameInput& input, renderer::RenderSta
             const renderer::TextureHandle texture =
                 m.image >= 0 ? m_textures[static_cast<std::size_t>(m.image)] : m_white;
             glBindTexture(GL_TEXTURE_2D, state.textures.gl_texture(texture));
+            // The shell's matrix as the game drew it this tick; its translation is in the game's
+            // sky units, the vertices were exported in 1/1024ths of them (editor/sky.py).
+            renderer::Mat4 shell = renderer::identity();
+            if (p.shell >= 0 && p.shell < 8 && (input.sky_shell_mask & (1u << p.shell)) != 0) {
+                shell = input.sky_shells[static_cast<std::size_t>(p.shell)];
+                shell[3] = shell[7] = shell[11] = 0.0f;
+                shell[12] /= 1024.0f;
+                shell[13] /= 1024.0f;
+                shell[14] /= 1024.0f;
+                shell[15] = 1.0f;
+            }
+            glUniformMatrix4fv(m_sky.uniform("shell"), 1, GL_FALSE, shell.data());
             glDrawElementsInstanced(
                 GL_TRIANGLES,
                 static_cast<GLsizei>(p.index_count),

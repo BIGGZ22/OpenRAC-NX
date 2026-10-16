@@ -273,6 +273,9 @@ std::optional<std::uint32_t> load_model(
             }
             out.index_count = static_cast<std::uint32_t>(level.indices.size()) - out.first_index;
             out.material = material_index(prim.material, base, level);
+            if (node.name != nullptr && std::strncmp(node.name, "Sky_", 4) == 0) {
+                out.shell = std::atoi(node.name + 4);
+            }
             model.primitives.push_back(out);
         }
     }

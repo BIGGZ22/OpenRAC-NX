@@ -27,7 +27,8 @@ public:
 
 private:
     // Binds TEX0's texture with TEX1's filtering and CLAMP's wrapping, and sets ALPHA's blend.
-    void apply(std::uint64_t tex0, std::uint64_t tex1, std::uint64_t clamp, std::uint64_t alpha, RenderState& state,
+    // False when the pool has nothing at TEX0's block (the draw is left out, not the placeholder).
+    bool apply(std::uint64_t tex0, std::uint64_t tex1, std::uint64_t clamp, std::uint64_t alpha, RenderState& state,
                std::uint32_t tbp = 0, std::uint32_t cbp = 0);
 
     struct Vertex {

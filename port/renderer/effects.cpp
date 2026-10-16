@@ -105,7 +105,9 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
         }
     }
     for (const EffectQuad& q : input.effects) {
-        apply(q.tex0, q.tex1, q.clamp, q.alpha, state, q.tbp, q.cbp);
+        if (!apply(q.tex0, q.tex1, q.clamp, q.alpha, state, q.tbp, q.cbp)) {
+            continue;
+        }
 
         for (int k = 0; k < 4; ++k) {
             Vertex& v = vertices[static_cast<std::size_t>(k)];
@@ -130,7 +132,7 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
     glDepthMask(GL_TRUE);
 }
 
-void EffectRenderer::apply(std::uint64_t tex0_bits, std::uint64_t tex1_bits, std::uint64_t clamp_bits,
+bool EffectRenderer::apply(std::uint64_t tex0_bits, std::uint64_t tex1_bits, std::uint64_t clamp_bits,
                            std::uint64_t alpha_bits, RenderState& state, std::uint32_t tbp, std::uint32_t cbp) {
     const gs::Texa texa{0, false, 0x80};
     gs::Tex0 tex0 = gs::Tex0::decode(tex0_bits);
@@ -163,6 +165,7 @@ void EffectRenderer::apply(std::uint64_t tex0_bits, std::uint64_t tex1_bits, std
     glBlendEquation(b.equation);
     glBlendFuncSeparate(b.src, b.dst, GL_ONE, GL_ZERO);
     glBlendColor(0.0f, 0.0f, 0.0f, b.constant);
+    return texture != state.textures.placeholder();
 }
 
 void EffectRenderer::release() {
