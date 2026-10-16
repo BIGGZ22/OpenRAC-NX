@@ -107,6 +107,13 @@ def textures(level: Level, gs: bytes) -> dict[tuple[str, int], Texture]:
                 raise FormatError(f"{group} texture {i} uses an unknown palette")
             result[(group, i)] = Texture(width, height, span(level.core, base + pixels, width * height),
                                          span(gs, palette * 256, 1024))
+    # The chrome (128 x 128) and glass (64 x 64) maps the metal packets are drawn with: byte offsets
+    # into the GS RAM lump of their PSMT8 pixels and CLUT, at core index 0x90 / 0x94 and 0x98 / 0x9C
+    # (ReRAC moby_skinning_lighting.md 9, "Texture"). Blurry environment pictures, alpha 13..0x80.
+    for key, at, size in ((("metal", -2), 0x90, 128), (("metal", -3), 0x98, 64)):
+        pixels, palette = unpack("<II", level.index, at)
+        if pixels and pixels + size * size <= len(gs) and palette + 1024 <= len(gs):
+            result[key] = Texture(size, size, span(gs, pixels, size * size), span(gs, palette, 1024))
     return result
 
 

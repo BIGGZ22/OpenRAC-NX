@@ -36,6 +36,9 @@ NO_STORE = 0xf4  # VU0 address meaning "do not keep this matrix".
 # this key and the writer pairs it with GREY.
 UNTEXTURED = ("moby", -1)
 GREY = Texture(8, 8, bytes(64), bytes((0x80,) * 4) + bytes(1020))
+# A metal packet's GS texture block names the level's chrome (-2) or glass (-3) map, which the game
+# binds at load time (ReRAC moby_skinning_lighting.md 9: "Texture").
+METAL_CHROME, METAL_GLASS = ("metal", -2), ("metal", -3)
 
 
 @dataclass
@@ -53,6 +56,10 @@ class MobyClass:
     joint_count: int = 0
     skins: list[tuple[tuple[int, int], ...]] = field(default_factory=list)
     skeleton: Skeleton | None = None
+    # The metal ("shine") packets' mesh: the parts the game draws a second time, sphere-mapped
+    # with the level's chrome or glass map (texture keys METAL_CHROME / METAL_GLASS); its skins
+    # are in metal.skins like the main mesh's. None for a class without metal packets.
+    metal: Mesh | None = None
 
 
 def normal(azimuth: int, elevation: int) -> tuple[float, float, float]:
@@ -203,6 +210,17 @@ def packet(data: bytes, entry: bytes, state: ListState, mesh: Mesh, remap: bytes
             mesh.light_slots.append(-2 if glow else -1)
         skins.append(skin)
 
+    def key(texture: int):
+        if texture < -1:  # chrome and glass belong to the metal packets
+            raise FormatError(f"invalid moby texture index {texture}")
+        return UNTEXTURED if texture < 0 else ("moby", remap[texture])
+
+    faces(index_data, secrets, textures, state, len(vertices), base, mesh, key, remap)
+
+
+def faces(index_data: bytes, secrets: list, textures: list, state: ListState, count: int, base: int,
+          mesh: Mesh, key, remap: bytes | None) -> None:
+    """Walk a packet's index stream into mesh faces; key turns a texture index into a mesh key."""
     # Index stream: 1-based, bit 7 suppresses the drawing kick. A 0 switches
     # to the next GS block's texture and pushes the next extra index; an
     # extra index of 0 ends the packet. The last three pushes (1, 1, 1)
@@ -219,7 +237,7 @@ def packet(data: bytes, entry: bytes, state: ListState, mesh: Mesh, remap: bytes
                 raise FormatError("moby texture switch without a GS block")
             state.texture, block = textures[block], block + 1
             byte |= 0x80
-        if not 0 < byte & 0x7f <= len(vertices):
+        if not 0 < byte & 0x7f <= count:
             raise FormatError("moby vertex index out of range")
         pushes.append(((byte & 0x7f) - 1, byte & 0x80 == 0, state.texture))
     else:
@@ -231,13 +249,60 @@ def packet(data: bytes, entry: bytes, state: ListState, mesh: Mesh, remap: bytes
         index, kick, texture = pushes[n]
         if not kick:
             continue
-        if texture is None or texture < -1 or texture >= 16:
+        if texture is None or texture < -3 or texture >= 16:
             raise FormatError(f"invalid moby texture index {texture}")
-        if texture >= 0 and remap[texture] == 255:
+        if texture >= 0 and remap is not None and remap[texture] == 255:
             raise FormatError("moby texture slot has no texture")
-        key = UNTEXTURED if texture < 0 else ("moby", remap[texture])
         a, b, c = (base + pushes[n - 2][0], base + pushes[n - 1][0], base + index)
-        mesh.add_face(key, orient(mesh, a, b, c))
+        mesh.add_face(key(texture), orient(mesh, a, b, c))
+
+
+def metal_packet(data: bytes, entry: bytes, state: ListState, mesh: Mesh, skins: list) -> None:
+    """Add one metal packet's vertices and faces to mesh. Its VIF list has the index stream and
+    the GS blocks only (the game makes the texture coordinates per frame, a sphere map); its vertex
+    table is a 0x10-byte header (the vertex count, then the game's output offsets) and 16-byte
+    vertices: s16 x, y, z, the normal's azimuth and elevation, joint[3], their count, weight[3]
+    (in 256ths; a count of 1 or less is joint 0 alone). After ReRAC's read_packet and metal_skin
+    (crates/rc-formats/src/moby.rs; ISC License, Copyright (c) 2026 ReRAC contributors)."""
+    list_offset, list_size, _, table, _data_size, _p, _c, _t = unpack("<IHHIBBBB", entry)
+    commands = unpacks(span(data, list_offset, list_size * 16))
+    if [c[0] for c in commands] not in ([INDICES], [INDICES, GS_BLOCKS]):
+        raise FormatError("unsupported moby metal VIF program")
+    _, _index_at, _index_count, index_data = commands[0]
+    secrets, textures = [index_data[2]], []
+    if len(commands) == 2:
+        _, _blocks_at, count, blocks = commands[1]
+        if count % 4:
+            raise FormatError("misplaced moby metal GS blocks")
+        for b in range(count // 4):
+            textures.append(unpack("<i", blocks, b * 64 + 32)[0])
+            secrets.append(blocks[b * 16 + 12])
+    count, = unpack("<i", data, table)
+    if not 0 < count <= 4096:
+        raise FormatError("implausible moby metal vertex count")
+    records = span(data, table + 0x10, count * 16)
+    base = len(mesh.positions)
+    for i in range(count):
+        r = records[i * 16:(i + 1) * 16]
+        x, y, z = unpack("<3h", r)
+        joints, n, weights = r[8:11], r[11], r[12:15]
+        if n <= 1:
+            skin = ((joints[0], 256),)
+        elif n <= 3 and sum(weights[:n]) == 256:
+            skin = tuple((joints[k], weights[k]) for k in range(n))
+        else:
+            raise FormatError("invalid moby metal vertex skin")
+        mesh.positions.append((x / 1024, y / 1024, z / 1024))
+        mesh.uvs.append((0.0, 0.0))
+        mesh.normals.append(normal(r[6], r[7]))
+        skins.append(skin)
+
+    def key(texture: int):
+        if texture not in (-2, -3):
+            raise FormatError(f"moby metal packet uses texture {texture}")
+        return METAL_CHROME if texture == -2 else METAL_GLASS
+
+    faces(index_data, secrets, textures, state, count, base, mesh, key, None)
 
 
 def orient(mesh: Mesh, a: int, b: int, c: int) -> tuple[int, int, int]:
@@ -273,13 +338,21 @@ def moby_class(data: bytes, remap: bytes, name: str, sequences: list | None = No
             raise FormatError(f"packet {i}: {exc}") from exc
     if not mesh.triangles:
         raise FormatError("moby class has no drawn triangles")
+    metal_mesh, metal_skins, metal_state = Mesh(f"{name}_metal", normals=[]), [], ListState()
+    for i in range(metal):
+        try:
+            metal_packet(data, span(data, packet_table + (metal_begin + i) * 16, 16), metal_state, metal_mesh,
+                         metal_skins)
+        except FormatError as exc:
+            raise FormatError(f"metal packet {i}: {exc}") from exc
     for skin in skins:
         if any(j >= max(joint_count, 1) for j, _ in skin):
             raise FormatError("moby vertex uses a joint past the class's joint count")
     bones = skeleton(data, class_sequences(data) if sequences is None else sequences)
     if bones is not None:
         mesh.skins = skins
-    return MobyClass(scale, mesh, joint_count, skins, bones)
+        metal_mesh.skins = metal_skins
+    return MobyClass(scale, mesh, joint_count, skins, bones, metal_mesh if metal_mesh.triangles else None)
 
 
 def moby_classes(level) -> dict[int, MobyClass | None]:

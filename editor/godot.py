@@ -29,7 +29,7 @@ from formats import png, unpack
 from gltf import Gltf
 from level import Level
 from mesh import Mesh
-from moby_class import GREY, UNTEXTURED, MobyClass, moby_classes
+from moby_class import GREY, METAL_CHROME, METAL_GLASS, UNTEXTURED, MobyClass, moby_classes
 from mobys import LEVEL_NAMES, moby_logic, node_name, moby_class_names, moby_instances
 from shrubs import shrub_classes, shrub_instances
 from sky import panorama, sky
@@ -154,7 +154,10 @@ class LevelWriter:
                       "mesh_instances": 0, "meshes": 0, "triangles": 0}
 
     def material(self, gltf: Gltf, key, depth: int) -> int:
-        name = "moby_untextured" if key == UNTEXTURED else f"{key[0]}_{key[1]:04}"
+        # The metal packets' maps are named metal_chrome / metal_glass: the port's renderer draws
+        # those faces as the game's shine pass (sphere-mapped, blended over the moby).
+        name = ("moby_untextured" if key == UNTEXTURED else "metal_chrome" if key == METAL_CHROME
+                else "metal_glass" if key == METAL_GLASS else f"{key[0]}_{key[1]:04}")
         texture = self.textures[name] = GREY if key == UNTEXTURED else self.level.texture(*key)
         return gltf.material(name, f"{'../' * depth}textures/{name}.png", cutout=texture.cutout)
 
@@ -177,7 +180,7 @@ class LevelWriter:
         """
         bones = moby.skeleton
         if bones is None:
-            return self.glb(path, [moby.mesh], 1)
+            return self.glb(path, [moby.mesh] + ([moby.metal] if moby.metal is not None else []), 1)
         count = len(bones.joints)
         scaled = [j for j, joint in enumerate(bones.joints) if joint.post_scale]
         # Every node is a skin joint, so that Godot makes each one a bone;
@@ -198,6 +201,13 @@ class LevelWriter:
         skin = gltf.skin(list(range(first, first + count + len(scaled))),
                          [joint.inverse_bind for joint in bones.joints] + [bones.joints[j].inverse_bind for j in scaled])
         gltf.node(moby.mesh.name, mesh, skin=skin)
+        if moby.metal is not None:
+            # The metal packets' mesh, skinned to the same joints (its own node: the main mesh's
+            # primitives stay first).
+            metal_skins = [tuple((slot.get(j, j), w) for j, w in pairs) for pairs in moby.metal.skins]
+            metal = gltf.mesh(replace(moby.metal, skins=metal_skins),
+                              {key: self.material(gltf, key, 1) for key in moby.metal.faces})
+            gltf.node(moby.metal.name, metal, skin=skin)
         for animation in bones.animations:
             gltf.animation(animation.name + ("_loop" if animation.loop else ""), animation.times,
                            [(post[j], "scale", values) if kind == "post_scale" else (first + j, kind, values)
