@@ -22,8 +22,14 @@ from moby_class import MobyClass
 from test_moby_anim import fixture
 
 # Level 0's moby texture 3 and level 1's moby texture 7 are the same picture.
-PICTURES = {0: {("moby", 3): (200, 10, 10), ("tie", 1): (10, 200, 10)},
-            1: {("moby", 7): (200, 10, 10), ("tie", 1): (10, 10, 200)}}
+# The other disc (CrossDiscTests) numbers Ratchet's picture 5 in level 0 and 6 in level 1; a
+# version of it with a picture of its own (9) has it a shade darker.
+PICTURES = {0: {("moby", 3): (200, 10, 10), ("moby", 5): (200, 10, 10), ("moby", 9): (199, 10, 10),
+                ("tie", 1): (10, 200, 10)},
+            1: {("moby", 7): (200, 10, 10), ("moby", 6): (200, 10, 10), ("moby", 9): (199, 10, 10),
+                ("tie", 1): (10, 10, 200)}}
+OTHER_DISC = ((0, ("moby", 5)), (1, ("moby", 6)))
+OTHER_PICTURE = ((0, ("moby", 9)), (1, ("moby", 9)))
 
 
 def texture(rgb) -> Texture:
@@ -300,6 +306,120 @@ class AssetTests(unittest.TestCase):
             assets.export(self.levels, self.export, [0], "mobys")
         with self.assertRaisesRegex(assets.AssetError, "only under assets/ or build/"):
             assets.export(self.levels, assets.ROOT / "editor" / "nope", [0], "mobys")
+
+
+class CrossDiscTests(unittest.TestCase):
+    """A pack made from one disc's levels, stacked for the other's, where the same pictures have other
+    names."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.pal = write_levels(self.root / "pal")
+        self.us = write_levels(self.root / "us", "ntsc", OTHER_DISC)
+        self.export = self.root / "export"
+        quiet(assets.export, self.pal, self.export, [0], "all")
+        self.into = self.root / "overrides"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def pack(self, edit) -> Path:
+        edit(self.export)
+        code, text = quiet(assets.main, ["import", str(self.export), "--levels", str(self.pal), "--into",
+                                         str(self.into), "--name", "Edited"])
+        self.assertEqual(code, 0, text)
+        return self.into / "packs/edited"
+
+    def stack(self, levels: Path, name: str = "mods") -> tuple[dict, Path]:
+        out = self.root / name
+        return overrides.stack(self.into, out, None, levels), out
+
+    def test_texture_and_model_go_where_the_other_disc_has_them(self):
+        big = rgb_png(16, 8, (255, 255, 0))
+
+        def edit(export):
+            (export / "level_00/textures/moby_0003.png").write_bytes(big)
+            model = export / "level_00/mobys/moby_0_ratchet/moby_0.gltf"
+            model.write_text(model.read_text() + "\n")
+        root = self.pack(edit)
+        manifest = json.loads((root / overrides.MANIFEST).read_text())
+        self.assertEqual(manifest["version"], "pal")
+        picture = assets.file_hash(self.pal / "level_00/textures/moby_0003.png")
+        self.assertEqual(manifest["originals"]["level_01/textures/moby_0007.png"],
+                         {"sha256": picture, "size": [4, 2], "used_by": [["moby", 0, 0, 1]]})
+        model = manifest["originals"]["level_00/mobys/moby_0.glb"]
+        self.assertEqual((model["kind"], model["class"], model["textures"], model["class_textures"]),
+                         ("moby", 0, {"moby_0003": picture}, ["moby_0003"]))
+
+        summary, out = self.stack(self.us)
+        self.assertEqual(summary["version"], "ntsc")
+        self.assertEqual(sorted(summary["files"]), ["level_00/mobys/moby_0.glb", "level_00/textures/moby_0005.png",
+                                                    "level_01/mobys/moby_0.glb", "level_01/textures/moby_0006.png"])
+        self.assertEqual((out / "level_01/textures/moby_0006.png").read_bytes(), big)
+        for level, name in ((0, "moby_0005"), (1, "moby_0006")):
+            document = gltf_read.read(out / f"level_{level:02}/mobys/moby_0.glb")
+            self.assertEqual(document.list("images")[0]["uri"], f"../textures/{name}.png")
+            self.assertEqual(document.list("materials")[0]["name"], name)
+        self.assertEqual(summary["skipped"], {}, summary["notes"])
+        # On the disc it was made from it goes in as it is.
+        summary, out = self.stack(self.pal, "mods-pal")
+        self.assertEqual(sorted(summary["files"]), ["level_00/mobys/moby_0.glb", "level_00/textures/moby_0003.png",
+                                                    "level_01/mobys/moby_0.glb", "level_01/textures/moby_0007.png"])
+
+    def test_a_picture_the_other_disc_has_its_own_version_of(self):
+        big = rgb_png(16, 8, (255, 255, 0))
+
+        def edit(export):
+            (export / "level_00/textures/moby_0003.png").write_bytes(big)
+            model = export / "level_00/mobys/moby_0_ratchet/moby_0.gltf"
+            model.write_text(model.read_text() + "\n")
+        self.pack(edit)
+        darker = write_levels(self.root / "darker", "ntsc", OTHER_PICTURE)
+        summary, out = self.stack(darker)
+        self.assertEqual(summary["skipped"], {}, summary["notes"])
+        # Where Ratchet's model uses its own version of the picture, of the same size.
+        self.assertEqual((out / "level_00/textures/moby_0009.png").read_bytes(), big)
+        self.assertEqual((out / "level_01/textures/moby_0009.png").read_bytes(), big)
+        document = gltf_read.read(out / "level_01/mobys/moby_0.glb")
+        self.assertEqual(document.list("images")[0]["uri"], "../textures/moby_0009.png")
+
+    def test_a_class_that_is_another_model_or_missing_is_left_out(self):
+        self.pack(lambda export: (export / "level_00/mobys/moby_0_ratchet/moby_0.gltf").write_text(
+            (export / "level_00/mobys/moby_0_ratchet/moby_0.gltf").read_text() + "\n"))
+        # Here level 1's class 0 has no skeleton, and level 0 has no class 0.
+        (self.us / "level_01/mobys/moby_0.glb").write_bytes(
+            (self.us / "level_01/ties/tie_3.glb").read_bytes())
+        manifest = json.loads((self.us / "level_00/manifest.json").read_text())
+        del manifest["classes"]["moby"]["0"]
+        (self.us / "level_00/manifest.json").write_text(json.dumps(manifest))
+        summary, out = self.stack(self.us)
+        self.assertEqual(summary["files"], {})
+        self.assertEqual(summary["skipped"]["edited"], [
+            "level_00/mobys/moby_0.glb (the level has no such class here)",
+            "level_01/mobys/moby_0.glb (the class is another model here)"])
+        self.assertTrue(any("other disc" in note for note in summary["notes"]))
+
+    def test_a_pack_from_before_originals_matches_by_name_and_picture(self):
+        green, yellow = rgb_png(8, 4, (0, 255, 0)), rgb_png(8, 4, (255, 255, 0))
+        files = {"level_00/textures/tie_0001.png": green, "level_00/textures/moby_0003.png": yellow,
+                 "level_01/textures/moby_0007.png": yellow, "level_02/placements.json": b"{}"}
+        source = self.root / "old"
+        for rel, data in files.items():
+            (source / rel).parent.mkdir(parents=True, exist_ok=True)
+            (source / rel).write_bytes(data)
+        (source / overrides.MANIFEST).write_text(json.dumps(
+            {"format": 1, "game": "rac1", "version": "pal", "name": "Old", "levels_format": 2}))
+        overrides.add(source, self.into)
+        summary, out = quiet(self.stack, self.us)[0]
+        # tie_0001 is the same picture under the same name here; level 0's moby_0003 is not here.
+        self.assertEqual(sorted(summary["files"]), ["level_00/textures/tie_0001.png"])
+        self.assertEqual(summary["skipped"]["old"], [
+            "level_00/textures/moby_0003.png (not the same picture here)",
+            "level_01/textures/moby_0007.png (not the same picture here)",
+            "level_02/placements.json (it belongs to the other disc's level data)"])
+        summary, _ = self.stack(self.pal, "mods-pal")
+        self.assertEqual(len(summary["files"]), 4)
 
 
 class SkinTests(unittest.TestCase):

@@ -40,6 +40,15 @@ def write_pack(root: Path, name: str, files: dict, **fields) -> Path:
     return root
 
 
+def levels(root: Path, version: str = "pal") -> Path:
+    """A levels folder the stack is for: one level of VERSION's, with nothing in it."""
+    (root / "level_00").mkdir(parents=True)
+    (root / "level_00/manifest.json").write_text(json.dumps(
+        {"format": overrides.LEVELS_FORMAT, "game": "rac1", "version": version, "level": 0,
+         "classes": {"moby": {}, "tie": {}, "shrub": {}}, "textures": []}))
+    return root
+
+
 def run(*argv) -> tuple[int, str]:
     with redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()):
         code = overrides.main([str(a) for a in argv])
@@ -137,7 +146,8 @@ class PackTests(unittest.TestCase):
         overrides.add(write_pack(self.root / "c", "Off", {"level_00/textures/y.png": blue}), self.into)
         run("disable", "off", "--into", self.into)
         out = self.root / "mods"
-        code, text = run("stack", "--into", self.into, "--out", out, "--packed", packed)
+        pal = levels(self.root / "levels")
+        code, text = run("stack", "--into", self.into, "--out", out, "--packed", packed, "--levels", pal)
         self.assertEqual(code, 0, text)
         self.assertEqual((out / "level_00/textures/x.png").read_bytes(), blue)  # the later pack wins
         self.assertTrue((out / "level_00/mobys/moby_0.glb").is_file())
@@ -156,6 +166,23 @@ class PackTests(unittest.TestCase):
         stranger.mkdir()
         with self.assertRaisesRegex(overrides.PackError, "not made by this tool"):
             overrides.stack(self.into, stranger)
+        # A folder per disc: the stack made before them, straight in mods/, is made again in mods/pal.
+        overrides.stack(self.into, out / "pal", packed, pal)
+        self.assertEqual(sorted(p.name for p in out.iterdir()), ["pal"])
+        self.assertEqual((out / "pal/level_00/textures/x.png").read_bytes(), red)
+
+    def test_packed_levels_of_the_other_disc_are_left_out(self):
+        packed = self.root / "packed"
+        (packed / "level_02").mkdir(parents=True)
+        (packed / "level_02/gameplay_ntsc.wad").write_bytes(b"packed")
+        (packed / "patches.tsv").write_text("100\t4\tlevel_02/gameplay_ntsc.wad\n")
+        (packed / overrides.PACKED).write_text(json.dumps({"game": "rac1", "version": "ntsc"}))
+        summary = overrides.stack(None, self.root / "mods", packed, levels(self.root / "levels"))
+        self.assertEqual(summary["files"], {})
+        self.assertEqual(summary["skipped"]["packed"], ["level_02/gameplay_ntsc.wad", "patches.tsv"])
+        self.assertTrue(any("pack them again" in n for n in summary["notes"]))
+        summary = overrides.stack(None, self.root / "mods-us", packed, levels(self.root / "us", "ntsc"))
+        self.assertEqual(summary["files"], {"level_02/gameplay_ntsc.wad": "packed"})
 
     def test_stack_with_nothing_still_writes_an_empty_list(self):
         out = self.root / "mods"

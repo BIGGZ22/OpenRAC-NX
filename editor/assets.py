@@ -1101,13 +1101,15 @@ def import_edits(edited: Path, levels: Path, report: Report) -> Pack:
     return pack
 
 
-def write_pack(pack: Pack, out: Path, name: str, author: str, description: str, source_id: str | None) -> dict:
-    """The pack folder (overrides.py's format) with its openrac-mod.json."""
+def write_pack(pack: Pack, out: Path, name: str, author: str, description: str, source_id: str | None,
+               levels: Path) -> dict:
+    """The pack folder (overrides.py's format) with its openrac-mod.json; LEVELS: the levels it
+    was made from, whose originals it records so that it applies to the other disc's too."""
     import overrides
     replaces = overrides.describe(pack.files)
     manifest = {"format": overrides.PACK_FORMAT, "game": GAME, "version": pack.version, "name": name,
                 "author": author, "description": description, "levels_format": LEVELS_FORMAT,
-                "replaces": replaces}
+                "replaces": replaces, "originals": overrides.originals(pack.files, levels)}
     if source_id:
         manifest["export"] = source_id
     out.mkdir(parents=True)
@@ -1166,11 +1168,11 @@ def main(argv: list[str] | None = None) -> int:
             import overrides
             with tempfile.TemporaryDirectory(prefix=".import-", dir=overrides.ensure(args.into)) as scratch:
                 staged = Path(scratch) / "pack"
-                write_pack(pack, staged, name, args.author, args.description, source_id)
+                write_pack(pack, staged, name, args.author, args.description, source_id, args.levels)
                 pack_id = overrides.install(staged, args.into, replace_export=source_id)
             where_to = f"{args.into.resolve()} as {pack_id}"
         else:
-            write_pack(pack, output_dir(args.out), name, args.author, args.description, source_id)
+            write_pack(pack, output_dir(args.out), name, args.author, args.description, source_id, args.levels)
             where_to = str(args.out.resolve())
         textures = sum(1 for p in pack.files if "/textures/" in p)
         models = len(pack.files) - textures

@@ -8,22 +8,32 @@ port loads on top of the extracted levels, without reading the disc again.
   overrides.py enable|disable ID --into OVERRIDES
   overrides.py move ID up|down|first|last --into OVERRIDES
   overrides.py remove ID --into OVERRIDES        delete the copy `add` made
-  overrides.py stack --into OVERRIDES --out MODS [--packed PACKED]
-                                                 the folder the port's --mods reads
+  overrides.py stack --into OVERRIDES --out MODS --levels LEVELS [--packed PACKED]
+                                                 the folder the port's --mods reads, for the
+                                                 levels it plays (either disc's)
   overrides.py zip ID OUT.zip --into OVERRIDES   a pack as a .zip to share
 
 A pack is a folder, or a .zip of one, with openrac-mod.json at its root (or
 in the zip's one top folder) and files laid out as the extracted levels are:
 
-  openrac-mod.json                  {"format": 1, "game": "rac1", "version": "pal",
+  openrac-mod.json                  {"format": 1, "game": "rac1", "version": "pal" or "ntsc",
                                      "name": ..., "author": ..., "description": ...,
-                                     "levels_format": 3, "replaces": {...}}
+                                     "levels_format": 3, "replaces": {...}, "originals": {...}}
   level_NN/textures/<name>.png      a texture, any size of the same shape
   level_NN/mobys/moby_<class>.glb   a class's model, as the port reads it
   level_NN/ties/tie_<class>.glb, level_NN/shrubs/shrub_<class>.glb
   level_NN/placements.json          ties and shrubs placed again (the level packer's)
-  level_NN/gameplay_pal.wad, patches.tsv   a packed level (the level packer's)
+  level_NN/gameplay_<version>.wad, patches.tsv   a packed level (the level packer's)
   README*, LICENSE*, *.txt, *.md    read by people only
+
+The files are named as the levels of the disc the pack was made from
+("version") name them. "originals" says what each texture and model
+replaces, so that a pack applies to the other disc's levels too, where
+the same textures have other names: for a texture, {"sha256": the
+original picture's PNG hash} (or {"new": true} for a model's own
+picture); for a model, {"kind", "class", "vertices": a hash of the
+original's vertex positions, "textures": {name: hash of each level
+texture it draws with}}.
 
 An OVERRIDES folder holds the packs that were added (packs/<id>/) and
 overrides.json, their order and which are on: {"format": 1, "packs":
@@ -31,13 +41,20 @@ overrides.json, their order and which are on: {"format": 1, "packs":
 The launcher reads and changes the same file (launcher/core/src/overrides.rs).
 
 `stack` puts the level packer's output (PACKED) and every enabled pack, in
-order, into MODS: the folder `--mods` names. The port draws each level's
+order, into MODS: the folder `--mods` names. A pack made from the levels of
+the disc LEVELS were read from goes in as it is. One made from the other
+disc's goes where it matches (cross_disc): each texture wherever LEVELS have
+the same original picture, each model where the level has its class with
+the same skeleton (or, without one, the same vertices), its textures named
+as LEVELS name them; what belongs to one disc's data (a packed gameplay
+file, patches.tsv, placements.json) or has no match is left out and listed. The port draws each level's
 files from MODS/level_NN/ where they are there, and from the extracted
 levels otherwise (port/viewer/level.cpp), and reads the disc sectors
 patches.tsv lists from the files beside it (port/game/common/lib/cdvd.c).
 """
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -62,7 +79,10 @@ LEVELS_FORMAT = FORMAT
 # metal packets and chrome and glass maps; 3 only added classes (port.py FORMAT).
 MODELS_SINCE = 2
 FILES = re.compile(r"^(?:patches\.tsv|level_\d{2}/(?:textures/[A-Za-z0-9_.-]+\.png|(?:mobys|ties|shrubs)/"
-                   r"[A-Za-z0-9_.-]+\.glb|placements\.json|gameplay_pal\.wad))$")
+                   r"[A-Za-z0-9_.-]+\.glb|placements\.json|gameplay_(?:" + "|".join(VERSIONS) + r")\.wad))$")
+TEXTURE = re.compile(r"^level_(\d{2})/textures/([A-Za-z0-9_.-]+)\.png$")
+MODEL = re.compile(r"^level_(\d{2})/(moby|tie|shrub)s/\2_(\d+)\.glb$")
+PACKED = "packed.json"  # the level packer's note of the disc it packed (pack.py)
 PEOPLE = re.compile(r"^(?:[^/]+\.(?:txt|md)|(?:README|LICENSE|CREDITS)[^/]*)$", re.IGNORECASE)
 MAX_TOTAL = 4 << 30
 MAX_FILES = 200_000
@@ -341,28 +361,342 @@ def layer_files(root: Path) -> dict[str, Path]:
             if p.is_file() and not p.is_symlink() and FILES.match(p.relative_to(root).as_posix())}
 
 
-def stack(folder: Path | None, out: Path, packed: Path | None = None) -> dict:
-    """Write MODS (out) from the packer's output and the enabled packs; returns what it holds."""
+# ---- the other disc --------------------------------------------------------------------------
+
+
+def sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def glb_parts(data: bytes) -> tuple[dict, bytes]:
+    """A GLB's JSON and binary chunk."""
+    import gltf_read
+    if data[:4] != struct.pack("<I", gltf_read.GLB_MAGIC):
+        raise PackError("not a .glb file")
+    at, doc, binary = 12, None, b""
+    while at + 8 <= len(data):
+        size, kind = struct.unpack_from("<2I", data, at)
+        if kind == gltf_read.JSON_CHUNK:
+            doc = json.loads(data[at + 8:at + 8 + size].decode("utf-8"))
+        elif kind == gltf_read.BIN_CHUNK:
+            binary = data[at + 8:at + 8 + size]
+        at += 8 + size + (-size % 4)
+    if doc is None:
+        raise PackError("a .glb file without its JSON")
+    return doc, binary
+
+
+def glb_join(doc: dict, binary: bytes) -> bytes:
+    text = json.dumps(doc, separators=(",", ":"), allow_nan=False).encode()
+    text += b" " * (-len(text) % 4)
+    binary += bytes(-len(binary) % 4)
+    return (struct.pack("<3I", 0x46546C67, 2, 28 + len(text) + len(binary))
+            + struct.pack("<I4s", len(text), b"JSON") + text + struct.pack("<I4s", len(binary), b"BIN\0") + binary)
+
+
+def model_textures(doc: dict) -> list[str]:
+    """The level textures a port GLB draws with: its images' ../textures/<name>.png."""
+    names = []
+    for image in doc.get("images", []):
+        found = re.fullmatch(r"\.\./textures/([A-Za-z0-9_.-]+)\.png", image.get("uri", ""))
+        if found and found.group(1) not in names:
+            names.append(found.group(1))
+    return names
+
+
+def vertices(path: Path) -> str:
+    """A hash of a model's vertex positions, in the order the file has them."""
+    import gltf_read
+    document = gltf_read.read(path)
+    digest = hashlib.sha256()
+    for node in document.list("nodes"):
+        if "mesh" in node:
+            for primitive in document.list("meshes")[node["mesh"]]["primitives"]:
+                for position in document.accessor(primitive["attributes"]["POSITION"]):
+                    digest.update(struct.pack("<3f", *position))
+    return digest.hexdigest()
+
+
+def skeleton(path: Path) -> dict[int, tuple]:
+    """A model's joints by game number (nodes named joint_NNN) -> inverse bind matrix."""
+    import gltf_read
+    document = gltf_read.read(path)
+    if not document.list("skins"):
+        return {}
+    skin = document.list("skins")[0]
+    matrices = document.accessor(skin["inverseBindMatrices"]) if "inverseBindMatrices" in skin else []
+    out = {}
+    for slot, j in enumerate(skin["joints"]):
+        found = re.fullmatch(r"joint_(\d{3})", document.list("nodes")[j].get("name", ""))
+        if found and slot < len(matrices):
+            out.setdefault(int(found.group(1)), matrices[slot])
+    return out
+
+
+def same_skeleton(pack: dict, level: dict) -> bool:
+    """A pack's model fits a level's class: the level's joints, each with its bind pose."""
+    return bool(level) and all(n in pack and all(abs(a - b) < 1e-4 for a, b in zip(pack[n], m))
+                               for n, m in level.items())
+
+
+def class_textures(levels: Path, level: int) -> dict[tuple[str, int], list[str]]:
+    """Each class model of a level -> the level textures it draws with, in its file's order."""
+    manifest = read_json(levels / f"level_{level:02}" / "manifest.json")
+    out = {}
+    for kind, classes in manifest.get("classes", {}).items():
+        for number, entry in classes.items():
+            mesh = entry.get("mesh") if isinstance(entry, dict) else None
+            if mesh and (levels / f"level_{level:02}" / mesh).is_file():
+                out[(kind, int(number))] = model_textures(glb_parts((levels / f"level_{level:02}" / mesh)
+                                                                    .read_bytes())[0])
+    return out
+
+
+def originals(files, levels: Path) -> dict:
+    """What each texture and model among FILES (pack paths -> bytes) replaces in LEVELS, the levels
+    they were made from: the "originals" a pack records so that it applies to the other disc too.
+
+    The two discs differ a little in some pictures (Ratchet's own skin among them), so a texture also
+    records where the level's models use it ("used_by": kind, class, place in the model's list of
+    textures, the list's length) and its size, and a model the textures its class has: on the other
+    disc the same class's model names its version of each picture in the same place."""
+    out, used = {}, {}
+    for rel in sorted(files):
+        texture, model = TEXTURE.match(rel), MODEL.match(rel)
+        if texture:
+            level = int(texture.group(1))
+            original = levels / f"level_{level:02}" / "textures" / f"{texture.group(2)}.png"
+            if not original.is_file():
+                out[rel] = {"new": True}
+                continue
+            import pngio
+            data = original.read_bytes()
+            if level not in used:
+                used[level] = class_textures(levels, level)
+            out[rel] = {"sha256": sha256(data), "size": list(pngio.size(data)),
+                        "used_by": [[kind, number, names.index(texture.group(2)), len(names)]
+                                    for (kind, number), names in sorted(used[level].items())
+                                    if texture.group(2) in names]}
+        elif model:
+            level = levels / f"level_{model.group(1)}"
+            original = level / rel.split("/", 1)[1]
+            if not original.is_file():
+                continue
+            doc, _ = glb_parts(files[rel])
+            names = {}
+            for name in model_textures(doc):
+                picture = level / "textures" / f"{name}.png"
+                if picture.is_file():         # a level texture (the model's own pictures are not)
+                    names[name] = sha256(picture.read_bytes())
+            out[rel] = {"kind": model.group(2), "class": int(model.group(3)), "vertices": vertices(original),
+                        "textures": names, "class_textures": model_textures(glb_parts(original.read_bytes())[0])}
+    return out
+
+
+class Target:
+    """The levels a stack is for: their disc, and each level's textures by picture."""
+
+    def __init__(self, levels: Path):
+        import assets
+        self.index = assets.LevelsIndex(Path(levels))
+        if not self.index.manifests:
+            raise PackError(f"{levels} holds no levels this OpenRAC reads: get the levels ready first")
+        self.levels = self.index.levels
+        self.version = self.index.version
+        self.names = {}                       # (level, name) -> picture hash
+        for picture, places in self.index.by_hash().items():
+            for place in places:
+                self.names[place] = picture
+
+    def places(self, picture: str) -> list[tuple[int, str]]:
+        return self.index.by_hash().get(picture, [])
+
+    def in_level(self, level: int, picture: str) -> str | None:
+        return next((n for lv, n in self.places(picture) if lv == level), None)
+
+    def model(self, level: int, kind: str, class_id: int) -> str | None:
+        entry = self.index.manifests.get(level, {}).get("classes", {}).get(kind, {}).get(str(class_id))
+        return entry.get("mesh") if entry else None
+
+    def textures_of(self, level: int, kind: str, class_id: int) -> list[str]:
+        """The level textures a class model here draws with, in its file's order."""
+        mesh = self.model(level, kind, class_id)
+        path = self.levels / f"level_{level:02}" / mesh if mesh else None
+        return model_textures(glb_parts(path.read_bytes())[0]) if path is not None and path.is_file() else []
+
+    def size(self, level: int, name: str) -> list[int] | None:
+        import pngio
+        path = self.levels / f"level_{level:02}" / "textures" / f"{name}.png"
+        return list(pngio.size(path.read_bytes())) if path.is_file() else None
+
+    def counterpart(self, level: int, entry: dict) -> str | None:
+        """The texture here that takes the place of a picture the other disc has a version of its
+        own of: the one its class models name where the original's name it (one answer only), of
+        the original's size."""
+        found = set()
+        for kind, number, at, count in entry.get("used_by", []):
+            names = self.textures_of(level, kind, number)
+            if len(names) == count:
+                found.add(names[at])
+        if len(found) != 1:
+            return None
+        name = found.pop()
+        return name if self.size(level, name) == entry.get("size") else None
+
+
+def cross_disc(root: Path, manifest: dict, target: Target) -> tuple[dict, list[str]]:
+    """A pack made from the other disc's levels, for TARGET: target path -> a file or bytes, and what
+    was left out, each with why."""
+    files = layer_files(root)
+    recorded = manifest.get("originals") if isinstance(manifest.get("originals"), dict) else {}
+    out, skipped = {}, []
+    # Textures: wherever the target has the original picture.
+    edited = {}                               # original picture -> {level: replacement}
+    unknown = {}                              # replacement's hash -> [(level, name, file)]: no original recorded
+    for rel, path in files.items():
+        texture = TEXTURE.match(rel)
+        if not texture:
+            continue
+        entry = recorded.get(rel, {})
+        if entry.get("new") or "_ovr_" in texture.group(2):
+            continue                          # a model's own picture: it goes with the model
+        if isinstance(entry.get("sha256"), str):
+            edited.setdefault(entry["sha256"], {})[int(texture.group(1))] = path
+        else:
+            unknown.setdefault(sha256(path.read_bytes()), []).append((int(texture.group(1)), texture.group(2), path))
+    for picture, by_level in edited.items():
+        places = target.places(picture)
+        for lv, name in places:
+            out[f"level_{lv:02}/textures/{name}.png"] = by_level.get(lv) or next(iter(by_level.values()))
+        if places:
+            continue
+        # This disc's version of the picture differs: where the same class models use it instead.
+        for lv, path in sorted(by_level.items()):
+            name = target.counterpart(lv, recorded.get(f"level_{lv:02}/textures/{path.stem}.png", {}))
+            if name is not None:
+                out[f"level_{lv:02}/textures/{name}.png"] = path
+            else:
+                skipped.append(f"level_{lv:02}/textures/{path.stem}.png (no level here has that picture)")
+    for group in unknown.values():
+        # A pack from before originals were recorded: the names it replaces must be one picture here.
+        pictures = {target.names.get((lv, name)) for lv, name, _ in group}
+        if len(pictures) == 1 and None not in pictures:
+            edited.setdefault(pictures.pop(), {}).update({lv: path for lv, _, path in group})
+            for lv, name in target.places(target.names[(group[0][0], group[0][1])]):
+                out[f"level_{lv:02}/textures/{name}.png"] = group[0][2]
+        else:
+            skipped += [f"level_{lv:02}/textures/{name}.png (not the same picture here)" for lv, name, _ in group]
+    # Models: by class, where the level has it with the same skeleton.
+    for rel, path in files.items():
+        model = MODEL.match(rel)
+        if not model:
+            continue
+        level, kind, class_id = int(model.group(1)), model.group(2), int(model.group(3))
+        mesh = target.model(level, kind, class_id)
+        if not mesh:
+            skipped.append(f"{rel} (the level has no such class here)")
+            continue
+        entry = recorded.get(rel, {})
+        theirs = skeleton(target.levels / f"level_{level:02}" / mesh)
+        if theirs:
+            fits = same_skeleton(skeleton(path), theirs)
+        else:
+            fits = entry.get("vertices") == vertices(target.levels / f"level_{level:02}" / mesh)
+        if not fits:
+            skipped.append(f"{rel} (the class is another model here)")
+            continue
+        doc, binary = glb_parts(path.read_bytes())
+        names, missing = {}, []
+        for name in model_textures(doc):
+            own = files.get(f"level_{level:02}/textures/{name}.png")
+            if name.startswith("metal_"):
+                names[name] = name            # each level's own chrome and glass maps
+            elif own is not None and (recorded.get(own.relative_to(root).as_posix(), {}).get("new")
+                                      or "_ovr_" in name):
+                out[f"level_{level:02}/textures/{name}.png"] = own
+                names[name] = name
+            else:
+                picture = entry.get("textures", {}).get(name) \
+                    or recorded.get(f"level_{level:02}/textures/{name}.png", {}).get("sha256")
+                if picture is None and not recorded and target.names.get((level, name)):
+                    names[name] = name        # a pack from before originals: by name
+                    continue
+                here = target.in_level(level, picture) if picture else None
+                theirs = target.textures_of(level, kind, class_id)
+                ours = entry.get("class_textures", [])
+                if here is None and name in ours and len(ours) == len(theirs):
+                    here = theirs[ours.index(name)]   # this disc's version of the class's picture
+                if here is not None:
+                    names[name] = here
+                elif picture in edited:       # not in this level here, but the pack has its picture
+                    data = next(iter(edited[picture].values())).read_bytes()
+                    names[name] = f"{kind}_ovr_{sha256(data)[:16]}"
+                    out[f"level_{level:02}/textures/{names[name]}.png"] = data
+                else:
+                    missing.append(name)
+        if missing:
+            skipped.append(f"{rel} (draws with {', '.join(missing)}, a picture this level does not have here)")
+            continue
+        if any(old != new for old, new in names.items()):
+            for image in doc.get("images", []):
+                found = re.fullmatch(r"\.\./textures/([A-Za-z0-9_.-]+)\.png", image.get("uri", ""))
+                if found and found.group(1) in names:
+                    image["uri"] = f"../textures/{names[found.group(1)]}.png"
+            for material in doc.get("materials", []):
+                if material.get("name") in names:
+                    material["name"] = names[material["name"]]
+            out[f"level_{level:02}/{mesh}"] = glb_join(doc, binary)
+        else:
+            out[f"level_{level:02}/{mesh}"] = path
+    for rel in files:
+        if not TEXTURE.match(rel) and not MODEL.match(rel):
+            skipped.append(f"{rel} (it belongs to the other disc's level data)")
+    return out, skipped
+
+
+def stack(folder: Path | None, out: Path, packed: Path | None = None, levels: Path | None = None) -> dict:
+    """Write MODS (out) from the packer's output and the enabled packs, for LEVELS (the levels the
+    game will play; without them every pack goes in as it is); returns what it holds."""
     out = Path(out).resolve()
     if out.exists() and not (out / MARKER).is_file():
         raise PackError(f"{out} exists and was not made by this tool; name another folder")
+    target = Target(levels) if levels is not None else None
+    if (out.parent / MARKER).is_file():
+        # A stack from before each disc had a folder of its own (<data>/mods): made again here.
+        shutil.rmtree(out.parent)
     layers = []
     if packed is not None and Path(packed).is_dir():
-        layers.append(("your packed levels", "packed", Path(packed)))
+        made = read_json(Path(packed) / PACKED).get("version", "pal") if (Path(packed) / PACKED).is_file() else "pal"
+        layers.append(("your packed levels", "packed", Path(packed), made))
     if folder is not None and Path(folder).is_dir():
         for entry in load_state(folder)["packs"]:
             if entry.get("enabled", True):
                 root = Path(folder) / "packs" / entry["id"]
-                name = json.loads((root / MANIFEST).read_text()).get("name", entry["id"])
-                layers.append((name, entry["id"], root))
+                manifest = read_json(root / MANIFEST)
+                layers.append((manifest.get("name", entry["id"]), entry["id"], root, manifest))
     out.parent.mkdir(parents=True, exist_ok=True)
     temporary = Path(tempfile.mkdtemp(prefix=f".{out.name}-", dir=out.parent))
-    owners, patches, notes = {}, {}, []
+    owners, patches, notes, skipped = {}, {}, [], {}
     try:
-        for name, ident, root in layers:
-            for rel, path in layer_files(root).items():
+        for name, ident, root, manifest in layers:
+            made = manifest if isinstance(manifest, str) else manifest.get("version", "pal")
+            if target is None or made == target.version:
+                files = layer_files(root)
+            elif ident == "packed":
+                skipped[ident] = sorted(layer_files(root))
+                notes.append("your packed levels were packed from the other disc's levels, so they are left "
+                             "out: pack them again")
+                continue
+            else:
+                files, skipped[ident] = cross_disc(root, manifest, target)
+                if skipped[ident]:
+                    shown = skipped[ident][:6]
+                    notes.append(f"{name} was made from the other disc's levels; left out, with no match here: "
+                                 + "; ".join(shown) + (f"; and {len(skipped[ident]) - 6} more" if
+                                                       len(skipped[ident]) > 6 else ""))
+            for rel, source in files.items():
                 if rel == "patches.tsv":
-                    for line in path.read_text().splitlines():
+                    for line in source.read_text().splitlines():
                         fields = line.split("\t")
                         if line.startswith("#") or len(fields) != 3:
                             continue
@@ -373,14 +707,21 @@ def stack(folder: Path | None, out: Path, packed: Path | None = None) -> dict:
                     continue
                 if rel in owners and owners[rel] != ident:
                     notes.append(f"{rel}: {name} wins over {owners[rel]}")
+                if (temporary / rel).exists():
                     (temporary / rel).unlink()
-                place(path, temporary / rel)
+                if isinstance(source, bytes):
+                    (temporary / rel).parent.mkdir(parents=True, exist_ok=True)
+                    (temporary / rel).write_bytes(source)
+                else:
+                    place(source, temporary / rel)
                 owners[rel] = ident
         (temporary / "patches.tsv").write_text(
             "# first sector\tsectors\tfile (beside this list)\n"
             + "".join(f"{first}\t{count}\t{file}\n" for (first, count), (file, _) in sorted(patches.items())))
-        summary = {"format": 1, "layers": [{"id": ident, "name": name} for name, ident, _ in layers],
-                   "files": dict(sorted(owners.items())), "notes": notes}
+        summary = {"format": 1, "version": target.version if target else None,
+                   "layers": [{"id": ident, "name": name} for name, ident, _, _ in layers],
+                   "files": dict(sorted(owners.items())), "notes": notes,
+                   "skipped": {k: v for k, v in skipped.items() if v}}
         (temporary / "stack.json").write_text(json.dumps(summary, indent=1) + "\n")
         (temporary / MARKER).write_text("made by editor/overrides.py stack; it is replaced each time\n")
         if out.exists():
@@ -394,6 +735,14 @@ def stack(folder: Path | None, out: Path, packed: Path | None = None) -> dict:
         if temporary.exists():
             shutil.rmtree(temporary)
     return summary
+
+
+def read_json(path: Path) -> dict:
+    try:
+        value = json.loads(Path(path).read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PackError(f"{path} cannot be read ({exc})") from None
+    return value if isinstance(value, dict) else {}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -416,6 +765,9 @@ def main(argv: list[str] | None = None) -> int:
         if name == "stack":
             command.add_argument("--out", type=Path, required=True, help="the folder the port's --mods reads")
             command.add_argument("--packed", type=Path, help="the level packer's output, beneath the packs")
+            command.add_argument("--levels", type=Path, required=True,
+                                 help="the levels the game plays (either disc's): packs made from the other "
+                                      "disc's go where they match")
     args = parser.parse_args(argv)
     try:
         if args.command == "check":
@@ -437,7 +789,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Added {args.source.name} as {new}, on, last in the order.")
             return 0
         if args.command == "stack":
-            summary = stack(args.into, args.out, args.packed)
+            summary = stack(args.into, args.out, args.packed, args.levels)
             for note in summary["notes"]:
                 print(f"note: {note}")
             print(f"Stacked {len(summary['layers'])} layer(s), {len(summary['files'])} file(s): {args.out.resolve()}")
