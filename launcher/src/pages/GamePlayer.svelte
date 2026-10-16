@@ -11,7 +11,7 @@
   import SaveManagerBlock from "$components/SaveManagerBlock.svelte";
   import { api, type ActionView } from "$lib/api";
   import { app, currentVersion, guard, openVersion, run, uninstallGame } from "$lib/app.svelte";
-  import { isBuilt, playerAct, playerState, regionWords } from "$lib/player.svelte";
+  import { isBuilt, playerAct, playerState } from "$lib/player.svelte";
   import { regionLabel } from "$lib/labels";
   import { themeStyle } from "$lib/themes";
 
@@ -94,8 +94,10 @@
         {v.title}
         {#if game.year}<small>{game.year}</small>{/if}
       </div>
-      {#if game.versions.length > 1}
-        <div class="versions" role="tablist" aria-label="Your disc's region">
+      <!-- Players never pick a region: the game is the version their disc is (playerVersion). With
+           developer tools on, every version of the game can be opened. -->
+      {#if developer && game.versions.length > 1}
+        <div class="versions" role="tablist" aria-label="Version">
           {#each game.versions as other (other.key)}
             <button
               role="tab"
@@ -103,7 +105,7 @@
               class:on={other.key === v.key}
               onclick={() => {
                 openVersion(other.key);
-              }}>{developer ? `${regionLabel(other.name)} · ${other.serial}` : regionWords(other)}</button
+              }}>{regionLabel(other.name)} · {other.serial}</button
             >
           {/each}
         </div>
