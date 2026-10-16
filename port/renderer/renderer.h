@@ -127,10 +127,12 @@ struct FrameInput {
     std::span<const EffectStrip> strips{};
     // The 2D layer's quads drawn natively (UiQuad), indexed by their markers in the 2D path.
     std::span<const UiQuad> ui_quads{};
-    // Mobys the game draws into a texture (the vendor's item and salesman screens): at their marker
-    // in the 2D path (GifInterpreter::kMobyMarker), called with the marker's value and the
-    // off-screen target bound (its framebuffer, its side in GL pixels), to draw them there.
-    std::function<void(std::uint64_t marker, unsigned framebuffer, int size)> target_mobys;
+    // Mobys the game draws into a texture (the vendor's item and salesman screens, the page menus'
+    // widgets): at their marker in the 2D path (GifInterpreter::kMobyMarker), called with the
+    // marker's value and the off-screen target bound (its framebuffer, its side in GL pixels, and
+    // the centre of the game's projection in it, in the chip's pixels of its 512 square).
+    std::function<void(std::uint64_t marker, unsigned framebuffer, int size, float centre_x, float centre_y)>
+        target_mobys;
     std::array<float, 4> clear_colour{0.0f, 0.0f, 0.0f, 1.0f};
     // The target already holds the picture to start from (a tick that draws no world of its own):
     // only depth is cleared.

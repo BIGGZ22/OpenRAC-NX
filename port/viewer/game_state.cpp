@@ -152,6 +152,12 @@ GameState read_game_state(std::span<const std::uint8_t> ram, const GameAddresses
         s.tan_half_fov_x = tx;
         s.tan_half_fov_y = ty > 0.05f && ty < 10.0f ? ty : tx * a.vertical_factor;
     }
+    const float fx = at<float>(ram, a.view_context + 0xC0) * 32.0f;
+    const float fy = at<float>(ram, a.view_context + 0xD4) * 32.0f;
+    if (fx > 16.0f && fx < 4096.0f && fy > 16.0f && fy < 4096.0f) {
+        s.focal_x = fx;
+        s.focal_y = fy;
+    }
 
     // UpdateFog (func_001F2930): the colour as three words at +0x230, then near and far depth
     // at +0x218 and +0x21C, near and far F at +0x228 and +0x22C.

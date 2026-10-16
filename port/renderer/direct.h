@@ -119,8 +119,9 @@ struct DirectDraw {
     std::uint32_t first = 0;  // first vertex
     std::uint32_t count = 0;  // vertices (three per triangle)
     // Not 0: no vertices, the mobys a moby marker names, drawn into state.target here
-    // (FrameInput::target_mobys).
+    // (FrameInput::target_mobys), about the target's centre (its XYOFFSET's 2048), in its pixels.
     std::uint64_t mobys = 0;
+    float centre_x = 0.0f, centre_y = 0.0f;
 };
 
 // Debugging: while set, every sprite and primitive the 2D path draws is logged (OPENRAC_DUMP_DRAWS).

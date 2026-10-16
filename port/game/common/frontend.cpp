@@ -1617,11 +1617,10 @@ void draw_kept(bool first) {
     input.sky_shell_mask = k.sky_shell_mask;
     input.effect_uploads = k.effect_uploads;
     input.ui_quads = k.ui_quads;
-    // The mobys the game drew into a texture, at their markers (Kept::target_mobys): the game's
-    // render to a texture is the target's top 512 x 128, centred on (256, 64), seen by the world's
-    // camera with the frame's focal lengths (ReRAC's SetRenderToTextureView, interaction.md 9.3):
-    // 256 / tan x across, the draw buffer's half height / tan y down.
-    input.target_mobys = [&](std::uint64_t marker, unsigned framebuffer, int size) {
+    // The mobys the game drew into a texture, at their markers (Kept::target_mobys): seen by the
+    // camera they were drawn with, through the frame's focal lengths, about the centre of the
+    // target the 2D layer was drawing into (its XYOFFSET's 2048), in its 512-pixel square.
+    input.target_mobys = [&](std::uint64_t marker, unsigned framebuffer, int size, float centre_x, float centre_y) {
         const std::uint32_t first = static_cast<std::uint32_t>(marker);
         const std::uint32_t count = static_cast<std::uint32_t>(marker >> 32) & 0xFFu;
         std::vector<viewer::Instance> instances;
@@ -1632,23 +1631,26 @@ void draw_kept(bool first) {
                 camera = &t.camera;
             }
         }
-        if (camera == nullptr || !g->renderer) {
+        if (camera == nullptr || !g->renderer || camera->focal_x <= 0.0f) {
             return;
         }
         using namespace openrac::gl;
-        const int height = size * 128 / renderer::kOffscreenPixels;
-        glViewport(0, size - height, size, height);
-        glEnable(GL_SCISSOR_TEST);
-        glScissor(0, size - height, size, height);
+        glViewport(0, 0, size, size);
+        glDisable(GL_SCISSOR_TEST);
         glDepthMask(GL_TRUE);
         glClearDepth(0.0);
         glClear(GL_DEPTH_BUFFER_BIT);
-        glDisable(GL_SCISSOR_TEST);
-        const float tan_x = camera->tan_half_fov_x;
-        const float tan_y = camera->tan_half_fov_y * 64.0f / (0.5f * static_cast<float>(renderer::g_draw_buffer_lines));
+        const float half = 0.5f * static_cast<float>(renderer::kOffscreenPixels);
+        const float tan_x = half / camera->focal_x;
+        const float tan_y = half / camera->focal_y;
+        renderer::Mat4 projection = renderer::perspective_reversed(2.0f * std::atan(tan_y), tan_x / tan_y, 0.05f, 2000.0f);
+        // The axis through the centre: x on and y down from the square's middle, in device units.
+        renderer::Mat4 offset = renderer::identity();
+        offset[12] = (centre_x - half) / half;
+        offset[13] = -(centre_y - half) / half;
         renderer::FrameInput panel;
         panel.camera.view = camera->view();
-        panel.camera.projection = renderer::perspective_reversed(2.0f * std::atan(tan_y), tan_x / tan_y, 0.05f, 2000.0f);
+        panel.camera.projection = renderer::multiply(offset, projection);
         panel.camera.position = camera->camera_position;
         renderer::RenderState target{g->renderer->textures(), renderer::RenderTarget{framebuffer, size, size}, {}};
         g->scene.draw_mobys(instances, panel, target);
@@ -2050,42 +2052,39 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     std::vector<int> live_joints;
     std::vector<viewer::LevelScene::JointColumns> palette;
     std::vector<Kept::TargetMoby> target_mobys;
-    // Mobys the game drew that are not in its list: the vendor's own (ReRAC interaction.md 9.3).
-    // Drawn with the camera of the list's mobys (the item's hologram over the vendor), they are
-    // the world's; with another (the screens' render to a texture, at zoom 1.0 instead of 0.63),
-    // they are drawn into the texture at their marker. The zoom does not reach the moby program's
-    // scales: they are drawn with the frame's own (ReRAC's vendor_render.rs: with the zoom they sit
-    // at the target's edges at a third of the size the game shows).
+    // Mobys the game drew into a texture, and the ones it drew that are not in its list. The game
+    // renders some mobys into a target the 2D layer then copies onto the screen: the vendor's item
+    // and salesman screens (ReRAC interaction.md 9.3), the page menus' widgets (the 3D Ratchet and
+    // the item previews, ReRAC menu_models.rs). It sets a zoom of 1.0 for them instead of the
+    // frame's 0.63: a moby drawn with a wider tangent than the frame's goes into the texture at its
+    // marker. The zoom does not reach the moby program's scales: drawn with it, the models sat at
+    // the targets' edges at a third of their size, as ReRAC found too; they are drawn with the
+    // frame's focal lengths (the frame camera's GameState::focal_x). A moby not in the list (the
+    // vendor's own) is read from its address; with the frame's camera (the item's hologram over the
+    // vendor) it is drawn in the world.
     const std::size_t listed = state.mobys.size();
     std::unordered_map<std::uint32_t, const viewer::GameState*> into_texture;
-    std::array<float, 2> frame_zoom{};
+    std::array<float, 2> frame_focal{};
     {
-        const auto in_list = [&](std::uint32_t address) {
-            return std::any_of(state.mobys.begin(), state.mobys.begin() + static_cast<std::ptrdiff_t>(listed),
+        const auto drawn = [&](std::uint32_t address) {
+            return std::any_of(state.mobys.begin(), state.mobys.end(),
                                [&](const viewer::LiveMoby& m) { return m.address == address; });
         };
-        float zoom = state.tan_half_fov_x;
-        float zoom_y = state.tan_half_fov_y;
-        if (!world_ran) {
-            for (const auto& [address, camera] : g->moby_cameras) {
-                if (in_list(address)) {
-                    zoom = camera.tan_half_fov_x;
-                    zoom_y = camera.tan_half_fov_y;
-                    break;
-                }
+        float zoom = world_ran ? state.tan_half_fov_x : 0.0f;
+        frame_focal = world_ran ? std::array<float, 2>{state.focal_x, state.focal_y} : std::array<float, 2>{};
+        for (const auto& [address, camera] : g->moby_cameras) {
+            if (zoom == 0.0f || camera.tan_half_fov_x < zoom) {
+                zoom = camera.tan_half_fov_x;
+                frame_focal = {camera.focal_x, camera.focal_y};
             }
         }
-        frame_zoom = {zoom, zoom_y};
         for (const auto& [address, camera] : g->moby_cameras) {
-            if (in_list(address) || into_texture.contains(address)
-                || std::any_of(state.mobys.begin() + static_cast<std::ptrdiff_t>(listed), state.mobys.end(),
-                               [&](const viewer::LiveMoby& m) { return m.address == address; })) {
-                continue;
+            if (camera.tan_half_fov_x > zoom + 1.0e-3f && frame_focal[0] > 0.0f) {
+                into_texture.emplace(address, &camera);
             }
-            if (const auto extra = viewer::read_live_moby(ram, address)) {
-                state.mobys.push_back(*extra);
-                if (std::fabs(camera.tan_half_fov_x - zoom) > 1.0e-3f) {
-                    into_texture.emplace(address, &camera);
+            if (!drawn(address)) {
+                if (const auto extra = viewer::read_live_moby(ram, address)) {
+                    state.mobys.push_back(*extra);
                 }
             }
         }
@@ -2213,8 +2212,8 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         }
         if (const auto t = into_texture.find(m.address); t != into_texture.end()) {
             target_mobys.push_back({m.address, instance, *t->second});
-            target_mobys.back().camera.tan_half_fov_x = frame_zoom[0];
-            target_mobys.back().camera.tan_half_fov_y = frame_zoom[1];
+            target_mobys.back().camera.focal_x = frame_focal[0];
+            target_mobys.back().camera.focal_y = frame_focal[1];
             continue;
         }
         live_joints.push_back(instance.palette >= 0 ? joints : 0);
