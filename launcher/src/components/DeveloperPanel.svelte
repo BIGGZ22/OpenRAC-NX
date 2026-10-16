@@ -63,7 +63,11 @@
   </div>
   <p class="blurb">The original PlayStation 2 program, rebuilt from the C and compared with your disc.</p>
   {#if v.progress}
-    <ProgressBar percent={v.progress.percent} label={`${v.title} code matched`} />
+    <ProgressBar
+      percent={v.progress.percent}
+      functional={v.progress.functional?.percent ?? null}
+      label={`${v.title} code matched`}
+    />
     <p class="count">
       {matchedLine(v.progress.matchedCode, v.progress.totalCode)}
       {#if v.progress.matchedFunctions !== null && v.progress.totalFunctions !== null}
