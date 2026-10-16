@@ -855,13 +855,16 @@ extern "C" __declspec(dllimport) unsigned int __stdcall timeBeginPeriod(unsigned
 #ifdef OPENRAC_FRONTEND
 // --check-levels: every level the window draws from (level_00 to level_18, the flight world 98 and
 // the title's 99) is read as the window reads it, without a window. A level that cannot be read,
-// or that has nothing to draw, is named with the reason; when all are whole, `verified.json` is
-// written beside them, which the launcher asks for before it offers Play. A game started over
-// levels that are missing or cut short shows its HUD over a black world and says nothing else.
+// or that has nothing to draw, is named with the reason; when all are whole, `verified-<format>.json`
+// (the extracted levels' format, viewer::kManifestFormat) is written beside them, which the launcher
+// asks for before it offers Play. A game started over levels that are missing or cut short shows
+// its HUD over a black world and says nothing else; levels of an older format fail the check (their
+// manifests are refused), so the launcher reads them from the disc again.
 static int check_levels(const fs::path& levels) {
-    const fs::path stamp = levels / "verified.json";
+    const fs::path stamp = levels / std::format("verified-{}.json", viewer::kManifestFormat);
     std::error_code ignored;
     fs::remove(stamp, ignored);
+    fs::remove(levels / "verified.json", ignored);  // the stamp before formats were named
     std::vector<int> ids;
     for (int i = 0; i < 19; ++i) {
         ids.push_back(i);
@@ -900,7 +903,8 @@ static int check_levels(const fs::path& levels) {
         return 1;
     }
     if (std::FILE* f = std::fopen(stamp.string().c_str(), "wb")) {
-        std::fprintf(f, "{\"format\": 1, \"levels\": %zu, \"program\": \"%s\"}\n", ids.size(), program_name().c_str());
+        std::fprintf(f, "{\"format\": %d, \"levels\": %zu, \"program\": \"%s\"}\n", viewer::kManifestFormat, ids.size(),
+                     program_name().c_str());
         std::fclose(f);
     } else {
         log::error("cannot write {}", stamp.string());

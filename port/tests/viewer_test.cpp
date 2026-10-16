@@ -101,7 +101,7 @@ void write_level(const fs::path& dir) {
     write_square(dir / "terrain.glb.gltf", 20.0f, 0.0f, "textures/terrain_0000.png");
     write_square(dir / "ties" / "tie_5.gltf", 2.0f, 0.0f, "../textures/tie_0001.png");
     write_text(dir / "manifest.json", R"({
-  "format": 1, "game": "rac1", "version": "pal", "level": 3,
+  "format": 2, "game": "rac1", "version": "pal", "level": 3,
   "terrain": "terrain.glb.gltf",
   "sky": {"background": [10, 20, 30], "mesh": null},
   "classes": {
@@ -112,7 +112,7 @@ void write_level(const fs::path& dir) {
   "placements": "placements.json"
 })");
     write_text(dir / "placements.json", R"({
-  "format": 1,
+  "format": 2,
   "ties": [{"index": 0, "class": 5, "matrix": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,1,1], "draw_distance": 100}],
   "shrubs": [],
   "mobys": [{"index": 0, "class": 7, "matrix": [2,0,0,0, 0,2,0,0, 0,0,2,0, 6,6,0,1], "colour": [128, 128, 128]},

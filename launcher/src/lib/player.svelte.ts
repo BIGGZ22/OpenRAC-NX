@@ -322,7 +322,8 @@ export async function prepareLevels(v: VersionView): Promise<boolean> {
   // The check named levels it cannot draw: read them all again, in the old ones' place.
   const reread = action(fresh(), "port-levels");
   if (!reread?.runnable) return false;
-  toast("Some levels could not be drawn. Reading them from your disc again…");
+  // Levels read by an older version of OpenRAC fail the check too (a newer game reads a newer format).
+  toast("Your levels need reading again (an older version read them, or some are incomplete). Reading them from your disc…");
   if (!(await runChain(scope, [reread]))) return false;
   await refresh();
   again = action(fresh(), "port-levels-check");

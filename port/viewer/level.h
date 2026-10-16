@@ -32,7 +32,9 @@ namespace openrac::viewer {
 using renderer::Mat4;
 using renderer::Vec3;
 
-inline constexpr int kManifestFormat = 1;
+// The extracted levels' format (editor/port.py FORMAT); --check-levels writes verified-<format>.json,
+// which the launcher waits for, so older exports are read from the disc again before Play.
+inline constexpr int kManifestFormat = 2;
 
 struct Vertex {
     float position[3];
