@@ -13,6 +13,9 @@
 
 static int loaded_level = OPENRAC_OVERLAY_EXE;
 
+/* Frames left in which the flight between planets counts as playing: set by its update. */
+static int flight_frames;
+
 /* ParseBin: copies the next level's program over the executable's main
  * segment and returns its entry. From then on a code address in that range
  * means the loaded level's function (the overlay the runtime looks in). */
@@ -66,6 +69,9 @@ void func_001F4630(int arg0) {
  */
 static void direct_start(unsigned frame) {
     static int done = 0;
+    if (flight_frames > 0) {
+        --flight_frames;
+    }
     static unsigned title_from = 0;
     (void)frame;
     if (done) {
@@ -102,10 +108,32 @@ static int in_cutscene(void) {
     return loaded_level >= 0 && loaded_level < LEVELS && GREF(int, OPENRAC_LDATA(0, 0x0015F6A8u)) == 2;
 }
 
+/* The flight's update (func_00230A90), once a frame of the transition's flight loop (space.c). */
+void func_00230A90(void) {
+    flight_frames = 2;
+    func_00230A90__game();
+}
+
+/*
+ * Start during the flight between planets: the flight is done. The transition (space.c, after
+ * func_0012F4A8) loops on the flight until D_0015F6FC is set (the flight sets it at its end), then
+ * waits for the next level's load as it would have. Only while the flight's update runs: the same
+ * word starts a new game from the menus.
+ */
+static void skip(void) {
+    if (flight_frames > 0) {
+        /* The flight's own end: its playing flag cleared (the loader waits on it before it unloads
+         * the old banks: ReRAC's 0x15ee4a, PAL D_0015EF4A, set to 1 before the loop) and done. */
+        GREF(short, 0x0015EF4Au) = 0;
+        GREF(int, OPENRAC_DATA(0x0015F6FCu)) = 1;
+    }
+}
+
 __attribute__((constructor)) static void install_direct_start(void) {
     openrac_game_on_frame = direct_start;
     openrac_game_bolts = bolts;
     openrac_game_in_cutscene = in_cutscene;
+    openrac_game_skip = skip;
 }
 
 void func_00209DC0(void) {

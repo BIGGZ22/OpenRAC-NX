@@ -2443,9 +2443,13 @@ bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
     // (Start alone only once it is beaten; ReRAC cutscenes_transitions.md, "skip"), so while one
     // plays a pressed Start also presses the four shoulders. Bits are active low: 0x8 Start,
     // 0x0F00 L2 R2 L1 R1.
-    if (port == 0 && settings::get().skip_cutscenes && (*buttons & 0x8) == 0 && openrac_game_in_cutscene != nullptr
-        && openrac_game_in_cutscene() != 0) {
-        *buttons = static_cast<std::uint16_t>(*buttons & ~0x0F00);
+    if (port == 0 && settings::get().skip_cutscenes && (*buttons & 0x8) == 0) {
+        if (openrac_game_in_cutscene != nullptr && openrac_game_in_cutscene() != 0) {
+            *buttons = static_cast<std::uint16_t>(*buttons & ~0x0F00);
+        }
+        if (openrac_game_skip != nullptr) {
+            openrac_game_skip();
+        }
     }
     if (port == 0) {
         debug_menu::filter_pad(*buttons, g->game.c_str(), openrac_game_loaded_overlay());

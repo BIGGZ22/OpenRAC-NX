@@ -84,6 +84,10 @@ extern int (*openrac_game_bolts)(void);
  * 2): the window lets Start skip it (settings skip_cutscenes). */
 extern int (*openrac_game_in_cutscene)(void);
 
+/* Called while Start is held with skip_cutscenes on, when a game installs it: skips what the game
+ * lets the port skip besides its own cutscenes (rac1/pal: the flight between planets, boot.c). */
+extern void (*openrac_game_skip)(void);
+
 /* The game sends a DMA chain (sceDmaSend): channel is the game address of
  * the channel's registers (0x10009000 is VIF1, the display list; 0x1000A000
  * is the GIF), tag the address of the chain's first tag. The renderer reads
