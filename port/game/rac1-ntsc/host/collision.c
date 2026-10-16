@@ -57,7 +57,7 @@ typedef struct {
 /* Level 0's program (the level kernels name D_L00_00173E40, gp-0x6C68, D_L00_0019B7E0, D_L00_00178100,
  * D_L00_00177F00 and gp-0x7608; $gp is 0x166C00); in another level, that level's copies of them
  * (OPENRAC_LDATA, guest.h). */
-static const Ctx LEVEL0 = {0x00173E40u, 0x0015FF98u, 0x0019BA60u, 0x00178100u, 0x00177F00u, 0x0015F614u};
+static const Ctx LEVEL0 = {0x00173E40u, 0x0015FF98u, 0x0019B7E0u, 0x00178100u, 0x00177F00u, 0x0015F614u};
 /* The executable's own copy of the line query (D_00194100, gp-0x6CE8, D_001B76E0, D_001983C0). */
 static const Ctx BOOT = {0x00194100u, 0x0015FF18u, 0x001B76E0u, 0x001983C0u, 0, 0};
 

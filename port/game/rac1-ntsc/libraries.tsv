@@ -219,7 +219,7 @@ func_L00_001FD228	game	func_L00_001FD228	host	the port's own (host/render_native
 func_L00_001FE6D8	game	func_L00_001FE6D8	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_L00_001FE688	int (void)
 func_L00_0028C680	game	func_L00_0028C680	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_L00_0028D958	int (void)
 func_L00_00295100	game	func_L00_00295100	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_L00_002963D8	int (void)
-FUN_L00_00298840	game	FUN_L00_00298840	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_L00_00299B68, paired as near	void (int)
+FUN_L00_00298840	game	FUN_L00_00298840	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_L00_00299B68 (the in-game scene start), paired as near	void (int)
 FUN_002109b8	game	FUN_002109b8	host	the port's own (host/render_native.c); its signature decides the prototype; PAL func_00211808	void (unsigned int, unsigned int)
 func_0020B418	game	func_0020B418	host	the port's own (host/hand.c); its signature decides the prototype; PAL func_0020C268	void (void)
 FUN_002334d8	game	FUN_002334d8	host	the port's own (host/hand.c); its signature decides the prototype; PAL func_002347F0	void (unsigned int)
