@@ -140,22 +140,25 @@ def fix_from_diagnostics(text: str, stderr: str, rel: str) -> tuple[str, list[st
         col = int(d["col"]) - 1
         m = re.match(r"redeclaration of '(\w+)' with a different type", msg)
         # an extern of a variable: plain, of an anonymous struct ({...}), or with attributes
-        if m and re.match(r"^\s*extern\b(?:[^;{}()]|\{[^{}]*\}|__attribute__\s*\(\([^;]*?\)\))*;\s*$", lines[line]) \
+        if m and re.match(r"^\s*extern\b(?:[^;{}]|\{[^{}]*\})*;\s*$", lines[line]) \
                 and not re.search(rf"\b{m.group(1)}\s*\(", lines[line]):
             name = m.group(1)
             alias = f"{name}__openrac_decl_{line + 1}"
             decl = re.sub(rf"\b{name}\b", alias, lines[line], count=1)
-            label = f' __asm__("{name}")'
-            if "__attribute__" in decl:      # the label comes before the attributes
-                decl = decl.replace("__attribute__", label.strip() + " __attribute__", 1)
-                lines[line] = decl
-            else:
-                lines[line] = re.sub(r";\s*$", label + ";", decl)
+            if not re.search(r"\b(?:__asm__|asm|SDATA|SBSS)\b", decl):
+                label = f' __asm__("{name}")'
+                attrs = re.search(r"((?:[ \t]+(?:__attribute__\s*\(\([^;]*?\)\)|[A-Z][A-Z0-9_]*(?:\([^;()]*\))?))+)\s*;\s*$", decl)
+                if attrs:
+                    pos = attrs.start(1)
+                    decl = decl[:pos] + label + decl[pos:]
+                else:
+                    decl = re.sub(r";\s*$", label + ";", decl)
+            lines[line] = decl
             for j in range(line + 1, len(lines)):
                 lines[j] = re.sub(rf"\b{name}\b", alias, lines[j])
             fixes.append(f"line {line + 1}: global declaration of {name} kept apart from a local extern")
             continue
-        m = re.match(r"conflicting types for '(\w+)'", msg)
+        m = re.match(r"(?:conflicting types for|redefinition of) '(\w+)'", msg)
         if m:
             name = m.group(1)
             note = diags[k + 1] if k + 1 < len(diags) else None
