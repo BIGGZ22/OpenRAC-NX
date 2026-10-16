@@ -51,6 +51,8 @@ export interface Config {
   setupComplete: boolean;
   lastVersion: string | null;
   discordRpc: boolean;
+  /** Look for a new launcher at start (Settings). */
+  checkUpdates: boolean;
   discordClientId: string | null;
   /** "compact", or "classic": the original design (src/layouts/compact.css). */
   layout: "compact" | "classic";

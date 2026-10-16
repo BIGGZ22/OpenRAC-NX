@@ -33,6 +33,9 @@ pub struct Config {
     pub last_version: Option<String>,
     /// Discord Rich Presence enabled (default true).
     pub discord_rpc: bool,
+    /// Look for a new launcher when it starts (default true). Off, it looks only when asked
+    /// (Settings, "Check now"); an update is never installed without the player's click.
+    pub check_updates: bool,
     /// Custom Discord application ID (optional).
     pub discord_client_id: Option<String>,
     /// The page layout: "compact" (default) or "classic", the original design (src/layouts/).
@@ -52,6 +55,7 @@ impl Default for Config {
             setup_complete: false,
             last_version: None,
             discord_rpc: true,
+            check_updates: true,
             discord_client_id: None,
             layout: "compact".into(),
         }
@@ -103,5 +107,17 @@ mod tests {
         assert!(text.contains("\"setupComplete\": true"), "{text}");
         std::fs::write(&path, "{ not json").unwrap();
         assert_eq!(load(&path), Config::default());
+    }
+
+    /// A settings file from before the option looks for updates, and turning it off is kept.
+    #[test]
+    fn checks_for_updates_unless_turned_off() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("launcher.json");
+        std::fs::write(&path, r#"{"setupComplete": true}"#).unwrap();
+        assert!(load(&path).check_updates);
+        save(&path, &Config { check_updates: false, ..Config::default() }).unwrap();
+        assert!(!load(&path).check_updates);
+        assert!(std::fs::read_to_string(&path).unwrap().contains("\"checkUpdates\": false"));
     }
 }

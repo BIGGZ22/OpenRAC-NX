@@ -5,7 +5,7 @@
   // the first-run screen: the folders and programs, filled from detection.
   import PathField from "$components/PathField.svelte";
   import { api, type Check, type Config, type Detected } from "$lib/api";
-  import { app, saveConfig } from "$lib/app.svelte";
+  import { app, lookForUpdate, saveConfig } from "$lib/app.svelte";
   import { REPO_URL } from "$lib/links";
 
   let { setup = false }: { setup?: boolean } = $props();
@@ -20,6 +20,13 @@
   let draft = $state<Config>(saved());
   let found = $state<Detected | null>(null);
   let saving = $state(false);
+  /** "Check now": what the last look for a new launcher found. */
+  let looked = $state<"idle" | "looking" | "found" | "none">("idle");
+
+  async function checkNow() {
+    looked = "looking";
+    looked = (await lookForUpdate()) ? "found" : "none";
+  }
 
   $effect(() => {
     void api.detect().then((d) => {
@@ -167,6 +174,19 @@
         <span>
           <strong>Show in Discord</strong>
           <small>Your Discord status says when you are in the launcher or playing.</small>
+        </span>
+      </label>
+      <label class="option">
+        <input type="checkbox" bind:checked={draft.checkUpdates} />
+        <span>
+          <strong>Check for updates</strong>
+          <small>
+            Look for a new launcher when it starts. Off, it only looks when you ask. An update is never installed
+            without your click.
+            <button class="link" disabled={looked === "looking"} onclick={() => void checkNow()}>Check now</button>
+            {#if looked === "looking"}· Looking…{:else if looked === "found"}· {app.update?.name ?? "A new version"} is out:
+              use Update in the header.{:else if looked === "none"}· You have the latest.{/if}
+          </small>
         </span>
       </label>
       <label class="option">

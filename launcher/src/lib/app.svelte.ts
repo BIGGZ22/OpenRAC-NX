@@ -102,11 +102,18 @@ export async function start() {
   if (app.config.lastVersion) app.version = app.config.lastVersion;
   await refresh();
   void syncProgressWeb();
-  if (app.info.version) {
-    void checkForUpdate(app.info.version).then((up) => {
-      if (up) app.update = up;
-    });
+  // A new launcher is looked for at start unless the player turned that off (Settings).
+  if (app.info.version && app.config.checkUpdates) {
+    void lookForUpdate();
   }
+}
+
+/** Looks for a new launcher now (at start, or Settings' "Check now"); true when one is out. */
+export async function lookForUpdate(): Promise<boolean> {
+  if (!app.info?.version) return false;
+  const up = await checkForUpdate(app.info.version);
+  app.update = up;
+  return !!up;
 }
 
 /** Reads the library again: after a job, on focus, after settings change. */

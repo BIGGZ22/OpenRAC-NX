@@ -107,6 +107,7 @@ let config: Config = {
     : null,
   lastVersion: null,
   discordRpc: true,
+  checkUpdates: true,
   layout: "compact",
   discordClientId: null,
 };
