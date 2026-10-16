@@ -251,9 +251,23 @@ jobs:
         shell: bash
         run: rm -rf target/release/bundle target/universal-apple-darwin/release/bundle
 
+      - name: Prepare signing key
+        if: env.RAW_KEY != ''
+        shell: bash
+        env:
+          RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const path = require("path");
+            const tempDir = process.env.RUNNER_TEMP || "/tmp";
+            const keyPath = path.resolve(tempDir, "updater.key");
+            fs.writeFileSync(keyPath, process.env.RAW_KEY.trim() + "\n");
+            fs.appendFileSync(process.env.GITHUB_ENV, `TAURI_SIGNING_PRIVATE_KEY=${keyPath}\n`);
+          '
+
       - name: Build the installers
         env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           yarn install --immutable
@@ -313,9 +327,26 @@ jobs:
       - name: No installers from an earlier build
         run: rm -rf target/release/bundle
 
+      - name: Prepare signing key
+        if: env.RAW_KEY != ''
+        shell: bash
+        env:
+          RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const path = require("path");
+            const tempDir = process.env.RUNNER_TEMP || "/tmp";
+            const keyPath = path.resolve(tempDir, "updater.key");
+            fs.writeFileSync(keyPath, process.env.RAW_KEY.trim() + "\n");
+            fs.appendFileSync(process.env.GITHUB_ENV, `TAURI_SIGNING_PRIVATE_KEY=${keyPath}\n`);
+          '
+
       # Its file is named as the one built on Ubuntu is: "fc44" tells them apart on a release,
       # which takes one file of a name.
       - name: Build the installer
+        env:
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           yarn install --immutable
           yarn tauri build --bundles rpm

@@ -603,6 +603,8 @@ class Unit:
         for vid in order:
             d = self.decls.get(vid)
             if d is not None and d.get("kind") == "VarDecl" and vid not in fn.memory:
+                if d.get("storageClass") == "extern":
+                    continue
                 if d.get("storageClass") == "static":
                     fn.statics[vid] = f"{d.get('name')}_at_"
                 elif self._vla_length(d) is not None:
@@ -697,9 +699,10 @@ class Unit:
             n = stack.pop()
             k = n.get("kind")
             if k == "VarDecl":
-                local_ids.add(n["id"])
-                if n.get("storageClass") != "extern" and self.cls(self.ty(n)) in ("rec", "arr"):
-                    out.add(n["id"])
+                if n.get("storageClass") != "extern":
+                    local_ids.add(n["id"])
+                    if self.cls(self.ty(n)) in ("rec", "arr"):
+                        out.add(n["id"])
             elif k == "UnaryOperator" and n.get("opcode") == "&":
                 target = _strip_parens(_inner(n)[0])
                 while target.get("kind") in ("MemberExpr", "ArraySubscriptExpr") and not (
@@ -709,7 +712,7 @@ class Unit:
                         target = _strip_parens(_inner(target)[0])
                 if target.get("kind") == "DeclRefExpr":
                     ref = target["referencedDecl"]
-                    if ref.get("kind") in ("VarDecl", "ParmVarDecl"):
+                    if ref.get("kind") in ("VarDecl", "ParmVarDecl") and ref.get("storageClass") != "extern":
                         out.add(ref["id"])
             stack.extend(_inner(n))
         for p in params:
