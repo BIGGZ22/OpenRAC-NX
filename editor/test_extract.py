@@ -1,5 +1,6 @@
 """Output safety: new directories under assets/ or build/, published whole."""
 
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -41,3 +42,33 @@ class OutputTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AdoptFlatExportTests(unittest.TestCase):
+    """Levels extracted before each version had its own folder move into it, once."""
+
+    def flat(self, root: Path, version: str) -> Path:
+        parent = root / "port"
+        for name in ("level_00", "level_99"):
+            (parent / name).mkdir(parents=True)
+            (parent / name / "manifest.json").write_text(json.dumps({"format": 3, "version": version}))
+        (parent / "verified-3.json").write_text("{}")
+        return parent
+
+    def test_moves_the_same_versions_levels_and_stamps(self):
+        from extract import adopt_flat_export
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = self.flat(Path(tmp), "pal")
+            self.assertTrue(adopt_flat_export(parent / "pal", "pal"))
+            self.assertEqual(sorted(p.name for p in (parent / "pal").iterdir()),
+                             ["level_00", "level_99", "verified-3.json"])
+            self.assertEqual(sorted(p.name for p in parent.iterdir()), ["pal"])
+            self.assertFalse(adopt_flat_export(parent / "pal", "pal"))  # once
+
+    def test_leaves_another_versions_levels(self):
+        from extract import adopt_flat_export
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = self.flat(Path(tmp), "pal")
+            self.assertFalse(adopt_flat_export(parent / "ntsc", "ntsc"))
+            self.assertFalse((parent / "ntsc").exists())
+            self.assertTrue((parent / "level_99").is_dir())

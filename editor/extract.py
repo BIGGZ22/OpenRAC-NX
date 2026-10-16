@@ -46,6 +46,27 @@ def output_path(path: Path, anywhere: bool = False, replace: bool = False) -> Pa
     return resolved
 
 
+def adopt_flat_export(out: Path, version: str) -> bool:
+    """Levels extracted before each version had a folder of its own sat straight in OUT's parent
+    (assets/port/rac1, <data>/port): when OUT does not exist yet and the parent holds an export of
+    VERSION, its level folders and stamps move into OUT, so the new layout starts from them instead
+    of a second copy beside them. True when something moved."""
+    parent = out.parent
+    manifest = parent / "level_99" / "manifest.json"
+    if out.exists() or not manifest.is_file():
+        return False
+    try:
+        if json.loads(manifest.read_text()).get("version", "pal") != version:
+            return False
+    except (OSError, ValueError):
+        return False
+    out.mkdir(parents=True)
+    for item in sorted(parent.iterdir()):
+        if (item.is_dir() and item.name.startswith("level_")) or (item.is_file() and item.name.startswith("verified")):
+            item.rename(out / item.name)
+    return True
+
+
 def publish(path: Path, build, anywhere: bool = False, replace: bool = False) -> Path:
     """Run build(directory) in a temporary sibling, then rename it to path. REPLACE: a directory
     already there gives way to the new one once that is whole (never before: a failed run leaves
@@ -202,6 +223,8 @@ def main() -> None:
                 print(f"Godot project{'s, one per level' if args.split else ''}: {dest}")
             elif args.command == "port":
                 levels = sorted(set(args.level or range(LEVEL_COUNT)))
+                if args.replace and adopt_flat_export(args.out.resolve(), disc.version.key):
+                    print(f"moved the levels extracted before into {args.out.resolve()}")
                 dest = publish(args.out, lambda out: port(args.iso, survey, levels, args.terrain_lod, max(1, args.jobs), out),
                                args.anywhere, args.replace)
                 print(f"Levels for the port's viewer: {dest}")
