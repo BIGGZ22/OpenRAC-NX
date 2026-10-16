@@ -1,11 +1,16 @@
 # Modding models and textures
 
-Ratchet & Clank (PAL) in OpenRAC's native port can draw your own textures
-and models in place of the game's: upscaled textures, a remodelled Ratchet,
-a repainted vendor. You export what you want to change from your own disc's
+Ratchet & Clank in OpenRAC's native port can draw your own textures and
+models in place of the game's: upscaled textures, a remodelled Ratchet, a
+repainted vendor. You export what you want to change from your own disc's
 levels, edit it in Blender or any image editor, import it back, and the
 result is an **overrides pack** the game loads on top of its levels. Packs
 from other people go in the same way, as a .zip or a folder.
+
+It works the same with any disc the game can be set up from (today the
+European and the North American one): the launcher uses the levels of the
+disc you set up, and a pack made from either disc's levels works with the
+other's too (below, [Packs and discs](#packs-and-discs)).
 
 Nothing here changes your disc image or the extracted levels, and nothing
 you export may be shared: it is your disc's data. A pack holds only what you
@@ -29,7 +34,9 @@ Everything below is on the **Mods** page, under **Models and textures**:
    with **Add a .zip** or **Add a folder**, or by dropping it on the page.
 5. **Play with your mods** (the first panel's Play) puts your packed levels
    and the packs that are on together and starts the game with them. The
-   game page's Play plays the levels as they are on the disc.
+   game page's Play plays the levels as they are on the disc. If a pack has
+   anything that does not fit your disc's levels, the activity log lists
+   what was left out.
 
 ## Editing textures
 
@@ -90,7 +97,35 @@ What the import checks and does:
   importer did to the vertices they move.
 
 The levels must be the ones the export was made from: after "Get the levels
-ready" runs again with a newer OpenRAC, export again and redo the edit.
+ready" runs again with a newer OpenRAC, or after setting the game up from
+another disc, export again and redo the edit. The pack you made keeps
+working either way.
+
+## Packs and discs
+
+The two discs hold the same levels, built a little differently: many
+textures have other numbers on one than on the other, a few pictures differ
+slightly (Ratchet's own skin among them), and a few classes are missing from
+one level or another. A pack records what each of its textures and models
+replaces (the original picture's hash, and which models use it; a model's
+class, its skeleton and the pictures it draws with), and when the game is
+played from the other disc's levels, the launcher puts each one where it
+belongs there:
+
+- a **texture** wherever those levels have the same original picture, in
+  every level; where that disc has its own version of the picture, where
+  the same models use it, if it is the same size;
+- a **model** in each level whose class has the same skeleton (a model
+  without one: the same vertices), drawing with that disc's own textures;
+- **level edits** (a packed level's gameplay file, ties and shrubs placed
+  again) belong to the disc they were packed from and are left out on the
+  other.
+
+Whatever has no match is left out and listed (`stack.json` in the stacked
+folder, and the activity log). Packs made before packs recorded this keep
+working on the disc they were made from; on the other, a texture goes in
+where its name is the same picture there, and a model where its skeleton
+fits.
 
 ## From a shell
 
@@ -100,13 +135,19 @@ python3 editor/assets.py import build/my-export --levels assets/port/rac1/pal --
 python3 editor/overrides.py check build/my-pack          # what a pack holds, and what is wrong with it
 python3 editor/overrides.py add build/my-pack --into build/overrides
 python3 editor/overrides.py list --into build/overrides
-python3 editor/overrides.py stack --into build/overrides --out build/mods [--packed assets/packed/rac1]
-port/build/release/openrac-rac1-pal --data <data> --window --levels assets/port/rac1/pal --mods build/mods
+python3 editor/overrides.py stack --into build/overrides --out build/mods/pal --levels assets/port/rac1/pal [--packed assets/packed/rac1]
+port/build/release/openrac-rac1-pal --data <data> --window --levels assets/port/rac1/pal --mods build/mods/pal
 python3 editor/overrides.py zip my-pack my-pack.zip --into build/overrides
 ```
 
-`--what` is `mobys`, `textures`, `scenery` (ties and shrubs) or `all`. Inside
-this repository, output goes under `assets/` or `build/` only.
+Each disc's levels are `assets/port/rac1/<version>` (`pal`, `ntsc`) in a
+checkout and `<data>/port/<version>` in an installed launcher; the commands
+are the same for either. `stack --levels` names the levels the game will
+play, and its `--out` is that disc's folder: `stack --into build/overrides
+--out build/mods/ntsc --levels assets/port/rac1/ntsc` puts the same packs
+together for the other disc. `--what` is `mobys`, `textures`, `scenery`
+(ties and shrubs) or `all`. Inside this repository, output goes under
+`assets/` or `build/` only.
 
 ## The pack format
 
@@ -116,14 +157,25 @@ its one top folder):
 ```
 openrac-mod.json                  {"format": 1, "game": "rac1", "version": "pal",
                                    "name": "...", "author": "...", "description": "...",
-                                   "levels_format": 2, "replaces": {"level_00": {"textures": [...], "models": [...]}}}
+                                   "levels_format": 3, "replaces": {"level_00": {"textures": [...], "models": [...]}},
+                                   "originals": {"level_00/textures/moby_0000.png": {...}, ...}}
 level_NN/textures/<name>.png      a level texture, by its name in that level
 level_NN/mobys/moby_<class>.glb   a class's model, as the port reads it (game axes, model units)
 level_NN/ties/tie_<class>.glb, level_NN/shrubs/shrub_<class>.glb
 level_NN/placements.json          ties and shrubs placed again (the level packer's)
-level_NN/gameplay_pal.wad, patches.tsv   a packed level (the level packer's)
+level_NN/gameplay_<version>.wad, patches.tsv   a packed level (the level packer's)
 README*, LICENSE*, *.txt, *.md    for people; other files are ignored
 ```
+
+`"version"` is the disc whose levels the files are named after (`pal` or
+`ntsc`); a pack is for both. `"originals"` says, for each texture, the
+original picture's hash, its size and the models that use it
+(`{"sha256", "size", "used_by": [[kind, class, place in the model's
+textures, how many]]}`, or `{"new": true}` for a model's own picture), and
+for each model its class, a hash of the original's vertex positions and the
+pictures it and its class draw with (`{"kind", "class", "vertices",
+"textures": {name: hash}, "class_textures": [...]}`). The hashes and sizes
+are all a pack holds of the originals.
 
 The files mirror the extracted levels (`editor/extract.py port`): the port
 reads each level's files from the stacked mods folder (`--mods`,
@@ -135,9 +187,10 @@ level's otherwise. Joints are `joint_NNN` nodes, numbered as the game's.
 
 The game's set-up folder holds the packs that were added
 (`overrides/packs/<id>/`), their order and state (`overrides/overrides.json`,
-`{"format": 1, "packs": [{"id": ..., "enabled": true}]}`), exports
-(`exports/`) and the stacked folder the game reads (`mods/`, made again
-before each Play with your mods).
+`{"format": 1, "packs": [{"id": ..., "enabled": true}]}`) and exports
+(`exports/`), shared by the discs, and the stacked folder the game reads,
+one per disc (`mods/<version>/`, made again before each Play with your
+mods, with `stack.json` saying what it holds and what was left out).
 
 ## Limits
 

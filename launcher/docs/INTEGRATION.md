@@ -259,27 +259,45 @@ Windows (`taskkill /T`) against a WSL process.
   tree is clean, refusing otherwise. Players who do not use git need a
   different answer (open decision below).
 
-### 8. The level editor
+### 8. The level editor and modding
 
-rac1/pal has the whole path written down, in the order a user takes it:
+rac1/pal and rac1/ntsc have the whole path written down, with the same ids,
+in the order a user takes it. The Mods page shows it for the version the
+game page plays (`playerVersion`: the disc the player set up), so both discs
+go the same way and no region is named; developer mode names the version.
 
-| Action           | State      | What it does                                                                                  |
-| ---------------- | ---------- | --------------------------------------------------------------------------------------------- |
-| `editor-extract` | unverified | the disc's 19 levels into a Godot project in `assets/godot`                                   |
-| `editor-import`  | unverified | Godot reads the meshes and textures once, headless, so the first open is quick                |
-| `editor-open`    | unverified | the Godot editor on that project                                                              |
-| `editor-pack`    | planned    | edited scenes back into level data, under `build/`; the packer does not exist yet             |
-| `editor-preview` | connected  | Godot's player on the first extracted level (Godot showing the editor's scenes, not the game) |
-| `editor-tests`   | unverified | the unit tests of `editor/`                                                                   |
+| Action            | State (PAL / NTSC-U)   | What it does                                                                                       |
+| ----------------- | ---------------------- | -------------------------------------------------------------------------------------------------- |
+| `editor-extract`  | unverified             | the disc's 19 levels into Godot projects, `assets/levels/rac1` (NTSC-U: `assets/levels/rac1-ntsc`) |
+| `editor-import`   | unverified             | Godot reads one level's meshes and textures once, headless, so the first open is quick             |
+| `editor-open`     | unverified             | the Godot editor on one level's project                                                            |
+| `editor-pack`     | unverified             | edited scenes back into that disc's level data, `assets/packed/rac1` (`assets/packed/rac1-ntsc`)   |
+| `editor-preview`  | connected / unverified | Godot's player on an extracted level (Godot showing the editor's scenes, not the game)             |
+| `editor-tests`    | unverified (PAL)       | the unit tests of `editor/`                                                                        |
+| `assets-export`   | unverified             | a level's models and textures from `assets/port/rac1/<version>` into `{data}/exports`              |
+| `assets-import`   | unverified             | an edited export back as an overrides pack in `{data}/overrides`                                   |
+| `overrides-add`   | unverified             | a pack (.zip or folder) into `{data}/overrides`                                                    |
+| `overrides-stack` | unverified             | the packed levels and the packs that are on into `{data}/mods/<version>`, for that disc's levels   |
+| `play-edited`     | unverified / planned   | the game with `--mods {data}/mods/<version>`; NTSC-U's waits for its Play                          |
 
-The unverified ones ran from a shell on macOS with a real disc and Godot
+Exports and packs are the game's, shared by its versions: a pack records
+what each file replaces, and `overrides-stack` (`editor/overrides.py stack
+--levels`) puts a pack made from the other disc's levels where it matches
+there ([editor/MODDING.md](../../editor/MODDING.md#packs-and-discs)). The
+stacked folder is each version's own, `{data}/mods/<version>`, because what
+it holds is made for one disc's levels (texture names, packed sectors); the
+level packer's output is per version too, since it replaces that disc's
+sectors. The installed launcher's bundle (tools/bundle_standalone.py) carries
+none of these actions yet, and its header hides Mods.
+
+The unverified ones ran from a shell on macOS with real discs and Godot
 4.7.2 (extract into a new folder, the refusal of an existing one, the
-headless import, the tests); none has been run from the desktop app yet. The
-extractor needs Python 3.10 or newer, which is why Settings refuses an older
-one. It never overwrites `assets/godot`, so once that exists the page should
-offer Open, not Extract (an `artifact` on extract and a "skip when present"
-rule, or a status field). The other versions carry a planned `editor-extract`
-that says what the editor lacks for them
+headless import, packing on each disc, exporting, importing and stacking a
+PAL pack onto both discs' levels, the tests); none has been run from the
+desktop app yet. The extractor needs Python 3.10 or newer, which is why
+Settings refuses an older one. It never overwrites a project folder, so once
+one exists the page offers Open, not Extract. The other games carry a planned
+`editor-extract` that says what the editor lacks for them
 ([editor/README.md](../../editor/README.md)).
 
 ### 9. Release and CI

@@ -232,7 +232,8 @@ Exports a level's moby, tie and shrub models as glTF (mesh, UVs, vertex
 colours, materials, skeleton, inverse bind matrices, weights, animations) and
 its textures as PNG, each with a manifest; reads the edited files back as an
 overrides pack ([overrides.py](overrides.py)) that the port loads with
-`--mods`. [MODDING.md](MODDING.md) is the guide: editing in Blender,
+`--mods`. Either disc's levels (`assets/port/rac1/ntsc` the same way), and a
+pack made from one disc's applies to the other's where it matches. [MODDING.md](MODDING.md) is the guide: editing in Blender,
 upscaling, re-importing, the pack format. The launcher's Mods page does it
 all.
 
