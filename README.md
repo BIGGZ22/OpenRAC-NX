@@ -42,7 +42,7 @@ design and the order of work are in [docs/port](docs/port/README.md).
 | Game | Version | Code matched | Functions | Fuzzy |
 |---|---|---:|---:|---:|
 | Ratchet & Clank | SCES_509.16 ([`games/rac1`](games/rac1)) | 92.32% (3,427,760 / 3,712,808 bytes) | 4,725 / 5,109 | 93.00% |
-| Ratchet & Clank | SCUS_971.99 ([`games/rac1/ntsc`](games/rac1/ntsc)) | 86.55% (3,069,248 / 3,546,268 bytes) | 3,933 / 4,233 | 87.88% |
+| Ratchet & Clank | SCUS_971.99 ([`games/rac1/ntsc`](games/rac1/ntsc)) | 92.30% (3,274,996 / 3,548,100 bytes) | 4,078 / 4,246 | 93.50% |
 | Ratchet & Clank: Going Commando | SCUS_972.68 ([`games/rac2/ntsc`](games/rac2/ntsc)) | 5.75% (318,088 / 5,533,600 bytes) | 2,941 / 9,100 | 5.75% |
 | Ratchet & Clank: Up Your Arsenal | SCUS_973.53 ([`games/rac3/ntsc`](games/rac3/ntsc)) | 1.28% (164,764 / 12,838,776 bytes) | 1,292 / 31,316 | 1.28% |
 | Ratchet: Deadlocked | SCUS_974.65 ([`games/rac4/ntsc`](games/rac4/ntsc)) | 0.51% (26,572 / 5,175,440 bytes) | 243 / 15,056 | 0.51% |

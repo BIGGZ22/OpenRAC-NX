@@ -4,13 +4,13 @@
     "region": "PAL (Europe)",
     "serial": "SCES_509.16",
     "progress": {
-      "matched_code": 3278504,
+      "matched_code": 3427760,
       "total_code": 3712808,
-      "matched_functions": 4595,
+      "matched_functions": 4725,
       "total_functions": 5109,
-      "fuzzy_percent": 89.47,
-      "date": "2026-10-15",
-      "percent": 88.3
+      "fuzzy_percent": 93.0,
+      "date": "2026-10-16",
+      "percent": 92.32
     },
     "note": "The boot executable and all 19 level programs. Handwritten assembly and linker remnants count as finished; staged near misses (nonmatching/) give the fuzzy figure."
   },
@@ -19,13 +19,13 @@
     "region": "NTSC-U (North America)",
     "serial": "SCUS_971.99",
     "progress": {
-      "matched_code": 3069248,
-      "total_code": 3546268,
-      "matched_functions": 3933,
-      "total_functions": 4233,
-      "fuzzy_percent": 87.88,
-      "date": "2026-10-13",
-      "percent": 86.55
+      "matched_code": 3274996,
+      "total_code": 3548100,
+      "matched_functions": 4078,
+      "total_functions": 4246,
+      "fuzzy_percent": 93.5,
+      "date": "2026-10-16",
+      "percent": 92.3
     },
     "note": "Lombyte commits no report: its CI publishes one on the project's progress branch, which `openrac.py progress --fetch` copies to progress/sources/. Byte-weighted over the boot executable and the 19 level programs."
   },
