@@ -15,6 +15,9 @@
 
 static int loaded_level = OPENRAC_OVERLAY_EXE;
 
+/* Frames left in which the flight between planets counts as playing: set by its update. */
+static int flight_frames;
+
 /* parse_bin (0x12D8F8): copies the next level's program over the
  * executable's main segment and returns its entry, which main
  * (run_game_main_loop, 0x12D9D8) calls next. From then on a code address in
@@ -77,6 +80,9 @@ void game_FUN_00209370(void) {
  */
 static void direct_start(unsigned frame) {
     static int done = 0;
+    if (flight_frames > 0) {
+        --flight_frames;
+    }
     static unsigned title_from = 0;
     (void)frame;
     if (done) {
@@ -107,7 +113,37 @@ static int bolts(void) {
     return GREF(int, 0x0015ED98u);
 }
 
+/* An in-game cutscene plays while the game mode (D_L00_0015F5C4, level data: relocated from level
+ * 0's address to the loaded level's; PAL D_L00_0015F6A8) is 2. */
+static int in_cutscene(void) {
+    return loaded_level >= 0 && loaded_level < LEVELS && GREF(int, OPENRAC_LDATA(0, 0x0015F5C4u)) == 2;
+}
+
+/* The flight's update (update_resident_gameplay_state, FUN_0022f778; PAL func_00230A90), once a
+ * frame of the transition's flight loop (do_space_transition). */
+void game_FUN_0022f778(void) {
+    flight_frames = 2;
+    game_FUN_0022f778__game();
+}
+
+/*
+ * Start during the flight between planets: the flight is done. The transition loops on the flight
+ * until D_0015F618 is set (the flight sets it at its end; PAL D_0015F6FC), then waits for the next
+ * level's load as it would have. Only while the flight's update runs: the same word starts a new
+ * game from the menus.
+ */
+static void skip(void) {
+    if (flight_frames > 0) {
+        /* The flight's own end: its playing flag cleared (the loader waits on it before it unloads
+         * the old banks: D_0015EE4A, set to 1 before the loop) and done. */
+        GREF(short, 0x0015EE4Au) = 0;
+        GREF(int, OPENRAC_DATA(0x0015F618u)) = 1;
+    }
+}
+
 __attribute__((constructor)) static void install_direct_start(void) {
     openrac_game_on_frame = direct_start;
     openrac_game_bolts = bolts;
+    openrac_game_in_cutscene = in_cutscene;
+    openrac_game_skip = skip;
 }

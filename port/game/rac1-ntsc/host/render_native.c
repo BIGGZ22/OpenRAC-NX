@@ -126,7 +126,22 @@ static void mark_drawn_mobys(gaddr first, int count) {
 int game_FUN_00211808(int a0, int a1, int a2, int a3) {
     mark_drawn_mobys((gaddr)a0, a2);
     openrac_game_draw(OPENRAC_DRAW_MOBYS);
-    openrac_game_mobys_drawn((gaddr)a0, a2);
+    if (openrac_game_mobys_drawn((gaddr)a0, a2)) {
+        /* A moby marker in the display list (as ui2d.c's quad markers: DMA cnt and VIF DIRECT of two
+         * quadwords, a PACKED GIF tag of one A+D register, the A+D write to NOP), the count in bits
+         * 32-39 and the first moby in the low word: the mobys of a screen the game renders to a
+         * texture (the vendor's item and salesman) are drawn into it there. */
+        const gaddr at = GREF(gaddr, OPENRAC_DATA(0x00160F00u));
+        GREF(uint32_t, at + 0) = 0x10000002u;
+        GREF(uint32_t, at + 4) = 0;
+        GREF(uint32_t, at + 8) = 0;
+        GREF(uint32_t, at + 12) = 0x50000002u;
+        GREF(uint64_t, at + 16) = 1ull | (1ull << 15) | (1ull << 60);
+        GREF(uint64_t, at + 24) = 0xEull;
+        GREF(uint64_t, at + 32) = (0x4D42ull << 48) | ((uint64_t)(a2 & 0xFF) << 32) | (uint32_t)a0;
+        GREF(uint64_t, at + 40) = 0x7Full;
+        GREF(gaddr, OPENRAC_DATA(0x00160F00u)) = at + 48;
+    }
     (void)a0;
     (void)a1;
     (void)a2;
@@ -151,18 +166,20 @@ void game_FUN_00217c18(void) {
     const gaddr pool = GREF(gaddr, OPENRAC_LDATA(0, 0x0016016Cu));
     const int high = GREF(int, OPENRAC_LDATA(0, 0x00160174u));
     const gaddr table = OPENRAC_LDATA(0, 0x001B1880u) + 0x200;
-    if (pool == 0 || pool >= 0x01FE0000u || table >= 0x01FFF000u) {
+    if (pool == 0 || pool >= 0x01FE0000u) {
         return;
     }
+    /* Each texture entry is 8 bytes (PAL's port, 52629b97 and 75419343): the low half the palette's
+     * address << 4 | the CLUT offset, the high half the pixels' address << 4; the loader always
+     * gives the texture 32 x 32. */
     for (int i = 0; i <= high && i < 2048; ++i) {
         const uint8_t* r = G(pool + (gaddr)i * 0x40);
         if ((r[1] & 0x80) != 0) {
             continue;
         }
-        uint64_t lo, hi;
-        memcpy(&lo, G(table + (gaddr)r[2] * 16), 8);
-        memcpy(&hi, G(table + (gaddr)r[2] * 16 + 8), 8);
-        openrac_game_particle(r, (uint32_t)(hi >> 4), (uint32_t)(lo >> 4), (int)(hi & 0xF));
+        uint64_t entry;
+        memcpy(&entry, G(table + (gaddr)r[2] * 8), 8);
+        openrac_game_particle(r, (uint32_t)(entry >> 32) >> 4, (uint32_t)entry >> 4, 5);
     }
 }
 
@@ -217,6 +234,18 @@ void game_FUN_0022a5e0(gaddr a0, gaddr a1) {
 }
 
 /* SkyDrawShellTextured */
+/*
+ * SkyDrawShell(shell): the sky code (the levels' skies, the flight's DrawSkyShells) builds each
+ * shell's matrix at D_001D96E0 before drawing it: its turn, scale and, in the flight, the
+ * translation that moves the stars past the ship. The window draws the shells natively with it.
+ */
+void game_FUN_0022b690(int shell) {
+    float m[16];
+    memcpy(m, G(OPENRAC_DATA(0x001D96E0u)), sizeof(m));
+    openrac_game_sky_shell(shell, m);
+    game_FUN_0022b690__game(shell);
+}
+
 void game_FUN_0022b6e8(gaddr a0) {
     openrac_game_draw(OPENRAC_DRAW_SKY);
     (void)a0;

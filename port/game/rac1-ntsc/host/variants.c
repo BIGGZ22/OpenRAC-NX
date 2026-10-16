@@ -138,3 +138,21 @@ static int moby_block(gaddr moby, gaddr at) {
 
 int func_L00_0025C368(gaddr moby) { return moby_block(moby, 0x10); }
 
+/* FUN_00215420's level places (32 bytes: a0 = an address, then one call; PAL func_00216270's) whose
+ * call is not FUN_0012ef28(FUN_00216950). The checkpoint restore (PAL func_L00_002862E0) ends with
+ * the first: its level's checkpoint block after the snapshot, given to FUN_L00_00285208. The
+ * addresses are this version's, read from each place's instructions. */
+void func_L00_002852C0(void) { game_FUN_L00_00285208(OPENRAC_LDATA(0, 0x001BB280u)); }
+
+/* The others, one level each: level 3's FUN_L03_00291918 and its copies in levels 7, 8 and 14 (the
+ * catalogue lists it in level 3 only: the loaded level's own copy, OPENRAC_LCODE), and
+ * FUN_L18_00281fa8, each on that level's data. */
+static void checkpoint_block_l03(gaddr block) {
+    GFN(void (*)(gaddr), OPENRAC_LCODE(3, 0x00291918u))(block);
+}
+void func_L03_002DC990(void) { checkpoint_block_l03(0x001DC1A0u); }
+void func_L07_002F8038(void) { checkpoint_block_l03(0x001D3400u); }
+void func_L07_0030D420(void) { checkpoint_block_l03(0x00208560u); }
+void func_L08_002DA0D0(void) { checkpoint_block_l03(0x001D7060u); }
+void func_L14_00303350(void) { checkpoint_block_l03(0x001E9C60u); }
+void func_L18_002FAD08(void) { game_FUN_L18_00281fa8(0x001DFC10u); }
