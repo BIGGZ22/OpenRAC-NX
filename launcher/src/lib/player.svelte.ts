@@ -99,11 +99,14 @@ export function regionWords(v: VersionView): string {
   return /\(([^)]+)\)/.exec(v.region)?.[1] ?? v.region;
 }
 
-/** The version a player means by "this game": the one their disc is, else the first one that can be played. */
+/** The version a player means by "this game": the one their set-up disc is, else the first one
+ *  whose disc image was found, else the first one that can be played. */
 export function playerVersion(game: GameView): VersionView | null {
   const own = game.install?.extracted?.version;
+  const found = app.discs.filter((d) => d.game === game.id).map((d) => d.version);
   return (
     game.versions.find((v) => v.key === own) ??
+    game.versions.find((v) => found.includes(v.key)) ??
     game.versions.find((v) => {
       const play = action(v, "play");
       return play && play.state !== "planned";

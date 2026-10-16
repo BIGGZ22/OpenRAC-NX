@@ -14,12 +14,14 @@
   import { isBuilt, playerAct, playerState, playerVersion } from "$lib/player.svelte";
   import { themeStyle } from "$lib/themes";
 
-  // One game, whatever the region: a player gets the version their disc is (playerVersion);
-  // with developer tools on, the version chosen in the developer panel.
+  // One game, whatever the region: the page plays the version your disc is (playerVersion),
+  // always. The developer panel alone follows the version chosen in it, for each disc's
+  // decompilation and actions.
   const developer = $derived(app.config?.developer ?? false);
   const opened = $derived(currentVersion());
   const game = $derived(app.library?.games.find((g) => g.id === opened?.game) ?? null);
-  const v = $derived(game && !developer ? playerVersion(game) : opened);
+  const v = $derived(game ? playerVersion(game) : opened);
+  const studied = $derived(game && opened?.game === game.id ? opened : v);
   const scope = $derived({ kind: "version" as const, key: v?.key ?? "" });
   const action = (id: string): ActionView | null => v?.actions.find((a) => a.id === id && a.thisPlatform) ?? null;
 
@@ -122,7 +124,7 @@
       {/if}
     </section>
 
-    {#if developer}<DeveloperPanel {game} version={v} />{/if}
+    {#if developer && studied}<DeveloperPanel {game} version={studied} />{/if}
     <SaveManagerBlock version={v} />
   </div>
 {/if}
