@@ -46,23 +46,34 @@ def output_path(path: Path, anywhere: bool = False, replace: bool = False) -> Pa
     return resolved
 
 
-def adopt_flat_export(out: Path, version: str) -> bool:
-    """Levels extracted before each version had a folder of its own sat straight in OUT's parent
-    (assets/port/rac1, <data>/port): when OUT does not exist yet and the parent holds an export of
-    VERSION, its level folders and stamps move into OUT, so the new layout starts from them instead
-    of a second copy beside them. True when something moved."""
+def adopt_flat_export(out: Path, version: str, kind: str = "port") -> bool:
+    """What was written before each version had a folder of its own sat straight in OUT's parent:
+    the port's levels (assets/port/rac1, <data>/port), the Godot projects (assets/levels/rac1) and
+    the level packer's output (assets/packed/rac1). When OUT does not exist yet and the parent holds
+    that of VERSION, its level folders and the files beside them move into OUT, so the new layout
+    starts from them (a Godot project keeps its edits) instead of leaving them beside it. Only PAL
+    had the flat layout; the port's levels also say their version in their manifests. KIND is
+    "port", "godot" or "packed". True when something moved."""
     parent = out.parent
-    manifest = parent / "level_99" / "manifest.json"
-    if out.exists() or not manifest.is_file():
+    if out.exists() or not parent.is_dir():
         return False
-    try:
-        if json.loads(manifest.read_text()).get("version", "pal") != version:
+    marker = {"port": "manifest.json", "godot": "project.godot", "packed": "gameplay_pal.wad"}[kind]
+    levels = [d for d in sorted(parent.glob("level_*")) if d.is_dir() and (d / marker).is_file()]
+    if not levels:
+        return False
+    if kind == "port":
+        try:
+            found = json.loads((levels[-1] / marker).read_text()).get("version", "pal")
+        except (OSError, ValueError):
             return False
-    except (OSError, ValueError):
+    else:
+        found = "pal"
+    if found != version:
         return False
     out.mkdir(parents=True)
+    files = ("verified", "patches.tsv", "packed.json", "changes.txt")
     for item in sorted(parent.iterdir()):
-        if (item.is_dir() and item.name.startswith("level_")) or (item.is_file() and item.name.startswith("verified")):
+        if (item.is_dir() and item.name.startswith("level_")) or (item.is_file() and item.name.startswith(files)):
             item.rename(out / item.name)
     return True
 
@@ -218,6 +229,11 @@ def main() -> None:
                 print()
             elif args.command == "godot":
                 levels = sorted(set(args.level or range(LEVEL_COUNT)))
+                if adopt_flat_export(args.out.resolve(), disc.version.key, "godot"):
+                    # Projects made before the per-version folders, edits and all: kept, not
+                    # written over.
+                    print(f"moved the Godot projects made before into {args.out.resolve()}")
+                    return
                 dest = publish(args.out, lambda out: godot(args.iso, survey, levels, args.terrain_lod, max(1, args.jobs), out,
                                                            args.split, disc.version.region))
                 print(f"Godot project{'s, one per level' if args.split else ''}: {dest}")
@@ -232,6 +248,10 @@ def main() -> None:
                 # Its own output, written again after each edit: the one command that may write
                 # into a directory that exists.
                 dest = args.out.resolve()
+                if adopt_flat_export(args.project.resolve(), disc.version.key, "godot"):
+                    print(f"moved the Godot projects made before into {args.project.resolve()}")
+                if adopt_flat_export(dest, disc.version.key, "packed"):
+                    print(f"moved the packed levels made before into {dest}")
                 if not any(root in dest.parents for root in (ROOT / "assets", ROOT / "build")):
                     raise FormatError("output must be a directory under this repository's assets/ or build/")
                 if not (args.project / "project.godot").is_file() and not list(args.project.glob("level_*/project.godot")):

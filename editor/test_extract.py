@@ -72,3 +72,19 @@ class AdoptFlatExportTests(unittest.TestCase):
             self.assertFalse(adopt_flat_export(parent / "ntsc", "ntsc"))
             self.assertFalse((parent / "ntsc").exists())
             self.assertTrue((parent / "level_99").is_dir())
+
+    def test_moves_godot_projects_and_packed_levels_of_pal_only(self):
+        from extract import adopt_flat_export
+        with tempfile.TemporaryDirectory() as tmp:
+            levels = Path(tmp) / "levels"
+            (levels / "level_00").mkdir(parents=True)
+            (levels / "level_00" / "project.godot").write_text("edited")
+            self.assertFalse(adopt_flat_export(levels / "ntsc", "ntsc", "godot"))
+            self.assertTrue(adopt_flat_export(levels / "pal", "pal", "godot"))
+            self.assertEqual((levels / "pal" / "level_00" / "project.godot").read_text(), "edited")
+            packed = Path(tmp) / "packed"
+            (packed / "level_03").mkdir(parents=True)
+            (packed / "level_03" / "gameplay_pal.wad").write_bytes(b"x")
+            (packed / "patches.tsv").write_text("")
+            self.assertTrue(adopt_flat_export(packed / "pal", "pal", "packed"))
+            self.assertEqual(sorted(p.name for p in (packed / "pal").iterdir()), ["level_03", "patches.tsv"])
