@@ -3,7 +3,10 @@
 //!
 //! They live in the game's set-up folder, `<install>/active/<game>/data/overrides`:
 //! `packs/<id>/` (each one a copy made when it was added, with its
-//! `openrac-mod.json`) and `overrides.json`, their order and which are on. The
+//! `openrac-mod.json`) and `overrides.json`, their order and which are on. They
+//! are the game's, not a version's: a pack made from one disc's levels applies
+//! to the other's where it matches, when `editor/overrides.py stack` puts the
+//! packs together for the version played, in `<data>/mods/<version>`. The
 //! format and everything that writes packs (adding, importing edits, stacking
 //! them for the port) are the editor's `editor/overrides.py`; this module only
 //! lists them and changes the order, the on/off state and removes one, which

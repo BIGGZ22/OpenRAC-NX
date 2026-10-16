@@ -332,7 +332,7 @@ function lastLines(id: string, args: Record<string, unknown>): string[] {
       mockPacks.push({ ...samplePack(name), id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-") });
       return [`Added ${name} as ${name.toLowerCase()}, on, last in the order.`];
     case "overrides-stack":
-      return [`Stacked ${mockPacks.filter((p) => p.enabled).length + 1} layer(s), 99 file(s): ${data}/mods`];
+      return [`Stacked ${mockPacks.filter((p) => p.enabled).length + 1} layer(s), 99 file(s): ${data}/mods/pal`];
     default:
       return ["\u2714 step one", "\u2714 step two", "done"];
   }

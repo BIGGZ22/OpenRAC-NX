@@ -2,13 +2,17 @@
   // Modding: for each game that can be edited, the three things a modder does,
   // in order. Edit the levels in Godot, pack the edits into the game's own
   // level data, play the game with them. The disc image is never changed.
-  // With developer tools on: the folders and the commands behind each step.
+  // The version is the one the game page plays (playerVersion: the player's own
+  // disc), so every disc goes the same way and no region is named; packs are
+  // shared by the discs (editor/overrides.py stacks them for the one played).
+  // With developer tools on: the version, the folders and the commands behind each step.
   import AssetsPanel from "$components/AssetsPanel.svelte";
   import Icon from "$components/Icon.svelte";
   import { api, pickFile, type ActionView, type GameView, type VersionView } from "$lib/api";
   import { app, guard, jobs, run, runChain, saveConfig, toast } from "$lib/app.svelte";
   import { RAC1_LEVELS } from "$lib/labels";
   import { GODOT_URL } from "$lib/links";
+  import { playerVersion } from "$lib/player.svelte";
   import type { Job } from "$lib/queue";
 
   const developer = $derived(app.config?.developer ?? false);
@@ -17,15 +21,18 @@
   const action = (v: VersionView, id: string): ActionView | null =>
     v.actions.find((a) => a.id === id && a.thisPlatform) ?? null;
 
-  /** The version of a game the level editor can open, if any. */
+  /** The version of a game the player modifies, the one its page plays, if the level editor can open it. */
   function editable(game: GameView): VersionView | null {
-    return (
-      game.versions.find((v) => {
-        const extract = action(v, "editor-extract");
-        return extract && extract.state !== "planned";
-      }) ?? null
-    );
+    const v = playerVersion(game);
+    const extract = v ? action(v, "editor-extract") : null;
+    return v && extract && extract.state !== "planned" ? v : null;
   }
+
+  /** A version's folders in a checkout (launcher/actions.json): its level projects and packed levels. */
+  const folders = (v: VersionView) => {
+    const tree = v.name === "pal" ? v.game : `${v.game}-${v.name}`;
+    return { projects: `assets/levels/${tree}`, packed: `assets/packed/${tree}` };
+  };
 
   const live = (j: Job) => j.state === "queued" || j.state === "running";
   const jobsOf = (v: VersionView, ids: string[]) =>
@@ -187,21 +194,25 @@
         </ol>
 
         {#if developer}
+          {@const dirs = folders(v)}
           <div class="sdk">
             <p class="dim">
-              The projects are <code>assets/levels/{game.id}/level_NN</code>, the packed levels
-              <code>assets/packed/{game.id}</code> (a list of disc sectors and the files that replace them). The same steps
-              from a shell:
+              This is <code>{v.key}</code>, the version of the disc set up. The projects are
+              <code>{dirs.projects}/level_NN</code>, the packed levels <code>{dirs.packed}</code> (a list of disc sectors
+              and the files that replace them). The same steps from a shell:
             </p>
-            <pre>python3 editor/extract.py godot &lt;disc.iso&gt; assets/levels/{game.id} --split
-python3 editor/extract.py pack &lt;disc.iso&gt; assets/levels/{game.id} assets/packed/{game.id}
-python3 editor/overrides.py stack --into &lt;data&gt;/overrides --out &lt;data&gt;/mods --packed assets/packed/{game.id}
-openrac-{v.key.replace("/", "-")} --data &lt;data&gt; --mods &lt;data&gt;/mods</pre>
+            <pre>python3 editor/extract.py godot &lt;disc.iso&gt; {dirs.projects} --split
+python3 editor/extract.py pack &lt;disc.iso&gt; {dirs.projects} {dirs.packed}
+python3 editor/overrides.py stack --into &lt;data&gt;/overrides --out &lt;data&gt;/mods/{v.name} --packed {dirs.packed} --levels assets/port/{v.game}/{v.name}
+openrac-{v.key.replace(
+                "/",
+                "-",
+              )} --data &lt;data&gt; --levels assets/port/{v.game}/{v.name} --mods &lt;data&gt;/mods/{v.name}</pre>
             <div class="row">
-              <button class="small" onclick={() => void guard(api.openPath(`assets/levels/${game.id}`))}
+              <button class="small" onclick={() => void guard(api.openPath(dirs.projects))}
                 ><Icon name="folder" size={14} />Level projects</button
               >
-              <button class="small" onclick={() => void guard(api.openPath(`assets/packed/${game.id}`))}
+              <button class="small" onclick={() => void guard(api.openPath(dirs.packed))}
                 ><Icon name="folder" size={14} />Packed levels</button
               >
               <button class="small" onclick={() => void guard(api.openPath("editor/README.md"))}

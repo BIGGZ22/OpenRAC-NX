@@ -3,7 +3,9 @@
   // import the edits back as an overrides pack, and manage the packs (on or off, their order,
   // remove, add a .zip or a folder, or drop one on the page). The Python side does the work
   // (editor/assets.py, editor/overrides.py, through actions.json); the list of packs and its
-  // changes are instant (core/src/overrides.rs). editor/MODDING.md is the modder's guide.
+  // changes are instant (core/src/overrides.rs). The packs are the game's, shared by its discs; the
+  // version (the one the game page plays) only picks the levels exported from and stacked for.
+  // editor/MODDING.md is the modder's guide.
   import { onMount } from "svelte";
   import Icon from "$components/Icon.svelte";
   import {
@@ -287,13 +289,14 @@
     {#if developer}
       <div class="sdk">
         <p class="dim">
-          Exports, packs and the stacked folder the game reads are in the game's set-up folder (<code>exports/</code>,
-          <code>overrides/</code>, <code>mods/</code>). The same steps from a shell:
+          Exports and packs are in the game's set-up folder (<code>exports/</code>, <code>overrides/</code>), shared by
+          its discs; the stacked folder the game reads is the version's own (<code>mods/{v.name}/</code>, for
+          <code>{v.key}</code>). The same steps from a shell:
         </p>
-        <pre>python3 editor/assets.py export assets/port/{v.game} &lt;out&gt; --level N --what mobys
-python3 editor/assets.py import &lt;out&gt; --levels assets/port/{v.game} --into &lt;data&gt;/overrides
+        <pre>python3 editor/assets.py export assets/port/{v.game}/{v.name} &lt;out&gt; --level N --what mobys
+python3 editor/assets.py import &lt;out&gt; --levels assets/port/{v.game}/{v.name} --into &lt;data&gt;/overrides
 python3 editor/overrides.py add &lt;pack.zip&gt; --into &lt;data&gt;/overrides
-python3 editor/overrides.py stack --into &lt;data&gt;/overrides --out &lt;data&gt;/mods --packed assets/packed/{v.game}</pre>
+python3 editor/overrides.py stack --into &lt;data&gt;/overrides --out &lt;data&gt;/mods/{v.name} --levels assets/port/{v.game}/{v.name}</pre>
       </div>
     {/if}
   </section>
