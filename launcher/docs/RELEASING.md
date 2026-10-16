@@ -76,28 +76,30 @@ git push origin launcher-vX.Y.Z
 ```
 
 ### What GitHub Actions does automatically (`.github/workflows/launcher.yml`):
+
 1. **Game payload build (`game` job)**:
-   * **Windows** (`windows-latest`): Builds `openrac-rac1-pal.exe` and bundles standalone Python.
-   * **Linux x86_64** (`ubuntu-22.04`): Builds the game against LLVM 19 libc++ (glibc 2.35 compatible).
-   * **Linux ARM64** (`ubuntu-24.04-arm`): Builds natively for AArch64 and bundles `aarch64-unknown-linux-gnu` Python.
-   * **macOS** (`macos-latest`): Builds the game for Apple Silicon.
+   - **Windows** (`windows-latest`): Builds `openrac-rac1-pal.exe` and bundles standalone Python.
+   - **Linux x86_64** (`ubuntu-22.04`): Builds the game against LLVM 19 libc++ (glibc 2.35 compatible).
+   - **Linux ARM64** (`ubuntu-24.04-arm`): Builds natively for AArch64 and bundles `aarch64-unknown-linux-gnu` Python.
+   - **macOS** (`macos-latest`): Builds the game for Apple Silicon.
 2. **Installer creation (`build` & `fedora` jobs)**:
-   * Packages Windows NSIS (`.exe`) and MSI.
-   * Packages Linux `.deb`, `.rpm`, and `.AppImage` (both `amd64` and `arm64`).
-   * Packages Fedora `.fc44.x86_64.rpm` in container.
-   * Packages macOS universal `.dmg` and `.app.tar.gz`.
+   - Packages Windows NSIS (`.exe`) and MSI.
+   - Packages Linux `.deb`, `.rpm`, and `.AppImage` (both `amd64` and `arm64`).
+   - Packages Fedora `.fc44.x86_64.rpm` in container.
+   - Packages macOS universal `.dmg` and `.app.tar.gz`.
 3. **Updater signing & manifest**:
-   * Signs update archives with minisign (`TAURI_SIGNING_PRIVATE_KEY`).
-   * Runs `tools/updater_manifest.py` to produce `latest.json` covering:
-     * `windows-x86_64`
-     * `linux-x86_64`
-     * `linux-aarch64`
-     * `darwin-x86_64`
-     * `darwin-aarch64`
+   - Signs update archives with minisign (`TAURI_SIGNING_PRIVATE_KEY`).
+   - Runs `tools/updater_manifest.py` to produce `latest.json` covering:
+     - `windows-x86_64`
+     - `linux-x86_64`
+     - `linux-aarch64`
+     - `darwin-x86_64`
+     - `darwin-aarch64`
 4. **Draft Release**:
-   * Creates a draft release titled `OpenRAC Launcher X.Y.Z` with all installer assets and signatures.
+   - Creates a draft release titled `OpenRAC Launcher X.Y.Z` with all installer assets and signatures.
 
 Monitor the CI status:
+
 ```bash
 gh run list --workflow=launcher.yml --limit 3
 ```
@@ -121,8 +123,8 @@ Once all CI jobs complete:
    curl -sSfL "https://github.com/OpenRAC/OpenRAC/releases/latest/download/latest.json"
    ```
    Check that:
-   * `version` matches `X.Y.Z`.
-   * Asset URLs contain dots instead of spaces (GitHub automatically converts spaces to dots in filenames: e.g. `OpenRAC.Launcher_X.Y.Z_amd64.AppImage`).
+   - `version` matches `X.Y.Z`.
+   - Asset URLs contain dots instead of spaces (GitHub automatically converts spaces to dots in filenames: e.g. `OpenRAC.Launcher_X.Y.Z_amd64.AppImage`).
 
 ---
 
@@ -131,36 +133,41 @@ Once all CI jobs complete:
 Once the GitHub release is published, update the Flathub package:
 
 ### 1. Get the SHA-256 hashes of the new `.deb` packages
+
 ```bash
 gh release view launcher-vX.Y.Z --json assets \
   --jq '.assets[] | select(.name | endswith(".deb")) | {name: .name, digest: .digest, url: .url}'
 ```
 
 ### 2. Update the Flathub manifest (`dev.openrac.launcher.yml`)
+
 In the Flathub repository (`flathub/dev.openrac.launcher`):
 
-* Update the `x86_64` `.deb` URL and `sha256`.
-* Update the `aarch64` `.deb` URL and `sha256`.
+- Update the `x86_64` `.deb` URL and `sha256`.
+- Update the `aarch64` `.deb` URL and `sha256`.
 
 Example snippet:
-```yaml
-      - type: file
-        only-arches:
-          - x86_64
-        url: https://github.com/OpenRAC/OpenRAC/releases/download/launcher-vX.Y.Z/OpenRAC.Launcher_X.Y.Z_amd64.deb
-        sha256: <NEW_AMD64_SHA256>
-        dest-filename: openrac-launcher.deb
 
-      - type: file
-        only-arches:
-          - aarch64
-        url: https://github.com/OpenRAC/OpenRAC/releases/download/launcher-vX.Y.Z/OpenRAC.Launcher_X.Y.Z_arm64.deb
-        sha256: <NEW_ARM64_SHA256>
-        dest-filename: openrac-launcher.deb
+```yaml
+- type: file
+  only-arches:
+    - x86_64
+  url: https://github.com/OpenRAC/OpenRAC/releases/download/launcher-vX.Y.Z/OpenRAC.Launcher_X.Y.Z_amd64.deb
+  sha256: <NEW_AMD64_SHA256>
+  dest-filename: openrac-launcher.deb
+
+- type: file
+  only-arches:
+    - aarch64
+  url: https://github.com/OpenRAC/OpenRAC/releases/download/launcher-vX.Y.Z/OpenRAC.Launcher_X.Y.Z_arm64.deb
+  sha256: <NEW_ARM64_SHA256>
+  dest-filename: openrac-launcher.deb
 ```
 
 ### 3. Update AppStream metadata (`dev.openrac.launcher.metainfo.xml`)
+
 Add the new release entry:
+
 ```xml
   <releases>
     <release version="X.Y.Z" date="YYYY-MM-DD">
@@ -176,6 +183,7 @@ Add the new release entry:
 ```
 
 ### 4. Lint and push to Flathub
+
 ```bash
 flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest dev.openrac.launcher.yml
 
@@ -190,6 +198,6 @@ Flathub build servers automatically build and deploy the update to all Flathub a
 
 ## 7. Common Pitfalls & Notes
 
-* **Spaces in filenames**: GitHub Releases replaces spaces with dots when files are uploaded. `tools/updater_manifest.py` sanitizes URLs with `.replace(" ", ".")` to prevent 404 Not Found errors in the in-app updater.
-* **Minisign key formatting**: `TAURI_SIGNING_PRIVATE_KEY` secret must be trimmed of trailing newlines before passing to Tauri CLI. The CI workflow handles this automatically via a temporary file in `$RUNNER_TEMP/updater.key`.
-* **Runtime EOL on Flathub**: Flathub regularly bumps GNOME/Freedesktop runtimes. Keep the manifest's `runtime-version` aligned with the active Flathub runtime (e.g. `51`).
+- **Spaces in filenames**: GitHub Releases replaces spaces with dots when files are uploaded. `tools/updater_manifest.py` sanitizes URLs with `.replace(" ", ".")` to prevent 404 Not Found errors in the in-app updater.
+- **Minisign key formatting**: `TAURI_SIGNING_PRIVATE_KEY` secret must be trimmed of trailing newlines before passing to Tauri CLI. The CI workflow handles this automatically via a temporary file in `$RUNNER_TEMP/updater.key`.
+- **Runtime EOL on Flathub**: Flathub regularly bumps GNOME/Freedesktop runtimes. Keep the manifest's `runtime-version` aligned with the active Flathub runtime (e.g. `51`).
