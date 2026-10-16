@@ -80,6 +80,14 @@ struct Kept {
     std::array<renderer::Mat4, 8> sky_shells{};
     unsigned sky_shell_mask = 0;
     std::vector<renderer::UiQuad> ui_quads;
+    // Mobys the game drew into a texture with a camera of its own (the vendor's screens): each
+    // drawn at its marker in the 2D path (renderer::FrameInput::target_mobys).
+    struct TargetMoby {
+        std::uint32_t address = 0;
+        viewer::Instance instance;
+        viewer::GameState camera;
+    };
+    std::vector<TargetMoby> target_mobys;
     std::uint32_t draws = 0;
     bool has_camera = false;
     std::uint64_t frame = 0;
@@ -1609,6 +1617,42 @@ void draw_kept(bool first) {
     input.sky_shell_mask = k.sky_shell_mask;
     input.effect_uploads = k.effect_uploads;
     input.ui_quads = k.ui_quads;
+    // The mobys the game drew into a texture, at their markers (Kept::target_mobys): the game's
+    // render to a texture is the target's top 512 x 128, centred on (256, 64), seen by the world's
+    // camera with the frame's focal lengths (ReRAC's SetRenderToTextureView, interaction.md 9.3):
+    // 256 / tan x across, the draw buffer's half height / tan y down.
+    input.target_mobys = [&](std::uint64_t marker, unsigned framebuffer, int size) {
+        const std::uint32_t first = static_cast<std::uint32_t>(marker);
+        const std::uint32_t count = static_cast<std::uint32_t>(marker >> 32) & 0xFFu;
+        std::vector<viewer::Instance> instances;
+        const viewer::GameState* camera = nullptr;
+        for (const Kept::TargetMoby& t : k.target_mobys) {
+            if (t.address >= first && t.address < first + count * 0x100u) {
+                instances.push_back(t.instance);
+                camera = &t.camera;
+            }
+        }
+        if (camera == nullptr || !g->renderer) {
+            return;
+        }
+        using namespace openrac::gl;
+        const int height = size * 128 / renderer::kOffscreenPixels;
+        glViewport(0, size - height, size, height);
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(0, size - height, size, height);
+        glDepthMask(GL_TRUE);
+        glClearDepth(0.0);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        glDisable(GL_SCISSOR_TEST);
+        const float tan_x = camera->tan_half_fov_x;
+        const float tan_y = camera->tan_half_fov_y * 64.0f / (0.5f * static_cast<float>(renderer::g_draw_buffer_lines));
+        renderer::FrameInput panel;
+        panel.camera.view = camera->view();
+        panel.camera.projection = renderer::perspective_reversed(2.0f * std::atan(tan_y), tan_x / tan_y, 0.05f, 2000.0f);
+        panel.camera.position = camera->camera_position;
+        renderer::RenderState target{g->renderer->textures(), renderer::RenderTarget{framebuffer, size, size}, {}};
+        g->scene.draw_mobys(instances, panel, target);
+    };
     // A tick that draws no world and has no picture of its own to put under its 2D (the page
     // menu's first ticks, before its snapshot of the frame comes; the tick it closes on): the
     // console still shows the last frame there, so the 2D goes over the last world drawn, not black.
@@ -2005,7 +2049,50 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     std::vector<std::uint32_t> live_addresses;
     std::vector<int> live_joints;
     std::vector<viewer::LevelScene::JointColumns> palette;
-    for (const viewer::LiveMoby& m : state.mobys) {
+    std::vector<Kept::TargetMoby> target_mobys;
+    // Mobys the game drew that are not in its list: the vendor's own (ReRAC interaction.md 9.3).
+    // Drawn with the camera of the list's mobys (the item's hologram over the vendor), they are
+    // the world's; with another (the screens' render to a texture, at zoom 1.0 instead of 0.63),
+    // they are drawn into the texture at their marker. The zoom does not reach the moby program's
+    // scales: they are drawn with the frame's own (ReRAC's vendor_render.rs: with the zoom they sit
+    // at the target's edges at a third of the size the game shows).
+    const std::size_t listed = state.mobys.size();
+    std::unordered_map<std::uint32_t, const viewer::GameState*> into_texture;
+    std::array<float, 2> frame_zoom{};
+    {
+        const auto in_list = [&](std::uint32_t address) {
+            return std::any_of(state.mobys.begin(), state.mobys.begin() + static_cast<std::ptrdiff_t>(listed),
+                               [&](const viewer::LiveMoby& m) { return m.address == address; });
+        };
+        float zoom = state.tan_half_fov_x;
+        float zoom_y = state.tan_half_fov_y;
+        if (!world_ran) {
+            for (const auto& [address, camera] : g->moby_cameras) {
+                if (in_list(address)) {
+                    zoom = camera.tan_half_fov_x;
+                    zoom_y = camera.tan_half_fov_y;
+                    break;
+                }
+            }
+        }
+        frame_zoom = {zoom, zoom_y};
+        for (const auto& [address, camera] : g->moby_cameras) {
+            if (in_list(address) || into_texture.contains(address)
+                || std::any_of(state.mobys.begin() + static_cast<std::ptrdiff_t>(listed), state.mobys.end(),
+                               [&](const viewer::LiveMoby& m) { return m.address == address; })) {
+                continue;
+            }
+            if (const auto extra = viewer::read_live_moby(ram, address)) {
+                state.mobys.push_back(*extra);
+                if (std::fabs(camera.tan_half_fov_x - zoom) > 1.0e-3f) {
+                    into_texture.emplace(address, &camera);
+                }
+            }
+        }
+    }
+    for (std::size_t index = 0; index < state.mobys.size(); ++index) {
+        const viewer::LiveMoby& m = state.mobys[index];
+        const bool extra = index >= listed;
         // Hidden (mode bit 0): MobyProc does not draw it (the parked ship while the landing one comes
         // down, Clank's spare parts).
         if (m.address + 0x36 <= ram.size() && (ram[m.address + 0x34] & 1) != 0) {
@@ -2014,7 +2101,7 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         // A draw distance (+0x32) of 0: MobyProc's distance test never passes, so the game never draws
         // it. Volumes and blockers the levels place as mobys (Veldin's grey box behind the start, the
         // walls of Kalebo III's landing) are such: untextured, they showed as solid grey walls.
-        if (m.address + 0x34 <= ram.size() && (ram[m.address + 0x32] | ram[m.address + 0x33]) == 0) {
+        if (!extra && m.address + 0x34 <= ram.size() && (ram[m.address + 0x32] | ram[m.address + 0x33]) == 0) {
             continue;
         }
         if (only_own_camera
@@ -2062,6 +2149,9 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         // Drawn by the game with a camera of its own: placed so the world's camera sees it where
         // that camera did (M' = V_world^-1 V_own M), as ReRAC draws the menu's frame objects.
         for (const auto& [address, camera] : g->moby_cameras) {
+            if (into_texture.contains(m.address)) {
+                break;
+            }
             if (address == m.address && instance.moby_light[3] == 1.0f) {
                 // One of the 2D layer's: in a picture wider than the game's it is cut at the game's
                 // picture's sides (mesh.vert), where those parked beside the screen stay unseen.
@@ -2121,6 +2211,12 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
                 }
             }
         }
+        if (const auto t = into_texture.find(m.address); t != into_texture.end()) {
+            target_mobys.push_back({m.address, instance, *t->second});
+            target_mobys.back().camera.tan_half_fov_x = frame_zoom[0];
+            target_mobys.back().camera.tan_half_fov_y = frame_zoom[1];
+            continue;
+        }
         live_joints.push_back(instance.palette >= 0 ? joints : 0);
         live.push_back(instance);
         live_addresses.push_back(m.address);
@@ -2163,6 +2259,7 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     k.state = state;
     k.has_state = true;
     k.live = std::move(live);
+    k.target_mobys = std::move(target_mobys);
     k.addresses = std::move(live_addresses);
     k.joints = std::move(live_joints);
     k.palette = std::move(palette);

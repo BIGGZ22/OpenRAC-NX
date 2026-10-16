@@ -38,6 +38,11 @@ public:
     // Replaces a layer's instances (live mobys, each frame).
     void set_instances(Layer layer, const std::vector<Instance>& instances);
 
+    // Draws these mobys now, as the moby layer draws its own, into what is bound (the game's
+    // render to a texture: the vendor's screens); the layer's own instances are kept.
+    void draw_mobys(const std::vector<Instance>& instances, const renderer::FrameInput& input,
+                    renderer::RenderState& state);
+
     // One joint matrix of a palette, as the vertex shader takes it: four columns (the images of
     // the axes, then the translation, in the mesh's units), column-major.
     using JointColumns = std::array<float, 16>;

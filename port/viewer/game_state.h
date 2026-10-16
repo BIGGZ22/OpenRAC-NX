@@ -16,6 +16,7 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <span>
 #include <string_view>
 #include <string>
@@ -88,6 +89,9 @@ struct GameState {
  * @return The state; empty moby list when the table pointers are not inside memory.
  */
 GameState read_game_state(std::span<const std::uint8_t> ram, const GameAddresses& a);
+
+/** The moby at address m as the renderers place it; none when its position or scale is unusable. */
+std::optional<LiveMoby> read_live_moby(std::span<const std::uint8_t> ram, std::uint32_t m);
 
 /** The display list of the frame being shown (the buffer VU1_swapChain retired last). */
 std::uint32_t shown_chain(std::span<const std::uint8_t> ram, const GameAddresses& a);

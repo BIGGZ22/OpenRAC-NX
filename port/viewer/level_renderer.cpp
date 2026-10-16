@@ -266,6 +266,18 @@ void LevelScene::set_instances(Layer layer, const std::vector<Instance>& instanc
     build_groups(layer, instances, true);
 }
 
+void LevelScene::draw_mobys(const std::vector<Instance>& instances, const renderer::FrameInput& input,
+                            renderer::RenderState& state) {
+    auto& groups = m_groups[static_cast<std::size_t>(Layer::Mobys)];
+    auto& idle = m_idle[static_cast<std::size_t>(Layer::Mobys)];
+    std::vector<Group> own;
+    own.swap(groups);
+    build_groups(Layer::Mobys, instances, true);
+    draw_layer(Layer::Mobys, input, state);
+    idle.insert(idle.end(), groups.begin(), groups.end());
+    groups.swap(own);
+}
+
 void LevelScene::set_palette(const std::vector<JointColumns>& matrices) {
     if (matrices.empty()) {
         return;

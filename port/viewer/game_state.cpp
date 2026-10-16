@@ -94,6 +94,51 @@ renderer::Mat4 GameState::projection(float aspect, float near_z, float far_z) co
     return renderer::perspective_reversed(2.0f * std::atan(tan_half_fov_y), aspect, near_z, far_z);
 }
 
+std::optional<LiveMoby> read_live_moby(std::span<const std::uint8_t> ram, std::uint32_t m) {
+    if (m == 0 || m + 0x100 > ram.size()) {
+        return std::nullopt;
+    }
+    const renderer::Vec3 pos = vec3(ram, m + 0x10);
+    const renderer::Vec3 rot = vec3(ram, m + 0x40);
+    const float scale = at<float>(ram, m + 0x2C);
+    if (!std::isfinite(pos[0]) || !std::isfinite(scale) || scale <= 0.0f || scale > 1000.0f) {
+        return std::nullopt;
+    }
+    LiveMoby live;
+    live.address = m;
+    live.class_id = at<std::int16_t>(ram, m + 0xA6);
+    // The rotation rows at +0xC0 (each the image of a model axis), as MobyProc draws it:
+    // MobyBuildMatrix (func_L00_00251E30) makes them from the Euler angles at +0x40 every
+    // update, unless the moby keeps rows of its own (mode 0x100, or an item placed after its
+    // update: the wrench in Ratchet's hand), and negates row 1 with mode 0x8000. The class
+    // mesh is in unscaled units and the moby's scale already includes the class's.
+    const renderer::Vec3 r0 = vec3(ram, m + 0xC0), r1 = vec3(ram, m + 0xD0), r2 = vec3(ram, m + 0xE0);
+    const auto usable = [](const renderer::Vec3& r) {
+        return std::isfinite(r[0]) && std::isfinite(r[1]) && std::isfinite(r[2])
+            && r[0] * r[0] + r[1] * r[1] + r[2] * r[2] > 1.0e-6f;
+    };
+    if (usable(r0) && usable(r1) && usable(r2)) {
+        live.matrix = {r0[0] * scale, r0[1] * scale, r0[2] * scale, 0,
+                       r1[0] * scale, r1[1] * scale, r1[2] * scale, 0,
+                       r2[0] * scale, r2[1] * scale, r2[2] * scale, 0,
+                       pos[0], pos[1], pos[2], 1};
+        return live;
+    }
+    // No rows yet (a moby not built since it was made): X first, then Y, then Z, as the
+    // game's Euler matrices.
+    live.matrix = renderer::multiply(
+        renderer::translation(pos),
+        renderer::multiply(
+            rotation_z(rot[2]),
+            renderer::multiply(
+                rotation_y(rot[1]),
+                renderer::multiply(rotation_x(rot[0]), renderer::scale(scale))
+            )
+        )
+    );
+    return live;
+}
+
 GameState read_game_state(std::span<const std::uint8_t> ram, const GameAddresses& a) {
     GameState s;
     s.camera_position = vec3(ram, a.camera_position);
@@ -137,46 +182,9 @@ GameState read_game_state(std::span<const std::uint8_t> ram, const GameAddresses
         if (at<std::uint8_t>(ram, m + 0x20) >= 0x80) {
             continue;
         }
-        const renderer::Vec3 pos = vec3(ram, m + 0x10);
-        const renderer::Vec3 rot = vec3(ram, m + 0x40);
-        const float scale = at<float>(ram, m + 0x2C);
-        if (!std::isfinite(pos[0]) || !std::isfinite(scale) || scale <= 0.0f || scale > 1000.0f) {
-            continue;
+        if (const auto live = read_live_moby(ram, m)) {
+            s.mobys.push_back(*live);
         }
-        LiveMoby live;
-        live.address = m;
-        live.class_id = at<std::int16_t>(ram, m + 0xA6);
-        // The rotation rows at +0xC0 (each the image of a model axis), as MobyProc draws it:
-        // MobyBuildMatrix (func_L00_00251E30) makes them from the Euler angles at +0x40 every
-        // update, unless the moby keeps rows of its own (mode 0x100, or an item placed after its
-        // update: the wrench in Ratchet's hand), and negates row 1 with mode 0x8000. The class
-        // mesh is in unscaled units and the moby's scale already includes the class's.
-        const renderer::Vec3 r0 = vec3(ram, m + 0xC0), r1 = vec3(ram, m + 0xD0), r2 = vec3(ram, m + 0xE0);
-        const auto usable = [](const renderer::Vec3& r) {
-            return std::isfinite(r[0]) && std::isfinite(r[1]) && std::isfinite(r[2])
-                && r[0] * r[0] + r[1] * r[1] + r[2] * r[2] > 1.0e-6f;
-        };
-        if (usable(r0) && usable(r1) && usable(r2)) {
-            live.matrix = {r0[0] * scale, r0[1] * scale, r0[2] * scale, 0,
-                           r1[0] * scale, r1[1] * scale, r1[2] * scale, 0,
-                           r2[0] * scale, r2[1] * scale, r2[2] * scale, 0,
-                           pos[0], pos[1], pos[2], 1};
-            s.mobys.push_back(live);
-            continue;
-        }
-        // No rows yet (a moby not built since it was made): X first, then Y, then Z, as the
-        // game's Euler matrices.
-        live.matrix = renderer::multiply(
-            renderer::translation(pos),
-            renderer::multiply(
-                rotation_z(rot[2]),
-                renderer::multiply(
-                    rotation_y(rot[1]),
-                    renderer::multiply(rotation_x(rot[0]), renderer::scale(scale))
-                )
-            )
-        );
-        s.mobys.push_back(live);
     }
     return s;
 }

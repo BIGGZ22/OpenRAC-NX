@@ -326,6 +326,12 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
         case 0x7F:  // NOP; the port's marker for a quad of the 2D layer drawn natively
             if ((value >> 48) == kUiQuadMarker && (value & 0xFFFFFFu) < m_ui_quads.size()) {
                 native_quad(m_ui_quads[value & 0xFFFFFFu]);
+            } else if ((value >> 48) == kMobyMarker && offscreen_target() != 0) {
+                DirectDraw d;
+                d.state.target = offscreen_target();
+                d.first = static_cast<std::uint32_t>(m_vertices.size());
+                d.mobys = value;
+                m_draws.push_back(d);
             }
             return;
         case gs::kPrim:
@@ -982,7 +988,7 @@ void GifInterpreter::ensure_draw() {
         m_state = s;
         m_state_dirty = false;
     }
-    if (m_draws.empty() || !(m_draws.back().state == m_state)) {
+    if (m_draws.empty() || !(m_draws.back().state == m_state) || m_draws.back().mobys != 0) {
         m_draws.push_back({m_state, static_cast<std::uint32_t>(m_vertices.size()), 0});
     }
 }
@@ -1312,6 +1318,7 @@ void DirectRenderer::render(const FrameInput& input, RenderState& state) {
         return;
     }
     m_interpreter->set_ui_quads(input.ui_quads);
+    m_frame = &input;
     submit(packets);
     flush(state);
 }
@@ -1486,6 +1493,22 @@ void DirectRenderer::apply(const DirectState& s, RenderState& render_state) {
 
 void DirectRenderer::draw(const DirectDraw& d, RenderState& render_state) {
     const DirectState& s = d.state;
+    if (d.mobys != 0) {
+        // Mobys the game drew into this target: the frontend draws them, with the target bound;
+        // then this renderer's own state again.
+        if (m_frame != nullptr && m_frame->target_mobys && s.target != 0) {
+            const Offscreen& o = offscreen(s.target);
+            glBindFramebuffer(GL_FRAMEBUFFER, o.framebuffer);
+            m_frame->target_mobys(d.mobys, o.framebuffer, kOffscreenPixels * kOffscreenScale);
+            glDisable(GL_CULL_FACE);
+            glDisable(GL_SCISSOR_TEST);
+            m_shader.use();
+            glBindVertexArray(m_vao);
+            glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+            glActiveTexture(GL_TEXTURE0);
+        }
+        return;
+    }
     apply(s, render_state);
 
     // FRAME.FBMSK: a channel whose bits are all masked is not written.
@@ -1586,7 +1609,7 @@ void DirectRenderer::flush(RenderState& state, bool background) {
         for (const DirectDraw& d : m_interpreter->draws()) {
             const DirectState& s = d.state;
             if (s.target != 0 || d.count == 0) {
-                if (d.count != 0) {
+                if (d.count != 0 || d.mobys != 0) {
                     runs.push_back({&d, d.first, d.count, true});  // an off-screen panel's own square
                 }
                 continue;
@@ -1632,12 +1655,12 @@ void DirectRenderer::flush(RenderState& state, bool background) {
     if (k < 1.0f) {
         for (const Run& r : runs) {
             m_whole_target = r.whole;
-            draw(DirectDraw{r.draw->state, r.first, r.count}, state);
+            draw(DirectDraw{r.draw->state, r.first, r.count, r.draw->mobys}, state);
         }
         m_whole_target = true;
     } else {
         for (const DirectDraw& d : m_interpreter->draws()) {
-            if (d.count != 0) {
+            if (d.count != 0 || d.mobys != 0) {
                 draw(d, state);
             }
         }

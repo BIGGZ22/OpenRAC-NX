@@ -118,6 +118,9 @@ struct DirectDraw {
     DirectState state;
     std::uint32_t first = 0;  // first vertex
     std::uint32_t count = 0;  // vertices (three per triangle)
+    // Not 0: no vertices, the mobys a moby marker names, drawn into state.target here
+    // (FrameInput::target_mobys).
+    std::uint64_t mobys = 0;
 };
 
 // Debugging: while set, every sprite and primitive the 2D path draws is logged (OPENRAC_DUMP_DRAWS).
@@ -172,6 +175,10 @@ public:
     // context the packets before it set up.
     void set_ui_quads(std::span<const UiQuad> quads) { m_ui_quads = quads; }
     static constexpr std::uint64_t kUiQuadMarker = 0x4E55;
+    // Mobys the game drew while rendering to a texture: a marker of the same form, kMobyMarker in
+    // the top 16 bits, the mobys' count in bits 32-39 and the first's address in the low 32,
+    // becomes a draw of no vertices (DirectDraw::mobys) in the target being drawn.
+    static constexpr std::uint64_t kMobyMarker = 0x4D42;
 
     // A VIF1 stream carrying GIF data in DIRECT and DIRECTHL commands, with
     // the bookkeeping codes around them (NOP, FLUSH, STCYCL...). A command
@@ -321,8 +328,11 @@ public:
     void flush(RenderState& state, bool background = false);
 
     GifInterpreter& interpreter() { return *m_interpreter; }
+    // The frame being drawn, for its moby markers (FrameInput::target_mobys).
+    void set_frame_input(const FrameInput* input) { m_frame = input; }
 
 private:
+    const FrameInput* m_frame = nullptr;
     void apply(const DirectState& state, RenderState& render_state);
     void draw(const DirectDraw& draw, RenderState& render_state);
     bool m_background = false;  // flush(): the part before the world
@@ -369,6 +379,7 @@ public:
     void render(const FrameInput& input, RenderState& state) override {
         if (!input.direct_before_world.empty()) {
             m_direct.interpreter().set_ui_quads(input.ui_quads);
+            m_direct.set_frame_input(&input);
             m_direct.submit(input.direct_before_world);
             m_direct.flush(state, true);
         }

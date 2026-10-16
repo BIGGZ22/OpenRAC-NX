@@ -654,16 +654,18 @@ int openrac_game_play_movie(uint32_t lsn, uint32_t bytes, int channel, int start
 #endif
 }
 
-void openrac_game_mobys_drawn(gaddr first, int count) {
+int openrac_game_mobys_drawn(gaddr first, int count) {
 #ifdef OPENRAC_FRONTEND
     if (g_window && count > 0) {
         const auto* ram = runtime::Memory::get().base();
         frontend::mobys_drawn(std::span<const std::uint8_t>(ram, 32u * 1024 * 1024), first, count);
+        return count <= 0xFF ? 1 : 0;
     }
 #else
     (void)first;
     (void)count;
 #endif
+    return 0;
 }
 
 void openrac_game_effect_quad(const openrac_game_quad* quad) {

@@ -144,8 +144,10 @@ void openrac_game_moby_chain(gaddr moby, gaddr marks);
 
 /* The game's moby renderer was asked to draw `count` mobys from `first` (0x100 bytes each; count
  * -1: the whole list, the world's draw). A list drawn on its own (the page menu's frame objects)
- * may be drawn with a camera of its own: the window draws those mobys as that camera saw them. */
-void openrac_game_mobys_drawn(gaddr first, int count);
+ * may be drawn with a camera of its own: the window draws those mobys as that camera saw them.
+ * Nonzero: the caller puts a moby marker in the 2D list where the game's packets would have gone
+ * (the renderer's kMobyMarker), so that mobys drawn into a texture are drawn there in order. */
+int openrac_game_mobys_drawn(gaddr first, int count);
 
 /* A textured quad the game draws in the world (rac1: func_001F7EF8, the draw callbacks' quad
  * routine): its corners in world space (x, y, z, w), the strip 0 1 2, 1 2 3; RGBA bytes and
