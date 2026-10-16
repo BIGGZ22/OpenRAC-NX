@@ -63,8 +63,10 @@ public:
 
     // A texture converted ahead of time. `scale` says how its alpha runs;
     // `mipmaps` gives its GL texture a mipmap chain and trilinear filtering
-    // (3D geometry), otherwise it has one level, filtered as each draw says.
-    TextureHandle add(Rgba8Image image, AlphaScale scale, std::string name, bool mipmaps = false);
+    // (3D geometry), otherwise it has one level, filtered as each draw says (nearest until then;
+    // `linear`: bilinear, as the GS samples a texture whose TEX1 has MXL 0 and linear filters).
+    TextureHandle add(Rgba8Image image, AlphaScale scale, std::string name, bool mipmaps = false,
+                      bool linear = false);
 
     // The anisotropic filter of every texture with a mipmap chain (the world's): 1 is none, up to
     // what the driver offers (max_anisotropy(); 1 when it has no such filter). The textures on the
@@ -136,6 +138,7 @@ private:
         bool live = false;
         bool from_upload = false;  // converted from game uploads: may be dropped
         bool mipmaps = false;
+        bool linear = false;
         Rgba8Image image;
         AlphaScale scale = AlphaScale::Gs;
         std::string name;

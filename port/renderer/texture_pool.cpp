@@ -71,7 +71,7 @@ TextureHandle TexturePool::new_entry() {
     return static_cast<TextureHandle>(m_entries.size());
 }
 
-TextureHandle TexturePool::add(Rgba8Image image, AlphaScale scale, std::string name, bool mipmaps) {
+TextureHandle TexturePool::add(Rgba8Image image, AlphaScale scale, std::string name, bool mipmaps, bool linear) {
     const TextureHandle h = new_entry();
     Entry& e = m_entries[h - 1];
     e = Entry{};
@@ -80,6 +80,7 @@ TextureHandle TexturePool::add(Rgba8Image image, AlphaScale scale, std::string n
     e.scale = scale;
     e.name = std::move(name);
     e.mipmaps = mipmaps;
+    e.linear = linear;
     e.last_used = m_frame;
     return h;
 }
@@ -311,8 +312,9 @@ unsigned TexturePool::gl_texture(TextureHandle texture) {
             }
         } else {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(GL_NEAREST));
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(GL_NEAREST));
+            const GLint filter = static_cast<GLint>(e.linear ? GL_LINEAR : GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
         }
     }
     return e.gl;

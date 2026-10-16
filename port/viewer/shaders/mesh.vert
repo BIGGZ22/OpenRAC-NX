@@ -137,10 +137,12 @@ void main() {
         // st = (e.xy + 1) / 2, e the normal in camera space (x right, y down: t grows downward).
         vec3 e = normalize(mat3(view) * normalize(mat3(model) * n));
         v_uv = vec2(e.x * 0.5 + 0.5, 0.5 - e.y * 0.5);
-        // The shine alpha: full within 8 game units of the camera, none past 24 (MobyProc's gate with
-        // the default shine distance 0x18: min(((0x18 << 10) - depth) >> 7, 0x80), depth in raw units).
+        // The shine alpha: MobyProc's gate min(((distance << 10) - depth) >> 7, 0x80), depth in raw
+        // units: full up to 16 game units nearer than the moby's shine distance (+0x73, 0x18 unless the
+        // class changes it; the frontend passes it as lights = -1 - distance), none past it.
+        float reach = lights < -1.5 ? -lights - 1.0 : 24.0;
         float centre = -(view * model[3]).z;
-        float shine = clamp((24.0 - centre) / 16.0, 0.0, 1.0);
+        float shine = clamp((reach - centre) / 16.0, 0.0, 1.0);
         v_colour = vec4(vec3(112.0 / 128.0), shine);
         // MobyProc's pull toward the camera (GS Z + 1000 Q): a little nearer, so the shine is not
         // lost to the moby's own surface under it (reversed depth: larger is nearer).

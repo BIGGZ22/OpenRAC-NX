@@ -57,11 +57,21 @@ bool LevelScene::upload(
     renderer::Rgba8Image white(1, 1);
     white.set_texel(0, 0, 0xFFFFFFFFu);
     m_white = textures.add(std::move(white), renderer::AlphaScale::Full, "white");
+    // The cutout materials' moby textures (the hologram's lettering, fences, foliage) with one
+    // level, bilinear: the GS samples moby textures without mip levels (TEX1 MXL 0), and a mipmap
+    // chain averages a cutout's alpha away at a distance (thin, broken letters).
+    std::vector<bool> cutout_moby(level.images.size(), false);
+    for (const Material& m : level.materials) {
+        if (m.cutout && m.image >= 0 && static_cast<std::size_t>(m.image) < level.images.size()
+            && level.image_paths[static_cast<std::size_t>(m.image)].find("/textures/moby_") != std::string::npos) {
+            cutout_moby[static_cast<std::size_t>(m.image)] = true;
+        }
+    }
     for (std::size_t i = 0; i < level.images.size(); ++i) {
         m_textures.push_back(
             level.images[i].width > 0
-                ? textures
-                      .add(level.images[i], renderer::AlphaScale::Full, level.image_paths[i], true)
+                ? textures.add(level.images[i], renderer::AlphaScale::Full, level.image_paths[i], !cutout_moby[i],
+                               cutout_moby[i])
                 : m_white
         );
     }

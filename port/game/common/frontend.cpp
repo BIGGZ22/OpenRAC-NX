@@ -2018,6 +2018,11 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
             const std::uint8_t* b = ram.data() + m.address;
             const unsigned mode = b[0x34] | b[0x35] << 8;
             const unsigned alpha = b[0x23];
+            // Its shine distance (+0x73, 0x18 for a class with metal packets, 32 for the Gadgetron
+            // logo) for the metal pass, in the tie-only `lights` slot as -1 - distance (mesh.vert).
+            if (b[0x73] != 0) {
+                instance.lights = -1 - static_cast<int>(b[0x73]);
+            }
             if ((mode & 0x200) != 0) {
                 instance.blend = 2;
                 instance.tint[3] = static_cast<float>(alpha) / 128.0f;
