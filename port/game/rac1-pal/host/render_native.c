@@ -136,12 +136,13 @@ int func_00212658(int a0, int a1, int a2, int a3) {
  * PartProc, the particle renderer: each live record of the pool (2048 records of 0x40 bytes at the
  * pool pointer; byte 1 bit 7 marks a free one; the highest live index is kept with the pool's
  * counters) goes to the window, which draws it as the game's VU1 sprite program does
- * (openrac_game_particle). Its texture is entry +0x02 of the particle texture table, 128 words at
- * 0x1CDD00 that PartProc copies to the scratchpad each frame and reads at entry * 8: the low half
- * the palette's address << 4 | the CLUT offset, the high half the pixels' address << 4. The loader
- * (func_00219704) always gives the texture 32 x 32 (0x505). Read as two words an entry from another
- * address, most particles named another texture or none: the bomb glove's and the explosions'
- * smoke came out as opaque white or noisy squares.
+ * (openrac_game_particle). Its texture is entry +0x02 of the particle texture table, 128 words
+ * 0x200 bytes past the pool's allocation bitmap (level 0's 0x1B1E00, which PartProc copies to the
+ * scratchpad each frame) read at entry * 8: the low half the palette's address << 4 | the CLUT
+ * offset, the high half the pixels' address << 4. The loader (func_00219704) always gives the
+ * texture 32 x 32 (0x505). Read as two words an entry with the size from a nibble, most particles
+ * named another texture or a single texel: the explosions' smoke came out as opaque white or noisy
+ * squares, and the nanotech crates' orbs as nothing.
  */
 void func_00218B10(void) {
     if (openrac_guest_overlay() < 0) {
@@ -151,7 +152,7 @@ void func_00218B10(void) {
     // loaded); the boot program keeps other things there.
     const gaddr pool = GREF(gaddr, OPENRAC_LDATA(0, 0x0016022Cu));
     const int high = GREF(int, OPENRAC_LDATA(0, 0x00160234u));
-    const gaddr table = 0x001CDD00u;  /* the executable's code reads it there in every level */
+    const gaddr table = OPENRAC_LDATA(0, 0x001B1C00u) + 0x200;
     if (pool == 0 || pool >= 0x01FE0000u) {
         return;
     }
