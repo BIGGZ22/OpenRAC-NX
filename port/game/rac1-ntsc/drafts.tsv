@@ -1,21 +1,19 @@
 # Files of the NTSC decomp whose own pending C (the #else of their NON_MATCHING guard) is read in
 # place of the assembly stub (hostgen.json "drafts"): drafts that decompilation never compiles, taken
 # where the port has nothing better (no C carried from rac1-pal for the function). A draft Clang
-# cannot read is left out. unit	functions
+# cannot read is left out. Sony's MPEG library's own routines (_csc_storeRefImage, _updateRefImage,
+# _getRef0, _doMC, _sequenceHeader, _setDefaultQM) are left out as well: the port plays movies with
+# its own decoder above the library (port/media), so they are never reached, and OpenRAC carries no C
+# whose origin it cannot vouch for under docs/policy/SOURCING.md (PAL's movie code was reverted on
+# that ground). unit	functions
 src/assembly/sdk/callbacks/invoke_sif_file_command_callback.c	# FUN_0011b980
 src/assembly/sdk/callbacks/signal_native_cd_delay_alarm.c	# FUN_001205e8
 src/assembly/sdk/debug/kputchar.c	# kputchar
 src/assembly/sdk/debug/printf_impl.c	# _printf
-src/assembly/sdk/dma/csc_store_ref_image.c	# _csc_storeRefImage
-src/assembly/sdk/library/_getRef0.c	# _getRef0
 src/assembly/sdk/library/_sceFs_Rcv_Intr.c	# _sceFs_Rcv_Intr
-src/assembly/sdk/library/_updateRefImage.c	# _updateRefImage
 src/assembly/sdk/library/cmd_sem_init.c	# cmd_sem_init
-src/assembly/sdk/library/domc.c	# _doMC
 src/assembly/sdk/library/sceCdInit.c	# sceCdInit
 src/assembly/sdk/library/sceDbcCreateSocket.c	# sceDbcCreateSocket
-src/assembly/sdk/library/sequenceheader.c	# _sequenceHeader func_0012C4C8
-src/assembly/sdk/library/setdefaultqm.c	# _setDefaultQM
 src/assembly/sdk/rpc/sce_sif_init_cmd.c	# sceSifInitCmd
 src/assembly/textbin/fun_001fd748.c	# FUN_001fd748
 src/assembly/textbin/fun_00203b08.c	# FUN_00203b08
