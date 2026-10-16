@@ -39,14 +39,41 @@ const char* layer_name(Layer layer) {
 
 namespace {
 
-int image_index(const fs::path& path, LevelData& level) {
-    const std::string key = path.lexically_normal().generic_string();
+// A level file's path, or the mod's file in its place: the same path under LevelData::overrides
+// when the level has a mod folder and the file is there. `overridden` counts the files taken.
+fs::path override_of(const fs::path& path, const LevelData& level, int* overridden) {
+    if (level.overrides.empty()) {
+        return path;
+    }
+    const fs::path normal = path.lexically_normal();
+    for (const fs::path& root : {level.dir.lexically_normal(), level.overrides.lexically_normal()}) {
+        const fs::path rel = normal.lexically_relative(root);
+        if (rel.empty() || *rel.begin() == "..") {
+            continue;
+        }
+        std::error_code ignored;
+        if (fs::is_regular_file(level.overrides / rel, ignored)) {
+            if (overridden != nullptr) {
+                ++*overridden;
+            }
+            return (level.overrides / rel).lexically_normal();
+        }
+        // A mod's model names the level's textures it does not replace by the same relative path.
+        return (level.dir / rel).lexically_normal();
+    }
+    return path;
+}
+
+int image_index(const fs::path& requested, LevelData& level) {
+    int overridden = 0;
+    const std::string key = override_of(requested, level, &overridden).lexically_normal().generic_string();
     auto it = std::find(level.image_paths.begin(), level.image_paths.end(), key);
     if (it != level.image_paths.end()) {
         const auto index = static_cast<int>(it - level.image_paths.begin());
         return level.images[static_cast<std::size_t>(index)].width > 0 ? index : -1;
     }
     level.image_paths.push_back(key);
+    level.overridden_images += overridden;
     int w = 0;
     int h = 0;
     int channels = 0;
@@ -369,6 +396,12 @@ std::vector<renderer::Rgba8Image> load_sky_textures(const fs::path& dir) {
 bool load_level(const fs::path& dir, LevelData& out, std::string& error, const fs::path& edited) {
     out = LevelData{};
     out.dir = dir;
+    if (!edited.empty()) {
+        std::error_code ignored;
+        if (fs::is_directory(edited.parent_path(), ignored)) {
+            out.overrides = fs::absolute(edited.parent_path(), ignored);
+        }
+    }
     json::Value manifest;
     if (!json::parse_file((dir / "manifest.json").string(), manifest, error)) {
         return false;
@@ -386,7 +419,7 @@ bool load_level(const fs::path& dir, LevelData& out, std::string& error, const f
         if (!file.is_string()) {
             return std::nullopt;
         }
-        return load_model(dir / file.string(), out, error);
+        return load_model(override_of(dir / file.string(), out, &out.overridden_models), out, error);
     };
 
     for (const json::Value& set : manifest["lights"].items()) {
@@ -542,6 +575,10 @@ bool load_level(const fs::path& dir, LevelData& out, std::string& error, const f
     }
     if (out.bounds_min[0] > out.bounds_max[0]) {
         out.bounds_min = out.bounds_max = Vec3{};
+    }
+    if (out.overridden_models > 0 || out.overridden_images > 0) {
+        log::info("level {}: {} meshes and {} textures from {}", out.level, out.overridden_models,
+                  out.overridden_images, out.overrides.string());
     }
     return true;
 }

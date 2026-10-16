@@ -107,6 +107,12 @@ const char* layer_name(Layer layer);
 
 struct LevelData {
     std::filesystem::path dir;
+    // A mod's folder for this level (the --mods folder's level_NN, editor/overrides.py): a mesh or
+    // texture there is read in place of the level's own of the same path (an upscaled texture, a
+    // replacement moby model). Empty without mods.
+    std::filesystem::path overrides;
+    int overridden_models = 0;
+    int overridden_images = 0;
     int level = -1;
     std::vector<Vertex> vertices;
     std::vector<std::uint32_t> indices;
@@ -132,7 +138,10 @@ struct LevelData {
 // Load a level directory. Returns false with a reason if the manifest or a
 // mesh cannot be read; a missing texture only counts in missing_images.
 // `edited`, when it names a file, is a placements file from a mod (the editor's
-// pack): the lists it has ("ties", "shrubs") stand for the level's own.
+// pack): the lists it has ("ties", "shrubs") stand for the level's own. The
+// folder it is in is the mod's folder for the level (LevelData::overrides): its
+// meshes and textures are read in place of the level's own of the same path,
+// whether or not the placements file itself is there.
 bool load_level(
     const std::filesystem::path& dir, LevelData& out, std::string& error,
     const std::filesystem::path& edited = {}
