@@ -10,6 +10,7 @@
       "dir": "games/rac1",
       "region": "PAL (Europe)",
       "serial": "SCES_509.16",
+      "bytematch": "OpenRAC/rac1-decomp",
       "disc": {
         "file": "SCES_509.16.iso",
         "volume": "RATCHETANDCLANK",
@@ -147,6 +148,7 @@
     "ntsc": {
       "region": "NTSC-U (North America)",
       "serial": "SCUS_971.99",
+      "bytematch": "lombyte-project/Lombyte",
       "disc": {
         "file": "SCUS_971.99.iso",
         "volume": "RATCHETANDCLANK",

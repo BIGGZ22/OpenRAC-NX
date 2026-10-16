@@ -309,18 +309,18 @@ async fn sync_progress_from_web(state: State<'_, AppState>) -> Result<Library, S
     let config = state.config.lock().unwrap().clone();
     let root = config.root.clone().ok_or("the OpenRAC folder is not set")?;
 
-    // Attempt to fetch latest numbers from openrac.dev using curl (available across all Linux distros)
+    // Every project's latest progress from bytematch.dev, with curl (on Linux, macOS and Windows 10+)
     let output = std::process::Command::new("curl")
         .arg("-s")
         .arg("--connect-timeout")
         .arg("4")
-        .arg("https://openrac.dev/progress.json")
+        .arg(openrac_launcher_core::catalog::BYTEMATCH_PROJECTS)
         .output();
 
     if let Ok(out) = output {
         if out.status.success() {
             if let Ok(json_str) = String::from_utf8(out.stdout) {
-                let _ = openrac_launcher_core::catalog::update_progress_from_openrac_dev(&root, &json_str);
+                let _ = openrac_launcher_core::catalog::update_progress_from_bytematch(&root, &json_str);
             }
         }
     }
@@ -332,7 +332,7 @@ async fn sync_progress_from_web(state: State<'_, AppState>) -> Result<Library, S
 async fn apply_progress_json(state: State<'_, AppState>, json: String) -> Result<Library, String> {
     let config = state.config.lock().unwrap().clone();
     let root = config.root.clone().ok_or("the OpenRAC folder is not set")?;
-    openrac_launcher_core::catalog::update_progress_from_openrac_dev(&root, &json)?;
+    openrac_launcher_core::catalog::update_progress_from_bytematch(&root, &json)?;
     tauri::async_runtime::spawn_blocking(move || library::library(&config)).await.map_err(|e| e.to_string())?
 }
 

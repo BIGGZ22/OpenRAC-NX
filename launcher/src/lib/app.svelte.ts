@@ -126,11 +126,11 @@ export async function refresh() {
   }
 }
 
-/** Fetches the latest progress from openrac.dev; the Rust side keeps a copy under build/ for offline use. */
+/** Fetches every project's latest progress from bytematch.dev; the Rust side keeps a copy under build/ for offline use. */
 export async function syncProgressWeb() {
   if (!app.config?.root) return;
   try {
-    const res = await fetch("https://openrac.dev/progress.json", {
+    const res = await fetch("https://bytematch.dev/api/v1/projects?per_page=500", {
       signal: AbortSignal.timeout(4000),
     });
     if (res.ok) {
