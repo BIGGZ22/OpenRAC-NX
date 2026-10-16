@@ -68,6 +68,7 @@ int material_index(const cgltf_material* source, const fs::path& base, LevelData
     Material m;
     if (source != nullptr) {
         m.cutout = source->alpha_mode == cgltf_alpha_mode_mask;
+        m.metal = source->name != nullptr && std::strncmp(source->name, "metal_", 6) == 0;
         m.blend = source->alpha_mode == cgltf_alpha_mode_blend;
         if (source->has_pbr_metallic_roughness) {
             const auto& pbr = source->pbr_metallic_roughness;
@@ -82,7 +83,7 @@ int material_index(const cgltf_material* source, const fs::path& base, LevelData
     // (TEST 0x5360b: texels at 0x80 written with depth, the others blended, colour only), whatever
     // the export's alpha mode says: Kalebo III's glass sheets (class 800, alpha 0x32..0x53) came
     // out as solid teal walls when drawn opaque.
-    if (!m.cutout && m.image >= 0 && base.filename() == "mobys") {
+    if (!m.cutout && !m.metal && m.image >= 0 && base.filename() == "mobys") {
         const auto& pixels = level.images[static_cast<std::size_t>(m.image)].pixels;
         for (std::size_t i = 3; i < pixels.size(); i += 4) {
             if (pixels[i] < 250) {
@@ -93,7 +94,7 @@ int material_index(const cgltf_material* source, const fs::path& base, LevelData
     }
     for (std::size_t i = 0; i < level.materials.size(); ++i) {
         const Material& o = level.materials[i];
-        if (o.image == m.image && o.cutout == m.cutout && o.blend == m.blend
+        if (o.image == m.image && o.cutout == m.cutout && o.blend == m.blend && o.metal == m.metal
             && o.colour == m.colour) {
             return static_cast<int>(i);
         }

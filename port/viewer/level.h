@@ -50,6 +50,7 @@ struct Vertex {
 
 struct Material {
     int image = -1;       // index into LevelData::images; -1 draws white
+    bool metal = false;   // a metal packet's chrome or glass map (metal_*): drawn in the shine pass
     bool cutout = false;  // glTF alphaMode MASK: alpha test at 0.5
     bool blend = false;   // glTF alphaMode BLEND
     std::array<float, 4> colour{1.0f, 1.0f, 1.0f, 1.0f};

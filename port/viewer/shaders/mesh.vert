@@ -38,6 +38,10 @@ uniform sampler2D palette_texture;
 uniform sampler2D light_texture;
 // The level's 16 directional sets: colour A (w = back factor), direction A, colour B, direction B.
 uniform vec4 light_sets[64];
+// The metal ("shine") pass (MobyProc's metal packets): texture coordinates from the view-space
+// normal, a sphere map of the level's chrome or glass picture, the vertex colour 0x70 and the
+// alpha the moby's distance gives (ReRAC moby_skinning_lighting.md 6 and 9).
+uniform int metal_pass;
 
 out vec2 v_uv;
 out vec4 v_colour;
@@ -129,4 +133,19 @@ void main() {
         v_lit = 1;
     }
     v_normal = mat3(model) * n;
+    if (metal_pass != 0) {
+        // st = (e.xy + 1) / 2, e the normal in camera space (x right, y down: t grows downward).
+        vec3 e = normalize(mat3(view) * normalize(mat3(model) * n));
+        v_uv = vec2(e.x * 0.5 + 0.5, 0.5 - e.y * 0.5);
+        // The shine alpha: full within 8 game units of the camera, none past 24 (MobyProc's gate with
+        // the default shine distance 0x18: min(((0x18 << 10) - depth) >> 7, 0x80), depth in raw units).
+        float centre = -(view * model[3]).z;
+        float shine = clamp((24.0 - centre) / 16.0, 0.0, 1.0);
+        v_colour = vec4(vec3(112.0 / 128.0), shine);
+        // MobyProc's pull toward the camera (GS Z + 1000 Q): a little nearer, so the shine is not
+        // lost to the moby's own surface under it (reversed depth: larger is nearer).
+        gl_Position.z += 1.0e-4 * gl_Position.w;
+        v_lit = 1;
+        v_glow = 0;
+    }
 }
