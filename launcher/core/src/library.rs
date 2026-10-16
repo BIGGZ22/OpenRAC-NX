@@ -271,6 +271,27 @@ mod tests {
         }
     }
 
+    /// NTSC-U's levels are read from its own disc into a folder of their own, checked by its own
+    /// program, never over PAL's: the two versions share the game's data folder.
+    #[test]
+    fn ntsc_levels_stay_apart_from_pals() {
+        let file = actions::load(&checkout()).unwrap();
+        let (pal, ntsc) = (Scope::Version("rac1/pal".into()), Scope::Version("rac1/ntsc".into()));
+        let made = |scope: &Scope| file.find(scope, "port-levels").and_then(|a| a.artifact.clone()).unwrap();
+        let (pal_made, ntsc_made) = (made(&pal), made(&ntsc));
+        let folder = |path: &str| path.rsplitn(3, '/').nth(2).unwrap().to_string();
+        assert_ne!(folder(&pal_made), folder(&ntsc_made));
+        assert!(!ntsc_made.starts_with(&format!("{}/", folder(&pal_made))), "{ntsc_made} is inside PAL's levels");
+        let check = file.find(&ntsc, "port-levels-check").expect("rac1/ntsc port-levels-check");
+        assert!(check.needs.iter().any(|n| n.path == ntsc_made));
+        assert!(check.makes.as_deref().is_some_and(|m| m.starts_with(&folder(&ntsc_made))), "{:?}", check.makes);
+        let at = check.args.iter().position(|a| a == "--levels").expect("the check names its levels");
+        assert_eq!(check.args[at + 1].trim_start_matches("{root}/"), folder(&ntsc_made));
+        assert!(check.artifact.as_deref().is_some_and(|a| a.contains("openrac-rac1-ntsc")));
+        let levels = file.find(&ntsc, "port-levels").unwrap();
+        assert!(levels.args.iter().any(|a| a == &folder(&ntsc_made)));
+    }
+
     /// The copy an installer carries (tools/bundle_standalone.py), when one was put together in
     /// build/standalone: its actions are valid, need no Python to play, and write nothing in it.
     #[test]

@@ -619,12 +619,79 @@
       {
         "id": "editor-extract",
         "label": "Extract the levels",
-        "description": "The level editor reads the PAL disc only, for now.",
+        "description": "Turns the 19 levels on your NTSC-U disc into Godot 4 projects, one per level, in assets/levels/rac1-ntsc. About 20 seconds and 800 MB. Stops if they already exist: it never overwrites your edits.",
         "kind": "edit",
         "area": "editor",
-        "state": "planned",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "editor/extract.py",
+          "godot",
+          "{disc}",
+          "assets/levels/rac1-ntsc",
+          "--split"
+        ],
+        "cwd": ".",
+        "requires": [
+          "disc",
+          "python"
+        ],
         "docs": "editor/README.md",
-        "todo": "The editor's readers know PAL v2.00 offsets only (editor/README.md); NTSC-U needs its own table."
+        "todo": "Run it from the desktop app. From a shell on macOS the same command wrote level 0's project from SCUS_971.99. Opening, previewing and packing are PAL's only for now (packing the NTSC-U gameplay copy is not done)."
+      },
+      {
+        "id": "port-levels",
+        "label": "Get the levels ready",
+        "description": "Reads the levels from your NTSC-U disc into the form the game draws: the worlds behind the menus and all 19 levels, in assets/port/rac1-ntsc, beside PAL's. About a minute and 1 GB, once.",
+        "kind": "build",
+        "area": "port",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "editor/extract.py",
+          "port",
+          "{disc}",
+          "assets/port/rac1-ntsc",
+          "--replace"
+        ],
+        "cwd": ".",
+        "requires": [
+          "disc",
+          "python"
+        ],
+        "artifact": "assets/port/rac1-ntsc/level_99/manifest.json",
+        "docs": "editor/README.md",
+        "todo": "Run it from the desktop app. The same command from a shell on macOS wrote all 21 levels from SCUS_971.99 (2026-10-16). --replace: run again, it puts a new export in the old one's place once the new one is whole."
+      },
+      {
+        "id": "port-levels-check",
+        "label": "Check the levels",
+        "description": "The game reads every level as it will when you play, without opening its window, and says which it cannot draw. A few seconds. Play waits for it: a level that is missing or cut short would be a black world.",
+        "kind": "build",
+        "area": "port",
+        "state": "unverified",
+        "program": "{artifact}",
+        "args": [
+          "--data",
+          "{data}",
+          "--levels",
+          "{root}/assets/port/rac1-ntsc",
+          "--check-levels"
+        ],
+        "cwd": ".",
+        "requires": [
+          "artifact"
+        ],
+        "artifact": "port/build/release/openrac-rac1-ntsc.exe",
+        "makes": "assets/port/rac1-ntsc/verified-3.json",
+        "needs": [
+          {
+            "path": "assets/port/rac1-ntsc/level_99/manifest.json",
+            "from": "the levels (Get the levels ready)"
+          }
+        ],
+        "docs": "port/game/rac1-ntsc/README.md",
+        "todo": "Run it from the desktop app. The game is built by tools/build_port.py rac1-ntsc (no launcher action yet). From a shell on macOS, openrac-rac1-ntsc --data <data> --levels <the export> --check-levels passed all 21 levels (2026-10-16)."
       },
       {
         "id": "play",
@@ -634,7 +701,7 @@
         "area": "port",
         "state": "planned",
         "docs": "port/game/README.md",
-        "todo": "openrac-rac1-ntsc builds (tools/build_port.py rac1-ntsc) and runs headless into its title loop with no function missing; in a window the title's logo and text are drawn but not the world behind them, and no level has been played. It also has no levels of its own to draw from: editor/extract.py reads the PAL disc only. port/game/rac1-ntsc/README.md lists what is carried from rac1/pal and what is left."
+        "todo": "openrac-rac1-ntsc builds (tools/build_port.py rac1-ntsc) and runs headless into its title loop with no function missing; in a window the title's logo and text are drawn but not the world behind them, and no level has been played. Its levels: port-levels writes them to assets/port/rac1-ntsc (beside PAL's assets/port/rac1) and port-levels-check stamps them (verified-3.json). To switch Play on: \"state\": \"unverified\", \"program\": \"{artifact}\", \"args\": [\"--data\", \"{data}\", \"--window\", \"--levels\", \"{root}/assets/port/rac1-ntsc\"], \"requires\": [\"artifact\"], \"artifact\": \"port/build/release/openrac-rac1-ntsc.exe\", \"needs\": [{\"path\": \"assets/port/rac1-ntsc/verified-3.json\", \"from\": \"a check of the levels (Check the levels)\"}], and docs port/game/rac1-ntsc/README.md. --levels is needed: without it the game reads <data>/port, which is PAL's. port/game/rac1-ntsc/README.md lists what is carried from rac1/pal and what is left."
       }
     ],
     "rac2/ntsc": [

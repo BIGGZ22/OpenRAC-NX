@@ -186,6 +186,14 @@ actions, as rac1/pal has on Windows:
   the levels: an action's `needs` lists files an earlier step makes, and it
   stays blocked, naming that step, until they exist.
 
+Each version's levels have a folder of their own, since the versions of a
+game share its data folder: rac1/ntsc's `port-levels` and
+`port-levels-check` write and stamp `assets/port/rac1-ntsc` (an installed
+launcher: `{data}/port-ntsc`, tools/bundle_standalone.py), and its programs
+are given `--levels` with that folder, because without it a game reads
+`<data>/port`, which is PAL's. Its `play` stays planned until the NTSC-U port
+plays; its `todo` holds the command line to switch on.
+
 The port needs each level's program to place the functions levels share; it
 reads it from the disc image the set-up kept (`iso_data/<game>/disc.iso`)
 when `decompiler_out` (from `openrac-extractor --decompile`) is not there, so
