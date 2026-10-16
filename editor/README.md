@@ -1,13 +1,13 @@
 # Level editor
 
-The editor turns the levels on your own disc of Ratchet & Clank (PAL, `SCES_509.16`
-v2.00) into a Godot 4 project. Godot is the map editor: open a level, move,
-add or delete objects, and save. Tools to pack edited scenes back into game
+The editor turns the levels on your own disc of Ratchet & Clank (PAL,
+`SCES_509.16` v2.00, or NTSC-U, `SCUS_971.99` v1.00) into a Godot 4 project.
+Godot is the map editor: open a level, move, add or delete objects, and save. Tools to pack edited scenes back into game
 data come later; the scenes already keep what they will need.
 
 It sits at the top of OpenRAC because it is meant to serve all four games.
-Today it reads Ratchet & Clank PAL only; the formats of the later games are
-close relatives (see [docs/engine](../docs/engine/README.md)).
+Today it reads Ratchet & Clank's PAL and NTSC-U discs; the formats of the
+later games are close relatives (see [docs/engine](../docs/engine/README.md)).
 
 Never commit or share what it produces (see [docs/policy/SOURCING.md](../docs/policy/SOURCING.md)).
 It only writes to new directories under OpenRAC's ignored `assets/` or `build/`.
@@ -19,13 +19,39 @@ You need:
 - Python 3.10 or newer (standard library only).
 - Godot 4, tested with 4.7.2. On macOS its command is
   `/Applications/Godot.app/Contents/MacOS/Godot`; below it is `godot`.
-- An ISO image of your own PAL disc, placed at `baserom/SCES_509.16.iso` at the top of
-  OpenRAC ([baserom/README.md](../baserom/README.md)). `baserom/` is ignored by git.
+- An ISO image of your own disc, placed at the top of OpenRAC as
+  `baserom/SCES_509.16.iso` (PAL) or `baserom/SCUS_971.99.iso` (NTSC-U)
+  ([baserom/README.md](../baserom/README.md)). `baserom/` is ignored by git.
+  The commands below name the PAL image; every one of them reads the NTSC-U
+  image the same way, except `pack` (below).
 
 The RAC1 PAL build only needs the executable from that image
 ([games/rac1/README.md](../games/rac1/README.md)).
 The extractor reads the whole image, and it stops unless the executable
-inside matches PAL v2.00.
+inside is PAL v2.00's or NTSC-U v1.00's (its name in `SYSTEM.CNF`, its size
+and SHA-1).
+
+## The two discs
+
+Both discs keep their levels the same way, so every reader serves both;
+what differs is one table per version in [disc.py](disc.py) (`VERSIONS`):
+
+| | PAL v2.00 | NTSC-U v1.00 |
+|---|---|---|
+| Executable | `SCES_509.16` | `SCUS_971.99` |
+| Table of contents | sector 1500, 0x2960 bytes, levels at 0x28c8 | the same |
+| Gameplay copy the game loads (each level header has both) | `gameplay_pal` | `gameplay_ntsc` |
+| (cos, sin) table the lighting reads | 0x165600 | 0x165500 (the same values) |
+
+The NTSC-U side follows ReRAC's disc layout (`docs/formats/disc_layout.md`)
+and the NTSC decomp's `load_level_gameplay`, which loads the NTSC copy
+unless the game runs in PAL mode. The two discs' levels are the same
+levels with small differences of their builds: on 2026-10-16 an export of
+each had the same tie, shrub and moby placements and terrain in every
+level, while NTSC-U's moby class 1138 (loaded in every level) has three
+animations fewer, most levels have one moby texture fewer, a few collision
+cells and surfaces differ, and level 17 loads four moby classes fewer
+(Drek's and Qwark's among them).
 
 ## Extract
 
@@ -133,6 +159,10 @@ assets/packed/rac1/
   changes.txt                 what changed, in words
 ```
 
+Packing reads the PAL disc only: the packed file takes the place of the
+PAL gameplay copy, and mod packs are PAL's ([overrides.py](overrides.py)).
+`pack` stops on the NTSC-U image.
+
 The disc image is never written. The native port reads the folder with
 `--mods assets/packed/rac1` and serves those sectors from the files
 ([port/game/common/lib/cdvd.c](../port/game/common/lib/cdvd.c)); the
@@ -206,7 +236,15 @@ python3 editor/extract.py port baserom/SCES_509.16.iso build/port-levels --level
 
 `port` writes each level for the native port's level viewer
 ([port/viewer](../port/viewer/README.md)): the same meshes and textures as
-the Godot export, the sky as a mesh, and the placements as JSON.
+the Godot export, the sky as a mesh, and the placements as JSON. Its
+manifests say which disc they came from (`"version": "pal"` or `"ntsc"`);
+the format is the same for both. The launcher keeps each version's export
+apart: `assets/port/rac1` for PAL, `assets/port/rac1-ntsc` for NTSC-U (in an
+installed launcher, `<data>/port` and `<data>/port-ntsc`).
+
+```sh
+python3 editor/extract.py port baserom/SCUS_971.99.iso assets/port/rac1-ntsc   # NTSC-U, every level
+```
 
 `raw` writes one level's sections as stored on the disc and decompressed,
 with a manifest of their sizes and hashes.
@@ -391,7 +429,7 @@ The GDScript files follow [`GDSCRIPT_CONVENTIONS.md`](GDSCRIPT_CONVENTIONS.md).
 | File | Contents |
 |---|---|
 | `extract.py` | Command line and safe output |
-| `disc.py` | ISO files, sector table of contents, level headers |
+| `disc.py` | ISO files, the two discs' versions, sector table of contents, level headers |
 | `level.py` | A level's sections, core blocks and textures |
 | `formats.py` | Bounded reads, WAD decompression, code overlays, textures |
 | `terrain.py`, `ties.py`, `shrubs.py`, `sky.py`, `collision.py` | Geometry and placements |
@@ -401,7 +439,7 @@ The GDScript files follow [`GDSCRIPT_CONVENTIONS.md`](GDSCRIPT_CONVENTIONS.md).
 | `assets.py`, `overrides.py` | Export for modding and re-import; overrides packs ([MODDING.md](MODDING.md)) |
 | `godot.py` | Project, scenes and level.json |
 
-The decoders accept only the layouts found on this disc and raise
+The decoders accept only the layouts found on these discs and raise
 `FormatError` on anything else. Nothing is skipped silently.
 
 ## Credits

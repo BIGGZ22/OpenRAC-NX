@@ -27,7 +27,7 @@ give (`OPENRAC_PRESS`, [port/README.md](../../README.md)).
 | Headless | the boot stage, the boot movie (skipped), the first sound bank, then the title loop for 3,000 frames with no function missing and no crash |
 | Window, title | the logo and PRESS START are drawn and the camera, the five mobys and the hero's pose are read (the same values PAL's has); **the world behind them is not drawn and the frame is not cleared**, so the 2D layer smears. Not found yet why |
 | Menus, new game, a level | not tried in a window. Before the title loop had C, the program fell through it into level 0's start: its program was copied in and relocated (737 functions, 1,284 global addresses) and it stopped in the level's set-up |
-| Levels to draw from | none of its own: `editor/extract.py` reads the PAL disc only. The window test above drew from PAL's extracted levels |
+| Levels to draw from | its own, from the NTSC-U disc (2026-10-16): `python3 editor/extract.py port baserom/SCUS_971.99.iso assets/port/rac1-ntsc` (the launcher's rac1/ntsc "Get the levels ready"; an installed launcher writes `<data>/port-ntsc`), then `--levels assets/port/rac1-ntsc`. Pass `--levels` always: without it the program reads `<data>/port`, PAL's. `--check-levels` passes all 21. Same format as PAL's; the manifests say `"version": "ntsc"` ([editor/README.md](../../../editor/README.md#the-two-discs) says how the two discs' levels differ) |
 
 It is not offered by the launcher yet (`play` is `planned` in
 [launcher/actions.json](../../../launcher/actions.json)).
