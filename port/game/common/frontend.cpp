@@ -1995,6 +1995,12 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         if (m.address + 0x36 <= ram.size() && (ram[m.address + 0x34] & 1) != 0) {
             continue;
         }
+        // A draw distance (+0x32) of 0: MobyProc's distance test never passes, so the game never draws
+        // it. Volumes and blockers the levels place as mobys (Veldin's grey box behind the start, the
+        // walls of Kalebo III's landing) are such: untextured, they showed as solid grey walls.
+        if (m.address + 0x34 <= ram.size() && (ram[m.address + 0x32] | ram[m.address + 0x33]) == 0) {
+            continue;
+        }
         if (only_own_camera
             && std::none_of(g->moby_cameras.begin(), g->moby_cameras.end(),
                             [&](const auto& c) { return c.first == m.address; })) {
