@@ -1,0 +1,48 @@
+// Names the NTSC decomp's C uses for a function in some files without the label it gives it in
+// others (`add_vector_xyz` in one file, `add_vector_xyz(...) __asm__("FUN_001f9a10")` in many).
+// The native port (port/game/rac1-ntsc/hostgen.json "symbols") needs each at its address. Each address is the one the labelled declarations agree on
+// (OpenRAC's addition, OPENRAC_PATCHES.md).
+add_vector_xyz = 0x001F9A10; // 221 of 221 labelled declarations
+advance_moby_animation = 0x0020D580; // 12 of 12 labelled declarations
+allocate_voice_for_target_entry = 0x0022DA68; // 150 of 150 labelled declarations
+append_rotated_sprite_quad = 0x001F5AB0; // 4 of 4 labelled declarations
+approach_value = 0x00213ED8; // 78 of 78 labelled declarations
+attach_manipulator = 0x0020CB10; // 39 of 39 labelled declarations
+blend_moby_animation = 0x00212F90; // 122 of 122 labelled declarations
+build_look_at_matrix = 0x00214890; // 25 of 25 labelled declarations
+build_moby_bone_transform = 0x0020CCA8; // 27 of 27 labelled declarations
+cam_interp_values = 0x001EBD78; // 9 of 9 labelled declarations
+clear_vector = 0x001F99F8; // 28 of 28 labelled declarations
+compute_interpolated_record_value = 0x0020C9E0; // 42 of 42 labelled declarations
+copy_matrix3x4 = 0x001FA2B8; // 19 of 19 labelled declarations
+create_moby = 0x0020C4F8; // 55 of 55 labelled declarations
+cross_vectors_xyz = 0x001F9AD8; // 38 of 38 labelled declarations
+detach_manipulator = 0x0020CB88; // 12 of 12 labelled declarations
+dot_vectors_xyz = 0x001F9AB0; // 31 of 31 labelled declarations
+draw_geometry_quad = 0x001F7D30; // 28 of 28 labelled declarations
+emit_gs_register_write = 0x00233980; // 1 of 1 labelled declarations
+fast_add_rotations = 0x001FA580; // 224 of 224 labelled declarations
+fast_cos = 0x001F9DC8; // 162 of 163 labelled declarations
+fast_draw_quad_real = 0x001F7D30; // 9 of 9 labelled declarations
+fast_sin = 0x001F9DE0; // 184 of 184 labelled declarations
+fast_subtract_rotations = 0x001FA5C8; // 115 of 115 labelled declarations
+fast_tween_color = 0x001FA6E0; // 70 of 70 labelled declarations
+fast_vec_dist = 0x001F9B48; // 67 of 67 labelled declarations
+fun_00213928 = 0x00213928; // 16 of 16 labelled declarations
+normalize_vector_xyz = 0x001F9BF8; // 115 of 115 labelled declarations
+probe_ground_height = 0x00213508; // 63 of 63 labelled declarations
+random_float_between = 0x002132A8; // 161 of 161 labelled declarations
+random_integer_below = 0x00213260; // 142 of 142 labelled declarations
+refresh_moby_spatial_bounds_from_basis = 0x0020E098; // 14 of 14 labelled declarations
+scale_game_frames = 0x001F96F8; // 291 of 292 labelled declarations
+scale_vector_xyz = 0x001F9A68; // 95 of 97 labelled declarations
+subtract_vector_xyz = 0x001F9A28; // 189 of 189 labelled declarations
+tick_countdown_32 = 0x001F9740; // 17 of 17 labelled declarations
+transform_vector_by_basis = 0x001F9CF8; // 90 of 91 labelled declarations
+truncate_float_to_s32 = 0x001FA6D0; // 250 of 250 labelled declarations
+try_set_help_message = 0x00215130; // 13 of 13 labelled declarations
+vector_length_xy = 0x001F9B20; // 88 of 88 labelled declarations
+vector_length_xyz = 0x001F9AF0; // 67 of 67 labelled declarations
+vu1_add_g_sregister = 0x00233980; // 94 of 94 labelled declarations
+vu_euler_rotation_basis = 0x001FA030; // 13 of 13 labelled declarations
+wrap_angle = 0x001FA610; // 1 of 1 labelled declarations
