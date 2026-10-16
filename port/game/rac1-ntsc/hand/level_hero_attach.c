@@ -38,12 +38,14 @@ typedef struct HeroAttachMoby {
     float basis[3][4];
 } HeroAttachMoby;
 
+/* 0x50 bytes a slot, at state +0x1070: retail reads primary +0x20, secondary +0x24, auxiliary
+ * +0x2C, detached +0x3A (a thrown wrench) and item +0x48 (PAL's port, 119a8881). */
 typedef struct HeroAttachSlot {
     float point[4], angles[4];
     HeroAttachMoby *primary, *secondary;
-    unsigned char pad28[2], detached, pad2B;
+    unsigned char pad28[4];
     HeroAttachMoby* auxiliary;
-    unsigned char pad30[0x18];
+    unsigned char pad30[0xA], detached, pad3B[0xD];
     int item, pad4C;
 } HeroAttachSlot;
 
