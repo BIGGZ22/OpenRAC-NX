@@ -79,6 +79,7 @@ void (*openrac_game_on_frame)(unsigned frame) = nullptr;
 int (*openrac_game_bolts)(void) = nullptr;
 int (*openrac_game_in_cutscene)(void) = nullptr;
 void (*openrac_game_skip)(void) = nullptr;
+const openrac_front_end* openrac_game_front_end = nullptr;
 }
 
 namespace {

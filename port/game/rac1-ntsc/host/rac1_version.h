@@ -33,11 +33,17 @@
 /* sceVu0Normalize, an entry inside the VU0 library object, which the map does not cut out. */
 #define func_001252C0 game_FUN_00125180
 
+/* The items the US game's Options list is given (Language, Sound: its enter puts them there each
+ * time); PAL's list, 0x1D4810 here (Language, Video, Sound), is still in the data, unused. */
+#define RAC1_ADDR_0x001D4B90u 0x001D4840u
+
 /* Where this version's decompilation declares a function otherwise: the type in its prototypes. */
 /* ParseBin's result, the loaded level's entry. */
 #define RAC1_TYPE_func_0012DA38_result long long
 /* DrawTexturedQuad's colour and TEX0. */
 #define RAC1_TYPE_func_001F5800_u64 long long
+/* The text lookup's result, a string's address. */
+#define RAC1_TYPE_func_001FE540_result int
 /* ---- generated below ---- */
 
 /* Functions: games/rac1's name, this version's. */
@@ -72,6 +78,10 @@
 #define func_001FA748 game_FUN_001fa580
 #define func_001FA790 game_FUN_001fa5c8
 #define func_001FA898 game_FUN_001fa6d0
+#define func_001FE540 game_FUN_001fdd10
+#define func_001FE540__game game_FUN_001fdd10__game
+#define func_001FFFB8 game_FUN_001ff780
+#define func_001FFFB8__game game_FUN_001ff780__game
 #define func_00200248 game_FUN_001ffa10
 #define func_00200468 game_FUN_001ffc30
 #define func_00200468__game game_FUN_001ffc30__game
@@ -122,6 +132,7 @@
 #define func_0022D3F8 game_FUN_0022c0e0
 #define func_0022D520 game_FUN_0022c208
 #define func_0022D7E0 game_FUN_0022c4c8
+#define func_0022ED80 game_FUN_0022da68
 #define func_0022F4A0 game_InitializeGlobalStateEntry
 #define func_00230A90 game_FUN_0022f778
 #define func_00230A90__game game_FUN_0022f778__game
@@ -178,6 +189,7 @@
 #define RAC1_ADDR(a) RAC1_ADDR_##a
 #define RAC1_LADDR(n, a) RAC1_ADDR_L##n##_##a
 #define RAC1_ADDR_0x0010E4C0u 0x0010E4C0u
+#define RAC1_ADDR_0x0013CA40u 0x0013C940u
 #define RAC1_ADDR_0x0013D010u 0x0013CF10u
 #define RAC1_ADDR_0x0013D5C8u 0x0013D4C0u
 #define RAC1_ADDR_0x0013E15Au 0x0013E05Au
@@ -201,9 +213,12 @@
 #define RAC1_ADDR_0x0015F558u 0x0015F458u
 #define RAC1_ADDR_0x0015F56Cu 0x0015F46Cu
 #define RAC1_ADDR_0x0015F570u 0x0015F470u
+#define RAC1_ADDR_0x0015F690u 0x0015F590u
+#define RAC1_ADDR_0x0015F6E8u 0x0015F604u
 #define RAC1_ADDR_0x0015F6FCu 0x0015F618u
 #define RAC1_ADDR_0x00160018u 0x0015FF18u
 #define RAC1_ADDR_0x00160020u 0x0015FF20u
+#define RAC1_ADDR_0x0016044Cu 0x0016034Cu
 #define RAC1_ADDR_0x001604CCu 0x001603CCu
 #define RAC1_ADDR_0x001604F0u 0x001603F0u
 #define RAC1_ADDR_0x001604F8u 0x001603F8u
@@ -222,11 +237,24 @@
 #define RAC1_ADDR_0x0018E140u 0x0018E040u
 #define RAC1_ADDR_0x0018E240u 0x0018E140u
 #define RAC1_ADDR_0x0018E340u 0x0018E240u
+#define RAC1_ADDR_0x00193400u 0x00193300u
 #define RAC1_ADDR_0x00194200u 0x00194100u
 #define RAC1_ADDR_0x001984C0u 0x001983C0u
+#define RAC1_ADDR_0x00199C60u 0x00199B60u
 #define RAC1_ADDR_0x0019A4E8u 0x0019A3E8u
+#define RAC1_ADDR_0x0019BEC0u 0x0019BDC0u
 #define RAC1_ADDR_0x001AAF40u 0x001AABC0u
 #define RAC1_ADDR_0x001B7A60u 0x001B76E0u
+#define RAC1_ADDR_0x001CE720u 0x001CE3A0u
+#define RAC1_ADDR_0x001D4B9Cu 0x001D481Cu
+#define RAC1_ADDR_0x001D4BE8u 0x001D4868u
+#define RAC1_ADDR_0x001D4CC0u 0x001D4940u
+#define RAC1_ADDR_0x001D4D48u 0x001D49C8u
+#define RAC1_ADDR_0x001D4DE8u 0x001D4A68u
+#define RAC1_ADDR_0x001D4E38u 0x001D4AB8u
+#define RAC1_ADDR_0x001D4F18u 0x001D4B98u
+#define RAC1_ADDR_0x001D4F40u 0x001D4BC0u
+#define RAC1_ADDR_0x001D5F70u 0x001D5BF0u
 #define RAC1_ADDR_0x001D82C0u 0x001D7F30u
 #define RAC1_ADDR_0x001D83C0u 0x001D8030u
 #define RAC1_ADDR_0x001D8440u 0x001D80B0u

@@ -13,6 +13,7 @@
 #include "common/log.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
+#include "options_menu.h"
 #include "renderer/gl.h"
 
 namespace openrac::frontend::debug_menu {
@@ -21,26 +22,18 @@ namespace {
 
 using namespace openrac::gl;
 
-// The games the menu knows how to start a level in, and their levels.
-struct Game {
-    const char* id;
-    std::array<const char*, 19> levels;
-};
+constexpr int kMaxLevels = 19;  // the most the menu's picture holds
 
-constexpr Game kGames[] = {
-    {"rac1-pal",
-     {"Veldin", "Novalis", "Aridia", "Kerwan", "Eudora", "Rilgar", "Blarg Station", "Umbris",
-      "Batalia", "Gaspar", "Orxon", "Pokitaru", "Hoven", "Gemlik Base", "Oltanis", "Quartu",
-      "Kalebo III", "Drek's Fleet", "Veldin (final)"}},
-};
+// The game's front end as its program describes it (game_host.h, openrac_front_end): its levels
+// and how to start one, and its page menu. Null for a game without one.
+const openrac_front_end* front_end() {
+    const openrac_front_end* fe = openrac_game_front_end;
+    return fe != nullptr && fe->levels > 0 && fe->start_level != nullptr ? fe : nullptr;
+}
 
-const Game* game_of(const char* id) {
-    for (const Game& g : kGames) {
-        if (id != nullptr && std::strcmp(id, g.id) == 0) {
-            return &g;
-        }
-    }
-    return nullptr;
+int level_count() {
+    const openrac_front_end* fe = front_end();
+    return fe != nullptr ? std::min(fe->levels, kMaxLevels) : 1;
 }
 
 // The launcher's developer mode (OPENRAC_DEVELOPER=1): without it the menus are the game's own.
@@ -53,8 +46,8 @@ bool developer() {
 }
 
 // Open only over the boot program (title and main menu), where a new game can be started.
-bool available(const char* game_id, int loaded_overlay) {
-    return developer() && game_of(game_id) != nullptr && loaded_overlay == OPENRAC_OVERLAY_EXE;
+bool available(int loaded_overlay) {
+    return developer() && front_end() != nullptr && loaded_overlay == OPENRAC_OVERLAY_EXE;
 }
 
 struct State {
@@ -69,27 +62,13 @@ struct State {
 };
 State s;
 
-// Rac1 PAL: what --level N with OPENRAC_DIRECT does (game/rac1-pal/host/boot.c, direct_start):
-// NewGameInit (whose wrapper puts openrac_game_start_level in the level word), the menus closed,
-// and the flag that starts the loaded new game. Called through the functions' code addresses, as
-// the game's own calls through addresses go.
-void start_rac1_pal(int level) {
-    const auto new_game = reinterpret_cast<void (*)(void)>(openrac_guest_function(0x00209DC0u));
-    const auto close_menus = reinterpret_cast<void (*)(int)>(openrac_guest_function(0x0022F4A0u));
-    if (new_game == nullptr || close_menus == nullptr) {
-        log::warn("debug menu: the game's new-game functions are not known");
-        return;
-    }
-    const int kept = openrac_game_start_level;
-    openrac_game_start_level = level;
-    new_game();
-    openrac_game_start_level = kept;  // later new games start where they would have
-    close_menus(0);
-    GREF(short, 0x0013E15Au) = 1;
+// What --level N with OPENRAC_DIRECT does (rac1: port/game/rac1/host/boot.c, rac1_start_level).
+void start_level(int level) {
+    front_end()->start_level(level);
     log::info("debug menu: starting level {}", level);
 }
 
-// ---- Rac1 PAL: a "Planets" entry in the front end's Options list, opening a page of levels ----
+// ---- Rac1: a "Planets" entry in the front end's Options list, opening a page of levels ----
 //
 // The front end's pages are data in the boot program (docs of ReRAC's menus.md section 3: a page is
 // seq[14], parent, kind, focus, widget[14]; a list widget has its flags at +0x30, items at +0x34
@@ -100,24 +79,16 @@ void start_rac1_pal(int level) {
 // widgets with other data: the title "Planets" (text 20216) and one item per level, labelled with
 // the game's planet names, drawn by the game's scroll list (func_0021E4B0) in the game's font. An
 // item's action is one the list ignores (0x7F); Cross on it is taken here, with the game's confirm
-// sound, and starts the level as start_rac1_pal does.
-namespace pal {
+// sound, and starts the level as start_level does. The addresses are the disc's own
+// (openrac_front_end, from the game's program).
+namespace page {
 
-constexpr gaddr kMenu = 0x001D5F70u;            // the page menu: +4 the current page
-constexpr gaddr kOptionsList = 0x001D4BE8u;     // the front end's Options list widget
-constexpr gaddr kPalOptionsItems = 0x001D4B90u;  // its PAL items: Language, Video, Sound
-constexpr gaddr kLanguagePage = 0x001D4CC0u;
-constexpr gaddr kLanguageTitle = 0x001D4D48u;
-constexpr gaddr kLanguageList = 0x001D4DE8u;
-constexpr std::int16_t kPlanetsText = 20216;    // "Planets"
 constexpr std::int16_t kIgnoredAction = 0x7F;
-// The planet names in the game's text, by level (the final Veldin is Veldin again).
-constexpr std::int16_t kPlanetText[19] = {20190, 20173, 20174, 20175, 20176, 20177, 20159,
-                                          20179, 20180, 20181, 20182, 20183, 20184, 20166,
-                                          20186, 20187, 20188, 20170, 20190};
+constexpr int kMaxItems = 8;  // the game's own Options items, at most (PAL: Language, Video, Sound)
 
 struct Native {
-    gaddr options_items = 0;  // Language, Video, Sound, Planets
+    gaddr base = 0;           // the items the Options list had (the game's, or options_menu's)
+    gaddr options_items = 0;  // those, then Planets
     gaddr page = 0, title = 0, list = 0, items = 0;
 };
 Native n;
@@ -134,21 +105,19 @@ void build() {
     if (n.page != 0) {
         return;
     }
-    n.options_items = openrac_guest_static(12 * 5);
-    std::memcpy(G(n.options_items), G(kPalOptionsItems), 12 * 3);
+    const openrac_front_end& fe = *front_end();
     n.page = openrac_guest_static(0xA0);
     n.title = openrac_guest_static(0x60);
     n.list = openrac_guest_static(0x60);
-    n.items = openrac_guest_static(12 * 20);
-    put_item(n.options_items + 12 * 3, kPlanetsText, 3, static_cast<std::int32_t>(n.page));
-    for (int i = 0; i < 19; ++i) {
-        put_item(n.items + 12 * static_cast<gaddr>(i), kPlanetText[i], kIgnoredAction, i);
+    n.items = openrac_guest_static(12 * static_cast<gaddr>(kMaxLevels + 1));
+    for (int i = 0; i < level_count(); ++i) {
+        put_item(n.items + 12 * static_cast<gaddr>(i), fe.planet_texts[i], kIgnoredAction, i);
     }
     // The page, title and list: the Language page's, with this data.
-    std::memcpy(G(n.page), G(kLanguagePage), 0xA0);
-    std::memcpy(G(n.title), G(kLanguageTitle), 0x60);
-    std::memcpy(G(n.list), G(kLanguageList), 0x60);
-    GREF(std::int32_t, n.title + 0x34) = kPlanetsText;
+    std::memcpy(G(n.page), G(fe.language_page), 0xA0);
+    std::memcpy(G(n.title), G(fe.language_title), 0x60);
+    std::memcpy(G(n.list), G(fe.language_list), 0x60);
+    GREF(std::int32_t, n.title + 0x34) = fe.planets_text;
     // A scrolled list (0x8000: by whole rows), its items centred (0x400), wrapping (0x1000), rows
     // as high as the font (0x10); no language marker.
     GREF(std::uint32_t, n.list + 0x30) = 0x10u | 0x400u | 0x1000u | 0x8000u;
@@ -163,34 +132,52 @@ void build() {
     GREF(std::uint32_t, n.page + 0x80) = 0;
 }
 
+// The Options list's items `base` (up to the one without a label), then Planets.
+void list_planets(gaddr base) {
+    if (n.base == base) {
+        return;
+    }
+    int count = 0;
+    while (count < kMaxItems && GREF(std::int16_t, base + 12 * static_cast<gaddr>(count)) != 0) {
+        ++count;
+    }
+    const gaddr own = 12 * static_cast<gaddr>(count);
+    n.base = base;
+    n.options_items = openrac_guest_static(own + 12 * 2);
+    std::memcpy(G(n.options_items), G(base), own);
+    put_item(n.options_items + own, front_end()->planets_text, 3, static_cast<std::int32_t>(n.page));
+}
+
 // Once a frame over the front end: the Options list shows the entry.
 void patch() {
     build();
-    if (GREF(std::uint32_t, kOptionsList + 0x34) == kPalOptionsItems) {
-        GREF(std::uint32_t, kOptionsList + 0x34) = n.options_items;
+    const openrac_front_end& fe = *front_end();
+    const gaddr shown = GREF(std::uint32_t, fe.options_list + 0x34);
+    if (shown == fe.options_items || (shown != 0 && shown == options_menu::options_items())) {
+        list_planets(shown);
+        GREF(std::uint32_t, fe.options_list + 0x34) = n.options_items;
     }
 }
 
 bool on_page() {
-    return n.page != 0 && GREF(std::uint32_t, kMenu + 4) == n.page;
+    return n.page != 0 && front_end() != nullptr && GREF(std::uint32_t, front_end()->page_menu + 4) == n.page;
 }
 
 int cursor() {
     const int c = GREF(std::int32_t, n.list + 0x40);
-    return c >= 0 && c < 19 ? c : 0;
+    return c >= 0 && c < level_count() ? c : 0;
 }
 
 void confirm_sound() {
-    const auto play = reinterpret_cast<void (*)(int, int, gaddr)>(openrac_guest_function(0x0022ED80u));
-    if (play != nullptr) {
-        play(0, 0x11, GREF(std::uint32_t, n.list + 0x14));
+    if (front_end()->menu_sound != nullptr) {
+        front_end()->menu_sound(0x11, GREF(std::uint32_t, n.list + 0x14));
     }
 }
 
-}  // namespace pal
+}  // namespace page
 
 void move(int by) {
-    s.cursor = (s.cursor + by + 19) % 19;
+    s.cursor = (s.cursor + by + level_count()) % level_count();
 }
 
 // ---- Drawing: a picture made on the CPU in the chip's pixels, blitted over the frame ----
@@ -281,15 +268,15 @@ constexpr std::uint32_t kHint = rgba(120, 120, 140);
 
 constexpr int kRow = 10;
 constexpr int kPanelWidth = 232;
-constexpr int kPanelHeight = 30 + 19 * kRow + 18;
+constexpr int kPanelHeight = 30 + kMaxLevels * kRow + 18;
 
-Picture make_picture(const Game& game) {
+Picture make_picture(const openrac_front_end& fe) {
     Picture p{kPanelWidth, kPanelHeight, std::vector<std::uint8_t>(static_cast<std::size_t>(kPanelWidth) * kPanelHeight * 4)};
     p.fill(0, 0, p.width, p.height, kFrame);
     p.fill(2, 2, p.width - 2, p.height - 2, kNavy);
     p.text(10, 9, "OPENRAC DEBUG: START A LEVEL", kTitle);
     p.fill(8, 20, p.width - 8, 21, kFrame);
-    for (int i = 0; i < 19; ++i) {
+    for (int i = 0; i < level_count(); ++i) {
         const int y = 27 + i * kRow;
         const bool sel = i == s.cursor;
         if (sel) {
@@ -297,7 +284,7 @@ Picture make_picture(const Game& game) {
             p.text(10, y, ">", kSelected);
         }
         const std::string number = (i < 10 ? " " : "") + std::to_string(i);
-        p.text(20, y, number + "  " + game.levels[static_cast<std::size_t>(i)], sel ? kSelected : kText);
+        p.text(20, y, number + "  " + fe.level_names[i], sel ? kSelected : kText);
     }
     p.text(10, p.height - 12, "X/RETURN START   TRIANGLE/F1 CLOSE", kHint);
     return p;
@@ -309,13 +296,13 @@ bool is_open() {
     return s.open;
 }
 
-bool event(const SDL_Event& e, const char* game_id, int loaded_overlay) {
+bool event(const SDL_Event& e, int loaded_overlay) {
     if (e.type != SDL_EVENT_KEY_DOWN || e.key.repeat) {
         return false;
     }
     const SDL_Keycode key = e.key.key;
     if (!s.open) {
-        if (key == SDLK_F1 && available(game_id, loaded_overlay)) {
+        if (key == SDLK_F1 && available(loaded_overlay)) {
             s.open = true;
             return true;
         }
@@ -350,26 +337,26 @@ bool event(const SDL_Event& e, const char* game_id, int loaded_overlay) {
     }
 }
 
-void filter_pad(std::uint16_t& buttons, const char* game_id, int loaded_overlay) {
+void filter_pad(std::uint16_t& buttons, int loaded_overlay) {
     const std::uint16_t pressed = static_cast<std::uint16_t>(~buttons & s.previous);  // newly down
     s.previous = buttons;
     constexpr std::uint16_t kSelect = 0x0001, kUp = 0x0010, kDown = 0x0040, kCross = 0x4000,
                             kTriangle = 0x1000;
-    if (!s.open && available(game_id, loaded_overlay) && pal::on_page() && (pressed & kCross) != 0) {
+    if (!s.open && available(loaded_overlay) && page::on_page() && (pressed & kCross) != 0) {
         // Cross on a level of the Planets page: the game's list ignores the item's action.
-        s.start = pal::cursor();
+        s.start = page::cursor();
         s.native = true;
         buttons = static_cast<std::uint16_t>(buttons | kCross);
         return;
     }
     if (!s.open) {
-        if ((pressed & kSelect) != 0 && available(game_id, loaded_overlay)) {
+        if ((pressed & kSelect) != 0 && available(loaded_overlay)) {
             s.open = true;
             buttons = 0xFFFF;
         }
         return;
     }
-    if (!available(game_id, loaded_overlay)) {
+    if (!available(loaded_overlay)) {
         s.open = false;
         return;
     }
@@ -389,23 +376,23 @@ void filter_pad(std::uint16_t& buttons, const char* game_id, int loaded_overlay)
     buttons = 0xFFFF;
 }
 
-void update(const char* game_id, int loaded_overlay, std::uint64_t frame) {
+void update(int loaded_overlay, std::uint64_t frame) {
     static const long long open_at = [] {
         const char* v = std::getenv("OPENRAC_DEBUG_MENU");
         return v != nullptr ? std::atoll(v) : -1ll;
     }();
     static bool opened_by_script = false;
     if (!opened_by_script && open_at >= 0 && frame >= static_cast<std::uint64_t>(open_at)
-        && available(game_id, loaded_overlay)) {
+        && available(loaded_overlay)) {
         opened_by_script = true;
         s.open = true;
     }
-    if (s.open && !available(game_id, loaded_overlay)) {
+    if (s.open && !available(loaded_overlay)) {
         s.open = false;
     }
-    const bool pal_front_end = available(game_id, loaded_overlay) && std::strcmp(game_id, "rac1-pal") == 0;
-    if (pal_front_end) {
-        pal::patch();
+    const bool over_front_end = available(loaded_overlay);
+    if (over_front_end) {
+        page::patch();
     }
     if (s.start < 0) {
         return;
@@ -414,11 +401,11 @@ void update(const char* game_id, int loaded_overlay, std::uint64_t frame) {
     const bool native = s.native;
     s.start = -1;
     s.native = false;
-    if (pal_front_end) {
+    if (over_front_end) {
         if (native) {
-            pal::confirm_sound();
+            page::confirm_sound();
         }
-        start_rac1_pal(level);
+        start_level(level);
     }
 }
 
@@ -426,9 +413,8 @@ void draw(unsigned framebuffer, int width, int height) {
     if (!s.open || width <= 0 || height <= 0) {
         return;
     }
-    // The menu is only open in a game it knows (available()).
-    const Game& game = kGames[0];
-    const Picture p = make_picture(game);
+    // The menu is only open in a game with a front end (available()).
+    const Picture p = make_picture(*front_end());
     if (s.texture == 0) {
         glGenTextures(1, &s.texture);
         glGenFramebuffers(1, &s.framebuffer);

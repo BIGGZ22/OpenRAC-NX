@@ -16,5 +16,7 @@
 #define RAC1_TYPE_func_0012DA38_result gaddr
 /* DrawTexturedQuad's colour and TEX0. */
 #define RAC1_TYPE_func_001F5800_u64 unsigned long long
+/* The text lookup's result, a string's address. */
+#define RAC1_TYPE_func_001FE540_result gaddr
 
 #endif /* OPENRAC_RAC1_VERSION_H */

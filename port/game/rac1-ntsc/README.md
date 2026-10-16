@@ -46,15 +46,15 @@ the two versions have the same instructions for it (only addresses differ),
 | [libraries.tsv](libraries.tsv) | rac1-pal's | 273 rows (carried again on 2026-10-16: the flight's update and the sky shells wrapped, the scene start written for this version, the checkpoint variants); each note keeps PAL's symbol. `strcmp` and `strncmp` have no counterpart (NTSC-U's libc is laid out otherwise) |
 | [hostgen.json](hostgen.json) | rac1-pal's lists | `relocate` from 0x15EF00 (every section from `core.lit` on is 0x100 under PAL's), the eleven level hooks, `returns_64`, `host_functions` |
 | [split_places.tsv](split_places.tsv) | rac1-pal's | 30 rows: only where the NTSC decomp's catalogue folds the same places into one name; where it names a place apart, the NTSC decomp's own function stands |
-| [host/boot.c](host/boot.c) | by hand | the overlay hook, the relocation, the draw flags, the direct start |
-| [host/hand.c](host/hand.c), [host/vector.c](host/vector.c) | rac1-pal's, read through | the hardware routines; the levels' copy of WadDecompress is bound apart (this catalogue lists it apart) |
-| the other `host/*.c` | rac1-pal's, as carried | the native 2D and world hand-off, collision, variants. Each compiles against this version's prototypes; none is checked in play |
+| [host/rac1_version.h](host/rac1_version.h) | the version map, checked by [hostnames.py](../../tools/versionmap/README.md#the-shared-host-cs-tables) | this version's names and addresses for the host C both discs share ([port/game/rac1](../rac1/README.md)): the overlay hook, the direct start, the hardware routines, the native 2D and world hand-off, collision, the HUD at a wide picture's edges, the Video options rows, the developer menu's Planets page. Each entry agrees with the map but those written above its mark with their reason |
+| [host/scene_start.c](host/scene_start.c), [host/catalogue.c](host/catalogue.c) | by hand | what only this version needs: the in-game scene's start (hand C in PAL; here the NTSC decomp has no stub to replace) and the levels' copy of WadDecompress, which this catalogue lists apart |
 | [hand/*.c](hand) | rac1-pal's `hand/` | 76 functions the NTSC decomp has as assembly (one, the integer as a float, written here) |
 | [hand/functional/](hand/functional) | the PAL decompilation's functional C and its matched C (rac1-pal's `hand/` where it has its own) | 277 files for functions the NTSC decomp has only as assembly, refreshed on 2026-10-16 from what PAL has then (111 of them PAL's matched C now); 9 of them `near` (their header says so). Some entries (about 100 of the first carry) no longer replace anything: the NTSC decomp has its own C for them since |
 | [drafts.tsv](drafts.tsv) | the NTSC decomp itself | 58 files whose own pending C (the `#else` of their `NON_MATCHING` guard) is read in place of the stub: where rac1-pal has nothing for the function, and for the six `near` functions that have a draft (the title loop is one). That decompilation never compiles these |
 
-`options.c` (PAL's rows on the Video options page) is not carried: the page
-it adds to is PAL's.
+The title's Options list gets the Video page back (the US game's list is
+Language and Sound; the page is still in its data), with the port's rows on
+it, as on the PAL disc.
 
 ## Left out of the build
 

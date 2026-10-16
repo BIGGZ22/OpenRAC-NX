@@ -2,7 +2,7 @@
 /* Copyright (c) 2026 the OpenRAC contributors */
 
 /*
- * Ratchet & Clank (PAL): the level HUD in a picture wider than the game's.
+ * Ratchet & Clank: the level HUD in a picture wider than the game's.
  *
  * The HUD is 13 slots of 0x90 bytes (D_00199C60), each an element with a place on the game's
  * 512-pixel screen (+0x50 x, +0x54 y), anchor flags (+0x60: bit 0 top, bit 1 bottom, bit 2 left,
@@ -22,14 +22,13 @@
  * `anchor`, and crates/rc-engine/src/display.rs, `side_extra`; ISC License, Copyright (c) 2026 ReRAC
  * contributors); no code of it is used.
  */
-#include "game_protos.h"
-#include "openrac/game_host.h"
+#include "rac1.h"
 
 enum { SLOTS = 13, SLOT_BYTES = 0x90, SLOT_X = 0x50, SLOT_FLAGS = 0x60, ANCHOR_LEFT = 4, ANCHOR_RIGHT = 8 };
 
 void func_001FFFB8(void) {
     const int side = openrac_game_hud_side();
-    const gaddr slots = OPENRAC_DATA(0x00199C60u);
+    const gaddr slots = OPENRAC_DATA(RAC1_ADDR(0x00199C60u));
     int moved[SLOTS];
     for (int i = 0; i < SLOTS; i++) {
         const gaddr slot = slots + (gaddr)i * SLOT_BYTES;

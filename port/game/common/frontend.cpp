@@ -568,15 +568,14 @@ constexpr int kTitleWorld = 99;
 constexpr int kFlightWorld = 98;
 // Where the sky's textures are placed in the texture pool, past the GS's 14-bit blocks.
 constexpr std::uint32_t kSkyTextureKey = 0x20000;
-// The game mode word (PAL 0x15F6E8, NTSC-U 0x15F604); 6 in the boot program is the flight between
-// planets.
+// The game mode word, as the game's front end names it (rac1: port/game/rac1/host/front_end.c); 6
+// in the boot program is the flight between planets. 0 for a game without one.
 std::uint32_t game_mode_address() {
-    return g->game == "rac1-ntsc" ? 0x0015F604 : 0x0015F6E8;
+    return openrac_game_front_end != nullptr ? openrac_game_front_end->game_mode : 0;
 }
-// The directional light bank, in the executable's terms (relocated to the loaded program's copy):
-// PAL 0x19BEC0, NTSC-U 0x19BDC0.
+// The directional light bank, in the executable's terms (relocated to the loaded program's copy).
 gaddr light_bank_address() {
-    return g->game == "rac1-ntsc" ? 0x0019BDC0 : 0x0019BEC0;
+    return openrac_game_front_end != nullptr ? openrac_game_front_end->light_bank : 0;
 }
 
 // Uploads a level's geometry; while the boot program runs (the title and the main menu), the title
@@ -1890,17 +1889,18 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
             return false;
         }
         if (window_key(event) || debug_overlay::event(event)
-            || debug_menu::event(event, g->game.c_str(), openrac_game_loaded_overlay())) {
+            || debug_menu::event(event, openrac_game_loaded_overlay())) {
             continue;  // the window's own keys; the debug overlay's; the port's debug menu (debug_menu.h)
         }
         g->input.handle_event(event);
     }
     g->input.update();
-    debug_menu::update(g->game.c_str(), openrac_game_loaded_overlay(), g->index);
     // The port's rows on the game's Video options page (options_menu.h): a changed one is applied.
-    if (options_menu::update(g->game.c_str(), openrac_game_loaded_overlay())) {
+    // Before the debug menu, which adds its entry to the Options list options_menu gives the game.
+    if (options_menu::update(openrac_game_loaded_overlay())) {
         apply_settings();
     }
+    debug_menu::update(openrac_game_loaded_overlay(), g->index);
 
     // The level program loaded now (-1: the boot program, title and menus), as the port knows it.
     const int level = openrac_game_loaded_overlay();
@@ -1959,15 +1959,17 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
             state.camera_position[2], state.forward[0], state.forward[1], state.forward[2],
             state.tan_half_fov_y, state.mobys.size(), draws
         );
-        log::info("  mode {} dialog kind {} step {} level word {} title exit {} pad {:#x}",
-                  static_cast<int>(word_at(ram, 0x0015F6E8)), static_cast<int>(word_at(ram, 0x00193400)),
-                  static_cast<int>(word_at(ram, 0x00193400 + 0x1C)), static_cast<int>(word_at(ram, 0x0015EE84)),
-                  static_cast<int>(word_at(ram, 0x0015F690)), word_at(ram, 0x0013CBE4));
-        if (g->game == "rac1-pal") {
+        if (const openrac_front_end* fe = openrac_game_front_end) {
+            // The first pad's block: +0x100 the sticks, +0x194 its socket, +0x198 its state,
+            // +0x1A0 the buttons held, +0x1A4 the raw word.
+            log::info("  mode {} dialog kind {} step {} level word {} title exit {} pad {:#x}",
+                      static_cast<int>(word_at(ram, fe->game_mode)), static_cast<int>(word_at(ram, fe->dialog)),
+                      static_cast<int>(word_at(ram, fe->dialog + 0x1C)), static_cast<int>(word_at(ram, fe->level)),
+                      static_cast<int>(word_at(ram, fe->title_exit)), word_at(ram, fe->pad + 0x1A4));
             float axes[4]{};
-            std::memcpy(axes, ram.data() + 0x0013CB40, sizeof axes);
+            std::memcpy(axes, ram.data() + fe->pad + 0x100, sizeof axes);
             log::info("  pad socket {} state {} held {:#x}, right {:.3f} {:.3f}, left {:.3f} {:.3f}",
-                      word_at(ram, 0x0013CBD4), word_at(ram, 0x0013CBD8), word_at(ram, 0x0013CBE0),
+                      word_at(ram, fe->pad + 0x194), word_at(ram, fe->pad + 0x198), word_at(ram, fe->pad + 0x1A0),
                       axes[0], axes[1], axes[2], axes[3]);
         }
         log::info("  fog colour {:.0f} {:.0f} {:.0f}, depth {:.0f} to {:.0f}, F {:.0f} to {:.0f}",
@@ -2226,10 +2228,10 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     g->moby_cameras.clear();
     g->scene.set_fog(state.fog_colour, state.fog_near, state.fog_far, state.fog_near_f,
                      state.fog_far_f);
-    // The light bank as the game holds it now (16 sets of 0x40 bytes; the executable's 0x19BEC0, each
+    // The light bank as the game holds it now (16 sets of 0x40 bytes; the executable's, each
     // level's copy elsewhere): the level loader fills it from the gameplay file, and the game changes
     // sets at run time (the page menus write set 14 for their frame mobys, fog zones the hero's).
-    {
+    if (light_bank_address() != 0) {
         const gaddr bank = openrac_relocate_data(light_bank_address());
         if (bank + 16 * 0x40 <= ram.size()) {
             std::vector<float> sets(16 * 16);
@@ -2498,7 +2500,7 @@ int between(std::chrono::steady_clock::time_point next_tick) {
             return -1;
         }
         if (window_key(event) || debug_overlay::event(event)
-            || debug_menu::event(event, g->game.c_str(), openrac_game_loaded_overlay())) {
+            || debug_menu::event(event, openrac_game_loaded_overlay())) {
             continue;
         }
         g->input.handle_event(event);
@@ -2585,7 +2587,7 @@ bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
         }
     }
     if (port == 0) {
-        debug_menu::filter_pad(*buttons, g->game.c_str(), openrac_game_loaded_overlay());
+        debug_menu::filter_pad(*buttons, openrac_game_loaded_overlay());
         debug_overlay::pad(*buttons, analog);  // [debug tools]
     }
     if (std::getenv("OPENRAC_TRACE_INPUT") != nullptr) {

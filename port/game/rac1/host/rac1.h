@@ -31,4 +31,10 @@
 #define RAC1_NAME_(f) #f
 #define RAC1_NAME(f) RAC1_NAME_(f)
 
+/* boot.c: a new game straight in `level` from the title, as --level N with OPENRAC_DIRECT. */
+void rac1_start_level(int level);
+
+/* front_end.c: what the window's menus need of the game (game_host.h). */
+extern const openrac_front_end rac1_front_end;
+
 #endif /* OPENRAC_RAC1_H */

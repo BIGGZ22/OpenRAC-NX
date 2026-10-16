@@ -69,10 +69,21 @@ void func_00209DC0(void) {
     }
 }
 
+/* A new game straight in `level`, from the title: NewGameInit (whose wrapper above puts the level
+ * in the level word), the menus closed and the flag that starts the loaded new game set (0x13E15A),
+ * as the save page's "continue without saving" starts one. */
+void rac1_start_level(int level) {
+    const int kept = openrac_game_start_level;
+    openrac_game_start_level = level;
+    func_00209DC0();
+    openrac_game_start_level = kept; /* later new games start where they would have */
+    func_0022F4A0(0);
+    GREF(short, RAC1_ADDR(0x0013E15Au)) = 1;
+}
+
 /*
- * OPENRAC_DIRECT with --level N: straight into the level from the title, as the save page's
- * "continue without saving" starts a new game (NewGameInit, then the menus closed and the start
- * flag at 0x13E15A set), so a test skips the title's wait and the menus.
+ * OPENRAC_DIRECT with --level N: straight into the level from the title (rac1_start_level), so a
+ * test skips the title's wait and the menus.
  */
 static void direct_start(unsigned frame) {
     static int done = 0;
@@ -99,9 +110,7 @@ static void direct_start(unsigned frame) {
         return;
     }
     done = 1;
-    func_00209DC0();
-    func_0022F4A0(0);
-    GREF(short, RAC1_ADDR(0x0013E15Au)) = 1;
+    rac1_start_level(openrac_game_start_level);
 }
 
 /* gBolts (include/names.h). */
@@ -141,4 +150,5 @@ __attribute__((constructor)) static void install_direct_start(void) {
     openrac_game_bolts = bolts;
     openrac_game_in_cutscene = in_cutscene;
     openrac_game_skip = skip;
+    openrac_game_front_end = &rac1_front_end;
 }

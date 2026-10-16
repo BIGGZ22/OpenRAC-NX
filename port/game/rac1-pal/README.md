@@ -54,8 +54,7 @@ the level loop (`func_L00_002465F8`).
 | [hostgen.json](hostgen.json) | the game and how hostgen reads it ([port/game](../README.md#what-a-game-is)) |
 | [libraries.tsv](libraries.tsv) | every library entry point the game calls, and what the port does with it: most are bound to the shared replacements ([common/libraries.tsv](../common/libraries.tsv)) |
 | [host/rac1_version.h](host/rac1_version.h) | this version's names and addresses for the host C both discs share ([port/game/rac1](../rac1/README.md)): PAL's are games/rac1's own, so nothing is renamed |
-| [host/hud.c](host/hud.c), [host/options.c](host/options.c) | host C only this version has |
-| [../rac1/host](../rac1/host) | the game's host C, one copy for both discs: ParseBin wrapped, so a level code address means the loaded level's function (its overlay hook), the native 2D and world hand-off, collision, the hardware routines |
+| [../rac1/host](../rac1/host) | the game's host C, one copy for both discs: ParseBin wrapped, so a level code address means the loaded level's function (its overlay hook), the native 2D and world hand-off, collision, the hardware routines, the HUD at a wide picture's edges, the port's rows on the Video options page and what the window's menus need of the game (front_end.c) |
 
 The replacements themselves are shared by every game, by library, in
 [common/lib](../common/lib): `cdvd.c` (the disc image), `mc.c` (memory

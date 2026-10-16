@@ -88,6 +88,40 @@ extern int (*openrac_game_in_cutscene)(void);
  * lets the port skip besides its own cutscenes (rac1/pal: the flight between planets, boot.c). */
 extern void (*openrac_game_skip)(void);
 
+/* What the window's own menus and drawing need of a game's front end, when a game installs it
+ * (rac1: port/game/rac1/host/front_end.c, with each disc's addresses). NULL: the window adds
+ * nothing to the game's menus. */
+typedef struct openrac_front_end {
+    /* The developer menu (debug_menu.cpp): the levels, by the game's own numbers, and a new game
+     * started straight in one of them, as --level N with OPENRAC_DIRECT does. */
+    int levels;
+    const char* const* level_names;
+    void (*start_level)(int level);
+    /* The menus' sound for a widget (rac1: the confirm sound, 0x11, from the widget's moby). */
+    void (*menu_sound)(int sound, gaddr moby);
+    /* The front end's page menu, data in the boot program (rac1: debug_menu.cpp describes it). */
+    gaddr page_menu;      /* +4 the page shown */
+    gaddr options_list;   /* the Options list widget: +0x34 its items, 12 bytes each */
+    gaddr options_items;  /* the items the game gives it, ended by one without a label */
+    gaddr video_item;     /* the item that opens the Video page, added where the game's lack it */
+    gaddr language_page, language_title, language_list; /* what the Planets page is copied from */
+    int16_t planets_text;                                /* "Planets" */
+    const int16_t* planet_texts;                         /* each level's planet name, by level */
+    gaddr video_page, video_list, video_rows; /* the Video options page, its list, its own rows */
+    gaddr sound_hint;                         /* the Sound options page's hint widget */
+    int32_t sound_list_seq, sound_hint_seq;   /* that page's frame animations */
+    gaddr pad;        /* the first pad: +0x1C4 the buttons pressed this tick, +0x100 the sticks */
+    gaddr video_mode; /* a byte: the game's own 50/60 Hz choice, kept at 60 Hz; 0 for none */
+    /* The window (frontend.cpp): words of the boot program and the executable. */
+    gaddr game_mode;  /* the game mode; 6 in the boot program is the flight between planets */
+    gaddr light_bank; /* the directional light bank (relocated to the loaded program's copy) */
+    gaddr level;      /* the level being played, or -1 */
+    gaddr dialog;     /* the front end's dialog: +0 its kind, +0x1C its step (logged) */
+    gaddr title_exit; /* the title loop's exit (logged) */
+} openrac_front_end;
+
+extern const openrac_front_end* openrac_game_front_end;
+
 /* The game sends a DMA chain (sceDmaSend): channel is the game address of
  * the channel's registers (0x10009000 is VIF1, the display list; 0x1000A000
  * is the GIF), tag the address of the chain's first tag. The renderer reads

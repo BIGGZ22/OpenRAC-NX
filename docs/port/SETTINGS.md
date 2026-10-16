@@ -259,7 +259,7 @@ OpenGOAL: `goal_src/jak1/pc/pckernel-h.gc`, `pckernel-common.gc`,
 `frame_pace.rs`, `crates/rc-game/src/menus/pause/port.rs`, as of a46d260.
 Both are ISC licensed. Nothing of either is copied here; the HUD placement
 follows ReRAC's idea and says so in
-[host/hud.c](../../port/game/rac1-pal/host/hud.c).
+[rac1/host/hud.c](../../port/game/rac1/host/hud.c).
 
 "Now" is this work. "Had" was there before it.
 
