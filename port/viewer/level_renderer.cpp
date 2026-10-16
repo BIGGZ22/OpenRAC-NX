@@ -198,22 +198,23 @@ void LevelScene::fill_group(Group& g, const std::vector<InstanceData>& list, uns
 }
 
 void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instances, bool live) {
-    // Instances grouped by class model, in first-seen order. The lists are kept between calls (a
-    // live layer is grouped again every frame).
-    for (auto& [model, list] : m_grouping) {
+    // Instances grouped by class model and blend (Instance::blend), in first-seen order. The lists
+    // are kept between calls (a live layer is grouped again every frame).
+    for (auto& [key, list] : m_grouping) {
         list.clear();
     }
     std::size_t used = 0;
     for (const Instance& instance : instances) {
+        const std::uint32_t key = instance.model << 2 | static_cast<std::uint32_t>(instance.blend & 3);
         std::size_t at = 0;
-        while (at < used && m_grouping[at].first != instance.model) {
+        while (at < used && m_grouping[at].first != key) {
             ++at;
         }
         if (at == used) {
             if (used == m_grouping.size()) {
                 m_grouping.emplace_back();
             }
-            m_grouping[used++].first = instance.model;
+            m_grouping[used++].first = key;
         }
         InstanceData data{};
         std::copy(instance.matrix.begin(), instance.matrix.end(), data.matrix);
@@ -227,7 +228,7 @@ void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instance
     auto& groups = m_groups[static_cast<std::size_t>(layer)];
     auto& idle = m_idle[static_cast<std::size_t>(layer)];
     for (std::size_t i = 0; i < used; ++i) {
-        const std::uint32_t model = m_grouping[i].first;
+        const std::uint32_t model = m_grouping[i].first >> 2;
         // A live layer draws the same classes frame after frame: each keeps its vertex array and
         // buffer, and only the instances are sent again.
         auto kept = std::find_if(idle.begin(), idle.end(), [&](const Group& g) { return g.model == model; });
@@ -239,6 +240,7 @@ void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instance
         } else {
             g = make_group(model);
         }
+        g.blend = static_cast<int>(m_grouping[i].first & 3);
         fill_group(g, m_grouping[i].second, live ? GL_STREAM_DRAW : GL_STATIC_DRAW);
         groups.push_back(g);
     }
@@ -447,7 +449,10 @@ void LevelScene::draw_layer(
     // Then the translucent texels of cutout materials, blended the same way, without depth.
     const int glow_pass = m_mesh.uniform("glow_pass");
     const int translucent_pass = m_mesh.uniform("translucent_pass");
-    const int passes = layer == Layer::Mobys ? 3 : 2;
+    const int effect_pass = m_mesh.uniform("effect_pass");
+    glUniform1i(effect_pass, 0);
+    // Mobys: a fourth pass for those MobyProc blends (Instance::blend), after everything else.
+    const int passes = layer == Layer::Mobys ? 4 : 2;
     // The material state the program holds now (flush): none yet.
     int set_material = -1;
     unsigned set_texture = 0;
@@ -455,9 +460,14 @@ void LevelScene::draw_layer(
     decltype(Material::colour) set_colour{};
     bool colour_set = false;
     for (int pass = 0; pass < passes; ++pass) {
-        const bool translucent = pass == passes - 1;
+        // The blended mobys' pass: their whole models, all texels, at their alpha (blend 1:
+        // ALPHA 0x44, (Cs - Cd) As + Cd) or added (blend 2: 0x48, Cs As + Cd), depth tested and
+        // not written, as ReRAC draws MobyProc's translucent and additive groups.
+        const bool effects = layer == Layer::Mobys && pass == 3;
+        const bool translucent = !effects && pass == (layer == Layer::Mobys ? 2 : 1);
         glUniform1i(glow_pass, layer == Layer::Mobys && pass == 1 ? 1 : 0);
         glUniform1i(translucent_pass, translucent ? 1 : 0);
+        glUniform1i(effect_pass, effects ? 1 : 0);
         if (pass >= 1) {
             glEnable(GL_BLEND);
             glBlendEquation(GL_FUNC_ADD);
@@ -465,6 +475,12 @@ void LevelScene::draw_layer(
             glDepthMask(GL_FALSE);
         }
         for (const Group& g : groups) {
+            if ((g.blend != 0) != effects) {
+                continue;
+            }
+            if (effects) {
+                glBlendFuncSeparate(GL_SRC_ALPHA, g.blend == 2 ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
+            }
             glBindVertexArray(g.vao);
             // Primitives that follow one another in the index buffer with one material are one
             // draw: the same triangles in the same order, in one call instead of several.

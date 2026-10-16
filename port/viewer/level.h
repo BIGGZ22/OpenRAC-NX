@@ -83,6 +83,9 @@ struct Instance {
     // 0..1; w = 1 to light it) and its ambient colour (RGB bytes / 128).
     std::array<float, 4> moby_light{0.0f, 0.0f, 0.0f, 0.0f};
     std::array<float, 4> moby_ambient{0.5f, 0.5f, 0.5f, 1.0f};
+    // How a live moby is blended, as MobyProc picks it (the explosions' flashes and fireballs,
+    // a pickup fading in): 0 drawn as it is, 1 blended at its alpha (tint's w), 2 added.
+    int blend = 0;
 };
 
 // What the viewer draws, in the game's order.

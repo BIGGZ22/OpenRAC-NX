@@ -64,6 +64,7 @@ public:
 private:
     struct Group {
         std::uint32_t model = 0;
+        int blend = 0;  // Instance::blend of all its instances
         unsigned vao = 0;
         unsigned instances = 0;  // instance buffer
         int count = 0;

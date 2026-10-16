@@ -2005,6 +2005,21 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
             continue;
         }
         viewer::Instance instance{cls->second.first, m.matrix, {1, 1, 1, 1}};
+        // How MobyProc blends it (ReRAC's MobyBlend, from the game's moby draw): mode bit 0x200
+        // (+0x34) adds it; an alpha (+0x23) below 0x80 blends it at that alpha (the explosions'
+        // flashes start at 0x20..0x40 and fade out; a fireball can be spawned below 0x80).
+        if (m.address + 0x36 <= ram.size()) {
+            const std::uint8_t* b = ram.data() + m.address;
+            const unsigned mode = b[0x34] | b[0x35] << 8;
+            const unsigned alpha = b[0x23];
+            if ((mode & 0x200) != 0) {
+                instance.blend = 2;
+                instance.tint[3] = static_cast<float>(alpha) / 128.0f;
+            } else if (alpha < 0x80) {
+                instance.blend = 1;
+                instance.tint[3] = static_cast<float>(alpha) / 128.0f;
+            }
+        }
         // Its light word (+0x38: set 0, set 1, the cross-fade) and ambient colour (+0x3C), as
         // MobyProc reads them to light it.
         if (!g->level.light_sets.empty() && m.address + 0x100 <= ram.size()) {
