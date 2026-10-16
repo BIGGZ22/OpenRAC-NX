@@ -410,7 +410,7 @@ extern char *D_L00_00160108_macro __asm__("D_L00_00160108") MACRO_ADDR;
 extern char *D_L00_0016016C_macro __asm__("D_L00_0016016C") MACRO_ADDR;
 extern char *D_L00_0015F318  MACRO_ADDR;
 extern char *D_L00_001B04B0[];
-extern char *func_0020D348_m(int);
+extern char *func_0020D348_m(int) __asm__("FUN_0020c4f8");
 extern char D_L00_00166C80[];
 extern char D_L00_0016C780[];
 extern char D_L00_0016C7B0[];

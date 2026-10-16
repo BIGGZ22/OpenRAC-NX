@@ -172,8 +172,8 @@ extern Elem D_L00_00167150[];
 extern S D_L00_00166C80;
 extern int D_L00_0015EF4C;
 extern int D_L00_00169890[];
-extern void clear_vector(void *);
-extern void normalize_vector_xyz(void *, void *, float);
+extern void clear_vector(void *) __asm__("func_001F99F8");
+extern void normalize_vector_xyz(void *, void *, float) __asm__("FUN_001f9bf8");
 s32 FUN_L00_001ed230(s32 id);
 void init_camera_system(void) __asm__("FUN_L00_001ed280");
 
@@ -292,14 +292,15 @@ typedef float W[4] __attribute__((aligned(16)));
 extern float fast_vec_length(float *) __asm__("FUN_001f9af0");
 extern float vector_length_xy(float *) __asm__("FUN_001f9b20");
 extern float fast_arc_tan(float, float) __asm__("FUN_001f9e90");
-extern void subtract_vector_xyz(float *) __asm__("FUN_001f9a28");
+extern void subtract_vector_xyz(float *, float *, float *) __asm__("FUN_001f9a28");
 extern void fast_subtract_rotations(float, float) __asm__("FUN_001fa5c8");
 
-/* Fills a from a subtract_vector_xyz result: two fast_arc_tan angles and its length. */
-int FUN_L00_001ed630(float *a) {
+/* Fills a from subtract_vector_xyz(b, c): two fast_arc_tan angles and its length. b and c stay in
+   a1 and a2 for the subtraction (every caller passes them). */
+int FUN_L00_001ed630(float *a, float *b, float *c) {
     W v;
     float t;
-    subtract_vector_xyz(v);
+    subtract_vector_xyz(v, b, c);
     a[1] = fast_arc_tan(vector_length_xy(v), v[2]);
     t = fast_arc_tan(v[0], v[1]);
     fast_subtract_rotations(t, a[0]);

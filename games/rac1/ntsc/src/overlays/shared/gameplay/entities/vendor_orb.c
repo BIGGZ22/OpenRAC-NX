@@ -1679,14 +1679,15 @@ void FUN_L00_002e46b8(char *a) {
 typedef float V4[4] __attribute__((aligned(16)));
 extern char D_L00_00166E10[];
 void FUN_001f9a68(void *, void *, float);
-extern void vcopy_2e48a0(void *, void *) __asm__("FUN_001f9a68");
+extern void vcopy_2e48a0(void *, void *, float) __asm__("FUN_001f9a68");
 void FUN_001f9a10(void *, void *, void *);
 float FUN_001f9ab0(void *, void *);
 void follow_camera_hero_target(int, void *) __asm__("FUN_L00_002e4168");
-void FUN_L00_002e48a0(void *out) {
+/* s (in $f12, every caller passes it) scales g + 0x20 in the first call. */
+void FUN_L00_002e48a0(void *out, float s) {
     V4 a, b;
     char *g = D_L00_00166E10;
-    vcopy_2e48a0(a, g + 0x20);
+    vcopy_2e48a0(a, g + 0x20, s);
     follow_camera_hero_target(*(int *)(g - 0x10), b);
     FUN_001f9a10(a, a, b);
     FUN_001f9a68(out, g + 0x30, FUN_001f9ab0(g + 0x30, a));
