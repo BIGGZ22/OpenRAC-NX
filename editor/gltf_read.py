@@ -7,6 +7,8 @@ accessors, Draco or meshopt compression, buffers outside the file's folder)
 raises GltfError with a sentence a modder can act on.
 """
 
+from __future__ import annotations
+
 import base64
 import json
 from pathlib import Path
