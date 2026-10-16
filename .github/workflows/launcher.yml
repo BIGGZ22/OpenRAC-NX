@@ -73,6 +73,11 @@ jobs:
             os: ubuntu-22.04
             python: x86_64-unknown-linux-gnu
             python_sha256: ffa8f85f1b56e88b687f08d743d817015524b86a9365fd921243132b80f1a36d
+          # Linux ARM64 (aarch64), built on Ubuntu 24.04 ARM runner.
+          - name: linux-arm64
+            os: ubuntu-24.04-arm
+            python: aarch64-unknown-linux-gnu
+            python_sha256: 2e1ba0e7f22e01c534caebf7f09e7820322bc0d055271d3434af671e8400f96f
           # Apple silicon: the runner's own. An Intel Mac's launcher finds no game it can run in
           # its copy and works on a checkout, as before.
           - name: macos
@@ -86,7 +91,7 @@ jobs:
           python-version: "3.12"
 
       - name: Compilers and what SDL3 is built against (Linux)
-        if: matrix.name == 'linux'
+        if: matrix.name == 'linux' || matrix.name == 'linux-arm64'
         run: |
           sudo apt-get update
           # LLVM 19 from apt.llvm.org: Clang, and libc++ to build into the game.
@@ -152,12 +157,18 @@ jobs:
           "$py" build/standalone/editor/extract.py --help > /dev/null
           game=build/standalone/port/build/release/openrac-rac1-pal; [ -f "$game" ] || game="$game.exe"
           "$game" --help || true
-          # On Linux: what the game asks of the system (only libc and libm, glibc 2.35 at most, Ubuntu 22.04's own).
+          # On Linux: what the game asks of the system (only libc and libm, glibc 2.35 at most on x86_64 Ubuntu 22.04).
           if [ "${{ matrix.name }}" = linux ]; then
             readelf -d "$game" | grep NEEDED
             need=$(objdump -T "$game" | grep -oE 'GLIBC_2\.[0-9]+' | sort -t. -k2 -n | tail -1)
             echo "needs $need"
             case "$need" in GLIBC_2.3[6-9]|GLIBC_2.[4-9]*) echo "the game needs a newer glibc than 2.35"; exit 1;; esac
+            if readelf -d "$game" | grep -q 'libstdc++'; then echo "the game needs the system's libstdc++"; exit 1; fi
+          fi
+          if [ "${{ matrix.name }}" = linux-arm64 ]; then
+            readelf -d "$game" | grep NEEDED
+            need=$(objdump -T "$game" | grep -oE 'GLIBC_2\.[0-9]+' | sort -t. -k2 -n | tail -1)
+            echo "needs $need"
             if readelf -d "$game" | grep -q 'libstdc++'; then echo "the game needs the system's libstdc++"; exit 1; fi
           fi
           tar -czf openrac-standalone.tar.gz -C build/standalone .
@@ -197,6 +208,15 @@ jobs:
               launcher/target/release/bundle/appimage/*.AppImage
               launcher/target/release/bundle/appimage/*.tar.gz
               launcher/target/release/bundle/appimage/*.sig
+          - name: linux-arm64
+            os: ubuntu-24.04-arm
+            args: "--bundles deb,rpm,appimage"
+            files: |
+              launcher/target/release/bundle/deb/*.deb
+              launcher/target/release/bundle/rpm/*.rpm
+              launcher/target/release/bundle/appimage/*.AppImage
+              launcher/target/release/bundle/appimage/*.tar.gz
+              launcher/target/release/bundle/appimage/*.sig
           # One program for Apple silicon and Intel.
           - name: macos
             os: macos-latest
@@ -228,10 +248,11 @@ jobs:
           restore-keys: launcher-${{ matrix.name }}-
 
       - name: Tauri's system libraries
-        if: matrix.name == 'linux'
+        if: matrix.name == 'linux' || matrix.name == 'linux-arm64'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev patchelf rpm file
+          sudo apt-get install -y libfuse2t64 || sudo apt-get install -y libfuse2 || true
 
       - uses: actions/download-artifact@v4
         with:
