@@ -29,10 +29,11 @@ class Level:
     stored: dict[str, bytes]      # Sections and ranges as they are on the disc.
     index: bytes                  # Core index, decoded.
     core: bytes                   # Core data, decoded.
-    gameplay: bytes               # PAL gameplay, decoded.
+    gameplay: bytes               # The gameplay copy the disc's version loads, decoded.
     overlay: dict
     textures: dict[tuple[str, int], Texture] = field(default_factory=dict)
     boundaries: list[int] = field(default_factory=list)
+    version: str = "pal"          # The disc's version (disc.Version.key).
 
     def table(self, at: int, size: int) -> list[bytes]:
         count, offset = unpack("<II", self.index, at)
@@ -70,7 +71,8 @@ def load_level(disc: Disc, info: dict) -> Level:
     if len(core) != unpack("<I", index, 0x8c)[0]:
         raise FormatError("core data size differs from its index")
     level = Level(info["id"], disc.read(info["header_lba"] * SECTOR, LEVEL_HEADER_SIZE), stored,
-                  index, core, decoded(stored["gameplay_pal"]), overlay_sections(sections["overlay"]))
+                  index, core, decoded(stored[disc.version.gameplay]), overlay_sections(sections["overlay"]))
+    level.version = disc.version.key
     level.boundaries = core_boundaries(level)
     level.textures = textures(level, sections["gs_ram"])
     return level
@@ -168,6 +170,7 @@ def load_title(disc: Disc, survey: dict) -> Level:
     index = bytes(header) + lump[:base]
     gameplay = data[h(0x1f):]
     level = Level(TITLE_ID, b"", {}, index, data, gameplay, {"entry_point": 0, "sections": []})
+    level.version = disc.version.key
     level.boundaries = core_boundaries(level)
     level.textures = textures(level, lump[h(0):base])
     return level
@@ -212,6 +215,7 @@ def load_flight(disc: Disc, survey: dict) -> Level:
     put(0x8c, len(data))
     index = bytes(header) + lump[:base]
     level = Level(FLIGHT_ID, b"", {}, index, data, bytes(0x100), {"entry_point": 0, "sections": []})
+    level.version = disc.version.key
     level.boundaries = core_boundaries(level)
     level.textures = textures(level, lump[h(0):base])
     level.no_terrain = True

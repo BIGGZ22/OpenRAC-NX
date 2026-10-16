@@ -416,11 +416,12 @@ def write_marker(path: Path, class_id: int, label: str, model: tuple[str, float,
     path.write_text(scene.text())
 
 
-def write_project(project: Path, levels: list[int]) -> None:
+def write_project(project: Path, levels: list[int], region: str = "PAL") -> None:
     """project.godot and the rc1 scripts; the main scene is the first level. A project of one
-    level is named after it."""
+    level is named after it, and the disc's region (disc.Version.region)."""
     project.mkdir(parents=True, exist_ok=True)
     main = f"res://levels/level_{levels[0]:02}/level_{levels[0]:02}.tscn"
-    name = f"Ratchet & Clank: {LEVEL_NAMES[levels[0]]} (PAL)" if len(levels) == 1 else "Ratchet & Clank levels (PAL)"
+    name = (f"Ratchet & Clank: {LEVEL_NAMES[levels[0]]} ({region})" if len(levels) == 1
+            else f"Ratchet & Clank levels ({region})")
     (project / "project.godot").write_text(PROJECT.format(main=main, name=name))
     shutil.copytree(SCRIPTS, project / "rc1")

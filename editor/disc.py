@@ -1,19 +1,20 @@
-"""The PAL v2.00 disc: its ISO 9660 files, sector table of contents and level headers.
+"""The two discs: their ISO 9660 files, sector table of contents and level headers.
 
-Only three files are named on the disc. Everything else is addressed by
-absolute 2048-byte sectors through the table the game reads at startup.
+Ratchet & Clank PAL v2.00 (SCES_509.16) and NTSC-U v1.00 (SCUS_971.99) lay
+their data out the same way: only three files are named on the disc, and
+everything else is addressed by absolute 2048-byte sectors through the table
+the game reads at startup. What differs between them is in VERSIONS: the
+executable, the gameplay copy each game reads and one table's address.
 """
 
+from dataclasses import dataclass
 import hashlib
 from pathlib import Path
+import re
 
 from formats import FormatError, span, unpack
 
 SECTOR = 2048
-EXE_NAME, EXE_SIZE = "SCES_509.16", 1388100
-PAL_SHA1 = "79956931bd62fafd8d20fa2eae796dbaf2e15e83"
-TOC_LBA, TOC_SIZE = 1500, 0x2960       # func_0012F3F8 into D_00137C80
-LEVEL_TABLE = 0x28c8                    # D_0013A548, read by func_0012F4A8
 LEVEL_COUNT = 19
 LEVEL_HEADER_SIZE = 0x2434
 LEVEL_RANGES = ("data", "gameplay_ntsc", "gameplay_pal", "occlusion")
@@ -49,12 +50,44 @@ GROUPS = (
 )
 
 
+
+@dataclass(frozen=True)
+class Version:
+    """One disc of the game: what identifies it and where it keeps what the readers need."""
+    key: str                # OpenRAC's name for it (games/rac1/game.json, launcher/actions.json)
+    region: str
+    label: str
+    executable: str         # the boot executable, named after the serial
+    executable_size: int
+    executable_sha1: str
+    gameplay: str           # the level range (LEVEL_RANGES) this version's game loads
+    normal_table: int       # the (cos, sin) table's address in the executable (lighting.py)
+    toc_lba: int = 1500     # the table of contents the boot program reads, its size,
+    toc_size: int = 0x2960  # and the level table in it
+    level_table: int = 0x28c8
+    groups: tuple = GROUPS
+
+
+# PAL: func_0012F3F8 reads the table into D_00137C80, func_0012F4A8 the level table (D_0013A548).
+PAL = Version("pal", "PAL", "PAL v2.00", "SCES_509.16", 1388100,
+              "79956931bd62fafd8d20fa2eae796dbaf2e15e83", "gameplay_pal", 0x165600)
+# NTSC-U: the same table of contents (ReRAC's docs/formats/disc_layout.md, sections 2.2 to 2.4;
+# ISC License, Copyright (c) 2026 ReRAC contributors: six sectors at 1500, 0x2960 bytes copied to
+# D_00137B80). Its game loads the NTSC gameplay copy: the NTSC decomp's load_level_gameplay reads
+# the level header that follows the table (+0x2970, header 0x10) unless pal_mode is set.
+NTSC = Version("ntsc", "NTSC-U", "NTSC-U v1.00", "SCUS_971.99", 1383028,
+               "72fd1de379dafd8f243dceeb3be50980f3fd3cd5", "gameplay_ntsc", 0x165500)
+VERSIONS = (PAL, NTSC)
+BOOT = re.compile(rb"BOOT2\s*=\s*cdrom0:\\([^;\r\n]+)")
+
+
 class Disc:
     """Read-only access to an ISO image, bounded by its size."""
 
     def __init__(self, path: Path):
         self.file = path.open("rb")
         self.size = path.stat().st_size
+        self._version = None
 
     def __enter__(self):
         return self
@@ -104,31 +137,52 @@ class Disc:
                             "bytes": unpack("<I", record, 10)[0]})
         return records
 
+    def identify(self) -> tuple[Version, dict]:
+        """The version, from the executable SYSTEM.CNF boots (or the one known executable on the
+        disc), checked by its size and SHA-1; and that executable's directory entry."""
+        files = {f["name"]: f for f in self.files()}
+        cnf = files.get("SYSTEM.CNF")
+        boot = BOOT.search(self.read(cnf["lba"] * SECTOR, min(cnf["bytes"], SECTOR))) if cnf else None
+        if boot:
+            name = boot.group(1).decode("ascii", "replace").strip()
+            version = next((v for v in VERSIONS if v.executable == name), None)
+        else:
+            version = next((v for v in VERSIONS if v.executable in files), None)
+        exe = files.get(version.executable) if version else None
+        if exe is None or exe["bytes"] != version.executable_size:
+            supported = " and ".join(f"{v.executable} ({v.label})" for v in VERSIONS)
+            raise FormatError(f"only {supported} are supported")
+        return version, exe
+
+    @property
+    def version(self) -> Version:
+        """The disc's version, identified once (identify) and its executable's SHA-1 checked."""
+        if self._version is None:
+            version, exe = self.identify()
+            digest = hashlib.sha1(self.read(exe["lba"] * SECTOR, exe["bytes"])).hexdigest()
+            if digest != version.executable_sha1:
+                raise FormatError(f"the executable's SHA-1 does not match {version.label}")
+            self._version = version
+        return self._version
+
     def executable(self) -> bytes:
-        """SCES_509.16, the game's executable."""
-        exe = next((f for f in self.files() if f["name"] == EXE_NAME), None)
-        if exe is None:
-            raise FormatError(f"the disc has no {EXE_NAME}")
+        """The game's executable (SCES_509.16 or SCUS_971.99)."""
+        version, exe = self.identify()
         return self.read(exe["lba"] * SECTOR, exe["bytes"])
 
     def survey(self) -> dict:
-        """Check the disc is PAL v2.00 and list every sector reference.
+        """Check the disc is a supported version and list every sector reference.
 
         References are not unique files: entries may alias. Sizes the table
         does not store stay None rather than being inferred.
         """
+        version = self.version
         files = self.files()
-        exe = next((f for f in files if f["name"] == EXE_NAME), None)
-        if exe is None or exe["bytes"] != EXE_SIZE:
-            raise FormatError("only SCES_509.16 (PAL v2.00) is supported")
-        digest = hashlib.sha1(self.read(exe["lba"] * SECTOR, exe["bytes"])).hexdigest()
-        if digest != PAL_SHA1:
-            raise FormatError("the executable's SHA-1 does not match PAL v2.00")
-        toc = self.read(TOC_LBA * SECTOR, TOC_SIZE)
-        if unpack("<II", toc) != (1, TOC_SIZE):
+        toc = self.read(version.toc_lba * SECTOR, version.toc_size)
+        if unpack("<II", toc) != (1, version.toc_size):
             raise FormatError("unexpected table of contents header")
         refs = []
-        for offset, slots, name, unit in GROUPS:
+        for offset, slots, name, unit in version.groups:
             for i in range(slots):
                 at = offset + i * (4 if unit == "lba" else 8)
                 lba, = unpack("<I", toc, at)
@@ -140,12 +194,13 @@ class Disc:
                 self.check(lba * SECTOR, size or 0)
                 refs.append({"group": name, "index": i, "toc_offset": at, "lba": lba, "bytes": size})
         levels = [self.level_header(toc, i) for i in range(LEVEL_COUNT)]
-        return {"schema": 1, "disc_bytes": self.size, "executable_sha1": digest,
+        return {"schema": 1, "version": version.key, "disc_bytes": self.size,
+                "executable_sha1": version.executable_sha1,
                 "iso_files": files, "global_references": refs, "levels": levels}
 
     def level_header(self, toc: bytes, level: int) -> dict:
         """A level's header: its four sector ranges plus audio and scene references."""
-        lba, toc_size = unpack("<II", toc, LEVEL_TABLE + level * 8)
+        lba, toc_size = unpack("<II", toc, self.version.level_table + level * 8)
         header = self.read(lba * SECTOR, LEVEL_HEADER_SIZE)
         if unpack("<II", header) != (level, LEVEL_HEADER_SIZE):
             raise FormatError(f"unexpected level {level} header")

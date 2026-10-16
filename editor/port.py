@@ -204,7 +204,7 @@ class PortLevelWriter(LevelWriter):
         bounds = ([min(p[i] for p in corners) for i in range(3)],
                   [max(p[i] for p in corners) for i in range(3)]) if corners else ([0, 0, 0], [0, 0, 0])
         self.stats["bounds"] = [list(bounds[0]), list(bounds[1])]
-        manifest = {"format": FORMAT, "game": "rac1", "version": "pal", "level": self.level.id,
+        manifest = {"format": FORMAT, "game": "rac1", "version": self.level.version, "level": self.level.id,
                     "axes": "game units, Z up; matrices column-major",
                     "terrain": "terrain.glb" if (self.dir / "terrain.glb").exists() else None,
                     "collision": "collision.glb" if (self.dir / "collision.glb").exists() else None,

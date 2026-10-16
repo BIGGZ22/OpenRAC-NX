@@ -14,7 +14,8 @@ import struct
 
 from formats import FormatError, span, unpack
 
-# The (cos, sin) table in SCES_509.16 (the NTSC-U executable has it at 0x165500).
+# The (cos, sin) table in SCES_509.16; each version's is in disc.VERSIONS (NTSC-U's at 0x165500,
+# the same 2048 bytes).
 NORMAL_TABLE_ADDRESS = 0x165600
 BANK_SETS = 16
 MAX_LEVEL_LIGHTS = 12
@@ -116,14 +117,14 @@ def dot3(a: list[int], b: list[int]) -> int:
     return add(add(p[0], p[1]), mul(ONE, p[2]))
 
 
-def normal_table(exe: bytes) -> list[tuple[int, int]]:
-    """The 256 (cos, sin) pairs as raw float bits, from the executable's load segments."""
+def normal_table(exe: bytes, address: int = NORMAL_TABLE_ADDRESS) -> list[tuple[int, int]]:
+    """The 256 (cos, sin) pairs as raw float bits at ADDRESS, from the executable's load segments."""
     phoff, = unpack("<I", exe, 0x1C)
     size, count = unpack("<HH", exe, 0x2A)
     for i in range(count):
         kind, offset, vaddr, _paddr, filesz = unpack("<5I", exe, phoff + i * size)
-        if kind == 1 and vaddr <= NORMAL_TABLE_ADDRESS and NORMAL_TABLE_ADDRESS + 2048 <= vaddr + filesz:
-            words = struct.unpack("<512I", span(exe, offset + NORMAL_TABLE_ADDRESS - vaddr, 2048))
+        if kind == 1 and vaddr <= address and address + 2048 <= vaddr + filesz:
+            words = struct.unpack("<512I", span(exe, offset + address - vaddr, 2048))
             return [(words[2 * k], words[2 * k + 1]) for k in range(256)]
     raise FormatError("the executable has no normal table")
 
