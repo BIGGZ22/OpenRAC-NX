@@ -9,7 +9,7 @@ import unittest
 from formats import FormatError, Texture
 from godot import LevelWriter
 from mesh import Mesh
-from moby_anim import class_sequences, skeleton
+from moby_anim import class_sequences, decompose, skeleton
 from moby_class import MobyClass
 from test_godot import read_glb
 
@@ -73,6 +73,11 @@ class SkeletonTests(unittest.TestCase):
         self.assertTrue(close(second.scale, (1, 1, 1)))
         self.assertEqual(second.inverse_bind[12:], [0, 1, -1, 1])
         self.assertTrue(second.post_scale and not first.post_scale)
+
+    def test_collapsed_joint(self):
+        # A joint scaled to nothing on one axis or all: kept, with no rotation of its own.
+        translation, rotation, scale = decompose([[0, 0, 0], [0, 2, 0], [0, 0, 0]], [1, 2, 3])
+        self.assertEqual((translation, rotation, scale), ((1, 2, 3), (0.0, 0.0, 0.0, 1.0), (0.0, 2.0, 0.0)))
 
     def test_keys_times_loop_and_channels(self):
         moving, still = skeleton(fixture(), class_sequences(fixture())).animations

@@ -118,7 +118,9 @@ def decompose(a, t) -> tuple[Vec3, Quat, Vec3]:
     """Translation, rotation and scale of [a | t]; a must have no shear."""
     scale = [math.sqrt(sum(a[r][c] ** 2 for r in range(3))) for c in range(3)]
     if min(scale) < 1e-9:
-        raise FormatError("degenerate moby joint scale")
+        # A joint collapsed to nothing in the bind pose (the Blaster's and the Pyrocitor's, parts
+        # their animations scale up): no rotation of its own, its axes' lengths as they are.
+        return tuple(t), (0.0, 0.0, 0.0, 1.0), tuple(s if s >= 1e-9 else 0.0 for s in scale)
     if inverse3(a)[1] < 0:
         scale[0] = -scale[0]  # Mirrored: flip one axis so that the rest is a rotation.
     rotation = [[a[r][c] / scale[c] for c in range(3)] for r in range(3)]
