@@ -42,6 +42,7 @@ It is a [Tauri 2](https://tauri.app/) app: a Rust side (`core/` and
 | Understand how the parts fit, add a command or a page          | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | Change the look, add a game's colours                          | [docs/STYLE.md](docs/STYLE.md)               |
 | Know where the native port stands                              | [docs/port](../docs/port/README.md)          |
+| Build, package and publish a new launcher release              | [docs/RELEASING.md](docs/RELEASING.md)       |
 
 OpenRAC's own rules apply here too ([AGENTS.md](../AGENTS.md),
 [CONTRIBUTING.md](../CONTRIBUTING.md), [SOURCING.md](../docs/policy/SOURCING.md)):
