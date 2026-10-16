@@ -315,8 +315,15 @@ async fn sync_progress_from_web(state: State<'_, AppState>) -> Result<Library, S
     tauri::async_runtime::spawn_blocking(move || {
         use openrac_launcher_core::catalog;
         let fetch = |url: &str| -> Option<String> {
-            let out = std::process::Command::new("curl").args(["-s", "-f", "--connect-timeout", "4", "--max-time", "10", url]).output().ok()?;
-            if out.status.success() { String::from_utf8(out.stdout).ok() } else { None }
+            let out = std::process::Command::new("curl")
+                .args(["-s", "-f", "--connect-timeout", "4", "--max-time", "10", url])
+                .output()
+                .ok()?;
+            if out.status.success() {
+                String::from_utf8(out.stdout).ok()
+            } else {
+                None
+            }
         };
         let Some(list) = fetch(catalog::BYTEMATCH_PROJECTS) else { return };
         let mut jsons = std::collections::BTreeMap::new();
