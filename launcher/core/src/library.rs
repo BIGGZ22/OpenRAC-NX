@@ -305,7 +305,7 @@ mod tests {
         assert_eq!(file.problems(&catalog), Vec::<String>::new());
         let scope = Scope::Version("rac1/pal".into());
         let levels = file.find(&scope, "port-levels").expect("port-levels");
-        assert!(levels.args.iter().any(|a| a == "{data}/port"), "{:?}", levels.args);
+        assert!(levels.args.iter().any(|a| a == "{data}/port/pal"), "{:?}", levels.args);
         let play = file.find(&scope, "play").expect("play");
         assert!(play.needs.iter().all(|n| n.path.starts_with("{data}/")), "{:?}", play.needs);
         let check = file.find(&scope, "port-levels-check").expect("port-levels-check");

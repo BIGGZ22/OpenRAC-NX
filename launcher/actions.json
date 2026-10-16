@@ -288,7 +288,7 @@
       {
         "id": "port-levels",
         "label": "Get the levels ready",
-        "description": "Reads the levels from your disc into the form the game draws: the worlds behind the menus and all 19 levels, in assets/port/rac1. About half a minute and 1 GB, once.",
+        "description": "Reads the levels from your disc into the form the game draws: the worlds behind the menus and all 19 levels, in assets/port/rac1/pal. About half a minute and 1 GB, once.",
         "kind": "build",
         "area": "port",
         "state": "unverified",
@@ -297,7 +297,7 @@
           "editor/extract.py",
           "port",
           "{disc}",
-          "assets/port/rac1",
+          "assets/port/rac1/pal",
           "--replace"
         ],
         "cwd": ".",
@@ -305,7 +305,7 @@
           "disc",
           "python"
         ],
-        "artifact": "assets/port/rac1/level_99/manifest.json",
+        "artifact": "assets/port/rac1/pal/level_99/manifest.json",
         "docs": "editor/README.md",
         "todo": "Run it from the desktop app. The same command from a shell on macOS wrote what the port draws from. --replace: run again, it puts a new export in the old one's place once the new one is whole."
       },
@@ -321,7 +321,7 @@
           "--data",
           "{data}",
           "--levels",
-          "{root}/assets/port/rac1",
+          "{root}/assets/port/rac1/pal",
           "--check-levels"
         ],
         "cwd": ".",
@@ -329,10 +329,10 @@
           "artifact"
         ],
         "artifact": "port/build/release/openrac-rac1-pal.exe",
-        "makes": "assets/port/rac1/verified-3.json",
+        "makes": "assets/port/rac1/pal/verified-3.json",
         "needs": [
           {
-            "path": "assets/port/rac1/level_99/manifest.json",
+            "path": "assets/port/rac1/pal/level_99/manifest.json",
             "from": "the levels (Get the levels ready)"
           }
         ],
@@ -352,7 +352,7 @@
           "{data}",
           "--window",
           "--levels",
-          "{root}/assets/port/rac1"
+          "{root}/assets/port/rac1/pal"
         ],
         "requires": [
           "artifact"
@@ -362,7 +362,7 @@
         "todo": "Built by port-build. The port reads each level's program from your disc image when decompiler_out (openrac-extractor --decompile) is not there. It draws from the levels port-levels writes (--levels): without them the menus have no world behind them and a level has no scenery. Runs on Windows, Linux and macOS: the port is one program for all three (it was listed for Windows and Linux only until 2026-10-13, though it had been built and run on macOS).",
         "needs": [
           {
-            "path": "assets/port/rac1/verified-3.json",
+            "path": "assets/port/rac1/pal/verified-3.json",
             "from": "a check of the levels (Check the levels)"
           }
         ]
@@ -378,7 +378,7 @@
         "args": [
           "editor/assets.py",
           "export",
-          "{root}/assets/port/rac1",
+          "{root}/assets/port/rac1/pal",
           "{data}/exports/level_{level}-{option}",
           "--level",
           "{level}",
@@ -398,7 +398,7 @@
         ],
         "needs": [
           {
-            "path": "assets/port/rac1/level_99/manifest.json",
+            "path": "assets/port/rac1/pal/level_99/manifest.json",
             "from": "the levels (Get the levels ready)"
           }
         ],
@@ -418,7 +418,7 @@
           "import",
           "{path}",
           "--levels",
-          "{root}/assets/port/rac1",
+          "{root}/assets/port/rac1/pal",
           "--into",
           "{data}/overrides"
         ],
@@ -428,7 +428,7 @@
         ],
         "needs": [
           {
-            "path": "assets/port/rac1/level_99/manifest.json",
+            "path": "assets/port/rac1/pal/level_99/manifest.json",
             "from": "the levels (Get the levels ready)"
           }
         ],
@@ -495,7 +495,7 @@
           "{data}",
           "--window",
           "--levels",
-          "{root}/assets/port/rac1",
+          "{root}/assets/port/rac1/pal",
           "--mods",
           "{data}/mods"
         ],
@@ -507,7 +507,7 @@
         "todo": "Built by port-build. The Mods page runs overrides-stack first, which puts the packed levels (assets/packed/rac1) and the packs that are on into {data}/mods. Run headless on macOS (--level 0 --frames 400): the port logged the sectors it took from the packed file and ran as it does without. Not run from the desktop app yet. Runs on Windows, Linux and macOS: the port is one program for all three (it was listed for Windows and Linux only until 2026-10-13, though it had been built and run on macOS).",
         "needs": [
           {
-            "path": "assets/port/rac1/verified-3.json",
+            "path": "assets/port/rac1/pal/verified-3.json",
             "from": "a check of the levels (Check the levels)"
           }
         ]
@@ -642,7 +642,7 @@
       {
         "id": "port-levels",
         "label": "Get the levels ready",
-        "description": "Reads the levels from your NTSC-U disc into the form the game draws: the worlds behind the menus and all 19 levels, in assets/port/rac1-ntsc, beside PAL's. About a minute and 1 GB, once.",
+        "description": "Reads the levels from your NTSC-U disc into the form the game draws: the worlds behind the menus and all 19 levels, in assets/port/rac1/ntsc, beside PAL's. About a minute and 1 GB, once.",
         "kind": "build",
         "area": "port",
         "state": "unverified",
@@ -651,7 +651,7 @@
           "editor/extract.py",
           "port",
           "{disc}",
-          "assets/port/rac1-ntsc",
+          "assets/port/rac1/ntsc",
           "--replace"
         ],
         "cwd": ".",
@@ -659,7 +659,7 @@
           "disc",
           "python"
         ],
-        "artifact": "assets/port/rac1-ntsc/level_99/manifest.json",
+        "artifact": "assets/port/rac1/ntsc/level_99/manifest.json",
         "docs": "editor/README.md",
         "todo": "Run it from the desktop app. The same command from a shell on macOS wrote all 21 levels from SCUS_971.99 (2026-10-16). --replace: run again, it puts a new export in the old one's place once the new one is whole."
       },
@@ -675,7 +675,7 @@
           "--data",
           "{data}",
           "--levels",
-          "{root}/assets/port/rac1-ntsc",
+          "{root}/assets/port/rac1/ntsc",
           "--check-levels"
         ],
         "cwd": ".",
@@ -683,10 +683,10 @@
           "artifact"
         ],
         "artifact": "port/build/release/openrac-rac1-ntsc.exe",
-        "makes": "assets/port/rac1-ntsc/verified-3.json",
+        "makes": "assets/port/rac1/ntsc/verified-3.json",
         "needs": [
           {
-            "path": "assets/port/rac1-ntsc/level_99/manifest.json",
+            "path": "assets/port/rac1/ntsc/level_99/manifest.json",
             "from": "the levels (Get the levels ready)"
           }
         ],
@@ -701,7 +701,7 @@
         "area": "port",
         "state": "planned",
         "docs": "port/game/README.md",
-        "todo": "openrac-rac1-ntsc builds (tools/build_port.py rac1-ntsc) and runs headless into its title loop with no function missing; in a window the title's logo and text are drawn but not the world behind them, and no level has been played. Its levels: port-levels writes them to assets/port/rac1-ntsc (beside PAL's assets/port/rac1) and port-levels-check stamps them (verified-3.json). To switch Play on: \"state\": \"unverified\", \"program\": \"{artifact}\", \"args\": [\"--data\", \"{data}\", \"--window\", \"--levels\", \"{root}/assets/port/rac1-ntsc\"], \"requires\": [\"artifact\"], \"artifact\": \"port/build/release/openrac-rac1-ntsc.exe\", \"needs\": [{\"path\": \"assets/port/rac1-ntsc/verified-3.json\", \"from\": \"a check of the levels (Check the levels)\"}], and docs port/game/rac1-ntsc/README.md. --levels is needed: without it the game reads <data>/port, which is PAL's. port/game/rac1-ntsc/README.md lists what is carried from rac1/pal and what is left."
+        "todo": "openrac-rac1-ntsc builds (tools/build_port.py rac1-ntsc) and runs headless into its title loop with no function missing; in a window the title's logo and text are drawn but not the world behind them, and no level has been played. Its levels: port-levels writes them to assets/port/rac1/ntsc (beside PAL's assets/port/rac1/pal) and port-levels-check stamps them (verified-3.json). To switch Play on: \"state\": \"unverified\", \"program\": \"{artifact}\", \"args\": [\"--data\", \"{data}\", \"--window\", \"--levels\", \"{root}/assets/port/rac1/ntsc\"], \"requires\": [\"artifact\"], \"artifact\": \"port/build/release/openrac-rac1-ntsc.exe\", \"needs\": [{\"path\": \"assets/port/rac1/ntsc/verified-3.json\", \"from\": \"a check of the levels (Check the levels)\"}], and docs port/game/rac1-ntsc/README.md. Every action names its folder (assets/port/rac1/<version>; an installer's {data}/port/<version>). port/game/rac1-ntsc/README.md lists what is carried from rac1/pal and what is left."
       }
     ],
     "rac2/ntsc": [

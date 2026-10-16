@@ -22,40 +22,38 @@ class PlayerActions(unittest.TestCase):
 
     def test_levels_go_to_the_data_folder(self):
         levels = self.pal["port-levels"]
-        self.assertEqual(levels["args"][-3:], ["{data}/port", "--anywhere", "--replace"])
-        self.assertTrue(levels["artifact"].startswith("{data}/port/"))
+        self.assertEqual(levels["args"][-3:], ["{data}/port/pal", "--anywhere", "--replace"])
+        self.assertEqual(levels["artifact"], "{data}/port/pal/level_99/manifest.json")
 
     def test_play_reads_them_there(self):
         play = self.pal["play"]
-        self.assertNotIn("--levels", play["args"])      # the game's own default is <data>/port
+        self.assertEqual(play["args"][play["args"].index("--levels") + 1], "{data}/port/pal")
         # Play waits for the check's stamp, and the check for the export.
         check = self.pal["port-levels-check"]
-        self.assertEqual(check["makes"], "{data}/port/verified-3.json")
-        self.assertNotIn("--levels", check["args"])
+        self.assertEqual(check["makes"], "{data}/port/pal/verified-3.json")
+        self.assertEqual(check["args"][check["args"].index("--levels") + 1], "{data}/port/pal")
         self.assertEqual([need["path"] for need in check["needs"]], [self.pal["port-levels"]["artifact"]])
         self.assertEqual([need["path"] for need in play["needs"]], [check["makes"]])
         self.assertNotIn("python", play.get("requires", []))
 
     def test_ntsc_levels_have_a_folder_of_their_own(self):
-        # <data> is the game's, shared by PAL and NTSC-U: the US levels must not land on PAL's.
+        # <data> is the game's, shared by PAL and NTSC-U: each version's levels are <data>/port/<version>.
         levels, check = self.ntsc["port-levels"], self.ntsc["port-levels-check"]
-        self.assertEqual(levels["args"][-3:], ["{data}/port-ntsc", "--anywhere", "--replace"])
-        self.assertEqual(levels["artifact"], "{data}/port-ntsc/level_99/manifest.json")
-        # The program's own default is <data>/port, so the check names the folder.
+        self.assertEqual(levels["args"][-3:], ["{data}/port/ntsc", "--anywhere", "--replace"])
+        self.assertEqual(levels["artifact"], "{data}/port/ntsc/level_99/manifest.json")
         at = check["args"].index("--levels")
-        self.assertEqual(check["args"][at + 1], "{data}/port-ntsc")
-        self.assertEqual(check["makes"], "{data}/port-ntsc/verified-3.json")
+        self.assertEqual(check["args"][at + 1], "{data}/port/ntsc")
+        self.assertEqual(check["makes"], "{data}/port/ntsc/verified-3.json")
         self.assertEqual([need["path"] for need in check["needs"]], [levels["artifact"]])
         self.assertTrue(check["artifact"].endswith("openrac-rac1-ntsc.exe"))
 
     def test_folders_and_arguments(self):
-        self.assertEqual(bundle.levels_folder("rac1/pal"), "{data}/port")
-        self.assertEqual(bundle.levels_folder("rac1/ntsc"), "{data}/port-ntsc")
-        self.assertEqual(bundle.levels_folder("rac9/ntsc-j"), "{data}/port-ntsc-j")
+        self.assertEqual(bundle.levels_folder("rac1/pal"), "{data}/port/pal")
+        self.assertEqual(bundle.levels_folder("rac1/ntsc"), "{data}/port/ntsc")
+        self.assertEqual(bundle.levels_folder("rac9/ntsc-j"), "{data}/port/ntsc-j")
         args = ["--data", "{data}", "--levels", "{root}/assets/port/x", "--window"]
-        self.assertEqual(bundle.point_at(args, "{data}/port"), ["--data", "{data}", "--window"])
-        self.assertEqual(bundle.point_at(args, "{data}/port-x"), ["--data", "{data}", "--levels", "{data}/port-x", "--window"])
-        self.assertEqual(bundle.point_at(["--data", "{data}"], "{data}/port-x"), ["--data", "{data}"])
+        self.assertEqual(bundle.point_at(args, "{data}/port/x"), ["--data", "{data}", "--levels", "{data}/port/x", "--window"])
+        self.assertEqual(bundle.point_at(["--data", "{data}"], "{data}/port/x"), ["--data", "{data}"])
 
     def test_every_action_starts_in_a_folder_the_copy_has(self):
         # 0.4.0 started the game in games/rac1, which only a checkout has: Play failed with

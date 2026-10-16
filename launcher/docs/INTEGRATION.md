@@ -177,22 +177,22 @@ actions, as rac1/pal has on Windows:
   On Windows it sets up Visual Studio's environment itself and finds Clang
   and Ninja, so a player never types a compiler's command. The game page
   offers it in place of Play until the game is built, and as Rebuild after.
-- `port-levels`: `editor/extract.py port {disc} assets/port/rac1`, the
+- `port-levels`: `editor/extract.py port {disc} assets/port/rac1/pal`, the
   levels in the form the port draws (the worlds behind the menus too). Half
   a minute, once. Building runs it after the build the first time, and the
   game page offers it by itself when the game is built but they are missing.
 - `play`: the port's executable with `--data {data} --window --levels
-{root}/assets/port/rac1`, as OpenGOAL's launcher starts `gk`. It `needs`
+{root}/assets/port/rac1/pal`, as OpenGOAL's launcher starts `gk`. It `needs`
   the levels: an action's `needs` lists files an earlier step makes, and it
   stays blocked, naming that step, until they exist.
 
-Each version's levels have a folder of their own, since the versions of a
-game share its data folder: rac1/ntsc's `port-levels` and
-`port-levels-check` write and stamp `assets/port/rac1-ntsc` (an installed
-launcher: `{data}/port-ntsc`, tools/bundle_standalone.py), and its programs
-are given `--levels` with that folder, because without it a game reads
-`<data>/port`, which is PAL's. Its `play` stays planned until the NTSC-U port
-plays; its `todo` holds the command line to switch on.
+Each version's levels have a folder of their own under one root, since the
+versions of a game share its data folder: `assets/port/<game>/<version>` in a
+checkout (`assets/port/rac1/pal`, `assets/port/rac1/ntsc`) and
+`{data}/port/<version>` in an installed launcher (tools/bundle_standalone.py),
+which is also where a game looks without `--levels`. Every action names its
+folder. rac1/ntsc's `play` stays planned until the NTSC-U port plays; its
+`todo` holds the command line to switch on.
 
 The port needs each level's program to place the functions levels share; it
 reads it from the disc image the set-up kept (`iso_data/<game>/disc.iso`)

@@ -37,26 +37,25 @@ ROOT = Path(__file__).resolve().parent.parent
 # What a player's launcher offers for a version, from launcher/actions.json. The rest (the
 # decompilation's builds and checks, the level editor, building the port) needs a checkout.
 KEEP = ("port-levels", "port-levels-check", "play")
-# Where the carried copy writes instead of the checkout's assets/. {data} is the game's, shared by
-# its versions, so each version's levels have a folder of their own: PAL's is the game's own default
-# (the program reads <data>/port without --levels), the others name theirs.
-DEFAULT_LEVELS = "{data}/port"
-LEVELS = {"rac1/pal": DEFAULT_LEVELS, "rac1/ntsc": "{data}/port-ntsc"}
+# Where the carried copy writes instead of the checkout's assets/port/<game>/<version>. {data} is the
+# game's, shared by its versions: each version's levels are <data>/port/<version>, which is also where
+# the program looks without --levels.
+LEVELS_ROOT = "{data}/port"
 # The programs carried when the build has them; the first is required.
 GAMES = ("openrac-rac1-pal", "openrac-rac1-ntsc")
 
 
 def levels_folder(key: str) -> str:
-    """The data folder's place for version KEY's levels (LEVELS, or port-<version>)."""
-    return LEVELS.get(key, f"{DEFAULT_LEVELS}-{key.split('/')[-1]}")
+    """The data folder's place for version KEY's levels: <data>/port/<version>."""
+    return f"{LEVELS_ROOT}/{key.split('/')[-1]}"
 
 
 def point_at(args: list[str], levels: str) -> list[str]:
-    """ARGS with --levels naming LEVELS, or without it where that is the program's own default."""
+    """ARGS with --levels naming LEVELS."""
     if "--levels" not in args:
         return list(args)
     at = args.index("--levels")
-    return args[:at] + args[at + 2:] if levels == DEFAULT_LEVELS else args[:at + 1] + [levels] + args[at + 2:]
+    return args[:at + 1] + [levels] + args[at + 2:]
 
 
 def player_actions() -> dict:
