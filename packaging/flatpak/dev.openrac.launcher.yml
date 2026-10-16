@@ -1,6 +1,6 @@
 app-id: dev.openrac.launcher
 runtime: org.gnome.Platform
-runtime-version: '47'
+runtime-version: '51'
 sdk: org.gnome.Sdk
 command: openrac-launcher
 
