@@ -540,8 +540,8 @@ void GifInterpreter::image_data(std::span<const std::uint8_t> data) {
             );
         }
         std::erase_if(m_frame_copies, [&](const FrameCopy& f) { return f.dbp == m_upload.dbp; });
-        if (m_upload.dpsm == gs::kPsmct32 && m_upload.dbp >= kDrawBufferBlock
-            && m_upload.dbp < kDrawBufferBlock + kDrawBufferWidth * (kDrawBufferLines / 32) * 32) {
+        if (m_upload.dpsm == gs::kPsmct32 && m_upload.dbp >= g_draw_buffer_block
+            && m_upload.dbp < g_draw_buffer_block + kDrawBufferWidth * (kDrawBufferLines / 32) * 32) {
             draw_frame_upload(m_upload);
         }
         m_textures.upload(std::move(m_upload));
@@ -552,10 +552,10 @@ void GifInterpreter::image_data(std::span<const std::uint8_t> data) {
 }
 
 bool frame_pixel(std::uint32_t base, std::uint32_t width, int x, int y, int& frame_x, int& frame_y) {
-    if (base < kDrawBufferBlock || (base - kDrawBufferBlock) % 32 != 0 || width == 0) {
+    if (base < g_draw_buffer_block || (base - g_draw_buffer_block) % 32 != 0 || width == 0) {
         return false;
     }
-    const int page = static_cast<int>((base - kDrawBufferBlock) / 32) + (y / 32) * static_cast<int>(width) + x / 64;
+    const int page = static_cast<int>((base - g_draw_buffer_block) / 32) + (y / 32) * static_cast<int>(width) + x / 64;
     frame_x = (page % static_cast<int>(kDrawBufferWidth)) * 64 + x % 64;
     frame_y = (page / static_cast<int>(kDrawBufferWidth)) * 32 + y % 32;
     return frame_y < kDrawBufferLines;
@@ -784,7 +784,7 @@ void GifInterpreter::kick(bool draw) {
 bool GifInterpreter::is_offscreen(const gs::Frame& f) const {
     const std::uint32_t block = f.fbp * 32;
     return static_cast<int>(f.fbw) * 64 < m_config.screen_width
-        || (block != m_config.frame_blocks[0] && block != m_config.frame_blocks[1]);
+        || (block != m_config.display_block && block != g_draw_buffer_block);
 }
 
 std::uint32_t GifInterpreter::offscreen_target() const {
@@ -1044,8 +1044,12 @@ void GifInterpreter::emit_sprite(const GsVertex& a, const GsVertex& b) {
     // The copy of the finished draw buffer into the display buffer, in strips: stretched in the menus,
     // 1:1 between borders in play. The picture already is that frame (both buffers map onto it by
     // their sizes), so drawing the copy would only shrink it into the middle of itself.
-    if (attributes().tme && context().tex0.tbp0 == m_config.frame_blocks[1]
-        && context().frame.fbp * 32 == m_config.frame_blocks[0]
+    // The same for a copy of the draw buffer onto itself in strips, which the game makes in its
+    // 448-line (60 Hz) mode: the picture already holds it, and the pool has no texture for it,
+    // so drawn it laid stripes of stale texels over the world.
+    const std::uint32_t target = context().frame.fbp * 32;
+    if (attributes().tme && context().tex0.tbp0 == g_draw_buffer_block
+        && (target == m_config.display_block || target == g_draw_buffer_block)
         && std::llabs(static_cast<std::int64_t>(b.y) - static_cast<std::int64_t>(a.y)) / 16 >= kFrameFillLines) {
         return;
     }

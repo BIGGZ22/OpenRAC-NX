@@ -60,11 +60,10 @@ struct DirectConfig {
     // The game's frame buffer: 512 x 448 for PAL Ratchet & Clank.
     int screen_width = 512;
     int screen_height = 448;
-    // The game's frame buffers (block addresses): what it displays and what it draws the frame
-    // in (PAL Ratchet & Clank: the 512-line display buffer at 0, the draw buffer at 0x1000). Any
+    // The game's display buffer (a block address; its draw buffer is g_draw_buffer_block). Any
     // other target is drawn off screen, to be sampled later, however wide it is (the save page
     // draws its 512 x 128 hint panel at 0x1E00, right after the draw buffer).
-    std::uint32_t frame_blocks[2] = {0x0000, 0x1000};
+    std::uint32_t display_block = 0x0000;
 };
 
 // One vertex as the GPU gets it (32 bytes).
@@ -140,9 +139,12 @@ struct FrameSnapshot {
 };
 inline FrameSnapshot g_frame_snapshot;
 
-// The draw buffer the games read back and write into (PAL Ratchet & Clank: block 0x1000, 8 x 64
-// pixels wide, 448 lines).
-inline constexpr std::uint32_t kDrawBufferBlock = 0x1000;
+// The draw buffer the games draw the frame in, read back and write into: 8 x 64 pixels wide, 448
+// lines, right after the display buffer. Where that is follows the display the game sets
+// (set_draw_buffer_block): PAL Ratchet & Clank's 512-line display puts it at block 0x1000, and the
+// 448-line one of its 60 Hz mode (and of the NTSC games) at 0xE00.
+inline std::uint32_t g_draw_buffer_block = 0x1000;
+inline void set_draw_buffer_block(std::uint32_t block) { g_draw_buffer_block = block; }
 inline constexpr std::uint32_t kDrawBufferWidth = 8;
 inline constexpr int kDrawBufferLines = 448;
 

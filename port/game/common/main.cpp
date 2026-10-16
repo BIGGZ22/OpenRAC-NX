@@ -58,6 +58,7 @@
 #include "openrac/sound_engine.h"
 #include "platform/audio.h"
 #include "platform/pump.h"
+#include "renderer/direct.h"
 #include "renderer/texture.h"
 #include "viewer/level.h"
 #include "viewer/moby_pose.h"
@@ -450,6 +451,14 @@ void openrac_game_set_display(const openrac_game_display* d) {
         last = *d;
         log::info("display: {}x{} at page {} (width {}), format {:#x}, at {},{}", d->width, d->height,
                   d->frame_base, d->frame_width, d->psm, d->x, d->y);
+        // The draw buffer follows the display buffer: a 512-line display (PAL) puts it at block
+        // 0x1000, the 448-line one of a 60 Hz mode at 0xE00. Missed, the game's copy of the draw
+        // buffer into the display was drawn from an empty texture over the picture: the PAL game in
+        // its 60 Hz mode showed its menus over black.
+        if (d->frame_width > 0 && d->height > 0) {
+            renderer::set_draw_buffer_block(static_cast<std::uint32_t>(d->frame_base) * 32
+                                            + static_cast<std::uint32_t>(d->height * d->frame_width));
+        }
     }
 }
 
