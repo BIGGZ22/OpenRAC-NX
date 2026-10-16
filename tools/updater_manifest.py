@@ -31,11 +31,12 @@ def generate_manifest(
             with open(sig_path, "r", encoding="utf-8") as s:
                 sig_content = s.read().strip()
 
-            archive_file = base
+            # GitHub Release asset names cannot have spaces: GitHub converts spaces to dots.
+            archive_file = base.replace(" ", ".")
             asset_url = f"https://github.com/{repo}/releases/download/{tag}/{archive_file}"
 
             f_lower = f.lower()
-            if "nsis" in f_lower or "windows" in f_lower:
+            if "nsis" in f_lower or "windows" in f_lower or "setup" in f_lower:
                 if "aarch64" in f_lower or "arm64" in f_lower:
                     platforms["windows-aarch64"] = {"signature": sig_content, "url": asset_url}
                 else:
