@@ -36,13 +36,12 @@ void sprite() {
     CHECK(gif.gif(b.bytes));
     CHECK(gif.vertices().size() == 6);
     CHECK(gif.draws().size() == 1);
-    // Half a pixel on: the chip samples pixels at their integer coordinates, GL at their centres.
-    const float hx = 0.5f / 512.0f * 2.0f;
-    const float hy = 0.5f / 448.0f * 2.0f;
+    // At their own positions: the shader moves them on by a fraction of the target's pixel (the
+    // chip samples pixels at their integer coordinates, GL at their centres).
     const DirectVertex& first = gif.vertices()[0];
-    CHECK(near(first.x, -1.0f + hx) && near(first.y, 1.0f - hy));  // the top left corner
+    CHECK(near(first.x, -1.0f) && near(first.y, 1.0f));  // the top left corner
     const DirectVertex& last = gif.vertices()[4];
-    CHECK(near(last.x, hx) && near(last.y, -hy));  // the centre of the screen
+    CHECK(near(last.x, 0.0f) && near(last.y, 0.0f));  // the centre of the screen
     CHECK(first.rgba[0] == 0xFF && first.rgba[3] == 0x80);
     // Depth: 100 of a 24-bit buffer.
     CHECK(near(first.z, static_cast<float>(100.0 / 16777215.0 * 2.0 - 1.0)));

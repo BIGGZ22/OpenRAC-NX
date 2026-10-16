@@ -363,7 +363,7 @@ private:
 
     struct Uniforms {
         int textured, tcc, tfx, tex_alpha_scale, fog_enable, fog_colour, alpha_test, alpha_ref,
-            alpha_keep_failing, distance_field, tex_T1;
+            alpha_keep_failing, distance_field, tex_T1, pixel_offset;
     } m_uniforms{};
 };
 

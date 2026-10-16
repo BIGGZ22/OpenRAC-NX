@@ -855,10 +855,13 @@ DirectVertex GifInterpreter::convert(const GsVertex& v) const {
     float px = 0.0f;
     float py = 0.0f;
     screen_position(v, px, py);
-    // The chip samples a pixel at its integer coordinates, GL at the pixel's centre: half a pixel
-    // on, so a rectangle ending at 511.5 covers pixel 511 here as it does on the console.
-    px += 0.5f;
-    py += 0.5f;
+    // The chip samples a pixel at its integer coordinates, GL at the pixel's centre: the shader
+    // moves every vertex a quarter of a pixel of the target on (pixel_offset), so that at the
+    // console's size a rectangle from 0 to 511.5 covers pixels 0 to 511 as it does on the console,
+    // and no pixel's centre lies on an edge. Half a pixel of the game's picture instead put the 2D
+    // layer up to 2.5 pixels off the world at 2560 across (a line of the world showed at the top
+    // and left of the vendor's monitors); half a pixel of the target put the first row of an
+    // off-screen panel on its clear's edge, and it was never cleared.
     const bool offscreen = offscreen_target() != 0;
     const float target_w = offscreen ? static_cast<float>(kOffscreenPixels) : static_cast<float>(m_config.screen_width);
     const float target_h = offscreen ? static_cast<float>(kOffscreenPixels) : static_cast<float>(m_config.screen_height);
@@ -1248,6 +1251,7 @@ bool DirectRenderer::init(RenderState& state, std::string& error) {
     m_uniforms.alpha_keep_failing = m_shader.uniform("alpha_keep_failing");
     m_uniforms.distance_field = m_shader.uniform("distance_field");
     m_uniforms.tex_T1 = m_shader.uniform("tex_T1");
+    m_uniforms.pixel_offset = m_shader.uniform("pixel_offset");
 
     glGenVertexArrays(1, &m_vao);
     glGenBuffers(1, &m_vbo);
@@ -1357,9 +1361,13 @@ void DirectRenderer::apply(const DirectState& s, RenderState& render_state) {
         const Offscreen& o = offscreen(s.target);
         glBindFramebuffer(GL_FRAMEBUFFER, o.framebuffer);
         glViewport(0, 0, kOffscreenPixels * kOffscreenScale, kOffscreenPixels * kOffscreenScale);
+        const float side = static_cast<float>(kOffscreenPixels * kOffscreenScale);
+        glUniform2f(m_uniforms.pixel_offset, 0.5f / side, -0.5f / side);
     } else {
         glBindFramebuffer(GL_FRAMEBUFFER, render_state.target.framebuffer);
         glViewport(0, 0, render_state.target.width, render_state.target.height);
+        glUniform2f(m_uniforms.pixel_offset, 0.5f / static_cast<float>(std::max(render_state.target.width, 1)),
+                    -0.5f / static_cast<float>(std::max(render_state.target.height, 1)));
     }
     glUniform1i(m_uniforms.textured, s.textured ? 1 : 0);
     if (s.textured) {
