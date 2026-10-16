@@ -7,6 +7,7 @@
 // Add a case here for every new command in api.ts.
 import actionsFile from "../../actions.json";
 import summaryFile from "../../../progress/summary.json";
+import packageFile from "../../package.json";
 import type {
   ActionView,
   BuildInfo,
@@ -435,7 +436,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
   switch (command) {
     case "app_info":
       return delay<AppInfo>({
-        version: "0.4.4-preview",
+        version: `${packageFile.version}-preview`,
         platform,
         configFile: "~/.config/dev.openrac.launcher/launcher.json",
         // ?standalone shows an installed launcher's pages: no checkout, nothing to find.

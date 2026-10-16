@@ -21,10 +21,19 @@
 </script>
 
 <header class="site-header">
-  <button class="brand" onclick={() => (app.page = "library")} aria-label="OpenRAC: your games">
+  <button
+    class="brand"
+    onclick={() => (app.page = "library")}
+    aria-label="OpenRAC: your games"
+    title={app.info?.version ? `OpenRAC Launcher ${app.info.version}` : undefined}
+  >
     <img src="/wrench.webp" alt="" width="40" height="40" />
     <span>Open<b>RAC</b></span>
-    <small>Launcher</small>
+    <!-- The launcher's version beside its name, on every page (also in the tooltip, for a narrow
+         window that hides the tag). -->
+    <small
+      >Launcher{#if app.info?.version}<span class="ver">{app.info.version}</span>{/if}</small
+    >
   </button>
 
   <nav>
@@ -135,6 +144,14 @@
     border-radius: 999px;
     padding: 2px 8px;
     margin-left: 4px;
+  }
+
+  .brand .ver {
+    margin-left: 6px;
+    padding-left: 6px;
+    border-left: 1px solid rgb(0 0 0 / 0.3);
+    letter-spacing: 0.06em;
+    text-transform: none;
   }
 
   nav {
