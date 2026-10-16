@@ -1,6 +1,6 @@
 # Releasing the OpenRAC Launcher
 
-This document describes the complete procedure for releasing a new version of the OpenRAC Launcher across all supported platforms (Windows, Linux x86_64, Linux ARM64, macOS Universal) and publishing the update to the GitHub Releases updater feed and Flathub.
+This document describes the complete procedure for releasing a new version of the OpenRAC Launcher across all supported platforms (Windows, Linux x86_64, Linux ARM64, macOS Universal) and publishing the update to the GitHub Releases updater feed.
 
 ---
 
@@ -128,76 +128,7 @@ Once all CI jobs complete:
 
 ---
 
-## 6. Updating the Flathub Package (`dev.openrac.launcher`)
-
-Once the GitHub release is published, update the Flathub package:
-
-### 1. Get the SHA-256 hashes of the new `.deb` packages
-
-```bash
-gh release view launcher-vX.Y.Z --json assets \
-  --jq '.assets[] | select(.name | endswith(".deb")) | {name: .name, digest: .digest, url: .url}'
-```
-
-### 2. Update the Flathub manifest (`dev.openrac.launcher.yml`)
-
-In the Flathub repository (`flathub/dev.openrac.launcher`):
-
-- Update the `x86_64` `.deb` URL and `sha256`.
-- Update the `aarch64` `.deb` URL and `sha256`.
-
-Example snippet:
-
-```yaml
-- type: file
-  only-arches:
-    - x86_64
-  url: https://github.com/OpenRAC/OpenRAC/releases/download/launcher-vX.Y.Z/OpenRAC.Launcher_X.Y.Z_amd64.deb
-  sha256: <NEW_AMD64_SHA256>
-  dest-filename: openrac-launcher.deb
-
-- type: file
-  only-arches:
-    - aarch64
-  url: https://github.com/OpenRAC/OpenRAC/releases/download/launcher-vX.Y.Z/OpenRAC.Launcher_X.Y.Z_arm64.deb
-  sha256: <NEW_ARM64_SHA256>
-  dest-filename: openrac-launcher.deb
-```
-
-### 3. Update AppStream metadata (`dev.openrac.launcher.metainfo.xml`)
-
-Add the new release entry:
-
-```xml
-  <releases>
-    <release version="X.Y.Z" date="YYYY-MM-DD">
-      <description>
-        <p>OpenRAC Launcher X.Y.Z release:</p>
-        <ul>
-          <li>Summary of main changes and fixes.</li>
-        </ul>
-      </description>
-    </release>
-    <!-- older releases -->
-  </releases>
-```
-
-### 4. Lint and push to Flathub
-
-```bash
-flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest dev.openrac.launcher.yml
-
-git add dev.openrac.launcher.yml dev.openrac.launcher.metainfo.xml
-git commit -m "Update to X.Y.Z"
-git push origin master
-```
-
-Flathub build servers automatically build and deploy the update to all Flathub and Steam Deck users within 1–2 hours.
-
----
-
-## 7. Common Pitfalls & Notes
+## 6. Common Pitfalls & Notes
 
 - **Spaces in filenames**: GitHub Releases replaces spaces with dots when files are uploaded. `tools/updater_manifest.py` sanitizes URLs with `.replace(" ", ".")` to prevent 404 Not Found errors in the in-app updater.
 - **Minisign key formatting**: `TAURI_SIGNING_PRIVATE_KEY` secret must be trimmed of trailing newlines before passing to Tauri CLI. The CI workflow handles this automatically via a temporary file in `$RUNNER_TEMP/updater.key`.
-- **Runtime EOL on Flathub**: Flathub regularly bumps GNOME/Freedesktop runtimes. Keep the manifest's `runtime-version` aligned with the active Flathub runtime (e.g. `51`).
