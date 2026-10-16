@@ -219,7 +219,6 @@ func_L00_001FD1D8	game	func_L00_001FD1D8	host	the port's own (host/render_native
 func_L00_001FE688	game	func_L00_001FE688	host	the port's own (host/render_native.c); its signature decides the prototype	int (void)
 func_L00_0028D958	game	func_L00_0028D958	host	the port's own (host/render_native.c); its signature decides the prototype	int (void)
 func_L00_002963D8	game	func_L00_002963D8	host	the port's own (host/render_native.c); its signature decides the prototype	int (void)
-func_L00_00299B68	game	func_L00_00299B68	host	the port's own (host/render_native.c); its signature decides the prototype	void (int)
 func_00211808	game	func_00211808	host	the port's own (host/render_native.c); its signature decides the prototype	void (unsigned int, unsigned int)
 func_0020C268	game	func_0020C268	host	the port's own (host/hand.c); its signature decides the prototype	void (void)
 func_002347F0	game	func_002347F0	host	the port's own (host/hand.c); its signature decides the prototype	void (unsigned int)

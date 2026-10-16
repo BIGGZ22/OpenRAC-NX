@@ -385,10 +385,6 @@ int func_L00_002963D8(void) {
     return 0;
 }
 
-/* tieproc_00299108.c: a renderer of the console's (the port draws natively) */
-void func_L00_00299B68(int a0) {
-    (void)a0;
-}
 /* moby_anim_eval_chain (hand-written VU0, 2640 bytes): the pose matrices of the joints marked in
  * a1 for the moby a0, into the scratchpad (MobyGetBoneMatrix reads them: the menu panels' corners,
  * items in Ratchet's hands). The port's evaluator (viewer/moby_pose, after ReRAC's evaluate_chains;
