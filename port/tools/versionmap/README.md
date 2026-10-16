@@ -48,3 +48,24 @@ listed on stderr. An address literal is a guess by nature (a size or a
 colour in the same range reads as an address): read what it changed.
 
 Nothing carried is proven by being carried.
+
+## The shared host C's tables
+
+rac1's host C is one copy for both discs ([port/game/rac1](../../game/rac1/README.md)),
+written with games/rac1's names and addresses; each other version has a
+table of its own names and addresses for it (`host/rac1_version.h`).
+`hostnames.py` keeps that table in step:
+
+```sh
+python3 port/tools/versionmap/hostnames.py check port/game/rac1-ntsc      # no disc needed
+python3 port/tools/versionmap/hostnames.py check port/game/rac1-ntsc \
+    --map build/versionmap/rac1-pal--rac1-ntsc.json --gen port/build/release/games/rac1-ntsc/gen
+python3 port/tools/versionmap/hostnames.py write port/game/rac1-ntsc --map ... --gen ...
+```
+
+`check` lists what the table lacks, what it has that nothing uses, and
+address literals left outside `RAC1_ADDR`; with the map, every entry the map
+does not agree with (an entry is never changed for it: the reason goes in a
+comment at the entry, above the generated part). `write` drops unused
+entries and adds new ones from the map. Its tests: `python3 -m unittest
+discover -s port/tools/versionmap`.

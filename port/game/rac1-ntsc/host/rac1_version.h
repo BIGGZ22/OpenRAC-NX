@@ -5,7 +5,8 @@
  * (port/game/rac1/host, rac1.h) in this version: games/rac1's name of each function the shared C
  * calls or defines, and the NTSC decomp's name of the same function; games/rac1's address of each
  * datum, and this version's. Paired by port/tools/versionmap (same instructions, or the same
- * instruction forming the address).
+ * instruction forming the address); the part below the mark is written and checked by
+ * port/tools/versionmap/hostnames.py.
  */
 #ifndef OPENRAC_RAC1_VERSION_H
 #define OPENRAC_RAC1_VERSION_H

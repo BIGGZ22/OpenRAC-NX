@@ -36,6 +36,13 @@ includes [rac1.h](host/rac1.h), which reads the version's translation
   `RAC1_TYPE_<name>_<what>` in each table.
 - **Names in strings**: `RAC1_NAME(func_...)` is the version's name.
 
+[port/tools/versionmap/hostnames.py](../../tools/versionmap/README.md)
+checks a table against the shared C and, given the map, against the two
+programs' code: every name and address the shared C uses has an entry,
+every entry is used, no address is left outside `RAC1_ADDR`, and each
+entry agrees with the map; `write` adds what a new piece of shared C uses
+from the map. ctest runs the check without the map (`rac1-*_host_table`).
+
 ## What stays per version
 
 A version's own folder keeps what truly differs: its `hostgen.json`,

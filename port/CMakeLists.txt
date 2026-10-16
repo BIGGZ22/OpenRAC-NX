@@ -230,4 +230,11 @@ endif()
 if(OPENRAC_PORT_GAMES)
   include(Games)
   openrac_add_games()
+  # Each rac1 version's table names every function and address the shared host C uses, and nothing
+  # else (port/game/rac1/README.md); no disc needed.
+  foreach(version rac1-pal rac1-ntsc)
+    add_test(NAME ${version}_host_table
+             COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tools/versionmap/hostnames.py" check
+                     "${PROJECT_SOURCE_DIR}/game/${version}")
+  endforeach()
 endif()
