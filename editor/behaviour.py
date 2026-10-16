@@ -34,7 +34,7 @@ HERE = Path(__file__).parent
 API = HERE / "behaviour_api.tsv"
 SCRIPTS = HERE / "rc1"
 MOBY_STRUCT = "Moby"
-REPO = DECOMPILATION.parents[2]
+REPO = DECOMPILATION.parents[1]
 
 GD_KEYWORDS = {"var", "const", "func", "class", "extends", "signal", "enum", "static", "match", "when", "in", "is", "as",
                "self", "super", "pass", "await", "void", "null", "true", "false", "not", "and", "or", "if", "elif",

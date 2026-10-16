@@ -92,7 +92,7 @@ def node_name(class_id: int, index: int, names: dict[int, str]) -> str:
     return f"{kind}_{index:04}"
 
 
-DECOMPILATION = Path(__file__).resolve().parents[1] / "games" / "rac1" / "pal"
+DECOMPILATION = Path(__file__).resolve().parents[1] / "games" / "rac1"
 _UPDATE = re.compile(r"UpdateMoby_(\d+):([\d/]+)")
 _logic = None
 
@@ -124,5 +124,5 @@ def moby_logic(level: int) -> dict[int, dict]:
                     for lv in levels.split("/"):
                         _logic.setdefault(int(lv), {})[int(class_id)] = {
                             "function": function, "decompiled": is_c,
-                            "file": path.relative_to(DECOMPILATION.parents[2]).as_posix() if path else None}
+                            "file": path.relative_to(DECOMPILATION.parents[1]).as_posix() if path else None}
     return _logic.get(level, {})
