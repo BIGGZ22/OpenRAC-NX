@@ -116,6 +116,10 @@ struct State {
         int log2_side;
     };
     std::vector<Particle> particles;
+    // The particle textures decoded so far (particle_texture): pixels and palette hash -> pool key,
+    // for the renderer that holds them.
+    std::unordered_map<std::uint64_t, std::uint32_t> particle_textures;
+    const void* particle_textures_for = nullptr;
     // The sky sprites the game drew since the last frame (sky_sprite): record, TEX0.
     std::vector<std::pair<std::array<std::uint8_t, 0x20>, std::uint64_t>> sky_sprites;
     // The 2D layer's quads drawn natively since the last frame (ui_quad), by marker index.
@@ -767,6 +771,41 @@ void particle(std::span<const std::uint8_t> ram, const std::uint8_t* record, std
     g->particles.push_back(p);
 }
 
+// A particle texture's pool key: its 32 x 32 PSMT8 pixels and its 16 x 16 CSM1 palette (both in game
+// memory) decoded to RGBA once, in the chip's alpha units (0x80 = opaque), and placed at a key of its
+// own, kept while the renderer lives. Earlier the pixels and palette went through the pool as
+// uploads at keys handed out per frame in pool order: a key named one texture this frame and
+// another the next, and the conversions the pool kept mixed them up (the nanotech crates' orbs as
+// white squares). 0 when the addresses are not in memory.
+// Refactor note: other effect textures (effect_quad) still go through uploads at their GS blocks.
+std::uint32_t particle_texture(std::span<const std::uint8_t> ram, std::uint32_t pixels, std::uint32_t clut) {
+    constexpr std::uint32_t kParticleTextureKey = 0x30000;  // past the sky's (kSkyTextureKey)
+    constexpr std::size_t kSide = 32;
+    if (!g->renderer || pixels == 0 || clut == 0 || pixels + kSide * kSide > ram.size() || clut + 1024 > ram.size()) {
+        return 0;
+    }
+    if (g->particle_textures_for != g->renderer.get()) {  // a new renderer (a level loaded): a new pool
+        g->particle_textures.clear();
+        g->particle_textures_for = g->renderer.get();
+    }
+    const std::span<const std::uint8_t> indices = ram.subspan(pixels, kSide * kSide);
+    const std::span<const std::uint8_t> colours = ram.subspan(clut, 1024);
+    const std::uint64_t id = renderer::hash_bytes(indices.data(), indices.size())
+                             ^ (renderer::hash_bytes(colours.data(), colours.size()) * 0x9E3779B97F4A7C15ull);
+    if (const auto found = g->particle_textures.find(id); found != g->particle_textures.end()) {
+        return found->second;
+    }
+    const renderer::gs::Texa texa{0, false, 0x80};
+    const std::vector<std::uint32_t> palette = renderer::clut_csm1(colours, 0x00, 16, 256, texa);
+    renderer::Rgba8Image image = renderer::convert_t8(indices, kSide, kSide, palette, renderer::AlphaScale::Gs);
+    const renderer::TextureHandle h = g->renderer->textures().add(
+        std::move(image), renderer::AlphaScale::Gs, std::format("particle {:#x}/{:#x}", pixels, clut));
+    const std::uint32_t key = kParticleTextureKey + static_cast<std::uint32_t>(g->particle_textures.size());
+    g->renderer->textures().place(key, h);
+    g->particle_textures.emplace(id, key);
+    return key;
+}
+
 // The frame's particles as effect quads, as the game's VU1 sprite program draws them (ReRAC's
 // particle notes, docs/plan/particles.md section 7; ISC License, Copyright (c) 2026 ReRAC
 // contributors): culled and faded by depth (the record's near and far, at most 500 units), back to
@@ -793,7 +832,6 @@ void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& 
         renderer::EffectQuad quad;
     };
     std::vector<Item> items;
-    std::unordered_map<std::uint32_t, std::uint32_t> slots;  // pixels address -> pool key
     for (const State::Particle& p : g->particles) {
         const std::uint8_t* r = p.record.data();
         const int kind = r[1] & 3;
@@ -874,35 +912,17 @@ void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& 
             q.rgba[2] = c2;
             q.rgba[3] = c2;
         }
-        // Its texture: 32 x 32 PSMT8 and a 16 x 16 CLUT, kept at a pool key of its own per pixels.
-        const auto [slot, added] = slots.try_emplace(p.pixels, 0x10000u + static_cast<std::uint32_t>(slots.size()) * 8);
-        const std::uint32_t side = 1u << p.log2_side;
-        q.tbp = slot->second + 4;
-        q.cbp = slot->second;
-        q.tex0 = 1ull << 14 | 0x13ull << 20 | static_cast<std::uint64_t>(p.log2_side) << 26
-                 | static_cast<std::uint64_t>(p.log2_side) << 30 | 1ull << 34 | 4ull << 61;
+        // Its texture: 32 x 32 PSMT8 with a 256-colour CSM1 palette, decoded here and kept in the pool
+        // at a key of its own (particle_texture).
+        q.tbp = particle_texture(ram, p.pixels, p.clut);
+        q.cbp = 0;
+        if (q.tbp == 0) {
+            continue;
+        }
+        q.tex0 = 1ull << 34;  // TCC, MODULATE; the texture is the one placed at q.tbp
         q.clamp = 5;
         q.tex1 = 0xFF9000000120ull;
         q.alpha = r[3];
-        if (added && p.pixels + side * side <= ram.size() && p.clut + 1024 <= ram.size()) {
-            renderer::ImageUpload palette;
-            palette.dbp = q.cbp;
-            palette.dbw = 1;
-            palette.dpsm = 0x00;
-            palette.width = 16;
-            palette.height = 16;
-            palette.data.assign(ram.data() + p.clut, ram.data() + p.clut + 1024);
-            renderer::ImageUpload image;
-            image.dbp = q.tbp;
-            image.dbw = 1;
-            image.dpsm = 0x13;
-            image.width = side;
-            image.height = side;
-            image.data.assign(ram.data() + p.pixels, ram.data() + p.pixels + side * side);
-            q.uploads = static_cast<int>(g->effect_uploads.size());
-            g->effect_uploads.push_back(std::move(palette));
-            g->effect_uploads.push_back(std::move(image));
-        }
         items.push_back({z, q});
     }
     std::stable_sort(items.begin(), items.end(), [](const Item& a, const Item& b) { return a.depth > b.depth; });
@@ -2409,3 +2429,4 @@ void close() {
 }
 
 }  // namespace openrac::frontend
+

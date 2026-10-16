@@ -93,11 +93,18 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
         state.stats.triangles += strip.count - 2;
     }
     vertices.resize(4);
+    // Every quad's texture before any quad is drawn. A texture's upload rides on the first quad that
+    // named it (frontend::particle_quads hands out the pool keys per frame, in pool order), but the
+    // quads are drawn back to front: one drawn before that quad sampled what the key held last frame,
+    // another texture, and the nanotech crates' orbs came out as opaque white quads.
+    // Refactor note: the uploads could travel as a list of their own instead of riding on quads.
     for (const EffectQuad& q : input.effects) {
         if (q.uploads >= 0 && static_cast<std::size_t>(q.uploads) + 1 < input.effect_uploads.size()) {
             state.textures.upload(input.effect_uploads[static_cast<std::size_t>(q.uploads)]);
             state.textures.upload(input.effect_uploads[static_cast<std::size_t>(q.uploads) + 1]);
         }
+    }
+    for (const EffectQuad& q : input.effects) {
         apply(q.tex0, q.tex1, q.clamp, q.alpha, state, q.tbp, q.cbp);
 
         for (int k = 0; k < 4; ++k) {
