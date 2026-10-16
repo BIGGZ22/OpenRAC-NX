@@ -749,9 +749,19 @@ def variant(src_key: str, dst_key: str, build: Path, names: list[str]) -> None:
             val = int(x.group(1), 16)
             if x.group(0).startswith("[") and val * 4 in m:
                 return f"[0x{m[val * 4] // 4:X}]"
-            return f"0x{m[val]:X}" if val in m and not x.group(0).startswith("[") else x.group(0)
-        body = re.sub(r"\[0x([0-9A-Fa-f]+)\]", sub, found.group(0))
-        body = re.sub(r"(?<![\[\w])0x([0-9A-Fa-f]+)", sub, body)
+            if val in m and not x.group(0).startswith("["):
+                return f"0x{m[val]:X}"
+            if val > 0xFFFF and val & 0xFFFF in m and (val & 0x8000) == (m[val & 0xFFFF] & 0x8000):
+                # an address literal whose low half moved (its %hi stays: same sign of the low half)
+                return f"0x{(val & ~0xFFFF) | m[val & 0xFFFF]:X}"
+            return x.group(0)
+        # A word offset written as an index: [0x3F], [63], [0xFC/4]
+        def index(x, m=m):
+            raw = x.group(1)
+            val = int(raw[:-2], 16) // 4 if raw.endswith("/4") else int(raw, 0)
+            return f"[{m[val * 4] // 4}]" if val * 4 in m else x.group(0)
+        body = re.sub(r"\[((?:0x[0-9A-Fa-f]+(?:/4)?)|[1-9][0-9]*)\]", index, found.group(0))
+        body = re.sub(r"(?<![\[\w/])0x([0-9A-Fa-f]+)(?!\s*/\s*4)", sub, body)
         text = text[:found.start()] + body + text[found.end():]
         print(f"{n}: " + ", ".join(f"{k:#x} -> {v:#x}" for k, v in m.items()))
     # Fields reached through a struct: the types the functions use (directly, or as the type of an
@@ -773,7 +783,7 @@ def variant(src_key: str, dst_key: str, build: Path, names: list[str]) -> None:
         body = re.sub(r"\[0x([0-9A-Fa-f]+)\]",
                       lambda x: f"[0x{moved[int(x.group(1), 16)]:X}]" if int(x.group(1), 16) in moved else x.group(0), body)
         return head + body + tail
-    text = re.sub(r"^((?:typedef\s+)?struct\s*\w*\s*\{)(.*?)(^\}\s*\w*\s*;)", resize, text, flags=re.M | re.S)
+    text = re.sub(r"^((?:typedef\s+)?struct\s*\w*\s*\{)([^{}]*)(\}\s*\w*\s*;)", resize, text, flags=re.M)
     rel = src.relative_to(build / "src")
     out = build / "versions" / dst_key.split("/")[1] / "src" / rel
     out.parent.mkdir(parents=True, exist_ok=True)

@@ -94,8 +94,15 @@ Level code works the same way: a variant of a file under `src/overlays/` is
 built with the pipeline PAL's progress report builds level files with, and
 placed in every level where PAL's version could not go. A shared level
 function sits in several levels, and NTSC-U's levels do not always agree on
-it, so a variant may place in some of its levels and not others. Five level
-files have variants so far (nine level placements). The level functions
-still differing are listed by `check`; most differ only in immediates the
-C does not write as hex literals (decimal values, other struct views), and
-need their variants written by hand.
+it, so a variant may place in some of its levels and not others.
+
+The generator rewrites hex literals, word indices (`[0x3F]`, `[63]`,
+`[0xFC/4]`), address literals whose low half moved, and the padding before a
+moved field in the structs a function uses (one-line typedefs included).
+Variants it cannot write are written by hand and say so in their header:
+`pause.c` and its level copy `pause_00277208.c` hold a function that does the
+same in both versions but whose NTSC-U code was compiled from C shaped
+differently (the store falls through to the common `return 0`). The level
+functions still differing either have no C of their own (pieces of joined
+functions, handwritten assembly) or call a different routine in some levels
+(the catalogue's false folds), which is a catalogue fix, not a variant.
