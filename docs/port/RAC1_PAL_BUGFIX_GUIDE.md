@@ -1,5 +1,8 @@
 # Ratchet & Clank (PAL): fixing gameplay bugs and backfilling C
 
+The scripted playtest procedures (timelines, places, camera, pictures) are in
+[RAC1_PAL_TESTING.md](RAC1_PAL_TESTING.md).
+
 A working guide for an agent picking up the native port of Ratchet & Clank
 (PAL) on Windows: how to build and run it, how to find out why something
 in the game misbehaves, how to supply C for a function that has none, and
