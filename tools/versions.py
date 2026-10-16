@@ -17,6 +17,7 @@ rest are still retail assembly), and only where tools/xmap.py pairs them one to 
 executable (`xmap.py scan` both versions first). Resident boot code only: no level programs yet.
 """
 import json
+import re
 import struct
 import sys
 from collections import Counter
@@ -161,9 +162,53 @@ for orig, variant, work in zip(*[iter(sys.argv[1:])] * 3):
     print(f"OBJ {obj}")
 """
 _compiled: dict = {}
+OWN = re.compile(r"\b(func|D|jtbl)_([0-9A-F]{8})\b")
 
 
-def variant_objects(src_key: str, dst_key: str, build: Path) -> list[tuple[str, Path, str]]:
+def own_asm_units(dst_key: str, build: Path) -> list[tuple[str, tuple[str, list[str]]]]:
+    """TO's own disassembly of its boot executable, for the functions nothing else places.
+
+    splat splits TO's executable with versions/<TO>/splat.yaml into versions/<TO>/asm/ (once).
+    Its globals are renamed with an n in front (nfunc_, nD_, njtbl_: TO's addresses, which FROM's
+    names would otherwise collide with) into build-sn/<TO>-asm/, and each segment becomes one
+    generated C file of INCLUDE_ASM lines, as FROM keeps its unmatched functions: [(src path,
+    (include folder, function names))]."""
+    import subprocess
+    version = dst_key.split("/")[1]
+    config = build / "versions" / version / "splat.yaml"
+    asm = build / "versions" / version / "asm" / "nonmatchings"
+    if not config.exists():
+        return []
+    if not asm.is_dir():
+        # splat reads TO's executable from FROM's baserom/, under its own name
+        target = build / "baserom" / boot_of(dst_key)[0].name
+        if not target.exists():
+            import shutil
+            shutil.copyfile(boot_of(dst_key)[0], target)
+        # then FROM's own fix-ups of splat's output (tools/setup_asm.sh): what SN's assembler reads
+        out = asm.parent.relative_to(build).as_posix()
+        steps = [f"python -m splat split {config.relative_to(build).as_posix()}",
+                 f"python tools/fix_vu0_macro.py {out}", f"python tools/sn_regnames.py {out}",
+                 f"python tools/fix_denormal_floats.py {out}"]
+        run = subprocess.run(["bash", "tools/docker/run.sh", "bash", "-c", " && ".join(steps)],
+                             cwd=build, capture_output=True, text=True)
+        if run.returncode:
+            sys.exit("splat failed:\n" + (run.stdout + run.stderr)[-3000:])
+    out_dir = build / "build-sn" / f"{version}-asm"
+    units = []
+    for segment, unit in (("core_text", "core/_own_core_text.c"), ("text", "game/_own_text.c")):
+        names = []
+        (out_dir / segment).mkdir(parents=True, exist_ok=True)
+        for f in sorted((asm / segment).glob("*.s")):
+            renamed = OWN.sub(lambda m: f"n{m.group(1)}_{m.group(2)}", f.read_text())
+            name = OWN.sub(lambda m: f"n{m.group(1)}_{m.group(2)}", f.stem)
+            (out_dir / segment / f"{name}.s").write_text(renamed)
+            names.append(name)
+        units.append((unit, (f"{version}-asm/{segment}", names)))
+    return units
+
+
+def variant_objects(src_key: str, dst_key: str, build: Path, own_asm: bool = False) -> list[tuple[str, Path, str]]:
     """Compile TO's variant files: [(object path from the checkout's root, object, "boot" or
     "level")], once per run.
 
@@ -174,14 +219,15 @@ def variant_objects(src_key: str, dst_key: str, build: Path) -> list[tuple[str, 
     shadow directory whose src/ holds only the variants, a level-code file (src/overlays/) by
     the pipeline FROM's progress report builds level files with. Same compiler, per-file flags
     and assembler steps, so the objects are what that file would give with the variant's C."""
-    key = (src_key, dst_key, str(build))
+    key = (src_key, dst_key, str(build), own_asm)
     if key in _compiled:
         return _compiled[key]
     version = dst_key.split("/")[1]
     root = build / "versions" / version / "src"
     files = sorted(root.rglob("*.c")) if root.is_dir() else []
     out = []
-    if files:
+    asm_units = own_asm_units(dst_key, build) if own_asm else []
+    if files or asm_units:
         import shutil
         import subprocess
         shadow = build / "build-sn" / f"variants-{version}"
@@ -191,20 +237,31 @@ def variant_objects(src_key: str, dst_key: str, build: Path) -> list[tuple[str, 
         for name in ("Makefile.sn", "include", "include-sn", "config", "tools", "toolchain", "asm"):
             if (build / name).exists():
                 (shadow / name).symlink_to(Path("../..") / name)
-        shutil.copytree(root, shadow / "src")
+        if files:
+            shutil.copytree(root, shadow / "src")
         rel = shadow.relative_to(build).as_posix()
-        exe = [f for f in files if not f.relative_to(root).as_posix().startswith("overlays/")]
+        # TO's own assembly, as FROM builds its unmatched functions: INCLUDE_ASM in a C file
+        for unit, (folder, names) in asm_units:
+            path = shadow / "src" / unit
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('#include "include_asm.h"\n\n' + "".join(
+                f'INCLUDE_ASM("{folder}", {n});\n' for n in names))
+            files.append(path)
+        if asm_units:
+            (shadow / f"{version}-asm").symlink_to(Path("..") / f"{version}-asm")
+        rel_of = lambda f: f.relative_to(shadow / "src") if f.is_relative_to(shadow / "src") else f.relative_to(root)
+        exe = [f for f in files if not rel_of(f).as_posix().startswith("overlays/")]
         level = [f for f in files if f not in exe]
         steps = []
         if exe:
-            targets = [f"build-sn/{f.relative_to(root).with_suffix('.o').as_posix()}" for f in exe]
+            targets = [f"build-sn/{rel_of(f).with_suffix('.o').as_posix()}" for f in exe]
             steps.append(f"(cd {rel} && . tools/toolchain.sh && make_sn {' '.join(targets)})")
-            out += [(f"{rel}/{t}", shadow / t, "boot") for t in targets]
+            out += [(f"{rel}/{t}", shadow / t, "asm" if Path(t).stem.startswith("_own_") else "boot") for t in targets]
         if level:
             (shadow / "levels.py").write_text(LEVEL_RUNNER)
             args = []
             for f in level:
-                r = f.relative_to(root)
+                r = rel_of(f)
                 work = f"{rel}/work/{r.parent.name}/{r.stem}"
                 args += [f"src/{r.as_posix()}", f"{rel}/src/{r.as_posix()}", work]
             steps.append(f"python {rel}/levels.py {' '.join(args)}")
@@ -252,7 +309,7 @@ def boot_of(key: str) -> tuple[Path, int]:
 
 
 def check(src_key: str, dst_key: str, build: Path, boot_only: bool = False, every: bool = False,
-          variants: bool = True) -> tuple:
+          variants: bool = True, own_asm: bool = False) -> tuple:
     pal_to = pairs(src_key, dst_key)
     matched = {m["name"] for m in json.loads((xmap.INDEX / f"{xmap.slug(src_key)}.json").read_text())["matched"].values()
                if m["program"] == "boot"}
@@ -297,7 +354,8 @@ def check(src_key: str, dst_key: str, build: Path, boot_only: bool = False, ever
     # Variants: TO's own C for functions that differ, compiled from versions/<TO>/src/. They are
     # placed like FROM's functions and take the place of FROM's version of them.
     variant_failed = []
-    for obj_path, path, kind in variant_objects(src_key, dst_key, build) if variants else []:
+    compiled = variant_objects(src_key, dst_key, build, own_asm) if variants else []
+    for obj_path, path, kind in compiled:
         if kind != "boot":
             continue
         obj = read_object(path)
@@ -325,6 +383,39 @@ def check(src_key: str, dst_key: str, build: Path, boot_only: bool = False, ever
             placed[sym["name"]] = address
             pieces[sym["name"]] = piece
             outcome["same bytes (variant)"] += 1
+    # TO's own assembly fills every address nothing above placed: each function at the address
+    # its name says, and every n-symbol it refers to at the address in its name.
+    taken = set(placed.values())
+    for obj_path, path, kind in compiled:
+        if kind != "asm":
+            continue
+        obj = read_object(path)
+        names = [s["name"] if s["type"] != STT_SECTION else f"§{obj_path}:{obj['sections'][s['section']]['name']}"
+                 for s in obj["symbols"]]
+        funcs = [s for s in obj["symbols"] if s["type"] == STT_FUNC]
+        for sym in funcs:
+            m = OWN.fullmatch(sym["name"][1:]) if sym["name"].startswith("n") else None
+            if m is None or not sym["size"]:
+                continue
+            address = int(m.group(2), 16)
+            if address in taken:
+                continue
+            found, why = place(obj, obj_path, names, funcs, sym, address, retail(address, sym["size"]), gp)
+            if not why:
+                why = next((f"{k} is not at its address" for k, x in found.items() if k.startswith("n")
+                            and OWN.fullmatch(k[1:]) and x != int(k[-8:], 16)), None)
+            if why:
+                outcome[f"own assembly: {why}"] += 1
+                continue
+            piece = (found.pop("\0code"), found.pop("\0relocs"))
+            if any(values.get(k, x) != x for k, x in found.items()):
+                outcome["own assembly disagrees with another function"] += 1
+                continue
+            for k, x in found.items():
+                values.setdefault(k, x)
+            placed[sym["name"]] = address
+            pieces[sym["name"]] = piece
+            outcome["own assembly"] += 1
     # A function's name says where it is in FROM: in TO it has to be where xmap pairs it.
     wrong = []
     for s, v in values.items():
@@ -650,7 +741,7 @@ def build(src_key: str, dst_key: str, build_dir: Path) -> None:
     address in TO; everything else stays TO's own: its retail bytes, standing in for its assembly.
     SN's ee-ld links each program with its address map as the symbols' values, and every loaded
     section of the result is compared with TO's program."""
-    values, placed, _objects, gp = check(src_key, dst_key, build_dir, boot_only=True)
+    values, placed, _objects, gp = check(src_key, dst_key, build_dir, boot_only=True, own_asm=True)
     boot_pieces = {f: (*check.pieces[f], placed[f]) for f in check.pieces}
     boot, _gp = boot_of(dst_key)
     b = boot.read_bytes()

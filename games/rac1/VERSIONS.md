@@ -106,3 +106,22 @@ differently (the store falls through to the common `return 0`). The level
 functions still differing either have no C of their own (pieces of joined
 functions, handwritten assembly) or call a different routine in some levels
 (the catalogue's false folds), which is a catalogue fix, not a variant.
+
+## NTSC-U's own code where the merged tree has none
+
+What the merged tree's C (PAL's functions and the variants) does not place
+comes from NTSC-U's own disassembly, not its retail bytes: splat splits
+`SCUS_971.99` with `versions/ntsc/splat.yaml` (PAL's config with NTSC-U's
+offsets) and PAL's own fix-ups of splat's output, its globals get an `n`
+in front (`nfunc_`, `nD_`, `njtbl_`, so they cannot collide with PAL's
+address names), and each segment is assembled the way PAL builds its
+unmatched functions, as `INCLUDE_ASM` lines in a generated C file. Each
+function goes in at the address its name says. `tools/versions.py build`
+does all of it; the disassembly goes to the ignored `versions/ntsc/asm/`.
+
+For the boot executable, 2026-10-15: 922 functions from the merged tree's C
+and 746 from NTSC-U's own assembly. 96% of `core.text` and 95% of `.text`
+come from code that is built; the rest, linker fill between objects and 34
+functions the check cannot place yet, stays retail, as does the data. All
+20 programs still link identical to the disc. Level programs are linked
+from the merged tree's C with NTSC-U's bytes between, as before.
