@@ -97,3 +97,5 @@ func_001F9BB0	game_sound_math.c
 func_001F9E58	game_sound_math.c
 func_L00_002DACC0	level_nanotech_glow.c
 func_L00_00299B68	level_scene_start.c
+func_L02_00250A58	level_liquid_grid.c
+func_L02_002100E8	level_liquid_grid.c
