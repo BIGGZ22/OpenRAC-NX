@@ -1620,7 +1620,8 @@ void draw_kept(bool first) {
     // The mobys the game drew into a texture, at their markers (Kept::target_mobys): seen by the
     // camera they were drawn with, through the frame's focal lengths, about the centre of the
     // target the 2D layer was drawing into (its XYOFFSET's 2048), in its 512-pixel square.
-    input.target_mobys = [&](std::uint64_t marker, unsigned framebuffer, int size, float centre_x, float centre_y) {
+    input.target_mobys = [&](std::uint64_t marker, unsigned framebuffer, int size, float centre_x, float centre_y,
+                             bool clear_depth) {
         const std::uint32_t first = static_cast<std::uint32_t>(marker);
         const std::uint32_t count = static_cast<std::uint32_t>(marker >> 32) & 0xFFu;
         std::vector<viewer::Instance> instances;
@@ -1637,9 +1638,11 @@ void draw_kept(bool first) {
         using namespace openrac::gl;
         glViewport(0, 0, size, size);
         glDisable(GL_SCISSOR_TEST);
-        glDepthMask(GL_TRUE);
-        glClearDepth(0.0);
-        glClear(GL_DEPTH_BUFFER_BIT);
+        if (clear_depth) {
+            glDepthMask(GL_TRUE);
+            glClearDepth(0.0);
+            glClear(GL_DEPTH_BUFFER_BIT);
+        }
         const float half = 0.5f * static_cast<float>(renderer::kOffscreenPixels);
         const float tan_x = half / camera->focal_x;
         const float tan_y = half / camera->focal_y;

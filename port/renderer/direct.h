@@ -122,6 +122,9 @@ struct DirectDraw {
     // (FrameInput::target_mobys), about the target's centre (its XYOFFSET's 2048), in its pixels.
     std::uint64_t mobys = 0;
     float centre_x = 0.0f, centre_y = 0.0f;
+    // The first mobys since the target was last drawn into otherwise (a new panel): its depth is
+    // cleared first. Mobys drawn one after another (Ratchet, then the Clank on his back) share it.
+    bool clear_depth = false;
 };
 
 // Debugging: while set, every sprite and primitive the 2D path draws is logged (OPENRAC_DUMP_DRAWS).

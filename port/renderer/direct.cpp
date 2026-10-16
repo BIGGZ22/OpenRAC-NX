@@ -333,6 +333,13 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
                 d.mobys = value;
                 d.centre_x = 2048.0f - static_cast<float>(context().xyoffset.ofx) / 16.0f;
                 d.centre_y = 2048.0f - static_cast<float>(context().xyoffset.ofy) / 16.0f;
+                d.clear_depth = true;
+                for (auto it = m_draws.rbegin(); it != m_draws.rend(); ++it) {
+                    if (it->state.target == d.state.target && (it->count != 0 || it->mobys != 0)) {
+                        d.clear_depth = it->mobys == 0;
+                        break;
+                    }
+                }
                 m_draws.push_back(d);
             }
             return;
@@ -1509,7 +1516,8 @@ void DirectRenderer::draw(const DirectDraw& d, RenderState& render_state) {
         if (m_frame != nullptr && m_frame->target_mobys && s.target != 0) {
             const Offscreen& o = offscreen(s.target);
             glBindFramebuffer(GL_FRAMEBUFFER, o.framebuffer);
-            m_frame->target_mobys(d.mobys, o.framebuffer, kOffscreenPixels * kOffscreenScale, d.centre_x, d.centre_y);
+            m_frame->target_mobys(d.mobys, o.framebuffer, kOffscreenPixels * kOffscreenScale, d.centre_x, d.centre_y,
+                                  d.clear_depth);
             glDisable(GL_CULL_FACE);
             glDisable(GL_SCISSOR_TEST);
             m_shader.use();
@@ -1665,7 +1673,9 @@ void DirectRenderer::flush(RenderState& state, bool background) {
     if (k < 1.0f) {
         for (const Run& r : runs) {
             m_whole_target = r.whole;
-            draw(DirectDraw{r.draw->state, r.first, r.count, r.draw->mobys, r.draw->centre_x, r.draw->centre_y}, state);
+            draw(DirectDraw{r.draw->state, r.first, r.count, r.draw->mobys, r.draw->centre_x, r.draw->centre_y,
+                            r.draw->clear_depth},
+                 state);
         }
         m_whole_target = true;
     } else {
