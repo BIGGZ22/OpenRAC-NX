@@ -94,11 +94,6 @@ export async function chooseGamesFolder(): Promise<number | null> {
   return found.length;
 }
 
-/** "PAL (Europe)" -> "Europe": a region in a player's words. */
-export function regionWords(v: VersionView): string {
-  return /\(([^)]+)\)/.exec(v.region)?.[1] ?? v.region;
-}
-
 /** The version a player means by "this game": the one their set-up disc is, else the first one
  *  whose disc image was found, else the first one that can be played. */
 export function playerVersion(game: GameView): VersionView | null {
@@ -179,9 +174,11 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       kind: "other-disc",
       label: "Play",
       icon: "play",
-      hint: `Your disc is the ${regionWords(other)} version. Switch to it to play.`,
+      // Only a developer view shows another version than the disc's (playerVersion picks the
+      // disc's): no region words, which a player never needs.
+      hint: "This is set up from another disc. Set up from this one to play it.",
       disabled: true,
-      status: `Your disc is ${regionWords(other)}`,
+      status: "Set up from another disc",
       tone: "info",
     };
   }

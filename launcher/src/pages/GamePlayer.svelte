@@ -91,7 +91,7 @@
 
     <button class="ghost back" onclick={() => (app.page = "library")}><Icon name="arrow" size={16} />Games</button>
 
-    <section class="hero rise" aria-label={`${v.title} (${v.region})`}>
+    <section class="hero rise" aria-label={v.title}>
       {#if media}
         <div class="hero-backdrop" aria-hidden="true">
           <img src={media.gif ?? media.bg} alt="" class="hero-bg" />
