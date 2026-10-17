@@ -38,10 +38,10 @@ extern int D_L10_001DA580_2EA578[][2] __asm__("D_L10_001DA2B0");
 extern float D_L10_001DA5C0_2EA578[][2] __asm__("D_L10_001DA2F0");
 extern int D_L10_0015F4F8_2EA578 __asm__("D_L10_0015F3F8") MACRO_ADDR;
 extern int D_L10_00161FC0_2EA578 SDATA(D_L10_00161F40);
-extern int D_L10_00161FC8_2EA578[2] __asm__("D_L10_00161FC8__gp") MACRO_ADDR;
-extern int D_L10_00161FD0_2EA578[2] __asm__("D_L10_00161FD0__gp") MACRO_ADDR;
-extern int D_L10_00161FD8_2EA578[2] __asm__("D_L10_00161FD8__gp") MACRO_ADDR;
-extern int D_L10_00161FE0_2EA578[2] __asm__("D_L10_00161FE0__gp") MACRO_ADDR;
+extern int D_L10_00161FC8_2EA578[2] __asm__("D_L10_00161F48__gp") MACRO_ADDR;
+extern int D_L10_00161FD0_2EA578[2] __asm__("D_L10_00161F50__gp") MACRO_ADDR;
+extern int D_L10_00161FD8_2EA578[2] __asm__("D_L10_00161F58__gp") MACRO_ADDR;
+extern int D_L10_00161FE0_2EA578[2] __asm__("D_L10_00161F60__gp") MACRO_ADDR;
 
 extern void func_001FA460_2EA578(void *, void *) __asm__("func_001FA298");
 extern long func_001F4868_2EA578(int) __asm__("func_001F44B8");

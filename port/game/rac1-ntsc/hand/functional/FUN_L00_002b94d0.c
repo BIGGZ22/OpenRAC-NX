@@ -107,7 +107,7 @@ extern float D_L00_001615CC SDATA(D_L00_001615CC);
 extern float D_L00_001615D0 SDATA(D_L00_001615D0);
 extern float D_L00_001615E4 SDATA(D_L00_001615E4);
 extern float D_L00_001615E8 SDATA(D_L00_001615E8);
-extern int color43 __asm__("D_L00_001616C8__gp") MACRO_ADDR;
+extern int color43 __asm__("D_L00_001615F8__gp") MACRO_ADDR;
 extern float D_L00_00161628 SDATA(D_L00_00161628);
 extern float D_L00_0016162C SDATA(D_L00_0016162C);
 extern float func_001FA580(float,float),func_001FA5C8(float,float),func_001FA688(float,float);

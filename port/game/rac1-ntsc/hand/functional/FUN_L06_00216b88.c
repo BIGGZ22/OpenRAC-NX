@@ -13,8 +13,8 @@
 #define SDATA(symbol) __asm__(#symbol)
 #endif
 /* What the PAL file this was written in declares before it (its unit, and its own file). */
-/* functional: medium. Builds 4 GIF/VIF packets (a ribbon of S[5] quads per strip, strip index 3..0): each vertex of the strip at S[6] (+idx*S[5]*16) is moved to z-0.05 and z+0.05, transformed by the 4x4 matrix M, with ST pairs (u,0)/(u,1), one packed colour lerped between the colours S[3]/S[4] by the strip's S[2][idx] value, and appended at the packet pointer D_00161140 behind the templates D_L06_001C47A0/00160F40/00160F60/00160F80. VU0 maths hand-traced; cannot be run. */
-extern unsigned int *D_00161140 MACRO_ADDR;
+/* functional: medium. Builds 4 GIF/VIF packets (a ribbon of S[5] quads per strip, strip index 3..0): each vertex of the strip at S[6] (+idx*S[5]*16) is moved to z-0.05 and z+0.05, transformed by the 4x4 matrix M, with ST pairs (u,0)/(u,1), one packed colour lerped between the colours S[3]/S[4] by the strip's S[2][idx] value, and appended at the packet pointer D_001611C0 behind the templates D_L06_001C47A0/00160F40/00160F60/00160F80. VU0 maths hand-traced; cannot be run. */
+extern unsigned int *D_001611C0 MACRO_ADDR;
 extern unsigned int D_L06_001C4AA0_16B38[] __asm__("D_L06_001C47A0");
 extern unsigned int D_L06_00160F40_16B38[] __asm__("D_L06_00160EC0");
 extern unsigned int D_L06_00160F60_16B38[] __asm__("D_L06_00160EE0");
@@ -96,7 +96,7 @@ void FUN_L06_00216b88(int *S, float *M) {
 
         n2 = S[5] * 2;
         sh = (unsigned int)n2 << 16;
-        p = D_00161140;
+        p = D_001611C0;
         start = p;
         src = D_L06_001C4AA0_16B38;
         for (k = 0; k < 5; k++) {
@@ -155,6 +155,6 @@ void FUN_L06_00216b88(int *S, float *M) {
         p += 4;
         cw = (((unsigned int)p - (unsigned int)start) >> 4) - 1;
         start[0] |= cw;
-        D_00161140 = p;
+        D_001611C0 = p;
     } while (idx != 0);
 }
