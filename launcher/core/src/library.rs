@@ -353,7 +353,7 @@ mod tests {
                     if path.exists() {
                         true
                     } else if !cfg!(windows) && artifact.ends_with(".exe") {
-                        crate::under(&root, &artifact[..artifact.len() - 4]).exists()
+                        crate::program_path(crate::under(&root, &artifact[..artifact.len() - 4])).exists()
                     } else {
                         false
                     }

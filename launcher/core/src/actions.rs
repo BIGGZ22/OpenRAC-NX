@@ -469,7 +469,8 @@ impl Action {
         let filled = fill(artifact, ctx, None)?;
         let full_path = abs(ctx.root, &filled);
         if !cfg!(windows) && filled.ends_with(".exe") {
-            let without_exe = abs(ctx.root, &filled[..filled.len() - 4]);
+            // A program built here: without .exe, and on macOS in its application bundle.
+            let without_exe = crate::program_path(abs(ctx.root, &filled[..filled.len() - 4]));
             if without_exe.exists() || !full_path.exists() {
                 return Ok(without_exe);
             }
