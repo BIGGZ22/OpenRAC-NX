@@ -334,19 +334,18 @@ void game_D_0023B578(gaddr moby) {
 #endif
 
 /*
- * sprintf (newlib, in the executable). The translated formatter passes a va_list into game
- * memory, which hostgen cannot carry, so the port formats here: the conversions the game uses
- * (d i u x X o c s f %, with flags, width and precision). A string argument is a game address;
- * the result is written into game memory at `buffer`.
+ * The conversions the game's formats use (d i u x X o c s f e g %, with flags, width and
+ * precision), from host arguments: a string argument is a game address. At most `size` - 1
+ * characters go to `out`, which is terminated; the count written is returned. sprintf below and
+ * the kernel library's prints (rac1-pal/host/kprintf.c) format with it.
  */
-int func_00116248(gaddr buffer, gaddr format, ...) {
-    char out[1024];
+int rac1_vformat(char *out, size_t size, const char *f, va_list args) {
     size_t n = 0;
-    const char *f = (const char *)G(format);
-    va_list args;
 
-    va_start(args, format);
-    while (*f != '\0' && n + 1 < sizeof(out)) {
+    if (size == 0) {
+        return 0;
+    }
+    while (*f != '\0' && n + 1 < size) {
         char spec[32];
         size_t k = 0;
         char piece[512];
@@ -397,17 +396,32 @@ int func_00116248(gaddr buffer, gaddr format, ...) {
         }
         if (made > 0) {
             size_t take = (size_t)made < sizeof(piece) ? (size_t)made : sizeof(piece) - 1;
-            if (n + take >= sizeof(out)) {
-                take = sizeof(out) - 1 - n;
+            if (n + take >= size) {
+                take = size - 1 - n;
             }
             memcpy(out + n, piece, take);
             n += take;
         }
     }
-    va_end(args);
     out[n] = '\0';
-    memcpy(G(buffer), out, n + 1);
     return (int)n;
+}
+
+/*
+ * sprintf (newlib, in the executable). The translated formatter passes a va_list into game
+ * memory, which hostgen cannot carry, so the port formats here (rac1_vformat). The result is
+ * written into game memory at `buffer`.
+ */
+int func_00116248(gaddr buffer, gaddr format, ...) {
+    char out[1024];
+    int n;
+    va_list args;
+
+    va_start(args, format);
+    n = rac1_vformat(out, sizeof(out), (const char *)G(format), args);
+    va_end(args);
+    memcpy(G(buffer), out, (size_t)n + 1);
+    return n;
 }
 
 /*

@@ -104,6 +104,7 @@ int openrac_lib_sceGsSyncPath(int, unsigned short);
 /* libgcc */
 void openrac_lib___main(void);
 double openrac_lib___extendsfdf2(float);
+long long openrac_lib___muldi3(long long, long long);
 /* cdvd */
 int openrac_lib_sceCdSync(int);
 int openrac_lib_sceCdInit(int);

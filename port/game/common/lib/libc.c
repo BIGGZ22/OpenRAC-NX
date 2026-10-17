@@ -63,6 +63,12 @@ double openrac_lib___extendsfdf2(float f) {
     return (double)f;
 }
 
+/* __muldi3: the low 64 bits of a 64-bit product, which the console's 32-bit
+ * multiplier built from halves (libgcc). Unsigned, so it wraps as there. */
+long long openrac_lib___muldi3(long long a, long long b) {
+    return (long long)((unsigned long long)a * (unsigned long long)b);
+}
+
 /* __main: what the console's start-up ran before main (global constructors;
  * the game has none). */
 void openrac_lib___main(void) {}

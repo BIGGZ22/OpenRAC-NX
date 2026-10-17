@@ -31,6 +31,12 @@
 #define RAC1_NAME_(f) #f
 #define RAC1_NAME(f) RAC1_NAME_(f)
 
+/* hand.c: the game's printf conversions from host arguments into `out` (at most size - 1
+ * characters, terminated); the count written. */
+#include <stdarg.h>
+#include <stddef.h>
+int rac1_vformat(char *out, size_t size, const char *format, va_list args);
+
 /* boot.c: a new game straight in `level` from the title, as --level N with OPENRAC_DIRECT. */
 void rac1_start_level(int level);
 

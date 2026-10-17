@@ -68,6 +68,7 @@ func_001207B8	vu	sceGsResetPath	host
 func_00120858	vu	sceGsSyncPath	host
 func_0011DFC8	libgcc	__main	host	the host runs no global constructors for the game: it has none
 func_00120778	libgcc	__extendsfdf2	host	float to double; libgcc is the host compiler's
+func_0011EEC8	libgcc	__muldi3	host	64-bit multiply (src/libgcc, which hostgen does not read)
 func_00120F30	cdvd	sceCdSync	host	reads are done at once from the extracted disc image
 func_001211B0	cdvd	sceCdInit	host
 func_00121490	cdvd	sceCdDiskReady	host
@@ -263,6 +264,8 @@ func_001F9FA8	game	func_001F9FA8	host	the port's own (rac1/host/hand.c); its sig
 func_0023B670	game	func_0023B670	host	the port's own (rac1/host/hand.c); its signature decides the prototype	int (int, int, int, unsigned int, int)
 func_00235118	game	func_00235118	host	the port's own (rac1/host/hand.c); its signature decides the prototype	void (void)
 func_00116078	game	func_00116078	host	the port's own (rac1/host/hand.c); its signature decides the prototype	int (unsigned int, ...)
+func_0011A690	game	func_0011A690	host	kprintf, the kernel library's debug print: formatted by the port, to the log (rac1-pal/host/kprintf.c)	void (unsigned int, ...)
+func_0011A6C8	game	func_0011A6C8	host	scePrintf, the same through the debugger's console (rac1-pal/host/kprintf.c)	int (unsigned int, ...)
 func_00230A90	space	FlightUpdate	wrap	the flight between planets, each of its frames: marks the flight as playing for the Start skip (rac1/host/boot.c)	void (void)
 func_0022C9A8	draw	SkyDrawShell	wrap	the shell's matrix (D_001D9A70, built by the sky code before each shell) goes to the window, which draws the shells natively (rac1/host/render_native.c)	void (int)
 func_00201AF0	draw	draw_bootImage	wrap	the picture shown while a level loads goes into the frame buffer by an image transfer, which the 2D path keeps only as a texture: the port also draws it there (rac1/host/boot_picture.c)
