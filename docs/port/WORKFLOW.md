@@ -54,9 +54,9 @@ Players describe what they see, not what broke. Before reproducing, know:
 - **Whether the game does it too.** Some reports describe how the game
   always behaved. The HUD is one: in play it stays hidden and shows only
   for a moment when it has news (Ratchet takes damage, picks up bolts,
-  talks to a vendor, opens the weapon menu) or when the player presses
-  R3 (as remembered; check on a console or a recording before relying on
-  it). A hidden HUD is not a bug; one that stays hidden through those is.
+  talks to a vendor, opens the weapon menu) or when the player opens and
+  closes the pause menu (R3 opens the map, not the HUD). A hidden HUD is
+  not a bug; one that stays hidden through those is.
 - **The log.** The game writes `openrac-<id>.log` in the data folder
   (`<install>/active/<game>/data`). `[error]` and `[warning]` lines often
   name the cause (section 4).
