@@ -183,6 +183,10 @@ public:
     // the top 16 bits, the mobys' count in bits 32-39 and the first's address in the low 32,
     // becomes a draw of no vertices (DirectDraw::mobys) in the target being drawn.
     static constexpr std::uint64_t kMobyMarker = 0x4D42;
+    // Where the world is drawn: a marker of the same form, kWorldMarker in the top 16 bits, put by
+    // the game's terrain pass (rac1/host/render_native.c). The frontend splits the 2D path there
+    // (FrameInput::direct_before_world); drawing passes over it.
+    static constexpr std::uint64_t kWorldMarker = 0x574C;
 
     // A VIF1 stream carrying GIF data in DIRECT and DIRECTHL commands, with
     // the bookkeeping codes around them (NOP, FLUSH, STCYCL...). A command

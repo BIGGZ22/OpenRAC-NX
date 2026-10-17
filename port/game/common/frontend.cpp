@@ -198,7 +198,8 @@ std::vector<std::uint8_t> direct_packets(std::span<const std::uint8_t> ram, std:
                                          std::vector<renderer::EffectStrip>* strips = nullptr,
                                          std::vector<renderer::ImageUpload>* uploads = nullptr,
                                          std::size_t* before_world = nullptr,
-                                         std::size_t* first_offscreen = nullptr) {
+                                         std::size_t* first_offscreen = nullptr,
+                                         std::size_t* world_marker = nullptr) {
     std::vector<std::uint8_t> vif;
     std::uint32_t tag_at = chain & 0x01FFFFF0;
     std::uint32_t stack[2] = {0, 0};
@@ -391,6 +392,16 @@ std::vector<std::uint8_t> direct_packets(std::span<const std::uint8_t> ram, std:
             // the direct renderer reads every one from its first tag.
             const std::uint32_t head[4] = {0, 0, 0, 0x50000000u | (imm & 0xFFFF)};
             direct_at = gif.size();
+            // The world's marker (renderer::GifInterpreter::kWorldMarker): one PACKED A+D write to
+            // the NOP register, put where the game's terrain pass runs.
+            if (world_marker != nullptr && *world_marker == SIZE_MAX && imm == 2) {
+                std::uint64_t value, address;
+                std::memcpy(&value, vif.data() + at + 16, 8);
+                std::memcpy(&address, vif.data() + at + 24, 8);
+                if ((address & 0xFF) == 0x7F && (value >> 48) == renderer::GifInterpreter::kWorldMarker) {
+                    *world_marker = direct_at;
+                }
+            }
             gif.insert(gif.end(), reinterpret_cast<const std::uint8_t*>(head),
                        reinterpret_cast<const std::uint8_t*>(head) + sizeof(head));
             gif.insert(gif.end(), vif.data() + at, vif.data() + at + size);
@@ -2293,8 +2304,10 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     std::vector<renderer::EffectStrip> strips;
     std::size_t before_world = SIZE_MAX;
     std::size_t first_offscreen = SIZE_MAX;
+    std::size_t world_marker = SIZE_MAX;
     std::vector<std::uint8_t> packets = direct_packets(ram, viewer::shown_chain(ram, a), &strip_vertices, &strips,
-                                                       &g->effect_uploads, &before_world, &first_offscreen);
+                                                       &g->effect_uploads, &before_world, &first_offscreen,
+                                                       &world_marker);
     // The markers in a list index the quads of the tick that built it, and the list shown is the
     // one the last tick built (the game builds the next while this one is sent), one tick behind
     // the quads just recorded; FadeToBlack sends an old list again. Drawn with this tick's quads, a
@@ -2328,6 +2341,16 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     // A frame with mobys and no VU1 program in its chain (the vendor's menu: its frozen world, then
     // the vendor, which the port draws natively, then its screens rendered to textures and put on
     // the monitors): what comes before the first render to a texture is the picture under the mobys.
+    // A level's frame whose terrain was drawn has the world's marker where it was (put by the
+    // terrain pass, rac1/host/render_native.c): the split is there, or at a VU1 program started
+    // before it. The first VU1 program alone was too fragile: the port's world renderers send
+    // none, and the first is the world text's sprite pass (func_001F7B70), which runs only while
+    // there is any. On Kerwan in play there was none: all of the 2D path, the HUD with it, was
+    // taken as coming before the world and drawn under it. On Rilgar the split moved from frame
+    // to frame, and the HUD and the sea's layers flickered.
+    if (world_marker != SIZE_MAX) {
+        before_world = std::min(before_world, world_marker);
+    }
     if (before_world == SIZE_MAX && (k.draws & 0x10u) != 0) {
         before_world = first_offscreen;
     }

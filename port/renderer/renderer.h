@@ -111,7 +111,8 @@ struct FrameInput {
     // The packets the game built for each bucket this frame (empty when a
     // bucket has nothing, or its renderer draws from elsewhere).
     std::array<std::span<const std::uint8_t>, kBucketCount> packets{};
-    // The 2D path's data sent before the frame's first VU1 program, which the world comes after:
+    // The 2D path's data sent before the world's marker (GifInterpreter::kWorldMarker, put by the
+    // terrain pass) or the frame's first VU1 program, whichever comes first; the world comes after:
     // the frame's clear, and what the page menus put under their frame objects (the snapshot of
     // the frame they opened over, darkened). Drawn before the world (DirectBackground).
     std::span<const std::uint8_t> direct_before_world{};

@@ -147,6 +147,7 @@ guide's own list covers gameplay code.
 |---|---|---|
 | The vendor's screens black | A draw that reads a render target has texture handle 0, the placeholder's, and the "texture not uploaded yet" guard dropped it | The target read back held the panels; the monitors' draws had their writes masked |
 | Screens under the vendor's monitors | The store's frame has no VU1 program, so all of its 2D was taken as coming before the world | `OPENRAC_FRAME_LOG`: "before world" equal to the whole list |
+| No HUD on Kerwan, the HUD and sea flickering on Rilgar | The split at the first VU1 program: in the port that is the world text's sprite pass, absent while there is no world text. The terrain pass now puts a world marker in the list | `OPENRAC_FRAME_LOG`: "before world" equal to the whole list in play, PAL and US alike |
 | The split point never found | The packet scan read a non-GIF word as a huge image and skipped the rest of the frame | Logging each DIRECT the scan saw |
 | A flash on opening the store | The fly-in's first tick draws the world with an empty 2D list, so it showed unfaded between black ticks | Mean brightness per frame |
 | Gaps around 2D panels | The half-pixel shift was half a *game* pixel, 2.5 screen pixels at 2560 across | Cropping the edge at full resolution |
