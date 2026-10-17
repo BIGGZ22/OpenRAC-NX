@@ -60,10 +60,11 @@ openrac-rac1-pal --data <install>/active/rac1/data
 ```
 
 On macOS each windowed program is also an application bundle named by the
-game's title, so that the Dock, Cmd-Tab, Activity Monitor and crash reports
-show "Ratchet & Clank" rather than the file name:
-`build/release/apps/openrac-rac1-pal/Ratchet & Clank.app` (the title from
-`games/<game>/game.json`, the same for every version; see
+game's title and version, so that the Dock, Cmd-Tab, Activity Monitor and
+crash reports show "Ratchet & Clank (PAL)" rather than the file name:
+`build/release/apps/openrac-rac1-pal/Ratchet & Clank (PAL).app` (the title
+and the version's video standard from `games/<game>/game.json`, which the
+window's title shows too; see
 [cmake/MacApp.cmake](cmake/MacApp.cmake)). `build/release/openrac-rac1-pal`
 is a link to its program, for a shell; macOS names a program started through
 the link after the link. The launcher starts the one in the bundle.

@@ -53,6 +53,11 @@ extern const unsigned char openrac_icon_png[];
 extern const unsigned int openrac_icon_png_size;
 }
 
+// The game's name and version, "Ratchet & Clank (PAL)" (cmake/Games.cmake).
+#ifndef OPENRAC_GAME_TITLE
+#define OPENRAC_GAME_TITLE "OpenRAC"
+#endif
+
 namespace openrac::frontend {
 
 namespace {
@@ -994,7 +999,7 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
     // Before SDL starts: on Wayland the app id names the program to the desktop, and a machine
     // with two graphics cards is asked for the fast one.
     const std::string app_id = "dev.openrac." + game_id;
-    platform::set_app_metadata("OpenRAC: Ratchet & Clank", app_id.c_str());
+    platform::set_app_metadata(OPENRAC_GAME_TITLE, app_id.c_str());
     platform::prefer_discrete_gpu();
     g->sdl = std::make_unique<platform::Platform>(platform::kVideo | platform::kGamepad | platform::kAudio);
     if (!g->sdl->ok()) {
@@ -1002,7 +1007,7 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
         return false;
     }
     platform::WindowConfig config;
-    config.title = "OpenRAC: Ratchet & Clank (native)";
+    config.title = OPENRAC_GAME_TITLE;
     config.width = 1280;
     config.height = 960;
     // The game ticks 60 times a second (main.cpp, every version) and the window draws at the

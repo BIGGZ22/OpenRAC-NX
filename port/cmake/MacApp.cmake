@@ -10,15 +10,14 @@
 # when that matches), the rest by its Info.plist and executable, and the Dock and Finder show its
 # icon before the window opens. So on macOS
 #
-#   openrac_macos_app(openrac-rac1-pal NAME "Ratchet & Clank" ID dev.openrac.rac1 ICON <png>)
+#   openrac_macos_app(openrac-rac1-pal NAME "Ratchet & Clank (PAL)" ID dev.openrac.rac1-pal ICON <png>)
 #
-# builds the target as <build>/apps/openrac-rac1-pal/Ratchet & Clank.app, its program
-# Contents/MacOS/Ratchet & Clank, with Contents/Info.plist (CFBundleName and CFBundleDisplayName
+# builds the target as <build>/apps/openrac-rac1-pal/Ratchet & Clank (PAL).app, its program
+# Contents/MacOS/Ratchet & Clank (PAL), with Contents/Info.plist (CFBundleName and CFBundleDisplayName
 # NAME, CFBundleIdentifier ID) and Contents/Resources/icon.icns: ICON if it is one, else made from
 # the PNG ICON (sips and iconutil, which every Mac has). A ":" in NAME, which Finder shows as "/",
-# is written " -". Each bundle has a folder named after its target, so two versions of a game share
-# their title, as players see it; the launcher finds the program from the target's name
-# (launcher/core/src/lib.rs, program_path).
+# is written " -". Each bundle has a folder named after its target, where the launcher finds it
+# from the target's name (launcher/core/src/lib.rs, program_path).
 #
 # <build>/openrac-rac1-pal stays as a link to the program, for a shell and the scripts that start
 # it there: started through the link the program works the same, but macOS names it after the link.
