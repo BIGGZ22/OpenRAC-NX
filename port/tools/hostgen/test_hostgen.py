@@ -773,6 +773,21 @@ class TypeStrings(unittest.TestCase):
 
 
 class Preparation(unittest.TestCase):
+    def test_each_declarator_keeps_its_own_assembler_name(self):
+        # Batalia: several names in one extern statement each reach their own symbol, not the first's.
+        src = ('extern float func_A(int),func_B(float), *D_C;\n'
+               'void f(void) { func_B(1.0f); func_A(2); }\n')
+        out = prep.own_declarations(src, "_hc1")
+        self.assertIn('func_A_hc1(int) __asm__("func_A")', out)
+        self.assertIn('func_B_hc1(float) __asm__("func_B")', out)
+        self.assertIn('*D_C_hc1 __asm__("D_C")', out)
+        self.assertIn("func_B_hc1(1.0f); func_A_hc1(2);", out)
+        self.assertEqual(out.count("\n"), src.count("\n"))
+
+    def test_commas_in_a_parameter_list_do_not_split(self):
+        src = "extern int func_A(int, float);\n"
+        self.assertEqual(prep.split_declarators(src), src)
+
     def test_long_constant_suffix_is_widened(self):
         # The EE's long is 64 bits: 1UL << 60 must stay a 64-bit shift.
         src = 'x = 1UL << 60; y = 0xFE00L; z = 3LU; w = 5ULL; s = "2L";'

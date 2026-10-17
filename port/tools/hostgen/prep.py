@@ -253,8 +253,47 @@ _INCLUDE_ASM = re.compile(r'^[ \t]*(?:INCLUDE_ASM|ASM_FUNC|LINKER_REMNANT)\(\s*(
 
 # A file-scope declaration of a game symbol (data or function) with no assembler name of its own.
 _GAME_DECL = re.compile(
-    r'^(?:extern[ \t]+)?[A-Za-z_][\w \t\*]*?[ \t\*]((?:D|func)_\w+)([^;{}=]*);', re.M)
+    r'(?:^|(?<=; /\*hc\*/ ))(?:extern[ \t]+)?[A-Za-z_][\w \t\*]*?[ \t\*]((?:D|func)_\w+)([^;{}=]*);', re.M)
 _DEFINED = re.compile(r'^[A-Za-z_][\w \t\*]*?[ \t\*]((?:D|func)_\w+)\s*\([^;{}]*\)\s*\{', re.M)
+
+
+_MULTI_DECL = re.compile(
+    r'^((?:extern[ \t]+)?[A-Za-z_][\w \t]*?)([ \t\*]+(?:D|func)_\w+[^;{}=]*);', re.M)
+
+
+def _top_level_commas(s: str) -> list[int]:
+    depth, at = 0, []
+    for i, c in enumerate(s):
+        if c in "([":
+            depth += 1
+        elif c in ")]":
+            depth -= 1
+        elif c == "," and depth == 0:
+            at.append(i)
+    return at
+
+
+def split_declarators(text: str) -> str:
+    """One declaration per name: `extern float f(int), g(float);` becomes
+    `extern float f(int); /*hc*/ extern float g(float);`, on the same line (the comment marks where
+    own_declarations may start a declaration in the middle of a line).
+
+    own_declarations gives each declared name an assembler name after its declarator; with several
+    declarators in one statement it would put the first name's assembler name after the last one,
+    and every call to one of them would reach another (Batalia's func_L08_002F7318 called the
+    int-to-float conversion for sqrt). Commas inside a parameter list stay."""
+    def split(m: re.Match) -> str:
+        base, rest = m.group(1).rstrip(), m.group(2)
+        cuts = _top_level_commas(rest)
+        if not cuts:
+            return m.group(0)
+        parts, last = [], 0
+        for c in cuts:
+            parts.append(rest[last:c])
+            last = c + 1
+        parts.append(rest[last:])
+        return "; /*hc*/ ".join(base + (p if p[:1] in " \t*" else " " + p) for p in parts) + ";"
+    return _MULTI_DECL.sub(split, text)
 
 
 def own_declarations(text: str, tag: str) -> str:
@@ -266,6 +305,7 @@ def own_declarations(text: str, tag: str) -> str:
     declared name becomes NAME<tag> with the assembler name NAME: the same
     symbol for hostgen, a separate declaration for Clang. Names the candidate
     defines keep theirs."""
+    text = split_declarators(text)
     defined = set(_DEFINED.findall(text))
     names = []
     for m in _GAME_DECL.finditer(text):
@@ -278,7 +318,7 @@ def own_declarations(text: str, tag: str) -> str:
         text = re.sub(r'"(?:\\.|[^"\\\n])*"|\b' + name + r'\b',
                       lambda m: m.group(0) if m.group(0).startswith('"') else name + tag, text)
         # The assembler name goes after the declarator, before attribute macros (MACRO_ADDR).
-        text = re.sub(r'^((?:extern[ \t]+)?[A-Za-z_][\w \t\*]*?[ \t\*]' + name + tag
+        text = re.sub(r'(?:^|(?<=; /\*hc\*/ ))((?:extern[ \t]+)?[A-Za-z_][\w \t\*]*?[ \t\*]' + name + tag
                       + r'\b[^;{}=]*?)((?:[ \t]+[A-Z][A-Z0-9_]*(?:\([^;()]*\))?)*)[ \t]*;',
                       lambda m: f'{m.group(1)} __asm__("{name}"){m.group(2)};', text, flags=re.M)
     return text
