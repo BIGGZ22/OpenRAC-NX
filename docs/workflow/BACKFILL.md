@@ -151,6 +151,45 @@ What it is not: a way to raise the percentage, or a place for a match that
 only works with a trick. If a later attempt matches the function, the match
 goes in `src/` and the functional file and its row are removed.
 
+## Picking what to backfill first
+
+The port does not need every function at once: it needs the ones gameplay goes
+through. `port/tools/hostgen/priority.py` ranks the weak ones by static
+analysis, from what hostgen already wrote, without running the game:
+
+```sh
+cmake --build --preset release            # in port/: hostgen writes gen/report.json
+python3 port/tools/hostgen/priority.py --game port/game/rac1-pal/hostgen.json \
+    --gen port/build/release/games/rac1-pal/gen \
+    --dump games/rac1/baserom/overlays --exe games/rac1/baserom/SCES_509.16 \
+    --out build/priority/rac1-pal.md
+python3 -m unittest port/tools/hostgen/test_priority.py   # its test (no Clang)
+```
+
+A weak function is one with no C, C hostgen cannot translate, a call that
+leaves an argument out (filled with 0), C that is not matched (a candidate or
+the port's hand C, weighted by its confidence line: low, medium, then high;
+VU0 microcode first of all), a candidate whose declarations hostgen's prep
+renamed wrongly (in `extern T a(..), b(..);` the calls to `b` reach `a`), or
+matched C its callers declare differently (hostgen's `call_site_mismatches`:
+more or fewer integer or float arguments than it takes, or a result it does
+not return; extra arguments it never reads are left out). For each level program it follows hostgen's `call_graph`, the
+retail code's own calls where only the level knows the target (the level
+hooks, functions with no C yet), and every function the level's `vtbl`,
+`camvtbl`, `sndvtbl` and data records point at (the moby class tables). The
+report ranks what every level reaches, or what sits on a hot path (hero,
+camera, collision, HUD, 2D draw, moby update and draw, sound, level load),
+first; then by the number of levels; then by how weak; and suggests a tier
+(Haiku for small plain functions, Sonnet up to 1 KB or for one argument read
+from the assembly, Opus for large or hand-written ones).
+
+What it cannot see: calls through pointers computed at run time and kept
+outside those records (a pointer built in the heap, a table in the
+executable's own data), so "no level reaches it" means nothing it follows
+does. Hot paths come from source units, readable names and table roles,
+carried two calls down; read them as a hint. Without `--dump` it uses the
+roles in `config/overlays/names.tsv` instead of the records.
+
 ## Deciding, in one pass
 
 ```

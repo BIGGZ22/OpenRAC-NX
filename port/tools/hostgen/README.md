@@ -133,6 +133,7 @@ with C). A level function is one named `func_Lnn_...` or `FUN_Lnn_...`.
 | `libraries.c` | the game's library addresses bound to the shared replacements |
 | `game_info.c` | the game's description (`openrac_game`), its entry (`openrac_game_run`) and, unless the game has its own, its overlay hook |
 | `report.md`, `report.json` | what was translated, what became a stub and why, and **the frontier**: the functions without C that the program reaches from its roots, nearest first. That list is where decompiling moves the port on. |
+| `report.json` `call_graph`, `call_site_mismatches` | what each translated function calls or takes the address of, and the direct calls whose site disagrees with the callee's definition (arity, kinds, result): [priority.py](priority.py) ranks the weak functions gameplay reaches from them ([BACKFILL.md](../../../docs/workflow/BACKFILL.md#picking-what-to-backfill-first)) |
 
 Names other than `func_...` get a `game_` prefix in the generated C, so
 the game's own `memcpy` or `main` never meets the host's.
@@ -148,3 +149,4 @@ the game's own `memcpy` or `main` never meets the host's.
 | [program.py](program.py) | what the whole program defines: signatures, addresses, typedefs |
 | [lower.py](lower.py) | the translation of one unit |
 | [test_hostgen.py](test_hostgen.py), [tests/harness.c](tests/harness.c) | small programs in the console's C, translated, built, run and checked |
+| [priority.py](priority.py), [test_priority.py](test_priority.py) | what to backfill first: the weak functions each level program reaches, ranked |
