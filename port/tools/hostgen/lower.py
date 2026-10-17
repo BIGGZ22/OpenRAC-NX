@@ -1135,7 +1135,10 @@ class Unit:
                 own = next((a for o, a in places if o == home), places[0][1])
                 self.fn.uses_self = True
                 return f"openrac_code_in_copy({home}, {hexaddr(canon)}, {size}u, openrac_self_, {hexaddr(own)})"
-            if level is not None and places[0][0] >= 0:
+            if level is not None and (places[0][0] >= 0 or any(o == level for o, _ in places)):
+                # An executable function the levels' programs also carry (its catalogue places)
+                # counts as theirs here: the copy in the level loaded, as the level's own
+                # instruction forms it, not the executable's address under the level program.
                 own = next((a for o, a in places if o == level), places[0][1])
                 return f"OPENRAC_LCODE({level}, {hexaddr(own)})"
             # A function of one level only: the place of the other in that level (its program is
