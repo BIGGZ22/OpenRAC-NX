@@ -85,6 +85,25 @@ void functions() {
     CHECK(openrac_guest_function_name(0x00200000u) == nullptr);
 }
 
+// A copy of a function that calls another through a pointer the compiler turned into a jal: the
+// address it takes is the one the copy at self calls at the same instruction.
+void code_in_copy_jal() {
+    const auto jal = [](gaddr target) { return 0x0C000000u | ((target & 0x0FFFFFFFu) >> 2); };
+    const std::uint32_t canon[] = {0x27BDFFF0u, jal(0x00310000u), 0, 0x03E00008u};
+    const std::uint32_t self[] = {0x27BDFFF0u, jal(0x00330000u), 0, 0x03E00008u};
+    std::memcpy(G(0x00300000u), canon, sizeof canon);
+    std::memcpy(G(0x00320000u), self, sizeof self);
+    openrac_guest_set_overlay(5);
+    CHECK(openrac_code_in_copy(5, 0x00300000u, sizeof canon, 0x00320000u, 0x00310000u) == 0x00330000u);
+    // Formed with lui and addiu, the address is read from the copy's own pair, as before.
+    const std::uint32_t formed[] = {0x3C040031u, 0x24840010u, jal(0x00310010u), 0};
+    const std::uint32_t own[] = {0x3C040034u, 0x24840020u, jal(0x00340020u), 0};
+    std::memcpy(G(0x00300100u), formed, sizeof formed);
+    std::memcpy(G(0x00320100u), own, sizeof own);
+    CHECK(openrac_code_in_copy(5, 0x00300100u, sizeof formed, 0x00320100u, 0x00310010u) == 0x00340020u);
+    openrac_guest_set_overlay(OPENRAC_OVERLAY_EXE);
+}
+
 void put32(std::vector<std::uint8_t>& f, std::size_t at, std::uint32_t v) {
     for (int i = 0; i < 4; i++) {
         f[at + i] = static_cast<std::uint8_t>(v >> (8 * i));
@@ -184,6 +203,7 @@ int main() {
     memory_map();
     frames_and_strings();
     functions();
+    code_in_copy_jal();
     elf();
     host_stack();
     return openrac::test::result();

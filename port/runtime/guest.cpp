@@ -1050,17 +1050,33 @@ gaddr openrac_code_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gad
         return (lo >> 26) == 0x0D ? (upper | imm) : upper + static_cast<std::uint32_t>(static_cast<std::int16_t>(imm));
     };
     gaddr result = fallback;
+    bool formed_here = false;
+    // A function the C takes the address of and calls through it, where the compiler called it
+    // directly: the copy at canon has a jal to target and forms no address. The copy at self calls
+    // its own function at the same instruction (rac1: func_L00_0029D988 calls the hero update
+    // through a pointer; in Novalis that is func_L01_00228E08, not level 0's func_L00_002076E8).
+    std::uint32_t jal_at = size;
     UpperHalves upper;
     for (std::uint32_t i = 0; i * 4 < size; upper.step(canon_word(canon + i * 4), i), ++i) {
         const std::uint32_t w = canon_word(canon + i * 4);
         const std::uint32_t op = w >> 26, rs = (w >> 21) & 31;
+        if (op == 3 && jal_at == size && ((w & 0x03FFFFFFu) << 2) == (target & 0x0FFFFFFFu)) {
+            jal_at = i;
+        }
         if ((op == 0x09 || op == 0x0D) && upper.set[rs]
                    && formed(canon_word(canon + upper.at[rs] * 4), w) == target) {
             const std::uint32_t hi = self_word(self + upper.at[rs] * 4), lo = self_word(self + i * 4);
             if ((hi >> 26) == 0x0F && (lo >> 26) == op) {
                 result = formed(hi, lo);
             }
+            formed_here = true;
             break;
+        }
+    }
+    if (!formed_here && jal_at != size) {
+        const std::uint32_t mine = self_word(self + jal_at * 4);
+        if ((mine >> 26) == 3) {
+            result = (self & 0xF0000000u) | ((mine & 0x03FFFFFFu) << 2);
         }
     }
     found.emplace(key, result);
