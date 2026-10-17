@@ -165,6 +165,14 @@ class Program:
                 return int(m.group("addr"), 16)
         return None
 
+    def data_level(self, symbol: str) -> int | None:
+        """The level a data name says it is of (D_L05_..., the names' `overlay` group), or None."""
+        for pattern in self.data_names:
+            m = pattern.match(symbol)
+            if m and m.groupdict().get("overlay") is not None:
+                return int(m.group("overlay"))
+        return None
+
     def index_places(self) -> None:
         """Every function with C (or the port's own) by where it sits, so that
         two spellings of one address (FUN_0020c828, func_0020C828) meet."""

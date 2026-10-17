@@ -1353,7 +1353,13 @@ class Unit:
         if address is None:
             raise Unsupported(f"global {sym} has no known address")
         addr = hexaddr(address)
-        if self._relocated(address):
+        named_level = self.program.data_level(sym) if hasattr(self.program, "data_level") else None
+        if self._relocated(address) and named_level is not None:
+            # A level's datum by its name (D_L00_...) in a function that is not a level's (a
+            # static helper of a level file): that level's, looked up for the level loaded, as in
+            # the level functions beside it; OPENRAC_DATA would take it for the executable's.
+            addr = f"OPENRAC_LDATA({named_level}, {addr})"
+        elif self._relocated(address):
             addr = f"OPENRAC_DATA({addr})"
         else:
             level = self._shared_level()
