@@ -1,4 +1,4 @@
-/* functional: medium. Thrown-object moby update (the state byte at moby+0x20 picks: 0 init, 1 held (killed if the hero lets go), 2 flying (gravity, push-apart from other mobys, sphere collision with bounce/stick), 3 and 4 landed/rolling (hit detection against the nearest hurt, damage and explosion when the vars+0x48 health drops below 0; 4 times out into 5), 5/6 fade and kill). Written from the asm with the NTSC decomp draft as the guide; PAL adds the hero-state 0x31 pull toward the hero before the hit test. Not checkable by real calls (not called before level 1). */
+/* functional: medium. corrected from nonmatching/functional/func_L00_002C5688.c: the hero-state 0x31 pull passed moby+0x10 where retail passes moby (func_L00_0025AC00 reads target+0xA4), the 0x24-byte effect block handed to func_L00_001F2BE8 was split over separate locals, and the vars+0x68 mask used 32-bit long. Thrown-object moby update (the state byte at moby+0x20 picks: 0 init, 1 held (killed if the hero lets go), 2 flying (gravity, push-apart from other mobys, sphere collision with bounce/stick), 3 and 4 landed/rolling (hit detection against the nearest hurt, damage and explosion when the vars+0x48 health drops below 0; 4 times out into 5), 5/6 fade and kill). Written from the asm with the NTSC decomp draft as the guide; PAL adds the hero-state 0x31 pull toward the hero before the hit test. Not checkable by real calls (not called before level 1). */
 extern int func_001F9850_C5688(int) __asm__("func_001F9850");
 extern float func_001FA888_C5688(int) __asm__("func_001FA888");
 extern void func_L00_00260878_C5688(void *, void *) __asm__("func_L00_00260878");
@@ -55,10 +55,10 @@ void func_L00_002C5688(char *moby) {
     int active = D_0013E633_C5688[6];
     char *vars = *(char **)(moby + 0x78);
     char *target, *found, *ground;
-    float v[4] __attribute__((aligned(16)));
-    float wv[4] __attribute__((aligned(16)));
-    float xv[4] __attribute__((aligned(16)));
-    float cv[4] __attribute__((aligned(16)));
+    /* One block like retail's frame (sp+0x20 v, +0x30 wv, +0x40 xv, +0x50 cv):
+       func_L00_001F2BE8 reads 0x24 bytes from wv, including the bytes set at xv+8..11. */
+    float sb[16] __attribute__((aligned(16)));
+    float *v = sb, *wv = sb + 4, *xv = sb + 8, *cv = sb + 12;
     float len, len2, angle, cos_a, sin_a, rate, effect, fx;
     int i, ok;
     short *ids;
@@ -209,7 +209,7 @@ void func_L00_002C5688(char *moby) {
     case 4:
         if (*(int *)(hero + 0x2084) == 0x31) {
             if (func_001F9D48_C5688(moby + 0x10, hero + 0x80) < 1.5f)
-                func_L00_0025AD38_C5688(1000.0f, moby + 0x10, moby + 0x10, 0x10000, hero + 0x80);
+                func_L00_0025AD38_C5688(1000.0f, moby, moby, 0x10000, hero + 0x80);
         }
         found = func_L00_0025B478_C5688(moby, 0x30001, 0);
         *(float *)(moby + 0x40) = func_001FA748_C5688(*(float *)(moby + 0x40),
@@ -225,7 +225,7 @@ void func_L00_002C5688(char *moby) {
                 *(int *)(vars + 0x5C) = func_001F9850_C5688(30);
                 if (*(short *)(vars + 0x6C) == 0) {
                     if (*(unsigned short *)(found + 0x28) == 0x101 &&
-                        (*(unsigned long *)(vars + 0x68) & 0xFFFFFF00000000UL) == 0) {
+                        (*(unsigned long long *)(vars + 0x68) & 0xFFFFFF00000000ULL) == 0) {
                         *(short *)(vars + 0x6C) = (short)func_001F9850_C5688(100);
                         *(unsigned char *)(vars + 0x6E) = 1;
                     } else {

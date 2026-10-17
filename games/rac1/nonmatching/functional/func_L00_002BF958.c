@@ -1,5 +1,15 @@
-/* functional: medium. Draws up to three glow quads (slots flagged in D_L00_001618E8): per slot the alpha comes from func_001FA898 of D_L00_001618B8[i], the 3-row frame is built from D_L00_001DD3D0[i] (cross products with the camera up vector D_0013E633+0x10AD) and the four corners from D_L00_001DC220 scaled by D_L00_001618D8[i]. */
+/* functional: medium. corrected from the previous nonmatching/functional/func_L00_002BF958.c: (1) retail stores 1.0f at +0x6C of the quad as well as +0x68, the old C left +0x6C uninitialised; (2) func_001F9EE8 reads a 4-row matrix (64 bytes) from its third argument, and retail keeps scaled, axis, negativeUp and the copy of D_L00_001DD3A0[i] contiguous at sp+0x90..0xCF, so the four rows are now one struct (separate locals would give func_001F9EE8 stack garbage for rows 1..3); declarations added so the file compiles. Draws up to three glow quads (slots flagged in D_L00_001618E8): per slot the alpha comes from func_001FA898 of D_L00_001618B8[i], the 3-row frame is built from D_L00_001DD3D0[i] (cross products with the camera up vector D_0013E633+0x10AD) and the four corners from D_L00_001DC220 scaled by D_L00_001618D8[i]. */
 typedef struct { float f[4]; } V_2BF958 __attribute__((aligned(16)));
+extern unsigned char D_0013E633[] NOT_SDA;
+extern int func_001F4868(int);
+extern int func_001FA898_r(float) __asm__("func_001FA898");
+extern void func_001F9CA0(void *, void *, void *);
+extern void func_001F9EE8(void *, void *, void *);
+extern void func_L00_001FF4B0(void *, void *, float);
+extern void func_L00_001FD1D8(void *, void *, int);
+typedef struct {
+    V_2BF958 row[4];
+} M_2BF958;
 typedef struct {
     V_2BF958 corner[4];
     int color[4];
@@ -9,7 +19,7 @@ typedef struct {
     float unk68, unk6C;
     long unk70, tex, unk80, unk88;
 } Q_2BF958;
-extern void vmul_2BF958(float, void *, void *) __asm__("func_001F9C30");
+extern void vmul_2BF958(void *, void *, float) __asm__("func_001F9C30");
 extern int D_L00_001618E8_2BF958[] __asm__("D_L00_001618E8");
 extern float D_L00_001618B8_2BF958[] __asm__("D_L00_001618B8");
 extern float D_L00_001618D8_2BF958[] __asm__("D_L00_001618D8");
@@ -21,11 +31,12 @@ extern int D_L00_00161834_2BF958 __asm__("D_L00_00161834");
 
 void func_L00_002BF958(void *o) {
     Q_2BF958 quad;
-    V_2BF958 scaled, axis, negativeUp, vertex0, vertex1;
+    M_2BF958 mat; /* rows: scaled, axis, negativeUp, vertex0 (sp+0x90..0xCF) */
+    V_2BF958 vertex1;
     int color;
     int i, j, c;
 
-    quad.tex = func_001F4868_BEF58(8);
+    quad.tex = func_001F4868(8);
     quad.unk88 = 0x8000000048L;
     quad.unk80 = 0xFF9000000260L;
     quad.unk5C = 1.0f;
@@ -36,6 +47,7 @@ void func_L00_002BF958(void *o) {
     quad.unk60 = 1.0f;
     quad.unk64 = 0;
     quad.unk68 = 1.0f;
+    quad.unk6C = 1.0f;
     if (((unsigned char *)D_0013E633)[2] != 0) {
         c = D_L00_00161834_2BF958;
     } else {
@@ -49,15 +61,15 @@ void func_L00_002BF958(void *o) {
             quad.color[1] = col;
             quad.color[2] = col;
             quad.color[3] = col;
-            vertex0 = D_L00_001DD3A0_2BF958[i];
-            scaled = D_L00_001DD3D0_2BF958[i];
-            vmul_2BF958(-1.0f, &negativeUp, D_0013E633 + 0x10AD);
-            func_001F9CA0(&axis, &scaled, &negativeUp);
-            func_L00_001FF4B0(&axis, &axis, 1.0f);
-            func_001F9CA0(&negativeUp, &axis, &scaled);
+            mat.row[3] = D_L00_001DD3A0_2BF958[i];
+            mat.row[0] = D_L00_001DD3D0_2BF958[i];
+            vmul_2BF958(&mat.row[2], D_0013E633 + 0x10AD, -1.0f);
+            func_001F9CA0(&mat.row[1], &mat.row[0], &mat.row[2]);
+            func_L00_001FF4B0(&mat.row[1], &mat.row[1], 1.0f);
+            func_001F9CA0(&mat.row[2], &mat.row[1], &mat.row[0]);
             for (j = 0; j < 4; j++) {
-                vmul_2BF958(D_L00_001618D8_2BF958[i], &vertex1, &D_L00_001DC220_2BF958[j]);
-                func_001F9EE8(&quad.corner[j], &vertex1, &scaled);
+                vmul_2BF958(&vertex1, &D_L00_001DC220_2BF958[j], D_L00_001618D8_2BF958[i]);
+                func_001F9EE8(&quad.corner[j], &vertex1, &mat);
             }
             func_L00_001FD1D8(&quad, 0, 0);
         }

@@ -1,3 +1,4 @@
+/* functional: medium. Corrected from nonmatching/functional/func_001F9E58.c: retail returns an int (1 when it shortened a, 0 when it did not) and writes out only when it shortens it; the old copy returned void and always wrote out. A zero-length a returns 0 as retail does. Same result for the in-place call in sound.c. */
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright (c) 2026 the OpenRAC contributors */
 
@@ -18,23 +19,28 @@
  */
 extern float openrac_sqrt(float x);
 
-/* out = a, shortened to the length `longest` when it is longer, in x, y and z; w is
- * a's. The occlusion test's line ends at most 64 units from the listener. */
-void func_001F9E58(float *out, float *a, float longest) {
+/* out = a, shortened to the length `longest` when it is at least that long, in x, y and z; w is
+ * a's. Returns 1 when it shortened a (and stored out), 0 otherwise (nothing stored). The
+ * occlusion test's line ends at most 64 units from the listener. */
+int func_001F9E58(void *out_, void *a_, float longest) {
+    float *out = (float *)out_;
+    float *a = (float *)a_;
     float x = a[0];
     float y = a[1];
     float z = a[2];
-    unsigned w = ((unsigned *)a)[3];
+    unsigned int w = ((unsigned int *)a)[3];
     float length = openrac_sqrt(x * x + y * y + z * z);
 
-    if (length != 0.0f && length >= longest) {
-        float scale = longest / length;
-        x = x * scale;
-        y = y * scale;
-        z = z * scale;
+    if (length == 0.0f || length < longest) {
+        return 0;
     }
-    out[0] = x;
-    out[1] = y;
-    out[2] = z;
-    ((unsigned *)out)[3] = w;
+    {
+        float scale = longest / length;
+
+        out[0] = x * scale;
+        out[1] = y * scale;
+        out[2] = z * scale;
+        ((unsigned int *)out)[3] = w;
+    }
+    return 1;
 }

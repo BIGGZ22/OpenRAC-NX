@@ -1,3 +1,4 @@
+/* functional: high. corrected from nonmatching/functional/func_L00_002A62D0.c: the four GS words (sp+0x70..0x8F in retail) are now part of the quad, which func_L00_001FD1D8 reads at +0x70..+0x88; the copy kept them in a separate 32-bit-long array, so the drawer read stack garbage and 0x4000000044 was truncated. */
 /* func_L00_002A62D0 -- src/overlays/shared/vendor_002A5138.c (functional C for the port, not a match)
  * Draw callback of the pulsing light-beam moby (queued through func_001F49B0 by func_L00_002A6A38).
  * Scrolls the beam's texture offset (D_L00_0016145C), draws four quads of the beam from the
@@ -13,6 +14,7 @@ typedef struct {
     float v[4][4];
     int col[4];
     float uv[4][2];
+    unsigned long long pk[4]; /* +0x70: GS words the quad drawer reads (func_L00_001FD428 ld 0x70..0x88) */
 } Quad_2A62D0;
 
 extern char D_L00_00166D80_2A62D0[] __asm__("D_L00_00166D80");
@@ -25,7 +27,7 @@ extern int D_L00_001D7738_2A62D0[] __asm__("D_L00_001D7738");
 extern int D_L00_001D7760_2A62D0[][4] __asm__("D_L00_001D7760");
 
 extern void func_001FA1F8_2A62D0(void *, void *) __asm__("func_001FA1F8");
-extern long func_001F4868_2A62D0(int) __asm__("func_001F4868");
+extern unsigned long long func_001F4868_2A62D0(int) __asm__("func_001F4868");
 extern void func_001F9EC0_2A62D0(void *, void *, void *) __asm__("func_001F9EC0");
 extern void func_001F9BD8_2A62D0(void *, void *, void *) __asm__("func_001F9BD8");
 extern void func_L00_001FD1D8_2A62D0(void *, int, int) __asm__("func_L00_001FD1D8");
@@ -37,7 +39,6 @@ void func_L00_002A62D0_m(char *m) __asm__("func_L00_002A62D0");
 void func_L00_002A62D0_m(char *m) {
     char *p = *(char **)(m + 0x78);
     Quad_2A62D0 qd;
-    long pk[4];
     float q[4][4];
     float d0[4];
     float mtx[3][4];
@@ -56,10 +57,10 @@ void func_L00_002A62D0_m(char *m) {
         D_L00_0016145C_2A62D0 = D_L00_0016145C_2A62D0 - 1.0f;
     }
 
-    pk[2] = 1;
-    pk[3] = 0x4000000044L;
-    pk[0] = 0;
-    pk[1] = func_001F4868_2A62D0(0x18);
+    qd.pk[2] = 1;
+    qd.pk[3] = 0x4000000044ULL;
+    qd.pk[0] = 0;
+    qd.pk[1] = func_001F4868_2A62D0(0x18);
 
     for (k = 0; k < 4; k++) {
         func_001F9EC0_2A62D0(q[0], D_L00_001D7660_2A62D0[D_L00_001D7760_2A62D0[k][0]], mtx);
@@ -100,7 +101,7 @@ void func_L00_002A62D0_m(char *m) {
         func_L00_001FD1D8_2A62D0(&qd, 0, 1);
     }
 
-    pk[1] = func_001F4868_2A62D0(0x1B);
+    qd.pk[1] = func_001F4868_2A62D0(0x1B);
 
     D_L00_00161460_2A62D0 = D_L00_00161460_2A62D0 + 0.01f;
     if (1.0f < D_L00_00161460_2A62D0) {

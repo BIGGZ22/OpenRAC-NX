@@ -1,9 +1,21 @@
-/* functional: medium. Builds 4 GIF/VIF packets (a ribbon of S[5] quads per strip, strip index 3..0): each vertex of the strip at S[6] (+idx*S[5]*16) is moved to z-0.05 and z+0.05, transformed by the 4x4 matrix M, with ST pairs (u,0)/(u,1), one packed colour lerped between the colours S[3]/S[4] by the strip's S[2][idx] value, and appended at the packet pointer D_00161240 behind the templates D_L06_001C4AA0/00160F40/00160F60/00160F80. VU0 maths hand-traced; cannot be run. */
+/* functional: high. Builds 4 GIF/VIF packets (a ribbon of S[5] quads per strip, strip index 3..0) at the packet pointer D_00161240 behind the templates D_L06_001C4AA0/00160F40/00160F60/00160F80; VU0 maths re-traced against the assembly (row-vector matrix product, ST pairs, colour lerp, pack to bytes) and agrees. Corrected from itself: VU0 never gives inf or NaN, so the two 1/x (vdiv by 0 gives FLT_MAX), the products and the float-to-int (saturating) are now clamped; the C divided by zero when S[0]==S[1] or S[1]==0. Not reproduced: the assembly leaves the packet cursors in $24/$25 (not an output). Hand-traced, cannot be run. */
 extern unsigned int *D_00161240 MACRO_ADDR;
 extern unsigned int D_L06_001C4AA0_16B38[] __asm__("D_L06_001C4AA0");
 extern unsigned int D_L06_00160F40_16B38[] __asm__("D_L06_00160F40");
 extern unsigned int D_L06_00160F60_16B38[] __asm__("D_L06_00160F60");
 extern unsigned int D_L06_00160F80_16B38[] __asm__("D_L06_00160F80");
+
+static float vu_div1_16B38(float den) { return den == 0.0f ? 3.4028235e38f : 1.0f / den; }
+static float vu_clamp_16B38(float v) {
+    if (v > 3.4028235e38f) return 3.4028235e38f;
+    if (v < -3.4028235e38f) return -3.4028235e38f;
+    return v;
+}
+static int vu_ftoi_16B38(float v) {
+    if (v >= 2147483648.0f) return 0x7FFFFFFF;
+    if (v <= -2147483648.0f) return (int)0x80000000;
+    return (int)v;
+}
 
 void func_L06_00216B38(int *S, float *M) {
     int idx = 4;
@@ -54,14 +66,14 @@ void func_L06_00216B38(int *S, float *M) {
         buf1 = (float *)0x70001000;
         buf2 = (float *)0x70002000;
 
-        inv_rng = 1.0f / (float)(S[0] - S[1]);
-        inv_s4 = 1.0f / (float)S[1];
+        inv_rng = vu_div1_16B38((float)(S[0] - S[1]));
+        inv_s4 = vu_div1_16B38((float)S[1]);
         val = ((int *)S[2])[idx];
         d = val - S[1];
         if (d > 0) {
-            x = (float)d * inv_rng;
+            x = vu_clamp_16B38((float)d * inv_rng);
         } else {
-            x = (float)val * inv_s4;
+            x = vu_clamp_16B38((float)val * inv_s4);
             w = 1.0f - x;
             x = w;
         }
@@ -72,8 +84,8 @@ void func_L06_00216B38(int *S, float *M) {
         }
         col = 0;
         for (c = 0; c < 4; c++) {
-            r = fa[c] * w + fb[c] * x;
-            ci = (int)r;
+            r = vu_clamp_16B38(vu_clamp_16B38(fa[c] * w) + vu_clamp_16B38(fb[c] * x));
+            ci = vu_ftoi_16B38(r);
             col |= ((unsigned int)ci & 0xFF) << (8 * c);
         }
 

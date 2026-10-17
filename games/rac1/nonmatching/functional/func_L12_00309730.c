@@ -1,4 +1,4 @@
-/* functional: medium. Draw callback: builds a view matrix from the moby (+0xC0), sets up two quad packets (only the first is drawn) and draws it 5 x 6 times as a strip of jittering sparks (corner z grows by 1.0 per outer pass, y gets +-0.2 random jitter, u gets +-0.5 jitter per pass). Packet field meanings guessed from the layout. */
+/* functional: medium. Corrected in place: the translation row M[12..14] = moby +0x10 (lq) with M[15] = 1.0 was missing after the matrix build. Draw callback: builds a view matrix from the moby (+0xC0), sets up two quad packets (only the first is drawn) and draws it 5 x 6 times as a strip of jittering sparks (corner z grows by 1.0 per outer pass, y gets +-0.2 random jitter, u gets +-0.5 jitter per pass). Packet field meanings guessed from the layout. */
 typedef struct Pkt_09730 {
     float corner[4][4];
     unsigned int color[4];
@@ -37,6 +37,13 @@ void func_L12_00309730_impl(char *m) {
     float f20;
 
     mat_09730(M, m + 0xC0);
+    {
+        float *pos = (float *)(m + 0x10);
+        M[12] = pos[0];
+        M[13] = pos[1];
+        M[14] = pos[2];
+        M[15] = 1.0f;
+    }
     tex = tex_09730(0xE);
     P[0].flags = (long)D_L12_0016203C_09730 | ((long)D_L12_00162040_09730 << 2) | ((long)D_L12_00162044_09730 << 4)
                  | ((long)D_L12_00162048_09730 << 6) | (0x8000L << 24);

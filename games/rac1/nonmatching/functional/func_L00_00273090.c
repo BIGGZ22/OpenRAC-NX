@@ -32,7 +32,8 @@ void func_L00_00273090(char *m) {
         *(float *)(m + 0xC) = q->size1 + ((*(float *)(m + 0x20) + q->size1) * 0.5f - q->size1) * t;
         a = ((q->alpha >> 1) - q->alpha) * t + q->alpha;
     } else {
-        t = *(short *)(m + 0xA) / func_001FA888(q->life - 6);
+        t = func_001FA888(q->life - 6);
+        t = (t == 0.0f) ? 0.0f : *(short *)(m + 0xA) / t; /* retail's divide by zero gives the largest float; 0 keeps the host finite for the life == 6 case */
         *(float *)(m + 0xC) = *(float *)(m + 0x20) + ((*(float *)(m + 0x20) + q->size1) * 0.5f - *(float *)(m + 0x20)) * t;
         a = (q->alpha >> 1) * t + 0.0f;
     }

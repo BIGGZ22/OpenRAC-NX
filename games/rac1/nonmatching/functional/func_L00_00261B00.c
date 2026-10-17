@@ -10,7 +10,7 @@ extern void func_001F9BC0(void *);
 extern unsigned char *func_L00_0025D390(int);
 extern int func_002140B0(int);
 extern int func_001F9850(int);
-extern int func_001E9730();
+extern void func_001E9730();   /* STUB_printf: returns nothing (v0 is left as it was on entry); no caller here reads a result */
 extern float func_001FA888(int);
 extern int func_00120778(float);
 extern float func_00214158(void);

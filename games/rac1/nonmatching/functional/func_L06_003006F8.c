@@ -1,4 +1,5 @@
-/* functional: medium. Per-frame update of a chain of 16 points (a whip/tentacle trail) hanging off a moby: advances a countdown, then each point is pulled toward the anchor at a speed (halved in vehicle mode 1), kept at a height by its alignment to the moby direction, collision-tested, and finally each adjacent pair that is solid enough spawns a hit; ends by queueing the draw callback and running the follow-up routine. Statically checked only. */
+/* functional: high. Per-frame update of a 16-point trail on a moby; checked against the assembly (reads/writes, calls and arguments, constants, branches all agree). Corrected from itself: ShotInfo_6F8 was undeclared so the file did not compile; typedef added (size 0x30, fields at 0x18/0x19/0x1A as in the retail stack layout). */
+typedef struct { unsigned char pad0[0x18]; unsigned char unk18; unsigned char unk19; short oclass; unsigned char pad1C[0x14]; } ShotInfo_6F8;
 extern int f_f2i_03006F8(float) __asm__("func_001FA898");
 extern int f_timer_03006F8(int *) __asm__("func_001F9908");
 extern void f_sub_03006F8(void *, void *, void *) __asm__("func_001F9BF0");
@@ -28,7 +29,7 @@ void func_L06_003006F8_x(char *moby) {
     float alignment;
     float point[4];
     float relative[4];
-    ShotInfo shot;
+    ShotInfo_6F8 shot;
 
     frames = f_f2i_03006F8(*(float *)(data + 0x21C));
     f_timer_03006F8(&frames);

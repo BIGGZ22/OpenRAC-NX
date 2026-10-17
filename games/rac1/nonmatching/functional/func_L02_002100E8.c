@@ -1,8 +1,15 @@
-/* functional: high. Written from the assembly, not compiled. Same stores in the same order (a1 to +0x80, a0 to +0x10, a2 to +0x20, 0x100 to +0x0 of the DMA block at 0x1000D400), then the read of 0x20100000 ored with 1. Retail leaves that value in $v1 rather than $v0; a caller that reads $v1 needs checking. */
-int func_L02_002100E8(int a0, int a1, int a2) {
-    *(volatile int *)0x1000D480 = a1;
-    *(volatile int *)0x1000D410 = a0;
-    *(volatile int *)0x1000D420 = a2;
-    *(volatile int *)0x1000D400 = 0x100;
-    return *(volatile int *)0x20100000 | 1;
+/* functional: medium. Starts the DMA channel at 0x1000D400 (CHCR 0x100, no DIR bit) with SADR (+0x80) = a1, MADR (+0x10) = a0, QWC (+0x20) = a2, in that order, then returns the uncached word at 0x20100000 | 1. Read as a copy of qwc quadwords from the scratchpad address a1 to main memory a0 (the direction the callers need: they stage an SPR buffer out to RAM); the copy is synchronous here and the retail status word is returned, not waited on. Written from the retail instructions (48 bytes); the DMA direction is inferred from the callers, not from hardware. */
+int func_L02_002100E8(void *a0, unsigned int a1, int a2)
+{
+    unsigned char *dst = (unsigned char *)a0;
+    const unsigned char *src = (const unsigned char *)a1;
+    unsigned int status;
+    int i, n;
+
+    n = a2 * 16;
+    for (i = 0; i < n; i++) {
+        dst[i] = src[i];
+    }
+    status = *(volatile unsigned int *)0x20100000;
+    return (int)(status | 1);
 }

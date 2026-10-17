@@ -41,7 +41,7 @@ extern float func_001F9D10_2F6540(void *, void *) __asm__("func_001F9D10");
 extern int func_002140B0_2F6540(int) __asm__("func_002140B0");
 extern int func_L00_00258BC8_2F6540(int, int) __asm__("func_L00_00258BC8");
 extern int func_001FA898_2F6540(float) __asm__("func_001FA898");
-extern int func_001E9730_2F6540(char *, int, int) __asm__("func_001E9730");
+extern void func_001E9730_2F6540(char *, int, int) __asm__("func_001E9730");   /* STUB_printf: returns nothing */
 extern float func_002140F8_2F6540(float, float) __asm__("func_002140F8");
 extern float func_L00_001FF860_2F6540(float, float) __asm__("func_L00_001FF860");
 extern void func_L01_0028C1D8_2F6540(char *) __asm__("func_L01_0028C1D8");

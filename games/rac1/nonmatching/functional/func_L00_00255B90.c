@@ -1,4 +1,4 @@
-/* functional: medium. Builds the joint matrices of an animated moby in the scratchpad: DMAs the bind data (record at a0->0x24) and two animation tables (a0->0x68 / 0x6C), writes per-joint quaternion (slot+0), scale (+0x10), translation vectors (+0x20/+0x30), blends the two tables by a0->0x54 (lerp, or normalised lerp when the frames differ), then applies the record chains at a0->0x60 / 0x64 (quaternion products and blends). VU0 arithmetic written lane by lane, not run against retail (hand-checked only); sqrtf stands in for vrsqrt.
+/* functional: high. corrected from nonmatching/functional/func_L00_00255B90.c: the four normalisations took 1/sqrtf(0) = inf when a blended quaternion is all zero, giving 0*inf = NaN; the VU0 rsqrt gives the largest float there, so the zero quaternion stays zero (rsq_255B90). Checked against the assembly lane by lane otherwise (DMA layout, lists A-D, blends, both record chains): same reads, writes, branches and arithmetic order. Builds the joint matrices of an animated moby in the scratchpad: DMAs the bind data (record at a0->0x24) and two animation tables (a0->0x68 / 0x6C), writes per-joint quaternion (slot+0), scale (+0x10), translation vectors (+0x20/+0x30), blends the two tables by a0->0x54 (lerp, or normalised lerp when the frames differ), then applies the record chains at a0->0x60 / 0x64 (quaternion products and blends).
  * Each DMA transfer to the scratchpad is a copy made where retail starts it (spr_dma_255B90), which
  * leaves the channel idle: the port has no DMA controller, and the waits for the transfers spun forever
  * (the bomb glove froze the game). */
@@ -21,6 +21,20 @@ static void spr_dma_255B90(unsigned int sadr, unsigned int madr, int qwc)
     for (i = 0; i < qwc * 4; i++)
         dst[i] = src[i];
     *(volatile unsigned int *)0x1000D400 = 0;
+}
+
+/* vrsqrt Q, vf0w, ll: 1/sqrt(ll), and the largest float when ll is zero (the VU never gives
+   infinity), so a zero quaternion times Q stays zero instead of becoming NaN. ll is a sum of
+   squares, never negative. */
+static float rsq_255B90(float ll)
+{
+    union { unsigned int u; float f; } mx;
+
+    if (!(ll > 0.0f)) {
+        mx.u = 0x7F7FFFFF;
+        return mx.f;
+    }
+    return 1.0f / sqrtf(ll);
 }
 
 #define LSQ4(v) ((((v)[0] * (v)[0] + (v)[1] * (v)[1]) + (v)[2] * (v)[2]) + (v)[3] * (v)[3])
@@ -266,7 +280,7 @@ void func_L00_00255B90(char *s)
                     for (i = 0; i < 4; i++)
                         f9[i] = f5[i] - f7[i];
                 ll = LSQ4(f9);
-                Q = 1.0f / sqrtf(ll);
+                Q = rsq_255B90(ll);
                 for (i = 0; i < 4; i++)
                     f9[i] = f9[i] * Q;
                 dd = DOT4(f12);
@@ -274,7 +288,7 @@ void func_L00_00255B90(char *s)
                     for (i = 0; i < 4; i++)
                         f11[i] = f6[i] - f8[i];
                 ll = LSQ4(f11);
-                Q = 1.0f / sqrtf(ll);
+                Q = rsq_255B90(ll);
                 for (i = 0; i < 4; i++)
                     f11[i] = f11[i] * Q;
                 PUT4(sp + m * 0x80, f9);
@@ -388,7 +402,7 @@ void func_L00_00255B90(char *s)
                 for (i = 0; i < 4; i++)
                     v12[i] = v6[i] - v9[i];
             ll = LSQ4(v12);
-            Q = 1.0f / sqrtf(ll);
+            Q = rsq_255B90(ll);
             rw3 = *(int *)(recs + 0x1C);
             nxt = *(char **)(recs + 0x5C);
             LD4(v9, recs + 0x30);
@@ -475,7 +489,7 @@ void func_L00_00255B90(char *s)
                 for (i = 0; i < 4; i++)
                     v14[i] = v6[i] - v7[i];
             ll = LSQ4(v14);
-            Q = 1.0f / sqrtf(ll);
+            Q = rsq_255B90(ll);
             for (i = 0; i < 4; i++)
                 v6[i] = v14[i] * Q;
         }

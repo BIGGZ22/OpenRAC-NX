@@ -13,7 +13,8 @@ extern int func_001F9850(int);
 extern void func_L00_0025E4B0(void *, short *);
 extern void func_L00_0025E590(void *, void *);
 extern int func_L00_0025A208(int *, int, int, int);
-extern int func_001E9730();
+extern void func_001E9730();   /* STUB_printf: returns nothing (v0 is left as it was on entry); no caller here reads a result */
+extern void func_L07_0030C320(void *);
 extern int func_L01_0028C2D8(void *, void *, float);
 extern int func_L00_0025A2F0(int *, int, int, int);
 extern int func_L00_0025E860(void *, void *, int *, float *, float, int);

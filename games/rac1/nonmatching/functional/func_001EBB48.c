@@ -1,4 +1,4 @@
-/* functional: high. Corrected from nonmatching/game/func_001EBB48.c: the three calls func_00234AC8(1), func_00122598(0) and D_0015F538 += 1 run every frame (the asm branch for 'D_0016044C[0] == D_0015EE80' lands on them); the near miss only ran them inside the mode-toggle block. */
+/* functional: high. Corrected from nonmatching/game/func_001EBB48.c: the three calls func_00234AC8(1), func_00122598(0) and D_0015F538 += 1 run every frame (the asm branch for 'D_0016044C[0] == D_0015EE80' lands on them); the near miss only ran them inside the mode-toggle block. Returns D_0015EF8C (retail leaves it in $v0 and func_001E99D8 declares an s32 result). */
 extern void func_001EABE8(void);
 extern char D_0018CC20_EABE8[] __asm__("D_0018CC20");
 extern void func_001EB300_EABE8(int) __asm__("func_001EB300");
@@ -27,7 +27,7 @@ extern void func_001207B8_EBB48(void) __asm__("func_001207B8");
 extern void func_001F3890_EBB48(void) __asm__("func_001F3890");
 extern void func_00234AC8_EBB48(int) __asm__("func_00234AC8");
 extern void func_00205220_EBB48(int) __asm__("func_00205220");
-extern void func_001F4E08_EBB48(int) __asm__("func_001F4E08");
+extern void func_001F4E08_EBB48(int, unsigned int) __asm__("func_001F4E08");
 extern void func_00122598_EBB48(int) __asm__("func_00122598");
 extern void func_0012EC40_EBB48(void) __asm__("func_0012EC40");
 extern void func_0012EC30_EBB48(void) __asm__("func_0012EC30");
@@ -60,7 +60,7 @@ extern s32 D_0015EF78_EBB48 __asm__("D_0015EF78") MACRO_ADDR;
 extern s32 D_0015EF8C_EBB48 __asm__("D_0015EF8C") MACRO_ADDR;
 extern u8 D_0016044C_EBB48[] __asm__("D_0016044C") MACRO_ADDR;
 
-void func_001EBB48(void) {
+s32 func_001EBB48(void) {
     char *base;
     char *cur;
     char *tb;
@@ -222,7 +222,7 @@ void func_001EBB48(void) {
             if (v2 != D_0015EE80_EBB48) {
                 t2 = (D_0015EE80_EBB48 == 0);
                 D_0015EE80_EBB48 = t2;
-                func_001F4E08_EBB48(4);
+                func_001F4E08_EBB48(4, 0); /* retail leaves a1 unset; func_001F4E08 never reads it */
                 func_001207B8_EBB48();
                 func_00121B78_EBB48(0, 1, (D_0015EE80_EBB48 == 0) ? 2 : 3, 0);
                 t = D_0015EF78_EBB48;
@@ -242,4 +242,5 @@ void func_001EBB48(void) {
     t = D_0015EF8C_EBB48;
     D_0015EF74_EBB48 = t;
     D_0015EF78_EBB48 = t;
+    return t;
 }

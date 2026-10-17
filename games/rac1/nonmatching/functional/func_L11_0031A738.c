@@ -1,3 +1,4 @@
+/* functional: high. Checked against the assembly: quad setup, colour fade, ring indexing (signed mod 16), calls and arguments all agree with retail. */
 /* func_L11_0031A738 -- src/overlays/shared/vendor_002C99E0.c (functional C for the port, not a match)
  * Draws the trails of a group of mobys (levels 11 and 17): unless the moby's group byte (+0x21) is
  * 0xFF, builds 16 quad packets whose uvs come from D_L11_001F1750 and whose colours fade along the

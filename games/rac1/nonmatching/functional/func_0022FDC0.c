@@ -1,3 +1,4 @@
+/* functional: high. corrected from nonmatching/functional/func_0022FDC0.c: obj+0x51 is cleared before func_0020D6D0 (retail's delay slot), which reads it; the copy cleared it after the call. */
 /* Port copy of nonmatching/game/func_0022FDC0.c: the two bone matrices are 4x4 locals (retail's
    frame has them at sp+0x20 and sp+0x60) and the trail rings take their translation rows (sp+0x50
    and sp+0x90); the near miss's 16-byte locals let each matrix run over its neighbours, so the
@@ -5,6 +6,17 @@
    One pass of the space loader (text 0x22FDC0). Steps the fade in D_0015F53C,
    counts frames and steps in D_0018CC20, copies the object list's frame
    vectors from the D_0013E130 slots, and calls the loader helpers. */
+extern void func_0012EC30(void);
+extern void func_0012EC40(void);
+extern void func_0012DDC0(void);
+extern int func_001160D8(void);
+extern void func_001F99B0(void *, int, int);
+extern void func_0022F128(void);
+extern void func_001F3140(void);
+extern int func_001F98C0(int);
+extern void func_001F9A98(void *, void *, int);
+extern int D_0016100C;
+extern int D_0015F6FC;
 extern void sl_E97B0(void) __asm__("func_001E97B0");
 extern void sl_E97A8(void) __asm__("func_001E97A8");
 extern void sl_E448(int, int, int, int, int, int, int, void *) __asm__("func_0012E448");
@@ -231,12 +243,12 @@ L_FC:
             ((unsigned char *)obj)[0x52] = 2;
             ((unsigned char *)obj)[0x53] = 2;
             ((unsigned char *)obj)[0x50] = 0;
+            ((unsigned char *)obj)[0x51] = 0;
             sl_D6D0(obj);
             func_001F9A98(*(char **)(obj + 0x68) + 0x10, p19, 0x20);
             func_001F9A98(*(char **)(obj + 0x6C) + 0x10, p20, 0x20);
             ((unsigned char *)obj)[0x72] = 0xFF;
             ((unsigned char *)obj)[0x71] = 0xFF;
-            ((unsigned char *)obj)[0x51] = 0;
             *(short *)(obj + 0x32) = 0x1FF;
             sl_ED48(obj);
             P = *(char **)(obj + 0x24);
