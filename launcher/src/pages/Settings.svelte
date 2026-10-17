@@ -198,6 +198,16 @@
           </small>
         </span>
       </label>
+      <label class="option">
+        <input type="checkbox" bind:checked={draft.saveEditorAdvanced} />
+        <span>
+          <strong>Advanced save editing</strong>
+          <small>
+            For debugging: the save editor shows every field of a save, the story planets, and each part of the file as
+            raw bytes. A wrong value can break a save; your memory card is backed up before every change.
+          </small>
+        </span>
+      </label>
       {#if draft.developer && draft.discordRpc}
         <div class="field">
           <label for="discord-client-id">Discord application ID</label>

@@ -1,6 +1,6 @@
 // The save editor's checks on the page: the same limits core/src/save_edit.rs enforces, so a
 // field shows its problem before Save is pressed. The Rust side checks again before it writes.
-import type { SaveFields, SaveView } from "./api";
+import type { RawPatch, SaveFields, SaveView } from "./api";
 
 /** A problem with what was typed, by field ("bolts", "ammo-15"), in a player's words. */
 export function fieldErrors(view: SaveView, f: SaveFields): Record<string, string> {
@@ -42,4 +42,52 @@ export function skillCount(f: SaveFields): [number, number] {
 export function goldBoltCount(f: SaveFields): [number, number] {
   const all = f.planets.flatMap((p) => p.goldBolts);
   return [all.filter(Boolean).length, all.length];
+}
+
+// ---- the advanced editor: chunks as bytes ------------------------------------------
+
+/** A chunk's key: `g:<id>` in the global section, `<level>:<id>` in a planet's. */
+export function chunkKey(section: number | null, id: number): string {
+  return `${section === null ? "g" : String(section)}:${String(id)}`;
+}
+
+export function bytesToHex(bytes: number[]): string {
+  return bytes.map((b) => b.toString(16).padStart(2, "0")).join(" ");
+}
+
+/** Bytes from hex in any spacing, or an error in a player's words. */
+export function hexToBytes(text: string): number[] | string {
+  const digits = text.replace(/\s+/g, "");
+  if (!/^[0-9a-fA-F]*$/.test(digits)) return "Only 0-9 and a-f";
+  if (digits.length % 2 !== 0) return "An odd number of digits";
+  const out: number[] = [];
+  for (let i = 0; i < digits.length; i += 2) out.push(parseInt(digits.slice(i, i + 2), 16));
+  return out;
+}
+
+/** Every chunk of a view as bytes, by key. */
+export function chunkBytes(view: SaveView): Record<string, number[]> {
+  const out: Record<string, number[]> = {};
+  for (const c of view.chunks) {
+    const b = hexToBytes(c.hex);
+    out[chunkKey(c.section, c.id)] = typeof b === "string" ? [] : b;
+  }
+  return out;
+}
+
+/** The chunks whose bytes differ from the view's, as the raw change write_save takes. */
+export function rawPatches(view: SaveView, bytes: Record<string, number[]>): RawPatch[] {
+  return view.chunks
+    .map((c) => ({ c, now: bytes[chunkKey(c.section, c.id)] ?? [] }))
+    .filter(({ c, now }) => bytesToHex(now) !== c.hex)
+    .map(({ c, now }) => ({ section: c.section, id: c.id, hex: bytesToHex(now) }));
+}
+
+export function readI32(b: number[], i: number): number {
+  return (b[i * 4] ?? 0) | ((b[i * 4 + 1] ?? 0) << 8) | ((b[i * 4 + 2] ?? 0) << 16) | ((b[i * 4 + 3] ?? 0) << 24) | 0;
+}
+
+export function writeI32(b: number[], i: number, v: number): void {
+  const n = v | 0;
+  for (let k = 0; k < 4; k++) b[i * 4 + k] = (n >>> (8 * k)) & 0xff;
 }

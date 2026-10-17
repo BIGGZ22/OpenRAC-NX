@@ -22,6 +22,7 @@ import type {
   PackView,
   Platform,
   Progress,
+  SaveChange,
   SaveFields,
   SaveView,
   Scope,
@@ -101,6 +102,8 @@ let config: Config = {
   docker: "/usr/bin/docker",
   // ?developer shows the contributor's pages.
   developer: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("developer"),
+  // ?advanced switches the advanced save editor on.
+  saveEditorAdvanced: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("advanced"),
   // ?setup opens the first-run screen.
   setupComplete: !new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("setup"),
   installDir: "/home/you/.local/share/dev.openrac.launcher",
@@ -486,10 +489,103 @@ const mockPlanets: [number, string, string, number][] = [
   [18, "Veldin", "Kyzil Plateau", 3],
 ];
 const savedFields: Record<string, SaveFields> = {};
+const savedRaw: Record<string, Record<string, string>> = {};
+
+/** The chunks as core/src/save_edit.rs lists them: id, size, name, decoded. */
+const mockGlobalChunks: [number, number, string, boolean][] = [
+  [0, 4, "Planet", true],
+  [1, 4, "Bolts", true],
+  [2, 4, "Times completed (challenge mode)", true],
+  [3, 4, "Time played (1/60 s)", true],
+  [4, 8, "When saved (clock)", true],
+  [5, 128, "Story flags", false],
+  [7, 12, "Cheats on", false],
+  [8, 32, "Skill points", true],
+  [9, 148, "Ammo by item", true],
+  [10, 37, "Items owned", true],
+  [11, 37, "Items ever had", true],
+  [12, 12, "Vendor stock", true],
+  [13, 32, "Quick select", true],
+  [19, 4, "Max health", true],
+  [14, 20, "Planets unlocked", true],
+  [20, 80, "Galaxy map order", true],
+  [15, 1936, "Map landmarks", false],
+  [16, 1184, "Help messages seen", false],
+  [17, 288, "Move help seen", false],
+  [18, 296, "Gadget help seen", false],
+  [21, 4, "Last item in hand", true],
+  [22, 4, "Wrench in hand", true],
+  [23, 4, "Thruster-Pack on the back", true],
+  [24, 4, "Unused", false],
+  [25, 4, "Camera left/right (1 normal)", true],
+  [26, 4, "Camera up/down (1 normal)", true],
+  [27, 4, "Camera speed (0 to 2)", true],
+  [28, 1, "HelpDesk voice", true],
+  [29, 1, "HelpDesk text", true],
+  [30, 40, "Gold weapons", true],
+  [31, 4, "Game beaten", true],
+  [32, 28, "Equipped: hand, feet, head, back", true],
+  [33, 1, "Subtitles", true],
+  [34, 4, "Stereo (1) or mono", true],
+  [35, 4, "Music volume (0 to 1024)", true],
+  [36, 4, "Effects volume (0 to 1024)", true],
+  [37, 12, "Cheats ever used", false],
+  [1000, 148, "Ammo bought by item", true],
+  [1001, 148, "Ammo picked up by item", true],
+  [1002, 148, "Ammo used by item", true],
+  [1003, 4, "Play time (ticks)", true],
+  [1004, 4, "Hits taken", true],
+  [1005, 4, "Deaths", true],
+  [1008, 4, "Bolt rate: ticks", false],
+  [1009, 4, "Bolt rate: bolts", false],
+  [1010, 150, "Help log", false],
+  [1011, 4, "Help log position", false],
+];
+const mockLevelChunks: [number, number, string, boolean][] = [
+  [3001, 1, "Visited (0 never, 1 visited, 2 left)", true],
+  [3002, 2048, "Map: the parts uncovered (packed)", false],
+  [3003, 4, "Gold bolts found", true],
+  [3004, 16, "Missions (0xff done)", true],
+  [3005, 256, "Enemies and crates destroyed (bits)", false],
+  [3006, 256, "Bolts from crates and enemies (pairs)", false],
+  [3007, 8, "Arrivals: count, time, levels", false],
+  [3008, 16, "Metal Detector spots", false],
+  [4000, 4, "Bolts collected here", true],
+  [4001, 4, "Hits taken here", true],
+  [4002, 4, "Deaths here", true],
+];
+const levelNames: [string, string][] = [
+  ["Veldin", "Kyzil Plateau"],
+  ...mockPlanets.map(([, name, location]): [string, string] => [name, location]),
+];
+
+function word(n: number): string {
+  return [0, 8, 16, 24].map((s) => ((n >>> s) & 0xff).toString(16).padStart(2, "0")).join(" ");
+}
+
+function mockChunks(serial: string, slot: number, f: SaveFields): SaveView["chunks"] {
+  const raw = savedRaw[`${serial}/${String(slot)}`] ?? {};
+  const zero = (n: number) => Array.from({ length: n }, () => "00").join(" ");
+  const out: SaveView["chunks"] = [];
+  for (const [id, size, name, known] of mockGlobalChunks) {
+    let hex = zero(size);
+    if (id === 0) hex = word(f.planet);
+    if (id === 1) hex = word(f.bolts);
+    if (id === 19) hex = word(f.nanotech === "ultra" ? 8 : f.nanotech === "premium" ? 5 : 4);
+    out.push({ section: null, id, size, name, known, hex: raw[`g:${String(id)}`] ?? hex });
+  }
+  for (let l = 0; l < 20; l++) {
+    for (const [id, size, name, known] of mockLevelChunks) {
+      out.push({ section: l, id, size, name, known, hex: raw[`${String(l)}:${String(id)}`] ?? zero(size) });
+    }
+  }
+  return out;
+}
 
 function mockSave(serial: string, slot: number): SaveView {
   const owned = new Set([2, 10, 12, 15, 16, 28]);
   const fields: SaveFields = savedFields[`${serial}/${String(slot)}`] ?? {
+    planet: slot === 1 ? 3 : 0,
     bolts: slot === 1 ? 4890 : 1250,
     nanotech: "premium",
     items: mockItems.map(([id, , , max, gold]) => ({
@@ -509,7 +605,7 @@ function mockSave(serial: string, slot: number): SaveView {
     serial,
     slot,
     fingerprint: "preview",
-    planetName: slot === 1 ? "Kerwan" : "Veldin",
+    planetName: levelNames[fields.planet]?.[0] ?? null,
     savedAt: "2026-10-09 17:21:44",
     fields: structuredClone(fields),
     items: mockItems.map(([id, name, kind, max, gold]) => ({
@@ -519,8 +615,22 @@ function mockSave(serial: string, slot: number): SaveView {
       maxAmmo: max > 0 ? max : null,
       hasGold: gold,
     })),
-    planets: mockPlanets.map(([id, name, location]) => ({ id, name, location, canUnlock: id <= 16 })),
+    planets: mockPlanets.map(([id, name, location]) => ({
+      id,
+      name,
+      location,
+      canUnlock: id <= 16,
+      canLand: id <= 16,
+    })),
+    levels: levelNames.map(([name, location], id) => ({
+      id,
+      name,
+      location,
+      canUnlock: id >= 1 && id <= 16,
+      canLand: id >= 1 && id <= 16,
+    })),
     maxBolts: 9_999_999,
+    chunks: mockChunks(serial, slot, fields),
   };
 }
 
@@ -724,10 +834,17 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
     case "read_save":
       return delay(mockSave(typeof args.serial === "string" ? args.serial : "SCES_509.16", Number(args.slot ?? 0)));
     case "write_save": {
+      const key = `${String(args.serial)}/${String(args.slot)}`;
+      const change = args.change as SaveChange;
+      if (change.kind === "fields") {
+        if (change.fields.bolts > 9_999_999) throw new Error("bolts go up to 9999999");
+        savedFields[key] = structuredClone(change.fields);
+      } else {
+        if (!config.saveEditorAdvanced) throw new Error("raw edits need the advanced save editor (Settings)");
+        const raw = (savedRaw[key] ??= {});
+        for (const c of change.chunks) raw[`${c.section === null ? "g" : String(c.section)}:${String(c.id)}`] = c.hex;
+      }
       const view = mockSave(String(args.serial), Number(args.slot));
-      const fields = args.fields as SaveFields;
-      if (fields.bolts > view.maxBolts) throw new Error(`bolts go up to ${view.maxBolts}`);
-      savedFields[`${String(args.serial)}/${String(args.slot)}`] = structuredClone(fields);
       const name = `.backup_${Math.floor(Date.now() / 1000)}_before_edit_slot${Number(args.slot) + 1}`;
       return delay<WriteResult>({
         backup: {
@@ -736,7 +853,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
           createdMillis: Date.now(),
           totalSize: 364544,
         },
-        view: { ...view, fields: structuredClone(fields) },
+        view,
       });
     }
     default:

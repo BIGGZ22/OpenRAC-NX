@@ -48,6 +48,8 @@ export interface Config {
   discsDir: string | null;
   /** Show what contributors use (builds, checks, progress); off, a player's three steps. */
   developer: boolean;
+  /** The save editor shows every field of a save, raw bytes included (for debugging). */
+  saveEditorAdvanced: boolean;
   setupComplete: boolean;
   lastVersion: string | null;
   discordRpc: boolean;
@@ -300,6 +302,8 @@ export interface PlanetState {
 
 /** What the editor changes; sent back whole. */
 export interface SaveFields {
+  /** The planet the save loads on, a level number. */
+  planet: number;
   bolts: number;
   nanotech: Nanotech;
   items: ItemState[];
@@ -321,7 +325,30 @@ export interface PlanetInfo {
   location: string;
   /** A ship destination the player may lock or unlock. */
   canUnlock: boolean;
+  /** The save can be moved there in the default mode. */
+  canLand: boolean;
 }
+
+/** One chunk of the file, for the advanced editor. */
+export interface ChunkView {
+  /** `null`: the global section; else the planet's level number. */
+  section: number | null;
+  id: number;
+  size: number;
+  name: string;
+  /** Its meaning is decoded; otherwise raw bytes only. */
+  known: boolean;
+  hex: string;
+}
+
+export interface RawPatch {
+  section: number | null;
+  id: number;
+  hex: string;
+}
+
+/** What a write changes: the default mode's fields, or raw chunks (advanced mode). */
+export type SaveChange = { kind: "fields"; fields: SaveFields } | { kind: "raw"; chunks: RawPatch[] };
 
 export interface SaveView {
   serial: string;
@@ -333,7 +360,10 @@ export interface SaveView {
   fields: SaveFields;
   items: ItemInfo[];
   planets: PlanetInfo[];
+  /** Every level, 0..18. */
+  levels: PlanetInfo[];
   maxBolts: number;
+  chunks: ChunkView[];
 }
 
 export interface WriteResult {
@@ -404,9 +434,9 @@ export const api = {
   openSavesFolder: (serial: string) => call<null>("open_saves_folder", { serial }),
   /** One slot for the save editor. */
   readSave: (serial: string, slot: number) => call<SaveView>("read_save", { serial, slot }),
-  /** Writes the editor's fields: refused while the game runs with the card; backs the card up first. */
-  writeSave: (serial: string, slot: number, fingerprint: string, fields: SaveFields) =>
-    call<WriteResult>("write_save", { serial, slot, fingerprint, fields }),
+  /** Writes the editor's change: refused while the game runs with the card; backs the card up first. */
+  writeSave: (serial: string, slot: number, fingerprint: string, change: SaveChange) =>
+    call<WriteResult>("write_save", { serial, slot, fingerprint, change }),
   /** A game's overrides packs (core/src/overrides.rs), in the order they apply. */
   overridesList: (game: string) => call<PackView[]>("overrides_list", { game }),
   overridesSetEnabled: (game: string, id: string, enabled: boolean) =>

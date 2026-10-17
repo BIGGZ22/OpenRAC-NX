@@ -2,11 +2,14 @@
   // The save editor: one slot of the memory card, opened from the Save files list. It shows only
   // what core/src/save_edit.rs decodes with confidence, in the game's own words, and saves through
   // write_save, which refuses while the game runs with the card and backs the card up first. After
-  // a save, Undo puts that backup back.
+  // a save, Undo puts that backup back. With "Advanced save editing" on (Settings) a second tab,
+  // AdvancedSaveEditor.svelte, edits every chunk of the file; it saves as raw chunks, through the
+  // same guards.
+  import AdvancedSaveEditor from "$components/AdvancedSaveEditor.svelte";
   import Icon from "$components/Icon.svelte";
-  import { api, type Nanotech, type SaveBackupInfo, type SaveFields, type SaveView } from "$lib/api";
-  import { toast } from "$lib/app.svelte";
-  import { changed, fieldErrors, goldBoltCount, setOwned, skillCount } from "$lib/saveEdit";
+  import { api, type Nanotech, type SaveBackupInfo, type SaveChange, type SaveFields, type SaveView } from "$lib/api";
+  import { app, toast } from "$lib/app.svelte";
+  import { changed, chunkBytes, fieldErrors, goldBoltCount, rawPatches, setOwned, skillCount } from "$lib/saveEdit";
   import { onMount } from "svelte";
 
   let {
@@ -27,10 +30,22 @@
   let busy = $state(false);
   let saved = $state<SaveBackupInfo | null>(null);
   let touchedCard = false;
+  /** Which tab: the player's fields, or every chunk (only with the setting on). */
+  let mode = $state<"player" | "advanced">("player");
+  /** The advanced tab's working copy: every chunk's bytes, by key. */
+  let bytes = $state<Record<string, number[]>>({});
+  /** Hex boxes in the advanced tab that do not hold valid bytes of the right size. */
+  let hexInvalid = $state(0);
 
+  const advancedOn = $derived(app.config?.saveEditorAdvanced ?? false);
   const errors = $derived(view && fields ? fieldErrors(view, fields) : {});
-  const dirty = $derived(!!view && !!fields && changed(view, fields));
-  const canSave = $derived(dirty && Object.keys(errors).length === 0 && !busy);
+  const patches = $derived(view && mode === "advanced" ? rawPatches(view, bytes) : []);
+  const dirty = $derived(!!view && !!fields && (mode === "advanced" ? patches.length > 0 : changed(view, fields)));
+  const canSave = $derived(
+    dirty && !busy && (mode === "advanced" ? hexInvalid === 0 : Object.keys(errors).length === 0),
+  );
+  /** Planets the save can be moved to, and the one it is on even when it is a story planet. */
+  const landing = $derived(view && fields ? view.levels.filter((l) => l.canLand || l.id === view?.fields.planet) : []);
   const weapons = $derived(view?.items.filter((i) => i.kind === "weapon") ?? []);
   const gadgets = $derived(view?.items.filter((i) => i.kind === "gadget") ?? []);
 
@@ -46,6 +61,7 @@
       const read = await api.readSave(serial, slot);
       view = read;
       fields = structuredClone(read.fields);
+      bytes = chunkBytes(read);
     } catch (e) {
       loadError = String(e);
     }
@@ -56,9 +72,14 @@
     busy = true;
     saveError = null;
     try {
-      const result = await api.writeSave(serial, slot, view.fingerprint, $state.snapshot(fields));
+      const change: SaveChange =
+        mode === "advanced"
+          ? { kind: "raw", chunks: $state.snapshot(patches) }
+          : { kind: "fields", fields: $state.snapshot(fields) };
+      const result = await api.writeSave(serial, slot, view.fingerprint, change);
       view = result.view;
       fields = structuredClone(result.view.fields);
+      bytes = chunkBytes(result.view);
       saved = result.backup;
       touchedCard = true;
     } catch (e) {
@@ -93,6 +114,14 @@
     return fields?.items.find((i) => i.id === id);
   }
 
+  /** Moves the save: the planet it loads on has to be unlocked, as the game's level start does. */
+  function choosePlanet(id: number) {
+    if (!fields) return;
+    fields.planet = id;
+    const p = fields.planets.find((s) => s.id === id);
+    if (p) p.unlocked = true;
+  }
+
   function setAllSkills(on: boolean) {
     if (fields) fields.skillPoints = fields.skillPoints.map(() => on);
   }
@@ -120,6 +149,23 @@
           </p>
         {/if}
       </div>
+      {#if advancedOn && view}
+        <div class="tabs" role="tablist" aria-label="What to edit">
+          {#each [["player", "Player"], ["advanced", "Advanced"]] as [id, label] (id)}
+            <button
+              role="tab"
+              class="tab"
+              class:on={mode === id}
+              aria-selected={mode === id}
+              disabled={busy || (dirty && mode !== id)}
+              title={dirty && mode !== id ? "Save or cancel your changes first" : undefined}
+              onclick={() => {
+                mode = id as "player" | "advanced";
+              }}>{label}</button
+            >
+          {/each}
+        </div>
+      {/if}
       <button class="ghost small" onclick={close} disabled={busy} aria-label="Close">
         <Icon name="x" size={16} />
       </button>
@@ -130,9 +176,34 @@
         <p class="problem"><Icon name="warn" size={16} />{loadError}</p>
       {:else if !view || !fields}
         <p class="muted row"><span class="spinner"></span>Reading the save…</p>
+      {:else if mode === "advanced"}
+        <AdvancedSaveEditor
+          {view}
+          bind:bytes
+          oninvalid={(n) => {
+            hexInvalid = n;
+          }}
+        />
       {:else}
         <section aria-labelledby="se-ratchet">
           <h3 id="se-ratchet">Ratchet</h3>
+          <div class="line">
+            <label for="se-planet">Planet</label>
+            <div class="field">
+              <select
+                id="se-planet"
+                value={fields.planet}
+                onchange={(e) => {
+                  choosePlanet(Number(e.currentTarget.value));
+                }}
+              >
+                {#each landing as l (l.id)}
+                  <option value={l.id}>{l.name} · {l.location}{l.canLand ? "" : " (by the story)"}</option>
+                {/each}
+              </select>
+              <span class="hint">The save loads there; Ratchet starts where the ship lands.</span>
+            </div>
+          </div>
           <div class="line">
             <label for="se-bolts">Bolts</label>
             <div class="field">
@@ -248,8 +319,8 @@
                     <span class="dim">{p.location}</span>
                   </span>
                   {#if p.canUnlock}
-                    <label class="own">
-                      <input type="checkbox" bind:checked={s.unlocked} />
+                    <label class="own" title={fields.planet === p.id ? "The save is on this planet" : undefined}>
+                      <input type="checkbox" bind:checked={s.unlocked} disabled={fields.planet === p.id} />
                       Unlocked
                     </label>
                   {:else}
@@ -326,7 +397,11 @@
             disabled={busy}>Close</button
           >
         {:else}
-          <span class="grow dim">Your memory card is backed up before anything is written.</span>
+          <span class="grow dim"
+            >{mode === "advanced" && dirty
+              ? `${String(patches.length)} part${patches.length === 1 ? "" : "s"} of the file changed. `
+              : ""}Your memory card is backed up before anything is written.</span
+          >
           <button class="ghost" onclick={close} disabled={busy}>Cancel</button>
           <button class="primary" onclick={save} disabled={!canSave}>
             {#if busy}<span class="spinner"></span>{:else}<Icon name="save" size={16} />{/if}Save
@@ -464,6 +539,42 @@
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    align-self: center;
+  }
+
+  .tab {
+    font-size: 13px;
+    padding: 4px 14px;
+    background: transparent;
+    border-color: var(--line);
+    color: var(--soft);
+  }
+
+  .tab.on {
+    background: var(--bar-ink-deep);
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+
+  select {
+    font: inherit;
+    font-size: 14px;
+    background: var(--ink-deep);
+    color: var(--text);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    max-width: 100%;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: var(--dim);
   }
 
   .bolt {

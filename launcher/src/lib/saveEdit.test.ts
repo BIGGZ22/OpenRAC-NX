@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
 import type { SaveView } from "./api";
-import { changed, fieldErrors, goldBoltCount, setOwned, skillCount } from "./saveEdit";
+import {
+  bytesToHex,
+  changed,
+  chunkBytes,
+  chunkKey,
+  fieldErrors,
+  goldBoltCount,
+  hexToBytes,
+  rawPatches,
+  readI32,
+  setOwned,
+  skillCount,
+  writeI32,
+} from "./saveEdit";
 
 function view(): SaveView {
   return {
@@ -10,6 +23,7 @@ function view(): SaveView {
     planetName: "Veldin",
     savedAt: null,
     fields: {
+      planet: 1,
       bolts: 10,
       nanotech: "standard",
       items: [
@@ -23,8 +37,10 @@ function view(): SaveView {
       { id: 2, name: "Heli-Pack", kind: "gadget", maxAmmo: null, hasGold: false },
       { id: 15, name: "Blaster", kind: "weapon", maxAmmo: 200, hasGold: true },
     ],
-    planets: [{ id: 1, name: "Novalis", location: "Tobruk Crater", canUnlock: true }],
+    planets: [{ id: 1, name: "Novalis", location: "Tobruk Crater", canUnlock: true, canLand: true }],
+    levels: [],
     maxBolts: 9_999_999,
+    chunks: [],
   };
 }
 
@@ -62,5 +78,35 @@ describe("the save editor's checks", () => {
     const f = view().fields;
     expect(skillCount(f)).toEqual([1, 3]);
     expect(goldBoltCount(f)).toEqual([1, 3]);
+  });
+});
+
+describe("the advanced editor's bytes", () => {
+  it("reads and writes hex in any spacing", () => {
+    expect(hexToBytes("0a 0B\n0c0d")).toEqual([10, 11, 12, 13]);
+    expect(hexToBytes("0g")).toBe("Only 0-9 and a-f");
+    expect(hexToBytes("abc")).toBe("An odd number of digits");
+    expect(bytesToHex([0, 255, 16])).toBe("00 ff 10");
+  });
+
+  it("reads and writes little-endian words", () => {
+    const b = [0, 0, 0, 0, 0, 0, 0, 0];
+    writeI32(b, 1, 123456);
+    expect(b).toEqual([0, 0, 0, 0, 0x40, 0xe2, 1, 0]);
+    expect(readI32(b, 1)).toBe(123456);
+    writeI32(b, 0, -1);
+    expect(readI32(b, 0)).toBe(-1);
+  });
+
+  it("sends only the chunks that changed", () => {
+    const v = view();
+    v.chunks = [
+      { section: null, id: 1, size: 4, name: "Bolts", known: true, hex: "0a 00 00 00" },
+      { section: 3, id: 3003, size: 4, name: "Gold bolts found", known: true, hex: "00 00 00 00" },
+    ];
+    const bytes = chunkBytes(v);
+    expect(rawPatches(v, bytes)).toEqual([]);
+    bytes[chunkKey(3, 3003)] = [1, 0, 0, 0];
+    expect(rawPatches(v, bytes)).toEqual([{ section: 3, id: 3003, hex: "01 00 00 00" }]);
   });
 });
