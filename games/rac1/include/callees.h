@@ -34,7 +34,7 @@ extern void func_001F99D8(void *, int);
 extern void func_001F9AF0(void *, int, int);
 extern float func_001F9B50(float);
 extern float func_001F9BB0(float, float, float);
-extern void func_001F9E58(void *, void *, float);
+extern int func_001F9E58(void *, void *, float);
 extern float func_001FA058(float, float);
 extern void func_001FA1F8(void *, void *);
 extern void func_001FA4F0(void *, void *, void *);
