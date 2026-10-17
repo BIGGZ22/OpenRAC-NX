@@ -1414,8 +1414,9 @@ void func_L18_002FDF58(unsigned char *moby) {
         }
     }
 }
-int func_L18_002FE070(char *a) {
-    int r = func_L00_002DCDA8(a);
+extern int func_L00_002DCDA8_pos(void *, void *, void *) __asm__("func_L00_002DCDA8");
+int func_L18_002FE070(char *a, void *pos, void *target) {
+    int r = func_L00_002DCDA8_pos(a, pos, target);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 7) a[0x20] = 2;
     } else {

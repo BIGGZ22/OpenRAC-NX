@@ -604,10 +604,11 @@ extern float func_001F9CE8(float *);
 extern float func_L00_001FF860(float, float);
 extern void func_001FA790(float, float);
 extern float func_001F9CB8(float *);
-int func_L00_001ED9B0(float *a) {
+extern void func_001F9BF0_3(float *, float *, float *) __asm__("func_001F9BF0");
+int func_L00_001ED9B0(float *a, float *p, float *q) {
     W v;
     float t;
-    FastVecSub(v);
+    func_001F9BF0_3(v, p, q);
     a[1] = func_L00_001FF860(func_001F9CE8(v), v[2]);
     t = func_L00_001FF860(v[0], v[1]);
     FastSubRots(t, a[0]);

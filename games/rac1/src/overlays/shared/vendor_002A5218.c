@@ -274,8 +274,9 @@ void func_L02_002CCD18(char *moby) {
         *(unsigned short *)(moby + 0x34) |= 0x40;
     }
 }
-int func_L02_002D75F8(char *a) {
-    int r = func_L00_002DCDA8(a);
+extern int func_L00_002DCDA8_pt(void *, void *, void *) __asm__("func_L00_002DCDA8");
+int func_L02_002D75F8(char *a, void *pos, void *target) {
+    int r = func_L00_002DCDA8_pt(a, pos, target);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 9) a[0x20] = 1;
     } else {

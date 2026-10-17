@@ -49711,7 +49711,7 @@
    "id": "level_code",
    "name": "Level code",
    "measures": {
-    "fuzzy_match_percent": 93.92549355303241,
+    "fuzzy_match_percent": 93.92549355303244,
     "total_code": "3247108",
     "matched_code": "3024660",
     "matched_code_percent": 93.14935012940747,
@@ -49771,7 +49771,7 @@
    "id": "levels",
    "name": "Level-specific code",
    "measures": {
-    "fuzzy_match_percent": 98.74470851413159,
+    "fuzzy_match_percent": 98.7447085141316,
     "total_code": "2046480",
     "matched_code": "2011352",
     "matched_code_percent": 98.28349165396193,

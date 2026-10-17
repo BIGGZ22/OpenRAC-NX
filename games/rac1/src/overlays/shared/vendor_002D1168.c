@@ -1723,8 +1723,9 @@ float func_L00_002D6978(unsigned char *m, float *t, float vel) {
         return d;
     return 37.0f;
 }
-int func_L00_002D6B90(char *a) {
-    int r = func_L00_002DCDA8(a);
+extern int func_L00_002DCDA8(void *, void *, void *);
+int func_L00_002D6B90(char *a, void *p, void *t) {
+    int r = func_L00_002DCDA8(a, p, t);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 9) a[0x20] = 5;
     } else {

@@ -1063,8 +1063,9 @@ void func_00213DE0_EBA10(MobyAnim_EBA10 *arg0, int arg1, int arg2, int arg3) __a
 
 /* Grabbed check: while FUN_L00_002db8f8 holds the moby, park it in state 0x10 (remembering the state it came from) unless it is in a state that cannot be grabbed; once released, drop it back to state 8.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002ea5e0. */
-int func_L06_002EBA10(struct Moby *moby) {
-    int r = func_L00_002DCDA8_EBA10(moby);
+extern int func_L00_002DCDA8_EBA10_3(void *, void *, void *) __asm__("func_L00_002DCDA8");
+int func_L06_002EBA10(struct Moby *moby, void *position, void *target) {
+    int r = func_L00_002DCDA8_EBA10_3(moby, position, target);
     if (r != 0) {
         if (moby->state == 8 || moby->state == 9 || moby->state == 0xC || moby->state == 0xD || moby->state == 0x10) {
             if (moby->state != 0x10) {
@@ -1087,8 +1088,9 @@ extern int func_001F9850(int);
 extern void func_00213DE0(void *, int, int, int);
 
 // Switches moby state between 0x10 and 8 depending on a check result.
-int func_L06_002EBAD8(unsigned char *moby) {
-    int r = func_L00_002DCFD0(moby);
+extern int func_L00_002DCFD0_EBAD8(void *, void *) __asm__("func_L00_002DCFD0");
+int func_L06_002EBAD8(unsigned char *moby, void *v) {
+    int r = func_L00_002DCFD0_EBAD8(moby, v);
     if (r != 0) {
         if (moby[0x20] != 0x10) {
             moby[0xBC] = moby[0x20];

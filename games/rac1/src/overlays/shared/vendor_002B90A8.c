@@ -119,8 +119,10 @@ void func_L01_002B9288(float *m) {
 extern void func_L00_002A5158(void *, int, int);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002b7ef0.c, FUN_L01_002b8288. */
-void func_L01_002B9440(void *a, int b) {
-    func_L00_002A5158(a, b, 0);
+extern void func_L00_002A5158_pt(float, float, float, float, void *, int, int) __asm__("func_L00_002A5158");
+
+void func_L01_002B9440(float x, float y, float z, float w, void *a, int b) {
+    func_L00_002A5158_pt(x, y, z, w, a, b, 0);
 }
 extern float D_L01_001CAF80[];
 
@@ -2357,12 +2359,11 @@ void func_L01_002F0B48(unsigned char *moby, f32 *mode) {
       } while (i < D_L01_00161A7C_0B48);
     }
 }
-extern int func_L00_002DCDA8(void *);
+extern int func_L00_002DCDA8_pt(void *, void *, void *) __asm__("func_L00_002DCDA8");
 
-// Updates the state when the vendor predicate permits it.
-int func_L01_002F0E60(unsigned char *moby)
+int func_L01_002F0E60(unsigned char *moby, void *pos, void *target)
 {
-    int value = func_L00_002DCDA8(moby);
+    int value = func_L00_002DCDA8_pt(moby, pos, target);
     if (value != 0) {
         if (*(short *)(moby + 0xA6) != 0x362) {
             return 0;
@@ -2376,9 +2377,9 @@ int func_L01_002F0E60(unsigned char *moby)
     }
     return value;
 }
-extern int func_L00_002DCFD0(void *);
-int func_L01_002F0ED0(char *a) {
-    int r = func_L00_002DCFD0(a);
+extern int func_L00_002DCFD0_pt(void *, void *) __asm__("func_L00_002DCFD0");
+int func_L01_002F0ED0(char *a, void *v) {
+    int r = func_L00_002DCFD0_pt(a, v);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 14) a[0x20] = 1;
     } else {
@@ -2416,8 +2417,9 @@ s32 func_L01_002F0FD0(s32 *values, s32 count, s32 offset) {
     }
     return index;
 }
-int func_L01_002F3050(char *a) {
-    int r = func_L00_002DCDA8(a);
+extern int func_L00_002DCDA8_pt(void *, void *, void *) __asm__("func_L00_002DCDA8");
+int func_L01_002F3050(char *a, void *pos, void *target) {
+    int r = func_L00_002DCDA8_pt(a, pos, target);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 7) a[0x20] = 1;
     } else {

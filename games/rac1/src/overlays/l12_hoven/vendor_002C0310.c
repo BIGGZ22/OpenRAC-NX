@@ -244,10 +244,11 @@ void func_L12_002C0940(int arg) {
 extern int func_L00_002DCDA8(void *);
 extern void func_L01_0026F040(int, int);
 
-int func_L12_002E29C8(unsigned char *moby) {
+extern int func_L00_002DCDA8_pos(void *, void *, void *) __asm__("func_L00_002DCDA8");
+int func_L12_002E29C8(unsigned char *moby, void *pos, void *target) {
     int active;
     if (moby[0x20] == 9 || moby[0x20] == 11 || moby[0x20] == 13) return 0;
-    active = func_L00_002DCDA8(moby);
+    active = func_L00_002DCDA8_pos(moby, pos, target);
     if (active) {
         if (moby[0x21] != 0xFF) func_L01_0026F040(moby[0x21], 1);
         moby[0x20] = 8;
@@ -257,8 +258,9 @@ int func_L12_002E29C8(unsigned char *moby) {
     return active;
 }
 extern int func_L00_002DCFD0(void *);
-int func_L12_002E2A68(char *a) {
-    int r = func_L00_002DCFD0(a);
+extern int func_L00_002DCFD0_pos(void *, void *) __asm__("func_L00_002DCFD0");
+int func_L12_002E2A68(char *a, void *pos) {
+    int r = func_L00_002DCFD0_pos(a, pos);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 8) a[0x20] = 1;
     } else {

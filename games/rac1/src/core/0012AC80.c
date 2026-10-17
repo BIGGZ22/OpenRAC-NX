@@ -1252,11 +1252,11 @@ void func_0012C420(void *arg0) {
     func_0011A6C8(D_00153BD8, arg0);
 }
 
-extern void func_00116248(void *);
+extern int func_00116248_f(char *, char *, int) __asm__("func_00116248");
 
-void func_0012C430(void *arg0) {
+void func_0012C430(void *arg0, char *fmt, int code) {
     char buf[0x100];
-    func_00116248(buf);
+    func_00116248_f(buf, fmt, code);
     func_0012C468(arg0, buf);
 }
 

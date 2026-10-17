@@ -154,8 +154,9 @@ extern int func_L00_002DCDA8(void *);
 extern int func_001F9850(int);
 extern void func_00213DE0(void *, int, int, int);
 
-int func_L17_002F19B8(unsigned char *moby) {
-    int result = func_L00_002DCDA8(moby);
+extern int func_L00_002DCDA8_pos(void *, void *, void *) __asm__("func_L00_002DCDA8");
+int func_L17_002F19B8(unsigned char *moby, void *pos, void *target) {
+    int result = func_L00_002DCDA8_pos(moby, pos, target);
     if (result) {
         moby[0x20] = 12;
     } else if (moby[0x20] == 12) {

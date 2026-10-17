@@ -50,10 +50,11 @@ int func_0023DFA0(VideoDec *dec, int a1, int a2, int (*cb)(void *, void *, void 
 void func_0023DFC0(VideoDec *dec, unsigned char **p1, int *n1, unsigned char **p2, int *n2) {
     viBufBeginPut(dec->viBuf, p1, n1, p2, n2);
 }
-/* videoDecEndPut(VideoDec *) -- viBufEndPut on the decoder's input buffer.
- * The symbol table gives viBufEndPut a second int argument; retail sets none up here. */
-void func_0023DFE0(VideoDec *dec) {
-    viBufEndPut(dec->viBuf);
+/* videoDecEndPut(VideoDec *, int size) -- viBufEndPut on the decoder's input buffer;
+ * the size in $a1 passes straight through. */
+extern void vibuf_end_put(void *, int) __asm__("func_0023D2E8");
+void func_0023DFE0(VideoDec *dec, int size) {
+    vibuf_end_put(dec->viBuf, size);
 }
 /* videoDecReset(VideoDec *) -- clears the decoder state. */
 void func_0023E000(VideoDec *dec) {

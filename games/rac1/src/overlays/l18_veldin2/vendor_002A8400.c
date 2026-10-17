@@ -585,9 +585,10 @@ struct AnimSeq;
 extern int func_L00_002DCDA8_D74F8(void *) __asm__("func_L00_002DCDA8");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002d6108. */
-int func_L18_002D74F8(struct Moby *m) {
+extern int func_L00_002DCDA8_D74F8_pos(void *, void *, void *) __asm__("func_L00_002DCDA8");
+int func_L18_002D74F8(struct Moby *m, void *pos, void *target) {
     char *d = (char *)m->pvars;
-    int r = func_L00_002DCDA8_D74F8(m);
+    int r = func_L00_002DCDA8_D74F8_pos(m, pos, target);
     if (r != 0) {
         unsigned char s = m->state;
         if ((unsigned)(s - 3) < 2) {

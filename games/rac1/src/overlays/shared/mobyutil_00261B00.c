@@ -592,11 +592,11 @@ void func_L00_00263BF8(float *o, float *a, float *b, float r, float l1, float l2
     *a = FastAddRots(*a, l1);
     *b = FastAddRots(*b, l2);
 }
-extern void func_00215C00(void *);
-void func_L00_00263D68(void *a, void *b) {
+extern void func_00215C00_x(void *, float, float, float) __asm__("func_00215C00");
+void func_L00_00263D68(void *a, void *b, float r, float y, float z) {
     typedef float W[4] __attribute__((aligned(16)));
     W v;
-    func_00215C00(v);
+    func_00215C00_x(v, r, y, z);
     FastVecAdd(a, v, b);
 }
 extern void func_L00_00264DB8(int arg0, int arg1);

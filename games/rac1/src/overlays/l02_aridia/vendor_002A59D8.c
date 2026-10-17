@@ -1183,8 +1183,10 @@ extern void *func_L00_002DCFD0(void *);
 extern int D_L02_00160058_g SDATA(D_L02_00160058);
 
 // Checks a moby's associated object; sets state 9 and decrements a counter, or restores state 1.
-void *func_L02_002D7648(char *moby) {
-    void *r = func_L00_002DCFD0(moby);
+extern void *func_L00_002DCFD0_pt(void *, void *) __asm__("func_L00_002DCFD0");
+
+void *func_L02_002D7648(char *moby, void *v) {
+    void *r = func_L00_002DCFD0_pt(moby, v);
     if (r) {
         int idx;
         moby[0x20] = 9;
