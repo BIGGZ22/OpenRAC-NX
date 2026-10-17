@@ -616,10 +616,18 @@ pub fn run() {
 
             let config_file = app.path().app_config_dir().ok().map(|dir| dir.join("launcher.json"));
             let mut config = config_file.as_deref().map(config::load).unwrap_or_default();
+
+            // First run / startup: ensure the OpenRAC folder exists in the user's home directory.
+            // On Linux: /home/<user>/OpenRAC
+            // On macOS: /Users/<user>/OpenRAC
+            // On Windows: C:\Users\<user>\OpenRAC
+            let home_dir = app.path().home_dir().ok().or_else(detect::home_dir);
+            let openrac_home = home_dir.as_ref().and_then(|h| detect::ensure_openrac_dir_in(h).ok());
+
             // OpenGOAL asks for an install folder at first start; until the
-            // player picks one, games are set up in the launcher's own data folder.
+            // player picks one, games are set up in the user's OpenRAC folder (or launcher's data folder).
             if config.install_dir.is_none() {
-                config.install_dir = app.path().app_local_data_dir().ok();
+                config.install_dir = openrac_home.or_else(|| app.path().app_local_data_dir().ok());
             }
 
             // The copy of OpenRAC the launcher carries: what a player plays from (detect::settle).

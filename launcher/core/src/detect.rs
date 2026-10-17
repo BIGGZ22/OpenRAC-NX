@@ -299,8 +299,48 @@ pub fn which(name: &str) -> Option<PathBuf> {
     None
 }
 
+/// The user's home directory.
+pub fn home_dir() -> Option<PathBuf> {
+    #[cfg(windows)]
+    {
+        std::env::var_os("USERPROFILE").map(PathBuf::from).or_else(|| {
+            let drive = std::env::var_os("HOMEDRIVE")?;
+            let path = std::env::var_os("HOMEPATH")?;
+            Some(PathBuf::from(drive).join(path))
+        })
+    }
+    #[cfg(not(windows))]
+    {
+        std::env::var_os("HOME").map(PathBuf::from)
+    }
+}
+
+/// The default OpenRAC folder in the user's home directory:
+/// - Linux: `/home/<user>/OpenRAC`
+/// - macOS: `/Users/<user>/OpenRAC`
+/// - Windows: `C:\Users\<user>\OpenRAC` (via `%USERPROFILE%`)
+pub fn default_openrac_dir() -> Option<PathBuf> {
+    home_dir().map(|h| h.join("OpenRAC"))
+}
+
+/// Ensures the default OpenRAC folder exists in a given home directory.
+/// Checks if it already exists; if not, creates it.
+pub fn ensure_openrac_dir_in(home: &Path) -> Result<PathBuf, String> {
+    let dir = home.join("OpenRAC");
+    if !dir.exists() {
+        std::fs::create_dir_all(&dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
+    }
+    Ok(dir)
+}
+
+/// Ensures the default OpenRAC folder exists in the user's home directory.
+pub fn ensure_default_openrac_dir() -> Result<PathBuf, String> {
+    let home = home_dir().ok_or_else(|| "cannot determine home directory".to_string())?;
+    ensure_openrac_dir_in(&home)
+}
+
 fn home() -> Option<PathBuf> {
-    std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" }).map(PathBuf::from)
+    home_dir()
 }
 
 #[cfg(windows)]
@@ -446,5 +486,26 @@ mod tests {
         assert!(python_too_old("Python 3.14.0rc2").is_none());
         // Not a Python 3 at all: the caller's other check says so.
         assert!(python_too_old("Python 2.7.18").is_none());
+    }
+
+    #[test]
+    fn creates_openrac_folder_in_home_if_missing_and_preserves_existing() {
+        let temp = tempfile::tempdir().unwrap();
+        let home = temp.path();
+        let expected = home.join("OpenRAC");
+        assert!(!expected.exists());
+
+        // First call creates the folder
+        let created = ensure_openrac_dir_in(home).unwrap();
+        assert_eq!(created, expected);
+        assert!(expected.is_dir());
+
+        // Put a file inside to ensure it is not wiped/overwritten
+        std::fs::write(expected.join("marker.txt"), "hello").unwrap();
+
+        // Second call detects it exists and leaves it intact
+        let existing = ensure_openrac_dir_in(home).unwrap();
+        assert_eq!(existing, expected);
+        assert!(expected.join("marker.txt").is_file());
     }
 }
