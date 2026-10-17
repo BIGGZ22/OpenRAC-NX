@@ -84,6 +84,9 @@ class FnReport:
     zero_args: list = field(default_factory=list)  # calls short of arguments the caller had none for
     hw: int = 0                  # accesses to hardware register addresses
     calls: set = field(default_factory=set)  # functions it calls or takes the address of
+    # Direct calls whose call site disagrees with the callee's definition (arity, kinds, result):
+    # "callee: what differs", for port/tools/hostgen/priority.py.
+    mismatches: list = field(default_factory=list)
 
 
 @dataclass
@@ -1775,6 +1778,7 @@ class Unit:
         values = self._match_args(sym, sig, args)
         text = f"{cname(sym)}({', '.join(values)})"
         ret_cls = self.sig_cls(sig.ret)
+        self._note_mismatch(sym, sig, args, result_cls, ret_cls)
         if result_cls == "void":
             return text
         if ret_cls == "void" or self._reg_class(ret_cls) != self._reg_class(result_cls) or ret_cls == "rec" != result_cls:
@@ -1787,6 +1791,25 @@ class Unit:
         if sym in getattr(self.program, "returns_64", ()) and result_cls == "int":
             return f"((long long)({text}))"  # all 64 bits, as the register holds them
         return f"(({self.host(ctype.strip_quals(result_t))})({text}))"
+
+    def _note_mismatch(self, sym: str, sig, args: list, result_cls: str, ret_cls: str) -> None:
+        """Record a direct call whose site disagrees with the callee's definition in what the EE's
+        registers carry: fewer or more integer (or float) arguments than it takes, or a result it
+        does not return. Another order of the two kinds is the same call on the EE. For
+        report.json's call_site_mismatches."""
+        if not sig.prototyped:
+            return
+        what = []
+        kinds = [self._arg_class(a) for a in args]
+        pkinds = [("agg" if self.sig_cls(p) == "rec" else self._reg_class(self.sig_cls(p))) for p in sig.params]
+        for k, label in (("i", "integer"), ("f", "float"), ("agg", "record")):
+            n, m = kinds.count(k), pkinds.count(k)
+            if n != m and not (sig.variadic and n > m):
+                what.append(f"{n} {label} arguments for {m}")
+        if result_cls != "void" and (ret_cls == "void" or self._reg_class(ret_cls) != self._reg_class(result_cls)):
+            what.append(f"reads a {result_cls} result, returns {ret_cls}")
+        if what:
+            self.fn.report.mismatches.append(f"{sym}: {'; '.join(what)}")
 
     def _arg_class(self, a: dict) -> str:
         """Which register file the call site put the argument in."""

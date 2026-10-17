@@ -401,6 +401,8 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         "functions_without_c_asm": sum(1 for f in no_c if f.asm),
         "arguments_passed_through": sum(f.passthrough for f in fns),
         "arguments_filled_with_zero": {f.name: f.zero_args for f in fns if f.zero_args},
+        "call_site_mismatches": {f.name: sorted(set(f.mismatches)) for f in fns if f.mismatches},
+        "call_graph": {f.name: sorted(f.calls) for f in fns if f.status == "translated" and f.calls},
         "hardware_accesses": sum(f.hw for f in fns),
         "functions_touching_hardware": sorted(f.name for f in fns if f.hw),
         "stub_reasons": dict(sorted(reasons.items(), key=lambda kv: -kv[1])),
