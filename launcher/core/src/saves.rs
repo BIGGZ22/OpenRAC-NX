@@ -33,6 +33,8 @@ pub struct SaveSlotInfo {
     /// ISO-8601 formatted timestamp if decoded from in-game save metadata or file mtime.
     pub timestamp: Option<String>,
     pub modified_millis: Option<u64>,
+    /// The save editor can open it (a game in it, and a game whose saves it knows).
+    pub editable: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -306,6 +308,7 @@ pub fn inspect_saves(serial: &str) -> GameSaveStatus {
                     planet_name,
                     timestamp,
                     modified_millis: mtime,
+                    editable: exists && !is_empty && crate::save_edit::edits_serial(serial),
                 });
             }
         }

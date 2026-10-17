@@ -28,6 +28,7 @@ pub mod install;
 pub mod jobs;
 pub mod library;
 pub mod overrides;
+pub mod save_edit;
 pub mod saves;
 pub mod status;
 
