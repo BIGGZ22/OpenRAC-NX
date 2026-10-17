@@ -88,8 +88,10 @@ the disc image and saves are kept.
 - **Save files**: the port's memory card (`~/.local/share/openrac/memcard/<serial>/`
   on Linux) with each slot's planet, bolts and save time, backups you can
   restore, and the folder. **Edit** opens a slot of Ratchet & Clank in the save
-  editor: bolts, health upgrades, weapons and gadgets, ammo, gold weapons,
-  gold bolts, planets and skill points. It refuses to write while the game runs
+  editor: the planet it loads on, bolts, health upgrades, weapons and gadgets,
+  ammo, gold weapons, gold bolts, planets and skill points. **Advanced save
+  editing** (Settings) adds every field and each part of the file as raw bytes,
+  for debugging. It refuses to write while the game runs
   with that card, backs the card up before every write, and offers Undo
   ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#the-save-editor)).
 - **Level editor**: under **Mods** (below), and in the game's menu.

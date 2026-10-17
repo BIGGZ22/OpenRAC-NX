@@ -109,7 +109,7 @@ mirrored in `src/lib/api.ts`.
 | `open_game_folder`                                              | `{game, path}`                                          | opens a folder inside the game's set-up folder (an export); refuses anything else                |
 | `inspect_saves` / `backup_saves` / `restore_backup`             | `{serial}` / `{serial, note}` / `{serial, backupName}`  | the card's slots and backups; a backup; a restore (refused while the game uses the card)         |
 | `read_save`                                                     | `{serial, slot}`                                        | one slot for the save editor (`core/src/save_edit.rs`, `SaveView`)                               |
-| `write_save`                                                    | `{serial, slot, fingerprint, fields}`                   | writes the editor's fields, safely (below); the backup it took and the slot as it now is         |
+| `write_save`                                                    | `{serial, slot, fingerprint, change}`                   | writes the editor's fields or raw chunks, safely (below); the backup and the slot as it now is   |
 | `cancel_job`                                                    | `{id}`                                                  |                                                                                                  |
 | `open_path`                                                     | `{path}` relative to the checkout                       | opens it with the system; refuses paths outside the checkout                                     |
 | `open_url`                                                      | `{url}`                                                 | opens an `https://` address in the browser                                                       |
@@ -193,7 +193,8 @@ so an edited save loads. It came from the game's own code: `memcard.c`,
 executable's item and vendor tables; checked against ReRAC's notes
 ([THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md#rerac)).
 
-**The fields**, only those whose meaning the code makes plain: bolts (to
+**The fields**, only those whose meaning the code makes plain: the planet the
+save loads on, bolts (to
 9,999,999, the game's own limit), health (Premium Nanotech for 5, Ultra for
 8: the two story flags and the maximum together), weapons and gadgets owned,
 ammo (to each weapon's limit, the vendor's "full" test), the ten gold weapons,
@@ -203,6 +204,31 @@ or taking an item keeps the related chunks as the game does: owned and
 acquired, the vendor's stock, and the quick select and equipped slots, which
 let go of an item taken away. Unlocking a planet adds it to the galaxy map
 after those unlocked before it.
+
+**The planet.** On Load Game the game restores the save and runs
+`DoSpaceTransition` (PAL `func_00233308`) with the saved planet (chunk 0) as
+both the planet left and the one reached; the level start then unlocks the
+planet, marks it visited and puts Ratchet at the level's start point (where
+the ship lands; position is never saved). Moving a save is therefore chunk 0,
+with the planet unlocked and added to the galaxy map as the level start would.
+A planet never visited plays its landing first. The default mode offers the
+ship's destinations, Novalis to Kalebo III; Veldin, Drek's Fleet and the last
+Veldin come with their story scenes and the state those leave, so they are
+offered only in the advanced mode (a save already on one keeps it).
+
+**Advanced mode** (Settings, "Advanced save editing", off by default) adds an
+Advanced tab (`components/AdvancedSaveEditor.svelte`) for debugging: every
+decoded field (the game's numbers and options, every item's owned, ever-had,
+gold and ammo, the quick select, equipped and vendor slots, the 32 skill-point
+bytes, the story and cheat flags, the galaxy map order, and each planet's
+section: unlocked, visited, gold bolts, missions, bolts, hits and deaths), any
+planet as the current one, and a raw view of every chunk by section and id
+with its size and its bytes as hex. What is not decoded is marked "raw" or
+"not decoded". The tab edits bytes only and applies no rules; it saves as raw
+chunk patches (`SaveChange::Raw`): each keeps its size, the checksums are
+written fresh, and the same guards apply. `write_save` refuses raw patches
+unless the setting is on. Switching tabs waits until the changes are saved or
+cancelled.
 
 **Safety.** `write_save` refuses to write when a game program (by its name,
 `openrac-rac1-pal` or `Ratchet & Clank (PAL)`, and the same for NTSC) runs
@@ -219,7 +245,9 @@ runs with the card, too.
 **Checking it with the game.** Copy the card folder somewhere else, edit a
 slot there (a few lines of Rust over `save_edit::write_save`), and start the
 port with `--cards <copy>/<serial>`: Load Game lists the slot with the new
-bolts, and loading it logs `bolts N` and shows the weapons in the pause menu
+bolts, and loading it logs `bolts N` and shows the weapons in the pause menu;
+a save moved to Kerwan or Rilgar, never visited, lands there and leaves
+Ratchet at the start
 ([docs/port/RAC1_PAL_TESTING.md](../../docs/port/RAC1_PAL_TESTING.md) for
 scripted presses and pictures). Never point a test at the player's own card.
 
