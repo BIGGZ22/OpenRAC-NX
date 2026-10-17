@@ -173,6 +173,42 @@ func_00118AF0	kernel	DisableIntc	host	system call 0x15
 func_00118B00	kernel	EnableDmac	host	system call 0x16
 func_00118B10	kernel	DisableDmac	host	system call 0x17
 func_00118DE0	kernel	GsPutIMR	host	system call 0x71
+func_00118A60	kernel	Exit	host	system call 0x04 (KExit)
+func_00118AC0	kernel	AddDmacHandler2	host	system call 0x12, the handler takes an argument (libmpeg's colour conversion)
+func_00118B20	kernel	SetAlarm	host	system call 0xFC; the callback runs at once
+func_00118BF0	kernel	ReferThreadStatus	host	system call 0x30
+func_00118C00	kernel	SleepThread	host	system call 0x32
+func_00118C10	kernel	WakeupThread	host	system call 0x33
+func_00118C20	kernel	WakeupThread	host	system call -0x34 (_iWakeupThread): the same in the port
+func_00118C40	kernel	SuspendThread	host	system call 0x37
+func_00118C60	kernel	EndOfHeap	host	system call 0x3E; sbrk's limit
+func_00118CA0	kernel	SignalSema	host	system call -0x43 (iSignalSema): the same in the port
+func_00118CC0	kernel	PollSema	host	system call 0x45
+func_00118CE0	kernel	SetOsdConfigParam	host	system call 0x4A
+func_00118CF0	kernel	GetOsdConfigParam	host	system call 0x4B
+func_00118DA0	kernel	sceSifStopDma	host	system call 0x6B
+func_00118DC0	kernel	GetOsdConfigParam2	host	system call 0x6F
+func_00118E00	kernel	SetVSyncFlag	host	system call 0x73
+func_00118E30	kernel	sceSifSetDma	host	system call -0x77 (isceSifSetDma): the same in the port
+func_00118E40	kernel	sceSifSetDChain	host	system call 0x78
+func_00118E50	kernel	sceSifSetDChain	host	system call -0x78 (isceSifSetDChain): the same in the port
+func_00118E60	kernel	sceSifSetReg	host	system call 0x79
+func_00118E70	kernel	sceSifGetReg	host	system call 0x7A
+func_00118E90	kernel	Deci2Call	host	system call 0x7C; kputs goes to the log
+func_00118EA0	kernel	GetMemorySize	host	system call 0x7F
+func_00118EB0	kernel	_InitTLB	host	system call 0x82
+func_0011D360	kernel	Copy	host	system call 0x5A
+func_0011D3A8	kernel	GetEntryAddress	host	system call 0x5B
+func_0011D3B8	kernel	SetSyscall	host	system call 0x74
+func_0011D490	kernel	_SetTLBEntry	host	system call 0x56
+func_0011DA80	kernel	FindAddress	host	system call 0x83
+func_0011DB98	kernel	SetSyscall	host	system call 0x74
+func_0011DBE8	kernel	SetSyscall	host	system call 0x74
+func_0011DBF8	kernel	Copy	host	system call 0x5A
+func_0011DC40	kernel	GetEntryAddress	host	system call 0x5B
+func_0011DDD0	kernel	SetSyscall	host	system call 0x74
+func_0011DDE0	kernel	Copy	host	system call 0x5A
+func_0011DE28	kernel	GetEntryAddress	host	system call 0x5B
 func_001F7EF8	game	func_001F7EF8	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (unsigned int, int, int)
 func_001F8B6C	game	func_001F8B6C	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (void)
 func_001F91B8	game	func_001F91B8	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (void)

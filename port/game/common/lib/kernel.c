@@ -8,6 +8,7 @@
  * leave the IOP's services to the replacements of the libraries above them
  * (disc, memory card, pads, sound). */
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "openrac/game_host.h"
 #include "openrac/game_lib.h"
@@ -22,6 +23,8 @@ typedef struct {
     int cause;
     gaddr handler;
     int arg;
+    gaddr data;    /* AddDmacHandler2: the handler's second argument */
+    int with_data; /* called as handler(cause, data, 0) */
 } handler;
 
 static handler intc[MAX_HANDLERS], dmac[MAX_HANDLERS];
@@ -30,7 +33,7 @@ static gaddr vsync_callback;
 static int add(handler* table, int cause, gaddr fn, int arg) {
     for (int i = 0; i < MAX_HANDLERS; i++) {
         if (table[i].handler == 0) {
-            table[i] = (handler){cause, fn, arg};
+            table[i] = (handler){cause, fn, arg, 0, 0};
             return i + 1;
         }
     }
@@ -62,7 +65,11 @@ void openrac_game_run_vsync_handlers(void) {
 void openrac_game_run_dmac_handlers(int channel) {
     for (int i = 0; i < MAX_HANDLERS; i++) {
         if (dmac[i].handler != 0 && dmac[i].cause == channel) {
-            GFN(int (*)(int), dmac[i].handler)(channel);
+            if (dmac[i].with_data) {
+                GFN(int (*)(int, gaddr, gaddr), dmac[i].handler)(channel, dmac[i].data, 0);
+            } else {
+                GFN(int (*)(int), dmac[i].handler)(channel);
+            }
         }
     }
 }
@@ -80,6 +87,17 @@ int openrac_lib_RemoveIntcHandler(int cause, int id) {
 /* AddDmacHandler */
 int openrac_lib_AddDmacHandler(int channel, gaddr fn, int next) {
     return add(dmac, channel, fn, next);
+}
+
+/* AddDmacHandler2 (system call 0x12, as AddDmacHandler): the handler also
+ * gets an argument of the caller's, handler(channel, arg, 0). */
+int openrac_lib_AddDmacHandler2(int channel, gaddr fn, int next, gaddr arg) {
+    int id = add(dmac, channel, fn, next);
+    if (id > 0) {
+        dmac[id - 1].data = arg;
+        dmac[id - 1].with_data = 1;
+    }
+    return id;
 }
 
 /* RemoveDmacHandler */
@@ -404,3 +422,238 @@ void openrac_lib_SetGsCrt(int interlace, int mode, int field) {
 void openrac_lib_GsPutIMR(unsigned int mask) {
     (void)mask;
 } /* GsPutIMR */
+
+/* ---- The other EE kernel services the game's libraries call ----
+ *
+ * Each is a system call stub in the program (addiu $v1, N; syscall; jr $ra).
+ * Which service a number is comes from the open-source ps2sdk's table of EE
+ * kernel calls (ee/kernel/include/syscallnr.h, AFL 2.0); the argument
+ * layouts from its kernel.h and osd_config.h. Facts only: nothing of the
+ * console's own kernel is reproduced. The port has one thread and no
+ * interrupts, so what would wait for an event finds it has happened. */
+
+/* Exit (KExit, 0x04): the program ends. Only the start-up code calls it,
+ * when the memory map it sets up does not fit. */
+void openrac_lib_Exit(int status) {
+    fprintf(stderr, "[game] Exit(%d)\n", status);
+    exit(status);
+} /* Exit */
+
+/* SetAlarm (0xFC): the callback runs once `time` horizontal blanks have
+ * passed, from the timer interrupt. The port has no interrupts and treats
+ * every wait as already over: it runs the callback at once. */
+static int next_alarm = 1;
+
+int openrac_lib_SetAlarm(unsigned short time, gaddr callback, gaddr common) { /* SetAlarm */
+    int id = next_alarm++;
+    if (callback != 0) {
+        GFN(void (*)(int, unsigned short, gaddr), callback)(id, time, common);
+    }
+    return id;
+}
+
+/* ReferThreadStatus (0x30): the 0x30-byte status record of a thread
+ * (status, entry, stack, stack size, gp, initial and current priority,
+ * attributes, option, wait type, wait id, wake-up count). The port's one
+ * thread is always running (status 1). */
+int openrac_lib_ReferThreadStatus(int id, gaddr info) { /* ReferThreadStatus */
+    uint32_t status[12] = {0};
+    status[0] = 1; /* THS_RUN */
+    status[5] = 1; /* initial priority */
+    status[6] = 1; /* current priority */
+    if (info != 0) {
+        memcpy(G(info), status, sizeof status);
+    }
+    return id;
+}
+
+/* SleepThread (0x32), WakeupThread (0x33, and _iWakeupThread, -0x34),
+ * SuspendThread (0x37): one thread, which the wake-up it waits for (an
+ * alarm, above) has already reached. */
+int openrac_lib_SleepThread(void) {
+    return openrac_lib_GetThreadId();
+} /* SleepThread */
+
+int openrac_lib_WakeupThread(int id) {
+    return id;
+} /* WakeupThread */
+
+int openrac_lib_SuspendThread(int id) {
+    return id;
+} /* SuspendThread */
+
+/* EndOfHeap (0x3E): the top of the area sbrk may grow into. The game's stack
+ * is outside its RAM in the port (GUEST_STACK_TOP), so the heap may reach
+ * the end of the 32 MB. */
+gaddr openrac_lib_EndOfHeap(void) {
+    return GUEST_RAM + GUEST_RAM_SIZE;
+} /* EndOfHeap */
+
+/* PollSema (0x45, and iPollSema): WaitSema without the wait: the semaphore's
+ * id when its count was above zero (and is now one less), else negative. */
+int openrac_lib_PollSema(int id) { /* PollSema */
+    if (id >= 1 && id <= MAX_SEMAS && sema_used[id - 1] && semas[id - 1] > 0) {
+        semas[id - 1]--;
+        return id;
+    }
+    return -1;
+}
+
+/* The system settings word (GetOsdConfigParam 0x4B, SetOsdConfigParam 0x4A):
+ * bit 0 S/PDIF off, bits 1-2 screen type, 3 video output, 4 non-Japanese,
+ * 5-12 PS1 driver, 13-15 version, 16-20 language, 21-31 time zone. Until the
+ * game sets one, it says: version 1, the language of the port's settings
+ * (the same numbering: 1 English, 2 French, ...), 4:3, no time-zone offset. */
+static uint32_t osd_config;
+static int osd_config_set;
+
+static uint32_t osd_config_word(void) {
+    if (osd_config_set) {
+        return osd_config;
+    }
+    return (1u << 4) | (1u << 13) | (((uint32_t)openrac_game_language & 31u) << 16);
+}
+
+void openrac_lib_SetOsdConfigParam(gaddr config) { /* SetOsdConfigParam */
+    if (config != 0) {
+        memcpy(&osd_config, G(config), 4);
+        osd_config_set = 1;
+    }
+}
+
+void openrac_lib_GetOsdConfigParam(gaddr config) { /* GetOsdConfigParam */
+    if (config != 0) {
+        uint32_t word = osd_config_word();
+        memcpy(G(config), &word, 4);
+    }
+}
+
+/* GetOsdConfigParam2 (0x6F): `size` bytes of the extended settings from
+ * `offset` (daylight saving, time and date formats): all zero, the
+ * console's defaults (standard time, 24-hour clock, YYYYMMDD). */
+void openrac_lib_GetOsdConfigParam2(gaddr config, int size, int offset) { /* GetOsdConfigParam2 */
+    (void)offset;
+    if (config != 0 && size > 0) {
+        memset(G(config), 0, (size_t)size);
+    }
+}
+
+/* The memory map (GetMemorySize 0x7F, _InitTLB 0x82, _SetTLBEntry 0x56):
+ * the start-up code sizes RAM and maps the TLB from it. The port's guest
+ * memory is 32 MB and has no TLB. */
+int openrac_lib_GetMemorySize(void) {
+    return (int)GUEST_RAM_SIZE;
+} /* GetMemorySize */
+
+int openrac_lib__InitTLB(void) {
+    return 0;
+} /* _InitTLB */
+
+int openrac_lib__SetTLBEntry(
+    unsigned int index, unsigned int mask, unsigned int hi, unsigned int lo0, unsigned int lo1
+) { /* _SetTLBEntry */
+    (void)mask;
+    (void)hi;
+    (void)lo0;
+    (void)lo1;
+    return (int)index;
+}
+
+/* Kernel patching (SetSyscall 0x74, GetEntryAddress 0x5B, Copy 0x5A,
+ * FindAddress 0x83): the start-up code replaces kernel routines with its
+ * own. The port has no kernel: the table of system calls is kept (so what is
+ * read back is what was set), copies into kernel memory go nowhere, and a
+ * search of kernel memory finds nothing (0). A copy whose both ends are in
+ * the game's RAM is done. */
+#define SYSCALLS 256
+static gaddr syscall_table[SYSCALLS];
+
+void openrac_lib_SetSyscall(int number, gaddr handler) { /* SetSyscall */
+    syscall_table[(unsigned int)number % SYSCALLS] = handler;
+}
+
+gaddr openrac_lib_GetEntryAddress(int number) { /* GetEntryAddress */
+    return syscall_table[(unsigned int)number % SYSCALLS];
+}
+
+int openrac_lib_Copy(gaddr dest, gaddr src, int size) { /* Copy */
+    if (size > 0 && dest < GUEST_RAM_SIZE && (uint32_t)size <= GUEST_RAM_SIZE - dest &&
+        src < GUEST_RAM_SIZE && (uint32_t)size <= GUEST_RAM_SIZE - src) {
+        memmove(G(dest), G(src), (size_t)size);
+    }
+    return 0;
+}
+
+gaddr openrac_lib_FindAddress(gaddr start, gaddr end, gaddr value) { /* FindAddress */
+    (void)start;
+    (void)end;
+    (void)value;
+    return 0;
+}
+
+/* SetVSyncFlag (0x73): at the next vertical blank the kernel stores 1 in
+ * *flag and the GS's status register in *csr (64 bits). The game spins on
+ * the flag; in the port the blank has come: both are stored now. */
+void openrac_lib_SetVSyncFlag(gaddr flag, gaddr csr) { /* SetVSyncFlag */
+    uint32_t one = 1;
+    uint64_t status = 0;
+    if (csr != 0) {
+        memcpy(G(csr), &status, 8);
+    }
+    if (flag != 0) {
+        memcpy(G(flag), &one, 4);
+    }
+}
+
+/* The SIF (sceSifStopDma 0x6B, sceSifSetDChain 0x78, sceSifSetReg 0x79,
+ * sceSifGetReg 0x7A): the link to the IOP, which the port does not have.
+ * Its registers keep what is written; the IOP's status flags (register 4)
+ * always read as up and its command system ready (0x10000, 0x20000), so a
+ * wait for the IOP ends at once. */
+#define SIF_REGS 8
+static int sif_reg[SIF_REGS], sif_sysreg[SIF_REGS];
+
+void openrac_lib_sceSifStopDma(void) {
+} /* sceSifStopDma */
+
+void openrac_lib_sceSifSetDChain(void) {
+} /* sceSifSetDChain */
+
+int openrac_lib_sceSifSetReg(unsigned int reg, int value) { /* sceSifSetReg */
+    int* file = (reg & 0x80000000u) ? sif_sysreg : sif_reg;
+    unsigned int i = reg & 0x7FFFFFFFu;
+    if (i < SIF_REGS) {
+        int old = file[i];
+        file[i] = value;
+        return old;
+    }
+    return 0;
+}
+
+int openrac_lib_sceSifGetReg(unsigned int reg) { /* sceSifGetReg */
+    const int* file = (reg & 0x80000000u) ? sif_sysreg : sif_reg;
+    unsigned int i = reg & 0x7FFFFFFFu;
+    if (i >= SIF_REGS) {
+        return 0;
+    }
+    if (!(reg & 0x80000000u) && i == 4) {
+        return file[i] | 0x30000;
+    }
+    return file[i];
+}
+
+/* Deci2Call (0x7C): the development kit's debug link. Function 16 (kputs)
+ * writes a string to the console's terminal, which goes to the log; the
+ * others (open, close, send, poll, ...) fail, as on a console without the
+ * link. */
+int openrac_lib_Deci2Call(int function, gaddr args) { /* Deci2Call */
+    if (function == 16 && args != 0) {
+        uint32_t text;
+        memcpy(&text, G(args), 4);
+        if (text != 0) {
+            fprintf(stderr, "[game] %s", (const char*)G(text));
+        }
+        return 0;
+    }
+    return -1;
+}
