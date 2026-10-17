@@ -104,6 +104,12 @@ to play a game. Start with [docs/LAYOUT.md](docs/LAYOUT.md).
    copy together (`tools/shared.py sync`) and verify each game that has it.
 10. **Verify before you say it is done.** Run the checks for what you
     touched and report the results as they are, failures included.
+    Builds, unit tests and log checks need no permission. **Ask before
+    automated game tests**: scripted runs of a game, screenshots, contact
+    sheets and test sweeps. Say what you would run, why, and about how
+    many images it takes, and offer that the person tries it themselves;
+    reading images uses a lot of context, and the runs open windows on
+    their screen. Brief subagents the same way.
 11. **Do not settle open questions alone.** If a task depends on one
     ([docs/policy/OPEN_QUESTIONS.md](docs/policy/OPEN_QUESTIONS.md)), say so
     and ask.
