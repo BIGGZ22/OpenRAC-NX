@@ -205,6 +205,28 @@ acquired, the vendor's stock, and the quick select and equipped slots, which
 let go of an item taken away. Unlocking a planet adds it to the galaxy map
 after those unlocked before it.
 
+**The page.** The editor is a large panel over the Play page (most of the
+window, down to 760 px wide). Its title says what the slot holds ("Slot 2 ·
+Kerwan · 4,890 bolts · 3h 12m", time played from chunk 3), and a row of links
+to its sections stays at the top of the Player view. Quick actions sit in the
+section headings: give all and take all weapons, fill all ammo, give all and
+take all gadgets and items (taking asks first, with the story-item warning),
+unlock or lock all ship destinations (the planet the save loads on stays
+unlocked), all or no gold bolts, all or no skill points. They change the same
+fields as the single edits, so the Rust side applies the same rules (vendor
+stock, acquired flags, quick select). The planet choice heads the Planets
+section, beside the Unlocked boxes it affects.
+
+**Skill point names** come from the game's own text, read at run time from the
+set-up disc (`<install>/active/rac1/data/iso_data/rac1/disc.iso`):
+`save_edit::skill_point_names` reads the table of contents at LBA 1500, the
+`all_text` lump it points to (+0x1528) and the English block's ids
+20444..20473, the names the pause menu's Skill Points page shows, in the
+save's order (the executable's skill-point description table, ids 20474..,
+is in the same order). Both rac1 discs hold the same names at the same ids.
+Without a readable disc the page numbers them 1 to 30. No game text is kept
+in the repository.
+
 **The planet.** On Load Game the game restores the save and runs
 `DoSpaceTransition` (PAL `func_00233308`) with the saved planet (chunk 0) as
 both the planet left and the one reached; the level start then unlocks the
