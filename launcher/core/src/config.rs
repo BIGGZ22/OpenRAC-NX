@@ -20,6 +20,9 @@ pub struct Config {
     /// Show what contributors use: builds, checks, toolchains, progress.
     /// Off, the launcher shows a player's three steps: set up from your disc, play, edit levels.
     pub developer: bool,
+    /// The save editor shows every field of a save, raw bytes included (for debugging). Off, the
+    /// player's safe set only.
+    pub save_editor_advanced: bool,
     /// Where games are set up from the player's discs (OpenGOAL's install
     /// directory); unset: the launcher's per-user data folder.
     pub install_dir: Option<PathBuf>,
@@ -52,6 +55,7 @@ impl Default for Config {
             install_dir: None,
             discs_dir: None,
             developer: false,
+            save_editor_advanced: false,
             setup_complete: false,
             last_version: None,
             discord_rpc: true,

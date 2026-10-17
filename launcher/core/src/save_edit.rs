@@ -448,6 +448,8 @@ pub struct PlanetState {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveFields {
+    /// The planet the save loads on (a level number, 0..=18).
+    pub planet: usize,
     pub bolts: u32,
     pub nanotech: Nanotech,
     pub items: Vec<ItemState>,
@@ -476,6 +478,8 @@ pub struct PlanetInfo {
     pub location: String,
     /// Whether the player may lock or unlock it (a ship destination).
     pub can_unlock: bool,
+    /// Whether the save can be moved there in the default mode (a ship destination).
+    pub can_land: bool,
 }
 
 /// A slot as the page shows it.
@@ -493,7 +497,139 @@ pub struct SaveView {
     pub fields: SaveFields,
     pub items: Vec<ItemInfo>,
     pub planets: Vec<PlanetInfo>,
+    /// Every level, 0..=18, for the planet choice and the advanced editor.
+    pub levels: Vec<PlanetInfo>,
     pub max_bolts: u32,
+    /// Every chunk of the file, for the advanced editor.
+    pub chunks: Vec<ChunkView>,
+}
+
+/// One chunk as the advanced editor shows it: where it is, its id and size, what it is (in a
+/// player's words where it is known), and its bytes as hex.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChunkView {
+    /// `None` for the global section, else the planet's level number.
+    pub section: Option<usize>,
+    pub id: i32,
+    pub size: usize,
+    pub name: String,
+    /// Whether its meaning is decoded; unknown chunks are raw bytes only.
+    pub known: bool,
+    pub hex: String,
+}
+
+/// A raw replacement of one chunk's bytes (the advanced editor). The size cannot change.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RawPatch {
+    pub section: Option<usize>,
+    pub id: i32,
+    pub hex: String,
+}
+
+/// What a write changes: the checked fields of the default mode, or raw chunks (advanced mode).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum SaveChange {
+    Fields { fields: SaveFields },
+    Raw { chunks: Vec<RawPatch> },
+}
+
+/// What each chunk is, as far as the code shows it (see the module notes); `false` for a chunk
+/// whose meaning is not decoded.
+pub fn chunk_name(level: bool, chunk: i32) -> (&'static str, bool) {
+    if level {
+        return match chunk {
+            3001 => ("Visited (0 never, 1 visited, 2 left)", true),
+            3002 => ("Map: the parts uncovered (packed)", false),
+            3003 => ("Gold bolts found", true),
+            3004 => ("Missions (0xff done)", true),
+            3005 => ("Enemies and crates destroyed (bits)", false),
+            3006 => ("Bolts from crates and enemies (pairs)", false),
+            3007 => ("Arrivals: count, time, levels", false),
+            3008 => ("Metal Detector spots", false),
+            4000 => ("Bolts collected here", true),
+            4001 => ("Hits taken here", true),
+            4002 => ("Deaths here", true),
+            _ => ("Unknown", false),
+        };
+    }
+    match chunk {
+        0 => ("Planet", true),
+        1 => ("Bolts", true),
+        2 => ("Times completed (challenge mode)", true),
+        3 => ("Time played (1/60 s)", true),
+        4 => ("When saved (clock)", true),
+        5 => ("Story flags", false),
+        7 => ("Cheats on", false),
+        8 => ("Skill points", true),
+        9 => ("Ammo by item", true),
+        10 => ("Items owned", true),
+        11 => ("Items ever had", true),
+        12 => ("Vendor stock", true),
+        13 => ("Quick select", true),
+        14 => ("Planets unlocked", true),
+        15 => ("Map landmarks", false),
+        16 => ("Help messages seen", false),
+        17 => ("Move help seen", false),
+        18 => ("Gadget help seen", false),
+        19 => ("Max health", true),
+        20 => ("Galaxy map order", true),
+        21 => ("Last item in hand", true),
+        22 => ("Wrench in hand", true),
+        23 => ("Thruster-Pack on the back", true),
+        24 => ("Unused", false),
+        25 => ("Camera left/right (1 normal)", true),
+        26 => ("Camera up/down (1 normal)", true),
+        27 => ("Camera speed (0 to 2)", true),
+        28 => ("HelpDesk voice", true),
+        29 => ("HelpDesk text", true),
+        30 => ("Gold weapons", true),
+        31 => ("Game beaten", true),
+        32 => ("Equipped: hand, feet, head, back", true),
+        33 => ("Subtitles", true),
+        34 => ("Stereo (1) or mono", true),
+        35 => ("Music volume (0 to 1024)", true),
+        36 => ("Effects volume (0 to 1024)", true),
+        37 => ("Cheats ever used", false),
+        1000 => ("Ammo bought by item", true),
+        1001 => ("Ammo picked up by item", true),
+        1002 => ("Ammo used by item", true),
+        1003 => ("Play time (ticks)", true),
+        1004 => ("Hits taken", true),
+        1005 => ("Deaths", true),
+        1008 => ("Bolt rate: ticks", false),
+        1009 => ("Bolt rate: bolts", false),
+        1010 => ("Help log", false),
+        1011 => ("Help log position", false),
+        _ => ("Unknown", false),
+    }
+}
+
+fn to_hex(b: &[u8]) -> String {
+    b.iter().map(|x| format!("{x:02x}")).collect::<Vec<_>>().join(" ")
+}
+
+fn from_hex(text: &str) -> Result<Vec<u8>, String> {
+    let digits: Vec<char> = text.chars().filter(|c| !c.is_whitespace()).collect();
+    if !digits.len().is_multiple_of(2) {
+        return Err("the hex has an odd number of digits".into());
+    }
+    digits
+        .chunks(2)
+        .map(|p| {
+            u8::from_str_radix(&p.iter().collect::<String>(), 16)
+                .map_err(|_| "the hex has a character that is not hex".to_string())
+        })
+        .collect()
+}
+
+/// The planets a save can be moved to in the default mode: the ship's destinations.
+/// Veldin (0 and 18) and Drek's Fleet (17) are reached through the story: their arrival
+/// scenes and the state they need are not in a save made elsewhere.
+pub fn can_land(p: usize) -> bool {
+    SHIP_PLANETS.contains(&p)
 }
 
 /// Whether the editor knows the saves of the game with this disc serial: both Ratchet & Clank
@@ -550,6 +686,7 @@ impl SaveFile {
             })
             .collect();
         SaveFields {
+            planet: i32_at(g.get(id::PLANET), 0).clamp(0, 18) as usize,
             bolts: i32_at(g.get(id::BOLTS), 0).max(0) as u32,
             nanotech,
             items,
@@ -567,6 +704,17 @@ impl SaveFile {
         for (w, h) in want.planets.iter().zip(&have.planets) {
             if w.unlocked != h.unlocked && !SHIP_PLANETS.contains(&w.id) {
                 return Err(format!("{} is reached by the story, not unlocked by hand", RAC1_PLANETS[w.id]));
+            }
+        }
+        if want.planet != have.planet {
+            if !can_land(want.planet) {
+                return Err(format!(
+                    "{} is reached by the story; a save cannot be moved there",
+                    RAC1_PLANETS[want.planet]
+                ));
+            }
+            if want.planets.iter().any(|s| s.id == want.planet && !s.unlocked) {
+                return Err(format!("{} has to be unlocked to load there", RAC1_PLANETS[want.planet]));
             }
         }
 
@@ -617,11 +765,51 @@ impl SaveFile {
             }
         }
 
+        // The level start unlocks the planet it loads and adds it to the galaxy map; doing it here
+        // keeps the save as the game would have it.
+        if want.planet != have.planet {
+            set_i32(self.global.get_mut(id::PLANET), 0, want.planet as i32);
+            if self.global.get(id::PLANETS)[want.planet] == 0 {
+                self.unlock_planet(want.planet);
+            }
+        }
+
         if want.skill_points != have.skill_points {
             let sp = self.global.get_mut(id::SKILL_POINTS);
             for (k, &on) in want.skill_points.iter().enumerate() {
                 sp[k] = on as u8;
             }
+        }
+        Ok(())
+    }
+
+    /// Every chunk, for the advanced editor.
+    pub fn chunk_views(&self) -> Vec<ChunkView> {
+        let one = |section: Option<usize>, c: &Chunk| {
+            let (name, known) = chunk_name(section.is_some(), c.id);
+            ChunkView { section, id: c.id, size: c.data.len(), name: name.to_string(), known, hex: to_hex(&c.data) }
+        };
+        let mut out: Vec<ChunkView> = self.global.chunks.iter().map(|c| one(None, c)).collect();
+        for (l, sec) in self.levels.iter().enumerate() {
+            out.extend(sec.chunks.iter().map(|c| one(Some(l), c)));
+        }
+        out
+    }
+
+    /// Replaces chunks' bytes as given (the advanced editor), the sizes unchanged.
+    pub fn apply_raw(&mut self, patches: &[RawPatch]) -> Result<(), String> {
+        for p in patches {
+            let section = match p.section {
+                None => &mut self.global,
+                Some(l) => self.levels.get_mut(l).ok_or(format!("there is no planet section {l}"))?,
+            };
+            let chunk =
+                section.chunks.iter_mut().find(|c| c.id == p.id).ok_or(format!("there is no chunk {} there", p.id))?;
+            let bytes = from_hex(&p.hex).map_err(|e| format!("chunk {}: {e}", p.id))?;
+            if bytes.len() != chunk.data.len() {
+                return Err(format!("chunk {} is {} bytes, not {}", p.id, chunk.data.len(), bytes.len()));
+            }
+            chunk.data = bytes;
         }
         Ok(())
     }
@@ -687,6 +875,9 @@ impl SaveFile {
 
 /// Checks a request against the save's limits before anything is changed.
 pub fn validate(f: &SaveFields) -> Result<(), String> {
+    if f.planet >= GOLD_BOLTS_PER_PLANET.len() {
+        return Err("there is no such planet".into());
+    }
     if f.bolts > MAX_BOLTS {
         return Err(format!("bolts go up to {MAX_BOLTS}"));
     }
@@ -765,9 +956,20 @@ pub fn view(serial: &str, slot: usize, bytes: &[u8], file: &SaveFile) -> SaveVie
                 name: RAC1_PLANETS[p].to_string(),
                 location: RAC1_LOCATIONS[p].to_string(),
                 can_unlock: SHIP_PLANETS.contains(&p),
+                can_land: can_land(p),
+            })
+            .collect(),
+        levels: (0..GOLD_BOLTS_PER_PLANET.len())
+            .map(|p| PlanetInfo {
+                id: p,
+                name: RAC1_PLANETS[p].to_string(),
+                location: RAC1_LOCATIONS[p].to_string(),
+                can_unlock: SHIP_PLANETS.contains(&p),
+                can_land: can_land(p),
             })
             .collect(),
         max_bolts: MAX_BOLTS,
+        chunks: file.chunk_views(),
     }
 }
 
@@ -804,6 +1006,14 @@ pub fn read_save(card_dir: &Path, serial: &str, slot: usize) -> Result<SaveView,
     Ok(view(serial, slot, &bytes, &file))
 }
 
+/// Whether two saves hold the same bytes in every chunk (padding aside).
+fn same_data(a: &SaveFile, b: &SaveFile) -> bool {
+    let sec = |x: &Section, y: &Section| {
+        x.layout() == y.layout() && x.chunks.iter().zip(&y.chunks).all(|(c, d)| c.data == d.data)
+    };
+    sec(&a.global, &b.global) && a.levels.iter().zip(&b.levels).all(|(x, y)| sec(x, y))
+}
+
 /// What a write did: the backup taken before it, and the save as it now is.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -812,7 +1022,7 @@ pub struct WriteResult {
     pub view: SaveView,
 }
 
-/// Writes `fields` into slot `slot`, safely:
+/// Writes `change` into slot `slot`, safely:
 /// 1. `in_use` must say no game is using the card (it names the game when one is);
 /// 2. the file must still be the one the page read (`fingerprint`);
 /// 3. the request is checked against the game's limits;
@@ -825,7 +1035,7 @@ pub fn write_save(
     serial: &str,
     slot: usize,
     fingerprint_seen: &str,
-    fields: &SaveFields,
+    change: &SaveChange,
     in_use: impl Fn() -> Result<Option<String>, String>,
 ) -> Result<WriteResult, String> {
     if let Some(game) = in_use()? {
@@ -835,10 +1045,17 @@ pub fn write_save(
     if fingerprint(&bytes) != fingerprint_seen {
         return Err("the save changed since it was opened (the game saved?): open it again".into());
     }
-    file.apply(fields)?;
+    match change {
+        SaveChange::Fields { fields } => file.apply(fields)?,
+        SaveChange::Raw { chunks } => file.apply_raw(chunks)?,
+    }
     let out = file.to_bytes();
     let check = SaveFile::parse(&out)?;
-    if check.fields() != *fields {
+    let as_asked = match change {
+        SaveChange::Fields { fields } => check.fields() == *fields,
+        SaveChange::Raw { .. } => same_data(&check, &file),
+    };
+    if !as_asked {
         return Err("the edited save did not read back as asked; nothing was written".into());
     }
     let backup = saves::backup_card(card_dir, Some(&format!("before_edit_slot{}", slot + 1)))?;
@@ -1147,6 +1364,97 @@ mod tests {
         assert_eq!(SaveFile::parse(&f.to_bytes()).unwrap().fields(), w);
     }
 
+    fn fx(f: &SaveFields) -> SaveChange {
+        SaveChange::Fields { fields: f.clone() }
+    }
+
+    #[test]
+    fn the_planet_can_be_changed_to_a_ship_destination() {
+        let mut f = blank();
+        let mut w = f.fields();
+        assert_eq!(w.planet, 3);
+        w.planet = 5; // Rilgar, never visited, locked
+        f.apply(&w).unwrap_err(); // the page unlocks the planet with the choice
+        w.planets.iter_mut().find(|s| s.id == 5).unwrap().unlocked = true;
+        f.apply(&w).unwrap();
+        assert_eq!(i32_at(f.global.get(id::PLANET), 0), 5);
+        assert_eq!(f.global.get(id::PLANETS)[5], 1);
+        assert_eq!(i32_at(f.global.get(id::MAP_ORDER), 0), 5);
+        let back = SaveFile::parse(&f.to_bytes()).unwrap();
+        assert_eq!(back.fields(), w);
+        assert_eq!(view("SCES_509.16", 0, &f.to_bytes(), &back).planet_name.as_deref(), Some("Rilgar"));
+        // The story's planets are not offered.
+        for p in [0, 17, 18] {
+            let mut w2 = back.fields();
+            w2.planet = p;
+            assert!(back.clone().apply(&w2).unwrap_err().contains("story"), "{p}");
+        }
+        let mut w3 = back.fields();
+        w3.planet = 19;
+        assert!(validate(&w3).is_err());
+    }
+
+    #[test]
+    fn a_save_on_a_story_planet_keeps_it_when_other_fields_change() {
+        let mut f = blank();
+        set_i32(f.global.get_mut(id::PLANET), 0, 18);
+        let mut w = f.fields();
+        assert_eq!(w.planet, 18);
+        w.bolts = 5;
+        f.apply(&w).unwrap();
+        assert_eq!(i32_at(f.global.get(id::PLANET), 0), 18);
+    }
+
+    #[test]
+    fn raw_chunks_round_trip_and_keep_their_size() {
+        let mut f = blank();
+        f.global.chunks.iter_mut().find(|c| c.id == id::OWNED).unwrap().pad = vec![1, 2, 3];
+        let before = f.to_bytes();
+        let views = f.chunk_views();
+        assert_eq!(views.len(), GLOBAL_LAYOUT.len() + LEVEL_SLOTS * LEVEL_LAYOUT.len());
+        assert_eq!(views.iter().filter(|v| v.section.is_none()).count(), 47);
+        let bolts = views.iter().find(|v| v.section.is_none() && v.id == 1).unwrap();
+        assert_eq!((bolts.size, bolts.known, bolts.name.as_str()), (4, true, "Bolts"));
+        assert!(!views.iter().find(|v| v.id == 3002).unwrap().known);
+        // Every chunk written back as it is: the same file, padding included.
+        let same: Vec<RawPatch> =
+            views.iter().map(|v| RawPatch { section: v.section, id: v.id, hex: v.hex.clone() }).collect();
+        f.apply_raw(&same).unwrap();
+        assert_eq!(f.to_bytes(), before);
+        // A change, in any spacing, lands where it was asked, with fresh checksums.
+        f.apply_raw(&[
+            RawPatch { section: None, id: 1, hex: "40E2 0100".into() },
+            RawPatch { section: Some(7), id: 3003, hex: "01 00 01 00".into() },
+            RawPatch { section: Some(7), id: 4000, hex: "0a000000".into() },
+        ])
+        .unwrap();
+        let back = SaveFile::parse(&f.to_bytes()).unwrap();
+        assert_eq!(back.fields().bolts, 123_456);
+        assert_eq!(back.levels[7].get(id::GOLD_BOLTS), &[1, 0, 1, 0]);
+        assert_eq!(i32_at(back.levels[7].get(4000), 0), 10);
+        // Wrong size, bad hex, unknown chunk or section: refused.
+        assert!(f.apply_raw(&[RawPatch { section: None, id: 1, hex: "00".into() }]).unwrap_err().contains("4 bytes"));
+        assert!(f.apply_raw(&[RawPatch { section: None, id: 1, hex: "zz000000".into() }]).is_err());
+        assert!(f.apply_raw(&[RawPatch { section: None, id: 6, hex: "".into() }]).is_err());
+        assert!(f.apply_raw(&[RawPatch { section: Some(20), id: 3001, hex: "00".into() }]).is_err());
+    }
+
+    #[test]
+    fn a_raw_write_goes_through_the_same_guards() {
+        let card = card_with(&blank());
+        let v = read_save(card.path(), "SCES_509.16", 1).unwrap();
+        let raw = SaveChange::Raw { chunks: vec![RawPatch { section: None, id: 1, hex: "07000000".into() }] };
+        assert!(
+            write_save(card.path(), "SCES_509.16", 1, &v.fingerprint, &raw, || Ok(Some("The game".into()))).is_err()
+        );
+        assert!(write_save(card.path(), "SCES_509.16", 1, "0", &raw, || Ok(None)).is_err());
+        let r = write_save(card.path(), "SCES_509.16", 1, &v.fingerprint, &raw, || Ok(None)).unwrap();
+        assert_eq!(r.view.fields.bolts, 7);
+        assert!(r.backup.name.ends_with("before_edit_slot2"));
+        let serialized = serde_json::to_string(&raw).unwrap();
+        assert!(serialized.starts_with(r#"{"kind":"raw","chunks":"#), "{serialized}");
+    }
+
     fn card_with(f: &SaveFile) -> tempfile::TempDir {
         let dir = tempfile::tempdir().unwrap();
         let game = dir.path().join("BESCES-50916RATCHET");
@@ -1164,7 +1472,7 @@ mod tests {
         let v = read_save(card.path(), "SCES_509.16", 1).unwrap();
         let mut want = v.fields.clone();
         want.bolts = 42;
-        let r = write_save(card.path(), "SCES_509.16", 1, &v.fingerprint, &want, || Ok(None)).unwrap();
+        let r = write_save(card.path(), "SCES_509.16", 1, &v.fingerprint, &fx(&want), || Ok(None)).unwrap();
         assert_eq!(r.view.fields.bolts, 42);
         assert!(r.backup.name.starts_with(".backup_") && r.backup.name.ends_with("before_edit_slot2"));
         let kept = fs::read(Path::new(&r.backup.path).join("BESCES-50916RATCHET/save1.bin")).unwrap();
@@ -1172,7 +1480,7 @@ mod tests {
         assert_eq!(read_save(card.path(), "SCES_509.16", 1).unwrap().fields.bolts, 42);
         // A second edit in the same second keeps the first backup.
         let v2 = read_save(card.path(), "SCES_509.16", 1).unwrap();
-        let r2 = write_save(card.path(), "SCES_509.16", 1, &v2.fingerprint, &v2.fields, || Ok(None)).unwrap();
+        let r2 = write_save(card.path(), "SCES_509.16", 1, &v2.fingerprint, &fx(&v2.fields), || Ok(None)).unwrap();
         assert_ne!(r2.backup.name, r.backup.name);
         let kept = fs::read(Path::new(&r.backup.path).join("BESCES-50916RATCHET/save1.bin")).unwrap();
         assert_eq!(SaveFile::parse(&kept).unwrap().fields().bolts, 0);
@@ -1185,16 +1493,16 @@ mod tests {
         let v = read_save(card.path(), "SCES_509.16", 1).unwrap();
         let before = fs::read(card.path().join("BESCES-50916RATCHET/save1.bin")).unwrap();
         let running =
-            write_save(card.path(), "SCES_509.16", 1, &v.fingerprint, &v.fields, || Ok(Some("The game".into())));
+            write_save(card.path(), "SCES_509.16", 1, &v.fingerprint, &fx(&v.fields), || Ok(Some("The game".into())));
         assert!(running.unwrap_err().contains("running"));
         let unsure =
-            write_save(card.path(), "SCES_509.16", 1, &v.fingerprint, &v.fields, || Err("no process list".into()));
+            write_save(card.path(), "SCES_509.16", 1, &v.fingerprint, &fx(&v.fields), || Err("no process list".into()));
         assert!(unsure.is_err());
-        let stale = write_save(card.path(), "SCES_509.16", 1, "0000", &v.fields, || Ok(None));
+        let stale = write_save(card.path(), "SCES_509.16", 1, "0000", &fx(&v.fields), || Ok(None));
         assert!(stale.unwrap_err().contains("changed"));
         let mut bad = v.fields.clone();
         bad.bolts = MAX_BOLTS + 1;
-        assert!(write_save(card.path(), "SCES_509.16", 1, &v.fingerprint, &bad, || Ok(None)).is_err());
+        assert!(write_save(card.path(), "SCES_509.16", 1, &v.fingerprint, &fx(&bad), || Ok(None)).is_err());
         assert_eq!(fs::read(card.path().join("BESCES-50916RATCHET/save1.bin")).unwrap(), before);
         let backups = fs::read_dir(card.path())
             .unwrap()
