@@ -55,6 +55,10 @@ struct State {
     int cursor = 0;
     int start = -1;               // a level to start at the next update
     bool native = false;          // asked for from the game's Options page (with its sound)
+    // A level was started and the game has not left the boot program yet: the Planets page stays
+    // on screen for a few frames while the flight loads, and a press on it then (a second Cross
+    // or Space) reached the game's menu and left a black screen instead of the level.
+    bool launched = false;
     std::uint16_t previous = 0xFFFF;  // pad 0 as last seen (active low)
     // GL: the menu's picture and a framebuffer to blit it from.
     unsigned texture = 0;
@@ -302,7 +306,7 @@ bool event(const SDL_Event& e, int loaded_overlay) {
     }
     const SDL_Keycode key = e.key.key;
     if (!s.open) {
-        if (key == SDLK_F1 && available(loaded_overlay)) {
+        if (key == SDLK_F1 && available(loaded_overlay) && !s.launched) {
             s.open = true;
             return true;
         }
@@ -342,6 +346,15 @@ void filter_pad(std::uint16_t& buttons, int loaded_overlay) {
     s.previous = buttons;
     constexpr std::uint16_t kSelect = 0x0001, kUp = 0x0010, kDown = 0x0040, kCross = 0x4000,
                             kTriangle = 0x1000;
+    if (s.launched) {
+        // The game's menu must not act on presses while the level starts (a Cross there broke
+        // the start on both discs); once the menu is gone the presses are the game's again, so
+        // Start still skips the flight.
+        if (page::on_page()) {
+            buttons = 0xFFFF;
+        }
+        return;
+    }
     if (!s.open && available(loaded_overlay) && page::on_page() && (pressed & kCross) != 0) {
         // Cross on a level of the Planets page: the game's list ignores the item's action.
         s.start = page::cursor();
@@ -391,10 +404,15 @@ void update(int loaded_overlay, std::uint64_t frame) {
         s.open = false;
     }
     const bool over_front_end = available(loaded_overlay);
+    if (loaded_overlay != OPENRAC_OVERLAY_EXE) {
+        s.launched = false;
+    }
     if (over_front_end) {
         page::patch();
     }
-    if (s.start < 0) {
+    if (s.start < 0 || s.launched) {
+        s.start = -1;
+        s.native = false;
         return;
     }
     const int level = s.start;
@@ -406,6 +424,7 @@ void update(int loaded_overlay, std::uint64_t frame) {
             page::confirm_sound();
         }
         start_level(level);
+        s.launched = true;
     }
 }
 
