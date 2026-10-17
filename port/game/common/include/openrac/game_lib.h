@@ -116,6 +116,7 @@ int openrac_lib_sceMcGetDir(int, int, gaddr, unsigned int, int, gaddr);
 int openrac_lib_sceMcFormat(int, int);
 int openrac_lib_sceMcDelete(int, int, gaddr);
 int openrac_lib_sceMcUnformat(int, int);
+int openrac_lib_sceMcChdir(int, int, gaddr, gaddr);
 /* dbc */
 int openrac_lib_sceDbcInit(void);
 /* pad2 */

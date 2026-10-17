@@ -44,6 +44,7 @@ enum {
     MC_READ = 0x05,
     MC_WRITE = 0x06,
     MC_MKDIR = 0x0B,
+    MC_CHDIR = 0x0C,
     MC_GET_DIR = 0x0D,
     MC_DELETE = 0x0F,
     MC_FORMAT = 0x10,
@@ -72,15 +73,22 @@ static int finish(int cmd, int result) {
     return 0; /* the command was started */
 }
 
+/* Each card's current folder (sceMcChdir), relative to its root without
+ * slashes at either end: "" is the root. A name that does not start with '/'
+ * is in it. */
+static char current_dir[2][512];
+
 /* The first port's card is card_dir itself, the folder the launcher's save
  * manager shows (launcher/core/src/saves.rs); the second port's is beside it,
  * card_dir.slot2, and counts as inserted only if it exists. */
 static int card_path(int port, const char* name, char* out, size_t size) {
     const char* root = openrac_game_card_dir != NULL ? openrac_game_card_dir : "memcard";
+    const char* dir = *name == '/' ? "" : current_dir[port != 0];
     while (*name == '/') {
         name++;
     }
-    return snprintf(out, size, "%s%s%s%s", root, port == 0 ? "" : ".slot2", *name ? "/" : "", name)
+    return snprintf(out, size, "%s%s%s%s%s%s", root, port == 0 ? "" : ".slot2", *dir ? "/" : "", dir,
+                    *name ? "/" : "", name)
            < (int)size;
 }
 
@@ -361,6 +369,57 @@ int openrac_lib_sceMcGetDir(
         n++;
     }
     return finish(MC_GET_DIR, n);
+}
+
+/* sceMcChdir(port, slot, path, old path): enters a folder of the card, from
+ * its root when the path starts with '/'; "." and ".." work as usual. A folder
+ * that does not exist leaves the current one and reports not found. The old
+ * path, when asked for, is written as an absolute one. */
+int openrac_lib_sceMcChdir(int port, int slot, gaddr path, gaddr old_path) {
+    (void)slot;
+    if (!card_present(port)) {
+        return finish(MC_CHDIR, MC_NO_CARD);
+    }
+    char* cur = current_dir[port != 0];
+    if (old_path != 0) {
+        snprintf((char*)G(old_path), 1024, "/%s", cur);
+    }
+    const char* p = (const char*)G(path);
+    char next[512];
+    snprintf(next, sizeof next, "%s", *p == '/' ? "" : cur);
+    while (*p) {
+        while (*p == '/') {
+            p++;
+        }
+        size_t len = strcspn(p, "/");
+        if (len == 0 || (len == 1 && p[0] == '.')) {
+            /* nothing */
+        } else if (len == 2 && p[0] == '.' && p[1] == '.') {
+            char* slash = strrchr(next, '/');
+            if (slash != NULL) {
+                *slash = '\0';
+            } else {
+                next[0] = '\0';
+            }
+        } else {
+            size_t used = strlen(next);
+            if (used + len + 2 > sizeof next) {
+                return finish(MC_CHDIR, MC_FAILED);
+            }
+            snprintf(next + used, sizeof next - used, "%s%.*s", used ? "/" : "", (int)len, p);
+        }
+        p += len;
+    }
+    char full[1024];
+    struct stat st;
+    char saved[512];
+    snprintf(saved, sizeof saved, "%s", cur);
+    snprintf(cur, sizeof current_dir[0], "%s", next);
+    if (!card_path(port, "", full, sizeof full) || stat(full, &st) != 0 || !S_ISDIR(st.st_mode)) {
+        snprintf(cur, sizeof current_dir[0], "%s", saved);
+        return finish(MC_CHDIR, MC_NOT_FOUND);
+    }
+    return finish(MC_CHDIR, MC_OK);
 }
 
 /* sceMcSync(mode, command, result): 1 when a command has finished (always,

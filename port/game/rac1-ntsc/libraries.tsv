@@ -103,6 +103,7 @@ sceMcGetDir	mc	sceMcGetDir	host	PAL func_001241F0
 SceMcFormat	mc	sceMcFormat	host	PAL func_00124340
 sceMcDelete	mc	sceMcDelete	host	PAL func_00124410
 SceMcUnformat	mc	sceMcUnformat	host	PAL func_00124528
+sceMcChdir	mc	sceMcChdir	host	the US game enters its save folder before reading it; PAL does not
 sceDbcInit	dbc	sceDbcInit	host	pads come from the platform layer; PAL func_00124650
 scePad2Init	pad2	scePad2Init	host	PAL func_00124B88
 scePad2CreateSocket	pad2	scePad2CreateSocket	host	PAL func_00124BC8
