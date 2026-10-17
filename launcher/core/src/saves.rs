@@ -330,22 +330,46 @@ pub fn backup_saves(serial: &str, note: Option<&str>) -> Result<SaveBackupInfo, 
     if !card_dir.is_dir() {
         return Err(format!("no save directory for {serial}"));
     }
+    backup_card(&card_dir, note)
+}
 
+/// The game's own folder on a card (`BESCES-50916RATCHET`): the first folder that is not a backup.
+pub fn find_game_folder(card_dir: &Path) -> Option<PathBuf> {
+    let mut found: Vec<PathBuf> = fs::read_dir(card_dir)
+        .ok()?
+        .flatten()
+        .filter(|e| !e.file_name().to_string_lossy().starts_with('.'))
+        .map(|e| e.path())
+        .filter(|p| p.is_dir())
+        .collect();
+    found.sort();
+    found.into_iter().next()
+}
+
+/// Backs up everything on the card in `card_dir` into `.backup_<seconds>[_<note>]` beside it. A
+/// second backup in the same second gets `-2`, `-3` ... so it never overwrites the first.
+pub fn backup_card(card_dir: &Path, note: Option<&str>) -> Result<SaveBackupInfo, String> {
     let timestamp =
         std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_err(|e| e.to_string())?.as_secs();
 
-    let backup_name = match note {
+    let base_name = match note {
         Some(n) if !n.trim().is_empty() => {
             let clean: String = n.chars().filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-').collect();
             format!(".backup_{timestamp}_{clean}")
         }
         _ => format!(".backup_{timestamp}"),
     };
+    let mut backup_name = base_name.clone();
+    let mut n = 2;
+    while card_dir.join(&backup_name).exists() {
+        backup_name = format!("{base_name}-{n}");
+        n += 1;
+    }
 
     let backup_path = card_dir.join(&backup_name);
     fs::create_dir_all(&backup_path).map_err(|e| e.to_string())?;
 
-    for entry in fs::read_dir(&card_dir).map_err(|e| e.to_string())?.flatten() {
+    for entry in fs::read_dir(card_dir).map_err(|e| e.to_string())?.flatten() {
         let p = entry.path();
         let fname = entry.file_name().to_string_lossy().to_string();
         if p.is_dir() && !fname.starts_with(".backup_") {
@@ -510,6 +534,19 @@ mod tests {
         let g = parse_save_gameplay_info(&data);
         assert!(g.empty);
         assert_eq!(g.timestamp, None);
+    }
+
+    #[test]
+    fn backups_in_the_same_second_get_their_own_folder() {
+        let card = tempfile::tempdir().unwrap();
+        fs::create_dir_all(card.path().join("BESCES-50916RATCHET")).unwrap();
+        fs::write(card.path().join("BESCES-50916RATCHET/save0.bin"), b"one").unwrap();
+        let a = backup_card(card.path(), Some("x")).unwrap();
+        fs::write(card.path().join("BESCES-50916RATCHET/save0.bin"), b"two").unwrap();
+        let b = backup_card(card.path(), Some("x")).unwrap();
+        assert_ne!(a.name, b.name);
+        assert_eq!(fs::read(Path::new(&a.path).join("BESCES-50916RATCHET/save0.bin")).unwrap(), b"one");
+        assert_eq!(find_game_folder(card.path()), Some(card.path().join("BESCES-50916RATCHET")));
     }
 
     #[test]
