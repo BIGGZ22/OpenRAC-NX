@@ -747,6 +747,32 @@ class Places(unittest.TestCase):
             self.assertIn("OPENRAC_CODE(0x00300000u)", text)
             self.assertNotIn("OPENRAC_DATA", text)
 
+    @unittest.skipUnless(have_compiler(), "needs Clang on a POSIX host")
+    def test_small_folded_executable_function_forms_its_own_globals(self):
+        # rac1's func_0023BF48 (movie.c, printf on a buffer of its own) is also, by its instructions,
+        # a Novalis moby's update, whose first argument is a draw callback of that level.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            src = root / "game"
+            (src / "src").mkdir(parents=True)
+            (src / "src" / "a.c").write_text(
+                "extern char D_00200000[];\n"
+                "extern void func_00320000(void *, char *);\n"
+                "void func_00300000(char *fmt) { func_00320000(D_00200000, fmt); }\n")
+            (src / "functions.tsv").write_text(
+                "func_00300000\texe\t36\tfingerprint\t2\t00:00440000,01:00450000,01:00460000\n")
+            (root / "hostgen.json").write_text(json.dumps({
+                "sources": ["src"], "includes": [], "places": "functions.tsv",
+                "relocate": [0x1A7C80, 0x500000],
+            }))
+            out = root / "gen"
+            self.assertEqual(hostgen.main(["--game", str(root / "hostgen.json"),
+                                           "--source", str(src), "--out", str(out),
+                                           "--jobs", "1", "--quiet"]), 0)
+            text = (out / "a.c").read_text()
+            self.assertIn("openrac_data_in_copy(-1, 0x00300000u, 36u, openrac_self_, 0x00200000u)", text)
+            self.assertIn("openrac_guest_entry((openrac_host_fn)func_00300000)", text)
+
 
 class TypeStrings(unittest.TestCase):
     def test_declarators(self):

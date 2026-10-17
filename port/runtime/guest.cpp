@@ -953,7 +953,8 @@ gaddr own_place(int from, gaddr canon, int overlay) {
 
 gaddr openrac_data_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gaddr target) {
     const int overlay = current_overlay();
-    const gaddr fallback = openrac_relocate_level_data(from, target);
+    // from -1: an executable function's global, the executable's own address relocated.
+    const gaddr fallback = from < 0 ? OPENRAC_DATA(target) : openrac_relocate_level_data(from, target);
     if (self == 0 && from >= 0 && overlay != from) {
         std::scoped_lock hold(g_relocate_lock);
         self = own_place(from, canon, overlay);
@@ -968,6 +969,9 @@ gaddr openrac_data_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gad
         return it->second;
     }
     const auto canon_word = [&](gaddr at) -> std::uint32_t {
+        if (from < 0) {
+            return exe_word(at);
+        }
         if (overlay == from) {
             std::uint32_t w;
             std::memcpy(&w, G(at), 4);

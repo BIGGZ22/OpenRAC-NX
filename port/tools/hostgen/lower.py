@@ -1384,6 +1384,15 @@ class Unit:
             # static helper of a level file): that level's, looked up for the level loaded, as in
             # the level functions beside it; OPENRAC_DATA would take it for the executable's.
             addr = f"OPENRAC_LDATA({named_level}, {addr})"
+        elif self._relocated(address) and (small := self._small_folded()) is not None and small[0] < 0:
+            # A small executable function the catalogue folded with level functions of the same
+            # instructions on other operands: the address the running copy forms itself (guest.h),
+            # OPENRAC_DATA's when it runs as the executable's or is called directly. rac1:
+            # func_0023BF48 (the movie's printf, a0 its buffer) is also a Novalis moby's update,
+            # whose a0 is a draw callback of its level; as data that was 0x001613B8.
+            home, canon, size = small
+            self.fn.uses_self = True
+            addr = f"openrac_data_in_copy({home}, {hexaddr(canon)}, {size}u, openrac_self_, {addr})"
         elif self._relocated(address):
             addr = f"OPENRAC_DATA({addr})"
         else:
