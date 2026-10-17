@@ -166,6 +166,12 @@ void openrac_guest_set_overlay_source(int (*current)(void));
 void openrac_guest_set_relocation(gaddr low, gaddr high, gaddr gp, const uint8_t* exe_code,
                                   gaddr exe_base, uint32_t exe_size);
 extern gaddr openrac_relocate_low, openrac_relocate_high;
+/* The executable as its loader placed it before the game ran (load_elf keeps a copy, openrac/elf.h):
+ * its bytes in [low, high) copied back into memory; returns how many. For a game that loads its boot
+ * program again over a level's in another build of it (rac1: Quit Game reads one from the disc whose
+ * code sits elsewhere, and whose data points there): the port's C is the executable's, so the
+ * executable's own program is what it has to find in memory. */
+uint32_t openrac_guest_restore_executable(gaddr low, gaddr high);
 gaddr openrac_relocate_data(gaddr address);
 gaddr openrac_relocate_code(gaddr address);
 static inline gaddr OPENRAC_DATA(gaddr a) {

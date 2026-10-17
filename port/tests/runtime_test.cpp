@@ -160,6 +160,15 @@ void elf() {
     CHECK(GREF(std::uint8_t, 0x200008) == 0);  // .bss zeroed
     CHECK(GREF(std::uint8_t, 0x20000F) == 0);
 
+    // The image as loaded comes back over what a program wrote since, only inside the range asked.
+    std::memset(G(0x200000), 0x55, 16);
+    CHECK(openrac_guest_restore_executable(0x200004, 0x200100) == 12);
+    CHECK(GREF(std::uint8_t, 0x200003) == 0x55);
+    CHECK(GREF(std::uint8_t, 0x200004) == 0xA4);
+    CHECK(GREF(std::uint8_t, 0x200007) == 0xA7);
+    CHECK(GREF(std::uint8_t, 0x20000F) == 0);
+    CHECK(openrac_guest_restore_executable(0x300000, 0x300100) == 0);
+
     std::vector<std::uint8_t> bad = f;
     put16(bad, 18, 3);  // x86
     CHECK(!openrac::runtime::read_elf(bad, &image, &reason));

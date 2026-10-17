@@ -35,6 +35,17 @@ RAC1_TYPE_func_0012DA38_result func_0012DA38(void) {
     }
     const RAC1_TYPE_func_0012DA38_result entry = func_0012DA38__game();
     loaded_level = GREF(int, CURRENT_LEVEL);
+    /* No level: Quit Game, whose level's loader read the boot program back from the disc
+     * (func_00204BE8). That copy is another build of the executable's program: the same
+     * sections at the same addresses, the data the same but for its code pointers, and code
+     * laid out differently (PAL: .text 0x858 bytes shorter, the menus' functions 0x2E8 to 0x858
+     * lower). Its menu tables then point into the middle of the executable's functions
+     * (0x00208BB8, 0x0021B338 and 0x0021B958 on PAL, and no labels on the main menu). The port
+     * runs the executable's C, so the executable's own program goes back in its place, as it
+     * was loaded: every pointer of its data at its own functions again. */
+    if (openrac_game_loaded_overlay() == OPENRAC_OVERLAY_EXE) {
+        openrac_guest_restore_executable(RAC1_ADDR(0x0015F000u), 0x250000u);
+    }
     return entry;
 }
 
