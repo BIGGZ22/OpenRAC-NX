@@ -132,6 +132,11 @@ openrac_warnings(openrac_viewer_lib)
 add_executable(openrac-viewer viewer/main.cpp)
 target_link_libraries(openrac-viewer PRIVATE openrac_viewer_lib openrac_platform)
 openrac_warnings(openrac-viewer)
+if(APPLE)
+  include(MacApp)
+  openrac_macos_app(openrac-viewer NAME "OpenRAC Viewer" ID dev.openrac.viewer
+    ICON "${PROJECT_SOURCE_DIR}/../launcher/src-tauri/icons/icon.icns")
+endif()
 
 # ---- tests ----
 # Tests that need an OpenGL context create one through SDL's offscreen

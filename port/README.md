@@ -59,6 +59,15 @@ openrac-rac1-pal --data <install>/active/rac1/data
    function by code address, runs the game's main()
 ```
 
+On macOS each windowed program is also an application bundle named by the
+game's title, so that the Dock, Cmd-Tab, Activity Monitor and crash reports
+show "Ratchet & Clank" rather than the file name:
+`build/release/apps/openrac-rac1-pal/Ratchet & Clank.app` (the title from
+`games/<game>/game.json`, the same for every version; see
+[cmake/MacApp.cmake](cmake/MacApp.cmake)). `build/release/openrac-rac1-pal`
+is a link to its program, for a shell; macOS names a program started through
+the link after the link. The launcher starts the one in the bundle.
+
 The program stops at the first function that has no C yet and names it.
 For OpenRAC's decompilation that is the boot stage, still assembly; a copy
 of the decompilation that is further along builds the same way

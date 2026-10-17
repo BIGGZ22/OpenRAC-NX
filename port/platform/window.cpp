@@ -146,7 +146,7 @@ void install_app_menus(bool) {}
 void set_app_metadata(const char* name, const char* id) {
     SDL_SetAppMetadata(name, nullptr, id);
 #if defined(__APPLE__)
-    // The menu bar would show the program file's name (openrac-rac1-pal).
+    // Outside its bundle the menu bar would show the program file's name (openrac-rac1-pal).
     macos_set_app_name("OpenRAC");
 #endif
 }

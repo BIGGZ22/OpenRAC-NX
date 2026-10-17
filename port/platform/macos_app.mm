@@ -32,11 +32,15 @@
 
 namespace openrac::platform {
 
-// The program is a plain executable, not an application bundle, so the menu bar names it after
-// its file. The name is read from the main bundle's dictionary when the application object is
-// made: putting it there before SDL starts gives the menu bar that name.
+// A program started as a plain executable (not from its application bundle, cmake/MacApp.cmake:
+// the build folder's link, say) has the menu bar name it after its file. The name is read from
+// the main bundle's dictionary when the application object is made: putting it there before SDL
+// starts gives the menu bar that name. A bundle's own name, its title, is left as it is.
 void macos_set_app_name(const char* name) {
     @autoreleasepool {
+        if ([[NSBundle mainBundle] bundleIdentifier] != nil) {
+            return;
+        }
         NSDictionary* info = [[NSBundle mainBundle] infoDictionary];
         if ([info isKindOfClass:[NSMutableDictionary class]]) {
             NSString* value = [NSString stringWithUTF8String:name];
