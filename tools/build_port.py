@@ -322,7 +322,9 @@ def main(argv: list[str] | None = None) -> int:
             return 1
     suffix = ".exe" if WINDOWS else ""
     for name in names:
-        say(f"built {(build / f'openrac-{name}{suffix}').relative_to(ROOT).as_posix()}")
+        # On macOS a windowed game is an application bundle (port/cmake/MacApp.cmake).
+        program = next((build / "apps" / f"openrac-{name}").glob("*.app"), build / f"openrac-{name}{suffix}")
+        say(f"built {program.relative_to(ROOT).as_posix()}")
     return 0
 
 

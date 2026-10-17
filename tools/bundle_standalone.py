@@ -16,7 +16,8 @@ OUT (launcher/src-tauri/resources/openrac for an installer) gets:
                              launcher's data folder (a carried copy is read-only)
   port/build/release/        the game built for this system (--game-build:
                              the folder tools/build_port.py built into), with
-                             the libraries beside it
+                             the libraries beside it; on macOS each game is its
+                             application bundle, apps/openrac-<id>/<title>.app
   python/                    a Python to run the tools (--python: an unpacked
                              python-build-standalone "install_only" archive)
 
@@ -105,6 +106,24 @@ def copy_tree(source: Path, dest: Path, keep) -> None:
             shutil.copy2(path, dest / rel)
 
 
+def copy_games(build: Path, dest: Path) -> list[str]:
+    """The game programs in BUILD, copied to DEST; their names. On macOS a game is an application
+    bundle named by its title in apps/openrac-<id>/ (port/cmake/MacApp.cmake), carried whole; the
+    build folder's link to its program is not."""
+    carried = []
+    for game in GAMES:
+        apps = build / "apps" / game
+        if any(apps.glob("*.app")):
+            shutil.copytree(apps, dest / "apps" / game, symlinks=True, dirs_exist_ok=True)
+            carried.append(f"apps/{game}")
+            continue
+        for path in sorted(build.glob(f"{game}*")):
+            if path.is_file() and path.suffix in ("", ".exe"):
+                shutil.copy2(path, dest / path.name)
+                carried.append(path.name)
+    return carried
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("out", type=Path)
@@ -143,18 +162,14 @@ def main() -> int:
     if args.game_build:
         dest = out / "port/build/release"
         dest.mkdir(parents=True, exist_ok=True)
-        for game in GAMES:
-            for path in sorted(args.game_build.glob(f"{game}*")):
-                if path.is_file() and path.suffix in ("", ".exe", ".pdb") and path.suffix != ".pdb":
-                    shutil.copy2(path, dest / path.name)
-                    carried.append(path.name)
+        carried += copy_games(args.game_build, dest)
         # The libraries the game was linked against as files of their own (SDL3 when it is not
         # built into the program).
         for pattern in ("*.dll", "*.dylib", "*.so", "*.so.*"):
             for path in sorted(args.game_build.glob(pattern)):
                 shutil.copy2(path, dest / path.name, follow_symlinks=True)
                 carried.append(path.name)
-        if not any(name.startswith(GAMES[0]) for name in carried):
+        if not any(name.split("/")[-1].startswith(GAMES[0]) for name in carried):
             sys.exit(f"{args.game_build} has no {GAMES[0]}: build it first (tools/build_port.py rac1-pal)")
     if args.python:
         if not any((args.python / rel).is_file() for rel in ("bin/python3", "python.exe")):

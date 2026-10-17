@@ -84,6 +84,23 @@ class Bundle(unittest.TestCase):
             self.assertFalse(list(out.rglob("test_*.py")))
             json.loads((out / "launcher/actions.json").read_text())
 
+    def test_games_as_built(self):
+        # On macOS a game is its bundle, carried whole; the build folder's link to it is not.
+        with tempfile.TemporaryDirectory() as tmp:
+            build, dest = Path(tmp) / "build", Path(tmp) / "dest"
+            app = "apps/openrac-rac1-pal/Ratchet & Clank.app"
+            (build / app / "Contents/MacOS").mkdir(parents=True)
+            (build / app / "Contents/MacOS/Ratchet & Clank").write_bytes(b"pal")
+            (build / app / "Contents/Info.plist").write_text("<plist/>")
+            (build / "openrac-rac1-pal").symlink_to(f"{app}/Contents/MacOS/Ratchet & Clank")
+            # Elsewhere a game is one file (and a .pdb is left behind).
+            (build / "openrac-rac1-ntsc.exe").write_bytes(b"ntsc")
+            (build / "openrac-rac1-ntsc.pdb").write_bytes(b"")
+            dest.mkdir()
+            self.assertEqual(bundle.copy_games(build, dest), ["apps/openrac-rac1-pal", "openrac-rac1-ntsc.exe"])
+            self.assertEqual((dest / app / "Contents/MacOS/Ratchet & Clank").read_bytes(), b"pal")
+            self.assertTrue((dest / app / "Contents/Info.plist").is_file())
+            self.assertEqual(sorted(p.name for p in dest.iterdir()), ["apps", "openrac-rac1-ntsc.exe"])
 
 if __name__ == "__main__":
     unittest.main()

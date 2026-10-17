@@ -155,10 +155,16 @@ jobs:
           py=build/standalone/python/bin/python3; [ -x "$py" ] || py=build/standalone/python/python.exe
           "$py" build/standalone/tools/extractor.py --help > /dev/null
           "$py" build/standalone/editor/extract.py --help > /dev/null
-          game=build/standalone/port/build/release/openrac-rac1-pal; [ -f "$game" ] || game="$game.exe"
+          # The program as the launcher finds it: openrac-<id>, openrac-<id>.exe, or on macOS the
+          # program in its application bundle, apps/openrac-<id>/<title>.app (port/cmake/MacApp.cmake).
+          program() {
+            local app; app=$(ls -d "$(dirname "$1")/apps/$(basename "$1")"/*.app/Contents/MacOS/* 2>/dev/null | head -1)
+            if [ -n "$app" ]; then echo "$app"; elif [ -f "$1" ]; then echo "$1"; else echo "$1.exe"; fi
+          }
+          game=$(program build/standalone/port/build/release/openrac-rac1-pal)
           "$game" --help || true
           # Every disc's program is carried: the launcher plays the one the player's disc is.
-          us=build/standalone/port/build/release/openrac-rac1-ntsc; [ -f "$us" ] || us="$us.exe"
+          us=$(program build/standalone/port/build/release/openrac-rac1-ntsc)
           [ -f "$us" ] || { echo "the copy carries no openrac-rac1-ntsc"; exit 1; }
           "$us" --help || true
           # On Linux: what the game asks of the system (only libc and libm, glibc 2.35 at most on x86_64 Ubuntu 22.04).
