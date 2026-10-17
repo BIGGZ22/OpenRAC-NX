@@ -392,19 +392,25 @@ async fn read_save(serial: String, slot: usize) -> Result<openrac_launcher_core:
     .map_err(|e| e.to_string())?
 }
 
-/// Writes the save editor's fields into a slot: refused while the game runs with the card or if
-/// the file changed since it was read; the card is backed up first.
+/// Writes the save editor's change into a slot: refused while the game runs with the card or if
+/// the file changed since it was read; the card is backed up first. Raw chunk edits only with the
+/// advanced save editor switched on in Settings.
 #[tauri::command]
 async fn write_save(
+    state: State<'_, AppState>,
     serial: String,
     slot: usize,
     fingerprint: String,
-    fields: openrac_launcher_core::save_edit::SaveFields,
+    change: openrac_launcher_core::save_edit::SaveChange,
 ) -> Result<openrac_launcher_core::save_edit::WriteResult, String> {
+    use openrac_launcher_core::save_edit;
+    let advanced = state.config.lock().unwrap().save_editor_advanced;
+    if matches!(change, save_edit::SaveChange::Raw { .. }) && !advanced {
+        return Err("raw edits need the advanced save editor (Settings)".into());
+    }
     tauri::async_runtime::spawn_blocking(move || {
-        use openrac_launcher_core::save_edit;
         let card = openrac_launcher_core::saves::get_memcard_dir(&serial);
-        save_edit::write_save(&card, &serial, slot, &fingerprint, &fields, || save_edit::card_in_use(&card, &serial))
+        save_edit::write_save(&card, &serial, slot, &fingerprint, &change, || save_edit::card_in_use(&card, &serial))
     })
     .await
     .map_err(|e| e.to_string())?
