@@ -381,12 +381,28 @@ async fn restore_backup(serial: String, backup_name: String) -> Result<(), Strin
     .map_err(|e| e.to_string())?
 }
 
-/// One save slot for the save editor (core/src/save_edit.rs).
+/// The skill points' names from the set-up rac1 disc (`<install>/active/rac1/data/iso_data/rac1/
+/// disc.iso`; both rac1 discs hold the same names at the same text ids), or none.
+fn skill_names(install: Option<PathBuf>) -> Vec<String> {
+    install
+        .map(|i| install::data_dir(&i, "rac1").join("iso_data").join("rac1").join("disc.iso"))
+        .and_then(|iso| openrac_launcher_core::save_edit::skill_point_names(&iso))
+        .unwrap_or_default()
+}
+
+/// One save slot for the save editor (core/src/save_edit.rs), with the skill points' names.
 #[tauri::command]
-async fn read_save(serial: String, slot: usize) -> Result<openrac_launcher_core::save_edit::SaveView, String> {
+async fn read_save(
+    state: State<'_, AppState>,
+    serial: String,
+    slot: usize,
+) -> Result<openrac_launcher_core::save_edit::SaveView, String> {
+    let install = state.config.lock().unwrap().install_dir.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let card = openrac_launcher_core::saves::get_memcard_dir(&serial);
-        openrac_launcher_core::save_edit::read_save(&card, &serial, slot)
+        let mut view = openrac_launcher_core::save_edit::read_save(&card, &serial, slot)?;
+        view.skill_names = skill_names(install);
+        Ok(view)
     })
     .await
     .map_err(|e| e.to_string())?
@@ -404,13 +420,20 @@ async fn write_save(
     change: openrac_launcher_core::save_edit::SaveChange,
 ) -> Result<openrac_launcher_core::save_edit::WriteResult, String> {
     use openrac_launcher_core::save_edit;
-    let advanced = state.config.lock().unwrap().save_editor_advanced;
+    let (advanced, install) = {
+        let c = state.config.lock().unwrap();
+        (c.save_editor_advanced, c.install_dir.clone())
+    };
     if matches!(change, save_edit::SaveChange::Raw { .. }) && !advanced {
         return Err("raw edits need the advanced save editor (Settings)".into());
     }
     tauri::async_runtime::spawn_blocking(move || {
         let card = openrac_launcher_core::saves::get_memcard_dir(&serial);
-        save_edit::write_save(&card, &serial, slot, &fingerprint, &change, || save_edit::card_in_use(&card, &serial))
+        let mut result = save_edit::write_save(&card, &serial, slot, &fingerprint, &change, || {
+            save_edit::card_in_use(&card, &serial)
+        })?;
+        result.view.skill_names = skill_names(install);
+        Ok(result)
     })
     .await
     .map_err(|e| e.to_string())?

@@ -502,6 +502,12 @@ pub struct SaveView {
     pub max_bolts: u32,
     /// Every chunk of the file, for the advanced editor.
     pub chunks: Vec<ChunkView>,
+    /// Time played as the game counts it (chunk 3, 1/60 s), in seconds.
+    pub played_seconds: u32,
+    /// The skill points' names from the game's own text ([`skill_point_names`]), in save order;
+    /// empty when the disc could not be read (the page numbers them instead).
+    #[serde(default)]
+    pub skill_names: Vec<String>,
 }
 
 /// One chunk as the advanced editor shows it: where it is, its id and size, what it is (in a
@@ -970,7 +976,75 @@ pub fn view(serial: &str, slot: usize, bytes: &[u8], file: &SaveFile) -> SaveVie
             .collect(),
         max_bolts: MAX_BOLTS,
         chunks: file.chunk_views(),
+        played_seconds: (i32_at(file.global.get(3), 0).max(0) / 60) as u32,
+        skill_names: Vec::new(),
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The skill points' names, from the game's text on the disc.
+
+/// The text id of the first skill point's name: the 30 names are ids 20444..=20473 of the global
+/// `all_text` lump, in the save's order, on both rac1 discs (the executable's skill-point
+/// description table, PAL file offset 0xd4258 / US 0xd3ed8, lists ids 20474.. in the same order;
+/// the pause menu's Goodies > Skill Points page shows these names).
+pub const SKILL_POINT_FIRST_TEXT: i32 = 20444;
+
+/// The table of contents' sector (LBA 1500) and the `all_text` SectorRange in it
+/// (docs/engine/formats/DISC.md, section 4).
+const TOC_SECTOR: u64 = 1500;
+const TOC_ALL_TEXT: usize = 0x1528;
+const SECTOR: u64 = 2048;
+
+/// The 30 skill point names in the game's English text, read from a rac1 disc image; `None` when
+/// the image is missing or anything in it is not as expected.
+pub fn skill_point_names(iso: &Path) -> Option<Vec<String>> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut f = fs::File::open(iso).ok()?;
+    let mut toc = vec![0u8; 0x2960];
+    f.seek(SeekFrom::Start(TOC_SECTOR * SECTOR)).ok()?;
+    f.read_exact(&mut toc).ok()?;
+    if u32_at(&toc, 0)? != 1 || u32_at(&toc, 4)? != 0x2960 {
+        return None;
+    }
+    let (start, count) = (u32_at(&toc, TOC_ALL_TEXT)? as u64, u32_at(&toc, TOC_ALL_TEXT + 4)? as u64);
+    if count == 0 || count > 2048 {
+        return None;
+    }
+    let mut lump = vec![0u8; (count * SECTOR) as usize];
+    f.seek(SeekFrom::Start(start * SECTOR)).ok()?;
+    f.read_exact(&mut lump).ok()?;
+    names_from_all_text(&lump)
+}
+
+/// The skill point names from an `all_text` lump: eight u32 language offsets, English first; a
+/// block is `{u32 count, u32 size}`, `count` x `{s32 text offset (from the block), s32 id, s32
+/// audio, s32 0}`, then NUL-terminated strings.
+pub fn names_from_all_text(lump: &[u8]) -> Option<Vec<String>> {
+    let block = lump.get(u32_at(lump, 0)? as usize..)?;
+    let n = u32_at(block, 0)? as usize;
+    if n > 100_000 {
+        return None;
+    }
+    let mut by_id = std::collections::HashMap::new();
+    for e in 0..n {
+        let at = 8 + 16 * e;
+        let (off, id) = (u32_at(block, at)? as usize, u32_at(block, at + 4)? as i32);
+        if (SKILL_POINT_FIRST_TEXT..SKILL_POINT_FIRST_TEXT + SKILL_POINT_COUNT as i32).contains(&id) {
+            let text = block.get(off..)?;
+            let end = text.iter().position(|&b| b == 0)?;
+            by_id.insert(id, game_text(&text[..end]));
+        }
+    }
+    (0..SKILL_POINT_COUNT as i32)
+        .map(|k| by_id.get(&(SKILL_POINT_FIRST_TEXT + k)).cloned().filter(|t| !t.is_empty()))
+        .collect()
+}
+
+/// The game's text as plain text: printable ASCII kept, colour codes (0x08..0x0c) and other
+/// control or button bytes dropped.
+fn game_text(b: &[u8]) -> String {
+    b.iter().filter(|&&c| (0x20..0x7f).contains(&c)).map(|&c| c as char).collect::<String>().trim().to_string()
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1453,6 +1527,78 @@ mod tests {
         assert!(r.backup.name.ends_with("before_edit_slot2"));
         let serialized = serde_json::to_string(&raw).unwrap();
         assert!(serialized.starts_with(r#"{"kind":"raw","chunks":"#), "{serialized}");
+    }
+
+    /// An `all_text` lump built in code: English block with `entries`, the other offsets past it.
+    fn all_text(entries: &[(i32, &[u8])]) -> Vec<u8> {
+        let mut block = Vec::new();
+        block.extend_from_slice(&(entries.len() as u32).to_le_bytes());
+        block.extend_from_slice(&0u32.to_le_bytes());
+        let mut strings = Vec::new();
+        let base = 8 + 16 * entries.len();
+        for (id, text) in entries {
+            block.extend_from_slice(&((base + strings.len()) as u32).to_le_bytes());
+            block.extend_from_slice(&id.to_le_bytes());
+            block.extend_from_slice(&(-1i32).to_le_bytes());
+            block.extend_from_slice(&0u32.to_le_bytes());
+            strings.extend_from_slice(text);
+            strings.push(0);
+        }
+        block.extend_from_slice(&strings);
+        let mut lump = Vec::new();
+        for _ in 0..8 {
+            lump.extend_from_slice(&0x20u32.to_le_bytes());
+        }
+        lump.extend_from_slice(&block);
+        lump
+    }
+
+    #[test]
+    fn skill_point_names_come_from_the_games_text() {
+        let names: Vec<String> = (0..30).map(|k| format!("Skill {k}")).collect();
+        let mut entries: Vec<(i32, Vec<u8>)> =
+            names.iter().enumerate().map(|(k, n)| (SKILL_POINT_FIRST_TEXT + k as i32, n.as_bytes().to_vec())).collect();
+        entries[1].1 = b"\x0cSwing It!\x08".to_vec(); // colour codes are dropped
+        entries.push((20443, b"not a skill point".to_vec()));
+        entries.reverse(); // the order of the entries does not matter
+        let refs: Vec<(i32, &[u8])> = entries.iter().map(|(i, t)| (*i, t.as_slice())).collect();
+        let got = names_from_all_text(&all_text(&refs)).unwrap();
+        assert_eq!(got.len(), 30);
+        assert_eq!(got[0], "Skill 0");
+        assert_eq!(got[1], "Swing It!");
+        assert_eq!(got[29], "Skill 29");
+        // One missing: no names (the page numbers them).
+        let short: Vec<(i32, &[u8])> = refs.iter().filter(|(i, _)| *i != SKILL_POINT_FIRST_TEXT + 5).copied().collect();
+        assert_eq!(names_from_all_text(&all_text(&short)), None);
+        assert_eq!(names_from_all_text(&[1, 2, 3]), None);
+
+        // Through a disc image built in code: the table of contents at LBA 1500 points at the lump.
+        let dir = tempfile::tempdir().unwrap();
+        let iso = dir.path().join("disc.iso");
+        let lump = all_text(&refs);
+        let lump_sector = 1600u64;
+        let mut img = vec![0u8; (lump_sector * SECTOR) as usize + lump.len()];
+        let toc = (TOC_SECTOR * SECTOR) as usize;
+        img[toc..toc + 4].copy_from_slice(&1u32.to_le_bytes());
+        img[toc + 4..toc + 8].copy_from_slice(&0x2960u32.to_le_bytes());
+        img[toc + TOC_ALL_TEXT..toc + TOC_ALL_TEXT + 4].copy_from_slice(&(lump_sector as u32).to_le_bytes());
+        let sectors = lump.len().div_ceil(SECTOR as usize) as u32;
+        img[toc + TOC_ALL_TEXT + 4..toc + TOC_ALL_TEXT + 8].copy_from_slice(&sectors.to_le_bytes());
+        img[(lump_sector * SECTOR) as usize..].copy_from_slice(&lump);
+        img.resize((lump_sector * SECTOR) as usize + sectors as usize * SECTOR as usize, 0);
+        fs::write(&iso, &img).unwrap();
+        assert_eq!(skill_point_names(&iso).unwrap()[1], "Swing It!");
+        assert_eq!(skill_point_names(&dir.path().join("missing.iso")), None);
+        img[toc] = 2; // not the table of contents
+        fs::write(&iso, &img).unwrap();
+        assert_eq!(skill_point_names(&iso), None);
+    }
+
+    #[test]
+    fn the_view_has_the_time_played() {
+        let mut f = blank();
+        set_i32(f.global.get_mut(3), 0, 60 * (3 * 3600 + 12 * 60));
+        assert_eq!(view("SCES_509.16", 0, &f.to_bytes(), &f).played_seconds, 3 * 3600 + 12 * 60);
     }
 
     fn card_with(f: &SaveFile) -> tempfile::TempDir {
