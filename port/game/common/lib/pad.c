@@ -23,12 +23,13 @@ int openrac_lib_scePad2Init(int mode) {
     return 1;
 } /* scePad2Init */
 
-static int next_socket;
-
+/* The socket is the port the parameters name (their second word; rac1 writes {2, port}), so a
+ * game that sets its pads up again (rac1 does after Quit Game) reads the same controller. Counting
+ * sockets up gave the second setup socket 1, the empty second port, and every button stopped. */
 int openrac_lib_scePad2CreateSocket(gaddr params, gaddr work) { /* scePad2CreateSocket */
-    (void)params;
     (void)work;
-    return next_socket++;
+    const int port = params != 0 ? GREF(int, params + 4) : 0;
+    return port >= 0 && port < 2 ? port : 0;
 }
 
 /* scePad2Read(socket, data): two bytes of buttons (a clear bit is a pressed
