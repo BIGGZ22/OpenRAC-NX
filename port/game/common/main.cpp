@@ -157,20 +157,33 @@ fs::path default_settings() {
     return data_home() / "settings" / (std::string(openrac_game.id) + ".ini");
 }
 
-// Where the levels are without --levels: <data>/port/<version> ("rac1-pal" -> pal), each version of
-// a game in a folder of its own beside the others (the checkout's assets/port/<game>/<version>).
-// PAL's levels read before that layout, straight in <data>/port (the only version that had them),
-// are read there until extracted again.
-fs::path default_levels(const fs::path& data) {
+// This program's version: "rac1-pal" -> pal.
+std::string game_version() {
     const std::string id = openrac_game.id;
     const auto dash = id.find('-');
-    const std::string version = dash == std::string::npos ? id : id.substr(dash + 1);
-    const fs::path own = data / "port" / version;
+    return dash == std::string::npos ? id : id.substr(dash + 1);
+}
+
+// Each version's levels sit in a folder of their own (<data>/port/<version>, the checkout's
+// assets/port/<game>/<version>). PAL's levels extracted before that layout sit straight in the
+// folder above (the only version that had them) and are read there until extracted again, whether
+// the folder came from --levels or the default.
+fs::path levels_or_flat(const fs::path& own) {
     std::error_code ec;
-    if (version == "pal" && !fs::exists(own, ec) && fs::exists(data / "port" / "level_99" / "manifest.json", ec)) {
-        return data / "port";
+    const fs::path flat = own.parent_path();
+    if (game_version() == "pal" && own.filename() == "pal" && !fs::exists(own / "level_99" / "manifest.json", ec) &&
+        fs::exists(flat / "level_99" / "manifest.json", ec)) {
+        log::warn("levels: reading the ones extracted before each version had a folder, in {} (extract again to "
+                   "move them into {})",
+                   flat.string(), own.string());
+        return flat;
     }
     return own;
+}
+
+// Where the levels are without --levels.
+fs::path default_levels(const fs::path& data) {
+    return levels_or_flat(data / "port" / game_version());
 }
 
 Options parse(int argc, char** argv) {
@@ -954,7 +967,7 @@ int main(int argc, char** argv) {
     g_options = parse(argc, argv);
     if (g_options.check_levels) {
 #ifdef OPENRAC_FRONTEND
-        return check_levels(g_options.levels.empty() ? default_levels(g_options.data) : g_options.levels);
+        return check_levels(g_options.levels.empty() ? default_levels(g_options.data) : levels_or_flat(g_options.levels));
 #else
         log::fatalf("--check-levels needs a build with the window (it reads the levels as the window does)");
 #endif
@@ -1008,7 +1021,7 @@ int main(int argc, char** argv) {
     if (g_options.window) {
         std::string why;
         settings::load(g_options.settings);
-        fs::path levels = g_options.levels.empty() ? default_levels(g_options.data) : g_options.levels;
+        fs::path levels = g_options.levels.empty() ? default_levels(g_options.data) : levels_or_flat(g_options.levels);
         if (!frontend::open(openrac_game.id, levels, why)) {
             log::fatalf("no window: {}", why);
         }
