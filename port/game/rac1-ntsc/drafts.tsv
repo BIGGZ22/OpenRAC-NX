@@ -58,3 +58,4 @@ src/overlays/shared/ui/help/001ff938.c	# FUN_L15_001ff938
 src/overlays/shared/ui/help/00226f10.c	# FUN_L01_00234358
 src/overlays/shared/ui/menus/0027a6e0.c	# FUN_L00_002831c0
 src/overlays/shared/ui/text/00249738.c	# FUN_L06_00249738
+src/assembly/textbin/ui/menus/render_configured_text_label.c	# FUN_0021a328, the menus' text label (titles, the map's planet and place names, the gadget page's labels)
