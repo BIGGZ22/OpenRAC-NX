@@ -20,7 +20,7 @@
 #include "types.h"
 
 /* Where the next VIF packet goes (read and written through $gp). */
-extern unsigned char *D_00161180;
+extern unsigned char *D_001611C0;
 /* The strip's packet head (five quadwords) and the unpack headers for its three arrays. */
 extern unsigned char D_L00_001C4020[];
 extern unsigned char D_L00_00160EC0[];
@@ -52,7 +52,7 @@ static unsigned char *pad_to_quad(unsigned char *out) {
  * gets the packet's length in quadwords less one.
  */
 void FUN_L00_001fde98(int n, unsigned char *xyz, unsigned char *colours, unsigned char *uvs, int flag) {
-    unsigned char *start = D_00161180;
+    unsigned char *start = D_001611C0;
     unsigned char *out = start;
     unsigned int count = (unsigned int)n << 16;
     int i;
@@ -93,5 +93,5 @@ void FUN_L00_001fde98(int n, unsigned char *xyz, unsigned char *colours, unsigne
     out += 16;
 
     *(unsigned int *)start |= (unsigned int)((out - start) >> 4) - 1;
-    D_00161180 = out;
+    D_001611C0 = out;
 }
