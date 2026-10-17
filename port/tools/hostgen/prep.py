@@ -17,6 +17,8 @@ where it was:
   gets a name and is defined on the first line of its function: Clang's JSON
   leaves out a record defined inside an expression, so hostgen could not lay
   it out and the whole function became a stub.
+- A file that declares `typedef char *va_list;` itself calls it game_va_list: the console's
+  va_list, a game pointer, not the host's (own_va_list).
 - With candidates (hostgen.json "candidates"), a function the decompilation
   still has as an assembly stub gets the candidate's C at the end of its file
   (use_candidates).
@@ -219,8 +221,30 @@ def name_wide_casts(text: str) -> str:
     return _WIDE_CAST.sub(lambda m: "openrac_uti" if m.group(1) else "openrac_ti", text)
 
 
+_OWN_VA_LIST = re.compile(r"^[ \t]*typedef[ \t]+char[ \t]*\*[ \t]*va_list[ \t]*;", re.M)
+_VA_LIST_WORD = re.compile(r"\bva_list\b")
+
+
+def own_va_list(text: str) -> str:
+    """A file that declares `typedef char *va_list;` itself (no <stdarg.h>) means the console's
+    va_list: a pointer into the caller's argument area, which its C walks itself (newlib's
+    _vfprintf_r reads `*(int *)((ap += 8) - 8)`). hostgen takes the name va_list for the host's
+    own type, which a game address cannot stand for, so in such a file the name becomes
+    game_va_list, a plain pointer typedef."""
+    if not _OWN_VA_LIST.search(text) or re.search(r"#[ \t]*include[ \t]*<stdarg\.h>", text):
+        return text
+    out = []
+    pos = 0
+    for m in _SKIP.finditer(text):
+        out.append(_VA_LIST_WORD.sub("game_va_list", text[pos:m.start()]))
+        out.append(m.group(0))
+        pos = m.end()
+    out.append(_VA_LIST_WORD.sub("game_va_list", text[pos:]))
+    return "".join(out)
+
+
 def prepare(text: str) -> str:
-    return name_wide_casts(name_cast_records(widen_long(split_multiline_strings(blank_file_scope_asm(text)))))
+    return own_va_list(name_wide_casts(name_cast_records(widen_long(split_multiline_strings(blank_file_scope_asm(text))))))
 
 
 # The path may be several adjacent strings over as many lines (the NTSC decomp's long paths).

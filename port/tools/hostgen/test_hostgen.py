@@ -333,6 +333,39 @@ class Translate(unittest.TestCase):
         self.assertIn("a va_list passed as a game pointer, or the other way round",
                       self.last_report["stubbed"].values())
 
+    def test_a_files_own_va_list_is_a_game_pointer(self):
+        # rac1's vfprintf.c declares typedef char *va_list itself and walks the console's
+        # argument area, eight bytes a slot; the caller passes it as a pointer.
+        out = self.run_program({"a.c": """
+            typedef char *va_list;
+            int vsum(int n, va_list ap) {
+                int s = 0;
+                while (n--) s += (*(int *)((ap += 8) - 8));
+                return s;
+            }
+            extern int vsum_p(int n, void *ap) __asm__("vsum");
+            int wrap(int n, void *ap) { return vsum_p(n, ap); }
+            extern long D_00200000[3];
+            int test_main(void) {
+                D_00200000[0] = 4; D_00200000[1] = 5; D_00200000[2] = 6;
+                test_print(wrap(3, D_00200000));
+                return 0;
+            }
+        """})
+        self.assertEqual(out, ["15"])
+
+    def test_a_local_of_an_unnamed_enum(self):
+        # newlib's _vfprintf_r: enum { OCT, DEC, HEX } base; an int, its constants usable.
+        out = self.run_program({"a.c": """
+            int pick(int c) {
+                enum { OCT, DEC, HEX } base;
+                base = c == 'x' ? HEX : c == 'o' ? OCT : DEC;
+                return base == HEX ? 16 : base == OCT ? 8 : 10;
+            }
+            int test_main(void) { test_print(pick('x')); test_print(pick('d')); return 0; }
+        """})
+        self.assertEqual(out, ["16", "10"])
+
     def test_candidate_replaces_an_assembly_stub(self):
         # The decompilation still has func_00110100 as assembly; its table of
         # candidates offers C for it, which goes at the end of the file.
@@ -554,6 +587,44 @@ class Translate(unittest.TestCase):
         """})
         self.assertEqual(out, ["30", "0", "2340"])
 
+    def test_variable_length_array_of_fixed_rows(self):
+        # rac1's func_L12_00304038: float v[count][4], a row of four floats per element.
+        out = self.run_program({"a.c": """
+            void row(float *r, int i) { r[0] = i; r[3] = i * 2; }
+            int rows(int count) {
+                float v[count][4];
+                int i, s = 0;
+                for (i = 0; i < count; i++) row(v[i], i);
+                for (i = 0; i < count; i++) s += (int)v[i][0] + (int)v[i][3];
+                return s;
+            }
+            int test_main(void) { test_print(rows(6)); test_print(rows(1)); return 0; }
+        """})
+        self.assertEqual(out, ["45", "0"])
+
+    def test_alloca_takes_game_stack_until_the_function_returns(self):
+        # rac1's func_L13_002EE590: __builtin_alloca for a copy of a list. The space is in game
+        # memory (its address is passed on) and is given back when the function returns.
+        out = self.run_program({"a.c": """
+            int sum(int *p, int n) { int s = 0; while (n--) s += *p++; return s; }
+            int copy(int count) {
+                int *list;
+                int i;
+                if (count == 0) return -1;
+                list = __builtin_alloca(count * 4);
+                for (i = 0; i < count; i++) list[i] = i + 1;
+                return sum(list, count);
+            }
+            int test_main(void) {
+                int i, s = 0;
+                for (i = 0; i < 4000; i++) s = copy(100);  /* 400 bytes each: 1.6 MB if kept */
+                test_print(s);
+                test_print(copy(0));
+                return 0;
+            }
+        """})
+        self.assertEqual(out, ["5050", "-1"])
+
     def test_libraries_bind_to_shared_replacements(self):
         # The game's table binds an address to a shared replacement by name;
         # hostgen writes the binding (libraries.c) with the shared signature.
@@ -650,6 +721,32 @@ class Places(unittest.TestCase):
                                            "--jobs", "1", "--quiet"]), 0)
             self.assertIn("OPENRAC_LDATA(0, 0x00410000u)", (out / "a.c").read_text())
 
+    @unittest.skipUnless(have_compiler(), "needs Clang on a POSIX host")
+    def test_code_declared_as_data_is_relocated_as_code(self):
+        # rac1's space.c: extern u8 resident_effect_entry[] __asm__("func_0022F4C0"), passed on as
+        # resident_effect_entry + 8, the entry of the function the catalogue starts 8 bytes early.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            src = root / "game"
+            (src / "src").mkdir(parents=True)
+            (src / "src" / "a.c").write_text(
+                "typedef unsigned char u8;\n"
+                "extern u8 entry[] __asm__(\"func_00300000\");\n"
+                "extern void func_00320000(void *);\n"
+                "void func_00310000(void) { func_00320000(entry + 8); func_00320000(entry); }\n")
+            (root / "hostgen.json").write_text(json.dumps({
+                "sources": ["src"], "includes": [],
+                "relocate": [0x1A7C80, 0x500000],
+            }))
+            out = root / "gen"
+            self.assertEqual(hostgen.main(["--game", str(root / "hostgen.json"),
+                                           "--source", str(src), "--out", str(out),
+                                           "--jobs", "1", "--quiet"]), 0)
+            text = (out / "a.c").read_text()
+            self.assertIn("OPENRAC_CODE((gaddr)(0x00300000u) + (gaddr)(8)", text)
+            self.assertIn("OPENRAC_CODE(0x00300000u)", text)
+            self.assertNotIn("OPENRAC_DATA", text)
+
 
 class TypeStrings(unittest.TestCase):
     def test_declarators(self):
@@ -662,6 +759,7 @@ class TypeStrings(unittest.TestCase):
             "float *[3][2]": "gaddr x[3][2]",
             "struct (unnamed struct at src/a.c:3:9)": "struct openrac_anon_src_a_c_3_9 x",
             "union S::(anonymous at a.c:1:25)": "union openrac_anon_a_c_1_25 x",
+            "enum (unnamed enum at src/a.c:5:2)": "int x",
             "void (int) __attribute__((noreturn))": "void x(int)",
             "struct Moby *[count]": "gaddr x[count]",
         }

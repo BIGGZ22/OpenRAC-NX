@@ -644,6 +644,10 @@ class Unit:
             prologue.insert(0, f"    static gaddr {var};")
             init = self._static_init(d, var)
             prologue.append(f"    if ({var} == 0) {{ {var} = openrac_guest_static(sizeof({self.host(self.ty(d))})); {init}}}")
+        if getattr(fn, "uses_alloca", False):
+            # alloca's space is the frame's: given back when the function returns, by any path.
+            prologue.insert(0, "    gaddr openrac_alloca_sp_ __attribute__((cleanup(openrac_guest_frame_end))) = "
+                               "openrac_guest_sp;")
         if getattr(fn, "uses_self", False):
             prologue.insert(0, f"    const gaddr openrac_self_ = openrac_guest_entry((openrac_host_fn){cname(fn.name)});")
         text = "{\n" + "\n".join(prologue + lines[1:])
@@ -661,11 +665,17 @@ class Unit:
         return fname
 
     def _vla_length(self, d: dict) -> str | None:
-        """The length of a one-dimensional variable-length array whose length is a local
-        or parameter by name (`struct Moby *found[count]`), else None."""
+        """The length of a variable-length array whose length is a local or parameter by name
+        (`struct Moby *found[count]`), and whose elements have a fixed size (`float v[count][4]`),
+        else None."""
         r = self.resolve(self.ty(d))
-        if not isinstance(r, ctype.Arr) or not r.vla or isinstance(self.resolve(r.of), ctype.Arr):
+        if not isinstance(r, ctype.Arr) or not r.vla:
             return None
+        inner = self.resolve(r.of)
+        while isinstance(inner, ctype.Arr):
+            if inner.size is None:
+                return None  # a variable length inside, or an unknown one
+            inner = self.resolve(inner.of)
         return r.vla.strip() if re.fullmatch(r"[A-Za-z_]\w*", r.vla.strip()) else None
 
     def _vla_decl(self, d: dict) -> str:
@@ -1223,6 +1233,12 @@ class Unit:
             pa, pb = self.cls(ta) == "ptr", self.cls(tb) == "ptr"
             if pa and pb and op == "-":
                 return f"((int32_t)((gaddr)({self.rv(a)}) - (gaddr)({self.rv(b)})) / (int32_t){self.pointee_size(ta)})"
+            code = self._code_as_data(a) if pa else None
+            if code is not None:
+                # An address inside a function the C declares as data (an entry 8 bytes into
+                # what the catalogue starts earlier): a code address, relocated as one, offset
+                # included, so a loaded level gives its own copy of the code.
+                return f"OPENRAC_CODE((gaddr)({hexaddr(code)}) {op} (gaddr)({self.rv(b)}) * {self.pointee_size(ta)})"
             if pa:
                 return f"((gaddr)({self.rv(a)}) {op} (gaddr)({self.rv(b)}) * {self.pointee_size(ta)})"
             if pb:
@@ -1357,7 +1373,10 @@ class Unit:
             raise Unsupported(f"global {sym} has no known address")
         addr = hexaddr(address)
         named_level = self.program.data_level(sym) if hasattr(self.program, "data_level") else None
-        if self._relocated(address) and named_level is not None:
+        if self._relocated(address) and self._code_symbol(sym) is not None:
+            # A function's code declared as data: where that code is in the program loaded.
+            addr = f"OPENRAC_CODE({addr})"
+        elif self._relocated(address) and named_level is not None:
             # A level's datum by its name (D_L00_...) in a function that is not a level's (a
             # static helper of a level file): that level's, looked up for the level loaded, as in
             # the level functions beside it; OPENRAC_DATA would take it for the executable's.
@@ -1445,6 +1464,33 @@ class Unit:
         canon = next((a for o, a in places if o == home), places[0][1])
         size = getattr(self.program, "sizes", {}).get(fn.name) or 0x400
         return home, canon, size
+
+    def _code_symbol(self, sym: str) -> int | None:
+        """The executable address of sym when it names a function of the executable (its name is
+        a code name, e.g. func_0022F4C0) and this is an executable function in a program whose
+        levels move code (hostgen.json "relocate"); otherwise None."""
+        if not getattr(self.program, "relocate", None) or self.fn is None or LEVEL_NAME.match(self.fn.name):
+            return None
+        if not any(p.match(sym) for p in self.program.code_names):
+            return None
+        places = self.program.code_places(sym)
+        return places[0][1] if places and places[0][0] < 0 else None
+
+    def _code_as_data(self, n: dict) -> int | None:
+        """Of an array declared over a function's code (extern u8 x[] __asm__("func_..."), its
+        decayed address): the function's executable address, else None."""
+        n = _strip_parens(n)
+        while n.get("kind") in ("ImplicitCastExpr", "CStyleCastExpr") and n.get("castKind") in (
+                "ArrayToPointerDecay", "NoOp", "BitCast"):
+            n = _strip_parens(_inner(n)[0])
+        if n.get("kind") != "DeclRefExpr" or n["referencedDecl"].get("kind") != "VarDecl":
+            return None
+        ref = n["referencedDecl"]
+        if self.fn is not None and (ref["id"] in self.fn.memory or ref["id"] in self.fn.statics
+                                    or ref["id"] in self.fn.host):
+            return None
+        d = self.decls.get(ref["id"], ref)
+        return self._code_symbol(symbol_of(d))
 
     def _relocated(self, address: int) -> bool:
         """An executable function's global in the range that level programs move (hostgen.json
@@ -1694,6 +1740,10 @@ class Unit:
             return f"((gaddr)({v[0]}), memset(G({v[0]}), {v[1]}, {v[2]}), (gaddr)({v[0]}))"
         if name in ("__builtin_fabsf", "__builtin_sqrtf", "__builtin_fabs", "__builtin_sqrt", "__builtin_abs"):
             return f"{name}({', '.join(v)})"
+        if name == "__builtin_alloca" and self.fn is not None:
+            # Space on the game stack, as the console's alloca takes it from the frame.
+            self.fn.uses_alloca = True
+            return f"openrac_guest_frame((uint32_t)({v[0]}))"
         raise Unsupported(f"builtin {name}")
 
     @staticmethod

@@ -72,12 +72,19 @@ def anon_tag(where: str) -> str:
     return f"openrac_anon_{stem}"
 
 
+def _unnamed(m: re.Match) -> str:
+    """An unnamed record gets a tag of its own; an unnamed enum is an int, as on the console
+    (`enum { OCT, DEC, HEX } base;` in newlib's _vfprintf_r): its constants are written apart."""
+    kind = m.group(1) or m.group(2)
+    return "int" if kind == "enum" else f"{kind} {anon_tag(m.group(3))}"
+
+
 _ATTRIBUTE = re.compile(r"__attribute__\s*\(\((?:[^()]|\([^()]*\))*\)\)")
 
 
 def _tokens(text: str) -> list[str]:
     text = _ATTRIBUTE.sub("", text)
-    text = UNNAMED.sub(lambda m: f"{m.group(1) or m.group(2)} {anon_tag(m.group(3))}", text)
+    text = UNNAMED.sub(_unnamed, text)
     toks = re.findall(r"[A-Za-z_][A-Za-z_0-9]*|\d+|\.\.\.|[()*\[\],+\-/<>&|^%~!.]", text)
     rest = re.sub(r"[A-Za-z_][A-Za-z_0-9]*|\d+|\.\.\.|[()*\[\],+\-/<>&|^%~!.]|\s+", "", text)
     if rest:
