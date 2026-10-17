@@ -184,9 +184,14 @@ function(openrac_add_game config)
 endfunction()
 
 # The window's icon as a C array (openrac_icon_png, openrac_icon_png_size): the game's icon if
-# present in port/game/<id>/icon.png, or OpenRAC's launcher icon as a fallback.
+# present in port/game/<id>/icon.png, or OpenRAC's launcher icon as a fallback. On macOS the
+# window's icon is the Dock's, which macOS draws as given, so there it is icon-macos.png: the same
+# picture in Apple's shape (launcher/src-tauri/icons/make_macos_icon.py --picture).
 function(openrac_window_icon game_dir target_id out)
   set(png "${game_dir}/icon.png")
+  if(APPLE AND EXISTS "${game_dir}/icon-macos.png")
+    set(png "${game_dir}/icon-macos.png")
+  endif()
   if(NOT EXISTS "${png}")
     set(png "${PROJECT_SOURCE_DIR}/../launcher/src-tauri/icons/128x128.png")
   endif()
