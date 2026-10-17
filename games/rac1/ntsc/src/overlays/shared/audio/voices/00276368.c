@@ -22,6 +22,9 @@ extern void *D_L00_00197300[];
 extern s32 D_L00_0015F3F8_gp __asm__("D_L00_0015F3F8") __attribute__((sda));
 extern s32 frame_size __asm__("D_0013E504");
 extern s32 D_L00_001611CC;
+/* The pause menu mobys' update (level 0's copy at 0x2DF638): by name, so each level's copy is
+ * meant, as each level program's own instruction forms its own address. */
+extern void FUN_0023a2c0(void *);
 #define D_L00_00184414 (*(s32 *)(D_L00_001841F0_init + 0x224))
 extern s32 D_L00_001B9E90_init[] __asm__("D_L00_001B9E90");
 extern s32 D_L00_00180260[];
@@ -225,7 +228,7 @@ void FUN_L00_00276368(void) {
             *handle = (s32)obj;
             if (obj != 0) {
                 *(u16 *)((u8 *)obj + 0x34) &= 0xfffd;
-                *(void **)((u8 *)*handle + 0x74) = (void *)0x002df638;
+                *(void **)((u8 *)*handle + 0x74) = (void *)FUN_0023a2c0;
                 *(f32 *)((u8 *)*handle + 0x10) = source[80];
                 *(f32 *)((u8 *)*handle + 0x14) = source[81];
                 *(f32 *)((u8 *)*handle + 0x18) = source[82];
