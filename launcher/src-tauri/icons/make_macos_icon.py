@@ -1,14 +1,22 @@
-"""Build icon.icns, the macOS icon, from icon.png.
+"""Build OpenRAC's macOS icons in Apple's shape.
 
 macOS draws app icons as given, so the file must carry Apple's own shape: an
 824-pixel rounded square, centred on a 1024-pixel canvas, with a soft shadow
-below it. icon.png (the full-bleed picture the other systems use) supplies the
-wrench; this lifts it off its orange, sets it on the shaped tile and writes
-every size iconutil wants.
+below it. With no arguments this builds the launcher's icon.icns: icon.png (the
+full-bleed picture the other systems use) supplies the wrench, which is lifted
+off its orange, set on the shaped tile and written in every size iconutil wants.
 
-    python3 make_macos_icon.py        # needs Pillow; macOS only (iconutil)
+With --picture it shapes any full-bleed square picture the same way, whole
+(scaled to the tile, its corners rounded), and writes a PNG: the native games
+set their window icon at run time, which on macOS is the Dock icon, so each
+port/game/<id>/icon.png has an icon-macos.png made from it.
+
+    python3 make_macos_icon.py        # icon.icns; needs Pillow, macOS (iconutil)
+    python3 make_macos_icon.py --picture ../../../port/game/rac1-pal/icon.png \\
+        ../../../port/game/rac1-pal/icon-macos.png   # needs Pillow only
 """
 
+import argparse
 import pathlib
 import shutil
 import subprocess
@@ -68,6 +76,26 @@ def wrench() -> Image.Image:
     return out.crop(out.getbbox())
 
 
+def on_canvas(tile: Image.Image) -> Image.Image:
+    """A TILE-sized picture as Apple's icon: corners rounded, centred on the canvas, shadowed."""
+    tile = tile.convert("RGBA")
+    tile.putalpha(ImageChops.multiply(tile.getchannel("A"), tile_mask()))
+    canvas = Image.new("RGBA", (CANVAS, CANVAS), (0, 0, 0, 0))
+    off = (CANVAS - TILE) // 2
+    drop = Image.new("RGBA", (CANVAS, CANVAS), (0, 0, 0, 0))
+    drop_a = Image.new("L", (CANVAS, CANVAS), 0)
+    drop_a.paste(tile_mask().point(lambda a: a * 0.32), (off, off + 12))
+    drop.putalpha(drop_a.filter(ImageFilter.GaussianBlur(14)))
+    canvas.alpha_composite(drop)
+    canvas.alpha_composite(tile, (off, off))
+    return canvas
+
+
+def picture(src: pathlib.Path) -> Image.Image:
+    """A full-bleed square picture, whole, in Apple's shape."""
+    return on_canvas(Image.open(src).convert("RGBA").resize((TILE, TILE), Image.LANCZOS))
+
+
 def build() -> Image.Image:
     tile = gradient()
     art = wrench()
@@ -83,20 +111,20 @@ def build() -> Image.Image:
     shade.putalpha(shade_a.filter(ImageFilter.GaussianBlur(10)))
     tile.alpha_composite(shade)
     tile.alpha_composite(art, at)
-    tile.putalpha(ImageChops.multiply(tile.getchannel("A"), tile_mask()))
-
-    canvas = Image.new("RGBA", (CANVAS, CANVAS), (0, 0, 0, 0))
-    off = (CANVAS - TILE) // 2
-    drop = Image.new("RGBA", (CANVAS, CANVAS), (0, 0, 0, 0))
-    drop_a = Image.new("L", (CANVAS, CANVAS), 0)
-    drop_a.paste(tile_mask().point(lambda a: a * 0.32), (off, off + 12))
-    drop.putalpha(drop_a.filter(ImageFilter.GaussianBlur(14)))
-    canvas.alpha_composite(drop)
-    canvas.alpha_composite(tile, (off, off))
-    return canvas
+    return on_canvas(tile)
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--picture", nargs=2, metavar=("SRC", "OUT"),
+                        help="shape a full-bleed square picture and write it as a PNG")
+    parser.add_argument("--size", type=int, default=512, help="the PNG's side (default 512)")
+    args = parser.parse_args()
+    if args.picture:
+        src, out = map(pathlib.Path, args.picture)
+        picture(src).resize((args.size, args.size), Image.LANCZOS).save(out, optimize=True)
+        print("wrote", out)
+        return
     icon = build()
     with tempfile.TemporaryDirectory() as tmp:
         iconset = pathlib.Path(tmp) / "icon.iconset"
