@@ -3,6 +3,7 @@
   // when it was saved), and backups to take and restore. File names, sizes and the
   // card's folder name are a contributor's details: shown with developer tools on.
   import Icon from "$components/Icon.svelte";
+  import SaveEditor from "$components/SaveEditor.svelte";
   import { api, type GameSaveStatus, type VersionView } from "$lib/api";
   import { app, toast } from "$lib/app.svelte";
   import { onMount } from "svelte";
@@ -16,6 +17,8 @@
   let backupNote = $state("");
   let creatingBackup = $state(false);
   let restoringBackupName = $state<string | null>(null);
+  /** The slot open in the save editor. */
+  let editing = $state<number | null>(null);
 
   async function loadStatus() {
     loading = true;
@@ -80,6 +83,17 @@
   });
 </script>
 
+{#if editing !== null}
+  <SaveEditor
+    serial={version.serial}
+    slot={editing}
+    onclose={(changedCard) => {
+      editing = null;
+      if (changedCard) void loadStatus();
+    }}
+  />
+{/if}
+
 <section class="panel saves" aria-label="Save files">
   <div class="row top">
     <h2 class="grow">Save files</h2>
@@ -109,6 +123,13 @@
             <span class="planet">{slot.planetName ?? "Unknown planet"}</span>
             <span class="bolts"><Icon name="bolt" size={14} />{(slot.bolts ?? 0).toLocaleString()}</span>
             <span class="when">{slot.timestamp ?? ""}</span>
+          {/if}
+          {#if slot.editable}
+            <button class="ghost small edit" onclick={() => (editing = slot.slotIndex)}
+              ><Icon name="edit" size={14} />Edit</button
+            >
+          {:else}
+            <span></span>
           {/if}
           {#if developer}
             <span class="file mono dim">{slot.filename}{slot.isEmpty ? "" : ` · ${formatBytes(slot.size)}`}</span>
@@ -179,7 +200,7 @@
   /* One slot per row, the columns aligned down the list. */
   .slots li {
     display: grid;
-    grid-template-columns: 56px minmax(0, 1.2fr) minmax(0, 0.7fr) minmax(0, 1fr) auto;
+    grid-template-columns: 56px minmax(0, 1.2fr) minmax(0, 0.7fr) minmax(0, 1fr) auto auto;
     align-items: center;
     gap: 16px;
     padding: 10px 2px;
@@ -215,6 +236,11 @@
 
   .file {
     justify-self: end;
+  }
+
+  /* An empty slot spans the planet, bolts and time columns. */
+  .empty .planet {
+    grid-column: span 3;
   }
 
   .empty .planet {

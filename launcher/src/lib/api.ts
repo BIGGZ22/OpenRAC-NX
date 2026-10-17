@@ -274,6 +274,71 @@ export interface SaveSlotInfo {
   planetName: string | null;
   timestamp: string | null;
   modifiedMillis: number | null;
+  /** The save editor can open it. */
+  editable: boolean;
+}
+
+// ---- the save editor (core/src/save_edit.rs) ---------------------------------------
+
+export type Nanotech = "standard" | "premium" | "ultra";
+
+export interface ItemState {
+  id: number;
+  owned: boolean;
+  /** Ammo, for an item that has it. */
+  ammo: number | null;
+  /** The gold version, for an item that has one. */
+  gold: boolean | null;
+}
+
+export interface PlanetState {
+  id: number;
+  unlocked: boolean;
+  /** One per gold bolt on the planet. */
+  goldBolts: boolean[];
+}
+
+/** What the editor changes; sent back whole. */
+export interface SaveFields {
+  bolts: number;
+  nanotech: Nanotech;
+  items: ItemState[];
+  planets: PlanetState[];
+  skillPoints: boolean[];
+}
+
+export interface ItemInfo {
+  id: number;
+  name: string;
+  kind: "weapon" | "gadget";
+  maxAmmo: number | null;
+  hasGold: boolean;
+}
+
+export interface PlanetInfo {
+  id: number;
+  name: string;
+  location: string;
+  /** A ship destination the player may lock or unlock. */
+  canUnlock: boolean;
+}
+
+export interface SaveView {
+  serial: string;
+  slot: number;
+  /** The file as read; a write is refused if it changed since. */
+  fingerprint: string;
+  planetName: string | null;
+  savedAt: string | null;
+  fields: SaveFields;
+  items: ItemInfo[];
+  planets: PlanetInfo[];
+  maxBolts: number;
+}
+
+export interface WriteResult {
+  backup: SaveBackupInfo;
+  view: SaveView;
 }
 
 export interface SaveBackupInfo {
@@ -337,6 +402,11 @@ export const api = {
   backupSaves: (serial: string, note?: string) => call<SaveBackupInfo>("backup_saves", { serial, note }),
   restoreBackup: (serial: string, backupName: string) => call<null>("restore_backup", { serial, backupName }),
   openSavesFolder: (serial: string) => call<null>("open_saves_folder", { serial }),
+  /** One slot for the save editor. */
+  readSave: (serial: string, slot: number) => call<SaveView>("read_save", { serial, slot }),
+  /** Writes the editor's fields: refused while the game runs with the card; backs the card up first. */
+  writeSave: (serial: string, slot: number, fingerprint: string, fields: SaveFields) =>
+    call<WriteResult>("write_save", { serial, slot, fingerprint, fields }),
   /** A game's overrides packs (core/src/overrides.rs), in the order they apply. */
   overridesList: (game: string) => call<PackView[]>("overrides_list", { game }),
   overridesSetEnabled: (game: string, id: string, enabled: boolean) =>

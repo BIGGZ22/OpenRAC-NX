@@ -22,10 +22,13 @@ import type {
   PackView,
   Platform,
   Progress,
+  SaveFields,
+  SaveView,
   Scope,
   Started,
   VersionStatus,
   VersionView,
+  WriteResult,
 } from "./api";
 
 // ---- the files, as the Rust side parses them --------------------------------------
@@ -424,6 +427,103 @@ function install(game: string, image: string): Started {
   });
 }
 
+// ---- the save editor ---------------------------------------------------------------
+
+/** The items and planets as core/src/save_edit.rs lists them. */
+const mockItems: [number, string, "weapon" | "gadget", number, boolean][] = [
+  [2, "Heli-Pack", "gadget", 0, false],
+  [3, "Thruster-Pack", "gadget", 0, false],
+  [4, "Hydro-Pack", "gadget", 0, false],
+  [5, "Sonic Summoner", "gadget", 0, false],
+  [6, "O2 Mask", "gadget", 0, false],
+  [7, "Pilot's Helmet", "gadget", 0, false],
+  [9, "Suck Cannon", "weapon", 0, true],
+  [10, "Bomb Glove", "weapon", 40, true],
+  [11, "Devastator", "weapon", 20, true],
+  [12, "Swingshot", "gadget", 0, false],
+  [13, "Visibomb Gun", "weapon", 20, false],
+  [14, "Taunter", "gadget", 0, false],
+  [15, "Blaster", "weapon", 200, true],
+  [16, "Pyrocitor", "weapon", 240, true],
+  [17, "Mine Glove", "weapon", 50, true],
+  [18, "Walloper", "weapon", 0, false],
+  [19, "Tesla Claw", "weapon", 240, true],
+  [20, "Glove of Doom", "weapon", 10, true],
+  [21, "Morph-o-Ray", "weapon", 0, true],
+  [22, "Hydrodisplacer", "gadget", 0, false],
+  [23, "R.Y.N.O.", "weapon", 50, false],
+  [24, "Drone Device", "weapon", 10, false],
+  [25, "Decoy Glove", "weapon", 20, true],
+  [26, "Trespasser", "gadget", 0, false],
+  [27, "Metal Detector", "gadget", 0, false],
+  [28, "Magneboots", "gadget", 0, false],
+  [29, "Grindboots", "gadget", 0, false],
+  [30, "Hoverboard", "gadget", 0, false],
+  [31, "Hologuise", "gadget", 0, false],
+  [32, "PDA", "gadget", 0, false],
+  [33, "Map-o-Matic", "gadget", 0, false],
+  [34, "Bolt Grabber", "gadget", 0, false],
+  [35, "Persuader", "gadget", 0, false],
+];
+const mockPlanets: [number, string, string, number][] = [
+  [1, "Novalis", "Tobruk Crater", 3],
+  [2, "Aridia", "Outpost X11", 4],
+  [3, "Kerwan", "Metropolis", 3],
+  [4, "Eudora", "Logging Site", 1],
+  [5, "Rilgar", "Blackwater City", 2],
+  [6, "Nebula G34", "Blarg Station", 2],
+  [7, "Umbris", "Qwark's HQ", 2],
+  [8, "Batalia", "Fort Krontos", 2],
+  [9, "Gaspar", "Blarg Depot", 2],
+  [10, "Orxon", "Kogor Refinery", 2],
+  [11, "Pokitaru", "Jowai Resort", 1],
+  [12, "Hoven", "Bomb Factory", 2],
+  [13, "Oltanis Orbit", "Gemlik Base", 1],
+  [14, "Oltanis", "Gorda City Ruins", 4],
+  [15, "Quartu", "Robot Plant", 2],
+  [16, "Kalebo III", "Gadgetron Site", 2],
+  [17, "Veldin Orbit", "Drek's Fleet", 2],
+  [18, "Veldin", "Kyzil Plateau", 3],
+];
+const savedFields: Record<string, SaveFields> = {};
+
+function mockSave(serial: string, slot: number): SaveView {
+  const owned = new Set([2, 10, 12, 15, 16, 28]);
+  const fields: SaveFields = savedFields[`${serial}/${String(slot)}`] ?? {
+    bolts: slot === 1 ? 4890 : 1250,
+    nanotech: "premium",
+    items: mockItems.map(([id, , , max, gold]) => ({
+      id,
+      owned: owned.has(id),
+      ammo: max > 0 ? (owned.has(id) ? Math.floor(max / 2) : 0) : null,
+      gold: gold ? id === 15 : null,
+    })),
+    planets: mockPlanets.map(([id, , , n]) => ({
+      id,
+      unlocked: id <= 4,
+      goldBolts: Array.from({ length: n }, (_, k) => id <= 3 && k === 0),
+    })),
+    skillPoints: Array.from({ length: 30 }, (_, k) => k % 7 === 0),
+  };
+  return {
+    serial,
+    slot,
+    fingerprint: "preview",
+    planetName: slot === 1 ? "Kerwan" : "Veldin",
+    savedAt: "2026-10-09 17:21:44",
+    fields: structuredClone(fields),
+    items: mockItems.map(([id, name, kind, max, gold]) => ({
+      id,
+      name,
+      kind,
+      maxAmmo: max > 0 ? max : null,
+      hasGold: gold,
+    })),
+    planets: mockPlanets.map(([id, name, location]) => ({ id, name, location, canUnlock: id <= 16 })),
+    maxBolts: 9_999_999,
+  };
+}
+
 // ---- the commands ------------------------------------------------------------------
 
 const delay = <T>(value: T) =>
@@ -534,6 +634,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
             size: 59912,
             exists: true,
             isEmpty: false,
+            editable: true,
             bolts: 1250,
             planetId: 0,
             planetName: "Veldin",
@@ -547,6 +648,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
             size: 59912,
             exists: true,
             isEmpty: false,
+            editable: true,
             bolts: 4890,
             planetId: 3,
             planetName: "Kerwan",
@@ -560,6 +662,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
             size: 59912,
             exists: true,
             isEmpty: true,
+            editable: false,
             bolts: null,
             planetId: null,
             planetName: null,
@@ -573,6 +676,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
             size: 59912,
             exists: true,
             isEmpty: true,
+            editable: false,
             bolts: null,
             planetId: null,
             planetName: null,
@@ -586,6 +690,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
             size: 59912,
             exists: true,
             isEmpty: true,
+            editable: false,
             bolts: null,
             planetId: null,
             planetName: null,
@@ -616,6 +721,24 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
     case "restore_backup":
     case "open_saves_folder":
       return delay(null);
+    case "read_save":
+      return delay(mockSave(typeof args.serial === "string" ? args.serial : "SCES_509.16", Number(args.slot ?? 0)));
+    case "write_save": {
+      const view = mockSave(String(args.serial), Number(args.slot));
+      const fields = args.fields as SaveFields;
+      if (fields.bolts > view.maxBolts) throw new Error(`bolts go up to ${view.maxBolts}`);
+      savedFields[`${String(args.serial)}/${String(args.slot)}`] = structuredClone(fields);
+      const name = `.backup_${Math.floor(Date.now() / 1000)}_before_edit_slot${Number(args.slot) + 1}`;
+      return delay<WriteResult>({
+        backup: {
+          name,
+          path: `/home/you/.local/share/openrac/memcard/${String(args.serial)}/${name}`,
+          createdMillis: Date.now(),
+          totalSize: 364544,
+        },
+        view: { ...view, fields: structuredClone(fields) },
+      });
+    }
     default:
       throw new Error(`the preview has no ${command}: add it to src/lib/mock.ts`);
   }
