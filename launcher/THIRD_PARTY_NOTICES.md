@@ -73,6 +73,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## ReRAC
+
+The save editor (`core/src/save_edit.rs`) decodes the Ratchet & Clank save from
+the game's own code in OpenRAC's decompilations, and checked what each chunk
+means against ReRAC's notes on the save (`docs/plan/game_state.md`) and its
+game state (`crates/rc-game/src/game_state.rs`), ISC license, which in turn
+checked its chunk names against Wrench's `savegame.wtf`. Only facts about the
+format were used (chunk ids, sizes and meanings); no code was taken.
+
 ## Fonts
 
 Bundled into the app from npm (`@fontsource/audiowide`,

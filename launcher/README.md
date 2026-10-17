@@ -87,7 +87,11 @@ the disc image and saves are kept.
   menu beside it. The games page shows the same button on each game's tile.
 - **Save files**: the port's memory card (`~/.local/share/openrac/memcard/<serial>/`
   on Linux) with each slot's planet, bolts and save time, backups you can
-  restore, and the folder.
+  restore, and the folder. **Edit** opens a slot of Ratchet & Clank in the save
+  editor: bolts, health upgrades, weapons and gadgets, ammo, gold weapons,
+  gold bolts, planets and skill points. It refuses to write while the game runs
+  with that card, backs the card up before every write, and offers Undo
+  ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#the-save-editor)).
 - **Level editor**: under **Mods** (below), and in the game's menu.
 - **Layout**: Settings → Launcher switches between Compact (the default:
   the game's name and its main button side by side) and Classic, stacked and
@@ -185,6 +189,9 @@ launcher/
 - **Games set up from discs**: the install folder (Settings; by default the
   launcher's per-user data folder), `active/<game>/data/`, as OpenGOAL lays
   it out.
+- **The memory card**, only when you ask: a backup (`.backup_<time>…` beside the
+  game's folder in the card), a restored backup, or a slot changed in the save
+  editor, always after a backup of the whole card.
 - **Through the tools it runs**: whatever those tools write in the checkout
   (`baserom/` inputs, build output, `assets/godot` for the level editor), all
   ignored by git.

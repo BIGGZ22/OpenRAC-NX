@@ -107,6 +107,9 @@ mirrored in `src/lib/api.ts`.
 | `overrides_list`                                                | `{game}`                                                | the game's overrides packs (`core/src/overrides.rs`), in order                                   |
 | `overrides_set_enabled` / `overrides_move` / `overrides_remove` | `{game, id, enabled}` / `{game, id, up}` / `{game, id}` | the packs again, changed                                                                         |
 | `open_game_folder`                                              | `{game, path}`                                          | opens a folder inside the game's set-up folder (an export); refuses anything else                |
+| `inspect_saves` / `backup_saves` / `restore_backup`             | `{serial}` / `{serial, note}` / `{serial, backupName}`  | the card's slots and backups; a backup; a restore (refused while the game uses the card)         |
+| `read_save`                                                     | `{serial, slot}`                                        | one slot for the save editor (`core/src/save_edit.rs`, `SaveView`)                               |
+| `write_save`                                                    | `{serial, slot, fingerprint, fields}`                   | writes the editor's fields, safely (below); the backup it took and the slot as it now is         |
 | `cancel_job`                                                    | `{id}`                                                  |                                                                                                  |
 | `open_path`                                                     | `{path}` relative to the checkout                       | opens it with the system; refuses paths outside the checkout                                     |
 | `open_url`                                                      | `{url}`                                                 | opens an `https://` address in the browser                                                       |
@@ -164,6 +167,61 @@ A component in `src/pages/`, a `Page` name in `lib/app.svelte.ts`, a tab in
 `components/Header.svelte` and a branch in `App.svelte`. Pages read `app` and
 call the functions of `lib/app.svelte.ts`; they do not call `api` for anything
 that changes state.
+
+## The save editor
+
+On the Play page, **Edit** beside a slot of the Save files list opens
+`components/SaveEditor.svelte` over that slot. The format and every field
+are in `core/src/save_edit.rs`, with unit tests on saves built in code (no
+real save file is kept in the repository).
+
+**The format.** Both Ratchet & Clank discs (PAL `SCES_509.16`, US
+`SCUS_971.99`) write the same `saveN.bin`: their descriptor tables list the
+same chunks with the same ids and sizes, so one decoder serves both, picked
+by the card's serial; the page never says which disc. The file is two section
+sizes (0x1530, 0xaa4), a global section and 20 per-planet sections; a section
+is `{size, crc16}` then `{id, size, bytes}` chunks padded to 4 and an end
+marker. The checksum is the game's `memcard_Checksum` (CRC-16, polynomial
+0x1F45, seed 0xEDB88320 of which the low 16 bits count, nothing above 0x1800
+bytes). On load the game checks the two sizes, each section's checksum (non-zero
+and equal) and every chunk's id and size; the editor keeps ids, sizes and
+padding as they were and writes a fresh checksum for each section (a checksum
+that would come out 0 is avoided through a padding byte the game never reads),
+so an edited save loads. It came from the game's own code: `memcard.c`,
+`pause.c`, `vendor.c` and the level code of the PAL decomp, and
+`src/storage/memory_card/` of the US one; the item names and limits from the
+executable's item and vendor tables; checked against ReRAC's notes
+([THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md#rerac)).
+
+**The fields**, only those whose meaning the code makes plain: bolts (to
+9,999,999, the game's own limit), health (Premium Nanotech for 5, Ultra for
+8: the two story flags and the maximum together), weapons and gadgets owned,
+ammo (to each weapon's limit, the vendor's "full" test), the ten gold weapons,
+the 40 gold bolts by planet, the planets unlocked for the ship (Novalis to
+Kalebo III; the others come with the story) and the 30 skill points. Giving
+or taking an item keeps the related chunks as the game does: owned and
+acquired, the vendor's stock, and the quick select and equipped slots, which
+let go of an item taken away. Unlocking a planet adds it to the galaxy map
+after those unlocked before it.
+
+**Safety.** `write_save` refuses to write when a game program (by its name,
+`openrac-rac1-pal` or `Ratchet & Clank (PAL)`, and the same for NTSC) runs
+with that card: its `--cards` folder, or its default card when it has none,
+and also when the process list cannot be read. It refuses when the file
+changed since the page read it (a digest), and when a value is out of range
+(checked on the page and again in Rust). It backs the whole card up to
+`.backup_<time>_before_edit_slotN` (in the Backups list, never overwriting
+an earlier backup), writes a temporary file beside the save, reads it back,
+and replaces the save in one rename. After a save the editor offers Undo,
+which restores that backup. Restoring any backup is refused while the game
+runs with the card, too.
+
+**Checking it with the game.** Copy the card folder somewhere else, edit a
+slot there (a few lines of Rust over `save_edit::write_save`), and start the
+port with `--cards <copy>/<serial>`: Load Game lists the slot with the new
+bolts, and loading it logs `bolts N` and shows the weapons in the pause menu
+([docs/port/RAC1_PAL_TESTING.md](../../docs/port/RAC1_PAL_TESTING.md) for
+scripted presses and pictures). Never point a test at the player's own card.
 
 ## Security
 
