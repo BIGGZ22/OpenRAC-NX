@@ -631,6 +631,11 @@ function mockSave(serial: string, slot: number): SaveView {
     })),
     maxBolts: 9_999_999,
     chunks: mockChunks(serial, slot, fields),
+    playedSeconds: slot === 1 ? 3 * 3600 + 12 * 60 : 47 * 60,
+    // The names come from the player's disc; the preview has none, so ?skillnames shows sample ones.
+    skillNames: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("skillnames")
+      ? Array.from({ length: 30 }, (_, k) => `Skill point name ${String(k + 1)}`)
+      : [],
   };
 }
 

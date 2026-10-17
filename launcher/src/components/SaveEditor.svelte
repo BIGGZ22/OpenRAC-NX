@@ -9,7 +9,21 @@
   import Icon from "$components/Icon.svelte";
   import { api, type Nanotech, type SaveBackupInfo, type SaveChange, type SaveFields, type SaveView } from "$lib/api";
   import { app, toast } from "$lib/app.svelte";
-  import { changed, chunkBytes, fieldErrors, goldBoltCount, rawPatches, setOwned, skillCount } from "$lib/saveEdit";
+  import {
+    changed,
+    chunkBytes,
+    fieldErrors,
+    fillAllAmmo,
+    giveAll,
+    goldBoltCount,
+    rawPatches,
+    setAllGoldBolts,
+    setAllPlanets,
+    setOwned,
+    skillCount,
+    slotTitle,
+    takeAll,
+  } from "$lib/saveEdit";
   import { onMount } from "svelte";
 
   let {
@@ -122,6 +136,26 @@
     if (p) p.unlocked = true;
   }
 
+  /** The player view's sections, for the row of links that stays at the top. */
+  const sections: [string, string][] = [
+    ["se-ratchet", "Ratchet"],
+    ["se-weapons", "Weapons"],
+    ["se-gadgets", "Gadgets and items"],
+    ["se-planets", "Planets"],
+    ["se-skills", "Skill points"],
+  ];
+
+  function jump(id: string) {
+    document.getElementById(id)?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+
+  const storyWarning =
+    "Taking away something the story needs, like the Heli-Pack or the Swingshot, can leave Ratchet stuck.";
+
+  function takeAllGadgets() {
+    if (view && fields && confirm(`${storyWarning} Take away every gadget and item?`)) takeAll(view, fields, "gadget");
+  }
+
   function setAllSkills(on: boolean) {
     if (fields) fields.skillPoints = fields.skillPoints.map(() => on);
   }
@@ -142,11 +176,9 @@
   <div class="modal rise" role="dialog" aria-modal="true" aria-labelledby="save-editor-title">
     <div class="head">
       <div class="grow">
-        <h2 id="save-editor-title">Edit slot {slot + 1}</h2>
-        {#if view}
-          <p class="sub">
-            {view.planetName ?? "Unknown planet"}{view.savedAt ? ` · saved ${view.savedAt}` : ""}
-          </p>
+        <h2 id="save-editor-title">{view ? slotTitle(view) : `Slot ${String(slot + 1)}`}</h2>
+        {#if view?.savedAt}
+          <p class="sub">Saved {view.savedAt}</p>
         {/if}
       </div>
       {#if advancedOn && view}
@@ -185,25 +217,18 @@
           }}
         />
       {:else}
-        <section aria-labelledby="se-ratchet">
-          <h3 id="se-ratchet">Ratchet</h3>
-          <div class="line">
-            <label for="se-planet">Planet</label>
-            <div class="field">
-              <select
-                id="se-planet"
-                value={fields.planet}
-                onchange={(e) => {
-                  choosePlanet(Number(e.currentTarget.value));
-                }}
-              >
-                {#each landing as l (l.id)}
-                  <option value={l.id}>{l.name} · {l.location}{l.canLand ? "" : " (by the story)"}</option>
-                {/each}
-              </select>
-              <span class="hint">The save loads there; Ratchet starts where the ship lands.</span>
-            </div>
-          </div>
+        <nav class="jump" aria-label="Sections">
+          {#each sections as [id, label] (id)}
+            <button
+              class="ghost small"
+              onclick={() => {
+                jump(id);
+              }}>{label}</button
+            >
+          {/each}
+        </nav>
+        <section id="se-ratchet" aria-labelledby="se-ratchet-h">
+          <h3 id="se-ratchet-h">Ratchet</h3>
           <div class="line">
             <label for="se-bolts">Bolts</label>
             <div class="field">
@@ -234,8 +259,31 @@
           </div>
         </section>
 
-        <section aria-labelledby="se-weapons">
-          <h3 id="se-weapons">Weapons</h3>
+        <section id="se-weapons" aria-labelledby="se-weapons-h">
+          <h3 id="se-weapons-h">
+            Weapons
+            <span class="grow"></span>
+            <span class="actions">
+              <button
+                class="ghost small"
+                onclick={() => {
+                  if (view && fields) giveAll(view, fields, "weapon");
+                }}>Give all</button
+              >
+              <button
+                class="ghost small"
+                onclick={() => {
+                  if (view && fields) fillAllAmmo(view, fields);
+                }}>Fill all ammo</button
+              >
+              <button
+                class="ghost small"
+                onclick={() => {
+                  if (view && fields) takeAll(view, fields, "weapon");
+                }}>Take all</button
+              >
+            </span>
+          </h3>
           <ul class="rows">
             {#each weapons as w (w.id)}
               {@const s = item(w.id)}
@@ -287,8 +335,20 @@
           {/if}
         </section>
 
-        <section aria-labelledby="se-gadgets">
-          <h3 id="se-gadgets">Gadgets and items</h3>
+        <section id="se-gadgets" aria-labelledby="se-gadgets-h">
+          <h3 id="se-gadgets-h">
+            Gadgets and items
+            <span class="grow"></span>
+            <span class="actions">
+              <button
+                class="ghost small"
+                onclick={() => {
+                  if (view && fields) giveAll(view, fields, "gadget");
+                }}>Give all</button
+              >
+              <button class="ghost small" onclick={takeAllGadgets}>Take all</button>
+            </span>
+          </h3>
           <div class="chips">
             {#each gadgets as g (g.id)}
               {@const s = item(g.id)}
@@ -300,15 +360,59 @@
               {/if}
             {/each}
           </div>
-          <p class="note">
-            Taking away something the story needs, like the Heli-Pack or the Swingshot, can leave Ratchet stuck.
-          </p>
+          <p class="note">{storyWarning}</p>
         </section>
 
-        <section aria-labelledby="se-planets">
-          <h3 id="se-planets">
+        <section id="se-planets" aria-labelledby="se-planets-h">
+          <h3 id="se-planets-h">
             Planets <span class="count">{goldBoltCount(fields)[0]} of {goldBoltCount(fields)[1]} gold bolts</span>
+            <span class="grow"></span>
+            <span class="actions">
+              <button
+                class="ghost small"
+                title="Ship destinations only: the story's planets stay as they are"
+                onclick={() => {
+                  if (view && fields) setAllPlanets(view, fields, true);
+                }}>Unlock all</button
+              >
+              <button
+                class="ghost small"
+                title="The planet the save loads on stays unlocked"
+                onclick={() => {
+                  if (view && fields) setAllPlanets(view, fields, false);
+                }}>Lock all</button
+              >
+              <button
+                class="ghost small"
+                onclick={() => {
+                  if (fields) setAllGoldBolts(fields, true);
+                }}>All gold bolts</button
+              >
+              <button
+                class="ghost small"
+                onclick={() => {
+                  if (fields) setAllGoldBolts(fields, false);
+                }}>No gold bolts</button
+              >
+            </span>
           </h3>
+          <div class="line first">
+            <label for="se-planet">Load on</label>
+            <div class="field">
+              <select
+                id="se-planet"
+                value={fields.planet}
+                onchange={(e) => {
+                  choosePlanet(Number(e.currentTarget.value));
+                }}
+              >
+                {#each landing as l (l.id)}
+                  <option value={l.id}>{l.name} · {l.location}{l.canLand ? "" : " (by the story)"}</option>
+                {/each}
+              </select>
+              <span class="hint">The save loads there and Ratchet starts where the ship lands; it stays unlocked.</span>
+            </div>
+          </div>
           <ul class="rows planets">
             {#each view.planets as p, i (p.id)}
               {@const s = fields.planets[i]}
@@ -345,8 +449,8 @@
           </ul>
         </section>
 
-        <section aria-labelledby="se-skills">
-          <h3 id="se-skills">
+        <section id="se-skills" aria-labelledby="se-skills-h">
+          <h3 id="se-skills-h">
             Skill points <span class="count">{skillCount(fields)[0]} of {skillCount(fields)[1]}</span>
             <span class="grow"></span>
             <button
@@ -362,20 +466,39 @@
               }}>None</button
             >
           </h3>
-          <div class="skills" role="group" aria-label="Skill points">
-            {#each fields.skillPoints as on, k (k)}
-              <button
-                class="skill"
-                class:on
-                aria-pressed={on}
-                aria-label={`Skill point ${String(k + 1)}`}
-                onclick={() => {
-                  if (fields) fields.skillPoints[k] = !on;
-                }}>{k + 1}</button
-              >
-            {/each}
-          </div>
-          <p class="note">In the order the game keeps them.</p>
+          {#if view.skillNames.length === fields.skillPoints.length}
+            <div class="chips" role="group" aria-label="Skill points">
+              {#each fields.skillPoints as on, k (k)}
+                <label class="chip" class:on>
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    onchange={(e) => {
+                      if (fields) fields.skillPoints[k] = e.currentTarget.checked;
+                    }}
+                  />
+                  {view.skillNames[k]}
+                </label>
+              {/each}
+            </div>
+          {:else}
+            <div class="skills" role="group" aria-label="Skill points">
+              {#each fields.skillPoints as on, k (k)}
+                <button
+                  class="skill"
+                  class:on
+                  aria-pressed={on}
+                  aria-label={`Skill point ${String(k + 1)}`}
+                  onclick={() => {
+                    if (fields) fields.skillPoints[k] = !on;
+                  }}>{k + 1}</button
+                >
+              {/each}
+            </div>
+            <p class="note">
+              Numbered in the order the game keeps them: their names are read from your disc once it is set up.
+            </p>
+          {/if}
         </section>
       {/if}
     </div>
@@ -440,8 +563,8 @@
     position: relative;
     z-index: 1;
     width: 100%;
-    max-width: 720px;
-    max-height: calc(100vh - 48px);
+    max-width: 980px;
+    height: calc(100vh - 48px);
     background: var(--panel);
     border: 1px solid var(--line-strong);
     border-radius: var(--radius);
@@ -494,15 +617,48 @@
   }
 
   .body {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
-    padding: 6px 22px 18px;
+    padding: 0 22px 18px;
     display: flex;
     flex-direction: column;
     gap: 18px;
   }
 
+  /* The section links stay at the top of the scrolling body. */
+  .jump {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0 -22px;
+    padding: 8px 18px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+
+  section {
+    scroll-margin-top: 52px;
+  }
+
+  .actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 2px;
+    font-family: var(--font-sans);
+  }
+
+  .line.first {
+    border-top: none;
+  }
+
   section h3 {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 10px;
     margin: 14px 0 8px;

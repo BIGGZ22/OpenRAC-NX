@@ -91,3 +91,52 @@ export function writeI32(b: number[], i: number, v: number): void {
   const n = v | 0;
   for (let k = 0; k < 4; k++) b[i * 4 + k] = (n >>> (8 * k)) & 0xff;
 }
+
+// ---- quick actions: the same rules as the single edits ----------------------------
+// Giving goes through setOwned (a weapon given empty comes full); the Rust side then keeps the
+// vendor stock, the acquired flags and the quick select in step, item by item, as for one edit.
+
+/** Gives every item of a kind ("weapon" or "gadget") the save does not have. */
+export function giveAll(view: SaveView, f: SaveFields, kind: "weapon" | "gadget"): void {
+  for (const info of view.items.filter((i) => i.kind === kind)) setOwned(view, f, info.id, true);
+}
+
+/** Takes every item of a kind away. */
+export function takeAll(view: SaveView, f: SaveFields, kind: "weapon" | "gadget"): void {
+  for (const info of view.items.filter((i) => i.kind === kind)) setOwned(view, f, info.id, false);
+}
+
+/** Fills the ammo of every weapon the save owns. */
+export function fillAllAmmo(view: SaveView, f: SaveFields): void {
+  for (const item of f.items) {
+    const max = view.items.find((i) => i.id === item.id)?.maxAmmo ?? null;
+    if (item.owned && max !== null) item.ammo = max;
+  }
+}
+
+/** Every gold bolt found, or none. */
+export function setAllGoldBolts(f: SaveFields, found: boolean): void {
+  for (const p of f.planets) p.goldBolts = p.goldBolts.map(() => found);
+}
+
+/** Every ship destination unlocked, or locked but the planet the save loads on. */
+export function setAllPlanets(view: SaveView, f: SaveFields, unlocked: boolean): void {
+  for (const p of f.planets) {
+    if (!view.planets.find((i) => i.id === p.id)?.canUnlock) continue;
+    p.unlocked = unlocked || p.id === f.planet;
+  }
+}
+
+/** The slot's title: "Slot 2 · Kerwan · 4,890 bolts · 3h 12m", from the save as read. */
+export function slotTitle(view: SaveView): string {
+  const s = view.playedSeconds;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const time = h > 0 ? `${String(h)}h ${String(m)}m` : `${String(m)}m`;
+  return [
+    `Slot ${String(view.slot + 1)}`,
+    view.planetName ?? "Unknown planet",
+    `${view.fields.bolts.toLocaleString("en-US")} bolts`,
+    time,
+  ].join(" · ");
+}

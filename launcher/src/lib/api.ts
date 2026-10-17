@@ -364,6 +364,10 @@ export interface SaveView {
   levels: PlanetInfo[];
   maxBolts: number;
   chunks: ChunkView[];
+  /** Time played as the game counts it, in seconds. */
+  playedSeconds: number;
+  /** The 30 skill points' names from the game's text, in save order; empty when not readable. */
+  skillNames: string[];
 }
 
 export interface WriteResult {

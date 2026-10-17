@@ -3,6 +3,12 @@ import type { SaveView } from "./api";
 import {
   bytesToHex,
   changed,
+  fillAllAmmo,
+  giveAll,
+  setAllGoldBolts,
+  setAllPlanets,
+  slotTitle,
+  takeAll,
   chunkBytes,
   chunkKey,
   fieldErrors,
@@ -41,6 +47,8 @@ function view(): SaveView {
     levels: [],
     maxBolts: 9_999_999,
     chunks: [],
+    playedSeconds: 3 * 3600 + 12 * 60 + 5,
+    skillNames: [],
   };
 }
 
@@ -108,5 +116,40 @@ describe("the advanced editor's bytes", () => {
     expect(rawPatches(v, bytes)).toEqual([]);
     bytes[chunkKey(3, 3003)] = [1, 0, 0, 0];
     expect(rawPatches(v, bytes)).toEqual([{ section: 3, id: 3003, hex: "01 00 00 00" }]);
+  });
+});
+
+describe("the quick actions", () => {
+  it("give, fill and take the way single edits do", () => {
+    const v = view();
+    const f = structuredClone(v.fields);
+    giveAll(v, f, "weapon");
+    expect(f.items.map((i) => i.owned)).toEqual([false, true]);
+    expect(f.items[1]?.ammo).toBe(200);
+    giveAll(v, f, "gadget");
+    expect(f.items[0]?.owned).toBe(true);
+    const blaster = f.items[1];
+    if (blaster) blaster.ammo = 3;
+    fillAllAmmo(v, f);
+    expect(f.items[1]?.ammo).toBe(200);
+    takeAll(v, f, "weapon");
+    expect(f.items[1]?.owned).toBe(false);
+    expect(f.items[0]?.owned).toBe(true);
+  });
+
+  it("set every gold bolt and planet, keeping the current planet unlocked", () => {
+    const v = view();
+    const f = structuredClone(v.fields);
+    setAllGoldBolts(f, true);
+    expect(f.planets[0]?.goldBolts).toEqual([true, true, true]);
+    setAllPlanets(v, f, false);
+    expect(f.planets[0]?.unlocked).toBe(true); // the save is on Novalis
+    f.planet = 3;
+    setAllPlanets(v, f, false);
+    expect(f.planets[0]?.unlocked).toBe(false);
+  });
+
+  it("titles the slot with what is in it", () => {
+    expect(slotTitle(view())).toBe("Slot 1 · Veldin · 10 bolts · 3h 12m");
   });
 });
