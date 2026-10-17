@@ -367,9 +367,47 @@ fn backup_saves(serial: String, note: Option<String>) -> Result<openrac_launcher
     openrac_launcher_core::saves::backup_saves(&serial, note.as_deref())
 }
 
+/// Restores a backup of the card; refused while the game runs with it, as an edit is.
 #[tauri::command]
-fn restore_backup(serial: String, backup_name: String) -> Result<(), String> {
-    openrac_launcher_core::saves::restore_backup(&serial, &backup_name)
+async fn restore_backup(serial: String, backup_name: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let card = openrac_launcher_core::saves::get_memcard_dir(&serial);
+        if let Some(game) = openrac_launcher_core::save_edit::card_in_use(&card, &serial)? {
+            return Err(format!("{game} is running with this memory card: close it first"));
+        }
+        openrac_launcher_core::saves::restore_backup(&serial, &backup_name)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// One save slot for the save editor (core/src/save_edit.rs).
+#[tauri::command]
+async fn read_save(serial: String, slot: usize) -> Result<openrac_launcher_core::save_edit::SaveView, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let card = openrac_launcher_core::saves::get_memcard_dir(&serial);
+        openrac_launcher_core::save_edit::read_save(&card, &serial, slot)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Writes the save editor's fields into a slot: refused while the game runs with the card or if
+/// the file changed since it was read; the card is backed up first.
+#[tauri::command]
+async fn write_save(
+    serial: String,
+    slot: usize,
+    fingerprint: String,
+    fields: openrac_launcher_core::save_edit::SaveFields,
+) -> Result<openrac_launcher_core::save_edit::WriteResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        use openrac_launcher_core::save_edit;
+        let card = openrac_launcher_core::saves::get_memcard_dir(&serial);
+        save_edit::write_save(&card, &serial, slot, &fingerprint, &fields, || save_edit::card_in_use(&card, &serial))
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// A game's overrides folder (`<data>/overrides`), from the install folder in Settings.
@@ -605,6 +643,8 @@ pub fn run() {
             backup_saves,
             restore_backup,
             open_saves_folder,
+            read_save,
+            write_save,
             overrides_list,
             overrides_set_enabled,
             overrides_move,
