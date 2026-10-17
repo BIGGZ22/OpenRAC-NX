@@ -1,0 +1,51 @@
+# Publishes a launcher release's draft by itself once everything is green, so
+# a release can be started and left: when the launcher workflow has built the
+# installers for tag `launcher-vX.Y.Z` (and left them on a draft), the latest
+# checks run on master has passed, and launcher/release-notes/X.Y.Z.md exists
+# on master. The notes become the release's text. A draft without a notes file
+# stays a draft, to be published by hand as before.
+name: publish
+
+on:
+  workflow_run:
+    workflows: [launcher, checks]
+    types: [completed]
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+      - name: Publish the newest launcher draft whose build and checks passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag=$(gh release list -R "$REPO" --limit 20 --json tagName,isDraft \
+                -q '[.[] | select(.isDraft and (.tagName | startswith("launcher-v")))][0].tagName // ""')
+          if [ -z "$tag" ]; then echo "no launcher draft"; exit 0; fi
+          version=${tag#launcher-v}
+          notes="launcher/release-notes/$version.md"
+          if [ ! -f "$notes" ]; then echo "$tag: no $notes, leaving the draft"; exit 0; fi
+          build=$(gh run list -R "$REPO" --workflow launcher --branch "$tag" --limit 1 \
+                  --json conclusion -q '.[0].conclusion // ""')
+          checks=$(gh run list -R "$REPO" --workflow checks --branch master --limit 1 \
+                   --json status,conclusion -q '.[0] | "\(.status) \(.conclusion)"')
+          echo "$tag: build=$build checks=$checks"
+          if [ "$build" != success ] || [ "$checks" != "completed success" ]; then
+            echo "not yet"; exit 0
+          fi
+          gh release edit "$tag" -R "$REPO" --notes-file "$notes" --draft=false --latest
+          echo "published $tag"
