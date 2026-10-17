@@ -1875,15 +1875,17 @@ typedef struct { int a[4]; } V __attribute__((aligned(16)));
 extern float func_001F9B88(float);
 extern void func_001F9D48(V *, V *);
 extern void func_001F9D10(V *, V *);
-void func_L00_0025EAC8(V *a, V *b, float r) {
+extern float func_001F9D48_r(V *, V *) __asm__("func_001F9D48");
+extern float func_001F9D10_r(V *, V *) __asm__("func_001F9D10");
+float func_L00_0025EAC8(V *a, V *b, float r) {
     V t0, t1;
     V *p = &t0, *q = &t1;
     t0 = *a;
     t1 = *b;
     if (0.0f < r && FastAbsF(((float *)p)[2] - ((float *)q)[2]) < r) {
-        func_001F9D48(p, q);
+        return func_001F9D48_r(p, q);
     } else {
-        FastVecDist(p, q);
+        return func_001F9D10_r(p, q);
     }
 }
 

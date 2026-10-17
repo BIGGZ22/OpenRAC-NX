@@ -605,6 +605,7 @@ extern float func_001FA748(float, float);
 extern float func_001FA790(float, float);
 extern char D_0013E633[];
 extern float D_0015EE6C MACRO_ADDR;
+extern void func_L00_00250800(void *, int, void *);
 
 // Steer the camera yaw toward a target angle, clamped to a per-frame limit.
 void func_L02_002DA728(char *moby) {

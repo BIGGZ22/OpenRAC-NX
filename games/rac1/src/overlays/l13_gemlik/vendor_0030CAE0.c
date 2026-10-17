@@ -571,6 +571,8 @@ extern char D_0013D50F[];
 extern int D_0014C290[][64] NOT_SDA;
 extern int D_L13_001BAAE0[];
 extern float D_L13_0015F660[] MACRO_ADDR;
+extern void func_L00_0025E4B0(void *, short *);
+extern void func_L00_0025E590(void *, void *);
 
 /* UpdateMoby_1805: deletes itself if its bit is set in D_0014C290. State 0 moves to state 1; state 1 takes a hit's value
  * (at +0x2C) off the float at data + 0x20 and moves to state 2 when it falls short; state 2 sets the bit and spawns

@@ -501,8 +501,9 @@ extern void func_001166FC(Cfg13 *, void *);
 /* The struct copy is a plain assignment: at alignment 1 this compiler
    expands the 0x13 bytes as unaligned ldl/ldr + sdl/sdr pairs with the
    trailing three bytes done singly, which is exactly retail's shape. */
+extern int func_00116810_hud(void *) __asm__("func_00116810");
 void func_001FFE88(void *arg0) {
-    if ((unsigned int)func_00116810() < 0x50) {
+    if ((unsigned int)func_00116810_hud(arg0) < 0x50) {
         D_0019A540 = D_001E7DD8;
     }
     func_001166FC(&D_0019A540, arg0);

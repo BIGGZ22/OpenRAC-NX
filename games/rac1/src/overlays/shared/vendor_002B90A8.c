@@ -40,7 +40,7 @@ void func_L01_002B90E8(char *base, int n) {
         *(int *)&D_L01_00161298 = b;
     }
 }
-extern void func_L01_002B90E8_2B9198(void) __asm__("func_L01_002B90E8");
+extern void func_L01_002B90E8_2B9198(char *, int) __asm__("func_L01_002B90E8");
 extern void func_L01_00262D28(char *, char *, char *, float);
 extern float D_L01_001CAF80[];
 extern short D_L01_001612A0;
@@ -50,7 +50,7 @@ extern short D_L01_001612A4;
 void func_L01_002B9198(char *p, int n) {
     if (1.0f - D_L01_001CAF80[8] <= *(float *)&D_L01_001612A4) {
         *(float *)&D_L01_001612A4 = D_L01_001CAF80[8];
-        func_L01_002B90E8_2B9198();
+        func_L01_002B90E8_2B9198(p, n);
         *(int *)&D_L01_001612A0 = *(int *)&D_L01_0016129C;
     } else {
         *(int *)&D_L01_001612A0 = 2;
@@ -1630,7 +1630,7 @@ extern int func_L00_0025D6F0(void *, void *);
 extern int func_L00_00262BC0(int, void *, void *, void *);
 extern void func_L00_0025AC00_EF078(void *, void *, int, void *, void *, float) __asm__("func_L00_0025AC00");
 extern int func_L00_002DDEA0(void *, void *);
-extern int func_L00_002584A8(void *, int, int);
+extern void func_L00_002584A8(void *, int, int);
 extern int func_00215B18(float, void *);
 extern int func_00215570(void *, int);
 extern void func_0022ED80(int, int, char *);

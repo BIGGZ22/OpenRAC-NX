@@ -523,7 +523,7 @@ void func_002032D0(void) {
  */
 extern int *D_0015EF4C MACRO_ADDR;
 extern char *D_0019A500;
-extern void func_0020C468(int);
+extern void func_0020C468(int, int);
 
 /* LoadCompressedHudBank(int, char *). Each scaled index in its own local
    gives retail's base-first addu; written inline, the multiply goes
@@ -532,7 +532,7 @@ void func_00203548(int idx, int size) {
     if (((size + 0xF) & 0xFFFFFFF0) != 0) {
         int *base = D_0015EF4C;
         int off = idx * 8;
-        func_0020C468(*(int *)((char *)base + off + 0x28) + (int)base);
+        func_0020C468(*(int *)((char *)base + off + 0x28) + (int)base, (size + 0xF) & 0xFFFFFFF0);
     }
     {
         int off = idx * 4;

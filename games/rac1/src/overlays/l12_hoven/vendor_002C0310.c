@@ -963,6 +963,7 @@ void func_L12_002E4838(struct Moby *moby) {
 extern short D_L12_001619A0;
 extern char *func_L00_0026DA50(void *pos, void *dir, int c, int d, int n, int k, float f);
 extern void *func_L00_0026DEA0_x(void *, float, float, float, int, void *, float, int) __asm__("func_L00_0026DEA0");
+extern void func_001F9EC0(void *, void *, void *);
 
 /* Hoven engine exhaust: emits a flame and a smoke puff from each of the moby's two nozzles (the second one
  * mirrored across its local Y axis), with random jitter. */

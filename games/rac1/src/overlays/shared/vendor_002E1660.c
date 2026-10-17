@@ -846,7 +846,7 @@ void func_L00_002E5618(char *a, void *out) {
     qcopy(out, D_0013E633 + 0xE9D);
 }
 typedef struct { float f[4]; } __attribute__((aligned(16))) VQ;
-extern int func_L00_001EE530_q(VQ *) __asm__("func_L00_001EE530");
+extern int func_L00_001EE530_q(VQ *, float) __asm__("func_L00_001EE530");
 extern void func_001F9BF0(float *, float *, float *);
 extern void func_001F9C30(void *, void *, float);
 extern void func_001F9BD8(void *, void *, void *);
@@ -863,7 +863,7 @@ int func_L00_002E5630(VQ *p, float r) {
     float l, inv;
     int *q;
     a = *p;
-    q = (int *)func_L00_001EE530_q(&a);
+    q = (int *)func_L00_001EE530_q(&a, r);
     if (q != 0) {
     e = (char *)D_L00_001601B4 + (q[5] << 7);
     c = e + 0x30;

@@ -969,11 +969,11 @@ float func_00215A98(int arg0, float arg1) {
     return arg1 / scale;
 }
 
-extern float func_0020D830(void);
+extern float func_0020D830(char *);
 extern float func_00215A98(int, float);
 
 int func_00215B18(char *arg0, float arg1) {
-    float now = func_0020D830();
+    float now = func_0020D830(arg0);
     float a = round_float_to_decimal_places(4, now - arg1);
     float b = round_float_to_decimal_places(4, *(float *)(arg0 + 0x58) * *(float *)(arg0 + 0x5C));
 

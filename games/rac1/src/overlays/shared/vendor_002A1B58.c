@@ -611,7 +611,7 @@ void func_L16_002D51A8(char *moby, int arg) {
         *(float *)(d + 0x2D4) = D_0015EE6C * 5.0f;
     }
 }
-extern float func_001F9D10(void *);
+extern float func_001F9D10(void *, void *);
 extern float func_00214D88(float *, float *, float, float, float, float);
 extern void func_001F9BF0(void *, void *, void *);
 extern void func_L00_001FF4B0(void *, void *, float);
@@ -621,7 +621,7 @@ extern void func_001F9BD8(void *, void *, void *);
 float func_L16_002D5280(char *moby, float *target) {
     char *data = *(char **)(moby + 0x78);
     char *p = data + 0x2C0;
-    float d = FastVecDist(p);
+    float d = FastVecDist(p, target);
     float b = D_0015EE70 * 4.0f;
     int zero[1];
     float vec[4];

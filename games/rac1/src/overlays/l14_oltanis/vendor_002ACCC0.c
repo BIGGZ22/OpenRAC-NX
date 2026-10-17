@@ -2348,8 +2348,8 @@ extern void func_L00_002592B0(char *moby, float *vel, float target, float k, flo
 /* steer a moby's position toward a target and update its velocity */
 int func_L14_002B6980(char *moby, char *a1, int a2, int a3, float *v, float *vel,
                       float f12, float f13, float f14, float f15, float f16, float f17, float f18) {
-    float tmp[3];
-    int r = func_L00_0025E860(a1, tmp, a2, a3, 0);
+    float tmp[4];
+    int r = func_L00_0025E860_AD858(a1, tmp, (void *)a2, (void *)a3, 0, f12);
     func_L00_0025C918((float *)(moby + 0x10), v, tmp[0], f13, f14, f15);
     func_L00_0025C918((float *)(moby + 0x14), v + 1, tmp[1], f13, f14, f15);
     func_L00_0025C918((float *)(moby + 0x18), v + 2, tmp[2], f13, f14, f15);

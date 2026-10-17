@@ -605,6 +605,8 @@ extern void func_L00_002EBF50(void *, void *, int, int, int);
 extern int func_001F9908_c(void *) __asm__("func_001F9908");
 extern void func_L00_002EC0C8(int);
 extern void func_L01_00240CE8(void);
+extern void func_L00_002EBE88(void *);
+extern void func_L00_002EBEE0(void *);
 
 /* Cutscene trigger: unless already seen, starts its camera sequence when the hero enters the volume (or it is
  * triggered), then ends it after its timer and re-arms. */
@@ -1411,7 +1413,7 @@ void func_L01_00309928(char *m) {
         FastVecAdd(dir, dir, step);
     }
 }
-extern float func_0020D830(void);
+extern float func_0020D830(void *);
 extern float func_001F9F90(float);
 extern void func_001F9BD8(void *, void *, void *);
 extern void func_001F9BC0(void *);
@@ -1434,7 +1436,7 @@ void func_L01_00309BB8(char *m) {
     char *t;
     char *g;
     if (*(unsigned char *)(m + 0x52) == 1) {
-        f = func_0020D830();
+        f = func_0020D830(m);
     } else {
         f = 170.0f;
     }
