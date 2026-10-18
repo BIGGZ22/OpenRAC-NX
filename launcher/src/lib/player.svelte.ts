@@ -4,6 +4,7 @@ import type { ActionView, GameView, VersionView } from "./api";
 import type { IconName } from "$components/Icon.svelte";
 import { pickFolder } from "./api";
 import { app, cancel, installGame, jobs, refresh, run, runChain, saveConfig, toast } from "./app.svelte";
+import { phaseLabel } from "./progress";
 import type { Job } from "./queue";
 
 export type PlayerKind =
@@ -23,7 +24,8 @@ export interface PlayerState {
   /** The main button's words. */
   label: string;
   icon: IconName;
-  /** One line under the button: what it will do, or why it cannot. */
+  /** One line under the button: what it will do, or why it cannot. While a job runs, its step in plain
+   *  words (progress.ts); the page shows that with the job's progress instead (JobProgress.svelte). */
   hint: string;
   /** The button is the page's main action (orange), not a stop or a dead end. */
   primary: boolean;
@@ -132,7 +134,7 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       kind: "installing",
       label: installing.state === "queued" ? "Waiting…" : "Stop",
       icon: "x",
-      hint: installing.lines.at(-1)?.line ?? "Reading your disc…",
+      hint: phaseLabel(installing),
       job: installing,
       status: "Setting up…",
       tone: "warn",
@@ -189,7 +191,7 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       kind: "playing",
       label: playing.state === "queued" ? "Waiting…" : "Stop the game",
       icon: "x",
-      hint: playing.lines.at(-1)?.line ?? "Starting the game…",
+      hint: phaseLabel(playing),
       job: playing,
       status: "Running",
       tone: "ok",
@@ -202,11 +204,7 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       kind: "building",
       label: building.state === "queued" ? "Waiting…" : "Stop",
       icon: "x",
-      hint:
-        building.lines.at(-1)?.line ??
-        (building.actionId === "port-levels"
-          ? "Reading the levels from your disc…"
-          : "Building the game for this computer…"),
+      hint: phaseLabel(building),
       job: building,
       status: building.actionId === "port-build" ? "Building…" : "Getting ready…",
       tone: "warn",

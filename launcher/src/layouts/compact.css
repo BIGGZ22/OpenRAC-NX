@@ -46,6 +46,11 @@
   justify-self: stretch;
   margin: 4px 0 0;
 }
+:root[data-layout="compact"] .hero > .job {
+  /* The running job's strip: its own row under the steps, the card's full width. */
+  grid-column: 1 / -1;
+  justify-self: stretch;
+}
 :root[data-layout="compact"] .page-ambient-bg {
   height: 360px;
 }

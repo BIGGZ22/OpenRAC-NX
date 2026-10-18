@@ -450,6 +450,17 @@ function start(scope: Scope, id: string, args: Record<string, unknown> = {}): St
   if (action.detached) return { id: 0, title: action.label, command, detached: true };
 
   const lines = [`$ ${command}`, "(browser preview: nothing really runs)", "working…", ...lastLines(id, args)];
+  // The build prints ninja's counter and long paths, as the real one does: to try the progress strip.
+  if (id === "port-build") {
+    const total = 60;
+    for (let n = 1; n <= total; n++) {
+      lines.splice(
+        2 + n,
+        0,
+        `[${n}/${total}] Building C object CMakeFiles/openrac-rac1-pal.dir/__w/OpenRAC/OpenRAC/games/rac1/pal/src/level_${n}/func_001E99D8_generated_long_name.c.o`,
+      );
+    }
+  }
   // ?crash: the game stops on a fault, as the port does (exit status 3, a report in crashes/).
   if (action.kind === "play" && query.has("crash")) {
     const crashed = [...lines, "[error] ==== the program stopped: fault ===="];

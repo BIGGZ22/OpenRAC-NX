@@ -8,11 +8,12 @@
   import CrashNotice from "$components/CrashNotice.svelte";
   import DeveloperPanel from "$components/DeveloperPanel.svelte";
   import Icon from "$components/Icon.svelte";
+  import JobProgress from "$components/JobProgress.svelte";
   import Menu, { type MenuItem } from "$components/Menu.svelte";
   import ReportsBlock from "$components/ReportsBlock.svelte";
   import SaveManagerBlock from "$components/SaveManagerBlock.svelte";
   import { api, type ActionView } from "$lib/api";
-  import { app, currentVersion, guard, run, uninstallGame } from "$lib/app.svelte";
+  import { app, clock, currentVersion, guard, run, uninstallGame } from "$lib/app.svelte";
   import { isBuilt, playerAct, playerState, playerVersion } from "$lib/player.svelte";
   import { themeStyle } from "$lib/themes";
 
@@ -137,13 +138,15 @@
           </button>
           <Menu items={menu} />
         </div>
-        {#if next.hint}<p class="line" class:clip={!!next.job}>{next.hint}</p>{/if}
+        {#if next.hint && !next.job}<p class="line">{next.hint}</p>{/if}
         {#if !app.stopped && recentCrashes > 0}
           <button class="crashed" onclick={showLogs}>
             <Icon name="warn" size={15} />Crashed recently: send us the report
           </button>
         {/if}
       </div>
+
+      {#if next.job}<JobProgress job={next.job} now={clock.now} />{/if}
 
       {#if showSteps}
         <ol class="steps" aria-label="Setting the game up">
