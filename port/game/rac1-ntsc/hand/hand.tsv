@@ -10,18 +10,18 @@ FUN_001f9af0	game_fastfunc.c
 FUN_001f9b20	game_fastfunc.c
 FUN_001f9b48	game_fastfunc.c
 FUN_001f9b80	game_fastfunc.c
-FUN_001f9bf8	game_fastfunc.c
+fast_vec_normalize	game_fastfunc.c
 FUN_001f9d20	game_fastfunc.c
 FUN_001f9cf8	game_fastfunc.c
 FUN_001f9988	game_fastfunc.c
-FUN_001f99f8	game_fastfunc.c
-FUN_001f9d50	game_fastfunc.c
+clear_u64_value	game_fastfunc.c
+fast_vector_from_packed_chars	game_fastfunc.c
 FUN_001fa6d0	game_fastfunc.c
-FUN_001fa580	game_fastfunc.c
-FUN_001fa5c8	game_fastfunc.c
-FUN_001fa6e0	game_fastfunc.c
+fast_add_rotations	game_fastfunc.c
+fast_subtract_rotations	game_fastfunc.c
+fast_tween_color	game_fastfunc.c
 FUN_001f9a80	game_fastfunc.c
-FUN_001f9d68	game_fastfunc.c
+fast_vector_to_packed_chars	game_fastfunc.c
 FUN_001fa298	game_fastfunc.c
 FUN_001fa2d8	game_fastfunc.c
 FUN_001fa3c0	game_fastfunc.c
@@ -38,12 +38,12 @@ FUN_001f9810	game_fastfunc.c
 FUN_001f98d0	game_fastfunc.c
 FUN_001f98f8	game_fastfunc.c
 FUN_001f9740	game_fastfunc.c
-FUN_001f9770	game_fastfunc.c
+fast_dec_timer_s16	game_fastfunc.c
 FUN_001f9bb0	game_fastfunc.c
 FUN_001f0b58	game_collproc.c
 FUN_001f9a00	game_fastfunc.c
 FUN_L00_00267b10	overlays_shared_pad_00268760.c
-FUN_001fa728	game_fastfunc.c
+fast_bsphere_check	game_fastfunc.c
 FUN_001fa820	game_fastfunc.c
 FUN_L00_001fde98	overlays_shared_drawquad_001FD1D8.c
 FUN_00210850	game_joint_matrices.c
@@ -58,7 +58,7 @@ FUN_00217b88	game_particle_update.c
 FUN_001f9ff8	game_scale_matrix.c
 FUN_001fa480	game_fastfunc.c
 FUN_L00_002d19b0	level_vendor_draw.c
-FUN_0020dc20	game_moby_grid.c
+update_moby_grids	game_moby_grid.c
 FUN_L00_00228c18	level_hero_gait.c
 FUN_L00_00213e68	level_hero_heading.c
 FUN_L00_002721f0	level_particle53.c
@@ -71,7 +71,7 @@ FUN_L00_00260a88	level_bolt_burst.c
 FUN_001f99e8	game_sound_math.c
 FUN_001f9c90	game_sound_math.c
 # Written for this version (the NTSC decomp keeps it as assembly; PAL's decompilation has it in C).
-func_001FA6C0	game_int_to_float.c
+convert_integer_to_float	game_int_to_float.c
 # The PAL decompilation's functional C (games/rac1/nonmatching/functional.tsv), carried the same way:
 # C that does what the function does without matching its bytes, for functions the NTSC decomp still has as assembly.
 memcmp	functional/memcmp.c
@@ -120,10 +120,10 @@ FUN_L11_003192c8	functional/FUN_L11_003192c8.c
 FUN_L15_002d6810	functional/FUN_L15_002d6810.c
 FUN_001e9b10	functional/FUN_001e9b10.c
 FUN_001f34e8	functional/FUN_001f34e8.c
-func_001F96B0	functional/func_001F96B0.c
-func_001F96E8	functional/func_001F96E8.c
+scale_time	functional/func_001F96B0.c
+multiply_global_scale	functional/func_001F96E8.c
 FUN_001f96f8	functional/FUN_001f96f8.c
-func_001F9730	functional/func_001F9730.c
+multiply_global_factor_ed70	functional/func_001F9730.c
 FUN_001f9838	functional/FUN_001f9838.c
 WriteDmaChannel	functional/WriteDmaChannel.c
 FUN_001f9958	functional/FUN_001f9958.c
@@ -140,8 +140,8 @@ FUN_001fa070	functional/FUN_001fa070.c
 FUN_001fa2b8	functional/FUN_001fa2b8.c
 FUN_001fa328	functional/FUN_001fa328.c
 FUN_001fa378	functional/FUN_001fa378.c
-FUN_001fa610	functional/FUN_001fa610.c
-FUN_001fa688	functional/FUN_001fa688.c
+fast_normalize_angle	functional/FUN_001fa610.c
+fast_difference_between_rotations	functional/FUN_001fa688.c
 FUN_001fa978	functional/FUN_001fa978.c
 FUN_00202270	functional/FUN_00202270.c
 FUN_00203730	functional/FUN_00203730.c

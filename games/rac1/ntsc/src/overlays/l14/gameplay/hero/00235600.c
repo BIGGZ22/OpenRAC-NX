@@ -43,12 +43,12 @@ extern float D_L14_0015F638;
 extern float D_L14_001674D8 __attribute__((section(".data")));
 extern float multiply_global_factor_ed64(float) __asm__("FUN_001f96b0");
 extern float FUN_001f9b48(void *, void *);
-extern float FUN_001f9b80(void *, void *);
+extern float vector_distance(void *, void *) __asm__("FUN_001f9b80");
 extern float fast_arc_tan(float, float) __asm__("FUN_001f9e90");
 extern float fast_difference_between_rotations(float, float) __asm__("FUN_001fa688");
 extern float FUN_L00_00208f20(float a, float b, float c, float d);
 extern float FUN_L00_00232b90(float a, float b, float c);
-extern float FUN_L00_00233a78(float *v);
+extern float gravity_z(float *v) __asm__("FUN_L00_00233a78");
 extern float FUN_L00_00233c30(float *pos, float *vel, int *steps, float step);
 extern float randf_sym(float lo, float hi) __asm__("FUN_L00_00257c48");
 extern float FUN_L00_00259468(float *a, float *b, int *out, float f);
@@ -66,7 +66,7 @@ int r1_repeat_timer __asm__("D_L14_0015F678") = 0;
 extern int D_L14_0015F6DC_d __asm__("D_L14_0015F6DC");
 extern int D_L14_0015F594 __attribute__((sda));
 extern int D_L14_0016CE80 __attribute__((section(".data")));
-extern int FUN_001efa68(void *, void *, int, int, int);
+extern int collision_line(void *, void *, int, int, int) __asm__("FUN_001efa68");
 extern int fast_dec_timer_s16(void *) __asm__("FUN_001f9770");
 extern int FUN_L00_002050b8(int);
 #include "rnc/overlay/path.h"
@@ -81,7 +81,7 @@ extern int hero_handle_jump_press(void) __asm__("FUN_L00_00229660");
 extern int FUN_L00_00229910(void);
 extern int FUN_L00_00229a98(void);
 extern int random_int_between(int, int) __asm__("FUN_L00_00257b90");
-extern int FUN_L00_0025d808(int *tab, float *out, int *a, float *b, int c, float d) __asm__("FUN_L00_0025d808");
+extern int sample_path(int *tab, float *out, int *a, float *b, int c, float d) __asm__("FUN_L00_0025d808");
 extern int FUN_L00_0025df68(void *, void *, void *, int *, float *, int, float, float, float);
 extern int pad_pressed_within(int, int, int *) __asm__("FUN_L00_00266d60");
 extern int FUN_L00_00266e00(int, int, int, int);
@@ -110,7 +110,7 @@ extern void FUN_L00_00232628(void);
 extern void FUN_L00_00232640(int id);
 extern void FUN_L00_00233288(float a, float b, short c, unsigned char d, unsigned char e,
                              unsigned char f);
-extern void FUN_L00_00233b20(float *dst, float *src, float z);
+extern void gravity_set_z(float *dst, float *src, float z) __asm__("FUN_L00_00233b20");
 extern void hud_keep_visible(int, int) __asm__("FUN_L00_00235e18");
 extern void FUN_L00_00237ae8(void);
 extern void FUN_L00_00237ba0(void);
@@ -778,7 +778,7 @@ void FUN_L14_00235600(void) {
                     }
                     break;
                 case 101:
-                    if (FUN_001f9b80(hero.motion.pos.f, hero.unk1640.f) < 0.2f) {
+                    if (vector_distance(hero.motion.pos.f, hero.unk1640.f) < 0.2f) {
                         if (frame_time * 2.7f > hero.motion.speed_xy) {
                             if (fast_difference_between_rotations(
                                     hero.motion.rot.f[2], hero.unk1640.f[3]) < 0.034906585f) {
@@ -802,7 +802,7 @@ void FUN_L14_00235600(void) {
                     if ((hero.unkA98 & 2) || hero.unk1650 != 0) {
                         hero_set_state(HERO_STATE_IDLE, 1);
                     }
-                    if (0.2f < FUN_001f9b80(hero.motion.pos.f, hero.unk1640.f)) {
+                    if (0.2f < vector_distance(hero.motion.pos.f, hero.unk1640.f)) {
                         hero_set_state(0x65, 1);
                     }
                     break;
@@ -1065,7 +1065,7 @@ void FUN_L14_00235600(void) {
                                 v1[1] = fast_sin(hero.unk57C) * 5.0f;
                                 v1[2] = 0.0f;
                                 add_vector_xyz(v1, v1, v0);
-                                if (FUN_001efa68(v0, v1, 2, 0, 0)) {
+                                if (collision_line(v0, v1, 2, 0, 0)) {
                                     ok = 0;
                                 }
                             }
@@ -1226,7 +1226,7 @@ void FUN_L14_00235600(void) {
                                     path_seg = hero.unk564;
                                     path_t = hero.unk568;
                                     /* Step a copy of the hero position along its current path. */
-                                    if (FUN_L00_0025d808((int *)hero.unk560, v0, &path_seg,
+                                    if (sample_path((int *)hero.unk560, v0, &path_seg,
                                                          &path_t, hero.unk584, t)) {
                                         scale_vector_xyz(v1, hero.motion.displacement.f,
                                                          scale_game_frames(0x30));
@@ -1257,7 +1257,7 @@ void FUN_L14_00235600(void) {
                             }
                         }
                         if (hero.state_timer > hero.unk420) {
-                            if (FUN_L00_00233a78(hero.motion.velocity.f) < 0.001f) {
+                            if (gravity_z(hero.motion.velocity.f) < 0.001f) {
                                 hero.unk41E = 1;
                             }
                         }
@@ -1493,7 +1493,7 @@ void FUN_L14_00235600(void) {
                             if (hero_set_state(HERO_STATE_IDLE, 0)) {
                                 set_hero_animation(0xC, 9, -1.0f);
                             }
-                            FUN_L00_00233b20(hero.motion.unk150.f, hero.motion.unk150.f, 0.0f);
+                            gravity_set_z(hero.motion.unk150.f, hero.motion.unk150.f, 0.0f);
                             FUN_L00_0025f730(hero.motion.unk150.f, frame_time * 7.0f);
                             hero.unk1C4 = scale_game_frames(7);
                             if (hero.state.prev == 0x2D) {
@@ -2002,7 +2002,7 @@ void FUN_L14_00235600(void) {
                                     scale_game_frames(0xE) < hero.state_timer &&
                                     (hero.unk41E == 0 ||
                                      (hero.ground_distance > 0.7f &&
-                                      absolute_float(FUN_L00_00233a78(hero.motion.velocity.f)) <
+                                      absolute_float(gravity_z(hero.motion.velocity.f)) <
                                           frame_time * 5.8f))) {
                                     hero_set_state(0xE, 1);
                                 } else if (D_0013D4DC[-0x1A] != 0 && hero_slot_item_id(3) != 4 &&

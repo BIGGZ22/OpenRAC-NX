@@ -31,7 +31,7 @@ extern float fast_vec_dist(void *, void *) __asm__("FUN_001f9b48");
 extern float fast_arc_tan(float, float) __asm__("FUN_001f9e90");
 extern float fast_difference_between_rotations(float, float) __asm__("FUN_001fa688");
 extern float FUN_L00_0020d658(int back);
-extern float FUN_L00_002339d0(float *v);
+extern float gravity_length_xy(float *v) __asm__("FUN_L00_002339d0");
 extern float randf_sym(float lo, float hi) __asm__("FUN_L00_00257c48");
 extern float fast_add_rotations(float, float) __asm__("FUN_001fa580");
 extern float vector_length_xy(void *);
@@ -66,12 +66,12 @@ extern void FUN_L00_00214ed8(float a, float b, float c);
 extern void FUN_L00_00216ec0(int, int, int);
 extern void set_hero_animation(int, int, float) __asm__("FUN_L00_002323b8");
 extern void FUN_L00_002325e0(int bank, int seq);
-extern void FUN_L00_00233b20(float *dst, float *src, float z);
+extern void gravity_set_z(float *dst, float *src, float z) __asm__("FUN_L00_00233b20");
 extern void FUN_L00_0025f730(void *a, float x);
 extern void FUN_L00_00262500(int a, char *b);
 extern void FUN_L00_00262528(char *o, int a, int b);
 extern void FUN_L00_00262840(char *o);
-extern void FUN_L00_002a3ec8(int, int, int, float, float, float, float);
+extern void pool_splash(int, int, int, float, float, float, float) __asm__("FUN_L00_002a3ec8");
 extern void FUN_L01_002405a0(void);
 extern void blend_moby_animation(void *, int, int, int) __asm__("FUN_00212f90");
 extern void clear_vector(void *);
@@ -291,14 +291,14 @@ int hero_set_state(int a, int b) {
         if (p->state.prev_control_mode == 0x11) {
             FUN_L00_00209ca8(3, 0xA, 0);
             if (D_L11_001612D0 != 0) {
-                FUN_L00_002a3ec8(D_L11_001612D0, D_L11_001612D8, 0, p->motion.pos.f[0],
+                pool_splash(D_L11_001612D0, D_L11_001612D8, 0, p->motion.pos.f[0],
                                  p->motion.pos.f[1], 0.4f, 0.3f);
             }
         } else if (p->motion.displacement.f[2] < frame_time * -0.5f) {
             int n = truncate_float_to_s32(absolute_float(p->motion.displacement.f[2]) * 300.0f);
             FUN_L00_00209ca8(3, n < 0x28 ? n : 0x28, 1);
             if (D_L11_001612D0 != 0) {
-                FUN_L00_002a3ec8(D_L11_001612D0, D_L11_001612D8, 0, p->motion.pos.f[0],
+                pool_splash(D_L11_001612D0, D_L11_001612D8, 0, p->motion.pos.f[0],
                                  p->motion.pos.f[1], 0.5f, -0.4f);
             }
             p->unk90A = scale_game_frames(0x4B);
@@ -625,7 +625,7 @@ int hero_set_state(int a, int b) {
         char *v = (char *)&p->motion.unk110;
         p->state.control_mode = 1;
         p->unk2284 = 0;
-        p->ground_speed = FUN_L00_002339d0((float *)v);
+        p->ground_speed = gravity_length_xy((float *)v);
         qcopy(&p->motion.unk150, v);
         if (b) {
             int id = 6;
@@ -1022,7 +1022,7 @@ int hero_set_state(int a, int b) {
                     u->unk48C = 1.98f;
                     u->unk430 = 1.95f;
                 } else {
-                    FUN_L00_00233b20((float *)(&u->motion.velocity), (float *)(&u->motion.velocity), 0.0f);
+                    gravity_set_z((float *)(&u->motion.velocity), (float *)(&u->motion.velocity), 0.0f);
                     u->unk41C = 1;
                     u->unk3D0 = scale_game_frames(2);
                     u->unk3D4 = scale_game_frames(0x23) + u->unk3D0;

@@ -6,7 +6,7 @@
 
 /*
  * State of the follow camera: the saved state of its camera record
- * (UpdateCam.saved_state, +0x70). FUN_L00_002e4fe8 writes `velocity`,
+ * (UpdateCam.saved_state, +0x70). follow_cam_focus_velocity writes `velocity`,
  * follow_camera_transition reads `follow` for its spring constants, and
  * fast_dec_timer counts `blend_timer` down. The follow_camera_set_* setters
  * (FUN_L00_002e8450..002e8680) each write one field and do nothing while the

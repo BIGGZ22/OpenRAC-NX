@@ -31,10 +31,6 @@ void FUN_L05_002661e8(char *moby) {
         *(int *)(moby + 0x6C) = -6;
     }
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L05_00266320.s", FUN_L05_00266320);
-#else
-#endif
 extern int D_0013E500[];
 extern int D_0015ED80;
 extern u8 D_0013D388[];
@@ -60,7 +56,6 @@ extern char *get_help_message_text(int) __asm__("FUN_001fdd10");
 extern int sprintf(char *, const char *, ...) __asm__("FUN_00116248");
 extern int FUN_001f6250(char *, int);
 extern void FUN_L00_001fb470(int x, int y, u64 color, char *text, int len);
-#ifdef NON_MATCHING
 extern int D_0015ED84;
 extern char D_L05_0015F860[];
 extern char D_L05_0015F9E0[];
@@ -134,14 +129,12 @@ int FUN_L05_00266320(HudElem *e) {
     FUN_L00_001fb470(x, y, D_L05_0015F998, buf, -1);
     if (D_0015ED84 == 0x10) {
         int y2, x2;
-        int *y2_ptr = &y2;
-        int count;
         sprintf(small_buf, D_L05_0015F860, hero.unk8CE);
-        count = D_0015ED80;
-        *y2_ptr = D_0013D388[0];
+        /* Fakematch: the dead early copy of the default row gives retail's register order. */
+        y2 = D_0015ED80 ? 10 : 18;
         x2 = e->unk50;
-        if ((u8)*y2_ptr == 0) {
-            y2 = count ? 10 : 18;
+        if (D_0013D388[0] == 0) {
+            y2 = D_0015ED80 ? 10 : 18;
         } else {
             x2 = D_L05_0015F9C0;
             y2 = D_L05_0015F9C4;
@@ -157,7 +150,6 @@ int FUN_L05_00266320(HudElem *e) {
     }
     return e->w;
 }
-#endif
 
 int FUN_L05_00266710(HudElem *e) {
     char buf[64];

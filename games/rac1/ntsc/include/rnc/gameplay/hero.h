@@ -327,7 +327,7 @@ struct Hero {
     f32 unk414;                    /* 0x414 */
     s32 unk418;                    /* 0x418: set when velocity.z clamps to unk500.z, counts up */
     s16 unk41C;                    /* 0x41C */
-    s16 unk41E;                    /* 0x41E: set to 1 when FUN_L00_00233a78(velocity) < 0.001 */
+    s16 unk41E;                    /* 0x41E: set to 1 when gravity_z(velocity) < 0.001 */
     s32 unk420;                    /* 0x420: per-state scale_game_frames(N), compared with state_timer */
     f32 unk424;                    /* 0x424 */
     f32 unk428;                    /* 0x428 */
@@ -662,7 +662,7 @@ struct Hero {
     u8 unk12ED;                    /* 0x12ED */
     u8 unk12EE;                    /* 0x12EE */
     u8 pad_12EF[0x301];
-    struct Moby *ship_moby;        /* 0x15F0: the ship the hero is flying (l17 FUN_L17_002ed018) */
+    struct Moby *ship_moby;        /* 0x15F0: the ship the hero is flying (l17 fighter_jet_update) */
     s16 ship_oclass;               /* 0x15F4: its oclass, -1 when none */
     u8 ship_ammo;                  /* 0x15F6: shots left in the space levels; firing needs one and takes it (FUN_L11_003126f8) */
     u8 ship_ammo_max;              /* 0x15F7: ammo pips the ship HUD draws, lit while below ship_ammo */
@@ -732,7 +732,7 @@ struct Hero {
     u8 pad_1FF8[0x28];
     u8 *unk2020[6];                /* 0x2020: six moby slots, filled at the index a moby carries at +0x54 */
     u8 pad_2038[0x8];
-    struct Moby *unk2040;          /* 0x2040: nearest oclass 0x25D moby (FUN_L00_002d2ee8) */
+    struct Moby *unk2040;          /* 0x2040: nearest oclass 0x25D moby (metal_detector_update) */
     f32 unk2044;                   /* 0x2044: distance to unk2040; 100000 when none */
     s32 unk2048;                   /* 0x2048 */
     u8 pad_204C[0x4];
@@ -797,7 +797,7 @@ struct Hero {
     f32 unk22A4;                   /* 0x22A4 */
     struct HeroHealth health;      /* 0x22A8 */
     s32 unk22B4;                   /* 0x22B4 */
-    f32 unk22B8;                   /* 0x22B8: distance to the nearest carrying path this frame (FUN_L01_002f3120 keeps the minimum) */
+    f32 unk22B8;                   /* 0x22B8: distance to the nearest carrying path this frame (water_current_update keeps the minimum) */
     u8 pad_22BC[0x8];
     s32 unk22C4;                   /* 0x22C4 */
     s16 unk22C8;                   /* 0x22C8 */

@@ -63,7 +63,7 @@ extern WatcherReward D_L02_0016CE60;
 extern char D_L02_00161D00[];
 extern void FUN_L02_002e0cd8(struct Moby *);
 extern void FUN_L02_002e1fb8(struct Moby *);
-extern void FUN_L02_0025c758(struct Moby *);
+extern void initialize_moby_grounding(struct Moby *) __asm__("FUN_L02_0025c758");
 extern void delete_moby(struct Moby *) __asm__("FUN_0020c828");
 extern void watcher_init(struct Moby *, WatcherVars *) __asm__("FUN_L00_002668a0");
 extern s32 watcher_talk(struct Moby *, WatcherVars *) __asm__("FUN_L00_00266448");
@@ -71,8 +71,8 @@ extern void watcher_face(struct Moby *, f32) __asm__("FUN_L01_002783a8");
 extern s32 point_in_clip_volume(void *, s32) __asm__("FUN_00214720");
 extern void give_reward(s32, s32) __asm__("FUN_L00_00203908");
 extern void FUN_L00_00260860(s32, s32);
-extern void FUN_L00_002502a0(s32);
-extern void FUN_L00_00284e50(void *, void *);
+extern void jet_clear_persistent(s32) __asm__("FUN_L00_002502a0");
+extern void jet_reset_camera(void *, void *) __asm__("FUN_L00_00284e50");
 extern void end_conversation(s32, s32) __asm__("FUN_0020b178");
 extern s32 count_down_16(s16 *) __asm__("FUN_001f9770");
 extern s32 count_down(s32 *) __asm__("FUN_001f9740");
@@ -124,7 +124,8 @@ extern void FUN_L00_00250df8(void *);
 
 /* Aridia NPC with a carried prop moby (data+0x178): dialogue state machine (the hint in state 1 is usage
  * record 50), a path-camera ride (3/4) that fades D_L02_0015F3FC in and out, then the shared head-tracking tail. */
-void FUN_L02_002e0dc0(struct Moby *moby) {
+void skids_agent_update(struct Moby *moby) __asm__("FUN_L02_002e0dc0");
+void skids_agent_update(struct Moby *moby) {
     char *data = (char *)moby->pvars;
     s32 t;
     f32 fade;
@@ -139,7 +140,7 @@ void FUN_L02_002e0dc0(struct Moby *moby) {
         *(char **)(data + 0x20) = D_L02_00161CF0;
         moby->state = 1;
         initialize_npc_dialogue(moby, data);
-        FUN_L02_0025c758(moby);
+        initialize_moby_grounding(moby);
         prop = create_moby(0x38);
         *(struct Moby **)(data + 0x178) = prop;
         prop->draw_dist = 0x40;
@@ -189,10 +190,10 @@ void FUN_L02_002e0dc0(struct Moby *moby) {
         if (level_game_mode != 2) {
             moby->state = 1;
             if (*(s16 *)(data + 4) == 0) {
-                FUN_L00_002502a0(moby->mission);
+                jet_clear_persistent(moby->mission);
                 if (*(s32 *)(data + 0x150) != -1) {
                     char *p = D_L02_001600EC + (*(s32 *)(data + 0x150) << 7);
-                    FUN_L00_00284e50(p + 0x30, p + 0x70);
+                    jet_reset_camera(p + 0x30, p + 0x70);
                 }
             } else if (*(s16 *)(data + 4) == 2) {
                 moby->visible = 0;
@@ -349,8 +350,9 @@ void FUN_L02_002e0dc0(struct Moby *moby) {
 }
 
 extern f32 frame_scale_sq_macro __asm__("D_0015ED64") __attribute__((section(".sdata")));
-/* Watcher NPC update (twin of FUN_L05_00317470): idles with random animations, talks to the hero and drops its reward, and turns its head toward the hero or a random look target. */
-void FUN_L02_002e1950(struct Moby *m) {
+/* Watcher NPC update (twin of qwarks_bouncer_update): idles with random animations, talks to the hero and drops its reward, and turns its head toward the hero or a random look target. */
+void skid_mcmarx_update(struct Moby *m) __asm__("FUN_L02_002e1950");
+void skid_mcmarx_update(struct Moby *m) {
     WatcherVars *v = (WatcherVars *)m->pvars;
     WatcherLook look;
     f32 rate;
@@ -370,7 +372,7 @@ void FUN_L02_002e1950(struct Moby *m) {
         m->state = 1;
         m->update_dist = 0xFF;
         watcher_init(m, v);
-        FUN_L02_0025c758(m);
+        initialize_moby_grounding(m);
         break;
     case 1:
         if (v->zone_check == 1 && point_in_clip_volume(&hero.motion.pos, v->zone))
@@ -384,8 +386,8 @@ void FUN_L02_002e1950(struct Moby *m) {
         if (v->talk_state == 2) {
             give_reward(2000, 10);
             FUN_L00_00260860(30, 1);
-            FUN_L00_002502a0(*((u8 *)m + 0xB0));
-            FUN_L00_00284e50(&hero.motion.pos, &hero.motion.rot);
+            jet_clear_persistent(*((u8 *)m + 0xB0));
+            jet_reset_camera(&hero.motion.pos, &hero.motion.rot);
             end_conversation(0, -1);
             delete_moby(m);
             return;
@@ -562,11 +564,12 @@ extern void set_moby_animation(void *, int, int) __asm__("FUN_00212ed8");
 extern void blend_moby_animation(void *, int, int, int) __asm__("FUN_00212f90");
 extern int allocate_voice_for_target(int, int, void *) __asm__("FUN_0022da68");
 extern void release_voice_slot(int) __asm__("FUN_0022d798");
-extern void FUN_L00_00260738(void *, void *, void *, void *);
+extern void update_entity_matrix(void *, void *, void *, void *) __asm__("FUN_L00_00260738");
 
 /* Lift platform carried by an animated driver moby: follows the driver's joint 0, waits at an end (3/5) for the
  * hero to step on, then plays the driver's up or down animation (2/4) with its loop sound until it ends. */
-void FUN_L02_002e2228(struct Moby *moby) {
+void liftcar_platform_update(struct Moby *moby) __asm__("FUN_L02_002e2228");
+void liftcar_platform_update(struct Moby *moby) {
     char *data = (char *)moby->pvars;
     struct Moby *driver = &D_L02_0015FFD8[*(int *)(data + 0xA0)];
     Vec4 delta;
@@ -667,7 +670,7 @@ void FUN_L02_002e2228(struct Moby *moby) {
         break;
     }
     add_vectors(&delta, &delta, &moby->pos);
-    FUN_L00_00260738(data + 0x60, &delta, &old_rot, &moby->rot);
+    update_entity_matrix(data + 0x60, &delta, &old_rot, &moby->rot);
 }
 
 extern int D_L02_0015F608;
@@ -680,8 +683,8 @@ extern char D_L02_001F3D90[];
 extern char D_L02_001F3DD0[];
 extern char D_L02_001F3E10[];
 extern char D_L02_001F3E80[];
-extern void begin_2ea048(float, float, float, float, int, int, int, int, int, int, void *) __asm__("FUN_L02_002a4818");
-extern void end_2ea048(void) __asm__("FUN_L02_002a47f8");
+extern void FUN_L02_002a4818(float, float, float, float, int, int, int, int, int, int, void *);
+extern void FUN_L02_002a47f8_c(void) __asm__("FUN_L02_002a47f8");
 extern int in_clip_2ea048(void *, int) __asm__("FUN_00214720");
 extern void draw_2ea048(void *) __asm__("FUN_00201f58");
 
@@ -690,7 +693,7 @@ extern void draw_2ea048(void *) __asm__("FUN_00201f58");
 void FUN_L02_002ea048(struct Moby *m) {
     int *d = (int *)m->pvars;
 
-    begin_2ea048(0.0f, 260080.0f, 255.0f, 0.0f, 15, 15, 25, 30, 40, 64, D_L02_001F3E80);
+    FUN_L02_002a4818(0.0f, 260080.0f, 255.0f, 0.0f, 15, 15, 25, 30, 40, 64, D_L02_001F3E80);
     if (D_L02_0015F608 != 0 || (d[0] != -1 && in_clip_2ea048(D_L02_001673C0, d[0]))) {
         draw_2ea048(D_L02_001F3C00);
     }
@@ -704,7 +707,7 @@ void FUN_L02_002ea048(struct Moby *m) {
     if (D_L02_0015F608 != 0 || (d[2] != -1 && in_clip_2ea048(D_L02_001673C0, d[2]))) {
         draw_2ea048(D_L02_001F3C60);
     }
-    end_2ea048();
+    FUN_L02_002a47f8_c();
 }
 
 extern void add_draw_callback(void *, void *) __asm__("FUN_001f4600");
@@ -718,7 +721,8 @@ extern void add_draw_callback(void *, void *) __asm__("FUN_001f4600");
 extern void FUN_L02_002a47f8(float);
 extern void FUN_L02_002ea048_cb(void) __asm__("FUN_L02_002ea048");
 
-void FUN_L02_002ea198(struct Moby *moby) {
+void ocean_aridia_update(struct Moby *moby) __asm__("FUN_L02_002ea198");
+void ocean_aridia_update(struct Moby *moby) {
     switch (moby->state) {
     case 0:
         FUN_L02_002a47f8(0.16666667f);

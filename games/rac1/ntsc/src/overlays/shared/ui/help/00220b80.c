@@ -372,7 +372,7 @@ extern void FUN_L00_00217658(void);
 extern void FUN_L00_00221ee0(void);
 extern void FUN_L00_00222158(void);
 extern s32 get_ammo(s32) __asm__("FUN_L00_00233e98");
-extern s32 FUN_L00_0028d8c0(struct Moby *, s32);
+extern s32 voice_is_playing(struct Moby *, s32) __asm__("FUN_L00_0028d8c0");
 extern void FUN_L00_0029a6b0(s32);
 
 /*
@@ -540,7 +540,7 @@ s32 FUN_L02_0022ee00(void)
                         FUN_L00_0020e4c8();
                     }
                 } else if ((controller_state.held & buttons) && get_ammo(-1) == 0 &&
-                           FUN_L00_0028d8c0(hero.items[0].moby, vars->voice) == 0) {
+                           voice_is_playing(hero.items[0].moby, vars->voice) == 0) {
                     vars->voice = allocate_voice_for_target_entry(0, 0, hero.items[0].moby);
                 }
             }

@@ -89,7 +89,7 @@ extern float vector_length_xy(void *) __asm__("FUN_001f9b20");
 extern float fast_arc_tan(float, float) __asm__("FUN_001f9e90");
 extern s32 truncate_float_to_s32(f32) __asm__("FUN_001fa6d0");
 extern void fast_vec_normalize(void *, void *, float) __asm__("FUN_001f9bf8");
-extern void FUN_L00_002502f0(void *, int, int, int);
+extern void set_moby_color(void *, int, int, int) __asm__("FUN_L00_002502f0");
 extern void FUN_L00_00250df8(void *);
 extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 
@@ -120,7 +120,7 @@ unsigned char *FUN_L11_00308848(char *owner, float *dir, float *pos, float a, fl
             *(float *)(*(char **)(m + 0x24) + 0x24) *
             (*(float *)(owner + 0x2C) / *(float *)(*(char **)(owner + 0x24) + 0x24));
         m[0x23] = func_001FA898_r(*(float *)(d + 0x10) * 24.0f);
-        FUN_L00_002502f0(m, 0xFF, 0xFF, 0xFF);
+        set_moby_color(m, 0xFF, 0xFF, 0xFF);
         FUN_L00_00250df8(m);
     }
     return m;
@@ -164,13 +164,13 @@ extern void build_spherical_offset_089d0(void *, float, float, float) __asm__("F
 extern void no_op_089d0(void *, void *) __asm__("FUN_001e93e8");
 extern void add_vector_089d0(void *, void *, void *) __asm__("FUN_001f9a10");
 extern void normalize_vector_089d0(void *, void *, float) __asm__("FUN_001f9bf8");
-extern void make_hit_089d0(float, void *, struct Moby *, int) __asm__("FUN_L00_00259858");
+extern void FUN_L00_00259858(float, void *, struct Moby *, int);
 extern int collision_line_089d0(void *, void *, int, void *, void *) __asm__("FUN_001efa68");
 extern float random_float_between_089d0(float, float) __asm__("FUN_002132a8");
 extern void reflect_089d0(void *, void *, void *) __asm__("FUN_L00_001ff660");
 extern int scale_game_frames_089d0(int) __asm__("FUN_001f96f8");
 extern int random_int_between_089d0(int, int) __asm__("FUN_L00_00257b90");
-extern char *spawn_spark_089d0(void *, void *, int, int, float) __asm__("FUN_L00_0026dd20");
+extern char *FUN_L00_0026dd20_c(void *, void *, int, int, float) __asm__("FUN_L00_0026dd20");
 extern void remove_moby_089d0(void *) __asm__("FUN_0020c828");
 extern int tick_countdown_089d0(int *) __asm__("FUN_001f9740");
 char *FUN_L11_00308670(float *pos, float *aim, float r1, float r2, float maxd);
@@ -237,7 +237,7 @@ void FUN_L11_003089d0(struct Moby *moby) {
         remove_moby_089d0(moby);
         return;
     }
-    make_hit_089d0(1.0f, &hit, moby, 0x10000);
+    FUN_L00_00259858(1.0f, &hit, moby, 0x10000);
     hit.oclass = moby->oclass;
     if (collision_line_089d0(old, &moby->pos, 0, vars->owner, &hit)) {
         for (i = 0; i < 5; i++) {
@@ -250,7 +250,7 @@ void FUN_L11_003089d0(struct Moby *moby) {
             normalize_vector_089d0(q, q, vector_length_089d0(r) * 0.5f);
             add_vector_089d0(q, r, q);
             normalize_vector_089d0(q, q, random_float_between_089d0(frame_time * 5.0f, frame_time * 9.0f));
-            spawn_spark_089d0(&moby->pos, q, 0x7F2F4F6F, random_int_between_089d0(scale_game_frames_089d0(10), scale_game_frames_089d0(15)), 90000.0f);
+            FUN_L00_0026dd20_c(&moby->pos, q, 0x7F2F4F6F, random_int_between_089d0(scale_game_frames_089d0(10), scale_game_frames_089d0(15)), 90000.0f);
         }
         remove_moby_089d0(moby);
         return;
@@ -306,7 +306,7 @@ extern int D_L11_00161DC4 __attribute__((sda));
 extern int D_L11_00161DC8 __attribute__((sda));
 extern int D_L11_00161DCC __attribute__((sda));
 extern float D_L11_00161DD0 __attribute__((sda));
-extern int FUN_001efa68(void *, void *, int, void *, void *);
+extern int collision_line(void *, void *, int, void *, void *) __asm__("FUN_001efa68");
 extern int fast_tween_color(int, int, float) __asm__("FUN_001fa6e0");
 extern int random_int_between(int, int) __asm__("FUN_L00_00257b90");
 extern int tick_countdown_32_alt(int *) __asm__("FUN_001f9740");
@@ -343,7 +343,7 @@ void FUN_L11_00309098(char *moby) {
     FUN_L00_0026dd20((char *)p, (char *)v, c, scale_game_frames(D_L11_00161DC8), (float)D_L11_00161DCC);
     add_vector_xyz(pos, pos, data);
     make_hit_descriptor(hit, moby, 0x10000, *(float *)(data + 0x20), data);
-    if (FUN_001efa68(old, pos, 0, *(void **)(data + 0x1C), hit)) {
+    if (collision_line(old, pos, 0, *(void **)(data + 0x1C), hit)) {
         int i;
         for (i = 0; i < 5; i++) {
             *(OvlQuad *)r = 0;
@@ -398,7 +398,8 @@ extern char D_L11_00174860[];
 /* Homing missile: turns toward its target while the target lives and stays within 3 units of
    where it was last frame, leaves a smoke trail, and bursts on a hit, when its timer runs out
    or outside the level box. */
-void FUN_L11_003094f8(struct Moby *moby) {
+void rocket_update(struct Moby *moby) __asm__("FUN_L11_003094f8");
+void rocket_update(struct Moby *moby) {
     Missile_94f8 *data = (Missile_94f8 *)moby->pvars;
     Vec4f *pos;
     Vec4 previous_pos, spray, offset, velocity, random;
@@ -459,7 +460,7 @@ void FUN_L11_003094f8(struct Moby *moby) {
         return;
     }
     moby_point_position_94f8(moby, 1, &spray);
-    if (FUN_001efa68(&previous_pos, &spray, 0, data->collision, 0)) {
+    if (collision_line(&previous_pos, &spray, 0, data->collision, 0)) {
         FUN_L00_0025e450_94f8(moby, data, D_L11_00174860, 2.0f, 10.0f, 10, 3, 0x10, 4.0f, 2.0f, 9.0f, 1.0f,
                                -1, 20.0f, 0, 1, -1, 0);
         mark_moby_for_removal(moby);
@@ -736,7 +737,8 @@ extern float ocean_level __asm__("D_L11_00161E1C");
 extern UV_30b358 wave_drift[] __asm__("D_L11_001D9AF0");
 extern float frame_delta_time __asm__("D_0015ED7C");
 
-void FUN_L11_0030b358(OceanMoby_30b358 *moby)
+void ocean_pokitaru_update(OceanMoby_30b358 *moby) __asm__("FUN_L11_0030b358");
+void ocean_pokitaru_update(OceanMoby_30b358 *moby)
 {
     OceanVars_30b358 *d = moby->vars;
     float src[4];
@@ -803,3 +805,16 @@ void FUN_L11_0030b358(OceanMoby_30b358 *moby)
     }
     enqueue_callback_b358((void *)FUN_L11_0030a908_b358, moby);
 }
+
+f32 D_L16_001D8A28[1] __attribute__((section(".data"))) = {0};
+f32 D_L16_001D8A2C[1] __attribute__((section(".data"))) = {0};
+f32 D_L16_001D8A30[1] __attribute__((section(".data"))) = {0};
+f32 D_L16_001D8A34[1] __attribute__((section(".data"))) = {0};
+f32 D_L16_001D8A38[1] __attribute__((section(".data"))) = {0};
+f32 D_L16_001D8A3C[1] __attribute__((section(".data"))) = {0};
+s32 D_L16_001D8D28[1] __attribute__((section(".data"))) = {0};
+s32 D_L16_001D8D2C[1] __attribute__((section(".data"))) = {0};
+s32 D_L16_001D9230[1] __attribute__((section(".data"))) = {0};
+s32 D_L16_001D9234[1] __attribute__((section(".data"))) = {0};
+s32 D_L16_001D9238[1] __attribute__((section(".data"))) = {0};
+s32 D_L16_001D923C[1] __attribute__((section(".data"))) = {0};

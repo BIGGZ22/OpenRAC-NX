@@ -38,6 +38,7 @@ extern void fast_vec_scale(void *, void *, float) __asm__("FUN_001f9a68");
 extern void fast_vec_normalize(void *, void *, float) __asm__("FUN_001f9bf8");
 
 /* Sets a to b plus c (normalised) scaled by s times the dot of c and b. */
+void FUN_L00_0025c2b0(void *a, void *b, void *c, float s);
 void FUN_L00_0025c2b0(void *a, void *b, void *c, float s) {
     Vq t0, t1;
     fast_vec_normalize(&t1, c, 1.0f);
@@ -120,7 +121,8 @@ int FUN_001f96f8_0025c558(int) __asm__("FUN_001f96f8");
 float *FUN_002141f8_0025c558(void *) __asm__("FUN_002141f8");
 void FUN_002130d8_0025c558(void *, int, int, int, int) __asm__("FUN_002130d8");
 void FUN_00212f90_0025c558(void *, int, int, int) __asm__("FUN_00212f90");
-void FUN_L00_0025c558(u8 *a, B_25c558 *b, int c, int d, int e, float f) {
+void trooper_start_knockback(u8 *a, B_25c558 *b, int c, int d, int e, float f) __asm__("FUN_L00_0025c558");
+void trooper_start_knockback(u8 *a, B_25c558 *b, int c, int d, int e, float f) {
     float *r;
     b->f0 = FUN_001f9dc8_0025c558(f) * b->f18;
     b->f4 = FUN_001f9de0_0025c558(f) * b->f18;
@@ -159,9 +161,9 @@ extern int *D_L00_00177F00[];
 extern float frame_scale __asm__("D_0015ED60") __attribute__((section(".sdata")));
 extern Vec4 D_94C8_60 __asm__("D_L00_00173E60"); /* no foreign declaration */
 extern int FUN_001efa68(void *, void *, int, int, int);
-extern int FUN_001f0b58(void);
-extern int FUN_L00_001f0d60();
-extern int FUN_L00_001f2868(void *, float, int, void *, void *);
+extern int collision_hit_material(void) __asm__("FUN_001f0b58");
+extern int coll_sphere() __asm__("FUN_L00_001f0d60");
+extern int collect_mobies_in_sphere(void *, float, int, void *, void *) __asm__("FUN_L00_001f2868");
 extern int FUN_L00_0025e3b8(void *);
 extern void add_vector_xyz_c(void *, void *, void *) __asm__("FUN_001f9a10");
 extern void fast_vec_normalize_c(void *, void *, f32) __asm__("FUN_001f9bf8");
@@ -173,7 +175,7 @@ float absolute_float(float input) __asm__("func_001F99C0");
 int FUN_L00_002595a0(float *r0, float *r1, float a, float b, float c);
 void FUN_L00_00258278(unsigned char *m, float *ptr, float t, float b, float c, float limit);
 void FUN_L00_00259710(void *a);
-void FUN_L00_00259bc8(char *, float, int, int, void *, void *);
+void spawn_nearby_effect(char *, float, int, int, void *, void *) __asm__("FUN_L00_00259bc8");
 void FUN_L00_0025c398_c(void *a0, void *a1, void *a2) __asm__("FUN_L00_0025c398");
 extern Vec4 D_94C8_60 __asm__("D_L00_00173E60");
 extern float func_L00_0025A748_f(void *) __asm__("FUN_L00_00259710");
@@ -183,7 +185,8 @@ extern float probe_ground_height(void *, int, float) __asm__("FUN_00213508");
 extern float frame_scale __asm__("D_0015ED60") __attribute__((section(".sdata")));
 extern int func_L00_001F2BE8_d6f0(float, void *, int, void *, void *) __asm__("FUN_L00_001f2868");
 
-int FUN_L00_0025c698(char *moby, char *st) {
+int mine_fall(char *moby, char *st) __asm__("FUN_L00_0025c698");
+int mine_fall(char *moby, char *st) {
     float eye[4];
     float v10[4];
     float v20[4];
@@ -217,7 +220,7 @@ int FUN_L00_0025c698(char *moby, char *st) {
     qcopy(v10, moby + 0x10);
     v10[2] = v10[2] + *(float *)(st + 0x28);
     f21 = probe_ground_height(v10, 0, 0.5f);
-    if (FUN_001f0b58() == 0) {
+    if (collision_hit_material() == 0) {
         if (*(float *)(st + 0x5C) == 0.0f && f21 <= v10[2] && v10[2] + *(float *)(st + 0x8) < f21) {
             *(float *)(st + 0x5C) = 1.0f;
             v10[2] = f21;
@@ -318,7 +321,7 @@ int FUN_L00_0025c698(char *moby, char *st) {
                     }
                 }
             } else {
-                FUN_L00_00259bc8((char *)*pp, 1.0f, (int)moby, 0x10000, (moby + 0x10), st);
+                spawn_nearby_effect((char *)*pp, 1.0f, (int)moby, 0x10000, (moby + 0x10), st);
             }
             pp++;
         } while (--k != 0);

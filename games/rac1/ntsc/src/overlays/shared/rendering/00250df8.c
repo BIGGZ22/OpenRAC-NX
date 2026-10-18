@@ -93,6 +93,7 @@ extern unsigned char D_L00_001E8F28[] __attribute__((section(".data")));
 extern s32 D_0014C190_257218[][64] __asm__("D_0014C190") __attribute__((section(".data")));
 extern int D_L00_001BA4D0_lui[] __asm__("D_L00_001BA4D0") __attribute__((section(".data")));
 extern struct Hero hero_lui __asm__("D_0013F350") __attribute__((section(".data")));
+void FUN_L00_00257470(unsigned char *m, int flags, int arg);
 void FUN_L00_00257470(unsigned char *m, int flags, int arg) {
     float amt;
     int lvl;

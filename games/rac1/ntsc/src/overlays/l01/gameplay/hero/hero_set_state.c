@@ -31,7 +31,7 @@ extern float D_L01_0017C270[][25];
 extern float fast_arc_tan(float, float) __asm__("FUN_001f9e90");
 extern float fast_difference_between_rotations(float, float) __asm__("FUN_001fa688");
 extern float FUN_L00_0020d658(int back);
-extern float FUN_L00_002339d0(float *v);
+extern float gravity_length_xy(float *v) __asm__("FUN_L00_002339d0");
 extern float randf_sym(float lo, float hi) __asm__("FUN_L00_00257c48");
 extern float fast_add_rotations(float, float) __asm__("FUN_001fa580");
 extern float vector_length_xy(void *);
@@ -62,12 +62,12 @@ extern void FUN_L00_00214ed8(float a, float b, float c);
 extern void FUN_L00_00216ec0(int, int, int);
 extern void set_hero_animation(int, int, float) __asm__("FUN_L00_002323b8");
 extern void FUN_L00_002325e0(int bank, int seq);
-extern void FUN_L00_00233b20(float *dst, float *src, float z);
+extern void gravity_set_z(float *dst, float *src, float z) __asm__("FUN_L00_00233b20");
 extern void FUN_L00_0025f730(void *a, float x);
 extern void FUN_L00_00262500(int a, char *b);
 extern void FUN_L00_00262528(char *o, int a, int b);
 extern void FUN_L00_00262840(char *o);
-extern void FUN_L00_002a3ec8(int, int, int, float, float, float, float);
+extern void pool_splash(int, int, int, float, float, float, float) __asm__("FUN_L00_002a3ec8");
 extern void FUN_L01_002405a0(void);
 extern void fill_transfer_words(void *, int, int) __asm__("func_001F97E8");
 extern void blend_moby_animation(void *, int, int, int) __asm__("FUN_00212f90");
@@ -288,14 +288,14 @@ int hero_set_state(int a, int b) {
         if (p->state.prev_control_mode == 0x11) {
             FUN_L00_00209ca8(3, 0xA, 0);
             if (pool_draw_tiles != 0) {
-                FUN_L00_002a3ec8(pool_draw_tiles, pool_draw_count, 0, p->motion.pos.f[0],
+                pool_splash(pool_draw_tiles, pool_draw_count, 0, p->motion.pos.f[0],
                                  p->motion.pos.f[1], 0.4f, 0.3f);
             }
         } else if (p->motion.displacement.f[2] < frame_time * -0.5f) {
             int n = truncate_float_to_s32(absolute_float(p->motion.displacement.f[2]) * 300.0f);
             FUN_L00_00209ca8(3, n < 0x28 ? n : 0x28, 1);
             if (pool_draw_tiles != 0) {
-                FUN_L00_002a3ec8(pool_draw_tiles, pool_draw_count, 0, p->motion.pos.f[0],
+                pool_splash(pool_draw_tiles, pool_draw_count, 0, p->motion.pos.f[0],
                                  p->motion.pos.f[1], 0.5f, -0.4f);
             }
             p->unk90A = scale_game_frames(0x4B);
@@ -609,7 +609,7 @@ int hero_set_state(int a, int b) {
         char *v = (char *)&p->motion.unk110;
         p->state.control_mode = 1;
         p->unk2284 = 0;
-        p->ground_speed = FUN_L00_002339d0((float *)v);
+        p->ground_speed = gravity_length_xy((float *)v);
         qcopy(&p->motion.unk150, v);
         if (b) {
             int id = 6;
@@ -885,7 +885,7 @@ int hero_set_state(int a, int b) {
                     u->unk48C = 1.98f;
                     u->unk430 = 1.95f;
                 } else {
-                    FUN_L00_00233b20((float *)(&u->motion.velocity), (float *)(&u->motion.velocity), 0.0f);
+                    gravity_set_z((float *)(&u->motion.velocity), (float *)(&u->motion.velocity), 0.0f);
                     u->unk41C = 1;
                     u->unk3D0 = scale_game_frames(2);
                     u->unk3D4 = scale_game_frames(0x23) + u->unk3D0;
@@ -1605,7 +1605,7 @@ struct HeldGadgetVars {
 
 extern int D_00141660 __attribute__((section(".data")));
 int r1_double_tap_timer __asm__("D_L01_0015F674") = 0;
-extern int FUN_001f9740(int *) __asm__("FUN_001f9740");
+extern int fast_dec_timer(int *) __asm__("FUN_001f9740");
 extern int FUN_0022da68(int, int, struct Moby *) __asm__("FUN_0022da68");
 extern unsigned int FUN_L00_00266d60(unsigned int, int, int *);
 extern int FUN_L00_0020d498(int);
@@ -1614,7 +1614,7 @@ extern int FUN_L00_0020fe30(void);
 extern int FUN_L00_00216de8(int, int);
 extern void FUN_L00_00217658(void);
 extern int FUN_L00_00233e98(int);
-extern int FUN_L00_0028d8c0(struct Moby *, int);
+extern int voice_is_playing(struct Moby *, int) __asm__("FUN_L00_0028d8c0");
 extern void FUN_L00_0029a6b0(int);
 
 int FUN_L01_00240ed8(void) {
@@ -1727,7 +1727,7 @@ int FUN_L01_00240ed8(void) {
                     if (hero.unk20A8 == 0) FUN_L00_0020e4c8();
                 } else if ((controller_state.held & buttons) != 0 &&
                            FUN_L00_00233e98(-1) == 0 &&
-                           FUN_L00_0028d8c0(hero.items[0].moby, vars->voice) == 0) {
+                           voice_is_playing(hero.items[0].moby, vars->voice) == 0) {
                     vars->voice = FUN_0022da68(0, 0, hero.items[0].moby);
                 }
             }
@@ -1786,7 +1786,7 @@ int FUN_L01_00240ed8(void) {
     if (hero.state_timer == saved) {
         if (FUN_L00_0020d498(3) == 3 && hero.state.current != 0x81 &&
             (hero.unk308 == 0 || D_0013D4DC[0] == 0) && hero.unk22D8 == 0) {
-            FUN_001f9740(&r1_double_tap_timer);
+            fast_dec_timer(&r1_double_tap_timer);
             if (r1_double_tap_timer != 0 &&
                 ((unsigned int)hero.state.control_mode < 2 || hero.state.control_mode == 0xc ||
                  ((hero.state.control_mode == 2 || hero.state.control_mode == 4) && hero.grounded_frames != 0)) &&

@@ -8,6 +8,7 @@
 
 /* Ported from rac1-decomp (src/overlays/shared/mobyutil_0026E8E0.c: func_L01_0026E8E0), where it is exact; names translated to the US level program. */
 
+void FUN_L01_0026d930(char *p);
 void FUN_L01_0026d930(char *p) {
     *(int *)(p + 0x0) = 0x280;
     *(float *)(p + 0x4) = 1.0f;
@@ -34,6 +35,7 @@ typedef struct {
 extern unsigned short *D_L01_001ABCC0_26e008[] __asm__("D_L01_001ABCC0") NOT_SDA;
 extern O_26e008 *D_L01_0015FFD8_26e008 __asm__("D_L01_0015FFD8");
 
+int FUN_L01_0026e008(int i, int st);
 int FUN_L01_0026e008(int i, int st) {
     unsigned short *p;
     int n = 0;
@@ -57,6 +59,7 @@ int FUN_L01_0026e008(int i, int st) {
 extern char *D_L01_0015FFD8;
 extern unsigned short *D_L01_001ABCC0[];
 
+void FUN_L01_0026e090(int i, int v);
 void FUN_L01_0026e090(int i, int v) {
     unsigned short *t = D_L01_001ABCC0[i];
     unsigned short *p;
@@ -73,6 +76,7 @@ extern char *D_L01_0015FFD8_e0e0 __asm__("D_L01_0015FFD8");
  * func_L01_0026F090), where it is exact; names translated to the US level
  * program. The datum needs the unsplit macro form here, so it is declared
  * through an alias (same symbol, .sdata) beside its neighbour's declaration. */
+void FUN_L01_0026e0e0(int list, int state);
 void FUN_L01_0026e0e0(int list, int state) {
     unsigned short *p;
     unsigned short *q = (unsigned short *)D_L01_001ABCC0[list];

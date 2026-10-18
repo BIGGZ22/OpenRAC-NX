@@ -46,7 +46,8 @@ void FUN_L00_00235878(void) {
 /* Ported from rac1-decomp (src/overlays/shared/hud_00235960.c: func_L00_00236400), where it is exact; names translated to the US level program. */
 
 /* Offsets x/y for the element's anchor flags (centre or right/bottom alignment). */
-int FUN_L00_00235a70(HudElem *rec, int *x, int *y) {
+int hud_screen_position(HudElem *rec, int *x, int *y) __asm__("FUN_L00_00235a70");
+int hud_screen_position(HudElem *rec, int *x, int *y) {
     int w = rec->w;
     int h = rec->h;
     int flags = rec->flags;
@@ -199,7 +200,7 @@ s32 hud_keep_visible(s32 key, s32 val) {
     }
     return 1;
 }
-extern float FUN_001fa6c0(int);
+extern float convert_integer_to_float(int) __asm__("FUN_001fa6c0");
 extern int FUN_001fa6d0(float);
 extern float square_root(float) __asm__("FUN_001f9988");
 extern void FUN_L00_0023aaa8(void *);
@@ -229,7 +230,7 @@ void FUN_L00_00235ea0(e) HudElem *e;
             int t = e->unk74 - e->unk78;
             d = t < 0 ? -t : t;
             if (d != 0) {
-                s = FUN_001fa6d0(square_root(FUN_001fa6c0(d) / 25.0f) * 5.0f);
+                s = FUN_001fa6d0(square_root(convert_integer_to_float(d) / 25.0f) * 5.0f);
                 s = s < d * scale_game_frames(2) / scale_game_frames(10)
                         ? d * scale_game_frames(2) / scale_game_frames(10)
                         : s;
@@ -436,7 +437,7 @@ int FUN_L00_002365a8(HudElem *e) {
 
     e->w = D_L00_0015F760;
     e->h = D_L00_0015F764;
-    FUN_L00_00235a70(e, &x, &y);
+    hud_screen_position(e, &x, &y);
     FUN_L00_00235ad8(e, &x, &y, e->unk6C, 0);
     w = D_L00_0015F760;
     h = D_L00_0015F764;
@@ -543,7 +544,7 @@ int FUN_L00_00236e50(HudElem *e) {
 
     e->w = D_L00_0015F760;
     e->h = D_L00_0015F764;
-    FUN_L00_00235a70(e, &x, &y);
+    hud_screen_position(e, &x, &y);
     FUN_L00_00235ad8(e, &x, &y, e->unk6C, 0);
     image = FUN_0023b208(*(int *)e, 0);
     FUN_L00_0023bac0(image, x + e->unk48, y + e->unk4A,
@@ -593,7 +594,8 @@ int FUN_L00_00236e50(HudElem *e) {
 #endif
 void FUN_L00_00235ea0();
 /* Calls FUN_L00_00235ea0. */
-void FUN_L00_002371e0(void) {
+void mine_blend_color(void) __asm__("FUN_L00_002371e0");
+void mine_blend_color(void) {
     FUN_L00_00235ea0();
 }
 #ifndef NON_MATCHING

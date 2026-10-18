@@ -1314,3 +1314,31 @@ void FUN_L00_001f58e0(void) {
     }
 }
 
+s32 D_L06_0016C7E4[1] __attribute__((section(".data"))) = {0};
+f32 D_L06_0016C860[1] __attribute__((section(".data"))) = {0};
+f32 D_L06_0016C864[1] __attribute__((section(".data"))) = {0};
+s32 D_L06_0016C86C[1] __attribute__((section(".data"))) = {0};
+s32 D_L06_0016C870[1] __attribute__((section(".data"))) = {0};
+s32 D_L06_0016C874[1] __attribute__((section(".data"))) = {0};
+s32 D_L08_0016C864[1] __attribute__((section(".data"))) = {0};
+f32 D_L08_0016C8E0[1] __attribute__((section(".data"))) = {0};
+f32 D_L08_0016C8E4[1] __attribute__((section(".data"))) = {0};
+s32 D_L08_0016C8EC[1] __attribute__((section(".data"))) = {0};
+s32 D_L08_0016C8F0[1] __attribute__((section(".data"))) = {0};
+s32 D_L08_0016C8F4[1] __attribute__((section(".data"))) = {0};
+f32 D_L11_0016CAE0[1] __attribute__((section(".data"))) = {0};
+f32 D_L11_0016CAE4[1] __attribute__((section(".data"))) = {0};
+s32 D_L11_0016CAEC[1] __attribute__((section(".data"))) = {0};
+s32 D_L11_0016CAF0[1] __attribute__((section(".data"))) = {0};
+s32 D_L11_0016CAF4[1] __attribute__((section(".data"))) = {0};
+f32 D_L14_0016C7E0[1] __attribute__((section(".data"))) = {0};
+f32 D_L14_0016C7E4[1] __attribute__((section(".data"))) = {0};
+s32 D_L14_0016C7EC[1] __attribute__((section(".data"))) = {0};
+s32 D_L14_0016C7F0[1] __attribute__((section(".data"))) = {0};
+s32 D_L14_0016C7F4[1] __attribute__((section(".data"))) = {0};
+s32 D_L17_0016C964[1] __attribute__((section(".data"))) = {0};
+f32 D_L18_0016CAE0[1] __attribute__((section(".data"))) = {0};
+f32 D_L18_0016CAE4[1] __attribute__((section(".data"))) = {0};
+s32 D_L18_0016CAEC[1] __attribute__((section(".data"))) = {0};
+s32 D_L18_0016CAF0[1] __attribute__((section(".data"))) = {0};
+s32 D_L18_0016CAF4[1] __attribute__((section(".data"))) = {0};

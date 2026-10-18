@@ -364,7 +364,8 @@ extern f32 frame_time_sq_macro __asm__("D_0015ED70") MACRO_ADDR;
 /* Spawner update (moby class 0x75D): state 0 clears the slot list, state 1 picks a target and lobs a
  * 0x75E moby towards it, state 2 explodes. Ported from rac1-decomp (src/overlays/shared/vendor_002C6B30.c:
  * func_L09_0030BF88), where it is exact; this build has no 0.85 limit check before a spawn. */
-void FUN_L09_0030ab80(char *moby)
+void spawner_update(char *moby) __asm__("FUN_L09_0030ab80");
+void spawner_update(char *moby)
 {
     char *d = *(char **)(moby + 0x78);
     float target[4];
@@ -581,13 +582,13 @@ typedef struct {
 
 extern CollisionHit D_L09_00173FC0;
 
-extern s32 FUN_001efa68(void *, void *, s32, struct Moby *, s32);
-extern s32 FUN_001f0b58(void);
-extern s32 FUN_001f9770(void *);
+extern s32 collision_line(void *, void *, s32, struct Moby *, s32) __asm__("FUN_001efa68");
+extern s32 collision_hit_material(void) __asm__("FUN_001f0b58");
+extern s32 fast_dec_timer_s16(void *) __asm__("FUN_001f9770");
 extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
 extern void subtract_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a28");
 extern void scale_vector_xyz(void *, void *, f32) __asm__("FUN_001f9a68");
-extern f32 FUN_001f9af0(void *);
+extern f32 fast_vec_length(void *) __asm__("FUN_001f9af0");
 extern f32 vector_length_xy(void *) __asm__("FUN_001f9b20");
 extern void normalize_vector_xyz(void *, void *, f32) __asm__("FUN_001f9bf8");
 extern f32 random_float_between(f32, f32) __asm__("FUN_002132a8");
@@ -596,8 +597,8 @@ extern s32 allocate_voice_for_target_entry(s32, s32, struct Moby *) __asm__("FUN
 extern s32 coll_sphere(f32, void *, s32, struct Moby *) __asm__("FUN_L00_001f0d60");
 extern void FUN_L00_001fefc8(void *);
 extern void FUN_L00_001ff660(void *, void *, void *);
-extern void FUN_L00_00259fe8(struct Moby *, f32);
-extern f32 FUN_L00_0025e310(f32);
+extern void jet_animate(struct Moby *, f32) __asm__("FUN_L00_00259fe8");
+extern f32 normalize_angle(f32) __asm__("FUN_L00_0025e310");
 extern struct Moby *FUN_L09_0030a778(struct Moby *, Vec4 *);
 
 static inline void bubble_bounce(struct Moby *moby, BubbleVars *vars) {
@@ -605,15 +606,15 @@ static inline void bubble_bounce(struct Moby *moby, BubbleVars *vars) {
 
     if (hit->moby == 0) {
         FUN_L00_001ff660(&vars->vel, &vars->vel, &hit->normal_x);
-        if (atan2_307ba8(hit->normal_z, vector_length_xy(&hit->normal_x)) < 0.6981317f && FUN_001f0b58() == -1) {
+        if (atan2_307ba8(hit->normal_z, vector_length_xy(&hit->normal_x)) < 0.6981317f && collision_hit_material() == -1) {
             scale_vector_xyz(&vars->vel, &vars->vel, 0.5f);
-            if (FUN_001f9af0(&vars->vel) < 0.025f) {
+            if (fast_vec_length(&vars->vel) < 0.025f) {
                 moby->state = 1;
             }
         }
     } else if (((struct Moby *)hit->moby)->oclass != 0x75E) {
         FUN_L00_001ff660(&vars->vel, &vars->vel, &hit->normal_x);
-        if (atan2_307ba8(hit->normal_z, vector_length_xy(&hit->normal_x)) < 0.6981317f && FUN_001f0b58() == -1) {
+        if (atan2_307ba8(hit->normal_z, vector_length_xy(&hit->normal_x)) < 0.6981317f && collision_hit_material() == -1) {
             scale_vector_xyz(&vars->vel, &vars->vel, 1.2f);
         }
     } else {
@@ -625,7 +626,8 @@ static inline void bubble_bounce(struct Moby *moby, BubbleVars *vars) {
     }
 }
 
-void FUN_L09_0030b3b0(struct Moby *moby) {
+void spawner_egg_update(struct Moby *moby) __asm__("FUN_L09_0030b3b0");
+void spawner_egg_update(struct Moby *moby) {
     BubbleVars *vars = (BubbleVars *)moby->pvars;
     Vec4 prev;
     Vec4 step;
@@ -647,7 +649,7 @@ void FUN_L09_0030b3b0(struct Moby *moby) {
         add_vector_xyz(&step, &step, &moby->pos);
         moby->collision = 0;
         vars->owner->collision = 0;
-        if (FUN_001efa68(&prev, &step, 4, moby, 0) != 0) {
+        if (collision_line(&prev, &step, 4, moby, 0) != 0) {
             subtract_vector_xyz(&step, &D_L09_00173FC0.point, &step);
             normalize_vector_xyz(&step, &step, 0.215f);
             add_vector_xyz(&moby->pos, &moby->pos, &step);
@@ -666,18 +668,18 @@ void FUN_L09_0030b3b0(struct Moby *moby) {
                 other->state != 0xFD) {
                 subtract_vector_xyz(&away, &moby->pos, &other->pos);
                 away.f[2] = 0.0f;
-                dist = FUN_001f9af0(&away);
+                dist = fast_vec_length(&away);
                 if (dist < 1.8f) {
                     scale_vector_xyz(&away, &away, (1.8f - dist) * (frame_scale * -0.5f + 1.0f));
                     add_vector_xyz(&moby->pos, &moby->pos, &away);
                 }
             }
         }
-        if (FUN_001f9770(&vars->life) != 0) {
+        if (fast_dec_timer_s16(&vars->life) != 0) {
             moby->state = 2;
         }
-        moby->rot.x = FUN_L00_0025e310(vars->vel.f[0]);
-        moby->rot.y = FUN_L00_0025e310(vars->vel.f[1]);
+        moby->rot.x = normalize_angle(vars->vel.f[0]);
+        moby->rot.y = normalize_angle(vars->vel.f[1]);
         moby->collision = moby->pclass->collision;
         vars->owner->collision = vars->owner->pclass->collision;
         vars->vel.f[2] -= frame_time_sq * 9.8f;
@@ -707,7 +709,7 @@ void FUN_L09_0030b3b0(struct Moby *moby) {
         }
         break;
     }
-    FUN_L00_00259fe8(moby, moby->scale * 0.3f / moby->pclass->scale);
+    jet_animate(moby, moby->scale * 0.3f / moby->pclass->scale);
     if (moby->pos.z < 5.0f || moby->pos.z > 500.0f) {
         FUN_L09_0030b350(moby, (char *)vars);
         return;

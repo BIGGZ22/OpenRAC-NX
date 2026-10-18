@@ -41,7 +41,8 @@ extern float D_L12_00161A00 __attribute__((sda));
 extern float D_L12_00161A04 __attribute__((sda));
 extern float D_L12_00161A08 __attribute__((sda));
 
-void FUN_L12_002ec720(struct Moby *moby) {
+void water_reservoir_update(struct Moby *moby) __asm__("FUN_L12_002ec720");
+void water_reservoir_update(struct Moby *moby) {
     float *data = (float *)moby->pvars;
     float pos[4], offset0[4], offset1[4], diff0[4], diff1[4];
     float fraction, frame_scale;
@@ -257,13 +258,14 @@ extern int coll_sphere_ece00(void *, float, int, struct Moby *) __asm__("FUN_L00
 extern void make_hit_ece00(void *, struct Moby *, int, float, void *) __asm__("FUN_L00_00259888");
 extern float fast_cos_ece00(float) __asm__("FUN_001f9dc8");
 extern float fast_sin_ece00(float) __asm__("FUN_001f9de0");
-extern void apply_hit_ece00(int, void *) __asm__("FUN_L00_00259a88");
-extern void FUN_L00_0025e450(struct Moby *, void *, void *, float, float, int, int, int, float, float, float, float,
-                             int, float, int, int, int, int);
-extern void FUN_L00_0025f090(void *, void *, int, float, float);
+extern void FUN_L00_00259a88(int, void *);
+extern void spawn_explosion(struct Moby *, void *, void *, float, float, int, int, int, float, float, float, float,
+                             int, float, int, int, int, int) __asm__("FUN_L00_0025e450");
+extern void cart_burst(void *, void *, int, float, float) __asm__("FUN_L00_0025f090");
 
 /* Level 12 shot: flies with a smoke trail, damages the first moby it hits other than its owner, then pops. */
-void FUN_L12_002ece00(struct Moby *moby) {
+void rocket_update(struct Moby *moby) __asm__("FUN_L12_002ece00");
+void rocket_update(struct Moby *moby) {
     ShotVars_ece00 *vars = (ShotVars_ece00 *)moby->pvars;
     float old_pos[4];
     float side[4];
@@ -313,7 +315,7 @@ void FUN_L12_002ece00(struct Moby *moby) {
                 hit.unk18 = 1;
                 hit.unk19 = 1;
                 hit.oclass = moby->oclass;
-                apply_hit_ece00(D_L12_001742C0_ece00.moby, &hit);
+                FUN_L00_00259a88(D_L12_001742C0_ece00.moby, &hit);
             }
             moby->state = 2;
         }
@@ -328,12 +330,12 @@ void FUN_L12_002ece00(struct Moby *moby) {
         add_vector_ece00(&moby->pos, &moby->pos, old_pos);
         if (current_level_index == 12 && camera_secondary_mode_ece00 == 50) {
             char *camera = D_L12_00167240 - 0x140;
-            FUN_L00_0025e450(moby, &D_L12_0015F580, 0, 0.0f, 0.0f, 3, 3, 5, 0.3f, 0.2f, 0.0f, 0.15f, -1, 0.0f, 0, 0,
+            spawn_explosion(moby, &D_L12_0015F580, 0, 0.0f, 0.0f, 3, 3, 5, 0.3f, 0.2f, 0.0f, 0.15f, -1, 0.0f, 0, 0,
                              -1, 0);
             *(float *)(camera + 0x160) = 0.025f;
             *(int *)(camera + 0x168) = scale_game_frames(20);
         } else {
-            FUN_L00_0025f090(moby, &moby->pos, 0, 0.25f, 13.0f);
+            cart_burst(moby, &moby->pos, 0, 0.25f, 13.0f);
         }
         mark_moby_for_removal_ece00(moby);
         break;

@@ -4,6 +4,7 @@
 
 void build_spherical_offset(void *, f32, f32, f32) __asm__("FUN_00214db0");
 void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
+void FUN_L00_00262cf0(void *a, void *b, f32 scale, f32 yaw, f32 pitch);
 void FUN_L00_00262cf0(void *a, void *b, f32 scale, f32 yaw, f32 pitch) {
     char buf[16];
     build_spherical_offset(buf, scale, yaw, pitch);

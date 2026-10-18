@@ -64,7 +64,7 @@ extern unsigned char D_0014C190_r[] __asm__("D_0014C190");
 extern unsigned char D_0013F350_r[] __asm__("D_0013F350");
 extern unsigned char D_0014C050_r[] __asm__("D_0014C050");
 extern unsigned char D_0013F3D0_r[] __asm__("D_0013F3D0");
-extern float FUN_001f9b80(void *, void *);
+extern float vector_distance(void *, void *) __asm__("FUN_001f9b80");
 extern int D_0014C050; /* no foreign declaration */
 extern int D_L11_0015FC88; /* no foreign declaration */
 extern int scale_game_frames_alt(int) __asm__("FUN_001f96f8");
@@ -81,7 +81,8 @@ extern int func_L00_00203F20_3102C8(int a, int b) __asm__("FUN_L00_00203908");
 extern float func_001F9D48_3102C8(void *, void *) __asm__("FUN_001f9b80");
 extern int func_001F9850_3102C8(int) __asm__("FUN_001f96f8");
 
-void FUN_L11_0030ee00(Lock_3102C8 *moby)
+void thruster_pack_lock_update(Lock_3102C8 *moby) __asm__("FUN_L11_0030ee00");
+void thruster_pack_lock_update(Lock_3102C8 *moby)
 {
     char *vars = moby->vars;
 
@@ -535,7 +536,7 @@ extern void transform_vector_by_basis(void *, void *, void *) __asm__("FUN_001f9
 extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
 void enqueue_callback_list_1(int arg0, int arg1) __asm__("FUN_001f4600");
 extern void f49(void *, void *) __asm__("FUN_001f4600");
-extern void cb(void) __asm__("FUN_L11_003192c8");
+extern void FUN_L11_003192c8_c(void) __asm__("FUN_L11_003192c8");
 
 void FUN_L11_00319670(char *moby) {
     char *d = *(char **)(moby + 0x78);
@@ -570,7 +571,7 @@ void FUN_L11_00319670(char *moby) {
         int *p = *(int **)(d + 0x2C8);
         if (t != *p) {
             *p = t;
-            f49(cb, moby);
+            f49(FUN_L11_003192c8_c, moby);
         }
     }
 }
@@ -755,3 +756,4 @@ void FUN_L11_0031a438(char *moby) {
     normalize_vector_xyz(direction, direction, *(float *)(d + 0x80));
     add_vector_xyz(&MOBY(moby)->pos, &MOBY(moby)->pos, direction);
 }
+

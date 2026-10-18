@@ -15,7 +15,7 @@
 
 extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
 extern float fast_add_rotations(float, float) __asm__("FUN_001fa580");
-extern int FUN_001f9740(int *arg0);
+extern int fast_dec_timer(int *arg0) __asm__("FUN_001f9740");
 extern s32 truncate_float_to_s32(f32) __asm__("FUN_001fa6d0");
 extern void FUN_L00_001ff290(void *, void *, void *);
 void mark_moby_for_removal(struct Obj *obj) __asm__("FUN_0020c828");
@@ -34,7 +34,7 @@ void FUN_L03_002de370(char *moby) {
         float b = convert_integer_to_float(*(int *)(d + 0x20));
         moby[0x23] = func_001FA898_r(a * 255.0f / b);
     }
-    if (FUN_001f9740((int *)(d + 0x24)) != 0) {
+    if (fast_dec_timer((int *)(d + 0x24)) != 0) {
         mark_moby_for_removal(moby);
     }
 }
@@ -92,7 +92,7 @@ void FUN_L03_002e8628(char *cam) {
 extern f32 approximate_arcsine(f32) __asm__("func_001F9DF8");
 extern f32 dot_vectors_xyz(void *, void *) __asm__("func_001F9AB0");
 extern float D_L03_00166F30[];
-extern float FUN_L00_001eb328(void *, float, float, float, float, float);
+extern float rope_spring_turn(void *, float, float, float, float, float) __asm__("FUN_L00_001eb328");
 extern void FUN_L03_0024e6f8(float, float *, float *, float *, int);
 extern void cross_vectors_xyz(void *, void *, void *) __asm__("func_001F9AD8");
 extern void normalize_vector_xyz(void *, void *, f32) __asm__("FUN_001f9bf8");
@@ -111,7 +111,7 @@ void FUN_L03_002e8730(char *m) {
     subtract_vector_xyz(direction, position, m + 0x30);
     normalize_vector_xyz(direction, direction, 1.0f);
     angle = approximate_arcsine(dot_vectors_xyz(direction, m));
-    t = FUN_L00_001eb328(data, 0.0f, 1.57079637f - angle, *(float *)(data + 4),
+    t = rope_spring_turn(data, 0.0f, 1.57079637f - angle, *(float *)(data + 4),
                          *(float *)(data + 8), *(float *)(data + 12));
     FUN_L03_0024e6f8(t, (float *)m, (float *)result, direction, 1);
     normalize_vector_xyz(result, m, 1.0f);

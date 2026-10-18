@@ -139,9 +139,9 @@ extern void FUN_L00_002132b8(f32, f32);
 extern void FUN_L00_00217118(f32, f32);
 extern void stick_target(f32, s32) __asm__("FUN_L00_002118c8");
 extern void transform_vector_by_basis(void *, void *, void *) __asm__("FUN_001f9cf8");
-extern void FUN_L00_00211e30(s32, f32, f32, f32);
+extern void turn_to(s32, f32, f32, f32) __asm__("FUN_L00_00211e30");
 extern void FUN_L00_00211e30_b(f32, f32, f32, s32) __asm__("FUN_L00_00211e30");
-extern s32 FUN_001f9740(void *);
+extern s32 fast_dec_timer(void *) __asm__("FUN_001f9740");
 extern s32 scale_game_frames(s32) __asm__("FUN_001f96f8");
 extern s32 FUN_L00_00229a98(void);
 extern void FUN_L00_00211e98(void);
@@ -192,10 +192,10 @@ extern u8 D_L05_0017C420[];
 
 extern void FUN_L00_00216e48(s32, struct MobyView *, s32);
 extern void release_voice_slot(s32) __asm__("FUN_0022d798");
-extern s32 FUN_001f9770(s16 *);
+extern s32 fast_dec_timer_s16(s16 *) __asm__("FUN_001f9770");
 extern void FUN_L00_00209a40(s32, s32);
 extern void FUN_L00_00209ca8(s32, s32, s32);
-extern void FUN_L00_002a3ec8(s32, s32, s32, f32, f32, f32, f32);
+extern void pool_splash(s32, s32, s32, f32, f32, f32, f32) __asm__("FUN_L00_002a3ec8");
 extern f32 FUN_L00_0025bc98(f32 *, f32, f32 *, s32, f32, f32, f32);
 extern f32 fast_subtract_rotations(f32, f32) __asm__("FUN_001fa5c8");
 extern void moby_point_position(struct MobyView *, s32, void *) __asm__("FUN_L00_0024f7c8");
@@ -209,7 +209,7 @@ extern void FUN_L00_00262cf0(void *, void *, f32, f32, f32);
 extern f32 fast_add_rotations(f32, f32) __asm__("FUN_001fa580");
 extern void build_spherical_offset(void *, f32, f32, f32) __asm__("FUN_00214db0");
 extern f32 FUN_L00_00209018(void *, s32);
-extern f32 FUN_001f9af0(void *);
+extern f32 fast_vec_length(void *) __asm__("FUN_001f9af0");
 extern f32 approach_value(f32 *, f32, f32) __asm__("FUN_00213ed8");
 extern f32 fast_cos(f32) __asm__("FUN_001f9dc8");
 extern void FUN_L00_0020a1e0(f32, f32);
@@ -233,21 +233,21 @@ extern f32 fast_arc_tan(f32, f32) __asm__("FUN_001f9e90");
 extern f32 fast_vec_dist(void *, void *) __asm__("FUN_001f9b48");
 extern s32 FUN_L00_002595a0(f32 *, f32 *, f32, f32, f32);
 extern f32 FUN_L00_0025bc00(f32 *, f32, s32, f32);
-extern f32 FUN_001f9b80(void *, void *);
+extern f32 vector_distance(void *, void *) __asm__("FUN_001f9b80");
 extern void fast_vec_scale(void *, void *, f32) __asm__("FUN_001f9a68");
 extern f32 fast_difference_between_rotations(f32, f32) __asm__("FUN_001fa688");
 extern void euler_rotation_matrix(void *, void *) __asm__("FUN_001fa050");
 extern void transpose_rotation_matrix(void *, void *) __asm__("FUN_001fa2d8");
 extern void transform_vector(void *, void *, void *) __asm__("FUN_001f9d20");
 extern f32 square_root(f32) __asm__("FUN_001f9988");
-extern f32 FUN_L00_00233a78(void *);
-extern f32 FUN_L00_0025b8c0(f32 *, f32 *, f32, f32, f32, f32);
-extern f32 FUN_L00_00213350(void *);
+extern f32 gravity_z(void *) __asm__("FUN_L00_00233a78");
+extern f32 vendor_spring(f32 *, f32 *, f32, f32, f32, f32) __asm__("FUN_L00_0025b8c0");
+extern f32 forward_component(void *) __asm__("FUN_L00_00213350");
 extern struct HeroTableRow2C D_L05_0017C088[];
 extern struct LevelTable_QS D_L05_00167080;
 #define Q D_L05_00167080
 extern void FUN_L00_00233ba0(void *, void *, f32);
-extern void FUN_L00_00233b20(void *, void *, f32);
+extern void gravity_set_z(void *, void *, f32) __asm__("FUN_L00_00233b20");
 extern void FUN_L00_002336e8(void *, void *, f32);
 extern void make_hit_descriptor(void *, struct MobyView *, s32, f32, void *) __asm__("FUN_L00_00259888");
 extern s32 collect_mobies_in_sphere(f32, void *, s32, struct MobyView *, void *) __asm__("FUN_L00_001f2868");
@@ -258,8 +258,8 @@ extern void FUN_L00_001ff290(void *, void *, void *);
 extern void FUN_L00_002a9b80(struct MobyView *, void *);
 extern s32 FUN_L00_002a96f8(struct MobyView *, void *, f32, f32, s32, f32, f32, f32);
 extern void FUN_L00_002335c8(void *, f32, f32, f32);
-extern s32 FUN_L00_002598b0(struct MobyView *, f32, void *, s32, f32, f32, s32, s32, s32);
-extern f32 FUN_001f9ab0(void *, void *);
+extern s32 play_entity_sound(struct MobyView *, f32, void *, s32, f32, f32, s32, s32, s32) __asm__("FUN_L00_002598b0");
+extern f32 fast_vec_dot(void *, void *) __asm__("FUN_001f9ab0");
 struct PlayerSpeedTuning {
     u8 pad0[8];
     f32 x08;
@@ -271,14 +271,14 @@ extern struct PlayerSpeedTuning D_L05_0017C218;
 extern s32 FUN_L00_00216de8(s32, s32);
 extern void FUN_L00_00233708(void *, void *, f32);
 extern void FUN_L00_00233810(void *, void *, f32);
-extern s32 FUN_001efa68(void *, void *, s32, struct MobyView *, s32);
+extern s32 collision_line(void *, void *, s32, struct MobyView *, s32) __asm__("FUN_001efa68");
 extern void FUN_L00_00215340(void);
 extern void FUN_L00_00233660(void *, f32, f32, f32);
 extern s32 FUN_L00_0025e3b8(s32);
-extern void FUN_L00_00259bc8(s32, struct MobyView *, s32, void *, void *, f32);
+extern void spawn_nearby_effect(s32, struct MobyView *, s32, void *, void *, f32) __asm__("FUN_L00_00259bc8");
 extern s32 D_L05_00178300[];
 extern void FUN_L00_00209ec8(void);
-extern void FUN_L00_002338d0(void *, void *);
+extern void gravity_flatten(void *, void *) __asm__("FUN_L00_002338d0");
 extern s32 hero_slot_item_id(s32) __asm__("FUN_L00_0020d498");
 extern void FUN_L00_0020b5b8(void);
 extern void FUN_L01_0022d090(void);
@@ -291,7 +291,7 @@ extern void FUN_L00_0020d2f8(void *);
 extern f32 randf_sym(f32, f32) __asm__("FUN_L00_00257c48");
 extern void FUN_L00_0026d598(void *, void *, s32);
 extern s32 FUN_L00_0025df68(void *, void *, void *, s32 *, f32 *, s32, f32, f32, f32);
-extern s32 FUN_L00_0025d808(void *, void *, s32 *, f32 *, f32, s32) __asm__("FUN_L00_0025d808");
+extern s32 sample_path(void *, void *, s32 *, f32 *, f32, s32) __asm__("FUN_L00_0025d808");
 extern s32 FUN_L00_0025d7a0(void *, s32, s32, s32);
 extern f32 multiply_global_factor_ed64(f32) __asm__("FUN_001f96b0");
 extern void hero_integrate_velocity(void) __asm__("FUN_L00_00214108");
@@ -350,8 +350,8 @@ void FUN_L05_00244a70(void) {
                 v0.f[0] = 1.0f;
                 transform_vector_by_basis(&hero.motion.unk170, &v0, &D_L05_001671D8[0x1F8]);
                 hero.motion.move_yaw = *(f32 *)D_L05_001671D8;
-                FUN_L00_00211e30(0, frame_scale_sq, frame_scale_sq * 0.0f, frame_time * 174.53293f);
-                if (D_L05_0015F688 > 0 && FUN_001f9740(&D_L05_0015F688) != 0) {
+                turn_to(0, frame_scale_sq, frame_scale_sq * 0.0f, frame_time * 174.53293f);
+                if (D_L05_0015F688 > 0 && fast_dec_timer(&D_L05_0015F688) != 0) {
                     s32 t;
                     if (usage_stats.stat[18].count < 0xFFFF) {
                         usage_stats.stat[18].count++;
@@ -374,7 +374,7 @@ void FUN_L05_00244a70(void) {
         if (hero.state.current == HERO_STATE_CROUCH || hero.state.current == 0x17) {
             if (hero.unk229C > 0.2f || ((struct MobyView *)hero.moby)->b53 == 0xE || ((struct MobyView *)hero.moby)->b53 == 0xF) {
                 if (hero.state.current == HERO_STATE_CROUCH) {
-                    FUN_L00_00211e30(0, frame_scale_sq * 0.002f, frame_scale_sq * 0.07f,
+                    turn_to(0, frame_scale_sq * 0.002f, frame_scale_sq * 0.07f,
                                      frame_time * 6.981317f);
                 } else if (hero.state.current == 0x17) {
                     FUN_L00_00211e98();
@@ -510,7 +510,7 @@ void FUN_L05_00244a70(void) {
         }
         if (hero.unk90A != 0) {
             s32 n;
-            FUN_001f9770(&hero.unk90A);
+            fast_dec_timer_s16(&hero.unk90A);
             n = (s16)hero.unk90A >> 2;
             FUN_L00_00209a40(n > 8 ? 8 : n, 0);
         }
@@ -524,7 +524,7 @@ void FUN_L05_00244a70(void) {
             if (hero.state_timer == 1) {
                 FUN_L00_00209ca8(3, 0x10, 0);
                 if (D_L05_001612D0 != 0) {
-                    FUN_L00_002a3ec8(D_L05_001612D0, D_L05_001612D8, 0, hero.motion.pos.f[0], hero.motion.pos.f[1],
+                    pool_splash(D_L05_001612D0, D_L05_001612D8, 0, hero.motion.pos.f[0], hero.motion.pos.f[1],
                                      0.4f, -0.3f);
                 }
                 hero.unk90A = scale_game_frames(70);
@@ -633,9 +633,9 @@ void FUN_L05_00244a70(void) {
             FUN_L00_0025bc98(&hero.motion.rot.f[1], steer, &hero.unk8E8, 0, accel, rate, lo);
             diff = fast_subtract_rotations(hero.motion.rot.f[1], old);
             stick_target(1.0f, 0);
-            FUN_L00_00211e30(0, frame_scale_sq * 0.007f, frame_scale_sq * 0.08f, frame_time * 5.2359877f);
+            turn_to(0, frame_scale_sq * 0.007f, frame_scale_sq * 0.08f, frame_time * 5.2359877f);
             hero.unk8EC = hero.motion.unk184;
-            FUN_001f9740(&hero.unk8F4);
+            fast_dec_timer(&hero.unk8F4);
             if (hero.state.step == 1) {
                 hero.target_speed = frame_time * 6.0f;
             } else if (hero.state.current == 0x35) {
@@ -665,7 +665,7 @@ void FUN_L05_00244a70(void) {
             if (hero.state.current != 0x35 || !(PD.u1A0.i1A0 & 0xA)) {
                 hero.target_speed *= k;
             };
-            if (FUN_001f9740(&hero.unk8F0) != 0) {
+            if (fast_dec_timer(&hero.unk8F0) != 0) {
                 s32 lo2;
                 s32 hi2;
                 pl = &hero;
@@ -688,7 +688,7 @@ void FUN_L05_00244a70(void) {
                 }
                 pl->unk8F0 = random_int_between(lo2, scale_game_frames(hi2));
             }
-            if (hero.state.current == 0x35 && FUN_001f9770(&hero.unk8F8) != 0) {
+            if (hero.state.current == 0x35 && fast_dec_timer_s16(&hero.unk8F8) != 0) {
                 struct MobyView *gm = (struct MobyView *)hero.items[3].moby;
                 if (gm != NULL && gm->hA6 == 0x261) {
                     s32 i;
@@ -726,7 +726,7 @@ void FUN_L05_00244a70(void) {
                 }
                 build_spherical_offset(&hero.motion.velocity, sp, hero.motion.rot.f[2], yaw);
             } else if (hero.state.current == 0x34) {
-                f32 len = FUN_001f9af0(&hero.motion.unk150);
+                f32 len = fast_vec_length(&hero.motion.unk150);
                 if (hero.state.prev == 0x35) {
                     approach_value(&len, 0.0f, frame_time_sq * 8.0f);
                 } else {
@@ -774,11 +774,11 @@ void FUN_L05_00244a70(void) {
         break;
     case 0x6A:
     case 0x82: {
-        f32 len = FUN_001f9af0(&hero.motion.unk150);
+        f32 len = fast_vec_length(&hero.motion.unk150);
         approach_value(&len, 0.0f, frame_time_sq * 4.0f);
         fast_vec_normalize(&hero.motion.unk150, &hero.motion.unk150, len);
         qcopy(&hero.motion.velocity, &hero.motion.unk150);
-        if (FUN_001f9740(&hero.unk8F0) == 2) {
+        if (fast_dec_timer(&hero.unk8F0) == 2) {
             moby_point_position((struct MobyView *)hero.moby, 4, &v0);
             v20.q = 0;
             v20.f[0] = 0.4f;
@@ -824,8 +824,8 @@ void FUN_L05_00244a70(void) {
                 hero.target_speed = frame_time * 3.0f * 0.5f;
             }
         }
-        FUN_L00_00211e30(0, frame_scale_sq * 0.007f, frame_scale_sq * 0.08f, frame_time * 5.2359877f);
-        FUN_001f9740(&hero.unk698);
+        turn_to(0, frame_scale_sq * 0.007f, frame_scale_sq * 0.08f, frame_time * 5.2359877f);
+        fast_dec_timer(&hero.unk698);
         if (hero.state.current == 0x36) {
             if (PD.i1D4 != 0 && hero.unk698 != 0) {
                 hero.target_speed = frame_time * 3.0f;
@@ -911,25 +911,25 @@ void FUN_L05_00244a70(void) {
         }
         hero.unk88D = hero.unk89C && (PD.u1A0.i1A0 & 0xF);
         if ((((PD.u1A0.i1A0 & 0x80) || hero.unk8CC != 0) && hero.unk864 != 0) || hero.unk8C4 != 0) {
-            FUN_001f9770(&hero.unk8CC);
+            fast_dec_timer_s16(&hero.unk8CC);
             if (hero.unk884 == 0) {
                 hero.unk8CC = scale_game_frames(20);
             }
             hero.unk884 = 1;
-            FUN_L00_0025b8c0(&hero.unk87C, &hero.unk858, 1.2217305f, frame_scale_sq * 0.01f, frame_scale_sq * 0.3f,
+            vendor_spring(&hero.unk87C, &hero.unk858, 1.2217305f, frame_scale_sq * 0.01f, frame_scale_sq * 0.3f,
                              frame_time * 0.6981317f);
             approach_value(&hero.unk868, frame_time * 11.0f, frame_time_sq * 20.0f);
             if (hero.unk8C4 != 0) {
-                FUN_001f9740(&hero.unk8C4);
+                fast_dec_timer(&hero.unk8C4);
             } else {
-                FUN_001f9740(&hero.unk864);
+                fast_dec_timer(&hero.unk864);
             }
             if ((struct MobyView *)hero.unk86C != NULL) {
                 ((struct MobyView *)hero.unk86C)->bBC = 1;
             }
         } else {
             hero.unk884 = 0;
-            FUN_L00_0025b8c0(&hero.unk87C, &hero.unk858, 1.2217305f, frame_scale_sq * 0.007f, frame_scale_sq * 0.3f,
+            vendor_spring(&hero.unk87C, &hero.unk858, 1.2217305f, frame_scale_sq * 0.007f, frame_scale_sq * 0.3f,
                              frame_time * 0.5235988f);
             approach_value(&hero.unk868, 0.0f, frame_time_sq * 10.0f);
         }
@@ -1050,7 +1050,7 @@ void FUN_L05_00244a70(void) {
             for (i = 0; i < n; i++) {
                 if (FUN_L00_0025e3b8(D_L05_00178300[i]) != 0 ||
                     ((struct MobyView *)D_L05_00178300[i])->hA6 == 0x85) {
-                    FUN_L00_00259bc8(D_L05_00178300[i], (struct MobyView *)hero.moby, 0x10000, &hero.motion.pos, &v10, 1.0f);
+                    spawn_nearby_effect(D_L05_00178300[i], (struct MobyView *)hero.moby, 0x10000, &hero.motion.pos, &v10, 1.0f);
                 }
             }
         }
@@ -1171,7 +1171,7 @@ void FUN_L05_00244a70(void) {
         if ((struct MobyView *)hero.unk964 != NULL) {
             hero.motion.move_yaw = fast_arc_tan(((struct MobyView *)hero.unk964)->u10.f10 - moby->u10.f10,
                                   ((struct MobyView *)hero.unk964)->u10.f14.v - moby->u10.f14.v);
-            FUN_L00_00211e30(0, frame_scale_sq * 0.02f, frame_scale_sq * 0.15f, frame_time * 6.2831855f);
+            turn_to(0, frame_scale_sq * 0.02f, frame_scale_sq * 0.15f, frame_time * 6.2831855f);
         }
         break;
     case 0x25: {
@@ -1187,7 +1187,7 @@ void FUN_L05_00244a70(void) {
             approach_value(&hero.unk960, frame_time * 27.0f, frame_time_sq * 80.0f);
             hero.motion.move_yaw = fast_arc_tan(((struct MobyView *)hero.unk964)->u10.f10 - moby->u10.f10,
                                   ((struct MobyView *)hero.unk964)->u10.f14.v - moby->u10.f14.v);
-            FUN_L00_00211e30(0, frame_scale_sq * 0.03f, frame_scale_sq * 0.15f, frame_time * 7.330383f);
+            turn_to(0, frame_scale_sq * 0.03f, frame_scale_sq * 0.15f, frame_time * 7.330383f);
         } else if (hero.state.step == 1) {
             approach_value(&hero.unk960, 0.0f, frame_time_sq * 42.0f);
         }
@@ -1204,7 +1204,7 @@ void FUN_L05_00244a70(void) {
             FUN_L00_0025bc00(&hero.motion.rot.f[1], 0.0f, 0, frame_time * 3.8397243f);
         } else {
             f32 an = fast_add_rotations(
-                -fast_arc_tan(FUN_001f9b80(&hero.motion.pos, &v0), v0.f[2] - hero.motion.pos.f[2]), 1.5707964f);
+                -fast_arc_tan(vector_distance(&hero.motion.pos, &v0), v0.f[2] - hero.motion.pos.f[2]), 1.5707964f);
             FUN_L00_0025bc00(&hero.motion.rot.f[1], an, 0, frame_time * 6.4577184f);
         }
         v20.f[0] = fast_cos(fast_add_rotations(hero.motion.rot.f[2], -1.5707964f)) * -0.57f;
@@ -1249,7 +1249,7 @@ void FUN_L05_00244a70(void) {
             FUN_L00_0025bc98(&hero.unk9AC, a, &hero.unk9B8, 0, frame_scale_sq * 0.02f, frame_scale_sq * 0.3f, 0.0f);
         }
         hero.motion.move_yaw = hero.unk9AC;
-        FUN_L00_00211e30(0, frame_scale_sq * 0.02f, frame_scale_sq * 0.3f, frame_time * 4.712389f);
+        turn_to(0, frame_scale_sq * 0.02f, frame_scale_sq * 0.3f, frame_time * 4.712389f);
         subtract_vector_xyz(&v0, &((struct MobyView *)hero.unk994)->u10.v10, &hero.motion.pos);
         fast_vec_normalize(&v0, &v0, 1.0f);
         if (v0.f[2] < 0.23f) {
@@ -1288,14 +1288,14 @@ void FUN_L05_00244a70(void) {
         }
         if (hero.unk99C != 0) {
             f32 s;
-            if (FUN_001f9b80(&hero.motion.pos, &((struct MobyView *)hero.unk994)->u10.v10) < hero.unk9A0 * 1.57f || hero.ground_distance > 1.5f) {
+            if (vector_distance(&hero.motion.pos, &((struct MobyView *)hero.unk994)->u10.v10) < hero.unk9A0 * 1.57f || hero.ground_distance > 1.5f) {
                 FUN_L00_002334d0(&hero.motion.velocity, &hero.motion.displacement, frame_time_sq * 40.0f);
-                if (hero.unk9BE != 0 && FUN_L00_00233a78(&hero.motion.velocity) > 0.0f) {
+                if (hero.unk9BE != 0 && gravity_z(&hero.motion.velocity) > 0.0f) {
                     subtract_vector_xyz(&m80[3], &hero.motion.pos, &((struct MobyView *)hero.unk994)->u10.v10);
                     FUN_L00_002334d0(&hero.motion.velocity, &hero.motion.velocity, frame_time_sq * 57.0f);
                 }
             }
-            s = FUN_001f9af0(&hero.motion.velocity) * (frame_time * 0.015f);
+            s = fast_vec_length(&hero.motion.velocity) * (frame_time * 0.015f);
             fast_vec_scale(&m80[3], &hero.motion.velocity, -1.0f);
             fast_vec_normalize(&m80[3], &m80[3], s);
             add_vector_xyz(&hero.motion.velocity, &hero.motion.velocity, &m80[3]);
@@ -1303,7 +1303,7 @@ void FUN_L05_00244a70(void) {
         {
             struct MobyView *r;
             if ((struct MobyView *)hero.unk994 != NULL && (r = ((struct MobyView *)hero.unk994)->pm78) != NULL) {
-                f32 len = FUN_001f9af0(&hero.motion.velocity);
+                f32 len = fast_vec_length(&hero.motion.velocity);
                 if (r->fC < len) {
                     approach_value(&len, r->fC, frame_time_sq * 15.0f);
                     fast_vec_normalize(&hero.motion.velocity, &hero.motion.velocity, len);
@@ -1324,9 +1324,9 @@ void FUN_L05_00244a70(void) {
             add_vector_xyz(&m80[3], &((struct MobyView *)hero.unk994)->u10.v10, &vC0);
             subtract_vector_xyz(&hero.motion.velocity, &m80[3], &vD0);
             old = hero.unk9A4;
-            FUN_L00_0025b8c0(&hero.unk9A4, &hero.unk9A8, hero.unk9A0, hero.unk9C4, hero.unk9C8, hero.unk9CC);
+            vendor_spring(&hero.unk9A4, &hero.unk9A8, hero.unk9A0, hero.unk9C4, hero.unk9C8, hero.unk9CC);
             d = hero.unk9A4 - old;
-            if (FUN_001f9af0(&vC0) > hero.unk9A4) {
+            if (fast_vec_length(&vC0) > hero.unk9A4) {
                 fast_vec_normalize(&vC0, &vC0, d);
                 add_vector_xyz(&hero.motion.pos, &hero.motion.pos, &vC0);
             }
@@ -1335,7 +1335,7 @@ void FUN_L05_00244a70(void) {
             f32 mx = frame_time * 14.0f;
             f32 sp = vector_length_xy(&hero.motion.velocity);
             if (sp < mx) {
-                FUN_L00_0025b8c0(&sp, &hero.unk9B4, mx, frame_scale_sq * 0.047f, frame_scale_sq * 0.3f, 0.0f);
+                vendor_spring(&sp, &hero.unk9B4, mx, frame_scale_sq * 0.047f, frame_scale_sq * 0.3f, 0.0f);
                 m80[3].f[0] = fast_cos(hero.unk9AC) * hero.unk9B4;
                 m80[3].f[1] = fast_sin(hero.unk9AC) * hero.unk9B4;
                 m80[3].f[2] = 0.0f;
@@ -1352,7 +1352,7 @@ void FUN_L05_00244a70(void) {
                     up = hero.unk9BC == 1;
                 } else {
                     m80[3].q = hero.motion.displacement.q;
-                    up = FUN_L00_00213350(&m80[3]) > 0.0f;
+                    up = forward_component(&m80[3]) > 0.0f;
                 }
                 if (up) {
                     if (moby->b53 != 0x35) {
@@ -1388,12 +1388,12 @@ void FUN_L05_00244a70(void) {
         mx = frame_time_sq * 70.0f;
         t2 = scale_game_frames(33);
         if (hero.state_timer < t1) {
-            f32 h = FUN_L00_00233a78(&hero.motion.velocity);
+            f32 h = gravity_z(&hero.motion.velocity);
             approach_value(&h, r, mx);
-            FUN_L00_00233b20(&hero.motion.velocity, &hero.motion.velocity, h);
+            gravity_set_z(&hero.motion.velocity, &hero.motion.velocity, h);
         } else if (t2 < hero.state_timer) {
             FUN_L00_002334d0(&hero.motion.velocity, &hero.motion.velocity, hero.unk4B0);
-            if (FUN_L00_00233a78(&hero.motion.velocity) < 0.0f) {
+            if (gravity_z(&hero.motion.velocity) < 0.0f) {
                 hero.unk4B8 = 1.0f;
             }
         }
@@ -1425,7 +1425,7 @@ void FUN_L05_00244a70(void) {
         }
         hero.target_speed = 0.0f;
         if ((struct MobyView *)hero.unkA54 != NULL) {
-            f32 d = FUN_001f9b80(&hero.motion.pos, &((struct MobyView *)hero.unkA54)->u10.v10);
+            f32 d = vector_distance(&hero.motion.pos, &((struct MobyView *)hero.unkA54)->u10.v10);
             if (d > 2.0f && d < 5.0f) {
                 hero.target_speed = frame_time * 4.5f;
             }
@@ -1438,7 +1438,7 @@ void FUN_L05_00244a70(void) {
         }
         if (hero.unkA58 != 0 || (struct MobyView *)hero.unkA54 != NULL) {
             hero.motion.move_yaw = hero.unkA5C;
-            FUN_L00_00211e30(0, frame_scale_sq * 0.05f, frame_scale_sq * 0.2f, frame_time * 15.009831f);
+            turn_to(0, frame_scale_sq * 0.05f, frame_scale_sq * 0.2f, frame_time * 15.009831f);
         } else if (hero.anim_frame < 25.0f) {
             FUN_L00_00214ed8(8.0f, 1.0471976f, 1.0471976f);
         }
@@ -1466,16 +1466,16 @@ void FUN_L05_00244a70(void) {
         }
         FUN_L00_00211870(27.0f);
         if (hero.state_timer < t1) {
-            f32 h = FUN_L00_00233a78(&hero.motion.velocity);
+            f32 h = gravity_z(&hero.motion.velocity);
             approach_value(&h, r, mx);
-            FUN_L00_00233b20(&hero.motion.velocity, &hero.motion.velocity, h);
+            gravity_set_z(&hero.motion.velocity, &hero.motion.velocity, h);
         } else if (t2 < hero.state_timer) {
             FUN_L00_002334d0(&hero.motion.velocity, &hero.motion.velocity, frame_time_sq * 130.0f);
-            if (FUN_L00_00233a78(&hero.motion.velocity) < 0.0f) {
+            if (gravity_z(&hero.motion.velocity) < 0.0f) {
                 hero.unkA70 = 1.0f;
             }
-            if (FUN_L00_00233a78(&hero.motion.velocity) < frame_time * -37.0f) {
-                FUN_L00_00233b20(&hero.motion.velocity, &hero.motion.velocity, frame_time * -37.0f);
+            if (gravity_z(&hero.motion.velocity) < frame_time * -37.0f) {
+                gravity_set_z(&hero.motion.velocity, &hero.motion.velocity, frame_time * -37.0f);
             }
         }
         break;
@@ -1504,10 +1504,10 @@ void FUN_L05_00244a70(void) {
                 }
                 hero.motion.move_yaw = hero.unkA5C;
                 if (ok) {
-                    FUN_L00_00211e30(1, frame_scale_sq * 0.05f, frame_scale_sq * 0.2f,
+                    turn_to(1, frame_scale_sq * 0.05f, frame_scale_sq * 0.2f,
                                      frame_time * 15.009831f);
                 } else {
-                    FUN_L00_00211e30(0, frame_scale_sq * 0.05f, frame_scale_sq * 0.2f,
+                    turn_to(0, frame_scale_sq * 0.05f, frame_scale_sq * 0.2f,
                                      frame_time * 15.009831f);
                 }
             } else {
@@ -1545,7 +1545,7 @@ void FUN_L05_00244a70(void) {
         tb = &D_L05_0017C088[hero.attack_record];
         hero.target_speed = 0.0f;
         if ((struct MobyView *)hero.unkA54 != NULL && scale_game_frames(4) > hero.state_timer) {
-            f32 d = FUN_001f9b80(&((struct MobyView *)hero.unkA54)->u10.v10, &hero.motion.pos) - 0.5f;
+            f32 d = vector_distance(&((struct MobyView *)hero.unkA54)->u10.v10, &hero.motion.pos) - 0.5f;
             f32 off;
             f32 tol;
             f32 mx;
@@ -1606,7 +1606,7 @@ void FUN_L05_00244a70(void) {
                 hero.anim_speed = 1.0f / (fast_difference_between_rotations(hero.unkA5C, hero.motion.rot.f[2]) + 1.0f);
             }
             hero.motion.move_yaw = hero.unkA5C;
-            FUN_L00_00211e30(0, frame_scale_sq * 0.05f, frame_scale_sq * 0.2f, frame_time * 15.009831f);
+            turn_to(0, frame_scale_sq * 0.05f, frame_scale_sq * 0.2f, frame_time * 15.009831f);
         } else {
             s32 ok = 1;
             if (tb->kind == 1 && hero.unkA9C == 0 && hero.anim_frame > 7.0f) {
@@ -1641,14 +1641,14 @@ void FUN_L05_00244a70(void) {
             hero.motion.velocity.f[2] = 0.0f;
         }
         hero.motion.move_yaw = fast_add_rotations(hero.unkA68, 3.1415927f);
-        FUN_L00_00211e30(0, frame_scale_sq * 0.05f, frame_scale_sq * 0.2f, frame_time * 15.009831f);
+        turn_to(0, frame_scale_sq * 0.05f, frame_scale_sq * 0.2f, frame_time * 15.009831f);
         break;
     case 0x20: {
         s32 t1;
         s32 t2;
         if (hero.unkA58 != 0 || (struct MobyView *)hero.unkA54 != NULL) {
             hero.motion.move_yaw = hero.unkA5C;
-            FUN_L00_00211e30(0, frame_scale_sq * 0.05f, frame_scale_sq * 0.2f, frame_time * 15.009831f);
+            turn_to(0, frame_scale_sq * 0.05f, frame_scale_sq * 0.2f, frame_time * 15.009831f);
         } else if (hero.state_timer < scale_game_frames(4)) {
             FUN_L00_00214ed8(11.0f, 0.87266463f, -1.0f);
         }
@@ -1721,7 +1721,7 @@ void FUN_L05_00244a70(void) {
         hero.target_speed = 0.0f;
         if (hero.unkA58 != 0) {
             hero.motion.move_yaw = hero.unkA5C;
-            FUN_L00_00211e30(0, frame_scale_sq * 0.04f, frame_scale_sq * 0.2f, frame_time * 15.009831f);
+            turn_to(0, frame_scale_sq * 0.04f, frame_scale_sq * 0.2f, frame_time * 15.009831f);
         } else {
             FUN_L00_00214ed8(11.0f, 0.87266463f, -1.0f);
         }
@@ -1764,7 +1764,7 @@ void FUN_L05_00244a70(void) {
             Vec4 *p = &hero.move_impulse;
             FUN_L00_002132b8(0.7f, 0.0f);
             v0.q = hero.move_impulse.q;
-            hero.target_speed += FUN_L00_00213350(&v0);
+            hero.target_speed += forward_component(&v0);
             if (hero.target_speed < frame_time * 0.7f) {
                 hero.target_speed = frame_time * 0.7f;
             }
@@ -1772,7 +1772,7 @@ void FUN_L05_00244a70(void) {
         }
         k = 1.0f;
         if (hero.state.step == 1 && hero.unk3BE == 0) {
-            FUN_L00_00211e30(0, frame_scale_sq * 0.008f, frame_scale_sq * 0.15f, frame_time * 9.948377f);
+            turn_to(0, frame_scale_sq * 0.008f, frame_scale_sq * 0.15f, frame_time * 9.948377f);
         } else {
             f32 c = hero.unk229C;
             f32 r = hero.motion.unk188;
@@ -1788,7 +1788,7 @@ void FUN_L05_00244a70(void) {
                 FUN_L00_00211f38();
             } else {
                 f32 f = hero.unk229C + 0.35f;
-                FUN_L00_00211e30(0, frame_scale_sq * 0.005f * f, frame_scale_sq * 0.1f,
+                turn_to(0, frame_scale_sq * 0.005f * f, frame_scale_sq * 0.1f,
                                  frame_time * 4.712389f * f);
             }
         }
@@ -1847,14 +1847,14 @@ void FUN_L05_00244a70(void) {
             v10.f[2] += random_float_between(frame_time, frame_time * 2.0f);
             FUN_L00_00271b18(&v0, &v10, random_float_between(37800.0f, 75600.0f));
         }
-        f = FUN_001f9af0(&hero.motion.platform_delta);
+        f = fast_vec_length(&hero.motion.platform_delta);
         if (f > frame_time * 0.5f) {
             hero.motion.move_yaw = fast_arc_tan(hero.motion.platform_delta.f[0], hero.motion.platform_delta.f[1]);
         } else {
             hero.motion.move_yaw = hero.motion.rot.f[2];
         }
         old = hero.motion.rot.f[2];
-        FUN_L00_00211e30(0, f * 0.125f * frame_scale_sq, frame_scale_sq * 0.2f, frame_time * 4.1887903f);
+        turn_to(0, f * 0.125f * frame_scale_sq, frame_scale_sq * 0.2f, frame_time * 4.1887903f);
         d = fast_difference_between_rotations(hero.motion.rot.f[2], old);
         clear_u64_value(&hero.motion.velocity);
         FUN_L00_00216710(frame_time_sq * 5.0f);
@@ -1883,7 +1883,7 @@ void FUN_L05_00244a70(void) {
     case 0x18:
     case 0x19:
         hero.motion.move_yaw = fast_add_rotations(hero.unk4E4, 3.1415927f);
-        FUN_L00_00211e30(0, frame_scale_sq * 0.04f, frame_scale_sq * 0.2f, frame_time * 6.2831855f);
+        turn_to(0, frame_scale_sq * 0.04f, frame_scale_sq * 0.2f, frame_time * 6.2831855f);
         FUN_L00_0025bc00(&hero.motion.rot.f[1], 0.0f, 0, frame_time * 4.712389f);
         subtract_vector_xyz(&hero.motion.velocity, &hero.unk4D0, &hero.motion.pos);
         FUN_L00_0025f730(&hero.motion.velocity, frame_time * 4.0f);
@@ -1930,7 +1930,7 @@ void FUN_L05_00244a70(void) {
         add_vector_xyz(&m40[1], &v0, &v10);
         fast_vec_scale(&m40[1], &m40[1], 0.5f);
         hero.motion.move_yaw = a;
-        FUN_L00_00211e30(0, frame_scale_sq * 0.04f, frame_scale_sq * 0.2f, frame_time * 6.2831855f);
+        turn_to(0, frame_scale_sq * 0.04f, frame_scale_sq * 0.2f, frame_time * 6.2831855f);
         fl = hero.motion.unk164;
         approach_value(&fl, hero.target_speed * frame_time, frame_time_sq * 5.0f);
         subtract_vector_xyz(&hero.motion.velocity, &m40[1], &hero.motion.pos);
@@ -2007,9 +2007,9 @@ void FUN_L05_00244a70(void) {
             if (hero.state.current == 0x42) {
                 r = hero.unk5CC * (f32)hero.unk578;
             }
-            FUN_L00_0025d808((void *)hero.unk560, &v0, &hero.unk564, &hero.unk568, r, hero.unk584);
+            sample_path((void *)hero.unk560, &v0, &hero.unk564, &hero.unk568, r, hero.unk584);
             if (hero.unk590 != 0) {
-                FUN_L00_0025d808((void *)hero.unk594, &v10, &hero.unk598, &hero.unk59C, r, hero.unk5A0);
+                sample_path((void *)hero.unk594, &v10, &hero.unk598, &hero.unk59C, r, hero.unk5A0);
             }
             if (scale_game_frames(90) < hero.unk19C) {
                 s32 h;
@@ -2019,11 +2019,11 @@ void FUN_L05_00244a70(void) {
                 qcopy(&v20, &hero.motion.pos);
                 si = hero.unk564;
                 sf = hero.unk568;
-                h = FUN_L00_0025d808((void *)hero.unk560, &v20, &si, &sf, q, hero.unk584);
+                h = sample_path((void *)hero.unk560, &v20, &si, &sf, q, hero.unk584);
                 qcopy(&v30, &hero.motion.pos);
                 si = hero.unk564;
                 sf = hero.unk568;
-                if ((h | FUN_L00_0025d808((void *)hero.unk560, &v30, &si, &sf, q + 0.1f, hero.unk584)) == 0 ||
+                if ((h | sample_path((void *)hero.unk560, &v30, &si, &sf, q + 0.1f, hero.unk584)) == 0 ||
                     hero.unk584 != 0) {
                     f32 a = fast_subtract_rotations(
                                 hero.unk57C, fast_arc_tan(v30.f[0] - v20.f[0], v30.f[1] - v20.f[1])) *
@@ -2080,7 +2080,7 @@ void FUN_L05_00244a70(void) {
             }
             idx = FUN_L00_0025d7a0((void *)hero.unk560, hero.unk564, hero.unk578, hero.unk584);
             subtract_vector_xyz(&v20, (Vec4 *)hero.unk560 + (idx + 1), &v0);
-            if (FUN_001f9af0(&v20) < 0.001f) {
+            if (fast_vec_length(&v20) < 0.001f) {
                 if (hero.unk564 == idx) {
                     hero.unk570 = scale_game_frames(1);
                     break;
@@ -2090,13 +2090,13 @@ void FUN_L05_00244a70(void) {
                 hero.unk580 = fast_arc_tan(vector_length_xy(&v20), v20.f[2]);
             }
             hero.motion.move_yaw = fast_add_rotations(hero.unk57C, hero.unk588);
-            FUN_L00_00211e30(0, frame_scale_sq * 0.015f, frame_scale_sq * 0.15f, frame_time * 6.2831855f);
+            turn_to(0, frame_scale_sq * 0.015f, frame_scale_sq * 0.15f, frame_time * 6.2831855f);
             if (((hero.state.current == 0x29 || hero.state.current == 0x2A) && hero.unk418 == 0) || hero.state.current == 0x42) {
                 if (hero.unk5C4 != 0) {
                     f32 a = fast_arc_tan(hero.unk550.f[0] - hero.motion.pos.f[0], hero.unk550.f[1] - hero.motion.pos.f[1]);
                     if (fast_difference_between_rotations(hero.motion.rot.f[2], a) < 1.5707964f) {
                         hero.motion.move_yaw = a;
-                        FUN_L00_00211e30(0, frame_scale_sq * 0.04f, frame_scale_sq * 0.2f,
+                        turn_to(0, frame_scale_sq * 0.04f, frame_scale_sq * 0.2f,
                                          frame_time * 6.2831855f);
                     }
                 }
@@ -2127,7 +2127,7 @@ void FUN_L05_00244a70(void) {
                     hero.motion.pos.f[2] += v20.f[2];
                     subtract_vector_xyz(&v30, &hero.unk500, &hero.motion.pos);
                     v30.f[2] = 0.0f;
-                    if (FUN_001f9af0(&v30) > frame_time) {
+                    if (fast_vec_length(&v30) > frame_time) {
                         fast_vec_normalize(&v30, &v30, frame_time);
                     }
                     hero.motion.pos.f[0] += v30.f[0];
@@ -2175,8 +2175,8 @@ void FUN_L05_00244a70(void) {
                 si = hero.unk564;
                 sf = hero.unk568;
                 qcopy(&v20, &hero.motion.pos);
-                FUN_L00_0025d808((void *)hero.unk560, &v20, &si, &sf, 0.3f, hero.unk584);
-                e = fast_arc_tan(FUN_001f9b80(&hero.unk500, &v20), v20.f[2] - hero.unk500.f[2]);
+                sample_path((void *)hero.unk560, &v20, &si, &sf, 0.3f, hero.unk584);
+                e = fast_arc_tan(vector_distance(&hero.unk500, &v20), v20.f[2] - hero.unk500.f[2]);
                 if (e > 0.0f) {
                     sp = e * 1.9098593f * (frame_time * -2.5f);
                     if (e > 0.2617994f && hero.unk5A8 != 2 && hero.unk5A8 != 3) {
@@ -2213,9 +2213,9 @@ void FUN_L05_00244a70(void) {
                     f32 mx = frame_time * 7.0f;
                     f32 fl;
                     f32 len;
-                    fl = -FUN_001f9af0(&v20);
-                    FUN_L00_0025b8c0(&fl, &hero.unk5DC, 0.0f, frame_scale_sq * 0.03f, frame_scale_sq * 0.3f, mx);
-                    len = FUN_001f9af0(&v20);
+                    fl = -fast_vec_length(&v20);
+                    vendor_spring(&fl, &hero.unk5DC, 0.0f, frame_scale_sq * 0.03f, frame_scale_sq * 0.3f, mx);
+                    len = fast_vec_length(&v20);
                     if (len < hero.unk5DC) {
                         hero.unk5DC = len;
                     }
@@ -2270,8 +2270,8 @@ void FUN_L05_00244a70(void) {
         FUN_L00_00215340();
         FUN_L00_002132b8(0.7f, frame_time * 0.0f);
         FUN_L00_002334d0(&hero.motion.velocity, &hero.motion.velocity, hero.unk940);
-        if (FUN_L00_00233a78(&hero.motion.velocity) < -(frame_time * 50.0f)) {
-            FUN_L00_00233b20(&hero.motion.velocity, &hero.motion.velocity, -(frame_time * 50.0f));
+        if (gravity_z(&hero.motion.velocity) < -(frame_time * 50.0f)) {
+            gravity_set_z(&hero.motion.velocity, &hero.motion.velocity, -(frame_time * 50.0f));
         }
         break;
     case 0x77: {
@@ -2283,8 +2283,8 @@ void FUN_L05_00244a70(void) {
         len = vector_length_xy(&hero.motion.velocity);
         FUN_L00_001ff600(frame_scale * -0.100000024f * len + len, &hero.motion.velocity, &hero.motion.velocity);
         FUN_L00_002334d0(&hero.motion.velocity, &hero.motion.velocity, hero.unk940);
-        if (FUN_L00_00233a78(&hero.motion.velocity) < -(frame_time * 50.0f)) {
-            FUN_L00_00233b20(&hero.motion.velocity, &hero.motion.velocity, -(frame_time * 50.0f));
+        if (gravity_z(&hero.motion.velocity) < -(frame_time * 50.0f)) {
+            gravity_set_z(&hero.motion.velocity, &hero.motion.velocity, -(frame_time * 50.0f));
         }
         break;
     }
@@ -2304,13 +2304,13 @@ void FUN_L05_00244a70(void) {
         }
         stick_target(hero.unk229C * m, 0);
         if (hero.unk229C > 0.2f && !(PD.u1A0.i1A0 & 3)) {
-            FUN_L00_00211e30(0, frame_scale_sq * 0.027f, frame_scale_sq * 0.3f,
+            turn_to(0, frame_scale_sq * 0.027f, frame_scale_sq * 0.3f,
                              frame_time * 5.934119f * hero.unk229C);
         }
         if (PD.u1A0.i1A0 & 3) {
             f32 o = hero.motion.move_yaw;
             hero.motion.move_yaw = *(f32 *)D_L05_001671D8;
-            FUN_L00_00211e30(0, frame_scale_sq * 0.017f, frame_scale_sq * 0.3f, frame_time * 4.712389f);
+            turn_to(0, frame_scale_sq * 0.017f, frame_scale_sq * 0.3f, frame_time * 4.712389f);
             hero.motion.move_yaw = o;
         }
         {
@@ -2323,11 +2323,11 @@ void FUN_L05_00244a70(void) {
         FUN_L00_00215340();
         FUN_L01_00232978(1);
         if (big) {
-            FUN_L00_002338d0(&hero.motion.velocity, &hero.motion.velocity);
+            gravity_flatten(&hero.motion.velocity, &hero.motion.velocity);
             FUN_L00_002334d0(&hero.motion.velocity, &hero.motion.velocity, sp * 0.72f);
             hero.unk304 = hero.motion.velocity.f[2];
         } else {
-            FUN_L00_0025b8c0(&hero.motion.pos.f[2], &hero.unk304, hero.ground_z.f + 0.17f, frame_scale_sq * 0.02f,
+            vendor_spring(&hero.motion.pos.f[2], &hero.unk304, hero.ground_z.f + 0.17f, frame_scale_sq * 0.02f,
                              frame_scale_sq * 0.35f, frame_time * 2.5f);
         }
         break;
@@ -2358,11 +2358,11 @@ void FUN_L05_00244a70(void) {
             sp = frame_time * 5.0f;
         }
         stick_target(sp, 0);
-        FUN_L00_00211e30(0, frame_scale_sq * 0.025f, frame_scale_sq * 0.3f, frame_time * 12.566371f);
+        turn_to(0, frame_scale_sq * 0.025f, frame_scale_sq * 0.3f, frame_time * 12.566371f);
         speed_step(frame_time_sq * 15.0f, frame_time_sq * 7.0f);
         set_planar_vel(99999.0f);
         FUN_L00_00215340();
-        FUN_L00_002338d0(&hero.motion.velocity, &hero.motion.velocity);
+        gravity_flatten(&hero.motion.velocity, &hero.motion.velocity);
         FUN_L00_002334d0(&hero.motion.velocity, &hero.motion.velocity, sp * 0.72f);
         if (hero.motion.pos.f[2] < hero.unk410) {
             approach_value(&hero.unk410, hero.motion.pos.f[2], frame_time * 4.0f);
@@ -2406,7 +2406,7 @@ void FUN_L05_00244a70(void) {
             if (hero.state_timer == scale_game_frames(20)) {
                 FUN_L00_00209ca8(3, 0x10, 1);
                 if (D_L05_001612D0 != 0) {
-                    FUN_L00_002a3ec8(D_L05_001612D0, D_L05_001612D8, 0, hero.motion.pos.f[0], hero.motion.pos.f[1],
+                    pool_splash(D_L05_001612D0, D_L05_001612D8, 0, hero.motion.pos.f[0], hero.motion.pos.f[1],
                                      0.4f, 0.35f);
                 }
             }
@@ -2422,7 +2422,7 @@ void FUN_L05_00244a70(void) {
         if (hero.unk418 != 0 || (t198 < t420 && hero.state.current != HERO_STATE_HIGH_JUMP && hero.state.current != HERO_STATE_PACK_LONG_JUMP && hero.state.current != 0xC &&
                             hero.state.current != 0x11 && hero.state.current != 0x1C && hero.state.current != 0x4C)) {
             f32 sv;
-            FUN_L00_00211e30(0, frame_scale_sq * 0.015f, frame_scale_sq * 0.2f, frame_time * 15.009831f);
+            turn_to(0, frame_scale_sq * 0.015f, frame_scale_sq * 0.2f, frame_time * 15.009831f);
             sv = hero.ground_speed;
             if (hero.unk418 >= 2) {
                 hero.ground_speed = sv * 0.4f;
@@ -2456,7 +2456,7 @@ void FUN_L05_00244a70(void) {
                 qcopy(&v10, &v0);
                 v10.f[0] += fast_cos(hero.motion.rot.f[2]) * 0.85f;
                 v10.f[1] += fast_sin(hero.motion.rot.f[2]) * 0.85f;
-                if (FUN_001efa68(&v0, &v10, 4, (struct MobyView *)hero.moby, 0) != 0) {
+                if (collision_line(&v0, &v10, 4, (struct MobyView *)hero.moby, 0) != 0) {
                     hero.unk4A4 = 1;
                 }
             }
@@ -2479,7 +2479,7 @@ void FUN_L05_00244a70(void) {
         if (hero.motion.pos.f[2] < hero.unk410) {
             hero.unk410 = hero.motion.pos.f[2];
         }
-        if (hero.state_timer > hero.unk420 && FUN_L00_00233a78(&hero.motion.velocity) < 0.001f &&
+        if (hero.state_timer > hero.unk420 && gravity_z(&hero.motion.velocity) < 0.001f &&
             (hero.unk41C == 0 || hero.state_timer > hero.unk3D4)) {
             hero.unk41E = 1;
             if (hero.unk3F8 != 0.0f) {
@@ -2502,7 +2502,7 @@ void FUN_L05_00244a70(void) {
                 fast_vec_scale(&v10, &hero.motion.displacement, 7.0f);
                 for (i = 0; i < n; i++) {
                     if (FUN_L00_0025e3b8(D_L05_00178300[i]) != 0) {
-                        FUN_L00_00259bc8(D_L05_00178300[i], (struct MobyView *)hero.moby, 0x10000, &hero.motion.pos, &v10,
+                        spawn_nearby_effect(D_L05_00178300[i], (struct MobyView *)hero.moby, 0x10000, &hero.motion.pos, &v10,
                                          1.0f);
                     }
                 }
@@ -2559,12 +2559,12 @@ void FUN_L05_00244a70(void) {
         }
         k = 1.0f;
         if (hero.vehicle_mode == 3) {
-            FUN_L00_00211e30(0, frame_scale_sq * 0.03f, frame_scale_sq * 0.3f, frame_time * 5.5850534f);
+            turn_to(0, frame_scale_sq * 0.03f, frame_scale_sq * 0.3f, frame_time * 5.5850534f);
         } else if (hero.vehicle_mode == 1) {
-            FUN_L00_00211e30(0, frame_scale_sq * 0.03f, frame_scale_sq * 0.3f, frame_time * 7.8539815f);
+            turn_to(0, frame_scale_sq * 0.03f, frame_scale_sq * 0.3f, frame_time * 7.8539815f);
         } else if (hero.vehicle_mode == 0) {
             if (hero.state.step == 1) {
-                FUN_L00_00211e30(0, frame_scale_sq * 0.016f, frame_scale_sq * 0.15f,
+                turn_to(0, frame_scale_sq * 0.016f, frame_scale_sq * 0.15f,
                                  frame_time * 9.948377f);
             } else {
                 FUN_L00_00211f38();
@@ -2588,7 +2588,7 @@ void FUN_L05_00244a70(void) {
     }
     case 0x66:
         subtract_vector_xyz(&v0, &hero.unk1640, &hero.motion.pos);
-        if (FUN_001f9ab0(&v0, &hero.motion.unk150) < 0.0f) {
+        if (fast_vec_dot(&v0, &hero.motion.unk150) < 0.0f) {
             clear_u64_value(&hero.motion.unk150);
         }
         clear_u64_value(&hero.motion.velocity);
@@ -2671,7 +2671,7 @@ void FUN_L05_00244a70(void) {
         if (k < 0.0f) {
             k = 0.0f;
         }
-        FUN_L00_00211e30(0, frame_scale_sq * 0.035f * g, frame_scale_sq * 0.1f, frame_time * 2.268928f * g);
+        turn_to(0, frame_scale_sq * 0.035f * g, frame_scale_sq * 0.1f, frame_time * 2.268928f * g);
         speed_step(frame_time_sq * 7.5f * k, frame_time_sq * 8.5f);
         if (hero.unk3B8 != 0 && hero.unk308 == 0) {
             set_planar_vel(hero.motion.move_yaw);
@@ -2716,3 +2716,5 @@ void FUN_L05_00244a70(void) {
         hero.unk1A4 = 0;
     }
 }
+
+f32 D_L05_0017AD50[1] __attribute__((section(".data"))) = {0};
