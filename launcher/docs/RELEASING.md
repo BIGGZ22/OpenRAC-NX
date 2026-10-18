@@ -87,13 +87,14 @@ git push origin launcher-vX.Y.Z
    - **Fedora** (a `fedora:44` container): the game with Fedora's compiler; `.fc44.x86_64.rpm`.
    - **macOS** (`macos-latest`): the game for Apple silicon; a universal `.dmg` and `.app.tar.gz`.
    - **Android** (`ubuntu-latest`): the port with the runner's NDK (`tools/build_android.py
-     --no-apk`), then the debug APK, signed with the launcher's Android key (the
+--no-apk`), then the debug APK, signed with the launcher's Android key (the
      `ANDROID_KEYSTORE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and
      `ANDROID_KEY_PASSWORD` secrets; without them, the runner's debug key).
 
    Kept between runs: hostgen's output (skipped when its inputs are unchanged), ccache, the
    Rust dependencies (Swatinem/rust-cache) and Gradle's.
    Each row signs its update archives (and the APK) with minisign (`TAURI_SIGNING_PRIVATE_KEY`).
+
 2. **Release job** (on a tag), after every row:
    - Runs `tools/updater_manifest.py` to produce `latest.json` covering `windows-x86_64`,
      `linux-x86_64`, `linux-aarch64`, `darwin-x86_64`, `darwin-aarch64` and `android-aarch64`
