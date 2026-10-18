@@ -830,8 +830,23 @@ pub fn run() {
 
             // OpenGOAL asks for an install folder at first start; until the
             // player picks one, games are set up in the user's OpenRAC folder (or launcher's data folder).
-            if config.install_dir.is_none() {
-                config.install_dir = openrac_home.or_else(|| app.path().app_local_data_dir().ok());
+            let local_data = app.path().app_local_data_dir().ok();
+            if let Some(openrac_dir) = &openrac_home {
+                if config.install_dir.is_none() || config.install_dir.as_ref() == local_data.as_ref() {
+                    if let Some(data) = &local_data {
+                        let old_active = data.join("active");
+                        let new_active = openrac_dir.join("active");
+                        if old_active.exists() && !new_active.exists() {
+                            let _ = std::fs::rename(&old_active, &new_active);
+                        }
+                    }
+                    config.install_dir = Some(openrac_dir.clone());
+                    if let Some(cfg_file) = &config_file {
+                        let _ = config::save(cfg_file, &config);
+                    }
+                }
+            } else if config.install_dir.is_none() {
+                config.install_dir = local_data;
             }
 
             // The copy of OpenRAC the launcher carries: what a player plays from (detect::settle).
