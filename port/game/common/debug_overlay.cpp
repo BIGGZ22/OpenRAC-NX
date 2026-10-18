@@ -27,6 +27,7 @@
 #include <imgui_impl_sdl3.h>
 
 #include "common/log.h"
+#include "imgui_gl.h"
 #include "common/stats.h"
 #include "settings.h"
 #include "openrac/game_host.h"
@@ -85,6 +86,7 @@ struct State {
     bool configured = false;  // the environment was read
     bool visible = false;
     bool initialised = false;  // the ImGui context exists
+    bool gl_subset = false;    // drawn with the renderer's GL (imgui_gl.h): the window's is Vulkan's
     std::array<bool, kSectionCount> open_at_start = {true, false, false, false, false, false};
 
     // The last tick, as the window gave it.
@@ -422,10 +424,9 @@ bool initialise(SDL_Window* window) {
     if (s.initialised) {
         return true;
     }
-    // Dear ImGui draws with its own OpenGL: no overlay without a GL context (the Vulkan renderer).
-    if (SDL_GL_GetCurrentContext() == nullptr) {
-        return false;
-    }
+    // ImGui's OpenGL backend loads the system's GL; a window drawn with Vulkan has none, and has the
+    // renderer's GL instead (imgui_gl.h).
+    s.gl_subset = SDL_GL_GetCurrentContext() == nullptr;
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -438,9 +439,13 @@ bool initialise(SDL_Window* window) {
     style.FramePadding = ImVec2(4.0f, 2.0f);
     style.ItemSpacing = ImVec2(6.0f, 3.0f);
     initialise_touch(window);
-    if (!ImGui_ImplSDL3_InitForOpenGL(window, SDL_GL_GetCurrentContext())
-        || !ImGui_ImplOpenGL3_Init(openrac::gl::is_es() ? "#version 300 es" : "#version 410 core")) {
-        log::warn("debug overlay: Dear ImGui could not start");
+    std::string error;
+    const bool started = s.gl_subset
+                             ? ImGui_ImplSDL3_InitForOther(window) && imgui_gl::init(error)
+                             : ImGui_ImplSDL3_InitForOpenGL(window, SDL_GL_GetCurrentContext())
+                                   && ImGui_ImplOpenGL3_Init(openrac::gl::is_es() ? "#version 300 es" : "#version 410 core");
+    if (!started) {
+        log::warn("debug overlay: Dear ImGui could not start{}", error.empty() ? "" : ": " + error);
         ImGui::DestroyContext();
         return false;
     }
@@ -1985,7 +1990,9 @@ void draw(const Shown& shown) {
         io.ConfigFlags = s.drawer_open ? io.ConfigFlags | ImGuiConfigFlags_NavEnableGamepad
                                        : io.ConfigFlags & ~ImGuiConfigFlags_NavEnableGamepad;
     }
-    ImGui_ImplOpenGL3_NewFrame();
+    if (!s.gl_subset) {
+        ImGui_ImplOpenGL3_NewFrame();
+    }
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
     if (menu_bar_shown()) {
@@ -2002,7 +2009,11 @@ void draw(const Shown& shown) {
     }
     status_badge();
     ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    if (s.gl_subset) {
+        imgui_gl::render(ImGui::GetDrawData());
+    } else {
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    }
     renderer::gl_stats::reset_binds();
 
     const stats::Frame* last = stats::history(0);
@@ -2059,7 +2070,11 @@ void notice(const std::string& text) {
 
 void release() {
     if (s.initialised) {
-        ImGui_ImplOpenGL3_Shutdown();
+        if (s.gl_subset) {
+            imgui_gl::shutdown();
+        } else {
+            ImGui_ImplOpenGL3_Shutdown();
+        }
         ImGui_ImplSDL3_Shutdown();
         ImGui::DestroyContext();
         s.initialised = false;
