@@ -1543,11 +1543,31 @@ bool drawer_event(const SDL_Event& e) {
     }
 }
 
+// The launcher's colours (launcher/docs/STYLE.md), so that the drawer looks like the rest of the app.
+namespace look {
+constexpr ImU32 kPanel = IM_COL32(0x1d, 0x1d, 0x28, 250);
+constexpr ImU32 kCard = IM_COL32(0x22, 0x22, 0x2f, 255);
+constexpr ImU32 kCardPressed = IM_COL32(0x3a, 0x2c, 0x16, 255);
+constexpr ImU32 kLine = IM_COL32(156, 161, 212, 56);
+constexpr ImU32 kLineStrong = IM_COL32(156, 161, 212, 90);
+constexpr ImU32 kBarTop = IM_COL32(0xe5, 0xa0, 0x13, 255);
+constexpr ImU32 kBarBottom = IM_COL32(0xcd, 0x83, 0x00, 255);
+constexpr ImU32 kBarInk = IM_COL32(0x2a, 0x18, 0x00, 255);
+constexpr ImU32 kAmber = IM_COL32(0xff, 0xb4, 0x43, 255);
+constexpr ImU32 kBrand = IM_COL32(0xd5, 0x8a, 0x00, 255);
+constexpr ImU32 kGold = IM_COL32(0xff, 0xd0, 0x8a, 255);
+constexpr ImU32 kText = IM_COL32(0xe8, 0xf0, 0xff, 255);
+constexpr ImU32 kSoft = IM_COL32(0xaa, 0xb6, 0xdc, 255);
+constexpr ImU32 kDim = IM_COL32(0x8f, 0x9a, 0xc4, 255);
+constexpr ImU32 kOff = IM_COL32(0x3a, 0x3b, 0x52, 255);
+constexpr ImU32 kErr = IM_COL32(0xff, 0x8a, 0x7a, 255);
+}  // namespace look
+
 // A row of the drawer as high as a thumb: true when it was pressed (not when the finger only
 // dragged the rows along). Its label at the left; `draw_right` puts what it shows at the right.
 template <typename Right>
-bool drawer_row(const char* label, bool enabled, Right&& draw_right) {
-    const float height = 44.0f * s.ui_scale;
+bool drawer_row(const char* label, bool enabled, Right&& draw_right, ImU32 label_ink = look::kText) {
+    const float height = 48.0f * s.ui_scale;
     const ImVec2 at = ImGui::GetCursorScreenPos();
     const float width = ImGui::GetContentRegionAvail().x;
     ImGui::PushID(label);
@@ -1555,22 +1575,24 @@ bool drawer_row(const char* label, bool enabled, Right&& draw_right) {
     const bool pressed = ImGui::InvisibleButton("row", ImVec2(width, height)) && !s.drawer_scrolled;
     ImDrawList* list = ImGui::GetWindowDrawList();
     const ImVec2 end(at.x + width, at.y + height);
-    if (ImGui::IsItemActive() && !s.drawer_scrolled) {
-        list->AddRectFilled(at, end, IM_COL32(255, 143, 36, 70), 6.0f * s.ui_scale);
-    } else if (ImGui::IsItemFocused() && ImGui::GetIO().NavVisible) {
-        list->AddRect(at, end, IM_COL32(255, 143, 36, 200), 6.0f * s.ui_scale, 0, 2.0f);
-    }
+    // A card of the launcher's: a lighter panel with a thin border, amber when pressed or chosen.
+    const float round = 12.0f * s.ui_scale;
+    const bool active = ImGui::IsItemActive() && !s.drawer_scrolled;
+    list->AddRectFilled(at, end, active ? look::kCardPressed : look::kCard, round);
+    const bool focused = ImGui::IsItemFocused() && ImGui::GetIO().NavVisible;
+    list->AddRect(at, end, focused || active ? look::kAmber : look::kLine, round, 0, focused ? 2.0f * s.ui_scale : 1.0f);
     const float text_y = at.y + (height - ImGui::GetFontSize()) * 0.5f;
-    const ImU32 ink = enabled ? IM_COL32(240, 236, 228, 255) : IM_COL32(140, 140, 145, 255);
-    list->AddText(ImVec2(at.x + 12.0f * s.ui_scale, text_y), ink, label);
-    draw_right(list, ImVec2(end.x - 12.0f * s.ui_scale, at.y + height * 0.5f), ink);
+    const ImU32 ink = enabled ? label_ink : look::kDim;
+    list->AddText(ImVec2(at.x + 16.0f * s.ui_scale, text_y), ink, label);
+    draw_right(list, ImVec2(end.x - 16.0f * s.ui_scale, at.y + height * 0.5f), ink);
     ImGui::EndDisabled();
     ImGui::PopID();
+    ImGui::Dummy(ImVec2(0.0f, 4.0f * s.ui_scale));
     return pressed && enabled;
 }
 
-bool drawer_row(const char* label, bool enabled = true) {
-    return drawer_row(label, enabled, [](ImDrawList*, ImVec2, ImU32) {});
+bool drawer_row(const char* label, bool enabled = true, ImU32 ink = look::kText) {
+    return drawer_row(label, enabled, [](ImDrawList*, ImVec2, ImU32) {}, ink);
 }
 
 // A row that turns something on and off, its switch at the right.
@@ -1580,29 +1602,40 @@ bool drawer_switch(const char* label, bool on) {
         const float w = 40.0f * s.ui_scale;
         const ImVec2 a(right.x - w, right.y - h * 0.5f);
         const ImVec2 b(right.x, right.y + h * 0.5f);
-        list->AddRectFilled(a, b, on ? IM_COL32(255, 143, 36, 230) : IM_COL32(90, 90, 96, 230), h * 0.5f);
+        if (on) {
+            // The header bar's orange, as the launcher's primary buttons.
+            list->AddRectFilled(a, b, look::kBarBottom, h * 0.5f);
+            list->AddRectFilled(a, ImVec2(b.x, right.y), look::kBarTop, h * 0.5f, ImDrawFlags_RoundCornersTop);
+        } else {
+            list->AddRectFilled(a, b, look::kOff, h * 0.5f);
+        }
+        list->AddRect(a, b, look::kLineStrong, h * 0.5f);
         const float r = h * 0.5f - 3.0f * s.ui_scale;
-        list->AddCircleFilled(ImVec2(on ? b.x - h * 0.5f : a.x + h * 0.5f, right.y), r, IM_COL32(250, 248, 244, 255));
+        list->AddCircleFilled(ImVec2(on ? b.x - h * 0.5f : a.x + h * 0.5f, right.y), r,
+                              on ? look::kBarInk : look::kSoft);
     });
 }
 
 // A row with a value and a minus and a plus beside it: -1 or 1 when one of them was pressed.
 int drawer_stepper(const char* label, const std::string& value, bool can_lower, bool can_raise) {
-    const float height = 44.0f * s.ui_scale;
+    const float height = 48.0f * s.ui_scale;
     const float button = 44.0f * s.ui_scale;
     const float gap = 6.0f * s.ui_scale;
     const float width = ImGui::GetContentRegionAvail().x;
     const ImVec2 at = ImGui::GetCursorScreenPos();
     ImDrawList* list = ImGui::GetWindowDrawList();
+    const float round = 12.0f * s.ui_scale;
+    list->AddRectFilled(at, ImVec2(at.x + width, at.y + height), look::kCard, round);
+    list->AddRect(at, ImVec2(at.x + width, at.y + height), look::kLine, round);
     const float text_y = at.y + (height - ImGui::GetFontSize()) * 0.5f;
-    list->AddText(ImVec2(at.x + 12.0f * s.ui_scale, text_y), IM_COL32(240, 236, 228, 255), label);
+    list->AddText(ImVec2(at.x + 16.0f * s.ui_scale, text_y), look::kText, label);
     const float value_width = ImGui::CalcTextSize("0000%").x;
     const float right = at.x + width - 4.0f * s.ui_scale;
     const float plus_x = right - button;
     const float value_x = plus_x - gap - value_width;
     const float minus_x = value_x - gap - button;
     const ImVec2 size = ImGui::CalcTextSize(value.c_str());
-    list->AddText(ImVec2(value_x + (value_width - size.x) * 0.5f, text_y), IM_COL32(200, 200, 206, 255), value.c_str());
+    list->AddText(ImVec2(value_x + (value_width - size.x) * 0.5f, text_y), look::kGold, value.c_str());
     int step = 0;
     const auto key = [&](const char* id, float x, bool enabled, bool plus) {
         ImGui::SetCursorScreenPos(ImVec2(x, at.y));
@@ -1612,11 +1645,11 @@ int drawer_stepper(const char* label, const std::string& value, bool can_lower, 
         }
         const ImVec2 c(x + button * 0.5f, at.y + height * 0.5f);
         const bool active = ImGui::IsItemActive() && !s.drawer_scrolled;
-        const ImU32 ink = enabled ? IM_COL32(240, 236, 228, 255) : IM_COL32(110, 110, 116, 255);
-        list->AddCircleFilled(c, button * 0.42f, active ? IM_COL32(255, 143, 36, 120) : IM_COL32(255, 255, 255, 22));
-        if (ImGui::IsItemFocused() && ImGui::GetIO().NavVisible) {
-            list->AddCircle(c, button * 0.42f, IM_COL32(255, 143, 36, 200), 0, 2.0f);
-        }
+        const ImU32 ink = !enabled ? look::kDim : active ? look::kBarInk : look::kText;
+        const float r = button * 0.36f;
+        list->AddCircleFilled(c, r, active ? look::kBarTop : look::kOff);
+        const bool focused = ImGui::IsItemFocused() && ImGui::GetIO().NavVisible;
+        list->AddCircle(c, r, focused ? look::kAmber : look::kLineStrong, 0, focused ? 2.0f * s.ui_scale : 1.0f);
         const float arm = button * 0.16f;
         const float thick = 2.5f * s.ui_scale;
         list->AddLine(ImVec2(c.x - arm, c.y), ImVec2(c.x + arm, c.y), ink, thick);
@@ -1630,14 +1663,21 @@ int drawer_stepper(const char* label, const std::string& value, bool can_lower, 
     key("raise", plus_x, can_raise, true);
     ImGui::PopID();
     ImGui::SetCursorScreenPos(ImVec2(at.x, at.y + height));
-    ImGui::Dummy(ImVec2(width, 0.0f));
+    ImGui::Dummy(ImVec2(width, 4.0f * s.ui_scale));
     return step;
 }
 
-void drawer_section(const char* title) {
-    ImGui::Dummy(ImVec2(0.0f, 10.0f * s.ui_scale));
-    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 12.0f * s.ui_scale);
-    text_coloured(ImVec4(1.0f, 0.62f, 0.25f, 1.0f), "{}", title);
+// A section's heading, numbered as the launcher's are ("01 View"): the number in the brand's
+// orange, the title in gold.
+void drawer_section(int number, const char* title) {
+    ImGui::Dummy(ImVec2(0.0f, 12.0f * s.ui_scale));
+    const ImVec2 at = ImGui::GetCursorScreenPos();
+    ImDrawList* list = ImGui::GetWindowDrawList();
+    const std::string n = std::format("{:02}", number);
+    const float x = at.x + 4.0f * s.ui_scale;
+    list->AddText(ImVec2(x, at.y), look::kBrand, n.c_str());
+    list->AddText(ImVec2(x + ImGui::CalcTextSize(n.c_str()).x + 8.0f * s.ui_scale, at.y), look::kGold, title);
+    ImGui::Dummy(ImVec2(0.0f, ImGui::GetFontSize() + 6.0f * s.ui_scale));
 }
 
 void drawer(const Shown& shown) {
@@ -1664,7 +1704,7 @@ void drawer(const Shown& shown) {
     const float x = viewport->Pos.x - width * (1.0f - ease);
     ImGui::GetBackgroundDrawList()->AddRectFilled(viewport->Pos,
                                                   ImVec2(viewport->Pos.x + viewport->Size.x, viewport->Pos.y + viewport->Size.y),
-                                                  IM_COL32(0, 0, 0, static_cast<int>(120.0f * ease)));
+                                                  IM_COL32(0x12, 0x12, 0x1a, static_cast<int>(150.0f * ease)));
     // A touch beside it shuts it.
     if (s.drawer_open && ImGui::IsMouseReleased(0) && !s.drawer_scrolled && io.MouseClickedPos[0].x > x + width) {
         set_drawer(false);
@@ -1675,10 +1715,16 @@ void drawer(const Shown& shown) {
         ImGui::SetNextWindowFocus();
         s.drawer_focus = false;
     }
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f * s.ui_scale + inset, 14.0f * s.ui_scale));
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 2.0f * s.ui_scale));
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.075f, 0.075f, 0.085f, 0.97f));
+    // The launcher's panel: its ink, a thin border, 16-pixel corners on the open side.
+    const float bar = 56.0f * s.ui_scale;
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 16.0f * s.ui_scale);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(14.0f * s.ui_scale + inset, bar + 10.0f * s.ui_scale));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 4.0f * s.ui_scale);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImGui::ColorConvertU32ToFloat4(look::kLineStrong));
     const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize
                                    | ImGuiWindowFlags_NoSavedSettings;
     if (ImGui::Begin("OpenRAC options", nullptr, flags)) {
@@ -1692,31 +1738,58 @@ void drawer(const Shown& shown) {
             ImGui::SetScrollY(ImGui::GetScrollY() - io.MouseDelta.y);
         }
 
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 12.0f * s.ui_scale);
-        ImGui::SetWindowFontScale(1.3f);
-        ImGui::TextUnformatted("OpenRAC");
-        ImGui::SetWindowFontScale(1.0f);
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 12.0f * s.ui_scale);
-        text_coloured(kDim, "{}", s.keep_paused ? "Paused" : "Paused while this is open");
-        ImGui::Dummy(ImVec2(0.0f, 6.0f * s.ui_scale));
-        if (drawer_row("Resume")) {
+        // The panel and the launcher's orange header bar with "OpenRAC" on it, fixed above the
+        // rows that scroll under it.
+        {
+            ImDrawList* back = ImGui::GetWindowDrawList();
+            const ImVec2 top(x, viewport->Pos.y);
+            const ImVec2 bottom(x + width, viewport->Pos.y + viewport->Size.y);
+            const float round = 16.0f * s.ui_scale;
+            back->PushClipRect(top, bottom, false);
+            back->AddRectFilled(top, bottom, look::kPanel, round, ImDrawFlags_RoundCornersRight);
+            back->AddRect(top, bottom, look::kLine, round, ImDrawFlags_RoundCornersRight);
+            back->PopClipRect();
+        }
+        ImDrawList* front = ImGui::GetForegroundDrawList();
+        {
+            const ImVec2 top(x, viewport->Pos.y);
+            const ImVec2 bottom(x + width, viewport->Pos.y + bar);
+            front->AddRectFilledMultiColor(top, ImVec2(bottom.x - 16.0f * s.ui_scale, bottom.y), look::kBarTop,
+                                           look::kBarTop, look::kBarBottom, look::kBarBottom);
+            front->AddRectFilled(ImVec2(bottom.x - 32.0f * s.ui_scale, top.y), bottom, look::kBarBottom,
+                                 16.0f * s.ui_scale, ImDrawFlags_RoundCornersTopRight);
+            ImFont* font = ImGui::GetFont();
+            const float size = ImGui::GetFontSize() * 1.35f;
+            const float text_y = top.y + (bar - size) * 0.5f;
+            const float text_x = top.x + inset + 18.0f * s.ui_scale;
+            const ImVec2 open = font->CalcTextSizeA(size, FLT_MAX, 0.0f, "Open");
+            front->AddText(font, size, ImVec2(text_x, text_y), look::kBarInk, "Open");
+            front->AddText(font, size, ImVec2(text_x + open.x, text_y), IM_COL32(0x1b, 0x12, 0x06, 255), "RAC");
+            front->AddText(font, size, ImVec2(text_x + open.x + 0.6f * s.ui_scale, text_y),
+                           IM_COL32(0x1b, 0x12, 0x06, 255), "RAC");  // bold, as the site's wordmark
+            const char* state = s.keep_paused ? "Paused" : "Paused while open";
+            const ImVec2 state_size = ImGui::CalcTextSize(state);
+            front->AddText(ImVec2(bottom.x - state_size.x - 18.0f * s.ui_scale, top.y + (bar - state_size.y) * 0.5f),
+                           look::kBarInk, state);
+        }
+        if (drawer_row("Resume", true, look::kGold)) {
             set_drawer(false);
         }
 
-        drawer_section("View");
+        drawer_section(1, "View");
         if (drawer_switch("Frame counter", settings::get().show_fps)) {
             settings::get().show_fps = !settings::get().show_fps;
             settings::save();
         }
 
-        drawer_section("Sound");
+        drawer_section(2, "Sound");
         const int volume = settings::get().volume;
         if (const int step = drawer_stepper("Volume", std::format("{}%", volume), volume > 0, volume < 100)) {
             settings::set_volume(volume + step * 10);
             settings::save();
         }
 
-        drawer_section("Developer");
+        drawer_section(3, "Developer");
         if (drawer_switch("Debug overlay", s.visible)) {
             set_visible(!s.visible);
         }
@@ -1740,8 +1813,8 @@ void drawer(const Shown& shown) {
             press(SDLK_F1);
         }
 
-        ImGui::Dummy(ImVec2(0.0f, 10.0f * s.ui_scale));
-        if (drawer_row("Quit game")) {
+        ImGui::Dummy(ImVec2(0.0f, 12.0f * s.ui_scale));
+        if (drawer_row("Quit game", true, look::kErr)) {
             SDL_Event quit;
             SDL_zero(quit);
             quit.type = SDL_EVENT_QUIT;
@@ -1749,8 +1822,8 @@ void drawer(const Shown& shown) {
         }
     }
     ImGui::End();
-    ImGui::PopStyleColor();
-    ImGui::PopStyleVar(3);
+    ImGui::PopStyleColor(3);
+    ImGui::PopStyleVar(5);
 }
 
 // What the keys of pause and speed have set, said in the picture whether the panel is shown or

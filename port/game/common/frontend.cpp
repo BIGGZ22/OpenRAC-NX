@@ -2587,8 +2587,11 @@ bool hold() {
         draw_kept(false);
         g_held = false;
         renderer::g_dump_draws = dump;
-        // No faster than 60 pictures a second, whatever the frame pacing does with a held tick.
-        std::this_thread::sleep_until(started + std::chrono::milliseconds(16));
+        // No faster than the display shows them (a 120 Hz screen's drawer moves at 120), and no
+        // faster than 60 a second where its rate is not known.
+        const double interval = pacing.interval > 0.0 ? pacing.interval : 1.0 / 60.0;
+        std::this_thread::sleep_until(
+            started + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(interval * 0.9)));
     }
     return true;
 }
