@@ -275,3 +275,39 @@ func_L14_00303350	game	func_L14_00303350	host	a place the catalogue folds into a
 func_L18_002FAD08	game	func_L18_002FAD08	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L18_002FC168	void (void)
 FUN_001ff780	hud	func_001FFFB8	wrap	the level HUD's draw: with the player's "HUD: Edges" the elements anchored left or right are drawn out at the sides of a picture wider than the game's (rac1/host/hud.c); PAL func_001FFFB8
 FUN_001fdd10	text	msg_string	wrap	the text of an id: the port's own ids (its rows on the Video options page) have their strings from the port (rac1/host/options.c); PAL func_001FE540
+_Exit	kernel	Exit	host	system call 0x04 (KExit); PAL func_00118A60
+func_001187C0	kernel	AddDmacHandler2	host	system call 0x12, the handler takes an argument (libmpeg's colour conversion); PAL func_00118AC0
+SetAlarm	kernel	SetAlarm	host	system call 0xFC; the callback runs at once; PAL func_00118B20
+ReferThreadStatus	kernel	ReferThreadStatus	host	system call 0x30; PAL func_00118BF0
+SleepThread	kernel	SleepThread	host	system call 0x32; PAL func_00118C00
+WakeupThread	kernel	WakeupThread	host	system call 0x33; PAL func_00118C10
+_iWakeupThread	kernel	WakeupThread	host	system call -0x34 (_iWakeupThread): the same in the port; PAL func_00118C20
+SuspendThread	kernel	SuspendThread	host	system call 0x37; PAL func_00118C40
+EndOfHeap	kernel	EndOfHeap	host	system call 0x3E; sbrk's limit; PAL func_00118C60
+iSignalSema	kernel	SignalSema	host	system call -0x43 (iSignalSema): the same in the port; PAL func_00118CA0
+PollSema	kernel	PollSema	host	system call 0x45; PAL func_00118CC0
+SetOsdConfigParam	kernel	SetOsdConfigParam	host	system call 0x4A; PAL func_00118CE0
+GetOsdConfigParam	kernel	GetOsdConfigParam	host	system call 0x4B; PAL func_00118CF0
+sceSifStopDma	kernel	sceSifStopDma	host	system call 0x6B; PAL func_00118DA0
+GetOsdConfigParam2	kernel	GetOsdConfigParam2	host	system call 0x6F; PAL func_00118DC0
+SetVSyncFlag	kernel	SetVSyncFlag	host	system call 0x73; PAL func_00118E00
+isceSifSetDma	kernel	sceSifSetDma	host	system call -0x77 (isceSifSetDma): the same in the port; PAL func_00118E30
+sceSifSetDChain	kernel	sceSifSetDChain	host	system call 0x78; PAL func_00118E40
+isceSifSetDChain	kernel	sceSifSetDChain	host	system call -0x78 (isceSifSetDChain): the same in the port; PAL func_00118E50
+sceSifSetReg	kernel	sceSifSetReg	host	system call 0x79; PAL func_00118E60
+sceSifGetReg	kernel	sceSifGetReg	host	system call 0x7A; PAL func_00118E70
+Deci2Call	kernel	Deci2Call	host	system call 0x7C; kputs goes to the log; PAL func_00118E90
+GetMemorySize	kernel	GetMemorySize	host	system call 0x7F; PAL func_00118EA0
+_InitTLB	kernel	_InitTLB	host	system call 0x82; PAL func_00118EB0
+InvokeKernelSyscall005A_Rfu	kernel	Copy	host	system call 0x5A; PAL func_0011D360
+Rfu091Early	kernel	GetEntryAddress	host	system call 0x5B; PAL func_0011D3A8
+Rfu116SetSyscallEarly	kernel	SetSyscall	host	system call 0x74; PAL func_0011D3B8
+func_0011D190	kernel	_SetTLBEntry	host	system call 0x56; PAL func_0011D490
+InvokeKernelSyscall0083_Rfu	kernel	FindAddress	host	system call 0x83; PAL func_0011DA80
+Rfu116SetSyscallMid	kernel	SetSyscall	host	system call 0x74; PAL func_0011DB98
+Rfu116SetSyscallLate	kernel	SetSyscall	host	system call 0x74; PAL func_0011DBE8
+InvokeKernelSyscall005A_RfuWorker	kernel	Copy	host	system call 0x5A; PAL func_0011DBF8
+Rfu091Mid	kernel	GetEntryAddress	host	system call 0x5B; PAL func_0011DC40
+Rfu116SetSyscallTail	kernel	SetSyscall	host	system call 0x74; PAL func_0011DDD0
+InvokeKernelSyscall005A_RfuTail	kernel	Copy	host	system call 0x5A; PAL func_0011DDE0
+Rfu091Tail	kernel	GetEntryAddress	host	system call 0x5B; PAL func_0011DE28
