@@ -2468,7 +2468,7 @@ dependencies = [
 
 [[package]]
 name = "openrac-launcher"
-version = "0.7.3"
+version = "0.7.4"
 dependencies = [
  "openrac-launcher-core",
  "serde",
@@ -2482,7 +2482,7 @@ dependencies = [
 
 [[package]]
 name = "openrac-launcher-core"
-version = "0.7.3"
+version = "0.7.4"
 dependencies = [
  "serde",
  "serde_json",
