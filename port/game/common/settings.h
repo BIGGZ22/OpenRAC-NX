@@ -83,6 +83,7 @@ struct Settings {
     bool mute_unfocused = false;  // silence while another window has the keyboard
     bool skip_cutscenes = true;   // Start skips an in-game cutscene (without the game's L1 L2 R1 R2 hold)
     int volume = 100;  // of everything the port plays, 0 (nothing at all) to 100 (as mixed)
+    bool verbose_log = false;  // the detailed log (as OPENRAC_LOG=verbose): level loads, pad changes, callers
 };
 
 // The settings in use.
@@ -90,6 +91,9 @@ Settings& get();
 
 // Reads `file` (missing or unreadable: the defaults) and remembers it for save().
 void load(const std::filesystem::path& file);
+
+// The settings in one line, for the log and its header.
+std::string summary();
 
 // Writes the settings to the file load() was given; nothing without one.
 void save();

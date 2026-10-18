@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// Reports an access to game memory that is not mapped: the game address and
-// the kind of access, then ends the program. Anything else is left to the
-// system's own handling.
+// The program's fatal faults: an access to game memory that is not mapped (with the game address
+// and the kind of access), an illegal instruction, an arithmetic fault, an abort, and on Windows
+// the structured exceptions that are these; and a C++ exception nobody caught. Each writes a crash
+// report (common/crash.h) and ends the program with status 3.
 
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <exception>
 
+#include "common/crash.h"
 #include "openrac/guest.h"
 #include "openrac/memory.h"
 
@@ -16,9 +19,10 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+
+#include <csignal>
 #else
 #include <csignal>
-#include <execinfo.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #if defined(__linux__)
@@ -29,29 +33,84 @@
 namespace openrac::runtime {
 namespace {
 
-void report(const void* host, const char* what) {
+// The fault's words, built without allocating, then the report; the program ends here.
+[[noreturn]] void report(const void* host, const char* what, crash::Kind kind) {
+    crash::Text reason;
     gaddr address = 0;
-    if (Memory::get().contains(host, &address)) {
-        std::fprintf(
-            stderr, "[error] %s at game address 0x%08X, which is not mapped\n", what, address
-        );
+    if (host != nullptr && Memory::get().contains(host, &address)) {
+        reason.str(what).str(" at game address ").hex(address, 8).str(", which is not mapped");
+    } else if (host != nullptr) {
+        reason.str(what).str(" at host address ").hex(reinterpret_cast<std::uintptr_t>(host));
     } else {
-        std::fprintf(stderr, "[error] %s at host address %p\n", what, host);
+        reason.str(what);
     }
-    std::fflush(stderr);
+    crash::report(reason.c_str(), kind);
+    std::_Exit(3);
+}
+
+// std::terminate: a C++ exception nobody caught (or a noexcept one broken).
+[[noreturn]] void on_terminate() {
+    crash::Text reason;
+    reason.str("a C++ exception nobody caught");
+    if (const std::exception_ptr e = std::current_exception()) {
+        try {
+            std::rethrow_exception(e);
+        } catch (const std::exception& x) {
+            reason.str(": ").str(x.what());
+        } catch (...) {
+        }
+    }
+    crash::report(reason.c_str(), crash::Kind::Exception);
+    std::_Exit(3);
 }
 
 #if defined(_WIN32)
 
+// A first look at every exception, before any handler of the program's: only the hardware's faults
+// are reported here (C++ exceptions pass through it too, and are caught where they are meant to be).
 LONG WINAPI on_exception(EXCEPTION_POINTERS* info) {
-    if (info->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION) {
-        return EXCEPTION_CONTINUE_SEARCH;
+    const DWORD code = info->ExceptionRecord->ExceptionCode;
+    if (code == EXCEPTION_ACCESS_VIOLATION || code == EXCEPTION_IN_PAGE_ERROR) {
+        const auto kind = info->ExceptionRecord->ExceptionInformation[0];
+        const auto* host =
+            reinterpret_cast<const void*>(info->ExceptionRecord->ExceptionInformation[1]);
+        report(host, kind == 1 ? "write" : kind == 8 ? "execution" : "read", crash::Kind::Exception);
     }
-    const auto kind = info->ExceptionRecord->ExceptionInformation[0];
-    const auto* host =
-        reinterpret_cast<const void*>(info->ExceptionRecord->ExceptionInformation[1]);
-    report(host, kind == 1 ? "write" : "read");
-    std::_Exit(3);
+    const char* what = nullptr;
+    switch (code) {
+        case EXCEPTION_ILLEGAL_INSTRUCTION:
+            what = "illegal instruction";
+            break;
+        case EXCEPTION_PRIV_INSTRUCTION:
+            what = "privileged instruction";
+            break;
+        case EXCEPTION_INT_DIVIDE_BY_ZERO:
+            what = "integer division by zero";
+            break;
+        case EXCEPTION_STACK_OVERFLOW:
+            what = "stack overflow";
+            break;
+        case EXCEPTION_DATATYPE_MISALIGNMENT:
+            what = "misaligned access";
+            break;
+        case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
+            what = "array bounds exceeded";
+            break;
+        default:
+            return EXCEPTION_CONTINUE_SEARCH;
+    }
+    report(info->ExceptionRecord->ExceptionAddress, what, crash::Kind::Exception);
+}
+
+// Any other exception nothing handled.
+LONG WINAPI on_unhandled(EXCEPTION_POINTERS* info) {
+    crash::Text what;
+    what.str("an unhandled exception, code ").hex(info->ExceptionRecord->ExceptionCode, 8);
+    report(info->ExceptionRecord->ExceptionAddress, what.c_str(), crash::Kind::Exception);
+}
+
+void on_abort(int) {
+    report(nullptr, "the program aborted (abort)", crash::Kind::Signal);
 }
 
 #else
@@ -82,10 +141,9 @@ void on_signal(int sig, siginfo_t* info, void* context) {
         gaddr address = 0;
         if (Memory::get().contains(at, &address) && address >= g_guard_low && address < g_guard_high
             && g_guard_skip-- == 0) {
-            std::fprintf(stderr, "[error] a write into the guarded range, at game address 0x%08X, by:\n", address);
-            void* frames[32];
-            const int count = backtrace(frames, 32);
-            backtrace_symbols_fd(frames, count, STDERR_FILENO);
+            crash::Text reason;
+            reason.str("OPENRAC_GUARD: a write into the guarded range, at game address ").hex(address, 8);
+            crash::report(reason.c_str(), crash::Kind::Signal);
             _exit(3);
         }
         // Another write to the page: let this one through, then guard again (on_step).
@@ -97,12 +155,28 @@ void on_signal(int sig, siginfo_t* info, void* context) {
 #endif
         return;
     }
-    report(info->si_addr, sig == SIGBUS ? "bus error" : "access");
-    // The host functions on the way there (the translated game code is named after the game's).
-    void* frames[32];
-    const int count = backtrace(frames, 32);
-    backtrace_symbols_fd(frames, count, STDERR_FILENO);
-    _exit(3);
+    // The host functions on the way there are in the report's backtrace (the translated game code
+    // is named after the game's).
+    report(info->si_addr, sig == SIGBUS ? "access (SIGBUS)" : "access (SIGSEGV)", crash::Kind::Signal);
+}
+
+// The other faults: no game address to give.
+void on_fault(int sig, siginfo_t* info, void*) {
+    const char* what = "a fatal signal";
+    switch (sig) {
+        case SIGILL:
+            what = "illegal instruction (SIGILL)";
+            break;
+        case SIGFPE:
+            what = "arithmetic fault (SIGFPE)";
+            break;
+        case SIGABRT:
+            what = "the program aborted (SIGABRT)";
+            break;
+        default:
+            break;
+    }
+    report(sig == SIGABRT ? nullptr : info->si_addr, what, crash::Kind::Signal);
 }
 
 #endif
@@ -139,16 +213,24 @@ void guard_writes(gaddr address, std::uint32_t bytes, std::uint32_t skip) {
 }
 
 void install_crash_handler() {
+    std::set_terminate(on_terminate);
 #if defined(_WIN32)
     AddVectoredExceptionHandler(1, on_exception);
+    SetUnhandledExceptionFilter(on_unhandled);
+    std::signal(SIGABRT, on_abort);
 #else
+    crash::prepare_thread();
     struct sigaction action {};
 
     action.sa_sigaction = on_signal;
-    action.sa_flags = SA_SIGINFO;
+    action.sa_flags = SA_SIGINFO | SA_ONSTACK;
     sigemptyset(&action.sa_mask);
     sigaction(SIGSEGV, &action, nullptr);
     sigaction(SIGBUS, &action, nullptr);
+    action.sa_sigaction = on_fault;
+    sigaction(SIGILL, &action, nullptr);
+    sigaction(SIGFPE, &action, nullptr);
+    sigaction(SIGABRT, &action, nullptr);
 #endif
 }
 

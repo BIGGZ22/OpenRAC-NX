@@ -135,6 +135,31 @@ static int in_cutscene(void) {
     return loaded_level >= 0 && loaded_level < LEVELS && GREF(int, OPENRAC_LDATA(0, RAC1_LADDR(00, 0x0015F6A8u))) == 2;
 }
 
+/* For a crash report: the game mode word (D_L00_0015F6A8, the level's copy) while a level is
+ * loaded, and the hero's position (gHeroPos: RAC1_HERO_POS, where rac1_version.h has it). */
+static int game_mode(uint32_t *mode) {
+    if (loaded_level < 0 || loaded_level >= LEVELS) {
+        return 0;
+    }
+    *mode = (uint32_t)GREF(int, OPENRAC_LDATA(0, RAC1_LADDR(00, 0x0015F6A8u)));
+    return 1;
+}
+
+static int hero_position(float xyz[3]) {
+#ifdef RAC1_HERO_POS
+    if (loaded_level < 0 || loaded_level >= LEVELS) {
+        return 0;
+    }
+    for (int i = 0; i < 3; ++i) {
+        xyz[i] = GREF(float, RAC1_HERO_POS + 4u * (unsigned)i);
+    }
+    return 1;
+#else
+    (void)xyz;
+    return 0;
+#endif
+}
+
 /* The flight's update (func_00230A90), once a frame of the transition's flight loop (space.c). */
 void func_00230A90(void) {
     flight_frames = 2;
@@ -161,5 +186,7 @@ __attribute__((constructor)) static void install_direct_start(void) {
     openrac_game_bolts = bolts;
     openrac_game_in_cutscene = in_cutscene;
     openrac_game_skip = skip;
+    openrac_game_mode = game_mode;
+    openrac_game_hero_position = hero_position;
     openrac_game_front_end = &rac1_front_end;
 }

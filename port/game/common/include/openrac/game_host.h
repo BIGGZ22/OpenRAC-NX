@@ -84,6 +84,21 @@ extern int (*openrac_game_bolts)(void);
  * 2): the window lets Start skip it (settings skip_cutscenes). */
 extern int (*openrac_game_in_cutscene)(void);
 
+/* For crash reports (port/common/crash.h), sampled once a frame, when a game installs them (rac1:
+ * boot.c): the game's mode word, and where the hero is. Each returns 0 when it has no answer now
+ * (no level loaded). */
+extern int (*openrac_game_mode)(uint32_t* mode);
+extern int (*openrac_game_hero_position)(float xyz[3]);
+
+/* A trap the game raised on purpose, or another reason the game cannot go on: writes a crash
+ * report (<data>/crashes) and ends the program. */
+#ifdef __cplusplus
+[[noreturn]]
+#else
+_Noreturn
+#endif
+void openrac_game_crash(const char* reason);
+
 /* Called while Start is held with skip_cutscenes on, when a game installs it: skips what the game
  * lets the port skip besides its own cutscenes (rac1/pal: the flight between planets, boot.c). */
 extern void (*openrac_game_skip)(void);

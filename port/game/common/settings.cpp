@@ -210,6 +210,8 @@ void load(const std::filesystem::path& file) {
             known = parse_bool(value, s.skip_cutscenes);
         } else if (key == "volume") {
             known = parse_int(value, 0, 100, s.volume);
+        } else if (key == "verbose_log") {
+            known = parse_bool(value, s.verbose_log);
         }
         if (!known) {
             log::warn("{}: {} = {} is not a value the port knows; the default is used", file.string(), key, value);
@@ -219,10 +221,19 @@ void load(const std::filesystem::path& file) {
         s.vsync = s.frame_rate == FrameRate::Display ? VSync::On : VSync::Off;
     }
     g_gain = gain_now();
-    log::info("settings from {}: {}, picture {}, {}% scale, {} sample(s), anisotropy {}, frames {}, vsync {}, "
-              "volume {}",
-              file.string(), kDisplayMode[static_cast<int>(s.display_mode)], kAspect[static_cast<int>(s.aspect)],
-              s.render_scale, s.msaa, s.anisotropy, frame_rate_value(s), kVSync[static_cast<int>(s.vsync)], s.volume);
+    log::info("settings from {}: {}", file.string(), summary());
+}
+
+std::string summary() {
+    const Settings& s = g_settings;
+    const std::string window = s.window_width > 0 && s.window_height > 0
+                                   ? std::format("{}x{}", s.window_width, s.window_height)
+                                   : std::string("default size");
+    return std::format("{} ({}, display {}), picture {}, {}% scale, {} sample(s), anisotropy {}, frames {}, vsync {}, "
+                       "volume {}{}",
+                       kDisplayMode[static_cast<int>(s.display_mode)], window, s.monitor,
+                       kAspect[static_cast<int>(s.aspect)], s.render_scale, s.msaa, s.anisotropy, frame_rate_value(s),
+                       kVSync[static_cast<int>(s.vsync)], s.volume, s.verbose_log ? ", detailed log" : "");
 }
 
 void save() {
@@ -262,6 +273,9 @@ void save() {
         << "mute_unfocused = " << (s.mute_unfocused ? 1 : 0) << "\n"
         << "skip_cutscenes = " << (s.skip_cutscenes ? 1 : 0) << "\n"
         << "volume = " << s.volume << "\n";
+    if (s.verbose_log) {
+        out << "verbose_log = 1\n";
+    }
 }
 
 void set_volume(int volume) {

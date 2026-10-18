@@ -306,6 +306,11 @@ std::unique_ptr<Window> Window::open(const WindowConfig& config, std::string& er
         const char* driver = SDL_GetCurrentVideoDriver();
         log::info("graphics: {} ({}), OpenGL {}, GLSL {}", window->m_gl_renderer, window->m_gl_vendor,
                   window->m_gl_version, gl_string(kGlShadingLanguageVersion));
+        // The card and its driver in the session's header too, for a crash report (common/crash.h).
+        log::header(std::format("graphics  {} ({}), OpenGL {}, {} through SDL's {} driver", window->m_gl_renderer,
+                                window->m_gl_vendor, window->m_gl_version,
+                                window->m_software ? "SOFTWARE" : "hardware", driver != nullptr ? driver : "?"),
+                    false);
         log::info("graphics: {} context through SDL's {} driver; the window's buffer {} bits a channel, depth {}, "
                   "stencil {}, {} samples, {}",
                   window->m_software ? "SOFTWARE (drawn on the CPU)" : "hardware", driver != nullptr ? driver : "?",

@@ -44,14 +44,35 @@ include(FastBuild)
 
 enable_testing()
 
-# ---- common: the log and small helpers, no dependencies ----
+# ---- common: the log, crash reports and small helpers, no dependencies ----
+# OpenRAC's version and the checkout's commit (common/build_info.h), written at every build and
+# replaced only when they change (cmake/BuildInfo.cmake).
+set(OPENRAC_BUILD_INFO "${CMAKE_BINARY_DIR}/generated/build_info.cpp")
+add_custom_target(openrac_build_info
+  COMMAND "${CMAKE_COMMAND}" "-DREPO=${PROJECT_SOURCE_DIR}/.." "-DOUT=${OPENRAC_BUILD_INFO}"
+          -P "${PROJECT_SOURCE_DIR}/cmake/BuildInfo.cmake"
+  BYPRODUCTS "${OPENRAC_BUILD_INFO}"
+  COMMENT "OpenRAC's version and commit"
+  VERBATIM)
 add_library(openrac_common STATIC
+  common/crash.cpp
   common/log.cpp
   common/process.cpp
   common/stats.cpp
+  common/system_info.cpp
+  "${OPENRAC_BUILD_INFO}"
 )
+add_dependencies(openrac_common openrac_build_info)
 target_include_directories(openrac_common PUBLIC .)
+if(UNIX AND NOT APPLE)
+  target_link_libraries(openrac_common PUBLIC ${CMAKE_DL_LIBS})  # dladdr, for the crash report
+endif()
 openrac_warnings(openrac_common)
+
+add_executable(log_test tests/log_test.cpp)
+target_link_libraries(log_test PRIVATE openrac_common)
+openrac_warnings(log_test)
+add_test(NAME log COMMAND log_test)
 
 # ---- runtime: game memory, the guest contract, the executable loader ----
 add_library(openrac_runtime STATIC

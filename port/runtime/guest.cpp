@@ -100,7 +100,19 @@ void unknown_function() {
     static std::mutex lock;
     static std::map<gaddr, int> seen;
     std::scoped_lock hold(lock);
-    if (seen[g_unknown_target]++ == 0) {
+    const int calls = ++seen[g_unknown_target];
+    // [verbose log] It goes on being called: said again at 10, 100, 1000... calls.
+    if (calls >= 10 && openrac::log::verbose_on()) {
+        int n = calls;
+        while (n % 10 == 0) {
+            n /= 10;
+        }
+        if (n == 1) {
+            openrac::log::verbose("call to code address {:#010x} again: {} calls (overlay {})", g_unknown_target,
+                                  calls, g_overlay);
+        }
+    }
+    if (calls == 1) {
         error(
             "call to code address {:#010x}, which no function of the port has (overlay {})",
             g_unknown_target,
@@ -330,6 +342,14 @@ void openrac_guest_missing(const char* name) {
         std::exit(2);
     }
     warn("{} has no C in the port yet; it does nothing", name);
+    // [verbose log] Who called it first.
+    if (openrac::log::verbose_on()) {
+        for (int depth = 0; depth < 4; ++depth) {
+            char who[256];
+            openrac_host_caller(depth, who, sizeof(who));
+            openrac::log::verbose("  from {}", who);
+        }
+    }
 }
 
 unsigned long openrac_guest_missing_calls(unsigned* functions) {

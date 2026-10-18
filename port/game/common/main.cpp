@@ -40,8 +40,13 @@
 
 #include <cfenv>
 #include <cmath>
+#include <csignal>
+#include <ctime>
 
+#include "common/build_info.h"
+#include "common/crash.h"
 #include "common/log.h"
+#include "common/system_info.h"
 #ifdef OPENRAC_HAS_DISC
 #include "assets/disc/disc.h"
 #endif
@@ -79,6 +84,8 @@ void (*openrac_game_on_frame)(unsigned frame) = nullptr;
 int (*openrac_game_bolts)(void) = nullptr;
 int (*openrac_game_in_cutscene)(void) = nullptr;
 void (*openrac_game_skip)(void) = nullptr;
+int (*openrac_game_mode)(uint32_t* mode) = nullptr;
+int (*openrac_game_hero_position)(float xyz[3]) = nullptr;
 const openrac_front_end* openrac_game_front_end = nullptr;
 }
 
@@ -251,6 +258,88 @@ Options parse(int argc, char** argv) {
     return o;
 }
 
+// The command line as it was typed, quoted where needed, with the home folder as ~.
+std::string command_line(int argc, char** argv) {
+    std::string line;
+    for (int i = 0; i < argc; ++i) {
+        std::string a = i == 0 ? program_name() : std::string(argv[i]);
+        if (a.find_first_of(" \"'") != std::string::npos || a.empty()) {
+            a = "\"" + a + "\"";
+        }
+        line += (i == 0 ? "" : " ") + a;
+    }
+    return line;
+}
+
+// This run's log (common/log.h: the earlier runs' moved along) and its header; crash reports go
+// to <data>/crashes (common/crash.h).
+void open_session(int argc, char** argv) {
+    const long offset = crash::local_offset();
+    char started[40];
+    crash::format_time(static_cast<long long>(std::time(nullptr)), offset, started, sizeof(started));
+    if (!log::open_session(g_options.data, program_name(), 5)) {
+        log::warn("the log cannot be written in {}", g_options.data.string());
+    }
+    crash::configure(g_options.data / "crashes", program_name(), started);
+    const char* level = log::level() <= log::Level::Debug     ? "debug"
+                        : log::level() <= log::Level::Verbose ? "verbose"
+                                                              : "info (OPENRAC_LOG=verbose, or verbose_log = 1 in the settings, for more)";
+    log::header("==== OpenRAC session ====");
+    log::header(std::format("session   {}", started));
+    log::header(std::format("openrac   {}, commit {}", build_info::version(), build_info::commit()));
+    log::header(std::format("game      {}: {}, disc {}", openrac_game.id, openrac_game.title, openrac_game.serial));
+    log::header(std::format("system    {}, {} of memory", system_info::os(), system_info::memory()));
+    log::header(std::format("cpu       {}", system_info::cpu()));
+    log::header(std::format("command   {}", command_line(argc, argv)));
+    log::header(std::format("log       {}", level));
+    log::header("=========================");
+}
+
+// What a crash report says the game was doing (common/crash.h): sampled each frame.
+void sample_state() {
+    crash::GameState s;
+    s.frame = g_frame;
+    const int level = openrac_game_loaded_overlay();
+    s.level = level == OPENRAC_OVERLAY_EXE ? -1 : level;
+    if (openrac_game_mode != nullptr) {
+        s.has_mode = openrac_game_mode(&s.mode) != 0;
+    }
+    if (openrac_game_hero_position != nullptr) {
+        s.has_hero = openrac_game_hero_position(s.hero) != 0;
+    }
+    crash::set_state(s);
+}
+
+// [testing only] OPENRAC_CRASH_TEST=KIND:FRAME stops the program on purpose at that frame, to check
+// the crash report: segv (an access to game memory that is not mapped), host (to a host address
+// that is not), abort, fpe (a raised SIGFPE), fatal (log::fatal), trap (the game's trap).
+void crash_test() {
+    static const char* test = std::getenv("OPENRAC_CRASH_TEST");
+    if (test == nullptr) {
+        return;
+    }
+    char kind[16] = {};
+    long frame = 0;
+    if (std::sscanf(test, "%15[a-z]:%ld", kind, &frame) < 1 || g_frame != frame) {
+        return;
+    }
+    log::warn("OPENRAC_CRASH_TEST: stopping on purpose ({})", kind);
+    const std::string k = kind;
+    if (k == "segv") {
+        *static_cast<volatile std::uint32_t*>(G(0x0F000000u)) = 1;
+    } else if (k == "host") {
+        *reinterpret_cast<volatile std::uint32_t*>(static_cast<std::uintptr_t>(16)) = 1;
+    } else if (k == "abort") {
+        std::abort();
+    } else if (k == "fpe") {
+        std::raise(SIGFPE);
+    } else if (k == "fatal") {
+        log::fatalf("OPENRAC_CRASH_TEST: a fatal error on purpose");
+    } else if (k == "trap") {
+        openrac_game_crash("the game raised a trap (a failed assertion of its own): OPENRAC_CRASH_TEST");
+    }
+}
+
 void finish() {
     openrac_guest_report_missing();
     log::info("{} frames", g_frame);
@@ -265,6 +354,12 @@ extern "C" {
 // What the game's renderers drew since the last frame (openrac_game_draw), and whether it reports.
 static unsigned g_draws = 0;
 static bool g_reports_draws = false;
+
+void openrac_game_crash(const char* reason) {
+    log::error("{}", reason);
+    crash::report(reason, crash::Kind::Trap);
+    std::_Exit(3);
+}
 
 void openrac_game_draw(unsigned layers) {
     g_draws |= layers;
@@ -346,6 +441,8 @@ int openrac_game_vsync(void) {
     }
 #endif
     g_frame++;
+    sample_state();
+    crash_test();
     // The level being played, once per change: the launcher reads this line for Discord's presence.
     static int shown_level = OPENRAC_OVERLAY_EXE;
     static int shown_bolts = -1;
@@ -792,9 +889,30 @@ gaddr openrac_game_text(int id) {
     return 0;
 }
 
+// [verbose log] The first pad's buttons each time they change, and its sticks when one moves far.
+static void log_pad(int port, const uint16_t* buttons, const uint8_t analog[4]) {
+    static uint16_t last = 0xFFFF;
+    static uint8_t last_analog[4] = {0x80, 0x80, 0x80, 0x80};
+    if (port != 0 || !log::verbose_on()) {
+        return;
+    }
+    bool moved = false;
+    for (int i = 0; i < 4; ++i) {
+        moved = moved || std::abs(int(analog[i]) - int(last_analog[i])) >= 0x30;
+    }
+    if (*buttons == last && !moved) {
+        return;
+    }
+    last = *buttons;
+    std::memcpy(last_analog, analog, 4);
+    log::verbose("frame {}: pad 0 buttons {:#06x} (active low), sticks {} {} {} {}", g_frame, *buttons, analog[0],
+                 analog[1], analog[2], analog[3]);
+}
+
 int openrac_game_pad(int port, uint16_t* buttons, uint8_t analog[4]) {
 #ifdef OPENRAC_FRONTEND
     if (g_window && frontend::pad(port, buttons, analog)) {
+        log_pad(port, buttons, analog);
         return 1;
     }
 #endif
@@ -863,6 +981,7 @@ static void load_level_program(int level) {
                    level, path.string());
         return;
     }
+    log::verbose("level {}'s program: {} bytes", level, bytes.size());
     std::uint32_t entry = 0;
     for (std::size_t at = 0; at + 16 <= bytes.size();) {
         std::uint32_t head[4];
@@ -952,6 +1071,7 @@ static int check_levels(const fs::path& levels) {
 // when rounded to nearest (a moby of rac1's level 6 shrank to a negative scale).
 // OPENRAC_ROUND_NEAREST=1 keeps the host's mode, to compare.
 static int run_game_as_the_ee() {
+    crash::prepare_thread();  // the game may run on a thread of its own (platform/pump.h)
     if (std::getenv("OPENRAC_ROUND_NEAREST") == nullptr) {
         std::fesetround(FE_TOWARDZERO);
     }
@@ -985,7 +1105,7 @@ int main(int argc, char** argv) {
             g_options.data.string()
         );
     }
-    log::set_file((g_options.data / (program_name() + ".log")).string().c_str());
+    open_session(argc, argv);
     log::info("{}: {}", program_name(), openrac_game.title);
 
     runtime::Memory::create();
@@ -1021,6 +1141,11 @@ int main(int argc, char** argv) {
     if (g_options.window) {
         std::string why;
         settings::load(g_options.settings);
+        log::header("settings  " + settings::summary(), false);
+        if (settings::get().verbose_log && log::level() > log::Level::Verbose) {
+            log::set_level(log::Level::Verbose);
+            log::info("the settings ask for the detailed log (verbose_log = 1)");
+        }
         fs::path levels = g_options.levels.empty() ? default_levels(g_options.data) : levels_or_flat(g_options.levels);
         if (!frontend::open(openrac_game.id, levels, why)) {
             log::fatalf("no window: {}", why);

@@ -43,13 +43,8 @@ float game_openrac_rsqrt(float a, float b) {
 /* A trap the game raises on purpose (teq $0, $0 in a hand-written routine): an assertion of the
  * game that failed. The console would stop in its exception handler; the port says so and stops. */
 void game_openrac_game_trap(void) {
-    fprintf(stderr, "[error] the game raised a trap (a failed assertion of its own); stopping\n");
-    for (int depth = 0; depth < 6; ++depth) {
-        char who[256];
-        openrac_host_caller(depth, who, sizeof(who));
-        fprintf(stderr, "[error]   from %s\n", who);
-    }
-    exit(3);
+    /* The crash report's backtrace names the functions that led here. */
+    openrac_game_crash("the game raised a trap (a failed assertion of its own)");
 }
 
 /* VU0_loadMicroProgram (func_002347F0, matched C in the decompilation): waits for VIF0, points it
