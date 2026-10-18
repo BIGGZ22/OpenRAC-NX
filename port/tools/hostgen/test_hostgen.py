@@ -810,6 +810,17 @@ class Preparation(unittest.TestCase):
         self.assertIn("func_B_hc1(1.0f); func_A_hc1(2);", out)
         self.assertEqual(out.count("\n"), src.count("\n"))
 
+    def test_a_labelled_va_list_library_name_is_renamed(self):
+        # The US vfprintf: named like the library's, bound to a game address, taking a game pointer.
+        src = ('s32 vfprintf(FILE *fp, const char *f, void *ap) __asm__("FUN_00116da8");\n'
+               's32 vfprintf(FILE *fp, const char *f, void *ap) { return vfprintf(fp, f, ap); }\n'
+               'char *s = "vfprintf(";\n')
+        out = prep.rename_va_builtins(src)
+        self.assertEqual(out.count("vfprintf_game("), 3)
+        self.assertIn('"vfprintf("', out)
+        self.assertEqual(prep.rename_va_builtins("int vfprintf(void *, const char *, void *);\n"),
+                         "int vfprintf(void *, const char *, void *);\n")
+
     def test_commas_in_a_parameter_list_do_not_split(self):
         src = "extern int func_A(int, float);\n"
         self.assertEqual(prep.split_declarators(src), src)

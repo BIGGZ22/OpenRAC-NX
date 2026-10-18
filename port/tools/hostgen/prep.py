@@ -221,6 +221,30 @@ def name_wide_casts(text: str) -> str:
     return _WIDE_CAST.sub(lambda m: "openrac_uti" if m.group(1) else "openrac_ti", text)
 
 
+_VA_BUILTINS = ("vfprintf", "vprintf", "vsprintf", "vsnprintf", "vfscanf", "vscanf", "vsscanf")
+_LABELLED_VA_BUILTIN = re.compile(
+    r"\b(" + "|".join(_VA_BUILTINS) + r")\s*\([^;{}]*\)\s*__asm__\(\s*\"(?:FUN|func)_")
+
+
+def rename_va_builtins(text: str) -> str:
+    """A game function that is named like a C library function taking a va_list (the US
+    decompilation's `vfprintf(FILE *, const char *, void *) __asm__("FUN_00116da8")`) is renamed
+    NAME_game in its file. Clang otherwise takes it for the library's own, gives its definition the
+    host's va_list while its body uses the game's pointer, and the translation casts one to the other
+    (a struct on Linux on ARM, where it does not compile). The assembler label keeps the symbol."""
+    names = set(_LABELLED_VA_BUILTIN.findall(text))
+    if not names:
+        return text
+    word = re.compile(r"\b(" + "|".join(sorted(names)) + r")\b(?=\s*\()")
+    out, pos = [], 0
+    for m in _SKIP.finditer(text):
+        out.append(word.sub(r"\1_game", text[pos:m.start()]))
+        out.append(m.group(0))
+        pos = m.end()
+    out.append(word.sub(r"\1_game", text[pos:]))
+    return "".join(out)
+
+
 _OWN_VA_LIST = re.compile(r"^[ \t]*typedef[ \t]+char[ \t]*\*[ \t]*va_list[ \t]*;", re.M)
 _VA_LIST_WORD = re.compile(r"\bva_list\b")
 
@@ -244,7 +268,7 @@ def own_va_list(text: str) -> str:
 
 
 def prepare(text: str) -> str:
-    return own_va_list(name_wide_casts(name_cast_records(widen_long(split_multiline_strings(blank_file_scope_asm(text))))))
+    return rename_va_builtins(own_va_list(name_wide_casts(name_cast_records(widen_long(split_multiline_strings(blank_file_scope_asm(text)))))))
 
 
 # The path may be several adjacent strings over as many lines (the NTSC decomp's long paths).
