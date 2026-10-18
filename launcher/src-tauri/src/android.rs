@@ -168,6 +168,22 @@ pub async fn gpu_driver_select<R: Runtime>(app: AppHandle<R>, id: Option<String>
     }
 }
 
+/// What the game draws with from its next start: "vulkan" or "gles".
+#[tauri::command]
+pub async fn gpu_renderer_select<R: Runtime>(app: AppHandle<R>, renderer: String) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    {
+        let _: serde_json::Value =
+            kotlin(&app, "selectRenderer", serde_json::json!({ "renderer": renderer })).await?;
+        Ok(())
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, renderer);
+        Err(ANDROID_ONLY.into())
+    }
+}
+
 #[tauri::command]
 pub async fn gpu_driver_remove<R: Runtime>(app: AppHandle<R>, id: String) -> Result<(), String> {
     #[cfg(target_os = "android")]

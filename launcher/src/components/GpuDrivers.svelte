@@ -3,7 +3,7 @@
   // or a package the player adds: the zip Android emulators take (Mesa's Turnip, Qualcomm's own
   // drivers), with a meta.json. Packages load on Adreno only (libadrenotools); on Mali the
   // system's driver is the one there is.
-  import { api, type GpuDrivers } from "$lib/api";
+  import { api, type GpuDrivers, type Renderer } from "$lib/api";
   import { guard, toast } from "$lib/app.svelte";
 
   let info = $state<GpuDrivers | null>(null);
@@ -20,6 +20,13 @@
   async function select(id: string | null) {
     busy = true;
     await guard(api.gpuDriverSelect(id));
+    await load();
+    busy = false;
+  }
+
+  async function renderer(choice: Renderer) {
+    busy = true;
+    await guard(api.gpuRendererSelect(choice));
     await load();
     busy = false;
   }
@@ -45,15 +52,29 @@
 
 <section class="panel">
   <h2>Renderer</h2>
-  <!-- Vulkan comes with its own renderer (docs/port/ANDROID.md); until then the game draws with
-       OpenGL ES, and the choice shows what there will be. -->
+  <!-- What the game draws with from its next start (docs/port/ANDROID.md, "A Vulkan renderer"). -->
   <label class="option">
-    <input type="radio" name="renderer" checked disabled={busy} />
+    <input
+      type="radio"
+      name="renderer"
+      checked={info?.renderer !== "vulkan"}
+      disabled={busy || !info}
+      onchange={() => void renderer("gles")}
+    />
     <span><strong>OpenGL ES 3.2</strong><small>Default</small></span>
   </label>
-  <label class="option off">
-    <input type="radio" name="renderer" disabled />
-    <span><strong>Vulkan</strong><small>Coming with the Vulkan renderer</small></span>
+  <label class="option">
+    <input
+      type="radio"
+      name="renderer"
+      checked={info?.renderer === "vulkan"}
+      disabled={busy || !info}
+      onchange={() => void renderer("vulkan")}
+    />
+    <span>
+      <strong>Vulkan</strong>
+      <small>Experimental. Needs Vulkan 1.3; the game falls back to OpenGL ES without it.</small>
+    </span>
   </label>
 </section>
 
@@ -99,7 +120,7 @@
       </div>
     {/each}
     {#if adreno}
-      <p class="dim note">Custom drivers are for the upcoming Vulkan renderer.</p>
+      <p class="dim note">Custom drivers are used by the Vulkan renderer.</p>
       <p><button disabled={busy} onclick={() => void add()}>Add driver (.zip)</button></p>
     {:else}
       <p class="dim note">Custom drivers require an Adreno GPU.</p>
@@ -142,10 +163,6 @@
 
   .grow {
     flex: 1;
-  }
-
-  .off {
-    opacity: 0.55;
   }
 
   .link {

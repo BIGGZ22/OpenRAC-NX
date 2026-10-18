@@ -896,6 +896,7 @@ pub fn run() {
             android::gpu_driver_import,
             android::gpu_driver_select,
             android::gpu_driver_remove,
+            android::gpu_renderer_select,
             android::background_status,
             android::update_check,
             android::update_install,

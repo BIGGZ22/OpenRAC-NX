@@ -517,6 +517,8 @@ export const api = {
   gpuDriverImport: () => call<{ driver?: GpuDriver }>("gpu_driver_import").then((r) => r.driver ?? null),
   gpuDriverSelect: (id: string | null) => call<null>("gpu_driver_select", { id }),
   gpuDriverRemove: (id: string) => call<null>("gpu_driver_remove", { id }),
+  /** Android: what the game draws with from its next start. */
+  gpuRendererSelect: (renderer: Renderer) => call<null>("gpu_renderer_select", { renderer }),
   /** Android: what the set-up's notification shows while the launcher is in the background; null:
    *  the set-up is over (SetupService.kt). */
   backgroundStatus: (status: BackgroundStatus | null) => call<null>("background_status", { ...status }),
@@ -559,11 +561,15 @@ export interface GameStatus {
   library?: string | null;
 }
 
+export type Renderer = "gles" | "vulkan";
+
 export interface GpuDrivers {
   drivers: GpuDriver[];
   /** The package the game loads; absent or null: the system's driver (Android's JSON drops a
    *  null value). */
   selected?: string | null;
+  /** What the game draws with: OpenGL ES (the default) or its Vulkan renderer. */
+  renderer: Renderer;
   device: {
     model: string;
     api: number;

@@ -53,6 +53,10 @@ class DriverArgs {
   var id: String? = null
 }
 
+class RendererArgs {
+  var renderer: String? = null
+}
+
 /**
  * What only Android's own APIs can do for the launcher (src-tauri/src/android.rs calls these):
  * pick a file through the system's picker (an app sees no paths outside its own folders), start
@@ -67,6 +71,8 @@ class DriverArgs {
 class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
   private val drivers: File get() = File(activity.filesDir, "gpu_drivers")
   private val selectedFile: File get() = File(drivers, "selected")
+  // "vulkan" when the game draws with its Vulkan renderer; absent: OpenGL ES.
+  private val rendererFile: File get() = File(activity.filesDir, "renderer")
   // The library of the game started last, while it runs.
   @Volatile private var playing: String? = null
 
@@ -233,6 +239,9 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
       environment["OPENRAC_GPU_DRIVER_DIR"] = dir.path
       environment["OPENRAC_GPU_DRIVER_LIBRARY"] = meta.getString("libraryName")
     }
+    // The renderer: Vulkan's falls back to OpenGL ES by itself where the device has no Vulkan 1.3
+    // (port/platform/window.cpp).
+    if (renderer() == "vulkan") environment["OPENRAC_GL_API"] = "vulkan"
     // Already playing: back to the game as it is, not a second start.
     gameTask()?.let {
       it.moveToFront()
@@ -300,6 +309,7 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
     val out = JSObject()
     out.put("drivers", list)
     out.put("selected", selectedDriver()?.first?.name)
+    out.put("renderer", renderer())
     out.put("device", device())
     invoke.resolve(out)
   }
@@ -340,6 +350,17 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
       val dir = driverDir(id) ?: return invoke.reject("no driver package $id")
       drivers.mkdirs()
       selectedFile.writeText(dir.name)
+    }
+    invoke.resolve()
+  }
+
+  /** {renderer}: "vulkan" or "gles", what the game draws with from its next start. */
+  @Command
+  fun selectRenderer(invoke: Invoke) {
+    when (invoke.parseArgs(RendererArgs::class.java).renderer) {
+      "vulkan" -> rendererFile.writeText("vulkan")
+      "gles" -> rendererFile.delete()
+      else -> return invoke.reject("no such renderer")
     }
     invoke.resolve()
   }
@@ -388,6 +409,9 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
       null
     }
   }
+
+  private fun renderer(): String =
+    if (rendererFile.isFile && rendererFile.readText().trim() == "vulkan") "vulkan" else "gles"
 
   private fun selectedDriver(): Pair<File, JSONObject>? {
     if (!selectedFile.isFile) return null

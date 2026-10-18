@@ -114,6 +114,7 @@ const turnip: GpuDriver = {
 let gpu: GpuDrivers = {
   drivers: [turnip],
   selected: null,
+  renderer: "gles",
   device: { model: "Google Pixel (preview)", api: 35, soc: "Qualcomm SM8650", gpu: "adreno" },
 };
 
@@ -1012,6 +1013,9 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
     }
     case "gpu_driver_select":
       gpu = { ...gpu, selected: (args.id as string | null) ?? null };
+      return delay(null);
+    case "gpu_renderer_select":
+      gpu = { ...gpu, renderer: args.renderer as GpuDrivers["renderer"] };
       return delay(null);
     case "gpu_driver_remove":
       gpu = {
