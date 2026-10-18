@@ -436,3 +436,24 @@ int func_L00_002963D8(void) {
 void func_00211808(gaddr a0, gaddr a1) {
     openrac_game_moby_chain(a0, a1);
 }
+
+/* The level programs' joint pose (hand-written VU0 with scratchpad DMA, 2136 bytes): the moby a0's
+ * joints 0 to a1 - 1 posed into the scratchpad, 0x40 bytes a joint, where the collision primitive
+ * code (mobyfunc_002649C8.c) reads a joint's row. The port's evaluator, as func_00211808. Not made:
+ * retail's copy of the matrices into the buffer at the moby's +0x24, and its use of a2 (0 at every
+ * call in the C). Hitting a crate on Kerwan called it. */
+void func_L00_00254218(gaddr a0, short a1, int a2) {
+    static gaddr marks;
+    int count = a1 > 0x7F ? 0x7F : a1;
+    (void)a2;
+    if (count <= 0) {
+        return;
+    }
+    if (marks == 0) {
+        marks = openrac_guest_static(0x80);
+    }
+    memset(G(marks), 0, 0x80);
+    memset(G(marks), 1, (size_t)count);
+    *(uint8_t*)G(marks + 0x7F) = (uint8_t)count;
+    openrac_game_moby_chain(a0, marks);
+}
