@@ -87,19 +87,25 @@ pub fn plan_extract(config: &Config, install: &Path, game: &str, image: &Path) -
     if !image.is_file() {
         return Err(format!("{} is not a file", image.display()));
     }
+    let mut args: Vec<String> = vec![
+        "tools/extractor.py".into(),
+        image.display().to_string(),
+        "--game".into(),
+        game.into(),
+        "--extract".into(),
+        "--validate".into(),
+        "--proj-path".into(),
+        data_dir(install, game).display().to_string(),
+    ];
+    // A phone's storage: of the disc's files only what the port reads beside the image (every
+    // file is still checked), not gigabytes more to write.
+    if crate::actions::Platform::current() == crate::actions::Platform::Android {
+        args.push("--boot-only".into());
+    }
     Ok(Plan {
         title: format!("Set up {game} from your disc"),
         program: python,
-        args: vec![
-            "tools/extractor.py".into(),
-            image.display().to_string(),
-            "--game".into(),
-            game.into(),
-            "--extract".into(),
-            "--validate".into(),
-            "--proj-path".into(),
-            data_dir(install, game).display().to_string(),
-        ],
+        args,
         cwd: root.to_path_buf(),
         detached: false,
         env: Vec::new(),

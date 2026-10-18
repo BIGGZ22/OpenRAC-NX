@@ -14,14 +14,15 @@ pub fn disc_file_name(name: &str) -> String {
 }
 
 /// Copies `from` into `dest` through a file beside it, reporting every 64 MB; an image already
-/// there with the same size is kept as it is.
+/// there with the same size is kept as it is. File to file, so that the kernel copies
+/// (copy_file_range or sendfile, which std::io::copy uses on Linux): no bytes through the app.
 pub fn copy_disc(
-    mut from: impl std::io::Read,
+    from: std::fs::File,
     total: u64,
     dest: &std::path::Path,
     progress: impl Fn(u64),
 ) -> std::io::Result<()> {
-    use std::io::Write;
+    use std::io::Read;
     if total > 0 && dest.metadata().is_ok_and(|m| m.len() == total) {
         progress(total);
         return Ok(());
@@ -31,22 +32,16 @@ pub fn copy_disc(
     }
     let partial = dest.with_extension("partial");
     let result = (|| {
-        let mut out = std::io::BufWriter::with_capacity(1 << 20, std::fs::File::create(&partial)?);
-        let mut buffer = vec![0u8; 1 << 20];
-        let (mut copied, mut reported) = (0u64, 0u64);
+        let mut out = std::fs::File::create(&partial)?;
+        let mut copied = 0u64;
         loop {
-            let n = from.read(&mut buffer)?;
+            let n = std::io::copy(&mut (&from).take(64 << 20), &mut out)?;
             if n == 0 {
                 break;
             }
-            out.write_all(&buffer[..n])?;
-            copied += n as u64;
-            if copied - reported >= 64 << 20 {
-                progress(copied);
-                reported = copied;
-            }
+            copied += n;
+            progress(copied);
         }
-        out.flush()?;
         drop(out);
         if total > 0 && copied != total {
             return Err(std::io::Error::other(format!("copied {copied} bytes of {total}")));
@@ -91,17 +86,22 @@ mod tests {
     fn a_copy_is_whole_or_not_there() {
         let dir = tempfile::tempdir().unwrap();
         let dest = dir.path().join("discs/game.iso");
-        let data = vec![7u8; 3 << 20];
+        let data: Vec<u8> = (0..(67u32 << 20)).map(|i| (i % 251) as u8).collect();
+        let picked = dir.path().join("picked.iso");
+        std::fs::write(&picked, &data).unwrap();
+        let open = || std::fs::File::open(&picked).unwrap();
         let seen = std::sync::Mutex::new(Vec::new());
-        copy_disc(&data[..], data.len() as u64, &dest, |n| seen.lock().unwrap().push(n)).unwrap();
-        assert_eq!(std::fs::read(&dest).unwrap(), data);
+        copy_disc(open(), data.len() as u64, &dest, |n| seen.lock().unwrap().push(n)).unwrap();
+        assert!(std::fs::read(&dest).unwrap() == data);
+        assert_eq!(seen.lock().unwrap().first(), Some(&(64u64 << 20)));
         assert_eq!(seen.lock().unwrap().last(), Some(&(data.len() as u64)));
         // The same image again is not copied again.
-        copy_disc(&[][..], data.len() as u64, &dest, |_| ()).unwrap();
+        std::fs::write(dir.path().join("empty"), b"").unwrap();
+        copy_disc(std::fs::File::open(dir.path().join("empty")).unwrap(), data.len() as u64, &dest, |_| ()).unwrap();
         assert_eq!(std::fs::read(&dest).unwrap().len(), data.len());
         // A short read leaves nothing behind.
         let other = dir.path().join("discs/other.iso");
-        assert!(copy_disc(&data[..10], 20, &other, |_| ()).is_err());
+        assert!(copy_disc(open(), data.len() as u64 + 1, &other, |_| ()).is_err());
         assert!(!other.exists() && !other.with_extension("partial").exists());
     }
 
