@@ -362,7 +362,9 @@ void close_sound() {
     g_sound.reset();
 }
 
-void open_sound() {
+// REPORT: whether a device that cannot be opened is logged (the first try is; the retries,
+// every few seconds on a machine without sound, are not).
+void open_sound(bool report = true) {
     std::string why;
     g_sound = platform::AudioOutput::open(why, [](std::span<std::int16_t> samples) {
         openrac_sound_render(samples.data(), samples.size() / 2);
@@ -373,7 +375,7 @@ void open_sound() {
             }
         }
     });
-    if (!g_sound) {
+    if (!g_sound && report) {
         log::warn("no sound: {}", why);
     }
 }
@@ -387,7 +389,7 @@ void watch_sound() {
     if (!g_sound) {
         if (g_frame >= g_sound_retry_frame) {
             g_sound_retry_frame = g_frame + 300;
-            open_sound();
+            open_sound(false);
             if (g_sound) {
                 log::info("sound is back");
             }
