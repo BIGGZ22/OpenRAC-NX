@@ -1645,8 +1645,49 @@ class Unit:
             raise Unsupported("a call through something that is not a function pointer")
         hostft = ctype.Func(self._canon_type(ft.ret), tuple(self._canon_type(p) for p in ft.params),
                             ft.variadic, ft.prototyped)
+        recast = self._recast_call(c, ft, args, result_t, fp)
+        if recast is not None:
+            return recast
         values = [self.rv(a) for a in args]
         return f"GFN({ctype.fn_pointer(hostft)}, {fp})({', '.join(values)})"
+
+    def _recast_call(self, callee: dict, ft: ctype.Func, args: list, result_t: ctype.Type, fp: str) -> str | None:
+        """A call through a named function cast to another prototype, `((void (*)(void *, float,
+        int))f)(p, x, n)` for an `f(void *, int, float)`: the decompilation's way to set up the
+        arguments in another order. On the EE the integers and the floats go in registers of their
+        own, each kind in order, so the call is f's own; the host's ABI may not assign them that way
+        (Windows x64 gives each argument a slot by position), so the call goes through f's own
+        type with each kind's arguments in its order, as a direct call matches them. None when the
+        callee is not such a cast or the kinds do not line up."""
+        if callee.get("kind") != "CStyleCastExpr" or not ft.prototyped or ft.variadic:
+            return None
+        inner = _strip_parens(_inner(callee)[0])
+        if inner.get("kind") == "ImplicitCastExpr" and inner.get("castKind") == "FunctionToPointerDecay":
+            inner = _strip_parens(_inner(inner)[0])
+        if inner.get("kind") != "DeclRefExpr" or inner["referencedDecl"].get("kind") != "FunctionDecl":
+            return None
+        sym = self._callee_symbol(inner)
+        f = self.program.lookup(self.unit, sym)
+        if f is None or not f.sig.prototyped or f.sig.variadic:
+            return None
+        sig = f.sig
+        classes = [self._arg_class(a) for a in args]
+        pcls = [("agg" if self.sig_cls(p) == "rec" else self._reg_class(self.sig_cls(p))) for p in sig.params]
+        if "agg" in classes or "agg" in pcls or len(classes) != len(pcls):
+            return None
+        if [c for c in classes if c == "i"] != [c for c in pcls if c == "i"]:
+            return None
+        if classes == pcls:
+            return None  # the same order: the cast's own type passes them alike
+        result_cls = self.cls(result_t)
+        ret_cls = self.sig_cls(sig.ret)
+        if result_cls != "void" and self._reg_class(ret_cls) != self._reg_class(result_cls):
+            return None
+        own = ctype.Func(self._canon_type(sig.ret), tuple(self._canon_type(p) for p in sig.params), False, True)
+        text = f"GFN({ctype.fn_pointer(own)}, {fp})({', '.join(self._match_args(sym, sig, args))})"
+        if result_cls == "void":
+            return text
+        return f"(({self.host(ctype.strip_quals(result_t))})({text}))"
 
     def _cross_level(self, sym: str) -> tuple[int, int] | None:
         """For a call from a function of some levels' programs to a level function placed in none

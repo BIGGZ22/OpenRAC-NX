@@ -93,6 +93,7 @@ class Translate(unittest.TestCase):
             self.last_report = report
             self.assertEqual(report["functions_stubbed"], stubs, report["stubbed"])
             sources = [out / u.strip() for u in (out / "units.txt").read_text().splitlines()]
+            self.last_generated = "\n".join(s.read_text() for s in sources)
             sources += [out / "stubs.c", out / "functions.c", out / "libraries.c", HERE / "tests" / "harness.c"]
             if host_c:
                 (tmp / "host.c").write_text('#include "openrac/guest.h"\n' + textwrap.dedent(host_c))
@@ -223,6 +224,30 @@ class Translate(unittest.TestCase):
             """,
         })
         self.assertEqual(out, ["3", "1.500", "0"])
+
+    def test_a_call_through_a_cast_of_a_function_follows_the_definition(self):
+        # The decompilation casts a function to another order of its float and integer
+        # parameters to get the retail argument setup (partupd_00280428.c). On the EE that is
+        # the function's own call; on the host it goes through the definition's type, with
+        # each kind's arguments in order: Windows x64 gives arguments slots by position, and
+        # the cast's type put the integer where the callee reads its second float.
+        out = self.run_program({
+            "callee.c": """
+                void func_00110000(int *out, int n, float a, float b) { *out = n * 100 + (int)a * 10 + (int)b; }
+            """,
+            "caller.c": """
+                extern void func_00110000(int *, int, float, float);
+                int test_main(void) {
+                    int r;
+                    ((void (*)(int *, float, float, int))func_00110000)(&r, 3.0f, 4.0f, 2);
+                    test_print(r);
+                    return 0;
+                }
+            """,
+        })
+        self.assertEqual(out, ["234"])
+        self.assertIn("GFN(void (*)(gaddr, int, float, float), ", self.last_generated)
+        self.assertNotIn("GFN(void (*)(gaddr, float, float, int), ", self.last_generated)
 
     def test_a_callee_typedef_the_caller_does_not_know(self):
         # The callee's file names its float and its pointer by typedefs the caller's file does
