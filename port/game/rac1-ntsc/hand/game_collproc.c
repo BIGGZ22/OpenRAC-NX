@@ -1,5 +1,9 @@
 /* Carried from port/game/rac1-pal/hand/game_collproc.c through the version map (../README.md): names and
- * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
+ * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play.
+ * Chunk 6 (2026-10-18, checked against the US assembly): low for FUN_001f0b58. Its US copies live in the
+ * level overlays only (no main-executable copy) and each reads its own level's block at 0x17xxxx
+ * (D_L00..D_L18_0017xxxx, + 0x1C), not CollOutput at 0x194100 as carried here. Left as it is: the port
+ * needs the per-level block address, which this file does not have. */
 #ifndef MACRO_ADDR
 #define MACRO_ADDR
 #endif

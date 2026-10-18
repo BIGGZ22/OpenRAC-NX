@@ -1,3 +1,4 @@
+/* functional: high. The US words equal PAL's except the branch/jump targets and the D_001B2C00 low half (US 0x2C00 against PAL 0x2F80), which the C already uses (D_001B2C00, func_0020DC20 at 0x20DC20). VU0 micro-program 0xD18 is the same call (vcallms) as PAL's. */
 /* Carried from the PAL decompilation's nonmatching/game/func_0020ED48.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

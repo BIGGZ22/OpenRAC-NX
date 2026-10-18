@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly (0x212E28..0x212EB8): func_0020D868 head into D_0015FF24, state byte +0x20 signed, flag tests 0x40 and 0x4 on +0x34, callback +0x74, next +0x28, calls 0x20D580 and 0x20DEF8. */
 /* Carried from the PAL decompilation's nonmatching/game/func_00213C78.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

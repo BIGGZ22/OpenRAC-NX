@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly: both jump tables (0x1E79B0, 0x1E79D0) map the groups and items as here; globals, offsets, constants, file calls and their arguments agree. */
 /* Carried from the PAL decompilation's nonmatching/shared/func_L00_001F4918.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

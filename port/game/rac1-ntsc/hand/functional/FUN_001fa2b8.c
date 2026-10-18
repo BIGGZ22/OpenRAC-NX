@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly (level_14 copy): three lq and three sq of 16 bytes, from arg1 to arg0. */
 /* Carried from the PAL decompilation's nonmatching/game/func_001FA480.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

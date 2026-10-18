@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly (0x20D580..0x20D864): same offsets (+0x50..+0x5C, +0x68/+0x6C, +0x70, +0x7C..+0x7E), seq table at class+0x48, forward/backward key loops, trigger scan, calls to func_0022DA68 and func_0020C940 and D_0015F60C (gp-30196). The retail function returns nothing meaningful (callers that declare an int result discard it). */
 /* Carried from the PAL decompilation's nonmatching/game/func_0020E3D0.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

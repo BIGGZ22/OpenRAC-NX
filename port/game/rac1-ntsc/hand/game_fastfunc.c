@@ -1,5 +1,15 @@
 /* Carried from port/game/rac1-pal/hand/game_fastfunc.c through the version map (../README.md): names and
- * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
+ * addresses are this version's, raw addresses in comments are PAL's. Confidence (2026-10-17, chunk 1 of the
+ * gameplay priority list, checked by behaviour against the US assembly): high for FUN_001f97a0, FUN_001f98d0,
+ * FUN_001f99f8, FUN_001f9a10, FUN_001f9a28, FUN_001f9a40 and FUN_001f9a68 (no change; float arguments arrive
+ * in $f12 and reach the vector unit through mfc1/mtc2, so the C arguments are the retail ones). Chunk 8
+ * (2026-10-17, checked against the US assembly): high for FUN_001f98f8 (or-loop, no change), FUN_001f9a00
+ * (vmr32 of $vf0 gives (0, 0, 1, 0), no change), FUN_001f9d50 (pextlb/pextlh/vitof0) and FUN_001fa480 (the
+ * three rows at out+0/16/32, no change); medium for FUN_001f9d68 (vftoi0 clamped to the int range, which the
+ * bare cast left undefined) and FUN_001fa400 (sign-bit branch like bgez; the normalise uses openrac_rsqrt, so a
+ * zero length does not give infinity). Chunk 6 (2026-10-18, checked against the US assembly): high for
+ * FUN_001f9bb0 (a sphere-overlap test: the sign of (dx^2 + dy^2 + dz^2) - (ra + rb)^2 read by bgez, no change).
+ * Not yet checked in play. */
 #ifndef MACRO_ADDR
 #define MACRO_ADDR
 #endif
@@ -201,7 +211,8 @@ void FUN_001f9cf8(float *out, float *v, float *m) {
     out[3] = r[3];
 }
 
-/* The square root of x. */
+/* The square root of x. (VU0 vsqrt takes the root of |x|; openrac_sqrt does the same on the host.
+ * The result is added to zero on its way out, as in the other routines here.) */
 float FUN_001f9988(float x) {
     return 0.0f + openrac_sqrt(x);
 }
@@ -226,14 +237,24 @@ void FUN_001f9d50(float *out, unsigned colour) {
     out[3] = w;
 }
 
-/* Ticks to a count: n * the tick scale + 0.5, cut to an integer. (adda.s, madd.s, cvt.w.s) */
+/* Ticks to a count. The carry named PAL's address 0x1F9688, which in the US program is inside
+ * another function; the function US retail calls for this is FUN_001f96f8 (scale_game_frames,
+ * its own scale word), so every carried caller of this name goes there. */
+extern int us_scale_game_frames(int) __asm__("FUN_001f96f8");
 int func_001F9688(int n) {
-    float half = 0.25f + 0.25f;
-    return (int)(half + (float)n * D_0015ED60);
+    return us_scale_game_frames(n);
 }
 
-/* x cut to an integer. (cvt.w.s) */
+/* x cut to an integer. (cvt.w.s) The EE's convert always truncates toward zero and saturates
+ * out of range: 0x7fffffff above the range and for NaN, 0x80000000 below it. C's cast does not
+ * define the out-of-range case, so the saturation is written out. */
 int FUN_001fa6d0(float x) {
+    if (!(x < 2147483648.0f)) {
+        return 0x7fffffff;
+    }
+    if (x <= -2147483648.0f) {
+        return -2147483647 - 1;
+    }
     return (int)x;
 }
 
@@ -269,6 +290,7 @@ float FUN_001fa5c8(float a, float b) {
     return r;
 }
 
+/* functional: high. Checked against the US assembly (level_03 copy): the bytes are expanded by pextlb/pextlh, lerped on VU0 (1 - t, then t) and truncated; the upper 32 bits of the result stay zero. */
 /*
  * Two colours mixed, byte by byte: each byte is from * (1 - t) + to * t, cut to an integer and
  * its low eight bits kept. The result fills the register's low 32 bits and leaves the rest zero.
@@ -304,11 +326,15 @@ unsigned long FUN_001f9d68(float *v) {
     unsigned long colour = 0;
     int i;
     for (i = 0; i < 4; i++) {
-        colour |= (unsigned long)((unsigned)(int)v[i] & 0xFF) << (8 * i);
+        /* vftoi0 saturates to the int range; the cast alone is undefined out of it. */
+        float f = v[i];
+        int n = f >= 2147483648.0f ? 0x7FFFFFFF : f <= -2147483648.0f ? (-2147483647 - 1) : (int)f;
+        colour |= (unsigned long)((unsigned)n & 0xFF) << (8 * i);
     }
     return colour;
 }
 
+/* functional: high. Checked against the US assembly (main executable copy): three lq and three sq of 16 bytes, then sqc2 vf0 for (0, 0, 0, 1). */
 /* out = the three rows of m copied, and (0, 0, 0, 1) as the fourth. */
 void FUN_001fa298(unsigned *out, unsigned *m) {
     unsigned rows[12];
@@ -325,6 +351,7 @@ void FUN_001fa298(unsigned *out, unsigned *m) {
     ((float *)out)[15] = 1.0f;
 }
 
+/* functional: high. Checked against the US assembly (level_15 copy): VU0 transposes the 3x3 part and stores (0, 0, 0, 1) in the fourth row. */
 /*
  * out = the upper three by three of m turned over its diagonal, each field added to zero on its
  * way, the fourth field of each row zero (one less one), and (0, 0, 0, 1) as the fourth row.
@@ -397,7 +424,8 @@ void func_001F97B0(void) {
     openrac_game_trap();
 }
 
-/* A short busy wait, two counts a pass: nothing to wait for on the PC. */
+/* A short busy wait, two counts a pass: nothing to wait for on the PC. The US loop touches no
+ * memory and returns nothing, so only its timing is lost. */
 void SpinWait(int count) {
     (void)count;
 }
@@ -455,7 +483,8 @@ void FUN_001f98f8(int *dst, int *a, int *b, int bytes) {
 }
 
 /* FastDecTimer: 1 if the timer was already zero (nothing stored); otherwise it counts down from at
- * least 1 and the result is 0 while it stays above zero, 2 when it reaches it. */
+ * least 1 and the result is 0 while it stays above zero, 2 when it reaches it.
+ * Checked against the US assembly: lw, pmaxw $1,$1,1 (max with 1), addi -1, sw, same result. */
 int FUN_001f9740(int *timer) {
     int v = *timer;
     if (v == 0) {
@@ -575,6 +604,7 @@ int FUN_001fa728(float *p, float r) {
     return sphere_in_view(p, r, &far);
 }
 
+/* functional: high. Checked against the US assembly (level_14 copy): the sphere test is FUN_001fa728 (main executable, view at D_0018CF80 = the US sky_view_mtx); the alpha is the far value (vftoi0.y) shifted right 7 and clamped to 0x80. */
 /*
  * FUN_001fa728's test, and an alpha from it in *alpha: what is left of the radius past the
  * sphere's depth, as an integer, over 128 and at most 128 (0 when the sphere is out of view).
@@ -653,10 +683,11 @@ void FUN_001fa400(void *out_, void *a_, void *b_, float t) {
         dot += p[i] * q[i];
     }
     for (i = 0; i < 4; i++) {
-        v[i] = dot >= 0.0f ? p[i] + q[i] : p[i] - q[i];
+        /* retail branches on the sign bit (bgez), so -0 takes the subtract path */
+        v[i] = (*(unsigned *)&dot >> 31) ? p[i] - q[i] : p[i] + q[i];
         len += v[i] * v[i];
     }
-    len = 1.0f / sqrtf(len);
+    len = openrac_rsqrt(1.0f, len);
     for (i = 0; i < 4; i++) {
         out[i] = v[i] * len;
     }

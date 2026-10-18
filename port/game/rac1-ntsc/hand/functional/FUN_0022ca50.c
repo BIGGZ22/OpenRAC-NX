@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly: globals, struct offsets, every call and its arguments, constants and branches agree; retail leaves the occlusion scratch vector unset where it is never read, here zeroed. */
 /* Carried from the PAL decompilation's nonmatching/game/func_0022DD68.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

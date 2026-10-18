@@ -1,3 +1,4 @@
+/* functional: high. checked against the US assembly (offsets, fade, blend, free call at 0x267A08 all agree); added the VU0 divide-by-zero and saturating float-to-int behaviour */
 /* Carried from port/game/rac1-pal/hand/overlays_shared_pad_00268760.c through the version map (../README.md): names and
  * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
 #ifndef MACRO_ADDR
@@ -26,6 +27,13 @@
 #include "types.h"
 
 extern void func_L00_00267A08(unsigned char *rec);
+
+/* VU0 vftoi0: truncates, saturating to the 32-bit range. */
+static int us_ftoi(float f) {
+    if (f >= 2147483648.0f) return 0x7FFFFFFF;
+    if (f <= -2147483648.0f) return (-2147483647 - 1);
+    return (int)f;
+}
 
 /* Frees the particle (func_L00_00267A08). */
 void func_L00_00267BE8(unsigned char *rec) {
@@ -57,7 +65,8 @@ void FUN_L00_00267b10(unsigned char *rec) {
         return;
     }
     *(short *)(rec + 0x0A) = (short)left;
-    q = (float)left / (float)life;
+    /* VU0 vdiv by zero gives the largest finite float (the numerator here is positive). */
+    q = life == 0 ? 3.4028234663852886e38f : (float)left / (float)life;
     fade = (float)((left < 8 ? left : 8) << 9) / 4096.0f;
     for (i = 0; i < 4; i++) {
         a[i] = (float)((first >> (i * 8)) & 0xFF);
@@ -71,7 +80,7 @@ void FUN_L00_00267b10(unsigned char *rec) {
     a[3] *= fade;
     b[3] *= fade;
     for (i = 0; i < 4; i++) {
-        colour |= ((unsigned int)(int)(b[i] * (1.0f - q) + a[i] * q) & 0xFF) << (i * 8);
+        colour |= ((unsigned int)us_ftoi(b[i] * (1.0f - q) + a[i] * q) & 0xFF) << (i * 8);
     }
     *(float *)(rec + 0x0C) += *(float *)(rec + 0x3C);
     *(unsigned int *)(rec + 0x04) = colour;

@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly (0x2040E0..0x2043AC): same globals (D_00160E8C pointer via gp, D_00160E90 count, D_00160EA0 LOD floats, D_0015EE8C), offsets, the 6x/4x/2x LOD floats, the TEX0/TEX1/CLAMP/MIPTBP1/MIPTBP2 bit layout and the two func_001F97A0 calls; no difference from PAL's C. */
 /* Carried from the PAL decompilation's nonmatching/game/func_00204918.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

@@ -1,5 +1,6 @@
 /* Carried from port/game/rac1-pal/hand/game_int_to_float.c through the version map (../README.md): names and
- * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
+ * addresses are this version's, raw addresses in comments are PAL's. Confidence (2026-10-17, checked by behaviour
+ * against the US assembly): high for func_001FA6C0 (mtc1 + cvt.s.w, no change). Not yet checked in play. */
 #ifndef MACRO_ADDR
 #define MACRO_ADDR
 #endif

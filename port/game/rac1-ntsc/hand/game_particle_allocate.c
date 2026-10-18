@@ -1,3 +1,4 @@
+/* US check 2026-10-17: FUN_00217a30 (tail jump with a1 = 0) and func_00217A38 match the US assembly for behaviour; the US gp is 0x166C00 as here. */
 /* Carried from port/game/rac1-pal/hand/game_particle_allocate.c through the version map (../README.md): names and
  * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
 #ifndef MACRO_ADDR

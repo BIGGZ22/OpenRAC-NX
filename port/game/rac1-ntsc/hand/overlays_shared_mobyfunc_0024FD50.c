@@ -1,3 +1,4 @@
+/* US check 2026-10-17: FUN_L00_002502f0 matches the US assembly for behaviour (the three fields at bits 32, 40 and 48 of the word at 0x38, returned). */
 /* Carried from port/game/rac1-pal/hand/overlays_shared_mobyfunc_0024FD50.c through the version map (../README.md): names and
  * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
 #ifndef MACRO_ADDR

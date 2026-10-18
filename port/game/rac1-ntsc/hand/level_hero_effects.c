@@ -1,3 +1,4 @@
+/* functional: high. FUN_L00_002059d8 checked against the US assembly (globals, offsets, calls, constants, branches); the frame-scale calls now go to FUN_001f96f8, which retail calls, instead of func_001F9688 (no such US function). */
 /* Carried from port/game/rac1-pal/hand/level_hero_effects.c through the version map (../README.md): names and
  * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
 #ifndef MACRO_ADDR
@@ -25,7 +26,7 @@ extern unsigned int hero_fx_template_b[] __asm__("D_L00_0017C220");
 extern unsigned int hero_fx_template_c[] __asm__("D_L00_0017C260");
 extern float hero_fx_envelope[] __asm__("D_L00_0017C2A0");
 extern float hero_fx_approach(float*, float, float) __asm__("func_00213ED8");
-extern int hero_fx_ticks(int) __asm__("func_001F9688");
+extern int hero_fx_ticks(int) __asm__("FUN_001f96f8"); /* US scale_game_frames (reads D_0015ED68); func_001F9688 is a PAL-era name with no US function */
 extern float hero_fx_float(int) __asm__("func_001FA6C0");
 extern int hero_fx_truncate(float) __asm__("func_001FA6D0");
 extern float hero_fx_sin(float) __asm__("func_001F9DE0");

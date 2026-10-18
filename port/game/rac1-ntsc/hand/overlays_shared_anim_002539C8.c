@@ -1,5 +1,7 @@
 /* Carried from port/game/rac1-pal/hand/overlays_shared_anim_002539C8.c through the version map (../README.md): names and
- * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
+ * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play.
+ * functional: high. 2026-10-18: the US words of FUN_L00_00252990 (with its tail at 002530F8) equal
+ * PAL's func_L00_002539C8 and func_L00_00254130 except jump targets; no globals or calls. */
 #ifndef MACRO_ADDR
 #define MACRO_ADDR
 #endif

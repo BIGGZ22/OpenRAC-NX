@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly 2026-10-17: |a - b| by abs.s, compared with pi (c.olt), then 2*pi - d when not below pi, as the C does. */
 /* Carried from the PAL decompilation's nonmatching/game/func_001FA850.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

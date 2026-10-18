@@ -1,5 +1,6 @@
 /* Carried from the PAL decompilation's nonmatching/game/func_0020E6B8.c (games/rac1) through the version
- * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
+ * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
+ * Checked against the US assembly: group pass advances the target list when mode & 0x1000 (fixed). */
 #include "types.h"
 #include "qcopy.h"
 #include "qzero.h"
@@ -166,7 +167,7 @@ void *FUN_0020d868(void) {
                 continue;
             }
             slot = *(unsigned char *)(m + 0x22);
-            if ((mode & 0x1000) == 0) {
+            if (mode & 0x1000) {
                 tgt += 2;
             }
             sl = (char *)0x70000000 + slot * 8;

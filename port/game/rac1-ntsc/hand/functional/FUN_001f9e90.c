@@ -1,3 +1,4 @@
+/* US check 2026-10-17: same behaviour, medium-high confidence (table addresses D_001DE320/D_001DE340 verified; VU0 chain read, not re-derived word by word). */
 /* Carried from the PAL decompilation's nonmatching/game/func_001FA058.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

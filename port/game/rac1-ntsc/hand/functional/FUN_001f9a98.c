@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly (lqc2, vmul.xyzw, sqc2): componentwise product, no change. */
 /* Carried from the PAL decompilation's nonmatching/game/func_001F9C60.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

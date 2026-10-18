@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly: all 81 handlers stored into D_L00_001B1E80 are the addresses retail stores, slot for slot. */
 /* Carried from the PAL decompilation's src/overlays/shared/partproc_002697A0.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

@@ -12,7 +12,7 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* functional: medium. Multiplies the xyz lanes of two VU0 vectors and writes the 16-byte result; w is copied from a. VU0 float multiply rounds and flushes denormals differently from the C FPU in the last bit, and the VU pipeline nop has no visible effect here. */
+/* functional: high. Checked against the US assembly (config/us/overlays/asm/FUN_L00_001ff348.s): lqc2 a and b, vmul.xyz, sqc2 to dst; w is a's, as the mask leaves it. VU0 float multiply rounds and flushes denormals differently from the C FPU in the last bit, and the VU pipeline nop has no visible effect here. Multiplies the xyz lanes of two VU0 vectors and writes the 16-byte result; w is copied from a. */
 void FUN_L00_001ff348(float *dst, const float *a, const float *b) {
     float x = a[0] * b[0];
     float y = a[1] * b[1];

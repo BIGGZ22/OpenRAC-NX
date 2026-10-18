@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly (level_17 copy): VU0 builds the identity rows (vmr32, vmove, vaddw) and stores four quadwords; same result. */
 /* Carried from the PAL decompilation's nonmatching/game/func_001FA190.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

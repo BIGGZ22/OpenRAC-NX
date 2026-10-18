@@ -24,6 +24,7 @@ extern float func_001F9B80(void *, void *);
 extern void func_L00_0025E450(void *, void *, void *, float, float, int, int, int, float, float, float, int, float, float, int, int, int, int);
 extern float func_001F9B20(void *);
 extern void func_L00_001FF500(void *, void *, float);
+extern float func_001F9AF0(void *);
 extern unsigned char D_0013A4E0[];
 extern unsigned char D_0013E533[];
 void func_L13_002B97F8(char *moby);

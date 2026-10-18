@@ -1,5 +1,6 @@
 /* Carried from the PAL decompilation's nonmatching/game/func_001F3890.c (games/rac1) through the version
- * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
+ * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
+ * Checked against the US assembly: z-buffer addresses are 0x1E0000 / 0x1B0000 here (PAL had 0x1DFC80 / 0x1AFC80). */
 #include "types.h"
 #include "qcopy.h"
 #include "qzero.h"
@@ -52,13 +53,13 @@ void FUN_001f34e8(void) {
     if (D_0015EE80_3890 != 0) {
         D_0015EF8C_3890 = 0x2C0000;
         D_0015EF84_3890 = 0x100000;
-        D_0015EF88_3890 = 0x1DFC80;
+        D_0015EF88_3890 = 0x1E0000;
         D_0015EF80_3890 = 0;
         set_mode_3890(0x200, 0x1C0, 0x200, 0x200, 4, 0);
     } else {
         D_0015EF8C_3890 = 0x280000;
         D_0015EF84_3890 = 0xE0000;
-        D_0015EF88_3890 = 0x1AFC80;
+        D_0015EF88_3890 = 0x1B0000;
         D_0015EF80_3890 = 0;
         set_mode_3890(0x200, 0x1A0, 0x200, 0x1C0, 0, 0);
     }

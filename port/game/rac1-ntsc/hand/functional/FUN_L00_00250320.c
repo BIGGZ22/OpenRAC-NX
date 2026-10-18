@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly 2026-10-17: three bytes of the 64-bit word at 0x38 (bits 32, 40, 48) stored as 32-bit words, as the C does. */
 /* Carried from the PAL decompilation's nonmatching/shared/func_L00_00251358.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

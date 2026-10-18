@@ -1,3 +1,4 @@
+/* functional: high. checked against the US assembly: table 0x1D60B8, state 0x1D5BF0 (+0x108/+0x10C), strides 0x11800/0x4F000, run lengths and clear to index 5 agree; callers ignore its result */
 /* Carried from the PAL decompilation's nonmatching/game/func_00226D50.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

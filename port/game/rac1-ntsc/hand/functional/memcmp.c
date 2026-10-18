@@ -1,3 +1,4 @@
+/* functional: high. checked against the US assembly: aligned 16-byte block skip, then byte loop returning the difference; same result for every input */
 /* Carried from the PAL decompilation's nonmatching/core/func_001151B4.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

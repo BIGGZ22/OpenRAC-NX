@@ -1,5 +1,9 @@
 /* Carried from port/game/rac1-pal/hand/game_sound_math.c through the version map (../README.md): names and
- * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
+ * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play.
+ * Chunk 6 (2026-10-18, checked against the US assembly): high for FUN_001f99e8 (MAX.S then MIN.S,
+ * the same clamp, no change); high for FUN_001f9c90 after a fix: retail stores out only when it
+ * shortens a (returns 1, else 0; the caller passes out == a and ignores the return), so the C now
+ * returns before writing. Its VU0 vsqrt/vdiv are plain float here, not reproduced bit for bit. */
 #ifndef MACRO_ADDR
 #define MACRO_ADDR
 #endif
@@ -44,7 +48,9 @@ float FUN_001f99e8(float x, float lo, float hi) {
 }
 
 /* out = a, shortened to the length `longest` when it is longer, in x, y and z; w is
- * a's. The occlusion test's line ends at most 64 units from the listener. */
+ * a's. The occlusion test's line ends at most 64 units from the listener. Retail writes
+ * out only when it shortens a (its routine returns 1 then, 0 otherwise, and the one
+ * caller ignores that), so out is left alone otherwise, as here. */
 void FUN_001f9c90(float *out, float *a, float longest) {
     float x = a[0];
     float y = a[1];
@@ -52,7 +58,10 @@ void FUN_001f9c90(float *out, float *a, float longest) {
     unsigned w = ((unsigned *)a)[3];
     float length = openrac_sqrt(x * x + y * y + z * z);
 
-    if (length != 0.0f && length >= longest) {
+    if (length == 0.0f || !(length >= longest)) {
+        return;
+    }
+    {
         float scale = longest / length;
         x = x * scale;
         y = y * scale;

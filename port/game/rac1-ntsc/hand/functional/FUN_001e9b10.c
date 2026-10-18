@@ -1,5 +1,6 @@
 /* Carried from the PAL decompilation's nonmatching/game/func_001E9EC8.c (games/rac1) through the version
- * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
+ * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
+ * functional: medium. 2026-10-18: the US words equal PAL's func_001E9EC8 except relocations; all 21 call targets and every global (absolute and gp-relative, including the -0x380/-0x390/-0x300/-0xE4 moved ones) map to the names used here. The body is PAL's functional C, not re-read against the instructions. */
 #include "types.h"
 #include "qcopy.h"
 #include "qzero.h"

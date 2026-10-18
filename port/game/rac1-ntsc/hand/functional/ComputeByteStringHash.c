@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly: same two loads per pass (p[1] before p += 2), same sums, same n test; the second sum is in the branch delay slot in retail and runs on every pass, as here. */
 /* Carried from the PAL decompilation's nonmatching/game/func_001F9F60.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

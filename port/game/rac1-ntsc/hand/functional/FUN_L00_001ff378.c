@@ -12,7 +12,10 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* out.xyz = a.xyz * (1 / s) (VU0 vdiv Q = vf0.w / s, then vmulq.xyz), out.w = a.w; a zero s is
+/* functional: high. Checked against the US assembly (config/us/overlays/asm/FUN_L00_001ff378.s): vdiv Q = 1 / s,
+ * vmulq.xyz, w copied; the zero case and the overflow case are the VU's clamp to the largest float with the sign
+ * of s, so the result is never infinity. Not run on hardware.
+ * out.xyz = a.xyz * (1 / s) (VU0 vdiv Q = vf0.w / s, then vmulq.xyz), out.w = a.w; a zero s is
    the VU's division by zero, the largest float. */
 void FUN_L00_001ff378(float *out, float *a, float s) {
     union { unsigned int u; float f; } q;
@@ -20,6 +23,9 @@ void FUN_L00_001ff378(float *out, float *a, float s) {
 
     if (s != 0.0f) {
         q.f = 1.0f / s;
+        if ((q.u & 0x7F800000) == 0x7F800000) {
+            q.u = (q.u & 0x80000000) | 0x7F7FFFFF;
+        }
     } else {
         q.u = (*(unsigned int *)&s & 0x80000000) | 0x7F7FFFFF;
     }

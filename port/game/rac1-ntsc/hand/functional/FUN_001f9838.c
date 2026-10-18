@@ -1,3 +1,4 @@
+/* US check 2026-10-17: same behaviour, high confidence (copy loop, widths and tests as retail). */
 /* Carried from the PAL decompilation's nonmatching/game/func_001F9A00.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

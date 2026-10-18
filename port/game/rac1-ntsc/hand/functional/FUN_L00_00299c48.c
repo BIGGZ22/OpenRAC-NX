@@ -1,6 +1,9 @@
+/* US check 2026-10-17: corrected, high confidence (slide table, three indices and one callee were PAL values; see below). */
 /* Carried from the PAL decompilation's src/overlays/shared/tieproc_00299108.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
- * The two versions' code differs here: func_L00_0029AFB8 (near) was paired by place; read it against NTSC-U before trusting it. */
+ * The two versions' code differs here: func_L00_0029AFB8 (near) was paired by place; read it against NTSC-U before trusting it.
+ * Checked against the US assembly (2026-10-17): slide table D_L00_00173BF0 (PAL 173C00), quit/skip indices 0x27/0x25/0x2B
+ * (PAL 0x29/0x27/0x2D), and the state-1 call is FUN_L00_002a09d8(1) (PAL func_002337B0). Confidence: high. */
 #include "types.h"
 #include "qcopy.h"
 #include "qzero.h"
@@ -23,11 +26,11 @@ extern int D_L00_0015F620[4] MACRO_ADDR;
 typedef struct { int a; int b; } LL9_c299c48;
 typedef struct { char pad[0x16A8]; LL9_c299c48 normal[20]; LL9_c299c48 alt[20]; } G9_c299c48;
 extern G9_c299c48 D_00137B80;
-extern void func_002337B0(int);
 extern int D_L00_0015F3FC MACRO_ADDR;
 extern void func_L00_00299C00(void);
 extern void func_0022CA50(void);
-extern int D_L00_00173C00[];
+extern int D_L00_00173BF0[];
+extern void FUN_L00_002a09d8(int);
 #define IST (((short *)D_L00_0015F620)[0])
 #define IIDX (((short *)D_L00_0015F620)[1])
 #define ICNT (((short *)D_L00_0015F620)[2])
@@ -48,21 +51,21 @@ void FUN_L00_00299c48(void) {
     s0 = *(unsigned char *)(D_0013A4E0 + 0x2CF2) == 0x41;
     one = 1;
     if (IST == 0) {
-        if (ITMR >= D_L00_00173C00[IIDX] - 0x24) {
+        if (ITMR >= D_L00_00173BF0[IIDX] - 0x24) {
             if (*(short *)(D_0014161B + 0x100BD) != 0) {
                 func_002168A8(1);
             }
-            if (!s0 && IIDX == 0x29) {
+            if (!s0 && IIDX == 0x27) {
             quit:
                 func_L00_00299C00();
                 return;
             }
-            if (IIDX >= 0x2D) goto quit;
+            if (IIDX >= 0x2B) goto quit;
             ICNT = -1;
             IST = 1;
         }
     } else if (IST == one) {
-        func_002337B0(1);
+        FUN_L00_002a09d8(1);
         t = ICNT;
         if (t < 0x20) {
             src = (int *)D_L00_0015F620[3];
@@ -85,8 +88,8 @@ void FUN_L00_00299c48(void) {
                     IIDX = 0x1B;
                     ITMR = 0x2238;
                 }
-                if (IIDX == 0x27) {
-                    IIDX = 0x29;
+                if (IIDX == 0x25) {
+                    IIDX = 0x27;
                     ITMR = 0x32B4;
                 }
             }

@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly: lwc1 of D_0015ED64, then mul.s by x; same operands, same result. */
 /* Carried from the PAL decompilation's nonmatching/game/func_001F9878.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

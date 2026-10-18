@@ -1,5 +1,7 @@
+/* US check 2026-10-17: FUN_L00_001fefc8 and FUN_L00_001ff290 match the US assembly for behaviour (FUN_L00_001ff290 writes xyz only, w stays a). */
 /* Carried from port/game/rac1-pal/hand/overlays_shared_fastfunc_001FEF78.c through the version map (../README.md): names and
- * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
+ * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play.
+ * Checked against the US assembly (confidence high): FUN_L00_00200228 now clamps the whole part to the int range, as the EE's cvt.w.s saturates. */
 #ifndef MACRO_ADDR
 #define MACRO_ADDR
 #endif
@@ -56,6 +58,7 @@ static __inline__ void put(float *out, float x, float y, float z, unsigned w) {
 }
 
 /* The level programs' own copy of the routine above. */
+extern void func_001F9BF8(void *, void *, float);
 void func_L00_001FF500(float *out, float *a, float length) {
     func_001F9BF8(out, a, length);
 }
@@ -117,9 +120,20 @@ int FUN_L00_001fefc8(unsigned char *counter) {
     return value > 0 ? 0 : 2;
 }
 
-/* Splits x: the whole part, cut towards zero, goes to *whole and the rest is returned. */
+/*
+ * Splits x: the whole part, cut towards zero, goes to *whole and the rest is returned. The EE's
+ * cvt.w.s always truncates and saturates out of range (to 0x7FFFFFFF or 0x80000000), so the
+ * whole part is clamped to the int range before the cast; a plain (int) cast is undefined there.
+ */
 float FUN_L00_00200228(float *whole, float x) {
-    float cut = (float)(int)x;
+    float cut;
+    if (x >= 2147483648.0f) {
+        cut = 2147483648.0f;
+    } else if (x < -2147483648.0f) {
+        cut = -2147483648.0f;
+    } else {
+        cut = (float)(int)x;
+    }
     *whole = cut;
     return x - cut;
 }

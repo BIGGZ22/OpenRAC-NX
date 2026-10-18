@@ -12,7 +12,7 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
-/* functional: medium. Scales the four floats at v by s, truncates to int, clamps each to -0x8000..0x7FFF and packs them as four 16-bit values (x lowest) into the 64-bit result. VU0 ftoi saturation modelled by clamping in float first; not checked against hardware. */
+/* functional: high. Checked against the US assembly (config/us/overlays/asm/FUN_L00_001ff768.s): vmulx.xyzw by s, vftoi0 (truncation), pminw/pmaxw to 0x7FFF / -0x8000, ppach of the low halves. Clamping in float first gives the same integers as the clamp after truncation; not checked against hardware. Scales the four floats at v by s, truncates to int, clamps each to -0x8000..0x7FFF and packs them as four 16-bit values (x lowest) into the 64-bit result. */
 long FUN_L00_001ff768(float *v, float s) {
     float f[4];
     unsigned long r = 0;

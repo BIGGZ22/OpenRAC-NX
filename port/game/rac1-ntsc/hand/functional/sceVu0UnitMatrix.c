@@ -1,6 +1,7 @@
 /* Carried from the PAL decompilation's nonmatching/core/func_00125358.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
- * The two versions' code differs here: func_00125358 (called) was paired by place; read it against NTSC-U before trusting it. */
+ * The two versions' code differs here: func_00125358 (called) was paired by place; read it against NTSC-U before trusting it.
+ * Checked against the US assembly (2026-10-18): same rows, same store order; the code is the same in both versions. */
 #include "types.h"
 #include "qcopy.h"
 #include "qzero.h"

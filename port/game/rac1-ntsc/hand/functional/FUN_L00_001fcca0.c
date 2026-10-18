@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly (0x1FCCA0..0x1FCF88): fields +0/4/6/8/0xA/0xC/0xE, the fade ramps (0.0625 and 0.125), the ' - ' join in mode 1, the 0x1A row advance otherwise, and the calls to FUN_001fdd10 (0x203AD8 in this level) and 0x1FCB28 with f12 = f21 and f13 = f20 match PAL's C. */
 /* Carried from the PAL decompilation's nonmatching/shared/func_L00_001FCC50.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

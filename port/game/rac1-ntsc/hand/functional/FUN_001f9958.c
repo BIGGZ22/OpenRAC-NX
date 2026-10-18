@@ -1,3 +1,5 @@
+/* functional: high. Checked against the US assembly (vclipw.xyz, then cfc2 CLIPFLAG & 0x3F): the same six
+ * strict tests against |w|, no change. Bit order as the header states. */
 /* Carried from the PAL decompilation's nonmatching/game/func_001F9B20.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

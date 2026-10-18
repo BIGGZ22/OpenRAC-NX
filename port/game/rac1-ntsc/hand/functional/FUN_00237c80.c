@@ -1,3 +1,4 @@
+/* functional: high. checked against the US assembly: same address, constant and store-order check as FUN_00237a78 (float outputs) */
 /* Carried from the PAL decompilation's nonmatching/functional/func_00238F98.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

@@ -1,3 +1,4 @@
+/* functional: high. checked against the US assembly: matrices 0x187080 (-0x40), screen 0x18CD00 +0x190/+0x194, rect 0x13E500 +8/+0xC, callee addresses, 1024/0.25 constants and store order agree */
 /* Carried from the PAL decompilation's nonmatching/game/func_00238D90.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

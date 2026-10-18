@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly: same calls and arguments (the jump table at 0x1E8AD0 orders the six screens as here), constants, globals and stack vectors. */
 /* Carried from the PAL decompilation's src/game/vendor.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

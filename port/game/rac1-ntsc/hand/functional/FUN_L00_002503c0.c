@@ -13,7 +13,11 @@
 #define SDATA(symbol) __asm__(#symbol)
 #endif
 /* What the PAL file this was written in declares before it (its unit, and its own file). */
-/* functional: medium. Reads bytes 0-2 of the 8 at obj+0x38 (b0, b1, b2; retail loads all 8 and shifts); table D_L00_0017FEC0 has 64-byte entries whose first quad is a colour/vector. If b2 == 0 copies entry b0's quad to out; else out.xyz = e0.xyz*(1-t) + e1.xyz*t with t = b2/256 (e0 = entry b0, e1 = entry b1) and out.w = e0.w. Joined with func_L00_00250400; VU rounding (ACC then madd) written as separate float operations; not run. */
+/* functional: high. Checked against the US assembly (build/overlay-asm/level_00/split/f002503C0, one 112-byte
+ * function): ld of obj+0x38, byte fields b0/b1/b2, bgtz on b2 (so b2 == 0 copies e0's quad), vitof12 for t = b2/256,
+ * vsubx.w for 1 - t, vmulaw/vmaddx for the xyz blend, w left as e0's. No difference found; VU rounding (ACC then
+ * madd) written as separate float operations; not run.
+ * Reads bytes 0-2 of the 8 at obj+0x38 (b0, b1, b2; retail loads all 8 and shifts); table D_L00_0017FEC0 has 64-byte entries whose first quad is a colour/vector. If b2 == 0 copies entry b0's quad to out; else out.xyz = e0.xyz*(1-t) + e1.xyz*t with t = b2/256 (e0 = entry b0, e1 = entry b1) and out.w = e0.w. */
 extern char D_L00_0017FFC0_513F8[] __asm__("D_L00_0017FEC0");
 
 

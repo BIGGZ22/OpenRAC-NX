@@ -1,5 +1,6 @@
 /* Carried from port/game/rac1-pal/hand/level_checkpoint_restore.c through the version map (../README.md): names and
- * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
+ * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play.
+ * Checked against the US assembly (2026-10-18): same behaviour. */
 #ifndef MACRO_ADDR
 #define MACRO_ADDR
 #endif

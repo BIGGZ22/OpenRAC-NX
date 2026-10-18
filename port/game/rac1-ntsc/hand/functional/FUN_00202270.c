@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly: upload struct offsets, palette and mip sizes, GS cursor D_0015EE74 steps, every load-image call and its arguments, the TEX0/MIPTBP values. */
 /* Carried from the PAL decompilation's nonmatching/game/func_00202AA8.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

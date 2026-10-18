@@ -1,3 +1,4 @@
+/* functional: high. checked against the US assembly: the broad region test is FUN_00212c28 (boot tables), not a level copy as in PAL; offsets, constants and the saturating byte blends agree */
 /* Carried from port/game/rac1-pal/hand/level_moby_lighting.c through the version map (../README.md): names and
  * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
 #ifndef MACRO_ADDR
@@ -31,8 +32,6 @@ typedef struct MobyLightObject {
     unsigned char pad40[0x40];
     unsigned int ambient;
 } MobyLightObject;
-extern int ml_last __asm__("D_L00_0015FBC4");
-extern float ml_bounds[][4] __asm__("D_L00_0017ECC0");
 extern MobyLightRegion ml_regions[] __asm__("D_L00_0017EEC0");
 extern unsigned int* ml_grid __asm__("D_L00_0015FBC0");
 extern MobyPointLight* ml_points __asm__("D_L00_0015FB80");
@@ -45,32 +44,10 @@ static int ml_integer(float f) {
     return (int)f;
 }
 
-int func_L00_00256DE0(const float* position, float* blend, int* index) {
-    int i, j;
-    for (i = 0; i <= ml_last; ++i) {
-        float x = position[0] - ml_bounds[i][0];
-        float y = position[1] - ml_bounds[i][1];
-        union { float f; unsigned int bits; } distance;
-        float local[3];
-        const float* m;
-        distance.f = (x * x + y * y) - ml_bounds[i][3];
-        if (!(distance.bits & 0x80000000u)) continue;
-        m = ml_regions[i].matrix;
-        for (j = 0; j < 3; ++j) {
-            float v = m[j] * position[0];
-            v = v + m[4 + j] * position[1];
-            v = v + m[8 + j] * position[2];
-            local[j] = v + m[12 + j];
-        }
-        /* Retail returns after the first broad hit, even when clipping fails.
-         * It ignores the input w and uses 1 for the translation row. */
-        for (j = 0; j < 3; ++j) if (local[j] < -1 || local[j] > 1) return 0;
-        *index = i;
-        *blend = (local[0] + 1.0f) * 0.5f;
-        return 1;
-    }
-    return 0;
-}
+/* The US code calls the camera-region walker FUN_00212c28 (boot tables D_0019ABC0/D_0019ADC0) for the
+ * broad test, not a level copy over D_L00_0017ECC0 as PAL does; only the region row below comes from
+ * D_L00_0017EEC0. */
+extern int FUN_00212c28(float* position, float* blend, int* index);
 
 MobyPointLight* func_L00_00256F14(const float* position, float* distance_squared) {
     unsigned int x = (unsigned int)ml_integer(position[0]) >> 4;
@@ -101,7 +78,7 @@ void FUN_L00_00257024(MobyLightObject* object) {
     float blend, distance;
     int index, channel;
     MobyPointLight* point;
-    if (func_L00_00256DE0(object->position, &blend, &index) && (ml_regions[index].flags & 1)) {
+    if (FUN_00212c28(object->position, &blend, &index) && (ml_regions[index].flags & 1)) {
         MobyLightRegion* region = &ml_regions[index];
         unsigned int weight = (unsigned int)ml_integer(blend * 255.0f);
         unsigned int ambient = 0;

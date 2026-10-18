@@ -1,3 +1,4 @@
+/* functional: high. checked against the US assembly (field offsets, 5.0/0.5/1021.0 constants, the four callee addresses, kill order all agree); added the R5900 divide-by-zero result */
 /* Carried from port/game/rac1-pal/hand/level_particle53.c through the version map (../README.md): names and
  * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
 #ifndef MACRO_ADDR
@@ -19,6 +20,12 @@ extern int func_001FA6D0(float);
 extern void func_001F9A10(void *, void *, void *);
 extern void func_L00_00267A08(void *);
 extern int func_001F9770(void *);
+
+/* R5900 DIV.S by zero gives the largest finite float with the sign of the quotient, never NaN or infinity. */
+static float us_div(float n, float d) {
+    if (d == 0.0f) return n < 0.0f ? -3.4028234663852886e38f : 3.4028234663852886e38f;
+    return n / d;
+}
 
 /* particle update: tween size/alpha over its life, drift, kill when out of range */
 void FUN_L00_002721f0(char *m) {
@@ -43,7 +50,7 @@ void FUN_L00_002721f0(char *m) {
         float s;
         float q = func_001FA6C0(a - 6);
         s = *(float *)(m + 0x20);
-        t = (float)*(short *)(m + 0xA) / q;
+        t = us_div((float)*(short *)(m + 0xA), q);
         *(float *)(m + 0xC) = s + ((s + *(float *)(v + 4)) * 0.5f - s) * t;
         u = v[0xB];
         f = (float)(u >> 1) * t + 0.0f;

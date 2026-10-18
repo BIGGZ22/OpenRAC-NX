@@ -1,6 +1,6 @@
 /* Carried from the PAL decompilation's nonmatching/functional/func_L00_00237B90.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
- * The two versions' code differs here: func_L00_00237B90 (near) was paired by place; read it against NTSC-U before trusting it. */
+ * The two versions' code differs here: func_L00_00237B90 (near) was paired by place; read against the NTSC-U assembly on 2026-10-17, functional: high (text ids corrected to the US 0x531B/0x531C). */
 #include "types.h"
 #include "qcopy.h"
 #include "qzero.h"
@@ -14,7 +14,7 @@
 #define SDATA(symbol) __asm__(#symbol)
 #endif
 /* What the PAL file this was written in declares before it (its unit, and its own file). */
-/* functional: medium. HUD race-timer / message banner: draws a one or two line text banner with a 3-piece frame (alpha fades with the byte at e+0x70), and on levels 5 and 0x10 when the camera is near a fixed point also prints the saved race time and score; returns e->0x58. */
+/* functional: high (checked against the US assembly; text ids 0x531B/0x531C are the US ones, PAL used 0x5320/0x5321). HUD race-timer / message banner: draws a one or two line text banner with a 3-piece frame (alpha fades with the byte at e+0x70), and on levels 5 and 0x10 when the camera is near a fixed point also prints the saved race time and score; returns e->0x58. */
 typedef struct { float x, y, z, w; } __attribute__((aligned(16))) HudPt_37B90_c237200;
 extern float func_001FA888_37B90(int) __asm__("func_001FA6C0");
 extern int func_001FA898_37B90(float) __asm__("func_001FA6D0");
@@ -117,10 +117,10 @@ int FUN_L00_00237200(char *e) {
                 secs = rem / unit;
                 rem = rem - secs * unit;
                 hund = (rem * 100) / unit;
-                func_00116248_37B90(text, D_L00_001E8840_37B90, func_001FE540_37B90(0x5320), mins, secs, hund);
+                func_00116248_37B90(text, D_L00_001E8840_37B90, func_001FE540_37B90(0x531B), mins, secs, hund);
                 func_00201A38_37B90(0x100, y + 0x28, color, text);
                 if (score != 0) {
-                    func_00116248_37B90(text, D_L00_0015F858_37B90, func_001FE540_37B90(0x5321), score);
+                    func_00116248_37B90(text, D_L00_0015F858_37B90, func_001FE540_37B90(0x531C), score);
                     func_00201A38_37B90(0x100, y + 0x48, color, text);
                 }
             }

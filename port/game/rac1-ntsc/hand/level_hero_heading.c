@@ -1,5 +1,7 @@
 /* Carried from port/game/rac1-pal/hand/level_hero_heading.c through the version map (../README.md): names and
- * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
+ * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play.
+ * Checked against the US assembly: offsets, calls, branches match; the clamp call was PAL's overlay
+ * address (func_L00_001FF550), now US func_001F9C48 (same body). */
 #ifndef MACRO_ADDR
 #define MACRO_ADDR
 #endif

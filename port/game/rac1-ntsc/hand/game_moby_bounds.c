@@ -1,5 +1,8 @@
 /* Carried from port/game/rac1-pal/hand/game_moby_bounds.c through the version map (../README.md): names and
- * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
+ * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play.
+ * functional: high. Read against the US assembly on 2026-10-18 (the exe stub, which jumps to the
+ * tail at 0x20DF30; the level copies' tail FUN_L00_00250e30 has the same body with the level's
+ * D_L00_00196D00): moby offsets, blend, basis, sphere, grid packing and FUN_0020dc20 agree; no change. */
 #ifndef MACRO_ADDR
 #define MACRO_ADDR
 #endif

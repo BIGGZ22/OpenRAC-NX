@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly (0x20B4A8..0x20B614): D_00160760 templates, D_0015F458 count, D_0018D040 table, D_00160F00 cursor, packet fields and the first-half-only skip on a zero address are the same as PAL's C. */
 /* Carried from the PAL decompilation's nonmatching/game/func_0020C2F8.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

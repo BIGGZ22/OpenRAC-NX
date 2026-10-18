@@ -20,6 +20,8 @@
  * The helpers: func_00121A08 gives a record P (2 u16 words at +0 and +2 and
  * 16-bit words at +0 and +4), func_00121A18 and func_00121AB8 fill four
  * int locals when P+2 is not 2 or 3. Divisor y is never 0 on this path.
+ * Checked against the US assembly: the quotient is (y + 0x9FF) / y in both branches of each mode
+ * (the f0 != 1 branch used to divide f0 by y).
  */
 extern char D_00153040[];
 extern void *func_00121D08_x(void *) __asm__("func_00121A08");
@@ -121,7 +123,7 @@ void sceGsSetDefDispEnv(char *out, int a1, int a2, int a3, int a4, int a5) {
             m3 = m3 | big;
             *(unsigned long *)(out + 0x18) = m3 | e7;
         } else {
-            q = f0s / y;
+            q = (y + 0x9FF) / y;
             t2 = w - 1;
             t = o + l[1] + k3;
             d = t & 0xFFF;

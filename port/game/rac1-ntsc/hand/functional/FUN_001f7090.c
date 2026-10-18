@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly: window offsets, flags, wrap and rebalance passes, colour table D_0018CAF8, both draw calls and their arguments, the clip resets. */
 /* Carried from the PAL decompilation's nonmatching/game/func_001F7070.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

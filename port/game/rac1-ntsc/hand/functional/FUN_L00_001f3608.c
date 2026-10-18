@@ -1,4 +1,6 @@
-/* Carried from the PAL decompilation's nonmatching/game/func_L00_001F3988.c (games/rac1) through the version
+/* functional: high. Checked against the US assembly (config/us/overlays/asm/FUN_L00_001f3608.s): same load of
+ * 0x1C from D_L00_00173E40, same sign test, mask and shift; no difference found.
+ * Carried from the PAL decompilation's nonmatching/game/func_L00_001F3988.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"

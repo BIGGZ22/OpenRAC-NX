@@ -1,3 +1,4 @@
+/* US check 2026-10-17: same behaviour, medium-high confidence (every global address, both calls and the 1024.0f constant verified against the words; inner bit-packing taken from the PAL review). */
 /* Carried from the PAL decompilation's nonmatching/game/func_00203F68.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

@@ -1,5 +1,8 @@
 /* Carried from port/game/rac1-pal/hand/level_hero_attach.c through the version map (../README.md): names and
- * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
+ * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play.
+ * functional: high. Read against the US assembly of FUN_L00_0020f580 on 2026-10-18: state, slot,
+ * definition and moby offsets, globals, poses and the colour pulse agree; the frame-scaling call
+ * now names the US FUN_001f96f8. */
 #ifndef MACRO_ADDR
 #define MACRO_ADDR
 #endif
@@ -105,7 +108,8 @@ extern void ha_cross(void*, void*, void*) __asm__("func_001F9AD8");
 extern HeroAttachMoby* ha_spawn(int) __asm__("func_0020C4F8");
 extern void ha_joint(void*, int, void*) __asm__("func_0020CCA8");
 extern void ha_auxiliary(void) __asm__("func_L00_00207D00");
-extern int ha_ticks(int) __asm__("func_001F9688");
+/* US scale_game_frames (FUN_001f96f8); the carry had named 001F9688, inside another function. */
+extern int ha_ticks(int) __asm__("func_001F96F8");
 extern float ha_float(int) __asm__("func_001FA6C0");
 extern float ha_sin(float) __asm__("func_001F9DE0");
 extern int ha_truncate(float) __asm__("func_001FA6D0");

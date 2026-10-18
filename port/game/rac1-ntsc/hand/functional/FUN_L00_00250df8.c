@@ -1,5 +1,6 @@
 /* Carried from the PAL decompilation's nonmatching/game/func_L00_00251E30.c (games/rac1) through the version
- * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
+ * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
+ * Checked against the US assembly (2026-10-18): same behaviour. */
 #include "types.h"
 #include "qcopy.h"
 #include "qzero.h"
@@ -118,7 +119,7 @@ void FUN_L00_00250df8(unsigned char *m) {
            | (((unsigned int)((ix + ir) >> 14) & 0xFF) << 16) | (((unsigned int)((iy + ir) >> 14) & 0xFF) << 24);
     old = *(unsigned int *)(m + 0xA0);
     /* Retail compares the packed rectangle (upper half zero) with the sign-extended word. */
-    if ((long)(unsigned long)rect == (long)(int)old) {
+    if ((long long)(unsigned long long)rect == (long long)(int)old) {
         return;
     }
     if (rect & 0xC0C0) {

@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly (level_11 copy): columns of m in vf4..vf7, VU0 macro multiply-accumulate per source vector (x, y, z, w order), loop to src + 64 bytes. */
 /* Carried from the PAL decompilation's nonmatching/game/func_001FA540.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

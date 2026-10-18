@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly: same globals, offsets, calls and loop bounds; retail writes the 2nd and 4th cross products over the along vectors (aliased, read before written), here into a separate array. */
 /* Carried from the PAL decompilation's nonmatching/functional/func_0022F738.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

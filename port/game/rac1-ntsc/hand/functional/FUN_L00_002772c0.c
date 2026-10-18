@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly (globals, offsets, calls and arguments, constants, branches, loop bounds); the VU1 sync after the first pass now goes to the level's FUN_L00_002a09d8, which retail calls, not the executable's FUN_002337b0. */
 /* Carried from the PAL decompilation's src/overlays/shared/pause_00277208.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
@@ -32,7 +33,7 @@ extern void func_001F5450(int, int, int, int, int, int, int, int, long, long);
 extern long D_0015EED0 MACRO_ADDR;
 extern void func_0020D248(void);
 extern void func_0020D3B0(void);
-extern void func_002337B0(int);
+extern void func_L00_002A09D8(int); /* the level's own VU1 sync (it polls its own flag word), not the executable's FUN_002337b0 */
 extern void func_0020CEF8(void);
 extern void func_001F4280(int);
 extern void func_00223E28(int);
@@ -232,7 +233,7 @@ void FUN_L00_002772c0(int arg0) {
         if (pass == 0) {
             func_0020D248();
             func_0020D3B0();
-            func_002337B0(0x10);
+            func_L00_002A09D8(0x10);
             func_0020CEF8();
         }
     }

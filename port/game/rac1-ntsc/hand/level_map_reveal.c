@@ -1,5 +1,8 @@
 /* Carried from port/game/rac1-pal/hand/level_map_reveal.c through the version map (../README.md): names and
- * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
+ * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play.
+ * functional: high. Read against the US assembly of FUN_L00_002484e0 on 2026-10-18: globals, zone
+ * flags, predicate table, brush and tile offsets agree; the projection call now names the US
+ * world_to_map_coords with its definition's argument order. */
 #ifndef MACRO_ADDR
 #define MACRO_ADDR
 #endif
@@ -49,7 +52,8 @@ extern MapRevealZone mr_zones[][16] __asm__("D_L00_00182BA0");
 extern int mr_switches[] __asm__("D_L00_001844A8");
 extern MapRevealPredicate mr_predicates[][8] __asm__("D_L00_00183F90");
 extern MapRevealState mr_map __asm__("D_L00_001841F0");
-extern void mr_project(float, float, float*, float*, int) __asm__("func_L00_0024A7E8");
+/* US: world_to_map_coords (FUN_00208408, level 0 place 0024A7E8), declared as its definition is. */
+extern void mr_project(float*, float*, int, float, float) __asm__("func_00208408");
 extern int mr_load_tile(int) __asm__("func_L00_00249D80");
 extern int mr_height_a(int, float, float, float) __asm__("func_L00_00249780");
 extern int mr_height_b(int, float, float, float) __asm__("func_L00_002497F8");
@@ -62,8 +66,8 @@ void FUN_L00_002484e0(float* position) {
     int x0, x1, y0, y1, x, y;
     MapRevealHero* hero = (MapRevealHero*)(mr_hero + 0xE1D);
     if (!mr_ready) return;
-    mr_project(position[0], position[1], &ox, &oy,
-               mr_level + (mr_alternate ? 100 : 0));
+    mr_project(&ox, &oy, mr_level + (mr_alternate ? 100 : 0),
+               position[0], position[1]);
     ox *= 512.0f;
     oy *= 512.0f;
     /* Only these truncation results can produce a coordinate in [0,512).

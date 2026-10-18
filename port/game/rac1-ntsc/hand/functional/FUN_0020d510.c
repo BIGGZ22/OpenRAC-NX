@@ -1,3 +1,7 @@
+/* functional: low. The blend matches the US VU0 code (qmtc2 + vitof12 of b2<<4 gives t = b2/256, w = 1 - t,
+ * xyz = (1-t)*v1 + t*v2, w from v1; b2 == 0 copies v1). Unresolved: the US copies read their table from
+ * each level's overlay (D_0017FEC0..D_001808C0), while this reads D_0019BDC0 of the main executable, so the
+ * table is right only where that copy is the one running. */
 /* Carried from the PAL decompilation's nonmatching/game/func_0020E360.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

@@ -1,4 +1,6 @@
-/* Carried from the PAL decompilation's nonmatching/game/func_001F98C0.c (games/rac1) through the version
+/* functional: high. Checked against the US assembly at 0x001F96F8: mtc1, cvt.s.w, the 0.5 accumulator (adda.s of two
+ * 0.25f copies), the multiply-add, then cvt.w.s and mfc1. The constant is gp-0x7E98 = D_0015ED68 (gp 0x166C00).
+ * Carried from the PAL decompilation's nonmatching/game/func_001F98C0.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
 #include "qcopy.h"

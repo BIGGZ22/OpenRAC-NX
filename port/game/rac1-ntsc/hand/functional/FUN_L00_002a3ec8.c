@@ -1,5 +1,6 @@
 /* Carried from the PAL decompilation's nonmatching/functional/func_L00_002A5158.c (games/rac1) through the version
- * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
+ * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
+ * functional: high. Read against the US assembly on 2026-10-18: grid, buffer and neighbour offsets, globals and calls agree; no change. */
 #include "types.h"
 #include "qcopy.h"
 #include "qzero.h"

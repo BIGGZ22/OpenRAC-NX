@@ -1,5 +1,8 @@
 /* Carried from the PAL decompilation's nonmatching/shared/func_L00_00236F38.c (games/rac1) through the version
- * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
+ * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
+ * functional: high. Read against the US assembly on 2026-10-18: the rect call now goes to the US
+ * draw_hud_rect (00200C80) and the blink's frame scaling to 001F96F8 (both were PAL addresses);
+ * offsets, constants, bands and the particle loop agree. */
 #include "types.h"
 #include "qcopy.h"
 #include "qzero.h"
@@ -53,8 +56,10 @@ extern short D_L00_0015F758;
  *   Still differing: 160*H/208*W swap a2/a3 in the rect, and four float regs in the setup (1.0, 0.5, b, 1-a).
  *   Tried: term and statement orders, locals or none, constant stores moved, half sizes kept in scale[].
  */
-extern void func_00200E08(int, int, int, int, long, long);
-extern int func_001F9688(int);
+/* US draw_hud_rect (FUN_00200c80); the carry had kept PAL's 00200E08, another US function. */
+extern void draw_hud_rect_c2365a8(int, int, int, int, unsigned long, int) __asm__("func_00200C80");
+/* US scale_game_frames (FUN_001f96f8); the carry had kept PAL's 001F9688. */
+extern int scale_frames_c2365a8(int) __asm__("func_001F96F8");
 extern float func_001F96B0(float);
 extern int func_L00_00216DE8(int, int);
 extern int func_001FF960(int, int);
@@ -74,7 +79,7 @@ extern float D_L00_0015F838_f SDATA(D_L00_0015F758);
 /* whether a value below a third blinks on, ago frames back */
 static inline int hud_blink_c2365a8(HudElem_c2365a8 *e, int ago) {
     if (e->unk74 * 3 <= 10000) {
-        return (D_L00_0015F3F8 - ago) % (int)(func_001F9688(1) * 60.0f) < (int)(func_001F96B0(0.75f) * 60.0f);
+        return (D_L00_0015F3F8 - ago) % (int)(scale_frames_c2365a8(1) * 60.0f) < (int)(func_001F96B0(0.75f) * 60.0f);
     }
     return 0;
 }
@@ -100,7 +105,7 @@ int FUN_L00_002365a8(HudElem_c2365a8 *e) {
     {
         int x0 = (x + e->unk48) * 16 + D_L00_0015F760 * 208 / 64;
         int y0 = (y + e->unk4A) * 16 + D_L00_0015F764 * 160 / 256;
-        func_00200E08(x0, y0, x0 + D_L00_0015F760 * 608 / 64, y0 + D_L00_0015F764 * 3744 / 256,
+        draw_hud_rect_c2365a8(x0, y0, x0 + D_L00_0015F760 * 608 / 64, y0 + D_L00_0015F764 * 3744 / 256,
                       0x80684C2F, 1);
     }
 

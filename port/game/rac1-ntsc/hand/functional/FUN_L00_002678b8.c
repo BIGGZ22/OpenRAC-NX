@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly 2026-10-17: a tail jump to FUN_L00_002678c0 with a1 = 0; that callee writes a1 before it reads anything, so dropping the zero changes nothing. */
 /* Carried from port/game/rac1-pal/hand/game_particle_allocate.c through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

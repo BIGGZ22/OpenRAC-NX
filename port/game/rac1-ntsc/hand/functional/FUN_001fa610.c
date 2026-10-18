@@ -1,3 +1,5 @@
+/* functional: high. Checked against the US assembly (MIPS FPU: the two do-while loops with pi and -pi as
+ * float constants, the same entry tests and the same c.olt comparisons), no change. */
 /* Carried from the PAL decompilation's nonmatching/game/func_001FA7D8.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"

@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly (globals, offsets, calls, branches); +0x51 is now cleared before func_0020C880 as retail does (it was cleared after it). */
 /* Carried from the PAL decompilation's nonmatching/functional/func_0022FDC0.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
@@ -259,12 +260,12 @@ L_FC:
             ((unsigned char *)obj)[0x52] = 2;
             ((unsigned char *)obj)[0x53] = 2;
             ((unsigned char *)obj)[0x50] = 0;
+            ((unsigned char *)obj)[0x51] = 0;
             sl_D6D0(obj);
             func_001F98D0(*(char **)(obj + 0x68) + 0x10, p19, 0x20);
             func_001F98D0(*(char **)(obj + 0x6C) + 0x10, p20, 0x20);
             ((unsigned char *)obj)[0x72] = 0xFF;
             ((unsigned char *)obj)[0x71] = 0xFF;
-            ((unsigned char *)obj)[0x51] = 0;
             *(short *)(obj + 0x32) = 0x1FF;
             sl_ED48(obj);
             P = *(char **)(obj + 0x24);

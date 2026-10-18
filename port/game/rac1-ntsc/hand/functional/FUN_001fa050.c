@@ -12,6 +12,7 @@
 #ifndef SDATA
 #define SDATA(symbol) __asm__(#symbol)
 #endif
+/* functional: medium. US assembly checked: lqc2 of in, vcallms 0xD18 (same call target as the PAL copy), stores vf20..vf23 to out. The microprogram's bytes are not compared with the US build's VU0 memory; the sine/cosine body is ReRAC's. */
 /* euler_to_matrix: rotation rows from Euler angles in[0..2] (x, y, z), out = 4 rows of 4
    floats. Retail loads in into vf1 and runs VU0 microprogram 28259 at 0xD18 (vcallms 0x1A3),
    then stores vf20..vf23. That program (ReRAC rc-formats moby_light.rs rotation_rows and

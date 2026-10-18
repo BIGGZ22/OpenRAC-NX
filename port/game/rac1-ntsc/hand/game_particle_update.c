@@ -1,3 +1,4 @@
+/* functional: high. Checked against the US assembly (0x217B88..0x217C10): D_001600AC pool, D_001600B4 high, D_001600D0 cursor, D_001600D4 end (gp-27476, -27468, -27440, -27436), D_001CDD80 callback table, 64-byte stride, active byte +1 signed, cursor and end reloaded after each call. */
 /* Carried from port/game/rac1-pal/hand/game_particle_update.c through the version map (../README.md): names and
  * addresses are this version's, raw addresses in comments are PAL's. Not yet checked in play. */
 #ifndef MACRO_ADDR
