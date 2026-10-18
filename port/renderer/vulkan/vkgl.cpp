@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
@@ -326,6 +327,9 @@ struct Context {
     std::vector<VkImage> swapchain_images;
     std::vector<VkSemaphore> rendered;  // per swapchain image
     bool swapchain_stale = false;
+    // The window's surface went with the app to the background (Android lets go of its window
+    // there): a new one is made from the window SDL holds before the next frame is shown.
+    std::atomic<bool> surface_lost{false};
     int interval = 1;  // -1 adaptive, 0 immediate, 1 vsync
     VkFormat depth_format = VK_FORMAT_UNDEFINED;
     VkPipelineCache pipeline_cache = VK_NULL_HANDLE;
@@ -3177,7 +3181,35 @@ void swapchain_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout from, V
                          nullptr, 1, &b);
 }
 
+// A new surface for the window, where the old one went (renew_surface).
+bool make_surface(SDL_Window* window, std::string& error);
+
+// The surface and swapchain made again: back from the background on Android, the window is a new
+// one and the old surface draws nowhere (the screen stayed black while the game went on).
+bool renew_surface() {
+    vkDeviceWaitIdle(g->device);
+    if (g->swapchain != VK_NULL_HANDLE) {
+        vkDestroySwapchainKHR(g->device, g->swapchain, nullptr);
+        g->swapchain = VK_NULL_HANDLE;
+    }
+    if (g->surface != VK_NULL_HANDLE) {
+        vkDestroySurfaceKHR(g->instance, g->surface, nullptr);
+        g->surface = VK_NULL_HANDLE;
+    }
+    std::string error;
+    if (!make_surface(g->window, error)) {
+        return false;  // no window yet: tried again with the next frame
+    }
+    g->surface_lost = false;
+    g->swapchain_stale = true;
+    log::info("vulkan: the window's surface made again");
+    return true;
+}
+
 bool present_to_screen() {
+    if (g->surface_lost && !renew_surface()) {
+        return false;
+    }
     if (g->swapchain_stale || g->swapchain == VK_NULL_HANDLE) {
         if (!make_swapchain()) {
             return false;
@@ -3191,6 +3223,9 @@ bool present_to_screen() {
             return false;
         }
         r = vkAcquireNextImageKHR(g->device, g->swapchain, UINT64_MAX, f.acquired, VK_NULL_HANDLE, &index);
+    }
+    if (r == VK_ERROR_SURFACE_LOST_KHR) {
+        g->surface_lost = true;
     }
     if (r != VK_SUCCESS && r != VK_SUBOPTIMAL_KHR) {
         return false;
@@ -3224,6 +3259,9 @@ bool present_to_screen() {
 #if defined(__ANDROID__)
     // Android says "suboptimal" for every frame of a turned screen that the system turns for us.
     const bool stale = r == VK_ERROR_OUT_OF_DATE_KHR;
+    if (r == VK_ERROR_SURFACE_LOST_KHR) {
+        g->surface_lost = true;
+    }
 #else
     const bool stale = r == VK_ERROR_OUT_OF_DATE_KHR || r == VK_SUBOPTIMAL_KHR;
 #endif
@@ -3608,6 +3646,14 @@ void destroy_all() {
 
 }  // namespace
 
+// Back in the foreground: the window SDL holds is a new one (Android).
+bool SDLCALL on_event(void*, SDL_Event* event) {
+    if (g != nullptr && event->type == SDL_EVENT_DID_ENTER_FOREGROUND) {
+        g->surface_lost = true;
+    }
+    return true;
+}
+
 bool open(const Config& config, std::string& error) {
     if (g != nullptr) {
         error = "a Vulkan context is open already";
@@ -3658,6 +3704,11 @@ bool open(const Config& config, std::string& error) {
     g->state.viewport[2] = g->state.scissor[2] = g->default_width;
     g->state.viewport[3] = g->state.scissor[3] = g->default_height;
     g->open = true;
+#if defined(__ANDROID__)
+    if (config.window != nullptr) {
+        SDL_AddEventWatch(on_event, nullptr);
+    }
+#endif
     log::info("vulkan: {} ({}), Vulkan {}{}", g->device_name, g->driver_version, g->api_version,
               validation ? ", with the validation layer" : "");
     return true;
@@ -3667,6 +3718,9 @@ void close() {
     if (g == nullptr) {
         return;
     }
+#if defined(__ANDROID__)
+    SDL_RemoveEventWatch(on_event, nullptr);
+#endif
     destroy_all();
     delete g;
     g = nullptr;
