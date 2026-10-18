@@ -201,6 +201,10 @@ inline constexpr GLenum GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
     X(void, glTexParameteri, (GLenum target, GLenum pname, GLint param))                           \
     X(void, glTexParameterf, (GLenum target, GLenum pname, GLfloat param))                         \
     X(void, glGenerateMipmap, (GLenum target))                                                     \
+    X(void, glGenSamplers, (GLsizei count, GLuint *samplers))                                      \
+    X(void, glDeleteSamplers, (GLsizei count, const GLuint *samplers))                             \
+    X(void, glBindSampler, (GLuint unit, GLuint sampler))                                          \
+    X(void, glSamplerParameteri, (GLuint sampler, GLenum pname, GLint param))                      \
     X(void, glGenBuffers, (GLsizei n, GLuint *buffers))                                            \
     X(void, glDeleteBuffers, (GLsizei n, const GLuint *buffers))                                   \
     X(void, glBindBuffer, (GLenum target, GLuint buffer))                                          \
