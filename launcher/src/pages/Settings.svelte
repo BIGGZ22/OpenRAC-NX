@@ -202,6 +202,26 @@
           </small>
         </span>
       </label>
+      {#if app.info?.updates}
+        {@const source = app.info.updates}
+        <div class="field">
+          <label for="update-source">Update source</label>
+          <input
+            id="update-source"
+            type="text"
+            class="mono"
+            readonly
+            aria-readonly="true"
+            title="Set by the build: the repository that built this launcher"
+            value={`github.com/${source.repository} · ${source.channel ?? "latest release"}`}
+          />
+          <p class="dim note">
+            Set when this launcher was built, to the repository that built it, and not changeable here.
+            {source.channel ? "This build of a branch updates from that branch's newest build." : ""}
+            <button class="link" onclick={() => void api.openUrl(source.page)}>See the releases</button>
+          </p>
+        </div>
+      {/if}
       <label class="option">
         <input type="checkbox" bind:checked={draft.detailedGameLog} />
         <span>
@@ -361,6 +381,11 @@
 
   .field input {
     max-width: 400px;
+  }
+
+  .field input[readonly] {
+    color: var(--soft);
+    cursor: default;
   }
 
   .link {

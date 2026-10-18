@@ -45,15 +45,34 @@ struct AppInfo {
     /// The launcher works on the copy of OpenRAC it carries: nothing to find or to build, and
     /// only what a player does is offered.
     standalone: bool,
+    /// Where its updates come from: the repository that built it (core/src/update.rs).
+    updates: openrac_launcher_core::update::UpdateSource,
+}
+
+/// A build of a branch: `dev.<run>`, which its updates are compared with (update::effective_version).
+const LAUNCHER_BUILD: Option<&str> = option_env!("OPENRAC_LAUNCHER_BUILD");
+
+/// The version updates are compared with, and the one shown.
+fn launcher_version<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> String {
+    openrac_launcher_core::update::effective_version(&app.package_info().version.to_string(), LAUNCHER_BUILD)
+}
+
+/// The update manifest's address (tauri.conf.json's `plugins.updater.endpoints`, which the build
+/// sets to its own repository's releases).
+fn update_source<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> openrac_launcher_core::update::UpdateSource {
+    let endpoint =
+        app.config().plugins.0.get("updater").and_then(|c| c["endpoints"][0].as_str()).unwrap_or_default().to_string();
+    openrac_launcher_core::update::source(&endpoint)
 }
 
 #[tauri::command]
 fn app_info(app: AppHandle, state: State<'_, AppState>) -> AppInfo {
     AppInfo {
-        version: app.package_info().version.to_string(),
+        version: launcher_version(&app),
         platform: Platform::current(),
         config_file: state.config_file.clone(),
         standalone: state.bundled.is_some() && state.config.lock().unwrap().root == state.bundled,
+        updates: update_source(&app),
     }
 }
 
@@ -748,7 +767,16 @@ pub fn run() {
     tune_webkit_for_wayland();
     let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init()).plugin(tauri_plugin_opener::init());
     #[cfg(desktop)]
-    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    let builder = builder.plugin(
+        tauri_plugin_updater::Builder::new()
+            // A build of a branch carries the release's plain version and its run (LAUNCHER_BUILD):
+            // compared as X.Y.Z-dev.<run>, so each build of the branch updates the one before.
+            .default_version_comparator(|current, release| {
+                let current = openrac_launcher_core::update::effective_version(&current.to_string(), LAUNCHER_BUILD);
+                openrac_launcher_core::update::is_newer(&current, &release.version.to_string())
+            })
+            .build(),
+    );
     #[cfg(target_os = "android")]
     let builder = builder.plugin(android::init());
     builder

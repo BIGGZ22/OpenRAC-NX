@@ -1,4 +1,5 @@
-//! The launcher's own updates where Tauri's updater does not run: Android, whose launcher is an APK.
+//! The launcher's own updates where Tauri's updater does not run: Android, whose launcher is an APK;
+//! and, for every system, where updates come from and the version they are compared with.
 //! The release's manifest is the desktop's (`latest.json`, tools/updater_manifest.py), with the APK
 //! under `android-aarch64`; the APK is signed with the same minisign key as the desktop's archives
 //! and checked against the public key in tauri.conf.json before it is handed to Android's
@@ -56,6 +57,58 @@ pub fn is_newer(current: &str, latest: &str) -> bool {
         (Some(_), None) => true,
         (Some(c), Some(l)) => l > c,
         _ => false,
+    }
+}
+
+/// Where a launcher looks for its updates, read from its manifest's address (tauri.conf.json's
+/// `plugins.updater.endpoints`, set by the build to the repository that built it: a fork's
+/// launcher reads the fork's releases). Shown on the Settings page, which cannot change it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateSource {
+    /// `owner/name` of the GitHub repository; the address itself when it is not one.
+    pub repository: String,
+    /// The release it reads: None for the repository's latest, else that release's tag (a
+    /// branch's rolling `launcher-dev-<branch>`).
+    pub channel: Option<String>,
+    /// The manifest's address.
+    pub manifest: String,
+    /// The page of the release it reads, or of all of them.
+    pub page: String,
+}
+
+pub fn source(manifest: &str) -> UpdateSource {
+    let unknown = || UpdateSource {
+        repository: manifest.to_string(),
+        channel: None,
+        manifest: manifest.to_string(),
+        page: manifest.to_string(),
+    };
+    let Some(path) = manifest.strip_prefix("https://github.com/") else { return unknown() };
+    let parts: Vec<&str> = path.split('/').collect();
+    let (owner, name) = match parts.as_slice() {
+        [owner, name, "releases", ..] if !owner.is_empty() && !name.is_empty() => (*owner, *name),
+        _ => return unknown(),
+    };
+    let repository = format!("{owner}/{name}");
+    let channel = match parts.as_slice() {
+        [_, _, "releases", "download", tag, _] => Some((*tag).to_string()),
+        _ => None,
+    };
+    let page = match &channel {
+        Some(tag) => format!("https://github.com/{repository}/releases/tag/{tag}"),
+        None => format!("https://github.com/{repository}/releases"),
+    };
+    UpdateSource { repository, channel, manifest: manifest.to_string(), page }
+}
+
+/// The version updates are compared with: the package's, or for a build of a branch, whose
+/// package carries the release's plain version (Windows' MSI and RPM take no `-dev`), that version
+/// with the build's own `dev.<run>` (`OPENRAC_LAUNCHER_BUILD` when it was compiled).
+pub fn effective_version(version: &str, build: Option<&str>) -> String {
+    match build.map(str::trim) {
+        Some(build) if !build.is_empty() && !version.contains('-') => format!("{version}-{build}"),
+        _ => version.to_string(),
     }
 }
 
@@ -131,6 +184,28 @@ mod tests {
         assert!(!is_newer("0.8.0-dev.10", "0.8.0-dev.10"));
         assert!(!is_newer("0.8.0-dev.10", "0.8.0-dev.9"));
         assert!(is_newer("0.8.0-dev.10", "0.8.0"));
+    }
+
+    #[test]
+    fn names_the_source() {
+        let latest = source("https://github.com/someone/OpenRAC/releases/latest/download/latest.json");
+        assert_eq!(latest.repository, "someone/OpenRAC");
+        assert_eq!(latest.channel, None);
+        assert_eq!(latest.page, "https://github.com/someone/OpenRAC/releases");
+        let branch = source("https://github.com/someone/OpenRAC/releases/download/launcher-dev-feature-x/latest.json");
+        assert_eq!(branch.repository, "someone/OpenRAC");
+        assert_eq!(branch.channel.as_deref(), Some("launcher-dev-feature-x"));
+        assert_eq!(branch.page, "https://github.com/someone/OpenRAC/releases/tag/launcher-dev-feature-x");
+        assert_eq!(source("https://example.com/latest.json").repository, "https://example.com/latest.json");
+    }
+
+    #[test]
+    fn versions_a_branch_build() {
+        assert_eq!(effective_version("0.8.0", Some("dev.12")), "0.8.0-dev.12");
+        assert_eq!(effective_version("0.8.0", Some("")), "0.8.0");
+        assert_eq!(effective_version("0.8.0", None), "0.8.0");
+        assert_eq!(effective_version("0.8.0-dev.12", Some("dev.12")), "0.8.0-dev.12");
+        assert!(is_newer(&effective_version("0.8.0", Some("dev.12")), "0.8.0-dev.13"));
     }
 
     #[test]

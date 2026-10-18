@@ -231,7 +231,7 @@ pub async fn update_check<R: Runtime>(app: AppHandle<R>) -> Result<Option<update
             kotlin(&app, "download", serde_json::json!({ "url": endpoint, "path": manifest })).await?;
         let text = std::fs::read_to_string(&manifest).map_err(|e| e.to_string())?;
         let _ = std::fs::remove_file(&manifest);
-        update::release_for(&text, update::ANDROID, &app.package_info().version.to_string())
+        update::release_for(&text, update::ANDROID, &crate::launcher_version(&app))
     }
     #[cfg(not(target_os = "android"))]
     {

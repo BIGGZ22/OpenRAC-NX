@@ -1,7 +1,7 @@
 // In-app and GitHub release updater for OpenRAC Launcher. On a desktop it is Tauri's updater; on
 // Android the launcher's own (src-tauri/src/android.rs): the release's APK, checked against the
 // same key, handed to Android's installer.
-import { api, inTauri, onAndroid, onUpdateProgress, relaunchApp, type AndroidRelease } from "./api";
+import { api, inTauri, onAndroid, onUpdateProgress, relaunchApp, type AndroidRelease, type UpdateSource } from "./api";
 import type { Update, DownloadEvent } from "@tauri-apps/plugin-updater";
 
 export interface UpdateInfo {
@@ -24,20 +24,35 @@ export type UpdateProgressCallback = (progress: {
 let activeTauriUpdate: Update | null = null;
 let activeAndroidRelease: AndroidRelease | null = null;
 
+/** core/src/update.rs's is_newer: a pre-release is older than its release, and of two
+ *  pre-releases of one version the one whose last number is larger is newer (the builds of a
+ *  branch, `0.8.0-dev.10` after `0.8.0-dev.9`). */
 export function isNewerVersion(current: string, latest: string): boolean {
-  const parse = (v: string) =>
-    v
-      .replace(/^[^0-9]*/, "")
-      .split(".")
-      .map((part) => parseInt(part, 10) || 0);
-
-  const [cMaj = 0, cMin = 0, cPatch = 0] = parse(current);
-  const [lMaj = 0, lMin = 0, lPatch = 0] = parse(latest);
-
-  if (lMaj !== cMaj) return lMaj > cMaj;
-  if (lMin !== cMin) return lMin > cMin;
-  return lPatch > cPatch;
+  const parse = (v: string): [number[], number | null] => {
+    const text = v.replace(/^[^0-9]*/, "");
+    const cut = text.search(/[-+]/);
+    const core = cut < 0 ? text : text.slice(0, cut);
+    const rest = cut < 0 ? "" : text.slice(cut + 1);
+    const pre = rest ? parseInt(rest.split(".").pop() ?? "", 10) || 0 : null;
+    const parts = core.split(".").map((part) => parseInt(part, 10) || 0);
+    return [[parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0], pre];
+  };
+  const [c, cPre] = parse(current);
+  const [l, lPre] = parse(latest);
+  for (let i = 0; i < 3; i++) {
+    if (l[i] !== c[i]) return (l[i] ?? 0) > (c[i] ?? 0);
+  }
+  if (cPre === null) return false;
+  return lPre === null || lPre > cPre;
 }
+
+/** The releases of the repository that built this launcher (OpenRAC's when it is not known). */
+const DEFAULT_SOURCE: UpdateSource = {
+  repository: "OpenRAC/OpenRAC",
+  channel: null,
+  manifest: "https://github.com/OpenRAC/OpenRAC/releases/latest/download/latest.json",
+  page: "https://github.com/OpenRAC/OpenRAC/releases",
+};
 
 interface GitHubReleaseResponse {
   tag_name?: string;
@@ -47,9 +62,14 @@ interface GitHubReleaseResponse {
   published_at?: string;
 }
 
-export async function checkGitHubRelease(currentVersion: string): Promise<UpdateInfo | null> {
+export async function checkGitHubRelease(
+  currentVersion: string,
+  source: UpdateSource = DEFAULT_SOURCE,
+): Promise<UpdateInfo | null> {
+  if (!/^[\w.-]+\/[\w.-]+$/.test(source.repository)) return null;
+  const release = source.channel ? `tags/${encodeURIComponent(source.channel)}` : "latest";
   try {
-    const res = await fetch("https://api.github.com/repos/OpenRAC/OpenRAC/releases/latest", {
+    const res = await fetch(`https://api.github.com/repos/${source.repository}/releases/${release}`, {
       headers: { Accept: "application/vnd.github.v3+json" },
       signal: AbortSignal.timeout(4000),
     });
@@ -57,13 +77,16 @@ export async function checkGitHubRelease(currentVersion: string): Promise<Update
 
     const data = (await res.json()) as GitHubReleaseResponse;
     const tag = data.tag_name ?? "";
-    const cleanVersion = tag.replace(/^[^0-9]*/, "");
+    // A branch's rolling release keeps its tag: its version is in its title, "OpenRAC Launcher X (branch)".
+    const cleanVersion = source.channel
+      ? ((data.name ?? "").replace(/^[^0-9]*/, "").split(" ")[0] ?? "")
+      : tag.replace(/^[^0-9]*/, "");
 
     if (isNewerVersion(currentVersion, cleanVersion)) {
       return {
         version: cleanVersion,
         tag,
-        url: data.html_url ?? "https://github.com/OpenRAC/OpenRAC/releases",
+        url: data.html_url ?? source.page,
         name: data.name ?? tag,
         body: data.body ?? "",
         publishedAt: data.published_at ?? "",
@@ -80,7 +103,10 @@ export async function checkGitHubRelease(currentVersion: string): Promise<Update
  * Checks for updates using the official Tauri updater plugin first.
  * Falls back to checking GitHub Releases API if running in browser or if updater is unavailable.
  */
-export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo | null> {
+export async function checkForUpdate(
+  currentVersion: string,
+  source: UpdateSource = DEFAULT_SOURCE,
+): Promise<UpdateInfo | null> {
   if (inTauri && onAndroid) {
     try {
       const release = await api.updateCheck();
@@ -89,7 +115,7 @@ export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo
       return {
         version: release.version,
         tag: `v${release.version}`,
-        url: "https://github.com/OpenRAC/OpenRAC/releases",
+        url: source.page,
         name: `OpenRAC Launcher v${release.version}`,
         body: release.notes,
         publishedAt: release.date,
@@ -107,7 +133,7 @@ export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo
         return {
           version: update.version,
           tag: `v${update.version}`,
-          url: "https://github.com/OpenRAC/OpenRAC/releases",
+          url: source.page,
           name: `OpenRAC Launcher v${update.version}`,
           body: update.body ?? "",
           publishedAt: update.date ?? "",
@@ -119,7 +145,7 @@ export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo
     }
   }
 
-  return checkGitHubRelease(currentVersion);
+  return checkGitHubRelease(currentVersion, source);
 }
 
 /**

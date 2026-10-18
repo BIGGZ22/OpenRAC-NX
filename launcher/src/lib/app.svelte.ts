@@ -261,7 +261,7 @@ export function dismissStopped() {
 /** Looks for a new launcher now (at start, or Settings' "Check now"); true when one is out. */
 export async function lookForUpdate(): Promise<boolean> {
   if (!app.info?.version) return false;
-  const up = await checkForUpdate(app.info.version);
+  const up = await checkForUpdate(app.info.version, app.info.updates);
   app.update = up;
   return !!up;
 }

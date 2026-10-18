@@ -759,6 +759,12 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
         configFile: "~/.config/dev.openrac.launcher/launcher.json",
         // ?standalone shows an installed launcher's pages: no checkout, nothing to find.
         standalone: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("standalone"),
+        updates: {
+          repository: "OpenRAC/OpenRAC",
+          channel: null,
+          manifest: "https://github.com/OpenRAC/OpenRAC/releases/latest/download/latest.json",
+          page: "https://github.com/OpenRAC/OpenRAC/releases",
+        },
       });
     case "get_config":
       return delay({ ...config });

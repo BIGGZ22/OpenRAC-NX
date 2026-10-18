@@ -33,6 +33,19 @@ export interface AppInfo {
   configFile: string | null;
   /** The launcher works on the copy of OpenRAC it carries: only what a player does is offered. */
   standalone: boolean;
+  /** Where its updates come from: the repository that built it, set by the build. */
+  updates: UpdateSource;
+}
+
+/** core/src/update.rs: the releases a launcher updates from. */
+export interface UpdateSource {
+  /** `owner/name` of the GitHub repository (the manifest's address when it is not one). */
+  repository: string;
+  /** The release it reads: null for the latest, else its tag (a branch's `launcher-dev-<branch>`). */
+  channel: string | null;
+  manifest: string;
+  /** That release's page, or the releases'. */
+  page: string;
 }
 
 /** core/src/discs.rs: a disc image in the games folder that is a game OpenRAC knows. */
