@@ -19,7 +19,12 @@
     <!-- AndroidTV support -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
+    <!-- A game, for the system's game features and the vendors' game overlays and launchers
+         (Game Dashboard, Game Booster, Game Turbo and the like), which list an app by its
+         category; isGame is the older flag some of them still read. -->
     <application
+        android:appCategory="game"
+        android:isGame="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
