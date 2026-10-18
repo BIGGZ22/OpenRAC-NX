@@ -28,7 +28,7 @@ std::uint8_t axis_byte(float offset, float radius) {
 
 TouchPad::TouchPad() {
     // The left thumb moves Ratchet (the left stick, the d-pad above it); the right one jumps and
-    // attacks (the face buttons, Cross the largest, where the thumb rests) and turns the camera
+    // attacks (the face buttons, all of one size as on the pad) and turns the camera
     // (the right stick, inside and below them); the shoulders along the top, under the index
     // fingers. Offsets and sizes in window heights, from the nearer edge.
     using From = Place::From;
@@ -47,10 +47,10 @@ TouchPad::TouchPad() {
         {Kind::Button, Button::Down, From::Left, 0.20f, 0.30f + kArm, 0.052f, 1.0f},
         {Kind::Button, Button::Left, From::Left, 0.20f - kArm, 0.30f, 0.052f, 1.0f},
         {Kind::Button, Button::Right, From::Left, 0.20f + kArm, 0.30f, 0.052f, 1.0f},
-        {Kind::Button, Button::Triangle, From::Right, 0.24f, 0.52f - kFace, 0.066f, 1.0f},
-        {Kind::Button, Button::Cross, From::Right, 0.24f, 0.52f + kFace, 0.076f, 1.0f},
-        {Kind::Button, Button::Square, From::Right, 0.24f + kFace, 0.52f, 0.066f, 1.0f},
-        {Kind::Button, Button::Circle, From::Right, 0.24f - kFace, 0.52f, 0.066f, 1.0f},
+        {Kind::Button, Button::Triangle, From::Right, 0.24f, 0.52f - kFace, 0.07f, 1.0f},
+        {Kind::Button, Button::Cross, From::Right, 0.24f, 0.52f + kFace, 0.07f, 1.0f},
+        {Kind::Button, Button::Square, From::Right, 0.24f + kFace, 0.52f, 0.07f, 1.0f},
+        {Kind::Button, Button::Circle, From::Right, 0.24f - kFace, 0.52f, 0.07f, 1.0f},
         {Kind::Button, Button::L2, From::Left, 0.13f, 0.075f, 0.045f, 1.75f},
         {Kind::Button, Button::L1, From::Left, 0.32f, 0.075f, 0.045f, 1.75f},
         {Kind::Button, Button::R1, From::Right, 0.32f, 0.075f, 0.045f, 1.75f},
