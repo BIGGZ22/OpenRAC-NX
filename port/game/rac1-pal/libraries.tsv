@@ -317,3 +317,6 @@ func_L07_0030E800	game	func_L07_0030E800	host	a place the catalogue folds into a
 func_L08_002DB448	game	func_L08_002DB448	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (void)
 func_L14_003047D8	game	func_L14_003047D8	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (void)
 func_L18_002FC168	game	func_L18_002FC168	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (void)
+func_L00_002124E8	hero	Hero_TurnToHeading	wrap	eases the facing toward the move yaw: with the player's lock-strafe on and a weapon fired while running, toward the camera's yaw (rac1/host/strafe.c)	void (int, float, float, float)
+func_L00_00212790	hero	Hero_SetPlanarVelocity	wrap	the velocity along an angle, the facing for one above pi: with lock-strafe strafing, along the move yaw (rac1/host/strafe.c)	void (float)
+func_L00_002E74B0	camera	func_L00_002E74B0	wrap	the follow camera's requests from the hero's state: while lock-strafing, the strafe camera the game asks for in state 0x81 with L2 or R2 held (rac1/host/strafe.c)	void (unsigned int)
