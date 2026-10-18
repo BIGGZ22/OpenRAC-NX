@@ -351,6 +351,26 @@ void write_reach() {
     }
 }
 
+// OPENRAC_AUDIO_TICKED=1: no sound device. The game's sounds advance by one tick's samples each
+// tick (rendered and dropped), and streams are read when they start, so every answer the game
+// gets back from the sound engine (a voice's state, a stream's position) lands on the same tick, however
+// fast the machine runs it: port/tools/regress's runs repeat. A device pulls at the real clock's
+// rate, which an uncapped run outpaces by a varying amount.
+bool audio_ticked() {
+    static const bool on = std::getenv("OPENRAC_AUDIO_TICKED") != nullptr;
+    return on;
+}
+
+void audio_tick() {
+#ifdef OPENRAC_FRONTEND
+    if (!audio_ticked() || !g_window) {
+        return;
+    }
+    static std::vector<std::int16_t> samples(static_cast<std::size_t>(platform::kAudioRate / tick_rate()) * 2);
+    openrac_sound_render(samples.data(), samples.size() / 2);
+#endif
+}
+
 void finish() {
     write_reach();
     openrac_guest_report_missing();
@@ -453,6 +473,7 @@ int openrac_game_vsync(void) {
     }
 #endif
     g_frame++;
+    audio_tick();
     sample_state();
     crash_test();
     // The level being played, once per change: the launcher reads this line for Discord's presence.
@@ -1185,9 +1206,10 @@ int main(int argc, char** argv) {
         if (g_options.debug_overlay) {
             frontend::debug_overlay::request();
         }
-        // The game's sounds (openrac/sound_engine.h), rendered on the output's thread.
+        // The game's sounds (openrac/sound_engine.h), rendered on the output's thread; with
+        // OPENRAC_AUDIO_TICKED, by the game's ticks instead (audio_tick).
         static std::unique_ptr<platform::AudioOutput> sound_output =
-            platform::AudioOutput::open(why, [](std::span<std::int16_t> samples) {
+            audio_ticked() ? nullptr : platform::AudioOutput::open(why, [](std::span<std::int16_t> samples) {
                 openrac_sound_render(samples.data(), samples.size() / 2);
                 // The player's volume (settings.h): at 0 the output is silence itself.
                 if (const float gain = settings::output_gain(); gain < 1.0f) {
@@ -1196,7 +1218,10 @@ int main(int argc, char** argv) {
                     }
                 }
             });
-        if (!sound_output) {
+        if (audio_ticked()) {
+            openrac_stream_read_at_once(1);
+            log::info("OPENRAC_AUDIO_TICKED: no sound device; the sounds advance with the game's ticks");
+        } else if (!sound_output) {
             log::warn("no sound: {}", why);
         }
     }
