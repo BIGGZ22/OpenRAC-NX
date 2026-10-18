@@ -13,7 +13,7 @@ when complete. Never commit or share it: see LEGAL.md.
 """
 
 import argparse
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import Executor, ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 import hashlib
 import json
 import os
@@ -100,6 +100,16 @@ def publish(path: Path, build, anywhere: bool = False, replace: bool = False) ->
     return dest
 
 
+def worker_pool(jobs: int) -> Executor:
+    """JOBS processes for the levels; one thread where Python has no process pools (Android's
+    CPython has no sem_open, so no multiprocessing): the levels are then written one by one, in
+    this process, as they would be with --jobs 1."""
+    try:
+        return ProcessPoolExecutor(jobs)
+    except (ImportError, NotImplementedError, OSError):
+        return ThreadPoolExecutor(1)
+
+
 def export_level(iso: Path, info: dict, out: Path, lod: int) -> dict:
     """One level of a Godot project; runs in its own process."""
     with Disc(iso) as disc:
@@ -116,7 +126,7 @@ def godot(iso: Path, survey: dict, levels: list[int], lod: int, jobs: int, out: 
             write_project(where[i], [i], region)
     else:
         write_project(out, levels, region)
-    with ProcessPoolExecutor(min(jobs, len(levels))) as pool:
+    with worker_pool(min(jobs, len(levels))) as pool:
         running = [pool.submit(export_level, iso, survey["levels"][i], where[i], lod) for i in levels]
         try:
             for done in as_completed(running):
@@ -156,7 +166,7 @@ def export_port_flight(iso: Path, survey: dict, out: Path, lod: int) -> dict:
 def port(iso: Path, survey: dict, levels: list[int], lod: int, jobs: int, out: Path) -> None:
     """OUT/level_NN/ per level (port.py), written in parallel like godot()."""
     out.mkdir(parents=True, exist_ok=True)
-    with ProcessPoolExecutor(min(jobs, len(levels))) as pool:
+    with worker_pool(min(jobs, len(levels))) as pool:
         running = [pool.submit(export_port_level, iso, survey["levels"][i], out, lod) for i in levels]
         running.append(pool.submit(export_port_title, iso, survey, out, lod))
         running.append(pool.submit(export_port_flight, iso, survey, out, lod))

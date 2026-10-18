@@ -4,8 +4,11 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from unittest import mock
 
-from extract import ROOT, output_path, publish
+import extract
+from extract import ROOT, output_path, publish, worker_pool
 from formats import FormatError
 
 
@@ -38,6 +41,20 @@ class OutputTests(unittest.TestCase):
             self.assertEqual(list(Path(temp).iterdir()), [])
             publish(dest, lambda directory: (directory / "done").write_text("x"))
             self.assertEqual([p.name for p in dest.iterdir()], ["done"])
+
+
+class PoolTests(unittest.TestCase):
+    def test_processes_where_python_has_them(self):
+        with worker_pool(2) as pool:
+            self.assertIsInstance(pool, ProcessPoolExecutor)
+
+    def test_one_thread_without_sem_open(self):
+        # Android's CPython: building a process pool fails for want of sem_open.
+        lacking = mock.Mock(side_effect=NotImplementedError("This platform lacks sem_open"))
+        with mock.patch.object(extract, "ProcessPoolExecutor", lacking):
+            with worker_pool(8) as pool:
+                self.assertIsInstance(pool, ThreadPoolExecutor)
+                self.assertEqual(pool.submit(sum, [1, 2]).result(), 3)
 
 
 if __name__ == "__main__":
