@@ -21,15 +21,18 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <imgui.h>
+#include <imgui_internal.h>  // ImGui::ClearActiveID: a finger that scrolls lets go of what it pressed
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl3.h>
 
 #include "common/log.h"
 #include "imgui_gl.h"
 #include "common/stats.h"
+#include "options_menu.h"
 #include "settings.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
@@ -77,6 +80,13 @@ struct ScriptedInput {
     SDL_Keycode key = 0;      // 0: a click
     float x = 0.0f, y = 0.0f;
     bool done = false;
+};
+
+// The card a section of the drawer's rows is drawn on (card_begin).
+struct Card {
+    ImVec2 top;
+    float width = 0.0f;
+    int rows = 0;
 };
 
 struct State {
@@ -153,6 +163,10 @@ struct State {
     bool drawer_focus = false;   // given the keyboard and gamepad when it opens
     bool drawer_scrolled = false;  // the finger down now has dragged the rows: no row is pressed
     bool shot_when_shut = false;   // a screenshot asked for in it, taken once it is out of the picture
+    bool drawer_developer = false;  // its developer tools unfolded
+    Card card;
+    bool settings_changed = false;  // a setting changed in the drawer or the menus, not applied yet
+    bool panel_scrolled = false;    // the panel's drag_scroll
     float ui_scale = 1.0f;         // the screen's density, for rows a thumb can press
     // Fingers on the screen as ImGui's pointer: the first one down, and those the drawer took from
     // the on-screen pad (their moves and lifts are the drawer's too).
@@ -167,6 +181,11 @@ struct State {
 };
 
 State s;
+
+// A length in the overlay's units: pixels on a desktop's screen, more on a dense one.
+float dp(float v) {
+    return v * s.ui_scale;
+}
 
 template <typename... Args>
 void text(std::format_string<Args...> fmt, Args&&... args) {
@@ -398,7 +417,14 @@ void initialise_touch(SDL_Window* window) {
     const float density = SDL_GetWindowPixelDensity(window);
     const float display = SDL_GetWindowDisplayScale(window);
     s.ui_scale = density > 0.0f && display > 0.0f ? std::max(display / density, 1.0f) : 1.0f;
-    ImGui::GetStyle().ScaleAllSizes(s.ui_scale);
+    // The panel's buttons, boxes and headers roomier for a finger, and reached a little beyond.
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.FramePadding = ImVec2(8.0f, 5.0f);
+    style.ItemSpacing = ImVec2(8.0f, 6.0f);
+    style.TouchExtraPadding = ImVec2(4.0f, 4.0f);
+    style.ScrollbarSize = 18.0f;
+    style.GrabMinSize = 18.0f;
+    style.ScaleAllSizes(s.ui_scale);
     bool font = false;
     for (const char* path : {"/system/fonts/Roboto-Regular.ttf", "/system/fonts/DroidSans.ttf"}) {
         if (std::FILE* f = std::fopen(path, "rb")) {
@@ -593,14 +619,15 @@ void frame_section(const Shown& shown, const Averages& a) {
     }
     const float top = static_cast<float>(std::max(2.0 * tick_ms, 10.0));
     ImGui::PlotLines("##frame", frame_ms.data(), static_cast<int>(n), 0, std::format("frame, 0-{:.0f} ms", top).c_str(),
-                     0.0f, top, ImVec2(300.0f, 44.0f));
+                     0.0f, top, ImVec2(dp(300.0f), dp(44.0f)));
     // Scaled to its own worst: the game's code takes a small part of a tick on a PC.
     float game_top = 0.5f;
     for (std::size_t i = game_ms.size() - ticks; i < game_ms.size(); ++i) {
         game_top = std::max(game_top, game_ms[i] * 1.25f);
     }
     ImGui::PlotHistogram("##game", game_ms.data() + (game_ms.size() - ticks), static_cast<int>(ticks), 0,
-                         std::format("game tick, 0-{:.1f} ms", game_top).c_str(), 0.0f, game_top, ImVec2(300.0f, 34.0f));
+                         std::format("game tick, 0-{:.1f} ms", game_top).c_str(), 0.0f, game_top,
+                         ImVec2(dp(300.0f), dp(34.0f)));
     if (ImGui::BeginTable("split", 2, ImGuiTableFlags_SizingFixedFit)) {
         row("game tick (the decompiled C)", std::format("{:6.2f} ms / tick", a.game_ms));
         row("scene read from memory", std::format("{:6.2f} ms / tick", a.scene_ms));
@@ -790,7 +817,7 @@ void memory_section() {
     // The map: 128 KB a cell, 64 a row (8 MB); brighter with more of it in use, orange where it
     // changed since the last look (twice a second).
     const ImVec2 origin = ImGui::GetCursorScreenPos();
-    const float cw = 5.0f, ch = 9.0f;
+    const float cw = dp(5.0f), ch = dp(9.0f);
     ImDrawList* draw = ImGui::GetWindowDrawList();
     for (std::size_t cell = 0; cell < kCells; ++cell) {
         const float x = origin.x + static_cast<float>(cell % 64) * cw;
@@ -846,7 +873,7 @@ void memory_viewer_window() {
     if (ImGui::Begin("Game memory", &s.memory_viewer,
                      ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings)) {
         static char input[16] = "100000";
-        ImGui::SetNextItemWidth(90.0f);
+        ImGui::SetNextItemWidth(dp(90.0f));
         if (ImGui::InputText("address", input, sizeof(input),
                              ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue)) {
             s.view_address = static_cast<std::uint32_t>(std::strtoul(input, nullptr, 16));
@@ -913,7 +940,7 @@ void mobys_section() {
     text("{} live mobys, {} drawn", s.state.mobys.size(), s.counts.mobys_drawn);
     ImGui::Checkbox("near the hero", &s.near_hero);
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(110.0f);
+    ImGui::SetNextItemWidth(dp(110.0f));
     ImGui::SliderFloat("radius", &s.radius, 2.0f, 200.0f, "%.0f");
     ImGui::Checkbox("labels in the picture", &s.labels);
     ImGui::SameLine();
@@ -933,7 +960,7 @@ void mobys_section() {
     text("{} listed{}", rows.size(), h == nullptr ? " (no hero: all of them)" : "");
     if (ImGui::BeginTable("mobys", 8,
                           ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY,
-                          ImVec2(0.0f, 190.0f))) {
+                          ImVec2(0.0f, dp(190.0f)))) {
         ImGui::TableSetupScrollFreeze(0, 1);
         for (const char* column : {"address", "class", "state", "mode", "anim", "position", "dist", "update"}) {
             ImGui::TableSetupColumn(column);
@@ -1268,29 +1295,61 @@ std::string shot_name(std::uint64_t tick) {
 
 // ---- The panel ----
 
+// On Android the drawer has the menus (debug_overlay.h); OPENRAC_DRAWER=1 elsewhere too.
+bool drawer_possible() {
+#if defined(__ANDROID__)
+    return true;
+#else
+    static const bool forced = std::getenv("OPENRAC_DRAWER") != nullptr;
+    return forced;
+#endif
+}
+
+// A finger dragged up or down the window being drawn scrolls it, and lets go of what it came down
+// on, which is then not pressed. `scrolled`: the finger down now has scrolled.
+void drag_scroll(bool& scrolled) {
+    if (ImGui::IsMouseClicked(0)) {
+        scrolled = false;
+    }
+    if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) && ImGui::IsMouseDown(0)
+        && (scrolled || std::abs(ImGui::GetMouseDragDelta(0).y) > dp(10.0f))) {
+        if (!scrolled) {
+            ImGui::ClearActiveID();
+        }
+        scrolled = true;
+        ImGui::SetScrollY(ImGui::GetScrollY() - ImGui::GetIO().MouseDelta.y);
+    }
+}
+
 void panel(const Shown& shown) {
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + 10.0f, viewport->WorkPos.y + 10.0f), ImGuiCond_Always);
     ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, 0.0f), ImVec2(viewport->WorkSize.x - 20.0f, viewport->WorkSize.y - 20.0f));
     ImGui::SetNextWindowBgAlpha(0.82f);
+    // On a touch screen it has no keys to name, and a gamepad moves through it while the game is
+    // paused (draw); a finger scrolls it.
+    const bool keys = !drawer_possible();
     const ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize
                                    | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing
-                                   | ImGuiWindowFlags_NoNav;
+                                   | (keys ? ImGuiWindowFlags_NoNav : ImGuiWindowFlags_None);
     if (ImGui::Begin("OpenRAC debug", nullptr, flags)) {
+        if (!keys) {
+            drag_scroll(s.panel_scrolled);
+        }
         const Averages a = averages();
         const std::string where = s.level >= 0 && s.level < 19 ? kLevelNames[static_cast<std::size_t>(s.level)] : "boot";
         text_coloured(kYellow, "OpenRAC {}  {}  tick {}  {:.0f} tps  {:.0f} fps", s.game, where, s.tick, a.tps, a.fps);
-        if (ImGui::Button(s.paused ? "resume (F5)" : "pause (F5)")) {
+        if (ImGui::Button(keys ? (s.paused ? "resume (F5)" : "pause (F5)") : (s.paused ? "resume" : "pause"))) {
             s.paused = !s.paused;
             s.held_frames = 0;
         }
         ImGui::SameLine();
-        if (ImGui::Button("step (F6)")) {
+        if (ImGui::Button(keys ? "step (F6)" : "step")) {
             s.paused = true;
             s.step = true;
         }
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(70.0f);
+        ImGui::SetNextItemWidth(dp(70.0f));
         static const char* const kSpeeds[] = {"1x", "1/2", "1/4", "1/8", "1/16"};
         int speed = std::clamp(static_cast<int>(std::lround(std::log2(s.stretch))), 0, 4);
         if (ImGui::Combo("speed", &speed, kSpeeds, 5)) {
@@ -1300,7 +1359,7 @@ void panel(const Shown& shown) {
             ImGui::SameLine();
             text_coloured(kRed, "PAUSED");
         }
-        if (ImGui::Button("screenshot (F12)")) {
+        if (ImGui::Button(keys ? "screenshot (F12)" : "screenshot")) {
             s.shot_path = shot_name(s.tick);
         }
         ImGui::SameLine();
@@ -1315,7 +1374,7 @@ void panel(const Shown& shown) {
             }
         }
         if (!s.message.empty()) {
-            ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 420.0f);
+            ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + dp(420.0f));
             text_coloured(kDim, "{}", s.message);
             ImGui::PopTextWrapPos();
         }
@@ -1341,7 +1400,9 @@ void panel(const Shown& shown) {
         if (header(kShaders, "Shaders")) {
             shaders_section();
         }
-        text_coloured(kDim, "F3 hide  F5 pause  F6 step  F7/F8 slower/faster  F12 screenshot");
+        if (keys) {
+            text_coloured(kDim, "F3 hide  F5 pause  F6 step  F7/F8 slower/faster  F12 screenshot");
+        }
     }
     ImGui::End();
 }
@@ -1377,6 +1438,17 @@ bool write_window(const std::string& path, int width, int height) {
     return false;
 }
 
+// A setting moved in the drawer or the menus: saved, and applied by the window
+// (take_settings_changed). A picture shape of the player's own is the settings file's.
+void change_setting(int row, int by) {
+    options_menu::step(row, by);
+    if (row == options_menu::kAspect && settings::get().aspect == settings::Aspect::Custom) {
+        options_menu::step(row, by);
+    }
+    settings::save();
+    s.settings_changed = true;
+}
+
 // The menus along the window's top, as OpenGOAL has them: on Windows and Linux. macOS has its own
 // menu bar, with the same menus (platform/macos_app.mm).
 #if defined(__APPLE__)
@@ -1384,16 +1456,6 @@ constexpr bool kMenuBar = false;
 #else
 constexpr bool kMenuBar = true;
 #endif
-
-// On Android the drawer has them (debug_overlay.h); OPENRAC_DRAWER=1 elsewhere too.
-bool drawer_possible() {
-#if defined(__ANDROID__)
-    return true;
-#else
-    static const bool forced = std::getenv("OPENRAC_DRAWER") != nullptr;
-    return forced;
-#endif
-}
 
 // OPENRAC_MENU_BAR=1 has them on macOS as well (for looking at them there).
 bool menu_bar_possible() {
@@ -1432,6 +1494,19 @@ void menu_bar() {
             s.toast = "Alt shows the menus again";
             s.toast_until = ImGui::GetTime() + 4.0;
         }
+        ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Graphics")) {
+        // Each item moves its setting on, its value beside it, and leaves the menu open.
+        ImGui::PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
+        using namespace options_menu;
+        for (const int row : {kAspect, kHud, kRenderScale, kMsaa, kAnisotropy, kFrameRate, kVSync}) {
+            const bool shown_for = row != kHud || settings::get().aspect != settings::Aspect::Standard;
+            if (ImGui::MenuItem(label(row), value(row).c_str(), false, shown_for)) {
+                change_setting(row, 1);
+            }
+        }
+        ImGui::PopItemFlag();
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Sound")) {
@@ -1562,14 +1637,13 @@ bool drawer_event(const SDL_Event& e) {
 namespace look {
 constexpr ImU32 kPanel = IM_COL32(0x1d, 0x1d, 0x28, 250);
 constexpr ImU32 kCard = IM_COL32(0x22, 0x22, 0x2f, 255);
-constexpr ImU32 kCardPressed = IM_COL32(0x3a, 0x2c, 0x16, 255);
+constexpr ImU32 kPressed = IM_COL32(0x3a, 0x2c, 0x16, 255);
 constexpr ImU32 kLine = IM_COL32(156, 161, 212, 56);
 constexpr ImU32 kLineStrong = IM_COL32(156, 161, 212, 90);
-constexpr ImU32 kBarTop = IM_COL32(0xe5, 0xa0, 0x13, 255);
-constexpr ImU32 kBarBottom = IM_COL32(0xcd, 0x83, 0x00, 255);
-constexpr ImU32 kBarInk = IM_COL32(0x2a, 0x18, 0x00, 255);
+constexpr ImU32 kOrange = IM_COL32(0xe5, 0xa0, 0x13, 255);  // the launcher's primary buttons
+constexpr ImU32 kOrangePressed = IM_COL32(0xb0, 0x70, 0x00, 255);
+constexpr ImU32 kOrangeInk = IM_COL32(0x2a, 0x18, 0x00, 255);
 constexpr ImU32 kAmber = IM_COL32(0xff, 0xb4, 0x43, 255);
-constexpr ImU32 kBrand = IM_COL32(0xd5, 0x8a, 0x00, 255);
 constexpr ImU32 kGold = IM_COL32(0xff, 0xd0, 0x8a, 255);
 constexpr ImU32 kText = IM_COL32(0xe8, 0xf0, 0xff, 255);
 constexpr ImU32 kSoft = IM_COL32(0xaa, 0xb6, 0xdc, 255);
@@ -1578,121 +1652,148 @@ constexpr ImU32 kOff = IM_COL32(0x3a, 0x3b, 0x52, 255);
 constexpr ImU32 kErr = IM_COL32(0xff, 0x8a, 0x7a, 255);
 }  // namespace look
 
-// A row of the drawer as high as a thumb: true when it was pressed (not when the finger only
-// dragged the rows along). Its label at the left; `draw_right` puts what it shows at the right.
-template <typename Right>
-bool drawer_row(const char* label, bool enabled, Right&& draw_right, ImU32 label_ink = look::kText) {
-    const float height = 48.0f * s.ui_scale;
-    const ImVec2 at = ImGui::GetCursorScreenPos();
-    const float width = ImGui::GetContentRegionAvail().x;
-    ImGui::PushID(label);
-    ImGui::BeginDisabled(!enabled);
-    const bool pressed = ImGui::InvisibleButton("row", ImVec2(width, height)) && !s.drawer_scrolled;
+// A section's rows on one card, as the launcher's settings have them: the card is drawn under the
+// rows once their height is known, a hairline between each two.
+void card_begin() {
     ImDrawList* list = ImGui::GetWindowDrawList();
-    const ImVec2 end(at.x + width, at.y + height);
-    // A card of the launcher's: a lighter panel with a thin border, amber when pressed or chosen.
-    const float round = 12.0f * s.ui_scale;
-    const bool active = ImGui::IsItemActive() && !s.drawer_scrolled;
-    list->AddRectFilled(at, end, active ? look::kCardPressed : look::kCard, round);
-    const bool focused = ImGui::IsItemFocused() && ImGui::GetIO().NavVisible;
-    list->AddRect(at, end, focused || active ? look::kAmber : look::kLine, round, 0, focused ? 2.0f * s.ui_scale : 1.0f);
-    const float text_y = at.y + (height - ImGui::GetFontSize()) * 0.5f;
-    const ImU32 ink = enabled ? label_ink : look::kDim;
-    list->AddText(ImVec2(at.x + 16.0f * s.ui_scale, text_y), ink, label);
-    draw_right(list, ImVec2(end.x - 16.0f * s.ui_scale, at.y + height * 0.5f), ink);
-    ImGui::EndDisabled();
-    ImGui::PopID();
-    ImGui::Dummy(ImVec2(0.0f, 4.0f * s.ui_scale));
-    return pressed && enabled;
+    list->ChannelsSplit(2);
+    list->ChannelsSetCurrent(1);
+    s.card = {ImGui::GetCursorScreenPos(), ImGui::GetContentRegionAvail().x, 0};
 }
 
-bool drawer_row(const char* label, bool enabled = true, ImU32 ink = look::kText) {
-    return drawer_row(label, enabled, [](ImDrawList*, ImVec2, ImU32) {}, ink);
+void card_end() {
+    ImDrawList* list = ImGui::GetWindowDrawList();
+    const ImVec2 end(s.card.top.x + s.card.width, ImGui::GetCursorScreenPos().y);
+    list->ChannelsSetCurrent(0);
+    list->AddRectFilled(s.card.top, end, look::kCard, dp(12.0f));
+    list->AddRect(s.card.top, end, look::kLine, dp(12.0f));
+    list->ChannelsMerge();
+}
+
+// A section's heading: its name, small, above its card.
+void drawer_section(const char* title) {
+    ImGui::Dummy(ImVec2(0.0f, dp(16.0f)));
+    ImFont* font = ImGui::GetFont();
+    const float size = ImGui::GetFontSize() * 0.85f;
+    const ImVec2 at = ImGui::GetCursorScreenPos();
+    ImGui::GetWindowDrawList()->AddText(font, size, ImVec2(at.x + dp(6.0f), at.y), look::kDim, title);
+    ImGui::Dummy(ImVec2(0.0f, size + dp(6.0f)));
+}
+
+// A row of the card open now, as high as a thumb: true when it was pressed (a finger that dragged
+// the rows along presses none). Its label at the left; `right` draws what it shows at the right,
+// from the point given (the row's right edge, inset, at its middle).
+template <typename Right>
+bool drawer_row(const char* label, ImU32 ink, Right&& right) {
+    const float height = dp(48.0f);
+    const ImVec2 at = ImGui::GetCursorScreenPos();
+    const float width = ImGui::GetContentRegionAvail().x;
+    ImDrawList* list = ImGui::GetWindowDrawList();
+    if (s.card.rows++ > 0) {
+        list->AddLine(ImVec2(at.x + dp(16.0f), at.y), ImVec2(at.x + width - dp(16.0f), at.y), look::kLine);
+    }
+    ImGui::PushID(label);
+    const bool pressed = ImGui::InvisibleButton("row", ImVec2(width, height));
+    ImGui::PopID();
+    const ImVec2 a(at.x + dp(3.0f), at.y + dp(3.0f));
+    const ImVec2 b(at.x + width - dp(3.0f), at.y + height - dp(3.0f));
+    if (ImGui::IsItemActive()) {
+        list->AddRectFilled(a, b, look::kPressed, dp(9.0f));
+    }
+    if (ImGui::IsItemFocused() && ImGui::GetIO().NavVisible) {
+        list->AddRect(a, b, look::kAmber, dp(9.0f), 0, dp(2.0f));
+    }
+    list->AddText(ImVec2(at.x + dp(16.0f), at.y + (height - ImGui::GetFontSize()) * 0.5f), ink, label);
+    right(list, ImVec2(at.x + width - dp(16.0f), at.y + height * 0.5f));
+    return pressed;
+}
+
+bool drawer_row(const char* label, ImU32 ink = look::kText) {
+    return drawer_row(label, ink, [](ImDrawList*, ImVec2) {});
+}
+
+// An arrow as the launcher draws one: two strokes meeting at `tip`, pointing `dx` (-1 left, 1
+// right) or, with `dx` 0, down (`dy` 1) or up (`dy` -1).
+void arrow(ImDrawList* list, ImVec2 tip, float dx, float dy, ImU32 ink) {
+    const float arm = dp(5.0f);
+    const ImVec2 back(tip.x - dx * arm, tip.y - dy * arm);
+    const ImVec2 points[3] = {ImVec2(back.x - dy * arm, back.y - dx * arm), tip,
+                              ImVec2(back.x + dy * arm, back.y + dx * arm)};
+    list->AddPolyline(points, 3, ink, ImDrawFlags_None, dp(2.0f));
 }
 
 // A row that turns something on and off, its switch at the right.
 bool drawer_switch(const char* label, bool on) {
-    return drawer_row(label, true, [on](ImDrawList* list, ImVec2 right, ImU32) {
-        const float h = 22.0f * s.ui_scale;
-        const float w = 40.0f * s.ui_scale;
-        const ImVec2 a(right.x - w, right.y - h * 0.5f);
+    return drawer_row(label, look::kText, [on](ImDrawList* list, ImVec2 right) {
+        const float h = dp(22.0f);
+        const ImVec2 a(right.x - dp(40.0f), right.y - h * 0.5f);
         const ImVec2 b(right.x, right.y + h * 0.5f);
-        if (on) {
-            // The header bar's orange, as the launcher's primary buttons.
-            list->AddRectFilled(a, b, look::kBarBottom, h * 0.5f);
-            list->AddRectFilled(a, ImVec2(b.x, right.y), look::kBarTop, h * 0.5f, ImDrawFlags_RoundCornersTop);
-        } else {
-            list->AddRectFilled(a, b, look::kOff, h * 0.5f);
-        }
+        list->AddRectFilled(a, b, on ? look::kOrange : look::kOff, h * 0.5f);
         list->AddRect(a, b, look::kLineStrong, h * 0.5f);
-        const float r = h * 0.5f - 3.0f * s.ui_scale;
-        list->AddCircleFilled(ImVec2(on ? b.x - h * 0.5f : a.x + h * 0.5f, right.y), r,
-                              on ? look::kBarInk : look::kSoft);
+        list->AddCircleFilled(ImVec2(on ? b.x - h * 0.5f : a.x + h * 0.5f, right.y), h * 0.5f - dp(3.0f),
+                              on ? look::kOrangeInk : look::kSoft);
     });
 }
 
-// A row with a value and a minus and a plus beside it: -1 or 1 when one of them was pressed.
-int drawer_stepper(const char* label, const std::string& value, bool can_lower, bool can_raise) {
-    const float height = 48.0f * s.ui_scale;
-    const float button = 44.0f * s.ui_scale;
-    const float gap = 6.0f * s.ui_scale;
-    const float width = ImGui::GetContentRegionAvail().x;
-    const ImVec2 at = ImGui::GetCursorScreenPos();
-    ImDrawList* list = ImGui::GetWindowDrawList();
-    const float round = 12.0f * s.ui_scale;
-    list->AddRectFilled(at, ImVec2(at.x + width, at.y + height), look::kCard, round);
-    list->AddRect(at, ImVec2(at.x + width, at.y + height), look::kLine, round);
-    const float text_y = at.y + (height - ImGui::GetFontSize()) * 0.5f;
-    list->AddText(ImVec2(at.x + 16.0f * s.ui_scale, text_y), look::kText, label);
-    const float value_width = ImGui::CalcTextSize("0000%").x;
-    const float right = at.x + width - 4.0f * s.ui_scale;
-    const float plus_x = right - button;
-    const float value_x = plus_x - gap - value_width;
-    const float minus_x = value_x - gap - button;
-    const ImVec2 size = ImGui::CalcTextSize(value.c_str());
-    list->AddText(ImVec2(value_x + (value_width - size.x) * 0.5f, text_y), look::kGold, value.c_str());
-    int step = 0;
-    const auto key = [&](const char* id, float x, bool enabled, bool plus) {
-        ImGui::SetCursorScreenPos(ImVec2(x, at.y));
-        ImGui::BeginDisabled(!enabled);
-        if (ImGui::InvisibleButton(id, ImVec2(button, height)) && !s.drawer_scrolled && enabled) {
-            step = plus ? 1 : -1;
+// A row with its value between two arrows, as a console game's options: -1 or 1 when it was moved
+// back or on. A touch on the value's left part moves it back, anywhere else on; a gamepad's or the
+// keyboard's left and right move it while it has the focus, and A moves it on.
+int drawer_choice(const char* label, const std::string& value, bool can_lower = true, bool can_raise = true) {
+    float back_until = 0.0f;  // a touch left of this moves the value back
+    const bool pressed = drawer_row(label, look::kText, [&](ImDrawList* list, ImVec2 right) {
+        // The values of every row in one column, centred between its arrows.
+        const float column = std::min(s.card.width * 0.48f, dp(168.0f));
+        const float left = right.x - column;
+        arrow(list, ImVec2(left, right.y), -1.0f, 0.0f, can_lower ? look::kAmber : look::kOff);
+        arrow(list, ImVec2(right.x, right.y), 1.0f, 0.0f, can_raise ? look::kAmber : look::kOff);
+        const ImVec2 size = ImGui::CalcTextSize(value.c_str());
+        list->AddText(ImVec2(left + (column - size.x) * 0.5f, right.y - size.y * 0.5f), look::kGold, value.c_str());
+        back_until = left + column * 0.35f;
+    });
+    int by = 0;
+    if (pressed) {
+        by = ImGui::IsMouseReleased(0) && ImGui::GetIO().MousePos.x < back_until ? -1 : 1;
+    }
+    if (ImGui::IsItemFocused()) {
+        const auto held = [](ImGuiKey pad, ImGuiKey stick, ImGuiKey key) {
+            return ImGui::IsKeyPressed(pad) || ImGui::IsKeyPressed(stick) || ImGui::IsKeyPressed(key);
+        };
+        if (held(ImGuiKey_GamepadDpadLeft, ImGuiKey_GamepadLStickLeft, ImGuiKey_LeftArrow)) {
+            by = -1;
+        } else if (held(ImGuiKey_GamepadDpadRight, ImGuiKey_GamepadLStickRight, ImGuiKey_RightArrow)) {
+            by = 1;
         }
-        const ImVec2 c(x + button * 0.5f, at.y + height * 0.5f);
-        const bool active = ImGui::IsItemActive() && !s.drawer_scrolled;
-        const ImU32 ink = !enabled ? look::kDim : active ? look::kBarInk : look::kText;
-        const float r = button * 0.36f;
-        list->AddCircleFilled(c, r, active ? look::kBarTop : look::kOff);
-        const bool focused = ImGui::IsItemFocused() && ImGui::GetIO().NavVisible;
-        list->AddCircle(c, r, focused ? look::kAmber : look::kLineStrong, 0, focused ? 2.0f * s.ui_scale : 1.0f);
-        const float arm = button * 0.16f;
-        const float thick = 2.5f * s.ui_scale;
-        list->AddLine(ImVec2(c.x - arm, c.y), ImVec2(c.x + arm, c.y), ink, thick);
-        if (plus) {
-            list->AddLine(ImVec2(c.x, c.y - arm), ImVec2(c.x, c.y + arm), ink, thick);
-        }
-        ImGui::EndDisabled();
-    };
-    ImGui::PushID(label);
-    key("lower", minus_x, can_lower, false);
-    key("raise", plus_x, can_raise, true);
-    ImGui::PopID();
-    ImGui::SetCursorScreenPos(ImVec2(at.x, at.y + height));
-    ImGui::Dummy(ImVec2(width, 4.0f * s.ui_scale));
-    return step;
+    }
+    return (by < 0 && !can_lower) || (by > 0 && !can_raise) ? 0 : by;
 }
 
-// A section's heading, numbered as the launcher's are ("01 View"): the number in the brand's
-// orange, the title in gold.
-void drawer_section(int number, const char* title) {
-    ImGui::Dummy(ImVec2(0.0f, 12.0f * s.ui_scale));
-    const ImVec2 at = ImGui::GetCursorScreenPos();
+// One of the port's settings as a choice row (options_menu.h).
+void setting_row(int row) {
+    std::string value = options_menu::value(row);
+    if (row == options_menu::kAspect && settings::get().aspect == settings::Aspect::Window) {
+        value = "Fill screen";  // a window's shape, said as a phone's
+    }
+    if (const int by = drawer_choice(options_menu::label(row), value)) {
+        change_setting(row, by);
+    }
+}
+
+// The launcher's primary button, across the drawer.
+bool drawer_button(const char* label) {
+    const float height = dp(46.0f);
+    const ImVec2 a = ImGui::GetCursorScreenPos();
+    const ImVec2 b(a.x + ImGui::GetContentRegionAvail().x, a.y + height);
+    const bool pressed = ImGui::InvisibleButton(label, ImVec2(b.x - a.x, height));
     ImDrawList* list = ImGui::GetWindowDrawList();
-    const std::string n = std::format("{:02}", number);
-    const float x = at.x + 4.0f * s.ui_scale;
-    list->AddText(ImVec2(x, at.y), look::kBrand, n.c_str());
-    list->AddText(ImVec2(x + ImGui::CalcTextSize(n.c_str()).x + 8.0f * s.ui_scale, at.y), look::kGold, title);
-    ImGui::Dummy(ImVec2(0.0f, ImGui::GetFontSize() + 6.0f * s.ui_scale));
+    const float round = dp(12.0f);
+    list->AddRectFilled(a, b, ImGui::IsItemActive() ? look::kOrangePressed : look::kOrange, round);
+    if (ImGui::IsItemFocused() && ImGui::GetIO().NavVisible) {
+        list->AddRect(ImVec2(a.x - dp(3.0f), a.y - dp(3.0f)), ImVec2(b.x + dp(3.0f), b.y + dp(3.0f)), look::kGold,
+                      round + dp(3.0f), 0, dp(2.0f));
+    }
+    const ImVec2 size = ImGui::CalcTextSize(label);
+    list->AddText(ImVec2((a.x + b.x - size.x) * 0.5f, a.y + (height - size.y) * 0.5f), look::kOrangeInk, label);
+    return pressed;
 }
 
 void drawer(const Shown& shown) {
@@ -1715,13 +1816,16 @@ void drawer(const Shown& shown) {
     if (shown.window != nullptr && SDL_GetWindowSafeArea(shown.window, &safe)) {
         inset = static_cast<float>(safe.x);
     }
-    const float width = std::min(viewport->Size.x * 0.6f, 340.0f * s.ui_scale) + inset;
+    const float width = std::min(viewport->Size.x * 0.6f, dp(360.0f)) + inset;
     const float x = viewport->Pos.x - width * (1.0f - ease);
     ImGui::GetBackgroundDrawList()->AddRectFilled(viewport->Pos,
                                                   ImVec2(viewport->Pos.x + viewport->Size.x, viewport->Pos.y + viewport->Size.y),
                                                   IM_COL32(0x12, 0x12, 0x1a, static_cast<int>(150.0f * ease)));
-    // A touch beside it shuts it.
+    // A touch beside it shuts it, as does the gamepad's B.
     if (s.drawer_open && ImGui::IsMouseReleased(0) && !s.drawer_scrolled && io.MouseClickedPos[0].x > x + width) {
+        set_drawer(false);
+    }
+    if (s.drawer_open && ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false)) {
         set_drawer(false);
     }
     ImGui::SetNextWindowPos(ImVec2(x, viewport->Pos.y));
@@ -1730,111 +1834,132 @@ void drawer(const Shown& shown) {
         ImGui::SetNextWindowFocus();
         s.drawer_focus = false;
     }
-    // The launcher's panel: its ink, a thin border, 16-pixel corners on the open side.
-    const float bar = 56.0f * s.ui_scale;
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 16.0f * s.ui_scale);
+    // The launcher's panel: its ink, a thin border, 16-pixel corners on the open side; a header
+    // above the rows, which scroll under it.
+    const float header = dp(52.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, dp(16.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(14.0f * s.ui_scale + inset, bar + 10.0f * s.ui_scale));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(dp(14.0f) + inset, header + dp(4.0f)));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
-    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 4.0f * s.ui_scale);
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, dp(4.0f));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0, 0, 0, 0));
     ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImGui::ColorConvertU32ToFloat4(look::kLineStrong));
     const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize
                                    | ImGuiWindowFlags_NoSavedSettings;
     if (ImGui::Begin("OpenRAC options", nullptr, flags)) {
-        // A finger dragged up or down scrolls the rows, and presses none of them.
-        if (ImGui::IsMouseClicked(0)) {
-            s.drawer_scrolled = false;
-        }
-        if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) && ImGui::IsMouseDown(0)
-            && (s.drawer_scrolled || std::abs(ImGui::GetMouseDragDelta(0).y) > 10.0f * s.ui_scale)) {
-            s.drawer_scrolled = true;
-            ImGui::SetScrollY(ImGui::GetScrollY() - io.MouseDelta.y);
-        }
-
-        // The panel and the launcher's orange header bar with "OpenRAC" on it, fixed above the
-        // rows that scroll under it.
+        drag_scroll(s.drawer_scrolled);
         {
             ImDrawList* back = ImGui::GetWindowDrawList();
             const ImVec2 top(x, viewport->Pos.y);
             const ImVec2 bottom(x + width, viewport->Pos.y + viewport->Size.y);
-            const float round = 16.0f * s.ui_scale;
             back->PushClipRect(top, bottom, false);
-            back->AddRectFilled(top, bottom, look::kPanel, round, ImDrawFlags_RoundCornersRight);
-            back->AddRect(top, bottom, look::kLine, round, ImDrawFlags_RoundCornersRight);
+            back->AddRectFilled(top, bottom, look::kPanel, dp(16.0f), ImDrawFlags_RoundCornersRight);
+            back->AddRect(top, bottom, look::kLine, dp(16.0f), ImDrawFlags_RoundCornersRight);
             back->PopClipRect();
         }
-        ImDrawList* front = ImGui::GetForegroundDrawList();
         {
+            // The header: the wordmark, and what the game is doing while the drawer is out.
+            ImDrawList* front = ImGui::GetForegroundDrawList();
             const ImVec2 top(x, viewport->Pos.y);
-            const ImVec2 bottom(x + width, viewport->Pos.y + bar);
-            front->AddRectFilledMultiColor(top, ImVec2(bottom.x - 16.0f * s.ui_scale, bottom.y), look::kBarTop,
-                                           look::kBarTop, look::kBarBottom, look::kBarBottom);
-            front->AddRectFilled(ImVec2(bottom.x - 32.0f * s.ui_scale, top.y), bottom, look::kBarBottom,
-                                 16.0f * s.ui_scale, ImDrawFlags_RoundCornersTopRight);
+            const ImVec2 bottom(x + width, viewport->Pos.y + header);
+            front->AddRectFilled(top, bottom, look::kPanel, dp(16.0f), ImDrawFlags_RoundCornersTopRight);
+            if (ImGui::GetScrollY() > 0.0f) {
+                front->AddLine(ImVec2(top.x, bottom.y), bottom, look::kLine);
+            }
             ImFont* font = ImGui::GetFont();
-            const float size = ImGui::GetFontSize() * 1.35f;
-            const float text_y = top.y + (bar - size) * 0.5f;
-            const float text_x = top.x + inset + 18.0f * s.ui_scale;
-            const ImVec2 open = font->CalcTextSizeA(size, FLT_MAX, 0.0f, "Open");
-            front->AddText(font, size, ImVec2(text_x, text_y), look::kBarInk, "Open");
-            front->AddText(font, size, ImVec2(text_x + open.x, text_y), IM_COL32(0x1b, 0x12, 0x06, 255), "RAC");
-            front->AddText(font, size, ImVec2(text_x + open.x + 0.6f * s.ui_scale, text_y),
-                           IM_COL32(0x1b, 0x12, 0x06, 255), "RAC");  // bold, as the site's wordmark
+            const float size = ImGui::GetFontSize() * 1.2f;
+            const float text_y = top.y + (header - size) * 0.5f;
+            const float text_x = top.x + inset + dp(18.0f);
+            const float open = font->CalcTextSizeA(size, FLT_MAX, 0.0f, "Open").x;
+            front->AddText(font, size, ImVec2(text_x, text_y), look::kText, "Open");
+            front->AddText(font, size, ImVec2(text_x + open, text_y), look::kAmber, "RAC");
             const char* state = s.keep_paused ? "Paused" : "Paused while open";
             const ImVec2 state_size = ImGui::CalcTextSize(state);
-            front->AddText(ImVec2(bottom.x - state_size.x - 18.0f * s.ui_scale, top.y + (bar - state_size.y) * 0.5f),
-                           look::kBarInk, state);
-        }
-        if (drawer_row("Resume", true, look::kGold)) {
-            set_drawer(false);
+            const ImVec2 pill_b(bottom.x - dp(16.0f), top.y + header * 0.5f + state_size.y * 0.5f + dp(4.0f));
+            const ImVec2 pill_a(pill_b.x - state_size.x - dp(20.0f), pill_b.y - state_size.y - dp(8.0f));
+            front->AddRectFilled(pill_a, pill_b, look::kOff, (pill_b.y - pill_a.y) * 0.5f);
+            front->AddText(ImVec2(pill_a.x + dp(10.0f), pill_a.y + dp(4.0f)), look::kSoft, state);
         }
 
-        drawer_section(1, "View");
+        if (drawer_button("Resume")) {
+            set_drawer(false);
+        }
+        ImGui::SetItemDefaultFocus();  // where a gamepad starts
+
+        drawer_section("GRAPHICS");
+        card_begin();
+        setting_row(options_menu::kAspect);
+        if (settings::get().aspect != settings::Aspect::Standard) {
+            setting_row(options_menu::kHud);  // the HUD at the 4:3 picture's middle, or out at the edges
+        }
+        setting_row(options_menu::kRenderScale);
+        setting_row(options_menu::kMsaa);
+        setting_row(options_menu::kAnisotropy);
+        setting_row(options_menu::kFrameRate);
+        setting_row(options_menu::kVSync);
         if (drawer_switch("Frame counter", settings::get().show_fps)) {
-            settings::get().show_fps = !settings::get().show_fps;
-            settings::save();
+            change_setting(options_menu::kShowFps, 1);
         }
+        card_end();
 
-        drawer_section(2, "Sound");
+        drawer_section("SOUND AND GAME");
+        card_begin();
         const int volume = settings::get().volume;
-        if (const int step = drawer_stepper("Volume", std::format("{}%", volume), volume > 0, volume < 100)) {
-            settings::set_volume(volume + step * 10);
+        if (const int by = drawer_choice("Volume", std::format("{}%", volume), volume > 0, volume < 100)) {
+            settings::set_volume(volume + by * 10);
             settings::save();
         }
+        if (drawer_switch("Skip cutscenes", settings::get().skip_cutscenes)) {
+            change_setting(options_menu::kSkipCutscenes, 1);
+        }
+        card_end();
 
-        drawer_section(3, "Developer");
-        if (drawer_switch("Debug overlay", s.visible)) {
-            set_visible(!s.visible);
+        ImGui::Dummy(ImVec2(0.0f, dp(16.0f)));
+        card_begin();
+        const bool developer = s.drawer_developer;
+        if (drawer_row("Developer tools", look::kText, [developer](ImDrawList* list, ImVec2 right) {
+                arrow(list, ImVec2(right.x - dp(5.0f), right.y + (developer ? -dp(2.5f) : dp(2.5f))), 0.0f,
+                      developer ? -1.0f : 1.0f, look::kSoft);
+            })) {
+            s.drawer_developer = !s.drawer_developer;
         }
-        if (drawer_switch("Keep paused", s.keep_paused)) {
-            s.keep_paused = !s.keep_paused;
+        if (developer) {
+            if (drawer_switch("Debug overlay", s.visible)) {
+                set_visible(!s.visible);
+            }
+            if (drawer_switch("Keep paused", s.keep_paused)) {
+                s.keep_paused = !s.keep_paused;
+            }
+            if (drawer_row("Step one tick")) {
+                s.keep_paused = true;
+                s.step = true;
+            }
+            // Back is slower, on is faster: full speed at the right end.
+            const std::string speed = s.stretch == 1.0 ? "Full" : std::format("1/{}", static_cast<int>(s.stretch));
+            if (const int by = drawer_choice("Speed", speed, s.stretch < 16.0, s.stretch > 1.0)) {
+                s.stretch = by < 0 ? std::min(s.stretch * 2.0, 16.0) : std::max(s.stretch / 2.0, 1.0);
+            }
+            if (drawer_row("Screenshot")) {
+                s.shot_when_shut = true;
+                set_drawer(false);
+            }
+            if (s.developer && drawer_row("Level select")) {
+                set_drawer(false);
+                press(SDLK_F1);
+            }
         }
-        if (drawer_row("Step one tick")) {
-            s.keep_paused = true;
-            s.step = true;
-        }
-        const std::string speed = s.stretch == 1.0 ? "full" : std::format("1/{}", static_cast<int>(s.stretch));
-        if (const int step = drawer_stepper("Speed", speed, s.stretch < 16.0, s.stretch > 1.0)) {
-            s.stretch = step < 0 ? std::min(s.stretch * 2.0, 16.0) : std::max(s.stretch / 2.0, 1.0);
-        }
-        if (drawer_row("Screenshot")) {
-            s.shot_when_shut = true;
-            set_drawer(false);
-        }
-        if (s.developer && drawer_row("Level select")) {
-            set_drawer(false);
-            press(SDLK_F1);
-        }
+        card_end();
 
-        ImGui::Dummy(ImVec2(0.0f, 12.0f * s.ui_scale));
-        if (drawer_row("Quit game", true, look::kErr)) {
+        ImGui::Dummy(ImVec2(0.0f, dp(16.0f)));
+        card_begin();
+        if (drawer_row("Quit game", look::kErr)) {
             SDL_Event quit;
             SDL_zero(quit);
             quit.type = SDL_EVENT_QUIT;
             SDL_PushEvent(&quit);
         }
+        card_end();
 
         // What the picture is drawn with: the launcher's renderer choice takes effect only when the
         // game starts, and here the player sees which one this run has.
@@ -1844,14 +1969,14 @@ void drawer(const Shown& shown) {
                 const char* api = s.gl_subset ? "Vulkan" : openrac::gl::is_es() ? "OpenGL ES" : "OpenGL";
                 return std::format("{} · {}", api, name != nullptr ? name : "unknown GPU");
             }();
-            ImGui::Dummy(ImVec2(0.0f, 14.0f * s.ui_scale));
+            ImGui::Dummy(ImVec2(0.0f, dp(14.0f)));
             ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(look::kDim));
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 6.0f * s.ui_scale);
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + dp(6.0f));
             ImGui::PushTextWrapPos(0.0f);
             ImGui::TextUnformatted(graphics.c_str());
             ImGui::PopTextWrapPos();
             ImGui::PopStyleColor();
-            ImGui::Dummy(ImVec2(0.0f, 12.0f * s.ui_scale));
+            ImGui::Dummy(ImVec2(0.0f, dp(12.0f)));
         }
     }
     ImGui::End();
@@ -2091,10 +2216,12 @@ void draw(const Shown& shown) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, shown.window_width, shown.window_height);
     if (drawer_possible()) {
-        // A gamepad moves through the drawer's rows while it is open, and is the game's otherwise.
+        // A gamepad moves through the drawer's rows while it is open, and through the panel while
+        // the game stands still under it; it is the game's otherwise.
         ImGuiIO& io = ImGui::GetIO();
-        io.ConfigFlags = s.drawer_open ? io.ConfigFlags | ImGuiConfigFlags_NavEnableGamepad
-                                       : io.ConfigFlags & ~ImGuiConfigFlags_NavEnableGamepad;
+        const bool pad_moves = s.drawer_open || (s.visible && s.paused);
+        io.ConfigFlags = pad_moves ? io.ConfigFlags | ImGuiConfigFlags_NavEnableGamepad
+                                   : io.ConfigFlags & ~ImGuiConfigFlags_NavEnableGamepad;
     }
     if (!s.gl_subset) {
         ImGui_ImplOpenGL3_NewFrame();
@@ -2172,6 +2299,10 @@ double tick_stretch() {
 
 void notice(const std::string& text) {
     s.notice = text;
+}
+
+bool take_settings_changed() {
+    return std::exchange(s.settings_changed, false);
 }
 
 void release() {

@@ -2059,9 +2059,11 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         g->input.handle_event(event);
     }
     g->input.update();
-    // The port's rows on the game's Video options page (options_menu.h): a changed one is applied.
-    // Before the debug menu, which adds its entry to the Options list options_menu gives the game.
-    if (options_menu::update(openrac_game_loaded_overlay())) {
+    // The port's rows on the game's Video options page (options_menu.h), and the overlay's drawer
+    // and menus: a changed one is applied. Before the debug menu, which adds its entry to the
+    // Options list options_menu gives the game.
+    const bool changed = options_menu::update(openrac_game_loaded_overlay());
+    if (debug_overlay::take_settings_changed() || changed) {
         apply_settings();
     }
     debug_menu::update(openrac_game_loaded_overlay(), g->index);
@@ -2703,6 +2705,9 @@ bool hold() {
                 continue;
             }
             g->input.handle_event(event);
+        }
+        if (debug_overlay::take_settings_changed()) {
+            apply_settings();  // the drawer is open over the paused game
         }
         const auto started = std::chrono::steady_clock::now();
         const bool dump = renderer::g_dump_draws;

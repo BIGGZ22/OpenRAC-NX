@@ -290,7 +290,11 @@ Picture make_picture(const openrac_front_end& fe) {
         const std::string number = (i < 10 ? " " : "") + std::to_string(i);
         p.text(20, y, number + "  " + fe.level_names[i], sel ? kSelected : kText);
     }
+#if defined(__ANDROID__)
+    p.text(10, p.height - 12, "X START   TRIANGLE CLOSE", kHint);  // no keyboard to name
+#else
     p.text(10, p.height - 12, "X/RETURN START   TRIANGLE/F1 CLOSE", kHint);
+#endif
     return p;
 }
 

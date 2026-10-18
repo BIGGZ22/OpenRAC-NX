@@ -33,10 +33,13 @@ paused or slowed, a line at the top of the picture says so and names the keys
 that undo it; a screenshot says where it went.
 
 The same keys are menus. On Windows and Linux a bar along the window's top
-has View, Sound and Developer, with a tick beside what is on; Alt by itself
+has View, Graphics, Sound and Developer, with a tick beside what is on
+(Graphics lists the picture's settings with their values; a click moves one
+to its next value, and the menu stays open); Alt by itself
 hides it and shows it again, and View > "Hide these menus" hides it (the
 `menu_bar` setting keeps the choice). On macOS the system's menu bar has
-those menus instead; `OPENRAC_MENU_BAR=1` shows the in-window bar there too.
+View, Sound and Developer instead (the game's own Video options page has the
+picture's settings there); `OPENRAC_MENU_BAR=1` shows the in-window bar too.
 On Android they are a drawer that slides in from the left (docs/port/ANDROID.md);
 `OPENRAC_DRAWER=1` puts it in place of the bar elsewhere, opened with the
 on-screen pad's options button or Back.
