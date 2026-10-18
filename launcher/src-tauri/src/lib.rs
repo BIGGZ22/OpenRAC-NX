@@ -9,6 +9,8 @@ use std::sync::{Arc, Mutex};
 use openrac_launcher_core::actions::{Platform, Scope};
 use openrac_launcher_core::config::{self, Config};
 use openrac_launcher_core::detect::{self, Check, Detected, Tool};
+use openrac_launcher_core::disc_choice::{self, DiscChoice};
+use openrac_launcher_core::discs::{self, FoundDisc};
 use openrac_launcher_core::install;
 use openrac_launcher_core::jobs::{Event, Jobs, Started};
 use openrac_launcher_core::launcher_log;
@@ -419,6 +421,11 @@ fn install_game(app: AppHandle, state: State<'_, AppState>, game: String, image:
     let config = state.config.lock().unwrap().clone();
     let install_dir = config.install_dir.clone().ok_or("no install folder (Settings)")?;
     let plan = install::plan_extract(&config, &install_dir, &game, &image)?;
+    // A developer's other disc set up before is kept aside, not replaced (disc_choice.rs).
+    if config.developer {
+        let catalog = openrac_launcher_core::catalog::load(config.root()?)?;
+        disc_choice::before_set_up(&config, &catalog, &game, &image)?;
+    }
     state.jobs.start(&plan, config.root.as_deref(), move |event| {
         let _ = match &event {
             Event::Output { .. } => app.emit("job-output", &event),
@@ -427,18 +434,54 @@ fn install_game(app: AppHandle, state: State<'_, AppState>, game: String, image:
     })
 }
 
+/// The games folder looked through: the games OpenRAC knows among its images, and, for a
+/// developer, the games with more than one of their discs there (disc_choice.rs).
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DiscScan {
+    found: Vec<FoundDisc>,
+    choices: Vec<DiscChoice>,
+}
+
+fn scan(config: &Config) -> Result<(openrac_launcher_core::catalog::Catalog, Vec<FoundDisc>), String> {
+    let catalog = openrac_launcher_core::catalog::load(config.root()?)?;
+    let found = config.discs_dir.as_deref().map(|dir| discs::scan(dir, &catalog)).unwrap_or_default();
+    Ok((catalog, found))
+}
+
 /// The games OpenRAC knows among the images in the player's games folder (none when no folder
-/// is chosen).
+/// is chosen), and the discs a developer can choose between.
 #[tauri::command]
-async fn scan_discs(state: State<'_, AppState>) -> Result<Vec<openrac_launcher_core::discs::FoundDisc>, String> {
+async fn scan_discs(state: State<'_, AppState>) -> Result<DiscScan, String> {
     let config = state.config.lock().unwrap().clone();
-    let (Some(dir), Some(root)) = (config.discs_dir, config.root) else { return Ok(Vec::new()) };
+    if config.discs_dir.is_none() || config.root.is_none() {
+        return Ok(DiscScan { found: Vec::new(), choices: Vec::new() });
+    }
     tauri::async_runtime::spawn_blocking(move || {
-        let catalog = openrac_launcher_core::catalog::load(&root)?;
-        Ok(openrac_launcher_core::discs::scan(&dir, &catalog))
+        let (catalog, found) = scan(&config)?;
+        let choices = disc_choice::choices(&config, &catalog, &found);
+        Ok(DiscScan { found, choices })
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+/// Developers only: plays `version`'s disc of its game from now on. Its set-up is put in place
+/// and the other kept aside (disc_choice.rs); the choice is saved in the settings.
+#[tauri::command]
+async fn choose_disc(state: State<'_, AppState>, version: String) -> Result<Config, String> {
+    let file = state.config_file.clone().ok_or("no per-user config folder")?;
+    let mut config = state.config.lock().unwrap().clone();
+    let config = tauri::async_runtime::spawn_blocking(move || {
+        let (catalog, found) = scan(&config)?;
+        disc_choice::choose(&mut config, &catalog, &found, &version)?;
+        config::save(&file, &config)?;
+        Ok::<_, String>(config)
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+    *state.config.lock().unwrap() = config.clone();
+    Ok(config)
 }
 
 /// Removes what setting `game` up made (OpenGOAL's uninstall); the player's
@@ -929,6 +972,7 @@ pub fn run() {
             install_game,
             uninstall_game,
             scan_discs,
+            choose_disc,
             sync_progress_from_web,
             apply_progress_json,
             set_discord_status,

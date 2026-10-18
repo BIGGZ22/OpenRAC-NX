@@ -7,6 +7,7 @@
   // list follows under the same button (DeveloperPanel).
   import CrashNotice from "$components/CrashNotice.svelte";
   import DeveloperPanel from "$components/DeveloperPanel.svelte";
+  import DiscSwitch from "$components/DiscSwitch.svelte";
   import Icon from "$components/Icon.svelte";
   import JobProgress from "$components/JobProgress.svelte";
   import Menu, { type MenuItem } from "$components/Menu.svelte";
@@ -14,6 +15,7 @@
   import SaveManagerBlock from "$components/SaveManagerBlock.svelte";
   import { api, type ActionView } from "$lib/api";
   import { app, clock, currentVersion, dismissCrashes, guard, run, uninstallGame } from "$lib/app.svelte";
+  import { choiceFor, programOf } from "$lib/discChoice";
   import { isBuilt, playerAct, playerState, playerVersion } from "$lib/player.svelte";
   import { themeStyle } from "$lib/themes";
 
@@ -26,6 +28,8 @@
   const v = $derived(game ? playerVersion(game) : opened);
   const studied = $derived(game && opened?.game === game.id ? opened : v);
   const scope = $derived({ kind: "version" as const, key: v?.key ?? "" });
+  // Developer tools on and two of the game's discs found: the switch beside Play (DiscSwitch).
+  const choice = $derived(developer && game ? choiceFor(app.discChoices, game.id) : null);
   const action = (id: string): ActionView | null => v?.actions.find((a) => a.id === id && a.thisPlatform) ?? null;
 
   const build = $derived(action("port-build"));
@@ -138,6 +142,7 @@
           </button>
           <Menu items={menu} />
         </div>
+        {#if choice}<DiscSwitch {game} {choice} busy={!!next.job} />{/if}
         {#if next.hint && !next.job}<p class="line">{next.hint}</p>{/if}
         {#if !app.stopped && recentCrashes > 0}
           <span class="crashed">
@@ -171,7 +176,7 @@
 
     {#if developer && studied}<DeveloperPanel {game} version={studied} />{/if}
     <SaveManagerBlock version={v} />
-    {#if setUp}<ReportsBlock game={v.game} />{/if}
+    {#if setUp}<ReportsBlock game={v.game} program={choice ? programOf(v.key) : null} />{/if}
   </div>
 {/if}
 

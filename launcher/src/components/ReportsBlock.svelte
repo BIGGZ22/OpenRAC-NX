@@ -10,7 +10,8 @@
   import { DISCORD_URL, ISSUES_URL } from "$lib/links";
   import { headline, when } from "$lib/reports";
 
-  let { game }: { game: string } = $props();
+  // PROGRAM: only that version's logs and reports (a developer's chosen disc, DiscSwitch); none: all.
+  let { game, program = null }: { game: string; program?: string | null } = $props();
 
   const developer = $derived(app.config?.developer ?? false);
   /** Rows shown before "Show all". */
@@ -32,9 +33,10 @@
   const crashes = $derived(entries?.filter((e) => e.kind === "crash").length ?? 0);
   const shown = $derived(entries ? (all ? entries : entries.slice(0, FIRST)) : []);
 
-  async function load() {
+  async function load(only: string | null) {
     try {
-      entries = await api.reportsList(game);
+      const list = await api.reportsList(game);
+      entries = only ? list.filter((e) => !e.program || e.program === only) : list;
       failed = null;
     } catch (e) {
       entries = [];
@@ -43,8 +45,8 @@
   }
 
   $effect(() => {
-    // Again whenever the game ends (app.reportsChanged) or another game is shown.
-    if (app.reportsChanged >= 0 && game) void load();
+    // Again whenever the game ends (app.reportsChanged) or another game or disc is shown.
+    if (app.reportsChanged >= 0 && game) void load(program);
   });
 
   async function copy(e: ReportEntry) {
@@ -82,7 +84,10 @@
 
   async function removeAll() {
     deleting = true;
-    const count = await guard(api.reportsDeleteAll(game));
+    // Listing one disc's (PROGRAM): only those go, the other disc's stay.
+    const count = program
+      ? await guard(Promise.all((entries ?? []).map((e) => api.reportDelete(game, e.file))))
+      : await guard(api.reportsDeleteAll(game));
     deleting = false;
     asking = null;
     if (count === undefined) return;

@@ -36,6 +36,22 @@ export interface FoundDisc {
   region: string;
 }
 
+/** core/src/disc_choice.rs: a game with more than one of its discs found, for a developer. */
+export interface DiscChoice {
+  game: string;
+  /** The versions found (`rac1/pal`, `rac1/ntsc`). */
+  versions: string[];
+  /** The one the game's page plays. */
+  chosen: string;
+}
+
+/** The games folder looked through (scan_discs). */
+export interface DiscScan {
+  found: FoundDisc[];
+  /** Only with developer tools on: the games whose disc can be switched. */
+  choices: DiscChoice[];
+}
+
 /** core/src/config.rs */
 export interface Config {
   root: string | null;
@@ -62,6 +78,8 @@ export interface Config {
   detailedGameLog: boolean;
   /** Per game, the time (seconds since 1970) of the newest crash report the player dismissed. */
   crashesSeen: Record<string, number>;
+  /** Developers only: the version each game with two discs found plays (`rac1` -> `rac1/ntsc`). */
+  discChoice: Record<string, string>;
 }
 
 /** One of a game's logs or crash reports (core/src/reports.rs). */
@@ -452,8 +470,10 @@ export const api = {
   installGame: (game: string, image: string) => call<Started>("install_game", { game, image }),
   /** Removes what setting a game up made (not the disc image, not the saves). */
   uninstallGame: (game: string) => call<null>("uninstall_game", { game }),
-  /** The games OpenRAC knows among the images in the games folder. */
-  scanDiscs: () => call<FoundDisc[]>("scan_discs"),
+  /** The games OpenRAC knows among the images in the games folder, and a developer's disc choices. */
+  scanDiscs: () => call<DiscScan>("scan_discs"),
+  /** Developers only: plays this version's disc of its game; the other's set-up is kept aside. */
+  chooseDisc: (version: string) => call<Config>("choose_disc", { version }),
   syncProgressFromWeb: () => call<Library>("sync_progress_from_web"),
   applyProgressJson: (json: string) => call<Library>("apply_progress_json", { json }),
   setDiscordStatus: (status: DiscordStatus) => call<null>("set_discord_status", { status }),

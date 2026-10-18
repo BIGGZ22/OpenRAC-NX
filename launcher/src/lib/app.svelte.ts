@@ -9,6 +9,7 @@ import {
   type ActionView,
   type AppInfo,
   type Config,
+  type DiscChoice,
   type FoundDisc,
   type Library,
   type RunInputs,
@@ -30,6 +31,8 @@ interface AppState {
   libraryError: string | null;
   /** The games found in the player's games folder (api.scanDiscs). */
   discs: FoundDisc[];
+  /** Developers only: the games whose disc can be switched (core/src/disc_choice.rs). */
+  discChoices: DiscChoice[];
   page: Page;
   /** The version the game page shows (`rac1/pal`). */
   version: string | null;
@@ -50,6 +53,7 @@ export const app = $state<AppState>({
   library: null,
   libraryError: null,
   discs: [],
+  discChoices: [],
   page: "library",
   version: null,
   toasts: [],
@@ -207,9 +211,12 @@ export async function refresh() {
   }
   void countCrashes();
   try {
-    app.discs = app.config.discsDir ? await api.scanDiscs() : [];
+    const scan = app.config.discsDir ? await api.scanDiscs() : { found: [], choices: [] };
+    app.discs = scan.found;
+    app.discChoices = scan.choices;
   } catch {
     app.discs = []; // a folder that went away: the tiles ask for an image as before
+    app.discChoices = [];
   }
 }
 
@@ -402,6 +409,15 @@ export async function installGame(game: string, title: string, found?: string): 
 }
 
 /** Removes what setting GAME up made, after the player confirmed. */
+/** Developers only: plays VERSION's disc of its game from now on (the switch on the game's page). */
+export async function chooseDisc(version: string) {
+  const saved = await guard(api.chooseDisc(version));
+  if (saved) {
+    app.config = saved;
+    await refresh();
+  }
+}
+
 export async function uninstallGame(game: string) {
   await guard(api.uninstallGame(game));
   await refresh();

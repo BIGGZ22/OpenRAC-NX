@@ -4,6 +4,7 @@ import type { ActionView, GameView, VersionView } from "./api";
 import type { IconName } from "$components/Icon.svelte";
 import { pickFolder } from "./api";
 import { app, cancel, installGame, jobs, refresh, run, runChain, saveConfig, toast } from "./app.svelte";
+import { choiceFor, pickVersion } from "./discChoice";
 import { phaseLabel } from "./progress";
 import type { Job } from "./queue";
 
@@ -49,9 +50,11 @@ function jobOf(v: VersionView, ids: string[]): Job | null {
 const action = (v: VersionView, id: string): ActionView | null =>
   v.actions.find((a) => a.id === id && a.thisPlatform) ?? null;
 
-/** The image of GAME in the player's games folder, if it holds one. */
+/** The image of GAME in the player's games folder, if it holds one: a developer's chosen one
+ *  when the folder holds more than one of its discs. */
 export function foundDisc(game: string) {
-  return app.discs.find((d) => d.game === game) ?? null;
+  const chosen = choiceFor(app.discChoices, game)?.chosen;
+  return app.discs.find((d) => d.game === game && (!chosen || d.version === chosen)) ?? null;
 }
 
 const fileName = (path: string) => path.split(/[\\/]/).pop() ?? path;
@@ -90,27 +93,26 @@ export async function chooseGamesFolder(): Promise<number | null> {
     const version = game?.versions.find((x) => x.key === disc.version);
     const play = version ? action(version, "play") : null;
     if (game && !game.install?.extracted && play && play.state !== "planned") {
-      await setUp(disc.game, disc.title, disc.path);
+      // The game's disc a developer chose, when the folder holds two (for a player, this one).
+      await setUp(disc.game, disc.title, foundDisc(disc.game)?.path ?? disc.path);
     }
   }
   return found.length;
 }
 
 /** The version a player means by "this game": the one their set-up disc is, else the first one
- *  whose disc image was found, else the first one that can be played. */
+ *  whose disc image was found, else the first one that can be played. With developer tools on
+ *  and two of its discs found, the one chosen on the game's page (discChoice.ts). */
 export function playerVersion(game: GameView): VersionView | null {
-  const own = game.install?.extracted?.version;
-  const found = app.discs.filter((d) => d.game === game.id).map((d) => d.version);
-  return (
-    game.versions.find((v) => v.key === own) ??
-    game.versions.find((v) => found.includes(v.key)) ??
-    game.versions.find((v) => {
+  return pickVersion(game.versions, {
+    chosen: choiceFor(app.discChoices, game.id)?.chosen,
+    own: game.install?.extracted?.version,
+    found: app.discs.filter((d) => d.game === game.id).map((d) => d.version),
+    playable: (v) => {
       const play = action(v, "play");
-      return play && play.state !== "planned";
-    }) ??
-    game.versions.at(0) ??
-    null
-  );
+      return !!play && play.state !== "planned";
+    },
+  });
 }
 
 /** The game is built for this computer. */
