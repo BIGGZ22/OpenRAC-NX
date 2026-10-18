@@ -12,7 +12,7 @@ is built this way, is [docs/port/ANDROID.md](../../docs/port/ANDROID.md).
 | `../cmake/Android.cmake` | what an Android build adds; the `android-arm64` preset in `../CMakePresets.json` |
 
 The launcher's side is in `launcher/src-tauri/gen/android` (Kotlin:
-`OpenracSetup.kt`, `OpenracPlugin.kt`, `SetupService.kt`) and `launcher/src-tauri/src/android.rs`.
+`OpenracSetup.kt`, `OpenracPlugin.kt`, `SetupService.kt`, `UpdateReceiver.kt`) and `launcher/src-tauri/src/android.rs`.
 
 ## Building
 
@@ -104,3 +104,9 @@ GPU driver, shows the model and SoC) and the game's log.
 10. **ANGLE.** In Developer options, "ANGLE preferences", choose ANGLE for
     OpenRAC Launcher and play: the game draws through ANGLE (its log names
     the renderer).
+11. **Updating the launcher.** With a release newer than the installed
+    launcher (both signed with the launcher's Android key), start the
+    launcher: it offers the update; Update downloads it, the first time
+    sends you to allow it to install apps (choose Update again after), then
+    Android's installer asks to confirm. The launcher restarts updated, with
+    the games set up as they were.

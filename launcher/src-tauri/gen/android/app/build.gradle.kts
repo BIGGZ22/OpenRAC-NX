@@ -38,6 +38,20 @@ android {
             java.srcDirs("src/main/sdl-java", "../../../../../port/android/java")
         }
     }
+    // The launcher's own key, when the build is given one (CI's secrets, .github/workflows/launcher.yml):
+    // Android installs an update only when it is signed as the launcher installed is, so every
+    // release is signed with this one. Without it a build is signed with the machine's debug key.
+    val keystore = System.getenv("OPENRAC_ANDROID_KEYSTORE")?.takeIf { it.isNotEmpty() }
+    if (keystore != null) {
+        signingConfigs {
+            create("openrac") {
+                storeFile = file(keystore)
+                storePassword = System.getenv("OPENRAC_ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("OPENRAC_ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("OPENRAC_ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
     packaging {
         // Installed as files in the native library folder, not read from the APK: the launcher
         // runs Python and the game's checks from there, and libadrenotools loads its hooks from
@@ -46,6 +60,7 @@ android {
     }
     buildTypes {
         getByName("debug") {
+            if (keystore != null) signingConfig = signingConfigs.getByName("openrac")
             manifestPlaceholders["usesCleartextTraffic"] = "true"
             isDebuggable = true
             isJniDebuggable = true
@@ -58,6 +73,7 @@ android {
             }
         }
         getByName("release") {
+            if (keystore != null) signingConfig = signingConfigs.getByName("openrac")
             optimization {
                enable = true
             }

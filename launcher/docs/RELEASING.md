@@ -87,16 +87,19 @@ git push origin launcher-vX.Y.Z
    - Packages Windows NSIS (`.exe`) and MSI.
    - Packages Linux `.deb`, `.rpm`, and `.AppImage` (both `amd64` and `arm64`).
    - Packages Fedora `.fc44.x86_64.rpm` in a Fedora container.
-   - Packages the Android debug APK.
+   - Packages the Android debug APK, signed with the launcher's Android key (the
+     `ANDROID_KEYSTORE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and
+     `ANDROID_KEY_PASSWORD` secrets; without them, the runner's debug key).
    - Packages macOS universal `.dmg` and `.app.tar.gz`.
 3. **Updater signing & manifest**:
-   - Signs update archives with minisign (`TAURI_SIGNING_PRIVATE_KEY`).
+   - Signs update archives and the APK with minisign (`TAURI_SIGNING_PRIVATE_KEY`).
    - Runs `tools/updater_manifest.py` to produce `latest.json` covering:
      - `windows-x86_64`
      - `linux-x86_64`
      - `linux-aarch64`
      - `darwin-x86_64`
      - `darwin-aarch64`
+     - `android-aarch64` (read by the Android launcher's own updater, `launcher/core/src/update.rs`)
 4. **Draft Release**:
    - Creates a draft release titled `OpenRAC Launcher X.Y.Z` with all installer assets and signatures.
 
@@ -133,4 +136,9 @@ Once all CI jobs complete:
 ## 6. Common Pitfalls & Notes
 
 - **Spaces in filenames**: GitHub Releases replaces spaces with dots when files are uploaded. `tools/updater_manifest.py` sanitizes URLs with `.replace(" ", ".")` to prevent 404 Not Found errors in the in-app updater.
+- **The Android key**: Android installs an update only over an APK signed with the same key, so
+  the keystore in `ANDROID_KEYSTORE` (base64 of a `.jks`, made once with
+  `keytool -genkeypair -v -keystore openrac.jks -keyalg RSA -keysize 4096 -validity 10000 -alias openrac`)
+  must never change: keep a copy offline. An APK built without it (a fork's run) installs, but
+  does not update an installed launcher, nor update to one.
 - **Minisign key formatting**: `TAURI_SIGNING_PRIVATE_KEY` secret must be trimmed of trailing newlines before passing to Tauri CLI. The CI workflow handles this automatically via a temporary file in `$RUNNER_TEMP/updater.key`.

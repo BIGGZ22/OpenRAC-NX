@@ -869,6 +869,8 @@ pub fn run() {
             android::gpu_driver_select,
             android::gpu_driver_remove,
             android::background_status,
+            android::update_check,
+            android::update_install,
         ])
         .run(tauri::generate_context!())
         .expect("the launcher failed to start");

@@ -5,12 +5,15 @@ package dev.openrac.launcher
 
 import android.Manifest
 import android.app.Activity
+import android.app.PendingIntent
 import android.content.Intent
+import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.StatFs
 import android.provider.OpenableColumns
+import android.provider.Settings
 import androidx.activity.result.ActivityResult
 import app.tauri.annotation.ActivityCallback
 import app.tauri.annotation.Command
@@ -22,6 +25,8 @@ import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
 import dev.openrac.game.GameActivity
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.zip.ZipInputStream
 import org.json.JSONObject
 
@@ -36,6 +41,12 @@ class StatusArgs {
   var title: String? = null
   var text: String = ""
   var percent: Int? = null
+}
+
+@InvokeArg
+class DownloadArgs {
+  lateinit var url: String
+  lateinit var path: String
 }
 
 @InvokeArg
@@ -121,6 +132,103 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
       SetupService.show(activity, title, args.text, args.percent?.coerceIn(0, 100))
     }
     invoke.resolve()
+  }
+
+  // ---- the launcher's own updates (src-tauri/src/android.rs checks what is downloaded) ----
+
+  @Volatile private var downloaded = 0L
+  @Volatile private var downloadTotal = -1L
+
+  /** {url, path}: downloads an https address into a file, through a file beside it. */
+  @Command
+  fun download(invoke: Invoke) {
+    val args = invoke.parseArgs(DownloadArgs::class.java)
+    if (!args.url.startsWith("https://")) return invoke.reject("not an https address: ${args.url}")
+    downloaded = 0L
+    downloadTotal = -1L
+    Thread {
+      val dest = File(args.path)
+      val partial = File(dest.path + ".partial")
+      try {
+        dest.parentFile?.mkdirs()
+        val connection = URL(args.url).openConnection() as HttpURLConnection
+        connection.connectTimeout = 15_000
+        connection.readTimeout = 30_000
+        connection.setRequestProperty("User-Agent", "OpenRAC-Launcher")
+        try {
+          // Redirects are followed within https only (GitHub's downloads are redirected once).
+          if (connection.responseCode != HttpURLConnection.HTTP_OK || connection.url.protocol != "https") {
+            throw IllegalStateException("${args.url}: HTTP ${connection.responseCode}")
+          }
+          downloadTotal = connection.contentLengthLong
+          connection.inputStream.use { input ->
+            partial.outputStream().use { out ->
+              val buffer = ByteArray(1 shl 16)
+              while (true) {
+                val n = input.read(buffer)
+                if (n < 0) break
+                out.write(buffer, 0, n)
+                downloaded += n
+              }
+            }
+          }
+        } finally {
+          connection.disconnect()
+        }
+        if (!partial.renameTo(dest)) throw IllegalStateException("cannot write $dest")
+        invoke.resolve()
+      } catch (e: Exception) {
+        partial.delete()
+        invoke.reject("the download failed: ${e.message}")
+      }
+    }.start()
+  }
+
+  /** {downloaded, total}: how far the download is; total -1 while it is not known. */
+  @Command
+  fun downloadProgress(invoke: Invoke) {
+    val out = JSObject()
+    out.put("downloaded", downloaded)
+    out.put("total", downloadTotal)
+    invoke.resolve(out)
+  }
+
+  /** {path}: hands a checked APK to Android's installer, which asks the player to confirm
+   *  (UpdateReceiver.kt). The first time, the player allows the launcher to install apps. */
+  @Command
+  fun installApk(invoke: Invoke) {
+    val apk = File(invoke.parseArgs(DownloadArgs::class.java).path)
+    if (!activity.packageManager.canRequestPackageInstalls()) {
+      activity.startActivity(
+        Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${activity.packageName}")),
+      )
+      return invoke.reject("Allow OpenRAC Launcher to install apps, then choose Update again.")
+    }
+    Thread {
+      try {
+        val installer = activity.packageManager.packageInstaller
+        val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
+        params.setAppPackageName(activity.packageName)
+        params.setSize(apk.length())
+        val id = installer.createSession(params)
+        installer.openSession(id).use { session ->
+          session.openWrite("base.apk", 0, apk.length()).use { out ->
+            apk.inputStream().use { it.copyTo(out, 1 shl 20) }
+            session.fsync(out)
+          }
+          // Mutable: the installer fills in its status.
+          val flags = PendingIntent.FLAG_UPDATE_CURRENT or
+            (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
+          val status = PendingIntent.getBroadcast(
+            activity, id, Intent(activity, UpdateReceiver::class.java).setPackage(activity.packageName), flags,
+          )
+          session.commit(status.intentSender)
+        }
+        invoke.resolve()
+      } catch (e: Exception) {
+        invoke.reject("the update could not be handed to Android's installer: ${e.message}")
+      }
+    }.start()
   }
 
   // ---- the game ----

@@ -278,13 +278,14 @@ jobs:
               launcher/target/universal-apple-darwin/release/bundle/dmg/*.dmg
               launcher/target/universal-apple-darwin/release/bundle/macos/*.tar.gz
               launcher/target/universal-apple-darwin/release/bundle/macos/*.sig
-          # A debug APK signed with the runner's debug key, so that it installs as it is; the
-          # device tests are in port/android/README.md.
+          # A debug APK, signed with the launcher's own key when the repository has it (the
+          # ANDROID_KEYSTORE secrets: updates install only over an APK of the same key), else
+          # with the runner's debug key; the device tests are in port/android/README.md.
           - name: android
             os: ubuntu-latest
             targets: aarch64-linux-android
             tauri: android build --apk --target aarch64 --debug
-            files: launcher/src-tauri/gen/android/app/build/outputs/apk/*/debug/OpenRAC*.apk
+            files: launcher/src-tauri/gen/android/app/build/outputs/apk/*/debug/OpenRAC*.apk*
     defaults:
       run:
         shell: bash
@@ -339,22 +340,33 @@ jobs:
       - name: No installers from an earlier build
         run: rm -rf target/release/bundle target/universal-apple-darwin/release/bundle
 
-      # The updater's archives are signed with the project's key. Without it (a fork's run, or
-      # Android, which has no updater) Tauri refuses to make them, so they are left out.
+      # The updater's archives are signed with the project's key. Without it (a fork's run) Tauri
+      # refuses to make them, so they are left out. Android's APK is signed with it after the
+      # build (below), and with the launcher's own Android key during it.
       - name: Build the installers
         env:
           RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          OPENRAC_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          OPENRAC_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          OPENRAC_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           TAURI: ${{ matrix.tauri }}
         run: |
           unsigned=()
-          if [ -n "$RAW_KEY" ] && [ "$NAME" != android ]; then
+          if [ -n "$RAW_KEY" ]; then
             printf '%s' "$RAW_KEY" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' > "$RUNNER_TEMP/updater.key"
+          fi
+          if [ -n "$RAW_KEY" ] && [ "$NAME" != android ]; then
             export TAURI_SIGNING_PRIVATE_KEY="$RUNNER_TEMP/updater.key"
           else
             unsigned=(--config '{"bundle":{"createUpdaterArtifacts":false}}')
           fi
-          unset RAW_KEY
+          if [ "$NAME" = android ] && [ -n "$ANDROID_KEYSTORE" ]; then
+            printf '%s' "$ANDROID_KEYSTORE" | base64 -d > "$RUNNER_TEMP/openrac.jks"
+            export OPENRAC_ANDROID_KEYSTORE="$RUNNER_TEMP/openrac.jks"
+          fi
+          unset RAW_KEY ANDROID_KEYSTORE
           yarn install --immutable
           # $TAURI is the row's own words: split on purpose.
           yarn tauri $TAURI "${unsigned[@]}"
@@ -366,9 +378,12 @@ jobs:
         run: for f in target/release/bundle/rpm/*.x86_64.rpm; do mv "$f" "${f%.x86_64.rpm}.fc44.x86_64.rpm"; done
 
       # Named as the desktop installers are, and checked: the game's activity, SDL's and the
-      # libraries the programs need are in it.
+      # libraries the programs need are in it. Signed for the launcher's updater when the key is
+      # there (an .apk.sig beside it, which tools/updater_manifest.py puts in latest.json).
       - name: What the APK carries (Android)
         if: matrix.name == 'android'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           built=$(ls src-tauri/gen/android/app/build/outputs/apk/*/debug/*.apk | head -1)
           version=$(node -p "require('./src-tauri/tauri.conf.json').version")
@@ -381,6 +396,10 @@ jobs:
                      libopenrac-python.so libpython3.13.so libmain_hook.so libopenrac_launcher_lib.so; do
             unzip -l "$apk" "lib/arm64-v8a/$lib" > /dev/null || { echo "the APK has no $lib"; exit 1; }
           done
+          if [ -f "$RUNNER_TEMP/updater.key" ]; then
+            yarn tauri signer sign -f "$RUNNER_TEMP/updater.key" "$apk"
+          fi
+          rm -f "$RUNNER_TEMP/updater.key" "$RUNNER_TEMP/openrac.jks"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

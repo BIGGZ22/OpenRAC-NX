@@ -19,6 +19,7 @@
 //! - [`library`]: all of the above, put together for the UI.
 //! - [`reports`]: a game's session logs and crash reports, the text and the .zip players send.
 //! - [`launcher_log`]: the launcher's own log, which goes in that .zip.
+//! - [`update`]: the launcher's own updates on Android: the manifest and the signature check.
 
 pub mod actions;
 pub mod android;
@@ -37,6 +38,7 @@ pub mod reports;
 pub mod save_edit;
 pub mod saves;
 pub mod status;
+pub mod update;
 
 use std::path::{Path, PathBuf};
 

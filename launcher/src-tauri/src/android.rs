@@ -13,6 +13,7 @@ use openrac_launcher_core::android::{copy_disc, disc_file_name};
 #[cfg(target_os = "android")]
 use openrac_launcher_core::chd;
 use openrac_launcher_core::jobs::Started;
+use openrac_launcher_core::update;
 #[cfg(target_os = "android")]
 use serde::Deserialize;
 use serde::Serialize;
@@ -199,6 +200,100 @@ pub async fn background_status<R: Runtime>(
     #[cfg(not(target_os = "android"))]
     {
         let _ = (app, title, text, percent);
+        Err(ANDROID_ONLY.into())
+    }
+}
+
+/// The launcher's updater settings in tauri.conf.json (`plugins.updater`): the manifest's address
+/// and the public key its files are signed with. Tauri's updater reads them on a desktop.
+#[cfg(target_os = "android")]
+fn updater_config<R: Runtime>(app: &AppHandle<R>) -> Result<(String, String), String> {
+    let config = app.config().plugins.0.get("updater").ok_or("tauri.conf.json has no updater settings")?;
+    let endpoint = config["endpoints"][0].as_str().ok_or("tauri.conf.json names no update manifest")?;
+    let key = config["pubkey"].as_str().ok_or("tauri.conf.json has no update key")?;
+    Ok((endpoint.to_string(), key.to_string()))
+}
+
+#[cfg(target_os = "android")]
+fn updates_dir<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {
+    Ok(app.path().app_cache_dir().map_err(|e| e.to_string())?.join("updates"))
+}
+
+/// A newer launcher on the releases (core/src/update.rs), or None. Android only: a desktop's
+/// launcher is updated by Tauri's updater.
+#[tauri::command]
+pub async fn update_check<R: Runtime>(app: AppHandle<R>) -> Result<Option<update::Release>, String> {
+    #[cfg(target_os = "android")]
+    {
+        let (endpoint, _) = updater_config(&app)?;
+        let manifest = updates_dir(&app)?.join("latest.json");
+        let _: serde_json::Value =
+            kotlin(&app, "download", serde_json::json!({ "url": endpoint, "path": manifest })).await?;
+        let text = std::fs::read_to_string(&manifest).map_err(|e| e.to_string())?;
+        let _ = std::fs::remove_file(&manifest);
+        update::release_for(&text, update::ANDROID, &app.package_info().version.to_string())
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        Err(ANDROID_ONLY.into())
+    }
+}
+
+/// How far the update's download is (the `update-progress` event); total 0 while it is not known.
+#[derive(Clone, Serialize)]
+pub struct UpdateProgress {
+    pub downloaded: u64,
+    pub total: u64,
+}
+
+/// Downloads the release's APK, checks its signature against the launcher's update key and hands
+/// it to Android's installer, which asks the player to confirm.
+#[tauri::command]
+pub async fn update_install<R: Runtime>(app: AppHandle<R>, url: String, signature: String) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::Arc;
+
+        let (_, key) = updater_config(&app)?;
+        let apk = updates_dir(&app)?.join("OpenRAC-Launcher.apk");
+        let _ = std::fs::remove_file(&apk);
+        // The download runs in Kotlin; its progress is read from there four times a second.
+        let done = Arc::new(AtomicBool::new(false));
+        let watcher = {
+            let (app, done) = (app.clone(), done.clone());
+            std::thread::spawn(move || {
+                let Some(plugin) = app.try_state::<Openrac<R>>() else { return };
+                while !done.load(Ordering::Relaxed) {
+                    std::thread::sleep(std::time::Duration::from_millis(250));
+                    if let Ok(p) = plugin.0.run_mobile_plugin::<serde_json::Value>("downloadProgress", ()) {
+                        let downloaded = p["downloaded"].as_u64().unwrap_or(0);
+                        let total = p["total"].as_i64().unwrap_or(-1).max(0) as u64;
+                        let _ = app.emit("update-progress", UpdateProgress { downloaded, total });
+                    }
+                }
+            })
+        };
+        let downloaded: Result<serde_json::Value, String> =
+            kotlin(&app, "download", serde_json::json!({ "url": url, "path": apk })).await;
+        done.store(true, Ordering::Relaxed);
+        let _ = watcher.join();
+        downloaded?;
+        let checked = apk.clone();
+        let verified = tauri::async_runtime::spawn_blocking(move || update::verify(&checked, &signature, &key))
+            .await
+            .map_err(|e| e.to_string())?;
+        if let Err(e) = verified {
+            let _ = std::fs::remove_file(&apk);
+            return Err(e);
+        }
+        let _: serde_json::Value = kotlin(&app, "installApk", serde_json::json!({ "path": apk })).await?;
+        Ok(())
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, url, signature);
         Err(ANDROID_ONLY.into())
     }
 }

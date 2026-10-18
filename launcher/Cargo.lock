@@ -2560,7 +2560,9 @@ dependencies = [
 name = "openrac-launcher-core"
 version = "0.7.4"
 dependencies = [
+ "base64 0.22.1",
  "chd",
+ "minisign-verify",
  "serde",
  "serde_json",
  "tempfile",

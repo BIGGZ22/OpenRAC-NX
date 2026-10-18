@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app } from "$lib/app.svelte";
-  import { api } from "$lib/api";
+  import { api, onAndroid } from "$lib/api";
   import { installUpdate } from "$lib/updates";
   import Icon from "./Icon.svelte";
 
@@ -31,10 +31,14 @@
           }
         } else if (progress.stage === "installing") {
           statusText = "Installing update...";
+        } else if (onAndroid) {
+          // Android's installer asks the player to confirm, then restarts the launcher.
+          statusText = "Confirm the update in Android's installer.";
         } else {
           statusText = "Update installed! Restarting launcher...";
         }
       });
+      if (onAndroid) installing = false;
     } catch (e) {
       installing = false;
       indeterminate = false;
@@ -100,6 +104,8 @@
               {/if}
             </div>
           </div>
+        {:else if statusText}
+          <div class="status-row"><span class="status-msg">{statusText}</span></div>
         {/if}
 
         {#if error}
@@ -114,7 +120,7 @@
         {#if !installing}
           <button class="btn-cancel" onclick={handleClose}>Later</button>
           {#if update.canInstallDirectly}
-            <button class="btn-primary" onclick={handleInstall}> Update & Restart </button>
+            <button class="btn-primary" onclick={handleInstall}>{onAndroid ? "Update" : "Update & Restart"}</button>
           {:else}
             <button class="btn-primary" onclick={() => void api.openUrl(update.url)}> Download Update </button>
           {/if}

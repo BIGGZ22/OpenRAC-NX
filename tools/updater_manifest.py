@@ -36,7 +36,10 @@ def generate_manifest(
             asset_url = f"https://github.com/{repo}/releases/download/{tag}/{archive_file}"
 
             f_lower = f.lower()
-            if "nsis" in f_lower or "windows" in f_lower or "setup" in f_lower:
+            # The Android launcher's APK: its own updater reads this entry (launcher/core/src/update.rs).
+            if f_lower.endswith(".apk.sig"):
+                platforms["android-aarch64"] = {"signature": sig_content, "url": asset_url}
+            elif "nsis" in f_lower or "windows" in f_lower or "setup" in f_lower:
                 if "aarch64" in f_lower or "arm64" in f_lower:
                     platforms["windows-aarch64"] = {"signature": sig_content, "url": asset_url}
                 else:

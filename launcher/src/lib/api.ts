@@ -507,7 +507,20 @@ export const api = {
   /** Android: what the set-up's notification shows while the launcher is in the background; null:
    *  the set-up is over (SetupService.kt). */
   backgroundStatus: (status: BackgroundStatus | null) => call<null>("background_status", { ...status }),
+  /** Android: a newer launcher on the releases, or null (desktops use Tauri's updater). */
+  updateCheck: () => call<AndroidRelease | null>("update_check"),
+  /** Android: downloads the release's APK, checks its signature, opens Android's installer. */
+  updateInstall: (url: string, signature: string) => call<null>("update_install", { url, signature }),
 };
+
+/** A newer Android launcher on the releases (core/src/update.rs). */
+export interface AndroidRelease {
+  version: string;
+  notes: string;
+  date: string;
+  url: string;
+  signature: string;
+}
 
 /** A GPU driver package the Android launcher keeps (OpenracPlugin.kt): its meta.json. */
 export interface GpuDriver {
@@ -616,6 +629,16 @@ export async function pickIso(title: string, copying?: (progress: DiscCopy) => v
 export async function onDiscCopy(handler: (progress: DiscCopy) => void): Promise<UnlistenFn> {
   if (!inTauri) return () => undefined;
   return listen<DiscCopy>("disc-copy", (e) => {
+    handler(e.payload);
+  });
+}
+
+/** `update-progress` events: the Android update's download. */
+export async function onUpdateProgress(
+  handler: (progress: { downloaded: number; total: number }) => void,
+): Promise<UnlistenFn> {
+  if (!inTauri) return () => undefined;
+  return listen<{ downloaded: number; total: number }>("update-progress", (e) => {
     handler(e.payload);
   });
 }

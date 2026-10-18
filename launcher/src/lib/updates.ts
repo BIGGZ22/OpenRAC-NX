@@ -1,5 +1,7 @@
-// In-app and GitHub release updater for OpenRAC Launcher.
-import { inTauri, relaunchApp } from "./api";
+// In-app and GitHub release updater for OpenRAC Launcher. On a desktop it is Tauri's updater; on
+// Android the launcher's own (src-tauri/src/android.rs): the release's APK, checked against the
+// same key, handed to Android's installer.
+import { api, inTauri, onAndroid, onUpdateProgress, relaunchApp, type AndroidRelease } from "./api";
 import type { Update, DownloadEvent } from "@tauri-apps/plugin-updater";
 
 export interface UpdateInfo {
@@ -20,6 +22,7 @@ export type UpdateProgressCallback = (progress: {
 }) => void;
 
 let activeTauriUpdate: Update | null = null;
+let activeAndroidRelease: AndroidRelease | null = null;
 
 export function isNewerVersion(current: string, latest: string): boolean {
   const parse = (v: string) =>
@@ -78,7 +81,24 @@ export async function checkGitHubRelease(currentVersion: string): Promise<Update
  * Falls back to checking GitHub Releases API if running in browser or if updater is unavailable.
  */
 export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo | null> {
-  if (inTauri) {
+  if (inTauri && onAndroid) {
+    try {
+      const release = await api.updateCheck();
+      activeAndroidRelease = release;
+      if (!release) return null;
+      return {
+        version: release.version,
+        tag: `v${release.version}`,
+        url: "https://github.com/OpenRAC/OpenRAC/releases",
+        name: `OpenRAC Launcher v${release.version}`,
+        body: release.notes,
+        publishedAt: release.date,
+        canInstallDirectly: true,
+      };
+    } catch (e) {
+      console.warn("Android update check failed, falling back to GitHub release check:", e);
+    }
+  } else if (inTauri) {
     try {
       const { check } = await import("@tauri-apps/plugin-updater");
       const update = await check();
@@ -106,6 +126,10 @@ export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo
  * Downloads and installs the update in-place, then restarts the application.
  */
 export async function installUpdate(onProgress?: UpdateProgressCallback): Promise<void> {
+  if (onAndroid && activeAndroidRelease) {
+    await installAndroidUpdate(activeAndroidRelease, onProgress);
+    return;
+  }
   if (!activeTauriUpdate) {
     throw new Error("No downloaded update available to install");
   }
@@ -149,4 +173,19 @@ export async function installUpdate(onProgress?: UpdateProgressCallback): Promis
   });
 
   await relaunchApp();
+}
+
+/** Android: the APK is downloaded and checked, then Android's installer asks the player to confirm
+ *  and restarts the launcher itself; "ready" here means that dialog is up. */
+async function installAndroidUpdate(release: AndroidRelease, onProgress?: UpdateProgressCallback): Promise<void> {
+  const off = await onUpdateProgress(({ downloaded, total }) => {
+    const percent = total > 0 ? Math.min(100, Math.round((downloaded / total) * 100)) : 0;
+    onProgress?.({ stage: "downloading", percent, downloadedBytes: downloaded, totalBytes: total });
+  });
+  try {
+    await api.updateInstall(release.url, release.signature);
+  } finally {
+    off();
+  }
+  onProgress?.({ stage: "ready", percent: 100, downloadedBytes: 0, totalBytes: 0 });
 }
