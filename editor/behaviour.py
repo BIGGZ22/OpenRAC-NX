@@ -915,17 +915,11 @@ def moby_data_script(types: Types | None = None) -> str:
     return "\n".join(out).rstrip() + "\n"
 
 
-def find_source(function: str, hint: str | None) -> tuple[Path, str] | None:
-    """The file holding C for FUNCTION, the decompilation's own else the port's functional C, and
-    the name it is defined by there: its func_ symbol or its readable name (names.h)."""
-    names = [function] + [name for name, symbol in load_macros().items() if symbol == function]
+def find_source(function: str, hint: str | None) -> Path | None:
+    """The file holding C for FUNCTION: the decompilation's own, else the port's functional C."""
     for path in ([REPO / hint] if hint else []) + [DECOMPILATION / "nonmatching" / "functional" / f"{function}.c"]:
-        if not path.is_file():
-            continue
-        text = path.read_text(errors="replace")
-        for name in names:
-            if function_source(text, name):
-                return path, name
+        if path.is_file() and function_source(path.read_text(errors="replace"), function):
+            return path
     return None
 
 
@@ -933,10 +927,10 @@ def translate_class(class_id: int, level: int) -> tuple[Result, dict] | None:
     logic = moby_logic(level).get(class_id)
     if logic is None:
         return None
-    found = find_source(logic["function"], logic["file"])
-    if found is None:
+    name = logic.get("defined_as", logic["function"])  # its readable name, where it has one
+    source = find_source(name, logic["file"])
+    if source is None:
         return None
-    source, name = found
     tr = Translator(load_types(source), load_api(), load_macros())
     return tr.function(name, source), logic
 

@@ -1,0 +1,361 @@
+# fcheck verdicts for the rows of functional.tsv (tools/fcheck_gate.py writes this; docs/workflow/BACKFILL.md, "The gate"). Only status same is done.
+# name	status	date	fcheck	csum	note
+func_001F3890	unchecked	2026-10-18	2e43062c	b355843f5aae	did not build or place: FileNotFoundError: [Errno 2] No such file or directory: 'build-sn/fcheck/func_001F3890/obj.o'
+func_00125358	same	2026-10-18	2e43062c	850e0fe71dae	3 calls
+func_001F9878	no-states	2026-10-18	2e43062c	4f6312774620	never called in the capture run (title, menu, level 0)
+func_001F98B0	no-states	2026-10-18	2e43062c	e547db9be266	never called in the capture run (title, menu, level 0)
+func_001F98C0	same	2026-10-18	2e43062c	6a04c52a51f6	3 calls
+func_001F98E8	no-states	2026-10-18	2e43062c	468d346af336	never called in the capture run (title, menu, level 0)
+func_001F98F8	no-states	2026-10-18	2e43062c	184ed7ca8a42	never called in the capture run (title, menu, level 0)
+func_001F9A00	same	2026-10-18	2e43062c	e8a1c08d8fb3	3 calls
+func_001F9AF0	unchecked	2026-10-18	2e43062c	58da4986171f	did not build or place: COMPILE failed (see the compiler's messages above)
+func_001F9B90	same	2026-10-18	2e43062c	03596165b6e9	3 calls
+func_001FA058	same	2026-10-18	2e43062c	6e410636db25	3 calls
+func_001FA190	same	2026-10-18	2e43062c	6adbf829cc66	3 calls
+func_001FA540	same	2026-10-18	2e43062c	3bd4dc386e30	3 calls
+func_001FA7D8	no-states	2026-10-18	2e43062c	19a36cae22de	never called in the capture run (title, menu, level 0)
+func_0020C210	same	2026-10-18	2e43062c	30b88ba87b9f	3 calls
+func_0020C230	same	2026-10-18	2e43062c	fd039ff28847	3 calls
+func_00213C78	same	2026-10-18	2e43062c	2b87948b1a07	3 calls
+func_0022DD68	unchecked	2026-10-18	2e43062c	a0c4c1bc7080	did not build or place: COMPILE failed (see the compiler's messages above)
+func_0012AAA8	no-states	2026-10-18	2e43062c	daa7398c6432	never called in the capture run (title, menu, level 0)
+func_001F7070	same	2026-10-18	2e43062c	5768bc849cf5	3 calls
+func_001F9840	no-states	2026-10-18	2e43062c	687ef0c934cb	never called in the capture run (title, menu, level 0)
+func_001F9B20	no-states	2026-10-18	2e43062c	09a451305b03	never called in the capture run (title, menu, level 0)
+func_001FA168	no-states	2026-10-18	2e43062c	a0ef98240b1d	never called in the capture run (title, menu, level 0)
+func_001FA4F0	no-states	2026-10-18	2e43062c	ae8bd2509ea2	never called in the capture run (title, menu, level 0)
+func_0020E360	no-states	2026-10-18	2e43062c	f4eaa147796b	never called in the capture run (title, menu, level 0)
+func_001151B4	same	2026-10-18	2e43062c	8815f132a560	3 calls
+func_001152F8	same	2026-10-18	2e43062c	ea582d204a79	2 calls
+func_001153FC	same	2026-10-18	2e43062c	a1a53a83cc30	3 calls
+func_001165B8	no-states	2026-10-18	2e43062c	74adfd650759	never called in the capture run (title, menu, level 0)
+func_001166FC	same	2026-10-18	2e43062c	3db2e8b0008d	3 calls
+func_001EBB48	unchecked	2026-10-18	2e43062c	cef83af74d33	did not build or place: COMPILE failed (see the compiler's messages above)
+func_001FA238	same	2026-10-18	2e43062c	88a0d8bd260f	3 calls
+func_0020C2F8	same	2026-10-18	2e43062c	e187d4dc387b	3 calls
+func_00116428	no-states	2026-10-18	2e43062c	adc2f56fc69a	never called in the capture run (title, menu, level 0)
+func_00116948	no-states	2026-10-18	2e43062c	0f775efa9f96	never called in the capture run (title, menu, level 0)
+func_00116B00	same	2026-10-18	2e43062c	9c2d94a12c04	3 calls
+func_0011BCB0	no-states	2026-10-18	2e43062c	5bc959c95ffe	never called in the capture run (title, menu, level 0)
+func_00121750	no-states	2026-10-18	2e43062c	c5004d6c71e7	never called in the capture run (title, menu, level 0)
+func_0020E3D0	unchecked	2026-10-18	2e43062c	33b39ca2a854	did not build or place: LINK ee_rate_0020E3D0 (same file) has no retail address
+func_0020E6B8	same	2026-10-18	2e43062c	574237fb9878	3 calls
+func_0020ED48	same	2026-10-18	2e43062c	eb274de591c4	3 calls
+func_00226D50	same	2026-10-18	2e43062c	e7cd3e67a12c	1 calls
+func_00238D90	same	2026-10-18	2e43062c	a3991513cbbe	3 calls
+func_0023A220	no-states	2026-10-18	2e43062c	5011818f3c60	never called in the capture run (title, menu, level 0)
+func_00121DC8	same	2026-10-18	2e43062c	be32c81cacb5	1 calls
+func_00203F68	same	2026-10-18	2e43062c	7036e16e1c67	3 calls
+func_00204918	same	2026-10-18	2e43062c	762ac038eb9f	1 calls
+func_001F9F60	no-states	2026-10-18	2e43062c	e5a110925410	never called in the capture run (title, menu, level 0)
+func_00211548	same	2026-10-18	2e43062c	51e1ca5abc64	3 calls
+func_L00_001EFF50	not-executable	2026-10-18	2e43062c	e97b4d61bbfd	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF548	not-executable	2026-10-18	2e43062c	a178984cf251	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FFED8	not-executable	2026-10-18	2e43062c	dcc9e77f0809	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0024B200	not-executable	2026-10-18	2e43062c	64a8b4312026	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00251A78	not-executable	2026-10-18	2e43062c	28338df509e4	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002D6610	not-executable	2026-10-18	2e43062c	bb512961a395	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF860	not-executable	2026-10-18	2e43062c	a7ace754fe2d	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00200290	not-executable	2026-10-18	2e43062c	4f5905cddaf3	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00251388	not-executable	2026-10-18	2e43062c	a80562f12914	level/overlay function; fcheck runs boot-executable functions only
+func_001FD3E8	unchecked	2026-10-18	2e43062c	08adb1de9830	every captured state was skipped (nothing compared)
+func_0022FDC0	unchecked	2026-10-18	2e43062c	8821b0def55a	did not build or place: COMPILE failed (see the compiler's messages above)
+func_L00_00244AE0	not-executable	2026-10-18	2e43062c	be97eb91049f	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001F3958	not-executable	2026-10-18	2e43062c	505c21659a7e	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001F3988	not-executable	2026-10-18	2e43062c	d6b1f5a444b9	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF040	not-executable	2026-10-18	2e43062c	7fcba2874732	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00205110	not-executable	2026-10-18	2e43062c	dcb2f3365d42	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0020EDC0	not-executable	2026-10-18	2e43062c	8cd11bd495e8	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00210E00	not-executable	2026-10-18	2e43062c	9493f6beef3a	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00242120	not-executable	2026-10-18	2e43062c	ad0bb206d44f	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0024A798	not-executable	2026-10-18	2e43062c	85658d23da5f	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0024E798	not-executable	2026-10-18	2e43062c	87385d56791c	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0024EBF8	not-executable	2026-10-18	2e43062c	b3679a3712ab	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002514B8	not-executable	2026-10-18	2e43062c	06b5f8ef2c2b	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002657B8	not-executable	2026-10-18	2e43062c	7d411c5ae280	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00267130	not-executable	2026-10-18	2e43062c	507369a94056	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00267188	not-executable	2026-10-18	2e43062c	c265ef013bd4	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002688A8	not-executable	2026-10-18	2e43062c	76d63e0f7cc3	level/overlay function; fcheck runs boot-executable functions only
+func_001FBE80	unchecked	2026-10-18	2e43062c	91fed1f4619a	did not build or place: COMPILE failed (see the compiler's messages above)
+func_001FA850	no-states	2026-10-18	2e43062c	3833685e9275	never called in the capture run (title, menu, level 0)
+func_0020E990	no-states	2026-10-18	2e43062c	e3130c00e5bc	never called in the capture run (title, menu, level 0)
+func_0020E9F0	no-states	2026-10-18	2e43062c	c229f9501f2c	never called in the capture run (title, menu, level 0)
+func_0020EA70	same	2026-10-18	2e43062c	164c400d7471	1 calls
+func_001FA1F8	no-states	2026-10-18	2e43062c	3f62a6525723	never called in the capture run (title, menu, level 0)
+func_L00_00251E30	not-executable	2026-10-18	2e43062c	0832769f2910	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00251B58	not-executable	2026-10-18	2e43062c	b33a4be212de	level/overlay function; fcheck runs boot-executable functions only
+func_00202AA8	unchecked	2026-10-18	2e43062c	5e6405861ef2	did not build or place: COMPILE failed (see the compiler's messages above)
+func_001FA218	no-states	2026-10-18	2e43062c	1105b30baa30	never called in the capture run (title, menu, level 0)
+func_001FA480	no-states	2026-10-18	2e43062c	94b4ce0cec0f	never called in the capture run (title, menu, level 0)
+func_001F9CA0	differs	2026-10-18	2e43062c	adc8086cbf43	func_001F9CA0.1.f644.snap: DIFFERS;     word at 01fffd8c: ours 3f800000, retail 00000000 (before 3f800000)
+func_001F9FC0	no-states	2026-10-18	2e43062c	92902ce44903	never called in the capture run (title, menu, level 0)
+func_00218930	no-states	2026-10-18	2e43062c	f19a36963362	never called in the capture run (title, menu, level 0)
+func_00218928	no-states	2026-10-18	2e43062c	389d9f50307b	never called in the capture run (title, menu, level 0)
+func_00213A78	no-states	2026-10-18	2e43062c	b668d8d2c761	never called in the capture run (title, menu, level 0)
+func_002116A0	same	2026-10-18	2e43062c	9de22aaee89e	3 calls
+func_001F9B98	no-states	2026-10-18	2e43062c	0cc945985ca1	never called in the capture run (title, menu, level 0)
+func_001F9C60	no-states	2026-10-18	2e43062c	177d568a2755	never called in the capture run (title, menu, level 0)
+func_001FA1C0	no-states	2026-10-18	2e43062c	e087a5f75ea3	never called in the capture run (title, menu, level 0)
+func_00218A80	no-states	2026-10-18	2e43062c	32306c256bd2	never called in the capture run (title, menu, level 0)
+func_L00_0025805C	not-executable	2026-10-18	2e43062c	95368525a021	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00257E18	not-executable	2026-10-18	2e43062c	245283a02e13	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00257F4C	not-executable	2026-10-18	2e43062c	ebebf8aa622d	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00232EF0	not-executable	2026-10-18	2e43062c	18d115754c1b	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0020FC18	not-executable	2026-10-18	2e43062c	14980ffce24a	level/overlay function; fcheck runs boot-executable functions only
+func_0020EEE8	no-states	2026-10-18	2e43062c	6599fa45141b	never called in the capture run (title, menu, level 0)
+func_L00_00248EF8	not-executable	2026-10-18	2e43062c	5b4cb48f78d9	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002D2E60	not-executable	2026-10-18	2e43062c	0e3da044156f	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002293E8	not-executable	2026-10-18	2e43062c	84d14c7ab8e6	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00214520	not-executable	2026-10-18	2e43062c	7ebdb8391161	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF328	not-executable	2026-10-18	2e43062c	33528cc9408d	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0024A60C	not-executable	2026-10-18	2e43062c	77f27357cdd5	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00251358	not-executable	2026-10-18	2e43062c	ec804f7c011a	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0026ABC0	not-executable	2026-10-18	2e43062c	d13039ab06d7	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00273090	not-executable	2026-10-18	2e43062c	9779270f019f	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002BE2A0	not-executable	2026-10-18	2e43062c	485ab721cb49	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002C12B0	not-executable	2026-10-18	2e43062c	78806950bb99	level/overlay function; fcheck runs boot-executable functions only
+func_L02_002FCE00	not-executable	2026-10-18	2e43062c	4e59846c1990	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00277208	not-executable	2026-10-18	2e43062c	380daf72ecb5	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002A62D0	not-executable	2026-10-18	2e43062c	378bca48a472	level/overlay function; fcheck runs boot-executable functions only
+func_L11_0031A738	not-executable	2026-10-18	2e43062c	0258250cca39	level/overlay function; fcheck runs boot-executable functions only
+func_L15_002D7C00	not-executable	2026-10-18	2e43062c	29487da22756	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002DACC0	not-executable	2026-10-18	2e43062c	4e72f6737484	level/overlay function; fcheck runs boot-executable functions only
+func_0022F738	unchecked	2026-10-18	2e43062c	57c41db41841	did not build or place: COMPILE failed (see the compiler's messages above)
+func_L00_0020E3B8	not-executable	2026-10-18	2e43062c	8fec4be320e0	level/overlay function; fcheck runs boot-executable functions only
+func_00115248	same	2026-10-18	2e43062c	e6c9aef47f84	1 calls
+func_00116810	same	2026-10-18	2e43062c	34e7b5c8c564	3 calls
+func_00119EA8	no-states	2026-10-18	2e43062c	960e439bce07	never called in the capture run (title, menu, level 0)
+func_0011CB40	no-states	2026-10-18	2e43062c	2d66d5ea806d	never called in the capture run (title, menu, level 0)
+func_0012DA28	no-states	2026-10-18	2e43062c	920e8e84669d	never called in the capture run (title, menu, level 0)
+func_001F7E98	same	2026-10-18	2e43062c	2d2f40ea4fb6	3 calls
+func_001F9BC8	no-states	2026-10-18	2e43062c	347116514d68	never called in the capture run (title, menu, level 0)
+func_001FA460	same	2026-10-18	2e43062c	1767d9baab7e	3 calls
+func_001FA6C0	no-states	2026-10-18	2e43062c	bb8c1a1f0695	never called in the capture run (title, menu, level 0)
+func_0023C910	no-states	2026-10-18	2e43062c	f6dd9e58fb62	never called in the capture run (title, menu, level 0)
+func_0023CAF8	no-states	2026-10-18	2e43062c	5d142f6fc7fa	never called in the capture run (title, menu, level 0)
+func_0023DA88	no-states	2026-10-18	2e43062c	c55e074b97b1	never called in the capture run (title, menu, level 0)
+func_L00_001EFFE8	not-executable	2026-10-18	2e43062c	8217cc66e39a	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001F3980	not-executable	2026-10-18	2e43062c	38790263712b	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001F39B0	not-executable	2026-10-18	2e43062c	7e17ca568fd6	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FEF78	not-executable	2026-10-18	2e43062c	6f082b68ab80	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF088	not-executable	2026-10-18	2e43062c	93c17a5ba9e1	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF0B0	not-executable	2026-10-18	2e43062c	bf3d470c9fa6	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF240	not-executable	2026-10-18	2e43062c	381a71c5b1a9	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF270	not-executable	2026-10-18	2e43062c	4aa59e97c67c	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF2C8	not-executable	2026-10-18	2e43062c	2ccf260a3041	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF2F8	not-executable	2026-10-18	2e43062c	77bb7a8c9b0e	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF3E0	not-executable	2026-10-18	2e43062c	52b78133b62d	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF4B0	not-executable	2026-10-18	2e43062c	d7ccd3ee15c4	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF610	not-executable	2026-10-18	2e43062c	667afe403eca	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF670	not-executable	2026-10-18	2e43062c	c2d2a77847e5	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF968	not-executable	2026-10-18	2e43062c	672a4703e2b3	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FFCF8	not-executable	2026-10-18	2e43062c	c22c570b1673	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FFDD0	not-executable	2026-10-18	2e43062c	1b91e26445c1	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002001D8	not-executable	2026-10-18	2e43062c	c7fb53b31068	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00200210	not-executable	2026-10-18	2e43062c	e2d3d7fe9c6a	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00203F08	not-executable	2026-10-18	2e43062c	f6fb59ddf16d	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00251468	not-executable	2026-10-18	2e43062c	b6d10cc56b5c	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00252CEC	not-executable	2026-10-18	2e43062c	318b466da752	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00268A88	not-executable	2026-10-18	2e43062c	03e13fca2403	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0027895C	not-executable	2026-10-18	2e43062c	cecffe6e2eaf	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0028D958	not-executable	2026-10-18	2e43062c	55782babfabd	level/overlay function; fcheck runs boot-executable functions only
+func_L01_00262BC0	not-executable	2026-10-18	2e43062c	de6a91bdab07	level/overlay function; fcheck runs boot-executable functions only
+func_L01_00262D28	not-executable	2026-10-18	2e43062c	ba18ee99edd5	level/overlay function; fcheck runs boot-executable functions only
+func_L02_002100E8	not-executable	2026-10-18	2e43062c	5d807c5fd35e	level/overlay function; fcheck runs boot-executable functions only
+func_L06_002172B0	not-executable	2026-10-18	2e43062c	4fa4c6a16c11	level/overlay function; fcheck runs boot-executable functions only
+func_L08_00211A38	not-executable	2026-10-18	2e43062c	5dfed78acc11	level/overlay function; fcheck runs boot-executable functions only
+func_L01_002F0728	not-executable	2026-10-18	2e43062c	7621400bef16	level/overlay function; fcheck runs boot-executable functions only
+func_L03_00251AC8	not-executable	2026-10-18	2e43062c	25691c256e02	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0025D6F0	not-executable	2026-10-18	2e43062c	64dd54371797	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002D1E68	not-executable	2026-10-18	2e43062c	cf78546ec2dc	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00261B00	not-executable	2026-10-18	2e43062c	1e781aa51031	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0025A8E8	not-executable	2026-10-18	2e43062c	fb1e05d9f361	level/overlay function; fcheck runs boot-executable functions only
+func_001F9BB0	no-states	2026-10-18	2e43062c	221224a39eb0	never called in the capture run (title, menu, level 0)
+func_001F9E58	no-states	2026-10-18	2e43062c	c01664313cea	never called in the capture run (title, menu, level 0)
+func_L03_002ED138	not-executable	2026-10-18	2e43062c	93f93ca8ed28	level/overlay function; fcheck runs boot-executable functions only
+func_L12_003061E0	not-executable	2026-10-18	2e43062c	39a6cfce4d15	level/overlay function; fcheck runs boot-executable functions only
+func_L01_002F6540	not-executable	2026-10-18	2e43062c	12eaf1d8ca77	level/overlay function; fcheck runs boot-executable functions only
+func_L12_0030A880	not-executable	2026-10-18	2e43062c	708f601e434e	level/overlay function; fcheck runs boot-executable functions only
+func_001F9B50	unchecked	2026-10-18	2e43062c	9f6fcc1b8009	did not build or place: LINK sqrtf has no retail address
+func_001F9BC0	same	2026-10-18	2e43062c	922433a70456	3 calls
+func_001F9BD8	same	2026-10-18	2e43062c	e89ca504ed64	3 calls
+func_001F9BF0	same	2026-10-18	2e43062c	fd7324224700	3 calls
+func_001F9C30	same	2026-10-18	2e43062c	6ca0d903f01d	3 calls
+func_001F9C48	same	2026-10-18	2e43062c	9a17758de646	3 calls
+func_001F9C78	same	2026-10-18	2e43062c	94de4063f1dc	3 calls
+func_001F9CB8	same	2026-10-18	2e43062c	cf3a98c17091	3 calls
+func_001F9CE8	same	2026-10-18	2e43062c	733c57bea147	3 calls
+func_001F9D10	no-states	2026-10-18	2e43062c	3ab7eba9e156	never called in the capture run (title, menu, level 0)
+func_001F9D48	no-states	2026-10-18	2e43062c	be37f553f82d	never called in the capture run (title, menu, level 0)
+func_001F9EC0	same	2026-10-18	2e43062c	0baa5a1f2c89	3 calls
+func_001F9EE8	same	2026-10-18	2e43062c	822f7b111a78	3 calls
+func_001F9F30	no-states	2026-10-18	2e43062c	dbca26b23d2d	never called in the capture run (title, menu, level 0)
+func_001FA4A0	same	2026-10-18	2e43062c	f5b7e9e35fad	3 calls
+func_001FA588	no-states	2026-10-18	2e43062c	d0d6b8d18974	never called in the capture run (title, menu, level 0)
+func_001FA748	same	2026-10-18	2e43062c	6cc37a114765	3 calls
+func_001FA898	same	2026-10-18	2e43062c	924d52a5cd2d	3 calls
+func_001FA8A8	unchecked	2026-10-18	2e43062c	3369cb1edc16	did not build or place: LINK ftoi_sat (same file) has no retail address
+func_L06_00303858	not-executable	2026-10-18	2e43062c	e00f24f2e920	level/overlay function; fcheck runs boot-executable functions only
+func_L07_00313D28	not-executable	2026-10-18	2e43062c	bef5a86f2778	level/overlay function; fcheck runs boot-executable functions only
+func_L08_002F7318	not-executable	2026-10-18	2e43062c	bc30eeddd42a	level/overlay function; fcheck runs boot-executable functions only
+func_L12_00304038	not-executable	2026-10-18	2e43062c	a58c1662f1b6	level/overlay function; fcheck runs boot-executable functions only
+func_L14_002E0538	not-executable	2026-10-18	2e43062c	5611608620fc	level/overlay function; fcheck runs boot-executable functions only
+func_L18_002EBBF0	not-executable	2026-10-18	2e43062c	f4cebdab2d23	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001F4918	not-executable	2026-10-18	2e43062c	e9a71be44de8	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FCC50	not-executable	2026-10-18	2e43062c	ee56e3d6411e	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00236F38	not-executable	2026-10-18	2e43062c	7442eab1170c	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002377E0	not-executable	2026-10-18	2e43062c	1a166d2850c0	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00251328	not-executable	2026-10-18	2e43062c	9df37adaceb3	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0025BCF8	not-executable	2026-10-18	2e43062c	fb03615c1701	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002AE278	not-executable	2026-10-18	2e43062c	88d3a9f420cf	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002B8AE8	not-executable	2026-10-18	2e43062c	3ec0b353b5a6	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002BA7C8	not-executable	2026-10-18	2e43062c	7cea4ea0cade	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002C9DC8	not-executable	2026-10-18	2e43062c	1601749c7e43	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002CF808	not-executable	2026-10-18	2e43062c	424b24f682bd	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002DF410	not-executable	2026-10-18	2e43062c	9ce5974c6ba5	level/overlay function; fcheck runs boot-executable functions only
+func_L05_00254838	not-executable	2026-10-18	2e43062c	19c94d2d79df	level/overlay function; fcheck runs boot-executable functions only
+func_L06_002F3680	not-executable	2026-10-18	2e43062c	59cead14cdb1	level/overlay function; fcheck runs boot-executable functions only
+func_L08_00303998	not-executable	2026-10-18	2e43062c	4088a4527f84	level/overlay function; fcheck runs boot-executable functions only
+func_L10_002F6F18	not-executable	2026-10-18	2e43062c	5af2ca5d7f03	level/overlay function; fcheck runs boot-executable functions only
+func_L14_00303270	not-executable	2026-10-18	2e43062c	b3145755297e	level/overlay function; fcheck runs boot-executable functions only
+func_L01_00262FE8	not-executable	2026-10-18	2e43062c	78250e85d759	level/overlay function; fcheck runs boot-executable functions only
+func_L01_0030F318	not-executable	2026-10-18	2e43062c	00faf1a5c27b	level/overlay function; fcheck runs boot-executable functions only
+func_L08_00259040	not-executable	2026-10-18	2e43062c	1b8c59b75d02	level/overlay function; fcheck runs boot-executable functions only
+func_L14_00316E60	not-executable	2026-10-18	2e43062c	a54e8bb5dc4a	level/overlay function; fcheck runs boot-executable functions only
+func_0012DB68	unchecked	2026-10-18	2e43062c	cb433bacc734	every captured state was skipped (nothing compared)
+func_0012EB18	differs	2026-10-18	2e43062c	5ecc631cff72	func_0012EB18.0.snap: DIFFERS;     does not keep $s0 (0, was 8)
+func_00204340	unchecked	2026-10-18	2e43062c	30283d8aa2b3	did not build or place: COMPILE failed (see the compiler's messages above)
+func_00226978	no-states	2026-10-18	2e43062c	7587b3847d58	never called in the capture run (title, menu, level 0)
+func_00238F98	no-states	2026-10-18	2e43062c	4677ef8440ae	never called in the capture run (title, menu, level 0)
+func_L08_002E35C8	not-executable	2026-10-18	2e43062c	9df233d10240	level/overlay function; fcheck runs boot-executable functions only
+func_L12_00304750	not-executable	2026-10-18	2e43062c	dc92d4400268	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00237B90	not-executable	2026-10-18	2e43062c	1aa4eaef98cc	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00255B90	not-executable	2026-10-18	2e43062c	45a9f0ed9e24	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0029AB38	not-executable	2026-10-18	2e43062c	c53f1bca49f3	level/overlay function; fcheck runs boot-executable functions only
+func_00125F88	no-states	2026-10-18	2e43062c	2e3b8b7615ae	never called in the capture run (title, menu, level 0)
+func_L01_00262DA8	not-executable	2026-10-18	2e43062c	1f1a6aa77ba4	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002BF958	not-executable	2026-10-18	2e43062c	49b3933cbfb8	level/overlay function; fcheck runs boot-executable functions only
+func_L15_002A4318	not-executable	2026-10-18	2e43062c	157567da338e	level/overlay function; fcheck runs boot-executable functions only
+func_0012A7E8	no-states	2026-10-18	2e43062c	36fc352375d6	never called in the capture run (title, menu, level 0)
+func_L01_00263338	not-executable	2026-10-18	2e43062c	d93df69be646	level/overlay function; fcheck runs boot-executable functions only
+func_L06_002F78A0	not-executable	2026-10-18	2e43062c	e99a4a9fb9f4	level/overlay function; fcheck runs boot-executable functions only
+func_00129690	no-states	2026-10-18	2e43062c	5839b29c74f2	never called in the capture run (title, menu, level 0)
+func_0021C840	no-states	2026-10-18	2e43062c	a1c51db34624	never called in the capture run (title, menu, level 0)
+func_00214778	no-states	2026-10-18	2e43062c	1925443afe3c	never called in the capture run (title, menu, level 0)
+func_L01_0021F9C8	not-executable	2026-10-18	2e43062c	993e3edb2434	level/overlay function; fcheck runs boot-executable functions only
+func_L14_00303430	not-executable	2026-10-18	2e43062c	0c9940cbf15a	level/overlay function; fcheck runs boot-executable functions only
+func_L12_00309730	not-executable	2026-10-18	2e43062c	f311d0f3a4ea	level/overlay function; fcheck runs boot-executable functions only
+func_L02_00250720	not-executable	2026-10-18	2e43062c	520b7225f048	level/overlay function; fcheck runs boot-executable functions only
+func_L02_00250C78	not-executable	2026-10-18	2e43062c	315764d4d5d5	level/overlay function; fcheck runs boot-executable functions only
+func_L05_0030F358	not-executable	2026-10-18	2e43062c	e1dca10a78ad	level/overlay function; fcheck runs boot-executable functions only
+func_0011B868	no-states	2026-10-18	2e43062c	7005fd636fc6	never called in the capture run (title, menu, level 0)
+func_L00_002ED320	not-executable	2026-10-18	2e43062c	c64d233b26c5	level/overlay function; fcheck runs boot-executable functions only
+func_L05_00266D10	not-executable	2026-10-18	2e43062c	2bebe56f0327	level/overlay function; fcheck runs boot-executable functions only
+func_L05_0030D678	not-executable	2026-10-18	2e43062c	e80fc8e71bcb	level/overlay function; fcheck runs boot-executable functions only
+func_L06_003089B8	not-executable	2026-10-18	2e43062c	302ce22f4a16	level/overlay function; fcheck runs boot-executable functions only
+func_L06_0024A080	not-executable	2026-10-18	2e43062c	1d1066894aca	level/overlay function; fcheck runs boot-executable functions only
+func_L06_00216B38	not-executable	2026-10-18	2e43062c	bea6a707ed64	level/overlay function; fcheck runs boot-executable functions only
+func_L10_002DE018	not-executable	2026-10-18	2e43062c	c0b016442dad	level/overlay function; fcheck runs boot-executable functions only
+func_L05_002D28D0	not-executable	2026-10-18	2e43062c	f5bf2eb4417a	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF468	not-executable	2026-10-18	2e43062c	7844336c6bf2	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0020E0A8	not-executable	2026-10-18	2e43062c	04e05145e1dc	level/overlay function; fcheck runs boot-executable functions only
+func_L04_002E2B48	not-executable	2026-10-18	2e43062c	632df10d4812	level/overlay function; fcheck runs boot-executable functions only
+func_L15_0029B1D8	not-executable	2026-10-18	2e43062c	5eb1a4534fc3	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF718	not-executable	2026-10-18	2e43062c	d56f820c16c2	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002513F8	not-executable	2026-10-18	2e43062c	b89ecb5e5467	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0024B960	not-executable	2026-10-18	2e43062c	502ac68afa9e	level/overlay function; fcheck runs boot-executable functions only
+func_L05_0023BA18	not-executable	2026-10-18	2e43062c	9d99ed262826	level/overlay function; fcheck runs boot-executable functions only
+func_L12_002677B4	not-executable	2026-10-18	2e43062c	27cdbd622e2e	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FFA40	not-executable	2026-10-18	2e43062c	0344a5219bef	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002003C8	not-executable	2026-10-18	2e43062c	3862dcc84c8e	level/overlay function; fcheck runs boot-executable functions only
+func_L01_002635C8	not-executable	2026-10-18	2e43062c	cdb68e72e5ce	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00268760	not-executable	2026-10-18	2e43062c	39d2e5f698ea	level/overlay function; fcheck runs boot-executable functions only
+func_L05_00317B68	not-executable	2026-10-18	2e43062c	674b837cc9ba	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00249EE0	not-executable	2026-10-18	2e43062c	5acb95534642	level/overlay function; fcheck runs boot-executable functions only
+func_L15_002C6950	not-executable	2026-10-18	2e43062c	2228108147b7	level/overlay function; fcheck runs boot-executable functions only
+func_L07_00319230	not-executable	2026-10-18	2e43062c	a8f9a747f3ce	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002D8898	not-executable	2026-10-18	2e43062c	84a501fb8605	level/overlay function; fcheck runs boot-executable functions only
+func_001F9850	no-states	2026-10-18	2e43062c	8c8d9947ddf9	never called in the capture run (title, menu, level 0)
+func_001F9888	no-states	2026-10-18	2e43062c	6fb2c206a2d0	never called in the capture run (title, menu, level 0)
+func_001F9BA0	no-states	2026-10-18	2e43062c	e638197129b9	never called in the capture run (title, menu, level 0)
+func_001F9C08	no-states	2026-10-18	2e43062c	7570e3bf6c9d	never called in the capture run (title, menu, level 0)
+func_001F9F18	no-states	2026-10-18	2e43062c	122624cc403f	never called in the capture run (title, menu, level 0)
+func_L00_001FF500	not-executable	2026-10-18	2e43062c	c4b5233e5b03	level/overlay function; fcheck runs boot-executable functions only
+func_001150D4	no-states	2026-10-18	2e43062c	6b2fd46c5c71	never called in the capture run (title, menu, level 0)
+func_00119110	no-states	2026-10-18	2e43062c	558cee2e9989	never called in the capture run (title, menu, level 0)
+func_001191E0	no-states	2026-10-18	2e43062c	c16cf153e4e8	never called in the capture run (title, menu, level 0)
+func_00119288	no-states	2026-10-18	2e43062c	1a88dc7f5361	never called in the capture run (title, menu, level 0)
+func_00119678	no-states	2026-10-18	2e43062c	cc6ebc83e9ef	never called in the capture run (title, menu, level 0)
+func_0011AC48	no-states	2026-10-18	2e43062c	a10c6eabed6e	never called in the capture run (title, menu, level 0)
+func_0011AD70	no-states	2026-10-18	2e43062c	92283dd961d9	never called in the capture run (title, menu, level 0)
+func_0011BC80	no-states	2026-10-18	2e43062c	bf872c4824ad	never called in the capture run (title, menu, level 0)
+func_0011D4E0	no-states	2026-10-18	2e43062c	a4ac06ec8f9b	never called in the capture run (title, menu, level 0)
+func_0011E6D8	no-states	2026-10-18	2e43062c	863836a4f630	never called in the capture run (title, menu, level 0)
+func_001206B0	unchecked	2026-10-18	2e43062c	a41aeb4f4a45	did not build or place: func_001206B0: neither an INCLUDE_ASM stub nor a C definition in src/
+func_001208E8	no-states	2026-10-18	2e43062c	77134920cf4f	never called in the capture run (title, menu, level 0)
+func_00120B28	no-states	2026-10-18	2e43062c	571011702afc	never called in the capture run (title, menu, level 0)
+func_00123EC0	no-states	2026-10-18	2e43062c	c13eb3476cdf	never called in the capture run (title, menu, level 0)
+func_001252A0	no-states	2026-10-18	2e43062c	c3fe5c684eda	never called in the capture run (title, menu, level 0)
+func_00125300	no-states	2026-10-18	2e43062c	88e1ab575ec7	never called in the capture run (title, menu, level 0)
+func_001265C8	no-states	2026-10-18	2e43062c	88063a675f28	never called in the capture run (title, menu, level 0)
+func_00126640	no-states	2026-10-18	2e43062c	220c5958bb6e	never called in the capture run (title, menu, level 0)
+func_001266D8	no-states	2026-10-18	2e43062c	f82063553b6c	never called in the capture run (title, menu, level 0)
+func_00126790	no-states	2026-10-18	2e43062c	526a73b16b05	never called in the capture run (title, menu, level 0)
+func_00126860	no-states	2026-10-18	2e43062c	350887bc4bf9	never called in the capture run (title, menu, level 0)
+func_00126910	no-states	2026-10-18	2e43062c	13dc08a946e6	never called in the capture run (title, menu, level 0)
+func_001269C8	no-states	2026-10-18	2e43062c	fcbbc3a7dc19	never called in the capture run (title, menu, level 0)
+func_00126AC0	no-states	2026-10-18	2e43062c	205e33aabc65	never called in the capture run (title, menu, level 0)
+func_00126BC0	no-states	2026-10-18	2e43062c	bce8375e677d	never called in the capture run (title, menu, level 0)
+func_00126C60	no-states	2026-10-18	2e43062c	3793d4c9b547	never called in the capture run (title, menu, level 0)
+func_00126D10	no-states	2026-10-18	2e43062c	8280edb7cb69	never called in the capture run (title, menu, level 0)
+func_00126DF0	no-states	2026-10-18	2e43062c	aadb17c340d8	never called in the capture run (title, menu, level 0)
+func_00126ED8	no-states	2026-10-18	2e43062c	378daffcf8bd	never called in the capture run (title, menu, level 0)
+func_00126FB0	no-states	2026-10-18	2e43062c	6443c1e5fac1	never called in the capture run (title, menu, level 0)
+func_00127080	no-states	2026-10-18	2e43062c	6c2bd0255aba	never called in the capture run (title, menu, level 0)
+func_001271A0	no-states	2026-10-18	2e43062c	7217671ebdf6	never called in the capture run (title, menu, level 0)
+func_001272B8	no-states	2026-10-18	2e43062c	2d33b6344d8b	never called in the capture run (title, menu, level 0)
+func_0012A418	no-states	2026-10-18	2e43062c	ae7d5fedce3b	never called in the capture run (title, menu, level 0)
+func_0012A718	no-states	2026-10-18	2e43062c	029f641e51f7	never called in the capture run (title, menu, level 0)
+func_0012C608	no-states	2026-10-18	2e43062c	d95cd2ef7dc2	never called in the capture run (title, menu, level 0)
+func_001EFD70	no-states	2026-10-18	2e43062c	4b35d30e623a	never called in the capture run (title, menu, level 0)
+func_001FAA28	no-states	2026-10-18	2e43062c	a5d03337190a	never called in the capture run (title, menu, level 0)
+func_0023B740	no-states	2026-10-18	2e43062c	9984d299fcd4	never called in the capture run (title, menu, level 0)
+func_0023BB90	no-states	2026-10-18	2e43062c	1b00571c099c	never called in the capture run (title, menu, level 0)
+func_0023C5E0	no-states	2026-10-18	2e43062c	90d5f62d8c3a	never called in the capture run (title, menu, level 0)
+func_0023C7A8	no-states	2026-10-18	2e43062c	d8792ffe6b76	never called in the capture run (title, menu, level 0)
+func_0023D340	no-states	2026-10-18	2e43062c	219175d8cd64	never called in the capture run (title, menu, level 0)
+func_0023DCF0	no-states	2026-10-18	2e43062c	b15a7d268635	never called in the capture run (title, menu, level 0)
+func_L00_0024DFC4	not-executable	2026-10-18	2e43062c	1d0810b7ef5b	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0024EC20	not-executable	2026-10-18	2e43062c	379b23899262	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002E17D4	not-executable	2026-10-18	2e43062c	bb5644bb6247	level/overlay function; fcheck runs boot-executable functions only
+func_L16_002D0B28	not-executable	2026-10-18	2e43062c	11ec0d64802b	level/overlay function; fcheck runs boot-executable functions only
+func_L18_002D9C90	not-executable	2026-10-18	2e43062c	4535c5a01f86	level/overlay function; fcheck runs boot-executable functions only
+func_L18_002FDCC4	not-executable	2026-10-18	2e43062c	596a5b16bba1	level/overlay function; fcheck runs boot-executable functions only
+func_0011DFE8	no-states	2026-10-18	2e43062c	4ada134b090c	never called in the capture run (title, menu, level 0)
+func_0011E860	no-states	2026-10-18	2e43062c	859fc5b1c40f	never called in the capture run (title, menu, level 0)
+func_0011EF28	no-states	2026-10-18	2e43062c	e3b5d9cc7a84	never called in the capture run (title, menu, level 0)
+func_0011F4F8	no-states	2026-10-18	2e43062c	a3bd8e59f3a0	never called in the capture run (title, menu, level 0)
+func_001F10A0	no-states	2026-10-18	2e43062c	18f59bfce161	never called in the capture run (title, menu, level 0)
+func_00118D80	differs	2026-10-18	2e43062c	70f7da63d95f	func_00118D80.0.snap: DIFFERS;     outside memory, step 0: ours [nothing more], retail [s 00000000 64 0] (r read, w write, s system call)
+func_00125328	no-states	2026-10-18	2e43062c	46f17e32c15e	never called in the capture run (title, menu, level 0)
+func_001F0F00	no-states	2026-10-18	2e43062c	58f173726e57	never called in the capture run (title, menu, level 0)
+func_001F9908	same	2026-10-18	2e43062c	86550802365b	3 calls
+func_001F9AC0	no-states	2026-10-18	2e43062c	73eec77182ca	never called in the capture run (title, menu, level 0)
+func_001F9B70	no-states	2026-10-18	2e43062c	e9ac9856a776	never called in the capture run (title, menu, level 0)
+func_001F9D78	no-states	2026-10-18	2e43062c	80ed4f7ed587	never called in the capture run (title, menu, level 0)
+func_001FA5C8	no-states	2026-10-18	2e43062c	3e5da6f0ab22	never called in the capture run (title, menu, level 0)
+func_001FA648	no-states	2026-10-18	2e43062c	9a41a3f41bd9	never called in the capture run (title, menu, level 0)
+func_001FA790	no-states	2026-10-18	2e43062c	43f4c29105de	never called in the capture run (title, menu, level 0)
+func_001FA9E8	no-states	2026-10-18	2e43062c	f130f77e9bd9	never called in the capture run (title, menu, level 0)
+func_L00_001FDE48	not-executable	2026-10-18	2e43062c	5ed5d93e97bb	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001FF5B0	not-executable	2026-10-18	2e43062c	f4cc46437788	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0025E210	not-executable	2026-10-18	2e43062c	eae7d309fdb7	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00264DB8	not-executable	2026-10-18	2e43062c	2bec0c68d651	level/overlay function; fcheck runs boot-executable functions only
+func_L00_00267618	not-executable	2026-10-18	2e43062c	2d73bdbbe381	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002689B0	not-executable	2026-10-18	2e43062c	c5d9b410ec46	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002EBE88	not-executable	2026-10-18	2e43062c	30110c898d55	level/overlay function; fcheck runs boot-executable functions only
+func_L00_002EBEE0	not-executable	2026-10-18	2e43062c	7dc70ad88a08	level/overlay function; fcheck runs boot-executable functions only
+func_L01_00279790	not-executable	2026-10-18	2e43062c	de2b08535b92	level/overlay function; fcheck runs boot-executable functions only
+func_L04_001F3010	not-executable	2026-10-18	2e43062c	b55dcf448988	level/overlay function; fcheck runs boot-executable functions only
+func_L00_001EAD88	not-executable	2026-10-18	2e43062c	851b3d9dec6c	level/overlay function; fcheck runs boot-executable functions only
+func_L00_0024F048	not-executable	2026-10-18	2e43062c	c4d08f644561	level/overlay function; fcheck runs boot-executable functions only

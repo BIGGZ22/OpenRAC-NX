@@ -15,7 +15,7 @@ never counted as a match.
 | | Matching C | Functional C (the backfill) |
 |---|---|---|
 | Compiles to | the retail bytes, exactly | anything that behaves the same |
-| Proven by | the build: the linked program equals retail | nothing; it is believed, then exercised |
+| Proven by | the build: the linked program equals retail | fcheck: the same result and memory as retail on real calls (the gate, below), or nothing yet |
 | Lives in | `src/` | `nonmatching/functional/`, listed in `nonmatching/functional.tsv` |
 | Counted in the progress report | yes | never |
 | Read by | the matching build and the port | the port only |
@@ -143,13 +143,96 @@ miss that is 95% byte-identical is usually already that; start from it.
   does not change behaviour> */`. Say `low` when any part is a guess.
 - **Check what can be checked.** It must compile in place of its stub. Byte
   similarity is evidence, not proof: a one-instruction difference can be a
-  wrong constant.
+  wrong constant. Reading it against the assembly is not proof either: a
+  wrong constants address and a literal read from the wrong copy both shipped
+  in C that read right. The proof is fcheck (the gate, below).
 - **Keep it out of `src/`.** It goes in `nonmatching/functional/` with a row
   in `functional.tsv`. The progress report must not change.
 
 What it is not: a way to raise the percentage, or a place for a match that
 only works with a trick. If a later attempt matches the function, the match
 goes in `src/` and the functional file and its row are removed.
+
+## The gate: done means fcheck says SAME
+
+A backfilled function is **done only when fcheck says SAME on captured calls
+of the retail game**. Anything fcheck cannot reach is **unchecked**, which is
+not done; it stays on the list with its reason. Reading the C, a high
+confidence line and a clean build are not a verdict.
+
+fcheck (rac1-decomp `tools/fcheck.py`, test-only) plays the PAL disc headless
+into level 0, captures the machine state at real calls of a function, runs the
+retail code from each state in OpenRAC's interpreter build, then runs the
+candidate from the same state and compares memory (but the dead stack and the
+scratchpad), the result by the return type, the registers a function keeps,
+and the order of device accesses and system calls. It is an offline check: it
+is never shipped and never used to play.
+
+The verdicts are kept in files OpenRAC owns, one per backfill table and keyed
+by function name, so the tables themselves (`functional.tsv` is synced from
+rac1-decomp, both are read by hostgen) are never changed:
+`port/game/rac1-pal/fcheck.tsv` for `nonmatching/functional.tsv` and
+`port/game/rac1-ntsc/hand/fcheck.tsv` for `hand/hand.tsv`. Columns, after
+`name`:
+
+| Column | Meaning |
+|---|---|
+| `status` | `same`: compared real calls, all equal. `differs`: a difference (the note says where; fix the C, not the verdict). `unchecked`: fcheck could not compare (the C did not build or place, every state was skipped, no oracle for that version); the note says why. `no-states`: the capture run (title, menu, level 0) never calls it. `not-executable`: not a boot-executable `func_XXXXXXXX` (level and overlay code; fcheck runs those only for now) |
+| `date` | the day it was run |
+| `fcheck` | the rac1-decomp commit fcheck ran from (`+dirty` when `tools/fcheck.py` had local edits) |
+| `csum` | the first 12 hex digits of the sha1 of the C file; an edit after the verdict makes it stale |
+| `note` | the call count, the differing lines, or the reason for `unchecked` |
+
+Only `same` counts as done. `differs` is a bug to fix. The rest are open: say
+so when you hand the function on, and never call it verified. A backfill row with no
+verdict has not been through the gate.
+
+Run it (OpenRAC built so that `build/runtime/openrac-fcheck` and
+`openrac-boot` exist; the PAL disc in place; a container runtime for the
+retail compiler; headless, it opens no window):
+
+```sh
+python3 tools/fcheck_gate.py run                       # every PAL row: capture what is missing, check in parallel, write fcheck.tsv
+python3 tools/fcheck_gate.py run --only func_001F7E98  # one or a few rows after you changed their C
+python3 tools/fcheck_gate.py report [--strict]         # joins each backfill table with its verdicts: counts, differing, stale and unverdicted rows; --strict exits 1 on any
+python3 tools/fcheck_gate.py us                        # the US table: unchecked, no US oracle
+python3 -m unittest tools/test_fcheck_gate.py
+```
+
+`OPENRAC_ROOT` names the OpenRAC checkout with the runtime build and
+`OPENRAC_DECOMP` the rac1-decomp checkout (defaults: `~/Projects/RAC/OpenRAC`
+and `~/Projects/RAC/rac1-decomp`). Each log is kept in rac1-decomp's
+`build-sn/fcheck/gate/logs/`. The gate copies each C file into
+`build-sn/fcheck/gate/`, which is ignored; it edits nothing else there.
+
+**How a worker reports.** A backfill worker hands a function on as one of:
+
+- `SAME`, with the call count from `tools/fcheck.py FUNC FILE` (or the row the
+  gate wrote). Then it is done.
+- `unchecked`, with the reason in one line: no states (never called in the
+  capture run), not executable (a level function), the candidate did not
+  build, every state skipped, or no oracle for the version. It is delivered
+  as unchecked and listed as such in the report, never as done or verified.
+- `differs`: not delivered. Fix the C and run fcheck again, or hand the
+  function back with the difference as it printed.
+
+A report line that says a backfill is finished without one of those is
+incomplete. The lead runs `fcheck_gate.py run --only ...` over the batch
+before landing and commits `fcheck.tsv` with the files.
+
+**The US table has no oracle.** `port/game/rac1-ntsc/hand/hand.tsv` rows are
+all `unchecked (no US oracle)` in `hand/fcheck.tsv`: fcheck's interpreter build, its hooks file and
+its capture list know the PAL disc and the PAL executable only. A US oracle
+would need: an interpreter build that boots the NTSC-U disc (its executable
+SCUS_971.99, its own hooks file, the button presses for its menus and a level
+start); a capture list keyed by the US executable's `FUN_` names, addresses
+and code bytes (fcheck reads function bytes from the PAL assembly and
+executable, and only takes `func_XXXXXXXX`); a way to compile a candidate in
+place of its stub with the NTSC decomp's compiler and place it with US
+addresses (the sections from `core.lit` on sit 0x100 lower than PAL's); and a
+check of what the PAL oracle cannot say. Until then a US function whose PAL
+counterpart the version map calls `same` has the PAL verdict as evidence (not
+a verdict of its own), and the rest stay unchecked.
 
 ## Picking what to backfill first
 
@@ -200,6 +283,8 @@ try to match, within the bound for its tier
   matched                                           -> src/, the build proves it
   stopped                                           -> near miss with a note; next tier up
 no tier left, or the port needs it now              -> functional C, with its confidence
+  fcheck SAME on captured calls                     -> done
+  unchecked (with the reason) or differs            -> not done
 ```
 
 ## Where the pieces are
@@ -207,7 +292,7 @@ no tier left, or the port needs it now              -> functional C, with its co
 | | Ratchet & Clank (PAL) | Going Commando |
 |---|---|---|
 | Near misses | `nonmatching/<area>/` | `nonmatching/<area>/` |
-| Functional C | `nonmatching/functional/`, `functional.tsv` | not set up yet: add the same two |
+| Functional C | `nonmatching/functional/`, `functional.tsv`; verdicts in OpenRAC's `port/game/rac1-pal/fcheck.tsv` | not set up yet: add the same two |
 | Pieces of one function | `config/overlays/joined.tsv` | the catalogue, `tools/levels.py` |
 | Handwritten | `ASM_FUNC`, counted as finished | `ASM_FUNC`, counted as finished |
 | Worker bound and protocol | `docs/QUEUE.md`, `docs/AGENT_WORKFLOW.md` | `docs/AGENT_WORKFLOW.md` |
