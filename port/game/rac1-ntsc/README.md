@@ -48,8 +48,8 @@ the two versions have the same instructions for it (only addresses differ),
 | [split_places.tsv](split_places.tsv) | rac1-pal's | 30 rows: only where the NTSC decomp's catalogue folds the same places into one name; where it names a place apart, the NTSC decomp's own function stands |
 | [host/rac1_version.h](host/rac1_version.h) | the version map, checked by [hostnames.py](../../tools/versionmap/README.md#the-shared-host-cs-tables) | this version's names and addresses for the host C both discs share ([port/game/rac1](../rac1/README.md)): the overlay hook, the direct start, the hardware routines, the native 2D and world hand-off, collision, the HUD at a wide picture's edges, the Video options rows, the developer menu's Planets page. Each entry agrees with the map but those written above its mark with their reason |
 | [host/scene_start.c](host/scene_start.c), [host/catalogue.c](host/catalogue.c) | by hand | what only this version needs: the in-game scene's start (hand C in PAL; here the NTSC decomp has no stub to replace) and the levels' copy of WadDecompress, which this catalogue lists apart |
-| [hand/*.c](hand) | rac1-pal's `hand/` | 76 functions the NTSC decomp has as assembly (one, the integer as a float, written here) |
-| [hand/functional/](hand/functional) | the PAL decompilation's functional C and its matched C (rac1-pal's `hand/` where it has its own) | 277 files for functions the NTSC decomp has only as assembly, refreshed on 2026-10-16 from what PAL has then (111 of them PAL's matched C now); 9 of them `near` (their header says so). Some entries (about 100 of the first carry) no longer replace anything: the NTSC decomp has its own C for them since |
+| [hand/*.c](hand) | rac1-pal's `hand/` | 70 functions the NTSC decomp has as assembly (one, the integer as a float, written here) |
+| [hand/functional/](hand/functional) | the PAL decompilation's functional C and its matched C (rac1-pal's `hand/` where it has its own) | 220 files for functions the NTSC decomp has only as assembly: refreshed on 2026-10-16 from what PAL had then (some `near`: their header says so), and 34 more on 2026-10-17 by [carry_functions.py](../../tools/versionmap/README.md#carrying-functions) (their header says so). The 97 rows (and files) that no longer replaced a stub, the NTSC decomp having its own C for them, are gone |
 | [drafts.tsv](drafts.tsv) | the NTSC decomp itself | 58 files whose own pending C (the `#else` of their `NON_MATCHING` guard) is read in place of the stub: where rac1-pal has nothing for the function, and for the six `near` functions that have a draft (the title loop is one). That decompilation never compiles these |
 
 The title's Options list gets the Video page back (the US game's list is
@@ -87,9 +87,7 @@ otherwise.
    a register the C does not set; fix them in its C as
    [OPENRAC_PATCHES.md](../../../games/rac1/ntsc/OPENRAC_PATCHES.md)
    records, worst first.
-3. **Stale carried entries.** hand.tsv still lists about 100 functions the
-   NTSC decomp has matched since; they replace nothing and can go.
-4. **The shared code's PAL addresses.** The viewer's address tables and two
+3. **The shared code's PAL addresses.** The viewer's address tables and two
    words in the front end have NTSC-U values now; `debug_menu.cpp` and
    `options_menu.cpp` are still PAL's and only act for `rac1-pal`. The
    vertical field-of-view factor (0.756) is PAL's.
