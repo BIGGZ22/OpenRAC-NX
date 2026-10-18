@@ -780,11 +780,30 @@ fn tune_webkit_for_wayland() {
     }
 }
 
+/// GTK 3's Wayland backend aborts on startup with an assertion failure in
+/// _gdk_wayland_display_get_scaled_cursor_theme (`display_wayland->cursor_theme_name`) if no
+/// cursor theme name can be resolved from GSettings (common in AppImages on GNOME Wayland or
+/// when cursor themes are misconfigured). Set safe fallbacks for XCURSOR_THEME and XCURSOR_SIZE.
+#[cfg(target_os = "linux")]
+fn ensure_wayland_cursor_fallback() {
+    let wayland = std::env::var_os("WAYLAND_DISPLAY").is_some();
+    if wayland {
+        if std::env::var("XCURSOR_THEME").map_or(true, |v| v.trim().is_empty()) {
+            std::env::set_var("XCURSOR_THEME", "default");
+        }
+        if std::env::var("XCURSOR_SIZE").map_or(true, |v| v.trim().is_empty()) {
+            std::env::set_var("XCURSOR_SIZE", "24");
+        }
+    }
+}
+
 pub fn run() {
     #[cfg(target_os = "linux")]
     clean_appimage_python_env();
     #[cfg(target_os = "linux")]
     tune_webkit_for_wayland();
+    #[cfg(target_os = "linux")]
+    ensure_wayland_cursor_fallback();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
