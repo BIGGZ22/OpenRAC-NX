@@ -2,4 +2,7 @@
     <string name="app_name">"OpenRAC Launcher"</string>
     <string name="main_activity_title">"OpenRAC Launcher"</string>
     <string name="setup_channel">"Game set-up"</string>
+    <string name="update_channel">"Launcher updates"</string>
+    <string name="update_ready">"The launcher's update is ready"</string>
+    <string name="update_ready_text">"Tap to install it."</string>
 </resources>

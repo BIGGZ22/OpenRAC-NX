@@ -23,8 +23,12 @@ import androidx.core.view.WindowInsetsControllerCompat
  * focused; Back asks the page first (`window.__openracBack`), then leaves the launcher.
  */
 class MainActivity : TauriActivity() {
-  private companion object {
-    const val NOTIFICATIONS = 0x4f52
+  companion object {
+    private const val NOTIFICATIONS = 0x4f52
+
+    /** The launcher's window is in front: Android lets it start an activity (UpdateReceiver). */
+    @Volatile var inFront = false
+      private set
   }
 
   private var webView: WebView? = null
@@ -74,6 +78,17 @@ class MainActivity : TauriActivity() {
     if (requestCode == NOTIFICATIONS && grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
       SetupService.refresh(this)
     }
+  }
+
+  override fun onResume() {
+    super.onResume()
+    inFront = true
+    UpdateReceiver.showWaiting(this)
+  }
+
+  override fun onPause() {
+    inFront = false
+    super.onPause()
   }
 
   override fun onWebViewCreate(webView: WebView) {
