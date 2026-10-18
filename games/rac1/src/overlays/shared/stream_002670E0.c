@@ -238,6 +238,21 @@ int func_L00_00267C48(int a, int b, int c, int d) {
 extern Hist_266e80 D_0013CA40;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_menus_00266d60.c, FUN_L00_00266e80. */
-/* Joined to the fragment that follows it (config/overlays/joined.tsv): the catalogue splits the delay slot of the final jr off. */
-f32 func_L00_00267CC8(s32 n) { s32 m; if (D_0013CA40.count < n) n = D_0013CA40.count; return D_0013CA40.v[(D_0013CA40.head - n + 30) % 30]; }
+typedef struct {
+    char pad[0x18E];
+    s16 head;
+    s32 count;
+    char pad2[0x2D0 - 0x194];
+    f32 v[30];
+} Hist_266e80_67CC8;
+extern Hist_266e80_67CC8 D_0013CA40_67CC8 __asm__("D_0013CA40");
+
+/* The value n entries back in the 30-entry history ring (n is capped at the count).
+   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/input/pad/pad_pressed_within.c, FUN_L00_00266e80. */
+f32 func_L00_00267CC8(s32 n) {
+    s32 m;
+    if (D_0013CA40_67CC8.count < n)
+        n = D_0013CA40_67CC8.count;
+    return D_0013CA40_67CC8.v[(D_0013CA40_67CC8.head - n + 30) % 30];
+}
 INCLUDE_ASM("asm/overlays", func_L00_00267D08);

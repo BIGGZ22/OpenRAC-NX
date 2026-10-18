@@ -5,7 +5,255 @@
 #include "hero.h"
 #include "moby.h"
 
-INCLUDE_ASM("asm/overlays", func_L00_002D1168);
+typedef struct { f32 x, y, z, w; } __attribute__((aligned(16))) V_2cfcb8;
+struct Vars_2cfcb8;
+typedef struct M_2cfcb8 {
+    u8 p0[0x10];
+    V_2cfcb8 pos;
+    u8 state;
+    u8 group;
+    u8 p22[0x30 - 0x22];
+    u8 update_dist;
+    u8 p31[0x36 - 0x31];
+    s16 occlusion;
+    u8 p38[0x40 - 0x38];
+    f32 rot_x;
+    f32 rot_y;
+    f32 rot_z;
+    u8 p4c[0x78 - 0x4C];
+    struct Vars_2cfcb8 *vars;
+    u8 p7c[0xA6 - 0x7C];
+    s16 oclass;
+    u16 hA8;
+    u8 pAA[0xB0 - 0xAA];
+    u8 mission;
+} M_2cfcb8;
+typedef struct Vars_2cfcb8 {
+    u8 p0[0xA0];
+    M_2cfcb8 *next_member;
+    M_2cfcb8 *pA4;
+    u8 pA8[4];
+    s32 flags;
+    f32 height;
+    u8 pB4[0xC0 - 0xB4];
+    s32 route_index;
+    u16 hC4;
+    s16 hC6;
+    u8 pC8[4];
+    s32 iCC;
+    V_2cfcb8 link_pos;
+    V_2cfcb8 link_rot;
+    M_2cfcb8 *standing_on;
+    f32 stack_level;
+    s32 iF8;
+} Vars_2cfcb8;
+typedef struct { s32 count; s32 pad_4[3]; struct { s32 pad_0[3]; s32 state; } entries[1]; } R_2cfcb8;
+typedef struct { u8 p0[0x18]; M_2cfcb8 *moby; u8 p1c[0x28 - 0x1C]; f32 point_z; } H_2cfcb8;
+extern s32 D_0014EF90[];
+extern int D_L00_00173F40;
+extern R_2cfcb8 * D_L00_001B0830_D1168[] __asm__("D_L00_001B0830");
+extern s32 func_002140B0(s32);
+extern f32 func_001FA748(f32, f32);
+extern void func_0020D678_D1168(M_2cfcb8 *) __asm__("func_0020D678");
+extern s32 func_L00_001EFFF0_D1168(V_2cfcb8 *, V_2cfcb8 *, s32, M_2cfcb8 *, s32) __asm__("func_L00_001EFFF0");
+extern s32 func_L00_0025F410_D1168(M_2cfcb8 *) __asm__("func_L00_0025F410");
+extern s32 func_L00_0025D390_D1168(M_2cfcb8 *) __asm__("func_L00_0025D390");
+extern int func_L00_002616E0(M_2cfcb8 *, M_2cfcb8 *, V_2cfcb8 *, f32 *, V_2cfcb8 *, V_2cfcb8 *);
+extern int func_L00_0025A208(M_2cfcb8 **, s32, s32, s32);
+extern int func_L00_0025A2F0(M_2cfcb8 **, M_2cfcb8 *, s32, s32);
+extern void func_001F9BD8_D1168(V_2cfcb8 *, V_2cfcb8 *, void *) __asm__("func_001F9BD8");
+extern void func_001F9978(void);
+extern f32 func_001F9D10_D1168(V_2cfcb8 *, V_2cfcb8 *) __asm__("func_001F9D10");
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/veldin_ship.c, FUN_L00_002cfcb8. */
+void func_L00_002D1168(M_2cfcb8 *moby) {
+    V_2cfcb8 probe_top;
+    V_2cfcb8 probe_bottom;
+    V_2cfcb8 probe_up;
+    V_2cfcb8 probe_down;
+    M_2cfcb8 *member;
+    M_2cfcb8 *other;
+    Vars_2cfcb8 *vars;
+    Vars_2cfcb8 *below_vars;
+    V_2cfcb8 *src1, *src2, *src3, *src4;
+    R_2cfcb8 *route;
+    s32 group, flags_before, i, member_flags;
+    M_2cfcb8 *below;
+
+    vars = moby->vars;
+    group = moby->group;
+    vars->flags |= 4;
+    if (group == 0xFF) {
+        if (moby->oclass == 0x1F4 && func_002140B0(2) != 0 && moby->rot_x == 0.0f && moby->rot_y == 0.0f) {
+            moby->rot_z = func_001FA748(moby->rot_z, 1.5707964f);
+        }
+        if (moby->oclass == 0x1F5 && moby->mission != 0xFF && D_0014EF90[moby->mission] < vars->iF8) {
+            func_0020D678_D1168(moby);
+            return;
+        }
+        flags_before = vars->flags;
+        vars->hC4 = moby->hA8;
+        vars->height = 1.0f;
+        vars->flags = flags_before | 1;
+        src1 = &moby->pos;
+        qcopy(&probe_top, src1);
+        qcopy(&probe_bottom, src1);
+        probe_top.z += 0.5f;
+        probe_bottom.z = 0.1f;
+        if (func_L00_001EFFF0_D1168(&probe_top, &probe_bottom, 2, 0, 0) == 0) {
+            vars->pA4 = 0;
+            return;
+        }
+        if ((*(H_2cfcb8 *)&D_L00_00173F40).moby == 0) {
+            moby->pos.z = (*(H_2cfcb8 *)&D_L00_00173F40).point_z;
+            vars->pA4 = 0;
+            return;
+        }
+        if (func_L00_0025F410_D1168((*(H_2cfcb8 *)&D_L00_00173F40).moby) != 0) return;
+        vars->pA4 = 0;
+        vars->flags |= 8;
+        if (func_L00_0025D390_D1168((*(H_2cfcb8 *)&D_L00_00173F40).moby) != 0) {
+            if (moby != 0) moby->occlusion = 0x7F80;
+            func_L00_002616E0(member, (*(H_2cfcb8 *)&D_L00_00173F40).moby, &moby->pos, &moby->rot_x, &vars->link_pos, &vars->link_rot);
+            vars->stack_level = 0;
+            vars->standing_on = (*(H_2cfcb8 *)&D_L00_00173F40).moby;
+        }
+        return;
+    }
+
+    func_L00_0025A208(&moby, group, 0, 0);
+    while (moby != 0) {
+        vars = moby->vars;
+        if (func_L00_0025F410_D1168(moby) != 0) {
+            if (moby->oclass == 0x1F4 && func_002140B0(2) != 0 && moby->rot_x == 0.0f && moby->rot_y == 0.0f) {
+                moby->rot_z = func_001FA748(moby->rot_z, 1.5707964f);
+            }
+            if (moby->oclass == 0x1F5 && moby->mission != 0xFF && D_0014EF90[moby->mission] < vars->iF8) {
+                func_0020D678_D1168(moby);
+            } else {
+                member_flags = vars->flags;
+                vars->hC4 = moby->hA8;
+                vars->height = 1.0f;
+                vars->flags = member_flags | 1;
+                src2 = &moby->pos;
+                qcopy(&probe_top, src2);
+                qcopy(&probe_bottom, src2);
+                probe_top.z += 0.5f;
+                probe_bottom.z = 0.1f;
+                if (func_L00_001EFFF0_D1168(&probe_top, &probe_bottom, 2, 0, 0) == 0) {
+                    vars->pA4 = 0;
+                } else {
+                    if ((*(H_2cfcb8 *)&D_L00_00173F40).moby == 0) {
+                        moby->pos.z = (*(H_2cfcb8 *)&D_L00_00173F40).point_z;
+                        vars->pA4 = 0;
+                    } else if (func_L00_0025F410_D1168((*(H_2cfcb8 *)&D_L00_00173F40).moby) == 0 && (u16)((*(H_2cfcb8 *)&D_L00_00173F40).moby->oclass - 0x128) >= 2) {
+                        vars->pA4 = 0;
+                        moby->update_dist = 0xFF;
+                        vars->flags |= 8;
+                    } else if ((*(H_2cfcb8 *)&D_L00_00173F40).moby->vars == 0) {
+                        vars->pA4 = 0;
+                    } else if ((*(H_2cfcb8 *)&D_L00_00173F40).moby->group != moby->group) {
+                        vars->pA4 = 0;
+                    } else if (func_L00_0025F410_D1168((*(H_2cfcb8 *)&D_L00_00173F40).moby) != 0) {
+                        vars->pA4 = (*(H_2cfcb8 *)&D_L00_00173F40).moby;
+                        src3 = &moby->pos;
+                        below = (*(H_2cfcb8 *)&D_L00_00173F40).moby;
+                        qcopy(src3, &below->pos);
+                        func_001F9BD8_D1168(src3, src3, (u8 *)below + 0xE0);
+                        vars = (*(H_2cfcb8 *)&D_L00_00173F40).moby->vars;
+                        if (func_L00_0025F410_D1168(moby) != 0) {
+                            vars->next_member = moby;
+                        } else {
+                            func_001F9978();
+                            vars->next_member = 0;
+                        }
+                    } else {
+                        vars->pA4 = 0;
+                        vars->iCC = 0;
+                        moby->pos.z = (*(H_2cfcb8 *)&D_L00_00173F40).point_z;
+                    }
+                }
+            }
+        }
+        func_L00_0025A2F0(&moby, moby, 0, 0);
+    }
+
+    func_L00_0025A208(&member, group, 0, 0);
+    while (member != 0) {
+        vars = member->vars;
+        if (func_L00_0025F410_D1168(member) != 0 && vars->pA4 == 0) {
+            src4 = &member->pos;
+            qcopy(&probe_up, src4);
+            qcopy(&probe_down, src4);
+            probe_up.z += vars->height * 0.5f;
+            probe_down.z = 0.1f;
+            if (func_L00_001EFFF0_D1168(&probe_up, &probe_down, 2, moby, 0) != 0) {
+                        if ((*(H_2cfcb8 *)&D_L00_00173F40).moby != 0 && func_L00_0025D390_D1168((*(H_2cfcb8 *)&D_L00_00173F40).moby) != 0) {
+                    if (moby != 0) moby->occlusion = 0x7F80;
+                    func_L00_002616E0(member, (*(H_2cfcb8 *)&D_L00_00173F40).moby, &member->pos, &member->rot_x, &vars->link_pos, &vars->link_rot);
+                    vars->stack_level = 0;
+                    vars->standing_on = (*(H_2cfcb8 *)&D_L00_00173F40).moby;
+                    vars->flags |= 8;
+                }
+            }
+            for (moby = member; moby != 0; moby = vars->next_member) {
+                vars = moby->vars;
+                below_vars = 0;
+                if (vars->pA4 != 0) below_vars = vars->pA4->vars;
+                if (below_vars != 0) {
+                    vars->iCC = below_vars->iCC;
+                    if (below_vars->standing_on != 0) {
+                        moby->update_dist = 0xFF;
+                        vars->flags |= 8;
+                        qcopy(&vars->link_pos, &below_vars->link_pos);
+                        qcopy(&vars->link_rot, &below_vars->link_rot);
+                        vars->standing_on = below_vars->standing_on;
+                        vars->stack_level = below_vars->stack_level + 1.0f;
+                    }
+                }
+                if ((vars->hC6 != 0 || moby->oclass == 0x1F5) && vars->next_member != 0 && vars->route_index != -1) {
+                    route = D_L00_001B0830_D1168[vars->route_index];
+                    if (route->count == 0) {
+                        vars->route_index = -1;
+                    } else {
+                        s32 entry_state = route->entries[0].state;
+                        if (entry_state == 1 || entry_state == 3) {
+                            vars->route_index = -1;
+                        } else if (entry_state == 0x111) {
+                            vars->route_index = -1;
+                        } else if ((u32)(entry_state - 0x11) < 0x100) {
+                            if (entry_state - 0x10 >= route->count) {
+                                vars->route_index = -1;
+                            } else {
+                                route->entries[0].state = entry_state + 1;
+                            }
+                        } else {
+                            route->entries[0].state = 0x11;
+                            for (i = 0; i < D_L00_001B0830_D1168[vars->route_index]->count; i++) {
+                                D_L00_001B0830_D1168[vars->route_index]->entries[i].state = 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        func_L00_0025A2F0(&member, member, 0, 0);
+    }
+
+    func_L00_0025A208(&moby, group, 0, 0);
+    while (moby != 0) {
+        if (func_L00_0025F410_D1168(moby) != 0) {
+            func_L00_0025A2F0(&other, moby, 0, 0);
+            while (other != 0) {
+                if (func_L00_0025F410_D1168(other) != 0) {
+                    func_001F9D10_D1168(&moby->pos, &other->pos);
+                }
+                func_L00_0025A2F0(&other, other, 0, 0);
+            }
+        }
+        func_L00_0025A2F0(&moby, moby, 0, 0);
+    }
+}
 typedef struct {
     s32 v[7];
 } T_2D19E8;

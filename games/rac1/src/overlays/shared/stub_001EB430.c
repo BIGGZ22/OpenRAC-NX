@@ -2,13 +2,13 @@
 #include "common.h"
 #include "include_asm.h"
 
-/* Clears the five words of A. The catalogue cuts this function in three (config/overlays/joined.tsv). */
-void func_L00_001EB430(int *a) {
-    a[0] = 0;
-    a[1] = 0;
-    a[2] = 0;
-    a[3] = 0;
-    a[4] = 0;
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/sdk/debug/001eb0b0.c, FUN_L00_001eb0b0. */
+void func_L00_001EB430(s32 *p) {
+    p[0] = 0;
+    p[1] = 0;
+    p[2] = 0;
+    p[3] = 0;
+    p[4] = 0;
 }
 INCLUDE_ASM("asm/overlays", func_L00_001EB438);
 // Clears the word at offset 0xC of its argument.
@@ -17,11 +17,12 @@ void func_L00_001EB440(int *a) {
 }
 extern float func_001FA748(float, float);
 
-/* Copies a 5-float record, the first element replaced by func_001FA748(src[0], x).
- * Adapted from Lombyte (MIT), FUN_L00_001eb0c8. The catalogue splits the delay slot of the final
- * jr off as func_001EC030, so this function is joined to it (config/overlays/joined.tsv). */
-void func_L00_001EB448(float *d, float *s, float x) {
-    d[0] = FastAddRots(s[0], x);
+f32 func_001FA748(f32, f32);
+
+/* Copies the five floats of s to d, adding x to the first as a rotation.
+   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/sdk/debug/001eb0b0.c, FUN_L00_001eb0c8. */
+void func_L00_001EB448(f32 *d, f32 *s, f32 x) {
+    d[0] = func_001FA748(s[0], x);
     d[1] = s[1];
     d[2] = s[2];
     d[3] = s[3];

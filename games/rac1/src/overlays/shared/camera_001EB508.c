@@ -43,24 +43,25 @@ extern float func_001F9B88(float);
 extern float func_001FA748(float, float);
 
 /* steers *p toward a target with damping, clamps it, then calls FA748 */
-/* Joined to the fragment that follows it (config/overlays/joined.tsv): the catalogue splits the delay slot of the final jr off. */
-void func_L00_001EB6A8(float *p, float a, float b, float c, float d, float lim) {
-    float r = func_001FA790_f(b, a);
-    float v;
-    *p = *p + (c * r - d * *p);
+float func_001FA790_EB6A8(float, float) __asm__("func_001FA790");
+float func_001F9B88(float);
+float func_001FA748(float, float);
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/camera/init_camera_system.c, FUN_L00_001eb328. */
+float func_L00_001EB6A8(float *p, float a, float b, float c, float d, float lim) {
+    float t = func_001FA790_EB6A8(b, a);
+    *p = *p + (c * t - d * *p);
     if (lim != 0.0f) {
-        if (lim < *p) {
+        if (*p > lim)
             *p = lim;
-        } else if (*p < -lim) {
+        else if (*p < -lim)
             *p = -lim;
-        }
     }
-    if (FastAbsF(r) < *p) {
-        *p = FastAbsF(r);
-    } else if (*p < -FastAbsF(r)) {
-        *p = -FastAbsF(r);
-    }
-    FastAddRots(a, *p);
+    if (*p > func_001F9B88(t))
+        *p = func_001F9B88(t);
+    else if (*p < -func_001F9B88(t))
+        *p = -func_001F9B88(t);
+    return func_001FA748(a, *p);
 }
 typedef struct { char pad[0x254]; int p; char pad2[0x18]; short s; char pad3[1]; char c; char pad4[0x14]; float f0; char pad5[8]; float f1; } S;
 extern S D_L00_00166D80;
