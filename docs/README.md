@@ -104,3 +104,13 @@ the first table; go to a game's documents when you work on that game.
 | [docs/RESEARCH.md](../games/rac4/ntsc/docs/RESEARCH.md) | The packed executable, its 17 sections, the compiler and assembler, libgcc and libm, open questions |
 | [docs/OVERLAYS.md](../games/rac4/ntsc/docs/OVERLAYS.md) | The 47 level overlays: obtaining, splitting, counting and disassembling them |
 | [docs/CREDITS.md](../games/rac4/ntsc/docs/CREDITS.md), [THIRD_PARTY_NOTICES.md](../games/rac4/ntsc/THIRD_PARTY_NOTICES.md) | Projects it drew on; GCC and newlib notices |
+
+## Ratchet & Clank: Size Matters ([games/rac5/ntsc](../games/rac5/ntsc))
+
+| Document | For |
+|---|---|
+| [README.md](../games/rac5/ntsc/README.md), [CONTRIBUTING.md](../games/rac5/ntsc/CONTRIBUTING.md), [AGENTS.md](../games/rac5/ntsc/AGENTS.md) | The project, what is established, how to contribute and check work |
+| [LEGAL.md](../games/rac5/ntsc/LEGAL.md) | What may be committed, allowed sources |
+| [docs/ROADMAP.md](../games/rac5/ntsc/docs/ROADMAP.md) | The gates still open |
+| [docs/REL-FORMAT.md](../games/rac5/ntsc/docs/REL-FORMAT.md), [docs/BOOT-SYMBOLS.md](../games/rac5/ntsc/docs/BOOT-SYMBOLS.md) | The SNR2 level modules; the boot's named symbols |
+| [docs/BOOT-TRIAL-GATE.md](../games/rac5/ntsc/docs/BOOT-TRIAL-GATE.md), [docs/BOOT-MATCH-SCOPE.md](../games/rac5/ntsc/docs/BOOT-MATCH-SCOPE.md) | How a function is accepted, and what a boot match covers |

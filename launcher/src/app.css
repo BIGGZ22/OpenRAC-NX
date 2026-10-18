@@ -37,6 +37,8 @@
   --font-sans: "Inter Variable", system-ui, sans-serif;
   --font-brand: "Audiowide", "Inter Variable", sans-serif;
   --font-head: "Orbitron Variable", "Inter Variable", sans-serif;
+  /* Size Matters' titles, as on the site's card. */
+  --font-chakra: "Chakra Petch", "Orbitron Variable", sans-serif;
   --font-mono: ui-monospace, "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
 
   --radius: 16px;

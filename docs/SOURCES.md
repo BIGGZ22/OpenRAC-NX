@@ -66,6 +66,10 @@ Everything else is exactly as it was at that commit.
 - `ports/pal-functional/` (platypet2217-star's RAC2Decomp, MIT) comes along unchanged; it is
   not part of the matching sources or progress.
 
+**rac5/ntsc**
+- Nothing changed: imported as the project's commit, whole. It already states the sourcing
+  rule in its own LEGAL.md, CONTRIBUTING.md and AGENTS.md.
+
 **rac4/ntsc**
 - In `src/game/00473A88.c`, the five members of the local struct are named by
   offset (`f20`, `f68`, `f69`, `f6A`, `fBE`), as the project's own `LEGAL.md`

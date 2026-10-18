@@ -79,7 +79,7 @@ Optional-Footer: value
 | `revert` | Reverting an earlier commit (name it in the body) |
 
 **Scopes** name what the commit touches: a game version (`rac1/pal`,
-`rac1/ntsc`, `rac2`, `rac3`, `rac4`), or a shared part (`editor`,
+`rac1/ntsc`, `rac2`, `rac3`, `rac4`, `rac5`), or a shared part (`editor`,
 `launcher`, `port`, `tools`, `docs`, `progress`, `policy`, `sources`,
 `setup`, `legal`, `import`, `games`).
 A scope may be narrower when that helps (`rac1/pal/overlays`). Leave it out

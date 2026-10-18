@@ -59,6 +59,12 @@ jobs:
           python tests/check_repository.py
           python tools/progress.py --check
 
+      - name: rac5 tools and layout
+        working-directory: games/rac5/ntsc
+        run: |
+          python -m unittest discover -s tests -v
+          python tools/check_repository.py
+
   # The desktop launcher (launcher/): its UI checks, and its Rust side, whose
   # tests also check launcher/actions.json against games/*/game.json.
   launcher:
