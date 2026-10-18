@@ -207,6 +207,7 @@ jobs:
               launcher/target/release/bundle/msi/*.msi
               launcher/target/release/bundle/nsis/*.zip
               launcher/target/release/bundle/nsis/*.sig
+              launcher/target/release/bundle/msi/*.sig
           # The oldest Ubuntu the runners offer: what is built there starts
           # on newer systems too, not the other way round.
           - name: linux
@@ -214,7 +215,9 @@ jobs:
             args: "--bundles deb,rpm,appimage"
             files: |
               launcher/target/release/bundle/deb/*.deb
+              launcher/target/release/bundle/deb/*.sig
               launcher/target/release/bundle/rpm/*.rpm
+              launcher/target/release/bundle/rpm/*.sig
               launcher/target/release/bundle/appimage/*.AppImage
               launcher/target/release/bundle/appimage/*.tar.gz
               launcher/target/release/bundle/appimage/*.sig
@@ -223,7 +226,9 @@ jobs:
             args: "--bundles deb,rpm,appimage"
             files: |
               launcher/target/release/bundle/deb/*.deb
+              launcher/target/release/bundle/deb/*.sig
               launcher/target/release/bundle/rpm/*.rpm
+              launcher/target/release/bundle/rpm/*.sig
               launcher/target/release/bundle/appimage/*.AppImage
               launcher/target/release/bundle/appimage/*.tar.gz
               launcher/target/release/bundle/appimage/*.sig
@@ -382,11 +387,14 @@ jobs:
           yarn install --immutable
           yarn tauri build --bundles rpm
           for f in target/release/bundle/rpm/*.x86_64.rpm; do mv "$f" "${f%.x86_64.rpm}.fc44.x86_64.rpm"; done
+          for f in target/release/bundle/rpm/*.x86_64.rpm.sig; do mv "$f" "${f%.x86_64.rpm.sig}.fc44.x86_64.rpm.sig"; done
 
       - uses: actions/upload-artifact@v4
         with:
           name: openrac-launcher-fedora
-          path: launcher/target/release/bundle/rpm/*.rpm
+          path: |
+            launcher/target/release/bundle/rpm/*.rpm
+            launcher/target/release/bundle/rpm/*.sig
           if-no-files-found: error
 
   # A tag `launcher-v*`: the installers of all the builds on a draft
