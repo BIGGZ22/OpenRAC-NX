@@ -380,9 +380,11 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
             return;
         case gs::kTex0_1:
             c1.tex0 = gs::Tex0::decode(value);
+            clut_load(c1.tex0);
             break;
         case gs::kTex0_2:
             c2.tex0 = gs::Tex0::decode(value);
+            clut_load(c2.tex0);
             break;
         case gs::kTex2_1:
         case gs::kTex2_2: {
@@ -395,6 +397,7 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
             c.tex0.csm = t.csm;
             c.tex0.csa = t.csa;
             c.tex0.cld = t.cld;
+            clut_load(c.tex0);
             break;
         }
         case gs::kTex1_1:
@@ -832,6 +835,34 @@ void GifInterpreter::overwritten(std::uint32_t dbp, std::uint32_t dbw, std::uint
     if (m_offscreen.size() != targets && logged++ < 100) {
         log::info("2D: a transfer to block {:#x} took {} off-screen target(s) back as texture memory", dbp,
                   targets - m_offscreen.size());
+    }
+}
+
+void GifInterpreter::clut_load(const gs::Tex0& t) {
+    // CLD: 1 loads; 2 and 3 load and keep CBP in CBP0 or CBP1; 4 and 5 load only when CBP is not
+    // the one kept there, then keep it.
+    bool load = false;
+    switch (t.cld) {
+        case 1:
+            load = true;
+            break;
+        case 2:
+        case 3:
+            load = true;
+            (t.cld == 2 ? m_cbp0 : m_cbp1) = t.cbp;
+            break;
+        case 4:
+        case 5: {
+            std::uint32_t& kept = t.cld == 4 ? m_cbp0 : m_cbp1;
+            load = kept != t.cbp;
+            kept = t.cbp;
+            break;
+        }
+        default:
+            break;
+    }
+    if (load) {
+        m_textures.load_clut(t);
     }
 }
 

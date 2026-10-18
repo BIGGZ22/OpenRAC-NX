@@ -94,21 +94,39 @@ void TexturePool::clear_placements() {
 }
 
 void TexturePool::upload(ImageUpload upload) {
-    if (upload.x != 0 || upload.y != 0) {
-        // Uploads into the middle of a buffer (texture atlases) would need the
-        // rectangle placed by its offset; the 2D path seen so far sends whole
-        // textures. Kept, and read as if at the origin.
-        log::debug("image transfer at offset {},{} in block {:#x}", upload.x, upload.y, upload.dbp);
-    }
     Stored stored;
-    const std::uint64_t shape[] = {upload.width, upload.height, upload.dpsm, upload.dbw};
+    const std::uint64_t shape[] = {upload.width, upload.height, upload.dpsm, upload.dbw, upload.x, upload.y};
     stored.hash = hash_bytes(upload.data.data(), upload.data.size())
                   ^ (hash_bytes(reinterpret_cast<const std::uint8_t*>(shape), sizeof(shape)) << 1);
+    stored.sequence = ++m_sequence;
+    // The pages the rectangle's last row reaches, in its format's page size (a page is 32 blocks
+    // whatever the format: 64 x 32 pixels of 32 bits, 64 x 64 of 16, 128 x 64 of 8, 128 x 128 of 4).
+    const int bits = std::max(gs::bits_per_pixel(upload.dpsm), 4);
+    const std::uint64_t line = static_cast<std::uint64_t>(std::max<std::uint32_t>(upload.dbw, 1)) * 64 * bits / 8;
+    const std::uint64_t bytes = (static_cast<std::uint64_t>(upload.y) + std::max<std::uint32_t>(upload.height, 1)) * line;
+    stored.end = upload.dbp + static_cast<std::uint32_t>((bytes + 8191) / 8192 * 32);
     stored.upload = std::move(upload);
     const std::uint32_t dbp = stored.upload.dbp;
     m_uploads[dbp] = std::move(stored);
     // An upload replaces a texture placed at the same base pointer.
     m_placed.erase(dbp);
+}
+
+const TexturePool::Stored* TexturePool::upload_at(std::uint32_t block, std::uint32_t& offset) const {
+    offset = 0;
+    if (auto it = m_uploads.find(block); it != m_uploads.end()) {
+        return &it->second;
+    }
+    const Stored* best = nullptr;
+    for (const auto& [base, stored] : m_uploads) {
+        if (base < block && block < stored.end && base < 0x10000u && (best == nullptr || stored.sequence > best->sequence)) {
+            best = &stored;
+        }
+    }
+    if (best != nullptr) {
+        offset = block - best->upload.dbp;
+    }
+    return best;
 }
 
 std::vector<std::uint8_t> TexturePool::texture_raster(const Stored& stored, const gs::Tex0& tex0)
@@ -118,6 +136,12 @@ std::vector<std::uint8_t> TexturePool::texture_raster(const Stored& stored, cons
     const int th = tex0.height();
     const int up_w = static_cast<int>(up.width);
     const int up_h = static_cast<int>(up.height);
+    if (tex0.tbp0 != up.dbp || up.x != 0 || up.y != 0) {
+        // Inside a larger transfer, or a transfer into the middle of a buffer: through the chip's
+        // layout, from where the rectangle lies to where the texture starts.
+        return reinterpret_at(up.data, up.dpsm, static_cast<int>(up.x), static_cast<int>(up.y), up_w, up_h, up.dbw,
+                              tex0.tbp0 - up.dbp, tex0.psm, tw, th, std::max<std::uint32_t>(tex0.tbw, 1));
+    }
     const bool both_16 = gs::bits_per_pixel(up.dpsm) == 16 && gs::bits_per_pixel(tex0.psm) == 16;
     if (up.dpsm != tex0.psm && !both_16) {
         // Sent in one format and read in another (an 8-bit texture sent as
@@ -170,6 +194,44 @@ std::vector<std::uint8_t> TexturePool::texture_raster(const Stored& stored, cons
     return out;
 }
 
+bool TexturePool::clut_in_memory(const gs::Tex0& tex0, Clut& out) const {
+    const int entries = palette_entries(tex0.psm);
+    std::uint32_t offset = 0;
+    const Stored* stored = entries == 0 ? nullptr : upload_at(tex0.cbp, offset);
+    if (stored == nullptr) {
+        return false;
+    }
+    const ImageUpload& up = stored->upload;
+    out.cpsm = tex0.cpsm;
+    out.entries = entries;
+    if (offset == 0 && up.x == 0 && up.y == 0) {
+        out.data = up.data;
+        out.cpsm = up.dpsm;
+        out.width = std::max<int>(static_cast<int>(up.width), 1);
+        out.hash = stored->hash;
+        return true;
+    }
+    // Inside a larger transfer: the CLUT's own rectangle (16 x 16 for 256 entries, 8 x 2 for 16),
+    // read out of it through the chip's layout.
+    out.width = entries == 256 ? 16 : 8;
+    const int height = entries == 256 ? 16 : 2;
+    out.data = reinterpret_at(up.data, up.dpsm, static_cast<int>(up.x), static_cast<int>(up.y),
+                              static_cast<int>(up.width), static_cast<int>(up.height), up.dbw, offset, tex0.cpsm,
+                              out.width, height, 1);
+    out.hash = stored->hash ^ (static_cast<std::uint64_t>(offset) * 0x9E3779B97F4A7C15ull);
+    return true;
+}
+
+void TexturePool::load_clut(const gs::Tex0& tex0) {
+    Clut clut;
+    if (clut_in_memory(tex0, clut)) {
+        m_cluts[tex0.cbp] = std::move(clut);
+    } else {
+        // Nothing there yet: the draws read memory as before (the chip would load whatever it held).
+        m_cluts.erase(tex0.cbp);
+    }
+}
+
 std::vector<std::uint32_t> TexturePool::palette(
     const gs::Tex0& tex0, const gs::Texa& texa, std::uint64_t& hash
 ) {
@@ -178,24 +240,34 @@ std::vector<std::uint32_t> TexturePool::palette(
     if (entries == 0) {
         return {};
     }
-    auto it = m_uploads.find(tex0.cbp);
-    if (it == m_uploads.end()) {
-        log::debug("no CLUT at block {:#x}", tex0.cbp);
-        return std::vector<std::uint32_t>(static_cast<std::size_t>(entries), 0);
-    }
     if (tex0.csm) {
         // CSM2 (a CLUT as one row of a larger image, placed by TEXCLUT) is
         // not used by the games read so far.
         log::debug("CSM2 CLUT at block {:#x} read as CSM1", tex0.cbp);
     }
-    hash = it->second.hash;
-    const ImageUpload& up = it->second.upload;
-    return clut_csm1(up.data, up.dpsm, std::max<int>(static_cast<int>(up.width), 1), entries, texa);
+    // The CLUT as last loaded from this block, else as memory holds it now.
+    Clut now;
+    const Clut* clut = nullptr;
+    if (auto it = m_cluts.find(tex0.cbp); it != m_cluts.end() && it->second.entries >= entries) {
+        clut = &it->second;
+    } else if (clut_in_memory(tex0, now)) {
+        clut = &now;
+    }
+    if (clut == nullptr) {
+        static int logged = 0;
+        if (logged++ < 50) {
+            log::info("2D: no CLUT at block {:#x} for the texture at {:#x}: drawn transparent", tex0.cbp, tex0.tbp0);
+        }
+        return std::vector<std::uint32_t>(static_cast<std::size_t>(entries), 0);
+    }
+    hash = clut->hash;
+    return clut_csm1(clut->data, clut->cpsm, clut->width, entries, texa);
 }
 
 TextureHandle TexturePool::convert_upload(const gs::Tex0& tex0, const gs::Texa& texa) {
-    auto it = m_uploads.find(tex0.tbp0);
-    if (it == m_uploads.end()) {
+    std::uint32_t offset = 0;
+    const Stored* stored = upload_at(tex0.tbp0, offset);
+    if (stored == nullptr) {
         return 0;
     }
     std::uint64_t clut_hash = 0;
@@ -213,13 +285,13 @@ TextureHandle TexturePool::convert_upload(const gs::Tex0& tex0, const gs::Texa& 
         tex0.psm,
         indexed ? tex0.cpsm : std::uint8_t{0},
         texa,
-        it->second.hash,
+        stored->hash ^ (static_cast<std::uint64_t>(offset) << 40),
         clut_hash
     };
     if (auto found = m_converted.find(key); found != m_converted.end()) {
         return found->second;
     }
-    const std::vector<std::uint8_t> raster = texture_raster(it->second, tex0);
+    const std::vector<std::uint8_t> raster = texture_raster(*stored, tex0);
     Rgba8Image image =
         convert(raster, tex0.psm, tex0.width(), tex0.height(), colours, texa, AlphaScale::Gs);
     // OPENRAC_DUMP_TEXTURE=BLOCK (hex): each conversion of a texture at that block is written as

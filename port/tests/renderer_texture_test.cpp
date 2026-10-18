@@ -348,6 +348,67 @@ void glyph_fields() {
 
 }  // namespace
 
+// What the 2D layer needs of the pool beyond whole textures at their own base: a texture or CLUT
+// inside a larger transfer, and a CLUT read as it was when TEX0 loaded it.
+void inside_and_loaded() {
+    TexturePool textures;
+    const gs::Texa texa{0, false, 0x80};
+
+    // 64 x 64 32-bit pixels at block 0x200, one page wide: the texture at block 0x220 is its second
+    // page, lines 32 to 63.
+    ImageUpload big{0x200, 1, gs::kPsmct32, 0, 0, 64, 64, std::vector<std::uint8_t>(64 * 64 * 4)};
+    for (int y = 0; y < 64; ++y) {
+        for (int x = 0; x < 64; ++x) {
+            big.data[static_cast<std::size_t>((y * 64 + x) * 4)] = static_cast<std::uint8_t>(y);
+            big.data[static_cast<std::size_t>((y * 64 + x) * 4 + 3)] = 0x80;
+        }
+    }
+    textures.upload(big);
+    const TextureHandle inner = textures.resolve(tex0(0x220, gs::kPsmct32, 6, 5), texa);
+    CHECK(inner != textures.placeholder());
+    if (inner != textures.placeholder()) {
+        CHECK(textures.image(inner).texel(0, 0) == rgba(32, 0, 0, 0x80));
+        CHECK(textures.image(inner).texel(5, 31) == rgba(63, 0, 0, 0x80));
+    }
+
+    // An 8-bit texture whose 256-colour CLUT is at block 0x300; TEX0 loads it, then the game puts
+    // another CLUT there: the texture keeps the loaded colours.
+    ImageUpload indices{0x280, 2, gs::kPsmt8, 0, 0, 2, 1, {1, 2}};
+    textures.upload(indices);
+    auto clut = [](std::uint8_t red) {
+        ImageUpload c{0x300, 1, gs::kPsmct32, 0, 0, 16, 16, std::vector<std::uint8_t>(16 * 16 * 4)};
+        for (std::size_t i = 0; i < 256; ++i) {
+            c.data[i * 4] = red;
+            c.data[i * 4 + 3] = 0x80;
+        }
+        return c;
+    };
+    gs::Tex0 t8 = tex0(0x280, gs::kPsmt8, 1, 0, 0x300);
+    t8.tbw = 2;
+    textures.upload(clut(10));
+    textures.load_clut(t8);
+    textures.upload(clut(99));
+    const TextureHandle loaded = textures.resolve(t8, texa);
+    CHECK(textures.image(loaded).texel(0, 0) == rgba(10, 0, 0, 0x80));
+    textures.load_clut(t8);  // loaded again: the new one
+    CHECK(textures.image(textures.resolve(t8, texa)).texel(0, 0) == rgba(99, 0, 0, 0x80));
+
+    // A 16-colour CLUT sent inside a larger transfer: block 0x341 is the second block of the
+    // upload at 0x340, pixels 8 to 15 of its first two rows.
+    ImageUpload sheet{0x340, 1, gs::kPsmct32, 0, 0, 64, 32, std::vector<std::uint8_t>(64 * 32 * 4)};
+    for (int y = 0; y < 32; ++y) {
+        for (int x = 0; x < 64; ++x) {
+            sheet.data[static_cast<std::size_t>((y * 64 + x) * 4 + 1)] = static_cast<std::uint8_t>(x);
+            sheet.data[static_cast<std::size_t>((y * 64 + x) * 4 + 3)] = 0x80;
+        }
+    }
+    textures.upload(sheet);
+    textures.upload(ImageUpload{0x380, 1, gs::kPsmt4, 0, 0, 2, 1, {0x10}});
+    const TextureHandle four = textures.resolve(tex0(0x380, gs::kPsmt4, 1, 0, 0x341), texa);
+    CHECK(textures.image(four).texel(0, 0) == rgba(0, 8, 0, 0x80));
+    CHECK(textures.image(four).texel(1, 0) == rgba(0, 9, 0, 0x80));
+}
+
 int main() {
     direct_colour();
     palettes();
@@ -355,5 +416,6 @@ int main() {
     layout();
     pool();
     glyph_fields();
+    inside_and_loaded();
     return openrac::test::result();
 }

@@ -279,6 +279,10 @@ private:
     // stops being drawn from the pool is what a 2D layer that flickers or goes shows.
     std::unordered_map<std::uint32_t, std::uint8_t> m_texture_kind;
     void note_texture_kind(std::uint32_t tbp, std::uint8_t psm, std::uint8_t kind);
+    // A TEX0 or TEX2 write's CLUT load (CLD), into the pool's copy of the chip's CLUT buffer.
+    void clut_load(const gs::Tex0& t);
+    std::uint32_t m_cbp0 = 0xFFFFFFFFu;  // the chip's CBP0 and CBP1, for CLD 4 and 5
+    std::uint32_t m_cbp1 = 0xFFFFFFFFu;
     // The off-screen target the current context draws into (its block), or 0.
     std::uint32_t offscreen_target() const;
     bool is_offscreen(const gs::Frame& f) const;  // a target that is not one of the frame buffers

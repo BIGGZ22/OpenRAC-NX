@@ -151,6 +151,25 @@ std::vector<std::uint8_t> reinterpret(
     std::uint32_t to_bw
 );
 
+// The same, for a rectangle placed at (`from_x`, `from_y`) of its buffer, read as a texture whose
+// base is `to_block` blocks past the rectangle's base: a texture or CLUT the game uploaded inside a
+// larger transfer, or a transfer into the middle of a buffer. Texels the rectangle does not cover
+// read as 0.
+std::vector<std::uint8_t> reinterpret_at(
+    std::span<const std::uint8_t> data,
+    std::uint8_t from_psm,
+    int from_x,
+    int from_y,
+    int from_width,
+    int from_height,
+    std::uint32_t from_bw,
+    std::uint32_t to_block,
+    std::uint8_t to_psm,
+    int to_width,
+    int to_height,
+    std::uint32_t to_bw
+);
+
 // Bits of one pixel in a raster transfer: 24 for PSMCT24, 8 and 4 for the
 // "H" formats (indices only), otherwise the format's own size.
 int raster_bits(std::uint8_t psm);
