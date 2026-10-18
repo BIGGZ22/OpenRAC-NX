@@ -189,9 +189,13 @@ fn usual_places(tool: Tool) -> Vec<PathBuf> {
                     bases.push(home.join("scoop").join("apps"));
                 }
                 bases.extend(
-                    [env("ProgramFiles"), env("ProgramFiles(x86)"), env("SystemDrive").map(|d| d.join("\\"))]
-                        .into_iter()
-                        .flatten(),
+                    [
+                        env("ProgramFiles"),
+                        env("ProgramFiles(x86)"),
+                        env("SystemDrive").map(|d| PathBuf::from(format!(r"{}\", d.display()))),
+                    ]
+                    .into_iter()
+                    .flatten(),
                 );
                 if let Some(local) = &local {
                     bases.push(local.join("Programs"));
