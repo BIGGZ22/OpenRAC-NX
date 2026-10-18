@@ -396,6 +396,7 @@ jobs:
         working-directory: launcher
         env:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          HAVE_ANDROID_KEY: ${{ secrets.ANDROID_KEYSTORE != '' }}
         run: |
           built=$(ls src-tauri/gen/android/app/build/outputs/apk/*/debug/*.apk | head -1)
           apk="$(dirname "$built")/OpenRAC.Launcher_${LAUNCHER_VERSION}_android-arm64-debug.apk"
@@ -407,6 +408,15 @@ jobs:
                      libopenrac-python.so libpython3.13.so libmain_hook.so libopenrac_launcher_lib.so; do
             unzip -l "$apk" "lib/arm64-v8a/$lib" > /dev/null || { echo "the APK has no $lib"; exit 1; }
           done
+          # Android installs an update only over an APK of the same key: the key's fingerprint is in
+          # the run's summary, and a run without the launcher's own key says it will not update.
+          signer=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          cert=$("$signer" verify --print-certs "$apk" | sed -n 's/.*certificate SHA-256 digest: //p' | head -1)
+          echo "APK signing certificate (SHA-256): $cert"
+          echo "APK signing certificate (SHA-256): \`$cert\`" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$HAVE_ANDROID_KEY" != true ]; then
+            echo "::warning::No ANDROID_KEYSTORE secret: the APK is signed with this runner's own debug key and will not install over an APK of another run. tools/android_keystore.py makes the launcher's key."
+          fi
           if [ -f "$RUNNER_TEMP/updater.key" ]; then
             yarn tauri signer sign -f "$RUNNER_TEMP/updater.key" "$apk"
           fi

@@ -89,7 +89,10 @@ git push origin launcher-vX.Y.Z
    - **Android** (`ubuntu-latest`): the port with the runner's NDK (`tools/build_android.py
 --no-apk`), then the debug APK, signed with the launcher's Android key (the
      `ANDROID_KEYSTORE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and
-     `ANDROID_KEY_PASSWORD` secrets; without them, the runner's debug key).
+     `ANDROID_KEY_PASSWORD` secrets; without them, the runner's debug key, new each run, so
+     that APK installs over no earlier one: Android refuses an update of another key).
+     `python3 tools/android_keystore.py` makes the key once and prints the four secrets; the
+     run's summary shows the APK's certificate, and warns when the secrets are missing.
 
    Kept between runs: hostgen's output (skipped when its inputs are unchanged), CMake's
    configuration (its cache, without the objects), ccache, the Rust dependencies
