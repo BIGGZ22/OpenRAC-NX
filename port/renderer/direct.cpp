@@ -509,8 +509,8 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
                 overwritten(m_bitbltbuf.dbp, m_bitbltbuf.dbw, m_bitbltbuf.dpsm, m_trxpos.dsay,
                             m_trxreg.rrh);  // copied over, as an upload (image_data)
                 if (frame_source(m_bitbltbuf.sbp, x, y)) {
-                    static int logged = 0;
-                    if (logged++ < 100) {
+                    static log::Capped told(100);
+                    if (told()) {
                         log::info("2D: part of the frame copied to block {:#x} ({}x{})", m_bitbltbuf.dbp, m_trxreg.rrw,
                                   m_trxreg.rrh);
                     }
@@ -831,8 +831,8 @@ void GifInterpreter::overwritten(std::uint32_t dbp, std::uint32_t dbw, std::uint
     std::erase_if(m_frame_copies, [&](const FrameCopy& f) { return covered(f.dbp); });
     const std::size_t targets = m_offscreen.size();
     std::erase_if(m_offscreen, covered);
-    static int logged = 0;
-    if (m_offscreen.size() != targets && logged++ < 100) {
+    static log::Capped told(100);
+    if (m_offscreen.size() != targets && told()) {
         log::info("2D: a transfer to block {:#x} took {} off-screen target(s) back as texture memory", dbp,
                   targets - m_offscreen.size());
     }
@@ -866,24 +866,33 @@ void GifInterpreter::clut_load(const gs::Tex0& t) {
     }
 }
 
-void GifInterpreter::note_texture_kind(std::uint32_t tbp, std::uint8_t psm, std::uint8_t kind) {
+void GifInterpreter::note_texture_kind(std::uint32_t tbp, std::uint8_t psm, TextureKind kind) {
     // Logged when a block's texture changes what it is drawn as, a few hundred times a run at
-    // most: enough to see which of the 2D layer's textures went, and as what.
-    static int logged = 0;
+    // most: enough to see which of the 2D layer's textures went, and as what. A texture drawn as
+    // itself the first time is what is expected, and not logged.
     const auto [at, added] = m_texture_kind.try_emplace(tbp, kind);
-    if ((added && kind == 0) || (!added && at->second == kind)) {
+    if (added ? kind == TextureKind::Texture : at->second == kind) {
         return;
     }
-    const std::uint8_t was = added ? 0xFF : at->second;
+    const auto name = [](TextureKind k) {
+        switch (k) {
+            case TextureKind::Texture:
+                return "its texture";
+            case TextureKind::Missing:
+                return "nothing (no texture there)";
+            case TextureKind::Offscreen:
+                return "an off-screen target";
+            case TextureKind::Frame:
+                return "the frame";
+        }
+        return "?";
+    };
+    static log::Capped told(400);
+    if (told()) {
+        log::info("2D: the texture at block {:#x} (psm {:#x}) draws as {}{}{}", tbp, psm, name(kind),
+                  added ? "" : ", was ", added ? "" : name(at->second));
+    }
     at->second = kind;
-    if (logged >= 400) {
-        return;
-    }
-    ++logged;
-    static constexpr const char* kKinds[] = {"its texture", "nothing (no texture there)", "an off-screen target",
-                                             "the frame"};
-    log::info("2D: the texture at block {:#x} (psm {:#x}) draws as {}{}{}", tbp, psm, kKinds[kind],
-              was == 0xFF ? "" : ", was ", was == 0xFF ? "" : kKinds[was]);
 }
 
 bool GifInterpreter::frame_source(std::uint32_t tbp, int& x, int& y) const {
@@ -1063,10 +1072,10 @@ void GifInterpreter::ensure_draw() {
         }
         if (s.textured) {
             note_texture_kind(c.tex0.tbp0, c.tex0.psm,
-                              s.source != 0                              ? 2
-                              : s.frame_source                           ? 3
-                              : s.texture == m_textures.placeholder()    ? 1
-                                                                         : 0);
+                              s.source != 0                           ? TextureKind::Offscreen
+                              : s.frame_source                        ? TextureKind::Frame
+                              : s.texture == m_textures.placeholder() ? TextureKind::Missing
+                                                                      : TextureKind::Texture);
         }
         // The scissor is in this buffer's own pixels: scaled onto the picture as its draws are
         // (screen_position), so it clips where they land.
@@ -1098,8 +1107,8 @@ void GifInterpreter::ensure_draw() {
     // the game put there later draw as that target, blank.
     if (m_state.target != 0 && std::find(m_offscreen.begin(), m_offscreen.end(), m_state.target) == m_offscreen.end()) {
         m_offscreen.push_back(m_state.target);
-        static int logged = 0;
-        if (logged++ < 100) {
+        static log::Capped told(100);
+        if (told()) {
             log::info("2D: drawn off-screen into block {:#x} (FRAME width {})", m_state.target, context().frame.fbw);
         }
     }

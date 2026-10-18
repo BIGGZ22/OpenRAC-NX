@@ -148,6 +148,16 @@ void report_has_every_section(const fs::path& dir) {
     CHECK(read(log::session_file(dir, "openrac-report", 0)).find("Crash report: ") != std::string::npos);
 }
 
+void capped_says_it_so_many_times() {
+    log::Capped told(2);
+    CHECK(told());
+    CHECK(told());
+    CHECK(!told());
+    CHECK(!told());
+    log::Capped never(0);
+    CHECK(!never());
+}
+
 }  // namespace
 
 int main() {
@@ -155,6 +165,7 @@ int main() {
     fs::remove_all(dir);
     fs::create_directories(dir);
     ring_keeps_the_last_lines();
+    capped_says_it_so_many_times();
     sessions_rotate(dir);
     home_reads_tilde();
     times_and_names();

@@ -67,6 +67,24 @@ std::string tidy(std::string_view text);
 // The home folder tidy() replaces (empty: none known).
 const std::string& home();
 
+// A line that would come every frame, said only the first `times` times in a run:
+//     static log::Capped told(100);
+//     if (told()) log::info(...);
+class Capped {
+public:
+    explicit constexpr Capped(int times) : m_left(times) {}
+    bool operator()() {
+        if (m_left <= 0) {
+            return false;
+        }
+        --m_left;
+        return true;
+    }
+
+private:
+    int m_left;
+};
+
 void write(Level level, std::string_view message);
 
 template <typename... Args>
