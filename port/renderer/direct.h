@@ -32,6 +32,7 @@
 #include <cstdint>
 #include <span>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "renderer/gs.h"
@@ -274,6 +275,10 @@ private:
     // Off-screen targets ever drawn to (their GS block): a FRAME narrower than the screen, which the
     // game renders a panel into and then draws as a texture.
     std::vector<std::uint32_t> m_offscreen;
+    // What each block's texture was last drawn as (texture_kind), for the log: a texture that
+    // stops being drawn from the pool is what a 2D layer that flickers or goes shows.
+    std::unordered_map<std::uint32_t, std::uint8_t> m_texture_kind;
+    void note_texture_kind(std::uint32_t tbp, std::uint8_t psm, std::uint8_t kind);
     // The off-screen target the current context draws into (its block), or 0.
     std::uint32_t offscreen_target() const;
     bool is_offscreen(const gs::Frame& f) const;  // a target that is not one of the frame buffers
