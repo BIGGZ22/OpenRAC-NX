@@ -1026,6 +1026,9 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
     }
     case "pick_disc":
       return delay("/data/user/0/dev.openrac.launcher/files/discs/game.iso");
+    case "tools_ready":
+      // The APK's copy of OpenRAC, unpacked by the time the preview asks.
+      return delay(null);
     case "gpu_drivers":
       return delay(structuredClone(gpu));
     case "gpu_driver_import": {
