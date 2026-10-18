@@ -8,6 +8,8 @@ import android.os.Bundle;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
+import android.view.InputDevice;
+import android.view.KeyEvent;
 
 import org.libsdl.app.SDLActivity;
 
@@ -68,6 +70,28 @@ public class GameActivity extends SDLActivity {
     @Override
     protected String[] getArguments() {
         return arguments;
+    }
+
+    /**
+     * A handheld's or a controller's Back key (Odin's, a Shield's) as the system's Back, which opens
+     * the game's drawer (debug_overlay.h). SDL counts Back from a gamepad as the pad's Select, the
+     * same button as KEYCODE_BUTTON_SELECT, and the game then opened its map; the pad's own Select
+     * stays Select.
+     */
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        final int source = event.getSource();
+        final boolean pad = (source & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
+                || (source & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
+        if (event.getKeyCode() == KeyEvent.KEYCODE_BACK && pad) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
+                onNativeKeyDown(KeyEvent.KEYCODE_BACK);
+            } else if (event.getAction() == KeyEvent.ACTION_UP) {
+                onNativeKeyUp(KeyEvent.KEYCODE_BACK);
+            }
+            return true;
+        }
+        return super.dispatchKeyEvent(event);
     }
 
     @Override
