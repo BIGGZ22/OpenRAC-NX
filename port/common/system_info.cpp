@@ -20,6 +20,9 @@
 #include <sys/sysinfo.h>
 #include <sys/utsname.h>
 #endif
+#if defined(__ANDROID__)
+#include <sys/system_properties.h>
+#endif
 
 namespace openrac::system_info {
 namespace {
@@ -42,6 +45,14 @@ std::string uname_text() {
         return {};
     }
     return std::format("{} {}, {}", u.sysname, u.release, u.machine);
+}
+#endif
+
+#if defined(__ANDROID__)
+// A system property ("ro.build.version.release"), empty when the device has none.
+std::string property(const char* name) {
+    char buf[PROP_VALUE_MAX] = {};
+    return __system_property_get(name, buf) > 0 ? std::string(buf) : std::string();
 }
 #endif
 
@@ -96,6 +107,11 @@ std::string os() {
 #elif defined(__APPLE__)
     const std::string version = sysctl_text("kern.osproductversion");
     return std::format("macOS {} ({})", version.empty() ? "?" : version, uname_text());
+#elif defined(__ANDROID__)
+    // Android has no os-release: its version and the device, from the system's properties.
+    const std::string device = property("ro.product.manufacturer") + " " + property("ro.product.model");
+    return std::format("Android {} (API {}, {}; {})", property("ro.build.version.release"),
+                       property("ro.build.version.sdk"), device, uname_text());
 #else
     std::string name = file_value("/etc/os-release", "PRETTY_NAME", '=');
     if (name.empty()) {
@@ -117,7 +133,19 @@ std::string cpu() {
 #elif defined(__APPLE__)
     name = sysctl_text("machdep.cpu.brand_string");
 #else
-    name = file_value("/proc/cpuinfo", "model name", ':');
+#if defined(__ANDROID__)
+    // The chip, where Android names it (12 on): "QTI SM8650".
+    name = property("ro.soc.manufacturer");
+    if (const std::string model = property("ro.soc.model"); !model.empty()) {
+        name = name.empty() ? model : name + " " + model;
+    }
+    if (name.empty()) {
+        name = file_value("/proc/cpuinfo", "Hardware", ':');
+    }
+#endif
+    if (name.empty()) {
+        name = file_value("/proc/cpuinfo", "model name", ':');
+    }
     if (name.empty()) {
         name = file_value("/proc/cpuinfo", "Model", ':');  // Arm boards
     }
