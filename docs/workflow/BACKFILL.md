@@ -168,7 +168,12 @@ scratchpad), the result by the return type, the registers a function keeps,
 and the order of device accesses and system calls. It is an offline check: it
 is never shipped and never used to play.
 
-The verdict is a column of the backfill table, after `name` and `file`:
+The verdicts are kept in files OpenRAC owns, one per backfill table and keyed
+by function name, so the tables themselves (`functional.tsv` is synced from
+rac1-decomp, both are read by hostgen) are never changed:
+`port/game/rac1-pal/fcheck.tsv` for `nonmatching/functional.tsv` and
+`port/game/rac1-ntsc/hand/fcheck.tsv` for `hand/hand.tsv`. Columns, after
+`name`:
 
 | Column | Meaning |
 |---|---|
@@ -179,7 +184,7 @@ The verdict is a column of the backfill table, after `name` and `file`:
 | `note` | the call count, the differing lines, or the reason for `unchecked` |
 
 Only `same` counts as done. `differs` is a bug to fix. The rest are open: say
-so when you hand the function on, and never call it verified. A row with no
+so when you hand the function on, and never call it verified. A backfill row with no
 verdict has not been through the gate.
 
 Run it (OpenRAC built so that `build/runtime/openrac-fcheck` and
@@ -187,9 +192,9 @@ Run it (OpenRAC built so that `build/runtime/openrac-fcheck` and
 retail compiler; headless, it opens no window):
 
 ```sh
-python3 tools/fcheck_gate.py run                       # every PAL row: capture what is missing, check in parallel, write the table
+python3 tools/fcheck_gate.py run                       # every PAL row: capture what is missing, check in parallel, write fcheck.tsv
 python3 tools/fcheck_gate.py run --only func_001F7E98  # one or a few rows after you changed their C
-python3 tools/fcheck_gate.py report [--strict]         # counts from the tables; stale and unverdicted rows; --strict exits 1 on any
+python3 tools/fcheck_gate.py report [--strict]         # joins each backfill table with its verdicts: counts, differing, stale and unverdicted rows; --strict exits 1 on any
 python3 tools/fcheck_gate.py us                        # the US table: unchecked, no US oracle
 python3 -m unittest tools/test_fcheck_gate.py
 ```
@@ -213,10 +218,10 @@ and `~/Projects/RAC/rac1-decomp`). Each log is kept in rac1-decomp's
 
 A report line that says a backfill is finished without one of those is
 incomplete. The lead runs `fcheck_gate.py run --only ...` over the batch
-before landing and commits the table with the files.
+before landing and commits `fcheck.tsv` with the files.
 
 **The US table has no oracle.** `port/game/rac1-ntsc/hand/hand.tsv` rows are
-all `unchecked (no US oracle)`: fcheck's interpreter build, its hooks file and
+all `unchecked (no US oracle)` in `hand/fcheck.tsv`: fcheck's interpreter build, its hooks file and
 its capture list know the PAL disc and the PAL executable only. A US oracle
 would need: an interpreter build that boots the NTSC-U disc (its executable
 SCUS_971.99, its own hooks file, the button presses for its menus and a level
@@ -287,7 +292,7 @@ no tier left, or the port needs it now              -> functional C, with its co
 | | Ratchet & Clank (PAL) | Going Commando |
 |---|---|---|
 | Near misses | `nonmatching/<area>/` | `nonmatching/<area>/` |
-| Functional C | `nonmatching/functional/`, `functional.tsv` (with its fcheck verdicts) | not set up yet: add the same two |
+| Functional C | `nonmatching/functional/`, `functional.tsv`; verdicts in OpenRAC's `port/game/rac1-pal/fcheck.tsv` | not set up yet: add the same two |
 | Pieces of one function | `config/overlays/joined.tsv` | the catalogue, `tools/levels.py` |
 | Handwritten | `ASM_FUNC`, counted as finished | `ASM_FUNC`, counted as finished |
 | Worker bound and protocol | `docs/QUEUE.md`, `docs/AGENT_WORKFLOW.md` | `docs/AGENT_WORKFLOW.md` |
