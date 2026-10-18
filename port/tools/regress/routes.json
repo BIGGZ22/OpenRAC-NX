@@ -1,0 +1,44 @@
+{
+  "comment": "Gameplay routes for port/tools/regress (docs/port/REGRESSION.md). Each level starts directly (OPENRAC_DIRECT with --level N), presses Cross through the boot screens, holds Start through scenes and the flight until control, then plays its sequence. Step frames count from control, so every version plays the same moments. A level may name another sequence, change length or max_frames, and override any of that per game under its game's id.",
+  "defaults": {
+    "boot": [{"at": 100, "buttons": "cross", "hold": 5}],
+    "skip": {"every": 30, "buttons": "start", "hold": 5},
+    "sequence": "standard",
+    "length": 660,
+    "max_frames": 9000,
+    "timeout": 240
+  },
+  "sequences": {
+    "standard": [
+      {"at": 30, "hold": 120, "left": [128, 0], "what": "walk forward"},
+      {"at": 160, "hold": 150, "right": [255, 128], "what": "turn the camera round"},
+      {"at": 320, "hold": 5, "buttons": "cross", "what": "jump"},
+      {"at": 360, "hold": 5, "buttons": "square", "what": "swing the wrench"},
+      {"at": 400, "hold": 90, "left": [0, 128], "what": "walk left"},
+      {"at": 490, "hold": 100, "left": [128, 0], "what": "walk forward"},
+      {"at": 530, "hold": 5, "buttons": "cross", "left": [128, 0], "what": "jump while walking"},
+      {"at": 600, "hold": 5, "buttons": "square", "what": "swing the wrench"}
+    ]
+  },
+  "levels": {
+    "0": {"name": "Veldin"},
+    "1": {"name": "Novalis"},
+    "2": {"name": "Aridia"},
+    "3": {"name": "Kerwan"},
+    "4": {"name": "Eudora"},
+    "5": {"name": "Rilgar"},
+    "6": {"name": "Blarg Station"},
+    "7": {"name": "Umbris"},
+    "8": {"name": "Batalia"},
+    "9": {"name": "Gaspar"},
+    "10": {"name": "Orxon"},
+    "11": {"name": "Pokitaru"},
+    "12": {"name": "Hoven"},
+    "13": {"name": "Gemlik Base"},
+    "14": {"name": "Oltanis"},
+    "15": {"name": "Quartu"},
+    "16": {"name": "Kalebo III"},
+    "17": {"name": "Drek's Fleet"},
+    "18": {"name": "Veldin (final)"}
+  }
+}

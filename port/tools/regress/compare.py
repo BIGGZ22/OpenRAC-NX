@@ -1,0 +1,175 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 the OpenRAC contributors
+"""Two sets of traces side by side: per level, the first tick from control on where they differ.
+
+Ticks are paired by c, the frames since control, so two builds of one version and the two
+versions (whose control comes at other window frames) are read at the same moments of a route.
+Numbers compare within a tolerance per field; the hero's and the camera's angles wrap at a turn.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from runner import read_trace
+
+# Every field the trace has, in the order a divergence names them, and its tolerance's kind.
+FIELDS = {
+    "lv": "exact", "m": "exact", "cam": "position", "fw": "direction", "hp": "position", "hr": "angle",
+    "hs": "exact", "mb": "exact", "dr": "exact",
+}
+DEFAULT_TOLERANCE = {"position": 0.05, "direction": 0.01, "angle": 0.01, "exact": 0}
+
+
+@dataclass
+class Divergence:
+    c: int
+    field: str
+    a: object
+    b: object
+    others: list = field(default_factory=list)  # the other fields that differ at the same tick
+    frames: tuple = (None, None)                # the window frames in each
+
+
+@dataclass
+class LevelResult:
+    level: int
+    name: str
+    state: str                # "same", "diverges", "missing" (one side has no trace from control)
+    compared: int = 0         # ticks compared
+    first: Divergence | None = None
+    note: str = ""
+
+    def line(self) -> str:
+        head = f"level {self.level:2d} {self.name:<15}"
+        if self.state == "missing":
+            return f"{head} not compared: {self.note}"
+        if self.state == "same":
+            return f"{head} same through c={self.compared - 1}" + (f" ({self.note})" if self.note else "")
+        d = self.first
+        more = f" (+ {', '.join(d.others)})" if d.others else ""
+        return (f"{head} diverges at c={d.c} (frames {d.frames[0]}/{d.frames[1]}): {d.field} "
+                f"{_show(d.a)} vs {_show(d.b)}{more}" + (f"; {self.note}" if self.note else ""))
+
+
+def _show(v) -> str:
+    if isinstance(v, list):
+        return "[" + ", ".join(_show(x) for x in v) + "]"
+    if isinstance(v, float):
+        return f"{v:.3f}"
+    return "none" if v is None else str(v)
+
+
+def _angle_gap(a: float, b: float) -> float:
+    d = (a - b) % (2 * math.pi)
+    return min(d, 2 * math.pi - d)
+
+
+def differs(kind: str, a, b, tol: float) -> bool:
+    if a is None or b is None:
+        return (a is None) != (b is None)
+    if isinstance(a, list) or isinstance(b, list):
+        if not isinstance(a, list) or not isinstance(b, list) or len(a) != len(b):
+            return True
+        return any(differs(kind, x, y, tol) for x, y in zip(a, b))
+    if kind == "exact":
+        return a != b
+    if kind == "angle":
+        return _angle_gap(float(a), float(b)) > tol
+    return abs(float(a) - float(b)) > tol
+
+
+def by_control(ticks: list[dict]) -> dict[int, dict]:
+    return {t["c"]: t for t in ticks if t.get("c") is not None}
+
+
+def gap(kind: str, a, b) -> float:
+    """How far apart two values are, in their field's terms (1 for exact fields that differ)."""
+    if a is None or b is None or isinstance(a, list) != isinstance(b, list):
+        return 0.0 if a == b else math.inf
+    if isinstance(a, list):
+        if len(a) != len(b):
+            return math.inf
+        return max((gap(kind, x, y) for x, y in zip(a, b)), default=0.0)
+    if kind == "exact":
+        return 0.0 if a == b else 1.0
+    if kind == "angle":
+        return _angle_gap(float(a), float(b))
+    return abs(float(a) - float(b))
+
+
+def compare_ticks(a: list[dict], b: list[dict], fields: list[str], tolerance: dict) -> tuple[int, Divergence | None, str]:
+    """Ticks compared, the first divergence, and a note: the largest gap of each field that
+    diverges over the whole route (a drift and a broken routine read differently), or where one
+    side ends first."""
+    ca, cb = by_control(a), by_control(b)
+    if not ca or not cb:
+        return 0, None, ""
+    end = min(max(ca), max(cb))
+    compared = 0
+    first = None
+    largest: dict[str, float] = {}
+    for c in range(0, end + 1):
+        ta, tb = ca.get(c), cb.get(c)
+        if ta is None or tb is None:
+            continue
+        compared += 1
+        bad = [f for f in fields if differs(FIELDS[f], ta.get(f), tb.get(f), tolerance[FIELDS[f]])]
+        for f in bad:
+            largest[f] = max(largest.get(f, 0.0), gap(FIELDS[f], ta.get(f), tb.get(f)))
+        if bad and first is None:
+            f = bad[0]
+            first = Divergence(c, f, ta.get(f), tb.get(f), bad[1:], (ta.get("f"), tb.get("f")))
+    notes = []
+    if largest:
+        order = list(FIELDS)
+        notes.append("largest gap " + ", ".join(
+            f"{f} {'differs' if FIELDS[f] == 'exact' else format(g, '.3f')}"
+            for f, g in sorted(largest.items(), key=lambda kv: order.index(kv[0]))))
+    if max(ca) != max(cb):
+        notes.append(f"A ends at c={max(ca)}, B at c={max(cb)}")
+    return compared, first, "; ".join(notes)
+
+
+def run_levels(run: Path) -> dict[int, tuple[str, Path]]:
+    """A run's levels (from run.json, else the folders) with their names and traces."""
+    out = {}
+    meta = run / "run.json"
+    names = {}
+    if meta.exists():
+        for k, v in json.loads(meta.read_text()).get("levels", {}).items():
+            names[int(k)] = v.get("name", "")
+    for d in sorted(run.iterdir()) if run.is_dir() else []:
+        if d.is_dir() and d.name.isdigit():
+            out[int(d.name)] = (names.get(int(d.name), ""), d / "trace.jsonl")
+    return out
+
+
+def compare_runs(a: Path, b: Path, fields: list[str] | None = None, tolerance: dict | None = None,
+                 levels: list[int] | None = None) -> list[LevelResult]:
+    fields = fields or list(FIELDS)
+    for f in fields:
+        if f not in FIELDS:
+            raise ValueError(f"unknown field {f!r} (known: {', '.join(FIELDS)})")
+    tol = dict(DEFAULT_TOLERANCE)
+    tol.update(tolerance or {})
+    la, lb = run_levels(a), run_levels(b)
+    out = []
+    for level in sorted(set(la) | set(lb)):
+        if levels is not None and level not in levels:
+            continue
+        name = (la.get(level) or lb.get(level))[0]
+        if level not in la or level not in lb:
+            out.append(LevelResult(level, name, "missing", note=f"only in {'A' if level in la else 'B'}"))
+            continue
+        ta, tb = read_trace(la[level][1]), read_trace(lb[level][1])
+        if not by_control(ta) or not by_control(tb):
+            which = [s for s, t in (("A", ta), ("B", tb)) if not by_control(t)]
+            out.append(LevelResult(level, name, "missing", note=f"no control in {' and '.join(which)}"))
+            continue
+        n, first, note = compare_ticks(ta, tb, fields, tol)
+        out.append(LevelResult(level, name, "diverges" if first else "same", n, first, note))
+    return out
