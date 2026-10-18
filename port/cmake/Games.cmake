@@ -59,6 +59,14 @@ function(openrac_add_game config)
   set(OPENRAC_${ID}_SOURCE "${OPENRAC_REPO_DIR}/${source}" CACHE PATH
       "The decompilation openrac-${id} is built from")
   set(game_source "${OPENRAC_${ID}_SOURCE}")
+  # Where the game's setup wrote the assembly, if not in that decompilation (another copy of it).
+  set(OPENRAC_${ID}_ASM_SOURCE "" CACHE PATH "Where openrac-${id}'s assembly is, if not in its decompilation")
+  set(asm_source "${game_source}")
+  set(asm_args "")
+  if(OPENRAC_${ID}_ASM_SOURCE)
+    set(asm_source "${OPENRAC_${ID}_ASM_SOURCE}")
+    set(asm_args --asm-source "${asm_source}")
+  endif()
   set(gen "${CMAKE_CURRENT_BINARY_DIR}/games/${id}/gen")
 
   if(NOT EXISTS "${game_source}")
@@ -105,6 +113,23 @@ function(openrac_add_game config)
       endif()
     endforeach()
   endif()
+  # The assembly the game's setup wrote (hostgen.json "asm", when enabled): functions with no C are
+  # translated from it (asmc.py), so hostgen runs again when it changes. Missing directories (no
+  # disc set up, as in CI) add nothing.
+  string(JSON asm_enabled ERROR_VARIABLE no_asm GET "${json}" asm enabled)
+  if(NOT no_asm AND asm_enabled)
+    string(JSON asm_dirs LENGTH "${json}" asm dirs)
+    if(asm_dirs GREATER 0)
+      math(EXPR last "${asm_dirs} - 1")
+      foreach(i RANGE ${last})
+        string(JSON asm_dir GET "${json}" asm dirs ${i})
+        if(IS_DIRECTORY "${asm_source}/${asm_dir}")
+          file(GLOB_RECURSE asm_files CONFIGURE_DEPENDS "${asm_source}/${asm_dir}/*.s")
+          list(APPEND inputs ${asm_files})
+        endif()
+      endforeach()
+    endif()
+  endif()
   # hostgen's own code (in a function, CMAKE_CURRENT_LIST_DIR is the caller's directory, so the
   # tool's is taken from OPENRAC_HOSTGEN, set where this file was read), and the headers it reads
   # the decompilation with.
@@ -119,7 +144,7 @@ function(openrac_add_game config)
     OUTPUT "${gen}/hostgen.stamp"
     BYPRODUCTS ${outputs}
     COMMAND "${Python3_EXECUTABLE}" "${OPENRAC_HOSTGEN}" --game "${config}"
-            --source "${game_source}" --out "${gen}" --quiet
+            --source "${game_source}" --out "${gen}" --quiet ${asm_args}
     COMMAND "${CMAKE_COMMAND}" -E touch "${gen}/hostgen.stamp"
     DEPENDS ${inputs} ${tool} ${tables}
     COMMENT "hostgen: ${id} from ${game_source}"

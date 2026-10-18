@@ -108,5 +108,10 @@
     "func_L00_00252D20"
   ],
   "candidates": "nonmatching/functional.tsv",
-  "hand": "hand/hand.tsv"
+  "hand": "hand/hand.tsv",
+  "asm": {
+    "enabled": false,
+    "dirs": ["asm/nonmatchings", "asm/handwritten", "asm/overlays", "asm/remnants"],
+    "gp": "0x00166D00"
+  }
 }

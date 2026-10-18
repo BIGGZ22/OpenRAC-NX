@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import sys
 import time
@@ -33,6 +34,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import asmc  # noqa: E402
 import clangast  # noqa: E402
 import ctype  # noqa: E402
 import prep  # noqa: E402
@@ -387,6 +389,14 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         key = f.reason.split(" (")[0] if f.reason.startswith("inline assembly") else f.reason
         reasons[key] = reasons.get(key, 0) + 1
     no_c = [f for f in program.stubs()]
+    stage = extra.pop("asm", None) or asmc.Stage()
+    asm_reasons: dict[str, int] = {}
+    for why in stage.unsupported.values():
+        key = re.sub(r" at [0-9A-F]{8}\b.*| \([0-9A-F]{8}\)", "", why)
+        key = re.sub(r"\b(?:func|FUN)_\w+|\b[A-Za-z_]\w*(?=, which)", "a function", key)
+        asm_reasons[key] = asm_reasons.get(key, 0) + 1
+    # What translated assembly calls counts for the frontier like what translated C calls.
+    fns_and_asm = fns + [r.report for r in stage.translated if r.report is not None]
     summary = {
         "game": game,
         "units": len(reports),
@@ -406,9 +416,16 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         "fixes": {r.unit: r.fixes for r in reports if r.fixes},
         "problems": {r.unit: r.problems for r in reports if r.problems},
         "stubbed": {f.name: f.reason for f in stubbed},
+        "functions_from_assembly": len(stage.translated),
+        "from_assembly": {r.name: r.source for r in stage.translated},
+        "assembly_unsupported": dict(sorted(stage.unsupported.items())),
+        "assembly_unsupported_reasons": dict(sorted(asm_reasons.items(), key=lambda kv: -kv[1])),
+        "without_c_or_assembly": sorted(stage.without_asm),
         **extra,
     }
-    frontier = boot_frontier(fns, program, extra.get("roots", []))
+    summary["call_graph"].update({r.name: sorted(r.report.calls) for r in stage.translated
+                                  if r.report is not None and r.report.calls})
+    frontier = boot_frontier(fns_and_asm, program, extra.get("roots", []))
     summary["frontier"] = frontier
     (out / "report.json").write_text(json.dumps(summary, indent=1, sort_keys=True) + "\n")
     md = [
@@ -419,6 +436,7 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         f"| Units read | {summary['units']} |",
         f"| Functions translated | {summary['functions_translated']} |",
         f"| Functions with C that could not be translated (stubs) | {summary['functions_stubbed']} |",
+        f"| Functions translated from assembly (no C yet; asmc.py) | {summary['functions_from_assembly']} |",
         f"| Functions with no C (still assembly, or libraries) | {summary['functions_without_c']} |",
         f"| Functions from candidates (C that is not the matched C) | {len(extra.get('candidates_used', []))} |",
         f"| Functions by code address | {extra.get('addresses', 0)} |",
@@ -436,6 +454,23 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         *[f"- {n} x {why}" for why, n in summary["stub_reasons"].items()],
         "",
     ]
+    if stage.translated or stage.unsupported:
+        md += [
+            "## Functions with no C, translated from their assembly",
+            "",
+            f"{len(stage.translated)} functions the decompilation has no C for run as C written from their",
+            f"instructions (asmc.py); {len(stage.unsupported)} with assembly stay stubs, and",
+            f"{len(stage.without_asm)} have no assembly here. C in the decompilation replaces a translation.",
+            "",
+            "Why a function with assembly stays a stub:",
+            "",
+            *[f"- {n} x {why}" for why, n in summary["assembly_unsupported_reasons"].items()],
+            "",
+            "| Function | Why it stays a stub |",
+            "|---|---|",
+            *[f"| {name} | {why} |" for name, why in summary["assembly_unsupported"].items()],
+            "",
+        ]
     if summary["arguments_filled_with_zero"]:
         md += [
             "## Calls short of arguments, filled with 0",
@@ -498,14 +533,30 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--allow-unreadable", action="store_true",
                     help="build without the source files Clang cannot read, instead of stopping")
     ap.add_argument("--list", action="store_true", help="print the files it would write, and stop (for the build)")
+    ap.add_argument("--asm", choices=["on", "off"],
+                    help="translate stubs from their assembly or not, whatever hostgen.json's \"asm\" says")
+    ap.add_argument("--asm-source", type=Path, metavar="DIR",
+                    help="where the assembly's directories (hostgen.json \"asm\") are, if not in --source: "
+                         "a copy of the decompilation the game's setup ran in")
+    ap.add_argument("--asm-console", type=Path, metavar="DIR",
+                    help="also write each executable function translated from assembly in the console's "
+                         "form, a candidate file each in DIR (for rac1-decomp's tools/fcheck.py)")
+    ap.add_argument("--asm-console-names", type=Path, metavar="FILE",
+                    help="with --asm-console: the functions to write (one a line), whether or not they have C")
     args = ap.parse_args(argv)
 
     cfg = load_config(args.game)
+    if args.asm is not None and cfg.get("asm"):
+        cfg["asm"] = {**cfg["asm"], "enabled": args.asm == "on"}
+    if args.asm_source and cfg.get("asm"):
+        cfg["asm"] = {**cfg["asm"], "source": str(args.asm_source.resolve())}
     source = args.source.resolve()
     out = args.out.resolve()
     if args.list:
         for u in units_of(source, cfg):
             print(generated_name(u))
+        for name in asmc.file_names(cfg):
+            print(name)
         for name in PROGRAM_FILES:
             print(name)
         return 0
@@ -564,6 +615,22 @@ def main(argv: list[str] | None = None) -> int:
             f = program.functions.get(sym)
             program.functions[sym] = Function(sym, sig, None, asm=f.asm if f else False)
     program.index_places()
+    # Functions with no C whose assembly the game's setup wrote (hostgen.json "asm"): C from their
+    # instructions, so the port runs them instead of stubs (asmc.py). Before the units, so calls to
+    # them are matched to the signatures they are written with.
+    # The port's own C for the game (its host/, and its game's shared one, rac1's ../rac1/host):
+    # what it calls keeps the signature it calls it by.
+    host_dirs = [args.game.parent / "host", args.game.parent.parent / str(cfg.get("game", "")) / "host"]
+    host_text = "".join(p.read_text(errors="replace") for d in host_dirs if d.is_dir()
+                        for p in sorted(d.glob("*.c")))
+    asm_stage, asm_results = asmc.run(program, cfg, source, host_text)
+    if args.asm_console:
+        names = None
+        if args.asm_console_names:
+            names = [l.split()[0] for l in args.asm_console_names.read_text().splitlines()
+                     if l.strip() and not l.startswith("#")]
+        for name, why in sorted(asmc.write_console(asm_stage, args.asm_console.resolve(), names).items()):
+            print(f"hostgen: {name}: no console form: {why}", file=sys.stderr)
     inherited = inherit_results(program)
     state["program"] = program
     with ProcessPoolExecutor(args.jobs, initializer=_init, initargs=(state,)) as ex:
@@ -576,10 +643,14 @@ def main(argv: list[str] | None = None) -> int:
     extra["bound_libraries"] = write_libraries(program, out, host_rows, library_api(args.game.parent, cfg))
     write_game_info(program, out, cfg)
     extra["index_problems"] = problems
-    (out / "units.txt").write_text("".join(generated_name(u) + "\n" for u in units))
+    asm_files = asmc.write_files(out, cfg, asm_results, cfg.get("title", cfg.get("name", "")))
+    extra["asm"] = asm_stage
+    (out / "units.txt").write_text("".join(generated_name(u) + "\n" for u in units)
+                                   + "".join(f + "\n" for f in asm_files))
     summary = write_report(out, reports, program, extra, cfg.get("title", cfg.get("name", "")))
     if not args.quiet:
         print(f"hostgen: {summary['units']} units, {summary['functions_translated']} functions translated, "
+              f"{summary['functions_from_assembly']} from assembly, "
               f"{summary['functions_stubbed']} stubbed, {summary['functions_without_c']} without C, "
               f"in {time.time() - started:.0f} s; report in {out / 'report.md'}")
     # A unit Clang cannot read is left out whole: every function in it goes missing and the game

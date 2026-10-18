@@ -146,5 +146,11 @@
     "guard": "NON_MATCHING",
     "units": "drafts.tsv"
   },
-  "split_places": "split_places.tsv"
+  "split_places": "split_places.tsv",
+  "asm": {
+    "enabled": false,
+    "dirs": ["config/us/overlays/asm", "config/us/expected/asm", "config/us/asm",
+             "build/baseline/config/us/expected/asm", "build/baseline/config/us/asm"],
+    "gp": "0x00166C00"
+  }
 }
