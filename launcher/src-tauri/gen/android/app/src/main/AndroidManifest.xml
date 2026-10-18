@@ -47,7 +47,9 @@
         <!-- The game: SDL's activity around libopenrac-<id>.so, in a process of its own so that
              each play starts the game afresh and a crash leaves the launcher standing, and in a
              task of its own: the game and the launcher are two windows in Recents, and the game
-             goes on while the launcher is in front. -->
+             goes on while the launcher is in front. It takes every change of the system's
+             settings itself (configChanges): one Android restarted it for (the font or display
+             size, changed while it ran) started the game afresh. -->
         <activity
             android:name="dev.openrac.game.GameActivity"
             android:process=":game"
@@ -57,7 +59,7 @@
             android:label="@string/app_name"
             android:launchMode="singleTask"
             android:screenOrientation="sensorLandscape"
-            android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation"
+            android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation|density|fontScale|fontWeightAdjustment|grammaticalGender|colorMode|touchscreen|mcc|mnc"
             android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
             android:preferMinimalPostProcessing="true" />
 
