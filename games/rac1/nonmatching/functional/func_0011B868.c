@@ -1,4 +1,4 @@
-/* functional: medium. Handles one reply record of a 0x440-byte slot table (D_00157600, slot from arg or 0): copies the 16-byte header, optionally memcpys data, runs per-command copy-outs (2, 11, 12, 22/24/25) and releases the request id (negative id: clears it in the D_0012FD10 table, else calls func_00118CA0). Not run against real calls. */
+/* functional: high. Handles one reply record of a 0x440-byte slot table (D_00157600, slot from arg or 0): copies the 16-byte header, optionally memcpys data, runs per-command copy-outs (2, 11, 12, 23/25/26) and releases the request id (negative id: clears it in the D_0012FD10 table, else calls func_00118CA0). Corrected in place: copy-out case labels were 22/24/25, the jump table jtbl_001529E0 gives 23/25/26. */
 extern s32 D_0012FD98_B868 __asm__("D_0012FD98");
 extern s32 D_0012FD90_B868 __asm__("D_0012FD90");
 extern volatile s32 D_0012FD10_B868[] __asm__("D_0012FD10");
@@ -64,9 +64,9 @@ void func_0011B868(u8 *arg) {
         for (i = 0; i < 0x40; i++)
             dst[i] = src[i];
         break;
-    case 22:
-    case 24:
+    case 23:
     case 25:
+    case 26:
         dst = (u8 *)*(s32 *)(rec + 0x14);
         len = *(s32 *)(rec + 0x18);
         if ((u32)len > 0x400)
