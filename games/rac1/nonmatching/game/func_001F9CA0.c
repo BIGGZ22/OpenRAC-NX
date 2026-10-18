@@ -8,7 +8,11 @@ void func_001F9CA0(float *out, float *a, float *b) {
     float acc0 = b[1] * a[2];
     float acc1 = b[2] * a[0];
     float acc2 = b[0] * a[1];
-    out[0] = acc0 - a[1] * b[2];
-    out[1] = acc1 - a[2] * b[0];
-    out[2] = acc2 - a[0] * b[1];
+    /* All three before any store, as the VU does: out may be a or b (cross in place). */
+    float x = acc0 - a[1] * b[2];
+    float y = acc1 - a[2] * b[0];
+    float z = acc2 - a[0] * b[1];
+    out[0] = x;
+    out[1] = y;
+    out[2] = z;
 }
