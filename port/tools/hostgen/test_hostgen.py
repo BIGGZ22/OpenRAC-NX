@@ -627,6 +627,38 @@ class Translate(unittest.TestCase):
         """})
         self.assertEqual(out, ["45", "0"])
 
+    def test_a_macro_whose_body_casts_to_an_unnamed_record(self):
+        # rac1's help_0020CDF0.c (`#define DEFA (((struct { T a[1]; } *)D)->a)`) and
+        # vendor_002C0310.c (`#define S_I(p, o) (((struct { char _p[o]; int v; } *)(p))->v)`):
+        # written out where they are used, the records are named in each function.
+        out = self.run_program({"a.c": """
+            typedef struct { int x; short y; } T;
+            #define FIRST (((struct { T a[1]; } *)table)->a)
+            #define AT(p, o) (((struct { char _p[o]; int v; } *)(p))->v)
+            int test_main(void) {
+                int table[8];
+                FIRST[1].x = 7;
+                AT(table, 4) = 3;
+                test_print(table[2] + table[1]);
+                test_print(AT((char *)table, 8));
+                return 0;
+            }
+        """})
+        self.assertEqual(out, ["10", "7"])
+
+    def test_cast_macros_keep_lines_and_skip_other_directives(self):
+        src = ("#define AT(p, o) (((struct { char _p[o]; int v; } *)(p))->v)\n"
+               "int f(char *s) { return AT(s, 8) + AT(s,\n"
+               "   12); }\n"
+               "#define B AT(x, 4)\n"
+               "#undef AT\n"
+               "int g(char *s) { return AT(s, 4); }\n")
+        out = prep.expand_cast_macros(src).split("\n")
+        self.assertEqual(len(out), len(src.split("\n")))
+        self.assertEqual(out[1], "int f(char *s) { return (((struct { char _p[8]; int v; } *)(s))->v) + AT(s,")
+        self.assertEqual(out[3], "#define B AT(x, 4)")
+        self.assertEqual(out[5], "int g(char *s) { return AT(s, 4); }")
+
     def test_alloca_takes_game_stack_until_the_function_returns(self):
         # rac1's func_L13_002EE590: __builtin_alloca for a copy of a list. The space is in game
         # memory (its address is passed on) and is given back when the function returns.
