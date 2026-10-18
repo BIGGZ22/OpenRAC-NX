@@ -117,23 +117,23 @@ export async function checkForUpdate(
   source: UpdateSource = DEFAULT_SOURCE,
 ): Promise<UpdateInfo | null> {
   if (inTauri && onAndroid) {
-    try {
-      const release = await api.updateCheck();
-      activeAndroidRelease = release;
-      if (!release) return null;
-      return {
-        version: release.version,
-        tag: `v${release.version}`,
-        url: source.page,
-        name: `OpenRAC Launcher v${release.version}`,
-        body: release.notes,
-        publishedAt: release.date,
-        canInstallDirectly: true,
-      };
-    } catch (e) {
-      console.warn("Android update check failed, falling back to GitHub release check:", e);
-    }
+    // The manifest the launcher was built to read (its own branch's, a fork's) is the one answer:
+    // GitHub's latest release is another channel's, which this launcher cannot install from.
+    activeAndroidRelease = null;
+    const release = await api.updateCheck();
+    activeAndroidRelease = release;
+    if (!release) return null;
+    return {
+      version: release.version,
+      tag: `v${release.version}`,
+      url: source.page,
+      name: `OpenRAC Launcher v${release.version}`,
+      body: release.notes,
+      publishedAt: release.date,
+      canInstallDirectly: true,
+    };
   } else if (inTauri) {
+    activeTauriUpdate = null;
     try {
       const { check } = await import("@tauri-apps/plugin-updater");
       const update = await check();

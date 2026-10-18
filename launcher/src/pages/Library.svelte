@@ -53,8 +53,8 @@
         {#if onAndroid}
           <h2>Add your Ratchet &amp; Clank disc</h2>
           <p class="muted">
-            Choose the image of your own disc (.iso) from this device's storage. It is copied into the app, a few GB,
-            and the game is set up from it. OpenRAC never downloads a game.
+            Choose the image of your own disc (.iso or .chd) from this device's storage. It is copied into the app, a
+            few GB, and the game is set up from it. OpenRAC never downloads a game.
           </p>
         {:else if askFolder}
           <h2>Where are your PlayStation 2 games?</h2>

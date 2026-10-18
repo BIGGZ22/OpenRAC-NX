@@ -8,9 +8,15 @@
 
   let info = $state<GpuDrivers | null>(null);
   let busy = $state(false);
+  // The radios show the choice, then what is saved (load): one that failed to save goes back
+  // ("" is the system's driver).
+  let rendererPick = $state<Renderer>("gles");
+  let driverPick = $state("");
 
   async function load() {
     info = (await guard(api.gpuDrivers())) ?? null;
+    rendererPick = info?.renderer === "vulkan" ? "vulkan" : "gles";
+    driverPick = info?.selected ?? "";
   }
 
   $effect(() => {
@@ -18,6 +24,7 @@
   });
 
   async function select(id: string | null) {
+    driverPick = id ?? "";
     busy = true;
     await guard(api.gpuDriverSelect(id));
     await load();
@@ -25,6 +32,7 @@
   }
 
   async function renderer(choice: Renderer) {
+    rendererPick = choice;
     busy = true;
     const saved = await guard(api.gpuRendererSelect(choice).then(() => true));
     await load();
@@ -71,7 +79,7 @@
     <input
       type="radio"
       name="renderer"
-      checked={info?.renderer !== "vulkan"}
+      checked={rendererPick === "gles"}
       disabled={busy || !info}
       onchange={() => void renderer("gles")}
     />
@@ -81,7 +89,7 @@
     <input
       type="radio"
       name="renderer"
-      checked={info?.renderer === "vulkan"}
+      checked={rendererPick === "vulkan"}
       disabled={busy || !info}
       onchange={() => void renderer("vulkan")}
     />
@@ -117,7 +125,7 @@
       <input
         type="radio"
         name="gpu-driver"
-        checked={!info.selected}
+        checked={driverPick === ""}
         disabled={busy}
         onchange={() => void select(null)}
       />
@@ -129,7 +137,7 @@
           id="gpu-{driver.id}"
           type="radio"
           name="gpu-driver"
-          checked={info.selected === driver.id}
+          checked={driverPick === driver.id}
           disabled={busy || !adreno}
           onchange={() => void select(driver.id)}
         />
