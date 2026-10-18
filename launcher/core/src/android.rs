@@ -14,18 +14,23 @@ pub fn disc_file_name(name: &str) -> String {
 }
 
 /// Copies `from` into `dest` through a file beside it, reporting every 64 MB; an image already
-/// there with the same size is kept as it is. File to file, so that the kernel copies
-/// (copy_file_range or sendfile, which std::io::copy uses on Linux): no bytes through the app.
+/// there with the same size, and the same first and last MB, is kept as it is (another dump of the
+/// same name and size is copied). File to file, so that the kernel copies (copy_file_range or
+/// sendfile, which std::io::copy uses on Linux): no bytes through the app.
 pub fn copy_disc(
     from: std::fs::File,
     total: u64,
     dest: &std::path::Path,
     progress: impl Fn(u64),
 ) -> std::io::Result<()> {
-    use std::io::Read;
-    if total > 0 && dest.metadata().is_ok_and(|m| m.len() == total) {
-        progress(total);
-        return Ok(());
+    use std::io::{Read, Seek, SeekFrom};
+    if total > 0 && dest.metadata().is_ok_and(|m| m.len() == total) && (&from).seek(SeekFrom::Start(0)).is_ok() {
+        let same = same_ends(&from, dest, total).unwrap_or(false);
+        (&from).seek(SeekFrom::Start(0))?;
+        if same {
+            progress(total);
+            return Ok(());
+        }
     }
     if let Some(dir) = dest.parent() {
         std::fs::create_dir_all(dir)?;
@@ -54,6 +59,27 @@ pub fn copy_disc(
         let _ = std::fs::remove_file(&partial);
     }
     result
+}
+
+/// Whether two images of `total` bytes begin and end with the same MB.
+fn same_ends(from: &std::fs::File, dest: &std::path::Path, total: u64) -> std::io::Result<bool> {
+    use std::io::{Read, Seek, SeekFrom};
+    const SAMPLE: u64 = 1 << 20;
+    let mut kept = std::fs::File::open(dest)?;
+    let mut from = from;
+    let ends = [0, total.saturating_sub(SAMPLE)];
+    for at in ends {
+        let len = SAMPLE.min(total) as usize;
+        let (mut a, mut b) = (vec![0; len], vec![0; len]);
+        from.seek(SeekFrom::Start(at))?;
+        from.read_exact(&mut a)?;
+        kept.seek(SeekFrom::Start(at))?;
+        kept.read_exact(&mut b)?;
+        if a != b {
+            return Ok(false);
+        }
+    }
+    Ok(true)
 }
 
 /// The game's library for a play action's program: the carried copy links
@@ -95,10 +121,16 @@ mod tests {
         assert!(std::fs::read(&dest).unwrap() == data);
         assert_eq!(seen.lock().unwrap().first(), Some(&(64u64 << 20)));
         assert_eq!(seen.lock().unwrap().last(), Some(&(data.len() as u64)));
-        // The same image again is not copied again.
-        std::fs::write(dir.path().join("empty"), b"").unwrap();
-        copy_disc(std::fs::File::open(dir.path().join("empty")).unwrap(), data.len() as u64, &dest, |_| ()).unwrap();
-        assert_eq!(std::fs::read(&dest).unwrap().len(), data.len());
+        // The same image again is not copied again: one report, of the whole.
+        let seen = std::sync::Mutex::new(Vec::new());
+        copy_disc(open(), data.len() as u64, &dest, |n| seen.lock().unwrap().push(n)).unwrap();
+        assert_eq!(*seen.lock().unwrap(), vec![data.len() as u64]);
+        // Another image of the same name and size is.
+        let mut changed = data.clone();
+        *changed.last_mut().unwrap() ^= 1;
+        std::fs::write(&picked, &changed).unwrap();
+        copy_disc(open(), data.len() as u64, &dest, |_| ()).unwrap();
+        assert!(std::fs::read(&dest).unwrap() == changed);
         // A short read leaves nothing behind.
         let other = dir.path().join("discs/other.iso");
         assert!(copy_disc(open(), data.len() as u64 + 1, &other, |_| ()).is_err());
