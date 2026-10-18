@@ -28,11 +28,19 @@ pub struct Release {
 }
 
 /// Whether `latest` is a later version than `current` (`major.minor.patch`, any prefix such as
-/// `launcher-v` ignored; a pre-release is older than its release).
+/// `launcher-v` ignored; a pre-release is older than its release, and of two pre-releases of one
+/// version the one whose last number is larger is newer: `0.8.0-dev.10` after `0.8.0-dev.9`, the
+/// builds of a branch, as semver orders them).
 pub fn is_newer(current: &str, latest: &str) -> bool {
-    fn parse(v: &str) -> ([u64; 3], bool) {
+    fn parse(v: &str) -> ([u64; 3], Option<u64>) {
         let v = v.trim_start_matches(|c: char| !c.is_ascii_digit());
-        let (core, pre) = v.split_once(['-', '+']).map_or((v, false), |(c, rest)| (c, !rest.is_empty()));
+        let (core, pre) = match v.split_once(['-', '+']) {
+            Some((c, rest)) if !rest.is_empty() => {
+                (c, Some(rest.rsplit('.').next().and_then(|n| n.parse().ok()).unwrap_or(0)))
+            }
+            Some((c, _)) => (c, None),
+            None => (v, None),
+        };
         let mut parts = [0u64; 3];
         for (part, text) in parts.iter_mut().zip(core.split('.')) {
             *part = text.parse().unwrap_or(0);
@@ -41,7 +49,14 @@ pub fn is_newer(current: &str, latest: &str) -> bool {
     }
     let (c, c_pre) = parse(current);
     let (l, l_pre) = parse(latest);
-    l > c || (l == c && c_pre && !l_pre)
+    if l != c {
+        return l > c;
+    }
+    match (c_pre, l_pre) {
+        (Some(_), None) => true,
+        (Some(c), Some(l)) => l > c,
+        _ => false,
+    }
 }
 
 /// The release the manifest offers `platform`, when it is newer than `current`; an error when the
@@ -112,6 +127,10 @@ mod tests {
         assert!(!is_newer("0.8.0", "0.7.9"));
         assert!(!is_newer("0.8.0", "0.8.0-rc.1"));
         assert!(!is_newer("1.0.0", "0.99.99"));
+        assert!(is_newer("0.8.0-dev.9", "0.8.0-dev.10"));
+        assert!(!is_newer("0.8.0-dev.10", "0.8.0-dev.10"));
+        assert!(!is_newer("0.8.0-dev.10", "0.8.0-dev.9"));
+        assert!(is_newer("0.8.0-dev.10", "0.8.0"));
     }
 
     #[test]
