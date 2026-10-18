@@ -62,6 +62,8 @@ ROOT = Path(__file__).resolve().parent.parent
 PAL_TABLE = ROOT / "games/rac1/nonmatching/functional.tsv"
 US_TABLE = ROOT / "port/game/rac1-ntsc/hand/hand.tsv"
 PAL_VERDICTS = ROOT / "port/game/rac1-pal/fcheck.tsv"
+# Functions whose DIFFERS is known not to be a difference of the C (name<TAB>reason), recorded by hand.
+PAL_ARTEFACTS = ROOT / "port/game/rac1-pal/fcheck_artefacts.tsv"
 US_VERDICTS = ROOT / "port/game/rac1-ntsc/hand/fcheck.tsv"
 PYTHON = "/opt/homebrew/bin/python3"
 HEADER = "name\tstatus\tdate\tfcheck\tcsum\tnote"
@@ -181,6 +183,25 @@ def classify(rc: int, output: str) -> tuple[str, str]:
     return "differs", "; ".join(diff[:2])[:200] or f"exit {rc}"
 
 
+def artefacts(path: Path = PAL_ARTEFACTS) -> dict[str, str]:
+    """name -> why a DIFFERS on it is not the C's doing (a # line is a comment)."""
+    out: dict[str, str] = {}
+    if path.is_file():
+        for line in path.read_text().splitlines():
+            if line.strip() and not line.startswith("#"):
+                c = line.split("\t", 1)
+                out[c[0].strip()] = c[1].strip() if len(c) > 1 else ""
+    return out
+
+
+def waive(name: str, status: str, note: str, known: dict[str, str]) -> tuple[str, str]:
+    """A DIFFERS on a function recorded as an artefact is "unchecked", never "same": the note
+    says why, then what fcheck printed. Anything else passes through."""
+    if status == "differs" and name in known:
+        return "unchecked", f"not the C's difference: {known[name]} (fcheck: {note})"[:400]
+    return status, note
+
+
 def run_one(decomp: Path, name: str, src: Path, log_dir: Path) -> tuple[str, str]:
     cand = decomp / "build-sn/fcheck/gate" / f"{name}.c"
     cand.parent.mkdir(parents=True, exist_ok=True)
@@ -234,6 +255,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             r.status, r.note = "unchecked", f"file {back.files[n]} is missing"
         else:
             work.append(r)
+    known = artefacts()
     capture_missing(decomp, [r.name for r in work])
     log_dir = decomp / "build-sn/fcheck/gate/logs"
     print(f"checking {len(work)} functions with {args.jobs} workers ...", flush=True)
@@ -242,7 +264,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         for i, f in enumerate(concurrent.futures.as_completed(futs), 1):
             r = futs[f]
             try:
-                r.status, r.note = f.result()
+                r.status, r.note = waive(r.name, *f.result(), known)
             except Exception as e:  # a crash of the harness is not a verdict on the C
                 r.status, r.note = "unchecked", f"gate error: {e}"[:160]
             print(f"[{i}/{len(work)}] {r.name}: {r.status} {r.note}", flush=True)

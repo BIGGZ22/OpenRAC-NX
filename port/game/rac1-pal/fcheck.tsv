@@ -87,7 +87,7 @@ func_L00_00251B58	not-executable	2026-10-18	2e43062c	b33a4be212de	level/overlay 
 func_00202AA8	unchecked	2026-10-18	2e43062c	5e6405861ef2	did not build or place: COMPILE failed (see the compiler's messages above)
 func_001FA218	no-states	2026-10-18	2e43062c	1105b30baa30	never called in the capture run (title, menu, level 0)
 func_001FA480	no-states	2026-10-18	2e43062c	94b4ce0cec0f	never called in the capture run (title, menu, level 0)
-func_001F9CA0	differs	2026-10-18	2e43062c	adc8086cbf43	func_001F9CA0.1.f644.snap: DIFFERS;     word at 01fffd8c: ours 3f800000, retail 00000000 (before 3f800000)
+func_001F9CA0	same	2026-10-18	97d7ec20	b71780ddbab5	3 calls
 func_001F9FC0	no-states	2026-10-18	2e43062c	92902ce44903	never called in the capture run (title, menu, level 0)
 func_00218930	no-states	2026-10-18	2e43062c	f19a36963362	never called in the capture run (title, menu, level 0)
 func_00218928	no-states	2026-10-18	2e43062c	389d9f50307b	never called in the capture run (title, menu, level 0)
@@ -223,7 +223,7 @@ func_L01_0030F318	not-executable	2026-10-18	2e43062c	00faf1a5c27b	level/overlay 
 func_L08_00259040	not-executable	2026-10-18	2e43062c	1b8c59b75d02	level/overlay function; fcheck runs boot-executable functions only
 func_L14_00316E60	not-executable	2026-10-18	2e43062c	a54e8bb5dc4a	level/overlay function; fcheck runs boot-executable functions only
 func_0012DB68	unchecked	2026-10-18	2e43062c	cb433bacc734	every captured state was skipped (nothing compared)
-func_0012EB18	differs	2026-10-18	2e43062c	5ecc631cff72	func_0012EB18.0.snap: DIFFERS;     does not keep $s0 (0, was 8)
+func_0012EB18	unchecked	2026-10-18	97d7ec20	5ecc631cff72	not the C's difference: the retail assembly of this very function, pasted in as the candidate, gets the identical DIFFERS (the first outside-memory event of the run differs before the function's own code matters), so the harness cannot compare it; the C was read against the assembly instruction for instruction (2026-10-18) (fcheck: func_0012EB18.0.snap: DIFFERS;     does not keep $s0 (0, was 8))
 func_00204340	unchecked	2026-10-18	2e43062c	30283d8aa2b3	did not build or place: COMPILE failed (see the compiler's messages above)
 func_00226978	no-states	2026-10-18	2e43062c	7587b3847d58	never called in the capture run (title, menu, level 0)
 func_00238F98	no-states	2026-10-18	2e43062c	4677ef8440ae	never called in the capture run (title, menu, level 0)
@@ -336,7 +336,7 @@ func_0011E860	no-states	2026-10-18	2e43062c	859fc5b1c40f	never called in the cap
 func_0011EF28	no-states	2026-10-18	2e43062c	e3b5d9cc7a84	never called in the capture run (title, menu, level 0)
 func_0011F4F8	no-states	2026-10-18	2e43062c	a3bd8e59f3a0	never called in the capture run (title, menu, level 0)
 func_001F10A0	no-states	2026-10-18	2e43062c	18f59bfce161	never called in the capture run (title, menu, level 0)
-func_00118D80	differs	2026-10-18	2e43062c	70f7da63d95f	func_00118D80.0.snap: DIFFERS;     outside memory, step 0: ours [nothing more], retail [s 00000000 64 0] (r read, w write, s system call)
+func_00118D80	unchecked	2026-10-18	97d7ec20	70f7da63d95f	not the C's difference: FlushCache is one syscall that writes back or invalidates the EE caches; the host has no caches to flush, so the port's C does nothing on purpose (libraries.tsv: "nothing to flush"), and C cannot make a syscall (fcheck: func_00118D80.0.snap: DIFFERS;     outside memory, step 0: ours [nothing more], retail [s 00000000 64 0] (r read, w write, s system call))
 func_00125328	no-states	2026-10-18	2e43062c	46f17e32c15e	never called in the capture run (title, menu, level 0)
 func_001F0F00	no-states	2026-10-18	2e43062c	58f173726e57	never called in the capture run (title, menu, level 0)
 func_001F9908	same	2026-10-18	2e43062c	86550802365b	3 calls

@@ -24,6 +24,18 @@ class GateTests(unittest.TestCase):
         self.assertEqual(s, "differs")
         self.assertIn("DIFFERENT", note)
 
+    def test_waive(self):
+        known = {"func_1": "retail's own assembly differs the same way"}
+        self.assertEqual(g.waive("func_1", "differs", "w", known)[0], "unchecked")
+        self.assertIn("retail's own assembly", g.waive("func_1", "differs", "w", known)[1])
+        self.assertEqual(g.waive("func_1", "same", "3 calls", known), ("same", "3 calls"))
+        self.assertEqual(g.waive("func_2", "differs", "w", known), ("differs", "w"))
+        with tempfile.TemporaryDirectory() as d:
+            t = Path(d) / "a.tsv"
+            t.write_text("# c\nfunc_1\twhy\n")
+            self.assertEqual(g.artefacts(t), {"func_1": "why"})
+            self.assertEqual(g.artefacts(Path(d) / "none.tsv"), {})
+
     def test_row_roundtrip(self):
         r = g.Row.parse("func_00100000\tsame\t2026-10-18\tabc12345\t0123456789ab\t3 calls")
         self.assertEqual(g.Row.parse(r.format()).note, "3 calls")

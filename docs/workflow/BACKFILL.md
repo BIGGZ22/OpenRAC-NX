@@ -214,7 +214,13 @@ and `~/Projects/RAC/rac1-decomp`). Each log is kept in rac1-decomp's
   build, every state skipped, or no oracle for the version. It is delivered
   as unchecked and listed as such in the report, never as done or verified.
 - `differs`: not delivered. Fix the C and run fcheck again, or hand the
-  function back with the difference as it printed.
+  function back with the difference as it printed. Before touching the C, test
+  whether the harness is at fault: paste the function's own retail assembly
+  in as the candidate (a top-level `__asm__` block); if that gets the same
+  DIFFERS, the C is not the cause. Such a function, and one whose difference
+  is the host having no hardware to act on (FlushCache), goes in
+  `port/game/rac1-pal/fcheck_artefacts.tsv` with the reason; the gate then
+  writes it as `unchecked` with that reason, never as `same`.
 
 A report line that says a backfill is finished without one of those is
 incomplete. The lead runs `fcheck_gate.py run --only ...` over the batch

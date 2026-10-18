@@ -1,0 +1,4 @@
+# Functions where fcheck says DIFFERS and the C is not the cause (tools/fcheck_gate.py turns that into "unchecked" with the reason).
+# name<TAB>reason. Only for a difference shown to come from the harness or from the host having no hardware to act on.
+func_0012EB18	the retail assembly of this very function, pasted in as the candidate, gets the identical DIFFERS (the first outside-memory event of the run differs before the function's own code matters), so the harness cannot compare it; the C was read against the assembly instruction for instruction (2026-10-18)
+func_00118D80	FlushCache is one syscall that writes back or invalidates the EE caches; the host has no caches to flush, so the port's C does nothing on purpose (libraries.tsv: "nothing to flush"), and C cannot make a syscall
