@@ -58,10 +58,11 @@ vec4 over(vec4 under, vec4 top) {
     float a = top.a + under.a * (1.0 - top.a);
     return vec4(a > 0.0 ? (top.rgb * top.a + under.rgb * under.a * (1.0 - top.a)) / a : vec3(0.0), a);
 }
-// Glass: a dark translucent body, lighter at the top, a fine bright rim.
+// The DualShock 2's black plastic, translucent over the game: lighter where the light falls
+// at the top, a fine rim.
 vec4 glass(float d, float lift) {
-    vec4 body = vec4(mix(vec3(0.23, 0.21, 0.20), vec3(0.08, 0.075, 0.07), v_at.y * 0.5 + 0.5),
-                     0.40 + 0.18 * held);
+    vec4 body = vec4(mix(vec3(0.20, 0.20, 0.21), vec3(0.05, 0.05, 0.055), v_at.y * 0.5 + 0.5),
+                     0.48 + 0.15 * held);
     body.rgb = mix(body.rgb, accent * 0.55, 0.45 * held * lift);
     vec4 c = vec4(body.rgb, body.a * fill(d));
     float rim = fill(abs(d + 0.035) - 0.022);
@@ -96,16 +97,26 @@ void main() {
     vec4 c = vec4(0.0);
     vec4 ink = vec4(tint, 0.92);
     if (symbol == 9) {
-        // The d-pad's plate: a rounded cross.
-        float arm = min(pill(p.yx, 0.60, 0.36), pill(p, 0.60, 0.36));
-        c = glass(arm, 0.0);
+        // The d-pad's round well in the pad's body, as on the DualShock 2.
+        float d = length(p) - 1.0;
+        c = glass(d, 0.0);
+        c.rgb *= 0.7;
     } else if (symbol == 6) {
-        // An arm of the d-pad: its arrow, lit when held.
+        // An arm of the d-pad: the DualShock 2's own, a key pointed toward the middle, with an
+        // arrow pressed into it.
         float ca = cos(angle), sa = sin(angle);
-        vec2 q = mat2(ca, -sa, sa, ca) * p;
-        c = vec4(accent, 0.40 * held * fill(length(p) - 0.95));
-        float tri = max(abs(q.x) * 0.9 - q.y * 0.45, q.y - 0.18) - 0.20;
-        c = over(c, vec4(mix(vec3(0.85), vec3(1.0), held), (0.75 + 0.25 * held) * fill(tri)));
+        vec2 q = mat2(ca, -sa, sa, ca) * p / press;
+        // The pad's middle is 1.5 radii inward (touch_pad.cpp's kArm): the keys' outer ends follow
+        // the well's circle.
+        float key = max(max(abs(q.x) - 0.80, length(q - vec2(0.0, 1.5)) - 2.45),
+                        (q.y + abs(q.x) - 1.02) * 0.7071);
+        vec3 plastic = mix(vec3(0.30, 0.30, 0.32), vec3(0.12, 0.12, 0.13), q.y * 0.4 + 0.5);
+        plastic = mix(plastic, accent * 0.75, 0.55 * held);
+        c = vec4(plastic, (0.62 + 0.2 * held) * fill(key));
+        c = over(c, vec4(mix(vec3(1.0), accent, 0.7 * held), (0.28 + 0.5 * held) * fill(abs(key + 0.03) - 0.018)));
+        vec2 t = q + vec2(0.0, 0.45);
+        float tri = max(abs(t.x) * 0.9 - t.y * 0.45, t.y - 0.14) - 0.17;
+        c = over(c, vec4(vec3(0.05), 0.75 * fill(tri)));
     } else if (symbol == 5) {
         // A stick: a well with a ring of ticks, and the knob where the thumb holds it.
         float d = length(p) - 1.0;
@@ -122,10 +133,15 @@ void main() {
         float kd = length(k) - 0.42 * press;
         vec4 shadow = vec4(vec3(0.0), 0.35 * fill(length(k - vec2(0.0, 0.06)) - 0.46));
         c = over(c, shadow);
-        vec3 face = mix(vec3(0.97, 0.95, 0.92), vec3(0.70, 0.66, 0.62), clamp(k.y / 0.42 * 0.5 + 0.5, 0.0, 1.0));
-        face = mix(face, mix(face, accent, 0.6), held);
-        c = over(c, vec4(face, 0.80 * fill(kd)));
-        c = over(c, vec4(vec3(1.0), 0.35 * fill(abs(length(k) - 0.27 * press) - 0.02)));
+        // The DualShock 2's cap: black rubber, a ribbed rim, its top dished in.
+        float r = length(k) / (0.42 * press);
+        vec3 face = mix(vec3(0.24, 0.24, 0.25), vec3(0.08, 0.08, 0.085), clamp(k.y / 0.42 * 0.5 + 0.5, 0.0, 1.0));
+        float ribs = step(0.78, r) * (0.5 + 0.5 * cos(atan(k.y, k.x) * 28.0));
+        face = mix(face, vec3(0.34, 0.34, 0.36), 0.5 * ribs);
+        face = mix(face, face * 0.6, smoothstep(0.65, 0.0, r) * 0.6);  // the dish
+        face = mix(face, accent * 0.8, 0.5 * held);
+        c = over(c, vec4(face, 0.88 * fill(kd)));
+        c = over(c, vec4(mix(vec3(0.75), accent, held), (0.35 + 0.4 * held) * fill(abs(length(k) - 0.42 * press + 0.02) - 0.02)));
     } else {
         // A button: glass, its symbol in its colour.
         float half_width = stretch - 1.0;
@@ -294,7 +310,7 @@ void draw(platform::TouchPad& touch, int width, int height) {
         }
     }
     if (arm > 0.0f) {
-        box((left + right) * 0.5f, (top + bottom) * 0.5f, (bottom - top) * 0.5f + arm * 1.05f, 1.0f, 1.0f);
+        box((left + right) * 0.5f, (top + bottom) * 0.5f, (bottom - top) * 0.5f + arm * 1.2f, 1.0f, 1.0f);
         glUniform3f(s.shader.uniform("tint"), 0.93f, 0.91f, 0.88f);
         glUniform1f(s.shader.uniform("held"), 0.0f);
         glUniform1i(s.shader.uniform("symbol"), kDpad);
