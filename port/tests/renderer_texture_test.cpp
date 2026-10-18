@@ -313,6 +313,39 @@ void pool() {
     CHECK(textures.image(textures.placeholder()).width == 8);
 }
 
+// A glyph page's distance field belongs to its contents. A conversion nobody used for a while is
+// dropped and its handle given to the next one; a field remembered by that handle (and a sample of
+// its texels, which a sparse page leaves mostly empty) was drawn for another page: the HUD's
+// digits with a page of letters, or with nothing.
+void glyph_fields() {
+    TexturePool textures;
+    const gs::Texa texa{0, false, 0x80};
+    auto page = [](int glyph_x, int glyph_y) {
+        std::vector<std::uint8_t> pixels(256 * 128 * 4);
+        for (int y = glyph_y; y < glyph_y + 12; ++y) {
+            for (int x = glyph_x; x < glyph_x + 6; ++x) {
+                pixels[static_cast<std::size_t>((y * 256 + x) * 4 + 3)] = 0x80;
+            }
+        }
+        return pixels;
+    };
+    gs::Tex0 t = tex0(0x600, gs::kPsmct32, 8, 7);
+    t.tbw = 4;
+    textures.upload(upload(0x600, gs::kPsmct32, 256, 128, page(10, 10)));
+    const TextureHandle digits = textures.resolve(t, texa);
+    const TextureHandle digits_field = textures.distance_field(digits);
+    CHECK(digits_field != digits);
+    for (std::uint32_t i = 0; i <= TexturePool::kKeepFrames; ++i) {
+        textures.end_frame();
+    }
+    textures.upload(upload(0x600, gs::kPsmct32, 256, 128, page(40, 60)));
+    const TextureHandle letters = textures.resolve(t, texa);
+    CHECK(letters == digits);  // the handle given again, as the pool does
+    const TextureHandle letters_field = textures.distance_field(letters);
+    CHECK(letters_field != digits_field);
+    CHECK(textures.image(letters_field).texel(43 * 4, 66 * 4) >> 24 > 0x80);  // inside the new glyph
+}
+
 }  // namespace
 
 int main() {
@@ -321,5 +354,6 @@ int main() {
     indexed();
     layout();
     pool();
+    glyph_fields();
     return openrac::test::result();
 }

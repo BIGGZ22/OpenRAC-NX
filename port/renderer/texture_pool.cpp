@@ -369,6 +369,10 @@ void TexturePool::end_frame() {
             glDeleteTextures(1, &e.gl);
         }
         m_converted.erase(e.key);
+        // The handle goes to the next conversion, and the field found by it (distance_field) with
+        // it: a glyph page of the same size, whose sparse texels sampled the same, was drawn with
+        // this one's field (the HUD's digits as letters, or as nothing).
+        m_field_of_handle.erase(static_cast<TextureHandle>(i + 1));
         e = Entry{};
         m_free.push_back(static_cast<TextureHandle>(i + 1));
     }
