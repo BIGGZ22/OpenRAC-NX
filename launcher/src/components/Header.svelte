@@ -406,8 +406,14 @@
   :global(html[data-platform="android"]) .site-header {
     flex-direction: column;
     gap: 16px;
+    flex: none;
+    align-self: stretch;
     width: var(--nav-left);
-    height: 100%;
+    /* The screen's whole height, however short or long the page beside it is. */
+    height: 100vh;
+    height: 100dvh;
+    position: sticky;
+    top: 0;
     padding: 16px 0 12px;
     background: var(--ink-deep);
     border-bottom: 0;
@@ -577,6 +583,7 @@
       justify-content: space-around;
       width: 100%;
       height: var(--nav-bottom);
+      position: static;
       padding: 12px 0 16px;
       border-right: 0;
       border-top: 1px solid var(--line);
