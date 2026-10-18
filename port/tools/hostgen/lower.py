@@ -1200,42 +1200,46 @@ class Unit:
         n = _strip_parens(n)
         if n.get("kind") == "DeclRefExpr" and (n["referencedDecl"].get("kind") == "FunctionDecl"
                                                or self._code_variable(n)):
-            sym = self._callee_symbol(n)
-            if self.fn is not None:
-                self.fn.report.calls.add(sym)
-            places = self.program.code_places(sym)
-            if not places:
-                raise Unsupported(f"the address of {sym}, which has none")
-            if getattr(self.program, "relocate", None) and self.fn is not None                     and not LEVEL_NAME.match(self.fn.name) and places[0][0] < 0:
-                return f"OPENRAC_CODE({hexaddr(places[0][1])})"
-            # A place split off as a variant of its own (split_places.tsv) is still where this name
-            # sits in that level: the address the level's own instruction forms.
-            places = places + [p for p in getattr(self.program, "splits", {}).get(sym, []) if p not in places]
-            level = self._shared_level()
-            copy = self._copy_places()
-            if copy is not None and places[0][0] >= 0:
-                # One C for copies at several places: the address this copy forms (guest.h).
-                home, canon, size = copy
-                own = next((a for o, a in places if o == home), places[0][1])
-                self.fn.uses_self = True
-                return f"openrac_code_in_copy({home}, {hexaddr(canon)}, {size}u, openrac_self_, {hexaddr(own)})"
-            if level is not None and (places[0][0] >= 0 or any(o == level for o, _ in places)):
-                # An executable function the levels' programs also carry (its catalogue places)
-                # counts as theirs here: the copy in the level loaded, as the level's own
-                # instruction forms it, not the executable's address under the level program.
-                own = next((a for o, a in places if o == level), places[0][1])
-                return f"OPENRAC_LCODE({level}, {hexaddr(own)})"
-            # A function of one level only: the place of the other in that level (its program is
-            # loaded whenever this runs), not the first level's.
-            levels = {o for o, _ in self.program.code_places(self.fn.name)} if self.fn is not None else set()
-            if len(levels) == 1 and min(levels) >= 0:
-                here = next((a for o, a in places if o == min(levels)), None)
-                if here is not None:
-                    return hexaddr(here)
-            return hexaddr(places[0][1])
+            return self.code_address(self._callee_symbol(n))
         if n.get("kind") == "UnaryOperator" and n["opcode"] == "*":
             return self.rv(_inner(n)[0])
         raise Unsupported(f"function designator {n.get('kind')}")
+
+    def code_address(self, sym: str) -> str:
+        """The code address of the function sym as the function being translated forms it, as a
+        gaddr: the copy in the program loaded. The assembly's translation (asmc.py) asks here too."""
+        if self.fn is not None:
+            self.fn.report.calls.add(sym)
+        places = self.program.code_places(sym)
+        if not places:
+            raise Unsupported(f"the address of {sym}, which has none")
+        if getattr(self.program, "relocate", None) and self.fn is not None                     and not LEVEL_NAME.match(self.fn.name) and places[0][0] < 0:
+            return f"OPENRAC_CODE({hexaddr(places[0][1])})"
+        # A place split off as a variant of its own (split_places.tsv) is still where this name
+        # sits in that level: the address the level's own instruction forms.
+        places = places + [p for p in getattr(self.program, "splits", {}).get(sym, []) if p not in places]
+        level = self._shared_level()
+        copy = self._copy_places()
+        if copy is not None and places[0][0] >= 0:
+            # One C for copies at several places: the address this copy forms (guest.h).
+            home, canon, size = copy
+            own = next((a for o, a in places if o == home), places[0][1])
+            self.fn.uses_self = True
+            return f"openrac_code_in_copy({home}, {hexaddr(canon)}, {size}u, openrac_self_, {hexaddr(own)})"
+        if level is not None and (places[0][0] >= 0 or any(o == level for o, _ in places)):
+            # An executable function the levels' programs also carry (its catalogue places)
+            # counts as theirs here: the copy in the level loaded, as the level's own
+            # instruction forms it, not the executable's address under the level program.
+            own = next((a for o, a in places if o == level), places[0][1])
+            return f"OPENRAC_LCODE({level}, {hexaddr(own)})"
+        # A function of one level only: the place of the other in that level (its program is
+        # loaded whenever this runs), not the first level's.
+        levels = {o for o, _ in self.program.code_places(self.fn.name)} if self.fn is not None else set()
+        if len(levels) == 1 and min(levels) >= 0:
+            here = next((a for o, a in places if o == min(levels)), None)
+            if here is not None:
+                return hexaddr(here)
+        return hexaddr(places[0][1])
 
     def _code_variable(self, n: dict) -> bool:
         """A variable that names code: `extern char f[] __asm__("func_L06_00300AB0")`, the way matched

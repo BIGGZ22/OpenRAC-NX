@@ -37,7 +37,7 @@ import clangast  # noqa: E402
 import ctype  # noqa: E402
 import prep  # noqa: E402
 from lower import Unit, UnitReport  # noqa: E402
-from program import Function, Program, Signature, canon, cname, index_unit, inherit_results, merge, read_places, read_split_places, read_symbols  # noqa: E402
+from program import Function, Program, Signature, canon, cname, index_unit, prototype, inherit_results, merge, read_places, read_split_places, read_symbols  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 PROGRAM_FILES = ["stubs.c", "functions.c", "libraries.c", "game_info.c", "game_protos.h"]
@@ -238,24 +238,6 @@ def units_of(root: Path, cfg: dict) -> list[str]:
 
 
 # ---- The program-wide files ----
-
-def prototype(f, typedefs: dict | None = None) -> str | None:
-    sig = f.sig
-    ret = canon(sig.ret, typedefs)
-    if ret is None:
-        return None
-    if not sig.prototyped:
-        return f"{ret} {cname(f.symbol)}()"
-    params = []
-    for i, p in enumerate(sig.params):
-        c = canon(p, typedefs)
-        if c is None:
-            return None
-        params.append(f"{c} a{i}")
-    if sig.variadic:
-        params.append("...")
-    return f"{ret} {cname(f.symbol)}({', '.join(params) or 'void'})"
-
 
 def write_program_files(program: Program, out: Path, game: str) -> dict:
     head = [

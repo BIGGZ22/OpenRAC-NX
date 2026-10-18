@@ -499,3 +499,22 @@ def read_symbols(path: Path, program: Program) -> int:
             count += 1
     return count
 
+
+def prototype(f, typedefs: dict | None = None) -> str | None:
+    """A function's declaration as game_protos.h writes it (parameters a0, a1, ...), or None
+    when a type in its signature has no form there (a record by value)."""
+    sig = f.sig
+    ret = canon(sig.ret, typedefs)
+    if ret is None:
+        return None
+    if not sig.prototyped:
+        return f"{ret} {cname(f.symbol)}()"
+    params = []
+    for i, p in enumerate(sig.params):
+        c = canon(p, typedefs)
+        if c is None:
+            return None
+        params.append(f"{c} a{i}")
+    if sig.variadic:
+        params.append("...")
+    return f"{ret} {cname(f.symbol)}({', '.join(params) or 'void'})"
