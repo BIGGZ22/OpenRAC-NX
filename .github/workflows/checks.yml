@@ -152,7 +152,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends clang ninja-build libgl1-mesa-dev libegl1-mesa-dev libgl1-mesa-dri \
             libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxss-dev \
-            libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev
+            libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev \
+            mesa-vulkan-drivers vulkan-validationlayers
 
       - name: hostgen
         run: python -m unittest discover -s port/tools/hostgen -v
@@ -182,7 +183,7 @@ jobs:
           dnf install -y --setopt=install_weak_deps=False git clang cmake ninja-build python3 \
             SDL3-devel mesa-libGL-devel mesa-libEGL-devel mesa-dri-drivers \
             libX11-devel libXext-devel libXrandr-devel libXcursor-devel libXi-devel libXScrnSaver-devel \
-            wayland-devel libxkbcommon-devel alsa-lib-devel pulseaudio-libs-devel
+            wayland-devel libxkbcommon-devel alsa-lib-devel pulseaudio-libs-devel mesa-vulkan-drivers
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
