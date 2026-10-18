@@ -684,7 +684,7 @@ typedef struct { char pad0[0x140]; float pos[4]; char pad150[0x10]; float f160; 
 char *FUN_L09_002ea528_c(struct Moby *owner, float *vec) __asm__("FUN_L09_002ea528");
 V6_2EC188 D_L09_00208B00 = {{0x4f008fff, 0x4f008fff, 0x4f007fff, 0x4f006fff, 0x2fffffff, 0x2fffffff}};
 V6_2EC188 D_L09_00208B18 = {{0x2f005f7f, 0x2f004f7f, 0x2f003f7f, 0x2f00004f, 0x2f000000, 0x3f000000}};
-extern char *FUN_L09_002efe48_c(void *, void *, void *, float, float) __asm__("FUN_L09_002efe48");
+extern char *FUN_L09_002efe48_c(void *, float, float, void *, float *) __asm__("FUN_L09_002efe48");
 extern f32 fast_add_rotations_c(f32, f32) __asm__("FUN_001fa580");
 extern f32 random_float_between_c2(f32, f32) __asm__("FUN_002132a8");
 extern float D_L09_00173FE8 __attribute__((section(".data")));
@@ -793,7 +793,7 @@ void FUN_L09_002eaea8(Moby *m) {
                 qcopy(v2, d->pos);
                 v2[2] = 25.0f;
                 for (j = 4; j >= 0; j--) {
-                    FUN_L09_002efe48_c(m, v2, movement_step, d->f50 * 4.0f, d->f50 * 12.0f);
+                    FUN_L09_002efe48_c(m, d->f50 * 4.0f, d->f50 * 12.0f, v2, movement_step);
                 }
                 d->f54 = d->f54 * (frame_scale_macro * -0.100000024f + 1.0f);
                 if (d->f58 <= 0) {
@@ -865,7 +865,7 @@ void FUN_L09_002eaea8(Moby *m) {
             qcopy(v2, d->pos);
             v2[2] = 25.0f;
             for (j = 1; j >= 0; j--) {
-                FUN_L09_002efe48_c(m, v2, movement_step, d->f50 * 4.0f, d->f50 * 12.0f);
+                FUN_L09_002efe48_c(m, d->f50 * 4.0f, d->f50 * 12.0f, v2, movement_step);
             }
             if (m->state > scale_game_frames(10)) {
                 mark_moby_for_removal(m);
