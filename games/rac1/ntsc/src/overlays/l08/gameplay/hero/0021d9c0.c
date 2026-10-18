@@ -406,7 +406,6 @@ extern void FUN_L00_00271b18(void *, void *, f32);
 extern void FUN_L00_00215340(void);
 extern void FUN_L00_00215ef8(void);
 extern void FUN_L00_00211f38(void);
-extern f32 D_L08_0017C5C4[] __asm__("D_L08_0017C5B8+12");
 extern void FUN_L00_00211be8(void);
 extern void FUN_L00_00262500(void *, void *);
 extern void FUN_L00_00262528(void *, s32, s32);
@@ -1652,7 +1651,7 @@ void FUN_L08_002284e0(void) {
             } else if (c < 0.8f && r > 0.5235988f) {
                 k = 0.0f;
             }
-            if (c > D_L08_0017C5C4[0]) {
+            if (c > D_L08_0017C5B8.x0C) {
                 FUN_L00_00211f38();
             } else {
                 f32 f = hero.unk229C + 0.35f;
