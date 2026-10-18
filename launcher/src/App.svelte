@@ -110,6 +110,8 @@
      (Header.svelte). */
   :global(html[data-platform="android"]) .shell {
     flex-direction: row;
+    /* Nothing beside the page scrolls the window: no strip of the background under the rail. */
+    overflow: hidden;
   }
 
   @media (max-width: 599px) {

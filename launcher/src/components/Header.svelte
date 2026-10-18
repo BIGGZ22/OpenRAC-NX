@@ -115,7 +115,9 @@
   {/if}
 
   <div class="end">
-    {#if app.update}
+    <!-- Android says it with a dot on Settings, where the update is (a pill at the rail's foot
+         looked like a stray bar). -->
+    {#if app.update && !onAndroid}
       {@const update = app.update}
       <button
         class="update"
@@ -407,13 +409,12 @@
     flex-direction: column;
     gap: 16px;
     flex: none;
+    /* The window's whole height beside the page, which scrolls on its own (App.svelte): the
+       shell is the window's height, and the rail stretches to it, never past it. */
     align-self: stretch;
     width: var(--nav-left);
-    /* The screen's whole height, however short or long the page beside it is. */
-    height: 100vh;
-    height: 100dvh;
-    position: sticky;
-    top: 0;
+    height: auto;
+    min-height: 0;
     padding: 16px 0 12px;
     background: var(--ink-deep);
     border-bottom: 0;
@@ -565,16 +566,6 @@
     flex-direction: column;
   }
 
-  :global(html[data-platform="android"]) .update {
-    width: 64px;
-    padding: 6px 4px;
-    font-size: 11px;
-    line-height: 1.2;
-    white-space: normal;
-    text-align: center;
-    justify-content: center;
-  }
-
   /* ---- Android on a narrow window: a navigation bar at the bottom ---- */
 
   @media (max-width: 599px) {
@@ -583,7 +574,6 @@
       justify-content: space-around;
       width: 100%;
       height: var(--nav-bottom);
-      position: static;
       padding: 12px 0 16px;
       border-right: 0;
       border-top: 1px solid var(--line);
