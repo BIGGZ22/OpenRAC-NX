@@ -76,6 +76,11 @@ builds; watch the game mode to be sure (section 5).
 
 Start (mask `8`) skips the scenes and the flight while "Skip cutscenes" is
 on (the default), so `OPENRAC_PRESS=...,600:8:5` gets to a planet quickly.
+In a cutscene Start also presses the four shoulders, and in the landing and
+the take-off (game mode 6) Cross: the game's own skips, so Start does what
+they do (the landing skips once 30 ticks have played, then control follows
+about 40 frames later). The settings file in your profile can turn it off;
+`--settings` naming a file that does not exist gives the defaults.
 
 ## 4. Moving Ratchet and the camera
 
@@ -139,8 +144,11 @@ in ReRAC's `docs/plan/class_census.md` and the planet pages.
   address every frame. Collapse a long log with
   `grep watch run.log | cut -d' ' -f4- | uniq -c`.
 - **The game mode** `0x15F6A8` (raw, watchable): 0 play, 1 movie, 2 in-game
-  scene, 3 pause menu, 5 vendor, 6 level loading and the flight's end. It is
-  level data: host C reads it as `OPENRAC_LDATA(0, 0x0015F6A8u)`.
+  scene, 3 pause menu, 5 vendor, 6 level loading, the landing, the take-off
+  and the flight's end. It is level data: host C reads it as
+  `OPENRAC_LDATA(0, 0x0015F6A8u)`, and `OPENRAC_DEBUG` logs the level's copy
+  as `level mode` (-1 outside a level). The ship's sequence state is
+  `0x13E150` (0 take-off, 8 landing, other values the flight).
 - **Level data moves.** Each level program relocates its data from
   0x15F000 up; a raw watch of an address there reads the executable's copy,
   not the level's (they agree on level 0). Host and hand C read it through
