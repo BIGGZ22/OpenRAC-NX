@@ -1,125 +1,142 @@
 <script lang="ts">
+  // A newer launcher: what it brings, then one button that downloads it, installs it and starts it
+  // again, with the download explained as it goes (how much of how much, what it is doing). When
+  // it stops, it says why, that the launcher is unchanged, and what to try. A copy that cannot
+  // update itself (one from GitHub's page, the browser preview's ?download) is sent to the release.
   import { app } from "$lib/app.svelte";
   import { api } from "$lib/api";
+  import { size } from "$lib/format";
   import { installUpdate } from "$lib/updates";
   import Icon from "./Icon.svelte";
 
-  let installing = $state(false);
-  let statusText = $state("");
+  let stage = $state<"idle" | "downloading" | "installing" | "ready" | "failed">("idle");
   let percent = $state(0);
-  let indeterminate = $state(false);
+  let done = $state(0);
+  let total = $state(0);
   let error = $state<string | null>(null);
+  const busy = $derived(stage === "downloading" || stage === "installing" || stage === "ready");
 
-  async function handleInstall() {
-    if (installing) return;
-    installing = true;
+  /** What the update is doing, in words. */
+  const doing = $derived.by(() => {
+    if (stage === "downloading") {
+      return total > 0 ? `Downloading: ${size(done)} of ${size(total)}` : `Downloading: ${size(done)}`;
+    }
+    if (stage === "installing") return "Installing…";
+    if (stage === "ready") return "Installed. The launcher starts again now.";
+    return "";
+  });
+
+  async function install() {
+    if (busy) return;
     error = null;
-    statusText = "Downloading update...";
+    stage = "downloading";
     percent = 0;
-    indeterminate = true;
-
     try {
-      await installUpdate((progress) => {
-        percent = progress.percent;
-        indeterminate = progress.stage === "downloading" && progress.totalBytes === 0;
-        if (progress.stage === "downloading") {
-          if (progress.totalBytes > 0) {
-            statusText = `Downloading update (${progress.percent}%)...`;
-          } else {
-            const mb = (progress.downloadedBytes / (1024 * 1024)).toFixed(1);
-            statusText = `Downloading update (${mb} MB)...`;
-          }
-        } else if (progress.stage === "installing") {
-          statusText = "Installing update...";
-        } else {
-          statusText = "Update installed! Restarting launcher...";
-        }
+      await installUpdate((p) => {
+        stage = p.stage;
+        percent = p.percent;
+        done = p.downloadedBytes;
+        total = p.totalBytes;
       });
     } catch (e) {
-      installing = false;
-      indeterminate = false;
+      stage = "failed";
       error = e instanceof Error ? e.message : String(e);
-      statusText = "";
     }
   }
 
-  function handleClose() {
-    if (!installing) {
-      app.showUpdateModal = false;
-    }
+  function close() {
+    if (!busy) app.showUpdateModal = false;
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Escape") {
-      handleClose();
-    }
+  function onkeydown(e: KeyboardEvent) {
+    if (e.key === "Escape") close();
   }
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window {onkeydown} />
 
 {#if app.showUpdateModal && app.update}
   {@const update = app.update}
   <div class="overlay" role="presentation">
-    <button class="backdrop" onclick={handleClose} tabindex="-1" aria-label="Close modal"></button>
+    <button class="backdrop" onclick={close} tabindex="-1" aria-label="Close"></button>
     <div class="modal rise" role="dialog" aria-modal="true" aria-labelledby="update-title">
       <div class="header">
         <div class="title-row">
-          <Icon name="bolt" size={22} />
-          <h2 id="update-title">Update Available</h2>
+          <Icon name="refresh" size={20} />
+          <h2 id="update-title">A new launcher is ready</h2>
         </div>
-        {#if !installing}
-          <button class="close-btn" onclick={handleClose} aria-label="Close dialog">✕</button>
+        {#if !busy}
+          <button class="close-btn" onclick={close} aria-label="Close"><Icon name="x" size={16} /></button>
         {/if}
       </div>
 
       <div class="body">
         <div class="version-banner">
-          <span class="tag">{update.tag}</span>
+          <span class="from">{app.info?.version ?? "this version"}</span>
+          <span class="arrow" aria-hidden="true">→</span>
+          <span class="tag">{update.version}</span>
           {#if update.publishedAt}
-            <span class="date">{new Date(update.publishedAt).toLocaleDateString()}</span>
+            <span class="date">released {new Date(update.publishedAt).toLocaleDateString()}</span>
           {/if}
         </div>
 
         {#if update.body}
           <div class="notes-box">
-            <h4>Release Notes</h4>
+            <h4>What's new</h4>
             <pre class="notes">{update.body}</pre>
           </div>
         {/if}
 
-        {#if installing}
-          <div class="progress-section">
-            <div class="progress-bar-bg">
-              <div class="progress-fill" class:indeterminate style={indeterminate ? "" : `width: ${percent}%`}></div>
+        <p class="kept">Your games, saves, mods and settings are kept.</p>
+
+        {#if busy}
+          <div class="progress-section" aria-live="polite">
+            <div
+              class="progress-bar-bg"
+              role="progressbar"
+              aria-label="Update"
+              aria-valuenow={stage === "downloading" ? percent : 100}
+            >
+              <div
+                class="progress-fill"
+                class:indeterminate={stage === "downloading" && total === 0}
+                style:width={`${stage === "downloading" ? percent : 100}%`}
+              ></div>
             </div>
             <div class="status-row">
-              <span class="status-msg">{statusText}</span>
-              {#if !indeterminate}
-                <span class="percent-msg">{percent}%</span>
-              {/if}
+              <span class="status-msg">{doing}</span>
+              {#if stage === "downloading" && total > 0}<span class="percent-msg">{percent} %</span>{/if}
             </div>
           </div>
         {/if}
 
-        {#if error}
-          <div class="error-msg">
+        {#if stage === "failed"}
+          <div class="error-msg" role="alert">
             <Icon name="warn" size={16} />
-            <span>Update failed: {error}</span>
+            <span>The update stopped: {error}. Your launcher is unchanged; try again, or download it from GitHub.</span>
           </div>
         {/if}
       </div>
 
       <div class="actions">
-        {#if !installing}
-          <button class="btn-cancel" onclick={handleClose}>Later</button>
-          {#if update.canInstallDirectly}
-            <button class="btn-primary" onclick={handleInstall}> Update & Restart </button>
-          {:else}
-            <button class="btn-primary" onclick={() => void api.openUrl(update.url)}> Download Update </button>
-          {/if}
+        {#if busy}
+          <span class="installing-hint">Leave the launcher open until it starts again.</span>
         {:else}
-          <span class="installing-hint">Please wait while the update is applied...</span>
+          {#if !update.canInstallDirectly}
+            <span class="installing-hint grow">This copy cannot update itself: get the new one from GitHub.</span>
+          {/if}
+          <button class="btn-cancel" onclick={close}>Later</button>
+          {#if stage === "failed" || !update.canInstallDirectly}
+            <button
+              class={update.canInstallDirectly ? "btn-cancel" : "btn-primary"}
+              onclick={() => void api.openUrl(update.url)}>Download from GitHub</button
+            >
+          {/if}
+          {#if update.canInstallDirectly}
+            <button class="btn-primary" onclick={() => void install()}
+              >{stage === "failed" ? "Try again" : "Update and restart"}</button
+            >
+          {/if}
         {/if}
       </div>
     </div>
@@ -145,9 +162,16 @@
     border: none;
     border-radius: 0;
     padding: 0;
-    background: rgba(10, 10, 16, 0.75);
+    background: rgb(10 10 16 / 0.75);
     backdrop-filter: blur(4px);
     cursor: default;
+    animation: dim 0.2s ease-out both;
+  }
+
+  @keyframes dim {
+    from {
+      opacity: 0;
+    }
   }
 
   .modal {
@@ -226,8 +250,8 @@
     font-size: 14px;
     font-weight: 600;
     color: var(--amber);
-    background: rgba(255, 180, 67, 0.12);
-    border: 1px solid rgba(255, 180, 67, 0.3);
+    background: color-mix(in srgb, var(--amber) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
     padding: 3px 10px;
     border-radius: 6px;
   }
@@ -235,6 +259,26 @@
   .version-banner .date {
     font-size: 13px;
     color: var(--dim);
+  }
+
+  .version-banner .from {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--soft);
+  }
+
+  .version-banner .arrow {
+    color: var(--dim);
+  }
+
+  .kept {
+    margin: 0;
+    font-size: 13px;
+    color: var(--soft);
+  }
+
+  .grow {
+    flex: 1;
   }
 
   .notes-box {
@@ -321,7 +365,7 @@
     align-items: center;
     gap: 8px;
     padding: 10px 14px;
-    background: rgba(255, 138, 122, 0.12);
+    background: color-mix(in srgb, var(--err) 12%, transparent);
     border: 1px solid var(--err);
     border-radius: var(--radius-sm);
     color: var(--err);
@@ -382,6 +426,6 @@
   .installing-hint {
     font-size: 13px;
     color: var(--dim);
-    font-style: italic;
+    margin-right: auto;
   }
 </style>

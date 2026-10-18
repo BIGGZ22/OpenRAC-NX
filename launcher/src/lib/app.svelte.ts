@@ -21,7 +21,7 @@ import { Queue, type Job } from "./queue";
 import { lastLines, PLAY_ACTIONS, unseenRecent, type StopNotice } from "./reports";
 import { checkForUpdate, type UpdateInfo } from "./updates";
 
-export type Page = "library" | "game" | "mods" | "tasks" | "settings";
+export type Page = "library" | "game" | "mods" | "tasks" | "develop" | "settings";
 
 interface AppState {
   info: AppInfo | null;
@@ -36,6 +36,8 @@ interface AppState {
   page: Page;
   /** The version the game page shows (`rac1/pal`). */
   version: string | null;
+  /** What Develop shows: "checkout", "console", or a version's key (`rac1/pal`). */
+  develop: string;
   toasts: { id: number; text: string; kind: "info" | "error" }[];
   update: UpdateInfo | null;
   showUpdateModal: boolean;
@@ -56,6 +58,7 @@ export const app = $state<AppState>({
   discChoices: [],
   page: "library",
   version: null,
+  develop: "checkout",
   toasts: [],
   update: null,
   showUpdateModal: false,
@@ -189,11 +192,17 @@ export function dismissStopped() {
 }
 
 /** Looks for a new launcher now (at start, or Settings' "Check now"); true when one is out. */
-export async function lookForUpdate(): Promise<boolean> {
-  if (!app.info?.version) return false;
-  const up = await checkForUpdate(app.info.version);
-  app.update = up;
-  return !!up;
+/** Asks whether a newer launcher is out: "found" (app.update holds it), "latest", or "failed"
+ *  when the question could not be asked (no connection), which is never read as "latest". */
+export async function lookForUpdate(): Promise<"found" | "latest" | "failed"> {
+  if (!app.info?.version) return "failed";
+  try {
+    const up = await checkForUpdate(app.info.version);
+    app.update = up;
+    return up ? "found" : "latest";
+  } catch {
+    return "failed";
+  }
 }
 
 /** Reads the library again: after a job, on focus, after settings change. */
@@ -262,6 +271,13 @@ export function openVersion(key: string) {
       if (saved) app.config = saved;
     });
   }
+}
+
+/** Opens Develop on TARGET: "checkout", "console" or a version's key; by default the version
+ *  the game page shows, else the checkout. */
+export function openDevelop(target?: string) {
+  app.develop = target ?? app.version ?? "checkout";
+  app.page = "develop";
 }
 
 export function currentVersion(): VersionView | null {
@@ -404,7 +420,10 @@ export async function installGame(game: string, title: string, found?: string): 
   });
   pump();
   const ok = await ended;
-  toast(ok ? `${title} is set up from your disc.` : `Setting ${title} up failed: see Tasks.`, ok ? "info" : "error");
+  toast(
+    ok ? `${title} is set up from your disc.` : `Setting ${title} up stopped: Activity has what it printed.`,
+    ok ? "info" : "error",
+  );
   return ok;
 }
 

@@ -62,12 +62,13 @@ is planned but not there yet.
 `src/lib/themes.ts` holds each game's `theme` from the site's
 `src/lib/projects.ts`, under OpenRAC's ids:
 
-| OpenRAC | Site         | Title font   |
-| ------- | ------------ | ------------ |
-| `rac1`  | `rac1`       | Audiowide    |
-| `rac2`  | `gc`         | Orbitron 600 |
-| `rac3`  | `uya`        | Orbitron 600 |
-| `rac4`  | `deadlocked` | Orbitron 700 |
+| OpenRAC | Site         | Title font       |
+| ------- | ------------ | ---------------- |
+| `rac1`  | `rac1`       | Audiowide        |
+| `rac2`  | `gc`         | Orbitron 600     |
+| `rac3`  | `uya`        | Orbitron 600     |
+| `rac4`  | `deadlocked` | Orbitron 700     |
+| `rac5`  | `sm`         | Chakra Petch 600 |
 
 `themeStyle(id)` turns a theme into the custom properties the cards use
 (`--box`, `--bd`, `--tx`, `--tx2`, `--from`, `--to`, `--title-font`,
@@ -75,13 +76,21 @@ is planned but not there yet.
 game's colours. A game without a theme gets `FALLBACK` (the launcher's own
 orange); the tests fail until every game in `games/` has one.
 
-The site's cards can show a backdrop image (`/img/<game>-bg.webp`), which the
-site does not ship in its repository. The launcher has carried its own copies
-in `public/img/` since 2026-10-09, with a gameplay clip or animation per game
-shown when a card is hovered (`GameTile.svelte`, `GamePlayer.svelte`). Where
-those images and clips come from, and under what terms, is not recorded yet:
-it belongs in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) before a
-release. Without them the cards show the gradient, as the site does.
+## A game's picture
+
+Each game has a picture (`public/img/<name>-bg.webp`, the site's backdrop
+under the site's name: `rac1`, `gc`, `uya`, `deadlocked`, `size-matters`),
+listed in `src/lib/media.ts`. It shows in the game list, under the game's
+band and faintly behind its page. A picture that is not there is left out:
+the game's colours show, as on the site.
+
+The site serves its backdrops from its server, not its repository, so a new
+one is copied from there (`size-matters-bg.webp` is not in the launcher yet).
+
+Where each picture comes from (who made it, from what, under what terms) is
+not recorded yet for the files already here (the backdrops since 2026-10-09
+and the old `*-gameplay.gif`, which nothing shows any more). It belongs in
+[THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) before a release.
 
 ## Structure
 
@@ -104,8 +113,11 @@ release. Without them the cards show the gradient, as the site does.
   only used on `--panel`, `--panel-hi` or a game's dark boxes.
 - Respect `prefers-reduced-motion` (already global in `app.css`).
 - Window sizes: the window opens at 1200 × 780, can be resized, and cannot be
-  made smaller than 760 × 560 (`tauri.conf.json`). A page scrolls down, never
-  sideways: lay it out to fit from 760 px wide.
+  made smaller than 960 × 560 (`tauri.conf.json`). 560 is as tall as a
+  1366 × 768 laptop at 125 % scaling leaves room for above the taskbar, so the
+  floor does not go higher. A page scrolls down, never sideways. A tiling
+  window manager may ignore the floor, so lay a page out to still fit from
+  760 px wide.
 
 ## Keeping in step with the site
 
@@ -113,6 +125,6 @@ release. Without them the cards show the gradient, as the site does.
 | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `src/app/globals.css` `@theme` colours or fonts            | `src/app.css` `:root`, the tables above                                                                                           |
 | `src/lib/projects.ts` themes                               | `src/lib/themes.ts`                                                                                                               |
-| `src/components/Header.tsx`, `Progress.tsx`                | `Header.svelte`, `GameTile.svelte`, `GamePlayer.svelte`                                                                           |
+| `src/components/Header.tsx`, `Progress.tsx`                | `Header.svelte`, `SideList.svelte`, `GamePlayer.svelte`                                                                           |
 | `public/wrench.webp`, `src/app/icon.png`, `apple-icon.png` | `public/`, and `npx tauri icon <1024 px png> -o src-tauri/icons` (then delete the `android/`, `ios/` and `Square*` files it adds) |
 | `DISCORD_URL`                                              | `src/lib/links.ts`                                                                                                                |
