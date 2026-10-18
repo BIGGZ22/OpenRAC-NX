@@ -172,7 +172,9 @@ mod tests {
         assert_eq!(plan.args[0], "tools/extractor.py");
         assert_eq!(plan.args[1], image.display().to_string());
         assert_eq!(plan.args[2..7], ["--game", "rac1", "--extract", "--validate", "--proj-path"]);
-        assert_eq!(plan.args[7], Path::new("/data/active/rac1/data").display().to_string());
+        // Joined as the system joins paths: with backslashes on Windows.
+        let data = Path::new("/data").join("active").join("rac1").join("data");
+        assert_eq!(plan.args[7], data.display().to_string());
         assert_eq!(plan.cwd, PathBuf::from("/openrac"));
         assert!(plan_extract(&Config::default(), Path::new("/data"), "rac1", &image).is_err());
         assert!(plan_extract(&config, Path::new("/data"), "rac 1", &image).is_err());

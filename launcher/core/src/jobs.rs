@@ -270,7 +270,10 @@ pub fn plain(line: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    // For the tests that run a shell, which are Unix only.
+    #[cfg(unix)]
     use std::path::PathBuf;
+    #[cfg(unix)]
     use std::sync::mpsc;
 
     #[test]

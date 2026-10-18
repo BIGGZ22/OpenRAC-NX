@@ -97,6 +97,37 @@ jobs:
           yarn build
           cargo clippy --workspace --all-targets -- -D warnings
 
+  # The same checks on Windows, where paths join with backslashes, files are
+  # checked out with CRLF and the Unix-only tests are left out.
+  launcher-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: launcher
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Yarn (the version package.json names, through Corepack)
+        run: corepack enable
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: UI (svelte-check, ESLint, Prettier, Vitest)
+        run: |
+          yarn install --immutable
+          yarn verify
+
+      - name: Rust tests (the logic, and actions.json against the checkout)
+        run: cargo test -p openrac-launcher-core
+
+      - name: Rust lints (the whole app)
+        run: |
+          yarn build
+          cargo clippy --workspace --all-targets -- -D warnings
+
   # The native port (port/): hostgen's tests, then the whole port built with
   # Clang (SDL3 fetched by CMake) and its tests, the OpenGL ones on Mesa's
   # software renderer. The rac1 program is built from games/rac1's C.
