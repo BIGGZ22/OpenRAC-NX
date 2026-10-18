@@ -90,7 +90,7 @@ task: `gameStopped` in `lib/app.svelte.ts` asks `latest_crash` for the report
 the port wrote since the job started and sets `app.stopped`, which the game's
 page shows as `components/CrashNotice.svelte`; `components/ReportsBlock.svelte`
 lists the game's logs and reports under its saves, and `app.crashes` (counted
-after every refresh and every game's end) marks a tile after a recent crash.
+after every refresh and every game's end) marks the game in the list after a recent crash.
 Every command run and every exit is written to `launcher.log`
 (`core/src/launcher_log.rs`), which goes in the report's .zip.
 
@@ -155,9 +155,11 @@ mirrored in `src/lib/api.ts`.
 `Config.developer` (Settings, "Developer tools") chooses what the pages show.
 Off, which is the default, a player's view. `lib/player.svelte.ts` answers
 one question, what can the player do with this game now (`playerState`), and
-does it (`playerAct`); the games page's tiles (`components/GameTile.svelte`)
-and `pages/GamePlayer.svelte` both show that answer as their main button, so
-the two never disagree. The secondary actions are in `components/Menu.svelte`
+does it (`playerAct`); `pages/GamePlayer.svelte` shows that answer as its main
+button, and the game list (`components/GameList.svelte`, on `SideList.svelte`)
+the same state in a few words, so the two never disagree. Every game has the
+same page; the Games tab (`pages/Library.svelte`) opens on the last one used
+(`config.lastVersion`) or the first, as OpenGOAL's launcher does. The secondary actions are in `components/Menu.svelte`
 beside it. Each is a button over actions found by id in `actions.json`:
 
 | Button                | What it runs                                                                                                                    |
@@ -166,14 +168,18 @@ beside it. Each is a button over actions found by id in `actions.json`:
 | Play                  | the `play` action: the native port (planned for every version)                                                                  |
 | Edit levels           | `editor-open`, after `editor-extract` and `editor-import` when the project is not there yet (`runChain` in `lib/app.svelte.ts`) |
 
-On, the same page goes on under the same button with
-`components/DeveloperPanel.svelte`: the version's actions as rows
+On, the game's page gains one row of chips that lead to the Develop tab
+(`pages/Develop.svelte`): a list of the checkout, every version and the
+console, and beside it `components/DeveloperPanel.svelte`: the version's actions as rows
 (`ActionRow.svelte`), grouped by the action's `area` in `actions.json` so the
 game's two builds are never side by side: "PC port" (`port`), "Decompilation"
 (`decomp`, the default, with the progress), "Level editor" (`editor`: its
 checks; editing is under Mods), then the files and the facts of the version.
-The library adds each version's progress to its tile and the checkout's own
-actions under the tiles. A version whose `play` or `editor-extract` is `planned`
+Develop's list shows each version's progress, and "This checkout"
+(`components/DevCheckout.svelte`) the checkout's own actions. Mods, Activity,
+Develop and the save editor load the first time they are opened
+(`App.svelte`); motion is in `lib/motion.ts` and stops with the system's
+reduced-motion setting. A version whose `play` or `editor-extract` is `planned`
 shows as "not playable yet" or "cannot open this game yet" to a player. A
 first start asks nothing when the checkout and a Python are found
 (`firstRun`).
@@ -240,7 +246,7 @@ let go of an item taken away. Unlocking a planet adds it to the galaxy map
 after those unlocked before it.
 
 **The page.** The editor is a large panel over the Play page (most of the
-window, down to 760 px wide). Its title says what the slot holds ("Slot 2 ·
+window, at any size it can take). Its title says what the slot holds ("Slot 2 ·
 Kerwan · 4,890 bolts · 3h 12m", time played from chunk 3), and a row of links
 to its sections stays at the top of the Player view. Quick actions sit in the
 section headings: give all and take all weapons, fill all ammo, give all and
@@ -250,6 +256,19 @@ unlocked), all or no gold bolts, all or no skill points. They change the same
 fields as the single edits, so the Rust side applies the same rules (vendor
 stock, acquired flags, quick select). The planet choice heads the Planets
 section, beside the Unlocked boxes it affects.
+
+**Editing.** What differs from the save as read carries an amber dot where it
+is and on its section's link; the link of the section in view is lit. Above
+Save, "3 changes" opens the list of them in a player's words, a line per kind
+of change ("Given: Devastator, Visibomb Gun", `saveEdit.ts`'s `editList`),
+each leading to its section. Reset puts the slot back as read without
+closing. Leaving with changes asks in the editor (Keep editing, Discard, Save
+and close), as does taking away every gadget; no browser box. A save leaves
+the editor open: Undo puts the backup back, and a new change brings Save
+back. While the launcher runs the game, which writes the card too, Save waits
+and says why. The editor is a dialog: focus goes into it, the page behind is
+`inert`, Escape steps back one thing at a time, Ctrl+S saves, and focus
+returns to the slot's Edit button.
 
 **Skill point names** come from the game's own text, read at run time from the
 set-up disc (`<install>/active/rac1/data/iso_data/rac1/disc.iso`):

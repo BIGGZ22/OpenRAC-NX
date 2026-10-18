@@ -1,0 +1,117 @@
+--- a/gcc/config/mips/mips.md
++++ b/gcc/config/mips/mips.md
+@@ -90,7 +90,8 @@
+ ;;   The 3900, is (mostly) mips1, but does not have a manditory load delay
+ ;;   slot. 
+ (define_attr "dslot" "no,yes"
+-  (if_then_else (ior (eq_attr "type" "branch,jump,call,xfer,hilo,fcmp")
++  (if_then_else (ior (ior (eq_attr "type" "branch,jump,call,xfer,hilo,fcmp")
++                          (eq_attr "type" "fdiv,fsqrt,frsqrt"))
+ 		     (and (eq_attr "type" "load")
+ 			  (and (eq (symbol_ref "mips_isa") (const_int 1))
+ 			       (and (eq (symbol_ref "mips16") (const_int 0))
+--- a/gcc/config/mips/mips.h
++++ b/gcc/config/mips/mips.h
+@@ -4814,6 +4814,13 @@
+    PC relative loads that are out of range.  */
+ #define MACHINE_DEPENDENT_REORG(X) machine_dependent_reorg (X)
+ 
++/* RAC5: measured retail rule for the SDK-compiled libm units -- every
++   single-precision division-family instruction is preceded by two nops and is
++   never left in a branch delay slot.  Runs after delayed-branch scheduling,
++   before branch shortening.  */
++#define MACHINE_DEPENDENT_REORG_AFTER_DBR(X) mips_r5900_pad_divisions (X)
++extern void mips_r5900_pad_divisions ();
++
+ /* We need to use a special set of functions to handle hard floating
+    point code in mips16 mode.  */
+ 
+--- a/gcc/toplev.c
++++ b/gcc/toplev.c
+@@ -4375,6 +4375,11 @@
+     }
+ #endif
+ 
++  /* RAC5: pad single-precision divisions after delay-slot scheduling.  */
++#ifdef MACHINE_DEPENDENT_REORG_AFTER_DBR
++  MACHINE_DEPENDENT_REORG_AFTER_DBR (insns);
++#endif
++
+   /* Shorten branches.  */
+   TIMEVAR (shorten_branch_time,
+ 	   {
+--- a/gcc/config/mips/mips.c
++++ b/gcc/config/mips/mips.c
+@@ -8766,6 +8766,72 @@
+ }
+  
+ 
++/* RAC5: single-precision division family?  rsqrt.s is (div:SF (sqrt:SF ...)),
++   so DIV/SQRT on an SFmode destination covers div.s, sqrt.s and rsqrt.s.  */
++static int
++rac5_div_family_p (insn)
++     rtx insn;
++{
++  rtx pattern, src;
++
++  if (GET_CODE (insn) != INSN)
++    return 0;
++  pattern = PATTERN (insn);
++  if (GET_CODE (pattern) != SET)
++    return 0;
++  if (GET_MODE (SET_DEST (pattern)) != SFmode)
++    return 0;
++  src = SET_SRC (pattern);
++  return GET_CODE (src) == DIV || GET_CODE (src) == SQRT;
++}
++
++/* RAC5: measured retail floor.  Every single-precision division is preceded by
++   two nops, and the retail never leaves one in a branch delay slot.  A
++   division sitting in an *unconditional* jump/call delay slot is moved before
++   the jump (the slot always executes, so this preserves the order) and the
++   slot is filled with a nop; a conditional-branch slot is left alone.  */
++void
++mips_r5900_pad_divisions (first)
++     rtx first;
++{
++  rtx insn;
++
++  for (insn = first; insn; )
++    {
++      rtx next = NEXT_INSN (insn);
++
++      if (rac5_div_family_p (insn))
++        {
++          rtx prev = prev_real_insn (insn);
++          int pad = 1;
++
++          if (prev != 0
++              && (GET_CODE (prev) == JUMP_INSN || GET_CODE (prev) == CALL_INSN))
++            {
++              rtx pat = PATTERN (prev);
++
++              /* `j $31` is the MIPS `return` pattern `[(return)]`, not a SET.  */
++              if (GET_CODE (pat) == RETURN
++                  || (GET_CODE (pat) == SET
++                      && GET_CODE (SET_SRC (pat)) != IF_THEN_ELSE))
++                {
++                  remove_insn (insn);
++                  emit_insn_before (insn, prev);
++                  emit_insn_after (gen_nop (), prev);
++                }
++              else
++                pad = 0;        /* conditional slot: cannot reorder safely */
++            }
++          if (pad)
++            {
++              emit_insn_before (gen_nop (), insn);
++              emit_insn_before (gen_nop (), insn);
++            }
++        }
++      insn = next;
++    }
++}
++
+ /* Exported to toplev.c.
+ 
+    Do a final pass over the function, just before delayed branch

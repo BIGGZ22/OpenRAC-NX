@@ -1,0 +1,47 @@
+{
+  "id": "rac5",
+  "title": "Ratchet & Clank: Size Matters",
+  "year": 2008,
+  "versions": {
+    "ntsc": {
+      "region": "NTSC-U (North America)",
+      "serial": "SCUS_976.15",
+      "disc": {
+        "file": "SCUS_976.15.iso",
+        "version": "1.00",
+        "video": "NTSC",
+        "size": 1744764928,
+        "sha1": "61b9cf7f46b8fc318daa2b98cfc53301654775d6",
+        "sha256": "ceae10a40d916eb78134c21cfe3d939a5c5d0a682a9382e1586df3274be7c7dc"
+      },
+      "boot": {
+        "file": "SCUS_976.15",
+        "size": 856120,
+        "sha256": "d8f1794a5b4f6bd7f70ca62ae11fb790d1c300c2a877ef1aef4c1855fd6575ac"
+      },
+      "target": "The PlayStation 2 port: the boot executable SCUS_976.15 (an ELF with 1,803 named symbols) and the frontend and 20 level modules in the SNR2 .REL format. Functions are accepted one by one through private whole-program gates; there is no qualified compiler or game-wide percentage yet.",
+      "inputs": [
+        {
+          "from": "disc",
+          "path": "games/rac5/ntsc/baserom/SCUS_976.15.iso"
+        }
+      ],
+      "setup": "in games/rac5/ntsc: python3 tools/disc.py verify baserom/SCUS_976.15.iso, then python3 -m unittest discover -s tests and python3 tools/check_repository.py (its README)",
+      "source": {
+        "name": "rac5-sm-decomp",
+        "repo": "https://github.com/OpenRAC/rac5-sm-decomp",
+        "branch": "master",
+        "checkout": "~/Projects/rac5-decomp",
+        "license": "GPL-3.0",
+        "exclude": [],
+        "commit": "57b025248ac032e0e98ba35cb3541c7146e41ad1",
+        "date": "2026-10-18",
+        "imported": "2026-10-18"
+      },
+      "build": {
+        "host": "Python 3.12 for the tools, on any system; no qualified compiler yet",
+        "readme": "games/rac5/ntsc/README.md"
+      }
+    }
+  }
+}

@@ -42,6 +42,10 @@ pub struct SaveSlotInfo {
 pub struct SaveBackupInfo {
     pub name: String,
     pub path: String,
+    /// What the backup is called, for people: the note it was taken with ("before the last boss",
+    /// "Before editing slot 2"); None when it was taken without one. See [`backup_note`].
+    #[serde(default)]
+    pub note: Option<String>,
     pub created_millis: u64,
     pub total_size: u64,
 }
@@ -241,6 +245,7 @@ pub fn inspect_saves(serial: &str) -> GameSaveStatus {
                         .unwrap_or(0);
 
                     backups.push(SaveBackupInfo {
+                        note: backup_note(&file_name),
                         name: file_name,
                         path: path.to_string_lossy().to_string(),
                         created_millis: mtime,
@@ -357,7 +362,13 @@ pub fn backup_card(card_dir: &Path, note: Option<&str>) -> Result<SaveBackupInfo
 
     let base_name = match note {
         Some(n) if !n.trim().is_empty() => {
-            let clean: String = n.chars().filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-').collect();
+            // Spaces become underscores, so the note can be read back from the name (backup_note).
+            let clean: String = n
+                .trim()
+                .chars()
+                .map(|c| if c.is_whitespace() { '_' } else { c })
+                .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-')
+                .collect();
             format!(".backup_{timestamp}_{clean}")
         }
         _ => format!(".backup_{timestamp}"),
@@ -390,11 +401,26 @@ pub fn backup_card(card_dir: &Path, note: Option<&str>) -> Result<SaveBackupInfo
         .unwrap_or(0);
 
     Ok(SaveBackupInfo {
+        note: backup_note(&backup_name),
         name: backup_name,
         path: backup_path.to_string_lossy().to_string(),
         created_millis: mtime,
         total_size,
     })
+}
+
+/// The note a backup folder was named with (`.backup_<seconds>_<note>`), in words: underscores are
+/// spaces, and the save editor's `before_edit_slotN` reads "Before editing slot N". None without one.
+pub fn backup_note(name: &str) -> Option<String> {
+    let rest = name.strip_prefix(".backup_")?;
+    let note = rest.trim_start_matches(|c: char| c.is_ascii_digit()).strip_prefix('_')?;
+    if let Some(slot) =
+        note.strip_prefix("before_edit_slot").filter(|n| !n.is_empty() && n.chars().all(|c| c.is_ascii_digit()))
+    {
+        return Some(format!("Before editing slot {slot}"));
+    }
+    let words = note.replace('_', " ").trim().to_string();
+    (!words.is_empty()).then_some(words)
 }
 
 /// Restores a snapshot backup, replacing current saves.
@@ -550,6 +576,24 @@ mod tests {
         assert_ne!(a.name, b.name);
         assert_eq!(fs::read(Path::new(&a.path).join("BESCES-50916RATCHET/save0.bin")).unwrap(), b"one");
         assert_eq!(find_game_folder(card.path()), Some(card.path().join("BESCES-50916RATCHET")));
+    }
+
+    #[test]
+    fn a_backup_is_called_by_its_note() {
+        assert_eq!(backup_note(".backup_1791560000_checkpoint").as_deref(), Some("checkpoint"));
+        assert_eq!(backup_note(".backup_1791560000_before_the_last_boss").as_deref(), Some("before the last boss"));
+        assert_eq!(backup_note(".backup_1791560000_before_edit_slot2").as_deref(), Some("Before editing slot 2"));
+        assert_eq!(backup_note(".backup_1791560000"), None);
+        assert_eq!(backup_note(".backup_1791560000-2"), None);
+        assert_eq!(backup_note("BESCES-50916RATCHET"), None);
+    }
+
+    #[test]
+    fn a_note_keeps_its_words() {
+        let card = tempfile::tempdir().unwrap();
+        fs::create_dir_all(card.path().join("BESCES-50916RATCHET")).unwrap();
+        let b = backup_card(card.path(), Some(" before the last boss! ")).unwrap();
+        assert_eq!(b.note.as_deref(), Some("before the last boss"));
     }
 
     #[test]

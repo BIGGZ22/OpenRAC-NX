@@ -32,6 +32,7 @@ import type {
   VersionView,
   WriteResult,
 } from "./api";
+import type { UpdateInfo, UpdateProgressCallback } from "./updates";
 
 // ---- the files, as the Rust side parses them --------------------------------------
 
@@ -97,7 +98,10 @@ const summary = summaryFile as RawSummary;
 const platform: Platform = "linux";
 
 let config: Config = {
-  root: "/home/you/OpenRAC",
+  // ?setup: a first start where no OpenRAC folder was found, so the welcome screen asks for one.
+  root: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("setup")
+    ? null
+    : "/home/you/OpenRAC",
   python: "/usr/bin/python3",
   godot: null,
   docker: "/usr/bin/docker",
@@ -463,6 +467,11 @@ function start(scope: Scope, id: string, args: Record<string, unknown> = {}): St
       );
     }
   }
+  // ?fail: every job stops with an error, to see how a failure reads.
+  if (query.has("fail")) {
+    const failed = [...lines.slice(0, 3), "error: the step could not finish (browser preview)"];
+    return fakeJob(action.label, command, failed, () => undefined, 1);
+  }
   // ?crash: the game stops on a fault, as the port does (exit status 3, a report in crashes/).
   if (action.kind === "play" && query.has("crash")) {
     const crashed = [...lines, "[error] ==== the program stopped: fault ===="];
@@ -748,16 +757,30 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       return delay({ ...config });
     case "detect":
       return delay<Detected>({
-        roots: [{ path: "/home/you/OpenRAC", source: "next to the launcher" }],
+        roots: query.has("setup") ? [] : [{ path: "/home/you/OpenRAC", source: "next to the launcher" }],
         pythons: [{ path: "/usr/bin/python3", source: "PATH" }],
         godots: [],
         dockers: [{ path: "/usr/bin/docker", source: "PATH" }],
       });
     case "check_root":
-      return delay<Check>({ ok: true, version: null, message: "4 games, 5 versions" });
-    case "check_tool":
-      return delay<Check>({ ok: true, version: "Python 3.12.4", message: "Python 3.12.4" });
+      return delay<Check>({
+        ok: true,
+        version: null,
+        message: `${Object.keys(manifests).length} games, ${Object.values(manifests).flatMap((m) => Object.keys(m.versions)).length} versions`,
+      });
+    case "check_tool": {
+      // What each program says about itself, as core/src/detect.rs reads it.
+      const versions: Record<string, string> = {
+        python: "Python 3.12.4",
+        godot: "Godot 4.7.stable",
+        docker: "Docker version 28.3.2",
+      };
+      const version = versions[String(args.tool)] ?? null;
+      return delay<Check>({ ok: true, version, message: version ?? "found" });
+    }
     case "library":
+      // ?nolib: the OpenRAC folder cannot be read, as when none is set.
+      if (query.has("nolib")) throw new Error("No OpenRAC folder is set: choose it in Settings.");
       return delay(library());
     case "install_game":
       return delay(install(args.game as string, args.image as string));
@@ -919,6 +942,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
           {
             name: ".backup_1791560000_checkpoint",
             path: `/home/you/.local/share/openrac/memcard/${serial}/.backup_1791560000_checkpoint`,
+            note: "checkpoint",
             createdMillis: Date.now() - 86400000,
             totalSize: 364544,
           },
@@ -927,10 +951,12 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
     }
     case "backup_saves": {
       const serial = typeof args.serial === "string" ? args.serial : "SCES_509.16";
-      const note = typeof args.note === "string" ? args.note : "manual";
+      const note = typeof args.note === "string" && args.note.trim() ? args.note.trim() : null;
+      const name = `.backup_${Math.floor(Date.now() / 1000)}${note ? `_${note.replace(/\s+/g, "_")}` : ""}`;
       return delay({
-        name: `.backup_${Math.floor(Date.now() / 1000)}_${note}`,
-        path: `/home/you/.local/share/openrac/memcard/${serial}/.backup_${Math.floor(Date.now() / 1000)}_${note}`,
+        name,
+        path: `/home/you/.local/share/openrac/memcard/${serial}/${name}`,
+        note,
         createdMillis: Date.now(),
         totalSize: 364544,
       });
@@ -987,6 +1013,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
         backup: {
           name,
           path: `/home/you/.local/share/openrac/memcard/${String(args.serial)}/${name}`,
+          note: `Before editing slot ${Number(args.slot) + 1}`,
           createdMillis: Date.now(),
           totalSize: 364544,
         },
@@ -996,4 +1023,53 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
     default:
       throw new Error(`the preview has no ${command}: add it to src/lib/mock.ts`);
   }
+}
+
+// ---- launcher updates ----------------------------------------------------------------
+
+/** The preview's answer to "is a newer launcher out?": ?update (one is, and installs itself;
+ *  with ?download only from GitHub), ?latest (none), ?offline (GitHub cannot be reached).
+ *  Undefined: no switch, so the real check runs. */
+export function mockUpdate(current: string): UpdateInfo | null | Error | undefined {
+  if (query.has("offline")) return new Error("no connection to GitHub");
+  if (query.has("latest")) return null;
+  if (!query.has("update")) return undefined;
+  const [major = 0, minor = 0] = current
+    .replace(/^[^0-9]*/, "")
+    .split(".")
+    .map((n) => parseInt(n, 10) || 0);
+  const version = `${major}.${minor + 1}.0`;
+  return {
+    version,
+    tag: `v${version}`,
+    url: "https://github.com/OpenRAC/OpenRAC/releases",
+    name: `OpenRAC Launcher v${version}`,
+    body: [
+      "- Every game has the same page; the list on the left switches between them.",
+      "- Develop: the checkout, each version's decompilation and the console in one tab.",
+      "- Ratchet & Clank: Size Matters joins the games.",
+      "- Help beside your saves: a crash report to send in two clicks.",
+    ].join("\n"),
+    publishedAt: new Date(Date.now() - 86400000).toISOString(),
+    canInstallDirectly: !query.has("download"),
+  };
+}
+
+/** The preview's install: a 30 MB download in a few seconds, then installing; ?updatefail stops
+ *  it part way, as a lost connection would. Nothing restarts in a browser. */
+export async function mockInstall(onProgress?: UpdateProgressCallback): Promise<void> {
+  const total = 31_457_280;
+  for (let done = 0; done <= total; done += total / 20) {
+    await new Promise((r) => setTimeout(r, 120));
+    if (query.has("updatefail") && done > total * 0.4) throw new Error("the download stopped: the connection was lost");
+    onProgress?.({
+      stage: "downloading",
+      percent: Math.round((done / total) * 100),
+      downloadedBytes: done,
+      totalBytes: total,
+    });
+  }
+  onProgress?.({ stage: "installing", percent: 100, downloadedBytes: total, totalBytes: total });
+  await new Promise((r) => setTimeout(r, 900));
+  onProgress?.({ stage: "ready", percent: 100, downloadedBytes: total, totalBytes: total });
 }

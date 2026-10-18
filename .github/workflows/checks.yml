@@ -14,10 +14,10 @@ permissions:
 
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -59,16 +59,22 @@ jobs:
           python tests/check_repository.py
           python tools/progress.py --check
 
+      - name: rac5 tools and layout
+        working-directory: games/rac5/ntsc
+        run: |
+          python -m unittest discover -s tests -v
+          python tools/check_repository.py
+
   # The desktop launcher (launcher/): its UI checks, and its Rust side, whose
   # tests also check launcher/actions.json against games/*/game.json.
   launcher:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: launcher
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
       - name: Yarn (the version package.json names, through Corepack)
@@ -105,8 +111,8 @@ jobs:
       run:
         working-directory: launcher
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
       - name: Yarn (the version package.json names, through Corepack)
@@ -132,10 +138,10 @@ jobs:
   # Clang (SDL3 fetched by CMake) and its tests, the OpenGL ones on Mesa's
   # software renderer. The rac1 program is built from games/rac1's C.
   port:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Compilers and SDL's system libraries
@@ -164,7 +170,7 @@ jobs:
   # "Build the game" builds it (tools/build_port.py), against the system's SDL3, Clang and CMake,
   # then hostgen's tests and every test of the port on Mesa's software renderer.
   port-fedora:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     container: registry.fedoraproject.org/fedora:44
     steps:
       - name: Compilers and SDL3
@@ -173,7 +179,7 @@ jobs:
             SDL3-devel mesa-libGL-devel mesa-libEGL-devel mesa-dri-drivers \
             libX11-devel libXext-devel libXrandr-devel libXcursor-devel libXi-devel libXScrnSaver-devel \
             wayland-devel libxkbcommon-devel alsa-lib-devel pulseaudio-libs-devel
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Build openrac-rac1-pal as the launcher builds it
         run: python3 tools/build_port.py rac1-pal
@@ -207,8 +213,8 @@ jobs:
       LLVM_VERSION: "21.1.4"
       LLVM_SHA256: 8e39f8051cd10a163c1fab304f16d8e16a9c0f5e94b59d08853bbab630bd65dd
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 

@@ -46,6 +46,7 @@ design and the order of work are in [docs/port](docs/port/README.md).
 | Ratchet & Clank: Going Commando | SCUS_972.68 ([`games/rac2/ntsc`](games/rac2/ntsc)) | 5.75% (318,088 / 5,533,600 bytes) | 2,941 / 9,100 | 5.75% |
 | Ratchet & Clank: Up Your Arsenal | SCUS_973.53 ([`games/rac3/ntsc`](games/rac3/ntsc)) | 1.28% (164,764 / 12,838,776 bytes) | 1,292 / 31,316 | 1.28% |
 | Ratchet: Deadlocked | SCUS_974.65 ([`games/rac4/ntsc`](games/rac4/ntsc)) | 0.51% (26,572 / 5,175,440 bytes) | 243 / 15,056 | 0.51% |
+| Ratchet & Clank: Size Matters | SCUS_976.15 ([`games/rac5/ntsc`](games/rac5/ntsc)) | – | – | – |
 <!-- progress:end -->
 
 Each project measures its own scope, so compare percentages within a game, not
@@ -62,6 +63,7 @@ between games ([progress/](progress/README.md) explains each).
 | Ratchet & Clank: Going Commando (2003) | NTSC-U (North America) `SCUS_972.68` | [`games/rac2/ntsc`](games/rac2/ntsc) | The boot executable SCUS_972.68 and its 27 level programs: every program rebuilds byte for byte from splat's assembly, with the C in src/ linked in place of its functions (one definition per function, at every place it has). | macOS, Linux or Windows through Docker (linux/386 image with Wine and the build tools); SN ProDG 2.0's assembler and linker you supply |
 | Ratchet & Clank: Up Your Arsenal (2004) | NTSC-U (North America) `SCUS_973.53` | [`games/rac3/ntsc`](games/rac3/ntsc) | Three programs extracted from the disc with Wrench, each rebuilt byte for byte: frontbin.elf (the frontend and menu program), boot_elf.elf (the main executable) and i5bootn.elf (the launcher); the level programs are counted for progress. | Windows with SN ee-gcc 2.95.3 v1.36 (and Sony 2.9-ee-991111 for library ranges); macOS (wibo-macos, natively) and Linux through tools/build.py with wibo |
 | Ratchet: Deadlocked (2005) | NTSC-U (North America) `SCUS_974.65` | [`games/rac4/ntsc`](games/rac4/ntsc) | The game image packed inside the boot executable SCUS_974.65 (core, network and resident level code: 8,027 functions) and the 47 level overlays (24 campaign, 23 multiplayer), compared function by function; there is no linked image yet. | macOS or Linux through Docker (rac1/pal's linux/386 image with Wine); SN ProDG toolchain you supply |
+| Ratchet & Clank: Size Matters (2008) | NTSC-U (North America) `SCUS_976.15` | [`games/rac5/ntsc`](games/rac5/ntsc) | The PlayStation 2 port: the boot executable SCUS_976.15 (an ELF with 1,803 named symbols) and the frontend and 20 level modules in the SNR2 .REL format. Functions are accepted one by one through private whole-program gates; there is no qualified compiler or game-wide percentage yet. | Python 3.12 for the tools, on any system; no qualified compiler yet |
 <!-- games:end -->
 
 Each version is a self-contained project that you build and work on from its
@@ -159,6 +161,7 @@ against them; images are recognised by content, not by file name.
 | Ratchet & Clank: Going Commando | NTSC-U (North America), disc v1.01 | `SCUS_972.68` | 3,828,350,976 | `6d1fc798` | `3cbbb5127ee8a0be93ef0876f7781ee8` | `f2cfaf0eb12b3c0d8fd6db7aa49ce032e8a6020b` | `9db2e33e276133cc283647fa3279b37911955e123d6199d10065547eaa9b1ce5` |
 | Ratchet & Clank: Up Your Arsenal | NTSC-U (North America), disc v1.00 | `SCUS_973.53` | 4,379,377,664 | `2b9b91f7` | `ba9f2b38c7346e7b6e5b8e87717d5893` | `b080139c5a94688ef9472b78d5f5585a756d1ee4` | `d2bb15c7c5b2205db868713fc0362c2b10e87751ca5bcc4e96c1e244a8c42444` |
 | Ratchet: Deadlocked | NTSC-U (North America), disc v1.00 | `SCUS_974.65` | 4,356,898,816 | `66eb35f4` | `c1e1992076becc7de5aa70ef1de8bcd0` | `a85482348f741d848dd2ff4e4c3ba7c2c40f431d` | `dda48512e9b7609f69a49146ab239c4ebda7f13cf3d06397f19f6f3ce155a42b` |
+| Ratchet & Clank: Size Matters | NTSC-U (North America), disc v1.00 | `SCUS_976.15` | 1,744,764,928 | – | – | `61b9cf7f46b8fc318daa2b98cfc53301654775d6` | `ceae10a40d916eb78134c21cfe3d939a5c5d0a682a9382e1586df3274be7c7dc` |
 <!-- discs:end -->
 
 The boot executable inside each:
@@ -172,6 +175,7 @@ The boot executable inside each:
 | Ratchet & Clank: Going Commando | NTSC-U (North America) | `SCUS_972.68` | 2,618,684 | `0fa89158` | `e514263cd9b01cad088839fbe8585e1e` | `bacda860cbd6723142e86db56f197e47e728970f` | `36d5814d8d95328d5839612ccdf7a2e7ecac0b6f868d3ad4bb2e98411f734b4a` |
 | Ratchet & Clank: Up Your Arsenal | NTSC-U (North America) | `SCUS_973.53` | 771,008 | `01affd24` | `c6075c4a296f656648bc9f64f4f1b09b` | `601012bb03ef1213ad1253baebae8a071b8a7df7` | `200068cb4186715521cdc1c20bc6c5a88054d0da54aa336ffdb2022633351c7d` |
 | Ratchet: Deadlocked | NTSC-U (North America) | `SCUS_974.65` | 1,692,216 | `eebbaace` | `9e33838c3939099d614963063544df3e` | `aa91b1c3b9b1a244320c47580b77342ef9856e95` | `2f305ab0ed47f148f599ef8769a534adf4080307aa11ab26a7966dedec897ed6` |
+| Ratchet & Clank: Size Matters | NTSC-U (North America) | `SCUS_976.15` | 856,120 | – | – | – | `d8f1794a5b4f6bd7f70ca62ae11fb790d1c300c2a877ef1aef4c1855fd6575ac` |
 <!-- boot:end -->
 
 ## Credits and licensing

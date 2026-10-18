@@ -2,16 +2,41 @@
   import Header from "$components/Header.svelte";
   import Toasts from "$components/Toasts.svelte";
   import UpdateModal from "$components/UpdateModal.svelte";
-  import { app, refresh, start, updateDiscordPresence, type Page } from "$lib/app.svelte";
+  import { app, openDevelop, refresh, start, updateDiscordPresence, type Page } from "$lib/app.svelte";
   import Game from "./pages/Game.svelte";
   import Library from "./pages/Library.svelte";
-  import Mods from "./pages/Mods.svelte";
   import Settings from "./pages/Settings.svelte";
-  import Tasks from "./pages/Tasks.svelte";
+
+  // Mods, Activity and Develop load the first time they are opened, so starting the launcher reads
+  // only what the game page needs; they are fetched while the launcher idles after it starts, so
+  // opening them later is instant.
+  const once = <T,>(load: () => Promise<T>) => {
+    let loaded: Promise<T> | null = null;
+    return () => (loaded ??= load());
+  };
+  const modsPage = once(() => import("./pages/Mods.svelte"));
+  const tasksPage = once(() => import("./pages/Tasks.svelte"));
+  const developPage = once(() => import("./pages/Develop.svelte"));
+  $effect(() => {
+    const later = setTimeout(() => {
+      void modsPage();
+      void tasksPage();
+      if (app.config?.developer) void developPage();
+    }, 2000);
+    return () => {
+      clearTimeout(later);
+    };
+  });
 
   $effect(() => {
     // The layout (Settings → Appearance): src/layouts/compact.css applies only to "compact".
     document.documentElement.dataset.layout = app.config?.layout ?? "compact";
+  });
+
+  $effect(() => {
+    // With developer tools on, what the launcher ran is Develop's console (a game's menu still
+    // asks for Activity).
+    if (app.page === "tasks" && app.config?.developer) openDevelop("console");
   });
 
   $effect(() => {
@@ -21,6 +46,7 @@
 
   $effect(() => {
     // ?page=tasks (and ?version=rac1/pal) open a page directly: handy for screenshots.
+    // ?page=develop opens Develop on ?version, or on ?develop=checkout|console.
     const params = new URLSearchParams(location.search);
     void start().then(() => {
       const version = params.get("version");
@@ -29,19 +55,10 @@
         app.page = "game";
       }
       const page = params.get("page") as Page | null;
-      if (page) app.page = page;
-      if (params.get("modal") === "update") {
-        app.update = {
-          version: "0.5.3",
-          tag: "v0.5.3",
-          url: "https://github.com/OpenRAC/OpenRAC/releases",
-          name: "OpenRAC Launcher v0.5.3",
-          body: "OpenRAC Launcher release 0.5.3",
-          publishedAt: "2026-10-16",
-          canInstallDirectly: true,
-        };
-        app.showUpdateModal = true;
-      }
+      if (page === "develop") openDevelop(params.get("develop") ?? version ?? undefined);
+      else if (page) app.page = page;
+      // ?update&modal=update: the update window open on the preview's update (mock.ts).
+      if (params.get("modal") === "update") app.showUpdateModal = true;
     });
     // Pick up what changed outside the launcher (a build in a terminal, a new disc).
     const onFocus = () => void refresh();
@@ -60,8 +77,9 @@
     <main>
       {#if !app.config.setupComplete}<Settings setup />
       {:else if app.page === "game"}<Game />
-      {:else if app.page === "mods"}<Mods />
-      {:else if app.page === "tasks"}<Tasks />
+      {:else if app.page === "mods"}{#await modsPage() then page}<page.default />{/await}
+      {:else if app.page === "tasks"}{#await tasksPage() then page}<page.default />{/await}
+      {:else if app.page === "develop"}{#await developPage() then page}<page.default />{/await}
       {:else if app.page === "settings"}<Settings />
       {:else}<Library />
       {/if}

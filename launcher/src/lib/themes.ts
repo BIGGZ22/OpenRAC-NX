@@ -1,7 +1,7 @@
 // Each game's colours and typeface, from the OpenRAC website's game cards
 // (openrac-site src/lib/projects.ts, `theme` and `fontClass`). The site
 // names the games by their own ids; OpenRAC by release order:
-//   rac1 = "rac1", rac2 = "gc", rac3 = "uya", rac4 = "deadlocked".
+//   rac1 = "rac1", rac2 = "gc", rac3 = "uya", rac4 = "deadlocked", rac5 = "sm".
 // Keep the values in step with the site (docs/STYLE.md).
 
 export interface Theme {
@@ -13,8 +13,9 @@ export interface Theme {
   /** The card's gradient, top to bottom. */
   from: string;
   to: string;
-  /** The title's typeface: the site's Audiowide for RAC1, Orbitron for the others. */
-  font: "brand" | "head";
+  /** The title's typeface: the site's Audiowide for RAC1, Chakra Petch for Size Matters,
+   *  Orbitron for the others. */
+  font: "brand" | "head" | "chakra";
   weight: number;
 }
 
@@ -59,6 +60,16 @@ export const THEMES: Record<string, Theme> = {
     font: "head",
     weight: 700,
   },
+  rac5: {
+    box: "#1b2936",
+    border: "#eab308",
+    text: "#f8fafc",
+    text2: "#facc15",
+    from: "#223342",
+    to: "#131d26",
+    font: "chakra",
+    weight: 600,
+  },
 };
 
 /** For a game the site has no card for yet: the launcher's own colours. */
@@ -80,7 +91,7 @@ export function theme(game: string): Theme {
 /** The theme as CSS custom properties, for a style attribute (the site's names: --box, --bd, --tx, --tx2). */
 export function themeStyle(game: string): string {
   const t = theme(game);
-  const font = t.font === "brand" ? "var(--font-brand)" : "var(--font-head)";
+  const font = { brand: "var(--font-brand)", head: "var(--font-head)", chakra: "var(--font-chakra)" }[t.font];
   return [
     `--box: ${t.box}`,
     `--bd: ${t.border}`,

@@ -3,6 +3,7 @@ import type { SaveView } from "./api";
 import {
   bytesToHex,
   changed,
+  editList,
   fillAllAmmo,
   giveAll,
   setAllGoldBolts,
@@ -14,6 +15,7 @@ import {
   fieldErrors,
   goldBoltCount,
   hexToBytes,
+  ownedCount,
   rawPatches,
   readI32,
   setOwned,
@@ -151,5 +153,68 @@ describe("the quick actions", () => {
 
   it("titles the slot with what is in it", () => {
     expect(slotTitle(view())).toBe("Slot 1 · Veldin · 10 bolts · 3h 12m");
+  });
+});
+
+describe("the list of changes", () => {
+  it("is empty while nothing changed", () => {
+    const v = view();
+    expect(editList(v, structuredClone(v.fields))).toEqual([]);
+  });
+
+  it("says what changed in a player's words, by section", () => {
+    const v = view();
+    v.levels = [
+      { id: 1, name: "Novalis", location: "Tobruk Crater", canUnlock: true, canLand: true },
+      { id: 3, name: "Kerwan", location: "Metropolis", canUnlock: true, canLand: true },
+    ];
+    const f = structuredClone(v.fields);
+    f.bolts = 50_000;
+    f.nanotech = "ultra";
+    setOwned(v, f, 15, true);
+    setOwned(v, f, 2, true);
+    f.planet = 3;
+    setAllGoldBolts(f, true);
+    f.skillPoints = [false, true, false];
+    expect(editList(v, f)).toEqual([
+      { section: "ratchet", text: "Bolts: 10 → 50,000" },
+      { section: "ratchet", text: "Health: No upgrade → Ultra Nanotech" },
+      { section: "weapons", text: "Given: Blaster" },
+      { section: "gadgets", text: "Given: Heli-Pack" },
+      { section: "planets", text: "Loads on: Novalis → Kerwan" },
+      { section: "planets", text: "Gold bolts: 1 → 3 of 3" },
+      { section: "skills", text: "Skill points: 1 earned, 1 taken away" },
+    ]);
+  });
+
+  it("names ammo, gold and planets it changed", () => {
+    const v = view();
+    const blaster = v.fields.items[1];
+    if (blaster) Object.assign(blaster, { owned: true, ammo: 100 });
+    const f = structuredClone(v.fields);
+    const now = f.items[1];
+    if (now) Object.assign(now, { ammo: 200, gold: true });
+    const novalis = f.planets[0];
+    if (novalis) {
+      novalis.unlocked = false;
+      novalis.goldBolts = [false, true, false];
+    }
+    f.skillPoints = [true, true, true];
+    expect(editList(v, f).map((e) => e.text)).toEqual([
+      "Ammo: Blaster 100 → 200",
+      "Made gold: Blaster",
+      "Locked: Novalis",
+      "Gold bolts changed on: Novalis",
+      "Skill points: 1 → 3 of 3",
+    ]);
+  });
+
+  it("counts what the save owns", () => {
+    const v = view();
+    const f = structuredClone(v.fields);
+    expect(ownedCount(v, f, "weapon")).toEqual([0, 1]);
+    giveAll(v, f, "weapon");
+    expect(ownedCount(v, f, "weapon")).toEqual([1, 1]);
+    expect(ownedCount(v, f, "gadget")).toEqual([0, 1]);
   });
 });

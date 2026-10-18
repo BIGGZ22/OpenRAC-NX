@@ -44,33 +44,33 @@ interface GitHubReleaseResponse {
   published_at?: string;
 }
 
+/** The newest release on GitHub when it is newer than CURRENT, else null; throws when GitHub could
+ *  not be asked (no connection, a refusal), so "you have the latest" is never said by mistake. */
 export async function checkGitHubRelease(currentVersion: string): Promise<UpdateInfo | null> {
+  let res: Response;
   try {
-    const res = await fetch("https://api.github.com/repos/OpenRAC/OpenRAC/releases/latest", {
+    res = await fetch("https://api.github.com/repos/OpenRAC/OpenRAC/releases/latest", {
       headers: { Accept: "application/vnd.github.v3+json" },
       signal: AbortSignal.timeout(4000),
     });
-    if (!res.ok) return null;
-
-    const data = (await res.json()) as GitHubReleaseResponse;
-    const tag = data.tag_name ?? "";
-    const cleanVersion = tag.replace(/^[^0-9]*/, "");
-
-    if (isNewerVersion(currentVersion, cleanVersion)) {
-      return {
-        version: cleanVersion,
-        tag,
-        url: data.html_url ?? "https://github.com/OpenRAC/OpenRAC/releases",
-        name: data.name ?? tag,
-        body: data.body ?? "",
-        publishedAt: data.published_at ?? "",
-        canInstallDirectly: false,
-      };
-    }
-    return null;
   } catch {
-    return null;
+    throw new Error("no connection to GitHub");
   }
+  if (!res.ok) throw new Error(`GitHub answered ${res.status}`);
+
+  const data = (await res.json()) as GitHubReleaseResponse;
+  const tag = data.tag_name ?? "";
+  const cleanVersion = tag.replace(/^[^0-9]*/, "");
+  if (!isNewerVersion(currentVersion, cleanVersion)) return null;
+  return {
+    version: cleanVersion,
+    tag,
+    url: data.html_url ?? "https://github.com/OpenRAC/OpenRAC/releases",
+    name: data.name ?? tag,
+    body: data.body ?? "",
+    publishedAt: data.published_at ?? "",
+    canInstallDirectly: false,
+  };
 }
 
 /**
@@ -78,6 +78,13 @@ export async function checkGitHubRelease(currentVersion: string): Promise<Update
  * Falls back to checking GitHub Releases API if running in browser or if updater is unavailable.
  */
 export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo | null> {
+  if (!inTauri) {
+    // The browser preview's own answer (?update, ?latest, ?offline), when it has one.
+    const { mockUpdate } = await import("./mock");
+    const answer = mockUpdate(currentVersion);
+    if (answer instanceof Error) throw answer;
+    if (answer !== undefined) return answer;
+  }
   if (inTauri) {
     try {
       const { check } = await import("@tauri-apps/plugin-updater");
@@ -106,6 +113,11 @@ export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo
  * Downloads and installs the update in-place, then restarts the application.
  */
 export async function installUpdate(onProgress?: UpdateProgressCallback): Promise<void> {
+  if (!inTauri) {
+    const { mockInstall } = await import("./mock");
+    await mockInstall(onProgress);
+    return;
+  }
   if (!activeTauriUpdate) {
     throw new Error("No downloaded update available to install");
   }

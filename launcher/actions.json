@@ -1209,6 +1209,81 @@
         "docs": "port/game/README.md",
         "todo": "openrac-rac4-ntsc builds from this version's decompilation (port/, cmake --preset release); before it runs it needs the game's main in port/game/rac4-ntsc/hostgen.json and its library table (port/game/README.md). rac1/pal is furthest along."
       }
+    ],
+    "rac5/ntsc": [
+      {
+        "id": "disc-verify",
+        "label": "Check your disc",
+        "description": "Checks your Size Matters image against the pinned USA disc: its size, SHA-1 and SHA-256, and the boot executable's.",
+        "kind": "setup",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "tools/disc.py",
+          "verify",
+          "baserom/SCUS_976.15.iso"
+        ],
+        "requires": [
+          "python",
+          "inputs"
+        ],
+        "docs": "games/rac5/ntsc/README.md",
+        "todo": "Runs from games/rac5/ntsc with the image placed in its baserom/ (python3 tools/openrac.py setup rac5/ntsc)."
+      },
+      {
+        "id": "tests",
+        "label": "Test the project's tools",
+        "description": "The project's unit tests (no disc needed), as its CI runs them.",
+        "kind": "check",
+        "state": "connected",
+        "program": "{python}",
+        "args": [
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "tests"
+        ],
+        "requires": [
+          "python"
+        ],
+        "docs": "games/rac5/ntsc/README.md"
+      },
+      {
+        "id": "repo-check",
+        "label": "Check the repository rules",
+        "description": "Makes sure no game data, build output or toolchain is in Git, as the project's CI does.",
+        "kind": "check",
+        "state": "connected",
+        "program": "{python}",
+        "args": [
+          "tools/check_repository.py"
+        ],
+        "requires": [
+          "python"
+        ],
+        "docs": "games/rac5/ntsc/LEGAL.md"
+      },
+      {
+        "id": "editor-extract",
+        "label": "Extract the levels",
+        "description": "The level editor reads the first game's PAL disc only, for now.",
+        "kind": "edit",
+        "area": "editor",
+        "state": "planned",
+        "docs": "editor/README.md",
+        "todo": "Size Matters keeps its levels in SNR2 .REL modules (games/rac5/ntsc/docs/REL-FORMAT.md); the editor reads none of them yet."
+      },
+      {
+        "id": "play",
+        "label": "Play",
+        "description": "The game as a native PC program: its decompiled C built for this computer, drawn by OpenRAC's own renderer, with the assets from your disc.",
+        "kind": "play",
+        "area": "port",
+        "state": "planned",
+        "docs": "port/game/README.md",
+        "todo": "There is no qualified compiler or game-wide decompilation yet (games/rac5/README.md); the port comes after."
+      }
     ]
   }
 }

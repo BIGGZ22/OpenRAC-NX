@@ -4,18 +4,24 @@
   // write_save, which refuses while the game runs with the card and backs the card up first. After
   // a save, Undo puts that backup back. With "Advanced save editing" on (Settings) a second tab,
   // AdvancedSaveEditor.svelte, edits every chunk of the file; it saves as raw chunks, through the
-  // same guards.
+  // same guards. What has been changed is marked where it is and listed above Save, Reset puts the
+  // save back as read, and leaving with changes asks in the editor itself, not in a browser box.
   import AdvancedSaveEditor from "$components/AdvancedSaveEditor.svelte";
   import Icon from "$components/Icon.svelte";
-  import { api, type Nanotech, type SaveBackupInfo, type SaveChange, type SaveFields, type SaveView } from "$lib/api";
+  import { api, type SaveBackupInfo, type SaveChange, type SaveFields, type SaveView } from "$lib/api";
   import { app, toast } from "$lib/app.svelte";
+  import { portal } from "$lib/portal";
+  import { fold } from "$lib/motion";
   import {
     changed,
     chunkBytes,
+    editList,
     fieldErrors,
     fillAllAmmo,
     giveAll,
     goldBoltCount,
+    NANOTECH,
+    ownedCount,
     rawPatches,
     setAllGoldBolts,
     setAllPlanets,
@@ -23,16 +29,21 @@
     skillCount,
     slotTitle,
     takeAll,
+    type SaveSection,
   } from "$lib/saveEdit";
   import { onMount } from "svelte";
+  import { slide } from "svelte/transition";
 
   let {
     serial,
     slot,
+    playing = false,
     onclose,
   }: {
     serial: string;
     slot: number;
+    /** The launcher is running the game, which writes the card too: saving waits until it is closed. */
+    playing?: boolean;
     /** `true` when the card changed (saved or undone), so the list reads it again. */
     onclose: (changedCard: boolean) => void;
   } = $props();
@@ -56,18 +67,27 @@
   const patches = $derived(view && mode === "advanced" ? rawPatches(view, bytes) : []);
   const dirty = $derived(!!view && !!fields && (mode === "advanced" ? patches.length > 0 : changed(view, fields)));
   const canSave = $derived(
-    dirty && !busy && (mode === "advanced" ? hexInvalid === 0 : Object.keys(errors).length === 0),
+    dirty && !busy && !playing && (mode === "advanced" ? hexInvalid === 0 : Object.keys(errors).length === 0),
   );
+  /** What the edits change, a line each, for the list above Save. */
+  const edits = $derived(view && fields && mode === "player" ? editList(view, fields) : []);
+  const editedSections = $derived(new Set(edits.map((e) => e.section)));
+  /** How many changes the foot counts: the player view's lines, or the chunks the bytes touch. */
+  const changeCount = $derived(mode === "advanced" ? patches.length : Math.max(edits.length, dirty ? 1 : 0));
+  /** Leaving with changes asks first, in the foot. */
+  let asking = $state(false);
+  /** "Take all" gadgets asks first, beside the button, with the story-item warning. */
+  let confirmTake = $state(false);
+  /** The list of changes is open. */
+  let reviewing = $state(false);
+  /** Bumped by Reset, so the advanced tab starts again from the file as read. */
+  let resets = $state(0);
+  let modalEl = $state<HTMLElement | null>(null);
+  let bodyEl = $state<HTMLElement | null>(null);
   /** Planets the save can be moved to, and the one it is on even when it is a story planet. */
   const landing = $derived(view && fields ? view.levels.filter((l) => l.canLand || l.id === view?.fields.planet) : []);
   const weapons = $derived(view?.items.filter((i) => i.kind === "weapon") ?? []);
   const gadgets = $derived(view?.items.filter((i) => i.kind === "gadget") ?? []);
-
-  const nanotechChoices: { value: Nanotech; label: string; health: number }[] = [
-    { value: "standard", label: "No upgrade", health: 4 },
-    { value: "premium", label: "Premium Nanotech", health: 5 },
-    { value: "ultra", label: "Ultra Nanotech", health: 8 },
-  ];
 
   async function load() {
     loadError = null;
@@ -120,12 +140,55 @@
 
   function close() {
     if (busy) return;
-    if (dirty && !saved && !confirm("Close without saving your changes?")) return;
-    onclose(touchedCard);
+    if (dirty) asking = true;
+    else onclose(touchedCard);
+  }
+
+  async function saveAndClose() {
+    await save();
+    if (!saveError) onclose(true);
+  }
+
+  /** Back to the save as read: every edit in this tab undone, nothing written. */
+  function reset() {
+    if (!view) return;
+    fields = $state.snapshot(view.fields);
+    bytes = chunkBytes(view);
+    hexInvalid = 0;
+    resets++;
+    reviewing = false;
+    confirmTake = false;
+  }
+
+  /** Escape steps back one thing at a time: a question, the list of changes, then the editor. */
+  function escape() {
+    if (confirmTake) confirmTake = false;
+    else if (asking) asking = false;
+    else if (reviewing) reviewing = false;
+    else close();
   }
 
   function item(id: number) {
     return fields?.items.find((i) => i.id === id);
+  }
+
+  /** An item's row differs from the save as read. */
+  function itemEdited(id: number): boolean {
+    const a = view?.fields.items.find((i) => i.id === id);
+    const b = item(id);
+    return !!a && !!b && (a.owned !== b.owned || a.ammo !== b.ammo || a.gold !== b.gold);
+  }
+
+  /** A planet's row differs from the save as read. */
+  function planetEdited(id: number): boolean {
+    const a = view?.fields.planets.find((p) => p.id === id);
+    const b = fields?.planets.find((p) => p.id === id);
+    return !!a && !!b && (a.unlocked !== b.unlocked || a.goldBolts.join() !== b.goldBolts.join());
+  }
+
+  /** Focus the element as it appears: the safe answer of a question. */
+  function focusOnShow(node: HTMLElement) {
+    node.focus();
   }
 
   /** Moves the save: the planet it loads on has to be unlocked, as the game's level start does. */
@@ -137,43 +200,94 @@
   }
 
   /** The player view's sections, for the row of links that stays at the top. */
-  const sections: [string, string][] = [
-    ["se-ratchet", "Ratchet"],
-    ["se-weapons", "Weapons"],
-    ["se-gadgets", "Gadgets and items"],
-    ["se-planets", "Planets"],
-    ["se-skills", "Skill points"],
+  const sections: [SaveSection, string][] = [
+    ["ratchet", "Ratchet"],
+    ["weapons", "Weapons"],
+    ["gadgets", "Gadgets and items"],
+    ["planets", "Planets"],
+    ["skills", "Skill points"],
   ];
+  const sectionLabel = Object.fromEntries(sections) as Record<SaveSection, string>;
 
-  function jump(id: string) {
-    document.getElementById(id)?.scrollIntoView({ block: "start", behavior: "smooth" });
+  /** The section in view, lit in the row of links. */
+  let current = $state<SaveSection>("ratchet");
+  /** The section a link scrolled to: at the end of the page, it stays lit though it cannot reach the top. */
+  let target: SaveSection | null = null;
+
+  function jump(key: SaveSection) {
+    target = key;
+    current = key;
+    document.getElementById(`se-${key}`)?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
+
+  /** Lights the last section whose top has passed under the row of links. */
+  function spy() {
+    if (!bodyEl) return;
+    const line = bodyEl.getBoundingClientRect().top + 60;
+    let at: SaveSection = "ratchet";
+    for (const [key] of sections) {
+      const el = document.getElementById(`se-${key}`);
+      if (el && el.getBoundingClientRect().top <= line) at = key;
+    }
+    const end = bodyEl.scrollTop + bodyEl.clientHeight >= bodyEl.scrollHeight - 2;
+    current = end ? (target ?? "skills") : at;
+  }
+
+  // Scrolling by hand lets the section in view decide again.
+  $effect(() => {
+    const el = bodyEl;
+    if (!el) return;
+    const free = () => (target = null);
+    el.addEventListener("wheel", free, { passive: true });
+    el.addEventListener("pointerdown", free);
+    return () => {
+      el.removeEventListener("wheel", free);
+      el.removeEventListener("pointerdown", free);
+    };
+  });
 
   const storyWarning =
     "Taking away something the story needs, like the Heli-Pack or the Swingshot, can leave Ratchet stuck.";
-
-  function takeAllGadgets() {
-    if (view && fields && confirm(`${storyWarning} Take away every gadget and item?`)) takeAll(view, fields, "gadget");
-  }
 
   function setAllSkills(on: boolean) {
     if (fields) fields.skillPoints = fields.skillPoints.map(() => on);
   }
 
   onMount(() => {
+    // A dialog: focus goes into it, the page behind cannot be reached until it closes, and focus
+    // goes back where it was (the slot's Edit button).
+    const back = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const page = document.getElementById("app");
+    page?.setAttribute("inert", "");
+    modalEl?.focus();
     void load();
+    return () => {
+      page?.removeAttribute("inert");
+      back?.focus();
+    };
   });
 </script>
 
 <svelte:window
   onkeydown={(e) => {
-    if (e.key === "Escape") close();
+    if (e.key === "Escape") escape();
+    else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+      e.preventDefault();
+      if (canSave) void save();
+    }
   }}
 />
 
-<div class="overlay" role="presentation">
+<div class="overlay" role="presentation" use:portal>
   <button class="backdrop" onclick={close} tabindex="-1" aria-label="Close the save editor"></button>
-  <div class="modal rise" role="dialog" aria-modal="true" aria-labelledby="save-editor-title">
+  <div
+    class="modal rise"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="save-editor-title"
+    tabindex="-1"
+    bind:this={modalEl}
+  >
     <div class="head">
       <div class="grow">
         <h2 id="save-editor-title">{view ? slotTitle(view) : `Slot ${String(slot + 1)}`}</h2>
@@ -203,34 +317,43 @@
       </button>
     </div>
 
-    <div class="body">
+    <div class="body" bind:this={bodyEl} onscroll={spy}>
       {#if loadError}
         <p class="problem"><Icon name="warn" size={16} />{loadError}</p>
       {:else if !view || !fields}
         <p class="muted row"><span class="spinner"></span>Reading the save…</p>
       {:else if mode === "advanced"}
-        <AdvancedSaveEditor
-          {view}
-          bind:bytes
-          oninvalid={(n) => {
-            hexInvalid = n;
-          }}
-        />
+        {#key resets}
+          <AdvancedSaveEditor
+            {view}
+            bind:bytes
+            oninvalid={(n) => {
+              hexInvalid = n;
+            }}
+          />
+        {/key}
       {:else}
         <nav class="jump" aria-label="Sections">
-          {#each sections as [id, label] (id)}
+          {#each sections as [key, label] (key)}
             <button
               class="ghost small"
+              class:on={current === key}
+              aria-current={current === key ? "location" : undefined}
               onclick={() => {
-                jump(id);
-              }}>{label}</button
+                jump(key);
+              }}
+              >{label}{#if editedSections.has(key)}<span class="mark" role="img" aria-label="changed"
+                ></span>{/if}</button
             >
           {/each}
         </nav>
         <section id="se-ratchet" aria-labelledby="se-ratchet-h">
           <h3 id="se-ratchet-h">Ratchet</h3>
           <div class="line">
-            <label for="se-bolts">Bolts</label>
+            <label for="se-bolts"
+              >Bolts{#if fields.bolts !== view.fields.bolts}<span class="mark" role="img" aria-label="changed"
+                ></span>{/if}</label
+            >
             <div class="field">
               <span class="bolt"><Icon name="bolt" size={16} /></span>
               <input
@@ -242,13 +365,23 @@
                 bind:value={fields.bolts}
                 aria-invalid={!!errors.bolts}
               />
+              <button
+                class="ghost small"
+                onclick={() => {
+                  if (view && fields) fields.bolts = view.maxBolts;
+                }}
+                disabled={fields.bolts === view.maxBolts}>Max</button
+              >
               {#if errors.bolts}<span class="err-text">{errors.bolts}</span>{/if}
             </div>
           </div>
           <div class="line">
-            <span id="se-health">Health</span>
+            <span id="se-health"
+              >Health{#if fields.nanotech !== view.fields.nanotech}<span class="mark" role="img" aria-label="changed"
+                ></span>{/if}</span
+            >
             <div class="choices" role="radiogroup" aria-labelledby="se-health">
-              {#each nanotechChoices as c (c.value)}
+              {#each NANOTECH as c (c.value)}
                 <label class="choice" class:on={fields.nanotech === c.value}>
                   <input type="radio" name="se-nanotech" value={c.value} bind:group={fields.nanotech} />
                   <b>{c.health}</b>
@@ -261,7 +394,9 @@
 
         <section id="se-weapons" aria-labelledby="se-weapons-h">
           <h3 id="se-weapons-h">
-            Weapons
+            Weapons <span class="count"
+              >{ownedCount(view, fields, "weapon")[0]} of {ownedCount(view, fields, "weapon")[1]}</span
+            >
             <span class="grow"></span>
             <span class="actions">
               <button
@@ -297,7 +432,7 @@
                         if (view && fields) setOwned(view, fields, w.id, e.currentTarget.checked);
                       }}
                     />
-                    {w.name}
+                    {w.name}{#if itemEdited(w.id)}<span class="mark" role="img" aria-label="changed"></span>{/if}
                   </label>
                   {#if w.maxAmmo !== null && s.ammo !== null}
                     <span class="ammo" class:off={!s.owned}>
@@ -337,7 +472,9 @@
 
         <section id="se-gadgets" aria-labelledby="se-gadgets-h">
           <h3 id="se-gadgets-h">
-            Gadgets and items
+            Gadgets and items <span class="count"
+              >{ownedCount(view, fields, "gadget")[0]} of {ownedCount(view, fields, "gadget")[1]}</span
+            >
             <span class="grow"></span>
             <span class="actions">
               <button
@@ -346,16 +483,39 @@
                   if (view && fields) giveAll(view, fields, "gadget");
                 }}>Give all</button
               >
-              <button class="ghost small" onclick={takeAllGadgets}>Take all</button>
+              <button
+                class="ghost small"
+                onclick={() => (confirmTake = true)}
+                disabled={confirmTake || ownedCount(view, fields, "gadget")[0] === 0}>Take all</button
+              >
             </span>
           </h3>
+          {#if confirmTake}
+            <div
+              class="ask-box"
+              role="alertdialog"
+              aria-label="Take every gadget and item away?"
+              transition:slide={fold}
+            >
+              <Icon name="warn" size={16} />
+              <span class="grow">{storyWarning} Take away every gadget and item?</span>
+              <button class="ghost small" use:focusOnShow onclick={() => (confirmTake = false)}>Keep them</button>
+              <button
+                class="small"
+                onclick={() => {
+                  if (view && fields) takeAll(view, fields, "gadget");
+                  confirmTake = false;
+                }}>Take all</button
+              >
+            </div>
+          {/if}
           <div class="chips">
             {#each gadgets as g (g.id)}
               {@const s = item(g.id)}
               {#if s}
                 <label class="chip" class:on={s.owned}>
                   <input type="checkbox" bind:checked={s.owned} />
-                  {g.name}
+                  {g.name}{#if itemEdited(g.id)}<span class="mark" role="img" aria-label="changed"></span>{/if}
                 </label>
               {/if}
             {/each}
@@ -397,7 +557,10 @@
             </span>
           </h3>
           <div class="line first">
-            <label for="se-planet">Load on</label>
+            <label for="se-planet"
+              >Load on{#if fields.planet !== view.fields.planet}<span class="mark" role="img" aria-label="changed"
+                ></span>{/if}</label
+            >
             <div class="field">
               <select
                 id="se-planet"
@@ -419,7 +582,10 @@
               {#if s}
                 <li>
                   <span class="planet">
-                    <b>{p.name}</b>
+                    <b
+                      >{p.name}{#if planetEdited(p.id)}<span class="mark" role="img" aria-label="changed"
+                        ></span>{/if}</b
+                    >
                     <span class="dim">{p.location}</span>
                   </span>
                   {#if p.canUnlock}
@@ -469,7 +635,7 @@
           {#if view.skillNames.length === fields.skillPoints.length}
             <div class="chips" role="group" aria-label="Skill points">
               {#each fields.skillPoints as on, k (k)}
-                <label class="chip" class:on>
+                <label class="chip" class:on class:edited={on !== view.fields.skillPoints[k]}>
                   <input
                     type="checkbox"
                     checked={on}
@@ -487,6 +653,7 @@
                 <button
                   class="skill"
                   class:on
+                  class:edited={on !== view.fields.skillPoints[k]}
                   aria-pressed={on}
                   aria-label={`Skill point ${String(k + 1)}`}
                   onclick={() => {
@@ -507,8 +674,46 @@
       {#if saveError}
         <p class="problem"><Icon name="warn" size={16} />{saveError}</p>
       {/if}
-      <div class="row">
-        {#if saved}
+      {#if playing && dirty}
+        <p class="running">
+          <Icon name="info" size={16} />The game is running and writes this memory card too: close it, then save.
+        </p>
+      {/if}
+      {#if reviewing && edits.length && !asking}
+        <ul class="review" aria-label="Your changes" transition:slide={fold}>
+          {#each edits as e, i (i)}
+            <li>
+              <button
+                class="ghost small"
+                onclick={() => {
+                  jump(e.section);
+                }}><span class="where">{sectionLabel[e.section]}</span>{e.text}</button
+              >
+            </li>
+          {/each}
+        </ul>
+      {/if}
+      {#if asking}
+        <div class="row" role="alertdialog" aria-label="Close without saving?">
+          <span class="grow"
+            >Close without saving your {changeCount === 1 ? "change" : `${String(changeCount)} changes`}?</span
+          >
+          <button class="ghost" use:focusOnShow onclick={() => (asking = false)} disabled={busy}>Keep editing</button>
+          <button
+            class="discard"
+            onclick={() => {
+              onclose(touchedCard);
+            }}
+            disabled={busy}>Discard</button
+          >
+          {#if canSave}
+            <button class="primary" onclick={saveAndClose} disabled={busy}>
+              {#if busy}<span class="spinner"></span>{:else}<Icon name="save" size={16} />{/if}Save and close
+            </button>
+          {/if}
+        </div>
+      {:else if saved && !dirty}
+        <div class="row">
           <span class="grow ok"
             ><Icon name="save" size={16} />Saved. Your card was backed up first: Undo puts it back.</span
           >
@@ -519,18 +724,43 @@
             }}
             disabled={busy}>Close</button
           >
-        {:else}
-          <span class="grow dim"
-            >{mode === "advanced" && dirty
-              ? `${String(patches.length)} part${patches.length === 1 ? "" : "s"} of the file changed. `
-              : ""}Your memory card is backed up before anything is written.</span
+        </div>
+      {:else}
+        <div class="row">
+          {#if dirty}
+            {#if mode === "player"}
+              <button
+                class="ghost small changes"
+                aria-expanded={reviewing}
+                onclick={() => (reviewing = !reviewing)}
+                title={reviewing ? "Hide the list" : "See what you changed"}
+                ><span class="mark" aria-hidden="true"></span>{changeCount === 1
+                  ? "1 change"
+                  : `${String(changeCount)} changes`}<span class="caret" class:open={reviewing} aria-hidden="true"
+                ></span></button
+              >
+            {:else}
+              <span class="changes-text"
+                ><span class="mark" aria-hidden="true"></span>{changeCount} part{changeCount === 1 ? "" : "s"} of the file
+                changed</span
+              >
+            {/if}
+            <span class="grow dim backup">Backed up before writing</span>
+            <button class="ghost" onclick={reset} disabled={busy} title="Undo every change you made here">Reset</button>
+          {:else}
+            <span class="grow dim">Your memory card is backed up before anything is written.</span>
+          {/if}
+          <button class="ghost" onclick={close} disabled={busy}>{dirty ? "Cancel" : "Close"}</button>
+          <button
+            class="primary"
+            onclick={save}
+            disabled={!canSave}
+            title={playing ? "Close the game first" : "Save (Ctrl+S)"}
           >
-          <button class="ghost" onclick={close} disabled={busy}>Cancel</button>
-          <button class="primary" onclick={save} disabled={!canSave}>
             {#if busy}<span class="spinner"></span>{:else}<Icon name="save" size={16} />{/if}Save
           </button>
-        {/if}
-      </div>
+        </div>
+      {/if}
     </div>
   </div>
 </div>
@@ -574,6 +804,11 @@
     overflow: hidden;
   }
 
+  /* Focus lands on the dialog itself when it opens; its own controls show focus as usual. */
+  .modal:focus {
+    outline: none;
+  }
+
   .head,
   .foot {
     padding: 16px 22px;
@@ -607,6 +842,111 @@
   .foot .row {
     gap: 8px;
     font-size: 13px;
+  }
+
+  /* Changed: an amber dot where the change is, on its section's link and before the count. */
+  .mark {
+    display: inline-block;
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-left: 7px;
+    border-radius: 50%;
+    background: var(--amber);
+    vertical-align: middle;
+  }
+
+  .own .mark,
+  .chip .mark,
+  .changes .mark,
+  .changes-text .mark {
+    margin-left: 0;
+  }
+
+  .changes {
+    color: var(--amber);
+    font-weight: 600;
+  }
+
+  .changes-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--amber);
+    font-weight: 600;
+  }
+
+  .caret {
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 5px solid currentcolor;
+    transition: transform 0.15s;
+  }
+
+  .caret.open {
+    transform: rotate(180deg);
+  }
+
+  .review {
+    max-height: 168px;
+    overflow-y: auto;
+    padding: 4px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--panel);
+  }
+
+  .review button {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 12px;
+    font-weight: 400;
+    text-align: left;
+    color: var(--text);
+  }
+
+  .where {
+    flex: none;
+    width: 128px;
+    color: var(--dim);
+  }
+
+  .discard {
+    color: var(--err);
+    border-color: color-mix(in srgb, var(--err) 40%, transparent);
+  }
+
+  .running {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    font-size: 13px;
+    color: var(--amber);
+  }
+
+  @media (max-width: 900px) {
+    .backup {
+      visibility: hidden;
+    }
+  }
+
+  /* A short window keeps its height for the save itself. */
+  @media (max-height: 640px) {
+    .overlay {
+      padding: 12px;
+    }
+
+    .modal {
+      height: calc(100vh - 24px);
+    }
+
+    .head,
+    .foot {
+      padding: 10px 22px;
+    }
   }
 
   .ok {
@@ -650,6 +990,32 @@
     justify-content: flex-end;
     gap: 2px;
     font-family: var(--font-sans);
+  }
+
+  .jump button.on {
+    color: var(--text);
+    background: var(--panel-hi);
+    border-color: var(--line);
+  }
+
+  /* Asks before "Take all" gadgets, under the button that asked. */
+  .ask-box {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--panel-hi);
+    border: 1px solid color-mix(in srgb, var(--amber) 45%, transparent);
+    border-radius: var(--radius-sm);
+  }
+
+  .ask-box > :global(svg) {
+    flex: none;
+    color: var(--amber);
   }
 
   .line.first {
@@ -915,6 +1281,25 @@
     color: var(--bar-ink-deep);
     background: var(--amber);
     border-color: var(--amber);
+  }
+
+  /* A skill point changed: the same amber dot, in the corner. */
+  .chip.edited,
+  .skill.edited {
+    position: relative;
+  }
+
+  .chip.edited::after,
+  .skill.edited::after {
+    content: "";
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--amber);
+    box-shadow: 0 0 0 2px var(--panel);
   }
 
   .problem {

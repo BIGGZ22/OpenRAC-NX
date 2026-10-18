@@ -1,6 +1,16 @@
 // The save editor's checks on the page: the same limits core/src/save_edit.rs enforces, so a
 // field shows its problem before Save is pressed. The Rust side checks again before it writes.
-import type { RawPatch, SaveFields, SaveView } from "./api";
+import type { Nanotech, RawPatch, SaveFields, SaveView } from "./api";
+
+/** The player view's sections, in page order. */
+export type SaveSection = "ratchet" | "weapons" | "gadgets" | "planets" | "skills";
+
+/** Ratchet's health upgrades, as the vendor sells them, with the health each gives. */
+export const NANOTECH: { value: Nanotech; label: string; health: number }[] = [
+  { value: "standard", label: "No upgrade", health: 4 },
+  { value: "premium", label: "Premium Nanotech", health: 5 },
+  { value: "ultra", label: "Ultra Nanotech", health: 8 },
+];
 
 /** A problem with what was typed, by field ("bolts", "ammo-15"), in a player's words. */
 export function fieldErrors(view: SaveView, f: SaveFields): Record<string, string> {
@@ -42,6 +52,105 @@ export function skillCount(f: SaveFields): [number, number] {
 export function goldBoltCount(f: SaveFields): [number, number] {
   const all = f.planets.flatMap((p) => p.goldBolts);
   return [all.filter(Boolean).length, all.length];
+}
+
+/** Items of a kind owned, of how many. */
+export function ownedCount(view: SaveView, f: SaveFields, kind: "weapon" | "gadget"): [number, number] {
+  const ids = new Set(view.items.filter((i) => i.kind === kind).map((i) => i.id));
+  const items = f.items.filter((i) => ids.has(i.id));
+  return [items.filter((i) => i.owned).length, items.length];
+}
+
+/** One line of what the edits change, in a player's words, and the section it belongs to. */
+export interface SaveEdit {
+  section: SaveSection;
+  text: string;
+}
+
+/**
+ * What `f` changes in the save, for the list the player reviews before saving: one line per kind
+ * of change ("Given: Devastator, Visibomb Gun"), so a quick action reads as the one change it was.
+ */
+export function editList(view: SaveView, f: SaveFields): SaveEdit[] {
+  const was = view.fields;
+  const out: SaveEdit[] = [];
+  const add = (section: SaveSection, label: string, names: string[]) => {
+    if (names.length) out.push({ section, text: `${label}: ${names.join(", ")}` });
+  };
+  const num = (n: number) => n.toLocaleString("en-US");
+  const health = (n: Nanotech) => NANOTECH.find((c) => c.value === n)?.label ?? n;
+  const level = (id: number) => view.levels.find((l) => l.id === id)?.name ?? `Level ${String(id)}`;
+
+  if (f.bolts !== was.bolts) out.push({ section: "ratchet", text: `Bolts: ${num(was.bolts)} → ${num(f.bolts)}` });
+  if (f.nanotech !== was.nanotech) {
+    out.push({ section: "ratchet", text: `Health: ${health(was.nanotech)} → ${health(f.nanotech)}` });
+  }
+
+  for (const [kind, section] of [
+    ["weapon", "weapons"],
+    ["gadget", "gadgets"],
+  ] as const) {
+    const given: string[] = [];
+    const taken: string[] = [];
+    const ammo: string[] = [];
+    const gold: string[] = [];
+    const plain: string[] = [];
+    for (const info of view.items.filter((i) => i.kind === kind)) {
+      const a = was.items.find((i) => i.id === info.id);
+      const b = f.items.find((i) => i.id === info.id);
+      if (!a || !b) continue;
+      if (a.owned !== b.owned) (b.owned ? given : taken).push(info.name);
+      else if (a.ammo !== b.ammo && b.ammo !== null)
+        ammo.push(`${info.name} ${String(a.ammo ?? 0)} → ${String(b.ammo)}`);
+      if (a.gold !== b.gold && b.gold !== null) (b.gold ? gold : plain).push(info.name);
+    }
+    add(section, "Given", given);
+    add(section, "Taken away", taken);
+    add(section, "Ammo", ammo);
+    add(section, "Made gold", gold);
+    add(section, "No longer gold", plain);
+  }
+
+  if (f.planet !== was.planet) {
+    out.push({ section: "planets", text: `Loads on: ${level(was.planet)} → ${level(f.planet)}` });
+  }
+  const unlocked: string[] = [];
+  const locked: string[] = [];
+  const bolts: string[] = [];
+  for (const info of view.planets) {
+    const a = was.planets.find((p) => p.id === info.id);
+    const b = f.planets.find((p) => p.id === info.id);
+    if (!a || !b) continue;
+    if (a.unlocked !== b.unlocked) (b.unlocked ? unlocked : locked).push(info.name);
+    if (a.goldBolts.join() !== b.goldBolts.join()) bolts.push(info.name);
+  }
+  add("planets", "Unlocked", unlocked);
+  add("planets", "Locked", locked);
+  const [boltsWas] = goldBoltCount(was);
+  const [boltsNow, boltsAll] = goldBoltCount(f);
+  if (boltsWas !== boltsNow) {
+    out.push({
+      section: "planets",
+      text: `Gold bolts: ${String(boltsWas)} → ${String(boltsNow)} of ${String(boltsAll)}`,
+    });
+  } else {
+    add("planets", "Gold bolts changed on", bolts);
+  }
+
+  const [skillsWas] = skillCount(was);
+  const [skillsNow, skillsAll] = skillCount(f);
+  if (skillsWas !== skillsNow) {
+    out.push({
+      section: "skills",
+      text: `Skill points: ${String(skillsWas)} → ${String(skillsNow)} of ${String(skillsAll)}`,
+    });
+  } else {
+    const earned = f.skillPoints.filter((on, k) => on && !was.skillPoints[k]).length;
+    if (earned) {
+      out.push({ section: "skills", text: `Skill points: ${String(earned)} earned, ${String(earned)} taken away` });
+    }
+  }
+  return out;
 }
 
 // ---- the advanced editor: chunks as bytes ------------------------------------------

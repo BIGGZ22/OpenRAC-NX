@@ -1,5 +1,37 @@
 // Words for the codes the Rust side sends.
+import type { IconName } from "$components/Icon.svelte";
 import type { ActionState, DiscState } from "./api";
+
+/** What a game list entry (GameList.svelte) says under the game's name, and in which colour;
+ *  BUSY shows a spinner. */
+export interface EntryState {
+  text: string;
+  tone: "ok" | "warn" | "info";
+  busy?: boolean;
+}
+
+/** An entry in the list on the left of the Games, Mods and Develop tabs (SideList.svelte). */
+export interface SideEntry {
+  key: string;
+  name: string;
+  state?: EntryState | null;
+  /** A picture, shown cropped. */
+  art?: string | null;
+  /** Without a picture: an icon. */
+  icon?: IconName;
+  /** The game's colours (themeStyle) for the picture's frame. */
+  style?: string;
+  /** A small red dot on the picture: it crashed recently. */
+  mark?: boolean;
+  /** A heading before this entry, starting a group. */
+  group?: string;
+}
+
+/** A game's name without the series in front, for a narrow list: "Ratchet & Clank: Going Commando"
+ *  -> "Going Commando", "Ratchet: Deadlocked" -> "Deadlocked"; the first game keeps its name. */
+export function shortTitle(title: string): string {
+  return title.replace(/^Ratchet( & Clank)?: /, "");
+}
 
 /** `pal` -> "PAL", `ntsc` -> "NTSC-U", `ntsc-j` -> "NTSC-J". */
 export function regionLabel(name: string): string {

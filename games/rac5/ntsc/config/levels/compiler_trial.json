@@ -1,0 +1,83 @@
+{
+  "id": "rac5-level-shared-c-gnu-ee-trial-20261015",
+  "status": "qualified_two_shared_functions_and_frontend_only",
+  "base_profile": "config/boot/compiler_trial.json",
+  "scope": "two shared C functions at twenty pinned LEVEL_*.REL placements and func_00002F80 in FRONTEND.REL only",
+  "accepted": {
+    "source": "src/levels/shared/func_00000100.c",
+    "source_sha256_lf": "da5daebdedc784152d8e995ef322eb8aa415a8e6368d4f79768c49d08275a8ad",
+    "object_sha256": "33f3990d0112f1a54faa0440dce113fcfa1b1738948fddabb698727b6c722fc4",
+    "offset": 256,
+    "body_bytes": 8
+  },
+  "additional_accepted": {
+    "source": "src/levels/shared/func_shared_zero_buffer.c",
+    "source_sha256_lf": "8425fefc73b121bd3eb6ffc09e4c49bf6425958c0f5b63d638af3b11d6c6e387",
+    "object_sha256": "fd9519ff060ad74b5180d6bfeba77981f963c9f9d07e00a96614b86a87117f55",
+    "body_bytes": 72,
+    "placements": {
+      "LEVEL_01.REL": 100352,
+      "LEVEL_02.REL": 103048,
+      "LEVEL_03.REL": 99848,
+      "LEVEL_04.REL": 99680,
+      "LEVEL_05.REL": 97992,
+      "LEVEL_06.REL": 94376,
+      "LEVEL_07.REL": 102248,
+      "LEVEL_08.REL": 102888,
+      "LEVEL_09.REL": 97384,
+      "LEVEL_10.REL": 97936,
+      "LEVEL_15.REL": 86040,
+      "LEVEL_16.REL": 93592,
+      "LEVEL_17.REL": 92088,
+      "LEVEL_18.REL": 91224,
+      "LEVEL_19.REL": 92936,
+      "LEVEL_20.REL": 85064,
+      "LEVEL_21.REL": 86040,
+      "LEVEL_22.REL": 87104,
+      "LEVEL_23.REL": 95672,
+      "LEVEL_24.REL": 95248
+    }
+  },
+  "frontend_accepted": {
+    "source": "src/levels/frontend/func_00002F80.c",
+    "source_sha256_lf": "bb1626a4f47d509dec32ee92d5b046051827bc94e7f93daf6e37bc5e44325749",
+    "object_sha256": "62ad287bc8772c656ce69f57a338a8fe1117520684de97b4e0787148e5d2308a",
+    "module": "FRONTEND.REL",
+    "offset": 12160,
+    "body_bytes": 476,
+    "linker_symbols": {
+      "D_00027E9C": 163484,
+      "MCP_WideScreenMaster": 0,
+      "func_00002F28": 12072,
+      "strncpy": 0,
+      "memset": 0,
+      "func_000036D8": 14040,
+      "func_00003B58": 15192,
+      "func_000032E8": 13032,
+      "SND_GetGlobalMusicVolume__Fv": 0,
+      "func_000240A0": 147616,
+      "func_00002F78": 12152,
+      "func_00003968": 14696
+    }
+  },
+  "provisional_controls": [
+    {
+      "source": "nonmatching/levels/func_00000190.c",
+      "source_sha256_lf": "3e751a1da4064b76fb2f20c0fc6258a11ed3555be8000c06521cc2eb35974424",
+      "object_sha256": "384323c08e9f62ed32c1a56090126a882485572d962621ce216563abc8eed309",
+      "module": "LEVEL_01.REL",
+      "offset": 400,
+      "body_bytes": 24,
+      "linker_symbols": {"level01_array": 2144048}
+    },
+    {
+      "source": "nonmatching/levels/func_00002CD8.c",
+      "source_sha256_lf": "0fcba545e229f7fd9e3985c7affceee4678747d0519a604be9cf70d12aa8bed3",
+      "object_sha256": "204e0ef66922cb4bcb48f3a5c2d3df3b764ccbab458b9cfa953db634c75cd730",
+      "module": "FRONTEND.REL",
+      "offset": 11480,
+      "body_bytes": 12,
+      "linker_symbols": {"frontend_global": 163460}
+    }
+  ]
+}
