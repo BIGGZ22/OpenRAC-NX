@@ -87,3 +87,6 @@ otherwise.
    words in the front end have NTSC-U values now; `debug_menu.cpp` and
    `options_menu.cpp` are still PAL's and only act for `rac1-pal`. The
    vertical field-of-view factor (0.756) is PAL's.
+
+Known trouble spots of the US game's own code, with where to look in this tree:
+[docs/port/RAC1_NTSC_HINTS.md](../../../docs/port/RAC1_NTSC_HINTS.md).

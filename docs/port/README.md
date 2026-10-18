@@ -44,6 +44,7 @@ The code is in [port/](../../port/README.md).
 | [WORKFLOW.md](WORKFLOW.md) | **Start here to help:** the whole loop from a player's report to a release (taking the report, reproducing it by script, finding the cause, where a fix belongs, checking it, landing it), with the kinds of cause met so far |
 | [RAC1_PAL_TESTING.md](RAC1_PAL_TESTING.md) | Playtesting by script: starting any level, teleporting Ratchet, moving the camera, pressing buttons on a schedule, skipping scenes and flights, screenshots and reading game memory, and checking a fix |
 | [RAC1_PAL_BUGFIX_GUIDE.md](RAC1_PAL_BUGFIX_GUIDE.md) | For whoever continues it: building and running, the development switches, how to find the cause of a gameplay bug, how to supply C for a function without any, and what is open |
+| [RAC1_NTSC_HINTS.md](RAC1_NTSC_HINTS.md) | Where the US game's own code is known to trouble a native build (planets, gameplay systems, rendering, sound, saves), with the places in this tree to look and what the port already does |
 | [VU_PROGRAMS.md](VU_PROGRAMS.md) | The games' vector unit programs by name, and which the games share |
 | [OPENGOAL_NOTES.md](OPENGOAL_NOTES.md) | How OpenGOAL's renderer and platform layer work, and what carries over |
 | [tools/extractor.py](../../tools/extractor.py) | The disc extractor (OpenGOAL's `extractor`, for OpenRAC) |
