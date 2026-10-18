@@ -57,9 +57,36 @@ Players describe what they see, not what broke. Before reproducing, know:
   talks to a vendor, opens the weapon menu) or when the player opens and
   closes the pause menu (R3 opens the map, not the HUD). A hidden HUD is
   not a bug; one that stays hidden through those is.
-- **The log.** The game writes `openrac-<id>.log` in the data folder
-  (`<install>/active/<game>/data`). `[error]` and `[warning]` lines often
-  name the cause (section 4).
+- **The crash report or the log.** Ask for the launcher's report first:
+  on the game's page, after a crash, **Copy report** gives a short text
+  (what happened, where, the versions, the system and graphics card, the
+  top of the backtrace) and **Save report** a .zip in the player's
+  Downloads folder (`OpenRAC-crash-<date>_<time>.zip`: `summary.txt`, the
+  crash report, that session's log and the launcher's `launcher.log`).
+  The same is under **Logs and crash reports** on the game's page for any
+  earlier session, crash or not; players post it in a
+  [GitHub issue](https://github.com/OpenRAC/OpenRAC/issues) or on the
+  Discord. The home folder reads `~` in all of it. Where the files are,
+  in the data folder (`<install>/active/<game>/data`):
+  - `openrac-<id>.log`: the latest session, one run only, starting with a
+    header (OpenRAC's version and commit, the game and disc, the system,
+    processor and memory, the command line); `openrac-<id>.1.log` to
+    `.5.log` are the five runs before it. A session's log takes no more
+    `[info]` lines past 32 MB.
+  - `crashes/crash-<date>_<time>.txt`: one per crash (a fault, a fatal
+    error, the game's own trap, an uncaught exception): the reason, the
+    native backtrace (with the program's load address, for `atos -l` or
+    `addr2line`), the level, the game mode word, the frame and the
+    hero's position, the log's last 200 lines and the session header.
+    The reason, backtrace and state are also at the end of the session's
+    log. `[error]` and `[warning]` lines often name the cause (section 4).
+  - For a bug that does not crash, ask the player to turn on **Detailed
+    logs** (the game's page or Settings; `OPENRAC_LOG=verbose`, or
+    `verbose_log = 1` in the settings file), play to the spot again and
+    send that session: it adds level program loads, the controller's
+    changes, who called a function with no C, and repeated calls to
+    unknown code addresses. Check a report path with
+    `OPENRAC_CRASH_TEST=segv:120` ([DEBUGGING.md](DEBUGGING.md#logs-and-traces)).
 
 ## 3. Reproducing it by script
 

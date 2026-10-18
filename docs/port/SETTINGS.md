@@ -45,6 +45,7 @@ needs the game started again.
 | (Alt) | `menu_bar` | `1`, `0` | The menus along the window's top on Windows and Linux (macOS has them in its own menu bar) |
 | Mute in background | `mute_unfocused` | `0`, `1` | Silence while another window has the keyboard |
 | (F9, F10) | `volume` | `100`, `0` to `100` | How loud everything the port plays is |
+| (the launcher's Detailed logs) | `verbose_log` | `0`, `1` | The detailed log, as `OPENRAC_LOG=verbose` ([DEBUGGING.md](DEBUGGING.md#logs-and-traces)). Written only when on |
 
 **Old files.** A file from before these keys loads as it did: `fullscreen = 1`
 is `display_mode = borderless`; `frame_rate = 60` (and 120, 144, 240) is that

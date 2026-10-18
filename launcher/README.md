@@ -94,6 +94,16 @@ the disc image and saves are kept.
   for debugging. It refuses to write while the game runs
   with that card, backs the card up before every write, and offers Undo
   ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#the-save-editor)).
+- **When the game crashes**: the game's page says "The game stopped
+  unexpectedly". Your saves are kept. To help us fix it, press **Copy
+  report** and paste it in a [GitHub issue](https://github.com/OpenRAC/OpenRAC/issues)
+  or on the Discord, or **Save report** for a .zip in your Downloads folder
+  to attach. Say what you were doing. Nothing personal goes in: your home
+  folder reads `~`.
+- **Logs and crash reports**, under the save files: each time you played
+  and each crash, newest first, with the same Copy and Save. A recent crash
+  marks the game's tile. **Detailed logs** makes the game write more, for
+  when we ask for it.
 - **Level editor**: under **Mods** (below), and in the game's menu.
 - **Layout**: Settings → Launcher switches between Compact (the default:
   the game's name and its main button side by side) and Classic, stacked and
@@ -190,7 +200,12 @@ launcher/
   `%APPDATA%\dev.openrac.launcher\` on Windows). Settings shows the path.
 - **Games set up from discs**: the install folder (Settings; by default the
   launcher's per-user data folder), `active/<game>/data/`, as OpenGOAL lays
-  it out.
+  it out. The game writes its logs there (`openrac-<id>.log` and the five
+  before it) and its crash reports (`crashes/`).
+- **Its own log**: `launcher.log` beside `launcher.json`: when it started,
+  each command it ran and how it ended; moved to `launcher.1.log` past 1 MB.
+- **A saved report**: `OpenRAC-<report>.zip` in your Downloads folder, only
+  when you press Save report.
 - **The memory card**, only when you ask: a backup (`.backup_<time>…` beside the
   game's folder in the card), a restored backup, or a slot changed in the save
   editor, always after a backup of the whole card.

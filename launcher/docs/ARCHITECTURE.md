@@ -84,6 +84,16 @@ library reports each game's set-up state (`GameView.install`), read from
 `iso_data/<game>/buildinfo.json`; `uninstall_game` removes what set-up made
 ([INTEGRATION.md](INTEGRATION.md#2-setting-a-game-up)).
 
+**When the game stops.** Play is a job like any other, so its end arrives as
+`job-exit`. An exit status other than 0, or none (a signal), is not a failed
+task: `gameStopped` in `lib/app.svelte.ts` asks `latest_crash` for the report
+the port wrote since the job started and sets `app.stopped`, which the game's
+page shows as `components/CrashNotice.svelte`; `components/ReportsBlock.svelte`
+lists the game's logs and reports under its saves, and `app.crashes` (counted
+after every refresh and every game's end) marks a tile after a recent crash.
+Every command run and every exit is written to `launcher.log`
+(`core/src/launcher_log.rs`), which goes in the report's .zip.
+
 **Cancelling.** `cancel_job` stops the job's whole process tree (its own
 process group on Linux and macOS, `taskkill /T` on Windows): a build's
 container or compiler goes with it.
@@ -110,6 +120,10 @@ mirrored in `src/lib/api.ts`.
 | `inspect_saves` / `backup_saves` / `restore_backup`             | `{serial}` / `{serial, note}` / `{serial, backupName}`  | the card's slots and backups; a backup; a restore (refused while the game uses the card)         |
 | `read_save`                                                     | `{serial, slot}`                                        | one slot for the save editor (`core/src/save_edit.rs`, `SaveView`)                               |
 | `write_save`                                                    | `{serial, slot, fingerprint, change}`                   | writes the editor's fields or raw chunks, safely (below); the backup and the slot as it now is   |
+| `reports_list`                                                  | `{game}`                                                | the game's session logs and crash reports, newest first (`core/src/reports.rs`)                  |
+| `latest_crash`                                                  | `{game, since}`                                         | the newest crash report since a time: after the game stopped                                     |
+| `report_text` / `report_save`                                   | `{game, file}`                                          | the text to copy; the .zip saved in Downloads and shown (its path, home as `~`)                  |
+| `open_reports_folder`                                           | `{game, crashes}`                                       | opens the game's data folder, or its `crashes/`                                                  |
 | `cancel_job`                                                    | `{id}`                                                  |                                                                                                  |
 | `open_path`                                                     | `{path}` relative to the checkout                       | opens it with the system; refuses paths outside the checkout                                     |
 | `open_url`                                                      | `{url}`                                                 | opens an `https://` address in the browser                                                       |

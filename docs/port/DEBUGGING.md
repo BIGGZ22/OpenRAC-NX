@@ -284,7 +284,8 @@ These variables are read by `openrac-<game>` at run time. Unless said otherwise,
 
 | Variable | Value | What it does | Read in |
 | --- | --- | --- | --- |
-| `OPENRAC_LOG` | `debug` | Sets the log level to debug. Any other value, or unset, leaves it at info. | `port/common/log.cpp` |
+| `OPENRAC_LOG` | `verbose`, `debug` | `verbose`: the detailed log a player can turn on (the launcher's Detailed logs; `verbose_log = 1` in the settings): level program loads, the first pad's changes, the callers of functions with no C, repeated calls to unknown code addresses. `debug`: everything, each frame's DMA chains and texture uploads too. Unset: info. | `port/common/log.cpp` |
+| `OPENRAC_CRASH_TEST` | `KIND:FRAME` | For testing the crash report only: stops the program on purpose at that frame. `segv` (game memory that is not mapped), `host` (a host address), `abort`, `fpe`, `fatal` (`log::fatal`), `trap` (the game's trap). The report goes to `<data>/crashes/` (port/common/crash.h). | `port/game/common/main.cpp` |
 | `OPENRAC_DEBUG` | any (set) | Every 100th frame, logs the game's state: level, camera, mobys, layers drawn, menu and pad words, fog, load stage, for bring-up. Also gates `OPENRAC_FX_DUMP`. | `port/game/common/frontend.cpp` |
 | `OPENRAC_FX_DUMP` | `FRAME` (decimal) | Only read inside the `OPENRAC_DEBUG` report (so every 100th frame): for frames from `FRAME` up to `FRAME`+99, logs each effect quad. | `port/game/common/frontend.cpp` |
 | `OPENRAC_MOBY_LOG` | `N[:RADIUS]` | Every `N` ticks (`N` > 0), logs the mobys within `RADIUS` game units of the hero (default 20): class, address, state, mode bits, animation, position, distance, collision radius and update function. | `port/game/common/frontend.cpp` |
