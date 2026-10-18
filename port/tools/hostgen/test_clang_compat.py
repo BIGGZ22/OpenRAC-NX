@@ -10,7 +10,25 @@ import subprocess
 import tempfile
 import unittest
 
+import clangast
 import hostgen
+
+
+class ClangAliases(unittest.TestCase):
+    def test_size_and_ptrdiff_aliases_are_the_targets_types(self):
+        # Fedora's Clang writes memmove's parameter as __size_t, with no declaration and, for an
+        # implicit builtin's, no desugared type; also inside the function's own type.
+        ast = {"kind": "TranslationUnitDecl", "inner": [
+            {"kind": "FunctionDecl", "name": "memmove",
+             "type": {"qualType": "void *(void *, const void *, __size_t)"},
+             "inner": [{"kind": "ParmVarDecl", "type": {"qualType": "__size_t"}},
+                       {"kind": "ParmVarDecl", "type": {"qualType": "__ptrdiff_t *"}},
+                       {"kind": "ParmVarDecl", "type": {"qualType": "my__size_t"}}]},
+        ]}
+        clangast.annotate(ast)
+        fn = ast["inner"][0]
+        self.assertEqual(fn["type"]["qualType"], "void *(void *, const void *, unsigned int)")
+        self.assertEqual([p["type"]["qualType"] for p in fn["inner"]], ["unsigned int", "int *", "my__size_t"])
 
 
 @unittest.skipUnless(shutil.which("clang"), "needs Clang")

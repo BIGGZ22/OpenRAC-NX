@@ -49,6 +49,11 @@ class Unit:
     fixes: list[str] = field(default_factory=list)
 
 
+# Clang's internal aliases for the target's size_t and ptrdiff_t (mipsel: 32-bit).
+_TARGET_TYPES = {"__size_t": "unsigned int", "__ptrdiff_t": "int"}
+_CLANG_ALIASES = re.compile(r"\b(?:__size_t|__ptrdiff_t)\b")
+
+
 def base_flags(includes: list[Path], defines: list[str]) -> list[str]:
     flags = [
         "--target=mipsel-linux-gnu", "-std=gnu89", "-fsyntax-only", "-w", "-ferror-limit=50",
@@ -444,12 +449,17 @@ def annotate(ast: dict) -> None:
         return state["file"], state["line"], loc.get("col", 0)
 
     def walk(node: dict):
-        # Clang 23 spells sizeof/pointer-difference types with internal aliases
-        # that have no declaration in the AST. Use the target type it reports,
-        # rather than leaking those aliases into the generated host C.
+        # Newer Clang (Fedora's, 22 and later) spells sizeof and pointer-difference
+        # types with internal aliases that have no declaration in the AST, also
+        # inside larger types (a function's, a pointer's). They are the target's,
+        # mipsel's: written as such, rather than leaking into the generated host C.
         typ = node.get("type", {})
         if typ.get("qualType") in ("__size_t", "__ptrdiff_t") and "desugaredQualType" in typ:
             typ["qualType"] = typ["desugaredQualType"]
+        for key in ("qualType", "desugaredQualType"):
+            text = typ.get(key)
+            if text and "__" in text:
+                typ[key] = _CLANG_ALIASES.sub(lambda m: _TARGET_TYPES[m.group(0)], text)
         # Newer Clang puts ownership on the RecordType/EnumType itself instead
         # of an enclosing ElaboratedType. Keep the representation the readers
         # use for typedefs of anonymous records and enums.
