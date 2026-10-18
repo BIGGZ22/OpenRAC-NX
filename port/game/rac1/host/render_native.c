@@ -234,10 +234,11 @@ int func_0022B648(int a0) {
     return 0;
 }
 
-/* LightShrubs */
-void func_0022B8F8(gaddr a0, gaddr a1) {
+/* LightShrubs(list): lights the instances of the 0xFFFF-ended index list at `list` (the scratchpad
+ * at level load, the frame's buffer after). One argument: the retail code writes $a1 before it reads
+ * it, so callers pass only the list. */
+void func_0022B8F8(gaddr a0) {
     (void)a0;
-    (void)a1;
 }
 
 /*
@@ -332,10 +333,11 @@ int func_002383D8(int a0) {
     return 0;
 }
 
-/* LightTies */
-void func_00238688(gaddr a0, gaddr a1) {
+/* LightTies(list): lights the instances of the 0xFFFF-ended index list at `list` (the scratchpad
+ * at level load, the frame's buffer after). One argument: the retail code writes $a1 before it reads
+ * it, so callers pass only the list. */
+void func_00238688(gaddr a0) {
     (void)a0;
-    (void)a1;
 }
 /* PatchMobyGifs: texture addresses into the GS packets of the console's renderer */
 void func_0020DD48(void) {
