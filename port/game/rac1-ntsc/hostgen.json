@@ -16,11 +16,7 @@
     "src/sdk/library/moddi3.c",
     "src/sdk/library/udivdi3.c",
     "src/sdk/library/umoddi3.c",
-    "src/sdk/library/malloc_extend_top.c",
-    "src/overlays/l06/gameplay/entities/002b4770.c",
-    "src/overlays/l13/gameplay/vendor/003058a8.c",
-    "src/overlays/l16/gameplay/entities/002a3f38.c",
-    "src/overlays/shared/gameplay/vendor/002e9010.c"
+    "src/sdk/library/malloc_extend_top.c"
   ],
   "includes": [
     "include",

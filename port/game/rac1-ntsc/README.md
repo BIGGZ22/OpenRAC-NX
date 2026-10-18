@@ -65,10 +65,6 @@ for all its functions.
 |---|---|
 | `src/sdk/library/__divdi3.c`, `__muldi3.c`, `moddi3.c`, `udivdi3.c`, `umoddi3.c` | libgcc's macros with GCC-only inline assembly; the host compiler has its own |
 | `src/sdk/library/malloc_extend_top.c` | assignment to a cast (`sbrk_base = brk`) |
-| `src/overlays/l06/gameplay/entities/002b4770.c` | an asm label on a variable after its first use (line 1935) |
-| `src/overlays/l13/gameplay/vendor/003058a8.c` | `D_L13_00174140` declared with two different struct types (lines 103, 854) |
-| `src/overlays/l16/gameplay/entities/002a3f38.c` | `freeze_stats_score_ref_b` given two asm labels (lines 394, 861) |
-| `src/overlays/shared/gameplay/vendor/002e9010.c` | `absolute_float` given two asm labels (the file's and `rnc/math/fast_math.h`'s) |
 | `src/overlays/shared/ui/text/00262ae8.c` (its draft only) | the draft does not read |
 
 Not carried, for the record: 9 of PAL's functional files that lean on the

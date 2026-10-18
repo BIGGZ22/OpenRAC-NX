@@ -7,7 +7,7 @@ void render_capture_effect_pass(void) __asm__("FUN_00238630");
 
 void render_capture_effect_pass(void) {
     draw_framebuffer_rect(0, 0, 0x200, 0x80, 0x200, 0x80, 0);
-    if (*(s32 *)0x1610A8 == 1) {
+    if (D_001610A8[0] == 1) {
         draw_moby_list(D_001E63E4[0], 1);
     }
 }
