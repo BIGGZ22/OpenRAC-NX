@@ -168,6 +168,23 @@ pub async fn gpu_driver_select<R: Runtime>(app: AppHandle<R>, id: Option<String>
     }
 }
 
+/// Asks the player where to save `path` (Android's "save as" screen, offering `name`) and copies it
+/// there: the name it was saved under, or None when they backed out. An app sees no folder outside
+/// its own, so a file to keep goes where the player puts it.
+pub async fn save_as<R: Runtime>(app: &AppHandle<R>, path: &std::path::Path, name: &str) -> Result<Option<String>, String> {
+    #[cfg(target_os = "android")]
+    {
+        let saved: serde_json::Value =
+            kotlin(app, "saveFileAs", serde_json::json!({ "path": path, "name": name, "mime": "application/zip" })).await?;
+        Ok(saved["saved"].as_str().map(str::to_string))
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, path, name);
+        Err(ANDROID_ONLY.into())
+    }
+}
+
 /// What the game draws with from its next start: "vulkan" or "gles".
 #[tauri::command]
 pub async fn gpu_renderer_select<R: Runtime>(app: AppHandle<R>, renderer: String) -> Result<(), String> {

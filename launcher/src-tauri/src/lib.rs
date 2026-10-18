@@ -338,14 +338,33 @@ async fn report_text(app: AppHandle, state: State<'_, AppState>, game: String, f
 async fn report_save(app: AppHandle, state: State<'_, AppState>, game: String, file: String) -> Result<String, String> {
     let data = game_data(&state, &game)?;
     let version = app.package_info().version.to_string();
-    let folder = reports::save_folder().ok_or("no folder to save in")?;
-    let out = folder.join(reports::bundle_name(&file));
+    // Android: made in the launcher's cache, then saved where the player chooses.
+    let folder = if cfg!(target_os = "android") {
+        let cache = app.path().app_cache_dir().map_err(|e| e.to_string())?.join("reports");
+        std::fs::create_dir_all(&cache).map_err(|e| e.to_string())?;
+        cache
+    } else {
+        reports::save_folder().ok_or("no folder to save in")?
+    };
+    let name = reports::bundle_name(&file);
+    let out = folder.join(&name);
     let target = out.clone();
     tauri::async_runtime::spawn_blocking(move || {
         reports::bundle(&data, &file, launcher_log::path().as_deref(), &version, &target)
     })
     .await
     .map_err(|e| e.to_string())??;
+    if cfg!(target_os = "android") {
+        let saved = android::save_as(&app, &out, &name).await;
+        let _ = std::fs::remove_file(&out);
+        return match saved? {
+            Some(name) => {
+                launcher_log::line(&format!("saved a report: {name}"));
+                Ok(name)
+            }
+            None => Ok(String::new()),  // backed out: nothing to say
+        };
+    }
     launcher_log::line(&format!("saved a report: {}", out.display()));
     let _ = app.opener().reveal_item_in_dir(&out);
     Ok(reports::tidy(&out.to_string_lossy(), reports::home().as_deref()))

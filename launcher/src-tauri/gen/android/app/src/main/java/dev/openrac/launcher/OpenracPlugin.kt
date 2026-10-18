@@ -49,10 +49,18 @@ class DownloadArgs {
 }
 
 @InvokeArg
+class SaveArgs {
+  lateinit var path: String
+  lateinit var name: String
+  var mime: String = "application/zip"
+}
+
+@InvokeArg
 class DriverArgs {
   var id: String? = null
 }
 
+@InvokeArg
 class RendererArgs {
   var renderer: String? = null
 }
@@ -114,6 +122,42 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
     } catch (e: Exception) {
       invoke.reject("cannot read the chosen file: ${e.message}")
     }
+  }
+
+  // ---- saving a file where the player chooses ----
+
+  /** {path, name, mime}: asks where to save the file at `path` (Android's own "save as" screen,
+   *  `name` offered) and copies it there; {saved: the name it got}, or {} when the player backs out. */
+  @Command
+  fun saveFileAs(invoke: Invoke) {
+    val args = invoke.parseArgs(SaveArgs::class.java)
+    val intent = Intent(Intent.ACTION_CREATE_DOCUMENT)
+      .addCategory(Intent.CATEGORY_OPENABLE)
+      .setType(args.mime)
+      .putExtra(Intent.EXTRA_TITLE, args.name)
+    startActivityForResult(invoke, intent, "saveFilePicked")
+  }
+
+  @ActivityCallback
+  fun saveFilePicked(invoke: Invoke, result: ActivityResult) {
+    val uri = result.data?.data
+    if (result.resultCode != Activity.RESULT_OK || uri == null) {
+      invoke.resolve(JSObject())
+      return
+    }
+    val source = File(invoke.parseArgs(SaveArgs::class.java).path)
+    Thread {
+      try {
+        val out = activity.contentResolver.openOutputStream(uri, "wt")
+          ?: throw IllegalStateException("the chosen place cannot be written")
+        out.use { o -> source.inputStream().use { it.copyTo(o, 1 shl 20) } }
+        val saved = JSObject()
+        saved.put("saved", describe(uri).first)
+        invoke.resolve(saved)
+      } catch (e: Exception) {
+        invoke.reject("the file could not be saved there: ${e.message}")
+      }
+    }.start()
   }
 
   // ---- the set-up, in the background ----
