@@ -68,13 +68,21 @@ export async function checkGitHubRelease(
 ): Promise<UpdateInfo | null> {
   if (!/^[\w.-]+\/[\w.-]+$/.test(source.repository)) return null;
   const release = source.channel ? `tags/${encodeURIComponent(source.channel)}` : "latest";
+  const where = `github.com/${source.repository} · ${source.channel ?? "latest release"}`;
+  let res: Response;
   try {
-    const res = await fetch(`https://api.github.com/repos/${source.repository}/releases/${release}`, {
+    res = await fetch(`https://api.github.com/repos/${source.repository}/releases/${release}`, {
       headers: { Accept: "application/vnd.github.v3+json" },
       signal: AbortSignal.timeout(4000),
     });
-    if (!res.ok) return null;
-
+  } catch {
+    throw new Error(`GitHub could not be reached (${where})`);
+  }
+  // No release where this launcher looks is not "the latest": a fork's builds publish none until
+  // it has the update key (TAURI_SIGNING_PRIVATE_KEY), and the player is told so.
+  if (res.status === 404) throw new Error(`no release has been published there yet (${where})`);
+  if (!res.ok) throw new Error(`GitHub answered ${res.status} (${where})`);
+  try {
     const data = (await res.json()) as GitHubReleaseResponse;
     const tag = data.tag_name ?? "";
     // A branch's rolling release keeps its tag: its version is in its title, "OpenRAC Launcher X (branch)".
@@ -95,13 +103,14 @@ export async function checkGitHubRelease(
     }
     return null;
   } catch {
-    return null;
+    throw new Error(`the release's details could not be read (${where})`);
   }
 }
 
 /**
  * Checks for updates using the official Tauri updater plugin first.
  * Falls back to checking GitHub Releases API if running in browser or if updater is unavailable.
+ * Null when this launcher is the newest; throws when no release could be found to compare with.
  */
 export async function checkForUpdate(
   currentVersion: string,

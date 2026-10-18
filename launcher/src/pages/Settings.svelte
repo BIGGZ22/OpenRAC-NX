@@ -5,7 +5,7 @@
   // the first-run screen: the folders and programs, filled from detection.
   import GpuDrivers from "$components/GpuDrivers.svelte";
   import PathField from "$components/PathField.svelte";
-  import { api, onAndroid, type Check, type Config, type Detected } from "$lib/api";
+  import { api, errorText, onAndroid, type Check, type Config, type Detected } from "$lib/api";
   import { app, lookForUpdate, saveConfig } from "$lib/app.svelte";
   import { REPO_URL } from "$lib/links";
 
@@ -22,11 +22,17 @@
   let found = $state<Detected | null>(null);
   let saving = $state(false);
   /** "Check now": what the last look for a new launcher found. */
-  let looked = $state<"idle" | "looking" | "found" | "none">("idle");
+  let looked = $state<"idle" | "looking" | "found" | "none" | "failed">("idle");
+  let lookError = $state("");
 
   async function checkNow() {
     looked = "looking";
-    looked = (await lookForUpdate()) ? "found" : "none";
+    try {
+      looked = (await lookForUpdate()) ? "found" : "none";
+    } catch (e) {
+      lookError = errorText(e);
+      looked = "failed";
+    }
   }
 
   $effect(() => {
@@ -198,7 +204,8 @@
             without your click.
             <button class="link" disabled={looked === "looking"} onclick={() => void checkNow()}>Check now</button>
             {#if looked === "looking"}· Looking…{:else if looked === "found"}· {app.update?.name ?? "A new version"} is out:
-              use Update in the header.{:else if looked === "none"}· You have the latest.{/if}
+              use Update in the header.{:else if looked === "none"}· You have the latest.{:else if looked === "failed"}·
+              Could not check: {lookError}.{/if}
           </small>
         </span>
       </label>

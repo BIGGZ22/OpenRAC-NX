@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { isNewerVersion } from "./updates";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { checkGitHubRelease, isNewerVersion } from "./updates";
 
 describe("isNewerVersion", () => {
   it("detects major updates", () => {
@@ -29,5 +29,25 @@ describe("isNewerVersion", () => {
     expect(isNewerVersion("0.8.0-dev.10", "0.8.0-dev.9")).toBe(false);
     expect(isNewerVersion("0.8.0-dev.10", "0.8.0")).toBe(true);
     expect(isNewerVersion("0.8.0", "0.8.0-dev.10")).toBe(false);
+  });
+});
+
+describe("checkGitHubRelease", () => {
+  const source = { repository: "someone/OpenRAC", channel: "launcher-dev-main", manifest: "", page: "" };
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("says so when nothing is published where the launcher looks", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 404 })));
+    await expect(checkGitHubRelease("0.8.0-dev.3", source)).rejects.toThrow(/no release/);
+  });
+
+  it("reads a branch's version from the release's title", async () => {
+    const body = JSON.stringify({ tag_name: "launcher-dev-main", name: "OpenRAC Launcher 0.8.0-dev.4 (main)" });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(body, { status: 200 }))),
+    );
+    expect((await checkGitHubRelease("0.8.0-dev.3", source))?.version).toBe("0.8.0-dev.4");
+    expect(await checkGitHubRelease("0.8.0-dev.4", source)).toBeNull();
   });
 });

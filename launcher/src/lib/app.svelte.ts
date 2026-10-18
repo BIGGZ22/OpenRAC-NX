@@ -196,7 +196,7 @@ export async function start() {
   void syncProgressWeb();
   // A new launcher is looked for at start unless the player turned that off (Settings).
   if (app.info.version && app.config.checkUpdates) {
-    void lookForUpdate();
+    lookForUpdate().catch(() => undefined); // told only when the player asks (Settings' "Check now")
   }
 }
 
@@ -258,7 +258,8 @@ export function dismissStopped() {
   if (game) void dismissCrashes(game);
 }
 
-/** Looks for a new launcher now (at start, or Settings' "Check now"); true when one is out. */
+/** Looks for a new launcher now (at start, or Settings' "Check now"); true when one is out. Throws
+ *  when there was nothing to compare with (no release where the launcher looks, no network). */
 export async function lookForUpdate(): Promise<boolean> {
   if (!app.info?.version) return false;
   const up = await checkForUpdate(app.info.version, app.info.updates);
