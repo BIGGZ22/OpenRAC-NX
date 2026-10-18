@@ -14,6 +14,7 @@ import math
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import routes as routes_mod
 from runner import read_trace
 
 # Every field the trace has, in the order a divergence names them, and its tolerance's kind.
@@ -101,10 +102,24 @@ def gap(kind: str, a, b) -> float:
     return abs(float(a) - float(b))
 
 
-def compare_ticks(a: list[dict], b: list[dict], fields: list[str], tolerance: dict) -> tuple[int, Divergence | None, str]:
+def ignored(differences: list[dict], c: int) -> set[str]:
+    """The fields a level's version differences (routes.json "versions") leave out at tick c."""
+    return {f for d in differences if c >= int(d.get("from", 0)) for f in d.get("fields", [])}
+
+
+def version_differences(level: int, data: dict | None = None) -> list[dict]:
+    """What routes.json says the two versions do differently on a level ("versions": the fields
+    not compared between PAL and US from a tick on, and why)."""
+    data = data if data is not None else routes_mod.load()
+    return list(data.get("levels", {}).get(str(level), {}).get("versions", []))
+
+
+def compare_ticks(a: list[dict], b: list[dict], fields: list[str], tolerance: dict,
+                  differences: list[dict] | None = None) -> tuple[int, Divergence | None, str]:
     """Ticks compared, the first divergence, and a note: the largest gap of each field that
     diverges over the whole route (a drift and a broken routine read differently), or where one
-    side ends first."""
+    side ends first. Fields a version difference leaves out (differences) are not compared from
+    its tick on."""
     ca, cb = by_control(a), by_control(b)
     if not ca or not cb:
         return 0, None, ""
@@ -117,7 +132,8 @@ def compare_ticks(a: list[dict], b: list[dict], fields: list[str], tolerance: di
         if ta is None or tb is None:
             continue
         compared += 1
-        bad = [f for f in fields if differs(FIELDS[f], ta.get(f), tb.get(f), tolerance[FIELDS[f]])]
+        skip = ignored(differences or [], c)
+        bad = [f for f in fields if f not in skip and differs(FIELDS[f], ta.get(f), tb.get(f), tolerance[FIELDS[f]])]
         for f in bad:
             largest[f] = max(largest.get(f, 0.0), gap(FIELDS[f], ta.get(f), tb.get(f)))
         if bad and first is None:
@@ -131,7 +147,16 @@ def compare_ticks(a: list[dict], b: list[dict], fields: list[str], tolerance: di
             for f, g in sorted(largest.items(), key=lambda kv: order.index(kv[0]))))
     if max(ca) != max(cb):
         notes.append(f"A ends at c={max(ca)}, B at c={max(cb)}")
+    if differences:
+        notes.append("version differences not compared: " + ", ".join(
+            f"{'/'.join(d.get('fields', []))} from c={int(d.get('from', 0))}" for d in differences))
     return compared, first, "; ".join(notes)
+
+
+def run_game(run: Path) -> str | None:
+    """The game a run is of (run.json), or None."""
+    meta = run / "run.json"
+    return json.loads(meta.read_text()).get("game") if meta.exists() else None
 
 
 def run_levels(run: Path) -> dict[int, tuple[str, Path]]:
@@ -149,7 +174,10 @@ def run_levels(run: Path) -> dict[int, tuple[str, Path]]:
 
 
 def compare_runs(a: Path, b: Path, fields: list[str] | None = None, tolerance: dict | None = None,
-                 levels: list[int] | None = None) -> list[LevelResult]:
+                 levels: list[int] | None = None, strict: bool = False,
+                 routes: dict | None = None) -> list[LevelResult]:
+    """Per level, the two runs side by side. Runs of two versions (run.json's game) leave out what
+    routes.json says the versions do differently on that level, unless strict."""
     fields = fields or list(FIELDS)
     for f in fields:
         if f not in FIELDS:
@@ -157,6 +185,9 @@ def compare_runs(a: Path, b: Path, fields: list[str] | None = None, tolerance: d
     tol = dict(DEFAULT_TOLERANCE)
     tol.update(tolerance or {})
     la, lb = run_levels(a), run_levels(b)
+    ga, gb = run_game(a), run_game(b)
+    versions = not strict and ga is not None and gb is not None and ga != gb
+    data = (routes if routes is not None else routes_mod.load()) if versions else None
     out = []
     for level in sorted(set(la) | set(lb)):
         if levels is not None and level not in levels:
@@ -170,6 +201,7 @@ def compare_runs(a: Path, b: Path, fields: list[str] | None = None, tolerance: d
             which = [s for s, t in (("A", ta), ("B", tb)) if not by_control(t)]
             out.append(LevelResult(level, name, "missing", note=f"no control in {' and '.join(which)}"))
             continue
-        n, first, note = compare_ticks(ta, tb, fields, tol)
+        differences = version_differences(level, data) if versions else []
+        n, first, note = compare_ticks(ta, tb, fields, tol, differences)
         out.append(LevelResult(level, name, "diverges" if first else "same", n, first, note))
     return out

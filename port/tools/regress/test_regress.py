@@ -105,6 +105,33 @@ class Compare(unittest.TestCase):
         _, first, _ = compare.compare_ticks(trace(0, 5), trace(0, 5, change=lose), ["hp"], self.tol)
         self.assertEqual(first.c, 2)
 
+    def test_version_differences_are_left_out_between_versions_only(self):
+        def more(c, t):
+            t["mb"] = 101
+            if c >= 4:
+                t["hr"] = [0.5, 0.0, 1.0]
+        data = {"levels": {"3": {"name": "L3", "versions": [
+            {"fields": ["mb"], "from": 0, "why": "spawns"}, {"fields": ["hr"], "from": 4, "why": "tumble"}]}}}
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            pal = write_run(tmp / "pal", "rac1-pal", {3: trace(0, 8)})
+            us = write_run(tmp / "us", "rac1-ntsc", {3: trace(0, 8, change=more)})
+            us2 = write_run(tmp / "us2", "rac1-ntsc", {3: trace(0, 8)})
+            [r] = compare.compare_runs(pal, us, routes=data)
+            self.assertEqual(r.state, "same")
+            self.assertIn("version differences not compared: mb from c=0, hr from c=4", r.note)
+            [r] = compare.compare_runs(pal, us, routes=data, strict=True)
+            self.assertEqual((r.state, r.first.c, r.first.field), ("diverges", 0, "mb"))
+            [r] = compare.compare_runs(us2, us, routes=data)  # two runs of one version: everything
+            self.assertEqual((r.first.c, r.first.field), (0, "mb"))
+
+    def test_the_routes_version_differences_name_known_fields(self):
+        for level, spec in routes.load()["levels"].items():
+            for d in spec.get("versions", []):
+                with self.subTest(level=level):
+                    self.assertTrue(set(d["fields"]) <= set(compare.FIELDS))
+                    self.assertTrue(d.get("why"))
+
     def test_runs_per_level(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)

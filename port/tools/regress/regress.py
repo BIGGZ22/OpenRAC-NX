@@ -83,10 +83,10 @@ def cmd_run(args) -> int:
     return 0 if set(counts) <= {"ok"} else 1
 
 
-def print_compare(a: Path, b: Path, fields, tol, levels, noise: dict | None = None) -> bool:
+def print_compare(a: Path, b: Path, fields, tol, levels, noise: dict | None = None, strict: bool = False) -> bool:
     """Prints the comparison; True when nothing diverges. A level in noise (a baseline whose own
     runs already part there) is shown but does not count."""
-    results = compare_mod.compare_runs(a, b, fields, tol, levels)
+    results = compare_mod.compare_runs(a, b, fields, tol, levels, strict=strict)
     noisy = 0
     bad = []
     for r in results:
@@ -130,7 +130,7 @@ def parse_tol(items: list[str] | None) -> dict:
 def cmd_compare(args) -> int:
     fields = args.fields.split(",") if args.fields else None
     ok = print_compare(resolve(args.a), resolve(args.b), fields, parse_tol(args.tol),
-                       parse_levels(args.levels) if args.levels else None)
+                       parse_levels(args.levels) if args.levels else None, strict=args.strict)
     return 0 if ok else 1
 
 
@@ -229,6 +229,8 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--fields", help=f"which: {','.join(compare_mod.FIELDS)} (default all)")
     c.add_argument("--tol", action="append", help="KIND=VALUE: position, direction, angle")
     c.add_argument("--levels")
+    c.add_argument("--strict", action="store_true",
+                   help="between PAL and US, also compare what routes.json lists as version differences")
     c.set_defaults(fn=cmd_compare)
 
     b = sub.add_parser("baseline", help="keep runs as a baseline, or check against one")

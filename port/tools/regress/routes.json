@@ -21,23 +21,56 @@
     ]
   },
   "levels": {
-    "0": {"name": "Veldin"},
-    "1": {"name": "Novalis"},
+    "0": {"name": "Veldin", "versions": [
+      {"fields": ["mb"], "from": 0, "why": "random and timed spawns (the shower, debris, bombs, bolts) do not happen at the same tick; the random sequence parts early in the level, where the sky walks low memory that differs between the runs (docs/port/RAC1_NTSC_HINTS.md 7)"}
+    ]},
+    "1": {"name": "Novalis", "versions": [
+      {"fields": ["mb"], "from": 0, "why": "the scene before control ends two ticks apart (the route's Start presses fall on window frames, and the versions reach the level at other frames), so the level's mobys run that much out of step with the hero (RAC1_NTSC_HINTS.md 7)"}
+    ]},
     "2": {"name": "Aridia"},
-    "3": {"name": "Kerwan"},
-    "4": {"name": "Eudora"},
-    "5": {"name": "Rilgar"},
+    "3": {"name": "Kerwan", "versions": [
+      {"fields": ["mb"], "from": 0, "why": "random and timed spawns (the shower, debris, bombs, bolts) do not happen at the same tick; the random sequence parts early in the level, where the sky walks low memory that differs between the runs (docs/port/RAC1_NTSC_HINTS.md 7)"}
+    ]},
+    "4": {"name": "Eudora", "versions": [
+      {"fields": ["mb"], "from": 0, "why": "random and timed spawns (the shower, debris, bombs, bolts) do not happen at the same tick; the random sequence parts early in the level, where the sky walks low memory that differs between the runs (docs/port/RAC1_NTSC_HINTS.md 7)"}
+    ]},
+    "5": {"name": "Rilgar", "versions": [
+      {"fields": ["mb"], "from": 0, "why": "random and timed spawns (the shower, debris, bombs, bolts) do not happen at the same tick; the random sequence parts early in the level, where the sky walks low memory that differs between the runs (docs/port/RAC1_NTSC_HINTS.md 7)"}
+    ]},
     "6": {"name": "Blarg Station"},
-    "7": {"name": "Umbris"},
-    "8": {"name": "Batalia"},
-    "9": {"name": "Gaspar"},
-    "10": {"name": "Orxon"},
-    "11": {"name": "Pokitaru"},
-    "12": {"name": "Hoven"},
-    "13": {"name": "Gemlik Base"},
-    "14": {"name": "Oltanis"},
-    "15": {"name": "Quartu"},
-    "16": {"name": "Kalebo III"},
+    "7": {"name": "Umbris", "versions": [
+      {"fields": ["mb"], "from": 0, "why": "the scene before control ends two ticks apart (the route's Start presses fall on window frames, and the versions reach the level at other frames), so the level's mobys run that much out of step with the hero (RAC1_NTSC_HINTS.md 7)"}
+    ]},
+    "8": {"name": "Batalia", "versions": [
+      {"fields": ["mb"], "from": 0, "why": "the scene before control ends two ticks apart (the route's Start presses fall on window frames, and the versions reach the level at other frames), so the level's mobys run that much out of step with the hero (RAC1_NTSC_HINTS.md 7)"}
+    ]},
+    "9": {"name": "Gaspar", "versions": [
+      {"fields": ["mb"], "from": 0, "why": "random and timed spawns (the shower, debris, bombs, bolts) do not happen at the same tick; the random sequence parts early in the level, where the sky walks low memory that differs between the runs (docs/port/RAC1_NTSC_HINTS.md 7)"}
+    ]},
+    "10": {"name": "Orxon", "versions": [
+      {"fields": ["mb"], "from": 0, "why": "random and timed spawns (the shower, debris, bombs, bolts) do not happen at the same tick; the random sequence parts early in the level, where the sky walks low memory that differs between the runs (docs/port/RAC1_NTSC_HINTS.md 7)"}
+    ]},
+    "11": {"name": "Pokitaru", "versions": [
+      {"fields": ["mb"], "from": 0, "why": "random and timed spawns (the shower, debris, bombs, bolts) do not happen at the same tick; the random sequence parts early in the level, where the sky walks low memory that differs between the runs (docs/port/RAC1_NTSC_HINTS.md 7)"}
+    ]},
+    "12": {"name": "Hoven", "versions": [
+      {"fields": ["mb"], "from": 0, "why": "the scene before control ends two ticks apart (the route's Start presses fall on window frames, and the versions reach the level at other frames), so the level's mobys run that much out of step with the hero (RAC1_NTSC_HINTS.md 7)"},
+      {"fields": ["cam", "fw", "hp", "hr"], "from": 604, "why": "an enemy out of step (above) reaches Ratchet differently"}
+    ]},
+    "13": {"name": "Gemlik Base", "versions": [
+      {"fields": ["mb"], "from": 0, "why": "the scene before control ends two ticks apart (the route's Start presses fall on window frames, and the versions reach the level at other frames), so the level's mobys run that much out of step with the hero (RAC1_NTSC_HINTS.md 7)"},
+      {"fields": ["cam", "fw", "hp", "hr"], "from": 498, "why": "the death fall's tumble takes a random sign and speed (randf_sym, FUN_L00_00257c48; RAC1_NTSC_HINTS.md 7)"}
+    ]},
+    "14": {"name": "Oltanis", "versions": [
+      {"fields": ["mb"], "from": 0, "why": "the scene before control ends two ticks apart (the route's Start presses fall on window frames, and the versions reach the level at other frames), so the level's mobys run that much out of step with the hero (RAC1_NTSC_HINTS.md 7)"},
+      {"fields": ["cam", "fw", "hp", "hr"], "from": 644, "why": "the death fall's tumble takes a random sign and speed (randf_sym, FUN_L00_00257c48; RAC1_NTSC_HINTS.md 7)"}
+    ]},
+    "15": {"name": "Quartu", "versions": [
+      {"fields": ["cam", "fw", "hp", "hr"], "from": 659, "why": "the death fall's tumble takes a random sign and speed (randf_sym, FUN_L00_00257c48; RAC1_NTSC_HINTS.md 7)"}
+    ]},
+    "16": {"name": "Kalebo III", "versions": [
+      {"fields": ["cam", "fw", "hp", "hr"], "from": 470, "why": "the death fall's tumble takes a random sign and speed (randf_sym, FUN_L00_00257c48; RAC1_NTSC_HINTS.md 7)"}
+    ]},
     "17": {"name": "Drek's Fleet"},
     "18": {"name": "Veldin (final)"}
   }

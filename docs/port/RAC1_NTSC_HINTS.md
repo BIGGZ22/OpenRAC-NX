@@ -498,3 +498,67 @@ In this order, because each blocks something that otherwise works:
 6. **Wide-picture visibility (3.3, 1.2, 1.4).** Not urgent until the NTSC
    levels exist (README item 2), but the port's choice to draw everything
    changes what the game's logic sees, and that is better decided early.
+
+## 7. Where PAL and US part on the regression routes, and why
+
+Measured 2026-10-18 with [port/tools/regress](REGRESSION.md) (PAL against US,
+every level, the standard route). Each level's moby instances are the same in
+both versions' data (`placements.json`: same count, same classes on every
+level), so a moby count that differs is about spawns, not data. The
+differences left once the port bugs below were fixed have three causes (the
+first is not settled); the
+harness is told about them per level in `routes.json` (`versions`), so a
+PAL-US `compare` shows only what is new. All are compared again with
+`compare --strict`.
+
+- **The random numbers part a few frames into the level.** The US runs reach
+  a level's program 58 frames later than PAL's (93 on Eudora, Gemlik Base and
+  Kalebo III, which start with the landing); from the level's first frame on
+  the two count the same frames (both play the 758-frame arrival), and both
+  reseed `rand` with 1234 when the level loads (`load_level_gameplay`, the
+  `jal FUN_001160c8` at US 0x241A34). The sequences then agree for a few
+  frames and part (Gaspar: level frame 3). Counting the calls per frame by
+  caller, the difference is the sky: `update_sky_effects` (US
+  `FUN_0022ae70`, PAL `func_0022C188`) calls `rand` once a frame for each of
+  its 256 star records that has its random-colour byte set, and on Gaspar the
+  level's sky has no star table (the header's word at 0x1C is 0, so
+  `relocate_sky_definition` leaves the pointer 0): the routine walks 256
+  records from game address 0, which on the console is the EE kernel's memory.
+  In the port that memory holds what PAL's run left there (246 records with
+  the byte set) and something else in US's (245; record 0 reads 0x20000000),
+  so US makes one call less a frame and every random choice after it differs:
+  Gaspar's asteroid shower and its impact dust (classes 263-266, 417; PAL 984
+  live mobys at control, US 893), Eudora's woodcutting robots' chips (class
+  1516; 20 to 60 live in both, PAL 40 and US 60 at control), Umbris's and
+  Orxon's bombs, Batalia's rockets, a bolt more or less on Veldin, Kerwan and
+  Rilgar. Not reproducible as the console has it (the kernel's bytes there are
+  not the game's); what writes US's address 0 before the level, and on which
+  other levels the sky has no star table, is still to be found (open). Until
+  the low memory is the same in both runs, these are left out.
+- **The scene before control ends two ticks apart.** On the levels whose
+  arrival is followed by a scene the route skips (Novalis, Umbris, Batalia,
+  Hoven, Gemlik Base, Oltanis), the route's Start presses fall on window
+  frames (every 30th), so they land at another tick of the level in each
+  version, and control comes two ticks earlier or later relative to the
+  level's mobys. The hero is compared from control, the mobys have run two
+  ticks more or less: on Hoven a class 238 enemy then reaches a spot two
+  ticks apart, one dies dropping four bolts in PAL at c=284 and not in US,
+  and Ratchet is bumped differently at c=604 (up to 1.15 units). A harness
+  effect; presses counted from the level's first frame would remove it.
+- **The death fall's tumble.** Falling off the world (hero state 0x77)
+  starts a tumble whose two spin speeds `randf_sym` (`FUN_L00_00257c48`)
+  draws with a random sign (bit 0 of `rand`): Gemlik Base c=498, Oltanis
+  c=644, Quartu c=659, Kalebo III c=470 tumble the other way round in each
+  version, and Ratchet lands back on the same spot. The C and the assembly
+  agree; only the random state differs (above).
+
+Port bugs these comparisons found and fixed (OPENRAC_PATCHES.md has each US
+edit): Eudora's walker gait read time 0 (`FUN_L04_002927d0`); the Oltanis,
+Kalebo III and Batalia hero updates were stubs (an assembler label with an
+offset); spawns through PAL's name for `create_moby`, `func_0020D348_m`, went
+nowhere; `draw_mobys` read the moby list through literal addresses, so the
+moby renderer marked no moby drawn and out-of-view mobys kept updating
+(Kerwan's 33 rail movers ran off their paths); the levels' joint pose had no
+host C on this disc; Quartu's helicopter update was a stub and its 28 Blarg
+commanders never existed; Gaspar's asteroid passed its dust spawn the radii
+and vectors crossed.

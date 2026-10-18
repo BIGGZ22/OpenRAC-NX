@@ -85,7 +85,9 @@ level 14 Oltanis         diverges at c=47 (frames 510/570): cam [252.593, 149.64
 
 `--fields` picks fields, `--tol position=0.2` changes a tolerance. A level
 without control on one side is "not compared". The exit code is 1 when
-anything diverges.
+anything diverges. Between a PAL and a US run, the fields a level's
+`versions` (routes.json) lists are not compared from their tick on, and the
+line says so; `--strict` compares them too.
 
 ## Baselines
 
@@ -143,6 +145,11 @@ Routes are data, in [port/tools/regress/routes.json](../../port/tools/regress/ro
   or its own `steps`, a longer `length`. Keys under `rac1-pal` or `rac1-ntsc`
   apply to that version only (keep the versions' routes the same unless a
   version needs otherwise, or they no longer compare).
+- `versions` (under a level): what the two versions do differently there on
+  the route, each `{"fields": [...], "from": c, "why": ...}`; `compare`
+  leaves those fields out from tick `from` when one run is PAL and the other
+  US ([RAC1_NTSC_HINTS.md](RAC1_NTSC_HINTS.md), section 7, says why each is
+  there). Never for two runs of one version.
 
 A route becomes the port's switches: `OPENRAC_DIRECT=1` with `--level N`,
 `OPENRAC_PRESS` (window-frame entries, `k` entries for the skips, `c`
