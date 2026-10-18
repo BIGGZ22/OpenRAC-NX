@@ -208,6 +208,8 @@ void load(const std::filesystem::path& file) {
             known = parse_bool(value, s.mute_unfocused);
         } else if (key == "skip_cutscenes") {
             known = parse_bool(value, s.skip_cutscenes);
+        } else if (key == "lock_strafe") {
+            known = parse_bool(value, s.lock_strafe);
         } else if (key == "volume") {
             known = parse_int(value, 0, 100, s.volume);
         } else if (key == "verbose_log") {
@@ -230,10 +232,11 @@ std::string summary() {
                                    ? std::format("{}x{}", s.window_width, s.window_height)
                                    : std::string("default size");
     return std::format("{} ({}, display {}), picture {}, {}% scale, {} sample(s), anisotropy {}, frames {}, vsync {}, "
-                       "volume {}{}",
+                       "volume {}{}{}",
                        kDisplayMode[static_cast<int>(s.display_mode)], window, s.monitor,
                        kAspect[static_cast<int>(s.aspect)], s.render_scale, s.msaa, s.anisotropy, frame_rate_value(s),
-                       kVSync[static_cast<int>(s.vsync)], s.volume, s.verbose_log ? ", detailed log" : "");
+                       kVSync[static_cast<int>(s.vsync)], s.volume, s.lock_strafe ? ", lock-strafe" : "",
+                       s.verbose_log ? ", detailed log" : "");
 }
 
 void save() {
@@ -272,6 +275,7 @@ void save() {
         << "menu_bar = " << (s.menu_bar ? 1 : 0) << "\n"
         << "mute_unfocused = " << (s.mute_unfocused ? 1 : 0) << "\n"
         << "skip_cutscenes = " << (s.skip_cutscenes ? 1 : 0) << "\n"
+        << "lock_strafe = " << (s.lock_strafe ? 1 : 0) << "\n"
         << "volume = " << s.volume << "\n";
     if (s.verbose_log) {
         out << "verbose_log = 1\n";

@@ -40,12 +40,13 @@ enum Row {
     kShowFps,
     kMuteUnfocused,
     kSkipCutscenes,
+    kLockStrafe,
     kRows
 };
 constexpr const char* kLabels[kRows] = {
     "Display mode", "Monitor",   "Resolution", "Picture",       "HUD",           "Render scale", "Anti-aliasing",
     "Texture filter", "VSync",   "Frame rate", "Frame cap",     "Frame counter", "Mute in background",
-    "Skip cutscenes",
+    "Skip cutscenes", "Lock-strafe",
 };
 
 // The value after `current` in a list (before it, for by = -1), around the ends; the first when
@@ -124,6 +125,8 @@ std::string value_of(int row) {
             return s.mute_unfocused ? "On" : "Off";
         case kSkipCutscenes:
             return s.skip_cutscenes ? "Start" : "Off";
+        case kLockStrafe:
+            return s.lock_strafe ? "On" : "Off";
         default:
             return {};
     }
@@ -227,6 +230,9 @@ void step_value(int row, int by) {
             break;
         case kSkipCutscenes:
             s.skip_cutscenes = !s.skip_cutscenes;
+            break;
+        case kLockStrafe:
+            s.lock_strafe = !s.lock_strafe;
             break;
         default:
             break;

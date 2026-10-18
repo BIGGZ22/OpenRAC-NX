@@ -826,6 +826,14 @@ int openrac_game_hud_side(void) {
     return 0;
 }
 
+int openrac_game_lock_strafe(void) {
+#ifdef OPENRAC_FRONTEND
+    return settings::get().lock_strafe ? 1 : 0;
+#else
+    return 0;
+#endif
+}
+
 int openrac_game_ui_quad(const openrac_game_ui_rect* quad) {
 #ifdef OPENRAC_FRONTEND
     if (g_window) {

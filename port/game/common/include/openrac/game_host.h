@@ -242,6 +242,11 @@ int openrac_game_ui_quad(const openrac_game_ui_rect* quad);
  * the player's HUD setting is "Edges", else 0. */
 int openrac_game_hud_side(void);
 
+/* Whether the player turned lock-strafe on (settings lock_strafe; rac1: host/strafe.c): while a
+ * weapon is fired the hero keeps facing the camera's way and the stick moves him sideways and
+ * back. 0 without a window (no settings) or with the option off, the game's own movement. */
+int openrac_game_lock_strafe(void);
+
 /* A live particle the game's particle renderer would draw (rac1: PartProc): its 0x40-byte record
  * (+0x01 bits 0-1 the render kind: 0 camera-facing sprite, 1 flat quad, 2 line, 3 ribbon; +0x03
  * ALPHA_1's low byte; +0x04 RGBA; +0x08 rotation, 256 steps a turn; +0x09 near (low nibble, 1/4

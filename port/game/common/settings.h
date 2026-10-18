@@ -82,6 +82,7 @@ struct Settings {
     bool menu_bar = true;   // the menus along the window's top (not on macOS, whose menu bar has them); Alt hides and shows it
     bool mute_unfocused = false;  // silence while another window has the keyboard
     bool skip_cutscenes = true;   // Start skips an in-game cutscene (without the game's L1 L2 R1 R2 hold)
+    bool lock_strafe = false;     // firing a weapon, the hero faces the camera's way and the stick strafes him
     int volume = 100;  // of everything the port plays, 0 (nothing at all) to 100 (as mixed)
     bool verbose_log = false;  // the detailed log (as OPENRAC_LOG=verbose): level loads, pad changes, callers
 };
