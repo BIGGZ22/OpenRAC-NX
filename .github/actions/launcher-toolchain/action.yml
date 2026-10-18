@@ -1,5 +1,6 @@
 # What the launcher builds with: Node with Yarn (the version launcher/package.json names, through
-# Corepack), Rust, and Cargo's downloads and target/ kept between runs under `cache-key`.
+# Corepack), Rust, and Cargo's downloads and compiled dependencies kept between runs under
+# `cache-key` (Swatinem/rust-cache, which also turns incremental builds off).
 name: The launcher's toolchain
 description: Node, Yarn, Rust and a Cargo cache for launcher/
 inputs:
@@ -26,14 +27,10 @@ runs:
         toolchain: stable
         targets: ${{ inputs.targets }}
         components: ${{ inputs.components }}
-    # Incremental builds only grow the cached target/: a cache's build is never resumed in place.
-    - shell: bash
-      run: echo "CARGO_INCREMENTAL=0" >> "$GITHUB_ENV"
-    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+    # Cargo's downloads and the compiled dependencies (not the launcher's own crates, which every
+    # build compiles anyway), kept small enough that the repository's cache holds every system's.
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          launcher/target
-        key: ${{ inputs.cache-key }}-${{ hashFiles('launcher/Cargo.lock') }}
-        restore-keys: ${{ inputs.cache-key }}-
+        workspaces: launcher -> target
+        shared-key: ${{ inputs.cache-key }}
+        cache-on-failure: true

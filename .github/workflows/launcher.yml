@@ -8,16 +8,16 @@
 #
 # An installer carries what a player needs beside their disc image: the game
 # built for the system, the set-up and level tools and a Python to run them
-# (the `game` job, tools/bundle_standalone.py). The launcher uses that copy
-# when it finds no OpenRAC checkout (launcher/core/src/detect.rs).
+# (tools/bundle_standalone.py). The launcher uses that copy when it finds no
+# OpenRAC checkout (launcher/core/src/detect.rs).
 #
-# Each system is a row of both matrices: `game` builds what the installer
-# carries, `build` the installer around it. A new system is a row in each,
-# with `if: matrix.name == ...` only on the steps that are its own. Android's
-# `game` builds the port with the runner's NDK (tools/build_android.py
-# --no-apk), its `build` makes the APK (docs/port/ANDROID.md). Compiles are
-# cached (ccache, Cargo, Gradle), so a run that changes only the launcher
-# rebuilds little of the game.
+# One job per system, a row of the `build` matrix: it builds the game and its
+# copy straight into the launcher's resources (on Android, its Android
+# project: tools/build_android.py --no-apk), then the installer around them.
+# A new system is a row, with `if: matrix.name == ...` only on the steps that
+# are its own. What a run would redo is kept between runs: the game's C as
+# hostgen writes it (skipped when its inputs are the same), every compile
+# (ccache), the Rust dependencies (rust-cache) and Gradle's.
 #
 # Every action is pinned to a commit (Dependabot, .github/dependabot.yml,
 # moves the pins), and every download is checked against its SHA-256.
@@ -50,15 +50,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # What an installer carries: the game built with SDL3 in it (the port's `standalone` preset), the
-  # tools and a Python, as one archive for each system (a tar: artifacts drop the files' modes). On
-  # Android the archive is what tools/build_android.py puts in the launcher's Android project.
-  game:
-    name: game (${{ matrix.name }})
+  build:
+    name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    # Fedora's row runs in Fedora itself; the others on the runner.
+    container: ${{ matrix.container }}
     timeout-minutes: 60
     env:
       NAME: ${{ matrix.name }}
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
       # python-build-standalone, a fixed release, each archive checked against its SHA-256.
       PYTHON_RELEASE: "20261009"
       PYTHON_VERSION: "3.12.15"
@@ -67,6 +67,8 @@ jobs:
       # Every compile through ccache (CMake reads these on its first configure).
       CMAKE_C_COMPILER_LAUNCHER: ccache
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      # Where the copy goes: the installer's resources, or on Android its project.
+      COPY: launcher/src-tauri/resources/openrac
     strategy:
       fail-fast: false
       matrix:
@@ -75,42 +77,99 @@ jobs:
             os: windows-latest
             python: x86_64-pc-windows-msvc
             python_sha256: 11ed9f8a6ac64fb1b5a55e40e305a6744a3f77a70863c8f8197a6e4349abc64a
-          # Ubuntu 22.04, with LLVM's compiler and its C++ library built into the game: the game
-          # then needs only the system's C library, glibc 2.35 or later (Ubuntu 22.04, Debian 12,
-          # Linux Mint 21, Fedora 36, SteamOS). Ubuntu 22.04's own C++ library is too old for the
-          # port (<format>), and one built on 24.04 asked for glibc 2.38.
+            tauri: build
+            files: |
+              launcher/target/release/bundle/nsis/*.exe
+              launcher/target/release/bundle/msi/*.msi
+              launcher/target/release/bundle/nsis/*.zip
+              launcher/target/release/bundle/nsis/*.sig
+          # Ubuntu 22.04, the oldest the runners offer, with LLVM's compiler and its C++ library
+          # built into the game: the game then needs only the system's C library, glibc 2.35 or
+          # later (Ubuntu 22.04, Debian 12, Linux Mint 21, Fedora 36, SteamOS), and the launcher
+          # built here starts on newer systems too. Ubuntu 22.04's own C++ library is too old for
+          # the port (<format>), and one built on 24.04 asked for glibc 2.38.
           - name: linux
             os: ubuntu-22.04
             python: x86_64-unknown-linux-gnu
             python_sha256: ffa8f85f1b56e88b687f08d743d817015524b86a9365fd921243132b80f1a36d
-          # Linux ARM64 (aarch64), built on Ubuntu 24.04 ARM runner.
+            tauri: build --bundles deb,rpm,appimage
+            files: &linux-files |
+              launcher/target/release/bundle/deb/*.deb
+              launcher/target/release/bundle/rpm/*.rpm
+              launcher/target/release/bundle/appimage/*.AppImage
+              launcher/target/release/bundle/appimage/*.tar.gz
+              launcher/target/release/bundle/appimage/*.sig
           - name: linux-arm64
             os: ubuntu-24.04-arm
             python: aarch64-unknown-linux-gnu
             python_sha256: 2e1ba0e7f22e01c534caebf7f09e7820322bc0d055271d3434af671e8400f96f
-          # Apple silicon: the runner's own. An Intel Mac's launcher finds no game it can run in
-          # its copy and works on a checkout, as before.
+            tauri: build --bundles deb,rpm,appimage
+            files: *linux-files
+          # Fedora itself (the release players run): an .rpm made against Fedora's own WebKitGTK
+          # and GTK, carrying a game built with Fedora's compiler.
+          - name: fedora
+            os: ubuntu-latest
+            container: registry.fedoraproject.org/fedora:44
+            python: x86_64-unknown-linux-gnu
+            python_sha256: ffa8f85f1b56e88b687f08d743d817015524b86a9365fd921243132b80f1a36d
+            tauri: build --bundles rpm
+            files: launcher/target/release/bundle/rpm/*.rpm
+          # One launcher for Apple silicon and Intel; the game is Apple silicon's (an Intel Mac's
+          # launcher finds no game it can run in its copy and works on a checkout).
           - name: macos
             os: macos-latest
             python: aarch64-apple-darwin
             python_sha256: 233f8e15255b3e1d1fd47ea5dd5230dfed803f371138e896e54d98c60ae19f6f
-          # arm64-v8a, API 29 and later, with the runner's NDK; its Python is Chaquopy's.
+            targets: aarch64-apple-darwin,x86_64-apple-darwin
+            tauri: build --target universal-apple-darwin --bundles app,dmg
+            files: |
+              launcher/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+              launcher/target/universal-apple-darwin/release/bundle/macos/*.tar.gz
+              launcher/target/universal-apple-darwin/release/bundle/macos/*.sig
+          # arm64-v8a, API 29 and later, with the runner's NDK; its Python is Chaquopy's. A debug
+          # APK, signed with the launcher's own key when the repository has it (the
+          # ANDROID_KEYSTORE secrets: updates install only over an APK of the same key), else
+          # with the runner's debug key; the device tests are in port/android/README.md.
           - name: android
             os: ubuntu-latest
+            targets: aarch64-linux-android
+            tauri: android build --apk --target aarch64 --debug
+            files: launcher/src-tauri/gen/android/app/build/outputs/apk/*/debug/OpenRAC*.apk*
     defaults:
       run:
         shell: bash
     steps:
+      - name: Compilers, tools and Tauri's system libraries (Fedora)
+        if: matrix.name == 'fedora'
+        run: |
+          dnf install -y --setopt=install_weak_deps=False git curl tar xz gcc gcc-c++ make file rpm-build \
+            clang cmake ninja-build ccache python3 python-unversioned-command binutils \
+            webkit2gtk4.1-devel gtk3-devel librsvg2-devel libsoup3-devel openssl-devel \
+            mesa-libGL-devel mesa-libEGL-devel libX11-devel libXext-devel libXrandr-devel libXcursor-devel \
+            libXi-devel libXScrnSaver-devel libXfixes-devel wayland-devel wayland-protocols-devel \
+            libxkbcommon-devel libdecor-devel alsa-lib-devel pulseaudio-libs-devel pipewire-devel \
+            dbus-devel systemd-devel libdrm-devel mesa-libgbm-devel
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        if: matrix.name != 'fedora'
         with:
           python-version: "3.12"
       - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
         with:
           key: game-${{ matrix.name }}
           max-size: 1G
+      # The game's C as hostgen wrote it last (port/tools/hostgen): hostgen checks its inputs'
+      # fingerprint and skips the translation, the longest step of a game's build, when they
+      # are the same. Any version of it is a good start: a stale one is translated again.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            port/build/*/games/*/gen
+            !port/build/*/games/*/gen/prep
+          key: hostgen-${{ matrix.name }}-${{ hashFiles('games/rac1/src/**', 'games/rac1/include/**', 'games/rac1/config/**', 'games/rac1/ntsc/src/**', 'games/rac1/ntsc/include/**', 'games/rac1/ntsc/config/**', 'port/game/**', 'port/tools/hostgen/*.py', 'port/tools/hostgen/include/**') }}
+          restore-keys: hostgen-${{ matrix.name }}-
 
       # LLVM 19 from apt.llvm.org (its key checked by fingerprint): Clang, and libc++ to build
       # into the game.
@@ -129,7 +188,9 @@ jobs:
             ninja-build pkg-config \
             libgl1-mesa-dev libegl1-mesa-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
             libxss-dev libxfixes-dev libwayland-dev wayland-protocols libxkbcommon-dev libdecor-0-dev \
-            libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev libdrm-dev libgbm-dev
+            libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev libdrm-dev libgbm-dev \
+            libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev patchelf rpm file
+          sudo apt-get install -y libfuse2t64 || sudo apt-get install -y libfuse2 || true
           sudo ln -sf /usr/bin/clang-19 /usr/local/bin/clang
           sudo ln -sf /usr/bin/clang++-19 /usr/local/bin/clang++
           # CMake reads these when it first configures: libc++ and the compiler's runtime in the game.
@@ -149,9 +210,21 @@ jobs:
         if: matrix.name == 'android'
         run: |
           echo "ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+          echo "NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
           grep Revision "$ANDROID_NDK_LATEST_HOME/source.properties"
           clang --version
           pip install ninja==1.13.0
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        if: matrix.name == 'android'
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - uses: ./.github/actions/launcher-toolchain
+        with:
+          cache-key: ${{ matrix.name }}
+          targets: ${{ matrix.targets }}
 
       - name: Build the game
         if: matrix.name != 'android'
@@ -174,22 +247,22 @@ jobs:
       - name: Put the copy together and try it
         if: matrix.name != 'android'
         run: |
-          python tools/bundle_standalone.py build/standalone --game-build port/build/standalone \
+          python tools/bundle_standalone.py "$COPY" --game-build port/build/standalone \
             --python "$RUNNER_TEMP/python/python"
           # Its own Python runs its own tools, and the game starts far enough to say what it is.
-          py=build/standalone/python/bin/python3; [ -x "$py" ] || py=build/standalone/python/python.exe
-          "$py" build/standalone/tools/extractor.py --help > /dev/null
-          "$py" build/standalone/editor/extract.py --help > /dev/null
+          py=$COPY/python/bin/python3; [ -x "$py" ] || py=$COPY/python/python.exe
+          "$py" "$COPY/tools/extractor.py" --help > /dev/null
+          "$py" "$COPY/editor/extract.py" --help > /dev/null
           # The program as the launcher finds it: openrac-<id>, openrac-<id>.exe, or on macOS the
           # program in its application bundle, apps/openrac-<id>/<title>.app (port/cmake/MacApp.cmake).
           program() {
             local app; app=$(ls -d "$(dirname "$1")/apps/$(basename "$1")"/*.app/Contents/MacOS/* 2>/dev/null | head -1)
             if [ -n "$app" ]; then echo "$app"; elif [ -f "$1" ]; then echo "$1"; else echo "$1.exe"; fi
           }
-          game=$(program build/standalone/port/build/release/openrac-rac1-pal)
+          game=$(program "$COPY/port/build/release/openrac-rac1-pal")
           "$game" --help || true
           # Every disc's program is carried: the launcher plays the one the player's disc is.
-          us=$(program build/standalone/port/build/release/openrac-rac1-ntsc)
+          us=$(program "$COPY/port/build/release/openrac-rac1-ntsc")
           [ -f "$us" ] || { echo "the copy carries no openrac-rac1-ntsc"; exit 1; }
           "$us" --help || true
           # On Linux: what the game asks of the system, libc and libm but not libstdc++, and on
@@ -203,148 +276,28 @@ jobs:
           if [ "$NAME" = linux ]; then
             case "$need" in GLIBC_2.3[6-9]|GLIBC_2.[4-9]*) echo "the game needs a newer glibc than 2.35"; exit 1;; esac
           fi
-          tar -czf openrac-standalone.tar.gz -C build/standalone .
 
       # The libraries, SDL's Java and the carried copy, in the launcher's Android project.
       - name: Build the game, the libraries and the copy (Android)
         if: matrix.name == 'android'
         run: |
           python tools/build_android.py --no-apk
-          main=launcher/src-tauri/gen/android/app/src/main
           llvm=$(ls -d "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/bin | head -1)
           for lib in libopenrac-rac1-pal.so libopenrac-rac1-pal-cli.so libopenrac-python.so; do
-            echo "$lib:"; "$llvm/llvm-readelf" -d "$main/jniLibs/arm64-v8a/$lib" | grep NEEDED
+            echo "$lib:"; "$llvm/llvm-readelf" -d "launcher/src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a/$lib" | grep NEEDED
           done
-          tar -czf openrac-standalone.tar.gz -C "$main" jniLibs sdl-java assets
-
-      # A step between the jobs, not something to download: the installers carry it. Kept a day.
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: openrac-standalone-${{ matrix.name }}
-          path: openrac-standalone.tar.gz
-          if-no-files-found: error
-          retention-days: 1
-
-  build:
-    name: ${{ matrix.name }}
-    needs: game
-    runs-on: ${{ matrix.os }}
-    # Fedora's row runs in Fedora itself; the others on the runner.
-    container: ${{ matrix.container }}
-    timeout-minutes: 60
-    env:
-      NAME: ${{ matrix.name }}
-      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: windows
-            os: windows-latest
-            tauri: build
-            files: |
-              launcher/target/release/bundle/nsis/*.exe
-              launcher/target/release/bundle/msi/*.msi
-              launcher/target/release/bundle/nsis/*.zip
-              launcher/target/release/bundle/nsis/*.sig
-          # The oldest Ubuntu the runners offer: what is built there starts
-          # on newer systems too, not the other way round.
-          - name: linux
-            os: ubuntu-22.04
-            tauri: build --bundles deb,rpm,appimage
-            files: &linux-files |
-              launcher/target/release/bundle/deb/*.deb
-              launcher/target/release/bundle/rpm/*.rpm
-              launcher/target/release/bundle/appimage/*.AppImage
-              launcher/target/release/bundle/appimage/*.tar.gz
-              launcher/target/release/bundle/appimage/*.sig
-          - name: linux-arm64
-            os: ubuntu-24.04-arm
-            tauri: build --bundles deb,rpm,appimage
-            files: *linux-files
-          # The launcher built on Fedora itself (the release players run), as an .rpm made against
-          # Fedora's own WebKitGTK and GTK, carrying the Linux game.
-          - name: fedora
-            os: ubuntu-latest
-            container: registry.fedoraproject.org/fedora:44
-            game: linux
-            tauri: build --bundles rpm
-            files: launcher/target/release/bundle/rpm/*.rpm
-          # One program for Apple silicon and Intel.
-          - name: macos
-            os: macos-latest
-            targets: aarch64-apple-darwin,x86_64-apple-darwin
-            tauri: build --target universal-apple-darwin --bundles app,dmg
-            files: |
-              launcher/target/universal-apple-darwin/release/bundle/dmg/*.dmg
-              launcher/target/universal-apple-darwin/release/bundle/macos/*.tar.gz
-              launcher/target/universal-apple-darwin/release/bundle/macos/*.sig
-          # A debug APK, signed with the launcher's own key when the repository has it (the
-          # ANDROID_KEYSTORE secrets: updates install only over an APK of the same key), else
-          # with the runner's debug key; the device tests are in port/android/README.md.
-          - name: android
-            os: ubuntu-latest
-            targets: aarch64-linux-android
-            tauri: android build --apk --target aarch64 --debug
-            files: launcher/src-tauri/gen/android/app/build/outputs/apk/*/debug/OpenRAC*.apk*
-    defaults:
-      run:
-        shell: bash
-        working-directory: launcher
-    steps:
-      - name: Tools and Tauri's system libraries (Fedora)
-        if: matrix.name == 'fedora'
-        working-directory: /
-        run: |
-          dnf install -y --setopt=install_weak_deps=False git curl tar xz gcc gcc-c++ make file rpm-build \
-            webkit2gtk4.1-devel gtk3-devel librsvg2-devel libsoup3-devel openssl-devel
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/launcher-toolchain
-        with:
-          cache-key: launcher-${{ matrix.name }}
-          targets: ${{ matrix.targets }}
-
-      - name: Tauri's system libraries (Linux)
-        if: matrix.name == 'linux' || matrix.name == 'linux-arm64'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
-            libsoup-3.0-dev patchelf rpm file
-          sudo apt-get install -y libfuse2t64 || sudo apt-get install -y libfuse2 || true
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
-        if: matrix.name == 'android'
-        with:
-          distribution: temurin
-          java-version: "21"
-          cache: gradle
-      - name: The NDK (Android)
-        if: matrix.name == 'android'
-        run: echo "NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
-
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: openrac-standalone-${{ matrix.game || matrix.name }}
-          path: ${{ runner.temp }}/standalone
-      - name: The copy of OpenRAC the installer carries
-        env:
-          INTO: ${{ matrix.name == 'android' && 'src-tauri/gen/android/app/src/main' || 'src-tauri/resources/openrac' }}
-        run: |
-          # The archive by a relative name: on Windows tar reads "D:\..." as a host named D.
-          cp "$RUNNER_TEMP/standalone/openrac-standalone.tar.gz" openrac-standalone.tar.gz
-          tar -xzf openrac-standalone.tar.gz -C "$INTO"
-          rm openrac-standalone.tar.gz
 
       # The cache keeps target/, and with it the installers of the last version: without this a
       # release carried 0.2.0's files beside 0.3.0's.
       - name: No installers from an earlier build
+        working-directory: launcher
         run: rm -rf target/release/bundle target/universal-apple-darwin/release/bundle
 
       # The updater's archives are signed with the project's key. Without it (a fork's run) Tauri
       # refuses to make them, so they are left out. Android's APK is signed with it after the
       # build (below), and with the launcher's own Android key during it.
       - name: Build the installers
+        working-directory: launcher
         env:
           RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -376,6 +329,7 @@ jobs:
       # which takes one file of a name.
       - name: The installer's name (Fedora)
         if: matrix.name == 'fedora'
+        working-directory: launcher
         run: for f in target/release/bundle/rpm/*.x86_64.rpm; do mv "$f" "${f%.x86_64.rpm}.fc44.x86_64.rpm"; done
 
       # Named as the desktop installers are, and checked: the game's activity, SDL's and the
@@ -383,6 +337,7 @@ jobs:
       # there (an .apk.sig beside it, which tools/updater_manifest.py puts in latest.json).
       - name: What the APK carries (Android)
         if: matrix.name == 'android'
+        working-directory: launcher
         env:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |

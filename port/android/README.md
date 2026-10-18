@@ -32,8 +32,8 @@ python3 tools/build_android.py --release     # an unsigned release APK, to sign 
 The APK is in
 `launcher/src-tauri/gen/android/app/build/outputs/apk/universal/debug/`
 (Tauri's flavour folder). CI builds the same debug APK beside the desktop
-installers (`.github/workflows/launcher.yml`, the `android` rows of its
-matrices, artifact `openrac-launcher-android`), and a `launcher-v*` tag puts it on the draft
+installers (`.github/workflows/launcher.yml`, the `android` row of its
+matrix, artifact `openrac-launcher-android`), and a `launcher-v*` tag puts it on the draft
 release with them.
 
 Only the port, without the launcher:

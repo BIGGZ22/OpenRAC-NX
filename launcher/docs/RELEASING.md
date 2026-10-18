@@ -77,30 +77,27 @@ git push origin launcher-vX.Y.Z
 
 ### What GitHub Actions does automatically (`.github/workflows/launcher.yml`):
 
-1. **Game payload build (`game` job)**:
-   - **Windows** (`windows-latest`): Builds `openrac-rac1-pal.exe` and bundles standalone Python.
-   - **Linux x86_64** (`ubuntu-22.04`): Builds the game against LLVM 19 libc++ (glibc 2.35 compatible).
-   - **Linux ARM64** (`ubuntu-24.04-arm`): Builds natively for AArch64 and bundles `aarch64-unknown-linux-gnu` Python.
-   - **macOS** (`macos-latest`): Builds the game for Apple Silicon.
-   - **Android** (`ubuntu-latest`): Builds the port with the runner's NDK (`tools/build_android.py --no-apk`).
-2. **Installer creation (`build` job, one matrix row per system)**:
-   - Packages Windows NSIS (`.exe`) and MSI.
-   - Packages Linux `.deb`, `.rpm`, and `.AppImage` (both `amd64` and `arm64`).
-   - Packages Fedora `.fc44.x86_64.rpm` in a Fedora container.
-   - Packages the Android debug APK, signed with the launcher's Android key (the
+1. **One `build` job per system** (a matrix row), each building the game and the copy of
+   OpenRAC the installer carries straight into the launcher's resources, then the installer:
+   - **Windows** (`windows-latest`): `openrac-rac1-pal.exe` with a standalone Python; NSIS
+     (`.exe`) and MSI.
+   - **Linux x86_64** (`ubuntu-22.04`): the game against LLVM 19's libc++ (glibc 2.35
+     compatible); `.deb`, `.rpm` (zstd) and `.AppImage`.
+   - **Linux ARM64** (`ubuntu-24.04-arm`): the same for `aarch64`.
+   - **Fedora** (a `fedora:44` container): the game with Fedora's compiler; `.fc44.x86_64.rpm`.
+   - **macOS** (`macos-latest`): the game for Apple silicon; a universal `.dmg` and `.app.tar.gz`.
+   - **Android** (`ubuntu-latest`): the port with the runner's NDK (`tools/build_android.py
+     --no-apk`), then the debug APK, signed with the launcher's Android key (the
      `ANDROID_KEYSTORE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and
      `ANDROID_KEY_PASSWORD` secrets; without them, the runner's debug key).
-   - Packages macOS universal `.dmg` and `.app.tar.gz`.
-3. **Updater signing & manifest**:
-   - Signs update archives and the APK with minisign (`TAURI_SIGNING_PRIVATE_KEY`).
-   - Runs `tools/updater_manifest.py` to produce `latest.json` covering:
-     - `windows-x86_64`
-     - `linux-x86_64`
-     - `linux-aarch64`
-     - `darwin-x86_64`
-     - `darwin-aarch64`
-     - `android-aarch64` (read by the Android launcher's own updater, `launcher/core/src/update.rs`)
-4. **Draft Release**:
+
+   Kept between runs: hostgen's output (skipped when its inputs are unchanged), ccache, the
+   Rust dependencies (Swatinem/rust-cache) and Gradle's.
+   Each row signs its update archives (and the APK) with minisign (`TAURI_SIGNING_PRIVATE_KEY`).
+2. **Release job** (on a tag), after every row:
+   - Runs `tools/updater_manifest.py` to produce `latest.json` covering `windows-x86_64`,
+     `linux-x86_64`, `linux-aarch64`, `darwin-x86_64`, `darwin-aarch64` and `android-aarch64`
+     (read by the Android launcher's own updater, `launcher/core/src/update.rs`).
    - Creates a draft release titled `OpenRAC Launcher X.Y.Z` with all installer assets and signatures.
 
 Monitor the CI status:
