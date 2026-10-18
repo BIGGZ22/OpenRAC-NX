@@ -13,7 +13,7 @@
   import ReportsBlock from "$components/ReportsBlock.svelte";
   import SaveManagerBlock from "$components/SaveManagerBlock.svelte";
   import { api, type ActionView } from "$lib/api";
-  import { app, clock, currentVersion, dismissCrashes, guard, run, uninstallGame } from "$lib/app.svelte";
+  import { app, clock, currentVersion, dismissCrashes, gameWindow, guard, run, uninstallGame } from "$lib/app.svelte";
   import { isBuilt, playerAct, playerState, playerVersion } from "$lib/player.svelte";
   import { themeStyle } from "$lib/themes";
 
@@ -49,7 +49,7 @@
   const setUp = $derived(game?.install?.extracted ?? null);
   const built = $derived(!!v && !!game && isBuilt(game, v));
   /** The steps are shown while there is one left that the player can take. */
-  const showSteps = $derived(!!next && next.kind !== "play" && next.kind !== "playing");
+  const showSteps = $derived(!!next && next.kind !== "play" && next.kind !== "playing" && next.kind !== "return");
 
   async function removeSetUp() {
     if (!v) return;
@@ -72,6 +72,9 @@
     if (!v) return [];
     const dir = v.dir;
     const items: MenuItem[] = [];
+    if (next?.kind === "return") {
+      items.push({ label: "Stop the game", icon: "x", danger: true, run: () => void gameWindow(true) });
+    }
     if (build?.runnable && built && next?.kind === "play") {
       items.push({ label: "Rebuild the game", icon: "build", run: () => void run(scope, build) });
     }

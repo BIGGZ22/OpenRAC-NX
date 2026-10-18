@@ -4,6 +4,7 @@
 package dev.openrac.launcher
 
 import android.app.Activity
+import android.app.ActivityManager
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.PackageInstaller
@@ -66,6 +67,8 @@ class DriverArgs {
 class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
   private val drivers: File get() = File(activity.filesDir, "gpu_drivers")
   private val selectedFile: File get() = File(drivers, "selected")
+  // The library of the game started last, while it runs.
+  @Volatile private var playing: String? = null
 
   // ---- files from the system's picker ----
 
@@ -230,11 +233,58 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
       environment["OPENRAC_GPU_DRIVER_DIR"] = dir.path
       environment["OPENRAC_GPU_DRIVER_LIBRARY"] = meta.getString("libraryName")
     }
+    // Already playing: back to the game as it is, not a second start.
+    gameTask()?.let {
+      it.moveToFront()
+      return invoke.resolve()
+    }
+    playing = args.library
+    // In a task of its own (the manifest's taskAffinity): the game and the launcher are two
+    // windows in Recents, and going back to the launcher leaves the game where it was.
     val intent = Intent(activity, GameActivity::class.java)
+      .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       .putExtra(GameActivity.EXTRA_LIBRARY, args.library)
       .putExtra(GameActivity.EXTRA_ARGUMENTS, args.args)
       .putExtra(GameActivity.EXTRA_ENVIRONMENT, environment.map { (k, v) -> "$k=$v" }.toTypedArray())
     activity.startActivity(intent)
+    invoke.resolve()
+  }
+
+  /** The game's task, while its activity runs. */
+  private fun gameTask(): ActivityManager.AppTask? =
+    activity.getSystemService(ActivityManager::class.java).appTasks.firstOrNull { task ->
+      try {
+        val info = task.taskInfo
+        info.isRunning && info.baseActivity?.className == GameActivity::class.java.name
+      } catch (e: IllegalArgumentException) {
+        false // the task went as it was read
+      }
+    }
+
+  /** {running, library}: whether the game is running, and which (unknown after the launcher's
+   *  own process was restarted while the game ran). */
+  @Command
+  fun gameStatus(invoke: Invoke) {
+    val running = gameTask() != null
+    if (!running) playing = null
+    val out = JSObject()
+    out.put("running", running)
+    out.put("library", playing)
+    invoke.resolve(out)
+  }
+
+  @Command
+  fun returnToGame(invoke: Invoke) {
+    val task = gameTask() ?: return invoke.reject("the game is not running")
+    task.moveToFront()
+    invoke.resolve()
+  }
+
+  /** Ends the game: its activity finishes, and its process with it (GameActivity.onDestroy). */
+  @Command
+  fun stopGame(invoke: Invoke) {
+    gameTask()?.finishAndRemoveTask()
+    playing = null
     invoke.resolve()
   }
 

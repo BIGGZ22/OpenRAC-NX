@@ -3,7 +3,19 @@
 import type { ActionView, GameView, VersionView } from "./api";
 import type { IconName } from "$components/Icon.svelte";
 import { onAndroid, pickFolder, pickIso } from "./api";
-import { app, cancel, copyingDisc, installGame, jobs, refresh, run, runChain, saveConfig, toast } from "./app.svelte";
+import {
+  app,
+  cancel,
+  copyingDisc,
+  gameWindow,
+  installGame,
+  jobs,
+  refresh,
+  run,
+  runChain,
+  saveConfig,
+  toast,
+} from "./app.svelte";
 import { phaseLabel } from "./progress";
 import type { Job } from "./queue";
 
@@ -13,6 +25,7 @@ export type PlayerKind =
   | "unavailable" // set up, but this game has no port to play yet
   | "other-disc" // the player's disc is another version of this game
   | "playing"
+  | "return" // Android: the game runs beside the launcher, in a window of its own
   | "building"
   | "play"
   | "build"
@@ -191,6 +204,18 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       tone: "info",
     };
   }
+  if (onAndroid && app.game?.running && (!app.game.library || app.game.library.startsWith(`openrac-${v.game}`))) {
+    return {
+      ...base,
+      kind: "return",
+      label: "Return to game",
+      icon: "play",
+      hint: "The game is running. It waits where you left it while the launcher is open.",
+      primary: true,
+      status: "Running",
+      tone: "ok",
+    };
+  }
   const playing = jobOf(v, ["play"]);
   if (playing) {
     return {
@@ -344,6 +369,10 @@ export async function playerAct(v: VersionView, state: PlayerState): Promise<voi
   const scope = { kind: "version" as const, key: v.key };
   if (state.job) {
     await cancel(state.job);
+    return;
+  }
+  if (state.kind === "return") {
+    await gameWindow(false);
     return;
   }
   if (state.kind === "set-up") {

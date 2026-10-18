@@ -871,6 +871,8 @@ pub fn run() {
             android::background_status,
             android::update_check,
             android::update_install,
+            android::game_status,
+            android::game_window,
         ])
         .run(tauri::generate_context!())
         .expect("the launcher failed to start");

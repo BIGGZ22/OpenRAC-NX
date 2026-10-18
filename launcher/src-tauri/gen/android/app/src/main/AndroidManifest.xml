@@ -40,10 +40,14 @@
         </activity>
 
         <!-- The game: SDL's activity around libopenrac-<id>.so, in a process of its own so that
-             each play starts the game afresh and a crash leaves the launcher standing. -->
+             each play starts the game afresh and a crash leaves the launcher standing, and in a
+             task of its own: the game and the launcher are two windows in Recents, and the game
+             goes on while the launcher is in front. -->
         <activity
             android:name="dev.openrac.game.GameActivity"
             android:process=":game"
+            android:taskAffinity="dev.openrac.launcher.game"
+            android:autoRemoveFromRecents="true"
             android:exported="false"
             android:label="@string/app_name"
             android:launchMode="singleTask"

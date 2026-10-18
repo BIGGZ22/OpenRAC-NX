@@ -299,6 +299,44 @@ pub async fn update_install<R: Runtime>(app: AppHandle<R>, url: String, signatur
     }
 }
 
+/// Whether the game's activity is running (in its own task, beside the launcher's) and which
+/// game's library it is, when the launcher knows.
+#[derive(Clone, Debug, Default, Serialize)]
+#[cfg_attr(target_os = "android", derive(Deserialize))]
+#[serde(rename_all = "camelCase")]
+pub struct GameStatus {
+    pub running: bool,
+    pub library: Option<String>,
+}
+
+#[tauri::command]
+pub async fn game_status<R: Runtime>(app: AppHandle<R>) -> Result<GameStatus, String> {
+    #[cfg(target_os = "android")]
+    {
+        kotlin(&app, "gameStatus", ()).await
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        Ok(GameStatus::default())
+    }
+}
+
+/// Brings the running game back in front of the launcher, or (`stop`) ends it.
+#[tauri::command]
+pub async fn game_window<R: Runtime>(app: AppHandle<R>, stop: bool) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    {
+        let _: serde_json::Value = kotlin(&app, if stop { "stopGame" } else { "returnToGame" }, ()).await?;
+        Ok(())
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, stop);
+        Err(ANDROID_ONLY.into())
+    }
+}
+
 /// Plays: starts the game's activity with the command line a desktop would run. A detached
 /// launch, as the game's window is its own activity.
 pub fn launch<R: Runtime>(app: &AppHandle<R>, plan: &Plan) -> Result<Started, String> {

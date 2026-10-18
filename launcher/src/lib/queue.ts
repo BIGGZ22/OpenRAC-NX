@@ -91,6 +91,16 @@ export class Queue {
     this.early.delete(id);
   }
 
+  /** A detached start (Android's game, an activity of its own): there is no process to follow, so
+   *  the job is done once it started; it must not hold the queue up nor offer a stop that cannot
+   *  stop anything. */
+  launched(job: Job, command: string, now = Date.now()) {
+    job.state = "succeeded";
+    job.command = command;
+    job.startedAt = now;
+    job.endedAt = now;
+  }
+
   /** The start call failed: the job never ran. */
   refused(job: Job, error: string, now = Date.now()) {
     job.state = "failed";

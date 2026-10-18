@@ -13,6 +13,7 @@ import {
   type AppInfo,
   type Config,
   type FoundDisc,
+  type GameStatus,
   type Library,
   type RunInputs,
   type Scope,
@@ -48,6 +49,8 @@ interface AppState {
   crashes: Record<string, { total: number; recent: number }>;
   /** A disc image being copied into the Android app's storage, or a .chd being unpacked. */
   discCopy: DiscCopy | null;
+  /** Android: the game running beside the launcher (readGame). */
+  game: GameStatus | null;
 }
 
 export const app = $state<AppState>({
@@ -65,7 +68,34 @@ export const app = $state<AppState>({
   reportsChanged: 0,
   crashes: {},
   discCopy: null,
+  game: null,
 });
+
+/** Android: whether the game still runs beside the launcher, read when the launcher comes back
+ *  in front and after a start. */
+export async function readGame() {
+  if (!onAndroid) return;
+  try {
+    app.game = await api.gameStatus();
+  } catch {
+    app.game = null;
+  }
+}
+
+/** After a start: the game's activity takes a moment to be there. */
+async function readGameSoon() {
+  for (const wait of [500, 1500, 3000]) {
+    await new Promise((resolve) => setTimeout(resolve, wait));
+    await readGame();
+    if (app.game?.running) return;
+  }
+}
+
+/** Android: back to the running game, or end it. */
+export async function gameWindow(stop: boolean) {
+  await guard(api.gameWindow(stop));
+  if (stop) app.game = { running: false, library: null };
+}
 
 /** The time, once a second: what a running job's elapsed time is counted against. One timer for
  *  the whole app (started in `start`), so a page shows it moving however it was reached. */
@@ -151,7 +181,14 @@ export async function start() {
       pump();
     }
   });
-  if (onAndroid) keepAliveInBackground();
+  if (onAndroid) {
+    keepAliveInBackground();
+    void readGame();
+    // Back in front (from the game, or from Home): is the game still running?
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") void readGame();
+    });
+  }
   app.info = await api.appInfo();
   app.config = await firstRun(await api.getConfig());
   if (app.config.lastVersion) app.version = app.config.lastVersion;
@@ -499,6 +536,14 @@ function pump() {
   start().then(
     (started) => {
       job.title = started.title;
+      if (started.detached) {
+        queue.launched(job, started.command);
+        settle(job.key, true);
+        if (PLAY_ACTIONS.includes(job.actionId)) void readGameSoon();
+        updateDiscordPresence();
+        pump();
+        return;
+      }
       queue.started(job, started.id, started.command);
       updateDiscordPresence();
     },

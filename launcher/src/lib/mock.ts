@@ -381,6 +381,7 @@ function library(): Library {
 type Listener = (event: JobEvent) => void;
 const listeners = new Set<Listener>();
 let nextJob = 0;
+let gameRunning = typeof location !== "undefined" && new URLSearchParams(location.search).has("playing");
 const timers = new Map<number, ReturnType<typeof setInterval>>();
 
 export function mockListen(handler: Listener): () => void {
@@ -1014,6 +1015,12 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       };
       return delay(null);
     case "background_status":
+      return delay(null);
+    // `?playing` in the preview: the Android game runs beside the launcher.
+    case "game_status":
+      return delay({ running: gameRunning, library: gameRunning ? "openrac-rac1-pal" : null });
+    case "game_window":
+      if (args.stop) gameRunning = false;
       return delay(null);
     case "update_check":
       return delay(null);

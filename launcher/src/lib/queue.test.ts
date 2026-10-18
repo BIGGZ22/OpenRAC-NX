@@ -47,6 +47,16 @@ describe("queue", () => {
     expect(q.jobs).toEqual([]);
   });
 
+  it("ends a detached launch at once, so that it holds nothing up", () => {
+    const q = new Queue();
+    const play = q.add(repo, "play", "Play");
+    const next = q.add(repo, "b", "B");
+    q.launched(play, "openrac-rac1-pal");
+    expect(play.state).toBe("succeeded");
+    expect(q.running()).toBeUndefined();
+    expect(q.next()).toBe(next);
+  });
+
   it("drops the oldest lines of a chatty job", () => {
     const q = new Queue();
     const a = q.add(repo, "a", "A");

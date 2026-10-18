@@ -507,6 +507,9 @@ export const api = {
   /** Android: what the set-up's notification shows while the launcher is in the background; null:
    *  the set-up is over (SetupService.kt). */
   backgroundStatus: (status: BackgroundStatus | null) => call<null>("background_status", { ...status }),
+  gameStatus: () => call<GameStatus>("game_status"),
+  /** Back to the running game, or (`stop`) end it. */
+  gameWindow: (stop: boolean) => call<null>("game_window", { stop }),
   /** Android: a newer launcher on the releases, or null (desktops use Tauri's updater). */
   updateCheck: () => call<AndroidRelease | null>("update_check"),
   /** Android: downloads the release's APK, checks its signature, opens Android's installer. */
@@ -534,6 +537,13 @@ export interface GpuDriver {
   minApi: number;
   /** The driver library in the package (meta.json's libraryName). */
   library: string;
+}
+
+/** Android: the game's activity, while it runs beside the launcher. */
+export interface GameStatus {
+  running: boolean;
+  /** Its library ("openrac-rac1-pal"); absent when the launcher restarted while it ran. */
+  library?: string | null;
 }
 
 export interface GpuDrivers {
