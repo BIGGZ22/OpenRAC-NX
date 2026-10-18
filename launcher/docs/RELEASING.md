@@ -103,16 +103,18 @@ git push origin launcher-vX.Y.Z
      (read by the Android launcher's own updater, `launcher/core/src/update.rs`).
    - Creates a draft release titled `OpenRAC Launcher X.Y.Z` with all installer assets and signatures.
 
-3. **Development channel** (Android, a push to a branch, not a tag): the APK is built as
-   `X.Y.Z-dev.<run number>` and the `dev-release` job replaces the pre-release
-   `launcher-dev-<branch>` with that APK, its signature and a `latest.json` for it. A launcher
-   built from a branch reads that pre-release; one built from a tag reads the repository's
-   latest release. Either way the updater asks the repository that built it
-   (`github.repository`), so a fork's builds update from the fork's releases with no setting.
+3. **Development channel** (a push to a branch, here or in a fork; not a tag, not a pull
+   request): the `dev-release` job replaces the pre-release `launcher-dev-<branch>` with every
+   system's installers, their signatures and a `latest.json` of version `X.Y.Z-dev.<run>`. The
+   launchers built from a branch read that pre-release; one built from a tag reads the
+   repository's latest release. Either way the updater asks the repository that built it
+   (`github.repository`), so a fork's builds update from the fork's releases with no setting;
+   Settings shows that source, read only. The APK carries `X.Y.Z-dev.<run>` as its version; the
+   desktop packages keep `X.Y.Z` (an MSI takes no `-dev`, an RPM no `-`) and carry the run in the
+   program (`OPENRAC_LAUNCHER_BUILD`, which their updater compares with).
    A fork needs its own `TAURI_SIGNING_PRIVATE_KEY` (and, when its key is not the project's,
    the repository variable `TAURI_UPDATER_PUBKEY` with the public key) and an
-   `ANDROID_KEYSTORE`; without the signing key no update is published. Desktop builds of a
-   branch keep their plain version (MSI and RPM refuse `-dev`) and read the latest release.
+   `ANDROID_KEYSTORE`; without the signing key no update is published.
 
 Monitor the CI status:
 
