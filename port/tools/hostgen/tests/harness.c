@@ -105,6 +105,18 @@ void openrac_guest_reach_first(openrac_reach_site* site) {
     }
 }
 
+/* What C translated from assembly needs (openrac/ee.h). */
+#include "openrac/ee.h"
+openrac_vu0_state openrac_vu0 = {{{0.0f, 0.0f, 0.0f, 1.0f}}, {0}, {0}, 0.0f, 0.0f, 0.0f, 0.0f};
+
+void openrac_ee_break(const char* function, uint32_t address) {
+    printf("break %s %08X\n", function, address);
+}
+
+void openrac_ee_lost(const char* function, uint32_t target) {
+    printf("lost %s %08X\n", function, target);
+}
+
 /* What the tests' C calls to print (host functions; names other than func_
  * get the game_ prefix in the port, port/tools/hostgen/program.py). */
 void game_test_print(int v) {

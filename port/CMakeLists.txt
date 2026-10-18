@@ -77,6 +77,7 @@ add_test(NAME log COMMAND log_test)
 # ---- runtime: game memory, the guest contract, the executable loader ----
 add_library(openrac_runtime STATIC
   runtime/crash.cpp
+  runtime/ee.cpp
   runtime/elf.cpp
   runtime/guest.cpp
   runtime/memory.cpp
