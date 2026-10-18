@@ -102,5 +102,24 @@ class Bundle(unittest.TestCase):
             self.assertTrue((dest / app / "Contents/Info.plist").is_file())
             self.assertEqual(sorted(p.name for p in dest.iterdir()), ["apps", "openrac-rac1-ntsc.exe"])
 
+    def test_the_android_copy(self):
+        # The games and the Python program are the APK's libraries: the copy carries a PYTHONHOME.
+        import sys
+        with tempfile.TemporaryDirectory() as tmp:
+            home, out = Path(tmp) / "python", Path(tmp) / "openrac"
+            (home / "lib/python3.13/lib-dynload").mkdir(parents=True)
+            (home / "lib/python3.13/os.py").write_text("")
+            (home / "lib/python3.13/test").mkdir()
+            argv, sys.argv = sys.argv, ["bundle_standalone.py", str(out), "--android", "--python", str(home)]
+            try:
+                self.assertEqual(bundle.main(), 0)
+            finally:
+                sys.argv = argv
+            self.assertTrue((out / "python/lib/python3.13/os.py").is_file())
+            self.assertFalse((out / "python/lib/python3.13/test").exists())
+            self.assertFalse((out / "port").exists())
+            self.assertIn("Android", (out / "STANDALONE").read_text())
+
+
 if __name__ == "__main__":
     unittest.main()

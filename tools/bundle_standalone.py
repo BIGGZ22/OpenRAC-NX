@@ -5,6 +5,7 @@ player needs nothing but the image of their own disc: no checkout, no Python,
 no compiler.
 
   python3 tools/bundle_standalone.py OUT [--game-build DIR] [--python DIR]
+  python3 tools/bundle_standalone.py OUT --android [--python DIR]
 
 OUT (launcher/src-tauri/resources/openrac for an installer) gets:
 
@@ -20,6 +21,13 @@ OUT (launcher/src-tauri/resources/openrac for an installer) gets:
                              application bundle, apps/openrac-<id>/<title>.app
   python/                    a Python to run the tools (--python: an unpacked
                              python-build-standalone "install_only" archive)
+
+--android makes the copy the Android launcher carries in its APK
+(tools/build_android.py; docs/port/ANDROID.md). The games and the Python
+program are libraries of the APK there, which the launcher links into place
+when it unpacks the copy (OpenracSetup.kt): the copy has no port/build/, and
+--python names a PYTHONHOME (lib/python3.N with its lib-dynload), not a
+python-build-standalone archive.
 
 The launcher finds it in its resources (launcher/core/src/detect.rs,
 bundled_root) and uses it when there is no checkout. Without --game-build or
@@ -129,7 +137,10 @@ def main() -> int:
     parser.add_argument("out", type=Path)
     parser.add_argument("--game-build", type=Path, help="the build folder holding the game (port/build/release)")
     parser.add_argument("--python", type=Path, help="an unpacked standalone Python (its python/ folder)")
+    parser.add_argument("--android", action="store_true", help="the Android launcher's copy (tools/build_android.py)")
     args = parser.parse_args()
+    if args.android and args.game_build:
+        sys.exit("--android carries no game build: the games are the APK's libraries")
     out = args.out.resolve()
     # The folder in the launcher's resources is kept in git with a note in it: the note stays.
     if out.exists() and any(p.name != "README.txt" for p in out.iterdir()):
@@ -171,7 +182,13 @@ def main() -> int:
                 carried.append(path.name)
         if not any(name.split("/")[-1].startswith(GAMES[0]) for name in carried):
             sys.exit(f"{args.game_build} has no {GAMES[0]}: build it first (tools/build_port.py rac1-pal)")
-    if args.python:
+    if args.python and args.android:
+        if not any(args.python.glob("lib/python3.*/os.py")):
+            sys.exit(f"{args.python} is not a PYTHONHOME for Android (no lib/python3.N/os.py)")
+        shutil.copytree(args.python, out / "python", symlinks=True,
+                        ignore=shutil.ignore_patterns("__pycache__", "test", "tests", "idlelib", "tkinter", "ensurepip"))
+        carried.append("python (Android)")
+    elif args.python:
         if not any((args.python / rel).is_file() for rel in ("bin/python3", "python.exe")):
             sys.exit(f"{args.python} is not an unpacked standalone Python (no bin/python3 or python.exe)")
         shutil.copytree(args.python, out / "python", symlinks=True,
@@ -182,7 +199,8 @@ def main() -> int:
     commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
     (out / "STANDALONE").write_text(
         "The copy of OpenRAC an installed launcher carries (tools/bundle_standalone.py).\n"
-        f"commit: {commit or 'unknown'}\ncarries: {', '.join(carried) or 'no game, no Python'}\n")
+        f"commit: {commit or 'unknown'}\ncarries: {', '.join(carried) or 'no game, no Python'}\n"
+        + ("for: Android (the games and Python are the APK's libraries)\n" if args.android else ""))
     size = sum(p.stat().st_size for p in out.rglob("*") if p.is_file())
     print(f"{out}: {size / 1e6:.0f} MB; carries {', '.join(carried) or 'no game, no Python'}")
     return 0
