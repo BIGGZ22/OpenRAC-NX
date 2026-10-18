@@ -263,8 +263,9 @@ Windows (`taskkill /T`) against a WSL process.
 
 rac1/pal and rac1/ntsc have the whole path written down, with the same ids,
 in the order a user takes it. The Mods page shows it for the version the
-game page plays (`playerVersion`: the disc the player set up), so both discs
-go the same way and no region is named; developer mode names the version.
+game page plays (`playerVersion`: the disc the player set up, or the one a
+developer with both discs chose on the game's page), so both discs go the
+same way and no region is named; developer mode names the version.
 
 | Action            | State (PAL / NTSC-U)   | What it does                                                                                           |
 | ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------ |

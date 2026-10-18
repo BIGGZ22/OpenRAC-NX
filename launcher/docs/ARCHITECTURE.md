@@ -114,6 +114,8 @@ mirrored in `src/lib/api.ts`.
 | `library`                                                       |                                                         | `Library` (`core/src/library.rs`)                                                                |
 | `install_game`                                                  | `{game, image}`                                         | the extractor's job, `{id, title, command, detached}`                                            |
 | `uninstall_game`                                                | `{game}`                                                | removes the game's `iso_data`, `decompiler_out` and `out`                                        |
+| `scan_discs`                                                    |                                                         | `{found, choices}`: the games folder's discs, and (developers) the games with two to choose from |
+| `choose_disc`                                                   | `{version}`                                             | `Config`, after putting that disc's set-up in place (developers only; below)                     |
 | `run_action`                                                    | `{scope, id, level, path, option}`                      | `{id, title, command, detached}`; `level`, `path`, `option` fill `{level}`, `{path}`, `{option}` |
 | `overrides_list`                                                | `{game}`                                                | the game's overrides packs (`core/src/overrides.rs`), in order                                   |
 | `overrides_set_enabled` / `overrides_move` / `overrides_remove` | `{game, id, enabled}` / `{game, id, up}` / `{game, id}` | the packs again, changed                                                                         |
@@ -175,6 +177,23 @@ actions under the tiles. A version whose `play` or `editor-extract` is `planned`
 shows as "not playable yet" or "cannot open this game yet" to a player. A
 first start asks nothing when the checkout and a Python are found
 (`firstRun`).
+
+### A developer's two discs
+
+With developer tools on and two versions of a game among the games folder's
+discs, `scan_discs` returns a `DiscChoice` for it (`core/src/disc_choice.rs`)
+and the game's page shows `components/DiscSwitch.svelte` under Play.
+`playerVersion` then plays the chosen version (`lib/discChoice.ts`), so
+Play, the levels, Mods, the saves (the card is the version's serial) and the
+logs (`ReportsBlock` lists only that version's program) follow it. The
+choice is `Config.discChoice`, by game; without one, the disc set up is
+played, as for a player. The levels, the build and the mods already have a
+folder per version; the set-up (`iso_data/<game>`, which the port reads, and
+`decompiler_out`, `out`) is one per game, so `choose_disc` moves the one in
+place to `<game>@<version>` beside it and the chosen version's back, and a
+developer's set-up of the other disc keeps the first aside the same way
+(`before_set_up`). Nothing is extracted again or deleted. Off, or with one
+disc, none of this runs.
 
 ### Adding a page
 
