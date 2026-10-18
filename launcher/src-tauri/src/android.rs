@@ -241,6 +241,7 @@ pub async fn update_check<R: Runtime>(app: AppHandle<R>) -> Result<Option<update
 }
 
 /// How far the update's download is (the `update-progress` event); total 0 while it is not known.
+#[cfg(target_os = "android")]
 #[derive(Clone, Serialize)]
 pub struct UpdateProgress {
     pub downloaded: u64,

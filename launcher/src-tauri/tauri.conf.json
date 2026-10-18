@@ -42,6 +42,11 @@
     ],
     "resources": {
       "resources/openrac": "openrac"
+    },
+    "linux": {
+      "rpm": {
+        "compression": { "type": "zstd", "level": 3 }
+      }
     }
   },
   "plugins": {
