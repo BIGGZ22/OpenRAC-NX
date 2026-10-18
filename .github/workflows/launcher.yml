@@ -217,12 +217,13 @@ jobs:
           done
           tar -czf openrac-standalone.tar.gz -C "$main" jniLibs sdl-java assets
 
+      # A step between the jobs, not something to download: the installers carry it. Kept a day.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: openrac-standalone-${{ matrix.name }}
           path: openrac-standalone.tar.gz
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 1
 
   build:
     name: ${{ matrix.name }}
