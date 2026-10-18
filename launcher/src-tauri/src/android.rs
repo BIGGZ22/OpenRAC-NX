@@ -181,6 +181,28 @@ pub async fn gpu_driver_remove<R: Runtime>(app: AppHandle<R>, id: String) -> Res
     }
 }
 
+/// What the set-up's notification shows while the launcher is in the background, or None when the
+/// set-up is over (OpenracPlugin.backgroundStatus, SetupService.kt): it keeps the process running.
+#[tauri::command]
+pub async fn background_status<R: Runtime>(
+    app: AppHandle<R>,
+    title: Option<String>,
+    text: Option<String>,
+    percent: Option<u8>,
+) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    {
+        let payload = serde_json::json!({ "title": title, "text": text.unwrap_or_default(), "percent": percent });
+        let _: serde_json::Value = kotlin(&app, "backgroundStatus", payload).await?;
+        Ok(())
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, title, text, percent);
+        Err(ANDROID_ONLY.into())
+    }
+}
+
 /// Plays: starts the game's activity with the command line a desktop would run. A detached
 /// launch, as the game's window is its own activity.
 pub fn launch<R: Runtime>(app: &AppHandle<R>, plan: &Plan) -> Result<Started, String> {

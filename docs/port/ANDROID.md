@@ -97,6 +97,10 @@ executable beside the image (`--boot-only`; every file is still read and
 checked, and nothing else on the disc is read by the port), and, since
 Android's CPython has no process pools (no `sem_open`), `editor/extract.py`
 writes up to four levels at once in Pythons of their own (`SubprocessPool`).
+The player can leave the launcher while it works: a foreground service
+(`SetupService.kt`, of the data-sync type) keeps its process running and
+shows the step and its progress in a notification, which the UI keeps
+current (`backgroundStatus` in launcher/src/lib/progress.ts).
 Play is the one action that does not run a program: the launcher starts the
 game's activity with the same command line. Nothing leaves the device.
 

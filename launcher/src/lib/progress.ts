@@ -62,3 +62,32 @@ export function readProgress(actionId: string, lines: Pick<Line, "line">[]): Job
 export function tailLines(lines: Pick<Line, "line">[], count = 8): string[] {
   return lines.slice(-count).map((l) => l.line);
 }
+
+/** What the Android notification says while the launcher works with its window closed. */
+export interface BackgroundStatus {
+  title: string;
+  text: string;
+  /** 0 to 100, or null for a bar without an end. */
+  percent: number | null;
+}
+
+/**
+ * The notification for a disc image being copied or unpacked (`copy`, null when none is) or the
+ * running job; null when there is nothing to keep the launcher alive for. The game itself runs in
+ * its own activity and needs none. A job waiting for the next one in a chain keeps it.
+ */
+export function backgroundStatus(
+  running: (Pick<Job, "actionId" | "state" | "startedAt" | "title"> & { lines: Pick<Line, "line">[] }) | undefined,
+  waiting: number,
+  copy: { name: string; copied: number; total: number } | null,
+): BackgroundStatus | null {
+  if (copy && copy.copied < copy.total) {
+    return { title: "Preparing your disc", text: copy.name, percent: Math.floor((copy.copied * 100) / copy.total) };
+  }
+  if (running?.state === "running" && !isGame(running)) {
+    const { percent } = readProgress(running.actionId, running.lines);
+    return { title: phaseLabel(running), text: running.title, percent: percent === null ? null : Math.round(percent) };
+  }
+  if (waiting > 0) return { title: "Setting up", text: "Waiting for the next step", percent: null };
+  return null;
+}

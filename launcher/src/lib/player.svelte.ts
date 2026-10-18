@@ -3,7 +3,7 @@
 import type { ActionView, GameView, VersionView } from "./api";
 import type { IconName } from "$components/Icon.svelte";
 import { onAndroid, pickFolder, pickIso } from "./api";
-import { app, cancel, copyingToast, installGame, jobs, refresh, run, runChain, saveConfig, toast } from "./app.svelte";
+import { app, cancel, copyingDisc, installGame, jobs, refresh, run, runChain, saveConfig, toast } from "./app.svelte";
 import { phaseLabel } from "./progress";
 import type { Job } from "./queue";
 
@@ -79,7 +79,8 @@ export async function chooseGamesFolder(): Promise<number | null> {
   if (onAndroid) {
     // Android's picker gives files, not folders: the player picks a disc image, which is copied
     // into the app's own games folder (the Rust side's default there); its games are set up below.
-    if (!(await pickIso("Select your legitimately obtained disc image", copyingToast()))) return null;
+    if (!(await copyingDisc((progress) => pickIso("Select your legitimately obtained disc image", progress))))
+      return null;
   } else {
     const dir = await pickFolder("Choose the folder with your PlayStation 2 games");
     if (!dir || !app.config) return null;

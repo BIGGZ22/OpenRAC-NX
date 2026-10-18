@@ -8,6 +8,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
+import type { BackgroundStatus } from "./progress";
 
 export const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -503,6 +504,9 @@ export const api = {
   gpuDriverImport: () => call<{ driver?: GpuDriver }>("gpu_driver_import").then((r) => r.driver ?? null),
   gpuDriverSelect: (id: string | null) => call<null>("gpu_driver_select", { id }),
   gpuDriverRemove: (id: string) => call<null>("gpu_driver_remove", { id }),
+  /** Android: what the set-up's notification shows while the launcher is in the background; null:
+   *  the set-up is over (SetupService.kt). */
+  backgroundStatus: (status: BackgroundStatus | null) => call<null>("background_status", { ...status }),
 };
 
 /** A GPU driver package the Android launcher keeps (OpenracPlugin.kt): its meta.json. */
@@ -587,7 +591,6 @@ export async function onDrop(
   });
 }
 
-/** A picker for a disc image; null when cancelled (or in the browser preview). */
 /** The player's disc image for setting a game up: an .iso, as OpenGOAL asks for, or a .chd. */
 export async function pickIso(title: string, copying?: (progress: DiscCopy) => void): Promise<string | null> {
   if (!inTauri) return "/home/you/Discs/game.iso";

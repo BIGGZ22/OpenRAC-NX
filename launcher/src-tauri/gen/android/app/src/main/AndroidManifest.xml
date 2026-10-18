@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- A game's set-up goes on with the launcher in the background, its status in a notification
+         (SetupService.kt). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- The game draws with OpenGL ES 3.2 (docs/port/ANDROID.md). -->
     <uses-feature android:glEsVersion="0x00030002" android:required="true" />
@@ -44,6 +49,11 @@
             android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation"
             android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
             android:preferMinimalPostProcessing="true" />
+
+        <service
+            android:name=".SetupService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <provider
           android:name="androidx.core.content.FileProvider"

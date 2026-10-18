@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">"OpenRAC Launcher"</string>
     <string name="main_activity_title">"OpenRAC Launcher"</string>
+    <string name="setup_channel">"Game set-up"</string>
 </resources>

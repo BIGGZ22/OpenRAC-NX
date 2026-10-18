@@ -3,8 +3,10 @@
 
 package dev.openrac.launcher
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.StatFs
@@ -27,6 +29,13 @@ import org.json.JSONObject
 class LaunchArgs {
   lateinit var library: String
   var args: Array<String> = arrayOf()
+}
+
+@InvokeArg
+class StatusArgs {
+  var title: String? = null
+  var text: String = ""
+  var percent: Int? = null
 }
 
 @InvokeArg
@@ -87,6 +96,31 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
     } catch (e: Exception) {
       invoke.reject("cannot read the chosen file: ${e.message}")
     }
+  }
+
+  // ---- the set-up, in the background ----
+
+  private var askedForNotifications = false
+
+  /** {title, text, percent}: what the set-up's notification shows (SetupService.kt); no title:
+   *  the set-up is over and the notification goes. */
+  @Command
+  fun backgroundStatus(invoke: Invoke) {
+    val args = invoke.parseArgs(StatusArgs::class.java)
+    val title = args.title
+    if (title == null) {
+      SetupService.hide(activity)
+    } else {
+      // Android 13 and later ask the player once before an app's notifications show.
+      if (Build.VERSION.SDK_INT >= 33 && !askedForNotifications &&
+        activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+      ) {
+        askedForNotifications = true
+        activity.requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
+      }
+      SetupService.show(activity, title, args.text, args.percent?.coerceIn(0, 100))
+    }
+    invoke.resolve()
   }
 
   // ---- the game ----

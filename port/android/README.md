@@ -12,7 +12,7 @@ is built this way, is [docs/port/ANDROID.md](../../docs/port/ANDROID.md).
 | `../cmake/Android.cmake` | what an Android build adds; the `android-arm64` preset in `../CMakePresets.json` |
 
 The launcher's side is in `launcher/src-tauri/gen/android` (Kotlin:
-`OpenracSetup.kt`, `OpenracPlugin.kt`) and `launcher/src-tauri/src/android.rs`.
+`OpenracSetup.kt`, `OpenracPlugin.kt`, `SetupService.kt`) and `launcher/src-tauri/src/android.rs`.
 
 ## Building
 
@@ -71,7 +71,9 @@ GPU driver, shows the model and SoC) and the game's log.
    own image of the disc (.iso, or a .chd made with `chdman createdvd`, which
    is unpacked into an .iso). Toasts count the copy in quarters; then the
    set-up runs by itself: the extractor, the levels (up to four at a time),
-   the check of the levels. On a device with
+   the check of the levels. Leave the launcher during it (Home): a
+   notification shows the step and its progress, and the set-up goes on;
+   tapping it brings the launcher back. On a device with
    less free space than the image, the launcher says how much it needs.
 3. **Play, on Mali.** Play opens the game in landscape: the menus over the
    title world, then a level. Check the picture against the desktop's

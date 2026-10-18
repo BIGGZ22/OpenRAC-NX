@@ -5,6 +5,7 @@ import {
   api,
   pickIso,
   onDiscCopy,
+  onAndroid,
   errorText,
   onJobEvent,
   type ActionView,
@@ -19,6 +20,7 @@ import {
   type VersionView,
 } from "./api";
 import { Queue, type Job } from "./queue";
+import { backgroundStatus } from "./progress";
 import { lastLines, PLAY_ACTIONS, unseenRecent, type StopNotice } from "./reports";
 import { checkForUpdate, type UpdateInfo } from "./updates";
 
@@ -44,6 +46,8 @@ interface AppState {
   reportsChanged: number;
   /** Each set-up game's crash reports: how many, and how many in the last three days (the tiles' mark). */
   crashes: Record<string, { total: number; recent: number }>;
+  /** A disc image being copied into the Android app's storage, or a .chd being unpacked. */
+  discCopy: DiscCopy | null;
 }
 
 export const app = $state<AppState>({
@@ -60,6 +64,7 @@ export const app = $state<AppState>({
   stopped: null,
   reportsChanged: 0,
   crashes: {},
+  discCopy: null,
 });
 
 /** The time, once a second: what a running job's elapsed time is counted against. One timer for
@@ -69,6 +74,36 @@ export const clock = $state({ now: Date.now() });
 /** The jobs, oldest first; reactive. */
 export const jobs = $state<{ list: Job[]; selected: number | null }>({ list: [], selected: null });
 const queue = new Queue(jobs.list);
+
+// ---- Android: the set-up goes on in the background -----------------------------------------
+
+/** How long the notification stays after the work ends: the next job of a chain starts within it,
+ *  and Android starts the service that keeps the process alive only while the launcher is in front. */
+const BACKGROUND_LINGER_MS = 3000;
+
+/** While a disc is copied or a game is set up, Android shows its status in a notification and
+ *  keeps the launcher running with its window closed (SetupService.kt). */
+function keepAliveInBackground() {
+  let sent = "null";
+  let stopping: ReturnType<typeof setTimeout> | undefined;
+  const send = (status: ReturnType<typeof backgroundStatus>) => {
+    const text = JSON.stringify(status);
+    if (text === sent) return;
+    sent = text;
+    void api.backgroundStatus(status).catch(() => undefined);
+  };
+  $effect.root(() => {
+    $effect(() => {
+      const status = backgroundStatus(runningJob(), pendingJobs(), app.discCopy);
+      clearTimeout(stopping);
+      if (status) send(status);
+      else
+        stopping = setTimeout(() => {
+          send(null);
+        }, BACKGROUND_LINGER_MS);
+    });
+  });
+}
 
 // ---- toasts ---------------------------------------------------------------------------
 
@@ -116,6 +151,7 @@ export async function start() {
       pump();
     }
   });
+  if (onAndroid) keepAliveInBackground();
   app.info = await api.appInfo();
   app.config = await firstRun(await api.getConfig());
   if (app.config.lastVersion) app.version = app.config.lastVersion;
@@ -375,19 +411,23 @@ export async function runChain(scope: Scope, actions: ActionView[], given?: numb
  */
 export async function installGame(game: string, title: string, found?: string): Promise<boolean> {
   // An image the games folder holds needs no picking.
-  const picked = found ?? (await pickIso(`Select your legitimately obtained disc image of ${title}`, copyingToast()));
+  const picked =
+    found ??
+    (await copyingDisc((progress) => pickIso(`Select your legitimately obtained disc image of ${title}`, progress)));
   if (!picked) return false;
   // A .chd is unpacked into a plain image first (on Android the picker already did).
   let image = picked;
   if (/\.chd$/i.test(picked)) {
-    const off = await onDiscCopy(copyingToast());
-    try {
-      const plain = await guard(api.prepareDisc(picked));
-      if (!plain) return false;
-      image = plain;
-    } finally {
-      off();
-    }
+    const plain = await copyingDisc(async (progress) => {
+      const off = await onDiscCopy(progress);
+      try {
+        return await guard(api.prepareDisc(picked));
+      } finally {
+        off();
+      }
+    });
+    if (!plain) return false;
+    image = plain;
   }
   const job = queue.add({ kind: "repository" }, `install:${game}`, `Set up ${title} from your disc`);
   starters[job.key] = () => api.installGame(game, image);
@@ -401,15 +441,22 @@ export async function installGame(game: string, title: string, found?: string): 
   return ok;
 }
 
-/** A disc image copied into the Android app's storage, or a .chd unpacked: a toast at each quarter. */
-export function copyingToast(): (progress: DiscCopy) => void {
+/** Runs a disc image's copy into the Android app's storage, or a .chd's unpacking, with its
+ *  progress in a toast at each quarter and in `app.discCopy` (Android's notification). */
+export async function copyingDisc<T>(run: (progress: (progress: DiscCopy) => void) => Promise<T>): Promise<T> {
   let shown = -1;
-  return ({ name, copied, total }) => {
-    const quarter = total > 0 ? Math.floor((copied / total) * 4) : 0;
-    if (quarter === shown) return;
-    shown = quarter;
-    toast(quarter >= 4 ? `${name} is ready.` : `Preparing ${name}: ${quarter * 25}%`);
-  };
+  try {
+    return await run((progress) => {
+      const { name, copied, total } = progress;
+      app.discCopy = progress;
+      const quarter = total > 0 ? Math.floor((copied / total) * 4) : 0;
+      if (quarter === shown) return;
+      shown = quarter;
+      toast(quarter >= 4 ? `${name} is ready.` : `Preparing ${name}: ${quarter * 25}%`);
+    });
+  } finally {
+    app.discCopy = null;
+  }
 }
 
 /** Removes what setting GAME up made, after the player confirmed. */

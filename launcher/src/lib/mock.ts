@@ -1013,6 +1013,8 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
         selected: gpu.selected === args.id ? null : gpu.selected,
       };
       return delay(null);
+    case "background_status":
+      return delay(null);
     default:
       throw new Error(`the preview has no ${command}: add it to src/lib/mock.ts`);
   }
