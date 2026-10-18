@@ -95,8 +95,9 @@ void FUN_L08_002f5e58(M45_c2f5e58 *moby) {
     if (!moby || !(data=moby->data)) return;
     {
         int row_bytes=(data->nx+1)*sizeof(V45_c2f5e58);
-        V45_c2f5e58 grid[data->ny+1][data->nx+1];
-        unsigned char *points=(unsigned char*)grid;
+        /* The grid of (ny+1) rows of (nx+1) points, on the stack as retail's alloca gives it (a
+         * two-dimensional variable-length array in PAL's C, which hostgen does not write). */
+        unsigned char *points=(unsigned char*)__builtin_alloca(row_bytes*(data->ny+1));
         int remaining;
         float inv_x,inv_y;
         inv_x=1.0f/func_001FA6C0(data->nx);
