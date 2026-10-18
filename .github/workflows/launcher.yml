@@ -16,8 +16,9 @@
 # project: tools/build_android.py --no-apk), then the installer around them.
 # A new system is a row, with `if: matrix.name == ...` only on the steps that
 # are its own. What a run would redo is kept between runs: the game's C as
-# hostgen writes it (skipped when its inputs are the same), every compile
-# (ccache), the Rust dependencies (rust-cache) and Gradle's.
+# hostgen writes it (skipped when its inputs are the same), CMake's
+# configuration, every compile (ccache), the Rust dependencies (rust-cache)
+# and Gradle's. The Linux games are carried without their debug info.
 #
 # Every action is pinned to a commit (Dependabot, .github/dependabot.yml,
 # moves the pins), and every download is checked against its SHA-256.
@@ -162,14 +163,26 @@ jobs:
           max-size: 1G
       # The game's C as hostgen wrote it last (port/tools/hostgen): hostgen checks its inputs'
       # fingerprint and skips the translation, the longest step of a game's build, when they
-      # are the same. Any version of it is a good start: a stale one is translated again.
+      # are the same. And CMake's configuration without the objects (its cache, which holds the
+      # answers of SDL's hundreds of checks, and the dependencies' sources): the configure step
+      # was a minute on Linux and two on Windows. Any version of either is a good start: a stale
+      # translation is made again, a changed CMakeLists.txt configured again.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             port/build/*/games/*/gen
             !port/build/*/games/*/gen/prep
-          key: hostgen-${{ matrix.name }}-${{ hashFiles('games/rac1/src/**', 'games/rac1/include/**', 'games/rac1/config/**', 'games/rac1/ntsc/src/**', 'games/rac1/ntsc/include/**', 'games/rac1/ntsc/config/**', 'port/game/**', 'port/tools/hostgen/*.py', 'port/tools/hostgen/include/**') }}
-          restore-keys: hostgen-${{ matrix.name }}-
+            port/build/*/CMakeCache.txt
+            port/build/*/CMakeFiles
+            port/build/*/_deps/*-src
+            port/build/*/_deps/*-subbuild
+            !port/build/**/*.o
+            !port/build/**/*.obj
+            !port/build/**/*.pdb
+          key: port-${{ matrix.name }}-${{ hashFiles('games/rac1/src/**', 'games/rac1/include/**', 'games/rac1/config/**', 'games/rac1/ntsc/src/**', 'games/rac1/ntsc/include/**', 'games/rac1/ntsc/config/**', 'port/game/**', 'port/tools/hostgen/*.py', 'port/tools/hostgen/include/**', 'port/**/CMakeLists.txt', 'port/cmake/**', 'port/CMakePresets.json') }}
+          restore-keys: |
+            port-${{ matrix.name }}-
+            hostgen-${{ matrix.name }}-
 
       # LLVM 19 from apt.llvm.org (its key checked by fingerprint): Clang, and libc++ to build
       # into the game.
@@ -226,9 +239,16 @@ jobs:
           cache-key: ${{ matrix.name }}
           targets: ${{ matrix.targets }}
 
+      # A configuration the cache brought that CMake cannot use (a compiler the runner's image
+      # changed) is made afresh, once.
       - name: Build the game
         if: matrix.name != 'android'
-        run: python tools/build_port.py rac1-pal rac1-ntsc --preset standalone
+        run: |
+          python tools/build_port.py rac1-pal rac1-ntsc --preset standalone || {
+            echo "::warning::building again with a fresh configuration"
+            rm -rf port/build/standalone/CMakeCache.txt port/build/standalone/CMakeFiles
+            python tools/build_port.py rac1-pal rac1-ntsc --preset standalone
+          }
 
       - name: A Python for the tools
         if: matrix.name != 'android'
@@ -281,7 +301,11 @@ jobs:
       - name: Build the game, the libraries and the copy (Android)
         if: matrix.name == 'android'
         run: |
-          python tools/build_android.py --no-apk
+          python tools/build_android.py --no-apk || {
+            echo "::warning::building again with a fresh configuration"
+            rm -rf port/build/android-arm64/CMakeCache.txt port/build/android-arm64/CMakeFiles
+            python tools/build_android.py --no-apk
+          }
           llvm=$(ls -d "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/bin | head -1)
           for lib in libopenrac-rac1-pal.so libopenrac-rac1-pal-cli.so libopenrac-python.so; do
             echo "$lib:"; "$llvm/llvm-readelf" -d "launcher/src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a/$lib" | grep NEEDED

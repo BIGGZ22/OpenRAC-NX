@@ -91,8 +91,10 @@ git push origin launcher-vX.Y.Z
      `ANDROID_KEYSTORE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and
      `ANDROID_KEY_PASSWORD` secrets; without them, the runner's debug key).
 
-   Kept between runs: hostgen's output (skipped when its inputs are unchanged), ccache, the
-   Rust dependencies (Swatinem/rust-cache) and Gradle's.
+   Kept between runs: hostgen's output (skipped when its inputs are unchanged), CMake's
+   configuration (its cache, without the objects), ccache, the Rust dependencies
+   (Swatinem/rust-cache, saved by a job that succeeded) and Gradle's. The Linux games are
+   carried without their debug info, and the launcher is built without LTO across crates.
    Each row signs its update archives (and the APK) with minisign (`TAURI_SIGNING_PRIVATE_KEY`).
 
 2. **Release job** (on a tag), after every row:
