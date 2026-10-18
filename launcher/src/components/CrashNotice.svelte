@@ -43,8 +43,13 @@
   <div class="head">
     <span class="mark" aria-hidden="true"><Icon name="warn" size={22} /></span>
     <h2 id="stopped-title" class="grow">The game stopped unexpectedly</h2>
-    <button class="ghost small close" onclick={dismissStopped} aria-label="Close this message">
-      <Icon name="x" size={16} />
+    <button
+      class="ghost small close"
+      onclick={dismissStopped}
+      title="Hide this until the game crashes again"
+      aria-label="Dismiss: hide this until the game crashes again"
+    >
+      <Icon name="x" size={16} />Dismiss
     </button>
   </div>
 

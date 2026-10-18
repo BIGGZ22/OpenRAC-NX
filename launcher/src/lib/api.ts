@@ -60,6 +60,8 @@ export interface Config {
   layout: "compact" | "classic";
   /** The game writes a detailed log (OPENRAC_LOG=verbose); off keeps logs small. */
   detailedGameLog: boolean;
+  /** Per game, the time (seconds since 1970) of the newest crash report the player dismissed. */
+  crashesSeen: Record<string, number>;
 }
 
 /** One of a game's logs or crash reports (core/src/reports.rs). */
@@ -465,6 +467,10 @@ export const api = {
   reportText: (game: string, file: string) => call<string>("report_text", { game, file }),
   /** Saves the report's .zip in Downloads and shows it; returns where (home folder as ~). */
   reportSave: (game: string, file: string) => call<string>("report_save", { game, file }),
+  /** Deletes one log or crash report from the game's data folder (core refuses any other file). */
+  reportDelete: (game: string, file: string) => call<null>("report_delete", { game, file }),
+  /** Deletes every log and crash report of the game; returns how many files went. */
+  reportsDeleteAll: (game: string) => call<number>("reports_delete_all", { game }),
   /** Opens the folder of a game's logs, or of its crash reports. */
   openReportsFolder: (game: string, crashes: boolean) => call<null>("open_reports_folder", { game, crashes }),
   /** One slot for the save editor. */

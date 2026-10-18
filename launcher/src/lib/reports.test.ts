@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ReportEntry } from "./api";
-import { duration, headline, place, stopText, when } from "./reports";
+import { duration, headline, place, stopText, unseenRecent, when } from "./reports";
 
 const crash: ReportEntry = {
   kind: "crash",
@@ -52,5 +52,19 @@ describe("reports", () => {
     );
     expect(text).toContain("exit code 1");
     expect(text).toContain("[error] no window: x");
+  });
+});
+
+describe("unseenRecent", () => {
+  const at = (time: number) => ({ ...crash, time });
+  it("hides the crashes a player dismissed, and shows a newer one", () => {
+    const list = [at(100), at(200), at(300)];
+    expect(unseenRecent(list, 0, 0)).toHaveLength(3);
+    expect(unseenRecent(list, 200, 0).map((e) => e.time)).toEqual([300]);
+    expect(unseenRecent(list, 300, 0)).toEqual([]);
+  });
+
+  it("leaves out the old ones", () => {
+    expect(unseenRecent([at(100), at(200)], 0, 150).map((e) => e.time)).toEqual([200]);
   });
 });

@@ -2,6 +2,7 @@
 //! it runs are. Stored as `launcher.json` in the per-user config folder (the
 //! app decides where; see `src-tauri/src/lib.rs`), never in the checkout.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -46,6 +47,9 @@ pub struct Config {
     /// The game writes a detailed log (OPENRAC_LOG=verbose): level loads, controller changes,
     /// what the port is missing. Off by default, so a log stays small.
     pub detailed_game_log: bool,
+    /// For each game, the time (seconds since 1970) of the newest crash report the player has
+    /// dismissed: crashes up to then are seen, and no notice, button or mark is shown for them.
+    pub crashes_seen: BTreeMap<String, u64>,
 }
 
 impl Default for Config {
@@ -66,6 +70,7 @@ impl Default for Config {
             discord_client_id: None,
             layout: "compact".into(),
             detailed_game_log: false,
+            crashes_seen: BTreeMap::new(),
         }
     }
 }

@@ -2,7 +2,7 @@
   // One game in a player's library: its art, its name, whether it can be played,
   // and the one thing to do next. The whole tile opens the game's page.
   import type { GameView } from "$lib/api";
-  import { app, openVersion } from "$lib/app.svelte";
+  import { app, dismissCrashes, openVersion } from "$lib/app.svelte";
   import { pct } from "$lib/format";
   import { regionLabel } from "$lib/labels";
   import { playerAct, playerState, playerVersion } from "$lib/player.svelte";
@@ -56,7 +56,17 @@
         </p>
         {#if matched}<p class="matched">{matched} matched</p>{/if}
         {#if (app.crashes[game.id]?.recent ?? 0) > 0}
-          <p class="crashed"><Icon name="warn" size={13} />Crashed recently: a report is on its page</p>
+          <p class="crashed">
+            <Icon name="warn" size={13} />Crashed recently: a report is on its page
+            <button
+              class="x"
+              onclick={() => void dismissCrashes(game.id)}
+              aria-label="Dismiss: hide this until the game crashes again"
+              title="Dismiss: hide this until the game crashes again"
+            >
+              <Icon name="x" size={12} />
+            </button>
+          </p>
         {/if}
       </div>
       {#if offers}
@@ -155,8 +165,24 @@
     pointer-events: none;
   }
 
-  .foot .act {
+  .foot .act,
+  .foot .x {
     pointer-events: auto;
+  }
+
+  .crashed .x {
+    display: inline-flex;
+    padding: 3px;
+    color: inherit;
+    background: none;
+    border: 0;
+    border-radius: 50%;
+    opacity: 0.75;
+  }
+
+  .crashed .x:hover {
+    opacity: 1;
+    background: rgb(255 255 255 / 0.12);
   }
 
   h2 {

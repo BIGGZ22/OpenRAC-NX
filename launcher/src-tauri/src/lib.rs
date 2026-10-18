@@ -256,6 +256,31 @@ async fn reports_list(state: State<'_, AppState>, game: String) -> Result<Vec<Re
     tauri::async_runtime::spawn_blocking(move || reports::list(&data)).await.map_err(|e| e.to_string())
 }
 
+/// Deletes one log or crash report of a game from its data folder (core checks the name).
+#[tauri::command]
+async fn report_delete(state: State<'_, AppState>, game: String, file: String) -> Result<(), String> {
+    let data = game_data(&state, &game)?;
+    let name = file.clone();
+    let g = game.clone();
+    tauri::async_runtime::spawn_blocking(move || reports::delete(&data, &g, &file))
+        .await
+        .map_err(|e| e.to_string())??;
+    launcher_log::line(&format!("deleted a report of {game}: {name}"));
+    Ok(())
+}
+
+/// Deletes every log and crash report of a game; returns how many files went.
+#[tauri::command]
+async fn reports_delete_all(state: State<'_, AppState>, game: String) -> Result<usize, String> {
+    let data = game_data(&state, &game)?;
+    let g = game.clone();
+    let count = tauri::async_runtime::spawn_blocking(move || reports::delete_all(&data, &g))
+        .await
+        .map_err(|e| e.to_string())??;
+    launcher_log::line(&format!("deleted all {count} reports of {game}"));
+    Ok(count)
+}
+
 /// The newest crash report written since `since` (seconds since 1970): after the game stopped.
 #[tauri::command]
 async fn latest_crash(state: State<'_, AppState>, game: String, since: u64) -> Result<Option<ReportEntry>, String> {
@@ -787,6 +812,8 @@ pub fn run() {
             latest_crash,
             report_text,
             report_save,
+            report_delete,
+            reports_delete_all,
             open_reports_folder,
         ])
         .run(tauri::generate_context!())

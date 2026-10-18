@@ -118,6 +118,7 @@ let config: Config = {
   layout: "compact",
   discordClientId: null,
   detailedGameLog: false,
+  crashesSeen: {},
 };
 
 const query = new URLSearchParams(typeof location === "undefined" ? "" : location.search);
@@ -137,7 +138,7 @@ const mockCrash: ReportEntry = {
   session: "2026-10-17 20:01:09 -0600",
   size: 9120,
 };
-const mockReports: ReportEntry[] = query.has("nologs")
+let mockReports: ReportEntry[] = query.has("nologs")
   ? []
   : [
       mockCrash,
@@ -917,8 +918,20 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       return delay(null);
     case "reports_list":
       return delay(args.game === "rac1" ? mockReports : []);
+    case "report_delete":
+      mockReports = mockReports.filter((e) => e.file !== args.file);
+      return delay(null);
+    case "reports_delete_all": {
+      const count = mockReports.length;
+      mockReports = [];
+      return delay(count);
+    }
     case "latest_crash":
-      return delay(query.has("crash") && mockCrash.time >= Number(args.since ?? 0) ? mockCrash : null);
+      return delay(
+        query.has("crash") && mockReports.includes(mockCrash) && mockCrash.time >= Number(args.since ?? 0)
+          ? mockCrash
+          : null,
+      );
     case "report_text":
       return delay(
         "**OpenRAC: the game stopped unexpectedly**\n\n- What happened: access (SIGSEGV) at game address 0x0F000000, which is not mapped\n- Where: Batalia (level 6)\n- OpenRAC: 0.7.1, commit ceffee00; launcher 0.7.1\n\n```\n4 Ratchet & Clank (PAL) 0x0000000104f1b3c0 func_0012DB18 + 68\n```\n",

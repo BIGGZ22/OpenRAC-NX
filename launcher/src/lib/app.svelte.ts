@@ -17,7 +17,7 @@ import {
   type VersionView,
 } from "./api";
 import { Queue, type Job } from "./queue";
-import { lastLines, PLAY_ACTIONS, type StopNotice } from "./reports";
+import { lastLines, PLAY_ACTIONS, unseenRecent, type StopNotice } from "./reports";
 import { checkForUpdate, type UpdateInfo } from "./updates";
 
 export type Page = "library" | "game" | "mods" | "tasks" | "settings";
@@ -148,7 +148,8 @@ export async function countCrashes() {
     if (!g.install?.extracted) continue;
     try {
       const crashes = (await api.reportsList(g.id)).filter((e) => e.kind === "crash");
-      counts[g.id] = { total: crashes.length, recent: crashes.filter((e) => e.time >= recent).length };
+      const seen = app.config?.crashesSeen[g.id] ?? 0;
+      counts[g.id] = { total: crashes.length, recent: unseenRecent(crashes, seen, recent).length };
     } catch {
       // no install folder: nothing to count
     }
@@ -156,9 +157,30 @@ export async function countCrashes() {
   app.crashes = counts;
 }
 
-/** Puts the notice away. */
+/**
+ * The player has seen the crashes this game has now: no notice, button or tile mark is shown for
+ * them again, only for one that comes later. Kept in the launcher's settings (crashesSeen).
+ */
+export async function dismissCrashes(game: string) {
+  if (!app.config) return;
+  let newest = app.config.crashesSeen[game] ?? 0;
+  try {
+    for (const e of await api.reportsList(game)) if (e.kind === "crash") newest = Math.max(newest, e.time);
+  } catch {
+    // no install folder: nothing to mark
+  }
+  const saved = await guard(
+    api.saveConfig({ ...app.config, crashesSeen: { ...app.config.crashesSeen, [game]: newest } }),
+  );
+  if (saved) app.config = saved;
+  await countCrashes();
+}
+
+/** Puts the notice away; its crash counts as seen. */
 export function dismissStopped() {
+  const game = app.stopped?.game;
   app.stopped = null;
+  if (game) void dismissCrashes(game);
 }
 
 /** Looks for a new launcher now (at start, or Settings' "Check now"); true when one is out. */

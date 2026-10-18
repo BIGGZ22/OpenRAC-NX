@@ -86,3 +86,9 @@ export function stopText(n: StopNotice, title: string, launcherVersion: string |
 export function lastLines(lines: Line[], count = 40): string[] {
   return lines.slice(-count).map((l) => l.line);
 }
+
+/** The crashes the player should still hear about: newer than SINCE (seconds since 1970) and than
+ *  the newest one they dismissed (SEEN, 0 for none). */
+export function unseenRecent<T extends Pick<ReportEntry, "time">>(crashes: T[], seen: number, since: number): T[] {
+  return crashes.filter((e) => e.time >= since && e.time > seen);
+}

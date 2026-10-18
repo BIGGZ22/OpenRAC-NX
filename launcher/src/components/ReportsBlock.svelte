@@ -1,11 +1,12 @@
 <script lang="ts">
   // A game's logs and crash reports, the newest first: each time it was played, and each time it
   // crashed, in a player's words ("Crashed on Batalia", "Played 23 minutes on Kerwan"), with the
-  // same actions as the crash notice: copy the report, save it as a .zip, open the folder. File
-  // names are a contributor's detail: shown with developer tools on.
+  // same actions as the crash notice: copy the report, save it as a .zip, open the folder. Each
+  // can be deleted (and all of them at once), after a plain question. File names are a
+  // contributor's detail: shown with developer tools on.
   import Icon from "$components/Icon.svelte";
   import { api, type ReportEntry } from "$lib/api";
-  import { app, guard, saveConfig, toast } from "$lib/app.svelte";
+  import { app, countCrashes, guard, saveConfig, toast } from "$lib/app.svelte";
   import { DISCORD_URL, ISSUES_URL } from "$lib/links";
   import { headline, when } from "$lib/reports";
 
@@ -21,6 +22,12 @@
   let copied = $state<string | null>(null);
   let saving = $state<string | null>(null);
   let savedTo = $state<string | null>(null);
+
+  /** What is being asked about: a row's file, "all", or nothing. */
+  let asking = $state<string | null>(null);
+  let deleting = $state(false);
+  /** Something was deleted here: an empty list then says so, not "nothing yet". */
+  let cleared = $state(false);
 
   const crashes = $derived(entries?.filter((e) => e.kind === "crash").length ?? 0);
   const shown = $derived(entries ? (all ? entries : entries.slice(0, FIRST)) : []);
@@ -59,6 +66,32 @@
     if (where) savedTo = where;
   }
 
+  const noun = (e: ReportEntry) => (e.kind === "crash" ? "crash report" : "log");
+
+  async function remove(e: ReportEntry) {
+    deleting = true;
+    const done = await guard(api.reportDelete(game, e.file));
+    deleting = false;
+    asking = null;
+    if (done === undefined) return;
+    cleared = true;
+    savedTo = null;
+    app.reportsChanged++; // the list reads them again
+    void countCrashes();
+  }
+
+  async function removeAll() {
+    deleting = true;
+    const count = await guard(api.reportsDeleteAll(game));
+    deleting = false;
+    asking = null;
+    if (count === undefined) return;
+    cleared = true;
+    savedTo = null;
+    app.reportsChanged++;
+    void countCrashes();
+  }
+
   async function setDetailed(on: boolean) {
     if (app.config) await saveConfig({ ...app.config, detailedGameLog: on });
   }
@@ -70,10 +103,27 @@
       Logs and crash reports
       {#if crashes > 0}<span class="badge">{crashes} {crashes === 1 ? "crash report" : "crash reports"}</span>{/if}
     </h2>
+    {#if entries && entries.length > 0}
+      <button class="ghost small danger" onclick={() => (asking = asking === "all" ? null : "all")}>
+        <Icon name="trash" size={14} />Delete all
+      </button>
+    {/if}
     <button class="ghost small" onclick={() => void guard(api.openReportsFolder(game, false))}>
       <Icon name="folder" size={14} />Open folder
     </button>
   </div>
+
+  {#if asking === "all" && entries}
+    <div class="ask" role="alertdialog" aria-label="Delete all logs and crash reports">
+      <p>
+        Delete all {entries.length} logs and crash reports of this game? They can't be undone. Your saves are not touched.
+      </p>
+      <span class="choices">
+        <button class="danger-solid small" onclick={() => void removeAll()} disabled={deleting}>Delete all</button>
+        <button class="ghost small" onclick={() => (asking = null)}>Keep them</button>
+      </span>
+    </div>
+  {/if}
 
   <p class="intro muted">
     The game keeps a log each time you play, and writes a report when it crashes. If something goes wrong, copy or save
@@ -87,8 +137,12 @@
     <p class="muted row"><span class="spinner"></span>Reading the logs…</p>
   {:else if entries.length === 0}
     <p class="empty">
-      Nothing here yet. After you play, each session is listed here, and if the game ever crashes, its report too, ready
-      to send to us.
+      {#if cleared}
+        All cleared. A new log is kept here each time you play, and if the game ever crashes, its report too.
+      {:else}
+        Nothing here yet. After you play, each session is listed here, and if the game ever crashes, its report too,
+        ready to send to us.
+      {/if}
     </p>
     {#if failed && developer}<p class="dim mono">{failed}</p>{/if}
   {:else}
@@ -119,7 +173,24 @@
             >
               {#if saving === e.file}<span class="spinner"></span>{:else}<Icon name="save" size={14} />{/if}Save
             </button>
+            <button
+              class="ghost small danger"
+              onclick={() => (asking = asking === e.file ? null : e.file)}
+              aria-expanded={asking === e.file}
+              aria-label={`Delete the ${noun(e)}: ${headline(e)}, ${when(e.time)}`}
+            >
+              <Icon name="trash" size={14} />Delete
+            </button>
           </span>
+          {#if asking === e.file}
+            <div class="ask" role="alertdialog" aria-label={`Delete this ${noun(e)}?`}>
+              <p>Delete this {noun(e)}? It can't be undone.</p>
+              <span class="choices">
+                <button class="danger-solid small" onclick={() => void remove(e)} disabled={deleting}>Delete</button>
+                <button class="ghost small" onclick={() => (asking = null)}>Keep it</button>
+              </span>
+            </div>
+          {/if}
         </li>
       {/each}
     </ul>
@@ -256,6 +327,53 @@
   .acts {
     display: flex;
     gap: 4px;
+  }
+
+  button.danger {
+    color: var(--err);
+  }
+
+  button.danger:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--err) 45%, transparent);
+  }
+
+  button.danger-solid {
+    color: var(--ink-deep);
+    background: var(--err);
+    border-color: transparent;
+    font-weight: 600;
+  }
+
+  button.danger-solid:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+
+  /* The question before anything is deleted: in the row it is about, under its text. */
+  .ask {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--err) 8%, var(--panel-hi));
+    border: 1px solid color-mix(in srgb, var(--err) 40%, transparent);
+  }
+
+  li > .ask {
+    grid-column: 2 / -1;
+  }
+
+  .ask p {
+    margin: 0;
+    flex: 1 1 260px;
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  .choices {
+    display: flex;
+    gap: 6px;
   }
 
   .more {

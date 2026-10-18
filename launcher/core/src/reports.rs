@@ -90,6 +90,63 @@ pub fn resolve(data: &Path, file: &str) -> Result<PathBuf, String> {
     }
 }
 
+/// Where `file` is, if it has the shape of a file this module may delete for GAME: a session log
+/// `openrac-<game>*.log` in the data folder itself, or `crashes/crash-*.txt` (a report of any
+/// program: the folder is the game's). The folder and the name; nothing is read from disk.
+fn shape<'a>(data: &Path, game: &str, file: &'a str) -> Option<(PathBuf, &'a str)> {
+    let stem = format!("openrac-{game}");
+    let plain = |name: &str| !name.contains(['/', '\\']) && name != "." && name != "..";
+    match file.split_once('/') {
+        Some(("crashes", name)) if plain(name) && name.starts_with("crash-") && name.ends_with(".txt") => {
+            Some((data.join("crashes"), name))
+        }
+        None if plain(file)
+            && file.strip_prefix(&stem).is_some_and(|rest| rest.starts_with(['-', '.']))
+            && file.ends_with(".log") =>
+        {
+            Some((data.to_path_buf(), file))
+        }
+        _ => None,
+    }
+}
+
+/// Deletes the log or crash report `file` of GAME from `data`, and nothing else: only a plain file
+/// (never a link, which could point anywhere) directly in the data folder or its `crashes/` folder,
+/// itself not a link out of it. One that is already gone is not an error: the list the player
+/// saw was old.
+pub fn delete(data: &Path, game: &str, file: &str) -> Result<(), String> {
+    let refuse = || format!("{file} is not a log or a crash report of this game");
+    let (dir, name) = shape(data, game, file).ok_or_else(refuse)?;
+    let path = dir.join(name);
+    let inside = match (dir.canonicalize(), data.canonicalize()) {
+        (Ok(d), Ok(root)) => d == root || d.parent() == Some(root.as_path()),
+        (Err(e), _) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        _ => false,
+    };
+    if !inside {
+        return Err(refuse());
+    }
+    match std::fs::symlink_metadata(&path) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Ok(m) if m.is_file() => std::fs::remove_file(&path).map_err(|e| format!("{file} could not be deleted: {e}")),
+        _ => Err(refuse()),
+    }
+}
+
+/// Deletes every log and crash report of GAME in `data` (what [`list`] shows, no more); returns
+/// how many files went.
+pub fn delete_all(data: &Path, game: &str) -> Result<usize, String> {
+    let mut count = 0;
+    for e in list(data) {
+        // A listed file of another program's name is left alone: not this game's to delete.
+        if shape(data, game, &e.file).is_some() {
+            delete(data, game, &e.file)?;
+            count += 1;
+        }
+    }
+    Ok(count)
+}
+
 // ---- Times ----------------------------------------------------------------------------
 
 fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
@@ -740,6 +797,86 @@ graphics  Apple M5 Max (Apple), OpenGL 4.1 Metal, hardware through SDL's cocoa d
         assert!(log.contains("--data ~/Library/data"), "{log}");
         assert!(!files.iter().any(|(_, t)| t.contains(&format!("{home}/"))), "the home folder is left in");
         assert_eq!(bundle_name("crashes/crash-2026-10-17_20-08-29.txt"), "OpenRAC-crash-2026-10-17_20-08-29.zip");
+    }
+
+    #[test]
+    fn deletes_one_crash_report_or_one_log() {
+        let data = data_with_files("/home/x");
+        delete(data.path(), "rac1", "crashes/crash-2026-10-17_20-08-29.txt").unwrap();
+        assert!(!data.path().join("crashes/crash-2026-10-17_20-08-29.txt").exists());
+        assert!(data.path().join("openrac-rac1-pal.log").is_file(), "its session's log is a row of its own");
+        delete(data.path(), "rac1", "openrac-rac1-pal.1.log").unwrap();
+        assert!(!data.path().join("openrac-rac1-pal.1.log").exists());
+        // Already gone: not an error.
+        delete(data.path(), "rac1", "openrac-rac1-pal.1.log").unwrap();
+        assert_eq!(list(data.path()).len(), 1);
+    }
+
+    #[test]
+    fn delete_refuses_anything_outside_the_game_s_reports() {
+        let data = data_with_files("/home/x");
+        let outside = data.path().parent().unwrap().join("outside-crash.txt");
+        std::fs::write(&outside, "keep").unwrap();
+        for bad in [
+            "other.txt",
+            "launcher.log",
+            "crashes",
+            "crashes/",
+            "crashes/other.txt",
+            "crashes/crash-x.log",
+            "../outside-crash.txt",
+            "crashes/../other.txt",
+            "crashes/../../outside-crash.txt",
+            "crashes/..",
+            "crashes\\crash-2026.txt",
+            "/etc/passwd",
+            "openrac-rac1-pal.txt",
+            "openrac-rac10-pal.log",
+            "openrac-rac2-pal.log",
+            "sub/openrac-rac1-pal.log",
+            "",
+        ] {
+            assert!(delete(data.path(), "rac1", bad).is_err(), "{bad:?} was allowed");
+        }
+        assert!(data.path().join("other.txt").is_file());
+        assert!(outside.is_file());
+        assert_eq!(list(data.path()).len(), 3);
+        std::fs::remove_file(outside).ok();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn delete_never_follows_a_link() {
+        let data = data_with_files("/home/x");
+        let secret = data.path().parent().unwrap().join("secret-target.txt");
+        std::fs::write(&secret, "keep").unwrap();
+        std::os::unix::fs::symlink(&secret, data.path().join("crashes/crash-linked.txt")).unwrap();
+        std::os::unix::fs::symlink(&secret, data.path().join("openrac-rac1-linked.log")).unwrap();
+        assert!(delete(data.path(), "rac1", "crashes/crash-linked.txt").is_err());
+        assert!(delete(data.path(), "rac1", "openrac-rac1-linked.log").is_err());
+        assert_eq!(std::fs::read_to_string(&secret).unwrap(), "keep");
+        // A crashes folder that is a link out of the data folder is not the game's.
+        let elsewhere = tempfile::tempdir().unwrap();
+        std::fs::write(elsewhere.path().join("crash-a.txt"), "keep").unwrap();
+        let other = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink(elsewhere.path(), other.path().join("crashes")).unwrap();
+        assert!(delete(other.path(), "rac1", "crashes/crash-a.txt").is_err());
+        assert!(elsewhere.path().join("crash-a.txt").is_file());
+        std::fs::remove_file(secret).ok();
+    }
+
+    #[test]
+    fn delete_all_takes_the_reports_and_leaves_the_rest() {
+        let data = data_with_files("/home/x");
+        std::fs::write(data.path().join("openrac-rac2-pal.log"), "another game's").unwrap();
+        std::fs::write(data.path().join("launcher.log"), "not a game log").unwrap();
+        assert_eq!(delete_all(data.path(), "rac1").unwrap(), 3);
+        assert!(!data.path().join("crashes/crash-2026-10-17_20-08-29.txt").exists());
+        assert!(data.path().join("other.txt").is_file());
+        assert!(data.path().join("launcher.log").is_file());
+        assert!(data.path().join("openrac-rac2-pal.log").is_file());
+        assert!(list(data.path()).iter().all(|e| e.file == "openrac-rac2-pal.log"));
+        assert_eq!(delete_all(data.path(), "rac1").unwrap(), 0);
     }
 
     #[test]
