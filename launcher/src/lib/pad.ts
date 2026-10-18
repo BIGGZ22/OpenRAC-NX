@@ -309,6 +309,14 @@ export function padEvent(event: string) {
   }
 }
 
+/** Every held button let go: the launcher lost the window (the game, a picker, a system dialog)
+ *  and their ups go elsewhere. Without it the next press of a button held then was ignored, and a
+ *  direction held then went on moving the focus. */
+export function releasePad() {
+  for (const timer of held.values()) clearTimeout(timer);
+  held.clear();
+}
+
 // ---- a desktop's controllers, through the Gamepad API ----
 
 /** The standard mapping's buttons (w3c.github.io/gamepad), and the left stick past half way. */
@@ -347,9 +355,18 @@ function pollGamepads(previous: Set<PadButton>) {
  */
 export function startPad(home: () => boolean, gamepadApi: boolean) {
   backHome = home;
-  const w = window as unknown as { __openracPad?: typeof padEvent; __openracBack?: typeof back };
+  const w = window as unknown as {
+    __openracPad?: typeof padEvent;
+    __openracPadRelease?: typeof releasePad;
+    __openracBack?: typeof back;
+  };
   w.__openracPad = padEvent;
+  w.__openracPadRelease = releasePad;
   w.__openracBack = back;
+  window.addEventListener("blur", releasePad);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) releasePad();
+  });
   window.addEventListener("pointerdown", () => {
     usingPad(false);
   });

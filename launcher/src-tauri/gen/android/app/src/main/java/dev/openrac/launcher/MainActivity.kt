@@ -82,7 +82,15 @@ class MainActivity : TauriActivity() {
 
   override fun onWindowFocusChanged(hasFocus: Boolean) {
     super.onWindowFocusChanged(hasFocus)
-    if (hasFocus) hideSystemBars()
+    if (hasFocus) {
+      hideSystemBars()
+    } else {
+      // What is held now is let go elsewhere (the game, a picker, a system dialog): the page and
+      // the stick's directions start again from nothing held.
+      heldX = null
+      heldY = null
+      webView?.evaluateJavascript("window.__openracPadRelease && window.__openracPadRelease()", null)
+    }
   }
 
   private fun hideSystemBars() {
