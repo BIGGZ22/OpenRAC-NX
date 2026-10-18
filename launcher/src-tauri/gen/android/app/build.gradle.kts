@@ -17,6 +17,9 @@ val tauriProperties = Properties().apply {
 android {
     compileSdk = 37
     namespace = "dev.openrac.launcher"
+    // The NDK the libraries were built with (tools/build_android.py, CI) also strips them below,
+    // whatever NDK this Gradle plugin would pick by itself.
+    (System.getenv("ANDROID_NDK_HOME") ?: System.getenv("NDK_HOME"))?.takeIf { it.isNotEmpty() }?.let { ndkPath = it }
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
         applicationId = "dev.openrac.launcher"
@@ -68,11 +71,12 @@ android {
             isDebuggable = true
             isJniDebuggable = true
             isMinifyEnabled = false
-            packaging {
-                jniLibs.keepDebugSymbols.add("*/arm64-v8a/*.so")
-                jniLibs.keepDebugSymbols.add("*/armeabi-v7a/*.so")
-                jniLibs.keepDebugSymbols.add("*/x86/*.so")
-                jniLibs.keepDebugSymbols.add("*/x86_64/*.so")
+            // The libraries go in without their debug information, as a release's do: the APK and
+            // each update a fraction of the size. tools/build_android.py --keep-symbols keeps it.
+            if (System.getenv("OPENRAC_ANDROID_KEEP_SYMBOLS") == "1") {
+                packaging {
+                    jniLibs.keepDebugSymbols.add("*/arm64-v8a/*.so")
+                }
             }
         }
         getByName("release") {

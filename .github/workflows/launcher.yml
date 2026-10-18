@@ -383,6 +383,11 @@ jobs:
           # Every build a version code of its own, above any version's own (Tauri's major*10^6 +
           # minor*10^3 + patch): a home screen takes a new icon only from a new version code.
           export OPENRAC_ANDROID_VERSION_CODE=$((1000000000 + GITHUB_RUN_NUMBER))
+          # The launcher's library without debug information (a debug build has it otherwise); Gradle
+          # strips the others (app/build.gradle.kts).
+          if [ "$NAME" = android ]; then
+            export CARGO_PROFILE_DEV_DEBUG=0
+          fi
           if [ "$NAME" = android ] && [ -n "$ANDROID_KEYSTORE" ]; then
             printf '%s' "$ANDROID_KEYSTORE" | base64 -d > "$RUNNER_TEMP/openrac.jks"
             export OPENRAC_ANDROID_KEYSTORE="$RUNNER_TEMP/openrac.jks"
@@ -421,6 +426,16 @@ jobs:
                      libgsl_alloc_hook.so libopenrac_launcher_lib.so; do
             unzip -l "$apk" "lib/arm64-v8a/$lib" > /dev/null || { echo "the APK has no $lib"; exit 1; }
           done
+          # None of them carries debug information: that is what makes a player's download large.
+          llvm=$(ls -d "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/bin | head -1)
+          libs="$RUNNER_TEMP/apk-libs"
+          rm -rf "$libs" && unzip -q "$apk" 'lib/arm64-v8a/*.so' -d "$libs"
+          for lib in "$libs"/lib/arm64-v8a/*.so; do
+            if "$llvm/llvm-readelf" -S "$lib" | grep -q '\.debug_info'; then
+              echo "$(basename "$lib") carries debug information"; exit 1
+            fi
+          done
+          du -sh "$libs"/lib/arm64-v8a/*.so | sort -h
           # Android installs an update only over an APK of the same key: the key's fingerprint is in
           # the run's summary, and a run without the launcher's own key says it will not update.
           signer=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)

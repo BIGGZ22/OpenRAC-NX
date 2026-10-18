@@ -22,7 +22,8 @@ rac1-ntsc when none is named. The steps:
      --android) as the APK's assets/openrac.zip
   5. the APK: `yarn tauri android build` (a debug build, signed with the
      debug key so that it installs as it is; --release for an unsigned
-     release build to sign yourself)
+     release build to sign yourself). Its libraries carry no debug
+     information unless --keep-symbols is given.
 
 It needs the Android SDK (ANDROID_HOME) with the NDK (ANDROID_NDK_HOME or
 NDK_HOME, r27 or newer), a JDK 17 or newer, Rust with the
@@ -183,8 +184,13 @@ def bundle(python_home: Path) -> Path:
     return archive
 
 
-def build_apk(ndk: Path, release: bool) -> None:
+def build_apk(ndk: Path, release: bool, keep_symbols: bool) -> None:
     env = dict(os.environ, NDK_HOME=str(ndk), ANDROID_NDK_HOME=str(ndk))
+    if keep_symbols:
+        env["OPENRAC_ANDROID_KEEP_SYMBOLS"] = "1"  # app/build.gradle.kts
+    else:
+        # The launcher's own library, which a debug build compiles with debug information.
+        env.setdefault("CARGO_PROFILE_DEV_DEBUG", "0")
     yarn = shutil.which("yarn") or "yarn"
     run([yarn, "install", "--immutable"], LAUNCHER, env)
     cmd = [yarn, "tauri", "android", "build", "--apk", "--target", "aarch64"]
@@ -199,7 +205,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("games", nargs="*", default=list(DEFAULT_GAMES))
     parser.add_argument("--release", action="store_true", help="an unsigned release APK (default: debug)")
-    parser.add_argument("--keep-symbols", action="store_true", help="keep the games' debug information")
+    parser.add_argument("--keep-symbols", action="store_true", help="keep the libraries' debug information")
     parser.add_argument("--no-apk", action="store_true", help="stop before Gradle (steps 1 to 4)")
     args = parser.parse_args()
     for game in args.games:
@@ -212,7 +218,7 @@ def main() -> int:
     print("native libraries:", ", ".join(names))
     bundle(python_home)
     if not args.no_apk:
-        build_apk(ndk, args.release)
+        build_apk(ndk, args.release, args.keep_symbols)
     return 0
 
 
