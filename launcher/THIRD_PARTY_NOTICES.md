@@ -12,7 +12,11 @@ The colours, type, header bar, game cards and progress bar follow
 `src/components/Header.tsx`, `src/components/Progress.tsx`, `src/lib/projects.ts`).
 `public/wrench.webp` is the site's `public/wrench.webp`; `public/icon.png` is its
 `src/app/icon.png`; the app icons in `src-tauri/icons/` are made from its
-`src/app/apple-icon.png` with `tauri icon`.
+`src/app/apple-icon.png` with `tauri icon`. The Android icons
+(`src-tauri/gen/android/app/src/main/res/mipmap-*`) are `yarn tauri icon
+src-tauri/icons/android.json -o <dir>`'s `android/` folder: the same icon,
+and for Android's adaptive icon `android-foreground.png`, that icon at 64% on
+its own orange so that the system's mask never cuts the wrench.
 
 ```
 MIT License
