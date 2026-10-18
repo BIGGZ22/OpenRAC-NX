@@ -76,6 +76,32 @@ int main() {
     CHECK(held > released);
     CHECK(glGetError() == GL_NO_ERROR);
 
+    // Frame after frame, as the game draws it: the picture blitted into the window, the pad over
+    // it, shown. The pad looks the same in each (on Vulkan it flickered on a phone).
+    GLuint picture = 0;
+    GLuint framebuffer = 0;
+    glGenTextures(1, &picture);
+    glBindTexture(GL_TEXTURE_2D, picture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, kWidth, kHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glGenFramebuffers(1, &framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, picture, 0);
+    for (int frame = 0; frame < 4; ++frame) {
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        clear();
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
+        glBlitFramebuffer(0, 0, kWidth, kHeight, 0, 0, kWidth, kHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+        frontend::touch_overlay::draw(touch, kWidth, kHeight);
+        CHECK(brightness(edge_x, cross->y) == held);
+        context.window().swap();
+    }
+    glDeleteFramebuffers(1, &framebuffer);
+    glDeleteTextures(1, &picture);
+    CHECK(glGetError() == GL_NO_ERROR);
+
     frontend::touch_overlay::release();
     return test::result();
 }

@@ -1442,6 +1442,20 @@ void DirectRenderer::apply(const DirectState& s, RenderState& render_state) {
             glActiveTexture(GL_TEXTURE0);
         }
     }
+    // The units this draw does not read hold the placeholder, never a texture left there by an
+    // earlier draw: that was often what this one draws into (an off-screen panel just composed, the
+    // frame), a feedback loop GL leaves undefined, and on a phone's GPU the 2D path flickered.
+    if (!s.textured || !s.distance_field) {
+        const GLuint none = render_state.textures.gl_texture(render_state.textures.placeholder());
+        if (!s.textured) {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, none);
+        }
+        glActiveTexture(GL_TEXTURE0 + 1);
+        glBindTexture(GL_TEXTURE_2D, none);
+        glUniform1i(m_uniforms.tex_T1, 1);
+        glActiveTexture(GL_TEXTURE0);
+    }
     glUniform1i(m_uniforms.fog_enable, s.fog ? 1 : 0);
     glUniform3f(
         m_uniforms.fog_colour,

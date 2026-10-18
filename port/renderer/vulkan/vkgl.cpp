@@ -1630,9 +1630,18 @@ void draw(GLenum mode, GLsizei count, GLsizei instances, bool indexed, GLenum in
             samplers.push_back(sampled(*p, i));
         }
     }
-    for (const Sampled& sm : samplers) {
+    for (Sampled& sm : samplers) {
         Image* image = sm.image;
-        if (image == nullptr || image == t.colour || image == t.depth) {
+        if (image != nullptr && (image == t.colour || image == t.depth)) {
+            // A texture that is also what the draw writes, left bound to a unit the draw does not
+            // read (the 2D path's untextured quads keep the frame's texture on unit 0): GL leaves
+            // a read of it undefined, and Vulkan cannot describe an attachment as sampled. GL's
+            // incomplete texture stands in.
+            sm.image = g->dummy_image.get();
+            sm.view = sample_view(*sm.image, 0, 0);
+            continue;
+        }
+        if (image == nullptr) {
             continue;
         }
         if (image->layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
