@@ -51,18 +51,21 @@ float segment(vec2 p, vec2 a, vec2 b) {
     vec2 pa = p - a, ba = b - a;
     return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0));
 }
+// The pad's accent: Ratchet's orange, for a held control's light and the sticks' knobs.
+const vec3 accent = vec3(1.0, 0.56, 0.14);
+
 vec4 over(vec4 under, vec4 top) {
     float a = top.a + under.a * (1.0 - top.a);
     return vec4(a > 0.0 ? (top.rgb * top.a + under.rgb * under.a * (1.0 - top.a)) / a : vec3(0.0), a);
 }
 // Glass: a dark translucent body, lighter at the top, a fine bright rim.
 vec4 glass(float d, float lift) {
-    vec4 body = vec4(mix(vec3(0.20, 0.22, 0.27), vec3(0.07, 0.08, 0.10), v_at.y * 0.5 + 0.5),
+    vec4 body = vec4(mix(vec3(0.23, 0.21, 0.20), vec3(0.08, 0.075, 0.07), v_at.y * 0.5 + 0.5),
                      0.40 + 0.18 * held);
-    body.rgb = mix(body.rgb, tint * 0.55, 0.45 * held * lift);
+    body.rgb = mix(body.rgb, accent * 0.55, 0.45 * held * lift);
     vec4 c = vec4(body.rgb, body.a * fill(d));
     float rim = fill(abs(d + 0.035) - 0.022);
-    return over(c, vec4(vec3(1.0), (0.30 + 0.45 * held) * rim));
+    return over(c, vec4(mix(vec3(1.0), accent, 0.6 * held), (0.30 + 0.5 * held) * rim));
 }
 // A letter of the shoulders' names in strokes, in a box 1 wide and 2 high centred on p's origin:
 // 0 L, 1 R, 2 one, 3 two.
@@ -100,7 +103,7 @@ void main() {
         // An arm of the d-pad: its arrow, lit when held.
         float ca = cos(angle), sa = sin(angle);
         vec2 q = mat2(ca, -sa, sa, ca) * p;
-        c = vec4(tint, 0.30 * held * fill(length(p) - 0.95));
+        c = vec4(accent, 0.40 * held * fill(length(p) - 0.95));
         float tri = max(abs(q.x) * 0.9 - q.y * 0.45, q.y - 0.18) - 0.20;
         c = over(c, vec4(mix(vec3(0.85), vec3(1.0), held), (0.75 + 0.25 * held) * fill(tri)));
     } else if (symbol == 5) {
@@ -119,8 +122,8 @@ void main() {
         float kd = length(k) - 0.42 * press;
         vec4 shadow = vec4(vec3(0.0), 0.35 * fill(length(k - vec2(0.0, 0.06)) - 0.46));
         c = over(c, shadow);
-        vec3 face = mix(vec3(0.92, 0.94, 0.98), vec3(0.62, 0.66, 0.74), clamp(k.y / 0.42 * 0.5 + 0.5, 0.0, 1.0));
-        face = mix(face, mix(face, vec3(0.55, 0.80, 1.0), 0.45), held);
+        vec3 face = mix(vec3(0.97, 0.95, 0.92), vec3(0.70, 0.66, 0.62), clamp(k.y / 0.42 * 0.5 + 0.5, 0.0, 1.0));
+        face = mix(face, mix(face, accent, 0.6), held);
         c = over(c, vec4(face, 0.80 * fill(kd)));
         c = over(c, vec4(vec3(1.0), 0.35 * fill(abs(length(k) - 0.27 * press) - 0.02)));
     } else {
@@ -159,7 +162,7 @@ void main() {
         ink.a *= 0.75 + 0.25 * held;
         c = over(c, vec4(ink.rgb, ink.a * fill(s)));
         // The glow of a press, outside the outline.
-        c = over(vec4(tint, 0.35 * held * (1.0 - smoothstep(0.0, 0.18, d)) * step(0.0, d)), c);
+        c = over(vec4(accent, 0.40 * held * (1.0 - smoothstep(0.0, 0.18, d)) * step(0.0, d)), c);
     }
     if (c.a <= 0.002) { discard; }
     colour = c;
@@ -203,7 +206,7 @@ struct Look {
 
 Look look(const TouchControl& c) {
     if (c.kind != TouchControl::Kind::Button) {
-        return {kStick, 0.55f, 0.80f, 1.0f};
+        return {kStick, 1.0f, 0.56f, 0.14f};
     }
     // The DualShock's own colours, a little brighter for a glass over a game.
     switch (c.button) {
@@ -211,16 +214,16 @@ Look look(const TouchControl& c) {
         case Button::Circle: return {kCircle, 1.0f, 0.42f, 0.45f};
         case Button::Cross: return {kCross, 0.55f, 0.72f, 1.0f};
         case Button::Square: return {kSquare, 1.0f, 0.55f, 0.88f};
-        case Button::Up: return {kArrow, 0.9f, 0.9f, 0.95f, 0.0f};
-        case Button::Right: return {kArrow, 0.9f, 0.9f, 0.95f, 1.5708f};
-        case Button::Down: return {kArrow, 0.9f, 0.9f, 0.95f, 3.1416f};
-        case Button::Left: return {kArrow, 0.9f, 0.9f, 0.95f, -1.5708f};
-        case Button::L1: return {kNone, 0.8f, 0.85f, 1.0f, 0.0f, kGlyphL, kGlyph1};
-        case Button::L2: return {kNone, 0.8f, 0.85f, 1.0f, 0.0f, kGlyphL, kGlyph2};
-        case Button::R1: return {kNone, 0.8f, 0.85f, 1.0f, 0.0f, kGlyphR, kGlyph1};
-        case Button::R2: return {kNone, 0.8f, 0.85f, 1.0f, 0.0f, kGlyphR, kGlyph2};
-        case Button::Select: return {kSelect, 0.8f, 0.85f, 1.0f};
-        case Button::Start: return {kStart, 0.8f, 0.85f, 1.0f};
+        case Button::Up: return {kArrow, 0.93f, 0.91f, 0.88f, 0.0f};
+        case Button::Right: return {kArrow, 0.93f, 0.91f, 0.88f, 1.5708f};
+        case Button::Down: return {kArrow, 0.93f, 0.91f, 0.88f, 3.1416f};
+        case Button::Left: return {kArrow, 0.93f, 0.91f, 0.88f, -1.5708f};
+        case Button::L1: return {kNone, 0.95f, 0.92f, 0.88f, 0.0f, kGlyphL, kGlyph1};
+        case Button::L2: return {kNone, 0.95f, 0.92f, 0.88f, 0.0f, kGlyphL, kGlyph2};
+        case Button::R1: return {kNone, 0.95f, 0.92f, 0.88f, 0.0f, kGlyphR, kGlyph1};
+        case Button::R2: return {kNone, 0.95f, 0.92f, 0.88f, 0.0f, kGlyphR, kGlyph2};
+        case Button::Select: return {kSelect, 0.95f, 0.92f, 0.88f};
+        case Button::Start: return {kStart, 0.95f, 0.92f, 0.88f};
         default: return {kNone, 0.9f, 0.9f, 0.9f};
     }
 }
@@ -292,7 +295,7 @@ void draw(platform::TouchPad& touch, int width, int height) {
     }
     if (arm > 0.0f) {
         box((left + right) * 0.5f, (top + bottom) * 0.5f, (bottom - top) * 0.5f + arm * 1.05f, 1.0f, 1.0f);
-        glUniform3f(s.shader.uniform("tint"), 0.9f, 0.9f, 0.95f);
+        glUniform3f(s.shader.uniform("tint"), 0.93f, 0.91f, 0.88f);
         glUniform1f(s.shader.uniform("held"), 0.0f);
         glUniform1i(s.shader.uniform("symbol"), kDpad);
         glUniform1i(s.shader.uniform("label0"), -1);
