@@ -4,7 +4,7 @@
   // drivers), with a meta.json. Packages load on Adreno only (libadrenotools); on Mali the
   // system's driver is the one there is.
   import { api, type GpuDrivers, type Renderer } from "$lib/api";
-  import { guard, toast } from "$lib/app.svelte";
+  import { app, gameWindow, guard, readGame, toast } from "$lib/app.svelte";
 
   let info = $state<GpuDrivers | null>(null);
   let busy = $state(false);
@@ -26,9 +26,23 @@
 
   async function renderer(choice: Renderer) {
     busy = true;
-    await guard(api.gpuRendererSelect(choice));
+    const saved = await guard(api.gpuRendererSelect(choice).then(() => true));
     await load();
+    await readGame();
     busy = false;
+    if (!saved) return;
+    // A running game keeps what it started with: "Return to game" brings that one back.
+    const name = choice === "vulkan" ? "Vulkan" : "OpenGL ES";
+    toast(
+      app.game?.running
+        ? `Saved. The game that is running keeps its renderer: quit it to start it with ${name}.`
+        : `Saved. The game starts with ${name}.`,
+    );
+  }
+
+  async function quitGame() {
+    if (!confirm("Quit the game? What is not saved in it is lost.")) return;
+    await gameWindow(true);
   }
 
   async function add() {
@@ -76,6 +90,13 @@
       <small>Experimental. Needs Vulkan 1.3; the game falls back to OpenGL ES without it.</small>
     </span>
   </label>
+  <p class="dim note">
+    Used from the game's next start; its menu (the Back button) says what it draws with now.
+    {#if app.game?.running}
+      The game is running with what it started with.
+      <button class="link" onclick={() => void quitGame()}>Quit the game</button>
+    {/if}
+  </p>
 </section>
 
 <section class="panel">
