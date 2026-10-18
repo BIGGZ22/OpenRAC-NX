@@ -46,6 +46,8 @@ class StatusArgs {
 class DownloadArgs {
   lateinit var url: String
   lateinit var path: String
+  // The download downloadProgress reports (the update's APK), not a manifest read beside it.
+  var progress: Boolean = false
 }
 
 @InvokeArg
@@ -181,13 +183,16 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
   @Volatile private var downloaded = 0L
   @Volatile private var downloadTotal = -1L
 
-  /** {url, path}: downloads an https address into a file, through a file beside it. */
+  /** {url, path, progress}: downloads an https address into a file, through a file beside it;
+   *  with progress, it is the one downloadProgress reports. */
   @Command
   fun download(invoke: Invoke) {
     val args = invoke.parseArgs(DownloadArgs::class.java)
     if (!args.url.startsWith("https://")) return invoke.reject("not an https address: ${args.url}")
-    downloaded = 0L
-    downloadTotal = -1L
+    if (args.progress) {
+      downloaded = 0L
+      downloadTotal = -1L
+    }
     Thread {
       val dest = File(args.path)
       val partial = File(dest.path + ".partial")
@@ -202,7 +207,7 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
           if (connection.responseCode != HttpURLConnection.HTTP_OK || connection.url.protocol != "https") {
             throw IllegalStateException("${args.url}: HTTP ${connection.responseCode}")
           }
-          downloadTotal = connection.contentLengthLong
+          if (args.progress) downloadTotal = connection.contentLengthLong
           connection.inputStream.use { input ->
             partial.outputStream().use { out ->
               val buffer = ByteArray(1 shl 16)
@@ -210,7 +215,7 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
                 val n = input.read(buffer)
                 if (n < 0) break
                 out.write(buffer, 0, n)
-                downloaded += n
+                if (args.progress) downloaded += n
               }
             }
           }
@@ -260,12 +265,13 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
   private fun install(invoke: Invoke) {
     val apk = File(invoke.parseArgs(DownloadArgs::class.java).path)
     Thread {
+      val installer = activity.packageManager.packageInstaller
+      var id = -1
       try {
-        val installer = activity.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
         params.setAppPackageName(activity.packageName)
         params.setSize(apk.length())
-        val id = installer.createSession(params)
+        id = installer.createSession(params)
         installer.openSession(id).use { session ->
           session.openWrite("base.apk", 0, apk.length()).use { out ->
             apk.inputStream().use { it.copyTo(out, 1 shl 20) }
@@ -281,6 +287,14 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
         }
         invoke.resolve()
       } catch (e: Exception) {
+        // A session left open keeps the APK's copy: the next try makes a new one.
+        if (id >= 0) {
+          try {
+            installer.abandonSession(id)
+          } catch (e: Exception) {
+            // Already committed or gone.
+          }
+        }
         invoke.reject("the update could not be handed to Android's installer: ${e.message}")
       }
     }.start()
@@ -292,15 +306,22 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
   fun launchGame(invoke: Invoke) {
     val args = invoke.parseArgs(LaunchArgs::class.java)
     val environment = OpenracSetup.environment(activity).toMutableMap()
-    selectedDriver()?.let { (dir, meta) ->
+    // A package loads only on Adreno's kernel driver; elsewhere the system's driver, whatever is
+    // chosen (the choice cannot be changed on such a device).
+    selectedDriver()?.takeIf { device().getString("gpu") == "adreno" }?.let { (dir, meta) ->
       environment["OPENRAC_GPU_DRIVER_DIR"] = dir.path
       environment["OPENRAC_GPU_DRIVER_LIBRARY"] = meta.getString("libraryName")
     }
     // The renderer: Vulkan's falls back to OpenGL ES by itself where the device has no Vulkan 1.3
     // (port/platform/window.cpp).
     if (renderer() == "vulkan") environment["OPENRAC_GL_API"] = "vulkan"
-    // Already playing: back to the game as it is, not a second start.
+    // Already playing: back to the game as it is, not a second start (unknown which runs, it is
+    // the same one). Another game waits for it to end: both run in one process, which ends with
+    // its game (GameActivity.onDestroy), so a start now would end with it.
     gameTask()?.let {
+      if (playing != null && playing != args.library) {
+        return invoke.reject("Another game is running: stop it first (Stop the game, in the menu on its page).")
+      }
       it.moveToFront()
       return invoke.resolve()
     }
@@ -538,6 +559,20 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
     partial.deleteRecursively()
     partial.mkdirs()
     val canonical = partial.canonicalPath + File.separator
+    try {
+      unpackInto(uri, partial, canonical)
+    } catch (e: Exception) {
+      partial.deleteRecursively()
+      throw e
+    }
+    if (!partial.renameTo(dir)) {
+      partial.deleteRecursively()
+      throw IllegalStateException("cannot keep the package in $dir")
+    }
+    return Pair(id, found)
+  }
+
+  private fun unpackInto(uri: Uri, partial: File, canonical: String) {
     activity.contentResolver.openInputStream(uri)?.use { input ->
       ZipInputStream(input.buffered()).use { zip ->
         while (true) {
@@ -554,11 +589,6 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
           }
         }
       }
-    }
-    if (!partial.renameTo(dir)) {
-      partial.deleteRecursively()
-      throw IllegalStateException("cannot keep the package in $dir")
-    }
-    return Pair(id, found)
+    } ?: throw IllegalStateException("the chosen file cannot be opened")
   }
 }
