@@ -29,7 +29,6 @@
 #define RAC1_OMIT_func_L12_002C08A0 1 /* FUN_L12_002bf6d0 */
 #define RAC1_OMIT_func_L13_0030AD88 1 /* FUN_L13_003098d0 */
 #define RAC1_OMIT_func_L00_00261448 1 /* FUN_L00_002603d0 */
-#define RAC1_OMIT_func_L00_00254218 1 /* the joint pose; not mapped for this disc yet */
 /* Entries the version map cannot pair, checked by hand. */
 /* sceVu0Normalize, an entry inside the VU0 library object, which the map does not cut out. */
 #define func_001252C0 game_FUN_00125180
@@ -166,6 +165,7 @@
 #define func_L00_00212790__game game_FUN_L00_002120d8__game
 #define func_L00_0024F054 func_L00_0024E01C
 #define func_L00_00252D20 func_L00_00251CE8
+#define func_L00_00254218 game_FUN_0020fa90
 #define func_L00_0025D3C0 func_L00_0025C368
 #define func_L00_00267080 func_L00_00266238
 #define func_L00_002864E0 game_FUN_L00_00285208
