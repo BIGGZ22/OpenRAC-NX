@@ -90,8 +90,13 @@ programs only from the app's native library folder. So the APK carries:
   `port/build/release/openrac-<id>` to those libraries, so the launcher's
   actions find them where a desktop copy has them.
 
-Android's CPython has no process pools (no `sem_open`), so
-`editor/extract.py` writes the levels one by one there (`worker_pool`).
+Setting up is made for a phone's storage and cores: the image is copied
+file to file by the kernel (`copy_file_range`/`sendfile`, through
+`std::io::copy`), the extractor writes out only SYSTEM.CNF and the boot
+executable beside the image (`--boot-only`; every file is still read and
+checked, and nothing else on the disc is read by the port), and, since
+Android's CPython has no process pools (no `sem_open`), `editor/extract.py`
+writes up to four levels at once in Pythons of their own (`SubprocessPool`).
 Play is the one action that does not run a program: the launcher starts the
 game's activity with the same command line. Nothing leaves the device.
 

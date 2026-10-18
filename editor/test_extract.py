@@ -1,10 +1,13 @@
 """Output safety: new directories under assets/ or build/, published whole."""
 
+import io
 import json
 from pathlib import Path
+import pickle
+import sys
 import tempfile
 import unittest
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 from unittest import mock
 
 import extract
@@ -48,13 +51,28 @@ class PoolTests(unittest.TestCase):
         with worker_pool(2) as pool:
             self.assertIsInstance(pool, ProcessPoolExecutor)
 
-    def test_one_thread_without_sem_open(self):
+    def test_processes_of_their_own_without_sem_open(self):
         # Android's CPython: building a process pool fails for want of sem_open.
         lacking = mock.Mock(side_effect=NotImplementedError("This platform lacks sem_open"))
         with mock.patch.object(extract, "ProcessPoolExecutor", lacking):
             with worker_pool(8) as pool:
-                self.assertIsInstance(pool, ThreadPoolExecutor)
-                self.assertEqual(pool.submit(sum, [1, 2]).result(), 3)
+                self.assertIsInstance(pool, extract.SubprocessPool)
+                # Only the level exports run there.
+                with self.assertRaises(RuntimeError):
+                    pool.submit(sum, [1, 2]).result()
+
+    def test_a_worker_runs_one_export_and_pickles_its_result(self):
+        stdin = io.TextIOWrapper(io.BytesIO(pickle.dumps(("export_port_title", ("disc.iso",), {"lod": 1}))))
+        stdout = io.TextIOWrapper(io.BytesIO())
+
+        def export(iso, lod):
+            print("progress that must not reach the result")
+            return {"level": 99, "iso": iso, "lod": lod}
+
+        with mock.patch.object(extract, "export_port_title", export), mock.patch.object(sys, "stdin", stdin), \
+                mock.patch.object(sys, "stdout", stdout), mock.patch.object(sys, "stderr", io.StringIO()):
+            extract.worker()
+        self.assertEqual(pickle.loads(stdout.buffer.getvalue()), {"level": 99, "iso": "disc.iso", "lod": 1})
 
 
 if __name__ == "__main__":
