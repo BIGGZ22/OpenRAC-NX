@@ -647,7 +647,7 @@ extern void func_0020DAB0();
 extern s32 func_0020DD48();
 extern void func_0020E2B0();
 extern void func_00218B10();
-extern s32 func_0021A610();
+extern void func_0021A610();
 extern s32 func_00229D48();
 extern void func_00229E50();
 extern s32 func_0022B8F8();

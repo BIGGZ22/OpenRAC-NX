@@ -116,7 +116,7 @@ void func_L06_002FF000(struct Moby *moby) {
     f32 frame;
     f32 cur_frame;
 
-    func_L06_002FFF70();
+    func_L06_002FFF70(moby);
     target = vars->target;
     func_L00_00264B40(moby, 1, vars->unk420, 2.5f);
     if (moby->unk31 != 0 && FastVecDist(&moby->pos, &D_L06_00167640) < 27.0f) {
