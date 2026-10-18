@@ -70,8 +70,9 @@ what to look for; report what you see with the device, its GPU (Settings,
 GPU driver, shows the model and SoC) and the game's log.
 
 1. **Install and start.** The launcher opens on the library. The first start
-   unpacks the tools (a few seconds); `adb logcat -s OpenRAC` says
-   "unpacked OpenRAC's tools".
+   unpacks the tools beside the page, which says it is preparing them;
+   `adb logcat -s OpenRAC` says "unpacked OpenRAC's tools" and how long it
+   took.
 2. **Add the disc.** "Choose disc image" opens Android's picker; pick your
    own image of the disc (.iso, or a .chd made with `chdman createdvd`, which
    is unpacked into an .iso). Toasts count the copy in quarters; then the

@@ -51,6 +51,8 @@ interface AppState {
   discCopy: DiscCopy | null;
   /** Android: the game running beside the launcher (readGame). */
   game: GameStatus | null;
+  /** Android: the tools the launcher carries being unpacked, after an install or an update. */
+  preparing: boolean;
 }
 
 export const app = $state<AppState>({
@@ -69,6 +71,7 @@ export const app = $state<AppState>({
   crashes: {},
   discCopy: null,
   game: null,
+  preparing: false,
 });
 
 /** Android: whether the game still runs beside the launcher, read when the launcher comes back
@@ -189,6 +192,7 @@ export async function start() {
       if (document.visibilityState === "visible") void readGame();
     });
   }
+  if (onAndroid) await prepareTools();
   app.info = await api.appInfo();
   app.config = await firstRun(await api.getConfig());
   if (app.config.lastVersion) app.version = app.config.lastVersion;
@@ -197,6 +201,20 @@ export async function start() {
   // A new launcher is looked for at start unless the player turned that off (Settings).
   if (app.info.version && app.config.checkUpdates) {
     lookForUpdate().catch(() => undefined); // told only when the player asks (Settings' "Check now")
+  }
+}
+
+/** Android: the tools the launcher carries are unpacked after each install or update, beside the
+ *  page; nothing reads them before they are there. A second's wait shows why. */
+async function prepareTools() {
+  const shown = setTimeout(() => (app.preparing = true), 1000);
+  try {
+    await api.toolsReady();
+  } catch (e) {
+    toast(String(e), "error");
+  } finally {
+    clearTimeout(shown);
+    app.preparing = false;
   }
 }
 

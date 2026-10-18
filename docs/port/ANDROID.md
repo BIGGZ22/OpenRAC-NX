@@ -91,7 +91,10 @@ programs only from the app's native library folder. So the APK carries:
   `assets/openrac.zip`, unpacked into `files/openrac` when the APK changes
   (`OpenracSetup.kt`), which then links `python/bin/python3` and
   `port/build/release/openrac-<id>` to those libraries, so the launcher's
-  actions find them where a desktop copy has them.
+  actions find them where a desktop copy has them. The unpacking runs on a
+  thread of its own, into `files/openrac.new` that then takes the place of
+  the old copy; the page waits for it (`tools_ready`) and says why after a
+  second.
 
 Setting up is made for a phone's storage and cores: the image is copied
 file to file by the kernel (`copy_file_range`/`sendfile`, through

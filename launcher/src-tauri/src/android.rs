@@ -214,6 +214,27 @@ pub async fn gpu_driver_remove<R: Runtime>(app: AppHandle<R>, id: String) -> Res
     }
 }
 
+/// Waits until the tools the launcher carries are unpacked (OpenracSetup.kt does that on a thread
+/// of its own, once per install or update); an error says why they could not be. Nothing to wait
+/// for on a desktop.
+#[tauri::command]
+pub async fn tools_ready<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    {
+        #[derive(Deserialize)]
+        struct Ready {
+            error: Option<String>,
+        }
+        let ready: Ready = kotlin(&app, "toolsReady", ()).await?;
+        ready.error.map_or(Ok(()), Err)
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        Ok(())
+    }
+}
+
 /// What the set-up's notification shows while the launcher is in the background, or None when the
 /// set-up is over (OpenracPlugin.backgroundStatus, SetupService.kt): it keeps the process running.
 #[tauri::command]

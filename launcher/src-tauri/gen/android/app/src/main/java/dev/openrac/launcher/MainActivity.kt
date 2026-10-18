@@ -38,7 +38,8 @@ class MainActivity : TauriActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
-    // OpenRAC's tools and the environment the Rust side reads, before it starts.
+    // The environment the Rust side reads, before it starts; OpenRAC's tools are unpacked beside
+    // it when they have to be (the page waits for them: toolsReady).
     OpenracSetup.prepare(this)
     super.onCreate(savedInstanceState)
     hideSystemBars()

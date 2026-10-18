@@ -529,6 +529,7 @@ export const api = {
   /** Android: what the set-up's notification shows while the launcher is in the background; null:
    *  the set-up is over (SetupService.kt). */
   backgroundStatus: (status: BackgroundStatus | null) => call<null>("background_status", { ...status }),
+  toolsReady: () => call<null>("tools_ready"),
   gameStatus: () => call<GameStatus>("game_status"),
   /** Back to the running game, or (`stop`) end it. */
   gameWindow: (stop: boolean) => call<null>("game_window", { stop }),

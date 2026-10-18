@@ -53,7 +53,10 @@
 </script>
 
 {#if !app.config}
-  <div class="loading"><span class="spinner"></span></div>
+  <div class="loading">
+    <span class="spinner"></span>
+    {#if app.preparing}<p>Preparing OpenRAC's tools. This happens once after installing or updating.</p>{/if}
+  </div>
 {:else}
   <div class="shell">
     {#if app.config.setupComplete}<Header />{/if}
@@ -76,7 +79,16 @@
     height: 100%;
     display: grid;
     place-items: center;
+    place-content: center;
+    gap: 16px;
+    padding: 0 24px;
+    text-align: center;
     color: var(--amber);
+  }
+
+  .loading p {
+    margin: 0;
+    color: var(--dim);
   }
 
   .shell {

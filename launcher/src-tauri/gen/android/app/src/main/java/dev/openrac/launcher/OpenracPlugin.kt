@@ -164,6 +164,17 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
 
   // ---- the set-up, in the background ----
 
+  /** Resolves once the tools the launcher carries are unpacked (OpenracSetup.prepare), with
+   *  {error} when they could not be. */
+  @Command
+  fun toolsReady(invoke: Invoke) {
+    Thread {
+      val out = JSObject()
+      OpenracSetup.awaitReady()?.let { out.put("error", it) }
+      invoke.resolve(out)
+    }.start()
+  }
+
   /** {title, text, percent}: what the set-up's notification shows (SetupService.kt); no title:
    *  the set-up is over and the notification goes. MainActivity asks for notifications. */
   @Command

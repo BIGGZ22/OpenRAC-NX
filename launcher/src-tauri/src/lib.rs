@@ -829,15 +829,15 @@ pub fn run() {
             // The copy of OpenRAC the launcher carries: what a player plays from (detect::settle).
             // A copy whose Python does not run here is not for this machine (an Intel Mac has the
             // Apple silicon one): the launcher then works on a checkout, as it did.
-            // On Android the copy is unpacked from the APK into the app's files (OpenracSetup.kt).
-            let resources = if Platform::current() == Platform::Android {
-                android::bundled_root().and_then(|root| root.parent().map(Path::to_path_buf))
+            // On Android the copy is unpacked from the APK into the app's files (OpenracSetup.kt),
+            // maybe still now: the page waits for it (tools_ready) before it reads anything there.
+            let bundled = if Platform::current() == Platform::Android {
+                android::bundled_root()
             } else {
-                app.path().resource_dir().ok()
+                app.path().resource_dir().ok().and_then(|dir| detect::bundled_root(&dir)).filter(|dir| {
+                    detect::bundled_python(dir).is_some_and(|python| detect::check_tool(Tool::Python, &python).ok)
+                })
             };
-            let bundled = resources.and_then(|dir| detect::bundled_root(&dir)).filter(|dir| {
-                detect::bundled_python(dir).is_some_and(|python| detect::check_tool(Tool::Python, &python).ok)
-            });
             // Android's picker gives no paths: the disc images the player picks are copied into
             // one folder of the app's, which is then the games folder.
             if config.discs_dir.is_none() && Platform::current() == Platform::Android {
@@ -917,6 +917,7 @@ pub fn run() {
             android::gpu_driver_remove,
             android::gpu_renderer_select,
             android::background_status,
+            android::tools_ready,
             android::update_check,
             android::update_install,
             android::game_status,
