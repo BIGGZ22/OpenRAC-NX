@@ -110,7 +110,7 @@
   "candidates": "nonmatching/functional.tsv",
   "hand": "hand/hand.tsv",
   "asm": {
-    "enabled": false,
+    "enabled": true,
     "dirs": ["asm/nonmatchings", "asm/handwritten", "asm/overlays", "asm/remnants"],
     "gp": "0x00166D00"
   }
