@@ -174,7 +174,8 @@
     font-weight: 400;
   }
 
-  /* The wrench turns in when the launcher opens, and again under the pointer or a press. */
+  /* The wrench turns in when the launcher opens, and again under the pointer or a press (not on
+     Android, below). */
   .brand img {
     width: 40px;
     height: 40px;
@@ -428,9 +429,13 @@
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
   }
 
+  /* It stays still there: the logo of an app, not a control that plays. */
   :global(html[data-platform="android"]) .brand img {
     width: 34px;
     height: 34px;
+    animation: none;
+    transform: none;
+    transition: none;
   }
 
   :global(html[data-platform="android"]) .brand :is(span, small) {
