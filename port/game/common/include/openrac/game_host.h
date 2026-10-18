@@ -80,9 +80,11 @@ extern void (*openrac_game_on_frame)(unsigned frame);
  * the launcher's Discord presence. */
 extern int (*openrac_game_bolts)(void);
 
-/* Whether an in-game cutscene is playing, when a game installs it (rac1/pal: boot.c, the game mode
- * 2): the window lets Start skip it (settings skip_cutscenes). */
-extern int (*openrac_game_in_cutscene)(void);
+/* The buttons a pressed Start also presses while Skip cutscenes is on (settings skip_cutscenes), when
+ * a game installs it: what the game's own skip of the scene playing now takes, as the window's pad
+ * bits (0x4000 Cross, 0x0F00 the four shoulders), or 0 while nothing skippable plays (rac1: boot.c,
+ * the shoulders in a cutscene, Cross in the ship's landing and take-off). */
+extern int (*openrac_game_skip_buttons)(void);
 
 /* For crash reports (port/common/crash.h), sampled once a frame, when a game installs them (rac1:
  * boot.c): the game's mode word, and where the hero is. Each returns 0 when it has no answer now

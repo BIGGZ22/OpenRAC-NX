@@ -2802,13 +2802,14 @@ bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
             at = at ? at + 1 : nullptr;
         }
     }
-    // Start skips an in-game cutscene: the game skips one on Start with L1, L2, R1 and R2 held
-    // (Start alone only once it is beaten; ReRAC cutscenes_transitions.md, "skip"), so while one
-    // plays a pressed Start also presses the four shoulders. Bits are active low: 0x8 Start,
-    // 0x0F00 L2 R2 L1 R1.
+    // Start skips an in-game scene the way the game itself skips it: a pressed Start also presses
+    // what the game's own skip of the scene playing reads (rac1: in a cutscene the four shoulders,
+    // since the game skips one on Start with L1, L2, R1 and R2 held, Start alone only once it is
+    // beaten, ReRAC cutscenes_transitions.md, "skip"; in the ship's landing and take-off Cross).
+    // Bits are active low: 0x8 Start, 0x4000 Cross, 0x0F00 L2 R2 L1 R1.
     if (port == 0 && settings::get().skip_cutscenes && (*buttons & 0x8) == 0) {
-        if (openrac_game_in_cutscene != nullptr && openrac_game_in_cutscene() != 0) {
-            *buttons = static_cast<std::uint16_t>(*buttons & ~0x0F00);
+        if (openrac_game_skip_buttons != nullptr) {
+            *buttons = static_cast<std::uint16_t>(*buttons & ~(openrac_game_skip_buttons() & 0xFFFF));
         }
         if (openrac_game_skip != nullptr) {
             openrac_game_skip();
