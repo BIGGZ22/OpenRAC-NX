@@ -1,8 +1,17 @@
 // In-app and GitHub release updater for OpenRAC Launcher. On a desktop it is Tauri's updater; on
 // Android the launcher's own (src-tauri/src/android.rs): the release's APK, checked against the
 // same key, handed to Android's installer.
-import { api, inTauri, onAndroid, onUpdateProgress, relaunchApp, type AndroidRelease, type UpdateSource } from "./api";
-import type { Update, DownloadEvent } from "@tauri-apps/plugin-updater";
+import {
+  api,
+  inTauri,
+  onAndroid,
+  onUpdateProgress,
+  relaunchApp,
+  type AndroidRelease,
+  type UpdateChannel,
+  type UpdateSource,
+} from "./api";
+import { Update, type DownloadEvent } from "@tauri-apps/plugin-updater";
 
 export interface UpdateInfo {
   version: string;
@@ -115,12 +124,13 @@ export async function checkGitHubRelease(
 export async function checkForUpdate(
   currentVersion: string,
   source: UpdateSource = DEFAULT_SOURCE,
+  channel: UpdateChannel = source.channel ? "dev" : "stable",
 ): Promise<UpdateInfo | null> {
   if (inTauri && onAndroid) {
-    // The manifest the launcher was built to read (its own branch's, a fork's) is the one answer:
-    // GitHub's latest release is another channel's, which this launcher cannot install from.
+    // The chosen channel's manifest in the repository that built it (a fork's) is the one answer:
+    // GitHub's latest release may be another channel's, which this launcher cannot install from.
     activeAndroidRelease = null;
-    const release = await api.updateCheck();
+    const release = await api.updateCheck(channel);
     activeAndroidRelease = release;
     if (!release) return null;
     return {
@@ -135,9 +145,11 @@ export async function checkForUpdate(
   } else if (inTauri) {
     activeTauriUpdate = null;
     try {
-      const { check } = await import("@tauri-apps/plugin-updater");
-      const update = await check();
-      if (update) {
+      // Asked at the chosen channel's manifest (src-tauri/src/lib.rs, launcher_update_check), not
+      // only the one it was built with.
+      const found = await api.launcherUpdateCheck(channel);
+      if (found) {
+        const update = new Update(found);
         activeTauriUpdate = update;
         return {
           version: update.version,

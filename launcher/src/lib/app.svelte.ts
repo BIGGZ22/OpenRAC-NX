@@ -19,7 +19,9 @@ import {
   type RunInputs,
   type Scope,
   type Started,
+  type UpdateChannel,
   type VersionView,
+  updateChannelOf,
 } from "./api";
 import { Queue, type Job } from "./queue";
 import { backgroundStatus } from "./progress";
@@ -281,11 +283,13 @@ export function dismissStopped() {
   if (game) void dismissCrashes(game);
 }
 
-/** Looks for a new launcher now (at start, or Settings' "Check now"); true when one is out. Throws
- *  when there was nothing to compare with (no release where the launcher looks, no network). */
-export async function lookForUpdate(): Promise<boolean> {
+/** Looks for a new launcher now (at start, or Settings' "Check now") on CHANNEL, by default the
+ *  player's; true when one is out. Throws when there was nothing to compare with (no release where
+ *  the launcher looks, no network). */
+export async function lookForUpdate(channel?: UpdateChannel): Promise<boolean> {
   if (!app.info?.version) return false;
-  const up = await checkForUpdate(app.info.version, app.info.updates);
+  channel ??= updateChannelOf(app.info, app.config);
+  const up = await checkForUpdate(app.info.version, app.info.updateChannels[channel], channel);
   app.update = up;
   return !!up;
 }

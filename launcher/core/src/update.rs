@@ -10,7 +10,7 @@ use std::path::Path;
 
 use base64::Engine;
 use minisign_verify::{PublicKey, Signature};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// The platform key of the Android launcher in the manifest.
@@ -102,6 +102,48 @@ pub fn source(manifest: &str) -> UpdateSource {
     UpdateSource { repository, channel, manifest: manifest.to_string(), page }
 }
 
+/// The builds a launcher updates to, chosen on the Settings page: the repository's releases, or its
+/// development builds (the rolling pre-release `launcher-dev-<branch>` CI keeps current). A switch
+/// takes effect with the first build on the other channel newer than the one installed: neither
+/// Android nor a version number goes back.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Channel {
+    Stable,
+    Dev,
+}
+
+/// The branch whose builds the development channel follows for a launcher built from no branch
+/// (a release's): the repository's own.
+pub const DEV_BRANCH: &str = "master";
+
+impl UpdateSource {
+    /// The channel this source is: a release's tag (a branch's rolling one) or the latest release.
+    pub fn kind(&self) -> Channel {
+        if self.channel.is_some() {
+            Channel::Dev
+        } else {
+            Channel::Stable
+        }
+    }
+
+    /// The same repository's `channel`: its latest release, or the development builds of the branch
+    /// this launcher was built from (of DEV_BRANCH when it was built from none). A source that is
+    /// not on GitHub has no other channel and stays as it is.
+    pub fn on(&self, channel: Channel) -> UpdateSource {
+        if self.kind() == channel || !self.manifest.starts_with("https://github.com/") {
+            return self.clone();
+        }
+        let repository = &self.repository;
+        match channel {
+            Channel::Stable => source(&format!("https://github.com/{repository}/releases/latest/download/latest.json")),
+            Channel::Dev => source(&format!(
+                "https://github.com/{repository}/releases/download/launcher-dev-{DEV_BRANCH}/latest.json"
+            )),
+        }
+    }
+}
+
 /// The version updates are compared with: the package's, or for a build of a branch, whose
 /// package carries the release's plain version (Windows' MSI and RPM take no `-dev`), that version
 /// with the build's own `dev.<run>` (`OPENRAC_LAUNCHER_BUILD` when it was compiled).
@@ -170,6 +212,27 @@ mod tests {
     const PUBLIC_KEY: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEEzMzRGOTAwNkNDNzQ4REUKUldUZVNNZHNBUGswbzVDVk5MRCt6ZExLaHNIOWFaN1pFWGF4M3FYOGE4TjFERE83alY5TFplYmwK";
     const SIGNATURE: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUZVNNZHNBUGswb3lNeGtLY0YvTm1aTm9DQlVkZlQrVWtWeS9tcW9pNVYvbE1Ndkh5bVd4V0E0L0luMDZ0WDRRam9PcHdTT2NoWFdydmN0SzdqTG5TanZKbllvMFpXYkFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMzIzNTkwCWZpbGU6ZGF0YS5iaW4KUUJjTDRxT0FNVHBhK0Z1VVhoNlIxeUYxRGN5eFJsNkJSVXhJb2g4VW1Fd2JNZ3NUY2V6UEhEcEdvM2NWQkl3U1htMkhuNWJBWk1rNGJNejJReFFpQnc9PQo=";
     const DATA: &[u8] = b"OpenRAC update test data\n";
+
+    #[test]
+    fn switches_channels() {
+        let release = source("https://github.com/OpenRAC/OpenRAC/releases/latest/download/latest.json");
+        let branch = source("https://github.com/someone/OpenRAC/releases/download/launcher-dev-feature-x/latest.json");
+        assert_eq!((release.kind(), branch.kind()), (Channel::Stable, Channel::Dev));
+        // Its own channel is itself; a release's development builds are the default branch's.
+        assert_eq!(release.on(Channel::Stable), release);
+        assert_eq!(
+            release.on(Channel::Dev).manifest,
+            "https://github.com/OpenRAC/OpenRAC/releases/download/launcher-dev-master/latest.json"
+        );
+        assert_eq!(branch.on(Channel::Dev), branch);
+        let stable = branch.on(Channel::Stable);
+        assert_eq!(stable.manifest, "https://github.com/someone/OpenRAC/releases/latest/download/latest.json");
+        assert_eq!((stable.channel, stable.page.as_str()), (None, "https://github.com/someone/OpenRAC/releases"));
+        // An address that is not GitHub's has no other channel.
+        let other = source("https://example.org/latest.json");
+        assert_eq!(other.on(Channel::Dev), other);
+        assert_eq!(serde_json::to_string(&Channel::Dev).unwrap(), "\"dev\"");
+    }
 
     #[test]
     fn compares_versions() {

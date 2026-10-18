@@ -118,6 +118,20 @@ let gpu: GpuDrivers = {
   device: { model: "Google Pixel (preview)", api: 35, soc: "Qualcomm SM8650", gpu: "adreno" },
 };
 
+// The launcher's update channels (core/src/update.rs): a release's build, and master's development builds.
+const STABLE = {
+  repository: "OpenRAC/OpenRAC",
+  channel: null,
+  manifest: "https://github.com/OpenRAC/OpenRAC/releases/latest/download/latest.json",
+  page: "https://github.com/OpenRAC/OpenRAC/releases",
+};
+const DEV = {
+  repository: "OpenRAC/OpenRAC",
+  channel: "launcher-dev-master",
+  manifest: "https://github.com/OpenRAC/OpenRAC/releases/download/launcher-dev-master/latest.json",
+  page: "https://github.com/OpenRAC/OpenRAC/releases/tag/launcher-dev-master",
+};
+
 let config: Config = {
   root: "/home/you/OpenRAC",
   python: "/usr/bin/python3",
@@ -137,6 +151,7 @@ let config: Config = {
   lastVersion: null,
   discordRpc: true,
   checkUpdates: true,
+  updateChannel: null,
   layout: "compact",
   discordClientId: null,
   detailedGameLog: false,
@@ -761,12 +776,8 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
         configFile: "~/.config/dev.openrac.launcher/launcher.json",
         // ?standalone shows an installed launcher's pages: no checkout, nothing to find.
         standalone: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("standalone"),
-        updates: {
-          repository: "OpenRAC/OpenRAC",
-          channel: null,
-          manifest: "https://github.com/OpenRAC/OpenRAC/releases/latest/download/latest.json",
-          page: "https://github.com/OpenRAC/OpenRAC/releases",
-        },
+        updates: STABLE,
+        updateChannels: { stable: STABLE, dev: DEV },
       });
     case "get_config":
       return delay({ ...config });
@@ -1058,6 +1069,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       if (args.stop) gameRunning = false;
       return delay(null);
     case "update_check":
+    case "launcher_update_check":
       return delay(null);
     case "update_install":
       return delay(null);

@@ -5,7 +5,16 @@
   // the first-run screen: the folders and programs, filled from detection.
   import GpuDrivers from "$components/GpuDrivers.svelte";
   import PathField from "$components/PathField.svelte";
-  import { api, errorText, onAndroid, type Check, type Config, type Detected } from "$lib/api";
+  import {
+    api,
+    errorText,
+    onAndroid,
+    updateChannelOf,
+    type Check,
+    type Config,
+    type Detected,
+    type UpdateChannel,
+  } from "$lib/api";
   import { app, lookForUpdate, saveConfig } from "$lib/app.svelte";
   import { DISCORD_URL, REPO_URL, SITE_URL } from "$lib/links";
 
@@ -25,10 +34,16 @@
   let looked = $state<"idle" | "looking" | "found" | "none" | "failed">("idle");
   let lookError = $state("");
 
+  /** The update channel as this page has it, saved or not. */
+  const channel = $derived<UpdateChannel>(app.info ? updateChannelOf(app.info, draft) : "stable");
+  /** The branch the development builds come from, as the release's tag names it. */
+  const devBranch = $derived(app.info?.updateChannels.dev.channel?.replace(/^launcher-dev-/, "") ?? "master");
+
   async function checkNow() {
     looked = "looking";
     try {
-      looked = (await lookForUpdate()) ? "found" : "none";
+      // The channel chosen here, before it is saved too.
+      looked = (await lookForUpdate(channel)) ? "found" : "none";
     } catch (e) {
       lookError = errorText(e);
       looked = "failed";
@@ -63,12 +78,19 @@
     saving = true;
     let customId: string | null = draft.discordClientId?.trim() ?? null;
     if (customId === "") customId = null;
+    const before = app.info ? updateChannelOf(app.info, app.config) : null;
     await saveConfig({
       ...draft,
       discordClientId: customId,
       setupComplete: draft.setupComplete || finish,
     });
     draft = saved();
+    // Another channel: what was found on the last one is not what this one offers.
+    if (app.info && before !== updateChannelOf(app.info, app.config)) {
+      app.update = null;
+      looked = "idle";
+      if (app.config?.checkUpdates) lookForUpdate().catch(() => undefined);
+    }
     saving = false;
     if (finish) app.page = "library";
   }
@@ -210,25 +232,42 @@
           </small>
         </span>
       </label>
-      {#if app.info?.updates}
-        {@const source = app.info.updates}
-        <div class="field">
-          <label for="update-source">Update source</label>
-          <input
-            id="update-source"
-            type="text"
-            class="mono"
-            readonly
-            aria-readonly="true"
-            title="Set by the build: the repository that built this launcher"
-            value={`github.com/${source.repository} · ${source.channel ?? "latest release"}`}
-          />
-          <p class="dim note">
-            Set when this launcher was built, to the repository that built it, and not changeable here.
-            {source.channel ? "This build of a branch updates from that branch's newest build." : ""}
-            <button class="link" onclick={() => void api.openUrl(source.page)}>See the releases</button>
-          </p>
+      {#if app.info?.updateChannels}
+        {@const source = app.info.updateChannels[channel]}
+        <div class="channels" role="radiogroup" aria-label="Updates">
+          <label class="option">
+            <input
+              type="radio"
+              name="update-channel"
+              checked={channel === "stable"}
+              onchange={() => (draft.updateChannel = "stable")}
+            />
+            <span>
+              <strong>Stable</strong>
+              <small>The released versions.</small>
+            </span>
+          </label>
+          <label class="option">
+            <input
+              type="radio"
+              name="update-channel"
+              checked={channel === "dev"}
+              onchange={() => (draft.updateChannel = "dev")}
+            />
+            <span>
+              <strong>Development</strong>
+              <small>
+                The newest build of <span class="mono">{devBranch}</span>: the latest changes, tried less. Back on
+                Stable, the next release replaces it.
+              </small>
+            </span>
+          </label>
         </div>
+        <p class="dim note">
+          From <span class="mono">github.com/{source.repository} · {source.channel ?? "latest release"}</span>, the
+          repository that built this launcher.
+          <button class="link" onclick={() => void api.openUrl(source.page)}>See the releases</button>
+        </p>
       {/if}
       <label class="option">
         <input type="checkbox" bind:checked={draft.detailedGameLog} />
@@ -380,6 +419,17 @@
     color: var(--soft);
   }
 
+  /* The update channel, set in under "Check for updates" as the fields are. */
+  .channels {
+    padding-left: 32px;
+    border-top: 1px solid var(--line);
+  }
+
+  .channels + .note {
+    margin: 0;
+    padding: 0 0 12px 32px;
+  }
+
   .field {
     display: flex;
     flex-direction: column;
@@ -395,11 +445,6 @@
 
   .field input {
     max-width: 400px;
-  }
-
-  .field input[readonly] {
-    color: var(--soft);
-    cursor: default;
   }
 
   .link {

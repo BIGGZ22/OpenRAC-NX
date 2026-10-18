@@ -36,7 +36,12 @@ export interface AppInfo {
   standalone: boolean;
   /** Where its updates come from: the repository that built it, set by the build. */
   updates: UpdateSource;
+  /** That repository's two channels, which the player chooses between (Config.updateChannel). */
+  updateChannels: Record<UpdateChannel, UpdateSource>;
 }
+
+/** core/src/update.rs, Channel: the releases, or the newest development build. */
+export type UpdateChannel = "stable" | "dev";
 
 /** core/src/update.rs: the releases a launcher updates from. */
 export interface UpdateSource {
@@ -95,6 +100,8 @@ export interface Config {
   discordRpc: boolean;
   /** Look for a new launcher at start (Settings). */
   checkUpdates: boolean;
+  /** The builds it updates to; null: the channel it was built from (updateChannelOf). */
+  updateChannel: UpdateChannel | null;
   discordClientId: string | null;
   /** "compact", or "classic": the original design (src/layouts/compact.css). */
   layout: "compact" | "classic";
@@ -556,10 +563,27 @@ export const api = {
   /** Back to the running game, or (`stop`) end it. */
   gameWindow: (stop: boolean) => call<null>("game_window", { stop }),
   /** Android: a newer launcher on the releases, or null (desktops use Tauri's updater). */
-  updateCheck: () => call<AndroidRelease | null>("update_check"),
+  updateCheck: (channel: UpdateChannel) => call<AndroidRelease | null>("update_check", { channel }),
+  /** A desktop: Tauri's updater asked at the channel's manifest; its update, or null. */
+  launcherUpdateCheck: (channel: UpdateChannel) => call<LauncherUpdate | null>("launcher_update_check", { channel }),
   /** Android: downloads the release's APK, checks its signature, opens Android's installer. */
   updateInstall: (url: string, signature: string) => call<null>("update_install", { url, signature }),
 };
+
+/** A desktop's update as Tauri's updater holds it: plugin-updater's `Update` is made from it. */
+export interface LauncherUpdate {
+  rid: number;
+  currentVersion: string;
+  version: string;
+  date?: string;
+  body?: string;
+  rawJson: Record<string, unknown>;
+}
+
+/** The channel a launcher updates on: the player's choice, or the one it was built from. */
+export function updateChannelOf(info: AppInfo, config: Config | null): UpdateChannel {
+  return config?.updateChannel ?? (info.updates.channel ? "dev" : "stable");
+}
 
 /** A newer Android launcher on the releases (core/src/update.rs). */
 export interface AndroidRelease {

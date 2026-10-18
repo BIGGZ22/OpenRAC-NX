@@ -40,6 +40,9 @@ pub struct Config {
     /// Look for a new launcher when it starts (default true). Off, it looks only when asked
     /// (Settings, "Check now"); an update is never installed without the player's click.
     pub check_updates: bool,
+    /// Which builds the launcher updates to (update::Channel): the releases, or the newest
+    /// development build. Unset: the one it was built from (a release's build, the releases).
+    pub update_channel: Option<crate::update::Channel>,
     /// Custom Discord application ID (optional).
     pub discord_client_id: Option<String>,
     /// The page layout: "compact" (default) or "classic", the original design (src/layouts/).
@@ -71,6 +74,7 @@ impl Default for Config {
             last_version: None,
             discord_rpc: true,
             check_updates: true,
+            update_channel: None,
             discord_client_id: None,
             layout: "compact".into(),
             detailed_game_log: false,

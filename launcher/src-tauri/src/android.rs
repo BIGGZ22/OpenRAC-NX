@@ -280,10 +280,14 @@ fn updates_dir<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {
 /// A newer launcher on the releases (core/src/update.rs), or None. Android only: a desktop's
 /// launcher is updated by Tauri's updater.
 #[tauri::command]
-pub async fn update_check<R: Runtime>(app: AppHandle<R>) -> Result<Option<update::Release>, String> {
+pub async fn update_check<R: Runtime>(
+    app: AppHandle<R>,
+    channel: Option<update::Channel>,
+) -> Result<Option<update::Release>, String> {
     #[cfg(target_os = "android")]
     {
-        let (endpoint, _) = updater_config(&app)?;
+        // CHANNEL or the player's (Settings), the one it was built from by default.
+        let endpoint = crate::chosen_update_source(&app, channel).manifest;
         let manifest = updates_dir(&app)?.join("latest.json");
         let _: serde_json::Value =
             kotlin(&app, "download", serde_json::json!({ "url": endpoint, "path": manifest })).await.map_err(|e| {
@@ -299,7 +303,7 @@ pub async fn update_check<R: Runtime>(app: AppHandle<R>) -> Result<Option<update
     }
     #[cfg(not(target_os = "android"))]
     {
-        let _ = app;
+        let _ = (app, channel);
         Err(ANDROID_ONLY.into())
     }
 }

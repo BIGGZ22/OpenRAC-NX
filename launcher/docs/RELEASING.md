@@ -115,8 +115,13 @@ git push origin launcher-vX.Y.Z
    system's installers, their signatures and a `latest.json` of version `X.Y.Z-dev.<run>`. The
    launchers built from a branch read that pre-release; one built from a tag reads the
    repository's latest release. Either way the updater asks the repository that built it
-   (`github.repository`), so a fork's builds update from the fork's releases with no setting;
-   Settings shows that source, read only. The APK carries `X.Y.Z-dev.<run>` as its version; the
+   (`github.repository`), so a fork's builds update from the fork's releases with no setting.
+   The player can switch channels in Settings: Stable (the latest release) or Development
+   (`launcher-dev-<branch>` of the branch the launcher was built from; `launcher-dev-master` for a
+   release's build). A switch takes effect with the first build on that channel newer than the
+   one installed, since neither version numbers nor Android go back: from Development to Stable,
+   the next release. So that Development stays ahead of the latest release, raise the version in
+   `tauri.conf.json` on master once a release is tagged. The APK carries `X.Y.Z-dev.<run>` as its version; the
    desktop packages keep `X.Y.Z` (an MSI takes no `-dev`, an RPM no `-`) and carry the run in the
    program (`OPENRAC_LAUNCHER_BUILD`, which their updater compares with).
    A fork needs its own `TAURI_SIGNING_PRIVATE_KEY` (and, when its key is not the project's,

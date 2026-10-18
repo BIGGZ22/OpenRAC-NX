@@ -49,6 +49,14 @@ struct AppInfo {
     standalone: bool,
     /// Where its updates come from: the repository that built it (core/src/update.rs).
     updates: openrac_launcher_core::update::UpdateSource,
+    /// That repository's two channels, which the player chooses between (Settings, `updateChannel`).
+    update_channels: UpdateChannels,
+}
+
+#[derive(Serialize)]
+struct UpdateChannels {
+    stable: openrac_launcher_core::update::UpdateSource,
+    dev: openrac_launcher_core::update::UpdateSource,
 }
 
 /// A build of a branch: `dev.<run>`, which its updates are compared with (update::effective_version).
@@ -67,14 +75,65 @@ fn update_source<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> openrac_launch
     openrac_launcher_core::update::source(&endpoint)
 }
 
+/// Where the launcher looks for its updates: CHANNEL (the Settings page's, before it is saved), else
+/// the one the player chose, else the one it was built from.
+fn chosen_update_source<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    channel: Option<openrac_launcher_core::update::Channel>,
+) -> openrac_launcher_core::update::UpdateSource {
+    let built = update_source(app);
+    let chosen =
+        channel.or_else(|| app.try_state::<AppState>().and_then(|state| state.config.lock().unwrap().update_channel));
+    built.on(chosen.unwrap_or(built.kind()))
+}
+
 #[tauri::command]
 fn app_info(app: AppHandle, state: State<'_, AppState>) -> AppInfo {
+    use openrac_launcher_core::update::Channel;
+    let updates = update_source(&app);
     AppInfo {
         version: launcher_version(&app),
         platform: Platform::current(),
         config_file: state.config_file.clone(),
         standalone: state.bundled.is_some() && state.config.lock().unwrap().root == state.bundled,
-        updates: update_source(&app),
+        update_channels: UpdateChannels { stable: updates.on(Channel::Stable), dev: updates.on(Channel::Dev) },
+        updates,
+    }
+}
+
+/// A newer launcher on the player's channel, or None: Tauri's updater asked at that channel's
+/// manifest, and the update kept for its own download and install (plugin-updater's `Update`,
+/// rebuilt in the page from `rid`). A desktop's; Android's launcher has android::update_check.
+#[tauri::command]
+async fn launcher_update_check(
+    webview: tauri::Webview,
+    channel: Option<openrac_launcher_core::update::Channel>,
+) -> Result<Option<serde_json::Value>, String> {
+    #[cfg(desktop)]
+    {
+        use tauri_plugin_updater::UpdaterExt;
+        let source = chosen_update_source(webview.app_handle(), channel);
+        let url = tauri::Url::parse(&source.manifest).map_err(|e| format!("{}: {e}", source.manifest))?;
+        let updater =
+            webview.updater_builder().endpoints(vec![url]).and_then(|b| b.build()).map_err(|e| e.to_string())?;
+        let Some(update) = updater.check().await.map_err(|e| e.to_string())? else { return Ok(None) };
+        let date = update.raw_json.get("pub_date").cloned();
+        let (current_version, version, body, raw_json) =
+            (update.current_version.clone(), update.version.clone(), update.body.clone(), update.raw_json.clone());
+        let rid = webview.resources_table().add(update);
+        Ok(Some(serde_json::json!({
+            "rid": rid,
+            "currentVersion": current_version,
+            "version": version,
+            "date": date,
+            "body": body,
+            "rawJson": raw_json,
+        })))
+    }
+    #[cfg(not(desktop))]
+    {
+        let _ = (webview, channel);
+        Err("on Android the launcher updates through update_check".into())
     }
 }
 
@@ -1097,6 +1156,7 @@ pub fn run() {
             android::gpu_renderer_select,
             android::background_status,
             android::tools_ready,
+            launcher_update_check,
             android::update_check,
             android::update_install,
             android::game_status,
