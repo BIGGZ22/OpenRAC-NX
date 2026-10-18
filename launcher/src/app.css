@@ -322,7 +322,8 @@ input[type="text"] {
   inset: 0;
   background: linear-gradient(to right, transparent, rgb(255 255 255 / 0.45), transparent);
   transform: translateX(-100%);
-  animation: sweep 2.6s ease-in-out 1.6s infinite;
+  /* A few shines when the bar shows, then it rests. */
+  animation: sweep 2.6s ease-in-out 1.6s 3;
 }
 
 /* Functional C after the matched part: stripes of the game's colour, muted, since it is not

@@ -317,18 +317,34 @@
     color: var(--amber);
   }
 
+  /* The dot rings a few times when the update shows, then rests: a ring that grows and fades
+     (transform and opacity, which the compositor runs without restyling the page each frame). */
   .pulse {
+    position: relative;
     width: 8px;
     height: 8px;
     border-radius: 50%;
     background: var(--amber);
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--amber) 60%, transparent);
-    animation: pulse 1.8s ease-out infinite;
+  }
+
+  .pulse::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: var(--amber);
+    opacity: 0;
+    animation: pulse 1.8s ease-out 5;
   }
 
   @keyframes pulse {
+    from {
+      opacity: 0.6;
+      transform: scale(1);
+    }
     to {
-      box-shadow: 0 0 0 8px transparent;
+      opacity: 0;
+      transform: scale(3);
     }
   }
 

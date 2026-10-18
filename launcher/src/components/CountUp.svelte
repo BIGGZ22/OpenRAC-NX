@@ -8,7 +8,12 @@
   let { value, format }: { value: number; format: (n: number) => string } = $props();
 
   const shown = new Tween(0, { duration: reduced ? 0 : 900, easing: cubicOut });
+  // Only a new figure moves it: the library is read again on every focus of the window, and a
+  // tween to the same figure would redraw it for 900 ms each time.
+  let last: number | undefined;
   $effect(() => {
+    if (value === last) return;
+    last = value;
     shown.target = value;
   });
 </script>

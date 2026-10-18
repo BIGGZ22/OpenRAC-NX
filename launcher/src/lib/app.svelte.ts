@@ -206,26 +206,44 @@ export async function lookForUpdate(): Promise<"found" | "latest" | "failed"> {
 }
 
 /** Reads the library again: after a job, on focus, after settings change. */
+// What the library and the disc scan last were, as JSON: refresh runs on every focus of the
+// window, and an answer that did not change is not put in `app`, so nothing that shows it is
+// worked out and drawn again.
+const seen = { library: "", discs: "" };
+
+function same(key: keyof typeof seen, value: unknown): boolean {
+  const json = JSON.stringify(value);
+  if (json === seen[key]) return true;
+  seen[key] = json;
+  return false;
+}
+
+function setLibrary(library: Library | null) {
+  if (!same("library", library)) app.library = library;
+}
+
 export async function refresh() {
   if (!app.config?.root) {
-    app.library = null;
+    setLibrary(null);
     app.libraryError = "Choose your OpenRAC folder in Settings.";
     return;
   }
   try {
-    app.library = await api.library();
+    setLibrary(await api.library());
     app.libraryError = null;
   } catch (e) {
     app.libraryError = errorText(e);
   }
   void countCrashes();
+  let scan: { found: FoundDisc[]; choices: DiscChoice[] } = { found: [], choices: [] };
   try {
-    const scan = app.config.discsDir ? await api.scanDiscs() : { found: [], choices: [] };
+    if (app.config.discsDir) scan = await api.scanDiscs();
+  } catch {
+    // A folder that went away: the game pages ask for an image as before.
+  }
+  if (!same("discs", scan)) {
     app.discs = scan.found;
     app.discChoices = scan.choices;
-  } catch {
-    app.discs = []; // a folder that went away: the tiles ask for an image as before
-    app.discChoices = [];
   }
 }
 
@@ -234,7 +252,7 @@ export async function refresh() {
 export async function syncProgressWeb() {
   if (!app.config?.root) return;
   try {
-    app.library = await api.syncProgressFromWeb();
+    setLibrary(await api.syncProgressFromWeb());
   } catch {
     // Offline: keep what was read at start (the kept copy)
   }

@@ -338,12 +338,14 @@
     animation: indeterminate-slide 1.4s ease-in-out infinite alternate;
   }
 
+  /* From the start of the track to its end (60% of it, 150% of the 40% bar), moved with a
+     transform so the page is not laid out again each frame. */
   @keyframes indeterminate-slide {
     from {
-      margin-left: 0;
+      transform: translateX(0);
     }
     to {
-      margin-left: 60%;
+      transform: translateX(150%);
     }
   }
 
