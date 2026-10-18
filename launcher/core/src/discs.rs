@@ -3,7 +3,7 @@
 //! `BOOT2` line of its `SYSTEM.CNF`, the disc's serial), read from the image
 //! itself, so its file name does not matter. Nothing is changed and nothing
 //! leaves the machine; the set-up checks the boot program's bytes afterwards
-//! (tools/extractor.py --validate).
+//! (tools/extractor.py --validate). Images are .iso files or CHDs (crate::chd).
 
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 use crate::catalog::Catalog;
+use crate::chd::{is_chd, ChdImage};
 
 const SECTOR: u64 = 2048;
 /// Folders are looked into this deep, and no more images than this are opened.
@@ -73,19 +74,44 @@ fn collect(dir: &Path, depth: usize, out: &mut Vec<PathBuf>) {
             if depth > 0 {
                 collect(&path, depth - 1, out);
             }
-        } else if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("iso")) {
+        } else if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("iso")) || is_chd(&path) {
             out.push(path);
         }
     }
 }
 
 /// The serial of a PlayStation 2 image: the boot program `SYSTEM.CNF` names, as `SCES_509.16`.
-/// `None` when the file is not an ISO 9660 image with one.
+/// `None` when the file is not an ISO 9660 image with one (an .iso, or one in a CHD).
 pub fn serial_of(image: &Path) -> Option<String> {
-    let mut file = File::open(image).ok()?;
+    if is_chd(image) {
+        serial_in(&mut ChdImage::open(image).ok()?)
+    } else {
+        serial_in(&mut File::open(image).ok()?)
+    }
+}
+
+/// An image read by byte offset.
+trait Image {
+    fn read_at(&mut self, offset: u64, buffer: &mut [u8]) -> Option<()>;
+}
+
+impl Image for File {
+    fn read_at(&mut self, offset: u64, buffer: &mut [u8]) -> Option<()> {
+        self.seek(SeekFrom::Start(offset)).ok()?;
+        self.read_exact(buffer).ok()
+    }
+}
+
+impl<F: Read + Seek> Image for ChdImage<F> {
+    fn read_at(&mut self, offset: u64, buffer: &mut [u8]) -> Option<()> {
+        ChdImage::read_at(self, offset, buffer).ok()
+    }
+}
+
+fn serial_in(file: &mut impl Image) -> Option<String> {
     // The primary volume descriptor, sector 16: "\x01CD001", the root directory's record at 156.
     let mut pvd = [0u8; SECTOR as usize];
-    read_at(&mut file, 16 * SECTOR, &mut pvd)?;
+    file.read_at(16 * SECTOR, &mut pvd)?;
     if &pvd[..6] != b"\x01CD001" {
         return None;
     }
@@ -93,7 +119,7 @@ pub fn serial_of(image: &Path) -> Option<String> {
     let extent = u64::from(u32::from_le_bytes(root[2..6].try_into().ok()?));
     let size = (u32::from_le_bytes(root[10..14].try_into().ok()?) as usize).min(64 * SECTOR as usize);
     let mut dir = vec![0u8; size];
-    read_at(&mut file, extent * SECTOR, &mut dir)?;
+    file.read_at(extent * SECTOR, &mut dir)?;
 
     let mut at = 0;
     while at + 33 < dir.len() {
@@ -112,17 +138,12 @@ pub fn serial_of(image: &Path) -> Option<String> {
             let extent = u64::from(u32::from_le_bytes(record[2..6].try_into().ok()?));
             let size = (u32::from_le_bytes(record[10..14].try_into().ok()?) as usize).min(4096);
             let mut text = vec![0u8; size];
-            read_at(&mut file, extent * SECTOR, &mut text)?;
+            file.read_at(extent * SECTOR, &mut text)?;
             return boot_serial(&String::from_utf8_lossy(&text));
         }
         at += len;
     }
     None
-}
-
-fn read_at(file: &mut File, offset: u64, buffer: &mut [u8]) -> Option<()> {
-    file.seek(SeekFrom::Start(offset)).ok()?;
-    file.read_exact(buffer).ok()
 }
 
 /// `BOOT2 = cdrom0:\SCES_509.16;1` gives `SCES_509.16`.
@@ -141,6 +162,10 @@ mod tests {
 
     /// A small ISO 9660 image: a volume descriptor, a root directory with SYSTEM.CNF, its text.
     fn image(path: &Path, system_cnf: &str) {
+        std::fs::write(path, image_data(system_cnf)).unwrap();
+    }
+
+    fn image_data(system_cnf: &str) -> Vec<u8> {
         let mut data = vec![0u8; 20 * SECTOR as usize];
         let pvd = 16 * SECTOR as usize;
         data[pvd..pvd + 6].copy_from_slice(b"\x01CD001");
@@ -157,7 +182,7 @@ mod tests {
         data[dir + 33..dir + 33 + name.len()].copy_from_slice(name);
         let text = 19 * SECTOR as usize;
         data[text..text + system_cnf.len()].copy_from_slice(system_cnf.as_bytes());
-        std::fs::write(path, data).unwrap();
+        data
     }
 
     #[test]
@@ -182,15 +207,21 @@ mod tests {
         std::fs::create_dir_all(tmp.join("PS2").join("Ratchet")).unwrap();
         image(&tmp.join("PS2").join("Ratchet").join("my backup (1).iso"), "BOOT2 = cdrom0:\\SCES_509.16;1\r\n");
         image(&tmp.join("another game.ISO"), "BOOT2 = cdrom0:\\SLES_123.45;1\r\n");
+        let chd = crate::chd::tests::chd_of(&image_data("BOOT2 = cdrom0:\\SCUS_971.99;1\r\n"), 8 * SECTOR as u32);
+        std::fs::write(tmp.join("Ratchet & Clank (USA).chd"), chd).unwrap();
         std::fs::write(tmp.join("notes.iso"), b"not an image").unwrap();
+        std::fs::write(tmp.join("notes.chd"), b"not an image").unwrap();
         std::fs::write(tmp.join("readme.txt"), b"").unwrap();
 
         let catalog = crate::catalog::load(&checkout()).unwrap();
         let found = scan(&tmp, &catalog);
-        assert_eq!(found.len(), 1, "{found:?}");
+        assert_eq!(found.len(), 2, "{found:?}");
         assert_eq!((found[0].version.as_str(), found[0].serial.as_str()), ("rac1/pal", "SCES_509.16"));
         assert!(found[0].path.ends_with("my backup (1).iso"));
+        assert_eq!((found[1].version.as_str(), found[1].serial.as_str()), ("rac1/ntsc", "SCUS_971.99"));
+        assert!(found[1].path.ends_with("Ratchet & Clank (USA).chd"));
         assert_eq!(serial_of(&tmp.join("notes.iso")), None);
+        assert_eq!(serial_of(&tmp.join("notes.chd")), None);
         std::fs::remove_dir_all(&tmp).unwrap();
     }
 }

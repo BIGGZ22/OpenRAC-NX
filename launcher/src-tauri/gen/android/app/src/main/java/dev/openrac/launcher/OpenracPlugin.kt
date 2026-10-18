@@ -68,9 +68,11 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
     try {
       val (name, size) = describe(uri)
       // The copy goes into the app's own storage; a few hundred megabytes are left for the
-      // levels the launcher writes next (about 1 GB, checked when they are written).
+      // levels the launcher writes next (about 1 GB, checked when they are written). A CHD is
+      // unpacked into a larger plain image: the Rust side checks that size against `free`.
       val free = StatFs(activity.filesDir.path).availableBytes
-      if (size > 0 && size + (256L shl 20) > free) {
+      val packed = name.endsWith(".chd", ignoreCase = true)
+      if (!packed && size > 0 && size + (256L shl 20) > free) {
         invoke.reject("$name needs ${size shr 20} MB and the device has ${free shr 20} MB free")
         return
       }
@@ -80,6 +82,7 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
       out.put("fd", fd)
       out.put("name", name)
       out.put("size", size)
+      out.put("free", free)
       invoke.resolve(out)
     } catch (e: Exception) {
       invoke.reject("cannot read the chosen file: ${e.message}")

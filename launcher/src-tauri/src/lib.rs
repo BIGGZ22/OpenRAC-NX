@@ -409,6 +409,30 @@ fn install_game(app: AppHandle, state: State<'_, AppState>, game: String, image:
     })
 }
 
+/// The plain image setting a game up reads: an .iso as it is; a CHD unpacked once into
+/// `<install>/discs/<name>.iso` (core/src/chd.rs), with `disc-copy` events as it goes.
+#[tauri::command]
+async fn prepare_disc(app: AppHandle, state: State<'_, AppState>, image: PathBuf) -> Result<PathBuf, String> {
+    use openrac_launcher_core::chd;
+    if !chd::is_chd(&image) {
+        return Ok(image);
+    }
+    let install_dir = state.config.lock().unwrap().install_dir.clone().ok_or("no install folder (Settings)")?;
+    let name = image.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let dest = install_dir.join("discs").join(chd::iso_name(&name));
+    let unpacked = dest.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let file = std::fs::File::open(&image).map_err(|e| format!("{}: {e}", image.display()))?;
+        chd::to_iso(file, &unpacked, |copied, total| {
+            let _ = app.emit("disc-copy", android::DiscCopy { name: name.clone(), copied, total });
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| format!("cannot unpack the CHD image: {e}"))?;
+    Ok(dest)
+}
+
 /// The games OpenRAC knows among the images in the player's games folder (none when no folder
 /// is chosen).
 #[tauri::command]
@@ -815,6 +839,7 @@ pub fn run() {
             open_path,
             open_url,
             install_game,
+            prepare_disc,
             uninstall_game,
             scan_discs,
             sync_progress_from_web,

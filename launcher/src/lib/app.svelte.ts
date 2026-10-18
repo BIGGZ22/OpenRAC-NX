@@ -4,6 +4,7 @@
 import {
   api,
   pickIso,
+  onDiscCopy,
   errorText,
   onJobEvent,
   type ActionView,
@@ -374,8 +375,20 @@ export async function runChain(scope: Scope, actions: ActionView[], given?: numb
  */
 export async function installGame(game: string, title: string, found?: string): Promise<boolean> {
   // An image the games folder holds needs no picking.
-  const image = found ?? (await pickIso(`Select your legitimately obtained ISO file of ${title}`, copyingToast()));
-  if (!image) return false;
+  const picked = found ?? (await pickIso(`Select your legitimately obtained disc image of ${title}`, copyingToast()));
+  if (!picked) return false;
+  // A .chd is unpacked into a plain image first (on Android the picker already did).
+  let image = picked;
+  if (/\.chd$/i.test(picked)) {
+    const off = await onDiscCopy(copyingToast());
+    try {
+      const plain = await guard(api.prepareDisc(picked));
+      if (!plain) return false;
+      image = plain;
+    } finally {
+      off();
+    }
+  }
   const job = queue.add({ kind: "repository" }, `install:${game}`, `Set up ${title} from your disc`);
   starters[job.key] = () => api.installGame(game, image);
   jobs.selected = job.key;
@@ -388,14 +401,14 @@ export async function installGame(game: string, title: string, found?: string): 
   return ok;
 }
 
-/** On Android a picked disc image is copied into the app's storage first: a toast at each quarter. */
-function copyingToast(): (progress: DiscCopy) => void {
+/** A disc image copied into the Android app's storage, or a .chd unpacked: a toast at each quarter. */
+export function copyingToast(): (progress: DiscCopy) => void {
   let shown = -1;
   return ({ name, copied, total }) => {
     const quarter = total > 0 ? Math.floor((copied / total) * 4) : 0;
     if (quarter === shown) return;
     shown = quarter;
-    toast(quarter >= 4 ? `${name} is copied.` : `Copying ${name} into the app: ${quarter * 25}%`);
+    toast(quarter >= 4 ? `${name} is ready.` : `Preparing ${name}: ${quarter * 25}%`);
   };
 }
 

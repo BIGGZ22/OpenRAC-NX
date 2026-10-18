@@ -10,9 +10,12 @@ use openrac_launcher_core::actions::Plan;
 use openrac_launcher_core::android::game_library;
 #[cfg(target_os = "android")]
 use openrac_launcher_core::android::{copy_disc, disc_file_name};
+#[cfg(target_os = "android")]
+use openrac_launcher_core::chd;
 use openrac_launcher_core::jobs::Started;
 #[cfg(target_os = "android")]
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use tauri::{AppHandle, Runtime};
 
 #[cfg(target_os = "android")]
@@ -21,8 +24,8 @@ use tauri::{Emitter, Manager};
 #[cfg(not(target_os = "android"))]
 const ANDROID_ONLY: &str = "only the Android launcher does this";
 
-/// How far a disc image's copy into the app's own storage is (the `disc-copy` event).
-#[cfg(target_os = "android")]
+/// How far a disc image's copy into the app's own storage, or a CHD's unpacking, is (the
+/// `disc-copy` event).
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscCopy {
@@ -68,7 +71,8 @@ pub fn discs_dir() -> Option<PathBuf> {
 
 /// The player picks their disc image with the system's picker; it is copied into the app's own
 /// storage (the extractor links it into place, and Android gives no path to the original), with
-/// `disc-copy` events as it goes. The copy's path, or None when the player cancelled.
+/// `disc-copy` events as it goes; a CHD is unpacked into a plain image instead (core/src/chd.rs).
+/// The copy's path, or None when the player cancelled.
 #[tauri::command]
 pub async fn pick_disc<R: Runtime>(app: AppHandle<R>) -> Result<Option<PathBuf>, String> {
     #[cfg(target_os = "android")]
@@ -78,6 +82,7 @@ pub async fn pick_disc<R: Runtime>(app: AppHandle<R>) -> Result<Option<PathBuf>,
             fd: Option<i32>,
             name: Option<String>,
             size: Option<i64>,
+            free: Option<i64>,
         }
         let picked: Picked = kotlin(&app, "pickDisc", ()).await?;
         let (Some(fd), Some(name)) = (picked.fd, picked.name) else { return Ok(None) };
@@ -85,18 +90,35 @@ pub async fn pick_disc<R: Runtime>(app: AppHandle<R>) -> Result<Option<PathBuf>,
         let file = unsafe { <std::fs::File as std::os::fd::FromRawFd>::from_raw_fd(fd) };
         let dir = discs_dir().ok_or("OPENRAC_DISCS_DIR is not set")?;
         let name = disc_file_name(&name);
-        let dest = dir.join(&name);
-        let total = picked.size.unwrap_or(-1).max(0) as u64;
+        let (packed, plain) = (chd::is_chd(std::path::Path::new(&name)), dir.join(chd::iso_name(&name)));
+        let dest = if packed { plain } else { dir.join(&name) };
         let emitter = app.clone();
-        let copied = dest.clone();
-        tauri::async_runtime::spawn_blocking(move || {
-            copy_disc(file, total, &copied, |done| {
-                let _ = emitter.emit("disc-copy", DiscCopy { name: name.clone(), copied: done, total });
+        let emit = move |copied, total| {
+            let _ = emitter.emit("disc-copy", DiscCopy { name: name.clone(), copied, total });
+        };
+        if packed {
+            let unpacked = dest.clone();
+            let free = picked.free.unwrap_or(-1);
+            tauri::async_runtime::spawn_blocking(move || {
+                let mut image = chd::ChdImage::new(file)?;
+                // As the Kotlin side checks a plain image: room for it and the levels written next.
+                let need = image.len() + (256 << 20);
+                if free >= 0 && need > free as u64 {
+                    return Err(format!("it needs {} MB and the device has {} MB free", need >> 20, free >> 20));
+                }
+                image.save_iso(&unpacked, emit)
             })
-        })
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| format!("cannot copy the disc image into the app's storage: {e}"))?;
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| format!("cannot unpack the CHD image: {e}"))?;
+            return Ok(Some(dest));
+        }
+        let total = picked.size.unwrap_or(-1).max(0) as u64;
+        let copied = dest.clone();
+        tauri::async_runtime::spawn_blocking(move || copy_disc(file, total, &copied, |done| emit(done, total)))
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| format!("cannot copy the disc image into the app's storage: {e}"))?;
         Ok(Some(dest))
     }
     #[cfg(not(target_os = "android"))]

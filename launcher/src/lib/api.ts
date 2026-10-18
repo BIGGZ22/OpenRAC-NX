@@ -457,6 +457,8 @@ export const api = {
   openUrl: (url: string) => call<null>("open_url", { url }),
   /** Sets a game up from the image of the player's disc: the extractor, as a job. */
   installGame: (game: string, image: string) => call<Started>("install_game", { game, image }),
+  /** The plain image a set-up reads: an .iso as it is, a .chd unpacked once (`disc-copy` events). */
+  prepareDisc: (image: string) => call<string>("prepare_disc", { image }),
   /** Removes what setting a game up made (not the disc image, not the saves). */
   uninstallGame: (game: string) => call<null>("uninstall_game", { game }),
   /** The games OpenRAC knows among the images in the games folder. */
@@ -530,7 +532,7 @@ export interface GpuDrivers {
   };
 }
 
-/** How far the copy of a picked disc image into the Android app's storage is (`disc-copy`). */
+/** How far a disc image's copy into the Android app's storage, or a CHD's unpacking, is (`disc-copy`). */
 export interface DiscCopy {
   name: string;
   copied: number;
@@ -586,16 +588,12 @@ export async function onDrop(
 }
 
 /** A picker for a disc image; null when cancelled (or in the browser preview). */
-/** The player's disc image for setting a game up: an .iso, as OpenGOAL asks for. */
+/** The player's disc image for setting a game up: an .iso, as OpenGOAL asks for, or a .chd. */
 export async function pickIso(title: string, copying?: (progress: DiscCopy) => void): Promise<string | null> {
   if (!inTauri) return "/home/you/Discs/game.iso";
   if (onAndroid) {
     // The system's picker; the image is copied into the app's storage as it is picked.
-    const off = copying
-      ? await listen<DiscCopy>("disc-copy", (e) => {
-          copying(e.payload);
-        })
-      : null;
+    const off = copying ? await onDiscCopy(copying) : null;
     try {
       return await call<string | null>("pick_disc");
     } finally {
@@ -606,9 +604,17 @@ export async function pickIso(title: string, copying?: (progress: DiscCopy) => v
     directory: false,
     multiple: false,
     title,
-    filters: [{ name: "ISO", extensions: ["iso", "ISO"] }],
+    filters: [{ name: "Disc image", extensions: ["iso", "ISO", "chd", "CHD"] }],
   });
   return typeof picked === "string" ? picked : null;
+}
+
+/** `disc-copy` events: a picked image's copy (Android) or a .chd's unpacking. */
+export async function onDiscCopy(handler: (progress: DiscCopy) => void): Promise<UnlistenFn> {
+  if (!inTauri) return () => undefined;
+  return listen<DiscCopy>("disc-copy", (e) => {
+    handler(e.payload);
+  });
 }
 
 /** Job output and exits, from `job-output` and `job-exit` events. */

@@ -65,7 +65,10 @@ The player picks the image (`.iso`) with Android's file picker, which gives
 an open file, not a path. The game reads the disc by sector for its whole
 life and the extractor links it into place, so the image is copied once into
 the app's own storage (`files/discs/`, the launcher's games folder there),
-with the free space checked first and `disc-copy` events as it goes.
+with the free space checked first and `disc-copy` events as it goes. A
+`.chd` (`chdman createdvd`) is unpacked into a plain `.iso` there instead of
+copied (launcher/core/src/chd.rs), its unpacked size checked against the
+free space.
 
 Setting a game up then runs exactly what an installed desktop launcher runs:
 `tools/extractor.py`, then `editor/extract.py port` for the levels, then the

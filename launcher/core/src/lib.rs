@@ -23,6 +23,7 @@
 pub mod actions;
 pub mod android;
 pub mod catalog;
+pub mod chd;
 pub mod config;
 pub mod detect;
 pub mod discord;

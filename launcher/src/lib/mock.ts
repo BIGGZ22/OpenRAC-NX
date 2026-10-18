@@ -779,6 +779,8 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       return delay(library());
     case "install_game":
       return delay(install(args.game as string, args.image as string));
+    case "prepare_disc":
+      return delay((args.image as string).replace(/\.chd$/i, ".iso"));
     case "scan_discs":
       // ?discs: the games folder holds the first game's PAL disc.
       return delay(

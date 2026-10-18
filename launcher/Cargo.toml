@@ -21,6 +21,17 @@ lto = true
 opt-level = "s"
 strip = true
 
+# Unpacking a CHD disc image (core/src/chd.rs) is gigabytes of decompression: optimised in debug
+# builds too (the Android CI's APK is one), where it is otherwise ten times slower.
+[profile.dev.package]
+chd = { opt-level = 3 }
+lzma-rs-perf-exp = { opt-level = 3 }
+ruzstd = { opt-level = 3 }
+claxon = { opt-level = 3 }
+miniz_oxide = { opt-level = 3 }
+crc = { opt-level = 3 }
+bitreader = { opt-level = 3 }
+
 [patch.crates-io]
 zip = { git = "https://github.com/zip-rs/zip2", tag = "v4.6.1" }
 

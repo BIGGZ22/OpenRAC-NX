@@ -68,7 +68,8 @@ GPU driver, shows the model and SoC) and the game's log.
    unpacks the tools (a few seconds); `adb logcat -s OpenRAC` says
    "unpacked OpenRAC's tools".
 2. **Add the disc.** "Choose disc image" opens Android's picker; pick your
-   own image of the disc (.iso). Toasts count the copy in quarters; then the
+   own image of the disc (.iso, or a .chd made with `chdman createdvd`, which
+   is unpacked into an .iso). Toasts count the copy in quarters; then the
    set-up runs by itself: the extractor, the levels (a few minutes on a
    phone: one level at a time), the check of the levels. On a device with
    less free space than the image, the launcher says how much it needs.

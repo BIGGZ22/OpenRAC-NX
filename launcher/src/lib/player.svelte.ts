@@ -3,7 +3,7 @@
 import type { ActionView, GameView, VersionView } from "./api";
 import type { IconName } from "$components/Icon.svelte";
 import { onAndroid, pickFolder, pickIso } from "./api";
-import { app, cancel, installGame, jobs, refresh, run, runChain, saveConfig, toast } from "./app.svelte";
+import { app, cancel, copyingToast, installGame, jobs, refresh, run, runChain, saveConfig, toast } from "./app.svelte";
 import { phaseLabel } from "./progress";
 import type { Job } from "./queue";
 
@@ -79,7 +79,7 @@ export async function chooseGamesFolder(): Promise<number | null> {
   if (onAndroid) {
     // Android's picker gives files, not folders: the player picks a disc image, which is copied
     // into the app's own games folder (the Rust side's default there); its games are set up below.
-    if (!(await pickIso("Select your legitimately obtained ISO file"))) return null;
+    if (!(await pickIso("Select your legitimately obtained disc image", copyingToast()))) return null;
   } else {
     const dir = await pickFolder("Choose the folder with your PlayStation 2 games");
     if (!dir || !app.config) return null;
@@ -88,7 +88,7 @@ export async function chooseGamesFolder(): Promise<number | null> {
   await refresh();
   const found = [...app.discs];
   if (!found.length) {
-    toast("No Ratchet & Clank disc image (.iso) was found in that folder.", "error");
+    toast("No Ratchet & Clank disc image (.iso or .chd) was found in that folder.", "error");
     return 0;
   }
   for (const disc of found) {
@@ -158,7 +158,7 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
         ? "This game cannot be played yet. You can set your disc up now, ready for when it can."
         : found
           ? `Found in your games folder: ${fileName(found.path)}`
-          : "Choose the image (.iso) of your own disc. OpenRAC never downloads a game.",
+          : "Choose the image (.iso or .chd) of your own disc. OpenRAC never downloads a game.",
       primary: !planned,
       status: planned ? "Not playable yet" : "Not set up",
       tone: planned ? "info" : "warn",
