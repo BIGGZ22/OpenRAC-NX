@@ -8,6 +8,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
+import { REPO_URL } from "./links";
 import type { BackgroundStatus } from "./progress";
 
 export const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -466,8 +467,14 @@ export const api = {
       option: inputs.option ?? null,
     }),
   cancelJob: (id: number) => call<null>("cancel_job", { id }),
-  /** A file or folder in the checkout, relative to it (`games/rac1/README.md`). */
-  openPath: (path: string) => call<null>("open_path", { path }),
+  /** A file or folder in the checkout, relative to it (`games/rac1/README.md`). Android opens no
+   *  app's own files: a document there is read on GitHub, and a folder cannot be shown. */
+  openPath: (path: string) =>
+    onAndroid
+      ? /^[\w./-]+\.\w+$/.test(path) && !path.startsWith("/") && !path.includes("..")
+        ? call<null>("open_url", { url: `${REPO_URL}/blob/master/${path}` })
+        : Promise.reject(new Error("Android cannot show the launcher's own folders."))
+      : call<null>("open_path", { path }),
   openUrl: (url: string) => call<null>("open_url", { url }),
   /** Sets a game up from the image of the player's disc: the extractor, as a job. */
   installGame: (game: string, image: string) => call<Started>("install_game", { game, image }),

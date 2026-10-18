@@ -5,7 +5,7 @@
   // can be deleted (and all of them at once), after a plain question. File names are a
   // contributor's detail: shown with developer tools on.
   import Icon from "$components/Icon.svelte";
-  import { api, type ReportEntry } from "$lib/api";
+  import { api, onAndroid, type ReportEntry } from "$lib/api";
   import { app, countCrashes, guard, saveConfig, toast } from "$lib/app.svelte";
   import { DISCORD_URL, ISSUES_URL } from "$lib/links";
   import { headline, when } from "$lib/reports";
@@ -108,9 +108,12 @@
         <Icon name="trash" size={14} />Delete all
       </button>
     {/if}
-    <button class="ghost small" onclick={() => void guard(api.openReportsFolder(game, false))}>
-      <Icon name="folder" size={14} />Open folder
-    </button>
+    {#if !onAndroid}
+      <!-- Android opens no app's own folders: Save puts a report where the player chooses. -->
+      <button class="ghost small" onclick={() => void guard(api.openReportsFolder(game, false))}>
+        <Icon name="folder" size={14} />Open folder
+      </button>
+    {/if}
   </div>
 
   {#if asking === "all" && entries}
