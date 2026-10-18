@@ -1238,8 +1238,9 @@ void FUN_L02_002d6118(struct Moby *moby, void *position, float *direction) {
 extern char D_L02_0015FFD8_c __asm__("D_L02_0015FFD8");
 extern void *FUN_L00_002dbb20(void *);
 
-void *FUN_L02_002d6210(struct Moby *moby) {
-    void *r = FUN_L00_002dbb20(moby);
+extern void *FUN_L00_002dbb20_pt(void *, void *) __asm__("FUN_L00_002dbb20");
+void *FUN_L02_002d6210(struct Moby *moby, void *quad) {
+    void *r = FUN_L00_002dbb20_pt(moby, quad);
     if (r) {
         int idx;
         moby->state = 9;

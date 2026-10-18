@@ -67,7 +67,7 @@ void game_FUN_L00_00298840(int index) {
     game_FUN_L00_002451b8(0);
     game_FUN_001f4a58(game_FUN_001f96f8(6));
     game_FUN_002168a8(1);
-    game_FUN_00204790(0);
+    game_FUN_00204790();
     for (gaddr p = GREF(gaddr, OPENRAC_LDATA(0, 0x0015FFDCu)); GREF(uint8_t, p + 0x20) != 0xFF; p += 0x100) {
         const int16_t cls = GREF(int16_t, p + 0xA6);
         if (!(GREF(uint8_t, p + 0x20) & 0x80) && (cls == 0x4A || cls == 0xCB)) {

@@ -713,10 +713,11 @@ typedef struct {
 
 extern S D_L00_00166C80;
 extern void allocate_voice_for_target_entry(int, int, int) __asm__("FUN_0022da68");
-extern void FUN_L00_002e9ef0_v(void) __asm__("FUN_L00_002e9ef0");
+extern void FUN_L00_002e9ef0_v(char *) __asm__("FUN_L00_002e9ef0");
 
-/* Sets s to 1 (2 if set), resets D_L00_00166C80, calls 002e9ef0, allocates a voice for its p. */
-void FUN_L00_002ea7a0(void) {
+/* Sets s to 1 (2 if set), resets D_L00_00166C80, calls 002e9ef0 on the caller's camera (its a0, passed
+ * through untouched), allocates a voice for its p. */
+void FUN_L00_002ea7a0(char *camera) {
     S *g = &D_L00_00166C80;
     S *h;
     if (g->s == 0)
@@ -727,7 +728,7 @@ void FUN_L00_002ea7a0(void) {
     h->c = 0;
     h->f1 = 0.05f;
     h->f0 = 0.05f;
-    FUN_L00_002e9ef0_v();
+    FUN_L00_002e9ef0_v(camera);
     if (h->p != 0)
         allocate_voice_for_target_entry(0, 0, h->p);
 }

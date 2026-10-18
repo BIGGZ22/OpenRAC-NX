@@ -2487,8 +2487,9 @@ void FUN_L01_002ef770(unsigned char *moby, f32 *mode) {
 
 extern int FUN_L00_002db8f8(void *);
 
-int FUN_L01_002efa88(unsigned char *moby) {
-    int value = FUN_L00_002db8f8(moby);
+extern int FUN_L00_002db8f8_pt(void *, void *, void *) __asm__("FUN_L00_002db8f8");
+int FUN_L01_002efa88(unsigned char *moby, void *pos, void *target) {
+    int value = FUN_L00_002db8f8_pt(moby, pos, target);
     if (value != 0) {
         if (*(short *)(moby + 0xA6) != 0x362) {
             return 0;

@@ -302,9 +302,10 @@ s32 FUN_L11_00316128(const u8 *moby) {
 
 extern int FUN_L00_002db8f8(void *);
 
+extern int FUN_L00_002db8f8_pt(void *, void *, void *) __asm__("FUN_L00_002db8f8");
 /* Grabbed check: while held, park the moby in state 0x14 (remembering its state) unless it cannot be grabbed; restore the saved state once released. */
-int FUN_L11_00316160(struct Moby *moby) {
-    int r = FUN_L00_002db8f8(moby);
+int FUN_L11_00316160(struct Moby *moby, void *pos, void *target) {
+    int r = FUN_L00_002db8f8_pt(moby, pos, target);
     if (r != 0) {
         if (moby->state == 2 || moby->state == 4 || moby->state == 5 || moby->state == 6 ||
             moby->state == 0xE || moby->state == 0xF || moby->state == 0x10 || moby->state == 0x14) {
@@ -328,8 +329,9 @@ int FUN_L11_00316160(struct Moby *moby) {
 
 extern void *FUN_L00_002dbb20(void *);
 
-void *FUN_L11_00316210(struct Moby *arg) {
-    void *found = FUN_L00_002dbb20(arg);
+extern void *FUN_L00_002dbb20_pt(void *, void *) __asm__("FUN_L00_002dbb20");
+void *FUN_L11_00316210(struct Moby *arg, void *quad) {
+    void *found = FUN_L00_002dbb20_pt(arg, quad);
     if (found != 0) {
         unsigned char state = arg->state;
         if (state != 0x14) {

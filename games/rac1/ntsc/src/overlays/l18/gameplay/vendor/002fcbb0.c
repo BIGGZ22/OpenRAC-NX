@@ -10,8 +10,9 @@
 
 extern int FUN_L00_002db8f8(void *);
 
-int FUN_L18_002fcbb0(struct Moby *a) {
-    int r = FUN_L00_002db8f8(a);
+extern int FUN_L00_002db8f8_pt(void *, void *, void *) __asm__("FUN_L00_002db8f8");
+int FUN_L18_002fcbb0(struct Moby *a, void *pos, void *target) {
+    int r = FUN_L00_002db8f8_pt(a, pos, target);
     if (r == 0) {
         if (a->state == 0x7)
             a->state = 0x2;

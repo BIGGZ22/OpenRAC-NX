@@ -2904,8 +2904,9 @@ extern int scale_ticks(int) __asm__("FUN_001f96f8");
 extern int FUN_L00_002db8f8(void *);
 void blend_moby_animation_u(MobyAnim *arg0, int arg1, int arg2, int arg3) __asm__("FUN_00212f90");
 
-int FUN_L17_002efea8(struct Moby *moby) {
-    int result = FUN_L00_002db8f8(moby);
+extern int FUN_L00_002db8f8_pt(void *, void *, void *) __asm__("FUN_L00_002db8f8");
+int FUN_L17_002efea8(struct Moby *moby, void *pos, void *target) {
+    int result = FUN_L00_002db8f8_pt(moby, pos, target);
     if (result) {
         moby->state = 12;
     } else if (moby->state == 12) {

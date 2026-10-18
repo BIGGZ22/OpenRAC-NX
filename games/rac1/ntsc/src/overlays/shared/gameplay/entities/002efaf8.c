@@ -9,9 +9,10 @@
 
 extern int FUN_L00_002dbb20(void *);
 
+extern int FUN_L00_002dbb20_pt(void *, void *) __asm__("FUN_L00_002dbb20");
 /* Moby state 0xE while FUN_L00_002dbb20 reports a hit, back to 1 when it stops. */
-int FUN_L01_002efaf8(char *a) {
-    int r = FUN_L00_002dbb20(a);
+int FUN_L01_002efaf8(char *a, void *quad) {
+    int r = FUN_L00_002dbb20_pt(a, quad);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 0xe)
             a[0x20] = 1;
@@ -48,9 +49,10 @@ s32 FUN_L01_002efbc8(T6 *p) {
 
 extern int FUN_L00_002db8f8(void *);
 
+extern int FUN_L00_002db8f8_pt(void *, void *, void *) __asm__("FUN_L00_002db8f8");
 /* Moby state 7 while FUN_L00_002db8f8 reports a hit, back to 1 when it stops. */
-int FUN_L01_002f1c78(char *a) {
-    int r = FUN_L00_002db8f8(a);
+int FUN_L01_002f1c78(char *a, void *pos, void *target) {
+    int r = FUN_L00_002db8f8_pt(a, pos, target);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 0x7)
             a[0x20] = 1;

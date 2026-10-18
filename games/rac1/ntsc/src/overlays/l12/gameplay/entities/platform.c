@@ -232,11 +232,12 @@ void FUN_L12_002bf770(int arg) {
 extern int FUN_L00_002db8f8(void *);
 extern void FUN_L01_0026e090(int, int);
 
-int FUN_L12_002e16b8(struct Moby *moby) {
+extern int FUN_L00_002db8f8_pt(void *, void *, void *) __asm__("FUN_L00_002db8f8");
+int FUN_L12_002e16b8(struct Moby *moby, void *pos, void *target) {
     int active;
     if (moby->state == 9 || moby->state == 11 || moby->state == 13)
         return 0;
-    active = FUN_L00_002db8f8(moby);
+    active = FUN_L00_002db8f8_pt(moby, pos, target);
     if (active) {
         if (moby->group != 0xFF)
             FUN_L01_0026e090(moby->group, 1);

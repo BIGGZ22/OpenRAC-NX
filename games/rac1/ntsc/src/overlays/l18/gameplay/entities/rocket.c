@@ -20,8 +20,9 @@
 
 extern int FUN_L00_002dbb20(struct Moby *);
 
-int FUN_L18_002d6190(struct Moby *moby) {
-    int active = FUN_L00_002dbb20(moby);
+extern int FUN_L00_002dbb20_pt(void *, void *) __asm__("FUN_L00_002dbb20");
+int FUN_L18_002d6190(struct Moby *moby, void *quad) {
+    int active = FUN_L00_002dbb20_pt(moby, quad);
     if (active != 0) {
         moby->state = 4;
     } else if (moby->state == 4) {
@@ -938,9 +939,10 @@ void FUN_L18_002d5f20(unsigned char *m) {
 
 extern int FUN_L00_002db8f8(void *);
 
-int FUN_L18_002d6108(struct Moby *m) {
+extern int FUN_L00_002db8f8_pt(void *, void *, void *) __asm__("FUN_L00_002db8f8");
+int FUN_L18_002d6108(struct Moby *m, void *pos, void *target) {
     char *d = (char *)m->pvars;
-    int r = FUN_L00_002db8f8(m);
+    int r = FUN_L00_002db8f8_pt(m, pos, target);
     if (r != 0) {
         unsigned char s = m->state;
         if ((unsigned)(s - 3) < 2) {

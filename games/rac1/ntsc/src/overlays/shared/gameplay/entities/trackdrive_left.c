@@ -36,10 +36,11 @@ void FUN_L02_002a4058(char *arg, int val, float scale) {
 
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002A5218.c: func_L02_002A52B0), where it is exact; names translated to the US level program. */
 
-extern void FUN_L02_002a4058_u(char *arg, int val) __asm__("FUN_L02_002a4058");
+extern void FUN_L02_002a4058_u(char *arg, int val, float scale) __asm__("FUN_L02_002a4058");
 
-void FUN_L02_002a40d0(char *arg) {
-    FUN_L02_002a4058_u(arg, 0x80);
+/* The scale it was given goes through untouched (the caller's $f12). */
+void FUN_L02_002a40d0(char *arg, float scale) {
+    FUN_L02_002a4058_u(arg, 0x80, scale);
 }
 #include "qcopy.h"
 

@@ -15,7 +15,7 @@ extern char *texture_vertices __asm__("D_L09_0015F420") __attribute__((section("
 extern char D_L09_0016D300[];
 extern long D_L09_00161FC0[];
 extern long get_effect_texture(int) __asm__("FUN_001f44b8");
-extern void FUN_L02_0024fca0(void *, void *, void *, void *, void *, int);
+extern void FUN_L02_0024fca0(void *, void *, void *, void *, void *, int, float);
 extern void vu1_add_g_sregister(int, long) __asm__("FUN_00233980");
 
 typedef struct {
@@ -26,7 +26,7 @@ typedef struct {
 } TextureEntry;
 
 /* Queues the GS packet for one texture (tex0 == tex1), or builds the strip between two texture entries and queues it. */
-void FUN_L09_0021e560(int tex0, int tex1) {
+void FUN_L09_0021e560(int tex0, int tex1, float fraction) {
     if (tex0 == tex1) {
         int *packet;
         long *words;
@@ -54,7 +54,7 @@ void FUN_L09_0021e560(int tex0, int tex1) {
         D_L09_00161FC0[0] = 0x0800000000000400L;
         D_L09_00161FC0[1] = 0;
         FUN_L02_0024fca0(&D_L09_00161FC0[2], texture_vertices + (a_first << 4), texture_vertices + (a_second << 4),
-                         texture_vertices + (b_first << 4), texture_vertices + (b_second << 4), 0x1000);
+                         texture_vertices + (b_first << 4), texture_vertices + (b_second << 4), 0x1000, fraction);
         PACKET_CURSOR[0] = 0x10000006;
         PACKET_CURSOR[1] = 0;
         PACKET_CURSOR[2] = 0;
@@ -116,11 +116,11 @@ extern int *D_L09_001611C0;
 extern int D_L09_0015F5CC;
 extern int fast_bsphere_check(char *, float) __asm__("FUN_001fa728");
 extern void FUN_L01_0021fa98(int, int, int, int, int, int);
-extern void FUN_L09_0021e560_u(int, int) __asm__("FUN_L09_0021e560");
+extern void FUN_L09_0021e560_u(int, int, float) __asm__("FUN_L09_0021e560");
 void font_queue_vu_state(void) __asm__("FUN_001f76a0");
 
 extern int *D_L09_001611B8[] __attribute__((section(".sdata")));
-void FUN_L09_0021e8c0(char *list, int count, float unused, long tex0, long tex1) {
+void FUN_L09_0021e8c0(char *list, int count, float fraction, long tex0, long tex1) {
     int i;
     int j;
     int c;
@@ -128,7 +128,7 @@ void FUN_L09_0021e8c0(char *list, int count, float unused, long tex0, long tex1)
     int idx;
     float first_scroll_offset;
     float second_scroll_offset;
-    FUN_L09_0021e560_u(tex0, tex1);
+    FUN_L09_0021e560_u(tex0, tex1, fraction);
     D_L09_001611B8[2][0] = 0x30000009;
     D_L09_001611B8[2][1] = (int)D_L09_0016EAA0;
     D_L09_001611B8[2][2] = 0;
@@ -1516,7 +1516,7 @@ void FUN_L09_002ef9b0(struct Moby *moby) {
 }
 extern char *create_moby_c(int) __asm__("FUN_0020c4f8");
 
-char *FUN_L09_002efda8(struct Moby *owner, void *position, float angle) {
+char *FUN_L09_002efda8(struct Moby *owner, void *position) {
     u128_ee380 pos;
     void *copy = &pos;
     char *moby;

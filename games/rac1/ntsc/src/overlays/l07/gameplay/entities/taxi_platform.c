@@ -1376,7 +1376,7 @@ extern unsigned short D_L07_00204680[];
 extern void approach_value(f32 *, f32, f32) __asm__("func_00213ED8");
 extern void enqueue_callback_list_1_c(void *, void *) __asm__("FUN_001f4600");
 extern void mark_moby_for_removal_c2(void *) __asm__("func_0020C828");
-int FUN_L07_00281ef8(int id);
+int FUN_L07_00281ef8(int id, int idx, int a, int b);
 void FUN_L01_0026e090(int i, int v);
 void FUN_L01_0026e0e0(int list, int state);
 void FUN_L01_00275690(char *vec, float scale);
