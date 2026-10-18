@@ -44,6 +44,7 @@ needs the game started again.
 | Frame counter (F2) | `show_fps` | `0`, `1` | Frames shown a second and what drawing one costs, in the picture's corner |
 | (Alt) | `menu_bar` | `1`, `0` | The menus along the window's top on Windows and Linux (macOS has them in its own menu bar) |
 | Mute in background | `mute_unfocused` | `0`, `1` | Silence while another window has the keyboard |
+| Lock-strafe | `lock_strafe` | `0`, `1` | While Ratchet runs with a weapon in hand and its button (Circle) held, he keeps facing the camera's way and the left stick moves him sideways and back, the camera held behind him; off, the game's own turning (section 7) |
 | (F9, F10) | `volume` | `100`, `0` to `100` | How loud everything the port plays is |
 | (the launcher's Detailed logs) | `verbose_log` | `0`, `1` | The detailed log, as `OPENRAC_LOG=verbose` ([DEBUGGING.md](DEBUGGING.md#logs-and-traces)). Written only when on |
 
@@ -322,3 +323,32 @@ follows ReRAC's idea and says so in
 | The game's 50 Hz / 60 Hz mode | `video-mode` follows the frame rate | none (NTSC only) | removed (section 3) | **now** |
 | Graphics card: prefer the discrete one | Windows exports | no | Windows exports, Linux variables | **now** |
 | Graphics card: refuse a software rasteriser | no (the strings are logged) | no | yes | **now** |
+
+## 7. Lock-strafe (Ratchet & Clank)
+
+The game turns the stick into a heading in three steps, each tick: the stick
+handler (`Hero_SetHeadingFromStick`) sets the hero's move yaw (`+0x180`) to
+the stick's angle plus the camera's yaw (`D_L00_00166ED8`); the state code
+eases his facing toward the move yaw (`Hero_TurnToHeading`); and the run
+builds his velocity along his facing (`Hero_SetPlanarVelocity` given an angle
+above pi). He turns first, then runs where he faces. The game has a strafe
+of its own in one state: in state 0x81 with L2 or R2 held, the state puts the
+camera's yaw in the move yaw around its turn, and the follow camera's
+per-tick requests (`func_L00_002E74B0`) switch to a strafe camera that
+slides along with him on a stiff lateral spring.
+
+With `lock_strafe = 1`, while the hero runs (states 2 and 0x73) on level
+ground with a weapon ready in slot 0 (not the wrench) and that item's button
+held, the port does the same in the run:
+[strafe.c](../../port/game/rac1/host/strafe.c) runs the three routines under
+host functions that turn him toward the camera's yaw, build the velocity
+along the move yaw (as the game's own run start from a standstill does), and
+ask for the game's strafe camera. Everything else is the game's code, and
+with the option off or the button let go the three are the game's routines
+exactly. The firing button is the trigger because every shoulder button is
+taken on foot (L1 and L2 look, R1 and R2 crouch); the game's own L2/R2
+strafe exists only in state 0x81. Each version's addresses come from its
+table ([port/game/rac1](../../port/game/rac1/README.md)); the decision is in
+[lock_strafe.h](../../port/game/rac1/host/lock_strafe.h) and tested by
+`hero_strafe` (ctest).
+
