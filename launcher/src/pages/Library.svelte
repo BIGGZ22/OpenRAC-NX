@@ -111,10 +111,10 @@
   .page {
     max-width: 1180px;
     margin: 0 auto;
-    padding: 28px 28px 60px;
+    padding: var(--page-top) var(--page-x) var(--page-bottom);
     display: flex;
     flex-direction: column;
-    gap: 22px;
+    gap: var(--page-gap);
   }
 
   .link {
@@ -194,7 +194,7 @@
     gap: 20px;
   }
 
-  @media (max-width: 820px) {
+  @media (max-width: 640px) {
     .tiles {
       grid-template-columns: minmax(0, 1fr);
     }

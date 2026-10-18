@@ -43,7 +43,53 @@
   --radius-sm: 10px;
   --shadow: 0 18px 50px rgb(0 0 0 / 0.45);
   --shadow-sm: 0 8px 24px rgb(0 0 0 / 0.35);
+
+  /* Motion: one curve for what arrives and settles, and three lengths. */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --fast: 0.15s;
+  --medium: 0.28s;
+  --slow: 0.5s;
+
+  /* A page's margins and the space between its sections, the same on every page. */
+  --page-x: 28px;
+  --page-top: 24px;
+  --page-bottom: 60px;
+  --page-gap: 20px;
+  /* What the navigation takes of the window: the header bar on top, or on Android the rail on
+     the left or the bar at the bottom (Header.svelte). */
+  --nav-top: 60px;
+  --nav-left: 0px;
+  --nav-bottom: 0px;
   color-scheme: dark;
+}
+
+@media (max-width: 600px) {
+  :root {
+    --page-x: 16px;
+    --page-top: 16px;
+    --page-gap: 16px;
+  }
+}
+
+/* Android: Material's margins (24 dp beside the content, 16 on a phone held upright), and the
+   navigation as its apps have it: a rail on the left, or a bar at the bottom when the window is
+   narrow. */
+html[data-platform="android"] {
+  --page-x: 24px;
+  --page-top: 20px;
+  --page-bottom: 32px;
+  --page-gap: 16px;
+  --nav-top: 0px;
+  --nav-left: 80px;
+}
+
+@media (max-width: 599px) {
+  html[data-platform="android"] {
+    --page-x: 16px;
+    --page-top: 16px;
+    --nav-left: 0px;
+    --nav-bottom: 80px;
+  }
 }
 
 * {
@@ -65,29 +111,6 @@ body {
 
 #app {
   height: 100%;
-}
-
-/* The orange bar at the top of the app */
-header,
-.site-header {
-  position: relative;
-  z-index: 20;
-  display: flex !important;
-  flex-direction: row;
-  align-items: center;
-  gap: 22px;
-  height: 60px;
-  min-height: 60px;
-  width: 100%;
-  padding: 0 18px;
-  background: linear-gradient(to bottom, var(--bar-top), var(--bar-bottom)) !important;
-  border-bottom: 1px solid rgb(0 0 0 / 0.3);
-  color: #000;
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.35),
-    0 4px 24px rgb(0 0 0 / 0.45);
-  flex: none;
-  box-sizing: border-box;
 }
 
 h1,
@@ -176,6 +199,12 @@ code,
   padding: 20px 22px;
 }
 
+@media (max-width: 600px) {
+  .panel {
+    padding: 16px;
+  }
+}
+
 /* Buttons. The primary one is the header bar's orange. */
 button,
 .button {
@@ -193,14 +222,18 @@ button,
   gap: 8px;
   text-decoration: none;
   transition:
-    background 0.15s,
-    border-color 0.15s,
-    filter 0.15s;
+    background var(--fast),
+    border-color var(--fast),
+    color var(--fast),
+    filter var(--fast),
+    transform var(--fast) var(--ease);
 }
 
-button:hover:not(:disabled),
-.button:hover {
-  border-color: var(--soft);
+@media (hover: hover) {
+  button:hover:not(:disabled),
+  .button:hover {
+    border-color: var(--soft);
+  }
 }
 
 button:disabled {
@@ -221,10 +254,12 @@ html[data-input="pad"] :focus {
   outline-offset: 2px;
 }
 
-/* Touch has no hover: a press dims the button a little instead. */
+/* A press dims the button and pushes it in a little; on a touch screen that is all it shows, as
+   hover styles apply only where there is a pointer that hovers. */
 button:active:not(:disabled),
 .button:active {
   filter: brightness(0.88);
+  transform: scale(0.97);
 }
 
 button.primary {
@@ -234,9 +269,11 @@ button.primary {
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
 }
 
-button.primary:hover:not(:disabled) {
-  filter: brightness(1.08);
-  border-color: rgb(0 0 0 / 0.3);
+@media (hover: hover) {
+  button.primary:hover:not(:disabled) {
+    filter: brightness(1.08);
+    border-color: rgb(0 0 0 / 0.3);
+  }
 }
 
 button.ghost {
@@ -245,9 +282,11 @@ button.ghost {
   color: var(--soft);
 }
 
-button.ghost:hover:not(:disabled) {
-  background: var(--panel-hi);
-  border-color: var(--line);
+@media (hover: hover) {
+  button.ghost:hover:not(:disabled) {
+    background: var(--panel-hi);
+    border-color: var(--line);
+  }
 }
 
 button.small {
@@ -380,7 +419,57 @@ input[type="text"] {
 }
 
 .rise {
-  animation: rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: rise 0.6s var(--ease) both;
+}
+
+/* A page's sections arrive one after another when it opens. */
+.page > :is(section, .panel, h1):not(.rise) {
+  animation: rise var(--slow) var(--ease) both;
+}
+
+.page > :nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.page > :nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.page > :nth-child(4) {
+  animation-delay: 120ms;
+}
+
+.page > :nth-child(5) {
+  animation-delay: 160ms;
+}
+
+.page > :nth-child(n + 6) {
+  animation-delay: 200ms;
+}
+
+/* Android's touch feedback (src/lib/ripple.ts): a wave from the finger, inside the control. */
+.ripples {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.2;
+  transform: translate(-50%, -50%) scale(0);
+  animation: ripple 0.5s var(--ease) forwards;
+}
+
+@keyframes ripple {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 
 .spinner {
@@ -413,6 +502,16 @@ input[type="text"] {
 /* Android's WebView flickers under a blurred backdrop (main.ts): the panels stay translucent. */
 html[data-platform="android"] * {
   backdrop-filter: none !important;
+}
+
+/* An app's controls are not text to select: a long press does nothing, as in Android's own apps.
+   What is text (fields, paths, logs) still is. */
+html[data-platform="android"] body {
+  user-select: none;
+}
+
+html[data-platform="android"] :is(input, textarea, pre, code, .mono, .selectable) {
+  user-select: text;
 }
 
 @media (prefers-reduced-motion: reduce) {

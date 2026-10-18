@@ -103,6 +103,19 @@ release. Without them the cards show the gradient, as the site does.
 - Keep text readable on its background: the pills' and blockers' colours are
   only used on `--panel`, `--panel-hi` or a game's dark boxes.
 - Respect `prefers-reduced-motion` (already global in `app.css`).
+- Motion and spacing have tokens too: `--ease` and `--fast`, `--medium`,
+  `--slow` for transitions; `--page-x`, `--page-top`, `--page-bottom` and
+  `--page-gap` for every page's margins. A page's sections rise in turn as
+  it opens (`.page > section` in `app.css`).
+- Hover styles go inside `@media (hover: hover)`: on a touch screen a tapped
+  control would otherwise keep them until the next tap elsewhere. A press
+  shows with `:active`, a keyboard's or controller's focus with
+  `:focus-visible` or `html[data-input="pad"]`.
+- Android follows Android's own patterns, not the desktop's: a navigation rail
+  on the left (a bar at the bottom below 600 px wide) in place of the orange
+  bar, Material's 24/16 px margins, a ripple under the finger
+  (`src/lib/ripple.ts`), snackbar-style toasts and no text selection on
+  controls. The `--nav-*` tokens say what the navigation takes of the window.
 - Window sizes: the window opens at 1200 × 780, can be resized, and cannot be
   made smaller than 760 × 560 (`tauri.conf.json`). A page scrolls down, never
   sideways: lay it out to fit from 760 px wide.

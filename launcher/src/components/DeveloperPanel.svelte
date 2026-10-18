@@ -185,8 +185,10 @@
     border-radius: 999px;
   }
 
-  .versions button:hover {
-    color: var(--tx1, #fff);
+  @media (hover: hover) {
+    .versions button:hover {
+      color: var(--tx1, #fff);
+    }
   }
 
   .versions button.on {

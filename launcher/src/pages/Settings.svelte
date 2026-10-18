@@ -7,7 +7,7 @@
   import PathField from "$components/PathField.svelte";
   import { api, errorText, onAndroid, type Check, type Config, type Detected } from "$lib/api";
   import { app, lookForUpdate, saveConfig } from "$lib/app.svelte";
-  import { REPO_URL } from "$lib/links";
+  import { DISCORD_URL, REPO_URL, SITE_URL } from "$lib/links";
 
   let { setup = false }: { setup?: boolean } = $props();
 
@@ -203,9 +203,10 @@
             Look for a new launcher when it starts. Off, it only looks when you ask. An update is never installed
             without your click.
             <button class="link" disabled={looked === "looking"} onclick={() => void checkNow()}>Check now</button>
-            {#if looked === "looking"}· Looking…{:else if looked === "found"}· {app.update?.name ?? "A new version"} is out:
-              use Update in the header.{:else if looked === "none"}· You have the latest.{:else if looked === "failed"}·
-              Could not check: {lookError}.{/if}
+            {#if looked === "looking"}· Looking…{:else if looked === "found" || app.update}· {app.update?.name ??
+                "A new version"} is out.
+              <button class="link" onclick={() => (app.showUpdateModal = true)}>Update</button
+              >{:else if looked === "none"}· You have the latest.{:else if looked === "failed"}· Could not check: {lookError}.{/if}
           </small>
         </span>
       </label>
@@ -288,6 +289,11 @@
       OpenRAC Launcher {app.info?.version ?? ""}{#if draft.developer && app.info}
         · {app.info.platform}{#if app.info.configFile}
           · <span class="mono">{app.info.configFile}</span>{/if}{/if}
+      <!-- The header's links, which Android's navigation has no room for. -->
+      {#if onAndroid}
+        · <button class="link" onclick={() => void api.openUrl(SITE_URL)}>openrac.dev</button>
+        · <button class="link" onclick={() => void api.openUrl(DISCORD_URL)}>Discord</button>
+      {/if}
     </p>
   {/if}
 </div>
@@ -304,10 +310,11 @@
   .page {
     max-width: 820px;
     margin: 0 auto;
-    padding: 28px 28px 110px;
+    /* Room at the bottom for the bar that saves. */
+    padding: var(--page-top) var(--page-x) calc(var(--page-bottom) + 56px);
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: var(--page-gap);
   }
 
   .welcome {
@@ -414,11 +421,12 @@
   /* Stays in view while there is something to save. */
   .save-bar {
     position: fixed;
-    left: 50%;
-    bottom: 22px;
+    /* The middle of the page, beside or above Android's navigation (app.css). */
+    left: calc(50% + var(--nav-left) / 2);
+    bottom: calc(22px + var(--nav-bottom));
     transform: translateX(-50%);
     z-index: 25;
-    width: min(764px, calc(100% - 56px));
+    width: min(764px, calc(100% - var(--nav-left) - 2 * var(--page-x)));
     display: flex;
     align-items: center;
     gap: 10px;
@@ -428,5 +436,13 @@
     border-radius: 999px;
     box-shadow: var(--shadow);
     font-size: 14px;
+    animation: bar-in var(--medium) var(--ease) both;
+  }
+
+  @keyframes bar-in {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 24px);
+    }
   }
 </style>

@@ -207,9 +207,11 @@
       background 0.15s;
   }
 
-  .close-btn:hover {
-    color: var(--text);
-    background: var(--line);
+  @media (hover: hover) {
+    .close-btn:hover {
+      color: var(--text);
+      background: var(--line);
+    }
   }
 
   .body {
@@ -357,9 +359,11 @@
       color 0.15s;
   }
 
-  .btn-cancel:hover {
-    background: var(--line);
-    color: var(--text);
+  @media (hover: hover) {
+    .btn-cancel:hover {
+      background: var(--line);
+      color: var(--text);
+    }
   }
 
   .btn-primary {
@@ -377,8 +381,10 @@
       filter 0.15s;
   }
 
-  .btn-primary:hover {
-    filter: brightness(1.1);
+  @media (hover: hover) {
+    .btn-primary:hover {
+      filter: brightness(1.1);
+    }
   }
 
   .btn-primary:active {

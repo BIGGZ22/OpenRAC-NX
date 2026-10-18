@@ -227,10 +227,10 @@
     position: relative;
     max-width: 920px;
     margin: 0 auto;
-    padding: 20px 28px 60px;
+    padding: var(--page-top) var(--page-x) var(--page-bottom);
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--page-gap);
   }
 
   .page-ambient-bg {
@@ -392,9 +392,11 @@
     opacity: 0.8;
   }
 
-  .crashed button:hover {
-    filter: brightness(1.2);
-    opacity: 1;
+  @media (hover: hover) {
+    .crashed button:hover {
+      filter: brightness(1.2);
+      opacity: 1;
+    }
   }
 
   .line {

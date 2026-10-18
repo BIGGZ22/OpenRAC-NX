@@ -84,8 +84,10 @@
     color: var(--text);
   }
 
-  .what:hover .name {
-    color: var(--gold);
+  @media (hover: hover) {
+    .what:hover .name {
+      color: var(--gold);
+    }
   }
 
   .done {

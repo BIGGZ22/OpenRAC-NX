@@ -59,8 +59,10 @@
     border-radius: 999px;
   }
 
-  button:hover:not(:disabled) {
-    color: #fff;
+  @media (hover: hover) {
+    button:hover:not(:disabled) {
+      color: #fff;
+    }
   }
 
   button.on {

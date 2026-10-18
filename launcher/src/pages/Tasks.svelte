@@ -88,10 +88,18 @@
     height: 100%;
     display: grid;
     grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
-    gap: 18px;
-    padding: 22px 28px;
+    gap: var(--page-gap);
+    padding: var(--page-top) var(--page-x);
     max-width: 1400px;
     margin: 0 auto;
+  }
+
+  /* A narrow window: the list above what the chosen task printed. */
+  @media (max-width: 720px) {
+    .page {
+      height: auto;
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   .list {

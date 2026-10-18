@@ -240,10 +240,10 @@ openrac-{v.key.replace(
   .page {
     max-width: 920px;
     margin: 0 auto;
-    padding: 28px 28px 60px;
+    padding: var(--page-top) var(--page-x) var(--page-bottom);
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--page-gap);
   }
 
   .lead {

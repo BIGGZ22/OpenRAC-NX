@@ -8,13 +8,18 @@ import App from "./App.svelte";
 import { onAndroid } from "./lib/api";
 import { app } from "./lib/app.svelte";
 import { startPad } from "./lib/pad";
+import { startRipples } from "./lib/ripple";
 
 const target = document.getElementById("app");
 if (!target) throw new Error("index.html has no #app element");
 
-// Android's WebView redraws a blurred backdrop over moving content with a visible flicker: its
-// panels are drawn without the blur (app.css).
-if (onAndroid) document.documentElement.dataset.platform = "android";
+// Android: its own layout and margins (app.css, Header.svelte), its panels without a blurred
+// backdrop (the WebView redraws one over moving content with a visible flicker), and a ripple
+// under the finger on each control.
+if (onAndroid) {
+  document.documentElement.dataset.platform = "android";
+  startRipples();
+}
 
 // A controller drives the whole launcher; B and Back return to the games from any other page.
 startPad(() => {

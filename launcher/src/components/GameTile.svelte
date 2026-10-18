@@ -84,20 +84,51 @@
     display: flex;
     align-items: flex-end;
     /* Two rows of tiles fill the window at any height it can have. */
-    min-height: clamp(240px, calc((100vh - 60px - 108px) / 2), 400px);
+    min-height: clamp(240px, calc((100vh - var(--nav-top) - var(--nav-bottom) - 108px) / 2), 400px);
     border-radius: 22px;
     overflow: hidden;
     background: linear-gradient(160deg, var(--from), var(--to));
     box-shadow: var(--shadow-sm);
+    /* Its foot follows the tile's own width (below). */
+    container-type: inline-size;
     transition:
-      transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
-      box-shadow 0.2s;
+      transform var(--medium) var(--ease),
+      box-shadow var(--medium);
   }
 
-  .tile:hover,
-  .tile:focus-within {
+  /* Raised under the pointer, or with the focus of a keyboard or a controller; a touch only
+     presses it in while the finger is down, and leaves nothing behind. */
+  @media (hover: hover) {
+    .tile:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow);
+    }
+
+    .tile:hover .art {
+      transform: scale(1.06);
+    }
+
+    .crashed .x:hover {
+      opacity: 1;
+      background: rgb(255 255 255 / 0.12);
+    }
+  }
+
+  .tile:has(:focus-visible),
+  :global(html[data-input="pad"]) .tile:focus-within {
     transform: translateY(-3px);
     box-shadow: var(--shadow);
+  }
+
+  .tile:has(.open:active) {
+    transform: scale(0.98);
+    transition-duration: var(--fast);
+  }
+
+  /* Android: the games side by side as tall cards, about the height of the screen held
+     sideways, as a console's home screen has them. */
+  :global(html[data-platform="android"]) .tile {
+    min-height: clamp(200px, calc(100vh - 2 * var(--page-top) - var(--nav-bottom)), 340px);
   }
 
   .art {
@@ -109,8 +140,8 @@
     transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
-  .tile:hover .art,
-  .tile:focus-within .art {
+  .tile:has(:focus-visible) .art,
+  :global(html[data-input="pad"]) .tile:focus-within .art {
     transform: scale(1.06);
   }
 
@@ -119,9 +150,8 @@
       transition: none;
     }
 
-    .tile:hover .art,
-    .tile:focus-within .art {
-      transform: none;
+    .tile .art {
+      transform: none !important;
     }
   }
 
@@ -180,11 +210,6 @@
     opacity: 0.75;
   }
 
-  .crashed .x:hover {
-    opacity: 1;
-    background: rgb(255 255 255 / 0.12);
-  }
-
   h2 {
     font-family: var(--title-font);
     font-weight: var(--title-weight);
@@ -232,6 +257,19 @@
     padding: 10px 22px;
     background: rgb(0 0 0 / 0.5);
     border-color: rgb(255 255 255 / 0.25);
+  }
+
+  /* A narrow tile: its button under its name, the tile's width. */
+  @container (max-width: 420px) {
+    .foot {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 14px;
+    }
+
+    .act {
+      justify-content: center;
+    }
   }
 
   .act.primary {

@@ -16,7 +16,7 @@
   .toasts {
     position: fixed;
     right: 20px;
-    bottom: 20px;
+    bottom: calc(20px + var(--nav-bottom));
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -35,6 +35,22 @@
     padding: 10px 14px;
     font-size: 14px;
     box-shadow: var(--shadow-sm);
+  }
+
+  /* Android: centred over the bottom of the page, as its snackbars are. */
+  :global(html[data-platform="android"]) .toasts {
+    right: 16px;
+    left: calc(var(--nav-left) + 16px);
+    bottom: calc(16px + var(--nav-bottom));
+    align-items: center;
+    max-width: none;
+    pointer-events: none;
+  }
+
+  :global(html[data-platform="android"]) .toast {
+    max-width: 560px;
+    border-left-width: 1px;
+    border-radius: 12px;
   }
 
   .toast.error {
