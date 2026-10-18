@@ -82,10 +82,12 @@ git push origin launcher-vX.Y.Z
    - **Linux x86_64** (`ubuntu-22.04`): Builds the game against LLVM 19 libc++ (glibc 2.35 compatible).
    - **Linux ARM64** (`ubuntu-24.04-arm`): Builds natively for AArch64 and bundles `aarch64-unknown-linux-gnu` Python.
    - **macOS** (`macos-latest`): Builds the game for Apple Silicon.
-2. **Installer creation (`build` & `fedora` jobs)**:
+   - **Android** (`ubuntu-latest`): Builds the port with the runner's NDK (`tools/build_android.py --no-apk`).
+2. **Installer creation (`build` job, one matrix row per system)**:
    - Packages Windows NSIS (`.exe`) and MSI.
    - Packages Linux `.deb`, `.rpm`, and `.AppImage` (both `amd64` and `arm64`).
-   - Packages Fedora `.fc44.x86_64.rpm` in container.
+   - Packages Fedora `.fc44.x86_64.rpm` in a Fedora container.
+   - Packages the Android debug APK.
    - Packages macOS universal `.dmg` and `.app.tar.gz`.
 3. **Updater signing & manifest**:
    - Signs update archives with minisign (`TAURI_SIGNING_PRIVATE_KEY`).

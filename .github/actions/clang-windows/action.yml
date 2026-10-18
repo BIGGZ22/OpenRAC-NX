@@ -1,0 +1,24 @@
+# The runner's own Clang may be older than Visual Studio's C++ library accepts, so LLVM's release
+# is fetched at a fixed version and checked against its SHA-256. Its installer is unpacked, not
+# run: nothing is installed over what the runner has.
+name: Clang (Windows)
+description: LLVM at a fixed version, checked and unpacked; sets OPENRAC_CLANG and puts it on PATH
+runs:
+  using: composite
+  steps:
+    - shell: pwsh
+      env:
+        LLVM_VERSION: "21.1.4"
+        LLVM_SHA256: 8e39f8051cd10a163c1fab304f16d8e16a9c0f5e94b59d08853bbab630bd65dd
+      run: |
+        $ProgressPreference = "SilentlyContinue"
+        $installer = Join-Path $env:RUNNER_TEMP "llvm.exe"
+        $release = "https://github.com/llvm/llvm-project/releases/download"
+        Invoke-WebRequest "$release/llvmorg-${env:LLVM_VERSION}/LLVM-${env:LLVM_VERSION}-win64.exe" -OutFile $installer
+        $sha256 = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()
+        if ($sha256 -ne $env:LLVM_SHA256) { throw "LLVM ${env:LLVM_VERSION}: its SHA-256 is $sha256" }
+        $llvm = Join-Path $env:RUNNER_TEMP "llvm"
+        7z x $installer "-o$llvm" -y | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "7z could not unpack LLVM's installer" }
+        "OPENRAC_CLANG=$llvm\bin\clang.exe" >> $env:GITHUB_ENV
+        "$llvm\bin" >> $env:GITHUB_PATH
