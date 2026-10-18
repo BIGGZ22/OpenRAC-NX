@@ -14,6 +14,7 @@
 //! - [`config`]: the launcher's own settings file.
 //! - [`detect`]: finding the checkout, Python, Godot and Docker.
 //! - [`install`]: setting a game up from the player's disc, OpenGOAL's way.
+//! - [`disc_choice`]: for developers with two discs of a game, which one is played.
 //! - [`jobs`]: running an action as a child process and streaming its output.
 //! - [`overrides`]: a game's overrides packs (replacement textures and models): list, order, on/off.
 //! - [`library`]: all of the above, put together for the UI.
@@ -24,6 +25,7 @@ pub mod actions;
 pub mod catalog;
 pub mod config;
 pub mod detect;
+pub mod disc_choice;
 pub mod discord;
 pub mod discs;
 pub mod install;
