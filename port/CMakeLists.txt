@@ -41,6 +41,10 @@ option(OPENRAC_PORT_GAMES "Build the games from their decompilations (needs Clan
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(Warnings)
 include(FastBuild)
+# Android (the android-arm64 preset, the NDK's toolchain file): docs/port/ANDROID.md.
+if(ANDROID)
+  include(Android)
+endif()
 
 enable_testing()
 
@@ -66,6 +70,9 @@ add_dependencies(openrac_common openrac_build_info)
 target_include_directories(openrac_common PUBLIC .)
 if(UNIX AND NOT APPLE)
   target_link_libraries(openrac_common PUBLIC ${CMAKE_DL_LIBS})  # dladdr, for the crash report
+endif()
+if(ANDROID)
+  target_link_libraries(openrac_common PUBLIC openrac_android_compat)  # backtrace below API 33
 endif()
 openrac_warnings(openrac_common)
 

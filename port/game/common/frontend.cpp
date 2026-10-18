@@ -26,6 +26,7 @@
 #include "common/stats.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
+#include "platform/gpu_driver.h"
 #include "platform/input.h"
 #include "platform/pump.h"
 #include "platform/window.h"
@@ -1013,6 +1014,7 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
     const std::string app_id = "dev.openrac." + game_id;
     platform::set_app_metadata(OPENRAC_GAME_TITLE, app_id.c_str());
     platform::prefer_discrete_gpu();
+    platform::prepare_gpu_driver();
     g->sdl = std::make_unique<platform::Platform>(platform::kVideo | platform::kGamepad | platform::kAudio);
     if (!g->sdl->ok()) {
         error = g->sdl->error();

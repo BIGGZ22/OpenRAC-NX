@@ -50,6 +50,7 @@ endfunction()
 add_library(openrac_platform STATIC
   platform/audio.cpp
   platform/clock.cpp
+  platform/gpu_driver.cpp
   platform/input.cpp
   platform/pad.cpp
   platform/pump.cpp
@@ -58,6 +59,14 @@ add_library(openrac_platform STATIC
 )
 target_link_libraries(openrac_platform PUBLIC openrac_common openrac_sdl3)
 openrac_warnings(openrac_platform)
+# Android: the player's own GPU driver package (platform/gpu_driver.h, cmake/Android.cmake).
+if(ANDROID)
+  target_sources(openrac_platform PRIVATE android/gpu_driver.cpp)
+  if(TARGET adrenotools)
+    target_link_libraries(openrac_platform PRIVATE adrenotools)
+    target_compile_definitions(openrac_platform PRIVATE OPENRAC_ADRENOTOOLS=1)
+  endif()
+endif()
 # macOS: the menu bar's name and menus (platform/macos_app.mm).
 if(APPLE)
   target_sources(openrac_platform PRIVATE platform/macos_app.mm)

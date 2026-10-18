@@ -72,6 +72,12 @@
 #include "media/movie.h"
 #include "platform/audio.h"
 #endif
+#if defined(OPENRAC_ANDROID_ACTIVITY)
+// The game as Android's activity loads it (libopenrac-<id>.so): main is SDL_main, which SDL's
+// activity calls with the arguments the launcher gave it. The executable beside it
+// (libopenrac-<id>-cli.so) keeps its main.
+#include <SDL3/SDL_main.h>
+#endif
 
 extern "C" {
 const char* openrac_game_disc_image = nullptr;

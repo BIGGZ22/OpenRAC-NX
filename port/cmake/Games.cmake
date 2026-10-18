@@ -158,52 +158,67 @@ function(openrac_add_game config)
     set_source_files_properties(${host} PROPERTIES COMPILE_OPTIONS "-Wall;-Wextra")
   endif()
 
-  add_executable(openrac-${id} "${OPENRAC_GAME_DIR}/common/main.cpp")
-  target_link_libraries(openrac-${id} PRIVATE openrac_${target_id}_game openrac_runtime)
-  # The window: the renderer draws what the game holds in memory (game/common/frontend.h).
-  if(TARGET openrac_viewer_lib AND TARGET openrac_platform)
-    target_sources(openrac-${id} PRIVATE "${OPENRAC_GAME_DIR}/common/frontend.cpp"
-                                         "${OPENRAC_GAME_DIR}/common/debug_menu.cpp"
-                                         "${OPENRAC_GAME_DIR}/common/debug_overlay.cpp"
-                                         "${OPENRAC_GAME_DIR}/common/fps_counter.cpp"
-                                         "${OPENRAC_GAME_DIR}/common/options_menu.cpp"
-                                         "${OPENRAC_GAME_DIR}/common/settings.cpp"
-                                         "${OPENRAC_GAME_DIR}/common/touch_overlay.cpp")
-    target_link_libraries(openrac-${id} PRIVATE openrac_viewer_lib openrac_platform openrac_imgui)
-    # The debug overlay's moby class names: the editor's table, as text.
-    openrac_moby_class_names(names_cpp)
-    target_sources(openrac-${id} PRIVATE "${names_cpp}")
-    target_compile_definitions(openrac-${id} PRIVATE OPENRAC_FRONTEND=1)
-    # The window's icon: the game's own or the launcher's, embedded as PNG bytes.
-    openrac_window_icon("${config_dir}" "${target_id}" icon_c)
-    target_sources(openrac-${id} PRIVATE "${icon_c}")
-    # The game's name as players see it, in the window's title and on macOS its bundle's name
-    # (cmake/MacApp.cmake): the title in its catalogue entry (games/<game>/game.json) and the
-    # version's video standard, "Ratchet & Clank (PAL)", "Ratchet & Clank (NTSC)".
-    string(JSON game GET "${json}" game)
-    string(REGEX REPLACE "^${game}-" "" version "${id}")
-    cmake_path(SET catalogue NORMALIZE "${OPENRAC_REPO_DIR}/games/${game}/game.json")
-    file(READ "${catalogue}" catalogue_json)
-    string(JSON title GET "${catalogue_json}" title)
-    string(JSON video ERROR_VARIABLE no_video GET "${catalogue_json}" versions "${version}" disc video)
-    if(NOT no_video)
-      set(title "${title} (${video})")
-    endif()
-    set_property(DIRECTORY "${PROJECT_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${catalogue}")
-    target_compile_definitions(openrac-${id} PRIVATE "OPENRAC_GAME_TITLE=\"${title}\"")
-    if(APPLE)
-      set(icon "${config_dir}/icon-macos.png")
-      if(NOT EXISTS "${icon}")
-        set(icon "${PROJECT_SOURCE_DIR}/../launcher/src-tauri/icons/icon.icns")
-      endif()
-      openrac_macos_app(openrac-${id} NAME "${title}" ID "dev.openrac.${id}" ICON "${icon}")
-    endif()
-    if(TARGET openrac_media)
-      target_link_libraries(openrac-${id} PRIVATE openrac_media)
-      target_compile_definitions(openrac-${id} PRIVATE OPENRAC_MOVIES=1)
-    endif()
+  # On Android the game is the library SDL's activity loads and whose main it calls
+  # (libopenrac-<id>.so), and the same program again as an executable the launcher runs for what
+  # needs no window (--check-levels). Android runs programs only from the app's library folder,
+  # so that one is named like a library too: libopenrac-<id>-cli.so (docs/port/ANDROID.md).
+  if(ANDROID)
+    add_library(openrac-${id} SHARED "${OPENRAC_GAME_DIR}/common/main.cpp")
+    target_compile_definitions(openrac-${id} PRIVATE OPENRAC_ANDROID_ACTIVITY=1)
+    add_executable(openrac-${id}-cli "${OPENRAC_GAME_DIR}/common/main.cpp")
+    set_target_properties(openrac-${id}-cli PROPERTIES OUTPUT_NAME "libopenrac-${id}-cli.so")
+    set(targets openrac-${id} openrac-${id}-cli)
+  else()
+    add_executable(openrac-${id} "${OPENRAC_GAME_DIR}/common/main.cpp")
+    set(targets openrac-${id})
   endif()
-  openrac_warnings(openrac-${id})
+  foreach(target IN LISTS targets)
+    target_link_libraries(${target} PRIVATE openrac_${target_id}_game openrac_runtime)
+    # The window: the renderer draws what the game holds in memory (game/common/frontend.h).
+    if(TARGET openrac_viewer_lib AND TARGET openrac_platform)
+      target_sources(${target} PRIVATE "${OPENRAC_GAME_DIR}/common/frontend.cpp"
+                                       "${OPENRAC_GAME_DIR}/common/debug_menu.cpp"
+                                       "${OPENRAC_GAME_DIR}/common/debug_overlay.cpp"
+                                       "${OPENRAC_GAME_DIR}/common/fps_counter.cpp"
+                                       "${OPENRAC_GAME_DIR}/common/options_menu.cpp"
+                                       "${OPENRAC_GAME_DIR}/common/settings.cpp"
+                                       "${OPENRAC_GAME_DIR}/common/touch_overlay.cpp")
+      target_link_libraries(${target} PRIVATE openrac_viewer_lib openrac_platform openrac_imgui)
+      # The debug overlay's moby class names: the editor's table, as text.
+      openrac_moby_class_names(names_cpp)
+      target_sources(${target} PRIVATE "${names_cpp}")
+      target_compile_definitions(${target} PRIVATE OPENRAC_FRONTEND=1)
+      # The window's icon: the game's own or the launcher's, embedded as PNG bytes.
+      openrac_window_icon("${config_dir}" "${target_id}" icon_c)
+      target_sources(${target} PRIVATE "${icon_c}")
+      # The game's name as players see it, in the window's title and on macOS its bundle's name
+      # (cmake/MacApp.cmake): the title in its catalogue entry (games/<game>/game.json) and the
+      # version's video standard, "Ratchet & Clank (PAL)", "Ratchet & Clank (NTSC)".
+      string(JSON game GET "${json}" game)
+      string(REGEX REPLACE "^${game}-" "" version "${id}")
+      cmake_path(SET catalogue NORMALIZE "${OPENRAC_REPO_DIR}/games/${game}/game.json")
+      file(READ "${catalogue}" catalogue_json)
+      string(JSON title GET "${catalogue_json}" title)
+      string(JSON video ERROR_VARIABLE no_video GET "${catalogue_json}" versions "${version}" disc video)
+      if(NOT no_video)
+        set(title "${title} (${video})")
+      endif()
+      set_property(DIRECTORY "${PROJECT_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${catalogue}")
+      target_compile_definitions(${target} PRIVATE "OPENRAC_GAME_TITLE=\"${title}\"")
+      if(APPLE)
+        set(icon "${config_dir}/icon-macos.png")
+        if(NOT EXISTS "${icon}")
+          set(icon "${PROJECT_SOURCE_DIR}/../launcher/src-tauri/icons/icon.icns")
+        endif()
+        openrac_macos_app(${target} NAME "${title}" ID "dev.openrac.${id}" ICON "${icon}")
+      endif()
+      if(TARGET openrac_media)
+        target_link_libraries(${target} PRIVATE openrac_media)
+        target_compile_definitions(${target} PRIVATE OPENRAC_MOVIES=1)
+      endif()
+    endif()
+    openrac_warnings(${target})
+  endforeach()
 endfunction()
 
 # The window's icon as a C array (openrac_icon_png, openrac_icon_png_size): the game's icon if
