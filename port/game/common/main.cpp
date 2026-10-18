@@ -1160,6 +1160,9 @@ int main(int argc, char** argv) {
         log::fatalf("--check-levels needs a build with the window (it reads the levels as the window does)");
 #endif
     }
+    // The session's log first, so that a game that cannot start says why in it (on Android the
+    // only place the player can read it, through the launcher).
+    open_session(argc, argv);
     const fs::path iso = g_options.data / "iso_data" / openrac_game.game;
     const fs::path exe = iso / openrac_game.serial;
     const fs::path disc = iso / "disc.iso";
@@ -1173,7 +1176,6 @@ int main(int argc, char** argv) {
             g_options.data.string()
         );
     }
-    open_session(argc, argv);
     log::info("{}: {}", program_name(), openrac_game.title);
 
     runtime::Memory::create();
