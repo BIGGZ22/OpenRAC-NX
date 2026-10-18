@@ -364,12 +364,12 @@ void FUN_L00_00235ea0();
 
 /* Moves every other star by its velocity and bounces it off a box whose size
  * depends on the star index. */
-void FUN_L00_00236458(void) {
+void FUN_L00_00236458(HudElem *e) {
     Star_236458 *p;
     int i;
     float lim, hx, hy, nhx, nhy;
 
-    FUN_L00_00235ea0();
+    FUN_L00_00235ea0(e);
     p = &D_L00_0017E660[D_L00_0015F3F8 % 2];
     i = D_L00_0015F3F8 % 2;
     for (; i < 100; i += 2, p += 2) {
