@@ -268,6 +268,38 @@ void textures_and_vif() {
     CHECK(!gif.vif(mscal));
 }
 
+// A block the game drew into off-screen, then uploaded a texture to (its 2D pages reuse that
+// memory): a draw of the texture reads the upload, not the old target.
+void offscreen_then_upload() {
+    TexturePool textures;
+    GifInterpreter gif(textures);
+    GifBuilder b;
+    constexpr std::uint32_t kBlock = 0x1000;
+    const std::uint64_t offscreen = std::uint64_t{kBlock / 32} | (std::uint64_t{4} << 16);
+    const std::uint64_t frame = std::uint64_t{8} << 16;  // the display buffer, 512 pixels wide
+    b.ad({{gs::kFrame1, offscreen},
+          {gs::kPrim, prim(gs::PrimKind::Sprite, false, false, false)},
+          {gs::kRgbaq, rgbaq(0xFF, 0, 0, 0x80)},
+          {gs::kXyz2, xyz2(0, 0, 0)},
+          {gs::kXyz2, xyz2(16, 16, 0)},
+          {gs::kFrame1, frame}});
+    std::vector<std::uint8_t> texels(4 * 4 * 4, 0x40);
+    b.image(kBlock, 1, gs::kPsmct32, 4, 4, texels);
+    b.ad({{gs::kTex0_1, openrac::test::tex0(kBlock, 1, gs::kPsmct32, 2, 2, true)},
+          {gs::kPrim, prim(gs::PrimKind::Sprite, false, true, false, true)},
+          {gs::kUv, openrac::test::uv(0, 0)},
+          {gs::kXyz2, xyz2(0, 0, 0)},
+          {gs::kUv, openrac::test::uv(4, 4)},
+          {gs::kXyz2, xyz2(8, 8, 0)}});
+    CHECK(gif.gif(b.bytes));
+    CHECK(!gif.draws().empty());
+    if (!gif.draws().empty()) {
+        const DirectState& s = gif.draws().back().state;
+        CHECK(s.source == 0);
+        CHECK(s.textured && s.texture != textures.placeholder());
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -276,5 +308,6 @@ int main() {
     packed_and_reglist();
     draw_groups();
     textures_and_vif();
+    offscreen_then_upload();
     return openrac::test::result();
 }

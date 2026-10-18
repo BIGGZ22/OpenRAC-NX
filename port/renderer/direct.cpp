@@ -512,6 +512,7 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
                 int x = 0;
                 int y = 0;
                 std::erase_if(m_frame_copies, [&](const FrameCopy& f) { return f.dbp == m_bitbltbuf.dbp; });
+                std::erase(m_offscreen, m_bitbltbuf.dbp);  // copied over, as an upload (image_data)
                 if (frame_source(m_bitbltbuf.sbp, x, y)) {
                     m_frame_copies.push_back(
                         {m_bitbltbuf.dbp,
@@ -555,6 +556,11 @@ void GifInterpreter::image_data(std::span<const std::uint8_t> data) {
             );
         }
         std::erase_if(m_frame_copies, [&](const FrameCopy& f) { return f.dbp == m_upload.dbp; });
+        // What the game drew into this block off-screen is gone too: a texture read from it now is
+        // the one uploaded. The block stayed an off-screen target for good, and every draw of a
+        // texture the game later put there (its HUD's and menus' pages reuse that memory) showed the
+        // old target, blank: the whole 2D layer flickered, then went until the game was restarted.
+        std::erase(m_offscreen, m_upload.dbp);
         if (m_upload.dpsm == gs::kPsmct32 && m_upload.dbp >= g_draw_buffer_block
             && m_upload.dbp < g_draw_buffer_block + kDrawBufferWidth * (g_draw_buffer_lines / 32) * 32) {
             draw_frame_upload(m_upload);
