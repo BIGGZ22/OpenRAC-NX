@@ -86,6 +86,9 @@ object OpenracSetup {
       Log.w(TAG, "this APK carries no $BUNDLE: the launcher has no tools to set a game up")
       return
     }
+    // Before the launcher's window (the Rust side reads the copy when it starts): Android's splash
+    // shows meanwhile, once per install or update.
+    val started = System.nanoTime()
     root.deleteRecursively()
     root.mkdirs()
     val canonical = root.canonicalPath + File.separator
@@ -100,12 +103,13 @@ object OpenracSetup {
           dest.mkdirs()
         } else {
           dest.parentFile?.mkdirs()
-          FileOutputStream(dest).use { zip.copyTo(it) }
+          FileOutputStream(dest).use { zip.copyTo(it, 1 shl 16) }
         }
       }
     }
     stampFile.writeText(stamp)
-    Log.i(TAG, "unpacked OpenRAC's tools into $root (${Build.MODEL})")
+    val ms = (System.nanoTime() - started) / 1_000_000
+    Log.i(TAG, "unpacked OpenRAC's tools into $root in $ms ms (${Build.MODEL})")
   }
 
   private fun link(target: File, link: File) {
