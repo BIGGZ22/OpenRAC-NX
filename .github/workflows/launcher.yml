@@ -85,8 +85,8 @@ jobs:
             python: aarch64-apple-darwin
             python_sha256: 233f8e15255b3e1d1fd47ea5dd5230dfed803f371138e896e54d98c60ae19f6f
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -183,7 +183,7 @@ jobs:
           fi
           tar -czf openrac-standalone.tar.gz -C build/standalone .
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: openrac-standalone-${{ matrix.name }}
           path: openrac-standalone.tar.gz
@@ -244,8 +244,8 @@ jobs:
       run:
         working-directory: launcher
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
       - name: Yarn (the version package.json names, through Corepack)
@@ -253,7 +253,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.name == 'macos' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -269,7 +269,7 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev patchelf rpm file
           sudo apt-get install -y libfuse2t64 || sudo apt-get install -y libfuse2 || true
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: openrac-standalone-${{ matrix.name }}
           path: ${{ runner.temp }}/standalone
@@ -309,7 +309,7 @@ jobs:
           yarn install --immutable
           yarn tauri build ${{ matrix.args }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: openrac-launcher-${{ matrix.name }}
           path: ${{ matrix.files }}
@@ -320,7 +320,7 @@ jobs:
   fedora:
     name: fedora
     needs: game
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     container: registry.fedoraproject.org/fedora:44
     timeout-minutes: 60
     env:
@@ -335,11 +335,11 @@ jobs:
           dnf install -y --setopt=install_weak_deps=False git gcc gcc-c++ make curl file rpm-build \
             nodejs npm webkit2gtk4.1-devel gtk3-devel librsvg2-devel libsoup3-devel openssl-devel
           npm install -g corepack
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Yarn (the version package.json names, through Corepack)
         run: corepack enable
       - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -348,7 +348,7 @@ jobs:
           key: launcher-fedora-${{ hashFiles('launcher/Cargo.lock') }}
           restore-keys: launcher-fedora-
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: openrac-standalone-linux
           path: ${{ runner.temp }}/standalone
@@ -389,7 +389,7 @@ jobs:
           for f in target/release/bundle/rpm/*.x86_64.rpm; do mv "$f" "${f%.x86_64.rpm}.fc44.x86_64.rpm"; done
           for f in target/release/bundle/rpm/*.x86_64.rpm.sig; do mv "$f" "${f%.x86_64.rpm.sig}.fc44.x86_64.rpm.sig"; done
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: openrac-launcher-fedora
           path: |
@@ -402,12 +402,12 @@ jobs:
   release:
     if: startsWith(github.ref, 'refs/tags/launcher-v')
     needs: [build, fedora]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
         with:
           pattern: openrac-launcher-*
           path: installers
