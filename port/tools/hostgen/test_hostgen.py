@@ -686,6 +686,37 @@ class Translate(unittest.TestCase):
         self.assertEqual(out, ["1", "20"])
 
 
+class InputsDigest(unittest.TestCase):
+    """The fingerprint that lets a build skip a translation it already has."""
+
+    def test_changes_with_what_hostgen_reads(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, game = Path(tmp) / "decomp", Path(tmp) / "game" / "g"
+            (source / "src").mkdir(parents=True)
+            (source / "include").mkdir()
+            (source / "asm").mkdir()
+            game.mkdir(parents=True)
+            (source / "src" / "a.c").write_text("int a(void) { return 1; }\n")
+            (source / "asm" / "big.s").write_text("nop\n")
+            config = game / "hostgen.json"
+            config.write_text("{}")
+            cfg = {"sources": ["src"], "includes": ["include"], "symbols": []}
+            first = hostgen.inputs_digest(source, config, cfg, [])
+            self.assertEqual(first, hostgen.inputs_digest(source, config, cfg, []))
+            # What it does not read leaves it as it is.
+            (source / "asm" / "big.s").write_text("nop\nnop\n")
+            self.assertEqual(first, hostgen.inputs_digest(source, config, cfg, []))
+            # The C, the game's configuration and the options change it.
+            (source / "src" / "a.c").write_text("int a(void) { return 2; }\n")
+            second = hostgen.inputs_digest(source, config, cfg, [])
+            self.assertNotEqual(first, second)
+            config.write_text('{"x": 1}')
+            self.assertNotEqual(second, hostgen.inputs_digest(source, config, cfg, []))
+            self.assertNotEqual(
+                hostgen.inputs_digest(source, config, cfg, []), hostgen.inputs_digest(source, config, cfg, ["src/a.c"])
+            )
+
+
 class SupersededDeclarations(unittest.TestCase):
     def test_header_declaration_a_definition_contradicts_is_dropped(self):
         with tempfile.TemporaryDirectory() as d:
