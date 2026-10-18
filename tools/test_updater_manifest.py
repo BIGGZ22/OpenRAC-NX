@@ -44,3 +44,17 @@ class TestUpdaterManifest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestDevelopmentManifest(unittest.TestCase):
+    def test_a_rolling_release_gives_its_version(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with open(os.path.join(tmpdir, "OpenRAC.Launcher_0.5.0-dev.42_android-arm64.apk.sig"), "w",
+                      encoding="utf-8") as f:
+                f.write("sig\n")
+            manifest = generate_manifest(tmpdir, "launcher-dev-feature-x", repo="someone/OpenRAC",
+                                         version="0.5.0-dev.42")
+            self.assertEqual(manifest["version"], "0.5.0-dev.42")
+            self.assertEqual(manifest["platforms"]["android-aarch64"]["url"],
+                             "https://github.com/someone/OpenRAC/releases/download/launcher-dev-feature-x/"
+                             "OpenRAC.Launcher_0.5.0-dev.42_android-arm64.apk")
