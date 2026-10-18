@@ -583,7 +583,7 @@ extern float random_float_between(float, float) __asm__("FUN_002132a8");
 extern int frame_count __asm__("D_L13_0015F5CC");
 extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
 
-extern short D_L13_00161388 __attribute__((sda));
+extern float D_L13_00161388 __attribute__((sda));
 int D_L13_0016138C = 2;
 void FUN_L13_002b47a0(struct Moby *moby) {
     float v[4];
@@ -597,8 +597,8 @@ void FUN_L13_002b47a0(struct Moby *moby) {
         x = (20.0f - d) / 20.0f * 5.0f + 2.5f;
         ang = fast_add_rotations(random_float_between(-x, x) * DEG_TO_RAD,
                                  moby->rot.z);
-        v2[0] = FUN_001f9dc8(ang) * (*(float *)&D_L13_00161388 * frame_time);
-        v2[1] = FUN_001f9de0(ang) * (*(float *)&D_L13_00161388 * frame_time);
+        v2[0] = FUN_001f9dc8(ang) * (D_L13_00161388 * frame_time);
+        v2[1] = FUN_001f9de0(ang) * (D_L13_00161388 * frame_time);
         v2[2] = 0;
         FUN_001f9a10(v, v, v2);
         FUN_L13_003061c8(*(float *)(data + 0x68), v, v2, moby);
@@ -2583,7 +2583,7 @@ typedef struct { char pad0[0x10]; JetVec velocity; Jet *source; int pad24,pad28;
 extern JetPlayer jet_player47 __asm__("D_0013F350");
 extern JetCamera jet_camera47 __asm__("D_L13_00166F80");
 extern JetTransition D_001516D0[];
-extern unsigned char D_0014C050[];
+#include "rnc/gameplay/state/game_globals.h"
 extern unsigned char D_0013E550[];
 extern unsigned char D_0013A4E0[];
 extern float D_L13_0015ED60;
@@ -2699,7 +2699,7 @@ void FUN_L13_002bb068(Jet *m) {
         hp_bar_clut[0]=palette;
         if (!initialized) __builtin_memcpy(D_L13_001CBE70,palette,1024);
         hp_bar_saved=1; d->wait_timer=1; d->energy=1;
-        if (m->persistent!=0xFF && (D_0014C050)[m->persistent+(D_L13_0015ED84<<4)]==0xFF) m->state=9;
+        if (m->persistent!=0xFF && (visited52)[m->persistent+(D_L13_0015ED84<<4)]==0xFF) m->state=9;
         if (d->group_a>0) jet_group_state(d->group_a,0,0,0);
         if (d->group_b>0) jet_group_state(d->group_b,0,0,0);
         jet_group_switch(D_L13_001CBDE8,1,1,-1); jet_group_switch(&D_L13_00161440,1,-1,-1); jet_group_flag(0x102,0);
@@ -2708,7 +2708,7 @@ void FUN_L13_002bb068(Jet *m) {
     }
     case 1: {
         short enter=0;
-        if (m->persistent!=0xFF && (D_0014C050)[m->persistent+(D_L13_0015ED84<<4)]==0xFF) m->state=9;
+        if (m->persistent!=0xFF && (visited52)[m->persistent+(D_L13_0015ED84<<4)]==0xFF) m->state=9;
         else if (d->trigger!=-1 && jet_check_trigger(D_0013F3D0,d->trigger)) { d->blend=0.99f; D_L13_0015F3FC=0.99f; enter=1; }
         else if (jet_distance(m,((JetPlayer*)(&jet_player47))->moby)<2.0f) {
             int pressed=jet_try_help(7,0x53E4)!=0;
@@ -3003,7 +3003,8 @@ void FUN_L13_002ba178(void *moby, void *obj) {
     distance = frame_time*30.0f-frame_time*24.0f;
     if (height < 0.0f) speed_fraction = 0.0f/distance;
     else speed_fraction = height/distance;
-    camera_position[3] = 0.0f;
+    /* The Z component is replaced below before the offset is copied. */
+    ((u64 *)camera_position)[1] = 0;
     *(u128 *)camera_rotation = 0;
     camera_position[0] = ((-15.0f-F(d,0x70))-speed_fraction*4.0f)*0.25f;
     camera_position[1] = F(d,0x6C)*-3.0f*0.25f;

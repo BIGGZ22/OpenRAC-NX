@@ -13,7 +13,7 @@ each project.
 | Directory | Project | Repository | Branch | Commit | Its date | License |
 |---|---|---|---|---|---|---|
 | [`games/rac1`](../games/rac1) | rac1-decomp | https://github.com/OpenRAC/rac1-decomp | main | `14f4ed57f2db` | 2026-10-17 | GPL-3.0 (third-party parts keep theirs) |
-| [`games/rac1/ntsc`](../games/rac1/ntsc) | Lombyte | https://github.com/lombyte-project/Lombyte | main | `b91bd288115f` | 2026-10-16 | MIT (GPL-2.0 and newlib parts) |
+| [`games/rac1/ntsc`](../games/rac1/ntsc) | Lombyte | https://github.com/lombyte-project/Lombyte | main | `623e6d97b5b7` | 2026-10-18 | MIT (GPL-2.0 and newlib parts) |
 | [`games/rac2/ntsc`](../games/rac2/ntsc) | rac2-decomp | https://github.com/OpenRAC/rac2-gc-decomp | master | `86dbd8523696` | 2026-10-15 | GPL-3.0 |
 | [`games/rac3/ntsc`](../games/rac3/ntsc) | rac3-uya-decomp | https://github.com/OpenRAC/rac3-uya-decomp | main | `bfd8278e8c73` | 2026-10-07 | GPL-3.0 |
 | [`games/rac4/ntsc`](../games/rac4/ntsc) | rac-deadlocked-decomp | https://github.com/OpenRAC/rac-deadlocked-decomp | main | `dedfcd416a1b` | 2026-10-05 | MIT (GPL libgcc, newlib libm) |

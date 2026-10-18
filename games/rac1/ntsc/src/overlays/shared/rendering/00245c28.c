@@ -34,7 +34,7 @@ extern void init_stash(void) __asm__("FUN_00232d00");
 extern void FUN_L00_0023d028(void);
 extern int FUN_L00_00244110(int, int);
 extern void clear_dma_queue_entry(void) __asm__("FUN_001f0b88");
-extern void FUN_L00_002464a8(void);
+extern void FUN_L00_002464a8_u(void) __asm__("FUN_L00_002464a8");
 extern void init_hud(void) __asm__("FUN_001fee88");
 extern void FUN_L00_00276078(void);
 extern void FUN_L00_0028eed0(void);
@@ -122,7 +122,7 @@ void FUN_L00_00245c28(void) {
     g_debug_menu.selected_column = one;
     g_debug_menu.actuator_enabled = one;
     clear_dma_queue_entry();
-    FUN_L00_002464a8();
+    FUN_L00_002464a8_u();
     init_hud();
     FUN_L00_00276078();
     FUN_L00_0028eed0();
@@ -300,16 +300,32 @@ void FUN_L00_00245c28(void) {
     }
     do_space_transition();
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_002464a8.s", FUN_L00_002464a8);
-#else
-#endif
 #include "rnc/storage/disc_table.h"
 
 typedef struct {
-    u8 pad0[0x24];
+    s32 unk0;
+    s32 unk4;
+    s32 buffer;
+    s32 unkC;
+} MapChunkSlot;
+
+typedef struct {
+    s32 first_data;
+    s32 second_data;
+    s32 scratch_data;
+    s32 mask_data;
+    s32 initialized;
+    s32 second_raw;
+    u8 pad18[0xc];
     s32 active;
-    u8 pad28[0x1fc];
+    s32 unk28;
+    u8 pad2c[4];
+    MapChunkSlot slots[8];
+    u8 padB0[4];
+    f32 unkB4[20];
+    s32 unk104[20];
+    s32 unk154[20];
+    u8 pad1a4[0x80];
     s32 archive_index;
     s32 load_state;
     s32 file_handle;
@@ -332,6 +348,124 @@ typedef struct {
     u8 pad2a4[4];
     s32 last_transfer_bytes;
 } RenderArchiveState;
+
+/* Sets up the map's tables, loads its data from disc and builds the circular mask. */
+/* Ported from rac1-decomp (src/overlays/shared/map_002465F8.c: func_L00_00246EC0), where it is exact; names translated to the US level program. */
+
+extern char render_archive_source_file[] __asm__("D_L00_0015FE00");
+extern char D_L00_001E8B00[];
+extern float map_points[] __asm__("D_L00_00182810");
+extern float map_coefficients[] __asm__("D_L00_00182A70");
+extern s32 D_L00_00173E08 __attribute__((section(".data")));
+extern int D_L00_00183EF0[];
+extern RenderArchiveState D_L00_001841F0 __asm__("D_L00_001841F0");
+extern int FUN_L00_0024d8d0();
+extern s32 D_0015ED84;
+extern s32 hud_heap_alloc() __asm__("func_001FF288");
+extern unsigned char D_0013D4C0[];
+extern unsigned char D_0014161B[];
+extern unsigned char D_L00_00184394[];
+extern void decode_map_mask(int *dst, unsigned char *src, short *offs) __asm__("FUN_00206710");
+extern void fast_mem_copy_alt(void *, void *, int) __asm__("FUN_001f98d0");
+extern void load_map_chunk(void *dst, unsigned char *src, int) __asm__("FUN_00207bb0");
+s32 load(s32 dst, s32 sector, s32 sector_count) __asm__("FUN_00216828");
+s32 stash_send_data(u32 src, s32 qw, s32 count, s32 tag) __asm__("FUN_00232e40");
+extern struct DiscFile D_00138438[];
+extern char D_001383A0[];
+extern char D_00141EC0[];
+
+void FUN_L00_002464a8(void) {
+    int i;
+    RenderArchiveState *state;
+    int level;
+    struct DiscFile *file;
+    int heap_tag, first_size, second_size, scratch;
+    int *archive, *archive_base;
+    unsigned char *level_data;
+    int x, y, mask_buffer;
+    float radius_sq;
+    unsigned char *flags;
+
+    D_L00_001841F0.initialized = 1;
+    { int i;
+    for (i = 0; i < 20; i++) {
+        D_L00_001841F0.unk104[i] = D_L00_00183EF0[i * 2];
+        D_L00_001841F0.unkB4[i] = 0.65f;
+        D_L00_001841F0.unk154[i] = D_L00_00183EF0[i * 2 + 1];
+    } }
+    level = current_level_index;
+    D_L00_001841F0.file_handle = -1;
+    D_L00_001841F0.archive_index = level > 18 ? 0 : level;
+    { int i;
+    for (i = 0; i < 19; i++) {
+        float world_x0 = map_points[i * 8], world_y0 = map_points[i * 8 + 1], world_x1 = map_points[i * 8 + 2], world_y1 = map_points[i * 8 + 3];
+        float map_x0 = map_points[i * 8 + 4], map_y0 = map_points[i * 8 + 5], map_x1 = map_points[i * 8 + 6], map_y1 = map_points[i * 8 + 7];
+        float scale_x = (map_x0 - map_x1) / (world_x0 - world_x1);
+        float scale_y = (map_y0 - map_y1) / (world_y0 - world_y1);
+        map_coefficients[i * 4 + 1] = scale_x;
+        map_coefficients[i * 4 + 3] = scale_y;
+        map_coefficients[i * 4] = map_x0 - scale_x * world_x0;
+        map_coefficients[i * 4 + 2] = map_y0 - scale_y * world_y0;
+    } }
+    flags = (unsigned char *)D_0013D4C0;
+    if (flags[0x21] != 0) {
+        D_L00_001841F0.loaded = 1;
+        file = (struct DiscFile *)D_00138438 + D_L00_001841F0.archive_index;
+    } else {
+        D_L00_001841F0.loaded = 0;
+        file = (struct DiscFile *)D_001383A0 + D_L00_001841F0.archive_index;
+    }
+    if (file->size != 0) {
+        state = &D_L00_001841F0;
+        state->unk28 = 1;
+        heap_tag = (int)render_archive_source_file;
+        archive_base = ((int **)&D_L00_00173E08)[0];
+        archive = (int *)((int)archive_base + 0x9A800);
+        scratch = file->size << 7;
+        load(archive, file->sector, file->size);
+        state->file_handle = stash_send_data((int)archive, scratch, 0x4800, (int)D_L00_001E8B00);
+        state->transfer_bytes = scratch;
+        FUN_L00_0024d8d0((int)archive, (int)archive_base);
+        archive = archive_base;
+        first_size = archive[1] - archive[0];
+        state->first_data = hud_heap_alloc(first_size, 0, (char *)heap_tag, 0x2DB);
+        fast_mem_copy_alt((void *)state->first_data, (char *)archive + archive[0], first_size);
+        state->first_data += 8;
+        state->second_data = state->first_data;
+        second_size = archive[2] - archive[1];
+        state->second_raw = hud_heap_alloc(second_size, 0, (char *)heap_tag, 0x2EC);
+        fast_mem_copy_alt((void *)state->second_raw, (char *)archive + archive[1], second_size);
+        state->scratch_data = hud_heap_alloc(0x1000, 0, (char *)heap_tag, 0x2F3);
+        for (i = 0; i < 8; i++) {
+            D_L00_001841F0.slots[i].unk0 = -1;
+            D_L00_001841F0.slots[i].unk4 = -1;
+            D_L00_001841F0.slots[i].buffer = D_L00_001841F0.scratch_data + i * 0x200;
+        }
+        mask_buffer = hud_heap_alloc(0x8000, 0, render_archive_source_file, 0x2FC);
+        level_data = ((char *)&D_00141EC0) + D_L00_001841F0.archive_index * 0x800;
+        D_L00_001841F0.mask_data = mask_buffer;
+        if (level_data[0] != 0) {
+            load_map_chunk((void *)D_L00_001841F0.mask_data, level_data, D_L00_001841F0.second_raw);
+        } else {
+            decode_map_mask((int *)D_L00_001841F0.mask_data, (unsigned char *)D_L00_001841F0.first_data, (short *)D_L00_001841F0.second_data);
+        }
+        radius_sq = 256.0f;
+        for (y = 0; y < 32; y++) {
+            for (x = 0; x < 32; x++) {
+                if ((15.5f - (float)x) * (15.5f - (float)x) +
+                    (15.5f - (float)y) * (15.5f - (float)y) > radius_sq) {
+                    D_L00_00184394[x / 8 + y * 4] |= 1 << (x - (x / 8) * 8);
+                }
+            }
+        }
+    } else {
+        D_L00_001841F0.first_data = 0;
+        D_L00_001841F0.scratch_data = 0;
+        D_L00_001841F0.mask_data = 0;
+        D_L00_001841F0.second_data = 0;
+        D_L00_001841F0.unk28 = 0;
+    }
+}
 
 extern RenderArchiveState D_L00_001841F0 __asm__("D_L00_001841F0");
 extern u8 D_0013D4E1 __attribute__((section(".data")));
@@ -398,153 +532,3 @@ void FUN_L00_002468b8(void) {
     }
     D_L00_001841F0.active = 0;
 }
-#ifdef NON_MATCHING
-#include "rnc/storage/disc_table.h"
-extern u8 D_0013D4E1;
-extern s32 D_L00_00173E08 __attribute__((section(".data")));
-
-typedef struct {
-    s32 first_data;
-    s32 second_data;
-    s32 scratch_data;
-    s32 mask_data;
-    s32 initialized;
-    s32 second_raw;
-    u8 pad18[0x20c];
-    s32 archive_index;
-    u8 pad228[4];
-    s32 file_handle;
-    s32 loaded;
-    s32 transfer_bytes;
-} RenderArchiveLoad;
-extern RenderArchiveLoad D_L00_001841F0_load __asm__("D_L00_001841F0");
-
-void FUN_00266040(void *, s32, s32) __asm__("FUN_L00_00266040");
-s32 FUN_00293c58(void *, s32, s32, s32) __asm__("FUN_L00_00293c58");
-void FUN_L00_0024d8d0(void *, s32 *) __asm__("FUN_L00_0024d8d0");
-s32 FUN_002355f0(s32, s32, s32, s32) __asm__("FUN_L00_002355f0");
-void hud_send_resident_bank(s32, s32, s32) __asm__("FUN_001ff128");
-void FUN_L00_00248278(s32, s32, s32) __asm__("FUN_L00_00248278");
-void FUN_L00_00249f48(s32, void *, s32) __asm__("FUN_L00_00249f48");
-
-extern f32 D_L00_00182810[];
-extern f32 D_L00_00182A70[];
-extern u8 D_L00_00184394[];
-extern char D_00141EC0[];
-extern s32 D_L00_00183EF0[];
-extern char render_archive_source_file[] __asm__("D_L00_0015FE00");
-
-void FUN_L00_002464a8(void) {
-    s32 i, x, y;
-    s32 *source;
-    s32 *destination;
-    s32 *archive;
-    s32 first_size, second_size;
-    s32 scratch;
-    s32 word0, word1;
-    s32 heap_tag;
-    s32 *archive_base;
-    f32 *points;
-    f32 *coefficients;
-    f32 x_slope, y_slope;
-    f32 x0, y0, x1, y1, x2, y2, x3, y3;
-    struct DiscFile *file;
-    u8 *level_data;
-    u8 *mask;
-
-    D_L00_001841F0_load.initialized = 1;
-    destination = (s32 *)((u8 *)&D_L00_001841F0_load + 0x154);
-    source = D_L00_00183EF0;
-    for (i = 0x13; i >= 0; i--) {
-        word0 = source[0];
-        word1 = source[1];
-        *(s32 *)((u8 *)destination - 0x50) = word0;
-        destination[0] = word1;
-        *(f32 *)((u8 *)destination - 0xa0) = 0.65f;
-        source += 2;
-        destination++;
-    }
-    i = current_level_index;
-    D_L00_001841F0_load.file_handle = -1;
-    i = 0x12 < i ? 0 : i;
-    D_L00_001841F0_load.archive_index = i;
-    coefficients = D_L00_00182A70;
-    points = D_L00_00182810;
-    for (i = 0x12; i >= 0; i--) {
-        x0 = points[0];
-        y0 = points[1];
-        x1 = points[2];
-        y1 = points[3];
-        x2 = points[4];
-        y2 = points[5];
-        x3 = points[6];
-        y3 = points[7];
-        x_slope = (x2 - x3) / (x0 - x1);
-        y_slope = (y2 - y3) / (y0 - y1);
-        coefficients[1] = x_slope;
-        coefficients[3] = y_slope;
-        coefficients[0] = x2 - x_slope * x0;
-        coefficients[2] = y2 - y_slope * y0;
-        points += 8;
-        coefficients += 4;
-    }
-    if (D_0013D4E1 != 0) {
-        file = (struct DiscFile *)0x138438;
-        D_L00_001841F0_load.loaded = 1;
-    } else {
-        file = (struct DiscFile *)0x1383a0;
-        D_L00_001841F0_load.loaded = 0;
-    }
-    file += D_L00_001841F0_load.archive_index;
-    if (file->size != 0) {
-        *(s32 *)0x184218 = 1;
-        heap_tag = (s32)render_archive_source_file;
-        archive_base = (s32 *)D_L00_00173E08;
-        archive = (s32 *)((s32)archive_base + 0x9a800);
-        scratch = file->size << 7;
-        FUN_00266040(archive, file->sector, file->size);
-        D_L00_001841F0_load.file_handle = FUN_00293c58(archive, scratch, 0x4800, 0x1e8b00);
-        D_L00_001841F0_load.transfer_bytes = scratch;
-        FUN_L00_0024d8d0(archive, archive_base);
-        archive = archive_base;
-        first_size = archive[1] - archive[0];
-        D_L00_001841F0_load.first_data = FUN_002355f0(first_size, 0, heap_tag, 0x2db);
-        hud_send_resident_bank(D_L00_001841F0_load.first_data, (s32)archive + archive[0], first_size);
-        D_L00_001841F0_load.first_data += 8;
-        D_L00_001841F0_load.second_data = D_L00_001841F0_load.first_data;
-        second_size = archive[2] - archive[1];
-        D_L00_001841F0_load.second_raw = FUN_002355f0(second_size, 0, heap_tag, 0x2ec);
-        hud_send_resident_bank(D_L00_001841F0_load.second_raw, (s32)archive + archive[1], second_size);
-        D_L00_001841F0_load.scratch_data = FUN_002355f0(0x1000, 0, heap_tag, 0x2f3);
-        destination = (s32 *)0x184228;
-        for (i = 0; i < 8; i++) {
-            *(s32 *)((u8 *)destination - 8) = -1;
-            *(s32 *)((u8 *)destination - 4) = -1;
-            destination[0] = D_L00_001841F0_load.scratch_data + i * 0x200;
-            destination += 4;
-        }
-        D_L00_001841F0_load.mask_data = FUN_002355f0(0x8000, 0, (s32)render_archive_source_file, 0x2fc);
-        level_data = (u8 *)D_00141EC0 + D_L00_001841F0_load.archive_index * 0x800;
-        if (level_data[0] != 0) {
-            FUN_L00_00249f48(D_L00_001841F0_load.mask_data, level_data, D_L00_001841F0_load.second_raw);
-        } else {
-            FUN_L00_00248278(D_L00_001841F0_load.mask_data, D_L00_001841F0_load.first_data, D_L00_001841F0_load.second_data);
-        }
-        mask = D_L00_00184394;
-        for (y = 0; y < 32; y++) {
-            for (x = 0; x < 32; x++) {
-                if ((15.5f - (f32)x) * (15.5f - (f32)x) +
-                    (15.5f - (f32)y) * (15.5f - (f32)y) > 256.0f) {
-                    mask[x / 8 + y * 4] |= 1 << (x - (x / 8) * 8);
-                }
-            }
-        }
-    } else {
-        D_L00_001841F0_load.first_data = 0;
-        *(s32 *)0x184218 = 0;
-        D_L00_001841F0_load.scratch_data = 0;
-        D_L00_001841F0_load.mask_data = 0;
-        D_L00_001841F0_load.second_data = 0;
-    }
-}
-#endif

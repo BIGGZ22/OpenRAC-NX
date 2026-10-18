@@ -316,49 +316,49 @@ void FUN_L00_00236128(HudElem *e) {
 extern float star_init_limit0_gp __asm__("D_L00_0015F750") __attribute__((sda));
 extern float star_init_limit1_gp __asm__("D_L00_0015F754") __attribute__((sda));
 extern float star_init_limit2_gp __asm__("D_L00_0015F758") __attribute__((sda));
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_00236268.s", FUN_L00_00236268);
-#else
-typedef struct { float x, y, z, w; } E_236268;
-extern E_236268 D_L00_0017E660_236268[] __asm__("D_L00_0017E660") __attribute__((section(".data")));
-extern int D_L00_0015F75C_236268 __asm__("D_L00_0015F75C") __attribute__((sda));
-void FUN_L00_00235d80_236268(void) __asm__("FUN_L00_00235d80");
-float FUN_002132a8_236268(float, float) __asm__("FUN_002132a8");
-void FUN_L00_00236268(void) {
-    int i;
-    FUN_L00_00235d80_236268();
-    for (i = 0; i < 100; i++) {
-        float margin, band, lo, hi;
-        int bands;
-        float *depth;
-        if (i < 10) margin = star_init_limit0_gp;
-        else if (i < 20) margin = star_init_limit1_gp;
-        else margin = star_init_limit2_gp;
-        bands = D_L00_0015F75C_236268;
-        band = 232.0f;
-        lo = 116.0f;
-        band = (band - (margin + margin)) / (float)bands;
-        lo = (margin - lo) + (float)(i % bands) * band;
-        hi = lo + band;
-        depth = &D_L00_0017E660_236268[i].z;
-        D_L00_0017E660_236268[i].x = FUN_002132a8_236268(margin - 17.0f, 17.0f - margin);
-        D_L00_0017E660_236268[i].y = FUN_002132a8_236268(lo, hi);
-        *depth = FUN_002132a8_236268(-0.4f, 0.4f);
-        D_L00_0017E660_236268[i].w = FUN_002132a8_236268(-0.6f, 0.6f);
-        *depth += FUN_002132a8_236268(-0.4f, 0.4f);
-        D_L00_0017E660_236268[i].w += FUN_002132a8_236268(-0.6f, 0.6f);
-        *depth += FUN_002132a8_236268(-0.4f, 0.4f);
-        D_L00_0017E660_236268[i].w += FUN_002132a8_236268(-0.6f, 0.6f);
-    }
-}
-#endif
+/* Fills the 100 hud stars with random positions and drift. */
+/* Ported from rac1-decomp (src/overlays/shared/hud_00235960.c: func_L00_00236BF8), where it is exact; names translated to the US level program. */
 
+extern f32 random_float_between(f32, f32) __asm__("FUN_002132a8");
 typedef struct {
     float x, y, vx, vy;
 } Star_236458;
 
-extern int D_L00_0015F3F8;
 extern Star_236458 D_L00_0017E660[];
+extern int D_L00_0015F75C_gp __asm__("D_L00_0015F75C") __attribute__((sda));
+
+void FUN_L00_00236268(HudElem *elem) {
+    int i;
+    float margin, lo, band, hi;
+    int bands;
+
+    FUN_L00_00235d80(elem);
+    for (i = 0; i < 100; i++) {
+        margin = star_init_limit0_gp;
+        if (i >= 10) {
+            margin = star_init_limit1_gp;
+            if (i >= 20) margin = star_init_limit2_gp;
+        }
+        bands = D_L00_0015F75C_gp;
+        band = (232.0f - (margin + margin)) / (float)bands;
+        lo = (margin - 116.0f) + (float)(i % bands) * band;
+        hi = lo + band;
+        D_L00_0017E660[i].x = random_float_between(margin - 17.0f, 17.0f - margin);
+        D_L00_0017E660[i].y = random_float_between(lo, hi);
+        D_L00_0017E660[i].vx = random_float_between(-0.4f, 0.4f);
+        D_L00_0017E660[i].vy = random_float_between(-0.6f, 0.6f);
+        D_L00_0017E660[i].vx += random_float_between(-0.4f, 0.4f);
+        D_L00_0017E660[i].vy += random_float_between(-0.6f, 0.6f);
+        D_L00_0017E660[i].vx += random_float_between(-0.4f, 0.4f);
+        D_L00_0017E660[i].vy += random_float_between(-0.6f, 0.6f);
+    }
+    /* Fakematch: keeping bands live past the loop gives retail's schedule of the loop body. */
+    bands++;
+    bands--;
+}
+
+
+extern int D_L00_0015F3F8;
 void FUN_L00_00235ea0();
 
 /* Moves every other star by its velocity and bounces it off a box whose size
@@ -657,14 +657,16 @@ int FUN_L00_00237200(HudElem *e) {
         D_L00_0017E530[i] = 0;
         width = FUN_001fb090((const char *)D_L00_0017E530, -1);
         left = 0xe0 - (width >> 1);
-        other_width = FUN_001fb090((const char *)&D_L00_0017E530[1] + i, -1);
-        other_left = 0xe0 - (other_width >> 1);
-        if (left >= other_left) {
-            width = other_width;
-        } else {
-            other_left = left;
+        {
+            int other_width = FUN_001fb090((const char *)&D_L00_0017E530[1] + i, -1);
+            other_left = 0xe0 - (other_width >> 1);
+            if (left >= other_left) {
+                width = other_width;
+            } else {
+                other_left = left;
+            }
+            left = other_left;
         }
-        left = other_left;
         other_left = left + 0x20;
         FUN_0023b4d8(FUN_0023b208(0x7580, 0), other_left, y, width, 0x36, alpha);
         other_left = color;
@@ -708,10 +710,11 @@ int FUN_L00_00237200(HudElem *e) {
                     const char *message;
                     interval = pal_mode != 0 ? 3000 : 3600;
                     seconds = elapsed / interval;
-                    other_width = interval / 60;
-                    remainder = elapsed - seconds * interval;
-                    other_left = remainder / other_width;
-                    remainder = (remainder - other_left * other_width) * 100 / other_width;
+                    other_width = interval;
+                    interval /= 60;
+                    remainder = elapsed - seconds * other_width;
+                    other_left = remainder / interval;
+                    remainder = (remainder - other_left * interval) * 100 / interval;
                     line = freeze_stats_time_format;
                     message = FUN_00203ad8(0x531b);
                     sprintf(text, line, message, seconds, other_left, remainder);

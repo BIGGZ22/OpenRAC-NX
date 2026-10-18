@@ -4,147 +4,150 @@
 #include "rnc/globals.h"
 #include "asm.h"
 
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L15_001ff938.s", FUN_L15_001ff938);
-#else
 #include "qcopy.h"
-extern void FUN_L00_00232670(void);
-extern void hero_update(void) __asm__("FUN_L00_00211670");
-extern void FUN_L15_002044c8(void);
-extern void FUN_L15_0021d040(void);
-extern void FUN_L00_00216f10(void);
+
+/* Ported from rac1-decomp (src/overlays/shared/help_001FFED0.c: func_L15_001FFED0), where it is exact; names translated to the US level program. */
+
+extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
+extern f32 fast_sin(f32) __asm__("func_001F9DE0");
+extern float D_L15_0017C0EC, D_L15_0017C14C;
+extern int D_L15_0015F5B0;
+extern int D_L15_0015F5CC;
+extern s32 scale_game_frames(s32) __asm__("func_001F96F8");
+extern s32 truncate_float_to_s32(f32) __asm__("func_001FA6D0");
+extern f32 D_0015EE18;
+extern unsigned char D_0013D4DC[];
+extern unsigned char D_0013F350[];
+#include "rnc/gameplay/state/options.h"
+extern float D_L15_0017C06C[];
+extern float D_L15_0017C1CC[];
+extern unsigned int fast_tween_color(float, unsigned int, unsigned int);
 extern void FUN_L00_002054e8(void);
-extern void FUN_L00_00208a10(void);
-extern void FUN_L00_00207c48(void);
-extern void FUN_L00_00207a58(void);
-extern void FUN_L00_002484e0(void *);
 extern void FUN_L00_002059d8(void);
 extern void FUN_L00_002061f0(void);
-extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
+extern void FUN_L00_00207a58(void);
+extern void FUN_L00_00207c48(void);
 extern void FUN_L00_00207d00(void);
-extern int scale_game_frames(int) __asm__("FUN_001f96f8");
-extern float convert_integer_to_float(int) __asm__("FUN_001fa6c0");
-extern float FUN_001fa6c0_inherited(void) __asm__("FUN_001fa6c0");
-extern float fast_sin(float) __asm__("FUN_001f9de0");
-extern int truncate_float_to_s32(float) __asm__("FUN_001fa6d0");
-extern u32 fast_tween_color(f32, u32, u32) __asm__("FUN_001fa6e0");
-extern void FUN_L00_00216de8(int, int);
+extern void FUN_L00_00208a10(void);
 extern void FUN_L00_00208b60(void);
+extern void hero_update(void) __asm__("FUN_L00_00211670");
+extern void FUN_L00_00216de8(int, int);
+extern void FUN_L00_00216f10(void);
+extern void FUN_L00_00232670(void);
+extern void FUN_L00_002484e0(void *);
+extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
 extern void FUN_L00_00257024(void *);
-extern float D_L15_0017ACC0_d __asm__("D_L15_0017ACC0") __attribute__((section(".data")));
-extern unsigned char D_0013E533[];
-extern u8 D_0015EDB3;
-extern u8 D_0015EDB1 __attribute__((section(".data")));
-extern float D_0015EE18_gp __attribute__((sda));
-extern int D_L15_0015F5CC;
-extern u8 D_0013D4DC[];
+extern void FUN_L15_002044c8(void);
+extern void FUN_L15_0021d040(void);
 
 void FUN_L15_001ff938(void) {
-    u8 *moby;
-    struct Hero *base;
-    u32 copy[4] __attribute__((aligned(16)));
+    unsigned char *hero0, *hero1, *hero2, *hero3, *hero4, *hero5, *hero6;
+    unsigned char *hero_moby;
+    unsigned int copy[4] __attribute__((aligned(16)));
     int period, red, green, blue, alpha, i;
-    u32 color;
+    unsigned int color;
     float pulse;
 
     FUN_L00_00232670();
     hero_update();
     FUN_L15_002044c8();
     FUN_L15_0021d040();
-    if (hero.vehicle_mode == 0)
+    hero0 = ((char *)&D_0013F350);
+    if (hero0[0x20A4] == 0)
         return;
     FUN_L00_00216f10();
     FUN_L00_002054e8();
-    if (hero.vehicle_mode == 0)
+    if (hero0[0x20A4] == 0)
         return;
     FUN_L00_00208a10();
     FUN_L00_00207c48();
     FUN_L00_00207a58();
-    FUN_L00_002484e0((u8 *)&hero + 0x80);
+    FUN_L00_002484e0(hero0 + 0x80);
 
-    if (hero.vehicle_mode == 2) {
-        if (D_0015EDB3 != 0)
-            *(float *)((u8 *)&D_L15_0017ACC0_d + 0x13AC) = D_0015EE18_gp * 1.4f;
+    if (hero0[0x20A4] == 2) {
+        if ((&big_head_cheat_enabled)[3] != 0)
+            D_L15_0017C06C[0] = D_0015EE18 * 1.4f;
         FUN_L00_002059d8();
         FUN_L00_002061f0();
-        if (((*(u16 *)((u8 *)hero.moby + 0x34) ^ 1) & 1) != 0) {
-            moby_point_position(hero.moby, 6, copy);
-            qcopy((u8 *)&hero + 0x1D80, copy);
+        {
+        unsigned char *hero_moby = *(unsigned char **)(hero0 + 0x2080);
+        if (((*(unsigned short *)(hero_moby + 0x34) ^ 1) & 1) != 0) {
+            moby_point_position(hero_moby, 6, copy);
+            qcopy(hero0 + 0x1D80, copy);
             FUN_L00_00207d00();
+        }
         }
     }
 
-    base = &hero;
-    if (base->vehicle_mode == 3) {
-        {
-            struct Hero *base = (struct Hero *)(D_0013E533 + 0xE1D);
-            if (D_0015EDB1 != 0)
-                *(float *)((u8 *)&D_L15_0017ACC0_d + 0x150C) = 1.9f;
-            alpha = 0x80;
-            period = scale_game_frames(0xAA);
-            if (base->unk22E0 == 2)
-                period = scale_game_frames(0x32);
-            else if (base->unk22E0 == 1)
-                period = scale_game_frames(0x5A);
-        }
+    hero1 = ((char *)&D_0013F350);
+    if (hero1[0x20A4] == 3) {
+        if ((&big_head_cheat_enabled)[1] != 0)
+            D_L15_0017C1CC[0] = 1.9f;
+        alpha = 0x80;
+        period = scale_game_frames(0xAA);
+        if (*(short *)(hero1 + 0x22E0) == 2)
+            period = scale_game_frames(0x32);
+        else if (*(short *)(hero1 + 0x22E0) == 1)
+            period = scale_game_frames(0x5A);
         pulse = fast_sin((((float)(D_L15_0015F5CC % period) / convert_integer_to_float(period)) * 2.0f) * 3.1415927f + -3.1415927f);
         red = truncate_float_to_s32(pulse * 20.0f) + 0x32;
         green = truncate_float_to_s32(pulse * 70.0f) + 0xB4;
-        blue = truncate_float_to_s32(pulse * 10.0f) + 0x14;
-        if (green > 0xFF) green = 0xFF;
+        blue = truncate_float_to_s32(pulse * 10.0f);
+        hero2 = ((char *)&D_0013F350);
+        hero_moby = *(unsigned char **)(hero2 + 0x2080);
         if (red > 0xFF) red = 0xFF;
-        *(u16 *)((u8 *)hero.moby + 0x34) |= 0x10;
-        if (hero.unk22E0 == 2) {
-            u32 channels;
-            channels = (alpha << 24) | (blue << 16) | ((red / 2) << 8);
-            color = channels | green;
-        } else {
-            u32 channels;
-            channels = (alpha << 24) | (blue << 16) | (green << 8);
-            color = channels | red;
-        }
-        *(u32 *)((u8 *)hero.moby + 0x90) = fast_tween_color(0.1f, *(u32 *)((u8 *)hero.moby + 0x90), color);
+        if (green > 0xFF) green = 0xFF;
+        blue += 0x14;
+        *(unsigned short *)(hero_moby + 0x34) |= 0x10;
+        if (*(short *)(hero2 + 0x22E0) == 2)
+            color = (alpha << 24) | (blue << 16) | ((red / 2) << 8) | green;
+        else
+            color = (alpha << 24) | (blue << 16) | (green << 8) | red;
+        hero3 = ((char *)&D_0013F350);
+        *(unsigned int *)(*(unsigned char **)(hero3 + 0x2080) + 0x90) =
+            fast_tween_color(0.1f, *(unsigned int *)(*(unsigned char **)(hero3 + 0x2080) + 0x90), color);
         for (i = 0; i < 3; i++)
-            moby_point_position(hero.moby, i, (u8 *)&hero + 0x1D50 + i * 16);
         {
-            u32 color;
-            base = &hero;
-            alpha = 0x30;
-            moby = (u8 *)base->moby;
-            blue = moby[0x92];
-            green = moby[0x91];
-            red = moby[0x90];
-            if (base->unk22DE != 0)
-                alpha = truncate_float_to_s32((convert_integer_to_float(base->unk22DE) / convert_integer_to_float(0x12)) * (float)alpha);
-            color = (alpha << 24) | (blue << 16) | (green << 8);
-            color |= red;
-            *(u32 *)((u8 *)base + 0x22E4) = color;
-            FUN_L00_00207d00();
-            base->unk22E0 = 0;
-            if (base->vehicle_mode == 3) {
-                int pending = base->pending_item[0];
-                if (pending != 0 && pending != 0x1F) {
-                    if (base->unk22DE == 0) {
-                        FUN_L00_00216de8(0x19, 0);
-                        base->unk22DE = 0x12;
-                        base->unk22DC = 1;
-                    }
-                } else {
-                    hero.pending_item[0] = 0;
-                    if (hero.unk12E7 != 0 && *(int *)((u8 *)&hero + 0x300) != 0 && D_0013D4DC[0] != 0 && hero.unk22DE == 0) {
-                        FUN_L00_00216de8(0x19, 0);
-                        /* Keep this prompt path distinct and retain its ordered halfword stores. */
-                        hero.unk22DE = 0x12;
-                        hero.unk22DC = 1;
-                    }
+            hero4 = ((char *)&D_0013F350);
+            moby_point_position(*(void **)(hero4 + 0x2080), i, hero4 + 0x1D50 + i * 16);
+        }
+        alpha = 0x30;
+        hero4 = ((char *)&D_0013F350);
+        {
+            unsigned char *hero_moby = *(unsigned char **)(hero4 + 0x2080);
+            blue = hero_moby[0x92];
+            green = hero_moby[0x91];
+            red = hero_moby[0x90];
+        }
+        if (*(short *)(hero4 + 0x22DE) != 0)
+            alpha = truncate_float_to_s32((convert_integer_to_float(*(short *)(hero4 + 0x22DE)) / convert_integer_to_float(0x12)) * (float)alpha);
+        *(unsigned int *)(hero4 + 0x22E4) = (alpha << 24) | (blue << 16) | (green << 8) | red;
+        FUN_L00_00207d00();
+        *(short *)(hero4 + 0x22E0) = 0;
+        if (hero4[0x20A4] == 3) {
+            int pending = ((struct Hero *)hero4)->pending_item[0];
+            if (pending != 0 && pending != 0x1F) {
+                if (*(short *)(hero4 + 0x22DE) == 0) {
+                    FUN_L00_00216de8(0x19, 0);
+                    *(short *)(hero4 + 0x22DE) = 0x12;
+                    *(short *)(hero4 + 0x22DC) = 1;
+                }
+            } else {
+                hero5 = ((char *)&D_0013F350);
+                ((struct Hero *)hero5)->pending_item[0] = 0;
+                if (hero5[0x12E7] != 0 && *(int *)(hero5 + 0x300) != 0 && D_0013D4DC[0] != 0 &&
+                    *(short *)(hero5 + 0x22DE) == 0) {
+                    FUN_L00_00216de8(0x19, 0);
+                    *(short *)(hero5 + 0x22DE) = 0x12;
+                    *(short *)(hero5 + 0x22DC) = 1;
                 }
             }
         }
     }
     FUN_L00_00208b60();
-    FUN_L00_00257024(hero.moby);
+    hero6 = ((char *)&D_0013F350);
+    FUN_L00_00257024(*(void **)(hero6 + 0x2080));
 }
-#endif
 #define NOT_SDA
 
 #define MACRO_ADDR
@@ -153,11 +156,11 @@ void FUN_L15_001ff938(void) {
 /* Ported from rac1-decomp (src/overlays/shared/help_001FFED0.c: func_L15_00200D20), where it is exact; names translated to the US level program. */
 
 extern unsigned char D_0013E05A[];
-extern unsigned char D_0013E533[];
+#include "rnc/data_labels.h"
 extern void FUN_L00_00207330(int, int);
 
 void FUN_L15_00200788(void) {
-    unsigned char *base = D_0013E533 + 0xE1D;
+    unsigned char *base = ((unsigned char *)&D_0013E533) + 0xE1D;
     int index = *(int *)(base + 0x10B8);
     if (index >= 0 && *(D_0013E05A + 0x4C6 + index) != 0) {
         int first = *(int *)(base + 0x1090);
@@ -214,7 +217,7 @@ void mark_moby_for_removal(struct Obj *obj) __asm__("FUN_0020c828");
 void set_animation_parameter(s32 arg0, s32 arg1) __asm__("FUN_001ff570");
 
 void FUN_L15_00208ca8(void) {
-    unsigned char *base = D_0013E533 + 0xE1D;
+    unsigned char *base = ((unsigned char *)&D_0013E533) + 0xE1D;
     unsigned char *b;
     int p;
     void *q;
@@ -227,7 +230,7 @@ void FUN_L15_00208ca8(void) {
         }
     }
     FUN_L00_00205538();
-    b = D_0013E533 + 0xE1D;
+    b = ((unsigned char *)&D_0013E533) + 0xE1D;
     p = *(int *)(b + 0xA84);
     b[0x20A4] = 0;
     if (p != 0) {
@@ -572,7 +575,7 @@ skip:
 extern int hero_set_state(int, int) __asm__("FUN_L15_00216c38");
 
 void FUN_L15_0021ab60(void) {
-    switch (D_0013E533[0x2EC1]) {
+    switch (((unsigned char *)&D_0013E533)[0x2EC1]) {
     case 0:
         hero_set_state(HERO_STATE_IDLE, 1);
         break;

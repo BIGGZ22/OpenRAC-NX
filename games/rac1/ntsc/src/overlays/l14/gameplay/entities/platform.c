@@ -430,12 +430,12 @@ void FUN_L14_002d67e8(struct Moby *m) {
 extern int D_L14_0015F70C;
 extern void FUN_L00_0025d808(int a, char *pos, char *b, char *c, int d, float f);
 
-extern short D_L14_00161A30 __attribute__((sda));
+extern float D_L14_00161A30 __attribute__((sda));
 void FUN_L14_002d7198(struct Moby *moby) {
     char *data = (char *)moby->pvars;
     int idx = *(int *)(data + 0x60);
     FUN_L00_0025d808(*(int *)((idx << 5) + D_L14_0015F70C + 0x10), &moby->pos, data + 0x64,
-                     data + 0x68, 0, *(float *)&D_L14_00161A30 * frame_time);
+                     data + 0x68, 0, D_L14_00161A30 * frame_time);
 }
 /* Draws the racer's two glow quads, at its lamp (0xE0) and its tail (0x200), turned to face the camera. */
 typedef struct {
@@ -631,13 +631,12 @@ extern void build_look_at_matrix(void *out, void *dir, void *axis, f32 ang) __as
 extern void cross_vectors_xyz(void *, void *, void *) __asm__("func_001F9AD8");
 extern void normalize_vector_xyz(void *, void *, f32) __asm__("FUN_001f9bf8");
 float absolute_float(float input) __asm__("func_001F99C0");
-extern char D_0013F350[];
 extern char D_0013F3D0[];
 
 /* The caller passes two floats in f12/f13; this routine never reads them. */
 void FUN_L14_002de2b8(char *moby, f32 unused_arg1, f32 unused_arg2) {
     char *data = *(char **)(moby + 0x78);
-    char *g = (char *)((char *)&D_0013F350);
+    char *g = (char *)((char *)((char *)&hero));
     float v[4];
     float up[4];
     float d[4];
@@ -653,7 +652,7 @@ void FUN_L14_002de2b8(char *moby, f32 unused_arg1, f32 unused_arg2) {
 
     if ((*(char **)(g + 0x2FC) == moby && *(short *)(g + 0x30E) == 0) ||
         (*(char **)(g + 0x4F8) == moby && *(int *)(g + 0x208C) == 3)) {
-        char *p = (char *)((char *)&D_0013F350);
+        char *p = (char *)((char *)((char *)&hero));
         *(char *)(moby + 0xBC) = 1;
         if (absolute_float(*(float *)(p + 0x80) - *(float *)(moby + 0x10)) < 0.1f &&
             absolute_float(*(float *)(p + 0x84) - *(float *)(moby + 0x14)) < 0.1f) {
