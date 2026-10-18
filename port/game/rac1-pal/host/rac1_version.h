@@ -14,6 +14,11 @@
 /* gHeroPos (D_0013F4D0), for crash reports (boot.c); a version without it reports no position. */
 #define RAC1_HERO_POS 0x0013F4D0u
 
+/* What this version leaves out of the shared C (rac1.h, RAC1_OMIT), and why. */
+/* The pause menu mobys' update at 0x0023B578: the decompilation has C for it (func_0023B578) since the
+ * remnant in front of it was split off. */
+#define RAC1_OMIT_game_D_0023B578 1
+
 /* Where this version's decompilation declares a function otherwise: the type in its prototypes. */
 /* ParseBin's result, the loaded level's entry. */
 #define RAC1_TYPE_func_0012DA38_result gaddr
