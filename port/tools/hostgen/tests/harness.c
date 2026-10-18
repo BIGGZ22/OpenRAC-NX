@@ -95,6 +95,16 @@ void openrac_guest_missing(const char* name) {
 
 void openrac_guest_report_missing(void) {}
 
+/* A site's first call (guest.h): a stub's is a missing function; a zero-filled call prints its
+ * site, which the tests read. */
+void openrac_guest_reach_first(openrac_reach_site* site) {
+    if (strcmp(site->kind, "zero-args") == 0) {
+        printf("reach %s\n", site->name);
+    } else {
+        openrac_guest_missing(site->name);
+    }
+}
+
 /* What the tests' C calls to print (host functions; names other than func_
  * get the game_ prefix in the port, port/tools/hostgen/program.py). */
 void game_test_print(int v) {

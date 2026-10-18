@@ -132,6 +132,28 @@ void unknown_function() {
 std::mutex g_missing_lock;
 std::map<std::string, unsigned long> g_missing;
 bool g_stop_on_missing = false;
+// The sites hostgen's C counts in (guest.h, openrac_reach_site), each once called; a stub's by
+// name too, since its calls are on the site from the second on (g_missing has the first).
+openrac_reach_site* g_reached = nullptr;
+std::map<std::string, const openrac_reach_site*> g_stub_sites;
+
+// A function's calls without C: openrac_guest_missing's count, and its stub's site's after the
+// first (which openrac_guest_missing counted).
+unsigned long missing_count(const std::string& name, unsigned long direct) {
+    const auto it = g_stub_sites.find(name);
+    return it == g_stub_sites.end() ? direct : direct - 1 + it->second->calls;
+}
+
+void json_string(std::FILE* f, const char* s) {
+    std::fputc('"', f);
+    for (; s != nullptr && *s != 0; ++s) {
+        if (*s == '"' || *s == '\\') {
+            std::fputc('\\', f);
+        }
+        std::fputc(static_cast<unsigned char>(*s) < 0x20 ? ' ' : *s, f);
+    }
+    std::fputc('"', f);
+}
 
 }  // namespace
 
@@ -356,7 +378,7 @@ unsigned long openrac_guest_missing_calls(unsigned* functions) {
     std::scoped_lock hold(g_missing_lock);
     unsigned long calls = 0;
     for (const auto& [name, count] : g_missing) {
-        calls += count;
+        calls += missing_count(name, count);
     }
     if (functions != nullptr) {
         *functions = static_cast<unsigned>(g_missing.size());
@@ -372,9 +394,63 @@ const char* openrac_guest_missing_at(unsigned index, unsigned long* calls) {
     auto it = g_missing.begin();
     std::advance(it, index);
     if (calls != nullptr) {
-        *calls = it->second;
+        *calls = missing_count(it->first, it->second);
     }
     return it->first.c_str();  // a map's keys do not move
+}
+
+void openrac_guest_reach_first(openrac_reach_site* site) {
+    const bool stub = site->kind != nullptr && std::strcmp(site->kind, "zero-args") != 0;
+    {
+        std::scoped_lock hold(g_missing_lock);
+        site->next = g_reached;
+        g_reached = site;
+        if (stub) {
+            g_stub_sites.emplace(site->name, site);
+        }
+    }
+    if (stub) {
+        openrac_guest_missing(site->name);  // logged, counted once, the stop on missing
+    }
+}
+
+int openrac_guest_write_reach(const char* path, const char* game, long frames) {
+    // Written beside and moved in place: a run stopped half way through leaves the last whole one.
+    const std::string part = std::string(path) + ".part";
+    std::FILE* f = std::fopen(part.c_str(), "w");
+    if (f == nullptr) {
+        return 0;
+    }
+    std::scoped_lock hold(g_missing_lock);
+    std::fputs("{\"game\": ", f);
+    json_string(f, game);
+    std::fprintf(f, ", \"frames\": %ld, \"sites\": [", frames);
+    bool first = true;
+    for (const openrac_reach_site* s = g_reached; s != nullptr; s = s->next) {
+        std::fputs(first ? "\n  {\"name\": " : ",\n  {\"name\": ", f);
+        first = false;
+        json_string(f, s->name);
+        std::fputs(", \"kind\": ", f);
+        json_string(f, s->kind);
+        if (s->detail != nullptr) {
+            std::fputs(", \"detail\": ", f);
+            json_string(f, s->detail);
+        }
+        std::fprintf(f, ", \"calls\": %lu}", s->calls);
+    }
+    // Hand C's own calls to openrac_guest_missing, with no site of hostgen's.
+    for (const auto& [name, count] : g_missing) {
+        if (g_stub_sites.count(name) != 0) {
+            continue;
+        }
+        std::fputs(first ? "\n  {\"name\": " : ",\n  {\"name\": ", f);
+        first = false;
+        json_string(f, name.c_str());
+        std::fprintf(f, ", \"kind\": \"missing\", \"calls\": %lu}", count);
+    }
+    std::fputs("\n]}\n", f);
+    const bool ok = std::fclose(f) == 0;
+    return ok && std::rename(part.c_str(), path) == 0 ? 1 : 0;
 }
 
 void openrac_guest_stop_on_missing(int stop) {
@@ -434,7 +510,10 @@ void openrac_guest_report_missing(void) {
     if (g_missing.empty()) {
         return;
     }
-    std::vector<std::pair<std::string, unsigned long>> calls(g_missing.begin(), g_missing.end());
+    std::vector<std::pair<std::string, unsigned long>> calls;
+    for (const auto& [name, count] : g_missing) {
+        calls.emplace_back(name, missing_count(name, count));
+    }
     std::sort(calls.begin(), calls.end(), [](const auto& a, const auto& b) {
         return a.second > b.second;
     });

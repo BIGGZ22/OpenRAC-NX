@@ -272,6 +272,35 @@ void openrac_guest_stop_on_missing(int stop);
 unsigned long openrac_guest_missing_calls(unsigned* functions);
 const char* openrac_guest_missing_at(unsigned index, unsigned long* calls);
 
+/* ---- What a run reached that the port does not have right yet ----
+ *
+ * hostgen gives each place it could not write as the game's C a site of its own: every stub
+ * (kind "asm": still assembly in the decompilation; "no-c": declared, defined nowhere;
+ * "untranslated": C hostgen cannot write) and every call it had to fill an argument of with 0
+ * ("zero-args": the site is the caller, detail names the callee and the argument). The site counts
+ * its calls itself, a static word in the generated C, so only those paths pay for it; the first
+ * call registers it (and, for a stub, logs it as openrac_guest_missing does). OPENRAC_REACH=FILE
+ * writes the sites a run called (openrac_guest_write_reach, port/tools/regress). */
+typedef struct openrac_reach_site {
+    const char* name;   /* the game function: the stub, or the caller of a zero-filled call */
+    const char* kind;   /* "asm", "no-c", "untranslated", "zero-args" */
+    const char* detail; /* zero-args: "callee argument N"; NULL otherwise */
+    unsigned long calls;
+    struct openrac_reach_site* next; /* the runtime's list of sites called */
+} openrac_reach_site;
+
+void openrac_guest_reach_first(openrac_reach_site* site);
+
+static inline void openrac_guest_reach(openrac_reach_site* site) {
+    if (site->calls++ == 0) {
+        openrac_guest_reach_first(site);
+    }
+}
+
+/* The reached sites as JSON at `path` (the game's id and the frame count in its header), and the
+ * functions without C called through openrac_guest_missing alone (hand C). 0 when it cannot. */
+int openrac_guest_write_reach(const char* path, const char* game, long frames);
+
 /* ---- The host's stack, for the debugging aids ----
  *
  * Host code is built on Linux, macOS and Windows, and only the first two have

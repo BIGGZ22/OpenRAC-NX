@@ -574,7 +574,8 @@ class Unit:
             ret = "" if self.cls(sig_t.ret) == "void" else (
                 " return 0;" if ret_canon else f" {{ {self.host(sig_t.ret)} zero_; memset(&zero_, 0, sizeof zero_); return zero_; }}")
             out = (f"/* Not translated: {e} */\n{proto} {{\n    {unused}\n"
-                   f"    openrac_guest_missing(\"{sym}\");\n   {ret}\n}}\n")
+                   f"    static openrac_reach_site site_ = {{\"{sym}\", \"untranslated\", 0, 0, 0}};\n"
+                   f"    openrac_guest_reach(&site_);\n   {ret}\n}}\n")
         self.report.functions.append(report)
         self.fn = None
         self.local_names = {}
@@ -1918,6 +1919,7 @@ class Unit:
         floats = [a for a, c in zip(args, classes) if c == "f"]
         out = []
         ni = nf = 0
+        counted = False
         for p, pc in zip(sig.params, pcls):
             if pc == "f":
                 src, k, regs = floats, nf, self.fn.float_params
@@ -1942,8 +1944,17 @@ class Unit:
             else:
                 # Nothing of the caller's own in that register either: on the console it held
                 # whatever the caller last put there, which C does not say (hostgen's report).
-                self.fn.report.zero_args.append(f"{sym} argument {len(out) + 1}")
-                out.append(self._cast_to("0", p))
+                detail = f"{sym} argument {len(out) + 1}"
+                self.fn.report.zero_args.append(detail)
+                if not counted:
+                    # Counted once a call, in a site of the call's own (guest.h, openrac_reach_site):
+                    # the run's OPENRAC_REACH file says which of these the game reached.
+                    counted = True
+                    out.append(self._cast_to(
+                        f"({{ static openrac_reach_site site_ = {{\"{self.fn.name}\", \"zero-args\", "
+                        f"\"{detail}\", 0, 0}}; openrac_guest_reach(&site_); 0; }})", p))
+                else:
+                    out.append(self._cast_to("0", p))
         if sig.variadic:
             extra = {id(a) for a in ints[ni:] + floats[nf:]}
             out += [self.rv(a) for a in args if id(a) in extra]

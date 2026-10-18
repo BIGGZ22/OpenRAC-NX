@@ -202,11 +202,14 @@ class Translate(unittest.TestCase):
             """,
             "caller.c": """
                 extern int two(int);
-                int test_main(void) { test_print(two(5)); return 0; }
+                int test_main(void) { test_print(two(5)); test_print(two(6)); return 0; }
             """,
         })
-        self.assertEqual(out, ["5"])
-        self.assertEqual(self.last_report["arguments_filled_with_zero"], {"test_main": ["two argument 2"]})
+        # Each call counts in a site of its own (OPENRAC_REACH): its first call registers it.
+        self.assertEqual(out, ["reach", "test_main", "5", "reach", "test_main", "6"])
+        self.assertEqual(self.last_report["arguments_filled_with_zero"],
+                         {"test_main": ["two argument 2", "two argument 2"]})
+        self.assertEqual(self.last_generated.count("openrac_reach_site site_"), 2)
 
     def test_calls_follow_the_definition(self):
         # The caller declares the callee with its float and integer arguments
@@ -223,7 +226,7 @@ class Translate(unittest.TestCase):
                 int run(int unused) { test_print(mix(1.5f, 3)); return 0; }
             """,
         })
-        self.assertEqual(out, ["3", "1.500", "0"])
+        self.assertEqual(out, ["reach", "run", "3", "1.500", "0"])
 
     def test_a_call_through_a_cast_of_a_function_follows_the_definition(self):
         # The decompilation casts a function to another order of its float and integer
@@ -531,6 +534,14 @@ class Translate(unittest.TestCase):
             int test_main(void) { test_print(func_00120000(1)); return 0; }
         """})
         self.assertEqual(out, ["missing", "func_00120000", "0"])
+
+    def test_a_stub_counts_its_calls_in_its_own_site(self):
+        # The stub's site logs the first call only; the rest are counted in its word.
+        out = self.run_program({"a.c": """
+            extern int func_00120000(int);
+            int test_main(void) { func_00120000(1); func_00120000(2); test_print(3); return 0; }
+        """})
+        self.assertEqual(out, ["missing", "func_00120000", "3"])
 
     def test_later_global_declaration_keeps_local_extern_type(self):
         out = self.run_program({"a.c": """

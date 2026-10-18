@@ -283,7 +283,11 @@ def write_program_files(program: Program, out: Path, game: str) -> dict:
         if p is None:
             continue
         ret = canon(f.sig.ret, program.typedefs)
-        body = f"    openrac_guest_missing(\"{f.symbol}\");"
+        # Its own site (guest.h, openrac_reach_site): the calls are counted in a word of its own,
+        # and the first is logged, as openrac_guest_missing does.
+        kind = "asm" if f.asm else "no-c"
+        body = (f"    static openrac_reach_site site_ = {{\"{f.symbol}\", \"{kind}\", 0, 0, 0}};\n"
+                f"    openrac_guest_reach(&site_);")
         if ret != "void":
             body += "\n    return 0;"
         stubs.append(f"{p} {{\n{body}\n}}\n")
