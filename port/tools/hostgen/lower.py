@@ -1122,6 +1122,19 @@ class Unit:
             return f"(({host})({v}))"
         if kind in ("PointerToBoolean", "IntegralToBoolean", "FloatingToBoolean"):
             return f"(({v}) != 0)"
+        if kind == "FloatingToIntegral" and tc == "int":
+            # The EE's own conversion (guest.h): C leaves a value out of the target's range
+            # undefined, and the hosts differ there (x86 wraps a negative float into an unsigned
+            # int, ARM gives 0), so a HUD's alpha or offset computed below zero came out different
+            # on a phone.
+            host = self.host(ctype.strip_quals(t))
+            r = self.resolve(t)
+            name = r.name if isinstance(r, ctype.Base) else ""
+            if "long long" in name:
+                return f"(({host})({v}))"
+            if name.startswith("unsigned") and "char" not in name and "short" not in name:
+                return f"(({host})openrac_f2u({v}))"
+            return f"(({host})openrac_f2i({v}))"
         if kind in ("IntegralCast", "FloatingCast", "IntegralToFloating", "FloatingToIntegral", "BitCast"):
             if tc in ("rec", "arr"):
                 raise Unsupported(f"cast {kind} to an aggregate")

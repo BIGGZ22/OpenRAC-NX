@@ -588,6 +588,28 @@ class Translate(unittest.TestCase):
         self.assertEqual(out, ["8", "1"])
         self.assertIn("inline assembly Clang cannot read", self.last_report["stubbed"].values())
 
+    def test_float_to_integer_as_the_ee_converts(self):
+        # Out of the target's range C says nothing and the hosts differ (ARM gives 0 for a
+        # negative float into an unsigned type): the EE's conversion on every host.
+        out = self.run_program({"a.c": """
+            #include "common.h"
+            int test_main(void) {
+                u8 alpha;
+                volatile float minus = -1.5f, big = 3e9f, huge = 1e20f, fifty = 50.7f;
+                u32 u = minus;
+                u8 b = (u8)(minus * 2.0f);
+                alpha = fifty;
+                test_print((int)(u == 0xFFFFFFFFu));
+                test_print(b);
+                test_print((int)((u32)big == 3000000000u));
+                test_print((s32)huge == 0x7FFFFFFF);
+                test_print((s32)-huge == (s32)0x80000000);
+                test_print(alpha);
+                return 0;
+            }
+        """})
+        self.assertEqual(out, ["1", "253", "1", "1", "1", "50"])
+
     def test_variable_length_array_of_a_local_length(self):
         # A one-dimensional array whose length is a local goes on the guest stack for its
         # block, as on the console, and its address can be passed on.

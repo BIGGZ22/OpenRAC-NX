@@ -256,6 +256,31 @@ static inline float openrac_fdiv(float a, float b) {
     return q;
 }
 
+/* The EE FPU's float to integer (cvt.w.s, trunc.w.s), for the game's conversions to an integer
+ * type: toward zero, saturating at the int's limits (the EE has no NaN). A narrower target keeps
+ * the low bits of that int, as the console's code stored them. C leaves a value out of range
+ * undefined and the hosts disagree there: x86 wraps -1.0 into an unsigned 0xFFFFFFFF as the EE
+ * did, ARM gives 0. */
+static inline int32_t openrac_f2i(double x) {
+    if (x >= 2147483647.0) {
+        return 2147483647;
+    }
+    if (x > -2147483648.0) {
+        return (int32_t)x;
+    }
+    return (int32_t)-2147483647 - 1;  /* and a NaN, which the EE never makes */
+}
+
+/* To a 32-bit unsigned int, as the console's compiler wrote it: below 2^31 the signed conversion
+ * (a negative value wraps), above it the signed conversion of the value less 2^31 with the top
+ * bit set. */
+static inline uint32_t openrac_f2u(double x) {
+    if (x >= 2147483648.0) {
+        return (uint32_t)openrac_f2i(x - 2147483648.0) ^ 0x80000000u;
+    }
+    return (uint32_t)openrac_f2i(x);
+}
+
 /* A function the game calls that has no C in the port yet: still assembly in
  * the decompilation, or a library the port has not replaced. Logged once per
  * function and counted (openrac_guest_report_missing at exit). While the
