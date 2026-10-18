@@ -192,16 +192,29 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
   }
 
   /** {path}: hands a checked APK to Android's installer, which asks the player to confirm
-   *  (UpdateReceiver.kt). The first time, the player allows the launcher to install apps. */
+   *  (UpdateReceiver.kt). The first time, the player allows the launcher to install apps in
+   *  Android's settings, and the install goes on when they come back: the APK is downloaded once. */
   @Command
   fun installApk(invoke: Invoke) {
-    val apk = File(invoke.parseArgs(DownloadArgs::class.java).path)
     if (!activity.packageManager.canRequestPackageInstalls()) {
-      activity.startActivity(
-        Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${activity.packageName}")),
-      )
-      return invoke.reject("Allow OpenRAC Launcher to install apps, then choose Update again.")
+      val settings =
+        Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${activity.packageName}"))
+      return startActivityForResult(invoke, settings, "installAllowed")
     }
+    install(invoke)
+  }
+
+  /** Back from the settings: the screen answers nothing, so what counts is whether it is allowed now. */
+  @ActivityCallback
+  fun installAllowed(invoke: Invoke, @Suppress("UNUSED_PARAMETER") result: ActivityResult) {
+    if (!activity.packageManager.canRequestPackageInstalls()) {
+      return invoke.reject("OpenRAC Launcher may not install apps: allow it in Android's settings to update.")
+    }
+    install(invoke)
+  }
+
+  private fun install(invoke: Invoke) {
+    val apk = File(invoke.parseArgs(DownloadArgs::class.java).path)
     Thread {
       try {
         val installer = activity.packageManager.packageInstaller

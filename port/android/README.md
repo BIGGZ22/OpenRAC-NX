@@ -114,8 +114,8 @@ GPU driver, shows the model and SoC) and the game's log.
 11. **Updating the launcher.** With a release newer than the installed
     launcher (both signed with the launcher's Android key), start the
     launcher: it offers the update; Update downloads it, the first time
-    sends you to allow it to install apps (choose Update again after), then
-    Android's installer asks to confirm. The launcher restarts updated, with
+    sends you to allow it to install apps, and back in the launcher
+    Android's installer asks to confirm, with no second download. The launcher restarts updated, with
     the games set up as they were.
 12. **The launcher with a controller.** With a controller connected, start
     the launcher and do not touch the screen: the d-pad and the left stick
