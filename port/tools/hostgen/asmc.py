@@ -394,6 +394,10 @@ class Translator:
                 break
             ins = self.at(a)
             rg, wg, rf, wf = rw(ins)
+            if ins.op in ("sw", "sd", "sq", "swc1") and ins.rs == 29:
+                # A register saved to the frame is not a use of it: a variadic routine saves every
+                # argument register so, whatever its callers pass.
+                rg, rf = rg - {ins.rt}, rf - {ins.ft}
             read_g |= {r for r in rg if r not in written_g}
             read_f |= {r for r in rf if r not in written_f}
             written_g |= wg
@@ -1275,7 +1279,9 @@ def run(program: Program, cfg: dict, source: Path, host_text: str = "") -> tuple
     tr.index = index
     if not index.blocks:
         return stage, {}
-    stubs = [f for f in program.stubs() if f.symbol not in program.host]
+    # A stub whose place has C under another spelling (func_0020C828 for FUN_0020c828) is that C
+    # already: calls to it go there (Program.canonical).
+    stubs = [f for f in program.stubs() if f.symbol not in program.host and program.canonical(f.symbol) == f.symbol]
     found = {}
     for f in stubs:
         hit = tr.find(f)
