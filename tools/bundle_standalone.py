@@ -18,7 +18,11 @@ OUT (launcher/src-tauri/resources/openrac for an installer) gets:
   port/build/release/        the game built for this system (--game-build:
                              the folder tools/build_port.py built into), with
                              the libraries beside it; on macOS each game is its
-                             application bundle, apps/openrac-<id>/<title>.app
+                             application bundle, apps/openrac-<id>/<title>.app.
+                             A Linux program goes without its debug info
+                             (its symbols stay, for a crash report's backtrace):
+                             three quarters of its size, which every installer
+                             would compress and every player download
   python/                    a Python to run the tools (--python: an unpacked
                              python-build-standalone "install_only" archive)
 
@@ -114,6 +118,20 @@ def copy_tree(source: Path, dest: Path, keep) -> None:
             shutil.copy2(path, dest / rel)
 
 
+def strip_debug(path: Path) -> bool:
+    """Drops the debug info of an ELF program (Linux), keeping its symbols; whether it did. A
+    program of another system, or no strip tool on the PATH, leaves the file as it is."""
+    with path.open("rb") as f:
+        if f.read(4) != b"\x7fELF":
+            return False
+    tool = shutil.which("llvm-strip") or shutil.which("strip")
+    if tool is None:
+        print(f"no strip tool: {path.name} keeps its debug info", file=sys.stderr)
+        return False
+    subprocess.run([tool, "--strip-debug", str(path)], check=True)
+    return True
+
+
 def copy_games(build: Path, dest: Path) -> list[str]:
     """The game programs in BUILD, copied to DEST; their names. On macOS a game is an application
     bundle named by its title in apps/openrac-<id>/ (port/cmake/MacApp.cmake), carried whole; the
@@ -128,6 +146,7 @@ def copy_games(build: Path, dest: Path) -> list[str]:
         for path in sorted(build.glob(f"{game}*")):
             if path.is_file() and path.suffix in ("", ".exe"):
                 shutil.copy2(path, dest / path.name)
+                strip_debug(dest / path.name)
                 carried.append(path.name)
     return carried
 
