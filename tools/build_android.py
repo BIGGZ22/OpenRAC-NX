@@ -157,7 +157,8 @@ def collect_libraries(games: list[str], ndk: Path, python_target: Path, keep_sym
         if not path.is_file():
             sys.exit(f"{path} was not built")
         shutil.copy2(path, dest / path.name, follow_symlinks=True)
-        if strip and not keep_symbols and path.name.startswith("libopenrac-"):
+        # Gradle strips them again; this way the APK carries no debug info even when it cannot.
+        if strip and not keep_symbols:
             run([strip[0], "--strip-debug", dest / path.name], ROOT)
         names.append(path.name)
     # SDL's activity and its helpers, as the SDL the port was built with has them.

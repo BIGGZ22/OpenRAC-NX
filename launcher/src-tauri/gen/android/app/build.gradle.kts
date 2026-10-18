@@ -18,8 +18,15 @@ android {
     compileSdk = 37
     namespace = "dev.openrac.launcher"
     // The NDK the libraries were built with (tools/build_android.py, CI) also strips them below,
-    // whatever NDK this Gradle plugin would pick by itself.
-    (System.getenv("ANDROID_NDK_HOME") ?: System.getenv("NDK_HOME"))?.takeIf { it.isNotEmpty() }?.let { ndkPath = it }
+    // whatever NDK this Gradle plugin would pick by itself. Its version is named too: the plugin
+    // strips nothing when the version it expects is not the one at ndkPath.
+    (System.getenv("ANDROID_NDK_HOME") ?: System.getenv("NDK_HOME"))?.takeIf { it.isNotEmpty() }?.let { home ->
+        ndkPath = home
+        val source = file("$home/source.properties")
+        if (source.exists()) {
+            Properties().apply { source.inputStream().use { load(it) } }.getProperty("Pkg.Revision")?.let { ndkVersion = it }
+        }
+    }
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
         applicationId = "dev.openrac.launcher"
