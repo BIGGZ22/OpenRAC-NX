@@ -1148,6 +1148,9 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
     // few frames a second, which looks like a broken port (OPENRAC_SOFTWARE_GL=1: run it anyway).
     config.software = std::getenv("OPENRAC_SOFTWARE_GL") != nullptr ? platform::SoftwareRenderer::Allow
                                                                     : platform::SoftwareRenderer::Refuse;
+    // OPENRAC_HIDDEN=1: the window is made and drawn as always but never shown, for scripted runs
+    // that should not open windows on the player's screen (several can run at once).
+    config.hidden = std::getenv("OPENRAC_HIDDEN") != nullptr;
     g->window = platform::Window::open(config, error);
     if (!g->window) {
         return false;
