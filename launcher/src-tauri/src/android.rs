@@ -173,8 +173,7 @@ pub async fn gpu_driver_select<R: Runtime>(app: AppHandle<R>, id: Option<String>
 pub async fn gpu_renderer_select<R: Runtime>(app: AppHandle<R>, renderer: String) -> Result<(), String> {
     #[cfg(target_os = "android")]
     {
-        let _: serde_json::Value =
-            kotlin(&app, "selectRenderer", serde_json::json!({ "renderer": renderer })).await?;
+        let _: serde_json::Value = kotlin(&app, "selectRenderer", serde_json::json!({ "renderer": renderer })).await?;
         Ok(())
     }
     #[cfg(not(target_os = "android"))]
