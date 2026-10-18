@@ -760,14 +760,10 @@ fn ensure_linux_game_desktop_integration(root: &std::path::Path) {
             )
         };
 
-        entries_changed |= write_if_changed(
-            &app_dir.join(format!("{app_id}.desktop")),
-            make_entry(&app_id, false).as_bytes(),
-        );
-        entries_changed |= write_if_changed(
-            &app_dir.join(format!("{prog_id}.desktop")),
-            make_entry(&prog_id, true).as_bytes(),
-        );
+        entries_changed |=
+            write_if_changed(&app_dir.join(format!("{app_id}.desktop")), make_entry(&app_id, false).as_bytes());
+        entries_changed |=
+            write_if_changed(&app_dir.join(format!("{prog_id}.desktop")), make_entry(&prog_id, true).as_bytes());
     }
 
     if icons_changed {
