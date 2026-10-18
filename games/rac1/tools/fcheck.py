@@ -37,10 +37,10 @@ import zlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OPENRAC = Path.home() / "Projects/OpenRAC"
+OPENRAC = Path(__import__("os").environ.get("OPENRAC_ROOT", str(Path.home() / "Projects/RAC/OpenRAC")))
 BOOT = OPENRAC / "build/runtime/openrac-boot"
 FCHECK = OPENRAC / "build/runtime/openrac-fcheck"
-DISC = OPENRAC / "baserom/SCES_509.16.iso"
+DISC = next((p for p in (OPENRAC / "baserom/SCES_509.16.iso", OPENRAC / "games/rac1/baserom/SCES_509.16.iso") if p.exists()), OPENRAC / "baserom/SCES_509.16.iso")
 HOOKS = OPENRAC / "runtime/games/SCES_509.16.hooks"
 WORK = ROOT / "build-sn/fcheck"
 STATES = WORK / "states"

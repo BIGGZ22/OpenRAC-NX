@@ -1,4 +1,5 @@
 #include "common.h"
+#include "vector.h"
 #include "callees.h"
 #include "records.h"
 #include "structs.h"
@@ -22,7 +23,7 @@ extern char D_001899D0[];
 extern void *D_001871C0 NOT_SDA;
 
 /* BackupCurrentCam */
-void func_001EC038(void) {
+void BackupCurrentCam(void) {
     FastMemCopy(D_00189310, D_001871C0, 0xA0);
     FastMemCopy(D_001899D0, D_001899D0 - 0x500, 0x280);
     *(void **)(D_00189310 + 0x70) = D_001899D0;
@@ -35,7 +36,7 @@ extern void (*D_001893B0[])(void);
    callbacks, then empties the queue. */
 /* D_0015F08C as MACRO_ADDR removes the hoisted address register (frame
    0x30); a plain indexed loop. */
-void func_001EC098(void) {
+void ExecuteCamPostUpdFuncs(void) {
     int i;
 
     for (i = 0; i < D_0015F08C; i++) {
@@ -56,7 +57,7 @@ extern float func_001F9B88(float);
    to +-e and to +-func_001F9B88(b - a), and returns a + *p. The nop
    between the first compare and its bc1f is ps2eeas's
    (tools/ps2eeas_nops.py). */
-float func_001EC120(float a, float b, float *p, float c, float d, float e) {
+float Cam_InterpValues(float a, float b, float *p, float c, float d, float e) {
     float diff = b - a;
     float v = *p;
 
@@ -88,7 +89,7 @@ extern void func_0020D678(void *); /* DeleteMoby */
    moby kept at D_001871D0+0xC4, depending on the flag at arg0+0x86. */
 /* A `char *c` base, the `== 0` arm first, and DeleteMoby takes the slot
    as its argument. */
-void func_001EC210(void *arg0) {
+void Camera_handleCollWithHero(void *arg0) {
     char *c = D_001871D0;
 
     if (*(short *)((char *)arg0 + 0x86) == 0) {
@@ -130,7 +131,7 @@ extern DispatchRec D_001E8F80[];
  * choice question. Kept per the same-size-tiny-diff precedent.
  */
 /* Camera_runSetupToNewCam(UpdateCam *) */
-void func_001EC270(void *arg0) {
+void Camera_runSetupToNewCam(void *arg0) {
     void (*fn)(void *) = D_001E8F80[*(short *)((char *)arg0 + 0x8C)].fn_08;
     if (fn != 0) {
         fn(arg0);
@@ -143,12 +144,6 @@ typedef struct {
     f32 y;
     f32 z;
 } Vec3;
-typedef struct {
-    f32 x;
-    f32 y;
-    f32 z;
-    f32 w;
-} Vec4f;
 struct UpdateCam {
     u128 m0;
     u128 m1;
@@ -209,7 +204,7 @@ extern void func_001F9A98(void *dst, void *src, s32 size);
 extern s32 func_001FA898(f32 transition_duration);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/fun_001ebf10.c, switch_active_camera_record. */
-void func_001EC2B8(struct UpdateCam *next_camera) {
+void Camera_SwitchActive(struct UpdateCam *next_camera) {
 
     struct UpdateCam *previous_camera;
     CameraDescriptorInfo *descriptor;
@@ -336,7 +331,7 @@ extern CamPrioHook D_001E8F80_prio[] __asm__("D_001E8F80");
    one shared `return 0;`, which is what lets cross-jumping and reorg give
    retail's branches; case 7's final test shares its `return 1` with the
    g < 0 exit so its `$v0 = 1` is not hoisted above the load. */
-int func_001EC5B8(void *cur, void *other) {
+int Camera_ActivationCheckPriority(void *cur, void *other) {
     char *c = (char *)cur;
     char *o = (char *)other;
     unsigned char *state = (unsigned char *)(c + 0x74);
@@ -420,7 +415,7 @@ __asm__(".section .text\n\tnop\n");
 /* Same vtable dispatch as func_001EC270, on the +0x10 slot instead of
    +8; identical 1/68 operand-order residual, same cause. */
 /* Camera_Exit(UpdateCam *) */
-void func_001EC780(void *arg0) {
+void Camera_Exit(void *arg0) {
     void (*fn)(void *) = D_001E8F80[*(short *)((char *)arg0 + 0x8C)].fn_10;
     if (fn != 0) {
         fn(arg0);
@@ -454,7 +449,7 @@ extern CamTypeHooks D_001E8F80_hooks[] __asm__("D_001E8F80");
    builds the two slot pointers in its order, and loop reversal makes the
    count run down 47..0. Indexing the table directly by a typed +0xC
    member puts the base first in the addu. */
-int func_001EC7C8(void) {
+int UpdateAllCameras(void) {
     void *cur = D_001871C0;
     int changed = 0;
     CamSlot *rec;
@@ -475,7 +470,7 @@ int func_001EC7C8(void) {
     }
 
     if (changed) {
-        func_001EC2B8(cur);
+        Camera_SwitchActive(cur);
     }
     {
         void (*fn0C)(void *) = D_001E8F80_hooks[*(short *)((char *)cur + 0x8C)].fn_0C;
@@ -509,7 +504,7 @@ extern void func_002156E0(void *dst, void *vec, void *axis, float angle); /* dst
    (p0 - p1) off the axis, out[1] = signed pitch after rotating dir0 by
    that yaw, out[2] = |p0 - p1|. A zero length becomes 0.0001 before the
    acos. The two sign fixups are shaped differently, as in retail. */
-void func_001EC8D8(float *out, void *p0, void *p1, void *dir0, void *dir1,
+void Camera_Pos2Polar3d(float *out, void *p0, void *p1, void *dir0, void *dir1,
                     void *axis) {
     char diff[16];
     char proj[16];
@@ -569,7 +564,7 @@ extern char D_001872B0[];
    stashes two of them into D_001872B0's record (+0x90, +0xA0), calls
    func_001EC8D8 to compute the camera's yaw/pitch/dist into +0x70,
    then copies +0xD0 back over +0xB0 (retail's qcopy, see common.h). */
-void func_001ECAB8(void) {
+void Camera_CaptureOrientation(void) {
     char *g = D_0013F450;
     char *r = D_001872B0;
     char local0[16];
@@ -594,7 +589,7 @@ extern char D_0013F590[];
 /* When the flag at +2 is clear, copies the 16-byte vector at +0x50 to
    +0xC0 with retail's qcopy, optionally runs func_001F9BD8 on +0x60,
    then copies +0x60 to +0xD0. Sibling of func_001ECC10 just above it. */
-void func_001ECB98(void) {
+void Camera_stagePendingTransform(void) {
     char *base = D_001872B0;
     if (*(unsigned char *)(base + 2) == 0) {
         qcopy(base + 0xC0, base + 0x50);
@@ -609,7 +604,7 @@ extern char D_001872B0[];
 
 /* When the flag at +2 is set, copies the 16-byte vectors at +0xC0 and
    +0xD0 back to +0x50 and +0x60 with retail's qcopy (see common.h). */
-void func_001ECC10(void) {
+void Camera_commitPendingTransform(void) {
     char *base = D_001872B0;
     if (*(unsigned char *)(base + 2) != 0) {
         qcopy(base + 0x50, base + 0xC0);
@@ -632,7 +627,7 @@ extern float func_001FA888(int);
    modes restore through func_001ECB98/func_001ECC10. Then the mode
    becomes 3, +2 takes the sub-mode, and either the +0x10 blend resets or
    the +0x70 timer advances. */
-void func_001ECC48(void *arg) {
+void Camera_StartBlend(void *arg) {
     char *arg0 = arg;
     char *r = D_001872B0;
     char local0[16];
@@ -648,7 +643,7 @@ void func_001ECC48(void *arg) {
         } else if (sub == 2) {
             qcopy(r + 0xC0, arg0 + 0x30);
             func_00215328(r + 0xD0, arg0);
-            func_001ECAB8();
+            Camera_CaptureOrientation();
         } else {
             char *g = D_0013F450;
 
@@ -664,7 +659,7 @@ void func_001ECC48(void *arg) {
         sub = r[3];
         if (sub == 2) {
             Camera_stagePendingTransform();
-            func_001ECAB8();
+            Camera_CaptureOrientation();
         } else if (sub == 1) {
             Camera_stagePendingTransform();
             qcopy(r + 0xB0, r + 0xD0);
@@ -688,7 +683,7 @@ void func_001ECC48(void *arg) {
         int n = ++*(int *)(b + 0x14);
 
         *(int *)(b + 0xC) = func_001F98C0(n);
-        *(float *)(b + 0x10) = 1.0f / func_001FA888(*(int *)(b + 0xC));
+        *(float *)(b + 0x10) = 1.0f / IntToFloat(*(int *)(b + 0xC));
     }
 }
 
@@ -707,7 +702,7 @@ extern void func_001FA480(void *, void *);
    (func_001FA5C8) into cam+0x50 and load it as the view matrix, then
    advance both blends by their rates times D_0015EE60, capped at 1.
    Returns 1 once both are complete. */
-int func_001ECEA0(void *arg0, void *arg1) {
+int Camera_StepBlend(void *arg0, void *arg1) {
     float *to = arg0;
     float *cam = arg1;
     float m[4];
@@ -719,7 +714,7 @@ int func_001ECEA0(void *arg0, void *arg1) {
     if (cam[3] == 1.0f && cam[0] == 1.0f) {
         return 1;
     }
-    t = func_00214220(0.0f, 1.0f, cam[3]);
+    t = CosineInterpolate(0.0f, 1.0f, cam[3]);
     FastVecAdd(cam + 12, D_0013F590, cam + 12);
     st = D_0018C418;
     cam[16] = cam[12] + (to[12] - cam[12]) * t;
@@ -730,7 +725,7 @@ int func_001ECEA0(void *arg0, void *arg1) {
     }
     func_00215328(m, to);
     rot = cam + 20;
-    t = func_00214220(0.0f, 1.0f, cam[0]);
+    t = CosineInterpolate(0.0f, 1.0f, cam[0]);
     func_001FA5C8(rot, cam + 8, m, t);
     func_001FA6C0(rot, q);
     if (*(int *)(st + 0x14) == 0) {
@@ -771,7 +766,7 @@ typedef struct {
 
 /* Camera update toward a target orientation: blends yaw/pitch/distance and rebuilds the camera basis.
    Adapted from Lombyte (MIT) for PAL: src/gameplay/camera/fun_001eccd8.c, FUN_001eccd8. */
-int func_001ED080(void *arg0, void *arg1) {
+int Camera_UpdateTowardTarget(void *arg0, void *arg1) {
     char *cam = arg0;
     float *b = arg1;
     Vec ang;
@@ -800,7 +795,7 @@ int func_001ED080(void *arg0, void *arg1) {
     if (*(int *)(b + 3) <= 0) {
         return 1;
     }
-    step = 1.0f / func_00214220(1.0f, (float)*(int *)(b + 5), (float)*(int *)(b + 3) * b[4]);
+    step = 1.0f / CosineInterpolate(1.0f, (float)*(int *)(b + 5), (float)*(int *)(b + 3) * b[4]);
     if (D_001872B2 == 2) {
         qcopy(&target, gHeroPos);
         qcopy(&fwd, b + 8);
@@ -854,14 +849,14 @@ int func_001ED080(void *arg0, void *arg1) {
         qcopy(&r1, &m[1]);
     } else {
         build_quaternion_from_axis_angle(&r2, &m[2], turn);
-        func_00215650(&r0, &m[0], &r2);
-        func_00215650(&r1, &m[1], &r2);
+        RotateVectorByQuaternion(&r0, &m[0], &r2);
+        RotateVectorByQuaternion(&r1, &m[1], &r2);
     }
     if (FastAbsF(yaw) < 1e-5f) {
         qcopy(&r2, &m[0]);
     } else {
         build_quaternion_from_axis_angle(&q, &m[2], yaw);
-        func_00215650(&r2, &m[0], &q);
+        RotateVectorByQuaternion(&r2, &m[0], &q);
     }
     yaw = 1.5707964f - FastArcSin(FastVecDot(&r2, cam));
     d = FastVecDot(&r2, cam + 0x20);
@@ -892,14 +887,14 @@ extern int func_001ED080(void *, void *);
    destination is -0x210 from D_00187390, a different member reached by
    pointer arithmetic on the same char array. Either way it clears
    D_001872B0's leading halfword and its flag byte. */
-void func_001ED658(char *arg0) {
+void Camera_UpdateBlend(char *arg0) {
     char *base = D_001872B0;
     int result;
 
     if (*(unsigned char *)(base + 2) == 0) {
-        result = func_001ECEA0(arg0, base + 0x10);
+        result = Camera_StepBlend(arg0, base + 0x10);
     } else {
-        result = func_001ED080(arg0, base + 0x70);
+        result = Camera_UpdateTowardTarget(arg0, base + 0x70);
     }
     if (result != 0) {
         if (D_0018C42C == 0) {
@@ -931,7 +926,7 @@ extern char D_001873B0[];
    countdown-zero exit is the else arm after the main path (retail's
    `b L800` over it), and the state-6 stores are written 8 then 0xC so
    the scheduler emits 0xC first and cross-jumping leaves them alone. */
-void func_001ED708(char *arg0, int arg1) {
+void Camera_UpdateShake(char *arg0, int arg1) {
     char buf[16];
 
     if (D_001871C0 != 0 && *(short *)((char *)D_001871C0 + 0x86) == 6) {
@@ -945,9 +940,9 @@ void func_001ED708(char *arg0, int arg1) {
             *(int *)(arg0 + 0xC) = *(int *)(arg0 + 8);
         }
         func_001F9908((int *)(arg0 + 8));
-        ratio = func_001FA888(*(int *)(arg0 + 8)) / func_001FA888(*(int *)(arg0 + 0xC));
+        ratio = IntToFloat(*(int *)(arg0 + 8)) / IntToFloat(*(int *)(arg0 + 0xC));
         shake = *(float *)arg0
-                * FastCos(FastNormalizeAngle(func_001FA888(*(int *)(arg0 + 8)) * 2.0f))
+                * FastCos(FastNormalizeAngle(IntToFloat(*(int *)(arg0 + 8)) * 2.0f))
                 * ratio * ratio;
         *(float *)(arg0 + 4) = shake;
         if (arg1 == 0) {
@@ -962,11 +957,6 @@ void func_001ED708(char *arg0, int arg1) {
 }
 __asm__(".section .text\n\tnop\n");
 
-typedef union {
-    u128 q;
-    f32 f[4];
-    s32 i[4];
-} Vec4;
 struct MobyClass;
 struct Manip;
 struct Moby {
@@ -1046,7 +1036,7 @@ extern f32 func_001F9CB8(void *a);
 extern void func_001F9DC0(void *out, void *a, f32 len);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/gameplay/camera/fun_001ed470.c, FUN_001ed470. */
-void func_001ED818(void) {
+void CameraPreUpdate(void) {
     Vec4 dir;
     Vec4 proj;
     struct CamColl *cam;
@@ -1130,7 +1120,7 @@ extern float func_00214440(void *, int);
    not a water surface, flag D_00187040+0x394 when the focus is below the
    surface height + 0.04. Off for camera mode 6 or while D_0015F6E8 is
    set. */
-void func_001EDB98(void) {
+void Camera_UpdateUnderwaterFlag(void) {
     char *cam = D_00187040;
     float a[4];
     float b[4];
@@ -1147,7 +1137,7 @@ void func_001EDB98(void) {
     i = 0;
     while (i < 6 && func_001EFE10(a, b, 0x12, 0, 0) != 0) {
         if (func_001F0F00() == 0) {
-            float h = func_00214440(D_00194220, 0) + 0.04f;
+            float h = GetGroundHeight(D_00194220, 0) + 0.04f;
             char *c2 = D_00187040;
 
             if (*(float *)(c2 + 0x148) < h) {
@@ -1175,7 +1165,7 @@ extern int D_0015F098 MACRO_ADDR;
    0x12E6, 0x12EC, 0x12E4 overrides. Each arm ORs the new mode in itself
    (the constants fold per arm, as in retail), and each block reads
    D_0013F450 through its own local (%hi kept, %lo rebuilt). */
-void func_001EDCE8(void) {
+void Camera_PickDrawModes(void) {
     char *c = D_001871D0;
     char *g = D_0013F450;
     int st;
@@ -1254,7 +1244,7 @@ extern void func_001EE858(void *);
    refresh its Euler angles; run func_001ED708 on the two vectors at
    D_001871A0, func_001EDB98 and func_001EE858, and, with
    D_0015EEB4 set, the matrix's third row as a cross product. */
-void func_001EDE50(void) {
+void UpdateCamera(void) {
     char *c;
     char *target;
     char *v;
@@ -1270,15 +1260,15 @@ void func_001EDE50(void) {
     c = D_00187040;
     (*(int *)(c + 0x398))++;
     func_001EDE08();
-    func_001EDCE8();
-    func_001ED818();
+    Camera_PickDrawModes();
+    CameraPreUpdate();
     UpdateAllCameras();
     target = *(char **)(c + 0x180);
     if ((unsigned short)(*(unsigned short *)(c + 0x270) - 1) < 2) {
-        func_001ECC48(*(void **)(c + 0x184));
+        Camera_StartBlend(*(void **)(c + 0x184));
     }
     if (*(short *)(c + 0x270) == 3) {
-        func_001ED658(target);
+        Camera_UpdateBlend(target);
     } else {
         char *st = D_0018C418;
         if (*(int *)(st + 0x14) != 0) {
@@ -1293,15 +1283,15 @@ void func_001EDE50(void) {
         char *st = D_0018C418;
         if (*(int *)(st + 0x14) == 0) {
             func_001FA460(m, D_00187390);
-            func_002153E8(m, D_00187390 - 0x200);
+            MatrixToEuler(m, D_00187390 - 0x200);
         }
     }
 frozen:
     v = D_001871A0;
-    func_001ED708(v, 0);
-    func_001ED708(v + 0x10, 1);
-    func_001EDB98();
-    func_001EE858(v - 0x20);
+    Camera_UpdateShake(v, 0);
+    Camera_UpdateShake(v + 0x10, 1);
+    Camera_UpdateUnderwaterFlag();
+    Camera_UpdateEnvironment(v - 0x20);
     if (D_0015EEB4_m[0] != 0) {
         FastVecCross(v + 0x200, v + 0x210, v + 0x1F0);
     }

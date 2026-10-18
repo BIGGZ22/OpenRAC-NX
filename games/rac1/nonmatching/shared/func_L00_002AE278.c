@@ -59,7 +59,7 @@ void func_L00_002AE278(char *pos, char *m, char *vel) {
 
     if (hero_2AE278.state.control_mode == 0xF
         || (hero_2AE278.ground_moby != 0 && func_L00_0025D390((unsigned char *)hero_2AE278.ground_moby) != 0)) {
-        func_001F9BD8(d, d, &hero_2AE278.motion.unk100);
+        func_001F9BD8(d, d, &hero_2AE278.motion.displacement);
     } else {
         p60 = *(char **)(d + 0x60);
         if (p60 != 0) {

@@ -77,7 +77,7 @@ extern void func_00202790(int);
    active point light (0x30-byte records at D_0019C4C0, positions from
    D_0019C2C0) that has moved more than 8 units is re-placed and either
    created (state 1 -> 2) or refreshed (state 2). */
-void func_00202260(void) {
+void UpdateAllPointLights(void) {
     char *l = D_0019BEC0;
     float ang;
     int i;
@@ -148,7 +148,7 @@ extern int func_001F9D78(void *, void *);
 extern void func_001F9C48(void *, void *, float);
 
 /* CreatePointLight: lists which objects of the three lists the light's sphere touches and records the light's index in their packed nibble field. Adapted from Lombyte (MIT) for PAL: src/rendering/create_point_light.c, create_point_light. */
-void func_002023E0(int i) {
+void CreatePointLight(int i) {
     LtSlot *slot;
     LtDef *def;
     short *p;
@@ -248,7 +248,7 @@ void func_002023E0(int i) {
 extern void func_002027C0(int);
 
 /* RefreshPointLight */
-void func_00202790(int arg0) {
+void RefreshPointLight(int arg0) {
     DetachPointLight(arg0);
     CreatePointLight(arg0);
 }
@@ -301,7 +301,7 @@ extern s32 func_001E9730();
 /* Remove one point light from three packed attachment lists. Each 16-bit
    reference stores up to four light IDs in nibbles; deleting one shifts
    the higher IDs down and marks the record free when all are 0xF. */
-void func_002027C0(s32 arg0) {
+void DetachPointLight(s32 arg0) {
     s16 *firstLinks;
     s16 *thirdLinks;
     s16 *secondLinks;

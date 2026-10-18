@@ -111,7 +111,7 @@ static void adjust_byte_1088(unsigned char *v)
         *v = b - 1;
 }
 
-void func_001F1088(void)
+void func_001F10A0(void)
 {
     int arr[6];
     char name[0x40];

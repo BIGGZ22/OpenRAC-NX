@@ -9,7 +9,7 @@ extern void func_001F9EE8(void *, void *, void *);
 extern void func_001F9BD8(void *, void *, void *);
 
 // transforms a vector by two matrices built from a3/a4 and adds the result relative to a0
-void func_L07_00289960(void *a0, void *a1, void *a2, void *a3, void *a4) {
+void TransformPointAboutPivot(void *a0, void *a1, void *a2, void *a3, void *a4) {
     float m0[16];
     float m1[16];
     float v[4];

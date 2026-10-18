@@ -26,7 +26,7 @@ void func_L05_00263490(HudElemX *e) {
     for (; i >= 0; i--) {
         *p-- = -1;
     }
-    func_L00_00236610(e);
+    Hud_SetupCounterDigits(e);
 }
 extern float func_00214D28(float *p, float target, float maxstep);
 extern int func_001FA898_r(float) __asm__("func_001FA898");
@@ -44,7 +44,7 @@ extern int D_L05_0015FBA8 MACRO_ADDR;
 extern short D_L05_0015F95C;
 
 /* HUD element update for the level 5 challenge: eases the shown count toward the target and runs the start / running / result states. */
-void func_L05_00263500(char *a) {
+void ChallengeHudUpdate(char *a) {
     float cur;
     unsigned char *u;
     char *H;
@@ -54,7 +54,7 @@ void func_L05_00263500(char *a) {
     int v;
 
     cur = (float)*(int *)(a + 0x74);
-    func_00214D28(&cur, (float)**(int **)(a + 0xC), 6.0f);
+    ApproachValue(&cur, (float)**(int **)(a + 0xC), 6.0f);
     u = (unsigned char *)(a + 0x70);
     *(int *)(a + 0x74) = func_001FA898_r(cur);
     switch (u[2]) {
@@ -135,11 +135,11 @@ void func_L05_00263500(char *a) {
             }
             u[2] = 3;
             u[1] = *(unsigned char *)&D_L05_0015F95C;
-            u[0] = func_001F9850(0x78);
+            u[0] = scale_ticks(0x78);
         } else {
             u[2] = 2;
             u[1] = *(unsigned char *)&D_L05_0015F95C;
-            u[0] = func_001F9850(0x3C);
+            u[0] = scale_ticks(0x3C);
         }
         }
         break;
@@ -158,13 +158,13 @@ void func_L05_00263500(char *a) {
             }
             u[2] = 0;
             u[0] = 0;
-        } else if (u[2] == 3 && u[0] == func_001F9850(0x6E)) {
+        } else if (u[2] == 3 && u[0] == scale_ticks(0x6E)) {
             int n = D_L05_0015FBB8;
             H = D_0013E633 + 0xE1D;
             *(int *)(H + 0x8A8) += n;
             *(int *)(H + 0x864) += n * 5;
-            if ((int)((float)func_001F9850(0x11) * 60.0f) < *(int *)(H + 0x864)) {
-                *(int *)(H + 0x864) = (int)((float)func_001F9850(0x11) * 60.0f);
+            if ((int)((float)scale_ticks(0x11) * 60.0f) < *(int *)(H + 0x864)) {
+                *(int *)(H + 0x864) = (int)((float)scale_ticks(0x11) * 60.0f);
             }
         }
         u[0]--;
@@ -206,7 +206,7 @@ extern short D_L05_0015F98C;
 extern short D_L05_0015F990;
 
 /* HUD element update: draws the level 5 challenge readouts and the progress bar; returns the element's width. */
-int func_L05_002638F8(char *a) {
+int ChallengeHudDraw(char *a) {
     unsigned char *u = (unsigned char *)(a + 0x70);
     char buf[0x80];
     int out[4];
@@ -225,11 +225,11 @@ int func_L05_002638F8(char *a) {
     }
     if (u[2] != 0) {
         func_00116248_002670A0(buf, D_L05_0015F940, D_L05_0015FB8C * 0x168);
-        f20 = func_001FA888(u[1]);
-        r = func_001F9850(*(int *)&D_L05_0015F95C);
+        f20 = IntToFloat(u[1]);
+        r = scale_ticks(*(int *)&D_L05_0015F95C);
         f12 = f20 / (float)r;
         if (u[2] == 1 || u[2] == 3) {
-            acc = func_001FA8A8(*(int *)&D_L05_0015F974, *(int *)&D_L05_0015F978, f12);
+            acc = FastTweenColor(*(int *)&D_L05_0015F974, *(int *)&D_L05_0015F978, f12);
         } else {
             acc = *(int *)&D_L05_0015F980;
         }
@@ -274,9 +274,9 @@ int func_L05_002638F8(char *a) {
                 }
                 D_L05_0015FBB8 = D_L05_0015FBB8 / cnt;
                 func_00116248_002670A0(buf, D_L05_0015F940, D_L05_0015FBB8);
-                func_00201A38(*(int *)&D_L05_0015F9A4, *(int *)&D_L05_0015F9A8 - 0x18, acc, (int)buf);
+                DrawFramedText(*(int *)&D_L05_0015F9A4, *(int *)&D_L05_0015F9A8 - 0x18, acc, (int)buf);
                 func_00116248_002670A0(buf, D_L05_0015F9B8, func_001FE540_002670A0(idx + 0x5092));
-                func_00201A38(*(int *)&D_L05_0015F9A4, *(int *)&D_L05_0015F9A8, acc, (int)buf);
+                DrawFramedText(*(int *)&D_L05_0015F9A4, *(int *)&D_L05_0015F9A8, acc, (int)buf);
             } else if (D_L05_0015FB90 > 0) {
                 int n = 0;
                 int m;
@@ -289,17 +289,17 @@ int func_L05_002638F8(char *a) {
                 if (D_L05_0015FB90 == 1) {
                     D_L05_0015FBB8 = D_L05_0015FB8C * 10;
                     func_00116248_002670A0(buf, D_L05_0015F940, D_L05_0015FBB8);
-                    func_00201A38(*(int *)&D_L05_0015F9A4, *(int *)&D_L05_0015F9A8 - 0x18, acc, (int)buf);
+                    DrawFramedText(*(int *)&D_L05_0015F9A4, *(int *)&D_L05_0015F9A8 - 0x18, acc, (int)buf);
                     func_00116248_002670A0(buf, D_L05_0015F9C0, func_001FE540_002670A0(out[0] + 0x5183), D_L05_0015FB8C,
                                            func_001FE540_002670A0(D_L05_0015FB8C == 0x168 ? 0x50A7 : 0x50A8));
-                    func_00201A38(*(int *)&D_L05_0015F9A4, *(int *)&D_L05_0015F9A8, acc, (int)buf);
+                    DrawFramedText(*(int *)&D_L05_0015F9A4, *(int *)&D_L05_0015F9A8, acc, (int)buf);
                 } else {
                     D_L05_0015FBB8 = D_L05_0015FB8C * 20;
                     func_00116248_002670A0(buf, D_L05_0015F940, D_L05_0015FBB8);
-                    func_00201A38(*(int *)&D_L05_0015F9A4, *(int *)&D_L05_0015F9A8 - 0x18, acc, (int)buf);
+                    DrawFramedText(*(int *)&D_L05_0015F9A4, *(int *)&D_L05_0015F9A8 - 0x18, acc, (int)buf);
                     func_00116248_002670A0(buf, D_L05_00216FC0, func_001FE540_002670A0(out[0] + 0x5183),
                                            func_001FE540_002670A0(out[1] + 0x5183), D_L05_0015FB8C);
-                    func_00201A38(*(int *)&D_L05_0015F9A4, *(int *)&D_L05_0015F9A8, acc, (int)buf);
+                    DrawFramedText(*(int *)&D_L05_0015F9A4, *(int *)&D_L05_0015F9A8, acc, (int)buf);
                 }
             }
         }
@@ -309,22 +309,22 @@ int func_L05_002638F8(char *a) {
     xb = *(int *)(a + 0x54);
     *(int *)(a + 0x58) = 0x100;
     *(int *)(a + 0x5C) = 0x40;
-    func_L00_00236400(a, &xa, &xb);
+    Hud_AlignElement(a, &xa, &xb);
     s16 = (*(int *)(a + 0x74) * 0xDD) / *(int *)(a + 0x8) + 0x1B;
-    id = func_00200198(0x7558, 1);
-    func_L00_0023C058(id, xa, xb, s16, 0x40, 0x80);
-    id2 = func_00200198(0x7558, 0);
-    func_00200468(id2, xa, xb, 0x100, 0x40, 0x80);
+    id = GetIconFrame(0x7558, 1);
+    HudSpriteSubRect(id, xa, xb, s16, 0x40, 0x80);
+    id2 = GetIconFrame(0x7558, 0);
+    HudSprite(id2, xa, xb, 0x100, 0x40, 0x80);
     E = D_0013E633 + 0xE1D;
     t = (unsigned char)E[0x8AE];
-    if (func_001F9850(0x78) < t) {
-        r3 = func_001F9850(0x3C);
-        f0 = func_001FA888(D_L05_0015F6B0 % r3) / (float)r3;
-        f0 = func_001F9FA8(f0 * 6.283180236816406f - 3.141590118408203f);
-        r3 = func_001FA8A8(*(int *)&D_L05_0015F98C, *(int *)&D_L05_0015F990, f0 * 0.5f + 0.5f);
+    if (scale_ticks(0x78) < t) {
+        r3 = scale_ticks(0x3C);
+        f0 = IntToFloat(D_L05_0015F6B0 % r3) / (float)r3;
+        f0 = FastSin(f0 * 6.283180236816406f - 3.141590118408203f);
+        r3 = FastTweenColor(*(int *)&D_L05_0015F98C, *(int *)&D_L05_0015F990, f0 * 0.5f + 0.5f);
         func_00116248_002670A0(buf, func_001FE540_002670A0(0x531F));
-        func_00201A38(*(int *)&D_L05_0015F984 + 1, *(int *)&D_L05_0015F988 + 1, 0x80000000, (int)buf);
-        func_00201A38(*(int *)&D_L05_0015F984, *(int *)&D_L05_0015F988, r3, (int)buf);
+        DrawFramedText(*(int *)&D_L05_0015F984 + 1, *(int *)&D_L05_0015F988 + 1, 0x80000000, (int)buf);
+        DrawFramedText(*(int *)&D_L05_0015F984, *(int *)&D_L05_0015F988, r3, (int)buf);
     }
     return *(int *)(a + 0x58);
 }
@@ -333,9 +333,9 @@ extern int D_L05_0015FA58 MACRO_ADDR;
 extern int D_L05_0015FA54 MACRO_ADDR;
 extern short D_L05_0015FA50;
 // Releases the held hud element if any, clears a flag and bumps a counter.
-void func_L05_00264C88(void) {
+void Hud_ReleaseHeldElement(void) {
     if (D_L05_0015FA58 != -1) {
-        func_001FFDA0(D_L05_0015FA58, 0);
+        Hud_SetBarValueById(D_L05_0015FA58, 0);
         D_L05_0015FA58 = -1;
     }
     D_L05_0015FA54 = 0;
@@ -355,7 +355,7 @@ typedef struct {
 } HudElem;
 
 /* Sets up a HUD element: timer, 128x128 size, zero offsets. */
-void func_L05_00266B90(HudElem *e) {
+void HudElementInit(HudElem *e) {
     e->unk7C = scale_ticks(0xB4) + 0x1E;
     e->w = 0x80;
     e->unk48 = 0;
@@ -410,7 +410,7 @@ extern void func_L00_001FB7F8_002670A0(int x, int y, u64 color, char *text, int 
 
 /* Draws the race timer HUD: the lap count line when laps are shown, then the time split into minutes, seconds and hundredths; returns the element's width.
    Adapted from Lombyte (MIT) for PAL: src/overlays/shared/ui/hud/002661a0.c, FUN_L05_00266710. */
-int func_L05_002670A0(HudElem_002670A0 *e) {
+int RaceTimerHudDraw(HudElem_002670A0 *e) {
     char buf[64];
     int y0, y1, y2;
     int frames, per_min, per_sec;

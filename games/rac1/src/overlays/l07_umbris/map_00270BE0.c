@@ -6,7 +6,7 @@ extern int func_L00_0024A798(int);
 extern struct { int a, b, c; char *p; } D_L07_001842F0;
 
 /* Clears each set bit in a rectangle of a per-row bit grid, notifying for each. */
-void func_L07_00270BE0(int x, int y0, int w, int h) {
+void ClearBitGridRect(int x, int y0, int w, int h) {
     int y = y0;
     for (; y < y0 + h; y++) {
         int rowbase = (y >> 5) << 4;

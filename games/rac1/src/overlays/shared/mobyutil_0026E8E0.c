@@ -3,7 +3,7 @@
 #include "include_asm.h"
 
 // Fills a jump pattern record with its default constants.
-void func_L01_0026E8E0(char *p)
+void MoveCtl_Init(char *p)
 {
     *(int *)(p + 0x0) = 0x280;
     *(float *)(p + 0x4) = 1.0f;
@@ -27,7 +27,7 @@ typedef struct {
     char pad21[0xDF];
 } O_26e008;
 
-int func_L01_0026EFB8(int i, int st) {
+int MobyGroup_CountNotInState(int i, int st) {
     unsigned short *p;
     int n = 0;
     O_26e008 *o;
@@ -49,7 +49,7 @@ extern unsigned short *D_L01_001ABFC0[];
 extern char *D_L01_00160058 MACRO_ADDR;
 
 // Set byte 0xBC of each entry in a negative-terminated index list.
-void func_L01_0026F040(int i, int v) {
+void MobyGroup_SetByteBC(int i, int v) {
     unsigned short *t = D_L01_001ABFC0[i];
     unsigned short *p;
     if (t != 0) {
@@ -62,7 +62,7 @@ void func_L01_0026F040(int i, int v) {
 extern int D_L01_00160058_m __asm__("D_L01_00160058") MACRO_ADDR;
 
 // Walks a list of moby indices and sets the state byte of each one that is non-negative.
-void func_L01_0026F090(int list, int state)
+void MobyGroup_SetState(int list, int state)
 {
     unsigned short *p;
     unsigned short *q = (unsigned short *)D_L01_001ABFC0[list];
@@ -79,7 +79,7 @@ void func_L01_0026F090(int list, int state)
 extern void func_001F9C48(void *, void *, float);
 extern int func_L00_00200290(char *, float);
 
-void func_L01_00276680(char *vec, float scale)
+void IsBSphereVisibleScaled(char *vec, float scale)
 {
     char scratch[16];
     func_001F9C48(scratch, vec, 0.0009765625f);
@@ -94,7 +94,7 @@ extern char *D_L01_001B0C30[];
 typedef int u128 __attribute__((mode(TI)));
 
 // Returns a bitmask of the table's spheres that no listed object touches, testing swept offsets.
-int func_L01_00277A38(int *objs, int n, int idx, float f, float *pos)
+int BuildPathNodeVisibilityMask(int *objs, int n, int idx, float f, float *pos)
 {
     char *t = D_L01_001B0C30[idx];
     int mask = 0;
@@ -119,13 +119,13 @@ int func_L01_00277A38(int *objs, int n, int idx, float f, float *pos)
                 func_L00_001FF4B0(v, v, fz);
                 FastVecSub(w1, pos, v);
                 FastVecAdd(w2, pos, v);
-                if (func_L00_002629E0(objs[j], w1, e) != 0) {
+                if (DoesSegmentCrossPath(objs[j], w1, e) != 0) {
                     found = 1;
-                } else if (func_L00_002629E0(objs[j], w2, e) != 0) {
+                } else if (DoesSegmentCrossPath(objs[j], w2, e) != 0) {
                     found = 1;
                 }
             } else {
-                if (func_L00_002629E0(objs[j], pos, t + (k * 16 + 0x10)) != 0) found = 1;
+                if (DoesSegmentCrossPath(objs[j], pos, t + (k * 16 + 0x10)) != 0) found = 1;
             }
             if (found) break;
         }
@@ -135,7 +135,7 @@ int func_L01_00277A38(int *objs, int n, int idx, float f, float *pos)
 }
 
 // Expands a bit mask through a table of per-bit masks until it meets another mask.
-int func_L01_00277C30(int idx, int a, int mask)
+int ExpandNodeMask(int idx, int a, int mask)
 {
     char *p = D_L01_001B0C30[idx];
     int i;
@@ -216,7 +216,7 @@ s32 func_L01_00277FD8(s32 *ids, s32 n, s32 path_index, f32 radius,
         path = D_L01_001B0C30_77FD8[path_index];
         from_mask = func_L01_00277A38_77FD8(ids, n, radius, path_index, pos);
         to_mask = func_L01_00277A38_77FD8(ids, n, radius, path_index, target);
-        mask = func_L01_00277C30(path_index, from_mask, to_mask);
+        mask = ExpandNodeMask(path_index, from_mask, to_mask);
         if (mask != 0) {
             nearest = 10000.0f;
             best = -1;
@@ -240,7 +240,7 @@ s32 func_L01_00277FD8(s32 *ids, s32 n, s32 path_index, f32 radius,
     return 1;
 }
 extern char D_0013E633[];
-int func_L01_00278FA8(char *m) {
+int Hero_IsOnMoby(char *m) {
     char *h = D_0013E633 + 0xE1D;
 
     if (*(int *)(h + 0x208C) == 3 || *(int *)(h + 0x2084) == 0x1C) {
@@ -268,7 +268,7 @@ extern void func_001F9BC0(float *);
 extern float func_001FA748(float, float);
 
 /* Places the marker at a moby's position offset along its heading by scale. */
-void func_L01_00279398(float scale, char *moby) {
+void PlaceMarkerAheadOfMoby(float scale, char *moby) {
     D_L01_0016CD60.f = 1;
     qcopy(D_L01_0016CD60.p, moby + 0x10);
     D_L01_0016CD60.p[0] += FastCos(*(float *)(moby + 0x48)) * scale;
@@ -281,7 +281,7 @@ extern void func_L00_00261B00(void *, int, int, int, int);
 extern char D_0013E633[];
 
 // Breaks an object into fragments, with a flag when it is near the origin.
-void func_L01_00279790(char *moby)
+void SpawnBreakFxByDistance(char *moby)
 {
     int r = 0;
     if (func_001F9D48(moby + 0x10, D_0013E633 + 0xE9D) < 7.0f) {
@@ -294,7 +294,7 @@ extern char *func_0020D348(int);
 extern void func_L00_00251E30(void *);
 
 /* spawns a moby of a class copying the source moby's placement, scaled */
-void func_L01_00279E10(char *src, int oClass) {
+void SpawnMobyCopyingPlacement(char *src, int oClass) {
     char *m = CreateMoby(oClass);
     if (m != 0) {
         *(short *)(m + 0x32) = 0xFF;

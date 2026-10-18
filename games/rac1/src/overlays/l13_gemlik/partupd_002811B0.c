@@ -8,7 +8,7 @@ extern void func_L00_00250800(void *, int, void *);
 extern unsigned char *D_L13_001B2790;
 
 /* Allocates and fills a particle-process record attached to a moby. */
-unsigned char *func_L13_002811B0(char *moby, unsigned char a, int b, int c, unsigned char d, float x, float y, float z) {
+unsigned char *AllocParticleProcess(char *moby, unsigned char a, int b, int c, unsigned char d, float x, float y, float z) {
     unsigned char *e = func_00218928(0x44);
     if (e != 0) {
         char *p;
@@ -23,7 +23,7 @@ unsigned char *func_L13_002811B0(char *moby, unsigned char a, int b, int c, unsi
         e[3] = 0x48;
         e[1] = 3;
         e[2] = *D_L13_001B2790;
-        func_L00_00250800(moby, a, p);
+        Moby_GetJointWorldPos(moby, a, p);
         qcopy(e + 0x20, p);
         *(float *)(e + 0x2C) = y;
         *(float *)(e + 0x1C) = x;

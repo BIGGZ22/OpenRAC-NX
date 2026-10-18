@@ -29,7 +29,7 @@ static inline s32 path_next(PathPoints *path, s32 i, s32 dir) {
 }
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/00294ae0.c, FUN_L09_00294ae0. */
-s32 func_L09_00295880(struct Moby *m, PathPoints *path, Vec4 *out, s32 i, s32 dir, f32 dist) {
+s32 AdvancePathIndexByDistance(struct Moby *m, PathPoints *path, Vec4 *out, s32 i, s32 dir, f32 dist) {
     Vec4 seg;
     Vec4 rel;
     s32 next;

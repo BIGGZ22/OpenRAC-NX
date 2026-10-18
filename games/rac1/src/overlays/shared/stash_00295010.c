@@ -6,7 +6,7 @@
 extern StashBlock D_L00_001C1668[];
 extern int func_00118E20(void *buf, int flag);
 // Starts a DMA transfer of size*16 bytes at offset*16 into a slot; -3 bad slot, -1 out of range.
-int func_L00_00295010(int arg, unsigned int slot, int off, int size) {
+int Stash_FetchSlot(int arg, unsigned int slot, int off, int size) {
     int req[4];
     int lim;
     if (slot >= 0x40) return -3;
@@ -22,7 +22,7 @@ int func_L00_00295010(int arg, unsigned int slot, int off, int size) {
 }
 /* The quadword count of stash slot SLOT, or -3 when there is no such slot. The catalogue splits
  * the `return -3` off as func_L00_002951C8 (config/overlays/joined.tsv). */
-int func_L00_002951A8(unsigned int slot) {
+int GetStashSlotSize(unsigned int slot) {
     if (slot >= 0x40) return -3;
     return D_L00_001C1668[slot].qwc;
 }

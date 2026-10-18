@@ -223,7 +223,7 @@ void func_0012DB18(void) { /* main */
     EntryFn entry;
 
     func_0011DFC8();
-    entry = func_001E99D8;
+    entry = GameBootSequence;
     do {
         entry();
         entry = func_0012DA38();

@@ -14,7 +14,7 @@ typedef struct {
 extern MissionNode_0024EEF0 *D_L00_001870A0;
 
 // Lists the current objectives: ids (or 0x5243 when done) to out, done bits to *mask, base + sel to nums; returns the count.
-int func_L00_0024EEF0(int *out, int *mask, int *nums, int arg3) {
+int CollectMissionNodes(int *out, int *mask, int *nums, int arg3) {
     MissionNode_0024EEF0 *p = D_L00_001870A0;
     int count = 0;
     int all = 1;
@@ -68,7 +68,7 @@ extern MapPoint_24F170 D_0013D6B8_24F170[] __asm__("D_0013D6B8");
 extern unsigned char D_0013D5C8[];
 
 /* mission status from the flags of map points 20, 22 and 24 and item flag 2: 1, 2 or 0 */
-int func_L00_0024F170(void) {
+int GetMapPointMissionStatus(void) {
     if (D_0013D6B8_24F170[20].flag && !D_0013D6B8_24F170[24].flag) return 1;
     if (D_0013D6B8_24F170[24].flag && D_0013D5C8[2] && !D_0013D6B8_24F170[22].flag) return 2;
     return 0;
@@ -85,7 +85,7 @@ int func_L00_0024F1C8(void) {
 extern u8 D_0013D5DD NOT_SDA;
 extern int D_0013DC34 NOT_SDA;
 /* 2 when the byte at 0x13D5DD is set, else whether the word at 0x13DC34 is */
-int func_L00_0024F220(void) {
+int GetMorphORayStatus(void) {
     if (gHaveMorphORay) return 2;
     return D_0013DC34 != 0;
 }
@@ -101,7 +101,7 @@ extern u32 D_L00_0015F6B0 MACRO_ADDR;
 extern s32 D_L00_0016007C MACRO_ADDR;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_map_0024e7a8.c, FUN_L00_0024e7a8. */
-void func_L00_0024F7E0(void) {
+void CountExpiredMobys(void) {
     u8 *p;
     s32 flag = 0;
     D_L00_0016007C = 0;

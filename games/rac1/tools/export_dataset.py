@@ -38,6 +38,7 @@ import json
 import re
 import sys
 from pathlib import Path
+import srcnames
 
 REPO = Path(__file__).resolve().parent.parent
 FUNC_RE = re.compile(r"func_[0-9A-F]{8}")
@@ -217,7 +218,7 @@ def main():
     rows, missing_asm, ported = [], 0, 0
 
     for src in sorted((REPO / "src").rglob("*.c")):
-        text = src.read_text(encoding="utf-8", errors="replace")
+        text = srcnames.read_c(src, encoding="utf-8", errors="replace")
         items = list(split_top_level(text))
         for idx, (s, e, kind) in enumerate(items):
             if kind != "func":

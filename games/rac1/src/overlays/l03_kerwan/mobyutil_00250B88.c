@@ -16,7 +16,7 @@ extern void func_001FA540(void *, void *, void *);
 
 /* Rotates a point (in place) about a unit axis by angle using a Rodrigues-style matrix: skew = cross-product matrix of axis, sin_part = sin*skew, cos_part = (1-cos)*skew^2; cos_part is then reused as the identity matrix.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l03/math/rotations/rotate_point_about_axis.c, FUN_L03_0024fba8. */
-void func_L03_00250B88(Q_50B88 *axis, Q_50B88 *point, float angle) {
+void RotatePointAboutAxis(Q_50B88 *axis, Q_50B88 *point, float angle) {
     float axis_v[4] __attribute__((aligned(16)));
     float point_v[4] __attribute__((aligned(16)));
     float skew[4][4] __attribute__((aligned(16)));
@@ -43,11 +43,11 @@ void func_L03_00250B88(Q_50B88 *axis, Q_50B88 *point, float angle) {
     skew[1][3] = 0.0f;
     skew[2][3] = 0.0f;
     skew[3][3] = 0.0f;
-    func_001FA540(skew_sq, skew, skew);
-    func_L00_001FFCF8(cos_part, skew_sq, 1.0f - func_001F9F90(angle));
-    func_L00_001FFCF8(sin_part, skew, func_001F9FA8(angle));
+    sce_vu0_mul_matrix(skew_sq, skew, skew);
+    func_L00_001FFCF8(cos_part, skew_sq, 1.0f - FastCos(angle));
+    func_L00_001FFCF8(sin_part, skew, FastSin(angle));
     func_L00_001FFDD0(sin_part, sin_part, cos_part);
     func_001FA190(cos_part);
     func_L00_001FFDD0(rot, sin_part, cos_part);
-    func_002153E8(rot, point_p);
+    MatrixToEuler(rot, point_p);
 }

@@ -9,10 +9,10 @@ extern void func_L00_0028A5A8(void);
 extern void func_0022C870(void);
 extern void func_00234C98(int, long);
 extern int D_0015EF88 MACRO_ADDR;
-void func_L07_00266470(void) {
+void DrawSkyUmbris(void) {
     SetupSkyGifPaging();
     if (D_0015EE84_m == 7) {
-        func_L00_0028B4E0();
+        SkyShellsSparkleThree();
     } else {
         UpdateSkyShellsStatic();
     }

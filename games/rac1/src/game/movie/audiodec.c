@@ -5,7 +5,7 @@
 extern int func_0012F1A8(int, int, int, int, int, int);
 extern char *D_001613B8 MACRO_ADDR;
 /* Clears the header, sets buffer parameters, and acquires the sound transport handle. */
-int func_0023BFA0(char *dec, void *buffer, int size, char *staging) {
+int audioDecCreate(char *dec, void *buffer, int size, char *staging) {
     FastMemZero16(dec + 8, 0x20);
     *(void **)(dec + 0x34) = buffer;
     *(int *)(dec + 0x40) = size;
@@ -49,7 +49,7 @@ typedef struct AudioDec {
 extern int func_0012F220(void);
 
 /* audioDecDelete(_AudioDec *) -- calls func_0012F220 and returns 1. */
-int func_0023C060(AudioDec *dec) {
+int audioDecDelete(AudioDec *dec) {
     func_0012F220();
     return 1;
 }
@@ -58,14 +58,14 @@ extern void func_0012F248(int, int, int, int, int);   /* snd_StartMovieSound */
 
 /* audioDecStart -- starts the movie sound with the decoder's parameters (size rounded down to
  * 0x400) and marks the decoder as started. */
-void func_0023C088(AudioDec *dec) {
+void audioDecStart(AudioDec *dec) {
     func_0012F248(dec->f48, dec->f4C / 0x400 * 0x400, dec->f5C, dec->f14, dec->f18);
     dec->pending = 2;
 }
 extern void func_0012F1E8(void);
 
 /* audioDecReset(_AudioDec *) */
-void func_0023C0E0(volatile int *dec) {
+void audioDecReset(volatile int *dec) {
     func_0012F1E8();
     dec[0x5C / 4] = 0;
     dec[0x0 / 4] = 0;
@@ -78,7 +78,7 @@ void func_0023C0E0(volatile int *dec) {
 }
 /* audioDecBeginPut(_AudioDec *, unsigned char **, int *, unsigned char **, int *) -- hands out
  * the free part of the ring as up to two (pointer, length) spans. */
-void func_0023C128(AudioDec *a, unsigned char **p1, int *n1, unsigned char **p2, int *n2) {
+void audioDecBeginPut(AudioDec *a, unsigned char **p1, int *n1, unsigned char **p2, int *n2) {
     if (a->pending == 0) {
         if (a->mode != 4) {
             *p1 = (unsigned char *)a + (a->fill + 8);
@@ -108,7 +108,7 @@ void func_0023C128(AudioDec *a, unsigned char **p1, int *n1, unsigned char **p2,
     }
 }
 /* Accounts for header bytes first, then advances the ring cursor and queued byte counts. */
-void func_0023C1F8(AudioDec *dec, int count) {
+void audioDecEndPut(AudioDec *dec, int count) {
     if (dec->pending == 0) {
         if (dec->mode != 4) {
             int used;
@@ -130,13 +130,13 @@ void func_0023C1F8(AudioDec *dec, int count) {
     dec->f44 += count;
 }
 /* No recovered name. True once 0x1000 bytes or more are queued. */
-int func_0023C2B0(AudioDec *dec) {
+int audioDecIsPageFull(AudioDec *dec) {
     return dec->bytes >= 0x1000;
 }
 extern void func_0023C390(AudioDec *);
 
 /* audioDecSend -- sendADPCM while data is pending. */
-void func_0023C2C0(AudioDec *dec) {
+void audioDecSend(AudioDec *dec) {
     if (dec->pending) {
         sendADPCM(dec);
     }
@@ -150,7 +150,7 @@ extern int func_0012F288(int, int);
 
 /* sendToSPU(_AudioDec *, unsigned char *, int, int) -- queues one transfer of len bytes to the
  * address in the decoder at 0x48, waits for it to finish, then calls func_0012F288(len, flag). */
-void func_0023C2E8(AudioDec *dec, unsigned char *src, int len, int flag) {
+void sendToSPU(AudioDec *dec, unsigned char *src, int len, int flag) {
     SpuDma dma;
     unsigned int id;
     func_00118D80(0);
@@ -182,7 +182,7 @@ typedef struct AdpcmDec_0023C390 {
 extern int func_0012F2B8(void);
 
 /* sendADPCM(_AudioDec *) */
-void func_0023C390(AudioDec *dec) {
+void sendADPCM(AudioDec *dec) {
     AdpcmDec_0023C390 *d = (AdpcmDec_0023C390 *)dec;
     int avail;
     int ch;

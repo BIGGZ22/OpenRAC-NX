@@ -17,7 +17,7 @@ extern f32 func_001FA058_4770(f32, f32) __asm__("func_001FA058");
 extern f32 func_001F9F90_4770(f32) __asm__("func_001F9F90");
 extern f32 func_001F9FA8_4770(f32) __asm__("func_001F9FA8");
 
-s32 func_00214770(u8 *a, u8 *B, u8 *an, u32 btn, s32 *outA, f32 *outF, s32 *outI, s32 k) {
+s32 func_00214778(u8 *a, u8 *B, u8 *an, u32 btn, s32 *outA, f32 *outF, s32 *outI, s32 k) {
     f32 v[4] __attribute__((aligned(16)));
     f32 w[4] __attribute__((aligned(16)));
     s32 s21;

@@ -10,12 +10,12 @@ extern int func_001F9850(int);
 extern unsigned char *D_L01_001B280C;
 
 /* Spawns a type-10 particle at a position and sets its colour, size, life and velocity. */
-void func_L01_00280428(char *pos, char *vel) {
+void PartType10Spawn(char *pos, char *vel) {
     unsigned char *p = func_00218928(10);
     if (p != 0) {
         char *q = (char *)p + 0x20;
         qcopy(p + 0x10, pos);
-        *(int *)(p + 4) = func_L00_0025D038(0.425f, 0.425f, 0.225f, 1.0f);
+        *(int *)(p + 4) = PackColorRGBA(0.425f, 0.425f, 0.225f, 1.0f);
         p[9] = func_001FA898_r(8.0f) - 0x60;
         p[1] = 0;
         p[3] = 0x48;
@@ -35,7 +35,7 @@ extern int func_002140B0(int);
 extern unsigned char *D_L01_001B2838;
 
 /* spawns a type 14 particle at the given position with jitter */
-char *func_L01_00281738(int a, char *b) {
+char *PartType14Spawn(int a, char *b) {
     char *p = func_00218928(0xE);
     int r;
     int *q;
@@ -72,7 +72,7 @@ extern int func_001FA898(float);
 
 /* Allocates a type 0x29 particle and fills it from the arguments; kind 0xFF derives the frame from flags and picks one of two blend modes.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/0027f660.c, FUN_L01_00285768. */
-char *func_L01_00286530(float scale, void *pos, int a, int idx, int b, unsigned char flags, short h, unsigned char kind) {
+char *PartType41Spawn(float scale, void *pos, int a, int idx, int b, unsigned char flags, short h, unsigned char kind) {
     char *r = func_00218928_86530(0x29);
     if (r != 0) {
         int *tail = (int *)(r + 0x20);
@@ -104,7 +104,7 @@ extern float func_001FA888(int);
 extern unsigned char *D_L01_001B28D0;
 
 /* spawns a type-0x34 particle at a with colour b, links c, lifetime d, scale f and drag g */
-unsigned char *func_L01_00287F20(void *a, int b, int c, int d, float f, float g) {
+unsigned char *PartType52Spawn(void *a, int b, int c, int d, float f, float g) {
     unsigned char *r = func_00218928(0x34);
     if (r != 0) {
         char *v = (char *)r + 0x20;
@@ -122,7 +122,7 @@ unsigned char *func_L01_00287F20(void *a, int b, int c, int d, float f, float g)
         *(int *)(v + 0xC) = c;
         *(float *)v = f;
         *(float *)(v + 4) = g;
-        *(float *)(v + 0x10) = 1.0f / func_001FA888(d);
+        *(float *)(v + 0x10) = 1.0f / IntToFloat(d);
     }
     return r;
 }
@@ -132,7 +132,7 @@ extern void func_001FA4A0(void *,void *);
 extern void func_001F9EE8(void *,void *,void *);
 extern unsigned char D_L01_001B2928_b[] __asm__("D_L01_001B2928");
 /* spawns a type-74 particle with transformed offset and velocity */
-unsigned char *func_L01_0028B570(char *m,char *pos,float *vel,char *cfg,int flag) {
+unsigned char *PartType74Spawn(char *m,char *pos,float *vel,char *cfg,int flag) {
  float v[4]; float mat[16];
  unsigned char *p=func_00218928(74);
  if(p) {
@@ -161,7 +161,7 @@ extern float func_001F9D10(void *, void *);
 extern char *D_L01_001B0C30[];
 
 // Resets a path object and computes per-segment lengths of its points.
-void func_L01_0028C1D8(char *p)
+void InitPathSegmentLengths(char *p)
 {
     int i;
     int off;
@@ -186,7 +186,7 @@ typedef struct {
 extern float func_001F9B88(float);
 
 /* Returns the index of the entry whose distance to arg0 is closest to a target value. */
-int func_L01_0028C2D8(void *arg0, List *arg1, float target) {
+int FindClosestDistanceEntry(void *arg0, List *arg1, float target) {
     int best = 0;
     int i;
     float bestDiff = 1e11f;
@@ -206,7 +206,7 @@ typedef struct {
 } List_8C3A8;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_0027f660.c, FUN_L01_0028b5e0. */
-int func_L01_0028C3A8(char *a0, List_8C3A8 *list, char *pt, char *out) {
+int FindClosestPointPair(char *a0, List_8C3A8 *list, char *pt, char *out) {
     int idx0 = -1;
     int idx1 = -1;
     float best0 = 10000.0f;
@@ -247,7 +247,7 @@ typedef struct { int n; int pad[3]; float e[1][4]; } List_0028C578;
 typedef struct { int cur; signed char f4; char pad5[11]; List_0028C578 *list; } Eff_0028C578;
 
 // Returns the list entry for a step count, wrapping past the end and counting back from it when negative.
-void *func_L01_0028C578(void *effect, int steps) {
+void *SplineGetPoint(void *effect, int steps) {
     int count = ((Eff_0028C578 *)effect)->f4 < 0 ? 0 : ((Eff_0028C578 *)effect)->list->n - 1;
     List_0028C578 *l = ((Eff_0028C578 *)effect)->list;
     if (steps < 0) {
@@ -262,7 +262,7 @@ void *func_L01_0028C578(void *effect, int steps) {
 INCLUDE_ASM("asm/overlays", func_L01_0028C5B8);
 INCLUDE_ASM("asm/overlays", func_L01_0028C5D0);
 // Computes a bounded animation index from an effect and step count.
-int func_L01_0028C5F0(char *effect, int steps) {
+int SplineWrapIndex(char *effect, int steps) {
     int count = effect[4] < 0 ? 0 : **(int **)(effect + 0x10) - 1;
     if (steps < 0) {
         return count + steps;
@@ -275,7 +275,7 @@ int func_L01_0028C5F0(char *effect, int steps) {
 }
 INCLUDE_ASM("asm/overlays", func_L01_0028C618);
 INCLUDE_ASM("asm/overlays", func_L01_0028C628);
-int func_L01_0028C640(char *p)
+int SplineNextIndex(char *p)
 {
     int max = 0;
     int next;
@@ -299,7 +299,7 @@ extern void func_L00_001FF4B0(void *, void *, float);
 typedef int u128 __attribute__((mode(TI)));
 
 // Blends three neighbouring list entries by (a, b) weights and clamps the result's length.
-void func_L01_0028C690(void *out, int *l, int idx, float a, float b) {
+void SplineSegmentTangent(void *out, int *l, int idx, float a, float b) {
     void *p[3];
     float v1[4];
     float v2[4];
@@ -307,9 +307,9 @@ void func_L01_0028C690(void *out, int *l, int idx, float a, float b) {
     float d1, d2, m, len;
     float wa, wb;
     func_001153FC_c(p, 0, 12);
-    p[0] = func_L01_0028C578(l, *l + idx - 1);
-    p[1] = func_L01_0028C578(l, *l + idx);
-    p[2] = func_L01_0028C578(l, *l + idx + 1);
+    p[0] = SplineGetPoint(l, *l + idx - 1);
+    p[1] = SplineGetPoint(l, *l + idx);
+    p[2] = SplineGetPoint(l, *l + idx + 1);
     {
         wb = (1.0f - a) * (b + 1.0f) * 0.5f;
         wa = (1.0f - a) * (1.0f - b) * 0.5f;
@@ -332,7 +332,7 @@ void func_L01_0028C690(void *out, int *l, int idx, float a, float b) {
 }
 
 // Cubic Hermite blend of four vectors at parameter t, written to out.
-void func_L01_0028C848(float t, void *out, void *p1, void *p2, void *p3, void *p4) {
+void HermiteInterpolate(float t, void *out, void *p1, void *p2, void *p3, void *p4) {
     char tmp[16];
     float t2 = t * t;
     float t3 = t2 * t;
@@ -365,7 +365,7 @@ void func_L01_0028C690(void *out, int *l, int idx, float a, float b);
 void func_L01_0028C848(float t, void *out, void *p1, void *p2, void *p3, void *p4);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/0027f660.c, FUN_L01_0028bb90. */
-float func_L01_0028C958(float a, float b, T_28b828 *path, int particles, void *moby) {
+float TracePathWithParticles(float a, float b, T_28b828 *path, int particles, void *moby) {
     OvlVec4 previousTangent;
     OvlVec4 nextTangent;
     OvlVec4 currentNode;
@@ -380,11 +380,11 @@ float func_L01_0028C958(float a, float b, T_28b828 *path, int particles, void *m
     *(int *)path = 0;
     nextNode.q = *(OvlQuad *)((char *)path->f10 + 0x10);
     if (particles) {
-        func_L01_00286530(0.666f, &nextNode, (int)moby, 0, 0x80101080, 0x7f, -1, 0xff);
+        PartType41Spawn(0.666f, &nextNode, (int)moby, 0, 0x80101080, 0x7f, -1, 0xff);
     }
     /* The SN ABI assigns float arguments independently of the integer arguments.
      * Keep the retail argument setup order without changing the shared helper. */
-    ((void (*)(void *, int *, float, float, int))func_L01_0028C690)(&nextTangent, (int *)path, a, b, 0);
+    ((void (*)(void *, int *, float, float, int))SplineSegmentTangent)(&nextTangent, (int *)path, a, b, 0);
 
     index = 0;
     while (index < count) {
@@ -395,21 +395,21 @@ float func_L01_0028C958(float a, float b, T_28b828 *path, int particles, void *m
         currentNode.q = nextNode.q;
         previousTangent.q = nextTangent.q;
         if (particles) {
-            func_L01_00286530(1.0f, &currentNode, (int)moby, index % 15 + 2, 0x80108010, 0x7f, -1, 0xff);
+            PartType41Spawn(1.0f, &currentNode, (int)moby, index % 15 + 2, 0x80108010, 0x7f, -1, 0xff);
         }
         t = 0.05f;
         nextIndex = func_L01_0028C5F0_8C958(path, index + 1);
         segmentLength = 0.0f;
         nextNode.q = *(OvlQuad *)((char *)path->f10 + nextIndex * 16 + 0x10);
         *(int *)path = index;
-        ((void (*)(void *, int *, float, float, int))func_L01_0028C690)(&nextTangent, (int *)path, a, b, 1);
+        ((void (*)(void *, int *, float, float, int))SplineSegmentTangent)(&nextTangent, (int *)path, a, b, 1);
         previousPoint.q = currentNode.q;
         step = t;
         do {
             if (particles) {
-                func_L01_00286530(0.2f, &previousPoint, (int)moby, 0, 0x80404080, 0x7f, -1, 0xff);
+                PartType41Spawn(0.2f, &previousPoint, (int)moby, 0, 0x80404080, 0x7f, -1, 0xff);
             }
-            func_L01_0028C848(t, &point, &currentNode, &nextNode, &previousTangent, &nextTangent);
+            HermiteInterpolate(t, &point, &currentNode, &nextNode, &previousTangent, &nextTangent);
             t += step;
             segmentLength += FastVecDist(&previousPoint, &point);
             previousPoint.q = point.q;

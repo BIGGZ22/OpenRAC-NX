@@ -9,7 +9,7 @@ extern char D_0013E633[];
 extern int func_L00_0020DB30(int);
 
 /* Returns the current help record's value, 0x54 or 0x6E in two special states, or 0 when no record applies. */
-int func_L17_00202740(int a) {
+int Help_GetCurrentRecord(int a) {
     char *g = (char *)D_0013E633 + 0xE1D;
     switch (*(unsigned char *)(g + 0x20A4)) {
     case 1:
@@ -39,7 +39,7 @@ int func_L17_00202740(int a) {
         }
     }
     {
-        int i = func_L00_0020DB30(0);
+        int i = Hero_GetSlotModuleId(0);
         return D_L17_0017A440[i].v;
     }
 }
@@ -144,7 +144,7 @@ s32 func_L17_0020E320(s32 arg) {
     if (arg == 0) {
         return 1;
     }
-    func_L00_00207220();
+    HeroClearSoundSlots();
     flag = 0;
     if (tbl->i30 & 1) {
         qcopy(&v, &tbl->v10);
@@ -164,11 +164,11 @@ s32 func_L17_0020E320(s32 arg) {
         if (mob != 0 && (*(s16 *)(mob + 0xA6) == 0x4EB || *(s16 *)(mob + 0xA6) == 0x558)) {
             id = 0x80;
         call_ret:
-            func_L17_0021ED38(id, 1);
+            HeroL17_SetMoveState(id, 1);
             return 1;
         }
         if (D_0013F450.i208C == 0x16) {
-            func_L17_0021ED38(0x6D, 1);
+            HeroL17_SetMoveState(0x6D, 1);
             D_0013F450.f128 = D_0015EE6C * 7.0f;
             return 1;
         }
@@ -178,7 +178,7 @@ s32 func_L17_0020E320(s32 arg) {
                 id = 0x82;
                 goto call_ret;
             }
-            func_L17_0021ED38(0x75, 1);
+            HeroL17_SetMoveState(0x75, 1);
         } else if (D_0013F450.i208C == 0x11) {
             mob = D_0013F450.p2280;
             if (mob != 0 && *(s16 *)(mob + 0xA6) == 0x28F) {
@@ -189,10 +189,10 @@ s32 func_L17_0020E320(s32 arg) {
                 mob = D_0013F450.p2280;
                 if (mob != 0 && (*(s16 *)(mob + 0xA6) == 0x28F || *(s16 *)(mob + 0xA6) == 0x7B
                                  || *(s16 *)(mob + 0xA6) == 0x29D)) {
-                    func_L00_00217570(0x1C, 0);
+                    Hero_PlayActiveSound(0x1C, 0);
                 }
             }
-            func_L17_0021ED38(0x76, 1);
+            HeroL17_SetMoveState(0x76, 1);
         } else if (D_0013F450.i208C == 3) {
             mob = D_0013F450.p2280;
             if (mob != 0) {
@@ -201,9 +201,9 @@ s32 func_L17_0020E320(s32 arg) {
                     goto call_ret;
                 }
             }
-            func_L17_0021ED38(0x16, 1);
+            HeroL17_SetMoveState(0x16, 1);
         } else {
-            func_L17_0021ED38(0x16, 1);
+            HeroL17_SetMoveState(0x16, 1);
         }
         e = D_0015EE6C;
         a = e * 5.7f;
@@ -212,18 +212,18 @@ s32 func_L17_0020E320(s32 arg) {
             a = 0.0f;
             b = e * 1.7f;
         }
-        func_L00_00211338(&v, flag, a, b);
+        Vec_ScaleXYSetZ(&v, flag, a, b);
         if (flag != 0 && tbl->b28 == 4) {
             v.f[2] += v.f[2];
         }
         break;
     case 1:
-        func_L17_0021ED38(0x46, 1);
-        func_L00_00211338(&v, flag, D_0015EE6C * 5.0f, D_0015EE6C * 3.0f);
+        HeroL17_SetMoveState(0x46, 1);
+        Vec_ScaleXYSetZ(&v, flag, D_0015EE6C * 5.0f, D_0015EE6C * 3.0f);
         break;
     case 3:
-        func_L17_0021ED38(0x56, 1);
-        func_L00_00211338(&v, flag, D_0015EE6C * 5.0f, D_0015EE6C * 2.4f);
+        HeroL17_SetMoveState(0x56, 1);
+        Vec_ScaleXYSetZ(&v, flag, D_0015EE6C * 5.0f, D_0015EE6C * 2.4f);
         break;
     }
     FastVecAdd(D_0013F530, D_0013F530, &v);
@@ -238,7 +238,7 @@ extern float D_0015EE64 MACRO_ADDR;
 extern float D_0015EE6C MACRO_ADDR;
 
 /* Per-frame easing of the camera blend parameters at the shared global block, by mode. */
-void func_L17_0020E8F8(void) {
+void Camera_EaseBlendParams(void) {
     char *a = (char *)D_0013E633 + 0xE1D;
     char *b;
     char *c;
@@ -295,8 +295,8 @@ void func_L17_0020E8F8(void) {
     }
     p = (float *)(D_0013E633 + 0x103D);
     g = (char *)p - 0x220;
-    func_00214D28(p, *(float *)(g + 0x228), D_0015EE60 * 0.02f);
-    func_00214D28(p + 1, *(float *)(g + 0x22C), D_0015EE60 * 0.02f);
-    func_L00_0025C918(p + 5, p + 6, *(float *)(g + 0x230),
+    ApproachValue(p, *(float *)(g + 0x228), D_0015EE60 * 0.02f);
+    ApproachValue(p + 1, *(float *)(g + 0x22C), D_0015EE60 * 0.02f);
+    Spring(p + 5, p + 6, *(float *)(g + 0x230),
                       D_0015EE64 * 0.02f, D_0015EE64 * 0.3f, D_0015EE6C * 4.0f);
 }

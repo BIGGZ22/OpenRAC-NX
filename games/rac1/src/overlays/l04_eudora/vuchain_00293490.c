@@ -8,7 +8,7 @@ extern float D_L04_00174068;
 extern int func_L00_001EFFF0(void *, void *, int, int, int);
 
 /* probes a ray from just above a point; returns the ground offset or 0 */
-float func_L04_00293490(float *pos) {
+float ProbeGroundOffset(float *pos) {
     float a[4];
     float b[4];
     qcopy(a, pos);
@@ -19,7 +19,8 @@ float func_L04_00293490(float *pos) {
     if (func_L00_001EFFF0(b, a, 2, 0, 0) != 0) return D_L04_00174068;
     return 0.0f;
 }
-void func_L04_00293530(void *unused, char *arg) {
+/* Writes the four joint angle limits of a leg-rig block. */
+void SetLegJointLimits(void *unused, char *arg) {
     *(float *)(arg + 0x10C) = -0.19634955f;
     *(float *)(arg + 0x110) = 1.5707964f;
     *(float *)(arg + 0x1BC) = -1.5707964f;
@@ -104,7 +105,8 @@ extern void func_0020DB98(struct Moby *m, int count, int *joints, void *out);
 extern void func_0020DAF8(struct Moby *m, int joint, float *mtx);
 extern float func_L00_001FF860(float, float);
 extern void func_0020D960(struct Moby *m, int slot, void *manip);
-void func_L04_00293578(struct Moby *moby, LegRig_p *rig) {
+/* Sets up a two-legged rig on a moby. */
+void InitTwoLeggedRig(struct Moby *moby, LegRig_p *rig) {
     int joints[6];
     float matrix[4][4];
     int i;
@@ -114,11 +116,11 @@ void func_L04_00293578(struct Moby *moby, LegRig_p *rig) {
 
     for (i = 0; i < 13; i++) {
         if (rig->anims[i]->id < 0) {
-            func_001E9730(D_L04_001DB660, i, moby->oclass);
+            STUB_printf(D_L04_001DB660, i, moby->oclass);
             func_001F9978();
         }
-        rig->anims[i]->start = func_L04_00242868(moby->unk22, rig->anims[i]->id);
-        rig->anims[i]->len = func_L04_002428C8(moby->unk22, rig->anims[i]->id) - rig->anims[i]->start;
+        rig->anims[i]->start = Anim_GetStartTime(moby->class_slot, rig->anims[i]->id);
+        rig->anims[i]->len = Anim_GetEndTime(moby->class_slot, rig->anims[i]->id) - rig->anims[i]->start;
         if (rig->anims[i]->len != 0.0f) {
             for (j = 0; j < 2; j++) {
                 rig->anims[i]->phase[1].span[j] = rig->anims[i]->phase[1].from[j] <= rig->anims[i]->phase[1].to[j]
@@ -137,17 +139,17 @@ void func_L04_00293578(struct Moby *moby, LegRig_p *rig) {
     joints[3] = rig->legs[1].joint2;
     joints[4] = rig->jointB4;
     joints[5] = rig->jointB5;
-    func_0020DB98(moby, 6, joints, rig);
+    MobyTransformScaledVertexBatch(moby, 6, joints, rig);
     for (k = 0; k < 2; k++) {
         char *p = (char *)rig + k * 0xB0;
-        func_0020DAF8(moby, ((unsigned char *)p)[0xF0], matrix[0]);
+        MobyTransformScaledVertex(moby, ((unsigned char *)p)[0xF0], matrix[0]);
         *(int *)(p + 0x104) = 0;
         *(int *)(p + 0xFC) = 0;
         *(float *)(p + 0xF8) = func_L00_001FF860(matrix[1][0], matrix[1][1]);
         if (((unsigned char *)p)[0x161] == 0)
-            func_0020D960(moby, ((unsigned char *)p)[0xF3], (LegRigManip_p *)(p + 0x160));
+            AttachManipulator(moby, ((unsigned char *)p)[0xF3], (LegRigManip_p *)(p + 0x160));
         if (((unsigned char *)p)[0x121] == 0)
-            func_0020D960(moby, ((unsigned char *)p)[0xF2], (LegRigManip_p *)(p + 0x120));
+            AttachManipulator(moby, ((unsigned char *)p)[0xF2], (LegRigManip_p *)(p + 0x120));
     }
     rig->unkEE = 0;
     rig->unkB7 = 0;
@@ -160,12 +162,12 @@ void func_L04_00293578(struct Moby *moby, LegRig_p *rig) {
     rig->unkE4 = 0;
     rig->unkEC = 0;
     rig->mode = 5;
-    func_001E9730(D_L04_001DB6F0, 0x250);
+    STUB_printf(D_L04_001DB6F0, 0x250);
 }
 extern int func_L00_002A2680_t(int *a, float v) __asm__("func_L00_002A2680");
 
 // Finds the entry of arg1's 13-pointer table whose first word equals arg0's byte at 0x52, then calls on it or returns a byte.
-int func_L04_00293990(char *arg0, char *arg1, float t) {
+int LegRig_GetAnimMode(char *arg0, char *arg1, float t) {
     int **p = (int **)(arg1 + 0x70);
     int *found = 0;
     int i;
@@ -218,7 +220,7 @@ extern float func_L00_001FF860_2939E8(float, float) __asm__("func_L00_001FF860")
 extern char D_L04_00174040_2939E8[] __asm__("D_L04_00174040");
 
 /* Steers a moby from the arg block: height and push terms, returns 2 when the tilt is past pi/4. */
-int func_L04_002939E8(StMoby_2939E8 *m, Steer_2939E8 *a)
+int HoverMobySteer(StMoby_2939E8 *m, Steer_2939E8 *a)
 {
     float push[4];
     float dir[4];
@@ -252,7 +254,7 @@ int func_L04_002939E8(StMoby_2939E8 *m, Steer_2939E8 *a)
         for (j = 0; j < 4; j++) {
             Vec4f *e = &a->pts[j];
             if (a->mask & bit) {
-                h = func_L04_00293490((float *)e);
+                h = ProbeGroundOffset((float *)e);
                 sum += h;
                 if (0.0f < h) {
                     t = func_001F9B88_2939E8(((StTab_2939E8 *)D_L04_00174040_2939E8)->v40.x);
@@ -322,92 +324,6 @@ int func_L04_002939E8(StMoby_2939E8 *m, Steer_2939E8 *a)
     return ret;
 }
 typedef struct {
-    f32 x;
-    f32 y;
-    f32 z;
-    f32 w;
-} Vec4f_93F08;
-struct Manip;
-struct GifEntry;
-struct AnimSeq;
-struct MobyClass_93F08 {
-    u8 pad_0[0xC];
-    u8 seq_count; /* number of entries in seqs[] (menu previews clamp the sequence to it) */
-    u8 pad_D[3];
-    u32 collision; /* collision data; copied into Moby.collision when a moby is (re)classed */
-    u8 pad_14[0x8];
-    void *retarget_table; /* retarget table: word table, indexed id * 4 + 4 (0024eec0) */
-    struct GifEntry *gifs; /* patched by patch_moby_gifs */
-    f32 scale; /* default draw scale: copied into Moby.scale, divides it */
-    s32 sound_defs; /* sound definitions, 0x20 bytes each */
-    void **callbacks; /* function-pointer table, called with the moby */
-    u8 pad_30[0x14];
-    u16 flags; /* initial Moby.flags */
-    s16 type; /* class type; 5 (a creature) is tested by targeting code */
-    struct AnimSeq *seqs[1]; /* animation sequences, indexed by Moby.seq */
-};
-struct Moby_93F08 {
-    Vec4f_93F08 bsphere;
-    Vec4f_93F08 pos;
-    u8 state; /* >= 0xFE: dead, waiting to respawn */
-    u8 group; /* linked group: index into the level moby-list table D_Lxx_001ABCC0 (0xFF: none) */
-    u8 class_slot; /* class slot: pclass = D_L00_00197300[class_slot] (crate_update) */
-    u8 alpha; /* 0x80 by default; 0x40 for the smoke trail FUN_L09_00307ba8 spawns */
-    struct MobyClass_93F08 *pclass;
-    struct Moby_93F08 *next;
-    f32 scale; /* draw scale (FUN_L01_002fa068 halves it, FUN_L00_00215ef8 divides by it) */
-    u8 update_dist; /* update distance; 0xFF (always) or 0x7F for beams, set by spawners */
-    u8 visible; /* drawn last frame; set to 1 by spawners */
-    s16 draw_dist; /* draw distance; 0xFF (0x7F for beams), set by spawners */
-    u16 flags;
-    u16 occlusion; /* occlusion bits; 0x7F80 set by spawners */
-    u64 spawn_frame; /* frame count at which it may respawn */
-    Vec4f_93F08 rot; /* z: yaw (FUN_L00_00266448 compares it with atan2 to the hero) */
-    u8 frame; /* animation frame */
-    u8 prev_frame; /* frame index in prev_seq */
-    u8 seq; /* animation sequence id */
-    u8 prev_seq;
-    f32 anim_time;
-    f32 anim_speed;
-    u8 pad5C[8];
-    struct Manip *manips;
-    void *cur_frame_data;
-    void *prev_frame_data;
-    u8 anim_flags;
-    u8 unk71; /* set to 0xFF when a moby changes class */
-    u8 unk72;
-    u8 unk73;
-    void (*update)(struct Moby_93F08 *moby);
-    u8 *pvars;
-    u8 unk7C;
-    u8 sound_slot; /* 0x7D: D_0013E550 slot of its looping sound, 0xFF: none (FUN_L00_00232670) */
-    u8 anim_trigger_count;
-    u8 shadow_range; /* shadow range in units of 1024; 0x17 from FUN_L09_002c5990 near D_L09_00166F40 */
-    u8 pad80[6];
-    s16 unk86;
-    u8 pad88[8];
-    s32 glow_color; /* glow colour (class header + 0x40) */
-    u32 collision; /* collision data, from the class header (MobyClass.collision) */
-    s32 collision_disable; /* per-primitive collision disable bits; 1 while a carrier holds the moby (FUN_L00_002c7a58) */
-    u8 pad9C[8];
-    u8 hit_slot; /* hit-message slot (0xFF: none) */
-    u8 padA5;
-    s16 oclass;
-    u8 padA8[8];
-    u8 mission; /* 0xB0: index into the level's D_0014C050 row (0xFF: not spawned) */
-    u8 padB1;
-    u16 save_id; /* index into the level collected[]/killed[] tables and save bits D_0014C190[level][id >> 5] */
-    s16 unkB4;
-    u8 padB6[2];
-    void *parent; /* 0xB8: spawner (bolt source record); its byte 0xB1 is a per-level id (FUN_L00_002a6b70) */
-    u8 command; /* external command byte */
-    u8 padBD[3];
-    Vec4f_93F08 rot_row0; /* 0xC0: rows of the matrix built from rot (FUN_001fa030) */
-    Vec4f_93F08 rot_row1;
-    Vec4f_93F08 rot_row2;
-    u8 padF0[0x10];
-};
-typedef struct {
     /* 0x00 */ u8 unk0;
     /* 0x01 */ u8 attached;
     /* 0x02 */ u8 pad2[0xE];
@@ -475,7 +391,7 @@ typedef struct {
     /* 0x0EE */ s16 unkEE;
     /* 0x0F0 */ LegRigLeg_93F08 legs[2];
 } LegRig_93F08;
-extern void func_0020DAF8_93F08(struct Moby_93F08 *, int, float *) __asm__("func_0020DAF8");
+extern void func_0020DAF8_93F08(struct Moby *, int, float *) __asm__("func_0020DAF8");
 extern float func_L00_001FF860(float, float);
 extern float func_001FA748(float, float);
 extern float func_001FA790(float, float);
@@ -485,7 +401,7 @@ extern void func_001FA588(float *, float *, float *);
 extern f32 D_0015EE60 MACRO_ADDR;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l04/runtime/dma/002922d0.c, FUN_L04_00292d48. */
-void func_L04_00293F08(struct Moby_93F08 *moby, LegRig_93F08 *rig, int flags) {
+void LegRig_UpdateLegAngles(struct Moby *moby, LegRig_93F08 *rig, int flags) {
     float joint[16];
     float tilt[4];
     float twist;
@@ -506,16 +422,16 @@ void func_L04_00293F08(struct Moby_93F08 *moby, LegRig_93F08 *rig, int flags) {
             leg->lower_turn);
         base_yaw = FastSubRots(heading, twist);
         if (rig->unkB7 == 0 || (flags & mask) == 0) {
-            leg->upper_turn = func_L00_00259148(leg->upper_turn, 0.0f, &rig->legs[i].upper_turn_speed, 0.1f, 0.1f,
+            leg->upper_turn = SpringTurn(leg->upper_turn, 0.0f, &rig->legs[i].upper_turn_speed, 0.1f, 0.1f,
                                            D_0015EE60 * 0.034906585f);
-            leg->lower_turn = func_L00_00259148(leg->lower_turn, 0.0f, &rig->legs[i].lower_turn_speed, 0.1f, 0.1f,
+            leg->lower_turn = SpringTurn(leg->lower_turn, 0.0f, &rig->legs[i].lower_turn_speed, 0.1f, 0.1f,
                                            D_0015EE60 * 0.034906585f);
         } else {
             if (rig->unkB7 == 13)
-                leg->upper_turn = func_L00_00259148(leg->upper_turn, 0.0f, &rig->legs[i].upper_turn_speed, 0.1f, 0.1f,
+                leg->upper_turn = SpringTurn(leg->upper_turn, 0.0f, &rig->legs[i].upper_turn_speed, 0.1f, 0.1f,
                                                D_0015EE60 * 0.034906585f);
             else
-                leg->upper_turn = func_L00_00259148(leg->upper_turn, twist * 0.5f, &rig->legs[i].upper_turn_speed, 0.1f,
+                leg->upper_turn = SpringTurn(leg->upper_turn, twist * 0.5f, &rig->legs[i].upper_turn_speed, 0.1f,
                                                0.1f, D_0015EE60 * 0.034906585f);
             leg->lower_turn = FastSubRots(twist, leg->upper_turn);
             leg->lower_turn_speed = 0.0f;
@@ -561,7 +477,7 @@ extern float D_0015EE68 MACRO_ADDR;
 typedef int u128_96938 __attribute__((mode(TI)));
 
 /* Level 04 walker update: blends heading and speed, places the legs, probes the ground and sets the anim rate; returns flags. */
-int func_L04_00296938(char *m, char *s, float speed, float ang, float accel) {
+int LegWalkerUpdate(char *m, char *s, float speed, float ang, float accel) {
     float buf[8];
     float v20[24];
     float v80[4];
@@ -582,23 +498,23 @@ int func_L04_00296938(char *m, char *s, float speed, float ang, float accel) {
     float *f;
 
     if (*(unsigned char *)(m + 0x52) != 0xFF) {
-        t = func_0020D830((struct Moby *)m);
+        t = MobyGetFrameValue((struct Moby *)m);
     } else {
-        t = func_001FA888(*(unsigned char *)(m + 0x51)) + func_L04_00242868(*(unsigned char *)(m + 0x22), *(unsigned char *)(m + 0x53));
+        t = IntToFloat(*(unsigned char *)(m + 0x51)) + Anim_GetStartTime(*(unsigned char *)(m + 0x22), *(unsigned char *)(m + 0x53));
     }
     flags = func_L04_00293990_96938(m, s, t);
     if (*(unsigned short *)(s + 0xEE) & 4) {
-        *(float *)(m + 0x48) = func_L00_00259148(*(float *)(m + 0x48), *(float *)(s + 0x6C), (float *)(s + 0xC8),
+        *(float *)(m + 0x48) = SpringTurn(*(float *)(m + 0x48), *(float *)(s + 0x6C), (float *)(s + 0xC8),
                                                  *(float *)(s + 0xCC), *(float *)(s + 0xD0), *(float *)(s + 0xD4));
     } else if (flags & 0xF) {
-        *(float *)(m + 0x48) = func_L00_00259148(*(float *)(m + 0x48), ang, (float *)(s + 0xC8),
+        *(float *)(m + 0x48) = SpringTurn(*(float *)(m + 0x48), ang, (float *)(s + 0xC8),
                                                  *(float *)(s + 0xCC), *(float *)(s + 0xD0), *(float *)(s + 0xD4));
     } else {
-        *(float *)(m + 0x48) = func_L00_00259148(*(float *)(m + 0x48), ang, (float *)(s + 0xC8),
+        *(float *)(m + 0x48) = SpringTurn(*(float *)(m + 0x48), ang, (float *)(s + 0xC8),
                                                  0.0f, *(float *)(s + 0xD0) + *(float *)(s + 0xD0), *(float *)(s + 0xD4));
     }
     func_L04_00293F08_96938(m, s, flags, ang);
-    *(float *)(m + 0x44) = func_L00_00259148(*(float *)(m + 0x44), *(float *)(s + 0xB8), (float *)(s + 0xBC),
+    *(float *)(m + 0x44) = SpringTurn(*(float *)(m + 0x44), *(float *)(s + 0xB8), (float *)(s + 0xBC),
                                              0.005f, 0.01f, D_0015EE60 * 0.017453292f);
 
     ((int *)buf)[0] = *(unsigned char *)(s + 0xF0);
@@ -607,7 +523,7 @@ int func_L04_00296938(char *m, char *s, float speed, float ang, float accel) {
     ((int *)buf)[3] = *(unsigned char *)(s + 0x1A1);
     ((int *)buf)[4] = *(unsigned char *)(s + 0xB4);
     ((int *)buf)[5] = *(unsigned char *)(s + 0xB5);
-    func_0020DB98((struct Moby *)m, 6, (int *)buf, v20);
+    MobyTransformScaledVertexBatch((struct Moby *)m, 6, (int *)buf, v20);
 
     if (!(*(unsigned short *)(s + 0xEE) & 4)) {
         mask = flags | (*(unsigned char *)(s + 0xB6) & 0x30);
@@ -619,7 +535,7 @@ int func_L04_00296938(char *m, char *s, float speed, float ang, float accel) {
             if (mask & bit) {
                 cnt = cnt + one;
                 func_001F9BD8_2939E8(v80, v80, s + i * 0x10);
-                func_001F9BF0(v80, v80, &v20[i * 4]);
+                FastVecSub(v80, v80, &v20[i * 4]);
             }
             bit <<= 1;
         }
@@ -661,12 +577,12 @@ int func_L04_00296938(char *m, char *s, float speed, float ang, float accel) {
         }
         buf[2] = buf[2] + *(float *)(s + 0xE8);
         a98 = a98 - *(float *)(s + 0xE8);
-        func_001F9BF0(buf + 4, m + 0x10, buf);
-        for (k = 0; k < 8 && func_L00_001F1D20(a94, a98, buf, 4, m); k++) {
+        FastVecSub(buf + 4, m + 0x10, buf);
+        for (k = 0; k < 8 && coll_capsule(a94, a98, buf, 4, m); k++) {
             qcopy(buf, D_L04_00174070);
             res |= 1;
         }
-        func_001F9BF0(v20, buf, m + 0x10);
+        FastVecSub(v20, buf, m + 0x10);
         func_001F9BD8_2939E8(m + 0x10, buf, buf + 4);
         if (func_001F9CE8_2939E8(v20) < *(float *)(s + 0xC0) * 0.5f) res |= 2;
     }
@@ -677,7 +593,7 @@ int func_L04_00296938(char *m, char *s, float speed, float ang, float accel) {
     ((int *)buf)[3] = *(unsigned char *)(s + 0x1A1);
     ((int *)buf)[4] = *(unsigned char *)(s + 0xB4);
     ((int *)buf)[5] = *(unsigned char *)(s + 0xB5);
-    func_0020DB98((struct Moby *)m, 6, (int *)buf, s);
+    MobyTransformScaledVertexBatch((struct Moby *)m, 6, (int *)buf, s);
 
     if (*(unsigned char *)(s + 0xB7) == 0x12 && *(unsigned char *)(m + 0x52) == **(int **)(s + 0xA0)) {
         return res;
@@ -688,7 +604,7 @@ int func_L04_00296938(char *m, char *s, float speed, float ang, float accel) {
         for (i = 0; i < 13; i++, pp++) {
             if (*((int **)(s + 0x70))[i] == *(unsigned char *)(m + 0x52)) {
                 if (!(*(float *)(s + 0xC0) < D_0015EE6C * 0.19f) ||
-                    !(func_001FA850(*(float *)(m + 0x48), ang) > 0.092399783f) ||
+                    !(FastDiffRots(*(float *)(m + 0x48), ang) > 0.092399783f) ||
                     !(speed < D_0015EE6C * 0.19f)) {
                     f = ((float **)(s + 0x70))[i];
                     t = *(float *)(s + 0xC0);
@@ -703,9 +619,6 @@ int func_L04_00296938(char *m, char *s, float speed, float ang, float accel) {
     }
     return res;
 }
-struct Manip;
-struct GifEntry;
-struct AnimSeq;
 typedef struct {
     /* 0x00 */ u8 unk0;
     /* 0x01 */ u8 attached;
@@ -784,7 +697,7 @@ extern float func_001F9B88(float);
 extern int func_L04_00293990_96FA8(struct Moby *m, LegRig *rig, float t) __asm__("func_L04_00293990");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l04/runtime/dma/002922d0.c, FUN_L04_00295de8. */
-void func_L04_00296FA8(struct Moby *m, LegRig *rig) {
+void LegRig_Init(struct Moby *m, LegRig *rig) {
     int joints[6];
     float mtx[4][4];
     float t;
@@ -798,9 +711,9 @@ void func_L04_00296FA8(struct Moby *m, LegRig *rig) {
     joints[3] = rig->legs[1].joint2;
     joints[4] = rig->jointB4;
     joints[5] = rig->jointB5;
-    func_0020DB98(m, 6, joints, rig);
+    MobyTransformScaledVertexBatch(m, 6, joints, rig);
     for (i = 0; i < 2; i++) {
-        func_0020DAF8(m, rig->legs[i].joint, mtx[0]);
+        MobyTransformScaledVertex(m, rig->legs[i].joint, mtx[0]);
         rig->legs[i].unk14 = 0;
         rig->legs[i].unkC = 0;
         rig->legs[i].yaw = func_L00_001FF860(mtx[1][0], mtx[1][1]);
@@ -810,10 +723,10 @@ void func_L04_00296FA8(struct Moby *m, LegRig *rig) {
             AttachManipulator(m, rig->legs[i].slot_a, &rig->legs[i].manip_a);
     }
     if (m->seq != 0xFF) {
-        t = func_0020D830(m);
+        t = MobyGetFrameValue(m);
     } else {
-        t = func_001FA888(m->prev_frame);
-        t += func_L04_00242868(m->unk22, m->prev_seq);
+        t = IntToFloat(m->prev_frame);
+        t += Anim_GetStartTime(m->class_slot, m->prev_seq);
     }
     rig->mode = 5;
     rig->speed = 0.0f;
@@ -821,7 +734,7 @@ void func_L04_00296FA8(struct Moby *m, LegRig *rig) {
     e = rig->anims;
     for (j = 12; j >= 0; j--, e++) {
         if ((*e)->id == m->prev_seq) {
-            rig->speed = FastAbsF(m->unk58 * (*e)->rate);
+            rig->speed = FastAbsF(m->anim_speed * (*e)->rate);
             rig->unkB7 = D_L04_001CABB8[12 - j][0];
         }
     }

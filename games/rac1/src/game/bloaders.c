@@ -49,7 +49,7 @@ extern int func_00120858(int, unsigned short);
    matching TEX0 (SCE_GS_SET_TEX0 with TCC 1, CLD 4) plus 1, 0 to arg1.
    The descriptor is a zeroed stack struct, so its fields are re-read
    after the calls as retail does. */
-void func_001E94E8(void *arg0, void *arg1, int tbp, int cbp) {
+void LoadPifAsPSMT8H(void *arg0, void *arg1, int tbp, int cbp) {
     PifTex d;
     GsLoadImage li;
     PifHeader *pif = arg0;
@@ -110,7 +110,7 @@ extern long D_0015EFC8_m __asm__("D_0015EFC8") MACRO_ADDR;
  * D_0015EF88 load in $v1 as retail has it; the level copy is the same C
  * (func_L00_001EB380).
  */
-void func_001E96B8(void) {
+void LoadDebugFont(void) {
     long localbuf[3];
 
     Load(D_001AAF40, D_00137C80[2], D_00137C80[3]);

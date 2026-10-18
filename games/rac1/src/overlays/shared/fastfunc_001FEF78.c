@@ -7,7 +7,7 @@ INCLUDE_ASM("asm/overlays", func_L00_001FEFE0);
 INCLUDE_ASM("asm/overlays", func_L00_001FF040);
 INCLUDE_ASM("asm/overlays", func_L00_001FF088);
 INCLUDE_ASM("asm/overlays", func_L00_001FF0B0);
-void func_L00_001FF200(s64 *v) {
+void Vec_ZeroXYZ(s64 *v) {
     v[0] = 0;
     __asm__ volatile ("nop");
     ((s32 *)v)[2] = 0;
@@ -43,7 +43,7 @@ extern float func_001FA790(float, float);
 extern float func_001FA748(float, float);
 extern float func_001F9B88(float);
 
-float func_L00_002004C0(float a, float b, float c) {
+float RotateTowardAngle(float a, float b, float c) {
     float r = FastSubRots(b, a);
     if (!(r > 0.0f)) {
         c = -c;
@@ -55,6 +55,250 @@ float func_L00_002004C0(float a, float b, float c) {
     }
     return FastAddRots(a, c);
 }
-INCLUDE_ASM("asm/overlays", func_L00_00200598);
+typedef unsigned int u128_FAB40 __attribute__((mode(TI)));
+
+typedef struct {
+    unsigned long NLOOP:15;
+    unsigned long EOP:1;
+    unsigned long pad16:16;
+    unsigned long id:14;
+    unsigned long PRE:1;
+    unsigned long PRIM:11;
+    unsigned long FLG:2;
+    unsigned long NREG:4;
+    unsigned long REGS0:4;
+    unsigned long REGS1:4;
+    unsigned long REGS2:4;
+    unsigned long REGS3:4;
+    unsigned long REGS4:4;
+    unsigned long REGS5:4;
+    unsigned long REGS6:4;
+    unsigned long REGS7:4;
+    unsigned long REGS8:4;
+    unsigned long REGS9:4;
+    unsigned long REGS10:4;
+    unsigned long REGS11:4;
+    unsigned long REGS12:4;
+    unsigned long REGS13:4;
+    unsigned long REGS14:4;
+    unsigned long REGS15:4;
+} GifTag_FAB40;
+
+typedef struct {
+    unsigned long FBP:9;
+    unsigned long rest:55;
+} GsFbp_FAB40;
+
+typedef struct {
+    unsigned long pmode;
+    unsigned long smode2;
+    GsFbp_FAB40 dispfb;
+    unsigned long display;
+    unsigned long bgcolor;
+    unsigned long pad028;
+    GifTag_FAB40 giftag0;       /* 0x030 */
+    GsFbp_FAB40 frame0;         /* 0x040 */
+    unsigned long draw0[15];
+    GifTag_FAB40 giftag1;       /* 0x0C0 */
+    GsFbp_FAB40 frame1;         /* 0x0D0 */
+    unsigned long draw1[15];
+    short display_width;        /* 0x150 */
+    short display_height;
+    short psm;
+    short fbp0;
+    short storage_width;        /* 0x158 */
+    short storage_height;
+    short storage_psm;
+    short fbp1;
+    short target_width;         /* 0x160 */
+    short target_height;
+    short target_psm;
+    short target_fbp;
+    short display_offset_x;     /* 0x168 */
+    short display_offset_y;
+    short zpsm;
+    short zbp;
+    int reserved170;            /* 0x170 */
+} FsAa_FAB40;
+
+extern FsAa_FAB40 D_00151880;
+extern void *D_0015EFB8 MACRO_ADDR;
+extern int D_0015EF80 MACRO_ADDR;
+extern int D_0015EF84 MACRO_ADDR;
+extern int D_0015EF88 MACRO_ADDR;
+extern char D_0013CD90[];
+extern char D_0013CED0[];
+extern char D_00151A00[];
+extern char D_00151C60[];
+extern char D_00151EF0[];
+extern char D_00152140[];
+extern void func_00121DC8(void *, short, short, short, short, short);
+extern int func_001222C8(void *, short, short, short, short, short);
+
+#define FA ((FsAa_FAB40 *)D_0015EFB8)
+
+void func_L00_00200598(int display_width, int display_height, int storage_width, int storage_height,
+                   int display_offset_x, int display_offset_y) {
+    unsigned long *q;
+
+    D_0015EFB8 = &D_00151880;
+    D_00151880.display_width = display_width;
+    D_00151880.display_height = display_height;
+    D_00151880.storage_width = storage_width;
+    D_00151880.storage_height = storage_height;
+    D_00151880.display_offset_x = display_offset_x;
+    D_00151880.display_offset_y = display_offset_y;
+    D_00151880.reserved170 = 0;
+    D_00151880.storage_psm = 0;
+    D_00151880.psm = 0;
+    D_00151880.target_psm = 0;
+    D_00151880.zpsm = 0x31;
+    D_00151880.fbp1 = D_0015EF80 >> 13;
+    D_00151880.fbp0 = D_0015EF84 >> 13;
+    D_00151880.zbp = D_0015EF88 >> 13;
+    func_00121DC8(&D_00151880, 0, storage_width, storage_height, display_offset_x,
+                  display_offset_y);
+    FA->dispfb.FBP = D_00151880.fbp1;
+    func_001222C8(&FA->frame0, D_00151880.psm, D_00151880.display_width,
+                  D_00151880.display_height, 3, D_00151880.zpsm);
+    FA->frame0.FBP = D_00151880.fbp0;
+    *(unsigned long *)&FA->draw0[1] =
+        (long)D_00151880.zbp | ((unsigned long)(D_00151880.zpsm & 0xF) << 24);
+    *(u128_FAB40 *)&FA->giftag0 = 0;
+    FA->giftag0.NLOOP = 8;
+    FA->giftag0.EOP = 1;
+    FA->giftag0.NREG = 1;
+    FA->giftag0.REGS0 = 0xE;
+    func_001222C8(&FA->frame1, D_00151880.storage_psm, D_00151880.storage_width,
+                  D_00151880.storage_height, 0, 0);
+    FA->frame1.FBP = D_00151880.fbp1;
+    *(unsigned long *)&FA->draw1[1] = 1UL << 32;
+    *(u128_FAB40 *)&FA->giftag1 = 0;
+    FA->giftag1.NLOOP = 8;
+    FA->giftag1.EOP = 1;
+    FA->giftag1.NREG = 1;
+    FA->giftag1.REGS0 = 0xE;
+
+    q = (unsigned long *)D_00151C60;
+    q[0] = 0x408B400000000001UL;
+    q[1] = 0xEEEE;
+    q[2] = 0x30000;
+    q[3] = 0x47;
+    q[4] = 5;
+    q[5] = 8;
+    q[6] = 0x100000261UL;
+    q[7] = 0x14;
+    q[8] = ((long)FA->fbp0 << 5) | ((unsigned long)((FA->display_width >> 6) & 0x3F) << 14) |
+           ((long)FA->psm << 20) | 0xEA8000000UL;
+    q[9] = 6;
+    q[10] = 0x4400000000008010UL;
+    q[11] = 0x5353;
+    {
+        unsigned long *p;
+        int i;
+        for (i = 0, p = q + 12; i < 16; i++) {
+            *p++ = i * FA->display_width;
+            *p++ = (i * FA->storage_width + (0x8000 - FA->storage_width * 8)) |
+                   ((long)(0x7FF8 - FA->storage_height * 8) << 16);
+            *p++ = (i + 1) * FA->display_width | ((long)FA->display_height << 20);
+            *p++ = ((i + 1) * FA->storage_width + (0x8000 - FA->storage_width * 8)) |
+                   ((long)(FA->storage_height * 8 + 0x7FF8) << 16);
+        }
+    }
+    q[76] = 0x4400000000008001UL;
+    q[77] = 0x4410;
+    q[78] = 0x181;
+    q[79] = 0x80000000UL;
+    q[80] = 0x6FF8 | ((long)(0x7FF8 - FA->storage_height * 8) << 16);
+    q[81] = 0x6FF8 | ((long)(FA->storage_height * 8 + 0x7FF8) << 16);
+
+    q = (unsigned long *)D_00151EF0;
+    q[0] = 0x308B400000000001UL;
+    q[1] = 0xEEE;
+    q[2] = 0x30000;
+    q[3] = 0x47;
+    q[4] = 0x100000261UL;
+    q[5] = 0x14;
+    q[6] = ((long)FA->fbp0 << 5) | ((unsigned long)((FA->display_width >> 6) & 0x3F) << 14) |
+           ((long)FA->psm << 20) | 0xEA8000000UL;
+    q[7] = 6;
+    q[8] = 0x4400000000008010UL;
+    q[9] = 0x5353;
+    {
+        unsigned long *p = q + 10;
+        int i;
+        for (i = 0; i < 16; i++) {
+            *p++ = i * FA->display_width;
+            *p++ = (i * 0x200 + 0x6FF8) | ((long)(0x7FF8 - FA->storage_height * 8) << 16);
+            *p++ = (i + 1) * FA->display_width | 0x1A000000;
+            *p++ = (i * 0x200 + 0x71F8) | ((long)(FA->storage_height * 8 + 0x7FF8) << 16);
+        }
+    }
+
+    q = (unsigned long *)D_00151A00;
+    q[0] = 0x408B400000000001UL;
+    q[1] = 0xEEEE;
+    q[2] = 0x30000;
+    q[3] = 0x47;
+    q[4] = 5;
+    q[5] = 8;
+    q[6] = 0x100000261UL;
+    q[7] = 0x14;
+    q[8] = ((long)FA->fbp0 << 5) | ((unsigned long)((FA->display_width >> 6) & 0x3F) << 14) |
+           ((long)FA->psm << 20) | 0xEA8000000UL;
+    q[9] = 6;
+    q[10] = 0x4400000000008010UL;
+    q[11] = 0x5353;
+    {
+        unsigned long *p = q + 12;
+        int i;
+        for (i = 0; i < 16; i++) {
+            *p++ = i * 0x200;
+            *p++ = (i * 0x200 + 0x7000) | ((long)(0x8000 - FA->display_height * 8) << 16);
+            *p++ = (i * 0x200 + 0x200) | ((long)FA->display_height << 20);
+            *p++ = (i * 0x200 + 0x7200) | ((long)(FA->display_height * 8 + 0x7FF0) << 16);
+        }
+    }
+
+    q = (unsigned long *)D_00152140;
+    q[0] = 0x1000000000000001UL;
+    q[1] = 0xE;
+    q[2] = 0x30000;
+    q[3] = 0x47;
+    q[4] = 0x2400000000008001UL;
+    q[5] = 0x10;
+    q[6] = 0x106;
+    q[7] = 0x80008000UL;
+    q[8] = 0x2400000000008010UL;
+    q[9] = 0x44;
+    {
+        unsigned long *p = q + 10;
+        int i;
+        for (i = 0; i < 16; i++) {
+            *p++ = (i * 0x200 + 0x6FF8) | ((long)(0x7FF8 - FA->display_height * 8) << 16);
+            *p++ = (i * 0x200 + 0x71F8) | ((long)(FA->display_height * 8 + 0x7FF8) << 16);
+        }
+    }
+
+    q = (unsigned long *)D_0013CD90;
+    {
+        unsigned long *p = q + 8;
+        int i;
+        for (i = 0; i < 16; i++) {
+            *p++ = (i * 0x200 + 0x6FF8) | ((long)(0x7FF8 - FA->display_height * 8) << 16);
+            *p++ = (i * 0x200 + 0x71F8) | ((long)(FA->display_height * 8 + 0x7FF8) << 16);
+        }
+    }
+
+    q = (unsigned long *)D_0013CED0;
+    {
+        unsigned long *p = q + 8;
+        int i;
+        for (i = 0; i < 16; i++) {
+            *p++ = (i * 0x200 + 0x6FF8) | ((long)(0x7FF8 - FA->storage_height * 8) << 16);
+            *p++ = (i * 0x200 + 0x71F8) | ((long)(FA->storage_height * 8 + 0x7FF8) << 16);
+        }
+    }
+}
 INCLUDE_ASM("asm/overlays", func_L00_0020079C);
 INCLUDE_ASM("asm/overlays", func_L00_002007A0);

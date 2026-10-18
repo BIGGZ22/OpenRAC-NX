@@ -26,6 +26,7 @@ from elftools.elf.elffile import ELFFile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from libgcc_units import FUNCTIONS as LIBGCC_FUNCTIONS, SEGMENT_SOURCES
+import srcnames
 
 BASEROM = "baserom/SCES_509.16"
 LINKED_ELF = "build-sn/rac1.elf"
@@ -116,7 +117,7 @@ def main() -> None:
     decompiled: list[str] = []
     for srcs in SEGMENT_SOURCES.values():
         for src in srcs:
-            text = Path(src).read_text(errors="replace")
+            text = srcnames.read_c(src, errors="replace")
             stubs = set(STUB.findall(text))
             for name in FUNC_DEF.findall(text):
                 if name not in stubs:

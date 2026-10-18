@@ -18,7 +18,7 @@ typedef struct VuChainRecord {
 } VuChainRecord;
 extern void func_001153FC(void *, int, int);
 /* Clears each record's three buffer groups and resets its scalar parameters. */
-void func_L01_002B8C00(VuChainRecord *records, int count) {
+void RipplePatchesInit(VuChainRecord *records, int count) {
     int i;
     for (i = 0; i < count; i++) {
         int j;
@@ -48,7 +48,7 @@ extern float D_L01_001CAF80[];
 extern int func_001FA898_r(float) __asm__("func_001FA898");
 
 /* Converts a float vector to fixed-point ints, relative to the grid origin, plus two scale shorts. */
-void func_L01_002B8E20(float *in, int *out) {
+void RipplePatch_ToFixedPoint(float *in, int *out) {
     out[0] = func_001FA898_r((in[0] + D_L01_001CAF80[2]) * 1024.0f);
     out[1] = func_001FA898_r((in[1] + D_L01_001CAF80[3]) * 1024.0f);
     out[2] = func_001FA898_r((in[2] - 1.0f) * 1024.0f);

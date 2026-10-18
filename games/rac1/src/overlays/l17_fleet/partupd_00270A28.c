@@ -10,7 +10,7 @@ extern int func_001FA898_r(float) __asm__("func_001FA898");
 extern unsigned char *D_L17_001B2D54;
 
 // Spawns a class 0x4F particle at a position with a direction, optionally relative to a parent.
-unsigned char *func_L17_00270A28(char *parent, void *pos, float *vec) {
+unsigned char *SpawnTrailParticle(char *parent, void *pos, float *vec) {
     int r = random_integer_below(5);
     unsigned char a = scale_ticks(r + 2);
     unsigned char b = random_integer_below(0xFF);
@@ -42,7 +42,7 @@ extern float func_001FA888(int);
 extern int func_001FA8A8(int, int, float);
 
 // Spawns a class 0x50 fading particle at a position, with colours depending on a mode and a fade step.
-unsigned char *func_L17_00270C98(char *pos, int mode, int step) {
+unsigned char *SpawnFadingParticle(char *pos, int mode, int step) {
     unsigned char *p;
     int n;
     if (mode)
@@ -62,8 +62,8 @@ unsigned char *func_L17_00270C98(char *pos, int mode, int step) {
                 *(float *)(p + 0xC) = 630000.0f;
                 *(short *)(p + 0xA) = d;
                 if (step != 0) {
-                    float a = func_001FA888((short)d - 1);
-                    *(int *)(p + 4) = FastTweenColor(0x603F1008, *(int *)(p + 4), a / func_001FA888(*(short *)(p + 0xA)));
+                    float a = IntToFloat((short)d - 1);
+                    *(int *)(p + 4) = FastTweenColor(0x603F1008, *(int *)(p + 4), a / IntToFloat(*(short *)(p + 0xA)));
                 }
             } else {
                 int d = 5 - step;
@@ -72,8 +72,8 @@ unsigned char *func_L17_00270C98(char *pos, int mode, int step) {
                 *(float *)(p + 0xC) = 420000.0f;
                 *(short *)(p + 0xA) = d;
                 if (step != 0) {
-                    float a = func_001FA888((short)d - 1);
-                    *(int *)(p + 4) = FastTweenColor(0x30FFFFFF, *(int *)(p + 4), a / func_001FA888(*(short *)(p + 0xA)));
+                    float a = IntToFloat((short)d - 1);
+                    *(int *)(p + 4) = FastTweenColor(0x30FFFFFF, *(int *)(p + 4), a / IntToFloat(*(short *)(p + 0xA)));
                 }
             }
             p[1] = 0;

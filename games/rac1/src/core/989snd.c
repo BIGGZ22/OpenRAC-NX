@@ -631,7 +631,38 @@ void func_0012EAE0(void) {
     func_0012DDC0();
 }
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_0012EB18); /* snd_SendCurrentBatch */
+extern s32 snd_batch_index_sb SDATA(D_0015EDC0);
+extern s32 *snd_batch_command_buffers_sb[2] SDATA(D_0015EDA0);
+extern s32 snd_batch_free_bytes_sb[2] SDATA(D_0015EDA8);
+extern void *snd_batch_return_buffers_sb[2] SDATA(D_0015EDB8);
+extern u8 sound_command_client_sb[] __asm__("D_0015ECC0");
+extern char snd_non_idle_error_string_sb[] __asm__("D_00153E20");
+extern void StoreObjectIndex_sb(void *, s32, s32 *) __asm__("func_0012E038");
+extern s32 SceSifCheckStatRpc_sb(void *) __asm__("func_0011B6B8");
+extern s32 printf_sb(const char *, ...) __asm__("func_00116078");
+extern void FlushCache_sb(s32) __asm__("func_00118D80");
+extern s32 sceSifCallRpc_sb(void *, u32, u32, void *, s32, void *, s32, void (*)(void *), void *) __asm__("func_0011B4C8");
+
+/* snd_SendCurrentBatch: store the reply size into the current batch,
+   wait until the sound RPC client is idle (complaining and flushing the
+   cache while it is not), send the batch (command 0x4D) with its return
+   buffer, then flip to the other batch and reset it.
+   Adapted from Lombyte (MIT): src/audio/rpc/snd_send_current_batch.c, snd_send_current_batch. */
+void func_0012EB18(void) {
+    s32 next;
+
+    StoreObjectIndex_sb(snd_batch_return_buffers_sb[snd_batch_index_sb], *snd_batch_command_buffers_sb[snd_batch_index_sb], snd_batch_command_buffers_sb[snd_batch_index_sb]);
+    while (SceSifCheckStatRpc_sb(sound_command_client_sb) != 0) {
+        printf_sb(snd_non_idle_error_string_sb);
+        FlushCache_sb(0);
+    }
+    sceSifCallRpc_sb(sound_command_client_sb, 0x4D, 1, snd_batch_command_buffers_sb[snd_batch_index_sb], 0x1000 - snd_batch_free_bytes_sb[snd_batch_index_sb],
+                  snd_batch_return_buffers_sb[snd_batch_index_sb], (*snd_batch_command_buffers_sb[snd_batch_index_sb] << 2) + 8, 0, 0);
+    next = snd_batch_index_sb != 1;
+    snd_batch_index_sb = next;
+    *snd_batch_command_buffers_sb[next] = 0;
+    snd_batch_free_bytes_sb[next] = 0xFFC;
+}
 
 /* gp-relative: declared small so -G2 places it in the small-data area,
    accessed as the word it really is. gp 0x166D00 - 0x7F3C = 0x15EDC4. */

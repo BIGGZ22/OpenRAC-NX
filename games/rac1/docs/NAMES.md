@@ -14,12 +14,14 @@ Readable names sit on top, as macros:
 | `include/names.h` | generated from the table: `#define FadeToBlack func_001F4E08`, for every name not a candidate; included by `common.h` |
 | `tools/names.py` | `build` (sources to table), `header` (table to names.h), `apply` (bodies use the names), `check`, and lookup: `python3 tools/names.py func_001F4E08` or `... FadeToBlack` |
 
-C writes the readable name inside function bodies and the address name
-everywhere else (declarations, definitions, `__asm__` labels, comments that
-cite a symbol). The preprocessor turns one into the other, so the objects
-are byte for byte the same either way: the change that introduced this
-was verified by hashing every compiler output and `rac1.elf` before and
-after. `tools/dossier.py` shows a function's name in its `CONTEXT.md`.
+C writes the readable name in function definitions and inside function
+bodies, and the address name everywhere else (declarations and prototypes,
+`__asm__` labels, `_r` definitions, comments that cite a symbol). The
+preprocessor turns one into the other, so the objects are byte for byte
+the same either way. Tools that find definitions by address read source
+through `tools/srcnames.py`, which maps readable names back.
+`tools/names.py apply-defs` renames definitions, `apply` renames uses in
+bodies. `tools/dossier.py` shows a function's name in its `CONTEXT.md`.
 
 Core/SDK/libc functions (`src/core`) are in the table but not in the
 header: their names (`memcpy`, `sceGsSync`, `rand` ...) are the libraries'
@@ -36,6 +38,16 @@ own, and a macro for them would shadow the real library spelling.
 When sources disagree, the best tier wins, then the source order above;
 the other names are kept in the `alternatives` column. A name is given to
 one symbol only.
+
+## Local names
+
+`config/names_local.tsv` holds names this project gives from reading the
+code (`symbol`, `name`, `evidence`, optional `override`). `tools/names.py
+local` merges it into `names.tsv` (and `build` applies it too): a local name
+fills a symbol with no name or only a candidate, as tier descriptive;
+`override` replaces a wrong recovered/descriptive name, keeping the old one
+in the alternatives. After `local`, run `header`, then `apply-defs` and
+`apply`.
 
 ## Sources (all RaC1)
 
@@ -76,6 +88,7 @@ one symbol only.
 NTSC=... LOMBYTE=... RERAC=... python3 tools/names.py build
 python3 tools/names.py header
 python3 tools/names.py apply      # new C that still spells address names
+python3 tools/names.py apply-defs # definitions by their readable names
 python3 tools/names.py check
 ```
 

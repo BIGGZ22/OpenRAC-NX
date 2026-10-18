@@ -89,7 +89,7 @@ extern void *D_L00_001B2200_2697A0[] __asm__("D_L00_001B2200");
 /* Registers the particle-type callbacks in the 81-entry table D_L00_001B2200. Entries 7, 17 and 63 are the
  * identical copies at 0x26B2B8 (of func_L00_0026AB10), 0x26D268 (an empty function, func_001E9768's code) and
  * 0x274750 (of func_L00_0026FEE8), named by their own addresses as retail stores them. */
-void func_L00_002697A0(void) {
+void RegisterPartTypes(void) {
     D_L00_001B2200_2697A0[0] = func_L00_00269BE8_2697A0;
     D_L00_001B2200_2697A0[1] = func_L00_00269E88_2697A0;
     D_L00_001B2200_2697A0[2] = func_L00_0026A130_2697A0;
@@ -193,7 +193,7 @@ extern f32 func_L00_002644E0(Vec4 *);
 extern void func_L00_002688A8_69BE8(FallingParticle *) __asm__("func_L00_002688A8");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/effects/00268900.c, FUN_L00_00268d48. */
-void func_L00_00269BE8(FallingParticle *p)
+void PartType00Update(FallingParticle *p)
 {
     Vec4 step;
     Vec4 tmp1;
@@ -215,11 +215,11 @@ void func_L00_00269BE8(FallingParticle *p)
     if (p->unk0A != 2) {
         if (cell_x != (s32)p->probe.f[0] || cell_y != (s32)p->probe.f[1]) {
             tmp1.q = p->probe.q;
-            if (func_L00_002644E0(&tmp1) < D_L00_00160320) {
+            if (SampleHeightMap(&tmp1) < D_L00_00160320) {
                 ground = D_L00_00160320;
             } else {
                 tmp2.q = p->probe.q;
-                ground = func_L00_002644E0(&tmp2);
+                ground = SampleHeightMap(&tmp2);
             }
             if (p->probe.f[2] < ground) {
                 /* shared exit; retail has one call site for all kill paths */
@@ -238,7 +238,7 @@ extern int func_001F9850(int);
 extern unsigned char *D_L00_001B2404;
 
 /* spawns a type-1 particle at a position, fading with alpha a1 */
-void func_L00_00269DB0(char *pos, int a1) {
+void PartType01Spawn(char *pos, int a1) {
     unsigned char *p = func_00218928(1);
     if (p != 0) {
         *(float *)(pos + 8) = *(float *)(pos + 8) + 0.1f;
@@ -257,7 +257,7 @@ void func_L00_00269DB0(char *pos, int a1) {
 extern int func_001F9938(void *);
 extern void func_L00_002688A8(void *);
 
-void func_L00_00269E88(char *m) {
+void PartType01Update(char *m) {
     int t = *(short *)(m + 0xA) * *(int *)(m + 0x20) / scale_ticks(0x1B);
     int a;
     *(int *)(m + 4) = (*(int *)(m + 4) & 0xFFFFFF) | (t << 24);

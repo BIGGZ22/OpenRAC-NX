@@ -6,7 +6,7 @@ extern int D_L02_0015F04C MACRO_ADDR;
 extern int D_L02_00169670[];
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/camera/001fc008.c, FUN_L02_001fc008. */
-void func_L02_001FC308(int x) {
+void RegisterUniqueCallback(int x) {
     int i;
 
     if (D_L02_0015F04C < 16) {

@@ -125,7 +125,7 @@ extern void func_00116B00(void *, void *, int);
 /* Builds a 13-byte name/version stamp in D_0013D2D0 from the record's
    region byte (arg0[0x12]) and the record's date/version fields, then
    copies that stamp into the six on-disk name buffers. */
-void func_00209A60(void *arg0) {
+void MemCard_BuildNameStamp(void *arg0) {
     unsigned char *a = (unsigned char *)arg0;
     unsigned char region = a[0x12];
     int i;
@@ -162,7 +162,7 @@ extern int D_0013D390_i[] __asm__("D_0013D390");
 /* The comparison is bound to a local before the shift:
    `(a < b) << 1` folds into `a < b ? 2 : 0` (li/slt/movn), not retail's
    slti/sll. */
-int func_00209BB8(void) {
+int MemCard_CheckFreeSpace(void) {
     int type, free, format, cmd, result;
 
     result = func_00124068(D_0013D390_i[0], D_0013D390_i[1], &type, &free, &format);
@@ -197,7 +197,7 @@ extern char D_001E8500[];
    blobs are read back in the same order they were written. The read
    cursor is the parameter, which retail keeps in $s2. */
 /* memcard_RestoreGame */
-void func_00209CE8(int arg0) {
+void memcard_RestoreGame(int arg0) {
     char *p = (char *)arg0;
     int a;
     int b;
@@ -237,15 +237,15 @@ extern int D_0015EE84_m __asm__("D_0015EE84") MACRO_ADDR;
 extern int func_002176C8_i(int, int, int) __asm__("func_002176C8");
 
 /* func_002176C8 returns int and takes three arguments (stream.c). */
-void func_00209DC0(void) {
+void RestoreGameFromStream(void) {
     int a;
     int b;
     int s0;
     int s1;
     int s2;
 
-    func_001FDF10(D_00137C80[5] << 11, &a, &b);
-    func_00217748(1);
+    GetTailBufferPair(D_00137C80[5] << 11, &a, &b);
+    UpdateAudioStreamUntilIdle(1);
     func_002176C8_i(a, D_00137C80[4], D_00137C80[5]);
     s2 = D_0015EEF0;
     s1 = D_0015EEEC;
@@ -358,7 +358,7 @@ extern s32 mc_call_00123D48(s32 fd, void *buf, s32 size) __asm__("func_00123D48"
 extern s32 mc_call_00116248(char *str, const char *format, ...) __asm__("func_00116248");
 extern char *mc_call_001166FC(char *, const char *) __asm__("func_001166FC");
 
-void func_00209E68(void) {
+void MemCard_UpdateState(void) {
     union {
         char name[0x40];
         struct {
@@ -1388,7 +1388,7 @@ extern int func_0020BBC8(void *dst, int i, int *table);
    each call returning how far to advance. The write cursor is the
    parameter itself -- retail keeps both in $s2. */
 /* memcard_MakeWholeSave */
-void func_0020BA00(char *out) {
+void memcard_MakeWholeSave(char *out) {
     int i;
 
     *(int *)out = memcard_GetDataSize(gGameSaveData);
@@ -1411,14 +1411,14 @@ extern int func_001E9730();
 extern char D_001E8690[];
 
 /* memcard_Init */
-void func_0020BAA8(void) {
+void memcard_Init(void) {
     if (func_001236F0()) {
         STUB_printf(D_001E8690);
     }
 }
 
 /* memcard_GetDataSize */
-int func_0020BAD8(int *p) {
+int memcard_GetDataSize(int *p) {
     int n = 8;
     while (p[0] != 0) {
         n += 8;
@@ -1432,7 +1432,7 @@ int func_0020BAD8(int *p) {
 /* memcard_Checksum: 0 for more than 0x1800 bytes, else a 16-bit
    shift-register checksum (polynomial 0x1F45). Only the low half of
    the 0xEDB88320 seed (the CRC-32 polynomial) reaches the result. */
-int func_0020BB10(void *data, int len) {
+int memcard_Checksum(void *data, int len) {
     unsigned char *p = data;
     unsigned char *end;
     int crc;
@@ -1459,7 +1459,7 @@ int func_0020BB10(void *data, int len) {
 /* memcard_TestChecksum. `len` is read before the test: retail's load sits
    in the beqz slot, and a load that may trap is never taken from the
    fall-through. */
-int func_0020BB88(char *buf) {
+int memcard_TestChecksum(char *buf) {
     int *p = (int *)buf;
     int len = p[0];
     int sum = p[1];
@@ -1506,7 +1506,7 @@ struct SaveHeader {
 /* memcard_PrepData: pack the save blocks (id, size, data, 4-aligned) after
    an 8-byte header, end with an id -1 record, checksum it. Adapted from
    Lombyte (MIT) for PAL. */
-int func_0020BBC8(void *dst, int slot, int *table) {
+int memcard_PrepData(void *dst, int slot, int *table) {
     struct SaveHeader *out = dst;
     struct SaveBlock *blk = table;
     unsigned char *p;
@@ -1560,7 +1560,7 @@ extern int func_0020BB88(char *); /* memcard_TestChecksum */
 /* memcard_RestoreInfo(char *, int, int). Advancing the buf parameter
    itself and copying the name with memcpy both matter for retail's
    registers; re-indexing the entry per store keeps its daddu copies. */
-void func_0020BCB0(char *buf, int slot, int idx) {
+void memcard_RestoreInfo(char *buf, int slot, int idx) {
     D_0013D390_s[slot].e[idx].valid = memcard_TestChecksum(buf) == 0;
     buf += 0x10;
     D_0013D390_s[slot].e[idx].a = *(int *)buf;
@@ -1605,7 +1605,7 @@ extern int func_001151B4(const void *, const void *, int); /* memcmp */
    and count blocks with no entry, a wrong total and entries left
    unrestored as errors, stored in the current card slot. Adapted from
    Lombyte (MIT) for PAL. */
-int func_0020BD70(void *src, int slot, int *table) {
+int memcard_RestoreData(void *src, int slot, int *table) {
     unsigned char *buf = src;
     struct RestoreEntry *tbl = (struct RestoreEntry *)table;
     struct RestoreEntry *e;
@@ -1702,13 +1702,13 @@ extern char D_001507D0[];
    D_0015EF98 is MACRO_ADDR (retail rebuilds its address at each use), the
    name field is reached from a `q + 0x30` base, and each block reads
    D_0013D390 through its own `char *` local (retail keeps only the %hi). */
-int func_0020BFC8(int slot, int flags) {
+int memcard_Save(int slot, int flags) {
     unsigned char saved;
 
     func_00121A80(D_0015EF98);
     func_0012D818(D_0015EF98);
-    func_00208FA0();
-    func_00208338(D_00141FC0 + (D_0015EE84_m << 11));
+    Map_CopyObjectPositions();
+    Menu_ReadSector(D_00141FC0 + (D_0015EE84_m << 11));
     {
         char *p = D_0013D390;
         int active = *(int *)(p + 0xC8);

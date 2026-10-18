@@ -136,7 +136,38 @@ extern void func_0012AAC8(void *, int);
 extern void func_00127378(int arg0);
 extern int func_0012AB60(void *arg0, int arg1);
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_0012AC80);
+/* {base id, field mask} per type; the mask selects the shift of value. */
+struct TypeEntry_12AC80 {
+    u64 id;
+    u64 type;
+};
+
+extern struct TypeEntry_12AC80 D_00132FD8_12AC80[] __asm__("D_00132FD8");
+
+/* _type2id (libmpeg): for a type below 10, the 64-bit stream key
+   D_00132FD8[type].id with value shifted into the field its mask selects
+   (0, 24 or 32 bits up); 0 for any other type.
+   Adapted from Lombyte (MIT): src/sdk/library/type2id.c, _type2id. */
+long func_0012AC80(int id, int value) {
+    u64 result = 0;
+    s32 shift = 0;
+
+    if ((u32)id < 10) {
+        switch (D_00132FD8_12AC80[id].type) {
+        case 0xFFFFFFFFFF:
+            shift = 0;
+            break;
+        case 0xFFFF000000:
+            shift = 24;
+            break;
+        case 0xFF00000000:
+            shift = 32;
+            break;
+        }
+        result = D_00132FD8_12AC80[id].id | ((u64)value << shift);
+    }
+    return result;
+}
 
 LINKER_REMNANT("asm/remnants/core_text", func_0012AD08);
 
@@ -1155,18 +1186,41 @@ void func_0012C268(void *arg0) {
 extern void func_00129E30(void *, int, int, int);
 extern char D_00153BB8[];
 
-void func_0012C278(void *arg0) {
-    Obj40 *s = (Obj40 *)arg0;
-    int n = s->unk118;
+/* _lastFrame (libmpeg): at the end of the stream, report an error if a
+   second field is still pending, else display the last reference picture
+   (whole frame when the picture structure is 3, else its two fields) as
+   frame count - 1; then clear the pending-field flag.
+   Adapted from Lombyte (MIT): src/sdk/library/_lastFrame.c, _lastFrame. */
+typedef struct {
+    u8 pad0[0x118];
+    s32 frame_count;         /* 0x118 */
+    u8 pad11C[4];
+    s32 second_field;        /* 0x120 */
+    u8 pad124[0x50];
+    s32 picture_structure;   /* 0x174 */
+    u8 pad178[0x40];
+    void *ref_images[10];    /* 0x1B8 */
+} MpegDecoder_12C278;
 
-    if (s->unk120 != 0) {
-        func_0012C468(s, D_00153BB8);
-    } else if (s->unk174 == 3) {
-        func_00129E30(s, (int)s->slots[0].unk04, n - 1, n - 1);
+extern s32 func_0012C468_lf(MpegDecoder_12C278 *, u8 *, s32) __asm__("func_0012C468");
+extern s32 func_00129E30_lf(MpegDecoder_12C278 *, void *, s32) __asm__("func_00129E30");
+extern s32 func_00129F40_lf(MpegDecoder_12C278 *, void *, void *, s32) __asm__("func_00129F40");
+extern u8 D_00153BB8_lf[] __asm__("D_00153BB8");
+
+void func_0012C278(void *arg0) {
+    MpegDecoder_12C278 *decoder = (MpegDecoder_12C278 *)arg0;
+    s32 count;
+    count = decoder->frame_count;
+    if (decoder->second_field != 0) {
+        func_0012C468_lf(decoder, D_00153BB8_lf, count);
     } else {
-        func_00129F40(s, (int)s->slots[1].unk04, (int)s->slots[2].unk04);
+        if (decoder->picture_structure == 3) {
+            func_00129E30_lf(decoder, decoder->ref_images[1], count - 1);
+        } else {
+            func_00129F40_lf(decoder, decoder->ref_images[5], decoder->ref_images[9], count - 1);
+        }
     }
-    s->unk120 = 0;
+    decoder->second_field = 0;
 }
 
 /*

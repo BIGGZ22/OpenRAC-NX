@@ -16,13 +16,13 @@ extern int func_00122598(int);
 
 /* startDisplay(int) -- waits until the vertical-sync field differs from the given one, then
  * marks the display active. */
-void func_0023C960(int field) {
+void startDisplay(int field) {
     while (func_00122598(0) == field) {
     }
     D_001612E0 = 1;
     D_001612E4 = 0;
 }
 /* endDisplay(void) -- clears the display-active flag. */
-void func_0023C9B0(void) {
+void endDisplay(void) {
     D_001612E0 = 0;
 }

@@ -1,4 +1,5 @@
 #include "common.h"
+#include "vector.h"
 #include "callees.h"
 #include "records.h"
 #include "structs.h"
@@ -64,10 +65,7 @@ ASM_FUNC("asm/handwritten/text", func_001F8B6C);
 ASM_FUNC("asm/handwritten/text", func_001F91B8);
 
 typedef struct {
-    f32 x, y, z, w;
-} Vec4;
-typedef struct {
-    Vec4 position;
+    Vec4f position;
     s16 active_count;
     s16 alpha;
     u8 pad14[4];
@@ -96,12 +94,12 @@ extern BillboardViewContext D_0018CE00;
 extern BillboardRecord D_0018EE00[];
 extern void func_001F99B0(void *, s32, s32);
 extern s64 func_001F4868_F9478(s32) __asm__("func_001F4868");
-extern s32 func_001F9B20(Vec4 *);
-extern void func_001F9BF0(Vec4 *, void *, void *);
-extern void func_001F9C30(Vec4 *, Vec4 *, f32);
-extern void func_001F9C60(Vec4 *, Vec4 *, void *);
-extern f32 func_001F9CB8(Vec4 *);
-extern void func_001F9EE8(Vec4 *, Vec4 *, void *);
+extern s32 func_001F9B20(Vec4f *);
+extern void func_001F9BF0(Vec4f *, void *, void *);
+extern void func_001F9C30(Vec4f *, Vec4f *, f32);
+extern void func_001F9C60(Vec4f *, Vec4f *, void *);
+extern f32 func_001F9CB8(Vec4f *);
+extern void func_001F9EE8(Vec4f *, Vec4f *, void *);
 extern f32 func_001F9F90(f32);
 extern f32 func_001F9FA8(f32);
 extern f32 func_001FA888(s32);
@@ -109,9 +107,9 @@ extern s32 func_001FA898(f32);
 extern void func_00234C98(s32, u64);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/append_billboard_batch.c, append_billboard_batch. */
-void func_001F9478(void) {
-    Vec4 projected_position;
-    Vec4 clip_position;
+void DrawBillboardBatch(void) {
+    Vec4f projected_position;
+    Vec4f clip_position;
     f32 distance;
     f32 radius;
     s32 record_index;
@@ -158,7 +156,7 @@ void func_001F9478(void) {
         } else if (distance < 2.0f) {
             distance = 2.0f;
         }
-        radius = record->radius_scale * (func_001FA888(record->alpha + 16) * 0.015625f) *
+        radius = record->radius_scale * (IntToFloat(record->alpha + 16) * 0.015625f) *
                  ((24.0f - distance) * 16.0f);
         sine_offset = truncate_float_to_s32(radius * FastSin(record->angle));
         cosine_offset = truncate_float_to_s32(radius * FastCos(record->angle));

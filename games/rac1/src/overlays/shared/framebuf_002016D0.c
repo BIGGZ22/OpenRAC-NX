@@ -5,6 +5,6 @@
 extern int D_L00_00173154;
 
 // Returns the value of a global data pointer
-int func_L00_002016D0(void) {
+int GetDebugOverlayMode(void) {
     return D_L00_00173154;
 }

@@ -31,7 +31,7 @@ extern void project_to_screen(f32 *, void *) __asm__("func_001F2418");
 extern s64 get_effect_texture(s32) __asm__("func_001F4868");
 extern void draw_textured_quad(s32, s32, s32, s32, s32, s32, s32, s32, s64, s64) __asm__("func_001F5800");
 /* Lens flare: projects the flare moby to the screen and fills the per-element alpha, texture, colour, distance and scale tables. Adapted from Lombyte (MIT) for PAL: rendering/effects/fun_001edc50.c, FUN_001edc50. */
-void func_001EDFF8(void) {
+void LensFlareUpdate(void) {
     f32 scr[4];
     f32 ctr[4];
     f32 d[4];
@@ -125,7 +125,7 @@ extern void func_001F5E60(float, float, float, float, float, int, int, int, int,
  * array, not scalars: retail spills them to fixed stack slots (0x0, 0x4,
  * 0x10, 0x14 with an 8-byte gap) instead of extra saved float registers.
  */
-void func_001EE3B0(void *arg0, float arg1, float arg2)
+void DrawFlareSprites(void *arg0, float arg1, float arg2)
 {
     float forty = 40.0f;
     char *p = (char *)arg0;
@@ -214,7 +214,7 @@ extern void func_001EE3B0(void *, float, float);
    at its projected screen position (func_001F2418, then relative to the
    D_0013E600 offset in 1/16 units) or, for off-screen ones, at the
    screen centre; then empties the queue. Nothing in level 0x72. */
-void func_001EE6E0(void) {
+void DrawQueuedGlows(void) {
     float centre[4];
     float pos[4];
     int i;
@@ -223,8 +223,8 @@ void func_001EE6E0(void) {
         D_00189400.count = 0;
     }
     if (D_00189400.count != 0) {
-        centre[0] = func_001FA888(D_0013E600[2]);
-        centre[1] = func_001FA888(D_0013E600[3]);
+        centre[0] = IntToFloat(D_0013E600[2]);
+        centre[1] = IntToFloat(D_0013E600[3]);
         for (i = 0; i < D_00189400.count; i++) {
             GlowSlot *s = &D_00189400.slot[i];
 
@@ -233,12 +233,12 @@ void func_001EE6E0(void) {
             }
             if (s->onScreen != 0) {
                 projectWorldPoint(pos, s);
-                pos[0] = (pos[0] - func_001FA888(D_0013E600[4])) * 0.0625f;
-                pos[1] = (pos[1] - func_001FA888(D_0013E600[5])) * 0.0625f;
+                pos[0] = (pos[0] - IntToFloat(D_0013E600[4])) * 0.0625f;
+                pos[1] = (pos[1] - IntToFloat(D_0013E600[5])) * 0.0625f;
             } else {
                 qcopy(pos, centre);
             }
-            func_001EE3B0(s, pos[0], pos[1]);
+            DrawFlareSprites(s, pos[0], pos[1]);
         }
         D_00189400.count = 0;
     }
@@ -273,7 +273,7 @@ extern s32 func_001FA898(f32);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/update_camera_environment_from_regions.c,
  * update_camera_environment_from_regions; the fog preset written as the struct src/game/draw.c reads. */
-void func_001EE858(void *position) {
+void Camera_UpdateEnvironment(void *position) {
     f32 blend;
     s32 region_index;
     struct CameraEnvironmentRegion *region;

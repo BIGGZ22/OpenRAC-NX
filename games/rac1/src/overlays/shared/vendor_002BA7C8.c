@@ -29,26 +29,26 @@ extern void func_L00_002BBDE8(void *, int, int, int, float, float, float);
 extern void func_L00_002BC3B8(void *);
 
 /* Scrolls the texture offset and refreshes the five scrolling-strip records of a moby. */
-void func_L00_002BBC78(char *m) {
+void UpdateScrollingStrips(char *m) {
     char *p = *(char **)(m + 0x78);
     float t = *(float *)&D_L00_001616BC - *(float *)&D_L00_001616C0 * D_0015EE60;
     *(float *)&D_L00_001616BC = t;
     if (t <= -8.0f) {
         *(float *)&D_L00_001616BC = t + 8.0f;
     }
-    func_L00_002BBDE8(D_L00_001DB8C0, *(int *)&D_L00_001616A4, *(int *)&D_L00_001616AC, *(short *)(p + 0x3E),
+    DrawScrollingRibbon(D_L00_001DB8C0, *(int *)&D_L00_001616A4, *(int *)&D_L00_001616AC, *(short *)(p + 0x3E),
         *(float *)&D_L00_001616CC, *(float *)&D_L00_001616D0, *(float *)&D_L00_00161700);
-    func_L00_002BBDE8(D_L00_001DB8C0 + 0x140, *(int *)&D_L00_001616D4, *(int *)&D_L00_001616D8, *(short *)(p + 0x3E),
+    DrawScrollingRibbon(D_L00_001DB8C0 + 0x140, *(int *)&D_L00_001616D4, *(int *)&D_L00_001616D8, *(short *)(p + 0x3E),
         *(float *)&D_L00_001616DC, *(float *)&D_L00_001616E0, *(float *)&D_L00_00161704);
-    func_L00_002BBDE8(D_L00_001DBD20, *(short *)&D_L00_00161730, *(short *)&D_L00_00161730, 5,
+    DrawScrollingRibbon(D_L00_001DBD20, *(short *)&D_L00_00161730, *(short *)&D_L00_00161730, 5,
         *(float *)&D_L00_001616DC, *(float *)&D_L00_001616E0, 0.2f);
-    func_L00_002BBDE8(D_L00_001DBD20 + 0x50, *(short *)&D_L00_00161732, *(short *)&D_L00_00161732, 5,
+    DrawScrollingRibbon(D_L00_001DBD20 + 0x50, *(short *)&D_L00_00161732, *(short *)&D_L00_00161732, 5,
         *(float *)&D_L00_001616DC, *(float *)&D_L00_001616E0, 0.2f);
-    func_L00_002BBDE8(D_L00_001DBD20 + 0xA0, *(short *)&D_L00_00161734, *(short *)&D_L00_00161734, 5,
+    DrawScrollingRibbon(D_L00_001DBD20 + 0xA0, *(short *)&D_L00_00161734, *(short *)&D_L00_00161734, 5,
         *(float *)&D_L00_001616DC, *(float *)&D_L00_001616E0, 0.2f);
-    func_L00_002BBDE8(D_L00_001DBD20 + 0xF0, *(short *)&D_L00_00161736, *(short *)&D_L00_00161736, 5,
+    DrawScrollingRibbon(D_L00_001DBD20 + 0xF0, *(short *)&D_L00_00161736, *(short *)&D_L00_00161736, 5,
         *(float *)&D_L00_001616DC, *(float *)&D_L00_001616E0, 0.2f);
-    func_L00_002BC3B8(m);
+    DrawMobyGlowQuads(m);
 }
 extern int func_001F4868(int);
 extern void func_001F9BF0(void *, void *, void *);
@@ -72,7 +72,7 @@ typedef struct {
 } RT_2BBDE8;
 
 // Draws a ribbon of quads along a polyline, in two passes with edge colouring and a scrolled texture (colours from globals).
-void func_L00_002BBDE8(void *m, int a, int b, int n, float sx, float sy, float sz) {
+void DrawScrollingRibbon(void *m, int a, int b, int n, float sx, float sy, float sz) {
     RW_2BBDE8 q[4];
     RT_2BBDE8 t;
     RW_2BBDE8 q2[4];
@@ -203,7 +203,7 @@ extern short D_L00_0016171C;
 extern char D_0013E633[];
 
 // Builds and draws two layered glow quads around a moby. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002b94d0.c, FUN_L00_002bb0b0.
-void func_L00_002BC3B8(void *mv) {
+void DrawMobyGlowQuads(void *mv) {
     Q_2bb0b0 quad;
     V_2bb0b0 mat[4];
     V_2bb0b0 *pos = *(V_2bb0b0 **)((char *)mv + 0x78);
@@ -255,7 +255,7 @@ extern char *func_0020D348(int);
 extern void func_001F9BC0(void *);
 extern void func_0020EEE8(void *);
 extern void func_L00_00251E30(void *);
-char *func_L00_002BC668(char *src) {
+char *SpawnMoby179(char *src) {
     char *m = CreateMoby(0xB3);
     if (m != 0) {
         char *p = *(char **)(m + 0x78);
@@ -284,7 +284,7 @@ extern float func_L00_0025F368(float);
 extern float func_001FA748(float, float);
 
 /* Per-frame update of a moby that follows its parent's flag and spins. */
-void func_L00_002BC708(char *m) {
+void Moby179Update(char *m) {
     char *p = *(char **)(m + 0x78);
     char *par = *(char **)(p + 8);
     char *g;
@@ -314,9 +314,9 @@ void func_L00_002BC708(char *m) {
         d = 0xF40;
         *(int *)(p + 4) = v + 0xF40;
     }
-    func_L00_0024FFE8(*(unsigned char **)(m + 0x24), 0, d);
+    OffsetShortPairTables(*(unsigned char **)(m + 0x24), 0, d);
     *(float *)(m + 0x2C) = *(float *)(*(char **)(m + 0x24) + 0x24) * *(float *)(p + 0xC) * random_float_between(0.5f, 1.0f);
-    *(float *)(m + 0x44) = FastAddRots(*(float *)(m + 0x44), func_L00_0025F368(*(float *)(p + 0xC)));
+    *(float *)(m + 0x44) = FastAddRots(*(float *)(m + 0x44), WrapAngle(*(float *)(p + 0xC)));
     func_0020EEE8(m);
 }
 extern short D_L00_001DC1C0[];
@@ -343,7 +343,7 @@ extern void func_001F49B0(void *, void *);
 extern void func_L00_002BCE08(int);
 
 // Per-frame update of a moby that scatters ten fading sparkle quads around the hero.
-void func_L00_002BC860(char *m) {
+void Moby180Update(char *m) {
     int flag = 0;
     float vec0[4] __attribute__((aligned(16)));
     float vec1[4] __attribute__((aligned(16)));
@@ -372,17 +372,17 @@ void func_L00_002BC860(char *m) {
         break;
     case 2:
         if (*(int *)(g + 0x2084) == 0x20) {
-            float f = func_0020D830(m);
+            float f = MobyGetFrameValue(m);
             if (6.0f <= f) {
                 flag = 1;
                 if (func_001F9908_r(&D_L00_0016179C) == 0) {
-                    float a = func_001FA888(D_L00_0016179C);
-                    a = a / func_001FA888(scale_ticks(*(int *)&D_L00_00161778));
+                    float a = IntToFloat(D_L00_0016179C);
+                    a = a / IntToFloat(scale_ticks(*(int *)&D_L00_00161778));
                     D_L00_001617A4 = 1.0f - a;
                 } else if (12.0f <= f) {
                     if (func_001F9908_r(&D_L00_001617A0) == 0) {
-                        float a = func_001FA888(D_L00_001617A0);
-                        a = a / func_001FA888(scale_ticks(*(int *)&D_L00_0016177C));
+                        float a = IntToFloat(D_L00_001617A0);
+                        a = a / IntToFloat(scale_ticks(*(int *)&D_L00_0016177C));
                         D_L00_001617A4 = a;
                     } else {
                         D_L00_001617A4 = 0.0f;
@@ -394,7 +394,7 @@ void func_L00_002BC860(char *m) {
         } else {
             D_L00_0016179C = scale_ticks(*(int *)&D_L00_00161778);
             D_L00_001617A0 = scale_ticks(*(int *)&D_L00_0016177C);
-            func_00213DE0(m, 1, 0, scale_ticks(12));
+            MobyBlendAnimation(m, 1, 0, scale_ticks(12));
         }
     }
     FastVecScale(vec0, m + 0xD0, -0.5f);
@@ -416,7 +416,7 @@ void func_L00_002BC860(char *m) {
                 int k;
                 D_L00_001DC1C0[i] = 2;
                 D_L00_001DC1D8[i] = 0x40;
-                func_002141A8(vec1, *(float *)&D_L00_00161774, *(float *)&D_L00_00161774);
+                RandomSphericalOffset(vec1, *(float *)&D_L00_00161774, *(float *)&D_L00_00161774);
                 qcopy(D_L00_001DBEA0 + i * 0x50, vec0);
                 n = i + 1;
                 sign = 1.0f;
@@ -450,7 +450,7 @@ void func_L00_002BC860(char *m) {
             else D_L00_001DC1D8[i] = 0;
         }
     }
-    AddDrawCallback(func_L00_002BCE08, m);
+    AddDrawCallback(DrawRibbonSlots, m);
 }
 extern float func_001FA888(int);
 extern int func_001FA898_r(float) __asm__("func_001FA898");
@@ -461,15 +461,15 @@ extern void func_L00_002BCED0(char *, int, int, int, float, float, float);
 extern void func_L00_002BD4A8(int);
 
 // Spawns an effect for each active slot of a ten-entry table, then runs the follow-up.
-void func_L00_002BCE08(int arg) {
+void DrawRibbonSlots(int arg) {
     int i;
     for (i = 9; i >= 0; i--) {
         if (D_L00_001DC1C0[9 - i] != 0) {
-            int r = func_001FA898_r(func_001FA888(D_L00_001DC1D8[9 - i]) * D_L00_001617A4_m);
-            func_L00_002BCED0(D_L00_001DBEA0 + (9 - i) * 0x50, r, r, 5, *(float *)&D_L00_00161760, *(float *)&D_L00_00161764, 0.2f);
+            int r = func_001FA898_r(IntToFloat(D_L00_001DC1D8[9 - i]) * D_L00_001617A4_m);
+            DrawRibbonEdgeColored(D_L00_001DBEA0 + (9 - i) * 0x50, r, r, 5, *(float *)&D_L00_00161760, *(float *)&D_L00_00161764, 0.2f);
         }
     }
-    func_L00_002BD4A8(arg);
+    DrawBillboardQuad(arg);
 }
 extern void func_001F9BF0(void *, void *, void *);
 extern void func_001F9CA0(void *, void *, void *);
@@ -489,7 +489,7 @@ typedef struct {
 } RT;
 
 // Draws a ribbon of quads along a polyline, in two passes with edge colouring.
-void func_L00_002BCED0(char *m, int a, int b, int n, float sx, float sy, float sz) {
+void DrawRibbonEdgeColored(char *m, int a, int b, int n, float sx, float sy, float sz) {
     RW q[4];
     RT t;
     RW q2[4];
@@ -614,7 +614,7 @@ typedef struct {
 } T;
 
 /* builds a four-vector billboard quad around a point and runs the draw packet */
-void func_L00_002BD4A8(int arg) {
+void DrawBillboardQuad(int arg) {
     char *m = (char *)arg;
     W q[4];
     T t;
@@ -642,7 +642,7 @@ void func_L00_002BD4A8(int arg) {
     } else {
         col = *(int *)&D_L00_00161790;
     }
-    r = func_001FA898_r(func_001FA888(col >> 24) * D_L00_001617A4_m);
+    r = func_001FA898_r(IntToFloat(col >> 24) * D_L00_001617A4_m);
     col = (col & 0xFFFFFF) | (r << 24);
     cc = c;
     t.c[3] = col;
@@ -717,7 +717,7 @@ char *func_L00_002BD6B8(char *self, float *position, float *heading, float *pitc
             *(short *)(candidate + 0xA6) == 0x452)
             continue;
         qcopy(target, candidate + 0x10);
-        data = (char *)func_L00_0025D390(candidate);
+        data = (char *)GetFlaggedPvarWord(candidate);
         if (!data)
             continue;
         target[2] += *(float *)(data + 0x10);
@@ -727,16 +727,16 @@ char *func_L00_002BD6B8(char *self, float *position, float *heading, float *pitc
         angle = func_L00_001FF860(target[0] - position[0], target[1] - position[1]);
         distance = func_001F9D48(position, target);
         elevation = func_L00_001FF860(distance, target[2] - position[2]);
-        headingError = func_001FA850(*heading, angle);
-        distance = func_001F9D10(position, target);
+        headingError = FastDiffRots(*heading, angle);
+        distance = FastVecDist(position, target);
         if (distance < 2.5f) {
             float toward;
             char *g1 = D_0013E633 + 0xE1D;
             moby = *(char **)(g1 + 0x2080);
             toward = func_L00_001FF860(*(float *)(candidate + 0x10) - *(float *)(g1 + 0x80),
                                    *(float *)(candidate + 0x14) - *(float *)(g1 + 0x84));
-            if (func_001FA850(*(float *)(moby + 0x48), toward) < 1.0471976f &&
-                func_001F9B88(position[2] - target[2]) < 2.0f &&
+            if (FastDiffRots(*(float *)(moby + 0x48), toward) < 1.0471976f &&
+                FastAbsF(position[2] - target[2]) < 2.0f &&
                 !func_L00_001EFFF0((Vec4f *)position, (Vec4f *)target, 6, *(char **)(g1 + 0x2080), 0)) {
                 res[0] = (int)candidate;
                 *pitch = -elevation;
@@ -748,16 +748,16 @@ char *func_L00_002BD6B8(char *self, float *position, float *heading, float *pitc
             continue;
         {
             char *g2 = D_0013E633 + 0xE1D;
-            func_00215C00(offset, distance, *heading, *pitch + *(float *)(g2 + 0x2E4) * 0.5f);
+            BuildSphericalOffset(offset, distance, *heading, *pitch + *(float *)(g2 + 0x2E4) * 0.5f);
         }
-        func_001F9BD8(offset, offset, position);
-        apparentAngle = func_001F9FC0(func_001F9D10(offset, target) / (distance + distance));
+        FastVecAdd(offset, offset, position);
+        apparentAngle = FastArcSin(FastVecDist(offset, target) / (distance + distance));
         apparentAngle += apparentAngle;
         if (*(float *)&D_L00_001617A8 * 0.017453292f < apparentAngle) {
-            data = (char *)func_L00_0025D390(candidate);
+            data = (char *)GetFlaggedPvarWord(candidate);
             if (data) {
-                radius = func_001FA888(*(unsigned char *)(data + 10)) * 0.125f;
-                reduction = func_001F9FC0(radius / distance);
+                radius = IntToFloat(*(unsigned char *)(data + 10)) * 0.125f;
+                reduction = FastArcSin(radius / distance);
                 if (radius < distance) {
                     apparentAngle -= reduction;
                     if (apparentAngle < 0.0f)
@@ -876,7 +876,7 @@ extern void func_L00_002377E0_2BDAF0(void) __asm__("func_L00_002377E0");
 
 // Morphoray (moby class 185) update: aims the hero's morph-o-ray, transforms what it hits over time,
 // and keeps its glow light and sound going while the gadget is held.
-void func_L00_002BDAF0(Moby *m) {
+void MorphorayUpdate(Moby *m) {
     Vq_2BDAF0 v0;
     Vq_2BDAF0 v[3];
     Vq_2BDAF0 mt[4];
@@ -935,10 +935,10 @@ void func_L00_002BDAF0(Moby *m) {
             v0.z = 1.0f;
             func_001F9EE8_2BDAF0(&v0, &v0, mt);
         } else if (((Hero *)D_0013F450_2BDAF0)->unk22C8 == 1) {
-            func_001F9C30_2BDAF0(&v0, &m->unkD0, -1.0f);
+            func_001F9C30_2BDAF0(&v0, &m->rot_row1, -1.0f);
         } else {
             v0.x = 1.0f;
-            func_001F9EC0_2BDAF0(&v0, &v0, ((Hero *)D_0013F450_2BDAF0)->unk640[0].f);
+            func_001F9EC0_2BDAF0(&v0, &v0, ((Hero *)D_0013F450_2BDAF0)->basis[0].f);
         }
         p->yaw = func_L00_001FF860_2BDAF0(v0.x, v0.y);
         p->pitch = func_L00_001FF860_2BDAF0(func_001F9CE8_2BDAF0(&v0), v0.z);
@@ -994,7 +994,7 @@ void func_L00_002BDAF0(Moby *m) {
         }
         if (D_L00_00161890_2BDAF0 >= 0) {
             D_L00_00161894_2BDAF0 = func_001F9850_2BDAF0(20);
-            func_L00_001FF4B0_2BDAF0(&v[0], &m->unkD0, -0.5f);
+            func_L00_001FF4B0_2BDAF0(&v[0], &m->rot_row1, -0.5f);
             func_001F9BD8_2BDAF0(&v[1], p, &v[0]);
             ((Light_2BDAF0 *)D_L00_001803C0_2BDAF0)[D_L00_00161890_2BDAF0].pos[0] = v[1].x;
             ((Light_2BDAF0 *)D_L00_001803C0_2BDAF0)[D_L00_00161890_2BDAF0].pos[1] = v[1].y;
@@ -1015,7 +1015,7 @@ void func_L00_002BDAF0(Moby *m) {
         D_L00_0016188C_2BDAF0 = 1;
         if (D_L00_00161890_2BDAF0 >= 0) {
             float f;
-            func_L00_001FF4B0_2BDAF0(&v0, &m->unkD0, -0.5f);
+            func_L00_001FF4B0_2BDAF0(&v0, &m->rot_row1, -0.5f);
             func_001F9BD8_2BDAF0(&v[0], p, &v0);
             ((Light_2BDAF0 *)D_L00_001803C0_2BDAF0)[D_L00_00161890_2BDAF0].pos[0] = v[0].x;
             ((Light_2BDAF0 *)D_L00_001803C0_2BDAF0)[D_L00_00161890_2BDAF0].pos[1] = v[0].y;
@@ -1135,7 +1135,7 @@ extern int func_001F9908_2BE3A8(int *) __asm__("func_001F9908");
 /* Tesla claw arc: bends the twelve-point beam toward the target, builds the two side rails and the ring of
  * twenty points around each node, queues the draw callback, sparks at the tip, and runs the three travelling
  * pulses along the beam. */
-void func_L00_002BE3A8(Moby *m) {
+void TeslaClawArcDraw(Moby *m) {
     Vec4A aim;
     Vec4A seg;
     Vec4A off;
@@ -1255,7 +1255,7 @@ void func_L00_002BE3A8(Moby *m) {
     func_001F9BF0_2BE3A8(&dir, &D_L00_001DC260_2BE3A8[1], &D_L00_001DC260_2BE3A8[0]);
     func_L00_001FF4B0_2BE3A8(&dir, &dir, D_L00_00161804_2BE3A8 * D_0015EE60_2BE3A8);
     if (func_002140B0_2BE3A8(2) == 0) {
-        func_L00_001FF4B0_2BE3A8(&side, &m->unkD0, D_L00_00161810_2BE3A8);
+        func_L00_001FF4B0_2BE3A8(&side, &m->rot_row1, D_L00_00161810_2BE3A8);
         func_001F9BD8_2BE3A8(&tmp, &D_L00_001DC260_2BE3A8[0], &side);
         {
             Tab_2BE3A8 cols;
@@ -1389,7 +1389,7 @@ void func_L00_001FD1D8(void *, void *, int);
 
 /* scrolls the two texture-offset accumulators and draws the 10x20 band of textured quads between the D_L00_001DC060/001DC1A0 rings, skipping back-facing ones.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b94d0.c, FUN_L00_002bdc50. */
-void func_L00_002BEF58(void *o) {
+void DrawTexturedBand(void *o) {
     Quad quad;
     Vec4 d1, d2, n, e;
     float y, a, b, t;
@@ -1400,7 +1400,7 @@ void func_L00_002BEF58(void *o) {
     func_L00_002BF380_BEF58(D_L00_001DC320, (*(int *)&D_L00_0016183C), (*(int *)&D_L00_00161840), 12, (*(float *)&D_L00_00161844), (*(float *)&D_L00_00161848), (*(float *)&D_L00_0016184C), (*(int *)&D_L00_00161854));
     func_L00_002BF380_BEF58(D_L00_001DC3E0, (*(int *)&D_L00_0016183C), (*(int *)&D_L00_00161840), 12, (*(float *)&D_L00_00161844), (*(float *)&D_L00_00161848), (*(float *)&D_L00_0016184C), (*(int *)&D_L00_00161858));
     func_L00_002BF958(o);
-    func_L00_002BFB98(o);
+    DrawMobyQuadTintedWhite(o);
     k = D_0013E635;
     c = k ? (*(int *)&D_L00_00161868) : (*(int *)&D_L00_00161864);
     quad.tex = func_001F4868_BEF58((*(int *)&D_L00_0016186C));
@@ -1475,7 +1475,7 @@ typedef struct {
 } RT_2BF380;
 
 // Draws a ribbon of quads along a polyline, in two passes with edge colouring and a scrolled texture.
-void func_L00_002BF380(P_2BF380 *m, int a, int b, float sx, float sy, float sz, int n, int col) {
+void DrawScrollingRibbonColored(P_2BF380 *m, int a, int b, float sx, float sy, float sz, int n, int col) {
     RW_2BF380 q[4];
     RT_2BF380 t;
     RW_2BF380 q2[4];
@@ -1602,7 +1602,7 @@ extern V_t D_L00_001DC260;
 extern V_t D_L00_001DC220[];
 
 // Draws a textured quad twice (first tinted, then white) from a moby's orientation. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002b94d0.c, FUN_L00_002be890.
-void func_L00_002BFB98(void *mv) {
+void DrawMobyQuadTintedWhite(void *mv) {
     char *m = mv;
     Q_t quad;
     V_t mat[4];
@@ -1660,7 +1660,7 @@ int func_L00_002BFDB8(char *a, int b, Vx *c) {
     float s;
     float t;
     int r;
-    s = func_001FA888((unsigned char)D_0013E633[1]) * 0.5f + 1.0f;
+    s = IntToFloat((unsigned char)D_0013E633[1]) * 0.5f + 1.0f;
     if (c != 0) {
         qcopy(&v, c);
     } else {
@@ -1676,7 +1676,7 @@ int func_L00_002BFDB8(char *a, int b, Vx *c) {
     return r;
 }
 extern char D_0013F450[];
-void func_L00_002BFE98(char *a) {
+void Hero_SetMotionBlock(char *a) {
     char *g = D_0013F450;
     *(float *)(g + 0x1ED0) = *(float *)(a + 0x40);
     *(float *)(g + 0x1ED4) = *(float *)(a + 0x44);
@@ -1684,7 +1684,7 @@ void func_L00_002BFE98(char *a) {
     *(int *)(g + 0x1F08) = *(int *)(a + 0x4C);
     *(float *)(g + 0x1EE4) = *(float *)(a + 0x5C);
 }
-void func_L00_002BFED0(char *a) {
+void Hero_GetMotionBlock(char *a) {
     char *g = D_0013F450;
     *(float *)(a + 0x40) = *(float *)(g + 0x1ED0);
     *(float *)(a + 0x44) = *(float *)(g + 0x1ED4);
@@ -1692,7 +1692,7 @@ void func_L00_002BFED0(char *a) {
     *(int *)(a + 0x4C) = *(int *)(g + 0x1F08);
     *(float *)(a + 0x5C) = *(float *)(g + 0x1EE4);
 }
-void func_L00_002BFF08(char *a) {
+void Hero_SetTargetBlock(char *a) {
     char *g = D_0013F450;
     *(float *)(g + 0x1F20) = *(float *)(a + 0x50);
     *(float *)(g + 0x1F24) = *(float *)(a + 0x54);
@@ -1701,7 +1701,7 @@ void func_L00_002BFF08(char *a) {
     *(float *)(g + 0x1F40) = *(float *)(a + 0x44);
     qcopy(g + 0x1F10, a);
 }
-void func_L00_002BFF50(char *a) {
+void Hero_GetTargetBlock(char *a) {
     char *g = D_0013F450;
     *(float *)(a + 0x50) = *(float *)(g + 0x1F20);
     *(float *)(a + 0x54) = *(float *)(g + 0x1F24);
@@ -1993,12 +1993,12 @@ extern void func_001F9C30(void *, void *, float);
 extern void func_001F9BD8(void *, void *, void *);
 
 /* Steps a vector by n repeated additions of the normalised difference. */
-void func_L00_002C0B18(char *a, char *b, int n) {
+void StepVectorToward(char *a, char *b, int n) {
     float d[4];
     float t[4];
     int i;
     FastVecSub(d, b, a);
-    FastVecScale(d, d, 1.0f / func_001FA888(n));
+    FastVecScale(d, d, 1.0f / IntToFloat(n));
     qcopy(t, a);
     for (i = 0; i < n; i++) {
         FastVecAdd(t, t, d);
@@ -2012,7 +2012,7 @@ extern float D_0015EE6C MACRO_ADDR;
 
 /* Updates a homing state block o from target m: turn rate, heading, and a speed clamped to seven times a global.
    Adapted from Lombyte (MIT) for PAL: src/overlays/shared/unclassified_002b94d0.c, FUN_L00_002bf8b0. */
-void func_L00_002C0BB8(unsigned char *m, unsigned char *o, void *src) {
+void UpdateHomingState(unsigned char *m, unsigned char *o, void *src) {
     float s, t, r, lim;
 #define F2BF(p, x) (*(float *)((p) + (x)))
     *(int *)(o + 0x30) = 0;
@@ -2023,7 +2023,7 @@ void func_L00_002C0BB8(unsigned char *m, unsigned char *o, void *src) {
     F2BF(o, 0x14) = t;
     if (F2BF(o, 0x20) < t) F2BF(o, 0x14) = F2BF(o, 0x20);
     F2BF(o, 0x18) = func_L00_001FF860(F2BF(o, 0) - F2BF(m, 0x10), F2BF(o, 4) - F2BF(m, 0x14));
-    r = func_L00_0025BC48(m + 0x10, o, 0, F2BF(o, 0x14), -F2BF(o, 0x1C));
+    r = ComputeLaunchVelocityZ(m + 0x10, o, 0, F2BF(o, 0x14), -F2BF(o, 0x1C));
     lim = D_0015EE6C * 7.0f;
     F2BF(o, 0x10) = r;
     if (lim < r) F2BF(o, 0x10) = lim;
@@ -2070,7 +2070,7 @@ extern void *D_L00_00173F58_2C0CF8 __asm__("D_L00_00173F58");
 
 /* Tries a hop of the moby toward q: probes the ground at the landing point and the path to it, and sets the jump
  * state on success. When blocked and the hop is long enough it tries again with half the distance. */
-int func_L00_002C0CF8(Mob_2C0CF8 *m, Blk_2C0CF8 *p, void *q, int flag) {
+int TryMobyHop(Mob_2C0CF8 *m, Blk_2C0CF8 *p, void *q, int flag) {
     float d[4];
     float land[4];
     float from[4];
@@ -2096,13 +2096,13 @@ int func_L00_002C0CF8(Mob_2C0CF8 *m, Blk_2C0CF8 *p, void *q, int flag) {
     d[2] = land[2] - m->pos[2];
     if (land[2] == 0.0f) {
         if (ok) {
-            return func_L00_002C0CF8(m, p, half, 1);
+            return TryMobyHop(m, p, half, 1);
         }
         return 0;
     }
     if (m->f2C * 3.0f / m->p24->f24 < d[2]) {
         if (ok) {
-            return func_L00_002C0CF8(m, p, half, 1);
+            return TryMobyHop(m, p, half, 1);
         }
         return 0;
     }
@@ -2112,14 +2112,14 @@ int func_L00_002C0CF8(Mob_2C0CF8 *m, Blk_2C0CF8 *p, void *q, int flag) {
     sum = sum + func_001F9B88_2C0CF8(mid[1]);
     if (func_001F9B88_2C0CF8(mid[2]) < sum) {
         if (ok) {
-            return func_L00_002C0CF8(m, p, half, 1);
+            return TryMobyHop(m, p, half, 1);
         }
         return 0;
     }
     land[2] = land[2] + m->f2C * 0.025f / m->p24->f24;
     if (func_L00_002BFDB8_2C0CF8(m, 6, land)) {
         if (ok) {
-            return func_L00_002C0CF8(m, p, half, 1);
+            return TryMobyHop(m, p, half, 1);
         }
         return 0;
     }
@@ -2131,7 +2131,7 @@ int func_L00_002C0CF8(Mob_2C0CF8 *m, Blk_2C0CF8 *p, void *q, int flag) {
     if (flag) {
         if (func_L00_001EFFF0_2C0CF8(from, to, 6, m, 0) == 0) {
             if (ok) {
-                return func_L00_002C0CF8(m, p, half, 1);
+                return TryMobyHop(m, p, half, 1);
             }
             return 0;
         }
@@ -2148,13 +2148,13 @@ int func_L00_002C0CF8(Mob_2C0CF8 *m, Blk_2C0CF8 *p, void *q, int flag) {
     func_L00_002C0B18_2C0CF8(to, mid, 10, 0, 32, 32, 40000.0f, 60);
     if (func_L00_001EFFF0_2C0CF8(from, mid, 6, m, 0) != 0 && D_L00_00173F58_2C0CF8 != p->p38) {
         if (ok) {
-            return func_L00_002C0CF8(m, p, half, 1);
+            return TryMobyHop(m, p, half, 1);
         }
         return 0;
     }
     if (func_L00_001EFFF0_2C0CF8(mid, to, 6, m, 0) != 0 && D_L00_00173F58_2C0CF8 != p->p38) {
         if (ok) {
-            return func_L00_002C0CF8(m, p, half, 1);
+            return TryMobyHop(m, p, half, 1);
         }
         return 0;
     }
@@ -2163,7 +2163,7 @@ int func_L00_002C0CF8(Mob_2C0CF8 *m, Blk_2C0CF8 *p, void *q, int flag) {
 }
 extern void func_L00_0025E210(void *);
 
-char *func_L00_002C1110(int owner, void *pos, void *rot) {
+char *SpawnMoby186(int owner, void *pos, void *rot) {
     char *m = CreateMoby(0xBA);
     if (m != 0) {
         char *p;

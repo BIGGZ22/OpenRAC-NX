@@ -3,7 +3,7 @@
 #include "include_asm.h"
 
 // Add and subtract a delta from a moby field, storing results
-void func_L02_0025D750(char *moby) {
+void SetMobyZBand(char *moby) {
     float delta = 0.2f;
     float val = *(float *)(moby + 0x18);
     *(float *)(moby + 0x84) = val - delta;
@@ -70,28 +70,28 @@ void func_L02_00265E88(char *slots, float *position, float *direction, float dis
     }
     qcopy(origin, position);
     func_L00_001FF4B0(adjusted, direction, distance + 0.75f);
-    func_001F9BD8(end, adjusted, origin);
+    FastVecAdd(end, adjusted, origin);
     if (func_L00_001EFFF0(origin, end, 2, 0, 0)) {
-        travel = func_001F9D10(origin, D_L02_001744E0) - 0.75f;
+        travel = FastVecDist(origin, D_L02_001744E0) - 0.75f;
         if (travel < 0.0f) travel = 0.0f;
     } else {
         travel = distance;
     }
     acceleration = D_0015EE70;
-    func_00214D88(&speed, &travel_step, travel, 1.0f, acceleration * 48.0f,
+    ApproachWithVelocity(&speed, &travel_step, travel, 1.0f, acceleration * 48.0f,
                   (*(float *)&D_L02_00160150) * D_0015EE6C);
     ((float (*)(void *, void *, float))func_L00_001FF4B0)(adjusted, adjusted, travel_step);
     n = (*(int *)&D_L02_00160158);
     first_count = (*(int *)&D_L02_00160154);
     if (travel < 4.0f) first_count = 1;
     for (i = 0; i < n + first_count; i++) {
-        func_L00_00258DB0(offset, 0.0f,
+        rand_vec(offset, 0.0f,
             (((*(float *)&D_L02_0016015C) - (*(float *)&D_L02_00160160)) * (travel / distance) + (*(float *)&D_L02_00160160)) * D_0015EE6C);
-        func_001F9BD8(offset, offset, adjusted);
-        func_001F9C30(velocity, adjusted, func_002140F8(0.0f, 1.0f));
-        func_001F9BD8(velocity, velocity, origin);
+        FastVecAdd(offset, offset, adjusted);
+        FastVecScale(velocity, adjusted, random_float_between(0.0f, 1.0f));
+        FastVecAdd(velocity, velocity, origin);
         if (i < first_count) fl = 1; else fl = 0;
-        shot = func_L00_0026C0D0(velocity, offset, fl, travel);
+        shot = PartType12Spawn(velocity, offset, fl, travel);
         if (i == 2 && save_shot) {
             int j;
             for (j = 0; j < 7; j++) {
@@ -102,15 +102,15 @@ void func_L02_00265E88(char *slots, float *position, float *direction, float dis
             }
         }
     }
-    if (func_001F9938(slots + 0x1c)) {
-        float sp2 = func_002140F8(10.0f, 30.0f);
+    if (FastDecTimer(slots + 0x1c)) {
+        float sp2 = random_float_between(10.0f, 30.0f);
         sp2 = func_001F9878(sp2);
-        ((Slots_265E88 *)slots)->timer = func_001FA898(sp2);
-        func_L00_00258DB0(offset, 0.0f, D_0015EE6C + D_0015EE6C);
-        func_001F9C30(velocity, adjusted, func_002140F8(0.5f, 0.1f));
-        func_001F9BD8(velocity, velocity, offset);
+        ((Slots_265E88 *)slots)->timer = truncate_float_to_s32(sp2);
+        rand_vec(offset, 0.0f, D_0015EE6C + D_0015EE6C);
+        FastVecScale(velocity, adjusted, random_float_between(0.5f, 0.1f));
+        FastVecAdd(velocity, velocity, offset);
         velocity[3] = 0.0f;
-        func_L00_0026E438(position, velocity, 0);
+        PartType25Spawn(position, velocity, 0);
     }
 }
 extern int func_L00_001F2BE8(float, void *, int, int, int);

@@ -6,7 +6,7 @@ extern int *D_L02_00161240 MACRO_ADDR;
 extern char D_L02_00160A20[];
 
 /* Appends a display-list entry: a DMA tag, a constant quad and a 0x154 record built from three vectors. */
-void func_L02_0020BF88(long *a, int *b, int *c, long d, int on) {
+void AppendDisplayListEntry(long *a, int *b, int *c, long d, int on) {
     int *t;
     long *w;
     long a3;

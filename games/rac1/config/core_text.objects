@@ -12,6 +12,12 @@
 # A third column `ee29` marks Sony SDK code built with the SDK's own
 # 2.9-ee (like libgcc) instead of the game's 2.95.3; Makefile.sn and
 # tools/try_func.py take the list from here.
+# An `ee29` object with a fourth column `991111-01` was built with Sony's
+# Linux 2.9-ee-991111-01, like libgcc's L_moddi3/L_udivdi3/L_umoddi3: it
+# keeps a stack frame no instruction uses and writes plain branches where
+# the Windows 2.9-ee writes branch-likely (_type2id, func_0012AC80).
+# Built with toolchain/ee-gcc-2.9-991111-01 when present (Makefile.sn,
+# tools/try_func.py), else with the Windows 2.9-ee, which cannot match it.
 #   build-sn/libgcc/l2_*.o     <- src/libgcc/libgcc2.c
 #   build-sn/libgcc/dp-bit.o, fp-bit.o <- src/libgcc/fp-bit.c
 #   build-sn/libgcc/asm_*.o    <- src/libgcc/nonmatching_*.c
@@ -74,7 +80,7 @@ build-sn/core/00125218.o 0x00125218 ee29
 build-sn/core/001252A0.o 0x001252A0 ee29
 build-sn/core/00125630.o 0x00125630 ee29
 build-sn/core/0012A2F0.o 0x0012A2F0 ee29
-build-sn/core/0012AC80.o 0x0012AC80 ee29
+build-sn/core/0012AC80.o 0x0012AC80 ee29 991111-01
 build-sn/core/0012CC70.o 0x0012CC70 ee29
 build-sn/core/0012CC90.o 0x0012CC90 ee29
 build-sn/core/crt0.o 0x0012D868

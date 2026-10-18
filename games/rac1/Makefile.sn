@@ -105,9 +105,20 @@ build-sn/core/%.o: src/core/%.c config/file_cflags.txt tools/file_cflags.py tool
 # not find its built-in include directory.
 EE29_CORE := $(shell awk '!/^\#/ && $$3 == "ee29" {print $$1}' config/core_text.objects)
 EE29_INC := -I$(SN_114)/lib/gcc-lib/ee/2.9-ee-991111/include
+# ee29 objects whose fourth column is `991111-01` (config/core_text.objects):
+# built with Sony's Linux 2.9-ee-991111-01 when it is present (as libgcc is),
+# else with the Windows 2.9-ee.
+EE29_01_CORE := $(shell awk '!/^\#/ && $$3 == "ee29" && $$4 == "991111-01" {print $$1}' config/core_text.objects)
+ifeq ($(wildcard toolchain/ee-gcc-2.9-991111-01/bin/ee-gcc),)
+CC_EE29_01 := $(WINE) $(SN_114)/bin/ee-gcc.exe
+INC_EE29_01 := $(EE29_INC)
+else
+CC_EE29_01 := toolchain/ee-gcc-2.9-991111-01/bin/ee-gcc
+INC_EE29_01 :=
+endif
 $(EE29_CORE): build-sn/core/%.o: src/core/%.c config/file_cflags.txt tools/file_cflags.py tools/fix_volatile_slot.py tools/check_macro_slots.py
 	@mkdir -p build-sn/core
-	$(WINE) $(SN_114)/bin/ee-gcc.exe $(CFLAGS) $$(python tools/file_cflags.py $<) $(EE29_INC) -S -o build-sn/core/$*.s $<
+	$(if $(filter $@,$(EE29_01_CORE)),$(CC_EE29_01) $(CFLAGS) $$(python tools/file_cflags.py $<) $(INC_EE29_01),$(WINE) $(SN_114)/bin/ee-gcc.exe $(CFLAGS) $$(python tools/file_cflags.py $<) $(EE29_INC)) -S -o build-sn/core/$*.s $<
 	cp build-sn/core/$*.s build-sn/core/$*_fixed.s
 	python tools/fix_volatile_slot.py build-sn/core/$*_fixed.s build-sn/core/$*_fixed.s
 	python tools/check_macro_slots.py build-sn/core/$*_fixed.s

@@ -27,7 +27,7 @@ extern s32 func_001FA898(f32);
 extern f32 func_001F9F90(f32);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/start_001eaa08.c, FUN_L00_001eaa08. */
-s32 func_001E9088(s32 *p1)
+s32 actuator_CalcPower(s32 *p1)
 {
     s32 aa[3][4];
     s32 *q2;
@@ -99,12 +99,12 @@ s32 func_001E9088(s32 *p1)
             f32 f;
             f32 g;
             if (rem < e->f0c) {
-                f = func_001FA888(rem) * 3.1415927f / func_001FA888(e->f0c);
+                f = IntToFloat(rem) * 3.1415927f / IntToFloat(e->f0c);
             } else {
-                f = 3.1415927f - func_001FA888(rem - e->f0c) * 3.1415927f / func_001FA888(e->f0a);
+                f = 3.1415927f - IntToFloat(rem - e->f0c) * 3.1415927f / IntToFloat(e->f0a);
             }
             f = FastCos(f);
-            g = func_001FA888(e->f0e);
+            g = IntToFloat(e->f0e);
             res = truncate_float_to_s32((f * g + g) * 0.5f) + e->f0f;
             if (res >= 256) {
                 res = 255;
@@ -138,7 +138,7 @@ extern int D_0015EF8C MACRO_ADDR;
 extern int D_0015F020 MACRO_ADDR;
 extern short D_0015EF74;
 
-void func_001E94A8(void) {
+void ResetTextureAllocator(void) {
     D_0015F020 = 0;
     *(int *)&D_0015EF74 = D_0015EF8C;
 }

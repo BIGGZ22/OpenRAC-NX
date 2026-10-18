@@ -15,7 +15,7 @@ extern short D_L08_00160284;
 extern short D_L08_00160280;
 
 /* Spawns an effect moby at the position of moby a. */
-unsigned char *func_L08_0027ACC8(char *a)
+unsigned char *SpawnEffectAtMoby(char *a)
 {
     float v[4];
     unsigned char *m = func_00218928(0x27);
@@ -93,6 +93,6 @@ void func_L08_00280BC8(char *a, char *b, int c, float f) {
         t = scale_ticks(c);
         *(short *)(m + 0xA) = t;
         *(U128 *)(m + 0x20) = *(U128 *)b;
-        *(float *)(q + 0xC) = func_001FA888((short)t);
+        *(float *)(q + 0xC) = IntToFloat((short)t);
     }
 }

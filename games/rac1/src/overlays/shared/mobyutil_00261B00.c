@@ -2,6 +2,7 @@
 #include "common.h"
 #include "callees.h"
 #include "include_asm.h"
+#include "vector.h"
 #include "hero.h"
 #include "moby.h"
 
@@ -16,7 +17,7 @@ extern int D_0015EE78 MACRO_ADDR;
 extern float D_0015EE7C MACRO_ADDR;
 extern int D_0015EE80 MACRO_ADDR;
 /* selects timing constants for the active update mode */
-void func_L00_002623D0(int mode) {
+void SetUpdateModeTiming(int mode) {
  if(!mode) {
  D_0015EE80=0; D_0015EE60=1.0f; D_0015EE64=1.0f; D_0015EE68=1.0f; D_0015EE70=0.00027777778450399637f; D_0015EE74=0.0000046296295295178425f; D_0015EE78=5; D_0015EE6C=0.01666666753590107f; D_0015EE7C=0.01666666753590107f;
  } else {
@@ -40,7 +41,7 @@ extern int func_001F9850(int);
 extern float func_L00_0025C7A8(float, float, float);
 
 // Steers a moby around: picks a wander heading, moves it and updates its heading toward a target.
-void func_L00_002626A8(char *moby, char *d, float a, float b) {
+void WanderSteer(char *moby, char *d, float a, float b) {
     char *pos;
     float v[4];
     int r;
@@ -52,14 +53,14 @@ void func_L00_002626A8(char *moby, char *d, float a, float b) {
         *(short *)(d + 0x2A) = rand_range(*(short *)(d + 0x2C), *(short *)(d + 0x2E));
         *(short *)(d + 0x28) = 1;
     } else {
-        func_L00_0025CC58((float *)(moby + 0x48), 0, *(float *)(d + 0x24), *(float *)(d + 0x18));
+        StepAngleToward((float *)(moby + 0x48), 0, *(float *)(d + 0x24), *(float *)(d + 0x18));
         if (FastDecTimer(d + 0x2A) != 0) *(short *)(d + 0x28) = 0;
         pos = moby + 0x10;
     }
     qcopy(v, pos);
     v[0] = v[0] + FastCos(*(float *)(moby + 0x48)) * *(float *)(d + 0x14);
     v[1] = v[1] + FastSin(*(float *)(moby + 0x48)) * *(float *)(d + 0x14);
-    r = func_L00_002594C8(moby, pos, v, 0, a, *(float *)(d + 0x10), b, 0.5235988f);
+    r = MoveKeepingOverGround(moby, pos, v, 0, a, *(float *)(d + 0x10), b, 0.5235988f);
     *(float *)(moby + 0x18) = func_00214358(pos, 0, 0.5f);
     dist = func_001F9D48(pos, d);
     if (r == 0 || *(float *)(d + 0x1C) < dist) {
@@ -73,7 +74,7 @@ void func_L00_002626A8(char *moby, char *d, float a, float b) {
         if (dist < *(float *)(d + 0x20)) {
             char *q = g - 0x80;
             dist = dist / *(float *)(d + 0x20);
-            *(float *)(d + 0x24) = func_L00_0025C7A8(*(float *)(d + 0x24), func_L00_001FF860(*(float *)(moby + 0x10) - *(float *)(q + 0x80), *(float *)(moby + 0x14) - *(float *)(q + 0x84)), dist);
+            *(float *)(d + 0x24) = LerpAngle(*(float *)(d + 0x24), func_L00_001FF860(*(float *)(moby + 0x10) - *(float *)(q + 0x80), *(float *)(moby + 0x14) - *(float *)(q + 0x84)), dist);
         }
     }
 }
@@ -91,7 +92,7 @@ extern void func_001F9BC0_2629E0(Vec4 *) __asm__("func_001F9BC0");
 extern void func_001F9EC0_2629E0(Vec4 *, Vec4 *, Vec4 *) __asm__("func_001F9EC0");
 
 /* Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/state/00261968.c, FUN_L00_00261968. */
-s32 func_L00_002629E0(s32 path_index, Vec4 *start, Vec4 *end) {
+s32 DoesSegmentCrossPath(s32 path_index, Vec4 *start, Vec4 *end) {
     Vec4 direction;
     Vec4 axis;
     Vec4 origin;
@@ -146,7 +147,8 @@ extern void func_001F9BC0(void *);
 extern void func_001F9EC0(void *, void *, void *);
 extern void func_001F9C08(void *, void *, void *, float);
 
-int func_L00_00262BC0(int idx, void *a, void *b, void *c) {
+/* Tests whether segment a-b crosses polyline D_L00_001B0830[idx]; writes the nearest crossing to c. */
+int SegmentCrossPolyline(int idx, void *a, void *b, void *c) {
     float v[4], w[4], z[4], t[4], u[4];
     float best;
     float zero;
@@ -155,16 +157,16 @@ int func_L00_00262BC0(int idx, void *a, void *b, void *c) {
     int offset;
     float *prev;
     float *cur;
-    func_001F9BF0(v, b, a);
+    FastVecSub(v, b, a);
     v[2] = 0;
-    func_L00_001FF4B0(v, v, 1.0f / func_001F9CB8(v));
-    func_001F9BC0(w);
+    func_L00_001FF4B0(v, v, 1.0f / FastVecLength(v));
+    clear_u64_value(w);
     w[0] = v[1];
     w[1] = -v[0];
-    func_001F9BC0(z);
+    clear_u64_value(z);
     z[2] = 1.0f;
     best = 1.0f;
-    func_001F9BF0(t, (char *)D_L00_001B0830_2629E0[idx] + 0x10, a);
+    FastVecSub(t, (char *)D_L00_001B0830_2629E0[idx] + 0x10, a);
     func_001F9EC0(t, t, v);
     prev = t;
     cur = u;
@@ -172,7 +174,7 @@ int func_L00_00262BC0(int idx, void *a, void *b, void *c) {
         offset = 0x20;
         zero = 0.0f;
         do {
-            func_001F9BF0(cur, (char *)D_L00_001B0830_2629E0[idx] + offset, a);
+            FastVecSub(cur, (char *)D_L00_001B0830_2629E0[idx] + offset, a);
             func_001F9EC0(cur, cur, v);
             if (t[3] != zero || u[3] != zero) {
                 if (u[1] * t[1] < 0.0f) {
@@ -196,34 +198,29 @@ int func_L00_00262BC0(int idx, void *a, void *b, void *c) {
 }
 LINKER_REMNANT("asm/overlays", func_L00_00262DE8);
 typedef int OvlQuad __attribute__((mode(TI)));
-typedef union {
-    OvlQuad q;
-    f32 f[4];
-    s32 i[4];
-} OvlVec4;
 typedef struct {
     s32 count;
     u8 pad[12];
-    OvlVec4 points[1];
+    Vec4 points[1];
 } SegmentPath_261d78;
 extern SegmentPath_261d78 * D_L00_001B0830[];
 extern f32 func_001F9B88(f32);
-extern void func_001F9BD8_62DF0(OvlVec4 *, OvlVec4 *, OvlVec4 *) __asm__("func_001F9BD8");
-extern void func_001F9BF0_62DF0(OvlVec4 *, OvlVec4 *, OvlVec4 *) __asm__("func_001F9BF0");
-extern f32 func_001F9C78(OvlVec4 *, OvlVec4 *);
-extern void func_001F9CA0_62DF0(OvlVec4 *, OvlVec4 *, OvlVec4 *) __asm__("func_001F9CA0");
-extern f32 func_001F9CB8_62DF0(OvlVec4 *) __asm__("func_001F9CB8");
-extern void func_L00_001FF4B0_62DF0(OvlVec4 *, OvlVec4 *, f32) __asm__("func_L00_001FF4B0");
+extern void func_001F9BD8_62DF0(Vec4 *, Vec4 *, Vec4 *) __asm__("func_001F9BD8");
+extern void func_001F9BF0_62DF0(Vec4 *, Vec4 *, Vec4 *) __asm__("func_001F9BF0");
+extern f32 func_001F9C78(Vec4 *, Vec4 *);
+extern void func_001F9CA0_62DF0(Vec4 *, Vec4 *, Vec4 *) __asm__("func_001F9CA0");
+extern f32 func_001F9CB8_62DF0(Vec4 *) __asm__("func_001F9CB8");
+extern void func_L00_001FF4B0_62DF0(Vec4 *, Vec4 *, f32) __asm__("func_L00_001FF4B0");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00261968.c, FUN_L00_00261d78. */
-s32 func_L00_00262DF0(f32 distance, s32 path_index, OvlVec4 *point, OvlVec4 *out) {
-    OvlVec4 difference;
-    OvlVec4 scaled_difference;
-    OvlVec4 working;
-    OvlVec4 segment;
-    OvlVec4 scaled_segment;
-    OvlVec4 cross;
-    OvlVec4 scaled_cross;
+s32 PushPointOutsidePath(f32 distance, s32 path_index, Vec4 *point, Vec4 *out) {
+    Vec4 difference;
+    Vec4 scaled_difference;
+    Vec4 working;
+    Vec4 segment;
+    Vec4 scaled_segment;
+    Vec4 cross;
+    Vec4 scaled_cross;
     SegmentPath_261d78 **entry;
     s32 i;
     s32 found;
@@ -268,41 +265,36 @@ s32 func_L00_00262DF0(f32 distance, s32 path_index, OvlVec4 *point, OvlVec4 *out
     return found;
 }
 typedef int OvlQuad_630A8 __attribute__((mode(TI)));
-typedef union {
-    OvlQuad_630A8 q;
-    f32 f[4];
-    s32 i[4];
-} OvlVec4_630A8;
 typedef struct {
     s32 count;
     u8 pad[12];
-    OvlVec4_630A8 points[1];
+    Vec4 points[1];
 } SegmentPath_262030;
 extern SegmentPath_262030 * D_L00_001B0830_630A8[] __asm__("D_L00_001B0830");
-extern OvlVec4_630A8 D_0013F6E0;
-extern void func_001F9BD8_630A8(OvlVec4_630A8 *, OvlVec4_630A8 *, OvlVec4_630A8 *) __asm__("func_001F9BD8");
-extern void func_001F9BF0_630A8(OvlVec4_630A8 *, OvlVec4_630A8 *, OvlVec4_630A8 *) __asm__("func_001F9BF0");
-extern f32 func_001F9C78_630A8(OvlVec4_630A8 *, OvlVec4_630A8 *) __asm__("func_001F9C78");
-extern void func_001F9CA0_630A8(OvlVec4_630A8 *, OvlVec4_630A8 *, OvlVec4_630A8 *) __asm__("func_001F9CA0");
-extern f32 func_001F9CB8_630A8(OvlVec4_630A8 *) __asm__("func_001F9CB8");
-extern void func_L00_001FF4B0_630A8(f32, OvlVec4_630A8 *, OvlVec4_630A8 *) __asm__("func_L00_001FF4B0");
+extern Vec4 D_0013F6E0;
+extern void func_001F9BD8_630A8(Vec4 *, Vec4 *, Vec4 *) __asm__("func_001F9BD8");
+extern void func_001F9BF0_630A8(Vec4 *, Vec4 *, Vec4 *) __asm__("func_001F9BF0");
+extern f32 func_001F9C78_630A8(Vec4 *, Vec4 *) __asm__("func_001F9C78");
+extern void func_001F9CA0_630A8(Vec4 *, Vec4 *, Vec4 *) __asm__("func_001F9CA0");
+extern f32 func_001F9CB8_630A8(Vec4 *) __asm__("func_001F9CB8");
+extern void func_L00_001FF4B0_630A8(f32, Vec4 *, Vec4 *) __asm__("func_L00_001FF4B0");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00261968.c, FUN_L00_00262030. */
-s32 func_L00_002630A8(f32 distance, s32 path_index, OvlVec4_630A8 *point, OvlVec4_630A8 *out) {
-    OvlVec4_630A8 difference;
-    OvlVec4_630A8 scaled_difference;
-    OvlVec4_630A8 working;
-    OvlVec4_630A8 segment;
-    OvlVec4_630A8 scaled_segment;
-    OvlVec4_630A8 cross;
-    OvlVec4_630A8 scaled_cross;
+s32 PushPointOutsidePathAxis(f32 distance, s32 path_index, Vec4 *point, Vec4 *out) {
+    Vec4 difference;
+    Vec4 scaled_difference;
+    Vec4 working;
+    Vec4 segment;
+    Vec4 scaled_segment;
+    Vec4 cross;
+    Vec4 scaled_cross;
     SegmentPath_262030 *entry;
-    OvlVec4_630A8 *height_axis;
-    OvlVec4_630A8 *current;
+    Vec4 *height_axis;
+    Vec4 *current;
     s32 next;
     s32 i;
     s32 offset;
-    OvlVec4_630A8 *saved_out;
+    Vec4 *saved_out;
     s32 found;
     f32 original_height;
     f32 segment_length;
@@ -313,17 +305,17 @@ s32 func_L00_002630A8(f32 distance, s32 path_index, OvlVec4_630A8 *point, OvlVec
     qcopy(&working, point);
     entry = D_L00_001B0830_630A8[path_index];
     offset = (s32)&D_0013F6E0;
-    original_height = func_001F9C78_630A8(&working, (OvlVec4_630A8 *)offset);
+    original_height = func_001F9C78_630A8(&working, (Vec4 *)offset);
     i = 0;
     if (entry->count - 1 > found) {
-        height_axis = (OvlVec4_630A8 *)offset;
+        height_axis = (Vec4 *)offset;
         do {
             offset = i << 4;
             next = i + 1;
-            if (((OvlVec4_630A8 *)((u8 *)entry + offset + 0x10))->f[3] != 0.0f || entry->points[next].f[3] != 0.0f) {
-                current = (OvlVec4_630A8 *)((u8 *)entry + (offset + 0x10));
+            if (((Vec4 *)((u8 *)entry + offset + 0x10))->f[3] != 0.0f || entry->points[next].f[3] != 0.0f) {
+                current = (Vec4 *)((u8 *)entry + (offset + 0x10));
                 func_001F9BF0_630A8(&difference, &working, current);
-                func_001F9BF0_630A8(&segment, (OvlVec4_630A8 *)((u8 *)entry + (offset + 0x20)), current);
+                func_001F9BF0_630A8(&segment, (Vec4 *)((u8 *)entry + (offset + 0x20)), current);
                 projection = func_001F9C78_630A8(&difference, height_axis);
                 func_L00_001FF4B0_630A8(projection, &scaled_cross, height_axis);
                 func_001F9BF0_630A8(&difference, &difference, &scaled_cross);
@@ -332,7 +324,7 @@ s32 func_L00_002630A8(f32 distance, s32 path_index, OvlVec4_630A8 *point, OvlVec
                 func_001F9BF0_630A8(&segment, &segment, &scaled_cross);
                 func_L00_001FF4B0_630A8(1.0f, &scaled_segment, &segment);
                 func_001F9CA0_630A8(&cross, &difference, &scaled_segment);
-                segment_length = func_001F9B88(func_001F9C78_630A8(&cross, height_axis));
+                segment_length = FastAbsF(func_001F9C78_630A8(&cross, height_axis));
                 if (distance < segment_length)
                     goto next_segment_262030;
                 segment_length = func_001F9CB8_630A8(&segment);
@@ -377,7 +369,7 @@ extern void func_001F9BD8(void *, void *, void *);
 
 /* Samples path at distance dist (points spacing apart): stores the segment, the distance into it and the point.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00261968.c, FUN_L00_00262360. */
-void func_L00_002633D8(PointPath *path, s32 *seg_out, f32 *along, Vec4 *out, f32 dist, f32 spacing) {
+void PathSampleAtDistance(PointPath *path, s32 *seg_out, f32 *along, Vec4 *out, f32 dist, f32 spacing) {
     Vec4 tmp;
     s32 seg;
 
@@ -395,7 +387,7 @@ void func_L00_002633D8(PointPath *path, s32 *seg_out, f32 *along, Vec4 *out, f32
         out->q = (path->points + *seg_out)->q;
         return;
     }
-    *along = dist - func_001FA888(seg) * spacing;
+    *along = dist - IntToFloat(seg) * spacing;
     FastVecSub(&tmp, &path->points[*seg_out + 1], &path->points[*seg_out]);
     out->q = tmp.q;
     func_L00_001FF4B0(out, out, *along);
@@ -404,7 +396,8 @@ void func_L00_002633D8(PointPath *path, s32 *seg_out, f32 *along, Vec4 *out, f32
 }
 extern void func_001FA218(void *, void *);
 extern void func_002153E8(void *, void *);
-void func_L00_002634F8(char *a, float x, float y, float z) {
+/* Rotates the matrix at a+0x40 by the Euler angles (x, y, z). */
+void MobyRotateEuler(char *a, float x, float y, float z) {
     float in[3];
     float t[16], u[16];
     in[0] = x;
@@ -413,9 +406,10 @@ void func_L00_002634F8(char *a, float x, float y, float z) {
     func_001FA218(t, in);
     func_001FA218(u, a + 0x40);
     sce_vu0_mul_matrix(u, u, t);
-    func_002153E8(u, a + 0x40);
+    MatrixToEuler(u, a + 0x40);
 }
-void func_L00_00263578(int a, char *b) {
+/* Starts a manipulator state in b if it is idle. */
+void Manipulator_StartIfIdle(int a, char *b) {
     if (*(int *)(b + 0x13C) == 0) {
         *(int *)(b + 0x134) = a;
         *(int *)(b + 0x13C) = 1;
@@ -427,7 +421,7 @@ void func_L00_00263578(int a, char *b) {
 extern struct Moby *func_0020D348_m(int) __asm__("func_0020D348");
 
 /* adds a spawned copy of an object to the owner's list (up to 4) */
-void func_L00_002635A0(char *o, int a, int b) {
+void AddSpawnedCopyToList(char *o, int a, int b) {
     if (*(int *)(o + 0x138) != 4) {
         if (b < 9) {
             char *m = (char *)func_0020D348_m(*(short *)(*(char **)(o + 0x134) + 0xA6));
@@ -466,7 +460,7 @@ extern void func_L00_00251E30(void *);
 
 /* Pushes the source object's transforms into an 8-entry ring and replays them into the trailing objects, ending them when all faded.
    Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay_state_00261968.c, FUN_L00_00262608. */
-void func_L00_00263680(S_263680 *s, int dec) {
+void TransformTrailUpdate(S_263680 *s, int dec) {
     unsigned char *src;
     unsigned char *o;
     int h, i, k, done;
@@ -474,7 +468,7 @@ void func_L00_00263680(S_263680 *s, int dec) {
         return;
     src = s->src;
     if (!src || src[0x20] == 0xFE || src[0x20] == 0xFD) {
-        func_L00_002638B8((char *)s);
+        DeleteOwnedMobys((char *)s);
         return;
     }
     h = s->head;
@@ -515,12 +509,13 @@ void func_L00_00263680(S_263680 *s, int dec) {
             }
         }
         if (done)
-            func_L00_002638B8((char *)s);
+            DeleteOwnedMobys((char *)s);
     }
 }
 extern void func_0020D678(int);
 
-void func_L00_002638B8(char *o) {
+/* Deletes every moby in the owner's list and marks it inactive. */
+void DeleteOwnedMobys(char *o) {
     int i;
     if (*(int *)(o + 0x13C) != 0) {
         for (i = 0; i < *(int *)(o + 0x138); i++) {
@@ -543,7 +538,7 @@ extern void func_001F9BC0(void *);
 
 /* Eases a moby's per-axis offsets toward zero and applies them and its scale to the held object, resetting when settled.
    Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay_state_00261968.c, FUN_L00_002628d8. */
-void func_L00_00263950(int m, unsigned char *p, int c, float fa, float fb) {
+void EaseManipulatorOffsets(int m, unsigned char *p, int c, float fa, float fb) {
     unsigned char *o = *(unsigned char **)(p + 0x78);
     float f;
     if (!o) {
@@ -563,12 +558,12 @@ void func_L00_00263950(int m, unsigned char *p, int c, float fa, float fb) {
             DetachManipulator(m, p);
         return;
     }
-    func_L00_0025CCF0(p + 0x40, p + 0x50, *(float *)(p + 0x60), fa, fb, 0.0f, 0);
-    func_L00_0025CCF0(p + 0x44, p + 0x54, *(float *)(p + 0x64), fa, fb, 0.0f, 0);
-    func_L00_0025CCF0(p + 0x48, p + 0x58, *(float *)(p + 0x68), fa, fb, 0.0f, 0);
+    SpringAngle(p + 0x40, p + 0x50, *(float *)(p + 0x60), fa, fb, 0.0f, 0);
+    SpringAngle(p + 0x44, p + 0x54, *(float *)(p + 0x64), fa, fb, 0.0f, 0);
+    SpringAngle(p + 0x48, p + 0x58, *(float *)(p + 0x68), fa, fb, 0.0f, 0);
     if (!p[1])
         AttachManipulator(m, c, p);
-    func_L00_0025AFA8(p + 0x10, (float *)(p + 0x40));
+    BuildEulerMatrix(p + 0x10, (float *)(p + 0x40));
     f = *(float *)(p + 0x70);
     *(float *)(p + 0x20) = f;
     *(float *)(p + 0x24) = f;
@@ -577,7 +572,8 @@ void func_L00_00263950(int m, unsigned char *p, int c, float fa, float fb) {
     *(float *)(p + 0x70) = 1.0f;
 }
 extern float func_001FA748(float, float);
-void func_L00_00263B78(float x, float y, char *a, float *p, float *q) {
+/* Bobs a's Z with a sine of phase *p, advancing the phase by y. */
+void MobyBobZ(float x, float y, char *a, float *p, float *q) {
     float t;
     *p = FastAddRots(*p, y);
     *(float *)(a + 0x18) -= *q;
@@ -586,14 +582,15 @@ void func_L00_00263B78(float x, float y, char *a, float *p, float *q) {
     *(float *)(a + 0x18) += t;
 }
 
-void func_L00_00263BF8(float *o, float *a, float *b, float r, float l1, float l2) {
+/* Writes a Lissajous-style offset to o[0x10] and o[0x11] and advances the angles. */
+void LissajousOffsetUpdate(float *o, float *a, float *b, float r, float l1, float l2) {
     o[0x10] = r * FastSin(*a) * FastSin(*b);
     o[0x11] = r * FastSin(*a) * FastCos(*b);
     *a = FastAddRots(*a, l1);
     *b = FastAddRots(*b, l2);
 }
 extern void func_00215C00_x(void *, float, float, float) __asm__("func_00215C00");
-void func_L00_00263D68(void *a, void *b, float r, float y, float z) {
+void AddSphericalOffset(void *a, void *b, float r, float y, float z) {
     typedef float W[4] __attribute__((aligned(16)));
     W v;
     func_00215C00_x(v, r, y, z);
@@ -604,7 +601,7 @@ extern char D_L00_001E93E0[];
 typedef struct { int v[19]; } Tbl;
 
 // Shows the banner message for planet index a (clamped to the table), copying the table locally.
-void func_L00_00263DB0(int a) {
+void ShowPlanetBanner(int a) {
     Tbl t = *(Tbl *)D_L00_001E93E0;
     if (a < 0) a = 0;
     if (a > 18) a = 18;
@@ -661,12 +658,12 @@ struct Moby *func_L00_00264140(void *ignore, Vec4 *pos_in, Vec4 *dir_in, f32 *ya
         if ((s8)m->state < 0)
             continue;
         qcopy(&target, &m->pos);
-        b = func_L00_0025D390(m);
+        b = GetFlaggedPvarWord(m);
         if (b)
             target.f[2] += b->height;
         else
             target.f[2] += 0.5f;
-        if (!(m->flags & 0x1000) || !m || !m->pclass || m->pclass->unk46 != 5)
+        if (!(m->flags & 0x1000) || !m || !m->pclass || m->pclass->type != 5)
             continue;
         t_yaw = func_L00_001FF860(target.f[0] - pp->f[0], target.f[1] - pp->f[1]);
         t_pitch = func_L00_001FF860(func_001F9D48(pp, &target), target.f[2] - pp->f[2]);
@@ -682,12 +679,12 @@ struct Moby *func_L00_00264140(void *ignore, Vec4 *pos_in, Vec4 *dir_in, f32 *ya
         }
         if (best_dist < dist)
             continue;
-        func_00215C00_64140(&probe, dist, *yaw, *pitch + D_0013F450.unk2E4.f * 0.5f);
+        func_00215C00_64140(&probe, dist, *yaw, *pitch + D_0013F450.ground_pitch.f * 0.5f);
         FastVecAdd(&probe, &probe, pp);
         ang = FastArcSin(FastVecDist(&probe, &target) / (dist + dist));
         ang = ang + ang;
         if (max_angle < ang && b) {
-            f32 radius = func_001FA888(b->size << 3) * 0.125f;
+            f32 radius = IntToFloat(b->size << 3) * 0.125f;
             f32 shrink = FastArcSin(radius / dist);
             if (radius < dist)
                 ang -= shrink;
@@ -709,7 +706,8 @@ typedef struct { float f[4]; } V __attribute__((aligned(16)));
 extern int D_L00_0015FD58 MACRO_ADDR;
 extern unsigned char *D_L00_0015FD68 MACRO_ADDR;
 extern float D_L00_0015FD60 MACRO_ADDR, D_L00_0015FD64 MACRO_ADDR;
-float func_L00_002644E0(V *p) {
+/* Samples the height map at the XY of *p and returns the scaled height. */
+float SampleHeightMap(V *p) {
     V v = *p;
     int y = (int)v.f[1];
     int x = (int)v.f[0];
@@ -724,13 +722,13 @@ extern float func_001F9CE8(void *);
 extern void func_L00_00269DB0(char *, int);
 
 /* spawns impact sparks at a point on the ground near the camera. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_entities_002630b8.c, FUN_L00_002634f8. */
-void func_L00_00264570(V *v) {
+void SpawnImpactSparks(V *v) {
     V t, u, d;
     float k, f;
     S166D *b;
     k = (D_L00_0015FD64 - D_L00_0015FD60) * 0.00390625f;
     t = *v;
-    f = func_L00_002644E0(&t) + k;
+    f = SampleHeightMap(&t) + k;
     b = &D_L00_00166D80;
     t.f[2] = f;
     if (f < b->pos.f[2] + 5.0f) {
@@ -738,7 +736,7 @@ void func_L00_00264570(V *v) {
         u.f[2] = u.f[2] - (k + k);
         if (func_L00_001EFFF0(&t, &u, 0x12, 0, 0)) {
             FastVecSub(&d, &D_L00_00173F60, &b->pos);
-            func_L00_00269DB0((char *)&D_L00_00173F60, (unsigned char)(int)(func_001F9CE8(&d) / 60.0f * 191.0f + 64.0f));
+            PartType01Spawn((char *)&D_L00_00173F60, (unsigned char)(int)(func_001F9CE8(&d) / 60.0f * 191.0f + 64.0f));
         }
     }
 }
@@ -753,7 +751,7 @@ extern float D_L00_00166EC0[];
 extern float D_L00_001B07F0[];
 
 /* builds a set of four scaled vectors from a position and hands them to the draw helper */
-void func_L00_00264690(float *p, int b, float s, float t) {
+void DrawBillboardAt(float *p, int b, float s, float t) {
     float m[16];
     int bb[4];
     float c[8];
@@ -792,10 +790,6 @@ void func_L00_00264690(float *p, int b, float s, float t) {
 }
 LINKER_REMNANT("asm/overlays", func_L00_00264860);
 typedef u32 u128_64870 __attribute__((mode(TI), aligned(16)));
-typedef union {
-    u128_64870 q;
-    float f[4];
-} Vec4_2634f8;
 typedef struct {
     u8 pad20[4];
     s32 w24;
@@ -819,16 +813,16 @@ extern Effect_2637f8 *func_L00_0026DEA0(void *, f32, f32, f32, s32, void *, f32,
 extern u8 D_L00_0015F660_64870[] __asm__("D_L00_0015F660") MACRO_ADDR;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002630b8.c, FUN_L00_002637f8. */
-void func_L00_00264870(u8 *m) {
-    Vec4_2634f8 vectors[4];
-    Vec4_2634f8 pos;
-    Vec4_2634f8 scaled;
+void SpawnMoby750Sparks(u8 *m) {
+    Vec4 vectors[4];
+    Vec4 pos;
+    Vec4 scaled;
     f32 fraction, size, lifetime, scale;
     s32 count;
     s32 w24;
     Effect_2637f8 *effect;
     if (*(s16 *)(m + 0xa6) == 0x2ee && m != 0) {
-        func_0020DAF8(m, 0, vectors);
+        MobyTransformScaledVertex(m, 0, vectors);
         fraction = FastVecLength(vectors) / 1.026f;
         if (1.0f < fraction)
             fraction = 1.0f;
@@ -847,7 +841,7 @@ void func_L00_00264870(u8 *m) {
                 n = random_integer_below(0x10);
                 if (random_integer_below(2) != 0)
                     n = -n;
-                effect = func_L00_0026DEA0(&pos, size, 1.0f, 0.75f, n,
+                effect = PartType23Spawn(&pos, size, 1.0f, 0.75f, n,
                                                    D_L00_0015F660_64870, lifetime, 0x503030ff);
                 if (effect) {
                     EffectTail_2637f8 *tail = &effect->tail;
@@ -870,7 +864,7 @@ void func_L00_00264870(u8 *m) {
             FastVecAdd(&pos, &vectors[3], &scaled);
             count = 4;
             do {
-                effect = func_L00_0026DEA0(&pos, size, 1.0f, 1.0f, 0x10,
+                effect = PartType23Spawn(&pos, size, 1.0f, 1.0f, 0x10,
                                                    D_L00_0015F660_64870, lifetime, 0x7fffffff);
                 if (effect) {
                     EffectTail_2637f8 *tail = &effect->tail;
@@ -888,7 +882,7 @@ void func_L00_00264870(u8 *m) {
 extern unsigned char D_0015EEB4_m[4] __asm__("D_0015EEB4") MACRO_ADDR;
 
 /* Sets a moby's three float fields to x, running its setup call first when it has a flag byte; without the global flag only runs func_0020D9D8 on a flagged moby. */
-void func_L00_00264B40(float x, int a, int b, unsigned char *m) {
+void Manipulator_ApplyScale(float x, int a, int b, unsigned char *m) {
     if (D_0015EEB4_m[3] != 0) {
         if (m[1] == 0) {
             AttachManipulator(a, b, m);
@@ -901,7 +895,7 @@ void func_L00_00264B40(float x, int a, int b, unsigned char *m) {
     }
 }
 /* sets the float at p + 0x70 to x when the byte at 0x15EEB7 is set, else to 1. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/entities/002630b8.c, FUN_L00_00263b38. */
-void func_L00_00264BB0(char *p, float x) {
+void Manipulator_SetScale(char *p, float x) {
     if (*(unsigned char *)0x15EEB7) {
         *(float *)(p + 0x70) = x;
         return;
@@ -909,7 +903,7 @@ void func_L00_00264BB0(char *p, float x) {
     *(float *)(p + 0x70) = 1.0f;
 }
 // Store 1.0 to offset 0x70
-void func_L00_00264BC8(char *arg) {
+void Manipulator_ResetScale(char *arg) {
     *(float *)(arg + 0x70) = 1.0f;
 }
 LINKER_REMNANT("asm/overlays", func_L00_00264BD8);
@@ -934,7 +928,7 @@ extern int func_001FA898_r(float) __asm__("func_001FA898");
 extern void *func_L00_0026DEA0_c(void *, int, void *, float, float, float, float, int) __asm__("func_L00_0026DEA0");
 
 /* Bursts two rings of sparks (and then three more) from two points with the given velocity. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_entities_002630b8.c, FUN_L00_00263b70. */
-void func_L00_00264BE8(void *p0, void *p1, void *vel, float a, float b) {
+void SpawnSparkRings(void *p0, void *p1, void *vel, float a, float b) {
     Part *part;
     PartTail *tail;
     int i, j, m;
@@ -970,7 +964,8 @@ extern char D_L00_00179218[];
 extern int func_001FE540(int);
 extern void func_001166FC(void *, int);
 
-void func_L00_00264DB8(int arg0, int arg1) {
+/* Shows message arg0 in the on-screen text box for arg1 ticks. */
+void ShowBanner(int arg0, int arg1) {
     if (arg1 == -1) {
         arg1 = scale_ticks(0xB4);
     }
@@ -979,7 +974,8 @@ void func_L00_00264DB8(int arg0, int arg1) {
 }
 extern char D_L00_00179218[] NOT_SDA;
 extern void func_00116248(void *, int, int);
-void func_L00_00264E28(int a, int b, int c) {
+/* Like func_L00_00264DB8, but draws message a with parameter b. */
+void ShowBannerf(int a, int b, int c) {
     if (c == -1) c = scale_ticks(0xB4);
     func_00116248(D_L00_00179218, msg_string(a), b);
     D_L00_0015F720 = c;
@@ -990,7 +986,7 @@ extern int func_L00_0025BCF8(void *, int, void *, void *, float);
 extern float func_00214158(void);
 
 /* Spawns a burst of effects on a moby: a fixed set at its own position, then randomly offset ones at points gathered around it. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_entities_002630b8.c, FUN_L00_00263e30. */
-void func_L00_00264EA8(char *m, int n, int cnt, int base, int range, int cnt2, int flag) {
+void SpawnMobyBurstFx(char *m, int n, int cnt, int base, int range, int cnt2, int flag) {
     char buf[256] __attribute__((aligned(16)));
     float v[4] __attribute__((aligned(16)));
     int mode = 0;
@@ -1000,7 +996,7 @@ void func_L00_00264EA8(char *m, int n, int cnt, int base, int range, int cnt2, i
     }
     if (n > 0) {
         if (cnt > 0) for (i = 0; i < cnt; i++) {
-            func_L00_00265050(m, n + i, (float *)(m + 0x10), m + 0x40, 0, mode, D_L00_0015F660, D_L00_0015F660, 0.0f, D_L00_0015F660);
+            SpawnBreakFragment(m, n + i, (float *)(m + 0x10), m + 0x40, 0, mode, D_L00_0015F660, D_L00_0015F660, 0.0f, D_L00_0015F660);
         }
     }
     if (n > 0 && range > 0) {
@@ -1011,7 +1007,7 @@ void func_L00_00264EA8(char *m, int n, int cnt, int base, int range, int cnt2, i
                 v[0] = random_angle_radians();
                 v[1] = random_angle_radians();
                 v[2] = random_angle_radians();
-                func_L00_00265050(m, base + random_integer_below(range), (float *)(buf + i * 16), v, 0, mode, D_L00_0015F660, D_L00_0015F660, 0.0f, D_L00_0015F660);
+                SpawnBreakFragment(m, base + random_integer_below(range), (float *)(buf + i * 16), v, 0, mode, D_L00_0015F660, D_L00_0015F660, 0.0f, D_L00_0015F660);
             }
         }
     }
@@ -1023,7 +1019,7 @@ extern float func_001F9CB8(void *a);
 extern void func_L00_00258DB0(float *, float, float);
 
 /* Spawns a break-effect fragment moby of class cls from src, and initialises its motion data. */
-void *func_L00_00265050(char *src, int cls, float *pos, void *mat, int a8, int a9, float *v10, float *v11, float scale, float *v12) {
+void *SpawnBreakFragment(char *src, int cls, float *pos, void *mat, int a8, int a9, float *v10, float *v11, float scale, float *v12) {
     char *m = (char *)func_0020D348_m(cls);
     char *d;
     float t[4];
@@ -1092,7 +1088,8 @@ extern void func_L00_002377E0(void);
 extern void func_L00_00237B70(void);
 extern void func_L00_00237B90(void);
 extern void func_L00_002367A8(int, int);
-void func_L00_002653A0(void) {
+/* Per-frame update for the countdown D_L00_0015F670. */
+void CountdownDisplayUpdate(void) {
     if (D_L00_0015F670 != 0) {
         D_L00_0015F670 = D_L00_0015F670 - 1;
         if (D_L00_0015F670 == 0) {
@@ -1104,6 +1101,6 @@ void func_L00_002653A0(void) {
     } else if ((*(int *)&D_L00_00161F04_g) == -1) {
         (*(int *)&D_L00_00161F04_g) = queue_animation_update(0xC, 0, (void *)((char *)func_L00_002377E0 + 0x340), DefaultVtbl_DeleteMoby, func_L00_00237B90, 0, 0);
     } else {
-        func_L00_002367A8((*(int *)&D_L00_00161F04_g), 0xA);
+        Hud_ExtendBankTime((*(int *)&D_L00_00161F04_g), 0xA);
     }
 }

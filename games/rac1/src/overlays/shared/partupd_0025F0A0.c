@@ -15,7 +15,7 @@ extern int func_001F9850(int);
 extern int D_L15_0016027C SDATA(D_L15_0016027C);
 
 // spawns a particle at a position offset from a moby
-void func_L15_0025F0A0(int a0, void *a1, char *a2) {
+void PartType31Spawn(int a0, void *a1, char *a2) {
     struct { u128 pos, s, d; } scratch;
     Particle5F0A0 *p;
     Owner5F0A0 *owner = (Owner5F0A0 *)a2;
@@ -50,7 +50,7 @@ extern void func_002158E8(float *, int *);
 extern void func_00215A10(float *, int *);
 
 // spawns a particle moby (class 0x47) at a position and fills in its two sub-records
-unsigned char *func_L15_002655D0(void *pos, float *p, float *c, int d, int e, int f, int g, int h, char *owner) {
+unsigned char *PartType71Spawn(void *pos, float *p, float *c, int d, int e, int f, int g, int h, char *owner) {
     unsigned char *r = func_00218928(0x47);
     if (r != 0) {
         int *q, *q2;
@@ -66,8 +66,8 @@ unsigned char *func_L15_002655D0(void *pos, float *p, float *c, int d, int e, in
         r[8] = random_integer_below(0xFF);
         r[2] = *(unsigned char *)D_L15_001B2A70;
         *(short *)(r + 0xA) = f;
-        func_002158E8(p, q);
-        func_002158E8(c, q2);
+        PackVectorScaled(p, q);
+        PackVectorScaled(c, q2);
         load_display_text_resource_entry(t0, q);
         load_display_text_resource_entry(t1, q2);
         q[2] = d;

@@ -16,14 +16,14 @@ extern void func_L00_001FFA40(void *, void *);
 void func_0022C9A8(s32 arg0);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l00/unclassified_0023d968.c, FUN_L00_00289330. */
-void func_L00_0028A608(void) {
+void DrawVeldinSky(void) {
     Vec4 rot;
 
     *(short *)(D_L00_001605DC + 4) = 0;
     SkyDrawShell(0);
     SkyDrawShell(1);
-    if (*(short *)(D_L00_001605DC + 8) == 0) func_L00_0028A198(0xF4, 0xC);
-    func_L00_0028A3E0();
+    if (*(short *)(D_L00_001605DC + 8) == 0) SkyInitParticles(0xF4, 0xC);
+    StepSkySparkles();
     SkySpriteProc();
     VU1_addGSregister(0x42, 0x8000000044L);
     SkyDrawShell(2);

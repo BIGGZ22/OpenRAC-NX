@@ -4,7 +4,7 @@
 
 extern char D_001517D0[];
 // Requests a music track and stinger.
-void func_L00_002664B0(int track, int stinger) {
+void MusicRequestTrack(int track, int stinger) {
  char *b = D_001517D0;
  if (*(short *)(b+0x38) == track) {
   if (*(signed char *)(b+0x22) == -1) return;

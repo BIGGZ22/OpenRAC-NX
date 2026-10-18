@@ -11,7 +11,7 @@ typedef unsigned int u128_pt __attribute__((mode(TI)));
 extern char D_L00_0016EB40_001fe990[] __asm__("D_L00_0016EB40");
 float func_00214158_001fe990() __asm__("func_00214158");
 /* Claims a free slot of the 16-entry effect table: copies the position quadword, stores a scale, a lifetime of 0x18 frames, a type and a random float; returns the slot or -1. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_001fd108.c, FUN_L00_001fe990. */
-int func_L00_001FE940(u128_pt *v, int b, float x) {
+int ClaimEffectSlot(u128_pt *v, int b, float x) {
     u128_pt t;
     u128_pt *tp = &t;
     char *e;
@@ -38,7 +38,7 @@ extern float D_0015EE6C MACRO_ADDR;
 extern float func_001FA790(float, float);
 extern void func_001F99B0(void *, int, int);
 
-void func_L00_001FE9C8(void) {
+void UpdateEffectSlots(void) {
     int i;
     P *p = D_L00_0016EB40;
     for (i = 15; i >= 0; i--, p++) {

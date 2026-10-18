@@ -12,7 +12,7 @@ extern int D_L00_0015F528 MACRO_ADDR;
 extern int D_L00_0015F534 MACRO_ADDR;
 extern int D_L00_0015F3F0 MACRO_ADDR;
 extern int D_L00_0015F3F4 MACRO_ADDR;
-void func_L00_00299108(void) {
+void ResetFrameCounters(void) {
     D_L00_0015F524 = 0;
     D_L00_0017E604[0] = 0;
     D_L00_0015F52C = 0;
@@ -32,7 +32,7 @@ extern int D_0015EF28 MACRO_ADDR;
 int func_001F9850(int);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00295100.c, FUN_L00_00297e70. */
-void func_L00_00299148(void) {
+void UpdateFrameCounters(void) {
     if (D_0013CA40.busy != 0 || D_0013CA40.c != 0.0f || D_0013CA40.d != 0.0f || D_0013CA40.a != 0.0f || D_0013CA40.b != 0.0f) {
         (*(int *)&D_L00_001610B0) = 0;
     } else {
@@ -118,7 +118,7 @@ extern int func_L00_0023B610_r(int) __asm__("func_L00_0023B610");
 extern void func_001FE6C0(void);
 
 /* per-frame update of the in-level game: pause and cutscene triggers, then the subsystem updates. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/unclassified_00295100.c, FUN_L00_00297f78. */
-void func_L00_00299250(void) {
+void LevelFrameUpdate(void) {
     int lvl, area, noctl, special;
     unsigned char *r;
     if (D_L00_0016C158.wEC) {
@@ -131,7 +131,7 @@ void func_L00_00299250(void) {
     }
     lvl = D_L00_0015F6A8;
     if (lvl == 0 && (D_0015EFB4_m & 0x401) && D_L00_0015F6AC >= 8 && ((HeroS *)(D_0013E633 + 0xE1D))->w2084 != 0x1D) {
-        func_001FBC80(3, 0, 0);
+        Freeze_Enter(3, 0, 0);
         return;
     }
     noctl = ((PadS *)(D_0013A5E0 + 0x2460))->w19C == 0;
@@ -143,7 +143,7 @@ void func_L00_00299250(void) {
     if (area == 15 && D_L00_0015F6AC >= 8 && ((HeroS *)(D_0013E633 + 0xE1D))->b20A4 == 2
         && ((((PadS *)(D_0013A5E0 + 0x2460))->w1A4 & 0x800) || noctl) && ((HeroS *)(D_0013E633 + 0xE1D))->w2084 != 0x72) {
         if (D_L00_00166F00->h86 == 0x13) return;
-        func_001FBC80(4, 0, 0);
+        Freeze_Enter(4, 0, 0);
         return;
     }
     special = 0;
@@ -153,17 +153,17 @@ void func_L00_00299250(void) {
     }
     if (special && D_L00_0015F6AC >= 8 && ((((PadS *)(D_0013A5E0 + 0x2460))->w1A4 & 0x800) || noctl)
         && ((HeroS *)(D_0013E633 + 0xE1D))->w2084 != 0x72 && D_L00_00166F00->h86 != 0x13) {
-        func_001FBC80(1, 0, 0);
+        Freeze_Enter(1, 0, 0);
         return;
     }
     if (lvl == 0 && (area == 8 || area == 0xC) && ((((PadS *)(D_0013A5E0 + 0x2460))->w1A4 & 0x800) || noctl)
         && ((HeroS *)(D_0013E633 + 0xE1D))->w2084 == 0x32) {
-        func_001FBC80(1, 0, 0);
+        Freeze_Enter(1, 0, 0);
         return;
     }
     if (((((PadS *)(D_0013A5E0 + 0x2460))->w1A4 & 0x800) || noctl) && D_L00_0015F6AC >= 8
         && ((HeroS *)(D_0013E633 + 0xE1D))->w2084 != 0x72 && ((HeroS *)(D_0013E633 + 0xE1D))->w208C == 0x16) {
-        func_001FBC80(0, 0, 0);
+        Freeze_Enter(0, 0, 0);
         return;
     }
     if (((((PadS *)(D_0013A5E0 + 0x2460))->w1A4 & 0x800) || noctl) && D_L00_0015F6AC >= 8
@@ -186,18 +186,18 @@ void func_L00_00299250(void) {
     if (((AreaS *)(D_0013D355 + 0x3B))->wFC && !(r = (unsigned char *)(D_0013D355_b + 0x13B))[0x10] && D_L00_0015F6AC >= 8
         && !D_0015EF20 && !((HeroS *)(D_0013E633 + 0xE1D))->b20B1 && ((HeroS *)(D_0013E633 + 0xE1D))->w22A8
         && scale_ticks(0x1E) < D_L00_0015F6B0 && D_0015EE84) {
-        func_001FBC80(5, 0, 0);
+        Freeze_Enter(5, 0, 0);
         r[0x10] = 1;
         return;
     }
-    if (((HeroS *)(D_0013E633 + 0xE1D))->w2084 != 0x1D && ((HeroS *)(D_0013E633 + 0xE1D))->w2084 != 0x32) func_L00_002653A0();
+    if (((HeroS *)(D_0013E633 + 0xE1D))->w2084 != 0x1D && ((HeroS *)(D_0013E633 + 0xE1D))->w2084 != 0x32) CountdownDisplayUpdate();
     if ((((PadS *)(D_0013A5E0 + 0x2460))->w1A4 & 0x200) && ((HeroS *)(D_0013E633 + 0xE1D))->w2084 != 0x1D
         && ((HeroS *)(D_0013E633 + 0xE1D))->w2084 != 0x32) {
         int x;
         x = func_L00_00235790_r();
-        func_L00_002367A8(x, scale_ticks(0xB4));
-        x = queue_animation_update(2, 0x754E, (int)func_L00_0023A658, (int)func_L00_0023A690, (int)func_L00_0023A788, (int)&gBolts, 9999999);
-        func_L00_002367A8(x, scale_ticks(0xB4));
+        Hud_ExtendBankTime(x, scale_ticks(0xB4));
+        x = queue_animation_update(2, 0x754E, (int)HudBoltsInit, (int)HudBoltsUpdate, (int)HudBoltsDraw, (int)&gBolts, 9999999);
+        Hud_ExtendBankTime(x, scale_ticks(0xB4));
     }
     if (D_L00_00184314) {
         HitS *h = (HitS *)(D_0014171B + 0x22D);
@@ -208,39 +208,39 @@ void func_L00_00299250(void) {
     if (D_L00_0015F710) {
         D_L00_0015F710 = 0;
         if (((HeroS *)(D_0013E633 + 0xE1D))->w22A8) {
-            func_L00_0028FFB0();
+            ShipTakeOff();
             return;
         }
     }
-    if ((D_L00_0016C158.w8 & 2) || ((D_L00_0016C158.w8 & 0x10) && (((PadS *)(D_0013A5E0 + 0x2460))->w1A4 & 0x200))) func_L00_00299108();
+    if ((D_L00_0016C158.w8 & 2) || ((D_L00_0016C158.w8 & 0x10) && (((PadS *)(D_0013A5E0 + 0x2460))->w1A4 & 0x200))) ResetFrameCounters();
     if ((D_L00_0016C158.w8 & 2) || ((D_L00_0016C158.w8 & 0x10) && (((PadS *)(D_0013A5E0 + 0x2460))->w1A4 & 0x200))) {
-        func_L00_0024F7E0();
+        CountExpiredMobys();
         func_00213C78();
-        func_0022EF68();
-        func_L00_002A5B20();
+        SoundRunEntryCallbacks();
+        LevelAmbienceUpdate();
     }
     func_001E9768_a(D_L00_001610B8, 3);
-    if ((D_L00_0016C158.w8 & 1) || ((D_L00_0016C158.w8 & 0x10) && (((PadS *)(D_0013A5E0 + 0x2460))->w1A4 & 0x200))) func_L00_002076E8();
+    if ((D_L00_0016C158.w8 & 1) || ((D_L00_0016C158.w8 & 0x10) && (((PadS *)(D_0013A5E0 + 0x2460))->w1A4 & 0x200))) Hero_UpdateWithBoundsCheck();
     func_001E9768_a(D_L00_001610C8, 7);
     if ((D_L00_0016C158.w8 & 4) || ((D_L00_0016C158.w8 & 0x10) && (((PadS *)(D_0013A5E0 + 0x2460))->w1A4 & 0x200))) {
         UpdateParts();
-        func_L00_001FE9C8();
+        UpdateEffectSlots();
     }
     func_001E9768_a(D_L00_001610D8, 5);
     if ((D_L00_0016C158.w8 & 8) || ((D_L00_0016C158.w8 & 0x10) && (((PadS *)(D_0013A5E0 + 0x2460))->w1A4 & 0x200))) {
-        func_L00_001ED428();
+        Camera_UpdateFrame();
     } else if (D_L00_0016C158.w14) {
-        func_L00_001F3E20();
-        if (D_L00_0016C158.w14 == 2) func_L00_001F4810();
+        DebugFreeCameraUpdate();
+        if (D_L00_0016C158.w14 == 2) Hero_PlaceOnOrbit();
     }
     func_001E9768_a(D_L00_001610E8, 8);
     sound_update();
     func_001E9768_a(D_L00_001610F8, 6);
     UpdateAllPointLights();
-    func_0020DE20();
+    UpdateLightDirection();
     func_L00_0023B610_r(1);
     Help_Update();
-    if ((D_L00_0016C158.w8 & 2) || ((D_L00_0016C158.w8 & 0x10) && (((PadS *)(D_0013A5E0 + 0x2460))->w1A4 & 0x200))) func_L00_00299148();
+    if ((D_L00_0016C158.w8 & 2) || ((D_L00_0016C158.w8 & 0x10) && (((PadS *)(D_0013A5E0 + 0x2460))->w1A4 & 0x200))) UpdateFrameCounters();
     if (D_L00_0016C158.w18 == 2) func_001E9768_b();
     if (D_L00_0016C158.w18 == 3) func_001E9768_b();
     if (D_L00_0016C158.w18 == 4) func_001E9768_b();
@@ -282,7 +282,7 @@ extern int func_00122598(int);
 typedef struct { char pad[0x30]; int a30; } Vd;
 
 // Sets up the vendor screen state from the requested entry and runs it until the screen closes.
-void func_L00_00299B68(int arg) {
+void StartCutscene(int arg) {
     char *d;
     Obj *p;
     char *h;
@@ -295,18 +295,18 @@ void func_L00_00299B68(int arg) {
     if (D_L00_0015F6A8 == 2) return;
     d = (char *)D_0013E633 + 0xE1D;
     if (*(int *)(d + 0x22A8) == 0) {
-        func_L00_00211908();
+        Hero_OnKilled();
         return;
     }
-    func_00216EF0(0);
-    func_00217748(0);
+    music_Pause(0);
+    UpdateAudioStreamUntilIdle(0);
     D_L00_0015F6BC = 1;
-    func_001F99B0(D_L00_0016C960, 0, 0x1C0);
-    func_001F99B0(D_L00_0017C540, 0, 0x40);
-    func_001F99B0(D_L00_0017C440, 0, 0x40);
-    func_001F99B0(D_L00_0017C480, 0, 0x40);
-    func_001F99B0(D_L00_0017C500, 0, 0x40);
-    func_001F99B0(D_L00_0017C4C0, 0, 0x40);
+    FastMemSet(D_L00_0016C960, 0, 0x1C0);
+    FastMemSet(D_L00_0017C540, 0, 0x40);
+    FastMemSet(D_L00_0017C440, 0, 0x40);
+    FastMemSet(D_L00_0017C480, 0, 0x40);
+    FastMemSet(D_L00_0017C500, 0, 0x40);
+    FastMemSet(D_L00_0017C4C0, 0, 0x40);
     *(int *)(D_L00_0016C960 + 0x30) = arg;
     v = D_L00_0016128C - 0x3C000;
     one = 1.0f;
@@ -317,21 +317,21 @@ void func_L00_00299B68(int arg) {
     D_L00_0016128C = v;
     *(int *)(D_L00_0016C960 + 0x58) = D_L00_00173F00[1] + v;
     *(int *)(D_L00_0016C960 + 0x5C) = D_L00_00173F00[2] + v;
-    func_L00_00203FB8();
+    HelpPopup_Cancel();
     *(float *)&D_L00_0015F4FC = one;
     D_L00_0015F6A8 = 2;
     D_L00_0016C960[0x4B] = D_L00_00166D80[0x394];
     *(int *)(D_L00_00166D80 + 0x394) = 0;
     D_L00_0015F500 = 0;
-    func_L00_00222B80(0x64, 2);
+    HeroEnterMoveState(0x64, 2);
     d[0x20A5] = 1;
-    func_L00_00233868();
+    HeroSetObjectFlags();
     if (D_L00_00179208 != 0) *(unsigned short *)(D_L00_00179208 + 0x34) |= 1;
     if (D_L00_001BA15C != 0) *(unsigned short *)(D_L00_001BA15C + 0x34) |= 1;
-    func_L00_00245B88(0);
-    func_001F4E08(func_001F9850(6));
-    func_00217748(1);
-    func_00204FC0();
+    StreamSectorListEntry(0);
+    FadeToBlack(scale_ticks(6));
+    UpdateAudioStreamUntilIdle(1);
+    UpdateWorldObjectAnimation();
     for (p = D_L00_0016009C; p->st != 0xFF; p++) {
         if (p->st & 0x80) continue;
         if (p->type == 0x4A || p->type == 0xCB) {
@@ -341,13 +341,13 @@ void func_L00_00299B68(int arg) {
     h = (char *)D_0014171B + 0x100B5;
     *(int *)(h + 0x1C) = ((Vd *)D_L00_0016C960)->a30;
     while (qq = (char *)D_0014171B + 0x100B5, *(short *)(qq + 0x5A) != 3) {
-        func_0022DD68();
+        sound_update();
         func_00122598(0);
     }
     q = D_L00_0016C960;
     *(short *)(q + 0x46) = -3;
-    ((int (*)(void))func_00216960)();
-    ((int (*)(int))func_L00_00245B88)(1);
+    ((int (*)(void))Music_ContinueStreamIfReady)();
+    ((int (*)(int))StreamSectorListEntry)(1);
     for (i = 0; *(short *)(q + 0x46) < i; i--) {
         func_00122598(0);
     }
@@ -384,7 +384,7 @@ extern AB D_L00_00179200;
 extern PP D_L00_001BA070 NOT_SDA;
 
 // Level teardown: clears the moby table, flags, camera floats and cached objects.
-void func_L00_00299E70(void) {
+void EndCutscene(void) {
     Obj *o;
     O5A *h = (O5A *)((char *)D_0014171B + 0x100B5 - 0);
     char *p, *b;
@@ -394,7 +394,7 @@ void func_L00_00299E70(void) {
     D_L00_0015F6BC = 1;
     func_002348B8();
     FadeToBlack(12);
-    func_L00_00299108();
+    ResetFrameCounters();
     D_L00_00167114 = D_L00_0016C960_c.x4b;
     D_L00_0016CBF0 = 0.63f;
     D_L00_0015F6A8 = 0;
@@ -412,7 +412,7 @@ void func_L00_00299E70(void) {
         if (!(o->st & 0x80) && (o->type == 0x4A || o->type == 0xCB)) o->flags &= 0xFF7F;
     }
     p = D_0013E633 + 0xE9D;
-    func_L00_00222B80(0, 1);
+    HeroEnterMoveState(0, 1);
     g = func_00214358(p, 0, 0.5f);
     if (2.0f < g) {
         p -= 0x80;
@@ -420,11 +420,11 @@ void func_L00_00299E70(void) {
     }
     b = D_0013E633 + 0xE1D;
     b[0x20A5] = 0;
-    func_L00_00233950();
+    HeroClearObjectFlags();
     if (D_L00_0016C960_c.x4a) {
         f = func_00214358(D_L00_0016C960_c.v, 0, 0.5f);
         if (2.0f < f && FastAbsF(D_L00_0016C960_c.v[2] - f) < 2.0f) D_L00_0016C960_c.v[2] = f;
-        func_L00_00217718(D_L00_0016C970, D_L00_0016C970 + 0x10, 0, 1);
+        Hero_ResetToPosition(D_L00_0016C970, D_L00_0016C970 + 0x10, 0, 1);
     }
     if (D_L00_00179200.a) D_L00_00179200.a->flags &= ~1;
     if (D_L00_001BA070.p) {
@@ -436,7 +436,7 @@ void func_L00_00299E70(void) {
         void *b = D_L00_00179200.b;
         D_L00_00179200.a = 0;
         D_L00_00179200.b = 0;
-        func_00217AE8(a, b, 1);
+        DialogNode_Update(a, b, 1);
     }
     func_L00_002666C8(scale_ticks(30));
 }
@@ -452,7 +452,7 @@ extern unsigned char D_0015EEB4_m[4] __asm__("D_0015EEB4") MACRO_ADDR;
 extern short D_L00_0015F680;
 
 /* Builds the camera view matrices from the current camera entry and returns the entry's flag byte. */
-unsigned char func_L00_0029A158(void) {
+unsigned char BuildCameraViewMatrices(void) {
     char *d = D_L00_0016C960;
     int idx = *(int *)(d + 0x38);
     char *e = *(char **)(d + 0x54) + idx * 32;
@@ -669,7 +669,7 @@ extern void func_L00_00207A48(void *);
 
 /* Per-frame update while the cutscene in D_L00_0016C860 plays: runs the debug-gated subsystem updates, fades, advances the frame counters and either finishes the cutscene (end frame reached or skipped) or steps each of its mobys between two keyframes.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00295100.c, FUN_L00_00298f90. */
-void func_L00_0029A300(void) {
+void CutsceneModeUpdate(void) {
     VendorCutscene *cs;
     VendorMoby *m;
     s32 done;
@@ -683,18 +683,18 @@ void func_L00_0029A300(void) {
     f32 b[4] __attribute__((aligned(16)));
 
     if ((D_L00_0016C158_9A300.update_flags & 2) || ((D_L00_0016C158_9A300.update_flags & 0x10) && (D_0013CBE4 & 0x200))) {
-        func_L00_00299108();
+        ResetFrameCounters();
     }
     if (!(D_L00_0016C158_9A300.update_flags & 0x10) || (D_0013CBE4 & 0x220)) {
-        func_L00_0023EC00();
+        Veldin_PerFrameHook();
     }
     if ((D_L00_0016C158_9A300.update_flags & 2) || ((D_L00_0016C158_9A300.update_flags & 0x10) && (D_0013CBE4 & 0x200))) {
         func_00213C78();
-        func_0022EF68();
+        SoundRunEntryCallbacks();
     }
     func_001E9768(D_L00_001610B8_9A300, 3);
     if ((D_L00_0016C158_9A300.update_flags & 1) || ((D_L00_0016C158_9A300.update_flags & 0x10) && (D_0013CBE4 & 0x200))) {
-        func_L00_002076E8();
+        Hero_UpdateWithBoundsCheck();
     }
     func_001E9768(D_L00_001610C8_9A300, 7);
     if ((D_L00_0016C158_9A300.update_flags & 4) || ((D_L00_0016C158_9A300.update_flags & 0x10) && (D_0013CBE4 & 0x200))) {
@@ -710,7 +710,7 @@ void func_L00_0029A300(void) {
         D_L00_0015F4FC_9A300 = 0.0f;
     }
     if (cs->f34 >= cs->h46) {
-        func_00216960();
+        Music_ContinueStreamIfReady();
     }
     done = cs->f34 >= cs->h40;
     if (cs->f34 >= scale_ticks(0x12) && D_L00_0015F4FC_9A300 == 0.0f) {
@@ -722,14 +722,14 @@ void func_L00_0029A300(void) {
         }
     }
     if (done) {
-        func_L00_00299E70();
+        EndCutscene();
     } else {
         lim = D_0015EE80 ? 0x50 : 0x60;
         if (D_L00_0016C960_9A300.f38 >= lim) {
-            func_00217748(1);
+            UpdateAudioStreamUntilIdle(1);
             D_L00_0016C960_9A300.f3C++;
-            func_00204FC0();
-            func_L00_00245B88(D_L00_0016C960_9A300.f3C + 1);
+            UpdateWorldObjectAnimation();
+            StreamSectorListEntry(D_L00_0016C960_9A300.f3C + 1);
         }
         last = func_L00_0029A158_9A300();
         for (i = 0; i < D_L00_0016C960_9A300.h44; i++) {
@@ -738,7 +738,7 @@ void func_L00_0029A300(void) {
             m->frame = id;
             m->next_frame = id + 1;
             update_moby_animation_state(m);
-            m->blend = func_001FA888(D_L00_0016C960_9A300.f38 & 1) * 0.5f;
+            m->blend = IntToFloat(D_L00_0016C960_9A300.f38 & 1) * 0.5f;
             if (last && (D_L00_0016C960_9A300.f38 & 1)) {
                 m->blend = 1.0f;
             }
@@ -749,13 +749,13 @@ void func_L00_0029A300(void) {
             m->b71 = 0xFF;
             func_L00_00251E30(m);
             if (m->b7F) {
-                func_00214550(m);
+                MobyUpdateShadowRange(m);
             }
             if (m->oclass == 0) {
-                func_L00_002353B8(m);
+                HeroAttachManipulators(m);
             }
             if (m->oclass == 10 || m->oclass == 0x1A3 || m->oclass == 0x555) {
-                func_L00_00207A48(m);
+                PulseMobyColor(m);
             }
         }
     }
@@ -763,9 +763,9 @@ void func_L00_0029A300(void) {
     sound_update();
     func_001E9768(D_L00_001610F8_9A300, 6);
     UpdateAllPointLights();
-    func_0020DE20();
+    UpdateLightDirection();
     if ((D_L00_0016C158_9A300.update_flags & 2) || ((D_L00_0016C158_9A300.update_flags & 0x10) && (D_0013CBE4 & 0x200))) {
-        func_L00_00299148();
+        UpdateFrameCounters();
     }
 }
 extern int D_0015EE80 MACRO_ADDR;
@@ -784,7 +784,7 @@ extern void func_L00_00211908(void);
 extern void func_L00_0029A940(int, int, int);
 
 /* Dialog stream update: pick the entry's pair and start it unless one is already playing. */
-void func_L00_0029A7D0(int idx) {
+void PlayMovieEntryIfIdle(int idx) {
     int a, b;
     char *base;
     if (idx < 0) return;
@@ -797,9 +797,9 @@ void func_L00_0029A7D0(int idx) {
     }
     base = D_0013E633 + 0xE1D;
     if (*(int *)(base + 0x22A8) == 0) {
-        func_L00_00211908();
+        Hero_OnKilled();
     } else if (*(unsigned char *)(base + 0x20B1) == 0) {
-        func_L00_0029A940(b, a, D_0015EE88);
+        StartMovie(b, a, D_0015EE88);
     }
 }
 typedef struct { int b; int a; } LL7;
@@ -811,7 +811,7 @@ typedef struct {
 extern G7 D_00137C80_q __asm__("D_00137C80");
 
 /* Plays the movie of table entry i (set chosen by a flag). Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_00295100.c, FUN_L00_002994f8. */
-void func_L00_0029A868(int i) {
+void PlayMovieEntry(int i) {
     int a, b;
     if (i < 0) return;
     if (D_0015EE80) {
@@ -819,7 +819,7 @@ void func_L00_0029A868(int i) {
     } else {
         b = D_00137C80_q.x[i].b; a = D_00137C80_q.x[i].a;
     }
-    func_L00_0029A940(b, a, 0);
+    StartMovie(b, a, 0);
 }
 typedef struct { int b; int a; } LL7_29A8D0;
 typedef struct {
@@ -830,7 +830,7 @@ typedef struct {
 extern G7_29A8D0 D_00137C80_q_29A8D0 __asm__("D_00137C80");
 
 /* Plays the movie of table entry i (set chosen by a flag). Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_00295100.c, FUN_L00_00299560. */
-void func_L00_0029A8D0(int i) {
+void PlayMovieEntryWithMode(int i) {
     int a, b;
     if (i < 0) return;
     if (D_0015EE80) {
@@ -838,7 +838,7 @@ void func_L00_0029A8D0(int i) {
     } else {
         b = D_00137C80_q_29A8D0.x[i].b; a = D_00137C80_q_29A8D0.x[i].a;
     }
-    func_L00_0029A940(b, a, D_0015EE88);
+    StartMovie(b, a, D_0015EE88);
 }
 extern char D_0013E650[];
 extern void func_00118D80(int);
@@ -864,7 +864,7 @@ extern int D_L00_00173F04;
 extern char D_L00_001E9800[];
 
 /* sets up a movie load, then uploads image data from the level buffer to GS memory in two runs of strips */
-void func_L00_0029A940(int sector, int size, int arg2) {
+void StartMovie(int sector, int size, int arg2) {
     int image[24];
     int big, small, gs_addr, src, i, j;
     D_0013E650[0x6B] |= 8;
@@ -875,8 +875,8 @@ void func_L00_0029A940(int sector, int size, int arg2) {
     D_L00_00161108_m.size = size;
     D_L00_00161108_m.unk8 = arg2;
     D_L00_0015F6BC = 1;
-    func_001F4E08(4);
-    func_L00_00203FB8();
+    FadeToBlack(4);
+    HelpPopup_Cancel();
     D_L00_0015F6A8 = 1;
     D_L00_00161108_m.buf0 = D_L00_00173F04;
     D_L00_00161108_m.buf1 = D_L00_0015F50C;
@@ -906,7 +906,7 @@ void func_L00_0029A940(int sector, int size, int arg2) {
         func_00120858(0, 0);
     }
     if (gs_addr > 0x400000) {
-        func_001E9730(D_L00_001E9800, gs_addr - 0x400000);
+        STUB_printf(D_L00_001E9800, gs_addr - 0x400000);
         func_001F9978();
     }
 }
@@ -927,7 +927,7 @@ extern int D_L00_00161108 MACRO_ADDR;
 extern short D_L00_00161114;
 
 /* Stop sound, wait for the loader to go idle, then start the movie load. */
-void func_L00_0029AD18(void) {
+void BeginMoviePlayback(void) {
     func_00118D80(0);
     sound_StopAllSounds();
     music_Stop();
@@ -937,9 +937,9 @@ void func_L00_0029AD18(void) {
         if (*(int *)(ld + 0xDC) < 3 && *(int *)(ld + 0xE4) < 0) {
             break;
         }
-        func_00209E68();
+        MemCard_UpdateState();
     }
-    func_0023B670(D_L00_00161108, D_L00_0016110C,
+    Movie_Play(D_L00_00161108, D_L00_0016110C,
                   (*(int *)&D_L00_00161114 + 0x3F) & ~0x3F,
                   (D_L00_00161118 + 0x3F) & ~0x3F, D_L00_00161110);
     func_00120F30(0);
@@ -955,35 +955,35 @@ typedef struct { char pad[0x16A8]; LL9 normal[20]; LL9 alt[20]; } G9;
 extern G9 D_00137C80;
 
 /* starts the slideshow: resets state, rebases the level data pointers, and starts the first two streams */
-void func_L00_0029ADD8(void) {
+void EnterSlideshowMode(void) {
     int t;
-    func_00217748(0);
-    func_001F4E08(8);
+    UpdateAudioStreamUntilIdle(0);
+    FadeToBlack(8);
     D_L00_0015F6BC = 1;
     *(float *)&D_L00_0015F4FC = 1.0f;
     D_L00_0015F6A8 = 7;
-    func_001F99B0(D_L00_0015F700, 0, 16);
+    FastMemSet(D_L00_0015F700, 0, 16);
     t = D_L00_0016128C - 0xE0000;
     D_L00_0015F700[2] = D_L00_00173F00[1] + t;
     D_L00_0015F700[3] = D_L00_00173F00[2] + t;
     D_L00_0016128C = t;
     if (D_0015EE80 != 0) {
-        func_00217628(D_L00_0015F700[2], D_00137C80.alt[((short *)D_L00_0015F700)[1]].a, D_00137C80.alt[((short *)D_L00_0015F700)[1]].b);
+        start_audio_stream_read(D_L00_0015F700[2], D_00137C80.alt[((short *)D_L00_0015F700)[1]].a, D_00137C80.alt[((short *)D_L00_0015F700)[1]].b);
     } else {
-        func_00217628(D_L00_0015F700[2], D_00137C80.normal[((short *)D_L00_0015F700)[1]].a, D_00137C80.normal[((short *)D_L00_0015F700)[1]].b);
+        start_audio_stream_read(D_L00_0015F700[2], D_00137C80.normal[((short *)D_L00_0015F700)[1]].a, D_00137C80.normal[((short *)D_L00_0015F700)[1]].b);
     }
-    func_00217748(1);
+    UpdateAudioStreamUntilIdle(1);
     ((short *)D_L00_0015F700)[1]++;
     if (D_0015EE80 != 0) {
-        func_00217628(D_L00_0015F700[3], D_00137C80.alt[((short *)D_L00_0015F700)[1]].a, D_00137C80.alt[((short *)D_L00_0015F700)[1]].b);
+        start_audio_stream_read(D_L00_0015F700[3], D_00137C80.alt[((short *)D_L00_0015F700)[1]].a, D_00137C80.alt[((short *)D_L00_0015F700)[1]].b);
     } else {
-        func_00217628(D_L00_0015F700[3], D_00137C80.normal[((short *)D_L00_0015F700)[1]].a, D_00137C80.normal[((short *)D_L00_0015F700)[1]].b);
+        start_audio_stream_read(D_L00_0015F700[3], D_00137C80.normal[((short *)D_L00_0015F700)[1]].a, D_00137C80.normal[((short *)D_L00_0015F700)[1]].b);
     }
 }
 extern void func_00234AC8(int);
 extern void func_00217588(void);
 extern int D_L00_0015F4FC MACRO_ADDR;
-void func_L00_0029AF70(void) {
+void ExitSlideshowMode(void) {
     VU1_syncChain(1);
     FadeToBlack(0xC);
     request_audio_stream_break();
@@ -1000,11 +1000,11 @@ extern int D_L00_00173D00[];
 #define ICNT (((short *)D_L00_0015F700)[2])
 #define ITMR (((short *)D_L00_0015F700)[3])
 
-void func_L00_0029AFB8(void) {
+void SlideshowModeUpdate(void) {
     int s0, t, i, r, one;
     int *src, *dst;
     float f;
-    func_00217748(0);
+    UpdateAudioStreamUntilIdle(0);
     f = *(float *)&D_L00_0015F4FC - 0.05f;
     *(float *)&D_L00_0015F4FC = f;
     if (f < 0.0f) {
@@ -1015,11 +1015,11 @@ void func_L00_0029AFB8(void) {
     if (IST == 0) {
         if (ITMR >= D_L00_00173D00[IIDX] - 0x24) {
             if (*(short *)(D_0014171B + 0x100BD) != 0) {
-                func_00217748(1);
+                UpdateAudioStreamUntilIdle(1);
             }
             if (!s0 && IIDX == 0x29) {
             quit:
-                func_L00_0029AF70();
+                ExitSlideshowMode();
                 return;
             }
             if (IIDX >= 0x2D) goto quit;
@@ -1027,7 +1027,7 @@ void func_L00_0029AFB8(void) {
             IST = 1;
         }
     } else if (IST == one) {
-        func_00234AC8(1);
+        VU1_syncChain(1);
         t = ICNT;
         if (t < 0x20) {
             src = (int *)D_L00_0015F700[3];
@@ -1060,16 +1060,16 @@ void func_L00_0029AFB8(void) {
             IIDX = IIDX + 1;
             r = IIDX % 20;
             if (D_0015EE80 != 0) {
-                func_00217628(D_L00_0015F700[3], D_00137C80.alt[r].a, D_00137C80.alt[r].b);
+                start_audio_stream_read(D_L00_0015F700[3], D_00137C80.alt[r].a, D_00137C80.alt[r].b);
             } else {
-                func_00217628(D_L00_0015F700[3], D_00137C80.normal[r].a, D_00137C80.normal[r].b);
+                start_audio_stream_read(D_L00_0015F700[3], D_00137C80.normal[r].a, D_00137C80.normal[r].b);
             }
         }
     }
     ICNT = ICNT + 1;
     ITMR = ITMR + 1;
     if (*(int *)(D_0013A5E0 + 0x2604) & 0x800) {
-        func_L00_0029AF70();
+        ExitSlideshowMode();
     }
-    func_0022DD68();
+    sound_update();
 }

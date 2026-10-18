@@ -98,7 +98,7 @@ typedef struct {
    TEX0 value returned as in func_00205660. The allocator update comes
    before the TEX0 value and the buffer width is shifted back into w:
    both decide which of tw and the constant 1 local-alloc serves first. */
-long func_00205520(char *p) {
+long LoadMapTexture(char *p) {
     TexDesc t;
     int w;
     int cbp;
@@ -142,7 +142,7 @@ long func_00205520(char *p) {
    cld 4) and, while there is room (64 entries), records it in the next
    D_0018D140 slot. The buffer width is shifted back into w itself: the
    shift then writes w's register and the constant 1 keeps its own. */
-long func_00205660(int tw, int th, int a2, int a3, int clut, int tex) {
+long RegisterMapTexture(int tw, int th, int a2, int a3, int clut, int tex) {
     int w = tw - 6;
     long reg;
     int tbp = tex >> 8;
@@ -172,7 +172,7 @@ __asm__(".section .text\n\tnop\n");
 
 extern int D_001A0468[];
 
-int func_00205728(int arg0) {
+int Map_FindFreeSlot(int arg0) {
     int *a = D_001A0468;
     int *b = D_001A0468 + 5;
     int i = 0;
@@ -246,10 +246,10 @@ extern PadSlots D_001A01F0_slots __asm__("D_001A01F0");
  * size miss of exactly 4 with an otherwise correct instruction stream
  * means a misaligned block, not a missing instruction.
  */
-int func_00205790(void) {
+int AllocMapSlot(void) {
     int i;
 
-    i = func_00205728(1);
+    i = Map_FindFreeSlot(1);
     if (i != 0) {
         return i;
     }
@@ -279,7 +279,7 @@ extern int D_001A01F0[];
    loses an instruction). `flags` is derived only after the call, as in
    retail: deriving it up front with the others swaps a*4 and b*4
    between $s1 and $s2. */
-void func_00205830(int a, int b) {
+void move_map_entry_slot(int a, int b) {
     int *base = D_001A01F0;
     int *dst = base + 0x9E;
     int *size = base + 0xA9;
@@ -295,7 +295,7 @@ void func_00205830(int a, int b) {
 
 extern int D_001A01F0[];
 
-int func_002058D0(int arg0) {
+int findMapSlot(int arg0) {
     int i;
     for (i = 0; i < 5; i++) {
         if (D_001A01F0[0x9E + i] != 0 && D_001A01F0[0xA3 + i] == arg0) {
@@ -316,7 +316,7 @@ extern int *D_001602E0_m __asm__("D_001602E0") MACRO_ADDR;
    -1 if none. The two bounds tests are nested so that fold does not
    merge them into one unsigned compare, and the step update is the
    ternary that gives retail's select (slti/movn). */
-int func_00205918(void) {
+int PickNextMap(void) {
     char *m = (char *)D_001A01F0;
     int off = gHaveMapOMatic ? 0x100 : 0;
     int key;
@@ -354,7 +354,7 @@ extern int *D_001602E0;
 
 /* The global is read at both uses in the loop, giving retail's two
    pointers, and through a MACRO_ADDR alias. */
-int func_00205A50(int arg0) {
+int find_id_in_terminated_table(int arg0) {
     int i;
 
     for (i = 0; D_001602E0_m[i] != 0 && i < 20; i++) {
@@ -377,7 +377,7 @@ extern int func_001F9B70(int); /* abs */
    The slots are indexed off the global itself, as in func_002058D0, so
    that loop.c keeps one pointer per loop; the final store goes through
    the struct view, which adds the base first. */
-int func_00205AA8(void) {
+int PickMapSlotToEvict(void) {
     int best = 0;
     int bestIdx = -1;
     int cur;
@@ -418,7 +418,7 @@ int func_00205AA8(void) {
     return bestIdx;
 }
 
-void func_00205C08(unsigned char *dst, unsigned char *a, unsigned char *b,
+void compose_bitmap_from_mask(unsigned char *dst, unsigned char *a, unsigned char *b,
                    unsigned char *mask) {
     int i;
     int j;
@@ -455,7 +455,7 @@ extern char D_0013CA40[];
    x and 1280 for y. The slot is re-read at every use, the three array
    bases are locals set where retail first builds them, and the x bound is
    computed before the y bound (the scheduler emits them in reverse). */
-int func_00205C70(void) {
+int UpdateMapZoomAndPan(void) {
     char *pad;
     char *m;
     float *zoom;
@@ -645,7 +645,7 @@ extern void vu1_add_g_sregister(s32, s64) __asm__("func_00234C98");
 extern void *map_memset_205E70(void *, s32, u32) __asm__("func_001153FC");
 
 /* UNK_NoMapAvailable */
-void func_00205E70(void) {
+void DrawMapView(void) {
     union {
         u8 b[0x80];
         f32 f[2];
@@ -1073,7 +1073,7 @@ extern void func_00207090(unsigned char *dst, int row, unsigned char *src,
    The remainder is computed before the quotient (retail's surviving
    copy of the quotient), and the scratchpad is a pointer local (retail
    adds the base first). */
-void func_00206F40(int *dst, unsigned char *src, short *offs) {
+void DecodeMapMask(int *dst, unsigned char *src, short *offs) {
     int row;
     unsigned char *scr = (unsigned char *)0x70000000;
 
@@ -1081,7 +1081,7 @@ void func_00206F40(int *dst, unsigned char *src, short *offs) {
         int *p;
         int j;
 
-        func_00207090(scr, row, src, offs);
+        DecodeMapRleRow(scr, row, src, offs);
         {
             int r = row % 16;
             int q = row / 16;
@@ -1121,7 +1121,7 @@ void func_00206F40(int *dst, unsigned char *src, short *offs) {
    at 0x100 in its own statement so that it stays a plain set in the loop
    (a cmove constant would be hoisted); the two bytes are read low byte
    first and `half` is cleared before the count drops, retail's order. */
-void func_00207090(unsigned char *dst, int row, unsigned char *src, short *offs) {
+void DecodeMapRleRow(unsigned char *dst, int row, unsigned char *src, short *offs) {
     int half = 0;
     unsigned char *p;
     int n;

@@ -178,7 +178,7 @@ extern void func_00216270(void);
    The two -1 stores are one chained assignment written last: that
    shares one register between the word and the byte store, and leaves
    the other stores in source order, as retail has them. */
-void func_002161E0(void) {
+void Music_Reset(void) {
     char *s = (char *)D_001517D0;
 
     *(char *)(s + 0x30) = 0x20;
@@ -202,8 +202,8 @@ void func_002161E0(void) {
 extern void func_0012F068(void *);
 extern void func_002177F0(int);
 
-void func_00216270(void) {
-    func_0012F068(func_002177F0);
+void register_audio_stream_callback(void) {
+    func_0012F068(FinishAudioStreamRead);
 }
 
 /* The sound tables in the WAD table of contents at D_00137C80, as far as
@@ -247,7 +247,7 @@ extern void func_0012ED48(int, int, int, int, short, int, int, int,
 
 /* Plays sound arg0 in 60000..: the other play functions below differ
    only in their table. */
-void func_00216290(int arg0, int arg1, int arg2) {
+void Music_PlayId60000(int arg0, int arg1, int arg2) {
     SndToc *toc = (SndToc *)D_00137C80;
     int i = arg0 - 60000;
     int h;
@@ -270,10 +270,10 @@ void func_00216290(int arg0, int arg1, int arg2) {
     *(short *)(s + 0x56) = arg2;
     *(short *)(s + 0x60) = 0;
     func_0012ED48(h, 0, 0, 0, arg2, 0, 2, 0, 0x21,
-                  func_00217860, (long)(unsigned int)(s + 0x50));
+                  MusicStartCallback, (long)(unsigned int)(s + 0x50));
 }
 
-void func_00216368(int arg0, int arg1, int arg2) {
+void Music_PlayId50000(int arg0, int arg1, int arg2) {
     SndToc *toc = (SndToc *)D_00137C80;
     int i = arg0 - 50000;
     int h;
@@ -296,10 +296,10 @@ void func_00216368(int arg0, int arg1, int arg2) {
     *(short *)(s + 0x56) = arg2;
     *(short *)(s + 0x60) = 0;
     func_0012ED48(h, 0, 0, 0, arg2, 0, 2, 0, 0x21,
-                  func_00217860, (long)(unsigned int)(s + 0x50));
+                  MusicStartCallback, (long)(unsigned int)(s + 0x50));
 }
 
-void func_00216450(int arg0, int arg1, int arg2) {
+void Music_PlayId40000(int arg0, int arg1, int arg2) {
     SndToc *toc = (SndToc *)D_00137C80;
     int i = arg0 - 40000;
     int h;
@@ -322,7 +322,7 @@ void func_00216450(int arg0, int arg1, int arg2) {
     *(short *)(s + 0x56) = arg2;
     *(short *)(s + 0x60) = 0;
     func_0012ED48(h, 0, 0, 0, arg2, 0, 2, 0, 0x21,
-                  func_00217860, (long)(unsigned int)(s + 0x50));
+                  MusicStartCallback, (long)(unsigned int)(s + 0x50));
 }
 
 /* A byte flag; declared int-sized so MACRO_ADDR keeps it off $gp (-G2). */
@@ -332,7 +332,7 @@ extern char D_00151820[];
 
 /* The same through a per-language table at D_0011C278; volume only
    when the D_0015EF1C flag is set. */
-void func_00216528(int arg0, int arg1, int arg2) {
+void Music_PlayId30000(int arg0, int arg1, int arg2) {
     int *p = (int *)(D_0011C278 + (arg0 * 4 + D_0015EE88 * 0x258));
     char *s;
 
@@ -352,10 +352,10 @@ void func_00216528(int arg0, int arg1, int arg2) {
     *(short *)(s + 0x56) = arg2;
     *(short *)(s + 0x60) = 0;
     func_0012ED48(*p, 0, 0, 0, *(unsigned char *)&D_0015EF1C_w ? arg2 : 0,
-                  0, 2, 0, 0x21, func_00217860, (long)(unsigned int)D_00151820);
+                  0, 2, 0, 0x21, MusicStartCallback, (long)(unsigned int)D_00151820);
 }
 
-void func_00216620(int arg0, int arg1, int arg2) {
+void Music_PlayId20000(int arg0, int arg1, int arg2) {
     SndToc *toc = (SndToc *)D_00137C80;
     int i = arg0 - 20000;
     int h;
@@ -378,10 +378,10 @@ void func_00216620(int arg0, int arg1, int arg2) {
     *(short *)(s + 0x56) = arg2;
     *(short *)(s + 0x60) = 0;
     func_0012ED48(h, 0, 0, 0, arg2, 0, 2, 0, 0x21,
-                  func_00217860, (long)(unsigned int)(s + 0x50));
+                  MusicStartCallback, (long)(unsigned int)(s + 0x50));
 }
 
-void func_002166F0(int arg0, int arg1, int arg2) {
+void Music_PlayId10000(int arg0, int arg1, int arg2) {
     SndToc *toc = (SndToc *)D_00137C80;
     int i = arg0 - 10000;
     int h;
@@ -404,7 +404,7 @@ void func_002166F0(int arg0, int arg1, int arg2) {
     *(short *)(s + 0x56) = arg2;
     *(short *)(s + 0x60) = 0;
     func_0012ED48(h, 0, 0, 0, arg2, 0, 2, 0, 0x21,
-                  func_00217860, (long)(unsigned int)(s + 0x50));
+                  MusicStartCallback, (long)(unsigned int)(s + 0x50));
 }
 
 extern char D_0013A764[];
@@ -414,32 +414,32 @@ extern char D_0013A764[];
    the same music_Playing setup those siblings do, inline, with the sound
    handle read from D_0013A764[arg0][D_0015EE88] (stride 0x250) instead of
    a SndToc table. */
-void func_002167C0(int arg0, int arg1, int arg2) {
+void music_start_track_by_id(int arg0, int arg1, int arg2) {
     char *s;
     int handle;
 
     if (arg0 >= 60000) {
-        func_00216290(arg0, arg1, arg2);
+        Music_PlayId60000(arg0, arg1, arg2);
         return;
     }
     if (arg0 >= 50000) {
-        func_00216368(arg0, arg1, arg2);
+        Music_PlayId50000(arg0, arg1, arg2);
         return;
     }
     if (arg0 >= 40000) {
-        func_00216450(arg0, arg1, arg2);
+        Music_PlayId40000(arg0, arg1, arg2);
         return;
     }
     if (arg0 >= 30000) {
-        func_00216528(arg0, arg1, arg2);
+        Music_PlayId30000(arg0, arg1, arg2);
         return;
     }
     if (arg0 >= 20000) {
-        func_00216620(arg0, arg1, arg2);
+        Music_PlayId20000(arg0, arg1, arg2);
         return;
     }
     if (arg0 >= 10000) {
-        func_002166F0(arg0, arg1, arg2);
+        Music_PlayId10000(arg0, arg1, arg2);
         return;
     }
     handle = *(int *)((char *)D_0013A764 + arg0 * 0x250 + D_0015EE88 * 4);
@@ -459,13 +459,13 @@ void func_002167C0(int arg0, int arg1, int arg2) {
     *(short *)(s + 0x56) = arg2;
     *(short *)(s + 0x60) = 0;
     func_0012ED48(handle, 0, 0, 0, arg2, 0, 2, 0, 0x21,
-                  func_00217860, (long)(unsigned int)(s + 0x50));
+                  MusicStartCallback, (long)(unsigned int)(s + 0x50));
 }
 
 extern short D_001517D0[];
 extern void func_0012EDE0(void *);
 
-int func_00216960(void) {
+int Music_ContinueStreamIfReady(void) {
     char *d = (char *)D_001517D0;
     void *p = *(void **)(d + 0x50);
     if (p != 0) {
@@ -481,7 +481,7 @@ int func_00216960(void) {
 extern void func_002178C0(int, long);
 
 /* music_PreseekTrack(int, int, int) */
-void func_002169B8(int arg0, int arg1, int arg2) {
+void music_PreseekTrack(int arg0, int arg1, int arg2) {
     char *s = (char *)D_001517D0;
     char *base;
     int *tbl;
@@ -505,13 +505,13 @@ void func_002169B8(int arg0, int arg1, int arg2) {
     *(short *)(s + 0x3A) = arg2;
     *(short *)(s + 0x44) = 0;
     func_0012ED48(h, 0, 0, 0, arg2, 0, 1, 0, 0x21,
-                  func_002178C0, (long)(unsigned int)(s + 0x34));
+                  MusicPreseekCallback, (long)(unsigned int)(s + 0x34));
 }
 
 extern void func_002179C8(int, long);
 
 /* music_StartTrack(int, int, int) */
-void func_00216A90(int arg0, int arg1, int arg2) {
+void music_StartTrack(int arg0, int arg1, int arg2) {
     char *s = (char *)D_001517D0;
     char *base;
     int *tbl;
@@ -535,7 +535,7 @@ void func_00216A90(int arg0, int arg1, int arg2) {
     *(short *)(s + 0x3A) = arg2;
     *(short *)(s + 0x44) = 0;
     func_0012ED48(h, 0, 0, 0, arg2, 0, 1, 0, 0x20,
-                  func_002179C8, (long)(unsigned int)(s + 0x34));
+                  MusicStartTrackCallback, (long)(unsigned int)(s + 0x34));
 }
 
 extern void func_00217970(int, long);
@@ -549,7 +549,7 @@ extern void func_00217970(int, long);
    func_00216A90 (CSE merges the loads, and the address stays in a
    register as in retail), and the 0x24/0x20 choice comes before the
    stores, which keeps arg1 in $a1. */
-void func_00216B68(int arg0, int arg1, int arg2) {
+void music_StartTrackBody(int arg0, int arg1, int arg2) {
     char *s = (char *)D_001517D0;
     char *base;
     int *tbl;
@@ -581,7 +581,7 @@ void func_00216B68(int arg0, int arg1, int arg2) {
     *(short *)(s + 0x3A) = arg2;
     *(short *)(s + 0x44) = 0;
     func_0012ED48(h, 0, 0, 0, arg2, 0, 1, cur, flags,
-                  func_00217970, (long)(unsigned int)(s + 0x34));
+                  MusicStartTrackBodyCallback, (long)(unsigned int)(s + 0x34));
 }
 
 /* Retail carries 4 bytes of inter-function padding after this endlabel. */
@@ -591,7 +591,7 @@ extern void func_00217920(int, long);
 
 /* The success path ends in the call, so `return 1` does not break the
    block's trailing call run (the scheduler then keeps retail's order). */
-int func_00216C50(int arg0, int arg1, int arg2, int arg3) {
+int music_Transition(int arg0, int arg1, int arg2, int arg3) {
     char *s = (char *)D_001517D0;
     char *base;
     int *tbl;
@@ -611,7 +611,7 @@ int func_00216C50(int arg0, int arg1, int arg2, int arg3) {
             *(short *)(s + 0x7C) = 1;
             *(short *)(s + 0x72) = arg3;
             func_0012ED48(h, 0, 0, 0, arg3, 0, 1, 0, 0x20,
-                          func_00217920, (long)(unsigned int)(s + 0x6C));
+                          MusicTransitionCallback, (long)(unsigned int)(s + 0x6C));
         } else {
             return 0;
         }
@@ -623,7 +623,7 @@ int func_00216C50(int arg0, int arg1, int arg2, int arg3) {
 
 /* A block-local `char *e` for the final stores (%hi kept, %lo rebuilt),
    written in the order the rotation rule gives. */
-void func_00216D30(int arg0, int arg1) {
+void Music_QueueTrack(int arg0, int arg1) {
     char *d = (char *)D_001517D0;
 
     if (*(short *)(d + 0x38) == arg0) {
@@ -656,7 +656,7 @@ extern void func_0012EE70(int);
    exit test in front of the loop then gets its own pseudo, and the loop
    keeps retail's copy in $s1. The stores are in the order that gives
    retail's schedule. */
-void func_00216D88(void) {
+void music_Stop(void) {
     {
         char *d;
         while (d = (char *)D_001517D0, *(unsigned int *)(d + 0x34) == 0xFFFFFFFF) {
@@ -702,7 +702,7 @@ void func_00216D88(void) {
 extern short D_001517D0[];
 
 /* music_Pause(int) */
-void func_00216EF0(int arg0) {
+void music_Pause(int arg0) {
     if (arg0 != 0) {
         D_001517D0[0x2F] = 0;
         D_001517D0[0x2E] = -0x8000;
@@ -714,7 +714,7 @@ void func_00216EF0(int arg0) {
 }
 
 /* music_Unpause(void) */
-void func_00216F28(void) {
+void music_Unpause(void) {
     short *p = D_001517D0;
     p[0x20] = 4;
     p[0x3C] = 4;
@@ -753,7 +753,7 @@ extern void func_00217830(int, long);
    0xFFFFFFFF with lui/ori), the special case is the else arm (retail
    places it last), and the dispatch reads p->state directly so the 2/3
    range test works on the loaded halfword as retail's does. */
-void func_00216F48(MusicPlaying *p) {
+void music_UpdateStream(MusicPlaying *p) {
     int h;
 
     if (p->state != 9 && p->handle != 0 && p->handle != 0xFFFFFFFF) {
@@ -793,12 +793,12 @@ void func_00216F48(MusicPlaying *p) {
         if (p->state != 2 && p->state != 3) {
             h = p->handle;
             p->handle = 0xFFFFFFFF;
-            func_0012EE10(h, func_00217A60, (long)(unsigned int)p);
-            func_0012E588(h, func_00217A08, (long)(unsigned int)p);
+            func_0012EE10(h, MusicTimeRemainingCallback, (long)(unsigned int)p);
+            func_0012E588(h, MusicReleaseCallback, (long)(unsigned int)p);
             return;
         }
         if (p->handle != 0xFFFFFFFF && p->state == 2) {
-            func_0012EE40(p->handle, func_00217830, (long)(unsigned int)p);
+            func_0012EE40(p->handle, MusicAdvanceStateCallback, (long)(unsigned int)p);
         }
     } else if (p->state == 7 || p->handle == 0) {
         p->state = 0;
@@ -862,7 +862,7 @@ extern void func_00216F48_17130(void *) __asm__("func_00216F48");
 extern s32 func_00217628(s32, s32, s32);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/audio/music/music_update.c, music_update. */
-void func_00217130(void) {
+void music_Update(void) {
     s8 requested_track;
     s32 fade_volume;
     s32 handle;

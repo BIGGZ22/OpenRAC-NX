@@ -5,7 +5,9 @@
    when its angle is zero (exponent bits zero), so row i = R.e_i with R = Rz.Ry.Rx. Sine and
    cosine fold the angle into [-pi/2, pi/2] with min/max and use a 9th-order odd polynomial;
    cosine is the sine of angle + pi/2. Only rows 0..2 are stored. */
-void func_001FA1F8(float *out, float *in) {
+void func_001FA1F8(void *out_, void *in_) {
+    float *out = out_;
+    float *in = in_;
     union { unsigned int u; float f; } cv;
     float k[7];
     float r[3][4];

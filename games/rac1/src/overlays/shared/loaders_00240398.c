@@ -54,7 +54,7 @@ extern int func_00120858_240398(int, unsigned short) __asm__("func_00120858");
 extern void func_00203E78_240398(void *, void *, void *, int) __asm__("func_00203E78");
 
 /* Loads a level's four packed images through the GS loader and registers the image records and their data blocks. */
-char *func_L00_00240398(char *buf, int *tbl) {
+char *LoadLevelImages(char *buf, int *tbl) {
     int img[24];
     int i = 0;
     int a;
@@ -134,7 +134,7 @@ extern u64 D_L00_00182740[];
 extern u64 D_L00_001828C0[];
 extern u64 D_L00_001828D8[];
 /* writes GIF viewer setup words for a selected or fallback configuration */
-void func_L00_00240CE0(char *out,int a,int b,u64 c,int d,int idx) {
+void SetupVisGifViewer(char *out,int a,int b,u64 c,int d,int idx) {
  u64 x=D_L00_00182740[idx*3];
  u64 y=D_L00_00182740[idx*3+1];
  u64 z=D_L00_00182740[idx*3+2];
@@ -170,7 +170,7 @@ extern int D_L00_00173F40_a[] __asm__("D_L00_00173F40");
 extern const int *D_L00_0015F6F8 SDATA(D_L00_0015F6F8);
 
 // Relocates the collision header's offsets into pointers.
-void func_L00_002420C0(char *p) {
+void CollInit(char *p) {
     const int *q;
     int i;
     int *e;
@@ -538,7 +538,7 @@ extern char *D_L00_0015F418 MACRO_ADDR;
 extern char *D_L00_0015F410 MACRO_ADDR;
 
 /* Loads a level's gameplay file into the level heap: settings, lights, ties, shrubs, mobys, paths and the occlusion tables; returns the heap cursor. */
-char *func_L00_002422D8(int arg0) {
+char *LoadLevelGameplay(int arg0) {
     Hdr_422D8 *hdr;
     char *mem;
     float *ship;
@@ -564,11 +564,11 @@ char *func_L00_002422D8(int arg0) {
     func_001160C8(0x4D2);
     if (D_0015EE80 != 0) {
         if (D_0015EE60 == 1.0f) {
-            func_L00_002623D0(1);
+            SetUpdateModeTiming(1);
         }
     } else {
         if (D_0015EE60 != 1.0f) {
-            func_L00_002623D0(0);
+            SetUpdateModeTiming(0);
         }
     }
     D_L00_00173F40.f4 = D_L00_00174000;
@@ -817,7 +817,7 @@ char *func_L00_002422D8(int arg0) {
                 float d;
 
                 inst->f17 = truncate_float_to_s32(*D_L00_001BC3C0[cls]->f1C);
-                d = func_001FA888(inst->f17) + 24.0f;
+                d = IntToFloat(inst->f17) + 24.0f;
                 if (inst->f10 < d) {
                     inst->f10 = d;
                 }
@@ -946,7 +946,7 @@ char *func_L00_002422D8(int arg0) {
 
                 func_L00_001FF040(e, p, 0x90);
                 p += 0x90;
-                func_L00_0028F230((short *)e);
+                Sound_LookupTableEntry((short *)e);
             }
         } else {
             D_0013E650.fD94 = 0;
@@ -994,7 +994,7 @@ char *func_L00_002422D8(int arg0) {
             if (flags != 0) {
                 tmp = D_0015EE84; /* read before the test: see the group loop */
                 if (flags & 0x10) {
-                    vis = func_L00_00286068(tmp, uid);
+                    vis = BoltTally_FindSlot(tmp, uid);
                 } else {
                     vis = 0xFF;
                 }
@@ -1049,16 +1049,16 @@ char *func_L00_002422D8(int arg0) {
                 p += 4;
                 m->unkB1 = vis;
                 m->save_id = uid;
-                m->unkB0 = mission;
+                m->mission = mission;
                 m->unkB4 = b2;
                 m->unkB6 = b1;
                 if (m->pclass != 0) {
                     m->scale = m->pclass->scale * *(float *)p;
                 }
                 p += 4;
-                m->unk32 = *(unsigned short *)p;
+                m->draw_dist = *(unsigned short *)p;
                 p += 4;
-                m->unk30 = *(unsigned char *)p;
+                m->update_dist = *(unsigned char *)p;
                 p += 0xC;
                 m->pos.x = ((float *)p)[0];
                 m->pos.y = ((float *)p)[1];
@@ -1083,11 +1083,11 @@ char *func_L00_002422D8(int arg0) {
                 }
                 p += 4;
                 pv = *(int *)p;
-                m->unk36 = 0x7F80;
+                m->occlusion = 0x7F80;
                 p += 4;
                 (*(int *)&m->pvars) = pv;
                 if (*(int *)p == 0) {
-                    m->unk36 = 0;
+                    m->occlusion = 0;
                 }
                 p += 4;
                 if (m->pclass != 0) {
@@ -1110,7 +1110,7 @@ char *func_L00_002422D8(int arg0) {
                 func_0020E340(m, m->unk80, 0, 0, 0);
                 (*(int *)&m->spawn_frame) = upd;
                 if (*(int *)p != -1) {
-                    func_L00_0024B1B0((int)m, *(int *)p);
+                    SetPlanetTableEntry((int)m, *(int *)p);
                 }
                 count++;
             }
@@ -1490,8 +1490,8 @@ char *func_L00_002422D8(int arg0) {
             if (D_L00_00160600 != 0) {
                 for (m = D_L00_00160098; m->state != 0xFF; m++) {
                     if (m->oclass == D_L00_00160608[D_0013E130.f26]) {
-                        func_L00_0028FB78((char *)m);
-                        func_00213D28(m, 1, 0);
+                        Ship_Register((char *)m);
+                        MobySetAnimation(m, 1, 0);
                         break;
                     }
                 }
@@ -1505,15 +1505,15 @@ char *func_L00_002422D8(int arg0) {
             m->pos.y = ship[1];
             m->pos.z = ship[2];
             rot = ship[3];
-            (*(void **)&m->update) = func_L00_0028F458;
-            m->unk32 = 0xFF;
+            (*(void **)&m->update) = EnvMappedPickupUpdate;
+            m->draw_dist = 0xFF;
             m->rot.z = rot;
-            m->unk30 = 0x10;
+            m->update_dist = 0x10;
             m->flags &= ~2;
-            func_00213D28(m, 1, 0);
+            MobySetAnimation(m, 1, 0);
             func_L00_00251E30(m);
             D_0013E130.f0 = m;
-            func_L00_0024B1B0((int)m, 0);
+            SetPlanetTableEntry((int)m, 0);
         }
     }
     if (D_L00_0015F6E0 != 0 && hdr->f8C != 0) {
@@ -1566,7 +1566,7 @@ char *func_L00_002422D8(int arg0) {
             int k = 0;
 
             for (m = D_L00_00160098; m->state != 0xFF; m++) {
-                if (m->unk36 != 0x7F80) {
+                if (m->occlusion != 0x7F80) {
                     int uid = (*(short *)&m->save_id);
                     int j;
 
@@ -1577,13 +1577,13 @@ char *func_L00_002422D8(int arg0) {
                         }
                     }
                     if (j == n3) {
-                        m->unk36 = 0x7F80;
+                        m->occlusion = 0x7F80;
                         flag = 1;
                         cnt++;
                     } else {
                         int w = q[j * 2];
 
-                        m->unk36 = ((w >> 3) << 8) | (1 << (w & 7));
+                        m->occlusion = ((w >> 3) << 8) | (1 << (w & 7));
                     }
                 }
             }
@@ -1654,7 +1654,7 @@ char *func_L00_002422D8(int arg0) {
 
         STUB_printf(D_L00_001E8AC0);
         for (m = D_L00_00160098; m != D_L00_001600A0; m++) {
-            m->unk36 = 0x7F80;
+            m->occlusion = 0x7F80;
         }
         for (t = D_L00_00161080; t != D_L00_00161084; t++) {
             t->f18 = 0x7F80;
@@ -1665,12 +1665,12 @@ char *func_L00_002422D8(int arg0) {
         D_L00_0016C158[7] = 0;
     }
     func_L00_001F8750();
-    func_L00_00205278();
-    func_L00_00205598();
-    func_L00_001ED6D8();
-    func_L00_001ED428();
+    HeroInit();
+    HeroResetTuning();
+    Camera_InitSlots();
+    Camera_UpdateFrame();
     pad_resetState();
-    func_001F6598();
+    Font_EnableColorCodes();
     D_L00_001B0AF0[0] = 0;
     D_L00_001B0B30[0] = 0;
     D_L00_001B0BB0[0] = 0;
@@ -1726,7 +1726,7 @@ extern void func_00217748(s32);
 
 /* streams entry i of the current sector list into the loader buffer.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/world/loaders/00240348.c, FUN_L00_002451b8. */
-s32 func_L00_00245B88(s32 i) {
+s32 StreamSectorListEntry(s32 i) {
     u8 *buf = D_L00_0016C960_45B88.buf;
     s32 start;
     s32 size;
@@ -1740,7 +1740,7 @@ s32 func_L00_00245B88(s32 i) {
     }
     if (size > 0) {
         func_00217628_45B88(buf, start, size);
-        func_00217748(0);
+        UpdateAudioStreamUntilIdle(0);
     }
     return 1;
 }
@@ -1766,7 +1766,7 @@ extern void func_00217748(int);
 extern void func_001F4E08(int);
 
 /* Reads a level's packed data from disc and builds its chunk pointer table. */
-void func_L00_00245E98(int arg) {
+void ReadLevelPackedData(int arg) {
     int *q;
     int i;
     if (D_0015EE80 == 0) {
@@ -1774,9 +1774,9 @@ void func_L00_00245E98(int arg) {
     } else {
         start_audio_stream_read((int)D_L00_0016C960.base, D_00137C80_g.alt[arg].a, D_00137C80_g.alt[arg].b);
     }
-    func_00217748(0);
+    UpdateAudioStreamUntilIdle(0);
     FadeToBlack(4);
-    func_00217748(1);
+    UpdateAudioStreamUntilIdle(1);
     q = (int *)D_L00_0016C960.base;
     i = 0;
     if (q[1] != 0) {
@@ -1802,7 +1802,7 @@ void func_00217748_45FE0b(s32) __asm__("func_00217748");
 void func_001F4E08_45FE0b(s32) __asm__("func_001F4E08");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/world_animation_002454c8.c, FUN_L00_00245610. */
-void func_L00_00245FE0(s32 i, s32 p) {
+void LoadAnimTable(s32 i, s32 p) {
     s32 n;
     s32 *e;
     if (D_0015EE80 == 0) {

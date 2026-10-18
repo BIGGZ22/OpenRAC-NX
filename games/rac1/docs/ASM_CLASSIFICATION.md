@@ -9,6 +9,12 @@ compiling C would misrepresent their origin. The tracked lists are:
 - `config/linker_remnants.txt`: 145 entries of dead-strip remnants (3,260
   retail bytes).
 
+On 2026-10-17, 33 VU0 helpers in fastfunc.o (func_001F9BC8..func_001FA8A8)
+were added to `config/handwritten_asm.txt`: retail's fastfunc is hand-written
+noreorder assembly (see `tools/ps2eeas_nops.py`), with hand-placed nops, `$at`
+used as a scratch register and `mtc1` in branch delay slots, which no C build
+produces. They are original assembly, not C waiting to be matched.
+
 The handwritten functions and the first 69 remnants were taken from the two
 corresponding `tools/triage.py` buckets on 2026-09-27, and 22 remnants were
 split off the functions splat had folded them into the same day. The

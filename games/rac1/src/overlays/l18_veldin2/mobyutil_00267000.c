@@ -18,14 +18,14 @@ extern int func_001FA898(float);
 extern char D_0013E633[];
 
 /* Set an attached effect's alpha from distance and the supplied scale. */
-void func_L18_00267000(Level18Moby *moby, float scale) {
+void Effect_SetAlphaByDistance(Level18Moby *moby, float scale) {
     Level18Effect *effect;
     int alpha;
 
     if (moby == 0) {
         return;
     }
-    effect = func_L00_0025D390(moby);
+    effect = GetFlaggedPvarWord(moby);
     if (effect == 0) {
         return;
     }

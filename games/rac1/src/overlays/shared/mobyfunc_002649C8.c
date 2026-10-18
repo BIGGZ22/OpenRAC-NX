@@ -37,9 +37,9 @@ int func_L01_002649D8(char *moby, int index, unsigned int *type, float *result,
 
     if (*type < 2 || *type == 3) {
         qcopy(result, entry + 0x10);
-        func_001F9C30(result, result, scale);
+        FastVecScale(result, result, scale);
         func_001F9EE8(result, result, matrix);
-        func_001F9BD8(result, result, moby + 0x10);
+        FastVecAdd(result, result, moby + 0x10);
         *radius = result[3] * scale;
         if (*type < 2) {
             *distance = 0.0f;
@@ -53,9 +53,9 @@ int func_L01_002649D8(char *moby, int index, unsigned int *type, float *result,
             func_L00_00254218(moby, joint, 0);
         }
         qcopy(result, (void *)(0x70000000 + *(int *)(entry + 4) * 0x10));
-        func_001F9C30(result, result, scale);
+        FastVecScale(result, result, scale);
         func_001F9EE8(result, result, matrix);
-        func_001F9BD8(result, result, moby + 0x10);
+        FastVecAdd(result, result, moby + 0x10);
         *radius = *(float *)(entry + 0xc) * scale;
         *distance = 0.0f;
         return 1;
@@ -73,10 +73,10 @@ int func_L01_002649D8(char *moby, int index, unsigned int *type, float *result,
             qcopy(result, second);
         }
         func_001F9EE8(result, result, matrix);
-        func_001F9BD8(result, result, moby + 0x10);
+        FastVecAdd(result, result, moby + 0x10);
         *radius = *(float *)(entry + 0xc) * scale;
-        func_001F9BF0(second, second, first);
-        *distance = func_001F9CB8(second);
+        FastVecSub(second, second, first);
+        *distance = FastVecLength(second);
         return 1;
     } else {
         return 0;

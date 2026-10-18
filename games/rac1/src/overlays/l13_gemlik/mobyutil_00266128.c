@@ -6,7 +6,7 @@ extern char *D_L13_00160058 MACRO_ADDR;
 extern char *D_L13_00160060 MACRO_ADDR;
 
 /* updates matching objects in the selected object range */
-void func_L13_00266128(int id, int state) {
+void SetStateOfMobysByClass(int id, int state) {
     char *moby = D_L13_00160058;
     if ((unsigned long)D_L13_00160060 >= (unsigned long)moby) {
         do {
@@ -19,7 +19,7 @@ void func_L13_00266128(int id, int state) {
 }
 
 // Sets flag bits and a data pointer on every live object in the pool whose id appears in a zero-terminated list.
-void func_L13_00266180(short *ids, int a, int b, int c) {
+void SetMobyFlagsByClassList(short *ids, int a, int b, int c) {
     char *m;
     for (m = D_L13_00160058; m <= D_L13_00160060; m += 0x100) {
         int n;

@@ -15,7 +15,7 @@ extern float D_0015EE6C MACRO_ADDR;
 typedef struct { char pad0[0x44]; short n; char pad1[0x132]; char *m[1]; } G_2DC848;
 extern G_2DC848 D_L03_0016C9E0;
 // Emits four randomized particles while the active level event is in its trigger range.
-void func_L03_0022D028(void) {
+void Kerwan_SpawnTimedSparks(void) {
  float position[4], direction[4];
  char *g;
  char *moby;
@@ -31,14 +31,14 @@ void func_L03_0022D028(void) {
   float a, b, size;
   int lo, hi, value;
   clear_u64_value(direction);
-  func_L00_00250800(moby, i % 2, position);
+  Moby_GetJointWorldPos(moby, i % 2, position);
   a = random_angle_radians();
   b = random_angle_radians();
   size = random_float_between(D_0015EE6C * 0.7f, D_0015EE6C * 2.2f);
-  func_00215C00(direction, size, a, b);
+  BuildSphericalOffset(direction, size, a, b);
   lo = scale_ticks(12);
   hi = scale_ticks(35);
   value = rand_range(lo, hi);
-  func_L00_0026DD70(position, direction, 0x80808080, 0x808080, value, 147000.0f);
+  PartType22Spawn(position, direction, 0x80808080, 0x808080, value, 147000.0f);
  }
 }

@@ -98,6 +98,7 @@ import dossier  # noqa: E402
 import integrate as checker  # noqa: E402
 import rank_candidates  # noqa: E402
 import triage  # noqa: E402
+import srcnames
 
 WAVES = ROOT / "build-sn/waves"
 TRY = ROOT / "build-sn/try"
@@ -898,7 +899,7 @@ def extract_definition(source: Path, name: str) -> str:
     are text changes only, but this is the same belt-and-braces the
     executable land() gets from its full build, which overlay code has
     none of)."""
-    lines = source.read_text().splitlines()
+    lines = srcnames.read_c(source).splitlines()
     for i, line in enumerate(lines):
         if name in line and OVERLAY_DEF_LINE.match(line) and not line.rstrip().endswith(";"):
             depth, seen, j = 0, False, i
