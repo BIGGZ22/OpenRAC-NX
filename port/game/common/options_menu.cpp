@@ -405,10 +405,17 @@ bool update(const openrac_front_end& fe) {
 constexpr int kTextVideo = kTextFirst + 2 * kShown;
 constexpr int kPauseTexts = 3;
 gaddr pause_texts = 0;
+// The pause menu's Video page's rows: kPauseRows labels, then as many values.
+constexpr int kPauseRows = 5;
+constexpr int kPauseRowText = kTextVideo + kPauseTexts;
+gaddr pause_rows_text = 0;
 
 std::uint32_t text(int id) {
     if (id >= kTextVideo && id < kTextVideo + kPauseTexts && pause_texts != 0) {
         return pause_texts + kTextBytes * static_cast<gaddr>(id - kTextVideo);
+    }
+    if (id >= kPauseRowText && id < kPauseRowText + 2 * kPauseRows && pause_rows_text != 0) {
+        return pause_rows_text + kTextBytes * static_cast<gaddr>(id - kPauseRowText);
     }
     if (n.rows == 0 || id < kTextFirst || id >= kTextFirst + 2 * kShown) {
         return 0;
@@ -421,7 +428,8 @@ std::uint32_t text(int id) {
 }  // namespace page
 
 /* In a level, the pause menu's Options page (HelpDesk, Save, Load, Sound, Camera, Subtitles, Quit
- * Game) is level code with no Video page, so one is made: a copy of the Camera page, whose list
+ * Game) is level code with no Video page, so one is made: a copy of the Camera page (with the Sound
+ * page's frames, which are taller), whose list
  * widget shows rows of a label and one of up to four value names chosen by an int (each row 0x18:
  * label, the int's address, the names, 0). The port's rows are given to it kShownHere at a time,
  * each with its value as all three names and its int at 1: Right makes it 2 and Left 0 (whether the
@@ -436,7 +444,7 @@ constexpr gaddr kPageBytes = 0x88;           // MenuPage
 constexpr gaddr kScreenBytes = 0x80;         // what of the Camera list widget is copied
 constexpr gaddr kChoiceBytes = 0x18;
 constexpr gaddr kTitleBytes = 0x58;          // the Camera page's title box: +0x34 its text
-constexpr int kShownHere = 3;                // the rows the Camera page's frame holds
+constexpr int kShownHere = page::kPauseRows;  // the rows shown at once
 
 struct Made {
     gaddr items_for = 0;  // the game's Options items these were made from
@@ -498,6 +506,12 @@ void make(gaddr items) {
     m.values = openrac_guest_static(4 * kShownHere);
     std::memcpy(G(m.page), G(camera_page), kPageBytes);
     std::memcpy(G(m.list), G(camera_list), kScreenBytes);
+    if (sound != 0) {
+        // The Sound page's frames for the list and the boxes around it: tall enough for five rows
+        // (the Camera page's hold three). The title's stays the Camera page's.
+        const gaddr sound_page = GREF(std::uint32_t, sound + 4);
+        std::memcpy(G(m.page + 4), G(sound_page + 4), 4 * 4);
+    }
     // The title box, the screen after the page in the level's data, with the port's title.
     const gaddr camera_title = camera_page + kPageBytes;
     const gaddr title = openrac_guest_static(kTitleBytes);
@@ -507,6 +521,9 @@ void make(gaddr items) {
         if (GREF(std::uint32_t, m.page + at) == camera_title) {
             GREF(std::uint32_t, m.page + at) = title;
         }
+    }
+    if (page::pause_rows_text == 0) {
+        page::pause_rows_text = openrac_guest_static(page::kTextBytes * 2 * kShownHere);
     }
     if (page::pause_texts == 0) {
         page::pause_texts = openrac_guest_static(page::kTextBytes * page::kPauseTexts);
@@ -522,10 +539,10 @@ void make(gaddr items) {
     std::memset(G(m.rows), 0, kChoiceBytes * (kShownHere + 1));
     for (int i = 0; i < kShownHere; ++i) {
         const gaddr row = m.rows + kChoiceBytes * static_cast<gaddr>(i);
-        GREF(std::int32_t, row + 0x00) = page::kTextFirst + i;
+        GREF(std::int32_t, row + 0x00) = page::kPauseRowText + i;
         GREF(std::uint32_t, row + 0x04) = m.values + 4 * static_cast<gaddr>(i);
         for (gaddr k = 0; k < 3; ++k) {
-            GREF(std::int32_t, row + 0x08 + 4 * k) = page::kTextFirst + page::kShown + i;
+            GREF(std::int32_t, row + 0x08 + 4 * k) = page::kPauseRowText + kShownHere + i;
         }
         GREF(std::int32_t, m.values + 4 * static_cast<gaddr>(i)) = 1;
     }
@@ -617,8 +634,8 @@ bool update(gaddr page_menu, gaddr pad) {
         ++cursor;
     }
     for (int i = 0; i < kShownHere; ++i) {
-        page::put_text(page::n.labels + page::kTextBytes * static_cast<gaddr>(i), kLabels[m.top + i]);
-        page::put_text(page::n.values + page::kTextBytes * static_cast<gaddr>(i), value_of(m.top + i));
+        page::put_text(page::pause_rows_text + page::kTextBytes * static_cast<gaddr>(i), kLabels[m.top + i]);
+        page::put_text(page::pause_rows_text + page::kTextBytes * static_cast<gaddr>(kShownHere + i), value_of(m.top + i));
     }
     if (changed) {
         settings::save();
