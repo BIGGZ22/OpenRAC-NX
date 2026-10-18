@@ -142,3 +142,145 @@ pub fn before_set_up(config: &Config, catalog: &Catalog, game: &str, image: &Pat
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testing::checkout;
+
+    fn disc(version: &str, serial: &str) -> FoundDisc {
+        FoundDisc {
+            path: format!("/games/{serial}.iso").into(),
+            serial: serial.into(),
+            game: "rac1".into(),
+            version: version.into(),
+            title: "Ratchet & Clank".into(),
+            region: String::new(),
+        }
+    }
+
+    fn both() -> Vec<FoundDisc> {
+        vec![disc("rac1/ntsc", "SCUS_971.99"), disc("rac1/pal", "SCES_509.16")]
+    }
+
+    /// A set-up of `version` in `install`, as the extractor leaves it, with a file of its own.
+    fn set_up(install: &Path, version: &str, serial: &str) {
+        let dir = install::data_dir(install, "rac1").join("iso_data").join("rac1");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("disc.iso"), version).unwrap();
+        std::fs::write(
+            dir.join("buildinfo.json"),
+            format!(
+                r#"[{{"serial": "{serial}", "version": "{version}", "elf_sha1": "ab", "files": 3, "image": "x.iso"}}]"#
+            ),
+        )
+        .unwrap();
+    }
+
+    fn played(install: &Path) -> String {
+        std::fs::read_to_string(install::data_dir(install, "rac1").join("iso_data/rac1/disc.iso")).unwrap()
+    }
+
+    #[test]
+    fn a_developer_with_both_discs_can_choose_and_the_choice_is_kept() {
+        let catalog = crate::catalog::load(&checkout()).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let install = dir.path();
+        set_up(install, "rac1/pal", "SCES_509.16");
+        let mut config = Config { developer: true, install_dir: Some(install.into()), ..Config::default() };
+
+        // Offered, in the catalogue's order, with the disc set up as the default.
+        let offered = choices(&config, &catalog, &both());
+        assert_eq!(offered.len(), 1, "{offered:?}");
+        assert_eq!(offered[0].versions, ["rac1/pal", "rac1/ntsc"]);
+        assert_eq!(offered[0].chosen, "rac1/pal");
+
+        // NTSC-U, never set up: PAL's set-up moves aside, the folder is free for NTSC-U's.
+        choose(&mut config, &catalog, &both(), "rac1/ntsc").unwrap();
+        assert_eq!(config.disc_choice.get("rac1").map(String::as_str), Some("rac1/ntsc"));
+        assert_eq!(choices(&config, &catalog, &both())[0].chosen, "rac1/ntsc");
+        assert!(install::state(install, "rac1").extracted.is_none());
+        assert!(kept(install, "iso_data", "rac1", "rac1/pal").join("buildinfo.json").is_file());
+
+        // Set up from the NTSC-U disc, then back to PAL: each set-up is the one it was.
+        set_up(install, "rac1/ntsc", "SCUS_971.99");
+        choose(&mut config, &catalog, &both(), "rac1/pal").unwrap();
+        assert_eq!(played(install), "rac1/pal");
+        assert!(kept(install, "iso_data", "rac1", "rac1/ntsc").join("disc.iso").is_file());
+        choose(&mut config, &catalog, &both(), "rac1/ntsc").unwrap();
+        assert_eq!(played(install), "rac1/ntsc");
+        assert_eq!(install::state(install, "rac1").extracted.unwrap().version, "rac1/ntsc");
+        assert!(!kept(install, "iso_data", "rac1", "rac1/ntsc").exists());
+
+        // A choice whose disc went from the folder is not used.
+        let only_pal = [disc("rac1/pal", "SCES_509.16")];
+        assert!(choices(&config, &catalog, &only_pal).is_empty());
+    }
+
+    #[test]
+    fn players_get_no_choice_and_nothing_moves() {
+        let catalog = crate::catalog::load(&checkout()).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let install = dir.path();
+        set_up(install, "rac1/pal", "SCES_509.16");
+        let mut config = Config { developer: false, install_dir: Some(install.into()), ..Config::default() };
+        assert!(choices(&config, &catalog, &both()).is_empty());
+        assert!(choose(&mut config, &catalog, &both(), "rac1/ntsc").is_err());
+        assert!(config.disc_choice.is_empty());
+        assert_eq!(played(install), "rac1/pal");
+
+        // A choice left from developer mode does nothing once it is off.
+        config.disc_choice.insert("rac1".into(), "rac1/ntsc".into());
+        assert!(choices(&config, &catalog, &both()).is_empty());
+    }
+
+    #[test]
+    fn one_disc_found_means_no_switch() {
+        let catalog = crate::catalog::load(&checkout()).unwrap();
+        let mut config = Config { developer: true, ..Config::default() };
+        let one = [disc("rac1/ntsc", "SCUS_971.99")];
+        assert!(choices(&config, &catalog, &one).is_empty());
+        assert!(choices(&config, &catalog, &[]).is_empty());
+        assert!(choose(&mut config, &catalog, &one, "rac1/ntsc").is_err());
+        // Two images of the same version are one disc (the scan keeps the first).
+        let same = [disc("rac1/pal", "SCES_509.16"), disc("rac1/pal", "SCES_509.16")];
+        assert!(choices(&config, &catalog, &same).is_empty());
+    }
+
+    /// A developer setting the other disc up by hand keeps the first one aside; a player's set-up
+    /// replaces it, as it always has.
+    #[test]
+    fn a_developers_second_set_up_keeps_the_first() {
+        let catalog = crate::catalog::load(&checkout()).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let install = dir.path().join("install");
+        let image = dir.path().join("us.iso");
+        crate::discs::tests::image(&image, "BOOT2 = cdrom0:\\SCUS_971.99;1\r\n");
+        set_up(&install, "rac1/pal", "SCES_509.16");
+
+        let player = Config { install_dir: Some(install.clone()), ..Config::default() };
+        before_set_up(&player, &catalog, "rac1", &image).unwrap();
+        assert_eq!(played(&install), "rac1/pal", "a player's set-up is left to the extractor");
+
+        let developer = Config { developer: true, ..player };
+        before_set_up(&developer, &catalog, "rac1", &image).unwrap();
+        assert!(install::state(&install, "rac1").extracted.is_none());
+        assert!(kept(&install, "iso_data", "rac1", "rac1/pal").join("disc.iso").is_file());
+    }
+
+    #[test]
+    fn switching_never_overwrites_a_kept_set_up() {
+        let dir = tempfile::tempdir().unwrap();
+        let install = dir.path();
+        set_up(install, "rac1/pal", "SCES_509.16");
+        std::fs::create_dir_all(kept(install, "iso_data", "rac1", "rac1/pal")).unwrap();
+        assert!(switch(install, "rac1", "rac1/ntsc").is_err());
+        assert_eq!(played(install), "rac1/pal");
+
+        // A set-up cut short (no buildinfo.json) is not moved under a guessed name.
+        let dir = tempfile::tempdir().unwrap();
+        let half = install::data_dir(dir.path(), "rac1").join("iso_data").join("rac1");
+        std::fs::create_dir_all(&half).unwrap();
+        assert!(switch(dir.path(), "rac1", "rac1/ntsc").is_err());
+        assert!(half.is_dir());
+    }
+}

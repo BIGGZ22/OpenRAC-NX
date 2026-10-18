@@ -135,12 +135,12 @@ fn boot_serial(system_cnf: &str) -> Option<String> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::testing::checkout;
 
     /// A small ISO 9660 image: a volume descriptor, a root directory with SYSTEM.CNF, its text.
-    fn image(path: &Path, system_cnf: &str) {
+    pub(crate) fn image(path: &Path, system_cnf: &str) {
         let mut data = vec![0u8; 20 * SECTOR as usize];
         let pvd = 16 * SECTOR as usize;
         data[pvd..pvd + 6].copy_from_slice(b"\x01CD001");
