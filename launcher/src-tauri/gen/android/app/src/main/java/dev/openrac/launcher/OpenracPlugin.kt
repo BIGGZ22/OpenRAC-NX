@@ -69,8 +69,10 @@ class RendererArgs {
 
 /**
  * What only Android's own APIs can do for the launcher (src-tauri/src/android.rs calls these):
- * pick a file through the system's picker (an app sees no paths outside its own folders), start
- * the game's activity, and keep the player's GPU driver packages.
+ * pick a disc image and save a file through the system's screens (an app sees no paths outside its
+ * own folders), wait for the tools it carries (OpenracSetup.kt), show a set-up's progress while it
+ * is in the background (SetupService.kt), download and install its own updates (UpdateReceiver.kt),
+ * start and stop the game's activity, and keep the player's GPU driver packages.
  *
  * A GPU driver package is the zip Android emulators take (Mesa's Turnip, Qualcomm's own drivers):
  * a meta.json naming the driver library ("libraryName") beside it. The launcher unpacks one into
