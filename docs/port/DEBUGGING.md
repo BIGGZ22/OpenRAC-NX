@@ -37,6 +37,9 @@ has View, Sound and Developer, with a tick beside what is on; Alt by itself
 hides it and shows it again, and View > "Hide these menus" hides it (the
 `menu_bar` setting keeps the choice). On macOS the system's menu bar has
 those menus instead; `OPENRAC_MENU_BAR=1` shows the in-window bar there too.
+On Android they are a drawer that slides in from the left (docs/port/ANDROID.md);
+`OPENRAC_DRAWER=1` puts it in place of the bar elsewhere, opened with the
+on-screen pad's options button or Back.
 
 F1, F2, F9, F10 and F11 keep their meanings (the level menu of developer
 mode, the frame counter, volume, fullscreen). Escape pauses, as Start does;

@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cfloat>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -142,6 +143,20 @@ struct State {
     bool developer = false;  // the launcher's developer tools (OPENRAC_DEVELOPER): the level select
     std::string dump_path = "openrac_frames.jsonl";
 
+    // The drawer (drawer_available()).
+    bool drawer_open = false;
+    float drawer_at = 0.0f;      // how far out: 0 shut, 1 open
+    bool keep_paused = false;    // the pause the game is left in when it shuts
+    bool drawer_focus = false;   // given the keyboard and gamepad when it opens
+    bool drawer_scrolled = false;  // the finger down now has dragged the rows: no row is pressed
+    bool shot_when_shut = false;   // a screenshot asked for in it, taken once it is out of the picture
+    float ui_scale = 1.0f;         // the screen's density, for rows a thumb can press
+    // Fingers on the screen as ImGui's pointer: the first one down, and those the drawer took from
+    // the on-screen pad (their moves and lifts are the drawer's too).
+    SDL_FingerID pointer = 0;
+    bool pointer_down = false;
+    std::vector<SDL_FingerID> taken;
+
     // The processor's load, measured each half second.
     double cpu_seconds = 0.0;
     double cpu_wall = 0.0;
@@ -249,6 +264,10 @@ void configure() {
         return;
     }
     s.configured = true;
+#if defined(__ANDROID__)
+    // Back opens and shuts the drawer instead of leaving the game.
+    SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
+#endif
     if (const char* developer = std::getenv("OPENRAC_DEVELOPER")) {
         s.developer = developer[0] != '\0' && developer[0] != '0';
     }
@@ -371,9 +390,41 @@ void set_visible(bool on) {
     stats::set_enabled(stats::Client::Overlay, on);
 }
 
+// On a phone: everything as large as the screen's density asks, in the system's own typeface
+// (ImGui's built-in one is a bitmap for a desktop's pixels).
+void initialise_touch(SDL_Window* window) {
+#if defined(__ANDROID__)
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_IsTouchScreen;
+    const float density = SDL_GetWindowPixelDensity(window);
+    const float display = SDL_GetWindowDisplayScale(window);
+    s.ui_scale = density > 0.0f && display > 0.0f ? std::max(display / density, 1.0f) : 1.0f;
+    ImGui::GetStyle().ScaleAllSizes(s.ui_scale);
+    bool font = false;
+    for (const char* path : {"/system/fonts/Roboto-Regular.ttf", "/system/fonts/DroidSans.ttf"}) {
+        if (std::FILE* f = std::fopen(path, "rb")) {
+            std::fclose(f);
+            font = io.Fonts->AddFontFromFileTTF(path, std::round(15.0f * s.ui_scale)) != nullptr;
+            break;
+        }
+    }
+    if (!font) {
+        ImFontConfig config;
+        config.SizePixels = std::round(13.0f * s.ui_scale);
+        io.Fonts->AddFontDefault(&config);
+    }
+#else
+    (void)window;
+#endif
+}
+
 bool initialise(SDL_Window* window) {
     if (s.initialised) {
         return true;
+    }
+    // Dear ImGui draws with its own OpenGL: no overlay without a GL context (the Vulkan renderer).
+    if (SDL_GL_GetCurrentContext() == nullptr) {
+        return false;
     }
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -386,6 +437,7 @@ bool initialise(SDL_Window* window) {
     style.WindowBorderSize = 0.0f;
     style.FramePadding = ImVec2(4.0f, 2.0f);
     style.ItemSpacing = ImVec2(6.0f, 3.0f);
+    initialise_touch(window);
     if (!ImGui_ImplSDL3_InitForOpenGL(window, SDL_GL_GetCurrentContext())
         || !ImGui_ImplOpenGL3_Init(openrac::gl::is_es() ? "#version 300 es" : "#version 410 core")) {
         log::warn("debug overlay: Dear ImGui could not start");
@@ -1313,10 +1365,20 @@ constexpr bool kMenuBar = false;
 constexpr bool kMenuBar = true;
 #endif
 
+// On Android the drawer has them (debug_overlay.h); OPENRAC_DRAWER=1 elsewhere too.
+bool drawer_possible() {
+#if defined(__ANDROID__)
+    return true;
+#else
+    static const bool forced = std::getenv("OPENRAC_DRAWER") != nullptr;
+    return forced;
+#endif
+}
+
 // OPENRAC_MENU_BAR=1 has them on macOS as well (for looking at them there).
 bool menu_bar_possible() {
     static const bool forced = std::getenv("OPENRAC_MENU_BAR") != nullptr;
-    return kMenuBar || forced;
+    return (kMenuBar || forced) && !drawer_possible();
 }
 
 bool menu_bar_shown() {
@@ -1375,17 +1437,334 @@ void menu_bar() {
     ImGui::EndMainMenuBar();
 }
 
+// ---- The drawer ----
+
+// Opening it pauses the game, as an emulator's menu does; shutting it leaves the game as its "Keep
+// paused" row says (paused as before it opened, unless changed there).
+void set_drawer(bool open) {
+    if (open == s.drawer_open) {
+        return;
+    }
+    s.drawer_open = open;
+    if (open) {
+        s.keep_paused = s.paused;
+        s.paused = true;
+        s.held_frames = 0;
+        s.drawer_focus = true;
+    } else {
+        s.paused = s.keep_paused;
+    }
+}
+
+// A finger, at its place in the window, as ImGui's pointer.
+void pointer_at(const SDL_TouchFingerEvent& f) {
+    SDL_Window* window = SDL_GetWindowFromID(f.windowID);
+    int w = 0;
+    int h = 0;
+    if (window == nullptr || !SDL_GetWindowSize(window, &w, &h)) {
+        return;
+    }
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddMouseSourceEvent(ImGuiMouseSource_TouchScreen);
+    io.AddMousePosEvent(f.x * static_cast<float>(w), f.y * static_cast<float>(h));
+}
+
+// The drawer's events: Back and Guide open and shut it; fingers are ImGui's pointer (the system's
+// mouse made from them follows only the first finger on the screen, perhaps a thumb on a stick),
+// and those that land while it is open are its own, not the on-screen pad's.
+bool drawer_event(const SDL_Event& e) {
+    switch (e.type) {
+        case SDL_EVENT_KEY_DOWN:
+        case SDL_EVENT_KEY_UP:
+            if (e.key.key != SDLK_AC_BACK) {
+                return false;
+            }
+            if (e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
+                set_drawer(!s.drawer_open);
+            }
+            return true;
+        case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+            if (e.gbutton.button != SDL_GAMEPAD_BUTTON_GUIDE) {
+                return false;
+            }
+            set_drawer(!s.drawer_open);
+            return true;
+        case SDL_EVENT_MOUSE_MOTION:
+            return e.motion.which == SDL_TOUCH_MOUSEID;
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case SDL_EVENT_MOUSE_BUTTON_UP:
+            return e.button.which == SDL_TOUCH_MOUSEID;
+        case SDL_EVENT_MOUSE_WHEEL:
+            return e.wheel.which == SDL_TOUCH_MOUSEID;
+        case SDL_EVENT_FINGER_DOWN: {
+            if (e.tfinger.touchID == SDL_MOUSE_TOUCHID || !s.initialised) {
+                return false;
+            }
+            if (!s.pointer_down && (s.drawer_open || s.visible)) {
+                s.pointer = e.tfinger.fingerID;
+                s.pointer_down = true;
+                pointer_at(e.tfinger);
+                ImGui::GetIO().AddMouseButtonEvent(0, true);
+            }
+            if (!s.drawer_open) {
+                return false;
+            }
+            s.taken.push_back(e.tfinger.fingerID);
+            return true;
+        }
+        case SDL_EVENT_FINGER_MOTION:
+            if (s.pointer_down && e.tfinger.fingerID == s.pointer && s.initialised) {
+                pointer_at(e.tfinger);
+            }
+            return std::find(s.taken.begin(), s.taken.end(), e.tfinger.fingerID) != s.taken.end();
+        case SDL_EVENT_FINGER_UP:
+        case SDL_EVENT_FINGER_CANCELED: {
+            if (s.pointer_down && e.tfinger.fingerID == s.pointer && s.initialised) {
+                pointer_at(e.tfinger);
+                ImGuiIO& io = ImGui::GetIO();
+                io.AddMouseButtonEvent(0, false);
+                io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);  // a lifted finger hovers nothing
+                s.pointer_down = false;
+            }
+            const auto it = std::find(s.taken.begin(), s.taken.end(), e.tfinger.fingerID);
+            if (it == s.taken.end()) {
+                return false;
+            }
+            s.taken.erase(it);
+            return true;
+        }
+        default:
+            return false;
+    }
+}
+
+// A row of the drawer as high as a thumb: true when it was pressed (not when the finger only
+// dragged the rows along). Its label at the left; `draw_right` puts what it shows at the right.
+template <typename Right>
+bool drawer_row(const char* label, bool enabled, Right&& draw_right) {
+    const float height = 44.0f * s.ui_scale;
+    const ImVec2 at = ImGui::GetCursorScreenPos();
+    const float width = ImGui::GetContentRegionAvail().x;
+    ImGui::PushID(label);
+    ImGui::BeginDisabled(!enabled);
+    const bool pressed = ImGui::InvisibleButton("row", ImVec2(width, height)) && !s.drawer_scrolled;
+    ImDrawList* list = ImGui::GetWindowDrawList();
+    const ImVec2 end(at.x + width, at.y + height);
+    if (ImGui::IsItemActive() && !s.drawer_scrolled) {
+        list->AddRectFilled(at, end, IM_COL32(255, 143, 36, 70), 6.0f * s.ui_scale);
+    } else if (ImGui::IsItemFocused() && ImGui::GetIO().NavVisible) {
+        list->AddRect(at, end, IM_COL32(255, 143, 36, 200), 6.0f * s.ui_scale, 0, 2.0f);
+    }
+    const float text_y = at.y + (height - ImGui::GetFontSize()) * 0.5f;
+    const ImU32 ink = enabled ? IM_COL32(240, 236, 228, 255) : IM_COL32(140, 140, 145, 255);
+    list->AddText(ImVec2(at.x + 12.0f * s.ui_scale, text_y), ink, label);
+    draw_right(list, ImVec2(end.x - 12.0f * s.ui_scale, at.y + height * 0.5f), ink);
+    ImGui::EndDisabled();
+    ImGui::PopID();
+    return pressed && enabled;
+}
+
+bool drawer_row(const char* label, bool enabled = true) {
+    return drawer_row(label, enabled, [](ImDrawList*, ImVec2, ImU32) {});
+}
+
+// A row that turns something on and off, its switch at the right.
+bool drawer_switch(const char* label, bool on) {
+    return drawer_row(label, true, [on](ImDrawList* list, ImVec2 right, ImU32) {
+        const float h = 22.0f * s.ui_scale;
+        const float w = 40.0f * s.ui_scale;
+        const ImVec2 a(right.x - w, right.y - h * 0.5f);
+        const ImVec2 b(right.x, right.y + h * 0.5f);
+        list->AddRectFilled(a, b, on ? IM_COL32(255, 143, 36, 230) : IM_COL32(90, 90, 96, 230), h * 0.5f);
+        const float r = h * 0.5f - 3.0f * s.ui_scale;
+        list->AddCircleFilled(ImVec2(on ? b.x - h * 0.5f : a.x + h * 0.5f, right.y), r, IM_COL32(250, 248, 244, 255));
+    });
+}
+
+// A row with a value and a minus and a plus beside it: -1 or 1 when one of them was pressed.
+int drawer_stepper(const char* label, const std::string& value, bool can_lower, bool can_raise) {
+    const float height = 44.0f * s.ui_scale;
+    const float button = 44.0f * s.ui_scale;
+    const float gap = 6.0f * s.ui_scale;
+    const float width = ImGui::GetContentRegionAvail().x;
+    const ImVec2 at = ImGui::GetCursorScreenPos();
+    ImDrawList* list = ImGui::GetWindowDrawList();
+    const float text_y = at.y + (height - ImGui::GetFontSize()) * 0.5f;
+    list->AddText(ImVec2(at.x + 12.0f * s.ui_scale, text_y), IM_COL32(240, 236, 228, 255), label);
+    const float value_width = ImGui::CalcTextSize("0000%").x;
+    const float right = at.x + width - 4.0f * s.ui_scale;
+    const float plus_x = right - button;
+    const float value_x = plus_x - gap - value_width;
+    const float minus_x = value_x - gap - button;
+    const ImVec2 size = ImGui::CalcTextSize(value.c_str());
+    list->AddText(ImVec2(value_x + (value_width - size.x) * 0.5f, text_y), IM_COL32(200, 200, 206, 255), value.c_str());
+    int step = 0;
+    const auto key = [&](const char* id, float x, bool enabled, bool plus) {
+        ImGui::SetCursorScreenPos(ImVec2(x, at.y));
+        ImGui::BeginDisabled(!enabled);
+        if (ImGui::InvisibleButton(id, ImVec2(button, height)) && !s.drawer_scrolled && enabled) {
+            step = plus ? 1 : -1;
+        }
+        const ImVec2 c(x + button * 0.5f, at.y + height * 0.5f);
+        const bool active = ImGui::IsItemActive() && !s.drawer_scrolled;
+        const ImU32 ink = enabled ? IM_COL32(240, 236, 228, 255) : IM_COL32(110, 110, 116, 255);
+        list->AddCircleFilled(c, button * 0.42f, active ? IM_COL32(255, 143, 36, 120) : IM_COL32(255, 255, 255, 22));
+        if (ImGui::IsItemFocused() && ImGui::GetIO().NavVisible) {
+            list->AddCircle(c, button * 0.42f, IM_COL32(255, 143, 36, 200), 0, 2.0f);
+        }
+        const float arm = button * 0.16f;
+        const float thick = 2.5f * s.ui_scale;
+        list->AddLine(ImVec2(c.x - arm, c.y), ImVec2(c.x + arm, c.y), ink, thick);
+        if (plus) {
+            list->AddLine(ImVec2(c.x, c.y - arm), ImVec2(c.x, c.y + arm), ink, thick);
+        }
+        ImGui::EndDisabled();
+    };
+    ImGui::PushID(label);
+    key("lower", minus_x, can_lower, false);
+    key("raise", plus_x, can_raise, true);
+    ImGui::PopID();
+    ImGui::SetCursorScreenPos(ImVec2(at.x, at.y + height));
+    ImGui::Dummy(ImVec2(width, 0.0f));
+    return step;
+}
+
+void drawer_section(const char* title) {
+    ImGui::Dummy(ImVec2(0.0f, 10.0f * s.ui_scale));
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 12.0f * s.ui_scale);
+    text_coloured(ImVec4(1.0f, 0.62f, 0.25f, 1.0f), "{}", title);
+}
+
+void drawer(const Shown& shown) {
+    const ImGuiIO& io = ImGui::GetIO();
+    const float target = s.drawer_open ? 1.0f : 0.0f;
+    const float move = io.DeltaTime / 0.18f;  // out or in in under a fifth of a second
+    s.drawer_at = s.drawer_at < target ? std::min(s.drawer_at + move, target) : std::max(s.drawer_at - move, target);
+    if (s.drawer_at <= 0.0f) {
+        if (s.shot_when_shut) {
+            s.shot_when_shut = false;
+            s.shot_path = std::format("openrac_window_{}.png", s.tick);
+        }
+        return;
+    }
+    const float ease = 1.0f - std::pow(1.0f - s.drawer_at, 3.0f);
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    // The left of the screen a camera's notch keeps.
+    float inset = 0.0f;
+    SDL_Rect safe{};
+    if (shown.window != nullptr && SDL_GetWindowSafeArea(shown.window, &safe)) {
+        inset = static_cast<float>(safe.x);
+    }
+    const float width = std::min(viewport->Size.x * 0.6f, 340.0f * s.ui_scale) + inset;
+    const float x = viewport->Pos.x - width * (1.0f - ease);
+    ImGui::GetBackgroundDrawList()->AddRectFilled(viewport->Pos,
+                                                  ImVec2(viewport->Pos.x + viewport->Size.x, viewport->Pos.y + viewport->Size.y),
+                                                  IM_COL32(0, 0, 0, static_cast<int>(120.0f * ease)));
+    // A touch beside it shuts it.
+    if (s.drawer_open && ImGui::IsMouseReleased(0) && !s.drawer_scrolled && io.MouseClickedPos[0].x > x + width) {
+        set_drawer(false);
+    }
+    ImGui::SetNextWindowPos(ImVec2(x, viewport->Pos.y));
+    ImGui::SetNextWindowSize(ImVec2(width, viewport->Size.y));
+    if (s.drawer_focus) {
+        ImGui::SetNextWindowFocus();
+        s.drawer_focus = false;
+    }
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f * s.ui_scale + inset, 14.0f * s.ui_scale));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 2.0f * s.ui_scale));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.075f, 0.075f, 0.085f, 0.97f));
+    const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize
+                                   | ImGuiWindowFlags_NoSavedSettings;
+    if (ImGui::Begin("OpenRAC options", nullptr, flags)) {
+        // A finger dragged up or down scrolls the rows, and presses none of them.
+        if (ImGui::IsMouseClicked(0)) {
+            s.drawer_scrolled = false;
+        }
+        if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) && ImGui::IsMouseDown(0)
+            && (s.drawer_scrolled || std::abs(ImGui::GetMouseDragDelta(0).y) > 10.0f * s.ui_scale)) {
+            s.drawer_scrolled = true;
+            ImGui::SetScrollY(ImGui::GetScrollY() - io.MouseDelta.y);
+        }
+
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 12.0f * s.ui_scale);
+        ImGui::SetWindowFontScale(1.3f);
+        ImGui::TextUnformatted("OpenRAC");
+        ImGui::SetWindowFontScale(1.0f);
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 12.0f * s.ui_scale);
+        text_coloured(kDim, "{}", s.keep_paused ? "Paused" : "Paused while this is open");
+        ImGui::Dummy(ImVec2(0.0f, 6.0f * s.ui_scale));
+        if (drawer_row("Resume")) {
+            set_drawer(false);
+        }
+
+        drawer_section("View");
+        if (drawer_switch("Frame counter", settings::get().show_fps)) {
+            settings::get().show_fps = !settings::get().show_fps;
+            settings::save();
+        }
+
+        drawer_section("Sound");
+        const int volume = settings::get().volume;
+        if (const int step = drawer_stepper("Volume", std::format("{}%", volume), volume > 0, volume < 100)) {
+            settings::set_volume(volume + step * 10);
+            settings::save();
+        }
+
+        drawer_section("Developer");
+        if (drawer_switch("Debug overlay", s.visible)) {
+            set_visible(!s.visible);
+        }
+        if (drawer_switch("Keep paused", s.keep_paused)) {
+            s.keep_paused = !s.keep_paused;
+        }
+        if (drawer_row("Step one tick")) {
+            s.keep_paused = true;
+            s.step = true;
+        }
+        const std::string speed = s.stretch == 1.0 ? "full" : std::format("1/{}", static_cast<int>(s.stretch));
+        if (const int step = drawer_stepper("Speed", speed, s.stretch < 16.0, s.stretch > 1.0)) {
+            s.stretch = step < 0 ? std::min(s.stretch * 2.0, 16.0) : std::max(s.stretch / 2.0, 1.0);
+        }
+        if (drawer_row("Screenshot")) {
+            s.shot_when_shut = true;
+            set_drawer(false);
+        }
+        if (s.developer && drawer_row("Level select")) {
+            set_drawer(false);
+            press(SDLK_F1);
+        }
+
+        ImGui::Dummy(ImVec2(0.0f, 10.0f * s.ui_scale));
+        if (drawer_row("Quit game")) {
+            SDL_Event quit;
+            SDL_zero(quit);
+            quit.type = SDL_EVENT_QUIT;
+            SDL_PushEvent(&quit);
+        }
+    }
+    ImGui::End();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar(3);
+}
+
 // What the keys of pause and speed have set, said in the picture whether the panel is shown or
 // not: a game standing still or running at a quarter speed with nothing saying why is a puzzle.
 void status_badge() {
     if (!s.toast.empty() && ImGui::GetTime() >= s.toast_until) {
         s.toast.clear();
     }
+    if (s.drawer_at > 0.0f) {
+        return;  // the drawer says it
+    }
+    // With the drawer, without the keys: its rows change them.
+    const bool keys = !drawer_possible();
     std::string line;
     if (s.paused) {
-        line = "PAUSED    F5 resume    F6 one tick";
+        line = keys ? "PAUSED    F5 resume    F6 one tick" : "PAUSED";
     } else if (s.stretch != 1.0) {
-        line = std::format("SPEED 1/{}    F8 faster    F7 slower", static_cast<int>(s.stretch));
+        line = keys ? std::format("SPEED 1/{}    F8 faster    F7 slower", static_cast<int>(s.stretch))
+                    : std::format("SPEED 1/{}", static_cast<int>(s.stretch));
     }
     if (line.empty() && s.toast.empty() && s.notice.empty()) {
         return;
@@ -1418,12 +1797,25 @@ void request() {
     s.wanted = true;
 }
 
+bool drawer_available() {
+    return drawer_possible();
+}
+
+void toggle_drawer() {
+    if (drawer_possible()) {
+        set_drawer(!s.drawer_open);
+    }
+}
+
 bool visible() {
     return s.visible;
 }
 
 bool event(const SDL_Event& e) {
     configure();
+    if (drawer_possible() && drawer_event(e)) {
+        return true;
+    }
     if (e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
         if (e.key.key == SDLK_F3) {
             set_visible(!s.visible);
@@ -1468,7 +1860,7 @@ bool event(const SDL_Event& e) {
             settings::save();
         }
     }
-    if (!(s.visible || menu_bar_shown()) || !s.initialised) {
+    if (!(s.visible || menu_bar_shown() || s.drawer_open) || !s.initialised) {
         return false;
     }
     ImGui_ImplSDL3_ProcessEvent(&e);
@@ -1572,7 +1964,8 @@ void draw(const Shown& shown) {
     stats::lap("present");
     s.window = shown.window;
     const bool badge = s.paused || s.stretch != 1.0 || !s.toast.empty() || !s.notice.empty();
-    if (!(s.visible || menu_bar_shown() || badge || !s.shot_path.empty()) || shown.window == nullptr
+    const bool drawer_out = s.drawer_open || s.drawer_at > 0.0f || s.shot_when_shut;
+    if (!(s.visible || menu_bar_shown() || badge || drawer_out || !s.shot_path.empty()) || shown.window == nullptr
         || !initialise(shown.window)) {
         return;
     }
@@ -1586,6 +1979,12 @@ void draw(const Shown& shown) {
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, shown.window_width, shown.window_height);
+    if (drawer_possible()) {
+        // A gamepad moves through the drawer's rows while it is open, and is the game's otherwise.
+        ImGuiIO& io = ImGui::GetIO();
+        io.ConfigFlags = s.drawer_open ? io.ConfigFlags | ImGuiConfigFlags_NavEnableGamepad
+                                       : io.ConfigFlags & ~ImGuiConfigFlags_NavEnableGamepad;
+    }
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
@@ -1597,6 +1996,9 @@ void draw(const Shown& shown) {
         inspector_window();
         memory_viewer_window();
         picture_marks(shown);
+    }
+    if (drawer_possible()) {
+        drawer(shown);
     }
     status_badge();
     ImGui::Render();

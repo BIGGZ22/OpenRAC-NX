@@ -168,6 +168,10 @@ void main() {
             vec2 t = vec2(q.y, -q.x) + vec2(0.0, -0.04);
             s = max(abs(t.x) * 0.9 - t.y * 0.45, t.y - 0.16) - 0.20;
             ink.rgb = vec3(0.92);
+        } else if (symbol == 10) { // the port's options: three bars
+            vec2 r = vec2(q.x, q.y - clamp(floor(q.y / 0.26 + 0.5), -1.0, 1.0) * 0.26);
+            s = pill(r, 0.24, 0.055);
+            ink.rgb = vec3(0.92);
         }
         if (label0 >= 0) {        // the shoulders: their name
             const float size = 0.38;  // half a letter's height
@@ -197,6 +201,7 @@ enum Symbol : int {
     kSelect = 7,
     kStart = 8,
     kDpad = 9,
+    kMenu = 10,
 };
 
 // The shoulders' names, letter by letter (letter() in the shader).
@@ -221,6 +226,9 @@ struct Look {
 };
 
 Look look(const TouchControl& c) {
+    if (c.kind == TouchControl::Kind::Menu) {
+        return {kMenu, 0.95f, 0.92f, 0.88f};
+    }
     if (c.kind != TouchControl::Kind::Button) {
         return {kStick, 1.0f, 0.56f, 0.14f};
     }
@@ -319,6 +327,9 @@ void draw(platform::TouchPad& touch, int width, int height) {
     }
     for (std::size_t i = 0; i < controls.size(); ++i) {
         const TouchControl& c = controls[i];
+        if (c.kind == TouchControl::Kind::Menu && !touch.menu_button()) {
+            continue;
+        }
         const Look l = look(c);
         box(c.x, c.y, c.radius, c.stretch, 1.2f);
         glUniform3f(s.shader.uniform("tint"), l.r, l.g, l.b);

@@ -3,7 +3,8 @@
 //
 // A DualShock 2 on a touch screen (Android phones and tablets; any touch screen SDL reports): two
 // sticks, the d-pad, the four face buttons, the shoulders, Select and Start, laid out for a picture
-// held sideways. Fingers come in as SDL gives them (0..1 across and down the window) and the pad's
+// held sideways; on Android, between Select and Start, the button that opens the port's options
+// (game/common/debug_overlay.h, the drawer). Fingers come in as SDL gives them (0..1 across and down the window) and the pad's
 // state goes out as a Pad's (pad.h), added to what the keyboard and a gamepad give port 0.
 //
 // A stick is held by the finger that touched inside it, and follows it until it lifts, even
@@ -25,7 +26,7 @@
 namespace openrac::platform {
 
 struct TouchControl {
-    enum class Kind { LeftStick, RightStick, Button };
+    enum class Kind { LeftStick, RightStick, Button, Menu };
     Kind kind = Kind::Button;
     Button button = Button::Cross;  // for Kind::Button
     // The centre: x across the window (0..1), y down it (0..1); the radius in window heights.
@@ -54,6 +55,14 @@ public:
 
     // Every finger lifted (the window lost focus, the app went to the background).
     void release_all();
+
+    // The options button (Kind::Menu): there only where the window has a drawer to open with it.
+    void set_menu_button(bool on);
+
+    bool menu_button() const { return m_menu_button; }
+
+    // True once for each press of the options button.
+    bool take_menu_press();
 
     // Adds what the fingers hold to `pad`: buttons pressed, a held stick's axes replacing the pad's.
     void apply(Pad& pad) const;
@@ -112,6 +121,8 @@ private:
     // A finger came down since the last idle(): it counts even if it lifted within the frame.
     bool m_touched = false;
     std::uint64_t m_last_touch_ms = 0;
+    bool m_menu_button = false;
+    bool m_menu_pressed = false;
 };
 
 }  // namespace openrac::platform

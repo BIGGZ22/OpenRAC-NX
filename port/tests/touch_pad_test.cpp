@@ -121,5 +121,32 @@ int main() {
     idle.idle(90000);
     idle.idle(200000);
     CHECK(idle.visible());
+
+    // The options button: nothing until the window has a drawer to open, then a press of its own,
+    // none of the game's buttons, and no stick brought under it.
+    TouchPad menu;
+    menu.set_aspect(16.0f / 9.0f);
+    const TouchControl& options = control(menu, TouchControl::Kind::Menu);
+    menu.finger_down(1, options.x, options.y);
+    CHECK(!menu.take_menu_press());
+    menu.finger_up(1);
+    menu.set_menu_button(true);
+    menu.finger_down(2, options.x, options.y);
+    CHECK(menu.take_menu_press());
+    CHECK(!menu.take_menu_press());
+    const Pad pressed = read(menu);
+    CHECK(pressed.buttons == Pad{}.buttons);
+    CHECK(pressed.left_x == Pad{}.left_x && pressed.left_y == Pad{}.left_y);
+    for (std::size_t i = 0; i < menu.controls().size(); ++i) {
+        if (menu.controls()[i].kind == TouchControl::Kind::Menu) {
+            CHECK(menu.held(i));
+        }
+    }
+    // Clear of Select and Start beside it.
+    const TouchControl& select = control(menu, TouchControl::Kind::Button, Button::Select);
+    const TouchControl& start = control(menu, TouchControl::Kind::Button, Button::Start);
+    const float gap = (start.x - options.x) * menu.aspect() - start.radius * start.stretch - options.radius;
+    CHECK(gap > 0.05f);
+    CHECK(select.x < options.x && options.x < start.x);
     return openrac::test::result();
 }

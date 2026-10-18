@@ -121,6 +121,16 @@ too: its window is fullscreen on Android (port/platform/window.cpp), and
 its on-screen pad shows only once the screen is touched, until a
 controller is used or the screen is left alone for ten seconds.
 
+The menus a desktop has along the window's top (View, Sound, Developer)
+are a drawer on Android, as in an emulator: the pad's options button
+between Select and Start, Back, or a controller's Guide button slides it
+in from the left over the paused game, with rows a thumb can press (the
+frame counter, the volume, the debug overlay, pause, a single tick, the
+speed, a screenshot, the level select in developer mode, and quitting).
+Back, Resume or a touch beside it closes it
+(port/game/common/debug_overlay.cpp; `OPENRAC_DRAWER=1` shows it on a
+desktop too).
+
 ## Updating the launcher
 
 Tauri's updater replaces a desktop program in place, which Android does not

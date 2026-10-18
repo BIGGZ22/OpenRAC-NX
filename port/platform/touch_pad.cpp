@@ -55,8 +55,9 @@ TouchPad::TouchPad() {
         {Kind::Button, Button::L1, From::Left, 0.32f, 0.075f, 0.045f, 1.75f},
         {Kind::Button, Button::R1, From::Right, 0.32f, 0.075f, 0.045f, 1.75f},
         {Kind::Button, Button::R2, From::Right, 0.13f, 0.075f, 0.045f, 1.75f},
-        {Kind::Button, Button::Select, From::Middle, -0.09f, 0.075f, 0.032f, 1.6f},
-        {Kind::Button, Button::Start, From::Middle, 0.09f, 0.075f, 0.032f, 1.6f},
+        {Kind::Button, Button::Select, From::Middle, -0.14f, 0.075f, 0.032f, 1.6f},
+        {Kind::Button, Button::Start, From::Middle, 0.14f, 0.075f, 0.032f, 1.6f},
+        {Kind::Menu, Button::Cross, From::Middle, 0.0f, 0.075f, 0.036f, 1.0f},
     };
     for (const Item& item : items) {
         m_controls.push_back(TouchControl{item.kind, item.button, 0.0f, item.y, item.radius, item.stretch});
@@ -144,6 +145,13 @@ void TouchPad::finger_down(std::uint64_t finger, float x, float y) {
     bool on_button = false;
     for (std::size_t i = 0; i < m_controls.size(); ++i) {
         const TouchControl& c = m_controls[i];
+        if (c.kind == Kind::Menu) {
+            if (m_menu_button && distance(c, x, y) <= c.radius + kButtonReach) {
+                m_menu_pressed = true;
+                on_button = true;
+            }
+            continue;
+        }
         if (c.kind == Kind::Button) {
             on_button = on_button || distance(c, x, y) <= c.radius + kButtonReach;
             continue;
@@ -182,6 +190,19 @@ void TouchPad::release_all() {
     layout();
 }
 
+void TouchPad::set_menu_button(bool on) {
+    m_menu_button = on;
+    if (!on) {
+        m_menu_pressed = false;
+    }
+}
+
+bool TouchPad::take_menu_press() {
+    const bool pressed = m_menu_pressed;
+    m_menu_pressed = false;
+    return pressed;
+}
+
 void TouchPad::idle(std::uint64_t now_ms) {
     if (m_touched || !m_fingers.empty()) {
         m_touched = false;
@@ -196,7 +217,13 @@ bool TouchPad::held(std::size_t index) const {
         return false;
     }
     const TouchControl& c = m_controls[index];
+    if (c.kind == Kind::Menu && !m_menu_button) {
+        return false;
+    }
     return std::any_of(m_fingers.begin(), m_fingers.end(), [&](const Finger& f) {
+        if (c.kind == Kind::Menu) {
+            return f.stick < 0 && distance(c, f.x, f.y) <= c.radius + kButtonReach;
+        }
         if (c.kind != Kind::Button) {
             return f.stick == static_cast<int>(index);
         }
@@ -231,6 +258,9 @@ void TouchPad::apply(Pad& pad) const {
             continue;
         }
         const TouchControl& c = m_controls[i];
+        if (c.kind == Kind::Menu) {
+            continue;  // the port's, not the game's
+        }
         if (c.kind == Kind::Button) {
             pad.set(c.button, true);
             continue;

@@ -1222,6 +1222,11 @@ static void draw_touch_pad(int window_width, int window_height) {
         touch.set_safe_area(static_cast<float>(safe.x) / height,
                             static_cast<float>(w - safe.x - safe.w) / height);
     }
+    // Android's options are in a drawer (debug_overlay.h), opened with the pad's own button.
+    touch.set_menu_button(debug_overlay::drawer_available());
+    if (touch.take_menu_press()) {
+        debug_overlay::toggle_drawer();
+    }
     touch_overlay::draw(touch, window_width, window_height);
 }
 
