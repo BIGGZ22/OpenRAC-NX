@@ -1,4 +1,4 @@
-# The launcher's installers, built for Windows, Linux and macOS and kept as
+# The launcher's installers, built for Windows, Linux, macOS and Android and kept as
 # the run's artifacts (Actions, the run, "Artifacts"). A tag `launcher-v*`
 # also puts them on a draft release of that name, to be looked over and
 # published by hand.
@@ -22,6 +22,7 @@ on:
       - "editor/**"
       - "games/rac1/**"
       - "tools/bundle_standalone.py"
+      - "tools/build_android.py"
       - "tools/build_port.py"
       - "tools/extractor.py"
       - ".github/workflows/launcher.yml"
@@ -32,6 +33,7 @@ on:
       - "editor/**"
       - "games/rac1/**"
       - "tools/bundle_standalone.py"
+      - "tools/build_android.py"
       - "tools/build_port.py"
       - "tools/extractor.py"
       - ".github/workflows/launcher.yml"
@@ -389,11 +391,81 @@ jobs:
           path: launcher/target/release/bundle/rpm/*.rpm
           if-no-files-found: error
 
+  # The Android APK (docs/port/ANDROID.md): the port with the runner's NDK, the launcher's Rust
+  # for Android, and the APK with both and the tools in it, as tools/build_android.py makes it. A
+  # debug build signed with the runner's debug key, so that it installs as it is; device tests are
+  # in port/android/README.md. It carries its own copy of OpenRAC, so it needs no `game` job.
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Yarn (the version package.json names, through Corepack)
+        run: corepack enable
+
+      - name: Compilers (hostgen's host Clang, Ninja) and Rust for Android
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang ninja-build
+          rustup target add aarch64-linux-android
+          # The runner's SDK carries a recent NDK.
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+          echo "NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+          ls "$ANDROID_NDK_LATEST_HOME"/source.properties && grep Revision "$ANDROID_NDK_LATEST_HOME"/source.properties
+
+      - name: The launcher's Rust for Android (clippy)
+        working-directory: launcher
+        run: |
+          yarn install --immutable
+          yarn build
+          cargo clippy -p openrac-launcher --target aarch64-linux-android -- -D warnings
+
+      - name: The port, the libraries, the tools and the APK
+        run: python tools/build_android.py
+
+      - name: What the APK carries
+        run: |
+          built=$(ls launcher/src-tauri/gen/android/app/build/outputs/apk/*/debug/*.apk | head -1)
+          version=$(python -c "import json; print(json.load(open('launcher/src-tauri/tauri.conf.json'))['version'])")
+          apk="$RUNNER_TEMP/OpenRAC.Launcher_${version}_android-arm64-debug.apk"
+          cp "$built" "$apk"
+          echo "APK=$apk" >> "$GITHUB_ENV"
+          unzip -l "$apk" | grep -E "lib/arm64-v8a/|assets/openrac.zip|classes" | sort -k4
+          # The game's activity and SDL's are in the APK's code.
+          unzip -p "$apk" 'classes*.dex' | grep -ac "dev/openrac/game/GameActivity"
+          unzip -p "$apk" 'classes*.dex' | grep -ac "org/libsdl/app/SDLActivity"
+          for lib in libopenrac-rac1-pal.so libopenrac-rac1-pal-cli.so libSDL3.so libc++_shared.so \
+                     libopenrac-python.so libpython3.13.so libmain_hook.so libopenrac_launcher_lib.so; do
+            unzip -l "$apk" "lib/arm64-v8a/$lib" > /dev/null || { echo "the APK has no $lib"; exit 1; }
+          done
+          # What each program needs from the system: bionic's libraries and the APK's own.
+          llvm=$(ls -d "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/bin | head -1)
+          for lib in libopenrac-rac1-pal.so libopenrac-rac1-pal-cli.so libopenrac-python.so; do
+            echo "$lib:"; "$llvm/llvm-readelf" -d "launcher/src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a/$lib" | grep NEEDED
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openrac-launcher-android
+          path: ${{ env.APK }}
+          if-no-files-found: error
+          retention-days: 7
+
   # A tag `launcher-v*`: the installers of all the builds on a draft
   # release. Nothing is published until someone publishes the draft.
   release:
     if: startsWith(github.ref, 'refs/tags/launcher-v')
-    needs: [build, fedora]
+    needs: [build, fedora, android]
     runs-on: ubuntu-latest
     permissions:
       contents: write
