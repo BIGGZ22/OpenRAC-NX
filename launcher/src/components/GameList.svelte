@@ -6,7 +6,7 @@
   // be modded).
   import type { GameView } from "$lib/api";
   import { app, openVersion } from "$lib/app.svelte";
-  import { gameArt } from "$lib/media";
+  import { gameThumb } from "$lib/media";
   import { playerState, playerVersion } from "$lib/player.svelte";
   import { themeStyle } from "$lib/themes";
   import type { EntryState, SideEntry } from "$lib/labels";
@@ -42,7 +42,7 @@
       key: game.id,
       name: game.title,
       state: stateOf(game),
-      art: gameArt(game.id),
+      art: gameThumb(game.id),
       style: themeStyle(game.id),
       mark: !state && (app.crashes[game.id]?.recent ?? 0) > 0,
     })),

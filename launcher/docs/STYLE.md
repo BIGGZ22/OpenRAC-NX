@@ -76,21 +76,42 @@ is planned but not there yet.
 game's colours. A game without a theme gets `FALLBACK` (the launcher's own
 orange); the tests fail until every game in `games/` has one.
 
-## A game's picture
+## A game's picture and clip
 
 Each game has a picture (`public/img/<name>-bg.webp`, the site's backdrop
-under the site's name: `rac1`, `gc`, `uya`, `deadlocked`, `size-matters`),
-listed in `src/lib/media.ts`. It shows in the game list, under the game's
-band and faintly behind its page. A picture that is not there is left out:
-the game's colours show, as on the site.
+under the site's name: `rac1`, `gc`, `uya`, `deadlocked`, `size-matters`)
+and may have a clip (`<name>-clip.webp`), both listed in `src/lib/media.ts`.
+The picture shows in the game list, under the game's band and faintly behind
+its page. The clip plays over the picture while the pointer is on the band or
+focus is in it, loaded only then, and never with reduced motion. A file that
+is not there is left out: the game's colours show, as on the site.
 
 The site serves its backdrops from its server, not its repository, so a new
 one is copied from there (`size-matters-bg.webp` is not in the launcher yet).
+The game list shows each picture 64 × 44 from a thumbnail,
+`<name>-thumb.webp` (192 × 132, a few KB), so that it does not decode every
+game's full picture: `python3 scripts/media.py thumbs` makes them again after
+a picture is added or replaced.
 
-Where each picture comes from (who made it, from what, under what terms) is
-not recorded yet for the files already here (the backdrops since 2026-10-09
-and the old `*-gameplay.gif`, which nothing shows any more). It belongs in
-[THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) before a release.
+A clip is an animated WebP, not a GIF: full colour where a GIF has 256, and a
+few times smaller. Make it from a recording of your own play with
+`python3 scripts/media.py clip RECORDING GAME --start S [--still S]`, which
+also writes the picture, and its thumbnail, from a frame of the same
+recording. What makes a good one:
+
+- 960 px wide at 20 frames a second, 4 to 8 seconds, under 3 MB (the script
+  warns above that). The band is wide and short: keep the action in the
+  middle third of the height.
+- One continuous shot of play: no menus, no loading, no text or HUD where
+  the game lets you hide it, no cut. It should loop without a jump.
+- Something each game is known for, at the same calm pace for every game, so
+  no game's band shouts louder than another's.
+
+Where each picture and clip comes from (who recorded it, from which disc,
+under what terms) is not recorded yet for the files already here (the
+backdrops since 2026-10-09 and the old `*-gameplay.gif`, which nothing shows
+any more). It belongs in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)
+before a release, and a new file adds its line there when it is added.
 
 ## Structure
 

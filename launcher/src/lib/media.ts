@@ -1,5 +1,5 @@
-// Each game's picture (public/img), under OpenRAC's game ids, with the site's file names: the art
-// of its entry in the game list and its page. Where these come from is in docs/STYLE.md.
+// Each game's picture (public/img), under OpenRAC's game ids, with the site's file names: under
+// its page's band and faintly behind the page. Where these come from is in docs/STYLE.md.
 // A picture that is not there (size-matters-bg.webp until it is copied from the site) is left
 // out where it is shown, and the game's colours carry it.
 export const GAME_ART: Record<string, string> = {
@@ -10,7 +10,38 @@ export const GAME_ART: Record<string, string> = {
   rac5: "/img/size-matters-bg.webp",
 };
 
-/** A game's picture, or null for a game without one (its entry then shows its colours). */
+// Each game's thumbnail: its picture, small, for the game list (scripts/media.py thumbs makes
+// them). The list shows five at 64 by 44; five full pictures would decode tens of MB for that.
+export const GAME_THUMB: Record<string, string> = {
+  rac1: "/img/rac1-thumb.webp",
+  rac2: "/img/gc-thumb.webp",
+  rac3: "/img/uya-thumb.webp",
+  rac4: "/img/deadlocked-thumb.webp",
+  rac5: "/img/size-matters-thumb.webp",
+};
+
+/** A game's thumbnail, or null. */
+export function gameThumb(game: string): string | null {
+  return GAME_THUMB[game] ?? null;
+}
+
+// Each game's clip: a few seconds of play, an animated WebP made with scripts/media.py from a
+// recording of your own game (docs/STYLE.md says how big, and what to record). It plays over the
+// picture while the pointer is on the game's band; a clip that is not there is never asked for again.
+export const GAME_CLIP: Record<string, string> = {
+  rac1: "/img/rac1-clip.webp",
+  rac2: "/img/gc-clip.webp",
+  rac3: "/img/uya-clip.webp",
+  rac4: "/img/deadlocked-clip.webp",
+  rac5: "/img/size-matters-clip.webp",
+};
+
+/** A game's clip, or null. */
+export function gameClip(game: string): string | null {
+  return GAME_CLIP[game] ?? null;
+}
+
+/** A game's picture, or null for a game without one (its tile then shows its colours). */
 export function gameArt(game: string): string | null {
   return GAME_ART[game] ?? null;
 }

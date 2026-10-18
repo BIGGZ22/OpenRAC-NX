@@ -11,7 +11,7 @@
   import { app, jobs, pendingJobs } from "$lib/app.svelte";
   import { pct } from "$lib/format";
   import { regionLabel, shortTitle, type SideEntry } from "$lib/labels";
-  import { gameArt } from "$lib/media";
+  import { gameThumb } from "$lib/media";
   import { enter } from "$lib/motion";
   import { themeStyle } from "$lib/themes";
   import { fly } from "svelte/transition";
@@ -35,7 +35,7 @@
       game.versions.map((v, vi) => ({
         key: v.key,
         name: shortTitle(game.title),
-        art: gameArt(game.id),
+        art: gameThumb(game.id),
         style: themeStyle(game.id),
         group: gi === 0 && vi === 0 ? "Versions" : undefined,
         state: v.progress
