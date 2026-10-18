@@ -768,6 +768,22 @@ int hud_side() {
     return wider > 1.0f ? static_cast<int>(256.0f * (wider - 1.0f)) : 0;
 }
 
+float picture_wider() {
+    if (!g || !g->window) {
+        return 1.0f;
+    }
+    int window_width = 0;
+    int window_height = 0;
+    g->window->drawable_size(window_width, window_height);
+    const float aspect = picture_aspect(window_width, window_height);
+    const Box box = frame_box(window_width, window_height, aspect);
+    // As render() widens the frame's horizontal tangent: 1 / picture_scale.
+    if (aspect <= kTvAspect || box.width <= 0 || box.height <= 0) {
+        return 1.0f;
+    }
+    return std::max(1.0f, static_cast<float>(box.width) / (kTvAspect * static_cast<float>(box.height)));
+}
+
 void sky_sprite(const std::uint8_t* record, std::uint64_t tex0) {
     std::array<std::uint8_t, 0x20> r;
     std::memcpy(r.data(), record, r.size());

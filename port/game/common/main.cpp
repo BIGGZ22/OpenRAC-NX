@@ -862,6 +862,15 @@ int openrac_game_hud_side(void) {
     return 0;
 }
 
+float openrac_game_picture_wider(void) {
+#ifdef OPENRAC_FRONTEND
+    if (g_window) {
+        return frontend::picture_wider();
+    }
+#endif
+    return 1.0f;
+}
+
 int openrac_game_lock_strafe(void) {
 #ifdef OPENRAC_FRONTEND
     return settings::get().lock_strafe ? 1 : 0;

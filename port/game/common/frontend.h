@@ -46,6 +46,10 @@ int ui_quad(const openrac_game_ui_rect& quad);
 // picture's width (openrac_game_hud_side): the player's "HUD: Edges" in a wider picture, else 0.
 int hud_side();
 
+// How many times wider than 4:3 the picture is, at least 1 (openrac_game_picture_wider): what the
+// frame's horizontal tangent is the game's times (render's projection, picture_scale).
+float picture_wider();
+
 // A sky sprite the game drew this frame (openrac_game_sky_sprite).
 void sky_sprite(const std::uint8_t* record, std::uint64_t tex0);
 

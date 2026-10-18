@@ -248,6 +248,10 @@ int openrac_game_ui_quad(const openrac_game_ui_rect* quad);
  * the player's HUD setting is "Edges", else 0. */
 int openrac_game_hud_side(void);
 
+/* How many times wider than the game's 4:3 the picture is (the player's aspect setting): its
+ * horizontal tangent is the game's times this. 1 for a 4:3 picture, and without a window. */
+float openrac_game_picture_wider(void);
+
 /* Whether the player turned lock-strafe on (settings lock_strafe; rac1: host/strafe.c): while a
  * weapon is fired the hero keeps facing the camera's way and the stick moves him sideways and
  * back. 0 without a window (no settings) or with the option off, the game's own movement. */
