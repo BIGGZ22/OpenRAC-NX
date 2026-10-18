@@ -357,12 +357,17 @@ jobs:
             fs.appendFileSync(process.env.GITHUB_ENV, `TAURI_SIGNING_PRIVATE_KEY=${keyPath}\n`);
           '
 
+      # Without the signing key (a fork's run) the installers are built without the updater's
+      # signed archives, which Tauri refuses to make unsigned.
       - name: Build the installers
+        shell: bash
         env:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           yarn install --immutable
-          yarn tauri ${{ matrix.tauri }}
+          unsigned=()
+          [ -n "${TAURI_SIGNING_PRIVATE_KEY:-}" ] || unsigned=(--config '{"bundle":{"createUpdaterArtifacts":false}}')
+          yarn tauri ${{ matrix.tauri }} "${unsigned[@]}"
 
       # Named as the desktop installers are, and checked: the game's activity, SDL's and the
       # libraries the programs need are in it.
@@ -453,11 +458,14 @@ jobs:
       # Its file is named as the one built on Ubuntu is: "fc44" tells them apart on a release,
       # which takes one file of a name.
       - name: Build the installer
+        shell: bash
         env:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           yarn install --immutable
-          yarn tauri build --bundles rpm
+          unsigned=()
+          [ -n "${TAURI_SIGNING_PRIVATE_KEY:-}" ] || unsigned=(--config '{"bundle":{"createUpdaterArtifacts":false}}')
+          yarn tauri build --bundles rpm "${unsigned[@]}"
           for f in target/release/bundle/rpm/*.x86_64.rpm; do mv "$f" "${f%.x86_64.rpm}.fc44.x86_64.rpm"; done
 
       - uses: actions/upload-artifact@v4
