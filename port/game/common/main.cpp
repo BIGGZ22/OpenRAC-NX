@@ -351,6 +351,57 @@ void finish() {
     log::info("{} frames", g_frame);
 }
 
+#ifdef OPENRAC_FRONTEND
+// The game's sounds (openrac/sound_engine.h), rendered on the output's thread.
+std::unique_ptr<platform::AudioOutput> g_sound;
+long g_sound_retry_frame = 0;
+
+void open_sound() {
+    std::string why;
+    g_sound = platform::AudioOutput::open(why, [](std::span<std::int16_t> samples) {
+        openrac_sound_render(samples.data(), samples.size() / 2);
+        // The player's volume (settings.h): at 0 the output is silence itself.
+        if (const float gain = settings::output_gain(); gain < 1.0f) {
+            for (std::int16_t& sample : samples) {
+                sample = static_cast<std::int16_t>(static_cast<float>(sample) * gain);
+            }
+        }
+    });
+    if (!g_sound) {
+        log::warn("no sound: {}", why);
+    }
+}
+
+// Once a frame: a device that stalled is opened again, and one that could not be opened is tried
+// again every few seconds (a phone's audio can be busy with a call or another app at the start).
+void watch_sound() {
+    if (!g_window) {
+        return;
+    }
+    if (!g_sound) {
+        if (g_frame >= g_sound_retry_frame) {
+            g_sound_retry_frame = g_frame + 300;
+            open_sound();
+            if (g_sound) {
+                log::info("sound is back");
+            }
+        }
+        return;
+    }
+    std::string why;
+    static bool reported = false;
+    if (!g_sound->watch(why)) {
+        if (!reported) {
+            log::warn("sound stopped and the device could not be opened again: {}", why);
+            reported = true;
+        }
+    } else if (reported) {
+        log::info("sound is back");
+        reported = false;
+    }
+}
+#endif
+
 }  // namespace
 
 // ---- What the library replacements call (openrac/game_host.h) ----
@@ -444,6 +495,7 @@ int openrac_game_vsync(void) {
         if (!frontend::frame(std::span<const std::uint8_t>(ram, 32u * 1024 * 1024), g_chain, draws)) {
             std::exit(0);
         }
+        watch_sound();
     }
 #endif
     g_frame++;
@@ -1170,20 +1222,7 @@ int main(int argc, char** argv) {
         if (g_options.debug_overlay) {
             frontend::debug_overlay::request();
         }
-        // The game's sounds (openrac/sound_engine.h), rendered on the output's thread.
-        static std::unique_ptr<platform::AudioOutput> sound_output =
-            platform::AudioOutput::open(why, [](std::span<std::int16_t> samples) {
-                openrac_sound_render(samples.data(), samples.size() / 2);
-                // The player's volume (settings.h): at 0 the output is silence itself.
-                if (const float gain = settings::output_gain(); gain < 1.0f) {
-                    for (std::int16_t& sample : samples) {
-                        sample = static_cast<std::int16_t>(static_cast<float>(sample) * gain);
-                    }
-                }
-            });
-        if (!sound_output) {
-            log::warn("no sound: {}", why);
-        }
+        open_sound();
     }
 #endif
 
