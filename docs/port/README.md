@@ -43,6 +43,7 @@ The code is in [port/](../../port/README.md).
 | [RAC1_PAL_CAMPAIGN.md](RAC1_PAL_CAMPAIGN.md) | The rules and the dated log of the campaign for a playable Ratchet & Clank (PAL) |
 | [WORKFLOW.md](WORKFLOW.md) | **Start here to help:** the whole loop from a player's report to a release (taking the report, reproducing it by script, finding the cause, where a fix belongs, checking it, landing it), with the kinds of cause met so far |
 | [RAC1_PAL_TESTING.md](RAC1_PAL_TESTING.md) | Playtesting by script: starting any level, teleporting Ratchet, moving the camera, pressing buttons on a schedule, skipping scenes and flights, screenshots and reading game memory, and checking a fix |
+| [REGRESSION.md](REGRESSION.md) | Gameplay regression runs: every level of both versions played by route in hidden windows, a trace per tick compared with another build, the other version or a baseline, and what the runs reached without right C |
 | [RAC1_PAL_BUGFIX_GUIDE.md](RAC1_PAL_BUGFIX_GUIDE.md) | For whoever continues it: building and running, the development switches, how to find the cause of a gameplay bug, how to supply C for a function without any, and what is open |
 | [RAC1_NTSC_HINTS.md](RAC1_NTSC_HINTS.md) | Where the US game's own code is known to trouble a native build (planets, gameplay systems, rendering, sound, saves), with the places in this tree to look and what the port already does |
 | [VU_PROGRAMS.md](VU_PROGRAMS.md) | The games' vector unit programs by name, and which the games share |

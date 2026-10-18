@@ -8,6 +8,10 @@ way. It complements [RAC1_PAL_BUGFIX_GUIDE.md](RAC1_PAL_BUGFIX_GUIDE.md)
 and the traps met on the way. Everything here runs the port's own
 development switches; nothing in it emulates the console.
 
+To check a change across every level of both versions at once (hidden
+windows, a trace per tick, compared with another build or a baseline), use
+the regression runs: [REGRESSION.md](REGRESSION.md).
+
 ## 1. Before a run
 
 - **Build** from the repository root: `python3 tools/build_port.py rac1-pal`
@@ -200,7 +204,9 @@ re-reads every player's levels before Play.
 1. Reproduce first, with the numbers or pictures that show the bug.
 2. Change one thing; rebuild (hostgen too when tables changed).
 3. Run the same script: the bug gone, and a second level or case where
-   the same code runs unchanged.
+   the same code runs unchanged. Then `regress.py check` against a baseline
+   of the build before ([REGRESSION.md](REGRESSION.md)): every other level
+   still plays the same.
 4. Compare a setting or switch on and off when the fix is one.
 5. `ctest --preset release` in `port/` (64 tests), the editor's and tools'
    unit tests when those changed, `yarn verify` for the launcher.
