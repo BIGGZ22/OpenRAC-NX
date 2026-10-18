@@ -436,9 +436,11 @@ async fn sync_progress_from_web(state: State<'_, AppState>) -> Result<Library, S
     let root_for_fetch = root.clone();
     tauri::async_runtime::spawn_blocking(move || {
         use openrac_launcher_core::catalog;
+        // detect::quiet: each curl opened a console window of its own on Windows, at every start.
         let fetch = |url: &str| -> Option<String> {
-            let out = std::process::Command::new("curl")
+            let out = detect::quiet(Path::new("curl"))
                 .args(["-s", "-f", "--connect-timeout", "4", "--max-time", "10", url])
+                .stdin(std::process::Stdio::null())
                 .output()
                 .ok()?;
             if out.status.success() {
