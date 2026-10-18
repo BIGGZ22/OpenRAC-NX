@@ -510,8 +510,8 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
                             m_trxreg.rrh);  // copied over, as an upload (image_data)
                 if (frame_source(m_bitbltbuf.sbp, x, y)) {
                     static log::Capped told(100);
-                    if (told()) {
-                        log::info("2D: part of the frame copied to block {:#x} ({}x{})", m_bitbltbuf.dbp, m_trxreg.rrw,
+                    if (log::verbose_on() && told()) {
+                        log::verbose("2D: part of the frame copied to block {:#x} ({}x{})", m_bitbltbuf.dbp, m_trxreg.rrw,
                                   m_trxreg.rrh);
                     }
                     m_frame_copies.push_back(
@@ -832,8 +832,8 @@ void GifInterpreter::overwritten(std::uint32_t dbp, std::uint32_t dbw, std::uint
     const std::size_t targets = m_offscreen.size();
     std::erase_if(m_offscreen, covered);
     static log::Capped told(100);
-    if (m_offscreen.size() != targets && told()) {
-        log::info("2D: a transfer to block {:#x} took {} off-screen target(s) back as texture memory", dbp,
+    if (m_offscreen.size() != targets && log::verbose_on() && told()) {
+        log::verbose("2D: a transfer to block {:#x} took {} off-screen target(s) back as texture memory", dbp,
                   targets - m_offscreen.size());
     }
 }
@@ -867,9 +867,9 @@ void GifInterpreter::clut_load(const gs::Tex0& t) {
 }
 
 void GifInterpreter::note_texture_kind(std::uint32_t tbp, std::uint8_t psm, TextureKind kind) {
-    // Logged when a block's texture changes what it is drawn as, a few hundred times a run at
-    // most: enough to see which of the 2D layer's textures went, and as what. A texture drawn as
-    // itself the first time is what is expected, and not logged.
+    // In the detailed log (OPENRAC_LOG=verbose), when a block's texture changes what it is drawn
+    // as, a few hundred times a run at most: enough to see which of the 2D layer's textures went,
+    // and as what. A texture drawn as itself the first time is what is expected, and not logged.
     const auto [at, added] = m_texture_kind.try_emplace(tbp, kind);
     if (added ? kind == TextureKind::Texture : at->second == kind) {
         return;
@@ -888,8 +888,8 @@ void GifInterpreter::note_texture_kind(std::uint32_t tbp, std::uint8_t psm, Text
         return "?";
     };
     static log::Capped told(400);
-    if (told()) {
-        log::info("2D: the texture at block {:#x} (psm {:#x}) draws as {}{}{}", tbp, psm, name(kind),
+    if (log::verbose_on() && told()) {
+        log::verbose("2D: the texture at block {:#x} (psm {:#x}) draws as {}{}{}", tbp, psm, name(kind),
                   added ? "" : ", was ", added ? "" : name(at->second));
     }
     at->second = kind;
@@ -1108,8 +1108,8 @@ void GifInterpreter::ensure_draw() {
     if (m_state.target != 0 && std::find(m_offscreen.begin(), m_offscreen.end(), m_state.target) == m_offscreen.end()) {
         m_offscreen.push_back(m_state.target);
         static log::Capped told(100);
-        if (told()) {
-            log::info("2D: drawn off-screen into block {:#x} (FRAME width {})", m_state.target, context().frame.fbw);
+        if (log::verbose_on() && told()) {
+            log::verbose("2D: drawn off-screen into block {:#x} (FRAME width {})", m_state.target, context().frame.fbw);
         }
     }
     if (m_draws.empty() || !(m_draws.back().state == m_state) || m_draws.back().mobys != 0) {

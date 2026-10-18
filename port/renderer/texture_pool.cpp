@@ -255,8 +255,8 @@ std::vector<std::uint32_t> TexturePool::palette(
     }
     if (clut == nullptr) {
         static log::Capped told(50);
-        if (told()) {
-            log::info("2D: no CLUT at block {:#x} for the texture at {:#x}: drawn transparent", tex0.cbp, tex0.tbp0);
+        if (log::verbose_on() && told()) {
+            log::verbose("2D: no CLUT at block {:#x} for the texture at {:#x}: drawn transparent", tex0.cbp, tex0.tbp0);
         }
         return std::vector<std::uint32_t>(static_cast<std::size_t>(entries), 0);
     }
