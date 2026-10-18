@@ -356,6 +356,12 @@ void finish() {
 std::unique_ptr<platform::AudioOutput> g_sound;
 long g_sound_retry_frame = 0;
 
+// Every way out is std::exit: the output's thread stops before the globals it renders from go
+// (its callback ran on into their destruction, a crash at quit).
+void close_sound() {
+    g_sound.reset();
+}
+
 void open_sound() {
     std::string why;
     g_sound = platform::AudioOutput::open(why, [](std::span<std::int16_t> samples) {
@@ -1225,6 +1231,7 @@ int main(int argc, char** argv) {
             frontend::debug_overlay::request();
         }
         open_sound();
+        std::atexit(close_sound);
     }
 #endif
 
