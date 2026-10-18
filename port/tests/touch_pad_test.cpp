@@ -77,5 +77,23 @@ int main() {
     CHECK(read(touch).buttons == Pad{}.buttons);
     touch.hide();
     CHECK(!touch.visible());
+
+    // Left alone, the pad goes away; a tap that lifts within the frame still counts as a touch.
+    TouchPad idle;
+    idle.idle(1000);
+    CHECK(!idle.visible());
+    idle.finger_down(5, 0.5f, 0.5f);
+    idle.finger_up(5);
+    idle.idle(50000);
+    CHECK(idle.visible());
+    idle.idle(50000 + TouchPad::kIdleHideMs - 1);
+    CHECK(idle.visible());
+    idle.idle(50000 + TouchPad::kIdleHideMs);
+    CHECK(!idle.visible());
+    // A finger held still keeps it.
+    idle.finger_down(6, 0.5f, 0.5f);
+    idle.idle(90000);
+    idle.idle(200000);
+    CHECK(idle.visible());
     return openrac::test::result();
 }

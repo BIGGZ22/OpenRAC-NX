@@ -148,6 +148,12 @@ void Input::handle_event(const SDL_Event& event) {
         case SDL_EVENT_KEY_DOWN:
             m_touch.hide();
             break;
+        case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+            // A stick pushed well past its dead zone, not a resting stick's drift.
+            if (event.gaxis.value > 16000 || event.gaxis.value < -16000) {
+                m_touch.hide();
+            }
+            break;
         case SDL_EVENT_WINDOW_FOCUS_LOST:
         case SDL_EVENT_DID_ENTER_BACKGROUND:
             m_touch.release_all();
@@ -214,6 +220,7 @@ void Input::update() {
         }
         if (port == 0) {
             apply_keyboard(pad, keys);
+            m_touch.idle(SDL_GetTicks());
             m_touch.apply(pad);
         }
     }

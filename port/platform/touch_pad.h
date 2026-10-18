@@ -50,10 +50,15 @@ public:
     // Adds what the fingers hold to `pad`: buttons pressed, a held stick's axes replacing the pad's.
     void apply(Pad& pad) const;
 
-    // Shown once the screen has been touched, until another device is used (hide()).
+    // Hidden at first; shown once the screen has been touched, until another device is used
+    // (hide()) or no finger has touched it for kIdleHideMs (idle()).
     bool visible() const { return m_visible; }
 
     void hide() { m_visible = false; }
+
+    // Once a frame, with SDL's clock: puts the pad away when the screen has been left alone.
+    static constexpr std::uint64_t kIdleHideMs = 10000;
+    void idle(std::uint64_t now_ms);
 
     std::span<const TouchControl> controls() const { return m_controls; }
 
@@ -78,6 +83,9 @@ private:
     std::vector<Finger> m_fingers;
     float m_aspect = 16.0f / 9.0f;
     bool m_visible = false;
+    // A finger came down since the last idle(): it counts even if it lifted within the frame.
+    bool m_touched = false;
+    std::uint64_t m_last_touch_ms = 0;
 };
 
 }  // namespace openrac::platform

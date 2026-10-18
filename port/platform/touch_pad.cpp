@@ -75,6 +75,7 @@ TouchPad::Finger* TouchPad::find(std::uint64_t id) {
 
 void TouchPad::finger_down(std::uint64_t finger, float x, float y) {
     m_visible = true;
+    m_touched = true;
     Finger f{finger, x, y, -1};
     for (std::size_t i = 0; i < m_controls.size(); ++i) {
         const TouchControl& c = m_controls[i];
@@ -109,6 +110,15 @@ void TouchPad::finger_up(std::uint64_t finger) {
 
 void TouchPad::release_all() {
     m_fingers.clear();
+}
+
+void TouchPad::idle(std::uint64_t now_ms) {
+    if (m_touched || !m_fingers.empty()) {
+        m_touched = false;
+        m_last_touch_ms = now_ms;
+    } else if (m_visible && now_ms - m_last_touch_ms >= kIdleHideMs) {
+        m_visible = false;
+    }
 }
 
 bool TouchPad::held(std::size_t index) const {
