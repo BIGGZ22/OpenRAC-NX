@@ -1211,6 +1211,20 @@ void world_drawn(std::span<const std::uint8_t> ram) {
     g->world_camera = viewer::read_game_state(ram, a);
 }
 
+// The on-screen pad, kept inside the screen's safe area (a camera's notch at a phone's side).
+static void draw_touch_pad(int window_width, int window_height) {
+    platform::TouchPad& touch = g->input.touch_pad();
+    SDL_Rect safe{};
+    int w = 0;
+    int h = 0;
+    if (SDL_GetWindowSafeArea(g->window->sdl(), &safe) && SDL_GetWindowSize(g->window->sdl(), &w, &h) && h > 0) {
+        const float height = static_cast<float>(h);
+        touch.set_safe_area(static_cast<float>(safe.x) / height,
+                            static_cast<float>(w - safe.x - safe.w) / height);
+    }
+    touch_overlay::draw(touch, window_width, window_height);
+}
+
 bool show_picture(const std::uint8_t* rgba, int width, int height, float black) {
     using namespace gl;
     if (!g || width <= 0 || height <= 0) {
@@ -1261,7 +1275,7 @@ bool show_picture(const std::uint8_t* rgba, int width, int height, float black) 
     }
     // The picture fills the frame the game's own frames fill; its first row is the top.
     present(g->picture.id(), width, height, window_width, window_height, true);
-    touch_overlay::draw(g->input.touch_pad(), window_width, window_height);
+    draw_touch_pad(window_width, window_height);
     {
         // [debug tools] The overlay over a picture too (no renderer or camera then).
         const Box box = frame_box(window_width, window_height);
@@ -1753,7 +1767,7 @@ void draw_kept(bool first) {
     }
     slow_frame();
     present(shown, width, height, window_width, window_height, false, aspect);
-    touch_overlay::draw(g->input.touch_pad(), window_width, window_height);
+    draw_touch_pad(window_width, window_height);
     // [debug tools] The overlay, over the frame in the window.
     debug_overlay::draw({g->window->sdl(), window_width, window_height, box.x, box.y, box.width, box.height,
                          g->renderer.get(), &input.camera, g->frame.width(), g->frame.height(),

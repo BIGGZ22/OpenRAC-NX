@@ -2,8 +2,8 @@
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // The on-screen pad (platform/touch_pad.h) drawn over the window, while it is visible: a
-// translucent circle for each control, the face buttons with their symbols in their colours, the
-// sticks with their knobs where the thumbs hold them.
+// glass for each control: the face buttons with their symbols in their colours, the shoulders
+// with their names, the d-pad on its plate, the sticks with their knobs where the thumbs hold them.
 #pragma once
 
 #include "platform/touch_pad.h"

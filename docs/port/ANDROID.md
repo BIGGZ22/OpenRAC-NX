@@ -49,7 +49,10 @@ keep in step with the first.
   CI and the tests check it without a phone (Mesa's ES driver).
 - **Input.** SDL3's gamepads (Bluetooth and USB controllers, handhelds'
   built-in pads) as on the desktop, and an on-screen pad for touch
-  (platform/touch_pad.h): its layout is plain data, tested on the desktop.
+  (platform/touch_pad.h), placed from the screen's edges in its heights and
+  inside its safe area, with a left stick that comes to the thumb: its layout
+  is plain data, tested on the desktop, and its look is drawn by one shader
+  (game/common/touch_overlay.cpp).
 - **Files.** The launcher gives the game its folders on the command line and
   in the environment (`--data`, `--levels`, `HOME`,
   `XDG_DATA_HOME` in the app's own storage), so main.cpp needs no Android

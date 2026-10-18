@@ -17,61 +17,174 @@ using namespace openrac::gl;
 using platform::Button;
 using platform::TouchControl;
 
-// One quad per control, its circle and symbol drawn by the fragment shader from the quad's own
-// coordinates, so there is no texture to make.
+// One quad per control, its shape and symbol drawn by the fragment shader from signed distances
+// in the quad's own coordinates (antialiased by the pixel's size), so there is no texture to make.
+// The d-pad's arms sit on one plate, drawn first.
 constexpr const char* kVertex = R"glsl(#version 410 core
-uniform vec4 box;  // the control's square in device coordinates: centre x, y, half width, half height
-out vec2 v_at;     // -1..1 across the square
+uniform vec4 box;     // the control's box in device coordinates: centre x, y, half width, half height
+uniform vec2 extent;  // its half width and height in radii
+out vec2 v_at;        // across the box in radii from the centre, down positive
 void main() {
     vec2 corner = vec2(float(gl_VertexID & 1), float((gl_VertexID >> 1) & 1)) * 2.0 - 1.0;
-    v_at = corner;
+    v_at = vec2(corner.x, -corner.y) * extent;
     gl_Position = vec4(box.xy + corner * box.zw, 0.0, 1.0);
 }
 )glsl";
 
 constexpr const char* kFragment = R"glsl(#version 410 core
 in vec2 v_at;
-uniform vec4 tint;    // the symbol's colour
-uniform float held;   // 1 while a finger holds it
-uniform int symbol;   // 0 none, 1 triangle, 2 circle, 3 cross, 4 square, 5 knob, 6 arrow (up)
-uniform vec2 knob;    // a stick's knob, -1..1 of the circle
-uniform float angle;  // the arrow's direction, in radians from up
+uniform vec3 tint;     // the symbol's colour
+uniform float held;    // 1 while a finger holds it
+uniform float stretch; // half the width over half the height
+uniform int symbol;    // see Symbol in touch_overlay.cpp
+uniform vec2 knob;     // a stick's knob, -1..1 of the circle
+uniform float angle;   // an arrow's direction, in radians clockwise from up
+uniform int label0;    // two letters (letter()), -1 for none
+uniform int label1;
 out vec4 colour;
 
-float ring(float d, float r, float w) { return 1.0 - smoothstep(w * 0.5, w * 0.5 + 0.04, abs(d - r)); }
+float fill(float d) { float w = fwidth(d) * 0.75; return 1.0 - smoothstep(-w, w, d); }
+float pill(vec2 p, float half_width, float r) {
+    return length(vec2(max(abs(p.x) - half_width, 0.0), p.y)) - r;
+}
+float segment(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a, ba = b - a;
+    return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0));
+}
+vec4 over(vec4 under, vec4 top) {
+    float a = top.a + under.a * (1.0 - top.a);
+    return vec4(a > 0.0 ? (top.rgb * top.a + under.rgb * under.a * (1.0 - top.a)) / a : vec3(0.0), a);
+}
+// Glass: a dark translucent body, lighter at the top, a fine bright rim.
+vec4 glass(float d, float lift) {
+    vec4 body = vec4(mix(vec3(0.20, 0.22, 0.27), vec3(0.07, 0.08, 0.10), v_at.y * 0.5 + 0.5),
+                     0.40 + 0.18 * held);
+    body.rgb = mix(body.rgb, tint * 0.55, 0.45 * held * lift);
+    vec4 c = vec4(body.rgb, body.a * fill(d));
+    float rim = fill(abs(d + 0.035) - 0.022);
+    return over(c, vec4(vec3(1.0), (0.30 + 0.45 * held) * rim));
+}
+// A letter of the shoulders' names in strokes, in a box 1 wide and 2 high centred on p's origin:
+// 0 L, 1 R, 2 one, 3 two.
+float letter(int code, vec2 p) {
+    float d = 1e3;
+    if (code == 0) {
+        d = min(segment(p, vec2(-0.35, -1.0), vec2(-0.35, 1.0)), segment(p, vec2(-0.35, 1.0), vec2(0.4, 1.0)));
+    } else if (code == 1) {
+        d = min(segment(p, vec2(-0.4, -1.0), vec2(-0.4, 1.0)), segment(p, vec2(-0.4, -1.0), vec2(0.0, -1.0)));
+        d = min(d, segment(p, vec2(-0.4, 0.0), vec2(0.0, 0.0)));
+        d = min(d, p.x > 0.0 ? abs(length(p - vec2(0.0, -0.5)) - 0.5) : 1e3);
+        d = min(d, segment(p, vec2(0.0, 0.0), vec2(0.45, 1.0)));
+    } else if (code == 2) {
+        d = min(segment(p, vec2(0.05, -1.0), vec2(0.05, 1.0)), segment(p, vec2(-0.3, -0.65), vec2(0.05, -1.0)));
+        d = min(d, segment(p, vec2(-0.3, 1.0), vec2(0.4, 1.0)));
+    } else if (code == 3) {
+        vec2 c = vec2(0.0, -0.45);
+        d = (p.y < c.y || p.x > 0.0) && p.y < 0.0 ? abs(length(p - c) - 0.45) : 1e3;
+        d = min(d, segment(p, vec2(0.35, -0.2), vec2(-0.42, 1.0)));
+        d = min(d, segment(p, vec2(-0.42, 1.0), vec2(0.45, 1.0)));
+    }
+    return d;
+}
 
 void main() {
-    float d = length(v_at);
-    if (d > 1.0) { discard; }
-    float base = mix(0.28, 0.5, held);
-    vec4 c = vec4(0.08, 0.08, 0.1, base * 0.6);
-    c = mix(c, vec4(1.0, 1.0, 1.0, base + 0.15), ring(d, 0.92, 0.08));
-    float s = 0.0;
-    if (symbol == 1) {
-        vec2 p = v_at * vec2(1.0, -1.0) + vec2(0.0, 0.12);
-        float e = max(abs(p.x) * 0.866 + p.y * 0.5, -p.y) - 0.25;
-        s = 1.0 - smoothstep(0.0, 0.05, abs(e));
-    } else if (symbol == 2) {
-        s = ring(d, 0.38, 0.1);
-    } else if (symbol == 3) {
-        vec2 p = abs(mat2(0.7071, -0.7071, 0.7071, 0.7071) * v_at);
-        s = (p.x < 0.07 || p.y < 0.07) && max(p.x, p.y) < 0.48 ? 1.0 : 0.0;
-    } else if (symbol == 4) {
-        vec2 p = abs(v_at);
-        s = 1.0 - smoothstep(0.0, 0.05, abs(max(p.x, p.y) - 0.32));
-    } else if (symbol == 5) {
-        float k = length(v_at - knob * 0.55);
-        s = 1.0 - smoothstep(0.38, 0.42, k);
+    vec2 p = v_at;
+    float press = 1.0 - 0.06 * held;  // a held control sinks a little
+    vec4 c = vec4(0.0);
+    vec4 ink = vec4(tint, 0.92);
+    if (symbol == 9) {
+        // The d-pad's plate: a rounded cross.
+        float arm = min(pill(p.yx, 0.60, 0.36), pill(p, 0.60, 0.36));
+        c = glass(arm, 0.0);
     } else if (symbol == 6) {
+        // An arm of the d-pad: its arrow, lit when held.
         float ca = cos(angle), sa = sin(angle);
-        vec2 p = mat2(ca, -sa, sa, ca) * v_at;
-        p.y = -p.y;
-        s = (p.y < 0.3 && p.y > -0.3 && abs(p.x) < (0.3 + p.y) * 0.8) ? 1.0 : 0.0;
+        vec2 q = mat2(ca, -sa, sa, ca) * p;
+        c = vec4(tint, 0.30 * held * fill(length(p) - 0.95));
+        float tri = max(abs(q.x) * 0.9 - q.y * 0.45, q.y - 0.18) - 0.20;
+        c = over(c, vec4(mix(vec3(0.85), vec3(1.0), held), (0.75 + 0.25 * held) * fill(tri)));
+    } else if (symbol == 5) {
+        // A stick: a well with a ring of ticks, and the knob where the thumb holds it.
+        float d = length(p) - 1.0;
+        c = glass(d, 0.0);
+        c.a *= 0.8;
+        float ticks = 0.0;
+        for (int k = 0; k < 4; ++k) {
+            float a = float(k) * 1.5708;
+            vec2 dir = vec2(sin(a), -cos(a));
+            ticks = max(ticks, fill(segment(p, dir * 0.74, dir * 0.84) - 0.025));
+        }
+        c = over(c, vec4(vec3(1.0), 0.35 * ticks));
+        vec2 k = p - knob * 0.55;
+        float kd = length(k) - 0.42 * press;
+        vec4 shadow = vec4(vec3(0.0), 0.35 * fill(length(k - vec2(0.0, 0.06)) - 0.46));
+        c = over(c, shadow);
+        vec3 face = mix(vec3(0.92, 0.94, 0.98), vec3(0.62, 0.66, 0.74), clamp(k.y / 0.42 * 0.5 + 0.5, 0.0, 1.0));
+        face = mix(face, mix(face, vec3(0.55, 0.80, 1.0), 0.45), held);
+        c = over(c, vec4(face, 0.80 * fill(kd)));
+        c = over(c, vec4(vec3(1.0), 0.35 * fill(abs(length(k) - 0.27 * press) - 0.02)));
+    } else {
+        // A button: glass, its symbol in its colour.
+        float half_width = stretch - 1.0;
+        float d = pill(p / press, half_width, 1.0);
+        c = glass(d, 1.0);
+        vec2 q = p / press;
+        float s = 1e3;
+        if (symbol == 1) {         // triangle
+            vec2 t = q + vec2(0.0, -0.08);
+            float e = max(abs(t.x) * 0.866 - t.y * 0.5, t.y) - 0.27;
+            s = abs(e) - 0.045;
+        } else if (symbol == 2) {  // circle
+            s = abs(length(q) - 0.40) - 0.06;
+        } else if (symbol == 3) {  // cross
+            vec2 r = abs(q);
+            s = min(segment(r, vec2(0.0), vec2(0.34, 0.34)), 1e3) - 0.065;
+        } else if (symbol == 4) {  // square
+            vec2 r = abs(q);
+            s = abs(max(r.x, r.y) - 0.31) - 0.055;
+        } else if (symbol == 7) {  // Select: a bar
+            s = pill(q, 0.30, 0.13);
+            ink.rgb = vec3(0.92);
+        } else if (symbol == 8) {  // Start: a play arrow
+            vec2 t = vec2(q.y, -q.x) + vec2(0.0, -0.04);
+            s = max(abs(t.x) * 0.9 - t.y * 0.45, t.y - 0.16) - 0.20;
+            ink.rgb = vec3(0.92);
+        }
+        if (label0 >= 0) {        // the shoulders: their name
+            const float size = 0.38;  // half a letter's height
+            vec2 at = q / size;
+            s = min(letter(label0, at + vec2(0.8, 0.0)), letter(label1, at - vec2(0.8, 0.0))) * size - 0.07;
+            ink.rgb = vec3(0.95);
+        }
+        ink.a *= 0.75 + 0.25 * held;
+        c = over(c, vec4(ink.rgb, ink.a * fill(s)));
+        // The glow of a press, outside the outline.
+        c = over(vec4(tint, 0.35 * held * (1.0 - smoothstep(0.0, 0.18, d)) * step(0.0, d)), c);
     }
-    c = mix(c, vec4(tint.rgb, max(tint.a * (0.55 + 0.45 * held), c.a)), s);
+    if (c.a <= 0.002) { discard; }
     colour = c;
 }
 )glsl";
+
+// What the fragment shader draws for a control.
+enum Symbol : int {
+    kNone = 0,
+    kTriangle = 1,
+    kCircle = 2,
+    kCross = 3,
+    kSquare = 4,
+    kStick = 5,
+    kArrow = 6,
+    kSelect = 7,
+    kStart = 8,
+    kDpad = 9,
+};
+
+// The shoulders' names, letter by letter (letter() in the shader).
+constexpr int kGlyphL = 0;
+constexpr int kGlyphR = 1;
+constexpr int kGlyph1 = 2;
+constexpr int kGlyph2 = 3;
 
 struct State {
     renderer::Shader shader;
@@ -82,26 +195,40 @@ struct State {
 State s;
 
 struct Look {
-    int symbol = 0;
+    int symbol = kNone;
     float r = 1.0f, g = 1.0f, b = 1.0f;
     float angle = 0.0f;
+    int label0 = -1, label1 = -1;
 };
 
 Look look(const TouchControl& c) {
     if (c.kind != TouchControl::Kind::Button) {
-        return {5, 0.85f, 0.85f, 0.9f};
+        return {kStick, 0.55f, 0.80f, 1.0f};
     }
+    // The DualShock's own colours, a little brighter for a glass over a game.
     switch (c.button) {
-        case Button::Triangle: return {1, 0.25f, 0.85f, 0.65f};
-        case Button::Circle: return {2, 0.95f, 0.35f, 0.4f};
-        case Button::Cross: return {3, 0.45f, 0.65f, 1.0f};
-        case Button::Square: return {4, 0.95f, 0.5f, 0.85f};
-        case Button::Up: return {6, 0.9f, 0.9f, 0.9f, 0.0f};
-        case Button::Right: return {6, 0.9f, 0.9f, 0.9f, 1.5708f};
-        case Button::Down: return {6, 0.9f, 0.9f, 0.9f, 3.1416f};
-        case Button::Left: return {6, 0.9f, 0.9f, 0.9f, -1.5708f};
-        default: return {0, 0.9f, 0.9f, 0.9f};
+        case Button::Triangle: return {kTriangle, 0.35f, 0.92f, 0.78f};
+        case Button::Circle: return {kCircle, 1.0f, 0.42f, 0.45f};
+        case Button::Cross: return {kCross, 0.55f, 0.72f, 1.0f};
+        case Button::Square: return {kSquare, 1.0f, 0.55f, 0.88f};
+        case Button::Up: return {kArrow, 0.9f, 0.9f, 0.95f, 0.0f};
+        case Button::Right: return {kArrow, 0.9f, 0.9f, 0.95f, 1.5708f};
+        case Button::Down: return {kArrow, 0.9f, 0.9f, 0.95f, 3.1416f};
+        case Button::Left: return {kArrow, 0.9f, 0.9f, 0.95f, -1.5708f};
+        case Button::L1: return {kNone, 0.8f, 0.85f, 1.0f, 0.0f, kGlyphL, kGlyph1};
+        case Button::L2: return {kNone, 0.8f, 0.85f, 1.0f, 0.0f, kGlyphL, kGlyph2};
+        case Button::R1: return {kNone, 0.8f, 0.85f, 1.0f, 0.0f, kGlyphR, kGlyph1};
+        case Button::R2: return {kNone, 0.8f, 0.85f, 1.0f, 0.0f, kGlyphR, kGlyph2};
+        case Button::Select: return {kSelect, 0.8f, 0.85f, 1.0f};
+        case Button::Start: return {kStart, 0.8f, 0.85f, 1.0f};
+        default: return {kNone, 0.9f, 0.9f, 0.9f};
     }
+}
+
+bool is_arm(const TouchControl& c) {
+    return c.kind == TouchControl::Kind::Button
+           && (c.button == Button::Up || c.button == Button::Down || c.button == Button::Left
+               || c.button == Button::Right);
 }
 
 bool ready() {
@@ -143,20 +270,48 @@ void draw(platform::TouchPad& touch, int width, int height) {
     glBindVertexArray(s.vao);
     const float aspect = touch.aspect();
     const auto controls = touch.controls();
+    // A control's box, in window units (0..1 down, the radius in heights), to device coordinates,
+    // with `reach` radii around its centre (more than 1 leaves room for a press's glow).
+    const auto box = [&](float x, float y, float radius, float stretch, float reach) {
+        const float across = stretch - 1.0f + reach;
+        glUniform4f(s.shader.uniform("box"), x * 2.0f - 1.0f, 1.0f - y * 2.0f, radius * across * 2.0f / aspect,
+                    radius * reach * 2.0f);
+        glUniform2f(s.shader.uniform("extent"), across, reach);
+        glUniform1f(s.shader.uniform("stretch"), stretch);
+    };
+    // The d-pad's plate, under its arms: the box the four of them span.
+    float left = 1.0f, right = 0.0f, top = 1.0f, bottom = 0.0f, arm = 0.0f;
+    for (const TouchControl& c : controls) {
+        if (is_arm(c)) {
+            left = std::min(left, c.x);
+            right = std::max(right, c.x);
+            top = std::min(top, c.y);
+            bottom = std::max(bottom, c.y);
+            arm = c.radius;
+        }
+    }
+    if (arm > 0.0f) {
+        box((left + right) * 0.5f, (top + bottom) * 0.5f, (bottom - top) * 0.5f + arm * 1.05f, 1.0f, 1.0f);
+        glUniform3f(s.shader.uniform("tint"), 0.9f, 0.9f, 0.95f);
+        glUniform1f(s.shader.uniform("held"), 0.0f);
+        glUniform1i(s.shader.uniform("symbol"), kDpad);
+        glUniform1i(s.shader.uniform("label0"), -1);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    }
     for (std::size_t i = 0; i < controls.size(); ++i) {
         const TouchControl& c = controls[i];
         const Look l = look(c);
-        // Window units (0..1 down) to device coordinates (-1..1 up); the radius is in heights.
-        glUniform4f(s.shader.uniform("box"), c.x * 2.0f - 1.0f, 1.0f - c.y * 2.0f, c.radius * 2.0f / aspect,
-                    c.radius * 2.0f);
-        glUniform4f(s.shader.uniform("tint"), l.r, l.g, l.b, 0.9f);
+        box(c.x, c.y, c.radius, c.stretch, 1.2f);
+        glUniform3f(s.shader.uniform("tint"), l.r, l.g, l.b);
         glUniform1f(s.shader.uniform("held"), touch.held(i) ? 1.0f : 0.0f);
         glUniform1i(s.shader.uniform("symbol"), l.symbol);
         glUniform1f(s.shader.uniform("angle"), l.angle);
+        glUniform1i(s.shader.uniform("label0"), l.label0);
+        glUniform1i(s.shader.uniform("label1"), l.label1);
         float dx = 0.0f;
         float dy = 0.0f;
         touch.knob(i, dx, dy);
-        glUniform2f(s.shader.uniform("knob"), dx / c.radius, -dy / c.radius);
+        glUniform2f(s.shader.uniform("knob"), dx / c.radius, dy / c.radius);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
     glBindVertexArray(0);

@@ -7,7 +7,10 @@
 // state goes out as a Pad's (pad.h), added to what the keyboard and a gamepad give port 0.
 //
 // A stick is held by the finger that touched inside it, and follows it until it lifts, even
-// outside the circle; a button is held while any finger is on it. Nothing here touches SDL or GL:
+// outside the circle; the left stick also comes to the thumb that lands anywhere in the lower
+// left of the screen, and goes home when it lifts. A button is held while any finger is on it, so
+// a thumb slid from one to the next presses the next. The controls keep their distance from the
+// edges in window heights, whatever the screen's shape, inside its safe area (a camera's notch). Nothing here touches SDL or GL:
 // input.cpp feeds it events and the frontend draws controls() (game/common/touch_overlay.h).
 
 #pragma once
@@ -29,6 +32,8 @@ struct TouchControl {
     float x = 0.0f;
     float y = 0.0f;
     float radius = 0.0f;
+    // Half the width over the radius: 1 a circle, more a pill (the shoulders, Select and Start).
+    float stretch = 1.0f;
 };
 
 class TouchPad {
@@ -39,6 +44,9 @@ public:
     void set_aspect(float aspect);
 
     float aspect() const { return m_aspect; }
+
+    // Where the screen cannot be seen or touched at the left and right edges, in window heights.
+    void set_safe_area(float left, float right);
 
     void finger_down(std::uint64_t finger, float x, float y);
     void finger_move(std::uint64_t finger, float x, float y);
@@ -75,11 +83,29 @@ private:
         int stick = -1;  // the index of the stick control it holds, or -1
     };
 
-    // Distance from a point to control `c`'s centre, in window heights.
+    // Where a control lives: its centre's distance from an edge (or from the middle), in window
+    // heights, and its height down the window.
+    struct Place {
+        enum class From { Left, Middle, Right };
+        From from = From::Left;
+        float offset = 0.0f;
+        float y = 0.0f;
+    };
+
+    // Distance from a point to control `c`'s outline (0 at its centre for a circle), in window
+    // heights.
     float distance(const TouchControl& c, float x, float y) const;
     Finger* find(std::uint64_t id);
+    // Puts control `index` at its place for the window's shape.
+    void place(std::size_t index);
+    void layout();
+    // Brings the left stick under a thumb at (x, y), kept on the screen.
+    void bring_stick(std::size_t index, float x, float y);
 
     std::vector<TouchControl> m_controls;
+    std::vector<Place> m_places;
+    float m_safe_left = 0.0f;
+    float m_safe_right = 0.0f;
     std::vector<Finger> m_fingers;
     float m_aspect = 16.0f / 9.0f;
     bool m_visible = false;

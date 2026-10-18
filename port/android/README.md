@@ -85,7 +85,9 @@ GPU driver, shows the model and SoC) and the game's log.
    (lighting, the sky, the 2D layer, text), the frame rate and the sound.
 4. **Play, on Adreno.** The same, with the system's driver.
 5. **Controls.** Touch the screen: the on-screen pad shows (sticks, d-pad,
-   face buttons, shoulders, Select, Start) and moves Ratchet. Connect a
+   face buttons, shoulders, Select, Start) and moves Ratchet; a thumb anywhere
+   in the lower left brings the left stick to it, and a thumb slid from one
+   button to the next presses the next. Connect a
    Bluetooth or USB controller and press a button: the pad hides and the
    controller plays.
 6. **Suspend and resume.** Switch to another app and back, and lock and

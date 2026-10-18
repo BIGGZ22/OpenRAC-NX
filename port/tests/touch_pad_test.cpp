@@ -4,6 +4,7 @@
 // The on-screen pad (platform/touch_pad.h): fingers on its controls, as SDL reports them, become
 // the pad's buttons and sticks.
 
+#include <cmath>
 #include <cstdio>
 
 #include "check.h"
@@ -77,6 +78,31 @@ int main() {
     CHECK(read(touch).buttons == Pad{}.buttons);
     touch.hide();
     CHECK(!touch.visible());
+
+    // A thumb in the lower left, away from the stick, brings the stick to it; lifted, it goes home.
+    TouchPad floating;
+    floating.set_aspect(2.0f);
+    const TouchControl& stick = control(floating, TouchControl::Kind::LeftStick);
+    const float home_x = stick.x;
+    const float home_y = stick.y;
+    floating.finger_down(7, 0.32f, 0.55f);
+    CHECK(stick.x == 0.32f && stick.y == 0.55f);
+    floating.finger_move(7, 0.32f, 0.40f);
+    CHECK(read(floating).left_y < 0x40);
+    floating.finger_up(7);
+    CHECK(stick.x == home_x && stick.y == home_y);
+    // In the middle of the screen it does not.
+    floating.finger_down(8, 0.6f, 0.6f);
+    CHECK(stick.x == home_x && read(floating).left_x == kStickCentre);
+    floating.finger_up(8);
+
+    // The controls keep their distance from the edges, inside the safe area.
+    const TouchControl& circle = control(floating, TouchControl::Kind::Button, Button::Circle);
+    const float circle_x = circle.x;
+    floating.set_safe_area(0.0f, 0.1f);
+    CHECK(std::abs((circle_x - circle.x) * 2.0f - 0.1f) < 1e-5f);
+    floating.set_aspect(2.4f);
+    CHECK(std::abs((1.0f - circle.x) * 2.4f - (1.0f - circle_x) * 2.0f - 0.1f) < 1e-5f);
 
     // Left alone, the pad goes away; a tap that lifts within the frame still counts as a touch.
     TouchPad idle;
