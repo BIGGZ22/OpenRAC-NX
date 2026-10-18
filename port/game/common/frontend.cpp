@@ -2163,8 +2163,15 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         if (const openrac_front_end* fe = openrac_game_front_end) {
             // The first pad's block: +0x100 the sticks, +0x194 its socket, +0x198 its state,
             // +0x1A0 the buttons held, +0x1A4 the raw word.
-            log::info("  mode {} dialog kind {} step {} level word {} title exit {} pad {:#x}",
-                      static_cast<int>(word_at(ram, fe->game_mode)), static_cast<int>(word_at(ram, fe->dialog)),
+            // The level's own game mode (openrac_game_mode: rac1's level copy of its mode word, 6 in
+            // the ship's landing, 2 in a cutscene, 0 in play), or -1 outside a level.
+            std::uint32_t level_mode = 0xFFFFFFFFu;
+            if (openrac_game_mode == nullptr || openrac_game_mode(&level_mode) == 0) {
+                level_mode = 0xFFFFFFFFu;
+            }
+            log::info("  mode {} level mode {} dialog kind {} step {} level word {} title exit {} pad {:#x}",
+                      static_cast<int>(word_at(ram, fe->game_mode)), static_cast<int>(level_mode),
+                      static_cast<int>(word_at(ram, fe->dialog)),
                       static_cast<int>(word_at(ram, fe->dialog + 0x1C)), static_cast<int>(word_at(ram, fe->level)),
                       static_cast<int>(word_at(ram, fe->title_exit)), word_at(ram, fe->pad + 0x1A4));
             float axes[4]{};
