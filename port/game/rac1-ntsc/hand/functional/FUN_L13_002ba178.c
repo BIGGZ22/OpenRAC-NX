@@ -13,6 +13,14 @@
 #define SDATA(symbol) __asm__(#symbol)
 #endif
 /* What the PAL file this was written in declares before it (its unit, and its own file). */
+/* The float helpers had no declaration here, so each call was an implicit int one: a nested
+ * func_001FA580 result counted as an integer argument and func_001FA5C8 got its second float as 0. */
+extern float func_001FA580(float, float);
+extern float func_001FA5C8(float, float);
+extern float func_001F99C0(float);
+extern float func_001F9DC8(float);
+extern float func_001F9DE0(float);
+extern int func_L00_001F0D60(float, void *, int, void *);
 extern void func_001FA030(void *, void *);
 extern void func_L00_002EA9D8(void *);
 extern void func_L00_002EAA30(void *);
