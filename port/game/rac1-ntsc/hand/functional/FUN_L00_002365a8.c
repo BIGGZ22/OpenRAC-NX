@@ -1,7 +1,8 @@
 /* Carried from the PAL decompilation's nonmatching/shared/func_L00_00236F38.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
- * functional: high. Read against the US assembly on 2026-10-18: the rect call now goes to the US
- * draw_hud_rect (00200C80) and the blink's frame scaling to 001F96F8 (both were PAL addresses);
+ * functional: high. Read against the US assembly on 2026-10-18: the blink's frame scaling goes to the US
+ * 001F96F8 (it was PAL's 001F9688); the rect call stays FUN_00200e08 (jal 0x23CAA8 at 0x2366D8, a place of FUN_00200e08, not of
+ * FUN_00200c80, whose twin it is);
  * offsets, constants, bands and the particle loop agree. */
 #include "types.h"
 #include "qcopy.h"
@@ -56,8 +57,8 @@ extern short D_L00_0015F758;
  *   Still differing: 160*H/208*W swap a2/a3 in the rect, and four float regs in the setup (1.0, 0.5, b, 1-a).
  *   Tried: term and statement orders, locals or none, constant stores moved, half sizes kept in scale[].
  */
-/* US draw_hud_rect (FUN_00200c80); the carry had kept PAL's 00200E08, another US function. */
-extern void draw_hud_rect_c2365a8(int, int, int, int, unsigned long, int) __asm__("func_00200C80");
+/* US FUN_00200e08 (level 0's jal 0x23CAA8); FUN_00200c80 is a different function of the same size. */
+extern void draw_hud_rect_c2365a8(int, int, int, int, unsigned long, int) __asm__("func_00200E08");
 /* US scale_game_frames (FUN_001f96f8); the carry had kept PAL's 001F9688. */
 extern int scale_frames_c2365a8(int) __asm__("func_001F96F8");
 extern float func_001F96B0(float);

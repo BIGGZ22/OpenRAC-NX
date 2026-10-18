@@ -1,4 +1,7 @@
-/* Checked against the US assembly: the packet cursor is D_001611C0 here (carried D_00160F00 was wrong; 0x160F00 is a 16-byte template in the US overlay code).
+/* Checked against the US executable's copy (lui 0x16, lw 0xF00 at 0x227214): the packet cursor is D_00160F00, as in
+ * FUN_0020b4a8 (gp-23808). This function is written with the executable's addresses and the per-level relocation
+ * maps them; 0x1611C0 is where level 0's own copy (0x2854F8) keeps the cursor, which is not an address to write here
+ * (an earlier "correction" to it was wrong).
  * Carried from the PAL decompilation's src/game/pause.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
 #include "types.h"
@@ -20,7 +23,7 @@ struct DisplayDims_284E8_c2271d0 {
     s16 display_height; /* 0x152 */
 };
 extern struct DisplayDims_284E8_c2271d0 D_00151880_284E8 __asm__("D_00151780");
-extern s32 *D_00161000_284E8 __asm__("D_001611C0") MACRO_ADDR;
+extern s32 *D_00161000_284E8 __asm__("D_00160F00") MACRO_ADDR;
 extern void func_00234C98_284E8(s32, s64) __asm__("func_00233980");
 
 
