@@ -5,7 +5,7 @@
   import ActionRow from "$components/ActionRow.svelte";
   import GameTile from "$components/GameTile.svelte";
   import Icon from "$components/Icon.svelte";
-  import { api } from "$lib/api";
+  import { api, onAndroid } from "$lib/api";
   import { app, guard, refresh } from "$lib/app.svelte";
   import { chooseGamesFolder } from "$lib/player.svelte";
 
@@ -50,7 +50,13 @@
     <section class="panel folder">
       <Icon name="folder" size={22} />
       <div class="grow">
-        {#if askFolder}
+        {#if onAndroid}
+          <h2>Add your Ratchet &amp; Clank disc</h2>
+          <p class="muted">
+            Choose the image of your own disc (.iso) from this device's storage. It is copied into the app, a few GB,
+            and the game is set up from it. OpenRAC never downloads a game.
+          </p>
+        {:else if askFolder}
           <h2>Where are your PlayStation 2 games?</h2>
           <p class="muted">
             Choose the folder with your disc images (.iso). OpenRAC finds the Ratchet &amp; Clank games in it and sets
@@ -65,7 +71,11 @@
         {/if}
       </div>
       <button class="primary" disabled={looking} onclick={() => void choose()}>
-        {#if looking}<span class="spinner"></span>{/if}{askFolder ? "Choose folder" : "Choose another"}
+        {#if looking}<span class="spinner"></span>{/if}{onAndroid
+          ? "Choose disc image"
+          : askFolder
+            ? "Choose folder"
+            : "Choose another"}
       </button>
     </section>
   {/if}

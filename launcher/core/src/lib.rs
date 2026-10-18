@@ -21,6 +21,7 @@
 //! - [`launcher_log`]: the launcher's own log, which goes in that .zip.
 
 pub mod actions;
+pub mod android;
 pub mod catalog;
 pub mod config;
 pub mod detect;

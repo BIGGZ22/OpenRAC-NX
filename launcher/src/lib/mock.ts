@@ -8,9 +8,12 @@
 import actionsFile from "../../actions.json";
 import summaryFile from "../../../progress/summary.json";
 import packageFile from "../../package.json";
+import { onAndroid } from "./api";
 import type {
   ActionView,
   BuildInfo,
+  GpuDriver,
+  GpuDrivers,
   InstallState,
   AppInfo,
   Check,
@@ -94,7 +97,25 @@ const summary = summaryFile as RawSummary;
 
 // ---- made-up state -------------------------------------------------------------------
 
-const platform: Platform = "linux";
+const platform: Platform = onAndroid ? "android" : "linux";
+
+/** ?android: the Android launcher's GPU driver packages. */
+const turnip: GpuDriver = {
+  id: "Turnip-25.2.0",
+  name: "Turnip",
+  description: "Mesa's open-source Vulkan driver for Adreno",
+  author: "Mesa",
+  version: "25.2.0",
+  vendor: "Mesa",
+  driverVersion: "Vulkan 1.4",
+  minApi: 28,
+  library: "vulkan.ad07XX.so",
+};
+let gpu: GpuDrivers = {
+  drivers: [turnip],
+  selected: null,
+  device: { model: "Google Pixel (preview)", api: 35, soc: "Qualcomm SM8650", gpu: "adreno" },
+};
 
 let config: Config = {
   root: "/home/you/OpenRAC",
@@ -971,6 +992,25 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
         view,
       });
     }
+    case "pick_disc":
+      return delay("/data/user/0/dev.openrac.launcher/files/discs/game.iso");
+    case "gpu_drivers":
+      return delay(structuredClone(gpu));
+    case "gpu_driver_import": {
+      const driver = { ...turnip, id: `Turnip-25.3.0`, version: "25.3.0" };
+      gpu = { ...gpu, drivers: [...gpu.drivers.filter((d) => d.id !== driver.id), driver] };
+      return delay({ driver });
+    }
+    case "gpu_driver_select":
+      gpu = { ...gpu, selected: (args.id as string | null) ?? null };
+      return delay(null);
+    case "gpu_driver_remove":
+      gpu = {
+        ...gpu,
+        drivers: gpu.drivers.filter((d) => d.id !== args.id),
+        selected: gpu.selected === args.id ? null : gpu.selected,
+      };
+      return delay(null);
     default:
       throw new Error(`the preview has no ${command}: add it to src/lib/mock.ts`);
   }

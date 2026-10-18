@@ -11,9 +11,18 @@ import { open } from "@tauri-apps/plugin-dialog";
 
 export const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
+/** The Android launcher (docs/port/ANDROID.md): files come from the system's picker, which gives
+ *  no folders and no paths, and the GPU driver packages are its own. `?android` in the browser
+ *  preview shows its pages. */
+export const onAndroid =
+  typeof navigator !== "undefined" &&
+  (inTauri
+    ? /android/i.test(navigator.userAgent)
+    : typeof location !== "undefined" && new URLSearchParams(location.search).has("android"));
+
 // ---- types: the serde output of core/src (camelCase) ------------------------------
 
-export type Platform = "linux" | "macos" | "windows";
+export type Platform = "linux" | "macos" | "windows" | "android";
 export type Tool = "python" | "godot" | "docker";
 
 export interface AppInfo {
@@ -486,7 +495,47 @@ export const api = {
   overridesRemove: (game: string, id: string) => call<PackView[]>("overrides_remove", { game, id }),
   /** A folder inside the game's set-up folder (an export), opened with the system. */
   openGameFolder: (game: string, path: string) => call<null>("open_game_folder", { game, path }),
+  /** Android: the player's GPU driver packages (src-tauri/src/android.rs). */
+  gpuDrivers: () => call<GpuDrivers>("gpu_drivers"),
+  /** Android: the player picks a package's zip; null when they cancelled. */
+  gpuDriverImport: () => call<{ driver?: GpuDriver }>("gpu_driver_import").then((r) => r.driver ?? null),
+  gpuDriverSelect: (id: string | null) => call<null>("gpu_driver_select", { id }),
+  gpuDriverRemove: (id: string) => call<null>("gpu_driver_remove", { id }),
 };
+
+/** A GPU driver package the Android launcher keeps (OpenracPlugin.kt): its meta.json. */
+export interface GpuDriver {
+  id: string;
+  name: string;
+  description: string;
+  author: string;
+  version: string;
+  vendor: string;
+  driverVersion: string;
+  minApi: number;
+  /** The driver library in the package (meta.json's libraryName). */
+  library: string;
+}
+
+export interface GpuDrivers {
+  drivers: GpuDriver[];
+  /** The package the game loads; null: the system's driver. */
+  selected: string | null;
+  device: {
+    model: string;
+    api: number;
+    soc: string;
+    /** Which kernel GPU driver the device has: packages load on Adreno's only. */
+    gpu: "adreno" | "mali" | "other";
+  };
+}
+
+/** How far the copy of a picked disc image into the Android app's storage is (`disc-copy`). */
+export interface DiscCopy {
+  name: string;
+  copied: number;
+  total: number;
+}
 
 /** A folder picker; null when cancelled (or in the browser preview). */
 export async function pickFolder(title: string): Promise<string | null> {
@@ -538,8 +587,21 @@ export async function onDrop(
 
 /** A picker for a disc image; null when cancelled (or in the browser preview). */
 /** The player's disc image for setting a game up: an .iso, as OpenGOAL asks for. */
-export async function pickIso(title: string): Promise<string | null> {
+export async function pickIso(title: string, copying?: (progress: DiscCopy) => void): Promise<string | null> {
   if (!inTauri) return "/home/you/Discs/game.iso";
+  if (onAndroid) {
+    // The system's picker; the image is copied into the app's storage as it is picked.
+    const off = copying
+      ? await listen<DiscCopy>("disc-copy", (e) => {
+          copying(e.payload);
+        })
+      : null;
+    try {
+      return await call<string | null>("pick_disc");
+    } finally {
+      off?.();
+    }
+  }
   const picked = await open({
     directory: false,
     multiple: false,

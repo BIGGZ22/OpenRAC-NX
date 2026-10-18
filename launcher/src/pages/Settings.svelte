@@ -3,8 +3,9 @@
   // and how the launcher itself behaves. Edits stay local until saved; the bar
   // that saves them stays in view at the bottom of the window. With `setup`,
   // the first-run screen: the folders and programs, filled from detection.
+  import GpuDrivers from "$components/GpuDrivers.svelte";
   import PathField from "$components/PathField.svelte";
-  import { api, type Check, type Config, type Detected } from "$lib/api";
+  import { api, onAndroid, type Check, type Config, type Detected } from "$lib/api";
   import { app, lookForUpdate, saveConfig } from "$lib/app.svelte";
   import { REPO_URL } from "$lib/links";
 
@@ -102,23 +103,35 @@
         </p>
       {/if}
     {/if}
-    <PathField
-      label="Games folder"
-      hint="The folder with your PlayStation 2 disc images (.iso). OpenRAC finds its games in it."
-      folder
-      bind:value={draft.discsDir}
-      detail={draft.developer}
-      check={gamesFolder}
-    />
-    <PathField
-      label="Install folder"
-      hint="Where your games are set up from your discs. A few GB per game."
-      folder
-      bind:value={draft.installDir}
-      detail={draft.developer}
-      check={installFolder}
-    />
+    <!-- Android's picker gives no folders: the app keeps its own (src-tauri/src/android.rs). -->
+    {#if onAndroid && !draft.developer}
+      <p class="dim note">
+        The disc images you choose are copied into the app, and your games are set up in its storage: there are no
+        folders to choose here.
+      </p>
+    {:else}
+      <PathField
+        label="Games folder"
+        hint="The folder with your PlayStation 2 disc images (.iso). OpenRAC finds its games in it."
+        folder
+        bind:value={draft.discsDir}
+        detail={draft.developer}
+        check={gamesFolder}
+      />
+      <PathField
+        label="Install folder"
+        hint="Where your games are set up from your discs. A few GB per game."
+        folder
+        bind:value={draft.installDir}
+        detail={draft.developer}
+        check={installFolder}
+      />
+    {/if}
   </section>
+
+  {#if onAndroid && !setup}
+    <GpuDrivers />
+  {/if}
 
   {#if !app.info?.standalone || draft.developer}
     <section class="panel">

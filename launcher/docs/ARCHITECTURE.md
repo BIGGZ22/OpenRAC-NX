@@ -130,11 +130,15 @@ mirrored in `src/lib/api.ts`.
 | `sync_progress_from_web`                                        |                                                         | fetches openrac.dev's progress, writes `progress/summary.json`, returns the catalogue            |
 | `apply_progress_json`                                           | `{json}`                                                | the same from JSON the page fetched                                                              |
 | `set_discord_status`                                            | `{status}`                                              | sets Discord Rich Presence (idle, viewing, playing)                                              |
+| `pick_disc` (Android)                                           |                                                         | the system's picker; the image copied into the app (`disc-copy` events), its path or null        |
+| `gpu_drivers` (Android)                                         |                                                         | the GPU driver packages, the one chosen, the device (`OpenracPlugin.kt`)                         |
+| `gpu_driver_import` / `_select` / `_remove` (Android)           | - / `{id}` (null: the system's) / `{id}`                | adds a package's zip; chooses the one the game loads; removes one                                |
 
 | Event        | Payload                                                    |
 | ------------ | ---------------------------------------------------------- |
 | `job-output` | `{type: "output", id, stream: "stdout" \| "stderr", line}` |
 | `job-exit`   | `{type: "exit", id, code, cancelled}`                      |
+| `disc-copy`  | `{name, copied, total}` (Android: a picked disc's copy)    |
 
 ### Adding a command
 
@@ -309,3 +313,12 @@ Tauri builds for Linux (AppImage, deb, rpm), macOS (app, dmg) and Windows
 equally portable: each action lists the platforms it runs on, and the game
 page tucks the others away ("N more for other platforms"). The platform the
 launcher runs on comes from `Platform::current()` in `core/src/actions.rs`.
+
+Android (`Platform::Android`) is an APK built by `tools/build_android.py`
+(docs/port/ANDROID.md): the same UI and Rust, a project of its own in
+`src-tauri/gen/android` (kept in git), and Kotlin for what only Android does
+(`OpenracPlugin.kt`, reached from `src-tauri/src/android.rs`): the system's
+file picker, the game's activity, the GPU driver packages. It always plays
+from the copy it carries, unpacked from the APK by `OpenracSetup.kt`; Play
+starts the game's activity instead of a program, and the updater is the
+desktop's only (`capabilities/updater.json`).

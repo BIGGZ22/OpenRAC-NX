@@ -7,6 +7,7 @@ import {
   errorText,
   onJobEvent,
   type ActionView,
+  type DiscCopy,
   type AppInfo,
   type Config,
   type FoundDisc,
@@ -373,7 +374,7 @@ export async function runChain(scope: Scope, actions: ActionView[], given?: numb
  */
 export async function installGame(game: string, title: string, found?: string): Promise<boolean> {
   // An image the games folder holds needs no picking.
-  const image = found ?? (await pickIso(`Select your legitimately obtained ISO file of ${title}`));
+  const image = found ?? (await pickIso(`Select your legitimately obtained ISO file of ${title}`, copyingToast()));
   if (!image) return false;
   const job = queue.add({ kind: "repository" }, `install:${game}`, `Set up ${title} from your disc`);
   starters[job.key] = () => api.installGame(game, image);
@@ -385,6 +386,17 @@ export async function installGame(game: string, title: string, found?: string): 
   const ok = await ended;
   toast(ok ? `${title} is set up from your disc.` : `Setting ${title} up failed: see Tasks.`, ok ? "info" : "error");
   return ok;
+}
+
+/** On Android a picked disc image is copied into the app's storage first: a toast at each quarter. */
+function copyingToast(): (progress: DiscCopy) => void {
+  let shown = -1;
+  return ({ name, copied, total }) => {
+    const quarter = total > 0 ? Math.floor((copied / total) * 4) : 0;
+    if (quarter === shown) return;
+    shown = quarter;
+    toast(quarter >= 4 ? `${name} is copied.` : `Copying ${name} into the app: ${quarter * 25}%`);
+  };
 }
 
 /** Removes what setting GAME up made, after the player confirmed. */

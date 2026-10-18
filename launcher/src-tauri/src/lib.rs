@@ -6,6 +6,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+mod android;
+
 use openrac_launcher_core::actions::{Platform, Scope};
 use openrac_launcher_core::config::{self, Config};
 use openrac_launcher_core::detect::{self, Check, Detected, Tool};
@@ -182,6 +184,11 @@ fn run_action(
         }
         _ => None,
     };
+    // On Android the game is an activity of the launcher's own, not a program it runs.
+    if is_play && Platform::current() == Platform::Android {
+        launcher_log::line(&format!("play: {}", openrac_launcher_core::jobs::command_line(&plan)));
+        return android::launch(&app, &plan);
+    }
     let app_handle = app.clone();
     let title = plan.title.clone();
     launcher_log::line(&format!("run: {}", openrac_launcher_core::jobs::command_line(&plan)));
@@ -713,14 +720,17 @@ pub fn run() {
     clean_appimage_python_env();
     #[cfg(target_os = "linux")]
     tune_webkit_for_wayland();
-    tauri::Builder::default()
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
+    let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init()).plugin(tauri_plugin_opener::init());
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    #[cfg(target_os = "android")]
+    let builder = builder.plugin(android::init());
+    builder
         .setup(|app| {
             #[cfg(target_os = "linux")]
             ensure_linux_desktop_integration();
 
+            #[cfg(desktop)]
             if let Some(window) = app.get_webview_window("main") {
                 if let Some(icon) = app.default_window_icon() {
                     let _ = window.set_icon(icon.clone());
@@ -746,9 +756,20 @@ pub fn run() {
             // The copy of OpenRAC the launcher carries: what a player plays from (detect::settle).
             // A copy whose Python does not run here is not for this machine (an Intel Mac has the
             // Apple silicon one): the launcher then works on a checkout, as it did.
-            let bundled = app.path().resource_dir().ok().and_then(|dir| detect::bundled_root(&dir)).filter(|dir| {
+            // On Android the copy is unpacked from the APK into the app's files (OpenracSetup.kt).
+            let resources = if Platform::current() == Platform::Android {
+                android::bundled_root().and_then(|root| root.parent().map(Path::to_path_buf))
+            } else {
+                app.path().resource_dir().ok()
+            };
+            let bundled = resources.and_then(|dir| detect::bundled_root(&dir)).filter(|dir| {
                 detect::bundled_python(dir).is_some_and(|python| detect::check_tool(Tool::Python, &python).ok)
             });
+            // Android's picker gives no paths: the disc images the player picks are copied into
+            // one folder of the app's, which is then the games folder.
+            if config.discs_dir.is_none() && Platform::current() == Platform::Android {
+                config.discs_dir = android::discs_dir();
+            }
             detect::settle(&mut config, bundled.as_deref());
 
             let client_id = config
@@ -815,6 +836,11 @@ pub fn run() {
             report_delete,
             reports_delete_all,
             open_reports_folder,
+            android::pick_disc,
+            android::gpu_drivers,
+            android::gpu_driver_import,
+            android::gpu_driver_select,
+            android::gpu_driver_remove,
         ])
         .run(tauri::generate_context!())
         .expect("the launcher failed to start");
