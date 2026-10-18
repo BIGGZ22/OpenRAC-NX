@@ -305,6 +305,158 @@ input[type="text"] {
   padding: 8px 12px;
 }
 
+/* Settings (Settings.svelte, GpuDrivers.svelte): a row per setting, its name and at most a line
+   about it on the left, its control on the right, as Android's and the desktop systems' own
+   settings are laid out. */
+.setting {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 56px;
+  padding: 10px 0;
+}
+
+.setting + .setting {
+  border-top: 1px solid var(--line);
+}
+
+label.setting {
+  cursor: pointer;
+}
+
+.setting > .text {
+  flex: 1;
+  min-width: 0;
+}
+
+.setting strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.setting small {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--soft);
+}
+
+/* An on/off setting: a checkbox drawn as a switch. */
+input.switch {
+  appearance: none;
+  flex: none;
+  position: relative;
+  width: 42px;
+  height: 24px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--ink-deep);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+  transition:
+    background var(--fast) var(--ease),
+    border-color var(--fast) var(--ease);
+}
+
+input.switch::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--dim);
+  transition:
+    transform var(--medium) var(--ease),
+    background var(--fast) var(--ease);
+}
+
+input.switch:checked {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+input.switch:checked::before {
+  transform: translateX(18px);
+  background: var(--text);
+}
+
+input.switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* One of a few choices, side by side: the chosen one filled. */
+.segmented {
+  flex: none;
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 999px;
+  background: var(--ink-deep);
+  border: 1px solid var(--line-strong);
+}
+
+.segmented button {
+  border: 0;
+  background: transparent;
+  color: var(--soft);
+  font-size: 13px;
+  padding: 5px 14px;
+}
+
+.segmented button[aria-checked="true"] {
+  background: var(--panel-hi);
+  color: var(--gold);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+@media (hover: hover) {
+  .segmented button:hover:not(:disabled) {
+    color: var(--text);
+  }
+}
+
+/* What most players never change, folded away (Settings, "Advanced"). */
+details.more > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  border-radius: var(--radius-sm);
+}
+
+details.more > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.more > summary::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  margin-left: auto;
+  border-right: 2px solid var(--soft);
+  border-bottom: 2px solid var(--soft);
+  transform: rotate(45deg);
+  transition: transform var(--medium) var(--ease);
+}
+
+details.more[open] > summary::after {
+  transform: rotate(225deg);
+}
+
+details.more > summary:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 4px;
+}
+
+details.more[open] > :not(summary) {
+  animation: rise var(--medium) var(--ease) both;
+}
+
 /* Status pills: a dot and a word. */
 .pill {
   display: inline-flex;

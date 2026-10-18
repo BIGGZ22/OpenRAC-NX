@@ -1,7 +1,7 @@
 // Android's touch feedback: a press on a control sends a wave out from the finger, clipped to the
 // control's shape (app.css, .ripples and .ripple), as the buttons of Android's own apps do.
 
-const CONTROLS = 'button, .button, [role="menuitem"], label.option';
+const CONTROLS = 'button, .button, [role="menuitem"], label.option, label.setting';
 
 function press(event: PointerEvent) {
   const target = event.target instanceof Element ? event.target.closest<HTMLElement>(CONTROLS) : null;

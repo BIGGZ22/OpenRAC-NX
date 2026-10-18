@@ -95,6 +95,14 @@ release. Without them the cards show the gradient, as the site does.
   states has to be scanned (the developer pages, Tasks).
 - What only a contributor reads (serials, percentages, file names, paths) is
   shown with developer tools on.
+- A setting is a row: its name and at most one short line on the left, its
+  control on the right (`.setting` in `app.css`). On/off is a switch
+  (`input.switch`), two or three choices a segmented control (`.segmented`),
+  more a list of radios. Settings are grouped in panels by what they are
+  about; what most players never change goes under Advanced, folded
+  (`details.more`), which opens by itself when something in it is on. A panel
+  with nothing to choose on this system is not shown, and a choice that only
+  matters with another one (Android's GPU driver, with Vulkan) shows with it.
 
 ## Rules
 

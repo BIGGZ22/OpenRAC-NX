@@ -34,6 +34,12 @@
   let looked = $state<"idle" | "looking" | "found" | "none" | "failed">("idle");
   let lookError = $state("");
 
+  /** The OpenRAC folder is a contributor's choice in an installed launcher, and Android has no
+   *  folders to choose (its picker copies discs into the app): no panel when it would be empty. */
+  const showFolders = $derived(!app.info?.standalone || draft.developer || !onAndroid);
+  /** Advanced opens by itself when something in it is on. */
+  let advancedOpen = $state(saved().detailedGameLog || saved().developer || saved().saveEditorAdvanced);
+
   /** The update channel as this page has it, saved or not. */
   const channel = $derived<UpdateChannel>(app.info ? updateChannelOf(app.info, draft) : "stable");
   /** The branch the development builds come from, as the release's tag names it. */
@@ -111,54 +117,127 @@
     <h1>Settings</h1>
   {/if}
 
-  <section class="panel">
-    <h2>Folders</h2>
-    <!-- An installed launcher carries its own copy: the folder is a contributor's choice there. -->
-    {#if !app.info?.standalone || draft.developer}
-      <PathField
-        label="OpenRAC folder"
-        hint="Your copy of OpenRAC: the folder with games/ and tools/ in it."
-        folder
-        bind:value={draft.root}
-        candidates={found?.roots}
-        detail={draft.developer}
-        check={root}
-      />
-      {#if !draft.root}
-        <p class="dim note">
-          No copy yet? <button class="link" onclick={() => void api.openUrl(REPO_URL)}>Get OpenRAC</button>, then choose
-          its folder here.
-        </p>
+  {#if showFolders}
+    <section class="panel">
+      <h2>Folders</h2>
+      <!-- An installed launcher carries its own copy: the folder is a contributor's choice there. -->
+      {#if !app.info?.standalone || draft.developer}
+        <PathField
+          label="OpenRAC folder"
+          hint="Your copy of OpenRAC: the folder with games/ and tools/ in it."
+          folder
+          bind:value={draft.root}
+          candidates={found?.roots}
+          detail={draft.developer}
+          check={root}
+        />
+        {#if !draft.root}
+          <p class="dim note">
+            No copy yet? <button class="link" onclick={() => void api.openUrl(REPO_URL)}>Get OpenRAC</button>, then
+            choose its folder here.
+          </p>
+        {/if}
       {/if}
-    {/if}
-    <!-- Android's picker gives no folders: the app keeps its own (src-tauri/src/android.rs). -->
-    {#if onAndroid && !draft.developer}
-      <p class="dim note">
-        The disc images you choose are copied into the app, and your games are set up in its storage: there are no
-        folders to choose here.
-      </p>
-    {:else}
-      <PathField
-        label="Games folder"
-        hint="The folder with your PlayStation 2 disc images (.iso). OpenRAC finds its games in it."
-        folder
-        bind:value={draft.discsDir}
-        detail={draft.developer}
-        check={gamesFolder}
-      />
-      <PathField
-        label="Install folder"
-        hint="Where your games are set up from your discs. A few GB per game."
-        folder
-        bind:value={draft.installDir}
-        detail={draft.developer}
-        check={installFolder}
-      />
-    {/if}
-  </section>
+      <!-- Android's picker gives no folders: the app keeps its own (src-tauri/src/android.rs). -->
+      {#if !onAndroid || draft.developer}
+        <PathField
+          label="Games folder"
+          hint="The folder with your PlayStation 2 disc images (.iso). OpenRAC finds its games in it."
+          folder
+          bind:value={draft.discsDir}
+          detail={draft.developer}
+          check={gamesFolder}
+        />
+        <PathField
+          label="Install folder"
+          hint="Where your games are set up from your discs. A few GB per game."
+          folder
+          bind:value={draft.installDir}
+          detail={draft.developer}
+          check={installFolder}
+        />
+      {/if}
+    </section>
+  {/if}
 
   {#if onAndroid && !setup}
     <GpuDrivers />
+  {/if}
+
+  {#if !setup}
+    <section class="panel">
+      <h2>General</h2>
+      <label class="setting">
+        <span class="text">
+          <strong>Compact layout</strong>
+          <small>A game's name and its Play button side by side.</small>
+        </span>
+        <input
+          type="checkbox"
+          role="switch"
+          class="switch"
+          checked={draft.layout !== "classic"}
+          onchange={(e) => (draft.layout = e.currentTarget.checked ? "compact" : "classic")}
+        />
+      </label>
+      <label class="setting">
+        <span class="text">
+          <strong>Show in Discord</strong>
+          <small>Your status says when you are playing.</small>
+        </span>
+        <input type="checkbox" role="switch" class="switch" bind:checked={draft.discordRpc} />
+      </label>
+    </section>
+
+    <section class="panel">
+      <h2>Updates</h2>
+      <label class="setting">
+        <span class="text">
+          <strong>Look for updates at start</strong>
+          <small>Nothing is installed without your click.</small>
+        </span>
+        <input type="checkbox" role="switch" class="switch" bind:checked={draft.checkUpdates} />
+      </label>
+      {#if app.info?.updateChannels}
+        <div class="setting">
+          <span class="text">
+            <strong>Channel</strong>
+            <small>
+              {#if channel === "dev"}
+                The newest build of <span class="mono">{devBranch}</span>, tried less.
+              {:else}
+                The released versions.
+              {/if}
+            </small>
+          </span>
+          <div class="segmented" role="radiogroup" aria-label="Update channel">
+            <button role="radio" aria-checked={channel === "stable"} onclick={() => (draft.updateChannel = "stable")}
+              >Stable</button
+            >
+            <button role="radio" aria-checked={channel === "dev"} onclick={() => (draft.updateChannel = "dev")}
+              >Development</button
+            >
+          </div>
+        </div>
+      {/if}
+      <p class="dim note status">
+        <button class="link" disabled={looked === "looking"} onclick={() => void checkNow()}>Check now</button>
+        {#if looked === "looking"}· Looking…{:else if looked === "found" || app.update}· {app.update?.name ??
+            "A new version"} is out.
+          <button class="link" onclick={() => (app.showUpdateModal = true)}>Update</button>{:else if looked === "none"}·
+          You have the latest.{:else if looked === "failed"}· Could not check: {lookError}.{/if}
+        {#if app.info?.updateChannels}
+          {@const source = app.info.updateChannels[channel]}
+          · <button class="link" onclick={() => void api.openUrl(source.page)}>Releases</button>
+          {#if draft.developer}
+            · <span class="mono">github.com/{source.repository} · {source.channel ?? "latest release"}</span>
+          {/if}
+        {/if}
+      </p>
+      {#if channel === "stable" && app.info?.updates.channel}
+        <p class="dim note">This development build stays until the next release replaces it.</p>
+      {/if}
+    </section>
   {/if}
 
   {#if !app.info?.standalone || draft.developer}
@@ -198,124 +277,48 @@
 
   {#if !setup}
     <section class="panel">
-      <h2>Launcher</h2>
-      <label class="option">
-        <input
-          type="checkbox"
-          checked={draft.layout !== "classic"}
-          onchange={(e) => (draft.layout = e.currentTarget.checked ? "compact" : "classic")}
-        />
-        <span>
-          <strong>Compact layout</strong>
-          <small>A game's name and its Play button side by side. Off: stacked and centred.</small>
-        </span>
-      </label>
-      <label class="option">
-        <input type="checkbox" bind:checked={draft.discordRpc} />
-        <span>
-          <strong>Show in Discord</strong>
-          <small>Your Discord status says when you are in the launcher or playing.</small>
-        </span>
-      </label>
-      <label class="option">
-        <input type="checkbox" bind:checked={draft.checkUpdates} />
-        <span>
-          <strong>Check for updates</strong>
-          <small>
-            Look for a new launcher when it starts. Off, it only looks when you ask. An update is never installed
-            without your click.
-            <button class="link" disabled={looked === "looking"} onclick={() => void checkNow()}>Check now</button>
-            {#if looked === "looking"}· Looking…{:else if looked === "found" || app.update}· {app.update?.name ??
-                "A new version"} is out.
-              <button class="link" onclick={() => (app.showUpdateModal = true)}>Update</button
-              >{:else if looked === "none"}· You have the latest.{:else if looked === "failed"}· Could not check: {lookError}.{/if}
-          </small>
-        </span>
-      </label>
-      {#if app.info?.updateChannels}
-        {@const source = app.info.updateChannels[channel]}
-        <div class="channels" role="radiogroup" aria-label="Updates">
-          <label class="option">
+      <details class="more" bind:open={advancedOpen}>
+        <summary><h2>Advanced</h2></summary>
+        <label class="setting">
+          <span class="text">
+            <strong>Detailed game logs</strong>
+            <small>Turn on when we ask you to. Logs are on each game's page.</small>
+          </span>
+          <input type="checkbox" role="switch" class="switch" bind:checked={draft.detailedGameLog} />
+        </label>
+        <label class="setting">
+          <span class="text">
+            <strong>Developer tools</strong>
+            <small>Builds, checks, progress, disc serials and the Tasks page.</small>
+          </span>
+          <input type="checkbox" role="switch" class="switch" bind:checked={draft.developer} />
+        </label>
+        <label class="setting">
+          <span class="text">
+            <strong>Advanced save editing</strong>
+            <small>Every field of a save, raw bytes too. Your memory card is backed up first.</small>
+          </span>
+          <input type="checkbox" role="switch" class="switch" bind:checked={draft.saveEditorAdvanced} />
+        </label>
+        {#if draft.developer && draft.discordRpc}
+          <div class="field">
+            <label for="discord-client-id">Discord application ID</label>
             <input
-              type="radio"
-              name="update-channel"
-              checked={channel === "stable"}
-              onchange={() => (draft.updateChannel = "stable")}
+              id="discord-client-id"
+              type="text"
+              class="mono"
+              placeholder="Empty: OpenRAC's own"
+              bind:value={draft.discordClientId}
             />
-            <span>
-              <strong>Stable</strong>
-              <small>The released versions.</small>
-            </span>
-          </label>
-          <label class="option">
-            <input
-              type="radio"
-              name="update-channel"
-              checked={channel === "dev"}
-              onchange={() => (draft.updateChannel = "dev")}
-            />
-            <span>
-              <strong>Development</strong>
-              <small>
-                The newest build of <span class="mono">{devBranch}</span>: the latest changes, tried less. Back on
-                Stable, the next release replaces it.
-              </small>
-            </span>
-          </label>
-        </div>
-        <p class="dim note">
-          From <span class="mono">github.com/{source.repository} · {source.channel ?? "latest release"}</span>, the
-          repository that built this launcher.
-          <button class="link" onclick={() => void api.openUrl(source.page)}>See the releases</button>
-        </p>
-      {/if}
-      <label class="option">
-        <input type="checkbox" bind:checked={draft.detailedGameLog} />
-        <span>
-          <strong>Detailed game logs</strong>
-          <small>
-            Turn this on when we ask you to: the game writes more about what it does. Each game's logs and crash reports
-            are on its own page, under its save files.
-          </small>
-        </span>
-      </label>
-      <label class="option">
-        <input type="checkbox" bind:checked={draft.developer} />
-        <span>
-          <strong>Developer tools</strong>
-          <small>
-            For contributors: each game's builds, checks and decompilation progress, disc serials, and the Tasks page.
-          </small>
-        </span>
-      </label>
-      <label class="option">
-        <input type="checkbox" bind:checked={draft.saveEditorAdvanced} />
-        <span>
-          <strong>Advanced save editing</strong>
-          <small>
-            For debugging: the save editor shows every field of a save, the story planets, and each part of the file as
-            raw bytes. A wrong value can break a save; your memory card is backed up before every change.
-          </small>
-        </span>
-      </label>
-      {#if draft.developer && draft.discordRpc}
-        <div class="field">
-          <label for="discord-client-id">Discord application ID</label>
-          <input
-            id="discord-client-id"
-            type="text"
-            class="mono"
-            placeholder="Empty: OpenRAC's own"
-            bind:value={draft.discordClientId}
-          />
-          <p class="dim note">
-            To show your own name and art, create an app at
-            <button class="link" onclick={() => void api.openUrl("https://discord.com/developers/applications")}>
-              discord.com/developers/applications
-            </button>.
-          </p>
-        </div>
-      {/if}
+            <p class="dim note">
+              To show your own name and art, create an app at
+              <button class="link" onclick={() => void api.openUrl("https://discord.com/developers/applications")}>
+                discord.com/developers/applications
+              </button>.
+            </p>
+          </div>
+        {/if}
+      </details>
     </section>
   {/if}
 
@@ -384,57 +387,29 @@
     font-size: 13px;
   }
 
-  /* A checkbox with its name and one line saying what it does. */
-  .option {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    padding: 12px 0;
-    cursor: pointer;
-  }
-
-  .option + .option {
+  /* "Check now", what it found and where it looks, under the update settings. */
+  .status {
+    padding-top: 10px;
     border-top: 1px solid var(--line);
   }
 
-  .option input {
-    flex: none;
-    width: 18px;
-    height: 18px;
-    margin: 2px 0 0;
-    accent-color: var(--amber);
-    cursor: pointer;
+  .status + .note {
+    margin-top: 4px;
   }
 
-  .option strong {
-    display: block;
-    font-size: 14px;
-    font-weight: 600;
-  }
-
-  .option small {
-    display: block;
-    margin-top: 2px;
-    font-size: 13px;
-    color: var(--soft);
-  }
-
-  /* The update channel, set in under "Check for updates" as the fields are. */
-  .channels {
-    padding-left: 32px;
-    border-top: 1px solid var(--line);
-  }
-
-  .channels + .note {
+  details.more > summary h2 {
     margin: 0;
-    padding: 0 0 12px 32px;
+  }
+
+  details.more[open] > summary {
+    margin-bottom: 6px;
   }
 
   .field {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding: 12px 0 2px 32px;
+    padding: 12px 0 2px;
     border-top: 1px solid var(--line);
   }
 
