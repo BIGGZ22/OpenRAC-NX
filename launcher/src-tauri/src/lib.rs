@@ -715,6 +715,8 @@ fn tune_webkit_for_wayland() {
     }
 }
 
+// On Android and iOS the launcher is a library the app's activity starts through this entry point.
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     #[cfg(target_os = "linux")]
     clean_appimage_python_env();
