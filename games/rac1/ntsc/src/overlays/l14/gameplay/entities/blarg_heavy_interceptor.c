@@ -2588,11 +2588,11 @@ extern float FUN_L00_0025b8c0_5730(float *p, float *v, float t, float u1, float 
 extern void steer_5730(char *moby, float *vel, float target, float k, float d,
                        float max) __asm__("FUN_L00_00258278");
 
-extern int FUN_L00_0025d808_5730() __asm__("FUN_L00_0025d808");
+extern int FUN_L00_0025d808_5730(char *tab, float *out, int a, int b, int c, float d) __asm__("FUN_L00_0025d808");
 int FUN_L14_002b5730(struct Moby *moby, char *a1, int a2, int a3, float *v, float *vel, float f12,
                      float f13, float f14, float f15, float f16, float f17, float f18) {
     float tmp[3];
-    int r = FUN_L00_0025d808_5730(a1, tmp, a2, a3, 0);
+    int r = FUN_L00_0025d808_5730(a1, tmp, a2, a3, 0, f12);
     FUN_L00_0025b8c0_5730(&moby->pos.x, v, tmp[0], f13, f14, f15);
     FUN_L00_0025b8c0_5730(&moby->pos.y, v + 1, tmp[1], f13, f14, f15);
     FUN_L00_0025b8c0_5730(&moby->pos.z, v + 2, tmp[2], f13, f14, f15);

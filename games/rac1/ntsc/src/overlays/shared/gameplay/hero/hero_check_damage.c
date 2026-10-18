@@ -384,10 +384,10 @@ int FUN_L00_0020d4d0(int arg) {
 s32 FUN_L00_0020d518(int a) {
     return (u32)(FUN_L00_0020d498_u(a) - 5) < 3;
 }
-int FUN_L00_0020d498_0020d540() __asm__("FUN_L00_0020d498");
-/* True when hero_slot_item_id returns 0x1C or 0x1D. */
-int FUN_L00_0020d540(void) {
-    return (unsigned)(FUN_L00_0020d498_0020d540() - 0x1c) < 2;
+int FUN_L00_0020d498_0020d540(int) __asm__("FUN_L00_0020d498");
+/* True when hero_slot_item_id(slot) returns 0x1C or 0x1D. */
+int FUN_L00_0020d540(int slot) {
+    return (unsigned)(FUN_L00_0020d498_0020d540(slot) - 0x1c) < 2;
 }
 /* True when hero.state.control_mode is 0x11/0x12 or state.current is 0x6A, 0x75, 0x76 or 0x82. */
 s32 FUN_L00_0020d568(void) {
@@ -1346,7 +1346,7 @@ extern void matrix_to_euler(void *, void *) __asm__("FUN_00214598");
 void normalize_vector_triplet(f32 *vectors) __asm__("FUN_00214128");
 extern struct Hero hero_lui __asm__("D_0013F350") __attribute__((section(".data")));
 
-void FUN_L00_0020f160(char *arg) {
+void FUN_L00_0020f160(char *arg, void *src) {
     V4_F7F8 vv[4];
     float fa[16];
     int ri;
@@ -1358,7 +1358,7 @@ void FUN_L00_0020f160(char *arg) {
 
     {
     char *b = ((char *)((char *)&hero_lui));
-    copy_matrix3x4_alt(((char *)((char *)&hero_lui)) + 0x12F0 + *(int *)(b + 0x21B8) * 0x30);
+    copy_matrix3x4_alt(((char *)((char *)&hero_lui)) + 0x12F0 + *(int *)(b + 0x21B8) * 0x30, src);
     normalize_vector_triplet(((char *)((char *)&hero_lui)) + 0x12F0 + *(int *)(b + 0x21B8) * 0x30);
 
     *(int *)(b + 0x21B8) = (*(int *)(b + 0x21B8) + 1) % 16;

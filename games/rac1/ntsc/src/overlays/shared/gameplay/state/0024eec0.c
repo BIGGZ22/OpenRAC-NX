@@ -242,6 +242,7 @@ typedef struct {
     u8 b51, b52, b53;
 } A;
 /* Fills a1 from a0's bytes, a2/a3 and a 1/a4 step; calls FUN_L00_0024f190 when a5 is set. */
+void FUN_L00_0024f190_0024f3e0(void *, void *) __asm__("FUN_L00_0024f190");
 void FUN_L00_0024f3e0(A *a0, S *a1, s32 a2, s32 a3, s32 a4, s32 a5) {
     a1->b22 = a0->b53;
     a1->b20 = a0->b51;
@@ -251,7 +252,7 @@ void FUN_L00_0024f3e0(A *a0, S *a1, s32 a2, s32 a3, s32 a4, s32 a5) {
     a1->f2c = 1.0f / (f32)a4;
     a1->i24 = 0;
     if (a5)
-        FUN_L00_0024f190();
+        FUN_L00_0024f190_0024f3e0(a0, a1);
 }
 /* FUN_L00_0024f440: builds an animation frame packet in out from frame
  * (table i, frame j) of the moby's animation set: header halfwords, the

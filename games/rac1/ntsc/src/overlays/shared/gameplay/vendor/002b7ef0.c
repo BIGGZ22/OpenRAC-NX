@@ -117,8 +117,8 @@ void FUN_L01_002b80d0(float *m) {
         }
     }
 }
-extern void FUN_L00_002a3ec8(void *, int, int);
+extern void FUN_L00_002a3ec8(void *, int, int, float, float, float, float);
 
-void FUN_L01_002b8288(void *a, int b) {
-    FUN_L00_002a3ec8(a, b, 0);
+void FUN_L01_002b8288(void *a, int b, float x, float y, float radius, float amount) {
+    FUN_L00_002a3ec8(a, b, 0, x, y, radius, amount);
 }

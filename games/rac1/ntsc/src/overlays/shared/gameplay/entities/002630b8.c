@@ -301,13 +301,13 @@ void FUN_L00_002637f8(u8 *m) {
     }
 }
 extern unsigned char D_0015EDB7;
-void attach_manipulator() __asm__("FUN_0020cb10");
+void attach_manipulator(void *owner, int slot_index, void *manip) __asm__("FUN_0020cb10");
 void detach_manipulator() __asm__("FUN_0020cb88");
 /* While D_0015EDB7 is set attaches the manipulator, sets floats 0x20..0x28 to x; else detaches. */
 void FUN_L00_00263ac8(float x, int a, int b, unsigned char *p) {
     if (D_0015EDB7) {
         if (p[1] == 0)
-            attach_manipulator();
+            attach_manipulator((void *)a, b, p);
         *(float *)(p + 0x20) = x;
         *(float *)(p + 0x24) = x;
         *(float *)(p + 0x28) = x;

@@ -908,10 +908,10 @@ void FUN_L00_00233660(float *out, float x, float y, float z) {
     transform_vector(out, out, base->unk0);
     add_vector_xyz(out, out, &base->motion.pos);
 }
-void FUN_L00_002334d0_002336e8(float) __asm__("FUN_L00_002334d0");
+void FUN_L00_002334d0_002336e8(float *, float *, float) __asm__("FUN_L00_002334d0");
 /* Calls FUN_L00_002334d0 with -x. */
-void FUN_L00_002336e8(float x) {
-    FUN_L00_002334d0_002336e8(-x);
+void FUN_L00_002336e8(float *out, float *in, float x) {
+    FUN_L00_002334d0_002336e8(out, in, -x);
 }
 typedef unsigned int u128_00233708 __attribute__((mode(TI), aligned(16)));
 typedef struct {

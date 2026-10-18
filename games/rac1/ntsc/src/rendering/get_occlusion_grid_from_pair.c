@@ -1,31 +1,37 @@
 #include "types.h"
-extern s32 parse_occlusion_grid() __asm__("FUN_001f2690");
-void get_occlusion_grid_from_pair(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5,
-                                  f32 fparg0) __asm__("FUN_001f2768");
+extern s32 parse_occlusion_grid(s32, s32, s32) __asm__("FUN_001f2690");
+s32 get_occlusion_grid_from_pair(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5,
+                                 f32 fparg0) __asm__("FUN_001f2768");
 
-void get_occlusion_grid_from_pair(s32 first_grid_x, s32 first_grid_y, s32 first_grid_z, s32 second_grid_x, s32 second_grid_y, s32 second_grid_z,
-                                  f32 fparg0) {
+s32 get_occlusion_grid_from_pair(s32 first_grid_x, s32 first_grid_y, s32 first_grid_z, s32 second_grid_x, s32 second_grid_y, s32 second_grid_z,
+                                 f32 fparg0) {
     s32 var_4_25;
     s32 var_5_26;
     s32 var_6_28;
+    s32 ret;
 
     if (fparg0 < 0.5f) {
-        if (parse_occlusion_grid() == 0) {
+        ret = parse_occlusion_grid(first_grid_x, first_grid_y, first_grid_z);
+        if (ret == 0) {
             var_4_25 = second_grid_x;
             var_5_26 = second_grid_y;
             var_6_28 = second_grid_z;
             goto block_5;
         }
-    } else if (parse_occlusion_grid(second_grid_x, second_grid_y, second_grid_z) == 0) {
-        var_4_25 = first_grid_x;
-        var_5_26 = first_grid_y;
-        var_6_28 = first_grid_z;
-    block_5:
-        parse_occlusion_grid(var_4_25, var_5_26, var_6_28);
+    } else {
+        ret = parse_occlusion_grid(second_grid_x, second_grid_y, second_grid_z);
+        if (ret == 0) {
+            var_4_25 = first_grid_x;
+            var_5_26 = first_grid_y;
+            var_6_28 = first_grid_z;
+        block_5:
+            ret = parse_occlusion_grid(var_4_25, var_5_26, var_6_28);
+        }
     }
+    return ret;
 }
 
-extern void func_001F2768(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, f32 fparg0)
+extern s32 func_001F2768(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, f32 fparg0)
     __attribute__((alias("FUN_001f2768")));
 
 /* Recovered original symbol name. */
