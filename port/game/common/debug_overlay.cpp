@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <format>
 #include <map>
 #include <set>
@@ -266,10 +267,6 @@ void configure() {
         return;
     }
     s.configured = true;
-#if defined(__ANDROID__)
-    // Back opens and shuts the drawer instead of leaving the game.
-    SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
-#endif
     if (const char* developer = std::getenv("OPENRAC_DEVELOPER")) {
         s.developer = developer[0] != '\0' && developer[0] != '0';
     }
@@ -1254,6 +1251,21 @@ void picture_marks(const Shown& shown) {
     }
 }
 
+// A screenshot's file: in the working folder; on Android, whose apps run in "/" (not writable),
+// in the app's own files (HOME, which the launcher sets).
+std::string shot_name(std::uint64_t tick) {
+    const std::string name = std::format("openrac_window_{}.png", tick);
+#if defined(__ANDROID__)
+    if (const char* home = std::getenv("HOME"); home != nullptr && *home != '\0') {
+        std::error_code ignored;
+        const std::filesystem::path dir = std::filesystem::path(home) / "screenshots";
+        std::filesystem::create_directories(dir, ignored);
+        return (dir / name).string();
+    }
+#endif
+    return name;
+}
+
 // ---- The panel ----
 
 void panel(const Shown& shown) {
@@ -1289,7 +1301,7 @@ void panel(const Shown& shown) {
             text_coloured(kRed, "PAUSED");
         }
         if (ImGui::Button("screenshot (F12)")) {
-            s.shot_path = std::format("openrac_window_{}.png", s.tick);
+            s.shot_path = shot_name(s.tick);
         }
         ImGui::SameLine();
         bool dumping = stats::dumping();
@@ -1334,11 +1346,12 @@ void panel(const Shown& shown) {
     ImGui::End();
 }
 
-// The window as it is now, overlay included, to a PNG (the back buffer, before the swap).
-void write_window(const std::string& path, int width, int height) {
+// The window as it is now, overlay included, to a PNG (the back buffer, before the swap). False
+// when it could not be written.
+bool write_window(const std::string& path, int width, int height) {
     using namespace openrac::gl;
     if (width <= 0 || height <= 0) {
-        return;
+        return false;
     }
     std::vector<std::uint8_t> pixels(static_cast<std::size_t>(width) * height * 4);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
@@ -1357,9 +1370,11 @@ void write_window(const std::string& path, int width, int height) {
     if (viewer::write_png(path, width, height, flipped)) {
         s.message = "window written to " + path;
         log::info("{}", s.message);
-    } else {
-        s.message = "cannot write " + path;
+        return true;
     }
+    s.message = "cannot write " + path;
+    log::warn("{}", s.message);
+    return false;
 }
 
 // The menus along the window's top, as OpenGOAL has them: on Windows and Linux. macOS has its own
@@ -1688,7 +1703,7 @@ void drawer(const Shown& shown) {
     if (s.drawer_at <= 0.0f) {
         if (s.shot_when_shut) {
             s.shot_when_shut = false;
-            s.shot_path = std::format("openrac_window_{}.png", s.tick);
+            s.shot_path = shot_name(s.tick);
         }
         return;
     }
@@ -1936,7 +1951,7 @@ bool event(const SDL_Event& e) {
                 s.stretch = std::max(s.stretch / 2.0, 1.0);
                 return true;
             case SDLK_F12:
-                s.shot_path = std::format("openrac_window_{}.png", s.tick);
+                s.shot_path = shot_name(s.tick);
                 return true;
             default:
                 break;
@@ -2122,8 +2137,8 @@ void draw(const Shown& shown) {
         }
     }
     if (!s.shot_path.empty()) {
-        write_window(s.shot_path, shown.window_width, shown.window_height);
-        s.toast = "saved " + s.shot_path;
+        s.toast = (write_window(s.shot_path, shown.window_width, shown.window_height) ? "saved " : "cannot save ")
+                  + s.shot_path;
         s.toast_until = ImGui::GetTime() + 2.5;
         s.shot_path.clear();
     }

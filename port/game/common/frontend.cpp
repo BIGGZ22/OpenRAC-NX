@@ -1015,6 +1015,11 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
     platform::set_app_metadata(OPENRAC_GAME_TITLE, app_id.c_str());
     platform::prefer_discrete_gpu();
     platform::prepare_gpu_driver();
+#if defined(__ANDROID__)
+    // Back opens and shuts the options drawer instead of leaving the game (debug_overlay.h), from
+    // the first moment the window is there.
+    SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
+#endif
     g->sdl = std::make_unique<platform::Platform>(platform::kVideo | platform::kGamepad | platform::kAudio);
     if (!g->sdl->ok()) {
         error = g->sdl->error();
@@ -1798,6 +1803,16 @@ void draw_kept(bool first) {
 
 namespace {
 
+// A window the player sizes: never on Android, where the game covers the screen whatever the
+// settings say (Window::set_display_mode).
+bool windowed() {
+#if defined(__ANDROID__)
+    return false;
+#else
+    return g->display_mode == settings::DisplayMode::Windowed;
+#endif
+}
+
 // The window as the player's settings want it: its display mode, display and fullscreen size, its
 // shape, and each swap waiting for a refresh or not. Called when they may have changed; all of
 // them take effect at once (the frame's size, its samples and the textures' filter follow the
@@ -1824,7 +1839,7 @@ void apply_settings() {
         // A window takes the picture's new shape, at the height it has.
         int w = 0;
         int h = 0;
-        if (g->display_mode == settings::DisplayMode::Windowed && s.aspect != settings::Aspect::Window
+        if (windowed() && s.aspect != settings::Aspect::Window
             && SDL_GetWindowSize(g->window->sdl(), &w, &h) && h > 0) {
             SDL_SetWindowSize(g->window->sdl(), static_cast<int>(std::lround(static_cast<float>(h) * picture_aspect(w, h))), h);
         }
@@ -1850,7 +1865,7 @@ void window_event(const SDL_Event& event) {
             break;
         case SDL_EVENT_WINDOW_RESIZED:
             // Remembered in memory; written with the next setting saved and when the window closes.
-            if (g->display_mode == settings::DisplayMode::Windowed && event.window.data1 >= 320
+            if (windowed() && event.window.data1 >= 320
                 && event.window.data2 >= 240) {
                 settings::get().window_width = event.window.data1;
                 settings::get().window_height = event.window.data2;
