@@ -23,6 +23,7 @@
     "src"
   ],
   "defines": ["LOMBYTE_QZERO_H"],
+  "aliases": ["config/us/port_aliases.h"],
   "symbols": [
     "config/us/symbol_addrs.txt",
     "config/us/port_symbols.txt"
