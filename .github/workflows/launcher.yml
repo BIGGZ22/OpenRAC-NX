@@ -1,7 +1,10 @@
 # The launcher's installers, built for Windows, Linux, macOS and Android and kept as
 # the run's artifacts (Actions, the run, "Artifacts"). A tag `launcher-v*`
 # also puts them on a draft release of that name, to be looked over and
-# published by hand.
+# published by hand. Each build's updater reads the repository that built it:
+# a tag's, that repository's latest release; an Android build of a branch, the
+# pre-release launcher-dev-<branch> that the dev-release job keeps current
+# (launcher/docs/RELEASING.md).
 #
 # They are not signed: Windows SmartScreen and macOS Gatekeeper warn about
 # them until the project has certificates.
@@ -330,16 +333,37 @@ jobs:
           OPENRAC_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           OPENRAC_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           TAURI: ${{ matrix.tauri }}
+          UPDATER_PUBKEY: ${{ vars.TAURI_UPDATER_PUBKEY }}
         run: |
-          unsigned=()
+          create_updater=false
           if [ -n "$RAW_KEY" ]; then
             printf '%s' "$RAW_KEY" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' > "$RUNNER_TEMP/updater.key"
           fi
           if [ -n "$RAW_KEY" ] && [ "$NAME" != android ]; then
             export TAURI_SIGNING_PRIVATE_KEY="$RUNNER_TEMP/updater.key"
-          else
-            unsigned=(--config '{"bundle":{"createUpdaterArtifacts":false}}')
+            create_updater=true
           fi
+          # The launcher looks for its updates where it was built: this repository's releases, a
+          # fork's in a fork. A tag's build reads the latest release; another build of the Android
+          # launcher is version X.Y.Z-dev.<run> and reads its branch's rolling release
+          # (launcher-dev-<branch>, the dev-release job), so each build of a branch updates the last.
+          base=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          version=$base
+          endpoint="https://github.com/$GITHUB_REPOSITORY/releases/latest/download/latest.json"
+          if [[ "$GITHUB_REF" != refs/tags/launcher-v* ]] && [ "$NAME" = android ]; then
+            channel="launcher-dev-$(printf '%s' "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}" | tr -c 'A-Za-z0-9._-' '-')"
+            version="$base-dev.$GITHUB_RUN_NUMBER"
+            endpoint="https://github.com/$GITHUB_REPOSITORY/releases/download/$channel/latest.json"
+          fi
+          echo "LAUNCHER_VERSION=$version" >> "$GITHUB_ENV"
+          config=$(VERSION="$version" ENDPOINT="$endpoint" CREATE="$create_updater" node -e '
+            const c = { version: process.env.VERSION,
+                        bundle: { createUpdaterArtifacts: process.env.CREATE === "true" },
+                        plugins: { updater: { endpoints: [process.env.ENDPOINT] } } };
+            // A fork that signs with a key of its own names its public half here (a variable).
+            if (process.env.UPDATER_PUBKEY) c.plugins.updater.pubkey = process.env.UPDATER_PUBKEY;
+            process.stdout.write(JSON.stringify(c));')
+          echo "updates: $version from $endpoint"
           # Every build a version code of its own, above any version's own (Tauri's major*10^6 +
           # minor*10^3 + patch): a home screen takes a new icon only from a new version code.
           export OPENRAC_ANDROID_VERSION_CODE=$((1000000000 + GITHUB_RUN_NUMBER))
@@ -350,7 +374,7 @@ jobs:
           unset RAW_KEY ANDROID_KEYSTORE
           yarn install --immutable
           # $TAURI is the row's own words: split on purpose.
-          yarn tauri $TAURI "${unsigned[@]}"
+          yarn tauri $TAURI --config "$config"
 
       # Its file is named as the one built on Ubuntu is: "fc44" tells them apart on a release,
       # which takes one file of a name.
@@ -369,8 +393,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           built=$(ls src-tauri/gen/android/app/build/outputs/apk/*/debug/*.apk | head -1)
-          version=$(node -p "require('./src-tauri/tauri.conf.json').version")
-          apk="$(dirname "$built")/OpenRAC.Launcher_${version}_android-arm64-debug.apk"
+          apk="$(dirname "$built")/OpenRAC.Launcher_${LAUNCHER_VERSION}_android-arm64-debug.apk"
           mv "$built" "$apk"
           unzip -l "$apk" | grep -E "lib/arm64-v8a/|assets/openrac.zip|classes" | sort -k4
           unzip -p "$apk" 'classes*.dex' | grep -ac "dev/openrac/game/GameActivity"
@@ -389,6 +412,45 @@ jobs:
           name: openrac-launcher-${{ matrix.name }}
           path: ${{ matrix.files }}
           if-no-files-found: error
+
+  # Any other build of a branch here or in a fork (not a pull request's): its Android launcher on
+  # the branch's rolling pre-release `launcher-dev-<branch>`, made again each time, where the
+  # launchers built from that branch look for their updates (Build the installers, above). Only
+  # with the update key: an APK without its signature is not installed by the updater.
+  dev-release:
+    if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: openrac-launcher-android
+          path: installers
+      - name: Rolling release of the branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          apk=$(find installers -name '*.apk' | head -1)
+          if [ ! -f "$apk.sig" ]; then
+            echo "::notice::no update signature (TAURI_SIGNING_PRIVATE_KEY is not set): nothing to publish"
+            exit 0
+          fi
+          version=$(basename "$apk" | sed -E 's/^OpenRAC\.Launcher_(.*)_android-arm64.*\.apk$/\1/')
+          channel="launcher-dev-$(printf '%s' "$GITHUB_REF_NAME" | tr -c 'A-Za-z0-9._-' '-')"
+          python3 tools/updater_manifest.py installers --tag "$channel" --repo "$GH_REPO" \
+            --version "$version" --notes "Built from $GITHUB_REF_NAME at $GITHUB_SHA." --output installers/latest.json
+          gh release delete "$channel" --cleanup-tag --yes || true
+          gh release create "$channel" --prerelease --target "$GITHUB_SHA" \
+            --title "OpenRAC Launcher $version ($GITHUB_REF_NAME)" \
+            --notes "The Android launcher built from $GITHUB_REF_NAME at $GITHUB_SHA; launchers built from this branch update from here." \
+            "$apk" "$apk.sig" installers/latest.json
 
   # A tag `launcher-v*`: the installers of all the builds on a draft
   # release. Nothing is published until someone publishes the draft.
