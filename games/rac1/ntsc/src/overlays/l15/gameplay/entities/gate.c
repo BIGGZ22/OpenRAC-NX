@@ -1207,7 +1207,7 @@ extern float D_L15_00161A08 __attribute__((sda));
 extern float D_L15_00161A0C __attribute__((sda));
 extern struct Moby *D_001413D0_5630 __asm__("D_001413D0") __attribute__((section(".data")));
 extern char D_L15_001BABD0_5630[] __asm__("D_L15_001BABD0");
-extern struct Moby *FUN_L12_00308670(void);
+extern struct Moby *FUN_L12_00308670(struct Moby *);
 extern void FUN_L12_00308708(struct Moby *, struct Moby *);
 extern void FUN_L15_002c6900(struct Moby *);
 extern void FUN_L02_00261c80(float, void *, void *);
@@ -1229,7 +1229,7 @@ extern void FUN_L00_00250df8(void *);
 extern int FUN_L03_002d5208(float, void *, void *, void *, int);
 extern void FUN_L00_0025e450_5630(void *, void *, void *, float, float, int, int, int, float, float, float, int, float, float, int, int, int, int) __asm__("FUN_L00_0025e450");
 extern void FUN_L00_001fff28(float, void *, int);
-extern void FUN_L15_002c52b8_goal(void *, void *, void *) __asm__("FUN_L15_002c52b8");
+extern float FUN_L15_002c52b8_goal(struct Moby *, float *, Goal_52b8) __asm__("FUN_L15_002c52b8");
 extern float absolute_float(float) __asm__("FUN_001f99c0");
 extern void transform_vector_by_basis(void *, void *, void *) __asm__("FUN_001f9d20");
 
@@ -1256,7 +1256,7 @@ void helicopter_update(struct Moby *moby)
 
     origin.q = *(u128 *)&moby->pos;
     if (*(struct Moby **)(vars + 0x160) == 0)
-        *(struct Moby **)(vars + 0x160) = FUN_L12_00308670();
+        *(struct Moby **)(vars + 0x160) = FUN_L12_00308670(moby);
     if (moby->state != 0 && moby->state != 0x40 && *(int *)(vars + 0x1a4) != 0 && D_001413F4[0] != 2) {
         moby->collision = 0;
         moby->flags = (moby->flags | 0x41) & 0xefff;
@@ -1483,7 +1483,7 @@ wait:
     case 5:
         moby_point_position(moby, 0, &point);
         if (goal.kind != 2) {
-            FUN_L15_002c52b8_goal(moby, &delta, &goal);
+            FUN_L15_002c52b8_goal(moby, (float *)&delta, *(Goal_52b8 *)&goal);
             first.q = *(u128 *)&target->pos;
             FUN_L15_002c4f88(moby, &delta, &first);
             if (fast_dec_timer_s16(vars + 0x168) && *(int *)(vars + 0x164) == 0) {

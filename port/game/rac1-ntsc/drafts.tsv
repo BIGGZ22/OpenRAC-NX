@@ -36,6 +36,7 @@ src/overlays/l08/gameplay/entities/002deee0.c	# FUN_L08_002e2250
 src/overlays/l08/gameplay/entities/002e9b70.c	# FUN_L08_002f44c0
 src/overlays/l12/gameplay/vendor/003028c8.c	# FUN_L12_00303370
 src/overlays/l15/gameplay/entities/0029aff0.c	# FUN_L15_002a7880
+src/overlays/l15/gameplay/entities/gate.c	# FUN_L15_002c5630
 src/overlays/shared/audio/voices/00276368.c	# FUN_L00_00276368
 src/overlays/shared/gameplay/entities/002648e0.c	# FUN_L00_002648e0
 src/overlays/shared/gameplay/entities/00264e40.c	# FUN_L02_00264e70
