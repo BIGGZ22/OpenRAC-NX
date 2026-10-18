@@ -27,13 +27,13 @@
   async function add() {
     busy = true;
     const driver = await guard(api.gpuDriverImport());
-    if (driver) toast(`${driver.name} ${driver.version} is added. Choose it to use it.`);
+    if (driver) toast(`Added ${driver.name} ${driver.version}.`);
     await load();
     busy = false;
   }
 
   async function remove(id: string, name: string) {
-    if (!confirm(`Remove the driver package ${name}?`)) return;
+    if (!confirm(`Remove ${name}?`)) return;
     busy = true;
     await guard(api.gpuDriverRemove(id));
     await load();
@@ -48,15 +48,14 @@
   {#if !info}
     <p class="dim">Looking…</p>
   {:else}
-    <p class="dim note">
-      {info.device.model}{info.device.soc ? `, ${info.device.soc}` : ""}, Android API {info.device.api}:
-      {#if adreno}
-        an Adreno GPU, which can use a driver package of your own (a Vulkan driver such as Mesa's Turnip).
-      {:else if info.device.gpu === "mali"}
-        a Mali GPU. Driver packages are for Adreno GPUs: the game uses the system's driver here.
-      {:else}
-        driver packages are for Adreno GPUs: the game uses the system's driver here.
-      {/if}
+    <p class="dim device">
+      {[
+        info.device.model,
+        info.device.soc,
+        info.device.gpu === "other" ? "" : info.device.gpu === "adreno" ? "Adreno" : "Mali",
+      ]
+        .filter(Boolean)
+        .join(" · ")}
     </p>
     <label class="option">
       <input
@@ -66,10 +65,7 @@
         disabled={busy}
         onchange={() => void select(null)}
       />
-      <span>
-        <strong>The system's driver</strong>
-        <small>What the device came with, updated with the system.</small>
-      </span>
+      <span><strong>System driver</strong><small>Default</small></span>
     </label>
     {#each info.drivers as driver (driver.id)}
       <div class="option">
@@ -83,22 +79,17 @@
         />
         <label for="gpu-{driver.id}" class="grow">
           <strong>{driver.name} {driver.version}</strong>
-          <small>
-            {[driver.vendor, driver.driverVersion, driver.author].filter(Boolean).join(" · ")}
-            {#if driver.description}<br />{driver.description}{/if}
-            <br /><span class="mono">{driver.library}</span>
-          </small>
+          <small>{[driver.vendor, driver.driverVersion].filter(Boolean).join(" · ")}</small>
         </label>
         <button class="link" disabled={busy} onclick={() => void remove(driver.id, driver.name)}>Remove</button>
       </div>
     {/each}
-    <p class="dim note">
-      The game draws with OpenGL ES for now: it loads the package and names it in its log, and the Vulkan renderer that
-      draws on it comes next. If a package keeps the game from starting, choose the system's driver again.
-    </p>
-    <p>
-      <button disabled={busy} onclick={() => void add()}>Add a driver package (.zip)</button>
-    </p>
+    {#if adreno}
+      <p class="dim note">Custom drivers are for the upcoming Vulkan renderer.</p>
+      <p><button disabled={busy} onclick={() => void add()}>Add driver (.zip)</button></p>
+    {:else}
+      <p class="dim note">Custom drivers require an Adreno GPU.</p>
+    {/if}
   {/if}
 </section>
 
