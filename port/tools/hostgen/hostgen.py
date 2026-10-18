@@ -392,7 +392,8 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
     stage = extra.pop("asm", None) or asmc.Stage()
     asm_reasons: dict[str, int] = {}
     for why in stage.unsupported.values():
-        key = re.sub(r" at [0-9A-F]{8}\b.*| \([0-9A-F]{8}\)", "", why)
+        key = re.sub(r",? at [0-9A-F]{8}\b| \([0-9A-F]{8}\)", "", why)
+        key = re.sub(r"\$\w+(?:, \$\w+)*", "a register", key)
         key = re.sub(r"\b(?:func|FUN)_\w+|\b[A-Za-z_]\w*(?=, which)", "a function", key)
         asm_reasons[key] = asm_reasons.get(key, 0) + 1
     # What translated assembly calls counts for the frontier like what translated C calls.
@@ -405,6 +406,7 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         "functions_stubbed": len(stubbed),
         "functions_without_c": len(no_c),
         "functions_without_c_asm": sum(1 for f in no_c if f.asm),
+        "functions_without_c_other_spelling": sum(1 for f in no_c if program.canonical(f.symbol) != f.symbol),
         "arguments_passed_through": sum(f.passthrough for f in fns),
         "arguments_filled_with_zero": {f.name: f.zero_args for f in fns if f.zero_args},
         "call_site_mismatches": {f.name: sorted(set(f.mismatches)) for f in fns if f.mismatches},
@@ -438,6 +440,8 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         f"| Functions with C that could not be translated (stubs) | {summary['functions_stubbed']} |",
         f"| Functions translated from assembly (no C yet; asmc.py) | {summary['functions_from_assembly']} |",
         f"| Functions with no C (still assembly, or libraries) | {summary['functions_without_c']} |",
+        f"| ... of them another spelling of a function with C, whose calls go there | "
+        f"{summary['functions_without_c_other_spelling']} |",
         f"| Functions from candidates (C that is not the matched C) | {len(extra.get('candidates_used', []))} |",
         f"| Functions by code address | {extra.get('addresses', 0)} |",
         f"| Arguments passed through from the caller's registers | {summary['arguments_passed_through']} |",
