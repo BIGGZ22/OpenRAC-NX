@@ -5,9 +5,12 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <format>
+#include <vector>
 
 #include <SDL3/SDL.h>
 
@@ -67,9 +70,7 @@ void prefer_discrete_gpu() {
         log::info("graphics card: the system's default (OPENRAC_GPU=integrated)");
         return;
     }
-    // Mesa: the second card of a PRIME pair (with one card it changes nothing). A value the
-    // player set stays.
-    setenv("DRI_PRIME", "1", 0);
+
     // NVIDIA's driver beside an integrated card (PRIME render offload): only when its kernel
     // driver is loaded, since naming a GLX vendor that is not installed leaves no OpenGL at all.
     std::error_code none;
@@ -77,7 +78,106 @@ void prefer_discrete_gpu() {
         setenv("__NV_PRIME_RENDER_OFFLOAD", "1", 0);
         setenv("__GLX_VENDOR_LIBRARY_NAME", "nvidia", 0);
         setenv("__VK_LAYER_NV_optimus", "NVIDIA_only", 0);
+        return;
     }
+
+    // If DRI_PRIME is already configured by the user, leave it untouched.
+    if (std::getenv("DRI_PRIME") != nullptr) {
+        return;
+    }
+
+    // Inspect available DRM cards to choose the best GPU intelligently.
+    // On multi-GPU systems (e.g. desktop with iGPU + dedicated PCIe GPU), setting DRI_PRIME=1
+    // tells Mesa to offload to the SECONDARY card. If the desktop booted with the discrete GPU
+    // as primary (boot_vga == 1), DRI_PRIME=1 would erroneously demote the game to the slow iGPU.
+    struct GpuCard {
+        int index = 0;
+        bool boot_vga = false;
+        std::uint64_t vram_bytes = 0;
+        std::string pci_id;
+    };
+
+    std::vector<GpuCard> cards;
+    for (int i = 0; i < 8; ++i) {
+        const std::string dev_path = std::format("/sys/class/drm/card{}/device", i);
+        if (!std::filesystem::exists(dev_path, none)) {
+            continue;
+        }
+        GpuCard card;
+        card.index = i;
+
+        const std::string boot_path = dev_path + "/boot_vga";
+        if (std::FILE* f = std::fopen(boot_path.c_str(), "r")) {
+            int val = 0;
+            if (std::fscanf(f, "%d", &val) == 1) {
+                card.boot_vga = (val == 1);
+            }
+            std::fclose(f);
+        }
+
+        const std::string vram_path = dev_path + "/mem_info_vram_total";
+        if (std::FILE* f = std::fopen(vram_path.c_str(), "r")) {
+            unsigned long long vram = 0;
+            if (std::fscanf(f, "%llu", &vram) == 1) {
+                card.vram_bytes = vram;
+            }
+            std::fclose(f);
+        }
+
+        const std::string uevent_path = dev_path + "/uevent";
+        if (std::FILE* f = std::fopen(uevent_path.c_str(), "r")) {
+            char line[256];
+            while (std::fgets(line, sizeof(line), f) != nullptr) {
+                if (std::strncmp(line, "PCI_ID=", 7) == 0) {
+                    std::string id = line + 7;
+                    while (!id.empty() && (id.back() == '\n' || id.back() == '\r')) {
+                        id.pop_back();
+                    }
+                    card.pci_id = id;
+                    break;
+                }
+            }
+            std::fclose(f);
+        }
+
+        cards.push_back(std::move(card));
+    }
+
+    if (cards.size() > 1) {
+        const auto* boot_card = &cards[0];
+        const auto* best_card = &cards[0];
+        for (const auto& c : cards) {
+            if (c.boot_vga) {
+                boot_card = &c;
+            }
+            if (c.vram_bytes > best_card->vram_bytes) {
+                best_card = &c;
+            }
+        }
+
+        // If primary boot GPU is already discrete (>= 1 GB VRAM and greatest VRAM),
+        // keep default: setting DRI_PRIME=1 would force the secondary (integrated) GPU.
+        if (boot_card == best_card && boot_card->vram_bytes >= (1024ull * 1024 * 1024)) {
+            log::info("graphics card: primary GPU is discrete (card{}, {:.1f} GB VRAM); keeping default",
+                      boot_card->index, static_cast<double>(boot_card->vram_bytes) / (1024.0 * 1024.0 * 1024.0));
+            return;
+        }
+
+        // If another card has significantly more VRAM than boot GPU, select it via DRI_PRIME.
+        if (best_card != boot_card && best_card->vram_bytes > boot_card->vram_bytes) {
+            if (!best_card->pci_id.empty()) {
+                setenv("DRI_PRIME", best_card->pci_id.c_str(), 0);
+            } else {
+                setenv("DRI_PRIME", "1", 0);
+            }
+            log::info("graphics card: preferring secondary discrete GPU (card{}, {:.1f} GB VRAM)",
+                      best_card->index, static_cast<double>(best_card->vram_bytes) / (1024.0 * 1024.0 * 1024.0));
+            return;
+        }
+    }
+
+    // Default fallback: Mesa PRIME offload
+    setenv("DRI_PRIME", "1", 0);
 #endif
 }
 
@@ -155,6 +255,10 @@ Platform::Platform(unsigned subsystems) {
     SDL_InitFlags flags = 0;
     if ((subsystems & kVideo) != 0) {
         flags |= SDL_INIT_VIDEO;
+#if defined(__linux__) || defined(__FreeBSD__)
+        // On Wayland, allow tearing / immediate presentation when vsync is disabled.
+        SDL_SetHint("SDL_VIDEO_WAYLAND_ALLOW_TEARING", "1");
+#endif
     }
     if ((subsystems & kGamepad) != 0) {
         flags |= SDL_INIT_GAMEPAD;
