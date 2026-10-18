@@ -22,10 +22,14 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+import asm  # noqa: E402
 import clangast  # noqa: E402
 import ctype  # noqa: E402
 import hostgen  # noqa: E402
 import prep  # noqa: E402
+
+sys.path.insert(0, str(HERE / "tests"))
+import mips  # noqa: E402
 
 RUNTIME_INCLUDE = HERE.parent.parent / "runtime" / "include"
 
@@ -61,7 +65,7 @@ def have_compiler() -> bool:
 class Translate(unittest.TestCase):
     def run_program(self, files: dict[str, str], places: str = "", config: dict | None = None,
                     extra_files: dict[str, str] | None = None, host_c: str = "",
-                    stubs: int = 0) -> list[str]:
+                    stubs: int = 0, hostgen_args: list[str] | None = None) -> list[str]:
         """Translates, builds and runs files (name -> C); returns the printed lines.
         config adds to hostgen.json; extra_files are written beside it (tables);
         host_c is linked in (the port's own C); stubs is how many functions are
@@ -87,7 +91,7 @@ class Translate(unittest.TestCase):
             (tmp / "hostgen.json").write_text(json.dumps(cfg))
             out = tmp / "gen"
             rc = hostgen.main(["--game", str(tmp / "hostgen.json"), "--source", str(src), "--out", str(out),
-                               "--jobs", "2", "--quiet"])
+                               "--jobs", "2", "--quiet", *(hostgen_args or [])])
             self.assertEqual(rc, 0)
             report = json.loads((out / "report.json").read_text())
             self.last_report = report
@@ -1111,6 +1115,373 @@ class Preparation(unittest.TestCase):
         self.assertEqual(prep.use_draft(taken, "NON_MATCHING"), taken)
         # Another guard is left alone.
         self.assertEqual(prep.use_draft(stub, "OTHER"), stub)
+
+
+ASM_CONFIG = {"asm": {"enabled": True, "dirs": ["asm"], "gp": "0x00180000"}}
+
+
+@unittest.skipUnless(have_compiler(), "needs Clang on a POSIX host")
+class FromAssembly(unittest.TestCase):
+    """C from assembly (asmc.py): a function the test's decompilation has only as assembly (an
+    INCLUDE_ASM stub, with an assembly file tests/mips.py writes the way the setup writes one),
+    translated, built with the C that calls it, run, and its output checked."""
+    run_program = Translate.run_program
+
+    def run_asm(self, c: str, functions: dict[str, tuple[int, str]], symbols=None, tables=None) -> list[str]:
+        files = {f"game/asm/{name}.s": mips.assemble(name, start, text, symbols, (tables or {}).get(name))
+                 for name, (start, text) in functions.items()}
+        return self.run_program({"a.c": c}, config=ASM_CONFIG, extra_files=files)
+
+    def test_branches_and_delay_slots(self):
+        # sum of n..1, the counter decremented in the delay slot after the test read it; a likely
+        # branch whose delay slot runs only when it is taken.
+        out = self.run_asm("""
+            INCLUDE_ASM("asm", func_00100000);
+            extern int func_00100000(int n);
+            INCLUDE_ASM("asm", func_00100100);
+            extern int func_00100100(int x);
+            int test_main(void) {
+                test_print(func_00100000(4));
+                test_print(func_00100000(0));
+                test_print(func_00100100(3));
+                test_print(func_00100100(0));
+                return 0;
+            }
+        """, {"func_00100000": (0x00100000, """
+                daddu $2, $0, $0
+                beq $4, $0, done
+                nop
+            loop:
+                addu $2, $2, $4
+                bne $4, $0, loop      # $4 is tested, then decremented: one more turn with 0
+                addiu $4, $4, -1
+            done:
+                jr $31
+                nop
+            """), "func_00100100": (0x00100100, """
+                addiu $2, $0, 100
+                bnel $4, $0, out
+                addiu $2, $0, 7       # only when taken
+                addiu $2, $2, 1
+            out:
+                jr $31
+                nop
+            """)})
+        self.assertEqual(out, ["10", "0", "7", "101"])
+        self.assertEqual(self.last_report["functions_from_assembly"], 2)
+
+    def test_calls_pass_arguments_by_the_callees_prototype(self):
+        # The assembly calls C: integers in $a0.., floats in $f12.., the result in $v0 / $f0;
+        # its own frame on the game stack, a local's address passed to C.
+        out = self.run_asm("""
+            int func_00200000(int a, float b, int c) {
+                test_print(a); test_print_float(b); test_print(c);
+                return a + c;
+            }
+            float func_00200100(float x) { return x * 2.0f; }
+            void func_00200200(int *p) { test_print(*p); *p = 77; }
+            INCLUDE_ASM("asm", func_00100000);
+            extern int func_00100000(int a, int b, float f);
+            int test_main(void) { test_print(func_00100000(5, 6, 1.5f)); return 0; }
+        """, {"func_00100000": (0x00100000, """
+                addiu $29, $29, -32
+                sq $31, 16($29)
+                sw $16, 0($29)
+                daddu $16, $5, $0      # keep b
+                sw $5, 4($29)
+                daddu $6, $5, $0       # c = b
+                jal func_00200000      # (a, f, b)
+                mov.s $f12, $f12
+                addu $16, $16, $2      # b + (a + b)
+                jal func_00200100
+                mov.s $f12, $f12
+                mfc1 $3, $f0
+                jal func_00200200      # the address of the local at 4($sp)
+                addiu $4, $29, 4
+                lw $2, 4($29)
+                addu $2, $2, $16
+                lq $31, 16($29)
+                lw $16, 0($29)
+                jr $31
+                addiu $29, $29, 32
+            """)}, symbols={"func_00200000": 0x00200000, "func_00200100": 0x00200100, "func_00200200": 0x00200200})
+        self.assertEqual(out, ["5", "1.500", "6", "6", "94"])
+
+    def test_floats(self):
+        # (a * b + c) / d, a compare and its branch, a conversion to an integer.
+        out = self.run_asm("""
+            INCLUDE_ASM("asm", func_00100000);
+            extern int func_00100000(float a, float b, float c, float d);
+            INCLUDE_ASM("asm", func_00100100);
+            extern float func_00100100(float a, float b);
+            int test_main(void) {
+                test_print(func_00100000(2.0f, 3.0f, 4.0f, 0.5f));
+                test_print_float(func_00100100(1.0f, 2.0f));
+                test_print_float(func_00100100(5.0f, 2.0f));
+                test_print_float(func_00100100(-1.0f, 0.0f));
+                return 0;
+            }
+        """, {"func_00100000": (0x00100000, """
+                mul.s $f0, $f12, $f13
+                add.s $f0, $f0, $f14
+                div.s $f0, $f0, $f15
+                cvt.w.s $f1, $f0
+                jr $31
+                mfc1 $2, $f1
+            """), "func_00100100": (0x00100100, """
+                c.lt.s $f12, $f13
+                bc1t less
+                sub.s $f0, $f12, $f13
+                jr $31
+                nop
+            less:
+                div.s $f0, $f12, $f13  # by zero: the EE's largest float, not infinity
+                jr $31
+                neg.s $f0, $f0
+            """)})
+        self.assertEqual(out[0], "20")
+        self.assertEqual(out[1:3], ["-0.500", "3.000"])
+        self.assertEqual(out[3], "340282346638528859811704183484516925440.000")
+
+    def test_loads_and_stores(self):
+        out = self.run_asm("""
+            extern unsigned char D_00300000[32];
+            INCLUDE_ASM("asm", func_00100000);
+            extern int func_00100000(unsigned char *p);
+            int test_main(void) {
+                int i;
+                for (i = 0; i < 32; i++) D_00300000[i] = (unsigned char)(i * 16 + 1);
+                test_print(func_00100000(D_00300000));
+                for (i = 16; i < 32; i++) test_print(D_00300000[i]);
+                return 0;
+            }
+        """, {"func_00100000": (0x00100000, """
+                lb $2, 15($4)          # 0xF1: -15
+                lbu $3, 15($4)         # 241
+                addu $2, $2, $3        # 226
+                lh $3, 2($4)           # 0x3121
+                addu $2, $2, $3
+                lq $8, 0($4)           # all 16 bytes
+                sq $8, 16($4)          # copied
+                lwl $9, 4($4)          # an unaligned word at 1: bytes 1..4
+                lwr $9, 1($4)
+                sw $9, 16($4)
+                ld $10, 8($4)
+                dsrl32 $10, $10, 0
+                jr $31
+                addu $2, $2, $10       # + the high word of the second doubleword (signed)
+            """)}, symbols={"D_00300000": 0x00300000})
+        # 226 + 0x3121 + (bytes 12..15 as a word: 0xF1E1D1C1 = -237907519)
+        self.assertEqual(out[0], str(226 + 0x3121 + (0xF1E1D1C1 - (1 << 32))))
+        self.assertEqual(out[1:5], ["17", "33", "49", "65"])          # bytes 1..4 stored at 16..19
+        self.assertEqual(out[5:], [str((i * 16 + 1) & 0xFF) for i in range(4, 16)])
+
+    def test_jump_table_and_globals(self):
+        # A switch through a table of code addresses in the game's data, the table's address
+        # formed with %hi/%lo; a global through $gp.
+        source = """
+                sltiu $2, $4, 3
+                beq $2, $0, other
+                sll $4, $4, 2
+                lui $2, %hi(jtbl_00300000)
+                addiu $2, $2, %lo(jtbl_00300000)
+                addu $4, $4, $2
+                lw $4, 0($4)
+                jr $4
+                nop
+            case0:
+                jr $31
+                addiu $2, $0, 10
+            case1:
+                jr $31
+                lw $2, -0x10($28)      # D_0017FFF0, through $gp
+            case2:
+                lui $3, %hi(D_00300010)
+                lw $2, %lo(D_00300010)($3)
+                jr $31
+                addiu $2, $2, 1
+            other:
+                jr $31
+                addiu $2, $0, -1
+        """
+        labels = mips.label_addresses(0x00100000, source)
+        out = self.run_asm(f"""
+            extern unsigned int D_00300000[8];
+            extern int D_0017FFF0;
+            INCLUDE_ASM("asm", func_00100000);
+            extern int func_00100000(int);
+            int test_main(void) {{
+                D_00300000[0] = 0x{labels['case0']:08X}u;
+                D_00300000[1] = 0x{labels['case1']:08X}u;
+                D_00300000[2] = 0x{labels['case2']:08X}u;
+                D_00300000[4] = 41;
+                D_0017FFF0 = 20;
+                test_print(func_00100000(0)); test_print(func_00100000(1));
+                test_print(func_00100000(2)); test_print(func_00100000(9));
+                return 0;
+            }}
+        """, {"func_00100000": (0x00100000, source)},
+            symbols={"jtbl_00300000": 0x00300000, "D_00300010": 0x00300010},
+            tables={"func_00100000": {"jtbl_00300000": ["case0", "case1", "case2"]}})
+        self.assertEqual(out, ["10", "20", "42", "-1"])
+
+    def test_mmi_and_vu0(self):
+        out = self.run_asm("""
+            extern float D_00300000[12];
+            extern int D_00300100[8];
+            INCLUDE_ASM("asm", func_00100000);
+            extern void func_00100000(float *v, int *w);
+            int test_main(void) {
+                int i;
+                for (i = 0; i < 4; i++) { D_00300000[i] = (float)(i + 1); D_00300000[4 + i] = 10.0f * (i + 1); }
+                for (i = 0; i < 4; i++) D_00300100[i] = i + 1;
+                func_00100000(D_00300000, D_00300100);
+                for (i = 8; i < 12; i++) test_print_float(D_00300000[i]);
+                for (i = 4; i < 8; i++) test_print(D_00300100[i]);
+                return 0;
+            }
+        """, {"func_00100000": (0x00100000, """
+                lqc2 $vf1, 0($4)            # (1, 2, 3, 4)
+                lqc2 $vf2, 16($4)           # (10, 20, 30, 40)
+                vmulbc.xyz $vf3, $vf1, $vf2y   # (20, 40, 60, w kept)
+                vadd.w $vf3, $vf1, $vf2     # w = 44
+                sqc2 $vf3, 32($4)
+                lq $8, 0($5)                # (1, 2, 3, 4)
+                pextlw $9, $8, $8           # (1, 1, 2, 2)
+                pcpyld $10, $9, $8          # (1, 2, 1, 1)
+                jr $31
+                sq $10, 16($5)
+            """)}, symbols={})
+        self.assertEqual(out, ["20.000", "40.000", "60.000", "44.000", "1", "2", "1", "1"])
+
+    def test_declared_nowhere_gets_its_parameters_from_its_registers(self):
+        # Called only through its code address; the C calls it as (int, int).
+        out = self.run_asm("""
+            INCLUDE_ASM("asm", func_00100000);
+            int test_main(void) {
+                int (*f)(int, int) = (int (*)(int, int))0x00100000;
+                test_print(f(30, 12));
+                return 0;
+            }
+        """, {"func_00100000": (0x00100000, """
+                jr $31
+                addu $2, $4, $5
+            """)})
+        self.assertEqual(out, ["42"])
+
+    def test_what_it_cannot_write_stays_a_stub_and_is_reported(self):
+        out = self.run_asm("""
+            INCLUDE_ASM("asm", func_00100000);
+            extern int func_00100000(void);
+            int test_main(void) { test_print(func_00100000()); return 0; }
+        """, {"func_00100000": (0x00100000, """
+                syscall
+                jr $31
+                nop
+            """)})
+        self.assertEqual(out, ["missing", "func_00100000", "0"])
+        self.assertEqual(self.last_report["functions_from_assembly"], 0)
+        self.assertIn("a system call", self.last_report["assembly_unsupported"]["func_00100000"])
+
+    def test_an_input_no_caller_passes_stays_a_stub(self):
+        # $3 read before it is written: a hand-written routine's own convention, or a fragment.
+        self.run_asm("""
+            INCLUDE_ASM("asm", func_00100000);
+            extern int func_00100000(int);
+            int test_main(void) { return func_00100000(1) * 0; }
+        """, {"func_00100000": (0x00100000, """
+                jr $31
+                addu $2, $4, $3
+            """)})
+        self.assertIn("$3", self.last_report["assembly_unsupported"]["func_00100000"])
+
+    def test_a_routine_taking_registers_runs_in_place(self):
+        # The helper takes $3 (no prototype can say so): the call runs its code in place and comes
+        # back through $ra; the function's own return is the saved $ra's.
+        out = self.run_asm("""
+            INCLUDE_ASM("asm", func_00100000);
+            extern int func_00100000(int);
+            int test_main(void) { test_print(func_00100000(4)); test_print(func_00100000(10)); return 0; }
+        """, {"func_00100000": (0x00100000, """
+                addiu $29, $29, -16
+                sq $31, 0($29)
+                jal func_00100100
+                addiu $3, $4, 5
+                jal func_00100100
+                daddu $3, $2, $0
+                lq $31, 0($29)
+                jr $31
+                addiu $29, $29, 16
+            """), "func_00100100": (0x00100100, """
+                jr $31
+                sll $2, $3, 1
+            """)}, symbols={"func_00100100": 0x00100100})
+        self.assertEqual(out, ["36", "60"])
+
+    def test_console_form(self):
+        # The form for the console's compiler (rac1-decomp's tools/fcheck.py): the function under a
+        # name of its own with the function's symbol, calls by retail address with every argument
+        # register, memory at the console's addresses.
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "console"
+            files = {"game/asm/func_00100000.s": mips.assemble("func_00100000", 0x00100000, """
+                addiu $29, $29, -16
+                sq $31, 0($29)
+                jal func_00200000
+                lw $4, 0x10($4)
+                lq $31, 0($29)
+                jr $31
+                addiu $29, $29, 16
+            """, {"func_00200000": 0x00200000})}
+            self.run_program({"a.c": """
+                int func_00200000(int x) { return x; }
+                INCLUDE_ASM("asm", func_00100000);
+                extern int func_00100000(int *p);
+                int test_main(void) { return 0; }
+            """}, config={**ASM_CONFIG}, extra_files=files, hostgen_args=["--asm-console", str(out)])
+            text = (out / "func_00100000.c").read_text()
+        self.assertIn('int openrac_asmc_func_00100000(gaddr a0) __asm__("func_00100000");', text)
+        self.assertIn("((int (*)(openrac_u64, openrac_u64, openrac_u64, openrac_u64, openrac_u64, openrac_u64, "
+                      "openrac_u64, openrac_u64, float, float, float, float, float, float, float, float, openrac_u64, openrac_u64, openrac_u64, openrac_u64))0x00200000u)", text)
+        self.assertIn("#define OPENRAC_EE_PTR(a) ((void *)(openrac_u32)(a))", text)
+        self.assertNotIn("GFN(", text)
+
+
+class Decoding(unittest.TestCase):
+    def test_words(self):
+        cases = {
+            0x27BDFFE0: ("addiu", dict(rs=29, rt=29, imm=-32)),
+            0x03E00008: ("jr", dict(rs=31)),
+            0x0C080000: ("jal", dict(target=0x00200000)),
+            0x7FB00010: ("sq", dict(rs=29, rt=16, imm=16)),
+            0x46020000: ("add.s", dict(fs=0, ft=2, fd=0)),
+            0x4A0208A8: ("vadd", dict(fs=1, ft=2, fd=2)),
+            0x70A84389: ("pcpyld", dict(rs=5, rt=8, rd=8)),
+        }
+        for word, (op, fields) in cases.items():
+            with self.subTest(hex(word)):
+                i = asm.decode(word, 0x00100000)
+                self.assertEqual(i.op, op)
+                for k, v in fields.items():
+                    self.assertEqual(getattr(i, k), v, k)
+
+    def test_file_reading(self):
+        text = mips.assemble("func_00100000", 0x00100000, """
+            beq $4, $0, end
+            nop
+        end:
+            jr $31
+            nop
+        """)
+        path = Path(self.id().replace(".", "_") + ".s")
+        try:
+            path.write_text(text)
+            (block,) = asm.parse_file(path)
+        finally:
+            path.unlink()
+        self.assertEqual(block.name, "func_00100000")
+        self.assertEqual([l.addr for l in block.lines], [0x00100000, 0x00100004, 0x00100008, 0x0010000C])
+        self.assertEqual(block.labels, {0x00100008: ".L00100008"})
 
 
 if __name__ == "__main__":
