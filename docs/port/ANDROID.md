@@ -140,11 +140,12 @@ and was not taken).
 `tools/build_android.py` builds everything: Python, the port with the NDK,
 the libraries and SDL's Java into the launcher's Android project, the
 carried copy, and the APK with `yarn tauri android build`.
-The launcher's workflow (`.github/workflows/launcher.yml`, job `android`;
-ubuntu-latest has the Android SDK and NDK) runs it beside the desktop
-installers, checks the launcher's Rust for `aarch64-linux-android` with
-clippy, and keeps the debug APK with the installers (on a `launcher-v*` tag,
-on the draft release too); the port's desktop tests (checks.yml)
+In the launcher's workflow (`.github/workflows/launcher.yml`) Android is a
+row of both matrices, beside the desktop systems (ubuntu-latest has the
+Android SDK and NDK): `game (android)` runs it with `--no-apk` and keeps
+what it put in the Android project, `android` makes the debug APK from that
+and keeps it with the installers (on a `launcher-v*` tag, on the draft
+release too); the port's desktop tests (checks.yml)
 include the OpenGL ES variants on Mesa. A release APK needs a signing key in the repository's
 secrets; until then the artifact is a debug build.
 
