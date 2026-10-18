@@ -288,4 +288,25 @@
       max-width: 160px;
     }
   }
+
+  /* A phone held upright (the Android launcher): the wrench stands for the name, Discord and the
+     running task give way, and the tabs scroll if they still do not fit. */
+  @media (max-width: 560px) {
+    .brand span,
+    .discord,
+    .job {
+      display: none;
+    }
+
+    nav {
+      flex-shrink: 1;
+      min-width: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .tab {
+      padding: 7px 11px;
+    }
+  }
 </style>
