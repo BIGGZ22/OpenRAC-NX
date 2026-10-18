@@ -736,6 +736,42 @@ class Translate(unittest.TestCase):
         self.assertEqual(out, ["103"])
 
 
+    def test_literal_addresses_reach_the_loaded_levels_globals(self):
+        # The NTSC decomp's render_capture_effect_pass read the vendor's salesman flag through
+        # *(s32 *)0x1610A8: a literal address in the range the levels move is the same global a
+        # name at that address is (OPENRAC_DATA), not the executable's copy under the level. The
+        # host's relocation here moves the range up by 0x1000, as a loaded level would.
+        out = self.run_program({"a.c": """
+            typedef struct { int a; int b; } Pair;
+            extern int D_00300010[2];
+            extern Pair D_00300100;
+            int test_main(void) {
+                int *p = (int *)0x00300010;
+                *(s32 *)0x00300010 = 5;
+                ((int *)0x00300010)[1] = 6;
+                ((Pair *)0x00300100)->b = 7;
+                *(s32 *)(0x00300100 + 0) = 8;
+                *(s32 *)0x00200000 = 9;               /* below the range: as it is */
+                test_print(D_00300010[0]);
+                test_print(D_00300010[1]);
+                test_print(D_00300100.b);
+                test_print(D_00300100.a);
+                test_print(p[1]);
+                test_print(*(s32 *)0x00201000);       /* nothing went to the executable's copy */
+                test_print(*(s32 *)0x00200000);
+                return 0;
+            }
+        """}, config={"relocate": [0x300000, 0x400000]}, host_c="""
+            gaddr openrac_relocate_low = 0x300000, openrac_relocate_high = 0x400000;
+            gaddr openrac_relocate_data(gaddr a) { return a + 0x1000; }
+            gaddr openrac_relocate_code(gaddr a) { return a + 0x1000; }
+        """)
+        self.assertEqual(out, ["5", "6", "7", "8", "6", "0", "9"])
+        self.assertEqual(sorted(self.last_report["literal_addresses"]["test_main"]), [
+            "0x300010 -> OPENRAC_DATA(0x00300010u)", "0x300010 -> OPENRAC_DATA(0x00300010u)",
+            "0x300010 -> OPENRAC_DATA(0x00300010u)", "0x300100 -> OPENRAC_DATA(0x00300100u)",
+            "0x300100 -> OPENRAC_DATA(0x00300100u)"])
+
     def test_a_separate_program_in_its_own_group(self):
         # Up Your Arsenal's menu is a program of its own, loaded over part of
         # the executable: the same address names another function there.
@@ -864,6 +900,46 @@ class Places(unittest.TestCase):
             self.assertIn("OPENRAC_CODE((gaddr)(0x00300000u) + (gaddr)(8)", text)
             self.assertIn("OPENRAC_CODE(0x00300000u)", text)
             self.assertNotIn("OPENRAC_DATA", text)
+
+    @unittest.skipUnless(have_compiler(), "needs Clang on a POSIX host")
+    def test_literal_addresses_take_their_globals_relocation(self):
+        # A literal address goes the way a D_ name at that address would: the loaded level's in an
+        # executable function, the level's own copy in a function several levels carry, as it is
+        # in a function of one level; a function pointer as code.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            src = root / "game"
+            (src / "src").mkdir(parents=True)
+            (src / "src" / "a.c").write_text(
+                "typedef void (*fn_t)(void);\n"
+                "int func_00300000(void) { return *(int *)0x00410000 + *(int *)0x00100000; }\n"
+                "void func_00300100(void) { ((fn_t)0x00320000)(); }\n"
+                "int func_L00_00420000(void) { return *(int *)0x00410004; }\n"
+                "void func_L00_00420100(void) { *(int *)0x00410008 = 1; }\n")
+            (src / "functions.tsv").write_text(
+                "func_L00_00420000\tshared\t4\tfingerprint\t2\t00:00420000,01:00430000\n"
+                "func_L00_00420100\tl00\t4\tfingerprint\t1\t00:00420100\n")
+            (root / "hostgen.json").write_text(json.dumps({
+                "sources": ["src"], "includes": [], "places": "functions.tsv",
+                "relocate": [0x1A7C80, 0x500000],
+            }))
+            out = root / "gen"
+            self.assertEqual(hostgen.main(["--game", str(root / "hostgen.json"),
+                                           "--source", str(src), "--out", str(out),
+                                           "--jobs", "1", "--quiet"]), 0)
+            text = (out / "a.c").read_text()
+            self.assertIn("OPENRAC_DATA(0x00410000u)", text)
+            self.assertNotIn("OPENRAC_DATA(0x00100000u)", text)
+            self.assertIn("OPENRAC_CODE(0x00320000u)", text)
+            self.assertIn("OPENRAC_LDATA(0, 0x00410004u)", text)
+            self.assertNotIn("(0, 0x00410008u)", text)
+            report = json.loads((out / "report.json").read_text())
+            self.assertEqual(report["literal_addresses"], {
+                "func_00300000": ["0x410000 -> OPENRAC_DATA(0x00410000u)"],
+                "func_00300100": ["0x320000 -> OPENRAC_CODE(0x00320000u)"],
+                "func_L00_00420000": ["0x410004 -> OPENRAC_LDATA(0, 0x00410004u)"],
+                "func_L00_00420100": ["0x410008 -> kept"],
+            })
 
     @unittest.skipUnless(have_compiler(), "needs Clang on a POSIX host")
     def test_small_folded_executable_function_forms_its_own_globals(self):
