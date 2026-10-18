@@ -40,6 +40,11 @@ on:
       - "tools/build_android.py"
       - "tools/build_port.py"
       - "tools/extractor.py"
+      # What the Android launcher carries (tools/bundle_standalone.py) and its updates' manifest.
+      - "tools/openrac.py"
+      - "tools/updater_manifest.py"
+      - "progress/**"
+      - "games/*/game.json"
       - ".github/workflows/launcher.yml"
       - ".github/actions/**"
   pull_request:
@@ -310,7 +315,8 @@ jobs:
             python tools/build_android.py --no-apk
           }
           llvm=$(ls -d "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/bin | head -1)
-          for lib in libopenrac-rac1-pal.so libopenrac-rac1-pal-cli.so libopenrac-python.so; do
+          for lib in libopenrac-rac1-pal.so libopenrac-rac1-pal-cli.so libopenrac-rac1-ntsc.so \
+                     libopenrac-rac1-ntsc-cli.so libopenrac-python.so; do
             echo "$lib:"; "$llvm/llvm-readelf" -d "launcher/src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a/$lib" | grep NEEDED
           done
 
@@ -338,6 +344,11 @@ jobs:
           create_updater=false
           if [ -n "$RAW_KEY" ]; then
             printf '%s' "$RAW_KEY" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' > "$RUNNER_TEMP/updater.key"
+            # tauri.conf.json names the project's public key: a fork's own key needs its own public
+            # half in the TAURI_UPDATER_PUBKEY variable, or every launcher refuses its updates.
+            if [ -z "$UPDATER_PUBKEY" ] && [ "$GITHUB_REPOSITORY" != OpenRAC/OpenRAC ]; then
+              echo "::warning::TAURI_SIGNING_PRIVATE_KEY is set but the TAURI_UPDATER_PUBKEY variable is not: the launchers built here check their updates with the project's public key and refuse updates signed with this repository's own key."
+            fi
           fi
           if [ -n "$RAW_KEY" ] && [ "$NAME" != android ]; then
             export TAURI_SIGNING_PRIVATE_KEY="$RUNNER_TEMP/updater.key"
@@ -404,8 +415,10 @@ jobs:
           unzip -l "$apk" | grep -E "lib/arm64-v8a/|assets/openrac.zip|classes" | sort -k4
           unzip -p "$apk" 'classes*.dex' | grep -ac "dev/openrac/game/GameActivity"
           unzip -p "$apk" 'classes*.dex' | grep -ac "org/libsdl/app/SDLActivity"
-          for lib in libopenrac-rac1-pal.so libopenrac-rac1-pal-cli.so libSDL3.so libc++_shared.so \
-                     libopenrac-python.so libpython3.13.so libmain_hook.so libopenrac_launcher_lib.so; do
+          for lib in libopenrac-rac1-pal.so libopenrac-rac1-pal-cli.so libopenrac-rac1-ntsc.so \
+                     libopenrac-rac1-ntsc-cli.so libSDL3.so libc++_shared.so libopenrac-python.so \
+                     libpython3.13.so libhook_impl.so libmain_hook.so libfile_redirect_hook.so \
+                     libgsl_alloc_hook.so libopenrac_launcher_lib.so; do
             unzip -l "$apk" "lib/arm64-v8a/$lib" > /dev/null || { echo "the APK has no $lib"; exit 1; }
           done
           # Android installs an update only over an APK of the same key: the key's fingerprint is in
@@ -417,10 +430,17 @@ jobs:
           if [ "$HAVE_ANDROID_KEY" != true ]; then
             echo "::warning::No ANDROID_KEYSTORE secret: the APK is signed with this runner's own debug key and will not install over an APK of another run. tools/android_keystore.py makes the launcher's key."
           fi
-          if [ -f "$RUNNER_TEMP/updater.key" ]; then
+          # Only an APK of the launcher's own key is offered as an update: one of a runner's debug key
+          # downloads and verifies, then Android refuses to install it over the launcher.
+          if [ -f "$RUNNER_TEMP/updater.key" ] && [ "$HAVE_ANDROID_KEY" = true ]; then
             yarn tauri signer sign -f "$RUNNER_TEMP/updater.key" "$apk"
           fi
           rm -f "$RUNNER_TEMP/updater.key" "$RUNNER_TEMP/openrac.jks"
+
+      # The keys written for the build go with it, whatever happened to the build.
+      - name: Forget the keys
+        if: always()
+        run: rm -f "$RUNNER_TEMP/updater.key" "$RUNNER_TEMP/openrac.jks"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -465,11 +485,24 @@ jobs:
           # The installers' names have spaces in them: an array, not a word list.
           mapfile -d '' files < <(find installers -type f -print0 | sort -z)
           printf '%s\n' "${files[@]}"
-          gh release delete "$channel" --cleanup-tag --yes || true
-          gh release create "$channel" --prerelease --target "$GITHUB_SHA" \
-            --title "OpenRAC Launcher $version ($GITHUB_REF_NAME)" \
-            --notes "The launchers built from $GITHUB_REF_NAME at $GITHUB_SHA; launchers built from this branch update from here." \
-            "${files[@]}"
+          title="OpenRAC Launcher $version ($GITHUB_REF_NAME)"
+          notes="The launchers built from $GITHUB_REF_NAME at $GITHUB_SHA; launchers built from this branch update from here."
+          if ! gh release view "$channel" > /dev/null 2>&1; then
+            gh release create "$channel" --prerelease --target "$GITHUB_SHA" --title "$title" --notes "$notes" "${files[@]}"
+            exit 0
+          fi
+          # Replaced in place, so a launcher that looks while this runs still finds a release: the
+          # installers first, latest.json (which names them) last, then the last build's files go.
+          installers=()
+          for f in "${files[@]}"; do [ "$(basename "$f")" = latest.json ] || installers+=("$f"); done
+          gh release upload "$channel" --clobber "${installers[@]}"
+          gh release upload "$channel" --clobber installers/latest.json
+          keep=$(for f in "${files[@]}"; do basename "$f"; done)
+          gh release view "$channel" --json assets --jq '.assets[].name' | while IFS= read -r name; do
+            grep -qxF "$name" <<< "$keep" || gh release delete-asset "$channel" "$name" --yes
+          done
+          gh api -X PATCH "repos/$GH_REPO/git/refs/tags/$channel" -f sha="$GITHUB_SHA" -F force=true > /dev/null
+          gh release edit "$channel" --prerelease --title "$title" --notes "$notes"
 
   # A tag `launcher-v*`: the installers of all the builds on a draft
   # release. Nothing is published until someone publishes the draft.
@@ -494,6 +527,13 @@ jobs:
           TAG: ${{ github.ref_name }}
           GH_REPO: ${{ github.repository }}
         run: |
+          # latest.json takes its version from the tag, the launchers from tauri.conf.json: when they
+          # differ, every launcher sees an update that never brings it to the tag's version.
+          conf=$(node -p "require('./launcher/src-tauri/tauri.conf.json').version")
+          if [ "${TAG#launcher-v}" != "$conf" ]; then
+            echo "::error::the tag $TAG does not match tauri.conf.json's version $conf"
+            exit 1
+          fi
           python3 tools/updater_manifest.py installers --tag "$TAG" --repo "$GH_REPO" --output installers/latest.json
       - name: Draft release
         env:
