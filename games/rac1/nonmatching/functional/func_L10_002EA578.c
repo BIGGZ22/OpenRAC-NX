@@ -1,3 +1,4 @@
+/* functional: high. Read side by side with the asm: same reads, writes, constants, calls and arguments, layer loop and uv derivation; the quad packets (a at sp+0x00, b at sp+0x90) and matrix (sp+0x120) match; only registers and compiler choices differ. The % by zero matches retail (break 7) and is table-fed, so not reachable. */
 /* func_L10_002EA578 -- src/overlays/shared/vendor_00299AF0.c (functional C for the port, not a match)
  * Draw callback (queued through func_001F49B0; levels 10 and 17) of a moby drawn as stacked pairs of
  * textured quads: the moby's matrix (rotation from +0xC0, position, w 1) places two quads whose

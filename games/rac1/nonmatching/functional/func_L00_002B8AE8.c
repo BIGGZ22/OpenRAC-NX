@@ -1,4 +1,4 @@
-/* functional: high. Corrected from nonmatching/shared/func_L00_002B8AE8.c: (1) func_L00_0028EB98 gets d->0x4A (short) as second arg, not 0; (2) the effect struct passed to func_L00_001F2BE8/001FF500 has no a/b fields: m is at +0x70, x +0x74, c +0x78, f +0x7C, i +0x80, and v[2]=1.0, v[3]=5627.9248 overwrite the copied vector; f = A888()+1.0 and the 001FF500 scale is 1.0, not the distance f20; (3) the 0x4E-timer block (258DB0, then 2140F8/9C30/9BD8/26E438) is inside the if(func_001F9938(d+0x4E)), not after it. */
+/* functional: high. Second review (vs asm): func_L00_001FF500 takes (&vc, &vc, 1.0), not v50; vc.i is set before that call (asm sets it in the jal delay slot); the end block keeps the result of func_L00_00234718(-1) separate from func_001F9938(d+0x4C) (the old C overwrote it, so the m[0x20]=2 / func_0022ED80 branch logic was wrong); D_L00_00161600 is read as an int (lw). Earlier: corrected from nonmatching/shared/func_L00_002B8AE8.c: (1) func_L00_0028EB98 gets d->0x4A (short) as second arg, not 0; (2) the effect struct passed to func_L00_001F2BE8/001FF500 has no a/b fields: m is at +0x70, x +0x74, c +0x78, f +0x7C, i +0x80, and v[2]=1.0, v[3]=5627.9248 overwrite the copied vector; f = A888()+1.0 and the 001FF500 scale is 1.0, not the distance f20; (3) the 0x4E-timer block (258DB0, then 2140F8/9C30/9BD8/26E438) is inside the if(func_001F9938(d+0x4E)), not after it. */
 extern char D_0013A5E0[];
 extern char D_0013E633[];
 extern int func_L00_0028EB98(void *, int);
@@ -307,9 +307,11 @@ L8FEC:
     fa = func_001FA888(W[0x10]);
     vc.m = m;
     vc.x = 0x10000;
+    vc.c = 0;
+    vc.i = 1;
     *(u128_B8AE8 *)vc.v = *(u128_B8AE8 *)v10;
     vc.f = fa + 1.0f;
-    func_L00_001FF500(v50, &vc, 1.0f);
+    func_L00_001FF500(&vc, &vc, 1.0f);
     vc.v[3] = 5627.9248046875f;
     vc.v[2] = 1.0f;
     vc.c = 5;
@@ -331,19 +333,19 @@ L8FEC:
             func_L00_0026E438((char *)v20, (char *)v40, W[0x10]);
         }
     }
-    r = func_001F9850_4198(D_L00_00161600);
+    r = func_001F9850_4198(*(int *)&D_L00_00161600);
     if (r != 0) {
         if (*(int *)&D_L00_0015F6B0_i % r != 0) goto L93F8;
     }
     func_L00_00234638(-1, 1);
 
 L93F8:
-    func_L00_00234718(-1);
+    hh = func_L00_00234718(-1);
     r = func_001F9938(d + 0x4C);
     if (r == 0) goto L94A4;
     if ((*(int *)(D_0013A5E0 + 0x2600) & *(int *)(Q + 0x10A0)) == 0) goto L9440;
     if (*(unsigned char *)(Q + 0x20AC) != 0) goto L9440;
-    if (r != 0) goto L94A8;
+    if (hh != 0) goto L94A8;
 L9440:
     m[0x20] = 2;
     func_L00_0020ED30();
@@ -357,7 +359,7 @@ L9440:
         }
     }
     *(short *)(d + 0x4A) = -1;
-    if (r == 0) func_0022ED80_B8208(0, 0, m);
+    if (hh == 0) func_0022ED80_B8208(0, 0, m);
 
 L94A4:
 L94A8:

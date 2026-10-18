@@ -1,4 +1,4 @@
-/* functional: the near miss nonmatching/l15_quartu/func_L15_002C6950.c (26 of 4,816 bytes off, equiv.py FUNCTIONAL), with one call written for the port. */
+/* functional: high. The near miss nonmatching/l15_quartu/func_L15_002C6950.c (26 of 4,816 bytes off, equiv.py FUNCTIONAL), with one call written for the port (the goal passed by value as Goal_52b8, which is how the definition of func_L15_002C65D8 takes it; retail passes a pointer to the goal in the frame). Re-checked: case 2 heading block (path segment, speed ramp, turn-to-heading), the call sites of func_L15_002C65D8/62A8 and the exit tests against the assembly. Needs the declarations of its source file (vendor_0029C1D0.c) above it, as hostgen appends it there; it does not compile alone. */
 /* NON_MATCHING func_L15_002C6950 -- src/overlays/l15_quartu/vendor_0029C1D0.c
  * Best so far: BYTES 26/4816 (99.5% of the bytes match), checked 2026-10-14.
  * Not built into anything: the retail assembly stays in the source file
@@ -106,7 +106,7 @@ extern float func_001FA888(int);
 extern int func_L00_0025A778(void *, void *, int);
 extern float func_L00_00259148(float *vel, float cur, float target, float k, float d, float max);
 extern float func_001F9CB8(void *);
-extern void func_L15_002C62A8(void *, void *, void *);
+extern void func_L15_002C62A8_6950(void *, void *, void *) __asm__("func_L15_002C62A8");
 extern void func_L00_00250800(void *, int, void *);
 /* port: the goal goes by value as the file's Goal_52b8 (same 0x50-byte layout), which the definition of func_L15_002C65D8 takes */
 extern int func_001F9938(void *);
@@ -338,7 +338,7 @@ void func_L15_002C6950(HMoby_6950 *m) {
         }
         v80.f[2] = tp->pos.f[2] + 7.5f;
         v90.q = tp->pos.q;
-        func_L15_002C62A8(m, &v80, &v90);
+        func_L15_002C62A8_6950(m, &v80, &v90);
         if (func_001F9D48(&v80, &m->pos) < 1.0f || func_L00_0025A778(&m->pos, path->pt, path->n)) {
             if (goal.mode != 2) {
                 m->state = 5;
@@ -354,7 +354,7 @@ void func_L15_002C6950(HMoby_6950 *m) {
         path = D_L15_001B0DB0_h[d->w194];
         v80.q = m->pos.q;
         v90.q = tp->pos.q;
-        func_L15_002C62A8(m, &v80, &v90);
+        func_L15_002C62A8_6950(m, &v80, &v90);
         if (goal.mode == 2) break;
         if (func_L00_0025A778(&m->pos, path->pt, path->n)) {
             m->state = 5;
@@ -369,7 +369,7 @@ void func_L15_002C6950(HMoby_6950 *m) {
         if (goal.mode != 2) {
             func_L15_002C65D8((struct Moby *)m, (float *)&v80, *(Goal_52b8 *)&goal);
             vA0.q = tp->pos.q;
-            func_L15_002C62A8(m, &v80, &vA0);
+            func_L15_002C62A8_6950(m, &v80, &vA0);
             if (func_001F9938(&d->h168) && d->shot == 0) {
                 d->h168 = func_001F9850(0x3C);
                 qcopy(&vB0, &goal);
@@ -381,7 +381,7 @@ void func_L15_002C6950(HMoby_6950 *m) {
         } else {
             vA0.q = m->pos.q;
             vB0.q = tp->pos.q;
-            func_L15_002C62A8(m, &vA0, &vB0);
+            func_L15_002C62A8_6950(m, &vA0, &vB0);
             m->state = 4;
         }
         break;

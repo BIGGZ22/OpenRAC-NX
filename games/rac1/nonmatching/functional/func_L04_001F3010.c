@@ -1,0 +1,270 @@
+/* functional: medium. Same behaviour as the C in src/overlays/l04_eudora/fastfunc_001F2F68.c (checked against retail asm: reads/writes, calls, constants, branches all agree); only difference: retail reads the stack slot at sp+0x20 (t) uninitialised for the distance d, here t is zeroed so the host is deterministic, and the callers (func_L04_0029FEC8) ignore any result (void). */
+#include "common.h"
+#include "hero.h"
+#include "moby.h"
+extern float func_001F9D48(void *, void *);
+typedef union { Vec4A v; int n; } PathEl_1F3010;
+typedef struct {
+    Vec4A vel;
+    Vec4A pos;
+    Vec4A dir;
+    Vec4A drift;
+    float range;
+    short timer;
+    short pad46;
+    float f48;
+    float near;
+    Moby *target;
+    Vec4A *point;
+    int pad58;
+    short path;
+    short count;
+    short classes[8];
+    float weight[8];
+    float scale[8];
+} Steer_1F3010;
+typedef struct {
+    char pad0[0x1C];
+    int hit;
+    char pad20[8];
+    float z;
+    char pad2C[0x14];
+    Vec4A normal;
+} Coll_1F3010;
+
+extern PathEl_1F3010 *D_L04_001B0930_1F3010[] __asm__("D_L04_001B0930");
+extern Coll_1F3010 D_L04_00174040_1F3010 __asm__("D_L04_00174040");
+extern char D_L04_00174070_1F3010[] __asm__("D_L04_00174070");
+extern char D_0013F450_1F3010[] __asm__("D_0013F450");
+extern void func_001F9BC0_1F3010(void *) __asm__("func_001F9BC0");
+extern float func_001F9D10_1F3010(void *, void *) __asm__("func_001F9D10");
+extern void func_001F9BF0_1F3010(void *, void *, void *) __asm__("func_001F9BF0");
+extern float func_001F9CB8_1F3010(void *) __asm__("func_001F9CB8");
+extern void func_L00_001FF4B0_1F3010(void *, void *, float) __asm__("func_L00_001FF4B0");
+extern void func_001F9BD8_1F3010(void *, void *, void *) __asm__("func_001F9BD8");
+extern void func_001F9C30_1F3010(void *, void *, float) __asm__("func_001F9C30");
+extern int func_L00_001EFFF0_1F3010(void *, void *, int, void *, int) __asm__("func_L00_001EFFF0");
+extern float func_001F9CE8_1F3010(void *) __asm__("func_001F9CE8");
+extern float func_L00_001FF860_1F3010(float, float) __asm__("func_L00_001FF860");
+extern void func_L00_001FF500_1F3010(void *, void *, float) __asm__("func_L00_001FF500");
+extern int func_L00_001F10E0_1F3010(float, void *, int, void *) __asm__("func_L00_001F10E0");
+extern int func_001F9938_1F3010(void *) __asm__("func_001F9938");
+extern float func_002140F8_1F3010(float, float) __asm__("func_002140F8");
+extern int func_001FA898_1F3010(float) __asm__("func_001FA898");
+extern int func_L04_001F2F68_1F3010(Moby *, void *, int) __asm__("func_L04_001F2F68");
+extern int func_L04_0024D790_1F3010(void *, void *, void *, int) __asm__("func_L04_0024D790");
+
+/* Steering for a moby: pulls it along its path (c->path) and toward its target, pushes it away from the
+ * listed mobys (and the hero's), and keeps it off the ground; f holds the gains. */
+void func_L04_001F3010(Moby **list, int n, Moby *m, Steer_1F3010 *c, float *f) {
+    Vec4A o;
+    Vec4A w;
+    Vec4A t;
+    Vec4A a;
+    Vec4A e;
+    Vec4A x;
+    PathEl_1F3010 *path;
+    Moby *obj;
+    int flag;
+    Moby *mob;
+    int r;
+    int i;
+    int k;
+    int ci;
+    int j;
+    int lo;
+    int hi;
+    float d;
+    float s;
+    float s2;
+    float g;
+
+    func_001F9BC0_1F3010(c);
+    t.x = 0.0f; t.y = 0.0f; t.z = 0.0f; t.w = 0.0f;
+    d = func_001F9D10_1F3010(&m->pos, &t);
+    r = 0;
+    path = 0;
+    flag = 0;
+    mob = 0;
+    if (c->path != -1) {
+        path = D_L04_001B0930_1F3010[c->path];
+        r = func_L04_001F2F68_1F3010(m, &path[1], path[0].n);
+        flag = func_L04_0024D790_1F3010(&o, &m->pos, &path[1], path[0].n);
+        if (flag == 0) {
+            func_001F9BF0_1F3010(&w, &o, &m->pos);
+            s = func_001F9CB8_1F3010(&w);
+            if (s != 0.0f) {
+                s = -f[2] / (s * s);
+            } else {
+                s = -1000.0f;
+            }
+        } else {
+            func_001F9BF0_1F3010(&w, &o, &m->pos);
+            s = func_001F9CB8_1F3010(&w) + 3.0f;
+            if (d < s) {
+                s = s * (f[2] * s);
+            } else {
+                s = 10000.0f;
+            }
+        }
+        func_L00_001FF4B0_1F3010(&w, &w, s);
+        func_001F9BD8_1F3010(c, c, &w);
+    }
+    if (f[0] != 0.0f) {
+        func_L00_001FF4B0_1F3010(&w, &c->dir, f[0]);
+        func_001F9BD8_1F3010(c, c, &w);
+    }
+    if (c->target == m) {
+        qcopy(&w, &c->pos);
+        func_L00_001FF4B0_1F3010(&w, &w, f[1]);
+        func_001F9BD8_1F3010(c, c, &w);
+    } else {
+        if (c->path != -1) {
+            k = r;
+            s = func_001F9D10_1F3010(&path[r + 1], &t);
+            j = 0;
+            if (r + 1 < path[0].n) {
+                j = r + 1;
+            }
+            s2 = func_001F9D10_1F3010(&path[j + 1], &t);
+            if (s < s2) {
+                k = j;
+                s = s2;
+            }
+            j = r - 1;
+            if (j < 0) {
+                j = path[0].n - 1;
+            }
+            if (s < func_001F9D10_1F3010(&path[j + 1], &t)) {
+                k = j;
+            }
+            j = 0;
+            if (k + 1 < path[0].n) {
+                j = k + 1;
+            }
+            lo = k - 1;
+            if (lo <= -1) {
+                lo = path[0].n - 1;
+            }
+            func_001F9BD8_1F3010(&w, &path[j + 1], &path[lo + 1]);
+            func_001F9BD8_1F3010(&w, &w, &path[k + 1]);
+            func_001F9C30_1F3010(&w, &w, 0.33333334f);
+            if (flag == 0) {
+                func_001F9BF0_1F3010(&w, &w, &m->pos);
+                s = func_001F9CB8_1F3010(&w);
+                func_L00_001FF4B0_1F3010(&w, &w, s * (s * s * f[2]));
+                func_001F9BD8_1F3010(c, c, &w);
+            }
+        }
+        if (c->target != 0) {
+            func_001F9BF0_1F3010(&w, &c->target->pos, &m->pos);
+            if (func_001F9CB8_1F3010(&w) < d) {
+                s = func_001F9CB8_1F3010(&w);
+                func_L00_001FF4B0_1F3010(&w, &w, s * (s * s * f[1]));
+                func_001F9BD8_1F3010(c, c, &w);
+            }
+        }
+        if (c->point != 0) {
+            w.x = c->point->x - m->pos.x;
+            w.y = c->point->y - m->pos.y;
+            w.z = c->point->z - m->pos.z;
+            if (func_001F9CB8_1F3010(&w) < d) {
+                s = func_001F9CB8_1F3010(&w);
+                func_L00_001FF4B0_1F3010(&w, &w, s * (s * s * f[1]));
+                func_001F9BD8_1F3010(c, c, &w);
+            }
+        }
+        for (i = 0; i < n + 1; i++) {
+            if (i < n) {
+                obj = list[i];
+            } else {
+                obj = ((Hero *)D_0013F450_1F3010)->moby;
+            }
+            ci = 0;
+            if ((*(signed char *)&obj->state) < 0 || m == obj) {
+                continue;
+            }
+            s = func_001F9D10_1F3010(&m->pos, &obj->pos);
+            if (c->near < s) {
+                continue;
+            }
+            do {
+                if (obj->oclass == c->classes[ci]) {
+                    break;
+                }
+                ci++;
+            } while (ci < c->count);
+            if (ci < c->count) {
+                if (s < f[4]) {
+                    mob = obj;
+                    break;
+                }
+                g = s / c->scale[ci];
+                if (g != 0.0f) {
+                    g = c->weight[ci] / (g * g);
+                } else {
+                    g = 1000.0f;
+                }
+                func_001F9BF0_1F3010(&w, &m->pos, &obj->pos);
+                func_L00_001FF4B0_1F3010(&w, &w, g);
+                func_001F9BD8_1F3010(c, c, &w);
+            }
+        }
+    }
+    if (c->f48 == 0.0f) {
+        func_001F9BD8_1F3010(&a, &m->pos, &c->pos);
+        func_001F9BD8_1F3010(&e, &m->pos, &c->pos);
+        a.z = a.z + 1.5f;
+        e.z = 0.01f;
+        if (func_L00_001EFFF0_1F3010(&a, &e, 2, m, 0) != 0) {
+            if (D_L04_00174040_1F3010.hit > 0 && D_L04_00174040_1F3010.z > m->pos.z) {
+                qcopy(&x, &D_L04_00174040_1F3010.normal);
+                s = func_L00_001FF860_1F3010(D_L04_00174040_1F3010.normal.z, func_001F9CE8_1F3010(&D_L04_00174040_1F3010.normal));
+                func_L00_001FF500_1F3010(&x, &x, 1.0f);
+                func_001F9C30_1F3010(&x, &x, f[3]);
+                func_001F9BD8_1F3010(c, c, &x);
+                if (0.4f < s) {
+                    func_001F9C30_1F3010(&x, &x, f[3] * (s * 10000.0f));
+                    func_001F9BD8_1F3010(c, c, &x);
+                }
+                if (0.2f < m->pos.z - D_L04_00174040_1F3010.z) {
+                    func_L00_001FF500_1F3010(&x, &c->pos, -(f[3] * 1000.0f));
+                    func_001F9BD8_1F3010(c, c, &x);
+                }
+            }
+        }
+    } else {
+        if (func_L00_001F10E0_1F3010(f[4], &m->pos, 4, m) != 0) {
+            func_001F9BF0_1F3010(&w, D_L04_00174070_1F3010, &m->pos);
+            w.z = w.z + f[3];
+            func_L00_001FF4B0_1F3010(&w, &w, f[3]);
+            func_001F9BD8_1F3010(c, c, &w);
+        }
+    }
+    if (c->f48 == 0.0f) {
+        func_L00_001FF500_1F3010(c, c, f[6]);
+        c->vel.z = 0.0f;
+    } else {
+        func_L00_001FF4B0_1F3010(c, c, f[6]);
+        c->vel.z = c->vel.z / c->f48;
+    }
+    if (func_001F9938_1F3010(&c->timer) != 0) {
+        c->timer = func_001FA898_1F3010(func_002140F8_1F3010(45.0f, 90.0f));
+        c->drift.x = func_002140F8_1F3010(0.0f, c->range) - c->range * 0.5f;
+        c->drift.y = func_002140F8_1F3010(0.0f, c->range) - c->range * 0.5f;
+        if (c->f48 != 0.0f) {
+            c->drift.z = func_002140F8_1F3010(0.0f, c->range) - c->range * 0.5f;
+        } else {
+            c->drift.z = 0.0f;
+        }
+    }
+    func_001F9BD8_1F3010(c, c, &c->drift);
+    if (mob != 0) {
+        func_001F9BF0_1F3010(&w, &m->pos, &mob->pos);
+        if (c->f48 != 0.0f) {
+            func_L00_001FF4B0_1F3010(c, &w, f[6]);
+        } else {
+            func_L00_001FF500_1F3010(c, &w, f[6]);
+        }
+    }
+}

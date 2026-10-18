@@ -1,4 +1,4 @@
-/* functional: medium. Same reads, writes, calls and arguments as retail; differs only in compiler structure (branch layout, register use), and the uninitialised y/z of one 3-float argument vector are zeroed on the host (retail leaves stack garbage there). */
+/* functional: medium. Corrected in place: the carry state's pull vector is normalised only when its length exceeds 1.0 (was 0.0, which normalised every non-zero vector); its unset z/w are zeroed on the host. Same reads, writes, calls and arguments as retail; differs only in compiler structure (branch layout, register use), and the uninitialised y/z of one 3-float argument vector are zeroed on the host (retail leaves stack garbage there). */
 /* Level 1 (Novalis) moby update/state machine, jump table of 6 states on moby[0x20], state record at
  * moby[0x78]. State 0 stores the moby's z-ish float (0x18) as the record's rest value and goes to 1; 1 is the
  * idle/"wait for Ratchet" state (when the save bit of the moby's id or the table byte says it was used, or
@@ -236,8 +236,10 @@ void func_L01_002E1FE0(char *m) {
         }
         V40[0] = -F(H, 0x1D24);
         V40[1] = -F(H, 0x1D20);
+        V40[2] = 0.0f;
+        V40[3] = 0.0f;
         d = func_001F9CE8_2E1FE0(V40);
-        if (0.0f < d) {
+        if (1.0f < d) {
             func_L00_001FF328_2E1FE0(V40, V40, d);
         }
         func_001FA218_2E1FE0(W0, V70);

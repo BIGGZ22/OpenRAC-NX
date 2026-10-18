@@ -1,31 +1,30 @@
-/* functional: medium. The NTSC decomp's pending C for the same instructions (a draft it has not matched
-   yet), carried to PAL's names by OpenRAC's tools/port.py. Never compared with retail's bytes here. */
+/* functional: medium. Corrected from itself (the NTSC decomp's draft carried to PAL by tools/port.py) after reading the whole assembly: the marker blink test read the NTSC frame counter's address (0x13cae4), PAL's is D_L02_0015F6B0 (gp-0x7650), now used; the tuning words are declared int as the assembly loads them. Everything else (steps, rings, distances, colours, calls and arguments) matches. */
 extern void func_00234C98(int, u64);
 extern u64 func_001F4868(int);
 extern float func_001FA748(float, float);
 extern float func_001F9FA8(float);
 extern int func_001FA8A8(int, int, float);
-extern short D_L02_00161BC0;
-extern short D_L02_00161BC4;
-extern short D_L02_00161BC8;
-extern short D_L02_00161BCC;
-extern short D_L02_00161BD0;
-extern short D_L02_00161BD4;
-extern short D_L02_00161BD8;
-extern short D_L02_00161BDC;
-extern short D_L02_00161BE0;
-extern short D_L02_00161BE4;
-extern short D_L02_00161BE8;
-extern short D_L02_00161BEC;
-extern short D_L02_00161C30;
-extern short D_L02_00161C34;
-extern short D_L02_00161C38;
-extern short D_L02_00161C3C;
-extern short D_L02_00161C40;
-extern short D_L02_00161C44;
-extern short D_L02_00161C4C;
-extern short D_L02_00161C50;
-extern short D_L02_00161C54;
+extern int D_L02_00161BC0;
+extern int D_L02_00161BC4;
+extern int D_L02_00161BC8;
+extern int D_L02_00161BCC;
+extern int D_L02_00161BD0;
+extern int D_L02_00161BD4;
+extern int D_L02_00161BD8;
+extern int D_L02_00161BDC;
+extern int D_L02_00161BE0;
+extern int D_L02_00161BE4;
+extern int D_L02_00161BE8;
+extern int D_L02_00161BEC;
+extern int D_L02_00161C30;
+extern int D_L02_00161C34;
+extern int D_L02_00161C38;
+extern int D_L02_00161C3C;
+extern int D_L02_00161C40;
+extern int D_L02_00161C44;
+extern int D_L02_00161C4C;
+extern int D_L02_00161C50;
+extern int D_L02_00161C54;
 extern int D_L02_0015F6B0 MACRO_ADDR;
 extern void func_L02_002DC2C0(void);
 extern void func_L02_002DB810(u64, u32, float, float, float, float);
@@ -181,7 +180,7 @@ void func_L02_002DA820(char *moby) {
             color = (*(int *)&D_L02_00161C54);
             if (markers[i] != 2) {
                 color = (*(int *)&D_L02_00161C50);
-                if ((*(int *)0x0013cae4 & 0x20) == 0) color = (*(int *)&D_L02_00161C4C);
+                if ((D_L02_0015F6B0 & 0x20) == 0) color = (*(int *)&D_L02_00161C4C);
             }
             func_L02_002DB810(texture, color, angle, phase, (float)(*(int *)&D_L02_00161BE8), (float)(*(int *)&D_L02_00161BE4));
         }
