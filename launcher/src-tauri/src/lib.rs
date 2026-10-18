@@ -362,7 +362,7 @@ async fn report_save(app: AppHandle, state: State<'_, AppState>, game: String, f
                 launcher_log::line(&format!("saved a report: {name}"));
                 Ok(name)
             }
-            None => Ok(String::new()),  // backed out: nothing to say
+            None => Ok(String::new()), // backed out: nothing to say
         };
     }
     launcher_log::line(&format!("saved a report: {}", out.display()));

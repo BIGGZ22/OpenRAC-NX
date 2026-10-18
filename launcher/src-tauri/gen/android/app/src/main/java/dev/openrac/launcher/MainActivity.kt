@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 the OpenRAC contributors
+
 package dev.openrac.launcher
 
 import android.Manifest

@@ -171,11 +171,16 @@ pub async fn gpu_driver_select<R: Runtime>(app: AppHandle<R>, id: Option<String>
 /// Asks the player where to save `path` (Android's "save as" screen, offering `name`) and copies it
 /// there: the name it was saved under, or None when they backed out. An app sees no folder outside
 /// its own, so a file to keep goes where the player puts it.
-pub async fn save_as<R: Runtime>(app: &AppHandle<R>, path: &std::path::Path, name: &str) -> Result<Option<String>, String> {
+pub async fn save_as<R: Runtime>(
+    app: &AppHandle<R>,
+    path: &std::path::Path,
+    name: &str,
+) -> Result<Option<String>, String> {
     #[cfg(target_os = "android")]
     {
         let saved: serde_json::Value =
-            kotlin(app, "saveFileAs", serde_json::json!({ "path": path, "name": name, "mime": "application/zip" })).await?;
+            kotlin(app, "saveFileAs", serde_json::json!({ "path": path, "name": name, "mime": "application/zip" }))
+                .await?;
         Ok(saved["saved"].as_str().map(str::to_string))
     }
     #[cfg(not(target_os = "android"))]
@@ -280,9 +285,8 @@ pub async fn update_check<R: Runtime>(app: AppHandle<R>) -> Result<Option<update
     {
         let (endpoint, _) = updater_config(&app)?;
         let manifest = updates_dir(&app)?.join("latest.json");
-        let _: serde_json::Value = kotlin(&app, "download", serde_json::json!({ "url": endpoint, "path": manifest }))
-            .await
-            .map_err(|e| {
+        let _: serde_json::Value =
+            kotlin(&app, "download", serde_json::json!({ "url": endpoint, "path": manifest })).await.map_err(|e| {
                 if e.contains("HTTP 404") {
                     format!("no release has been published at {endpoint} yet")
                 } else {
