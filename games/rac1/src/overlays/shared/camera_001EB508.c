@@ -8,7 +8,7 @@
 extern int D_L00_0015F04C MACRO_ADDR;
 extern void (*D_L00_001690F0[])(void);
 
-void func_L00_001EB508(void) {
+void Camera_RunQueuedCallbacks(void) {
     int i;
     for (i = 0; i < D_L00_0015F04C; i++) {
         D_L00_001690F0[i]();
@@ -18,7 +18,7 @@ void func_L00_001EB508(void) {
 INCLUDE_ASM("asm/overlays", func_L00_001EB564);
 extern u8 D_L00_00167250_1EB578[] __asm__("D_L00_00167250");
 /* the 0xA0-byte record at 0x167250 whose s16 at +0x86 is id, 0 when none. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/camera/001eb188.c, FUN_L00_001eb1f8. */
-char *func_L00_001EB578(int id) {
+char *FindCameraById(int id) {
     s32 p;
     s32 e;
     s16 v;
@@ -48,7 +48,7 @@ float func_001F9B88(float);
 float func_001FA748(float, float);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/camera/init_camera_system.c, FUN_L00_001eb328. */
-float func_L00_001EB6A8(float *p, float a, float b, float c, float d, float lim) {
+float Camera_SmoothAngle(float *p, float a, float b, float c, float d, float lim) {
     float t = func_001FA790_EB6A8(b, a);
     *p = *p + (c * t - d * *p);
     if (lim != 0.0f) {
@@ -57,11 +57,11 @@ float func_L00_001EB6A8(float *p, float a, float b, float c, float d, float lim)
         else if (*p < -lim)
             *p = -lim;
     }
-    if (*p > func_001F9B88(t))
-        *p = func_001F9B88(t);
-    else if (*p < -func_001F9B88(t))
-        *p = -func_001F9B88(t);
-    return func_001FA748(a, *p);
+    if (*p > FastAbsF(t))
+        *p = FastAbsF(t);
+    else if (*p < -FastAbsF(t))
+        *p = -FastAbsF(t);
+    return FastAddRots(a, *p);
 }
 typedef struct { char pad[0x254]; int p; char pad2[0x18]; short s; char pad3[1]; char c; char pad4[0x14]; float f0; char pad5[8]; float f1; } S;
 extern S D_L00_00166D80;
@@ -138,7 +138,7 @@ extern void func_001F9A98_EB890(void *dst, void *src, s32 size) __asm__("func_00
 extern s32 func_001FA898_EB890(f32 transition_duration) __asm__("func_001FA898");
 
 /* Switches the active camera to next_camera: picks the blend by the old camera's transition state and the new one's descriptor kind, then installs it. Level copy of func_001EC2B8. Adapted from Lombyte (MIT) for PAL: src/textbin/fun_001ebf10.c, switch_active_camera_record. */
-void func_L00_001EB890(char *c) {
+void SwitchCamera(char *c) {
     struct UpdateCam_EB890 *next_camera = (struct UpdateCam_EB890 *)c;
 
     struct UpdateCam_EB890 *previous_camera;
@@ -269,7 +269,7 @@ int func_L00_001EBDA0(void) {
         }
     }
     if (found) {
-        func_L00_001EB890(best);
+        SwitchCamera(best);
     }
     fn = D_L00_001EAC00_raw[*(short *)(best + 0x8C)].fn;
     Camera_handleCollWithHero(best);
@@ -281,7 +281,7 @@ int func_L00_001EBDA0(void) {
     q[0] = p[0];
     q[1] = p[1];
     q[2] = p[2];
-    func_L00_001EB508();
+    Camera_RunQueuedCallbacks();
     return -1;
 }
 extern char D_0013E633[];
@@ -291,7 +291,7 @@ extern char D_L00_00166FF0[];
 
 // Samples three axes of the active camera, stores two and derives the look-at vector from them.
 /* Joined to the fragment that follows it (config/overlays/joined.tsv): the catalogue splits the delay slot of the final jr off. */
-void func_L00_001EC090(void) {
+void Camera_CaptureHeroRelativeView(void) {
     float a[4];
     float b[4];
     float c[4];
@@ -318,7 +318,7 @@ extern int func_001F9850(int);
 extern float func_001FA888(int);
 
 /* Camera mode update from arg: in mode 1 the sub-mode at +3 picks what is captured from it, other modes restore the pending transform; then the mode becomes 3 and the blend resets or the timer advances. Level copy of func_001ECC48. */
-void func_L00_001EC220(void *arg) {
+void Camera_CaptureTransform(void *arg) {
     char *arg0 = arg;
     char *r = D_L00_00166FF0;
     char local0[16];
@@ -334,7 +334,7 @@ void func_L00_001EC220(void *arg) {
         } else if (sub == 2) {
             qcopy(r + 0xC0, arg0 + 0x30);
             func_00215328(r + 0xD0, arg0);
-            func_L00_001EC090();
+            Camera_CaptureHeroRelativeView();
         } else {
             char *g = D_0013E633 + 0xE1D;
 
@@ -350,7 +350,7 @@ void func_L00_001EC220(void *arg) {
         sub = r[3];
         if (sub == 2) {
             Camera_stagePendingTransform();
-            func_L00_001EC090();
+            Camera_CaptureHeroRelativeView();
         } else if (sub == 1) {
             Camera_stagePendingTransform();
             qcopy(r + 0xB0, r + 0xD0);
@@ -374,7 +374,7 @@ void func_L00_001EC220(void *arg) {
         int n = ++*(int *)(b + 0x14);
 
         *(int *)(b + 0xC) = scale_ticks(n);
-        *(float *)(b + 0x10) = 1.0f / func_001FA888(*(int *)(b + 0xC));
+        *(float *)(b + 0x10) = 1.0f / IntToFloat(*(int *)(b + 0xC));
     }
 }
 /* func_L00_001ED2C0 is the head of one C function: its retail code runs on through
@@ -467,7 +467,7 @@ extern void func_001EE858(void *);
 extern void func_001F9CA0(void *, void *, void *);
 
 /* Camera update, once per frame: count the frame, run the camera steps, take the view from the target camera (mode 3 blends it) unless frozen, refresh the angles and the derived vectors. Level copy of func_001EDE50. Joined with func_L00_001ED460 and func_L00_001ED464 (config/overlays/joined.tsv). */
-void func_L00_001ED428(void) {
+void Camera_UpdateFrame(void) {
     char *c;
     char *target;
     char *v;
@@ -484,14 +484,14 @@ void func_L00_001ED428(void) {
     (*(int *)(c + 0x398))++;
     func_001EDE08();
     func_L00_001ED2C0();
-    func_001ED818();
+    CameraPreUpdate();
     func_L00_001EBDA0();
     target = *(char **)(c + 0x180);
     if ((unsigned short)(*(unsigned short *)(c + 0x270) - 1) < 2) {
-        func_L00_001EC220(*(void **)(c + 0x184));
+        Camera_CaptureTransform(*(void **)(c + 0x184));
     }
     if (*(short *)(c + 0x270) == 3) {
-        func_001ED658(target);
+        Camera_UpdateBlend(target);
     } else {
         char *st = D_L00_0016C158_ED428;
         if (*(int *)(st + 0x14) != 0) {
@@ -506,15 +506,15 @@ void func_L00_001ED428(void) {
         char *st = D_L00_0016C158_ED428;
         if (*(int *)(st + 0x14) == 0) {
             func_001FA460(m, D_L00_001670D0);
-            func_002153E8(m, D_L00_001670D0 - 0x200);
+            MatrixToEuler(m, D_L00_001670D0 - 0x200);
         }
     }
 frozen:
     v = D_L00_00166EE0;
-    func_001ED708(v, 0);
-    func_001ED708(v + 0x10, 1);
-    func_001EDB98();
-    func_001EE858(v - 0x20);
+    Camera_UpdateShake(v, 0);
+    Camera_UpdateShake(v + 0x10, 1);
+    Camera_UpdateUnderwaterFlag();
+    Camera_UpdateEnvironment(v - 0x20);
     if (D_0015EEB4_ED428[0] != 0) {
         FastVecCross(v + 0x200, v + 0x210, v + 0x1F0);
     }
@@ -528,7 +528,7 @@ typedef struct {
 extern E D_L00_001EAC00[];
 
 /* Returns the index of the entry with the given key, or of the -1 terminator. */
-int func_L00_001ED5B0(int key) {
+int Camera_FindTypeIndex(int key) {
     int i = 0;
     while (D_L00_001EAC00[i].key != -1 && D_L00_001EAC00[i].key != key) {
         i++;
@@ -541,7 +541,7 @@ extern void func_001EC038(void);
 extern char D_L00_00169210[];
 
 /* resets the camera behind the hero */
-void func_L00_001ED600(void) {
+void CameraResetBehindHero(void) {
     char *g = (char *)&D_L00_00166D80;
     float *s, *d, *t, *u;
     char *a;
@@ -550,11 +550,11 @@ void func_L00_001ED600(void) {
         *(*(char **)(g + 0x180) + 0x7D) = 0;
         *(short *)(*(char **)(g + 0x180) + 0x7E) = 0;
     }
-    *(char **)(g + 0x180) = func_L00_001EB578(0);
+    *(char **)(g + 0x180) = FindCameraById(0);
     *(short *)(*(char **)(g + 0x180) + 0x8E) = 1;
     *(char **)(*(char **)(g + 0x180) + 0x70) = D_L00_00169210;
     *(short *)(g + 0x270) = 0;
-    func_001ED818();
+    CameraPreUpdate();
     Camera_runSetupToNewCam(*(char **)(g + 0x180));
     BackupCurrentCam();
     a = *(char **)(g + 0x180);
@@ -592,7 +592,7 @@ extern float func_001F9F90(float);
 extern float func_001F9FA8(float);
 extern void func_001F9BD8(void *, void *, void *);
 
-void func_L00_001ED900(float *o, float *v, void *m) {
+void Camera_Polar3dToPos(float *o, float *v, void *m) {
     o[0] = v[2] * FastCos(v[1]) * FastCos(v[0]);
     o[1] = v[2] * FastCos(v[1]) * FastSin(v[0]);
     o[2] = v[2] * FastSin(v[1]);
@@ -606,7 +606,7 @@ extern float func_L00_001FF860(float, float);
 extern void func_001FA790(float, float);
 extern float func_001F9CB8(float *);
 extern void func_001F9BF0_3(float *, float *, float *) __asm__("func_001F9BF0");
-int func_L00_001ED9B0(float *a, float *p, float *q) {
+int Camera_UpdatePolarFromPos(float *a, float *p, float *q) {
     W v;
     float t;
     func_001F9BF0_3(v, p, q);
@@ -630,7 +630,7 @@ extern W D_L00_00166EC0;
 extern short D_L00_0015F05C;
 
 /* moves the camera position a toward a target in steps, stopping each step on collision. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_camera_001eb188.c, FUN_L00_001ed6a8. */
-void func_L00_001EDA28(float *pos, float r) {
+void MoveCameraToward(float *pos, float r) {
     W d;
     W v;
     char *o = D_cam_c.o;
@@ -652,7 +652,7 @@ void func_L00_001EDA28(float *pos, float r) {
     }
     func_001F9BF0_3(d, pos, v);
     n = func_001FA898_r(FastVecLength(d) / (r * 0.9f)) + 1;
-    func_L00_001FF328(d, d, func_001FA888(n));
+    func_L00_001FF328(d, d, IntToFloat(n));
     qcopy(pos, v);
     for (i = 0; i < n; i++) {
         q = D_L00_00173F70;

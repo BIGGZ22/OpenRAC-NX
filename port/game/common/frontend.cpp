@@ -14,7 +14,9 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <filesystem>
 #include <format>
+#include <fstream>
 #include <chrono>
 #include <thread>
 #include <unordered_map>
@@ -1005,6 +1007,107 @@ void set_window_icon(platform::Window& window) {
     stbi_image_free(rgba);
 }
 
+#if defined(__linux__) || defined(__FreeBSD__)
+static bool write_file_if_changed(const std::filesystem::path& path, const void* data, std::size_t size) {
+    std::error_code ec;
+    if (std::filesystem::exists(path, ec) && std::filesystem::file_size(path, ec) == size) {
+        std::ifstream current(path, std::ios::binary);
+        if (current) {
+            std::vector<char> buffer(size);
+            if (current.read(buffer.data(), static_cast<std::streamsize>(size))) {
+                if (std::memcmp(buffer.data(), data, size) == 0) {
+                    return false;
+                }
+            }
+        }
+    }
+    std::filesystem::create_directories(path.parent_path(), ec);
+    std::ofstream out(path, std::ios::binary | std::ios::trunc);
+    if (!out) {
+        return false;
+    }
+    out.write(reinterpret_cast<const char*>(data), static_cast<std::streamsize>(size));
+    return out.good();
+}
+
+static void ensure_linux_desktop_integration(const std::string& game_id) {
+    const char* home = std::getenv("HOME");
+    if (home == nullptr || home[0] == '\0') {
+        return;
+    }
+    const std::filesystem::path home_path = home;
+    const std::filesystem::path icons_base = home_path / ".local/share/icons/hicolor";
+    const std::filesystem::path app_dir = home_path / ".local/share/applications";
+
+    bool icons_changed = false;
+    bool entries_changed = false;
+
+    // The game's icon for the desktop and taskbar (KDE Plasma, GNOME, etc.).
+    // Wayland compositors identify windows by their app_id (dev.openrac.<game_id>)
+    // and match them against .desktop files in ~/.local/share/applications/ and
+    // icons in ~/.local/share/icons/hicolor/.
+    const std::filesystem::path icon_dir = icons_base / "512x512/apps";
+    const std::string app_id = "dev.openrac." + game_id;
+    const std::string prog_id = "openrac-" + game_id;
+
+    if (openrac_icon_png_size > 0) {
+        icons_changed |= write_file_if_changed(icon_dir / (app_id + ".png"), openrac_icon_png, openrac_icon_png_size);
+        icons_changed |= write_file_if_changed(icon_dir / (prog_id + ".png"), openrac_icon_png, openrac_icon_png_size);
+    }
+
+    // Resolve current executable path for desktop entry.
+    std::error_code ec;
+    std::filesystem::path exe_path = std::filesystem::canonical("/proc/self/exe", ec);
+    if (ec || exe_path.empty()) {
+        exe_path = prog_id;
+    }
+
+    const auto make_entry = [&](const std::string& wm_class, bool hidden) {
+        std::string entry = "[Desktop Entry]\n";
+        entry += "Type=Application\n";
+        entry += "Name=";
+        entry += OPENRAC_GAME_TITLE;
+        entry += "\nComment=Play ";
+        entry += OPENRAC_GAME_TITLE;
+        entry += " with OpenRAC\n";
+        entry += "Exec=\"";
+        entry += exe_path.string();
+        entry += "\"\n";
+        entry += "Icon=" + app_id + "\n";
+        entry += "Terminal=false\n";
+        entry += "Categories=Game;\n";
+        entry += "StartupNotify=true\n";
+        entry += "StartupWMClass=" + wm_class + "\n";
+        if (hidden) {
+            entry += "NoDisplay=true\n";
+        }
+        return entry;
+    };
+
+    const std::string dev_entry = make_entry(app_id, false);
+    const std::string prog_entry = make_entry(prog_id, true);
+
+    entries_changed |= write_file_if_changed(app_dir / (app_id + ".desktop"), dev_entry.data(), dev_entry.size());
+    entries_changed |= write_file_if_changed(app_dir / (prog_id + ".desktop"), prog_entry.data(), prog_entry.size());
+
+    // Refresh system caches if files were added or modified
+    if (icons_changed) {
+        if (std::system(nullptr)) {
+            std::string cmd = "gtk-update-icon-cache -f -t \"" + icons_base.string() + "\" >/dev/null 2>&1 &";
+            (void)std::system(cmd.c_str());
+        }
+    }
+    if (entries_changed || icons_changed) {
+        if (std::system(nullptr)) {
+            std::string cmd1 = "update-desktop-database \"" + app_dir.string() + "\" >/dev/null 2>&1 &";
+            (void)std::system(cmd1.c_str());
+            std::string cmd2 = "kbuildsycoca6 >/dev/null 2>&1 &";
+            (void)std::system(cmd2.c_str());
+        }
+    }
+}
+#endif
+
 bool open(const std::string& game_id, const std::filesystem::path& levels, std::string& error) {
     g = std::make_unique<State>();
     g->game = game_id;
@@ -1012,6 +1115,9 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
     // Before SDL starts: on Wayland the app id names the program to the desktop, and a machine
     // with two graphics cards is asked for the fast one.
     const std::string app_id = "dev.openrac." + game_id;
+#if defined(__linux__) || defined(__FreeBSD__)
+    ensure_linux_desktop_integration(game_id);
+#endif
     platform::set_app_metadata(OPENRAC_GAME_TITLE, app_id.c_str());
     platform::prefer_discrete_gpu();
     platform::prepare_gpu_driver();
@@ -1050,6 +1156,9 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
     // few frames a second, which looks like a broken port (OPENRAC_SOFTWARE_GL=1: run it anyway).
     config.software = std::getenv("OPENRAC_SOFTWARE_GL") != nullptr ? platform::SoftwareRenderer::Allow
                                                                     : platform::SoftwareRenderer::Refuse;
+    // OPENRAC_HIDDEN=1: the window is made and drawn as always but never shown, for scripted runs
+    // that should not open windows on the player's screen (several can run at once).
+    config.hidden = std::getenv("OPENRAC_HIDDEN") != nullptr;
     g->window = platform::Window::open(config, error);
     if (!g->window) {
         return false;

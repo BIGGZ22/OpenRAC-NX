@@ -92,6 +92,7 @@ jobs:
               launcher/target/release/bundle/msi/*.msi
               launcher/target/release/bundle/nsis/*.zip
               launcher/target/release/bundle/nsis/*.sig
+              launcher/target/release/bundle/msi/*.sig
           # Ubuntu 22.04, the oldest the runners offer, with LLVM's compiler and its C++ library
           # built into the game: the game then needs only the system's C library, glibc 2.35 or
           # later (Ubuntu 22.04, Debian 12, Linux Mint 21, Fedora 36, SteamOS), and the launcher
@@ -104,7 +105,9 @@ jobs:
             tauri: build --bundles deb,rpm,appimage
             files: &linux-files |
               launcher/target/release/bundle/deb/*.deb
+              launcher/target/release/bundle/deb/*.sig
               launcher/target/release/bundle/rpm/*.rpm
+              launcher/target/release/bundle/rpm/*.sig
               launcher/target/release/bundle/appimage/*.AppImage
               launcher/target/release/bundle/appimage/*.tar.gz
               launcher/target/release/bundle/appimage/*.sig
@@ -122,7 +125,9 @@ jobs:
             python: x86_64-unknown-linux-gnu
             python_sha256: ffa8f85f1b56e88b687f08d743d817015524b86a9365fd921243132b80f1a36d
             tauri: build --bundles rpm
-            files: launcher/target/release/bundle/rpm/*.rpm
+            files: |
+              launcher/target/release/bundle/rpm/*.rpm
+              launcher/target/release/bundle/rpm/*.sig
           # One launcher for Apple silicon and Intel; the game is Apple silicon's (an Intel Mac's
           # launcher finds no game it can run in its copy and works on a checkout).
           - name: macos
@@ -402,7 +407,9 @@ jobs:
       - name: The installer's name (Fedora)
         if: matrix.name == 'fedora'
         working-directory: launcher
-        run: for f in target/release/bundle/rpm/*.x86_64.rpm; do mv "$f" "${f%.x86_64.rpm}.fc44.x86_64.rpm"; done
+        run: |
+          for f in target/release/bundle/rpm/*.x86_64.rpm; do mv "$f" "${f%.x86_64.rpm}.fc44.x86_64.rpm"; done
+          for f in target/release/bundle/rpm/*.x86_64.rpm.sig; do mv "$f" "${f%.x86_64.rpm.sig}.fc44.x86_64.rpm.sig"; done
 
       # Named as the desktop installers are, and checked: the game's activity, SDL's and the
       # libraries the programs need are in it. Signed for the launcher's updater when the key is

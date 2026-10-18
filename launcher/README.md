@@ -108,6 +108,14 @@ the disc image and saves are kept.
   marks the game's tile. **Detailed logs** makes the game write more, for
   when we ask for it.
 - **Level editor**: under **Mods** (below), and in the game's menu.
+- **Two discs of a game, for developers**: with developer tools on and both
+  a game's PAL and NTSC-U images in the games folder, a small **Disc** switch
+  under Play picks which one the page plays; Play, the levels, saves, logs and
+  crash reports follow it, and the choice is remembered. Each disc keeps its
+  own set-up, levels and build: switching moves the other's set-up aside
+  (`iso_data/<game>@<version>`), never reads it again or deletes it
+  ([core/src/disc_choice.rs](core/src/disc_choice.rs)). Players never see it,
+  and with one disc nothing changes.
 - **Layout**: Settings → Launcher switches between Compact (the default:
   the game's name and its main button side by side) and Classic, stacked and
   centred. Compact is one stylesheet, `src/layouts/compact.css`.
@@ -203,7 +211,8 @@ launcher/
   `%APPDATA%\dev.openrac.launcher\` on Windows). Settings shows the path.
 - **Games set up from discs**: the install folder (Settings; by default the
   launcher's per-user data folder), `active/<game>/data/`, as OpenGOAL lays
-  it out. The game writes its logs there (`openrac-<id>.log` and the five
+  it out (a developer's other disc of the same game waits beside it as
+  `iso_data/<game>@<version>`). The game writes its logs there (`openrac-<id>.log` and the five
   before it) and its crash reports (`crashes/`).
 - **Its own log**: `launcher.log` beside `launcher.json`: when it started,
   each command it ran and how it ended; moved to `launcher.1.log` past 1 MB.

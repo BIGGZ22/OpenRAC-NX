@@ -16,3 +16,5 @@ src/overlays/shared/vendor_002E9D78.c        -fno-schedule-insns
 src/overlays/shared/help_00203E98.c    -fno-sched-interblock
 src/overlays/shared/hud_00235960.c -fno-sched-interblock
 src/overlays/l12_hoven/vendor_002EDAA0.c -fno-sched-interblock
+src/game/framebuf.c -fno-rerun-loop-opt
+src/overlays/shared/fastfunc_001FEF78.c -fno-rerun-loop-opt

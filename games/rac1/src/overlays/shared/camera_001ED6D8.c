@@ -31,7 +31,7 @@ extern void func_001F9BC0(void *);
 extern void func_L00_001ED600(void);
 
 /* Initialises the camera slot tables and the camera state from the hero's transform. */
-void func_L00_001ED6D8(void) {
+void Camera_InitSlots(void) {
     char *g = (char *)&D_L00_00166D80;
     char *g1;
     char *q;
@@ -99,11 +99,11 @@ void func_L00_001ED6D8(void) {
             h = *(unsigned short *)(e + 0xC);
             D_L00_00169990[i] = 1;
             el->s86 = h;
-            el->s8C = func_L00_001ED5B0((short)h);
+            el->s8C = Camera_FindTypeIndex((short)h);
             i++;
         } while (i < D_L00_0015F054);
     }
-    func_L00_001ED600();
+    CameraResetBehindHero();
     *(short *)D_L00_00166FF0 = 0;
     {
         int *q = (int *)(D_L00_00166FF0 + 0x110);

@@ -91,7 +91,7 @@ extern char *D_L05_00160098 MACRO_ADDR;
 extern unsigned char D_0013D355[];
 
 /* Puts the hero into move state A (with its animation when B is set); returns 0 when the change is refused (level 05 build). */
-int func_L05_0024D680(int a, int b) {
+int Hero_TryMoveStateL05(int a, int b) {
     int old2088;
     char *moby;
     int old20A7;
@@ -127,19 +127,19 @@ int func_L05_0024D680(int a, int b) {
             *(unsigned char *)(p + 0x20B2) = 0;
             *(unsigned char *)(p + 0x20AF) = 0;
             *(short *)(p + 0x22E0) = 0;
-            func_L00_002638B8(p + 0x1670);
+            DeleteOwnedMobys(p + 0x1670);
         }
         if (*(unsigned char *)(p + 0x20A4) == 3) {
             int s = *(int *)(p + 0x2084);
             if (!(s >= 0x53 && s <= 0x59) && !(s >= 0x65 && s <= 0x67) && s != 0 && s != 1) {
-                func_L00_0020BFA8();
+                ResetHelpStateIfMode3();
                 *(int *)(p + 0x2084) = a;
             }
         }
     }
     {
         char *p = D_0013E633 + 0xE1D;
-        func_L00_0020E9F8(*(int *)(p + 0x2090), *(int *)(p + 0x2084));
+        SpawnHelpMarkers(*(int *)(p + 0x2090), *(int *)(p + 0x2084));
         *(int *)(p + 0xFF8) = 0;
     }
     switch (a) {
@@ -155,7 +155,7 @@ int func_L05_0024D680(int a, int b) {
         }
         qcopy(p + 0x150, p + 0x110);
         if (*(unsigned char *)(p + 0x12EA) != 0 && *(short *)(p + 0x30C) == 0) {
-            func_L05_0024D680(0x79, 1);
+            Hero_TryMoveStateL05(0x79, 1);
             return 0;
         }
         {
@@ -163,10 +163,10 @@ int func_L05_0024D680(int a, int b) {
             *(int *)(q + 0xFF8) = 0x68;
         }
         if (b) {
-            if (func_L01_002274A8(0) == 0x54) {
-                func_L00_00232C10(func_L01_002274A8(0), 0, (float)scale_ticks(0x12));
+            if (Help_GetRecordValue(0) == 0x54) {
+                HeroStartAnim(Help_GetRecordValue(0), 0, (float)scale_ticks(0x12));
             } else {
-                func_L00_00232C10(func_L01_002274A8(0), 0, -1.0f);
+                HeroStartAnim(Help_GetRecordValue(0), 0, -1.0f);
             }
         }
         break;
@@ -178,21 +178,21 @@ int func_L05_0024D680(int a, int b) {
         clear_u64_value(p + 0x150);
         *(int *)(p + 0xFF8) = 0x68;
         if (b) {
-            if (func_L01_002274A8(0) == 0x54) {
-                func_L00_00232C10(func_L01_002274A8(0), 0, (float)scale_ticks(0x12));
+            if (Help_GetRecordValue(0) == 0x54) {
+                HeroStartAnim(Help_GetRecordValue(0), 0, (float)scale_ticks(0x12));
             } else {
-                func_L00_00232C10(func_L01_002274A8(0), 0, -1.0f);
+                HeroStartAnim(Help_GetRecordValue(0), 0, -1.0f);
             }
         }
         break;
     }
     case 0x41: {
         int t = scale_ticks(9);
-        func_L00_00232C10(func_L01_002274A8(0), 0, (float)t);
+        HeroStartAnim(Help_GetRecordValue(0), 0, (float)t);
         {
             char *p = D_0013E633 + 0xE1D;
             if (*(void **)(p + 0x1614) != 0) {
-                func_00213DE0(*(void **)(p + 0x1614), 0, 0, t);
+                MobyBlendAnimation(*(void **)(p + 0x1614), 0, 0, t);
             }
         }
         break;
@@ -202,7 +202,7 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x208C) = 0x14;
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0x150, p + 0x110);
-        if (b) func_L00_00232C10(0x45, 0, (float)scale_ticks(0xC));
+        if (b) HeroStartAnim(0x45, 0, (float)scale_ticks(0xC));
         break;
     }
     case 0x80: {
@@ -211,8 +211,8 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x2284) = 0;
         *(int *)(p + 0x22A8) = 0;
         qcopy(p + 0x150, p + 0x110);
-        func_L00_002607A8(p + 0x150, D_0015EE6C * 3.5f);
-        if (b) func_L00_00232C10(0x7C, 0, (float)scale_ticks(0xC));
+        ClampVectorLength(p + 0x150, D_0015EE6C * 3.5f);
+        if (b) HeroStartAnim(0x7C, 0, (float)scale_ticks(0xC));
         break;
     }
     case 0x7F: {
@@ -226,7 +226,7 @@ int func_L05_0024D680(int a, int b) {
         *(unsigned char *)(p + 0x20A7) = 1;
         *(int *)(p + 0x6A0) = 0;
         *(float *)(p + 0x690) = *(float *)(p + 0x88) - *(float *)(p + 0x69C);
-        if (b) func_L00_00232C10(0x74, 0, (float)scale_ticks(0xB));
+        if (b) HeroStartAnim(0x74, 0, (float)scale_ticks(0xB));
         break;
     }
     case 0x33: {
@@ -236,7 +236,7 @@ int func_L05_0024D680(int a, int b) {
         *(unsigned char *)(p + 0x20A7) = 1;
         *(int *)(p + 0x8FC) = 0;
         if (*(int *)(p + 0x2094) == 0x12) {
-            func_L00_00217570(3, 0);
+            Hero_PlayActiveSound(3, 0);
             *(int *)(p + 0x2088) = 1;
         } else {
             *(int *)(p + 0x8F4) = scale_ticks(0x2D);
@@ -247,7 +247,7 @@ int func_L05_0024D680(int a, int b) {
             *(int *)(q + 0xFF8) = 0x68;
             *(int *)(q + 0x8E0) = 0;
             n = scale_ticks(0xC);
-            if (b) func_L00_00232C10(0x3B, 0, (float)n);
+            if (b) HeroStartAnim(0x3B, 0, (float)n);
         }
         break;
     }
@@ -259,14 +259,14 @@ int func_L05_0024D680(int a, int b) {
         *(unsigned char *)(p + 0x20A7) = 1;
         *(int *)(p + 0x8F4) = scale_ticks(0x3C);
         if (*(int *)(p + 0x2094) == 0x12) {
-            func_L00_00217570(3, 0);
+            Hero_PlayActiveSound(3, 0);
             *(int *)(p + 0x2088) = 1;
         }
         *(int *)(p + 0x8E0) = 0;
         *(int *)(p + 0xFF8) = 0x68;
         n = scale_ticks(0xB);
         if (*(int *)(p + 0x2090) == 0x33) n = scale_ticks(0xF);
-        if (b) func_L00_00232C10(0x3D, 0, (float)n);
+        if (b) HeroStartAnim(0x3D, 0, (float)n);
         break;
     }
     case 0x34: {
@@ -281,7 +281,7 @@ int func_L05_0024D680(int a, int b) {
         n = scale_ticks(0x23);
         t = -2;
         if (*(int *)(p + 0x2090) != 0x35) t = n;
-        if (b) func_L00_00232C10(0x3C, 0, (float)t);
+        if (b) HeroStartAnim(0x3C, 0, (float)t);
         break;
     }
     case 0x37: {
@@ -291,17 +291,17 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x2284) = 0;
         *(short *)(p + 0x90A) = 0;
         if (*(int *)(p + 0x2094) == 0x11) {
-            func_L00_0020A320(3, 0xA, 0);
+            HeroKickUpDust(3, 0xA, 0);
             if (D_L05_00161390 != 0) {
-                func_L00_002A5158(D_L05_00161390, D_L05_00161398, 0, *(float *)(p + 0x80), *(float *)(p + 0x84), 0.4f, 0.3f);
+                RippleDisturb(D_L05_00161390, D_L05_00161398, 0, *(float *)(p + 0x80), *(float *)(p + 0x84), 0.4f, 0.3f);
             }
         } else if (*(float *)(p + 0x108) < D_0015EE6C * -0.5f) {
             int n = truncate_float_to_s32(FastAbsF(*(float *)(p + 0x108)) * 300.0f);
             int v = n;
             if (n > 0x28) v = 0x28;
-            func_L00_0020A320(3, v, 1);
+            HeroKickUpDust(3, v, 1);
             if (D_L05_00161390 != 0) {
-                func_L00_002A5158(D_L05_00161390, D_L05_00161398, 0, *(float *)(p + 0x80), *(float *)(p + 0x84), 0.5f, -0.4f);
+                RippleDisturb(D_L05_00161390, D_L05_00161398, 0, *(float *)(p + 0x80), *(float *)(p + 0x84), 0.5f, -0.4f);
             }
             *(short *)(p + 0x90A) = scale_ticks(0x4B);
         }
@@ -311,18 +311,18 @@ int func_L05_0024D680(int a, int b) {
             if (*(int *)(q + 0x2094) == 0x11) {
                 float d = (float)*(int *)(q + 0x22A0);
                 if (d < 2500.0f) {
-                    func_L00_00217648(8, scale_ticks(0x1E), 0);
+                    Help_QueueAdd(8, scale_ticks(0x1E), 0);
                 } else if (d < 7500.0f) {
-                    func_L00_00217648(7, scale_ticks(0x1B), 0);
+                    Help_QueueAdd(7, scale_ticks(0x1B), 0);
                 }
                 {
                     char *r = D_0013E633 + 0xE1D;
                     if (*(int *)(r + 0x2094) == 0x11) {
                         float e = (float)*(int *)(r + 0x22A0);
                         if (e < 2500.0f) {
-                            func_L00_00217648(8, scale_ticks(0x1E), 0);
+                            Help_QueueAdd(8, scale_ticks(0x1E), 0);
                         } else if (e < 7500.0f) {
-                            func_L00_00217648(7, scale_ticks(0x28), 0);
+                            Help_QueueAdd(7, scale_ticks(0x28), 0);
                         }
                     }
                 }
@@ -337,9 +337,9 @@ int func_L05_0024D680(int a, int b) {
             *(float *)(s + 0x690) = *(float *)(s + 0x88) - *(float *)(s + 0x69C) - -0.12f;
             qcopy(s + 0x150, s + 0x110);
             *(float *)(s + 0x158) = 0.0f;
-            func_L00_002607A8(s + 0x150, D_0015EE6C * 5.5f);
+            ClampVectorLength(s + 0x150, D_0015EE6C * 5.5f);
             *(int *)(s + 0xFF8) = 0x68;
-            if (b) func_L00_00232C10(0x3A, 0, (float)scale_ticks(0x16));
+            if (b) HeroStartAnim(0x3A, 0, (float)scale_ticks(0x16));
         }
         break;
     }
@@ -349,14 +349,14 @@ int func_L05_0024D680(int a, int b) {
         char *r;
         *(int *)(p + 0x208C) = 7;
         *(int *)(p + 0x2284) = 0;
-        func_L00_002144A0(0.5f);
+        Hero_ScaleMotion(0.5f);
         *(unsigned char *)(p + 0x20A7) = 1;
         qcopy(p + 0xE0, p + 0x100);
-        r = func_L00_0025B478(*(void **)(p + 0x2080), 1, 0);
+        r = MobyGetHitMessage(*(void **)(p + 0x2080), 1, 0);
         if (r != 0) {
-            func_L00_002056D8(truncate_float_to_s32(*(float *)(r + 0x2C)));
+            Hero_TakeDamage(truncate_float_to_s32(*(float *)(r + 0x2C)));
         } else {
-            func_L00_002056D8(1);
+            Hero_TakeDamage(1);
         }
         {
             int t = scale_ticks(0x4D);
@@ -364,9 +364,9 @@ int func_L05_0024D680(int a, int b) {
             *(int *)(q + 0x1C0) = t;
             if (b) {
                 if (*(int *)(q + 0x2084) == 0x75) {
-                    func_L00_00232C10(0x70, 3, -3.0f);
+                    HeroStartAnim(0x70, 3, -3.0f);
                 } else {
-                    func_L00_00232C10(0x6F, 3, -3.0f);
+                    HeroStartAnim(0x6F, 3, -3.0f);
                 }
                 {
                     char *w = D_0013E633 + 0xE1D;
@@ -384,7 +384,7 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x8FC) = 0;
         *(int *)(p + 0x698) = scale_ticks(0x2D);
         *(int *)(p + 0xFF8) = 0x68;
-        if (b) func_L00_00232C10(0x65, 0, (float)scale_ticks(0x11));
+        if (b) HeroStartAnim(0x65, 0, (float)scale_ticks(0x11));
         break;
     }
     case 0x6A: {
@@ -423,7 +423,7 @@ int func_L05_0024D680(int a, int b) {
             v = D_0013E633 + 0xF6D;
             qcopy(v, v - 0x40);
         }
-        if (b) func_L00_00232C10(0x5F, 0, (float)scale_ticks(0xA));
+        if (b) HeroStartAnim(0x5F, 0, (float)scale_ticks(0xA));
         break;
     }
     case 0x82: {
@@ -433,7 +433,7 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x2284) = 0;
         *(int *)(p + 0x22A8) = 0;
         qcopy(p + 0x150, p + 0x110);
-        if (b) func_L00_00232C10(0x80, 0, (float)scale_ticks(0xA));
+        if (b) HeroStartAnim(0x80, 0, (float)scale_ticks(0xA));
         break;
     }
     case 0x6B: {
@@ -447,7 +447,7 @@ int func_L05_0024D680(int a, int b) {
         if (*(int *)(p + 0x2090) == 0x6D || *(int *)(p + 0x2090) == 0x6F || *(int *)(p + 0x2090) == 0x6E) {
             char *r = D_0013E633 + 0xE1D;
             if (*(void **)(r + 0x8B4) != 0) {
-                int n = func_L01_0028C2D8(r + 0x80, *(void **)(r + 0x8B4), 0.0f);
+                int n = FindClosestDistanceEntry(r + 0x80, *(void **)(r + 0x8B4), 0.0f);
                 if (n < *(short *)(r + 0x898)) *(short *)(r + 0x898) = n;
             }
             {
@@ -478,12 +478,12 @@ int func_L05_0024D680(int a, int b) {
                 *(float *)(q + 0x87C) = 1.2217305f;
                 *(int *)(q + 0x880) = -1;
                 if (D_0013D355[0x13B] != 0) {
-                    func_L05_00264C88();
-                    *(int *)(q + 0x880) = queue_animation_update(0x10, 0xFFFF, (int)func_L05_00263490, (int)func_L05_00263500, (int)func_L05_002638F8, (int)(q + 0x864), (int)((float)scale_ticks(0x11) * 60.0f));
+                    Hud_ReleaseHeldElement();
+                    *(int *)(q + 0x880) = queue_animation_update(0x10, 0xFFFF, (int)func_L05_00263490, (int)ChallengeHudUpdate, (int)ChallengeHudDraw, (int)(q + 0x864), (int)((float)scale_ticks(0x11) * 60.0f));
                 }
                 *(float *)(q + 0x874) = *(float *)(q + 0x98);
-                queue_animation_update(5, 0xFFFF, (int)func_L05_00266B90, (int)func_L05_00266BD8, (int)func_L05_00266D10, 0, 0);
-                queue_animation_update(7, 0xFFFF, (int)func_L05_00266B90, (int)func_L05_00266BD8, (int)func_L05_002670A0, 0, 0);
+                queue_animation_update(5, 0xFFFF, (int)HudElementInit, (int)func_L05_00266BD8, (int)func_L05_00266D10, 0, 0);
+                queue_animation_update(7, 0xFFFF, (int)HudElementInit, (int)func_L05_00266BD8, (int)RaceTimerHudDraw, 0, 0);
             } else {
                 *(float *)(q + 0x854) = -FastVecDot(q + 0x290, q + 0x100);
             }
@@ -491,9 +491,9 @@ int func_L05_0024D680(int a, int b) {
         if (b) {
             char *t = D_0013E633 + 0xE1D;
             if (*(unsigned char *)(t + 0x8CE) != 0) {
-                func_L00_00232C10(0x7D, 0, (float)scale_ticks(5));
+                HeroStartAnim(0x7D, 0, (float)scale_ticks(5));
             } else {
-                func_L00_00232C10(0x52, 0, (float)scale_ticks(5));
+                HeroStartAnim(0x52, 0, (float)scale_ticks(5));
             }
         }
         break;
@@ -504,18 +504,18 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x2284) = 8;
         *(unsigned char *)(p + 0x20A7) = 1;
         *(int *)(p + 0x870) = 0;
-        if (b) func_L00_00232C10(func_L05_002559A0(), 5, (float)scale_ticks(8));
+        if (b) HeroStartAnim(Hero_GetHelpAnimId(), 5, (float)scale_ticks(8));
         break;
     }
     case 0x6D: {
         char *p = D_0013E633 + 0xE1D;
         *(unsigned char *)(p + 0x20A7) = 1;
         *(int *)(p + 0x2284) = 0;
-        func_L00_00207220();
+        HeroClearSoundSlots();
         *(int *)(p + 0x8C4) = 0;
         FastVecScale(p + 0xE0, p + 0x110, 0.7f);
         *(float *)(p + 0xE8) = D_0015EE6C * 10.0f;
-        func_L00_00232C10(0x61, 3, (float)scale_ticks(4));
+        HeroStartAnim(0x61, 3, (float)scale_ticks(4));
         break;
     }
     case 0x6E: {
@@ -524,15 +524,15 @@ int func_L05_0024D680(int a, int b) {
         int v;
         *(unsigned char *)(p + 0x20A7) = 1;
         *(int *)(p + 0x2284) = 0;
-        func_L00_00207220();
+        HeroClearSoundSlots();
         *(int *)(p + 0x8C4) = 0;
         *(short *)(p + 0x8BE) = scale_ticks(0x46);
         *(float *)(p + 0x2F0) = *(float *)(p + 0x8A0);
         n = truncate_float_to_s32(FastAbsF(*(float *)(p + 0x108)) * 300.0f);
         v = n;
         if (n > 0x28) v = 0x28;
-        func_L00_0020A320(3, v, 1);
-        func_L00_00217570(3, 0);
+        HeroKickUpDust(3, v, 1);
+        Hero_PlayActiveSound(3, 0);
         *(short *)(p + 0x90A) = scale_ticks(0x4B);
         *(float *)(p + 0x694) = *(float *)(p + 0x108) * 0.3f;
         if (*(float *)(p + 0x694) < D_0015EE6C * -5.7f) *(float *)(p + 0x694) = D_0015EE6C * -5.7f;
@@ -550,10 +550,10 @@ int func_L05_0024D680(int a, int b) {
             clear_u64_value(v2);
             w = v2 + 0x70;
             qcopy(w, v2 + 0x30);
-            func_L00_00234150((float *)w, (float *)w);
-            func_L00_002607A8(w, D_0015EE6C * 9.5f);
+            HeroRemoveNormalComponent((float *)w, (float *)w);
+            ClampVectorLength(w, D_0015EE6C * 9.5f);
             *(int *)(v2 + 0xF18) = 0x68;
-            if (b) func_L00_00232C10(0x3A, 0, (float)scale_ticks(0x11));
+            if (b) HeroStartAnim(0x3A, 0, (float)scale_ticks(0x11));
         }
         break;
     }
@@ -561,31 +561,31 @@ int func_L05_0024D680(int a, int b) {
         char *p = D_0013E633 + 0xE1D;
         *(unsigned char *)(p + 0x20A7) = 1;
         *(int *)(p + 0x2284) = 0;
-        func_L00_00207220();
+        HeroClearSoundSlots();
         *(int *)(p + 0x8C4) = 0;
         *(int *)(p + 0xFF8) = 0x68;
-        if (b) func_L00_00232C10(0x62, 4, (float)scale_ticks(4));
+        if (b) HeroStartAnim(0x62, 4, (float)scale_ticks(4));
         break;
     }
     case 0x38: {
         char *p = D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 0x13;
         *(int *)(p + 0x2284) = 0;
-        if (b) func_L00_00232C10(0x46, 0, (float)scale_ticks(8));
+        if (b) HeroStartAnim(0x46, 0, (float)scale_ticks(8));
         break;
     }
     case 0x39: {
         char *p = D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 0x13;
         *(int *)(p + 0x2284) = 0;
-        if (b) func_L00_00232C10(0x47, 0, (float)scale_ticks(8));
+        if (b) HeroStartAnim(0x47, 0, (float)scale_ticks(8));
         break;
     }
     case 0x3A: {
         char *p = D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 0x13;
         *(int *)(p + 0x2284) = 0;
-        if (b) func_L00_00232C10(0x48, 0, (float)scale_ticks(8));
+        if (b) HeroStartAnim(0x48, 0, (float)scale_ticks(8));
         break;
     }
     case 1: {
@@ -595,9 +595,9 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x2284) = 4;
         *(int *)&D_L05_0015F768 = scale_ticks(0x3C);
         if (*(unsigned char *)(p + 0x20AA) == 0) {
-            t = func_L01_002274A8(1);
+            t = Help_GetRecordValue(1);
             if (*(unsigned char *)(*(char **)(p + 0x2080) + 0x53) != t && b) {
-                func_L00_00232C10(t, 0, (float)scale_ticks(0x12));
+                HeroStartAnim(t, 0, (float)scale_ticks(0x12));
             }
         }
         break;
@@ -607,7 +607,7 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x208C) = 8;
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0x150, p + 0x100);
-        func_L00_00232C10(func_L01_002274A8(0), 0, (float)scale_ticks(0xA));
+        HeroStartAnim(Help_GetRecordValue(0), 0, (float)scale_ticks(0xA));
         *(int *)(p + 0x1D0) = scale_ticks(7);
         break;
     }
@@ -616,7 +616,7 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x208C) = 8;
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0x150, p + 0x100);
-        func_L00_00232C10(func_L01_002274A8(0), 0, (float)scale_ticks(5));
+        HeroStartAnim(Help_GetRecordValue(0), 0, (float)scale_ticks(5));
         *(int *)(p + 0x1D0) = scale_ticks(7);
         break;
     }
@@ -628,7 +628,7 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x2088) = 0;
         *(short *)(p + 0x3B8) = 0;
         *(short *)(p + 0x3BC) = 0;
-        func_L00_00232C10(0x2E, 0, (float)scale_ticks(5));
+        HeroStartAnim(0x2E, 0, (float)scale_ticks(5));
         break;
     }
     case 2:
@@ -644,7 +644,7 @@ int func_L05_0024D680(int a, int b) {
             char *q = D_0013E633 + 0xE1D;
             if (D_0015EE6C * 7.0f < *(float *)(q + 0x194)) *(float *)(q + 0x194) = D_0015EE6C * 7.0f;
             *(short *)(q + 0x3BE) = 0;
-            func_L00_00211F80(1.0f, 0);
+            Hero_SetHeadingFromStick(1.0f, 0);
             if (1.5707964f < FastDiffRots(*(float *)(q + 0x98), *(float *)(q + 0x180))) {
                 if (*(int *)(q + 0x2094) == 7 || *(int *)(q + 0x2090) == 3 || *(int *)(q + 0x209C) == 3) {
                     char *r = D_0013E633 + 0xE1D;
@@ -656,7 +656,7 @@ int func_L05_0024D680(int a, int b) {
             char *s = D_0013E633 + 0xE1D;
             *(int *)(s + 0xFF8) = 0x68;
             if (*(unsigned char *)(s + 0x12EA) != 0 && *(short *)(s + 0x30C) == 0) {
-                func_L05_0024D680(0x79, 1);
+                Hero_TryMoveStateL05(0x79, 1);
                 return 0;
             }
         }
@@ -664,7 +664,7 @@ int func_L05_0024D680(int a, int b) {
             char *t = D_0013E633 + 0xE1D;
             if (*(unsigned char *)(t + 0x20A9) != 0 || *(int *)(t + 0x2084) == 0x73) {
                 *(int *)(t + 0x2084) = 0x73;
-                func_L00_00232C10(0x60, 0, (float)scale_ticks(8));
+                HeroStartAnim(0x60, 0, (float)scale_ticks(8));
             } else {
                 int n;
                 *(int *)(t + 0x2088) = 0;
@@ -680,7 +680,7 @@ int func_L05_0024D680(int a, int b) {
                 }
                 if (b) {
                     char *v = D_0013E633 + 0xE1D;
-                    func_L00_00232C10(*(int *)(v + 0x2088) + 3, ((int *)&D_L05_0015F7C8)[*(int *)(v + 0x2088)], (float)n);
+                    HeroStartAnim(*(int *)(v + 0x2088) + 3, ((int *)&D_L05_0015F7C8)[*(int *)(v + 0x2088)], (float)n);
                 }
             }
         }
@@ -692,14 +692,14 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x2284) = 0;
         *(float *)(p + 0x194) = func_001F9CE8(p + 0x110);
         *(unsigned char *)(p + 0x20AC) = 1;
-        if (*(unsigned char *)(p + 0x20A4) == 0) func_L00_0020ED30();
+        if (*(unsigned char *)(p + 0x20A4) == 0) Hero_ClearPendingModuleAnim();
         if (b) {
             if (*(unsigned char *)(p + 0x20A4) == 3) {
-                func_L00_00232C10(1, 0, (float)scale_ticks(8));
+                HeroStartAnim(1, 0, (float)scale_ticks(8));
             } else if (*(unsigned char *)(p + 0x20A4) == 1) {
-                func_L00_00232C10(2, 0, (float)scale_ticks(8));
+                HeroStartAnim(2, 0, (float)scale_ticks(8));
             } else if (*(unsigned char *)(p + 0x20A4) == 0) {
-                func_L00_00232C10(*(int *)(p + 0x2088) + 3, ((int *)&D_L05_0015F7C8)[*(int *)(p + 0x2088)], (float)scale_ticks(8));
+                HeroStartAnim(*(int *)(p + 0x2088) + 3, ((int *)&D_L05_0015F7C8)[*(int *)(p + 0x2088)], (float)scale_ticks(8));
             }
         }
         break;
@@ -711,7 +711,7 @@ int func_L05_0024D680(int a, int b) {
         *(unsigned char *)(p + 0x20A7) = 1;
         FastMemSet(p + 0x9D0, 0, 0x20);
         qcopy(p + 0x150, p + 0x100);
-        if (b) func_L00_00232C10(0x64, 0, (float)scale_ticks(0xF));
+        if (b) HeroStartAnim(0x64, 0, (float)scale_ticks(0xF));
         break;
     }
     case 3: {
@@ -720,13 +720,13 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0x150, p + 0x110);
         if (*(unsigned char *)(p + 0x12EA) != 0 && *(short *)(p + 0x30C) == 0) {
-            func_L05_0024D680(0x79, 1);
+            Hero_TryMoveStateL05(0x79, 1);
             return 0;
         }
-        if (func_L00_0022A268()) return 0;
-        if (func_L01_002274A8(0) == 0x54) {
-            if (func_L05_0024D680(0, 0)) {
-                func_L00_00232C10(func_L01_002274A8(0), 0, (float)scale_ticks(0x12));
+        if (HeroStartPendingAction()) return 0;
+        if (Help_GetRecordValue(0) == 0x54) {
+            if (Hero_TryMoveStateL05(0, 0)) {
+                HeroStartAnim(Help_GetRecordValue(0), 0, (float)scale_ticks(0x12));
             }
             return 0;
         }
@@ -735,7 +735,7 @@ int func_L05_0024D680(int a, int b) {
             float d = *(float *)(q + 0xAA8);
             int id = 6;
             if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
-            func_L00_00232C10(id, 4, (float)scale_ticks(9));
+            HeroStartAnim(id, 4, (float)scale_ticks(9));
         }
         break;
     }
@@ -744,13 +744,13 @@ int func_L05_0024D680(int a, int b) {
         char *v = p + 0x110;
         *(int *)(p + 0x208C) = 1;
         *(int *)(p + 0x2284) = 0;
-        *(float *)(p + 0x194) = func_L00_00234250((float *)v);
+        *(float *)(p + 0x194) = ViewXyLength((float *)v);
         qcopy(p + 0x150, v);
         if (b) {
             int id = 6;
             float d = *(float *)(p + 0xAA8);
             if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
-            func_L00_00232C10(id, 4, (float)scale_ticks(9));
+            HeroStartAnim(id, 4, (float)scale_ticks(9));
         }
         break;
     }
@@ -761,22 +761,22 @@ int func_L05_0024D680(int a, int b) {
         *(float *)(p + 0x194) = func_001F9CE8(p + 0x110);
         if (D_0015EE6C * 7.0f < *(float *)(p + 0x194)) *(float *)(p + 0x194) = D_0015EE6C * 7.0f;
         if (*(unsigned char *)(p + 0x12EA) != 0 && *(short *)(p + 0x30C) == 0) {
-            func_L05_0024D680(0x79, 1);
+            Hero_TryMoveStateL05(0x79, 1);
             return 0;
         }
         {
             char *q = D_0013E633 + 0xE1D;
             *(int *)(q + 0xFF8) = 0x68;
             qcopy(q + 0x150, q + 0x110);
-            func_L00_002607A8(q + 0x150, D_0015EE6C * 7.0f);
-            if (D_0015EE6C * 3.5f < *(float *)(q + 0x168)) func_L00_00217570(0xC, 0);
+            ClampVectorLength(q + 0x150, D_0015EE6C * 7.0f);
+            if (D_0015EE6C * 3.5f < *(float *)(q + 0x168)) Hero_PlayActiveSound(0xC, 0);
             if (b) {
-                if (*(unsigned char *)(*(char **)(q + 0x2080) + 0x52) == func_L01_002274A8(0)) {
-                    func_L00_00232C10(0xD, 2, (float)scale_ticks(9));
+                if (*(unsigned char *)(*(char **)(q + 0x2080) + 0x52) == Help_GetRecordValue(0)) {
+                    HeroStartAnim(0xD, 2, (float)scale_ticks(9));
                 } else {
-                    func_L00_00232C10(0xD, 2, (float)scale_ticks(0xE));
+                    HeroStartAnim(0xD, 2, (float)scale_ticks(0xE));
                 }
-                func_L00_00232E60(3, 0x12);
+                HeroQueueSequence(3, 0x12);
             }
         }
         break;
@@ -797,8 +797,8 @@ int func_L05_0024D680(int a, int b) {
         }
         *(float *)(p + 0x180) = func_L00_001FF860(*(float *)(*(char **)(p + 0x964) + 0x10) - *(float *)(p + 0x80), *(float *)(*(char **)(p + 0x964) + 0x14) - *(float *)(p + 0x84));
         if (b) {
-            func_L00_00232C10(0x2F, 2, (float)scale_ticks(5));
-            func_L00_00232E60(0xA, 0xE);
+            HeroStartAnim(0x2F, 2, (float)scale_ticks(5));
+            HeroQueueSequence(0xA, 0xE);
         }
         break;
     }
@@ -809,7 +809,7 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x960) = 0;
         *(int *)(p + 0x974) = 0;
         *(unsigned char *)(p + 0x20AC) = 1;
-        if (b) func_L00_00232C10(0x30, 1, (float)scale_ticks(0xA));
+        if (b) HeroStartAnim(0x30, 1, (float)scale_ticks(0xA));
         break;
     }
     case 0x26: {
@@ -820,7 +820,7 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x960) = 0;
         *(int *)(p + 0x974) = 0;
         *(float *)(p + 0x97C) = FastVecDist(p + 0x80, *(char **)(p + 0x964) + 0x10);
-        if (b) func_L00_00232C10(0x30, 1, (float)scale_ticks(5));
+        if (b) HeroStartAnim(0x30, 1, (float)scale_ticks(5));
         break;
     }
     case 0x2C: {
@@ -872,7 +872,7 @@ int func_L05_0024D680(int a, int b) {
                 *(float *)(q + 0x9B0) = *(float *)(q + 0x940);
             }
             if (b) {
-                func_L00_00232C10(0x34, 0, (float)scale_ticks(0xB));
+                HeroStartAnim(0x34, 0, (float)scale_ticks(0xB));
                 {
                     char *r = D_0013E633 + 0xE1D;
                     *(float *)(r + 0xA90) = 0.7f;
@@ -887,7 +887,7 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x2284) = 7;
         clear_u64_value(p + 0xA0);
         qcopy(p + 0xE0, p + 0x110);
-        if (b) func_L00_00232C10(0xB, 0, (float)scale_ticks(0xF));
+        if (b) HeroStartAnim(0xB, 0, (float)scale_ticks(0xF));
         break;
     }
     case 0x22: {
@@ -898,7 +898,7 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x4B8) = 0;
         *(int *)(p + 0x4C4) = 0;
         *(float *)(p + 0x4B0) = D_0015EE70 * 100.0f;
-        if (b) func_L00_00232C10(0x2A, 0, (float)scale_ticks(6));
+        if (b) HeroStartAnim(0x2A, 0, (float)scale_ticks(6));
         break;
     }
     case 0x18: {
@@ -914,9 +914,9 @@ int func_L05_0024D680(int a, int b) {
         *(unsigned char *)(p + 0x20A7) = 1;
         if (b) {
             if (D_0015EE6C * 3.5f < *(float *)(p + 0x164)) {
-                func_L00_00232C10(0x20, 0, (float)scale_ticks(9));
+                HeroStartAnim(0x20, 0, (float)scale_ticks(9));
             } else {
-                func_L00_00232C10(0x20, 1, (float)(scale_ticks(9) + 2));
+                HeroStartAnim(0x20, 1, (float)(scale_ticks(9) + 2));
             }
         }
         break;
@@ -927,7 +927,7 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x2284) = 0xD;
         *(unsigned char *)(p + 0x20A7) = 1;
         *(int *)(p + 0xFF8) = 0x68;
-        if (b) func_L00_00232C10(0x21, 0, (float)scale_ticks(6));
+        if (b) HeroStartAnim(0x21, 0, (float)scale_ticks(6));
         break;
     }
     case 0x1A: {
@@ -935,7 +935,7 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x208C) = 3;
         *(int *)(p + 0x2284) = 0xD;
         *(unsigned char *)(p + 0x20A7) = 1;
-        if (b) func_L00_00232C10(0x24, 0, (float)scale_ticks(6));
+        if (b) HeroStartAnim(0x24, 0, (float)scale_ticks(6));
         break;
     }
     case 0x1B: {
@@ -943,7 +943,7 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x208C) = 3;
         *(int *)(p + 0x2284) = 0xD;
         *(unsigned char *)(p + 0x20A7) = 1;
-        if (b) func_L00_00232C10(0x25, 0, (float)scale_ticks(6));
+        if (b) HeroStartAnim(0x25, 0, (float)scale_ticks(6));
         break;
     }
     case 0x79: {
@@ -951,7 +951,7 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x208C) = 2;
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0xE0, p + 0x110);
-        if (b) func_L00_00232C10(0xB, 0, (float)scale_ticks(0xC));
+        if (b) HeroStartAnim(0xB, 0, (float)scale_ticks(0xC));
         break;
     }
     case 6:
@@ -963,7 +963,7 @@ int func_L05_0024D680(int a, int b) {
         *(float *)(p + 0x944) = D_0015EE70 * 7.0f;
         if (*(int *)(p + 0x2084) == 0x77) {
             if (*(unsigned char *)(p + 0x20A4) == 0) {
-                *(short *)(p + 0x22B2) = func_L00_00217570(0x17, 0x20);
+                *(short *)(p + 0x22B2) = Hero_PlayActiveSound(0x17, 0x20);
             }
             *(float *)(p + 0x950) = randf_sym(D_0015EE6C * 3.1415927f, D_0015EE6C * 4.3633232f);
             *(float *)(p + 0x954) = randf_sym(D_0015EE6C * 3.1415927f, D_0015EE6C * 4.3633232f);
@@ -975,14 +975,14 @@ int func_L05_0024D680(int a, int b) {
             qcopy(q + 0xE0, q + 0x110);
             if (b) {
                 if (*(unsigned char *)(q + 0x20A4) == 3) {
-                    func_L00_00232C10(6, 0, (float)scale_ticks(8));
+                    HeroStartAnim(6, 0, (float)scale_ticks(8));
                     return 1;
                 }
                 if (1.75f < *(float *)(q + 0x2DC)) {
-                    func_L00_00232C10(0xB, 0, (float)scale_ticks(0xC));
+                    HeroStartAnim(0xB, 0, (float)scale_ticks(0xC));
                     *(int *)(q + 0x2088) = 1;
                 } else {
-                    func_L00_00232C10(0xA, 0, (float)scale_ticks(0xA));
+                    HeroStartAnim(0xA, 0, (float)scale_ticks(0xA));
                 }
             }
         }
@@ -996,11 +996,11 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0xFF8) = 0x68;
         *(int *)(p + 0x2284) = 0;
         if (D_0015EE6C * 4.5f < *(float *)(p + 0x160)) {
-            func_L00_002144A0(D_0015EE6C * 4.5f / *(float *)(p + 0x160));
+            Hero_ScaleMotion(D_0015EE6C * 4.5f / *(float *)(p + 0x160));
         }
         qcopy(p + 0xE0, p + 0x110);
         if (b) {
-            func_L00_00232C10(0x13, 0, (float)t81);
+            HeroStartAnim(0x13, 0, (float)t81);
         }
         break;
     }
@@ -1011,11 +1011,11 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0xFF8) = 0x68;
         *(int *)(p + 0x2284) = 0;
         if (D_0015EE6C * 4.5f < *(float *)(p + 0x160)) {
-            func_L00_002144A0(D_0015EE6C * 4.5f / *(float *)(p + 0x160));
+            Hero_ScaleMotion(D_0015EE6C * 4.5f / *(float *)(p + 0x160));
         }
         qcopy(p + 0xE0, p + 0x100);
         if (b) {
-            func_L00_00232C10(0x13, 0, (float)t8);
+            HeroStartAnim(0x13, 0, (float)t8);
         }
         break;
     }
@@ -1058,13 +1058,13 @@ int func_L05_0024D680(int a, int b) {
             r = v - 0xE0;
             if (*(int *)(r + 0x2084) != 0x12) {
                 if (*(unsigned char *)(r + 0x12E4) != 0 && *(float *)(r + 0x88) < *(float *)(r + 0x2F0) + 0.5f) {
-                    func_L00_0020A320(3, 0x10, 0);
+                    HeroKickUpDust(3, 0x10, 0);
                 }
             }
         }
         {
             char *u = D_0013E633 + 0xE1D;
-            if (*(int *)(u + 0x2084) == 0x69) func_L00_00217570(0xA, 0);
+            if (*(int *)(u + 0x2084) == 0x69) Hero_PlayActiveSound(0xA, 0);
             *(float *)(u + 0x410) = *(float *)(u + 0x88);
             *(float *)(u + 0x4A0) = D_0015EE70 * 29.7f;
             *(int *)(u + 0x3E8) = -1;
@@ -1119,7 +1119,7 @@ int func_L05_0024D680(int a, int b) {
                     *(float *)(u + 0x48C) = 1.98f;
                     *(float *)(u + 0x430) = 1.95f;
                 } else {
-                    func_L00_002343A0((float *)(u + 0xE0), (float *)(u + 0xE0), 0.0f);
+                    HeroPlacePointZ((float *)(u + 0xE0), (float *)(u + 0xE0), 0.0f);
                     *(short *)(u + 0x41C) = 1;
                     *(int *)(u + 0x3D0) = scale_ticks(2);
                     *(int *)(u + 0x3D4) = scale_ticks(0x23) + *(int *)(u + 0x3D0);
@@ -1143,9 +1143,9 @@ int func_L05_0024D680(int a, int b) {
                 *(float *)(u + 0x488) = 5.5f;
                 *(short *)(u + 0x498) = scale_ticks(2);
                 *(short *)(u + 0x49A) = scale_ticks(0x78);
-                func_L00_002056D8(1);
+                Hero_TakeDamage(1);
                 if (D_0015EE84 == 0xA) {
-                    func_L05_0024D680(0x7C, 1);
+                    Hero_TryMoveStateL05(0x7C, 1);
                     return 0;
                 }
                 if (D_0015EE84 != 6) {
@@ -1153,7 +1153,7 @@ int func_L05_0024D680(int a, int b) {
                         char *w = D_0013E633 + 0xE1D;
                         *(int *)(w + 0x1660) = *(int *)(w + 0x1660) + 1;
                         if (*(int *)(w + 0x1660) >= 2 || *(int *)(w + 0x22A8) == 0) {
-                            func_L05_0024D680(0x7C, 1);
+                            Hero_TryMoveStateL05(0x7C, 1);
                             return 0;
                         }
                     } else {
@@ -1230,10 +1230,10 @@ int func_L05_0024D680(int a, int b) {
                 *(float *)(u + 0x430) = 0.4f;
                 *(float *)(u + 0x488) = 0.4f;
                 *(float *)(u + 0x48C) = 0.9f;
-                func_L00_00263578(*(int *)(u + 0x2080), x);
-                func_L00_002635A0(x, 0x28, 2);
-                func_L00_002635A0(x, 0x14, 4);
-                func_L00_002635A0(x, 0xA, 6);
+                Manipulator_StartIfIdle(*(int *)(u + 0x2080), x);
+                AddSpawnedCopyToList(x, 0x28, 2);
+                AddSpawnedCopyToList(x, 0x14, 4);
+                AddSpawnedCopyToList(x, 0xA, 6);
                 *(unsigned char *)(u + 0x4AE) = 1;
                 *(float *)(u + 0x3F4) = D_0015EE6C * 11.5f;
                 if (1.4f < *(float *)(u + 0x2DC)) *(float *)(u + 0x3F4) = D_0015EE6C * 5.7f;
@@ -1285,9 +1285,9 @@ int func_L05_0024D680(int a, int b) {
                 *(float *)(u + 0x490) = 4.5f;
                 *(short *)(u + 0x49A) = scale_ticks(0x78);
                 *(float *)(u + 0x424) = D_0015EE6C * 1.9f;
-                func_L00_00263578(*(int *)(u + 0x2080), x);
-                func_L00_002635A0(x, 0x28, 3);
-                func_L00_002635A0(x, 0x14, 5);
+                Manipulator_StartIfIdle(*(int *)(u + 0x2080), x);
+                AddSpawnedCopyToList(x, 0x28, 3);
+                AddSpawnedCopyToList(x, 0x14, 5);
                 *(short *)(u + 0x41C) = 1;
                 *(int *)(u + 0x3D0) = scale_ticks(9);
                 *(int *)(u + 0x3D4) = scale_ticks(0x23) + *(int *)(u + 0x3D0);
@@ -1354,8 +1354,8 @@ int func_L05_0024D680(int a, int b) {
                 *(float *)(u + 0x490) = 4.5f;
                 *(short *)(u + 0x4AA) = scale_ticks(0x32);
                 *(float *)(u + 0x494) = 1.0f;
-                *(float *)(u + 0x43C) = func_L00_0020DCF0(scale_ticks(0xA));
-                *(int *)(u + 0x450) = func_L00_00222580();
+                *(float *)(u + 0x43C) = Hero_GetRecentRingValue(scale_ticks(0xA));
+                *(int *)(u + 0x450) = Hero_ClassifyStick();
                 *(float *)(u + 0x438) = *(float *)(u + 0x180);
                 if (D_0015EE6C * 1.5f < *(float *)(u + 0x164)) {
                     *(float *)(u + 0x454) = *(float *)(u + 0x164);
@@ -1376,38 +1376,38 @@ int func_L05_0024D680(int a, int b) {
             if (b) {
                 int s = *(int *)(q + 0x2084);
                 if (s == 7) {
-                    func_L00_00232C10(7, 0, (float)scale_ticks(5));
+                    HeroStartAnim(7, 0, (float)scale_ticks(5));
                 } else if (s == 0x12) {
-                    func_L00_00232C10(0x72, 1, -1.0f);
+                    HeroStartAnim(0x72, 1, -1.0f);
                 } else if (s == 0x3C) {
-                    func_L00_00232C10(0x43, 0, (float)scale_ticks(4));
+                    HeroStartAnim(0x43, 0, (float)scale_ticks(4));
                 } else if (s == 0x69) {
-                    func_L00_00232C10(7, 0, (float)scale_ticks(5));
+                    HeroStartAnim(7, 0, (float)scale_ticks(5));
                 } else if (s == 9) {
                     int id = 8;
                     int n = truncate_float_to_s32(*(float *)(q + 0xAA8));
                     if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4) id = D_L05_0017C338[n];
-                    func_L00_00232C10(id, 0, (float)scale_ticks(5));
+                    HeroStartAnim(id, 0, (float)scale_ticks(5));
                 } else if (s == 0xA) {
-                    func_L00_00232C10(0x12, 0, (float)scale_ticks(5));
+                    HeroStartAnim(0x12, 0, (float)scale_ticks(5));
                 } else if (s == 0x10) {
                     if (*(int *)(q + 0x2094) == 4 || (*(int *)(q + 0x2090) == 4 && scale_ticks(7) > *(int *)(q + 0x198))) {
-                        func_L00_00232C10(0x26, 0, (float)scale_ticks(8));
+                        HeroStartAnim(0x26, 0, (float)scale_ticks(8));
                         *(int *)(q + 0x420) += scale_ticks(3);
                     } else {
-                        func_L00_00232C10(0x26, 0, (float)scale_ticks(5));
+                        HeroStartAnim(0x26, 0, (float)scale_ticks(5));
                     }
                 } else if (s == 0x1C) {
-                    func_L00_00232C10(0x22, 0, (float)scale_ticks(4));
+                    HeroStartAnim(0x22, 0, (float)scale_ticks(4));
                 } else if (s == 0x11) {
-                    func_L00_00232C10(0x23, 2, (float)scale_ticks(7));
+                    HeroStartAnim(0x23, 2, (float)scale_ticks(7));
                 } else if (s == 0xD) {
-                    func_L00_00232C10(0x11, 0, (float)scale_ticks(5));
+                    HeroStartAnim(0x11, 0, (float)scale_ticks(5));
                 } else if (s == 0xE) {
-                    func_L00_00232C10(0x16, 3, (float)scale_ticks(7));
+                    HeroStartAnim(0x16, 3, (float)scale_ticks(7));
                     *(float *)(q + 0xA90) = D_0015EE60 * 0.8f;
                 } else if (s == 0xF) {
-                    func_L00_00232C10(0x15, 0, (float)scale_ticks(5));
+                    HeroStartAnim(0x15, 0, (float)scale_ticks(5));
                 } else if (s == 0xB) {
                     int id;
                     if (*(int *)(q + 0x450) == 2) *(int *)(q + 0x450) = 0;
@@ -1422,10 +1422,10 @@ int func_L05_0024D680(int a, int b) {
                     {
                         char *w = D_0013E633 + 0xE1D;
                         if (*(int *)(w + 0x2094) == 4) {
-                            func_L00_00232C10(id, 1, (float)scale_ticks(4));
+                            HeroStartAnim(id, 1, (float)scale_ticks(4));
                             *(int *)(w + 0x420) = scale_ticks(1);
                         } else {
-                            func_L00_00232C10(id, 0, (float)scale_ticks(5));
+                            HeroStartAnim(id, 0, (float)scale_ticks(5));
                         }
                     }
                 }
@@ -1461,16 +1461,16 @@ int func_L05_0024D680(int a, int b) {
             *(int *)(q + 0x2284) = 0x50;
             *(int *)(q + 0xA60) = 4;
             *(int *)(q + 0x20F0) = 0;
-            func_L00_00215628(8.0f, 1.0471976f, -1.0f);
+            CameraTrackNearestTarget(8.0f, 1.0471976f, -1.0f);
             *(int *)(q + 0xA70) = 0;
             *(short *)(q + 0x10A8) = 0xA;
             if (b) {
                 char *m;
                 int n = scale_ticks(0xB);
                 if (*(int *)(q + 0x2090) == 0xB && scale_ticks(0x2A) > *(int *)(q + 0x2098)) n = scale_ticks(0x11);
-                func_L00_00232C10(0x2B, 4, (float)n);
-                m = func_L00_0020DAF8(0);
-                if (func_L00_00211A18(m)) func_00213DE0(m, 0xA, 4, n + 2);
+                HeroStartAnim(0x2B, 4, (float)n);
+                m = Hero_GetReadySlotMoby(0);
+                if (IsMobyClass47(m)) MobyBlendAnimation(m, 0xA, 4, n + 2);
             }
             break;
         }
@@ -1496,14 +1496,14 @@ int func_L05_0024D680(int a, int b) {
             q = D_0013E633 + 0xE1D;
             *(int *)(q + 0xA60) = 3;
             *(int *)(q + 0x20F0) = 0;
-            func_L00_00215628(14.0f, 0.5235988f, -1.0f);
+            CameraTrackNearestTarget(14.0f, 0.5235988f, -1.0f);
             *(int *)(q + 0xA7C) = *(int *)(q + 0xA7C) == 0;
             if (b) {
                 int n = scale_ticks(0xA);
                 if (*(unsigned char *)(*(char **)(q + 0x2080) + 0x53) == 0x1A) n = scale_ticks(3);
                 if (*(int *)(q + 0x2090) == 1) n = scale_ticks(0x11);
-                func_L00_00232C10(0x1A, 0, (float)n);
-                func_L00_00232E60(6, 0x15);
+                HeroStartAnim(0x1A, 0, (float)n);
+                HeroQueueSequence(6, 0x15);
             }
             break;
         }
@@ -1511,10 +1511,10 @@ int func_L05_0024D680(int a, int b) {
             char *q = D_0013E633 + 0xE1D;
             if (*(void **)(q + 0x1090) == 0) break;
             if (b) {
-                func_L00_00232C10(0x67, 4, -1.0f);
-                func_00213DE0(*(void **)(q + 0x1090), 3, 4, -1);
+                HeroStartAnim(0x67, 4, -1.0f);
+                MobyBlendAnimation(*(void **)(q + 0x1090), 3, 4, -1);
             }
-            func_L00_00215628(11.0f, 0.87266463f, -1.0f);
+            CameraTrackNearestTarget(11.0f, 0.87266463f, -1.0f);
             break;
         }
         case 0x13: {
@@ -1540,7 +1540,7 @@ int func_L05_0024D680(int a, int b) {
                 char *r = D_0013E633 + 0xE1D;
                 *(int *)(r + 0xA60) = k;
             }
-            func_L00_00215628(5.0f, 0.7853982f, 0.7853982f);
+            CameraTrackNearestTarget(5.0f, 0.7853982f, 0.7853982f);
             if (b) {
                 char *m;
                 int j = 0;
@@ -1561,15 +1561,15 @@ int func_L05_0024D680(int a, int b) {
                     }
                 }
                 j = j / 2;
-                func_L00_00232C10(k + 0x17, j, (float)n);
-                m = func_L00_0020DAF8(0);
-                if (func_L00_00211A18(m)) func_00213DE0(m, k + 3, j, n);
+                HeroStartAnim(k + 0x17, j, (float)n);
+                m = Hero_GetReadySlotMoby(0);
+                if (IsMobyClass47(m)) MobyBlendAnimation(m, k + 3, j, n);
             }
             break;
         }
         case 0x23: {
             char *q;
-            if (b) func_L00_00232C10(0x2C, 7, (float)scale_ticks(9));
+            if (b) HeroStartAnim(0x2C, 7, (float)scale_ticks(9));
             q = D_0013E633 + 0xE1D;
             if (*(int *)(q + 0x10B8) == 0xA && *(char **)(q + 0xA50) != 0) {
                 *(int *)(q + 0xA58) = 1;
@@ -1592,9 +1592,9 @@ int func_L05_0024D680(int a, int b) {
             int n;
             if (e->a == 1) k = 2;
             n = scale_ticks(5);
-            func_L00_00232C10(k + 0x27, 5, (float)n);
-            m = func_L00_0020DAF8(0);
-            if (func_L00_00211A18(m)) func_00213DE0(m, k + 7, 5, n);
+            HeroStartAnim(k + 0x27, 5, (float)n);
+            m = Hero_GetReadySlotMoby(0);
+            if (IsMobyClass47(m)) MobyBlendAnimation(m, k + 7, 5, n);
         }
         break;
     }
@@ -1604,7 +1604,7 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x2284) = 0;
         *(float *)(p + 0xA68) = FastAddRots(*(float *)(p + 0x98), 3.1415927f);
         *(float *)(p + 0x194) = D_0015EE6C * 9.0f;
-        if (b) func_L00_00232C10(0x29, 5, (float)scale_ticks(8));
+        if (b) HeroStartAnim(0x29, 5, (float)scale_ticks(8));
         break;
     }
     case 0x16: {
@@ -1612,21 +1612,21 @@ int func_L05_0024D680(int a, int b) {
         char *r;
         *(int *)(p + 0x208C) = 7;
         *(int *)(p + 0x2284) = 0;
-        func_L00_002144A0(0.5f);
+        Hero_ScaleMotion(0.5f);
         *(short *)(p + 0x1EE) = scale_ticks(0x2D);
         qcopy(p + 0xE0, p + 0x110);
-        func_L00_002607A8(p + 0xE0, D_0015EE6C * 7.0f);
-        r = func_L00_0025B478(*(void **)(p + 0x2080), 1, 0);
+        ClampVectorLength(p + 0xE0, D_0015EE6C * 7.0f);
+        r = MobyGetHitMessage(*(void **)(p + 0x2080), 1, 0);
         if (r != 0) {
-            func_L00_002056D8(truncate_float_to_s32(*(float *)(r + 0x2C)));
+            Hero_TakeDamage(truncate_float_to_s32(*(float *)(r + 0x2C)));
         } else {
-            func_L00_002056D8(1);
+            Hero_TakeDamage(1);
         }
         {
             char *q = D_0013E633 + 0xE1D;
             *(int *)(q + 0x1C0) = scale_ticks(0x4D);
             if (b) {
-                func_L00_00232C10(0x10, 3, -3.0f);
+                HeroStartAnim(0x10, 3, -3.0f);
                 *(float *)(*(char **)(q + 0x2080) + 0x54) = D_L05_0017C350[*(int *)(q + 0xAA0)][(*(int *)(q + 0xAA4))++];
             }
         }
@@ -1644,11 +1644,11 @@ int func_L05_0024D680(int a, int b) {
             char *r = D_0013E633 + 0xE1D;
             *(int *)(r + 0x208C) = 0x19;
             *(int *)(r + 0x2284) = 0;
-            func_L00_00217570(9, 0);
+            Hero_PlayActiveSound(9, 0);
             *(int *)(r + 0xFF8) = 0x68;
             *(float *)(r + 0x190) = 0.0f;
             *(float *)(r + 0x194) = 0.0f;
-            if (b) func_L00_00232C10(0x71, 0, (float)scale_ticks(8));
+            if (b) HeroStartAnim(0x71, 0, (float)scale_ticks(8));
         }
         break;
     }
@@ -1656,11 +1656,11 @@ int func_L05_0024D680(int a, int b) {
         char *p = D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 0x19;
         *(int *)(p + 0x2284) = 0;
-        if (D_0015EE84 == 0xF) func_L00_00217BD8();
+        if (D_0015EE84 == 0xF) Hero_SpawnParticleBurst();
         *(int *)(p + 0x1CC) = 0x2710;
-        func_L00_00217570(9, 0);
+        Hero_PlayActiveSound(9, 0);
         *(int *)(p + 0xFF8) = 0x68;
-        if (b) func_L00_00232C10(0x71, 0, (float)scale_ticks(8));
+        if (b) HeroStartAnim(0x71, 0, (float)scale_ticks(8));
         break;
     }
     case 0x7C: {
@@ -1668,7 +1668,7 @@ int func_L05_0024D680(int a, int b) {
             int c0;
             int c1;
             int c2;
-            func_L05_0024D680(0x3D, 1);
+            Hero_TryMoveStateL05(0x3D, 1);
             {
                 char *q = D_0013E633 + 0xE1D;
                 *(int *)(q + 0x22F4) = 1;
@@ -1684,8 +1684,8 @@ int func_L05_0024D680(int a, int b) {
             *(int *)(p + 0x22A8) = 0;
             *(int *)(p + 0x1CC) = 0x2710;
             *(float *)(p + 0x2F4) = *(float *)(p + 0x2D8);
-            func_L00_00217570(9, 0);
-            if (b) func_L00_00232C10(0x71, 0, (float)scale_ticks(8));
+            Hero_PlayActiveSound(9, 0);
+            if (b) HeroStartAnim(0x71, 0, (float)scale_ticks(8));
         }
         break;
     }
@@ -1694,10 +1694,10 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x208C) = 0;
         *(int *)(p + 0x2284) = 0;
         if (*(unsigned char *)(p + 0x12EA) != 0 && *(short *)(p + 0x30C) == 0) {
-            func_L05_0024D680(0x58, 1);
+            Hero_TryMoveStateL05(0x58, 1);
             return 0;
         }
-        if (b) func_L00_00232C10(0, 0, (float)scale_ticks(0xE));
+        if (b) HeroStartAnim(0, 0, (float)scale_ticks(0xE));
         break;
     }
     case 0x59: {
@@ -1705,8 +1705,8 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x208C) = 0;
         *(int *)(p + 0x2284) = 0;
         if (b) {
-            func_L00_00232C10(4, 0, (float)scale_ticks(7));
-            func_L00_00232E60(0xE, 0x22);
+            HeroStartAnim(4, 0, (float)scale_ticks(7));
+            HeroQueueSequence(0xE, 0x22);
         }
         break;
     }
@@ -1715,7 +1715,7 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x208C) = 2;
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0xE0, p + 0x110);
-        if (b) func_L00_00232C10(6, 0, (float)scale_ticks(0xC));
+        if (b) HeroStartAnim(6, 0, (float)scale_ticks(0xC));
         break;
     }
     case 0x55: {
@@ -1725,7 +1725,7 @@ int func_L05_0024D680(int a, int b) {
         *(float *)(p + 0x940) = D_0015EE70 * 24.0f;
         *(float *)(p + 0x944) = D_0015EE70 * 7.0f;
         qcopy(p + 0xE0, p + 0x110);
-        if (b) func_L00_00232C10(6, 0, (float)scale_ticks(7));
+        if (b) HeroStartAnim(6, 0, (float)scale_ticks(7));
         break;
     }
     case 0x54: {
@@ -1733,7 +1733,7 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x208C) = 1;
         *(int *)(p + 0x2284) = 0;
         if (*(unsigned char *)(p + 0x12EA) != 0 && *(short *)(p + 0x30C) == 0) {
-            func_L05_0024D680(0x58, 1);
+            Hero_TryMoveStateL05(0x58, 1);
             return 0;
         }
         {
@@ -1744,7 +1744,7 @@ int func_L05_0024D680(int a, int b) {
             *(float *)(g + 0x194) = r;
             if (D_0015EE6C * 1.5f < r) *(float *)(g + 0x194) = D_0015EE6C * 1.5f;
             *(short *)(g + 0x3B8) = 0;
-            if (b) func_L00_00232C10(1, 0, (float)scale_ticks(8));
+            if (b) HeroStartAnim(1, 0, (float)scale_ticks(8));
         }
         break;
     }
@@ -1753,20 +1753,20 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x208C) = 0x14;
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0x150, p + 0x110);
-        if (b) func_L00_00232C10(3, 0, (float)scale_ticks(0xC));
+        if (b) HeroStartAnim(3, 0, (float)scale_ticks(0xC));
         break;
     }
     case 0x56: {
         char *p = D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 7;
         *(int *)(p + 0x2284) = 0;
-        func_L00_002144A0(0.5f);
+        Hero_ScaleMotion(0.5f);
         qcopy(p + 0xE0, p + 0x110);
-        func_L00_002607A8(p + 0xE0, D_0015EE6C * 5.0f);
-        func_L00_002056D8(1);
+        ClampVectorLength(p + 0xE0, D_0015EE6C * 5.0f);
+        Hero_TakeDamage(1);
         *(int *)(p + 0x1C0) = scale_ticks(0x4D);
         if (b) {
-            func_L00_00232C10(2, 3, -3.0f);
+            HeroStartAnim(2, 3, -3.0f);
             *(float *)(*(char **)(p + 0x2080) + 0x54) = D_L05_0017C350[*(int *)(p + 0xAA0)][(*(int *)(p + 0xAA4))++];
         }
         break;
@@ -1775,7 +1775,7 @@ int func_L05_0024D680(int a, int b) {
         char *p = D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 0xF;
         *(int *)(p + 0x2284) = 0;
-        if (*(int *)(p + 0x570) == 0) func_L00_002056D8(1);
+        if (*(int *)(p + 0x570) == 0) Hero_TakeDamage(1);
         *(int *)(p + 0x1C0) = scale_ticks(0x4D);
         *(float *)(p + 0x5CC) = D_0015EE6C * 2.5f;
         if (D_0015EE6C * 2.5f < *(float *)(p + 0x5B0)) *(float *)(p + 0x5B0) = D_0015EE6C * 2.5f;
@@ -1783,7 +1783,7 @@ int func_L05_0024D680(int a, int b) {
         clear_u64_value(p + 0xE0);
         clear_u64_value(p + 0x100);
         *(float *)(p + 0xE8) = D_0015EE6C * 10.0f;
-        if (b) func_L00_00232C10(0x10, 2, -3.0f);
+        if (b) HeroStartAnim(0x10, 2, -3.0f);
         break;
     }
     case 0x1D: {
@@ -1791,15 +1791,15 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x208C) = 9;
         *(unsigned char *)(p + 0x20AC) = 1;
         *(int *)(p + 0x2284) = 0;
-        func_L00_00232C10(func_L01_002274A8(0), 0, (float)scale_ticks(0xA));
+        HeroStartAnim(Help_GetRecordValue(0), 0, (float)scale_ticks(0xA));
         break;
     }
     case 0x1E: {
         char *p = D_0013E633 + 0xE1D;
         *(int *)(p + 0x2284) = 0x51;
         *(int *)(p + 0x208C) = 0;
-        if (func_L00_002056D0(*(unsigned char *)(*(char **)(p + 0x2080) + 0x53)) != func_L01_002274A8(1)) {
-            func_L00_00232C10(func_L01_002274A8(1), 0, (float)scale_ticks(5));
+        if (func_L00_002056D0(*(unsigned char *)(*(char **)(p + 0x2080) + 0x53)) != Help_GetRecordValue(1)) {
+            HeroStartAnim(Help_GetRecordValue(1), 0, (float)scale_ticks(5));
         }
         break;
     }
@@ -1807,7 +1807,7 @@ int func_L05_0024D680(int a, int b) {
         char *p = D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 9;
         *(int *)(p + 0x2284) = 0;
-        func_L00_00232C10(func_L01_002274A8(0), 0, (float)scale_ticks(0xA));
+        HeroStartAnim(Help_GetRecordValue(0), 0, (float)scale_ticks(0xA));
         break;
     }
     case 0x72: {
@@ -1815,15 +1815,15 @@ int func_L05_0024D680(int a, int b) {
         *(int *)(p + 0x208C) = 9;
         *(unsigned char *)(p + 0x20AC) = 1;
         *(int *)(p + 0x2284) = 0;
-        func_L00_0020ED30();
-        func_L00_00232C10(func_L01_002274A8(0), 0, (float)scale_ticks(0xA));
+        Hero_ClearPendingModuleAnim();
+        HeroStartAnim(Help_GetRecordValue(0), 0, (float)scale_ticks(0xA));
         break;
     }
     case 0x27: {
         char *p = D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 8;
         *(int *)(p + 0x2284) = 0;
-        func_L00_00232C10(func_L01_002274A8(0), 0, (float)scale_ticks(0xA));
+        HeroStartAnim(Help_GetRecordValue(0), 0, (float)scale_ticks(0xA));
         break;
     }
     case 0x32: {
@@ -1833,7 +1833,7 @@ int func_L05_0024D680(int a, int b) {
         *(unsigned char *)(p + 0x20A7) = 1;
         *(unsigned char *)(p + 0x20AD) = 1;
         *(unsigned char *)(p + 0x20AC) = 1;
-        if (b) func_L00_00232C10(func_L01_002274A8(0), 0, -1.0f);
+        if (b) HeroStartAnim(Help_GetRecordValue(0), 0, -1.0f);
         break;
     }
     case 0x78: {
@@ -1843,7 +1843,7 @@ int func_L05_0024D680(int a, int b) {
         *(unsigned char *)(p + 0x20A7) = 1;
         *(unsigned char *)(p + 0x20AC) = 1;
         clear_u64_value(p + 0xE0);
-        if (b) func_L00_00232C10(0xB, 0, -1.0f);
+        if (b) HeroStartAnim(0xB, 0, -1.0f);
         break;
     }
     case 0x63:
@@ -1851,8 +1851,8 @@ int func_L05_0024D680(int a, int b) {
         char *p = D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 0x18;
         *(unsigned char *)(p + 0x20AC) = 1;
-        func_L00_0020ED30();
-        if (b) func_L00_00232C10(func_L01_002274A8(0), 0, -1.0f);
+        Hero_ClearPendingModuleAnim();
+        if (b) HeroStartAnim(Help_GetRecordValue(0), 0, -1.0f);
         break;
     }
     }
@@ -1874,7 +1874,7 @@ int func_L05_0024D680(int a, int b) {
             *(int *)(t + 0x2110) = 1;
         }
     }
-    if (func_L00_0020DC00() == 0) {
+    if (Hero_IsInSpecialState() == 0) {
         char *t = D_0013E633 + 0xE1D;
         if (*(int *)(t + 0x1108) == 0 && *(int *)(t + 0x20F4) != 0) {
             *(int *)(t + 0x2110) = 1;
@@ -1883,11 +1883,11 @@ int func_L05_0024D680(int a, int b) {
     {
         char *t = D_0013E633 + 0xE1D;
         if (*(int *)(t + 0x208C) == 0x14) {
-            func_L00_0020ED30();
+            Hero_ClearPendingModuleAnim();
             *(unsigned char *)(t + 0x20AC) = 1;
         }
         if (*(int *)(t + 0x208C) != *(int *)(t + 0x2094)) {
-            func_L00_00207220();
+            HeroClearSoundSlots();
         }
         *(int *)(t + 0x198) = 0;
         *(int *)(t + 0x1A0) = 0;

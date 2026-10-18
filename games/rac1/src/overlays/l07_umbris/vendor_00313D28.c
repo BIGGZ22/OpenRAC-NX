@@ -9,7 +9,7 @@ INCLUDE_ASM("asm/overlays", func_L07_00313D28);
 extern void func_L07_00313D28(char *, int, float, float, float, float, float);
 
 /* Starts the effect with an angle ramped from the moby's timer, capped at pi. */
-void func_L07_003141A8(char *moby)
+void RingEffectStart(char *moby)
 {
     char *data = *(char **)(moby + 0x78);
     float ang;
@@ -24,13 +24,8 @@ void func_L07_003141A8(char *moby)
 /* functional: high. The NTSC decomp's matched C for the same instructions (FUN_L07_00312e70), carried to PAL's
    names by OpenRAC's tools/port.py. Not a PAL match: its PAL file declares a symbol it uses with another type, so it was not built there. */
 typedef u32 u128 __attribute__((mode(TI), aligned(16)));
-typedef union {
-    u128 q;
-    f32 f[4];
-    s32 i[4];
-} Vec4_14250;
 struct GeometryQuad {
-    Vec4_14250 positions[4]; /* 0x00 */
+    Vec4 positions[4]; /* 0x00 */
     u32 colors[4]; /* 0x40 */
     f32 texture_coordinates[4][2]; /* 0x50 */
     union {
@@ -54,7 +49,7 @@ extern void func_001F9EC0(void *, void *, void *);
 extern void func_001F9BD8(void *, void *, void *);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/00312948.c, FUN_L07_00312e70. */
-void func_L07_00314250(void *mobyp, float radius, int phase, float speed, int color) {
+void DrawSpinningRing(void *mobyp, float radius, int phase, float speed, int color) {
     char *moby = mobyp;
     char *vars = *(char **)(moby + 0x78);
     struct GeometryQuad quad;
@@ -66,21 +61,21 @@ void func_L07_00314250(void *mobyp, float radius, int phase, float speed, int co
     float wrapped;
     u64 texture;
 
-    spin = func_001FA888(D_L07_0015F6B0 + phase) * speed;
+    spin = IntToFloat(D_L07_0015F6B0 + phase) * speed;
     if (*(int *)(vars + 0x164) == 4) {
-        float alpha = func_001FA888(color >> 24);
-        float fade = func_001FA888(*(int *)(vars + 0x160));
-        fade = fade / func_001F9850(20);
+        float alpha = IntToFloat(color >> 24);
+        float fade = IntToFloat(*(int *)(vars + 0x160));
+        fade = fade / scale_ticks(20);
         alpha = alpha * fade;
         if (alpha < 0.0f)
             alpha = 0.0f;
         color &= 0xFFFFFF;
-        color |= func_001FA898(alpha) << 24;
+        color |= truncate_float_to_s32(alpha) << 24;
     } else if (*(int *)(vars + 0x164) > 4) {
         return;
     }
     step = 0.5235988f;
-    texture = func_001F4868(0x3D);
+    texture = GetEffectTex(0x3D);
     {
         float zero = 0.0f;
         float one = 1.0f;
@@ -111,12 +106,12 @@ void func_L07_00314250(void *mobyp, float radius, int phase, float speed, int co
     for (angle = -3.1415927f; angle < step + 3.1415927f; angle += step) {
         qcopy(&quad.positions[0], &quad.positions[1]);
         qcopy(&quad.positions[2], &quad.positions[3]);
-        wrapped = func_L00_0025F368(angle + spin * 0.02f);
-        offset[1] = radius * func_001F9F90(wrapped);
-        offset[2] = radius * func_001F9FA8(wrapped);
+        wrapped = WrapAngle(angle + spin * 0.02f);
+        offset[1] = radius * FastCos(wrapped);
+        offset[2] = radius * FastSin(wrapped);
         offset[0] = 0.0f;
         func_001F9EC0(offset, offset, moby + 0xC0);
-        func_001F9BD8(&quad.positions[3], vars + 0x140, offset);
+        FastVecAdd(&quad.positions[3], vars + 0x140, offset);
         if (angle != -3.1415927f) {
             func_L00_001FD1D8(&quad, 0, 1);
             qcopy(&inner.positions[2], &quad.positions[2]);
@@ -133,7 +128,7 @@ extern void func_L00_0025A8C0(void *, void *, int, float, void *);
 extern int func_L00_001EFFF0(void *, void *, int, int, int);
 extern int func_L00_001F2BE8(float, void *, int, void *, void *);
 /* Emits layered effects and resolves movement along a scaled displacement. */
-void func_L07_00314590(char *moby) {
+void RingProjectileUpdate(char *moby) {
     float displacement[4];
     char hit[48];
     float direction[4];
@@ -147,17 +142,18 @@ void func_L07_00314590(char *moby) {
     FastVecAdd(data + 0x140, displacement, origin);
     func_L00_001FF4B0(displacement, displacement, *(float *)(data + 0x16C));
     FastVecAdd(position, displacement, origin);
-    func_L07_00314250(moby, 1.0f, 0, 1.0f, 0x20000080);
-    func_L07_00314250(moby, 0.7f, 10, 2.0f, 0x28008080);
-    func_L07_00314250(moby, 0.4f, 20, 3.0f, 0x30B0FFFF);
+    DrawSpinningRing(moby, 1.0f, 0, 1.0f, 0x20000080);
+    DrawSpinningRing(moby, 0.7f, 10, 2.0f, 0x28008080);
+    DrawSpinningRing(moby, 0.4f, 20, 3.0f, 0x30B0FFFF);
     FastVecSub(direction, position, origin);
     func_L00_001FF4B0(direction, direction, 1.0f);
-    func_L00_0025A8C0(hit, moby, 0x30000, 1.000123f, direction);
+    InitDirectionalHitQuery(hit, moby, 0x30000, 1.000123f, direction);
     if (!func_L00_001EFFF0(origin, position, 0, (int)moby, (int)hit)) {
         coll_sphere_mobys(0.5f, position, 0, moby, hit);
     }
 }
-void *func_L07_00314730(void *unused, void *dp, void *op) {
+/* Collects the linked-moby ids into the out array and returns the count. */
+void *CollectLinkedMobyIds(void *unused, void *dp, void *op) {
     char *data = dp;
     int *out = op;
     int n = 0;
@@ -250,6 +246,7 @@ extern char D_0013E650_314800[] __asm__("D_0013E650");
 
 /* Umbris moby think step: homes on its target, runs its timer and state changes. */
 void func_L07_00314800_r(Moby *moby, ThinkData_314800 *data, Vec_314800 *vec) __asm__("func_L07_00314800");
+/* Hit handling for a damageable enemy: scales and applies damage, plays hurt reactions. */
 void func_L07_00314800_r(Moby *moby, ThinkData_314800 *data, Vec_314800 *vec)
 {
     int st;
@@ -295,7 +292,7 @@ void func_L07_00314800_r(Moby *moby, ThinkData_314800 *data, Vec_314800 *vec)
                     if (data->f1F0 != -1) {
                         func_L00_002676A0_314800(moby, 1);
                         func_L00_002584A8_314800(moby, 0, -1);
-                        func_L00_002512D8_314800(moby->unkB0);
+                        func_L00_002512D8_314800(moby->mission);
                         func_L00_00286128_314800(D_L07_0016016C_314800[data->f1F0].f30, D_L07_0016016C_314800[data->f1F0].f70);
                     }
                     moby->state = 10;
@@ -330,7 +327,7 @@ void func_L07_00314800_r(Moby *moby, ThinkData_314800 *data, Vec_314800 *vec)
                         data->f1F8 = -1;
                         data->f1F8 = func_0022ED80_314800(0xF, 4, moby);
                         moby->state = 11;
-                        moby->unkBC++;
+                        moby->command++;
                     }
                     if ((f23 < v0 && vec->f0 <= f23) || (f24 < v0 && vec->f0 <= f24)) {
                         data->f1C7 = 1;
@@ -346,7 +343,7 @@ void func_L07_00314800_r(Moby *moby, ThinkData_314800 *data, Vec_314800 *vec)
         } else {
             data->f1C6 = 0;
         }
-        moby->unkA4 = 0xFF;
+        moby->hit_slot = 0xFF;
     }
     func_L00_0025E590_314800(moby, data->anim);
     data->f1FC = data->f1FC + 0.3f;
@@ -354,7 +351,8 @@ void func_L07_00314800_r(Moby *moby, ThinkData_314800 *data, Vec_314800 *vec)
 }
 extern float func_002140F8(float, float);
 
-void func_L07_00314D00(float *out, float value) {
+/* Adds a random offset in [-value, value] to the x and y of out. */
+void AddRandomOffsetXY(float *out, float value) {
     float neg = -value;
     out[0] += random_float_between(neg, value);
     out[1] += random_float_between(neg, value);
@@ -365,15 +363,15 @@ extern int func_L01_0028C2D8(void *, void *, float);
 extern char *D_L07_001B0830[];
 
 /* Finds where a path leaves the object's current segment and copies the point out. */
-void func_L07_00314D68(char *m, char *a, void *b, void *c) {
+void FindPathExitPoint(char *m, char *a, void *b, void *c) {
     float v[8];
-    void *r = func_L07_00314730(m, a, v);
+    void *r = CollectLinkedMobyIds(m, a, v);
     if (func_L01_00277FD8(v, r, *(int *)(a + 0x188), 0.0f, m + 0x10, b, c)) return;
     {
-        int i = func_L01_0028C2D8(b, D_L07_001B0830[*(int *)(a + 0x290)], 0.0f);
-        int j = func_L01_0028C2D8(D_L07_001B0830[*(int *)(a + 0x290)] + (i * 16 + 0x10), D_L07_001B0830[*(int *)(a + 0x188)], 0.0f);
+        int i = FindClosestDistanceEntry(b, D_L07_001B0830[*(int *)(a + 0x290)], 0.0f);
+        int j = FindClosestDistanceEntry(D_L07_001B0830[*(int *)(a + 0x290)] + (i * 16 + 0x10), D_L07_001B0830[*(int *)(a + 0x188)], 0.0f);
         if (func_L01_00277FD8(v, r, *(int *)(a + 0x188), 0.0f, m + 0x10, D_L07_001B0830[*(int *)(a + 0x188)] + (j * 16 + 0x10), c)) return;
-        i = func_L01_0028C2D8(m + 0x10, D_L07_001B0830[*(int *)(a + 0x188)], 0.0f);
+        i = FindClosestDistanceEntry(m + 0x10, D_L07_001B0830[*(int *)(a + 0x188)], 0.0f);
         qcopy(c, D_L07_001B0830[*(int *)(a + 0x188)] + i * 16 + 0x10);
     }
 }
@@ -393,16 +391,16 @@ extern int func_L00_00259428(void *p, int x, int y, float f, float g);
 extern void func_001F9C30(void *, void *, float);
 
 /* steers a moby toward a target, then handles the pickup contact */
-int func_L07_00314ED0(char *m, char *a, void *p6, float *p7, float thr) {
+int ChaseOrSteerAlongPath(char *m, char *a, void *p6, float *p7, float thr) {
     float v[4];
     char *mp = m + 0x10;
     float d = func_001F9D48(mp, p6);
     int r = 4;
     char *tbl = D_L07_001B0830[*(int *)(a + 0x290)];
     if (thr < d) {
-        r = func_L00_0025A060(m, a + 0x70, p7, a + 0x100);
+        r = ClassifyTargetInCone(m, a + 0x70, p7, a + 0x100);
         if (r & 2) {
-            int i = func_L01_0028C2D8(mp, tbl, 0.0f);
+            int i = FindClosestDistanceEntry(mp, tbl, 0.0f);
             FastVecSub(v, tbl + (i * 16 + 0x10), mp);
             func_L00_001FF548(v, v, *(float *)(a + 0x94));
             FastVecAdd(mp, mp, v);
@@ -413,11 +411,11 @@ int func_L07_00314ED0(char *m, char *a, void *p6, float *p7, float thr) {
         float dx = *(float *)(g + 0x80) - *(float *)(m + 0x10);
         float dy = *(float *)(g + 0x84) - *(float *)(m + 0x14);
         h = func_L00_001FF860(dx, dy);
-        func_L00_002592B0(m, h, (float *)(a + 0x168), D_0015EE70 * 2.0943952f, D_0015EE70 * 0.6981317f, D_0015EE6C * 2.0943952f);
+        MobySpringTurn(m, h, (float *)(a + 0x168), D_0015EE70 * 2.0943952f, D_0015EE70 * 0.6981317f, D_0015EE6C * 2.0943952f);
     }
     if ((D_L07_0015F6B0 & 3) == 3) {
         char *mp2 = m + 0x10;
-        if (func_L00_00259428(mp2, (int)m, 0, 0.1f, 1.0f)) {
+        if (CheckGroundBelow(mp2, (int)m, 0, 0.1f, 1.0f)) {
             int *t = D_L07_00173F40;
             unsigned char *q = *(unsigned char **)(t + 6);
             if (q != 0 && t[7] > 0 && *(short *)(q + 0xA6) == 0x42D && q[0xBC] == 0) {
@@ -462,7 +460,7 @@ extern int func_L00_00258BC8(int, int);
 extern void func_00213DE0(void *, int, int, int);
 
 /* latches onto a target when it is turned toward enough, then picks a turn animation */
-int func_L07_003151C0(unsigned char *m, unsigned char *obj, float *vec, int a, int b) {
+int TryLatchOntoTarget(unsigned char *m, unsigned char *obj, float *vec, int a, int b) {
     float h = func_L00_001FF860(vec[0] - *(float *)(m + 0x10), vec[1] - *(float *)(m + 0x14));
     if (*(float *)(obj + 0x98) < FastDiffRots(*(float *)(m + 0x48), h)) {
         *(int *)(obj + 0x168) = 0;
@@ -474,12 +472,12 @@ int func_L07_003151C0(unsigned char *m, unsigned char *obj, float *vec, int a, i
         if (func_L00_001FF860(vec[0] - *(float *)(m + 0x10), vec[1] - *(float *)(m + 0x14)) < 0.0f) {
             if (m[0x53] != 3) {
                 int r = rand_range(0, 1);
-                func_00213DE0(m, 3, r, rand_range(0xF, 0x14));
+                MobyBlendAnimation(m, 3, r, rand_range(0xF, 0x14));
             }
         } else {
             if (m[0x53] != 0xE) {
                 int r = rand_range(0, 1);
-                func_00213DE0(m, 0xE, r, rand_range(0xF, 0x14));
+                MobyBlendAnimation(m, 0xE, r, rand_range(0xF, 0x14));
             }
         }
         m[0x20] = 7;
@@ -493,7 +491,7 @@ extern void func_L00_00263950(char *, char *, int, float, float);
 extern float D_0015EE64 MACRO_ADDR;
 
 // Computes a clamped turn angle toward a target and starts an effect.
-void func_L07_00315338(char *moby, char *d, float *t) {
+void AimYawTowardTarget(char *moby, char *d, float *t) {
     float a;
     float k;
     if (((unsigned char *)moby)[0x20] < 10) {
@@ -509,7 +507,7 @@ void func_L07_00315338(char *moby, char *d, float *t) {
     }
     k = D_0015EE64;
     *(float *)(d + 0x264) = *(float *)(d + 0x1FC);
-    func_L00_00263950(moby, d + 0x200, 0xB, k * 0.030f, k * 0.3f);
+    EaseManipulatorOffsets(moby, d + 0x200, 0xB, k * 0.030f, k * 0.3f);
 }
 typedef struct {
     char pad0[0x44];
@@ -524,7 +522,7 @@ extern unsigned char D_L07_0020C980[];
 extern void func_0020D960(char *, int, void *);
 
 /* When the level flag is 2, find the moby sharing the caller's class and restart its effect. */
-void func_L07_00315430(char *arg) {
+void AttachCheatManipulators(char *arg) {
     if (D_L07_0015F6A8 == 2 && gCheats[0] != 0) {
         int i;
         for (i = 0; i < D_L07_0016C960.count; i++) {
@@ -641,7 +639,7 @@ typedef struct {
 typedef struct { SbVec pos; SbVec v10; SbVec v20; SbVec v30; void *moby; int kind; } SbTarget;
 
 /* Snagglebeast update: senses the target, runs the fade timers, then steps the state machine. */
-void func_L07_00315528(unsigned char *m) {
+void SnagglebeastUpdate(unsigned char *m) {
     SbVec oldpos;
     SbTarget tgt;
     SbVec va;
@@ -666,19 +664,19 @@ void func_L07_00315528(unsigned char *m) {
     int i;
     float *t20;
 
-    func_L00_00264B40(2.5f, (int)m, 0xB, d + 0x2A0);
-    func_L07_00315430((char *)m);
+    Manipulator_ApplyScale(2.5f, (int)m, 0xB, d + 0x2A0);
+    AttachCheatManipulators((char *)m);
     if (D_L07_0015F6A8 == 2) return;
     if (*(int *)(d + 0x1A4) != -1 && !is_point_inside_clip_volume(D_0013F450 + 0x80, *(int *)(d + 0x1A4))) return;
     if (m[0x31] != 0) {
         if (FastVecDist(m + 0x10, D_L07_00166EC0) < 35.0f) {
-            func_L00_0025B178(m);
+            SetGroundHeightBand(m);
             m[0x7F] = 0x1C;
         }
     }
     qcopy(&oldpos, m + 0x10);
     t20 = (float *)(d + 0x20);
-    func_L07_00314800(m, d, t20);
+    EnemyHitReact(m, d, t20);
     see = 0;
     func_L00_00260D30(m, &tgt, 30.0f);
     dist = func_001F9D48(&tgt, m + 0x10);
@@ -790,7 +788,7 @@ void func_L07_00315528(unsigned char *m) {
             if (*(int *)(d + 0x1F8) != -1) {
                 char *sl = D_0013E650 + *(int *)(d + 0x1F8) * 0x70;
                 if (*(void **)(sl + 0x88) == m && *(unsigned char *)(sl + 0x74) != 0) {
-                    func_L00_0028EBF0(*(int *)(d + 0x1F8));
+                    Sound_StopSlot(*(int *)(d + 0x1F8));
                 }
             }
             d[0x1C5] = 0;
@@ -798,10 +796,10 @@ void func_L07_00315528(unsigned char *m) {
         }
         if (*(float *)(d + 0x1C8) < 0.0f) *(float *)(d + 0x1C8) = 0.0f;
     }
-    if (*(float *)(d + 0x1C8) > 0.0f) AddDrawCallback(func_L07_003141A8, m);
-    func_L07_00315338((char *)m, (char *)d, (float *)(D_0013F450 + 0x80));
+    if (*(float *)(d + 0x1C8) > 0.0f) AddDrawCallback(RingEffectStart, m);
+    AimYawTowardTarget((char *)m, (char *)d, (float *)(D_0013F450 + 0x80));
     if (m[0x20] != 0 && m[0x20] != 0xA && m[0x20] != 0x10) {
-        *(int *)(d + 0x1B0) = queue_animation_update(0x16, 0xFFFF, (int)func_L00_00236710, (int)func_L00_00236830,
+        *(int *)(d + 0x1B0) = queue_animation_update(0x16, 0xFFFF, (int)Hud_InitElement, (int)Hud_UpdateCounter,
                                             (int)((char *)func_L06_0024A080 + 0x20), (int)(d + 0x1B4),
                                             (*(short *)(d + 0x24) << 4) | 0xF);
     }
@@ -837,13 +835,13 @@ void func_L07_00315528(unsigned char *m) {
         }
         *(int *)(d + 0xA8) &= ~8;
         *(unsigned short *)(m + 0x34) |= 0x1000;
-        func_L05_0028CEE8((int *)(d + 0x170), 3, *(int *)(d + 0x188));
+        BuildAdjacencyMasks((int *)(d + 0x170), 3, *(int *)(d + 0x188));
         d[0x19C] = 7;
         m[0x30] = 0xFF;
         *(short *)(m + 0x32) = 0xFF;
         *(int *)(d + 0x1A8) = -1;
         *(int *)(d + 0x1B0) = -1;
-        *(int *)(d + 0x1C0) = func_L01_0028C2D8(m + 0x10, D_L07_001B0830[*(int *)(d + 0x188)], 0.0f);
+        *(int *)(d + 0x1C0) = FindClosestDistanceEntry(m + 0x10, D_L07_001B0830[*(int *)(d + 0x188)], 0.0f);
         func_L00_002DF150(m);
         *(float *)(m + 0x2C) *= 1.75f;
         d[0x1C7] = 0;
@@ -857,7 +855,7 @@ void func_L07_00315528(unsigned char *m) {
             if (m[0x53] != (func_001160D8() & 1)) {
                 int r1 = func_001160D8() & 1;
                 int r2 = rand_range(0, 0xF);
-                func_00213DE0(m, r1, r2, rand_range(0x1E, 0x2A));
+                MobyBlendAnimation(m, r1, r2, rand_range(0x1E, 0x2A));
             }
         }
         if (func_001F9908((int *)(d + 0x160))) {
@@ -866,7 +864,7 @@ void func_L07_00315528(unsigned char *m) {
                 *(int *)(d + 0x160) = 0;
                 if (m[0x53] != 5) {
                     int r = rand_range(0, 2);
-                    func_00213DE0(m, 5, r, rand_range(0x12, 0x14));
+                    MobyBlendAnimation(m, 5, r, rand_range(0x12, 0x14));
                 }
                 m[0x20] = 4;
             }
@@ -875,7 +873,7 @@ void func_L07_00315528(unsigned char *m) {
                     *(int *)(d + 0x164) = 0;
                     if (m[0x53] != 4) {
                         int r = rand_range(0, 9);
-                        func_00213DE0(m, 4, r, rand_range(0x14, 0x28));
+                        MobyBlendAnimation(m, 4, r, rand_range(0x14, 0x28));
                     }
                     m[0x20] = 3;
                     *(float *)(m + 0x58) = 1.0f;
@@ -884,7 +882,7 @@ void func_L07_00315528(unsigned char *m) {
             if (a) {
                 if (m[0x53] != 6) {
                     int r = rand_range(0, 2);
-                    func_00213DE0(m, 6, r, rand_range(0xF, 0x19));
+                    MobyBlendAnimation(m, 6, r, rand_range(0xF, 0x19));
                 }
                 *(int *)(d + 0x164) = 0;
                 *(float *)(d + 0x16C) = 0.0f;
@@ -896,7 +894,7 @@ void func_L07_00315528(unsigned char *m) {
             if (b) {
                 if (m[0x53] != 9) {
                     int r = rand_range(0, 2);
-                    func_00213DE0(m, 9, r, rand_range(0x11, 0x19));
+                    MobyBlendAnimation(m, 9, r, rand_range(0x11, 0x19));
                 }
                 m[0x20] = 2;
             }
@@ -904,7 +902,7 @@ void func_L07_00315528(unsigned char *m) {
         if (see && m[0x20] != 8) {
             if (m[0x53] != 0xA) {
                 int r = rand_range(0, 4);
-                func_00213DE0(m, 0xA, r, rand_range(0x14, 0x1E));
+                MobyBlendAnimation(m, 0xA, r, rand_range(0x14, 0x1E));
             }
             *(float *)(m + 0x58) = 1.5f;
             *(int *)(d + 0x298) = 0;
@@ -914,22 +912,22 @@ void func_L07_00315528(unsigned char *m) {
     case 2: {
         float rot;
         rot = *(float *)(m + 0x48);
-        if (D_L07_0015F6B0 % 6 == 0) func_L07_0029C6A8((char *)m, 0, 600000.0f, 5.0f);
-        if ((D_L07_0015F6B0 - 2) % 6 == 0) func_L07_0029C6A8((char *)m, 1, 600000.0f, 5.0f);
-        if (func_L07_003151C0(m, d, (float *)(D_0013F450 + 0x80), 9, 0)) break;
-        func_L00_002592B0((char *)m, ang, (float *)(d + 0x168), D_0015EE70 * 2.0943952f, D_0015EE70 * 0.6981317f, D_0015EE6C * 2.0943952f);
+        if (D_L07_0015F6B0 % 6 == 0) SpawnMobyAttachedParticle((char *)m, 0, 600000.0f, 5.0f);
+        if ((D_L07_0015F6B0 - 2) % 6 == 0) SpawnMobyAttachedParticle((char *)m, 1, 600000.0f, 5.0f);
+        if (TryLatchOntoTarget(m, d, (float *)(D_0013F450 + 0x80), 9, 0)) break;
+        MobySpringTurn((char *)m, ang, (float *)(d + 0x168), D_0015EE70 * 2.0943952f, D_0015EE70 * 0.6981317f, D_0015EE6C * 2.0943952f);
         if (FastDiffRots(*(float *)(m + 0x48), rot) > D_0015EE6C * 0.17453292f) {
             if (m[0x53] != 0xD) {
                 int r = rand_range(0, 1);
-                func_00213DE0(m, 0xD, r, rand_range(0xF, 0x16));
+                MobyBlendAnimation(m, 0xD, r, rand_range(0xF, 0x16));
             }
         } else {
             if (m[0x53] != 9) {
                 int r = rand_range(0, 1);
-                func_00213DE0(m, 9, r, rand_range(0xF, 0x16));
+                MobyBlendAnimation(m, 9, r, rand_range(0xF, 0x16));
             }
         }
-        if (m[0x52] == 9 || m[0x52] == 0xD) m[0x20] = func_L07_00313690(m, (char *)d, (float *)&tgt);
+        if (m[0x52] == 9 || m[0x52] == 0xD) m[0x20] = HitEffectEmitterUpdate(m, (char *)d, (float *)&tgt);
         if ((m[0xBC] % 3U == 0 && func_001F9D48(&tgt, m + 0x10) > 13.0f)
             || (m[0xBC] % 3U == 1 && func_001F9D48(&tgt, m + 0x10) > 20.0f)) {
             *(short *)(d + 0x198) = scale_ticks(0x23);
@@ -939,28 +937,28 @@ void func_L07_00315528(unsigned char *m) {
         break;
     }
     case 3:
-        func_L00_002592B0((char *)m, ang, (float *)(d + 0x168), D_0015EE70 * 1.5707964f, D_0015EE70 * 0.6981317f, D_0015EE6C * 1.0471976f);
-        if (func_00215B18(m, 31.0f) || func_00215B18(m, 67.0f) || func_00215B18(m, 101.0f)) {
+        MobySpringTurn((char *)m, ang, (float *)(d + 0x168), D_0015EE70 * 1.5707964f, D_0015EE70 * 0.6981317f, D_0015EE6C * 1.0471976f);
+        if (IsFrameWithinWindow(m, 31.0f) || IsFrameWithinWindow(m, 67.0f) || IsFrameWithinWindow(m, 101.0f)) {
             *(int *)(d + 0x164) += 1;
             qcopy(&va, m + 0x10);
             ((SbData *)d)->i168 = 0;
-            func_L07_0030EF90((int)m, &va, 0x3A, 1.0f, 25.0f, 2.0f, D_0015EE6C * 8.0f, 1.0f);
-            func_L00_00250800(m, (*(int *)(d + 0x164) & 1) + 5, &va);
+            ShockwaveSpawn((int)m, &va, 0x3A, 1.0f, 25.0f, 2.0f, D_0015EE6C * 8.0f, 1.0f);
+            Moby_GetJointWorldPos(m, (*(int *)(d + 0x164) & 1) + 5, &va);
             func_L07_00313298_f(m, d, 1, &va, scale_ticks(0x1E), 0x800060FF, 0, 10.0f);
             va.f[2] = *(float *)(m + 0x18);
             for (i = 0; i < 55; i++) {
                 float r1 = random_angle_radians();
                 float r2 = random_float_between(0.3926991f, 0.78539819f);
-                func_00215C00(&vb, D_0015EE6C * 5.0f, r1, r2);
+                BuildSphericalOffset(&vb, D_0015EE6C * 5.0f, r1, r2);
                 func_L00_001FF4B0(&vc, &vb, 0.75f);
                 vc.f[2] += 0.1f;
                 FastVecAdd(&vc, &vc, &va);
                 *(int *)&vb.f[3] = 0;
-                func_L07_0029D2B8(&vc, &vb);
+                SpawnParticle(&vc, &vb);
             }
-            func_L07_003134B8((char *)m);
+            RumbleByDistance((char *)m);
         }
-        if (*(int *)(d + 0x164) >= 3 && func_00215B18(m, 51.0f)) {
+        if (*(int *)(d + 0x164) >= 3 && IsFrameWithinWindow(m, 51.0f)) {
             if (t19A) {
                 *(short *)(d + 0x194) = 0xC0;
                 *(int *)(d + 0x160) = 0xAA;
@@ -973,18 +971,18 @@ void func_L07_00315528(unsigned char *m) {
             if (m[0x53] != (func_001160D8() & 1)) {
                 int r1 = func_001160D8() & 1;
                 int r2 = rand_range(0, 0xF);
-                func_00213DE0(m, r1, r2, rand_range(0x1E, 0x2A));
+                MobyBlendAnimation(m, r1, r2, rand_range(0x1E, 0x2A));
             }
             m[0x20] = 1;
         }
         break;
     case 4:
-        if (func_L07_003151C0(m, d, (float *)(D_0013F450 + 0x80), 5, 0)) break;
+        if (TryLatchOntoTarget(m, d, (float *)(D_0013F450 + 0x80), 5, 0)) break;
         if (*(int *)(d + 0x160) < scale_ticks(0x3C) / 2) {
-            func_L00_00250800(m, 2, &va);
+            Moby_GetJointWorldPos(m, 2, &va);
             func_L07_00313298_f(m, d, 2, &va, scale_ticks(0x1E), 0x800060FF, 0, 10.0f);
-            if ((D_L07_0015F6B0 & 7) == 0) func_L07_0029C6A8((char *)m, 2, 0.0f, 0.2f);
-            if (((D_L07_0015F6B0 - 4) & 7) == 0) func_L07_0029C6A8((char *)m, 3, 0.0f, 0.2f);
+            if ((D_L07_0015F6B0 & 7) == 0) SpawnMobyAttachedParticle((char *)m, 2, 0.0f, 0.2f);
+            if (((D_L07_0015F6B0 - 4) & 7) == 0) SpawnMobyAttachedParticle((char *)m, 3, 0.0f, 0.2f);
         }
         if (m[0x52] == 5) {
             qcopy(&va, &tgt);
@@ -1034,7 +1032,7 @@ void func_L07_00315528(unsigned char *m) {
             } else {
                 if (*(int *)(d + 0x160) < scale_ticks(0x3C)) {
                     FastVecAdd(d + 0x140, d + 0x140, d + 0x130);
-                    AddDrawCallback(func_L07_00313800, m);
+                    AddDrawCallback(SwayingBeamDraw, m);
                     *(int *)(d + 0x164) = 2;
                 } else {
                     *(int *)(d + 0x164) = 0;
@@ -1050,15 +1048,15 @@ void func_L07_00315528(unsigned char *m) {
         float thr = 2.0f;
         float rot = *(float *)(m + 0x48);
         float dd;
-        func_L07_00314730(m, d, &vc);
+        CollectLinkedMobyIds(m, d, &vc);
         if (!c) {
             thr = 6.0f;
             if (*(int *)(d + 0x29C) != -1 && (d[0x19C] & 3) == 0 && is_point_inside_clip_volume(&tgt, *(int *)(d + 0x29C))) {
-                qcopy(&vb, D_L07_001B0830[*(int *)(d + 0x1A0)] + func_L01_0028C2D8(&tgt, D_L07_001B0830[*(int *)(d + 0x1A0)], 0.0f) * 16 + 0x10);
+                qcopy(&vb, D_L07_001B0830[*(int *)(d + 0x1A0)] + FindClosestDistanceEntry(&tgt, D_L07_001B0830[*(int *)(d + 0x1A0)], 0.0f) * 16 + 0x10);
                 dd = func_001F9D48(m + 0x10, &vb);
             } else {
                 qcopy(&vb, &tgt);
-                qcopy(&vb, D_L07_001B0830[*(int *)(d + 0x290)] + func_L01_0028C2D8(&vb, D_L07_001B0830[*(int *)(d + 0x290)], 0.0f) * 16 + 0x10);
+                qcopy(&vb, D_L07_001B0830[*(int *)(d + 0x290)] + FindClosestDistanceEntry(&vb, D_L07_001B0830[*(int *)(d + 0x290)], 0.0f) * 16 + 0x10);
                 dd = func_001F9D48(m + 0x10, &vb);
                 if (dd < *(float *)(d + 0x9C) + 1.0f) qcopy(&vb, &tgt);
             }
@@ -1066,8 +1064,8 @@ void func_L07_00315528(unsigned char *m) {
             qcopy(&vb, D_L07_001B0830[*(int *)(d + 0x188)] + *(int *)(d + 0x1A8) * 16 + 0x10);
             dd = func_001F9D48(m + 0x10, &vb);
         }
-        func_L07_00315108(m, d, dd, thr, 1.5f);
-        if ((*(int *)(d + 0x298) & 3) == 0) func_L07_00314D68((char *)m, (char *)d, &vb, d + 0x140);
+        SetChaserSpeed(m, d, dd, thr, 1.5f);
+        if ((*(int *)(d + 0x298) & 3) == 0) FindPathExitPoint((char *)m, (char *)d, &vb, d + 0x140);
         qcopy(&va, d + 0x140);
         *(int *)(d + 0x298) += 1;
         if (*(float *)(d + 0x98) < FastDiffRots(*(float *)(m + 0x48), func_L00_001FF860(va.f[0] - *(float *)(m + 0x10), va.f[1] - *(float *)(m + 0x14)))) {
@@ -1078,11 +1076,11 @@ void func_L07_00315528(unsigned char *m) {
             qcopy(d + 0xC0, &va);
             if (m[0x53] != 3) {
                 int r = rand_range(0, 1);
-                func_00213DE0(m, 3, r, rand_range(0xF, 0x16));
+                MobyBlendAnimation(m, 3, r, rand_range(0xF, 0x16));
             }
             m[0x20] = 7;
         } else {
-            int hit = func_L07_00314ED0((char *)m, (char *)d, &vb, (float *)&va, thr);
+            int hit = ChaseOrSteerAlongPath((char *)m, (char *)d, &vb, (float *)&va, thr);
             float spd;
             int near;
             int moving;
@@ -1096,16 +1094,16 @@ void func_L07_00315528(unsigned char *m) {
                 if (m[0x53] != (func_001160D8() & 1)) {
                     int r1 = func_001160D8() & 1;
                     int r2 = rand_range(0, 9);
-                    func_00213DE0(m, r1, r2, rand_range(0x14, 0x28));
+                    MobyBlendAnimation(m, r1, r2, rand_range(0x14, 0x28));
                 }
                 *(int *)(d + 0x1A8) = -1;
                 m[0x20] = 1;
                 break;
             }
             if (m[0x53] != 0xA) {
-                if (!near && (m[0x70] & 2)) func_00213DE0(m, 0xA, 5, rand_range(0xA, 0xD));
+                if (!near && (m[0x70] & 2)) MobyBlendAnimation(m, 0xA, 5, rand_range(0xA, 0xD));
             } else {
-                if (near && (m[0x70] & 2)) func_00213DE0(m, 0xC, 5, rand_range(0xA, 0xD));
+                if (near && (m[0x70] & 2)) MobyBlendAnimation(m, 0xC, 5, rand_range(0xA, 0xD));
             }
             if (func_001F9908((int *)(d + 0x160))) {
                 if (t19A) {
@@ -1114,7 +1112,7 @@ void func_L07_00315528(unsigned char *m) {
                     *(float *)(m + 0x58) = 1.0f;
                     if (m[0x53] != 5) {
                         int r = rand_range(0, 2);
-                        func_00213DE0(m, 5, r, rand_range(0x14, 0x19));
+                        MobyBlendAnimation(m, 5, r, rand_range(0x14, 0x19));
                     }
                     m[0x20] = 4;
                 }
@@ -1122,7 +1120,7 @@ void func_L07_00315528(unsigned char *m) {
                     *(int *)(d + 0x164) = 0;
                     if (m[0x53] != 4) {
                         int r = rand_range(0, 5);
-                        func_00213DE0(m, 4, r, rand_range(0x14, 0x28));
+                        MobyBlendAnimation(m, 4, r, rand_range(0x14, 0x28));
                     }
                     m[0x20] = 3;
                     *(float *)(m + 0x58) = 1.0f;
@@ -1137,7 +1135,7 @@ void func_L07_00315528(unsigned char *m) {
                     *(float *)(m + 0x58) = 1.0f;
                     if (m[0x53] != 6) {
                         int r = rand_range(0, 2);
-                        func_00213DE0(m, 6, r, rand_range(0x14, 0x19));
+                        MobyBlendAnimation(m, 6, r, rand_range(0x14, 0x19));
                     }
                     *(int *)(d + 0x164) = 0;
                     *(float *)(d + 0x16C) = 0.0f;
@@ -1152,15 +1150,15 @@ void func_L07_00315528(unsigned char *m) {
                 if (m[0x53] != (func_001160D8() & 1)) {
                     int r1 = func_001160D8() & 1;
                     int r2 = rand_range(0, 2);
-                    func_00213DE0(m, r1, r2, rand_range(0x1C, 0x28));
+                    MobyBlendAnimation(m, r1, r2, rand_range(0x1C, 0x28));
                 }
                 m[0x20] = 1;
             }
-            if (m[0x52] == 0xC) func_L07_00313690(m, (char *)d, (float *)&tgt);
+            if (m[0x52] == 0xC) HitEffectEmitterUpdate(m, (char *)d, (float *)&tgt);
         }
         if (m[0x52] == 0xA || m[0x52] == 0xC) {
-            if (func_00215B18(m, 27.5f)) func_L07_003134B8((char *)m);
-            if (func_00215B18(m, 73.0f)) func_L07_003134B8((char *)m);
+            if (IsFrameWithinWindow(m, 27.5f)) RumbleByDistance((char *)m);
+            if (IsFrameWithinWindow(m, 73.0f)) RumbleByDistance((char *)m);
         }
         break;
     }
@@ -1170,21 +1168,21 @@ void func_L07_00315528(unsigned char *m) {
         diff = FastSubRots(func_L00_001FF860(*(float *)(d + 0xC0) - *(float *)(m + 0x10), *(float *)(d + 0xC4) - *(float *)(m + 0x14)), *(float *)(m + 0x48));
         if (!b && (m[0x70] & 2)) {
             if (diff < 0.0001f) {
-                if (m[0x53] != 3) func_00213DE0(m, 3, 5, rand_range(0xA, 0xD));
+                if (m[0x53] != 3) MobyBlendAnimation(m, 3, 5, rand_range(0xA, 0xD));
             } else {
-                if (m[0x53] != 0xE) func_00213DE0(m, 0xE, 5, rand_range(0xA, 0xD));
+                if (m[0x53] != 0xE) MobyBlendAnimation(m, 0xE, 5, rand_range(0xA, 0xD));
             }
         }
         if (m[0x52] == 3 || m[0x52] == 0xE || m[0x52] == 0xD) {
-            float dz = func_0020D830(m);
+            float dz = MobyGetFrameValue(m);
             if (dz < 14.5f || (dz > 19.0f && dz < 35.5f) || dz > 40.5f) {
-                func_L00_002592B0((char *)m, func_L00_001FF860(*(float *)(d + 0xC0) - *(float *)(m + 0x10), *(float *)(d + 0xC4) - *(float *)(m + 0x14)),
+                MobySpringTurn((char *)m, func_L00_001FF860(*(float *)(d + 0xC0) - *(float *)(m + 0x10), *(float *)(d + 0xC4) - *(float *)(m + 0x14)),
                                   (float *)(d + 0x168), D_0015EE70 * 2.0943952f, D_0015EE70 * 0.6981317f, D_0015EE6C * 2.0943952f);
             }
             if (diff > 0.001f && m[0x53] == 3) {
-                func_00213DE0(m, 0xE, 5, rand_range(0xA, 0xD));
+                MobyBlendAnimation(m, 0xE, 5, rand_range(0xA, 0xD));
             } else if (diff < 0.001f && m[0x53] == 0xE) {
-                func_00213DE0(m, 3, 5, rand_range(0xA, 0xD));
+                MobyBlendAnimation(m, 3, 5, rand_range(0xA, 0xD));
             }
         } else {
             *(int *)(d + 0x84) = 0;
@@ -1194,25 +1192,25 @@ void func_L07_00315528(unsigned char *m) {
             if (m[0x53] != d[0x1F6]) {
                 int anim = d[0x1F6];
                 int r = rand_range(0, 2);
-                func_00213DE0(m, anim, r, rand_range(0xF, 0x1B));
+                MobyBlendAnimation(m, anim, r, rand_range(0xF, 0x1B));
             }
             m[0x20] = d[0x1F4];
         }
         if (m[0x52] == 3 || m[0x52] == 0xE) {
-            if (func_00215B18(m, 16.0f)) func_L07_003134B8((char *)m);
-            if (func_00215B18(m, 37.0f)) func_L07_003134B8((char *)m);
+            if (IsFrameWithinWindow(m, 16.0f)) RumbleByDistance((char *)m);
+            if (IsFrameWithinWindow(m, 37.0f)) RumbleByDistance((char *)m);
         } else if (m[0x52] == 0xD) {
-            if (func_00215B18(m, 13.0f)) func_L07_003134B8((char *)m);
-            if (func_00215B18(m, 34.0f)) func_L07_003134B8((char *)m);
+            if (IsFrameWithinWindow(m, 13.0f)) RumbleByDistance((char *)m);
+            if (IsFrameWithinWindow(m, 34.0f)) RumbleByDistance((char *)m);
         }
         break;
     }
     case 12: {
         int k;
-        if (*(float *)(d + 0x20) <= func_001FA888(*(short *)(d + 0x24) / 6)) {
-            if (m[0x53] != 8) func_00213DE0(m, 8, 0x35, rand_range(0xA, 0xD));
+        if (*(float *)(d + 0x20) <= IntToFloat(*(short *)(d + 0x24) / 6)) {
+            if (m[0x53] != 8) MobyBlendAnimation(m, 8, 0x35, rand_range(0xA, 0xD));
         } else {
-            if (m[0x53] != 0xB) func_00213DE0(m, 0xB, 0x3D, 1);
+            if (m[0x53] != 0xB) MobyBlendAnimation(m, 0xB, 0x3D, 1);
         }
         m[0x20] = 0xD;
         *(float *)(d + 0x108) = 0.0f;
@@ -1245,10 +1243,10 @@ void func_L07_00315528(unsigned char *m) {
     }
     case 13: {
         int done = 0;
-        if (func_0020D830(m) > 10.0f) {
-            func_L00_00250800(m, 0xA, &va);
+        if (MobyGetFrameValue(m) > 10.0f) {
+            Moby_GetJointWorldPos(m, 0xA, &va);
             va.f[2] = 34.6f;
-            if (random_integer_below(0x1A) == 0) func_L00_00272488(&va, 0, 0x40103080, 1.6f, 14700.0f);
+            if (random_integer_below(0x1A) == 0) PartType45Spawn(&va, 0, 0x40103080, 1.6f, 14700.0f);
         }
         if (m[0xBC] == 8) {
             float z = *(float *)(d + 0x108);
@@ -1258,7 +1256,7 @@ void func_L07_00315528(unsigned char *m) {
             FastVecAdd(m + 0x10, m + 0x10, d + 0x100);
             if (*(float *)(m + 0x18) < *(float *)(d + 0x1B8)) done = 1;
         } else {
-            if (func_0020D830(m) > 79.0f) done = 1;
+            if (MobyGetFrameValue(m) > 79.0f) done = 1;
         }
         if (done) {
             *(int *)(d + 0x160) = scale_ticks(0xA);
@@ -1271,34 +1269,34 @@ void func_L07_00315528(unsigned char *m) {
     case 14:
         FastVecScale(d + 0x100, d + 0x100, 0.4f);
         FastVecAdd(m + 0x10, m + 0x10, d + 0x100);
-        if (func_0020D830(m) < 168.0f) {
-            func_L00_00250800(m, 0xA, &va);
+        if (MobyGetFrameValue(m) < 168.0f) {
+            Moby_GetJointWorldPos(m, 0xA, &va);
             va.f[2] = 34.6f;
-            if (random_integer_below(0x1A) == 0) func_L00_00272488(&va, 0, 0x40103080, 1.6f, 14700.0f);
+            if (random_integer_below(0x1A) == 0) PartType45Spawn(&va, 0, 0x40103080, 1.6f, 14700.0f);
         }
-        if (func_00215B18(m, 168.0f)) {
-            func_L00_00250800(m, 5, &va);
-            func_L07_0030EF90((int)m, &va, 0x3A, 1.0f, 25.0f, 2.0f, D_0015EE6C * 8.0f, 1.0f);
+        if (IsFrameWithinWindow(m, 168.0f)) {
+            Moby_GetJointWorldPos(m, 5, &va);
+            ShockwaveSpawn((int)m, &va, 0x3A, 1.0f, 25.0f, 2.0f, D_0015EE6C * 8.0f, 1.0f);
         }
-        if (func_00215B18(m, 168.5f)) {
-            func_L00_00250800(m, 6, &va);
-            func_L07_0030EF90((int)m, &va, 0x3A, 1.0f, 25.0f, 2.0f, D_0015EE6C * 8.0f, 1.0f);
-            func_L07_003134B8((char *)m);
+        if (IsFrameWithinWindow(m, 168.5f)) {
+            Moby_GetJointWorldPos(m, 6, &va);
+            ShockwaveSpawn((int)m, &va, 0x3A, 1.0f, 25.0f, 2.0f, D_0015EE6C * 8.0f, 1.0f);
+            RumbleByDistance((char *)m);
         }
         if (*(int *)(d + 0x164) > 0) {
             if (func_001F9908((int *)(d + 0x160))) {
                 *(int *)(d + 0x164) -= 1;
                 *t20 -= 1.0f;
                 d[0x67] = 0xFA;
-                func_L00_0025E4B0(m, (short *)(d + 0x60));
+                RerollEffectCounter(m, (short *)(d + 0x60));
                 if (*t20 <= 0.0f) {
                     *t20 = 0.0f;
-                    if (m[0x53] != 8) func_00213DE0(m, 8, 0, rand_range(0xA, 0xD));
+                    if (m[0x53] != 8) MobyBlendAnimation(m, 8, 0, rand_range(0xA, 0xD));
                     if (*(int *)(d + 0x1F0) != -1) {
                         func_L00_002676A0(m, 1);
-                        func_L00_002584A8(m, 0, -1);
-                        func_L00_002512D8(m[0xB0]);
-                        func_L00_00286128(D_L07_0016016C + (*(int *)(d + 0x1F0) << 7) + 0x30, D_L07_0016016C + (*(int *)(d + 0x1F0) << 7) + 0x70);
+                        SetDeathBits(m, 0, -1);
+                        SetLevelTriggerDone(m[0xB0]);
+                        PauseMenu_SeedSnapshot(D_L07_0016016C + (*(int *)(d + 0x1F0) << 7) + 0x30, D_L07_0016016C + (*(int *)(d + 0x1F0) << 7) + 0x70);
                     }
                     m[0x20] = 0xA;
                 } else {
@@ -1332,21 +1330,21 @@ void func_L07_00315528(unsigned char *m) {
                 }
                 }
                 *(int *)(d + 0x1A8) = ((SbData *)d)->b1D4[d[0x19D]];
-                func_L05_0028CEE8((int *)&va, (int)func_L07_00314730(m, d, &va), *(int *)(d + 0x188));
+                BuildAdjacencyMasks((int *)&va, (int)CollectLinkedMobyIds(m, d, &va), *(int *)(d + 0x188));
                 m[0x20] = 0xF;
             }
         }
         break;
     case 15: {
         int iF0;
-        if (func_0020D830(m) > 198.0f) {
-            if (m[0x53] != 0xA) func_00213DE0(m, 0xA, 0, 0);
-            func_L00_00250800(m, 0xA, &va);
+        if (MobyGetFrameValue(m) > 198.0f) {
+            if (m[0x53] != 0xA) MobyBlendAnimation(m, 0xA, 0, 0);
+            Moby_GetJointWorldPos(m, 0xA, &va);
             qcopy(d + 0xC0, &va);
             *(float *)(d + 0xC8) = *(float *)(d + 0x128);
             iF0 = 0xA;
             func_002116A0(m, 1, &iF0, &vb);
-            func_002153E8(&vb, &vg);
+            MatrixToEuler(&vb, &vg);
             *(float *)(d + 0xCC) = FastAddRots(*(float *)(m + 0x48), vg.f[2]);
         }
         if (m[0x52] == 0xA) {
@@ -1366,11 +1364,11 @@ void func_L07_00315528(unsigned char *m) {
     case 8: {
         float fr;
         if (*(int *)(d + 0x294) <= 0) {
-            if (func_L07_003151C0(m, d, (float *)(D_0013F450 + 0x80), 6, 0)) break;
+            if (TryLatchOntoTarget(m, d, (float *)(D_0013F450 + 0x80), 6, 0)) break;
         }
         ((SbData *)d)->i294 = 1;
-        func_L00_002592B0((char *)m, hang, (float *)(d + 0x168), D_0015EE70 * 2.0943952f, D_0015EE70 * 0.6981317f, D_0015EE6C * 2.0943952f);
-        func_L00_00250800(m, 4, &va);
+        MobySpringTurn((char *)m, hang, (float *)(d + 0x168), D_0015EE70 * 2.0943952f, D_0015EE70 * 0.6981317f, D_0015EE6C * 2.0943952f);
+        Moby_GetJointWorldPos(m, 4, &va);
         fr = func_L07_00319230(m, &va);
         if (m[0x52] != 6) break;
         qcopy(d + 0x140, D_0013F450 + 0x80);
@@ -1391,7 +1389,7 @@ void func_L07_00315528(unsigned char *m) {
                     } else {
                         *(float *)(d + 0x128) = *(float *)(m + 0x18) + 2.0f;
                     }
-                    func_L00_00222B80(0x78, 1);
+                    HeroEnterMoveState(0x78, 1);
                     *(int *)(d + 0x164) = 0;
                     *(float *)(d + 0x1AC) = 20.0f;
                     *(short *)(d + 0x19E) = 0;
@@ -1412,13 +1410,13 @@ void func_L07_00315528(unsigned char *m) {
                     *(int *)(d + 0x164) = 0;
                     *(short *)(d + 0x196) = scale_ticks(0x320);
                     *(int *)(d + 0x160) = scale_ticks(0xF0);
-                    func_L07_0031A268((int)m);
-                    { char *g3 = D_0013F450; if (*(int *)(g3 + 0x2084) == 0x78) func_L00_00222B80(0, 1); }
+                    PullMobysToTargets((int)m);
+                    { char *g3 = D_0013F450; if (*(int *)(g3 + 0x2084) == 0x78) HeroEnterMoveState(0, 1); }
                     d[0x1C7] = 0;
                     if (*(int *)(d + 0x1F8) != -1) {
                         char *sl = D_0013E650 + *(int *)(d + 0x1F8) * 0x70;
                         if (*(void **)(sl + 0x88) == m && *(unsigned char *)(sl + 0x74) != 0) {
-                            func_L00_0028EBF0(*(int *)(d + 0x1F8));
+                            Sound_StopSlot(*(int *)(d + 0x1F8));
                         }
                     }
                     *(int *)(d + 0x1F8) = -1;
@@ -1454,14 +1452,14 @@ void func_L07_00315528(unsigned char *m) {
                             float pfrac = 0.0f;
                             float d1;
                             float d2;
-                            pidx = func_L01_0028C2D8(D_0013F450 + 0x80, path, 0.0f);
+                            pidx = FindClosestDistanceEntry(D_0013F450 + 0x80, path, 0.0f);
                             do {
                                 *(float *)(d + 0x1AC) += 10.0f;
-                                func_L00_0025E860(path, &ve, &pidx, &pfrac, *(float *)(d + 0x1AC), 1);
+                                Spline_AdvanceByDistance(path, &ve, &pidx, &pfrac, *(float *)(d + 0x1AC), 1);
                                 d1 = func_001F9D48(D_0013F450 + 0x80, &ve);
                                 d2 = func_001F9D48(m + 0x10, &ve);
                             } while (d1 < 8.0f || d2 < 12.0f);
-                            func_L07_00314D00((float *)&ve, 0.5f);
+                            AddRandomOffsetXY((float *)&ve, 0.5f);
                             FastVecSub(&vc, &ve, D_0013F450 + 0x80);
                             zv = ve.f[2];
                             func_L00_001FF4B0(&vc, &vc, 0.9f);
@@ -1469,12 +1467,12 @@ void func_L07_00315528(unsigned char *m) {
                             vb.f[2] = 0.0f;
                             func_L00_001FF4B0(&vb, &vb, D_0015EE6C * 15.0f);
                             FastVecAdd(&vc, &vc, D_0013F450 + 0x80);
-                            vb.f[2] = func_L00_0025BC48(&vc, &ve, 0, D_0015EE6C * 15.0f, D_0015EE70 * -9.8f);
+                            vb.f[2] = ComputeLaunchVelocityZ(&vc, &ve, 0, D_0015EE6C * 15.0f, D_0015EE70 * -9.8f);
                             *(float *)(d + 0x1AC) += random_float_between(0.7f, 2.0f);
                         }
                         func_0022ED80(0xB, 0, (int)m);
                         {
-                            char *obj = func_L00_002C6608(&vc, slot, cnt, 0);
+                            char *obj = SpawnMobyFromTable(&vc, slot, cnt, 0);
                             if (obj != 0) {
                                 qcopy_nc(*(char **)(obj + 0x78) + 0x10, &vb);
                                 *(float *)(*(char **)(obj + 0x78) + 0x28) = zv;
@@ -1489,14 +1487,14 @@ void func_L07_00315528(unsigned char *m) {
         if (!a) {
             *(int *)(d + 0x164) = 0;
             *(short *)(d + 0x196) = scale_ticks(0xF);
-            func_L07_0031A268((int)m);
-            { char *g3 = D_0013F450; if (*(int *)(g3 + 0x2084) == 0x78) func_L00_00222B80(0, 1); }
+            PullMobysToTargets((int)m);
+            { char *g3 = D_0013F450; if (*(int *)(g3 + 0x2084) == 0x78) HeroEnterMoveState(0, 1); }
             *(int *)(d + 0x160) = scale_ticks(0x46);
             d[0x1C7] = 0;
             if (*(int *)(d + 0x1F8) != -1) {
                 char *sl = D_0013E650 + *(int *)(d + 0x1F8) * 0x70;
                 if (*(void **)(sl + 0x88) == m && *(unsigned char *)(sl + 0x74) != 0) {
-                    func_L00_0028EBF0(*(int *)(d + 0x1F8));
+                    Sound_StopSlot(*(int *)(d + 0x1F8));
                 }
             }
             *(int *)(d + 0x1F8) = -1;
@@ -1506,14 +1504,14 @@ void func_L07_00315528(unsigned char *m) {
             *(short *)(d + 0x196) = scale_ticks(0x1E);
             if (m[0x53] != 9) {
                 int r = rand_range(0, 2);
-                func_00213DE0(m, 9, r, rand_range(0x10, 0x19));
+                MobyBlendAnimation(m, 9, r, rand_range(0x10, 0x19));
             }
-            func_L07_0031A268((int)m);
-            { char *g3 = D_0013F450; if (*(int *)(g3 + 0x2084) == 0x78) func_L00_00222B80(0, 1); }
+            PullMobysToTargets((int)m);
+            { char *g3 = D_0013F450; if (*(int *)(g3 + 0x2084) == 0x78) HeroEnterMoveState(0, 1); }
             if (*(int *)(d + 0x1F8) != -1) {
                 char *sl = D_0013E650 + *(int *)(d + 0x1F8) * 0x70;
                 if (*(void **)(sl + 0x88) == m && *(unsigned char *)(sl + 0x74) != 0) {
-                    func_L00_0028EBF0(*(int *)(d + 0x1F8));
+                    Sound_StopSlot(*(int *)(d + 0x1F8));
                 }
             }
             *(int *)(d + 0x1F8) = -1;
@@ -1523,24 +1521,24 @@ void func_L07_00315528(unsigned char *m) {
     }
     case 9:
         if (*(int *)(d + 0x164) <= 0) {
-            if (func_L07_003151C0(m, d, (float *)(d + 0x150), 7, 1)) break;
+            if (TryLatchOntoTarget(m, d, (float *)(d + 0x150), 7, 1)) break;
         }
-        func_L00_002592B0((char *)m, func_L00_001FF860(*(float *)(d + 0x150) - *(float *)(m + 0x10), *(float *)(d + 0x154) - *(float *)(m + 0x14)),
+        MobySpringTurn((char *)m, func_L00_001FF860(*(float *)(d + 0x150) - *(float *)(m + 0x10), *(float *)(d + 0x154) - *(float *)(m + 0x14)),
                           (float *)(d + 0x168), D_0015EE70 * 2.0943952f, D_0015EE70 * 0.6981317f, D_0015EE6C * 2.0943952f);
         switch (*(int *)(d + 0x164)) {
         case 0:
-            if (m[0x53] != 7) func_00213DE0(m, 7, 0, rand_range(0xA, 0xD));
+            if (m[0x53] != 7) MobyBlendAnimation(m, 7, 0, rand_range(0xA, 0xD));
             *(int *)(d + 0x160) = 0;
             *(int *)(d + 0x164) = 1;
             break;
         case 1:
             if ((*(unsigned long *)(m + 0x50) & 0xFFFF0000) != 0x07070000 && m[0x53] != 7) {
-                func_00213DE0(m, 7, 0, rand_range(0xA, 0xD));
+                MobyBlendAnimation(m, 7, 0, rand_range(0xA, 0xD));
             }
             if (m[0x52] == 7) {
-                if (func_0020D830(m) >= 9.5f) {
-                    func_L00_00250800(m, 0, &vb);
-                    func_L00_00250800(m, 1, &vc);
+                if (MobyGetFrameValue(m) >= 9.5f) {
+                    Moby_GetJointWorldPos(m, 0, &vb);
+                    Moby_GetJointWorldPos(m, 1, &vc);
                     FastVecAdd(&va, &vb, &vc);
                     FastVecScale(&va, &va, 0.5f);
                     qcopy(d + 0x110, &va);
@@ -1552,14 +1550,14 @@ void func_L07_00315528(unsigned char *m) {
             break;
         case 2:
             if ((*(unsigned long *)(m + 0x50) & 0xFFFF0000) != 0x07070000 && m[0x53] != 7) {
-                func_00213DE0(m, 7, 0, rand_range(7, 0xA));
+                MobyBlendAnimation(m, 7, 0, rand_range(7, 0xA));
             }
             if (func_001F9908((int *)(d + 0x160))) {
                 *(int *)(d + 0x160) = scale_ticks(0xA);
-                func_L07_0029C6A8((char *)m, 0, 800000.0f, 5.0f);
-                func_L07_0029C6A8((char *)m, 1, 800000.0f, 5.0f);
+                SpawnMobyAttachedParticle((char *)m, 0, 800000.0f, 5.0f);
+                SpawnMobyAttachedParticle((char *)m, 1, 800000.0f, 5.0f);
             }
-            if (func_0020D830(m) >= 31.5f) {
+            if (MobyGetFrameValue(m) >= 31.5f) {
                 *(float *)(d + 0x16C) = 0.0f;
                 *(int *)(d + 0x164) = 3;
                 *(int *)(d + 0x11C) = 0;
@@ -1570,7 +1568,7 @@ void func_L07_00315528(unsigned char *m) {
             *(float *)(d + 0x16C) += D_0015EE60;
             if (r <= *(float *)(d + 0x16C)) *(int *)(d + 0x164) = 4;
             if (func_001F9908((int *)(d + 0x160))) *(int *)(d + 0x160) = scale_ticks(0x14);
-            AddDrawCallback(func_L07_00314590, m);
+            AddDrawCallback(RingProjectileUpdate, m);
             break;
         }
         case 4:
@@ -1581,7 +1579,7 @@ void func_L07_00315528(unsigned char *m) {
             if (*(int *)(d + 0x164) != 0) {
                 if (func_001F9908((int *)(d + 0x160))) *(int *)(d + 0x164) = 5;
             }
-            AddDrawCallback(func_L07_00314590, m);
+            AddDrawCallback(RingProjectileUpdate, m);
             break;
         case 5:
             *(float *)(m + 0x58) = 1.0f;
@@ -1590,7 +1588,7 @@ void func_L07_00315528(unsigned char *m) {
             if (m[0x53] != (func_001160D8() & 1)) {
                 int r1 = func_001160D8() & 1;
                 int r2 = rand_range(0, 7);
-                func_00213DE0(m, r1, r2, rand_range(0x1B, 0x2D));
+                MobyBlendAnimation(m, r1, r2, rand_range(0x1B, 0x2D));
             }
             m[0x20] = 1;
             break;
@@ -1598,7 +1596,7 @@ void func_L07_00315528(unsigned char *m) {
         break;
     case 10:
         if (*(int *)(d + 0x1B0) != -1) {
-            func_001FFDA0(*(int *)(d + 0x1B0), 0);
+            Hud_SetBarValueById(*(int *)(d + 0x1B0), 0);
             *(int *)(d + 0x1B0) = -1;
         }
         if (m[0x70] & 2) {
@@ -1626,7 +1624,7 @@ void func_L07_00315528(unsigned char *m) {
         }
         break;
     case 16:
-        if (*(short *)(d + 0x280) != -1) func_L00_0023F1D0(*(short *)(d + 0x280));
+        if (*(short *)(d + 0x280) != -1) FreePointLight(*(short *)(d + 0x280));
         if (*(int *)(d + 0x1D0) == -1 || !(*(float *)(D_L07_00160058 + (*(int *)(d + 0x1D0) << 8) + 0x18) < 34.5f)) {
             DeleteMoby(m);
             return;
@@ -1638,8 +1636,8 @@ void func_L07_00315528(unsigned char *m) {
         break;
     }
     FastVecSub(d + 0x100, m + 0x10, &oldpos);
-    if (m[0x20] < 0xA) func_L00_0025B040(m, 2.5f);
-    func_L07_00313530((char *)d);
+    if (m[0x20] < 0xA) RecordMobyShadow(m, 2.5f);
+    PointLight_UpdateFade((char *)d);
 }
 extern s32 D_0015EF88 MACRO_ADDR;
 typedef float RopeVec[4] __attribute__((aligned(16)));
@@ -1660,7 +1658,7 @@ extern RopeVec D_L07_0020DEA0[][20];
 
 /* Draws the rope grid as textured quads between neighbouring rows, each row faded by its level.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/00312948.c, FUN_L07_00317910. */
-void func_L07_00318CE0(void) {
+void DrawRopeGrid(void) {
     L07RopeDrawPacket packet;
     float phase;
     float row_phase;
@@ -1672,18 +1670,18 @@ void func_L07_00318CE0(void) {
     float phase_step;
     float column_step;
 
-    packet.header[1] = func_001F4868(0x15);
+    packet.header[1] = GetEffectTex(0x15);
     packet.header[2] = 0xff9000000260ULL;
     packet.header[3] = 0x8000000048ULL;
     packet.header[0] = 0;
     phase = (*(float *)&D_L07_00161C04);
     (*(float *)&D_L07_00161C04) += 0.001f;
     if ((*(float *)&D_L07_00161C04) > 7.0f) (*(float *)&D_L07_00161C04) -= 7.0f;
-    func_00234C98(0x47, 0x5301b);
+    VU1_addGSregister(0x47, 0x5301b);
     phase_step = 0.3f;
     phase += phase_step;
     column_step = 0.05f;
-    func_00234C98(0x4e, (D_0015EF88 >> 13) | 0x1000000 | ((u64)0x8000 << 17));
+    VU1_addGSregister(0x4e, (D_0015EF88 >> 13) | 0x1000000 | ((u64)0x8000 << 17));
     for (row = 1; row < 10; row++) {
         row_phase = (*(float *)&D_L07_00161C08);
         (*(float *)&D_L07_00161C08) += (*(float *)&D_L07_00161C0C);
@@ -1722,8 +1720,8 @@ void func_L07_00318CE0(void) {
         }
         phase += phase_step;
     }
-    func_00234C98(0x4e, (s64)(D_0015EF88 >> 13) | 0x1000000);
-    func_00234C98(0x47, 0x5360b);
+    VU1_addGSregister(0x4e, (s64)(D_0015EF88 >> 13) | 0x1000000);
+    VU1_addGSregister(0x47, 0x5360b);
 }
 typedef int u128_319080 __attribute__((mode(TI)));
 typedef union {
@@ -1756,7 +1754,7 @@ extern void look_319080(void *, void *, void *, float) __asm__("func_002156E0");
 /* Starts the rope when one is pending: lays nine points out from the anchor along the moby's
  * axis, then resets the swing state and, once, clears every entry's link.
  * Adapted from Lombyte (MIT) for PAL: overlays/l07/gameplay/entities/00312948.c, FUN_L07_00317cb0. */
-void func_L07_00319080(char *moby, void *anchor) {
+void StartRopeWhenPending(char *moby, void *anchor) {
     RopeVec_319080 step;
     RopeVec_319080 up;
     RopeQuad_319080 c;
@@ -1825,7 +1823,7 @@ extern short D_L07_00161C00;
 extern short D_L07_00161BFC;
 
 /* Pulls each pending moby toward its target point and smooths its velocity. */
-void func_L07_0031A268(int arg0) {
+void PullMobysToTargets(int arg0) {
     float a[4];
     float b[4];
     float c[4];
@@ -1910,6 +1908,7 @@ typedef struct {
 
 void func_L07_0031A410(struct Moby *moby);
 #define func_L07_0031A410_r func_L07_0031A410
+/* Moby update for a homing mine. */
 void func_L07_0031A410_r(struct Moby *moby) {
     Mine_p *vars;
     float *health;
@@ -1931,9 +1930,9 @@ void func_L07_0031A410_r(struct Moby *moby) {
     if (vars == 0) return;
 
     sight_p(moby, sight, 8.0f);
-    if (moby->unk31 && dist_p(&moby->pos, &D_L07_00166EC0_p) < 27.0f) {
+    if (moby->visible && dist_p(&moby->pos, &D_L07_00166EC0_p) < 27.0f) {
         shadow_p(moby);
-        moby->unk7F = 0x15;
+        moby->shadow_range = 0x15;
     }
     health = &vars->health;
     hit = hit_lookup_p(moby, 0x230000, 0);
@@ -1951,7 +1950,7 @@ void func_L07_0031A410_r(struct Moby *moby) {
     case 0:
         moby->flags |= 0x1000;
         qcopy(&vars->home, &moby->pos);
-        moby->unk94 = moby->pclass->unk10;
+        moby->collision = moby->pclass->collision;
         moby->state = 1;
         break;
     case 1:
@@ -1965,7 +1964,7 @@ void func_L07_0031A410_r(struct Moby *moby) {
             (*(int *)(sight + 0x40) != 0 && dist_p(&moby->pos, sight) < 8.0f)) {
             vars->speed = 0.0f;
             vars->timeout = scale_ticks_p(600);
-            moby->unkBC = 1;
+            moby->command = 1;
             vars->bob_timer = scale_ticks_p(7);
             moby->state = 3;
             if (vars->sound != -1) voice_p(vars->sound, 2);
@@ -1976,7 +1975,7 @@ void func_L07_0031A410_r(struct Moby *moby) {
         if (moby->prev_seq != 1) anim_p(moby, 1, 0, 10);
         moby->state = 3;
     case 3:
-        if ((moby->unk70 & 2) && moby->seq == 1 && moby->prev_seq != 2) {
+        if ((moby->anim_flags & 2) && moby->seq == 1 && moby->prev_seq != 2) {
             anim_p(moby, 2, 0, 10);
         }
         speed = D_0015EE70_p;
@@ -1985,15 +1984,15 @@ void func_L07_0031A410_r(struct Moby *moby) {
         vars->speed = new_speed;
         if (max_speed < new_speed)
             vars->speed = max_speed;
-        if (moby->unkBC == 1) {
+        if (moby->command == 1) {
             moby->pos.z += D_0015EE60_p * 0.1f;
             if (tick_p(&vars->bob_timer)) {
                 vars->bob_timer = scale_ticks_p(7);
-                moby->unkBC = 2;
+                moby->command = 2;
             }
-        } else if (moby->unkBC == 2) {
+        } else if (moby->command == 2) {
             moby->pos.z -= D_0015EE60_p * 0.1f;
-            if (tick_p(&vars->bob_timer)) moby->unkBC = 0;
+            if (tick_p(&vars->bob_timer)) moby->command = 0;
         }
         sub_p(&dir, sight, &moby->pos);
         norm_p(&dir, &dir, vars->speed);
@@ -2062,7 +2061,8 @@ void func_L07_0031A410_r(struct Moby *moby) {
 extern int func_001F9850(int);
 extern void func_0020D678(void *);
 
-void func_L07_0031AA68(char *arg, char *other) {
+/* Deletes the moby, first copying other's timer into this moby's data if other is non-null. */
+void DeleteMobyCopyTimer(char *arg, char *other) {
     char *dst = *(char **)(arg + 0x78);
     if (other != 0) {
         *(int *)(dst + 0x98) = scale_ticks(*(int *)(other + 0x84));
@@ -2145,7 +2145,7 @@ extern s32 probe_31AAB0(f32, void *, s32, void *, void *) __asm__("func_L00_001F
 
 /* Swooper: holds at its goal, dives at the hero once it sees it and bursts on contact.
  * Adapted from Lombyte (MIT) for PAL: overlays/l07/gameplay/entities/00312948.c, FUN_L07_003196e0. */
-void func_L07_0031AAB0(struct Moby *moby) {
+void SwooperUpdate(struct Moby *moby) {
     SwooperVars_31AAB0 *vars;
     SwooperSpawnerVars_31AAB0 *spawner_vars;
     SwooperSight_31AAB0 sight;
@@ -2168,9 +2168,9 @@ void func_L07_0031AAB0(struct Moby *moby) {
     collision = vars->collision;
     spawner_vars = (SwooperSpawnerVars_31AAB0 *)vars->spawner->pvars;
     see_31AAB0(moby, &sight, spawner_vars->view_range);
-    if (moby->unk31 && dist_31AAB0(&moby->pos, &D_L07_00166EC0_31AAB0) < 27.0f) {
+    if (moby->visible && dist_31AAB0(&moby->pos, &D_L07_00166EC0_31AAB0) < 27.0f) {
         func_L00_0025B178_31AAB0(moby);
-        moby->unk7F = 0x15;
+        moby->shadow_range = 0x15;
     }
     hit = hit_31AAB0(moby, 0x230000, 0);
     func_L00_0025B4D0_31AAB0(moby, hit, collision, 0, &touching, 0, 0, 4);
@@ -2192,7 +2192,7 @@ void func_L07_0031AAB0(struct Moby *moby) {
         moby->rot.z = atan2_31AAB0(vars->goal.f[0] - moby->pos.x, vars->goal.f[1] - moby->pos.y);
         vars->unk29 = 0;
         moby->state = 1;
-        moby->unkBC = 0;
+        moby->command = 0;
         break;
     case 1:
         sub_31AAB0(&vars->velocity, &vars->goal, &moby->pos);
@@ -2212,25 +2212,25 @@ void func_L07_0031AAB0(struct Moby *moby) {
             }
             vars->dive_speed = spawner_vars->speed * D_0015EE6C_31AAB0;
             vars->life_timer = ticks_31AAB0(600);
-            moby->unkBC = 1;
+            moby->command = 1;
             vars->bob_timer = ticks_31AAB0(7);
             moby->state = 2;
         }
         break;
     case 2:
-        if ((moby->unk70 & 2) && moby->seq == 1 && moby->prev_seq != 2) {
+        if ((moby->anim_flags & 2) && moby->seq == 1 && moby->prev_seq != 2) {
             blend_31AAB0(moby, 2, 0, 10);
         }
-        if (moby->unkBC == 1) {
+        if (moby->command == 1) {
             moby->pos.z += D_0015EE60_315108 * 0.1f;
             if (tick_31AAB0(&vars->bob_timer)) {
                 vars->bob_timer = ticks_31AAB0(7);
-                moby->unkBC = 2;
+                moby->command = 2;
             }
-        } else if (moby->unkBC == 2) {
+        } else if (moby->command == 2) {
             moby->pos.z -= D_0015EE60_315108 * 0.1f;
             if (tick_31AAB0(&vars->bob_timer)) {
-                moby->unkBC = 0;
+                moby->command = 0;
             }
         }
         turn_31AAB0(moby, atan2_31AAB0(sight.pos.f[0] - moby->pos.x, sight.pos.f[1] - moby->pos.y),
@@ -2240,7 +2240,7 @@ void func_L07_0031AAB0(struct Moby *moby) {
         moby->rot.y = func_L00_00259148_31AAB0(&vars->pitch_speed, moby->rot.y, pitch,
                                        D_0015EE70_31AAB0 * 3.1415927f, D_0015EE6C_31AAB0 * 3.1415927f, D_0015EE6C_31AAB0 * 6.2831855f);
         sub_31AAB0(&dir, &sight.pos, &moby->pos);
-        if (moby->unkBC != 0) {
+        if (moby->command != 0) {
             dir.f[2] = 0.0f;
         }
         norm_31AAB0(&dir, &dir, D_0015EE70_31AAB0 * 30.0f);
@@ -2306,7 +2306,7 @@ extern void delete_31B318(void *) __asm__("func_0020D678");
 /* Breakable prop: when hit by moby 0x415 in state 8 or 0x452 in state 9 with hit kind 1.000123, scatters its shard
  * count of pieces over its rotated extent, spawns debris and removes itself.
  * Adapted from Lombyte (MIT) for PAL: overlays/l07/gameplay/entities/00312948.c, FUN_L07_00319f48. */
-void func_L07_0031B318(struct Moby *m) {
+void BreakablePropUpdate(struct Moby *m) {
     BreakableVars_31B318 *v = (BreakableVars_31B318 *)m->pvars;
     MobyHit_31B318 *h;
     Vec4f ext, p, vel;
@@ -2322,7 +2322,7 @@ void func_L07_0031B318(struct Moby *m) {
         ext.x = v->size.x;
         ext.y = v->size.y;
         ext.z = v->size.z;
-        break_rotate_31B318(&ext, &ext, &m->unkC0);
+        break_rotate_31B318(&ext, &ext, &m->rot_row0);
         for (i = 0; i < v->shards; i++) {
             p.x = rand_31B318(-ext.x, ext.x) * 0.5f;
             p.y = rand_31B318(-ext.y, ext.y) * 0.5f;
@@ -2342,7 +2342,7 @@ void func_L07_0031B318(struct Moby *m) {
         delete_31B318(m);
         return;
     }
-    m->unkA4 = 0xFF;
+    m->hit_slot = 0xFF;
 }
 typedef struct Gun_31B620 {
     char p0[0x20];
@@ -2423,7 +2423,7 @@ void func_L07_0031B620(Moby *moby)
         }
         moby->state = 2;
     }
-    moby->unkA4 = 0xFF;
+    moby->hit_slot = 0xFF;
     func_L00_0025E590_31B620(moby, data->path);
 
     switch (moby->state) {
@@ -2457,7 +2457,7 @@ void func_L07_0031B620(Moby *moby)
         }
         data->height = moby->pos.z;
         data->b29 = 0;
-        moby->unkBC = 0;
+        moby->command = 0;
         data->shot = data->pause;
         if (moby->prev_seq != 1) {
             func_00213DE0_31B620(moby, 1, 0, 0);
@@ -2466,7 +2466,7 @@ void func_L07_0031B620(Moby *moby)
         break;
 
     case 1:
-        if (moby->seq != 1 && (moby->unk70 & 2) && moby->prev_seq != 1) {
+        if (moby->seq != 1 && (moby->anim_flags & 2) && moby->prev_seq != 1) {
             func_00213DE0_31B620(moby, 1, 0, 1);
         }
         if (data->back != 0) {
@@ -2488,7 +2488,7 @@ void func_L07_0031B620(Moby *moby)
         if (func_001F9938_31B620(&data->timer) == 0) {
             break;
         }
-        if (moby->unkBC == 0) {
+        if (moby->command == 0) {
             if (data->burst == 0 || (data->shot & 1) != 0) {
                 func_L00_00250800_31B620(moby, 0, pos);
                 vel[0] = func_001F9F90_31B620(moby->rot.z) * (D_0015EE6C_31B318 * 15.0f);
@@ -2499,20 +2499,20 @@ void func_L07_0031B620(Moby *moby)
             }
             if (data->burst != 0) {
                 if (func_001F9938_31B620(&data->shot)) {
-                    moby->unkBC = 1;
+                    moby->command = 1;
                     data->shot = data->burst;
                 }
             } else {
                 data->shot = data->shot ^ 1;
             }
         } else if (func_001F9938_31B620(&data->shot)) {
-            moby->unkBC = 0;
+            moby->command = 0;
             data->shot = data->pause;
         }
         data->timer = func_001F9850_31B620(6);
         {
             float dist = func_001F9D48_31B620(((float *)&moby->pos), D_0013F4D0_31B620);
-            if (55.0f < dist || (35.0f < dist && moby->unk31 == 0)) {
+            if (55.0f < dist || (35.0f < dist && moby->visible == 0)) {
             if (80.0f < dist) {
                 data->timer = data->timer * 3;
             } else if (120.0f < dist) {
@@ -2525,7 +2525,7 @@ void func_L07_0031B620(Moby *moby)
         break;
 
     case 2:
-        if (moby->seq != 4 && (moby->unk70 & 2) && moby->prev_seq != 4) {
+        if (moby->seq != 4 && (moby->anim_flags & 2) && moby->prev_seq != 4) {
             func_00213DE0_31B620(moby, 4, 0, 1);
         }
         moby->rot.z = func_001FA748_31B620(moby->rot.z, D_0015EE6C_31B318 * 12.566371f);
@@ -2537,7 +2537,7 @@ void func_L07_0031B620(Moby *moby)
         break;
 
     case 3:
-        if (moby->seq != 4 && (moby->unk70 & 2) && moby->prev_seq != 4) {
+        if (moby->seq != 4 && (moby->anim_flags & 2) && moby->prev_seq != 4) {
             func_00213DE0_31B620(moby, 4, 0, 0);
         }
         {

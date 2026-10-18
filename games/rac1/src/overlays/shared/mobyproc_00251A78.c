@@ -36,7 +36,7 @@ extern unsigned char D_0013D5C8[];
 extern int D_0013D530[];
 extern char D_0014171B[];
 
-int func_L00_00258250(unsigned char *m, int *item) {
+int ChooseDropItem(unsigned char *m, int *item) {
     extern short D_0015EE84;
     int shortfall = 0;
     int available = 0;
@@ -66,7 +66,7 @@ int func_L00_00258250(unsigned char *m, int *item) {
         }
         i = -1;
         if (shortfall != 0) {
-            scan_index = func_002140B0(shortfall);
+            scan_index = random_integer_below(shortfall);
             if (scan_index >= 0) {
                 i = -1;
                 while (1) {
@@ -82,7 +82,7 @@ int func_L00_00258250(unsigned char *m, int *item) {
             *item = D_0015EED0[i] & 0x3F;
         } else if (available != 0) {
             {
-                scan_index = func_002140B0(stocked);
+                scan_index = random_integer_below(stocked);
                 if (scan_index >= 0) {
                     i = -1;
                     while (1) {
@@ -102,7 +102,7 @@ int func_L00_00258250(unsigned char *m, int *item) {
         }
     }
     {
-        int t = func_002140B0(5);
+        int t = random_integer_below(5);
         int two = 2;
         int one = 1;
         return t == 0 ? two : one;
@@ -129,7 +129,7 @@ extern float func_001F9D10(void *, void *);
 extern void func_L00_00261B00(void *, int, int, int, int);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00250df8.c, FUN_L00_00257470. */
-void func_L00_002584A8(unsigned char *m, int flags, int arg) {
+void SetDeathBits(unsigned char *m, int flags, int arg) {
     float amt;
     int lvl;
     int k;

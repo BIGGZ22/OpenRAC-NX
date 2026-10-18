@@ -1733,7 +1733,7 @@ extern char D_0013F350[];
 void FUN_L15_0029d6c0(M_29E8A0 *m) {
     Tbl_29E8A0 tbl;
     float v50[4];
-    float v60[4];
+    float previous_position[4];
     float v70[4];
     float v80[4];
     float v90[4];
@@ -1857,7 +1857,7 @@ void FUN_L15_0029d6c0(M_29E8A0 *m) {
             transform_vector_by_basis(dv, dv, m->mtx);
             build_look_at_matrix(dv, dv, m->mtx, random_angle_radians());
             FUN_L00_0026cbb0(v90, dv, 0x4F007FFF, 0x1FFFFFFF, scale_game_frames(5), 1, 20000.0f);
-            qcopy(v60, m->pos);
+            qcopy(previous_position, m->pos);
             FUN_L00_001ff290(delta, vel, up);
         }
     }
@@ -1881,7 +1881,7 @@ void FUN_L15_0029d6c0(M_29E8A0 *m) {
         coll.id = m->id;
         coll.v[2] = 1.0f;
         coll.one = 1;
-        if (collision_line(v60, m->pos, 0, *(char **)(hero + 0x2080), &coll) != 0) {
+        if (collision_line(previous_position, m->pos, 0, *(char **)(hero + 0x2080), &coll) != 0) {
             char *hit = D_L15_00174440;
             char *hm = *(char **)(hit + 0x18);
             if (hm != 0) {
@@ -1954,8 +1954,8 @@ void FUN_L15_0029d6c0(M_29E8A0 *m) {
                     fast_vec_normalize(v100, v100, random_float_between(8.5f, 16.5f) * D_0015ED6C);
                 } else {
                     float sp = random_float_between(8.5f, 16.5f) * D_0015ED6C;
-                    float a1 = random_angle_radians();
-                    build_spherical_offset_c(v100, sp, a1, random_angle_radians());
+                    float random_yaw = random_angle_radians();
+                    build_spherical_offset_c(v100, sp, random_yaw, random_angle_radians());
                 }
                 v100[2] = v100[2] + D_0015ED6C * 5.0f;
                 add_vector_xyz(v100, v100, v70);
@@ -2181,7 +2181,7 @@ extern f32 frame_scale_macro __asm__("D_0015ED60") __attribute__((section(".sdat
 void FUN_L15_0029edb0(Moby29FF90 *moby) {
     float w[4];
     float v[4];
-    float v2[4];
+    float temporary_position[4];
     Data29FF90 *d = moby->data;
 
     switch (moby->state) {
@@ -2275,7 +2275,7 @@ void FUN_L15_0029edb0(Moby29FF90 *moby) {
             }
         }
         if (scale_game_frames_alt(0x3C) < d->f14 || *(unsigned char *)(((char *)&D_001413F4)) != 2
-            || (FUN_L00_001ff290(v2, moby->pos, d), moby->pos[0] < 2.0f) || moby->pos[0] > 1021.0f
+            || (FUN_L00_001ff290(temporary_position, moby->pos, d), moby->pos[0] < 2.0f) || moby->pos[0] > 1021.0f
             || moby->pos[1] < 2.0f || moby->pos[1] > 1021.0f
             || moby->pos[2] < 2.0f || moby->pos[2] > 1021.0f) {
             mark_moby_for_removal_c2(D_L15_00161484);
@@ -2283,8 +2283,8 @@ void FUN_L15_0029edb0(Moby29FF90 *moby) {
             return;
         }
         n = func_L00_001F2BE8_29FF90(moby->pos, r, 0x10, moby, 0);
-        *(u128_29FF90 *)v2 = *(u128_29FF90 *)moby->pos;
-        send_blast_hits(moby, v2, D_L15_00178500, n, 0, 0x8B0000, 2, 1, 20.0f, 1.0f, 1.0f);
+        *(u128_29FF90 *)temporary_position = *(u128_29FF90 *)moby->pos;
+        send_blast_hits(moby, temporary_position, D_L15_00178500, n, 0, 0x8B0000, 2, 1, 20.0f, 1.0f, 1.0f);
         cnt = scale_game_frames_alt(0x3C) - d->f14 < scale_game_frames_alt(5) ? scale_game_frames_alt(0x3C) - d->f14 : scale_game_frames_alt(5);
         func_L00_0026E940_29FF90(r * 0.5f * 210000.0f, (char *)moby,
                                  (0x4F << 24) | (random_int_between(0x3F, 0x7F) << 16) | (random_int_between(0x2F, 0x3F) << 8) | random_int_between(0xF, 0x2F),
@@ -2300,7 +2300,7 @@ void FUN_L15_0029edb0(Moby29FF90 *moby) {
 
                 random_spherical_offset(w, r * D_0015ED6C, r * 2.0f * D_0015ED6C);
                 random_spherical_offset(v, 0.0f, r * 0.5f);
-                FUN_L00_001ff290(v2, v, moby->pos);
+                FUN_L00_001ff290(temporary_position, v, moby->pos);
                 p = (Part29FF90 *)FUN_L00_00274948(v, w, 0x7F, moby);
                 if (p != 0) {
                     p->fC = random_float_between(6000.0f, 32000.0f) * r * 0.4f;

@@ -175,7 +175,7 @@ extern int func_0012EFE8_i(void) __asm__("func_0012EFE8");
 
 /* func_0012EFE8 returns int (989snd.c): with the result in $v0, the
    constant goes to the register retail uses. */
-void func_00217588(void) {
+void request_audio_stream_break(void) {
     short *p = D_001517D0;
     if (p[4] != 0) {
         func_0012EFE8_i();
@@ -194,7 +194,7 @@ extern int D_0015EFBC MACRO_ADDR;
 extern int D_0015EFC0 MACRO_ADDR;
 extern void func_00121750(int, int, int, void *);
 
-int func_002175C8(int arg0, int arg1, int arg2) {
+int Stream_SubmitRead(int arg0, int arg1, int arg2) {
     StreamHdr hdr = D_00151800;
 
     hdr.b[1] = D_0015EE58[0];
@@ -212,7 +212,7 @@ extern int func_0012EE98(int, int, int, void *);
    block at D_001517D0+0x30 and record it. Returns the length in the
    units the caller wants, arg2 << 11; on a rejected request it reports
    the failure and returns 0. */
-int func_00217628(int arg0, int arg1, int arg2) {
+int start_audio_stream_read(int arg0, int arg1, int arg2) {
     char *d = (char *)D_001517D0;
 
     if (*(short *)(d + 8) != 0) {
@@ -267,7 +267,7 @@ extern void func_0012EC30(void);
    its own temporary, and the loop's copy goes to $s1 with the result in
    $s0, as in retail. */
 /* Load */
-int func_002176C8(int arg0, int arg1, int arg2) {
+int Load(int arg0, int arg1, int arg2) {
     char *d;
     int r = start_audio_stream_read(arg0, arg1, arg2);
     if (r != 0) {
@@ -294,7 +294,7 @@ int func_002176C8(int arg0, int arg1, int arg2) {
    $a0 for the guard), loop.c hoists the loop's copy into $s0 and CSE turns
    it into `daddu $s0,$a0,$0`. A second, separate local for the return keeps
    its base a temp ($v1) sharing the %hi with the guard through $s1. */
-short func_00217748(int arg0) {
+short UpdateAudioStreamUntilIdle(int arg0) {
     if (arg0 != 0) {
         char *d;
         while (d = (char *)D_001517D0, *(short *)(d + 0x8) != 0) {
@@ -318,7 +318,7 @@ short func_00217748(int arg0) {
 
 extern int func_0012F030(void);
 
-void func_002177F0(int arg0) {
+void FinishAudioStreamRead(int arg0) {
     char *d;
     if (arg0 == 1) {
         d = (char *)D_001517D0;
@@ -329,7 +329,7 @@ void func_002177F0(int arg0) {
     }
 }
 
-void func_00217830(int arg0, long arg1) {
+void MusicAdvanceStateCallback(int arg0, long arg1) {
     short *p = (short *)(int)arg1;
     if (p != 0 && arg0 != 0 && p[5] == 2) {
         p[5] = 3;
@@ -338,7 +338,7 @@ void func_00217830(int arg0, long arg1) {
 
 extern void func_002167C0(short, short, short);
 
-void func_00217860(int arg0, long arg1) {
+void MusicStartCallback(int arg0, long arg1) {
     short *p = (short *)(int)arg1;
     if (p == 0) {
         return;
@@ -356,7 +356,7 @@ void func_00217860(int arg0, long arg1) {
 
 extern void func_002169B8(short, short, short);
 
-void func_002178C0(int arg0, long arg1) {
+void MusicPreseekCallback(int arg0, long arg1) {
     short *p = (short *)(int)arg1;
     if (p == 0) {
         return;
@@ -374,7 +374,7 @@ void func_002178C0(int arg0, long arg1) {
 
 extern short D_001517F0 NOT_SDA;
 
-void func_00217920(int arg0, long arg1) {
+void MusicTransitionCallback(int arg0, long arg1) {
     short *p = (short *)(int)arg1;
     if (p != 0) {
         *(int *)p = arg0;
@@ -392,7 +392,7 @@ void func_00217920(int arg0, long arg1) {
     }
 }
 
-void func_00217970(int arg0, long arg1) {
+void MusicStartTrackBodyCallback(int arg0, long arg1) {
     short *p = (short *)(int)arg1;
     if (p != 0) {
         if (arg0 < 0) {
@@ -411,7 +411,7 @@ void func_00217970(int arg0, long arg1) {
     }
 }
 
-void func_002179C8(int arg0, long arg1) {
+void MusicStartTrackCallback(int arg0, long arg1) {
     short *p = (short *)(int)arg1;
     if (p != 0) {
         *(int *)p = arg0;
@@ -429,7 +429,7 @@ extern char D_00160168[];
 
 /* `*p = arg0` happens on the 0xFFFFFFFF path too (the older decode made
    it conditional), and D_001E8C60's message is printed. */
-void func_00217A08(int arg0, long arg1) {
+void MusicReleaseCallback(int arg0, long arg1) {
     short *p = (short *)(int)arg1;
     if (p != 0) {
         if (*(unsigned int *)p != 0xFFFFFFFF) {
@@ -443,7 +443,7 @@ void func_00217A08(int arg0, long arg1) {
     }
 }
 
-void func_00217A60(int arg0, long arg1) {
+void MusicTimeRemainingCallback(int arg0, long arg1) {
     char *p = (char *)(int)arg1;
     short *b;
     if (p == 0) {
@@ -529,7 +529,7 @@ extern s32 func_00216098(void);
 
 void func_00217AE8(void *arg0, Menu *menu, s32 arg2);
 
-void func_00217AE8(void *arg0, Menu *menu, s32 arg2) {
+void DialogNode_Update(void *arg0, Menu *menu, s32 arg2) {
     char buf[0x100];
     Suffixes sfx;
     char num[0x20];
@@ -561,7 +561,7 @@ void func_00217AE8(void *arg0, Menu *menu, s32 arg2) {
                 if (e->unk4 & 0x4000) {
                     func_001E97D8((s16)(e->unk4 ^ 0x4000));
                 } else {
-                    func_001FFCB0(D_00160170);
+                    Hud_RemoveBank(D_00160170);
                     D_00160170 = -1;
                     func_001E97E0((s16)e->unk4);
                 }
@@ -589,7 +589,7 @@ void func_00217AE8(void *arg0, Menu *menu, s32 arg2) {
     if (D_001994C0[5] != 0) {
         copy_text_to_shared_buffer(buf);
     } else if (D_00160170 != -1) {
-        func_001FFCB0(D_00160170);
+        Hud_RemoveBank(D_00160170);
         D_00160170 = -1;
     }
     if (e->unk8 == 0) {
@@ -632,13 +632,13 @@ void func_00217AE8(void *arg0, Menu *menu, s32 arg2) {
         menu->unk38 = D_0015F6F0_far;
         e = (MenuItem *)(menu->unk3C + next * 0x1C);
         menu->unk8 = *(u8 *)&e->unk10 & 1;
-        func_00217AE8(arg0, menu, 0);
+        DialogNode_Update(arg0, menu, 0);
     }
 }
 
 extern char D_0013CA40[];
 
-void func_00217EC0(void) {
+void pad_resetState(void) {
     char *p = D_0013CA40;
     *(short *)(p + 0x18E) = 0;
     *(int *)(p + 0x190) = 0;
@@ -651,7 +651,7 @@ extern void func_00124650(void);
 extern void func_00124B88(int);
 extern int func_00124BC8(void *, void *);
 
-void func_00217EE8(void) {
+void InitPads(void) {
     int *p = &D_001CDAE0;
 
     func_00124650();

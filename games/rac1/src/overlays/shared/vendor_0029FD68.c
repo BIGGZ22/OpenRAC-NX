@@ -25,7 +25,7 @@ extern int D_L00_00161F30 MACRO_ADDR;
 extern char D_L00_00161228[];
 extern char D_L00_00161230[];
 
-void func_L00_0029FD68(void *m, int x, int y) {
+void Vendor_DrawCostBox(void *m, int x, int y) {
     TBox box;
     char text[256];
     int cost;
@@ -35,7 +35,7 @@ void func_L00_0029FD68(void *m, int x, int y) {
     char *fmt;
     int total;
 
-    func_001FBAB8(0, 0, 0x200, 0x80, 0x200, 0x80, 0);
+    Framebuf_DrawAlphaRect(0, 0, 0x200, 0x80, 0x200, 0x80, 0);
     { int n = sizeof(box); func_001153FC((void *)&box, 0, n); }
     box.half_x = x / 2;
     box.half_y = y / 2;
@@ -56,12 +56,12 @@ void func_L00_0029FD68(void *m, int x, int y) {
         ammo_cost = D_L00_001C43B0[MENU.rows[MENU.f58].fD0].hA;
     else
         ammo_cost = D_L00_001C43B0[MENU.rows[MENU.f58].fD0].h8;
-    if (D_0015EE98 < ammo_cost)
+    if (gBolts < ammo_cost)
         goto no_money;
-    func_0020E180(MENU.f20 + 0x500, 1);
+    DrawMobyList(MENU.f20 + 0x500, 1);
     box.half_y = 6;
     box.style = 1;
-    func_001F75D0((void *)&box, 0x80f0f0f0L, func_001FE540(0x523C), -1);
+    Font_PrintWindowAlt((void *)&box, 0x80f0f0f0L, msg_string(0x523C), -1);
     func_00116248(text, D_L00_00161220, D_L00_00161F30);
     if (D_L00_00161F30 >= 100)
         text_x = 0x17;
@@ -70,34 +70,34 @@ void func_L00_0029FD68(void *m, int x, int y) {
             goto quantity_small;
         text_x = 0x1e;
     }
-    func_001F6968(text_x, 0x32, 0x80f0f0f0L, text, -1);
+    FontPrintSmall(text_x, 0x32, 0x80f0f0f0L, text, -1);
     goto quantity_done;
 quantity_small:
-    func_001F6968(0x25, 0x32, 0x80f0f0f0L, text, -1);
+    FontPrintSmall(0x25, 0x32, 0x80f0f0f0L, text, -1);
 quantity_done:
-    func_001F6968(0xc, 0x32, 0x80f0f0f0L, D_L00_00161228, -1);
-    func_001F6968(0x40, 0x32, 0x80f0f0f0L, D_L00_00161230, -1);
+    FontPrintSmall(0xc, 0x32, 0x80f0f0f0L, D_L00_00161228, -1);
+    FontPrintSmall(0x40, 0x32, 0x80f0f0f0L, D_L00_00161230, -1);
     fmt = D_L00_00161220;
     if (MENU.f40)
         total = D_L00_00161F30 * D_L00_001C43B0[MENU.rows[MENU.f58].fD0].hA;
     else
         total = D_L00_00161F30 * D_L00_001C43B0[MENU.rows[MENU.f58].fD0].h8;
     func_00116248(text, fmt, total);
-    func_001F6D88(0x40, 0x4c, 0x80f0f0f0L, text, -1);
+    font_print_right_small(0x40, 0x4c, 0x80f0f0f0L, text, -1);
     return;
 no_money:
     message_id = 0x523D;
 message:
-    func_001F75D0((void *)&box, 0x80f0f0f0L, func_001FE540(message_id), -1);
+    Font_PrintWindowAlt((void *)&box, 0x80f0f0f0L, msg_string(message_id), -1);
     return;
 purchase:
-    cost = D_0013D5EB ? D_L00_001C43B0[MENU.rows[MENU.f58].fD0].i4 : D_L00_001C43B0[MENU.rows[MENU.f58].fD0].i0;
-    if (D_0015EE98 >= cost) {
-        func_001F6968(6, 6, 0x80f0f0f0L, func_001FE540(0x523E), -1);
-        func_001F6968(2, 0x20, 0x80f0f0f0L, func_001FE540(0x5239), -1);
-        func_001F6968(2, 0x3e, 0x80f0f0f0L, func_001FE540(0x5250), -1);
+    cost = gHavePersuader ? D_L00_001C43B0[MENU.rows[MENU.f58].fD0].i4 : D_L00_001C43B0[MENU.rows[MENU.f58].fD0].i0;
+    if (gBolts >= cost) {
+        FontPrintSmall(6, 6, 0x80f0f0f0L, msg_string(0x523E), -1);
+        FontPrintSmall(2, 0x20, 0x80f0f0f0L, msg_string(0x5239), -1);
+        FontPrintSmall(2, 0x3e, 0x80f0f0f0L, msg_string(0x5250), -1);
     } else {
-        func_001F75D0((void *)&box, 0x80f0f0f0L, func_001FE540(0x523D), -1);
+        Font_PrintWindowAlt((void *)&box, 0x80f0f0f0L, msg_string(0x523D), -1);
     }
 }
 typedef struct {
@@ -119,7 +119,7 @@ extern void func_00234C98(int, long);
 extern void func_L00_001FD1D8(void *, void *, int);
 
 // draws five glass quads around a moby's joints
-void func_L00_002A0C20(char *m) {
+void Vendor_DrawGlassQuads(char *m) {
     float A[4];
     float B[4];
     float C[4];
@@ -136,7 +136,7 @@ void func_L00_002A0C20(char *m) {
         idx[0] = i * 4;
         idx[1] = i * 4 + 1;
         idx[2] = i * 4 + 2;
-        func_0020DB98(m, 3, idx, (char *)P);
+        MobyTransformScaledVertexBatch(m, 3, idx, (char *)P);
         qcopy(C, P[0]);
         FastVecSub(A, P[1], P[0]);
         FastVecSub(B, P[2], P[0]);
@@ -193,7 +193,7 @@ extern void func_001F5800(int, int, int, int, int, int, int, int, long, long);
 extern long D_0015EFD0 MACRO_ADDR;
 
 /* Draws a screen-space rectangle from five joints of a moby: builds a box from its joint vectors, projects it and draws the rectangle. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_0029f990.c, FUN_L00_0029fcd0. */
-void func_L00_002A0F60(void *m) {
+void DrawMobyJointRect(void *m) {
     q2A d1[1];
     q2A d2[1];
     q2A base[1];
@@ -206,7 +206,7 @@ void func_L00_002A0F60(void *m) {
     int x, y, w, h;
     float len;
     ids = D_L00_00161238;
-    func_0020DB98(m, 3, &ids, out);
+    MobyTransformScaledVertexBatch(m, 3, &ids, out);
     qcopy(base, out);
     FastVecSub(d1, &out[1], out);
     FastVecSub(d2, &out[2], out);
@@ -225,13 +225,13 @@ void func_L00_002A0F60(void *m) {
     a = c[0];
     b = c[3];
     func_00238D90(&a, &b, &x, &y, &w, &h);
-    func_0023A948(9, 7, 1.0f);
-    func_001FB908(0x200, 0x200);
+    Framebuf_AllocRenderTarget(9, 7, 1.0f);
+    Framebuf_ClearScreen(0x200, 0x200);
     VU1_addGSregister(0x42, 0x8000000064L);
-    func_L00_0029FD68(m, x, y);
+    Vendor_DrawCostBox(m, x, y);
     func_0023A5E0(6, (float)x, (float)y);
-    func_001F7B40();
-    func_001FB908(0x200, 0x200);
+    BeginDrawFrame();
+    Framebuf_ClearScreen(0x200, 0x200);
     VU1_addGSregister(0x42, 0x8000000064L);
     DrawMobyList((int)m, 1);
     DrawTexturedQuad(w, h, x, y, 0, 0, x, y, 0x80808080L, D_0015EFD0);
@@ -253,7 +253,7 @@ struct HoloPacket {
 };
 
 /* Draws the four quads of the hologram cone, scrolling the texture coordinates. */
-void func_L00_002A11E8(void) {
+void Vendor_DrawHologramCone(void) {
     struct HoloPacket s;
     float v[4][4];
     int i;
@@ -262,7 +262,7 @@ void func_L00_002A11E8(void) {
     s.hdr[2] = 1;
     s.hdr[3] = 0x4000000044L;
     s.hdr[0] = 0;
-    s.hdr[1] = func_001F4868(0x18);
+    s.hdr[1] = GetEffectTex(0x18);
     for (i = 0; i < 4; i++) {
         func_001F9EC0(v[0], D_L00_001CA680[D_L00_001CA780[i].a], (char *)D_L00_001CA7C0[7] + 0xC0);
         func_001F9EC0(v[1], D_L00_001CA680[*(int *)((char *)D_L00_001CA780 + i * 16 + 4)], (char *)D_L00_001CA7C0[7] + 0xC0);
@@ -398,7 +398,7 @@ extern void func_0020DD48_2A1540(void) __asm__("func_0020DD48");
 /* Vendor screen frame: on the first frame sets up the camera rows, the two preview mobys and the stream read; then
  * draws the vendor mobys, the capture pass and the HUD.
  * Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay/entities/0029f990.c, FUN_L00_002a02b0. */
-void func_L00_002A1540(void) {
+void Vendor_RenderScreen(void) {
     A02b0_obj_2A1540 *e;
     A02b0_tab_2A1540 *g;
 

@@ -1401,6 +1401,19 @@ bool DirectRenderer::init(RenderState& state, std::string& error) {
         3, 1, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<const void*>(offsetof(DirectVertex, fog))
     );
     glBindVertexArray(0);
+
+    glGenSamplers(16, m_samplers.data());
+    for (int i = 0; i < 16; ++i) {
+        const bool linear_mag = (i & 1) != 0;
+        const bool linear_min = (i & 2) != 0;
+        const bool clamp_s = (i & 4) != 0;
+        const bool clamp_t = (i & 8) != 0;
+        glSamplerParameteri(m_samplers[i], GL_TEXTURE_MAG_FILTER, static_cast<GLint>(linear_mag ? GL_LINEAR : GL_NEAREST));
+        glSamplerParameteri(m_samplers[i], GL_TEXTURE_MIN_FILTER, static_cast<GLint>(linear_min ? GL_LINEAR : GL_NEAREST));
+        glSamplerParameteri(m_samplers[i], GL_TEXTURE_WRAP_S, static_cast<GLint>(clamp_s ? GL_CLAMP_TO_EDGE : GL_REPEAT));
+        glSamplerParameteri(m_samplers[i], GL_TEXTURE_WRAP_T, static_cast<GLint>(clamp_t ? GL_CLAMP_TO_EDGE : GL_REPEAT));
+    }
+
     return true;
 }
 
@@ -1425,6 +1438,11 @@ void DirectRenderer::release() {
         glDeleteTextures(1, &o.texture);
     }
     m_offscreen_targets.clear();
+    if (m_samplers[0] != 0) {
+        glDeleteSamplers(16, m_samplers.data());
+        m_samplers.fill(0);
+    }
+    m_bound_sampler = 0xFFFFFFFF;
 }
 
 bool DirectRenderer::submit(std::span<const std::uint8_t> packets) {
@@ -1519,26 +1537,13 @@ void DirectRenderer::apply(const DirectState& s, RenderState& render_state) {
         } else {
             glBindTexture(GL_TEXTURE_2D, render_state.textures.gl_texture(s.texture));
         }
-        glTexParameteri(
-            GL_TEXTURE_2D,
-            GL_TEXTURE_MAG_FILTER,
-            static_cast<GLint>(s.linear_mag ? GL_LINEAR : GL_NEAREST)
-        );
-        glTexParameteri(
-            GL_TEXTURE_2D,
-            GL_TEXTURE_MIN_FILTER,
-            static_cast<GLint>(s.linear_min ? GL_LINEAR : GL_NEAREST)
-        );
-        glTexParameteri(
-            GL_TEXTURE_2D,
-            GL_TEXTURE_WRAP_S,
-            static_cast<GLint>(s.clamp_s ? GL_CLAMP_TO_EDGE : GL_REPEAT)
-        );
-        glTexParameteri(
-            GL_TEXTURE_2D,
-            GL_TEXTURE_WRAP_T,
-            static_cast<GLint>(s.clamp_t ? GL_CLAMP_TO_EDGE : GL_REPEAT)
-        );
+        const unsigned sampler_idx = (s.linear_mag ? 1u : 0u) | (s.linear_min ? 2u : 0u)
+                                   | (s.clamp_s ? 4u : 0u) | (s.clamp_t ? 8u : 0u);
+        const unsigned sampler = m_samplers[sampler_idx];
+        if (sampler != m_bound_sampler) {
+            glBindSampler(0, sampler);
+            m_bound_sampler = sampler;
+        }
         glUniform1i(m_uniforms.tcc, s.tcc ? 1 : 0);
         glUniform1i(m_uniforms.tfx, static_cast<GLint>(s.tfx));
         glUniform1f(m_uniforms.tex_alpha_scale, s.texture_full_alpha ? 0.5f : 1.0f);
@@ -1546,10 +1551,7 @@ void DirectRenderer::apply(const DirectState& s, RenderState& render_state) {
         if (s.distance_field) {
             glActiveTexture(GL_TEXTURE0 + 1);
             glBindTexture(GL_TEXTURE_2D, render_state.textures.gl_texture(s.field));
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glBindSampler(1, m_samplers[15]);  // linear mag/min + clamp s/t
             glUniform1i(m_uniforms.tex_T1, 1);
             glActiveTexture(GL_TEXTURE0);
         }
@@ -1821,6 +1823,9 @@ void DirectRenderer::flush(RenderState& state, bool background) {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_GEQUAL);
     glBindVertexArray(0);
+    glBindSampler(0, 0);
+    glBindSampler(1, 0);
+    m_bound_sampler = 0xFFFFFFFF;
     m_interpreter->clear();
 }
 

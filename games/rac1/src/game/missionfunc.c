@@ -1,4 +1,5 @@
 #include "common.h"
+#include "hero.h"
 #include "callees.h"
 #include "records.h"
 #include "structs.h"
@@ -135,7 +136,7 @@ extern char D_001A2F90[];
    Returns whether that count is 0. The head is stored and then read back
    (CSE forwards it, leaving retail's copy into $s0 after the null test),
    and each block reads D_001A2F90 through its own `char *` local. */
-int func_0020C7A0(void) {
+int Mission_UpdateObjectives(void) {
     char *node;
 
     {
@@ -149,9 +150,9 @@ int func_0020C7A0(void) {
     while (*(short *)node != 0) {
         if ((*(unsigned short *)(node + 0x10) & 4) && D_0013DE60[D_001A01F0[0x89]] == 0) {
             *(short *)(node + 0x24) = 0;
-        } else if (!func_0020C940(*(short *)(node + 2), *(int *)(node + 4))) {
+        } else if (!Mission_CheckCondition(*(short *)(node + 2), *(int *)(node + 4))) {
             *(short *)(node + 0x24) = 0;
-        } else if (!func_0020C940(*(short *)(node + 8), *(int *)(node + 0xC))) {
+        } else if (!Mission_CheckCondition(*(short *)(node + 8), *(int *)(node + 0xC))) {
             *(short *)(node + 0x24) = 1;
         } else {
             *(short *)(node + 0x24) = 2;
@@ -190,7 +191,7 @@ extern unsigned char D_0013D490[];
 extern unsigned char D_0014BFC0[][4];
 
 /* A 10-case switch; the explicit `case 9: break;` keeps retail's table. */
-int func_0020C940(short type, int arg) {
+int Mission_CheckCondition(short type, int arg) {
     switch (type) {
     case 0:
         return 1;
@@ -237,7 +238,7 @@ extern MissionNode *D_001A2FA0;
    Bit 31 of *mask says every visible node is done. Returns the count.
    out is indexed by count: loop strength reduction then gives retail's
    pointer and its copy for the second store. */
-int func_0020CA50(int *out, int *mask, int *nums, int arg3) {
+int Mission_CollectObjectiveIds(int *out, int *mask, int *nums, int arg3) {
     MissionNode *p = D_001A2FA0;
     int count = 0;
     int all = 1;
@@ -284,6 +285,7 @@ __asm__(".section .text\n\tnop\n");
 extern int D_0013D844 NOT_SDA;
 extern unsigned char D_0013D4A8 NOT_SDA;
 
+/* Predicate: true when D_0013D844 and the flag byte D_0013D4A8 are both set. */
 int func_0020CB80(void) {
     if (D_0013D844 != 0 && D_0013D4A8 != 0) return 1;
     return 0;
@@ -291,6 +293,7 @@ int func_0020CB80(void) {
 
 extern int D_0013D9B4 NOT_SDA;
 
+/* Predicate: true when D_0013D9B4 and special items 0x20 and 0x21 are all set. */
 int func_0020CBA8(void) {
     if (D_0013D9B4 != 0 && gSpecialItems[0x20] != 0 && gSpecialItems[0x21] != 0) return 1;
     return 0;
@@ -299,6 +302,7 @@ int func_0020CBA8(void) {
 extern unsigned char D_0013D5CA NOT_SDA;
 extern int D_0013D6B8 NOT_SDA;
 
+/* Predicate: true when both mission words at D_0013D6B8 are non-zero. */
 int func_0020CBE0(void) {
     char *base = (char *)&D_0013D6B8;
     if (*(int *)(base + 0x40C) != 0 && *(int *)(base + 0x3FC) != 0) return 1;
@@ -308,6 +312,7 @@ int func_0020CBE0(void) {
 extern int D_0013DAE4 NOT_SDA;
 extern unsigned char D_0013D4E5 NOT_SDA;
 
+/* Predicate: true when D_0013DAE4 and the flag byte D_0013D4E5 are both set. */
 int func_0020CC10(void) {
     if (D_0013DAE4 != 0 && D_0013D4E5 != 0) return 1;
     return 0;
@@ -316,6 +321,7 @@ int func_0020CC10(void) {
 extern int D_0013DB24 NOT_SDA;
 extern unsigned char D_0013D4F1 NOT_SDA;
 
+/* Predicate: true when D_0013DB24 and the flag byte D_0013D4F1 are both set. */
 int func_0020CC38(void) {
     if (D_0013DB24 != 0 && D_0013D4F1 != 0) return 1;
     return 0;
@@ -324,6 +330,7 @@ int func_0020CC38(void) {
 extern int D_0013DC34 NOT_SDA;
 extern unsigned char D_0013D605 NOT_SDA;
 
+/* Predicate: true when D_0013DC34 and the flag byte D_0013D605 are both set. */
 int func_0020CC60(void) {
     if (D_0013DC34 != 0 && D_0013D605 != 0) return 1;
     return 0;
@@ -331,12 +338,14 @@ int func_0020CC60(void) {
 
 extern int D_0013D5C8 NOT_SDA;
 
+/* Predicate: true when two entries of the D_0013D5C8 table are both set. */
 int func_0020CC88(void) {
     unsigned char *base = (unsigned char *)&D_0013D5C8;
     if (base[0x21] != 0 && base[0x1F] != 0) return 1;
     return 0;
 }
 
+/* Returns whether entry arg0 of the D_0013D5C8 table is set. */
 int func_0020CCB8(int arg0) {
     unsigned char *base = (unsigned char *)&D_0013D5C8;
     return base[arg0] != 0;
@@ -356,6 +365,7 @@ int func_0020CCD0(void) {
 
 extern unsigned char D_0013D4B0 NOT_SDA;
 
+/* Returns 0 when D_0013D9B4 is clear, else 2 or 1 depending on D_0013D4B0. */
 int func_0020CD28(void) {
     if (D_0013D9B4 != 0) {
         return D_0013D4B0 ? 2 : 1;
@@ -365,6 +375,7 @@ int func_0020CD28(void) {
 
 extern unsigned char D_0013DE55 NOT_SDA;
 
+/* Predicate: true when both D_0013D4F1 and D_0013DE55 are set. */
 int func_0020CD58(void) {
     if (D_0013D4F1 != 0 && D_0013DE55 != 0) return 1;
     return 0;
@@ -372,6 +383,7 @@ int func_0020CD58(void) {
 
 extern unsigned char D_0013D5DD NOT_SDA;
 
+/* Returns 2 when the Morph-o-Ray is owned, else whether D_0013DC34 is set. */
 int func_0020CD80(void) {
     if (gHaveMorphORay != 0) return 2;
     return D_0013DC34 != 0;
@@ -379,10 +391,12 @@ int func_0020CD80(void) {
 
 extern unsigned char D_0013D5E7 NOT_SDA;
 
-int func_0020CDA8(void) {
+/* Returns whether the Hologuise is owned. */
+int HasHologuise(void) {
     return gHaveHologuise != 0;
 }
 
+/* Returns 2 or the state of another entry of the D_0013D5C8 table, depending on the first. */
 int func_0020CDB8(void) {
     unsigned char *base = (unsigned char *)&D_0013D5C8;
     if (base[0x1F] != 0) return 2;
@@ -451,12 +465,8 @@ struct MapState_0CDE0 {
     s32 pan_x[20];               /* 0x104 */
     s32 pan_y[20];               /* 0x154 */
 };
-struct HeroPos_0CDE0 {
-    u8 pad0[0x80];
-    f32 pos[4];                  /* 0x80: world position */
-};
 extern struct MapState_0CDE0 D_001A01F0_0CDE0 __asm__("D_001A01F0");
-extern struct HeroPos_0CDE0 D_0013F450_0CDE0 __asm__("D_0013F450");
+extern struct Hero D_0013F450_0CDE0 __asm__("D_0013F450");
 extern s32 D_0015EE84_0CDE0 __asm__("D_0015EE84") MACRO_ADDR;
 extern u8 D_0013DE60_0CDE0[] __asm__("D_0013DE60");
 extern struct MapIcon_0CDE0 *D_001A2F40_0CDE0[] __asm__("D_001A2F40");
@@ -480,7 +490,7 @@ extern void func_001F75D0_0CDE0(struct TextRegion_0CDE0 *, long, char *,
    it is the current level, places the fixed icons (-1..-9) and projects the others to map
    coordinates, then sets each icon's active flag and sizes its label box.
    Adapted from Lombyte (MIT) for PAL: src/ui/map/update_map_icons.c, update_map_icons. */
-void func_0020CDE0(s32 level, s32 flag) {
+void Map_RefreshIcons(s32 level, s32 flag) {
     char label_text[128];
     f32 map_x;
     f32 map_y;
@@ -493,9 +503,9 @@ void func_0020CDE0(s32 level, s32 flag) {
         D_001A01F0_0CDE0.icons = 0;
     }
 
-    if (D_0013F450_0CDE0.pos[2] != 0.0f && level == D_0015EE84_0CDE0 && flag) {
-        func_00208C38_0CDE0(&map_x, &map_y, D_0015FE20_0CDE0 ? level + 100 : level, D_0013F450_0CDE0.pos[0],
-                            D_0013F450_0CDE0.pos[1]);
+    if (D_0013F450_0CDE0.motion.pos.f[2] != 0.0f && level == D_0015EE84_0CDE0 && flag) {
+        func_00208C38_0CDE0(&map_x, &map_y, D_0015FE20_0CDE0 ? level + 100 : level, D_0013F450_0CDE0.motion.pos.f[0],
+                            D_0013F450_0CDE0.motion.pos.f[1]);
         D_001A01F0_0CDE0.pan_x[level] = (s32)(map_x * 4096.0f) << 16;
         D_001A01F0_0CDE0.pan_y[level] = (s32)(map_y * 4096.0f) << 16;
     } else {

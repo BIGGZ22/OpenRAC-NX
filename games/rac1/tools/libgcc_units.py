@@ -81,6 +81,17 @@ def ee29_sources() -> set[str]:
     return out
 
 
+def ee29_01_sources() -> set[str]:
+    """Sources of the `ee29` objects with a fourth column `991111-01`:
+    built with Sony's Linux 2.9-ee-991111-01 (config/core_text.objects)."""
+    out = set()
+    for line in (ROOT / "config/core_text.objects").read_text().splitlines():
+        parts = line.split()
+        if len(parts) > 3 and not line.startswith("#") and parts[2] == "ee29" and parts[3] == "991111-01":
+            out.add(source_of(parts[0]))
+    return out
+
+
 def source_of(obj: str) -> str:
     """The source file an object in the list is built from."""
     name = obj.rsplit("/", 1)[1][:-2]

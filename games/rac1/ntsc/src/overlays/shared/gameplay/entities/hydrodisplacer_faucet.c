@@ -260,26 +260,29 @@ void FUN_L05_002f81b8(void *mv) {
 INCLUDE_ASM("config/us/overlays/asm/FUN_L05_002f87a8.s", FUN_L05_002f87a8);
 #else
 #include "rnc/gameplay/state/item_state.h"
-extern int scale_game_frames_87a8(int) __asm__("FUN_001f96f8");
-extern void add_vector_xyz_87a8(void *, void *, void *) __asm__("FUN_001f9a10");
-extern void subtract_vector_xyz_87a8(void *, void *, void *) __asm__("FUN_001f9a28");
-extern void scale_vector_xyz_87a8(float, void *, void *) __asm__("FUN_001f9a68");
-extern float vector_length_xyz_87a8(void *) __asm__("FUN_001f9af0");
-extern float distance_xyz_87a8(void *, void *) __asm__("FUN_001f9b48");
-extern void normalize_vector_xyz_87a8(void *, void *, float) __asm__("FUN_001f9bf8");
-extern float fast_cos_87a8(float) __asm__("FUN_001f9dc8");
-extern float fast_sin_87a8(float) __asm__("FUN_001f9de0");
-extern void play_sound_87a8(int, int) __asm__("FUN_L00_00203908");
-extern void get_moby_position_87a8(void *, int, void *) __asm__("FUN_L00_0024f7c8");
-extern int random_int_between_87a8(int, int) __asm__("FUN_L00_00257b90");
-extern float random_angle_radians_87a8(void) __asm__("FUN_00213308");
-extern void spawn_effect_87a8(void *, void *, int, int, int, int, int, int) __asm__("FUN_L00_00269958");
-extern void spawn_second_effect_87a8(void *, void *, int, int, int, int, float) __asm__("FUN_L00_0026cbb0");
-extern void FUN_L05_0024cee8_87a8(int, int) __asm__("FUN_L05_0024cee8");
-extern int D_0014F5CC_87a8 __asm__("D_0014F5CC") __attribute__((sda));
-extern int D_00151928_87a8 __asm__("D_00151928") __attribute__((sda));
-extern int D_0015190C_87a8 __asm__("D_0015190C") __attribute__((sda));
-extern int D_00151910_87a8 __asm__("D_00151910") __attribute__((sda));
+extern int scale_game_frames(int) __asm__("FUN_001f96f8");
+extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void subtract_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a28");
+extern void scale_vector_xyz(void *, void *, float) __asm__("FUN_001f9a68");
+extern float vector_length_xyz(void *) __asm__("FUN_001f9af0");
+extern float distance_xyz(void *, void *) __asm__("FUN_001f9b48");
+extern void normalize_vector_xyz(void *, void *, float) __asm__("FUN_001f9bf8");
+extern float fast_cos(float) __asm__("FUN_001f9dc8");
+extern float fast_sin(float) __asm__("FUN_001f9de0");
+extern void play_sound(int, int) __asm__("FUN_L00_00203908");
+extern void get_moby_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
+extern int random_int_between(int, int) __asm__("FUN_L00_00257b90");
+extern float random_angle_radians(void) __asm__("FUN_00213308");
+extern void spawn_effect(void *, void *, int, int, int, int, int, int) __asm__("FUN_L00_00269958");
+extern void spawn_second_effect(void *, void *, int, int, int, int, float) __asm__("FUN_L00_0026cbb0");
+extern void FUN_L05_0024cee8(int, int);
+extern int frame_number_gp __asm__("D_L05_0015F5CC") __attribute__((sda));
+extern unsigned short D_00141938 __attribute__((section(".data")));
+extern unsigned short D_00141C60 __attribute__((section(".data")));
+extern int D_L05_0015F6A8 __attribute__((section(".data")));
+extern int D_L05_00161928 __attribute__((sda));
+extern int D_L05_0016190C __attribute__((sda));
+extern int D_L05_00161910 __attribute__((sda));
 
 void hoverboard_update(unsigned char *moby) __asm__("FUN_L05_002f87a8");
 void hoverboard_update(unsigned char *moby) {
@@ -290,26 +293,28 @@ void hoverboard_update(unsigned char *moby) {
     struct Hero *g;
 
     switch (state) {
-    case 0:
-        g = &hero;
-        if (distance_xyz_87a8(&g->motion.pos, moby + 0x10) < 5.5f &&
-            D_0014F5CC_87a8 > 3 && g->state.control_mode != 0x15 &&
-            g->state.control_mode != 0x16) {
-            g->unk86C = moby;
-            FUN_L05_0024cee8_87a8(0x6b, 1);
+    case 0: {
+        char *pos = D_0013F3D0;
+        struct Hero *player;
+        if (distance_xyz(pos, moby + 0x10) < 5.5f && frame_number_gp > 3 &&
+            (player = (struct Hero *)(pos - 0x80))->state.control_mode != 0x15 &&
+            player->state.control_mode != 0x16) {
+            player->unk86C = moby;
+            FUN_L05_0024cee8(0x6b, 1);
             if (*(int *)(data + 0x50) == 0) {
-                *(u128 *)(data + 0x10) = *(u128 *)(moby + 0x10);
+                qcopy(data + 0x10, moby + 0x10);
             }
             moby[0x20] = 1;
             *(unsigned char *)(moby + 0x30) = 0xff;
         }
         break;
+    }
     case 1:
         if (*(int *)(data + 0x50) == 0 && alternate_item_available[0] != 0 &&
-            *(unsigned short *)0x141938 == 0 && *(int *)0x15f6a8 != 0 &&
-            scale_game_frames_87a8(0x4b0) < (g = &hero)->unk19C &&
-            *(unsigned short *)0x141c60 == 0) {
-            play_sound_87a8(0x138f, 0x5f);
+            D_00141938 == 0 && D_L05_0015F6A8 != 0 &&
+            (g = &hero, scale_game_frames(0x4b0) < g->unk19C) &&
+            D_00141C60 == 0) {
+            play_sound(0x138f, 0x5f);
         }
         if (hero.state.control_mode != 0x16) {
             moby[0x30] = 0x10;
@@ -324,34 +329,34 @@ void hoverboard_update(unsigned char *moby) {
     }
     {
         unsigned char *position_ptr = moby + 0x10;
-        subtract_vector_xyz_87a8(delta, position_ptr, data);
+        subtract_vector_xyz(delta, position_ptr, data);
         qcopy(data, position_ptr);
     }
-    delta_length = vector_length_xyz_87a8(delta);
+    delta_length = vector_length_xyz(delta);
     if ((unsigned char)moby[0xbc] != 2 && delta_length < 2.0f) {
-        get_moby_position_87a8(moby, D_0014F5CC_87a8 & 1, position);
-        angle = random_angle_radians_87a8();
+        get_moby_position(moby, frame_number_gp & 1, position);
+        angle = random_angle_radians();
         distance_scale = frame_time * 0.25f;
-        normalize_vector_xyz_87a8(effect_position, moby + 0xe0, distance_scale * fast_cos_87a8(angle));
-        normalize_vector_xyz_87a8(offset, moby + 0xd0, distance_scale * fast_sin_87a8(angle));
-        add_vector_xyz_87a8(effect_position, effect_position, delta);
-        add_vector_xyz_87a8(effect_position, effect_position, offset);
+        normalize_vector_xyz(effect_position, moby + 0xe0, distance_scale * fast_cos(angle));
+        normalize_vector_xyz(offset, moby + 0xd0, distance_scale * fast_sin(angle));
+        add_vector_xyz(effect_position, effect_position, delta);
+        add_vector_xyz(effect_position, effect_position, offset);
         qcopy(effect_position, delta);
-        effect_position[3] = (float)D_00151928_87a8;
+        effect_position[3] = (float)D_L05_00161928;
         if ((unsigned char)moby[0xbc] == 0) {
-            int size = random_int_between_87a8(scale_game_frames_87a8(10), scale_game_frames_87a8(13));
-            spawn_effect_87a8(position, effect_position, D_0015190C_87a8, D_00151910_87a8, size, 15, 15, 1);
+            int size = random_int_between(scale_game_frames(10), scale_game_frames(13));
+            spawn_effect(position, effect_position, D_L05_0016190C, D_L05_00161910, size, 15, 15, 1);
             moby[0xbc] = 0;
             return;
         }
-        scale_vector_xyz_87a8(0.920f, second_position, delta);
+        scale_vector_xyz(second_position, delta, 0.920f);
         {
-            int size = random_int_between_87a8(scale_game_frames_87a8(15), scale_game_frames_87a8(18));
-            spawn_effect_87a8(position, second_position, 0x5032f0d2, D_00151910_87a8, size, 30, 20, 1);
+            int size = random_int_between(scale_game_frames(15), scale_game_frames(18));
+            spawn_effect(position, second_position, 0x5032f0d2, D_L05_00161910, size, 30, 20, 1);
         }
         {
-            int size = random_int_between_87a8(scale_game_frames_87a8(8), scale_game_frames_87a8(17));
-            spawn_second_effect_87a8(position, effect_position, D_0015190C_87a8, D_00151910_87a8, size, 1, 15000.0f);
+            int size = random_int_between(scale_game_frames(8), scale_game_frames(17));
+            spawn_second_effect(position, effect_position, D_L05_0016190C, D_L05_00161910, size, 1, 15000.0f);
         }
     }
     moby[0xbc] = 0;
@@ -535,7 +540,6 @@ void FUN_L05_0030c220(struct Moby *m) {
     float offset_a_x, offset_a_z, offset_b_x, offset_b_z;
     int i, j, color;
     float *vertex_a, *vertex_b;
-    int *color_a, *color_b;
     char *vars = (char *)m->pvars;
 
     get_moby_position(m, 0, position);
@@ -550,7 +554,7 @@ void FUN_L05_0030c220(struct Moby *m) {
     up = matrix + 8;
     cross_vector_xyz_30c220(side, direction, up);
     cross_vector_xyz_30c220(direction, up, side);
-    *(u128 *)(matrix + 12) = *(u128 *)position;
+    qcopy(matrix + 12, position);
 
     texture = get_effect_texture_30c220(D_L05_00161D0C);
     flags = (u64)(s64)D_L05_00161CF4 |
@@ -589,20 +593,18 @@ void FUN_L05_0030c220(struct Moby *m) {
     }
     for (i = 0; i < 10; i++) {
         pass = (float)i;
-        j = 0;
         vertex_a = a.vertex[0];
+        j = 0;
         vertex_b = b.vertex[0];
-        color_b = b.color;
-        color_a = a.color;
         do {
-            qcopy_nc(vertex_a, D_L05_001D67D0[j]);
-            *(u128 *)b.vertex[j] = *(u128 *)D_L05_001D6810[j];
+            qcopy(vertex_a, D_L05_001D67D0[j]);
+            qcopy(b.vertex[j], D_L05_001D6810[j]);
             phase = (float)(i + (j & 1)) * 0.1f;
             sign = 1.0f;
             if (j > 1) sign = -1.0f;
             color = fast_tween_color(D_L05_00161D04, D_L05_00161D08, phase);
-            *color_b++ = color;
-            *color_a++ = color;
+            b.color[j] = color;
+            a.color[j] = color;
             offset_a_x = phase * 8.0f * sign;
             offset_a_z = pass * 10.0f;
             offset_b_x = phase * 6.0f * sign;
@@ -758,11 +760,11 @@ typedef struct {
 
 extern float random_float_between(float, float) __asm__("FUN_002132a8");
 
-void FUN_L05_00318648(char *m, int b, void *v1, void *v2, int a) {
+void FUN_L05_00318648(char *m, int b, void *initial_motion_step, void *local_rotation_offset, int a) {
     Dat *d = *(Dat **)(m + 0x78);
     m[0x20] = 1;
-    qcopy((char *)d + 0x30, v1);
-    qcopy((char *)d + 0x10, v2);
+    qcopy((char *)d + 0x30, initial_motion_step);
+    qcopy((char *)d + 0x10, local_rotation_offset);
     d->id = scale_game_frames(a);
     d->s[0] = random_float_between(-(frame_time * 4.1887903f), frame_time * 4.1887903f);
     d->s[1] = random_float_between(-(frame_time * 4.1887903f), frame_time * 4.1887903f);

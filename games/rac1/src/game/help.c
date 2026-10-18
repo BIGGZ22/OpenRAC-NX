@@ -54,7 +54,7 @@ extern int D_0016100C MACRO_ADDR;
    uses them). Both outputs are 0 and the result -1 when size is over
    0x20000. */
 /* Returns int; the size is unsigned and D_0016100C MACRO_ADDR. */
-int func_001FDF10(unsigned int size, int *out1, int *out2) {
+int GetTailBufferPair(unsigned int size, int *out1, int *out2) {
     if (size > 0x20000) {
         *out1 = 0;
         *out2 = 0;
@@ -156,7 +156,7 @@ static inline s32 map_availability_FDF78(s32 level_index) {
 }
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/assembly/textbin/fun_001fd748.c, draw_level_selection_map. */
-void func_001FDF78(s32 left, s32 right, s32 top, s32 bottom) {
+void DrawLevelSelectMap(s32 left, s32 right, s32 top, s32 bottom) {
     f32 label_direction[4];
     s32 level_index;
     s32 availability;
@@ -176,19 +176,19 @@ void func_001FDF78(s32 left, s32 right, s32 top, s32 bottom) {
     u8 *label_text;
     s32 texture_index;
 
-    func_001F4630(0);
-    func_00234C98(0x42, 0x8000000044);
-    func_00234C98(0x47, 0x4B);
+    SetupGifPaging(0);
+    VU1_addGSregister(0x42, 0x8000000044);
+    VU1_addGSregister(0x47, 0x4B);
     func_00201640(0, 0, 0x200, 0x1C0, 0x80000000, 0);
-    texture_index = func_00200198(0xE99A, 0xE);
+    texture_index = GetIconFrame(0xE99A, 0xE);
     screen_width_subpixels = (right - left) * 16;
     screen_height_subpixels = (bottom - top) * 16;
-    func_00200A90(texture_index, 0, 0, screen_width_subpixels, screen_height_subpixels, 0, 0,
+    DrawHudSpriteUV(texture_index, 0, 0, screen_width_subpixels, screen_height_subpixels, 0, 0,
                        0x80);
-    func_00234C98(8, 0);
-    func_00200A90(func_00200198(0xE99A, 0xF), 0, 0, screen_width_subpixels,
+    VU1_addGSregister(8, 0);
+    DrawHudSpriteUV(GetIconFrame(0xE99A, 0xF), 0, 0, screen_width_subpixels,
                        screen_height_subpixels, D_0015F538 & 0xFFF, 0, 0x80);
-    func_00234C98(8, 5);
+    VU1_addGSregister(8, 5);
     for (level_index = 1; level_index < 20; level_index++) {
         if (D_001DE1A8[level_index].x == 0) {
             continue;
@@ -206,7 +206,7 @@ void func_001FDF78(s32 left, s32 right, s32 top, s32 bottom) {
             (availability == 2 &&
              D_0015F538 % (func_001F98C0(0x16) + func_001F98C0(8)) <
                  func_001F98C0(0x16))) {
-            func_00200468(func_00200198(0xE99A, 0xC), marker_x - 5,
+            HudSprite(GetIconFrame(0xE99A, 0xC), marker_x - 5,
                             marker_y - 5, 10, 10, 0x80);
         }
         if (level_index == D_001A01F0.level) {
@@ -218,8 +218,8 @@ void func_001FDF78(s32 left, s32 right, s32 top, s32 bottom) {
             line_fraction = direction_length - 8000;
             line_start_x = label_x + (marker_x - label_x) * line_fraction / direction_length;
             line_start_y = label_y + (marker_y - label_y) * line_fraction / direction_length;
-            label_text = func_001FE540(D_001DE0C4[level_index].label_text);
-            text_width = func_001F6600(label_text, -1);
+            label_text = msg_string(D_001DE0C4[level_index].label_text);
+            text_width = MeasureTextWidthRegular(label_text, -1);
             if (D_001DE1A8[level_index].label_offset_x <= -1) {
                 line_end_x = label_x - text_width;
             } else {
@@ -229,16 +229,16 @@ void func_001FDF78(s32 left, s32 right, s32 top, s32 bottom) {
                           0);
             func_002014B8(label_x + 1, label_y + 1, line_end_x + 1, label_y + 1, 0x80000000, 0);
             text_x = (line_end_x < label_x) ? line_end_x : label_x;
-            func_001F68E8(text_x + 1, label_y - (*(s32 *)&D_0015F770) + 1, 0x80000000, label_text,
+            FontPrintLarge(text_x + 1, label_y - (*(s32 *)&D_0015F770) + 1, 0x80000000, label_text,
                              -1);
             func_002014B8(line_start_x, line_start_y, label_x, label_y, 0x80F0F0F0, 0);
             func_002014B8(label_x, label_y, line_end_x, label_y, 0x80F0F0F0, 0);
-            func_001F68E8(text_x, label_y - (*(s32 *)&D_0015F770), 0x80F0F0F0, label_text, -1);
-            func_00200468(func_00200198(0xE99A, 0xD), marker_x - 10,
+            FontPrintLarge(text_x, label_y - (*(s32 *)&D_0015F770), 0x80F0F0F0, label_text, -1);
+            HudSprite(GetIconFrame(0xE99A, 0xD), marker_x - 10,
                             marker_y - 10, 20, 20, 0x80);
         }
     }
-    func_001F4748();
+    DoGifPaging();
 }
 
 typedef struct {
@@ -254,7 +254,7 @@ extern char D_001997D0[];
 /* Advances the help screen's state (D_001997D0). Every access goes
    through the global, and cases 6 and 7 are spelled out: the jump table
    has eight entries. */
-void func_001FE438(void) {
+void Help_AdvanceState(void) {
     switch (((HelpState *)D_001997D0)->state) {
     case 0:
         ((HelpState *)D_001997D0)->x24 = -1;
@@ -296,7 +296,7 @@ extern HelpEntry *D_0015F780 MACRO_ADDR;
    or -1. `r = -1` and a `break` give retail's peeled first compare and
    rotated loop; the count goes through the struct so its +0x2C stays a
    displacement. */
-int func_001FE4D0(int id) {
+int Help_FindIndex(int id) {
     int r = -1;
     int i;
 
@@ -313,7 +313,7 @@ extern char D_00199A68[];
 
 /* msg_string(int). The table load sits in the bgezl slot, where the
    MACRO_ADDR access becomes $gp-relative. */
-void *func_001FE540(int id) {
+void *msg_string(int id) {
     int i = Help_FindIndex(id);
     if (i >= 0) {
         return D_0015F780[i].text;
@@ -340,7 +340,7 @@ extern int D_0013E604;
    stays 12 above the screen's; written as `screenY - 0xC - hHalf5`, CSE
    folds it to retail's screenY - (h/2 + 0x11). The fade flags are bytes
    read through MACRO_ADDR int aliases, which keeps retail's lui+lbu. */
-void func_001FE588(void) {
+void Help_Open(void) {
     short win[12];
     int idx;
     char *text;
@@ -352,13 +352,13 @@ void func_001FE588(void) {
     ((HelpState *)D_001997D0)->state = 1;
     ((HelpState *)D_001997D0)->x04 = 0;
     if (D_0015EF1D_b || D_0015EF1C_b) {
-        func_0022EE28(0, 1, 0);
+        PlayBankSound(0, 1, 0);
     }
 
     idx = ((HelpState *)D_001997D0)->pad[6];
     text = D_0015F780[idx].text;
     FontSetWindow((void *)win, 0xF0, 0x1E0, 0x2C, 0x1D4, 0x100, 0x168, 0x10, 7);
-    func_001F75D0((void *)win, 0x80FFA888L, text, -1);
+    Font_PrintWindowAlt((void *)win, 0x80FFA888L, text, -1);
 
     screenY = D_0013E604;
     w = win[6];
@@ -441,7 +441,7 @@ extern PlayerHud D_001517D0;
     D_00141A68[HS.entry].flags = D_00141A68[HS.entry].flags | (1 << D_0015EE84) | 0x80000000
 
 /* Advances the help popup's state machine: delay, open, hold, close, record stats. Adapted from Lombyte (MIT) for PAL: ui/help/update_help_state.c, update_help_state. */
-void func_001FE6C0(void) {
+void Help_Update(void) {
     if (HS.started == 0) {
         if (HS.delay == 0 && (D_0013CBE0 & 0xF000)) {
             HS.delay = 1;
@@ -469,7 +469,7 @@ void func_001FE6C0(void) {
         if (HS.msg >= 0) {
             if (HS.shown == 0) {
                 if (func_001F9908_r(HS.wait) != 0) {
-                    func_001FE588();
+                    Help_Open();
                     HS.shown++;
                 }
                 break;
@@ -488,7 +488,7 @@ void func_001FE6C0(void) {
             HS.msg = Help_FindIndex(HS.pending);
             HS.pending = -1;
             if (HS.msg >= 0) {
-                func_001FE588();
+                Help_Open();
             }
         }
         break;
@@ -562,7 +562,7 @@ void func_001FE6C0(void) {
         } else if (HS.timer >= 4) {
             id = D_0015F780[HS.msg].unk_08;
             if (id != -1 && id == D_001517D0.unk54 - 0x7530 && D_001517D0.unk5A == 3) {
-                func_00216960();
+                Music_ContinueStreamIfReady();
             }
             HS.state = 5;
             HS.timer = 0;
@@ -630,7 +630,7 @@ extern long func_001F4868_l(int) __asm__("func_001F4868");
    D_001997D0, as in the rest of this file. The texture handle is the
    draw call's 64-bit last argument, taken as `long` so retail's sd
    stores $v0 directly, ahead of the colour. */
-void func_001FF0C8(void) {
+void Help_DrawPrompt(void) {
     int alpha;
 
     ((HelpState *)D_001997D0)->pad[4] = 0x20;
@@ -661,7 +661,7 @@ __asm__(".section .text\n\tnop\n");
    frame and the entry text, fading in (4) or out (6) through the text
    colour's alpha (4, 5, 6), or the closing frame (7). The fade flag is
    re-read in each case, as retail's per-case andi shows. */
-void func_001FF1B0(void) {
+void Help_Draw(void) {
     if (((HelpState *)D_001997D0)->state == 0) {
         return;
     }
@@ -732,7 +732,7 @@ void func_001FF1B0(void) {
             text = D_0015F780[((HelpState *)D_001997D0)->pad[6]].text;
             FontSetWindow((void *)win, 0xF0, 0x1E0, 0x2C, 0x1D4, 0x100,
                           ((HelpState *)D_001997D0)->pad[3], 0x10, 3);
-            func_001F75D0((void *)win, col, text, -1);
+            Font_PrintWindowAlt((void *)win, col, text, -1);
         }
         break;
     case 7:
@@ -761,7 +761,7 @@ extern short D_00199810[];
    (idx * 4) when which != 0. idx * 4 is computed before the compare,
    so it lives across the branch and fills its delay slot; the address
    is an int sum so the addu takes the offset first. */
-int func_001FF4F8(short key, int which, short *out) {
+int FindHelpEntry(short key, int which, short *out) {
     char *base = (char *)D_00199810;
     short *p = (short *)(base + which * 2);
     int idx = 0;
@@ -797,8 +797,8 @@ extern int D_0015EF30 MACRO_ADDR;
    value is appended. Unknown ids (-1) change nothing. The search loop
    tests the byte before the bound, as retail does: it reads
    D_00141F08[0] before it first reads the count. */
-void func_001FF560(short id) {
-    int val = func_001FF4F8(id, 0, 0);
+void PushHelpHistory(short id) {
+    int val = FindHelpEntry(id, 0, 0);
     int i;
 
     if (val == -1) {

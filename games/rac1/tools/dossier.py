@@ -36,6 +36,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 
 import triage  # noqa: E402
+import srcnames
 
 GP_BASE = 0x166D00
 # The optional (?:L\d{2}_)? makes every pattern below match both an
@@ -425,7 +426,7 @@ def overlay_functions_in(path: Path) -> list[tuple[str, bool]]:
     """[(name, already matched C)] for every overlay function PATH defines
     or stubs, in file order -- "the functions next to it" for the worker."""
     out = []
-    for line in path.read_text(errors="replace").splitlines():
+    for line in srcnames.read_c(path, errors="replace").splitlines():
         m = OVERLAY_STUB.search(line)
         if m:
             out.append((m.group(1), False))

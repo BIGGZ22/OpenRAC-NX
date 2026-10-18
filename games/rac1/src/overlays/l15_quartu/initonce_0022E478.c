@@ -16,7 +16,7 @@ extern Level15State D_L15_0016CEE0;
 extern void func_L00_0025805C(void *);
 
 /* Update each moby while the level event is in phase three or four. */
-void func_L15_0022E478(void) {
+void Quartu_UpdateEventMobys(void) {
     int i;
     if (D_0015EE84 == 15 && (unsigned)(D_L15_0016CEE0.state - 3) < 2) {
         for (i = 0; i < D_L15_0016CEE0.count; i++) {

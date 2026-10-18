@@ -73,7 +73,7 @@ extern void func_0011CCB0();
    The nops before the poll loop's branch are the short-loop padding
    (tools/fix_short_loops.py); the result test comes before the
    func_0011CCB0 call, where retail's movz sits in its delay slot. */
-int func_00201D58(void *arg0, void *arg1) {
+int LoadIRXModule(void *arg0, void *arg1) {
     int buf[4];
     int result;
     int modid;

@@ -23,25 +23,25 @@ extern float D_L18_001624E4_b __asm__("D_L18_001624E4");
 extern float D_L18_001624E0_b __asm__("D_L18_001624E0");
 extern short D_L18_00162590;
 
-void func_L18_002FAEF8(void *moby) {
+void DrawPulsingGlows(void *moby) {
     char a[16];
     char b[32];
     char c[16];
     char d[16];
     char e[16];
     int n = scale_ticks(D_L18_001624F0);
-    float f = func_001FA888(D_L18_0015F6B0 % n);
+    float f = IntToFloat(D_L18_0015F6B0 % n);
     int h;
-    f = f / func_001FA888(n);
+    f = f / IntToFloat(n);
     f = f * 6.18318f;
     f = FastSin(f - 3.14159f);
     h = FastTweenColor(D_L18_001624E8, D_L18_001624EC, f * 0.5f + 0.5f);
-    func_0020DAF8(moby, 1, b);
+    MobyTransformScaledVertex(moby, 1, b);
     FastVecScale(e, c, *(float*)&D_L18_00162590);
     FastVecSub(a, d, e);
-    func_L00_00264690(a, h, D_L18_001624E0, D_L18_001624E4);
-    func_0020DAF8(moby, 2, b);
+    DrawBillboardAt(a, h, D_L18_001624E0, D_L18_001624E4);
+    MobyTransformScaledVertex(moby, 2, b);
     FastVecScale(e, c, *(float*)&D_L18_00162590);
     FastVecSub(a, d, e);
-    func_L00_00264690(a, h, D_L18_001624E0_b, D_L18_001624E4_b);
+    DrawBillboardAt(a, h, D_L18_001624E0_b, D_L18_001624E4_b);
 }

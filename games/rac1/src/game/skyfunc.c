@@ -244,7 +244,84 @@ extern int D_001D6860[];
 extern int D_001D74C0[];
 extern int D_001D6760[];
 
-INCLUDE_ASM("asm/nonmatchings/text", func_0022BEB0);
+LINKER_REMNANT("asm/remnants/text", func_0022BEB0);
+
+/* Sky shell draw loop (a variant of func_0022C5A0): shell 0 re-reads the
+   base transform; shells 1-5 scroll their float by D_00160500 times a
+   per-shell rate, get a per-shell spin and scale, rebuild the sky transform
+   from D_001D9A70, scale its three rows, copy D_00160560 into the
+   translation, and every shell is drawn by func_0022C9A8. Each case does
+   its own add and store, and the shell table is indexed through its own
+   pointer, which gives retail's base-first address add. */
+extern char *D_0016055C_2BEB0 __asm__("D_0016055C") MACRO_ADDR;
+extern f32 D_00160500_2BEB0 SDATA(D_00160500);
+extern u8 D_001D9A70_2BEB0[] __asm__("D_001D9A70");
+extern u8 D_00160560_2BEB0[] __asm__("D_00160560") MACRO_ADDR;
+extern void func_001FA190_2BEB0(void *) __asm__("func_001FA190");
+extern void func_001F9BC0_2BEB0(void *) __asm__("func_001F9BC0");
+extern void func_001FA238_2BEB0(void *, void *) __asm__("func_001FA238");
+extern void func_001F9C48_2BEB0(void *, void *, f32) __asm__("func_001F9C48");
+extern void func_0022C9A8_2BEB0(s32) __asm__("func_0022C9A8");
+
+void DrawSkyShellsScrolling(void) {
+    f32 rot[4];
+    f32 scale;
+    f32 *p;
+    f32 d;
+    u8 *t;
+    u8 **tab;
+    s32 i;
+
+    *(s16 *)(D_0016055C_2BEB0 + 4) = 0;
+    func_001FA190_2BEB0(D_001D9A70_2BEB0);
+    func_001F9BC0_2BEB0(rot);
+    for (i = 0; i < *(s16 *)(D_0016055C_2BEB0 + 6); i++) {
+        tab = (u8 **)(D_0016055C_2BEB0 + 0x20);
+        p = (f32 *)(tab[i] + 8);
+        scale = 1.0f;
+        switch (i) {
+        case 1:
+            rot[1] = 0.02f;
+            scale = 3.0f;
+            *p += D_00160500_2BEB0 * 0.55f;
+            break;
+        case 2:
+            rot[1] = -0.02f;
+            scale = 2.5f;
+            *p += D_00160500_2BEB0 * 0.6f;
+            break;
+        case 3:
+            rot[1] = 0.01f;
+            scale = 2.0f;
+            *p += D_00160500_2BEB0 * 0.7f;
+            break;
+        case 4:
+            rot[1] = -0.01f;
+            scale = 1.5f;
+            *p += D_00160500_2BEB0 * 0.75f;
+            break;
+        case 5:
+            scale = 1.25f;
+            *p += D_00160500_2BEB0 * 0.8f;
+            break;
+        default:
+            func_001FA190_2BEB0(D_001D9A70_2BEB0);
+            break;
+        }
+        if (i > 0) {
+            f32 v = (f32)i * 2000.0f;
+            s32 n = (s32)(*p + v);
+            rot[2] = (f32)(n % 10000) * 0.00062831853f - 3.1415927f;
+            func_001FA238_2BEB0(D_001D9A70_2BEB0, rot);
+            t = D_001D9A70_2BEB0;
+            func_001F9C48_2BEB0(t, t, scale);
+            func_001F9C48_2BEB0(t + 0x10, t + 0x10, scale);
+            func_001F9C48_2BEB0(t + 0x20, t + 0x20, scale);
+            qcopy(t + 0x30, D_00160560_2BEB0);
+        }
+        func_0022C9A8_2BEB0(i);
+    }
+}
 
 struct LevelSkyEffectData {
     u8 pad_0[4];
@@ -291,7 +368,7 @@ extern void func_00234C98_2C188(s32, u64) __asm__("func_00234C98");
 extern s32 func_001160D8();
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/rendering/sky/update_sky_effects.c, update_sky_effects. */
-void func_0022C188(void) {
+void SkyLevelGeneric___maybe(void) {
     f32 trig_product;
     f32 elevation;
     f32 azimuth;
@@ -339,7 +416,7 @@ void func_0022C188(void) {
                 effect->state.angles.azimuth = color_delta;
                 effect->angle = random_angle_radians();
                 effect->size =
-                    func_001FA888(random_integer_below(0x18) + 0x20) * 0.00390625f;
+                    IntToFloat(random_integer_below(0x18) + 0x20) * 0.00390625f;
                 azimuth = FastAddRots(-3.0f, random_angle_radians() * 0.2f);
                 elevation = random_angle_radians();
                 elevation = elevation * 0.09f;
@@ -371,8 +448,8 @@ void func_0022C188(void) {
             angles = &effect->state.angles.azimuth;
             effect->state.angles.azimuth = (s16)(effect->state.angles.azimuth + 1);
             angles[1] = (u16)(angles[1] + 1);
-            azimuth = func_001FA888((orbit->azimuth & 0xFFF) - 0x800) * 0.0015339808f;
-            elevation = func_001FA888((angles[1] & 0xFFF) - 0x800) * 0.0015339808f;
+            azimuth = IntToFloat((orbit->azimuth & 0xFFF) - 0x800) * 0.0015339808f;
+            elevation = IntToFloat((angles[1] & 0xFFF) - 0x800) * 0.0015339808f;
             trig_product = FastCos(azimuth);
             trig_product = trig_product * FastSin(elevation);
             trig_product = trig_product * 50.0f;
@@ -518,7 +595,7 @@ extern SkyDef *D_0016055C MACRO_ADDR;
  * fixed_scalar_and_varying_struct_p), where a cast access would keep it
  * behind them.
  */
-void func_0022C7E0(void) {
+void SetupSkyGifPaging(void) {
     int p;
     SkyDef *s;
     int i;
@@ -550,7 +627,7 @@ extern void func_00234E80(void);
    D_0015EF74 from D_0015EF78. The first advance goes through a local
    advanced in place, which keeps the old and new pointer in one register
    as retail does. */
-void func_0022C870(void) {
+void DoSkyGifPaging(void) {
     int *p = D_00161000_p;
 
     D_00160574 = p;
@@ -585,7 +662,7 @@ extern void func_0022CA00(void *);
 extern void func_0022CC40(void *);
 
 /* SkyDrawShell(int) */
-void func_0022C9A8(int idx) {
+void SkyDrawShell(int idx) {
     SkyDef *def = D_0016055C;
 
     if (idx < def->count) {

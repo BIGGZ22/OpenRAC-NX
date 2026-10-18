@@ -11,7 +11,7 @@ extern Level18PauseState D_L18_001BA9F0;
 extern void func_0020BA00(char *);
 
 /* Serialize save data once and retain its destination buffer. */
-void func_L18_00282F48(char *save_data) {
+void SerializeSaveData(char *save_data) {
     if (D_L18_001BA9F0.save_data == 0) {
         D_L18_001BA9F0.save_data = save_data;
         memcard_MakeWholeSave(save_data);

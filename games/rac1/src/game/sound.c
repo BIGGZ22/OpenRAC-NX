@@ -257,8 +257,8 @@ extern int func_001EFE10_a(void *, void *, int, int, int) __asm__("func_001EFE10
 /* Jitter the vector at arg0 between 0.5 and 6.0, fold in the reference
    frame at D_00187180, and if the emitter accepts it, re-derive it from
    D_00194220, damp to 3/4 and fold the frame in again. */
-void func_0022D8C0(void *arg0) {
-    func_002141A8(arg0, 0.5f, 6.0f);
+void Sound_PickOcclusionOrigin(void *arg0) {
+    RandomSphericalOffset(arg0, 0.5f, 6.0f);
     func_001F9BD8_a(arg0, arg0, D_00187180_a);
     if (func_001EFE10_a(D_00187180_a, arg0, 0x82, D_0013E6BC, 0) != 0) {
         func_001F9BF0_a(arg0, D_00194220, D_00187180_a);
@@ -275,7 +275,7 @@ extern void func_001EFE10(void *, void *, int, int, int);
 /* Aim the vector from the frame at D_00187180 toward arg0+0x20, scaled to
    3/4 and 64, and return the line test from arg1 to its end. The int
    return keeps retail's argument order for func_001F9BD8. */
-int func_0022D970(void *arg0, void *arg1) {
+int Sound_LineTest(void *arg0, void *arg1) {
     float v[4];
 
     FastVecSub(v, (char *)arg0 + 0x20, D_00187180);
@@ -293,17 +293,17 @@ extern int func_001FA898_i(float) __asm__("func_001FA898");
    chain setting one `r` with a single return; early returns let jump.c
    move the last arm's return block to the end. It returns int, and its
    one caller here uses a void alias. */
-int func_0022DA10(void *arg0, float x, float lo, float hi) {
+int sound_GetFade(void *arg0, float x, float lo, float hi) {
     char *s = (char *)arg0;
     int r;
     if (*(unsigned char *)(s + 0x19) & 1) {
         if (x <= lo) r = *(int *)(s + 0xC);
         else if (hi <= x) r = *(int *)(s + 0x8);
-        else r = *(int *)(s + 0x8) + func_001FA898_i((hi - x) * (hi - x) * func_001FA888(*(int *)(s + 0xC) - *(int *)(s + 0x8)) / ((hi - lo) * (hi - lo)));
+        else r = *(int *)(s + 0x8) + func_001FA898_i((hi - x) * (hi - x) * IntToFloat(*(int *)(s + 0xC) - *(int *)(s + 0x8)) / ((hi - lo) * (hi - lo)));
     } else {
         if (x <= lo) r = *(int *)(s + 0xC);
         else if (hi <= x) r = *(int *)(s + 0x8);
-        else r = *(int *)(s + 0x8) + func_001FA898_i((hi - x) * func_001FA888(*(int *)(s + 0xC) - *(int *)(s + 0x8)) / (hi - lo));
+        else r = *(int *)(s + 0x8) + func_001FA898_i((hi - x) * IntToFloat(*(int *)(s + 0xC) - *(int *)(s + 0x8)) / (hi - lo));
     }
     return r;
 }
@@ -314,7 +314,7 @@ extern float func_001F9D10(int, void *);
    declaring it int would move its next temporary to $v1. */
 extern void func_0022DA10_v(void *, float, float, float) __asm__("func_0022DA10");
 
-void func_0022DB00(void *arg0, int arg1) {
+void Sound_ApplyDistanceFade(void *arg0, int arg1) {
     char *s = (char *)arg0;
     float v = FastVecDist(arg1, D_00187180);
     float *p = *(float **)(s + 0x8);
@@ -330,7 +330,7 @@ extern void func_001FA898(float);
    arg2, and steer by its heading: atan2 of the xy part, negated and
    converted from radians to degrees (180 * 1/pi), scaled by how far the
    projection runs past 1.0, clamped to 0..1. arg0 is unused. */
-void func_0022DB48(void *arg0, void *arg1, void *arg2) {
+void Sound_ComputePan(void *arg0, void *arg1, void *arg2) {
     float v[4];
     float t;
 
@@ -365,7 +365,7 @@ extern void func_0012E3F8(int, int, int);
 extern void func_0012E348(int, int);
 extern void func_002161E0(void);
 
-void func_0022DBE8(void) {
+void Sound_InitState(void) {
     s32 i;
     s32 p;
     s32 end;
@@ -397,7 +397,7 @@ void func_0022DBE8(void) {
     ((SndState_2DBE8 *)D_0013E650)->vol[3] = (v * 7) / 10;
     ((SndState_2DBE8 *)D_0013E650)->vol[4] = (v * 7) / 10;
     ((SndState_2DBE8 *)D_0013E650)->vol[5] = v;
-    func_002161E0();
+    Music_Reset();
     func_0012E348(0, ((SndState_2DBE8 *)D_0013E650)->vol[0]);
     func_0012E348(1, ((SndState_2DBE8 *)D_0013E650)->vol[1]);
     func_0012E348(2, ((SndState_2DBE8 *)D_0013E650)->vol[2]);
@@ -419,7 +419,7 @@ extern void func_0012E2E8(void);
    *next* call. That callee, func_0012EE70 (snd_StreamSafeCheckCDIdle),
    returns int: a value call resets $v0's readers, which lets the
    capture sink into its slot. */
-int func_0022EA20(void *arg0) {
+int sound_loadBankByLocation(void *arg0) {
     char *base = D_0013E650;
     int r = 0;
 
@@ -438,7 +438,7 @@ int func_0022EA20(void *arg0) {
 /* 12 bytes of post-endlabel nop padding in retail -- see func_001F6668. */
 __asm__(".section .text\n\tnop\n\tnop\n\tnop\n");
 
-void func_0022EAB0(int idx) {
+void sound_KillChannel(int idx) {
     if (idx >= 0) {
         char *e = D_0013E650 + idx * 0x70;
         unsigned char st = *(unsigned char *)(e + 0x74);
@@ -671,7 +671,7 @@ int func_0022ED80(int idx, int arg1, int arg2) {
 
 extern char *D_0015F714 MACRO_ADDR;
 
-int func_0022EE28(int idx, int arg1, int arg2) {
+int PlayBankSound(int idx, int arg1, int arg2) {
     int h;
 
     if (idx >= D_0015F694) {
@@ -688,7 +688,7 @@ int func_0022EE28(int idx, int arg1, int arg2) {
 
 extern int D_0015F710 MACRO_ADDR;
 
-int func_0022EEB8(int rel, int arg1, int arg2) {
+int PlayGroupSound(int rel, int arg1, int arg2) {
     int idx = rel + D_0015F694;
     int h;
 
@@ -719,7 +719,7 @@ static inline char *SndSys(void) {
  * `i * 0x90 + (int)table` (not an offset variable) gives the
  * offset-first addu.
  */
-void func_0022EF68(void) {
+void SoundRunEntryCallbacks(void) {
     int i;
     for (i = 0; i < *(int *)(SndSys() + 0xD90); i++) {
         char *e = (char *)(i * 0x90 + *(int *)(SndSys() + 0xD94));
@@ -751,7 +751,7 @@ extern s32 func_0012E4F8();
 extern s32 func_0012EC40_2EFE8() __asm__("func_0012EC40");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/audio/voices/sound_stop_all_sounds.c, sound_stop_all_sounds. */
-void func_0022EFE8(void) {
+void sound_StopAllSounds(void) {
     s32 i;
     SndState *s;
     u128 *q;

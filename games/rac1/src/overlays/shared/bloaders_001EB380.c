@@ -12,7 +12,7 @@ extern long D_0015EFC8 MACRO_ADDR;
 /* Loads the texture at D_L00_0018F040 into VRAM and caches its TEX0 word. Exact with the two
  * globals declared MACRO_ADDR and func_002176C8 returning int (its result unused); joined to the
  * delay-slot fragment that follows (config/overlays/joined.tsv). */
-void func_L00_001EB380(void) {
+void LoadCachedTexture(void) {
     long localbuf[3];
 
     Load(D_L00_0018F040, D_00137C80[2], D_00137C80[3]);

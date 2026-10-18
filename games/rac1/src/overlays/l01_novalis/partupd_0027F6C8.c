@@ -10,7 +10,7 @@ extern int func_L00_0025D038(float, float, float, float);
 extern unsigned char *D_L01_001B2800[];
 
 /* Spawns a type 6 particle with position, colour, scale and owner. */
-void func_L01_0027F6C8(int owner, float *pos, int snd, unsigned char arg, unsigned char idx, unsigned char mode, float x, float y, float z, float scale, float f21, float r, float g, float b, float a) {
+void PartType06Spawn(int owner, float *pos, int snd, unsigned char arg, unsigned char idx, unsigned char mode, float x, float y, float z, float scale, float f21, float r, float g, float b, float a) {
     float buf[4];
     float *tmp = buf;
     unsigned char *p;
@@ -44,7 +44,7 @@ void func_L01_0027F6C8(int owner, float *pos, int snd, unsigned char arg, unsign
             p[8] = (int)(f21 * 255.0f);
             *(short *)(p + 0xA) = scale_ticks(snd);
             u[0x1B] = 0;
-            *(int *)(p + 4) = func_L00_0025D038(r, g, b, a);
+            *(int *)(p + 4) = PackColorRGBA(r, g, b, a);
         }
     }
 }
@@ -52,7 +52,7 @@ extern char *D_L01_001B28E0;
 extern int func_002140B0(int);
 
 /* Spawns a particle at a, with a random tint, offset b and scale f. */
-unsigned char *func_L01_002888C8(void *a, void *b, float f) {
+unsigned char *PartType56Spawn(void *a, void *b, float f) {
     unsigned char *r = func_00218928(0x38);
     int c, m;
     if (r != 0) {
@@ -74,7 +74,7 @@ extern char *D_L01_001B28E4;
 extern float func_002140F8(float, float);
 
 // Spawns a particle at a with offset b, a random tint and scale f, with extra parameter g at +0x34.
-unsigned char *func_L01_00288A48(void *a, void *b, float f, float g) {
+unsigned char *PartType57Spawn(void *a, void *b, float f, float g) {
     unsigned char *r = func_00218928(0x39);
     char *q;
     int c;

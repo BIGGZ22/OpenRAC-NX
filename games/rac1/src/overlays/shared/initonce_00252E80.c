@@ -11,7 +11,7 @@ extern int D_0015EE84_m __asm__("D_0015EE84") MACRO_ADDR;
 extern int D_0015EF88 MACRO_ADDR;
 
 // Level init: pick a setup by mode, then issue two draw commands.
-void func_L01_00252E80(void) {
+void DrawSkyL01(void) {
     SetupSkyGifPaging();
     if (D_0015EE84_m == 1) {
         UpdateSkyShellsAnimated();

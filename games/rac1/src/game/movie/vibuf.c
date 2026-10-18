@@ -33,7 +33,7 @@ typedef struct ViBuf {
 } ViBuf;
 
 /* getFIFOindex(ViBuf *, void *) */
-int func_0023CEC8(ViBuf *vb, unsigned int addr) {
+int getFIFOindex(ViBuf *vb, unsigned int addr) {
     unsigned int mask = 0x0FFFFFFF;
     if (addr == (((vb->count << 4) + (unsigned int)vb->tags + 16) & mask)) {
         return 0;
@@ -44,7 +44,7 @@ extern void func_0011D960(void);
 extern void func_0011D9A8(void);
 
 /* setD3_CHCR(unsigned int) */
-void func_0023CF10(unsigned int chcr) {
+void setD3_CHCR(unsigned int chcr) {
     func_0011D960();
     *(volatile unsigned int *)0x1000F590 = *(volatile unsigned int *)0x1000F520 | 0x10000;
     *(volatile unsigned int *)0x1000B000 = chcr;
@@ -52,7 +52,7 @@ void func_0023CF10(unsigned int chcr) {
     func_0011D9A8();
 }
 /* setD4_CHCR(unsigned int) */
-void func_0023CF80(unsigned int chcr) {
+void setD4_CHCR(unsigned int chcr) {
     func_0011D960();
     *(volatile unsigned int *)0x1000F590 = *(volatile unsigned int *)0x1000F520 | 0x10000;
     *(volatile unsigned int *)0x1000B400 = chcr;
@@ -60,7 +60,7 @@ void func_0023CF80(unsigned int chcr) {
     func_0011D9A8();
 }
 /* scTag2 */
-void func_0023CFF0(unsigned long *tag, unsigned int a, unsigned int b, unsigned int c) {
+void scTag2(unsigned long *tag, unsigned int a, unsigned int b, unsigned int c) {
     *tag = ((unsigned long)a << 32) | ((unsigned long)b << 28) | (unsigned long)c;
 }
 /* video input buffer: 0x5C bytes as touched by the asm */
@@ -91,7 +91,7 @@ extern int func_00118C70(SemaParam *);
 extern int func_0023D090();
 
 /* viBufCreate: fill the header, make a semaphore (1/1), reset, clear 0x48 */
-int func_0023D018(VB *vb, int data, unsigned int tags, int count, int f50, int f54) {
+int viBufCreate(VB *vb, int data, unsigned int tags, int count, int f50, int f54) {
     SemaParam sp;
 
     vb->f0 = data;
@@ -103,7 +103,7 @@ int func_0023D018(VB *vb, int data, unsigned int tags, int count, int f50, int f
     sp.init = 1;
     sp.max = 1;
     vb->sema = func_00118C70(&sp);
-    func_0023D090(vb);
+    viBufReset(vb);
     vb->f48 = 0;
     return 1;
 }
@@ -111,7 +111,7 @@ extern void func_0023CFF0(unsigned long *, unsigned int, unsigned int, unsigned 
 extern void func_0023CF80(unsigned int);
 
 /* viBufReset(ViBuf *) */
-int func_0023D090(ViBuf *vb) {
+int viBufReset(ViBuf *vb) {
     int i;
 
     vb->f44 = 1;
@@ -144,7 +144,7 @@ int func_0023D090(ViBuf *vb) {
     return 1;
 }
 /* viBufBeginPut(ViBuf *, unsigned char **, int *, unsigned char **, int *) */
-void func_0023D1F0(ViBuf *vb, unsigned char **p1, int *n1, unsigned char **p2, int *n2) {
+void viBufBeginPut(ViBuf *vb, unsigned char **p1, int *n1, unsigned char **p2, int *n2) {
     int tagIdx;
     int pos;
     int available;
@@ -171,7 +171,7 @@ void func_0023D1F0(ViBuf *vb, unsigned char **p1, int *n1, unsigned char **p2, i
     func_00118C90(vb->sema);
 }
 /* viBufEndPut(ViBuf *, int) */
-void func_0023D2E8(ViBuf *vb, int size) {
+void viBufEndPut(ViBuf *vb, int size) {
     func_00118CB0(vb->sema);
     vb->f14 += size;
     *(long *)(vb->pad48) += size;
@@ -197,7 +197,7 @@ typedef struct VbDmaSave {
 /* viBufStopDMA(ViBuf *): clears f44, stops channel 4 and saves its registers, waits for
  * the IPU_CTRL 0xF0 bits to clear, stops channel 3 and saves its registers plus
  * IPU_TOP/IPU_CTRL. Returns 1. */
-int func_0023D540(ViBuf *vb) {
+int viBufStopDMA(ViBuf *vb) {
     VbDmaSave *s = (VbDmaSave *)vb;
 
     func_00118CB0(vb->sema);
@@ -212,7 +212,7 @@ int func_0023D540(ViBuf *vb) {
             break;
         }
     }
-    func_0023CF10(0);
+    setD3_CHCR(0);
     s->d3_madr = *(volatile unsigned int *)0x1000B010;
     s->d3_qwc = *(volatile unsigned int *)0x1000B020;
     s->d3_chcr = *(volatile unsigned int *)0x1000B000;
@@ -233,7 +233,7 @@ extern int func_0023CEC8(ViBuf *, unsigned int);
  * MADR/TADR/QWC/CHCR, restarts channel 3 if it had a transfer, re-issues the IPU
  * command with the saved bit position (IPU_TOP & 0x7F) when f10 is non-zero, restores
  * IPU_CTRL and sets f44. Returns 1. */
-int func_0023D650(ViBuf *vb) {
+int viBufRestartDMA(ViBuf *vb) {
     VbDmaSave *s = (VbDmaSave *)vb;
     int bp = s->ipu_top & 0x7F;
     int fifo = ((s->ipu_top >> 16) & 3) + ((s->ipu_top >> 8) & 0xF);
@@ -256,8 +256,8 @@ int func_0023D650(ViBuf *vb) {
             vb->f10++;
         }
     } else {
-        int a = func_0023CEC8(vb, s->d4_madr);
-        int b = func_0023CEC8(vb, madr);
+        int a = getFIFOindex(vb, s->d4_madr);
+        int b = getFIFOindex(vb, madr);
         if (a != b) {
             int id;
             int size = vb->count << 11;
@@ -276,7 +276,7 @@ int func_0023D650(ViBuf *vb) {
     if (s->d3_madr != 0 && s->d3_qwc != 0) {
         *(volatile unsigned int *)0x1000B010 = s->d3_madr;
         *(volatile unsigned int *)0x1000B020 = s->d3_qwc;
-        func_0023CF10(s->d3_chcr | 0x100);
+        setD3_CHCR(s->d3_chcr | 0x100);
     }
     if (vb->f10 != 0) {
         for (;;) {
@@ -306,7 +306,7 @@ extern void func_00118C80(int);     /* DeleteSema */
 
 /* viBufDelete(ViBuf *) -- stops DMA channel 4 (setD4_CHCR(5)), zeroes its MADR/QWC/TADR
  * and deletes the buffer's semaphore. Returns 1. */
-int func_0023D988(ViBuf *vb) {
+int viBufDelete(ViBuf *vb) {
     setD4_CHCR(5);
     *(volatile unsigned int *)0x1000B420 = 0;
     *(volatile unsigned int *)0x1000B410 = 0;
@@ -318,7 +318,7 @@ extern int func_00118CB0(int);
 extern int func_00118C90(int);
 
 /* viBufCount(ViBuf *) */
-int func_0023D9E0(ViBuf *vb) {
+int viBufCount(ViBuf *vb) {
     int count;
     func_00118CB0(vb->sema);
     count = (vb->f10 << 11) + vb->f14;
@@ -326,7 +326,7 @@ int func_0023D9E0(ViBuf *vb) {
     return count;
 }
 /* viBufFlush(ViBuf *) */
-void func_0023DA30(ViBuf *vb) {
+void viBufFlush(ViBuf *vb) {
     func_00118CB0(vb->sema);
     vb->f14 = ((vb->f14 + 0x7FF) / 0x800) * 0x800;
     func_00118C90(vb->sema);
@@ -335,7 +335,7 @@ INCLUDE_ASM("asm/nonmatchings/text", func_0023DA88); /* viBufModifyPts(ViBuf *, 
 extern int func_0023DA88(ViBuf *, TimeStamp *);
 
 /* viBufPutTs(ViBuf *, TimeStamp *) */
-int func_0023DBE0(ViBuf *vb, TimeStamp *ts) {
+int viBufPutTs(ViBuf *vb, TimeStamp *ts) {
     int ret = 0;
     func_00118CB0(vb->sema);
     if (vb->f58 < vb->ntbl) {

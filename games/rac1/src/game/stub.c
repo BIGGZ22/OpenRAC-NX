@@ -7,7 +7,7 @@
  * sizes -- see docs/DECOMP_PROGRESS.md. Compiled as C for now.
  */
 
-void func_001E9730(int arg0, ...) {
+void STUB_printf(int arg0, ...) {
 }
 
 void func_001E9768(void) {

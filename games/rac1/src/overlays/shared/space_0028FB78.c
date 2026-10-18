@@ -11,11 +11,11 @@ extern void func_L00_0028F458(void);
 extern void func_00213D28(void *, int, int);
 
 /* Start the moby's camera-follow state: stash it in the global record, point its update at func_L00_0028F458. */
-void func_L00_0028FB78(char *m) {
+void Ship_Register(char *m) {
     char *g;
     int *src;
     *(int *)&D_L00_00160600 = 1;
-    func_L00_0028FC68();
+    Ship_ReleaseCurrent();
     if (D_0015EE84_m == 0xD) {
         char *q = D_0013E130_a;
         *(float *)(q + 0x60) = 464.66f;
@@ -26,17 +26,17 @@ void func_L00_0028FB78(char *m) {
     g = D_0013E130_a;
     *(short *)(g + 0x26) = *(unsigned short *)(m + 0xA6) - 0x213;
     *(char **)g = m;
-    *(void **)(m + 0x74) = func_L00_0028F458;
+    *(void **)(m + 0x74) = EnvMappedPickupUpdate;
     *(unsigned short *)(m + 0x34) &= 0xFFFC;
     *(int *)(m + 0x94) = *(int *)(*(int *)(m + 0x24) + 0x10);
-    func_00213D28(m, 1, 0);
+    MobySetAnimation(m, 1, 0);
     src = *(int **)(m + 0x78);
     *(int *)(g + 0x30) = src[0];
     *(int *)(g + 0x34) = src[1];
     *(int *)(g + 0x38) = src[2];
 }
 extern char *D_0013E130;
-void func_L00_0028FC68(void) {
+void Ship_ReleaseCurrent(void) {
     char *m = D_0013E130;
     if (m != 0) {
         *(unsigned short *)(m + 0x34) |= 3;
@@ -72,7 +72,7 @@ extern void func_00205220(int);
 extern int func_00122598(int);
 extern void func_00216960(void);
 // Puts the hero into ship mode: clears the ship records, flags the matching mobys and picks the ship's start sound and camera set. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay_space_0028e8a0.c, FUN_L00_0028e9c8.
-void func_L00_0028FCA0(int a) {
+void EnterShipMode(int a) {
     O_28e9c8 *o;
     S_171b *z;
     int t, n, m, m2, u;
@@ -91,9 +91,9 @@ void func_L00_0028FCA0(int a) {
     D_L00_0015F6A8 = 6;
     D_L00_0016128C = u;
     D_L00_0015F500 = 0;
-    func_L00_00222B80(100, 2);
+    HeroEnterMoveState(100, 2);
     D_001414F5[0] = 1;
-    func_L00_00233868();
+    HeroSetObjectFlags();
     D_0013E130_s.x0->flags |= 1;
     for (o = D_L00_0016009C; o->st != 0xFF; o++) {
         if (!(o->st & 0x80) && (o->type == 0x4A || o->type == 0xCB)) o->flags |= 0x80;
@@ -109,7 +109,7 @@ void func_L00_0028FCA0(int a) {
             m = 8;
             t = 14;
         }
-        func_L00_00245FE0(m, scale_ticks(6));
+        LoadAnimTable(m, scale_ticks(6));
     } else {
         int k, r;
         n = D_0013E130_s.x26;
@@ -128,16 +128,16 @@ void func_L00_0028FCA0(int a) {
         }
         r = 0;
         if (!D_0013E130_s.x2c) r = scale_ticks(6);
-        func_L00_00245FE0(m2, r);
+        LoadAnimTable(m2, r);
     }
     z = (S_171b *)(D_0014171B + 0x100B5);
     z->x1c = t + 40000;
-    func_00205220(0);
+    ParseSpaceSceneChunk(0);
     while (3 != z->x5a) {
         sound_update();
         func_00122598(0);
     }
-    func_00216960();
+    Music_ContinueStreamIfReady();
 }
 extern char D_0013F450[] NOT_SDA;
 extern short D_L00_0015F6BC;
@@ -145,7 +145,7 @@ extern unsigned char D_0013E15A[] NOT_SDA;
 extern void func_00216EF0(int);
 extern void func_L00_00203FB8(void);
 extern void func_L00_0028FCA0(int);
-void func_L00_0028FFB0(void) {
+void ShipTakeOff(void) {
     char *g = D_0013F450;
     
     if (*(int *)(g + 0x22A8) <= 0) *(int *)(g + 0x22A8) = 1;
@@ -157,8 +157,8 @@ void func_L00_0028FFB0(void) {
         if ((unsigned short)(h - 6) >= 2) *(short *)(p + 0x5A) = 5;
     }
     sound_update();
-    func_L00_00203FB8();
-    func_L00_0028FCA0(0);
+    HelpPopup_Cancel();
+    EnterShipMode(0);
     *(short *)(D_0013E15A + 2) = 0;
 }
 extern char D_0013DE6E[];
@@ -173,7 +173,7 @@ extern short D_L00_00160630;
 extern int func_0020BFC8(int, int);
 
 /* start a ship-travel transition to the given destination, setting up the flight path and timing Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_space_0028e8a0.c, FUN_L00_0028ed58. */
-void func_L00_00290030(int dest) {
+void ShipTravelTo(int dest) {
     char *g = D_0013DE6E + 0x2C2;
     char *h;
     int base;
@@ -195,13 +195,13 @@ void func_L00_00290030(int dest) {
         int d = 0x60;
         int v;
         int t;
-        func_L00_0028FCA0(8);
+        EnterShipMode(8);
         if (D_0015EE80) d = 0x50;
         v = scale_ticks(((int *)&D_L00_00160630)[*(short *)(g + 0x26)]);
         *(int *)(h + 0x34) = v;
         t = v / d;
         *(int *)(h + 0x3C) = t;
-        func_00205220(t);
+        ParseSpaceSceneChunk(t);
         *(int *)(h + 0x38) = *(int *)(h + 0x34) % d;
     } else {
         memcard_Save(0, dest);
@@ -224,7 +224,7 @@ void func_L00_0028FCA0(s32);
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_space_0028e8a0.c, FUN_L00_0028eed0. */
 /* Camera-follow update. Exact once the file declares D_L00_0016128C as a 4-byte MACRO_ADDR int: a `short` declaration of the same symbol makes the assembler use $gp for
  * every access to it. Joined to its trailing fragment (config/overlays/joined.tsv). */
-void func_L00_002901A8(void) {
+void Ship_BeginMapFlight(void) {
     int m, u;
     D_0013E130_901A8.x2c = 1;
     if (D_0013E130_901A8.x2a != 0) D_0013E130_901A8.x2a = 0;
@@ -246,7 +246,7 @@ in:
     D_L00_0016C960_901A8.x58 = D_L00_00173F00_901A8.x4 + u;
     D_L00_0016C960_901A8.x5c = D_L00_00173F00_901A8.x8_c + u;
     D_L00_0016128C_901A8 = u;
-    func_L00_0028FCA0(8);
+    EnterShipMode(8);
 }
 typedef struct { float f[4]; } __attribute__((aligned(16))) V_28efc8;
 typedef struct {
@@ -272,7 +272,7 @@ float func_001FA888(int);
 void func_L00_001FD1D8(void *, void *, int);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_space_0028e8a0.c, FUN_L00_0028efc8. */
-void func_L00_002902A0(unsigned char *m) {
+void Ship_DrawBillboards(unsigned char *m) {
     Q_28efc8 quad;
     V_28efc8 v;
     V_28efc8 *tbl;
@@ -294,7 +294,7 @@ void func_L00_002902A0(unsigned char *m) {
         unsigned int col;
         float s;
         if (*(short *)(m + 0xB2)) c += random_integer_below(*(short *)(m + 0xB2));
-        s = func_001FA888(c) * (tbl[i].f[3] / 40.0f);
+        s = IntToFloat(c) * (tbl[i].f[3] / 40.0f);
         col = (c << 24) | 0x2058B0;
         if (*(short *)(m + 0xA6) == 0x215) col = (c << 24) | 0x308000;
         for (k = 0; k < 4; k++) {

@@ -4,7 +4,7 @@
 
 extern char D_0013E130[];
 /* clears two moby flags and refreshes its linked value */
-void func_L01_002A3680(void) {
+void ShowTrackedMoby(void) {
  char *first=*(char **)D_0013E130;
  if(first!=0) {
  char *moby;

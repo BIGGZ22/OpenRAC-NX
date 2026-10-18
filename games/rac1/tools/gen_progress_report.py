@@ -52,6 +52,7 @@ from libgcc_units import (MODULES, FUNCTIONS as LIBGCC_FUNCTIONS, SEGMENT_SOURCE
 from organize_asm import LISTS, entries
 from toolchain import TC, make_sn, sn, start_wineserver
 from levels import NUM_LEVELS, dirname as level_dirname, level_of_dir, title as level_title
+import srcnames
 
 SHARED_TITLE = "Shared level code"
 
@@ -123,7 +124,7 @@ def with_source() -> set[str]:
     names = set(LIBGCC_FUNCTIONS)
     for srcs in SEGMENT_SOURCES.values():
         for src in srcs:
-            text = Path(src).read_text(errors="replace")
+            text = srcnames.read_c(src, errors="replace")
             stubs = set(STUB.findall(text))
             names |= {n for n in FUNC_DEF.findall(text) if n not in stubs}
     return names
@@ -208,7 +209,7 @@ def overlay_file_functions(path: Path) -> list[tuple[str, bool]]:
     order: is_c is True for a C definition, False for an INCLUDE_ASM stub
     (mirrors tools/try_func.py's find_overlay_stub(), generalised to every
     name in the file instead of stopping at one)."""
-    lines = path.read_text(errors="replace").splitlines()
+    lines = srcnames.read_c(path, errors="replace").splitlines()
     out = []
     i = 0
     while i < len(lines):

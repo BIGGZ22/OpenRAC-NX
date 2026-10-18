@@ -119,16 +119,9 @@ void func_00119E70(int c) {
 /* func_00119EA8: matched only with the truncation's last instruction moved into the return slot by a removed step (docs/BUILD_FIDELITY.md, "Removed"). */
 INCLUDE_ASM("asm/nonmatchings/core_text", func_00119EA8);
 
-extern char D_00152880[]; /* "0.%d" */
-extern char D_00152888[]; /* "e+%d" */
-extern char D_00152890[]; /* "e%d" */
 extern void *D_0012FD00;
 extern long func_0011E6D8(double);
 extern void func_0011A690(const char *, ...);
-
-extern char D_00152880[]; /* "0.%d" */
-extern char D_00152888[]; /* "e+%d" */
-extern char D_00152890[]; /* "e%d" */
 
 /* printfloat (libkernl.a:kprintf.o): the kprintf %f formatter. Prints a
    leading '-' through the putchar hook (D_0012FD00) if negative, then
@@ -141,8 +134,10 @@ extern char D_00152890[]; /* "e%d" */
 
    The magnitude is checked, then rescaled, in nested `if (v < 0.1)
    { while (v < 0.1) ... }`: retail keeps a separate 0.1 for each. Its
-   constants are this object's .rodata, linked at D_00152898 (see
-   config/core_rodata.txt). */
+   three format strings and its constants open this object's .rodata
+   (D_00152880-D_001528A8), followed by _printf's jump table
+   (jtbl_001528B0): the strings are literals so that the table lands
+   16-aligned at its retail address (config/core_rodata.txt). */
 void func_00119F38(double v) {
     int exp10 = 0;
     int digits;
@@ -163,15 +158,227 @@ void func_00119F38(double v) {
         }
     }
     digits = func_00119EA8(func_0011E6D8(v * 1000000.0));
-    func_0011A690(D_00152880, digits);
+    func_0011A690("0.%d", digits);
     if (exp10 >= 0) {
-        func_0011A690(D_00152888, exp10);
+        func_0011A690("e+%d", exp10);
     } else {
-        func_0011A690(D_00152890, exp10);
+        func_0011A690("e%d", exp10);
     }
 }
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_0011A0A0);
+/* _printf: the SDK libc formatter behind printf/sprintf: walks fmt, takes
+   each argument from the 8-byte slots at ap and writes characters through
+   the output hook at D_0012FD00, with interrupts held off around it.
+   Adapted from Lombyte (MIT): src/sdk/debug/printf_impl.c, _printf. */
+
+extern s32 DIntr_A0A0(void) __asm__("func_0011D960");
+extern s32 EnableInterrupts_A0A0(void) __asm__("func_0011D9A8");
+extern void printfloat_A0A0(double) __asm__("func_00119F38");
+extern void (*D_0012FD00_A0A0[])(s32) __asm__("D_0012FD00");
+
+
+int func_0011A0A0(const char *fmt, va_list ap) {
+    char buf[32];
+    char *pad;
+    char *p;
+    s32 mod;
+    s32 n;
+    unsigned long d;
+    u8 ch;
+    char second;
+    s64 v;
+    s32 ie;
+
+    ie = DIntr_A0A0();
+    for (; *fmt != 0; fmt++) {
+        p = (char *)fmt;
+        pad = 0;
+        mod = 0;
+        if (*fmt == '%') {
+        again:
+            fmt++;
+            switch ((char)(*fmt - '0')) {
+            case 0:
+                n = fmt[1] - '0';
+                second = fmt[2];
+                if ((u8)n < 10) {
+                    if ((u32)(second - '0') < 10) {
+                        n = n * 10 + (second - '0');
+                        fmt += 2;
+                        if (n >= 32) {
+                            n = 31;
+                        }
+                    } else {
+                        fmt += 1;
+                    }
+                    pad = &buf[31 - n];
+                    while (n > 0) {
+                        buf[31 - n] = '0';
+                        n--;
+                    }
+                    goto again;
+                }
+                goto again;
+            case 'l' - '0':
+                mod = 'l';
+                goto again;
+            case 'h' - '0':
+                mod = 'h';
+                goto again;
+            case 'o' - '0':
+                if (mod == 'l') {
+                    v = (ap += 8, *(s64 *)(ap - 8));
+                } else if (mod == 'h') {
+                    v = (ap += 8, *(u16 *)(ap - 8));
+                } else {
+                    v = (ap += 8, *(u32 *)(ap - 8));
+                }
+                p = &buf[31];
+                *p = 0;
+                if (v == 0) {
+                    *--p = '0';
+                } else {
+                    do {
+                        *--p = (v & 7) + '0';
+                        v = (u64)v >> 3;
+                    } while (v != 0);
+                }
+                if (pad != 0 && pad < p) {
+                    p = pad;
+                }
+                while (*p != 0) {
+                    D_0012FD00_A0A0[0](*p++);
+                }
+                break;
+            case 'x' - '0':
+                if (mod == 'l') {
+                    v = (ap += 8, *(s64 *)(ap - 8));
+                } else if (mod == 'h') {
+                    v = (ap += 8, *(u16 *)(ap - 8));
+                } else {
+                    v = (ap += 8, *(u32 *)(ap - 8));
+                }
+                p = &buf[31];
+                *p = 0;
+                if (v == 0) {
+                    *--p = '0';
+                } else {
+                    do {
+                        d = v & 0xF;
+                        if (d < 10) {
+                            *--p = d + '0';
+                        } else {
+                            *--p = d + 'a' - 10;
+                        }
+                        v = (u64)v >> 4;
+                    } while (v != 0);
+                }
+                if (pad != 0 && pad < p) {
+                    p = pad;
+                }
+                while (*p != 0) {
+                    D_0012FD00_A0A0[0](*p++);
+                }
+                break;
+            case 'd' - '0':
+                if (mod == 'l') {
+                    v = (ap += 8, *(s64 *)(ap - 8));
+                } else if (mod == 'h') {
+                    v = (ap += 8, *(s16 *)(ap - 8));
+                } else {
+                    v = (ap += 8, *(s32 *)(ap - 8));
+                }
+                p = &buf[31];
+                *p = 0;
+                if (v == 0) {
+                    *--p = '0';
+                } else {
+                    if (v < 0) {
+                        v = -v;
+                        D_0012FD00_A0A0[0]('-');
+                    }
+                    while (v != 0) {
+                        *--p = v % 10 + '0';
+                        v = v / 10;
+                    }
+                }
+                if (pad != 0 && pad < p) {
+                    p = pad;
+                }
+                while (*p != 0) {
+                    D_0012FD00_A0A0[0](*p++);
+                }
+                break;
+            case 'u' - '0':
+                if (mod == 'l') {
+                    v = (ap += 8, *(s64 *)(ap - 8));
+                } else if (mod == 'h') {
+                    v = (ap += 8, *(u16 *)(ap - 8));
+                } else {
+                    v = (ap += 8, *(u32 *)(ap - 8));
+                }
+                p = &buf[31];
+                *p = 0;
+                if (v == 0) {
+                    *--p = '0';
+                } else {
+                    do {
+                        *--p = (u64)v % 10 + '0';
+                        v = (u64)v / 10;
+                    } while (v != 0);
+                }
+                if (pad != 0 && pad < p) {
+                    p = pad;
+                }
+                while (*p != 0) {
+                    D_0012FD00_A0A0[0](*p++);
+                }
+                break;
+            case 'e' - '0':
+            case 'f' - '0': {
+                f32 f = (ap += 8, *(f32 *)(ap - 8));
+                if (f == 0.0f) {
+                    D_0012FD00_A0A0[0]('0');
+                } else {
+                    printfloat_A0A0(f);
+                }
+            } break;
+            case 's' - '0': {
+                char *string = (ap += 8, *(char * *)(ap - 8));
+                if (*string == 0) {
+                    D_0012FD00_A0A0[0]('(');
+                    D_0012FD00_A0A0[0]('n');
+                    D_0012FD00_A0A0[0]('u');
+                    D_0012FD00_A0A0[0]('l');
+                    D_0012FD00_A0A0[0]('l');
+                    D_0012FD00_A0A0[0](')');
+                } else {
+                    p = string;
+                    if (*p != 0) {
+                        do {
+                            D_0012FD00_A0A0[0](*p++);
+                        } while (*p != 0);
+                    }
+                }
+                break;
+            }
+            case 'c' - '0':
+                v = (ap += 8, *(char *)(ap - 8));
+                D_0012FD00_A0A0[0](v);
+                break;
+            default:
+                break;
+            }
+        } else {
+            D_0012FD00_A0A0[0](*fmt);
+        }
+    }
+    if (ie != 0) {
+        EnableInterrupts_A0A0();
+    }
+}
+
+
 
 /* The print core: walks fmt with the va_list, writing through the hook
    D_0012FD00, and returns the count. */

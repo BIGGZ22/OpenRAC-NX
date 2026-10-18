@@ -185,7 +185,7 @@ extern void func_0020D440(void *, int);
 
 /* CreateMoby. The failure message ("... Time: %d, oClass: %d") takes
    oClass as its third argument, which is why retail keeps it in $a2. */
-Moby *func_0020D348(int oClass) {
+Moby *CreateMoby(int oClass) {
     Moby *m;
 
     for (m = (Moby *)D_0016001C; m < (Moby *)D_00160020; m++) {
@@ -292,7 +292,7 @@ typedef struct {
    first, and the default stores are ordered so that sched1's
    register-pressure tie-break (stores that free a register go first)
    reproduces retail's store order. */
-void func_0020D440(void *arg0, int oClass) {
+void InitMobyInstance(void *arg0, int oClass) {
     MobyI *m = (MobyI *)arg0;
     unsigned char c;
     int idx;
@@ -380,7 +380,7 @@ typedef struct {
 extern void func_0020EA70(void *, int);
 
 /* DeleteMoby */
-void func_0020D678(MobyDel *m) {
+void DeleteMoby(MobyDel *m) {
     if ((char *)m < D_0016001C) {
         m->state = 0xFD;
     } else {
@@ -400,7 +400,7 @@ extern unsigned char D_001AAF40[];
    last one to that base, which puts it in $a0 and overwrites the
    compare's copy of m->seq. With the value gone, reload_cse cannot turn
    the three index loads into `andi`s of the compare register. */
-void func_0020D6D0(Moby *m) {
+void update_moby_animation_state(Moby *m) {
     MobyClass *mc;
     if (m->seq != 0xFF) {
         mc = m->pClass;
@@ -424,7 +424,7 @@ extern int func_0022ED80(int, int, int);
    branch is what gives retail's two registers: the compare keeps the
    first load, the copy (live across blocks) becomes CSE's canonical
    register for the index and the call. */
-void func_0020D790(unsigned char *s) {
+void MobySyncVoice(unsigned char *s) {
     if (s[0x7D] != 0xFF) {
         int id = s[0x7D];
         char *e = D_0013E650 + id * 0x70;
@@ -449,7 +449,7 @@ extern float func_001FA888(int);
    is starting, else blended between the current and previous frames by
    that factor. Written `frame > prevFrame` so the two bytes load in
    retail's order; prevFrameData is read before the first call. */
-float func_0020D830(Moby *m) {
+float MobyGetFrameValue(Moby *m) {
     int fd;
 
     if (m->seq != 0xFF) {
@@ -458,14 +458,14 @@ float func_0020D830(Moby *m) {
         fd = m->prevFrameData;
     }
     if (*(float *)((char *)m + 0x54) == 0.0f) {
-        return func_001FA888(*(short *)(fd + 4)) * 0.0625f;
+        return IntToFloat(*(short *)(fd + 4)) * 0.0625f;
     }
     if (m->seq != m->prevSeq || m->frame > m->prevFrame) {
-        return func_001FA888(*(short *)(fd + 4)) * 0.0625f + *(float *)((char *)m + 0x54);
+        return IntToFloat(*(short *)(fd + 4)) * 0.0625f + *(float *)((char *)m + 0x54);
     } else {
         int prev = m->prevFrameData;
-        float a = func_001FA888(*(short *)(fd + 4)) * (1.0f - *(float *)((char *)m + 0x54));
-        return (a + func_001FA888(*(short *)(prev + 4)) * *(float *)((char *)m + 0x54)) * 0.0625f;
+        float a = IntToFloat(*(short *)(fd + 4)) * (1.0f - *(float *)((char *)m + 0x54));
+        return (a + IntToFloat(*(short *)(prev + 4)) * *(float *)((char *)m + 0x54)) * 0.0625f;
     }
 }
 __asm__(".section .text\n\tnop\n");
@@ -474,7 +474,7 @@ LINKER_REMNANT("asm/remnants/text", func_0020D928);
 
 /* Attach a fresh node to arg0's list at +0x64, seeded with 1.0f scales. */
 /* AttachManipulator */
-void func_0020D960(char *arg0, int arg1, unsigned char *arg2) {
+void AttachManipulator(char *arg0, int arg1, unsigned char *arg2) {
     unsigned char *e;
 
     if (arg2[1] != 0) {
@@ -500,7 +500,7 @@ void func_0020D960(char *arg0, int arg1, unsigned char *arg2) {
  * The head is read twice, for the test and again for `cur`: the copy
  * that makes lands in the bnel's slot and leaves retail's two nops.
  */
-void func_0020D9D8(void *arg0, void *arg1) {
+void DetachManipulator(void *arg0, void *arg1) {
     char *base = (char *)arg0;
     char *node = (char *)arg1;
     char *cur;
@@ -524,7 +524,7 @@ void func_0020D9D8(void *arg0, void *arg1) {
 
 extern int D_001B2F40[];
 
-int func_0020DA68(int v) {
+int AnimSlot_Register(int v) {
     int i = 0;
     int *p = D_001B2F40;
     do {
@@ -538,7 +538,7 @@ int func_0020DA68(int v) {
     return -1;
 }
 
-void func_0020DAB0(void) {
+void AnimSlot_ReleaseStale(void) {
     int sentinel = 0xFF;
     char **p = (char **)D_001B2F40;
     int i = 0xF;
@@ -565,7 +565,7 @@ extern void func_001F9EC0(void *, void *, void *);
 /* Scale the single vertex block at arg2+0x30 by the object's 0x2C field
    in 1/1024 units, then run it through the two per-object transforms at
    arg0+0xC0 and arg0+0x10. 0x3A800000 is exactly 2^-10. */
-void func_0020DAF8(char *arg0, int arg1, char *arg2) {
+void MobyTransformScaledVertex(char *arg0, int arg1, char *arg2) {
     char buf[0x40];
     int n;
     char *v;
@@ -583,7 +583,7 @@ void func_0020DAF8(char *arg0, int arg1, char *arg2) {
 
 /* The many-vertex form of the same thing: arg1 blocks of 0x10 bytes
    starting at arg3, each scaled and transformed in place. */
-void func_0020DB98(char *arg0, int arg1, void *arg2, char *arg3) {
+void MobyTransformScaledVertexBatch(char *arg0, int arg1, void *arg2, char *arg3) {
     char *v = arg3;
     int n = arg1;
     float s;
@@ -613,7 +613,7 @@ extern void func_00234E80(void);
    "next" tags (0x20000000). D_00161000 is the packet write pointer and
    D_0016000C the tag slot DrawMobysSetup reserved. Every access goes
    back to the globals, because each store through them could alias. */
-void func_0020DC40(void) {
+void DmaMobyTextures(void) {
     int *p = (int *)D_00161000;
 
     D_00161000 += 0x10;
@@ -654,7 +654,7 @@ typedef struct {
    through a `next` named at the top of the body (retail computes p + 1
    there), and the joint loop tests and breaks before its increment: in
    a do/while the increment is an expression GCSE hoists to the loop top. */
-void func_0020DD48(void) {
+void PatchMobyGifs(void) {
     int *p;
     int *next;
 
@@ -694,7 +694,7 @@ extern float D_001CAE00[] NOT_SDA;
 extern float func_001F9F90(float);
 extern float func_001F9FA8(float);
 
-void func_0020DE20(void) {
+void UpdateLightDirection(void) {
     float buf[4];
     float a;
 
@@ -719,7 +719,7 @@ extern void func_001F2558(void *, int);
    a temporary that is advanced in place (t += 0x10): that breaks CSE's
    p == t equivalence, which is what keeps retail's `daddu $16,$2,$0`
    copy. `p = D_00161000; D_00161000 += 0x10;` is 4 bytes short. */
-void func_0020DEB0(void) {
+void SpliceShadowDma(void) {
     int *p;
     int t;
 
@@ -739,7 +739,7 @@ void func_0020DEB0(void) {
     ((int *)D_00160040)[2] = 0;
     ((int *)D_00160040)[3] = 0;
     func_00228A58();
-    func_00228860(D_001C8A00);
+    SubmitGraphicsSetupStream(D_001C8A00);
     ((int *)D_00161000)[0] = 0x20000000;
     ((int *)D_00161000)[1] = D_00160040 + 0x10;
     ((int *)D_00161000)[2] = 0;
@@ -760,7 +760,7 @@ extern int D_0015F71C MACRO_ADDR;
 /* ProcessMobyAnimData(void). Both globals are MACRO_ADDR: D_0015F718
    loads with retail's one-register lui $4 / lw $4, and D_0015F71C's
    load, scheduled into the jal delay slot, becomes $gp-relative. */
-void func_0020DFF8(void) {
+void ProcessMobyAnimData(void) {
     func_00118D80(0);
     FastMemCopy((void *)0x70003800, D_00165600, 0x800);
     MobyAnimProc(D_0015F718, D_0015F71C);
@@ -768,19 +768,19 @@ void func_0020DFF8(void) {
 
 
 /* InitMobyClassDists(void) */
-void func_0020E040(void) {
+void InitMobyClassDists(void) {
     FastMemSet((void *)0x70003A00, (void *)0x40000000, 0x380);
 }
 
 extern char D_001B3200[];
 
 /* StashMobyClassDists(void) */
-void func_0020E068(void) {
+void StashMobyClassDists(void) {
     FastMemCopy(D_001B3200, (void *)0x70003A00, 0x380);
 }
 
 /* RestoreMobyClassDists(void) */
-void func_0020E098(void) {
+void RestoreMobyClassDists(void) {
     FastMemCopy((void *)0x70003A00, D_001B3200, 0x380);
 }
 
@@ -802,7 +802,7 @@ extern int D_00161008 MACRO_ADDR;
    profiling marker func_001F2560. The packet pointer goes through a
    local advanced in place, as in DrawShrubs. func_00234C98's second
    parameter being `long` is what orders its arguments like retail. */
-void func_0020E0C8(void) {
+void DrawMobysSetup(void) {
     int p;
 
     VU1_addDataRef(D_0010FAA0, D_0010FA90);
@@ -823,7 +823,7 @@ void func_0020E0C8(void) {
 extern int func_00212658(int, int, int, int);
 
 /* DrawMobyList */
-void func_0020E180(int arg0, int arg1) {
+void DrawMobyList(int arg0, int arg1) {
     VU1_addGSregister(0x47, 0x5360B);
     func_00118D80(0);
     RestoreMobyClassDists();
@@ -842,7 +842,7 @@ extern int D_00160038 MACRO_ADDR;
 /* DrawMobysCleanUp. The empty profiling markers take (void *, int);
    DmaMobyTextures and func_00212508 take nothing. With the arguments
    right, D_0015FFF0 is a plain array, not MACRO_ADDR. */
-void func_0020E200(void) {
+void DrawMobysCleanUp(void) {
     func_001F2560(D_0015FFE0, 3);
     DmaMobyTextures();
     func_001F2558(D_0015FFE0, 5);
@@ -854,7 +854,7 @@ void func_0020E200(void) {
     }
     func_001F2558(D_0015FFF0, 3);
     if (D_0018A3B0[10] != 0 && D_00160040 != 0) {
-        func_0020DEB0();
+        SpliceShadowDma();
     }
 }
 
@@ -864,7 +864,7 @@ extern void func_0020E0C8(void);
 extern void func_0020E200(void);
 
 /* DrawMobys */
-void func_0020E2B0(void) {
+void DrawMobys(void) {
     DrawMobysSetup();
     if (D_0018A3D8 != 0) {
         InitMobyClassDists();

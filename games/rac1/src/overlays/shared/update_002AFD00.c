@@ -41,7 +41,7 @@ extern void func_L00_00207948(int, int);
 extern int func_00216960(void);
 
 /* Opens the vendor screen for moby m in level lvl: sets up its camera, resets the screen state and runs it until it closes. */
-void func_L01_002AFD00(char *m, int lvl) {
+void OpenVendorScreen(char *m, int lvl) {
     char *g = D_0013E633 + 0xE1D;
     char *s = D_L01_001CABC0;
     char *c = D_L01_0016CD60;
@@ -62,12 +62,12 @@ void func_L01_002AFD00(char *m, int lvl) {
     *(int *)(s + 4) = 0;
     *(char **)(s + 0x28) = m;
     sc = s + 0xC0;
-    func_L00_0023B890();
-    func_L00_00203FB8();
-    func_L01_0023D688(100, 1);
+    Hud_ResetState();
+    HelpPopup_Cancel();
+    Hero_SetMoveState(100, 1);
     g[0x20AC] = 1;
     g[0x20A5] = 1;
-    func_L00_00233868();
+    HeroSetObjectFlags();
     func_001F9EC0(sc, &D_L01_00161180, m + 0xC0);
     FastVecAdd(sc, sc, m + 0x10);
     *(float *)(s + 0xC8) = func_00214358(sc, 0, 0.5f);
@@ -84,19 +84,19 @@ void func_L01_002AFD00(char *m, int lvl) {
     D_L01_0015F4FC = 1.0f;
     D_L01_0016124C = n;
     *(int *)&D_L01_0015F500 = 0;
-    func_L00_00210340(0, 0);
+    Hero_DestroySlotMobys(0, 0);
     *(int *)(g + 0x20B8) = lvl;
-    func_00205270(D_L01_00179FC0[lvl].f10, -1);
-    func_L00_00245E98(r);
+    LoadMobyClassResources(D_L01_00179FC0[lvl].f10, -1);
+    ReadLevelPackedData(r);
     q = (char *)D_0014171B + 0x100B5;
     *(int *)(q + 0x1C) = 0x2734;
-    func_00205220(0);
+    ParseSpaceSceneChunk(0);
     while (qq = (char *)D_0014171B + 0x100B5, *(short *)(qq + 0x5A) != 3) {
         sound_update();
         func_00122598(0);
     }
     c2 = D_L01_0016CD60;
     g2 = D_0013E633 + 0xE1D;
-    func_L00_00207948(*(int *)(c2 + 0x17C), *(int *)(g2 + 0x2080));
-    func_00216960();
+    TintEffectFromMobyColor(*(int *)(c2 + 0x17C), *(int *)(g2 + 0x2080));
+    Music_ContinueStreamIfReady();
 }

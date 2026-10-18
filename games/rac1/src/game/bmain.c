@@ -1,4 +1,5 @@
 #include "common.h"
+#include "pad.h"
 #include "structs.h"
 
 /*
@@ -43,7 +44,7 @@ extern void func_00201348(int, int, int, int, int, int);
    table in D_00137C80 (the alternate set while D_0015EE80 is set), stop
    sound and wait for the loader (func_00209E68) to go idle, then load it
    (func_0023B670) and reset the display state. */
-void func_001E9808(int level) {
+void StartLevel(int level) {
     int a;
     int b;
     int t;
@@ -74,13 +75,13 @@ void func_001E9808(int level) {
         if (*(int *)(ld + 0xDC) < 3 && *(int *)(ld + 0xE4) < 0) {
             break;
         }
-        func_00209E68();
+        MemCard_UpdateState();
     }
     {
         char *g = D_001941C0;
         t = *(int *)(g + 0x1C);
     }
-    func_0023B670(b, a, t + 0x100000, t + 0x400000, 0);
+    Movie_Play(b, a, t + 0x100000, t + 0x400000, 0);
     func_00120F30(0);
     func_00122598(0);
     func_00120858(0, 0);
@@ -93,10 +94,6 @@ void func_001E9808(int level) {
 }
 
 /* Pad state, as far as this function reads it. */
-struct PadState_E99D8 {
-    u8 pad_0[0x1A4];
-    s32 pressed;
-};
 
 extern s32 D_0015EE88_E99D8 __asm__("D_0015EE88") MACRO_ADDR;
 
@@ -137,7 +134,7 @@ extern s32 D_0015EFD8_E99D8 __asm__("D_0015EFD8") MACRO_ADDR;
 extern s32 D_0015EE80_E99D8 __asm__("D_0015EE80") MACRO_ADDR;
 extern s32 D_0015EE84_E99D8 __asm__("D_0015EE84") MACRO_ADDR;
 extern u8 D_0024272F_E99D8[] __asm__("D_0024272F");
-extern struct PadState_E99D8 D_0013CA40_E99D8 __asm__("D_0013CA40");
+extern struct PadState D_0013CA40_E99D8 __asm__("D_0013CA40");
 extern s32 D_00139478_E99D8[] __asm__("D_00139478");
 extern s32 D_00139480_E99D8[] __asm__("D_00139480");
 extern char D_001E79C0_E99D8[] __asm__("D_001E79C0");
@@ -194,7 +191,7 @@ extern void func_00233308_E99D8(void) __asm__("func_00233308");
    The slot stores are in this order on purpose: the last store through each table, the last
    one of the bank value and the two globals are what the scheduler moves to the front.
    Adapted from Lombyte (MIT) for PAL: src/textbin/world/startlevel.c, startlevel. */
-void func_001E99D8(void) {
+void GameBootSequence(void) {
     LevelHeader_E99D8 *hdr;
     LevelChunk_E99D8 *tbl;
     s32 n;

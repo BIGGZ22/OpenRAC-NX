@@ -11,7 +11,7 @@ extern unsigned char *D_L00_001B24B0;
 
 /* Spawns a type 0x2C particle with position, velocity, colour and scale parameters.
    Adapted from Lombyte (MIT) for PAL: src/overlays/shared/rendering_002712b8.c, FUN_L00_002712b8. */
-unsigned char *func_L00_00272158(void *pos, float *vec, int s, int a, int col, int n, float x, float y, float z, float w, float pw) {
+unsigned char *PartType44Spawn(void *pos, float *vec, int s, int a, int col, int n, float x, float y, float z, float w, float pw) {
     unsigned char *m = func_00218928(0x2C);
     if (m) {
         unsigned char *q;
@@ -57,7 +57,7 @@ extern unsigned char D_0013E633[] NOT_SDA;
 
 /* Per-frame update of a type 0x2C particle: fade colour, move and rotate its velocity.
    Adapted from Lombyte (MIT) for PAL: src/overlays/shared/rendering_002712b8.c, FUN_L00_00271450. */
-void func_L00_002722F0(unsigned char *p) {
+void PartType44Update(unsigned char *p) {
     float v[4];
     Q t[1];
     Q m[1];
@@ -71,8 +71,8 @@ void func_L00_002722F0(unsigned char *p) {
     } else {
         q = p + 0x20;
         r = p + 0x10;
-        a = func_001FA888(*(short *)(q + 0x1E));
-        w = truncate_float_to_s32(a * ((float)*(short *)(p + 0xA) / func_001FA888(*(short *)(q + 0x1C))));
+        a = IntToFloat(*(short *)(q + 0x1E));
+        w = truncate_float_to_s32(a * ((float)*(short *)(p + 0xA) / IntToFloat(*(short *)(q + 0x1C))));
         w = (w << 24) | (q[0x13] << 16);
         w |= q[0x12] << 8;
         w |= q[0x11];
@@ -104,7 +104,7 @@ extern float func_001F9F90(float);
 extern float func_001F9FA8(float);
 
 /* spawn a type-0x2D particle at a position with a velocity scale */
-unsigned char *func_L00_00272488(void *pos, int b, int color, float f, float g) {
+unsigned char *PartType45Spawn(void *pos, int b, int color, float f, float g) {
     unsigned char *r = func_00218928(0x2D);
     if (r != 0) {
         char *v;
@@ -141,7 +141,7 @@ extern void func_L00_002688A8(void *);
 extern float func_001F9B88(float);
 
 /* updates a type-45 particle: moves it, kills it when out of range or faded */
-void func_L00_002725E8(char *m) {
+void PartType45Update(char *m) {
     char *v = m + 0x20;
     int t;
     float *q = (float *)m;
@@ -170,7 +170,7 @@ void func_L00_002725E8(char *m) {
 extern unsigned char *D_L00_001B24B8;
 
 /* spawns a type-0x2E particle at a with velocity block b, link c, scale f and drag g */
-unsigned char *func_L00_00272770(void *a, void *b, int c, float f, float g) {
+unsigned char *PartType46Spawn(void *a, void *b, int c, float f, float g) {
     unsigned char *r = func_00218928(0x2E);
     if (r != 0) {
         char *v;
@@ -196,7 +196,7 @@ extern int func_001FA898(float);
 extern void func_L00_002688A8(void *);
 
 /* Particle update: move, spin, ease toward a target value, fade, die. */
-void func_L00_00272890(char *m) {
+void PartType46Update(char *m) {
     char *v = m + 0x20;
     FastVecAdd(m + 0x10, m + 0x10, v);
     *(float *)(m + 0xC) += 5880.0f;
@@ -218,7 +218,7 @@ void func_L00_00272890(char *m) {
 extern char *D_L00_001B24BC;
 extern int func_001FA898(float);
 
-unsigned char *func_L00_002729B8(void *a, void *b, float f) {
+unsigned char *PartType47Spawn(void *a, void *b, float f) {
     unsigned char *r = func_00218928(0x2F);
     if (r != 0) {
         qcopy(r + 0x10, a);
@@ -235,7 +235,7 @@ unsigned char *func_L00_002729B8(void *a, void *b, float f) {
 }
 extern void func_001F9BD8(void *, void *, void *);
 extern void func_L00_002688A8(void *);
-void func_L00_00272A88(char *m) {
+void PartType47Update(char *m) {
     char *v = m + 0x20;
     int t;
     FastVecScale(v, v, 0.975f);
@@ -252,12 +252,12 @@ extern void func_001F9BD8(void *, void *, void *);
 extern int func_001FA8A8(int, int, float);
 extern int func_001F9938(void *);
 extern void func_L00_002688A8(void *);
-void func_L00_00272B28(char *m) {
+void PartType48Update(char *m) {
     char *v = m + 0x20;
     m[8] += v[0x1C];
     FastVecAdd(m + 0x10, m + 0x10, v);
     *(int *)(m + 4) = FastTweenColor(*(int *)(v + 0x18), *(int *)(v + 0x14),
-        FastAbsF(func_001FA888(*(short *)(m + 0xA)) * *(float *)(v + 0x10) - 1.0f));
+        FastAbsF(IntToFloat(*(short *)(m + 0xA)) * *(float *)(v + 0x10) - 1.0f));
     if (FastDecTimer(m + 0xA)) {
         KillPart(m);
     }
@@ -296,7 +296,7 @@ s32 func_001F9938_72BC0g(void *) __asm__("func_001F9938");
 void func_L00_002688A8_72BC0o(void *) __asm__("func_L00_002688A8");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_002712b8.c, FUN_L00_00271d20. */
-void func_L00_00272BC0(O00271d20 *o) {
+void PartType49Update(O00271d20 *o) {
     Vec4 t;
     Vec4 *acc = &o->acc;
     Vec4 *pos = &o->pos;
@@ -319,7 +319,7 @@ extern short D_L00_001602D0;
 extern float D_0015EE6C MACRO_ADDR;
 
 // particle update: advance position, tick colour, spawn-time drift, kill when done
-void func_L00_00272C98(unsigned char *m) {
+void PartType50Update(unsigned char *m) {
     unsigned char *v = m + 0x20;
     if (FastDecTimer(m + 0xA)) {
         *(float *)(v + 8) -= *(float *)(v + 0x18);
@@ -336,7 +336,7 @@ void func_L00_00272C98(unsigned char *m) {
 extern float D_0015EE70 MACRO_ADDR;
 
 // Updates a particle: drifts it with gravity, fades it, kills it when faded or timed out.
-void func_L00_00272D68(char *m) {
+void PartType51Update(char *m) {
     char *v = m + 0x20;
     char tmp[16];
     int t;
@@ -352,14 +352,14 @@ void func_L00_00272D68(char *m) {
         m[8] += 1;
     }
 }
-void func_L00_00272E60(char *m) {
+void PartType52Update(char *m) {
     char *v;
     float f;
     if (FastDecTimer(m + 0xA)) {
         KillPart(m);
     } else {
         v = m + 0x20;
-        f = func_001FA888(*(short *)(m + 0xA)) * *(float *)(v + 0x10);
+        f = IntToFloat(*(short *)(m + 0xA)) * *(float *)(v + 0x10);
         *(int *)(m + 4) = FastTweenColor(*(int *)(v + 0xC), *(int *)(v + 8), f);
         *(float *)(m + 0xC) = ((*(float *)(m + 0x20) - *(float *)(v + 4)) * f + *(float *)(v + 4)) * 210000.0f;
     }
@@ -367,7 +367,7 @@ void func_L00_00272E60(char *m) {
 extern int D_L00_001B24D4;
 
 /* spawns a type 53 particle */
-unsigned char *func_L00_00272F00(float *pos, int a, int col, int mode, int b, float *vel, float f0, float f1, float f2) {
+unsigned char *PartType53Spawn(float *pos, int a, int col, int mode, int b, float *vel, float f0, float f1, float f2) {
     unsigned char *r = func_00218928(0x35);
     unsigned char *q;
     float *w;
@@ -413,7 +413,7 @@ extern void func_L00_0025BA50(void *, void *, void *, int, int, int, int, int, f
 extern int *D_L00_00178000[];
 
 /* Part type 54 update: advances a particle, fades its color near the end of life and spawns a light effect at its position. Adapted from Lombyte (MIT) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_00272438. */
-void func_L00_002732D8(unsigned char *m) {
+void PartType54Update(unsigned char *m) {
     V54 *pos = (V54 *)(m + 0x10);
     Q54 *q = (Q54 *)(m + 0x20);
     V54 old;
@@ -422,18 +422,18 @@ void func_L00_002732D8(unsigned char *m) {
     int r;
     old = *pos;
     q->f4 += q->f8;
-    func_L00_002633D8(q->i0, &x, &y, pos, q->f4, q->fc);
+    PathSampleAtDistance(q->i0, &x, &y, pos, q->f4, q->fc);
     if (FastDecTimer(m + 0xA)) {
         KillPart(m);
         return;
     }
     if ((float)*(short *)(m + 0xA) < (float)scale_ticks(0x1E) * 0.25f) {
-        float a = func_001FA888(*(short *)(m + 0xA));
-        *(int *)(m + 4) = func_L00_0025D038(0.7f, 0.7f, 0.7f, a * 0.08f / ((float)scale_ticks(0x1E) * 0.25f));
+        float a = IntToFloat(*(short *)(m + 0xA));
+        *(int *)(m + 4) = PackColorRGBA(0.7f, 0.7f, 0.7f, a * 0.08f / ((float)scale_ticks(0x1E) * 0.25f));
     }
     r = coll_sphere_mobys(0.15f, pos, 0x10, q->p14, 0);
     t = *pos;
-    func_L00_0025BA50(q->p14, (void *)&t, D_L00_00178000, r, 0, 0x810001, 2, 1, 2.0f, 1.0f, 1.0f);
+    SendRadialMessageToMobys(q->p14, (void *)&t, D_L00_00178000, r, 0, 0x810001, 2, 1, 2.0f, 1.0f, 1.0f);
 }
 int func_001FA898(float);
 typedef struct { u8 *o; u8 *b; s32 k; f32 f; } S_2725d8;
@@ -460,7 +460,7 @@ int func_001FA898_73478c(float) __asm__("func_001FA898");
 s32 func_001FA898_73478d(f32) __asm__("func_001FA898");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_002712b8.c, FUN_L00_002725d8. */
-P_2725d8 *func_L00_00273478(u8 *a0, u8 *a1, s32 a2, s32 a3, f32 a4, f32 a5) {
+P_2725d8 *PartType55Spawn(u8 *a0, u8 *a1, s32 a2, s32 a3, f32 a4, f32 a5) {
     P_2725d8 *p = func_00218928_73478(0x37);
     a3++;
     a3--;
@@ -495,7 +495,7 @@ extern void func_001F9BF0_273578(void *, void *, void *) __asm__("func_001F9BF0"
 extern f32 func_001F9CB8_273578(void *) __asm__("func_001F9CB8");
 extern void func_L00_001FF4B0_273578(void *, void *, f32) __asm__("func_L00_001FF4B0");
 /* Particle update. Adapted from Lombyte (MIT) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_002726d8. */
-void func_L00_00273578(P_2726d8 *p) {
+void PartType55Update(P_2726d8 *p) {
     Q_2726d8 *q = &p->q;
     u128_2726d8 t;
     f32 save, sc, r2, f;
@@ -520,7 +520,7 @@ void func_L00_00273578(P_2726d8 *p) {
     p->f2C = save;
 }
 /* Updates a fading particle: damps velocity, moves, dims colour, kills at zero. */
-void func_L00_002736D8(char *m) {
+void PartType56Update(char *m) {
     char *v = m + 0x20;
     int t;
     FastVecScale(v, v, 0.975f);
@@ -534,7 +534,7 @@ void func_L00_002736D8(char *m) {
     }
 }
 // particle update: drift, fade colour in and out over the timer
-void func_L00_00273788(char *m) {
+void PartType57Update(char *m) {
     char *v = m + 0x20;
     int t;
     FastVecAdd(m + 0x10, m + 0x10, v);
@@ -591,7 +591,7 @@ unsigned char *func_L00_00273868(float *pos, unsigned char a1, unsigned char a2,
             x = x * D_0015EE6C;
             y = random_angle_radians();
             z = random_float_between(1.3439035f, 1.7976891f);
-            func_00215C00(v, x, y, z);
+            BuildSphericalOffset(v, x, y, z);
             *(float *)(r + 0xC) = 42000.0f;
             v[0x16] = (func_001160D8() & 0x1F) + 0x10;
             *(int *)(r + 4) = (v[0x16] << 24) | 0x808080;
@@ -613,7 +613,7 @@ typedef struct { char p0[0x88]; float f88; char p1[0x2080 - 0x8C]; int i2080; } 
 extern unsigned char *D_L00_0016022C MACRO_ADDR;
 
 /* part type 58 update: fade in, hold spawning sparks, then fall and fade out. Adapted from Lombyte (MIT) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_00272bc0. */
-void func_L00_00273A60(unsigned char *p) {
+void PartType58Update(unsigned char *p) {
     V_272bc0 t;
     unsigned char *q;
     unsigned char *c;
@@ -626,8 +626,8 @@ void func_L00_00273A60(unsigned char *p) {
     switch (q[0x14]) {
     case 0:
         {
-            float n = func_001FA888(q[0x11]);
-            *(int *)(p + 4) = FastTweenColor(0xFF4080FF, 0, (n - func_001FA888(*(short *)(p + 0xA))) / n);
+            float n = IntToFloat(q[0x11]);
+            *(int *)(p + 4) = FastTweenColor(0xFF4080FF, 0, (n - IntToFloat(*(short *)(p + 0xA))) / n);
         }
         if (FastDecTimer(p + 0xA)) {
             if (q[0x10] == 1) {
@@ -644,9 +644,9 @@ void func_L00_00273A60(unsigned char *p) {
         for (i = 0; i < q[0x13]; i++) {
             qcopy(t, p + 0x10);
             m = 1.0f;
-            func_L00_00260958(t, 0.05f);
+            JitterVector(t, 0.05f);
             if (*(short *)(p + 0xA) < scale_ticks(10)) {
-                m = func_001FA888(*(short *)(p + 0xA)) / (float)scale_ticks(10);
+                m = IntToFloat(*(short *)(p + 0xA)) / (float)scale_ticks(10);
             }
             func_L00_00273868(t, 2, q[0x11], q[0x12], q[0x13], q[0x15], *(int *)(q + 0x18), *(float *)(q + 0x1C), m);
         }
@@ -661,14 +661,14 @@ void func_L00_00273A60(unsigned char *p) {
                 FastVecSub(t, c, p + 0x10);
                 func_L00_001FF4B0(t, t, 1.0f);
                 t[2] = 1.0f;
-                func_L00_0025AC00(g->i2080, *(int *)(q + 0x18), 1, p + 0x10, t, *(float *)(q + 0x1C));
+                PostHitMessage(g->i2080, *(int *)(q + 0x18), 1, p + 0x10, t, *(float *)(q + 0x1C));
             }
         }
         break;
     case 2:
         FastVecAdd(p + 0x10, p + 0x10, q);
-        a = func_001FA888(q[0x15]);
-        k = a - func_001FA888(*(short *)(p + 0xA));
+        a = IntToFloat(q[0x15]);
+        k = a - IntToFloat(*(short *)(p + 0xA));
         k = k / a;
         *(int *)(p + 4) = FastTweenColor((q[0x16] << 24) | 0x4060, 0x8FAFFF, k);
         if (k < 0.6f) {
@@ -693,7 +693,7 @@ extern char D_0013F4D0[];
 extern unsigned char *D_L00_001B2400[];
 
 /* spawns particle type 0x3B from a position, colour index and flags */
-unsigned char *func_L00_00273E08(float f, void *pos, int a1, unsigned char a2, int idx, int flag, int s, int mode) {
+unsigned char *PartType59Spawn(float f, void *pos, int a1, unsigned char a2, int idx, int flag, int s, int mode) {
     unsigned char *r = func_00218928(0x3B);
     if (r != 0) {
         char *v = (char *)r + 0x20;
@@ -719,7 +719,7 @@ unsigned char *func_L00_00273E08(float f, void *pos, int a1, unsigned char a2, i
 }
 
 // Particle update: registers the velocity vector once, then kills the particle when its timer expires.
-void func_L00_00273F28(char *m) {
+void PartType59Update(char *m) {
     char *v = m + 0x20;
     if (*(int *)(v + 0x10) == 1) {
         FastVecAdd(m + 0x10, D_0013E633 + 0xE9D, v);
@@ -733,7 +733,7 @@ extern unsigned char *D_L00_001B24D4_p __asm__("D_L00_001B24D4") NOT_SDA;
 extern int func_001FA898_r(float) __asm__("func_001FA898");
 
 /* Spawns an effect record at a position inside the level bounds; Adapted from Lombyte (MIT) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_002730e0. */
-unsigned char *func_L00_00273F80(float *pos, char *vel, int color, unsigned char life, unsigned char b, int mode, float scale)
+unsigned char *PartType60Spawn(float *pos, char *vel, int color, unsigned char life, unsigned char b, int mode, float scale)
 {
     unsigned char *m;
     float *v;
@@ -763,7 +763,7 @@ unsigned char *func_L00_00273F80(float *pos, char *vel, int color, unsigned char
     return m;
 }
 /* Particle update: move with the camera offset when flagged, kill it when off the map or its timer ends, else fade its colour. */
-void func_L00_00274138(char *m) {
+void PartType60Update(char *m) {
     char *v = m + 0x20;
     int col;
     float a;
@@ -787,8 +787,8 @@ void func_L00_00274138(char *m) {
         return;
     }
     col = *(int *)(m + 4) & 0xFFFFFF;
-    a = func_001FA888(*(short *)(m + 0xA) - 1);
-    *(int *)(m + 4) = FastTweenColor(col, *(int *)(m + 4), a / func_001FA888(*(short *)(m + 0xA)));
+    a = IntToFloat(*(short *)(m + 0xA) - 1);
+    *(int *)(m + 4) = FastTweenColor(col, *(int *)(m + 4), a / IntToFloat(*(short *)(m + 0xA)));
 }
 extern void func_L00_00250800(void *, int, void *);
 extern void func_L00_001FF4B0(void *, void *, float);
@@ -819,7 +819,7 @@ typedef struct {
 } P_p;
 
 /* Updates a fading, pulsing particle: animates its phase, colour and scale, then orients it. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/rendering_002712b8.c, FUN_L00_00273448. */
-void func_L00_002742E8(P_p *p) {
+void PartType61Update(P_p *p) {
     E_p *e;
     float lim;
     float a[4] __attribute__((aligned(16)));
@@ -872,7 +872,7 @@ void func_L00_002742E8(P_p *p) {
     }
     p->w4 = (p->w4 & 0xFFFFFF) + (truncate_float_to_s32(e->f4 * 256.0f) << 24);
     e->f14 += (1.0f - e->f14) * (D_0015EE60 * 0.175f);
-    func_L00_00250800(e->m, e->hE, a);
+    Moby_GetJointWorldPos(e->m, e->hE, a);
     FastVecSub(v, D_L00_00166EC0, a);
     func_L00_001FF4B0(v, v, e->f14);
     FastVecAdd(p->pos, a, v);
@@ -880,7 +880,7 @@ void func_L00_002742E8(P_p *p) {
 extern unsigned char *D_L00_001B24F8;
 
 // Spawns a type-62 particle at a position with a lifetime and a colour index.
-unsigned char *func_L00_002745A8(void *a, int b, int c) {
+unsigned char *PartType62Spawn(void *a, int b, int c) {
     unsigned char *r = func_00218928(0x3E);
     if (r != 0) {
         unsigned char *v = r + 0x20;
@@ -894,12 +894,12 @@ unsigned char *func_L00_002745A8(void *a, int b, int c) {
         *(short *)(v + 2) = c;
         if (c >= 2) c = 0;
         r[2] = D_L00_001B24F8[c];
-        *(short *)(r + 0x20) = truncate_float_to_s32(127.0f / func_001FA888(b));
+        *(short *)(r + 0x20) = truncate_float_to_s32(127.0f / IntToFloat(b));
         *(short *)(r + 0xA) = b;
     }
     return r;
 }
-void func_L00_002746A0(char *a) {
+void PartType62Update(char *a) {
     char *s = a + 0x20;
     int w;
     int t;
@@ -923,7 +923,7 @@ void func_L00_002746A0(char *a) {
 extern unsigned char *D_L00_001B2500;
 
 /* Spawns a type-64 particle at pos moving with vel, sprite size chosen by distance to the hero. */
-unsigned char *func_L00_00274788(void *pos, void *vel, float scale, int life, float f1, int col, float f2, int a4, int big) {
+unsigned char *PartType64Spawn(void *pos, void *vel, float scale, int life, float f1, int col, float f2, int a4, int big) {
     unsigned char *r = func_00218928(0x40);
     unsigned char *u;
     if (r != 0) {
@@ -981,7 +981,7 @@ extern f32 D_0015EE6C MACRO_ADDR;
 extern s32 D_0015EE84 MACRO_ADDR;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/002712b8.c, FUN_L00_00273a68. */
-void func_L00_00274908(struct EmberParticle *p) {
+void PartType64Update(struct EmberParticle *p) {
     struct EmberMotion *m = &p->m;
     Vec4 t;
     s32 cr, cg, cb;
@@ -1005,7 +1005,7 @@ void func_L00_00274908(struct EmberParticle *p) {
         f = p->size;
         f *= 0.5f;
         n = rand_range(scale_ticks(0x3C), scale_ticks(0x78));
-        func_L00_0026CA10(&p->pos, &m->vel, p->color, m->color2, f, n, 0, p->tex, p->blend);
+        PartType15Spawn(&p->pos, &m->vel, p->color, m->color2, f, n, 0, p->tex, p->blend);
     } else {
         p->pos.f[2] = m->floor_z;
         m->vel.f[0] += random_float_between(-5.0f, 5.0f) * D_0015EE6C;
@@ -1014,13 +1014,13 @@ void func_L00_00274908(struct EmberParticle *p) {
         f = p->size;
         f *= 0.25f;
         n = rand_range(scale_ticks(0x1E), scale_ticks(0x3C));
-        func_L00_0026CA10(&p->pos, &m->vel, p->color, m->color2, f, n, 0, p->tex, p->blend);
+        PartType15Spawn(&p->pos, &m->vel, p->color, m->color2, f, n, 0, p->tex, p->blend);
     }
     if (D_0015EE84 == 10) {
         if (!random_integer_below(0x13)) {
             t.q = p->pos.q;
             t.f[2] += 0.1f;
-            func_L00_00272488(&t, 0, ((random_integer_below(6) + 0x34) << 24) | (cb << 16) | (cg << 8) | cr,
+            PartType45Spawn(&t, 0, ((random_integer_below(6) + 0x34) << 24) | (cb << 16) | (cg << 8) | cr,
                              0.05f, 10500.0f);
         }
         if (!random_integer_below(9)) {
@@ -1036,7 +1036,7 @@ void func_L00_00274908(struct EmberParticle *p) {
             t.f[2] -= 1.5f;
             f = random_float_between(420000.0f, 630000.0f);
             n = rand_range(scale_ticks(0x5A), scale_ticks(0x96));
-            func_L00_0026CD70(&t, &m->vel, c1, c2, f, n, 3);
+            PartType16Spawn(&t, &m->vel, c1, c2, f, n, 3);
         }
     }
     KillPart(p);
@@ -1048,7 +1048,7 @@ extern int func_L00_001EFFF0(void *, void *, int, void *, int);
 extern void func_001F9BC0(void *);
 
 /* Particle type 65 update: fall under gravity, bounce off the world, fade the colour and die when spent. Adapted from Lombyte (MIT) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_00273ee0. */
-void func_L00_00274D80(unsigned char *o) {
+void PartType65Update(unsigned char *o) {
     V out;
     float *c;
     unsigned char *b;
@@ -1087,13 +1087,13 @@ void func_L00_00274D80(unsigned char *o) {
     if (c[6] < 0.0f) c[6] = 0.0f;
     c[7] += D_0015EE60 * 0.0f;
     if (c[7] < 0.0f) c[7] = 0.0f;
-    *(int *)(o + 4) = func_L00_0025D038(c[4], c[5], c[6], c[7]);
+    *(int *)(o + 4) = PackColorRGBA(c[4], c[5], c[6], c[7]);
     o[8]--;
 }
 extern unsigned char *D_L00_001B2508;
 
 /* spawns a type-0x42 particle moving in a random direction */
-unsigned char *func_L00_00275040(void *pos, int color, float f, float speed) {
+unsigned char *PartType66Spawn(void *pos, int color, float f, float speed) {
     unsigned char *r = func_00218928(0x42);
     if (r != 0) {
         float ang, sp;
@@ -1127,7 +1127,7 @@ unsigned char *func_L00_00275040(void *pos, int color, float f, float speed) {
     }
     return r;
 }
-void func_L00_002751A8(char *m) {
+void PartType66Update(char *m) {
     char *v = m + 0x20;
     int t;
     FastVecAdd(m + 0x10, m + 0x10, v);
@@ -1146,7 +1146,7 @@ void func_L00_002751A8(char *m) {
 extern unsigned char *D_L00_001B250C;
 
 /* spawns particle type 0x43 at a position with a colour, timer and optional velocity */
-unsigned char *func_L00_00275248(float f0, float f1, int a0, void *pos, int timer, int flag, int col, float *vel) {
+unsigned char *PartType67Spawn(float f0, float f1, int a0, void *pos, int timer, int flag, int col, float *vel) {
     unsigned char *r = func_00218928(0x43);
     if (r != 0) {
         unsigned char *v = r + 0x20;
@@ -1164,7 +1164,7 @@ unsigned char *func_L00_00275248(float f0, float f1, int a0, void *pos, int time
         *(short *)(v + 0x18) = 0;
         r[2] = flag == 0 ? D_L00_001B250C[0] : D_L00_001B250C[1];
         if (flag == 0) {
-            *(short *)(v + 0x1A) = truncate_float_to_s32(127.0f / func_001FA888(timer));
+            *(short *)(v + 0x1A) = truncate_float_to_s32(127.0f / IntToFloat(timer));
         }
         if (vel != 0) {
             *(float *)(v + 0) = vel[0];
@@ -1183,7 +1183,7 @@ extern void func_001F9EC0(void *, void *, void *);
 extern float func_001FA748(float, float);
 
 // Update for an attached particle: follows its owner moby, spawns a child and orients itself.
-void func_L00_002753B8(char *m) {
+void PartType67Update(char *m) {
     char *s = m + 0x20;
     float vv[28];
     char *q;
@@ -1199,7 +1199,7 @@ void func_L00_002753B8(char *m) {
         vv[0] = *(float *)(m + 0x20);
         vv[1] = *(float *)(s + 4);
         vv[2] = *(float *)(s + 8);
-        FastVecScale(vv, vv, func_001FA888(*(short *)(s + 0x18)));
+        FastVecScale(vv, vv, IntToFloat(*(short *)(s + 0x18)));
         FastVecAdd(m + 0x10, *(char **)(s + 0xC) + 0x10, vv);
         return;
     }
@@ -1250,7 +1250,7 @@ extern void func_0020DAF8(void *, int, void *);
 extern void func_L00_001FF4B0(void *, void *, float);
 
 /* part type 68 update: follows its owner, scaling velocity until the owner goes away */
-void func_L00_002756B8(char *m) {
+void PartType68Update(char *m) {
     float v[16];
     float v2[4];
     unsigned char *p = (unsigned char *)m + 0x30;
@@ -1262,9 +1262,9 @@ void func_L00_002756B8(char *m) {
     }
     a = *(float *)(p + 8) * random_float_between(0.05f, 1.0f);
     b = *(float *)(m + 0x2C);
-    func_L00_00250800(*(void **)(m + 0x30), p[4], m + 0x10);
-    func_0020DAF8(*(void **)(m + 0x30), p[4], v);
-    f = func_001FA888(p[5]);
+    Moby_GetJointWorldPos(*(void **)(m + 0x30), p[4], m + 0x10);
+    MobyTransformScaledVertex(*(void **)(m + 0x30), p[4], v);
+    f = IntToFloat(p[5]);
     f = (random_float_between(-f, f) / 100.0f - 1.0f) * *(float *)(p + 0xC);
     func_L00_001FF4B0(v2, v, f);
     FastVecAdd(m + 0x20, m + 0x10, v2);
@@ -1276,7 +1276,7 @@ extern int func_001F9850(int);
 extern unsigned char *D_L00_001B2514;
 
 /* spawns a particle at a with velocity b, colour byte c and payload d */
-unsigned char *func_L00_002757E8(void *a, void *b, int c, int d) {
+unsigned char *PartType69Spawn(void *a, void *b, int c, int d) {
     unsigned char *r = func_00218928(0x45);
     char *v;
     int x;
@@ -1292,7 +1292,7 @@ unsigned char *func_L00_002757E8(void *a, void *b, int c, int d) {
         r[2] = *D_L00_001B2514;
         x = scale_ticks(rand_range(10, 30));
         *(short *)(r + 0xA) = x;
-        t = func_001FA888((short)x);
+        t = IntToFloat((short)x);
         *(int *)(v + 0x1C) = d;
         *(short *)(v + 0x14) = c;
         *(int *)(v + 0x18) = 0x7F7F7F;
@@ -1306,7 +1306,7 @@ unsigned char *func_L00_002757E8(void *a, void *b, int c, int d) {
 extern float func_L00_00258C80(float, float);
 
 /* Per-frame update of a particle that follows a moby's joint, kills itself when out of range or expired. */
-void func_L00_00275910(char *p) {
+void PartType69Update(char *p) {
     char *v = p + 0x20;
     float z;
     int t;
@@ -1347,13 +1347,13 @@ void func_L00_00275910(char *p) {
         KillPart(p);
         return;
     }
-    *(int *)(p + 4) = (truncate_float_to_s32(func_001FA888(*(short *)(p + 0xA)) * *(float *)(v + 0x10) * func_001FA888(*(short *)(v + 0x14))) << 24) | *(int *)(v + 0x18);
+    *(int *)(p + 4) = (truncate_float_to_s32(IntToFloat(*(short *)(p + 0xA)) * *(float *)(v + 0x10) * IntToFloat(*(short *)(v + 0x14))) << 24) | *(int *)(v + 0x18);
 }
 extern int func_001F9850(int);
 extern unsigned char *D_L00_001B2518;
 
 /* spawns a particle at pos with a colour byte taken from a table and a heading */
-unsigned char *func_L00_00275B98(void *a, int idx, float ang) {
+unsigned char *PartType70Spawn(void *a, int idx, float ang) {
     unsigned char *r = func_00218928(0x46);
     if (r != 0) {
         qcopy(r + 0x10, a);
@@ -1369,7 +1369,7 @@ unsigned char *func_L00_00275B98(void *a, int idx, float ang) {
     return r;
 }
 extern void func_L00_002688A8(void *);
-void func_L00_00275C80(char *a) {
+void PartType70Update(char *a) {
     int t = *(unsigned short *)(a + 0xA) - 1;
     *(short *)(a + 0xA) = t;
     if ((short)t == 0) {
@@ -1385,7 +1385,7 @@ extern void func_002158E8(float *v, int *out);
 extern void func_00215A10(float *arg0, int *arg1);
 extern void func_001F9C08(void *, void *, void *, float);
 // Advances a particle that homes on a target: steers toward it, fades the colour and steps its keyframes.
-void func_L00_00275CE8(char *m) {
+void PartType71Update(char *m) {
     float x[4] __attribute__((aligned(16)));
     float y[4] __attribute__((aligned(16)));
     float z[4] __attribute__((aligned(16)));
@@ -1402,7 +1402,7 @@ void func_L00_00275CE8(char *m) {
                 FastVecAdd(m + 0x10, m + 0x10, y);
             } else {
                 func_L00_001FF4B0(y, y, 0.005f);
-                func_002158E8(y, (int *)(m + 0x24));
+                PackVectorScaled(y, (int *)(m + 0x24));
             }
         }
     }
@@ -1414,8 +1414,8 @@ void func_L00_00275CE8(char *m) {
         *(volatile int *)0x10000000 = 0;
         load_display_text_resource_entry(x, (int *)v);
         FastVecAdd(m + 0x10, m + 0x10, x);
-        f = func_001FA888(*(short *)(m + 0xA));
-        f = f / func_001FA888(*(short *)(v + 0x10));
+        f = IntToFloat(*(short *)(m + 0xA));
+        f = f / IntToFloat(*(short *)(v + 0x10));
         {
             int c = *(int *)(m + 4);
             *(int *)(m + 4) = FastTweenColor(c & 0xFFFFFF, c, 1.0f - f);
@@ -1427,8 +1427,8 @@ void func_L00_00275CE8(char *m) {
     } else if (*(short *)(v + 0x12) != 0) {
         load_display_text_resource_entry(y, (int *)v);
         load_display_text_resource_entry(z, (int *)(v + 4));
-        f = func_001FA888(*(short *)(m + 0xA));
-        func_001F9C08(x, z, y, f / func_001FA888(*(short *)(v + 0x12)));
+        f = IntToFloat(*(short *)(m + 0xA));
+        func_001F9C08(x, z, y, f / IntToFloat(*(short *)(v + 0x12)));
         FastVecAdd(m + 0x10, m + 0x10, x);
         if (FastDecTimer(m + 0xA)) {
             *(short *)(v + 0x12) = 0;
@@ -1439,8 +1439,8 @@ void func_L00_00275CE8(char *m) {
         load_display_text_resource_entry(x, (int *)(v + 4));
         FastVecAdd(m + 0x10, m + 0x10, x);
         c = *(int *)(m + 4) & 0xFFFFFF;
-        f = func_001FA888(*(short *)(m + 0xA));
-        f = f / func_001FA888(*(short *)(v + 0x14));
+        f = IntToFloat(*(short *)(m + 0xA));
+        f = f / IntToFloat(*(short *)(v + 0x14));
         *(int *)(m + 4) = FastTweenColor(c, *(int *)(m + 4), f);
         if (FastDecTimer(m + 0xA)) KillPart(m);
     }
@@ -1448,7 +1448,7 @@ void func_L00_00275CE8(char *m) {
 extern unsigned char *D_L00_001B2520;
 
 /* spawns a type-72 particle with a signed spin and a scaled lifetime */
-unsigned char *func_L00_00275FF8(char *a, char *b, int c, float f) {
+unsigned char *PartType72Spawn(char *a, char *b, int c, float f) {
     unsigned char *p = func_00218928(0x48);
     unsigned char *u;
     if (p) {
@@ -1483,7 +1483,7 @@ unsigned char *func_L00_00275FF8(char *a, char *b, int c, float f) {
     return p;
 }
 extern void func_L00_002688A8(void *);
-void func_L00_00276180(char *a) {
+void PartType72Update(char *a) {
     *(unsigned char *)(a + 8) = *(unsigned char *)(a + 8) + *(unsigned char *)(a + 0x38);
     if (*(float *)(a + 0xC) <= 0.0f) {
         *(float *)(a + 0xC) = 0.0f;
@@ -1503,7 +1503,7 @@ extern float func_L00_002644E0(void *);
 extern void func_L00_00264570(void *);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/002712b8.c, FUN_L00_00275320. */
-void func_L00_002761C0(O_275320 *o) {
+void PartType73Update(O_275320 *o) {
     Vec4 tmp;
     Vec4 t2;
     Vec4 t3;
@@ -1520,7 +1520,7 @@ void func_L00_002761C0(O_275320 *o) {
     }
     if (o->pos.f[2] < h) {
         tmp.q = o->pos.q;
-        func_L00_00264570(&tmp);
+        SpawnImpactSparks(&tmp);
         KillPart(o);
         return;
     }
@@ -1532,16 +1532,16 @@ void func_L00_002761C0(O_275320 *o) {
     FastVecAdd(&o->pos, &o->pos, D_L00_00160310);
     if (ix != (int)o->pos.f[0] || iy != (int)o->pos.f[1]) {
         t2.q = o->pos.q;
-        h = func_L00_002644E0(&t2);
+        h = SampleHeightMap(&t2);
         if (h < D_L00_00160320) {
             h = D_L00_00160320;
         } else {
             t3.q = o->pos.q;
-            h = func_L00_002644E0(&t3);
+            h = SampleHeightMap(&t3);
         }
         if (o->pos.f[2] < h) {
             t2.q = o->pos.q;
-            func_L00_00264570(&t2);
+            SpawnImpactSparks(&t2);
             KillPart(o);
             return;
         }
@@ -1556,7 +1556,7 @@ void func_L00_002761C0(O_275320 *o) {
 extern int func_L00_00237B70(float, int, int);
 
 /* Update a particle following a parent moby with a scaled offset. */
-void func_L00_002763B0(char *m) {
+void PartType74Update(char *m) {
     char *s = m + 0x20;
     char *d = *(char **)(s + 0x1C);
     float t[3];
@@ -1567,7 +1567,7 @@ void func_L00_002763B0(char *m) {
     float r;
     int k;
     k = *(int *)(d + 0xC) - *(short *)(m + 0xA);
-    r = func_001FA888(*(short *)(d + 8) * k / *(int *)(d + 0xC) + *(short *)(d + 0xA));
+    r = IntToFloat(*(short *)(d + 8) * k / *(int *)(d + 0xC) + *(short *)(d + 0xA));
     q = D_0015EE60 * -0.01999998f + 1.0f;
     *(float *)(m + 0xC) = r * 1000.0f;
     t[0] = *(float *)(m + 0x20);
@@ -1594,7 +1594,7 @@ void func_L00_002763B0(char *m) {
     }
     m[8] = m[8] + 1;
     *(int *)(m + 4) = DefaultVtbl_DeleteMoby(
-        (float)*(short *)(m + 0xA) / func_001FA888(*(int *)(d + 0xC)),
+        (float)*(short *)(m + 0xA) / IntToFloat(*(int *)(d + 0xC)),
         *(int *)(d + 4), *(int *)d);
     if (FastDecTimer(m + 0xA)) {
         KillPart(m);
@@ -1604,7 +1604,7 @@ extern float func_001F9CE8(void *);
 extern int func_L00_0025A468_r(void *, void *) __asm__("func_L00_0025A468");
 
 /* particle type 75 update: move, damp, then fade or die */
-void func_L00_00276590(char *m) {
+void PartType75Update(char *m) {
     char *v = m + 0x20;
     float s;
     float t;
@@ -1630,8 +1630,8 @@ void func_L00_00276590(char *m) {
 extern void func_L00_0025A468(void *, void *);
 extern int func_001F9938(void *);
 extern short D_L00_00160300;
-void func_L00_002766B0(char *a) {
-    func_L00_0025A468(a + 4, *(void **)&D_L00_00160300);
+void PartType76Update(char *a) {
+    Particle_FadeAlpha(a + 4, *(void **)&D_L00_00160300);
     if (FastDecTimer(a + 0xA) != 0) {
         KillPart(a);
     }
@@ -1639,13 +1639,13 @@ void func_L00_002766B0(char *a) {
 typedef struct { float x, y, z, w; } Vx __attribute__((aligned(16)));
 extern int func_001FA898(float);
 
-void func_L00_00276700(char *m) {
+void PartType77Update(char *m) {
     Vx v;
     float w, t;
     v = *(Vx *)(m + 0x20);
     w = v.w;
     v.w = 0;
-    t = func_001FA888(*(short *)(m + 0xA)) / w;
+    t = IntToFloat(*(short *)(m + 0xA)) / w;
     *(int *)(m + 4) = (truncate_float_to_s32(t * 38.0f) << 24) | 0x808080;
     *(char *)(m + 8) = truncate_float_to_s32(t * 33.0f);
     FastVecAdd(m + 0x10, m + 0x10, &v);
@@ -1657,7 +1657,7 @@ extern unsigned char *func_L00_0025D390(int);
 extern unsigned char *D_L00_001B2538;
 
 /* Spawns a type 78 particle: position, colour, lifetime and mode, with a trailing record of speeds, id and target. Adapted from Lombyte (MIT) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_00275910. */
-unsigned char *func_L00_002767B0(void *pos, int s, int col, int mode, int b, float *vec, int h, float x, float y) {
+unsigned char *PartType78Spawn(void *pos, int s, int col, int mode, int b, float *vec, int h, float x, float y) {
     unsigned char *m = func_00218928(0x4E);
     if (m) {
         float *v;
@@ -1685,7 +1685,7 @@ unsigned char *func_L00_002767B0(void *pos, int s, int col, int mode, int b, flo
         *(int *)(q + 0x18) = h;
         *(float *)(q + 0x1C) = 0;
         if (h) {
-            unsigned char *r = func_L00_0025D390(h);
+            unsigned char *r = GetFlaggedPvarWord(h);
             if (r) *(float *)(q + 0x1C) = *(float *)(r + 0x10);
         }
         v = (float *)(q + 0xC);
@@ -1706,7 +1706,7 @@ static __inline__ void vcopy_276940(float *d, float *s) {
 }
 
 // Particle update (type 0x78): ramps the size and alpha, moves by a velocity vector, steers it away from a nearby moby and kills the particle when its timer expires.
-void func_L00_00276940(char *m) {
+void PartType78Update(char *m) {
     char *v = m + 0x20;
     char *p;
     float f4;
@@ -1723,26 +1723,26 @@ void func_L00_00276940(char *m) {
         *(float *)(m + 0xC) = *(float *)(v + 4) + ((*(float *)(m + 0x20) + *(float *)(v + 4)) * 0.5f - *(float *)(v + 4)) * f4;
         c2 = (unsigned char)v[0xB] >> 1;
         c = (unsigned char)v[0xB];
-        al = func_001FA898((float)c + (float)(c2 - c) * f4);
+        al = truncate_float_to_s32((float)c + (float)(c2 - c) * f4);
     } else {
-        f4 = (float)*(short *)(m + 0xA) / func_001FA888(*(short *)(v + 8) - 6);
+        f4 = (float)*(short *)(m + 0xA) / IntToFloat(*(short *)(v + 8) - 6);
         *(float *)(m + 0xC) = *(float *)(m + 0x20) + ((*(float *)(m + 0x20) + *(float *)(v + 4)) * 0.5f - *(float *)(m + 0x20)) * f4;
-        al = func_001FA898((float)((unsigned char)v[0xB] >> 1) * f4 + 0.0f);
+        al = truncate_float_to_s32((float)((unsigned char)v[0xB] >> 1) * f4 + 0.0f);
     }
     p = m + 0x10;
     *(int *)(m + 4) = (al << 24) | (*(int *)(m + 4) & 0xFFFFFF);
     vcopy_276940(a, (float *)(v + 0xC));
-    func_001F9BD8(p, p, a);
+    FastVecAdd(p, p, a);
     if (*(int *)(v + 0x18) != 0) {
-        func_001F9BF0(d, *(char **)(v + 0x18) + 0x10, p);
+        FastVecSub(d, *(char **)(v + 0x18) + 0x10, p);
         if (d[0] <= 2.0f && d[1] <= 2.0f) {
-            func_001F9CA0(e, d, D_0013E633 + 0x10AD);
+            FastVecCross(e, d, D_0013E633 + 0x10AD);
             func_L00_001FF4B0(e, e, *(float *)&D_L00_0016030C);
-            func_001F9BD8(p, p, e);
+            FastVecAdd(p, p, e);
             if (d[0] <= 0.5f && d[1] <= 0.5f) {
                 func_L00_001FF4B0(a, d, 0.03f);
             } else {
-                func_L00_001FF4B0(a, d, func_001F9CB8(a));
+                func_L00_001FF4B0(a, d, FastVecLength(a));
             }
             w = (float *)(v + 0xC);
             *(float *)(v + 0xC) = a[0];
@@ -1751,12 +1751,12 @@ void func_L00_00276940(char *m) {
             w[2] = a[2];
         }
     }
-    if (func_001F9938(m + 0xA)) {
-        func_L00_002688A8(m);
+    if (FastDecTimer(m + 0xA)) {
+        KillPart(m);
     }
 }
 // Particle update: move by velocity, fade color over remaining lifetime.
-void func_L00_00276C08(char *m) {
+void PartType79Update(char *m) {
     char *v = m + 0x20;
     int c;
     if (*(int *)(v + 0x1C) != 0) {
@@ -1776,14 +1776,14 @@ void func_L00_00276C08(char *m) {
     if (*(int *)(v + 0x1C) != 0) {
         c = *(int *)(m + 4) & 0xFFFFFF;
         *(int *)(m + 4) = FastTweenColor(c, *(int *)(m + 4),
-            func_001FA888(*(short *)(m + 0xA) - 1) / func_001FA888(*(short *)(m + 0xA)));
+            IntToFloat(*(short *)(m + 0xA) - 1) / IntToFloat(*(short *)(m + 0xA)));
     } else {
         *(int *)(m + 4) = FastTweenColor(0, *(int *)(m + 4),
-            func_001FA888(*(short *)(m + 0xA) - 1) / func_001FA888(*(short *)(m + 0xA)));
+            IntToFloat(*(short *)(m + 0xA) - 1) / IntToFloat(*(short *)(m + 0xA)));
     }
 }
 /* Per-frame update of a fading particle: kills it when out of range or expired, else fades its colour. */
-void func_L00_00276D50(char *m) {
+void PartType80Update(char *m) {
     float a = *(float *)(m + 0x10);
     if (a < 2.0f || a > 1021.0f
         || *(float *)(m + 0x14) < 2.0f || *(float *)(m + 0x14) > 1021.0f
@@ -1795,13 +1795,13 @@ void func_L00_00276D50(char *m) {
     if (*(int *)(m + 0x20) != 0) {
         float f;
         *(float *)(m + 0xC) = *(float *)(m + 0xC) * 0.99f;
-        f = func_001FA888(*(short *)(m + 0xA) - 1);
-        *(int *)(m + 4) = FastTweenColor(0x30FFFFFF, *(int *)(m + 4), f / func_001FA888(*(short *)(m + 0xA)));
+        f = IntToFloat(*(short *)(m + 0xA) - 1);
+        *(int *)(m + 4) = FastTweenColor(0x30FFFFFF, *(int *)(m + 4), f / IntToFloat(*(short *)(m + 0xA)));
     } else {
         float f;
         *(float *)(m + 0xC) = *(float *)(m + 0xC) * 0.95f;
-        f = func_001FA888(*(short *)(m + 0xA) - 1);
-        *(int *)(m + 4) = FastTweenColor(0x603F1008, *(int *)(m + 4), f / func_001FA888(*(short *)(m + 0xA)));
+        f = IntToFloat(*(short *)(m + 0xA) - 1);
+        *(int *)(m + 4) = FastTweenColor(0x603F1008, *(int *)(m + 4), f / IntToFloat(*(short *)(m + 0xA)));
     }
 }
 LINKER_REMNANT("asm/overlays", func_L00_00276EB0);
@@ -1817,7 +1817,7 @@ extern int func_00234158(int arg0, int arg1, int arg2, int arg3);
 
 // loads the 20 table entries from the resident table into the level's slots
 // Adapted from Lombyte (MIT) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_00276078.
-void func_L00_00276F18(void) {
+void Stash_SendLoadedEntries(void) {
     int h = D_L00_00173F08;
     int i;
     for (i = 0; i < 20; i++) {

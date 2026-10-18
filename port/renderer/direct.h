@@ -29,6 +29,7 @@
 
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <span>
 #include <string>
@@ -381,6 +382,8 @@ private:
     const Offscreen& offscreen(std::uint32_t block);
     std::size_t m_vbo_bytes = 0;
     std::string m_last_error;
+    std::array<unsigned, 16> m_samplers{};
+    unsigned m_bound_sampler = 0xFFFFFFFF;
 
     struct Uniforms {
         int textured, tcc, tfx, tex_alpha_scale, fog_enable, fog_colour, alpha_test, alpha_ref,

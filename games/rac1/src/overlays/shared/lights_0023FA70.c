@@ -7,7 +7,7 @@ extern int D_L00_0015FD5C MACRO_ADDR;
 extern float D_L00_0015FD60 MACRO_ADDR;
 extern float D_L00_0015FD64 MACRO_ADDR;
 extern char *D_L00_0015FD68 MACRO_ADDR;
-void func_L00_0023FA70(char *p) {
+void LoadLightHeader(char *p) {
     D_L00_0015FD58 = *(int *)p; p += 4;
     D_L00_0015FD5C = *(int *)p; p += 4;
     D_L00_0015FD60 = *(float *)p; p += 4;
@@ -19,7 +19,7 @@ extern s32 D_L00_0015F538 MACRO_ADDR;
 extern u32 D_L00_0015F540 MACRO_ADDR;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_0023f0d8.c, FUN_L00_0023f120. */
-void func_L00_0023FAB8(s32 *p) {
+void LightTable_Relocate(s32 *p) {
     s32 i, j;
     s32 n;
     n = *p;

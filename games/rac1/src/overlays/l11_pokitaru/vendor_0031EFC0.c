@@ -16,30 +16,30 @@ extern int D_L11_001625AC MACRO_ADDR;
 extern int D_L11_00162620 MACRO_ADDR;
 
 // Draws the pokitaru HUD elements with their colours.
-void func_L11_0031EFC0(void) {
+void PokitaruSurfaceNearDraw(void) {
     VU1_addGSregister(0x42, 0x8000000044L);
     VU1_addGSregister(8, 0);
     VU1_addGSregister(0x14, 0xFF9000000260L);
     VU1_addGSregister(0x47, 0x513F1);
-    func_001F7868();
+    Draw_BuildVu1Setup();
     VU1_addGSregister(6, GetEffectTex(0x2C));
     VU1_addGSregister(0x42, (long)*(int *)&D_L11_00162588 << 32 | 0x44);
-    func_L11_0031ED48(0);
+    DrawHudQuadGroup(0);
     if (*(unsigned char *)&D_L11_00162620 != 0) {
         VU1_addGSregister(6, GetEffectTex(0x29));
         VU1_addGSregister(0x42, (long)((D_L11_0016258C * *(unsigned char *)&D_L11_00162620) >> 8) << 32 | 0x68);
-        func_L11_0031ED48(1);
+        DrawHudQuadGroup(1);
         VU1_addGSregister(0x42, (long)((D_L11_0016258C * *(unsigned char *)&D_L11_00162620) >> 8) << 32 | 0x62);
-        func_L11_0031ED48(2);
+        DrawHudQuadGroup(2);
     }
     VU1_addGSregister(6, GetEffectTex(0x2A));
     VU1_addGSregister(0x42, (long)*(int *)&D_L11_001625A8 << 32 | 0x48);
-    func_L08_002F21B0(0);
+    Moby600_DrawQuads8(0);
     VU1_addGSregister(0x42, (long)D_L11_001625AC << 32 | 0x48);
-    func_L08_002F21B0(1);
+    Moby600_DrawQuads8(1);
     VU1_addGSregister(6, GetEffectTex(0x2B));
     VU1_addGSregister(0x42, (long)*(int *)&D_L11_001625B8 << 32 | 0x48);
-    func_L08_002F20D8(0);
+    Moby600_DrawQuads11(0);
     VU1_addGSregister(0x47, 0x5360B);
 }
 typedef struct { int a, b; } PairA_31F760;
@@ -74,7 +74,7 @@ extern short D_L11_00162578;
 
 /* Update function: state 0 sets up some global tables (running func_L08_002F2428 once), state 1 tests a point
  * and its distance to the hero and sets D_L11_00162620 to a 0 to 255 value that fades between 15.0 and 35.0. */
-void func_L11_0031F760(unsigned char *moby) {
+void PokitaruSurfaceNearUpdate(unsigned char *moby) {
     int i;
     float v[4];
     float w[4];
@@ -83,9 +83,9 @@ void func_L11_0031F760(unsigned char *moby) {
     switch (moby[0x20]) {
     case 0:
         if (*(int *)&D_L11_001625BC == 0) {
-            func_L08_002F2428(&D_L11_00162600, 4, &D_L11_001625C0, 0.7f, 1.0f, 0.9f, 0.5f, 1);
-            func_L08_002F2428(D_L11_001F9D08, 11, D_L11_001F4C38, 0.5f, 0.5f, 0.5f, 1.0f, 1);
-            func_L08_002F2428(D_L11_001FF9F0, 8, D_L11_001F9D38, 0.25f, 0.25f, 0.25f, 0.7f, 1);
+            ScaleColorTables(&D_L11_00162600, 4, &D_L11_001625C0, 0.7f, 1.0f, 0.9f, 0.5f, 1);
+            ScaleColorTables(D_L11_001F9D08, 11, D_L11_001F4C38, 0.5f, 0.5f, 0.5f, 1.0f, 1);
+            ScaleColorTables(D_L11_001FF9F0, 8, D_L11_001F9D38, 0.25f, 0.25f, 0.25f, 0.7f, 1);
             *(int *)&D_L11_001625BC = 1;
         }
         moby[0x20] = 1;
@@ -120,9 +120,9 @@ void func_L11_0031F760(unsigned char *moby) {
                     FastVecSub(w, g + 0x140, w);
                     d = FastVecLength(w);
                     if (d <= 35.0f) {
-                        func_L08_002F2760(0);
-                        func_L08_002F2618(D_L11_001FFA18, 0.52f, 0.62f, 0.06f, D_L11_00162640);
-                        func_L08_002F2760(2);
+                        AdvanceScrollOffsets(0);
+                        AdvanceWavePhase(D_L11_001FFA18, 0.52f, 0.62f, 0.06f, D_L11_00162640);
+                        AdvanceScrollOffsets(2);
                         if (d < 15.0f) {
                             *(unsigned char *)&D_L11_00162620 = 0xFF;
                         } else if (d < 35.0f) {
@@ -131,10 +131,10 @@ void func_L11_0031F760(unsigned char *moby) {
                             *(char *)&D_L11_00162620 = 0;
                         }
                     }
-                    func_L08_002F2838(0);
-                    func_L08_002F2838(0);
-                    func_L08_002F2838(1);
-                    AddDrawCallback(func_L11_0031EFC0, moby);
+                    AdvanceScrollEntry(0);
+                    AdvanceScrollEntry(0);
+                    AdvanceScrollEntry(1);
+                    AddDrawCallback(PokitaruSurfaceNearDraw, moby);
                 }
             }
         }
@@ -152,7 +152,7 @@ extern int D_L11_00215408[];
 extern int D_L11_002154E0[];
 
 /* Builds 17 entries from parallel tables. */
-void func_L11_0031FB18(int arg) {
+void PokitaruSurfaceBuildPieces(int arg) {
     int i;
     for (i = 0; i < 17; i++) {
         func_L08_00259040(D_L11_00217A30, D_L11_00215450[i], D_L11_00207BC0[i], D_L11_00217A18 + arg * 8);
@@ -167,7 +167,7 @@ extern int D_L11_00207B98[];
 extern Pair8 D_L11_001626A8[] MACRO_ADDR;
 
 /* Places the level's 9 effect pieces from their tables (a relative of func_L11_0031FCC8). */
-void func_L11_0031FBF0(int a) {
+void PlaceEffectPieces(int a) {
     int i;
     for (i = 0; i < 9; i++) {
         func_L08_00259040(D_L11_00217A30, D_L11_00207B48[i], D_L11_002009E8[i], &D_L11_001626A8[a]);
@@ -186,7 +186,7 @@ extern short D_L11_00162678;
 extern short D_L11_00162688;
 
 // Draws the level 11 HUD gauges: sets up the gfx packets and per-gauge draws.
-void func_L11_0031FDA0(char *m) {
+void PokitaruSurfaceFarDraw(char *m) {
     int *d = *(int **)(m + 0x78);
     int flag = 0;
     char *cam;
@@ -194,7 +194,7 @@ void func_L11_0031FDA0(char *m) {
     VU1_addGSregister(8, 0);
     VU1_addGSregister(0x14, 0xFF9000000260L);
     VU1_addGSregister(0x47, 0x513F1L);
-    func_001F7868();
+    Draw_BuildVu1Setup();
     cam = D_L11_00167700;
     if (*(float *)(cam + 0x148) > 255.0f
         || is_point_inside_clip_volume(cam + 0x140, d[0])
@@ -205,24 +205,24 @@ void func_L11_0031FDA0(char *m) {
     if (flag) {
         VU1_addGSregister(6, GetEffectTex(0x2C));
         VU1_addGSregister(0x42, ((long)*(int *)&D_L11_00162658 << 32) | 0x44);
-        func_L11_0031FB18(0);
+        PokitaruSurfaceBuildPieces(0);
     }
     if (*(unsigned char *)&D_L11_001626A0_w != 0 && flag) {
         VU1_addGSregister(6, GetEffectTex(0x29));
         VU1_addGSregister(0x42, ((long)((D_L11_0016265C * *(unsigned char *)&D_L11_001626A0_w) >> 8) << 32) | 0x68);
-        func_L11_0031FB18(1);
+        PokitaruSurfaceBuildPieces(1);
         VU1_addGSregister(0x42, ((long)((D_L11_0016265C * *(unsigned char *)&D_L11_001626A0_w) >> 8) << 32) | 0x62);
-        func_L11_0031FB18(2);
+        PokitaruSurfaceBuildPieces(2);
     }
     VU1_addGSregister(6, GetEffectTex(0x2A));
     VU1_addGSregister(0x42, ((long)*(int *)&D_L11_00162678 << 32) | 0x48);
-    func_L11_0031FBF0(0);
+    PlaceEffectPieces(0);
     VU1_addGSregister(0x42, ((long)D_L11_0016267C << 32) | 0x48);
-    func_L11_0031FBF0(1);
+    PlaceEffectPieces(1);
     if (flag) {
         VU1_addGSregister(6, GetEffectTex(0x2B));
         VU1_addGSregister(0x42, ((long)*(int *)&D_L11_00162688 << 32) | 0x48);
-        func_L11_0031FCC8(0);
+        PlaceLevelEffectPieces(0);
     }
 }
 typedef struct { int a, b; } PairA_3205C0;
@@ -241,7 +241,7 @@ extern short D_L11_00162648;
 
 /* Update function: state 0 sets up some global tables (running func_L08_002F2428 once), state 1 tests a point
  * and its distance to the hero and sets D_L11_001626A0 to a 0 to 255 value that fades between 80.0 and 100.0. */
-void func_L11_003205C0(unsigned char *moby) {
+void PokitaruSurfaceFarUpdate(unsigned char *moby) {
     int i;
     float v[4];
     float w[4];
@@ -250,9 +250,9 @@ void func_L11_003205C0(unsigned char *moby) {
     switch (moby[0x20]) {
     case 0:
         if (*(int *)&D_L11_0016268C == 0) {
-            func_L08_002F2428(D_L11_002154E0, 17, D_L11_00207BC0, 0.7f, 1.0f, 0.9f, 0.5f, 1);
-            func_L08_002F2428(D_L11_00217A00, 5, D_L11_00215528, 0.5f, 0.5f, 0.5f, 1.0f, 1);
-            func_L08_002F2428(D_L11_00207B98, 9, D_L11_002009E8, 0.25f, 0.25f, 0.25f, 0.7f, 1);
+            ScaleColorTables(D_L11_002154E0, 17, D_L11_00207BC0, 0.7f, 1.0f, 0.9f, 0.5f, 1);
+            ScaleColorTables(D_L11_00217A00, 5, D_L11_00215528, 0.5f, 0.5f, 0.5f, 1.0f, 1);
+            ScaleColorTables(D_L11_00207B98, 9, D_L11_002009E8, 0.25f, 0.25f, 0.25f, 0.7f, 1);
             *(int *)&D_L11_0016268C = 1;
         }
         moby[0x20] = 1;
@@ -287,9 +287,9 @@ void func_L11_003205C0(unsigned char *moby) {
                     FastVecSub(w, g + 0x140, w);
                     d = FastVecLength(w);
                     if (d <= 100.0f) {
-                        func_L08_002F2760(0);
-                        func_L08_002F2618(D_L11_00217A20, 0.52f, 0.62f, 0.06f, D_L11_001626C0_p);
-                        func_L08_002F2760(2);
+                        AdvanceScrollOffsets(0);
+                        AdvanceWavePhase(D_L11_00217A20, 0.52f, 0.62f, 0.06f, D_L11_001626C0_p);
+                        AdvanceScrollOffsets(2);
                         if (d < 80.0f) {
                             *(unsigned char *)&D_L11_001626A0_w = 0xFF;
                         } else if (d < 100.0f) {
@@ -298,10 +298,10 @@ void func_L11_003205C0(unsigned char *moby) {
                             *(char *)&D_L11_001626A0_w = 0;
                         }
                     }
-                    func_L08_002F2838(0);
-                    func_L08_002F2838(0);
-                    func_L08_002F2838(1);
-                    AddDrawCallback((void (*)(void))func_L11_0031FDA0, moby);
+                    AdvanceScrollEntry(0);
+                    AdvanceScrollEntry(0);
+                    AdvanceScrollEntry(1);
+                    AddDrawCallback((void (*)(void))PokitaruSurfaceFarDraw, moby);
                 }
             }
         }

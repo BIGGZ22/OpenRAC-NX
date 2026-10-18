@@ -3,7 +3,7 @@
 #include "include_asm.h"
 
 // Computes a bounded buffer checksum.
-unsigned int func_L00_0024DFB0(unsigned char *data, int size) {
+unsigned int MemCard_Crc16(unsigned char *data, int size) {
  unsigned char *end;
  unsigned int crc;
  if (size > 0x1800) return 0;

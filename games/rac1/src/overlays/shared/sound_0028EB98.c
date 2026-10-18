@@ -4,7 +4,7 @@
 #include "include_asm.h"
 
 extern char D_0013E633[];
-int func_L00_0028EB98(int a, int i) {
+int Sound_IsPlaying(int a, int i) {
     if (i >= 0) {
         char *p = D_0013E633 + 0x1D + i * 0x70;
         if (*(int *)(p + 0x88) == a) {
@@ -17,7 +17,7 @@ int func_L00_0028EB98(int a, int i) {
 /* Stops sound slot I: one still starting (state 7) is cleared outright, one in any other state
  * but 0 and 6 is set to 4. The catalogue cuts the second test off as func_L00_0028EC28
  * (config/overlays/joined.tsv). */
-void func_L00_0028EBF0(int i) {
+void Sound_StopSlot(int i) {
     if (i >= 0) {
         char *e = D_0013E633 + 0x1D + i * 0x70;
         int t = *(unsigned char *)(e + 0x74);
@@ -35,7 +35,7 @@ extern char D_0013E633[] NOT_SDA;
 extern unsigned char D_L00_00197F40[] NOT_SDA;
 extern char *D_L00_00197680[] NOT_SDA;
 
-int func_L00_0028EF68(int i, int a1, int v, int k) {
+int Sound_PlayClassSound(int i, int a1, int v, int k) {
     char *t = D_L00_00197680[D_L00_00197F40[k]];
     char *e;
     int r;
@@ -55,7 +55,7 @@ int func_L00_0028EF68(int i, int a1, int v, int k) {
 }
 extern int D_L00_0015F6D0 MACRO_ADDR;
 extern char *D_L00_0015F6D4 MACRO_ADDR;
-int func_L00_0028F0B0(int a, int b, int c, int d) {
+int Sound_PlayLevelSound(int a, int b, int c, int d) {
     int r;
     if (a >= D_L00_0015F6D0) return -1;
     r = func_0022EB08(D_L00_0015F6D4 + a * 32, b, 0, c + 0x40, d);
@@ -74,7 +74,7 @@ extern int D_L00_0015F654 MACRO_ADDR;
 
 /* Starts a sound bank entry chosen by (a0, a1, a2) offset from a
    level-specific table row, the same shape as func_0022EE28. */
-int func_L00_0028F140(int a0, int a1, int a2, int a3, int a4) {
+int Sound_PlayLevelTableEntry(int a0, int a1, int a2, int a3, int a4) {
     int idx = D_L00_001BDBB0[D_0015EE84_m] + a0 * 4 + a1 * 2 + a2 + D_L00_0015F654;
     int h;
 
@@ -91,7 +91,7 @@ int func_L00_0028F140(int a0, int a1, int a2, int a3, int a4) {
 }
 LINKER_REMNANT("asm/overlays", func_L00_0028F208);
 /* sets the pitch-bend word of sound slot i to v */
-int func_L00_0028F210(int i, int v) {
+int Sound_SetPitchBend(int i, int v) {
     char *e = D_0013E633 + 0x1D + i * 0x70;
     *(int *)(e + 0x84) = v;
     return 1;
@@ -99,7 +99,7 @@ int func_L00_0028F210(int i, int v) {
 typedef struct { int k; int v; } TE;
 extern TE D_L00_001EAD00[];
 
-void func_L00_0028F230(short *a) {
+void Sound_LookupTableEntry(short *a) {
     int i;
     for (i = 0; D_L00_001EAD00[i].k != -1 && D_L00_001EAD00[i].k != a[0]; i++) {
     }
@@ -107,7 +107,7 @@ void func_L00_0028F230(short *a) {
     *(int *)(a + 2) = D_L00_001EAD00[i].v;
 }
 /* stores a sound value and transitions or clears its entry */
-void func_L00_0028F3E0(int value, long long address) {
+void Sound_SetEntryValue(int value, long long address) {
     unsigned char *entry = (unsigned char *)(int)address;
     if (entry == 0) return;
     *(int *)entry = value;
@@ -145,7 +145,7 @@ extern void func_00233AB8(void);
 extern void func_0022F258(void);
 
 /* Per-frame update of a pickup-like moby: pulses its colour, tracks the player's range and collects items. */
-void func_L00_0028F458(unsigned char *m) {
+void EnvMappedPickupUpdate(unsigned char *m) {
     char *d = *(char **)(m + 0x78);
     float *p;
     float tmp[4];
@@ -156,15 +156,15 @@ void func_L00_0028F458(unsigned char *m) {
     if (m[0x20] != 0x2A) {
         if (m[0x31] != 0) {
             m[0xBC] += 2;
-            v = (int)(FastCos(func_001FA888((unsigned char)m[0xBC] - 0x80) * 0.024543693f) * 50.0f) + 0x96;
+            v = (int)(FastCos(IntToFloat((unsigned char)m[0xBC] - 0x80) * 0.024543693f) * 50.0f) + 0x96;
             if (*(short *)(m + 0xA6) == 0x215) {
                 *(int *)(m + 0x90) = (v >> 1) | (v << 8) | (v << 16);
             } else {
                 *(int *)(m + 0x90) = v | (v << 8) | (v << 16);
             }
-            AddDrawCallback(func_00233AB8, m);
+            AddDrawCallback(DrawEnvMappedObject, m);
             if (func_001F9D48(m + 0x10, D_L00_00166EC0) < 32.0f) {
-                AddDrawCallback(func_0022F258, m);
+                AddDrawCallback(DrawLightFlare, m);
             }
         }
         p = (float *)(m + 0x10);
@@ -193,9 +193,9 @@ void func_L00_0028F458(unsigned char *m) {
                 if (D_0015EE84_m == 10 && *(unsigned char *)(D_0013E633 + 0x2EC1) == 1) {
                     m[0x20] = 0x2A;
                     *(unsigned short *)(m + 0x34) |= 0x41;
-                    func_L00_00299B68(9);
+                    StartCutscene(9);
                 } else {
-                    func_L00_00265558(2);
+                    Hud_ClosePopupIfActive(2);
                     D_L00_0015F710 = 1;
                     D_0013E156[1] = 0;
                 }
@@ -205,16 +205,16 @@ void func_L00_0028F458(unsigned char *m) {
         if (D_L00_0015F6A8 != 2) {
             q = D_0013D355 + 0x13B;
             if (q[0x48] == 0 && gHaveMorphORay[7] != 0) {
-                func_L00_00299B68(4);
+                StartCutscene(4);
                 q[0x48] = 1;
             } else if ((q = D_0013D355 + 0x13B)[0x49] == 0 && D_0013DE4B[8] != 0) {
-                func_L00_00299B68(5);
+                StartCutscene(5);
                 q[0x49] = 1;
             } else if ((q = D_0013D355 + 0x13B)[0x4A] == 0 && D_0013DE4B[8] != 0) {
-                func_L00_0029A7D0(0xB);
+                PlayMovieEntryIfIdle(0xB);
                 q[0x4A] = 1;
             } else if ((q = D_0013D355 + 0x13B)[0x4B] == 0 && D_0013DE4B[8] != 0) {
-                func_L00_00299B68(6);
+                StartCutscene(6);
                 q[0x4B] = 1;
             } else {
                 m[0x20] = 0;

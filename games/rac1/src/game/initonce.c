@@ -76,7 +76,7 @@ extern int D_001941C0[];
  * and a value stored twice (d, into [5] and [6]) has its first store
  * emitted last. The allocation follows the schedule.
  */
-void func_00201E10(void) {
+void InitMemSlots(void) {
     int base = (int)D_0024272F & 0xFFFFC000;
     int size = D_0016100C;
     int a = base + size;
@@ -154,7 +154,7 @@ extern char D_001E7E40[]; /* "Unsupported language %d\n" */
  * palette/font image, and finally maps sceCdGetDiskType's result to the
  * current-language global.
  * Adapted from Lombyte (MIT) for PAL: runtime/startup/init_once.c, init_once. */
-void func_00201E88(void) {
+void InitOnce(void) {
     unsigned char buf[0x800];
     char *seg;
     int base;
@@ -185,7 +185,7 @@ void func_00201E88(void) {
 
     region = buf[0x33] != 0x4E;
     D_0015EF90 = D_0015EE80 = region;
-    func_00209A60(buf);
+    MemCard_BuildNameStamp(buf);
 
     func_00121B78(0, 1, (D_0015EE80 != 0) ? 3 : 2, 0);
     InitDma();
@@ -213,7 +213,7 @@ void func_00201E88(void) {
 
     STUB_printf(D_001E7E28);
     func_00121490(0);
-    func_00217EE8();
+    InitPads();
     func_00123168(func_0012F308);
     D_0016100C = 0x160000;
     InitMemSlots();
@@ -223,7 +223,7 @@ void func_00201E88(void) {
     UpdateViewContext();
     VU1_initChain();
     func_00121490(0);
-    func_0022DBE8();
+    Sound_InitState();
     FastMemSet(D_001942C0, 0x80808080, 0x100);
     func_00122630(buf, 0x3FFB, 1, 0, 0, 0, 8, 8);
     func_00118D80(0);

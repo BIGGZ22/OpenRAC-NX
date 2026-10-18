@@ -10,7 +10,7 @@ typedef struct VoBuf {
 } VoBuf;
 
 /* Updates or queries the decoded-frame ring. */
-void func_0023E560(VoBuf *vb, char *frames, char *entries, int capacity) {
+void voBufCreate(VoBuf *vb, char *frames, char *entries, int capacity) {
     vb->count = 0;
     vb->frames = frames;
     vb->data = entries;
@@ -26,22 +26,22 @@ void func_0023E560(VoBuf *vb, char *frames, char *entries, int capacity) {
     }
 }
 /* voBufDelete(VoBuf *) -- nothing to free. */
-void func_0023E5B0(VoBuf *vb) {
+void voBufDelete(VoBuf *vb) {
 }
 /* voBufReset(VoBuf *) */
-void func_0023E5B8(volatile int *arg0) {
+void voBufReset(volatile int *arg0) {
     arg0[3] = 0;
     arg0[2] = 0;
 }
 /* voBufIsFull(VoBuf *) */
-int func_0023E5C8(VoBuf *vb) {
+int voBufIsFull(VoBuf *vb) {
     return vb->count == vb->cap;
 }
 /* Updates or queries the decoded-frame ring. */
 extern int func_0011D960(void);
 extern void func_0011D9A8(void);
 /* voBufIncCount(VoBuf *) */
-void func_0023E5E0(VoBuf *vb) {
+void voBufIncCount(VoBuf *vb) {
     func_0011D960();
     *(int *)(vb->data + vb->wr * 0x138C0) = 2;
     vb->count++;
@@ -49,23 +49,23 @@ void func_0023E5E0(VoBuf *vb) {
     func_0011D9A8();
 }
 /* voBufGetData(VoBuf *) */
-char *func_0023E658(VoBuf *vb) {
+char *voBufGetData(VoBuf *vb) {
     if (voBufIsFull(vb)) {
         return 0;
     }
     return *(char **)vb + vb->wr * 0xD0000;
 }
 /* voBufIsEmpty -- true when the entry count is zero. */
-int func_0023E698(VoBuf *vb) {
+int voBufIsEmpty(VoBuf *vb) {
     return vb->count == 0;
 }
 /* Returns the current ring entry when the corresponding count test permits it. */
-char *func_0023E6A8(VoBuf *vb) {
+char *voBufGetTag(VoBuf *vb) {
     if (voBufIsEmpty(vb)) return 0;
     return vb->data + ((vb->wr - vb->count + vb->cap) % vb->cap) * 0x138C0;
 }
 /* voBufDecCount(VoBuf *) */
-void func_0023E710(volatile int *vb) {
+void voBufDecCount(volatile int *vb) {
     if (vb[3] > 0) {
         vb[3]--;
     }

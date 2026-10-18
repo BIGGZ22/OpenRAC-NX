@@ -36,6 +36,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 import claims  # noqa: E402
 import levels  # noqa: E402
+import srcnames
 
 SRC = ROOT / "src/overlays"
 ASM = ROOT / "asm/overlays"
@@ -58,7 +59,7 @@ def rows(path: Path) -> list[list[str]]:
 
 def spans(path: Path) -> dict[str, tuple[int, int, bool]]:
     """name -> (first line, last line, is_c) of each overlay function in PATH."""
-    lines = path.read_text().splitlines()
+    lines = srcnames.read_c(path).splitlines()
     out, i = {}, 0
     while i < len(lines):
         m = STUB.match(lines[i])

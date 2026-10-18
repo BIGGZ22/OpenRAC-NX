@@ -198,21 +198,23 @@ void func_L12_002C08A0(gaddr moby) {
 #if !RAC1_OMIT(func_L13_0030AD88)
 /* func_L06_00300AB0's level 13 copy: the effect's data 0x20 lower (+0x210 points, +0x1F0 centre,
  * +0x21C fades). Fifteen strips of quads between the points and a sag toward the centre, each
- * drawn twice, 0.25 apart. QuadPacket: pos[4][4] +0, col[4] +0x40, uv[4][2] +0x50, tag[4] +0x70. */
+ * drawn twice, 0.25 apart. Its globals are level 13's own (the copy's $gp
+ * and lui addresses): read at level 6's addresses, the texture index was garbage and the draw
+ * faulted. QuadPacket: pos[4][4] +0, col[4] +0x40, uv[4][2] +0x50, tag[4] +0x70. */
 void func_L13_0030AD88(gaddr moby) {
     enum { PK = 0x90, MAT = 2 * PK, TMP = MAT + 0x40, SIZE = TMP + 0x10 };
     GFRAME(frame_, SIZE);
     const gaddr data = GREF(gaddr, moby + 0x78);
-    const gaddr uvs = OPENRAC_LDATA(6, RAC1_LADDR(06, 0x001F31E0u));
+    const gaddr uvs = OPENRAC_LDATA(13, RAC1_LADDR(13, 0x001D9E40u));
     func_00234C98(71, 342027);
     for (int k = 0; k < 2; ++k) {
-        GREF(uint64_t, frame_ + k * PK + 0x78) = (uint64_t)func_001F4868(GREF(int, OPENRAC_LDATA(6, RAC1_LADDR(06, 0x00162080u))));
+        GREF(uint64_t, frame_ + k * PK + 0x78) = (uint64_t)func_001F4868(GREF(int, OPENRAC_LDATA(13, RAC1_LADDR(13, 0x00161F2Cu))));
     }
-    uint64_t regs = (uint64_t)(uint32_t)GREF(int, OPENRAC_LDATA(6, RAC1_LADDR(06, 0x0016206Cu)));
-    regs |= (uint64_t)(uint32_t)GREF(int, OPENRAC_LDATA(6, RAC1_LADDR(06, 0x00162070u))) << 2;
-    regs |= (uint64_t)(uint32_t)GREF(int, OPENRAC_LDATA(6, RAC1_LADDR(06, 0x00162074u))) << 4;
-    regs |= (uint64_t)(uint32_t)GREF(int, OPENRAC_LDATA(6, RAC1_LADDR(06, 0x00162078u))) << 6;
-    regs |= (uint64_t)(uint32_t)GREF(int, OPENRAC_LDATA(6, RAC1_LADDR(06, 0x0016207Cu))) << 32;
+    uint64_t regs = (uint64_t)(uint32_t)GREF(int, OPENRAC_LDATA(13, RAC1_LADDR(13, 0x00161F18u)));
+    regs |= (uint64_t)(uint32_t)GREF(int, OPENRAC_LDATA(13, RAC1_LADDR(13, 0x00161F1Cu))) << 2;
+    regs |= (uint64_t)(uint32_t)GREF(int, OPENRAC_LDATA(13, RAC1_LADDR(13, 0x00161F20u))) << 4;
+    regs |= (uint64_t)(uint32_t)GREF(int, OPENRAC_LDATA(13, RAC1_LADDR(13, 0x00161F24u))) << 6;
+    regs |= (uint64_t)(uint32_t)GREF(int, OPENRAC_LDATA(13, RAC1_LADDR(13, 0x00161F28u))) << 32;
     for (int k = 0; k < 2; ++k) {
         GREF(uint64_t, frame_ + k * PK + 0x80) = 0x0000FF9000000260ULL;
         GREF(uint64_t, frame_ + k * PK + 0x70) = 0;
@@ -232,11 +234,11 @@ void func_L13_0030AD88(gaddr moby) {
                 func_001F9BF0(v, v, frame_ + TMP);
                 GREF(float, v + 8) -= 0.125f;
                 GREF(uint32_t, frame_ + 0x40 + 4u * j) = func_001FA8A8(
-                    GREF(int, OPENRAC_LDATA(6, RAC1_LADDR(06, 0x0016208Cu))), GREF(int, OPENRAC_LDATA(6, RAC1_LADDR(06, 0x00162090u))),
+                    GREF(int, OPENRAC_LDATA(13, RAC1_LADDR(13, 0x00161F38u))), GREF(int, OPENRAC_LDATA(13, RAC1_LADDR(13, 0x00161F3Cu))),
                     GREF(float, data + off + 0x21C));
             } else {
                 GREF(uint32_t, frame_ + 0x40 + 4u * j) = func_001FA8A8(
-                    GREF(int, OPENRAC_LDATA(6, RAC1_LADDR(06, 0x00162084u))), GREF(int, OPENRAC_LDATA(6, RAC1_LADDR(06, 0x00162088u))),
+                    GREF(int, OPENRAC_LDATA(13, RAC1_LADDR(13, 0x00161F30u))), GREF(int, OPENRAC_LDATA(13, RAC1_LADDR(13, 0x00161F34u))),
                     GREF(float, data + off + 0x21C));
             }
             for (int k = 0; k < 2; ++k) {

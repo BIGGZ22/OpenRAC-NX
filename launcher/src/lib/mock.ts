@@ -141,6 +141,7 @@ let config: Config = {
   discordClientId: null,
   detailedGameLog: false,
   crashesSeen: {},
+  discChoice: {},
 };
 
 const query = new URLSearchParams(typeof location === "undefined" ? "" : location.search);
@@ -772,6 +773,8 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
     case "save_config":
       config = { ...(args.config as Config) };
       return delay({ ...config });
+    case "adopt_godot":
+      return delay({ ...config });
     case "detect":
       return delay<Detected>({
         roots: [{ path: "/home/you/OpenRAC", source: "next to the launcher" }],
@@ -789,22 +792,41 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       return delay(install(args.game as string, args.image as string));
     case "prepare_disc":
       return delay((args.image as string).replace(/\.chd$/i, ".iso"));
-    case "scan_discs":
-      // ?discs: the games folder holds the first game's PAL disc.
-      return delay(
-        config.discsDir && new URLSearchParams(location.search).has("discs")
+    case "scan_discs": {
+      // ?discs: the games folder holds the first game's PAL disc; ?discs=both, its NTSC-U disc too,
+      // which with developer tools on offers the disc switch (core/src/disc_choice.rs).
+      const asked = new URLSearchParams(location.search).get("discs");
+      const disc = (version: string, serial: string, region: string, file: string) => ({
+        path: `${config.discsDir}/${file}`,
+        serial,
+        game: "rac1",
+        version,
+        title: "Ratchet & Clank",
+        region,
+      });
+      const found =
+        config.discsDir && asked !== null
           ? [
-              {
-                path: `${config.discsDir}/Ratchet & Clank (Europe).iso`,
-                serial: "SCES_509.16",
-                game: "rac1",
-                version: "rac1/pal",
-                title: "Ratchet & Clank",
-                region: "PAL (Europe)",
-              },
+              disc("rac1/pal", "SCES_509.16", "PAL (Europe)", "Ratchet & Clank (Europe).iso"),
+              ...(asked === "both"
+                ? [disc("rac1/ntsc", "SCUS_971.99", "NTSC-U (North America)", "Ratchet & Clank (USA).iso")]
+                : []),
             ]
-          : [],
-      );
+          : [];
+      const versions = found.map((d) => d.version);
+      const remembered = config.discChoice.rac1 ?? "";
+      const choices =
+        config.developer && versions.length > 1
+          ? [{ game: "rac1", versions, chosen: versions.includes(remembered) ? remembered : versions[0] }]
+          : [];
+      return delay({ found, choices });
+    }
+    case "choose_disc": {
+      const version = args.version as string;
+      const game = version.split("/")[0] ?? version;
+      config = { ...config, discChoice: { ...config.discChoice, [game]: version } };
+      return delay(config);
+    }
     case "uninstall_game":
       installs[args.game as string] = undefined;
       return delay(null);

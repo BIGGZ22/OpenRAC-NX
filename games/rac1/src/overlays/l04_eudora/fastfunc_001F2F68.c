@@ -7,7 +7,7 @@
 extern float func_001F9D48(void *, void *);
 
 /* index of the nearest of n vectors to a + 0x10 */
-int func_L04_001F2F68(char *a, char *b, int n) {
+int NearestVectorIndex(char *a, char *b, int n) {
     int best = -1;
     int i;
     float m = 32767.0f;
@@ -73,7 +73,7 @@ extern int func_L04_0024D790_1F3010(void *, void *, void *, int) __asm__("func_L
 
 /* Steering for a moby: pulls it along its path (c->path) and toward its target, pushes it away from the
  * listed mobys (and the hero's), and keeps it off the ground; f holds the gains. */
-void func_L04_001F3010(Moby **list, int n, Moby *m, Steer_1F3010 *c, float *f) {
+void MobySteer(Moby **list, int n, Moby *m, Steer_1F3010 *c, float *f) {
     Vec4A o;
     Vec4A w;
     Vec4A t;
@@ -292,7 +292,7 @@ extern float func_001FA748(float, float);
 extern char D_L04_00174070[];
 
 /* steps a moby's position out of collision and aims it */
-void func_L04_001F39B0(char *a, char *b, char *c, float f) {
+void StepMobyOutOfCollision(char *a, char *b, char *c, float f) {
     int i;
     float v[4];
     char *p = b + 0x10;
@@ -319,10 +319,10 @@ extern void func_L00_0028A5A8(void);
 extern void func_0022C870(void);
 extern void func_00234C98(int, long);
 extern int D_0015EF88 MACRO_ADDR;
-void func_L04_00231860(void) {
+void DrawEudoraSky(void) {
     SetupSkyGifPaging();
     if (D_0015EE84_m == 4) {
-        func_L00_0028AD68();
+        SkyShellsRotateLooped();
     } else {
         UpdateSkyShellsStatic();
     }

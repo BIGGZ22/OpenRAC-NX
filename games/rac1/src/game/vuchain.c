@@ -291,7 +291,7 @@ extern TexRemap D_001E0F00[];
  * points it at the (uncached-masked) micro program address, kicks off
  * MSCALL 0x45 by writing the code word directly, then waits for VIF0 to
  * go idle again. */
-void func_002347F0(long *prog) {
+void VU0_loadMicroProgram(long *prog) {
     while (*VIF0_STAT & 0x100) {
         func_001F9988(0x10);
     }
@@ -341,7 +341,7 @@ extern int D_0015F698_m __asm__("D_0015F698") MACRO_ADDR;
 /* `end` reads D_00161000 back right after storing it (CSE folds the
    load away), which changes how the stores are scheduled: that, not
    any order of the four stores, gives retail's. */
-void func_002348E8(void) {
+void VU1_initChain(void) {
     int base = D_001941C0[1];
     int end;
 
@@ -355,7 +355,7 @@ void func_002348E8(void) {
 }
 
 /* VU1_swapChain(void) */
-void func_00234948(void) {
+void VU1_swapChain(void) {
     int idx = 1 - D_00161010;
     int base = D_00160FF8[idx];
     int end;
@@ -376,7 +376,7 @@ extern void func_001235C8(int *, int);
 
 /* VU1_sendChain. D_00160FE0 is volatile, so its store stays out of the
    delay slot (reorg never moves a volatile access there). */
-void func_002349B8(void) {
+void VU1_sendChain(void) {
     int size;
     int err;
     int *chan;
@@ -410,7 +410,7 @@ extern char D_001E8D10[];
 extern void func_001F2568(void);
 
 /* VU1_syncChain(int) */
-void func_00234AC8(int mask) {
+void VU1_syncChain(int mask) {
     int i = 0;
     while ((*(int *)&D_00160FE0 & mask) != 0) {
         func_001F9988(0x400);
@@ -429,7 +429,7 @@ void func_00234AC8(int mask) {
  * exactly what writing through the global (rather than through a local
  * copy) produces.
  */
-void func_00234B48(void *data, int qwc) {
+void VU1_addDataRef(void *data, int qwc) {
     D_00161000[0] = qwc | 0x30000000;
     D_00161000[1] = (int)data;
     D_00161000[2] = 0;
@@ -439,7 +439,7 @@ void func_00234B48(void *data, int qwc) {
 
 LINKER_REMNANT("asm/remnants/text", func_00234B98);
 
-void func_00234BA0(int arg0, void *src, int qwc) {
+void write_vif_unpack_packet(int arg0, void *src, int qwc) {
     D_00161000[0] = qwc | 0x10000000;
     D_00161000[1] = 0;
     D_00161000[2] = 0x1000404;
@@ -451,7 +451,7 @@ void func_00234BA0(int arg0, void *src, int qwc) {
 
 LINKER_REMNANT("asm/remnants/text", func_00234C48);
 
-void func_00234C50(int arg0) {
+void Dma_AppendVifCode(int arg0) {
     D_00161000[0] = 0x10000000;
     D_00161000[1] = 0;
     D_00161000[2] = 0;
@@ -467,7 +467,7 @@ void func_00234C50(int arg0) {
  * evidently dropped the bool, confirmed by every real call site in this
  * codebase using only 2 args.
  */
-void func_00234C98(int arg0, long arg1) {
+void VU1_addGSregister(int arg0, long arg1) {
     D_00161000[0] = 0x10000002;
     D_00161000[1] = 0;
     D_00161000[2] = 0;
@@ -492,7 +492,7 @@ extern int D_0013E600[];
    same packet VU1_addGSregister (func_00234C98) builds. Each clamp is a
    `cond ? bound : arg` select assigned back to the argument, and the
    fields are sign-extended to 64 bits, not zero-extended. */
-void func_00234D58(int x0, int x1, int y0, int y1) {
+void VU1_setScissor(int x0, int x1, int y0, int y1) {
     x0 = x0 < 0 ? 0 : x0;
     x1 = x1 > D_0013E600[0] - 1 ? D_0013E600[0] - 1 : x1;
     y0 = y0 < 0 ? 0 : y0;
@@ -519,7 +519,7 @@ LINKER_REMNANT("asm/remnants/text", func_00234E78);
 extern char D_001DF180[];
 
 /* VU1_texFlush(void) */
-void func_00234E80(void) {
+void VU1_texFlush(void) {
     D_00161000[0] = 0x30000003;
     D_00161000[1] = (int)D_001DF180;
     D_00161000[2] = 0;
@@ -530,7 +530,7 @@ void func_00234E80(void) {
 extern char D_001DE740[];
 
 /* VU1_gsRegsNormal(void) */
-void func_00234EE0(void) {
+void VU1_gsRegsNormal(void) {
     D_00161000[0] = 0x30000003;
     D_00161000[1] = (int)D_001DE740;
     D_00161000[2] = 0;
@@ -540,7 +540,7 @@ void func_00234EE0(void) {
 
 extern char D_001DE770[];
 
-void func_00234F40(void) {
+void Dma_AppendRefDirect3(void) {
     D_00161000[0] = 0x30000003;
     D_00161000[1] = (int)D_001DE770;
     D_00161000[2] = 0;
@@ -552,7 +552,7 @@ LINKER_REMNANT("asm/remnants/text", func_00234FA0);
 
 extern char D_0013D010[];
 
-void func_00234FA8(void) {
+void Dma_AppendRefDirect11(void) {
     D_00161000[0] = 0x3000000B;
     D_00161000[1] = (int)D_0013D010;
     D_00161000[2] = 0;
@@ -577,7 +577,7 @@ extern void func_00235218(void);
  * plain: a volatile store stops reorg's try_merge_delay_insns at it and
  * leaves a second copy of the handler's lui on the fall-through path.
  */
-void func_00235018(void) {
+void DMAC_VIF1_Enable(void) {
     if (D_00161018 == 0 && D_0016101C == 0) {
         if ((*(volatile int *)0x1000E010 & 0x20000) == 0) {
             *(int *)0x1000E010 = 0x20000;
@@ -597,7 +597,7 @@ void func_00235018(void) {
 extern int func_00118AD0(int, int);
 extern int func_001193F8(int);
 
-void func_002350A8(void) {
+void DMAC_VIF1_Disable(void) {
     if ((*(volatile int *)0x1000E010 & 0x20000) != 0) {
         *(volatile int *)0x1000E010 = 0x20000;
     }
@@ -614,7 +614,7 @@ extern char D_001E8D38[];
 extern char D_001E8D50[];
 extern char D_001E8D68[];
 
-void func_00235218(void) {
+void print_register_values_and_halt(void) {
     int a = *(volatile int *)0x10009000;
     int b = *(volatile int *)0x10009030;
 
@@ -638,7 +638,7 @@ typedef struct {
 } Qword;
 extern Qword *D_00161000_q __asm__("D_00161000") MACRO_ADDR;
 
-void func_00235290(int arg0) {
+void Vif1ChainCmd(int arg0) {
     Qword *p = D_00161000_q++;
     p->w[0] = arg0 + 0x90000000;
     p->w[1] = 0;

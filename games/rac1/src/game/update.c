@@ -308,7 +308,7 @@ LINKER_REMNANT("asm/remnants/text", func_00239180);
 extern char D_001E66C0[];
 extern char D_001E8DA0[];
 
-void func_002391A8(int arg0) {
+void set_scrolling_status_message(int arg0) {
     char *b = D_001E66C0;
     func_00116248(*(int *)(b + 0x2C), D_001E8DA0, arg0);
     *(int *)(b + 0x44) = 0;
@@ -373,7 +373,7 @@ void func_002391E8(Moby *m) {
             D_001611B0 = 1;
             D_001611B4 = 0;
             if (m->prev_seq != 2) {
-                func_00213DE0(m, 2, 0, func_001F98C0(0x12));
+                MobyBlendAnimation(m, 2, 0, func_001F98C0(0x12));
             }
             m->state = 12;
             D_001E66C0_391E8.timer = 0;
@@ -383,7 +383,7 @@ void func_002391E8(Moby *m) {
     case 2:
         if (D_001E66C0_391E8.timer > func_001F98C0(600)) {
             if (m->prev_seq != 3) {
-                func_00213DE0(m, 3, 0, func_001F98C0(0x12));
+                MobyBlendAnimation(m, 3, 0, func_001F98C0(0x12));
             }
             m->state = 3;
             D_001E66C0_391E8.timer = 0;
@@ -391,50 +391,50 @@ void func_002391E8(Moby *m) {
         D_001E66C0_391E8.timer++;
         break;
     case 3:
-        if (m->unk70 & 2) {
+        if (m->anim_flags & 2) {
             if (m->prev_seq != 0) {
-                func_00213DE0(m, 0, 0, func_001F98C0(0x12));
+                MobyBlendAnimation(m, 0, 0, func_001F98C0(0x12));
             }
             m->state = 0;
         }
         break;
     case 4:
-        if (func_00215B18(m, (((s32 *)&D_00161130))[D_001E66C0_391E8.pick]) != 0 &&
+        if (IsFrameWithinWindow(m, (((s32 *)&D_00161130))[D_001E66C0_391E8.pick]) != 0 &&
             D_001611B4 != 0) {
             D_001611B4 = 0;
-            func_00216960();
+            Music_ContinueStreamIfReady();
         }
-        if (m->unk70 & 2) {
+        if (m->anim_flags & 2) {
             if (m->prev_seq != 2) {
-                func_00213DE0(m, 2, 0, func_001F98C0(0x12));
+                MobyBlendAnimation(m, 2, 0, func_001F98C0(0x12));
             }
             m->state = 2;
             D_001E66C0_391E8.timer = 0;
         }
         break;
     case 5:
-        if (func_00215B18(m, (((s32 *)&D_00161138))[D_001E66C0_391E8.pick]) != 0 &&
+        if (IsFrameWithinWindow(m, (((s32 *)&D_00161138))[D_001E66C0_391E8.pick]) != 0 &&
             D_001611B4 != 0) {
             D_001611B4 = 0;
-            func_00216960();
+            Music_ContinueStreamIfReady();
         }
-        if (m->unk70 & 2) {
+        if (m->anim_flags & 2) {
             if (m->prev_seq != 2) {
-                func_00213DE0(m, 2, 0, func_001F98C0(0x12));
+                MobyBlendAnimation(m, 2, 0, func_001F98C0(0x12));
             }
             m->state = 2;
             D_001E66C0_391E8.timer = 0;
         }
         break;
     case 6:
-        if (func_00215B18(m, (((s32 *)&D_00161140))[D_001E66C0_391E8.pick]) != 0 &&
+        if (IsFrameWithinWindow(m, (((s32 *)&D_00161140))[D_001E66C0_391E8.pick]) != 0 &&
             D_001611B4 != 0) {
             D_001611B4 = 0;
-            func_00216960();
+            Music_ContinueStreamIfReady();
         }
-        if (m->unk70 & 2) {
+        if (m->anim_flags & 2) {
             if (m->prev_seq != 2) {
-                func_00213DE0(m, 2, 0, func_001F98C0(0x12));
+                MobyBlendAnimation(m, 2, 0, func_001F98C0(0x12));
             }
             m->state = 2;
             D_001E66C0_391E8.timer = 0;
@@ -445,10 +445,10 @@ void func_002391E8(Moby *m) {
             D_001611B0 = 0;
             D_001611B4 = 1;
         }
-        if (m->unk70 & 2) {
+        if (m->anim_flags & 2) {
             a = D_001E66FC * 3 + 4;
             if (m->prev_seq != a) {
-                func_00213DE0(m, a, 0, func_001F98C0(0xC));
+                MobyBlendAnimation(m, a, 0, func_001F98C0(0xC));
             }
             m->state = 4;
         }
@@ -459,7 +459,7 @@ void func_002391E8(Moby *m) {
             D_001611B0 = 0;
             a = D_001E66FC * 3 + 5;
             if (m->prev_seq != a) {
-                func_00213DE0(m, a, 0, func_001F98C0(0x12));
+                MobyBlendAnimation(m, a, 0, func_001F98C0(0x12));
             }
             m->state = 5;
         }
@@ -470,7 +470,7 @@ void func_002391E8(Moby *m) {
             D_001611B0 = 0;
             a = D_001E66FC * 3 + 6;
             if (m->prev_seq != a) {
-                func_00213DE0(m, a, 0, func_001F98C0(0x12));
+                MobyBlendAnimation(m, a, 0, func_001F98C0(0x12));
             }
             m->state = 6;
         }

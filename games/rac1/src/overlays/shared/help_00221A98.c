@@ -34,7 +34,7 @@ extern f32 func_001F9D10(void *, void *);
 extern s32 func_L00_001F10E0(f32, Vec4 *, s32, s32);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/hero/00221310.c, FUN_L00_00221310. */
-void func_L00_00221A98(void) {
+void Hero_UpdateCollisionProbes(void) {
     Vec4 first;
     Vec4 second;
     Vec4 probe;
@@ -47,14 +47,14 @@ void func_L00_00221A98(void) {
         func_L00_00213F38();
     }
     if (D_L00_0015F6B0 % 3 == 0) {
-        D_0013F450_21A98.unk248 = 4.0f;
+        D_0013F450_21A98.wall_probe_distance = 4.0f;
         D_0013F450_21A98.unk254 = 0;
         D_0013F450_21A98.unk255 = 0;
-        if (func_L00_0020A8B8(&D_0013F450_21A98.unk248, 0.7f, 4.0f)) {
+        if (HeroProbeObstacleAhead(&D_0013F450_21A98.wall_probe_distance, 0.7f, 4.0f)) {
             D_0013F450_21A98.unk250 = func_L00_001FF860(D_L00_00173F40.normal_z, func_001F9CE8(&D_L00_00173F40.normal_x));
             if (D_L00_00173F40.moby != 0) {
                 D_0013F450_21A98.unk255 = 1;
-                if (func_L00_0025F410(D_L00_00173F40.moby)) {
+                if (IsMobyClass500To540(D_L00_00173F40.moby)) {
                     D_0013F450_21A98.unk254 = 1;
                 }
             }
@@ -63,10 +63,10 @@ void func_L00_00221A98(void) {
     if (D_L00_0015F6B0 % 5 == 0) {
         D_0013F450_21A98.unk260 = 0;
         D_0013F450_21A98.unk258 = 0.0f;
-        if (D_0013F450_21A98.unk300 != 0) {
+        if (D_0013F450_21A98.grounded_frames != 0) {
             base = D_0013F450_21A98.unk258;
-            func_L00_00233EE0(&first, 1.1f, base, 1.0f);
-            func_L00_00233EE0(&second, 1.1f, base, -20.0f);
+            LocalToWorldPoint(&first, 1.1f, base, 1.0f);
+            LocalToWorldPoint(&second, 1.1f, base, -20.0f);
             if (second.f[2] < 0.5f) {
                 second.f[2] = 0.5f;
             }
@@ -83,7 +83,7 @@ void func_L00_00221A98(void) {
                already hold them (base is known to be the 0.0f just stored),
                which gives retail's two mov.s before the loop. */
             for (off = -0.4f; off < 0.5f; off += 0.1f) {
-                func_L00_00233EE0(&probe, off + 1.1f, 0.0f, 0.0f);
+                LocalToWorldPoint(&probe, off + 1.1f, 0.0f, 0.0f);
                 if (!coll_sphere(D_0013F450_21A98.unk234, &probe, 2, 0)) {
                     D_0013F450_21A98.unk260 = 1;
                     if (hit == 0) {
@@ -133,7 +133,7 @@ extern void func_L00_00233EE0_21D50(void *, f32, f32, f32) __asm__("func_L00_002
 extern void func_L00_00211908_21D50(void) __asm__("func_L00_00211908");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/hero/00221310.c, FUN_L00_002215c8. */
-void func_L00_00221D50(void) {
+void Hero_UpdateTimers(void) {
     Vec4 sum;
     Vec4 d;
     struct Moby *m;
@@ -149,7 +149,7 @@ void func_L00_00221D50(void) {
     D_0013F450_21A98.unk1A0++;
     D_0013F450_21A98.unk1A4++;
     func_001F9908_21D50(&D_0013F450_21A98.unk1C4);
-    func_001F9908_21D50(&D_0013F450_21A98.unk1C0);
+    func_001F9908_21D50(&D_0013F450_21A98.invulnerable_frames);
     func_001F9938_21D50(&D_0013F450_21A98.unk1B2);
     func_001F9908_21D50(&D_0013F450_21A98.unk1B8);
     func_001F9938_21D50(&D_0013F450_21A98.unk1D8);
@@ -164,7 +164,7 @@ void func_L00_00221D50(void) {
     func_001F9908_21D50(&D_0013F450_21A98.unk1CC);
     func_001F9908_21D50(&D_0013F450_21A98.unk1D0);
     func_001F9908_21D50(&D_0013F450_21A98.unk1D4);
-    func_001F9938_21D50(&D_0013F450_21A98.unk1E8);
+    func_001F9938_21D50(&D_0013F450_21A98.fidget_cooldown);
     func_001F9938_21D50(&D_0013F450_21A98.unk1E0);
     func_001F9938_21D50(&D_0013F450_21A98.unk1EE);
     func_001F9938_21D50(&D_0013F450_21A98.unk1EA);
@@ -191,7 +191,7 @@ void func_L00_00221D50(void) {
     }
     if (D_0013F450_21A98.unk22DE != 0 && func_001F9938_21D50(&D_0013F450_21A98.unk22DE) != 0 &&
         D_0013F450_21A98.health.hp != 0 && (*(s32 *)&D_L00_0015F6A8_21D50) == 0) {
-        if (D_0013F450_21A98.unk20A4 == 3) {
+        if (D_0013F450_21A98.vehicle_mode == 3) {
             func_L00_002111E8_21D50();
             if (func_L00_00267BA8_21D50(0x80, func_001F9850_21D50(0x12), 0)) {
                 D_0013F450_21A98.unk20A6 = 1;
@@ -202,16 +202,16 @@ void func_L00_00221D50(void) {
             if (m != 0) {
                 qcopy(&m->pos, &D_0013F450_21A98.motion.pos);
                 qcopy(&m->rot, &D_0013F450_21A98.motion.rot);
-                m->unk32 = 0x40;
-                ((struct Moby *)D_0013F450_21A98.unkA8C)->unk31 = 1;
-                ((struct Moby *)D_0013F450_21A98.unkA8C)->unk90 = 0;
+                m->draw_dist = 0x40;
+                ((struct Moby *)D_0013F450_21A98.unkA8C)->visible = 1;
+                ((struct Moby *)D_0013F450_21A98.unkA8C)->glow_color = 0;
                 ((struct Moby *)D_0013F450_21A98.unkA8C)->spawn_frame = D_0013F450_21A98.moby->spawn_frame;
                 func_L00_00251E30_21D50(D_0013F450_21A98.unkA8C);
                 func_L00_002110C0_21D50(3, 0x53, D_0013F450_21A98.unkA8C);
             }
         }
     }
-    if (D_0013F450_21A98.unk20A4 == 2) {
+    if (D_0013F450_21A98.vehicle_mode == 2) {
         func_001F9938_21D50(&D_0013F450_21A98.unk1636);
     }
     for (i = 0; i < 5; i++) {
@@ -240,25 +240,25 @@ void func_L00_00221D50(void) {
     D_0013F450_21A98.unk1E2 = 0;
 skip:
     func_L00_002222F0_21D50();
-    switch (D_0013F450_21A98.unk20A4) {
+    switch (D_0013F450_21A98.vehicle_mode) {
     case 1:
         func_L00_00233EE0_21D50(&D_0013F450_21A98.motion.unkD0, 0.0f, 0.0f, 0.4f);
-        D_0013F450_21A98.unk2288 = 2.125f;
-        D_0013F450_21A98.unk228C = 1.25f;
+        D_0013F450_21A98.reach_distance = 2.125f;
+        D_0013F450_21A98.reach_height = 1.25f;
         break;
     case 2:
         func_L00_00233EE0_21D50(&D_0013F450_21A98.motion.unkD0, 0.0f, 0.0f, 4.0f);
-        D_0013F450_21A98.unk2288 = 15.0f;
-        D_0013F450_21A98.unk228C = 3.0f;
+        D_0013F450_21A98.reach_distance = 15.0f;
+        D_0013F450_21A98.reach_height = 3.0f;
         break;
     default:
         func_L00_00233EE0_21D50(&D_0013F450_21A98.motion.unkD0, 0.0f, 0.0f, 0.7f);
         if (D_0013D5EA_21D50) {
-            D_0013F450_21A98.unk2288 = 12.0f;
-            D_0013F450_21A98.unk228C = 4.5f;
+            D_0013F450_21A98.reach_distance = 12.0f;
+            D_0013F450_21A98.reach_height = 4.5f;
         } else {
-            D_0013F450_21A98.unk2288 = 3.0f;
-            D_0013F450_21A98.unk228C = 1.75f;
+            D_0013F450_21A98.reach_distance = 3.0f;
+            D_0013F450_21A98.reach_height = 1.75f;
         }
         break;
     }
@@ -287,7 +287,7 @@ extern float func_001F9F90(float);
 extern float func_001F9FA8(float);
 
 // Steers the player's slide: starts it when a dash ends near a wall, then aims its velocity.
-void func_L00_002222F0(void) {
+void Hero_PushOffSupportCenter(void) {
     char *q = (char *)D_0013E633 + 0xE1D;
     char *p;
     char *r;
@@ -319,7 +319,7 @@ void func_L00_002222F0(void) {
                 ang = *(float *)(p + 0x98);
             }
             t0 = d - lim;
-            func_L00_0025C918(&t0, (float *)(p + 0x244), 0.0f, D_0015EE64 * 0.03f, D_0015EE64 * 0.3f, D_0015EE6C * 2.8f);
+            Spring(&t0, (float *)(p + 0x244), 0.0f, D_0015EE64 * 0.03f, D_0015EE64 * 0.3f, D_0015EE6C * 2.8f);
             *(float *)(p + 0xF0) = FastCos(ang) * *(float *)(p + 0x244);
             *(float *)(p + 0xF4) = FastSin(ang) * *(float *)(p + 0x244);
             *(float *)(p + 0xF8) = 0.0f;
@@ -330,9 +330,10 @@ void func_L00_002222F0(void) {
 }
 extern int func_001F9850(int);
 extern int func_L00_00222580(void);
-int func_L00_00222520(void) {
+/* Returns a tick count for the stick tilt. */
+int GetStickTilt(void) {
     int r = scale_ticks(12);
-    int t = func_L00_00222580();
+    int t = Hero_ClassifyStick();
     if (t == 2) {
         r = 0;
     } else if (t == 3) {
@@ -345,11 +346,11 @@ extern float func_001FA790(float, float);
 extern float func_001FA850(float, float);
 
 // Classifies the stick direction into one of four quadrants (2, 3, 1 or 0).
-int func_L00_00222580(void) {
+int Hero_ClassifyStick(void) {
     char *p;
     float a;
     int r = 2;
-    func_L00_00211F80(0, 1.0f);
+    Hero_SetHeadingFromStick(0, 1.0f);
     p = (char *)D_0013E633 + 0xE1D;
     a = FastSubRots(*(float *)(p + 0x180), *(float *)(p + 0x98));
     if (FastDiffRots(a, 3.14159274f) < 0.785398185f) {
@@ -368,7 +369,7 @@ extern int func_00215570(void *, int);
 extern int func_L00_001EFFF0(void *, void *, int, int, int);
 
 // picks the nearest eligible moby of class 0x323 near the player and stores it as the target Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_help_00221310.c, FUN_L00_00221ee0.
-void func_L00_00222668(void) {
+void Hero_FindMoby323Target(void) {
     char *g, *gb, *g0, *g2;
     char *m;
     char *best;
@@ -405,7 +406,7 @@ void func_L00_00222668(void) {
         gb = (char *)D_0013E633 + 0xE1D;
         x = *(float *)(gb + 0x98);
         if (t != 0.0f) a13 = t;
-        d = func_L00_0020DD48(m, &out, x, a13, a14, a15);
+        d = Target_ScoreCandidate(m, &out, x, a13, a14, a15);
         if (out != 0) continue;
         if (*(unsigned char *)(m + 0x31) == 0) d += 10.0f;
         if (*(int *)(q + 0x1C) >= 0 && is_point_inside_clip_volume(gb + 0x80, *(int *)(q + 0x1C)) != 0) continue;
@@ -427,7 +428,7 @@ void func_L00_00222668(void) {
     }
 }
 /* Picks the nearest free helper moby of class 0x2F6 in reach of the hero as the target; returns whether one is in sight. */
-int func_L00_002228E0(void) {
+int Hero_FindMoby2F6Target(void) {
     char *g0, *g, *gb, *g2, *g3;
     char *m;
     char *best;
@@ -464,7 +465,7 @@ int func_L00_002228E0(void) {
         if (*(int *)(gb + 0x208C) == 0xF) x = *(float *)(gb + 0x57C);
         a13 = 30.0f;
         if (*(float *)(q + 0x20) != 0.0f) a13 = *(float *)(q + 0x20);
-        d = func_L00_0020DD48(m, &out, x, a13, a14, a15);
+        d = Target_ScoreCandidate(m, &out, x, a13, a14, a15);
         if (out != 0) continue;
         gb += 0x80;
         if (func_001F9D48(gb, m + 0x10) < 4.0f) continue;
@@ -563,7 +564,7 @@ extern T2C_222B80 D_L00_0017BD28[];
 extern float D_L00_0017BEF0[][25];
 
 /* Puts the hero into move state A (with its animation when B is set); returns 0 when the change is refused (shared build: levels 00, 04, 07, 09, 10, 13). */
-int func_L00_00222B80(int a, int b) {
+int HeroEnterMoveState(int a, int b) {
     int old2088;
     char *moby;
     int old20A7;
@@ -601,19 +602,19 @@ int func_L00_00222B80(int a, int b) {
             *(unsigned char *)(p + 0x20B2) = 0;
             *(unsigned char *)(p + 0x20AF) = 0;
             *(short *)(p + 0x22E0) = 0;
-            func_L00_002638B8(p + 0x1670);
+            DeleteOwnedMobys(p + 0x1670);
         }
         if (*(unsigned char *)(p + 0x20A4) == 3) {
             int s = *(int *)(p + 0x2084);
             if (!(s >= 0x53 && s <= 0x59) && !(s >= 0x65 && s <= 0x67) && s != 0 && s != 1) {
-                func_L00_0020BFA8();
+                ResetHelpStateIfMode3();
                 *(int *)(p + 0x2084) = a;
             }
         }
     }
     {
         char *p = (char *)D_0013E633 + 0xE1D;
-        func_L00_0020E9F8(*(int *)(p + 0x2090), *(int *)(p + 0x2084));
+        SpawnHelpMarkers(*(int *)(p + 0x2090), *(int *)(p + 0x2084));
         *(int *)(p + 0xFF8) = 0;
     }
     switch (a) {
@@ -624,18 +625,18 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x1010) = rand_range(scale_ticks(0x32), scale_ticks(0x64));
         func_L00_0020AB78();
         if (*(unsigned char *)(p + 0x20A4) != 0) {
-            func_L00_00227E08();
+            Hero_SetStateFromMode();
             return 1;
         }
         qcopy(p + 0x150, p + 0x110);
         if (*(unsigned char *)(p + 0x12E2) != 0 && func_001F9CE8(p + 0x150) > D_0015EE6C * 0.5f) {
-            func_L00_00222B80(0x2F, 1);
+            HeroEnterMoveState(0x2F, 1);
             return 0;
         }
         {
             char *r = (char *)D_0013E633 + 0xE1D;
             if (*(unsigned char *)(r + 0x12EA) != 0 && *(short *)(r + 0x30C) == 0) {
-                func_L00_00222B80(0x79, 1);
+                HeroEnterMoveState(0x79, 1);
                 return 0;
             }
         }
@@ -644,10 +645,10 @@ int func_L00_00222B80(int a, int b) {
             *(int *)(q + 0xFF8) = 0x68;
         }
         if (b) {
-            if (func_L00_00205618(0) == 0x54) {
-                func_L00_00232C10(func_L00_00205618(0), 0, (float)scale_ticks(0x12));
+            if (Hero_PickSituationId(0) == 0x54) {
+                HeroStartAnim(Hero_PickSituationId(0), 0, (float)scale_ticks(0x12));
             } else {
-                func_L00_00232C10(func_L00_00205618(0), 0, -1.0f);
+                HeroStartAnim(Hero_PickSituationId(0), 0, -1.0f);
             }
         }
         break;
@@ -659,21 +660,21 @@ int func_L00_00222B80(int a, int b) {
         clear_u64_value(p + 0x150);
         *(int *)(p + 0xFF8) = 0x68;
         if (b) {
-            if (func_L00_00205618(0) == 0x54) {
-                func_L00_00232C10(func_L00_00205618(0), 0, (float)scale_ticks(0x12));
+            if (Hero_PickSituationId(0) == 0x54) {
+                HeroStartAnim(Hero_PickSituationId(0), 0, (float)scale_ticks(0x12));
             } else {
-                func_L00_00232C10(func_L00_00205618(0), 0, -1.0f);
+                HeroStartAnim(Hero_PickSituationId(0), 0, -1.0f);
             }
         }
         break;
     }
     case 0x41: {
         int t = scale_ticks(9);
-        func_L00_00232C10(func_L00_00205618(0), 0, (float)t);
+        HeroStartAnim(Hero_PickSituationId(0), 0, (float)t);
         {
             char *p = (char *)D_0013E633 + 0xE1D;
             if (*(void **)(p + 0x1614) != 0) {
-                func_00213DE0(*(void **)(p + 0x1614), 0, 0, t);
+                MobyBlendAnimation(*(void **)(p + 0x1614), 0, 0, t);
             }
         }
         break;
@@ -683,7 +684,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x208C) = 0x14;
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0x150, p + 0x110);
-        if (b) func_L00_00232C10(0x45, 0, (float)scale_ticks(0xC));
+        if (b) HeroStartAnim(0x45, 0, (float)scale_ticks(0xC));
         break;
     }
     case 0x80: {
@@ -692,8 +693,8 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x2284) = 0;
         *(int *)(p + 0x22A8) = 0;
         qcopy(p + 0x150, p + 0x110);
-        func_L00_002607A8(p + 0x150, D_0015EE6C * 3.5f);
-        if (b) func_L00_00232C10(0x7C, 0, (float)scale_ticks(0xC));
+        ClampVectorLength(p + 0x150, D_0015EE6C * 3.5f);
+        if (b) HeroStartAnim(0x7C, 0, (float)scale_ticks(0xC));
         break;
     }
     case 0x7F: {
@@ -707,7 +708,7 @@ int func_L00_00222B80(int a, int b) {
         *(unsigned char *)(p + 0x20A7) = 1;
         *(int *)(p + 0x6A0) = 0;
         *(float *)(p + 0x690) = *(float *)(p + 0x88) - *(float *)(p + 0x69C);
-        if (b) func_L00_00232C10(0x74, 0, (float)scale_ticks(0xB));
+        if (b) HeroStartAnim(0x74, 0, (float)scale_ticks(0xB));
         break;
     }
     case 0x33: {
@@ -717,7 +718,7 @@ int func_L00_00222B80(int a, int b) {
         *(unsigned char *)(p + 0x20A7) = 1;
         *(int *)(p + 0x8FC) = 0;
         if (*(int *)(p + 0x2094) == 0x12) {
-            func_L00_00217570(3, 0);
+            Hero_PlayActiveSound(3, 0);
             *(int *)(p + 0x2088) = 1;
         } else {
             *(int *)(p + 0x8F4) = scale_ticks(0x2D);
@@ -728,7 +729,7 @@ int func_L00_00222B80(int a, int b) {
             *(int *)(q + 0xFF8) = 0x68;
             *(int *)(q + 0x8E0) = 0;
             n = scale_ticks(0xC);
-            if (b) func_L00_00232C10(0x3B, 0, (float)n);
+            if (b) HeroStartAnim(0x3B, 0, (float)n);
         }
         break;
     }
@@ -740,14 +741,14 @@ int func_L00_00222B80(int a, int b) {
         *(unsigned char *)(p + 0x20A7) = 1;
         *(int *)(p + 0x8F4) = scale_ticks(0x3C);
         if (*(int *)(p + 0x2094) == 0x12) {
-            func_L00_00217570(3, 0);
+            Hero_PlayActiveSound(3, 0);
             *(int *)(p + 0x2088) = 1;
         }
         *(int *)(p + 0x8E0) = 0;
         *(int *)(p + 0xFF8) = 0x68;
         n = scale_ticks(0xB);
         if (*(int *)(p + 0x2090) == 0x33) n = scale_ticks(0xF);
-        if (b) func_L00_00232C10(0x3D, 0, (float)n);
+        if (b) HeroStartAnim(0x3D, 0, (float)n);
         break;
     }
     case 0x34: {
@@ -760,7 +761,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0xFF8) = 0x68;
         n = scale_ticks(0x23);
         if (*(int *)(p + 0x2090) == 0x35) n = -2;
-        if (b) func_L00_00232C10(0x3C, 0, (float)n);
+        if (b) HeroStartAnim(0x3C, 0, (float)n);
         break;
     }
     case 0x37: {
@@ -770,15 +771,15 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x2284) = 0;
         *(short *)(p + 0x90A) = 0;
         if (*(int *)(p + 0x2094) == 0x11) {
-            func_L00_0020A320(3, 0xA, 0);
+            HeroKickUpDust(3, 0xA, 0);
             if (D_L00_00161390 != 0) {
-                func_L00_002A5158(D_L00_00161390, D_L00_00161398, 0, *(float *)(p + 0x80), *(float *)(p + 0x84), 0.4f, 0.3f);
+                RippleDisturb(D_L00_00161390, D_L00_00161398, 0, *(float *)(p + 0x80), *(float *)(p + 0x84), 0.4f, 0.3f);
             }
         } else if (*(float *)(p + 0x108) < D_0015EE6C * -0.5f) {
             int n = truncate_float_to_s32(FastAbsF(*(float *)(p + 0x108)) * 300.0f);
-            func_L00_0020A320(3, n < 0x28 ? n : 0x28, 1);
+            HeroKickUpDust(3, n < 0x28 ? n : 0x28, 1);
             if (D_L00_00161390 != 0) {
-                func_L00_002A5158(D_L00_00161390, D_L00_00161398, 0, *(float *)(p + 0x80), *(float *)(p + 0x84), 0.5f, -0.4f);
+                RippleDisturb(D_L00_00161390, D_L00_00161398, 0, *(float *)(p + 0x80), *(float *)(p + 0x84), 0.5f, -0.4f);
             }
             *(short *)(p + 0x90A) = scale_ticks(0x4B);
         }
@@ -787,17 +788,17 @@ int func_L00_00222B80(int a, int b) {
             *(int *)(q + 0x698) = 0;
             if (*(int *)(q + 0x2094) == 0x11) {
                 if ((float)*(int *)(q + 0x22A0) < 2500.0f) {
-                    func_L00_00217648(8, scale_ticks(0x1E), 0);
+                    Help_QueueAdd(8, scale_ticks(0x1E), 0);
                 } else if ((float)*(int *)(q + 0x22A0) < 7500.0f) {
-                    func_L00_00217648(7, scale_ticks(0x1B), 0);
+                    Help_QueueAdd(7, scale_ticks(0x1B), 0);
                 }
                 {
                     char *r = (char *)D_0013E633 + 0xE1D;
                     if (*(int *)(r + 0x2094) == 0x11) {
                         if ((float)*(int *)(r + 0x22A0) < 2500.0f) {
-                            func_L00_00217648(8, scale_ticks(0x1E), 0);
+                            Help_QueueAdd(8, scale_ticks(0x1E), 0);
                         } else if ((float)*(int *)(r + 0x22A0) < 7500.0f) {
-                            func_L00_00217648(7, scale_ticks(0x28), 0);
+                            Help_QueueAdd(7, scale_ticks(0x28), 0);
                         }
                     }
                 }
@@ -812,9 +813,9 @@ int func_L00_00222B80(int a, int b) {
             *(float *)(s + 0x690) = *(float *)(s + 0x88) - *(float *)(s + 0x69C) - -0.12f;
             qcopy(s + 0x150, s + 0x110);
             *(float *)(s + 0x158) = 0.0f;
-            func_L00_002607A8(s + 0x150, D_0015EE6C * 5.5f);
+            ClampVectorLength(s + 0x150, D_0015EE6C * 5.5f);
             *(int *)(s + 0xFF8) = 0x68;
-            if (b) func_L00_00232C10(0x3A, 0, (float)scale_ticks(0x16));
+            if (b) HeroStartAnim(0x3A, 0, (float)scale_ticks(0x16));
         }
         break;
     }
@@ -824,14 +825,14 @@ int func_L00_00222B80(int a, int b) {
         char *r;
         *(int *)(p + 0x208C) = 7;
         *(int *)(p + 0x2284) = 0;
-        func_L00_002144A0(0.5f);
+        Hero_ScaleMotion(0.5f);
         *(unsigned char *)(p + 0x20A7) = 1;
         qcopy(p + 0xE0, p + 0x100);
-        r = func_L00_0025B478(*(void **)(p + 0x2080), 1, 0);
+        r = MobyGetHitMessage(*(void **)(p + 0x2080), 1, 0);
         if (r != 0) {
-            func_L00_002056D8(truncate_float_to_s32(*(float *)(r + 0x2C)));
+            Hero_TakeDamage(truncate_float_to_s32(*(float *)(r + 0x2C)));
         } else {
-            func_L00_002056D8(1);
+            Hero_TakeDamage(1);
         }
         {
             int t = scale_ticks(0x4D);
@@ -839,9 +840,9 @@ int func_L00_00222B80(int a, int b) {
             *(int *)(q + 0x1C0) = t;
             if (b) {
                 if (*(int *)(q + 0x2084) == 0x75) {
-                    func_L00_00232C10(0x70, 3, -3.0f);
+                    HeroStartAnim(0x70, 3, -3.0f);
                 } else {
-                    func_L00_00232C10(0x6F, 3, -3.0f);
+                    HeroStartAnim(0x6F, 3, -3.0f);
                 }
                 {
                     char *w = (char *)D_0013E633 + 0xE1D;
@@ -859,7 +860,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x8FC) = 0;
         *(int *)(p + 0x698) = scale_ticks(0x2D);
         *(int *)(p + 0xFF8) = 0x68;
-        if (b) func_L00_00232C10(0x65, 0, (float)scale_ticks(0x11));
+        if (b) HeroStartAnim(0x65, 0, (float)scale_ticks(0x11));
         break;
     }
     case 0x6A: {
@@ -900,7 +901,7 @@ int func_L00_00222B80(int a, int b) {
             char *v = (char *)D_0013E633 + 0xF6D;
             qcopy(v, v - 0x40);
         }
-        if (b) func_L00_00232C10(0x5F, 0, (float)scale_ticks(0xA));
+        if (b) HeroStartAnim(0x5F, 0, (float)scale_ticks(0xA));
         break;
     }
     case 0x82: {
@@ -910,28 +911,28 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x2284) = 0;
         *(int *)(p + 0x22A8) = 0;
         qcopy(p + 0x150, p + 0x110);
-        if (b) func_L00_00232C10(0x80, 0, (float)scale_ticks(0xA));
+        if (b) HeroStartAnim(0x80, 0, (float)scale_ticks(0xA));
         break;
     }
     case 0x38: {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 0x13;
         *(int *)(p + 0x2284) = 0;
-        if (b) func_L00_00232C10(0x46, 0, (float)scale_ticks(8));
+        if (b) HeroStartAnim(0x46, 0, (float)scale_ticks(8));
         break;
     }
     case 0x39: {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 0x13;
         *(int *)(p + 0x2284) = 0;
-        if (b) func_L00_00232C10(0x47, 0, (float)scale_ticks(8));
+        if (b) HeroStartAnim(0x47, 0, (float)scale_ticks(8));
         break;
     }
     case 0x3A: {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 0x13;
         *(int *)(p + 0x2284) = 0;
-        if (b) func_L00_00232C10(0x48, 0, (float)scale_ticks(8));
+        if (b) HeroStartAnim(0x48, 0, (float)scale_ticks(8));
         break;
     }
     case 1: {
@@ -941,9 +942,9 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x2284) = 4;
         *(int *)&D_L00_0015F768 = scale_ticks(0x3C);
         if (*(unsigned char *)(p + 0x20AA) == 0) {
-            t = func_L00_00205618(1);
+            t = Hero_PickSituationId(1);
             if (*(unsigned char *)(*(char **)(p + 0x2080) + 0x53) != t && b) {
-                func_L00_00232C10(t, 0, (float)scale_ticks(0x12));
+                HeroStartAnim(t, 0, (float)scale_ticks(0x12));
             }
         }
         break;
@@ -953,7 +954,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x208C) = 8;
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0x150, p + 0x100);
-        func_L00_00232C10(func_L00_00205618(0), 0, (float)scale_ticks(0xA));
+        HeroStartAnim(Hero_PickSituationId(0), 0, (float)scale_ticks(0xA));
         *(int *)(p + 0x1D0) = scale_ticks(7);
         break;
     }
@@ -962,7 +963,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x208C) = 8;
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0x150, p + 0x100);
-        func_L00_00232C10(func_L00_00205618(0), 0, (float)scale_ticks(5));
+        HeroStartAnim(Hero_PickSituationId(0), 0, (float)scale_ticks(5));
         *(int *)(p + 0x1D0) = scale_ticks(7);
         break;
     }
@@ -974,7 +975,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x2088) = 0;
         *(short *)(p + 0x3B8) = 0;
         *(short *)(p + 0x3BC) = 0;
-        func_L00_00232C10(0x2E, 0, (float)scale_ticks(5));
+        HeroStartAnim(0x2E, 0, (float)scale_ticks(5));
         break;
     }
     case 2:
@@ -991,7 +992,7 @@ int func_L00_00222B80(int a, int b) {
             char *q = (char *)D_0013E633 + 0xE1D;
             if (D_0015EE6C * 7.0f < *(float *)(q + 0x194)) *(float *)(q + 0x194) = D_0015EE6C * 7.0f;
             *(short *)(q + 0x3BE) = 0;
-            func_L00_00211F80(0, 1.0f);
+            Hero_SetHeadingFromStick(0, 1.0f);
             if (1.5707964f < FastDiffRots(*(float *)(q + 0x98), *(float *)(q + 0x180))) {
                 if (*(int *)(q + 0x2094) == 7 || *(int *)(q + 0x2090) == 3 || *(int *)(q + 0x209C) == 3) {
                     char *r = (char *)D_0013E633 + 0xE1D;
@@ -1003,7 +1004,7 @@ int func_L00_00222B80(int a, int b) {
             char *s = (char *)D_0013E633 + 0xE1D;
             *(int *)(s + 0xFF8) = 0x68;
             if (*(unsigned char *)(s + 0x12EA) != 0 && *(short *)(s + 0x30C) == 0) {
-                func_L00_00222B80(0x79, 1);
+                HeroEnterMoveState(0x79, 1);
                 return 0;
             }
         }
@@ -1012,16 +1013,16 @@ int func_L00_00222B80(int a, int b) {
             if (*(unsigned char *)(t + 0x12E2) != 0 || *(int *)(t + 0x2084) == 0x2F) {
                 if (D_0015EE6C * 7.7f < *(float *)(t + 0x194)) ((H194_222B80 *)t)->f194 = D_0015EE6C * 7.7f;
                 *(float *)(t + 0xE8) = 0.0f;
-                func_L00_002607A8(t + 0xE0, D_0015EE6C * 7.7f);
+                ClampVectorLength(t + 0xE0, D_0015EE6C * 7.7f);
                 *(int *)(t + 0x3B4) = 0;
                 *(int *)(t + 0x2084) = 0x2F;
-                func_L00_00232C10(0x37, 0, (float)scale_ticks(8));
+                HeroStartAnim(0x37, 0, (float)scale_ticks(8));
             } else if (*(unsigned char *)(t + 0x20A9) != 0 || *(int *)(t + 0x2084) == 0x73) {
                 *(int *)(t + 0x2084) = 0x73;
-                func_L00_00232C10(0x60, 0, (float)scale_ticks(8));
+                HeroStartAnim(0x60, 0, (float)scale_ticks(8));
             } else if (*(short *)(t + 0x308) == 1 || *(int *)(t + 0x2084) == 0x3F) {
                 *(int *)(t + 0x2084) = 0x3F;
-                func_L00_00232C10(0x5B, 0, (float)scale_ticks(8));
+                HeroStartAnim(0x5B, 0, (float)scale_ticks(8));
             } else {
                 int n;
                 *(int *)(t + 0x2088) = 0;
@@ -1037,7 +1038,7 @@ int func_L00_00222B80(int a, int b) {
                 }
                 if (b) {
                     char *v = (char *)D_0013E633 + 0xE1D;
-                    func_L00_00232C10(*(int *)(v + 0x2088) + 3, ((int *)&D_L00_0015F7B8)[*(int *)(v + 0x2088)], (float)n);
+                    HeroStartAnim(*(int *)(v + 0x2088) + 3, ((int *)&D_L00_0015F7B8)[*(int *)(v + 0x2088)], (float)n);
                 }
             }
         }
@@ -1049,9 +1050,9 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x2284) = 0;
         if (b) {
             if (*(int *)(p + 0x2090) == 4) {
-                func_L00_00232C10(0x5E, 2, (float)scale_ticks(5));
+                HeroStartAnim(0x5E, 2, (float)scale_ticks(5));
             } else {
-                func_L00_00232C10(0x5E, 1, (float)scale_ticks(8));
+                HeroStartAnim(0x5E, 1, (float)scale_ticks(8));
             }
         }
         break;
@@ -1062,14 +1063,14 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x2284) = 0;
         *(float *)(p + 0x194) = func_001F9CE8(p + 0x110);
         *(unsigned char *)(p + 0x20AC) = 1;
-        if (*(unsigned char *)(p + 0x20A4) == 0) func_L00_0020ED30();
+        if (*(unsigned char *)(p + 0x20A4) == 0) Hero_ClearPendingModuleAnim();
         if (b) {
             if (*(unsigned char *)(p + 0x20A4) == 3) {
-                func_L00_00232C10(1, 0, (float)scale_ticks(8));
+                HeroStartAnim(1, 0, (float)scale_ticks(8));
             } else if (*(unsigned char *)(p + 0x20A4) == 1) {
-                func_L00_00232C10(2, 0, (float)scale_ticks(8));
+                HeroStartAnim(2, 0, (float)scale_ticks(8));
             } else if (*(unsigned char *)(p + 0x20A4) == 0) {
-                func_L00_00232C10(*(int *)(p + 0x2088) + 3, ((int *)&D_L00_0015F7B8)[*(int *)(p + 0x2088)], (float)scale_ticks(8));
+                HeroStartAnim(*(int *)(p + 0x2088) + 3, ((int *)&D_L00_0015F7B8)[*(int *)(p + 0x2088)], (float)scale_ticks(8));
             }
         }
         break;
@@ -1081,7 +1082,7 @@ int func_L00_00222B80(int a, int b) {
         *(unsigned char *)(p + 0x20A7) = 1;
         FastMemSet(p + 0x9D0, 0, 0x20);
         qcopy(p + 0x150, p + 0x100);
-        if (b) func_L00_00232C10(0x64, 0, (float)scale_ticks(0xF));
+        if (b) HeroStartAnim(0x64, 0, (float)scale_ticks(0xF));
         break;
     }
     case 3: {
@@ -1090,17 +1091,17 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0x150, p + 0x110);
         if (*(unsigned char *)(p + 0x12E2) != 0) {
-            func_L00_00222B80(0x2F, 1);
+            HeroEnterMoveState(0x2F, 1);
             return 0;
         }
         if (*(unsigned char *)(p + 0x12EA) != 0 && *(short *)(p + 0x30C) == 0) {
-            func_L00_00222B80(0x79, 1);
+            HeroEnterMoveState(0x79, 1);
             return 0;
         }
-        if (func_L00_0022A268()) return 0;
-        if (func_L00_00205618(0) == 0x54) {
-            if (func_L00_00222B80(0, 0)) {
-                func_L00_00232C10(func_L00_00205618(0), 0, (float)scale_ticks(0x12));
+        if (HeroStartPendingAction()) return 0;
+        if (Hero_PickSituationId(0) == 0x54) {
+            if (HeroEnterMoveState(0, 0)) {
+                HeroStartAnim(Hero_PickSituationId(0), 0, (float)scale_ticks(0x12));
             }
             return 0;
         }
@@ -1109,7 +1110,7 @@ int func_L00_00222B80(int a, int b) {
             float d = *(float *)(q + 0xAA8);
             int id = 6;
             if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
-            func_L00_00232C10(id, 4, (float)scale_ticks(9));
+            HeroStartAnim(id, 4, (float)scale_ticks(9));
         }
         break;
     }
@@ -1118,13 +1119,13 @@ int func_L00_00222B80(int a, int b) {
         char *v = p + 0x110;
         *(int *)(p + 0x208C) = 1;
         *(int *)(p + 0x2284) = 0;
-        *(float *)(p + 0x194) = func_L00_00234250((float *)v);
+        *(float *)(p + 0x194) = ViewXyLength((float *)v);
         qcopy(p + 0x150, v);
         if (b) {
             int id = 6;
             float d = *(float *)(p + 0xAA8);
             if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
-            func_L00_00232C10(id, 4, (float)scale_ticks(9));
+            HeroStartAnim(id, 4, (float)scale_ticks(9));
         }
         break;
     }
@@ -1135,22 +1136,22 @@ int func_L00_00222B80(int a, int b) {
         *(float *)(p + 0x194) = func_001F9CE8(p + 0x110);
         if (D_0015EE6C * 7.0f < *(float *)(p + 0x194)) *(float *)(p + 0x194) = D_0015EE6C * 7.0f;
         if (*(unsigned char *)(p + 0x12EA) != 0 && *(short *)(p + 0x30C) == 0) {
-            func_L00_00222B80(0x79, 1);
+            HeroEnterMoveState(0x79, 1);
             return 0;
         }
         {
             char *q = (char *)D_0013E633 + 0xE1D;
             *(int *)(q + 0xFF8) = 0x68;
             qcopy(q + 0x150, q + 0x110);
-            func_L00_002607A8(q + 0x150, D_0015EE6C * 7.0f);
-            if (D_0015EE6C * 3.5f < *(float *)(q + 0x168)) func_L00_00217570(0xC, 0);
+            ClampVectorLength(q + 0x150, D_0015EE6C * 7.0f);
+            if (D_0015EE6C * 3.5f < *(float *)(q + 0x168)) Hero_PlayActiveSound(0xC, 0);
             if (b) {
-                if (*(unsigned char *)(*(char **)(q + 0x2080) + 0x52) == func_L00_00205618(0)) {
-                    func_L00_00232C10(0xD, 2, (float)scale_ticks(9));
+                if (*(unsigned char *)(*(char **)(q + 0x2080) + 0x52) == Hero_PickSituationId(0)) {
+                    HeroStartAnim(0xD, 2, (float)scale_ticks(9));
                 } else {
-                    func_L00_00232C10(0xD, 2, (float)scale_ticks(0xE));
+                    HeroStartAnim(0xD, 2, (float)scale_ticks(0xE));
                 }
-                func_L00_00232E60(3, 0x12);
+                HeroQueueSequence(3, 0x12);
             }
         }
         break;
@@ -1171,8 +1172,8 @@ int func_L00_00222B80(int a, int b) {
         }
         *(float *)(p + 0x180) = func_L00_001FF860(*(float *)(*(char **)(p + 0x964) + 0x10) - *(float *)(p + 0x80), *(float *)(*(char **)(p + 0x964) + 0x14) - *(float *)(p + 0x84));
         if (b) {
-            func_L00_00232C10(0x2F, 2, (float)scale_ticks(5));
-            func_L00_00232E60(0xA, 0xE);
+            HeroStartAnim(0x2F, 2, (float)scale_ticks(5));
+            HeroQueueSequence(0xA, 0xE);
         }
         break;
     }
@@ -1183,7 +1184,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x960) = 0;
         *(int *)(p + 0x974) = 0;
         *(unsigned char *)(p + 0x20AC) = 1;
-        if (b) func_L00_00232C10(0x30, 1, (float)scale_ticks(0xA));
+        if (b) HeroStartAnim(0x30, 1, (float)scale_ticks(0xA));
         break;
     }
     case 0x26: {
@@ -1194,7 +1195,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x960) = 0;
         *(int *)(p + 0x974) = 0;
         *(float *)(p + 0x97C) = FastVecDist(p + 0x80, *(char **)(p + 0x964) + 0x10);
-        if (b) func_L00_00232C10(0x30, 1, (float)scale_ticks(5));
+        if (b) HeroStartAnim(0x30, 1, (float)scale_ticks(5));
         break;
     }
     case 0x2C: {
@@ -1246,7 +1247,7 @@ int func_L00_00222B80(int a, int b) {
                 *(float *)(q + 0x9B0) = *(float *)(q + 0x940);
             }
             if (b) {
-                func_L00_00232C10(0x34, 0, (float)scale_ticks(0xB));
+                HeroStartAnim(0x34, 0, (float)scale_ticks(0xB));
                 {
                     char *r = (char *)D_0013E633 + 0xE1D;
                     *(float *)(r + 0xA90) = 0.7f;
@@ -1261,7 +1262,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x2284) = 7;
         clear_u64_value(p + 0xA0);
         qcopy(p + 0xE0, p + 0x110);
-        if (b) func_L00_00232C10(0xB, 0, (float)scale_ticks(0xF));
+        if (b) HeroStartAnim(0xB, 0, (float)scale_ticks(0xF));
         break;
     }
     case 0x22: {
@@ -1272,7 +1273,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x4B8) = 0;
         *(int *)(p + 0x4C4) = 0;
         *(float *)(p + 0x4B0) = D_0015EE70 * 100.0f;
-        if (b) func_L00_00232C10(0x2A, 0, (float)scale_ticks(6));
+        if (b) HeroStartAnim(0x2A, 0, (float)scale_ticks(6));
         break;
     }
     case 0x28: {
@@ -1299,7 +1300,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x5B8) = 0;
         *(short *)(p + 0x5BC) = 0;
         *(int *)(p + 0x5C0) = 0;
-        func_L00_0025E860(*(int *)(p + 0x560), (char *)&out, (char *)&i, (char *)&f, *(int *)(p + 0x584), 1.0f);
+        Spline_AdvanceByDistance(*(int *)(p + 0x560), (char *)&out, (char *)&i, (char *)&f, *(int *)(p + 0x584), 1.0f);
         FastVecSub(&d, &out, p + 0x80);
         if (0.001f < FastVecLength(&d)) {
             func_L00_001FF4B0(&d, &d, 1.0f);
@@ -1318,7 +1319,7 @@ int func_L00_00222B80(int a, int b) {
         }
         if (b) {
             char *r = (char *)D_0013E633 + 0xE1D;
-            func_L00_00232C10(*(int *)(r + 0x58C) + 0x31, 0, (float)scale_ticks(6));
+            HeroStartAnim(*(int *)(r + 0x58C) + 0x31, 0, (float)scale_ticks(6));
         }
         break;
     }
@@ -1336,7 +1337,7 @@ int func_L00_00222B80(int a, int b) {
         t = *(float *)(p + 0x5F8);
         i = *(int *)(p + 0x5F4);
         f = t;
-        func_L00_0025E860(*(int *)(p + 0x5F0), (char *)&out, (char *)&i, (char *)&f, *(int *)(p + 0x60C), 1.0f);
+        Spline_AdvanceByDistance(*(int *)(p + 0x5F0), (char *)&out, (char *)&i, (char *)&f, *(int *)(p + 0x60C), 1.0f);
         FastVecSub(&d, &out, p + 0x80);
         if (0.001f < FastVecLength(&d)) {
             func_L00_001FF4B0(&d, &d, 1.0f);
@@ -1344,7 +1345,7 @@ int func_L00_00222B80(int a, int b) {
         }
         *(float *)(p + 0x604) = *(float *)(p + 0x604) * 0.5f;
         if (*(float *)(p + 0x604) < 0.0f) *(float *)(p + 0x604) = 0.0f;
-        func_L00_00232C10(0x73, 0, (float)scale_ticks(8));
+        HeroStartAnim(0x73, 0, (float)scale_ticks(8));
         break;
     }
     case 0x18: {
@@ -1360,9 +1361,9 @@ int func_L00_00222B80(int a, int b) {
         *(unsigned char *)(p + 0x20A7) = 1;
         if (b) {
             if (D_0015EE6C * 3.5f < *(float *)(p + 0x164)) {
-                func_L00_00232C10(0x20, 0, (float)scale_ticks(9));
+                HeroStartAnim(0x20, 0, (float)scale_ticks(9));
             } else {
-                func_L00_00232C10(0x20, 1, (float)(scale_ticks(9) + 2));
+                HeroStartAnim(0x20, 1, (float)(scale_ticks(9) + 2));
             }
         }
         break;
@@ -1373,7 +1374,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x2284) = 0xD;
         *(unsigned char *)(p + 0x20A7) = 1;
         *(int *)(p + 0xFF8) = 0x68;
-        if (b) func_L00_00232C10(0x21, 0, (float)scale_ticks(6));
+        if (b) HeroStartAnim(0x21, 0, (float)scale_ticks(6));
         break;
     }
     case 0x1A: {
@@ -1381,7 +1382,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x208C) = 3;
         *(int *)(p + 0x2284) = 0xD;
         *(unsigned char *)(p + 0x20A7) = 1;
-        if (b) func_L00_00232C10(0x24, 0, (float)scale_ticks(6));
+        if (b) HeroStartAnim(0x24, 0, (float)scale_ticks(6));
         break;
     }
     case 0x1B: {
@@ -1389,7 +1390,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x208C) = 3;
         *(int *)(p + 0x2284) = 0xD;
         *(unsigned char *)(p + 0x20A7) = 1;
-        if (b) func_L00_00232C10(0x25, 0, (float)scale_ticks(6));
+        if (b) HeroStartAnim(0x25, 0, (float)scale_ticks(6));
         break;
     }
     case 0x79: {
@@ -1397,7 +1398,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x208C) = 2;
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0xE0, p + 0x110);
-        if (b) func_L00_00232C10(0xB, 0, (float)scale_ticks(0xC));
+        if (b) HeroStartAnim(0xB, 0, (float)scale_ticks(0xC));
         break;
     }
     case 6:
@@ -1409,7 +1410,7 @@ int func_L00_00222B80(int a, int b) {
         *(float *)(p + 0x944) = D_0015EE70 * 7.0f;
         if (*(int *)(p + 0x2084) == 0x77) {
             if (*(unsigned char *)(p + 0x20A4) == 0) {
-                *(short *)(p + 0x22B2) = func_L00_00217570(0x17, 0x20);
+                *(short *)(p + 0x22B2) = Hero_PlayActiveSound(0x17, 0x20);
             }
             *(float *)(p + 0x950) = randf_sym(D_0015EE6C * 3.1415927f, D_0015EE6C * 4.3633232f);
             *(float *)(p + 0x954) = randf_sym(D_0015EE6C * 3.1415927f, D_0015EE6C * 4.3633232f);
@@ -1421,18 +1422,18 @@ int func_L00_00222B80(int a, int b) {
             qcopy(q + 0xE0, q + 0x110);
             if (b) {
                 if (*(unsigned char *)(q + 0x20A4) == 1) {
-                    func_L00_00232C10(4, 0, (float)scale_ticks(8));
+                    HeroStartAnim(4, 0, (float)scale_ticks(8));
                     return 1;
                 }
                 if (*(unsigned char *)(q + 0x20A4) == 3) {
-                    func_L00_00232C10(6, 0, (float)scale_ticks(8));
+                    HeroStartAnim(6, 0, (float)scale_ticks(8));
                     return 1;
                 }
                 if (1.75f < *(float *)(q + 0x2DC)) {
-                    func_L00_00232C10(0xB, 0, (float)scale_ticks(0xC));
+                    HeroStartAnim(0xB, 0, (float)scale_ticks(0xC));
                     *(int *)(q + 0x2088) = 1;
                 } else {
-                    func_L00_00232C10(0xA, 0, (float)scale_ticks(0xA));
+                    HeroStartAnim(0xA, 0, (float)scale_ticks(0xA));
                 }
             }
         }
@@ -1446,11 +1447,11 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0xFF8) = 0x68;
         *(int *)(p + 0x2284) = 0;
         if (D_0015EE6C * 4.5f < *(float *)(p + 0x160)) {
-            func_L00_002144A0(D_0015EE6C * 4.5f / *(float *)(p + 0x160));
+            Hero_ScaleMotion(D_0015EE6C * 4.5f / *(float *)(p + 0x160));
         }
         qcopy(p + 0xE0, p + 0x110);
         if (b) {
-            func_L00_00232C10(0x13, 0, (float)t81);
+            HeroStartAnim(0x13, 0, (float)t81);
         }
         break;
     }
@@ -1461,11 +1462,11 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0xFF8) = 0x68;
         *(int *)(p + 0x2284) = 0;
         if (D_0015EE6C * 4.5f < *(float *)(p + 0x160)) {
-            func_L00_002144A0(D_0015EE6C * 4.5f / *(float *)(p + 0x160));
+            Hero_ScaleMotion(D_0015EE6C * 4.5f / *(float *)(p + 0x160));
         }
         qcopy(p + 0xE0, p + 0x100);
         if (b) {
-            func_L00_00232C10(0x13, 0, (float)t8);
+            HeroStartAnim(0x13, 0, (float)t8);
         }
         break;
     }
@@ -1508,13 +1509,13 @@ int func_L00_00222B80(int a, int b) {
             r = v - 0xE0;
             if (*(int *)(r + 0x2084) != 0x12) {
                 if (*(unsigned char *)(r + 0x12E4) != 0 && *(float *)(r + 0x88) < *(float *)(r + 0x2F0) + 0.5f) {
-                    func_L00_0020A320(3, 0x10, 0);
+                    HeroKickUpDust(3, 0x10, 0);
                 }
             }
         }
         {
             char *u = (char *)D_0013E633 + 0xE1D;
-            if (*(int *)(u + 0x2084) == 0x69) func_L00_00217570(0xA, 0);
+            if (*(int *)(u + 0x2084) == 0x69) Hero_PlayActiveSound(0xA, 0);
             *(float *)(u + 0x410) = *(float *)(u + 0x88);
             *(float *)(u + 0x4A0) = D_0015EE70 * 29.7f;
             *(int *)(u + 0x3E8) = -1;
@@ -1569,7 +1570,7 @@ int func_L00_00222B80(int a, int b) {
                     *(float *)(u + 0x48C) = 1.98f;
                     *(float *)(u + 0x430) = 1.95f;
                 } else {
-                    func_L00_002343A0((float *)(u + 0xE0), (float *)(u + 0xE0), 0.0f);
+                    HeroPlacePointZ((float *)(u + 0xE0), (float *)(u + 0xE0), 0.0f);
                     *(short *)(u + 0x41C) = 1;
                     *(int *)(u + 0x3D0) = scale_ticks(2);
                     *(int *)(u + 0x3D4) = scale_ticks(0x23) + *(int *)(u + 0x3D0);
@@ -1593,9 +1594,9 @@ int func_L00_00222B80(int a, int b) {
                 *(float *)(u + 0x488) = 5.5f;
                 *(short *)(u + 0x498) = scale_ticks(2);
                 *(short *)(u + 0x49A) = scale_ticks(0x78);
-                func_L00_002056D8(1);
+                Hero_TakeDamage(1);
                 if (D_0015EE84 == 0xA) {
-                    func_L00_00222B80(0x7C, 1);
+                    HeroEnterMoveState(0x7C, 1);
                     return 0;
                 }
                 if (D_0015EE84 != 6) {
@@ -1603,7 +1604,7 @@ int func_L00_00222B80(int a, int b) {
                         char *w = (char *)D_0013E633 + 0xE1D;
                         *(int *)(w + 0x1660) = *(int *)(w + 0x1660) + 1;
                         if (*(int *)(w + 0x1660) >= 2 || *(int *)(w + 0x22A8) == 0) {
-                            func_L00_00222B80(0x7C, 1);
+                            HeroEnterMoveState(0x7C, 1);
                             return 0;
                         }
                     } else {
@@ -1748,10 +1749,10 @@ int func_L00_00222B80(int a, int b) {
                 *(float *)(u + 0x430) = 0.4f;
                 *(float *)(u + 0x488) = 0.4f;
                 *(float *)(u + 0x48C) = 0.9f;
-                func_L00_00263578(*(int *)(u + 0x2080), x);
-                func_L00_002635A0(x, 0x28, 2);
-                func_L00_002635A0(x, 0x14, 4);
-                func_L00_002635A0(x, 0xA, 6);
+                Manipulator_StartIfIdle(*(int *)(u + 0x2080), x);
+                AddSpawnedCopyToList(x, 0x28, 2);
+                AddSpawnedCopyToList(x, 0x14, 4);
+                AddSpawnedCopyToList(x, 0xA, 6);
                 *(unsigned char *)(u + 0x4AE) = 1;
                 *(float *)(u + 0x3F4) = D_0015EE6C * 11.5f;
                 if (1.4f < *(float *)(u + 0x2DC)) *(float *)(u + 0x3F4) = D_0015EE6C * 5.7f;
@@ -1815,9 +1816,9 @@ int func_L00_00222B80(int a, int b) {
                 *(float *)(u + 0x490) = 4.5f;
                 *(short *)(u + 0x49A) = scale_ticks(0x78);
                 *(float *)(u + 0x424) = D_0015EE6C * 1.9f;
-                func_L00_00263578(*(int *)(u + 0x2080), x);
-                func_L00_002635A0(x, 0x28, 3);
-                func_L00_002635A0(x, 0x14, 5);
+                Manipulator_StartIfIdle(*(int *)(u + 0x2080), x);
+                AddSpawnedCopyToList(x, 0x28, 3);
+                AddSpawnedCopyToList(x, 0x14, 5);
                 *(short *)(u + 0x41C) = 1;
                 *(int *)(u + 0x3D0) = scale_ticks(9);
                 *(int *)(u + 0x3D4) = scale_ticks(0x23) + *(int *)(u + 0x3D0);
@@ -1884,8 +1885,8 @@ int func_L00_00222B80(int a, int b) {
                 *(float *)(u + 0x490) = 4.5f;
                 *(short *)(u + 0x4AA) = scale_ticks(0x32);
                 *(float *)(u + 0x494) = 1.0f;
-                *(float *)(u + 0x43C) = func_L00_0020DCF0(scale_ticks(0xA));
-                *(int *)(u + 0x450) = func_L00_00222580();
+                *(float *)(u + 0x43C) = Hero_GetRecentRingValue(scale_ticks(0xA));
+                *(int *)(u + 0x450) = Hero_ClassifyStick();
                 *(float *)(u + 0x438) = *(float *)(u + 0x180);
                 if (D_0015EE6C * 1.5f < *(float *)(u + 0x164)) {
                     *(float *)(u + 0x454) = *(float *)(u + 0x164);
@@ -1906,50 +1907,50 @@ int func_L00_00222B80(int a, int b) {
             if (b) {
                 int s = *(int *)(q + 0x2084);
                 if (s == 7) {
-                    func_L00_00232C10(7, 0, (float)scale_ticks(5));
+                    HeroStartAnim(7, 0, (float)scale_ticks(5));
                 } else if (s == 0x12) {
-                    func_L00_00232C10(0x72, 1, -1.0f);
+                    HeroStartAnim(0x72, 1, -1.0f);
                 } else if (s == 0x3C) {
-                    func_L00_00232C10(0x43, 0, (float)scale_ticks(4));
+                    HeroStartAnim(0x43, 0, (float)scale_ticks(4));
                 } else if (s == 0x69) {
-                    func_L00_00232C10(7, 0, (float)scale_ticks(5));
+                    HeroStartAnim(7, 0, (float)scale_ticks(5));
                 } else if (s == 0x29) {
-                    func_L00_00232C10(0x50, 4, (float)scale_ticks(5));
+                    HeroStartAnim(0x50, 4, (float)scale_ticks(5));
                 } else if (s == 0x2A) {
                     int id = 0x1E;
                     if (1.5707964f < FastDiffRots(*(float *)(q + 0x98), func_L00_001FF860(*(float *)(q + 0x500) - *(float *)(q + 0x540), *(float *)(q + 0x504) - *(float *)(q + 0x544)))) id = 0x1F;
-                    func_L00_00232C10(id, 0, (float)scale_ticks(5));
+                    HeroStartAnim(id, 0, (float)scale_ticks(5));
                 } else if (s == 9) {
                     int id = 8;
                     int n = truncate_float_to_s32(*(float *)(q + 0xAA8));
                     if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4) id = D_L00_0017BED8[n];
-                    func_L00_00232C10(id, 0, (float)scale_ticks(5));
+                    HeroStartAnim(id, 0, (float)scale_ticks(5));
                 } else if (s == 0x5E) {
-                    func_L00_00232C10(4, 0, (float)scale_ticks(8));
+                    HeroStartAnim(4, 0, (float)scale_ticks(8));
                 } else if (s == 0x49) {
-                    func_L00_00232C10(7, 5, (float)scale_ticks(5));
+                    HeroStartAnim(7, 5, (float)scale_ticks(5));
                 } else if (s == 0xA) {
-                    func_L00_00232C10(0x12, 0, (float)scale_ticks(5));
+                    HeroStartAnim(0x12, 0, (float)scale_ticks(5));
                 } else if (s == 0x10) {
                     if (*(int *)(q + 0x2094) == 4 || (*(int *)(q + 0x2090) == 4 && scale_ticks(7) > *(int *)(q + 0x198))) {
-                        func_L00_00232C10(0x26, 0, (float)scale_ticks(8));
+                        HeroStartAnim(0x26, 0, (float)scale_ticks(8));
                         *(int *)(q + 0x420) += scale_ticks(3);
                     } else {
-                        func_L00_00232C10(0x26, 0, (float)scale_ticks(5));
+                        HeroStartAnim(0x26, 0, (float)scale_ticks(5));
                     }
                 } else if (s == 0x1C) {
-                    func_L00_00232C10(0x22, 0, (float)scale_ticks(4));
+                    HeroStartAnim(0x22, 0, (float)scale_ticks(4));
                 } else if (s == 0x4C) {
-                    func_L00_00232C10(9, 0, (float)scale_ticks(4));
+                    HeroStartAnim(9, 0, (float)scale_ticks(4));
                 } else if (s == 0x11) {
-                    func_L00_00232C10(0x23, 2, (float)scale_ticks(7));
+                    HeroStartAnim(0x23, 2, (float)scale_ticks(7));
                 } else if (s == 0xD) {
-                    func_L00_00232C10(0x11, 0, (float)scale_ticks(5));
+                    HeroStartAnim(0x11, 0, (float)scale_ticks(5));
                 } else if (s == 0xE) {
-                    func_L00_00232C10(0x16, 3, (float)scale_ticks(7));
+                    HeroStartAnim(0x16, 3, (float)scale_ticks(7));
                     *(float *)(q + 0xA90) = D_0015EE60 * 0.8f;
                 } else if (s == 0xF) {
-                    func_L00_00232C10(0x15, 0, (float)scale_ticks(5));
+                    HeroStartAnim(0x15, 0, (float)scale_ticks(5));
                 } else if (s == 0xB) {
                     int id;
                     if (*(int *)(q + 0x450) == 2) *(int *)(q + 0x450) = 0;
@@ -1964,10 +1965,10 @@ int func_L00_00222B80(int a, int b) {
                     {
                         char *w = (char *)D_0013E633 + 0xE1D;
                         if (*(int *)(w + 0x2094) == 4) {
-                            func_L00_00232C10(id, 1, (float)scale_ticks(4));
+                            HeroStartAnim(id, 1, (float)scale_ticks(4));
                             *(int *)(w + 0x420) = scale_ticks(1);
                         } else {
-                            func_L00_00232C10(id, 0, (float)scale_ticks(5));
+                            HeroStartAnim(id, 0, (float)scale_ticks(5));
                         }
                     }
                 }
@@ -2003,16 +2004,16 @@ int func_L00_00222B80(int a, int b) {
             *(int *)(q + 0x2284) = 0x50;
             *(int *)(q + 0xA60) = 4;
             *(int *)(q + 0x20F0) = 0;
-            func_L00_00215628(8.0f, 1.0471976f, -1.0f);
+            CameraTrackNearestTarget(8.0f, 1.0471976f, -1.0f);
             *(int *)(q + 0xA70) = 0;
             *(short *)(q + 0x10A8) = 0xA;
             if (b) {
                 char *m;
                 int n = scale_ticks(0xB);
                 if (*(int *)(q + 0x2090) == 0xB && scale_ticks(0x2A) > *(int *)(q + 0x2098)) n = scale_ticks(0x11);
-                func_L00_00232C10(0x2B, 4, (float)n);
-                m = func_L00_0020DAF8(0);
-                if (func_L00_00211A18(m)) func_00213DE0(m, 0xA, 4, n + 2);
+                HeroStartAnim(0x2B, 4, (float)n);
+                m = Hero_GetReadySlotMoby(0);
+                if (IsMobyClass47(m)) MobyBlendAnimation(m, 0xA, 4, n + 2);
             }
             break;
         }
@@ -2038,14 +2039,14 @@ int func_L00_00222B80(int a, int b) {
             q = (char *)D_0013E633 + 0xE1D;
             *(int *)(q + 0xA60) = 3;
             *(int *)(q + 0x20F0) = 0;
-            func_L00_00215628(14.0f, 0.5235988f, -1.0f);
+            CameraTrackNearestTarget(14.0f, 0.5235988f, -1.0f);
             *(int *)(q + 0xA7C) = *(int *)(q + 0xA7C) == 0;
             if (b) {
                 int n = scale_ticks(0xA);
                 if (*(unsigned char *)(*(char **)(q + 0x2080) + 0x53) == 0x1A) n = scale_ticks(3);
                 if (*(int *)(q + 0x2090) == 1) n = scale_ticks(0x11);
-                func_L00_00232C10(0x1A, 0, (float)n);
-                func_L00_00232E60(6, 0x15);
+                HeroStartAnim(0x1A, 0, (float)n);
+                HeroQueueSequence(6, 0x15);
             }
             break;
         }
@@ -2053,10 +2054,10 @@ int func_L00_00222B80(int a, int b) {
             char *q = (char *)D_0013E633 + 0xE1D;
             if (*(void **)(q + 0x1090) == 0) break;
             if (b) {
-                func_L00_00232C10(0x67, 4, -1.0f);
-                func_00213DE0(*(void **)(q + 0x1090), 3, 4, -1);
+                HeroStartAnim(0x67, 4, -1.0f);
+                MobyBlendAnimation(*(void **)(q + 0x1090), 3, 4, -1);
             }
-            func_L00_00215628(11.0f, 0.87266463f, -1.0f);
+            CameraTrackNearestTarget(11.0f, 0.87266463f, -1.0f);
             break;
         }
         case 0x13: {
@@ -2082,7 +2083,7 @@ int func_L00_00222B80(int a, int b) {
                 char *r = (char *)D_0013E633 + 0xE1D;
                 *(int *)(r + 0xA60) = k;
             }
-            func_L00_00215628(5.0f, 0.7853982f, 0.7853982f);
+            CameraTrackNearestTarget(5.0f, 0.7853982f, 0.7853982f);
             if (b) {
                 char *m;
                 int j = 0;
@@ -2103,9 +2104,9 @@ int func_L00_00222B80(int a, int b) {
                     }
                 }
                 j = j / 2;
-                func_L00_00232C10(k + 0x17, j, (float)n);
-                m = func_L00_0020DAF8(0);
-                if (func_L00_00211A18(m)) func_00213DE0(m, k + 3, j, n);
+                HeroStartAnim(k + 0x17, j, (float)n);
+                m = Hero_GetReadySlotMoby(0);
+                if (IsMobyClass47(m)) MobyBlendAnimation(m, k + 3, j, n);
             }
             break;
         }
@@ -2120,7 +2121,7 @@ int func_L00_00222B80(int a, int b) {
                 char *r = (char *)D_0013E633 + 0xE1D;
                 *(int *)(r + 0xA60) = k + 7;
             }
-            func_L00_00215628(5.0f, 0.7853982f, 0.7853982f);
+            CameraTrackNearestTarget(5.0f, 0.7853982f, 0.7853982f);
             if (b) {
                 int n;
                 if (k == 0) {
@@ -2128,13 +2129,13 @@ int func_L00_00222B80(int a, int b) {
                 } else {
                     n = scale_ticks(5);
                 }
-                func_L00_00232C10(k + 0xF, 1, (float)n);
+                HeroStartAnim(k + 0xF, 1, (float)n);
             }
             break;
         }
         case 0x23: {
             char *q;
-            if (b) func_L00_00232C10(0x2C, 7, (float)scale_ticks(9));
+            if (b) HeroStartAnim(0x2C, 7, (float)scale_ticks(9));
             q = (char *)D_0013E633 + 0xE1D;
             if (*(int *)(q + 0x10B8) == 0xA && *(char **)(q + 0xA50) != 0) {
                 *(int *)(q + 0xA58) = 1;
@@ -2163,9 +2164,9 @@ int func_L00_00222B80(int a, int b) {
                 char *m;
                 int z = e == 0;
                 int n = scale_ticks(5);
-                func_L00_00232C10(e + 0x5C, z, (float)n);
-                m = func_L00_0020DAF8(0);
-                if (func_L00_00211A18(m)) func_00213DE0(m, e + 0xC, z, n);
+                HeroStartAnim(e + 0x5C, z, (float)n);
+                m = Hero_GetReadySlotMoby(0);
+                if (IsMobyClass47(m)) MobyBlendAnimation(m, e + 0xC, z, n);
             }
         }
         break;
@@ -2183,9 +2184,9 @@ int func_L00_00222B80(int a, int b) {
             char *q = (char *)D_0013E633 + 0xE1D;
             char *m;
             int n = scale_ticks(4);
-            func_L00_00232C10(*(int *)(q + 0xA60) + 0x4E, 0, (float)n);
-            m = func_L00_0020DAF8(0);
-            if (func_L00_00211A18(m)) func_00213DE0(m, *(int *)(q + 0xA60) + 0xC, 0, n);
+            HeroStartAnim(*(int *)(q + 0xA60) + 0x4E, 0, (float)n);
+            m = Hero_GetReadySlotMoby(0);
+            if (IsMobyClass47(m)) MobyBlendAnimation(m, *(int *)(q + 0xA60) + 0xC, 0, n);
         }
         break;
     }
@@ -2201,9 +2202,9 @@ int func_L00_00222B80(int a, int b) {
             int n;
             if (e->a == 1) k = 2;
             n = scale_ticks(5);
-            func_L00_00232C10(k + 0x27, 5, (float)n);
-            m = func_L00_0020DAF8(0);
-            if (func_L00_00211A18(m)) func_00213DE0(m, k + 7, 5, n);
+            HeroStartAnim(k + 0x27, 5, (float)n);
+            m = Hero_GetReadySlotMoby(0);
+            if (IsMobyClass47(m)) MobyBlendAnimation(m, k + 7, 5, n);
         }
         break;
     }
@@ -2213,7 +2214,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x2284) = 0;
         *(float *)(p + 0xA68) = FastAddRots(*(float *)(p + 0x98), 3.1415927f);
         *(float *)(p + 0x194) = D_0015EE6C * 9.0f;
-        if (b) func_L00_00232C10(0x29, 5, (float)scale_ticks(8));
+        if (b) HeroStartAnim(0x29, 5, (float)scale_ticks(8));
         break;
     }
     case 0x16: {
@@ -2221,21 +2222,21 @@ int func_L00_00222B80(int a, int b) {
         char *r;
         *(int *)(p + 0x208C) = 7;
         *(int *)(p + 0x2284) = 0;
-        func_L00_002144A0(0.5f);
+        Hero_ScaleMotion(0.5f);
         *(short *)(p + 0x1EE) = scale_ticks(0x2D);
         qcopy(p + 0xE0, p + 0x110);
-        func_L00_002607A8(p + 0xE0, D_0015EE6C * 7.0f);
-        r = func_L00_0025B478(*(void **)(p + 0x2080), 1, 0);
+        ClampVectorLength(p + 0xE0, D_0015EE6C * 7.0f);
+        r = MobyGetHitMessage(*(void **)(p + 0x2080), 1, 0);
         if (r != 0) {
-            func_L00_002056D8(truncate_float_to_s32(*(float *)(r + 0x2C)));
+            Hero_TakeDamage(truncate_float_to_s32(*(float *)(r + 0x2C)));
         } else {
-            func_L00_002056D8(1);
+            Hero_TakeDamage(1);
         }
         {
             char *q = (char *)D_0013E633 + 0xE1D;
             *(int *)(q + 0x1C0) = scale_ticks(0x4D);
             if (b) {
-                func_L00_00232C10(0x10, 3, -3.0f);
+                HeroStartAnim(0x10, 3, -3.0f);
                 *(float *)(*(char **)(q + 0x2080) + 0x54) = D_L00_0017BEF0[*(int *)(q + 0xAA0)][(*(int *)(q + 0xAA4))++];
             }
         }
@@ -2253,11 +2254,11 @@ int func_L00_00222B80(int a, int b) {
             char *r = (char *)D_0013E633 + 0xE1D;
             *(int *)(r + 0x208C) = 0x19;
             *(int *)(r + 0x2284) = 0;
-            func_L00_00217570(9, 0);
+            Hero_PlayActiveSound(9, 0);
             *(int *)(r + 0xFF8) = 0x68;
             *(float *)(r + 0x190) = 0.0f;
             *(float *)(r + 0x194) = 0.0f;
-            if (b) func_L00_00232C10(0x71, 0, (float)scale_ticks(8));
+            if (b) HeroStartAnim(0x71, 0, (float)scale_ticks(8));
         }
         break;
     }
@@ -2265,11 +2266,11 @@ int func_L00_00222B80(int a, int b) {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 0x19;
         *(int *)(p + 0x2284) = 0;
-        if (D_0015EE84 == 0xF) func_L00_00217BD8();
+        if (D_0015EE84 == 0xF) Hero_SpawnParticleBurst();
         *(int *)(p + 0x1CC) = 0x2710;
-        func_L00_00217570(9, 0);
+        Hero_PlayActiveSound(9, 0);
         *(int *)(p + 0xFF8) = 0x68;
-        if (b) func_L00_00232C10(0x71, 0, (float)scale_ticks(8));
+        if (b) HeroStartAnim(0x71, 0, (float)scale_ticks(8));
         break;
     }
     case 0x7C: {
@@ -2277,7 +2278,7 @@ int func_L00_00222B80(int a, int b) {
             int c0;
             int c1;
             int c2;
-            func_L00_00222B80(0x3D, 1);
+            HeroEnterMoveState(0x3D, 1);
             {
                 char *q = (char *)D_0013E633 + 0xE1D;
                 *(int *)(q + 0x22F4) = 1;
@@ -2293,8 +2294,8 @@ int func_L00_00222B80(int a, int b) {
             *(int *)(p + 0x22A8) = 0;
             *(int *)(p + 0x1CC) = 0x2710;
             *(float *)(p + 0x2F4) = *(float *)(p + 0x2D8);
-            func_L00_00217570(9, 0);
-            if (b) func_L00_00232C10(0x71, 0, (float)scale_ticks(8));
+            Hero_PlayActiveSound(9, 0);
+            if (b) HeroStartAnim(0x71, 0, (float)scale_ticks(8));
         }
         break;
     }
@@ -2309,7 +2310,7 @@ int func_L00_00222B80(int a, int b) {
         m = *(char **)(p + 0xA88);
         qcopy(m + 0x10, p + 0x80);
         func_0022ED80(9, 0, (int)m);
-        if (b) func_L00_00232C10(0x11, 0, (float)scale_ticks(8));
+        if (b) HeroStartAnim(0x11, 0, (float)scale_ticks(8));
         break;
     }
     case 0x43: {
@@ -2317,10 +2318,10 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x208C) = 0;
         *(int *)(p + 0x2284) = 0;
         if (*(unsigned char *)(p + 0x12EA) != 0 && *(short *)(p + 0x30C) == 0) {
-            func_L00_00222B80(0x52, 1);
+            HeroEnterMoveState(0x52, 1);
             return 0;
         }
-        if (b) func_L00_00232C10(0, 0, (float)scale_ticks(9));
+        if (b) HeroStartAnim(0, 0, (float)scale_ticks(9));
         break;
     }
     case 0x4F: {
@@ -2328,10 +2329,10 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x208C) = 5;
         *(int *)(p + 0x2284) = 0;
         if (D_0015EE6C * 4.5f < *(float *)(p + 0x160)) {
-            func_L00_002144A0(D_0015EE6C * 4.5f / *(float *)(p + 0x160));
+            Hero_ScaleMotion(D_0015EE6C * 4.5f / *(float *)(p + 0x160));
         }
         qcopy(p + 0xE0, p + 0x100);
-        if (b) func_L00_00232C10(0xE, 0, (float)scale_ticks(0xC));
+        if (b) HeroStartAnim(0xE, 0, (float)scale_ticks(0xC));
         break;
     }
     case 0x45: {
@@ -2340,7 +2341,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x2284) = 0;
         *(float *)(p + 0x944) = D_0015EE70 * 7.0f;
         qcopy(p + 0xE0, p + 0x110);
-        if (b) func_L00_00232C10(4, 0, (float)scale_ticks(8));
+        if (b) HeroStartAnim(4, 0, (float)scale_ticks(8));
         break;
     }
     case 0x52: {
@@ -2348,21 +2349,21 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x208C) = 2;
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0xE0, p + 0x110);
-        if (b) func_L00_00232C10(4, 0, (float)scale_ticks(0xC));
+        if (b) HeroStartAnim(4, 0, (float)scale_ticks(0xC));
         break;
     }
     case 0x46: {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 7;
         *(int *)(p + 0x2284) = 0;
-        func_L00_002144A0(0.5f);
+        Hero_ScaleMotion(0.5f);
         qcopy(p + 0xE0, p + 0x110);
-        func_L00_002607A8(p + 0xE0, D_0015EE6C * 5.0f);
-        func_L00_002056D8(1);
+        ClampVectorLength(p + 0xE0, D_0015EE6C * 5.0f);
+        Hero_TakeDamage(1);
         *(short *)(p + 0x1EE) = scale_ticks(0x2D);
         *(int *)(p + 0x1C0) = scale_ticks(0x32);
         if (b) {
-            func_L00_00232C10(6, 3, -3.0f);
+            HeroStartAnim(6, 3, -3.0f);
             *(float *)(*(char **)(p + 0x2080) + 0x54) = D_L00_0017BEF0[*(int *)(p + 0xAA0)][(*(int *)(p + 0xAA4))++];
         }
         break;
@@ -2370,7 +2371,7 @@ int func_L00_00222B80(int a, int b) {
     case 0x44: {
         char *p = (char *)D_0013E633 + 0xE1D;
         if (*(unsigned char *)(p + 0x12EA) != 0 && *(short *)(p + 0x30C) == 0) {
-            func_L00_00222B80(0x52, 1);
+            HeroEnterMoveState(0x52, 1);
             return 0;
         }
         {
@@ -2381,7 +2382,7 @@ int func_L00_00222B80(int a, int b) {
             if (*(int *)(q + 0x2090) == 3) *(float *)(q + 0x194) = 0.0f;
             if (*(int *)(q + 0x2094) == 0) *(float *)(q + 0x194) = func_001F9CE8(q + 0x150);
             *(short *)(q + 0x3B8) = 0;
-            if (b) func_L00_00232C10(2, 0, (float)scale_ticks(8));
+            if (b) HeroStartAnim(2, 0, (float)scale_ticks(8));
         }
         break;
     }
@@ -2391,7 +2392,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x2284) = 0;
         *(int *)(p + 0x22A8) = 0;
         qcopy(p + 0x150, p + 0x110);
-        if (b) func_L00_00232C10(5, 0, (float)scale_ticks(0xC));
+        if (b) HeroStartAnim(5, 0, (float)scale_ticks(0xC));
         break;
     }
     case 0x4A: {
@@ -2404,35 +2405,35 @@ int func_L00_00222B80(int a, int b) {
             *(float *)(p + 0x4EC) = *(float *)(p + 0x4A0);
             *(float *)(p + 0x4F0) = *(float *)(p + 0x410);
         }
-        if (b) func_L00_00232C10(8, 0x12, (float)(scale_ticks(7) + 2));
+        if (b) HeroStartAnim(8, 0x12, (float)(scale_ticks(7) + 2));
         break;
     }
     case 0x4B: {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 3;
         *(int *)(p + 0x2284) = 0xD;
-        if (b) func_L00_00232C10(0xA, 0, (float)scale_ticks(6));
+        if (b) HeroStartAnim(0xA, 0, (float)scale_ticks(6));
         break;
     }
     case 0x4D: {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 3;
         *(int *)(p + 0x2284) = 0xD;
-        if (b) func_L00_00232C10(0xB, 0, (float)scale_ticks(6));
+        if (b) HeroStartAnim(0xB, 0, (float)scale_ticks(6));
         break;
     }
     case 0x4E: {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 3;
         *(int *)(p + 0x2284) = 0xD;
-        if (b) func_L00_00232C10(0xC, 0, (float)scale_ticks(6));
+        if (b) HeroStartAnim(0xC, 0, (float)scale_ticks(6));
         break;
     }
     case 0x5A: {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 0;
         *(int *)(p + 0x2284) = 0;
-        if (b) func_L00_00232C10(0, 0, (float)scale_ticks(0xF));
+        if (b) HeroStartAnim(0, 0, (float)scale_ticks(0xF));
         break;
     }
     case 0x60: {
@@ -2449,7 +2450,7 @@ int func_L00_00222B80(int a, int b) {
             char *r = (char *)D_0013E633 + 0xE1D;
             int n = scale_ticks(7);
             if (*(int *)(r + 0x2090) == 0x60) n = scale_ticks(0xD);
-            if (b) func_L00_00232C10(*(int *)(r + 0xA60) + 9, 1, (float)n);
+            if (b) HeroStartAnim(*(int *)(r + 0xA60) + 9, 1, (float)n);
         }
         break;
     }
@@ -2457,14 +2458,14 @@ int func_L00_00222B80(int a, int b) {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 6;
         *(int *)(p + 0x2284) = 0;
-        if (b) func_L00_00232C10(0xC, 0, (float)scale_ticks(8));
+        if (b) HeroStartAnim(0xC, 0, (float)scale_ticks(8));
         break;
     }
     case 0x5F: {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 6;
         *(int *)(p + 0x2284) = 0;
-        if (b) func_L00_00232C10(8, 0, (float)scale_ticks(8));
+        if (b) HeroStartAnim(8, 0, (float)scale_ticks(8));
         break;
     }
     case 0x5C: {
@@ -2476,9 +2477,9 @@ int func_L00_00222B80(int a, int b) {
         qcopy(p + 0xE0, p + 0x110);
         if (b) {
             if (2.5f < *(float *)(p + 0x2DC)) {
-                func_L00_00232C10(5, 0, (float)scale_ticks(8));
+                HeroStartAnim(5, 0, (float)scale_ticks(8));
             } else {
-                func_L00_00232C10(0, 0, (float)scale_ticks(0xB));
+                HeroStartAnim(0, 0, (float)scale_ticks(0xB));
             }
         }
         break;
@@ -2489,7 +2490,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x2284) = 0;
         *(float *)(p + 0x194) = func_001F9CE8(p + 0x110);
         *(short *)(p + 0x3B8) = 0;
-        if (b) func_L00_00232C10(3, 0x12, (float)scale_ticks(8));
+        if (b) HeroStartAnim(3, 0x12, (float)scale_ticks(8));
         break;
     }
     case 0x62: {
@@ -2497,19 +2498,19 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x208C) = 0x14;
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0x150, p + 0x110);
-        if (b) func_L00_00232C10(7, 0, (float)scale_ticks(0xC));
+        if (b) HeroStartAnim(7, 0, (float)scale_ticks(0xC));
         break;
     }
     case 0x5D: {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 7;
         *(int *)(p + 0x2284) = 0;
-        func_L00_002144A0(0.5f);
+        Hero_ScaleMotion(0.5f);
         qcopy(p + 0xE0, p + 0x110);
-        func_L00_002607A8(p + 0xE0, D_0015EE6C * 7.0f);
+        ClampVectorLength(p + 0xE0, D_0015EE6C * 7.0f);
         *(int *)(p + 0x1C0) = scale_ticks(0x4D);
         if (b) {
-            func_L00_00232C10(6, 3, -3.0f);
+            HeroStartAnim(6, 3, -3.0f);
             *(float *)(*(char **)(p + 0x2080) + 0x54) = D_L00_0017BEF0[*(int *)(p + 0xAA0)][(*(int *)(p + 0xAA4))++];
         }
         break;
@@ -2519,10 +2520,10 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x208C) = 0;
         *(int *)(p + 0x2284) = 0;
         if (*(unsigned char *)(p + 0x12EA) != 0 && *(short *)(p + 0x30C) == 0) {
-            func_L00_00222B80(0x58, 1);
+            HeroEnterMoveState(0x58, 1);
             return 0;
         }
-        if (b) func_L00_00232C10(0, 0, (float)scale_ticks(0xE));
+        if (b) HeroStartAnim(0, 0, (float)scale_ticks(0xE));
         break;
     }
     case 0x59: {
@@ -2530,8 +2531,8 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x208C) = 0;
         *(int *)(p + 0x2284) = 0;
         if (b) {
-            func_L00_00232C10(4, 0, (float)scale_ticks(7));
-            func_L00_00232E60(0xE, 0x22);
+            HeroStartAnim(4, 0, (float)scale_ticks(7));
+            HeroQueueSequence(0xE, 0x22);
         }
         break;
     }
@@ -2540,7 +2541,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x208C) = 2;
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0xE0, p + 0x110);
-        if (b) func_L00_00232C10(6, 0, (float)scale_ticks(0xC));
+        if (b) HeroStartAnim(6, 0, (float)scale_ticks(0xC));
         break;
     }
     case 0x55: {
@@ -2550,7 +2551,7 @@ int func_L00_00222B80(int a, int b) {
         *(float *)(p + 0x940) = D_0015EE70 * 24.0f;
         *(float *)(p + 0x944) = D_0015EE70 * 7.0f;
         qcopy(p + 0xE0, p + 0x110);
-        if (b) func_L00_00232C10(6, 0, (float)scale_ticks(7));
+        if (b) HeroStartAnim(6, 0, (float)scale_ticks(7));
         break;
     }
     case 0x54: {
@@ -2558,7 +2559,7 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x208C) = 1;
         *(int *)(p + 0x2284) = 0;
         if (*(unsigned char *)(p + 0x12EA) != 0 && *(short *)(p + 0x30C) == 0) {
-            func_L00_00222B80(0x58, 1);
+            HeroEnterMoveState(0x58, 1);
             return 0;
         }
         {
@@ -2569,7 +2570,7 @@ int func_L00_00222B80(int a, int b) {
             *(float *)(g + 0x194) = r;
             if (D_0015EE6C * 1.5f < r) *(float *)(g + 0x194) = D_0015EE6C * 1.5f;
             *(short *)(g + 0x3B8) = 0;
-            if (b) func_L00_00232C10(1, 0, (float)scale_ticks(8));
+            if (b) HeroStartAnim(1, 0, (float)scale_ticks(8));
         }
         break;
     }
@@ -2578,20 +2579,20 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x208C) = 0x14;
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0x150, p + 0x110);
-        if (b) func_L00_00232C10(3, 0, (float)scale_ticks(0xC));
+        if (b) HeroStartAnim(3, 0, (float)scale_ticks(0xC));
         break;
     }
     case 0x56: {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 7;
         *(int *)(p + 0x2284) = 0;
-        func_L00_002144A0(0.5f);
+        Hero_ScaleMotion(0.5f);
         qcopy(p + 0xE0, p + 0x110);
-        func_L00_002607A8(p + 0xE0, D_0015EE6C * 5.0f);
-        func_L00_002056D8(1);
+        ClampVectorLength(p + 0xE0, D_0015EE6C * 5.0f);
+        Hero_TakeDamage(1);
         *(int *)(p + 0x1C0) = scale_ticks(0x4D);
         if (b) {
-            func_L00_00232C10(2, 3, -3.0f);
+            HeroStartAnim(2, 3, -3.0f);
             *(float *)(*(char **)(p + 0x2080) + 0x54) = D_L00_0017BEF0[*(int *)(p + 0xAA0)][(*(int *)(p + 0xAA4))++];
         }
         break;
@@ -2600,7 +2601,7 @@ int func_L00_00222B80(int a, int b) {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 0xF;
         *(int *)(p + 0x2284) = 0;
-        if (*(int *)(p + 0x570) == 0) func_L00_002056D8(1);
+        if (*(int *)(p + 0x570) == 0) Hero_TakeDamage(1);
         *(int *)(p + 0x1C0) = scale_ticks(0x4D);
         *(float *)(p + 0x5CC) = D_0015EE6C * 2.5f;
         if (D_0015EE6C * 2.5f < *(float *)(p + 0x5B0)) *(float *)(p + 0x5B0) = D_0015EE6C * 2.5f;
@@ -2608,7 +2609,7 @@ int func_L00_00222B80(int a, int b) {
         clear_u64_value(p + 0xE0);
         clear_u64_value(p + 0x100);
         *(float *)(p + 0xE8) = D_0015EE6C * 10.0f;
-        if (b) func_L00_00232C10(0x10, 2, -3.0f);
+        if (b) HeroStartAnim(0x10, 2, -3.0f);
         break;
     }
     case 0x1D: {
@@ -2616,15 +2617,15 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x208C) = 9;
         *(unsigned char *)(p + 0x20AC) = 1;
         *(int *)(p + 0x2284) = 0;
-        func_L00_00232C10(func_L00_00205618(0), 0, (float)scale_ticks(0xA));
+        HeroStartAnim(Hero_PickSituationId(0), 0, (float)scale_ticks(0xA));
         break;
     }
     case 0x1E: {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x2284) = 0x51;
         *(int *)(p + 0x208C) = 0;
-        if (func_L00_002056D0(*(unsigned char *)(*(char **)(p + 0x2080) + 0x53)) != func_L00_00205618(1)) {
-            func_L00_00232C10(func_L00_00205618(1), 0, (float)scale_ticks(5));
+        if (func_L00_002056D0(*(unsigned char *)(*(char **)(p + 0x2080) + 0x53)) != Hero_PickSituationId(1)) {
+            HeroStartAnim(Hero_PickSituationId(1), 0, (float)scale_ticks(5));
         }
         break;
     }
@@ -2632,7 +2633,7 @@ int func_L00_00222B80(int a, int b) {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 9;
         *(int *)(p + 0x2284) = 0;
-        func_L00_00232C10(func_L00_00205618(0), 0, (float)scale_ticks(0xA));
+        HeroStartAnim(Hero_PickSituationId(0), 0, (float)scale_ticks(0xA));
         break;
     }
     case 0x72: {
@@ -2640,15 +2641,15 @@ int func_L00_00222B80(int a, int b) {
         *(int *)(p + 0x208C) = 9;
         *(unsigned char *)(p + 0x20AC) = 1;
         *(int *)(p + 0x2284) = 0;
-        func_L00_0020ED30();
-        func_L00_00232C10(func_L00_00205618(0), 0, (float)scale_ticks(0xA));
+        Hero_ClearPendingModuleAnim();
+        HeroStartAnim(Hero_PickSituationId(0), 0, (float)scale_ticks(0xA));
         break;
     }
     case 0x27: {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 8;
         *(int *)(p + 0x2284) = 0;
-        func_L00_00232C10(func_L00_00205618(0), 0, (float)scale_ticks(0xA));
+        HeroStartAnim(Hero_PickSituationId(0), 0, (float)scale_ticks(0xA));
         break;
     }
     case 0x32: {
@@ -2658,7 +2659,7 @@ int func_L00_00222B80(int a, int b) {
         *(unsigned char *)(p + 0x20A7) = 1;
         *(unsigned char *)(p + 0x20AD) = 1;
         *(unsigned char *)(p + 0x20AC) = 1;
-        if (b) func_L00_00232C10(func_L00_00205618(0), 0, -1.0f);
+        if (b) HeroStartAnim(Hero_PickSituationId(0), 0, -1.0f);
         break;
     }
     case 0x78: {
@@ -2668,7 +2669,7 @@ int func_L00_00222B80(int a, int b) {
         *(unsigned char *)(p + 0x20A7) = 1;
         *(unsigned char *)(p + 0x20AC) = 1;
         clear_u64_value(p + 0xE0);
-        if (b) func_L00_00232C10(0xB, 0, -1.0f);
+        if (b) HeroStartAnim(0xB, 0, -1.0f);
         break;
     }
     case 0x3B: {
@@ -2679,9 +2680,9 @@ int func_L00_00222B80(int a, int b) {
         *(unsigned char *)(p + 0x20A7) = 1;
         *(unsigned char *)(p + 0x20AD) = 1;
         n = scale_ticks(8);
-        func_L00_00232C10(0x44, 2, (float)n);
+        HeroStartAnim(0x44, 2, (float)n);
         m = *(char **)(p + 0x1090);
-        if (func_L00_00211A18(m)) func_00213DE0(m, 0xB, 2, n + scale_ticks(5));
+        if (IsMobyClass47(m)) MobyBlendAnimation(m, 0xB, 2, n + scale_ticks(5));
         break;
     }
     case 0x63:
@@ -2689,8 +2690,8 @@ int func_L00_00222B80(int a, int b) {
         char *p = (char *)D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 0x18;
         *(unsigned char *)(p + 0x20AC) = 1;
-        func_L00_0020ED30();
-        if (b) func_L00_00232C10(func_L00_00205618(0), 0, -1.0f);
+        Hero_ClearPendingModuleAnim();
+        if (b) HeroStartAnim(Hero_PickSituationId(0), 0, -1.0f);
         break;
     }
     }
@@ -2712,7 +2713,7 @@ int func_L00_00222B80(int a, int b) {
             *(int *)(t + 0x2110) = 1;
         }
     }
-    if (func_L00_0020DC00() == 0) {
+    if (Hero_IsInSpecialState() == 0) {
         char *t = (char *)D_0013E633 + 0xE1D;
         if (*(int *)(t + 0x1108) == 0 && *(int *)(t + 0x20F4) != 0) {
             *(int *)(t + 0x2110) = 1;
@@ -2721,11 +2722,11 @@ int func_L00_00222B80(int a, int b) {
     {
         char *t = (char *)D_0013E633 + 0xE1D;
         if (*(int *)(t + 0x208C) == 0x14) {
-            func_L00_0020ED30();
+            Hero_ClearPendingModuleAnim();
             *(unsigned char *)(t + 0x20AC) = 1;
         }
         if (*(int *)(t + 0x208C) != *(int *)(t + 0x2094)) {
-            func_L00_00207220();
+            HeroClearSoundSlots();
         }
         *(int *)(t + 0x198) = 0;
         *(int *)(t + 0x1A0) = 0;
@@ -2736,16 +2737,18 @@ int func_L00_00222B80(int a, int b) {
     }
     return 1;
 }
-void func_L00_00227E08(void) {
+/* Requests a hero state based on a byte of the hero block. */
+void Hero_SetStateFromMode(void) {
     switch (D_0013E633[0x2EC1]) {
-    case 0: func_L00_00222B80(0, 1); break;
-    case 1: func_L00_00222B80(0x43, 1); break;
-    case 2: func_L00_00222B80(0x5A, 1); break;
-    case 3: func_L00_00222B80(0x53, 1); break;
+    case 0: HeroEnterMoveState(0, 1); break;
+    case 1: HeroEnterMoveState(0x43, 1); break;
+    case 2: HeroEnterMoveState(0x5A, 1); break;
+    case 3: HeroEnterMoveState(0x53, 1); break;
     }
 }
 
-int func_L00_00227E90(void) {
+/* Tries to put the hero into state 0x23; returns 1 if it did. */
+int HeroTryEnterState35(void) {
     char *p = (char *)D_0013E633 + 0xE1D;
     int s = *(int *)(p + 0x2084);
     if ((unsigned)(s - 2) < 2 || s == 0) {
@@ -2753,9 +2756,9 @@ int func_L00_00227E90(void) {
             if (*(int *)(p + 0x1BC) < scale_ticks(6)) {
                 if (*(float *)(p + 0x229C) < 0.7f) {
                     if (*(unsigned char *)(p + 0x20AB) == 0) {
-                        func_L00_0020ED30();
+                        Hero_ClearPendingModuleAnim();
                         *(int *)(p + 0xD14) = 2;
-                        func_L00_00222B80(0x23, 1);
+                        HeroEnterMoveState(0x23, 1);
                         return 1;
                     }
                 }
@@ -2765,731 +2768,8 @@ int func_L00_00227E90(void) {
     return 0;
 }
 typedef u32 u128_27F48 __attribute__((mode(TI), aligned(16)));
-typedef union {
-    u128_27F48 q;
-    f32 f[4];
-    s32 i[4];
-} Vec4_27F48;
 struct Moby;
-struct MobyTrail_27F48 {
-    Vec4_27F48 pos[8]; /* 0x00: ring of source positions */
-    Vec4_27F48 rot[8]; /* 0x80: ring of source rotations */
-    s32 copy_fade[4]; /* 0x100: start of copy moby byte 0x23; all 0 ends the trail */
-    s32 delay[4]; /* 0x110: frames each copy lags behind */
-    struct Moby *copies[4]; /* 0x120 */
-    s16 head; /* 0x130: next ring slot */
-    s16 count; /* 0x132: ring entries filled (max 8) */
-    struct Moby *source; /* 0x134 */
-    s32 copy_count; /* 0x138: copies in use (max 4) */
-    s32 active; /* 0x13C */
-};
-struct HeroEase_27F48 {
-    u8 unk0; /* 0x00 */
-    u8 attached; /* 0x01: attached to its moby (FUN_0020cb10 / FUN_0020cb88) */
-    u8 pad_2[0xE];
-    Vec4_27F48 quat; /* 0x10: rotation built from rot (FUN_L00_00259f50) */
-    Vec4_27F48 scale3; /* 0x20: x/y/z = scale */
-    Vec4_27F48 translation; /* 0x30: copy of pos */
-    Vec4_27F48 rot; /* 0x40: eased toward rot_target */
-    Vec4_27F48 rot_vel; /* 0x50 */
-    Vec4_27F48 rot_target; /* 0x60: cleared every frame */
-    Vec4_27F48 pos; /* 0x70: eased toward pos_target */
-    Vec4_27F48 pos_vel; /* 0x80 */
-    Vec4_27F48 pos_target; /* 0x90: cleared every frame */
-    s16 unkA0; /* 0xA0: -1 = unused */
-    s16 kind; /* 0xA2: picks the moby (FUN_L00_00205110) */
-    f32 accel; /* 0xA4 */
-    f32 max_speed; /* 0xA8 */
-    f32 scale; /* 0xAC: reset to 1 every frame */
-};
-struct HeroItemSlot_27F48 {
-    struct Moby *moby; /* 0x00: item moby */
-    struct Moby *moby2; /* 0x04: second item moby */
-    u8 pad_08[0x4];
-    u8 *unk0C; /* 0x0C */
-    s32 button_mask; /* 0x10: pad buttons that hold the gadget states */
-    s32 unk14; /* 0x14: set on release */
-    s16 timer; /* 0x18: counts down; a slot change waits for 0 */
-    u8 unk1A; /* 0x1A: cleared on a slot change */
-    u8 unk1B; /* 0x1B: counts releases (FUN_L00_00210748, state 3) */
-    u8 unk1C; /* 0x1C: 2 blocks a slot change, 1 reloads timer */
-    u8 timer_reload; /* 0x1D: timer reload value */
-    u8 pad_1E[0x2];
-    s32 unk20; /* 0x20 */
-    s32 state; /* 0x24: 0 empty, 2 ready, 3 released */
-    s32 item_id; /* 0x28: item in the slot */
-    u8 pad_2C[0x4];
-    f32 unk30; /* 0x30 */
-    f32 unk34; /* 0x34 */
-    s32 unk38; /* 0x38 */
-    s16 unk3C; /* 0x3C */
-    u16 unk3E; /* 0x3E */
-    u8 pad_40[0x10];
-};
-struct HeroVelocityKey_27F48 {
-    f32 value;
-    f32 delta;
-    s32 frames;
-};
-struct HeroMotion_27F48 {
-    Vec4_27F48 pos; /* 0x80: world position */
-    Vec4_27F48 rot; /* 0x90: rotation; z is the yaw */
-    Vec4_27F48 unkA0; /* 0xA0 */
-    Vec4_27F48 unkB0; /* 0xB0 */
-    Vec4_27F48 unkC0; /* 0xC0 */
-    Vec4_27F48 unkD0; /* 0xD0 */
-    Vec4_27F48 velocity; /* 0xE0: per-frame velocity */
-    Vec4_27F48 platform_delta; /* 0xF0: platform movement this frame */
-    Vec4_27F48 displacement; /* 0x100: total displacement this frame */
-    Vec4_27F48 unk110; /* 0x110 */
-    Vec4_27F48 unk120; /* 0x120 */
-    Vec4_27F48 unk130; /* 0x130 */
-    Vec4_27F48 platform_carry; /* 0x140 */
-    Vec4_27F48 unk150; /* 0x150: copied from unk110/displacement on hero_set_state */
-    f32 speed_xy; /* 0x160: current horizontal speed per frame; eases toward ground_speed, capped at frame_time * 52 */
-    f32 unk164; /* 0x164 */
-    f32 unk168; /* 0x168 */
-    f32 unk16C; /* 0x16C */
-    Vec4_27F48 unk170; /* 0x170 */
-    f32 move_yaw; /* 0x180: angle, compared with rot.z */
-    f32 unk184; /* 0x184 */
-    f32 unk188; /* 0x188 */
-    u8 pad_18C[0x4];
-};
-struct HeroRandTimer_27F48 {
-    s32 fired; /* 0xFF0: 1 once the deadline passed */
-    s32 deadline; /* 0xFF4: frame count to wait for */
-    s32 range; /* 0xFF8: random span; 0 holds the timer off */
-};
-struct HeroState_27F48 {
-    s32 current; /* 0x2084: state id; hero_set_state sets it */
-    s32 step; /* 0x2088: sub-step, 0 on state change */
-    s32 control_mode; /* 0x208C */
-    s32 prev; /* 0x2090: state before the last change */
-    s32 prev_control_mode; /* 0x2094: control_mode before the last change */
-    s32 prev_timer; /* 0x2098: state_timer before the last change */
-    s32 prev2; /* 0x209C: state before prev */
-    s32 prev2_control_mode; /* 0x20A0: control mode before prev_control_mode */
-};
-struct HeroHealth_27F48 {
-    s32 hp; /* 0x22A8: hit points; 0 = dead */
-    s32 unk22AC; /* 0x22AC: swapped with health.hp */
-    s16 unk22B0; /* 0x22B0: s16 copy of health.hp */
-    s16 unk22B2; /* 0x22B2 */
-};
-struct Hero_27F48 {
-    f32 unk0[16]; /* 0x00: matrix */
-    f32 unk40[16]; /* 0x40 */
-    struct HeroMotion_27F48 motion; /* 0x80 */
-    f32 target_speed; /* 0x190: horizontal speed ground_speed eases toward; the stick handler writes it (0 with the stick centred) */
-    f32 ground_speed; /* 0x194: horizontal speed target this frame (0.095 running, i.e. 5.7 u/s at 60 fps; 0 idle) */
-    s32 state_timer; /* 0x198: frames in the current state */
-    s32 unk19C; /* 0x19C */
-    s32 unk1A0; /* 0x1A0 */
-    s32 unk1A4; /* 0x1A4 */
-    s32 unk1A8; /* 0x1A8 */
-    s32 unk1AC; /* 0x1AC */
-    s16 unk1B0; /* 0x1B0 */
-    s16 unk1B2; /* 0x1B2 */
-    s32 unk1B4; /* 0x1B4 */
-    s32 unk1B8; /* 0x1B8 */
-    s32 unk1BC; /* 0x1BC */
-    s32 invulnerable_frames; /* 0x1C0 */
-    s32 unk1C4; /* 0x1C4 */
-    s16 unk1C8; /* 0x1C8 */
-    s16 unk1CA; /* 0x1CA */
-    s32 unk1CC; /* 0x1CC */
-    s32 unk1D0; /* 0x1D0 */
-    s32 unk1D4; /* 0x1D4 */
-    s16 unk1D8; /* 0x1D8 */
-    s16 unk1DA; /* 0x1DA */
-    s16 unk1DC; /* 0x1DC */
-    s16 unk1DE; /* 0x1DE */
-    s16 unk1E0; /* 0x1E0 */
-    s16 unk1E2; /* 0x1E2 */
-    s16 unk1E4; /* 0x1E4 */
-    s16 unk1E6; /* 0x1E6 */
-    s16 fidget_cooldown; /* 0x1E8 */
-    s16 unk1EA; /* 0x1EA */
-    s16 unk1EC; /* 0x1EC */
-    s16 unk1EE; /* 0x1EE */
-    s16 unk1F0; /* 0x1F0 */
-    s16 unk1F2; /* 0x1F2 */
-    s16 unk1F4; /* 0x1F4 */
-    s16 unk1F6; /* 0x1F6 */
-    s16 unk1F8; /* 0x1F8 */
-    u8 pad_1FA[0x6];
-    Vec4_27F48 unk200; /* 0x200 */
-    Vec4_27F48 unk210; /* 0x210 */
-    f32 capsule_top; /* 0x220 */
-    f32 unk224; /* 0x224 */
-    f32 unk228; /* 0x228 */
-    f32 unk22C; /* 0x22C */
-    f32 unk230; /* 0x230 */
-    f32 unk234; /* 0x234 */
-    f32 unk238; /* 0x238: velocity of the unk234 spring (FUN_L00_00211380) */
-    u8 *coll_hit_moby; /* 0x23C: moby of the last push-out collision hit */
-    s32 unk240; /* 0x240 */
-    union { f32 f; s32 i; } unk244; /* 0x244: written as a float and zeroed as an int */
-    f32 wall_probe_distance; /* 0x248 */
-    u8 pad_24C[0x4];
-    f32 unk250; /* 0x250 */
-    u8 unk254; /* 0x254 */
-    u8 unk255; /* 0x255 */
-    u8 pad_256[0x1];
-    u8 wall_hit; /* 0x257 */
-    f32 unk258; /* 0x258 */
-    f32 unk25C; /* 0x25C */
-    s32 unk260; /* 0x260 */
-    u8 pad_264[0xC];
-    Vec4_27F48 unk270; /* 0x270 */
-    Vec4_27F48 unk280; /* 0x280 */
-    Vec4_27F48 gravity_dir; /* 0x290: gravity direction (0, 0, -1) */
-    Vec4_27F48 ground_point; /* 0x2A0: ground probe hit point under the hero */
-    Vec4_27F48 unk2B0; /* 0x2B0 */
-    union { f32 f[2]; s32 i[2]; } unk2C0; /* 0x2C0: written as floats and zeroed as ints */
-    union { f32 f[2]; s32 i[2]; } unk2C8; /* 0x2C8: written as floats and zeroed as ints */
-    union { f32 f[2]; s32 i[2]; } unk2D0; /* 0x2D0: written as floats and zeroed as ints */
-    union { f32 f; s32 i; } ground_z; /* 0x2D8: ground_point.z; zeroed as an int */
-    f32 ground_distance; /* 0x2DC: distance from motion.pos to ground_point */
-    union { f32 f; s32 i; } ground_slope; /* 0x2E0: written as a float and zeroed as an int */
-    union { f32 f; s32 i; } ground_pitch; /* 0x2E4: written as a float and zeroed as an int */
-    union { f32 f; s32 i; } unk2E8; /* 0x2E8: written as a float and zeroed as an int */
-    f32 downhill_yaw; /* 0x2EC */
-    f32 water_surface_z; /* 0x2F0 */
-    f32 unk2F4; /* 0x2F4 */
-    s32 unk2F8; /* 0x2F8 */
-    struct Moby *ground_moby; /* 0x2FC: moby the ground probe hit (0 = level ground) */
-    s32 grounded_frames; /* 0x300: frames on the ground */
-    f32 unk304; /* 0x304 */
-    s16 unk308; /* 0x308 */
-    s16 unk30A; /* 0x30A */
-    union { s16 s; u16 u; } frames_off_ground; /* 0x30C: read signed, incremented unsigned */
-    union { s16 s; u16 u; } air_frames; /* 0x30E: frames off the ground, 0 on landing */
-    Vec4_27F48 unk310; /* 0x310: attach anchor position (written by FUN_L00_00260668, read by FUN_L00_002604f0) */
-    Vec4_27F48 unk320; /* 0x320: attach anchor rotation */
-    Vec4_27F48 unk330; /* 0x330: attach anchor second position */
-    u8 pad_340[0x10];
-    Vec4_27F48 unk350; /* 0x350: per-frame move of the moby the hero is attached to (FUN_L00_00233f80) */
-    s32 unk360; /* 0x360: attached moby (FUN_L00_00233f80) */
-    s32 unk364; /* 0x364: attach flags, bits 0 and 1 */
-    u8 pad_368[0x48];
-    f32 unk3B0; /* 0x3B0 */
-    union { f32 f; s32 i; } unk3B4; /* 0x3B4: written as a float and zeroed as an int */
-    s16 unk3B8; /* 0x3B8 */
-    u8 pad_3BA[0x2];
-    s16 unk3BC; /* 0x3BC */
-    s16 unk3BE; /* 0x3BE */
-    u8 pad_3C0[0x10];
-    s32 unk3D0; /* 0x3D0 */
-    s32 unk3D4; /* 0x3D4 */
-    f32 unk3D8; /* 0x3D8 */
-    f32 unk3DC; /* 0x3DC */
-    s32 unk3E0; /* 0x3E0 */
-    struct HeroVelocityKey_27F48 *unk3E4; /* 0x3E4: keys run by hero_integrate_velocity while unk41C is set */
-    s32 unk3E8; /* 0x3E8: current key in unk3E4, -1 before the first */
-    s32 unk3EC; /* 0x3EC: frames spent in the current key */
-    f32 unk3F0; /* 0x3F0: value added to velocity.z each frame */
-    f32 unk3F4; /* 0x3F4 */
-    f32 unk3F8; /* 0x3F8 */
-    u8 pad_3FC[0x4];
-    Vec4_27F48 unk400; /* 0x400 */
-    f32 unk410; /* 0x410 */
-    f32 unk414; /* 0x414 */
-    s32 unk418; /* 0x418: set when velocity.z clamps to unk500.z, counts up */
-    s16 unk41C; /* 0x41C */
-    s16 unk41E; /* 0x41E: set to 1 when FUN_L00_00233a78(velocity) < 0.001 */
-    s32 unk420; /* 0x420: per-state scale_game_frames(N), compared with state_timer */
-    f32 unk424; /* 0x424 */
-    f32 unk428; /* 0x428 */
-    f32 unk42C; /* 0x42C */
-    f32 unk430; /* 0x430 */
-    f32 unk434; /* 0x434 */
-    f32 unk438; /* 0x438 */
-    f32 unk43C; /* 0x43C */
-    f32 unk440; /* 0x440 */
-    f32 unk444; /* 0x444 */
-    f32 unk448; /* 0x448 */
-    s32 unk44C; /* 0x44C */
-    s32 unk450; /* 0x450 */
-    f32 unk454; /* 0x454 */
-    f32 unk458; /* 0x458 */
-    f32 unk45C; /* 0x45C */
-    Vec4_27F48 unk460; /* 0x460 */
-    Vec4_27F48 unk470; /* 0x470 */
-    f32 unk480; /* 0x480 */
-    f32 unk484; /* 0x484 */
-    f32 unk488; /* 0x488 */
-    f32 unk48C; /* 0x48C */
-    f32 unk490; /* 0x490 */
-    f32 unk494; /* 0x494 */
-    s16 unk498; /* 0x498 */
-    s16 unk49A; /* 0x49A */
-    s16 unk49C; /* 0x49C */
-    s16 unk49E; /* 0x49E */
-    f32 unk4A0; /* 0x4A0 */
-    s16 unk4A4; /* 0x4A4 */
-    s16 unk4A6; /* 0x4A6 */
-    s16 unk4A8; /* 0x4A8 */
-    s16 unk4AA; /* 0x4AA */
-    s16 unk4AC; /* 0x4AC */
-    u8 unk4AE; /* 0x4AE */
-    u8 unk4AF; /* 0x4AF */
-    f32 unk4B0; /* 0x4B0 */
-    u8 pad_4B4[0x4];
-    f32 unk4B8; /* 0x4B8 */
-    s32 unk4BC; /* 0x4BC */
-    f32 unk4C0; /* 0x4C0 */
-    s32 unk4C4; /* 0x4C4 */
-    u8 pad_4C8[0x8];
-    Vec4_27F48 unk4D0; /* 0x4D0 */
-    f32 unk4E0; /* 0x4E0: ledge height (FUN_L00_0020bed0) */
-    f32 unk4E4; /* 0x4E4 */
-    s32 unk4E8; /* 0x4E8 */
-    f32 unk4EC; /* 0x4EC */
-    f32 unk4F0; /* 0x4F0 */
-    u32 unk4F4; /* 0x4F4: ledge flags, bit 0: no headroom above the ledge (FUN_L00_0020bed0) */
-    s32 unk4F8; /* 0x4F8: first argument of FUN_L00_00233f80 (FUN_L01_00233de0) */
-    u8 pad_4FC[0x4];
-    Vec4_27F48 unk500; /* 0x500 */
-    Vec4_27F48 unk510; /* 0x510 */
-    Vec4_27F48 unk520; /* 0x520 */
-    Vec4_27F48 unk530; /* 0x530 */
-    Vec4_27F48 unk540; /* 0x540 */
-    Vec4_27F48 unk550; /* 0x550 */
-    s32 unk560; /* 0x560 */
-    s32 unk564; /* 0x564 */
-    f32 unk568; /* 0x568 */
-    s32 grind_rail; /* 0x56C */
-    s32 unk570; /* 0x570 */
-    f32 unk574; /* 0x574 */
-    s32 unk578; /* 0x578 */
-    f32 unk57C; /* 0x57C */
-    f32 unk580; /* 0x580 */
-    s32 unk584; /* 0x584 */
-    f32 unk588; /* 0x588 */
-    s32 unk58C; /* 0x58C */
-    s32 unk590; /* 0x590 */
-    s32 unk594; /* 0x594 */
-    s32 unk598; /* 0x598 */
-    f32 unk59C; /* 0x59C */
-    s32 unk5A0; /* 0x5A0 */
-    s32 unk5A4; /* 0x5A4 */
-    s32 unk5A8; /* 0x5A8 */
-    union { f32 f; s32 i; } unk5AC; /* 0x5AC: float approached toward a speed, zeroed as an int */
-    f32 unk5B0; /* 0x5B0 */
-    s32 unk5B4; /* 0x5B4 */
-    s32 unk5B8; /* 0x5B8 */
-    s16 unk5BC; /* 0x5BC */
-    s16 unk5BE; /* 0x5BE */
-    s32 unk5C0; /* 0x5C0 */
-    s32 unk5C4; /* 0x5C4 */
-    f32 unk5C8; /* 0x5C8 */
-    f32 unk5CC; /* 0x5CC */
-    f32 unk5D0; /* 0x5D0 */
-    f32 unk5D4; /* 0x5D4 */
-    struct Moby *unk5D8; /* 0x5D8 */
-    f32 unk5DC; /* 0x5DC */
-    Vec4_27F48 unk5E0; /* 0x5E0 */
-    s32 *unk5F0; /* 0x5F0 */
-    s32 unk5F4; /* 0x5F4 */
-    f32 unk5F8; /* 0x5F8 */
-    s32 unk5FC; /* 0x5FC */
-    s32 unk600; /* 0x600 */
-    f32 unk604; /* 0x604 */
-    u8 pad_608[0x4];
-    s32 unk60C; /* 0x60C */
-    f32 unk610; /* 0x610 */
-    f32 unk614; /* 0x614 */
-    union { f32 f; s32 i; } unk618; /* 0x618: float distance clamp, zeroed as an int */
-    u8 pad_61C[0x24];
-    Vec4_27F48 basis[3]; /* 0x640: rotation rows (transform_vector_by_basis) */
-    f32 unk670; /* 0x670 */
-    f32 unk674; /* 0x674 */
-    u8 pad_678[0xC];
-    f32 unk684; /* 0x684 */
-    f32 unk688; /* 0x688 */
-    u8 pad_68C[0x4];
-    f32 unk690; /* 0x690 */
-    f32 unk694; /* 0x694 */
-    s32 unk698; /* 0x698 */
-    f32 unk69C; /* 0x69C */
-    s32 unk6A0; /* 0x6A0 */
-    struct Moby *unk6A4; /* 0x6A4 */
-    f32 unk6A8; /* 0x6A8 */
-    f32 unk6AC; /* 0x6AC */
-    f32 unk6B0; /* 0x6B0 */
-    f32 unk6B4; /* 0x6B4 */
-    u8 pad_6B8[0x8];
-    Vec4_27F48 unk6C0; /* 0x6C0: 0x60 bytes cleared by fill_transfer_words */
-    f32 unk6D0; /* 0x6D0 */
-    f32 unk6D4; /* 0x6D4 */
-    u8 pad_6D8[0x8];
-    s32 unk6E0[6]; /* 0x6E0: one flag per pose, indexed by unk88F */
-    s32 unk6F8; /* 0x6F8: counts the flags set in unk6E0 */
-    u8 pad_6FC[0x24];
-    Vec4_27F48 unk720; /* 0x720 */
-    u8 pad_730[0x10];
-    Vec4_27F48 unk740; /* 0x740 */
-    Vec4_27F48 unk750; /* 0x750 */
-    Vec4_27F48 unk760; /* 0x760 */
-    Vec4_27F48 unk770; /* 0x770 */
-    Vec4_27F48 unk780; /* 0x780 */
-    Vec4_27F48 unk790; /* 0x790 */
-    s16 unk7A0[8]; /* 0x7A0 */
-    s16 unk7B0[8]; /* 0x7B0 */
-    s16 unk7C0[8]; /* 0x7C0 */
-    f32 unk7D0[0x20]; /* 0x7D0 */
-    u8 pad_850[0x4];
-    f32 unk854; /* 0x854 */
-    f32 unk858; /* 0x858 */
-    f32 unk85C; /* 0x85C */
-    f32 unk860; /* 0x860 */
-    s32 unk864; /* 0x864 */
-    f32 unk868; /* 0x868 */
-    u8 *unk86C; /* 0x86C */
-    s32 unk870; /* 0x870 */
-    f32 unk874; /* 0x874 */
-    f32 unk878; /* 0x878 */
-    f32 unk87C; /* 0x87C */
-    s32 unk880; /* 0x880 */
-    s16 unk884; /* 0x884 */
-    s16 unk886; /* 0x886 */
-    s16 unk888; /* 0x888 */
-    s16 unk88A; /* 0x88A */
-    u8 unk88C; /* 0x88C */
-    u8 unk88D; /* 0x88D */
-    u8 unk88E; /* 0x88E */
-    u8 unk88F; /* 0x88F */
-    u8 *unk890; /* 0x890 */
-    s32 unk894; /* 0x894: frame counter shown as m:ss.hh on the HUD (FUN_L05_00266710) */
-    s16 unk898; /* 0x898 */
-    s16 unk89A; /* 0x89A: shown + 1 (capped at 3) on the HUD (FUN_L05_00266320) */
-    s16 unk89C; /* 0x89C */
-    s16 unk89E; /* 0x89E */
-    f32 unk8A0; /* 0x8A0 */
-    f32 unk8A4; /* 0x8A4 */
-    s32 unk8A8; /* 0x8A8: count shown on the HUD (FUN_L05_00266710) */
-    s16 unk8AC; /* 0x8AC */
-    u8 pad_8AE[0x1];
-    u8 unk8AF; /* 0x8AF */
-    s16 unk8B0; /* 0x8B0 */
-    s16 unk8B2; /* 0x8B2 */
-    void *unk8B4; /* 0x8B4 */
-    union { f32 f; s32 i; } unk8B8; /* 0x8B8: read as a float, zeroed as an int */
-    s16 unk8BC; /* 0x8BC */
-    s16 unk8BE; /* 0x8BE */
-    s32 unk8C0; /* 0x8C0: 1..3 picks the HUD rank string (FUN_L05_00266320) */
-    s32 unk8C4; /* 0x8C4 */
-    u8 pad_8C8[0x2];
-    s16 unk8CA; /* 0x8CA */
-    s16 unk8CC; /* 0x8CC */
-    u8 unk8CE; /* 0x8CE */
-    u8 unk8CF; /* 0x8CF */
-    Vec4_27F48 unk8D0; /* 0x8D0 */
-    s32 unk8E0; /* 0x8E0 */
-    f32 unk8E4; /* 0x8E4 */
-    f32 unk8E8; /* 0x8E8 */
-    f32 unk8EC; /* 0x8EC */
-    s32 unk8F0; /* 0x8F0 */
-    s32 unk8F4; /* 0x8F4 */
-    s16 unk8F8; /* 0x8F8 */
-    u8 pad_8FA[0x2];
-    f32 unk8FC; /* 0x8FC */
-    s16 unk900; /* 0x900 */
-    s16 unk902; /* 0x902 */
-    s16 unk904; /* 0x904 */
-    s16 unk906; /* 0x906 */
-    s16 unk908; /* 0x908 */
-    s16 unk90A; /* 0x90A */
-    s16 unk90C; /* 0x90C */
-    s16 unk90E; /* 0x90E */
-    s32 unk910; /* 0x910 */
-    s32 unk914; /* 0x914 */
-    u8 pad_918[0x8];
-    Vec4_27F48 move_impulse; /* 0x920: one-frame displacement; the hero update adds it to motion.pos and clears it (some states; zero while running) */
-    f32 unk930; /* 0x930 */
-    f32 unk934; /* 0x934 */
-    f32 unk938; /* 0x938 */
-    u8 pad_93C[0x4];
-    f32 unk940; /* 0x940 */
-    f32 unk944; /* 0x944 */
-    f32 unk948; /* 0x948 */
-    f32 unk94C; /* 0x94C */
-    f32 unk950; /* 0x950 */
-    f32 unk954; /* 0x954 */
-    u8 pad_958[0x8];
-    f32 unk960; /* 0x960 */
-    struct Moby *unk964; /* 0x964 */
-    s32 unk968; /* 0x968 */
-    f32 unk96C; /* 0x96C */
-    f32 unk970; /* 0x970 */
-    s32 unk974; /* 0x974 */
-    s32 unk978; /* 0x978 */
-    f32 unk97C; /* 0x97C */
-    f32 unk980; /* 0x980 */
-    f32 unk984; /* 0x984 */
-    s32 unk988; /* 0x988 */
-    u8 pad_98C[0x4];
-    struct Moby *unk990; /* 0x990 */
-    struct Moby *unk994; /* 0x994 */
-    f32 unk998; /* 0x998 */
-    s16 unk99C; /* 0x99C */
-    s16 unk99E; /* 0x99E */
-    f32 unk9A0; /* 0x9A0 */
-    f32 unk9A4; /* 0x9A4 */
-    f32 unk9A8; /* 0x9A8 */
-    f32 unk9AC; /* 0x9AC */
-    f32 unk9B0; /* 0x9B0 */
-    f32 unk9B4; /* 0x9B4 */
-    f32 unk9B8; /* 0x9B8 */
-    s16 unk9BC; /* 0x9BC */
-    s16 unk9BE; /* 0x9BE */
-    u8 pad_9C0[0x4];
-    f32 unk9C4; /* 0x9C4 */
-    f32 unk9C8; /* 0x9C8 */
-    f32 unk9CC; /* 0x9CC */
-    f32 unk9D0; /* 0x9D0: rail yaw (FUN_L01_002f6328) */
-    f32 unk9D4; /* 0x9D4 */
-    u8 pad_9D8[0x4];
-    f32 unk9DC; /* 0x9DC: rail speed, eased toward the rail's speed */
-    f32 unk9E0; /* 0x9E0: pull toward the rail, capped at the distance */
-    f32 unk9E4; /* 0x9E4 */
-    f32 unk9E8; /* 0x9E8 */
-    u8 pad_9EC[0x64];
-    u8 *unkA50; /* 0xA50 */
-    struct Moby *unkA54; /* 0xA54 */
-    s32 unkA58; /* 0xA58 */
-    f32 unkA5C; /* 0xA5C */
-    s32 attack_record; /* 0xA60 */
-    s32 unkA64; /* 0xA64 */
-    f32 unkA68; /* 0xA68 */
-    f32 speed_scale; /* 0xA6C: multiplier on the run target in some states (target = frame_time * 5.7 * speed_scale); 1.0 normally */
-    f32 unkA70; /* 0xA70 */
-    f32 aim_yaw; /* 0xA74: gadget aim yaw (FUN_L00_00217658) */
-    f32 aim_pitch; /* 0xA78: gadget aim pitch */
-    s32 unkA7C; /* 0xA7C */
-    s32 unkA80; /* 0xA80 */
-    u8 *unkA84; /* 0xA84 */
-    u8 *unkA88; /* 0xA88 */
-    void *unkA8C; /* 0xA8C */
-    f32 anim_speed; /* 0xA90 */
-    f32 unkA94; /* 0xA94 */
-    s32 unkA98; /* 0xA98 */
-    s32 unkA9C; /* 0xA9C */
-    s32 unkAA0; /* 0xAA0 */
-    s32 unkAA4; /* 0xAA4 */
-    f32 anim_frame; /* 0xAA8 */
-    f32 unkAAC; /* 0xAAC */
-    s32 unkAB0; /* 0xAB0 */
-    s32 unkAB4; /* 0xAB4 */
-    s32 unkAB8; /* 0xAB8 */
-    u8 pad_ABC[0x244];
-    u8*unkD00; /* 0xD00 */
-    u8*unkD04; /* 0xD04 */
-    u8 *unkD08[2]; /* 0xD08: per item slot 0/1: moby from FUN_L00_0024f028 */
-    u8 *unkD10; /* 0xD10 */
-    s32 unkD14; /* 0xD14 */
-    u8 pad_D18[0x8];
-    f32 unkD20; /* 0xD20 */
-    u8 pad_D24[0x2CC];
-    struct HeroRandTimer_27F48 rand_timer;/* 0xFF0 */
-    u8 pad_FFC[0x8];
-    s32 unk1004; /* 0x1004 */
-    s32 unk1008; /* 0x1008 */
-    u8 pad_100C[0x4];
-    s32 unk1010; /* 0x1010 */
-    f32 unk1014; /* 0x1014 */
-    f32 unk1018; /* 0x1018 */
-    u8 pad_101C[0x8];
-    s32 unk1024; /* 0x1024: cleared by FUN_L00_0020a500 */
-    s32 unk1028; /* 0x1028: cleared by FUN_L00_0020a500 */
-    u8 pad_102C[0x8];
-    s32 unk1034; /* 0x1034: cleared by FUN_L00_0020a500 */
-    s32 unk1038; /* 0x1038: cleared by FUN_L00_0020a500 */
-    u8 pad_103C[0x8];
-    s32 unk1044; /* 0x1044: cleared by FUN_L00_0020a500 */
-    s32 unk1048; /* 0x1048: cleared by FUN_L00_0020a500 */
-    u8 pad_104C[0x8];
-    s32 unk1054; /* 0x1054: cleared by FUN_L00_0020a500 */
-    s32 unk1058; /* 0x1058: cleared by FUN_L00_0020a500 */
-    u8 pad_105C[0x34];
-    struct HeroItemSlot_27F48 items[7]; /* 0x1090: item slots; slot 0 is the equipped gadget */
-    u8 pad_12C0[0x20];
-    s16 ground_type; /* 0x12E0 */
-    u8 unk12E2; /* 0x12E2 */
-    u8 unk12E3; /* 0x12E3 */
-    u8 base_condition; /* 0x12E4 */
-    u8 selector_1; /* 0x12E5 */
-    u8 selector_3; /* 0x12E6 */
-    u8 unk12E7; /* 0x12E7 */
-    u8 unk12E8; /* 0x12E8 */
-    u8 unk12E9; /* 0x12E9 */
-    u8 on_slip_ground; /* 0x12EA */
-    u8 selector_11; /* 0x12EB */
-    u8 selector_13; /* 0x12EC */
-    u8 unk12ED; /* 0x12ED */
-    u8 unk12EE; /* 0x12EE */
-    u8 pad_12EF[0x301];
-    struct Moby *ship_moby; /* 0x15F0: the ship the hero is flying (l17 FUN_L17_002ed018) */
-    s16 ship_oclass; /* 0x15F4: its oclass, -1 when none */
-    u8 ship_ammo; /* 0x15F6: shots left in the space levels; firing needs one and takes it (FUN_L11_003126f8) */
-    u8 ship_ammo_max; /* 0x15F7: ammo pips the ship HUD draws, lit while below ship_ammo */
-    u8 unk15F8; /* 0x15F8 */
-    u8 unk15F9; /* 0x15F9 */
-    u8 unk15FA; /* 0x15FA */
-    u8 unk15FB; /* 0x15FB */
-    f32 ship_hp; /* 0x15FC: ship health; l17 subtracts collision damage and explodes the ship below 0 */
-    f32 ship_hp_max; /* 0x1600: full ship_hp; the HUD bar shows ship_hp over it */
-    f32 unk1604; /* 0x1604 */
-    s32 ship_hp_percent; /* 0x1608: ship_hp as a percentage for the HUD */
-    s16 unk160C; /* 0x160C */
-    u8 unk160E; /* 0x160E */
-    u8 ship_flags; /* 0x160F: 2 = being steered back from the edge or height limit of the space arena (FUN_L11_00313f60) */
-    u8 pad_1610[0x4];
-    s32 unk1614; /* 0x1614 */
-    u8 pad_1618[0x8];
-    void *unk1620; /* 0x1620 */
-    void *unk1624; /* 0x1624 */
-    u8 pad_1628[0x8];
-    s32 unk1630; /* 0x1630 */
-    s16 unk1634; /* 0x1634 */
-    s16 unk1636; /* 0x1636 */
-    u8 pad_1638[0x8];
-    Vec4_27F48 unk1640; /* 0x1640 */
-    s32 unk1650; /* 0x1650 */
-    u8 pad_1654[0xC];
-    s32 unk1660; /* 0x1660 */
-    u8 pad_1664[0xC];
-    struct MobyTrail_27F48 trail; /* 0x1670: trail of moby copies following hero.moby */
-    u8 unk17B0[0x140]; /* 0x17B0: buffer handed to FUN_L00_00262500 / FUN_L00_00262528 */
-    struct HeroEase_27F48 unk18F0[3]; /* 0x18F0: eased records, kind 5 set when an item slot is ready (FUN_L00_00210748) */
-    Vec4_27F48 unk1B00[32]; /* 0x1B00: ring of 32 quads indexed by unk21B0 */
-    u8 unk1D00[0x20]; /* 0x1D00 */
-    f32 stick_x; /* 0x1D20: stick vector (d-pad when the stick is idle) */
-    f32 stick_y; /* 0x1D24 */
-    u8 pad_1D28[0x68];
-    struct HeroEase_27F48 unk1D90; /* 0x1D90: manipulator record handed to attach_manipulator (FUN_L00_00234808) */
-    u8 pad_1E40[0x70];
-    s16 unk1EB0; /* 0x1EB0 */
-    s16 unk1EB2; /* 0x1EB2: once flag for queueing FUN_L00_00207d40 */
-    u8 pad_1EB4[0x1C];
-    f32 unk1ED0; /* 0x1ED0 */
-    f32 unk1ED4; /* 0x1ED4 */
-    f32 unk1ED8; /* 0x1ED8 */
-    u8 pad_1EDC[0x8];
-    f32 unk1EE4; /* 0x1EE4 */
-    u8 pad_1EE8[0x20];
-    s32 unk1F08; /* 0x1F08 */
-    u8 pad_1F0C[0x4];
-    Vec4_27F48 unk1F10; /* 0x1F10 */
-    f32 unk1F20; /* 0x1F20 */
-    f32 unk1F24; /* 0x1F24 */
-    f32 unk1F28; /* 0x1F28 */
-    u8 pad_1F2C[0x13];
-    s8 unk1F3F; /* 0x1F3F */
-    f32 unk1F40; /* 0x1F40 */
-    u8 pad_1F44[0x1C];
-    u8 unk1F60[0x40]; /* 0x1F60: 0x40-byte buffer cleared by FUN_L00_002b58d8 */
-    u8 unk1FA0[0x40]; /* 0x1FA0: 0x40-byte buffer cleared by FUN_L00_002b58d8 */
-    u8 *unk1FE0; /* 0x1FE0: moby set by FUN_L00_002b58d8 */
-    u8 pad_1FE4[0x11];
-    u8 unk1FF5; /* 0x1FF5 */
-    u8 ammo_used; /* 0x1FF6 */
-    u8 ammo_capacity; /* 0x1FF7 */
-    u8 pad_1FF8[0x28];
-    u8 *unk2020[6]; /* 0x2020: six moby slots, filled at the index a moby carries at +0x54 */
-    u8 pad_2038[0x8];
-    struct Moby *unk2040; /* 0x2040: nearest oclass 0x25D moby (FUN_L00_002d2ee8) */
-    f32 unk2044; /* 0x2044: distance to unk2040; 100000 when none */
-    s32 unk2048; /* 0x2048 */
-    u8 pad_204C[0x4];
-    struct Moby *unk2050[10]; /* 0x2050 */
-    s32 unk2078; /* 0x2078 */
-    s32 unk207C; /* 0x207C */
-    struct Moby *moby; /* 0x2080: the hero's moby */
-    struct HeroState_27F48 state; /* 0x2084 */
-    u8 vehicle_mode; /* 0x20A4 */
-    u8 unk20A5; /* 0x20A5 */
-    u8 unk20A6; /* 0x20A6: forces slot 0 to item 8 */
-    u8 unk20A7; /* 0x20A7 */
-    u8 unk20A8; /* 0x20A8 */
-    u8 unk20A9; /* 0x20A9 */
-    u8 unk20AA; /* 0x20AA */
-    u8 unk20AB; /* 0x20AB */
-    u8 unk20AC; /* 0x20AC */
-    u8 unk20AD; /* 0x20AD */
-    u8 unk20AE; /* 0x20AE */
-    u8 unk20AF; /* 0x20AF */
-    u8 unk20B0; /* 0x20B0 */
-    u8 unk20B1; /* 0x20B1 */
-    u8 unk20B2; /* 0x20B2 */
-    u8 unk20B3; /* 0x20B3 */
-    u8 unk20B4; /* 0x20B4 */
-    u8 pad_20B5[0x3];
-    s32 pending_item[7]; /* 0x20B8: per slot: item to switch to */
-    s32 selected_item[7]; /* 0x20D4: per slot: item after a switch */
-    s32 saved_item[7]; /* 0x20F0: per slot: item kept while another is forced in */
-    s32 restore_item[7]; /* 0x210C: per slot: 1 puts saved_item back */
-    f32 unk2128[32]; /* 0x2128: ring of 32 yaws (motion.rot.z) indexed by unk21A8 */
-    s32 unk21A8; /* 0x21A8: unk2128 ring index */
-    s32 unk21AC; /* 0x21AC: unk2128 ring count */
-    s32 unk21B0; /* 0x21B0: unk1B00 ring index */
-    s32 unk21B4; /* 0x21B4: unk1B00 ring count */
-    u8 pad_21B8[0x20];
-    s16 unk21D8[8][4]; /* 0x21D8: 8 slots of four s16 */
-    s32 unk2218; /* 0x2218: voice of sound slot 0, -1 = none (slots 0-7 run to 0x2234, FUN_L00_00206c08) */
-    s32 unk221C; /* 0x221C: voice of sound slot 1 */
-    s32 unk2220; /* 0x2220 */
-    s32 unk2224; /* 0x2224 */
-    s32 unk2228; /* 0x2228 */
-    s32 unk222C; /* 0x222C */
-    s32 unk2230; /* 0x2230 */
-    s32 unk2234; /* 0x2234 */
-    struct Moby *unk2238[8]; /* 0x2238: per sound slot (unk2218 + i * 4): moby the sound plays on, 0 = hero.moby */
-    u8 pad_2258[0x18];
-    s32 unk2270; /* 0x2270 */
-    s32 unk2274; /* 0x2274 */
-    void *unk2278; /* 0x2278 */
-    s32 unk227C; /* 0x227C */
-    struct Moby *unk2280; /* 0x2280 */
-    s32 unk2284; /* 0x2284 */
-    f32 reach_distance; /* 0x2288 */
-    f32 reach_height; /* 0x228C */
-    f32 unk2290; /* 0x2290 */
-    s32 unk2294; /* 0x2294 */
-    s32 unk2298; /* 0x2298 */
-    f32 unk229C; /* 0x229C */
-    s32 unk22A0; /* 0x22A0 */
-    f32 unk22A4; /* 0x22A4 */
-    struct HeroHealth_27F48 health; /* 0x22A8 */
-    s32 unk22B4; /* 0x22B4 */
-    f32 unk22B8; /* 0x22B8: distance to the nearest carrying path this frame (FUN_L01_002f3120 keeps the minimum) */
-    u8 pad_22BC[0x8];
-    s32 unk22C4; /* 0x22C4 */
-    s16 unk22C8; /* 0x22C8 */
-    u8 unk22CA; /* 0x22CA */
-    u8 unk22CB; /* 0x22CB */
-    s16 unk22CC; /* 0x22CC */
-    s16 unk22CE; /* 0x22CE */
-    u8 pad_22D0[0x2];
-    s16 unk22D2; /* 0x22D2 */
-    s16 unk22D4; /* 0x22D4: countdown set on pad bit 0x10 press */
-    s16 unk22D6; /* 0x22D6: countdown; nonzero with unk22D4 switches pending_item[0] */
-    s16 unk22D8; /* 0x22D8 */
-    s16 unk22DA; /* 0x22DA */
-    s16 unk22DC; /* 0x22DC */
-    s16 unk22DE; /* 0x22DE */
-    s16 unk22E0; /* 0x22E0 */
-    u8 pad_22E2[0x6];
-    f32 unk22E8; /* 0x22E8: phase for the items[4].moby colour */
-    f32 unk22EC; /* 0x22EC: phase for the items[4].moby2 colour */
-    f32 unk22F0; /* 0x22F0: phase for the items[5].moby colour */
-    s32 unk22F4; /* 0x22F4 */
-    s32 unk22F8; /* 0x22F8 */
-    s16 unk22FC; /* 0x22FC */
-};
-extern struct Hero_27F48 D_0013F450_27F48 __asm__("D_0013F450");
+extern struct Hero D_0013F450_27F48 __asm__("D_0013F450");
 extern unsigned char D_0013D5C8[];
 extern unsigned int D_0013CBE0;
 extern int D_L00_00167114[];
@@ -3503,9 +2783,9 @@ extern int func_L00_00222B80(int, int);
 extern void func_L00_00222B80_27F48b(int, int) __asm__("func_L00_00222B80");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/hero/00227778.c, FUN_L00_00227778. */
-int func_L00_00227F48(void) {
-    Vec4_27F48 start;
-    Vec4_27F48 end;
+int Hero_UpdateWaterState(void) {
+    Vec4 start;
+    Vec4 end;
     int decrement;
     int state;
 
@@ -3514,8 +2794,8 @@ int func_L00_00227F48(void) {
             decrement = 0;
         } else {
             decrement = 10000 / (scale_ticks(0x3C) * 15);
-            queue_animation_update(4, 0x753F, func_L00_00236BF8,
-                func_L00_00236DE8, func_L00_00236F38, &D_0013F450_27F48.unk22A0, 10000);
+            queue_animation_update(4, 0x753F, Hud_InitParticles,
+                Hud_UpdateParticles, func_L00_00236F38, &D_0013F450_27F48.unk22A0, 10000);
         }
         D_0013F450_27F48.unk22A0 -= decrement;
         if (D_0013F450_27F48.unk22A0 < 0)
@@ -3532,7 +2812,7 @@ int func_L00_00227F48(void) {
             goto collision_mode;
         }
 change_state:
-        func_L00_00222B80(state, 1);
+        HeroEnterMoveState(state, 1);
         return 1;
     } else if (D_0013F450_27F48.state.current != 0x6A && D_0013F450_27F48.state.current != 0x76) {
         D_0013F450_27F48.unk22A0 = 10000;
@@ -3570,7 +2850,7 @@ extern int D_L00_0015F6B0 MACRO_ADDR;
 #define I(o) (*(int *)(p + (o)))
 
 // Checks whether the player can grab a ledge or surface here; returns 1 when it does.
-int func_L00_00228180(void) {
+int HeroL00_ShouldSwing(void) {
     char *p = (char *)D_0013E633 + 0xE1D;
     char *q;
     char *u;
@@ -3631,35 +2911,35 @@ int func_L00_00228180(void) {
         if ((D_L00_0015F6B0 & 0x3F) == 0) {
             scale = 16.0f;
         }
-        func_L00_00212D70(v1, v2, 0, scale, 1.3f);
+        Hero_BuildProbeEndpoints(v1, v2, 0, scale, 1.3f);
         if (func_L00_001EFFF0(v1, v2, 2, *(int *)(u + 0x2080), 0) != 0) {
             int s = CollType();
             *(short *)(u + 0x12E0) = s;
             if ((short)s == 0) {
                 v1[2] = D_L00_00173F68 - 0.01f;
                 if (func_L00_001EFFF0(v1, v2, 2, *(int *)(u + 0x2080), 0) == 0) {
-                    func_L00_00222B80(0x34, 1);
+                    HeroEnterMoveState(0x34, 1);
                     return 1;
                 }
             }
         }
     }
     if (r != 0) {
-        func_L00_00222B80(0x37, 1);
-        func_L00_00217570(3, 0);
+        HeroEnterMoveState(0x37, 1);
+        Hero_PlayActiveSound(3, 0);
     }
     return r;
 }
 extern float func_00214D28(float *p, float target, float maxstep);
 
 // Integrates and damps the player's camera-offset spring values and stores the resulting height.
-void func_L00_00228510(void) {
+void Hero_UpdateTiltSpring(void) {
     char *p = (char *)D_0013E633 + 0xE1D;
     if (scale_ticks(10) < *(int *)(p + 0x198) || *(float *)(p + 0x690) < 0.0f ||
         *(int *)(p + 0x2094) == 0x11 || *(int *)(p + 0x20A0) == 0x11) {
         char *u = (char *)D_0013E633 + 0xE1D;
         if (*(int *)(u + 0x2084) == 0x36) {
-            func_L00_0025C918((float *)(u + 0x690), (float *)(u + 0x8FC), 0.0f,
+            Spring((float *)(u + 0x690), (float *)(u + 0x8FC), 0.0f,
                               D_0015EE64 * 0.03f, D_0015EE64 * 0.3f,
                               D_0015EE6C * 1.5f);
             *(float *)(u + 0x694) = 0.0f;
@@ -3680,7 +2960,7 @@ void func_L00_00228510(void) {
             if (0.0f < *(float *)(q + 0x694)) {
                 *(float *)(q + 0x694) = 0.0f;
             }
-            func_00214D28((float *)(q + 0x690), 0.0f, D_0015EE6C * 0.7f);
+            ApproachValue((float *)(q + 0x690), 0.0f, D_0015EE6C * 0.7f);
         }
     }
     }
@@ -3691,7 +2971,7 @@ void func_L00_00228510(void) {
         if (*(int *)(r + 0x208C) == 0x16) {
             a = *(float *)(r + 0x8A0);
         }
-        func_L00_0025C918((float *)(r + 0x69C), (float *)(r + 0x6A0), a,
+        Spring((float *)(r + 0x69C), (float *)(r + 0x6A0), a,
                           D_0015EE64 * 0.027f, D_0015EE64 * 0.3f, 0.0f);
     }
     }
@@ -3734,7 +3014,7 @@ int func_L00_00228770(void) {
     if (D_0013F450_h228770.unk20AC != 0 && (D_0013F450_h228770.items[0].item_id != 8 || D_0013F450_h228770.unk308 != 1)) {
         return 0;
     }
-    if (D_0013F450_h228770.unk20A4 != 0) {
+    if (D_0013F450_h228770.vehicle_mode != 0) {
         return 0;
     }
     if (D_0013F450_h228770.items[0].moby == 0) {
@@ -3750,7 +3030,7 @@ int func_L00_00228770(void) {
         if (D_0013F450_h228770.state.control_mode < 2U || (D_0013F450_h228770.state.control_mode == 4 && D_0013F450_h228770.unk418 != 0)) {
             Moby *m;
 
-            if (D_0013F450_h228770.unk12EA != 0) {
+            if (D_0013F450_h228770.on_slip_ground != 0) {
                 break;
             }
             if (!func_L00_00267BA8_228770(mask, scale_ticks(7), &out[0])) {
@@ -3760,7 +3040,7 @@ int func_L00_00228770(void) {
             if (m == 0) {
                 break;
             }
-            if (!func_L00_00211A18((char *)m)) {
+            if (!IsMobyClass47((char *)m)) {
                 break;
             }
             if (m->state != 0) {
@@ -3768,22 +3048,22 @@ int func_L00_00228770(void) {
             }
             if ((D_0013CA40_p228770.held & 0xA) || ((D_0013F450_h228770.state.current == 1 || D_0013F450_h228770.state.current == 0x1E) && D_0013F450_h228770.state_timer > scale_ticks(0x14))) {
                 if ((D_0013F450_h228770.state.current == 1 || D_0013F450_h228770.state.current == 0x1E) && D_0013F450_h228770.state_timer > scale_ticks(0x14)) {
-                    func_L00_00217DE0();
+                    LaunchGadgetMoby();
                     break;
                 }
-                func_L00_00222B80(0x15, 1);
+                HeroEnterMoveState(0x15, 1);
                 break;
             }
             if (D_0013F450_h228770.unk308 == 1) {
-                func_L00_00222B80(0x70, 1);
+                HeroEnterMoveState(0x70, 1);
             } else {
-                func_L00_00222B80(0x13, 1);
+                HeroEnterMoveState(0x13, 1);
             }
             break;
         }
         if (D_0013F450_h228770.state.current == 7 || D_0013F450_h228770.state.current == 9 || D_0013F450_h228770.state.current == 8 || D_0013F450_h228770.state.current == 6
-            || (D_0013F450_h228770.state.current == 0xE && D_0013F450_h228770.unkAA8 > 32.0f)
-            || (D_0013F450_h228770.state.current == 0xB && D_0013F450_h228770.unk450 != 3 && D_0013F450_h228770.unkAA8 > 18.0f) || (D_0013F450_h228770.state.current == 0xB && D_0013F450_h228770.unk450 == 3 && D_0013F450_h228770.unkAA8 > 20.0f)
+            || (D_0013F450_h228770.state.current == 0xE && D_0013F450_h228770.anim_frame > 32.0f)
+            || (D_0013F450_h228770.state.current == 0xB && D_0013F450_h228770.unk450 != 3 && D_0013F450_h228770.anim_frame > 18.0f) || (D_0013F450_h228770.state.current == 0xB && D_0013F450_h228770.unk450 == 3 && D_0013F450_h228770.anim_frame > 20.0f)
             || D_0013F450_h228770.state.current == 0x2D || D_0013F450_h228770.state.current == 0x11) {
             if (D_0013F450_h228770.state_timer > scale_ticks(0xA)) {
                 int t = scale_ticks(0xA);
@@ -3799,18 +3079,18 @@ int func_L00_00228770(void) {
                     if (D_0013F450_h228770.unk5FC != 0) {
                         break;
                     }
-                    func_L00_00222B80(0x14, 1);
+                    HeroEnterMoveState(0x14, 1);
                     break;
                 }
-                if (D_0013F450_h228770.unk12EA != 0) {
+                if (D_0013F450_h228770.on_slip_ground != 0) {
                     break;
                 }
-                func_L00_00222B80(0x13, 1);
+                HeroEnterMoveState(0x13, 1);
                 break;
             }
         }
         if (D_0013F450_h228770.state.control_mode == 6) {
-            Rec2C_228770 *rec = &D_L00_0017BD28_228770[D_0013F450_h228770.unkA60];
+            Rec2C_228770 *rec = &D_L00_0017BD28_228770[D_0013F450_h228770.attack_record];
             int t;
 
             if (D_0013F450_h228770.state.current == 0x15) {
@@ -3818,8 +3098,8 @@ int func_L00_00228770(void) {
                     if (D_0013F450_h228770.unkA9C != 0) {
                         break;
                     }
-                    if (D_0013F450_h228770.unkAA8 >= (float)rec->f10 && (D_0013CA40_p228770.held & 0xA) && func_L00_00267BA8_228770(mask, scale_ticks(0xF), 0)) {
-                        func_L00_00222B80(0x15, 1);
+                    if (D_0013F450_h228770.anim_frame >= (float)rec->f10 && (D_0013CA40_p228770.held & 0xA) && func_L00_00267BA8_228770(mask, scale_ticks(0xF), 0)) {
+                        HeroEnterMoveState(0x15, 1);
                         break;
                     }
                 }
@@ -3827,30 +3107,30 @@ int func_L00_00228770(void) {
             if (D_0013F450_h228770.unkA9C != 0) {
                 break;
             }
-            if (!(D_0013F450_h228770.unkAA8 >= (float)rec->f10)) {
+            if (!(D_0013F450_h228770.anim_frame >= (float)rec->f10)) {
                 break;
             }
-            t = (truncate_float_to_s32(D_0013F450_h228770.unkAA8) - rec->fC) * 2;
+            t = (truncate_float_to_s32(D_0013F450_h228770.anim_frame) - rec->fC) * 2;
             if (t <= 0) {
                 t = 1;
             }
             if (t > scale_ticks(0xF)) {
                 t = scale_ticks(0xF);
             }
-            if (D_0013F450_h228770.unk12EA != 0) {
+            if (D_0013F450_h228770.on_slip_ground != 0) {
                 break;
             }
             if (!func_L00_00267BA8_228770(mask, t, 0)) {
                 break;
             }
             if (D_0013CA40_p228770.held & 0xA) {
-                func_L00_00222B80(0x15, 1);
+                HeroEnterMoveState(0x15, 1);
                 break;
             }
             if (D_0013F450_h228770.unk308 == 1) {
-                func_L00_00222B80(0x70, 1);
+                HeroEnterMoveState(0x70, 1);
             } else {
-                func_L00_00222B80(0x13, 1);
+                HeroEnterMoveState(0x13, 1);
             }
         }
         break;
@@ -3858,8 +3138,8 @@ int func_L00_00228770(void) {
         {
             int t;
 
-            func_L00_00222668();
-            func_L00_002228E0();
+            Hero_FindMoby323Target();
+            Hero_FindMoby2F6Target();
             t = scale_ticks(5);
             if (D_0013F450_h228770.air_frames.s != 0) {
                 t = scale_ticks(8);
@@ -3876,22 +3156,22 @@ int func_L00_00228770(void) {
                             }
                         }
                         if (D_0013F450_h228770.unk99E != 0 && D_0013F450_h228770.unk1E6 == 0 && D_0013F450_h228770.state.current != 0x2C) {
-                            func_L00_00222B80(0x2C, 1);
+                            HeroEnterMoveState(0x2C, 1);
                             break;
                         }
                     }
                     if (D_0013F450_h228770.unk968 != 0 && D_0013F450_h228770.unk1E6 == 0) {
-                        func_L00_00222B80(0x24, 1);
+                        HeroEnterMoveState(0x24, 1);
                     }
                 }
             }
         }
         break;
     case 31:
-        if (D_0013F450_h228770.unk20A4 != 0) {
+        if (D_0013F450_h228770.vehicle_mode != 0) {
             break;
         }
-        if (!func_L00_002104C8()) {
+        if (!Hero_CanUseGadget()) {
             break;
         }
         if (!func_L00_00267BA8_228770(mask, scale_ticks(7), 0)) {
@@ -3906,14 +3186,14 @@ int func_L00_00228770(void) {
         if (D_0013F450_h228770.unk22DE != 0) {
             break;
         }
-        func_L00_00217570(0x18, 0);
+        Hero_PlayActiveSound(0x18, 0);
         D_0013F450_h228770.unk22DE = 0x12;
         D_0013F450_h228770.unk22DC = 1;
         break;
     case 32:
         if (D_0013F450_h228770.state.control_mode < 3U || D_0013F450_h228770.state.control_mode == 4 || D_0013F450_h228770.state.control_mode == 5) {
             if (func_L00_00267BA8_228770(mask, scale_ticks(8), 0)) {
-                func_L00_0029BA20(0);
+                VendorOpenMenu(0);
             }
         }
         break;
@@ -3927,16 +3207,16 @@ int func_L00_00228770(void) {
             }
             pv = *(PVar_228770 **)&D_0013F450_h228770.items[0].moby->pvars;
             if (((D_0013CA40_p228770.held & mask) && D_0013F450_h228770.items[0].unk20 > scale_ticks(5)) || (D_0013CA40_p228770.pressed & mask)) {
-                if (func_L00_00234718(-1)) {
+                if (GetAmmo(-1)) {
                     if (D_0013F450_h228770.unk20A8 == 0) {
-                        func_L00_0020EB60();
+                        Hero_StartModuleAnim();
                     }
                     break;
                 }
             }
             if (D_0013CA40_p228770.held & mask) {
-                if (!func_L00_00234718(-1)) {
-                    if (!func_L00_0028EB98(D_0013F450_h228770.items[0].moby, pv->fC)) {
+                if (!GetAmmo(-1)) {
+                    if (!Sound_IsPlaying(D_0013F450_h228770.items[0].moby, pv->fC)) {
                         pv->fC = func_0022ED80(0, 0, (int)D_0013F450_h228770.items[0].moby);
                     }
                 }
@@ -3950,7 +3230,7 @@ int func_L00_00228770(void) {
     case 25:
         if ((D_0013F450_h228770.state.control_mode == 0 && D_0013F450_h228770.state.current != 0x1E) || D_0013F450_h228770.state.control_mode == 1 || D_0013F450_h228770.state.control_mode == 0xC
             || D_0013F450_h228770.state.control_mode == 5 || D_0013F450_h228770.state.control_mode == 0xF || (D_0013F450_h228770.state.control_mode == 4 && D_0013F450_h228770.unk4AC != 0)
-            || (D_0013F450_h228770.state.current == 0x23 && D_0013F450_h228770.unkAA8 > 25.0f)) {
+            || (D_0013F450_h228770.state.current == 0x23 && D_0013F450_h228770.anim_frame > 25.0f)) {
             int t;
             int n;
 
@@ -3961,12 +3241,12 @@ int func_L00_00228770(void) {
             n = D_0013F450_h228770.items[0].unk20;
             if (func_L00_00267BA8_228770(mask, t <= n ? t : n, &out[1])
                 || ((D_0013CA40_p228770.held & 0x20) && n > scale_ticks(8) && n < scale_ticks(0x11))) {
-                if (func_L00_00234718(-1)) {
+                if (GetAmmo(-1)) {
                     if (D_0013F450_h228770.state.control_mode == 0xC || D_0013F450_h228770.state.control_mode == 0 || D_0013F450_h228770.state.current == 3
                         || (D_0013F450_h228770.state.control_mode == 1 && D_0013F450_h228770.unk229C < 0.7f)) {
-                        func_L00_00222B80(0x23, 1);
+                        HeroEnterMoveState(0x23, 1);
                     } else {
-                        func_L00_0020EB60();
+                        Hero_StartModuleAnim();
                     }
                     break;
                 }
@@ -3984,7 +3264,7 @@ int func_L00_00228770(void) {
 
                 if (func_L00_00267BA8_228770(mask, t <= n ? t : n, &out[2])) {
                     if (D_0013F450_h228770.items[0].moby != 0) {
-                        func_L00_00222B80(0x20, 1);
+                        HeroEnterMoveState(0x20, 1);
                         if (D_0013F450_h228770.items[0].moby != 0) {
                             func_0022ED80(0, 0, (int)D_0013F450_h228770.items[0].moby);
                         }
@@ -3996,20 +3276,20 @@ int func_L00_00228770(void) {
     case 21:
         if (D_0013F450_h228770.items[0].moby != 0) {
             if (D_0013CA40_p228770.pressed & mask) {
-                func_L00_0020EB60();
+                Hero_StartModuleAnim();
             }
         }
         break;
     }
     if (D_0013F450_h228770.state_timer == start) {
-        if (func_L00_0020DB30(3) == 3 && D_0013F450_h228770.state.current != 0x81 && (D_0013F450_h228770.unk308 == 0 || D_0013D5C8_228770[0x1C] == 0)
+        if (Hero_GetSlotModuleId(3) == 3 && D_0013F450_h228770.state.current != 0x81 && (D_0013F450_h228770.unk308 == 0 || D_0013D5C8_228770[0x1C] == 0)
             && D_0013F450_h228770.unk22D8 == 0) {
             func_001F9908_228770(&D_L00_0015F754);
             if (D_L00_0015F754 != 0) {
                 if (D_0013F450_h228770.state.control_mode < 2U || D_0013F450_h228770.state.control_mode == 0xC
-                    || ((D_0013F450_h228770.state.control_mode == 2 || D_0013F450_h228770.state.control_mode == 4) && D_0013F450_h228770.unk300 != 0)) {
+                    || ((D_0013F450_h228770.state.control_mode == 2 || D_0013F450_h228770.state.control_mode == 4) && D_0013F450_h228770.grounded_frames != 0)) {
                     if ((D_0013CA40_p228770.held & 8) && (D_0013CA40_p228770.pressed & 8)) {
-                        func_L00_00222B80(0x81, 1);
+                        HeroEnterMoveState(0x81, 1);
                     }
                 }
             }
@@ -4031,18 +3311,18 @@ extern int func_L00_00267C48(int, void *, void *, int);
 /* Loads a record into A0 (type 0x40). If the flags at D_0013A5E0 + 0x2600
    have 0x2 or 0x8 set, saves it back and signals state 0xB; otherwise
    signals state 7 unless A1. Returns whether it signalled. */
-int func_L00_00229348(void *a0, int a1) {
+int Hero_TryStartJump(void *a0, int a1) {
     s32 buf;
     int len;
 
-    if (!func_L00_00267BA8(0x40, a0, &buf))
+    if (!PadPressedWithin(0x40, a0, &buf))
         return 0;
 
-    len = func_L00_00222520();
+    len = GetStickTilt();
 
     if ((*(int *)((char *) D_0013A5E0 + 0x2600) & 0xA) != 0) {
-        if (len > 0 && func_L00_00267C48(0x40, (void *) 0x1F000, (char *) a0 + len, len)) {
-            func_L00_00222B80(0xB, 1);
+        if (len > 0 && PadComboWithin(0x40, (void *) 0x1F000, (char *) a0 + len, len)) {
+            HeroEnterMoveState(0xB, 1);
             return 1;
         }
     }
@@ -4050,7 +3330,7 @@ int func_L00_00229348(void *a0, int a1) {
     if (a1 != 0)
         return 0;
 
-    func_L00_00222B80(0x7, 1);
+    HeroEnterMoveState(0x7, 1);
     return 1;
 }
 INCLUDE_ASM("asm/overlays", func_L00_002293E8);
@@ -4060,7 +3340,7 @@ extern void func_0020D678(void *); /* DeleteMoby */
 /* Deletes and clears any moby cached at D_0013F450+0x1614, then clears
    flag bits 0x41 on the two moby pointers cached at +0x1180 and +0x1184,
    when set. */
-void func_L00_00229778(void) {
+void Hero_ClearAttachedMobys(void) {
     char *g = D_0013F450;
     void *m;
     void *a;

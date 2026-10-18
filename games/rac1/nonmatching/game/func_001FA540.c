@@ -2,7 +2,10 @@
    as four columns (VU0: column 0 times x, plus column 1 times y, plus column 2
    times z, plus column 3 times w, accumulated in ACC in that order). The
    columns are read before the first store, as the VU registers are. */
-void func_001FA540(float *dst, float *m, float *src) {
+void func_001FA540(void *dst_, void *m_, void *src_) {
+    float *dst = dst_;
+    float *m = m_;
+    float *src = src_;
     float c0[4];
     float c1[4];
     float c2[4];

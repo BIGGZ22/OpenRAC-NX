@@ -27,11 +27,14 @@ struct PadState {
     u8 pad_0[0x100] __attribute__((aligned(16)));
     f32 analog[16];                     /* 0x100: [0..3] stick axes (-1..1), [4..15] pressure (0..1) */
     f32 analog_prev[16];                /* 0x140: copy of analog */
-    u8 pad_180[0x9];
+    u8 profile[4];                      /* 0x180: button profile block UpdatePad reads (func_00124DF0) */
+    u8 act[4];                          /* 0x184: actuator block UpdatePad reads (func_00125218) */
+    u8 unk188;                          /* 0x188 */
     u8 unk189;                          /* 0x189: copied by FUN_L00_002d2ee8 on spawn */
-    u8 pad_18A[0x4];
-    s16 unk18E;                         /* 0x18E: cleared with unk190 by ResetGlobalStateFields */
-    s32 unk190;                         /* 0x190 */
+    u8 pad_18A[0x2];
+    s16 unk18C;                         /* 0x18C: counted down by UpdatePad; on pad 0, nonzero suppresses pressed/released (PAL) */
+    s16 hist_idx;                       /* 0x18E: next slot of the 30-poll history; cleared with hist_count by ResetGlobalStateFields */
+    s32 hist_count;                     /* 0x190: history entries filled, up to 30 */
     s32 socket;                         /* 0x194: scePad2CreateSocket(&param, &D_0013C940) result, init_pads */
     s32 profile_state;                  /* 0x198: 0 query profile, 1 read pad, 2 profile too long */
     s32 device_state;                   /* 0x19C: scePad2GetState result */
@@ -51,6 +54,14 @@ struct PadState {
     s32 no_direction;                   /* 0x1D4: (held & 0xF000) == 0 */
     s32 stick_moved;                    /* 0x1D8: analog[2] or analog[3] nonzero */
     s32 unk1DC;                         /* 0x1DC: 0x79 if the button profile is all ones, else 0; l01 picks pressure input on 0x79 */
+    s32 hist_btn[30];                   /* 0x1E0: pressed, per poll, for the stick flick detector */
+    f32 hist_ang[30];                   /* 0x258: stick angle, per poll */
+    f32 hist_mag[30];                   /* 0x2D0: stick magnitude, per poll */
+    s32 unk348;                         /* 0x348: held, latched by UpdatePad */
+    u8 pad_34C;
+    u8 rep_delay;                       /* 0x34D: key repeat: frames before the first repeat */
+    u8 rep_rate;                        /* 0x34E: frames between repeats */
+    u8 rep_timer;                       /* 0x34F */
 };
 
 typedef struct PadState PadState;

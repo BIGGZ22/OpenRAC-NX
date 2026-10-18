@@ -39,7 +39,7 @@ extern void func_L01_002293D0(void);
 extern void func_L00_002091D8(void);
 
 /* Per-frame driver: validates the cursor, then runs each update pass in order. */
-void func_L03_00200890(void) {
+void HeroL03_FrameUpdate(void) {
     char *g = (char *)D_0013E633 + 0xE1D;
     if (*(float *)(g + 0x80) < 2.0f || *(float *)(g + 0x84) < 2.0f || *(float *)(g + 0x80) > 1022.0f || *(float *)(g + 0x84) > 1022.0f) {
         char *q;
@@ -51,37 +51,37 @@ void func_L03_00200890(void) {
     *(short *)(g + 0x1EB2) = 0;
     *(short *)(g + 0x1EB0) = 0;
     if (*(unsigned char *)(g + 0x20A4) != 0) {
-        func_L01_00228598();
+        HeroFrameUpdate();
         return;
     }
     func_L00_00232EF0();
-    func_L00_00211D28();
-    func_L01_0022D340();
-    func_L01_0022D688();
-    func_L00_0020D9C8();
-    func_L03_0021CDA8();
+    Hero_UpdateMotionInput();
+    HeroProcessContactType();
+    HeroLedgeProbeSingle();
+    Hero_LatchUpperProbe();
+    HeroL03_UpdateStateTransitions();
     if (*(unsigned char *)(g + 0x20A4) != 0) {
         return;
     }
-    func_L00_00217698();
-    func_L00_0020B850();
+    Hero_TickReleaseTimers();
+    Hero_CheckMovementThresholds();
     func_L00_0020A990();
     func_L00_0020ABB8();
-    func_L00_0020B310();
-    func_L00_0020B060();
-    func_L00_00205CC0();
-    func_L00_00205FF0();
-    func_L00_00215738();
-    func_L00_00205B00();
-    func_L00_00208E98();
-    func_L00_002098B8(0);
-    func_L00_00210FE0();
-    func_001F7B40();
-    func_L00_00208260();
-    func_L00_00208070();
-    func_L00_00207310();
-    func_L00_002064C0();
-    func_L00_00206698();
+    HeroScanTargets();
+    RerollMotionParams();
+    ClampAimLeanAngles();
+    UpdateHelperMoby();
+    Hero_SetTiltJoints();
+    SettleAllHeldObjects();
+    HeroSyncMoby();
+    HeroComputeAttachMatrices(0);
+    Hero_UpdateItems();
+    BeginDrawFrame();
+    UpdateRampUpDown();
+    CameraShakeUpdate();
+    HelpHintsPeriodicCheck();
+    HudBoltAlertShow();
+    FireGadgetStateHooks();
     func_L00_00207418();
     func_001E9768(*(void **)(g + 0x2080));
     if (*(int *)(g + 0x208C) != 0x16 && *(int *)(g + 0x2084) != 0x32) {
@@ -91,6 +91,6 @@ void func_L03_00200890(void) {
         char *q = (char *)D_0013E633 + 0xE1D;
         func_L00_0025805C(*(void **)(q + 0x2080));
     }
-    func_L01_002293D0();
-    func_L00_002091D8();
+    HeroUpdateBlink();
+    Hero_SteerAimAndProbe();
 }

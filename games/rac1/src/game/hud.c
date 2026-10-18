@@ -58,7 +58,7 @@ extern HudIconRec *D_0019A504;
 
 /* Finds arg0 in the table D_0019A504 points to (ended by id 0xFFFF).
    The older decode read D_0019A504 as the table itself. */
-int func_001FF668(int arg0) {
+int Hud_GetIconIndex(int arg0) {
     HudIconRec *tab = D_0019A504;
     int i = 0;
 
@@ -97,7 +97,7 @@ extern HudBank D_00199C60_b[] __asm__("D_00199C60") NOT_SDA;
    0x2800 bytes of it and sets its byte +0x20 to 0xFF. The records are
    indexed through a struct array: each field access is its own giv,
    and loop.c's pick (the +0x24 one) is retail's loop pointer. */
-void func_001FF6B8(void) {
+void Hud_InitBanks(void) {
     int *arena = &D_0019A4E8;
     int i;
     unsigned char *buf;
@@ -152,7 +152,7 @@ typedef struct {
 extern HudArena D_0019A4E8_arena __asm__("D_0019A4E8");
 
 /* LinkHudBank(int, char *) */
-void func_001FF7F0(int bank, int addr) {
+void LinkHudBank(int bank, int addr) {
     int *banks;
     int *slot;
     int start;
@@ -262,7 +262,7 @@ extern void func_00201348_FF958(u32 data, s32 dbp, s32 psm, s32 wlog, s32 hlog, 
 
 /* Uploads the image pages of one HUD bank to GS memory, from the depth buffer address up, and records each page's block offset. Bank 0's pages are linked first when the bank file is not linked yet.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/ui/hud/hud_send_resident_bank.c, hud_send_resident_bank. */
-void func_001FF958(s32 bank, s32 base, s32 immediate) {
+void Hud_SendResidentBank(s32 bank, s32 base, s32 immediate) {
     struct HudTexCounts *counts;
     s32 address;
     s32 bank_offset;
@@ -301,7 +301,7 @@ extern int D_001941CC NOT_SDA;
 extern int D_0019A4E8 NOT_SDA;
 
 /* Hud_HeapReset(void) */
-void func_001FFA90(void) {
+void Hud_HeapReset(void) {
     int *p = &D_0019A4E8;
     int v = D_001941CC;
     p[5] = v + 0x64000;
@@ -311,7 +311,7 @@ void func_001FFA90(void) {
 /* Bump allocator out of the D_0019A4E8 arena: p[4] is the cursor,
    p[5] the limit. Rounds the request up to 16 bytes. */
 /* Hud_HeapAlloc(unsigned int, char *, char *, int) */
-int func_001FFAB8(int size) {
+int Hud_HeapAlloc(int size) {
     int *p = &D_0019A4E8;
     int cur;
 
@@ -351,7 +351,7 @@ extern void func_001FFC48(void *arg0);
    func_001FFC48 to reload the bank when a bit of (arg0's high nibbles &
    the record's +0x04 flags) is set. Sibling of func_001FFCB0/func_001FFD30
    in this file, which use the same record layout. */
-int func_001FFB38(int arg0, int arg1, int arg2, int arg3, int arg4,
+int queue_animation_update(int arg0, int arg1, int arg2, int arg3, int arg4,
                  int arg5, int arg6) {
     int idx = arg0 & 0xF;
     char *p = D_00199C60_raw + idx * 0x90;
@@ -397,7 +397,7 @@ extern void func_001FFD30(void *, int);
    is one, and clears +0x68. The copies are in retail's store order, and
    the +0x10 copy is unconditional (retail stores it in the beqz's delay
    slot), which also makes the scheduler load +0x30 first. */
-void func_001FFC48(void *arg0) {
+void apply_pending_animation(void *arg0) {
     char *p = (char *)arg0;
 
     load_animation_definition(arg0, *(int *)(p + 0x20));
@@ -430,7 +430,7 @@ extern void func_001FFB38_v(int, int, int, int, int, int, int) __asm__("func_001
 /* Calls func_001FFB38(i, 0xFFFF, 0, 0, 0, 0, 0) on the record whose
    +0x64 is arg0 and returns 1, or returns 0 when none is. The nop in
    the search loop is ps2eeas's short-loop padding. */
-int func_001FFCB0(int arg0) {
+int Hud_RemoveBank(int arg0) {
     int i;
     for (i = 0; i < 13; i++) {
         if (D_00199C60[i].unk64 == arg0) {
@@ -449,7 +449,7 @@ extern int func_001FF668(int);
 /* tbl[7] is volatile: retail re-loads that pointer field before each of
    the three record accesses rather than caching it, while keeping the
    r*8 offset in a register. */
-void func_001FFD30(void *arg0, int arg1) {
+void load_animation_definition(void *arg0, int arg1) {
     char *self = (char *)arg0;
     volatile int *tbl;
     int r;
@@ -472,7 +472,7 @@ LINKER_REMNANT("asm/remnants/text", func_001FFD98);
 /* Stores arg1 into +0x24 of the record whose +0x64 is arg0, and into
    +0x04 when its +0x68 is 0. Indexing the extern array at each access,
    not through a cached base pointer, gives retail's per-access %lo. */
-void func_001FFDA0(int arg0, int arg1) {
+void Hud_SetBarValueById(int arg0, int arg1) {
     int i;
     for (i = 0; i < 13; i++) {
         if (D_00199C60[i].unk64 == arg0) {
@@ -502,7 +502,7 @@ extern void func_001166FC(Cfg13 *, void *);
    expands the 0x13 bytes as unaligned ldl/ldr + sdl/sdr pairs with the
    trailing three bytes done singly, which is exactly retail's shape. */
 extern int func_00116810_hud(void *) __asm__("func_00116810");
-void func_001FFE88(void *arg0) {
+void copy_text_to_shared_buffer(void *arg0) {
     if ((unsigned int)func_00116810_hud(arg0) < 0x50) {
         D_0019A540 = D_001E7DD8;
     }
@@ -513,7 +513,7 @@ LINKER_REMNANT("asm/remnants/text", func_001FFF08);
 
 extern short D_0015F9D0;   /* SDA (gp -0x7330) */
 
-void func_001FFFA0(void) {
+void TickDownCounter(void) {
     int v = *(int *)&D_0015F9D0;
     if (v != 0) {
         *(int *)&D_0015F9D0 = v - 1;
@@ -544,7 +544,7 @@ extern void func_00201A38(int, int, int, int);
    bank's +0x18 callback, then fade the D_0015F764 alpha (0..128) in
    while the D_0015F760 timer runs, or out once it stops, and draw
    the overlay text D_001994D8 (plus D_00199528 above 1000) with it. */
-void func_001FFFB8(void) {
+void HudDraw(void) {
     char *arena = D_0019A4E8_raw;
     int i;
     HudBankCb *p;
@@ -575,9 +575,9 @@ void func_001FFFB8(void) {
             }
         }
         col = (D_0015F764 << 24) + 0xF0F0F0;
-        func_00201A38(0x100, D_0015F768, col, (int)D_001994D8);
+        DrawFramedText(0x100, D_0015F768, col, (int)D_001994D8);
         if (D_00199528[0] != 0 && D_0015F760 > 1000) {
-            func_00201A38(0x100, D_0015F768, col, (int)D_00199528);
+            DrawFramedText(0x100, D_0015F768, col, (int)D_00199528);
         }
         if (D_0015F760 != 0) {
             D_0015F760--;
@@ -601,7 +601,7 @@ LINKER_REMNANT("asm/remnants/text", func_00200190);
    are int sums so their addu takes the index first. Both flag tests
    are `& 0x80000000`: the first becomes a bltz, but the constant it
    loaded is reused by the second test, as in retail. */
-int func_00200198(int iconId, int sub) {
+int GetIconFrame(int iconId, int sub) {
     int idx;
     char *arena;
     unsigned short *row;
@@ -777,7 +777,7 @@ extern long func_00200248(int);
    texture's TEX0 from func_00200248 and its full size (1 << the
    entry's +6/+7 log2 sizes) as the far UV. The entry is found through
    the arena's +0x20 index table into its +0x24 texture table. */
-void func_00200468(int tex, int x, int y, int w, int h, int alpha) {
+void HudSprite(int tex, int x, int y, int w, int h, int alpha) {
     char *arena = D_0019A4E8_raw;
     unsigned char *e = (unsigned char *)(*(char **)(arena + 0x24)
         + *(short *)(*(char **)(arena + 0x20) + tex * 4 + 2) * 8);
@@ -816,7 +816,7 @@ void func_00200468(int tex, int x, int y, int w, int h, int alpha) {
 /* func_00200468 drawn as a four-vertex strip (PRIM 0x154) instead of a
    sprite, the texture turned a quarter: corners (x, y+h), (x, y),
    (x+w, y+h), (x+w, y) take UVs (tw, 0), (tw, th), (0, 0), (0, th). */
-void func_00200650(int tex, int x, int y, int w, int h, int alpha) {
+void DrawHudSpriteTurned(int tex, int x, int y, int w, int h, int alpha) {
     char *arena = D_0019A4E8_raw;
     unsigned char *e = (unsigned char *)(*(char **)(arena + 0x24)
         + *(short *)(*(char **)(arena + 0x20) + tex * 4 + 2) * 8);
@@ -863,7 +863,7 @@ void func_00200650(int tex, int x, int y, int w, int h, int alpha) {
 LINKER_REMNANT("asm/remnants/text", func_002008B0);
 
 /* func_00200468 with the position and size already in 16ths of a pixel. */
-void func_002008B8(int tex, int x, int y, int w, int h, int alpha) {
+void DrawHudSpriteSubpixel(int tex, int x, int y, int w, int h, int alpha) {
     char *arena = D_0019A4E8_raw;
     unsigned char *e = (unsigned char *)(*(char **)(arena + 0x24)
         + *(short *)(*(char **)(arena + 0x20) + tex * 4 + 2) * 8);
@@ -901,7 +901,7 @@ void func_002008B8(int tex, int x, int y, int w, int h, int alpha) {
 
 /* func_002008B8 with an explicit texture window: UVs run from (u, v) to
    (u, v) plus the texture's size in 16ths. */
-void func_00200A90(int tex, int x, int y, int w, int h, int u, int v, int alpha) {
+void DrawHudSpriteUV(int tex, int x, int y, int w, int h, int u, int v, int alpha) {
     char *arena = D_0019A4E8_raw;
     unsigned char *e = (unsigned char *)(*(char **)(arena + 0x24)
         + *(short *)(*(char **)(arena + 0x20) + tex * 4 + 2) * 8);
@@ -992,7 +992,7 @@ extern void func_001F9BF0(float *, float *, float *);
    (func_001F9BD8 adds, func_001F9BF0 subtracts vectors), each packed as
    XYZ2 with D_0013E600[4]/[5] - 8 and the HUD arena's +0xC depth; UVs
    run from (0, 0) to (u * 16, v << 20). */
-void func_00200E38(int u, int v, long tex, float x, float y, float w, float h, float rot) {
+void DrawHudSpriteRotated(int u, int v, long tex, float x, float y, float w, float h, float rot) {
     float a[4];
     float b[4];
     float pos[4];
@@ -1107,7 +1107,7 @@ extern void func_00122958(void *, void *);
 
    p7 is set before the branch, as retail does in its delay slot, but
    truncated to short after it, with the other short arguments. */
-void func_00201348(char *arg0, int arg1, int arg2, int arg3, int arg4, int arg5) {
+void Hud_sendTexture(char *arg0, int arg1, int arg2, int arg3, int arg4, int arg5) {
     char buf[0x60];
     int nloop2;
     int levels;
@@ -1298,14 +1298,14 @@ extern void func_00200650(int, int, int, int, int, int);
 /* Draw a 3-part stretchable bar: left cap, stretched middle, right cap
  * (mirrored via func_00200650), all using the same GetIconFrame glyph
  * in its two variants. */
-void func_00201960(int a0, int a1, int a2, int a3, int a4) {
+void draw_stretchable_ui_frame(int a0, int a1, int a2, int a3, int a4) {
     int v0 = GetIconFrame(0x7580, 0);
     int v1 = GetIconFrame(0x7580, 1);
 
     HudSprite(v1, a0, a1, 0x20, a3, a4);
     HudSprite(v0, a0 + 0x20, a1, a2 - 0x40, a3, a4);
     a0 = a0 + a2;
-    func_00200650(v1, a0 - 0x20, a1, 0x20, a3, a4);
+    DrawHudSpriteTurned(v1, a0 - 0x20, a1, 0x20, a3, a4);
 }
 
 extern s32 func_001F6FD8_01A38(s32, s32, u64, s32, s32) __asm__("func_001F6FD8");
@@ -1313,7 +1313,7 @@ extern void func_00201960(s32, s32, s32, s32, s32);
 void func_00201A38(s32 x, s32 y, s32 color, s32 text);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/ui/frames/draw_framed_text.c, draw_framed_text. */
-void func_00201A38(s32 x, s32 y, s32 color, s32 text) {
+void DrawFramedText(s32 x, s32 y, s32 color, s32 text) {
     s32 alpha = (s32)color >> 24;
     s32 text_left;
     s32 left;
@@ -1344,7 +1344,7 @@ extern s32 D_0015EF84 MACRO_ADDR;
 void func_00201AF0(u32 image_address);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/draw_boot_image.c, draw_boot_image. */
-void func_00201AF0(u32 image_address) {
+void draw_bootImage(u32 image_address) {
     struct DmaTag *tag;
     struct DmaTag *next;
     u64 *register_words;

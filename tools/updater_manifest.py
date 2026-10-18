@@ -9,6 +9,28 @@ import sys
 from typing import Any, Dict, Optional
 
 
+def _is_arm(name: str) -> bool:
+    return "aarch64" in name or "arm64" in name
+
+
+def _linux_installer(name: str) -> str:
+    if ".deb" in name:
+        return "deb"
+    if ".rpm" in name:
+        return "rpm"
+    if "appimage" in name:
+        return "appimage"
+    if name.endswith(".tar.gz") or ".tar.gz" in name:
+        return "appimage"
+    return "appimage"
+
+
+def _windows_installer(name: str) -> str:
+    if ".msi" in name or "msi" in name:
+        return "msi"
+    return "nsis"
+
+
 def generate_manifest(
     artifacts_dir: str,
     tag: str,
@@ -38,23 +60,23 @@ def generate_manifest(
             archive_file = base.replace(" ", ".")
             asset_url = f"https://github.com/{repo}/releases/download/{tag}/{archive_file}"
 
-            f_lower = f.lower()
+            rel = os.path.relpath(sig_path, artifacts_dir).lower()
+            name = f.lower()
+
             # The Android launcher's APK: its own updater reads this entry (launcher/core/src/update.rs).
-            if f_lower.endswith(".apk.sig"):
+            if name.endswith(".apk.sig"):
                 platforms["android-aarch64"] = {"signature": sig_content, "url": asset_url}
-            elif "nsis" in f_lower or "windows" in f_lower or "setup" in f_lower:
-                if "aarch64" in f_lower or "arm64" in f_lower:
-                    platforms["windows-aarch64"] = {"signature": sig_content, "url": asset_url}
-                else:
-                    platforms["windows-x86_64"] = {"signature": sig_content, "url": asset_url}
-            elif "appimage" in f_lower or "linux" in f_lower:
-                if "aarch64" in f_lower or "arm64" in f_lower:
-                    platforms["linux-aarch64"] = {"signature": sig_content, "url": asset_url}
-                else:
-                    platforms["linux-x86_64"] = {"signature": sig_content, "url": asset_url}
-            elif "darwin" in f_lower or "macos" in f_lower or "app" in f_lower:
-                platforms["darwin-aarch64"] = {"signature": sig_content, "url": asset_url}
-                platforms["darwin-x86_64"] = {"signature": sig_content, "url": asset_url}
+            elif "darwin" in rel or "macos" in rel or ".dmg" in rel or ".app.tar.gz" in rel or "macos" in name or "darwin" in name:
+                platforms["darwin-aarch64-app"] = {"signature": sig_content, "url": asset_url}
+                platforms["darwin-x86_64-app"] = {"signature": sig_content, "url": asset_url}
+            elif "windows" in rel or ".exe" in rel or ".msi" in rel or "nsis" in rel or "setup" in rel or "windows" in name or ".exe" in name or ".msi" in name:
+                arch = "aarch64" if _is_arm(rel + name) else "x86_64"
+                installer = _windows_installer(rel + name)
+                platforms[f"windows-{arch}-{installer}"] = {"signature": sig_content, "url": asset_url}
+            else:
+                arch = "aarch64" if _is_arm(rel + name) else "x86_64"
+                installer = _linux_installer(rel + name)
+                platforms[f"linux-{arch}-{installer}"] = {"signature": sig_content, "url": asset_url}
 
     return {
         "version": clean_version,
@@ -65,7 +87,7 @@ def generate_manifest(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate latest.json for Tauri v2 updater")
+    parser = argparse.ArgumentParser(description="Generate Tauri v2 latest.json for OpenRAC Launcher")
     parser.add_argument("artifacts_dir", help="Directory containing release artifacts and .sig files")
     parser.add_argument("--tag", required=True, help="GitHub release tag (e.g. launcher-v0.5.0)")
     parser.add_argument("--repo", default="OpenRAC/OpenRAC", help="GitHub repo (default: OpenRAC/OpenRAC)")

@@ -14,7 +14,7 @@ extern void func_L18_002284E0(int, int);
 extern void func_L00_00211908(void);
 
 /* Updates the pickup/aim flags after a state change, and requests a follow-up state when the target is in range. */
-void func_L18_00214138(void) {
+void HeroL18_UpdateStateFlags(void) {
     char *g = (char *)D_0013E633 + 0xE1D;
     int c = *(unsigned char *)(g + 0x12ED);
     int s = *(short *)(g + 0x12E0);
@@ -61,7 +61,7 @@ void func_L18_00214138(void) {
         if (*(int *)(p + 0x2084) != 0x7B) {
             if (coll_sphere(*(float *)(p + 0x234) + 0.03f, p + 0xD0, 2, 0) != 0) {
                 if (CollType() == 0xB) {
-                    func_L18_002284E0(0x7B, 1);
+                    HeroL18_SetMoveState(0x7B, 1);
                     return;
                 }
             }
@@ -78,7 +78,7 @@ void func_L18_00214138(void) {
         if (*(unsigned char *)(p + 0x12E3) != 0 && *(int *)(p + 0x300) != 0) {
             t = *(int *)(p + 0x208C);
             if (t != 0x10 && t != 0x14 && t != 7) {
-                func_L18_002284E0(0x31, 1);
+                HeroL18_SetMoveState(0x31, 1);
                 return;
             }
         }
@@ -92,11 +92,11 @@ void func_L18_00214138(void) {
                     if (0.0f < *(float *)(p + 0x2F4) - *(float *)(p + 0x88)) {
                         if (*(int *)(p + 0x2084) != 0x69 || *(short *)(p + 0x41E) != 0) {
                             if (*(float *)(p + 0x108) < 0.0f) {
-                                func_L00_0020BFA8();
+                                ResetHelpStateIfMode3();
                                 if (*(int *)(p + 0x22A8) != 0) {
-                                    func_L18_002284E0(0x68, 1);
+                                    HeroL18_SetMoveState(0x68, 1);
                                 } else {
-                                    func_L18_002284E0(0x7B, 1);
+                                    HeroL18_SetMoveState(0x7B, 1);
                                 }
                                 return;
                             }
@@ -114,10 +114,10 @@ void func_L18_00214138(void) {
                     if (0.0f < *(float *)(p + 0x2F4) - *(float *)(p + 0x88)) {
                         if (*(float *)(p + 0x108) < 0.0f) {
                             if ((unsigned)(*(unsigned char *)(p + 0x20A4) - 1) < 2) {
-                                func_L00_00211908();
+                                Hero_OnKilled();
                             } else {
-                                func_L00_0020BFA8();
-                                func_L18_002284E0(0x7B, 1);
+                                ResetHelpStateIfMode3();
+                                HeroL18_SetMoveState(0x7B, 1);
                             }
                         }
                     }
@@ -187,7 +187,7 @@ void func_001F9BC0(void *);
 void func_L00_00211338(void *, s32, f32, f32);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l18/ui_help_00213b40.c, FUN_L18_00218a90. */
-s32 func_L18_002190C8(s32 arg) {
+s32 HeroL18_TryTakeHit(s32 arg) {
     u8 *m;
     T_210ce8 *tbl;
     u8 *mob;
@@ -243,7 +243,7 @@ s32 func_L18_002190C8(s32 arg) {
     if (arg == 0) {
         return 1;
     }
-    func_L00_00207220();
+    HeroClearSoundSlots();
     flag = 0;
     if (tbl->i30 & 1) {
         qcopy(&v, &tbl->v10);
@@ -263,11 +263,11 @@ s32 func_L18_002190C8(s32 arg) {
         if (mob != 0 && (*(s16 *)(mob + 0xA6) == 0x4EB || *(s16 *)(mob + 0xA6) == 0x558)) {
             id = 0x80;
         call_ret:
-            func_L18_002284E0(id, 1);
+            HeroL18_SetMoveState(id, 1);
             return 1;
         }
         if (D_0013F450.i208C == 0x16) {
-            func_L18_002284E0(0x6D, 1);
+            HeroL18_SetMoveState(0x6D, 1);
             D_0013F450.f128 = D_0015EE6C * 7.0f;
             return 1;
         }
@@ -277,7 +277,7 @@ s32 func_L18_002190C8(s32 arg) {
                 id = 0x82;
                 goto call_ret;
             }
-            func_L18_002284E0(0x75, 1);
+            HeroL18_SetMoveState(0x75, 1);
         } else if (D_0013F450.i208C == 0x11) {
             mob = D_0013F450.p2280;
             if (mob != 0 && *(s16 *)(mob + 0xA6) == 0x28F) {
@@ -288,10 +288,10 @@ s32 func_L18_002190C8(s32 arg) {
                 mob = D_0013F450.p2280;
                 if (mob != 0 && (*(s16 *)(mob + 0xA6) == 0x28F || *(s16 *)(mob + 0xA6) == 0x7B
                                  || *(s16 *)(mob + 0xA6) == 0x29D)) {
-                    func_L00_00217570(0x1C, 0);
+                    Hero_PlayActiveSound(0x1C, 0);
                 }
             }
-            func_L18_002284E0(0x76, 1);
+            HeroL18_SetMoveState(0x76, 1);
         } else if (D_0013F450.i208C == 3) {
             mob = D_0013F450.p2280;
             if (mob != 0) {
@@ -300,9 +300,9 @@ s32 func_L18_002190C8(s32 arg) {
                     goto call_ret;
                 }
             }
-            func_L18_002284E0(0x16, 1);
+            HeroL18_SetMoveState(0x16, 1);
         } else {
-            func_L18_002284E0(0x16, 1);
+            HeroL18_SetMoveState(0x16, 1);
         }
         e = D_0015EE6C;
         a = e * 5.7f;
@@ -311,25 +311,25 @@ s32 func_L18_002190C8(s32 arg) {
             a = 0.0f;
             b = e * 1.7f;
         }
-        func_L00_00211338(&v, flag, a, b);
+        Vec_ScaleXYSetZ(&v, flag, a, b);
         if (flag != 0 && tbl->b28 == 4) {
             v.f[2] += v.f[2];
         }
         break;
     case 2:
         if ((tbl->i24 & 4) || D_0013F450.i1630 <= 0) {
-            func_L18_002284E0(0x5D, 1);
-            func_L00_002AAE80();
+            HeroL18_SetMoveState(0x5D, 1);
+            Moby1523Delete();
             if (D_0013F450.h30E == 0) {
-                func_L00_00211338(&v, flag, D_0015EE6C * 7.0f, D_0015EE6C * 3.5f);
+                Vec_ScaleXYSetZ(&v, flag, D_0015EE6C * 7.0f, D_0015EE6C * 3.5f);
                 break;
             }
         }
         clear_u64_value(&v);
         break;
     case 3:
-        func_L18_002284E0(0x56, 1);
-        func_L00_00211338(&v, flag, D_0015EE6C * 5.0f, D_0015EE6C * 2.4f);
+        HeroL18_SetMoveState(0x56, 1);
+        Vec_ScaleXYSetZ(&v, flag, D_0015EE6C * 5.0f, D_0015EE6C * 2.4f);
         break;
     }
     FastVecAdd(D_0013F530, D_0013F530, &v);

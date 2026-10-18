@@ -12,7 +12,7 @@ extern int func_0023BB90(int,int,int);
 extern void func_0023B740(void*,void*,void*);
 extern void func_0023BE38(void);
 /* No recovered name. Sets movie globals, runs initialization and playback, then clears them. */
-int func_0023B670(int a,int b,int c,char *state,int e) {
+int Movie_Play(int a,int b,int c,char *state,int e) {
     D_00161308=c;
     D_0016130C=state;
     D_00161314=0;
@@ -33,14 +33,14 @@ INCLUDE_ASM("asm/nonmatchings/text", func_0023B740);
 extern int func_00118BC0(int);
 
 /* switchThread -- calls func_00118BC0(1). */
-void func_0023BB40(void) {
+void switchThread(void) {
     func_00118BC0(1);
 }
 extern int func_0023C2B0(char *);
 
 /* isAudioOK -- true when the audio decoder at offset 0xD9100 of the movie state holds 0x1000
  * bytes or more. */
-int func_0023BB60(void) {
+int isAudioOK(void) {
     return audioDecIsPageFull(D_0016130C + 0xD9100);
 }
 INCLUDE_ASM("asm/nonmatchings/text", func_0023BB90); /* initAll(int, int, int) */
@@ -58,7 +58,7 @@ extern int func_0023E008(char*);
 extern int func_0023C060(char*);
 extern int func_0023CE28(char*);
 /* termAll(void): shuts down workers and decoders, then clears the DMA enable bit. */
-void func_0023BE38(void) {
+void termAll(void) {
     func_00120F30(0);
     readBufDelete(D_0016130C);
     voBufDelete(D_0016130C+0xD9168);
@@ -79,12 +79,12 @@ extern char D_001612F8[];
 
 /* ErrMessage -- passes the message to func_001E9730 (STUB_printf) with the string at
  * D_001612F8 as its first argument. */
-void func_0023BF48(char *fmt) {
+void ErrMessage(char *fmt) {
     STUB_printf(D_001612F8, fmt);
 }
 extern void func_0023C2C0(char *);
 
 /* proceedAudio(void) -- audioDecSend on the audio decoder at offset 0xD9100 of the movie state. */
-void func_0023BF70(void) {
+void proceedAudio(void) {
     audioDecSend(D_0016130C + 0xD9100);
 }

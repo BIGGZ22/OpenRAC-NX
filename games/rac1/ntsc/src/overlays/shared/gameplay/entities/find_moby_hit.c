@@ -242,12 +242,12 @@ extern void multiply_quaternions(void *, void *, void *) __asm__("FUN_001fa3c0")
 extern void FUN_L00_001fff28(void *, int, float);
 
 void FUN_L00_00259f50(void *a, float *v) {
-    Vk t0, t1, t2;
-    FUN_L00_001fff28(&t2, 0, v[0]);
-    FUN_L00_001fff28(&t1, 1, v[1]);
-    FUN_L00_001fff28(&t0, 2, v[2]);
-    multiply_quaternions(a, &t2, &t1);
-    multiply_quaternions(a, a, &t0);
+    Vk z_axis_quaternion, y_axis_quaternion, x_axis_quaternion;
+    FUN_L00_001fff28(&x_axis_quaternion, 0, v[0]);
+    FUN_L00_001fff28(&y_axis_quaternion, 1, v[1]);
+    FUN_L00_001fff28(&z_axis_quaternion, 2, v[2]);
+    multiply_quaternions(a, &x_axis_quaternion, &y_axis_quaternion);
+    multiply_quaternions(a, a, &z_axis_quaternion);
 }
 #include "eetypes.h"
 #include "rnc/overlay/quad.h"
@@ -448,7 +448,7 @@ typedef union {
 float fast_arc_tan(float, float) __asm__("FUN_001f9e90");
 float vector_length_xy(void *) __asm__("FUN_001f9b20");
 void trooper_knockback_arc(OvlQuad *v, float *ang, float *s1, float *s2) __asm__("FUN_L00_0025ab48");
-void trooper_knockback_arc(OvlQuad *v, float *ang, float *s1, float *s2) {
+void trooper_knockback_arc(OvlQuad *v, float *ang, float *xy_scaled_value, float *z_scaled_value) {
     U25ab48 t;
     t.q = *v;
     if (t.f[3] != 5627.9248046875f) {
@@ -456,9 +456,9 @@ void trooper_knockback_arc(OvlQuad *v, float *ang, float *s1, float *s2) {
         return;
     }
     *ang = fast_arc_tan(t.f[0], t.f[1]);
-    *s1 *= vector_length_xy(&t);
+    *xy_scaled_value *= vector_length_xy(&t);
     t.f[3] = 0;
-    *s2 *= t.f[2];
+    *z_scaled_value *= t.f[2];
 }
 #define NOT_SDA
 
@@ -538,11 +538,12 @@ int FUN_L00_0025aca0(float density, unsigned char *entity, int maximum, Vec4_25a
             do {
                 float radius, extent;
                 int type;
+                unsigned int active;
                 flags = *(unsigned int *)(list - 4);
                 last = flags >> 31;
                 type = flags & 0xff;
-                chosen = (mask >> index) ^ 1;
-                if (!(chosen & 1) && (flags & 0x20000)) {
+                active = flags & 0x20000;
+                if (!(((mask >> index) ^ 1) & 1) && active) {
                     entries[count] = entry;
                     switch (type) {
                     case 0:

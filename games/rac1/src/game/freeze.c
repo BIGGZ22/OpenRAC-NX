@@ -64,7 +64,7 @@ extern char D_00193400[];
    rebuilds the %lo per case); the case bodies are in retail's layout
    order, and the last store of a block is written last in the source
    because the scheduler issues it first. */
-void func_001FBC80(int arg0, int arg1, int arg2) {
+void Freeze_Enter(int arg0, int arg1, int arg2) {
     char *s = D_00193400;
 
     *(int *)(s + 0x30) = arg2;
@@ -109,7 +109,7 @@ void func_001FBC80(int arg0, int arg1, int arg2) {
     }
     case 5: {
         char *p = D_00193400;
-        func_001FF560(0x4E2B);
+        PushHelpHistory(0x4E2B);
         *(int *)(p + 4) = func_001F98C0(0x1E);
         *(int *)(p + 0x20) = 0;
         *(int *)(p + 0x24) = func_001F98C0(0x1E);

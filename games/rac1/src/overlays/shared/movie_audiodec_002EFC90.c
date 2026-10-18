@@ -3,7 +3,7 @@
 #include "include_asm.h"
 
 /* splits available audio-buffer data into up to two spans */
-void func_L00_002EFC90(int *s,int *a,int *n,int *b,int *m) {
+void SplitAudioBufferSpans(int *s,int *a,int *n,int *b,int *m) {
  if(s[0]==0) {
   if(s[1]!=4) { *a=(int)((char *)s+(s[12]+8)); *n=40-s[12]; *b=s[13]; *m=s[16]; }
   else { *a=s[13]; *n=s[16]; *b=0; *m=0; }

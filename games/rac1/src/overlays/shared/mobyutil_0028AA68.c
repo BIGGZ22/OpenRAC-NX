@@ -4,7 +4,7 @@
 
 typedef struct { char pad[0x2C]; float f; } O_28aa68;
 
-O_28aa68 *func_L05_0028AA68(O_28aa68 *a, O_28aa68 *b, O_28aa68 *c, O_28aa68 *d) {
+O_28aa68 *PickMaxEntry(O_28aa68 *a, O_28aa68 *b, O_28aa68 *c, O_28aa68 *d) {
     O_28aa68 *r = a;
 
     if (r == 0) {
@@ -39,7 +39,7 @@ extern char *D_L05_001B0CB0[];
 extern int func_L00_002629E0(int, void *, void *);
 
 /* Build a symmetric adjacency bitmask over a table's entries from pairwise tests. */
-void func_L05_0028CEE8(int *list, int n, int idx) {
+void BuildAdjacencyMasks(int *list, int n, int idx) {
     char *t = D_L05_001B0CB0[idx];
     int i, j, k, found;
     {
@@ -52,7 +52,7 @@ void func_L05_0028CEE8(int *list, int n, int idx) {
         for (j = i + 1; j < *(int *)t; j++) {
             found = 0;
             for (k = 0; k < n; k++) {
-                if (func_L00_002629E0(list[k], t + 0x10 + i * 16, t + 0x10 + j * 16) != 0) {
+                if (DoesSegmentCrossPath(list[k], t + 0x10 + i * 16, t + 0x10 + j * 16) != 0) {
                     found = 1;
                     break;
                 }

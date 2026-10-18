@@ -22,6 +22,11 @@ where it was:
 - With candidates (hostgen.json "candidates"), a function the decompilation
   still has as an assembly stub gets the candidate's C at the end of its file
   (use_candidates).
+- With aliases (hostgen.json "aliases"), a readable name the decompilation
+  defines as a macro for an address name (`#define DrawFlare func_0022F258`)
+  is written as that address name, outside comments, strings and `#define`
+  lines (unalias): the same code for Clang, and the passes here, which know
+  game symbols by their address names, see every definition and call.
 """
 
 from __future__ import annotations
@@ -210,6 +215,78 @@ def name_cast_records(text: str) -> str:
     return "\n".join(lines)
 
 
+# A one-line macro of the unit's own: `#define NAME body` or `#define NAME(a, b) body`.
+_DEFINE = re.compile(r"^[ \t]*#[ \t]*define[ \t]+(\w+)(?:\(([^()]*)\))?[ \t]+(\S.*?)[ \t]*$")
+_UNDEF = re.compile(r"^[ \t]*#[ \t]*undef[ \t]+(\w+)")
+
+
+def _expand_line(line: str, name: str, params: list[str] | None, body: str) -> str:
+    """LINE with every use of the macro NAME written out (outside strings); a use whose
+    arguments do not close on this line, or are not as many as the parameters, stays."""
+    out, pos = [], 0
+    for m in re.finditer(r'"(?:\\.|[^"\\\n])*"|\b' + re.escape(name) + r"\b", line):
+        if m.group(0).startswith('"'):
+            continue
+        if params is None:
+            out.append(line[pos:m.start()] + body)
+            pos = m.end()
+            continue
+        at = m.end()
+        while at < len(line) and line[at] in " \t":
+            at += 1
+        if at >= len(line) or line[at] != "(":
+            continue
+        depth, end = 0, None
+        for i in range(at, len(line)):
+            depth += line[i] == "("
+            depth -= line[i] == ")"
+            if depth == 0:
+                end = i
+                break
+        if end is None:
+            continue
+        inner = line[at + 1:end]
+        cuts = _top_level_commas(inner)
+        args = [inner[a + 1:b].strip() for a, b in zip([-1] + cuts, cuts + [len(inner)])]
+        if args == [""] and not params:
+            args = []
+        if len(args) != len(params):
+            continue
+        given = dict(zip(params, args))
+        text = re.sub(r"\b(" + "|".join(map(re.escape, params)) + r")\b",
+                      lambda p: given[p.group(1)], body) if params else body
+        out.append(line[pos:m.start()] + text)
+        pos = end + 1
+    return "".join(out) + line[pos:]
+
+
+def expand_cast_macros(text: str) -> str:
+    """A one-line macro of the unit whose body defines a record inside a cast is written out where
+    it is used, so name_cast_records finds the record in each function (Clang's JSON leaves a
+    record out that a macro defined: rac1/pal's `#define S_I(p, o) (((struct { char _p[o]; int v;
+    } *)(p))->v)`). Uses on preprocessor lines, and after an #undef, stay as they are; every line
+    stays where it was."""
+    if not _CAST_RECORD.search(text) or "define" not in text:
+        return text
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        m = _DEFINE.match(line)
+        if not m or line.endswith("\\") or not _CAST_RECORD.search(m.group(3)) or "#" in m.group(3):
+            continue
+        name, body = m.group(1), m.group(3)
+        params = None if m.group(2) is None else [p.strip() for p in m.group(2).split(",") if p.strip()]
+        if params is not None and any(not re.fullmatch(r"[A-Za-z_]\w*", p) for p in params):
+            continue  # variadic
+        for j in range(i + 1, len(lines)):
+            u = _UNDEF.match(lines[j])
+            if u and u.group(1) == name:
+                break
+            if lines[j].lstrip().startswith("#") or name not in lines[j]:
+                continue
+            lines[j] = _expand_line(lines[j], name, params, body)
+    return "\n".join(lines)
+
+
 # A 128-bit integer written as a type name: "int __attribute__((mode(TI)))" before a "*" or a ")".
 _WIDE_CAST = re.compile(r"\b(unsigned\s+)?int\s+__attribute__\(\(mode\(TI\)\)\)(?=\s*[*)])")
 
@@ -267,8 +344,33 @@ def own_va_list(text: str) -> str:
     return "".join(out)
 
 
+# What unalias leaves alone: comments, literals and preprocessor definitions; and the words it reads.
+_ALIAS_TOKEN = re.compile(
+    r'"(?:\\.|[^"\\\n])*"'
+    r"|'(?:\\.|[^'\\\n])*'"
+    r"|/\*.*?\*/"
+    r"|//[^\n]*"
+    r"|^[ \t]*#[ \t]*define\b(?:\\\n|[^\n])*"
+    r"|\b[A-Za-z_]\w*\b",
+    re.S | re.M,
+)
+_ALIAS_DEFINE = re.compile(r'^[ \t]*#[ \t]*define[ \t]+([A-Za-z_]\w*)[ \t]+((?:D|func)_\w+)[ \t]*$', re.M)
+
+
+def read_aliases(text: str) -> dict[str, str]:
+    """readable name -> address name, from a header of `#define NAME func_ADDR` lines."""
+    return {m.group(1): m.group(2) for m in _ALIAS_DEFINE.finditer(text) if m.group(1) != m.group(2)}
+
+
+def unalias(text: str, aliases: dict[str, str]) -> str:
+    """TEXT with each readable name of ALIASES written as its address name (see the top)."""
+    if not aliases:
+        return text
+    return _ALIAS_TOKEN.sub(lambda m: aliases.get(m.group(0), m.group(0)), text)
+
+
 def prepare(text: str) -> str:
-    return rename_va_builtins(own_va_list(name_wide_casts(name_cast_records(widen_long(split_multiline_strings(blank_file_scope_asm(text)))))))
+    return rename_va_builtins(own_va_list(name_wide_casts(name_cast_records(expand_cast_macros(widen_long(split_multiline_strings(blank_file_scope_asm(text))))))))
 
 
 # The path may be several adjacent strings over as many lines (the NTSC decomp's long paths).
@@ -509,8 +611,10 @@ def apply_decomp_workarounds(rel: str, text: str) -> str:
 
 def copy_tree(src: Path, dst: Path, patterns=("*.c", "*.h", "*.inc"),
               candidates: dict[str, str] | None = None, used: set[str] | None = None,
-              drafts: tuple[str, set[str]] | None = None, prefix: str = "") -> int:
+              drafts: tuple[str, set[str]] | None = None, prefix: str = "",
+              aliases: dict[str, str] | None = None) -> int:
     """Prepares every C file under src into dst; only rewrites what changed.
+    aliases (readable name -> address name) are written as their address names first (unalias).
     candidates (function name -> C) replace their assembly stubs (use_candidates);
     the names used are added to used. drafts (a guard macro, the files it applies to, named
     from the decompilation's top with prefix as src's own name) has those files' own drafts
@@ -519,7 +623,7 @@ def copy_tree(src: Path, dst: Path, patterns=("*.c", "*.h", "*.inc"),
     for pattern in patterns:
         for path in src.rglob(pattern):
             out = dst / path.relative_to(src)
-            text = prepare(path.read_text(encoding="utf-8", errors="surrogateescape"))
+            text = prepare(unalias(path.read_text(encoding="utf-8", errors="surrogateescape"), aliases or {}))
             if candidates and path.suffix == ".c":
                 text = use_candidates(text, candidates, used if used is not None else set())
             if drafts and (Path(prefix) / path.relative_to(src)).as_posix() in drafts[1]:

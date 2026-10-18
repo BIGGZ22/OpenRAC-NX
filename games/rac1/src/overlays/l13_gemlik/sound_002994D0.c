@@ -10,7 +10,7 @@ typedef struct {
 extern char D_0013E633[];
 
 /* Enable a sound effect and copy its 16-byte parameter vector. */
-int func_L13_002994D0(int index, const void *vector) {
+int EnableSoundEffect(int index, const void *vector) {
     int offset = index * 0x70;
     char *base = D_0013E633 + 0x1D;
     char *vector_base = base + 0xA0;

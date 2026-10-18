@@ -101,9 +101,13 @@ git push origin launcher-vX.Y.Z
    Each row signs its update archives (and the APK) with minisign (`TAURI_SIGNING_PRIVATE_KEY`).
 
 2. **Release job** (on a tag), after every row:
-   - Runs `tools/updater_manifest.py` to produce `latest.json` covering `windows-x86_64`,
-     `linux-x86_64`, `linux-aarch64`, `darwin-x86_64`, `darwin-aarch64` and `android-aarch64`
-     (read by the Android launcher's own updater, `launcher/core/src/update.rs`).
+   - Runs `tools/updater_manifest.py` to produce `latest.json`, an entry per installer, so each
+     launcher updates with the kind it was installed from:
+     - `windows-x86_64-nsis`, `windows-x86_64-msi`
+     - `linux-x86_64-appimage`, `linux-x86_64-deb`, `linux-x86_64-rpm`
+     - `linux-aarch64-appimage`, `linux-aarch64-deb`, `linux-aarch64-rpm`
+     - `darwin-x86_64-app`, `darwin-aarch64-app`
+     - `android-aarch64` (read by the Android launcher's own updater, `launcher/core/src/update.rs`)
    - Creates a draft release titled `OpenRAC Launcher X.Y.Z` with all installer assets and signatures.
 
 3. **Development channel** (a push to a branch, here or in a fork; not a tag, not a pull

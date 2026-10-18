@@ -12,6 +12,7 @@ import {
   type DiscCopy,
   type AppInfo,
   type Config,
+  type DiscChoice,
   type FoundDisc,
   type GameStatus,
   type Library,
@@ -35,6 +36,8 @@ interface AppState {
   libraryError: string | null;
   /** The games found in the player's games folder (api.scanDiscs). */
   discs: FoundDisc[];
+  /** Developers only: the games whose disc can be switched (core/src/disc_choice.rs). */
+  discChoices: DiscChoice[];
   page: Page;
   /** The version the game page shows (`rac1/pal`). */
   version: string | null;
@@ -61,6 +64,7 @@ export const app = $state<AppState>({
   library: null,
   libraryError: null,
   discs: [],
+  discChoices: [],
   page: "library",
   version: null,
   toasts: [],
@@ -198,6 +202,7 @@ export async function start() {
   if (app.config.lastVersion) app.version = app.config.lastVersion;
   await refresh();
   void syncProgressWeb();
+  void adoptGodot();
   // A new launcher is looked for at start unless the player turned that off (Settings).
   if (app.info.version && app.config.checkUpdates) {
     lookForUpdate().catch(() => undefined); // told only when the player asks (Settings' "Check now")
@@ -300,9 +305,12 @@ export async function refresh() {
   }
   void countCrashes();
   try {
-    app.discs = app.config.discsDir ? await api.scanDiscs() : [];
+    const scan = app.config.discsDir ? await api.scanDiscs() : { found: [], choices: [] };
+    app.discs = scan.found;
+    app.discChoices = scan.choices;
   } catch {
     app.discs = []; // a folder that went away: the tiles ask for an image as before
+    app.discChoices = [];
   }
 }
 
@@ -314,6 +322,19 @@ export async function syncProgressWeb() {
     app.library = await api.syncProgressFromWeb();
   } catch {
     // Offline: keep what was read at start (the kept copy)
+  }
+}
+
+/** Godot installed after the first run, or moved: the Rust side looks for it again (detect.rs). */
+async function adoptGodot() {
+  try {
+    const config = await api.adoptGodot();
+    if (config.godot && config.godot !== app.config?.godot) {
+      app.config = config;
+      await refresh();
+    }
+  } catch {
+    // Not found is not an error: the Mods page offers Get Godot and Choose Godot
   }
 }
 
@@ -516,6 +537,15 @@ export async function copyingDisc<T>(run: (progress: (progress: DiscCopy) => voi
 }
 
 /** Removes what setting GAME up made, after the player confirmed. */
+/** Developers only: plays VERSION's disc of its game from now on (the switch on the game's page). */
+export async function chooseDisc(version: string) {
+  const saved = await guard(api.chooseDisc(version));
+  if (saved) {
+    app.config = saved;
+    await refresh();
+  }
+}
+
 export async function uninstallGame(game: string) {
   await guard(api.uninstallGame(game));
   await refresh();

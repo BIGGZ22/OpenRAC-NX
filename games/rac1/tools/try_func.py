@@ -43,7 +43,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from libgcc_units import SEGMENT_SOURCES, ee29_sources  # noqa: E402
+from libgcc_units import SEGMENT_SOURCES, ee29_sources, ee29_01_sources  # noqa: E402
 from toolchain import sn  # noqa: E402
 import file_cflags  # noqa: E402
 import overlay_check  # noqa: E402
@@ -51,6 +51,7 @@ import overlay_check  # noqa: E402
 import rabbitizer as rz  # noqa: E402
 from elftools.elf.elffile import ELFFile  # noqa: E402
 from elftools.elf.relocation import RelocationSection  # noqa: E402
+import srcnames
 
 # Absolute: Windows' CreateProcess won't resolve a relative forward-slash
 # path to an .exe (tools/toolchain.py).
@@ -60,6 +61,10 @@ CC = str(Path("toolchain/sn-prodg-24/local/sce/ee/gcc/bin/ee-gcc2953.exe").resol
 CC29 = str(Path("toolchain/sn-prodg-24/local/sce/ee/gcc/bin/ee-gcc.exe").resolve())
 EE29_INC = "-Itoolchain/sn-prodg-24/local/sce/ee/gcc/lib/gcc-lib/ee/2.9-ee-991111/include"
 EE29_SOURCES = ee29_sources()
+# ee29 objects built with Sony's Linux 2.9-ee-991111-01 (a fourth column in
+# config/core_text.objects), when toolchain/ee-gcc-2.9-991111-01 is present.
+CC29_01 = Path("toolchain/ee-gcc-2.9-991111-01/bin/ee-gcc")
+EE29_01_SOURCES = ee29_01_sources() if CC29_01.is_file() else set()
 CFLAGS = ["-O2", "-G2", "-Iinclude", "-Wa,-I,."] + os.environ.get("TRY_CFLAGS", "").split()  # extra flags for experiments
 BASEROM = "baserom/SCES_509.16"
 STUB = re.compile(r'^\s*(?:INCLUDE_ASM|ASM_FUNC)\([^)]*\b(func_[0-9A-Fa-f]{8})\)')
@@ -79,7 +84,7 @@ OVERLAY_DEF = re.compile(r"^(?!extern\b)[A-Za-z_].*?\b(func_L\d{2}_[0-9A-Fa-f]{8
 def find_overlay_stub(name):
     """Like find_stub, but over every src/overlays/**/*.c file."""
     for src in sorted(Path("src/overlays").rglob("*.c")):
-        lines = src.read_text(errors="replace").splitlines()
+        lines = srcnames.read_c(src, errors="replace").splitlines()
         for i, line in enumerate(lines):
             m = OVERLAY_STUB.match(line)
             if m and m.group(1) == name:
@@ -103,7 +108,7 @@ def find_stub(name):
         return find_overlay_stub(name)
     for seg, srcs in SEGMENT_SOURCES.items():
         for src in srcs:
-            lines = Path(src).read_text(errors="replace").splitlines()
+            lines = srcnames.read_c(src, errors="replace").splitlines()
             for i, line in enumerate(lines):
                 m = STUB.match(line)
                 if m and m.group(1) == name:
@@ -142,7 +147,11 @@ def build(name, seg, src, first, last, candidate, work):
     with open(work / "log.txt", "w") as log:
         s = [work / f"{n}.s" for n in "abcd"]
         if Path(src).as_posix() in EE29_SOURCES:
-            if not run(sn(CC29, *CFLAGS, *extra, EE29_INC, "-S", "-o", str(s[0]), str(c)), log):
+            if Path(src).as_posix() in EE29_01_SOURCES:
+                cc29 = [str(CC29_01.resolve()), *CFLAGS, *extra, "-S", "-o", str(s[0]), str(c)]
+            else:
+                cc29 = sn(CC29, *CFLAGS, *extra, EE29_INC, "-S", "-o", str(s[0]), str(c))
+            if not run(cc29, log):
                 return None
             shutil.copy(s[0], s[3])
             if not run([sys.executable, "tools/fix_volatile_slot.py", str(s[3]), str(s[3])], log):

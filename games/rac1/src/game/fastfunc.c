@@ -46,7 +46,9 @@ extern void func_001F3140(void);
 extern int D_0018E840[];
 extern void func_001F7B40(void);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9810);
+LINKER_REMNANT("asm/remnants/text", func_001F9810);
+
+INCLUDE_ASM("asm/nonmatchings/text", func_001F9840);
 
 INCLUDE_ASM("asm/nonmatchings/text", func_001F9850);
 
@@ -120,7 +122,7 @@ ASM_FUNC("asm/handwritten/text", func_001F9AC0);
  */
 INCLUDE_ASM("asm/nonmatchings/text", func_001F9AF0);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9B20);
+ASM_FUNC("asm/handwritten/text", func_001F9B20);
 
 LINKER_REMNANT("asm/remnants/text", func_001F9B48);
 
@@ -128,7 +130,7 @@ INCLUDE_ASM("asm/nonmatchings/text", func_001F9B50);
 
 ASM_FUNC("asm/handwritten/text", func_001F9B70);
 
-float func_001F9B88(float arg0) {
+float FastAbsF(float arg0) {
     return __builtin_fabsf(arg0);
 }
 
@@ -176,47 +178,47 @@ INCLUDE_ASM("asm/nonmatchings/text", func_001F9BB0);
  */
 INCLUDE_ASM("asm/nonmatchings/text", func_001F9BC0);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9BC8);
+ASM_FUNC("asm/handwritten/text", func_001F9BC8);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9BD8);
+ASM_FUNC("asm/handwritten/text", func_001F9BD8);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9BF0);
+ASM_FUNC("asm/handwritten/text", func_001F9BF0);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9C08);
+ASM_FUNC("asm/handwritten/text", func_001F9C08);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9C30);
+ASM_FUNC("asm/handwritten/text", func_001F9C30);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9C48);
+ASM_FUNC("asm/handwritten/text", func_001F9C48);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9C60);
+ASM_FUNC("asm/handwritten/text", func_001F9C60);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9C78);
+ASM_FUNC("asm/handwritten/text", func_001F9C78);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9CA0);
+ASM_FUNC("asm/handwritten/text", func_001F9CA0);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9CB8);
+ASM_FUNC("asm/handwritten/text", func_001F9CB8);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9CE8);
+ASM_FUNC("asm/handwritten/text", func_001F9CE8);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9D10);
+ASM_FUNC("asm/handwritten/text", func_001F9D10);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9D48);
+ASM_FUNC("asm/handwritten/text", func_001F9D48);
 
 ASM_FUNC("asm/handwritten/text", func_001F9D78);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9DC0);
+ASM_FUNC("asm/handwritten/text", func_001F9DC0);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9E10);
+ASM_FUNC("asm/handwritten/text", func_001F9E10);
 
 ASM_FUNC("asm/handwritten/text", func_001F9E58);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9EC0);
+ASM_FUNC("asm/handwritten/text", func_001F9EC0);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9EE8);
+ASM_FUNC("asm/handwritten/text", func_001F9EE8);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9F18);
+ASM_FUNC("asm/handwritten/text", func_001F9F18);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9F30);
+ASM_FUNC("asm/handwritten/text", func_001F9F30);
 
 ASM_FUNC("asm/handwritten/text", func_001F9F60);
 
@@ -228,19 +230,19 @@ INCLUDE_ASM("asm/nonmatchings/text", func_001F9FC0);
 
 ASM_FUNC("asm/handwritten/text", func_001FA058);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA168);
+ASM_FUNC("asm/handwritten/text", func_001FA168);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA190);
+ASM_FUNC("asm/handwritten/text", func_001FA190);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA1C0);
+ASM_FUNC("asm/handwritten/text", func_001FA1C0);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA1F8);
+ASM_FUNC("asm/handwritten/text", func_001FA1F8);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA218);
+ASM_FUNC("asm/handwritten/text", func_001FA218);
 
 ASM_FUNC("asm/handwritten/text", func_001FA238);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA460);
+ASM_FUNC("asm/handwritten/text", func_001FA460);
 
 /*
  * Reverted (size mismatch: 28 vs retail's 32). Semantics certain: a
@@ -261,19 +263,19 @@ INCLUDE_ASM("asm/nonmatchings/text", func_001FA460);
  */
 INCLUDE_ASM("asm/nonmatchings/text", func_001FA480);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA4A0);
+ASM_FUNC("asm/handwritten/text", func_001FA4A0);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA4F0);
+ASM_FUNC("asm/handwritten/text", func_001FA4F0);
 
 ASM_FUNC("asm/handwritten/text", func_001FA540);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA588);
+ASM_FUNC("asm/handwritten/text", func_001FA588);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA5C8);
+ASM_FUNC("asm/handwritten/text", func_001FA5C8);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA648);
+ASM_FUNC("asm/handwritten/text", func_001FA648);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA6C0);
+ASM_FUNC("asm/handwritten/text", func_001FA6C0);
 
 /*
  * Close but not exact: angle-wrap-to-[-pi,pi] on arg0+arg1 (retail's
@@ -297,7 +299,7 @@ INCLUDE_ASM("asm/nonmatchings/text", func_001FA7D8);
 
 INCLUDE_ASM("asm/nonmatchings/text", func_001FA850);
 
-float func_001FA888(int arg0) {
+float IntToFloat(int arg0) {
     return (float)arg0;
 }
 
@@ -312,7 +314,7 @@ float func_001FA888(int arg0) {
  */
 INCLUDE_ASM("asm/nonmatchings/text", func_001FA898);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA8A8);
+ASM_FUNC("asm/handwritten/text", func_001FA8A8);
 
 ASM_FUNC("asm/handwritten/text", func_001FA8F0);
 

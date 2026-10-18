@@ -129,7 +129,7 @@ extern void func_001FFC48(void *);
    for each of the 13 bank records at D_L00_0017DD50, func_001FFB38(i,
    0xFFFF, 0, 0, 0, 0, 1), +0x7C = 0, +0x6C = -6, then reloads it with
    func_001FFC48. */
-void func_L00_00236208(void) {
+void Hud_ResetBanks(void) {
     int i;
 
     for (i = 0; i < 13; i++) {
@@ -166,7 +166,7 @@ typedef struct {
    *X moves left by the width (+0x58) with bit 3, else by half of it.
    Returns 0. The flags are read once for the first test and again after
    the store; `(flags ^ 1) & 1` is retail's xori / andi test of bit 0. */
-int func_L00_00236400(HudElem *rec, int *x, int *y) {
+int Hud_AlignElement(HudElem *rec, int *x, int *y) {
     int w = rec->w;
     int h = rec->h;
     int flags = rec->flags;
@@ -196,7 +196,7 @@ extern float D_L00_0017E500[];
    D_L00_0017E500, and offsets *Y by it times (height + 52) for flags 1
    (up) / 2 (down), or *X by it times (width + 20) for flags 4 (left) /
    8 (right), rounded (func_001FA888 / func_001FA898 convert). */
-void func_L00_00236468(HudElem *e, int *x, int *y, int t, int d) {
+void Hud_SlideElement(HudElem *e, int *x, int *y, int t, int d) {
     int dx = 0;
     int dy = 0;
     float s;
@@ -218,19 +218,19 @@ void func_L00_00236468(HudElem *e, int *x, int *y, int t, int d) {
         s = D_L00_0017E500[t];
     }
     if (e->flags & 1) {
-        dy = -truncate_float_to_s32(s * (func_001FA888(e->h) + 52.0f) + 0.5f);
+        dy = -truncate_float_to_s32(s * (IntToFloat(e->h) + 52.0f) + 0.5f);
     } else if (e->flags & 2) {
-        dy = truncate_float_to_s32(s * (func_001FA888(e->h) + 52.0f) + 0.5f);
+        dy = truncate_float_to_s32(s * (IntToFloat(e->h) + 52.0f) + 0.5f);
     } else if (e->flags & 4) {
-        dx = -truncate_float_to_s32(s * (func_001FA888(e->w) + 20.0f) + 0.5f);
+        dx = -truncate_float_to_s32(s * (IntToFloat(e->w) + 20.0f) + 0.5f);
     } else if (e->flags & 8) {
-        dx = truncate_float_to_s32(s * (func_001FA888(e->w) + 20.0f) + 0.5f);
+        dx = truncate_float_to_s32(s * (IntToFloat(e->w) + 20.0f) + 0.5f);
     }
     *x += dx;
     *y += dy;
 }
 /* updates numeric HUD values and dimensions from digit count */
-void func_L00_00236610(HudElem *e) {
+void Hud_SetupCounterDigits(HudElem *e) {
  int *value=e->unk0C;
  int digits;
  int v,flags,width;
@@ -255,22 +255,22 @@ extern void func_L00_00236610(HudElem *);
 
 /* Resets a HUD element: a timer of 30 + func_001F9850(180) (+0x7C),
    offsets 0x48 / 0x4A cleared, then func_L00_00236610. */
-void func_L00_00236710(HudElem *e) {
+void Hud_InitElement(HudElem *e) {
     e->unk7C = scale_ticks(0xB4) + 0x1E;
     e->unk48 = 0;
     e->unk4A = 0;
-    func_L00_00236610(e);
+    Hud_SetupCounterDigits(e);
 }
 /* func_L00_00236710 for a 32 x 32 element. */
-void func_L00_00236750(HudElem *e) {
+void Hud_InitSmallElement(HudElem *e) {
     e->unk7C = scale_ticks(0xB4) + 0x1E;
     e->unk48 = 0;
     e->unk4A = 0;
     e->w = 0x20;
     e->h = 0x20;
-    func_L00_00236610(e);
+    Hud_SetupCounterDigits(e);
 }
-int func_L00_002367A8(int key, int val) {
+int Hud_ExtendBankTime(int key, int val) {
     int i;
     int r;
     HudBank *e;
@@ -288,7 +288,7 @@ int func_L00_002367A8(int key, int val) {
 }
 
 /* Eases a counter's shown value toward its target and animates its two drifting digits. */
-void func_L00_00236830(HudElem *e) {
+void Hud_UpdateCounter(HudElem *e) {
     unsigned char *c = e->cnt;
     int v;
     int cap;
@@ -315,7 +315,7 @@ void func_L00_00236830(HudElem *e) {
             d = x;
             d = d < 0 ? -d : d;
             if (d != 0) {
-                n = truncate_float_to_s32(func_001F9B50(func_001FA888(d) / 25.0f) * 5.0f);
+                n = truncate_float_to_s32(func_001F9B50(IntToFloat(d) / 25.0f) * 5.0f);
                 n = n < d * scale_ticks(2) / scale_ticks(10) ? d * scale_ticks(2) / scale_ticks(10) : n;
                 if (n >= 0x7A) {
                     n = 0x79;
@@ -352,7 +352,7 @@ void func_L00_00236830(HudElem *e) {
             c[0]--;
         }
     }
-    func_L00_0023B440((char *)e + 0x40);
+    Hud_EvalAnimFrame((char *)e + 0x40);
 }
 extern int func_L00_0023B440(char *);
 
@@ -363,7 +363,7 @@ extern int func_L00_0023B440(char *);
    func_001F9850(5) each digit rises when below func_001F9850(8), else
    they fall (setting +0x6C to 1 while any is left). Ends with
    func_L00_0023B440 on the block at +0x40. */
-void func_L00_00236AB8(HudElem *e) {
+void Hud_UpdateDriftCounter(HudElem *e) {
     unsigned char *c = e->cnt;
     int v;
     int cap;
@@ -401,7 +401,7 @@ void func_L00_00236AB8(HudElem *e) {
             c[0]--;
         }
     }
-    func_L00_0023B440((char *)e + 0x40);
+    Hud_EvalAnimFrame((char *)e + 0x40);
 }
 extern float func_002140F8(float, float);
 extern float D_L00_0017E760[][4];
@@ -411,12 +411,12 @@ extern short D_L00_0015F838;
 extern short D_L00_0015F83C;
 
 /* fills 100 hud particle records with randomised positions and drift */
-void func_L00_00236BF8(HudElem *e) {
+void Hud_InitParticles(HudElem *e) {
     int i;
     float v, lo, span, hi;
     int n;
 
-    func_L00_00236710(e);
+    Hud_InitElement(e);
     for (i = 0; i < 100; i++) {
         v = *(float *)&D_L00_0015F830;
         if (i >= 10) {
@@ -427,14 +427,14 @@ void func_L00_00236BF8(HudElem *e) {
         span = (232.0f - (v + v)) / (float)n;
         lo = (v - 116.0f) + (float)(i % n) * span;
         hi = lo + span;
-        D_L00_0017E760[i][0] = func_002140F8(v - 17.0f, 17.0f - v);
-        D_L00_0017E760[i][1] = func_002140F8(lo, hi);
-        D_L00_0017E760[i][2] = func_002140F8(-0.4f, 0.4f);
-        D_L00_0017E760[i][3] = func_002140F8(-0.6f, 0.6f);
-        D_L00_0017E760[i][2] += func_002140F8(-0.4f, 0.4f);
-        D_L00_0017E760[i][3] += func_002140F8(-0.6f, 0.6f);
-        D_L00_0017E760[i][2] += func_002140F8(-0.4f, 0.4f);
-        D_L00_0017E760[i][3] += func_002140F8(-0.6f, 0.6f);
+        D_L00_0017E760[i][0] = random_float_between(v - 17.0f, 17.0f - v);
+        D_L00_0017E760[i][1] = random_float_between(lo, hi);
+        D_L00_0017E760[i][2] = random_float_between(-0.4f, 0.4f);
+        D_L00_0017E760[i][3] = random_float_between(-0.6f, 0.6f);
+        D_L00_0017E760[i][2] += random_float_between(-0.4f, 0.4f);
+        D_L00_0017E760[i][3] += random_float_between(-0.6f, 0.6f);
+        D_L00_0017E760[i][2] += random_float_between(-0.4f, 0.4f);
+        D_L00_0017E760[i][3] += random_float_between(-0.6f, 0.6f);
     }
 }
 extern void func_L00_00236830_v(HudElem *) __asm__("func_L00_00236830");
@@ -446,7 +446,7 @@ extern short D_L00_0015F838;
 
 /* bounces the drifting particles around a box that depends on their index, after updating its
    HUD element (the element it is the callback of, passed on in $a0) */
-void func_L00_00236DE8(HudElem *e) {
+void Hud_UpdateParticles(HudElem *e) {
     int i;
     int cnt;
     int par;
@@ -494,17 +494,17 @@ void func_L00_00236DE8(HudElem *e) {
 }
 INCLUDE_ASM("asm/overlays", func_L00_00236F38);
 INCLUDE_ASM("asm/overlays", func_L00_002377E0);
-void func_L00_00237B20(HudElem *e) {
+void Hud_InitCounter(HudElem *e) {
     e->unk7C = scale_ticks(0xA) + 0x1E;
     e->unk48 = 0;
     e->unk4A = 0;
     e->w = 0x20;
     e->h = 0x20;
-    func_L00_00236610(e);
+    Hud_SetupCounterDigits(e);
 }
 // Wrapper function (declaration provided by includes)
-void func_L00_00237B70(void *e) {
-    func_L00_00236830(e);
+void DefaultVtbl_DeleteMoby(void *e) {
+    Hud_UpdateCounter(e);
 }
 INCLUDE_ASM("asm/overlays", func_L00_00237B90);
 extern char D_0013F450[];
@@ -518,7 +518,7 @@ extern void func_L00_00236830(HudElem *);
 void func_L00_00238148(HudElem *e) {
     char *base;
 
-    func_L00_00236830(e);
+    Hud_UpdateCounter(e);
     if (gGoldSuckCannon != 0) {
         e->unk08 = 10;
     } else {
@@ -544,7 +544,7 @@ extern void func_L00_00236468(HudElem *, int *, int *, int, int);
 extern void func_L00_0023C458(int, int, int, int, int, int);
 
 /* Draws a HUD gauge frame. */
-int func_L00_002381D0(HudElem *e) {
+int Hud_DrawGaugeFrame(HudElem *e) {
     int pos[2];
     int left, top, right, bottom, w, h, bh, step, i;
     {
@@ -558,8 +558,8 @@ int func_L00_002381D0(HudElem *e) {
             __builtin_memcpy(dst, src, 4);
         }
     }
-    func_L00_00236400(e, &pos[0], &pos[1]);
-    func_L00_00236468(e, &pos[0], &pos[1], e->unk6C, 0);
+    Hud_AlignElement(e, &pos[0], &pos[1]);
+    Hud_SlideElement(e, &pos[0], &pos[1], e->unk6C, 0);
     w = *(int *)&D_L00_0015F840 * 0xD0;
     h = *(int *)&D_L00_0015F844 * 0xA0;
     bh = *(int *)&D_L00_0015F840 * 0x260;
@@ -591,8 +591,8 @@ int func_L00_002381D0(HudElem *e) {
         top -= 16;
         func_00201640(left, top, right, top + 32, 0x80000000, 1);
     } while (i < e->unk74);
-    w = func_00200198(*(int *)e, 0);
-    func_L00_0023C458(w, pos[0] + e->unk48, pos[1] + e->unk4A, *(int *)&D_L00_0015F840, *(int *)&D_L00_0015F844, 0x80);
+    w = GetIconFrame(*(int *)e, 0);
+    HudSpriteRot90(w, pos[0] + e->unk48, pos[1] + e->unk4A, *(int *)&D_L00_0015F840, *(int *)&D_L00_0015F844, 0x80);
     return e->w;
 }
 typedef struct {
@@ -629,7 +629,7 @@ extern int D_0014171B_i[] __asm__("D_0014171B");
 
 // initializes a quick-select object and fills its 8-entry table from the info table
 // Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_text_002377b8.c, FUN_L00_00237ae8.
-void func_L00_00238478(Obj238478 *o) {
+void QuickSelectInit(Obj238478 *o) {
     int i, a, b;
     DestElem *d;
     int *s;
@@ -731,7 +731,7 @@ extern float func_001FA7D8(float);
 
 /* Picks slot w74 from the stick angle (or steps it with the 0x1000-0x8000 pad bits), counts hold frames in b71/b70, records the slot's entry when released, and closes when b70 runs out.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/text/002377b8.c, FUN_L00_00237ba0. */
-void func_L00_00238530(Obj_38530 *p) {
+void QuickSelectUpdate(Obj_38530 *p) {
     float x, y, mag, ang, a, f, r;
     int old, n, s, k, id;
     u8 *c = &p->b70;
@@ -759,7 +759,7 @@ void func_L00_00238530(Obj_38530 *p) {
         if (mag > 0.9f) {
             a = ang + 3.1415927f + 3.1415927f + 1.5707964f + 3.1415927f / (float)D_L00_0015FB48;
             f = a * ((float)D_L00_0015FB48 / 6.2831855f);
-            r = (float)old * 6.2831855f / func_001FA888(D_L00_0015FB48) - 3.1415927f;
+            r = (float)old * 6.2831855f / IntToFloat(D_L00_0015FB48) - 3.1415927f;
             if (old == -1 || FastDiffRots(r, FastSubRots(ang, 1.5707964f)) > 0.58904862f) {
                 s = (int)f % D_L00_0015FB48;
                 if (((s ^ 1) & 1)) {
@@ -818,7 +818,7 @@ void func_L00_00238530(Obj_38530 *p) {
             D_L00_0015FB54_38530 = b;
             D_L00_0015FB50 = a;
         }
-        func_001FFCB0(p->w64);
+        Hud_RemoveBank(p->w64);
         p->w6C = -6;
         D_L00_0015FB4C = D_L00_0015F4F8;
     }
@@ -860,7 +860,7 @@ extern char D_0013D50F[];
 
 #define GI(x) (*(int *)&(x))
 #define GF(x) (*(float *)&(x))
-int func_L00_00238C30(HudElem *rec) {
+int QuickSelectDraw(HudElem *rec) {
     extern char D_L00_001C43B0[];
     char *wr;
     int x, y, half_w, half_h, alpha;
@@ -874,59 +874,59 @@ int func_L00_00238C30(HudElem *rec) {
     unsigned char *q = rec->cnt;
     char formatted[80];
 
-    open = func_001FA888(q[0]) / func_001FA888(GI(D_L00_0015F860));
+    open = IntToFloat(q[0]) / IntToFloat(GI(D_L00_0015F860));
     if (1.0f < open) open = 1.0f;
     else if (open < 0.0f) open = 0.0f;
-    fade = func_001FA888(q[1]) / func_001FA888(GI(D_L00_0015F860));
+    fade = IntToFloat(q[1]) / IntToFloat(GI(D_L00_0015F860));
     if (1.0f < fade) fade = 1.0f;
     else if (fade < 0.0f) fade = 0.0f;
     {
         float phase, angle, radius;
-        phase = func_001FA888(D_L00_0015F6B0 % GI(D_L00_0015F890));
-        phase /= func_001FA888(GI(D_L00_0015F890));
+        phase = IntToFloat(D_L00_0015F6B0 % GI(D_L00_0015F890));
+        phase /= IntToFloat(GI(D_L00_0015F890));
         phase *= 6.28318f;
-        angle = func_001F9FA8(phase - 3.14159f);
+        angle = FastSin(phase - 3.14159f);
         radius = open * 128.0f;
-        alpha = func_001FA898(radius);
+        alpha = truncate_float_to_s32(radius);
         angle *= 0.125f;
         angle += 0.875f;
-        marker_alpha = func_001FA898(radius * angle);
+        marker_alpha = truncate_float_to_s32(radius * angle);
     }
     x = rec->unk50;
     y = rec->unk54;
-    func_L00_00236400(rec, &x, &y);
+    Hud_AlignElement(rec, &x, &y);
     half_w = GI(D_L00_0015F7F8) / 2;
     half_h = GI(D_L00_0015F7FC) / 2;
-    func_00200468(func_00200198(0xe934, 0), x, y, half_w, half_h, alpha);
-    func_00200468(func_00200198(0xe934, 0), x + GI(D_L00_0015F7F8),
+    HudSprite(GetIconFrame(0xe934, 0), x, y, half_w, half_h, alpha);
+    HudSprite(GetIconFrame(0xe934, 0), x + GI(D_L00_0015F7F8),
                   y + GI(D_L00_0015F7FC), -half_w, -half_h, alpha);
-    func_00200468(func_00200198(0xe934, 0), x + GI(D_L00_0015F7F8),
+    HudSprite(GetIconFrame(0xe934, 0), x + GI(D_L00_0015F7F8),
                   y, -half_w, half_h, alpha);
-    func_00200468(func_00200198(0xe934, 0), x,
+    HudSprite(GetIconFrame(0xe934, 0), x,
                   y + GI(D_L00_0015F7FC), half_w, -half_h, alpha);
     for (i = 0; i < D_L00_0015FB48; i++) {
-        angle = func_001FA748(((float)i + (float)i) * 3.1415927f /
+        angle = FastAddRots(((float)i + (float)i) * 3.1415927f /
                               (float)D_L00_0015FB48 - 3.1415927f, 1.5707964f);
         icon_x = x + GI(D_L00_0015F800) +
-                 (int)(GF(D_L00_0015F86C) * func_001F9F90(angle) * GF(D_L00_0015F8A4));
+                 (int)(GF(D_L00_0015F86C) * FastCos(angle) * GF(D_L00_0015F8A4));
         icon_y = y + GI(D_L00_0015F804) +
-                 (int)(GF(D_L00_0015F86C) * func_001F9FA8(angle));
+                 (int)(GF(D_L00_0015F86C) * FastSin(angle));
         if (rec->unk74 == i && ((E_238C30 **)D_L00_0015FB78)[GI(D_L00_0015F80C)][i].id != 0)
-            func_00200468(func_00200198(0xe99c, 0), icon_x - 0x13,
+            HudSprite(GetIconFrame(0xe99c, 0), icon_x - 0x13,
                           icon_y - 0x13, 0x26, 0x26, marker_alpha);
         if (((E_238C30 **)D_L00_0015FB78)[GI(D_L00_0015F80C)][i].id != 0) {
             int icon_alpha;
             if (i != rec->unk74)
-                icon_alpha = func_001FA898((float)alpha * GF(D_L00_0015F8A0));
+                icon_alpha = truncate_float_to_s32((float)alpha * GF(D_L00_0015F8A0));
             else
                 icon_alpha = alpha;
-            func_L00_0023BAB8((char *)rec, func_00200198(((E_238C30 **)D_L00_0015FB78)[GI(D_L00_0015F80C)][i].id,
+            HudFrame((char *)rec, GetIconFrame(((E_238C30 **)D_L00_0015FB78)[GI(D_L00_0015F80C)][i].id,
                           ((unsigned char *)D_0013E15A + 0x4C6)[((E_238C30 **)D_L00_0015FB78)[GI(D_L00_0015F80C)][i].item] ? 4 : 0), icon_x, icon_y, 1, icon_alpha);
         }
     }
     selected = rec->unk74;
     if (selected >= 0 && *(int *)(((char **)D_L00_0015FB78)[GI(D_L00_0015F80C)] + selected * 0x1C) != 0) {
-        color = func_001FA8A8(GI(D_L00_0015F878), GI(D_L00_0015F87C), open * fade);
+        color = FastTweenColor(GI(D_L00_0015F878), GI(D_L00_0015F87C), open * fade);
         {
         int id;
         id = *(int *)((char *)D_0014171B_i + 0x885 + selected * 4);
@@ -936,15 +936,15 @@ int func_L00_00238C30(HudElem *rec) {
             item = *(int *)(D_0013D50F + 0x21 + id * 4);
             func_00116248(formatted, D_L00_0015F8A8, item, *(unsigned short *)(wr + 0xE));
             if (item != 0)
-                shadow = func_001FA8A8(GI(D_L00_0015F888), GI(D_L00_0015F88C), open * fade);
+                shadow = FastTweenColor(GI(D_L00_0015F888), GI(D_L00_0015F88C), open * fade);
             else
-                shadow = func_001FA8A8(GI(D_L00_0015F880), GI(D_L00_0015F884), open * fade);
-            func_001F6EA8(x + GI(D_L00_0015F800) + 1, y + GI(D_L00_0015F804) + 13, color, formatted, -1);
-            func_001F6EA8(x + GI(D_L00_0015F800), y + GI(D_L00_0015F804) + 12, shadow, formatted, -1);
+                shadow = FastTweenColor(GI(D_L00_0015F880), GI(D_L00_0015F884), open * fade);
+            FontPrintCenter(x + GI(D_L00_0015F800) + 1, y + GI(D_L00_0015F804) + 13, color, formatted, -1);
+            FontPrintCenter(x + GI(D_L00_0015F800), y + GI(D_L00_0015F804) + 12, shadow, formatted, -1);
         }
         }
         prefix_length = 0;
-        shadow = func_001FA8A8(GI(D_L00_0015F870), GI(D_L00_0015F874), open * fade);
+        shadow = FastTweenColor(GI(D_L00_0015F870), GI(D_L00_0015F874), open * fade);
         {
             int item, id;
             item = *(int *)(((char **)D_L00_0015FB78)[GI(D_L00_0015F80C)] + selected * 0x1C + 0x18);
@@ -952,7 +952,7 @@ int func_L00_00238C30(HudElem *rec) {
                 id = ((TI_238C30 *)D_L00_00179BC0)[item].h48;
             else
                 id = ((TI_238C30 *)D_L00_00179BC0)[item].h46;
-            text = func_001FE540(id);
+            text = msg_string(id);
         }
         if (text == 0) return rec->w;
         if (func_00116810((char *)text) == 0) return rec->w;
@@ -991,14 +991,14 @@ int func_L00_00238C30(HudElem *rec) {
             text_y += GI(D_L00_0015F89C);
         }
         if (prefix_length != 0) {
-            func_001F6EA8(x + GI(D_L00_0015F800) + 1, text_y + 1, color, (void *)text, prefix_length);
-            func_001F6EA8(x + GI(D_L00_0015F800), text_y, shadow, (void *)text, prefix_length);
+            FontPrintCenter(x + GI(D_L00_0015F800) + 1, text_y + 1, color, (void *)text, prefix_length);
+            FontPrintCenter(x + GI(D_L00_0015F800), text_y, shadow, (void *)text, prefix_length);
             text_y += 16;
-            func_001F6EA8(x + GI(D_L00_0015F800) + 1, text_y + 1, color, (void *)suffix, -1);
-            func_001F6EA8(x + GI(D_L00_0015F800), text_y, shadow, (void *)suffix, -1);
+            FontPrintCenter(x + GI(D_L00_0015F800) + 1, text_y + 1, color, (void *)suffix, -1);
+            FontPrintCenter(x + GI(D_L00_0015F800), text_y, shadow, (void *)suffix, -1);
         } else {
-            func_001F6EA8(x + GI(D_L00_0015F800) + 1, text_y + 1, color, (void *)text, -1);
-            func_001F6EA8(x + GI(D_L00_0015F800), text_y, shadow, (void *)text, -1);
+            FontPrintCenter(x + GI(D_L00_0015F800) + 1, text_y + 1, color, (void *)text, -1);
+            FontPrintCenter(x + GI(D_L00_0015F800), text_y, shadow, (void *)text, -1);
         }
     }
     return rec->w;
@@ -1007,7 +1007,7 @@ extern int D_L00_0015FB48 MACRO_ADDR;
 extern void *D_L00_0015FB78 MACRO_ADDR;
 extern short D_L00_0015F820;
 extern short D_L00_0015F80C;
-void func_L00_002394A8(char *a) {
+void RadialSelectInit(char *a) {
     int x = *(int *)&D_L00_0015F7F8;
     int y = *(int *)&D_L00_0015F7FC;
     D_L00_0015FB48 = 4;
@@ -1038,7 +1038,7 @@ extern int D_L00_0017DD44;
 extern int D_00141710[];
 
 /* Updates radial HUD selection and fades, closing it when the display fade reaches zero. Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_text_002377b8.c, FUN_L00_00238b80. */
-void func_L00_00239510(Obj *o) {
+void RadialSelectUpdate(Obj *o) {
     float x, y, len, ang;
     int old, cur, n, t;
     u8 *c = &o->b70;
@@ -1101,7 +1101,7 @@ void func_L00_00239510(Obj *o) {
     }
     if (c[0] == 0) {
         { int a = o->w78; int b = o->w74; D_L00_0015FB54_export = b; D_L00_0015FB50 = a; }
-        func_001FFCB0(o->w64);
+        Hud_RemoveBank(o->w64);
         o->w6C = -6;
         D_L00_0015FB4C = D_L00_0015F4F8;
     }
@@ -1153,7 +1153,7 @@ extern int func_L00_00236400_239918(void *, int *, int *) __asm__("func_L00_0023
 
 /* Draws the radial selection HUD element: the four mirrored corners of its ring, one icon per entry on a circle
  * (the selected one with a glow), then the selected entry's name; returns the element's word at 0x58. */
-int func_L00_00239918(Elem_239918 *e) {
+int RadialSelectDraw(Elem_239918 *e) {
     Ids_239918 tmp;
     int x, y;
     int a, b, hw, hh, i, alpha, k, yy, col, shadow, str;
@@ -1253,13 +1253,13 @@ extern HudCounter D_L00_0015FB68 MACRO_ADDR;
    0, 0, 0, 1. They are declared as one 8-byte struct: as separate shorts
    -G2 would put them in $gp's reach, where retail stores them through
    lui $at. */
-void func_L00_00239F40(HudElem *e) {
+void HudHealthInit(HudElem *e) {
     e->unk7C = scale_ticks(0xB4) + 0x1E;
     e->w = 0x40;
     e->h = 0x40;
     e->unk48 = 0x20;
     e->unk4A = 0;
-    func_L00_00236610(e);
+    Hud_SetupCounterDigits(e);
     e->unk80 = &D_L00_0015FB68;
     D_L00_0015FB68.unk0 = 0;
     D_L00_0015FB68.unk2 = 0;
@@ -1269,7 +1269,7 @@ void func_L00_00239F40(HudElem *e) {
 extern short D_L00_0015F8D0;
 
 /* Updates the health HUD element: advances the wobble counters in its HudCounter (+0x80), clamps the target (+0x78) to +0x08, and steps the two digits (+0x70, +0x71) up or down. */
-void func_L00_00239FC0(HudElem *e) {
+void HudHealthUpdate(HudElem *e) {
     unsigned char *c = e->cnt;
     HudCounter *h;
     int t;
@@ -1327,7 +1327,7 @@ void func_L00_00239FC0(HudElem *e) {
             e->unk6C = -6;
         }
     }
-    func_L00_0023B440((char *)e + 0x40);
+    Hud_EvalAnimFrame((char *)e + 0x40);
 }
 extern char D_0013E633[];
 extern int D_0015EE80_m __asm__("D_0015EE80") MACRO_ADDR;
@@ -1347,7 +1347,7 @@ extern void func_00200468(int, int, int, int, int, int);
 extern void func_L00_0023BAB8(char *, int, int, int, int, int);
 
 /* Draws the health bar (and its nanotech orbs) of a HUD element; returns the element's field 0x58. */
-int func_L00_0023A1A0(char *e) {
+int HudHealthDraw(char *e) {
     int y0, n, alpha;
     char *ip;
     short *tbl;
@@ -1371,15 +1371,15 @@ int func_L00_0023A1A0(char *e) {
     if (((unsigned char *)e)[0x70] == 0) {
         return *(int *)(e + 0x58);
     }
-    f20 = func_001FA888(((unsigned char *)e)[0x70]);
-    f21 = f20 / func_001FA888((*(int *)&D_L00_0015F8D0));
+    f20 = IntToFloat(((unsigned char *)e)[0x70]);
+    f21 = f20 / IntToFloat((*(int *)&D_L00_0015F8D0));
     if (f21 > 1.0f) {
         f21 = 1.0f;
     } else if (f21 < 0.0f) {
         f21 = 0.0f;
     }
-    f20 = func_001FA888(q[1]);
-    f22 = f20 / func_001FA888((*(int *)&D_L00_0015F8D0));
+    f20 = IntToFloat(q[1]);
+    f22 = f20 / IntToFloat((*(int *)&D_L00_0015F8D0));
     if (f22 > 1.0f) {
         f22 = 1.0f;
     } else if (f22 < 0.0f) {
@@ -1415,7 +1415,7 @@ int func_L00_0023A1A0(char *e) {
     y = y0 + *(int *)&D_L00_0015F8F0;
     tex = GetIconFrame(0x7580, 1);
     tex2 = GetIconFrame(0x7580, 0);
-    func_00200650(tex, x0 + bw, y, (*(int *)&D_L00_0015F8FC), (*(int *)&D_L00_0015F8FC), w);
+    DrawHudSpriteTurned(tex, x0 + bw, y, (*(int *)&D_L00_0015F8FC), (*(int *)&D_L00_0015F8FC), w);
     HudSprite(tex2, x, y, bw << 1, (*(int *)&D_L00_0015F8FC), w);
     {
         int h = (*(int *)&D_L00_0015F8FC);
@@ -1424,7 +1424,7 @@ int func_L00_0023A1A0(char *e) {
     if (bw2) {
         int x2;
         y += *(int *)&D_L00_0015F8EC;
-        func_00200650(tex, x0 + bw2, y, (*(int *)&D_L00_0015F8FC), (*(int *)&D_L00_0015F8FC), w);
+        DrawHudSpriteTurned(tex, x0 + bw2, y, (*(int *)&D_L00_0015F8FC), (*(int *)&D_L00_0015F8FC), w);
         x2 = x0 - bw2;
         HudSprite(tex2, x2, y, bw2 << 1, (*(int *)&D_L00_0015F8FC), w);
         {
@@ -1459,8 +1459,8 @@ extern void func_L00_0023B0F8(HudElem *);
 /* Sets E up with func_L00_0023B0F8, points +0x80 at the shorts of
    D_L00_0015FB70 (declared like D_L00_0015FB68, out of $gp's reach) and
    clears the first. */
-void func_L00_0023A658(HudElem *e) {
-    func_L00_0023B0F8(e);
+void HudBoltsInit(HudElem *e) {
+    HudTileInit(e);
     e->unk80 = &D_L00_0015FB70;
     D_L00_0015FB70.unk0 = 0;
 }
@@ -1477,7 +1477,7 @@ extern int D_0015EE98 MACRO_ADDR;
    to D_L00_0015F904 / D_L00_0015F908; otherwise it lowers them and
    sets +0x6C to 1, or to -6 once both are 0. D_0015EE98 is read before
    the tick update, where retail loads it. */
-void func_L00_0023A690(HudElem *e) {
+void HudBoltsUpdate(HudElem *e) {
     unsigned char *c = e->cnt;
     short *tick = e->unk80;
     int v;
@@ -1552,7 +1552,7 @@ extern int func_00116248_3A788() __asm__("func_00116248");
 extern void func_001F6CF8(int, int, int, char *, int);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/text/002377b8.c, FUN_L00_00239df8. */
-int func_L00_0023A788(HudElem_3A788 *m)
+int HudBoltsDraw(HudElem_3A788 *m)
 {
     char buf[16];
     s16 *frame;
@@ -1573,12 +1573,12 @@ int func_L00_0023A788(HudElem_3A788 *m)
     y = D_0015EE80_3A788 ? 10 : 18;
     x = m->unk50;
 
-    open = func_001FA888(m->cnt[0]) / func_001FA888((*(s32 *)&D_L00_0015F904));
+    open = IntToFloat(m->cnt[0]) / IntToFloat((*(s32 *)&D_L00_0015F904));
     if (1.0f < open)
         open = 1.0f;
     else if (open < 0.0f)
         open = 0.0f;
-    text = func_001FA888(fade[1]) / func_001FA888((*(s32 *)&D_L00_0015F908));
+    text = IntToFloat(fade[1]) / IntToFloat((*(s32 *)&D_L00_0015F908));
     if (1.0f < text)
         text = 1.0f;
     else if (text < 0.0f)
@@ -1595,7 +1595,7 @@ int func_L00_0023A788(HudElem_3A788 *m)
 
     /* panel: right cap, stretched middle, left cap */
     slide = truncate_float_to_s32((f32)((*(s32 *)&D_L00_0015F92C) * digits) * open);
-    func_00200650(GetIconFrame(0x7580, 1), cap_x, y, 32, 32, alpha);
+    DrawHudSpriteTurned(GetIconFrame(0x7580, 1), cap_x, y, 32, 32, alpha);
     panel_x -= slide;
     HudSprite(GetIconFrame(0x7580, 0), panel_x, y, slide + 0x10, 32, alpha);
     HudSprite(GetIconFrame(0x7580, 1), panel_x - 0x20, y, 32, 32, alpha);
@@ -1634,7 +1634,7 @@ LINKER_REMNANT("asm/overlays", func_L00_0023AB88);
    second digit goes through a pointer kept across the call, as retail
    holds e + 0x70 in a saved register; the limit is read before the
    timer is stored. */
-void func_L00_0023ABB0(HudElem *e) {
+void HudSmallElementUpdate(HudElem *e) {
     unsigned char *c = e->cnt;
     int max;
     int t;
@@ -1677,7 +1677,7 @@ extern float func_001F9FA8(float);
 extern int func_001FA8A8(int, int, float);
 extern void func_L00_001FB7F8(int, int, int, char *, int);
 
-int func_L00_0023AC68(char *m) {
+int HudSmallElementDraw(char *m) {
     char buf[16];
     unsigned char *q;
     int x, y, panel_right, panel_left, slide, alpha, text_alpha;
@@ -1701,40 +1701,40 @@ int func_L00_0023AC68(char *m) {
     if (q[0] == 0)
         return *(int *)(m + 0x58);
 
-    open = func_001FA888(q[0]) / func_001FA888(*(int *)&D_L00_0015F8D0);
+    open = IntToFloat(q[0]) / IntToFloat(*(int *)&D_L00_0015F8D0);
     if (1.0f < open)
         open = 1.0f;
     else if (open < 0.0f)
         open = 0.0f;
-    text = func_001FA888(q[1]) / func_001FA888(*(int *)&D_L00_0015F8D0);
+    text = IntToFloat(q[1]) / IntToFloat(*(int *)&D_L00_0015F8D0);
     if (1.0f < text)
         text = 1.0f;
     else if (text < 0.0f)
         text = 0.0f;
 
-    text_alpha = func_001FA898(text * 128.0f);
-    alpha = func_001FA898((float)*(int *)&D_L00_0015F9CC * open);
+    text_alpha = truncate_float_to_s32(text * 128.0f);
+    alpha = truncate_float_to_s32((float)*(int *)&D_L00_0015F9CC * open);
     panel_right = x + *(int *)&D_L00_0015F9D4;
-    slide = func_001FA898((float)*(int *)&D_L00_0015F9D0 * open);
-    func_00200650(func_00200198(0x7580, 1), panel_right + 16, y, 32, 32, alpha);
+    slide = truncate_float_to_s32((float)*(int *)&D_L00_0015F9D0 * open);
+    DrawHudSpriteTurned(GetIconFrame(0x7580, 1), panel_right + 16, y, 32, 32, alpha);
     panel_left = panel_right - slide;
-    func_00200468(func_00200198(0x7580, 0), panel_left, y, slide + 16, 32, alpha);
-    func_00200468(func_00200198(0x7580, 1), panel_left - 32, y, 32, 32, alpha);
-    func_L00_0023BAB8(m, func_00200198(0x754f, D_L00_0015F6B0 % 60 >> 1), x - 32, y, 0, text_alpha);
+    HudSprite(GetIconFrame(0x7580, 0), panel_left, y, slide + 16, 32, alpha);
+    HudSprite(GetIconFrame(0x7580, 1), panel_left - 32, y, 32, 32, alpha);
+    HudFrame(m, GetIconFrame(0x754f, D_L00_0015F6B0 % 60 >> 1), x - 32, y, 0, text_alpha);
 
     func_00116248(buf, D_L00_0015F9F0);
     text_x = x + *(int *)&D_L00_0015F9D8;
     text_y = y + *(int *)&D_L00_0015F9DC;
-    period = func_001F9850(*(int *)&D_L00_0015F9E8);
-    pulse = func_001F9FA8((float)(D_L00_0015F6B0 % period) /
-                     func_001FA888(period) * 6.28318f - 3.14159f) * 4.0f - 3.0f;
+    period = scale_ticks(*(int *)&D_L00_0015F9E8);
+    pulse = FastSin((float)(D_L00_0015F6B0 % period) /
+                     IntToFloat(period) * 6.28318f - 3.14159f) * 4.0f - 3.0f;
     if (pulse < 0.0f)
         pulse = 0.0f;
     scaled_text = pulse * text;
-    shadow = func_001FA8A8(0, 0x80000000, scaled_text);
-    color = func_001FA8A8(*(int *)&D_L00_0015F9E0, *(int *)&D_L00_0015F9E4, scaled_text);
-    func_L00_001FB7F8(text_x + 1, text_y + 1, shadow, buf, -1);
-    func_L00_001FB7F8(text_x, text_y, color, buf, -1);
+    shadow = FastTweenColor(0, 0x80000000, scaled_text);
+    color = FastTweenColor(*(int *)&D_L00_0015F9E0, *(int *)&D_L00_0015F9E4, scaled_text);
+    DebugFontPrint(text_x + 1, text_y + 1, shadow, buf, -1);
+    DebugFontPrint(text_x, text_y, color, buf, -1);
     return *(int *)(m + 0x58);
 }
 extern short D_00140A86 NOT_SDA;
@@ -1750,7 +1750,7 @@ extern void func_00200468(int, int, int, int, int, int);
    32 x 32 icon that is visible only while D_00140A86 is set. Returns the
    width. The position is two scalars, not an array: that gives retail's
    argument order. */
-int func_L00_0023AFD8(HudElem *e) {
+int Hud_DrawMeter(HudElem *e) {
     int x;
     int y;
     int len;
@@ -1759,21 +1759,21 @@ int func_L00_0023AFD8(HudElem *e) {
     y = e->unk54;
     e->w = 0x100;
     e->h = 0x40;
-    func_L00_00236400(e, &x, &y);
-    func_L00_00236468(e, &x, &y, e->unk6C, 0);
+    Hud_AlignElement(e, &x, &y);
+    Hud_SlideElement(e, &x, &y, e->unk6C, 0);
     len = e->unk74 * 0xDD / e->unk08 + 0x1B;
-    func_L00_0023C058(GetIconFrame(0x7558, 1), x, y, len, 0x40, 0x80);
+    HudSpriteSubRect(GetIconFrame(0x7558, 1), x, y, len, 0x40, 0x80);
     HudSprite(GetIconFrame(0x7558, 0), x, y, 0x100, 0x40, 0x80);
     HudSprite(GetIconFrame(0x7558, 2), x, y, 0x20, 0x20, D_00140A86 != 0 ? 0x80 : 0);
     return e->w;
 }
 /* func_L00_00236750 without the offsets: a 32 x 32 element with a timer
    of 30 + func_001F9850(120). */
-void func_L00_0023B0F8(HudElem *e) {
+void HudTileInit(HudElem *e) {
     e->unk7C = scale_ticks(0x78) + 0x1E;
     e->w = 0x20;
     e->h = 0x20;
-    func_L00_00236610(e);
+    Hud_SetupCounterDigits(e);
 }
 extern int D_0015EE80 MACRO_ADDR;
 extern short D_L00_0015F9F4;
@@ -1793,7 +1793,7 @@ extern int func_00116248(char *, const char *, ...);
 extern int func_001FA8A8(int, int, float);
 
 /* Draws the weapon HUD tile: three-part frame, weapon icon and ammo text with shadow, faded by the slide-in timers. */
-int func_L00_0023B140(char *m) {
+int HudWeaponDraw(char *m) {
     char buf[16];
     char *q = m + 0x70;
     int x4;
@@ -1804,12 +1804,12 @@ int func_L00_0023B140(char *m) {
     x = *(int *)(m + 0x50);
     if (*(unsigned char *)(m + 0x70) == 0) return *(int *)(m + 0x58);
     {
-        f20 = func_001FA888(*(unsigned char *)(m + 0x70));
-        f21 = f20 / func_001FA888(*(int *)&D_L00_0015F9F4);
+        f20 = IntToFloat(*(unsigned char *)(m + 0x70));
+        f21 = f20 / IntToFloat(*(int *)&D_L00_0015F9F4);
         if (f21 > 1.0f) f21 = 1.0f;
         else if (f21 < 0.0f) f21 = 0.0f;
-        f20 = func_001FA888(*(unsigned char *)(q + 1));
-        f20 = f20 / func_001FA888(*(int *)&D_L00_0015F9F8);
+        f20 = IntToFloat(*(unsigned char *)(q + 1));
+        f20 = f20 / IntToFloat(*(int *)&D_L00_0015F9F8);
         if (f20 > 1.0f) f20 = 1.0f;
         else if (f20 < 0.0f) f20 = 0.0f;
         alpha = truncate_float_to_s32(f21 * 128.0f);
@@ -1820,7 +1820,7 @@ int func_L00_0023B140(char *m) {
         wd = x + truncate_float_to_s32((float)w * f21);
         HudSprite(GetIconFrame(0x7580, 1), x - 0x1C, y, 0x20, 0x20, a);
         HudSprite(GetIconFrame(0x7580, 0), x4, y, wd, 0x20, a);
-        func_00200650(GetIconFrame(0x7580, 1), x4 + wd, y, 0x20, 0x20, a);
+        DrawHudSpriteTurned(GetIconFrame(0x7580, 1), x4 + wd, y, 0x20, 0x20, a);
         tex = GetIconFrame(*(int *)m, 3);
         *(int *)(m + 0x44) = tex;
         HudFrame(m, tex, x, y, 0, alpha);
@@ -1842,7 +1842,7 @@ extern char *D_L00_0017E5F4;
 extern int D_L00_0015F6B0 MACRO_ADDR;
 
 /* Evaluates an animated counter: picks a frame index from a table entry by mode (hold, loop, ping-pong, random pause) and stores it at +4. */
-int func_L00_0023B440(char *p) {
+int Hud_EvalAnimFrame(char *p) {
     char *e = D_L00_0017E5F4 + *(short *)p * 8;
     int r = 0;
 
@@ -1897,7 +1897,7 @@ extern H_23ac78 D_L00_0017E5D8_23b610  __asm__("D_L00_0017E5D8") __attribute__((
 extern void func_L00_0023B750_23b610(void) __asm__("func_L00_0023B750");
 extern void func_001FFC48_23b610(void *) __asm__("func_001FFC48");
 /* Text/HUD update. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_text_0023a7a8.c, FUN_L00_0023ac78. */
-int func_L00_0023B610(int call) {
+int HudUpdate(int call) {
     int n = 0;
     E_23ac78 *e;
     H_23ac78 *h;
@@ -1943,7 +1943,7 @@ extern void func_L00_0023D750(void);
 extern int func_L00_0023B140(char *);
 
 /* Shows or hides the weapon HUD element depending on the current weapon. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_text_002377b8.c, FUN_L00_0023adb8. */
-void func_L00_0023B750(void) {
+void HudWeaponShow(void) {
     char *base;
     int w;
     int mode;
@@ -1960,19 +1960,19 @@ void func_L00_0023B750(void) {
         }
         if (w != 0) {
             D_hud_pair[0] = w;
-            D_hud_pair[1] = queue_animation_update(0x10, w + 60000, (int)func_L00_0023B0F8, (int)func_L00_0023D750,
-                                           (int)func_L00_0023B140, (int)(D_0013D50F + 0x21 + w * 4),
+            D_hud_pair[1] = queue_animation_update(0x10, w + 60000, (int)HudTileInit, (int)HudWeaponUpdate,
+                                           (int)HudWeaponDraw, (int)(D_0013D50F + 0x21 + w * 4),
                                            D_L00_001C43B0[w].unkE);
         } else if (mode == 2) {
             if (D_hud_pair[1] != -1) {
-                func_001FFDA0(D_hud_pair[1], 0);
+                Hud_SetBarValueById(D_hud_pair[1], 0);
                 D_hud_pair[1] = -1;
             }
-            *(short *)(base + 0x1634) = queue_animation_update(0x10, 0xFFFF, (int)func_L00_00236710, (int)func_L00_00236830,
-                                                      (int)func_L00_0023AFD8, (int)(base + 0x1630), 200);
+            *(short *)(base + 0x1634) = queue_animation_update(0x10, 0xFFFF, (int)Hud_InitElement, (int)Hud_UpdateCounter,
+                                                      (int)Hud_DrawMeter, (int)(base + 0x1630), 200);
         } else {
             if (D_hud_pair[1] != -1) {
-                func_001FFDA0(D_hud_pair[1], 0);
+                Hud_SetBarValueById(D_hud_pair[1], 0);
                 D_hud_pair[1] = -1;
             }
         }
@@ -1986,8 +1986,8 @@ extern void func_L00_00236208(void);
 
 /* Resets the HUD banks (func_L00_00236208), then D_L00_0015FA40 = 1,
    D_L00_0015FA48 = -1 and D_L00_0015FA44 = 0. */
-void func_L00_0023B890(void) {
-    func_L00_00236208();
+void Hud_ResetState(void) {
+    Hud_ResetBanks();
     *(int *)&D_L00_0015FA40 = 1;
     D_L00_0015FA48 = -1;
     D_L00_0015FA44 = 0;
@@ -1995,7 +1995,7 @@ void func_L00_0023B890(void) {
 extern char D_L00_0017E5D8[];
 
 // Places a HUD element: looks up its size, offsets x/y by the anchor flags and draws it.
-void func_L00_0023BAB8(char *e, int id, int x, int y, int flags, int alpha) {
+void HudFrame(char *e, int id, int x, int y, int flags, int alpha) {
     if (id >= 0) {
         char *g = D_L00_0017E5D8;
         char *a = *(char **)(g + 0x20);
@@ -2038,7 +2038,7 @@ extern long func_00200248(int);
    packet pointer D_L00_00161280, the far UV being (w, h) itself rather
    than the texture's full size. The arena pointer is taken after the
    TEX0 call, where retail forms it. */
-void func_L00_0023C058(int tex, int x, int y, int w, int h, int alpha) {
+void HudSpriteSubRect(int tex, int x, int y, int w, int h, int alpha) {
     char *arena;
     int *base;
     long *p;
@@ -2071,7 +2071,7 @@ void func_L00_0023C058(int tex, int x, int y, int w, int h, int alpha) {
 extern int *D_L00_00161280 __attribute__((section(".sdata")));
 
 /* Draws texture TEX as a four-vertex strip, turned a quarter, through the packet pointer. */
-void func_L00_0023C458(int tex, int x, int y, int w, int h, int alpha) {
+void HudSpriteRot90(int tex, int x, int y, int w, int h, int alpha) {
     char *arena = D_L00_0017E5D8;
     unsigned char *e = (unsigned char *)(*(char **)(arena + 0x24)
         + *(short *)(*(char **)(arena + 0x20) + tex * 4 + 2) * 8);
@@ -2186,7 +2186,7 @@ extern void func_L00_00261848(int);
    tables with 0x87654321, -1 or 0 (func_001F99B0), calls
    func_L00_00261848 with D_0015EE84 when that is set, and advances
    D_0015EF24 by 180. */
-void func_L00_0023D9C0(void) {
+void InitLevelResidentState(void) {
     register_audio_stream_callback();
     func_002348B8();
     InitMemSlots();
@@ -2205,11 +2205,11 @@ void func_L00_0023D9C0(void) {
     InitViewContext();
     UpdateViewContext();
     VU1_initChain();
-    func_L00_002697A0();
+    RegisterPartTypes();
     DMAC_VIF1_Enable();
-    func_L00_0023DB30();
+    VendorStockLevelInit();
     if (D_0015EE84 != 0) {
-        func_L00_00261848(D_0015EE84);
+        UnlockPlanet(D_0015EE84);
     }
     D_0015EF24 += 0xB4;
 }
@@ -2231,13 +2231,13 @@ extern unsigned char D_0014171B[] NOT_SDA;
 extern void func_L00_002618D8(int, int);
 
 /* Initialise the vendor stock list: fixed defaults once the level is at least 19, else prune unknown entries. */
-void func_L00_0023DB30(void) {
+void VendorStockLevelInit(void) {
     int i, j, v, k;
     unsigned char c;
     if (D_0015EE84 >= 0x13) {
         for (k = 0; k < 0x25; k++) {
             (D_0013D50F + 0xB9)[k] = 1;
-            (D_0013D5EB + 5)[k] = 1;
+            (gHavePersuader + 5)[k] = 1;
         }
         D_0015EED0[0] = 0x4A;
         D_0015EED0[1] = 0x50;
@@ -2260,8 +2260,8 @@ void func_L00_0023DB30(void) {
         *(int *)(D_0014171B + 0x89D) = 0x10;
         *(int *)(D_0014171B + 0x8A1) = 0x13;
     } else {
-        if (D_0013D5CA[8] == 0) {
-            func_L00_002618D8(0xA, 1);
+        if (gHaveHeliPack[8] == 0) {
+            GiveItem(0xA, 1);
             D_0015EED0[0] = 0x4A;
             *(int *)(D_0014171B + 0x45) = 0xA;
         }
@@ -2277,7 +2277,7 @@ void func_L00_0023DB30(void) {
                 D_0015EED0[i] = 0xFF;
             }
         }
-        func_L00_0023DD70(D_0015EE84);
+        VendorStock_AddLevelItem(D_0015EE84);
     }
 }
 extern int D_L00_001C4198[];
@@ -2287,7 +2287,7 @@ extern unsigned char D_0015EED0[] MACRO_ADDR;
    D_0015EED0 (ids in the low six bits) unless it is already there. The
    list is MACRO_ADDR: its first byte, loaded in a delay slot, is reached
    through $gp as retail does, the address itself through lui. */
-void func_L00_0023DD70(int idx) {
+void VendorStock_AddLevelItem(int idx) {
     int id = D_L00_001C4198[idx];
     int i;
 

@@ -91,160 +91,131 @@ void FUN_L10_002e9028(unsigned char *m) {
         break;
     }
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L10_002e91b8.s", FUN_L10_002e91b8);
-#else
-extern void copy_matrix(void *, void *) __asm__("FUN_001fa298");
-extern long long trail_effect_texture(int) __asm__("FUN_001f44b8");
-extern int float_to_integer(float) __asm__("FUN_001fa6d0");
-extern float integer_to_float(int) __asm__("FUN_001fa6c0");
-extern void transform_vectors(float *, void *, int) __asm__("FUN_001f7d30");
-typedef struct { float v[4]; } aligned_vector __attribute__((aligned(16)));
-/* Retail uses gp-0x4cc0 for the count and four separate two-word
- * color tables at gp-0x4cb8, -0x4cb0, -0x4ca8 and -0x4ca0.
- * With gp=0x166c00 these are 0x161f40 and 0x161f48..0x161f60.
- * Keep the existing C names while binding the checked overlay addresses. */
-extern int D_L10_0015B340 __asm__("D_L10_00161F40") __attribute__((sda));
-extern int D_L10_0015B348[2] __asm__("D_L10_00161F48") __attribute__((sda));
+#include "qcopy.h"
+
+/* Ported from rac1-decomp (src/overlays/shared/vendor_00299AF0.c: func_L10_002EA578), where it is exact; names translated to the US level program. */
+
+typedef struct {
+    float v[4];
+} QuadCorner;
+
+typedef struct {
+    QuadCorner corner[4];
+    int color[4];
+    float uv[4][2];
+    long unk70, tex, unk80, alpha;
+} TrailQuad;
+
+extern QuadCorner D_L10_001DA310[];
+extern QuadCorner D_L10_001DA350[];
+extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
+extern float D_L10_001DA270[][2];
+extern float D_L10_001DA2F0[][2];
+extern int D_L10_0015F3F8;
+extern int D_L10_001DA250[];
+extern int D_L10_001DA2B0[][2];
+extern s32 truncate_float_to_s32(f32) __asm__("func_001FA6D0");
+extern s64 get_effect_texture(s32) __asm__("func_001F44B8");
+extern int D_L10_00161F40 __attribute__((sda));
+extern int D_L10_00161F48[2] __attribute__((sda));
 extern int D_L10_00161F50[2] __attribute__((sda));
 extern int D_L10_00161F58[2] __attribute__((sda));
 extern int D_L10_00161F60[2] __attribute__((sda));
+extern void copy_matrix_rotation(void *, void *) __asm__("func_001FA298");
+extern void fast_draw_quad_real(void *, void *, int);
 
-#include "qcopy.h"
-extern float D_L10_001DA350[];
-extern float D_L10_001DA310[];
-extern int D_L10_001DA250[];
-extern float D_L10_001DA270[];
-extern int D_L10_001DA2B0[];
-extern float D_L10_001DA2F0[];
+#define GS_ALPHA(a, b, k, d, fix) \
+    ((unsigned long)(a) | ((unsigned long)(b) << 2) | ((unsigned long)(k) << 4) | \
+     ((unsigned long)(d) << 6) | ((unsigned long)(fix) << 32))
+
 void FUN_L10_002e91b8(unsigned char *m) {
-    unsigned char first[0x90] __attribute__((aligned(16)));
-    unsigned char second[0x90] __attribute__((aligned(16)));
-    float matrix[12] __attribute__((aligned(16)));
+    TrailQuad first, second;
+    float transform[12] __attribute__((aligned(16)));
     float position[4] __attribute__((aligned(16)));
-    float *scale = *(float **)(m + 0x78);
-    float *first_source;
-    float *second_source;
-    float *first_vectors;
-    float *second_vectors;
-    float *second_angles;
-    float *second_packet;
-    int i, k;
-    int j;
+    float *scale;
+    int pass, axis, k, i;
+    float *first_corner, *second_corner, *second_dst;
+    QuadCorner *first_src, *second_src;
+    TrailQuad *second_quad;
 
-    copy_matrix(matrix, m + 0xc0);
+    scale = *(float **)(m + 0x78);
+    copy_matrix_rotation(transform, m + 0xC0);
     qcopy(position, m + 0x10);
     position[3] = 1.0f;
-    *(long long *)(first + 0x78) = trail_effect_texture(0x2c);
-    *(long long *)(first + 0x80) = 0xff9000000260LL;
-    *(long long *)(first + 0x70) = 0;
-    *(long long *)(second + 0x78) = trail_effect_texture(0x2c);
-    second_packet = (float *)second;
-    *(long long *)(second + 0x80) = 0xff9000000260LL;
-    *(long long *)(second + 0x70) = 0;
-    *(int *)(second + 0x4c) = 0;
-    *(int *)(second + 0x44) = 0;
-    second_source = D_L10_001DA310;
-    first_source = D_L10_001DA350;
-    second_vectors = second_packet;
-    second_angles = second_packet;
-    first_vectors = (float *)first;
-    j = 3;
-    do {
-        qcopy(first_vectors, first_source);
-        qcopy(second_angles, second_source);
-        second_source += 4;
-        second_angles += 4;
-        first_source += 4;
-        j--;
-        first_vectors[0] *= scale[0];
-        second_vectors[0] *= scale[0];
-        first_vectors[2] *= scale[1];
-        second_vectors[2] *= scale[1];
-        first_vectors += 4;
-        second_vectors += 4;
-    } while (j >= 0);
-
-    if (D_L10_0015B340 > 0) {
-
-        float *angle_vectors = (float *)(first + 0x50);
-        float *angles = (float *)(first + 0x58);
-        float *offsets = (float *)(first + 0x68);
-        float *first_angles = (float *)(second + 0x50);
-        float *first_offsets = (float *)(second + 0x58);
-        float *second_angles = (float *)(second + 0x60);
-        float *second_offsets = (float *)(second + 0x68);
-        for (i = 0; i < D_L10_0015B340; i++) {
-            int parity = i & 1;
-            int *colors = D_L10_0015B348;
-            unsigned long long color = (long long)colors[parity] |
-                ((long long)D_L10_00161F50[parity] << 2) |
-                ((long long)D_L10_00161F58[parity] << 4) |
-                ((long long)D_L10_00161F60[parity] << 6) | 0x8000000000ULL;
-            int shade = (D_L10_001DA250)[i];
-            *(unsigned long long *)(first + 0x88) = color;
-            *(unsigned long long *)(second + 0x88) =
-                (long long)colors[parity] | ((long long)D_L10_00161F50[parity] << 2) |
-                ((long long)D_L10_00161F58[parity] << 4) | ((long long)D_L10_00161F60[parity] << 6) |
-                0x8000000000ULL;
-            ((int *)(first + 0x40))[0] = shade;
-            ((int *)(second + 0x40))[2] = shade;
-            ((int *)(second + 0x40))[0] = shade;
-            ((int *)(first + 0x40))[3] = shade;
-            ((int *)(first + 0x40))[2] = shade;
-            ((int *)(first + 0x40))[1] = shade;
-            j = 0;
-            do {
-                float *first_source = D_L10_001DA270 + i * 2;
-                int index = i * 8;
-                int offset = j * 8;
-                float *first_vectors = (float *)((unsigned char *)angle_vectors + offset);
-                int next_vector = j + 1;
-                k = 1;
-                do {
-                    int limit = float_to_integer(*first_source * 360.0f);
-                    float angle = integer_to_float(*(int *)0x0015f3f8 % limit) / *first_source - 180.0f;
-                    float wave;
-                    if (*(int *)((unsigned char *)D_L10_001DA2B0 + index) != 0)
-                        wave = fast_cos(angle * 0.017453292f);
-                    else
-                        wave = fast_sin(angle * 0.017453292f);
-                    first_source++;
-                    index += 4;
-                    *first_vectors++ = *(float *)((unsigned char *)D_L10_001DA2F0 + offset) + wave * 0.125f;
-                    offset += 4;
-                    k--;
-                } while (k >= 0);
-                j = next_vector;
-            } while (j < 4);
-            {
-                int k;
-                for (k = 0; k < 2; k++) {
-                    float step = (float)k * 0.125f;
-                    first_angles[k] = angles[k];
-                    first_offsets[k] = angles[k] + step;
-                    second_angles[k] = offsets[k];
-                    second_offsets[k] = offsets[k] + step;
+    first.tex = get_effect_texture(0x2C);
+    first.unk80 = 0xFF9000000260L;
+    first.unk70 = 0;
+    second.tex = get_effect_texture(0x2C);
+    second.unk80 = 0xFF9000000260L;
+    second.unk70 = 0;
+    second.color[3] = 0;
+    second.color[1] = 0;
+    second_quad = &second;
+    second_corner = (float *)second_quad;
+    second_dst = (float *)second_quad;
+    first_corner = (float *)&first;
+    first_src = D_L10_001DA350;
+    second_src = D_L10_001DA310;
+    for (i = 0; i < 4; i++) {
+        qcopy(first_corner, &first_src[i]);
+        qcopy(second_dst, second_src);
+        first_corner[0] = first_corner[0] * scale[0];
+        second_corner[0] = second_corner[0] * scale[0];
+        first_corner[2] = first_corner[2] * scale[1];
+        second_corner[2] = second_corner[2] * scale[1];
+        first_corner += 4;
+        second_corner += 4;
+        second_src++;
+        second_dst += 4;
+    }
+    for (pass = 0; pass < D_L10_00161F40; pass++) {
+        int parity = pass & 1;
+        int shade;
+        first.alpha = GS_ALPHA(D_L10_00161F48[parity], D_L10_00161F50[parity],
+                                   D_L10_00161F58[parity], D_L10_00161F60[parity], 0x80);
+        second.alpha = GS_ALPHA(D_L10_00161F48[parity], D_L10_00161F50[parity],
+                                    D_L10_00161F58[parity], D_L10_00161F60[parity], 0x80);
+        shade = D_L10_001DA250[pass];
+        second.color[2] = shade;
+        second.color[0] = shade;
+        first.color[3] = shade;
+        first.color[2] = shade;
+        first.color[1] = shade;
+        first.color[0] = shade;
+        for (i = 0; i < 4; i++) {
+            for (axis = 0; axis < 2; axis++) {
+                int limit = truncate_float_to_s32(D_L10_001DA270[pass][axis] * 360.0f);
+                float angle = convert_integer_to_float(D_L10_0015F3F8 % limit) / D_L10_001DA270[pass][axis] - 180.0f;
+                float wave;
+                if (D_L10_001DA2B0[pass][axis] != 0) {
+                    wave = fast_cos(angle * 0.017453292f);
+                } else {
+                    wave = fast_sin(angle * 0.017453292f);
                 }
+                first.uv[i][axis] = D_L10_001DA2F0[i][axis] + wave * 0.125f;
             }
-            transform_vectors((float *)first, matrix, 0);
-            transform_vectors(second_packet, matrix, 0);
-            {
-                float *second_vectors = second_packet;
-                float *first_vectors = (float *)first;
-                j = 3;
-                do {
-                    first_vectors[1] += 0.1f;
-                    first_vectors += 4;
-                    second_vectors[1] += 0.1f;
-                    second_vectors += 4;
-                    j--;
-                } while (j >= 0);
+        }
+        for (k = 0; k < 2; k++) {
+            float step = (float)k * 0.125f;
+            second.uv[0][k] = first.uv[1][k];
+            second.uv[1][k] = first.uv[1][k] + step;
+            second.uv[2][k] = first.uv[3][k];
+            second.uv[3][k] = first.uv[3][k] + step;
+        }
+        fast_draw_quad_real(&first, transform, 0);
+        fast_draw_quad_real(second_quad, transform, 0);
+        {
+            float *q = (float *)second_quad;
+            float *p = (float *)&first;
+            for (i = 0; i < 4; i++) {
+                p[1] += 0.1f;
+                q[1] += 0.1f;
+                p += 4;
+                q += 4;
             }
         }
     }
 }
-#endif
 extern char *D_L10_0015EF50;
 
 void FUN_L10_002f5a50(int i) {

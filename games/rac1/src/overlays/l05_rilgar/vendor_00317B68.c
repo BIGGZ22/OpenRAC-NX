@@ -33,7 +33,7 @@ typedef struct {
 extern int func_0022ED80_i(int, int, void *) __asm__("func_0022ED80");
 extern float ease_rotation_317B68(float *, float, float *, float, float, float) __asm__("func_L00_0025CE58");
 /* Updates a triggered rotor: initialize its angle, wait for the target, then ease its rotation. */
-void func_L05_00317B68(RotorMoby17B68 *moby) {
+void TriggeredRotorUpdate(RotorMoby17B68 *moby) {
     RotorData17B68 *p = moby->data;
     float f;
     switch (moby->state) {
@@ -44,9 +44,9 @@ void func_L05_00317B68(RotorMoby17B68 *moby) {
         moby->state = 1;
         p->angle = moby->rot;
         if (p->flag != 0) {
-            moby->rot = func_001FA790(moby->rot, 1.5707964f);
+            moby->rot = FastSubRots(moby->rot, 1.5707964f);
         } else {
-            moby->rot = func_001FA748(moby->rot, 1.5707964f);
+            moby->rot = FastAddRots(moby->rot, 1.5707964f);
         }
         /* fallthrough */
     case 1:
@@ -57,9 +57,9 @@ void func_L05_00317B68(RotorMoby17B68 *moby) {
         break;
     case 2:
         if (p->flag != 0) {
-            f = func_001FA790(p->angle, 0.6981317f);
+            f = FastSubRots(p->angle, 0.6981317f);
         } else {
-            f = func_001FA748(p->angle, 0.6981317f);
+            f = FastAddRots(p->angle, 0.6981317f);
         }
         ease_rotation_317B68(&moby->rot, f, &p->velocity, D_0015EE70 * 12.566371f, D_0015EE70 * 12.566371f, D_0015EE6C * 12.566371f);
         break;

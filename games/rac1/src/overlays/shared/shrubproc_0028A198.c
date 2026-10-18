@@ -14,7 +14,7 @@ extern float func_001F9F90(float);
 extern float func_001F9FA8(float);
 
 /* Fills the sky particle list: entries from a up are dim specks, the first a are coloured sparks with random direction and speed. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_00288ec0.c, FUN_L00_00288ec0. */
-void func_L00_0028A198(int a, int b) {
+void SkyInitParticles(int a, int b) {
     int i;
     E *e;
     float x, y;
@@ -36,7 +36,7 @@ void func_L00_0028A198(int a, int b) {
             e->b2 = (func_001160D8() >> 16) & 1;
             e->b3 = 0x48;
             e->f8 = random_angle_radians();
-            e->f1C = func_001FA888(random_integer_below(0x30) + 0x20) * 0.00390625f;
+            e->f1C = IntToFloat(random_integer_below(0x30) + 0x20) * 0.00390625f;
             x = random_angle_radians();
             y = random_angle_radians();
             e->f10 = FastCos(x) * FastSin(y) * 50.0f;
@@ -82,7 +82,7 @@ extern float func_001F9B88(float);
 extern int func_001160D8(void);
 
 /* Steps each shrub sparkle entry: type 0 spins and scales a direction, type 1 randomises a colour. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_00288ec0.c, FUN_L00_00289108. */
-void func_L00_0028A3E0(void) {
+void StepSkySparkles(void) {
     int i;
     for (i = 0; i < D_L00_001605DC_g->n; i++) {
         E_289108 *e = &D_L00_001605DC_g->list[i];
@@ -91,8 +91,8 @@ void func_L00_0028A3E0(void) {
             float a, b;
             e->hC++;
             h[1]++;
-            a = func_001FA888((e->hC & 0xFFF) - 0x800) * 0.0015339808f;
-            b = func_001FA888((h[1] & 0xFFF) - 0x800) * 0.0015339808f;
+            a = IntToFloat((e->hC & 0xFFF) - 0x800) * 0.0015339808f;
+            b = IntToFloat((h[1] & 0xFFF) - 0x800) * 0.0015339808f;
             e->f10 = FastCos(a) * FastSin(b) * 50.0f;
             e->f14 = FastSin(a) * FastSin(b) * 50.0f;
             e->f18 = FastAbsF(FastCos(b)) * 50.0f;
@@ -118,7 +118,7 @@ extern void func_001FA190(void *);
 extern void func_0022C9A8(int);
 
 /* Draws each static sky shell in turn. */
-void func_L00_0028A5A8(void) {
+void UpdateSkyShellsStatic(void) {
     int i;
     func_001FA190(D_L00_001BDB70);
     for (i = 0; i < *(short *)(D_L00_001605DC + 6); i++) {
@@ -128,7 +128,7 @@ void func_L00_0028A5A8(void) {
 extern int D_L00_0015F6B0 MACRO_ADDR;
 void func_L00_001FFA40(void *,void *);
 /* rotates animated sky shells and draws each layer */
-void func_L00_0028A6F8(void) {
+void UpdateSkyShellsAnimated(void) {
  float v[4] __attribute__((aligned(16))); int i;
  *(short *)(D_L00_001605DC+4)=0;
  qzero(v);
@@ -169,7 +169,7 @@ typedef struct {
 #define SKY ((SkyData *)D_L00_001605DC)
 
 /* Initialises and animates the star field of the sky. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_002895a0. */
-void func_L00_0028A878(void) {
+void SkyStarFieldUpdate(void) {
     int i, j;
     SkyStar *s;
     f32 a, b;
@@ -200,7 +200,7 @@ void func_L00_0028A878(void) {
                     s->b2 = (q & 1) + 2;
                 }
                 s->f8 = random_angle_radians();
-                s->f1C = func_001FA888(random_integer_below(0x30) + 0x20) * (1.0f / 256.0f);
+                s->f1C = IntToFloat(random_integer_below(0x30) + 0x20) * (1.0f / 256.0f);
                 a = random_angle_radians();
                 b = random_angle_radians();
                 s->x = FastCos(a) * FastSin(b) * 50.0f;
@@ -223,8 +223,8 @@ void func_L00_0028A878(void) {
             u16 *h = &s->c.h.a;
             h[0]++;
             h[1]++;
-            a = func_001FA888((s->c.h.a & 0xFFF) - 0x800) * 0.0015339808f;
-            b = func_001FA888((h[1] & 0xFFF) - 0x800) * 0.0015339808f;
+            a = IntToFloat((s->c.h.a & 0xFFF) - 0x800) * 0.0015339808f;
+            b = IntToFloat((h[1] & 0xFFF) - 0x800) * 0.0015339808f;
             s->x = FastCos(a) * FastSin(b) * 50.0f;
             s->y = FastSin(a) * FastSin(b) * 50.0f;
             s->z = FastAbsF(FastCos(b)) * 50.0f;
@@ -243,7 +243,7 @@ void func_L00_0028A878(void) {
 extern int D_L00_0015F6B0 MACRO_ADDR;
 void func_L00_001FFA40(void *,void *);
 /* refreshes two rotating shrub transform layers */
-void func_L00_0028AC80(void) {
+void SkyShellsRotateTwo(void) {
  float v[4] __attribute__((aligned(16)));
  *(short *)(D_L00_001605DC+4)=0;
  func_001FA190(D_L00_001BDB70);
@@ -258,7 +258,7 @@ void func_L00_0028AC80(void) {
 }
 extern void func_L00_001FFA40(void *,void *);
 /* draws sky shells with two animated rotation offsets */
-void func_L00_0028AD68(void) {
+void SkyShellsRotateLooped(void) {
  float v[4] __attribute__((aligned(16))); int i;
  *(short *)(D_L00_001605DC+4)=0; qzero(v);
  for(i=0;i<*(short *)(D_L00_001605DC+6);++i) {
@@ -283,12 +283,12 @@ void func_00234C98(int, long);
 void func_L00_001FFA40(void *, void *);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_00289bd8. */
-void func_L00_0028AEB0(void) {
+void SkyShellsSparkleTwo(void) {
     float v[4] __attribute__((aligned(16)));
     func_001FA190(D_L00_001BDB70);
     SkyDrawShell(0);
-    if (*(short *)(D_L00_001605DC + 8) == 0) func_L00_0028A198(0x78, 8);
-    func_L00_0028A3E0();
+    if (*(short *)(D_L00_001605DC + 8) == 0) SkyInitParticles(0x78, 8);
+    StepSkySparkles();
     SkySpriteProc();
     VU1_addGSregister(0x42, (0x8000L << 24) | 0x44);
     qzero(v);
@@ -337,7 +337,7 @@ extern f32 func_001F9FA8(f32);
 extern void func_00234C98_8AF90(s32, u64) __asm__("func_00234C98");
 
 /* Initializes and steps three types of sky particles before drawing the sky layer. Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_00289cb8. */
-void func_L00_0028AF90(void) {
+void SkyParticlesUpdate(void) {
     Part *p;
     Part *p2;
     PU *q2;
@@ -397,7 +397,7 @@ void func_L00_0028AF90(void) {
                 p->b2 = (func_001160D8() >> 16) & 1;
                 p->b3 = 0x48;
                 p->f8 = random_angle_radians();
-                p->f1C = func_001FA888(random_integer_below(0x30) + 0x20) * 0.00390625f;
+                p->f1C = IntToFloat(random_integer_below(0x30) + 0x20) * 0.00390625f;
                 a = random_angle_radians();
                 b = random_angle_radians();
                 p->f10 = FastCos(a) * FastSin(b) * 50.0f;
@@ -419,8 +419,8 @@ void func_L00_0028AF90(void) {
             q2 = &p2->u;
             p2->u.h.h0++;
             q2->h.h2++;
-            a = func_001FA888((p2->u.h.h0 & 0xFFF) - 0x800) * 0.0015339808f;
-            b = func_001FA888((q2->h.h2 & 0xFFF) - 0x800) * 0.0015339808f;
+            a = IntToFloat((p2->u.h.h0 & 0xFFF) - 0x800) * 0.0015339808f;
+            b = IntToFloat((q2->h.h2 & 0xFFF) - 0x800) * 0.0015339808f;
             p2->f10 = FastCos(a) * FastSin(b) * 50.0f;
             p2->f14 = FastSin(a) * FastSin(b) * 50.0f;
             p2->f18 = FastCos(b) * 50.0f;
@@ -434,7 +434,7 @@ void func_L00_0028AF90(void) {
             q2 = &p2->u;
             q2->c.c2 = (q2->c.c2 + 1) % 0x30;
             if (q2->c.c2 == 0) {
-                p2->f8 = func_001FA888((q2->c.c1 << 5) + ((func_001160D8() >> 16) & 0xF) - 8) * 0.024543693f;
+                p2->f8 = IntToFloat((q2->c.c1 << 5) + ((func_001160D8() >> 16) & 0xF) - 8) * 0.024543693f;
             }
             k2 = q2->c.c2 * 4;
             if (k2 > 0x60) k2 = 0xC0 - k2;
@@ -475,12 +475,12 @@ void func_00234C98(int, long);
 void func_L00_001FFA40(void *, void *);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028a208. */
-void func_L00_0028B4E0(void) {
+void SkyShellsSparkleThree(void) {
     float v[4] __attribute__((aligned(16)));
     func_001FA190(D_L00_001BDB70);
     SkyDrawShell(0);
-    if (*(short *)(D_L00_001605DC + 8) == 0) func_L00_0028A198(0x78, 8);
-    func_L00_0028A3E0();
+    if (*(short *)(D_L00_001605DC + 8) == 0) SkyInitParticles(0x78, 8);
+    StepSkySparkles();
     SkySpriteProc();
     VU1_addGSregister(0x42, (0x8000L << 24) | 0x44);
     SkyDrawShell(1);
@@ -497,7 +497,7 @@ void func_0022C9A8(s32);
 void func_L00_001FFA40(void *, void *);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028a2f0. */
-void func_L00_0028B5C8(void) {
+void SkyShellsRotateOne(void) {
     Vec4 t;
     *(s16 *)(D_L00_001605DC_8B5C8 + 4) = 0;
     func_001FA190(D_L00_001BDB70_8AF90);
@@ -513,7 +513,7 @@ extern int D_L00_0015F6B0 MACRO_ADDR;
 extern void func_L00_001FFA40(void *, void *);
 
 /* Draws the sky shells with one extra shell placed at a pseudo-random angle. */
-void func_L00_0028B680(void) {
+void DrawSkyShellsExtra(void) {
     float v[3];
     int r;
     *(short *)(D_L00_001605DC + 4) = 0;
@@ -534,7 +534,7 @@ typedef int T28a480_q __attribute__((mode(TI)));
 extern int D_L00_0015F6B0_8B758b __asm__("D_L00_0015F6B0") MACRO_ADDR;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028a480. */
-void func_L00_0028B758(void)
+void SkyShellsRotateByIndex(void)
 {
     T28a480_q v[1];
     int i;
@@ -567,7 +567,7 @@ void func_L00_0028B758(void)
 }
 extern short D_L00_0015F6B0_s __asm__("D_L00_0015F6B0");
 // Rotates each sky shell at its assigned angular rate before drawing.
-void func_L00_0028B8F8(void) {
+void SkyShellsRotateMulti(void) {
  float v[4] __attribute__((aligned(16)));
  int i;
  *(short *)(D_L00_001605DC + 4) = 0;
@@ -597,12 +597,12 @@ extern void func_0022C9A8(int);
 extern void func_L00_0028A198(int, int);
 extern void func_L00_0028A3E0(void);
 extern void func_00234C98(int, long);
-void func_L00_0028BBF8(void) {
+void SkyShellsSparkleStatic(void) {
     func_001FA190(D_L00_001BDB70);
     SkyDrawShell(0);
     SkyDrawShell(1);
-    if (*(short *)(D_L00_001605DC + 8) == 0) func_L00_0028A198(0x78, 8);
-    func_L00_0028A3E0();
+    if (*(short *)(D_L00_001605DC + 8) == 0) SkyInitParticles(0x78, 8);
+    StepSkySparkles();
     SkySpriteProc();
     VU1_addGSregister(0x42, 0x8000000044L);
     SkyDrawShell(2);
@@ -612,7 +612,7 @@ void func_0022C9A8();
 void func_L00_001FFA40(void *, void *);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028a998. */
-void func_L00_0028BC70(void) {
+void SkyShellsRotatePair(void) {
     float v[4] __attribute__((aligned(16)));
     func_001FA190(D_L00_001BDB70);
     SkyDrawShell(0);
@@ -625,18 +625,18 @@ void func_L00_0028BC70(void) {
     SkyDrawShell(2);
 }
 /* Shrub proc init variant: set up, conditional call, finish. */
-void func_L00_0028BD70(void) {
+void SkyShellsSparkleOne(void) {
     func_001FA190(D_L00_001BDB70);
     SkyDrawShell(0);
-    if (*(short *)(D_L00_001605DC + 8) == 0) func_L00_0028A198(0x78, 8);
-    func_L00_0028A3E0();
+    if (*(short *)(D_L00_001605DC + 8) == 0) SkyInitParticles(0x78, 8);
+    StepSkySparkles();
     SkySpriteProc();
     VU1_addGSregister(0x42, 0x8000000044L);
     SkyDrawShell(1);
 }
 
 /* Initialises and animates a second star field of the sky (variant of func_L00_0028A878). */
-void func_L00_0028BF60(void) {
+void SkyStarField2Update(void) {
     int i, j;
     SkyStar *s;
     f32 a, b;
@@ -670,7 +670,7 @@ void func_L00_0028BF60(void) {
                     s->b2 = q & 1;
                 }
                 s->f8 = random_angle_radians();
-                s->f1C = func_001FA888(random_integer_below(0x30) + 0x20) * (1.0f / 256.0f);
+                s->f1C = IntToFloat(random_integer_below(0x30) + 0x20) * (1.0f / 256.0f);
                 a = random_angle_radians();
                 b = random_angle_radians();
                 s->x = FastCos(a) * FastSin(b) * 50.0f;
@@ -693,8 +693,8 @@ void func_L00_0028BF60(void) {
             u16 *h = &s->c.h.a;
             h[0]++;
             h[1]++;
-            a = func_001FA888((s->c.h.a & 0xFFF) - 0x800) * 0.0015339808f;
-            b = func_001FA888((h[1] & 0xFFF) - 0x800) * 0.0015339808f;
+            a = IntToFloat((s->c.h.a & 0xFFF) - 0x800) * 0.0015339808f;
+            b = IntToFloat((h[1] & 0xFFF) - 0x800) * 0.0015339808f;
             s->x = FastCos(a) * FastSin(b) * 50.0f;
             s->y = FastSin(a) * FastSin(b) * 50.0f;
             s->z = FastCos(b) * 50.0f;
@@ -716,7 +716,7 @@ void func_0022C9A8();
 void func_L00_001FFA40(void *, void *);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028b080. */
-void func_L00_0028C358(void) {
+void SkyShellsSevenLayer(void) {
     float v[4] __attribute__((aligned(16)));
     *(short *)(D_L00_001605DC + 4) = 0;
     SkyDrawShell(0);
@@ -745,7 +745,7 @@ void func_L00_001FFA40_28b1a0(void *, void *) __asm__("func_L00_001FFA40");
 void func_001F9C48_28b1a0(void *, void *, float) __asm__("func_001F9C48");
 void func_0022C9A8_28b1a0(int) __asm__("func_0022C9A8");
 /* Per-entry update of a table of up to five entries (a switch on the index): each entry gets its own tilt, scale and turn speed, and its matrix is rebuilt every frame. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_00288ec0.c, FUN_L00_0028b1a0. */
-void func_L00_0028C478(void)
+void SkyShellsEntryUpdate(void)
 {
     float v[4] __attribute__((aligned(16)));
     int i = 0;

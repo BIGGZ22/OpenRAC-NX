@@ -255,7 +255,7 @@ extern void func_00234E80(void);
 /* DmaShrubTextures: DmaMobyTextures' splice around the shrub texture
    upload, which also warns past 0x400000 bytes and keeps the largest
    size seen in D_001604F8. */
-void func_00229C08(void) {
+void DmaShrubTextures(void) {
     int *p = (int *)D_00161000;
     int size;
 
@@ -292,7 +292,7 @@ typedef struct { char *ptr; int pad; } ShrubRec_29D48;
 
 /* `items` declared inside the middle loop, and `rec = &items[i];
    rec->ptr` rather than `items[i].ptr`, give retail's base-first addu. */
-void func_00229D48(void) {
+void PatchShrubGifs(void) {
     int *p;
     for (p = D_001D9140; *p >= 0; p++) {
         char *obj = D_001D82C0[*p];
@@ -325,7 +325,7 @@ extern void func_00229C08(void);
 /* DrawShrubs. The packet pointer goes through a local advanced in place;
    `D_00161000 += 0x10` is 4 bytes short (its store lands in the jal
    delay slot as a $gp store). */
-void func_00229E50(void) {
+void DrawShrubs(void) {
     int p = D_00161000;
 
     D_001604F0 = p;

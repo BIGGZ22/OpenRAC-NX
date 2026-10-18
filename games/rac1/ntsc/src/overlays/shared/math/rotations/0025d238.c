@@ -14,14 +14,14 @@ f32 absolute_float(f32) __asm__("FUN_001f99c0");
 void fast_vec_scale(void *, void *, f32) __asm__("FUN_001f9a68");
 void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
 void FUN_L00_0025d238(V0025d238 *src, V0025d238 *v) {
-    V0025d238 t0, t1;
+    V0025d238 source_copy, scaled_delta;
     f32 *pv, *p0, *p1;
-    V0025d238 *a = &t0, *b = &t1;
+    V0025d238 *a = &source_copy, *b = &scaled_delta;
     s32 i;
-    t0.q = src->q;
-    p0 = t0.f;
+    source_copy.q = src->q;
+    p0 = source_copy.f;
     pv = v->f;
-    p1 = t1.f;
+    p1 = scaled_delta.f;
     for (i = 2; i >= 0; i--) {
         if (*pv < 0.0f) {
             subtract_vector_xyz(b, v, a);
@@ -534,7 +534,7 @@ void spawn_explosion(char *m, void *unused, char *pos, float fA, float fB, int n
                        int s16, int s18, unsigned char flag) __asm__("FUN_L00_0025e450");
 void spawn_explosion(char *m, void *unused, char *pos, float fA, float fB, int n, int k8, int k9,
                        float fC, float fD, float fE, float fF, int k10, float fG, int k11,
-                       int s16, int s18, unsigned char flag) {
+                       int spray_count, int s18, unsigned char flag) {
     Q_25e450 vb;
     Q_25e450 v0;
     float dist;
@@ -582,7 +582,7 @@ void spawn_explosion(char *m, void *unused, char *pos, float fA, float fB, int n
     subtract_vector_xyz_25e450(&v0, D_L00_00166DC0_25e450, pos);
     dist = vector_length_xyz_25e450(&v0);
     {
-    if (s16 != 0) {
+    if (spray_count != 0) {
         Q_25e450 d2;
         Q_25e450 rnd;
         int i;
@@ -599,8 +599,8 @@ void spawn_explosion(char *m, void *unused, char *pos, float fA, float fB, int n
             func_L00_001FF548_25e450(&d2, &d2, frame_time_macro * 10.0f);
             func_L00_002B0738_25e450(pos, &d2, random_int_between_25e450(scale_game_frames_25e450(0x3C), scale_game_frames_25e450(0x5A)), 0, 0);
         }
-        s16 = s16 - 1;
-        for (i = 0; i < s16; i++) {
+        spray_count = spray_count - 1;
+        for (i = 0; i < spray_count; i++) {
             float a;
             float b;
             int sel;
@@ -809,7 +809,7 @@ void FUN_L00_0025f3e8(char *owner, char *pos, float scale, float flash) {
     S6y10 c1;
     int rgb[3];
     int i;
-    float k5, sp, big, t1, t2;
+    float k5, sp, big, first_glow_scale, second_glow_scale;
     clear_u64_value(&zero_vec);
     k5 = 500000.0f;
     for (i = 2; i >= 0; i--) {
@@ -824,12 +824,12 @@ void FUN_L00_0025f3e8(char *owner, char *pos, float scale, float flash) {
     if (owner != 0) {
         rgb[0] = 0x7F; rgb[1] = 0x40; rgb[2] = 0;
         FUN_L00_0025c088(&rgb[0], &rgb[1], &rgb[2], 1);
-        t1 = scale * 4.0f;
-        spawn_glow_particle(owner, pos, &zero_vec, t1, scale_game_frames_c(0x14), *(unsigned char *)&rgb[0], *(unsigned char *)&rgb[1], *(unsigned char *)&rgb[2], 0x30);
+        first_glow_scale = scale * 4.0f;
+        spawn_glow_particle(owner, pos, &zero_vec, first_glow_scale, scale_game_frames_c(0x14), *(unsigned char *)&rgb[0], *(unsigned char *)&rgb[1], *(unsigned char *)&rgb[2], 0x30);
         rgb[0] = 0x60; rgb[1] = 0x20; rgb[2] = 0;
         FUN_L00_0025c088(&rgb[0], &rgb[1], &rgb[2], 1);
-        t2 = scale * 3.0f;
-        spawn_glow_particle(owner, pos, &zero_vec, t2, scale_game_frames_c(0x1D), *(unsigned char *)&rgb[0], *(unsigned char *)&rgb[1], *(unsigned char *)&rgb[2], 0x20);
+        second_glow_scale = scale * 3.0f;
+        spawn_glow_particle(owner, pos, &zero_vec, second_glow_scale, scale_game_frames_c(0x1D), *(unsigned char *)&rgb[0], *(unsigned char *)&rgb[1], *(unsigned char *)&rgb[2], 0x20);
     }
     if (flash != 0.0f) {
         if (flash > 0.0f) {

@@ -10,7 +10,7 @@ extern void func_0023BF48(void *);
 extern void func_0023DFE0(void *, int);
 
 /* Copies wrapped input into free decoder spans, records timestamps, then submits the copied bytes. */
-int func_0023C9C0(void *unused, char *entry, char *buffer) {
+int videoCallback(void *unused, char *entry, char *buffer) {
     struct { char *p1; int n1; char *p2; int n2; } spans;
     char *source = *(char **)(entry + 8);
     int total = *(int *)(entry + 0xC);
@@ -35,7 +35,7 @@ INCLUDE_ASM("asm/nonmatchings/text", func_0023CAF8); /* pcmCallback(sceMpeg *, s
 extern void *func_00115248(void *dest, const void *src, int n);
 
 /* cpy2area(unsigned char *, int, unsigned char *, int, unsigned char *, int, unsigned char *, int) */
-int func_0023CBE0(char *dst1, int size1, char *dst2, int size2,
+int cpy2area(char *dst1, int size1, char *dst2, int size2,
                   char *src1, int len1, char *src2, int len2) {
     if (size1 + size2 < len1 + len2) {
         return 0;

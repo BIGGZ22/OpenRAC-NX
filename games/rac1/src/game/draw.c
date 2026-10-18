@@ -1,4 +1,5 @@
 #include "common.h"
+#include "vector.h"
 #include "callees.h"
 #include "records.h"
 #include "structs.h"
@@ -20,7 +21,8 @@ extern DispatchRec D_001E8F80[];
 
 extern int D_0018A3B0[];
 
-void func_001F0F30(void) {
+/* Resets the texture DMA state words to 1. */
+void draw_resetTextureDmaState(void) {
     int *p = D_0018A3B0;
     int val = 1;
     int i = 0x13;
@@ -49,7 +51,7 @@ extern int func_00116248();
    D_0015F100 string pool past the copy. Indexing the table at every
    store gives retail's two addu forms; a `DrawTextRec *` local folds
    them into one register and comes out 12 bytes short. */
-void func_001F0F78(int x, int y, int color, char *str) {
+void Text_Queue(int x, int y, int color, char *str) {
     int n = *(int *)&D_0015F104;
 
     D_0018AC00[n].x = x;
@@ -70,7 +72,7 @@ extern int D_00189EC0[];
    func_001F0F78. Returns the adjusted x. `idx = ch` followed by the
    out-of-range override gives retail's sltiu 0x60 + movn; the reverse
    (default first, then `if (ch < 0x60)`) becomes sltu + movz. */
-int func_001F0FF8(int x, int y, int color, char *str) {
+int Text_QueueCentered(int x, int y, int color, char *str) {
     int w = 0;
     unsigned char *p = (unsigned char *)str;
 
@@ -83,13 +85,15 @@ int func_001F0FF8(int x, int y, int color, char *str) {
         w += D_00189EC0[idx];
     }
     x -= w >> 1;
-    func_001F0F78(x, y, color, str);
+    Text_Queue(x, y, color, str);
     return x;
 }
 
 __asm__(".section .text\n\tnop\n");
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F1088);
+LINKER_REMNANT("asm/remnants/text", func_001F1088);
+
+INCLUDE_ASM("asm/nonmatchings/text", func_001F10A0);
 
 LINKER_REMNANT("asm/remnants/text", func_001F2410);
 
@@ -115,7 +119,7 @@ typedef struct {
 /* Projects camera-space point a1 through the camera matrix, divides by
    depth (D_0018D010 / w) and scales to x16 screen units. func_002346C0
    in tfragfunc.c builds the same matrix. */
-void func_001F2418(Vec3f *a0, float *a1) {
+void projectWorldPoint(Vec3f *a0, float *a1) {
     float m[4][4];
     float m2[4][4];
     float v[4];
@@ -142,9 +146,11 @@ void func_001F2418(Vec3f *a0, float *a1) {
 
 LINKER_REMNANT("asm/remnants/text", func_001F2550);
 
+/* Empty stub (returns immediately). */
 void func_001F2558(void) {
 }
 
+/* Empty stub (returns immediately). */
 void func_001F2560(void) {
 }
 
@@ -170,7 +176,7 @@ extern volatile int D_00160FE0_v __asm__("D_00160FE0") MACRO_ADDR;
    func_002350A8's delay slot, where the plain MACRO_ADDR store would go.
    The two stores that do sit in delay slots (D_00161000, D_0015EF78) are
    MACRO_ADDR and come out $gp-relative there. */
-void func_001F2568(void) {
+void ResetVideoPipeline(void) {
     int flag;
     int pal;
 
@@ -206,7 +212,7 @@ typedef struct {
 extern SceneG D_00187040_g __asm__("D_00187040");
 
 /* Builds the view matrices in the camera block from the rotation set up in D_00187390 or the three rotation angles, then copies the result to D_0018D080. Adapted from Lombyte (MIT) for PAL: src/rendering/view/fun_001f2260.c, FUN_001f2260. */
-void func_001F2608(void) {
+void BuildViewMatrices(void) {
     float m[4][4];
     SceneG *g;
     char *x;
@@ -294,7 +300,7 @@ extern void func_001F3140(void);
    D_0015F598. The presets and the two words it writes are MACRO_ADDR:
    retail reads each field with the one-register macro, and the mode
    word's store fits the branch delay slot ($gp-relative there). */
-void func_001F2930(int arg0) {
+void UpdateFog(int arg0) {
     if (D_001873D4 != 0) {
         D_0018CE00[0x8C] = D_001611C4.r;
         D_0018CE00[0x8D] = D_001611C4.g;
@@ -331,7 +337,7 @@ extern char *D_0015F720 MACRO_ADDR;
    registers and the level pointer in $a3. The last level's bounds share
    one `if`, which is what leaves retail's shared failure return after
    level 2 and a separate one for the 0xFFFF test. */
-int func_001F2A38(int x, int y, int z) {
+int ParseOcclGrid(int x, int y, int z) {
     char *grid = D_0015F720;
     char *base = grid + *(int *)grid;
     unsigned short *l = (unsigned short *)(grid + 4);
@@ -358,7 +364,7 @@ __asm__(".section .text\n\tnop\n");
 extern int func_001F2A38(int, int, int);
 
 /* GetOcclGridFromPair(int, int, int, int, int, int, float) */
-int func_001F2B10(int a0, int a1, int a2, int a3, int a4, int a5, float t) {
+int GetOcclGridFromPair(int a0, int a1, int a2, int a3, int a4, int a5, float t) {
     int r;
     int b0;
     int b1;
@@ -398,7 +404,7 @@ extern float *D_0015F724 MACRO_ADDR;
 
 /* Build the occlusion visibility bitmap for the camera's grid cell.
    Adapted from Lombyte (MIT) for PAL: src/rendering/build_occlusion_visibility.c, build_occlusion_visibility. */
-void func_001F2BC8(void) {
+void BuildOcclVisibility(void) {
     float scale = 0.25f;
     int x, y, z;
     char *vis;
@@ -418,11 +424,11 @@ void func_001F2BC8(void) {
         D_0015F72C = 1;
         if (D_0015F728 == 0) {
             gx = (char *)GetOcclGridFromPair(x - 1, y, z, x + 1, y, z,
-                                       D_00187040_cam.focus[0] * scale - func_001FA888(x));
+                                       D_00187040_cam.focus[0] * scale - IntToFloat(x));
             gy = (char *)GetOcclGridFromPair(x, y - 1, z, x, y + 1, z,
-                                       D_00187040_cam.focus[1] * scale - func_001FA888(y));
+                                       D_00187040_cam.focus[1] * scale - IntToFloat(y));
             gz = (char *)GetOcclGridFromPair(x, y, z - 1, x, y, z + 1,
-                                       D_00187040_cam.focus[2] * scale - func_001FA888(z));
+                                       D_00187040_cam.focus[2] * scale - IntToFloat(z));
             if (gx != 0 || gy != 0 || gz != 0) {
                 FastMemZero16(D_00194140, 0x80);
                 if (gx != 0) {
@@ -481,7 +487,7 @@ extern void func_001F2BC8(void);
 extern int D_0018C434 NOT_SDA;
 
 /* UpdateOcclusion(void) */
-void func_001F2FB8(void) {
+void UpdateOcclusion(void) {
     int state = D_0018C434;
     if (state == 0) {
         FastMemSet(D_001940C0, -1, 0x80);
@@ -504,7 +510,7 @@ extern float func_001FA888(int);
    +0x22C. The size is read into `short` locals (lhu, then sll/sra) through
    a base pointer that stays in $s1, and the height is read again from
    memory for the second conversion. */
-void func_001F3008(void) {
+void InitViewContext(void) {
     short *res = D_00151880;
     float *ctx = (float *)D_0018CE00;
     short w = res[0xA8];
@@ -524,8 +530,8 @@ void func_001F3008(void) {
     ctx[0x28] = 32.0f;
     ctx[0x29] = 745472.0f;
     ctx[0x2C] = 0.63f;
-    ctx[0x80] = func_001FA888(w) * 0.5f;
-    fh = func_001FA888(res[0xA9]) * 0.5f;
+    ctx[0x80] = IntToFloat(w) * 0.5f;
+    fh = IntToFloat(res[0xA9]) * 0.5f;
     ctx[0x81] = fh;
     ctx[0x82] = ctx[0x80] * 4.0f;
     ctx[0x83] = fh * 4.0f;
@@ -596,7 +602,7 @@ extern void func_00234380(void);
    endpoints: the clip constants at D_0018D0C0, the fog multiplier and the
    fog packet registers, the projection matrices and the screen scale and
    bias vectors that the renderers copy into their packets. */
-void func_001F3140(void) {
+void UpdateViewContext(void) {
     struct ViewP *view;
     struct ViewP *packet_view;
     f32 depth_scale;
@@ -795,7 +801,7 @@ extern float func_001FA888(int);
    The context is reached through one local pointer, which keeps its
    full address in $s0 as retail does (indexing the global directly
    folds +0xB0 into the base and spends $a0 on the %hi). */
-void func_001F3760(int w, int h, float a2, float a3, float a4, float a5, float a6) {
+void SetScreenSize(int w, int h, float a2, float a3, float a4, float a5, float a6) {
     float *ctx = (float *)D_0018CE00;
     int hw = w >> 1;
     int hh = h >> 1;
@@ -812,8 +818,8 @@ void func_001F3760(int w, int h, float a2, float a3, float a4, float a5, float a
     ctx[0x2C] = a2;
     ctx[0x28] = 32.0f;
     ctx[0x29] = 524288.0f;
-    ctx[0x80] = func_001FA888(w) * 0.5f;
-    fh = func_001FA888(h) * 0.5f;
+    ctx[0x80] = IntToFloat(w) * 0.5f;
+    fh = IntToFloat(h) * 0.5f;
     ctx[0x81] = fh;
     ctx[0x82] = ctx[0x80] * 4.0f;
     ctx[0x83] = fh * 4.0f;
@@ -850,7 +856,8 @@ extern int D_00161294 MACRO_ADDR;
 extern int D_00161298 MACRO_ADDR;
 extern int D_0016129C MACRO_ADDR;
 
-void func_001F3B90(void) {
+/* ResetDrawGlobals: clears the draw-callback counts and related draw counters. */
+void ResetDrawGlobals(void) {
     D_0015F564 = 0;
     D_0015F56C = 0;
     D_0015F570 = 0;
@@ -876,7 +883,7 @@ extern char D_0013D0C0[];
 extern char D_0013D010[];
 
 /* ResetGsRegisters(void) */
-void func_001F3C10(void) {
+void ResetGsRegisters(void) {
     D_00161000[0] = 0x30000013;
     D_00161000[1] = (int)D_0013D0C0;
     D_00161000[2] = 0;
@@ -897,7 +904,7 @@ extern long D_00151888[3];
    register block): CSR ack, PMODE, then SMODE2/DISPFB1/DISPFB2/DISPLAY1/
    DISPLAY2/BGCOLOR set from a 3-entry table. */
 /* ResetGsRegistersPr(void) */
-void func_001F3D00(void) {
+void ResetGsRegistersPr(void) {
     *(volatile long *)0x120000E0 = 0;
     *(volatile long *)0x12000000 = 0xFFA1;
     *(volatile long *)0x12000020 = D_00151888[0];
@@ -995,7 +1002,7 @@ extern void func_00229D48(void);
 extern void func_0020DD48(void);
 
 /* Draws the whole frame: each world layer's DMA chain in order, then the fades and the per-layer profiler bars. Adapted from Lombyte (MIT) for PAL: rendering/draw_debug_profiler.c, draw_debug_profiler. */
-void func_001F3D78(void) {
+void DrawDebugProfiler(void) {
     float t;
     float div;
 
@@ -1003,8 +1010,8 @@ void func_001F3D78(void) {
         D_0018C44C[0] != 0) {
         framebuf_appendLargeSetup();
     }
-    func_001F2608();
-    func_0020DAB0();
+    BuildViewMatrices();
+    AnimSlot_ReleaseStale();
     UpdateOcclusion();
     ResetGsRegisters();
     D_0015F704 = -1;
@@ -1030,7 +1037,7 @@ void func_001F3D78(void) {
     }
     Vif1ChainCmd(0x02020000);
     if (D_0018A3B0[0x34 / 4] != 0 && D_0015F56C != 0) {
-        func_00234F40();
+        Dma_AppendRefDirect3();
         SetupGifPaging(1);
         ExecuteDrawCallbacks3();
         DoGifPaging();
@@ -1047,11 +1054,11 @@ void func_001F3D78(void) {
     }
     if (D_0015F534_f & 0x20) {
         SetupGifPaging(1);
-        func_001F7B70();
+        DrawOptionalExtraPass();
         DoGifPaging();
     }
     if (D_0018A3B0[0x34 / 4] != 0 && D_0015F570 != 0) {
-        func_00234F40();
+        Dma_AppendRefDirect3();
         SetupGifPaging(1);
         ExecuteDrawCallbacks4();
         DoGifPaging();
@@ -1069,21 +1076,21 @@ void func_001F3D78(void) {
     func_001F2560_a(D_0015F4B0, 4);
     func_001F2558_a(D_0015F4B0, 4);
     if (D_0015F534_f & 0x20) {
-        func_00234F40();
+        Dma_AppendRefDirect3();
         if (D_0018A3B0[0x34 / 4] != 0) {
             if (D_0015F564 != 0) {
                 ExecuteDrawCallbacks();
             }
             VU1_addGSregister(0x42, 0x8000000048L);
-            func_001EDFF8();
-            func_00234F40();
-            func_001F4C30();
+            LensFlareUpdate();
+            Dma_AppendRefDirect3();
+            DrawLightQuads();
         }
         func_001F2558_a(D_0015F4C0, 6);
         func_001F2560_a(D_0015F4C0, 6);
         if (D_0018A3B0[0x38 / 4] != 0) {
             VU1_addGSregister(8, 5);
-            func_00234F40();
+            Dma_AppendRefDirect3();
             func_00118D80(0);
             PartProc();
             D_0015F704 = 8;
@@ -1092,14 +1099,14 @@ void func_001F3D78(void) {
         func_001F2560_a(D_0015F4D0, 8);
         if (D_0018A3B0[0x3C / 4] != 0) {
             if (D_0015F568 != 0) {
-                func_00234F40();
+                Dma_AppendRefDirect3();
                 ExecuteDrawCallbacks2();
             }
             if (D_0015F6E8 == 0) {
-                func_001F9478();
+                DrawBillboardBatch();
             }
             VU1_addGSregister(0x42, 0x8000000044L);
-            func_001EE6E0();
+            DrawQueuedGlows();
         }
         func_001F2558_a(D_0015F4E0, 6);
         func_001F2560_a(D_0015F4E0, 6);
@@ -1108,17 +1115,17 @@ void func_001F3D78(void) {
         AA_BlurPass();
     }
     func_001F2560_a(D_0015F4F0, 0xF);
-    func_00234F40();
+    Dma_AppendRefDirect3();
     if (D_0015F534_f & 0x10000) {
         func_00238D88();
     }
     if ((D_0015F534_f & 0x80) && D_0018A3B0[0x40 / 4] != 0) {
         HudDraw();
-        func_001FF1B0();
-        func_001F5148();
+        Help_Draw();
+        DrawLetterboxBars();
     }
     if (D_0015F6E8 == 2 && D_0015EF40_F3D78[0] != 0) {
-        func_001F4F90();
+        DrawSubtitles();
     }
     func_001F2560_a(D_0015F4F8, 0xE);
     func_001F2558_a(D_0015F4F8, 0xE);
@@ -1149,7 +1156,7 @@ void func_001F3D78(void) {
     }
     VU0_loadMicroProgram(D_00100AE0);
     func_00118D80(0);
-    t = func_001FA888(*(volatile int *)0x10000800);
+    t = IntToFloat(*(volatile int *)0x10000800);
     D_0015F6F8 = t / (D_0015EE80 != 0 ? 11520.0f : 9600.0f);
     VU1_syncChain(2);
     func_001F2558_a(D_0015F510, 0x11);
@@ -1165,7 +1172,7 @@ void func_001F3D78(void) {
     if (D_0015F534_f & 4) {
         if (D_0018A3B0[0x18 / 4] != 0) {
             if (D_0015EE80 != 0) {
-                func_00236BB0();
+                LightTieBuffers();
                 copy_render_buffer_pair();
             } else {
                 LightTies(D_001E3500);
@@ -1202,7 +1209,7 @@ extern void func_001F3D78(void);
 
 /* D_0015F6FC is read through a MACRO_ADDR alias: retail's one-register
    lui $2 / lw $2 (an older note filed it as an allocator question). */
-void func_001F45F0(void) {
+void drawNormalFrame(void) {
     if (D_0015F6FC_m == 0) {
         framebuf_appendLargeSetup();
         *(int *)&D_0015F534 = 0x7F;
@@ -1217,7 +1224,7 @@ extern int *D_0015F550 MACRO_ADDR;
 extern int D_0015EF74 MACRO_ADDR;
 extern int D_0015F55C MACRO_ADDR;
 extern int D_0015EF8C MACRO_ADDR;
-extern short D_0015F558;
+extern int D_0015F558 MACRO_ADDR;
 typedef struct {
     long unk0;
     long unk8;
@@ -1241,7 +1248,7 @@ static inline char *PagingArena(void) {
    gives retail's copy for the loop) with the element offset first
    (`i * 8 + base`); the second through a block-local pointer, whose
    %hi retail keeps. */
-void func_001F4630(int arg0) {
+void SetupGifPaging(int arg0) {
     int *p = D_00161000;
     int i;
 
@@ -1249,7 +1256,7 @@ void func_001F4630(int arg0) {
     p += 4;
     D_00161000 = p;
     D_0015EF74 = D_0015EF78;
-    *(int *)&D_0015F558 = 0;
+    D_0015F558 = 0;
     {
         int k;
 
@@ -1292,7 +1299,7 @@ extern void func_00234E80(void);
    D_0018A3DC is set, func_0020C2F8 and func_00234E80 add their own.
    The first advance goes through a local advanced in place, which keeps
    the old and new pointer in one register as retail does. */
-void func_001F4748(void) {
+void DoGifPaging(void) {
     int *p = D_00161000;
 
     D_0015F554 = p;
@@ -1336,7 +1343,86 @@ typedef struct TexUpload {
     unsigned char th;
     short tbp;
 } TexUpload;
-INCLUDE_ASM("asm/nonmatchings/text", func_001F4868); /* GetEffectTex(int, int) */
+struct EffectTextureDefinition_et {
+    u64 tex0;
+    u16 texel_offset_quadwords;
+    u16 palette_offset_quadwords;
+    s16 width_log2;
+    s16 height_log2;
+};
+struct TextureUpload_et {
+    s32 clut_data;
+    s16 unk4;
+    s16 cbp;
+    s32 image_data;
+    u8 tw;
+    u8 th;
+    s16 tbp;
+};
+
+extern struct EffectTextureDefinition_et effect_texture_definitions_et[] __asm__("D_0018D540");
+extern struct TextureUpload_et pending_texture_uploads_et[0x40] __asm__("D_0018D140");
+extern s32 pending_texture_upload_count_et __asm__("D_0015F558") MACRO_ADDR;
+extern s32 level_texture_payload_address_et __asm__("D_0015F560") MACRO_ADDR;
+extern s32 gs_texture_allocation_cursor_et __asm__("D_0015EF74") MACRO_ADDR;
+
+/* GetEffectTex: the GS TEX0 word of effect texture slot index. The first
+   call for a slot allocates its CLUT and texels from the GS texture cursor,
+   builds and caches the word, and, while fewer than 64 uploads are
+   pending, queues the slot's CLUT and pixels for upload.
+   Adapted from Lombyte (MIT): src/rendering/effects/get_effect_texture.c, get_effect_texture. */
+u64 func_001F4868_r(s32 index) __asm__("func_001F4868");
+
+/* GetEffectTex with its real 64-bit return: builds and returns the GS TEX0 word for an effect texture. */
+u64 func_001F4868_r(s32 index) {
+    struct EffectTextureDefinition_et *texture;
+    struct TextureUpload_et *upload;
+    s32 width_log2;
+    s32 buffer_width_shift;
+    s32 palette_block_offset;
+    s32 texel_address;
+    s32 texel_block_offset;
+    u64 tex0_word;
+    s64 width_bits;
+    s64 palette_bits;
+    s32 pending_texture_upload_count_snapshot;
+
+    if (effect_texture_definitions_et[index].tex0 == 0) {
+        texture = &effect_texture_definitions_et[index];
+        width_log2 = texture->width_log2;
+        buffer_width_shift = width_log2 - 6;
+        palette_block_offset = gs_texture_allocation_cursor_et >> 8;
+        texel_address = gs_texture_allocation_cursor_et + 0x400;
+        texel_block_offset = texel_address >> 8;
+        pending_texture_upload_count_snapshot = pending_texture_upload_count_et;
+        tex0_word = ((u64)(1 << ((buffer_width_shift <= -1) ? 0 : buffer_width_shift)) << 14);
+        tex0_word |= texel_block_offset;
+        width_bits = ((s64)((u64)(u16)texture->width_log2 << 48) >> 22) | 0x1300000;
+        tex0_word |= width_bits;
+        tex0_word |= (s64)((u64)(u16)texture->height_log2 << 48) >> 18;
+        palette_bits = (u64)palette_block_offset << 37;
+        palette_bits |= (u64)1 << 34;
+        width_log2 += texture->height_log2;
+        tex0_word |= palette_bits;
+        tex0_word |= (u64)1 << 63;
+        gs_texture_allocation_cursor_et = texel_address + (1 << width_log2);
+        texture->tex0 = tex0_word;
+        if (pending_texture_upload_count_snapshot < 0x40) {
+            upload = &pending_texture_uploads_et[pending_texture_upload_count_snapshot];
+            upload->clut_data =
+                level_texture_payload_address_et + texture->palette_offset_quadwords * 0x10;
+            upload->cbp = palette_block_offset;
+            upload->unk4 = 0;
+            *(s32 *)((u8 *)pending_texture_uploads_et + pending_texture_upload_count_snapshot * 0x10 +
+                     8) = level_texture_payload_address_et + texture->texel_offset_quadwords * 0x10;
+            upload->tw = (u8)texture->width_log2;
+            upload->th = (u8)texture->height_log2;
+            upload->tbp = texel_block_offset;
+            pending_texture_upload_count_et = pending_texture_upload_count_snapshot + 1;
+        }
+    }
+    return effect_texture_definitions_et[index].tex0;
+}
 
 /*
  * Four parallel callback lists, each a (function, argument) pair of
@@ -1354,7 +1440,8 @@ extern void *D_0018E140[];
 extern DrawCallback D_0018E240[];
 extern void *D_0018E340[];
 
-void func_001F49B0(DrawCallback fn, void *arg) {
+/* AddDrawCallback: appends fn(arg) to the first draw-callback list. */
+void AddDrawCallback(DrawCallback fn, void *arg) {
     int count = D_0015F564;
     if (count < 0x40) {
         D_0018DC40[count] = fn;
@@ -1363,28 +1450,32 @@ void func_001F49B0(DrawCallback fn, void *arg) {
     }
 }
 
-void func_001F4A00(void) {
+/* ExecuteDrawCallbacks: calls every callback in the first list. */
+void ExecuteDrawCallbacks(void) {
     int i;
     for (i = 0; i < D_0015F564; i++) {
         D_0018DC40[i](D_0018DD40[i]);
     }
 }
 
-void func_001F4A78(void) {
+/* Calls every callback in the second draw-callback list. */
+void ExecuteDrawCallbacks3(void) {
     int i;
     for (i = 0; i < D_0015F56C; i++) {
         D_0018E040[i](D_0018E140[i]);
     }
 }
 
-void func_001F4AF0(void) {
+/* Calls every callback in the third draw-callback list. */
+void ExecuteDrawCallbacks4(void) {
     int i;
     for (i = 0; i < D_0015F570; i++) {
         D_0018E240[i](D_0018E340[i]);
     }
 }
 
-void func_001F4B68(DrawCallback fn, void *arg) {
+/* Appends fn(arg) to the fourth draw-callback list. */
+void enqueue_callback_list_4(DrawCallback fn, void *arg) {
     int count = D_0015F568;
     if (count < 0x40) {
         D_0018DE40[count] = fn;
@@ -1393,7 +1484,8 @@ void func_001F4B68(DrawCallback fn, void *arg) {
     }
 }
 
-void func_001F4BB8(void) {
+/* Calls every callback in the fourth draw-callback list. */
+void ExecuteDrawCallbacks2(void) {
     int i;
     for (i = 0; i < D_0015F568; i++) {
         D_0018DE40[i](D_0018DF40[i]);
@@ -1423,7 +1515,7 @@ extern void func_001F7EF8(void *, int, int);
    colours and UVs are filled on the stack but never sent. Both copies
    are qcopy (retail's lq/sq stay inside the loop), and the inner loop
    needs its own counter, not the one the setup loop used. */
-void func_001F4C30(void) {
+void DrawLightQuads(void) {
     FRow m[4];
     int colors[4];
     float uv[4][2];
@@ -1479,7 +1571,7 @@ extern char D_0013CED0[];
    D_0015F538 bump. func_00122598 (sceGsSyncV) returns int: declared that
    way, the bump's temporary moves to $v1 as in retail. D_0015F538 is
    MACRO_ADDR so each bump reloads it in one register. */
-void func_001F4E08(int frames, unsigned int color) {
+void FadeToBlack(int frames, unsigned int color) {
     int n;
     int q;
 
@@ -1552,7 +1644,7 @@ extern void func_001F62C8(int, int, int, int, int);
    flag (4) cleared. The list is tested and then read again for the
    loop, which gives retail's copy of it; the clamp test is written
    bottom-first, which gives retail's registers. */
-void func_001F4F90(void) {
+void DrawSubtitles(void) {
     Subtitle *p;
     int lang;
     int idx;
@@ -1601,7 +1693,7 @@ extern char D_00160930[];
    0x104) drawing two full-width strips, the height in 16ths reaching in
    from the top and bottom of the D_0013E600 viewport, the same packet
    steps as func_001F5650. */
-void func_001F5148(void) {
+void DrawLetterboxBars(void) {
     int h;
 
     if (D_0015F544 != 0) {
@@ -1680,7 +1772,7 @@ extern void func_001F5650(int, int, int, int, unsigned long);
    first, then alternating stripes of widths step0/step1 in colours
    color0/color1, each with its own GS register 0x42 blend word when set.
    Adapted from Lombyte (MIT) for PAL. */
-void func_001F5368(void) {
+void DrawScreenEffect(void) {
     int i;
     short w;
     long mask;
@@ -1737,7 +1829,7 @@ extern int D_0015EF88 MACRO_ADDR;
    alpha byte, register 0x4E switched around a full-screen
    func_001F5650 draw. The 64-bit constants are ps2eeas's dli
    sequences (tools/ps2eeas_dli.py). */
-void func_001F54E8(char *arg0) {
+void draw_fogged_fullscreen_sprite(char *arg0) {
     long v = *(long *)(arg0 + 8);
 
     if (v != 0) {
@@ -1761,7 +1853,8 @@ void func_001F54E8(char *arg0) {
 extern int *D_00161000 MACRO_ADDR;
 extern char D_0013CD90[];
 
-void func_001F55C0(int a, int b, int c, int d) {
+/* Appends a GIF packet that sets GS register 1 from the four bytes a, b, c, d. */
+void emit_rgba_draw_packet(int a, int b, int c, int d) {
     VU1_addGSregister(1, (long)a | ((long)b << 8) | ((long)c << 16) | ((long)d << 24));
     D_00161000[0] = 0x30000014;
     D_00161000[1] = (int)D_0013CD90;
@@ -1777,7 +1870,7 @@ void func_001F55C0(int a, int b, int c, int d) {
    D_00160920 and D_00160930 register descriptors (ids 0x8001/0x8004),
    then four XYZ values at Z 0xFFFFF0. Each packet step has its own
    block-scoped base pointer, which gives retail's registers. */
-void func_001F5650(int y0, int y1, int x0, int x1, unsigned long rgba) {
+void DrawRectOverlay_FiiiiUl(int y0, int y1, int x0, int x1, unsigned long rgba) {
     D_00161000[0] = 0x10000005;
     D_00161000[1] = 0;
     D_00161000[2] = 0;
@@ -1830,7 +1923,7 @@ extern char D_00160940[];
 /* Append a textured sprite as a four-vertex strip (PRIM 0x154): screen
    corners in 12.4 fixed point relative to the viewport origin, UVs from
    (u, v) to (u + uw, v + vh) in 16ths. */
-void func_001F5800(int x, int y, int w, int h, int u, int v, int uw, int vh,
+void DrawTexturedQuad(int x, int y, int w, int h, int u, int v, int uw, int vh,
                    unsigned long rgba, unsigned long tex) {
     int x0 = x * 16 + D_0013E600[4] - 8;
     int x1 = (x + w) * 16 + D_0013E600[4] - 8;
@@ -1983,12 +2076,6 @@ union PacketCursor {
     s32 addr;
 };
 extern union PacketCursor D_00161000_F5E60 __asm__("D_00161000") MACRO_ADDR;
-typedef struct {
-    f32 x;
-    f32 y;
-    f32 z;
-    f32 w;
-} Vec4f;
 extern void func_001F9BD8(void *, void *, void *);
 extern void func_001F9BF0(void *, void *, void *);
 extern void func_001F9C30(void *, void *, f32);
@@ -2096,7 +2183,7 @@ LINKER_REMNANT("asm/remnants/text", func_001F62C0);
 
 /* Draws a bevelled frame: the box itself, then three shrinking bars
    above and three below it, all in grey 0x040404 with alpha a. */
-void func_001F62C8(int x0, int x1, int y0, int y1, int a) {
+void DrawUIFrame(int x0, int x1, int y0, int y1, int a) {
     int col = (a << 24) | 0x40404;
 
     DrawRectOverlay_FiiiiUl(x0, x1, y0, y1, col);
@@ -2112,7 +2199,7 @@ void func_001F62C8(int x0, int x1, int y0, int y1, int a) {
    (a0, a1, a2, a3), offset by +-1/3/5 along each axis, all sharing the
    colour/flags word a4. The first call passes a4 with only its top byte
    kept and the low nibble forced to 4; the rest pass a4 unchanged. */
-void func_001F6410(int a0, int a1, int a2, int a3, int a4) {
+void DrawOutlinedRect(int a0, int a1, int a2, int a3, int a4) {
     int color;
     int t0, t1, t2;
     int t_a0m5, t4, t5;
@@ -2156,11 +2243,13 @@ void func_001F6410(int a0, int a1, int a2, int a3, int a4) {
    as the 4-byte word it really is. gp base 0x166D00 - 0x7764 = 0x15F59C. */
 extern short D_0015F59C;
 
-void func_001F6598(void) {
+/* Sets the word flag at D_0015F59C to 1. */
+void Font_EnableColorCodes(void) {
     *(int *)&D_0015F59C = 1;
 }
 
-void func_001F65A8(void) {
+/* Clears the word flag at D_0015F59C. */
+void Font_DisableColorCodes(void) {
     *(int *)&D_0015F59C = 0;
 }
 
@@ -2171,7 +2260,7 @@ void func_001F65A8(void) {
    if: the body's `*p` then sits after the loop label, so CSE keeps it
    apart from the entry test's `*str`, and `i = 0` is not folded into the
    first `i++`, both as in retail. */
-int func_001F65B0(unsigned char *str, int count, void *table) {
+int measure_text_width(unsigned char *str, int count, void *table) {
     int width = 0;
     int i = 0;
     unsigned char *p;
@@ -2198,15 +2287,18 @@ extern unsigned char D_001DF3D0[];
 extern unsigned char D_001DF770[];
 extern unsigned char D_001DFB10[];
 
-int func_001F6600(unsigned char *arg0, int arg1) {
+/* measure_text_width_regular: width of the first arg1 characters of arg0 in the regular font table. */
+int MeasureTextWidthRegular(unsigned char *arg0, int arg1) {
     return measure_text_width(arg0, arg1, D_001DF3D0);
 }
 
-int func_001F6620(unsigned char *arg0, int arg1) {
+/* measure_text_width_small: width of the first arg1 characters of arg0 in the small font table. */
+int MeasureTextWidthSmall(unsigned char *arg0, int arg1) {
     return measure_text_width(arg0, arg1, D_001DF770);
 }
 
-int func_001F6640(unsigned char *arg0, int arg1) {
+/* measure_text_width_large: width of the first arg1 characters of arg0 in the large font table. */
+int MeasureTextWidthLarge(unsigned char *arg0, int arg1) {
     return measure_text_width(arg0, arg1, D_001DFB10);
 }
 
@@ -2308,14 +2400,14 @@ extern void func_001F6668(void *, void *, void *, void *, void *, long,
    mode 1 vs 2, D_001DF3D0 vs D_001DF770. Seven arguments, so EABI puts
    the fifth through seventh in $8/$9/$10. */
 /* FontPrintLarge */
-void func_001F68E8(void *a, void *b, void *c, void *d, void *e) {
+void FontPrintLarge(void *a, void *b, void *c, void *d, void *e) {
     long mode = GetEffectTex64(1);
 
     FontPrint(a, b, c, d, e, mode, D_001DF3D0);
 }
 
 /* FontPrintSmall */
-void func_001F6968(void *a, void *b, void *c, void *d, void *e) {
+void FontPrintSmall(void *a, void *b, void *c, void *d, void *e) {
     long mode = GetEffectTex64(2);
 
     FontPrint(a, b, c, d, e, mode, D_001DF770);
@@ -2336,7 +2428,7 @@ extern void func_001F5BB8_F69F0(f32, f32, f32, f32, s32, s32, s32, s32, u64, s64
 void func_001F69F0(u64 color, u8 *s, s32 n, s64 tex, struct Glyph *g, f32 x, f32 y, f32 scale);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/audio/music/process_bgm_display_text_event.c, process_bgm_display_text_event. */
-void func_001F69F0(u64 color, u8 *str, s32 n, s64 tex, struct Glyph *g, f32 x, f32 y, f32 scale) {
+void Font_DrawString(u64 color, u8 *str, s32 n, s64 tex, struct Glyph *g, f32 x, f32 y, f32 scale) {
     u8 *s;
     s32 i;
     f32 size;
@@ -2363,11 +2455,11 @@ void func_001F69F0(u64 color, u8 *str, s32 n, s64 tex, struct Glyph *g, f32 x, f
                 color |= D_0018CBF8[*s - 8] & 0xFFFFFF;
             }
         } else if (g[*s].adv != 0) {
-            top = func_001FA888(g[*s].top) * scale;
+            top = IntToFloat(g[*s].top) * scale;
             if ((u8)(*s + 0x80) < 0x28) {
                 e = (struct Glyph *)(((*s + 0x40) << 2) + (s32)g);
-                dx = func_001FA888(e->adv) * scale;
-                dy = func_001FA888(e->top) * scale;
+                dx = IntToFloat(e->adv) * scale;
+                dy = IntToFloat(e->top) * scale;
                 func_001F5BB8_F69F0(x + dx, y + dy, size, size, e->u, e->v, 16, 16, color, tex);
             }
             if (*s < 0x20) {
@@ -2380,7 +2472,7 @@ void func_001F69F0(u64 color, u8 *str, s32 n, s64 tex, struct Glyph *g, f32 x, f
             } else if (*s > 0x20) {
                 func_001F5BB8_F69F0(x, y + top, size, size, g[*s].u, g[*s].v, 16, 16, color, tex);
             }
-            x += func_001FA888(g[*s].adv) * scale;
+            x += IntToFloat(g[*s].adv) * scale;
         }
         i++;
         if (i == n) {
@@ -2400,22 +2492,24 @@ extern int func_001F6620(unsigned char *, int);
    D_001DF3D0, D_001DF770, D_001DFB10), each paired with its own
    measuring helper, and the first argument stepped back by whatever that
    helper returns. */
-void func_001F6CF8(char *a, void *b, void *c, unsigned char *d, int e) {
-    char *p = a - func_001F6600(d, e);
+void font_print_right(char *a, void *b, void *c, unsigned char *d, int e) {
+    char *p = a - MeasureTextWidthRegular(d, e);
     long mode = GetEffectTex64(1);
 
     FontPrint(p, b, c, d, (void *)e, mode, D_001DF3D0);
 }
 
-void func_001F6D88(char *a, void *b, void *c, unsigned char *d, int e) {
-    char *p = a - func_001F6620(d, e);
+/* Right-aligned FontPrint with the second font. */
+void font_print_right_small(char *a, void *b, void *c, unsigned char *d, int e) {
+    char *p = a - MeasureTextWidthSmall(d, e);
     long mode = GetEffectTex64(2);
 
     FontPrint(p, b, c, d, (void *)e, mode, D_001DF770);
 }
 
-void func_001F6E18(char *a, void *b, void *c, unsigned char *d, int e) {
-    char *p = a - func_001F6640(d, e);
+/* Right-aligned FontPrint with the third font. */
+void font_print_right_large(char *a, void *b, void *c, unsigned char *d, int e) {
+    char *p = a - MeasureTextWidthLarge(d, e);
     long mode = GetEffectTex64(3);
 
     FontPrint(p, b, c, d, (void *)e, mode, D_001DFB10);
@@ -2426,8 +2520,8 @@ void func_001F6E18(char *a, void *b, void *c, unsigned char *d, int e) {
    value, and the adjusted position is returned. Typed all-int to match
    the extern func_001F7288 already declares for func_001F6FD8. */
 /* FontPrintCenter */
-int func_001F6EA8(int a, int b, int c, int d, int e) {
-    int p = a - (func_001F6600((unsigned char *)d, e) >> 1);
+int FontPrintCenter(int a, int b, int c, int d, int e) {
+    int p = a - (MeasureTextWidthRegular((unsigned char *)d, e) >> 1);
     long mode = GetEffectTex64(1);
 
     FontPrint((void *)p, (void *)b, (void *)c, (void *)d, (void *)e,
@@ -2436,8 +2530,8 @@ int func_001F6EA8(int a, int b, int c, int d, int e) {
 }
 
 /* FontPrintCenterSmall */
-int func_001F6F40(int a, int b, int c, int d, int e) {
-    int p = a - (func_001F6620((unsigned char *)d, e) >> 1);
+int FontPrintCenterSmall(int a, int b, int c, int d, int e) {
+    int p = a - (MeasureTextWidthSmall((unsigned char *)d, e) >> 1);
     long mode = GetEffectTex64(2);
 
     FontPrint((void *)p, (void *)b, (void *)c, (void *)d, (void *)e,
@@ -2446,8 +2540,8 @@ int func_001F6F40(int a, int b, int c, int d, int e) {
 }
 
 /* FontPrintCenterLarge */
-int func_001F6FD8(int a, int b, int c, int d, int e) {
-    int p = a - (func_001F6640((unsigned char *)d, e) >> 1);
+int FontPrintCenterLarge(int a, int b, int c, int d, int e) {
+    int p = a - (MeasureTextWidthLarge((unsigned char *)d, e) >> 1);
     long mode = GetEffectTex64(3);
 
     FontPrint((void *)p, (void *)b, (void *)c, (void *)d, (void *)e,
@@ -2463,13 +2557,14 @@ extern int func_001F4868(int);
    mode (1 vs 2) and a different table. Six arguments: EABI passes the
    fifth and sixth in $8/$9, which is why they appear alongside $4-$7
    rather than on the stack. */
-void func_001F7560(void *a, void *b, void *c, void *d) {
+void Font_PrintWindowRegular(void *a, void *b, void *c, void *d) {
     int mode = GetEffectTex(1);
 
     FontPrintWindow(a, b, c, d, mode, D_001DF3D0);
 }
 
-void func_001F75D0(void *a, void *b, void *c, void *d) {
+/* FontPrintWindow with the second font. */
+void Font_PrintWindowAlt(void *a, void *b, void *c, void *d) {
     int mode = GetEffectTex(2);
 
     FontPrintWindow(a, b, c, d, mode, D_001DF770);
@@ -2478,7 +2573,7 @@ void func_001F75D0(void *a, void *b, void *c, void *d) {
 LINKER_REMNANT("asm/remnants/text", func_001F7640);
 
 /* FontSetWindow */
-void func_001F7648(void *arg0, int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8) {
+void FontSetWindow(void *arg0, int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8) {
     short *s = (short *)arg0;
     s[0] = a1;
     s[1] = a2;
@@ -2498,7 +2593,8 @@ extern int D_0015EF84 MACRO_ADDR;
 extern int D_0013E604[];
 #define PK ((unsigned char *)D_00161000)
 
-void func_001F7680(unsigned int source) {
+/* Uploads a block to the GS in DMA packets. */
+void UploadToGs(unsigned int source) {
     int remaining = D_0013E604[0];
     int destination = D_0015EF84 >> 8;
     unsigned long count;
@@ -2540,7 +2636,7 @@ void func_001F7680(unsigned int source) {
         *(unsigned int *)(PK + 12) = (unsigned int)transfer | 0x50000000;
         D_00161000 = (int *)(PK + 0x10);
     } while (remaining > 0);
-    func_00234E80();
+    VU1_texFlush();
 }
 
 extern short D_0015F448;              /* SDA, gp -0x78B8 */
@@ -2555,7 +2651,7 @@ extern void func_00234FA8(void);
    (each scaled to 1024 and biased in z by D_0015F448), the screen scale
    and offsets from D_0018CE00, and the GIF register setup; the DMA tag's
    qword count is patched in at the end. */
-void func_001F7868(void) {
+void Draw_BuildVu1Setup(void) {
     float m[16];
     char *cam;
     char *g;
@@ -2605,7 +2701,7 @@ void func_001F7868(void) {
     p = base + 0x3C;
     D_00161000[0] |= ((char *)p - (char *)D_00161000 >> 4) - 1;
     D_00161000 = p;
-    func_00234FA8();
+    Dma_AppendRefDirect11();
 }
 
 extern void func_001FB608(int, int, int);
@@ -2619,7 +2715,7 @@ extern short D_001519EE NOT_SDA;
    flag, 0x30000 without) and 0x42 are then written. Each arm makes its
    own page-aligned base, so the two trailing `<< 13`s are cross-jumped
    into the one retail has ahead of the argument moves. */
-void func_001F7A50(int a, int b, int flag, float f) {
+void Framebuf_SetupRenderTarget(int a, int b, int flag, float f) {
     int base;
 
     if (flag != 0) {
@@ -2633,8 +2729,8 @@ void func_001F7A50(int a, int b, int flag, float f) {
         base = D_0015EF8C - (4 << t);
         base = (base >> 13) << 13;
     }
-    func_001FB608(a, b, base);
-    func_001F3760(1 << a, 1 << b, f, 0.0f, 524288.0f, 255.0f, 0.0f);
+    Framebuf_SetRenderTarget(a, b, base);
+    SetScreenSize(1 << a, 1 << b, f, 0.0f, 524288.0f, 255.0f, 0.0f);
     if (flag != 0) {
         VU1_addGSregister(0x47, 0);
     } else {
@@ -2647,7 +2743,8 @@ __asm__(".section .text\n\tnop\n");
 
 extern void func_001F3008(void);
 
-void func_001F7B40(void) {
+/* Frame start for the large draw buffer. */
+void BeginDrawFrame(void) {
     PutDrawBufferLarge();
     InitViewContext();
     UpdateViewContext();
@@ -2662,7 +2759,8 @@ extern void func_001F91B8(void);
 extern void func_001F7868(void);
 extern void func_001F8B6C(void);
 
-void func_001F7B70(void) {
+/* Optional extra draw pass, enabled by D_0015F578. */
+void DrawOptionalExtraPass(void) {
     if (D_0015F578 != 0) {
         VU1_addGSregister(8, 5);
         VU1_addGSregister(0x14, 0x61);
@@ -2670,7 +2768,7 @@ void func_001F7B70(void) {
         VU1_addGSregister(0x4A, 1);
         func_001F91B8();
         *(float *)&D_0015F448 = -0.04f;
-        func_001F7868();
+        Draw_BuildVu1Setup();
         func_001F8B6C();
         *(int *)&D_0015F448 = 0;
         VU1_addGSregister(0x4A, 0);
@@ -2679,7 +2777,8 @@ void func_001F7B70(void) {
 
 extern int D_0018E840[];
 
-void func_001F7BF8(void) {
+/* buildBitSwapLut: fills the alpha lookup table D_0018E840. */
+void buildBitSwapLut(void) {
     int i;
     for (i = 0; i < 0x100; i++) {
         int v = i & 0xE7;

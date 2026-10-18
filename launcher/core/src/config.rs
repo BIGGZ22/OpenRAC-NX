@@ -50,6 +50,10 @@ pub struct Config {
     /// For each game, the time (seconds since 1970) of the newest crash report the player has
     /// dismissed: crashes up to then are seen, and no notice, button or mark is shown for them.
     pub crashes_seen: BTreeMap<String, u64>,
+    /// For developers with more than one disc of a game in the games folder: the version each
+    /// game's page plays (`rac1` -> `rac1/ntsc`). Used only with developer tools on
+    /// (disc_choice.rs); without one, the disc set up, as for a player.
+    pub disc_choice: BTreeMap<String, String>,
 }
 
 impl Default for Config {
@@ -71,6 +75,7 @@ impl Default for Config {
             layout: "compact".into(),
             detailed_game_log: false,
             crashes_seen: BTreeMap::new(),
+            disc_choice: BTreeMap::new(),
         }
     }
 }

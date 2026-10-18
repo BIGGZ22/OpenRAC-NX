@@ -128,9 +128,8 @@ purchase: {
 
 }
 #endif
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_002a3ec8.s", FUN_L00_002a3ec8);
-#else
+/* Ported from rac1-decomp (src/overlays/shared/vendor_002A5138.c: func_L00_002A5158), where it is exact; names translated to the US level program. */
+
 typedef struct {
     f32 x, z;
     u8 pad_8[4];
@@ -143,71 +142,110 @@ typedef struct { u8 pad_0[8]; f32 origin_x, origin_z, cell_width, cell_height; }
 extern HeightGridLayout D_L00_001CA880;
 extern s32 D_L00_00161218 __attribute__((sda));
 extern s32 D_L00_00161220 __attribute__((sda));
-extern f32 square_root(f32) __asm__("FUN_001f9988");
-extern f32 absolute_float(f32) __asm__("FUN_001f99c0");
-#define NEIGHBOUR(k) (grids + tile->neighbours[k])
-void pool_splash(HeightTile *grids, s32 count, s32 mode, f32 x, f32 z, f32 radius, f32 amount) __asm__("FUN_L00_002a3ec8");
-void pool_splash(HeightTile *grids, s32 count, s32 mode, f32 x, f32 z, f32 radius, f32 amount)
-{
-    HeightTile *tile = grids;
-    s32 k, i, j, row_first, row_last, col_first, col_last;
-    f32 tile_z, cell_x, cell_z, row_z, col_x, dz_sq, dist_sq, height, magnitude;
+extern f32 square_root_scalar(f32) __asm__("func_001F9988");
+float absolute_float(float input) __asm__("func_001F99C0");
 
-    for (k = 0; k < count; k++, tile++) {
-        tile_z = tile->z + D_L00_001CA880.origin_z;
-        cell_z = (z - tile_z) / D_L00_001CA880.cell_height;
-        cell_x = (x - (tile->x + D_L00_001CA880.origin_x)) / D_L00_001CA880.cell_width;
-        row_first = cell_z - radius;
+/* Splash on the pool height tiles: raises the heights around (x, z) and copies the edges into the neighbour tiles. */
+void FUN_L00_002a3ec8(HeightTile *tile, int count, int mode, float x, float z, float radius, float amount) {
+    HeightTile *tiles = tile;
+    int row;
+    int i;
+
+    for (i = 0; i < count; i++) {
+        float tile_z = tile->z + D_L00_001CA880.origin_z;
+        float cell_z = (z - tile_z) / D_L00_001CA880.cell_height;
+        float cell_x = (x - (tile->x + D_L00_001CA880.origin_x)) / D_L00_001CA880.cell_width;
+        int row_first, row_last, col_first, col_last;
+        float row_z;
+
+        row_first = (int)(cell_z - radius);
+        row_last = (int)(cell_z + radius);
         if (row_first < 0) row_first = 0;
-        row_last = cell_z + radius;
-        col_last = cell_x + radius;
-        col_first = cell_x - radius;
         if (row_last >= 16) row_last = 15;
+        col_first = (int)(cell_x - radius);
+        col_last = (int)(cell_x + radius);
         if (col_last >= 16) col_last = 15;
         if (col_first < 0) col_first = 0;
-        row_z = tile_z + D_L00_001CA880.cell_height * (f32)row_first;
-        for (i = row_first; i <= row_last; i++) {
-            col_x = tile->x + D_L00_001CA880.origin_x + D_L00_001CA880.cell_width * (f32)col_first;
-            dz_sq = (z - row_z) * (z - row_z);
-            for (j = col_first; j <= col_last; j++) {
-                dist_sq = (x - col_x) * (x - col_x) + dz_sq;
-                height = amount;
-                if (!(dist_sq < 1.0f)) height = amount / square_root(dist_sq);
-                if (mode == 0) {
-                    magnitude = absolute_float(height);
-                    if (magnitude < absolute_float(tile->heights[D_L00_00161218][i][j]))
-                        height = tile->heights[D_L00_00161218][i][j];
+        row_z = tile_z + D_L00_001CA880.cell_height * (float)row_first;
+
+        for (row = row_first; row <= row_last; row++) {
+            float col_x = (tile->x + D_L00_001CA880.origin_x) + D_L00_001CA880.cell_width * (float)col_first;
+            int col;
+
+            for (col = col_first; col <= col_last; col++) {
+                float dist_sq = (x - col_x) * (x - col_x) + (z - row_z) * (z - row_z);
+                float height;
+
+                if (dist_sq < 1.0f) {
+                    height = amount;
                 } else {
-                    height += tile->heights[D_L00_00161220][i][j];
+                    height = amount / square_root_scalar(dist_sq);
                 }
-                tile->heights[D_L00_00161218][i][j] = height;
-                if (i < 2 && tile->neighbours[0] != 0xFF) {
-                    if (i == 0) NEIGHBOUR(0)->heights[D_L00_00161218][18][j] = tile->heights[D_L00_00161218][0][j];
-                    else NEIGHBOUR(0)->heights[D_L00_00161218][20][j] = height;
+                if (mode == 0) {
+                    float magnitude = absolute_float(height);
+                    if (magnitude < absolute_float(tile->heights[D_L00_00161218][row][col])) {
+                        height = tile->heights[D_L00_00161218][row][col];
+                    }
+                } else {
+                    height += tile->heights[D_L00_00161220][row][col];
                 }
-                if (j < 2 && tile->neighbours[1] != 0xFF) {
-                    if (j == 0) NEIGHBOUR(1)->heights[D_L00_00161218][19][i] = tile->heights[D_L00_00161218][i][0];
-                    else NEIGHBOUR(1)->heights[D_L00_00161218][21][i] = tile->heights[D_L00_00161218][i][j];
+                {
+                int cur = D_L00_00161218;
+                tile->heights[cur][row][col] = height;
+
+                if (row < 2 && tile->neighbours[0] != 0xFF) {
+                    if (row == 0) {
+                        tiles[tile->neighbours[0]].heights[cur][18][col] = tile->heights[cur][0][col];
+                    } else {
+                        tiles[tile->neighbours[0]].heights[cur][20][col] = height;
+                    }
                 }
-                if (i == 15 && tile->neighbours[2] != 0xFF)
-                    NEIGHBOUR(2)->heights[D_L00_00161218][16][j] = tile->heights[D_L00_00161218][15][j];
-                if (j == 15 && tile->neighbours[3] != 0xFF)
-                    NEIGHBOUR(3)->heights[D_L00_00161218][17][i] = tile->heights[D_L00_00161218][i][15];
+                }
+                if (col < 2 && tile->neighbours[1] != 0xFF) {
+                    if (col == 0) {
+                        tiles[tile->neighbours[1]].heights[D_L00_00161218][19][row] = tile->heights[D_L00_00161218][row][0];
+                    } else {
+                        tiles[tile->neighbours[1]].heights[D_L00_00161218][21][row] = tile->heights[D_L00_00161218][row][col];
+                    }
+                }
+                if (row == 15 && tile->neighbours[2] != 0xFF) {
+                    int cur = D_L00_00161218;
+                    tiles[tile->neighbours[2]].heights[cur][16][col] = tile->heights[cur][row][col];
+                }
+                if (col == 15 && tile->neighbours[3] != 0xFF) {
+                    int cur = D_L00_00161218;
+                    tiles[tile->neighbours[3]].heights[cur][17][row] = tile->heights[cur][row][col];
+                }
                 if (tile->neighbours[4] != 0xFF) {
-                    if (j == 0 && i == 0) NEIGHBOUR(4)->heights[D_L00_00161218][22][3] = tile->heights[D_L00_00161218][0][0];
-                    if (j == 1 && i == 0) NEIGHBOUR(4)->heights[D_L00_00161218][22][4] = tile->heights[D_L00_00161218][0][1];
-                    if (j == 0 && i == 1) NEIGHBOUR(4)->heights[D_L00_00161218][22][5] = tile->heights[D_L00_00161218][1][0];
+                    if (col == 0 && row == 0) {
+                        int cur = D_L00_00161218;
+                        tiles[tile->neighbours[4]].heights[cur][22][3] = tile->heights[cur][row][col];
+                    }
+                    if (col == 1 && row == 0) {
+                        int cur = D_L00_00161218;
+                        tiles[tile->neighbours[4]].heights[cur][22][4] = tile->heights[cur][0][1];
+                    }
+                    if (col == 0 && row == 1) {
+                        int cur = D_L00_00161218;
+                        tiles[tile->neighbours[4]].heights[cur][22][5] = tile->heights[cur][1][0];
+                    }
                 }
-                if (tile->neighbours[5] != 0xFF && j == 15 && i == 0)
-                    NEIGHBOUR(5)->heights[D_L00_00161218][22][2] = tile->heights[D_L00_00161218][0][15];
-                if (tile->neighbours[6] != 0xFF && j == 0 && i == 15)
-                    NEIGHBOUR(6)->heights[D_L00_00161218][22][1] = tile->heights[D_L00_00161218][15][0];
-                if (tile->neighbours[7] != 0xFF && j == 15 && i == 15)
-                    NEIGHBOUR(7)->heights[D_L00_00161218][22][0] = tile->heights[D_L00_00161218][15][15];
+                if (tile->neighbours[5] != 0xFF && col == 15 && row == 0) {
+                    int cur = D_L00_00161218;
+                    tiles[tile->neighbours[5]].heights[cur][22][2] = tile->heights[cur][0][15];
+                }
+                if (tile->neighbours[6] != 0xFF && col == 0 && row == 15) {
+                    int cur = D_L00_00161218;
+                    tiles[tile->neighbours[6]].heights[cur][22][1] = tile->heights[cur][15][0];
+                }
+                if (tile->neighbours[7] != 0xFF && col == 15 && row == 15) {
+                    int cur = D_L00_00161218;
+                    tiles[tile->neighbours[7]].heights[cur][22][0] = tile->heights[cur][15][15];
+                }
                 col_x += D_L00_001CA880.cell_width;
             }
             row_z += D_L00_001CA880.cell_height;
         }
+        tile++;
     }
 }
-#endif

@@ -171,59 +171,80 @@ void func_001209D8(int *arg0) {
     D_00131414_v = 0;
 }
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_00120A78);
+LINKER_REMNANT("asm/remnants/core_text", func_00120A78);
+
+/* libcdvd S-command completion callback: through the uncached view of the
+   receive block, copies n0 bytes of buf0 to dst0 and n1 bytes of buf1 to
+   dst1, then finishes like the N-command callback (func_001209D8 on
+   D_00131414). Each destination is loaded once inside its own `if`, which
+   gives retail's doubled count test. */
+extern int D_00131414;
+
+typedef struct {
+    int n0;
+    int n1;
+    char *dst0;
+    char *dst1;
+    char buf0[0x40];
+    char buf1[0x40];
+} CdRecv;
+
+void func_00120A88(int arg0) {
+    CdRecv *p = (CdRecv *)(arg0 | 0x20000000);
+    int i;
+
+    if (p->n0 > 0) {
+        char *d0 = p->dst0;
+        for (i = 0; i < p->n0; i++) d0[i] = p->buf0[i];
+    }
+    if (p->n1 > 0) {
+        char *d1 = p->dst1;
+        for (i = 0; i < p->n1; i++) d1[i] = p->buf1[i];
+    }
+    func_001209D8((int *)&D_00131414);
+}
 
 extern int D_001313E0;
 extern int D_001313E8;
 extern int D_001313EC;
 extern int D_001313F0;
 
-/*
- * REVERTED (size mismatch: ours 136, retail 148). Logic is certain --
- * the same one-shot registration idiom as func_0011B710, run only while
- * either handle is still -1:
- *
- *   void func_00120B28(void) {
- *       int buf[8];
- *
- *       if (D_001313E8 == -1 || D_001313EC == -1) {
- *           buf[5] = 0;
- *           buf[1] = 1;
- *           buf[2] = 1;
- *           D_001313E8 = func_00118C70(buf);
- *           D_001313EC = func_00118C70(buf);
- *           buf[2] = 0;
- *           D_001313E0 = func_00118C70(buf);
- *           D_001313F0 = 0;
- *       }
- *   }
- *
- * Three instructions short under 2.95.3, and all three are retail's
- * compiler being WORSE at tail merging rather than anything in the
- * source: retail
- * materialises %hi(D_001313EC) separately in each arm of the ||, keeps
- * a separate `addiu $2,$0,1` per arm, and needs a `b` to rejoin. This
- * compiler hoists the lui above the test and merges the two arms into
- * one block. Writing the guard inverted with an early return
- * (`if (a != -1 && b != -1) return;`) produces the identical 34
- * instructions, so the block duplication is not reachable from the
- * condition's spelling.
- *
- * The buf store order is also rotated (ours 2,5,1 against retail's
- * 5,1,2) -- the same rotation as func_0011B710, this function's twin.
- *
- * Under 2.9-ee (this object's compiler) the same C with the stores written
- * 2,1,5 is the right size, 148, and 11/148: the block duplication is
- * 2.9-ee's, and what is left is where the three handle stores are
- * scheduled around the CreateSema calls. Storing D_001313E0 and
- * D_001313F0 through the volatile aliases below (as the interrupt
- * handler does) fixes those two: 6/148. The last pair is the
- * D_001313E8 store, which ours puts before `daddu $a0,$sp,$zero` for
- * the second call and retail after it, in the jal's delay slot. The
- * volatile alias for D_001313E8 makes it far worse (81/148), and a
- * struct for the semaphore parameters changes nothing. Still open.
- */
-INCLUDE_ASM("asm/nonmatchings/core_text", func_00120B28);
+struct SemaParam_120B28 {
+    s32 currentCount;
+    s32 maxCount;
+    s32 initCount;
+    s32 numWaitThreads;
+    u32 attr;
+    u32 option;
+};
+extern volatile s32 D_001313E0_120B28[] __asm__("D_001313E0");
+extern s32 D_001313E8_120B28[] __asm__("D_001313E8");
+extern s32 D_001313EC_120B28[] __asm__("D_001313EC");
+extern volatile s32 D_001313F0_120B28[] __asm__("D_001313F0");
+extern s32 func_00118C70_120B28(struct SemaParam_120B28 *) __asm__("func_00118C70");
+
+/* cmd_sem_init: unless both command semaphores already exist, create them
+   (count 1, max 1) and the completion semaphore (count 0) through
+   func_00118C70 (CreateSema), then clear D_001313F0.
+   Adapted from Lombyte (MIT): src/sdk/library/cmd_sem_init.c, cmd_sem_init. */
+void func_00120B28(void) {
+    struct SemaParam_120B28 sema;
+
+    if ((D_001313E8_120B28[0] != -1) && (D_001313EC_120B28[0] != -1)) {
+        return;
+    }
+    sema.option = 0;
+    sema.initCount = 1;
+    sema.maxCount = 1;
+    /* Both results use the same record; storing the first handle inside
+       the second call's argument puts the store in that jal's delay slot,
+       as retail has it (the open residual of the old near-miss). */
+    D_001313EC_120B28[0] = func_00118C70_120B28(
+        (D_001313E8_120B28[0] = func_00118C70_120B28(&sema)) ? &sema : &sema);
+    sema.initCount = 0;
+    D_001313E0_120B28[0] = func_00118C70_120B28(&sema);
+    D_001313F0_120B28[0] = 0;
+}
 
 extern int D_001313D4;
 /* DeleteSema returns int; declared void, the lui after each call would take
@@ -263,7 +284,20 @@ void func_00120BC0(void) {
     }
 }
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_00120C58);
+LINKER_REMNANT("asm/remnants/core_text", func_00120C58);
+
+/* Interrupt handler registered by func_00120CA0. If a handler is set
+   (D_00159844) and the flag D_001313E4 is clear, calls it with D_00159848
+   as its argument. The linker remnant in front of it was split off. */
+extern int D_00159844;
+extern int D_00159848;
+extern int D_001313E4;
+
+void func_00120C60(void) {
+    if (D_00159844 != 0 && D_001313E4 == 0) {
+        ((void (*)(int))D_00159844)(D_00159848);
+    }
+}
 
 extern int D_001313E4;
 extern int D_001313FC;
@@ -289,7 +323,7 @@ typedef struct {
     void *serve;
 } SifRpcClientData;
 
-extern int func_00120B28(void);
+extern void func_00120B28(void);
 extern int func_00118CC0(int);
 extern int func_00118BF0(int, void *);
 extern void func_0011AE20(int);

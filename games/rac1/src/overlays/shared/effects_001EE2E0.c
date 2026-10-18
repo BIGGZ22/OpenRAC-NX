@@ -7,7 +7,7 @@ extern int D_L00_0015F6A8 MACRO_ADDR;
 extern int D_L00_00169140[];
 
 /* append a 0x30-byte entry to the 3-slot queue */
-void func_L00_001EE2E0(int a0, int a1, float f12, float f13, int *a2, int a3, int t0, float f14) {
+void EffectQueue_Add(int a0, int a1, float f12, float f13, int *a2, int a3, int t0, float f14) {
     int *e;
     int n;
     if (D_L00_0015F6A8 == 2) return;
@@ -51,7 +51,7 @@ extern char D_L00_001E7C00[];
 extern s32 func_L00_001EE698_EE530(Vec4 *, s32 *, f32) __asm__("func_L00_001EE698");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_001ee1b0.c, FUN_L00_001ee1b0. */
-s32 *func_L00_001EE530(q128 *v, f32 rad) {
+s32 *FindVolumeInGrid(q128 *v, f32 rad) {
     Vec4 t;
     Vec4 d;
     Vec4 *tp;
@@ -97,7 +97,7 @@ extern float func_001F9CB8(void *);
 extern float func_001F9D10(void *, void *);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_001ee1b0.c, FUN_L00_001ee318. */
-int func_L00_001EE698(Vec4 *pt, int *vol, float rad) {
+int IsPointInVolume(Vec4 *pt, int *vol, float rad) {
     Vec4 p;
     Vec4 c;
     Vec4 d;

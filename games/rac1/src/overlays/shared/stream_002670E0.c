@@ -13,7 +13,7 @@ extern short D_001517F0 NOT_SDA;
 
 /* stores value in the slot passed as a 64-bit argument; a zero value resets the slot's state,
    otherwise a slot in state 1 moves to 4 and, with its flag set, D_001517F0 becomes 1 */
-void func_L00_002670E0(int value, long arg) {
+void Stream_SetSlotValue(int value, long arg) {
     Slot_2670E0 *s = (Slot_2670E0 *)arg;
 
     if (s == 0) {
@@ -75,50 +75,50 @@ int func_L00_00267290(char *p, char *q) {
     if (q == 0) return 0;
     if (*(short *)(q + 0x36) == -1) return 0;
     if (*(unsigned char *)(q + 8) == 0xFF) return 0;
-    f0 = func_001F9D10(p + 0x10, g + 0x80);
+    f0 = FastVecDist(p + 0x10, g + 0x80);
     f = *(float *)(q + 0xC);
     f = f + f;
     if (f < f0) return 0;
     if (*(unsigned char *)(q + 8) == 0) {
         f = func_L00_001FF860(*(float *)(g + 0x80) - *(float *)(p + 0x10), *(float *)(g + 0x84) - *(float *)(p + 0x14));
-        f = func_001FA850(f, *(float *)(p + 0x48));
+        f = FastDiffRots(f, *(float *)(p + 0x48));
         if (*(float *)(q + 0xC) < f) return 0;
         f = func_L00_001FF860(*(float *)(p + 0x10) - *(float *)(g + 0x80), *(float *)(p + 0x14) - *(float *)(g + 0x84));
-        f = func_001FA850(f, *(float *)(g + 0x98));
+        f = FastDiffRots(f, *(float *)(g + 0x98));
         if (1.5700000524520874f < f) return 0;
     }
-    func_00217AE8(p, q, 0);
+    DialogNode_Update(p, q, 0);
     x = D_L00_00179200;
     if (D_L00_0015F6B0 < *(int *)(x + 0x10)) return 0;
     if (*(unsigned char *)(q + 8) != 0 || (*(int *)(D_0013A5E0 + 0x2604) & 0x10) != 0) {
-        i = func_L00_00267618(p);
+        i = FindLevelTableIndex(p);
         tb = D_0013D605 + 0xB3; tb = tb + 0xC;
         ptr = (int *)(tb + (i << 4));
         if (*ptr == 0) *ptr = 1;
         *(int *)(x + 8) = (int)p; *(int *)(x + 0xC) = (int)q;
         e = (char *)*(int *)(q + 0x3C) + *(short *)(q + 0x36) * 0x1C;
         if (*(unsigned short *)(e + 0x10) & 8) {
-            if (*(short *)(e + 8) == 1) D_0015EE98 = D_0015EE98 - *(int *)(D_L00_001C43B0 + *(short *)(e + 0xA) * 0x18);
+            if (*(short *)(e + 8) == 1) gBolts = gBolts - *(int *)(D_L00_001C43B0 + *(short *)(e + 0xA) * 0x18);
             else if (*(short *)(e + 8) == 4) { tb2 = D_0013D355 + 0x13B; tb2[*(short *)(e + 0xA)] = 0; }
         }
-        if (*(short *)(e + 4) == -1) { func_00217AE8(p, q, 1); return 1; }
+        if (*(short *)(e + 4) == -1) { DialogNode_Update(p, q, 1); return 1; }
         y = (char *)&D_L00_00179200;
         *(int *)(y + 8) = (int)p; *(int *)(y + 0xC) = (int)q;
-        if (*(unsigned short *)(e + 4) & 0x4000) { func_L00_0029A7D0((short)(*(unsigned short *)(e + 4) ^ 0x4000)); return 1; }
-        func_001FFCB0(*(int *)&D_L00_001601F0);
+        if (*(unsigned short *)(e + 4) & 0x4000) { PlayMovieEntryIfIdle((short)(*(unsigned short *)(e + 4) ^ 0x4000)); return 1; }
+        Hud_RemoveBank(*(int *)&D_L00_001601F0);
         h4 = *(short *)(e + 4);
         *(int *)&D_L00_001601F0 = -1;
-        func_L00_00299B68(h4);
+        StartCutscene(h4);
         return 1;
     }
-    if (func_L00_002367A8(*(int *)&D_L00_001601F0, 0xA)) {
-        *(int *)&D_L00_001601F0 = func_001FFB38(0xC, 0, (void*)func_L00_00237B20, (void*)func_L00_00237B70, (void*)func_L00_00237B90, 0, 0);
+    if (Hud_ExtendBankTime(*(int *)&D_L00_001601F0, 0xA)) {
+        *(int *)&D_L00_001601F0 = queue_animation_update(0xC, 0, (void*)Hud_InitCounter, (void*)DefaultVtbl_DeleteMoby, (void*)func_L00_00237B90, 0, 0);
     }
     {
         char *e2 = (char *)*(int *)(q + 0x3C) + *(short *)(q + 0x36) * 0x1C;
         if (*(short *)(e2 + 8) == 1 || *(short *)(e2 + 8) == 6) {
-            m = func_001FFB38(2, 0x754E, (void*)func_L00_0023A658, (void*)func_L00_0023A690, (void*)func_L00_0023A788, &D_0015EE98, 0x98967F);
-            func_L00_002367A8(m, func_001F9850(0x3C));
+            m = queue_animation_update(2, 0x754E, (void*)HudBoltsInit, (void*)HudBoltsUpdate, (void*)HudBoltsDraw, &gBolts, 0x98967F);
+            Hud_ExtendBankTime(m, scale_ticks(0x3C));
         }
     }
     return 0;
@@ -126,7 +126,7 @@ int func_L00_00267290(char *p, char *q) {
 extern s32 D_0015EE84 MACRO_ADDR;
 extern s32 D_L00_001C47B8[];
 extern s32 D_L00_001792B8[];
-s32 func_L00_00267618(s32 p, s32 unused) {
+s32 FindLevelTableIndex(s32 p, s32 unused) {
     s32 n = D_0015EE84;
     s32 lo;
     s32 hi;
@@ -150,7 +150,7 @@ extern int func_L00_00267618(int, int);
 
 /* stores b in the d field of the slot func_L00_00267618 finds, if any. Adapted from Lombyte (MIT) for PAL: overlays/shared/audio_streaming_00266298.c, FUN_L00_00266858. */
 void func_L00_002676A0(int a, int b) {
-    int i = func_L00_00267618(a, b);
+    int i = FindLevelTableIndex(a, b);
     if (i != -1) {
         E00266858 *s = (E00266858 *)(D_0013D605 + 0xB3);
         ((E00266858 *)((char *)s - (-(i * 16))))->d = b;
@@ -207,7 +207,7 @@ s32 func_L00_002676E8(void *p, u8 *out_p)
 }
 typedef struct { char pad[0x18E]; s16 head; s32 count; char pad2[0x1E0-0x194]; u32 t[30]; char pad3[0x2D0-0x258]; f32 v[30]; } Hist_266e80;
 extern Hist_266e80 D_0013CA40;
-int func_L00_00267BA8(int mask, int n, int *out) {
+int PadPressedWithin(int mask, int n, int *out) {
     int lim = D_0013CA40.count;
     int i;
     if (lim >= n)
@@ -225,11 +225,11 @@ int func_L00_00267BA8(int mask, int n, int *out) {
 INCLUDE_ASM("asm/overlays", func_L00_00267C34);
 extern int func_L00_00267BA8(int, int, int *);
 extern int func_001F9B70(int);
-int func_L00_00267C48(int a, int b, int c, int d) {
+int PadComboWithin(int a, int b, int c, int d) {
     int v[2];
     int r = 0;
-    if (func_L00_00267BA8(a, c, &v[0])) {
-        if (func_L00_00267BA8(b, c, &v[1])) {
+    if (PadPressedWithin(a, c, &v[0])) {
+        if (PadPressedWithin(b, c, &v[1])) {
             r = func_001F9B70(v[0] - v[1]) < d;
         }
     }
@@ -249,7 +249,7 @@ extern Hist_266e80_67CC8 D_0013CA40_67CC8 __asm__("D_0013CA40");
 
 /* The value n entries back in the 30-entry history ring (n is capped at the count).
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/input/pad/pad_pressed_within.c, FUN_L00_00266e80. */
-f32 func_L00_00267CC8(s32 n) {
+f32 RingBuffer_GetRecent(s32 n) {
     s32 m;
     if (D_0013CA40_67CC8.count < n)
         n = D_0013CA40_67CC8.count;

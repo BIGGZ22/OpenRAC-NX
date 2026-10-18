@@ -104,7 +104,7 @@ s32 func_L08_00222E18(s32 arg) {
     if (arg == 0) {
         return 1;
     }
-    func_L00_00207220();
+    HeroClearSoundSlots();
     flag = 0;
     if (tbl->i30 & 1) {
         qcopy(&v, &tbl->v10);
@@ -124,11 +124,11 @@ s32 func_L08_00222E18(s32 arg) {
         if (mob != 0 && (*(s16 *)(mob + 0xA6) == 0x4EB || *(s16 *)(mob + 0xA6) == 0x558)) {
             id = 0x80;
         call_ret:
-            func_L08_00231228(id, 1);
+            Hero_TryMoveStateL08(id, 1);
             return 1;
         }
         if (D_0013F450.i208C == 0x16) {
-            func_L08_00231228(0x6D, 1);
+            Hero_TryMoveStateL08(0x6D, 1);
             D_0013F450.f128 = D_0015EE6C * 7.0f;
             return 1;
         }
@@ -138,7 +138,7 @@ s32 func_L08_00222E18(s32 arg) {
                 id = 0x82;
                 goto call_ret;
             }
-            func_L08_00231228(0x75, 1);
+            Hero_TryMoveStateL08(0x75, 1);
         } else if (D_0013F450.i208C == 0x11) {
             mob = D_0013F450.p2280;
             if (mob != 0 && *(s16 *)(mob + 0xA6) == 0x28F) {
@@ -149,10 +149,10 @@ s32 func_L08_00222E18(s32 arg) {
                 mob = D_0013F450.p2280;
                 if (mob != 0 && (*(s16 *)(mob + 0xA6) == 0x28F || *(s16 *)(mob + 0xA6) == 0x7B
                                  || *(s16 *)(mob + 0xA6) == 0x29D)) {
-                    func_L00_00217570(0x1C, 0);
+                    Hero_PlayActiveSound(0x1C, 0);
                 }
             }
-            func_L08_00231228(0x76, 1);
+            Hero_TryMoveStateL08(0x76, 1);
         } else if (D_0013F450.i208C == 3) {
             mob = D_0013F450.p2280;
             if (mob != 0) {
@@ -161,9 +161,9 @@ s32 func_L08_00222E18(s32 arg) {
                     goto call_ret;
                 }
             }
-            func_L08_00231228(0x16, 1);
+            Hero_TryMoveStateL08(0x16, 1);
         } else {
-            func_L08_00231228(0x16, 1);
+            Hero_TryMoveStateL08(0x16, 1);
         }
         e = D_0015EE6C;
         a = e * 5.7f;
@@ -172,14 +172,14 @@ s32 func_L08_00222E18(s32 arg) {
             a = 0.0f;
             b = e * 1.7f;
         }
-        func_L00_00211338(&v, flag, a, b);
+        Vec_ScaleXYSetZ(&v, flag, a, b);
         if (flag != 0 && tbl->b28 == 4) {
             v.f[2] += v.f[2];
         }
         break;
     case 3:
-        func_L08_00231228(0x56, 1);
-        func_L00_00211338(&v, flag, D_0015EE6C * 5.0f, D_0015EE6C * 2.4f);
+        Hero_TryMoveStateL08(0x56, 1);
+        Vec_ScaleXYSetZ(&v, flag, D_0015EE6C * 5.0f, D_0015EE6C * 2.4f);
         break;
     }
     FastVecAdd(D_0013F530, D_0013F530, &v);

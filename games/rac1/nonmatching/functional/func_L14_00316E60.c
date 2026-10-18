@@ -30,7 +30,7 @@ struct MobyTrail_16E60 {
     s32 copy_count; /* 0x138: copies in use (max 4) */
     s32 active; /* 0x13C */
 };
-struct HeroManipulator {
+struct HeroManipulator_16E60 {
     u8 unk0; /* 0x00 */
     u8 attached; /* 0x01 */
     u8 unk2; /* 0x02 */
@@ -554,7 +554,7 @@ struct Hero_16E60 {
     u8 pad_D18[0x8];
     f32 unkD20; /* 0xD20 */
     u8 pad_D24[0xC];
-    struct HeroManipulator manipulators[7]; /* 0xD30: attached by FUN_L00_002056a8 while rand_timer runs */
+    struct HeroManipulator_16E60 manipulators[7]; /* 0xD30: attached by FUN_L00_002056a8 while rand_timer runs */
     u8 pad_EF0[0x100];
     struct HeroRandTimer_16E60 rand_timer;/* 0xFF0 */
     u8 pad_FFC[0x8];

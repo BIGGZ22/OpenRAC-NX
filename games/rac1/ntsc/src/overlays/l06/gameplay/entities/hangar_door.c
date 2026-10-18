@@ -305,7 +305,7 @@ extern void FUN_L00_002ea9d8(void *);
 extern void FUN_L00_002eaa30(void *);
 
 int FUN_L06_002fb2a8(char *moby) {
-    float v0[4], m[4], v1[4], v2[4];
+    float output_position[4], m[4], moby_offset_position[4], hero_offset_position[4];
     char *data;
     char *pos;
     struct Hero *x;
@@ -313,26 +313,26 @@ int FUN_L06_002fb2a8(char *moby) {
     data = *(char **)(moby + 0x78);
     clear_u64_value(m);
     if (*(unsigned char *)(moby + 0x53) == 8) {
-        qcopy(v0, D_L06_00167540);
+        qcopy(output_position, D_L06_00167540);
         pos = moby + 0x10;
     } else {
         t = *(float *)&D_0015ED70_s * 3.0f;
         FUN_00213f38((float *)(data + 0x118), (float *)(data + 0x11C), 1.0f, t, t,
                      frame_time + frame_time);
-        fast_vec_normalize(v1, moby + 0xC0, 8.0f);
-        fast_vec_add(v1, v1, moby + 0x10);
+        fast_vec_normalize(moby_offset_position, moby + 0xC0, 8.0f);
+        fast_vec_add(moby_offset_position, moby_offset_position, moby + 0x10);
         x = &hero;
-        v1[2] = x->motion.pos.f[2] + 2.0f;
-        fast_vec_normalize(v2, x->unk0, -7.0f);
-        fast_vec_add(v2, v2, &x->motion.pos);
-        v2[2] += 4.0f;
+        moby_offset_position[2] = x->motion.pos.f[2] + 2.0f;
+        fast_vec_normalize(hero_offset_position, x->unk0, -7.0f);
+        fast_vec_add(hero_offset_position, hero_offset_position, &x->motion.pos);
+        hero_offset_position[2] += 4.0f;
         pos = moby + 0x10;
-        lerp_vector(v0, v1, v2, *(float *)(data + 0x118));
+        lerp_vector(output_position, moby_offset_position, hero_offset_position, *(float *)(data + 0x118));
     }
-    m[2] = fast_arc_tan(*(float *)(moby + 0x10) - v0[0], *(float *)(moby + 0x14) - v0[1]);
-    m[1] = -fast_arc_tan(vector_distance(v0, pos), *(float *)(moby + 0x18) - v0[2]) -
+    m[2] = fast_arc_tan(*(float *)(moby + 0x10) - output_position[0], *(float *)(moby + 0x14) - output_position[1]);
+    m[1] = -fast_arc_tan(vector_distance(output_position, pos), *(float *)(moby + 0x18) - output_position[2]) -
            (1.0f - *(float *)(data + 0x118)) * 30.0f * DEG_TO_RAD;
-    FUN_L00_002ea9d8(v0);
+    FUN_L00_002ea9d8(output_position);
     FUN_L00_002eaa30(m);
     if (*(float *)(data + 0x118) >= 1.0f && *(unsigned char *)(moby + 0x53) == 1)
         return 1;
@@ -362,7 +362,7 @@ extern void FUN_L06_00312a78(void *);
 extern void FUN_L06_00312ad0(void *);
 
 int FUN_L06_002fb668(char *moby) {
-    float v0[4], m[4], v1[4], v2[4];
+    float output_position[4], m[4], moby_offset_position[4], hero_offset_position[4];
     char *data;
     char *pos;
     struct Hero *x;
@@ -370,26 +370,26 @@ int FUN_L06_002fb668(char *moby) {
     data = *(char **)(moby + 0x78);
     clear_u64_value(m);
     if (*(unsigned char *)(moby + 0x53) == 6) {
-        qcopy(v0, D_L06_00167540);
+        qcopy(output_position, D_L06_00167540);
         pos = moby + 0x10;
     } else {
         t = frame_time_sq * 0.5f;
         FUN_00213f38((float *)(data + 0x118), (float *)(data + 0x11C), 1.0f, t, t,
                      frame_time * 0.5f);
-        fast_vec_normalize(v1, moby + 0xC0, 8.0f);
-        fast_vec_add(v1, v1, moby + 0x10);
+        fast_vec_normalize(moby_offset_position, moby + 0xC0, 8.0f);
+        fast_vec_add(moby_offset_position, moby_offset_position, moby + 0x10);
         x = &hero;
-        v1[2] = x->motion.pos.f[2] + 2.0f;
-        fast_vec_normalize(v2, x->unk0, -7.0f);
-        fast_vec_add(v2, v2, &x->motion.pos);
-        v2[2] += 4.0f;
+        moby_offset_position[2] = x->motion.pos.f[2] + 2.0f;
+        fast_vec_normalize(hero_offset_position, x->unk0, -7.0f);
+        fast_vec_add(hero_offset_position, hero_offset_position, &x->motion.pos);
+        hero_offset_position[2] += 4.0f;
         pos = moby + 0x10;
-        lerp_vector(v0, v1, v2, *(float *)(data + 0x118));
+        lerp_vector(output_position, moby_offset_position, hero_offset_position, *(float *)(data + 0x118));
     }
-    m[2] = fast_arc_tan(*(float *)(moby + 0x10) - v0[0], *(float *)(moby + 0x14) - v0[1]);
-    m[1] = -fast_arc_tan(vector_distance(v0, pos), *(float *)(moby + 0x18) - v0[2]) -
+    m[2] = fast_arc_tan(*(float *)(moby + 0x10) - output_position[0], *(float *)(moby + 0x14) - output_position[1]);
+    m[1] = -fast_arc_tan(vector_distance(output_position, pos), *(float *)(moby + 0x18) - output_position[2]) -
            (1.0f - *(float *)(data + 0x118)) * 30.0f * DEG_TO_RAD;
-    FUN_L06_00312a78(v0);
+    FUN_L06_00312a78(output_position);
     FUN_L06_00312ad0(m);
     if (*(float *)(data + 0x118) >= 1.0f && *(unsigned char *)(moby + 0x53) == 1)
         return 1;
@@ -996,7 +996,6 @@ s32 FUN_L00_00203908(s32 a, s32 b);
 void jet_clear_persistent(int idx) __asm__("FUN_L00_002502a0");
 void FUN_L00_00263d40(int a, int b);
 void FUN_L06_00239528(void);
-void FUN_L06_002f5d78(char *moby);
 extern unsigned char D_0013E633_2F69D0[] __asm__("D_0013F350");
 extern char D_0013E650_2F69D0[] __asm__("D_0013E550");
 extern unsigned char D_0013D5DD_2F69D0[] __asm__("D_001413F4");
@@ -1184,110 +1183,117 @@ void FUN_L06_002f55a0(Moby *moby) {
         break;
     }
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L06_002f5d78.s", FUN_L06_002f5d78);
-#else
-extern void transform_vector_by_basis(void *, void *, void *) __asm__("FUN_001f9cf8");
+/* Blarg drawbridge pieces: places and rotates the 20 + 10 chained segment mobys. */
+/* Ported from rac1-decomp (src/overlays/l06_blarg/vendor_002B5990.c: func_L06_002F71A8), where it is exact; names translated to the US level program. */
+
+typedef struct DrawbridgeVars {
+    char p0[0x60];
+    int i60;
+    int i64;
+    int i68;
+    float f6C;
+    Moby *a[20];
+    Moby *b[20];
+    Moby *c[10];
+    Moby *d[10];
+} DrawbridgeVars;
+
+extern char D_L06_00161D50[4] __attribute__((sda));
+extern char D_L06_00161D60[4] __attribute__((sda));
 extern float D_L06_00161D70 __attribute__((sda));
 extern float D_L06_00161D74 __attribute__((sda));
-extern float D_L06_00161D78_gp __asm__("D_L06_00161D78") __attribute__((sda));
-extern float D_L06_00161D7C_gp __asm__("D_L06_00161D7C") __attribute__((sda));
-extern float D_L06_00161D80_gp __asm__("D_L06_00161D80") __attribute__((sda));
-extern float D_L06_00161D50 __attribute__((sda));
-extern float D_L06_00161D60 __attribute__((sda));
+extern float D_L06_00161D78 __attribute__((sda));
+extern float D_L06_00161D7C __attribute__((sda));
+extern float D_L06_00161D80 __attribute__((sda));
+extern void fast_vec_normalize(void *, void *, float) __asm__("FUN_001f9bf8");
+extern void transform_vector_by_basis(void *, void *, void *) __asm__("func_001F9CF8");
 
-void FUN_L06_002f5d78(char *moby) {
-    char *data = *(char **)(moby + 0x78);
-    Vec4 result, first, second;
-    int i, offset;
-    float angle, other, upper, lower, base, threshold;
-    char **left, **right;
+void FUN_L06_002f5d78(Moby *moby)
+{
+    Vec_2F69D0 result, first, second;
+    DrawbridgeVars *data = (DrawbridgeVars *)moby->pvars;
+    int i, j;
+    float length, angle, left, min_length, right, limit;
 
-    for (i = 0, offset = 0; offset < 80;) {
-        float angle;
-        float length = D_L06_00161D78_gp - (float)i;
+    for (i = 0; i < 20; i++) {
+        length = D_L06_00161D78 - (float)i;
         if (length < 0.0f) length = 0.0f;
-        normalize_vector_xyz(&first, moby + 0xc0, length);
-        transform_vector_by_basis(&result, &D_L06_00161D50, moby + 0xc0);
-        add_vector_xyz(&result, &result, moby + 0x10);
+        fast_vec_normalize(&first, &moby->rot_row0, length);
+        transform_vector_by_basis(&result, (Vec_2F69D0 *)D_L06_00161D50, &moby->rot_row0);
+        add_vector_xyz(&result, &result, &moby->pos);
         add_vector_xyz(&result, &result, &first);
-        qcopy(*(char **)(data + 0x70 + offset) + 0x10, &result);
-        transform_vector_by_basis(&result, &D_L06_00161D60, moby + 0xc0);
-        add_vector_xyz(&result, &result, moby + 0x10);
+        qcopy(&data->a[i]->pos, &result);
+        transform_vector_by_basis(&result, (Vec_2F69D0 *)D_L06_00161D60, &moby->rot_row0);
+        add_vector_xyz(&result, &result, &moby->pos);
         add_vector_xyz(&result, &result, &first);
-        qcopy(*(char **)(data + 0xc0 + offset) + 0x10, &result);
-        angle = D_L06_00161D7C_gp * DEG_TO_RAD - (float)(i * 45) * DEG_TO_RAD;
-        if (1.5707964f < angle) angle = 1.5707964f;
+        qcopy(&data->b[i]->pos, &result);
+        angle = D_L06_00161D7C * 0.017453292f - (float)(i * 45) * 0.017453292f;
+        if (angle > 1.5707964f) angle = 1.5707964f;
         else if (angle < 0.0f) angle = 0.0f;
-        right = (char **)(data + 0xc0 + offset);
-        left = (char **)(data + 0x70 + offset);
-        i++;
-        offset += 4;
-        *(float *)(*left + 0x40) = -angle;
-        *(float *)(*right + 0x40) = angle;
-        FUN_L00_00250df8(*left);
-        FUN_L00_00250df8(*right);
+        data->a[i]->rot.x = -angle;
+        data->b[i]->rot.x = angle;
+        FUN_L00_00250df8(data->a[i]);
+        FUN_L00_00250df8(data->b[i]);
     }
-    {
-        int i, offset;
-        right = (char **)(data + 0x138);
-        left = (char **)(data + 0x110);
-        for (i = 0, offset = 0; i < 10; i++, offset = i + i, left++, right++) {
-            float length = D_L06_00161D78_gp - ((float)i + (float)i);
-            threshold = (float)(4 - i) * D_L06_00161D74 + D_L06_00161D70;
-            upper = length;
-            lower = length - 1.0f;
-            if (length < threshold) upper = threshold;
-            if (lower < threshold) lower = threshold;
-            normalize_vector_xyz(&first, moby + 0xc0, upper);
-            normalize_vector_xyz(&second, moby + 0xc0, lower);
-            transform_vector_by_basis(&result, &D_L06_00161D50, moby + 0xc0);
-            add_vector_xyz(&result, &result, moby + 0x10);
-            add_vector_xyz(&result, &result, &first);
-            qcopy(*left + 0x10, &result);
-            transform_vector_by_basis(&result, &D_L06_00161D60, moby + 0xc0);
-            add_vector_xyz(&result, &result, moby + 0x10);
-            add_vector_xyz(&result, &result, &second);
-            qcopy(*right + 0x10, &result);
-            angle = D_L06_00161D7C_gp * DEG_TO_RAD - (float)offset * 0.7853982f;
-            threshold = angle - (*(float *)&D_L06_00161DA0) * DEG_TO_RAD;
-            if (1.5707964f < angle) angle = 1.5707964f;
-            else if (angle < 0.0f) angle = 0.0f;
-            if (1.5707964f < threshold) threshold = 1.5707964f;
-            else if (threshold < 0.0f) threshold = 0.0f;
-            if (angle != 0.0f && threshold == 0.0f) allocate_voice_for_target_entry(1, 0, (int)*left);
-            upper = (D_L06_00161D7C_gp * DEG_TO_RAD - (float)(i + i) * 0.7853982f) - 0.7853982f;
-            threshold = upper - (*(float *)&D_L06_00161DA0) * DEG_TO_RAD;
-            if (1.5707964f < upper) upper = 1.5707964f;
-            else if (upper < 0.0f) upper = 0.0f;
-            if (1.5707964f < threshold) threshold = 1.5707964f;
-            else if (threshold < 0.0f) threshold = 0.0f;
-            if (upper != 0.0f && threshold == 0.0f) allocate_voice_for_target_entry(1, 0, (int)*right);
-            other = -angle;
-            angle = D_L06_00161D80_gp * DEG_TO_RAD - (float)(i + i) * 0.7853982f;
-            threshold = angle - (*(float *)&D_L06_00161DA4) * DEG_TO_RAD;
-            *(float *)(*left + 0x40) = other;
-            *(float *)(*right + 0x40) = upper;
-            if (1.5707964f < angle) angle = 1.5707964f;
-            else if (angle < 0.0f) angle = 0.0f;
-            if (1.5707964f < threshold) threshold = 1.5707964f;
-            else if (threshold < 0.0f) threshold = 0.0f;
-            if (angle != 0.0f && threshold == 0.0f) allocate_voice_for_target_entry(2, 0, (int)*left);
-            upper = (D_L06_00161D80_gp * DEG_TO_RAD - (float)(i + i) * 0.7853982f) - 0.7853982f;
-            threshold = angle - (*(float *)&D_L06_00161DA4) * DEG_TO_RAD;
-            if (1.5707964f < upper) upper = 1.5707964f;
-            else if (upper < 0.0f) upper = 0.0f;
-            if (1.5707964f < threshold) threshold = 1.5707964f;
-            else if (threshold < 0.0f) threshold = 0.0f;
-            if (upper != 0.0f && threshold == 0.0f) allocate_voice_for_target_entry(2, 0, (int)*right);
-            *(float *)(*left + 0x44) = -angle;
-            *(float *)(*right + 0x44) = -upper;
-            FUN_L00_00250df8(*left);
-            FUN_L00_00250df8(*right);
-        }
+
+    for (j = 0; j < 10; j++) {
+        min_length = D_L06_00161D70 + (float)(4 - j) * D_L06_00161D74;
+        length = D_L06_00161D78 - j * 2.0f;
+        right = length - 1.0f;
+        if (length < min_length) length = min_length;
+        if (right < min_length) right = min_length;
+        fast_vec_normalize(&first, &moby->rot_row0, length);
+        fast_vec_normalize(&second, &moby->rot_row0, right);
+        transform_vector_by_basis(&result, (Vec_2F69D0 *)D_L06_00161D50, &moby->rot_row0);
+        add_vector_xyz(&result, &result, &moby->pos);
+        add_vector_xyz(&result, &result, &first);
+        qcopy(&data->c[j]->pos, &result);
+        transform_vector_by_basis(&result, (Vec_2F69D0 *)D_L06_00161D60, &moby->rot_row0);
+        add_vector_xyz(&result, &result, &moby->pos);
+        add_vector_xyz(&result, &result, &second);
+        qcopy(&data->d[j]->pos, &result);
+
+        left = D_L06_00161D7C * 0.017453292f - (float)(j * 2) * 0.7853982f;
+        limit = left - D_L06_00161E30_2F69D0 * 0.017453292f;
+        if (left > 1.5707964f) left = 1.5707964f;
+        else if (left < 0.0f) left = 0.0f;
+        if (limit > 1.5707964f) limit = 1.5707964f;
+        else if (limit < 0.0f) limit = 0.0f;
+        if (left != 0.0f && limit == 0.0f) allocate_voice_for_target_entry(1, 0, (int)data->c[j]);
+
+        right = D_L06_00161D7C * 0.017453292f - (float)(j * 2) * 0.7853982f - 0.7853982f;
+        limit = right - D_L06_00161E30_2F69D0 * 0.017453292f;
+        if (right > 1.5707964f) right = 1.5707964f;
+        else if (right < 0.0f) right = 0.0f;
+        if (limit > 1.5707964f) limit = 1.5707964f;
+        else if (limit < 0.0f) limit = 0.0f;
+        if (right != 0.0f && limit == 0.0f) allocate_voice_for_target_entry(1, 0, (int)data->d[j]);
+
+        data->c[j]->rot.x = -left;
+        data->d[j]->rot.x = right;
+
+        left = D_L06_00161D80 * 0.017453292f - (float)(j * 2) * 0.7853982f;
+        limit = left - D_L06_00161E34_2F69D0 * 0.017453292f;
+        if (left > 1.5707964f) left = 1.5707964f;
+        else if (left < 0.0f) left = 0.0f;
+        if (limit > 1.5707964f) limit = 1.5707964f;
+        else if (limit < 0.0f) limit = 0.0f;
+        if (left != 0.0f && limit == 0.0f) allocate_voice_for_target_entry(2, 0, (int)data->c[j]);
+
+        right = D_L06_00161D80 * 0.017453292f - (float)(j * 2) * 0.7853982f - 0.7853982f;
+        limit = left - D_L06_00161E34_2F69D0 * 0.017453292f;
+        if (right > 1.5707964f) right = 1.5707964f;
+        else if (right < 0.0f) right = 0.0f;
+        if (limit > 1.5707964f) limit = 1.5707964f;
+        else if (limit < 0.0f) limit = 0.0f;
+        if (right != 0.0f && limit == 0.0f) allocate_voice_for_target_entry(2, 0, (int)data->d[j]);
+
+        data->c[j]->rot.y = -left;
+        data->d[j]->rot.y = -right;
+        FUN_L00_00250df8(data->c[j]);
+        FUN_L00_00250df8(data->d[j]);
     }
 }
-#endif
 #ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L06_002f6470.s", FUN_L06_002f6470);
 #else
@@ -3092,21 +3098,21 @@ extern void FUN_L00_00216f90(void *, void *, int, int);
 extern void jet_mount(void *, void *, int, int, int) __asm__("FUN_L00_002eaaa0");
 
 void FUN_L06_002fb148(char *moby) {
-    float v0[4], m[4], v1[4];
+    float output_position[4], m[4], moby_offset_vector[4];
     char *data = *(char **)(moby + 0x78);
     char *base = D_L06_0016016C + (*(int *)(data + 0xF8) << 7);
     *(int *)(data + 0x118) = 0;
     FUN_L00_00216f90(base + 0x30, base + 0x70, 0x72, 0);
-    qcopy(v0, moby + 0x10);
-    v0[2] = hero.motion.pos.f[2] + 2.0f;
-    normalize_vector_xyz(v1, moby + 0xC0, 8.0f);
-    add_vector_xyz(v0, v0, v1);
+    qcopy(output_position, moby + 0x10);
+    output_position[2] = hero.motion.pos.f[2] + 2.0f;
+    normalize_vector_xyz(moby_offset_vector, moby + 0xC0, 8.0f);
+    add_vector_xyz(output_position, output_position, moby_offset_vector);
     clear_u64_value(m);
-    m[2] = fast_arc_tan(*(float *)(moby + 0x10) - v0[0], *(float *)(moby + 0x14) - v0[1]);
+    m[2] = fast_arc_tan(*(float *)(moby + 0x10) - output_position[0], *(float *)(moby + 0x14) - output_position[1]);
     m[1] =
-        -fast_arc_tan(vector_distance(v0, moby + 0x10), *(float *)(moby + 0x18) - v0[2]) - 0.5235988f;
-    jet_mount(v0, m, 1, 0, 0);
-    FUN_L00_002ea9d8(v0);
+        -fast_arc_tan(vector_distance(output_position, moby + 0x10), *(float *)(moby + 0x18) - output_position[2]) - 0.5235988f;
+    jet_mount(output_position, m, 1, 0, 0);
+    FUN_L00_002ea9d8(output_position);
     FUN_L00_002eaa30(m);
     *D_L06_001B0FB0[*(int *)(data + 0xEC)] = 0;
 }
@@ -3477,12 +3483,12 @@ extern unsigned char alternate_item_available[] __asm__("D_0013D388");
 extern char D_0013A5E0_2FDA70[] __asm__("D_0013CAE4");
 
 void FUN_L06_002fc640(Moby_2FDA70 *moby) {
-    Vec_2FDA70 v0;
-    Vec_2FDA70 v10;
+    Vec_2FDA70 position_delta;
+    Vec_2FDA70 initial_rotation;
     Data_2FDA70 *d = moby->data;
 
-    scale_vector_xyz_c(&v0, &moby->pos, -1.0f);
-    qcopy(&v10, &moby->rot);
+    scale_vector_xyz_c(&position_delta, &moby->pos, -1.0f);
+    qcopy(&initial_rotation, &moby->rot);
     moby->f2C = moby->cls->f24 * D_L06_00161F60;
     switch (moby->state) {
     case 0:
@@ -3687,6 +3693,6 @@ void FUN_L06_002fc640(Moby_2FDA70 *moby) {
         }
         moby->f90 = FUN_001fa6e0(D_L06_00161F6C, D_L06_00161F70, f);
     }
-    add_vector_xyz(&v0, &v0, &moby->pos);
-    update_entity_matrix(d->f20, &v0, &v10, &moby->rot);
+    add_vector_xyz(&position_delta, &position_delta, &moby->pos);
+    update_entity_matrix(d->f20, &position_delta, &initial_rotation, &moby->rot);
 }

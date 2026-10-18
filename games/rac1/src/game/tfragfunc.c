@@ -298,7 +298,7 @@ extern int func_001FA898_i(float) __asm__("func_001FA898");
    ([1][3] = b, then [0][3] = a) moves sched1's last use of b, and with it
    the local-alloc priority of b's quantity below ab's -- retail's b in $f21,
    1/(a-b) in $f20, and -0.5 in $f3. */
-void func_00234380(void) {
+void SetTfragDists(void) {
     float a, b, c, ab, bc;
 
     D_00160FB0[0] = func_001FA898_i(D_00160FA0[0] * 1024.0f);
@@ -335,7 +335,7 @@ extern void func_00234E80(void);
    which also warns "tfrag texture overflow" past 0x400000 bytes and keeps
    the largest size seen in D_00160FC4. */
 /* A copy of its twin func_00229C08. */
-void func_002344D8(void) {
+void DmaTfragTextures(void) {
     int *p = (int *)D_00161000;
     int size;
 
@@ -384,7 +384,7 @@ extern TexRemap D_001E0F00[];
    +0x23 and patch its two nonzero halves into the low 14 bits of the
    words at +0x00 and +0x30. */
 /* PatchTfragGifs(void) */
-void func_00234620(void) {
+void PatchTfragGifs(void) {
     TexChunk *c;
     char *r;
     TexRemap *e;
@@ -421,7 +421,7 @@ extern void func_002352C8(void);
 extern void func_002344D8(void);
 
 /* DrawTfrag, in DrawShrubs' shape. */
-void func_002346C0(void) {
+void DrawTfrag(void) {
     float m[4][4];
     int p = D_00161000;
 

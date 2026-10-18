@@ -268,7 +268,7 @@ extern void func_0012E2E8(void);
 
 extern void func_0011AE20(int arg0);
 
-void func_00233FF8(void) {
+void initialize_sif_rpc(void) {
     func_0011AE20(0);
 }
 
@@ -293,7 +293,7 @@ extern Rec10_00234018 D_001DD568_alias[] __asm__("D_001DD568");
    The server check reads through a pointer set inside the loop: loop.c
    then hoists the struct's full address into a register of its own, as
    retail has it, while the client's address stays a constant. */
-void func_00234018(void) {
+void Stash_Init(void) {
     StashState_00234018 *s;
     int reply[4];
     int i;
@@ -337,7 +337,7 @@ extern int func_00118E20(void *, int);
    address (func_00118E20 takes a {src, dst, size, mode} record), reserve
    arg2 quadwords there, and return the slot. `h->block++` read into the
    slot index is what keeps retail's copy of the old count. */
-int func_00234158(int arg0, int arg1, int arg2, int arg3) {
+int Stash_SendData(int arg0, int arg1, int arg2, int arg3) {
     StashInfo *h = &D_001DD530;
     int dma[4];
     int n;
@@ -372,12 +372,12 @@ extern char D_001DD538[];
    client's RPC 1 (IOP_STASH_FETCH), at most 0xFFFF quadwords per call; returns 0. The RPC
    is sceSifCallRpc, with nine arguments: end function and end
    parameter 0, the last on the stack. */
-int func_00234238(void *dest, unsigned int slot, int offset, int size, int mode) {
+int Stash_ReceiveData(void *dest, unsigned int slot, int offset, int size, int mode) {
     int src;
     int chunk;
 
     if (size == -1) {
-        size = func_00234350(slot);
+        size = Stash_GetSlotSize(slot);
     }
     if (slot >= 0x40) {
         return -3;
@@ -399,7 +399,7 @@ int func_00234238(void *dest, unsigned int slot, int offset, int size, int mode)
     return 0;
 }
 
-int func_00234350(unsigned int arg0) {
+int Stash_GetSlotSize(unsigned int arg0) {
     if (arg0 >= 0x40) {
         return -3;
     }

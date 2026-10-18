@@ -12,5 +12,5 @@ void func_L00_002E9D78(char *moby, int arg, float f)
 {
     float scratch[4];
     char *data = *(char **)(moby + 0x70);
-    func_L00_002E9B60(moby, (FastVecSub(scratch, (float *)arg, (float *)(data + 0x40)), scratch), f);
+    Cam_SignedAngleBetweenOffsets(moby, (FastVecSub(scratch, (float *)arg, (float *)(data + 0x40)), scratch), f);
 }

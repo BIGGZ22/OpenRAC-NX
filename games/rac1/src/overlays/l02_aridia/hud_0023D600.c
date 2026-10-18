@@ -5,7 +5,7 @@
 extern int func_001F9850(int);
 
 // Ticks two small counters up or down depending on a random roll; copies a value.
-void func_L02_0023D600(char *m) {
+void HudCounter_UpdateRamp(char *m) {
     unsigned char *p = (unsigned char *)(m + 0x70);
     if (*(int *)(m + 0x7C) >= scale_ticks(5)) {
         if (p[0] < scale_ticks(8)) {
@@ -71,7 +71,7 @@ extern short D_L02_0015FA34;
 
 /* Draws the counter: a stretched bar behind the icon and the count, on whichever side of the screen it sits.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l02/ui/text/0023ccc8.c, FUN_L02_0023cda8. */
-s32 func_L02_0023D6E0(HudElem *m) {
+s32 Hud_DrawCounter(HudElem *m) {
     char text[16];
     int x;
     int y;
@@ -94,7 +94,7 @@ s32 func_L02_0023D6E0(HudElem *m) {
     }
     x = m->unk50;
     y = m->unk54;
-    func_L00_00236400(m, &x, &y);
+    Hud_AlignElement(m, &x, &y);
     left = x < 0x101;
     if (left) {
         x = (*(s32 *)&D_L02_0015FA1C);
@@ -103,13 +103,13 @@ s32 func_L02_0023D6E0(HudElem *m) {
     }
     bottom = D_0013E604[0];
     y = D_0015EE80 != 0 ? bottom - 0x2A : bottom - 0x32;
-    grow = func_001FA888(fade[0]) / func_001FA888((*(s32 *)&D_L02_0015F9F4));
+    grow = IntToFloat(fade[0]) / IntToFloat((*(s32 *)&D_L02_0015F9F4));
     if (1.0f < grow) {
         grow = 1.0f;
     } else if (grow < 0.0f) {
         grow = 0.0f;
     }
-    shade = func_001FA888(fade[1]) / func_001FA888((*(s32 *)&D_L02_0015F9F8));
+    shade = IntToFloat(fade[1]) / IntToFloat((*(s32 *)&D_L02_0015F9F8));
     if (1.0f < shade) {
         shade = 1.0f;
     } else if (shade < 0.0f) {
@@ -131,10 +131,10 @@ s32 func_L02_0023D6E0(HudElem *m) {
         frame = GetIconFrame(0x7580, 0);
         HudSprite(frame, bar, y, width, 0x20, alpha);
         frame = GetIconFrame(0x7580, 1);
-        func_00200650(frame, bar + width, y, 0x20, 0x20, alpha);
+        DrawHudSpriteTurned(frame, bar + width, y, 0x20, 0x20, alpha);
     } else {
         frame = GetIconFrame(0x7580, 1);
-        func_00200650(frame, bar, y, 0x20, 0x20, alpha);
+        DrawHudSpriteTurned(frame, bar, y, 0x20, 0x20, alpha);
         px = bar - width;
         frame = GetIconFrame(0x7580, 0);
         HudSprite(frame, px, y, width, 0x20, alpha);
@@ -164,10 +164,10 @@ extern void func_L00_0028A5A8(void);
 extern void func_0022C870(void);
 extern void func_00234C98(int, long);
 extern int D_0015EF88 MACRO_ADDR;
-void func_L02_00240980(void) {
+void Sky_DrawLevel02(void) {
     SetupSkyGifPaging();
     if (D_0015EE84_m == 2) {
-        func_L00_0028A878();
+        SkyStarFieldUpdate();
     } else {
         UpdateSkyShellsStatic();
     }

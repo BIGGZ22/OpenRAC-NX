@@ -1,4 +1,5 @@
 #include "common.h"
+#include "pad.h"
 #include "callees.h"
 #include "records.h"
 #include "structs.h"
@@ -187,29 +188,6 @@ extern void func_00124650(void);
 extern void func_00124B88(int);
 extern int func_00124BC8(void *, void *);
 
-typedef struct {
-    char unk_000[0x180];
-    unsigned char mode[4]; /* 0x180 */
-    unsigned char act[4];  /* 0x184 */
-    char f188;             /* 0x188 */
-    char f189;             /* 0x189 */
-    char unk_18A[2];
-    short f18C;            /* 0x18C */
-    char unk_18E[6];
-    int port;              /* 0x194 */
-    int state;             /* 0x198 */
-    int padState;          /* 0x19C */
-    int f1A0;              /* 0x1A0 */
-    char unk_1A4[8];
-    int f1AC;              /* 0x1AC */
-    int f1B0;              /* 0x1B0 */
-    char unk_1B4[8];
-    int f1BC;              /* 0x1BC */
-    char unk_1C0[0x1C];
-    int f1DC;              /* 0x1DC */
-    char unk_1E0[0x168];
-    int f348;              /* 0x348 */
-} Pad;
 
 extern int func_00124EE0(int);
 extern int func_00124DF0(int, void *);
@@ -227,38 +205,38 @@ extern void func_002181F0(void *, void *, int);
    long; state 1 reads the buttons into func_002181F0 and counts +0x18C
    down; state 2 clears the input and sets +0x18C to 2. The two copy
    loops per block are as retail has them (0..n, then n..3). */
-void func_00217F68(void *arg0) {
-    Pad *p = arg0;
+void Pad_UpdatePort(void *arg0) {
+    PadState *p = arg0;
     unsigned char buf[0x40];
     int n, i, s;
 
-    p->f1A0 = 0;
-    p->f1AC = p->f348;
-    p->f1BC = p->f1B0;
-    p->f1B0 = 0;
-    p->padState = func_00124EE0(p->port);
-    if (p->padState == 1) {
-        switch (s = p->state) {
+    p->held = 0;
+    p->prev_held = p->unk348;
+    p->prev_raw_held = p->raw_held;
+    p->raw_held = 0;
+    p->device_state = func_00124EE0(p->socket);
+    if (p->device_state == 1) {
+        switch (s = p->profile_state) {
         case 0:
-            n = func_00124DF0(p->port, buf);
+            n = func_00124DF0(p->socket, buf);
             if (*(unsigned int *)buf == 0xFFFFFFFF) {
-                p->f1DC = 0x79;
+                p->unk1DC = 0x79;
             } else {
-                p->f1DC = 0;
+                p->unk1DC = 0;
             }
             if (n < 5) {
                 for (i = 0; i < n; i++) {
-                    p->mode[i] = buf[i];
+                    p->profile[i] = buf[i];
                 }
-                p->state = 1;
+                p->profile_state = 1;
             } else {
                 n = 0;
-                p->state = 2;
+                p->profile_state = 2;
             }
             for (i = n; i < 4; i++) {
-                p->mode[i] = buf[i];
+                p->profile[i] = buf[i];
             }
-            n = func_00125218(p->port, buf);
+            n = func_00125218(p->socket, buf);
             if (n < 5) {
                 for (i = 0; i < n; i++) {
                     p->act[i] = buf[i];
@@ -270,26 +248,26 @@ void func_00217F68(void *arg0) {
                 p->act[i] = buf[i];
             }
             ClearPadInput(p);
-            p->f18C = 2;
+            p->unk18C = 2;
             break;
         case 1:
-            n = func_00124D18(p->port, buf);
-            func_002181F0(p, buf, n);
-            if (p->f18C != 0) {
-                p->f18C--;
+            n = func_00124D18(p->socket, buf);
+            Pad_ProcessReport(p, buf, n);
+            if (p->unk18C != 0) {
+                p->unk18C--;
             }
             break;
         case 2:
             ClearPadInput(p);
-            p->f18C = s;
+            p->unk18C = s;
             break;
         }
     } else {
         ClearPadInput(p);
-        p->state = 0;
+        p->profile_state = 0;
     }
-    p->f188 = 0;
-    p->f189 = 0;
+    p->unk188 = 0;
+    p->unk189 = 0;
 }
 
 /* Retail carries 4 bytes of inter-function padding after this endlabel. */
@@ -310,7 +288,7 @@ typedef struct {
 /* ClearPadInput(PAD &). The stores are in the source order that gives
    retail's schedule. a and b are separate members, so each is its own
    loop giv; the second one (b) becomes the loop's base. */
-void func_00218188(PadClr *p) {
+void ClearPadInput(PadClr *p) {
     int i;
 
     p->f1B0 = 0;
@@ -331,40 +309,6 @@ void func_00218188(PadClr *p) {
     }
 }
 
-typedef struct Pad_181F0 {
-    u8 pad0[0x100];
-    float axes[16]; /* 0x100 */
-    float prev[16]; /* 0x140 */
-    u8 pad180[0xC];
-    s16 x18C;  /* 0x18C: on pad 0, nonzero suppresses pressed/released (PAL) */
-    s16 idx;   /* 0x18E */
-    s32 count; /* 0x190 */
-    u8 pad194[0xC];
-    s32 held;     /* 0x1A0 */
-    s32 pressed;  /* 0x1A4 */
-    s32 released; /* 0x1A8 */
-    s32 old;      /* 0x1AC */
-    s32 raw;      /* 0x1B0 */
-    s32 x1B4;     /* 0x1B4 */
-    s32 x1B8;     /* 0x1B8 */
-    s32 x1BC;     /* 0x1BC */
-    s32 x1C0;     /* 0x1C0 */
-    s32 x1C4;     /* 0x1C4 */
-    s32 x1C8;     /* 0x1C8 */
-    s32 mode;     /* 0x1CC */
-    s32 none;     /* 0x1D0 */
-    s32 nodir;    /* 0x1D4 */
-    s32 moving;   /* 0x1D8 */
-    u8 pad1DC[4];
-    s32 hist_btn[30];   /* 0x1E0 */
-    float hist_ang[30]; /* 0x258 */
-    float hist_mag[30]; /* 0x2D0 */
-    s32 x348;           /* 0x348 */
-    u8 pad34C;
-    u8 rep_delay; /* 0x34D */
-    u8 rep_rate;  /* 0x34E */
-    u8 rep_timer; /* 0x34F */
-} Pad_181F0;
 
 /* A 12-byte small-data block (func_00227DB0 saves it whole); the byte at +4 mirrors left and
    right. A member behind the start of the object is a two-instruction access for the
@@ -375,29 +319,29 @@ struct PadOptions_181F0 {
     u8 pad5[7];
 };
 extern struct PadOptions_181F0 D_0015EEB0_181F0 __asm__("D_0015EEB0") MACRO_ADDR;
-extern Pad_181F0 D_0013CA40_181F0 __asm__("D_0013CA40");
+extern PadState D_0013CA40_181F0 __asm__("D_0013CA40");
 extern s32 func_001F98C0_181F0(s32) __asm__("func_001F98C0");
 extern float func_001F9CE8_181F0(float *) __asm__("func_001F9CE8");
 extern float func_001FA058_181F0(float, float) __asm__("func_001FA058");
 extern float func_001FA850_181F0(float, float) __asm__("func_001FA850");
 extern float func_001FA888_181F0(s32) __asm__("func_001FA888");
 
-void func_002181F0_r(Pad_181F0 *p, u8 *buf, s32 len) __asm__("func_002181F0");
+void func_002181F0_r(PadState *p, u8 *buf, s32 len) __asm__("func_002181F0");
 
 /* Turns one pad report into the pad's state: buttons, the four stick axes with a dead zone
    and the twelve pressure values, the left/right mirror option, stick directions as buttons,
    pressed/released edges, the two input-lock modes, a stick flick detector over the last
    30 frames, and key repeat.
    Adapted from Lombyte (MIT) for PAL: src/input/pad/process_pad_input.c, process_pad_input. */
-void func_002181F0_r(Pad_181F0 *p, u8 *buf, s32 len) {
+void func_002181F0_r(PadState *p, u8 *buf, s32 len) {
     float v[2];
     s32 i, j, k;
     s32 cur, old, ncur, nold;
     float mag, ang;
 
-    p->raw = p->held = ((buf[0] << 8) | buf[1]) ^ 0xFFFF;
+    p->raw_held = p->held = ((buf[0] << 8) | buf[1]) ^ 0xFFFF;
     for (i = 15; i >= 0; i--) {
-        p->axes[i] = 0;
+        p->analog[i] = 0;
     }
     if (len >= 6) {
         for (i = 0; i < 4; i++) {
@@ -406,111 +350,111 @@ void func_002181F0_r(Pad_181F0 *p, u8 *buf, s32 len) {
                 d = -d;
             if (d >= 0x30) {
                 float f = func_001FA888_181F0(d - 0x30) / func_001FA888_181F0(0x4C);
-                p->axes[i] = f;
+                p->analog[i] = f;
                 if (f > 1.0f) {
-                    p->axes[i] = 1.0f;
+                    p->analog[i] = 1.0f;
                 }
                 if (buf[i + 2] < 0x7F) {
-                    p->axes[i] = -p->axes[i];
+                    p->analog[i] = -p->analog[i];
                 }
             }
         }
     }
     if (len >= 0x12) {
         for (i = 4; i < 16; i++) {
-            p->axes[i] = func_001FA888_181F0(buf[i + 2]) * 0.003921569f;
+            p->analog[i] = func_001FA888_181F0(buf[i + 2]) * 0.003921569f;
         }
     }
     if (D_0015EEB0_181F0.mirror) {
-        p->axes[2] = -p->axes[2];
-        p->axes[0] = -p->axes[0];
+        p->analog[2] = -p->analog[2];
+        p->analog[0] = -p->analog[0];
         if (p->held & 0x8000) {
             p->held = (p->held & ~0x8000) | 0x2000;
         } else if (p->held & 0x2000) {
             p->held = (p->held & ~0x2000) | 0x8000;
         }
-        p->raw = p->held;
+        p->raw_held = p->held;
     }
     {
-        float *dst = p->prev, *src = p->axes;
+        float *dst = p->analog_prev, *src = p->analog;
         for (i = 15; i >= 0; i--) {
             *dst++ = *src++;
         }
     }
-    if (p->axes[2] != 0.0f || p->axes[3] != 0.0f) {
-        p->moving = 1;
+    if (p->analog[2] != 0.0f || p->analog[3] != 0.0f) {
+        p->stick_moved = 1;
     } else {
-        p->moving = 0;
+        p->stick_moved = 0;
     }
-    if (p->axes[2] < 0.0f)
+    if (p->analog[2] < 0.0f)
         p->held |= 0x8000;
-    if (p->axes[2] > 0.0f)
+    if (p->analog[2] > 0.0f)
         p->held |= 0x2000;
-    if (p->axes[3] < 0.0f)
+    if (p->analog[3] < 0.0f)
         p->held |= 0x1000;
-    if (p->axes[3] > 0.0f)
+    if (p->analog[3] > 0.0f)
         p->held |= 0x4000;
-    if (D_0013CA40_181F0.x18C != 0) {
+    if (D_0013CA40_181F0.unk18C != 0) {
         p->pressed = 0;
         p->released = 0;
     } else {
-        p->pressed = ~p->old & p->held;
-        p->released = ~p->held & p->old;
+        p->pressed = ~p->prev_held & p->held;
+        p->released = ~p->held & p->prev_held;
     }
-    p->none = p->held == 0;
-    p->nodir = (p->held & 0xF000) == 0;
-    p->x1B4 = ~p->old & p->raw;
-    p->x1B8 = ~p->held & p->x1BC;
-    p->x1C4 = p->pressed;
-    p->x1C8 = p->released;
-    p->x1C0 = p->held;
-    p->x348 = p->held;
+    p->no_buttons = p->held == 0;
+    p->no_direction = (p->held & 0xF000) == 0;
+    p->raw_pressed = ~p->prev_held & p->raw_held;
+    p->raw_released = ~p->held & p->prev_raw_held;
+    p->pressed_unmasked = p->pressed;
+    p->released_unmasked = p->released;
+    p->held_unmasked = p->held;
+    p->unk348 = p->held;
     if (D_0015EEB0_181F0.mirror) {
-        p->prev[2] = -p->prev[2];
-        p->prev[0] = -p->prev[0];
-        if (p->x1C0 & 0x8000) {
-            p->x1C0 = (p->x1C0 & ~0x8000) | 0x2000;
-        } else if (p->x1C0 & 0x2000) {
-            p->x1C0 = (p->x1C0 & ~0x2000) | 0x8000;
+        p->analog_prev[2] = -p->analog_prev[2];
+        p->analog_prev[0] = -p->analog_prev[0];
+        if (((s32)p->held_unmasked) & 0x8000) {
+            p->held_unmasked = (((s32)p->held_unmasked) & ~0x8000) | 0x2000;
+        } else if (((s32)p->held_unmasked) & 0x2000) {
+            p->held_unmasked = (((s32)p->held_unmasked) & ~0x2000) | 0x8000;
         }
-        if (p->x1C4 & 0x8000) {
-            p->x1C4 = (p->x1C4 & ~0x8000) | 0x2000;
-        } else if (p->x1C4 & 0x2000) {
-            p->x1C4 = (p->x1C4 & ~0x2000) | 0x8000;
+        if (((s32)p->pressed_unmasked) & 0x8000) {
+            p->pressed_unmasked = (((s32)p->pressed_unmasked) & ~0x8000) | 0x2000;
+        } else if (((s32)p->pressed_unmasked) & 0x2000) {
+            p->pressed_unmasked = (((s32)p->pressed_unmasked) & ~0x2000) | 0x8000;
         }
-        if (p->x1C8 & 0x8000) {
-            p->x1C8 = (p->x1C8 & ~0x8000) | 0x2000;
-        } else if (p->x1C8 & 0x2000) {
-            p->x1C8 = (p->x1C8 & ~0x2000) | 0x8000;
+        if (((s32)p->released_unmasked) & 0x8000) {
+            p->released_unmasked = (((s32)p->released_unmasked) & ~0x8000) | 0x2000;
+        } else if (((s32)p->released_unmasked) & 0x2000) {
+            p->released_unmasked = (((s32)p->released_unmasked) & ~0x2000) | 0x8000;
         }
     }
     if (p->mode == 1) {
         p->held &= ~0x5030;
         p->pressed &= ~0x5030;
         p->released &= ~0x5030;
-        p->axes[0] = 0.0f;
-        p->axes[1] = 0.0f;
+        p->analog[0] = 0.0f;
+        p->analog[1] = 0.0f;
         p->mode = 0;
     }
     if (p->mode == 2) {
         p->held &= 0x900;
         p->pressed &= 0x900;
         p->released &= 0x900;
-        p->raw &= 0x900;
-        p->nodir = 1;
-        p->axes[2] = 0.0f;
-        p->axes[3] = 0.0f;
+        p->raw_held &= 0x900;
+        p->no_direction = 1;
+        p->analog[2] = 0.0f;
+        p->analog[3] = 0.0f;
         p->mode = 0;
     }
-    v[0] = p->axes[2];
-    v[1] = p->axes[3];
+    v[0] = p->analog[2];
+    v[1] = p->analog[3];
     mag = func_001F9CE8_181F0(v);
     ang = func_001FA058_181F0(v[0], v[1]);
-    p->hist_mag[p->idx] = mag;
-    p->hist_ang[p->idx] = ang;
+    p->hist_mag[p->hist_idx] = mag;
+    p->hist_ang[p->hist_idx] = ang;
     if (mag > 0.9f) {
         for (j = 1; j < func_001F98C0_181F0(4); j++) {
-            float m = p->hist_mag[(p->idx - j + 30) % 30];
+            float m = p->hist_mag[(p->hist_idx - j + 30) % 30];
             if (m > 0.9f)
                 break;
             if (m < 0.25f) {
@@ -520,7 +464,7 @@ void func_002181F0_r(Pad_181F0 *p, u8 *buf, s32 len) {
         }
         if (!(p->pressed & 0x10000)) {
             for (k = 1; k < func_001F98C0_181F0(5); k++) {
-                if (func_001FA850_181F0(p->hist_ang[(p->idx - k + 30) % 30], ang) >
+                if (func_001FA850_181F0(p->hist_ang[(p->hist_idx - k + 30) % 30], ang) >
                     0.9599311f) {
                     p->pressed |= 0x10000;
                     break;
@@ -528,14 +472,14 @@ void func_002181F0_r(Pad_181F0 *p, u8 *buf, s32 len) {
             }
         }
     }
-    p->hist_btn[p->idx] = p->pressed;
-    p->idx = (p->idx + 1) % 30;
-    if (++p->count > 30) {
-        p->count = 30;
+    p->hist_btn[p->hist_idx] = p->pressed;
+    p->hist_idx = (p->hist_idx + 1) % 30;
+    if (++p->hist_count > 30) {
+        p->hist_count = 30;
     }
     if (p->rep_rate) {
         cur = p->held;
-        if (cur != 0 && cur == p->old) {
+        if (cur != 0 && cur == p->prev_held) {
             u8 t = --p->rep_timer;
             if (0 == t || t == 0xFF) {
                 p->rep_timer = p->rep_rate;
@@ -550,6 +494,6 @@ void func_002181F0_r(Pad_181F0 *p, u8 *buf, s32 len) {
 extern void func_00217F68(void *);
 
 /* UpdatePad(void) */
-void func_00218908(void) {
-    func_00217F68(D_0013CA40);
+void UpdatePad(void) {
+    Pad_UpdatePort(D_0013CA40);
 }

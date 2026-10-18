@@ -11,7 +11,7 @@ extern int func_001FA898_r(float) __asm__("func_001FA898");
 extern void func_001F9BD8(void *, void *, void *);
 
 // Spawns a particle at a position with a color and scale chosen by kind.
-void func_L08_00273A80(float *pos, int kind, float *vec, float scale) {
+void SpawnKindParticle(float *pos, int kind, float *vec, float scale) {
     float v[4];
     float *vp = v;
     float w[4];

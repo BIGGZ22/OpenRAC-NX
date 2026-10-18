@@ -442,7 +442,7 @@ extern void trooper_start_knockback(void *, void *, float, int, int, int) __asm_
 extern void trooper_anim_update(void *m, short *p) __asm__("FUN_L00_0025d458");
 extern void trooper_anim_finish(void *, void *) __asm__("FUN_L00_0025d538");
 extern void FUN_L00_00263d40(int, int);
-extern void FUN_L06_002ff2c8(void *);
+void FUN_L06_002ff2c8(void *arg);
 extern void allocate_voice_for_bank_entry(int, int, int) __asm__("FUN_0022db10");
 float absolute_float(float input) __asm__("func_001F99C0");
 
@@ -627,109 +627,116 @@ void FUN_L06_002ff100(char *m) {
     }
     *(float *)(d + 0x21C) = (float)scale_game_frames(D_L06_00161FD8);
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L06_002ff2c8.s", FUN_L06_002ff2c8);
-#else
+/* Shared moby update: steps the timer at 0x21C, spaces 16 entries, and runs the pair checks. */
+/* Ported from rac1-decomp (src/overlays/shared/vendor_002FF000.c: func_L06_003006F8), where it is exact; names translated to the US level program. */
+
+typedef struct Hero Hero;
+
+typedef struct Moby Moby;
+
+typedef struct { float frames, y, z, w; } FanPt;
+
+typedef struct {
+    char pad0[0x210];
+    FanPt base;   /* 0x210; w = timer */
+    FanPt dir;    /* 0x220 */
+    FanPt pts[16]; /* 0x230 */
+} FanData;
+
+extern f32 fast_vec_dot(void *a, void *b) __asm__("func_001F9AB0");
+extern float approach_value(float *, float, float);
+extern int collision_line(void *, void *, int, void *, void *);
 extern f32 D_L06_00161FD0 __attribute__((sda));
+void FUN_L06_002ff680(char *moby);
+void FUN_L06_002ff978(char *moby);
+extern void enqueue_callback_list_1(void *, void *) __asm__("FUN_001f4600");
+extern void fast_vec_normalize(void *, void *, f32) __asm__("FUN_001f9bf8");
 extern void subtract_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a28");
-extern f32 dot_vectors_xyz(void *, void *) __asm__("FUN_001f9ab0");
-extern s32 collision_line(void *, void *, s32, void *, void *) __asm__("FUN_001efa68");
-extern f32 approach_value(f32 *, f32, f32) __asm__("FUN_00213ed8");
-extern void enqueue_callback_list_1(void (*)(char *), char *) __asm__("FUN_001f4600");
-void FUN_L06_002ff680(char *);
-void FUN_L06_002ff978(char *);
 
-void FUN_L06_002ff2c8(char *moby) {
-    char *data = *(char **)(moby + 0x78);
-    s32 frames;
-    s32 i;
-    s32 next;
-    s32 offset;
-    f32 step;
-    f32 alignment;
-    f32 point[4];
-    f32 relative[4];
+void FUN_L06_002ff2c8(void *arg) {
+    char *moby = arg;
+    FanData *data = *(FanData **)(moby + 0x78);
+    int frames;
+    float point[4];
+    float relative[4];
     ShotInfo shot;
+    float step;
+    float alignment;
+    int i, j, next, hit_type;
+    int remaining;
 
-    frames = truncate_float_to_s32(*(f32 *)(data + 0x21C));
-    fast_dec_timer(&frames);
-    *(f32 *)(data + 0x21C) = (f32)frames;
+    frames = truncate_float_to_s32(data->base.w);
+    fast_dec_timer((s32 *)&frames);
+    data->base.w = (float)frames;
     if (frames == 0) {
         return;
     }
     if (frames == 20) {
-        f32 *weight = (f32 *)(data + 0x23C);
-        s32 remaining = 15;
-        do {
-            f32 *value = weight;
-            if (*value >= 1.0f) {
-                *value = 0.98f;
+        char *weights = (char *)data;
+        for (remaining = 15; remaining >= 0; remaining--) {
+            if (1.0f <= *(float *)(weights + 0x23C)) {
+                *(float *)(weights + 0x23C) = 0.98f;
             }
-            remaining--;
-            weight += 4;
-        } while (remaining >= 0);
-    }
-    offset = 0;
-    {
-        f32 *entry = (f32 *)(data + 0x230);
-        f32 *relative_ptr = relative;
-        i = 0;
-        do {
-            if (hero.vehicle_mode == 1) {
-                step = D_L06_00161FD0 * frame_time;
-                step *= 0.5f;
-            } else {
-                step = D_L06_00161FD0 * frame_time;
-            }
-            subtract_vector_xyz(point, entry, data + 0x210);
-            point[2] = 0.0f;
-            normalize_vector_xyz(point, point, step);
-            add_vector_xyz(point, entry, point);
-            subtract_vector_xyz(relative_ptr, point, moby + 0x10);
-            alignment = dot_vectors_xyz(relative_ptr, data + 0x220);
-            if (alignment > 0.4f) {
-                point[2] -= frame_time + frame_time;
-            } else if (alignment < 0.3f) {
-                point[2] += (frame_time + frame_time);
-            }
-            if (entry[3] >= 1.0f && collision_line(&data[offset + 0x230], point, 2, 0, 0) != 0) {
-                point[3] = 0.98f;
-            } else if (point[3] < 1.0f) {
-                approach_value(&point[3], 0.0f, frame_time + frame_time);
-            }
-            qcopy(entry, point);
-            i++;
-            entry += 4;
-            offset = i * 16;
-        } while (i < 16);
-    }
-    for (i = 0; i < 15; i = next) {
-        f32 *entry = (f32 *)(data + 0x230 + i * 16);
-        f32 *next_entry;
-        offset = i * 16;
-        next = i + 1;
-        if (*(f32 *)(data + i * 16 + 0x23C) >= 0.6f &&
-            (next_entry = (f32 *)(data + 0x230 + next * 16), next_entry[3] >= 0.6f)) {
-            s32 hit_type;
-            point[0] = fast_cos(*(f32 *)(moby + 0x48));
-            point[1] = fast_sin_c(*(f32 *)(moby + 0x48));
-            point[2] = 1.0f;
-            point[3] = 5627.925f;
-            hit_type = 0x10000;
-            if (*(f32 *)(data + i * 16 + 0x23C) >= 1.0f && next_entry[3] >= 1.0f) {
-                hit_type |= 1;
-            }
-            make_hit_descriptor(&shot, (struct Moby *)moby, hit_type, point, 1.0f);
-            shot.unk18 = 0;
-            shot.unk19 = 1;
-            shot.oclass = *(s16 *)(moby + 0xA6);
-            collision_line(&data[offset + 0x230], &data[offset + 0x240], 0, moby, &shot);
+            weights += 0x10;
         }
     }
-    enqueue_callback_list_1(FUN_L06_002ff680, moby);
+
+    for (i = 0; i < 16; i++) {
+        char *entry;
+        if (hero.vehicle_mode == 1) {
+            step = (D_L06_00161FD0 * frame_time) * 0.5f;
+        } else {
+            step = D_L06_00161FD0 * frame_time;
+        }
+        subtract_vector_xyz(point, &data->pts[i], &data->base);
+        point[2] = 0.0f;
+        fast_vec_normalize(point, point, step);
+        add_vector_xyz(point, (float *)&data->pts[i], point);
+        subtract_vector_xyz(relative, point, moby + 0x10);
+        alignment = fast_vec_dot(relative, &data->dir);
+        if (0.4f < alignment) {
+            point[2] = point[2] - (frame_time + frame_time);
+        } else if (alignment < 0.3f) {
+            point[2] = point[2] + (frame_time + frame_time);
+        }
+        entry = (char *)data + i * 16;
+        if (1.0f <= *(float *)(entry + 0x23C) && collision_line(&data->pts[i], point, 2, 0, 0)) {
+            point[3] = 0.98f;
+        } else if (point[3] < 1.0f) {
+            approach_value(&point[3], 0.0f, frame_time + frame_time);
+        }
+        qcopy(&data->pts[i], point);
+    }
+
+    j = 0;
+    do {
+        char *entry = (char *)data + j * 16;
+        char *next_entry;
+        next = j + 1;
+        if (0.6f <= *(float *)(entry + 0x23C)) {
+            next_entry = (char *)data + next * 16;
+            if (0.6f <= *(float *)(next_entry + 0x23C)) {
+                point[0] = fast_cos(*(float *)(moby + 0x48));
+                point[1] = fast_sin(*(float *)(moby + 0x48));
+                point[2] = 1.0f;
+                point[3] = 5627.925f;
+                hit_type = 0x10000;
+                if (1.0f <= *(float *)(entry + 0x23C) && 1.0f <= *(float *)(next_entry + 0x23C)) {
+                    hit_type = 0x10001;
+                }
+                make_hit_descriptor(&shot, (struct Moby *)moby, hit_type, point, 1.0f);
+                shot.oclass = *(s16 *)(moby + 0xA6);
+                shot.unk18 = 0;
+                shot.unk19 = 1;
+                collision_line(&data->pts[j], &data->pts[j + 1], 0, moby, &shot);
+            }
+        }
+        j = next;
+    } while (j < 15);
+
+    enqueue_callback_list_1((void *)FUN_L06_002ff680, moby);
     FUN_L06_002ff978(moby);
 }
-#endif
 
 /* GS quad packet for draw_geometry_quad: four corners, their colours and
    texture coordinates, then the giftag and register words. */
@@ -865,8 +872,8 @@ void FUN_L06_002ff978(char *moby) {
     int i, n;
     for (i = 0; i < 15; i = n) {
         float f21, f22;
-        int s18, s19, s17;
-        int s10[4];
+        int frame_count, second_frame_count, third_frame_count;
+        int spark_position[4];
         float v[4], w[4];
         char *p;
         int off = i * 16;
@@ -892,19 +899,19 @@ void FUN_L06_002ff978(char *moby) {
         w[2] = 0;
         v[2] = random_float_between(D_L06_00162034, D_L06_00162038);
         w[2] = random_float_between(D_L06_00162034, D_L06_00162038);
-        s18 = func_001FA898_r(multiply_global_factor_ed64(
+        frame_count = func_001FA898_r(multiply_global_factor_ed64(
             random_float_between(D_L06_00162014, D_L06_00162018)));
-        s19 = func_001FA898_r(multiply_global_factor_ed64(
+        second_frame_count = func_001FA898_r(multiply_global_factor_ed64(
             random_float_between(D_L06_0016201C, D_L06_00162020)));
-        s17 = func_001FA898_r(multiply_global_factor_ed64(
+        third_frame_count = func_001FA898_r(multiply_global_factor_ed64(
             random_float_between(D_L06_00162024, D_L06_00162028)));
-        scale_vector_xyz(v, v, 1.0f / (float)s18);
+        scale_vector_xyz(v, v, 1.0f / (float)frame_count);
         v[3] = D_L06_0016200C;
-        scale_vector_xyz(w, w, 1.0f / (float)s17);
+        scale_vector_xyz(w, w, 1.0f / (float)third_frame_count);
         w[3] = D_L06_00162010;
         p = data + (off + 0x230);
-        lerp_vector(s10, p, p, random_float_between(0.0f, 1.0f));
-        spawn_spark(s10, v, w, D_L06_00162004, D_L06_00162008, s18, s19, s17,
+        lerp_vector(spark_position, p, p, random_float_between(0.0f, 1.0f));
+        spawn_spark(spark_position, v, w, D_L06_00162004, D_L06_00162008, frame_count, second_frame_count, third_frame_count,
                      D_L06_00162040);
     }
 }

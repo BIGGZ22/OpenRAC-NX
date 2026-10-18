@@ -20,7 +20,7 @@ extern int D_0015EE84 MACRO_ADDR;
 extern Level02MobyList D_L02_0016CEE0;
 
 /* Mark every moby of class 0x1B1 in the active level. */
-void func_L02_00240A00(void) {
+void Aridia_FlagMoby433(void) {
     int i;
     if (D_0015EE84 == 2) {
         for (i = 0; i < D_L02_0016CEE0.count; i++) {

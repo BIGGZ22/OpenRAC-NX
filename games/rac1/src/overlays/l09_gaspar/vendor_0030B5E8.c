@@ -7,7 +7,7 @@
 extern float func_001FA790(float, float);
 extern float func_001FA748(float, float);
 
-void func_L09_0030B5E8(float *dst, float a, float b, float scale) {
+void Rot_ApproachAngle(float *dst, float a, float b, float scale) {
     float v = FastSubRots(b, a) * scale;
     *dst = v;
     *dst = FastAddRots(v, a);
@@ -69,13 +69,13 @@ int func_L09_0030B648(struct Moby *moby) {
     FastVecSub(&step, &target, &moby->pos);
     func_L00_001FF4B0(&step, &step, vars->speed);
     FastVecAdd(&moby->pos, &moby->pos, &step);
-    func_L09_0030B5E8(&moby->rot.z, moby->rot.z,
+    Rot_ApproachAngle(&moby->rot.z, moby->rot.z,
                      FastAddRots(func_L00_001FF860(path->node[vars->node].f[0] - moby->pos.x,
                                          path->node[vars->node].f[1] - moby->pos.y),
                                  vars->yaw_offset),
                      (1.0f - vars->lag) * 0.02f);
-    func_L09_0030B5E8(&moby->rot.x, moby->rot.x, 0.0f, 0.02f);
-    func_L09_0030B5E8(&moby->rot.y, moby->rot.y, 0.0f, 0.02f);
+    Rot_ApproachAngle(&moby->rot.x, moby->rot.x, 0.0f, 0.02f);
+    Rot_ApproachAngle(&moby->rot.y, moby->rot.y, 0.0f, 0.02f);
     if (vars->dir > 0) {
         f32 v;
         if (FastVecDist(&target, &moby->pos) < vars->speed + vars->speed) {
@@ -85,7 +85,7 @@ int func_L09_0030B648(struct Moby *moby) {
         }
         d = FastVecDist(&moby->pos, &path->node[path->count - 1]);
         v = 0.0f;
-        func_00214D88(d, D_0015EE70 * 3.0f, D_0015EE70 * 3.0f, D_0015EE6C * 10.0f, &v, &vars->speed);
+        ApproachWithVelocity(d, D_0015EE70 * 3.0f, D_0015EE70 * 3.0f, D_0015EE6C * 10.0f, &v, &vars->speed);
     } else {
         f32 v;
         if (FastVecDist(&target, &moby->pos) < vars->speed + vars->speed) {
@@ -95,7 +95,7 @@ int func_L09_0030B648(struct Moby *moby) {
         }
         d = FastVecDist(&moby->pos, &path->node[0]);
         v = 0.0f;
-        func_00214D88(d, D_0015EE70 * 3.0f, D_0015EE70 * 3.0f, D_0015EE6C * 10.0f, &v, &vars->speed);
+        ApproachWithVelocity(d, D_0015EE70 * 3.0f, D_0015EE70 * 3.0f, D_0015EE6C * 10.0f, &v, &vars->speed);
     }
     if (path->node[vars->node].f[3] == 42.0f)
         vars->yaw_offset = 0.0f;
@@ -104,9 +104,9 @@ int func_L09_0030B648(struct Moby *moby) {
     if (func_001F9D48(&moby->pos, &path->node[path->count - 1]) > 8.0f &&
         func_001F9D48(&moby->pos, &path->node[0]) > 8.0f && !random_integer_below(7)) {
         qcopy(&puff, &moby->pos);
-        func_L00_00260958(&puff, 0.5f);
+        JitterVector(&puff, 0.5f);
         puff.f[2] = 25.01f;
-        func_L00_00272488(&puff, 0, 0x40103080, vars->speed * 3.0f / (D_0015EE6C * 10.0f), 12600.0f);
+        PartType45Spawn(&puff, 0, 0x40103080, vars->speed * 3.0f / (D_0015EE6C * 10.0f), 12600.0f);
     }
     return done;
 }
@@ -118,7 +118,7 @@ extern void func_L01_00279E10(void *, int);
 extern void func_0020D678(void *);
 void func_L09_0030BA28(char *m) {
     int hit = 0;
-    char *r = func_L00_0025B478(m, 0x10000, 0);
+    char *r = MobyGetHitMessage(m, 0x10000, 0);
     switch (*(unsigned char *)(m + 0x20)) {
     case 0:
         m[0x20] = 1;
@@ -129,9 +129,9 @@ void func_L09_0030BA28(char *m) {
         break;
     case 2:
         func_0022ED80(0, 0, (int)m);
-        func_L01_00279790(m);
-        func_L00_00264EA8(m, 0x73B, 1, 0x73B, 1, 7, 2);
-        func_L01_00279E10(m, 0x73A);
+        SpawnBreakFxByDistance(m);
+        SpawnMobyBurstFx(m, 0x73B, 1, 0x73B, 1, 7, 2);
+        SpawnMobyCopyingPlacement(m, 0x73A);
         DeleteMoby(m);
         break;
     }

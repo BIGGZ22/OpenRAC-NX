@@ -13,7 +13,7 @@ extern int *D_L12_00161240 MACRO_ADDR;
 extern char D_L12_001CBA20[];
 
 /* draw a list of effect entries into the scratchpad */
-void func_L12_002BD3D0(void *list_, int count, int tex0, int tex1) {
+void Effect_DrawEntryList(void *list_, int count, int tex0, int tex1) {
     char *list = list_;
     int i;
     int *sp;
@@ -25,7 +25,7 @@ void func_L12_002BD3D0(void *list_, int count, int tex0, int tex1) {
     D_L12_00161240[2] = 0;
     D_L12_00161240[3] = 0x50000009;
     D_L12_00161240 += 4;
-    func_001F7868();
+    Draw_BuildVu1Setup();
     sp = (int *)0x70000000;
     for (i = 0xB3; i >= 0; i--) {
         *sp++ = 0x80808080;
@@ -54,7 +54,7 @@ extern Level12MobyList D_L12_0016CD60;
 extern unsigned char D_L12_0017C940[];
 
 /* Re-arms the matching entry of the moby list when the level mode is 2 (func_L02_002E2110 with argument 1). */
-void func_L12_002E7EE0(char *moby) {
+void Moby_AttachCheatManipulators(char *moby) {
     int i;
     if (D_L12_0015F6A8 == 2 && gCheats[0] != 0) {
         for (i = 0; i < D_L12_0016CD60.count; i++) {
@@ -76,15 +76,15 @@ extern void func_L12_002BD3D0(void *, int, int, int);
 extern char D_L12_001F5740[];
 
 /* calls func_L12_002BD3D0 with two looked-up ids */
-void func_L12_002E8530(void) {
-    func_L12_002BD3D0(D_L12_001F5740, 0x2F, GetEffectTex(0x2C), GetEffectTex(0x2D));
+void Moby_DrawEffectEntries(void) {
+    Effect_DrawEntryList(D_L12_001F5740, 0x2F, GetEffectTex(0x2C), GetEffectTex(0x2D));
 }
 typedef int u128_8670 __attribute__((mode(TI)));
 extern char *func_0020D348(int);
 extern void func_L00_00251E30(void *);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_00308670.c, FUN_L12_00308670. */
-char *func_L12_00309A50(char *a0)
+char *SpawnMoby55B(char *a0)
 {
     unsigned char *m = (unsigned char *)CreateMoby(0x55B);
     if (m != 0) {
@@ -132,7 +132,7 @@ typedef struct {
 } LobbedVars;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/00308670.c, FUN_L12_00308708. */
-void func_L12_00309AE8(void *unused, struct Moby *m) {
+void LobbedMoby_Launch(void *unused, struct Moby *m) {
     LobbedVars *d = (LobbedVars *)m->pvars;
     float dir[4];
     float ang;
@@ -146,7 +146,7 @@ void func_L12_00309AE8(void *unused, struct Moby *m) {
     d->unk48 = 0.7f;
     d->timer = truncate_float_to_s32(716.8f);
     d->unk6C = 0.0f;
-    m->unk30 = 0xFF;
+    m->update_dist = 0xFF;
     m->flags &= ~6;
     ang = FastAddRots(m->rot.z, 3.1415927f);
     dir[0] = FastCos(ang);
@@ -163,13 +163,13 @@ void func_L12_00309AE8(void *unused, struct Moby *m) {
     d->unk3C = func_001F9B50(a * 4.0f);
     d->unk5D = 0;
     d->unk44 = 1;
-    func_L00_0025BBA0(dir, &ang, &d->launch_speed, &d->unk3C);
-    func_L00_0025D5B0(ang, m, &d->arc, 1, 5, 2);
+    HeadingFromVector(dir, &ang, &d->launch_speed, &d->unk3C);
+    InitKnockback(ang, m, &d->arc, 1, 5, 2);
     d->unk6C = D_0015EE6C + D_0015EE6C;
     d->unk70 = -1.0f;
     d->unk74 = -1.0f;
     m->flags &= ~0x1000;
-    func_00213DE0(m, 1, 0, 0);
+    MobyBlendAnimation(m, 1, 0, 0);
 }
 typedef struct { char pad[0x40]; float vx, vy; } MO;
 extern int func_L00_0025D6F0(void *, void *);
@@ -179,7 +179,7 @@ extern void func_L00_0025F4A8_alt(void *, void *, void *, float, float, int, int
 extern void func_0020D678(void *);
 
 // updates a moby's velocity and either spawns an effect and deletes itself or expires by height
-void func_L12_00309CF8(char *m) {
+void LobbedMoby_UpdateFlight(char *m) {
     int st;
     char *d;
     char *p;
@@ -190,7 +190,7 @@ void func_L12_00309CF8(char *m) {
     d = *(char **)(m + 0x78);
     if (st == 1) {
         p = d + 0x20;
-        r = func_L00_0025D6F0(m, p);
+        r = StepMobyPhysics(m, p);
         mo->vx = FastAddRots(mo->vx, D_0015EE6C * 4.3633232f);
         mo->vy = FastAddRots(mo->vy, D_0015EE6C * 4.3633232f);
         *(unsigned short *)(m + 0x34) &= 0xEFFF;

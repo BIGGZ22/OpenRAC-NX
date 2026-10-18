@@ -12,7 +12,7 @@ extern int func_L00_0020DB30(int);
 extern Rec4C D_L15_0017A140[];
 
 /* Returns 0 or 0x54 in the early-out cases below, otherwise the v field of D_L15_0017A140[func_L00_0020DB30(0)]. */
-int func_L15_001FED10(int a) {
+int HelpL15_GetRecordValue(int a) {
     char *g = (char *)D_0013E633 + 0xE1D;
     switch (*(unsigned char *)(g + 0x20A4)) {
     case 2:
@@ -39,7 +39,7 @@ int func_L15_001FED10(int a) {
         }
     }
     {
-        int i = func_L00_0020DB30(0);
+        int i = Hero_GetSlotModuleId(0);
         return D_L15_0017A140[i].v;
     }
 }

@@ -73,6 +73,15 @@ func_0012F0A8 = 0x0012F0A8; // type:func
 func_0012F1A8 = 0x0012F1A8; // type:func
 func_0012F220 = 0x0012F220; // type:func
 func_0012F288 = 0x0012F288; // type:func
+func_00226818 = 0x00226818; // type:func
+func_00120C60 = 0x00120C60; // type:func
+func_001F10A0 = 0x001F10A0; // type:func
+func_001F9840 = 0x001F9840; // type:func
+func_00214778 = 0x00214778; // type:func
+func_0022BEF0 = 0x0022BEF0; // type:func
+func_0022F4C8 = 0x0022F4C8; // type:func
+func_0023B578 = 0x0023B578; // type:func
+func_00120A88 = 0x00120A88; // type:func
 
 // String literals after libgcc __umoddi3 __clz_tab
 D_00152F18 = 0x00152F18;

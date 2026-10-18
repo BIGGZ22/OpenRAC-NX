@@ -6,7 +6,7 @@
 extern int func_001FA898_r(float) __asm__("func_001FA898");
 
 /* Finds the index of the keyframe nearest to the given time, or -1. */
-int func_L00_0024FD50(char *a, float time) {
+int MobyAnimFindFrame(char *a, float time) {
     int x = (short)func_001FA898_r(time * 16.0f);
     int i;
     for (i = 0; i < *(unsigned char *)(a + 0x10); i++) {
@@ -34,7 +34,7 @@ extern void func_001F9EE8(void *, void *, void *);
 extern void func_001F9C30(void *, void *, float);
 
 /* places a scaled, camera-relative entry in an object's table */
-void func_L00_0024FF10(char *a, int idx, void *pos, float x, float y) {
+void Moby_SetScaledJointEntry(char *a, int idx, void *pos, float x, float y) {
     float m[16];
     float v[4];
     char *e = *(char **)(a + 0x94) + (idx * 32 + 0x10);
@@ -47,7 +47,7 @@ void func_L00_0024FF10(char *a, int idx, void *pos, float x, float y) {
     *(float *)(e + 4) = y * s;
     *(float *)(e + 0x1C) = x * s;
 }
-void func_L00_0024FFE8(unsigned char *a, int dx, int dy) {
+void OffsetShortPairTables(unsigned char *a, int dx, int dy) {
     int i;
     int n = a[4] + a[5];
     int *t = *(int **)a;
@@ -71,7 +71,7 @@ typedef struct Slot {
 extern Slot D_L00_0018EEC0[];
 extern char D_L00_001870C0[];
 
-Slot *func_L00_00250060(char *o, int id) {
+Slot *AllocAnimSlot(char *o, int id) {
     int i = 0;
     Slot *s;
     unsigned char *r;
@@ -102,7 +102,7 @@ typedef struct {
 extern void func_001F99B0(void *, s32, s32);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/0024eec0.c, FUN_L00_0024f0e8. */
-void func_L00_00250120(ListOwner_24f0e8 *owner, ListNode_24f0e8 **slot) {
+void List_RemoveAndClearNode(ListOwner_24f0e8 *owner, ListNode_24f0e8 **slot) {
     ListNode_24f0e8 *p;
 
     if (*slot == 0)
@@ -123,7 +123,7 @@ extern void func_L00_00250478(void *, int, int, int);
 extern void func_L00_002539C8(void *);
 
 /* advances an animation blend timer and steps through its frame table */
-void func_L00_002501C8(void *unused, unsigned char *a) {
+void MobyAnim_StepBlend(void *unused, unsigned char *a) {
     float s = *(float *)(a + 0x28);
     a[5] = 0;
     if (s != 0.0f && *(float *)(a + 0x2C) != 0.0f) {
@@ -165,14 +165,14 @@ void func_L00_002501C8(void *unused, unsigned char *a) {
         }
     }
     if (a[6]) {
-        func_L00_00250478(a, a[0x22], a[0x20], *(int *)(a + 0x38));
+        Moby_BuildFramePacket(a, a[0x22], a[0x20], *(int *)(a + 0x38));
     } else {
         int o = a[0x22] * 4;
         int p = a[0x20] * 4;
         *(int *)(a + 0x38) = *(int *)(*(int *)(*(unsigned char **)(a + 0x14) + o + 0x48) + p + 0x1C);
     }
     if (a[7]) {
-        func_L00_00250478(a, a[0x23], a[0x21], *(int *)(a + 0x3C));
+        Moby_BuildFramePacket(a, a[0x23], a[0x21], *(int *)(a + 0x3C));
     } else {
         int o = a[0x23] * 4;
         int p = a[0x21] * 4;
@@ -185,7 +185,7 @@ typedef struct { u8 pad[0x51]; u8 b51, b52, b53; } A;
 extern void func_L00_002501C8_50418(void *, void *) __asm__("func_L00_002501C8");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_state_0024eec0.c, FUN_L00_0024f3e0. */
-void func_L00_00250418(A *a0, S *a1, s32 a2, s32 a3, s32 a4, s32 a5) {
+void MobyAnim_StartBlend(A *a0, S *a1, s32 a2, s32 a3, s32 a4, s32 a5) {
     a1->b22 = a0->b53;
     a1->b20 = a0->b51;
     a1->b23 = a2;
@@ -275,7 +275,7 @@ void func_L00_00250478_r(Object_50478p *obj, int i, int j, Packet_50478p *out) {
 extern char D_L00_00197040[];
 
 /* stores the value in the first empty or matching slot */
-int func_L00_002506D0(int value) {
+int SlotTable_Insert(int value) {
     int i;
     for (i = 0; i < 16; i++) {
         int *slot = (int *)(D_L00_00197040 + i * 4);
@@ -298,7 +298,7 @@ INCLUDE_ASM("asm/overlays", func_L00_00250700);
 extern void func_001F9EC0(void *, void *, void *);
 extern void func_001F9BD8(void *, void *, void *);
 
-void func_L00_00250800(char *arg0, int arg1, void *arg2) {
+void Moby_GetJointWorldPos(char *arg0, int arg1, void *arg2) {
     char buf[0x40];
     int n;
     float s;
@@ -313,7 +313,7 @@ void func_L00_00250800(char *arg0, int arg1, void *arg2) {
 extern void func_001FA460(void *, void *);
 
 // Builds a matrix from the object's rotation, then rescales and offsets each entry of an attach list.
-void func_L00_00250928(char *o, int n, int *arg2, char *out) {
+void Moby_GetJointWorldMatrices(char *o, int n, int *arg2, char *out) {
     char buf[0x40];
     float s;
     int i;
@@ -337,7 +337,7 @@ extern void func_001E9730();
 extern void func_0020E340(void *, int, int, int, int);
 
 /* Finds the table entry nearest the object's position (within 8 units) and applies its fields to the object and globals. */
-void func_L00_002510F0(char *o) {
+void EnvNearestSamplePoint(char *o) {
     float vec[4];
     float best = 999999.0f;
     float d;
@@ -387,7 +387,7 @@ void func_L00_002510F0(char *o) {
 }
 extern int D_0015EE84 MACRO_ADDR;
 extern unsigned char D_0014C150[];
-void func_L00_002512D8(int idx) {
+void SetLevelTriggerDone(int idx) {
     if (idx != 0xFF) {
         D_0014C150[idx + D_0015EE84 * 16] = 0xFF;
     }
