@@ -1,0 +1,17 @@
+{
+  "game": "Ratchet & Clank: Size Matters",
+  "platform": "PlayStation 2",
+  "region": "USA",
+  "serial": "SCUS_976.15",
+  "system_cnf_version": "1.00",
+  "boot_file": "SCUS_976.15",
+  "reference_status": "complete-public-catalogue-sha1-match",
+  "iso_size": 1744764928,
+  "iso_sha1": "61b9cf7f46b8fc318daa2b98cfc53301654775d6",
+  "iso_sha256": "ceae10a40d916eb78134c21cfe3d939a5c5d0a682a9382e1586df3274be7c7dc",
+  "iso9660_declared_size": 1744764928,
+  "boot_size": 856120,
+  "boot_sha256": "d8f1794a5b4f6bd7f70ca62ae11fb790d1c300c2a877ef1aef4c1855fd6575ac",
+  "boot_entry": "0x01E62508",
+  "matching_compiler": null
+}

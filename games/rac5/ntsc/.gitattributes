@@ -1,0 +1,13 @@
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.tsv text eol=lf
+*.txt text eol=lf
+# The pinned 2.9 preprocessors read a line continuation as a backslash followed
+# by a line feed: in a CRLF checkout the backslash ends up before a carriage
+# return and the preprocessor reports "stray '\' in program", so a body with a
+# macro continuation only compiles from an LF tree.
+*.c text eol=lf
+*.h text eol=lf
+*.patch text eol=lf
+LICENSE text eol=lf

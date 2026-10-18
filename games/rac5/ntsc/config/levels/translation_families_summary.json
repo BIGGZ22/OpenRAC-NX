@@ -1,0 +1,130 @@
+{
+  "status": "structural_translation_leads",
+  "module_count": 21,
+  "group_count": 2415,
+  "placement_body_bytes": 8146612,
+  "template_body_bytes": 687372,
+  "callgraph_resolved_groups": 958,
+  "callgraph_placement_body_bytes": 4166564,
+  "groups_with_pointer_or_nonzero_tail": 496,
+  "placement_bytes_with_pointer_or_nonzero_tail": 1198916,
+  "unique_data_window_groups": 36,
+  "unique_data_window_placement_bytes": 396016,
+  "extra_candidate_savings_beyond_exact": 5444816,
+  "template_lead_upper_bound_bytes": 27724076,
+  "rejection_counts": {
+    "boundary_disagreement": 433,
+    "code_relocation_or_unpaired_hi": 855,
+    "different_local_code_targets": 243,
+    "nonuniform_data_translation": 755,
+    "repeated_module": 281,
+    "unresolved_callgraph_dependencies": 1269
+  },
+  "largest_groups": [
+    {
+      "body_bytes": 32796,
+      "placements": 20,
+      "fingerprint": "41c6ab0da9b0393ace6de61c6d868c436bcd368f5670b9074df9b77eaabbdde7"
+    },
+    {
+      "body_bytes": 6536,
+      "placements": 20,
+      "fingerprint": "e592541a085b5a3f371f94bca58540bf87fbb1485b786cd4c71b7c3f6cb94236"
+    },
+    {
+      "body_bytes": 6068,
+      "placements": 20,
+      "fingerprint": "88de339b970c6389f8a65044332f8d0af113521f3bdb3e8c12a393e8e25d32fb"
+    },
+    {
+      "body_bytes": 4376,
+      "placements": 20,
+      "fingerprint": "be1563a702d2a91a5f7dcb35545503cd46842b52dc6a90b98fad88305a5459bf"
+    },
+    {
+      "body_bytes": 4336,
+      "placements": 20,
+      "fingerprint": "54b8610fc488721a5e2431379bcd1271c8cf3b5920f6523b4348456899e02330"
+    },
+    {
+      "body_bytes": 2928,
+      "placements": 20,
+      "fingerprint": "cfb6c6025a49b50e0f2b54f3075c43115e94abe1556cf04b2692887ed75382c4"
+    },
+    {
+      "body_bytes": 2492,
+      "placements": 21,
+      "fingerprint": "9419b0b3723a73e5abe663c186fe5b3116abf8249f7299a8602fb4e01be3f1a4"
+    },
+    {
+      "body_bytes": 2804,
+      "placements": 18,
+      "fingerprint": "49661c38bbfdfa0d19da503e946f423148a203f10c8ec872f2a3a95f4b786337"
+    },
+    {
+      "body_bytes": 2236,
+      "placements": 20,
+      "fingerprint": "2ed3a6ff018fd5f98ba28090e39ef24377ab846ce3ba603d91d9b3f5ba753aa2"
+    },
+    {
+      "body_bytes": 1892,
+      "placements": 20,
+      "fingerprint": "ac4947a3b0413233cb804d0e56504f206961aa408c424a6dabb28a18a4c1382d"
+    },
+    {
+      "body_bytes": 1856,
+      "placements": 20,
+      "fingerprint": "141dad5be848bc3ac0983b73a109c17b5f68de1cd60ee51326f9f5632f2cbf68"
+    },
+    {
+      "body_bytes": 2288,
+      "placements": 16,
+      "fingerprint": "571dc85d5a3163ded71e13ab2f21c7c51d3b63d1dd6479ec657fe3e9b13b3223"
+    },
+    {
+      "body_bytes": 1796,
+      "placements": 20,
+      "fingerprint": "2b7ed48b3c923c9611475f1111366475e82ad4338236dc1e8aed0c5be3fca16c"
+    },
+    {
+      "body_bytes": 2476,
+      "placements": 14,
+      "fingerprint": "58306d23493a81abcbd063b2368af13aefa5cd88ad285abed7be4510998764dd"
+    },
+    {
+      "body_bytes": 1688,
+      "placements": 20,
+      "fingerprint": "7775f874a3625778f2a13ff1dee066b4ad3f2e631c222faf34bfd75d94552a48"
+    },
+    {
+      "body_bytes": 1688,
+      "placements": 20,
+      "fingerprint": "47217050317a4ffc1d6da2f2bdf8416c52d7ad9a474ea6450c72e307bc06e660"
+    },
+    {
+      "body_bytes": 1508,
+      "placements": 20,
+      "fingerprint": "0f1a7e24f0194d27bf09d2522e440a041fd0dd3f798cde18e2cd0ee1b6fb0818"
+    },
+    {
+      "body_bytes": 1508,
+      "placements": 20,
+      "fingerprint": "f74a3fb3584541bf27d1ca852a0bea903d3fdc6e74fafc8433cf21d2a01c30a9"
+    },
+    {
+      "body_bytes": 1500,
+      "placements": 20,
+      "fingerprint": "f89e32de3fde80dc4f5a1f2e610a3b56cd40ff800201bc294469117a6b1c0e90"
+    },
+    {
+      "body_bytes": 1472,
+      "placements": 20,
+      "fingerprint": "7710bfe88d4fa570139e15a9b3b3bee9a90a1ab5c373779a9a0c7db44bf6e346"
+    }
+  ],
+  "inventory_sha256": "4baab06c153cd1be2af72591f9bf82efc0b9c7d9198592cc50977dcc891b7b49",
+  "ghidra_crosscheck_sha256": "0f00587cd4f346955d8264343f93cde9259170ed8e0c61259cada3682b979f9d",
+  "overall_percent": null,
+  "bytematch_ready": false,
+  "warning": "The candidate-size scenario assumes each structural lead is one shared template. Unique 64-byte data windows corroborate target bytes but not source-level identity; complete function ownership is also unproven. This is not an unconditional upper bound or progress denominator."
+}

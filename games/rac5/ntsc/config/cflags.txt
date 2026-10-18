@@ -1,0 +1,347 @@
+# Per-source compiler, assembler and flags measured against the retail boot
+# (SCUS_976.15).
+#
+# One entry per line: a repository-relative campaign C source path, optional
+# selectors, then the flags measured for that file. A source with no entry
+# compiles with the profile's global flags, its own chain and the pinned GNU
+# "as", so its pinned object stays valid; an entry is rejected when its path is
+# missing, duplicated, names no campaign source, names an unpinned compiler or
+# assembler, or says nothing at all. tools/cflags.py owns the format and the
+# checks; compile_boot_trial.py, boot_trial_gate.py and level_c_gate.py apply
+# the entries they compile.
+#
+# The selectors are bare tokens in front of the flags, each at most once. A
+# plain token names a compiler. Without one, the flags are extra cc1 flags for
+# the profile's pinned chain, on top of its global "-quiet -O2 -G0"; with one,
+# the flags are the complete flag set for that compiler and that file. Pinned
+# compiler selectors, both in config/boot/compiler_trial.json: "prodg2953" is
+# SN ProDG 3.01 ee-gcc2953 (GCC 2.95.3) and "sdk991111" is the Sony EE SDK
+# compiler 2.9-ee-991111-01.
+#
+# "as=NAME" names an assembler from the profile's "extra_assemblers". An entry
+# may select one with no flag at all, since moving the object to another
+# assembler is then the whole content of the line.
+#
+# -mno-check-zero-division (GCC 2.9 mips.md, divmodsi4, under
+# !TARGET_NO_CHECK_ZERO_DIV): the pinned chain always emits
+# "beql $rt,$zero ; break 0,7" before div/divu, while the retail boot leaves
+# 104 of its 111 div/divu sites unguarded, so the retail build used this flag.
+# Controls: compiling every campaign object with and without the flag gives
+# identical SHA-256 (none of the 405 pre-existing objects contains a division);
+# dlib_displist_direct_end__FP13DLIB_DISPLIST is 128 bytes and byte-exact only
+# with the flag, and 136 bytes with the guard, which is the default.
+src/boot/dlib_displist_direct_end__FP13DLIB_DISPLIST.c  -mno-check-zero-division
+
+# Route P: the ps2fio/cdvdfs prebuilt bodies whose retail bytes come from SN
+# ProDG 3.01 rather than the pinned chain. The pinned chain reaches 66-140 of
+# their bytes; under ee-gcc2953 with -O2 -G0 each fills its owned interval
+# exactly. Measured per source by tools/compile_boot_trial.py, which pins each
+# object's SHA-256 in tools/boot_c_campaign.py; the same sources without their
+# selector stay byte-inexact, which is this route's negative control.
+src/boot/ps2fioClose.c        prodg2953 -O2 -G0
+src/boot/ps2fioDopen.c        prodg2953 -O2 -G0
+src/boot/ps2fioGetStat.c      prodg2953 -O2 -G0
+src/boot/ps2fioFormatDevice.c prodg2953 -O2 -G0
+src/boot/cdvdfsFreeFS.c       prodg2953 -O2 -G0
+
+# Route Q: the libcd, fileio, sceSif and libgcc bodies whose retail bytes come
+# from the Sony EE SDK compiler. The pinned chain reaches 73-118 of their bytes
+# and its 8-byte save slots are the wrong frame shape; under 2.9-ee-991111 with
+# -O2 -G0 each fills its owned interval exactly. Measured per source by
+# tools/compile_boot_trial.py, which pins each object's SHA-256 in
+# tools/boot_c_campaign.py; the same sources without their selector stay
+# byte-inexact, which is this route's negative control.
+src/boot/sceCdSyncS.c         sdk991111 -O2 -G0
+src/boot/read.c               sdk991111 -O2 -G0
+src/boot/write.c              sdk991111 -O2 -G0
+src/boot/sceSifSetDma.c       sdk991111 -O2 -G0
+src/boot/dpadd.c              sdk991111 -O2 -G0
+
+# Route R: the two boot bodies whose retail bytes come from another assembler,
+# the cc1 output being byte-right for them either way. The boot is not one
+# assembler build any more than it is one compiler build: its 64-bit `dli`
+# expands with `lui` first, while the pinned GNU `as` puts `ori` first, and a
+# 64-bit `li.d` of a double is inlined by Ps2EeAs where the pinned `as` loads it
+# from the .rdata pool. Neither pinned extra assembler covers the other's case,
+# so the assembler is selected per source exactly as the compiler is.
+#
+# __pack_d (304 bytes, 0x01E95FF0) reaches 249/304 under the pinned `as`: one
+# `dli 0x800FFFFFFFFFFFFF` expands to seven instructions instead of the retail
+# six, from byte 243. Under the Sony EE SDK assembler it is 300/300, and its
+# source is unchanged from the measured fp-bit.c body. Reassembling all 682
+# authored bodies under the same assembler leaves every other body's bytes
+# identical, so this line moves one object and no other.
+src/boot/__pack_d.c           as=ee-sdk
+
+# sceKernelGetSystemTimeLow__Fv (160 bytes, 0x01E86280) reaches 155/156 under
+# the pinned `as`: the two double constants are loaded from the .rdata pool in
+# two instructions where the retail inlines four. Under Ps2EeAs the same cc1
+# output is 160/160. That assembler is the pinned SN ProDG 2.0 one the boot
+# assembly base already uses; it is worse than the pinned GNU `as` on most of
+# the campaign (200 of 411 objects differ), which is why it is selected here for
+# one body rather than pinned as the chain.
+src/boot/sceKernelGetSystemTimeLow__Fv.c  as=ps2eeas
+
+# Route Q, second batch: libgcc soft-float conversions and comparisons, the
+# libc entry points and the libsif/libdma bodies the sweep measured exact under
+# the same pinned Sony compiler and the
+# same pinned GNU as. Same negative control: without the selector the pinned
+# chain reaches a fraction of each body (see qretry/sweep_sdk.tsv privately).
+src/boot/__fixunsdfdi.c    sdk991111 -O2 -G0
+src/boot/__floatdidf.c    sdk991111 -O2 -G0
+src/boot/__main.c    sdk991111 -O2 -G0
+src/boot/dpcmp.c    sdk991111 -O2 -G0
+src/boot/dpdiv.c    sdk991111 -O2 -G0
+src/boot/dpmul.c    sdk991111 -O2 -G0
+src/boot/dpsub.c    sdk991111 -O2 -G0
+src/boot/dptofp.c    sdk991111 -O2 -G0
+src/boot/dptoli.c    sdk991111 -O2 -G0
+src/boot/dptoul.c    sdk991111 -O2 -G0
+nonmatching/boot/exit.c    sdk991111 -O2 -G0
+src/boot/fptodp.c    sdk991111 -O2 -G0
+src/boot/fptoui.c    sdk991111 -O2 -G0
+src/boot/litodp.c    sdk991111 -O2 -G0
+src/boot/ps2fioLseekPartition.c    sdk991111 -O2 -G0
+src/boot/sceDmaPutEnv.c    sdk991111 -O2 -G0
+src/boot/sceSifSendCmd.c    sdk991111 -O2 -G0
+
+# Route R, second bench: the three libm bodies that are exact only when the
+# Sony compiler's output is assembled by the SDK `as` with -G0. That assembler
+# otherwise lowers a `li.s` float to a GP-relative lit4 entry, which the
+# campaign's linker script does not define (the link stops on `R_MIPS_LITERAL
+# lit4`); with -G0 the same pseudo-op is inlined like the pinned `as` does.
+# __kernel_cosf reaches 344/344 and 264 bytes of __kernel_sinf 260/260 and
+# scalbnf 352/352, each filling its owned interval; without the assembler
+# selector the pinned chain reproduces only 281/344, 187/260 and 346/352.
+src/boot/__kernel_cosf.c        sdk991111 as=ee-sdk -O2 -G0
+src/boot/__kernel_sinf.c        sdk991111 as=ee-sdk -O2 -G0
+src/boot/scalbnf.c             sdk991111 as=ee-sdk -O2 -G0
+
+# Route Q, third batch: the GCC 2.9 RTTI accessors. Each is byte-exact under
+# the pinned Sony compiler with the pinned GNU as; the pinned chain reaches
+# 76 of the 80 bytes. Their external type-info nodes and name strings are
+# absolute data symbols in the campaign linker script -- ld.exe prints them
+# demangled ("bad_exception type_info node") in its diagnostics, but the
+# object names are the ordinary __ti*/STR_name spellings.
+src/boot/__tf10bad_typeid.c    sdk991111 -O2 -G0
+src/boot/__tf13bad_exception.c    sdk991111 -O2 -G0
+src/boot/__tf14__si_type_info.c    sdk991111 -O2 -G0
+src/boot/__tf16__attr_type_info.c    sdk991111 -O2 -G0
+src/boot/__tf16__func_type_info.c    sdk991111 -O2 -G0
+src/boot/__tf16__ptmd_type_info.c    sdk991111 -O2 -G0
+src/boot/__tf16__ptmf_type_info.c    sdk991111 -O2 -G0
+src/boot/__tf16__user_type_info.c    sdk991111 -O2 -G0
+src/boot/__tf17__array_type_info.c    sdk991111 -O2 -G0
+src/boot/__tf17__class_type_info.c    sdk991111 -O2 -G0
+src/boot/__tf19__builtin_type_info.c    sdk991111 -O2 -G0
+src/boot/__tf19__pointer_type_info.c    sdk991111 -O2 -G0
+src/boot/__tf8bad_cast.c    sdk991111 -O2 -G0
+src/boot/__tf9bad_alloc.c    sdk991111 -O2 -G0
+src/boot/__tf9type_info.c    sdk991111 -O2 -G0
+
+# Route Q, fourth batch: the two libm bodies whose only remaining difference was
+# the R5900 division pad. The retail pads every single-precision division with
+# two nops and never schedules one into a delay slot (208 COP1 sites measured);
+# the SDK compiler's cc1 does neither, so the profile pins a build of the same
+# Sony source with tools/compiler/patches/0002-rac5-div-pad.patch. With it
+# __ieee754_expf fills 692 of its 696 bytes and __ieee754_fmodf all 592, both
+# exactly; without it the same sources score 560/676 and 175/576.
+src/boot/__ieee754_expf.c   sdk-divpad as=ee-sdk -O2 -G0
+src/boot/__ieee754_fmodf.c  sdk-divpad as=ee-sdk -O2 -G0
+
+# Wave 10, route A: two libm bodies whose constants the retail code loads from
+# the shared .rodata pool instead of materialising them in place. They are
+# measured under the neighbouring libm profiles; the campaign pre-links each one
+# alone with its pool pinned, then injects only the resolved .text, because the
+# final link takes retail data from boot_data.o and discards object .rodata.
+src/boot/__ieee754_logf.c   sdk-divpad as=ee-sdk -O2 -G0
+src/boot/__kernel_sin.c     sdk991111 as=ee-sdk -O2 -G0
+
+# Route Q, fifth batch: the SDK library and libdma bodies whose sources live in
+# the lombyte-upstream SDK tree. Each is byte-exact under the pinned Sony
+# compiler; the pinned chain reproduces only part of them.
+src/boot/InitAlarm.c    sdk991111 -O2 -G0
+src/boot/sceCdGetError.c    sdk991111 -O2 -G0
+src/boot/sceDmaPause.c    sdk991111 -O2 -G0
+src/boot/sceDmaReset.c    sdk991111 -O2 -G0
+src/boot/sceDmaSend.c    sdk991111 -O2 -G0
+src/boot/sceGsPutDrawEnv.c    sdk991111 -O2 -G0
+src/boot/sceGsResetGraph.c    sdk991111 -O2 -G0
+src/boot/sceGszbufaddr.c    sdk991111 -O2 -G0
+src/boot/sceScfGetTimeZone.c    sdk991111 -O2 -G0
+
+# Route Q, sixth batch: the memory-card RPC wrappers and the GS sync helper.
+# The SDK region of the retail boot carries 16-byte save slots (`sd $s0,0x0` /
+# `sd $ra,0x10`); the pinned chain has 8-byte slots and reproduces 73-140 of
+# these bytes, while the pinned Sony compiler fills their owned intervals
+# exactly. The memory-card RPC frames are reached through absolute SDK
+# addresses (`lui` + signed `addiu`, e.g. lui 0x1FE + addiu -0x2100 =
+# 0x01FDDF00), which each source declares through its .map sidecar.
+src/boot/sceMcOpen.c    sdk991111 -O2 -G0
+src/boot/sceMcDelete.c    sdk991111 -O2 -G0
+src/boot/sceMcRename.c    sdk991111 -O2 -G0
+src/boot/sceMcRead.c    sdk991111 -O2 -G0
+src/boot/sceMcWrite.c    sdk991111 -O2 -G0
+src/boot/sceMcGetInfo.c    sdk991111 -O2 -G0
+src/boot/sceMcGetDir.c    sdk991111 -O2 -G0
+src/boot/sceGsSyncV.c    sdk991111 -O2 -G0
+
+# Same batch: two libm entry points. floor reads its threshold from the shared
+# .rodata through three distinct aliases of the same address (the retail emits
+# three independent lui/ld pairs); rint loads TWO52 the same way.
+src/boot/floor.c    sdk991111 -O2 -G0
+src/boot/rint.c    sdk991111 -O2 -G0
+
+# Same batch: the kernel init body whose source comes from the SDK tree.
+src/boot/InitExecPS2.c    sdk991111 -O2 -G0
+
+# Wall E: two libm bodies that need both measured axes of the libm tree at once
+# -- the div.s pad of the sdk-divpad profile and the authentic -fno-builtin
+# (the retail libm calls fabsf instead of inlining abs.s; without the flag the
+# frame and the call disappear). Controls: atan2f 582/736 without -fno-builtin
+# and 563/736 without the pad; tanf 131/644 and 183/604. The flag leaves the
+# two libm bodies already exact under sdk-divpad byte-identical.
+src/boot/__ieee754_atan2f.c  sdk-divpad as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/__kernel_tanf.c     sdk-divpad as=ee-sdk -O2 -G0 -fno-builtin
+
+# Wave 11, route P family: the libc/libm bodies whose 16-byte `sq` save slots
+# come from SN ProDG 3.01 (ee-gcc2953) with the pinned ProDG 2.0 assembler.
+# The pinned chain emits 8-byte `sd` slots and reproduces only part of each
+# body; the same sources under this chain fill their intervals exactly. This
+# also retires the wave-10 "sq wall" for the C-authored members of the family.
+src/boot/fread.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/fflush.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/__srefill.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/_multadd.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/_calloc_r.c    prodg2953 as=ps2eeas -O2 -G0
+
+# Wave 11, route Q continued: memory-card, libsif, libcd and sibling-call
+# bodies measured exact under the pinned Sony compiler. The SetT2/sn_* family
+# and sceSifSetRpcQueue are the sibling-call (`j`) forms the pinned chain
+# compiles with a frame and a `jal`.
+src/boot/sceMcClose.c    sdk991111 -O2 -G0
+src/boot/sceMcSeek.c    sdk991111 -O2 -G0
+src/boot/sceMcFormat.c    sdk991111 -O2 -G0
+src/boot/sceMcUnformat.c    sdk991111 -O2 -G0
+src/boot/sceMcFlush.c    sdk991111 -O2 -G0
+src/boot/sceMcGetSlotMax.c    sdk991111 -O2 -G0
+src/boot/sceMcEnd.c    sdk991111 -O2 -G0
+src/boot/sceSifAllocIopHeap.c    sdk991111 -O2 -G0
+src/boot/sceSifBindRpc.c    sdk991111 -O2 -G0
+src/boot/sceCdMmode.c    sdk991111 -O2 -G0
+src/boot/sceCdReadClock.c    sdk991111 -O2 -G0
+src/boot/sceSifInitRpc.c    sdk991111 -O2 -G0
+src/boot/sceClose.c    sdk991111 -O2 -G0
+nonmatching/boot/sceSifSetRpcQueue.c    sdk991111 -O2 -G0
+nonmatching/boot/SetT2_COUNT.c    sdk991111 -O2 -G0
+nonmatching/boot/SetT2_MODE.c    sdk991111 -O2 -G0
+nonmatching/boot/SetT2_COMP.c    sdk991111 -O2 -G0
+nonmatching/boot/sn_reg_frame.c    sdk991111 -O2 -G0
+nonmatching/boot/sn_dereg_frame.c    sdk991111 -O2 -G0
+
+# Wave 11, route Q with the SDK assembler: three C++ runtime helpers and the
+# sceSif command body that need the Sony cc1 and `ee-as-sdk -G0`.
+src/boot/__eh_rtime_match.c    sdk991111 as=ee-sdk -O2 -G0
+src/boot/__throw_type_match.c    sdk991111 as=ee-sdk -O2 -G0
+src/boot/dcast__C16__user_type_infoRC9type_infoiPvPC9type_infoT3.c    sdk991111 as=ee-sdk -O2 -G0
+src/boot/isceSifSendCmd.c    sdk991111 as=ee-sdk -O2 -G0
+
+# Wave 11 Batch B: public Newlib 1.9.0/fdlibm sources adapted for the pinned
+# RAC5 boot. Each route was measured per body; the level and boot profiles stay
+# separate. Pool bodies are pre-linked at their recorded retail .rodata base.
+src/boot/acosf.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/asinf.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/atan2f.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/atanf.c    sdk-divpad as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/ceilf.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/copysignf.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/cosf.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/expf.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/fabs.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/fabsf.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/finitef.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/floorf.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/fmodf.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/isnan.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/isnanf.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/logf.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/sin.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/sinf.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/sqrt.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/sqrtf.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/tanf.c    sdk991111 as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/__kernel_rem_pio2.c    sdk991111 as=ee-sdk -O2 -G0
+src/boot/__kernel_cos.c    sdk991111 as=ee-sdk -O2 -G0
+src/boot/__kernel_rem_pio2f.c    sdk991111 as=ee-sdk -O2 -G0
+src/boot/__ieee754_rem_pio2f.c    sdk-divpad as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/__ieee754_rem_pio2.c    sdk-divpad as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/__ieee754_sqrt.c    sdk991111 as=ee-sdk -O2 -G0
+src/boot/__ieee754_sqrtf.c    sdk-divpad as=ee-sdk -O2 -G0 -fno-builtin
+src/boot/__ieee754_acosf.c    sdk-divpad as=ee-sdk -O2 -G0 -fno-builtin
+
+# Wave 11 e4: the already pinned ProDG 3.01 compiler with the already pinned
+# ProDG 2.0 Ps2EeAs reproduces these seven bodies; no new assembler pin.
+src/boot/_i2b.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/ps2fioChStat.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/ps2fioDclose.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/ps2fioRebootIop.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/ps2fioSync.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/ps2fioUmountPartition.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/ps2fioUnformatDevice.c    prodg2953 as=ps2eeas -O2 -G0
+
+# Wave 12 backlog: the newlib/libm members whose 16-byte sq slots and short
+# loop padding come from SN ProDG 3.01 with the pinned ProDG 2.0 assembler.
+# qsort is exact only at -O3 (the retail build inlines med3/swapfunc).
+src/boot/_strtol_r.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/_strtoul_r.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/_b2d.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/_d2b.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/sn_floor.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/sn_log10.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/sn_log.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/qsort.c    prodg2953 as=ps2eeas -O3 -G0
+src/boot/_malloc_trim_r.c    prodg2953 as=ps2eeas -O2 -G0
+src/boot/ps2fioLoadExec.c    prodg2953 as=ps2eeas -O2 -G0
+
+# Wave 12 backlog: the libcd/sif/kernel bodies exact under the pinned Sony
+# compiler, and the libgcc throw helper that needs it too.
+src/boot/sceSifRebootIop.c    sdk991111 -O2 -G0
+nonmatching/boot/_InitSys.c    sdk991111 -O2 -G0
+src/boot/_sceCd_cd_callback.c    sdk991111 -O2 -G0
+src/boot/sceCdNcmdDiskReady.c    sdk991111 -O2 -G0
+src/boot/sceCdSync.c    sdk991111 -O2 -G0
+src/boot/sceOpen.c    sdk991111 -O2 -G0
+nonmatching/boot/__sjpopnthrow.c    sdk991111 -O2 -G0
+
+# Wave 12 backlog: the tty init body, exact under the Sony compiler with the
+# SDK assembler.
+src/boot/sceTtyInit.c    sdk991111 as=ee-sdk -O2 -G0
+
+# Wave 12 pools: the printf scanf body needs the ProDG 3.01 compiler with the
+# SDK assembler; its jump tables are placed by the campaign's pool prelink.
+src/boot/__svfscanf.c    prodg2953 as=ee-sdk -O2 -G0 -Ithird_party/newlib-1.8.2/newlib/libc/include -Ithird_party/newlib-1.8.2/newlib/libc/stdio
+
+# Wave 12 pool .data: the wide-character state body carries both a .rodata
+# constant and its initialised .data tables; the campaign prelink now places
+# and checks both against the retail sections.
+src/boot/_mbtowc_r.c    prodg2953 as=ps2eeas -O2 -G0
+
+# Wave 12 compiler-profile study: the three Gu rotation helpers reproduce the
+# retail descending callee-saved save order only with the trial GNU 2.9 cc1
+# built without the RAC2 "increasing saves" patch; the pinned cc1 keeps that
+# patch and fails them (252/260 etc.). The profile is selected per source, so
+# no other body is affected; the complete gate rechecks every pin.
+src/boot/RotateX__Q34scee3Psp3Gumf.c    gnu-ee-trial as=ee-sdk -O2 -G0
+src/boot/RotateY__Q34scee3Psp3Gumf.c    gnu-ee-trial as=ee-sdk -O2 -G0
+src/boot/RotateZ__Q34scee3Psp3Gumf.c    gnu-ee-trial as=ee-sdk -O2 -G0
+nonmatching/boot/_sceCd_ncmd_prechk.c    sdk991111 as=ee-sdk -O2 -G0
+nonmatching/boot/_sceCd_scmd_prechk.c    sdk991111 as=ee-sdk -O2 -G0
+nonmatching/boot/scePadSetActAlign.c    sdk991111 as=ee-sdk -O2 -G0
+nonmatching/boot/MCPTRANS_Fade_Init__Fv.c    gnu-ee-trial -O2 -G0
+nonmatching/boot/__frame_state_for.c    sdk991111 -O2 -G0
+nonmatching/boot/scePadGetState.c    sdk991111 -O2 -G0
+nonmatching/boot/sceMcSync.c    sdk991111 -O2 -G0
+nonmatching/boot/powf.c    sdk991111 as=ee-sdk -O2 -G0
+nonmatching/boot/scalbn.c    sdk991111 as=ee-sdk -O2 -G0
+nonmatching/boot/__ieee754_asinf.c    sdk-divpad as=ee-sdk -O2 -G0 -fno-builtin
+nonmatching/boot/add_separators.c    prodg2953 as=ps2eeas -O2 -G0

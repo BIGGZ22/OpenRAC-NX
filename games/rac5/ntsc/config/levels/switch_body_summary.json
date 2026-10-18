@@ -1,0 +1,20 @@
+{
+  "status": "contiguous_switch_body_leads_only",
+  "module_count": 21,
+  "reviewed_placements": 1117,
+  "reviewed_placement_bytes": 1784320,
+  "masked_groups": 158,
+  "shared_masked_groups": 98,
+  "optimistic_shared_shape_savings": 1539908,
+  "review_sha256": "b4f394ee154ec1337f6686ffeec619215053d85331a93a61600471855e75f48e",
+  "target_sha256": "043f3679a3a7f4e861986aeed303dd30e344c837c34303fc8591b71271a0f96f",
+  "module_catalogue_sha256": "ca38d187d892f1f1a62395b4ee49e50af45305ac8bd67507936387d77945a4ec",
+  "code_catalogue_sha256": "7e9185101e055457d591b1fbe55baa122a103ef99eae13b4761d0920ef249768",
+  "inventory_sha256": "4baab06c153cd1be2af72591f9bf82efc0b9c7d9198592cc50977dcc891b7b49",
+  "split_sha256": "b3b2a6e5526b06be3b7fbf1405910f3fa42ba48b444301e1ecc1cf847a08bb85",
+  "ghidra_sha256": "0f00587cd4f346955d8264343f93cde9259170ed8e0c61259cada3682b979f9d",
+  "full_flow_sha256": "0a153c6a1fec77a20deed23d52846ccb8ce4f65f8349bceaac56ee969d608352",
+  "overall_percent": null,
+  "bytematch_ready": false,
+  "warning": "Full-module Ghidra and static call/pointer evidence support contiguous switch-body review leads. Masked shapes and function ownership still need data and callgraph checks."
+}
