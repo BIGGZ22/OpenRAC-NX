@@ -223,7 +223,7 @@ void FUN_L08_002b82a0(Moby_2B94B0 *m)
 /* Spawns a moby of class 0xF8 at a position and facing derived from a vector. */
 /* Ported from rac1-decomp (src/overlays/l08_batalia/vendor_002B9438.c: func_L08_002D35E8), where it is exact; names translated to the US level program. */
 
-extern char *func_0020D348_m(int);
+extern char *func_0020D348_m(int) __asm__("FUN_0020c4f8");
 extern float fast_arc_tan(float, float) __asm__("FUN_001f9e90");
 extern int scale_game_frames(int) __asm__("FUN_001f96f8");
 extern void FUN_L00_00250df8(void *);

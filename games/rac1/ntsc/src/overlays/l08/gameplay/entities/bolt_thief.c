@@ -55,7 +55,7 @@ void FUN_L08_002e1698(struct Moby *arg) {
 
 /* Ported from rac1-decomp (src/overlays/l08_batalia/vendor_002E0258.c: func_L08_002E3010), where it is exact; names translated to the US level program. */
 
-extern char *func_0020D348_m(int);
+extern char *func_0020D348_m(int) __asm__("FUN_0020c4f8");
 extern char D_0013E533[];
 extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
 extern void FUN_L00_00250df8(void *);
