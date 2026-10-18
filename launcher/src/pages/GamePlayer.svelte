@@ -5,9 +5,11 @@
   // is under Mods). Each button runs the actions the developer page lists
   // (launcher/actions.json), found by their ids. With developer tools on, that
   // list follows under the same button (DeveloperPanel).
+  import CrashNotice from "$components/CrashNotice.svelte";
   import DeveloperPanel from "$components/DeveloperPanel.svelte";
   import Icon from "$components/Icon.svelte";
   import Menu, { type MenuItem } from "$components/Menu.svelte";
+  import ReportsBlock from "$components/ReportsBlock.svelte";
   import SaveManagerBlock from "$components/SaveManagerBlock.svelte";
   import { api, type ActionView } from "$lib/api";
   import { app, currentVersion, guard, run, uninstallGame } from "$lib/app.svelte";
@@ -56,6 +58,14 @@
     if (sure) await uninstallGame(v.game);
   }
 
+  /** Crash reports from the last three days (app.countCrashes): a way to them under the main button. */
+  const recentCrashes = $derived(v ? (app.crashes[v.game]?.recent ?? 0) : 0);
+  function showLogs() {
+    const logs = document.getElementById("logs");
+    logs?.scrollIntoView({ behavior: "smooth", block: "start" });
+    logs?.focus({ preventScroll: true });
+  }
+
   /** What is done less often than playing, in the menu beside the main button. */
   const menu = $derived.by<MenuItem[]>(() => {
     if (!v) return [];
@@ -69,6 +79,13 @@
     }
     if (extract && extract.state !== "planned") {
       items.push({ label: "Edit its levels (Mods)", icon: "edit", run: () => (app.page = "mods") });
+    }
+    if (setUp) {
+      items.push({
+        label: "Logs and crash reports",
+        icon: "book",
+        run: showLogs,
+      });
     }
     items.push({ label: "Open the game's folder", icon: "folder", run: () => void guard(api.openPath(dir)) });
     items.push({ label: "Activity log", icon: "terminal", run: () => (app.page = "tasks") });
@@ -91,6 +108,10 @@
     {/if}
 
     <button class="ghost back" onclick={() => (app.page = "library")}><Icon name="arrow" size={16} />Games</button>
+
+    {#if app.stopped?.game === v.game}
+      <CrashNotice notice={app.stopped} title={v.title} />
+    {/if}
 
     <section class="hero rise" aria-label={v.title}>
       {#if media}
@@ -117,6 +138,11 @@
           <Menu items={menu} />
         </div>
         {#if next.hint}<p class="line" class:clip={!!next.job}>{next.hint}</p>{/if}
+        {#if !app.stopped && recentCrashes > 0}
+          <button class="crashed" onclick={showLogs}>
+            <Icon name="warn" size={15} />Crashed recently: send us the report
+          </button>
+        {/if}
       </div>
 
       {#if showSteps}
@@ -132,6 +158,7 @@
 
     {#if developer && studied}<DeveloperPanel {game} version={studied} />{/if}
     <SaveManagerBlock version={v} />
+    {#if setUp}<ReportsBlock game={v.game} />{/if}
   </div>
 {/if}
 
@@ -309,6 +336,18 @@
     padding: 16px 46px;
     border-radius: 999px;
     gap: 12px;
+  }
+
+  .crashed {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    font-size: 14px;
+    color: var(--err);
+    background: rgb(18 18 26 / 0.7);
+    border: 1px solid color-mix(in srgb, var(--err) 45%, transparent);
+    border-radius: 999px;
   }
 
   .line {

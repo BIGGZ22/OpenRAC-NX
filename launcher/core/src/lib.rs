@@ -17,6 +17,8 @@
 //! - [`jobs`]: running an action as a child process and streaming its output.
 //! - [`overrides`]: a game's overrides packs (replacement textures and models): list, order, on/off.
 //! - [`library`]: all of the above, put together for the UI.
+//! - [`reports`]: a game's session logs and crash reports, the text and the .zip players send.
+//! - [`launcher_log`]: the launcher's own log, which goes in that .zip.
 
 pub mod actions;
 pub mod catalog;
@@ -26,8 +28,10 @@ pub mod discord;
 pub mod discs;
 pub mod install;
 pub mod jobs;
+pub mod launcher_log;
 pub mod library;
 pub mod overrides;
+pub mod reports;
 pub mod save_edit;
 pub mod saves;
 pub mod status;

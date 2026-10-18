@@ -58,6 +58,27 @@ export interface Config {
   discordClientId: string | null;
   /** "compact", or "classic": the original design (src/layouts/compact.css). */
   layout: "compact" | "classic";
+  /** The game writes a detailed log (OPENRAC_LOG=verbose); off keeps logs small. */
+  detailedGameLog: boolean;
+}
+
+/** One of a game's logs or crash reports (core/src/reports.rs). */
+export interface ReportEntry {
+  kind: "crash" | "session";
+  /** Its path in the game's data folder: `crashes/crash-....txt`, `openrac-rac1-pal.log`. */
+  file: string;
+  program: string | null;
+  /** When it happened (a crash) or began (a session), seconds since 1970. */
+  time: number;
+  /** How long the session ran, in seconds. */
+  duration: number | null;
+  /** A crash's reason, in the port's words: for the Details. */
+  reason: string | null;
+  level: number | null;
+  planet: string | null;
+  crashed: boolean;
+  session: string | null;
+  size: number;
 }
 
 export type DiscordStatus =
@@ -436,6 +457,16 @@ export const api = {
   backupSaves: (serial: string, note?: string) => call<SaveBackupInfo>("backup_saves", { serial, note }),
   restoreBackup: (serial: string, backupName: string) => call<null>("restore_backup", { serial, backupName }),
   openSavesFolder: (serial: string) => call<null>("open_saves_folder", { serial }),
+  /** A game's session logs and crash reports, the newest first. */
+  reportsList: (game: string) => call<ReportEntry[]>("reports_list", { game }),
+  /** The newest crash report written since `since` (seconds since 1970). */
+  latestCrash: (game: string, since: number) => call<ReportEntry | null>("latest_crash", { game, since }),
+  /** The short text to paste in an issue or on Discord (home folder as ~). */
+  reportText: (game: string, file: string) => call<string>("report_text", { game, file }),
+  /** Saves the report's .zip in Downloads and shows it; returns where (home folder as ~). */
+  reportSave: (game: string, file: string) => call<string>("report_save", { game, file }),
+  /** Opens the folder of a game's logs, or of its crash reports. */
+  openReportsFolder: (game: string, crashes: boolean) => call<null>("open_reports_folder", { game, crashes }),
   /** One slot for the save editor. */
   readSave: (serial: string, slot: number) => call<SaveView>("read_save", { serial, slot }),
   /** Writes the editor's change: refused while the game runs with the card; backs the card up first. */

@@ -190,6 +190,16 @@
         </span>
       </label>
       <label class="option">
+        <input type="checkbox" bind:checked={draft.detailedGameLog} />
+        <span>
+          <strong>Detailed game logs</strong>
+          <small>
+            Turn this on when we ask you to: the game writes more about what it does. Each game's logs and crash reports
+            are on its own page, under its save files.
+          </small>
+        </span>
+      </label>
+      <label class="option">
         <input type="checkbox" bind:checked={draft.developer} />
         <span>
           <strong>Developer tools</strong>

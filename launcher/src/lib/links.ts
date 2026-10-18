@@ -4,3 +4,5 @@ export const SITE_URL = "https://openrac.dev";
 export const REPO_URL = "https://github.com/OpenRAC/OpenRAC";
 export const DISCORD_URL = "https://discord.gg/Sfd2B54PDG";
 export const GODOT_URL = "https://godotengine.org/download";
+/** Where players report a crash or a bug. */
+export const ISSUES_URL = "https://github.com/OpenRAC/OpenRAC/issues";

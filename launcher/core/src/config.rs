@@ -43,6 +43,9 @@ pub struct Config {
     pub discord_client_id: Option<String>,
     /// The page layout: "compact" (default) or "classic", the original design (src/layouts/).
     pub layout: String,
+    /// The game writes a detailed log (OPENRAC_LOG=verbose): level loads, controller changes,
+    /// what the port is missing. Off by default, so a log stays small.
+    pub detailed_game_log: bool,
 }
 
 impl Default for Config {
@@ -62,6 +65,7 @@ impl Default for Config {
             check_updates: true,
             discord_client_id: None,
             layout: "compact".into(),
+            detailed_game_log: false,
         }
     }
 }

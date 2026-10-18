@@ -45,7 +45,7 @@
       onclick={() => {
         openVersion(v.key);
       }}
-      aria-label={`${game.title}: ${next.status}`}
+      aria-label={`${game.title}: ${next.status}${(app.crashes[game.id]?.recent ?? 0) > 0 ? ". It crashed recently: a report is on its page" : ""}`}
     ></button>
 
     <div class="foot">
@@ -55,6 +55,9 @@
           {#if next.job}<span class="spinner"></span>{:else}<span class="dot"></span>{/if}{next.status}
         </p>
         {#if matched}<p class="matched">{matched} matched</p>{/if}
+        {#if (app.crashes[game.id]?.recent ?? 0) > 0}
+          <p class="crashed"><Icon name="warn" size={13} />Crashed recently: a report is on its page</p>
+        {/if}
       </div>
       {#if offers}
         <button class="act" class:primary={next.primary} onclick={() => void playerAct(v, next)}>
@@ -110,6 +113,15 @@
     .tile:focus-within .art {
       transform: none;
     }
+  }
+
+  .crashed {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0 0;
+    font-size: 12.5px;
+    color: var(--err);
   }
 
   .shade {

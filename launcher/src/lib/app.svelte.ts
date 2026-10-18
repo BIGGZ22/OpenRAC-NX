@@ -17,6 +17,7 @@ import {
   type VersionView,
 } from "./api";
 import { Queue, type Job } from "./queue";
+import { lastLines, PLAY_ACTIONS, type StopNotice } from "./reports";
 import { checkForUpdate, type UpdateInfo } from "./updates";
 
 export type Page = "library" | "game" | "mods" | "tasks" | "settings";
@@ -35,6 +36,12 @@ interface AppState {
   toasts: { id: number; text: string; kind: "info" | "error" }[];
   update: UpdateInfo | null;
   showUpdateModal: boolean;
+  /** The game stopped unexpectedly: the notice on its Play page, until dismissed. */
+  stopped: StopNotice | null;
+  /** Bumped when the logs may have changed (the game ended): the logs list reads them again. */
+  reportsChanged: number;
+  /** Each set-up game's crash reports: how many, and how many in the last three days (the tiles' mark). */
+  crashes: Record<string, { total: number; recent: number }>;
 }
 
 export const app = $state<AppState>({
@@ -48,6 +55,9 @@ export const app = $state<AppState>({
   toasts: [],
   update: null,
   showUpdateModal: false,
+  stopped: null,
+  reportsChanged: 0,
+  crashes: {},
 });
 
 /** The time, once a second: what a running job's elapsed time is counted against. One timer for
@@ -90,7 +100,14 @@ export async function start() {
     queue.apply(event);
     if (event.type === "exit") {
       const job = queue.jobs.find((j) => j.id === event.id);
-      if (job?.state === "failed") toast(`${job.title} failed`, "error");
+      const played = !!job && PLAY_ACTIONS.includes(job.actionId) && job.scope.kind === "version";
+      if (played) {
+        app.reportsChanged++;
+        void countCrashes();
+      }
+      // The game stopping on its own is not a failed task: the Play page says what happened.
+      if (job?.state === "failed" && played) void gameStopped(job);
+      else if (job?.state === "failed") toast(`${job.title} failed`, "error");
       if (job) settle(job.key, job.state === "succeeded");
       void refresh();
       updateDiscordPresence();
@@ -106,6 +123,42 @@ export async function start() {
   if (app.info.version && app.config.checkUpdates) {
     void lookForUpdate();
   }
+}
+
+/** The game ended with an error status or a signal: find its crash report and show the notice. */
+async function gameStopped(job: Job) {
+  if (job.scope.kind !== "version") return;
+  const versionKey = job.scope.key;
+  const game = versionKey.split("/")[0] ?? versionKey;
+  const since = Math.floor((job.startedAt ?? job.queuedAt) / 1000) - 2;
+  // No install folder: the notice still says it stopped.
+  const crash = await api.latestCrash(game, since).catch(() => null);
+  app.stopped = { game, versionKey, code: job.code, at: job.endedAt ?? Date.now(), crash, lines: lastLines(job.lines) };
+  // On another page, the player is told where to look.
+  if (app.page !== "game" || currentVersion()?.game !== game) {
+    toast("The game stopped unexpectedly. Its page has a report you can send us.", "error");
+  }
+}
+
+/** How many crash reports each set-up game has, for the tiles and the Play page's badge. */
+export async function countCrashes() {
+  const counts: AppState["crashes"] = {};
+  const recent = Date.now() / 1000 - 3 * 86400;
+  for (const g of app.library?.games ?? []) {
+    if (!g.install?.extracted) continue;
+    try {
+      const crashes = (await api.reportsList(g.id)).filter((e) => e.kind === "crash");
+      counts[g.id] = { total: crashes.length, recent: crashes.filter((e) => e.time >= recent).length };
+    } catch {
+      // no install folder: nothing to count
+    }
+  }
+  app.crashes = counts;
+}
+
+/** Puts the notice away. */
+export function dismissStopped() {
+  app.stopped = null;
 }
 
 /** Looks for a new launcher now (at start, or Settings' "Check now"); true when one is out. */
@@ -129,6 +182,7 @@ export async function refresh() {
   } catch (e) {
     app.libraryError = errorText(e);
   }
+  void countCrashes();
   try {
     app.discs = app.config.discsDir ? await api.scanDiscs() : [];
   } catch {

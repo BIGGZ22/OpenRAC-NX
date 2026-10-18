@@ -11,8 +11,10 @@ use openrac_launcher_core::config::{self, Config};
 use openrac_launcher_core::detect::{self, Check, Detected, Tool};
 use openrac_launcher_core::install;
 use openrac_launcher_core::jobs::{Event, Jobs, Started};
+use openrac_launcher_core::launcher_log;
 use openrac_launcher_core::library::{self, Library};
 use openrac_launcher_core::overrides::{self, PackView};
+use openrac_launcher_core::reports::{self, ReportEntry};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_opener::OpenerExt;
@@ -181,7 +183,9 @@ fn run_action(
         _ => None,
     };
     let app_handle = app.clone();
-    state.jobs.start(&plan, config.root.as_deref(), move |event| {
+    let title = plan.title.clone();
+    launcher_log::line(&format!("run: {}", openrac_launcher_core::jobs::command_line(&plan)));
+    let started = state.jobs.start(&plan, config.root.as_deref(), move |event| {
         let _ = match &event {
             Event::Output { line, .. } => {
                 // The planet and bolts the game logs.
@@ -200,7 +204,15 @@ fn run_action(
                 }
                 app.emit("job-output", &event)
             }
-            Event::Exit { .. } => {
+            Event::Exit { code, cancelled, .. } => {
+                launcher_log::line(&format!(
+                    "ended: {title}: {}",
+                    if *cancelled {
+                        "cancelled".to_string()
+                    } else {
+                        code.map_or("stopped by a signal (no exit code)".to_string(), |c| format!("exit code {c}"))
+                    }
+                ));
                 if is_play {
                     if let Some(st) = app_handle.try_state::<AppState>() {
                         let cfg = st.config.lock().unwrap().clone();
@@ -220,7 +232,83 @@ fn run_action(
                 app.emit("job-exit", &event)
             }
         };
+    });
+    if let Err(e) = &started {
+        launcher_log::line(&format!("could not start: {e}"));
+    }
+    started
+}
+
+// ---- Logs and crash reports (core/src/reports.rs) ----
+
+/// A game's data folder, where its logs and crash reports are.
+fn game_data(state: &State<'_, AppState>, game: &str) -> Result<PathBuf, String> {
+    if game.is_empty() || game.contains(['/', '\\', '.']) {
+        return Err(format!("{game} is not a game"));
+    }
+    let install = state.config.lock().unwrap().install_dir.clone().ok_or("no install folder (Settings)")?;
+    Ok(install::data_dir(&install, game))
+}
+
+#[tauri::command]
+async fn reports_list(state: State<'_, AppState>, game: String) -> Result<Vec<ReportEntry>, String> {
+    let data = game_data(&state, &game)?;
+    tauri::async_runtime::spawn_blocking(move || reports::list(&data)).await.map_err(|e| e.to_string())
+}
+
+/// The newest crash report written since `since` (seconds since 1970): after the game stopped.
+#[tauri::command]
+async fn latest_crash(state: State<'_, AppState>, game: String, since: u64) -> Result<Option<ReportEntry>, String> {
+    let data = game_data(&state, &game)?;
+    let found = tauri::async_runtime::spawn_blocking(move || reports::latest_crash(&data, since))
+        .await
+        .map_err(|e| e.to_string())?;
+    if let Some(e) = &found {
+        launcher_log::line(&format!(
+            "the game stopped unexpectedly: {} ({})",
+            e.file,
+            e.reason.as_deref().unwrap_or("?")
+        ));
+    }
+    Ok(found)
+}
+
+#[tauri::command]
+async fn report_text(app: AppHandle, state: State<'_, AppState>, game: String, file: String) -> Result<String, String> {
+    let data = game_data(&state, &game)?;
+    let version = app.package_info().version.to_string();
+    tauri::async_runtime::spawn_blocking(move || reports::copy_text(&data, &file, &version))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// Saves the .zip for `file` in the player's Downloads folder and shows it there; returns its path.
+#[tauri::command]
+async fn report_save(app: AppHandle, state: State<'_, AppState>, game: String, file: String) -> Result<String, String> {
+    let data = game_data(&state, &game)?;
+    let version = app.package_info().version.to_string();
+    let folder = reports::save_folder().ok_or("no folder to save in")?;
+    let out = folder.join(reports::bundle_name(&file));
+    let target = out.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        reports::bundle(&data, &file, launcher_log::path().as_deref(), &version, &target)
     })
+    .await
+    .map_err(|e| e.to_string())??;
+    launcher_log::line(&format!("saved a report: {}", out.display()));
+    let _ = app.opener().reveal_item_in_dir(&out);
+    Ok(reports::tidy(&out.to_string_lossy(), reports::home().as_deref()))
+}
+
+/// Opens the folder a game's logs are in (its crash reports' folder when `crashes`).
+#[tauri::command]
+fn open_reports_folder(app: AppHandle, state: State<'_, AppState>, game: String, crashes: bool) -> Result<(), String> {
+    let data = game_data(&state, &game)?;
+    let dir = if crashes && data.join("crashes").is_dir() { data.join("crashes") } else { data };
+    if !dir.is_dir() {
+        return Err("nothing has been logged for this game yet".into());
+    }
+    app.opener().open_path(dir.to_string_lossy(), None::<&str>).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -654,6 +742,14 @@ pub fn run() {
                 });
             }
 
+            if let Some(dir) = config_file.as_deref().and_then(Path::parent) {
+                launcher_log::init(dir);
+                launcher_log::line(&format!(
+                    "the launcher {} started on {:?}",
+                    app.package_info().version,
+                    Platform::current()
+                ));
+            }
             app.manage(AppState { config: Mutex::new(config), config_file, jobs: Jobs::default(), discord, bundled });
             Ok(())
         })
@@ -687,6 +783,11 @@ pub fn run() {
             overrides_move,
             overrides_remove,
             open_game_folder,
+            reports_list,
+            latest_crash,
+            report_text,
+            report_save,
+            open_reports_folder,
         ])
         .run(tauri::generate_context!())
         .expect("the launcher failed to start");

@@ -21,6 +21,7 @@ import type {
   Library,
   PackView,
   Platform,
+  ReportEntry,
   Progress,
   SaveChange,
   SaveFields,
@@ -116,7 +117,66 @@ let config: Config = {
   checkUpdates: true,
   layout: "compact",
   discordClientId: null,
+  detailedGameLog: false,
 };
+
+const query = new URLSearchParams(typeof location === "undefined" ? "" : location.search);
+
+/** The preview's logs and crash reports: ?crash makes Play stop with a crash; ?nologs shows none. */
+const now = Math.floor(Date.now() / 1000);
+const mockCrash: ReportEntry = {
+  kind: "crash",
+  file: "crashes/crash-2026-10-17_20-08-29.txt",
+  program: "openrac-rac1-pal",
+  time: now - 60,
+  duration: null,
+  reason: "access (SIGSEGV) at game address 0x0F000000, which is not mapped",
+  level: 6,
+  planet: "Batalia",
+  crashed: true,
+  session: "2026-10-17 20:01:09 -0600",
+  size: 9120,
+};
+const mockReports: ReportEntry[] = query.has("nologs")
+  ? []
+  : [
+      mockCrash,
+      {
+        ...mockCrash,
+        kind: "session",
+        file: "openrac-rac1-pal.log",
+        time: now - 23 * 60 - 60,
+        duration: 23 * 60,
+        reason: null,
+        size: 48211,
+      },
+      {
+        kind: "session",
+        file: "openrac-rac1-pal.1.log",
+        program: "openrac-rac1-pal",
+        time: now - 26 * 3600,
+        duration: 74 * 60,
+        reason: null,
+        level: 3,
+        planet: "Kerwan",
+        crashed: false,
+        session: "2026-10-16 18:00:00 -0600",
+        size: 120400,
+      },
+      {
+        kind: "session",
+        file: "openrac-rac1-pal.2.log",
+        program: "openrac-rac1-pal",
+        time: now - 3 * 86400,
+        duration: 40,
+        reason: null,
+        level: null,
+        planet: null,
+        crashed: false,
+        session: "2026-10-14 10:00:00 -0600",
+        size: 8200,
+      },
+    ];
 
 /** Which games pretend to be set up from the player's disc, and as which version. */
 const fresh = new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("fresh");
@@ -133,12 +193,15 @@ const installs: Record<string, BuildInfo | undefined> = fresh
       },
     };
 
+/** ?built (and ?crash): the game is built and its levels are ready, so Play is the main button. */
+const built = query.has("built") || query.has("crash");
+
 function installState(game: string): InstallState {
   return {
     dir: `${config.installDir ?? ""}/active/${game}/data`,
     extracted: installs[game] ?? null,
     decompiled: false,
-    compiled: false,
+    compiled: built && !!installs[game],
   };
 }
 
@@ -195,7 +258,7 @@ function view(action: RawAction, st: VersionStatus | null): ActionView {
         python: !config.python,
         godot: !config.godot,
         docker: !config.docker,
-        artifact: true,
+        artifact: !built,
       };
       const words: Record<string, string> = {
         disc: "your disc image (baserom/)",
@@ -222,8 +285,8 @@ function view(action: RawAction, st: VersionStatus | null): ActionView {
     thisPlatform,
     runnable: blockers.length === 0,
     blockers,
-    // The mock has no files: nothing is built or made.
-    done: false,
+    // The mock has no files: nothing is built or made (but with ?built).
+    done: built,
   };
 }
 
@@ -387,11 +450,16 @@ function start(scope: Scope, id: string, args: Record<string, unknown> = {}): St
   if (action.detached) return { id: 0, title: action.label, command, detached: true };
 
   const lines = [`$ ${command}`, "(browser preview: nothing really runs)", "working…", ...lastLines(id, args)];
+  // ?crash: the game stops on a fault, as the port does (exit status 3, a report in crashes/).
+  if (action.kind === "play" && query.has("crash")) {
+    const crashed = [...lines, "[error] ==== the program stopped: fault ===="];
+    return fakeJob(action.label, command, crashed, () => (mockCrash.time = Math.floor(Date.now() / 1000)), 3);
+  }
   return fakeJob(action.label, command, lines, () => undefined);
 }
 
-/** A job that prints LINES one by one, then succeeds and calls DONE. */
-function fakeJob(title: string, command: string, lines: string[], done: () => void): Started {
+/** A job that prints LINES one by one, then ends with CODE (0: it worked) and calls DONE. */
+function fakeJob(title: string, command: string, lines: string[], done: () => void, code = 0): Started {
   const job = ++nextJob;
   let i = 0;
   timers.set(
@@ -405,7 +473,7 @@ function fakeJob(title: string, command: string, lines: string[], done: () => vo
       clearInterval(timers.get(job));
       timers.delete(job);
       done();
-      emit({ type: "exit", id: job, code: 0, cancelled: false });
+      emit({ type: "exit", id: job, code, cancelled: false });
     }, 450),
   );
   return { id: job, title, command, detached: false };
@@ -835,6 +903,24 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
     }
     case "restore_backup":
     case "open_saves_folder":
+      return delay(null);
+    case "reports_list":
+      return delay(args.game === "rac1" ? mockReports : []);
+    case "latest_crash":
+      return delay(query.has("crash") && mockCrash.time >= Number(args.since ?? 0) ? mockCrash : null);
+    case "report_text":
+      return delay(
+        "**OpenRAC: the game stopped unexpectedly**\n\n- What happened: access (SIGSEGV) at game address 0x0F000000, which is not mapped\n- Where: Batalia (level 6)\n- OpenRAC: 0.7.1, commit ceffee00; launcher 0.7.1\n\n```\n4 Ratchet & Clank (PAL) 0x0000000104f1b3c0 func_0012DB18 + 68\n```\n",
+      );
+    case "report_save":
+      return delay(
+        `~/Downloads/OpenRAC-${String(args.file)
+          .split("/")
+          .pop()
+          ?.replace(/\.(txt|log)$/, "")}.zip`,
+      );
+    case "open_reports_folder":
+      console.info(`[preview] ${command}`, args);
       return delay(null);
     case "read_save":
       return delay(mockSave(typeof args.serial === "string" ? args.serial : "SCES_509.16", Number(args.slot ?? 0)));
