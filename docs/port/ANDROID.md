@@ -126,7 +126,8 @@ are a drawer on Android, as in an emulator: the pad's options button
 between Select and Start, Back, or a controller's Guide button slides it
 in from the left over the paused game, with rows a thumb can press (the
 frame counter, the volume, the debug overlay, pause, a single tick, the
-speed, a screenshot, the level select in developer mode, and quitting).
+speed, a screenshot, written to the app's files/screenshots, the level
+select in developer mode, and quitting).
 Back, Resume or a touch beside it closes it
 (port/game/common/debug_overlay.cpp; `OPENRAC_DRAWER=1` shows it on a
 desktop too).
@@ -141,7 +142,11 @@ against the public key in `tauri.conf.json` (launcher/core/src/update.rs)
 and hands it to Android's installer (`PackageInstaller`), which asks the
 player to confirm and checks that the APK is signed with the same Android
 key as the launcher installed. The first update asks the player to allow
-the launcher to install apps. Releases are signed with the launcher's own
+the launcher to install apps. When the player has left the launcher by
+then, the confirmation waits in a notification and shows as the launcher
+comes back (UpdateReceiver.kt). A build's APK is signed for the updater
+only when it carries the launcher's own Android key, so that no update is
+offered that Android would refuse to install. Releases are signed with the launcher's own
 Android key ([RELEASING.md](../../launcher/docs/RELEASING.md)); a build made
 elsewhere has another key and is neither updated nor an update.
 
