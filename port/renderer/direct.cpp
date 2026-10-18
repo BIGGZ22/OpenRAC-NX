@@ -436,11 +436,7 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
         case gs::kFrame1:
             c1.frame = gs::Frame::decode(value);
             m_targets.push_back(c1.frame.fbp * 32);
-            if (is_offscreen(c1.frame)) {
-                if (std::find(m_offscreen.begin(), m_offscreen.end(), c1.frame.fbp * 32) == m_offscreen.end()) {
-                    m_offscreen.push_back(c1.frame.fbp * 32);
-                }
-            } else if (std::none_of(m_frame_buffers.begin(), m_frame_buffers.end(), [&](const FrameBuffer& f) {
+            if (!is_offscreen(c1.frame) && std::none_of(m_frame_buffers.begin(), m_frame_buffers.end(), [&](const FrameBuffer& f) {
                     return f.block == c1.frame.fbp * 32;
                 })) {
                 m_frame_buffers.push_back({c1.frame.fbp * 32, c1.frame.fbw});
@@ -449,11 +445,7 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
         case gs::kFrame2:
             c2.frame = gs::Frame::decode(value);
             m_targets.push_back(c2.frame.fbp * 32);
-            if (is_offscreen(c2.frame)) {
-                if (std::find(m_offscreen.begin(), m_offscreen.end(), c2.frame.fbp * 32) == m_offscreen.end()) {
-                    m_offscreen.push_back(c2.frame.fbp * 32);
-                }
-            } else if (std::none_of(m_frame_buffers.begin(), m_frame_buffers.end(), [&](const FrameBuffer& f) {
+            if (!is_offscreen(c2.frame) && std::none_of(m_frame_buffers.begin(), m_frame_buffers.end(), [&](const FrameBuffer& f) {
                     return f.block == c2.frame.fbp * 32;
                 })) {
                 m_frame_buffers.push_back({c2.frame.fbp * 32, c2.frame.fbw});
@@ -511,8 +503,8 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
                 // follow yet.
                 int x = 0;
                 int y = 0;
-                std::erase_if(m_frame_copies, [&](const FrameCopy& f) { return f.dbp == m_bitbltbuf.dbp; });
-                std::erase(m_offscreen, m_bitbltbuf.dbp);  // copied over, as an upload (image_data)
+                overwritten(m_bitbltbuf.dbp, m_bitbltbuf.dbw, m_bitbltbuf.dpsm, m_trxpos.dsay,
+                            m_trxreg.rrh);  // copied over, as an upload (image_data)
                 if (frame_source(m_bitbltbuf.sbp, x, y)) {
                     m_frame_copies.push_back(
                         {m_bitbltbuf.dbp,
@@ -555,12 +547,11 @@ void GifInterpreter::image_data(std::span<const std::uint8_t> data) {
                 m_upload.height
             );
         }
-        std::erase_if(m_frame_copies, [&](const FrameCopy& f) { return f.dbp == m_upload.dbp; });
-        // What the game drew into this block off-screen is gone too: a texture read from it now is
-        // the one uploaded. The block stayed an off-screen target for good, and every draw of a
-        // texture the game later put there (its HUD's and menus' pages reuse that memory) showed the
-        // old target, blank: the whole 2D layer flickered, then went until the game was restarted.
-        std::erase(m_offscreen, m_upload.dbp);
+        // What the game drew off-screen, or copied out of the frame, where this rectangle now is is
+        // gone: a texture read from there now is the one uploaded. Such a block stayed a target for
+        // good, and every draw of a texture the game later put there (its HUD's and menus' pages
+        // reuse that memory) showed the old target, blank: the 2D layer flickered or went.
+        overwritten(m_upload.dbp, m_upload.dbw, m_upload.dpsm, m_upload.y, m_upload.height);
         if (m_upload.dpsm == gs::kPsmct32 && m_upload.dbp >= g_draw_buffer_block
             && m_upload.dbp < g_draw_buffer_block + kDrawBufferWidth * (g_draw_buffer_lines / 32) * 32) {
             draw_frame_upload(m_upload);
@@ -814,6 +805,25 @@ std::uint32_t GifInterpreter::offscreen_target() const {
     return is_offscreen(f) ? f.fbp * 32 : 0;
 }
 
+void GifInterpreter::overwritten(std::uint32_t dbp, std::uint32_t dbw, std::uint8_t psm, std::uint32_t y,
+                                 std::uint32_t height) {
+    // The blocks a rectangle's rows lie in: whole pages (8 KiB, 32 blocks) from the page row of its
+    // first line to that of its last, the buffer `dbw` 64-pixel units wide. A page holds the same
+    // bytes in every format (64 x 32 pixels of 32 bits, 64 x 64 of 16, 128 x 64 of 8, 128 x 128 of
+    // 4), so a row of pages is the buffer's width times as many lines of bytes as one line holds.
+    const std::uint32_t bits = static_cast<std::uint32_t>(std::max(gs::bits_per_pixel(psm), 4));
+    const std::uint64_t line = static_cast<std::uint64_t>(std::max<std::uint32_t>(dbw, 1)) * 64 * bits / 8;
+    constexpr std::uint64_t kPage = 8192;
+    const std::uint64_t first = y * line / kPage * 32;
+    const std::uint64_t last = ((static_cast<std::uint64_t>(y) + std::max<std::uint32_t>(height, 1)) * line + kPage - 1)
+                               / kPage * 32;
+    const auto covered = [&](std::uint32_t block) {
+        return block == dbp || (block >= dbp + first && block < dbp + last);
+    };
+    std::erase_if(m_frame_copies, [&](const FrameCopy& f) { return covered(f.dbp); });
+    std::erase_if(m_offscreen, covered);
+}
+
 bool GifInterpreter::frame_source(std::uint32_t tbp, int& x, int& y) const {
     for (const FrameCopy& f : m_frame_copies) {
         if (f.dbp == tbp) {
@@ -823,10 +833,17 @@ bool GifInterpreter::frame_source(std::uint32_t tbp, int& x, int& y) const {
         }
     }
     for (const FrameBuffer& f : m_frame_buffers) {
+        // Only the buffers the frame is in now (a mode change moves the draw buffer: where it was is
+        // texture memory again), and only the lines the frame fills: the game keeps textures in the
+        // pages under a 448-line draw buffer, and those drew as the frame.
+        if (f.block != m_config.display_block && f.block != g_draw_buffer_block) {
+            continue;
+        }
+        const std::uint32_t rows = f.block == g_draw_buffer_block ? static_cast<std::uint32_t>(g_draw_buffer_lines) / 32 : 16;
         // A frame buffer is rows of pages (64 x 32 pixels, 32 blocks each), `width` pages a row:
         // a texture that starts on one of its page rows is the frame from that row down.
         const std::uint32_t row = std::max<std::uint32_t>(f.width, 1) * 32;
-        if (tbp >= f.block && tbp < f.block + row * 16 && (tbp - f.block) % row == 0) {
+        if (tbp >= f.block && tbp < f.block + row * rows && (tbp - f.block) % row == 0) {
             x = 0;
             y = static_cast<int>((tbp - f.block) / row * 32);
             return true;
@@ -1005,6 +1022,13 @@ void GifInterpreter::ensure_draw() {
         }
         m_state = s;
         m_state_dirty = false;
+    }
+    // An off-screen target is one once something is drawn into it, not when FRAME merely names it:
+    // the game sets FRAME to blocks it then uploads textures to (its register sets name a panel's
+    // target whether or not that panel is drawn), and a block taken for a target made every texture
+    // the game put there later draw as that target, blank.
+    if (m_state.target != 0 && std::find(m_offscreen.begin(), m_offscreen.end(), m_state.target) == m_offscreen.end()) {
+        m_offscreen.push_back(m_state.target);
     }
     if (m_draws.empty() || !(m_draws.back().state == m_state) || m_draws.back().mobys != 0) {
         m_draws.push_back({m_state, static_cast<std::uint32_t>(m_vertices.size()), 0});

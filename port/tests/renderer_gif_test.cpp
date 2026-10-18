@@ -300,6 +300,85 @@ void offscreen_then_upload() {
     }
 }
 
+// The game names a block in FRAME (its register sets name a panel's target whether or not that
+// panel is drawn) where a texture of its already is: with nothing drawn there, the block is still
+// that texture.
+void frame_named_without_draw() {
+    TexturePool textures;
+    GifInterpreter gif(textures);
+    GifBuilder b;
+    constexpr std::uint32_t kBlock = 0x2000;
+    std::vector<std::uint8_t> texels(4 * 4 * 4, 0x40);
+    b.image(kBlock, 1, gs::kPsmct32, 4, 4, texels);
+    b.ad({{gs::kFrame1, std::uint64_t{kBlock / 32} | (std::uint64_t{4} << 16)},
+          {gs::kFrame1, std::uint64_t{8} << 16},
+          {gs::kTex0_1, openrac::test::tex0(kBlock, 1, gs::kPsmct32, 2, 2, true)},
+          {gs::kPrim, prim(gs::PrimKind::Sprite, false, true, false, true)},
+          {gs::kUv, openrac::test::uv(0, 0)},
+          {gs::kXyz2, xyz2(0, 0, 0)},
+          {gs::kUv, openrac::test::uv(4, 4)},
+          {gs::kXyz2, xyz2(8, 8, 0)}});
+    CHECK(gif.gif(b.bytes));
+    CHECK(!gif.draws().empty());
+    if (!gif.draws().empty()) {
+        const DirectState& s = gif.draws().back().state;
+        CHECK(s.source == 0);
+        CHECK(s.textured && s.texture != textures.placeholder());
+    }
+}
+
+// An upload that starts below an off-screen target and runs over it: what was drawn there is gone.
+void upload_over_offscreen() {
+    TexturePool textures;
+    GifInterpreter gif(textures);
+    GifBuilder b;
+    constexpr std::uint32_t kBase = 0x2000;
+    constexpr std::uint32_t kTarget = kBase + 64;  // two pages in: line 64 of a 256-pixel buffer
+    b.ad({{gs::kFrame1, std::uint64_t{kTarget / 32} | (std::uint64_t{4} << 16)},
+          {gs::kPrim, prim(gs::PrimKind::Sprite, false, false, false)},
+          {gs::kRgbaq, rgbaq(0xFF, 0, 0, 0x80)},
+          {gs::kXyz2, xyz2(0, 0, 0)},
+          {gs::kXyz2, xyz2(16, 16, 0)},
+          {gs::kFrame1, std::uint64_t{8} << 16}});
+    std::vector<std::uint8_t> texels(256 * 128 * 4, 0x40);
+    b.image(kBase, 4, gs::kPsmct32, 256, 128, texels);
+    b.ad({{gs::kTex0_1, openrac::test::tex0(kTarget, 4, gs::kPsmct32, 4, 4, true)},
+          {gs::kPrim, prim(gs::PrimKind::Sprite, false, true, false, true)},
+          {gs::kUv, openrac::test::uv(0, 0)},
+          {gs::kXyz2, xyz2(0, 0, 0)},
+          {gs::kUv, openrac::test::uv(16, 16)},
+          {gs::kXyz2, xyz2(8, 8, 0)}});
+    CHECK(gif.gif(b.bytes));
+    if (!gif.draws().empty()) {
+        CHECK(gif.draws().back().state.source == 0);
+    }
+}
+
+// A texture in the pages under the 448-line draw buffer (line 448 on) is a texture, not the frame.
+void texture_under_draw_buffer() {
+    TexturePool textures;
+    GifInterpreter gif(textures);
+    GifBuilder b;
+    set_draw_buffer_block(0x1000, 448);
+    const std::uint32_t block = 0x1000 + 14 * 8 * 32;  // page row 14: line 448
+    std::vector<std::uint8_t> texels(4 * 4 * 4, 0x40);
+    b.ad({{gs::kFrame1, std::uint64_t{0x1000 / 32} | (std::uint64_t{8} << 16)}});
+    b.image(block, 1, gs::kPsmct32, 4, 4, texels);
+    b.ad({{gs::kTex0_1, openrac::test::tex0(block, 1, gs::kPsmct32, 2, 2, true)},
+          {gs::kPrim, prim(gs::PrimKind::Sprite, false, true, false, true)},
+          {gs::kUv, openrac::test::uv(0, 0)},
+          {gs::kXyz2, xyz2(0, 0, 0)},
+          {gs::kUv, openrac::test::uv(4, 4)},
+          {gs::kXyz2, xyz2(8, 8, 0)}});
+    CHECK(gif.gif(b.bytes));
+    CHECK(!gif.draws().empty());
+    if (!gif.draws().empty()) {
+        const DirectState& s = gif.draws().back().state;
+        CHECK(!s.frame_source);
+        CHECK(s.textured && s.texture != textures.placeholder());
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -309,5 +388,8 @@ int main() {
     draw_groups();
     textures_and_vif();
     offscreen_then_upload();
+    frame_named_without_draw();
+    upload_over_offscreen();
+    texture_under_draw_buffer();
     return openrac::test::result();
 }

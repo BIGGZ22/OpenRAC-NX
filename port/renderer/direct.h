@@ -280,6 +280,9 @@ private:
     // Whether a texture at `tbp` is a frame buffer or a copy of one; if so, where its texel (0, 0)
     // is in the frame.
     bool frame_source(std::uint32_t tbp, int& x, int& y) const;
+    // A transfer has put a rectangle of `height` lines from line `y` at `dbp`: the off-screen
+    // targets and frame copies in the memory it covers are gone.
+    void overwritten(std::uint32_t dbp, std::uint32_t dbw, std::uint8_t psm, std::uint32_t y, std::uint32_t height);
 
     Context m_context[2];
     gs::Prim m_prim{};
