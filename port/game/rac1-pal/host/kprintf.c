@@ -3,8 +3,8 @@
  *
  * The kernel library's debug prints (libkernl's kprintf, src/core/00119D88.c), answered by the
  * port (hostgen.json, "host_functions"). Both hand their format and a va_list to the print core
- * (func_0011A0A0, still assembly), which walks the console's argument area and writes each
- * character through a hook: the debugger's console, or nothing on a retail console. hostgen
+ * (func_0011A0A0), which walks the console's argument area and writes each character through a
+ * hook: the debugger's console, or nothing on a retail console. hostgen
  * cannot pass a host va_list as the console's, so the port formats here (rac1_vformat, hand.c)
  * and the text goes to the log. PAL only: the NTSC program's names for these differ.
  */
@@ -36,4 +36,14 @@ int func_0011A6C8(gaddr format, ...) {
     va_end(args);
     fprintf(stderr, "[game] %s", out);
     return n;
+}
+
+/* The print core itself: matched C in the decompilation, left out here (hostgen.json,
+ * "host_functions") because it walks the MIPS argument area with pointer arithmetic on its
+ * va_list, which Clang's va_list is not on Linux ARM64. Only the two prints above call it,
+ * and the port answers those itself, so nothing reaches this. */
+int func_0011A0A0(gaddr format, va_list arguments) {
+    (void)format;
+    (void)arguments;
+    return 0;
 }
