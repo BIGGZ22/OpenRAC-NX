@@ -5,6 +5,7 @@
 #include "debug_menu.h"
 #include "debug_overlay.h"
 #include "fps_counter.h"
+#include "touch_overlay.h"
 #include "options_menu.h"
 #include "settings.h"
 
@@ -1258,6 +1259,7 @@ bool show_picture(const std::uint8_t* rgba, int width, int height, float black) 
     }
     // The picture fills the frame the game's own frames fill; its first row is the top.
     present(g->picture.id(), width, height, window_width, window_height, true);
+    touch_overlay::draw(g->input.touch_pad(), window_width, window_height);
     {
         // [debug tools] The overlay over a picture too (no renderer or camera then).
         const Box box = frame_box(window_width, window_height);
@@ -1749,6 +1751,7 @@ void draw_kept(bool first) {
     }
     slow_frame();
     present(shown, width, height, window_width, window_height, false, aspect);
+    touch_overlay::draw(g->input.touch_pad(), window_width, window_height);
     // [debug tools] The overlay, over the frame in the window.
     debug_overlay::draw({g->window->sdl(), window_width, window_height, box.x, box.y, box.width, box.height,
                          g->renderer.get(), &input.camera, g->frame.width(), g->frame.height(),
@@ -2634,6 +2637,7 @@ void close() {
         debug_overlay::release();
         settings::save();  // the window's size, if it was changed
         fps_counter::release();
+        touch_overlay::release();
         debug_menu::release();
         g->frame.release();
         g->picture.release();

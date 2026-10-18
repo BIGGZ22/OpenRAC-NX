@@ -128,6 +128,30 @@ void Input::handle_event(const SDL_Event& event) {
             }
             break;
         }
+        // The on-screen pad: real fingers only (SDL can report the mouse as a finger too).
+        case SDL_EVENT_FINGER_DOWN:
+            if (event.tfinger.touchID != SDL_MOUSE_TOUCHID) {
+                m_touch.finger_down(event.tfinger.fingerID, event.tfinger.x, event.tfinger.y);
+            }
+            break;
+        case SDL_EVENT_FINGER_MOTION:
+            if (event.tfinger.touchID != SDL_MOUSE_TOUCHID) {
+                m_touch.finger_move(event.tfinger.fingerID, event.tfinger.x, event.tfinger.y);
+            }
+            break;
+        case SDL_EVENT_FINGER_UP:
+        case SDL_EVENT_FINGER_CANCELED:
+            m_touch.finger_up(event.tfinger.fingerID);
+            break;
+        // Another device in use: the on-screen pad is put away until the screen is touched again.
+        case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+        case SDL_EVENT_KEY_DOWN:
+            m_touch.hide();
+            break;
+        case SDL_EVENT_WINDOW_FOCUS_LOST:
+        case SDL_EVENT_DID_ENTER_BACKGROUND:
+            m_touch.release_all();
+            break;
         default:
             break;
     }
@@ -190,6 +214,7 @@ void Input::update() {
         }
         if (port == 0) {
             apply_keyboard(pad, keys);
+            m_touch.apply(pad);
         }
     }
 }

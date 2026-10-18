@@ -53,6 +53,7 @@ add_library(openrac_platform STATIC
   platform/input.cpp
   platform/pad.cpp
   platform/pump.cpp
+  platform/touch_pad.cpp
   platform/window.cpp
 )
 target_link_libraries(openrac_platform PUBLIC openrac_common openrac_sdl3)
@@ -148,6 +149,18 @@ openrac_warnings(platform_test)
 add_test(NAME platform COMMAND platform_test)
 set_tests_properties(platform PROPERTIES ENVIRONMENT "SDL_AUDIO_DRIVER=dummy")
 
+add_executable(touch_pad_test tests/touch_pad_test.cpp)
+target_link_libraries(touch_pad_test PRIVATE openrac_platform)
+openrac_warnings(touch_pad_test)
+add_test(NAME touch_pad COMMAND touch_pad_test)
+
+add_executable(touch_overlay_test tests/touch_overlay_test.cpp game/common/touch_overlay.cpp)
+target_include_directories(touch_overlay_test PRIVATE game/common)
+target_link_libraries(touch_overlay_test PRIVATE openrac_renderer openrac_platform)
+openrac_warnings(touch_overlay_test)
+add_test(NAME touch_overlay COMMAND touch_overlay_test)
+set_tests_properties(touch_overlay PROPERTIES SKIP_RETURN_CODE 77)
+
 add_executable(renderer_texture_test tests/renderer_texture_test.cpp)
 target_link_libraries(renderer_texture_test PRIVATE openrac_renderer)
 openrac_warnings(renderer_texture_test)
@@ -183,8 +196,9 @@ set_tests_properties(viewer PROPERTIES SKIP_RETURN_CODE 77)
 # stand-ins and every shader's GLSL ES form are checked without a phone.
 add_test(NAME renderer_direct_es COMMAND renderer_direct_test)
 add_test(NAME renderer_shader_es COMMAND renderer_shader_test)
+add_test(NAME touch_overlay_es COMMAND touch_overlay_test)
 add_test(NAME viewer_es COMMAND viewer_test "${CMAKE_CURRENT_BINARY_DIR}/viewer_test_level_es")
-set(openrac_es_tests renderer_direct_es renderer_shader_es viewer_es)
+set(openrac_es_tests renderer_direct_es renderer_shader_es touch_overlay_es viewer_es)
 if(TARGET world_gl_smoke_test)
   add_test(NAME world_gl_smoke_es COMMAND world_gl_smoke_test)
   list(APPEND openrac_es_tests world_gl_smoke_es)

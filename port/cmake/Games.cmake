@@ -167,7 +167,8 @@ function(openrac_add_game config)
                                          "${OPENRAC_GAME_DIR}/common/debug_overlay.cpp"
                                          "${OPENRAC_GAME_DIR}/common/fps_counter.cpp"
                                          "${OPENRAC_GAME_DIR}/common/options_menu.cpp"
-                                         "${OPENRAC_GAME_DIR}/common/settings.cpp")
+                                         "${OPENRAC_GAME_DIR}/common/settings.cpp"
+                                         "${OPENRAC_GAME_DIR}/common/touch_overlay.cpp")
     target_link_libraries(openrac-${id} PRIVATE openrac_viewer_lib openrac_platform openrac_imgui)
     # The debug overlay's moby class names: the editor's table, as text.
     openrac_moby_class_names(names_cpp)

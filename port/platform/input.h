@@ -12,7 +12,8 @@
 //   d-pad       arrow keys     Cross Space, Square F, Circle E, Triangle R
 //   L1 Left Shift, R1 Q, L2 1, R2 3, L3 C, R3 V, Start Return, Select Backspace
 //
-// Remapping comes with the settings file; the table is in input.cpp.
+// Remapping comes with the settings file; the table is in input.cpp. A touch screen gets an
+// on-screen pad (touch_pad.h), also on port 0.
 
 #pragma once
 
@@ -21,6 +22,7 @@
 #include <vector>
 
 #include "platform/pad.h"
+#include "platform/touch_pad.h"
 
 union SDL_Event;
 struct SDL_Gamepad;
@@ -52,11 +54,16 @@ public:
     // The game sets the motors here (scePadSetActDirect); update() plays them.
     Pad& pad(int port) { return m_pads[static_cast<std::size_t>(port)]; }
 
+    // The on-screen pad, which adds to port 0 (touch_pad.h). The frontend tells it the window's
+    // shape and draws it while it is visible.
+    TouchPad& touch_pad() { return m_touch; }
+
 private:
     SDL_Gamepad* gamepad(int port) const;
 
     std::array<Pad, kPadPorts> m_pads{};
     std::vector<SDL_Gamepad*> m_gamepads;
+    TouchPad m_touch;
 };
 
 }  // namespace openrac::platform
