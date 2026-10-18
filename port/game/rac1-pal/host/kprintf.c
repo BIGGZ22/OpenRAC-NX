@@ -3,10 +3,11 @@
  *
  * The kernel library's debug prints (libkernl's kprintf, src/core/00119D88.c), answered by the
  * port (hostgen.json, "host_functions"). Both hand their format and a va_list to the print core
- * (func_0011A0A0, still assembly), which walks the console's argument area and writes each
- * character through a hook: the debugger's console, or nothing on a retail console. hostgen
- * cannot pass a host va_list as the console's, so the port formats here (rac1_vformat, hand.c)
- * and the text goes to the log. PAL only: the NTSC program's names for these differ.
+ * (func_0011A0A0), which walks the console's argument area and writes each character through a
+ * hook: the debugger's console, or nothing on a retail console. Its C steps through the va_list
+ * as a pointer (`ap += 8`), which the host's is not (a structure on ARM, where it does not
+ * compile), so the port formats here (rac1_vformat, hand.c) and the text goes to the log. PAL
+ * only: the NTSC program's names for these differ.
  */
 #include "rac1.h"
 
@@ -34,6 +35,15 @@ int func_0011A6C8(gaddr format, ...) {
     va_start(args, format);
     n = rac1_vformat(out, sizeof(out), (const char *)G(format), args);
     va_end(args);
+    fprintf(stderr, "[game] %s", out);
+    return n;
+}
+
+/* The print core itself, for a caller other than the two above: the format and a host va_list. */
+int func_0011A0A0(gaddr format, va_list args) {
+    char out[1024];
+    int n = rac1_vformat(out, sizeof(out), (const char *)G(format), args);
+
     fprintf(stderr, "[game] %s", out);
     return n;
 }
