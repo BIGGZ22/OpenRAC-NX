@@ -98,7 +98,7 @@ _logic = None
 
 
 def moby_logic(level: int) -> dict[int, dict]:
-    """class -> {"function", "file", "decompiled"} for the classes LEVEL updates: the function
+    """class -> {"function", "file", "decompiled", "defined_as"} for the classes LEVEL updates: the function
     the game calls for each moby of the class every frame, where it is in the decompilation
     (games/rac1), and whether it is C there yet. From that project's
     config/overlays/names.tsv (the UpdateMoby_<class> roles) and its src/. Empty when the
@@ -108,13 +108,21 @@ def moby_logic(level: int) -> dict[int, dict]:
         _logic = {}
         table = DECOMPILATION / "config" / "overlays" / "names.tsv"
         if table.is_file():
-            where = {}
+            # A function the decompilation has renamed is defined under its readable name
+            # (include/names.h maps each one to its func_ symbol).
+            names_h = DECOMPILATION / "include" / "names.h"
+            symbol_of = dict(re.findall(r"^#define\s+(\w+)\s+(func_\w+)\s*$", names_h.read_text(), re.M)) \
+                if names_h.is_file() else {}
+            where, defined_as = {}, {}
             for path in sorted((DECOMPILATION / "src").rglob("*.c")):
                 text = path.read_text(errors="replace")
                 for name in re.findall(r"^(?:INCLUDE_ASM|ASM_FUNC)\([^)]*\b(func_\w+)\);", text, re.M):
                     where.setdefault(name, (path, False))
-                for name in re.findall(r"^(?!extern\b)[A-Za-z_][^;=\n]*?\b(func_(?:L\d\d_)?[0-9A-F]{8})\s*\([^;]*$", text, re.M):
-                    where[name] = (path, True)
+                for name in re.findall(r"^(?!extern\b)[A-Za-z_][^;=\n]*?\b([A-Za-z_]\w*)\s*\([^;]*$", text, re.M):
+                    symbol = name if re.fullmatch(r"func_(?:L\d\d_)?[0-9A-F]{8}", name) else symbol_of.get(name)
+                    if symbol is not None:
+                        where[symbol] = (path, True)
+                        defined_as[symbol] = name
             for line in table.read_text().splitlines():
                 if line.startswith("#") or "\t" not in line:
                     continue
@@ -124,5 +132,6 @@ def moby_logic(level: int) -> dict[int, dict]:
                     for lv in levels.split("/"):
                         _logic.setdefault(int(lv), {})[int(class_id)] = {
                             "function": function, "decompiled": is_c,
+                            "defined_as": defined_as.get(function, function),
                             "file": path.relative_to(DECOMPILATION.parents[1]).as_posix() if path else None}
     return _logic.get(level, {})

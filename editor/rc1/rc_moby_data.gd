@@ -21,10 +21,10 @@ var state: int = 0
 var group: int = 0
 
 ## +0x22 u8
-var unk22: int = 0
+var class_slot: int = 0
 
 ## +0x23 u8
-var unk23: int = 0
+var alpha: int = 0
 
 ## +0x24 MobyClass*
 var pclass = RcStruct.new()
@@ -36,19 +36,19 @@ var next = null
 var scale: float = 0.0
 
 ## +0x30 u8
-var unk30: int = 0
+var update_dist: int = 0
 
 ## +0x31 u8
-var unk31: int = 0
+var visible: int = 0
 
 ## +0x32 s16
-var unk32: int = 0
+var draw_dist: int = 0
 
 ## +0x34 u16
 var flags: int = 0
 
 ## +0x36 u16
-var unk36: int = 0
+var occlusion: int = 0
 
 ## +0x38 u64
 var spawn_frame: int = 0
@@ -69,10 +69,10 @@ var seq: int = 0
 var prev_seq: int = 0
 
 ## +0x54 f32
-var unk54: float = 0.0
+var anim_time: float = 0.0
 
 ## +0x58 f32
-var unk58: float = 0.0
+var anim_speed: float = 0.0
 
 ## +0x64 Manip*
 var manips = null
@@ -84,7 +84,7 @@ var cur_frame_data = null
 var prev_frame_data = null
 
 ## +0x70 u8
-var unk70: int = 0
+var anim_flags: int = 0
 
 ## +0x71 u8
 var unk71: int = 0
@@ -101,11 +101,14 @@ var pvars: Object = null
 ## +0x7c u8
 var unk7C: int = 0
 
+## +0x7d u8
+var sound_slot: int = 0
+
 ## +0x7e u8
-var unk7E: int = 0
+var anim_trigger_count: int = 0
 
 ## +0x7f u8
-var unk7F: int = 0
+var shadow_range: int = 0
 
 ## +0x80 s32
 var unk80: int = 0
@@ -114,22 +117,22 @@ var unk80: int = 0
 var unk86: int = 0
 
 ## +0x90 s32
-var unk90: int = 0
+var glow_color: int = 0
 
 ## +0x94 u32
-var unk94: int = 0
+var collision: int = 0
 
 ## +0x98 s32
-var unk98: int = 0
+var collision_disable: int = 0
 
 ## +0xa4 u8
-var unkA4: int = 0
+var hit_slot: int = 0
 
 ## +0xa6 s16
 var oclass: int = 0
 
 ## +0xb0 u8
-var unkB0: int = 0
+var mission: int = 0
 
 ## +0xb1 u8
 var unkB1: int = 0
@@ -144,16 +147,16 @@ var unkB4: int = 0
 var unkB6: int = 0
 
 ## +0xb8 void*
-var unkB8 = null
+var parent = null
 
 ## +0xbc u8
-var unkBC: int = 0
+var command: int = 0
 
 ## +0xc0 Vec4f
-var unkC0: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0, 0.0])
+var rot_row0: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0, 0.0])
 
 ## +0xd0 Vec4f
-var unkD0: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0, 0.0])
+var rot_row1: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0, 0.0])
 
 ## +0xe0 Vec4f
-var unkE0: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0, 0.0])
+var rot_row2: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0, 0.0])

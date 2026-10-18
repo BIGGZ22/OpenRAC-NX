@@ -927,11 +927,12 @@ def translate_class(class_id: int, level: int) -> tuple[Result, dict] | None:
     logic = moby_logic(level).get(class_id)
     if logic is None:
         return None
-    source = find_source(logic["function"], logic["file"])
+    name = logic.get("defined_as", logic["function"])  # its readable name, where it has one
+    source = find_source(name, logic["file"])
     if source is None:
         return None
     tr = Translator(load_types(source), load_api(), load_macros())
-    return tr.function(logic["function"], source), logic
+    return tr.function(name, source), logic
 
 
 def class_script(class_id: int, level: int) -> tuple[str, Result] | None:
