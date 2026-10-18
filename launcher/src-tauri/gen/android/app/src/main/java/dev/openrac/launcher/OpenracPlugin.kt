@@ -254,7 +254,7 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
   private fun gameTask(): ActivityManager.AppTask? =
     activity.getSystemService(ActivityManager::class.java).appTasks.firstOrNull { task ->
       try {
-        val info = task.taskInfo
+        val info = task.taskInfo ?: return@firstOrNull false
         info.isRunning && info.baseActivity?.className == GameActivity::class.java.name
       } catch (e: IllegalArgumentException) {
         false // the task went as it was read
