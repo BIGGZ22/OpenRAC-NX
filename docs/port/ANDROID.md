@@ -178,15 +178,25 @@ So this work builds the custom-driver path up to the renderer:
    the Vulkan side; the result (driver name and version, or why it was
    refused) is logged and shown in the launcher. Anywhere else, or when
    loading fails, the system driver is used.
-3. **A Vulkan renderer** consumes it. The renderer is GL today; its
-   subsystems are written against a small set of calls (renderer/gl.h), so a
-   Vulkan backend is a renderer of its own, not a rewrite of the game. That
-   is the next step and is outside this change.
+3. **A Vulkan renderer** consumes it (port/renderer/vulkan/vkgl.cpp). The
+   renderers are written against a small set of GL calls (renderer/gl.h,
+   renderer/world/gl_world.h), and this carries those calls out on Vulkan
+   1.3: GL's objects become Vulkan's, a program is compiled with glslang,
+   the state a pipeline bakes in keys a pipeline cache, buffers stream
+   through a per-frame ring until they stop changing. The renderers, their
+   shaders, the touch pad and the debug overlay with the drawer (through
+   game/common/imgui_gl.cpp) run on it unchanged. Settings' "Renderer"
+   chooses it (the launcher passes `OPENRAC_GL_API=vulkan`); where Vulkan
+   1.3 cannot open, the game falls back to OpenGL ES by itself.
 
-Decided: steps 1 and 2 are in this change, and the game draws with GLES on
-the system's driver meanwhile; the Vulkan renderer that draws on a custom
-driver is the next change (a patched ANGLE in the APK was the alternative
-and was not taken).
+Decided: the Vulkan renderer is this layer first, and measured before any
+of it is rewritten for Vulkan itself. Each frame's cost is in the debug
+tools: `--debug-dump` writes the `vk_*` gauges (draws, pipelines made, ring
+kilobytes, flushes, and the CPU milliseconds of the draws, of present and
+of the wait for the GPU); the paths that cost most are the ones a native
+Vulkan version would be written for. A patched ANGLE in the APK was the
+alternative and was not taken. The tests that draw also run on it
+(`*_vulkan`, with the validation layer, on Mesa's lavapipe in CI).
 
 ## Building and CI
 
@@ -207,5 +217,7 @@ secrets; until then the artifact is a debug build.
 No phone or disc is reachable from CI, so these are manual (the list with
 steps is in [port/android/README.md](../../port/android/README.md)): the
 launcher's screens, importing a disc, the game's first frames on Mali and
-on Adreno, a controller and the touch pad, suspend and resume, and, on
-Adreno, importing a Turnip package and reading in the log that it loaded.
+on Adreno, a controller and the touch pad, the options drawer, suspend and
+resume, the Vulkan renderer (and that it falls back where it cannot open),
+and, on Adreno, importing a Turnip package and reading in the log that it
+loaded and draws.
