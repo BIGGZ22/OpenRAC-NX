@@ -25,14 +25,14 @@ class TestUpdaterManifest(unittest.TestCase):
             manifest = generate_manifest(tmpdir, "launcher-v0.5.0", pub_date="2026-10-16T12:00:00Z")
             self.assertEqual(manifest["version"], "0.5.0")
             self.assertEqual(manifest["pub_date"], "2026-10-16T12:00:00Z")
-            self.assertIn("windows-x86_64", manifest["platforms"])
-            self.assertEqual(manifest["platforms"]["windows-x86_64"]["signature"], "mock_win_sig")
-            self.assertIn("linux-x86_64", manifest["platforms"])
-            self.assertEqual(manifest["platforms"]["linux-x86_64"]["signature"], "mock_linux_sig")
-            self.assertTrue("OpenRAC.Launcher" in manifest["platforms"]["linux-x86_64"]["url"])
-            self.assertIn("linux-aarch64", manifest["platforms"])
-            self.assertEqual(manifest["platforms"]["linux-aarch64"]["signature"], "mock_linux_arm_sig")
-            self.assertTrue("OpenRAC.Launcher" in manifest["platforms"]["linux-aarch64"]["url"])
+            self.assertIn("windows-x86_64-nsis", manifest["platforms"])
+            self.assertEqual(manifest["platforms"]["windows-x86_64-nsis"]["signature"], "mock_win_sig")
+            self.assertIn("linux-x86_64-appimage", manifest["platforms"])
+            self.assertEqual(manifest["platforms"]["linux-x86_64-appimage"]["signature"], "mock_linux_sig")
+            self.assertTrue("OpenRAC.Launcher" in manifest["platforms"]["linux-x86_64-appimage"]["url"])
+            self.assertIn("linux-aarch64-appimage", manifest["platforms"])
+            self.assertEqual(manifest["platforms"]["linux-aarch64-appimage"]["signature"], "mock_linux_arm_sig")
+            self.assertTrue("OpenRAC.Launcher" in manifest["platforms"]["linux-aarch64-appimage"]["url"])
 
 
 if __name__ == "__main__":

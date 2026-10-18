@@ -90,11 +90,11 @@ git push origin launcher-vX.Y.Z
 3. **Updater signing & manifest**:
    - Signs update archives with minisign (`TAURI_SIGNING_PRIVATE_KEY`).
    - Runs `tools/updater_manifest.py` to produce `latest.json` covering:
-     - `windows-x86_64`
-     - `linux-x86_64`
-     - `linux-aarch64`
-     - `darwin-x86_64`
-     - `darwin-aarch64`
+     - `windows-x86_64-nsis`, `windows-x86_64-msi`
+     - `linux-x86_64-appimage`, `linux-x86_64-deb`, `linux-x86_64-rpm`
+     - `linux-aarch64-appimage`, `linux-aarch64-deb`, `linux-aarch64-rpm`
+     - `darwin-x86_64-app`
+     - `darwin-aarch64-app`
 4. **Draft Release**:
    - Creates a draft release titled `OpenRAC Launcher X.Y.Z` with all installer assets and signatures.
 
