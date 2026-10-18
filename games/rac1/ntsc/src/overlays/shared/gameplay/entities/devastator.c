@@ -2525,10 +2525,10 @@ s32 FUN_L00_002b6bc8(Moby *m, f32 radius) {
     Moby *other;
     u8 *state;
     Vars *vars;
+    struct HeroMotion *motion;
     s32 limit;
     s32 count = 0;
     s32 i;
-    s16 *entry;
     f32 distance;
     f32 angle;
 
@@ -2540,8 +2540,10 @@ s32 FUN_L00_002b6bc8(Moby *m, f32 radius) {
     if (other != 0) {
         i = 0;
         do {
-            state = FUN_L00_0025c338_b6bc8(other);
+            /* Fakematch: the extra block brings the draft closer to retail's scheduling. */
+            do { state = FUN_L00_0025c338_b6bc8(other); } while (0);
             if (state != 0) {
+                motion = &hero.motion;
                 distance = FUN_001ff488_b6bc8(&pos, (u8 *)other + 0x10);
                 if (distance < 12.0f &&
                     ((u16)(*(u16 *)((u8 *)other + 0xa6) - 500) < 2 ||
@@ -2565,9 +2567,8 @@ s32 FUN_L00_002b6bc8(Moby *m, f32 radius) {
                     struct Hero *g = &hero;
                     angle = FUN_001ff8b0_b6bc8(*(f32 *)((u8 *)other + 0x10) - g->motion.pos.f[0],
                                                *(f32 *)((u8 *)other + 0x14) - g->motion.pos.f[1]);
-                    /* D_0013F3D0 is hero.motion.pos; reload yaw after the angle helper. */
                     angle = FUN_002001f0_b6bc8(
-                        ((struct Hero *)((u8 *)D_0013F3D0_b6bc8 - 0x80))->motion.rot.f[2], angle);
+                        motion->rot.f[2], angle);
                     if (angle < 0.9599311f) {
                         Moby *current = *(Moby **)(state + 0x18);
                         if (current == 0 || distance < FUN_001ff488_b6bc8((u8 *)current + 0x10, (u8 *)other + 0x10)) {
@@ -2581,29 +2582,21 @@ s32 FUN_L00_002b6bc8(Moby *m, f32 radius) {
             other = D_001ABA00_b6bc8[i];
         } while (other != 0);
     }
-    i = 1;
-    if (D_L00_001B07B0[0] > 0) {
-        struct Hero *g = &hero;
-        s16 *entryCount = D_L00_001B07B0;
-        entry = entryCount + 1;
-        do {
-            other = (Moby *)(D_0015FFD8_b6bc8 + *entry * 0x100);
-            if (other != 0 && (s8)other->state >= 0) {
-                Vars *vars = other->vars;
-                distance = FUN_001ff488_b6bc8(&pos, (u8 *)other + 0x10);
-                if (distance < radius) {
-                    angle = FUN_002001f0_b6bc8(g->motion.rot.f[2],
-                        FUN_001ff8b0_b6bc8(*(f32 *)((u8 *)other + 0x10) - g->motion.pos.f[0],
-                                               *(f32 *)((u8 *)other + 0x14) - g->motion.pos.f[1]));
-                    if (angle < 0.9599311f) {
-                        *(Moby **)((u8 *)vars + 0x78) = m;
-                        count++;
-                    }
+    for (i = 1; i <= D_L00_001B07B0[0]; i++) {
+        other = (Moby *)(D_0015FFD8_b6bc8 + D_L00_001B07B0[i] * 0x100);
+        if (other != 0 && (s8)other->state >= 0) {
+            Vars *vars = other->vars;
+            distance = FUN_001ff488_b6bc8(&pos, (u8 *)other + 0x10);
+            if (distance < radius) {
+                angle = FUN_002001f0_b6bc8(hero.motion.rot.f[2],
+                    FUN_001ff8b0_b6bc8(*(f32 *)((u8 *)other + 0x10) - hero.motion.pos.f[0],
+                                           *(f32 *)((u8 *)other + 0x14) - hero.motion.pos.f[1]));
+                if (angle < 0.9599311f) {
+                    *(Moby **)((u8 *)vars + 0x78) = m;
+                    count++;
                 }
             }
-            i++;
-            entry++;
-        } while (i <= entryCount[0]);
+        }
     }
     return count;
 }
@@ -2620,7 +2613,7 @@ void taunter_update(Moby *m) {
     s32 r1;
     s32 r2;
     u8 *e;
-    s32 v2;
+    s32 play_time_stat_value;
 
     if (m == 0)
         return;
@@ -2662,8 +2655,8 @@ void taunter_update(Moby *m) {
             }
             if (D_00141680.cnt < 0xFFFF)
                 D_00141680.cnt++;
-            v2 = FUN_001f96f8_c(D_0015EEA4) / 600;
-            if (D_00141680.last < v2) {
+            play_time_stat_value = FUN_001f96f8_c(D_0015EEA4) / 600;
+            if (D_00141680.last < play_time_stat_value) {
                 D_00141680.last = FUN_001f96f8_c(D_0015EEA4) / 600;
             }
             D_00141680.flags |= 1 << current_level_index;
@@ -3263,7 +3256,7 @@ void FUN_L00_002b8438(char *moby) {
     char buf[0x30];
     char qv[16];
     float v2[4];
-    float v3[4];
+    float spark_position[4];
     char *slots_base = *(char **)(moby + 0x78) + 4;
     unsigned char *q = (unsigned char *)D_0013E520;
     int i;
@@ -3304,9 +3297,9 @@ void FUN_L00_002b8438(char *moby) {
                     FUN_L00_0025c0e8(c2, q[0x10]);
                     c3 = func_001FA898_r(multiply_global_factor_ed64(random_float_between_c((float)*(int *)&D_L00_00161554, (float)*(int *)&D_L00_00161558)));
                     c4 = func_001FA898_r(multiply_global_factor_ed64(random_float_between_c((float)*(int *)&D_L00_00161554, (float)*(int *)&D_L00_00161558)));
-                    FUN_L00_00257d78(v3, 0.0f, f20 + f20);
-                    add_vector_xyz(v3, v3, (entry + 0x10));
-                    spawn_spark(v3, qv, v2, c1, c2, 0xA, c3, c4, *(int *)&D_L00_0016152C);
+                    FUN_L00_00257d78(spark_position, 0.0f, f20 + f20);
+                    add_vector_xyz(spark_position, spark_position, (entry + 0x10));
+                    spawn_spark(spark_position, qv, v2, c1, c2, 0xA, c3, c4, *(int *)&D_L00_0016152C);
                 }
             } else if (sub_type < 2) {
                 *(int *)(slots_base - (-(i * 4))) = 0;

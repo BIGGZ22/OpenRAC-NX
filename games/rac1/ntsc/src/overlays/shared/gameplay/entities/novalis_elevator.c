@@ -2063,8 +2063,8 @@ void FUN_L01_002eec68(char *m) {
     V_2F0040 w;
     int flag;
     float amount;
-    float a1;
-    float a2;
+    float first_spawn_angle;
+    float second_spawn_angle;
     char *d;
     char *t;
     char *p;
@@ -2152,9 +2152,9 @@ void FUN_L01_002eec68(char *m) {
                 *(float *)(q + 0xB0) = seven;
                 *(float *)(q + 0xB4) = 13.0f;
                 v.q = *(u128_2F0040 *)(t + 0x10);
-                trooper_knockback_arc(&v, &a1, q + 0x78, q + 0x7C);
-                a1 = fast_subtract_rotations(a1, 0.7853982f);
-                trooper_start_knockback(spawned, q + 0x60, a1, 4, 8, 0);
+                trooper_knockback_arc(&v, &first_spawn_angle, q + 0x78, q + 0x7C);
+                first_spawn_angle = fast_subtract_rotations(first_spawn_angle, 0.7853982f);
+                trooper_start_knockback(spawned, q + 0x60, first_spawn_angle, 4, 8, 0);
                 spawned[0x20] = 8;
                 *(float *)(spawned + 0x58) = f24;
             }
@@ -2174,9 +2174,9 @@ void FUN_L01_002eec68(char *m) {
                 *(float *)(q + 0xB0) = seven;
                 *(float *)(q + 0xB4) = 13.0f;
                 v.q = *(u128_2F0040 *)(t + 0x10);
-                trooper_knockback_arc(&v, &a2, q + 0x78, q + 0x7C);
-                a2 = fast_add_rotations_c(a2, 0.7853982f);
-                trooper_start_knockback(spawned, q + 0x60, a2, 4, 8, 0);
+                trooper_knockback_arc(&v, &second_spawn_angle, q + 0x78, q + 0x7C);
+                second_spawn_angle = fast_add_rotations_c(second_spawn_angle, 0.7853982f);
+                trooper_start_knockback(spawned, q + 0x60, second_spawn_angle, 4, 8, 0);
                 spawned[0x20] = 8;
                 *(float *)(spawned + 0x58) = f24;
             }
@@ -2251,7 +2251,8 @@ extern short *lists_2ef478[] __asm__("D_L01_001ABCC0");
 extern char *D_L01_0015FFD8;
 extern void FUN_L00_00250df8(void *);
 
-char *FUN_L01_002ef350(char *self) {
+char *FUN_L01_002ef350(void *arg) {
+    char *self = arg;
     short *list;
     char *entities;
     int entry;

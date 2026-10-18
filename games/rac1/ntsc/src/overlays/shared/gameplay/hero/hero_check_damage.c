@@ -207,7 +207,7 @@ f32 FUN_001f9b48_c(void *, V_cf58 *) __asm__("FUN_001f9b48");
 #include "rnc/overlay/path.h"
 void find_grind_rail(void) __asm__("FUN_L00_0020cf58");
 void find_grind_rail(void) {
-    V_cf58 v0, v1, v2;
+    V_cf58 v0, v1, third_proximity_point;
 
     s32 a, b, e;
     f32 c;
@@ -242,11 +242,11 @@ void find_grind_rail(void) {
             v1.y = 341.0f;
             v1.z = 48.0f;
             if (12.0f < FUN_001f9b48_c(&hero.motion.pos, &v1)) {
-                *(OvlQuad *)&v2 = 0;
-                v2.x = 308.0f;
-                v2.y = 104.0f;
-                v2.z = 69.0f;
-                if (12.0f < FUN_001f9b48_c(&hero.motion.pos, &v2))
+                *(OvlQuad *)&third_proximity_point = 0;
+                third_proximity_point.x = 308.0f;
+                third_proximity_point.y = 104.0f;
+                third_proximity_point.z = 69.0f;
+                if (12.0f < FUN_001f9b48_c(&hero.motion.pos, &third_proximity_point))
                     return;
             }
         }
@@ -567,8 +567,8 @@ char *FUN_L00_0020d8f8(float a, float b, float c, float d) {
     return best;
 }
 /* Maps 1, 2, 3 to 0x79, 0x77, 0x75; others to 0. */
-s32 FUN_L00_0020da10(s32 a0) {
-    switch (a0) {
+s32 FUN_L00_0020da10(s32 animation_selector) {
+    switch (animation_selector) {
     case 1:
         return 0x79;
     case 2:
@@ -948,7 +948,7 @@ extern void FUN_L00_002323b8_c(s32, s32, f32) __asm__("FUN_L00_002323b8");
 
 void FUN_L00_0020e4c8(void);
 void FUN_L00_0020e4c8(void) {
-    s32 t, v19, v20, v21, i;
+    s32 t, hero_animation_id, animation_step_divisor, slot_animation_id, i;
     u8 *o;
     struct Hero *P;
     t = FUN_L00_0020d498_c(0);
@@ -956,24 +956,24 @@ void FUN_L00_0020e4c8(void) {
         return;
     P = &hero;
     P->unk2298 = t;
-    v19 = D_L00_00179AC0_c[t].unk24;
-    v21 = D_L00_00179AC0_c[t].f28;
+    hero_animation_id = D_L00_00179AC0_c[t].unk24;
+    slot_animation_id = D_L00_00179AC0_c[t].f28;
     if ((s32)P->state.control_mode == 12)
-        v21 = D_L00_00179AC0_c[t].f2C;
+        slot_animation_id = D_L00_00179AC0_c[t].f2C;
     P->unk20A8 = 1;
     {
         s32 k = D_L00_00179AC0_c[t].f30;
         P->unk20AA = k;
     }
-    v20 = FUN_001f96f8_c(10);
+    animation_step_divisor = FUN_001f96f8_c(10);
     if (D_L00_00179AC0_c[t].f18 == 0)
-        v20 = FUN_001f96f8_c(11);
+        animation_step_divisor = FUN_001f96f8_c(11);
     if (P->state.control_mode == 0 && P->unk22C8 == 0) {
-        P->unk2294 = v19;
-        FUN_L00_002323b8_c(v19, 0, (f32)v20);
+        P->unk2294 = hero_animation_id;
+        FUN_L00_002323b8_c(hero_animation_id, 0, (f32)animation_step_divisor);
         return;
     }
-    if (v21 == -1)
+    if (slot_animation_id == -1)
         return;
     for (i = 0; i < 2 && (i != 1 || hero.unk20AB == 2); i++) {
         if (hero.unkD08[i] != 0) {
@@ -982,10 +982,10 @@ void FUN_L00_0020e4c8(void) {
         o = FUN_L00_0024f028((u8 *)hero.moby, D_L00_0015F6A0_gp[i]);
         hero.unkD08[i] = o;
         if (o != 0) {
-            hero.unk2294 = v21;
+            hero.unk2294 = slot_animation_id;
             hero.unkD14 = 0;
             *(f32 *)(o + 8) = 1.0f;
-            FUN_L00_0024f3e0((u8 *)hero.moby, o, hero.unk2294, 0, v20, 1);
+            FUN_L00_0024f3e0((u8 *)hero.moby, o, hero.unk2294, 0, animation_step_divisor, 1);
         }
     }
 }
@@ -1349,7 +1349,7 @@ extern void matrix_to_euler(void *, void *) __asm__("FUN_00214598");
 void normalize_vector_triplet(f32 *vectors) __asm__("FUN_00214128");
 extern struct Hero hero_lui __asm__("D_0013F350") __attribute__((section(".data")));
 
-void FUN_L00_0020f160(char *arg, void *src) {
+void FUN_L00_0020f160(char *arg, u8 *entry) {
     V4_F7F8 vv[4];
     float fa[16];
     int ri;
@@ -1361,7 +1361,7 @@ void FUN_L00_0020f160(char *arg, void *src) {
 
     {
     char *b = ((char *)((char *)&hero_lui));
-    copy_matrix3x4_alt(((char *)((char *)&hero_lui)) + 0x12F0 + *(int *)(b + 0x21B8) * 0x30, src);
+    copy_matrix3x4_alt(((char *)((char *)&hero_lui)) + 0x12F0 + *(int *)(b + 0x21B8) * 0x30, entry);
     normalize_vector_triplet(((char *)((char *)&hero_lui)) + 0x12F0 + *(int *)(b + 0x21B8) * 0x30);
 
     *(int *)(b + 0x21B8) = (*(int *)(b + 0x21B8) + 1) % 16;
@@ -2103,7 +2103,8 @@ void FUN_L00_00210748(void) {
     struct Hero *hero_state = &hero;
     int i = 0;
     do {
-        struct Hero *slot_hero = (struct Hero *)((char *)&hero + i * sizeof(struct HeroItemSlot));
+        /* Fakematch: subtracting the negated offset gives retail's mtlo/madd address. */
+        struct Hero *slot_hero = (struct Hero *)((char *)&hero - -(i * sizeof(struct HeroItemSlot)));
         struct Moby *moby = slot_hero->items[0].moby;
         if (moby != 0) {
             switch (slot_hero->items[0].state) {
@@ -3155,7 +3156,7 @@ extern CollisionHit HH __asm__("D_L00_00173E40") __attribute__((section(".data")
 #define HF(o) (*(f32 *)(D_L00_00173E40 + (o)))
 
 void FUN_L00_002127b8(void) {
-    V v0, v10, v20, v30, v40, v50, v60;
+    V collision_ray_end, ground_ray_start, v20, side_ray_start, v40, v50, v60;
     f32 f;
     s32 r;
     s32 i;
@@ -3186,8 +3187,8 @@ void FUN_L00_002127b8(void) {
     if (hero.state.control_mode == 2) {
         g = hero.unk234 * 2.9f;
     }
-    hero_get_collision_ray_endpoints((Vec4_002126b8 *)&v10, (Vec4_002126b8 *)&v0, k, g, -48.0f);
-    if (collision_line(&v10, &v0, 2, hero.moby, 0) == 0) {
+    hero_get_collision_ray_endpoints((Vec4_002126b8 *)&ground_ray_start, (Vec4_002126b8 *)&collision_ray_end, k, g, -48.0f);
+    if (collision_line(&ground_ray_start, &collision_ray_end, 2, hero.moby, 0) == 0) {
         goto tail;
     }
     r = coll_sound_class();
@@ -3201,7 +3202,7 @@ void FUN_L00_002127b8(void) {
         if (hero.motion.pos.f[2] < hero.water_surface_z && hero.unk2F8 <= 0) {
             hero.unk2F8 = 1;
         }
-        if (collision_line(&v10, &v0, 0x24, hero.moby, 0) == 0) {
+        if (collision_line(&ground_ray_start, &collision_ray_end, 0x24, hero.moby, 0) == 0) {
             goto d1;
         }
         r = coll_sound_class();
@@ -3212,15 +3213,15 @@ void FUN_L00_002127b8(void) {
     }
     if (hero.ground_type == 0xD) {
         hero.water_surface_z = D_L00_00173E68;
-        v10.f[2] = D_L00_00173E68 - 0.01f;
-        if (collision_line(&v10, &v0, 4, hero.moby, 0) == 0) {
+        ground_ray_start.f[2] = D_L00_00173E68 - 0.01f;
+        if (collision_line(&ground_ray_start, &collision_ray_end, 4, hero.moby, 0) == 0) {
             goto d1;
         }
     }
     if (hero.ground_type == 3) {
         hero.unk2F4 = D_L00_00173E68;
-        v10.f[2] = D_L00_00173E68 - 0.01f;
-        if (collision_line(&v10, &v0, 4, hero.moby, 0) == 0) {
+        ground_ray_start.f[2] = D_L00_00173E68 - 0.01f;
+        if (collision_line(&ground_ray_start, &collision_ray_end, 4, hero.moby, 0) == 0) {
             goto d1;
         }
     }
@@ -3312,9 +3313,9 @@ d1:
         if (i == 1) {
             a = -a;
         }
-        FUN_L00_002335c8(&v30, 0.2f, a, 0.45f);
+        FUN_L00_002335c8(&side_ray_start, 0.2f, a, 0.45f);
         FUN_L00_002335c8(&v40, 0.2f, a, -0.45f);
-        if (collision_line(&v30, &v0, 0x22, hero.moby, 0)) {
+        if (collision_line(&side_ray_start, &collision_ray_end, 0x22, hero.moby, 0)) {
             f = HH.point.f[2] - hero.ground_z.f;
             hero.unk2C0.f[i] = f;
             if (0.4f < FUN_001f99c0(f)) {
@@ -3773,23 +3774,21 @@ void FUN_L00_00213de8(float s) {
     f = (float *)(p - 0x100);
     f[0x194 / 4] = f[0x194 / 4] * s;
 }
+#define HERO_OF(v) ((struct Hero *)((char *)(v) - 0xE0))
+extern Vec4 hero_velocity __asm__("D_0013F430");
+extern f32 FUN_L00_002339d0(void *);
+extern f32 approach_value(f32 *p, f32 target, f32 maxstep) __asm__("FUN_00213ed8");
+extern void FUN_L00_00233708(void *, void *, f32);
+extern void subtract_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a28");
+extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void FUN_001f9c48(void *, void *, f32);
+extern f32 vector_length_xy(void *) __asm__("FUN_001f9b20");
+
 #ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_00213e68.s", FUN_L00_00213e68);
 #else
 /* Steers the velocity's xy toward the move yaw at the target speed. Three
    instructions off retail: a v0 / v1 swap at 0x213FD0..0x213FF4. */
-#define HERO_OF(v) ((struct Hero *)((char *)(v) - 0xE0))
-extern Vec4 hero_velocity_34358 __asm__("D_0013F430");
-extern f32 FUN_L00_00213350_34358(void *) __asm__("FUN_L00_00213350");
-extern f32 FUN_L00_002339d0_34358(void *) __asm__("FUN_L00_002339d0");
-extern f32 approach_value_34358(f32, f32, f32 *) __asm__("FUN_00213ed8");
-extern void FUN_L00_00233ba0_34358(void *, void *, f32) __asm__("FUN_L00_00233ba0");
-extern void FUN_L00_00233708_34358(void *, void *, f32) __asm__("FUN_L00_00233708");
-extern void subtract_vector_xyz_34358(void *, void *, void *) __asm__("FUN_001f9a28");
-extern void add_vector_xyz_34358(void *, void *, void *) __asm__("FUN_001f9a10");
-extern void FUN_001f9c48_34358(void *, void *, f32) __asm__("FUN_001f9c48");
-extern f32 vector_length_xy_34358(void *) __asm__("FUN_001f9b20");
-
 void FUN_L00_00213e68(float amount) {
     f32 delta[4];
 
@@ -3822,8 +3821,8 @@ void FUN_L00_00213e68(float amount) {
             delta[1] = fast_sin(angle) * speed;
             delta[2] = hero.motion.velocity.f[2];
             factor = -(hero.motion.velocity.f[0] * delta[0] + hero.motion.velocity.f[1] * delta[1]);
-            length = vector_length_xy_34358(delta);
-            current_length = vector_length_xy_34358(&hero.motion.velocity);
+            length = vector_length_xy(delta);
+            current_length = vector_length_xy(&hero.motion.velocity);
             if (length == 0.0f) {
                 factor = 0.0f;
                 goto ratio_done;
@@ -3848,28 +3847,115 @@ void FUN_L00_00213e68(float amount) {
             if (factor < 1.0f)
                 factor = 1.0f;
             amount *= factor;
-            velocity = &hero_velocity_34358;
-            subtract_vector_xyz_34358(delta, delta, velocity);
-            length = vector_length_xy_34358(delta);
+            velocity = &hero_velocity;
+            subtract_vector_xyz(delta, delta, velocity);
+            length = vector_length_xy(delta);
             if (amount < length)
-                FUN_001f9c48_34358(delta, delta, amount);
-            add_vector_xyz_34358(velocity, velocity, delta);
+                FUN_001f9c48(delta, delta, amount);
+            add_vector_xyz(velocity, velocity, delta);
             qcopy(&HERO_OF(velocity)->motion.unk130, velocity);
             saved.q = HERO_OF(velocity)->move_impulse.q;
-            length = FUN_L00_00213350_34358(&saved);
+            length = forward_component(&saved);
             h = HERO_OF(velocity);
             h->ground_speed = h->motion.unk168 - length;
         break;
     case 1:
     case 2:
-        value = FUN_L00_002339d0_34358(&hero_velocity_34358);
-        approach_value_34358(HERO_OF(&hero_velocity_34358)->target_speed, amount, &value);
-        FUN_L00_00233ba0_34358(&hero_velocity_34358, &hero_velocity_34358, 0.0f);
-        FUN_L00_00233708_34358(&hero_velocity_34358, &hero_velocity_34358, value);
+        value = FUN_L00_002339d0(&hero_velocity);
+        approach_value(&value, HERO_OF(&hero_velocity)->target_speed, amount);
+        FUN_L00_00233ba0((float *)&hero_velocity, (float *)&hero_velocity, 0.0f);
+        FUN_L00_00233708(&hero_velocity, &hero_velocity, value);
         break;
     }
 }
-#endif
+#endif /* NON_MATCHING */
+
+void air_accel(float amount) __asm__("FUN_L01_00234358");
+#ifndef NON_MATCHING
+INCLUDE_ASM("config/us/overlays/asm/FUN_L01_00234358.s", FUN_L01_00234358);
+#else
+/* Same steering as FUN_L00_00213e68, without the copy into motion.unk130.
+   Off retail by the same v0 / v1 swap. */
+void air_accel(float amount) {
+    f32 delta[4];
+
+    Vec4 saved;
+    f32 value;
+    f32 angle;
+    f32 speed;
+    f32 factor;
+    f32 length;
+    f32 current_length;
+    f32 max;
+    Vec4 *velocity;
+    struct Hero *h;
+
+    switch (hero.unk20B3) {
+    case 0:
+            angle = hero.motion.move_yaw;
+            speed = hero.target_speed;
+            if (hero.state.control_mode == 4) {
+                if (hero.unk30A == 0) {
+                    if (hero.unk4A4 != 0 && hero.wall_hit != 0)
+                        speed = frame_time * 2.1f;
+                }
+            }
+            if (hero.unk30A != 0) {
+                if (hero.state.current == 0xE && frame_time < speed)
+                    speed = frame_time;
+            }
+            delta[0] = fast_cos(angle) * speed;
+            delta[1] = fast_sin(angle) * speed;
+            delta[2] = hero.motion.velocity.f[2];
+            factor = -(hero.motion.velocity.f[0] * delta[0] + hero.motion.velocity.f[1] * delta[1]);
+            length = vector_length_xy(delta);
+            current_length = vector_length_xy(&hero.motion.velocity);
+            if (length == 0.0f) {
+                factor = 0.0f;
+                goto ratio_done;
+            }
+            if (current_length != 0.0f) {
+                factor /= length;
+                goto divide_current;
+            }
+            factor = 0.0f;
+            goto ratio_done;
+        divide_current:
+            factor /= current_length;
+        ratio_done:
+            factor += 1.0f;
+            max = 1.5f;
+            factor *= max;
+            max = 3.0f;
+            if (hero.state.current == 0x81)
+                max = 1.7f;
+            if (max < factor)
+                factor = max;
+            if (factor < 1.0f)
+                factor = 1.0f;
+            amount *= factor;
+            velocity = &hero_velocity;
+            subtract_vector_xyz(delta, delta, velocity);
+            length = vector_length_xy(delta);
+            if (amount < length)
+                FUN_001f9c48(delta, delta, amount);
+            add_vector_xyz(velocity, velocity, delta);
+
+            saved.q = HERO_OF(velocity)->move_impulse.q;
+            length = forward_component(&saved);
+            h = HERO_OF(velocity);
+            h->ground_speed = h->motion.unk168 - length;
+        break;
+    case 1:
+    case 2:
+        value = FUN_L00_002339d0(&hero_velocity);
+        approach_value(&value, HERO_OF(&hero_velocity)->target_speed, amount);
+        FUN_L00_00233ba0((float *)&hero_velocity, (float *)&hero_velocity, 0.0f);
+        FUN_L00_00233708(&hero_velocity, &hero_velocity, value);
+        break;
+    }
+}
+#endif /* NON_MATCHING */
 #include "types.h"
 #include "rnc/gameplay/hero.h"
 extern int nearest_rail_point() __asm__("FUN_L00_0020cd08");

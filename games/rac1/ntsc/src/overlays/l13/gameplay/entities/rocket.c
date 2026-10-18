@@ -55,11 +55,11 @@ char *FUN_L13_003058a8(struct Moby *src, short cls) {
 extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
 extern void FUN_L00_00250df8(void *);
 
-void FUN_L13_00305988(struct Moby *moby, char *pos, int arg2, float arg3) {
+void FUN_L13_00305988(struct Moby *moby, char *pos, int distance_reference_moby, float max_travel_distance) {
     char *d = (char *)moby->pvars;
     char *s = *(char **)(d + 0x20);
     char *mp;
-    *(float *)(d + 0x28) = arg3;
+    *(float *)(d + 0x28) = max_travel_distance;
     qcopy(&moby->rot, s + 0x40);
     mp = &moby->pos;
     *(OvlQuad *)&moby->rot_row0 = *(OvlQuad *)(s + 0xC0);
@@ -68,7 +68,7 @@ void FUN_L13_00305988(struct Moby *moby, char *pos, int arg2, float arg3) {
     moby_point_position(*(void **)(d + 0x20), *(short *)(d + 0x26), mp);
     qcopy(d + 0x10, mp);
     qcopy(d, pos);
-    *(int *)(d + 0x2C) = arg2;
+    *(int *)(d + 0x2C) = distance_reference_moby;
     moby->state = 0;
     moby->flags &= 0xFFFE;
     moby->collision = moby->pclass->collision;
@@ -468,8 +468,8 @@ extern char D_L13_001670C0[];
 typedef struct { int v[6]; } L13EffectColors;
 extern L13EffectColors D_L13_001F5560, D_L13_001F5578;
 extern char *FUN_L13_0030c138(void *, void *, int, int);
-extern void FUN_L00_0026a9f0(void *, void *, int, int, int, int, int, int, float, float);
-extern char *FUN_L00_002df808(void *, void *, void *, int, int, int, int, int, float);
+extern void FUN_L00_0026a9f0(void *, void *, int, int, float, int, int, int, int, float);
+extern char *FUN_L00_002df808(void *, void *, void *, float, int, unsigned char, unsigned char, unsigned char, int);
 
 void FUN_L13_003073c8(struct Moby *moby, void *vars) {
     struct {
@@ -589,34 +589,34 @@ void FUN_L13_003073c8(struct Moby *moby, void *vars) {
                 duration2 = random_int_between(lo, hi);
             }
             FUN_L00_0026a9f0(&work.pos, &work.velocity, *color, *second_color,
-                duration, duration2, 0, 0, amount, speed);
+                amount, duration, duration2, 0, 0, speed);
         } while (i != 0);
     }
     if (distance > 9.0f) {
         float amount;
         amount = scale * 4.0f;
         duration = scale_game_frames(15);
-        FUN_L00_002df808(moby, &work.pos, &work.velocity, duration, 127,127,127,32, amount);
+        FUN_L00_002df808(moby, &work.pos, &work.velocity, amount, duration, 127, 127, 127, 32);
         duration = scale_game_frames(24);
-        FUN_L00_002df808(moby, &work.pos, &work.velocity, duration, 32,127,0,32, amount);
+        FUN_L00_002df808(moby, &work.pos, &work.velocity, amount, duration, 32, 127, 0, 32);
     }
     {
         float amount;
         amount = scale * 4.0f;
         duration = scale_game_frames(20);
-        FUN_L00_002df808(moby, &work.pos, &work.velocity, duration, 63,127,0,48, amount);
+        FUN_L00_002df808(moby, &work.pos, &work.velocity, amount, duration, 63, 127, 0, 48);
     }
     {
         float amount;
         amount = scale * 3.5f;
         duration = scale_game_frames(27);
-        FUN_L00_002df808(moby, &work.pos, &work.velocity, duration, 16,96,0,64, amount);
+        FUN_L00_002df808(moby, &work.pos, &work.velocity, amount, duration, 16, 96, 0, 64);
     }
     {
         float amount;
         amount = scale * 3.0f;
         duration = scale_game_frames(29);
-        FUN_L00_002df808(moby, &work.pos, &work.velocity, duration, 0,32,0,32, amount);
+        FUN_L00_002df808(moby, &work.pos, &work.velocity, amount, duration, 0, 32, 0, 32);
     }
 }
 #endif

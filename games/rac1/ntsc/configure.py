@@ -115,7 +115,6 @@ ROUTE_EXCEPTIONS = {
     # fun_00208030: expand a 4bpp coverage map through the 16-entry weight table
     # into a 1bpp threshold mask (4 source rows per output row)
     "ui/map/downsample_map_coverage": "cc_sn",
-    "ui/menus/update_menu_cycle_selection": "cc_sn",
     # Game code still built by SN cc1 plus the SN assembler Ps2EeAs (the padless route).
     "rendering/packets/emit_rgba_draw_packet": "cc_sn_padless",
     # parse_particle_textures: The a1/a3 induction-pointer swap was the ORDER OF
@@ -346,7 +345,9 @@ OVERLAY_SN_UNITS = {
     "shared/gameplay/state/0024eec0.c",
     "shared/gameplay/state/0024f190.c",
     "shared/gameplay/state/0027b268.c",
+    "shared/gameplay/state/00284e50.c",
     "shared/gameplay/state/unlock_planet.c",
+    "shared/gameplay/vendor/0029ead8.c",
     "shared/gameplay/vendor/002e3de8.c",
     "shared/gameplay/vendor/003015d0.c",
     "shared/gameplay/vendor/00316f48.c",
@@ -443,6 +444,7 @@ RODATA_OVERLAYS = {
     "sdk/callbacks/report_mpeg_picture_spatial_scalable_unsupported": (0x153B90, 0x54B10, 50),
     "sdk/callbacks/report_mpeg_picture_temporal_scalable_unsupported": (0x153BC8, 0x54B48, 51),
     "sdk/library/GetRomName": (0x153C00, 0x54B80, 12),
+    "draw_scrolling_sky_shells": (0x1E88F0, 0xE9870, 20),  # switch table
 }
 
 # Recovered C units that define the small-data variables their original
@@ -476,13 +478,13 @@ DATA_OVERLAYS = {
     "runtime/data/get_core_data_table": (0x132D40, 0x33CC0, 16),
     "sdk/video/ipu/send_ipu_command": (0x132E70, 0x33DF0, 64),
     "sdk/debug/sce_scf_get_language": (0x1330D4, 0x34054, 1),
-    "assembly/textbin/video/display/set_pal_mode": (0x13D100, 0x3E080, 8),
+    "video/display/set_pal_mode": (0x13D100, 0x3E080, 8),
     "rendering/texture/append_palette_transfer_packet": (0x151B60, 0x52AE0, 656),
     "textbin/render_queued_rotated_sprites": (0x189300, 0x8A280, 196),
     "gameplay/camera/backup_current_cam": (0x1893D0, 0x8A350, 1920),
     "textbin/append_billboard_batch": (0x18ED00, 0x8FC80, 512),
     "ui/map/map_filters": (0x1A03B0, 0xA1330, 4),
-    "textbin/initialize_level_runtime": (0x1CAAC0, 0xCBA40, 4096),
+    "textbin/gameplay/state/initialize_level_runtime": (0x1CAAC0, 0xCBA40, 4096),
     "textbin/world/data/select_world_object_resource_tables": (0x1CBBE0, 0xCCB60, 1152),
     "ui/menus/render_level_effects_and_screen_sprites": (0x1CE2C0, 0xCF240, 56),
     "textbin/gameplay/gadgets/load_hand_gadget": (0x1D52E8, 0xD6268, 1776),

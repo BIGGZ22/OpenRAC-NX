@@ -569,7 +569,7 @@ void FUN_L18_002f16f0(struct Moby *moby) {
             break;
         }
         case 2: {
-            int v9;
+            int hero_on_group_or_class_764_moby;
             int i;
             unsigned char *p;
             if (D_L18_00162288 != 0) {
@@ -585,12 +585,12 @@ void FUN_L18_002f16f0(struct Moby *moby) {
             if (d->f330 > D_L18_001622B4 && d->i8 != 0) {
                 moby->state = 4;
             }
-            v9 = 0;
+            hero_on_group_or_class_764_moby = 0;
             for (i = 0; i < d->cnt; i++) {
                 unsigned char *e = D_L18_0015FFD8 + (d->ent[i].idx << 8);
                 if (hero.ground_moby == e) {
                     d->f348 = 1;
-                    v9 = 1;
+                    hero_on_group_or_class_764_moby = 1;
                     break;
                 }
             }
@@ -598,9 +598,9 @@ void FUN_L18_002f16f0(struct Moby *moby) {
             if (p != 0) {
                 short s = *(short *)(p + 0xA6);
                 if (s == 0x764)
-                    v9 = 1;
+                    hero_on_group_or_class_764_moby = 1;
             }
-            if (d->f348 != 0 && v9 == 0 && hero.air_frames.s == 0) {
+            if (d->f348 != 0 && hero_on_group_or_class_764_moby == 0 && hero.air_frames.s == 0) {
                 if (tick_countdown_32(&d->f34C))
                     moby->state = 4;
             }
@@ -1493,7 +1493,7 @@ void drek_final_boss_robot_update(BossMoby *moby) {
     float v1[4];
     float v2[4];
     float v3[4];
-    float v4[4];
+    float node_position_and_yaw[4];
     float slow;
     float ang;
     float *aim;
@@ -1895,10 +1895,10 @@ void drek_final_boss_robot_update(BossMoby *moby) {
             char *recs = D_L18_001600EC;
             int idx = d->f298;
 
-            qcopy(v4, recs + idx * 0x80 + 0x30);
-            v4[3] = *(float *)(recs + idx * 0x80 + 0x78);
+            qcopy(node_position_and_yaw, recs + idx * 0x80 + 0x30);
+            node_position_and_yaw[3] = *(float *)(recs + idx * 0x80 + 0x78);
         }
-        FUN_L18_002dfaa0((char *)d->f334, v0, v1, v2, v3, v4, *(int *)&D_L18_00162394,
+        FUN_L18_002dfaa0((char *)d->f334, v0, v1, v2, v3, node_position_and_yaw, *(int *)&D_L18_00162394,
                          *(int *)&D_L18_00162398, 1);
         hero.pending_item[3] = 3;
         moby->f20 = 8;
@@ -3090,7 +3090,7 @@ extern int D_L18_0015FFD8_d __asm__("D_L18_0015FFD8");
  * Ported from rac1-decomp, where it is exact; names translated to
  * the US level program (data still reached through the MACRO_ADDR form). */
 // Walks a list of moby indices and resets the flags of each live moby.
-void FUN_L18_002f7028(int a0, int idx) {
+void FUN_L18_002f7028(int unused, int idx) {
     short *p = D_L18_001AC240_u[idx];
     if (p != 0) {
         do {

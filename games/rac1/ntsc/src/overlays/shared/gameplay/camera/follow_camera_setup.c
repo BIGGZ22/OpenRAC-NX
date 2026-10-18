@@ -661,7 +661,7 @@ void follow_camera_setup(Moby_2E8210 *m) {
     int r;
     float t;
     float v0[4];
-    float v1[4];
+    float orbit_offset_remainder[4];
 
     D_L00_00161D8C = 0;
     D_L00_00161D90 = 0;
@@ -783,8 +783,8 @@ void follow_camera_setup(Moby_2E8210 *m) {
     qcopy(c->pos, m->v30);
     qcopy(g->v20, m->v30);
     scale_vector_xyz(v0, D_0013F6E0_2E8210, dot_vectors_xyz_c(b->v0, D_0013F6E0_2E8210));
-    subtract_vector_xyz(v1, b->v0, v0);
-    t = b->f2C - func_001F9CB8_2E8210(v1);
+    subtract_vector_xyz(orbit_offset_remainder, b->v0, v0);
+    t = b->f2C - func_001F9CB8_2E8210(orbit_offset_remainder);
     g->f30 = t;
     if (t < -0.1f) {
         g->h3A = 1;
@@ -941,16 +941,16 @@ typedef struct {
 } O002e7530;
 void FUN_L00_002e7530(O002e7530 *o, V002e7530 *a, V002e7530 *b, V002e7530 *c, V002e7530 *out,
                       f32 k1, f32 k2) {
-    V002e7530 t0, t1, t2, t3;
+    V002e7530 separation_vector, separation_step, radial_offset, adjusted_position;
     u8 *m = o->m;
-    subtract_vector_xyz(&t0, b, c);
+    subtract_vector_xyz(&separation_vector, b, c);
     m += 0x90;
-    normalize_vector_xyz(&t1, &t0, k1);
-    add_vector_xyz(b, b, &t1);
-    subtract_vector_xyz(&t2, b, m);
-    normalize_vector_xyz(&t2, &t2, k2);
-    add_vector_xyz(&t3, m, &t2);
-    subtract_vector_xyz(a, &t3, out);
+    normalize_vector_xyz(&separation_step, &separation_vector, k1);
+    add_vector_xyz(b, b, &separation_step);
+    subtract_vector_xyz(&radial_offset, b, m);
+    normalize_vector_xyz(&radial_offset, &radial_offset, k2);
+    add_vector_xyz(&adjusted_position, m, &radial_offset);
+    subtract_vector_xyz(a, &adjusted_position, out);
 }
 extern char *current_follow_cam __asm__("D_L00_00166E00") __attribute__((section(".data")));
 extern int D_L00_0015EF5C __asm__("D_L00_0015EF5C");
@@ -1034,13 +1034,13 @@ extern float fast_vec_dot(void *, void *) __asm__("FUN_001f9ab0");
 extern void fast_vec_sub(float *, float *, float *) __asm__("FUN_001f9a28");
 
 /* For arg1 1: true when (D_L00_00173E60 - arg2) points against the object's +0x130 vector. */
-int FUN_L00_002e79c8(void *arg0, int arg1, float *arg2) {
+int FUN_L00_002e79c8(void *camera_moby, int step_index, float *sample_position) {
     V diff;
     char *ptr2;
 
-    if (arg1 == 1) {
-        ptr2 = *(char **)((char *)arg0 + 0x70) + 0x130;
-        fast_vec_sub(diff, D_L00_00173E60, arg2);
+    if (step_index == 1) {
+        ptr2 = *(char **)((char *)camera_moby + 0x70) + 0x130;
+        fast_vec_sub(diff, D_L00_00173E60, sample_position);
         if (fast_vec_dot(diff, ptr2) < 0.0f) {
             return 1;
         }

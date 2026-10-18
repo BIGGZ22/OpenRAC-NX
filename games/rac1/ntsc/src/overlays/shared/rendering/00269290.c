@@ -191,7 +191,7 @@ int FUN_001fa6d0_00269958(float) __asm__("FUN_001fa6d0");
 int FUN_001160d8_00269958(void) __asm__("FUN_001160d8");
 extern unsigned char *D_L00_001B2090 __attribute__((section(".data")));
 void FUN_L00_00269958(u128 *a, u128 *b, int c, int d, int n, int s1, int s2, int flag);
-void FUN_L00_00269958(u128 *a, u128 *b, int c, int d, int n, int s1, int s2, int flag) {
+void FUN_L00_00269958(u128 *a, u128 *b, int c, int d, int n, int scalar_base, int scalar_delta, int flag) {
     unsigned char *m = FUN_L00_002678b8_00269958(4);
     if (m) {
         int *e;
@@ -212,8 +212,8 @@ void FUN_L00_00269958(u128 *a, u128 *b, int c, int d, int n, int s1, int s2, int
         e[7] = n;
         e[4] = c;
         e[5] = d;
-        *(short *)((char *)e + 0x18) = s2;
-        *(short *)((char *)e + 0x1a) = s1;
+        *(short *)((char *)e + 0x18) = scalar_delta;
+        *(short *)((char *)e + 0x1a) = scalar_base;
     }
 }
 typedef struct {
@@ -372,9 +372,8 @@ void FUN_L00_00269d20(unsigned char *m) {
             if (p[0x1b] & 0x20) green -= *(float *)(e + 0x50) * step;
             else green += *(float *)(e + 0x50) * step;
         }
-        step = frame_scale;
-        if (p[0x1b] & 0x40) blue -= *(float *)(e + 0x54) * step;
-        else blue += *(float *)(e + 0x54) * step;
+        if (p[0x1b] & 0x40) blue -= *(float *)(e + 0x54) * frame_scale;
+        else blue += *(float *)(e + 0x54) * frame_scale;
         limit = *(float *)(e + 0x64);
         if (limit < red) {
             red = limit;
@@ -400,7 +399,8 @@ void FUN_L00_00269d20(unsigned char *m) {
             blue = limit;
             if (*(unsigned int *)(e + 0x70) & 0x400) p[0x1b] ^= 0x40;
         }
-        limit = *(float *)(e + 0x60);
+        /* Fakematch: the dead copy into step puts the 65535 and 255 constants in retail's order. */
+        limit = step = *(float *)(e + 0x60);
         if (blue < limit) {
             blue = limit;
             if (*(unsigned int *)(e + 0x70) & 0x40) p[0x1b] ^= 0x40;
@@ -3048,7 +3048,7 @@ void FUN_L00_0026ff10(Moby_26ff10 *p) {
     VV_26ff10 v0u;
     VV_26ff10 v1u;
     S_26ff10 c;
-    f32 v2[4];
+    f32 collision_offset[4];
     PV_26ff10 *pv;
     Moby_26ff10 *r;
     u8 *tab;
@@ -3127,11 +3127,11 @@ void FUN_L00_0026ff10(Moby_26ff10 *p) {
     }
     hit = FUN_001efa68_26ff10(pa, pb, mode, col, aux) != 0;
     if (hit) {
-        FUN_001f9bf8_26ff10(v2, D_L00_00173E80_26ff10, 1.0f);
+        FUN_001f9bf8_26ff10(collision_offset, D_L00_00173E80_26ff10, 1.0f);
         FUN_L00_001ff660_26ff10(pv, pv, D_L00_00173E80_26ff10);
         FUN_001f9a68_26ff10(pv, pv, 0.02f);
-        FUN_001f9bf8_26ff10(v2, D_L00_00173E80_26ff10, 0.055f);
-        FUN_001f9a10_26ff10(p->posv.f, D_L00_00173E80_26ff10 - 8, v2);
+        FUN_001f9bf8_26ff10(collision_offset, D_L00_00173E80_26ff10, 0.055f);
+        FUN_001f9a10_26ff10(p->posv.f, D_L00_00173E80_26ff10 - 8, collision_offset);
         if (p->f0C < 200000.0f && (pv->f18 & 8) == 0) {
             p->f0C = p->f0C + p->f0C;
         }
