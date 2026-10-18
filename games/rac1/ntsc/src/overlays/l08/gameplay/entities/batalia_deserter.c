@@ -397,6 +397,7 @@ extern float random_float_between(float, float) __asm__("FUN_002132a8");
 extern int FUN_001f9740_c(int *) __asm__("FUN_001f9740");
 extern int FUN_001fa6d0(float);
 extern void fast_vec_sub(void *, void *, void *) __asm__("FUN_001f9a28");
+extern void fast_vec_add(void *, void *, void *) __asm__("FUN_001f9a10");
 extern void FUN_L00_002668a0_c(void *, void *) __asm__("FUN_L00_002668a0");
 extern void jet_reset_camera(void *, void *) __asm__("FUN_L00_00284e50");
 extern char D_L08_00162308[];
