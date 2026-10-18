@@ -99,17 +99,28 @@ Levels are numbered as the discs number them. The ones named here: 0 Veldin,
 - **Symptom.** In a picture wider than 4:3 tiles of a lake, lava or sand sea
   are missing near the left and right edges.
 - **Cause.** Each of these surfaces has a per-level draw callback, and it
-  decides which tiles to draw with the game's own clip test, which knows only
-  the 4:3 picture; nothing in the port widens that test.
+  decides which tiles to draw with the game's own view tests, which know only
+  the 4:3 picture; nothing in the port widened them. The liquid grid
+  (Aridia, Kerwan, Rilgar, Umbris, Batalia, Gaspar, Oltanis) culls its 7 x 7
+  cell blocks against the camera block's cull matrix (+0x100, built by
+  `FUN_001f2260`, update_camera_view_matrices); Novalis's lava layers and other
+  callbacks test bounding spheres (`FUN_001fa728`, fast_bsphere_check) against
+  the clip constants `FUN_001f2d98` (update_view_context) copies to
+  `D_0018CFC0`. The liquid grid's callback sets its fog first, which builds the
+  matrices again, so the values have to be opened at the test itself.
 - **Where.** The callbacks are level code (`FUN_L<level>_...`) registered
-  into the game's draw callback lists
-  (`port/game/rac1-ntsc/host/callback_lists.c` has the registration
-  routines the levels carry). The matrix is the one `FUN_001f2d98` (US 0x1F7980, update_view_context)
-  writes.
-- **Port today.** Open. PAL's port draws the 3D itself from the extracted
-  level and does not use these callbacks for the world, so check whether the
-  NTSC window's levels hit this at all once the NTSC levels exist
-  (README item 2).
+  into the game's draw callback lists (`port/game/rac1/host/callback_lists.c`
+  has the registration routines the levels carry); the grid's cull is
+  `FUN_L02_0024f748` (PAL `func_L02_00250720`) in every liquid level.
+- **Port today.** Fixed for both discs in
+  [rac1/host/wide_view.c](../../port/game/rac1/host/wide_view.c): in a picture
+  wider than 4:3 the grid's cull runs against the cull matrix opened by as much
+  as the picture is wider, and the sphere test against opened clip constants
+  while a draw callback list runs (outside the lists it also serves the game's
+  logic, which keeps the 4:3 view). At 4:3 nothing changes. Still 4:3: the
+  callbacks' tests that compare a projected point with the screen's pixels.
+  Gaspar's lava backdrop (`FUN_L09_002ef750`) was not reached on the harness
+  route.
 
 ### 1.5 Kerwan: bullets frozen in the air, cables not caught (level 3)
 
