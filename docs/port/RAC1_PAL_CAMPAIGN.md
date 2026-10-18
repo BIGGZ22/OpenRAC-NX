@@ -1547,3 +1547,25 @@ VU0 or trap code; libmpeg and the movie player are SDK code the port does not ne
 
 Open: a playthrough; the frontier past each level's start (deeper scripted routes);
 func_L08_002F7318 and func_L12_00304038 are stubs (VLA lengths that are expressions).
+
+### Planet flights and a moby tour of every level, 2026-10-18
+
+Scripted with a hidden window (`OPENRAC_HIDDEN=1`), `--stop-on-missing` and `OPENRAC_STRICT=1`.
+Veldin to Novalis by the crash-site scenes works; from Kerwan's ship, with every planet put on the
+Galactic Map (`D_0013DE48[level]`, `D_0013DE60[level]` set and `gGalaxyList` at 0x13D618 written:
+a test shortcut, not progression), every planet's flight lands and play resumes. Fixed on the way:
+func_001FAA28 (map-bit coder, every flight), func_L00_0024F048 (Blarg; the catalogue had 12 of its
+56 bytes, and six functions after it at 0x24F080-0x24F158 are in no catalogue), func_L08_002F7318
+(Batalia, a stub), func_L00_00254218 (a crate on Kerwan), callbacks declared as `extern char[]`
+taking the wrong level's address, func_L13_0030AD88 reading level 6's globals.
+
+Moby tour (teleport beside up to 3 live mobys of each class, wrench twice, 130 ticks each): levels
+0-3, 5, 6, 8-12, 15-17 complete. Open:
+- 4 Eudora: fault near class 584. 7 Umbris: fault near class 447.
+- 13 Gemlik (near class 127) and 18 Veldin 2 (class 568): a call to the code address of a level-1
+  name. The same function is at 0x246610 on Gemlik and 0x23D688 on Veldin 2; shared C calls it
+  as func_L01_0023D688 through `openrac_call_in_copy(1, ...)`, which needs that level's place.
+- 14 Oltanis (class 1416): func_L05_0031AA20's copy calls a function at 0x31AAA8 that differs
+  from func_L05_0031AAA8 there; the catalogue has no level 14 place for either.
+Only believed correct, not exercised: everything the tour did not reach; progression (infobots,
+gates, bosses) was not played at all.
