@@ -1096,6 +1096,8 @@ class Unit:
         if kind == "LValueToRValue":
             return self.lv(child).text
         if kind == "ArrayToPointerDecay":
+            if self._code_variable(child):
+                return self.function_value(child)
             lv = self.lv(child)
             if lv.addr is None:
                 raise Unsupported("an array that is not in game memory")
@@ -1131,7 +1133,8 @@ class Unit:
     def function_value(self, n: dict) -> str:
         """The code address of a function designator, as a gaddr."""
         n = _strip_parens(n)
-        if n.get("kind") == "DeclRefExpr" and n["referencedDecl"].get("kind") == "FunctionDecl":
+        if n.get("kind") == "DeclRefExpr" and (n["referencedDecl"].get("kind") == "FunctionDecl"
+                                               or self._code_variable(n)):
             sym = self._callee_symbol(n)
             if self.fn is not None:
                 self.fn.report.calls.add(sym)
@@ -1140,6 +1143,9 @@ class Unit:
                 raise Unsupported(f"the address of {sym}, which has none")
             if getattr(self.program, "relocate", None) and self.fn is not None                     and not LEVEL_NAME.match(self.fn.name) and places[0][0] < 0:
                 return f"OPENRAC_CODE({hexaddr(places[0][1])})"
+            # A place split off as a variant of its own (split_places.tsv) is still where this name
+            # sits in that level: the address the level's own instruction forms.
+            places = places + [p for p in getattr(self.program, "splits", {}).get(sym, []) if p not in places]
             level = self._shared_level()
             copy = self._copy_places()
             if copy is not None and places[0][0] >= 0:
@@ -1165,6 +1171,19 @@ class Unit:
         if n.get("kind") == "UnaryOperator" and n["opcode"] == "*":
             return self.rv(_inner(n)[0])
         raise Unsupported(f"function designator {n.get('kind')}")
+
+    def _code_variable(self, n: dict) -> bool:
+        """A variable that names code: `extern char f[] __asm__("func_L06_00300AB0")`, the way matched
+        C takes a function's address. Its address is the function's, found as for a function
+        designator (the copy in the level loaded), not the one place its name has."""
+        n = _strip_parens(n)
+        if n.get("kind") != "DeclRefExpr" or n["referencedDecl"].get("kind") != "VarDecl":
+            return False
+        d = self.decls.get(n["referencedDecl"]["id"])
+        if d is None or d.get("storageClass") != "extern":
+            return False
+        sym = self.program.canonical(symbol_of(d))
+        return sym in self.program.functions and bool(self.program.code_places(sym))
 
     def _callee_symbol(self, ref: dict) -> str:
         d = self.decls.get(ref["referencedDecl"]["id"])
@@ -1198,7 +1217,8 @@ class Unit:
         child = _inner(n)[0]
         if op == "&":
             c = _strip_parens(child)
-            if c.get("kind") == "DeclRefExpr" and c["referencedDecl"].get("kind") == "FunctionDecl":
+            if c.get("kind") == "DeclRefExpr" and (c["referencedDecl"].get("kind") == "FunctionDecl"
+                                                   or self._code_variable(c)):
                 return self.function_value(c)
             lv = self.lv(child)
             if lv.addr is None:
