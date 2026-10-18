@@ -311,3 +311,4 @@ Rfu091Mid	kernel	GetEntryAddress	host	system call 0x5B; PAL func_0011DC40
 Rfu116SetSyscallTail	kernel	SetSyscall	host	system call 0x74; PAL func_0011DDD0
 InvokeKernelSyscall005A_RfuTail	kernel	Copy	host	system call 0x5A; PAL func_0011DDE0
 Rfu091Tail	kernel	GetEntryAddress	host	system call 0x5B; PAL func_0011DE28
+__muldi3	libgcc	__muldi3	host	64-bit multiply; PAL func_0011EEC8

@@ -294,3 +294,9 @@ func_00127060	functional/func_00127060.c
 func_00127178	functional/func_00127178.c
 memchr	functional/memchr.c
 sceSifWriteBackDCache	functional/sceSifWriteBackDCache.c
+FUN_0021b858	functional/FUN_0021b858.c
+FUN_00238f08	functional/FUN_00238f08.c
+_doMC	functional/_doMC.c
+FUN_L00_002c97e0	functional/FUN_L00_002c97e0.c
+FUN_L07_00314150	functional/FUN_L07_00314150.c
+FUN_L00_002b49a8	functional/FUN_L00_002b49a8.c
