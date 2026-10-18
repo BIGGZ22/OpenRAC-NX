@@ -22,6 +22,11 @@ where it was:
 - With candidates (hostgen.json "candidates"), a function the decompilation
   still has as an assembly stub gets the candidate's C at the end of its file
   (use_candidates).
+- With aliases (hostgen.json "aliases"), a readable name the decompilation
+  defines as a macro for an address name (`#define DrawFlare func_0022F258`)
+  is written as that address name, outside comments, strings and `#define`
+  lines (unalias): the same code for Clang, and the passes here, which know
+  game symbols by their address names, see every definition and call.
 """
 
 from __future__ import annotations
@@ -339,6 +344,31 @@ def own_va_list(text: str) -> str:
     return "".join(out)
 
 
+# What unalias leaves alone: comments, literals and preprocessor definitions; and the words it reads.
+_ALIAS_TOKEN = re.compile(
+    r'"(?:\\.|[^"\\\n])*"'
+    r"|'(?:\\.|[^'\\\n])*'"
+    r"|/\*.*?\*/"
+    r"|//[^\n]*"
+    r"|^[ \t]*#[ \t]*define\b(?:\\\n|[^\n])*"
+    r"|\b[A-Za-z_]\w*\b",
+    re.S | re.M,
+)
+_ALIAS_DEFINE = re.compile(r'^[ \t]*#[ \t]*define[ \t]+([A-Za-z_]\w*)[ \t]+((?:D|func)_\w+)[ \t]*$', re.M)
+
+
+def read_aliases(text: str) -> dict[str, str]:
+    """readable name -> address name, from a header of `#define NAME func_ADDR` lines."""
+    return {m.group(1): m.group(2) for m in _ALIAS_DEFINE.finditer(text) if m.group(1) != m.group(2)}
+
+
+def unalias(text: str, aliases: dict[str, str]) -> str:
+    """TEXT with each readable name of ALIASES written as its address name (see the top)."""
+    if not aliases:
+        return text
+    return _ALIAS_TOKEN.sub(lambda m: aliases.get(m.group(0), m.group(0)), text)
+
+
 def prepare(text: str) -> str:
     return rename_va_builtins(own_va_list(name_wide_casts(name_cast_records(expand_cast_macros(widen_long(split_multiline_strings(blank_file_scope_asm(text))))))))
 
@@ -581,8 +611,10 @@ def apply_decomp_workarounds(rel: str, text: str) -> str:
 
 def copy_tree(src: Path, dst: Path, patterns=("*.c", "*.h", "*.inc"),
               candidates: dict[str, str] | None = None, used: set[str] | None = None,
-              drafts: tuple[str, set[str]] | None = None, prefix: str = "") -> int:
+              drafts: tuple[str, set[str]] | None = None, prefix: str = "",
+              aliases: dict[str, str] | None = None) -> int:
     """Prepares every C file under src into dst; only rewrites what changed.
+    aliases (readable name -> address name) are written as their address names first (unalias).
     candidates (function name -> C) replace their assembly stubs (use_candidates);
     the names used are added to used. drafts (a guard macro, the files it applies to, named
     from the decompilation's top with prefix as src's own name) has those files' own drafts
@@ -591,7 +623,7 @@ def copy_tree(src: Path, dst: Path, patterns=("*.c", "*.h", "*.inc"),
     for pattern in patterns:
         for path in src.rglob(pattern):
             out = dst / path.relative_to(src)
-            text = prepare(path.read_text(encoding="utf-8", errors="surrogateescape"))
+            text = prepare(unalias(path.read_text(encoding="utf-8", errors="surrogateescape"), aliases or {}))
             if candidates and path.suffix == ".c":
                 text = use_candidates(text, candidates, used if used is not None else set())
             if drafts and (Path(prefix) / path.relative_to(src)).as_posix() in drafts[1]:

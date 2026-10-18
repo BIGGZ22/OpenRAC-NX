@@ -131,6 +131,16 @@ def read_hand(config_dir: Path, cfg: dict) -> dict[str, str]:
     return read_table_of_c(config_dir / table)
 
 
+def read_aliases(source: Path, cfg: dict) -> dict[str, str]:
+    """The decompilation's readable names, each a macro for an address name (hostgen.json
+    "aliases": headers in the decompilation of `#define NAME func_ADDR` lines), or none."""
+    out: dict[str, str] = {}
+    for header in cfg.get("aliases", []):
+        if (source / header).is_file():
+            out.update(prep.read_aliases((source / header).read_text(encoding="utf-8", errors="surrogateescape")))
+    return out
+
+
 def read_drafts(config_dir: Path, cfg: dict) -> tuple[str, set[str]] | None:
     """The files whose own pending C is read in place of their assembly stub (hostgen.json
     "drafts": {"guard": the macro the decompilation keeps it under, "units": a list beside the
@@ -514,11 +524,17 @@ def main(argv: list[str] | None = None) -> int:
     # The port's own C for hand-written assembly first; a decompilation's
     # candidate for the same function stands aside.
     candidates = {**read_candidates(source, cfg), **read_hand(args.game.parent, cfg)}
+    aliases = read_aliases(source, cfg)
+    if aliases:
+        # One text for several functions stays one text (use_candidates puts it in once).
+        texts = {id(c): prep.unalias(c, aliases) for c in candidates.values()}
+        candidates = {name: texts[id(c)] for name, c in candidates.items()}
     used: set[str] = set()
     drafts = read_drafts(args.game.parent, cfg)
     for d in sorted(set(cfg["sources"] + cfg["includes"])):
         if (source / d).is_dir():
-            prep.copy_tree(source / d, root / d, candidates=candidates, used=used, drafts=drafts, prefix=d)
+            prep.copy_tree(source / d, root / d, candidates=candidates, used=used, drafts=drafts, prefix=d,
+                           aliases=aliases)
     units = units_of(root, cfg)
     if args.only:
         units = [u for u in units if u in args.only]

@@ -880,6 +880,21 @@ class TypeStrings(unittest.TestCase):
 
 
 class Preparation(unittest.TestCase):
+    def test_readable_names_are_written_as_their_address_names(self):
+        # rac1/pal's names.h: a definition under its readable name is still the matched C of
+        # func_0022F4C8, so the port's own copy of that function steps aside.
+        aliases = prep.read_aliases('#define DrawQuads    func_0022F4C8\n#define D_X D_00100000\n')
+        self.assertEqual(aliases, {"DrawQuads": "func_0022F4C8", "D_X": "D_00100000"})
+        src = ('#define DrawQuads func_0022F4C8\n'
+               'void DrawQuads(char *m) { /* DrawQuads */ char *s = "DrawQuads"; DrawQuadsX(m); }\n'
+               'INCLUDE_ASM("asm", func_0022F4C0);\n')
+        out = prep.unalias(src, aliases)
+        self.assertIn('#define DrawQuads func_0022F4C8\nvoid func_0022F4C8(char *m) { /* DrawQuads */ '
+                      'char *s = "DrawQuads"; DrawQuadsX(m); }', out)
+        both = 'void func_0022F4C0(void) {}\nvoid func_0022F4C8(char *m) {}\n'
+        text = prep.use_candidates(out, {"func_0022F4C0": both}, set())
+        self.assertEqual(text.count("void func_0022F4C8(char *m)"), 1)
+
     def test_each_declarator_keeps_its_own_assembler_name(self):
         # Batalia: several names in one extern statement each reach their own symbol, not the first's.
         src = ('extern float func_A(int),func_B(float), *D_C;\n'
