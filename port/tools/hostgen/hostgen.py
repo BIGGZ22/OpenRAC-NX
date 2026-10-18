@@ -419,6 +419,7 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         "call_graph": {f.name: sorted(f.calls) for f in fns if f.status == "translated" and f.calls},
         "hardware_accesses": sum(f.hw for f in fns),
         "functions_touching_hardware": sorted(f.name for f in fns if f.hw),
+        "literal_addresses": {f.name: f.literals for f in fns if f.literals},
         "stub_reasons": dict(sorted(reasons.items(), key=lambda kv: -kv[1])),
         "fixes": {r.unit: r.fixes for r in reports if r.fixes},
         "problems": {r.unit: r.problems for r in reports if r.problems},
@@ -444,6 +445,9 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         f"{sum(len(v) for v in summary['arguments_filled_with_zero'].values())} |",
         f"| Accesses to hardware register addresses | {summary['hardware_accesses']} "
         f"in {len(summary['functions_touching_hardware'])} functions |",
+        f"| Literal addresses relocated as their globals would be | "
+        f"{sum(len(v) for v in summary['literal_addresses'].values())} "
+        f"in {len(summary['literal_addresses'])} functions |",
         "",
         "## Why functions became stubs",
         "",

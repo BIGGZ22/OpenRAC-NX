@@ -27,6 +27,7 @@ for Jak's pointers. hostgen writes the C against it:
 | `*p`, `p->f`, `p[i]` | an access to game memory: `GREF(T, addr)`, `((S *)G(p))->f` |
 | pointer arithmetic | scaled by the pointee's size, which is the console's: every record keeps its layout, since its pointers are 4-byte `gaddr`s too |
 | a global (`D_0013E650`, or a named one with its address) | the object at its retail address in game memory |
+| a literal address made a pointer (`*(s32 *)0x1610A8`, `((S *)0x160F08)->f`) | the global a name at that address would be, relocated the same way: in a range the levels move (`relocate`), the loaded level's copy, not the executable's under it |
 | a local whose address is taken, a local array, struct or union | a slot in a frame on the game stack (`GFRAME`), given back when the function returns |
 | a string literal | copied into game memory once (`GSTR`) |
 | a direct call | a call to the callee's **definition**, its arguments matched to the definition's parameters as the EE passes them (below) |
@@ -133,6 +134,7 @@ with C). A level function is one named `func_Lnn_...` or `FUN_Lnn_...`.
 | `functions.c` | every function by code address, per level program (`openrac_game_register_functions`) |
 | `libraries.c` | the game's library addresses bound to the shared replacements |
 | `game_info.c` | the game's description (`openrac_game`), its entry (`openrac_game_run`) and, unless the game has its own, its overlay hook |
+| `report.json` `literal_addresses` | each function's literal addresses in the relocated range and what each became (`OPENRAC_DATA(...)`, `OPENRAC_LDATA(...)`, or `kept` in a function of one level, whose addresses are that level's) |
 | `report.md`, `report.json` | what was translated, what became a stub and why, and **the frontier**: the functions without C that the program reaches from its roots, nearest first. That list is where decompiling moves the port on. |
 | `report.json` `call_graph`, `call_site_mismatches` | what each translated function calls or takes the address of, and the direct calls whose site disagrees with the callee's definition (arity, kinds, result): [priority.py](priority.py) ranks the weak functions gameplay reaches from them ([BACKFILL.md](../../../docs/workflow/BACKFILL.md#picking-what-to-backfill-first)) |
 

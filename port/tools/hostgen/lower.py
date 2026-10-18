@@ -83,6 +83,8 @@ class FnReport:
     passthrough: int = 0         # arguments passed through from the caller's registers
     zero_args: list = field(default_factory=list)  # calls short of arguments the caller had none for
     hw: int = 0                  # accesses to hardware register addresses
+    # Literal addresses cast to pointers (`*(s32 *)0x1610A8`) and what each became: "0x... -> C".
+    literals: list = field(default_factory=list)
     calls: set = field(default_factory=set)  # functions it calls or takes the address of
     # Direct calls whose call site disagrees with the callee's definition (arity, kinds, result):
     # "callee: what differs", for port/tools/hostgen/priority.py.
@@ -126,6 +128,31 @@ def _strip_parens(n: dict) -> dict:
     while n.get("kind") == "ParenExpr":
         n = _inner(n)[0]
     return n
+
+
+def _in(address: int, rng) -> bool:
+    return bool(rng) and rng[0] <= address < rng[1]
+
+
+def _constant(n: dict) -> int | None:
+    """The value of an integer constant expression of literals (`0x1610A8`, `(u32)0x160F00 + 8`), or
+    None."""
+    n = _strip_parens(n)
+    k = n.get("kind")
+    if k == "IntegerLiteral":
+        try:
+            return int(n["value"], 0)
+        except ValueError:
+            return None
+    if k == "ConstantExpr" or (k in ("ImplicitCastExpr", "CStyleCastExpr")
+                               and n.get("castKind") in ("IntegralCast", "NoOp")):
+        return _constant(_inner(n)[0])
+    if k == "BinaryOperator" and n.get("opcode") in ("+", "-", "|"):
+        a, b = (_constant(c) for c in _inner(n)[:2])
+        if a is None or b is None:
+            return None
+        return a + b if n["opcode"] == "+" else a - b if n["opcode"] == "-" else a | b
+    return None
 
 
 def hexaddr(a: int) -> str:
@@ -1114,6 +1141,8 @@ class Unit:
         tc = self.cls(t)
         v = self.rv(child)
         if tc == "ptr":
+            if kind == "IntegralToPointer" and (lit := self._literal_pointer(child, t)) is not None:
+                return lit
             if kind in ("BitCast", "IntegralToPointer"):
                 return f"(gaddr)({v})" if kind == "IntegralToPointer" else v
             raise Unsupported(f"cast {kind} to a pointer")
@@ -1130,6 +1159,41 @@ class Unit:
                 raise Unsupported(f"cast {kind} to an aggregate")
             return f"(({self.host(ctype.strip_quals(t))})({v}))"
         raise Unsupported(f"cast {kind}")
+
+    def _literal_pointer(self, child: dict, t) -> str | None:
+        """A constant address made a pointer (`*(s32 *)0x1610A8`, `((S *)0x160F08)->f`): lowered as
+        the global a name at that address would be (global_address), so in a range the levels move
+        it is the loaded level's, not the executable's copy under it. A function pointer is code:
+        OPENRAC_CODE in an executable function, OPENRAC_LCODE in one several levels carry. None
+        when it is not a constant, or nothing relocates it (the plain address is right)."""
+        address = _constant(child)
+        if address is None or self.fn is None or not getattr(self.program, "relocate", None):
+            return None
+        address &= 0xFFFFFFFF
+        r = self.resolve(t)
+        pointee = self.resolve(ctype.strip_quals(r.to)) if isinstance(r, ctype.Ptr) else None
+        if isinstance(pointee, ctype.Func):
+            if self._relocated(address):
+                text = f"OPENRAC_CODE({hexaddr(address)})"
+            elif (level := self._shared_level()) is not None and _in(address, self.program.relocate):
+                text = f"OPENRAC_LCODE({level}, {hexaddr(address)})"
+            else:
+                text = None
+        else:
+            text = self.global_address(address, self._exe_code_at(address))
+            if text == hexaddr(address):
+                text = None
+        if self.fn.report is not None and (text is not None or _in(address, self.program.relocate)):
+            # In the range but kept: a function of one level, written with that level's addresses.
+            self.fn.report.literals.append(f"{address:#08x} -> {text or 'kept'}")
+        return text
+
+    def _exe_code_at(self, address: int) -> bool:
+        """An executable function starts at `address` (its code read as data through a literal)."""
+        if self.fn is None or LEVEL_NAME.match(self.fn.name):
+            return False
+        places = getattr(self.program, "by_place", {})
+        return (-1, address) in places
 
     def function_value(self, n: dict) -> str:
         """The code address of a function designator, as a gaddr."""
@@ -1395,9 +1459,18 @@ class Unit:
         address = self.program.data_address(sym)
         if address is None:
             raise Unsupported(f"global {sym} has no known address")
-        addr = hexaddr(address)
         named_level = self.program.data_level(sym) if hasattr(self.program, "data_level") else None
-        if self._relocated(address) and self._code_symbol(sym) is not None:
+        addr = self.global_address(address, self._code_symbol(sym) is not None, named_level)
+        return LV(self.gref(t, addr), addr)
+
+    def global_address(self, address: int, code: bool = False, named_level: int | None = None) -> str:
+        """The address of a global at `address` as the running program finds it: in a range the
+        levels move (hostgen.json "relocate"), the loaded level's (guest.h). `code`: the address is
+        an executable function's code read as data; `named_level`: the level its name gives
+        (D_L00_...). A global's name and a literal address of it (`*(s32 *)0x1610A8`) take the
+        same path."""
+        addr = hexaddr(address)
+        if self._relocated(address) and code:
             # A function's code declared as data: where that code is in the program loaded.
             addr = f"OPENRAC_CODE({addr})"
         elif self._relocated(address) and named_level is not None:
@@ -1428,7 +1501,7 @@ class Unit:
                 addr = f"openrac_data_in_copy({home}, {hexaddr(canon)}, {size}u, openrac_self_, {addr})"
             elif level is not None and low <= address < high:
                 addr = f"OPENRAC_LDATA({level}, {addr})"
-        return LV(self.gref(t, addr), addr)
+        return addr
 
     def _variant_call(self, sym: str) -> tuple[int, int, int, int] | None:
         """For a call from a level function placed in several levels to a level function missing
