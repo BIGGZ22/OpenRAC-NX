@@ -249,8 +249,9 @@ class Translator:
         # for one declared `int f()`, the integer parameters its registers say, which that
         # declaration allows.
         sig = self._signature(f)
-        if f.sig.prototyped or not self._compatible(sig, f.sig):
+        if self.mode == "host" and (f.sig.prototyped or not self._compatible(sig, f.sig)):
             sig = f.sig
+        # (The console's form, a candidate of its own, takes every register its code reads.)
         self.sig = sig
         self.calls_k: dict[str, int] = {}
         body = self._body()
