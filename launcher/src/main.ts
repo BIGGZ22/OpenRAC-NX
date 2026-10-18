@@ -12,6 +12,10 @@ import { startPad } from "./lib/pad";
 const target = document.getElementById("app");
 if (!target) throw new Error("index.html has no #app element");
 
+// Android's WebView redraws a blurred backdrop over moving content with a visible flicker: its
+// panels are drawn without the blur (app.css).
+if (onAndroid) document.documentElement.dataset.platform = "android";
+
 // A controller drives the whole launcher; B and Back return to the games from any other page.
 startPad(() => {
   if (app.page === "library") return false;

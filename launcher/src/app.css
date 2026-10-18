@@ -410,6 +410,11 @@ input[type="text"] {
   border: 2px solid var(--ink);
 }
 
+/* Android's WebView flickers under a blurred backdrop (main.ts): the panels stay translucent. */
+html[data-platform="android"] * {
+  backdrop-filter: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

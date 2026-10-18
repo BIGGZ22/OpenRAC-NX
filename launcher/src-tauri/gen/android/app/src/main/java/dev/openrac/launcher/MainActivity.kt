@@ -39,11 +39,11 @@ class MainActivity : TauriActivity() {
     super.onCreate(savedInstanceState)
     hideSystemBars()
     askForNotifications()
-    // The page stays clear of a camera's cut-out, and of the keyboard while it is up.
+    // The page stays clear of a camera's cut-out, and of the keyboard while it is up. Not of the
+    // system's bars: they are hidden, and the moment a swipe shows them they lie over the page
+    // (making room for them moved the whole page down and back up, a flash at every swipe).
     ViewCompat.setOnApplyWindowInsetsListener(findViewById<View>(android.R.id.content)) { view, insets ->
-      val clear = insets.getInsets(
-        WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout() or WindowInsetsCompat.Type.ime(),
-      )
+      val clear = insets.getInsets(WindowInsetsCompat.Type.displayCutout() or WindowInsetsCompat.Type.ime())
       view.setPadding(clear.left, clear.top, clear.right, clear.bottom)
       WindowInsetsCompat.CONSUMED
     }
