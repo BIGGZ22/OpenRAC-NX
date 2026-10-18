@@ -396,10 +396,13 @@ std::uint32_t high_offset(std::uint8_t psm) {
     }
 }
 
-// Nibbles of one pixel as it is stored (24-bit pixels occupy a 32-bit slot).
+// Nibbles of one pixel as it is stored (24-bit pixels occupy a 32-bit slot, of which only the low
+// six nibbles are the pixel's: as many as its raster carries, so a rectangle read as PSMZ24 fills
+// exactly its raster and no nibble of the next pixel lands in the slot's top byte).
 int stored_nibbles(std::uint8_t psm) {
     switch (psm) {
         case gs::kPsmct24:
+        case gs::kPsmz24:
             return 6;
         case gs::kPsmt8h:
             return 2;

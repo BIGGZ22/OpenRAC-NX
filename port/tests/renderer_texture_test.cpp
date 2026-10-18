@@ -194,6 +194,23 @@ void layout() {
     CHECK(t8h.size() == 16);
     CHECK(t8h[0] == 0xAB);
     CHECK(t8h[5] == 0xCD);
+    // PSMZ24 is three bytes a pixel in its raster and the low three of a 32-bit slot, as PSMCT24:
+    // a 32-bit rectangle read as one is exactly its raster (8 x 16 is 384 bytes; the last pixel
+    // once wrote a byte past it), and back again leaves the slots' top bytes empty.
+    std::vector<std::uint8_t> z32(8 * 16 * 4);
+    for (std::size_t i = 0; i < z32.size(); ++i) {
+        z32[i] = static_cast<std::uint8_t>(i % 4 == 3 ? 0 : i * 5 + 1);
+    }
+    const auto z24 = reinterpret(z32, gs::kPsmz32, 8, 16, 1, gs::kPsmz24, 8, 16, 1);
+    CHECK(z24.size() == 8 * 16 * 3);
+    bool packed = true;
+    for (std::size_t p = 0; p < 8 * 16; ++p) {
+        for (std::size_t b = 0; b < 3; ++b) {
+            packed = packed && z24[p * 3 + b] == z32[p * 4 + b];
+        }
+    }
+    CHECK(packed);
+    CHECK(reinterpret(z24, gs::kPsmz24, 8, 16, 1, gs::kPsmz32, 8, 16, 1) == z32);
 }
 
 ImageUpload upload(
