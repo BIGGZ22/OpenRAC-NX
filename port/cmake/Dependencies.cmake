@@ -136,3 +136,72 @@ if(NOT TARGET openrac_imgui)
     target_compile_options(openrac_imgui PRIVATE -w)
   endif()
 endif()
+
+# ---- Vulkan: the renderer's other API (renderer/vulkan/vkgl.h) ----
+# Vulkan-Headers (Apache-2.0 or MIT), volk (MIT: the loader, opened at run time, so a machine
+# without Vulkan still runs the game with OpenGL), the Vulkan Memory Allocator (MIT) and glslang
+# (BSD-3-Clause and others: the GLSL compiler, built without its optimiser, HLSL or programs).
+# Not on Apple's systems, which have no Vulkan of their own.
+if(APPLE)
+  set(openrac_vulkan_default OFF)
+else()
+  set(openrac_vulkan_default ON)
+endif()
+option(OPENRAC_VULKAN "Build the Vulkan renderer (OPENRAC_GL_API=vulkan)" ${openrac_vulkan_default})
+if(OPENRAC_VULKAN AND NOT TARGET openrac_vulkan)
+  FetchContent_Declare(vulkan_headers
+    GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
+    GIT_TAG vulkan-sdk-1.4.350.1
+    GIT_SHALLOW TRUE
+    SOURCE_SUBDIR openrac-download-only
+  )
+  FetchContent_Declare(volk
+    GIT_REPOSITORY https://github.com/zeux/volk.git
+    GIT_TAG vulkan-sdk-1.4.350.1
+    GIT_SHALLOW TRUE
+    SOURCE_SUBDIR openrac-download-only
+  )
+  FetchContent_Declare(vma
+    GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+    GIT_TAG v3.3.0
+    GIT_SHALLOW TRUE
+    SOURCE_SUBDIR openrac-download-only
+  )
+  FetchContent_Declare(glslang
+    GIT_REPOSITORY https://github.com/KhronosGroup/glslang.git
+    GIT_TAG vulkan-sdk-1.4.350.1
+    GIT_SHALLOW TRUE
+    ${openrac_sdl_options}
+  )
+  # The first three are only downloaded (SOURCE_SUBDIR names no directory): their headers and
+  # volk's one source are compiled below.
+  FetchContent_MakeAvailable(vulkan_headers volk vma)
+  set(ENABLE_OPT OFF CACHE BOOL "" FORCE)
+  set(ENABLE_HLSL OFF CACHE BOOL "" FORCE)
+  set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "" FORCE)
+  set(ENABLE_SPVREMAPPER OFF CACHE BOOL "" FORCE)
+  set(GLSLANG_TESTS OFF CACHE BOOL "" FORCE)
+  set(GLSLANG_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+  set(ENABLE_CTEST OFF CACHE BOOL "" FORCE)
+  set(BUILD_EXTERNAL OFF CACHE BOOL "" FORCE)
+  set(openrac_shared_libs ${BUILD_SHARED_LIBS})
+  set(BUILD_SHARED_LIBS OFF)
+  FetchContent_MakeAvailable(glslang)
+  set(BUILD_SHARED_LIBS ${openrac_shared_libs})
+
+  add_library(openrac_vulkan STATIC "${volk_SOURCE_DIR}/volk.c")
+  target_include_directories(openrac_vulkan SYSTEM PUBLIC
+    "${vulkan_headers_SOURCE_DIR}/include" "${volk_SOURCE_DIR}" "${vma_SOURCE_DIR}/include")
+  target_compile_definitions(openrac_vulkan PUBLIC VK_NO_PROTOTYPES)
+  if(ANDROID)
+    target_compile_definitions(openrac_vulkan PUBLIC VK_USE_PLATFORM_ANDROID_KHR)
+  endif()
+  target_link_libraries(openrac_vulkan PUBLIC ${CMAKE_DL_LIBS})
+  if(MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(openrac_vulkan PRIVATE /w)
+  else()
+    target_compile_options(openrac_vulkan PRIVATE -w)
+  endif()
+  add_library(openrac_glslang INTERFACE)
+  target_link_libraries(openrac_glslang INTERFACE glslang SPIRV glslang-default-resource-limits)
+endif()

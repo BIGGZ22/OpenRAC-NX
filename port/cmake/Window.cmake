@@ -67,6 +67,25 @@ if(ANDROID)
     target_compile_definitions(openrac_platform PRIVATE OPENRAC_ADRENOTOOLS=1)
   endif()
 endif()
+# The Vulkan renderer: renderer/gl.h carried out with Vulkan (renderer/vulkan/vkgl.h), which the
+# window opens for OPENRAC_GL_API=vulkan.
+if(OPENRAC_VULKAN)
+  add_library(openrac_vkgl STATIC
+    renderer/vulkan/shader_compiler.cpp
+    renderer/vulkan/vkgl.cpp
+    renderer/vulkan/vma.cpp
+  )
+  target_link_libraries(openrac_vkgl PUBLIC openrac_common openrac_sdl3 openrac_vulkan PRIVATE openrac_glslang)
+  openrac_warnings(openrac_vkgl)
+  # Vulkan's structures are written {VK_STRUCTURE_TYPE_...}, the rest zero.
+  if(NOT MSVC OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(openrac_vkgl PRIVATE -Wno-missing-field-initializers)
+  endif()
+  # The allocator's own source is not ours to keep warning-free.
+  set_source_files_properties(renderer/vulkan/vma.cpp PROPERTIES COMPILE_OPTIONS "$<IF:$<CXX_COMPILER_ID:MSVC>,/w,-w>")
+  target_link_libraries(openrac_platform PRIVATE openrac_vkgl)
+  target_compile_definitions(openrac_platform PRIVATE OPENRAC_VULKAN=1)
+endif()
 # macOS: the menu bar's name and menus (platform/macos_app.mm).
 if(APPLE)
   target_sources(openrac_platform PRIVATE platform/macos_app.mm)

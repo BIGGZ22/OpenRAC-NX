@@ -115,16 +115,19 @@ void set_app_metadata(const char* name, const char* id);
 // their own in the game. Call once the window exists. Nothing on other systems.
 void install_app_menus(bool developer);
 
-// Which OpenGL the window's context is: the desktop's 4.1 core profile, or OpenGL ES 3.2 (Android,
-// whose drivers have only ES; renderer/gl.h and renderer/shader.h adapt to it).
+// Which OpenGL the window's context is: the desktop's 4.1 core profile, OpenGL ES 3.2 (Android,
+// whose drivers have only ES; renderer/gl.h and renderer/shader.h adapt to it), or the renderer's
+// GL carried out with Vulkan (renderer/vulkan/vkgl.h), where the build has it; a window that
+// cannot have Vulkan opens with the system's OpenGL instead.
 enum class GlApi {
     Desktop,
     ES,
+    Vulkan,
 };
 
-// ES on Android, the desktop's elsewhere; OPENRAC_GL_API=es or =desktop in the environment chooses
-// (es on a desktop draws through its driver's ES context, which is how the ES path is checked
-// without a phone).
+// ES on Android, the desktop's elsewhere; OPENRAC_GL_API=es, =desktop or =vulkan in the
+// environment chooses (es on a desktop draws through its driver's ES context, which is how the ES
+// path is checked without a phone).
 GlApi default_gl_api();
 
 struct WindowConfig {
@@ -213,8 +216,12 @@ public:
 private:
     Window() = default;
 
+    // Opens the window for GlApi::Vulkan; false (and nothing left open) when Vulkan cannot be had.
+    bool open_vulkan(const WindowConfig& config, std::string& error);
+
     SDL_Window* m_window = nullptr;
     SDL_GLContextState* m_context = nullptr;
+    bool m_vulkan = false;
     DisplayMode m_mode = DisplayMode::Windowed;
     std::string m_gl_version;
     std::string m_gl_renderer;

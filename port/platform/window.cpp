@@ -13,6 +13,10 @@
 #include <SDL3/SDL.h>
 
 #include "common/log.h"
+#include "platform/gpu_driver.h"
+#if defined(OPENRAC_VULKAN)
+#include "renderer/vulkan/vkgl.h"
+#endif
 
 namespace openrac::platform {
 namespace {
@@ -208,7 +212,10 @@ GlApi default_gl_api() {
         if (value == "desktop" || value == "gl") {
             return GlApi::Desktop;
         }
-        log::warn("OPENRAC_GL_API={}: not es or desktop, ignored", value);
+        if (value == "vulkan" || value == "vk") {
+            return GlApi::Vulkan;
+        }
+        log::warn("OPENRAC_GL_API={}: not es, desktop or vulkan, ignored", value);
     }
 #if defined(__ANDROID__)
     return GlApi::ES;
@@ -217,7 +224,76 @@ GlApi default_gl_api() {
 #endif
 }
 
-std::unique_ptr<Window> Window::open(const WindowConfig& config, std::string& error) {
+bool Window::open_vulkan(const WindowConfig& config, std::string& error) {
+#if defined(OPENRAC_VULKAN)
+    // A hidden window (the headless checks) draws without a screen to show it on.
+    SDL_WindowFlags flags = SDL_WINDOW_HIGH_PIXEL_DENSITY | (config.hidden ? SDL_WINDOW_HIDDEN : SDL_WINDOW_VULKAN);
+    if (config.resizable) {
+        flags |= SDL_WINDOW_RESIZABLE;
+    }
+#if defined(__ANDROID__)
+    flags |= SDL_WINDOW_FULLSCREEN;
+#endif
+    m_window = SDL_CreateWindow(config.title.c_str(), config.width, config.height, flags);
+    if (m_window == nullptr) {
+        error = std::format("no window for Vulkan: {}", SDL_GetError());
+        return false;
+    }
+    vkgl::Config vk;
+    vk.window = config.hidden ? nullptr : m_window;
+    SDL_GetWindowSizeInPixels(m_window, &vk.width, &vk.height);
+    vk.vsync = config.vsync;
+    vk.get_instance_proc_addr = custom_vulkan_get_instance_proc_addr();
+    vk.validation = config.debug_context;
+    if (!vkgl::open(vk, error)) {
+        SDL_DestroyWindow(m_window);
+        m_window = nullptr;
+        return false;
+    }
+    m_vulkan = true;
+    m_gl_api = GlApi::Vulkan;
+    m_gl_version = std::format("Vulkan {}", vkgl::api_version());
+    m_gl_renderer = vkgl::device_name();
+    m_gl_vendor = vkgl::driver_version();
+    m_software = vkgl::software();
+    log::info("graphics: {} ({}), Vulkan {}, the renderer's GL carried out with Vulkan", m_gl_renderer, m_gl_vendor,
+              vkgl::api_version());
+    log::header(std::format("graphics  {} ({}), Vulkan {}, {}", m_gl_renderer, m_gl_vendor, vkgl::api_version(),
+                            m_software ? "SOFTWARE" : "hardware"),
+                false);
+    if (config.display > 0 && config.mode == DisplayMode::Windowed) {
+        if (const SDL_DisplayID id = display_id(config.display)) {
+            SDL_SetWindowPosition(m_window, static_cast<int>(SDL_WINDOWPOS_CENTERED_DISPLAY(id)),
+                                  static_cast<int>(SDL_WINDOWPOS_CENTERED_DISPLAY(id)));
+        }
+    }
+    if (config.mode != DisplayMode::Windowed) {
+        set_display_mode(config.mode, config.fullscreen_width, config.fullscreen_height, config.display);
+    }
+    return true;
+#else
+    (void)config;
+    error = "this build has no Vulkan renderer";
+    return false;
+#endif
+}
+
+std::unique_ptr<Window> Window::open(const WindowConfig& asked, std::string& error) {
+    WindowConfig config = asked;
+    if (config.gl_api == GlApi::Vulkan) {
+        std::unique_ptr<Window> window(new Window());
+        std::string why;
+        if (window->open_vulkan(config, why)) {
+            return window;
+        }
+        // Drawn with OpenGL instead: the game still runs.
+        log::warn("graphics: Vulkan could not be used ({}); drawing with OpenGL", why);
+#if defined(__ANDROID__)
+        config.gl_api = GlApi::ES;
+#else
+        config.gl_api = GlApi::Desktop;
+#endif
+    }
     const bool es = config.gl_api == GlApi::ES;
     const int major = es ? kGlesMajor : kGlMajor;
     const int minor = es ? kGlesMinor : kGlMinor;
@@ -395,6 +471,11 @@ std::unique_ptr<Window> Window::open(const WindowConfig& config, std::string& er
 }
 
 Window::~Window() {
+#if defined(OPENRAC_VULKAN)
+    if (m_vulkan) {
+        vkgl::close();
+    }
+#endif
     if (m_context != nullptr) {
         SDL_GL_DestroyContext(m_context);
     }
@@ -462,6 +543,12 @@ bool Window::set_display_mode(DisplayMode mode, int width, int height, int displ
 }
 
 bool Window::set_vsync(bool on) {
+#if defined(OPENRAC_VULKAN)
+    if (m_vulkan) {
+        vkgl::set_swap_interval(on ? -1 : 0);
+        return true;
+    }
+#endif
     if (!on) {
         return SDL_GL_SetSwapInterval(0);
     }
@@ -472,6 +559,14 @@ bool Window::set_vsync(bool on) {
 }
 
 SwapInterval Window::set_swap_interval(SwapInterval interval) {
+#if defined(OPENRAC_VULKAN)
+    if (m_vulkan) {
+        const int got = vkgl::set_swap_interval(interval == SwapInterval::Adaptive ? -1
+                                                : interval == SwapInterval::VSync  ? 1
+                                                                                   : 0);
+        return got < 0 ? SwapInterval::Adaptive : got > 0 ? SwapInterval::VSync : SwapInterval::Immediate;
+    }
+#endif
     if (interval == SwapInterval::Adaptive && SDL_GL_SetSwapInterval(-1)) {
         return SwapInterval::Adaptive;
     }
@@ -494,6 +589,12 @@ bool Window::focused() const {
 }
 
 void Window::swap() {
+#if defined(OPENRAC_VULKAN)
+    if (m_vulkan) {
+        vkgl::present();
+        return;
+    }
+#endif
     SDL_GL_SwapWindow(m_window);
 }
 
@@ -505,6 +606,11 @@ void Window::drawable_size(int& width, int& height) const {
 }
 
 GlLoader Window::gl_loader() {
+#if defined(OPENRAC_VULKAN)
+    if (vkgl::active()) {
+        return vkgl::get_proc;
+    }
+#endif
     return SDL_GL_GetProcAddress;
 }
 
