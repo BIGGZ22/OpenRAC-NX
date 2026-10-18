@@ -66,6 +66,6 @@ if(OPENRAC_ANDROID_PYTHON)
   target_include_directories(openrac-python SYSTEM PRIVATE "${openrac_python_include}")
   target_link_libraries(openrac-python PRIVATE "${openrac_python_library}")
   # A program, but named as a library: libopenrac-python.so.
-  set_target_properties(openrac-python PROPERTIES OUTPUT_NAME "libopenrac-python.so")
+  set_target_properties(openrac-python PROPERTIES OUTPUT_NAME "libopenrac-python.so" BUILD_RPATH "\$ORIGIN")
   message(STATUS "Python for the launcher's tools: ${openrac_python_library}")
 endif()
