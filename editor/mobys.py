@@ -97,24 +97,34 @@ _UPDATE = re.compile(r"UpdateMoby_(\d+):([\d/]+)")
 _logic = None
 
 
+def readable_names() -> dict[str, str]:
+    """The decompilation's readable names for functions (include/names.h): name -> func_ symbol."""
+    path = DECOMPILATION / "include" / "names.h"
+    return dict(re.findall(r"^#define\s+(\w+)\s+(func_\w+)\s*$", path.read_text(), re.M)) if path.is_file() else {}
+
+
 def moby_logic(level: int) -> dict[int, dict]:
     """class -> {"function", "file", "decompiled"} for the classes LEVEL updates: the function
     the game calls for each moby of the class every frame, where it is in the decompilation
     (games/rac1), and whether it is C there yet. From that project's
-    config/overlays/names.tsv (the UpdateMoby_<class> roles) and its src/. Empty when the
-    decompilation is not in this checkout."""
+    config/overlays/names.tsv (the UpdateMoby_<class> roles) and its src/, where a function may be
+    defined under its readable name (include/names.h). Empty when the decompilation is not in this
+    checkout."""
     global _logic
     if _logic is None:
         _logic = {}
         table = DECOMPILATION / "config" / "overlays" / "names.tsv"
         if table.is_file():
+            names = readable_names()
             where = {}
             for path in sorted((DECOMPILATION / "src").rglob("*.c")):
                 text = path.read_text(errors="replace")
-                for name in re.findall(r"^(?:INCLUDE_ASM|ASM_FUNC)\([^)]*\b(func_\w+)\);", text, re.M):
-                    where.setdefault(name, (path, False))
-                for name in re.findall(r"^(?!extern\b)[A-Za-z_][^;=\n]*?\b(func_(?:L\d\d_)?[0-9A-F]{8})\s*\([^;]*$", text, re.M):
-                    where[name] = (path, True)
+                for name in re.findall(r"^(?:INCLUDE_ASM|ASM_FUNC)\([^)]*\b(\w+)\);", text, re.M):
+                    where.setdefault(names.get(name, name), (path, False))
+                for name in re.findall(r"^(?!extern\b)[A-Za-z_][^;=\n(]*?\b([A-Za-z_]\w*)\s*\([^;]*$", text, re.M):
+                    name = names.get(name, name)
+                    if re.fullmatch(r"func_(?:L\d\d_)?[0-9A-F]{8}", name):
+                        where[name] = (path, True)
             for line in table.read_text().splitlines():
                 if line.startswith("#") or "\t" not in line:
                     continue
