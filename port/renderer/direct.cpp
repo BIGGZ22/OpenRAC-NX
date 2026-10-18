@@ -3,6 +3,7 @@
 
 #include "renderer/direct.h"
 
+#include <cstdint>
 #include <cstdlib>
 
 #include <algorithm>
@@ -1005,9 +1006,57 @@ void GifInterpreter::ensure_draw() {
     }
 }
 
+bool GifInterpreter::covers_no_pixel(std::initializer_list<const GsVertex*> corners) const {
+    // The chip fills a pixel when its sample point, the pixel's integer coordinates, lies in the
+    // primitive: x0 <= x < x1 for a sprite, the left and top edges in and the right and bottom
+    // out for a triangle (so inside its box the same way), and inside the scissor. The game puts
+    // its 2D edges half a pixel before a pixel's sample (the -8 in its 12.4 positions), so a
+    // sprite moved just past the screen's last column (the HUD's air meter slid away, from 511.5
+    // on) covers no sample and the chip draws nothing; drawn bigger than the chip's picture, the
+    // half pixel up to the screen's edge is a line of window pixels of its own, and GL filled it:
+    // a line where the meter had gone.
+    const Context& c = context();
+    const std::int64_t ofx = c.xyoffset.ofx;
+    const std::int64_t ofy = c.xyoffset.ofy;
+    std::int64_t x_lo = INT64_MAX, x_hi = INT64_MIN, y_lo = INT64_MAX, y_hi = INT64_MIN;
+    for (const GsVertex* v : corners) {
+        const std::int64_t x = static_cast<std::int64_t>(v->x) - ofx;
+        const std::int64_t y = static_cast<std::int64_t>(v->y) - ofy;
+        x_lo = std::min(x_lo, x);
+        x_hi = std::max(x_hi, x);
+        y_lo = std::min(y_lo, y);
+        y_hi = std::max(y_hi, y);
+    }
+    // The samples in [lo, hi) of 16ths of a pixel: from ceil(lo / 16) to ceil(hi / 16) - 1.
+    auto ceil16 = [](std::int64_t v) { return v >= 0 ? (v + 15) / 16 : -((-v) / 16); };
+    std::int64_t sx0 = c.scissor.x0;
+    std::int64_t sx1 = c.scissor.x1;
+    // On a target wider than the picture with the HUD at its sides, a scissor of the screen's whole
+    // width is the target's (DirectRenderer::apply): the columns past the picture's sides are seen.
+    // Their screen is as much wider on each side as the HUD was moved out (the whole pixels of
+    // frontend::hud_side): an element the game slides off its edge goes past that edge as it went
+    // past the television's, and the part of a pixel the target has beyond it shows no more of it.
+    const std::int64_t width = 2 * (2048 - ofx / 16);
+    if (m_wide_2d && m_picture_scale_x > 0.0f && m_picture_scale_x < 1.0f && offscreen_target() == 0
+        && width >= 64 && width <= 1024 && sx0 <= 0 && sx1 + 1 >= width) {
+        const auto extra = static_cast<std::int64_t>(
+            (1.0f / m_picture_scale_x - 1.0f) * 0.5f * static_cast<float>(width));
+        sx0 -= extra;
+        sx1 += extra;
+    }
+    const std::int64_t first_x = std::max(ceil16(x_lo), sx0);
+    const std::int64_t last_x = std::min(ceil16(x_hi) - 1, sx1);
+    const std::int64_t first_y = std::max(ceil16(y_lo), static_cast<std::int64_t>(c.scissor.y0));
+    const std::int64_t last_y = std::min(ceil16(y_hi) - 1, static_cast<std::int64_t>(c.scissor.y1));
+    return first_x > last_x || first_y > last_y;
+}
+
 void GifInterpreter::emit_triangle(
     const GsVertex& a, const GsVertex& b, const GsVertex& c, const GsVertex& colour_from
 ) {
+    if (covers_no_pixel({&a, &b, &c})) {
+        return;
+    }
     ensure_draw();
     DirectVertex v[3] = {convert(a), convert(b), convert(c)};
     if (!attributes().iip) {
@@ -1039,6 +1088,9 @@ void GifInterpreter::emit_sprite(const GsVertex& a, const GsVertex& b) {
             attributes().tme, context().tex0.psm, context().tex0.cbp, context().tex0.tbw, context().tex0.tbp0, context().tex1.mmag, context().tex1.mmin, attributes().abe, al.a, al.b, al.c, al.d, al.fix,
             sc.x0, sc.x1, sc.y0, sc.y1, context().frame.fbp, context().frame.fbmsk, test_text(context().test)
         );
+    }
+    if (covers_no_pixel({&a, &b})) {
+        return;
     }
     // An untextured sprite as tall as a whole-frame scissor fills the frame (a clear, in strips, or a
     // full-screen fade). The game draws those before its world; the port's world renderers draw
@@ -1349,6 +1401,7 @@ void DirectRenderer::render(const FrameInput& input, RenderState& state) {
         return;
     }
     m_interpreter->set_ui_quads(input.ui_quads);
+    m_interpreter->set_picture(state.target.picture_scale_x, state.target.wide_2d);
     m_frame = &input;
     submit(packets);
     flush(state);

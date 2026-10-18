@@ -28,6 +28,12 @@ Shaders are in `shaders/` and compiled into the library
   chip's Z, bigger nearer, goes straight to GL's window depth.
 - **Colour 0x80 = 1.0** when modulating: the direct shader works in the chip's
   units (texel × vertex / 128, alpha 0x80 opaque) and writes alpha / 128.
+- **No sample, no pixel**: the chip fills a pixel when its integer coordinates
+  are inside the primitive and the scissor; a 2D primitive whose box holds no
+  such point (between two rows, or slid just past the screen's edge) is left
+  out, as the chip draws nothing of it. Drawn bigger than 512 x 448, GL would
+  fill the window pixels between the samples (the air meter's line at the
+  right edge after it slid away).
 - **Alpha-test fail modes** (FB_ONLY, ZB_ONLY, RGB_ONLY) by drawing twice:
   passing pixels with every write, then failing ones with only what the mode
   keeps; ATST NEVER draws once with the fail mode's writes.
