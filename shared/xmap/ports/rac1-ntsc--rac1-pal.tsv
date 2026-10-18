@@ -6,12 +6,10 @@
 kind	size	from_name	from_program	from_address	to_program	to_address	places	ratio
 same	3732	FUN_L12_002e9f68	level:12	002E9F68	level:12	002EB2E8	1	
 same	2304	FUN_L03_002c4718	level:03	002C4718	level:03	002C5AE0	3	
-same	2176	FUN_L00_002cfcb8	level:00	002CFCB8	level:00	002D1168	19	
 same	2108	FUN_L00_00233f80	level:00	00233F80	level:00	00234800	19	
 same	1592	FUN_L00_0020ea80	level:00	0020EA80	level:00	0020F118	19	
 same	1516	_printf	boot	00119DA0	boot	0011A0A0	1	
 same	1312	FUN_L00_00232670	level:00	00232670	level:00	00232EF0	19	
-same	1184	FUN_L15_002a3138	level:15	002A3138	level:15	002A4318	2	
 same	900	_sceFs_Rcv_Intr	boot	0011B568	boot	0011B868	1	
 same	880	FUN_L14_003159d8	level:14	003159D8	level:14	00316E60	1	
 same	796	FUN_L14_002df138	level:14	002DF138	level:14	002E0538	1	
