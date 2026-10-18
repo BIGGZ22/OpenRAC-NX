@@ -86,6 +86,7 @@ int (*openrac_game_in_cutscene)(void) = nullptr;
 void (*openrac_game_skip)(void) = nullptr;
 int (*openrac_game_mode)(uint32_t* mode) = nullptr;
 int (*openrac_game_hero_position)(float xyz[3]) = nullptr;
+int (*openrac_game_hero)(float position[3], float rotation[3], int32_t* state) = nullptr;
 const openrac_front_end* openrac_game_front_end = nullptr;
 }
 

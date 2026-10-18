@@ -160,6 +160,22 @@ static int hero_position(float xyz[3]) {
 #endif
 }
 
+/* For OPENRAC_TRACE: the hero (D_0013F450, include/hero.h: the motion's position at +0x80 and
+ * rotation at +0x90, the state id at +0x2084), at this version's address (rac1_version.h). */
+#define HERO RAC1_ADDR(0x0013F450u)
+
+static int hero(float position[3], float rotation[3], int32_t *state) {
+    if (loaded_level < 0 || loaded_level >= LEVELS) {
+        return 0;
+    }
+    for (int i = 0; i < 3; ++i) {
+        position[i] = GREF(float, HERO + 0x80u + 4u * (unsigned)i);
+        rotation[i] = GREF(float, HERO + 0x90u + 4u * (unsigned)i);
+    }
+    *state = GREF(int, HERO + 0x2084u);
+    return 1;
+}
+
 /* The flight's update (func_00230A90), once a frame of the transition's flight loop (space.c). */
 void func_00230A90(void) {
     flight_frames = 2;
@@ -188,5 +204,6 @@ __attribute__((constructor)) static void install_direct_start(void) {
     openrac_game_skip = skip;
     openrac_game_mode = game_mode;
     openrac_game_hero_position = hero_position;
+    openrac_game_hero = hero;
     openrac_game_front_end = &rac1_front_end;
 }

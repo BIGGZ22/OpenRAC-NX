@@ -90,6 +90,10 @@ extern int (*openrac_game_in_cutscene)(void);
 extern int (*openrac_game_mode)(uint32_t* mode);
 extern int (*openrac_game_hero_position)(float xyz[3]);
 
+/* For OPENRAC_TRACE (frontend.cpp), when a game installs it (rac1: boot.c): the hero's position,
+ * rotation (game axes; z the yaw) and state id. 0 when there is none now (no level loaded). */
+extern int (*openrac_game_hero)(float position[3], float rotation[3], int32_t* state);
+
 /* A trap the game raised on purpose, or another reason the game cannot go on: writes a crash
  * report (<data>/crashes) and ends the program. */
 #ifdef __cplusplus

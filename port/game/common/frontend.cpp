@@ -179,6 +179,25 @@ struct State {
 
 std::unique_ptr<State> g;
 
+// Where a scripted run is (port/tools/regress): the game mode as frame() last read it, and the
+// window frame at which the player got control (-1 before). Control is a level's game mode 0 (play)
+// held for kControlHold ticks in a row: a level's program can show mode 0 for a few ticks between
+// loading and its arrival scene, and those are no control.
+constexpr int kControlHold = 30;
+struct Route {
+    int level = -1;
+    int mode = -1;
+    int streak = 0;
+    std::int64_t control = -1;
+};
+Route g_route;
+
+// Whether Start would skip what is playing now: a level's in-game scene (mode 2), or the flight
+// between planets (the boot program's mode 6).
+bool skippable() {
+    return (g_route.level >= 0 && g_route.mode == 2) || (g_route.level < 0 && g_route.mode == 6);
+}
+
 std::uint32_t word_at(std::span<const std::uint8_t> ram, std::uint32_t at) {
     std::uint32_t w = 0;
     at &= 0x01FFFFFF;
@@ -2064,6 +2083,63 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
                   state.camera_position[0], state.camera_position[1], state.camera_position[2], state.forward[0],
                   state.forward[1], state.forward[2], state.up[0], state.up[1], state.up[2], world_ran ? 1 : 0);
     }
+    // The game mode (the loaded level's copy, or the boot program's word) and control (Route).
+    {
+        std::uint32_t mode = 0;
+        const bool in_level = level >= 0 && level < 19;
+        if (!(in_level && openrac_game_mode != nullptr && openrac_game_mode(&mode) != 0)) {
+            mode = game_mode_address() != 0 ? word_at(ram, game_mode_address()) : 0;
+        }
+        g_route.level = in_level ? level : -1;
+        g_route.mode = static_cast<int>(mode);
+        if (g_route.control < 0) {
+            g_route.streak = in_level && mode == 0 ? g_route.streak + 1 : 0;
+            if (g_route.streak >= kControlHold) {
+                g_route.control = static_cast<std::int64_t>(g->index);
+                log::info("control at frame {} (level {})", g->index, level);
+            }
+        }
+    }
+    // OPENRAC_TRACE=FILE: one JSON line a tick, for port/tools/regress (docs/port/REGRESSION.md):
+    // f the window frame, c frames since control (null before), lv the level (-1 the boot
+    // program), m the game mode, cam/fw the camera's position and forward row, hp/hr/hs the hero's
+    // position, rotation and state, mb the live mobys, dr the layers the game drew.
+    static std::FILE* trace = [] {
+        const char* path = std::getenv("OPENRAC_TRACE");
+        std::FILE* f = path != nullptr && *path != 0 ? std::fopen(path, "w") : nullptr;
+        if (path != nullptr && f == nullptr) {
+            log::warn("OPENRAC_TRACE: cannot write {}", path);
+        }
+        return f;
+    }();
+    if (trace != nullptr) {
+        const auto num = [](float v) { return std::isfinite(v) ? std::format("{:.4f}", v) : std::string("null"); };
+        const auto vec = [&](const float* v) { return std::format("[{},{},{}]", num(v[0]), num(v[1]), num(v[2])); };
+        std::string line = std::format("{{\"f\":{},\"c\":{},\"lv\":{},\"m\":{},\"cam\":{},\"fw\":{}", g->index,
+                                       g_route.control < 0 ? std::string("null")
+                                                           : std::to_string(static_cast<std::int64_t>(g->index) - g_route.control),
+                                       g_route.level, g_route.mode, vec(state.camera_position.data()),
+                                       vec(state.forward.data()));
+        float hp[3]{}, hr[3]{};
+        std::int32_t hs = 0;
+        if (openrac_game_hero != nullptr && openrac_game_hero(hp, hr, &hs) != 0) {
+            line += std::format(",\"hp\":{},\"hr\":{},\"hs\":{}", vec(hp), vec(hr), hs);
+        }
+        line += std::format(",\"mb\":{},\"dr\":{}}}\n", state.mobys.size(), draws);
+        std::fputs(line.c_str(), trace);
+        std::fflush(trace);  // a crash keeps every tick before it
+    }
+    // OPENRAC_CONTROL_FRAMES=N: the run ends N frames after control (a route's length).
+    static const long control_frames = [] {
+        const char* v = std::getenv("OPENRAC_CONTROL_FRAMES");
+        return v != nullptr ? std::atol(v) : -1L;
+    }();
+    if (control_frames >= 0 && g_route.control >= 0
+        && static_cast<std::int64_t>(g->index) >= g_route.control + control_frames) {
+        log::info("{} frames after control: the run ends", control_frames);
+        return false;
+    }
+
     // OPENRAC_DUMP_RAM=FRAME: the game's 32 MB of main memory at that frame, to ram_FRAME.bin.
     static const char* dump_ram = std::getenv("OPENRAC_DUMP_RAM");
     if (dump_ram != nullptr && g->index == std::strtoull(dump_ram, nullptr, 10)) {
@@ -2691,12 +2767,27 @@ bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
     // OPENRAC_PRESS=FRAME:MASK:FRAMES[:LX:LY[:RX:RY]],... holds buttons (mask bits as the pad reports
     // them, 0x4000 cross, 0x8 start) and optionally the left and right sticks (0-255, 128 centred; 0
     // is left or up) for scripted checks. FRAME counts the window's frames (world, 2D and movie frames).
+    // cFRAME counts from control instead (Route: the same moment in every version); kPERIOD holds the
+    // buttons the first FRAMES of every PERIOD frames while what plays can be skipped and control has
+    // not come yet (Start through scenes and the flight).
     if (const char* script = port == 0 ? std::getenv("OPENRAC_PRESS") : nullptr) {
         for (const char* at = script; at && *at;) {
             unsigned long frame = 0, mask = 0, length = 5;
             unsigned int lx = 128, ly = 128, rx = 128, ry = 128;
-            const int read = std::sscanf(at, "%lu:%lx:%lu:%u:%u:%u:%u", &frame, &mask, &length, &lx, &ly, &rx, &ry);
-            if (read >= 2 && g->index >= frame && g->index < frame + length) {
+            const char kind = *at == 'c' || *at == 'k' ? *at : 0;
+            const int read = std::sscanf(at + (kind != 0 ? 1 : 0), "%lu:%lx:%lu:%u:%u:%u:%u", &frame, &mask, &length,
+                                         &lx, &ly, &rx, &ry);
+            bool active = false;
+            if (kind == 'c') {
+                const std::int64_t since = static_cast<std::int64_t>(g->index) - g_route.control;
+                active = g_route.control >= 0 && since >= static_cast<std::int64_t>(frame)
+                         && since < static_cast<std::int64_t>(frame + length);
+            } else if (kind == 'k') {
+                active = g_route.control < 0 && frame > 0 && skippable() && g->index % frame < length;
+            } else {
+                active = g->index >= frame && g->index < frame + length;
+            }
+            if (read >= 2 && active) {
                 *buttons = static_cast<std::uint16_t>(*buttons & ~mask);
                 if (read >= 5) {
                     analog[2] = static_cast<std::uint8_t>(lx);
