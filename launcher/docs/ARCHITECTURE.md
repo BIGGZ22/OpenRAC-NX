@@ -257,6 +257,19 @@ fields as the single edits, so the Rust side applies the same rules (vendor
 stock, acquired flags, quick select). The planet choice heads the Planets
 section, beside the Unlocked boxes it affects.
 
+**Editing.** What differs from the save as read carries an amber dot where it
+is and on its section's link; the link of the section in view is lit. Above
+Save, "3 changes" opens the list of them in a player's words, a line per kind
+of change ("Given: Devastator, Visibomb Gun", `saveEdit.ts`'s `editList`),
+each leading to its section. Reset puts the slot back as read without
+closing. Leaving with changes asks in the editor (Keep editing, Discard, Save
+and close), as does taking away every gadget; no browser box. A save leaves
+the editor open: Undo puts the backup back, and a new change brings Save
+back. While the launcher runs the game, which writes the card too, Save waits
+and says why. The editor is a dialog: focus goes into it, the page behind is
+`inert`, Escape steps back one thing at a time, Ctrl+S saves, and focus
+returns to the slot's Edit button.
+
 **Skill point names** come from the game's own text, read at run time from the
 set-up disc (`<install>/active/rac1/data/iso_data/rac1/disc.iso`):
 `save_edit::skill_point_names` reads the table of contents at LBA 1500, the

@@ -8,6 +8,7 @@
   import { app, toast } from "$lib/app.svelte";
   import { grouped, size } from "$lib/format";
   import { when } from "$lib/reports";
+  import { isPlaying } from "$lib/player.svelte";
   import { backupLabel, emptySlots, stampSeconds } from "$lib/saves";
   import { fold } from "$lib/motion";
   import { onMount, tick } from "svelte";
@@ -109,6 +110,7 @@
     <SaveEditor
       serial={version.serial}
       slot={editing}
+      playing={isPlaying(version)}
       onclose={(changedCard) => {
         editing = null;
         if (changedCard) void loadStatus();
