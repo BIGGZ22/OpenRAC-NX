@@ -1023,6 +1023,7 @@ static int check_levels(const fs::path& levels) {
     ids.push_back(98);
     ids.push_back(99);
     int bad = 0;
+    int newer = 0;  // levels of a newer format than this game reads: the game is out of date
     for (const int id : ids) {
         const fs::path dir = levels / std::format("level_{:02d}", id);
         viewer::LevelData level;
@@ -1030,6 +1031,7 @@ static int check_levels(const fs::path& levels) {
         if (!viewer::load_level(dir, level, error)) {
             log::error("level {:02d}: {}", id, error);
             ++bad;
+            newer += error.find("newer than this game") != std::string::npos;
             continue;
         }
         // The flight world has only its ships' textures; every other one has ground to stand on.
@@ -1046,6 +1048,12 @@ static int check_levels(const fs::path& levels) {
         }
         log::info("level {:02d}: {} models, {} vertices, {} textures", id, level.models.size(), level.vertices.size(),
                   level.images.size());
+    }
+    if (newer > 0) {
+        log::error("{} of {} levels in {} are of a newer format than this game reads: build the game again (the "
+                   "launcher's \"Build the game\"; tools/build_port.py)",
+                   newer, ids.size(), levels.string());
+        return 1;
     }
     if (bad > 0) {
         log::error("{} of {} levels in {} cannot be drawn: read them from the disc again (the launcher's "

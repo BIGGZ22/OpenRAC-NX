@@ -276,14 +276,16 @@ const freshVersion = (v: VersionView) =>
   app.library?.games.flatMap((g) => g.versions).find((x) => x.key === v.key) ?? v;
 
 /**
- * Everything playing still needs, in order: the game built for this computer when it is not (the
- * levels' check runs the game, so it comes first), then the levels read and checked
- * (prepareLevels). True when the game can be played.
+ * Everything playing still needs, in order: the game built for this computer as its sources are
+ * now, then the levels read and checked (prepareLevels). The build comes first even when a game is
+ * already built (only what changed is redone): the levels' check runs the game, and a game older
+ * than its sources refuses levels of a newer format, so they would be read again for nothing and
+ * fail the same check again. True when the game can be played.
  */
 export async function prepare(v: VersionView): Promise<boolean> {
   const scope = { kind: "version" as const, key: v.key };
   const build = action(v, "port-build");
-  if (!action(v, "play")?.done && build?.runnable) {
+  if (build?.runnable) {
     if (!(await runChain(scope, [build]))) return false;
     await refresh();
   }
