@@ -2,7 +2,8 @@
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // A GLSL program. Every shader is `#version 410 core`, OpenGOAL's baseline,
-// so one source runs on every platform OpenGL 4.1 reaches. As in OpenGOAL,
+// so one source runs on every platform OpenGL 4.1 reaches; on an OpenGL ES 3.2
+// context (Android) it is given as GLSL ES 3.20 (es_source). As in OpenGOAL,
 // a sampler named tex_T<n> is bound to texture unit n when the program is
 // built, so no renderer sets sampler uniforms by hand.
 
@@ -13,6 +14,12 @@
 #include <unordered_map>
 
 namespace openrac::renderer {
+
+// A `#version 410 core` source as GLSL ES 3.20: the version line, the extensions it needs where the
+// context has them (noperspective, gl_ClipDistance) and the precisions ES wants stated. Without the
+// extensions, noperspective varyings are interpolated with perspective and clip distances are
+// dropped. Any other source is returned as it is.
+std::string es_source(std::string_view source, bool noperspective, bool clip_distance);
 
 class Shader {
 public:

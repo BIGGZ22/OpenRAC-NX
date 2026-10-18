@@ -387,7 +387,7 @@ bool initialise(SDL_Window* window) {
     style.FramePadding = ImVec2(4.0f, 2.0f);
     style.ItemSpacing = ImVec2(6.0f, 3.0f);
     if (!ImGui_ImplSDL3_InitForOpenGL(window, SDL_GL_GetCurrentContext())
-        || !ImGui_ImplOpenGL3_Init("#version 410 core")) {
+        || !ImGui_ImplOpenGL3_Init(openrac::gl::is_es() ? "#version 300 es" : "#version 410 core")) {
         log::warn("debug overlay: Dear ImGui could not start");
         ImGui::DestroyContext();
         return false;

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // SDL3 and the game's window: an OpenGL 4.1 core context (the version macOS
-// stops at, and all OpenGOAL's renderer needs), windowed, fullscreen at a
+// stops at, and all OpenGOAL's renderer needs; OpenGL ES 3.2 on Android, GlApi), windowed, fullscreen at a
 // chosen resolution, or borderless at the desktop's, on a chosen display, with
 // vsync on, off or adaptive. The context is asked for on the graphics card:
 // a software rasteriser is named in the log, and refused when the program
@@ -115,6 +115,18 @@ void set_app_metadata(const char* name, const char* id);
 // their own in the game. Call once the window exists. Nothing on other systems.
 void install_app_menus(bool developer);
 
+// Which OpenGL the window's context is: the desktop's 4.1 core profile, or OpenGL ES 3.2 (Android,
+// whose drivers have only ES; renderer/gl.h and renderer/shader.h adapt to it).
+enum class GlApi {
+    Desktop,
+    ES,
+};
+
+// ES on Android, the desktop's elsewhere; OPENRAC_GL_API=es or =desktop in the environment chooses
+// (es on a desktop draws through its driver's ES context, which is how the ES path is checked
+// without a phone).
+GlApi default_gl_api();
+
 struct WindowConfig {
     std::string title = "OpenRAC";
     // The client area when windowed. The PAL picture is 512 x 448 with
@@ -133,6 +145,7 @@ struct WindowConfig {
     bool hidden = false;  // never shown: headless checks
     bool debug_context = false;
     int msaa_samples = 0;
+    GlApi gl_api = default_gl_api();
 };
 
 // The context's function loader, in SDL_GL_GetProcAddress's shape: what
@@ -192,6 +205,9 @@ public:
     // The context draws on the CPU (is_software_renderer of its strings).
     bool software() const { return m_software; }
 
+    // The kind of context open() made.
+    GlApi gl_api() const { return m_gl_api; }
+
     SDL_Window* sdl() const { return m_window; }
 
 private:
@@ -204,6 +220,7 @@ private:
     std::string m_gl_renderer;
     std::string m_gl_vendor;
     bool m_software = false;
+    GlApi m_gl_api = GlApi::Desktop;
 };
 
 // True when GL_RENDERER or GL_VENDOR names a rasteriser that runs on the CPU.

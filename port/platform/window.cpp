@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <format>
+#include <string_view>
 
 #include <SDL3/SDL.h>
 
@@ -18,6 +19,8 @@ namespace {
 
 constexpr int kGlMajor = 4;
 constexpr int kGlMinor = 1;
+constexpr int kGlesMajor = 3;
+constexpr int kGlesMinor = 2;
 
 // Read a GL string without the renderer's loader: the platform layer only
 // needs it for the log.
@@ -196,17 +199,39 @@ void Window::set_icon(const unsigned char* rgba, int width, int height) {
     SDL_DestroySurface(surface);
 }
 
+GlApi default_gl_api() {
+    if (const char* env = std::getenv("OPENRAC_GL_API"); env != nullptr && env[0] != '\0') {
+        const std::string_view value(env);
+        if (value == "es" || value == "gles") {
+            return GlApi::ES;
+        }
+        if (value == "desktop" || value == "gl") {
+            return GlApi::Desktop;
+        }
+        log::warn("OPENRAC_GL_API={}: not es or desktop, ignored", value);
+    }
+#if defined(__ANDROID__)
+    return GlApi::ES;
+#else
+    return GlApi::Desktop;
+#endif
+}
+
 std::unique_ptr<Window> Window::open(const WindowConfig& config, std::string& error) {
+    const bool es = config.gl_api == GlApi::ES;
+    const int major = es ? kGlesMajor : kGlMajor;
+    const int minor = es ? kGlesMinor : kGlMinor;
+    const char* api_name = es ? "OpenGL ES" : "OpenGL";
     // Context attributes must be set before the window exists. The same request everywhere: 4.1
     // core is the most macOS gives, and Mesa and Windows' drivers give a core context of that
     // version or a later one that runs it.
     const auto set_attributes = [&] {
         SDL_GL_ResetAttributes();
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, kGlMajor);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, kGlMinor);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-        // macOS only gives a core context to a forward-compatible request.
-        int context_flags = SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG;
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, major);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minor);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, es ? SDL_GL_CONTEXT_PROFILE_ES : SDL_GL_CONTEXT_PROFILE_CORE);
+        // macOS only gives a core context to a forward-compatible request; ES has no such flag.
+        int context_flags = es ? 0 : SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG;
         if (config.debug_context) {
             context_flags |= SDL_GL_CONTEXT_DEBUG_FLAG;
         }
@@ -235,17 +260,20 @@ std::unique_ptr<Window> Window::open(const WindowConfig& config, std::string& er
         flags |= SDL_WINDOW_HIDDEN;
     }
 
-    // Without OpenGL 4.1 there is no game to show: say so in a message box
+    // Without OpenGL 4.1 (ES 3.2) there is no game to show: say so in a message box
     // too, since a player starting from the launcher sees no console.
     auto no_opengl = [&](SDL_Window* parent) {
         error = std::format(
-            "OpenGL {}.{} (core profile) is not available: {}. OpenRAC draws with OpenGL {}.{}; "
+            "{} {}.{}{} is not available: {}. OpenRAC draws with {} {}.{}; "
             "update the graphics driver, or check that the graphics card supports it.",
-            kGlMajor,
-            kGlMinor,
+            api_name,
+            major,
+            minor,
+            es ? "" : " (core profile)",
             SDL_GetError(),
-            kGlMajor,
-            kGlMinor
+            api_name,
+            major,
+            minor
         );
         if (!config.hidden) {
             SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "OpenRAC", error.c_str(), parent);
@@ -286,6 +314,7 @@ std::unique_ptr<Window> Window::open(const WindowConfig& config, std::string& er
         return nullptr;
     }
     window->m_context = context;
+    window->m_gl_api = config.gl_api;
     if (!SDL_GL_MakeCurrent(window->m_window, context)) {
         error = std::format("could not use the OpenGL context: {}", SDL_GetError());
         return nullptr;
@@ -304,11 +333,13 @@ std::unique_ptr<Window> Window::open(const WindowConfig& config, std::string& er
         SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &samples);
         SDL_GL_GetAttribute(SDL_GL_DOUBLEBUFFER, &doublebuffer);
         const char* driver = SDL_GetCurrentVideoDriver();
-        log::info("graphics: {} ({}), OpenGL {}, GLSL {}", window->m_gl_renderer, window->m_gl_vendor,
+        // GL_VERSION of an ES context starts "OpenGL ES" already.
+        const char* prefix = es ? "" : "OpenGL ";
+        log::info("graphics: {} ({}), {}{}, GLSL {}", window->m_gl_renderer, window->m_gl_vendor, prefix,
                   window->m_gl_version, gl_string(kGlShadingLanguageVersion));
         // The card and its driver in the session's header too, for a crash report (common/crash.h).
-        log::header(std::format("graphics  {} ({}), OpenGL {}, {} through SDL's {} driver", window->m_gl_renderer,
-                                window->m_gl_vendor, window->m_gl_version,
+        log::header(std::format("graphics  {} ({}), {}{}, {} through SDL's {} driver", window->m_gl_renderer,
+                                window->m_gl_vendor, prefix, window->m_gl_version,
                                 window->m_software ? "SOFTWARE" : "hardware", driver != nullptr ? driver : "?"),
                     false);
         log::info("graphics: {} context through SDL's {} driver; the window's buffer {} bits a channel, depth {}, "
@@ -337,7 +368,8 @@ std::unique_ptr<Window> Window::open(const WindowConfig& config, std::string& er
     // The renderer blends and writes colours as the console's chip did, in the display's own
     // (gamma) space: the window's buffer must never convert them as if they were linear. Off is
     // OpenGL's default; some drivers start with it on for a buffer that can do sRGB.
-    {
+    // ES has no such switch: an ES window's buffer is linear unless asked for in sRGB.
+    if (!es) {
         using Disable = void (*)(unsigned);
         if (auto disable = reinterpret_cast<Disable>(SDL_GL_GetProcAddress("glDisable"))) {
             disable(kGlFramebufferSrgb);

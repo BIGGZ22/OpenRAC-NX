@@ -430,7 +430,9 @@ void LevelScene::draw_layer(
     glUniformMatrix4fv(m_mesh.uniform("view_projection"), 1, GL_FALSE, view_projection.data());
     // On a target wider than the game's picture, the 2D layer's mobys are cut at the picture's sides
     // (mesh.vert).
-    const bool cut = layer == Layer::Mobys && state.target.picture_scale_x < 1.0f;
+    // An ES driver without GL_EXT_clip_cull_distance has no clip planes (renderer/shader.h, es_source).
+    const bool cut = layer == Layer::Mobys && state.target.picture_scale_x < 1.0f
+        && (!gl::is_es() || gl::has_extension("GL_EXT_clip_cull_distance"));
     glUniform1f(m_mesh.uniform("picture_scale"), state.target.picture_scale_x);
     if (cut) {
         glEnable(GL_CLIP_DISTANCE0);

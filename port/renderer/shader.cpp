@@ -16,7 +16,60 @@ namespace {
 
 constexpr int kSamplerUnits = 8;
 
-GLuint compile(GLenum type, std::string_view source, std::string& log) {
+}  // namespace
+
+std::string es_source(std::string_view source, bool noperspective, bool clip_distance) {
+    // The version line, and the first line after it that is not a comment, are where the ES
+    // preamble goes; a source without "#version 410 core" first is given as it is.
+    constexpr std::string_view kDesktop = "#version 410 core";
+    if (source.substr(0, kDesktop.size()) != kDesktop) {
+        return std::string(source);
+    }
+    std::string body(source.substr(kDesktop.size()));
+    const auto replace_all = [&body](std::string_view from, std::string_view to) {
+        for (std::size_t at = body.find(from); at != std::string::npos; at = body.find(from, at + to.size())) {
+            body.replace(at, from.size(), to);
+        }
+    };
+    std::string out = "#version 320 es\n";
+    if (noperspective) {
+        out += "#extension GL_NV_shader_noperspective_interpolation : require\n";
+    } else {
+        // Interpolated with perspective instead: Gouraud colours and fog differ a little across a
+        // large triangle seen at an angle, and nothing else.
+        replace_all("noperspective ", "");
+    }
+    if (body.find("gl_ClipDistance") != std::string::npos) {
+        if (clip_distance) {
+            out += "#extension GL_EXT_clip_cull_distance : require\n";
+        } else {
+            // No user clip planes: the distances are written to a variable nobody reads, and the
+            // renderer leaves the planes off (gl::has_extension).
+            replace_all("gl_ClipDistance", "openrac_clip_distance");
+            out += "float openrac_clip_distance[8];\n";
+        }
+    }
+    // ES has no default precision for floats in a fragment shader or for the sampler types beyond
+    // sampler2D and samplerCube; the desktop's is high everywhere.
+    out += "precision highp float;\nprecision highp int;\nprecision highp sampler2D;\n"
+           "precision highp sampler2DArray;\nprecision highp usampler2D;\nprecision highp isampler2D;\n"
+           "precision highp samplerBuffer;\nprecision highp usamplerBuffer;\nprecision highp isamplerBuffer;\n";
+    // Keep the source's own line numbers in compiler logs.
+    out += "#line 1\n";
+    out += body;
+    return out;
+}
+
+namespace {
+
+GLuint compile(GLenum type, std::string_view desktop_source, std::string& log) {
+    std::string translated;
+    std::string_view source = desktop_source;
+    if (is_es()) {
+        translated = es_source(desktop_source, has_extension("GL_NV_shader_noperspective_interpolation"),
+                               has_extension("GL_EXT_clip_cull_distance"));
+        source = translated;
+    }
     const GLuint shader = glCreateShader(type);
     const GLchar* text = source.data();
     const auto length = static_cast<GLint>(source.size());
