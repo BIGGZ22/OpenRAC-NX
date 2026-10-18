@@ -104,6 +104,17 @@ current (`backgroundStatus` in launcher/src/lib/progress.ts).
 Play is the one action that does not run a program: the launcher starts the
 game's activity with the same command line. Nothing leaves the device.
 
+## The launcher's window
+
+The launcher runs full screen: the system's bars are hidden (a swipe shows
+them for a moment) and the page keeps clear of a camera's cut-out
+(MainActivity.kt). It works without a touch screen: a controller's d-pad or
+left stick moves the focus to the nearest control in that direction, A
+presses it, B closes a menu or a dialog and then returns to the games, LB
+and RB change tabs (launcher/src/lib/pad.ts; on a desktop the same through
+the Gamepad API). Android's Back does what B does, and leaves the launcher
+from the games, which keeps a set-up running.
+
 ## Updating the launcher
 
 Tauri's updater replaces a desktop program in place, which Android does not

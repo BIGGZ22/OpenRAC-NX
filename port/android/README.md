@@ -89,17 +89,17 @@ GPU driver, shows the model and SoC) and the game's log.
 7. **Play again.** Quit the game (its menu, or Back), then Play again: it
    starts afresh. A crash leaves the launcher open with the crash report on
    the game's page.
-8. **A driver package, on Adreno.** Settings, GPU driver, "Add a driver
-   package (.zip)": pick a Mesa Turnip package (for example from
+8. **A driver package, on Adreno.** Settings, GPU driver, "Add driver
+   (.zip)": pick a Mesa Turnip package (for example from
    K11MCH1/AdrenoToolsDrivers releases, made for Android emulators). It is
-   listed with its name, version and library; choose it and play. The
+   listed with its name, version and vendor; choose it and play. The
    game's log says `GPU driver: the player's package, Turnip Adreno (TM) ...`
    with the driver's version. The picture still comes from OpenGL ES and the
    system's driver: the Vulkan renderer that draws on the package is the
-   next change. Choose "The system's driver" and play again: the log says
+   next change. Choose "System driver" and play again: the log says
    so. A zip without a `meta.json` is refused with a message.
-9. **A driver package, on Mali.** The section says packages are for Adreno
-   and the choice is greyed out; the game's log says why the system's
+9. **A driver package, on Mali.** The section says custom drivers require an
+   Adreno GPU, and offers none; the game's log says why the system's
    driver is used.
 10. **ANGLE.** In Developer options, "ANGLE preferences", choose ANGLE for
     OpenRAC Launcher and play: the game draws through ANGLE (its log names
@@ -110,3 +110,10 @@ GPU driver, shows the model and SoC) and the game's log.
     sends you to allow it to install apps (choose Update again after), then
     Android's installer asks to confirm. The launcher restarts updated, with
     the games set up as they were.
+12. **The launcher with a controller.** With a controller connected, start
+    the launcher and do not touch the screen: the d-pad and the left stick
+    move an amber focus ring between every control (tabs, tiles, buttons,
+    menus, settings, dialogs), A presses, B closes a menu or dialog and then
+    returns to the games, LB and RB change tabs, and a held direction
+    repeats. Add a disc, set a game up and play with the controller alone.
+    The system's bars stay hidden, and a tap shows no blue flash.

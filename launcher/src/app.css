@@ -48,6 +48,8 @@
 
 * {
   box-sizing: border-box;
+  /* No blue flash on a tap (Android's WebView): a press shows in the launcher's own colours. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -211,6 +213,18 @@ a:focus-visible,
 input:focus-visible {
   outline: 2px solid var(--amber);
   outline-offset: 2px;
+}
+
+/* With a controller (src/lib/pad.ts) the focus is where A presses: always drawn. */
+html[data-input="pad"] :focus {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+/* Touch has no hover: a press dims the button a little instead. */
+button:active:not(:disabled),
+.button:active {
+  filter: brightness(0.88);
 }
 
 button.primary {
