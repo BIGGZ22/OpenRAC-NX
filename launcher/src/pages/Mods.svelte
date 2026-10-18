@@ -55,7 +55,16 @@
   async function chooseGodot() {
     if (!app.config) return;
     const picked = await pickFile("Godot 4");
-    if (picked) await saveConfig({ ...app.config, godot: picked });
+    if (!picked) return;
+    // Settings checks a pick the same way: the zip, a Godot 3 or another program is said at once,
+    // not when a level does not open.
+    const check = await guard(api.checkTool("godot", picked));
+    if (!check) return;
+    if (!check.ok) {
+      toast(`That is not a Godot 4 the editor can use: ${check.message}`, "error");
+      return;
+    }
+    await saveConfig({ ...app.config, godot: picked });
   }
 
   /** Reads the levels from the disc when that has not been done yet, then opens the chosen one in Godot. */

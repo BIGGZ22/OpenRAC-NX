@@ -119,6 +119,7 @@ export async function start() {
   if (app.config.lastVersion) app.version = app.config.lastVersion;
   await refresh();
   void syncProgressWeb();
+  void adoptGodot();
   // A new launcher is looked for at start unless the player turned that off (Settings).
   if (app.info.version && app.config.checkUpdates) {
     void lookForUpdate();
@@ -220,6 +221,19 @@ export async function syncProgressWeb() {
     app.library = await api.syncProgressFromWeb();
   } catch {
     // Offline: keep what was read at start (the kept copy)
+  }
+}
+
+/** Godot installed after the first run, or moved: the Rust side looks for it again (detect.rs). */
+async function adoptGodot() {
+  try {
+    const config = await api.adoptGodot();
+    if (config.godot && config.godot !== app.config?.godot) {
+      app.config = config;
+      await refresh();
+    }
+  } catch {
+    // Not found is not an error: the Mods page offers Get Godot and Choose Godot
   }
 }
 

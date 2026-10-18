@@ -431,6 +431,8 @@ export const api = {
   detect: () => call<Detected>("detect"),
   checkRoot: (path: string) => call<Check>("check_root", { path }),
   checkTool: (tool: Tool, path: string) => call<Check>("check_tool", { tool, path }),
+  /** Takes a Godot that works when none is set or the one set is gone; the config as it is then. */
+  adoptGodot: () => call<Config>("adopt_godot"),
   library: () => call<Library>("library"),
   /** `inputs`: which level a per-level action is for (the level editor's projects, one each), a
    *  file or folder the player chose (`{path}`), one of the action's options (`{option}`). */

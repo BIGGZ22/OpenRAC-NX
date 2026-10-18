@@ -743,6 +743,8 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
     case "save_config":
       config = { ...(args.config as Config) };
       return delay({ ...config });
+    case "adopt_godot":
+      return delay({ ...config });
     case "detect":
       return delay<Detected>({
         roots: [{ path: "/home/you/OpenRAC", source: "next to the launcher" }],

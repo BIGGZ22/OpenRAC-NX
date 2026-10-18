@@ -117,6 +117,31 @@ async fn check_tool(tool: Tool, path: PathBuf) -> Result<Check, String> {
     tauri::async_runtime::spawn_blocking(move || detect::check_tool(tool, &path)).await.map_err(|e| e.to_string())
 }
 
+/// Takes a Godot that works when none is set, or the one set is gone: the first run looks only
+/// once, and a player often gets Godot later, from the Mods page's link. The config as it is.
+#[tauri::command]
+async fn adopt_godot(state: State<'_, AppState>) -> Result<Config, String> {
+    if state.config.lock().unwrap().godot.as_deref().is_some_and(Path::is_file) {
+        return Ok(state.config.lock().unwrap().clone());
+    }
+    let found = tauri::async_runtime::spawn_blocking(|| {
+        let first = detect::tool_candidates(Tool::Godot).into_iter().next()?;
+        detect::check_tool(Tool::Godot, &first.path).ok.then_some(first.path)
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    let mut config = state.config.lock().unwrap();
+    if let (Some(godot), Some(file)) = (found, state.config_file.as_deref()) {
+        if !config.godot.as_deref().is_some_and(Path::is_file) {
+            let mut next = config.clone();
+            next.godot = Some(godot);
+            config::save(file, &next)?;
+            *config = next;
+        }
+    }
+    Ok(config.clone())
+}
+
 #[tauri::command]
 async fn library(state: State<'_, AppState>) -> Result<Library, String> {
     let config = state.config.lock().unwrap().clone();
@@ -899,6 +924,7 @@ pub fn run() {
             detect,
             check_root,
             check_tool,
+            adopt_godot,
             library,
             run_action,
             cancel_job,
