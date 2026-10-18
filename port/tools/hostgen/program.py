@@ -27,6 +27,9 @@ DEFAULT_DATA_NAMES = [r"^(?:D|func)_(?:L(?P<overlay>\d\d)_)?(?P<addr>[0-9A-Fa-f]
 
 ASM_MARK = "openrac_asm_"
 
+# A data symbol given as an asm label with a constant offset (`D_L16_0017C218+12`).
+_SYMBOL_OFFSET = re.compile(r"^\s*([A-Za-z_]\w*)\s*([+-])\s*(0[xX][0-9A-Fa-f]+|\d+)\s*$")
+
 # Helpers whose bodies are the decompilation's inline assembly
 # (include/common.h): the runtime has host versions (guest.h).
 BUILTINS = {
@@ -163,10 +166,22 @@ class Program:
             m = pattern.match(symbol)
             if m:
                 return int(m.group("addr"), 16)
+        offset = _SYMBOL_OFFSET.match(symbol)
+        if offset:
+            # An asm label with an offset (`__asm__("D_L16_0017C218+12")`): the assembler's
+            # symbol plus the constant, as the console's linker resolves it.
+            base = self.data_address(offset.group(1))
+            if base is not None:
+                text = offset.group(3)
+                n = int(text, 16) if text[:2] in ("0x", "0X") else int(text, 10)
+                return (base + n if offset.group(2) == "+" else base - n) & 0xFFFFFFFF
         return None
 
     def data_level(self, symbol: str) -> int | None:
         """The level a data name says it is of (D_L05_..., the names' `overlay` group), or None."""
+        offset = _SYMBOL_OFFSET.match(symbol)
+        if offset:
+            symbol = offset.group(1)
         for pattern in self.data_names:
             m = pattern.match(symbol)
             if m and m.groupdict().get("overlay") is not None:

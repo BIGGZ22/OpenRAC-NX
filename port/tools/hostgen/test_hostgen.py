@@ -814,6 +814,32 @@ class Places(unittest.TestCase):
             self.assertIn("OPENRAC_LDATA(0, 0x00410000u)", (out / "a.c").read_text())
 
     @unittest.skipUnless(have_compiler(), "needs Clang on a POSIX host")
+    def test_a_data_label_with_an_offset_is_the_symbol_plus_it(self):
+        # rac1/ntsc's l16 00214598.c: extern f32 D_L16_0017C224[] __asm__("D_L16_0017C218+12").
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            src = root / "game"
+            (src / "src").mkdir(parents=True)
+            (src / "src" / "a.c").write_text(
+                "extern float row[] __asm__(\"D_L00_00410000+12\");\n"
+                "extern float back[] __asm__(\"D_00200010 - 0x10\");\n"
+                "float func_L00_00420000(void) { return row[1] + back[0]; }\n")
+            (src / "functions.tsv").write_text(
+                "func_L00_00420000\tshared\t4\tfingerprint\t2\t00:00420000,01:00430000\n")
+            (root / "hostgen.json").write_text(json.dumps({
+                "sources": ["src"], "includes": [], "places": "functions.tsv",
+                "relocate": [0x1A7C80, 0x500000],
+            }))
+            out = root / "gen"
+            self.assertEqual(hostgen.main(["--game", str(root / "hostgen.json"),
+                                           "--source", str(src), "--out", str(out),
+                                           "--jobs", "1", "--quiet"]), 0)
+            text = (out / "a.c").read_text()
+            self.assertIn("OPENRAC_LDATA(0, 0x0041000Cu)", text)
+            self.assertIn("0x00200000u", text)
+            self.assertNotIn("openrac_stub", text)
+
+    @unittest.skipUnless(have_compiler(), "needs Clang on a POSIX host")
     def test_code_declared_as_data_is_relocated_as_code(self):
         # rac1's space.c: extern u8 resident_effect_entry[] __asm__("func_0022F4C0"), passed on as
         # resident_effect_entry + 8, the entry of the function the catalogue starts 8 bytes early.
