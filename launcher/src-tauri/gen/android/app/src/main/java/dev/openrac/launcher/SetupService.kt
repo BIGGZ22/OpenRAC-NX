@@ -29,11 +29,13 @@ class SetupService : Service() {
     private const val ID = 1
     private const val TAG = "OpenRAC"
     @Volatile private var running = false
+    @Volatile private var last: android.app.Notification? = null
 
     /** Shows the status, starting the service the first time (only possible while the launcher is
      *  in front, which it is when a set-up starts). */
     fun show(context: Context, title: String, text: String, percent: Int?) {
       val notification = notification(context, title, text, percent)
+      last = notification
       if (running) {
         try {
           NotificationManagerCompat.from(context).notify(ID, notification)
@@ -52,7 +54,20 @@ class SetupService : Service() {
       }
     }
 
+    /** Notifications were just allowed: the running set-up's status shows now, not at its next
+     *  change (a foreground service's notification posted without the permission stays hidden). */
+    fun refresh(context: Context) {
+      val notification = last ?: return
+      if (!running) return
+      try {
+        NotificationManagerCompat.from(context).notify(ID, notification)
+      } catch (e: SecurityException) {
+        // Still declined.
+      }
+    }
+
     fun hide(context: Context) {
+      last = null
       if (running) {
         running = false
         context.stopService(Intent(context, SetupService::class.java))

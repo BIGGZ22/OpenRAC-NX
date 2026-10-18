@@ -1,5 +1,8 @@
 package dev.openrac.launcher
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -20,6 +23,10 @@ import androidx.core.view.WindowInsetsControllerCompat
  * focused; Back asks the page first (`window.__openracBack`), then leaves the launcher.
  */
 class MainActivity : TauriActivity() {
+  private companion object {
+    const val NOTIFICATIONS = 0x4f52
+  }
+
   private var webView: WebView? = null
 
   // The launcher's own Back, not Tauri's (which goes back in the page's history).
@@ -31,6 +38,7 @@ class MainActivity : TauriActivity() {
     OpenracSetup.prepare(this)
     super.onCreate(savedInstanceState)
     hideSystemBars()
+    askForNotifications()
     // The page stays clear of a camera's cut-out, and of the keyboard while it is up.
     ViewCompat.setOnApplyWindowInsetsListener(findViewById<View>(android.R.id.content)) { view, insets ->
       val clear = insets.getInsets(
@@ -47,6 +55,25 @@ class MainActivity : TauriActivity() {
         }
       }
     })
+  }
+
+  /** Android 13 and later show an app's notifications only once the player allows them: asked
+   *  once, when the launcher first opens, so that a set-up's progress (SetupService.kt) shows. */
+  private fun askForNotifications() {
+    if (Build.VERSION.SDK_INT < 33) return
+    if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return
+    val settings = getSharedPreferences("launcher", MODE_PRIVATE)
+    if (settings.getBoolean("askedForNotifications", false)) return
+    settings.edit().putBoolean("askedForNotifications", true).apply()
+    requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), NOTIFICATIONS)
+  }
+
+  @Deprecated("Deprecated in Java")
+  override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    if (requestCode == NOTIFICATIONS && grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+      SetupService.refresh(this)
+    }
   }
 
   override fun onWebViewCreate(webView: WebView) {
