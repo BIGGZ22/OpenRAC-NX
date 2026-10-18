@@ -1820,6 +1820,24 @@ void drawer(const Shown& shown) {
             quit.type = SDL_EVENT_QUIT;
             SDL_PushEvent(&quit);
         }
+
+        // What the picture is drawn with: the launcher's renderer choice takes effect only when the
+        // game starts, and here the player sees which one this run has.
+        {
+            static const std::string graphics = [] {
+                const auto* name = reinterpret_cast<const char*>(openrac::gl::glGetString(openrac::gl::GL_RENDERER));
+                const char* api = s.gl_subset ? "Vulkan" : openrac::gl::is_es() ? "OpenGL ES" : "OpenGL";
+                return std::format("{} · {}", api, name != nullptr ? name : "unknown GPU");
+            }();
+            ImGui::Dummy(ImVec2(0.0f, 14.0f * s.ui_scale));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(look::kDim));
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 6.0f * s.ui_scale);
+            ImGui::PushTextWrapPos(0.0f);
+            ImGui::TextUnformatted(graphics.c_str());
+            ImGui::PopTextWrapPos();
+            ImGui::PopStyleColor();
+            ImGui::Dummy(ImVec2(0.0f, 12.0f * s.ui_scale));
+        }
     }
     ImGui::End();
     ImGui::PopStyleColor(3);
