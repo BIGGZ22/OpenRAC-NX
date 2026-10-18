@@ -680,6 +680,78 @@ fn ensure_linux_desktop_integration() {
     }
 }
 
+/// Game desktop entries and icons so KDE Plasma and other Linux desktop taskbars show the game's
+/// icon when launched from the launcher or directly.
+#[cfg(target_os = "linux")]
+fn ensure_linux_game_desktop_integration(root: &std::path::Path) {
+    let Ok(home) = std::env::var("HOME") else { return };
+    let home_path = PathBuf::from(home);
+    let icons_base = home_path.join(".local/share/icons/hicolor");
+    let app_dir = home_path.join(".local/share/applications");
+    let _ = std::fs::create_dir_all(&app_dir);
+
+    let games_dir = root.join("port/game");
+    let Ok(entries) = std::fs::read_dir(games_dir) else { return };
+
+    let mut icons_changed = false;
+    let mut entries_changed = false;
+
+    for entry in entries.flatten() {
+        if !entry.path().is_dir() {
+            continue;
+        }
+        let game_id = entry.file_name().to_string_lossy().to_string();
+        let icon_path = entry.path().join("icon.png");
+        if !icon_path.is_file() {
+            continue;
+        }
+        let Ok(bytes) = std::fs::read(&icon_path) else { continue };
+
+        let dir = icons_base.join("512x512/apps");
+        let _ = std::fs::create_dir_all(&dir);
+        let app_id = format!("dev.openrac.{game_id}");
+        let prog_id = format!("openrac-{game_id}");
+
+        icons_changed |= write_if_changed(&dir.join(format!("{app_id}.png")), &bytes);
+        icons_changed |= write_if_changed(&dir.join(format!("{prog_id}.png")), &bytes);
+
+        let exe_path = root.join(format!("port/build/release/openrac-{game_id}"));
+        let title = match game_id.as_str() {
+            "rac1-pal" => "Ratchet & Clank (PAL)",
+            "rac1-ntsc" => "Ratchet & Clank (NTSC)",
+            "rac2-ntsc" => "Ratchet & Clank: Going Commando (NTSC)",
+            "rac3-ntsc" => "Ratchet & Clank: Up Your Arsenal (NTSC)",
+            "rac4-ntsc" => "Ratchet: Deadlocked (NTSC)",
+            _ => "Ratchet & Clank",
+        };
+
+        let make_entry = |wm_class: &str, hidden: bool| {
+            format!(
+                "[Desktop Entry]\nType=Application\nName={title}\nComment=Play {title} with OpenRAC\nExec=\"{}\"\nIcon={app_id}\nTerminal=false\nCategories=Game;\nStartupNotify=true\nStartupWMClass={wm_class}\n{}",
+                exe_path.to_string_lossy(),
+                if hidden { "NoDisplay=true\n" } else { "" }
+            )
+        };
+
+        entries_changed |= write_if_changed(
+            &app_dir.join(format!("{app_id}.desktop")),
+            make_entry(&app_id, false).as_bytes(),
+        );
+        entries_changed |= write_if_changed(
+            &app_dir.join(format!("{prog_id}.desktop")),
+            make_entry(&prog_id, true).as_bytes(),
+        );
+    }
+
+    if icons_changed {
+        let _ = std::process::Command::new("gtk-update-icon-cache").arg("-f").arg("-t").arg(&icons_base).status();
+    }
+    if entries_changed || icons_changed {
+        let _ = std::process::Command::new("update-desktop-database").arg(&app_dir).status();
+        let _ = std::process::Command::new("kbuildsycoca6").status();
+    }
+}
+
 /// AppImageKit's AppRun unconditionally sets PYTHONHOME=$APPDIR/usr/ and
 /// PYTHONPATH=$APPDIR/usr/share/pyshared/:, which poisons any Python process
 /// started from the AppImage (both our carried python in resources/openrac/python
@@ -750,6 +822,11 @@ pub fn run() {
                 detect::bundled_python(dir).is_some_and(|python| detect::check_tool(Tool::Python, &python).ok)
             });
             detect::settle(&mut config, bundled.as_deref());
+
+            #[cfg(target_os = "linux")]
+            if let Some(root) = &config.root {
+                ensure_linux_game_desktop_integration(root);
+            }
 
             let client_id = config
                 .discord_client_id
