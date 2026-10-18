@@ -49,6 +49,36 @@ colour in the same range reads as an address): read what it changed.
 
 Nothing carried is proven by being carried.
 
+## Carrying functions
+
+`carry_functions.py` does the above for every function the target still has
+only as assembly: it pairs each with the source's through the map (back,
+`--back-map`, TO to FROM), takes the C the source's port runs for a `same`
+pair (matched C, the port's hand C, or the candidate its functional table
+names), preprocesses it in its own file, cuts it down to the function and the
+declarations, types and static helpers it uses (its own types and helpers
+renamed apart, with a suffix from the target's address), carries it with
+`carry_c`, and checks it with Clang where hostgen will put it. `--write` puts
+it in the target's `hand/functional/<name>.c` with a row in `hand/hand.tsv`,
+and drops the rows that no longer replace a stub (and their files).
+
+```sh
+python3 port/tools/versionmap/carry_functions.py --target port/game/rac1-ntsc/hostgen.json \
+    --source port/game/rac1-pal/hostgen.json \
+    --to-map build/versionmap/rac1-pal--rac1-ntsc.json --back-map build/versionmap/rac1-ntsc--rac1-pal.json \
+    --gen port/build/release/games/rac1-ntsc/gen --source-gen port/build/release/games/rac1-pal/gen \
+    --out build/carry/rac1-ntsc [--write]
+```
+
+What it does not carry it lists in `--out`: `near.json` (the function changed
+between the versions; the source's C is a draft), `write.json` (no
+counterpart, or one with no C: write it from the assembly), `skipped.json`
+(remnants, handwritten routines, names with no function or no stub behind
+them, C that does not translate, each with the reason) and `covered.json`
+(names hostgen reports without C whose address has C under another name).
+Its tests: `python3 -m unittest port/tools/versionmap/test_carry_functions.py`
+(they need Clang).
+
 ## The shared host C's tables
 
 rac1's host C is one copy for both discs ([port/game/rac1](../../game/rac1/README.md)),
