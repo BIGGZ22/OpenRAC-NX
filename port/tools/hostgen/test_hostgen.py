@@ -571,7 +571,7 @@ class Translate(unittest.TestCase):
     def test_gcc_295_habits(self):
         # Strings across lines, a later declaration that contradicts the
         # definition, inline assembly Clang cannot read, a variable-length
-        # array: the program still builds; the last two become stubs.
+        # array: the program still builds; the assembly becomes a stub.
         out = self.run_program({"a.c": """
             int twice(int x) { return 2 * x; }
             extern int twice(int, int);
@@ -582,10 +582,11 @@ class Translate(unittest.TestCase):
             lines";
                 test_print(twice(4, 9));
                 test_print(s[3] == '\\n');
+                test_print(vla(6));
                 return 0;
             }
-        """}, stubs=2)
-        self.assertEqual(out, ["8", "1"])
+        """}, stubs=1)
+        self.assertEqual(out, ["8", "1", "6"])
         self.assertIn("inline assembly Clang cannot read", self.last_report["stubbed"].values())
 
     def test_variable_length_array_of_a_local_length(self):
@@ -626,6 +627,29 @@ class Translate(unittest.TestCase):
             int test_main(void) { test_print(rows(6)); test_print(rows(1)); return 0; }
         """})
         self.assertEqual(out, ["45", "0"])
+
+    def test_variable_length_array_of_an_expression(self):
+        # rac1's func_L10_002DBA50: char scratch[*(int *)(data + 4) * 0x40]. The length goes into a
+        # local of its own on the same line, computed once where the array is declared.
+        out = self.run_program({"a.c": """
+            int fill(int *data) {
+                char scratch[(unsigned int)*(data + 1) * 0x40];
+                float rows[data[0] + 1][4], more[data[1] + 2];
+                int i, s = 0;
+                more[data[1] + 1] = 2;
+                for (i = 0; i < data[1] * 0x40; i++) scratch[i] = (char)i;
+                for (i = 0; i <= data[0]; i++) rows[i][3] = i;
+                for (i = 0; i < data[1] * 0x40; i++) s += scratch[i];
+                return s + (int)rows[data[0]][3] + (int)more[data[1] + 1];
+            }
+            int test_main(void) {
+                int d[2];
+                d[0] = 4; d[1] = 1;
+                test_print(fill(d));
+                return 0;
+            }
+        """})
+        self.assertEqual(out, [str(sum(range(64)) + 6)])
 
     def test_a_macro_whose_body_casts_to_an_unnamed_record(self):
         # rac1's help_0020CDF0.c (`#define DEFA (((struct { T a[1]; } *)D)->a)`) and

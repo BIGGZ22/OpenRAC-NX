@@ -381,6 +381,64 @@ def drop_superseded_declarations(root: Path, rel: str, text: str, stderr: str) -
     return done
 
 
+def _bracketed(s: str, at: int) -> int | None:
+    """The index of the "]" that closes the "[" at s[at], or None."""
+    depth = 0
+    for i in range(at, len(s)):
+        depth += s[i] == "["
+        depth -= s[i] == "]"
+        if depth == 0:
+            return i
+    return None
+
+
+def name_vla_lengths(text: str, ast: dict, rel: str) -> tuple[str, list[str]]:
+    """A variable-length array whose length is an expression (`char s[*(int *)(d + 4) * 64]`)
+    gets that length in a local of its own, computed just before it on the same line:
+    `unsigned int s__vlan = (...); char s[s__vlan];`. The length is still computed once, where the
+    array is declared; the lowering takes a length that is a local by name. No line moves."""
+    raw = text.encode("utf-8", errors="surrogateescape")
+    edits = []
+
+    def walk(node: dict):
+        loc, rng = node.get("loc") or {}, node.get("range") or {}
+        if (node.get("kind") == "VarDecl" and node.get("_file", "").endswith(rel)
+                and "offset" in loc and "spellingLoc" not in loc and "offset" in rng.get("begin", {})):
+            qual = node.get("type", {}).get("qualType", "")
+            name = node.get("name", "")
+            b = qual.find("[")
+            e = _bracketed(qual, b) if b != -1 else None
+            first = qual[b + 1:e].strip() if e is not None else ""
+            if first and not re.fullmatch(r"\d+|[A-Za-z_]\w*", first):
+                at = loc["offset"] + len(name)
+                if raw[loc["offset"]:at].decode("utf-8", "surrogateescape") == name:
+                    while at < len(raw) and raw[at:at + 1] in b" \t":
+                        at += 1
+                    close = _bracketed(raw.decode("latin-1"), at) if raw[at:at + 1] == b"[" else None
+                    if close is not None:
+                        expr = raw[at + 1:close].decode("utf-8", "surrogateescape")
+                        if "\n" not in expr and "//" not in expr and "/*" not in expr:
+                            edits.append((rng["begin"]["offset"], at + 1, close, name, expr.strip()))
+        for c in node.get("inner", []):
+            walk(c)
+
+    walk(ast)
+    if not edits:
+        return text, []
+    # Several arrays of one declaration (`float u[a + 1], v[b + 1];`) share its start: each change
+    # is made from the end of the file back, the lengths before the locals in front of them.
+    done, ops = [], []
+    for k, (begin, start, close, name, expr) in enumerate(sorted(edits)):
+        local = f"{name}__vlan"
+        ops.append((start, 1, close, local.encode()))
+        ops.append((begin, 0, begin, f"unsigned int {local} = ({expr}); ".encode(), k))
+        done.append(f"variable-length array {name}: its length {expr} in {local}")
+    for op in sorted(ops, key=lambda o: (o[0], o[1], o[4] if len(o) > 4 else 0), reverse=True):
+        at, _, end, new = op[:4]
+        raw = raw[:at] + new + raw[end:]
+    return raw.decode("utf-8", errors="surrogateescape"), done
+
+
 def parse_unit(clang: str, root: Path, rel: str, flags: list[str], attempts: int = 12) -> tuple[Unit | None, str]:
     """The AST of root/rel. Returns (None, errors) if Clang still refuses it."""
     path = root / rel
@@ -393,6 +451,12 @@ def parse_unit(clang: str, root: Path, rel: str, flags: list[str], attempts: int
                 return None, out.stderr
             ast = json.loads(out.stdout)
             annotate(ast)
+            text = path.read_text(encoding="utf-8", errors="surrogateescape")
+            named, more = name_vla_lengths(text, ast, rel)
+            if more:
+                _write(path, named)
+                fixes += more
+                continue
             return Unit(path, ast, fixes), ""
         text = path.read_text(encoding="utf-8", errors="surrogateescape")
         fixed, more = fix_from_diagnostics(text, check.stderr, rel)
