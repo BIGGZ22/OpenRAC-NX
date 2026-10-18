@@ -259,6 +259,11 @@ std::unique_ptr<Window> Window::open(const WindowConfig& config, std::string& er
     if (config.hidden) {
         flags |= SDL_WINDOW_HIDDEN;
     }
+#if defined(__ANDROID__)
+    // A phone's game covers the screen: SDL's activity hides the system's bars for a fullscreen
+    // window only (a swipe from the edge shows them for a moment).
+    flags |= SDL_WINDOW_FULLSCREEN;
+#endif
 
     // Without OpenGL 4.1 (ES 3.2) there is no game to show: say so in a message box
     // too, since a player starting from the launcher sees no console.
@@ -400,6 +405,10 @@ Window::~Window() {
 
 bool Window::set_display_mode(DisplayMode mode, int width, int height, int display) {
     bool ok = true;
+#if defined(__ANDROID__)
+    // No windows on Android: the game always covers the screen, without the system's bars.
+    mode = DisplayMode::Borderless;
+#endif
     // Onto the display asked for first: fullscreen covers the display the window is on.
     if (const SDL_DisplayID wanted = display_id(display);
         wanted != 0 && mode != DisplayMode::Windowed && wanted != SDL_GetDisplayForWindow(m_window)) {
