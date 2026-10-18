@@ -538,8 +538,9 @@ export interface GpuDriver {
 
 export interface GpuDrivers {
   drivers: GpuDriver[];
-  /** The package the game loads; null: the system's driver. */
-  selected: string | null;
+  /** The package the game loads; absent or null: the system's driver (Android's JSON drops a
+   *  null value). */
+  selected?: string | null;
   device: {
     model: string;
     api: number;

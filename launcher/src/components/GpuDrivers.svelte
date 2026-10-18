@@ -44,6 +44,20 @@
 </script>
 
 <section class="panel">
+  <h2>Renderer</h2>
+  <!-- Vulkan comes with its own renderer (docs/port/ANDROID.md); until then the game draws with
+       OpenGL ES, and the choice shows what there will be. -->
+  <label class="option">
+    <input type="radio" name="renderer" checked disabled={busy} />
+    <span><strong>OpenGL ES 3.2</strong><small>Default</small></span>
+  </label>
+  <label class="option off">
+    <input type="radio" name="renderer" disabled />
+    <span><strong>Vulkan</strong><small>Coming with the Vulkan renderer</small></span>
+  </label>
+</section>
+
+<section class="panel">
   <h2>GPU driver</h2>
   {#if !info}
     <p class="dim">Looking…</p>
@@ -61,7 +75,7 @@
       <input
         type="radio"
         name="gpu-driver"
-        checked={info.selected === null}
+        checked={!info.selected}
         disabled={busy}
         onchange={() => void select(null)}
       />
@@ -128,6 +142,10 @@
 
   .grow {
     flex: 1;
+  }
+
+  .off {
+    opacity: 0.55;
   }
 
   .link {
