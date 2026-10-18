@@ -316,6 +316,9 @@ jobs:
           else
             unsigned=(--config '{"bundle":{"createUpdaterArtifacts":false}}')
           fi
+          # Every build a version code of its own, above any version's own (Tauri's major*10^6 +
+          # minor*10^3 + patch): a home screen takes a new icon only from a new version code.
+          export OPENRAC_ANDROID_VERSION_CODE=$((1000000000 + GITHUB_RUN_NUMBER))
           if [ "$NAME" = android ] && [ -n "$ANDROID_KEYSTORE" ]; then
             printf '%s' "$ANDROID_KEYSTORE" | base64 -d > "$RUNNER_TEMP/openrac.jks"
             export OPENRAC_ANDROID_KEYSTORE="$RUNNER_TEMP/openrac.jks"

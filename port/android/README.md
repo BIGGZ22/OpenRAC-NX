@@ -53,6 +53,11 @@ adb install -r app-universal-debug.apk
 adb logcat -s OpenRAC SDL SDL/APP openrac
 ```
 
+CI numbers each APK's version code by its run (`OPENRAC_ANDROID_VERSION_CODE`,
+above any version's own), so that a home screen takes a changed icon: a
+local build installs over a CI build only after `adb uninstall
+dev.openrac.launcher`, or with the variable set higher.
+
 The game writes its own log as on a desktop, in its data folder
 (`files/OpenRAC/active/<game>/data/`); the launcher shows it on the game's
 page with the crash reports. `adb shell run-as dev.openrac.launcher ls files`

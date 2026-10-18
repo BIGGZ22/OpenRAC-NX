@@ -24,7 +24,10 @@ android {
         // APIs the game's activity uses (docs/port/ANDROID.md).
         minSdk = 29
         targetSdk = 37
-        versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
+        // CI numbers each build (.github/workflows/launcher.yml): Android's home screens take a
+        // new icon or name only from an APK whose version code changed.
+        versionCode = System.getenv("OPENRAC_ANDROID_VERSION_CODE")?.toIntOrNull()
+            ?: tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
         // The game's memory is a 4 GB reservation: 64-bit Arm only.
         ndk {
