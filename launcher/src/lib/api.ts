@@ -107,6 +107,9 @@ export interface Config {
   layout: "compact" | "classic";
   /** The game writes a detailed log (OPENRAC_LOG=verbose); off keeps logs small. */
   detailedGameLog: boolean;
+  /** Windows and Linux: what the game draws with, OpenGL (the default) or the experimental Vulkan
+   *  renderer (OPENRAC_GL_API=vulkan). Android keeps its own choice (Renderer, gpuRendererSelect). */
+  renderer: DesktopRenderer;
   /** Per game, the time (seconds since 1970) of the newest crash report the player dismissed. */
   crashesSeen: Record<string, number>;
   /** Developers only: the version each game with two discs found plays (`rac1` -> `rac1/ntsc`). */
@@ -621,6 +624,8 @@ export interface GameStatus {
 }
 
 export type Renderer = "gles" | "vulkan";
+/** Config.renderer, on Windows and Linux. */
+export type DesktopRenderer = "opengl" | "vulkan";
 
 export interface GpuDrivers {
   drivers: GpuDriver[];

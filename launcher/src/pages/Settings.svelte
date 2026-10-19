@@ -40,6 +40,7 @@
     "checkUpdates",
     "updateChannel",
     "detailedGameLog",
+    "renderer",
     "saveEditorAdvanced",
     "developer",
     "discordClientId",
@@ -64,8 +65,13 @@
   /** Android has no folders to choose (its picker copies discs into the app): no panel when it
    *  would be empty. */
   const showFolders = $derived(rootHere || !onAndroid || draft.developer);
+  /** The game's Vulkan renderer is built for Windows and Linux only (port/cmake/Dependencies.cmake);
+   *  Android chooses its own in Graphics (GpuDrivers). */
+  const desktopRenderer = $derived(app.info?.platform === "windows" || app.info?.platform === "linux");
   /** Advanced opens by itself when something in it is on. */
-  let advancedOpen = $state(saved().detailedGameLog || saved().developer || saved().saveEditorAdvanced);
+  let advancedOpen = $state(
+    saved().detailedGameLog || saved().developer || saved().saveEditorAdvanced || saved().renderer === "vulkan",
+  );
 
   /** The update channel as this page has it, saved or not. */
   const channel = $derived<UpdateChannel>(app.info ? updateChannelOf(app.info, draft) : "stable");
@@ -303,6 +309,33 @@
           </span>
           <input type="checkbox" role="switch" class="switch" bind:checked={draft.detailedGameLog} />
         </label>
+        {#if desktopRenderer}
+          <!-- What the game draws with (OPENRAC_GL_API, core/src/actions.rs); without Vulkan it
+               falls back to OpenGL by itself (port/platform/window.cpp). -->
+          <div class="setting">
+            <span class="text">
+              <strong>Renderer</strong>
+              <small>
+                {draft.renderer === "vulkan"
+                  ? "Experimental: needs Vulkan 1.3, else the game draws with OpenGL."
+                  : "OpenGL 4.1, the default."}
+                From the game's next start: a running game keeps its renderer.
+              </small>
+            </span>
+            <div class="segmented" role="radiogroup" aria-label="Renderer">
+              <button
+                role="radio"
+                aria-checked={draft.renderer !== "vulkan"}
+                onclick={() => (draft.renderer = "opengl")}>OpenGL</button
+              >
+              <button
+                role="radio"
+                aria-checked={draft.renderer === "vulkan"}
+                onclick={() => (draft.renderer = "vulkan")}>Vulkan</button
+              >
+            </div>
+          </div>
+        {/if}
         <label class="setting">
           <span class="text">
             <strong>Advanced save editing</strong>

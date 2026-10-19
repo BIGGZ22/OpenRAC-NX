@@ -159,6 +159,10 @@ let config: Config = {
   layout: "compact",
   discordClientId: null,
   detailedGameLog: false,
+  // ?vulkan: the desktop's Vulkan renderer is chosen (Settings, Advanced).
+  renderer: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("vulkan")
+    ? "vulkan"
+    : "opengl",
   crashesSeen: {},
   discChoice: {},
 };
