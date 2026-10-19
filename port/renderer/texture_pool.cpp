@@ -445,19 +445,31 @@ void TexturePool::end_frame() {
     ++m_frame;
     for (std::size_t i = 0; i < m_entries.size(); ++i) {
         Entry& e = m_entries[i];
-        if (!e.live || !e.from_upload || m_frame - e.last_used < kKeepFrames) {
+        if (!e.live || !(e.from_upload || e.field) || m_frame - e.last_used < kKeepFrames) {
             continue;
         }
         if (e.gl != 0 && gl::loaded()) {
             glDeleteTextures(1, &e.gl);
         }
-        m_converted.erase(e.key);
+        const auto handle = static_cast<TextureHandle>(i + 1);
+        if (e.from_upload) {
+            m_converted.erase(e.key);
+        }
+        if (e.field) {
+            // A field nobody drew with for a while: made again if its glyphs come back. Kept for
+            // good, every content a text texture ever had took a field four times its size, for
+            // the rest of the session.
+            if (auto it = m_distance_fields.find(e.field_hash); it != m_distance_fields.end() && it->second == handle) {
+                m_distance_fields.erase(it);
+            }
+            std::erase_if(m_field_of_handle, [&](const auto& seen) { return seen.second.second == handle; });
+        }
         // The handle goes to the next conversion, and the field found by it (distance_field) with
         // it: a glyph page of the same size, whose sparse texels sampled the same, was drawn with
         // this one's field (the HUD's digits as letters, or as nothing).
-        m_field_of_handle.erase(static_cast<TextureHandle>(i + 1));
+        m_field_of_handle.erase(handle);
         e = Entry{};
-        m_free.push_back(static_cast<TextureHandle>(i + 1));
+        m_free.push_back(handle);
     }
 }
 
@@ -548,6 +560,7 @@ TextureHandle TexturePool::distance_field(TextureHandle source) {
         sample = (sample ^ texel_word) * 1099511628211ull;
     }
     if (auto seen = m_field_of_handle.find(source); seen != m_field_of_handle.end() && seen->second.first == sample) {
+        m_entries[seen->second.second - 1].last_used = m_frame;
         return seen->second.second;
     }
     const std::uint64_t shape = static_cast<std::uint64_t>(src.width) << 32 | static_cast<std::uint64_t>(src.height) << 1
@@ -555,6 +568,7 @@ TextureHandle TexturePool::distance_field(TextureHandle source) {
     const std::uint64_t hash = hash_bytes(src.pixels.data(), src.pixels.size()) ^ (shape * 0x9E3779B97F4A7C15ull);
     if (auto it = m_distance_fields.find(hash); it != m_distance_fields.end()) {
         m_field_of_handle[source] = {sample, it->second};
+        m_entries[it->second - 1].last_used = m_frame;
         return it->second;
     }
     constexpr int kScale = 4;
@@ -630,6 +644,8 @@ TextureHandle TexturePool::distance_field(TextureHandle source) {
         out.pixels[i * 4 + 3] = static_cast<std::uint8_t>(std::clamp(value, 0.0f, 1.0f) * 255.0f + 0.5f);
     }
     const TextureHandle handle = add(std::move(out), AlphaScale::Full, name(source) + " (distance field)");
+    m_entries[handle - 1].field = true;
+    m_entries[handle - 1].field_hash = hash;
     m_distance_fields.emplace(hash, handle);
     m_field_of_handle[source] = {sample, handle};
     return handle;

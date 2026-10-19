@@ -112,7 +112,7 @@ public:
     // Delete every GL texture (before the context goes away).
     void release_gl();
 
-    // Once per frame: forget conversions of game uploads that no draw has
+    // Once per frame: forget conversions of game uploads, and distance fields, that no draw has
     // used for kKeepFrames frames.
     void end_frame();
 
@@ -160,6 +160,8 @@ private:
     struct Entry {
         bool live = false;
         bool from_upload = false;  // converted from game uploads: may be dropped
+        bool field = false;        // a distance field (distance_field): may be dropped as well
+        std::uint64_t field_hash = 0;  // its key in m_distance_fields
         bool mipmaps = false;
         bool linear = false;
         Rgba8Image image;
