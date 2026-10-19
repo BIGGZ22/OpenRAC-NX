@@ -400,6 +400,66 @@ static void lock_play_through(void) {
     CHECK(fabsf(rac1_strafe_angle_diff(facing, turned)) < 1e-4f);
 }
 
+/* The backpedal: when it plays the walk or the run backwards, and the step back itself. */
+static void backpedal(void) {
+    const float deg = 0.017453292f;
+    const int run = RAC1_STRAFE_STATE_RUN;
+    /* Strafing in the run: straight back and up to 110 degrees off, the edges with their hysteresis. */
+    CHECK(rac1_strafe_backpedal(RAC1_STRAFE_HELD, run, 0.5f, 0.5f + 3.1415927f, 0));
+    CHECK(rac1_strafe_backpedal(RAC1_STRAFE_LOCKED, RAC1_STRAFE_STATE_RUN_ALT, 0.5f, 0.5f - 120.0f * deg, 0));
+    CHECK(!rac1_strafe_backpedal(RAC1_STRAFE_HELD, run, 0.5f, 0.5f + 105.0f * deg, 0)); /* not yet */
+    CHECK(rac1_strafe_backpedal(RAC1_STRAFE_HELD, run, 0.5f, 0.5f + 105.0f * deg, 1));  /* kept */
+    CHECK(!rac1_strafe_backpedal(RAC1_STRAFE_HELD, run, 0.5f, 0.5f + 95.0f * deg, 1));  /* left */
+    CHECK(!rac1_strafe_backpedal(RAC1_STRAFE_HELD, run, 0.5f, 0.5f - 90.0f * deg, 0));  /* sideways */
+    CHECK(!rac1_strafe_backpedal(RAC1_STRAFE_HELD, run, 0.5f, 0.5f, 1));                /* forward */
+    /* Across the wrap of the angles: facing 170, moving at -30 (160 off). */
+    CHECK(rac1_strafe_backpedal(RAC1_STRAFE_HELD, run, 170.0f * deg, -30.0f * deg, 0));
+    /* Not strafing, or not in the run (standing, the jump): the game's. */
+    CHECK(!rac1_strafe_backpedal(RAC1_STRAFE_NONE, run, 0.5f, 0.5f + 3.1415927f, 1));
+    CHECK(!rac1_strafe_backpedal(RAC1_STRAFE_HELD, RAC1_STRAFE_STATE_JUMP, 0.5f, 0.5f + 3.1415927f, 0));
+    CHECK(!rac1_strafe_backpedal(RAC1_STRAFE_HELD, RAC1_STRAFE_STATE_STAND, 0.5f, 0.5f + 3.1415927f, 0));
+
+    /* The step back, a sequence of 4 keys at rates 0.5, 0.25, 0.5, 1. */
+    const float rates[4] = {0.5f, 0.25f, 0.5f, 1.0f};
+    rac1_strafe_anim a = {2, 3, 0.6f, 0.5f};
+    rac1_strafe_anim_back(&a, 0.25f, 4, rates); /* within the interval */
+    CHECK(a.key == 2 && a.next_key == 3 && fabsf(a.fraction - 0.35f) < 1e-6f && a.rate == 0.5f);
+    rac1_strafe_anim_back(&a, 0.45f, 4, rates); /* 0.1 below: 0.2 ticks into key 1's interval */
+    CHECK(a.key == 1 && a.next_key == 2 && a.rate == 0.25f && fabsf(a.fraction - (1.0f - 0.2f * 0.25f)) < 1e-6f);
+    /* Back past key 0: the last key and key 0, its rate. */
+    a = (rac1_strafe_anim){0, 1, 0.1f, 0.5f};
+    rac1_strafe_anim_back(&a, 0.2f, 4, rates);
+    CHECK(a.key == 3 && a.next_key == 0 && a.rate == 1.0f && fabsf(a.fraction - (1.0f - 0.2f)) < 1e-6f);
+    /* Several keys in one tick. */
+    a = (rac1_strafe_anim){3, 0, 0.5f, 1.0f};
+    rac1_strafe_anim_back(&a, 1.0f, 4, rates); /* 0.5 ticks over: key 2 (rate 0.5) takes 0.25 of it */
+    CHECK(a.key == 2 && a.next_key == 3 && fabsf(a.fraction - 0.75f) < 1e-6f);
+    /* Never left where the advance would round it up to the next key. */
+    a = (rac1_strafe_anim){2, 3, 0.001f, 0.5f};
+    rac1_strafe_anim_back(&a, 0.002f, 4, rates);
+    CHECK(a.key == 1 && a.fraction <= RAC1_STRAFE_BACK_TOP);
+    /* A whole cycle backwards visits every key in reverse and comes back, and a key of no rate or a
+     * huge step stops the loop. */
+    a = (rac1_strafe_anim){0, 1, 0.5f, 0.5f};
+    int seen = 0;
+    for (int i = 0; i < 200 && seen < 5; ++i) {
+        const int before = a.key;
+        rac1_strafe_anim_back(&a, 0.1f, 4, rates);
+        if (a.key != before) {
+            CHECK(a.key == (before + 3) % 4 && a.next_key == before);
+            ++seen;
+        }
+    }
+    CHECK(seen == 5);
+    const float stuck[4] = {0.5f, 0.0f, 0.5f, 0.5f};
+    a = (rac1_strafe_anim){2, 3, 0.1f, 0.5f};
+    rac1_strafe_anim_back(&a, 0.5f, 4, stuck);
+    CHECK(a.key == 1 && a.fraction == RAC1_STRAFE_BACK_TOP); /* a key of no rate holds, as forward */
+    a = (rac1_strafe_anim){2, 3, 0.1f, 0.5f};
+    rac1_strafe_anim_back(&a, 1e30f, 4, rates);
+    CHECK(a.fraction >= 0.0f && a.fraction <= RAC1_STRAFE_BACK_TOP);
+}
+
 int main(void) {
     items();
     off();
@@ -408,6 +468,7 @@ int main(void) {
     movement();
     hold_play_through();
     lock_play_through();
-    puts("hero strafe: weapons, off, hold, lock, the buttons taken, facing, velocity, swing and right stick passed");
+    backpedal();
+    puts("hero strafe: weapons, off, hold, lock, the buttons taken, facing, velocity, swing, right stick and backpedal passed");
     return 0;
 }
