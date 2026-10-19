@@ -1714,6 +1714,11 @@ extern void mark_moby_for_removal_p(void *) __asm__("FUN_0020c828");
 extern void scale_vector_xyz(void *, void *, float);
 
 void FUN_L18_002db460(struct Moby *moby) {
+    enum {
+        STATE_BALLISTIC_FLIGHT = 0,
+        STATE_GROUND_IMPACT_DELAY = 1,
+        STATE_REMOVE = 3
+    };
     float v[4];
     float a[4];
     float c[4];
@@ -1727,7 +1732,7 @@ void FUN_L18_002db460(struct Moby *moby) {
         return;
     }
     switch (moby->state) {
-    case 0: {
+    case STATE_BALLISTIC_FLIGHT: {
         float *cc;
         i = 0;
         for (; i < D_L18_00161C40; i++) {
@@ -1783,7 +1788,7 @@ void FUN_L18_002db460(struct Moby *moby) {
         }
         break;
     }
-    case 1:
+    case STATE_GROUND_IMPACT_DELAY:
         d[12] = fast_add_rotations(d[12], frame_time * 18.849556f);
         moby->glow_color = FUN_001fa6e0(*(int *)&D_L18_00161BFC, D_L18_00161C00,
                                              (fast_sin(d[12]) + 1.0f) * 0.5f);
@@ -1804,7 +1809,7 @@ void FUN_L18_002db460(struct Moby *moby) {
             moby->state = 3;
         }
         break;
-    case 3:
+    case STATE_REMOVE:
         mark_moby_for_removal_p(moby);
         break;
     }
