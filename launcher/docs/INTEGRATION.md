@@ -172,8 +172,12 @@ prepared. [docs/port/ROADMAP.md](../../docs/port/ROADMAP.md) says what each
 needs and in which order. A version whose port can be started gets two
 actions, as rac1/pal has on Windows:
 
-- `port-build`, "Build the game": `tools/build_port.py <id>`, which
-  configures `port/` the first time and then rebuilds only what changed.
+- `port-build`, "Build the game": `tools/build_port.py <id> --disc {disc}`, which
+  configures `port/` the first time and then rebuilds only what changed. The
+  disc is read for the functions the decompilation has only as assembly:
+  hostgen writes their C from the disc's own executable and level programs
+  ([retail.py](../../port/tools/hostgen/retail.py)), which the player's
+  machine has where the decompilation's assembly files are not.
   On Windows it sets up Visual Studio's environment itself and finds Clang
   and Ninja, so a player never types a compiler's command. The game page
   offers it in place of Play until the game is built, and as Rebuild after.

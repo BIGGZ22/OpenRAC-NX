@@ -99,6 +99,19 @@ class Commands(unittest.TestCase):
                                     build_port.parse_cache(CACHE), more=["runtime_test"])
         self.assertEqual(steps, [BUILD + ["runtime_test"]])
 
+    def test_a_disc_is_kept_for_the_games_translation(self):
+        disc = Path("/discs/rac1.iso")
+        new = build_port.commands("cmake", "release", self.build, ["rac1-pal"], None, {}, disc=disc)
+        self.assertEqual(new[0], ["cmake", "--preset", "release", "-DOPENRAC_RAC1_PAL_RETAIL_IMAGE=" + disc.as_posix()])
+        (self.build / "build.ninja").write_text("")
+        cache = build_port.parse_cache(CACHE)
+        steps = build_port.commands("cmake", "release", self.build, ["rac1-pal"], None, cache, disc=disc)
+        self.assertEqual(steps[0], ["cmake", "-S", str(build_port.PORT), "-B", str(self.build),
+                                    "-DOPENRAC_RAC1_PAL_RETAIL_IMAGE=" + disc.as_posix()])
+        cache["OPENRAC_RAC1_PAL_RETAIL_IMAGE"] = disc.as_posix()
+        self.assertEqual(build_port.commands("cmake", "release", self.build, ["rac1-pal"], None, cache, disc=disc),
+                         [BUILD])
+
     def test_an_unfinished_folder_keeps_its_own_compilers(self):
         steps = self.plan(build_port.parse_cache(CACHE), compilers=("other", "other++", "ninja2"), configured=False)
         self.assertEqual(steps[0][:3], ["cmake", "--preset", "release"])
@@ -116,6 +129,10 @@ class CommandLine(unittest.TestCase):
 
     def test_a_source_for_two_games_is_refused(self):
         self.refused(["rac1-pal", "rac1-ntsc", "--source", "."])
+
+    def test_a_disc_for_two_games_or_none_is_refused(self):
+        self.refused(["rac1-pal", "rac1-ntsc", "--disc", __file__])
+        self.refused(["rac1-pal", "--disc", "/no/such/disc.iso"])
 
 
 if __name__ == "__main__":

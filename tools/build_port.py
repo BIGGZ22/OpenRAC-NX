@@ -20,6 +20,12 @@ your own checkout, further along than OpenRAC's (OPENRAC_<ID>_SOURCE). The
 build folder keeps the choice, so later runs build from it again until
 another --source.
 
+--disc IMAGE names the image of GAME's disc (one game; the launcher passes the
+one set up). What the decompilation still has only as assembly is then
+translated from that disc's own programs (OPENRAC_<ID>_RETAIL_IMAGE,
+port/tools/hostgen/retail.py) instead of staying a stub that does nothing; the
+build folder keeps it too.
+
 On Windows the build runs in Visual Studio's x64 environment (the MSVC
 libraries and the Windows SDK, from any edition with the C++ tools, found
 with vswhere), with Clang (OPENRAC_CLANG, else LLVM's installer, Scoop or
@@ -76,6 +82,11 @@ def games() -> list[str]:
 def source_variable(game: str) -> str:
     """The cache variable naming GAME's decompilation (Games.cmake): rac1-pal is OPENRAC_RAC1_PAL_SOURCE."""
     return f"OPENRAC_{game.upper().replace('-', '_')}_SOURCE"
+
+
+def retail_variable(game: str) -> str:
+    """The cache variable naming the disc image GAME's functions with no C are translated from."""
+    return f"OPENRAC_{game.upper().replace('-', '_')}_RETAIL_IMAGE"
 
 
 def default_source(game: str) -> Path:
@@ -137,6 +148,7 @@ def commands(
     compilers: tuple[str, str, str] | None = None,
     python: str | None = None,
     more: list[str] | None = None,
+    disc: Path | None = None,
 ) -> list[list[str]]:
     """The command lines to run, in order. A folder not configured yet is configured from the
     preset; a configured one is only built, after a configure without the preset when `source`
@@ -144,8 +156,14 @@ def commands(
     clang++), and a name that finds another Clang than the cached one makes CMake drop the whole
     cache, so a configure from the preset passes the folder's own compilers, else `compilers`
     (C, C++, Ninja) when given. `python` is the interpreter hostgen runs under in a new folder
-    (this one: CMake's own choice may be an older Python than hostgen reads)."""
-    variable = source_variable(names[0]) if source is not None else None
+    (this one: CMake's own choice may be an older Python than hostgen reads). `disc` is the
+    player's image of the first game's disc, kept as its OPENRAC_<ID>_RETAIL_IMAGE: hostgen reads
+    the instructions of the functions with no C from it (port/tools/hostgen/retail.py)."""
+    wanted = {}
+    if source is not None:
+        wanted[source_variable(names[0])] = Path(source).as_posix()
+    if disc is not None:
+        wanted[retail_variable(names[0])] = Path(disc).as_posix()
     if not cache or not (build / "build.ninja").is_file():
         configure = [cmake, "--preset", preset]
         found = dict(zip(("CMAKE_C_COMPILER", "CMAKE_CXX_COMPILER", "CMAKE_MAKE_PROGRAM"), compilers or ()))
@@ -155,13 +173,11 @@ def commands(
             value = cache.get(key) or found.get(key)
             if value:
                 configure.append(f"-D{key}={value}")
-        if variable:
-            configure.append(f"-D{variable}={Path(source).as_posix()}")
+        configure += [f"-D{key}={value}" for key, value in wanted.items()]
         out = [configure]
-    elif variable and not same_path(cache.get(variable, ""), source):
-        out = [[cmake, "-S", str(PORT), "-B", str(build), f"-D{variable}={Path(source).as_posix()}"]]
     else:
-        out = []
+        changed = [f"-D{key}={value}" for key, value in wanted.items() if not same_path(cache.get(key, ""), value)]
+        out = [[cmake, "-S", str(PORT), "-B", str(build), *changed]] if changed else []
     out.append([cmake, "--build", "--preset", preset, "--target", *targets(names, more)])
     return out
 
@@ -284,6 +300,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Builds the native port (port/) for this computer.")
     parser.add_argument("games", nargs="*", metavar="GAME", help=f"a port game ({', '.join(known)}); default {DEFAULT_GAME}")
     parser.add_argument("--source", type=Path, help="build GAME from this copy of its decompilation (kept for later builds)")
+    parser.add_argument("--disc", type=Path, metavar="IMAGE",
+                        help="the image of GAME's disc (one game): the functions the decompilation has no C for "
+                             "are translated from its programs (kept for later builds)")
     parser.add_argument("--preset", default="release", help="the CMake preset (port/CMakePresets.json); default release")
     parser.add_argument("--target", action="append", default=[], metavar="NAME",
                         help="also build this target of the port (a test program such as runtime_test)")
@@ -300,6 +319,13 @@ def main(argv: list[str] | None = None) -> int:
         source = args.source.resolve()
         if not source.is_dir():
             parser.error(f"--source {args.source}: no such folder")
+    disc = None
+    if args.disc is not None:
+        if len(names) != 1:
+            parser.error("--disc is one game's disc: name that one GAME")
+        disc = args.disc.resolve()
+        if not disc.is_file():
+            parser.error(f"--disc {args.disc}: no such file")
 
     build = PORT / "build" / args.preset
     cache = read_cache(build)
@@ -313,7 +339,8 @@ def main(argv: list[str] | None = None) -> int:
         decompilation = source if name == names[0] and source else cache.get(source_variable(name)) or default_source(name)
         say(f"{name}: from {decompilation}")
     python = Path(sys.executable).as_posix()
-    for command in commands(str(cmake), args.preset, build, names, source, cache, compilers, python, args.target):
+    for command in commands(str(cmake), args.preset, build, names, source, cache, compilers, python, args.target,
+                            disc):
         say("> " + " ".join(f'"{part}"' if " " in part else part for part in command))
         status = subprocess.run(command, cwd=PORT, env=env).returncode
         if status != 0:

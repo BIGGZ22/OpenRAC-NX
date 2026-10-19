@@ -276,7 +276,9 @@
         "program": "{python}",
         "args": [
           "tools/build_port.py",
-          "rac1-pal"
+          "rac1-pal",
+          "--disc",
+          "{disc}"
         ],
         "cwd": ".",
         "requires": [
@@ -745,7 +747,9 @@
         "program": "{python}",
         "args": [
           "tools/build_port.py",
-          "rac1-ntsc"
+          "rac1-ntsc",
+          "--disc",
+          "{disc}"
         ],
         "cwd": ".",
         "requires": [
