@@ -160,6 +160,7 @@ inline constexpr GLenum GL_DRAW_FRAMEBUFFER = 0x8CA9;
 inline constexpr GLenum GL_COLOR_ATTACHMENT0 = 0x8CE0;
 inline constexpr GLenum GL_DEPTH_ATTACHMENT = 0x8D00;
 inline constexpr GLenum GL_DEPTH_STENCIL_ATTACHMENT = 0x821A;
+inline constexpr GLenum GL_STENCIL_ATTACHMENT = 0x8D20;
 inline constexpr GLenum GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
 // clang-format on
 
@@ -277,11 +278,30 @@ inline constexpr GLenum GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
     X(void, glPolygonMode, (GLenum face, GLenum mode))
 // clang-format on
 
+// Functions only some contexts have, for a tiled GPU's sake (a phone's): null where the context
+// lacks them, and loaded on an ES context only (a desktop GPU gains nothing from them, and a
+// desktop loader may hand out a pointer for a function its context does not have). Each caller
+// tests its pointer, and the extension where it is one.
+//   glInvalidateFramebuffer: OpenGL ES 3.0. The attachments a pass leaves are not written back.
+//   glFramebufferTexture2DMultisampleEXT, glRenderbufferStorageMultisampleEXT:
+//     GL_EXT_multisampled_render_to_texture. The samples stay in the GPU's tile memory and are
+//     resolved into the texture as they are written out (FrameBuffer).
+// clang-format off
+#define OPENRAC_GL_ES_OPTIONAL_FUNCTIONS(X)                                                        \
+    X(void, glInvalidateFramebuffer, (GLenum target, GLsizei count, const GLenum *attachments))    \
+    X(void, glFramebufferTexture2DMultisampleEXT, (GLenum target, GLenum attachment,               \
+                                                   GLenum textarget, GLuint texture, GLint level,  \
+                                                   GLsizei samples))                               \
+    X(void, glRenderbufferStorageMultisampleEXT, (GLenum target, GLsizei samples, GLenum format,   \
+                                                  GLsizei w, GLsizei h))
+// clang-format on
+
 #define OPENRAC_GL_DECLARE(ret, name, params)                                                      \
     using PFN_##name = ret(OPENRAC_GLAPI*) params;                                                 \
     extern PFN_##name name;
 OPENRAC_GL_FUNCTIONS(OPENRAC_GL_DECLARE)
 OPENRAC_GL_DESKTOP_FUNCTIONS(OPENRAC_GL_DECLARE)
+OPENRAC_GL_ES_OPTIONAL_FUNCTIONS(OPENRAC_GL_DECLARE)
 #undef OPENRAC_GL_DECLARE
 
 // The context's loader, in SDL_GL_GetProcAddress's shape.

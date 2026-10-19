@@ -13,6 +13,7 @@ namespace openrac::gl {
 #define OPENRAC_GL_DEFINE(ret, name, params) PFN_##name name = nullptr;
 OPENRAC_GL_FUNCTIONS(OPENRAC_GL_DEFINE)
 OPENRAC_GL_DESKTOP_FUNCTIONS(OPENRAC_GL_DEFINE)
+OPENRAC_GL_ES_OPTIONAL_FUNCTIONS(OPENRAC_GL_DEFINE)
 #undef OPENRAC_GL_DEFINE
 
 namespace {
@@ -79,6 +80,14 @@ bool load(GetProcAddress get, std::string& missing) {
         }
     }
 
+#define OPENRAC_GL_LOAD_OPTIONAL(ret, name, params)                                                \
+    name = g_api == Api::ES ? reinterpret_cast<PFN_##name>(get(#name)) : nullptr;
+    OPENRAC_GL_ES_OPTIONAL_FUNCTIONS(OPENRAC_GL_LOAD_OPTIONAL)
+#undef OPENRAC_GL_LOAD_OPTIONAL
+    if (!has_extension("GL_EXT_multisampled_render_to_texture")) {
+        glFramebufferTexture2DMultisampleEXT = nullptr;
+        glRenderbufferStorageMultisampleEXT = nullptr;
+    }
     if (g_api == Api::Desktop) {
         OPENRAC_GL_DESKTOP_FUNCTIONS(OPENRAC_GL_LOAD)
     } else {

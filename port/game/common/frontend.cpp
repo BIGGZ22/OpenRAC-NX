@@ -1857,6 +1857,7 @@ void draw_kept(bool first) {
         const stats::Scope render_scope("render");
         renderer::RenderTarget target{g->frame.id(), width, height, picture_scale};
         target.resolve_framebuffer = g->frame.resolve_target();
+        target.resolves_itself = g->frame.resolves_itself();
         target.wide_2d = picture_scale < 1.0f && settings::get().hud == settings::Hud::Edges;
         g->renderer->render(input, target);
     }

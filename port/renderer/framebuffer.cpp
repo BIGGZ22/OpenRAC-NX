@@ -12,6 +12,14 @@ namespace openrac::renderer {
 
 using namespace openrac::gl;
 
+namespace {
+
+// A driver that lists GL_EXT_multisampled_render_to_texture but would not complete such a target:
+// multisampled buffers from then on.
+bool g_implicit_refused = false;
+
+}  // namespace
+
 FrameBuffer::~FrameBuffer() {
     // release() frees the GL objects while the context exists.
 }
@@ -53,7 +61,19 @@ bool FrameBuffer::create(int width, int height, std::string& error, int samples)
     glBindRenderbuffer(GL_RENDERBUFFER, m_depth);
     glGenFramebuffers(1, &m_framebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, m_framebuffer);
-    if (m_samples > 1) {
+    // On a tiled GPU with GL_EXT_multisampled_render_to_texture (a phone's) the samples never
+    // leave the GPU's tile memory: they are resolved into the colour texture as each tile is
+    // written out, and the depth's samples are not written at all. A multisampled buffer instead
+    // writes every sample to memory and reads it back for the resolve, four times a plain frame's
+    // traffic at 4x, each frame. A second framebuffer holds the same texture with one sample, for
+    // reading and copying what was drawn.
+    m_implicit = m_samples > 1 && !g_implicit_refused && glFramebufferTexture2DMultisampleEXT != nullptr
+                 && glRenderbufferStorageMultisampleEXT != nullptr;
+    if (m_implicit) {
+        glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER, m_samples, GL_DEPTH24_STENCIL8, width, height);
+        glFramebufferTexture2DMultisampleEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colour, 0,
+                                             m_samples);
+    } else if (m_samples > 1) {
         glRenderbufferStorageMultisample(GL_RENDERBUFFER, m_samples, GL_DEPTH24_STENCIL8, width, height);
         glGenRenderbuffers(1, &m_multisample);
         glBindRenderbuffer(GL_RENDERBUFFER, m_multisample);
@@ -74,6 +94,10 @@ bool FrameBuffer::create(int width, int height, std::string& error, int samples)
         status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    if (status != GL_FRAMEBUFFER_COMPLETE && m_implicit) {
+        g_implicit_refused = true;
+        return create(width, height, error, samples);
+    }
     if (status != GL_FRAMEBUFFER_COMPLETE) {
         error = std::format("framebuffer {}x{} with {} sample(s) incomplete ({:#x})", width, height, m_samples,
                             status);
@@ -105,6 +129,7 @@ void FrameBuffer::release() {
         m_multisample = 0;
     }
     m_samples = 1;
+    m_implicit = false;
     m_width = 0;
     m_height = 0;
 }
@@ -112,6 +137,9 @@ void FrameBuffer::release() {
 unsigned FrameBuffer::resolved() const {
     if (m_resolve == 0) {
         return m_framebuffer;
+    }
+    if (m_implicit) {
+        return m_resolve;  // the texture holds the resolved colour already
     }
     // As blit_to: neither the scissor nor the colour mask applies to a copy.
     glDisable(GL_SCISSOR_TEST);
@@ -152,8 +180,9 @@ void FrameBuffer::blit_to(unsigned target, int dst_width, int dst_height) const 
     glDisable(GL_SCISSOR_TEST);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     // A multisampled target copies to one of another size only through its resolved colour.
-    const unsigned source = m_samples > 1 && (dst_width != m_width || dst_height != m_height) ? resolved()
-                                                                                              : m_framebuffer;
+    const unsigned source = m_implicit || (m_samples > 1 && (dst_width != m_width || dst_height != m_height))
+                                ? resolved()
+                                : m_framebuffer;
     glBindFramebuffer(GL_READ_FRAMEBUFFER, source);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target);
     const bool same_size = dst_width == m_width && dst_height == m_height;

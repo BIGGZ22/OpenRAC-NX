@@ -5,12 +5,18 @@
 // without a context, and then every program whose sources stand alone (the direct renderer's, the
 // effect renderer's, the viewer's mesh and sky) built on whatever context the test gets: OpenGL
 // 4.1, or ES 3.2 under OPENRAC_GL_API=es (renderer_shader_es). The world's programs are built by
-// world_gl_smoke. Skipped (exit 77) where no context can be made.
+// world_gl_smoke. Then a multisampled frame resolved and read back, as the frontend draws one (with
+// GL_EXT_multisampled_render_to_texture on an ES driver that has it, renderer/framebuffer.h).
+// Skipped (exit 77) where no context can be made.
 
+#include <cstdint>
 #include <cstdio>
 #include <string>
+#include <vector>
 
 #include "check.h"
+#include "renderer/framebuffer.h"
+#include "renderer/gl.h"
 #include "renderer/shader.h"
 #include "renderer_gl_context.h"
 #include "renderer_shaders.h"
@@ -63,6 +69,33 @@ void build(const char* name, const char* vertex, const char* fragment) {
     shader.release();
 }
 
+// A 4x frame cleared to one colour reads back as that colour, through resolved() and read_rgba().
+void multisampled() {
+    using namespace openrac::gl;
+    openrac::renderer::FrameBuffer frame;
+    std::string error;
+    const bool made = frame.create(16, 8, error, 4);
+    if (!made) {
+        std::fprintf(stderr, "%s\n", error.c_str());
+    }
+    CHECK(made);
+    if (!made) {
+        return;
+    }
+    std::printf("multisampled frame: %d samples, %s\n", frame.samples(),
+                frame.resolves_itself() ? "resolved by the GPU" : "resolved by a copy");
+    glBindFramebuffer(GL_FRAMEBUFFER, frame.id());
+    glViewport(0, 0, 16, 8);
+    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    const std::vector<std::uint8_t> pixels = frame.read_rgba();
+    CHECK(pixels.size() == 16u * 8u * 4u);
+    CHECK(pixels.size() >= 4 && pixels[0] == 255 && pixels[1] == 0 && pixels[2] == 0 && pixels[3] == 255);
+    CHECK(pixels.size() >= 4 && pixels[pixels.size() - 4] == 255 && pixels[pixels.size() - 3] == 0);
+    CHECK(glGetError() == GL_NO_ERROR);
+    frame.release();
+}
+
 }  // namespace
 
 int main() {
@@ -79,6 +112,11 @@ int main() {
     build("direct", renderer_src::direct_vert, renderer_src::direct_frag);
     build("effect", renderer_src::effect_vert, renderer_src::direct_frag);
     build("mesh", viewer_src::mesh_vert, viewer_src::mesh_frag);
+    // The static layers' opaque pass (viewer/level_renderer.cpp, m_solid).
+    std::string solid(viewer_src::mesh_frag);
+    solid.insert(solid.find('\n') + 1, "#define OPENRAC_SOLID 1\n");
+    build("mesh (solid)", viewer_src::mesh_vert, solid.c_str());
     build("sky", viewer_src::sky_vert, viewer_src::sky_frag);
+    multisampled();
     return openrac::test::result();
 }

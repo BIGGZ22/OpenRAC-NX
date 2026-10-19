@@ -9,7 +9,8 @@
 // With more than one sample a pixel (anti-aliasing) the target drawn into is
 // a pair of multisampled buffers, which cannot be sampled, read or scaled:
 // the colour texture then belongs to a second framebuffer the samples are
-// resolved into (resolved()), as OpenGOAL does for its own multisampled frame.
+// resolved into (resolved()), as OpenGOAL does for its own multisampled frame. Where the GPU resolves
+// the samples itself (resolves_itself()), the second framebuffer holds the texture they go to.
 
 #pragma once
 
@@ -48,6 +49,11 @@ public:
     // The framebuffer resolved() fills, without filling it; 0 for a target of one sample a pixel.
     unsigned resolve_target() const { return m_resolve; }
 
+    // The samples are resolved into the colour texture by the GPU itself, as they are written out
+    // (GL_EXT_multisampled_render_to_texture): resolve_target() can be read at any time, with
+    // nothing to copy first.
+    bool resolves_itself() const { return m_implicit; }
+
     // The most samples a pixel the driver gives a target (1 when it has no multisampling).
     static int max_samples();
 
@@ -69,6 +75,7 @@ private:
     unsigned m_resolve = 0;       // the framebuffer holding m_colour, when multisampled
     unsigned m_multisample = 0;   // the multisampled colour buffer
     int m_samples = 1;
+    bool m_implicit = false;      // resolves_itself()
     int m_width = 0;
     int m_height = 0;
 };

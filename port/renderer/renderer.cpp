@@ -38,6 +38,9 @@ unsigned readable(const RenderTarget& target) {
     if (target.resolve_framebuffer == 0) {
         return target.framebuffer;
     }
+    if (target.resolves_itself) {
+        return target.resolve_framebuffer;
+    }
     glDisable(GL_SCISSOR_TEST);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, target.framebuffer);
@@ -117,6 +120,14 @@ void Renderer::render(const FrameInput& input, const RenderTarget& target) {
             const stats::Scope pass(r->name(), stats::kGpu);
             r->render(input, state);
         }
+    }
+    // Nothing reads the frame's depth and stencil after it (the next frame clears them): a tiled
+    // GPU (a phone's) then does not write them back to memory at the end of the pass, which it does
+    // for every attachment it is not told to drop (gl.h, OPENRAC_GL_ES_OPTIONAL_FUNCTIONS).
+    if (glInvalidateFramebuffer != nullptr && target.framebuffer != 0) {
+        glBindFramebuffer(GL_FRAMEBUFFER, target.framebuffer);
+        const GLenum dropped[] = {GL_DEPTH_ATTACHMENT, GL_STENCIL_ATTACHMENT};
+        glInvalidateFramebuffer(GL_FRAMEBUFFER, 2, dropped);
     }
     m_stats = state.stats;
     m_textures.end_frame();
