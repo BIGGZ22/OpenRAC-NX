@@ -35,6 +35,9 @@ extern float func_001F9878_6610(float) __asm__("func_001F96B0");
 /* PAL declares these two in the unit this file shares with level_crate_init.c there; not here. */
 extern void func_L00_002584A8_2D19E8(u8 *, s32, s32) __asm__("FUN_L00_00257470");
 extern f32 func_002140F8_2D19E8(f32, f32) __asm__("FUN_002132a8");
+/* float to int (cvt.w.s): PAL's func_001FA898, FUN_001fa6d0 in the US program (its jal at 0x002D5288);
+ * with no declaration the PAL name called 0x001FA898, where no US function starts. */
+extern int func_001FA898_2D3F40(f32) __asm__("FUN_001fa6d0");
 /* What the PAL file this was written in declares before it. */
 typedef struct { float x, y, z, w; } __attribute__((aligned(16))) CreatureHitVec;
 extern int D_L00_0015F5C4_hits __asm__("D_L00_0015F5C4") MACRO_ADDR;
