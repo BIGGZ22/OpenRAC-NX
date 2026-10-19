@@ -74,6 +74,11 @@ target_link_libraries(log_test PRIVATE openrac_common)
 openrac_warnings(log_test)
 add_test(NAME log COMMAND log_test)
 
+add_executable(pause_options_test tests/pause_options_test.cpp)
+target_include_directories(pause_options_test PRIVATE .)
+openrac_warnings(pause_options_test)
+add_test(NAME pause_options COMMAND pause_options_test)
+
 # ---- runtime: game memory, the guest contract, the executable loader ----
 add_library(openrac_runtime STATIC
   runtime/crash.cpp
