@@ -2071,7 +2071,18 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     const viewer::GameAddresses& a =
         viewer::rac1_addresses(g->game, level);
     // The boot program's worlds: the flight between planets (game mode 6), else the title world.
-    use_level(level >= 0 && level < 19 ? level : word_at(ram, game_mode_address()) == 6 ? -2 : -1);
+    // A flight between planets also plays inside the previous planet's program, which stays loaded
+    // until the next level is read: mode 6 with the ship in neither the take-off (0) nor the
+    // landing (8) is the space part, whose world is the flight world's, not the planet's.
+    int world = level >= 0 && level < 19 ? level : word_at(ram, game_mode_address()) == 6 ? -2 : -1;
+    if (world >= 0 && openrac_game_front_end != nullptr && openrac_game_front_end->ship_state != 0
+        && word_at(ram, game_mode_address()) == 6) {
+        const std::uint32_t ship = word_at(ram, openrac_game_front_end->ship_state);
+        if (ship != 0 && ship != 8) {
+            world = -2;
+        }
+    }
+    use_level(world);
     viewer::GameState state = viewer::read_game_state(ram, a);
     // The world is drawn from the camera the game's world renderers used, not from whatever the
     // camera globals hold at the end of the frame (the page menu sets its own camera, at
