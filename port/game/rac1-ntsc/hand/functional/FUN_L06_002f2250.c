@@ -1,5 +1,10 @@
 /* Carried from the PAL decompilation's nonmatching/shared/func_L06_002F3680.c (games/rac1) through the version
- * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
+ * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
+ * With PAL's later corrections (nonmatching/functional/func_L06_002F3680.c), checked against the US
+ * assembly (config/us/overlays/asm/FUN_L06_002f2250.s): sel, fl and ptrs hold 50 (jc runs to 50; with 20
+ * the host wrote past them), a candidate is skipped when its +0xBC is 2 (beql), the insertion index starts
+ * at 0 also when the list is empty, the clear loop stores through +0x78 (lw 0x78, sw 0x178), the
+ * selection loop runs jc times, and the two vectors copied as quadwords are 16-byte aligned. */
 #include "types.h"
 #include "qcopy.h"
 #include "qzero.h"
@@ -38,11 +43,11 @@ extern float func_001FA580(float, float);
 /* Shared level-06/10 routine: gathers candidate mobies, scores them against the target list and writes the slot tables. */
 void FUN_L06_002f2250(void) {
     char *outv[50];
-    char vD[16];
-    char vE[16];
-    int sel[20];
-    signed char fl[20];
-    char *ptrs[20];
+    char vD[16] __attribute__((aligned(16)));
+    char vE[16] __attribute__((aligned(16)));
+    int sel[50];
+    signed char fl[50];
+    char *ptrs[50];
     char *pp;
     char *q;
     char *d;
@@ -90,7 +95,7 @@ void FUN_L06_002f2250(void) {
         do {
             if (*(short *)(pp + 0xA6) != 0x359) goto L_NX;
             if (((unsigned char *)pp)[0x20] != 5) goto L_NX;
-            if (((unsigned char *)pp)[0xBC] != 2) goto L_NX;
+            if (((unsigned char *)pp)[0xBC] == 2) goto L_NX;
             if (n == 0x32) goto L_NX;
             d = *(char **)(pp + 0x78);
             q = *(char **)(d + 0x174);
@@ -139,8 +144,8 @@ void FUN_L06_002f2250(void) {
                 }
                 f1 = func_L06_002F2148(pi, q, 5);
                 h = *(short *)(d + 0x192);
+                k = 0;
                 if (h > 0) {
-                    k = 0;
                     for (;;) {
                         f0 = *(float *)(d + 0x1C0 + k * 4);
                         if (f1 < f0) {
@@ -205,7 +210,7 @@ void FUN_L06_002f2250(void) {
         int *cp = (int *)outv;
         int cc = n;
         do {
-            *(int *)(*(char **)*cp + 0x178) = 0;
+            *(int *)(*(char **)((char *)*cp + 0x78) + 0x178) = 0;
             cp++;
             cc--;
         } while (cc != 0);
@@ -272,8 +277,7 @@ void FUN_L06_002f2250(void) {
                     *(float *)(d + 0x17C) = f1;
                 }
             }
-            kq++;
-        } while (kq < jc);
+        } while (kq++ < jc);
     }
 
     if (n > 0) {
