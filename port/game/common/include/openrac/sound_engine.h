@@ -52,7 +52,8 @@ uint32_t openrac_stream_play(uint32_t sector, int32_t volume, int32_t group, uin
                              uint32_t flags);
 int openrac_stream_live(uint32_t stream);
 int openrac_stream_buffered(uint32_t stream);
-/* Milliseconds left in the part playing (a loop: in this pass), 0 once ended. */
+/* Milliseconds left in the part playing (a loop: in this pass), 0 once ended; while the part is
+ * still being decoded, its whole length from the VAG header. */
 int32_t openrac_stream_remaining_ms(uint32_t stream);
 void openrac_stream_stop(uint32_t stream); /* 0: every stream */
 void openrac_stream_pause(uint32_t stream, int paused);

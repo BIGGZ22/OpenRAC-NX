@@ -48,6 +48,13 @@ if(TARGET openrac_assets_geometry)
 endif()
 target_compile_options(openrac_game_common PRIVATE ${OPENRAC_GAME_C_FLAGS} -Wall -Wextra)
 
+# The VAG streams of the sound engine, on a disc image the test writes.
+add_executable(sound_engine_test "${CMAKE_CURRENT_LIST_DIR}/../tests/sound_engine_test.cpp")
+target_include_directories(sound_engine_test PRIVATE "${CMAKE_CURRENT_LIST_DIR}/..")
+target_link_libraries(sound_engine_test PRIVATE openrac_game_common)
+openrac_warnings(sound_engine_test)
+add_test(NAME sound_engine COMMAND sound_engine_test)
+
 function(openrac_add_game config)
   file(READ "${config}" json)
   string(JSON id GET "${json}" id)

@@ -61,6 +61,9 @@ std::array<std::int32_t, audio::kVolumeGroups> g_master = [] {
 struct Track {
     std::vector<std::int16_t> samples;
     std::uint32_t rate = 44100;
+    // The samples the header announces (28 per 16-byte frame), known when the stream starts: the
+    // time left before the decode has ended (openrac_stream_remaining_ms).
+    std::size_t length = 0;
     bool ready = false;
     bool failed = false;
 };
@@ -96,19 +99,36 @@ Stream* find_stream(std::uint32_t handle) {
 }
 
 // A mono VAG file at `sector`: {"VAGp", version, pad, data size, rate, ...} big-endian, 0x30 bytes.
+constexpr std::size_t kVagHeader = 0x30;
+
+// The body's size and the rate from the header at `sector`, or false.
+bool read_vag_header(std::FILE* disc, std::uint32_t sector, std::uint32_t& size, std::uint32_t& rate) {
+    std::uint8_t header[kVagHeader];
+    if (!seek_disc(disc, static_cast<std::uint64_t>(sector) * 2048)
+        || std::fread(header, 1, sizeof header, disc) != sizeof header
+        || std::memcmp(header, "VAGp", 4) != 0) {
+        return false;
+    }
+    const auto be32 = [&](int at) {
+        return static_cast<std::uint32_t>(header[at]) << 24
+               | static_cast<std::uint32_t>(header[at + 1]) << 16
+               | static_cast<std::uint32_t>(header[at + 2]) << 8 | header[at + 3];
+    };
+    size = be32(12);
+    rate = be32(16);
+    return true;
+}
+
 void read_track(std::uint32_t sector, std::shared_ptr<Track> track) {
     std::vector<std::int16_t> samples;
     std::uint32_t rate = 0;
     if (std::FILE* disc =
             openrac_game_disc_image ? std::fopen(openrac_game_disc_image, "rb") : nullptr) {
         const std::uint64_t at = static_cast<std::uint64_t>(sector) * 2048;
-        std::uint8_t header[0x30];
-        if (seek_disc(disc, at)
-            && std::fread(header, 1, sizeof header, disc) == sizeof header
-            && std::memcmp(header, "VAGp", 4) == 0) {
-            const std::uint32_t size = static_cast<std::uint32_t>(header[12]) << 24
-                                       | header[13] << 16 | header[14] << 8 | header[15];
-            std::vector<std::uint8_t> file(sizeof header + size);
+        std::uint32_t size = 0;
+        std::uint32_t header_rate = 0;
+        if (read_vag_header(disc, sector, size, header_rate)) {
+            std::vector<std::uint8_t> file(kVagHeader + size);
             if (size > 0 && size < 64u * 1024 * 1024 && seek_disc(disc, at)
                 && std::fread(file.data(), 1, file.size(), disc) == file.size()) {
                 try {
@@ -380,6 +400,18 @@ uint32_t openrac_stream_play(
         return 0;
     }
     auto track = std::make_shared<Track>();
+    // The header now, the body on the reader's thread: the game asks how long the stream has left
+    // from the next frame on, long before a track of minutes is read and decoded.
+    if (std::FILE* disc =
+            openrac_game_disc_image ? std::fopen(openrac_game_disc_image, "rb") : nullptr) {
+        std::uint32_t size = 0;
+        std::uint32_t rate = 0;
+        if (read_vag_header(disc, sector, size, rate) && rate != 0) {
+            track->length = static_cast<std::size_t>(size / 16) * 28;
+            track->rate = rate;
+        }
+        std::fclose(disc);
+    }
     std::uint32_t handle;
     {
         std::lock_guard lock(g_lock);
@@ -429,10 +461,15 @@ int32_t openrac_stream_remaining_ms(uint32_t stream) {
         return 0;
     }
     const Track& t = *s->parts.front().track;
-    if (!t.ready) {
-        return 60000;  // not read yet: the game only needs it to be playing
+    // Not decoded yet: all of it is left, as its header gives it (the stream holds silent at its
+    // start until then). RAC1's crossfade measures the old music's fade against the first answer
+    // it gets for the transition (music_Update, case 2), so a made-up length there cut the old
+    // music at once and started the next track with it.
+    const std::size_t length = t.ready ? t.samples.size() : t.length;
+    if (!t.ready && length == 0) {
+        return 60000;  // no header either: the game only needs it to be playing
     }
-    const double left = static_cast<double>(t.samples.size()) - s->position;
+    const double left = static_cast<double>(length) - s->position;
     return static_cast<int32_t>(std::max(0.0, left) * 1000.0 / t.rate);
 }
 
