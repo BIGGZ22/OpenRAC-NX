@@ -92,6 +92,8 @@
   const portReady = $derived(!!action("play") && action("play")?.state !== "planned");
 
   const next = $derived(v && game ? playerState(game, v) : null);
+  /** Built by an OpenRAC from before an update that changed it (port_build.rs), and nothing runs. */
+  const updateReady = $derived(!!v?.portOutdated && !!rebuild?.runnable && next?.kind === "play");
   const setUp = $derived(game?.install?.extracted ?? null);
   const built = $derived(!!v && !!game && isBuilt(game, v));
   /** The steps are shown while there is one left that the player can take. */
@@ -208,6 +210,17 @@
           <div class="panel notice">
             <Icon name="warn" />
             <p class="grow">The games show, but no actions: {app.library.actionsError}</p>
+          </div>
+        {/if}
+        {#if updateReady && rebuild}
+          <!-- Recommended, never forced: Play still starts the build there is. -->
+          <div class="panel notice" role="status">
+            <Icon name="warn" />
+            <p class="grow">
+              An update is ready. Rebuild {v.title} to play the latest version: it takes a few minutes, and your saves and
+              levels are kept.
+            </p>
+            <button class="primary" onclick={() => void run(scope, rebuild)}>Rebuild now</button>
           </div>
         {/if}
         {#if app.stopped?.game === v.game}
