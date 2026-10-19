@@ -584,7 +584,23 @@ void pair_code(WordReader reference, int program, gaddr exe, gaddr level, std::u
     std::map<std::uint32_t, Registers> at_target;
     std::uint32_t pending_from = 0, pending_target = 0;
     bool pending = false;
+    // A call leaves only the callee-saved registers, but its delay slot runs before it: the
+    // compiler often forms an argument's address there (jal f; addiu $a1, $a1, %lo(x)), so the
+    // registers are forgotten after the slot, not at the jal.
+    const auto forget_call = [&known] {
+        for (int r = 1; r < 32; ++r) {
+            if (!((r >= 16 && r <= 23) || r == 28 || r == 29 || r == 30)) {
+                known[r] = false;
+            }
+        }
+    };
+    std::uint32_t call_slot = 0;
+    bool call = false;
     for (std::uint32_t i = 0; i + 4 <= size; i += 4) {
+        if (call && i == call_slot + 4) {
+            forget_call();
+            call = false;
+        }
         if (pending && i == pending_from + 8) {
             Registers& r = at_target[pending_target];
             std::memcpy(r.ve, ve, sizeof(ve));
@@ -651,12 +667,13 @@ void pair_code(WordReader reference, int program, gaddr exe, gaddr level, std::u
             known[rd] = known[rs];
         } else if (op == 0x00 || op == 0x1C) {
             known[rd] = false;
-        } else if (op == 0x03) {  // jal
-            for (int r = 1; r < 32; ++r) {
-                if (!((r >= 16 && r <= 23) || r == 28 || r == 29 || r == 30)) {
-                    known[r] = false;
-                }
+            if (op == 0x00 && funct == 0x09) {  // jalr: as jal
+                call = true;
+                call_slot = i + 4;
             }
+        } else if (op == 0x03) {  // jal: the registers are forgotten after its delay slot
+            call = true;
+            call_slot = i + 4;
         } else if (add) {
             known[rt] = have;
             if (have) {
