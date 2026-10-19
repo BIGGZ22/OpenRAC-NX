@@ -94,7 +94,7 @@ export async function checkGitHubRelease(
   try {
     const data = (await res.json()) as GitHubReleaseResponse;
     const tag = data.tag_name ?? "";
-    // A branch's rolling release keeps its tag: its version is in its title, "OpenRAC Launcher X (branch)".
+    // A branch's rolling release keeps its tag: its version is in its title, "vX (branch)".
     const cleanVersion = source.channel
       ? ((data.name ?? "").replace(/^[^0-9]*/, "").split(" ")[0] ?? "")
       : tag.replace(/^[^0-9]*/, "");

@@ -108,7 +108,7 @@ git push origin launcher-vX.Y.Z
      - `linux-aarch64-appimage`, `linux-aarch64-deb`, `linux-aarch64-rpm`
      - `darwin-x86_64-app`, `darwin-aarch64-app`
      - `android-aarch64` (read by the Android launcher's own updater, `launcher/core/src/update.rs`)
-   - Creates a draft release titled `OpenRAC Launcher X.Y.Z` with all installer assets and signatures.
+   - Creates a draft release titled `vX.Y.Z` with all installer assets and signatures.
      Its text is `launcher/release-notes/X.Y.Z.md` (which the launcher's update prompt shows), then
      the commit it was built from: write that file before tagging.
 

@@ -516,7 +516,7 @@ jobs:
           # The installers' names have spaces in them: an array, not a word list.
           mapfile -d '' files < <(find installers -type f -print0 | sort -z)
           printf '%s\n' "${files[@]}"
-          title="OpenRAC Launcher $version ($GITHUB_REF_NAME)"
+          title="v$version ($GITHUB_REF_NAME)"
           notes="The launchers built from $GITHUB_REF_NAME at $GITHUB_SHA; launchers built from this branch update from here."
           if ! gh release view "$channel" > /dev/null 2>&1; then
             gh release create "$channel" --prerelease --target "$GITHUB_SHA" --title "$title" --notes "$notes" "${files[@]}"
@@ -586,5 +586,5 @@ jobs:
             : > "$notes"
           fi
           echo "Installers built by the launcher workflow from $GITHUB_SHA." >> "$notes"
-          gh release create "$TAG" --draft --title "OpenRAC Launcher ${TAG#launcher-v}" \
+          gh release create "$TAG" --draft --title "v${TAG#launcher-v}" \
             --notes-file "$notes" "${files[@]}"
