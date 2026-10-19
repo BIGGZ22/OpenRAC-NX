@@ -264,12 +264,150 @@ static void movement(void) {
     CHECK(fabsf(facing - camera) < 1e-4f && v[0] * cosf(camera) + v[1] * sinf(camera) < -0.999f);
 }
 
+/* The camera's yaw over a tick as the follow camera turns it: the right stick's turn when it is
+ * pushed (the game's), else Hold's swing toward the latched facing while strafe.c asks for it,
+ * else left where it is (the strafe camera slides along with him, it does not turn). */
+static float camera_tick(float camera, float look_x, int kind, const rac1_strafe_hold* hold) {
+    if (look_x != 0.0f) {
+        camera += look_x * 0.05f;
+    } else if (rac1_strafe_swings_camera(kind, hold)) {
+        camera += rac1_strafe_angle_diff(camera, hold->yaw) * 0.15f;
+    }
+    return rac1_strafe_angle_diff(0.0f, camera);
+}
+
+/* The whole of Hold, a tick at a time: the pad's report (Hold's memory), the camera, the run. */
+typedef struct hold_play {
+    rac1_strafe_hold hold;
+    rac1_strafe_input in;
+    float v[2];
+    int kind;
+} hold_play;
+
+static void hold_tick(hold_play* p, uint32_t held, float look_x, float stick) {
+    p->in.held = held;
+    p->in.look_x = look_x;
+    rac1_strafe_hold_update(RAC1_STRAFE_HOLD, &p->in, &p->hold);
+    p->kind = rac1_strafe_kind(RAC1_STRAFE_HOLD, &p->in, &p->hold);
+    p->in.camera = camera_tick(p->in.camera, look_x, p->kind, &p->hold);
+    tick(p->kind, p->in.camera, stick, &p->hold, &p->in.facing, p->v);
+}
+
+/* Hold as it plays: the swing once, then the right stick turns the camera and him with it, nothing
+ * pulls the camera back, and letting go leaves the camera where it is. */
+static void hold_play_through(void) {
+    const float right = -1.5707964f;
+    hold_play p = {{0, 0, 0, 0.0f}, running(), {0.0f, 0.0f}, 0};
+    p.in.slot_item = WRENCH;
+    p.in.facing = 2.0f;
+    p.in.camera = -0.5f; /* the camera well off to his side */
+    /* Pressed: the camera swings round behind his facing (2.0), which he keeps meanwhile. */
+    int ticks = 0;
+    hold_tick(&p, RAC1_PAD_R2, 0.0f, right);
+    CHECK(p.kind == RAC1_STRAFE_HELD && p.hold.swinging && p.hold.yaw == 2.0f);
+    while (p.hold.swinging && ticks < 200) {
+        hold_tick(&p, RAC1_PAD_R2, 0.0f, right);
+        CHECK(!p.hold.swinging || fabsf(p.in.facing - 2.0f) < 1e-4f);
+        ++ticks;
+    }
+    CHECK(!p.hold.swinging && ticks < RAC1_STRAFE_SWING_TICKS); /* ended by getting there */
+    CHECK(fabsf(rac1_strafe_angle_diff(p.in.camera, 2.0f)) < RAC1_STRAFE_SWING_DONE);
+    /* Then he faces the camera's yaw, tick by tick. */
+    for (int i = 0; i < 30; ++i) {
+        hold_tick(&p, RAC1_PAD_R2, 0.0f, right);
+    }
+    CHECK(fabsf(rac1_strafe_angle_diff(p.in.facing, p.in.camera)) < 1e-4f);
+    /* The right stick turns the camera, and his facing follows it. */
+    const float before = p.in.camera;
+    for (int i = 0; i < 20; ++i) {
+        hold_tick(&p, RAC1_PAD_R2, 1.0f, right);
+    }
+    const float turned = p.in.camera;
+    CHECK(fabsf(rac1_strafe_angle_diff(before, turned) - 1.0f) < 1e-4f);
+    for (int i = 0; i < 30; ++i) {
+        hold_tick(&p, RAC1_PAD_R2, 0.0f, right);
+        /* No snap back: the stick let go, the camera stays where it was turned, no swing again. */
+        CHECK(p.in.camera == turned && !p.hold.swinging);
+    }
+    CHECK(fabsf(rac1_strafe_angle_diff(p.in.facing, turned)) < 1e-4f);
+    CHECK(fabsf(rac1_strafe_angle_diff(p.in.facing, 2.0f)) > 0.9f); /* not the press-time facing */
+    /* The left stick moves him relative to it: right is at right angles, no forward part. */
+    CHECK(fabsf(p.v[0] * cosf(turned) + p.v[1] * sinf(turned)) < 1e-4f);
+    CHECK(fabsf(p.v[0] - cosf(turned + right)) < 1e-4f && fabsf(p.v[1] - sinf(turned + right)) < 1e-4f);
+    /* Back: still facing it, moving toward the camera. */
+    for (int i = 0; i < 5; ++i) {
+        hold_tick(&p, RAC1_PAD_R2, 0.0f, 3.1415927f);
+    }
+    CHECK(fabsf(rac1_strafe_angle_diff(p.in.facing, turned)) < 1e-4f);
+    CHECK(p.v[0] * cosf(turned) + p.v[1] * sinf(turned) < -0.999f);
+    /* Let go: the game's own, and the camera does not move on its account. */
+    const float facing = p.in.facing;
+    hold_tick(&p, 0, 0.0f, 0.0f);
+    CHECK(p.kind == RAC1_STRAFE_NONE && !p.hold.latched && !p.hold.swinging);
+    CHECK(p.in.camera == turned);
+    CHECK(fabsf(rac1_strafe_angle_diff(p.in.facing, facing)) < 1e-4f); /* stick ahead: he stays */
+
+    /* Pressed again, the right stick pushed during the swing: the swing ends there and then, and
+     * he turns with the camera from where the player takes it. */
+    p.in.facing = 0.0f;
+    p.in.camera = 3.0f;
+    hold_tick(&p, RAC1_PAD_L2, 0.0f, 0.0f);
+    CHECK(p.hold.swinging);
+    hold_tick(&p, RAC1_PAD_L2, 0.5f, 0.0f);
+    CHECK(!p.hold.swinging);
+    const float taken = p.in.camera;
+    for (int i = 0; i < 60; ++i) {
+        hold_tick(&p, RAC1_PAD_L2, 0.0f, 0.0f);
+        CHECK(p.in.camera == taken);
+    }
+    CHECK(fabsf(rac1_strafe_angle_diff(p.in.facing, taken)) < 1e-4f);
+
+    /* A camera that cannot get there (a wall): the swing gives up after its ticks. */
+    p.in.held = 0;
+    rac1_strafe_hold_update(RAC1_STRAFE_HOLD, &p.in, &p.hold);
+    p.in.facing = 1.0f;
+    p.in.camera = -1.0f;
+    p.in.held = RAC1_PAD_R2;
+    rac1_strafe_hold_update(RAC1_STRAFE_HOLD, &p.in, &p.hold);
+    CHECK(p.hold.swinging);
+    for (int i = 0; i < RAC1_STRAFE_SWING_TICKS; ++i) {
+        rac1_strafe_hold_update(RAC1_STRAFE_HOLD, &p.in, &p.hold);
+    }
+    CHECK(!p.hold.swinging && p.hold.latched);
+}
+
+/* Lock as it plays: the right stick's turn stays, nothing swings the camera back. */
+static void lock_play_through(void) {
+    rac1_strafe_hold hold = {0, 0, 0, 0.0f};
+    rac1_strafe_input in = running();
+    in.camera = 0.3f;
+    float facing = 0.3f, v[2];
+    for (int i = 0; i < 20; ++i) {
+        rac1_strafe_hold_update(RAC1_STRAFE_LOCK, &in, &hold);
+        const int kind = rac1_strafe_kind(RAC1_STRAFE_LOCK, &in, &hold);
+        CHECK(kind == RAC1_STRAFE_LOCKED);
+        in.camera = camera_tick(in.camera, -1.0f, kind, &hold);
+        tick(kind, in.camera, 0.0f, &hold, &facing, v);
+    }
+    const float turned = in.camera;
+    for (int i = 0; i < 40; ++i) {
+        rac1_strafe_hold_update(RAC1_STRAFE_LOCK, &in, &hold);
+        const int kind = rac1_strafe_kind(RAC1_STRAFE_LOCK, &in, &hold);
+        in.camera = camera_tick(in.camera, 0.0f, kind, &hold);
+        tick(kind, in.camera, 0.0f, &hold, &facing, v);
+        CHECK(in.camera == turned);
+    }
+    CHECK(fabsf(rac1_strafe_angle_diff(facing, turned)) < 1e-4f);
+}
+
 int main(void) {
     items();
     off();
     hold_mode();
     lock_mode();
     movement();
-    puts("hero strafe: weapons, off, hold, lock, the buttons taken, facing and velocity passed");
+    hold_play_through();
+    lock_play_through();
+    puts("hero strafe: weapons, off, hold, lock, the buttons taken, facing, velocity, swing and right stick passed");
     return 0;
 }
