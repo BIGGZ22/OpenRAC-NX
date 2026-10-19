@@ -32,7 +32,7 @@ struct MapState_FDF78_c1fd748 {
     s32 unk8; /* 0x008: draw_map_overlay draft tests it with unk2C */
     u8 *mask; /* 0x00C: 512x512 1-bit explored mask of the current level */
     u8 pad10[0x4];
-    s32 unk14; /* 0x014: passed with mask to func_001FA860__NOT_CARRIED */
+    s32 unk14; /* 0x014: passed with the mask to PAL func_001FA860, which the version map does not place in the US program; this function does not read it */
     s32 z; /* 0x018: GS Z of the map quads (draw_map_overlay packets) */
     struct MapMarker *markers; /* 0x01C: drawn by draw_map_markers, may be null */
     struct MapIcon *icons; /* 0x020: icon list of the shown level */
