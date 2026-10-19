@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <span>
 #include <vector>
@@ -31,12 +32,14 @@ struct Rgba8Image {
 
     Rgba8Image() = default;
 
+    // A negative side is an empty image. The size is reckoned in std::size_t: w * h * 4 in int
+    // overflows for sizes a garbage TEX0 can claim (up to 32768 x 32768): in 0.8.0 one such as
+    // 32768 x 16384 came out as -2^31, asked operator new for 2^64 - 2^31 bytes and threw
+    // bad_alloc (Kerwan, crash report 2026-10-19).
     Rgba8Image(int w, int h)
-        : width(w),
-          height(h),
-          // In std::size_t: w * h * 4 in int overflows for sizes a garbage
-          // TEX0 can claim (up to 32768 x 32768).
-          pixels(static_cast<std::size_t>(w) * static_cast<std::size_t>(h) * 4) {}
+        : width(std::max(w, 0)),
+          height(std::max(h, 0)),
+          pixels(static_cast<std::size_t>(std::max(w, 0)) * static_cast<std::size_t>(std::max(h, 0)) * 4) {}
 
     std::uint32_t texel(int x, int y) const;  // R in the low byte
     void set_texel(int x, int y, std::uint32_t rgba);
@@ -97,8 +100,14 @@ std::vector<std::uint32_t> clut_csm1(
     const gs::Texa& texa
 );
 
+// The largest texture side the chip samples: TW and TH go up to 10 (1024 texels). The registers
+// have room for 15 (32768), which only a garbage write uses.
+constexpr int kMaxTextureSide = 1024;
+
 // Any supported format to RGBA8: `palette` is used by the indexed formats
-// (PSMT8, PSMT4 and their "H" forms, whose raster data is plain indices).
+// (PSMT8, PSMT4 and their "H" forms, whose raster data is plain indices). A side
+// outside 1..kMaxTextureSide is no texture the chip has: the result is empty
+// (0 x 0), never an allocation of gigabytes.
 Rgba8Image convert(
     std::span<const std::uint8_t> data,
     std::uint8_t psm,

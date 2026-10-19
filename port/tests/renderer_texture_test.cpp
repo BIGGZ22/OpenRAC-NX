@@ -367,6 +367,35 @@ void glyph_fields() {
     CHECK(textures.image(letters_field).texel(43 * 4, 66 * 4) >> 24 > 0x80);  // inside the new glyph
 }
 
+// Sizes no texture the chip samples can have: an empty image, not an allocation. In 0.8.0 a
+// garbage TEX0 (an unknown format, 32768 x 16384 texels) reached convert(), whose blank image for
+// an unknown format computed w * h * 4 in int: -2^31, which operator new was asked for as
+// 2^64 - 2^31 bytes (std::bad_alloc after 22 minutes on Kerwan, crash report 2026-10-19).
+void absurd_sizes() {
+    const std::vector<std::uint8_t> none;
+    for (const int psm_value : {int{gs::kPsmct32}, int{gs::kPsmct16}, int{gs::kPsmt8}, int{gs::kPsmt4}, 0x3F}) {
+        const auto psm = static_cast<std::uint8_t>(psm_value);
+        const Rgba8Image huge = convert(none, psm, 32768, 16384, {}, kTexa, AlphaScale::Gs);
+        CHECK(huge.width == 0 && huge.height == 0 && huge.pixels.empty());
+        CHECK(convert(none, psm, 1025, 4, {}, kTexa, AlphaScale::Gs).pixels.empty());
+        CHECK(convert(none, psm, 4, 0, {}, kTexa, AlphaScale::Gs).pixels.empty());
+        CHECK(convert(none, psm, -8, 4, {}, kTexa, AlphaScale::Gs).pixels.empty());
+        // The chip's largest is still converted.
+        CHECK(convert(none, psm, 1024, 1024, {}, kTexa, AlphaScale::Gs).pixels.size() == 1024u * 1024u * 4u);
+    }
+    const Rgba8Image negative(-1, 5);
+    CHECK(negative.width == 0 && negative.pixels.empty());
+
+    // The pool, asked for such a texture in a format it does not know (the crash's case), draws
+    // the placeholder.
+    TexturePool textures;
+    const gs::Texa texa{0, false, 0x80};
+    textures.upload(upload(0x100, gs::kPsmct32, 4, 4, std::vector<std::uint8_t>(64, 1)));
+    CHECK(textures.resolve(tex0(0x100, 0x3F, 15, 14), texa) == textures.placeholder());
+    CHECK(textures.resolve(tex0(0x100, 0x3F, 14, 15), texa) == textures.placeholder());
+    CHECK(textures.size() == 1);
+}
+
 }  // namespace
 
 // What the 2D layer needs of the pool beyond whole textures at their own base: a texture or CLUT
@@ -437,6 +466,7 @@ int main() {
     layout();
     pool();
     glyph_fields();
+    absurd_sizes();
     inside_and_loaded();
     return openrac::test::result();
 }

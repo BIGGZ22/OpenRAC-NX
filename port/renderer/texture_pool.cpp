@@ -302,6 +302,9 @@ TextureHandle TexturePool::convert_upload(const gs::Tex0& tex0, const gs::Texa& 
     const std::vector<std::uint8_t> raster = texture_raster(*stored, tex0);
     Rgba8Image image =
         convert(raster, tex0.psm, tex0.width(), tex0.height(), colours, texa, AlphaScale::Gs);
+    if (image.pixels.empty()) {
+        return 0;  // no texture the chip could sample (convert())
+    }
     // OPENRAC_DUMP_TEXTURE=BLOCK (hex): each conversion of a texture at that block is written as
     // a PPM (RGB) and its alpha as a PGM, for checking uploads and palettes.
     static const char* dump = std::getenv("OPENRAC_DUMP_TEXTURE");

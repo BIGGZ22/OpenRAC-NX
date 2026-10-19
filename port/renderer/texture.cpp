@@ -201,6 +201,9 @@ Rgba8Image convert(
     const gs::Texa& texa,
     AlphaScale scale
 ) {
+    if (width <= 0 || height <= 0 || width > kMaxTextureSide || height > kMaxTextureSide) {
+        return {};
+    }
     switch (psm) {
         case gs::kPsmct32:
             return convert_ct32(data, width, height, scale);
