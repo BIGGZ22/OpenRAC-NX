@@ -38,7 +38,9 @@ extern volatile int D_00131314;
 extern int D_001312F0;
 extern void func_0011AA70(void *, int);
 extern void func_00118990(int);
-extern void func_00120778();
+/* The RPC's end callback, US 0x00120788 (FUN_00120788), named as the US code forms it (0x001215B4);
+ * the carried C wrote it as func_00120778 + 0x10, the 16-byte routine before it. */
+extern void func_00120788();
 
 int sceCdRead(int lba, int sectors, void *buf, unsigned char *mode) {
     char *req = D_001313C0;
@@ -85,7 +87,7 @@ int sceCdRead(int lba, int sectors, void *buf, unsigned char *mode) {
     D_00131314 = 1;
     D_001312F0 = 1;
     r = func_0011B1C8(D_00132490, 1, 1, req, 0x18, 0, 0,
-                      (void *)((char *)func_00120778 + 0x10), D_001323C0);
+                      (void *)func_00120788, D_001323C0);
     if (r >= 0) {
         if (D_001312D0 > 0) {
             func_0011A3C8(D_00152FE0);
