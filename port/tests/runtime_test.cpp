@@ -104,6 +104,59 @@ void code_in_copy_jal() {
     openrac_guest_set_overlay(OPENRAC_OVERLAY_EXE);
 }
 
+int folded_measure(int a) {
+    return a;
+}
+
+int font_printer(int a) {
+    return a;
+}
+
+// An executable global relocated into a level whose program has three copies of the function that
+// names it (rac1: the measurers of the regular, small and large fonts, one name in the catalogue),
+// each on a table of its own: the copies disagree on it, so none of them decides where it went;
+// the function with a single copy (the printer of the regular font) does, whatever order the
+// copies were registered or are kept in.
+void relocation_with_folded_copies() {
+    const auto words = [](gaddr at, std::initializer_list<std::uint32_t> w) {
+        std::memcpy(G(at), w.begin(), w.size() * 4);
+    };
+    // Executable: the measurer at 0x104000 and the printer at 0x104100, both forming 0x150000.
+    std::vector<std::uint8_t> exe(0x200, 0);
+    const std::uint32_t measure[] = {0x3C040015u, 0x24840000u, 0x03E00008u, 0};
+    const std::uint32_t print[] = {0x3C060015u, 0x24C60000u, 0x03E00008u, 0};
+    std::memcpy(exe.data(), measure, sizeof measure);
+    std::memcpy(exe.data() + 0x100, print, sizeof print);
+    // The level: the three measurer copies on 0x160000, 0x160200 and 0x160100 (the regular one's
+    // table at 0x160000, the others' after it), the printer's copy on 0x160000.
+    words(0x00180000u, {0x3C040016u, 0x24840000u, 0x03E00008u, 0});
+    words(0x00180020u, {0x3C040016u, 0x24840200u, 0x03E00008u, 0});
+    words(0x00180040u, {0x3C040016u, 0x24840100u, 0x03E00008u, 0});
+    words(0x00180100u, {0x3C060016u, 0x24C60000u, 0x03E00008u, 0});
+    const auto fn = [](auto f) { return reinterpret_cast<openrac_host_fn>(f); };
+    static const openrac_fn_entry exe_fns[] = {
+        {0x00104000u, fn(folded_measure), "measure"},
+        {0x00104100u, fn(font_printer), "print"},
+    };
+    static const openrac_fn_entry level_fns[] = {
+        {0x00180040u, fn(folded_measure), "measure"},
+        {0x00180000u, fn(folded_measure), "measure"},
+        {0x00180020u, fn(folded_measure), "measure"},
+        {0x00180100u, fn(font_printer), "print"},
+    };
+    openrac_guest_register(OPENRAC_OVERLAY_EXE, exe_fns, 2);
+    openrac_guest_register(7, level_fns, 4);
+    openrac_guest_set_relocation(0x00140000u, 0x00170000u, 0, exe.data(), 0x00104000u,
+                                 static_cast<std::uint32_t>(exe.size()));
+    openrac_guest_set_overlay(7);
+    CHECK(OPENRAC_DATA(0x00150000u) == 0x00160000u);
+    CHECK(OPENRAC_DATA(0x00150004u) == 0x00160004u);  // a field of it, from the same pair
+    CHECK(OPENRAC_CODE(0x00104100u) == 0x00180100u);
+    CHECK(OPENRAC_CODE(0x00104000u) == 0x00180000u);  // a folded one: its lowest copy
+    openrac_guest_set_overlay(OPENRAC_OVERLAY_EXE);
+    openrac_guest_set_relocation(0, 0, 0, exe.data(), 0, 0);
+}
+
 void put32(std::vector<std::uint8_t>& f, std::size_t at, std::uint32_t v) {
     for (int i = 0; i < 4; i++) {
         f[at + i] = static_cast<std::uint8_t>(v >> (8 * i));
@@ -213,6 +266,7 @@ int main() {
     frames_and_strings();
     functions();
     code_in_copy_jal();
+    relocation_with_folded_copies();
     elf();
     host_stack();
     return openrac::test::result();
