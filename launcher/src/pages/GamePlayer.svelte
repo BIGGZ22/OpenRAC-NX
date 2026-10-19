@@ -40,6 +40,7 @@
   const action = (id: string): ActionView | null => v?.actions.find((a) => a.id === id && a.thisPlatform) ?? null;
 
   const build = $derived(action("port-build"));
+  const rebuild = $derived(action("port-rebuild"));
   const levels = $derived(action("port-levels"));
   const levelsCheck = $derived(action("port-levels-check"));
   /** The levels were read from the disc and, where the version has the check, the game read them all. */
@@ -98,7 +99,7 @@
    *  runs: the page says so under the main button, with the way to what it printed. */
   const stopped = $derived.by(() => {
     if (!v || next?.job) return null;
-    const ids = [`install:${v.game}`, "port-build", "port-levels", "port-levels-check"];
+    const ids = [`install:${v.game}`, "port-build", "port-rebuild", "port-levels", "port-levels-check"];
     const mine = jobs.list.filter(
       (j) => ids.includes(j.actionId) && (j.scope.kind === "repository" || j.scope.key === v.key),
     );
@@ -142,8 +143,10 @@
     if (!v) return [];
     const dir = v.dir;
     const items: MenuItem[] = [];
-    if (build?.runnable && built && next?.kind === "play") {
-      items.push({ label: "Rebuild the game", icon: "build", run: () => void run(scope, build) });
+    // From scratch: everything built before is deleted first (tools/build_port.py --clean).
+    const again = rebuild?.runnable ? rebuild : build;
+    if (again?.runnable && built && next?.kind === "play") {
+      items.push({ label: "Rebuild the game", icon: "build", run: () => void run(scope, again) });
     }
     if (playGodot?.runnable) {
       items.push({ label: "Preview a level in Godot", icon: "play", run: () => void run(scope, playGodot) });

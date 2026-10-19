@@ -233,6 +233,9 @@ export interface VersionView {
   progress: Progress | null;
   status: VersionStatus;
   actions: ActionView[];
+  /** Built, but by an older OpenRAC than the checkout holds now (an update): rebuilt from scratch
+   *  (port-rebuild) before it is played. */
+  portOutdated: boolean;
 }
 
 export interface GameView {

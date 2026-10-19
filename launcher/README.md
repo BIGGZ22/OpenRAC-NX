@@ -72,8 +72,10 @@ OpenGOAL's flow, step for step ([docs/INTEGRATION.md](docs/INTEGRATION.md#settin
    check; levels that fail it are read from the disc again, once, and checked
    again. Without it an export cut short was a black world behind the HUD.
 4. In a checkout, **Build the game** runs [tools/build_port.py](../tools/build_port.py): it
-   compiles the native port for this computer (a few minutes the first time),
-   and **Rebuild** compiles again what changed after an update.
+   compiles the native port for this computer (a few minutes the first time).
+   **Rebuild** deletes what was built and compiles everything again; after an
+   update (a new launcher, or a `git pull` in a checkout) the game is outdated
+   and Play becomes **Rebuild and play**, which does that first.
 5. **Play** starts the port with the set-up data.
 
 **Remove the set-up** deletes what set-up made, as OpenGOAL's uninstall does;

@@ -204,7 +204,7 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       tone: "ok",
     };
   }
-  const building = jobOf(v, ["port-build", "port-levels", "port-levels-check"]);
+  const building = jobOf(v, ["port-build", "port-rebuild", "port-levels", "port-levels-check"]);
   if (building) {
     return {
       ...base,
@@ -213,7 +213,21 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       icon: "x",
       hint: phaseLabel(building),
       job: building,
-      status: building.actionId === "port-build" ? "Building…" : "Getting ready…",
+      status:
+        building.actionId.startsWith("port-") && building.actionId.endsWith("build") ? "Building…" : "Getting ready…",
+      tone: "warn",
+    };
+  }
+  const rebuild = action(v, "port-rebuild");
+  if (v.portOutdated && rebuild?.runnable) {
+    return {
+      ...base,
+      kind: "build",
+      label: "Rebuild and play",
+      icon: "build",
+      hint: "OpenRAC was updated since this game was built. It is built again from scratch, then starts. A few minutes.",
+      primary: true,
+      status: "Needs rebuilding",
       tone: "warn",
     };
   }
@@ -289,7 +303,9 @@ const freshVersion = (v: VersionView) =>
  */
 export async function prepare(v: VersionView): Promise<boolean> {
   const scope = { kind: "version" as const, key: v.key };
-  const build = action(v, "port-build");
+  // Built by an older OpenRAC (an update): everything is built again, not only what changed.
+  const rebuild = v.portOutdated ? action(v, "port-rebuild") : null;
+  const build = rebuild?.runnable ? rebuild : action(v, "port-build");
   if (build?.runnable) {
     if (!(await runChain(scope, [build]))) return false;
     await refresh();

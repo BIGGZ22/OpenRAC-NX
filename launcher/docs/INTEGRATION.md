@@ -180,7 +180,15 @@ actions, as rac1/pal has on Windows:
   machine has where the decompilation's assembly files are not.
   On Windows it sets up Visual Studio's environment itself and finds Clang
   and Ninja, so a player never types a compiler's command. The game page
-  offers it in place of Play until the game is built, and as Rebuild after.
+  offers it in place of Play until the game is built. Each build that
+  succeeds leaves `openrac-build.json` in `port/build/release`: the OpenRAC
+  version and commit it built, and its games.
+- `port-rebuild`, "Rebuild the game from scratch": the same with `--clean`,
+  which deletes the build folder first and keeps the `--source` and `--disc`
+  it held. The game page's Rebuild runs it, and so does Play when the game
+  is outdated: built by another OpenRAC version, or another commit than the
+  checkout's HEAD, than the stamp records (after an update or a `git pull`;
+  [port_build.rs](../core/src/port_build.rs)). It then reads "Rebuild and play".
 - `port-levels`: `editor/extract.py port {disc} assets/port/rac1/pal`, the
   levels in the form the port draws (the worlds behind the menus too). Half
   a minute, once. Building runs it after the build the first time, and the
