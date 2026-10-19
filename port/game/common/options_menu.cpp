@@ -47,7 +47,7 @@ enum Row {
 constexpr const char* kLabels[kRows] = {
     "Display mode", "Monitor",   "Resolution", "Picture",       "HUD",           "Render scale", "Anti-aliasing",
     "Texture filter", "VSync",   "Frame rate", "Frame cap",     "Frame counter", "Mute in background",
-    "Skip cutscenes", "Strafe",
+    "Skip cutscenes", "Strafe (experimental)",
 };
 
 // The value after `current` in a list (before it, for by = -1), around the ends; the first when

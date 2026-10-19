@@ -44,7 +44,7 @@ needs the game started again.
 | Frame counter (F2) | `show_fps` | `0`, `1` | Frames shown a second and what drawing one costs, in the picture's corner |
 | (Alt) | `menu_bar` | `1`, `0` | The menus along the window's top on Windows and Linux (macOS has them in its own menu bar) |
 | Mute in background | `mute_unfocused` | `0`, `1` | Silence while another window has the keyboard |
-| Strafe | `strafe` | `off`, `hold`, `lock` | How Ratchet strafes on foot (section 7): the game's own turning; **Hold L2-R2**, while L2 or R2 is held the camera swings behind him once, then he faces the camera's way (the right stick turning it) and the stick moves him sideways and back; **Lock with weapons**, with a forward-firing weapon in hand he always faces the camera's way, the right stick turning it, and Hold otherwise. An old file's `lock_strafe = 1` is `lock` |
+| Strafe (experimental) | `strafe` | `off`, `hold`, `lock` | How Ratchet strafes on foot (section 7): the game's own turning; **Hold L2-R2**, while L2 or R2 is held the camera swings behind him once, then he faces the camera's way (the right stick turning it) and the stick moves him sideways and back; **Lock with weapons**, with a forward-firing weapon in hand he always faces the camera's way, the right stick turning it, and Hold otherwise. An old file's `lock_strafe = 1` is `lock` |
 | (F9, F10) | `volume` | `100`, `0` to `100` | How loud everything the port plays is |
 | (the launcher's Detailed logs) | `verbose_log` | `0`, `1` | The detailed log, as `OPENRAC_LOG=verbose` ([DEBUGGING.md](DEBUGGING.md#logs-and-traces)). Written only when on |
 
@@ -326,7 +326,7 @@ follows ReRAC's idea and says so in
 
 ## 7. Strafe (Ratchet & Clank)
 
-**What the player gets.** `strafe` has three values, the row **Strafe** on
+**What the player gets.** `strafe` has three values, the row **Strafe (experimental)** on
 the Video page:
 
 | Value | Key | Controls on foot |
