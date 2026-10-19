@@ -8,9 +8,12 @@
 import actionsFile from "../../actions.json";
 import summaryFile from "../../../progress/summary.json";
 import packageFile from "../../package.json";
+import { onAndroid } from "./api";
 import type {
   ActionView,
   BuildInfo,
+  GpuDriver,
+  GpuDrivers,
   InstallState,
   AppInfo,
   Check,
@@ -95,7 +98,40 @@ const summary = summaryFile as RawSummary;
 
 // ---- made-up state -------------------------------------------------------------------
 
-const platform: Platform = "linux";
+const platform: Platform = onAndroid ? "android" : "linux";
+
+/** ?android: the Android launcher's GPU driver packages. */
+const turnip: GpuDriver = {
+  id: "Turnip-25.2.0",
+  name: "Turnip",
+  description: "Mesa's open-source Vulkan driver for Adreno",
+  author: "Mesa",
+  version: "25.2.0",
+  vendor: "Mesa",
+  driverVersion: "Vulkan 1.4",
+  minApi: 28,
+  library: "vulkan.ad07XX.so",
+};
+let gpu: GpuDrivers = {
+  drivers: [turnip],
+  selected: null,
+  renderer: "gles",
+  device: { model: "Google Pixel (preview)", api: 35, soc: "Qualcomm SM8650", gpu: "adreno" },
+};
+
+// The launcher's update channels (core/src/update.rs): a release's build, and master's development builds.
+const STABLE = {
+  repository: "OpenRAC/OpenRAC",
+  channel: null,
+  manifest: "https://github.com/OpenRAC/OpenRAC/releases/latest/download/latest.json",
+  page: "https://github.com/OpenRAC/OpenRAC/releases",
+};
+const DEV = {
+  repository: "OpenRAC/OpenRAC",
+  channel: "launcher-dev-master",
+  manifest: "https://github.com/OpenRAC/OpenRAC/releases/download/launcher-dev-master/latest.json",
+  page: "https://github.com/OpenRAC/OpenRAC/releases/tag/launcher-dev-master",
+};
 
 let config: Config = {
   // ?setup: a first start where no OpenRAC folder was found, so the welcome screen asks for one.
@@ -119,6 +155,7 @@ let config: Config = {
   lastVersion: null,
   discordRpc: true,
   checkUpdates: true,
+  updateChannel: null,
   layout: "compact",
   discordClientId: null,
   detailedGameLog: false,
@@ -366,6 +403,7 @@ function library(): Library {
 type Listener = (event: JobEvent) => void;
 const listeners = new Set<Listener>();
 let nextJob = 0;
+let gameRunning = typeof location !== "undefined" && new URLSearchParams(location.search).has("playing");
 const timers = new Map<number, ReturnType<typeof setInterval>>();
 
 export function mockListen(handler: Listener): () => void {
@@ -748,6 +786,8 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
         configFile: "~/.config/dev.openrac.launcher/launcher.json",
         // ?standalone shows an installed launcher's pages: no checkout, nothing to find.
         standalone: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("standalone"),
+        updates: STABLE,
+        updateChannels: { stable: STABLE, dev: DEV },
       });
     case "get_config":
       return delay({ ...config });
@@ -785,6 +825,8 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       return delay(library());
     case "install_game":
       return delay(install(args.game as string, args.image as string));
+    case "prepare_disc":
+      return delay((args.image as string).replace(/\.chd$/i, ".iso"));
     case "scan_discs": {
       // ?discs: the games folder holds the first game's PAL disc; ?discs=both, its NTSC-U disc too,
       // which with developer tools on offers the disc switch (core/src/disc_choice.rs).
@@ -1021,6 +1063,44 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
         view,
       });
     }
+    case "pick_disc":
+      return delay("/data/user/0/dev.openrac.launcher/files/discs/game.iso");
+    case "tools_ready":
+      // The APK's copy of OpenRAC, unpacked by the time the preview asks.
+      return delay(null);
+    case "gpu_drivers":
+      return delay(structuredClone(gpu));
+    case "gpu_driver_import": {
+      const driver = { ...turnip, id: `Turnip-25.3.0`, version: "25.3.0" };
+      gpu = { ...gpu, drivers: [...gpu.drivers.filter((d) => d.id !== driver.id), driver] };
+      return delay({ driver });
+    }
+    case "gpu_driver_select":
+      gpu = { ...gpu, selected: (args.id as string | null) ?? null };
+      return delay(null);
+    case "gpu_renderer_select":
+      gpu = { ...gpu, renderer: args.renderer as GpuDrivers["renderer"] };
+      return delay(null);
+    case "gpu_driver_remove":
+      gpu = {
+        ...gpu,
+        drivers: gpu.drivers.filter((d) => d.id !== args.id),
+        selected: gpu.selected === args.id ? null : gpu.selected,
+      };
+      return delay(null);
+    case "background_status":
+      return delay(null);
+    // `?playing` in the preview: the Android game runs beside the launcher.
+    case "game_status":
+      return delay({ running: gameRunning, library: gameRunning ? "openrac-rac1-pal" : null });
+    case "game_window":
+      if (args.stop) gameRunning = false;
+      return delay(null);
+    case "update_check":
+    case "launcher_update_check":
+      return delay(null);
+    case "update_install":
+      return delay(null);
     default:
       throw new Error(`the preview has no ${command}: add it to src/lib/mock.ts`);
   }

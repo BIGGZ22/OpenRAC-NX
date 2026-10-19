@@ -146,9 +146,14 @@
     white-space: nowrap;
   }
 
-  .list button:hover,
   .list button:focus-visible {
     background: rgb(255 255 255 / 0.08);
+  }
+
+  @media (hover: hover) {
+    .list button:hover {
+      background: rgb(255 255 255 / 0.08);
+    }
   }
 
   .list .danger {

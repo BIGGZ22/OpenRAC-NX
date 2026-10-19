@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isGame, phaseLabel, readProgress, STARTING_MS, tailLines } from "./progress";
+import { backgroundStatus, isGame, phaseLabel, readProgress, STARTING_MS, tailLines } from "./progress";
 
 const out = (...lines: string[]) => lines.map((line) => ({ stream: "stdout" as const, line }));
 const job = (actionId: string, state: "queued" | "running" = "running", startedAt: number | null = 0) => ({
@@ -67,5 +67,37 @@ describe("tailLines", () => {
     const lines = out(...Array.from({ length: 20 }, (_, i) => `l${i}`));
     expect(tailLines(lines)).toEqual(["l12", "l13", "l14", "l15", "l16", "l17", "l18", "l19"]);
     expect(tailLines(out("a"))).toEqual(["a"]);
+  });
+});
+
+describe("backgroundStatus", () => {
+  const job = (actionId: string, state: "running" | "queued", lines: string[] = []) => ({
+    actionId,
+    state,
+    startedAt: 0,
+    title: "Get the levels ready",
+    lines: lines.map((line) => ({ line })),
+  });
+
+  it("counts a disc image's copy in percent", () => {
+    expect(backgroundStatus(undefined, 0, { name: "game.chd", copied: 1, total: 4 })).toEqual({
+      title: "Preparing your disc",
+      text: "game.chd",
+      percent: 25,
+    });
+  });
+
+  it("follows the running job, but not the game", () => {
+    expect(backgroundStatus(job("port-levels", "running", ["[ 45%] level 3"]), 0, null)).toEqual({
+      title: "Reading the levels from your disc",
+      text: "Get the levels ready",
+      percent: 45,
+    });
+    expect(backgroundStatus(job("play", "running"), 0, null)).toBeNull();
+  });
+
+  it("stays between the steps of a chain and ends after the last", () => {
+    expect(backgroundStatus(undefined, 1, null)?.percent).toBeNull();
+    expect(backgroundStatus(undefined, 0, { name: "x.iso", copied: 4, total: 4 })).toBeNull();
   });
 });

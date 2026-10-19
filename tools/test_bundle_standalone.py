@@ -1,5 +1,8 @@
 """The copy of OpenRAC an installed launcher carries: its actions and its files."""
 import json
+import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -101,6 +104,43 @@ class Bundle(unittest.TestCase):
             self.assertEqual((dest / app / "Contents/MacOS/Ratchet & Clank").read_bytes(), b"pal")
             self.assertTrue((dest / app / "Contents/Info.plist").is_file())
             self.assertEqual(sorted(p.name for p in dest.iterdir()), ["apps", "openrac-rac1-ntsc.exe"])
+
+    @unittest.skipUnless(sys.platform.startswith("linux") and shutil.which("cc")
+                         and (shutil.which("llvm-strip") or shutil.which("strip")), "needs a Linux compiler and strip")
+    def test_linux_programs_go_without_their_debug_info(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, program = Path(tmp) / "main.c", Path(tmp) / "openrac-rac1-pal"
+            source.write_text("int main(void) { return 0; }\n")
+            subprocess.run(["cc", "-g", "-o", str(program), str(source)], check=True)
+            self.assertIn(b".debug_info", program.read_bytes())
+            self.assertTrue(bundle.strip_debug(program))
+            self.assertNotIn(b".debug_info", program.read_bytes())
+            self.assertIn(b"main", program.read_bytes())  # the symbols stay
+            subprocess.run([str(program)], check=True)
+            # Not an ELF program (a Windows .exe): left as it is.
+            exe = Path(tmp) / "openrac-rac1-pal.exe"
+            exe.write_bytes(b"MZ")
+            self.assertFalse(bundle.strip_debug(exe))
+            self.assertEqual(exe.read_bytes(), b"MZ")
+
+    def test_the_android_copy(self):
+        # The games and the Python program are the APK's libraries: the copy carries a PYTHONHOME.
+        import sys
+        with tempfile.TemporaryDirectory() as tmp:
+            home, out = Path(tmp) / "python", Path(tmp) / "openrac"
+            (home / "lib/python3.13/lib-dynload").mkdir(parents=True)
+            (home / "lib/python3.13/os.py").write_text("")
+            (home / "lib/python3.13/test").mkdir()
+            argv, sys.argv = sys.argv, ["bundle_standalone.py", str(out), "--android", "--python", str(home)]
+            try:
+                self.assertEqual(bundle.main(), 0)
+            finally:
+                sys.argv = argv
+            self.assertTrue((out / "python/lib/python3.13/os.py").is_file())
+            self.assertFalse((out / "python/lib/python3.13/test").exists())
+            self.assertFalse((out / "port").exists())
+            self.assertIn("Android", (out / "STANDALONE").read_text())
+
 
 if __name__ == "__main__":
     unittest.main()

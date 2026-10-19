@@ -6,6 +6,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+mod android;
+
 use openrac_launcher_core::actions::{Platform, Scope};
 use openrac_launcher_core::config::{self, Config};
 use openrac_launcher_core::detect::{self, Check, Detected, Tool};
@@ -45,15 +47,93 @@ struct AppInfo {
     /// The launcher works on the copy of OpenRAC it carries: nothing to find or to build, and
     /// only what a player does is offered.
     standalone: bool,
+    /// Where its updates come from: the repository that built it (core/src/update.rs).
+    updates: openrac_launcher_core::update::UpdateSource,
+    /// That repository's two channels, which the player chooses between (Settings, `updateChannel`).
+    update_channels: UpdateChannels,
+}
+
+#[derive(Serialize)]
+struct UpdateChannels {
+    stable: openrac_launcher_core::update::UpdateSource,
+    dev: openrac_launcher_core::update::UpdateSource,
+}
+
+/// A build of a branch: `dev.<run>`, which its updates are compared with (update::effective_version).
+const LAUNCHER_BUILD: Option<&str> = option_env!("OPENRAC_LAUNCHER_BUILD");
+
+/// The version updates are compared with, and the one shown.
+fn launcher_version<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> String {
+    openrac_launcher_core::update::effective_version(&app.package_info().version.to_string(), LAUNCHER_BUILD)
+}
+
+/// The update manifest's address (tauri.conf.json's `plugins.updater.endpoints`, which the build
+/// sets to its own repository's releases).
+fn update_source<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> openrac_launcher_core::update::UpdateSource {
+    let endpoint =
+        app.config().plugins.0.get("updater").and_then(|c| c["endpoints"][0].as_str()).unwrap_or_default().to_string();
+    openrac_launcher_core::update::source(&endpoint)
+}
+
+/// Where the launcher looks for its updates: CHANNEL (the Settings page's, before it is saved), else
+/// the one the player chose, else the one it was built from.
+fn chosen_update_source<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    channel: Option<openrac_launcher_core::update::Channel>,
+) -> openrac_launcher_core::update::UpdateSource {
+    let built = update_source(app);
+    let chosen =
+        channel.or_else(|| app.try_state::<AppState>().and_then(|state| state.config.lock().unwrap().update_channel));
+    built.on(chosen.unwrap_or(built.kind()))
 }
 
 #[tauri::command]
 fn app_info(app: AppHandle, state: State<'_, AppState>) -> AppInfo {
+    use openrac_launcher_core::update::Channel;
+    let updates = update_source(&app);
     AppInfo {
-        version: app.package_info().version.to_string(),
+        version: launcher_version(&app),
         platform: Platform::current(),
         config_file: state.config_file.clone(),
         standalone: state.bundled.is_some() && state.config.lock().unwrap().root == state.bundled,
+        update_channels: UpdateChannels { stable: updates.on(Channel::Stable), dev: updates.on(Channel::Dev) },
+        updates,
+    }
+}
+
+/// A newer launcher on the player's channel, or None: Tauri's updater asked at that channel's
+/// manifest, and the update kept for its own download and install (plugin-updater's `Update`,
+/// rebuilt in the page from `rid`). A desktop's; Android's launcher has android::update_check.
+#[tauri::command]
+async fn launcher_update_check(
+    webview: tauri::Webview,
+    channel: Option<openrac_launcher_core::update::Channel>,
+) -> Result<Option<serde_json::Value>, String> {
+    #[cfg(desktop)]
+    {
+        use tauri_plugin_updater::UpdaterExt;
+        let source = chosen_update_source(webview.app_handle(), channel);
+        let url = tauri::Url::parse(&source.manifest).map_err(|e| format!("{}: {e}", source.manifest))?;
+        let updater =
+            webview.updater_builder().endpoints(vec![url]).and_then(|b| b.build()).map_err(|e| e.to_string())?;
+        let Some(update) = updater.check().await.map_err(|e| e.to_string())? else { return Ok(None) };
+        let date = update.raw_json.get("pub_date").cloned();
+        let (current_version, version, body, raw_json) =
+            (update.current_version.clone(), update.version.clone(), update.body.clone(), update.raw_json.clone());
+        let rid = webview.resources_table().add(update);
+        Ok(Some(serde_json::json!({
+            "rid": rid,
+            "currentVersion": current_version,
+            "version": version,
+            "date": date,
+            "body": body,
+            "rawJson": raw_json,
+        })))
+    }
+    #[cfg(not(desktop))]
+    {
+        let _ = (webview, channel);
+        Err("on Android the launcher updates through update_check".into())
     }
 }
 
@@ -209,6 +289,11 @@ fn run_action(
         }
         _ => None,
     };
+    // On Android the game is an activity of the launcher's own, not a program it runs.
+    if is_play && Platform::current() == Platform::Android {
+        launcher_log::line(&format!("play: {}", openrac_launcher_core::jobs::command_line(&plan)));
+        return android::launch(&app, &plan);
+    }
     let app_handle = app.clone();
     let title = plan.title.clone();
     launcher_log::line(&format!("run: {}", openrac_launcher_core::jobs::command_line(&plan)));
@@ -339,14 +424,33 @@ async fn report_text(app: AppHandle, state: State<'_, AppState>, game: String, f
 async fn report_save(app: AppHandle, state: State<'_, AppState>, game: String, file: String) -> Result<String, String> {
     let data = game_data(&state, &game)?;
     let version = app.package_info().version.to_string();
-    let folder = reports::save_folder().ok_or("no folder to save in")?;
-    let out = folder.join(reports::bundle_name(&file));
+    // Android: made in the launcher's cache, then saved where the player chooses.
+    let folder = if cfg!(target_os = "android") {
+        let cache = app.path().app_cache_dir().map_err(|e| e.to_string())?.join("reports");
+        std::fs::create_dir_all(&cache).map_err(|e| e.to_string())?;
+        cache
+    } else {
+        reports::save_folder().ok_or("no folder to save in")?
+    };
+    let name = reports::bundle_name(&file);
+    let out = folder.join(&name);
     let target = out.clone();
     tauri::async_runtime::spawn_blocking(move || {
         reports::bundle(&data, &file, launcher_log::path().as_deref(), &version, &target)
     })
     .await
     .map_err(|e| e.to_string())??;
+    if cfg!(target_os = "android") {
+        let saved = android::save_as(&app, &out, &name).await;
+        let _ = std::fs::remove_file(&out);
+        return match saved? {
+            Some(name) => {
+                launcher_log::line(&format!("saved a report: {name}"));
+                Ok(name)
+            }
+            None => Ok(String::new()), // backed out: nothing to say
+        };
+    }
     launcher_log::line(&format!("saved a report: {}", out.display()));
     let _ = app.opener().reveal_item_in_dir(&out);
     Ok(reports::tidy(&out.to_string_lossy(), reports::home().as_deref()))
@@ -432,6 +536,30 @@ fn install_game(app: AppHandle, state: State<'_, AppState>, game: String, image:
             Event::Exit { .. } => app.emit("job-exit", &event),
         };
     })
+}
+
+/// The plain image setting a game up reads: an .iso as it is; a CHD unpacked once into
+/// `<install>/discs/<name>.iso` (core/src/chd.rs), with `disc-copy` events as it goes.
+#[tauri::command]
+async fn prepare_disc(app: AppHandle, state: State<'_, AppState>, image: PathBuf) -> Result<PathBuf, String> {
+    use openrac_launcher_core::chd;
+    if !chd::is_chd(&image) {
+        return Ok(image);
+    }
+    let install_dir = state.config.lock().unwrap().install_dir.clone().ok_or("no install folder (Settings)")?;
+    let name = image.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let dest = install_dir.join("discs").join(chd::iso_name(&name));
+    let unpacked = dest.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let file = std::fs::File::open(&image).map_err(|e| format!("{}: {e}", image.display()))?;
+        chd::to_iso(file, &unpacked, |copied, total| {
+            let _ = app.emit("disc-copy", android::DiscCopy { name: name.clone(), copied, total });
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| format!("cannot unpack the CHD image: {e}"))?;
+    Ok(dest)
 }
 
 /// The games folder looked through: the games OpenRAC knows among its images, and, for a
@@ -550,12 +678,34 @@ fn backup_saves(serial: String, note: Option<String>) -> Result<openrac_launcher
     openrac_launcher_core::saves::backup_saves(&serial, note.as_deref())
 }
 
+/// Whether the game runs with a memory card (the name to show when it does), for an edit or a
+/// restore: on a desktop from the process list when asked, on Android from the game's activity,
+/// asked here before (android.rs, game_holding_card).
+async fn card_check(app: &AppHandle) -> Result<impl Fn(&Path, &str) -> Result<Option<String>, String>, String> {
+    #[cfg(target_os = "android")]
+    let running = android::game_holding_card(app).await?;
+    #[cfg(not(target_os = "android"))]
+    let _ = app;
+    Ok(move |card: &Path, serial: &str| {
+        #[cfg(target_os = "android")]
+        {
+            let _ = (card, serial);
+            Ok(running.clone())
+        }
+        #[cfg(not(target_os = "android"))]
+        {
+            openrac_launcher_core::save_edit::card_in_use(card, serial)
+        }
+    })
+}
+
 /// Restores a backup of the card; refused while the game runs with it, as an edit is.
 #[tauri::command]
-async fn restore_backup(serial: String, backup_name: String) -> Result<(), String> {
+async fn restore_backup(app: AppHandle, serial: String, backup_name: String) -> Result<(), String> {
+    let in_use = card_check(&app).await?;
     tauri::async_runtime::spawn_blocking(move || {
         let card = openrac_launcher_core::saves::get_memcard_dir(&serial);
-        if let Some(game) = openrac_launcher_core::save_edit::card_in_use(&card, &serial)? {
+        if let Some(game) = in_use(&card, &serial)? {
             return Err(format!("{game} is running with this memory card: close it first"));
         }
         openrac_launcher_core::saves::restore_backup(&serial, &backup_name)
@@ -596,6 +746,7 @@ async fn read_save(
 /// advanced save editor switched on in Settings.
 #[tauri::command]
 async fn write_save(
+    app: AppHandle,
     state: State<'_, AppState>,
     serial: String,
     slot: usize,
@@ -610,11 +761,10 @@ async fn write_save(
     if matches!(change, save_edit::SaveChange::Raw { .. }) && !advanced {
         return Err("raw edits need the advanced save editor (Settings)".into());
     }
+    let in_use = card_check(&app).await?;
     tauri::async_runtime::spawn_blocking(move || {
         let card = openrac_launcher_core::saves::get_memcard_dir(&serial);
-        let mut result = save_edit::write_save(&card, &serial, slot, &fingerprint, &change, || {
-            save_edit::card_in_use(&card, &serial)
-        })?;
+        let mut result = save_edit::write_save(&card, &serial, slot, &fingerprint, &change, || in_use(&card, &serial))?;
         result.view.skill_names = skill_names(install);
         Ok(result)
     })
@@ -863,6 +1013,8 @@ fn ensure_wayland_cursor_fallback() {
     }
 }
 
+// On Android and iOS the launcher is a library the app's activity starts through this entry point.
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     #[cfg(target_os = "linux")]
     clean_appimage_python_env();
@@ -870,14 +1022,26 @@ pub fn run() {
     tune_webkit_for_wayland();
     #[cfg(target_os = "linux")]
     ensure_wayland_cursor_fallback();
-    tauri::Builder::default()
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
+    let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init()).plugin(tauri_plugin_opener::init());
+    #[cfg(desktop)]
+    let builder = builder.plugin(
+        tauri_plugin_updater::Builder::new()
+            // A build of a branch carries the release's plain version and its run (LAUNCHER_BUILD):
+            // compared as X.Y.Z-dev.<run>, so each build of the branch updates the one before.
+            .default_version_comparator(|current, release| {
+                let current = openrac_launcher_core::update::effective_version(&current.to_string(), LAUNCHER_BUILD);
+                openrac_launcher_core::update::is_newer(&current, &release.version.to_string())
+            })
+            .build(),
+    );
+    #[cfg(target_os = "android")]
+    let builder = builder.plugin(android::init());
+    builder
         .setup(|app| {
             #[cfg(target_os = "linux")]
             ensure_linux_desktop_integration();
 
+            #[cfg(desktop)]
             if let Some(window) = app.get_webview_window("main") {
                 if let Some(icon) = app.default_window_icon() {
                     let _ = window.set_icon(icon.clone());
@@ -918,9 +1082,20 @@ pub fn run() {
             // The copy of OpenRAC the launcher carries: what a player plays from (detect::settle).
             // A copy whose Python does not run here is not for this machine (an Intel Mac has the
             // Apple silicon one): the launcher then works on a checkout, as it did.
-            let bundled = app.path().resource_dir().ok().and_then(|dir| detect::bundled_root(&dir)).filter(|dir| {
-                detect::bundled_python(dir).is_some_and(|python| detect::check_tool(Tool::Python, &python).ok)
-            });
+            // On Android the copy is unpacked from the APK into the app's files (OpenracSetup.kt),
+            // maybe still now: the page waits for it (tools_ready) before it reads anything there.
+            let bundled = if Platform::current() == Platform::Android {
+                android::bundled_root()
+            } else {
+                app.path().resource_dir().ok().and_then(|dir| detect::bundled_root(&dir)).filter(|dir| {
+                    detect::bundled_python(dir).is_some_and(|python| detect::check_tool(Tool::Python, &python).ok)
+                })
+            };
+            // Android's picker gives no paths: the disc images the player picks are copied into
+            // one folder of the app's, which is then the games folder.
+            if config.discs_dir.is_none() && Platform::current() == Platform::Android {
+                config.discs_dir = android::discs_dir();
+            }
             detect::settle(&mut config, bundled.as_deref());
 
             #[cfg(target_os = "linux")]
@@ -970,6 +1145,7 @@ pub fn run() {
             open_path,
             open_url,
             install_game,
+            prepare_disc,
             uninstall_game,
             scan_discs,
             choose_disc,
@@ -994,6 +1170,19 @@ pub fn run() {
             report_delete,
             reports_delete_all,
             open_reports_folder,
+            android::pick_disc,
+            android::gpu_drivers,
+            android::gpu_driver_import,
+            android::gpu_driver_select,
+            android::gpu_driver_remove,
+            android::gpu_renderer_select,
+            android::background_status,
+            android::tools_ready,
+            launcher_update_check,
+            android::update_check,
+            android::update_install,
+            android::game_status,
+            android::game_window,
         ])
         .run(tauri::generate_context!())
         .expect("the launcher failed to start");

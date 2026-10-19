@@ -8,12 +8,23 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
+import { REPO_URL } from "./links";
+import type { BackgroundStatus } from "./progress";
 
 export const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
+/** The Android launcher (docs/port/ANDROID.md): files come from the system's picker, which gives
+ *  no folders and no paths, and the GPU driver packages are its own. `?android` in the browser
+ *  preview shows its pages. */
+export const onAndroid =
+  typeof navigator !== "undefined" &&
+  (inTauri
+    ? /android/i.test(navigator.userAgent)
+    : typeof location !== "undefined" && new URLSearchParams(location.search).has("android"));
+
 // ---- types: the serde output of core/src (camelCase) ------------------------------
 
-export type Platform = "linux" | "macos" | "windows";
+export type Platform = "linux" | "macos" | "windows" | "android";
 export type Tool = "python" | "godot" | "docker";
 
 export interface AppInfo {
@@ -23,6 +34,24 @@ export interface AppInfo {
   configFile: string | null;
   /** The launcher works on the copy of OpenRAC it carries: only what a player does is offered. */
   standalone: boolean;
+  /** Where its updates come from: the repository that built it, set by the build. */
+  updates: UpdateSource;
+  /** That repository's two channels, which the player chooses between (Config.updateChannel). */
+  updateChannels: Record<UpdateChannel, UpdateSource>;
+}
+
+/** core/src/update.rs, Channel: the releases, or the newest development build. */
+export type UpdateChannel = "stable" | "dev";
+
+/** core/src/update.rs: the releases a launcher updates from. */
+export interface UpdateSource {
+  /** `owner/name` of the GitHub repository (the manifest's address when it is not one). */
+  repository: string;
+  /** The release it reads: null for the latest, else its tag (a branch's `launcher-dev-<branch>`). */
+  channel: string | null;
+  manifest: string;
+  /** That release's page, or the releases'. */
+  page: string;
 }
 
 /** core/src/discs.rs: a disc image in the games folder that is a game OpenRAC knows. */
@@ -71,6 +100,8 @@ export interface Config {
   discordRpc: boolean;
   /** Look for a new launcher at start (Settings). */
   checkUpdates: boolean;
+  /** The builds it updates to; null: the channel it was built from (updateChannelOf). */
+  updateChannel: UpdateChannel | null;
   discordClientId: string | null;
   /** "compact", or "classic": the original design (src/layouts/compact.css). */
   layout: "compact" | "classic";
@@ -468,11 +499,19 @@ export const api = {
       option: inputs.option ?? null,
     }),
   cancelJob: (id: number) => call<null>("cancel_job", { id }),
-  /** A file or folder in the checkout, relative to it (`games/rac1/README.md`). */
-  openPath: (path: string) => call<null>("open_path", { path }),
+  /** A file or folder in the checkout, relative to it (`games/rac1/README.md`). Android opens no
+   *  app's own files: a document there is read on GitHub, and a folder cannot be shown. */
+  openPath: (path: string) =>
+    onAndroid
+      ? /^[\w./-]+\.\w+$/.test(path) && !path.startsWith("/") && !path.includes("..")
+        ? call<null>("open_url", { url: `${REPO_URL}/blob/master/${path}` })
+        : Promise.reject(new Error("Android cannot show the launcher's own folders."))
+      : call<null>("open_path", { path }),
   openUrl: (url: string) => call<null>("open_url", { url }),
   /** Sets a game up from the image of the player's disc: the extractor, as a job. */
   installGame: (game: string, image: string) => call<Started>("install_game", { game, image }),
+  /** The plain image a set-up reads: an .iso as it is, a .chd unpacked once (`disc-copy` events). */
+  prepareDisc: (image: string) => call<string>("prepare_disc", { image }),
   /** Removes what setting a game up made (not the disc image, not the saves). */
   uninstallGame: (game: string) => call<null>("uninstall_game", { game }),
   /** The games OpenRAC knows among the images in the games folder, and a developer's disc choices. */
@@ -513,7 +552,98 @@ export const api = {
   overridesRemove: (game: string, id: string) => call<PackView[]>("overrides_remove", { game, id }),
   /** A folder inside the game's set-up folder (an export), opened with the system. */
   openGameFolder: (game: string, path: string) => call<null>("open_game_folder", { game, path }),
+  /** Android: the player's GPU driver packages (src-tauri/src/android.rs). */
+  gpuDrivers: () => call<GpuDrivers>("gpu_drivers"),
+  /** Android: the player picks a package's zip; null when they cancelled. */
+  gpuDriverImport: () => call<{ driver?: GpuDriver }>("gpu_driver_import").then((r) => r.driver ?? null),
+  gpuDriverSelect: (id: string | null) => call<null>("gpu_driver_select", { id }),
+  gpuDriverRemove: (id: string) => call<null>("gpu_driver_remove", { id }),
+  /** Android: what the game draws with from its next start. */
+  gpuRendererSelect: (renderer: Renderer) => call<null>("gpu_renderer_select", { renderer }),
+  /** Android: what the set-up's notification shows while the launcher is in the background; null:
+   *  the set-up is over (SetupService.kt). */
+  backgroundStatus: (status: BackgroundStatus | null) => call<null>("background_status", { ...status }),
+  toolsReady: () => call<null>("tools_ready"),
+  gameStatus: () => call<GameStatus>("game_status"),
+  /** Back to the running game, or (`stop`) end it. */
+  gameWindow: (stop: boolean) => call<null>("game_window", { stop }),
+  /** Android: a newer launcher on the releases, or null (desktops use Tauri's updater). */
+  updateCheck: (channel: UpdateChannel) => call<AndroidRelease | null>("update_check", { channel }),
+  /** A desktop: Tauri's updater asked at the channel's manifest; its update, or null. */
+  launcherUpdateCheck: (channel: UpdateChannel) => call<LauncherUpdate | null>("launcher_update_check", { channel }),
+  /** Android: downloads the release's APK, checks its signature, opens Android's installer. */
+  updateInstall: (url: string, signature: string) => call<null>("update_install", { url, signature }),
 };
+
+/** A desktop's update as Tauri's updater holds it: plugin-updater's `Update` is made from it. */
+export interface LauncherUpdate {
+  rid: number;
+  currentVersion: string;
+  version: string;
+  date?: string;
+  body?: string;
+  rawJson: Record<string, unknown>;
+}
+
+/** The channel a launcher updates on: the player's choice, or the one it was built from. */
+export function updateChannelOf(info: AppInfo, config: Config | null): UpdateChannel {
+  return config?.updateChannel ?? (info.updates.channel ? "dev" : "stable");
+}
+
+/** A newer Android launcher on the releases (core/src/update.rs). */
+export interface AndroidRelease {
+  version: string;
+  notes: string;
+  date: string;
+  url: string;
+  signature: string;
+}
+
+/** A GPU driver package the Android launcher keeps (OpenracPlugin.kt): its meta.json. */
+export interface GpuDriver {
+  id: string;
+  name: string;
+  description: string;
+  author: string;
+  version: string;
+  vendor: string;
+  driverVersion: string;
+  minApi: number;
+  /** The driver library in the package (meta.json's libraryName). */
+  library: string;
+}
+
+/** Android: the game's activity, while it runs beside the launcher. */
+export interface GameStatus {
+  running: boolean;
+  /** Its library ("openrac-rac1-pal"); absent when the launcher restarted while it ran. */
+  library?: string | null;
+}
+
+export type Renderer = "gles" | "vulkan";
+
+export interface GpuDrivers {
+  drivers: GpuDriver[];
+  /** The package the game loads; absent or null: the system's driver (Android's JSON drops a
+   *  null value). */
+  selected?: string | null;
+  /** What the game draws with: OpenGL ES (the default) or its Vulkan renderer. */
+  renderer: Renderer;
+  device: {
+    model: string;
+    api: number;
+    soc: string;
+    /** Which kernel GPU driver the device has: packages load on Adreno's only. */
+    gpu: "adreno" | "mali" | "other";
+  };
+}
+
+/** How far a disc image's copy into the Android app's storage, or a CHD's unpacking, is (`disc-copy`). */
+export interface DiscCopy {
+  name: string;
+  copied: number;
+  total: number;
+}
 
 /** A folder picker; null when cancelled (or in the browser preview). */
 export async function pickFolder(title: string): Promise<string | null> {
@@ -563,17 +693,43 @@ export async function onDrop(
   });
 }
 
-/** A picker for a disc image; null when cancelled (or in the browser preview). */
-/** The player's disc image for setting a game up: an .iso, as OpenGOAL asks for. */
-export async function pickIso(title: string): Promise<string | null> {
+/** The player's disc image for setting a game up: an .iso, as OpenGOAL asks for, or a .chd. */
+export async function pickIso(title: string, copying?: (progress: DiscCopy) => void): Promise<string | null> {
   if (!inTauri) return "/home/you/Discs/game.iso";
+  if (onAndroid) {
+    // The system's picker; the image is copied into the app's storage as it is picked.
+    const off = copying ? await onDiscCopy(copying) : null;
+    try {
+      return await call<string | null>("pick_disc");
+    } finally {
+      off?.();
+    }
+  }
   const picked = await open({
     directory: false,
     multiple: false,
     title,
-    filters: [{ name: "ISO", extensions: ["iso", "ISO"] }],
+    filters: [{ name: "Disc image", extensions: ["iso", "ISO", "chd", "CHD"] }],
   });
   return typeof picked === "string" ? picked : null;
+}
+
+/** `disc-copy` events: a picked image's copy (Android) or a .chd's unpacking. */
+export async function onDiscCopy(handler: (progress: DiscCopy) => void): Promise<UnlistenFn> {
+  if (!inTauri) return () => undefined;
+  return listen<DiscCopy>("disc-copy", (e) => {
+    handler(e.payload);
+  });
+}
+
+/** `update-progress` events: the Android update's download. */
+export async function onUpdateProgress(
+  handler: (progress: { downloaded: number; total: number }) => void,
+): Promise<UnlistenFn> {
+  if (!inTauri) return () => undefined;
+  return listen<{ downloaded: number; total: number }>("update-progress", (e) => {
+    handler(e.payload);
+  });
 }
 
 /** Job output and exits, from `job-output` and `job-exit` events. */

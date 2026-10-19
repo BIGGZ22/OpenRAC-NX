@@ -17,7 +17,17 @@
   import ReportsBlock from "$components/ReportsBlock.svelte";
   import SaveManagerBlock from "$components/SaveManagerBlock.svelte";
   import { api, type ActionView, type ReportEntry } from "$lib/api";
-  import { app, clock, currentVersion, guard, jobs, openDevelop, run, uninstallGame } from "$lib/app.svelte";
+  import {
+    app,
+    clock,
+    currentVersion,
+    gameWindow,
+    guard,
+    jobs,
+    openDevelop,
+    run,
+    uninstallGame,
+  } from "$lib/app.svelte";
   import { choiceFor, programOf } from "$lib/discChoice";
   import { pct } from "$lib/format";
   import { SITE_URL } from "$lib/links";
@@ -85,7 +95,7 @@
   const setUp = $derived(game?.install?.extracted ?? null);
   const built = $derived(!!v && !!game && isBuilt(game, v));
   /** The steps are shown while there is one left that the player can take. */
-  const showSteps = $derived(!!next && next.kind !== "play" && next.kind !== "playing");
+  const showSteps = $derived(!!next && next.kind !== "play" && next.kind !== "playing" && next.kind !== "return");
 
   async function removeSetUp() {
     if (!v) return;
@@ -143,6 +153,9 @@
     if (!v) return [];
     const dir = v.dir;
     const items: MenuItem[] = [];
+    if (next?.kind === "return") {
+      items.push({ label: "Stop the game", icon: "x", danger: true, run: () => void gameWindow(true) });
+    }
     // From scratch: everything built before is deleted first (tools/build_port.py --clean).
     const again = rebuild?.runnable ? rebuild : build;
     if (again?.runnable && built && next?.kind === "play") {
@@ -356,10 +369,10 @@
     position: relative;
     max-width: 920px;
     margin: 0 auto;
-    padding: 20px 28px 60px;
+    padding: var(--page-top, 20px) var(--page-x, 28px) var(--page-bottom, 60px);
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--page-gap, 20px);
   }
 
   .page-ambient-bg {

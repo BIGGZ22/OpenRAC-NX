@@ -147,10 +147,10 @@
   .page {
     max-width: 900px;
     margin: 0 auto;
-    padding: 28px 28px 60px;
+    padding: var(--page-top, 28px) var(--page-x, 28px) var(--page-bottom, 60px);
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--page-gap, 14px);
   }
 
   .page.console {

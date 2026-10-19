@@ -5,6 +5,7 @@
 #include "debug_menu.h"
 #include "debug_overlay.h"
 #include "fps_counter.h"
+#include "touch_overlay.h"
 #include "options_menu.h"
 #include "settings.h"
 
@@ -27,7 +28,9 @@
 #include "common/stats.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
+#include "platform/gpu_driver.h"
 #include "platform/input.h"
+#include "platform/performance_hint.h"
 #include "platform/pump.h"
 #include "platform/window.h"
 #include "renderer/direct.h"
@@ -1157,6 +1160,12 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
 #endif
     platform::set_app_metadata(OPENRAC_GAME_TITLE, app_id.c_str());
     platform::prefer_discrete_gpu();
+    platform::prepare_gpu_driver();
+#if defined(__ANDROID__)
+    // Back opens and shuts the options drawer instead of leaving the game (debug_overlay.h), from
+    // the first moment the window is there.
+    SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
+#endif
     g->sdl = std::make_unique<platform::Platform>(platform::kVideo | platform::kGamepad | platform::kAudio);
     if (!g->sdl->ok()) {
         error = g->sdl->error();
@@ -1356,6 +1365,25 @@ void world_drawn(std::span<const std::uint8_t> ram) {
     g->world_camera = viewer::read_game_state(ram, a);
 }
 
+// The on-screen pad, kept inside the screen's safe area (a camera's notch at a phone's side).
+static void draw_touch_pad(int window_width, int window_height) {
+    platform::TouchPad& touch = g->input.touch_pad();
+    SDL_Rect safe{};
+    int w = 0;
+    int h = 0;
+    if (SDL_GetWindowSafeArea(g->window->sdl(), &safe) && SDL_GetWindowSize(g->window->sdl(), &w, &h) && h > 0) {
+        const float height = static_cast<float>(h);
+        touch.set_safe_area(static_cast<float>(safe.x) / height,
+                            static_cast<float>(w - safe.x - safe.w) / height);
+    }
+    // Android's options are in a drawer (debug_overlay.h), opened with the pad's own button.
+    touch.set_menu_button(debug_overlay::drawer_available());
+    if (touch.take_menu_press()) {
+        debug_overlay::toggle_drawer();
+    }
+    touch_overlay::draw(touch, window_width, window_height);
+}
+
 bool show_picture(const std::uint8_t* rgba, int width, int height, float black) {
     using namespace gl;
     if (!g || width <= 0 || height <= 0) {
@@ -1406,6 +1434,7 @@ bool show_picture(const std::uint8_t* rgba, int width, int height, float black) 
     }
     // The picture fills the frame the game's own frames fill; its first row is the top.
     present(g->picture.id(), width, height, window_width, window_height, true);
+    draw_touch_pad(window_width, window_height);
     {
         // [debug tools] The overlay over a picture too (no renderer or camera then).
         const Box box = frame_box(window_width, window_height);
@@ -1492,6 +1521,7 @@ float alpha_at(std::chrono::steady_clock::time_point display) {
 void swapped(std::chrono::steady_clock::time_point started) {
     using namespace std::chrono;
     const auto before = steady_clock::now();
+    platform::frame_work_done();
     g->window->swap();
     const auto after = steady_clock::now();
     const double cost = duration<double>(before - started).count();
@@ -1504,6 +1534,10 @@ void swapped(std::chrono::steady_clock::time_point started) {
         pacing.interval = rate > 20.0f ? 1.0 / rate : 0.0;
         pacing.interval_stale = false;
     }
+    // What a frame may take, for the system's CPU clocks (performance_hint.h): a refresh, or the
+    // player's frame cap when it is lower.
+    const double cap = frame_cap();
+    platform::set_frame_target(cap > 0.0 ? std::max(1.0 / cap, pacing.interval) : pacing.interval);
     if (g->swap == platform::SwapInterval::Immediate) {
         // No refresh is waited for: there is no phase to draw the next frame for.
         pacing.last_swap = {};
@@ -1523,7 +1557,7 @@ void swapped(std::chrono::steady_clock::time_point started) {
     // next ones; one more than a frame late starts the count again. It holds beside the swap's
     // wait: 60 frames a second on a 120 Hz display are every other refresh. Nothing sleeps here:
     // the game's tick may be due before the next frame is (frame_due).
-    if (const double cap = frame_cap(); cap > 0.0) {
+    if (cap > 0.0) {
         const auto step = duration_cast<steady_clock::duration>(duration<double>(1.0 / cap));
         const auto now = steady_clock::now();
         pacing.due = pacing.due.time_since_epoch().count() == 0 || now > pacing.due + 2 * step ? now
@@ -1531,6 +1565,8 @@ void swapped(std::chrono::steady_clock::time_point started) {
     } else {
         pacing.due = {};
     }
+    // The next frame's work counts from here: the swap, and any wait in it, is the display's.
+    platform::work_resumed();
 }
 
 // Whether the frame cap lets a frame start now (within a millisecond: a sleep wakes that coarsely).
@@ -1860,6 +1896,7 @@ void draw_kept(bool first) {
         const stats::Scope render_scope("render");
         renderer::RenderTarget target{g->frame.id(), width, height, picture_scale};
         target.resolve_framebuffer = g->frame.resolve_target();
+        target.resolves_itself = g->frame.resolves_itself();
         target.wide_2d = picture_scale < 1.0f && settings::get().hud == settings::Hud::Edges;
         g->renderer->render(input, target);
     }
@@ -1897,6 +1934,7 @@ void draw_kept(bool first) {
     }
     slow_frame();
     present(shown, width, height, window_width, window_height, false, aspect);
+    draw_touch_pad(window_width, window_height);
     // [debug tools] The overlay, over the frame in the window.
     debug_overlay::draw({g->window->sdl(), window_width, window_height, box.x, box.y, box.width, box.height,
                          g->renderer.get(), &input.camera, g->frame.width(), g->frame.height(),
@@ -1921,6 +1959,16 @@ void draw_kept(bool first) {
 }
 
 namespace {
+
+// A window the player sizes: never on Android, where the game covers the screen whatever the
+// settings say (Window::set_display_mode).
+bool windowed() {
+#if defined(__ANDROID__)
+    return false;
+#else
+    return g->display_mode == settings::DisplayMode::Windowed;
+#endif
+}
 
 // The window as the player's settings want it: its display mode, display and fullscreen size, its
 // shape, and each swap waiting for a refresh or not. Called when they may have changed; all of
@@ -1948,7 +1996,7 @@ void apply_settings() {
         // A window takes the picture's new shape, at the height it has.
         int w = 0;
         int h = 0;
-        if (g->display_mode == settings::DisplayMode::Windowed && s.aspect != settings::Aspect::Window
+        if (windowed() && s.aspect != settings::Aspect::Window
             && SDL_GetWindowSize(g->window->sdl(), &w, &h) && h > 0) {
             SDL_SetWindowSize(g->window->sdl(), static_cast<int>(std::lround(static_cast<float>(h) * picture_aspect(w, h))), h);
         }
@@ -1974,7 +2022,7 @@ void window_event(const SDL_Event& event) {
             break;
         case SDL_EVENT_WINDOW_RESIZED:
             // Remembered in memory; written with the next setting saved and when the window closes.
-            if (g->display_mode == settings::DisplayMode::Windowed && event.window.data1 >= 320
+            if (windowed() && event.window.data1 >= 320
                 && event.window.data2 >= 240) {
                 settings::get().window_width = event.window.data1;
                 settings::get().window_height = event.window.data2;
@@ -2059,9 +2107,11 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         g->input.handle_event(event);
     }
     g->input.update();
-    // The port's rows on the game's Video options page (options_menu.h): a changed one is applied.
-    // Before the debug menu, which adds its entry to the Options list options_menu gives the game.
-    if (options_menu::update(openrac_game_loaded_overlay())) {
+    // The port's rows on the game's Video options page (options_menu.h), and the overlay's drawer
+    // and menus: a changed one is applied. Before the debug menu, which adds its entry to the
+    // Options list options_menu gives the game.
+    const bool changed = options_menu::update(openrac_game_loaded_overlay());
+    if (debug_overlay::take_settings_changed() || changed) {
         apply_settings();
     }
     debug_menu::update(openrac_game_loaded_overlay(), g->index);
@@ -2735,6 +2785,7 @@ int between(std::chrono::steady_clock::time_point next_tick) {
             return 0;
         }
         std::this_thread::sleep_until(pacing.due);
+        platform::work_resumed();
         now = std::chrono::steady_clock::now();
     }
     const auto display = next_display(now);
@@ -2787,6 +2838,9 @@ bool hold() {
             }
             g->input.handle_event(event);
         }
+        if (debug_overlay::take_settings_changed()) {
+            apply_settings();  // the drawer is open over the paused game
+        }
         const auto started = std::chrono::steady_clock::now();
         const bool dump = renderer::g_dump_draws;
         renderer::g_dump_draws = false;
@@ -2794,8 +2848,11 @@ bool hold() {
         draw_kept(false);
         g_held = false;
         renderer::g_dump_draws = dump;
-        // No faster than 60 pictures a second, whatever the frame pacing does with a held tick.
-        std::this_thread::sleep_until(started + std::chrono::milliseconds(16));
+        // No faster than the display shows them (a 120 Hz screen's drawer moves at 120), and no
+        // faster than 60 a second where its rate is not known.
+        const double interval = pacing.interval > 0.0 ? pacing.interval : 1.0 / 60.0;
+        std::this_thread::sleep_until(
+            started + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(interval * 0.9)));
     }
     return true;
 }
@@ -2892,6 +2949,7 @@ void close() {
         debug_overlay::release();
         settings::save();  // the window's size, if it was changed
         fps_counter::release();
+        touch_overlay::release();
         debug_menu::release();
         g->frame.release();
         g->picture.release();

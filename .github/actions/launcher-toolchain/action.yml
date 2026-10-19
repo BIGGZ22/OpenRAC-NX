@@ -1,0 +1,38 @@
+# What the launcher builds with: Node with Yarn (the version launcher/package.json names, through
+# Corepack), Rust, and Cargo's downloads and compiled dependencies kept between runs under
+# `cache-key` (Swatinem/rust-cache, which also turns incremental builds off).
+name: The launcher's toolchain
+description: Node, Yarn, Rust and a Cargo cache for launcher/
+inputs:
+  cache-key:
+    description: what the Cargo cache is kept under (one for each job and system)
+    required: true
+  targets:
+    description: Rust targets beside the host's, comma separated
+    default: ""
+  components:
+    description: Rust components, comma separated
+    default: ""
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: "22"
+        package-manager-cache: false
+    - shell: bash
+      run: corepack enable
+    - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+      with:
+        toolchain: stable
+        targets: ${{ inputs.targets }}
+        components: ${{ inputs.components }}
+    # Cargo's downloads and the compiled dependencies (not the launcher's own crates, which every
+    # build compiles anyway), kept small enough that the repository's cache holds every system's.
+    # Saved only by a job that succeeded: one that failed before Cargo ran kept an empty target/
+    # under the key, which every later run then restored and built every dependency again.
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      with:
+        workspaces: launcher -> target
+        shared-key: ${{ inputs.cache-key }}
+        cache-on-failure: false

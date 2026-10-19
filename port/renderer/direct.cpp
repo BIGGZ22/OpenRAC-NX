@@ -381,9 +381,11 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
             return;
         case gs::kTex0_1:
             c1.tex0 = gs::Tex0::decode(value);
+            clut_load(c1.tex0);
             break;
         case gs::kTex0_2:
             c2.tex0 = gs::Tex0::decode(value);
+            clut_load(c2.tex0);
             break;
         case gs::kTex2_1:
         case gs::kTex2_2: {
@@ -396,6 +398,7 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
             c.tex0.csm = t.csm;
             c.tex0.csa = t.csa;
             c.tex0.cld = t.cld;
+            clut_load(c.tex0);
             break;
         }
         case gs::kTex1_1:
@@ -437,11 +440,7 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
         case gs::kFrame1:
             c1.frame = gs::Frame::decode(value);
             m_targets.push_back(c1.frame.fbp * 32);
-            if (is_offscreen(c1.frame)) {
-                if (std::find(m_offscreen.begin(), m_offscreen.end(), c1.frame.fbp * 32) == m_offscreen.end()) {
-                    m_offscreen.push_back(c1.frame.fbp * 32);
-                }
-            } else if (std::none_of(m_frame_buffers.begin(), m_frame_buffers.end(), [&](const FrameBuffer& f) {
+            if (!is_offscreen(c1.frame) && std::none_of(m_frame_buffers.begin(), m_frame_buffers.end(), [&](const FrameBuffer& f) {
                     return f.block == c1.frame.fbp * 32;
                 })) {
                 m_frame_buffers.push_back({c1.frame.fbp * 32, c1.frame.fbw});
@@ -450,11 +449,7 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
         case gs::kFrame2:
             c2.frame = gs::Frame::decode(value);
             m_targets.push_back(c2.frame.fbp * 32);
-            if (is_offscreen(c2.frame)) {
-                if (std::find(m_offscreen.begin(), m_offscreen.end(), c2.frame.fbp * 32) == m_offscreen.end()) {
-                    m_offscreen.push_back(c2.frame.fbp * 32);
-                }
-            } else if (std::none_of(m_frame_buffers.begin(), m_frame_buffers.end(), [&](const FrameBuffer& f) {
+            if (!is_offscreen(c2.frame) && std::none_of(m_frame_buffers.begin(), m_frame_buffers.end(), [&](const FrameBuffer& f) {
                     return f.block == c2.frame.fbp * 32;
                 })) {
                 m_frame_buffers.push_back({c2.frame.fbp * 32, c2.frame.fbw});
@@ -512,8 +507,14 @@ void GifInterpreter::write_register(std::uint8_t address, std::uint64_t value) {
                 // follow yet.
                 int x = 0;
                 int y = 0;
-                std::erase_if(m_frame_copies, [&](const FrameCopy& f) { return f.dbp == m_bitbltbuf.dbp; });
+                overwritten(m_bitbltbuf.dbp, m_bitbltbuf.dbw, m_bitbltbuf.dpsm, m_trxpos.dsay,
+                            m_trxreg.rrh);  // copied over, as an upload (image_data)
                 if (frame_source(m_bitbltbuf.sbp, x, y)) {
+                    static log::Capped told(100);
+                    if (log::verbose_on() && told()) {
+                        log::verbose("2D: part of the frame copied to block {:#x} ({}x{})", m_bitbltbuf.dbp, m_trxreg.rrw,
+                                  m_trxreg.rrh);
+                    }
                     m_frame_copies.push_back(
                         {m_bitbltbuf.dbp,
                          x + static_cast<int>(m_trxpos.ssax) - static_cast<int>(m_trxpos.dsax),
@@ -555,7 +556,11 @@ void GifInterpreter::image_data(std::span<const std::uint8_t> data) {
                 m_upload.height
             );
         }
-        std::erase_if(m_frame_copies, [&](const FrameCopy& f) { return f.dbp == m_upload.dbp; });
+        // What the game drew off-screen, or copied out of the frame, where this rectangle now is is
+        // gone: a texture read from there now is the one uploaded. Such a block stayed a target for
+        // good, and every draw of a texture the game later put there (its HUD's and menus' pages
+        // reuse that memory) showed the old target, blank: the 2D layer flickered or went.
+        overwritten(m_upload.dbp, m_upload.dbw, m_upload.dpsm, m_upload.y, m_upload.height);
         if (m_upload.dpsm == gs::kPsmct32 && m_upload.dbp >= g_draw_buffer_block
             && m_upload.dbp < g_draw_buffer_block + kDrawBufferWidth * (g_draw_buffer_lines / 32) * 32) {
             draw_frame_upload(m_upload);
@@ -809,6 +814,88 @@ std::uint32_t GifInterpreter::offscreen_target() const {
     return is_offscreen(f) ? f.fbp * 32 : 0;
 }
 
+void GifInterpreter::overwritten(std::uint32_t dbp, std::uint32_t dbw, std::uint8_t psm, std::uint32_t y,
+                                 std::uint32_t height) {
+    // The blocks a rectangle's rows lie in: whole pages (8 KiB, 32 blocks) from the page row of its
+    // first line to that of its last, the buffer `dbw` 64-pixel units wide. A page holds the same
+    // bytes in every format (64 x 32 pixels of 32 bits, 64 x 64 of 16, 128 x 64 of 8, 128 x 128 of
+    // 4), so a row of pages is the buffer's width times as many lines of bytes as one line holds.
+    const std::uint32_t bits = static_cast<std::uint32_t>(std::max(gs::bits_per_pixel(psm), 4));
+    const std::uint64_t line = static_cast<std::uint64_t>(std::max<std::uint32_t>(dbw, 1)) * 64 * bits / 8;
+    constexpr std::uint64_t kPage = 8192;
+    const std::uint64_t first = y * line / kPage * 32;
+    const std::uint64_t last = ((static_cast<std::uint64_t>(y) + std::max<std::uint32_t>(height, 1)) * line + kPage - 1)
+                               / kPage * 32;
+    const auto covered = [&](std::uint32_t block) {
+        return block == dbp || (block >= dbp + first && block < dbp + last);
+    };
+    std::erase_if(m_frame_copies, [&](const FrameCopy& f) { return covered(f.dbp); });
+    const std::size_t targets = m_offscreen.size();
+    std::erase_if(m_offscreen, covered);
+    static log::Capped told(100);
+    if (m_offscreen.size() != targets && log::verbose_on() && told()) {
+        log::verbose("2D: a transfer to block {:#x} took {} off-screen target(s) back as texture memory", dbp,
+                  targets - m_offscreen.size());
+    }
+}
+
+void GifInterpreter::clut_load(const gs::Tex0& t) {
+    // CLD: 1 loads; 2 and 3 load and keep CBP in CBP0 or CBP1; 4 and 5 load only when CBP is not
+    // the one kept there, then keep it.
+    bool load = false;
+    switch (t.cld) {
+        case 1:
+            load = true;
+            break;
+        case 2:
+        case 3:
+            load = true;
+            (t.cld == 2 ? m_cbp0 : m_cbp1) = t.cbp;
+            break;
+        case 4:
+        case 5: {
+            std::uint32_t& kept = t.cld == 4 ? m_cbp0 : m_cbp1;
+            load = kept != t.cbp;
+            kept = t.cbp;
+            break;
+        }
+        default:
+            break;
+    }
+    if (load) {
+        m_textures.load_clut(t);
+    }
+}
+
+void GifInterpreter::note_texture_kind(std::uint32_t tbp, std::uint8_t psm, TextureKind kind) {
+    // In the detailed log (OPENRAC_LOG=verbose), when a block's texture changes what it is drawn
+    // as, a few hundred times a run at most: enough to see which of the 2D layer's textures went,
+    // and as what. A texture drawn as itself the first time is what is expected, and not logged.
+    const auto [at, added] = m_texture_kind.try_emplace(tbp, kind);
+    if (added ? kind == TextureKind::Texture : at->second == kind) {
+        return;
+    }
+    const auto name = [](TextureKind k) {
+        switch (k) {
+            case TextureKind::Texture:
+                return "its texture";
+            case TextureKind::Missing:
+                return "nothing (no texture there)";
+            case TextureKind::Offscreen:
+                return "an off-screen target";
+            case TextureKind::Frame:
+                return "the frame";
+        }
+        return "?";
+    };
+    static log::Capped told(400);
+    if (log::verbose_on() && told()) {
+        log::verbose("2D: the texture at block {:#x} (psm {:#x}) draws as {}{}{}", tbp, psm, name(kind),
+                  added ? "" : ", was ", added ? "" : name(at->second));
+    }
+    at->second = kind;
+}
+
 bool GifInterpreter::frame_source(std::uint32_t tbp, int& x, int& y) const {
     for (const FrameCopy& f : m_frame_copies) {
         if (f.dbp == tbp) {
@@ -818,10 +905,17 @@ bool GifInterpreter::frame_source(std::uint32_t tbp, int& x, int& y) const {
         }
     }
     for (const FrameBuffer& f : m_frame_buffers) {
+        // Only the buffers the frame is in now (a mode change moves the draw buffer: where it was is
+        // texture memory again), and only the lines the frame fills: the game keeps textures in the
+        // pages under a 448-line draw buffer, and those drew as the frame.
+        if (f.block != m_config.display_block && f.block != g_draw_buffer_block) {
+            continue;
+        }
+        const std::uint32_t rows = f.block == g_draw_buffer_block ? static_cast<std::uint32_t>(g_draw_buffer_lines) / 32 : 16;
         // A frame buffer is rows of pages (64 x 32 pixels, 32 blocks each), `width` pages a row:
         // a texture that starts on one of its page rows is the frame from that row down.
         const std::uint32_t row = std::max<std::uint32_t>(f.width, 1) * 32;
-        if (tbp >= f.block && tbp < f.block + row * 16 && (tbp - f.block) % row == 0) {
+        if (tbp >= f.block && tbp < f.block + row * rows && (tbp - f.block) % row == 0) {
             x = 0;
             y = static_cast<int>((tbp - f.block) / row * 32);
             return true;
@@ -977,6 +1071,13 @@ void GifInterpreter::ensure_draw() {
             s.fbmsk = 0xFFFFFFFFu;
             s.depth_write = false;
         }
+        if (s.textured) {
+            note_texture_kind(c.tex0.tbp0, c.tex0.psm,
+                              s.source != 0                           ? TextureKind::Offscreen
+                              : s.frame_source                        ? TextureKind::Frame
+                              : s.texture == m_textures.placeholder() ? TextureKind::Missing
+                                                                      : TextureKind::Texture);
+        }
         // The scissor is in this buffer's own pixels: scaled onto the picture as its draws are
         // (screen_position), so it clips where they land.
         {
@@ -1000,6 +1101,17 @@ void GifInterpreter::ensure_draw() {
         }
         m_state = s;
         m_state_dirty = false;
+    }
+    // An off-screen target is one once something is drawn into it, not when FRAME merely names it:
+    // the game sets FRAME to blocks it then uploads textures to (its register sets name a panel's
+    // target whether or not that panel is drawn), and a block taken for a target made every texture
+    // the game put there later draw as that target, blank.
+    if (m_state.target != 0 && std::find(m_offscreen.begin(), m_offscreen.end(), m_state.target) == m_offscreen.end()) {
+        m_offscreen.push_back(m_state.target);
+        static log::Capped told(100);
+        if (log::verbose_on() && told()) {
+            log::verbose("2D: drawn off-screen into block {:#x} (FRAME width {})", m_state.target, context().frame.fbw);
+        }
     }
     if (m_draws.empty() || !(m_draws.back().state == m_state) || m_draws.back().mobys != 0) {
         m_draws.push_back({m_state, static_cast<std::uint32_t>(m_vertices.size()), 0});
@@ -1496,6 +1608,20 @@ void DirectRenderer::apply(const DirectState& s, RenderState& render_state) {
             glUniform1i(m_uniforms.tex_T1, 1);
             glActiveTexture(GL_TEXTURE0);
         }
+    }
+    // The units this draw does not read hold the placeholder, never a texture left there by an
+    // earlier draw: that was often what this one draws into (an off-screen panel just composed, the
+    // frame), a feedback loop GL leaves undefined, and on a phone's GPU the 2D path flickered.
+    if (!s.textured || !s.distance_field) {
+        const GLuint none = render_state.textures.gl_texture(render_state.textures.placeholder());
+        if (!s.textured) {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, none);
+        }
+        glActiveTexture(GL_TEXTURE0 + 1);
+        glBindTexture(GL_TEXTURE_2D, none);
+        glUniform1i(m_uniforms.tex_T1, 1);
+        glActiveTexture(GL_TEXTURE0);
     }
     glUniform1i(m_uniforms.fog_enable, s.fog ? 1 : 0);
     glUniform3f(

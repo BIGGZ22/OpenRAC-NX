@@ -161,6 +161,9 @@ struct RenderTarget {
     // the same size with one sample a pixel to resolve it into first (readable()); 0 for a plain
     // target, which is read as it is.
     unsigned resolve_framebuffer = 0;
+    // The GPU resolves the samples into resolve_framebuffer's colour itself (FrameBuffer::
+    // resolves_itself): it is read as it is, with nothing copied first.
+    bool resolves_itself = false;
     // On a target wider than the picture: what the game cut at the television's sides (a scissor
     // of the screen's whole width) is cut at the target's sides instead, so that the HUD's parts
     // the game moved out past its picture's sides (the player's "HUD: Edges") are seen.

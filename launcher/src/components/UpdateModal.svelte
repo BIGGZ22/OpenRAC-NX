@@ -4,7 +4,7 @@
   // it stops, it says why, that the launcher is unchanged, and what to try. A copy that cannot
   // update itself (one from GitHub's page, the browser preview's ?download) is sent to the release.
   import { app } from "$lib/app.svelte";
-  import { api } from "$lib/api";
+  import { api, onAndroid } from "$lib/api";
   import { size } from "$lib/format";
   import { installUpdate } from "$lib/updates";
   import Icon from "./Icon.svelte";
@@ -14,7 +14,8 @@
   let done = $state(0);
   let total = $state(0);
   let error = $state<string | null>(null);
-  const busy = $derived(stage === "downloading" || stage === "installing" || stage === "ready");
+  // Android's installer takes over once the package is downloaded: the launcher waits on nothing.
+  const busy = $derived(stage === "downloading" || stage === "installing" || (stage === "ready" && !onAndroid));
 
   /** What the update is doing, in words. */
   const doing = $derived.by(() => {
@@ -22,7 +23,9 @@
       return total > 0 ? `Downloading: ${size(done)} of ${size(total)}` : `Downloading: ${size(done)}`;
     }
     if (stage === "installing") return "Installing…";
-    if (stage === "ready") return "Installed. The launcher starts again now.";
+    if (stage === "ready") {
+      return onAndroid ? "Confirm the update in Android's installer." : "Installed. The launcher starts again now.";
+    }
     return "";
   });
 
@@ -134,7 +137,7 @@
           {/if}
           {#if update.canInstallDirectly}
             <button class="btn-primary" onclick={() => void install()}
-              >{stage === "failed" ? "Try again" : "Update and restart"}</button
+              >{stage === "failed" ? "Try again" : onAndroid ? "Update" : "Update and restart"}</button
             >
           {/if}
         {/if}

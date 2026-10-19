@@ -33,6 +33,15 @@
     document.documentElement.dataset.layout = app.config?.layout ?? "compact";
   });
 
+  // Another page starts at its top, as it arrives (app.css: its sections rise in turn).
+  let view = $state<HTMLElement | null>(null);
+  let shown: Page | null = null;
+  $effect(() => {
+    if (app.page === shown) return;
+    shown = app.page;
+    view?.scrollTo({ top: 0 });
+  });
+
   $effect(() => {
     // With developer tools on, what the launcher ran is Develop's console (a game's menu still
     // asks for Activity).
@@ -70,11 +79,14 @@
 </script>
 
 {#if !app.config}
-  <div class="loading"><span class="spinner"></span></div>
+  <div class="loading">
+    <span class="spinner"></span>
+    {#if app.preparing}<p>Preparing OpenRAC's tools. This happens once after installing or updating.</p>{/if}
+  </div>
 {:else}
   <div class="shell">
     {#if app.config.setupComplete}<Header />{/if}
-    <main>
+    <main bind:this={view}>
       {#if !app.config.setupComplete}<Settings setup />
       {:else if app.page === "game"}<Game />
       {:else if app.page === "mods"}{#await modsPage() then page}<page.default />{/await}
@@ -94,13 +106,36 @@
     height: 100%;
     display: grid;
     place-items: center;
+    place-content: center;
+    gap: 16px;
+    padding: 0 24px;
+    text-align: center;
     color: var(--amber);
+  }
+
+  .loading p {
+    margin: 0;
+    color: var(--dim);
   }
 
   .shell {
     height: 100%;
     display: flex;
     flex-direction: column;
+  }
+
+  /* Android: the navigation rail beside the page, or its bar under it on a narrow window
+     (Header.svelte). */
+  :global(html[data-platform="android"]) .shell {
+    flex-direction: row;
+    /* Nothing beside the page scrolls the window: no strip of the background under the rail. */
+    overflow: hidden;
+  }
+
+  @media (max-width: 599px) {
+    :global(html[data-platform="android"]) .shell {
+      flex-direction: column-reverse;
+    }
   }
 
   /* A page scrolls down, never sideways: what is wider than the window is the page's to fit. */

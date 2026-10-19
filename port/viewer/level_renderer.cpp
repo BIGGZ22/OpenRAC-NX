@@ -42,12 +42,46 @@ const void* offset(std::size_t bytes) {
     return reinterpret_cast<const void*>(bytes);
 }
 
+// The sides of what a camera sees (its view and projection, column-major), as planes a point is
+// inside of when a x + b y + c z + d >= 0: left, right, bottom, top. Near and far are left out, so
+// that nothing depends on the projection's depth range; they would leave out little.
+std::array<std::array<float, 4>, 4> frustum_sides(const renderer::Mat4& m) {
+    const auto row = [&](int i) { return std::array<float, 4>{m[i], m[4 + i], m[8 + i], m[12 + i]}; };
+    const auto x = row(0), y = row(1), w = row(3);
+    std::array<std::array<float, 4>, 4> planes{};
+    for (int k = 0; k < 4; ++k) {
+        planes[0][k] = w[k] + x[k];
+        planes[1][k] = w[k] - x[k];
+        planes[2][k] = w[k] + y[k];
+        planes[3][k] = w[k] - y[k];
+    }
+    return planes;
+}
+
+// Whether a box is wholly outside one of the sides: its corner furthest along the side's inward
+// direction is outside it.
+bool outside(const std::array<std::array<float, 4>, 4>& planes, const renderer::Vec3& low, const renderer::Vec3& high) {
+    for (const auto& p : planes) {
+        const float x = p[0] >= 0.0f ? high[0] : low[0];
+        const float y = p[1] >= 0.0f ? high[1] : low[1];
+        const float z = p[2] >= 0.0f ? high[2] : low[2];
+        if (p[0] * x + p[1] * y + p[2] * z + p[3] < 0.0f) {
+            return true;
+        }
+    }
+    return false;
+}
+
 }  // namespace
 
 bool LevelScene::upload(
     const LevelData& level, renderer::TexturePool& textures, std::string& error
 ) {
+    // mesh.frag again with OPENRAC_SOLID, after its version line (which has to stay the first).
+    std::string solid(shaders::mesh_frag);
+    solid.insert(solid.find('\n') + 1, "#define OPENRAC_SOLID 1\n");
     if (!m_mesh.build("mesh", shaders::mesh_vert, shaders::mesh_frag, error)
+        || !m_solid.build("mesh (solid)", shaders::mesh_vert, solid, error)
         || !m_sky.build("sky", shaders::sky_vert, shaders::sky_frag, error)) {
         return false;
     }
@@ -76,6 +110,43 @@ bool LevelScene::upload(
         );
     }
 
+    // The static layers' models again, their primitives in material order, for the opaque pass:
+    // the level's terrain is one model of a primitive per fragment and material, two thousand
+    // draws in a frame, and in material order a material's fragments are one run of indices,
+    // one draw (draw_layer joins them). Depth decides what is in front in that pass, so the order
+    // does not change the picture; the blended passes keep the stored order.
+    std::vector<std::uint32_t> indices = level.indices;
+    m_opaque.assign(m_models.size(), 0);
+    std::vector<bool> fixed(m_models.size(), false);
+    for (const Layer layer : {Layer::Terrain, Layer::Ties, Layer::Shrubs}) {
+        for (const Instance& instance : level.instances[static_cast<std::size_t>(layer)]) {
+            if (instance.model < fixed.size()) {
+                fixed[instance.model] = true;
+            }
+        }
+    }
+    for (std::uint32_t m = 0; m < m_opaque.size(); ++m) {
+        m_opaque[m] = m;
+        const Model& model = m_models[m];
+        if (!fixed[m] || model.primitives.size() < 2) {
+            continue;
+        }
+        Model sorted = model;
+        std::stable_sort(sorted.primitives.begin(), sorted.primitives.end(),
+                         [](const Primitive& a, const Primitive& b) { return a.material < b.material; });
+        for (Primitive& p : sorted.primitives) {
+            const std::uint32_t first = static_cast<std::uint32_t>(indices.size());
+            if (static_cast<std::size_t>(p.first_index) + p.index_count > level.indices.size()) {
+                continue;
+            }
+            indices.insert(indices.end(), level.indices.begin() + p.first_index,
+                           level.indices.begin() + p.first_index + p.index_count);
+            p.first_index = first;
+        }
+        m_opaque[m] = static_cast<std::uint32_t>(m_models.size());
+        m_models.push_back(std::move(sorted));
+    }
+
     glGenBuffers(1, &m_vertices);
     glBindBuffer(GL_ARRAY_BUFFER, m_vertices);
     glBufferData(
@@ -90,8 +161,8 @@ bool LevelScene::upload(
     glBindBuffer(GL_ARRAY_BUFFER, m_indices);
     glBufferData(
         GL_ARRAY_BUFFER,
-        static_cast<GLsizeiptr>(level.indices.size() * sizeof(std::uint32_t)),
-        level.indices.data(),
+        static_cast<GLsizeiptr>(indices.size() * sizeof(std::uint32_t)),
+        indices.data(),
         GL_STATIC_DRAW
     );
 
@@ -252,6 +323,29 @@ void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instance
         }
         g.blend = static_cast<int>(m_grouping[i].first & 3);
         fill_group(g, m_grouping[i].second, live ? GL_STREAM_DRAW : GL_STATIC_DRAW);
+        // A static group's box: its model's box at each of its instances.
+        g.bounded = false;
+        const Model& shape = m_models[model];
+        if (!live && shape.min[0] <= shape.max[0]) {
+            constexpr float kHuge = 3.0e38f;
+            g.low = {kHuge, kHuge, kHuge};
+            g.high = {-kHuge, -kHuge, -kHuge};
+            for (const InstanceData& d : m_grouping[i].second) {
+                renderer::Mat4 matrix;
+                std::copy(std::begin(d.matrix), std::end(d.matrix), matrix.begin());
+                for (int corner = 0; corner < 8; ++corner) {
+                    const renderer::Vec3 at = renderer::transform_point(
+                        matrix, {(corner & 1) != 0 ? shape.max[0] : shape.min[0],
+                                 (corner & 2) != 0 ? shape.max[1] : shape.min[1],
+                                 (corner & 4) != 0 ? shape.max[2] : shape.min[2]});
+                    for (int k = 0; k < 3; ++k) {
+                        g.low[k] = std::min(g.low[k], at[k]);
+                        g.high[k] = std::max(g.high[k], at[k]);
+                    }
+                }
+            }
+            g.bounded = g.count > 0;
+        }
         groups.push_back(g);
     }
     glBindVertexArray(0);
@@ -344,6 +438,7 @@ void LevelScene::release() {
         m_lights = 0;
     }
     m_mesh.release();
+    m_solid.release();
     m_sky.release();
 }
 
@@ -426,40 +521,53 @@ void LevelScene::draw_layer(
     }
     const renderer::Mat4 view_projection =
         renderer::multiply(input.camera.projection, input.camera.view);
-    m_mesh.use();
-    glUniformMatrix4fv(m_mesh.uniform("view_projection"), 1, GL_FALSE, view_projection.data());
+    // The static groups the camera does not see are left out: a level's ties and shrubs are
+    // hundreds of draws, most of them behind or beside the camera.
+    const auto sides = frustum_sides(view_projection);
+    m_visible.assign(groups.size(), true);
+    for (std::size_t i = 0; i < groups.size(); ++i) {
+        m_visible[i] = !groups[i].bounded || !outside(sides, groups[i].low, groups[i].high);
+    }
     // On a target wider than the game's picture, the 2D layer's mobys are cut at the picture's sides
     // (mesh.vert).
-    const bool cut = layer == Layer::Mobys && state.target.picture_scale_x < 1.0f;
-    glUniform1f(m_mesh.uniform("picture_scale"), state.target.picture_scale_x);
+    // An ES driver without GL_EXT_clip_cull_distance has no clip planes (renderer/shader.h, es_source).
+    const bool cut = layer == Layer::Mobys && state.target.picture_scale_x < 1.0f
+        && (!gl::is_es() || gl::has_extension("GL_EXT_clip_cull_distance"));
     if (cut) {
         glEnable(GL_CLIP_DISTANCE0);
         glEnable(GL_CLIP_DISTANCE1);
     }
-    // The terrain's vertex colours are the game's own lighting (the extractor lights it as
-    // LightTfrags does): it gets no viewer sun.
-    glUniform1i(m_mesh.uniform("lighting"), lighting && layer != Layer::Terrain ? 1 : 0);
     // The joint palettes (live mobys): unit 1; the textures go on unit 0.
     const bool palettes = layer == Layer::Mobys && m_palette != 0;
-    glUniform1i(m_mesh.uniform("skinning"), palettes ? 1 : 0);
-    glUniform1i(m_mesh.uniform("palette_texture"), static_cast<GLint>(kPaletteUnit));
-    glUniform1i(m_mesh.uniform("light_texture"), static_cast<GLint>(kLightUnit));
-    if (m_light_sets.size() == 16 * 16) {
-        glUniform4fv(m_mesh.uniform("light_sets"), 64, m_light_sets.data());
-    }
-    glUniform4f(m_mesh.uniform("fog_colour"), m_fog_colour[0], m_fog_colour[1], m_fog_colour[2],
-                m_fog_colour[3]);
-    glUniform4f(m_mesh.uniform("fog_params"), m_fog_params[0], m_fog_params[1], m_fog_params[2],
-                m_fog_params[3]);
-    glUniformMatrix4fv(m_mesh.uniform("view"), 1, GL_FALSE, input.camera.view.data());
+    // The frame's uniforms, on the program the next passes draw with: the solid one for the static
+    // layers' opaque materials without a cutout (mesh.frag, OPENRAC_SOLID), the general one else.
+    const auto use = [&](const renderer::Shader& shader) {
+        shader.use();
+        glUniformMatrix4fv(shader.uniform("view_projection"), 1, GL_FALSE, view_projection.data());
+        glUniform1f(shader.uniform("picture_scale"), state.target.picture_scale_x);
+        // The terrain's vertex colours are the game's own lighting (the extractor lights it as
+        // LightTfrags does): it gets no viewer sun.
+        glUniform1i(shader.uniform("lighting"), lighting && layer != Layer::Terrain ? 1 : 0);
+        glUniform1i(shader.uniform("skinning"), palettes ? 1 : 0);
+        glUniform1i(shader.uniform("palette_texture"), static_cast<GLint>(kPaletteUnit));
+        glUniform1i(shader.uniform("light_texture"), static_cast<GLint>(kLightUnit));
+        if (m_light_sets.size() == 16 * 16) {
+            glUniform4fv(shader.uniform("light_sets"), 64, m_light_sets.data());
+        }
+        glUniform4f(shader.uniform("fog_colour"), m_fog_colour[0], m_fog_colour[1], m_fog_colour[2],
+                    m_fog_colour[3]);
+        glUniform4f(shader.uniform("fog_params"), m_fog_params[0], m_fog_params[1], m_fog_params[2],
+                    m_fog_params[3]);
+        glUniformMatrix4fv(shader.uniform("view"), 1, GL_FALSE, input.camera.view.data());
+        glUniform1i(shader.uniform("effect_pass"), 0);
+        glUniform1i(shader.uniform("metal_pass"), 0);
+    };
     glActiveTexture(GL_TEXTURE0 + kLightUnit);
     glBindTexture(GL_TEXTURE_2D, m_lights);
     if (palettes) {
         glActiveTexture(GL_TEXTURE0 + kPaletteUnit);
         glBindTexture(GL_TEXTURE_2D, m_palette);
     }
-    const int cutout = m_mesh.uniform("cutout");
-    const int colour = m_mesh.uniform("material_colour");
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_GEQUAL);  // reversed depth
     glDepthMask(GL_TRUE);
@@ -469,42 +577,54 @@ void LevelScene::draw_layer(
     // Mobys in two passes: their solid faces, then their glow faces blended over them as the GS
     // blends them (ALPHA 0x44: (Cs - Cd) As + Cd), without writing depth.
     // Then the translucent texels of cutout materials, blended the same way, without depth.
-    const int glow_pass = m_mesh.uniform("glow_pass");
-    const int translucent_pass = m_mesh.uniform("translucent_pass");
-    const int effect_pass = m_mesh.uniform("effect_pass");
-    const int metal_pass = m_mesh.uniform("metal_pass");
-    glUniform1i(effect_pass, 0);
-    glUniform1i(metal_pass, 0);
     // Mobys: a fourth pass for those MobyProc blends (Instance::blend), then a fifth for the metal
     // packets (the shine pass), after everything else.
-    const int passes = layer == Layer::Mobys ? 5 : 2;
+    // The static layers: their opaque materials without a cutout (solid), then the opaque texels
+    // of the cutout ones, then those cutouts' translucent texels.
+    const bool mobys = layer == Layer::Mobys;
+    const int passes = mobys ? 5 : 3;
     // The material state the program holds now (flush): none yet.
     int set_material = -1;
     unsigned set_texture = 0;
     int set_cutout = -1;
     decltype(Material::colour) set_colour{};
     bool colour_set = false;
+    const renderer::Shader* program = nullptr;
     for (int pass = 0; pass < passes; ++pass) {
+        const bool solid = !mobys && pass == 0;
+        const renderer::Shader& wanted = solid ? m_solid : m_mesh;
+        if (program != &wanted) {
+            use(wanted);
+            program = &wanted;
+            set_material = -1;
+            set_cutout = -1;
+            colour_set = false;
+        }
+        const int cutout = program->uniform("cutout");
+        const int colour = program->uniform("material_colour");
+        // The cutout materials' opaque texels (static layers).
+        const bool cutouts = !mobys && pass == 1;
         // The blended mobys' pass: their whole models, all texels, at their alpha (blend 1:
         // ALPHA 0x44, (Cs - Cd) As + Cd) or added (blend 2: 0x48, Cs As + Cd), depth tested and
         // not written, as ReRAC draws MobyProc's translucent and additive groups.
-        const bool effects = layer == Layer::Mobys && pass == 3;
+        const bool effects = mobys && pass == 3;
         // The metal packets: blended over the moby with ALPHA 0x44, depth tested and not written,
         // pulled a little toward the camera (MobyProc adds 1000 to their GS Z; mesh.vert).
-        const bool metal = layer == Layer::Mobys && pass == 4;
-        const bool translucent = !effects && !metal && pass == (layer == Layer::Mobys ? 2 : 1);
-        glUniform1i(metal_pass, metal ? 1 : 0);
-        glUniform1i(glow_pass, layer == Layer::Mobys && pass == 1 ? 1 : 0);
-        glUniform1i(translucent_pass, translucent ? 1 : 0);
-        glUniform1i(effect_pass, effects ? 1 : 0);
-        if (pass >= 1) {
+        const bool metal = mobys && pass == 4;
+        const bool translucent = pass == 2;
+        glUniform1i(program->uniform("metal_pass"), metal ? 1 : 0);
+        glUniform1i(program->uniform("glow_pass"), mobys && pass == 1 ? 1 : 0);
+        glUniform1i(program->uniform("translucent_pass"), translucent ? 1 : 0);
+        glUniform1i(program->uniform("effect_pass"), effects ? 1 : 0);
+        if (mobys ? pass >= 1 : pass >= 2) {
             glEnable(GL_BLEND);
             glBlendEquation(GL_FUNC_ADD);
             glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
             glDepthMask(GL_FALSE);
         }
-        for (const Group& g : groups) {
-            if (!metal && (g.blend != 0) != effects) {
+        for (std::size_t gi = 0; gi < groups.size(); ++gi) {
+            const Group& g = groups[gi];
+            if (!m_visible[gi] || (!metal && (g.blend != 0) != effects)) {
                 continue;
             }
             if (effects) {
@@ -554,12 +674,18 @@ void LevelScene::draw_layer(
                     static_cast<std::uint64_t>(run_count / 3) * static_cast<std::uint64_t>(g.count);
                 run_count = 0;
             };
-            for (const Primitive& p : m_models[g.model].primitives) {
+            // The opaque pass of a static layer in material order (m_opaque).
+            const std::uint32_t model = pass <= 1 && !mobys && g.model < m_opaque.size() ? m_opaque[g.model] : g.model;
+            for (const Primitive& p : m_models[model].primitives) {
                 const bool is_metal = m_materials[static_cast<std::size_t>(p.material)].metal;
                 if (is_metal != metal) {
                     continue;
                 }
-                if (translucent && !m_materials[static_cast<std::size_t>(p.material)].cutout) {
+                const bool is_cutout = m_materials[static_cast<std::size_t>(p.material)].cutout;
+                if ((translucent || cutouts) && !is_cutout) {
+                    continue;
+                }
+                if (solid && is_cutout) {
                     continue;
                 }
                 if (run_count != 0 && p.material == run_material && p.first_index == run_first + run_count) {

@@ -39,13 +39,27 @@
       "inherits": "base",
       "displayName": "No window (no SDL3): the runtime, the games, the tests",
       "cacheVariables": {"CMAKE_BUILD_TYPE": "RelWithDebInfo", "OPENRAC_PORT_WINDOW": "OFF"}
+    },
+    {
+      "name": "android-arm64",
+      "displayName": "Android, arm64-v8a, API 29 and later, with the NDK at $ANDROID_NDK_HOME (tools/build_android.py)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "toolchainFile": "$env{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "ANDROID_ABI": "arm64-v8a",
+        "ANDROID_PLATFORM": "android-29",
+        "ANDROID_STL": "c++_shared"
+      }
     }
   ],
   "buildPresets": [
     {"name": "release", "configurePreset": "release"},
     {"name": "standalone", "configurePreset": "standalone"},
     {"name": "debug", "configurePreset": "debug"},
-    {"name": "headless", "configurePreset": "headless"}
+    {"name": "headless", "configurePreset": "headless"},
+    {"name": "android-arm64", "configurePreset": "android-arm64"}
   ],
   "testPresets": [
     {"name": "release", "configurePreset": "release", "output": {"outputOnFailure": true}},

@@ -5,7 +5,7 @@
   // Kerwan"), each with Copy, Save and Delete (and all at once), after a plain question; then
   // Detailed logs. File names are a contributor's detail: shown with developer tools on.
   import Icon from "$components/Icon.svelte";
-  import { api, type ReportEntry } from "$lib/api";
+  import { api, onAndroid, type ReportEntry } from "$lib/api";
   import { app, countCrashes, dismissCrashes, guard, saveConfig, toast } from "$lib/app.svelte";
   import { DISCORD_URL, ISSUES_URL } from "$lib/links";
   import { headline, when } from "$lib/reports";
@@ -160,9 +160,12 @@
         save one and send it to us.
       </p>
       <div class="row tools">
-        <button class="ghost small" onclick={() => void guard(api.openReportsFolder(game, false))}>
-          <Icon name="folder" size={14} />Open folder
-        </button>
+        {#if !onAndroid}
+          <!-- Android opens no app's own folders: Save puts a report where the player chooses. -->
+          <button class="ghost small" onclick={() => void guard(api.openReportsFolder(game, false))}>
+            <Icon name="folder" size={14} />Open folder
+          </button>
+        {/if}
         {#if entries && entries.length > 0}
           <button class="ghost small danger" onclick={() => (asking = asking === "all" ? null : "all")}>
             <Icon name="trash" size={14} />Delete all

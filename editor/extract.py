@@ -13,13 +13,15 @@ when complete. Never commit or share it: see LEGAL.md.
 """
 
 import argparse
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import Executor, ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 import hashlib
 import json
 import os
 from pathlib import Path
+import pickle
 import shutil
 import struct
+import subprocess
 import sys
 import tempfile
 
@@ -100,6 +102,62 @@ def publish(path: Path, build, anywhere: bool = False, replace: bool = False) ->
     return dest
 
 
+def worker_pool(jobs: int) -> Executor:
+    """JOBS processes for the levels. Where Python has no process pools (Android's CPython has no
+    sem_open, so no multiprocessing), each level is written by a Python of its own instead
+    (SubprocessPool)."""
+    try:
+        return ProcessPoolExecutor(jobs)
+    except (ImportError, NotImplementedError, OSError):
+        return SubprocessPool(jobs)
+
+
+# What SubprocessPool may run: the level exports below.
+WORKER_FUNCTIONS = ("export_level", "export_port_level", "export_port_title", "export_port_flight")
+# A phone's memory, not its cores, limits how many levels are written at once.
+SUBPROCESS_JOBS = 4
+
+
+class SubprocessPool(Executor):
+    """A process pool without multiprocessing: each call runs `extract.py --worker` (this file, in
+    the same Python), its function's name and arguments pickled in and its result pickled out,
+    up to SUBPROCESS_JOBS at a time."""
+
+    def __init__(self, jobs: int):
+        self._threads = ThreadPoolExecutor(max(1, min(jobs, SUBPROCESS_JOBS)))
+
+    def submit(self, fn, /, *args, **kwargs):
+        return self._threads.submit(run_worker, fn.__name__, args, kwargs)
+
+    def shutdown(self, wait: bool = True, *, cancel_futures: bool = False) -> None:
+        self._threads.shutdown(wait, cancel_futures=cancel_futures)
+
+
+def run_worker(name: str, args: tuple, kwargs: dict):
+    done = subprocess.run([sys.executable, str(Path(__file__).resolve()), "--worker"],
+                          input=pickle.dumps((name, args, kwargs)), capture_output=True, check=False)
+    sys.stderr.write(done.stderr.decode(errors="replace"))
+    if done.returncode:
+        raise RuntimeError(f"{name} failed in its own process (exit status {done.returncode})")
+    return pickle.loads(done.stdout)
+
+
+def worker() -> None:
+    """One call for SubprocessPool: (name, args, kwargs) on stdin, the result on stdout."""
+    name, args, kwargs = pickle.load(sys.stdin.buffer)
+    if name not in WORKER_FUNCTIONS:
+        sys.exit(f"{name} is not one of the level exports")
+    stdout = sys.stdout
+    sys.stdout = sys.stderr  # what the export prints must not mix with its result
+    try:
+        value = globals()[name](*args, **kwargs)
+    finally:
+        sys.stdout = stdout
+    result = stdout.buffer
+    result.write(pickle.dumps(value))
+    result.flush()
+
+
 def export_level(iso: Path, info: dict, out: Path, lod: int) -> dict:
     """One level of a Godot project; runs in its own process."""
     with Disc(iso) as disc:
@@ -116,7 +174,7 @@ def godot(iso: Path, survey: dict, levels: list[int], lod: int, jobs: int, out: 
             write_project(where[i], [i], region)
     else:
         write_project(out, levels, region)
-    with ProcessPoolExecutor(min(jobs, len(levels))) as pool:
+    with worker_pool(min(jobs, len(levels))) as pool:
         running = [pool.submit(export_level, iso, survey["levels"][i], where[i], lod) for i in levels]
         try:
             for done in as_completed(running):
@@ -156,7 +214,7 @@ def export_port_flight(iso: Path, survey: dict, out: Path, lod: int) -> dict:
 def port(iso: Path, survey: dict, levels: list[int], lod: int, jobs: int, out: Path) -> None:
     """OUT/level_NN/ per level (port.py), written in parallel like godot()."""
     out.mkdir(parents=True, exist_ok=True)
-    with ProcessPoolExecutor(min(jobs, len(levels))) as pool:
+    with worker_pool(min(jobs, len(levels))) as pool:
         running = [pool.submit(export_port_level, iso, survey["levels"][i], out, lod) for i in levels]
         running.append(pool.submit(export_port_title, iso, survey, out, lod))
         running.append(pool.submit(export_port_flight, iso, survey, out, lod))
@@ -268,4 +326,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if sys.argv[1:] == ["--worker"]:
+        worker()
+    else:
+        main()

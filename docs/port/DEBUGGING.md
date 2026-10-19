@@ -33,10 +33,16 @@ paused or slowed, a line at the top of the picture says so and names the keys
 that undo it; a screenshot says where it went.
 
 The same keys are menus. On Windows and Linux a bar along the window's top
-has View, Sound and Developer, with a tick beside what is on; Alt by itself
+has View, Graphics, Sound and Developer, with a tick beside what is on
+(Graphics lists the picture's settings with their values; a click moves one
+to its next value, and the menu stays open); Alt by itself
 hides it and shows it again, and View > "Hide these menus" hides it (the
 `menu_bar` setting keeps the choice). On macOS the system's menu bar has
-those menus instead; `OPENRAC_MENU_BAR=1` shows the in-window bar there too.
+View, Sound and Developer instead (the game's own Video options page has the
+picture's settings there); `OPENRAC_MENU_BAR=1` shows the in-window bar too.
+On Android they are a drawer that slides in from the left (docs/port/ANDROID.md);
+`OPENRAC_DRAWER=1` puts it in place of the bar elsewhere, opened with the
+on-screen pad's options button or Back.
 
 F1, F2, F9, F10 and F11 keep their meanings (the level menu of developer
 mode, the frame counter, volume, fullscreen). Escape pauses, as Start does;
@@ -245,6 +251,8 @@ section tree follows OpenGOAL's frame profiler.
 | `OPENRAC_OVERLAY` | `1`, or a list of `frame`, `renderer`, `memory`, `mobys`, `game`, `shaders`, `all`, `inspect`, `labels`, `memview`, `wireframe` | Shows the overlay from the start (`0`: not). The section names open those sections; `inspect` selects the hero and opens the moby inspector, `labels` names the mobys in the picture, `memview` opens the memory viewer, `wireframe` draws the frame in lines. | `port/game/common/debug_overlay.cpp` |
 | `OPENRAC_OVERLAY_SHOT` | `N:PREFIX` | With the overlay shown: every `N` ticks, the window with the overlay to `PREFIX<tick>.png`, from `OPENRAC_SHOT_FROM` on; while paused one more, `PREFIX<tick>_held.png`. (`OPENRAC_SHOT` writes the game's frame without the overlay.) | `port/game/common/debug_overlay.cpp` |
 | `OPENRAC_KEYS` | `FRAME[+HELD]:KEY,...` | Keys and clicks by script, put in the window's event queue at those window frames, as `OPENRAC_PRESS` presses pad buttons. `KEY` is SDL's name of a key (`F3`, `F5`, `Return`) or `click@X,Y`, a left click at that place of the window (in the window's own units, not pixels). `+HELD`: that many pictures later while the game is paused at `FRAME`, where frames do not count. An event is read on the frame after it was put. | `port/game/common/debug_overlay.cpp` |
+| `OPENRAC_GL_API` | `es`, `desktop` | The kind of OpenGL context: `es` asks for OpenGL ES 3.2, what Android draws with (the default there), and runs the renderer's ES path on a desktop driver; `desktop` the 4.1 core profile (the default elsewhere). | `port/platform/window.cpp` |
+| `OPENRAC_GL_HIDE_EXTENSIONS` | `NAME,...` | The renderer acts as if the driver lacked these GL extensions, to try the fallbacks a phone's driver needs on one that has them (`GL_NV_shader_noperspective_interpolation`, `GL_EXT_clip_cull_distance`). | `port/renderer/gl.cpp` |
 | `OPENRAC_HIDE_PASSES` | `NAME,...` | The renderer's passes of those names are not drawn: the names of the Renderer section's rows (`sky`, `terrain`, `ties`, `shrubs`, `mobys`, `effects`, `hud`). | `port/game/common/debug_overlay.cpp` |
 | `OPENRAC_DEBUG_DUMP` | `FILE` | The frame dump, as `--debug-dump FILE`. | `port/game/common/main.cpp` |
 | `OPENRAC_PAUSE_AT` | `TICK[:FRAMES]` | Pauses the game at that window frame; with `FRAMES`, goes on by itself after that many held pictures. | `port/game/common/debug_overlay.cpp` |

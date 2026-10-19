@@ -9,6 +9,9 @@ Steps (all of them when none is named):
   --extract    copy the disc's files into PROJ/iso_data/GAME/ and keep the image
                there too: Ratchet & Clank reads most of its data by sector, not
                by file, so the image is linked (copied across file systems)
+  --boot-only  with --extract: write out only SYSTEM.CNF and the boot executable,
+               which is all the port reads beside the image; every file is still
+               read and checked. Gigabytes less to write (the Android launcher's)
   --validate   refuse the image unless its boot executable is a build OpenRAC
                knows (games/GAME/game.json: serial, size and SHA-1), as
                OpenGOAL's --validate does; implied by --extract
@@ -170,8 +173,9 @@ def link_or_copy(source: Path, dest: Path) -> str:
         return "copied"
 
 
-def extract(image: Path, game: str, proj: Path, minimum: int = MIN_IMAGE_SIZE) -> dict:
-    """Extract and validate IMAGE into PROJ/iso_data/GAME; returns the build info written."""
+def extract(image: Path, game: str, proj: Path, minimum: int = MIN_IMAGE_SIZE, boot_only: bool = False) -> dict:
+    """Extract and validate IMAGE into PROJ/iso_data/GAME; returns the build info written.
+    BOOT_ONLY: of the disc's files only SYSTEM.CNF and the boot executable are written."""
     check_image_file(image, minimum)
     entries = files_of(image)
     serial = openrac.boot_serial(image)
@@ -185,20 +189,23 @@ def extract(image: Path, game: str, proj: Path, minimum: int = MIN_IMAGE_SIZE) -
     hashes: dict[str, str] = {}
     with open(image, "rb") as f:
         for path, lba, size in entries:
+            keep = not boot_only or path in (serial, "SYSTEM.CNF")
             dest = temp / path
-            dest.parent.mkdir(parents=True, exist_ok=True)
+            if keep:
+                dest.parent.mkdir(parents=True, exist_ok=True)
             f.seek(lba * SECTOR)
             h, left = hashlib.sha1(), size
-            with open(dest, "wb") as out:
+            with open(dest, "wb") if keep else open(os.devnull, "wb") as out:
                 while left:
-                    block = f.read(min(left, 1 << 22))
+                    block = f.read(min(left, 1 << 23))
                     if not block:
                         raise ExtractError(4020, f"{path} runs past the end of the image")
-                    out.write(block)
+                    if keep:
+                        out.write(block)
                     h.update(block)
                     left -= len(block)
             hashes[path] = h.hexdigest()
-            print(f"  {path}: {size} bytes")
+            print(f"  {path}: {size} bytes{'' if keep else ', checked'}")
 
     try:
         boot = temp / serial if serial else None
@@ -241,6 +248,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("-g", "--game", required=True, choices=sorted({g["id"] for g in openrac.games()}))
     parser.add_argument("--proj-path", type=Path, default=openrac.ROOT / "build" / "port")
     parser.add_argument("-e", "--extract", action="store_true")
+    parser.add_argument("--boot-only", action="store_true")
     parser.add_argument("-v", "--validate", action="store_true")
     parser.add_argument("-d", "--decompile", action="store_true")
     parser.add_argument("-c", "--compile", action="store_true")
@@ -248,7 +256,7 @@ def main(argv: list[str] | None = None) -> int:
     every = not (args.extract or args.validate or args.decompile or args.compile)
     try:
         if every or args.extract or args.validate:
-            extract(args.image.resolve(), args.game, args.proj_path.resolve())
+            extract(args.image.resolve(), args.game, args.proj_path.resolve(), boot_only=args.boot_only)
         if every or args.decompile:
             not_yet("decompile")
         if every or args.compile:

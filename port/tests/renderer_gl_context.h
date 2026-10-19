@@ -55,6 +55,8 @@ public:
         return true;
     }
 
+    platform::Window& window() { return *m_window; }
+
 private:
     std::unique_ptr<platform::Platform> m_sdl;
     std::unique_ptr<platform::Window> m_window;  // destroyed before m_sdl

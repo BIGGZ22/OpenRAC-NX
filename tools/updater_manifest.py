@@ -37,8 +37,11 @@ def generate_manifest(
     repo: str = "OpenRAC/OpenRAC",
     notes: str = "",
     pub_date: Optional[str] = None,
+    version: Optional[str] = None,
 ) -> Dict[str, Any]:
-    clean_version = tag.removeprefix("launcher-v").removeprefix("v")
+    # A release's version is its tag's; a development build's (the rolling launcher-dev-* release
+    # of a branch) is given, since its tag stays the same from build to build.
+    clean_version = version or tag.removeprefix("launcher-v").removeprefix("v")
     if not pub_date:
         pub_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -60,7 +63,10 @@ def generate_manifest(
             rel = os.path.relpath(sig_path, artifacts_dir).lower()
             name = f.lower()
 
-            if "darwin" in rel or "macos" in rel or ".dmg" in rel or ".app.tar.gz" in rel or "macos" in name or "darwin" in name:
+            # The Android launcher's APK: its own updater reads this entry (launcher/core/src/update.rs).
+            if name.endswith(".apk.sig"):
+                platforms["android-aarch64"] = {"signature": sig_content, "url": asset_url}
+            elif "darwin" in rel or "macos" in rel or ".dmg" in rel or ".app.tar.gz" in rel or "macos" in name or "darwin" in name:
                 platforms["darwin-aarch64-app"] = {"signature": sig_content, "url": asset_url}
                 platforms["darwin-x86_64-app"] = {"signature": sig_content, "url": asset_url}
             elif "windows" in rel or ".exe" in rel or ".msi" in rel or "nsis" in rel or "setup" in rel or "windows" in name or ".exe" in name or ".msi" in name:
@@ -86,10 +92,11 @@ def main():
     parser.add_argument("--tag", required=True, help="GitHub release tag (e.g. launcher-v0.5.0)")
     parser.add_argument("--repo", default="OpenRAC/OpenRAC", help="GitHub repo (default: OpenRAC/OpenRAC)")
     parser.add_argument("--notes", default="", help="Release notes")
+    parser.add_argument("--version", default=None, help="The launcher's version, when the tag does not say it")
     parser.add_argument("--output", default="latest.json", help="Output path (default: latest.json)")
     args = parser.parse_args()
 
-    manifest = generate_manifest(args.artifacts_dir, args.tag, args.repo, args.notes)
+    manifest = generate_manifest(args.artifacts_dir, args.tag, args.repo, args.notes, version=args.version)
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
     print(f"Wrote updater manifest with {len(manifest['platforms'])} platform(s) to {args.output}")

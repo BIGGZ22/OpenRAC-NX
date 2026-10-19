@@ -2,24 +2,49 @@
 # editor's, the generated tables, and each game's toolchain-free checks as
 # its original repository ran them. Game builds need your own disc and
 # proprietary compilers, so they run on contributors' machines.
+#
+# Every action is pinned to a commit (Dependabot, .github/dependabot.yml,
+# moves the pins); the port's compiles are cached with ccache.
 name: checks
 
 on:
   push:
     branches: [master]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+# A newer push to a pull request stops the older run; master's runs all finish.
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   checks:
     runs-on: ubuntu-26.04
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
+
+      # The workflows themselves: actionlint at a fixed version, checked against its SHA-256.
+      - name: Workflows
+        env:
+          ACTIONLINT_VERSION: "1.7.12"
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          archive="$RUNNER_TEMP/actionlint.tar.gz"
+          curl -sSfL -o "$archive" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "$ACTIONLINT_SHA256  $archive" | sha256sum -c -
+          tar -xzf "$archive" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -shellcheck=
 
       - name: OpenRAC tools
         run: python -m unittest discover -s tools -v
@@ -65,27 +90,34 @@ jobs:
           python -m unittest discover -s tests -v
           python tools/check_repository.py
 
-  # The desktop launcher (launcher/): its UI checks, and its Rust side, whose
-  # tests also check launcher/actions.json against games/*/game.json.
+  # The desktop launcher (launcher/): its UI checks, and its Rust side, whose tests also check
+  # launcher/actions.json against games/*/game.json. On Windows too, where paths join with
+  # backslashes, files are checked out with CRLF and the Unix-only tests are left out.
   launcher:
-    runs-on: ubuntu-26.04
+    name: launcher (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-26.04, windows-latest]
     defaults:
       run:
+        shell: bash
         working-directory: launcher
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: "22"
-      - name: Yarn (the version package.json names, through Corepack)
-        run: corepack enable
-      - uses: dtolnay/rust-toolchain@stable
+          persist-credentials: false
+      - uses: ./.github/actions/launcher-toolchain
         with:
+          cache-key: checks-launcher-${{ matrix.os }}
           components: clippy, rustfmt
       - name: Tauri's system libraries
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev
 
       - name: UI (svelte-check, ESLint, Prettier, Vitest)
         run: |
@@ -93,38 +125,8 @@ jobs:
           yarn verify
 
       - name: Rust format
+        if: runner.os == 'Linux'
         run: cargo fmt --all --check
-
-      - name: Rust tests (the logic, and actions.json against the checkout)
-        run: cargo test -p openrac-launcher-core
-
-      - name: Rust lints (the whole app)
-        run: |
-          yarn build
-          cargo clippy --workspace --all-targets -- -D warnings
-
-  # The same checks on Windows, where paths join with backslashes, files are
-  # checked out with CRLF and the Unix-only tests are left out.
-  launcher-windows:
-    runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: launcher
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "22"
-      - name: Yarn (the version package.json names, through Corepack)
-        run: corepack enable
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
-
-      - name: UI (svelte-check, ESLint, Prettier, Vitest)
-        run: |
-          yarn install --immutable
-          yarn verify
 
       - name: Rust tests (the logic, and actions.json against the checkout)
         run: cargo test -p openrac-launcher-core
@@ -139,17 +141,25 @@ jobs:
   # software renderer. The rac1 program is built from games/rac1's C.
   port:
     runs-on: ubuntu-26.04
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
+      - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+        with:
+          key: checks-port
+          max-size: 1G
       - name: Compilers and SDL's system libraries
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang ninja-build libgl1-mesa-dev libegl1-mesa-dev libgl1-mesa-dri \
+          sudo apt-get install -y --no-install-recommends clang ninja-build libgl1-mesa-dev libegl1-mesa-dev libgl1-mesa-dri \
             libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxss-dev \
-            libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev
+            libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev \
+            mesa-vulkan-drivers vulkan-validationlayers
 
       - name: hostgen
         run: python -m unittest discover -s port/tools/hostgen -v
@@ -172,14 +182,17 @@ jobs:
   port-fedora:
     runs-on: ubuntu-26.04
     container: registry.fedoraproject.org/fedora:44
+    timeout-minutes: 60
     steps:
       - name: Compilers and SDL3
         run: |
           dnf install -y --setopt=install_weak_deps=False git clang cmake ninja-build python3 \
             SDL3-devel mesa-libGL-devel mesa-libEGL-devel mesa-dri-drivers \
             libX11-devel libXext-devel libXrandr-devel libXcursor-devel libXi-devel libXScrnSaver-devel \
-            wayland-devel libxkbcommon-devel alsa-lib-devel pulseaudio-libs-devel
-      - uses: actions/checkout@v6
+            wayland-devel libxkbcommon-devel alsa-lib-devel pulseaudio-libs-devel mesa-vulkan-drivers
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Build openrac-rac1-pal as the launcher builds it
         run: python3 tools/build_port.py rac1-pal
@@ -210,32 +223,21 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 60
     env:
-      LLVM_VERSION: "21.1.4"
-      LLVM_SHA256: 8e39f8051cd10a163c1fab304f16d8e16a9c0f5e94b59d08853bbab630bd65dd
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
 
-      # The runner's own Clang may be older than Visual Studio's C++ library
-      # accepts, so LLVM's release is fetched at a fixed version and checked
-      # against its SHA-256. Its installer is unpacked, not run: nothing is
-      # installed over what the runner has.
-      - name: Clang
-        shell: pwsh
-        run: |
-          $ProgressPreference = "SilentlyContinue"
-          $installer = Join-Path $env:RUNNER_TEMP "llvm.exe"
-          $release = "https://github.com/llvm/llvm-project/releases/download"
-          Invoke-WebRequest "$release/llvmorg-${env:LLVM_VERSION}/LLVM-${env:LLVM_VERSION}-win64.exe" -OutFile $installer
-          $sha256 = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()
-          if ($sha256 -ne $env:LLVM_SHA256) { throw "LLVM ${env:LLVM_VERSION}: its SHA-256 is $sha256" }
-          $llvm = Join-Path $env:RUNNER_TEMP "llvm"
-          7z x $installer "-o$llvm" -y | Out-Null
-          if ($LASTEXITCODE -ne 0) { throw "7z could not unpack LLVM's installer" }
-          "OPENRAC_CLANG=$llvm\bin\clang.exe" >> $env:GITHUB_ENV
-          "$llvm\bin" >> $env:GITHUB_PATH
+      - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+        with:
+          key: checks-port-windows
+          max-size: 1G
+      - uses: ./.github/actions/clang-windows
 
       - name: Build openrac-rac1-pal and the runtime's tests
         run: python tools/build_port.py rac1-pal --target runtime_test

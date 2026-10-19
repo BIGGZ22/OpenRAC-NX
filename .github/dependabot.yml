@@ -1,0 +1,13 @@
+# Moves the commits the workflows' actions are pinned to (and the version comment beside each),
+# as one pull request a week.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories: ["/", "/.github/actions/*"]
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

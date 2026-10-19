@@ -449,6 +449,24 @@ std::vector<std::uint8_t> reinterpret(
     int to_height,
     std::uint32_t to_bw
 ) {
+    return reinterpret_at(data, from_psm, 0, 0, from_width, from_height, from_bw, 0, to_psm, to_width, to_height,
+                          to_bw);
+}
+
+std::vector<std::uint8_t> reinterpret_at(
+    std::span<const std::uint8_t> data,
+    std::uint8_t from_psm,
+    int from_x,
+    int from_y,
+    int from_width,
+    int from_height,
+    std::uint32_t from_bw,
+    std::uint32_t to_block,
+    std::uint8_t to_psm,
+    int to_width,
+    int to_height,
+    std::uint32_t to_bw
+) {
     const std::uint8_t from_layout = layout_of(from_psm);
     const std::uint8_t to_layout = layout_of(to_psm);
     const int from_nibbles = stored_nibbles(from_psm);
@@ -460,12 +478,12 @@ std::vector<std::uint8_t> reinterpret(
     std::uint64_t end = 0;
     for (int y = 0; y < from_height; ++y) {
         for (int x = 0; x < from_width; ++x) {
-            end = std::max(end, swizzle::nibble_address(from_layout, x, y, 0, from_bw) + 8);
+            end = std::max(end, swizzle::nibble_address(from_layout, x + from_x, y + from_y, 0, from_bw) + 8);
         }
     }
     for (int y = 0; y < to_height; ++y) {
         for (int x = 0; x < to_width; ++x) {
-            end = std::max(end, swizzle::nibble_address(to_layout, x, y, 0, to_bw) + 8);
+            end = std::max(end, swizzle::nibble_address(to_layout, x, y, to_block, to_bw) + 8);
         }
     }
     std::vector<std::uint8_t> scratch(static_cast<std::size_t>((end + 1) / 2));
@@ -474,7 +492,7 @@ std::vector<std::uint8_t> reinterpret(
     for (int y = 0; y < from_height; ++y) {
         for (int x = 0; x < from_width; ++x) {
             const std::uint64_t at =
-                swizzle::nibble_address(from_layout, x, y, 0, from_bw) + from_high;
+                swizzle::nibble_address(from_layout, x + from_x, y + from_y, 0, from_bw) + from_high;
             const auto source = static_cast<std::uint64_t>(y * from_width + x)
                                 * static_cast<std::uint64_t>(from_raster);
             for (int n = 0; n < from_nibbles; ++n) {
@@ -496,7 +514,7 @@ std::vector<std::uint8_t> reinterpret(
     );
     for (int y = 0; y < to_height; ++y) {
         for (int x = 0; x < to_width; ++x) {
-            const std::uint64_t at = swizzle::nibble_address(to_layout, x, y, 0, to_bw) + to_high;
+            const std::uint64_t at = swizzle::nibble_address(to_layout, x, y, to_block, to_bw) + to_high;
             const auto dest = static_cast<std::uint64_t>(y * to_width + x)
                               * static_cast<std::uint64_t>(to_raster);
             for (int n = 0; n < to_nibbles; ++n) {

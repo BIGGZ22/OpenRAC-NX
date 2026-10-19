@@ -50,13 +50,43 @@ endfunction()
 add_library(openrac_platform STATIC
   platform/audio.cpp
   platform/clock.cpp
+  platform/gpu_driver.cpp
   platform/input.cpp
   platform/pad.cpp
+  platform/performance_hint.cpp
   platform/pump.cpp
+  platform/touch_pad.cpp
   platform/window.cpp
 )
 target_link_libraries(openrac_platform PUBLIC openrac_common openrac_sdl3)
 openrac_warnings(openrac_platform)
+# Android: the player's own GPU driver package (platform/gpu_driver.h, cmake/Android.cmake).
+if(ANDROID)
+  target_sources(openrac_platform PRIVATE android/gpu_driver.cpp)
+  if(TARGET adrenotools)
+    target_link_libraries(openrac_platform PRIVATE adrenotools)
+    target_compile_definitions(openrac_platform PRIVATE OPENRAC_ADRENOTOOLS=1)
+  endif()
+endif()
+# The Vulkan renderer: renderer/gl.h carried out with Vulkan (renderer/vulkan/vkgl.h), which the
+# window opens for OPENRAC_GL_API=vulkan.
+if(OPENRAC_VULKAN)
+  add_library(openrac_vkgl STATIC
+    renderer/vulkan/shader_compiler.cpp
+    renderer/vulkan/vkgl.cpp
+    renderer/vulkan/vma.cpp
+  )
+  target_link_libraries(openrac_vkgl PUBLIC openrac_common openrac_sdl3 openrac_vulkan PRIVATE openrac_glslang)
+  openrac_warnings(openrac_vkgl)
+  # Vulkan's structures are written {VK_STRUCTURE_TYPE_...}, the rest zero.
+  if(NOT MSVC OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(openrac_vkgl PRIVATE -Wno-missing-field-initializers)
+  endif()
+  # The allocator's own source is not ours to keep warning-free.
+  set_source_files_properties(renderer/vulkan/vma.cpp PROPERTIES COMPILE_OPTIONS "$<IF:$<CXX_COMPILER_ID:MSVC>,/w,-w>")
+  target_link_libraries(openrac_platform PRIVATE openrac_vkgl)
+  target_compile_definitions(openrac_platform PRIVATE OPENRAC_VULKAN=1)
+endif()
 # macOS: the menu bar's name and menus (platform/macos_app.mm).
 if(APPLE)
   target_sources(openrac_platform PRIVATE platform/macos_app.mm)
@@ -148,6 +178,25 @@ openrac_warnings(platform_test)
 add_test(NAME platform COMMAND platform_test)
 set_tests_properties(platform PROPERTIES ENVIRONMENT "SDL_AUDIO_DRIVER=dummy")
 
+add_executable(touch_pad_test tests/touch_pad_test.cpp)
+target_link_libraries(touch_pad_test PRIVATE openrac_platform)
+openrac_warnings(touch_pad_test)
+add_test(NAME touch_pad COMMAND touch_pad_test)
+
+add_executable(touch_overlay_test tests/touch_overlay_test.cpp game/common/touch_overlay.cpp)
+target_include_directories(touch_overlay_test PRIVATE game/common)
+target_link_libraries(touch_overlay_test PRIVATE openrac_renderer openrac_platform)
+openrac_warnings(touch_overlay_test)
+add_test(NAME touch_overlay COMMAND touch_overlay_test)
+set_tests_properties(touch_overlay PROPERTIES SKIP_RETURN_CODE 77)
+
+add_executable(imgui_gl_test tests/imgui_gl_test.cpp game/common/imgui_gl.cpp)
+target_include_directories(imgui_gl_test PRIVATE game/common)
+target_link_libraries(imgui_gl_test PRIVATE openrac_renderer openrac_platform openrac_imgui)
+openrac_warnings(imgui_gl_test)
+add_test(NAME imgui_gl COMMAND imgui_gl_test)
+set_tests_properties(imgui_gl PROPERTIES SKIP_RETURN_CODE 77)
+
 add_executable(renderer_texture_test tests/renderer_texture_test.cpp)
 target_link_libraries(renderer_texture_test PRIVATE openrac_renderer)
 openrac_warnings(renderer_texture_test)
@@ -164,8 +213,59 @@ openrac_warnings(renderer_direct_test)
 add_test(NAME renderer_direct COMMAND renderer_direct_test)
 set_tests_properties(renderer_direct PROPERTIES SKIP_RETURN_CODE 77)
 
+add_executable(renderer_shader_test tests/renderer_shader_test.cpp)
+target_link_libraries(renderer_shader_test PRIVATE openrac_viewer_lib openrac_platform)
+# The embedded sources' headers (openrac_embed_shaders) are private to their libraries.
+target_include_directories(renderer_shader_test PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+openrac_warnings(renderer_shader_test)
+add_test(NAME renderer_shader COMMAND renderer_shader_test)
+set_tests_properties(renderer_shader PROPERTIES SKIP_RETURN_CODE 77)
+
 add_executable(viewer_test tests/viewer_test.cpp)
 target_link_libraries(viewer_test PRIVATE openrac_viewer_lib openrac_platform)
 openrac_warnings(viewer_test)
 add_test(NAME viewer COMMAND viewer_test "${CMAKE_CURRENT_BINARY_DIR}/viewer_test_level")
 set_tests_properties(viewer PROPERTIES SKIP_RETURN_CODE 77)
+
+# The tests that draw, again on an OpenGL ES 3.2 context (OPENRAC_GL_API=es: what Android draws
+# with, docs/port/ANDROID.md), through the system driver's ES support (Mesa's in CI): the loader's
+# stand-ins and every shader's GLSL ES form are checked without a phone.
+add_test(NAME renderer_direct_es COMMAND renderer_direct_test)
+add_test(NAME renderer_shader_es COMMAND renderer_shader_test)
+add_test(NAME touch_overlay_es COMMAND touch_overlay_test)
+add_test(NAME imgui_gl_es COMMAND imgui_gl_test)
+add_test(NAME viewer_es COMMAND viewer_test "${CMAKE_CURRENT_BINARY_DIR}/viewer_test_level_es")
+set(openrac_es_tests renderer_direct_es renderer_shader_es touch_overlay_es imgui_gl_es viewer_es)
+if(TARGET world_gl_smoke_test)
+  add_test(NAME world_gl_smoke_es COMMAND world_gl_smoke_test)
+  list(APPEND openrac_es_tests world_gl_smoke_es)
+endif()
+set_tests_properties(${openrac_es_tests} PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT "OPENRAC_GL_API=es")
+# And as on a driver without the two extensions the shaders use where they can (Mali's lack clip
+# distances, some lack noperspective): the fallbacks of renderer/shader.h's es_source.
+add_test(NAME renderer_shader_es_bare COMMAND renderer_shader_test)
+set(openrac_es_bare_tests renderer_shader_es_bare)
+if(TARGET world_gl_smoke_test)
+  add_test(NAME world_gl_smoke_es_bare COMMAND world_gl_smoke_test)
+  list(APPEND openrac_es_bare_tests world_gl_smoke_es_bare)
+endif()
+set_tests_properties(${openrac_es_bare_tests} PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+  "OPENRAC_GL_API=es;OPENRAC_GL_HIDE_EXTENSIONS=GL_NV_shader_noperspective_interpolation,GL_EXT_clip_cull_distance")
+# And on the Vulkan renderer (renderer/vulkan/vkgl.h), with the validation layer where it is
+# installed: every GL call the renderers make, carried out on Vulkan (Mesa's lavapipe in CI). Where
+# Vulkan cannot open, the window falls back to OpenGL and these repeat the tests above.
+if(OPENRAC_VULKAN)
+  add_test(NAME renderer_direct_vulkan COMMAND renderer_direct_test)
+  add_test(NAME renderer_shader_vulkan COMMAND renderer_shader_test)
+  add_test(NAME touch_overlay_vulkan COMMAND touch_overlay_test)
+  add_test(NAME imgui_gl_vulkan COMMAND imgui_gl_test)
+  add_test(NAME viewer_vulkan COMMAND viewer_test "${CMAKE_CURRENT_BINARY_DIR}/viewer_test_level_vulkan")
+  set(openrac_vulkan_tests renderer_direct_vulkan renderer_shader_vulkan touch_overlay_vulkan imgui_gl_vulkan
+      viewer_vulkan)
+  if(TARGET world_gl_smoke_test)
+    add_test(NAME world_gl_smoke_vulkan COMMAND world_gl_smoke_test)
+    list(APPEND openrac_vulkan_tests world_gl_smoke_vulkan)
+  endif()
+  set_tests_properties(${openrac_vulkan_tests} PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+    "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+endif()

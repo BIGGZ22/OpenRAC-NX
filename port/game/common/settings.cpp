@@ -257,7 +257,11 @@ void save() {
     }
     std::error_code made;
     std::filesystem::create_directories(g_file.parent_path(), made);
-    std::ofstream out(g_file, std::ios::trunc);
+    // Through a file beside it, then over the old one: a stop mid-write (Android ends a game in
+    // the background) leaves the settings as they were, not an empty file.
+    std::filesystem::path written = g_file;
+    written += ".new";
+    std::ofstream out(written, std::ios::trunc);
     if (!out) {
         log::warn("the settings could not be written to {}", g_file.string());
         return;
@@ -291,6 +295,15 @@ void save() {
         << "volume = " << s.volume << "\n";
     if (s.verbose_log) {
         out << "verbose_log = 1\n";
+    }
+    out.close();
+    std::error_code moved;
+    if (!out.fail()) {
+        std::filesystem::rename(written, g_file, moved);
+    }
+    if (out.fail() || moved) {
+        log::warn("the settings could not be written to {}", g_file.string());
+        std::filesystem::remove(written, moved);
     }
 }
 

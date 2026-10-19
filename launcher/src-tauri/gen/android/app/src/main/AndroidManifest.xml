@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- A game's set-up goes on with the launcher in the background, its status in a notification
+         (SetupService.kt). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- The launcher installs its own updates, the APK of a release (OpenracPlugin.installApk). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!-- The game draws with OpenGL ES 3.2 (docs/port/ANDROID.md). -->
+    <uses-feature android:glEsVersion="0x00030002" android:required="true" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.gamepad" android:required="false" />
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+
+    <!-- AndroidTV support -->
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+
+    <!-- A game, for the system's game features and the vendors' game overlays and launchers
+         (Game Dashboard, Game Booster, Game Turbo and the like), which list an app by its
+         category; isGame is the older flag some of them still read. -->
+    <application
+        android:appCategory="game"
+        android:isGame="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.openrac_launcher"
+        android:usesCleartextTraffic="${usesCleartextTraffic}">
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+            android:launchMode="singleTask"
+            android:label="@string/main_activity_title"
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <!-- AndroidTV support -->
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- The game: SDL's activity around libopenrac-<id>.so, in a process of its own so that
+             each play starts the game afresh and a crash leaves the launcher standing, and in a
+             task of its own: the game and the launcher are two windows in Recents, and the game
+             goes on while the launcher is in front. It takes every change of the system's
+             settings itself (configChanges): one Android restarted it for (the font or display
+             size, changed while it ran) started the game afresh. -->
+        <activity
+            android:name="dev.openrac.game.GameActivity"
+            android:process=":game"
+            android:taskAffinity="dev.openrac.launcher.game"
+            android:autoRemoveFromRecents="true"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:launchMode="singleTask"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation|density|fontScale|fontWeightAdjustment|grammaticalGender|colorMode|touchscreen|mcc|mnc"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+            android:preferMinimalPostProcessing="true" />
+
+        <service
+            android:name=".SetupService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <receiver
+            android:name=".UpdateReceiver"
+            android:exported="false" />
+
+        <provider
+          android:name="androidx.core.content.FileProvider"
+          android:authorities="${applicationId}.fileprovider"
+          android:exported="false"
+          android:grantUriPermissions="true">
+          <meta-data
+            android:name="android.support.FILE_PROVIDER_PATHS"
+            android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+</manifest>

@@ -22,6 +22,10 @@ class TestUpdaterManifest(unittest.TestCase):
             with open(linux_arm_sig, "w", encoding="utf-8") as f:
                 f.write("mock_linux_arm_sig\n")
 
+            apk_sig = os.path.join(tmpdir, "OpenRAC.Launcher_0.5.0_android-arm64.apk.sig")
+            with open(apk_sig, "w", encoding="utf-8") as f:
+                f.write("mock_apk_sig\n")
+
             manifest = generate_manifest(tmpdir, "launcher-v0.5.0", pub_date="2026-10-16T12:00:00Z")
             self.assertEqual(manifest["version"], "0.5.0")
             self.assertEqual(manifest["pub_date"], "2026-10-16T12:00:00Z")
@@ -33,7 +37,24 @@ class TestUpdaterManifest(unittest.TestCase):
             self.assertIn("linux-aarch64-appimage", manifest["platforms"])
             self.assertEqual(manifest["platforms"]["linux-aarch64-appimage"]["signature"], "mock_linux_arm_sig")
             self.assertTrue("OpenRAC.Launcher" in manifest["platforms"]["linux-aarch64-appimage"]["url"])
+            self.assertEqual(manifest["platforms"]["android-aarch64"]["signature"], "mock_apk_sig")
+            self.assertTrue(manifest["platforms"]["android-aarch64"]["url"].endswith("_android-arm64.apk"))
+            self.assertNotIn("darwin-aarch64-app", manifest["platforms"])
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestDevelopmentManifest(unittest.TestCase):
+    def test_a_rolling_release_gives_its_version(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with open(os.path.join(tmpdir, "OpenRAC.Launcher_0.5.0-dev.42_android-arm64.apk.sig"), "w",
+                      encoding="utf-8") as f:
+                f.write("sig\n")
+            manifest = generate_manifest(tmpdir, "launcher-dev-feature-x", repo="someone/OpenRAC",
+                                         version="0.5.0-dev.42")
+            self.assertEqual(manifest["version"], "0.5.0-dev.42")
+            self.assertEqual(manifest["platforms"]["android-aarch64"]["url"],
+                             "https://github.com/someone/OpenRAC/releases/download/launcher-dev-feature-x/"
+                             "OpenRAC.Launcher_0.5.0-dev.42_android-arm64.apk")

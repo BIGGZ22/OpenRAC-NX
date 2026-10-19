@@ -58,8 +58,11 @@ OpenGOAL's flow, step for step ([docs/INTEGRATION.md](docs/INTEGRATION.md#settin
    `SYSTEM.CNF` names, whatever the file is called
    ([core/src/discs.rs](core/src/discs.rs)), and sets each playable one up
    without further questions. The folder can be changed in Settings; a game's
-   own **Set up from your disc** still asks for a single image (`.iso`) when
-   the folder holds none.
+   own **Set up from your disc** still asks for a single image (`.iso`, or a
+   `.chd` made with `chdman createdvd`) when the folder holds none. The
+   extractor and the game read a plain image by sector, so a `.chd` is
+   unpacked once into `<install>/discs/<name>.iso` first
+   ([core/src/chd.rs](core/src/chd.rs)).
 2. The launcher runs OpenRAC's extractor ([tools/extractor.py](../tools/extractor.py))
    as a job: it copies the disc's files into the install folder and checks
    the boot executable against the builds OpenRAC knows

@@ -24,26 +24,6 @@ namespace openrac::frontend::options_menu {
 
 namespace {
 
-// ---- The rows: one per setting, whatever game shows them ----
-
-enum Row {
-    kDisplayMode,
-    kMonitor,
-    kResolution,
-    kAspect,
-    kHud,
-    kRenderScale,
-    kMsaa,
-    kAnisotropy,
-    kVSync,
-    kFrameRate,
-    kFrameCap,
-    kShowFps,
-    kMuteUnfocused,
-    kSkipCutscenes,
-    kStrafe,
-    kRows
-};
 constexpr const char* kLabels[kRows] = {
     "Display mode", "Monitor",   "Resolution", "Picture",       "HUD",           "Render scale", "Anti-aliasing",
     "Texture filter", "VSync",   "Frame rate", "Frame cap",     "Frame counter", "Mute in background",
@@ -688,6 +668,18 @@ const openrac_front_end* front_end() {
 }
 
 }  // namespace
+
+const char* label(int row) {
+    return row >= 0 && row < kRows ? kLabels[row] : "";
+}
+
+std::string value(int row) {
+    return value_of(row);
+}
+
+void step(int row, int by) {
+    step_value(row, by);
+}
 
 bool update(int loaded_overlay) {
     const openrac_front_end* fe = front_end();

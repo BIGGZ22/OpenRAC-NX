@@ -37,6 +37,22 @@ layout(location = 0) out vec4 out_colour;
 const vec3 kSun = vec3(0.36, 0.48, 0.80);
 
 void main() {
+#ifdef OPENRAC_SOLID
+    // The opaque pass of the materials without a cutout (the static layers': terrain, ties,
+    // shrubs), what the general shader does for them, with no discard anywhere in the program: a
+    // tiled GPU then keeps its early depth test for these draws (Adreno's LRZ, Mali's forward pixel
+    // kill), which a shader that may discard turns off, so that hidden surfaces cost no shading.
+    vec4 c = texture(tex_T0, v_uv) * v_colour * material_colour;
+    float light = 1.0;
+    if (lighting != 0 && v_lit == 0) {
+        light = 0.55 + 0.45 * abs(dot(normalize(v_normal), kSun));
+    }
+    vec3 rgb = min(c.rgb * light, vec3(1.0));
+    if (fog_colour.w > 0.5) {
+        rgb = mix(fog_colour.rgb, rgb, v_fog);
+    }
+    out_colour = vec4(rgb, 1.0);
+#else
     if (metal_pass != 0) {
         vec4 m = texture(tex_T0, v_uv) * v_colour;
         vec3 mrgb = min(m.rgb, vec3(1.0));
@@ -77,4 +93,5 @@ void main() {
         rgb = mix(fog_colour.rgb, rgb, v_fog);
     }
     out_colour = vec4(rgb, v_glow != 0 || translucent_pass != 0 ? clamp(c.a, 0.0, 1.0) : 1.0);
+#endif
 }

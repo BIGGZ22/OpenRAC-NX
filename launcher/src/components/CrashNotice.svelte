@@ -3,7 +3,7 @@
   // report, or save it as a .zip to attach) and where to send it. The port's own words (the
   // fault, the exit status, the last lines) wait under Details.
   import Icon from "$components/Icon.svelte";
-  import { api } from "$lib/api";
+  import { api, onAndroid } from "$lib/api";
   import { app, dismissStopped, guard, toast } from "$lib/app.svelte";
   import { DISCORD_URL, ISSUES_URL } from "$lib/links";
   import { place, stopText, type StopNotice } from "$lib/reports";
@@ -68,13 +68,15 @@
     <button onclick={() => void save()} disabled={saving}>
       {#if saving}<span class="spinner"></span>{:else}<Icon name="save" size={16} />{/if}Save report
     </button>
-    <button
-      class="ghost"
-      onclick={() => void guard(api.openReportsFolder(notice.game, !!crash))}
-      title="The folder the game's logs and crash reports are in"
-    >
-      <Icon name="folder" size={16} />Open folder
-    </button>
+    {#if !onAndroid}
+      <button
+        class="ghost"
+        onclick={() => void guard(api.openReportsFolder(notice.game, !!crash))}
+        title="The folder the game's logs and crash reports are in"
+      >
+        <Icon name="folder" size={16} />Open folder
+      </button>
+    {/if}
     <span class="live" aria-live="polite">{copied ? "The report is copied: paste it in your message." : ""}</span>
   </div>
   {#if savedTo}

@@ -23,10 +23,12 @@ The decompilation is never changed; hostgen works on prepared copies under
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
@@ -598,6 +600,44 @@ def boot_frontier(fns, program: Program, roots: list[str]) -> dict:
     return {"roots": roots, "reachable": len(seen), "missing": missing}
 
 
+def _files(path: Path):
+    if path.is_file():
+        yield path
+    elif path.is_dir():
+        yield from (p for p in path.rglob("*") if p.is_file() and "__pycache__" not in p.parts)
+
+
+def inputs_digest(source: Path, config: Path, cfg: dict, options: list[str]) -> str:
+    """A fingerprint of everything hostgen reads: the decompilation's C and tables, the game's
+    configuration, hostgen's own code, the Clang it parses with and the options. Equal
+    fingerprints write the same files, so a build whose generated C is already in place (a CI
+    cache, a second configure) skips the translation."""
+    paths = [source / d for d in sorted(set(cfg["sources"] + cfg["includes"]))]
+    paths += [source / t for t in cfg["symbols"]]
+    for key in ("places", "candidates"):
+        if cfg.get(key):
+            paths.append(source / cfg[key])
+    table = source / cfg["candidates"] if cfg.get("candidates") else None
+    if table and table.is_file():
+        for line in table.read_text().splitlines():
+            if line.strip() and not line.startswith("#"):
+                paths.append(source / line.partition("\t")[2].strip())
+    # The game's own folder and the tables every game shares (port/game/<id>, port/game/common).
+    paths += [config.parent, config.parent.parent / "common", HERE / "include"]
+    paths += sorted(HERE.glob("*.py"))
+    h = hashlib.sha256()
+    for root in paths:
+        for f in sorted(_files(root)):
+            h.update(str(f.relative_to(root) if f != root else f.name).encode() + b"\0")
+            h.update(hashlib.sha256(f.read_bytes()).digest())
+    try:
+        clang = subprocess.run([clangast.clang_binary(), "--version"], capture_output=True, text=True).stdout
+    except (OSError, SystemExit):
+        clang = ""
+    h.update((clang + sys.platform + "\0".join(options)).encode())
+    return h.hexdigest()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--game", type=Path, required=True, help="the game's hostgen.json")
@@ -648,6 +688,15 @@ def main(argv: list[str] | None = None) -> int:
         for name in PROGRAM_FILES:
             print(name)
         return 0
+    # The translation is skipped when what it reads is what it last wrote from.
+    stamp = out / "inputs.sha256"
+    digest = inputs_digest(source, args.game.resolve(), cfg, args.only + ["--allow-unreadable"] * args.allow_unreadable)
+    expected = [generated_name(u) for u in units_of(source, cfg)] + PROGRAM_FILES + ["report.json"]
+    if stamp.is_file() and stamp.read_text().strip() == digest and all((out / f).is_file() for f in expected):
+        if not args.quiet:
+            print(f"hostgen: {out} is up to date")
+        return 0
+    stamp.unlink(missing_ok=True)
     root = out / "prep"
     started = time.time()
     # The port's own C for hand-written assembly first; a decompilation's
@@ -752,6 +801,7 @@ def main(argv: list[str] | None = None) -> int:
               "with all its functions. Fix the declarations named above (--allow-unreadable builds without them).",
               file=sys.stderr)
         return 1
+    stamp.write_text(digest + "\n")
     return 0
 
 

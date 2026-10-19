@@ -1,6 +1,7 @@
 <script lang="ts">
   // The first-run question, at the top of the game page: a player who has set nothing up and named
   // no games folder is asked for one, once; a folder that holds no game OpenRAC knows says so.
+  import { onAndroid } from "$lib/api";
   import { app } from "$lib/app.svelte";
   import { chooseGamesFolder } from "$lib/player.svelte";
   import Icon from "./Icon.svelte";
@@ -21,7 +22,13 @@
   <section class="panel folder">
     <Icon name="folder" size={22} />
     <div class="grow">
-      {#if askFolder}
+      {#if onAndroid}
+        <h2>Add your Ratchet &amp; Clank disc</h2>
+        <p class="muted">
+          Choose the image of your own disc (.iso or .chd) from this device's storage. It is copied into the app, a few
+          GB, and the game is set up from it. OpenRAC never downloads a game.
+        </p>
+      {:else if askFolder}
         <h2>Where are your PlayStation 2 games?</h2>
         <p class="muted">
           Choose the folder with your disc images (.iso). OpenRAC finds the Ratchet &amp; Clank games in it and sets
@@ -36,7 +43,11 @@
       {/if}
     </div>
     <button class="primary" disabled={looking} onclick={() => void choose()}>
-      {#if looking}<span class="spinner"></span>{/if}{askFolder ? "Choose folder" : "Choose another"}
+      {#if looking}<span class="spinner"></span>{/if}{onAndroid
+        ? "Choose disc image"
+        : askFolder
+          ? "Choose folder"
+          : "Choose another"}
     </button>
   </section>
 {/if}

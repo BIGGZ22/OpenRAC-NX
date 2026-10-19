@@ -12,6 +12,10 @@
 #include "common/crash.h"
 #include "common/line_ring.h"
 
+#if defined(__ANDROID__)
+#include <android/log.h>
+#endif
+
 namespace openrac::log {
 namespace {
 
@@ -190,6 +194,15 @@ void write(Level level, std::string_view message) {
     std::fprintf(
         stderr, "[%s] %.*s\n", prefix(level), static_cast<int>(message.size()), message.data()
     );
+#if defined(__ANDROID__)
+    // The game's activity has a stderr that goes nowhere (a windowless program's is read by the
+    // launcher): Android's log (logcat) has it too.
+    const int priority = level == Level::Error  ? ANDROID_LOG_ERROR
+                         : level == Level::Warn ? ANDROID_LOG_WARN
+                         : level == Level::Info ? ANDROID_LOG_INFO
+                                                : ANDROID_LOG_DEBUG;
+    __android_log_print(priority, "OpenRAC", "%.*s", static_cast<int>(message.size()), message.data());
+#endif
     std::string line = "[";
     line += prefix(level);
     line += "] ";

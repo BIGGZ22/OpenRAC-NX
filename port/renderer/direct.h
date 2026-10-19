@@ -34,6 +34,7 @@
 #include <initializer_list>
 #include <span>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "renderer/gs.h"
@@ -291,12 +292,24 @@ private:
     // Off-screen targets ever drawn to (their GS block): a FRAME narrower than the screen, which the
     // game renders a panel into and then draws as a texture.
     std::vector<std::uint32_t> m_offscreen;
+    // What each block's texture was last drawn as, for the log: a texture that stops being drawn
+    // from the pool is what a 2D layer that flickers or goes shows.
+    enum class TextureKind : std::uint8_t { Texture, Missing, Offscreen, Frame };
+    std::unordered_map<std::uint32_t, TextureKind> m_texture_kind;
+    void note_texture_kind(std::uint32_t tbp, std::uint8_t psm, TextureKind kind);
+    // A TEX0 or TEX2 write's CLUT load (CLD), into the pool's copy of the chip's CLUT buffer.
+    void clut_load(const gs::Tex0& t);
+    std::uint32_t m_cbp0 = 0xFFFFFFFFu;  // the chip's CBP0 and CBP1, for CLD 4 and 5
+    std::uint32_t m_cbp1 = 0xFFFFFFFFu;
     // The off-screen target the current context draws into (its block), or 0.
     std::uint32_t offscreen_target() const;
     bool is_offscreen(const gs::Frame& f) const;  // a target that is not one of the frame buffers
     // Whether a texture at `tbp` is a frame buffer or a copy of one; if so, where its texel (0, 0)
     // is in the frame.
     bool frame_source(std::uint32_t tbp, int& x, int& y) const;
+    // A transfer has put a rectangle of `height` lines from line `y` at `dbp`: the off-screen
+    // targets and frame copies in the memory it covers are gone.
+    void overwritten(std::uint32_t dbp, std::uint32_t dbw, std::uint8_t psm, std::uint32_t y, std::uint32_t height);
 
     Context m_context[2];
     gs::Prim m_prim{};

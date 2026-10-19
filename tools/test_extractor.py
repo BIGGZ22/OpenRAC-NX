@@ -52,6 +52,17 @@ class ExtractTests(unittest.TestCase):
         self.assertEqual(info["files"], 3)
         self.assertFalse((self.proj / "iso_data" / "_temp").exists())
 
+    def test_boot_only_writes_what_the_port_reads_and_checks_every_file(self):
+        with mock.patch.object(extractor, "builds", fake_builds(hashlib.sha1(BOOT).hexdigest())):
+            info = extractor.extract(self.iso, "rac9", self.proj, minimum=0, boot_only=True)
+        out = self.proj / "iso_data" / "rac9"
+        self.assertEqual((out / "SCES_999.99").read_bytes(), BOOT)
+        self.assertEqual((out / "SYSTEM.CNF").read_bytes(), CNF)
+        self.assertFalse((out / "IOPRP.IMG").exists())
+        self.assertEqual((out / "disc.iso").read_bytes(), self.iso.read_bytes())
+        self.assertEqual(info["files"], 3)
+        self.assertEqual(info, self.run_extract())  # the same build info as a full extraction
+
     def test_a_second_extraction_replaces_the_first(self):
         self.run_extract()
         (self.proj / "iso_data" / "rac9" / "stale").write_text("x")

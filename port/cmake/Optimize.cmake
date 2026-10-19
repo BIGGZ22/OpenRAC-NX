@@ -11,9 +11,25 @@ if(OPENRAC_PORT_LTO)
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux"
      AND CMAKE_CXX_COMPILER_ID MATCHES "Clang"
      AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_options(-flto=thin)
-    add_link_options(-flto=thin)
-    message(STATUS "ThinLTO: on")
+    # The archives hold LLVM bitcode, which only LLVM's own archiver reads for certain: the
+    # system's ar reads it through a plugin of whatever LLVM binutils was built with, and an
+    # older one than the compiler's aborts (Ubuntu 22.04's LLVM 13 against Clang 19).
+    # Searched here too, not only taken from CMake's compiler checks: a build directory
+    # configured before llvm-ar was installed keeps those checks' answer.
+    string(REGEX MATCH "^[0-9]+" llvm_major "${CMAKE_CXX_COMPILER_VERSION}")
+    get_filename_component(llvm_bin "${CMAKE_CXX_COMPILER}" REALPATH)
+    get_filename_component(llvm_bin "${llvm_bin}" DIRECTORY)
+    find_program(OPENRAC_LLVM_AR NAMES llvm-ar-${llvm_major} llvm-ar HINTS "${llvm_bin}")
+    find_program(OPENRAC_LLVM_RANLIB NAMES llvm-ranlib-${llvm_major} llvm-ranlib HINTS "${llvm_bin}")
+    if(OPENRAC_LLVM_AR AND OPENRAC_LLVM_RANLIB)
+      set(CMAKE_AR "${OPENRAC_LLVM_AR}")
+      set(CMAKE_RANLIB "${OPENRAC_LLVM_RANLIB}")
+      add_compile_options(-flto=thin)
+      add_link_options(-flto=thin)
+      message(STATUS "ThinLTO: on (archiver ${CMAKE_AR})")
+    else()
+      message(STATUS "ThinLTO: requested but skipped (no llvm-ar beside the compiler)")
+    endif()
   else()
     message(STATUS "ThinLTO: requested but skipped (Linux with Clang, not Debug, only)")
   endif()

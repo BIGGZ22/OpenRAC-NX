@@ -87,10 +87,26 @@ bool holding();
 // How much longer a tick lasts than the game's own (1: full speed; 4: quarter speed).
 double tick_stretch();
 
-// GL objects and the ImGui context, before the window's context goes.
+// ---- The drawer: the window's options on a touch screen ----
+//
+// On Android the menus along the window's top (View, Graphics, Sound, Developer), which want a
+// mouse and Alt to bring them back, are a drawer instead, as an emulator's: it slides in from the
+// left over the paused game, its rows large enough for a thumb and moved through by a gamepad.
+// The on-screen pad's options button opens it, as do Back and a gamepad's Guide button; Back,
+// Resume, the gamepad's B or a touch beside it closes it.
+// OPENRAC_DRAWER=1 has it on other systems too (for looking at it there), in place of the menus.
+bool drawer_available();
+void toggle_drawer();
+
+// True once after the drawer or the menus changed one of the port's settings (saved already): the
+// window applies it (frontend.cpp, apply_settings).
+bool take_settings_changed();
+
 // A line kept in the picture until it is cleared (an empty text): something the player has to
 // know and can do something about, such as a level whose scenery could not be read.
 void notice(const std::string& text);
+
+// GL objects and the ImGui context, before the window's context goes.
 void release();
 
 }  // namespace openrac::frontend::debug_overlay

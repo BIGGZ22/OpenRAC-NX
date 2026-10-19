@@ -1,11 +1,17 @@
 """Output safety: new directories under assets/ or build/, published whole."""
 
+import io
 import json
 from pathlib import Path
+import pickle
+import sys
 import tempfile
 import unittest
+from concurrent.futures import ProcessPoolExecutor
+from unittest import mock
 
-from extract import ROOT, output_path, publish
+import extract
+from extract import ROOT, output_path, publish, worker_pool
 from formats import FormatError
 
 
@@ -38,6 +44,35 @@ class OutputTests(unittest.TestCase):
             self.assertEqual(list(Path(temp).iterdir()), [])
             publish(dest, lambda directory: (directory / "done").write_text("x"))
             self.assertEqual([p.name for p in dest.iterdir()], ["done"])
+
+
+class PoolTests(unittest.TestCase):
+    def test_processes_where_python_has_them(self):
+        with worker_pool(2) as pool:
+            self.assertIsInstance(pool, ProcessPoolExecutor)
+
+    def test_processes_of_their_own_without_sem_open(self):
+        # Android's CPython: building a process pool fails for want of sem_open.
+        lacking = mock.Mock(side_effect=NotImplementedError("This platform lacks sem_open"))
+        with mock.patch.object(extract, "ProcessPoolExecutor", lacking):
+            with worker_pool(8) as pool:
+                self.assertIsInstance(pool, extract.SubprocessPool)
+                # Only the level exports run there.
+                with self.assertRaises(RuntimeError):
+                    pool.submit(sum, [1, 2]).result()
+
+    def test_a_worker_runs_one_export_and_pickles_its_result(self):
+        stdin = io.TextIOWrapper(io.BytesIO(pickle.dumps(("export_port_title", ("disc.iso",), {"lod": 1}))))
+        stdout = io.TextIOWrapper(io.BytesIO())
+
+        def export(iso, lod):
+            print("progress that must not reach the result")
+            return {"level": 99, "iso": iso, "lod": lod}
+
+        with mock.patch.object(extract, "export_port_title", export), mock.patch.object(sys, "stdin", stdin), \
+                mock.patch.object(sys, "stdout", stdout), mock.patch.object(sys, "stderr", io.StringIO()):
+            extract.worker()
+        self.assertEqual(pickle.loads(stdout.buffer.getvalue()), {"level": 99, "iso": "disc.iso", "lod": 1})
 
 
 if __name__ == "__main__":

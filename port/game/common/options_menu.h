@@ -8,8 +8,38 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 namespace openrac::frontend::options_menu {
+
+// The rows: one per setting, whichever menu shows them (the game's options pages here, the
+// overlay's menus and drawer, debug_overlay.cpp).
+enum Row {
+    kDisplayMode,
+    kMonitor,
+    kResolution,
+    kAspect,
+    kHud,
+    kRenderScale,
+    kMsaa,
+    kAnisotropy,
+    kVSync,
+    kFrameRate,
+    kFrameCap,
+    kShowFps,
+    kMuteUnfocused,
+    kSkipCutscenes,
+    kStrafe,
+    kRows
+};
+
+// A row's name, and its setting's value now, as the player reads them.
+const char* label(int row);
+std::string value(int row);
+
+// A row moved to its next value (by = 1) or the one before (by = -1), within what the graphics
+// card offers. Not saved (settings::save) and not applied: the window applies what changed.
+void step(int row, int by);
 
 // Once a frame: while the boot program runs (the title and its menus), the Video options page
 // shows the port's rows, four at a time, moving with the cursor. Cross or Right moves the row under

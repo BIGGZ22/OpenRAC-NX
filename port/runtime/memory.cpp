@@ -25,6 +25,9 @@
 #include <unistd.h>
 
 #include <sys/mman.h>
+#if defined(__ANDROID__)
+#include <sys/syscall.h>
+#endif
 #endif
 
 extern "C" {
@@ -185,7 +188,10 @@ void Memory::map_all() {
 namespace {
 
 int ram_object() {
-#if defined(__linux__)
+#if defined(__ANDROID__) && __ANDROID_API__ < 30
+    // bionic declares memfd_create from API 30; the kernel call is older (Linux 3.17).
+    return static_cast<int>(syscall(__NR_memfd_create, "openrac-ram", 0));
+#elif defined(__linux__)
     return memfd_create("openrac-ram", 0);
 #else
     char name[64];

@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -54,14 +55,31 @@ public:
     // Output gain, 0 (silent) to 1 (as mixed).
     void set_gain(float gain);
 
+    // Call once a frame from the game's thread. When the callback has not run for kStallMs while
+    // playing (the system took the device and never gave it back, as Android does after a call or
+    // another app's sound), the stream is opened again on the default device. Returns false, with
+    // `error`, when that failed; the next call tries again.
+    bool watch(std::string& error);
+
+    static constexpr std::uint64_t kStallMs = 1500;
+
 private:
     AudioOutput() = default;
+
+    bool start(std::string& error);
 
     static void feed(void* self, SDL_AudioStream* stream, int additional, int total);
 
     SDL_AudioStream* m_stream = nullptr;
     Callback m_callback;
     std::vector<std::int16_t> m_scratch;
+    float m_gain = 1.0f;
+    bool m_paused = false;
+    // SDL_GetTicks() of the callback's last run (written on the audio thread), of the stream's
+    // start, and of the last watch() (a longer gap means the game itself stood still).
+    std::atomic<std::uint64_t> m_fed_ms{0};
+    std::uint64_t m_started_ms = 0;
+    std::uint64_t m_watched_ms = 0;
 };
 
 }  // namespace openrac::platform

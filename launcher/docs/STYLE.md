@@ -125,6 +125,14 @@ before a release, and a new file adds its line there when it is added.
   states has to be scanned (the developer pages, Tasks).
 - What only a contributor reads (serials, percentages, file names, paths) is
   shown with developer tools on.
+- A setting is a row: its name and at most one short line on the left, its
+  control on the right (`.setting` in `app.css`). On/off is a switch
+  (`input.switch`), two or three choices a segmented control (`.segmented`),
+  more a list of radios. Settings are grouped in panels by what they are
+  about; what most players never change goes under Advanced, folded
+  (`details.more`), which opens by itself when something in it is on. A panel
+  with nothing to choose on this system is not shown, and a choice that only
+  matters with another one (Android's GPU driver, with Vulkan) shows with it.
 
 ## Rules
 
@@ -133,6 +141,19 @@ before a release, and a new file adds its line there when it is added.
 - Keep text readable on its background: the pills' and blockers' colours are
   only used on `--panel`, `--panel-hi` or a game's dark boxes.
 - Respect `prefers-reduced-motion` (already global in `app.css`).
+- Motion and spacing have tokens too: `--ease` and `--fast`, `--medium`,
+  `--slow` for transitions; `--page-x`, `--page-top`, `--page-bottom` and
+  `--page-gap` for every page's margins. A page's sections rise in turn as
+  it opens (`.page > section` in `app.css`).
+- Hover styles go inside `@media (hover: hover)`: on a touch screen a tapped
+  control would otherwise keep them until the next tap elsewhere. A press
+  shows with `:active`, a keyboard's or controller's focus with
+  `:focus-visible` or `html[data-input="pad"]`.
+- Android follows Android's own patterns, not the desktop's: a navigation rail
+  on the left (a bar at the bottom below 600 px wide) in place of the orange
+  bar, Material's 24/16 px margins, a ripple under the finger
+  (`src/lib/ripple.ts`), snackbar-style toasts and no text selection on
+  controls. The `--nav-*` tokens say what the navigation takes of the window.
 - Window sizes: the window opens at 1200 × 780, can be resized, and cannot be
   made smaller than 960 × 560 (`tauri.conf.json`). 560 is as tall as a
   1366 × 768 laptop at 125 % scaling leaves room for above the taskbar, so the

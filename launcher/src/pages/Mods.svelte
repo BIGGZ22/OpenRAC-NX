@@ -338,10 +338,10 @@
   .page {
     max-width: 960px;
     margin: 0 auto;
-    padding: 24px 24px 48px;
+    padding: var(--page-top, 24px) var(--page-x, 24px) var(--page-bottom, 48px);
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--page-gap, 16px);
   }
 
   .intro {

@@ -2,8 +2,20 @@
 // tile and the game's page, so the main button says and does the same thing in both.
 import type { ActionView, GameView, VersionView } from "./api";
 import type { IconName } from "$components/Icon.svelte";
-import { pickFolder } from "./api";
-import { app, cancel, installGame, jobs, refresh, run, runChain, saveConfig, toast } from "./app.svelte";
+import { onAndroid, pickFolder, pickIso } from "./api";
+import {
+  app,
+  cancel,
+  copyingDisc,
+  gameWindow,
+  installGame,
+  jobs,
+  refresh,
+  run,
+  runChain,
+  saveConfig,
+  toast,
+} from "./app.svelte";
 import { choiceFor, pickVersion } from "./discChoice";
 import { phaseLabel } from "./progress";
 import type { Job } from "./queue";
@@ -14,6 +26,7 @@ export type PlayerKind =
   | "unavailable" // set up, but this game has no port to play yet
   | "other-disc" // the player's disc is another version of this game
   | "playing"
+  | "return" // Android: the game runs beside the launcher, in a window of its own
   | "building"
   | "play"
   | "build"
@@ -84,13 +97,20 @@ export async function setUp(game: string, title: string, image?: string): Promis
  * games the folder holds (0: none found), or null when no folder was chosen.
  */
 export async function chooseGamesFolder(): Promise<number | null> {
-  const dir = await pickFolder("Choose the folder with your PlayStation 2 games");
-  if (!dir || !app.config) return null;
-  await saveConfig({ ...app.config, discsDir: dir });
+  if (onAndroid) {
+    // Android's picker gives files, not folders: the player picks a disc image, which is copied
+    // into the app's own games folder (the Rust side's default there); its games are set up below.
+    if (!(await copyingDisc((progress) => pickIso("Select your legitimately obtained disc image", progress))))
+      return null;
+  } else {
+    const dir = await pickFolder("Choose the folder with your PlayStation 2 games");
+    if (!dir || !app.config) return null;
+    await saveConfig({ ...app.config, discsDir: dir });
+  }
   await refresh();
   const found = [...app.discs];
   if (!found.length) {
-    toast("No Ratchet & Clank disc image (.iso) was found in that folder.", "error");
+    toast("No Ratchet & Clank disc image (.iso or .chd) was found in that folder.", "error");
     return 0;
   }
   for (const disc of found) {
@@ -159,7 +179,7 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
         ? "This game cannot be played yet. You can set your disc up now, ready for when it can."
         : found
           ? `Found in your games folder: ${fileName(found.path)}`
-          : "Choose the image (.iso) of your own disc. OpenRAC never downloads a game.",
+          : "Choose the image (.iso or .chd) of your own disc. OpenRAC never downloads a game.",
       primary: !planned,
       status: planned ? "Not playable yet" : "Not set up",
       tone: planned ? "info" : "warn",
@@ -189,6 +209,18 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       disabled: true,
       status: "Set up from another disc",
       tone: "info",
+    };
+  }
+  if (onAndroid && app.game?.running && (!app.game.library || app.game.library.startsWith(`openrac-${v.game}`))) {
+    return {
+      ...base,
+      kind: "return",
+      label: "Return to game",
+      icon: "play",
+      hint: "The game is running. It waits where you left it while the launcher is open.",
+      primary: true,
+      status: "Running",
+      tone: "ok",
     };
   }
   const playing = jobOf(v, ["play"]);
@@ -348,6 +380,10 @@ export async function playerAct(v: VersionView, state: PlayerState): Promise<voi
   const scope = { kind: "version" as const, key: v.key };
   if (state.job) {
     await cancel(state.job);
+    return;
+  }
+  if (state.kind === "return") {
+    await gameWindow(false);
     return;
   }
   if (state.kind === "set-up") {
