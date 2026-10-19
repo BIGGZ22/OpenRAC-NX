@@ -517,35 +517,56 @@ every level, the standard route). Each level's moby instances are the same in
 both versions' data (`placements.json`: same count, same classes on every
 level), so a moby count that differs is about spawns, not data. The
 differences left once the port bugs below were fixed have three causes (the
-first is not settled); the
+first is partly settled); the
 harness is told about them per level in `routes.json` (`versions`), so a
 PAL-US `compare` shows only what is new. All are compared again with
 `compare --strict`.
 
-- **The random numbers part a few frames into the level.** The US runs reach
-  a level's program 58 frames later than PAL's (93 on Eudora, Gemlik Base and
+- **The random numbers part early in some levels.** The US runs reach a
+  level's program 58 frames later than PAL's (93 on Eudora, Gemlik Base and
   Kalebo III, which start with the landing); from the level's first frame on
   the two count the same frames (both play the 758-frame arrival), and both
   reseed `rand` with 1234 when the level loads (`load_level_gameplay`, the
-  `jal FUN_001160c8` at US 0x241A34). The sequences then agree for a few
-  frames and part (Gaspar: level frame 3). Counting the calls per frame by
-  caller, the difference is the sky: `update_sky_effects` (US
-  `FUN_0022ae70`, PAL `func_0022C188`) calls `rand` once a frame for each of
-  its 256 star records that has its random-colour byte set, and on Gaspar the
-  level's sky has no star table (the header's word at 0x1C is 0, so
-  `relocate_sky_definition` leaves the pointer 0): the routine walks 256
-  records from game address 0, which on the console is the EE kernel's memory.
-  In the port that memory holds what PAL's run left there (246 records with
-  the byte set) and something else in US's (245; record 0 reads 0x20000000),
-  so US makes one call less a frame and every random choice after it differs:
-  Gaspar's asteroid shower and its impact dust (classes 263-266, 417; PAL 984
-  live mobys at control, US 893), Eudora's woodcutting robots' chips (class
-  1516; 20 to 60 live in both, PAL 40 and US 60 at control), Umbris's and
-  Orxon's bombs, Batalia's rockets, a bolt more or less on Veldin, Kerwan and
-  Rilgar. Not reproducible as the console has it (the kernel's bytes there are
-  not the game's); what writes US's address 0 before the level, and on which
-  other levels the sky has no star table, is still to be found (open). Until
-  the low memory is the same in both runs, these are left out.
+  `jal FUN_001160c8` at US 0x241A34), then with 12345 on the sky's first frame
+  (below). A difference in how many numbers one frame draws parts every random
+  choice after it: a bolt more or less, a spawn at another tick.
+  - *The sky's star records at game address 0 (fixed 2026-10-18).*
+    `update_sky_effects` (US `FUN_0022ae70`, PAL `func_0022C188`) keeps 256
+    star records of 0x20 bytes at the pointer `relocate_sky_definition` makes
+    of the sky header's word at 0x1C. On 11 of the 19 levels (Novalis, Kerwan,
+    Eudora, Batalia, Gaspar, Orxon, Pokitaru, Hoven, Oltanis, Kalebo III,
+    Veldin's return; the same in both versions, measured by what the sky
+    writes at address 0) that word is 0, and so is the record count at 0x08:
+    on its first frame the routine sets the count to 256, reseeds `rand` with
+    12345 and fills all 256 records from address 0 on (the first 246 with the
+    random-colour byte set, which costs a `rand` call each frame), and every
+    frame after reads back what it wrote. On the console that is the EE
+    kernel's low memory; what the kernel had there never reaches the game,
+    which writes all of it before it reads any (the port's guest memory there
+    is otherwise untouched). In US's runs record 0 read 0x20000000 from the
+    level's first frame: a DMA tag that the port's own host C wrote through a
+    null pointer. `func_L00_00296CD0` (rac1/host/variants.c), standing in for
+    the level programs' copies of DmaTieTextures, spliced the shrub list
+    (`D_001604F0`) instead of the tie list, still 0 on the level's first frame
+    in US; the carried `split_places.tsv` row even sent the US catalogue's own
+    `dma_tie_textures` places there. The variant is now DmaTieTextures itself
+    (PAL), and US's row is gone (its catalogue names those places right).
+    Eudora (class 1516's wood chips), Gaspar (the asteroid shower and its dust,
+    classes 263-266 and 417: PAL 984 live mobys at control, US 893 before) and
+    Orxon now play the same in both versions, and Pokitaru up to c=591, where
+    the hero's state parts (55 against 7; it did before this, not looked
+    into); Hoven's hero no longer parts at c=604.
+  - *Still to find.* Kerwan: on the level's first frame `allocate_voice_slot`
+    (US `FUN_0022d7f0`, from `FUN_0022da68`) draws a pitch bend for four new
+    sounds in PAL's run and for one in US's (sound definitions or the voice
+    volume check differ). Rilgar: on the level's 60th frame a sharkigator's
+    update (`FUN_L05_002d1688`) draws a number in US's run and not in PAL's.
+    Veldin: on the level's 20th frame level 0's code at US 0x20A9E8 (called
+    from 0x2070D0) draws numbers in PAL's run and not in US's. Each ends in a
+    bolt more or less (Veldin c=603, Kerwan c=143, Rilgar c=454); Umbris's
+    bombs and Batalia's rockets are the scene timing below. Counted with a
+    debugger breakpoint on `rand` and its callers per frame, the sky update
+    marking the frames. These are left out (`versions`) until found.
 - **The scene before control ends two ticks apart.** On the levels whose
   arrival is followed by a scene the route skips (Novalis, Umbris, Batalia,
   Hoven, Gemlik Base, Oltanis), the route's Start presses fall on window
@@ -553,15 +574,17 @@ PAL-US `compare` shows only what is new. All are compared again with
   version, and control comes two ticks earlier or later relative to the
   level's mobys. The hero is compared from control, the mobys have run two
   ticks more or less: on Hoven a class 238 enemy then reaches a spot two
-  ticks apart, one dies dropping four bolts in PAL at c=284 and not in US,
-  and Ratchet is bumped differently at c=604 (up to 1.15 units). A harness
+  ticks apart, one dies dropping four bolts in PAL at c=284 and not in US (it
+  also bumped Ratchet differently at c=604 while the sky's records differed,
+  above). A harness
   effect; presses counted from the level's first frame would remove it.
 - **The death fall's tumble.** Falling off the world (hero state 0x77)
   starts a tumble whose two spin speeds `randf_sym` (`FUN_L00_00257c48`)
   draws with a random sign (bit 0 of `rand`): Gemlik Base c=498, Oltanis
   c=644, Quartu c=659, Kalebo III c=470 tumble the other way round in each
   version, and Ratchet lands back on the same spot. The C and the assembly
-  agree; only the random state differs (above).
+  agree; only the random state differs (above: on these levels it still parts
+  for a cause not yet looked for).
 
 Port bugs these comparisons found and fixed (OPENRAC_PATCHES.md has each US
 edit): Eudora's walker gait read time 0 (`FUN_L04_002927d0`); the Oltanis,
