@@ -97,6 +97,19 @@ typedef struct {
     int i;
 } VCs_c2b77f0;
 
+/* The flame's hit record, as the hit writers (func_L00_001F2868, func_L00_00259A88) copy it into the
+ * moby hit table (D_L00_00178100): its +0x10 becomes the entry's source moby, which every moby's hit
+ * reaction (FUN_00213928) reads as a pointer. The US assembly builds it at sp+0x60: m at 0x70, x 0x74,
+ * c 0x78, f 0x7C, i 0x80. 0.8.0's copy had two floats before m, so the flame's length went in as the
+ * source and the Novalis birdbots crashed reading it (a read at 0x41221E2F). */
+#define VCS_OFFSET_c2b77f0(field, off) \
+    typedef char vcs_offset_##field##_c2b77f0[__builtin_offsetof(VCs_c2b77f0, field) == (off) ? 1 : -1]
+VCS_OFFSET_c2b77f0(m, 0x10);
+VCS_OFFSET_c2b77f0(x, 0x14);
+VCS_OFFSET_c2b77f0(c, 0x18);
+VCS_OFFSET_c2b77f0(f, 0x1C);
+VCS_OFFSET_c2b77f0(i, 0x20);
+
 /* Pyrocitor update: steps the moby's state machine, moves its effect points and runs the per-frame blend. */
 void FUN_L00_002b77f0(unsigned char *m) {
     unsigned char *d;
