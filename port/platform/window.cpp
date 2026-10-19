@@ -18,7 +18,12 @@
 #include "common/log.h"
 #include "platform/gpu_driver.h"
 #if defined(OPENRAC_VULKAN)
+#include <SDL3/SDL_vulkan.h>
+
 #include "renderer/vulkan/vkgl.h"
+#endif
+#if defined(OPENRAC_VULKAN) && defined(__APPLE__)
+#include <mach-o/dyld.h>
 #endif
 
 namespace openrac::platform {
@@ -341,10 +346,103 @@ GlApi default_gl_api() {
 #endif
 }
 
+#if defined(OPENRAC_VULKAN) && defined(__APPLE__)
+namespace {
+
+// The folder of the running program, links resolved (<build>/openrac-rac1-pal is a link into its
+// application bundle).
+std::filesystem::path program_folder() {
+    std::uint32_t size = 0;
+    _NSGetExecutablePath(nullptr, &size);
+    std::string path(size, '\0');
+    if (size == 0 || _NSGetExecutablePath(path.data(), &size) != 0) {
+        return {};
+    }
+    path.resize(std::strlen(path.c_str()));
+    std::error_code ec;
+    const std::filesystem::path real = std::filesystem::canonical(path, ec);
+    return ec ? std::filesystem::path(path).parent_path() : real.parent_path();
+}
+
+// macOS has no Vulkan of its own: it is MoltenVK, Vulkan on Metal. SDL is given the library by
+// its full path (a bare name is not looked for in Homebrew's or the bundle's folders), and volk
+// takes its vkGetInstanceProcAddr from SDL, so that the window's surface and the renderer use the
+// same one. In order: OPENRAC_VULKAN_LIBRARY; MoltenVK in the application bundle
+// (Contents/Frameworks, cmake/MacApp.cmake), what a player has; a Vulkan loader installed with
+// Homebrew or the Vulkan SDK (it has the validation layer, so it comes first when that is asked
+// for); MoltenVK installed there; SDL's own search.
+bool load_vulkan_library(bool validation, std::string& error) {
+    std::vector<std::string> paths;
+    if (const char* env = std::getenv("OPENRAC_VULKAN_LIBRARY"); env != nullptr && env[0] != '\0') {
+        paths.emplace_back(env);
+    }
+    const std::string bundled = (program_folder().parent_path() / "Frameworks" / "libMoltenVK.dylib").string();
+    std::vector<std::string> folders;
+    if (const char* sdk = std::getenv("VULKAN_SDK"); sdk != nullptr && sdk[0] != '\0') {
+        folders.push_back(std::string(sdk) + "/lib");
+    }
+    folders.insert(folders.end(), {"/opt/homebrew/lib", "/usr/local/lib"});
+    if (!validation) {
+        paths.push_back(bundled);
+    }
+    for (const std::string& folder : folders) {
+        paths.push_back(folder + "/libvulkan.1.dylib");
+    }
+    if (validation) {
+        paths.push_back(bundled);
+    }
+    for (const std::string& folder : folders) {
+        paths.push_back(folder + "/libMoltenVK.dylib");
+    }
+    std::string tried;
+    for (const std::string& path : paths) {
+        std::error_code ec;
+        // OPENRAC_VULKAN_LIBRARY may be a bare name, for the system's own search.
+        if (path.find('/') != std::string::npos && !std::filesystem::exists(path, ec)) {
+            continue;
+        }
+        if (SDL_Vulkan_LoadLibrary(path.c_str())) {
+            log::info("vulkan: {}", path);
+            return true;
+        }
+        tried += std::format("{}{}: {}", tried.empty() ? "" : "; ", path, SDL_GetError());
+    }
+    if (SDL_Vulkan_LoadLibrary(nullptr)) {
+        return true;
+    }
+    error = tried.empty() ? "no MoltenVK or Vulkan loader found (the game's bundle carries none; brew install molten-vk)"
+                          : std::format("no Vulkan library could be opened ({})", tried);
+    return false;
+}
+
+}  // namespace
+#endif
+
 bool Window::open_vulkan(const WindowConfig& config, std::string& error) {
 #if defined(OPENRAC_VULKAN)
+#if defined(__APPLE__)
+    if (custom_vulkan_get_instance_proc_addr() == nullptr) {
+        const char* env = std::getenv("OPENRAC_VULKAN_VALIDATION");
+        if (!load_vulkan_library(config.debug_context || (env != nullptr && env[0] == '1'), error)) {
+            return false;
+        }
+        m_vulkan_library = true;
+    }
+#endif
+    // What this window loaded is let go again when Vulkan cannot be had.
+    const auto fail = [this] {
+        if (m_vulkan_library) {
+            SDL_Vulkan_UnloadLibrary();
+            m_vulkan_library = false;
+        }
+    };
     // A hidden window (the headless checks) draws without a screen to show it on.
     SDL_WindowFlags flags = SDL_WINDOW_HIGH_PIXEL_DENSITY | (config.hidden ? SDL_WINDOW_HIDDEN : SDL_WINDOW_VULKAN);
+#if defined(__APPLE__)
+    // On macOS a window without a graphics flag is an OpenGL one, and SDL opens OpenGL for it
+    // (which macOS 27 no longer has where SDL looks): a hidden window is a Vulkan one as well.
+    flags |= SDL_WINDOW_VULKAN;
+#endif
     if (config.resizable) {
         flags |= SDL_WINDOW_RESIZABLE;
     }
@@ -354,6 +452,7 @@ bool Window::open_vulkan(const WindowConfig& config, std::string& error) {
     m_window = SDL_CreateWindow(config.title.c_str(), config.width, config.height, flags);
     if (m_window == nullptr) {
         error = std::format("no window for Vulkan: {}", SDL_GetError());
+        fail();
         return false;
     }
     vkgl::Config vk;
@@ -361,10 +460,14 @@ bool Window::open_vulkan(const WindowConfig& config, std::string& error) {
     SDL_GetWindowSizeInPixels(m_window, &vk.width, &vk.height);
     vk.vsync = config.vsync;
     vk.get_instance_proc_addr = custom_vulkan_get_instance_proc_addr();
+    if (vk.get_instance_proc_addr == nullptr && m_vulkan_library) {
+        vk.get_instance_proc_addr = reinterpret_cast<void*>(SDL_Vulkan_GetVkGetInstanceProcAddr());
+    }
     vk.validation = config.debug_context;
     if (!vkgl::open(vk, error)) {
         SDL_DestroyWindow(m_window);
         m_window = nullptr;
+        fail();
         return false;
     }
     m_vulkan = true;
@@ -599,6 +702,11 @@ Window::~Window() {
     if (m_window != nullptr) {
         SDL_DestroyWindow(m_window);
     }
+#if defined(OPENRAC_VULKAN)
+    if (m_vulkan_library) {
+        SDL_Vulkan_UnloadLibrary();
+    }
+#endif
 }
 
 bool Window::set_display_mode(DisplayMode mode, int width, int height, int display) {

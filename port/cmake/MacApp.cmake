@@ -19,6 +19,9 @@
 # is written " -". Each bundle has a folder named after its target, where the launcher finds it
 # from the target's name (launcher/core/src/lib.rs, program_path).
 #
+# With the Vulkan renderer, Contents/Frameworks/libMoltenVK.dylib (cmake/Dependencies.cmake) and
+# its license in Contents/Resources: OPENRAC_GL_API=vulkan needs nothing installed.
+#
 # <build>/openrac-rac1-pal stays as a link to the program, for a shell and the scripts that start
 # it there: started through the link the program works the same, but macOS names it after the link.
 
@@ -90,6 +93,19 @@ function(openrac_macos_app target)
 
   add_custom_target(${target}_icon DEPENDS "${icns}")
   add_dependencies(${target} ${target}_icon)
+
+  if(OPENRAC_VULKAN AND OPENRAC_MOLTENVK_LIBRARY MATCHES "\\.dylib$")
+    # Homebrew's file is read-only, and so is its copy: removed before it is copied again.
+    set(carry COMMAND "${CMAKE_COMMAND}" -E make_directory "${bundle}/Contents/Frameworks" "${bundle}/Contents/Resources"
+              COMMAND "${CMAKE_COMMAND}" -E rm -f "${bundle}/Contents/Frameworks/libMoltenVK.dylib"
+              COMMAND "${CMAKE_COMMAND}" -E copy "${OPENRAC_MOLTENVK_LIBRARY}"
+                      "${bundle}/Contents/Frameworks/libMoltenVK.dylib")
+    if(OPENRAC_MOLTENVK_LICENSE)
+      list(APPEND carry COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${OPENRAC_MOLTENVK_LICENSE}"
+                                "${bundle}/Contents/Resources/MoltenVK-LICENSE.txt")
+    endif()
+    add_custom_command(TARGET ${target} POST_BUILD ${carry} VERBATIM)
+  endif()
 
   add_custom_command(TARGET ${target} POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E rm -f "${CMAKE_BINARY_DIR}/${target}"

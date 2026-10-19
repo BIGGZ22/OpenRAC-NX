@@ -141,13 +141,9 @@ endif()
 # Vulkan-Headers (Apache-2.0 or MIT), volk (MIT: the loader, opened at run time, so a machine
 # without Vulkan still runs the game with OpenGL), the Vulkan Memory Allocator (MIT) and glslang
 # (BSD-3-Clause and others: the GLSL compiler, built without its optimiser, HLSL or programs).
-# Not on Apple's systems, which have no Vulkan of their own.
-if(APPLE)
-  set(openrac_vulkan_default OFF)
-else()
-  set(openrac_vulkan_default ON)
-endif()
-option(OPENRAC_VULKAN "Build the Vulkan renderer (OPENRAC_GL_API=vulkan)" ${openrac_vulkan_default})
+# Apple's systems have no Vulkan of their own: there it runs on MoltenVK (Apache-2.0, Vulkan on
+# Metal), which each game's application bundle carries (cmake/MacApp.cmake, below).
+option(OPENRAC_VULKAN "Build the Vulkan renderer (OPENRAC_GL_API=vulkan)" ON)
 if(OPENRAC_VULKAN AND NOT TARGET openrac_vulkan)
   FetchContent_Declare(vulkan_headers
     GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
@@ -204,4 +200,27 @@ if(OPENRAC_VULKAN AND NOT TARGET openrac_vulkan)
   endif()
   add_library(openrac_glslang INTERFACE)
   target_link_libraries(openrac_glslang INTERFACE glslang SPIRV glslang-default-resource-limits)
+
+  # macOS: MoltenVK's library, copied into each application bundle's Contents/Frameworks, where
+  # the window opens it (platform/window.cpp): a player needs nothing installed. Homebrew's
+  # (brew install molten-vk) or the Vulkan SDK's. Without it the game still opens a system's
+  # Vulkan loader where one is installed, and otherwise draws with OpenGL.
+  if(APPLE)
+    find_library(OPENRAC_MOLTENVK_LIBRARY NAMES libMoltenVK.dylib MoltenVK
+      HINTS "$ENV{VULKAN_SDK}/lib" /opt/homebrew/opt/molten-vk/lib /opt/homebrew/lib /usr/local/lib
+      NO_CMAKE_SYSTEM_PATH
+      DOC "libMoltenVK.dylib, carried in the games' application bundles")
+    if(OPENRAC_MOLTENVK_LIBRARY MATCHES "\\.dylib$")
+      # Its license beside it (Homebrew's keg, the SDK's tree), carried with it.
+      get_filename_component(openrac_moltenvk_real "${OPENRAC_MOLTENVK_LIBRARY}" REALPATH)
+      get_filename_component(openrac_moltenvk_dir "${openrac_moltenvk_real}" DIRECTORY)
+      find_file(OPENRAC_MOLTENVK_LICENSE NAMES LICENSE LICENSE.txt
+        PATHS "${openrac_moltenvk_dir}/.." "${openrac_moltenvk_dir}/../share/doc/MoltenVK"
+        NO_DEFAULT_PATH DOC "MoltenVK's license, carried with its library")
+      message(STATUS "MoltenVK: ${openrac_moltenvk_real}")
+    else()
+      message(WARNING "No libMoltenVK.dylib (brew install molten-vk): the games' bundles carry no "
+                      "Vulkan driver, and OPENRAC_GL_API=vulkan needs one installed")
+    endif()
+  endif()
 endif()

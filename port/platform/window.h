@@ -222,6 +222,7 @@ private:
     SDL_Window* m_window = nullptr;
     SDL_GLContextState* m_context = nullptr;
     bool m_vulkan = false;
+    bool m_vulkan_library = false;  // macOS: the Vulkan library this window had SDL load
     DisplayMode m_mode = DisplayMode::Windowed;
     std::string m_gl_version;
     std::string m_gl_renderer;
