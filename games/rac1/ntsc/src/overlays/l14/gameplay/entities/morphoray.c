@@ -1202,7 +1202,7 @@ int FUN_L14_00307620(struct Moby *moby) {
     }
     return 1;
 }
-extern void FUN_L12_002e71b0(void);
+extern void FUN_L14_00307a28(void);
 void enqueue_callback_list_1(int arg0, int arg1) __asm__("FUN_001f4600");
 /* 0x00307a80, 84 bytes.
  * Ported from rac1-decomp (src/overlays/l14_oltanis/vendor_002FF358.c:
@@ -1216,7 +1216,7 @@ void FUN_L14_00307a80(struct Moby *moby) {
         moby->update_dist = 0xFF;
         break;
     case 1:
-        enqueue_callback_list_1((int)FUN_L12_002e71b0, (int)moby);
+        enqueue_callback_list_1((int)FUN_L14_00307a28, (int)moby);
         break;
     }
 }
