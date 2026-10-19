@@ -77,7 +77,11 @@ bool outside(const std::array<std::array<float, 4>, 4>& planes, const renderer::
 bool LevelScene::upload(
     const LevelData& level, renderer::TexturePool& textures, std::string& error
 ) {
+    // mesh.frag again with OPENRAC_SOLID, after its version line (which has to stay the first).
+    std::string solid(shaders::mesh_frag);
+    solid.insert(solid.find('\n') + 1, "#define OPENRAC_SOLID 1\n");
     if (!m_mesh.build("mesh", shaders::mesh_vert, shaders::mesh_frag, error)
+        || !m_solid.build("mesh (solid)", shaders::mesh_vert, solid, error)
         || !m_sky.build("sky", shaders::sky_vert, shaders::sky_frag, error)) {
         return false;
     }
@@ -434,6 +438,7 @@ void LevelScene::release() {
         m_lights = 0;
     }
     m_mesh.release();
+    m_solid.release();
     m_sky.release();
 }
 
@@ -523,42 +528,46 @@ void LevelScene::draw_layer(
     for (std::size_t i = 0; i < groups.size(); ++i) {
         m_visible[i] = !groups[i].bounded || !outside(sides, groups[i].low, groups[i].high);
     }
-    m_mesh.use();
-    glUniformMatrix4fv(m_mesh.uniform("view_projection"), 1, GL_FALSE, view_projection.data());
     // On a target wider than the game's picture, the 2D layer's mobys are cut at the picture's sides
     // (mesh.vert).
     // An ES driver without GL_EXT_clip_cull_distance has no clip planes (renderer/shader.h, es_source).
     const bool cut = layer == Layer::Mobys && state.target.picture_scale_x < 1.0f
         && (!gl::is_es() || gl::has_extension("GL_EXT_clip_cull_distance"));
-    glUniform1f(m_mesh.uniform("picture_scale"), state.target.picture_scale_x);
     if (cut) {
         glEnable(GL_CLIP_DISTANCE0);
         glEnable(GL_CLIP_DISTANCE1);
     }
-    // The terrain's vertex colours are the game's own lighting (the extractor lights it as
-    // LightTfrags does): it gets no viewer sun.
-    glUniform1i(m_mesh.uniform("lighting"), lighting && layer != Layer::Terrain ? 1 : 0);
     // The joint palettes (live mobys): unit 1; the textures go on unit 0.
     const bool palettes = layer == Layer::Mobys && m_palette != 0;
-    glUniform1i(m_mesh.uniform("skinning"), palettes ? 1 : 0);
-    glUniform1i(m_mesh.uniform("palette_texture"), static_cast<GLint>(kPaletteUnit));
-    glUniform1i(m_mesh.uniform("light_texture"), static_cast<GLint>(kLightUnit));
-    if (m_light_sets.size() == 16 * 16) {
-        glUniform4fv(m_mesh.uniform("light_sets"), 64, m_light_sets.data());
-    }
-    glUniform4f(m_mesh.uniform("fog_colour"), m_fog_colour[0], m_fog_colour[1], m_fog_colour[2],
-                m_fog_colour[3]);
-    glUniform4f(m_mesh.uniform("fog_params"), m_fog_params[0], m_fog_params[1], m_fog_params[2],
-                m_fog_params[3]);
-    glUniformMatrix4fv(m_mesh.uniform("view"), 1, GL_FALSE, input.camera.view.data());
+    // The frame's uniforms, on the program the next passes draw with: the solid one for the static
+    // layers' opaque materials without a cutout (mesh.frag, OPENRAC_SOLID), the general one else.
+    const auto use = [&](const renderer::Shader& shader) {
+        shader.use();
+        glUniformMatrix4fv(shader.uniform("view_projection"), 1, GL_FALSE, view_projection.data());
+        glUniform1f(shader.uniform("picture_scale"), state.target.picture_scale_x);
+        // The terrain's vertex colours are the game's own lighting (the extractor lights it as
+        // LightTfrags does): it gets no viewer sun.
+        glUniform1i(shader.uniform("lighting"), lighting && layer != Layer::Terrain ? 1 : 0);
+        glUniform1i(shader.uniform("skinning"), palettes ? 1 : 0);
+        glUniform1i(shader.uniform("palette_texture"), static_cast<GLint>(kPaletteUnit));
+        glUniform1i(shader.uniform("light_texture"), static_cast<GLint>(kLightUnit));
+        if (m_light_sets.size() == 16 * 16) {
+            glUniform4fv(shader.uniform("light_sets"), 64, m_light_sets.data());
+        }
+        glUniform4f(shader.uniform("fog_colour"), m_fog_colour[0], m_fog_colour[1], m_fog_colour[2],
+                    m_fog_colour[3]);
+        glUniform4f(shader.uniform("fog_params"), m_fog_params[0], m_fog_params[1], m_fog_params[2],
+                    m_fog_params[3]);
+        glUniformMatrix4fv(shader.uniform("view"), 1, GL_FALSE, input.camera.view.data());
+        glUniform1i(shader.uniform("effect_pass"), 0);
+        glUniform1i(shader.uniform("metal_pass"), 0);
+    };
     glActiveTexture(GL_TEXTURE0 + kLightUnit);
     glBindTexture(GL_TEXTURE_2D, m_lights);
     if (palettes) {
         glActiveTexture(GL_TEXTURE0 + kPaletteUnit);
         glBindTexture(GL_TEXTURE_2D, m_palette);
     }
-    const int cutout = m_mesh.uniform("cutout");
-    const int colour = m_mesh.uniform("material_colour");
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_GEQUAL);  // reversed depth
     glDepthMask(GL_TRUE);
@@ -568,35 +577,46 @@ void LevelScene::draw_layer(
     // Mobys in two passes: their solid faces, then their glow faces blended over them as the GS
     // blends them (ALPHA 0x44: (Cs - Cd) As + Cd), without writing depth.
     // Then the translucent texels of cutout materials, blended the same way, without depth.
-    const int glow_pass = m_mesh.uniform("glow_pass");
-    const int translucent_pass = m_mesh.uniform("translucent_pass");
-    const int effect_pass = m_mesh.uniform("effect_pass");
-    const int metal_pass = m_mesh.uniform("metal_pass");
-    glUniform1i(effect_pass, 0);
-    glUniform1i(metal_pass, 0);
     // Mobys: a fourth pass for those MobyProc blends (Instance::blend), then a fifth for the metal
     // packets (the shine pass), after everything else.
-    const int passes = layer == Layer::Mobys ? 5 : 2;
+    // The static layers: their opaque materials without a cutout (solid), then the opaque texels
+    // of the cutout ones, then those cutouts' translucent texels.
+    const bool mobys = layer == Layer::Mobys;
+    const int passes = mobys ? 5 : 3;
     // The material state the program holds now (flush): none yet.
     int set_material = -1;
     unsigned set_texture = 0;
     int set_cutout = -1;
     decltype(Material::colour) set_colour{};
     bool colour_set = false;
+    const renderer::Shader* program = nullptr;
     for (int pass = 0; pass < passes; ++pass) {
+        const bool solid = !mobys && pass == 0;
+        const renderer::Shader& wanted = solid ? m_solid : m_mesh;
+        if (program != &wanted) {
+            use(wanted);
+            program = &wanted;
+            set_material = -1;
+            set_cutout = -1;
+            colour_set = false;
+        }
+        const int cutout = program->uniform("cutout");
+        const int colour = program->uniform("material_colour");
+        // The cutout materials' opaque texels (static layers).
+        const bool cutouts = !mobys && pass == 1;
         // The blended mobys' pass: their whole models, all texels, at their alpha (blend 1:
         // ALPHA 0x44, (Cs - Cd) As + Cd) or added (blend 2: 0x48, Cs As + Cd), depth tested and
         // not written, as ReRAC draws MobyProc's translucent and additive groups.
-        const bool effects = layer == Layer::Mobys && pass == 3;
+        const bool effects = mobys && pass == 3;
         // The metal packets: blended over the moby with ALPHA 0x44, depth tested and not written,
         // pulled a little toward the camera (MobyProc adds 1000 to their GS Z; mesh.vert).
-        const bool metal = layer == Layer::Mobys && pass == 4;
-        const bool translucent = !effects && !metal && pass == (layer == Layer::Mobys ? 2 : 1);
-        glUniform1i(metal_pass, metal ? 1 : 0);
-        glUniform1i(glow_pass, layer == Layer::Mobys && pass == 1 ? 1 : 0);
-        glUniform1i(translucent_pass, translucent ? 1 : 0);
-        glUniform1i(effect_pass, effects ? 1 : 0);
-        if (pass >= 1) {
+        const bool metal = mobys && pass == 4;
+        const bool translucent = pass == 2;
+        glUniform1i(program->uniform("metal_pass"), metal ? 1 : 0);
+        glUniform1i(program->uniform("glow_pass"), mobys && pass == 1 ? 1 : 0);
+        glUniform1i(program->uniform("translucent_pass"), translucent ? 1 : 0);
+        glUniform1i(program->uniform("effect_pass"), effects ? 1 : 0);
+        if (mobys ? pass >= 1 : pass >= 2) {
             glEnable(GL_BLEND);
             glBlendEquation(GL_FUNC_ADD);
             glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
@@ -655,14 +675,17 @@ void LevelScene::draw_layer(
                 run_count = 0;
             };
             // The opaque pass of a static layer in material order (m_opaque).
-            const std::uint32_t model = pass == 0 && layer != Layer::Mobys && g.model < m_opaque.size()
-                                            ? m_opaque[g.model] : g.model;
+            const std::uint32_t model = pass <= 1 && !mobys && g.model < m_opaque.size() ? m_opaque[g.model] : g.model;
             for (const Primitive& p : m_models[model].primitives) {
                 const bool is_metal = m_materials[static_cast<std::size_t>(p.material)].metal;
                 if (is_metal != metal) {
                     continue;
                 }
-                if (translucent && !m_materials[static_cast<std::size_t>(p.material)].cutout) {
+                const bool is_cutout = m_materials[static_cast<std::size_t>(p.material)].cutout;
+                if ((translucent || cutouts) && !is_cutout) {
+                    continue;
+                }
+                if (solid && is_cutout) {
                     continue;
                 }
                 if (run_count != 0 && p.material == run_material && p.first_index == run_first + run_count) {

@@ -117,6 +117,8 @@ private:
     std::array<float, 4> m_fog_params{0, 255, 255, 255};  // slope, offset, lower, upper clamp
     std::vector<JointColumns> m_palette_data;
     renderer::Shader m_mesh;
+    // mesh.frag's opaque path alone, without discard (the static layers' opaque pass; draw_layer).
+    renderer::Shader m_solid;
     renderer::Shader m_sky;
 };
 
