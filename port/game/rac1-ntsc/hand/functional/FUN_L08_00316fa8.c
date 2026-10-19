@@ -21,7 +21,9 @@ typedef struct { char p0[0x148]; float f148; char p14C[8]; float f154; float f15
 extern float func_L00_002644E0_3091B0(void *) __asm__("func_L00_00263468");
 extern short D_L08_001625E8;
 extern void func_00214890(void *dst, void *vec, void *axis, float angle);
-extern int func_L00_0028DF38(int, int);
+/* NTSC-U calls 0x296230 here (jal at 0x31718C): FUN_L01_002a1968, the setter of the entry's word 0x80, not
+ * FUN_L00_0028df38 (0x296250 in this level, word 0x84). */
+extern int func_L01_002A1968(int, int);
 extern int func_L00_0028DDD8(int a, int b, int c, int d);
 
 
@@ -60,7 +62,7 @@ void FUN_L08_00316fa8(char *m) {
     {
         char *e = D_0013E533 + 0x1D + *(int *)(d + 8) * 0x70;
         if (*(char **)(e + 0x8C) == m && ((unsigned char *)e)[0x74] != 0) {
-            func_L00_0028DF38(*(int *)(d + 8),
+            func_L01_002A1968(*(int *)(d + 8),
                               (int)((*(float *)(d + 4) + *(float *)&D_L08_001625E8) / (*(float *)(d + 4) + 1.0f) * 1024.0f));
         }
     }
