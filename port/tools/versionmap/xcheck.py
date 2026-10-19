@@ -132,8 +132,10 @@ class Game:
         asm_cfg = self.cfg.get("asm", {})
         self.gp = int(str(asm_cfg.get("gp", "0")), 0)
         self.low = self.cfg["relocate"][0]
-        self.code_names = [re.compile(p) for p in self.cfg["names"]["code"]]
-        self.data_names = [re.compile(p) for p in self.cfg["names"]["data"]]
+        from program import DEFAULT_CODE_NAMES, DEFAULT_DATA_NAMES
+        names = self.cfg.get("names", {})
+        self.code_names = [re.compile(p) for p in names.get("code") or DEFAULT_CODE_NAMES]
+        self.data_names = [re.compile(p) for p in names.get("data") or DEFAULT_DATA_NAMES]
         self.hand_table = game_dir / self.cfg["hand"]
         self._functions(gen / "functions.c")
         self._symbols()

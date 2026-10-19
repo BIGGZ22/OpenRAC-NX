@@ -7,7 +7,7 @@ FUN_001fa820	c-data	*	the view's clip constants (D_0018CF80) the shared sphere t
 FUN_L00_0020dd20	c-call	FUN_001f97b0	the port's guard: a manipulator that cannot be made traps, where retail goes on and dereferences it
 FUN_L00_002484e0	c-call	*	the four height predicates are compared with the table's pointer to call each by its own prototype (the host passes integers and floats in registers of their own)
 FUN_001fa4f8	c-call	FUN_001fa480	retail repeats FUN_001fa480's quaternion rows in line; the C calls it for them
-FUN_L00_002d9810	code-call	*	open: carried from PAL's level_nanotech_glow.c, which draws the sphere, halo and sheen through the port's quad drawer with the GS registers in each quad; the US routine sets them with vu1_add_g_sregister (FUN_00233980) and FUN_001f76a0 and draws the sphere strips with FUN_L00_001fde98
+FUN_L00_002d9810	code-call	*	the port's own draw, carried from rac1-pal's level_nanotech_glow.c (which differs from the PAL code the same way): the sphere, halo and sheen go through the port's quad drawer with the GS registers in each quad, where the US routine sets them with vu1_add_g_sregister (FUN_00233980) and FUN_001f76a0 and draws the sphere strips with FUN_L00_001fde98
 FUN_L01_00262038	c-call	memcpy	16-byte copies, which retail makes with lq and sq
 FUN_0020db40	code-call	FUN_001f97b0	returns where the retail copy traps on a bit that is already clear (said at the function)
 FUN_L00_00250df8	c-call	FUN_001fa030	the rotation rows are the VU0 microprogram's (vcallms) in retail; the C calls the routine that runs the same program
