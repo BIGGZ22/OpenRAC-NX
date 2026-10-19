@@ -15,7 +15,7 @@
 
 extern char D_L07_001D3400[];
 extern void FUN_L02_002a4058(void *, int, float);
-extern void l07_moby_draw_callback(void) __asm__("FUN_L07_0030d420");
+extern void l07_moby_draw_callback(void) __asm__("FUN_L07_002f8038");
 void enqueue_callback_list_1(s32 arg0, s32 arg1) __asm__("FUN_001f4600");
 
 void FUN_L07_002f8058(unsigned char *moby) {
