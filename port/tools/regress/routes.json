@@ -64,5 +64,1002 @@
     ]},
     "17": {"name": "Drek's Fleet"},
     "18": {"name": "Veldin (final)"}
+  },
+  "addresses": {
+    "comment": "Each version's addresses (hex) for the set steps' actions, paired by the version map (build/versionmap): the hero D_0013F450 (include/hero.h: position +0x80, rotation +0x90, pending item +0x20B8, health +0x22A8), owned and acquired u8[37] and ammo s32[37] by item id (launcher/core/src/save_edit.rs), gBolts, the planets unlocked u8[20], the quick select s32[8].",
+    "rac1-pal": {
+      "hero": "0x13F450",
+      "owned": "0x13D5C8",
+      "acquired": "0x13D5F0",
+      "ammo": "0x13D530",
+      "bolts": "0x15EE98",
+      "planets": "0x13DE48",
+      "quick": "0x141FA0"
+    },
+    "rac1-ntsc": {
+      "hero": "0x13F350",
+      "owned": "0x13D4C0",
+      "acquired": "0x13D4E8",
+      "ammo": "0x13D428",
+      "bolts": "0x15ED98",
+      "planets": "0x13DD40",
+      "quick": "0x141EA0"
+    }
+  },
+  "items": {
+    "comment": "Item ids (launcher/core/src/save_edit.rs ITEMS), and each one's ammo limit.",
+    "all": [
+      2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+      32, 33, 34, 35
+    ],
+    "ammo": {
+      "10": 40,
+      "11": 20,
+      "13": 20,
+      "15": 200,
+      "16": 240,
+      "17": 50,
+      "19": 240,
+      "20": 10,
+      "23": 50,
+      "24": 10,
+      "25": 20
+    }
+  },
+  "sets": {
+    "wide": {
+      "comment": "Longer and wider routes (docs/port/REGRESSION.md, Route sets): each level's path from its own data (points.py), the vendor, the menus and every item; the pause pages; deaths; set pieces; the title, a new game and the prepared card's saves. Start skips scenes from the frame they became skippable (s/S), before control and after it.",
+      "defaults": {
+        "skip": {"every": 30, "buttons": "start", "hold": 5, "from": "scene", "after_control": true},
+        "length": 2400,
+        "max_frames": 20000,
+        "timeout": 600
+      },
+      "lists": {"held": [15, 10, 11, 13, 16, 17, 18, 19, 20, 21, 23, 24, 25, 12, 14, 22, 26, 27, 31, 32, 5, 9]},
+      "sequences": {
+        "long": [
+          {"at": 10, "give": "all", "what": "every weapon and gadget, full ammo"},
+          {
+            "at": 30,
+            "each": "path",
+            "every": 300,
+            "what": "the level's path: teleport, walk, jump, wrench, talk, throw",
+            "do": [
+              {"at": 0, "teleport": "$"},
+              {"at": 40, "hold": 90, "left": [128, 0]},
+              {"at": 140, "buttons": "cross", "hold": 5},
+              {"at": 170, "buttons": "square", "hold": 5},
+              {"at": 200, "buttons": "triangle", "hold": 5},
+              {"at": 240, "buttons": "r1+square", "hold": 5}
+            ]
+          },
+          {"at": 3030, "teleport": "vendor", "what": "the vendor: open, move, buy, leave"},
+          {"at": 3100, "buttons": "triangle", "hold": 5},
+          {"at": 3180, "buttons": "down", "hold": 5},
+          {"at": 3220, "buttons": "down", "hold": 5},
+          {"at": 3260, "buttons": "cross", "hold": 5},
+          {"at": 3320, "buttons": "cross", "hold": 5},
+          {"at": 3380, "buttons": "triangle", "hold": 5},
+          {"at": 3440, "buttons": "triangle", "hold": 5},
+          {"at": 3500, "buttons": "start", "hold": 5},
+          {"at": 3700, "buttons": "start", "hold": 5, "what": "the pause menu, open and closed"},
+          {"at": 3800, "buttons": "start", "hold": 5},
+          {"at": 3900, "buttons": "select", "hold": 5, "what": "the map, open and closed"},
+          {"at": 4020, "buttons": "select", "hold": 5},
+          {"at": 4100, "buttons": "triangle", "hold": 90, "left": [128, 0], "what": "the quick select, top item"},
+          {
+            "at": 4300,
+            "each": "held",
+            "every": 100,
+            "what": "each weapon and gadget: equip, fire three times",
+            "do": [
+              {"at": 0, "equip": "$"},
+              {"at": 40, "buttons": "circle", "hold": 5},
+              {"at": 60, "buttons": "circle", "hold": 5},
+              {"at": 80, "buttons": "circle", "hold": 12}
+            ]
+          }
+        ],
+        "loaded": [
+          {"at": 30, "hold": 120, "left": [128, 0]},
+          {"at": 160, "hold": 150, "right": [255, 128]},
+          {"at": 320, "buttons": "cross", "hold": 5},
+          {"at": 360, "buttons": "square", "hold": 5},
+          {"at": 500, "buttons": "start", "hold": 5, "what": "the pause menu, open and closed"},
+          {"at": 600, "buttons": "start", "hold": 5},
+          {"at": 700, "buttons": "select", "hold": 5, "what": "the map"},
+          {"at": 820, "buttons": "select", "hold": 5},
+          {
+            "at": 900,
+            "each": "held",
+            "every": 100,
+            "what": "each item the save owns: equip, fire",
+            "do": [
+              {"at": 0, "equip": "$"},
+              {"at": 40, "buttons": "circle", "hold": 5},
+              {"at": 60, "buttons": "circle", "hold": 5},
+              {"at": 80, "buttons": "circle", "hold": 12}
+            ]
+          }
+        ],
+        "talk": [
+          {"at": 10, "give": "all"},
+          {"at": 30, "teleport": "it", "what": "next to the set piece's moby"},
+          {"at": 100, "buttons": "triangle", "hold": 5, "what": "talk / use"},
+          {"at": 160, "buttons": "cross", "hold": 5},
+          {"at": 220, "buttons": "cross", "hold": 5},
+          {"at": 280, "buttons": "cross", "hold": 5},
+          {"at": 340, "buttons": "triangle", "hold": 5},
+          {"at": 400, "buttons": "cross", "hold": 5},
+          {"at": 500, "hold": 120, "left": [128, 0]},
+          {"at": 700, "buttons": "circle", "hold": 5},
+          {"at": 760, "buttons": "circle", "hold": 5},
+          {"at": 900, "hold": 120, "left": [0, 128]},
+          {"at": 1100, "buttons": "cross", "hold": 5},
+          {"at": 1200, "buttons": "square", "hold": 5},
+          {"at": 1400, "hold": 200, "left": [128, 0]},
+          {"at": 1700, "buttons": "cross", "hold": 5},
+          {"at": 1900, "hold": 200, "left": [255, 128]}
+        ],
+        "death": [
+          {"at": 400, "hold": 60, "left": [128, 0]},
+          {"at": 900, "hold": 60, "left": [128, 0]},
+          {"at": 1000, "buttons": "cross", "hold": 5},
+          {"at": 1100, "buttons": "square", "hold": 5}
+        ]
+      },
+      "routes": {
+        "00-long": {
+          "level": 0,
+          "name": "Veldin: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [132.09, 115.48, 31.43, 0.0]},
+          "lists": {
+            "path": [
+              [138.61, 93.31, 33.6],
+              [152.62, 90.25, 32.6],
+              [163.99, 127.2, 29.98],
+              [156.07, 130.31, 30.67],
+              [169.98, 160.99, 31.73],
+              [114.25, 167.9, 31.11],
+              [103.0, 191.87, 34.99],
+              [113.95, 195.7, 34.98],
+              [104.84, 227.54, 35.19],
+              [113.2, 248.07, 33.98]
+            ]
+          }
+        },
+        "01-long": {
+          "level": 1,
+          "name": "Novalis: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [168.16, 138.03, 60.3, 0.933]},
+          "lists": {
+            "path": [
+              [158.97, 139.31, 60.5],
+              [168.16, 138.03, 60.8],
+              [159.51, 208.44, 40.5],
+              [249.86, 185.83, 96.07],
+              [253.86, 128.13, 54.97],
+              [241.52, 103.59, 88.0],
+              [94.51, 103.09, 57.3],
+              [36.74, 117.65, 47.08]
+            ]
+          }
+        },
+        "02-long": {
+          "level": 2,
+          "name": "Aridia: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [214.45, 167.58, 25.46, -0.786]},
+          "lists": {
+            "path": [
+              [214.45, 167.58, 25.96],
+              [205.58, 163.05, 26.72],
+              [191.27, 126.43, 25.49],
+              [173.32, 93.33, 25.76],
+              [143.97, 219.38, 32.5],
+              [98.0, 276.95, 54.65],
+              [89.5, 267.95, 61.5],
+              [247.99, 310.01, 37.99],
+              [255.79, 267.03, 25.38],
+              [257.2, 199.46, 28.43]
+            ]
+          }
+        },
+        "03-long": {
+          "level": 3,
+          "name": "Kerwan: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [263.09, 145.69, 50.3, 2.57]},
+          "lists": {
+            "path": [
+              [262.52, 124.6, 34.56],
+              [263.09, 145.69, 50.8],
+              [288.26, 127.8, 65.61],
+              [295.5, 244.0, 35.0],
+              [177.07, 227.38, 50.5],
+              [201.58, 343.23, 80.95],
+              [278.62, 394.51, 89.44],
+              [114.83, 87.64, 66.33]
+            ]
+          }
+        },
+        "04-long": {
+          "level": 4,
+          "name": "Eudora: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [238.91, 162.58, 55.3, 2.29]},
+          "lists": {
+            "path": [[218.0, 161.0, 56.5], [238.91, 162.58, 55.8], [260.2, 172.03, 60.16], [261.05, 232.53, 56.5]]
+          }
+        },
+        "05-long": {
+          "level": 5,
+          "name": "Rilgar: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [348.66, 127.74, 60.87, -0.404]},
+          "lists": {
+            "path": [
+              [343.27, 114.03, 63.48],
+              [348.66, 127.74, 61.37],
+              [295.0, 242.29, 100.5],
+              [252.82, 224.77, 100.35],
+              [223.4, 223.4, 45.5],
+              [214.5, 287.07, 55.5],
+              [362.94, 320.55, 72.5],
+              [395.29, 272.57, 62.8],
+              [398.61, 263.48, 62.35]
+            ]
+          }
+        },
+        "06-long": {
+          "level": 6,
+          "name": "Blarg Station: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [254.38, 139.11, 138.64, -1.014]},
+          "lists": {
+            "path": [
+              [248.07, 148.08, 138.84],
+              [254.38, 139.11, 139.14],
+              [274.6, 131.66, 136.25],
+              [201.07, 156.09, 130.61],
+              [173.07, 183.75, 133.99],
+              [177.99, 318.63, 142.32],
+              [258.74, 372.99, 146.81],
+              [258.43, 392.42, 129.5],
+              [294.36, 366.1, 142.8]
+            ]
+          }
+        },
+        "07-long": {
+          "level": 7,
+          "name": "Umbris: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [263.29, 71.35, 46.11, -3.039]},
+          "lists": {
+            "path": [
+              [263.29, 71.35, 46.61],
+              [272.03, 72.77, 46.52],
+              [264.03, 183.7, 48.5],
+              [339.58, 249.94, 49.08],
+              [279.77, 286.1, 52.74],
+              [248.58, 305.85, 72.51],
+              [278.15, 407.79, 74.39],
+              [290.0, 413.46, 74.42],
+              [216.59, 455.46, 35.36]
+            ]
+          }
+        },
+        "08-long": {
+          "level": 8,
+          "name": "Batalia: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [168.32, 184.24, 37.14, -0.011]},
+          "lists": {
+            "path": [
+              [148.98, 194.88, 39.52],
+              [168.32, 184.24, 37.64],
+              [177.0, 158.18, 40.0],
+              [214.1, 204.0, 45.59],
+              [268.33, 287.58, 36.74],
+              [140.38, 303.37, 38.07],
+              [327.76, 160.3, 39.57],
+              [311.34, 97.47, 37.92]
+            ]
+          }
+        },
+        "09-long": {
+          "level": 9,
+          "name": "Gaspar: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [295.7, 405.12, 36.26, -1.097]},
+          "lists": {
+            "path": [
+              [295.7, 405.12, 36.76],
+              [328.58, 408.3, 44.55],
+              [299.4, 331.19, 27.17],
+              [347.97, 310.2, 41.5],
+              [421.03, 229.68, 27.53]
+            ]
+          }
+        },
+        "10-long": {
+          "level": 10,
+          "name": "Orxon: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [230.81, 183.33, 49.3, -0.252]},
+          "lists": {
+            "path": [
+              [229.65, 203.13, 49.72],
+              [220.7, 196.5, 49.5],
+              [230.81, 183.33, 49.8],
+              [238.06, 190.19, 60.0],
+              [238.34, 172.13, 57.5],
+              [284.16, 136.21, 62.99],
+              [294.67, 222.0, 60.5],
+              [307.13, 228.47, 69.05],
+              [219.82, 292.48, 35.8],
+              [155.7, 196.54, 54.5]
+            ]
+          }
+        },
+        "11-long": {
+          "level": 11,
+          "name": "Pokitaru: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [497.68, 417.04, 230.3, 2.179]},
+          "lists": {
+            "path": [
+              [497.68, 417.04, 230.8],
+              [440.41, 476.93, 234.5],
+              [446.76, 591.36, 244.57],
+              [432.46, 644.73, 225.65],
+              [531.18, 514.84, 137.67],
+              [611.96, 566.11, 233.4]
+            ]
+          }
+        },
+        "12-long": {
+          "level": 12,
+          "name": "Hoven: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [313.35, 311.86, 32.3, 1.394]},
+          "lists": {
+            "path": [
+              [301.14, 301.39, 31.93],
+              [313.35, 311.86, 32.8],
+              [298.05, 364.17, 62.47],
+              [245.32, 324.03, 31.39],
+              [180.58, 281.86, 52.15],
+              [383.08, 328.96, 42.54],
+              [394.88, 294.77, 48.58],
+              [428.42, 342.95, 43.03],
+              [414.47, 408.56, 43.12],
+              [327.23, 441.92, 52.51]
+            ]
+          }
+        },
+        "13-long": {
+          "level": 13,
+          "name": "Gemlik Base: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [506.23, 389.97, 314.99, 3.142]},
+          "lists": {
+            "path": [
+              [506.23, 389.97, 315.49],
+              [507.85, 378.04, 315.22],
+              [413.68, 450.68, 311.58],
+              [458.69, 532.49, 316.5],
+              [451.57, 575.25, 318.0],
+              [501.92, 552.28, 310.8],
+              [572.3, 576.67, 290.5],
+              [546.4, 620.15, 291.67]
+            ]
+          }
+        },
+        "14-long": {
+          "level": 14,
+          "name": "Oltanis: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [248.13, 165.9, 47.37, -2.479]},
+          "lists": {
+            "path": [
+              [264.26, 155.89, 47.5],
+              [248.13, 165.9, 47.87],
+              [204.12, 145.89, 65.51],
+              [199.06, 202.62, 51.47],
+              [219.59, 213.83, 44.86],
+              [242.28, 256.88, 55.72],
+              [269.4, 236.78, 49.34],
+              [268.19, 123.06, 73.57],
+              [271.16, 76.6, 73.32],
+              [313.72, 100.32, 69.75]
+            ]
+          }
+        },
+        "15-long": {
+          "level": 15,
+          "name": "Quartu: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [303.88, 185.79, 32.37, -2.037]},
+          "lists": {
+            "path": [
+              [303.88, 185.79, 32.87],
+              [329.54, 195.5, 32.44],
+              [335.72, 170.23, 39.28],
+              [231.49, 150.63, 40.0],
+              [170.43, 186.5, 26.26],
+              [231.19, 224.0, 26.25],
+              [221.39, 299.73, 43.6],
+              [308.78, 289.72, 49.17],
+              [315.78, 312.88, 52.51]
+            ]
+          }
+        },
+        "16-long": {
+          "level": 16,
+          "name": "Kalebo III: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [151.97, 126.33, 128.59, 1.19]},
+          "lists": {
+            "path": [
+              [151.97, 126.33, 129.09],
+              [157.93, 261.1, 121.05],
+              [132.03, 292.96, 120.78],
+              [121.34, 287.07, 120.5],
+              [118.29, 263.99, 133.76],
+              [256.95, 249.32, 128.73],
+              [259.02, 240.02, 126.85],
+              [304.75, 206.01, 124.15],
+              [323.06, 209.5, 118.62],
+              [310.0, 292.3, 118.35]
+            ]
+          }
+        },
+        "17-long": {
+          "level": 17,
+          "name": "Drek's Fleet: path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [493.65, 615.44, 152.8, 2.147]},
+          "lists": {
+            "path": [
+              [500.83, 609.73, 153.0],
+              [493.65, 615.44, 153.3],
+              [478.82, 616.07, 154.61],
+              [499.64, 636.81, 154.68],
+              [499.57, 572.66, 139.52],
+              [547.62, 446.81, 147.48],
+              [499.57, 364.72, 140.0],
+              [367.3, 318.43, 173.87],
+              [367.31, 210.07, 173.11],
+              [309.72, 428.86, 155.5]
+            ]
+          }
+        },
+        "18-long": {
+          "level": 18,
+          "name": "Veldin (final): path, vendor, menus, items",
+          "sequence": "long",
+          "length": 6600,
+          "points": {"vendor": [354.11, 633.17, 85.98, 1.278]},
+          "lists": {
+            "path": [
+              [354.11, 633.17, 86.48],
+              [399.2, 739.87, 97.86],
+              [419.78, 730.08, 97.8],
+              [438.17, 714.66, 85.41],
+              [485.97, 761.25, 90.58],
+              [563.17, 703.97, 104.75],
+              [507.46, 630.46, 101.91],
+              [499.4, 615.38, 103.18],
+              [504.91, 608.84, 102.88],
+              [577.25, 808.85, 108.77]
+            ]
+          }
+        },
+        "01-pause-0": {
+          "level": 1,
+          "name": "Novalis: pause page 0",
+          "length": 1000,
+          "steps": [
+            {"at": 30, "buttons": "start", "hold": 5},
+            {"at": 130, "buttons": "cross", "hold": 5, "what": "pause page 0"},
+            {"at": 250, "buttons": "cross", "hold": 5},
+            {"at": 330, "buttons": "down", "hold": 5},
+            {"at": 390, "buttons": "cross", "hold": 5},
+            {"at": 470, "buttons": "triangle", "hold": 5},
+            {"at": 550, "buttons": "triangle", "hold": 5},
+            {"at": 630, "buttons": "start", "hold": 5}
+          ]
+        },
+        "01-pause-1": {
+          "level": 1,
+          "name": "Novalis: pause page 1",
+          "length": 1000,
+          "steps": [
+            {"at": 30, "buttons": "start", "hold": 5},
+            {"at": 100, "buttons": "down", "hold": 5},
+            {"at": 160, "buttons": "cross", "hold": 5, "what": "pause page 1"},
+            {"at": 280, "buttons": "cross", "hold": 5},
+            {"at": 360, "buttons": "down", "hold": 5},
+            {"at": 420, "buttons": "cross", "hold": 5},
+            {"at": 500, "buttons": "triangle", "hold": 5},
+            {"at": 580, "buttons": "triangle", "hold": 5},
+            {"at": 660, "buttons": "start", "hold": 5}
+          ]
+        },
+        "01-pause-2": {
+          "level": 1,
+          "name": "Novalis: pause page 2",
+          "length": 1000,
+          "steps": [
+            {"at": 30, "buttons": "start", "hold": 5},
+            {"at": 100, "buttons": "down", "hold": 5},
+            {"at": 130, "buttons": "down", "hold": 5},
+            {"at": 190, "buttons": "cross", "hold": 5, "what": "pause page 2"},
+            {"at": 310, "buttons": "cross", "hold": 5},
+            {"at": 390, "buttons": "down", "hold": 5},
+            {"at": 450, "buttons": "cross", "hold": 5},
+            {"at": 530, "buttons": "triangle", "hold": 5},
+            {"at": 610, "buttons": "triangle", "hold": 5},
+            {"at": 690, "buttons": "start", "hold": 5}
+          ]
+        },
+        "01-pause-3": {
+          "level": 1,
+          "name": "Novalis: pause page 3",
+          "length": 1000,
+          "steps": [
+            {"at": 30, "buttons": "start", "hold": 5},
+            {"at": 100, "buttons": "down", "hold": 5},
+            {"at": 130, "buttons": "down", "hold": 5},
+            {"at": 160, "buttons": "down", "hold": 5},
+            {"at": 220, "buttons": "cross", "hold": 5, "what": "pause page 3"},
+            {"at": 340, "buttons": "cross", "hold": 5},
+            {"at": 420, "buttons": "down", "hold": 5},
+            {"at": 480, "buttons": "cross", "hold": 5},
+            {"at": 560, "buttons": "triangle", "hold": 5},
+            {"at": 640, "buttons": "triangle", "hold": 5},
+            {"at": 720, "buttons": "start", "hold": 5}
+          ]
+        },
+        "01-pause-4": {
+          "level": 1,
+          "name": "Novalis: pause page 4",
+          "length": 1000,
+          "steps": [
+            {"at": 30, "buttons": "start", "hold": 5},
+            {"at": 100, "buttons": "down", "hold": 5},
+            {"at": 130, "buttons": "down", "hold": 5},
+            {"at": 160, "buttons": "down", "hold": 5},
+            {"at": 190, "buttons": "down", "hold": 5},
+            {"at": 250, "buttons": "cross", "hold": 5, "what": "pause page 4"},
+            {"at": 370, "buttons": "cross", "hold": 5},
+            {"at": 450, "buttons": "down", "hold": 5},
+            {"at": 510, "buttons": "cross", "hold": 5},
+            {"at": 590, "buttons": "triangle", "hold": 5},
+            {"at": 670, "buttons": "triangle", "hold": 5},
+            {"at": 750, "buttons": "start", "hold": 5}
+          ]
+        },
+        "01-pause-5": {
+          "level": 1,
+          "name": "Novalis: pause page 5",
+          "length": 1000,
+          "steps": [
+            {"at": 30, "buttons": "start", "hold": 5},
+            {"at": 100, "buttons": "down", "hold": 5},
+            {"at": 130, "buttons": "down", "hold": 5},
+            {"at": 160, "buttons": "down", "hold": 5},
+            {"at": 190, "buttons": "down", "hold": 5},
+            {"at": 220, "buttons": "down", "hold": 5},
+            {"at": 280, "buttons": "cross", "hold": 5, "what": "pause page 5"},
+            {"at": 400, "buttons": "cross", "hold": 5},
+            {"at": 480, "buttons": "down", "hold": 5},
+            {"at": 540, "buttons": "cross", "hold": 5},
+            {"at": 620, "buttons": "triangle", "hold": 5},
+            {"at": 700, "buttons": "triangle", "hold": 5},
+            {"at": 780, "buttons": "start", "hold": 5}
+          ]
+        },
+        "01-pause-6": {
+          "level": 1,
+          "name": "Novalis: pause page 6",
+          "length": 1000,
+          "steps": [
+            {"at": 30, "buttons": "start", "hold": 5},
+            {"at": 100, "buttons": "down", "hold": 5},
+            {"at": 130, "buttons": "down", "hold": 5},
+            {"at": 160, "buttons": "down", "hold": 5},
+            {"at": 190, "buttons": "down", "hold": 5},
+            {"at": 220, "buttons": "down", "hold": 5},
+            {"at": 250, "buttons": "down", "hold": 5},
+            {"at": 310, "buttons": "cross", "hold": 5, "what": "pause page 6"},
+            {"at": 430, "buttons": "cross", "hold": 5},
+            {"at": 510, "buttons": "down", "hold": 5},
+            {"at": 570, "buttons": "cross", "hold": 5},
+            {"at": 650, "buttons": "triangle", "hold": 5},
+            {"at": 730, "buttons": "triangle", "hold": 5},
+            {"at": 810, "buttons": "start", "hold": 5}
+          ]
+        },
+        "03-fall": {
+          "level": 3,
+          "name": "Kerwan: fall to death",
+          "sequence": "death",
+          "length": 1500,
+          "then": [{"at": 30, "teleport": [264.0, 101.9, -200.0]}]
+        },
+        "09-fall": {
+          "level": 9,
+          "name": "Gaspar: fall to death",
+          "sequence": "death",
+          "length": 1500,
+          "then": [{"at": 30, "teleport": [291.3, 392.3, -200.0]}]
+        },
+        "05-health": {
+          "level": 5,
+          "name": "Rilgar: health to 0",
+          "sequence": "death",
+          "length": 1500,
+          "then": [{"at": 30, "health": 0}]
+        },
+        "12-enemies": {
+          "level": 12,
+          "name": "Hoven: troopers, one hit point",
+          "sequence": "death",
+          "length": 2400,
+          "then": [
+            {"at": 30, "health": 1},
+            {"at": 40, "teleport": [363.6, 345.1, 33.0]},
+            {"at": 100, "hold": 200, "left": [128, 0]},
+            {"at": 500, "hold": 200, "left": [0, 128]}
+          ]
+        },
+        "03-dogs": {
+          "level": 3,
+          "name": "Kerwan: robot dogs, one hit point",
+          "sequence": "death",
+          "length": 2400,
+          "then": [
+            {"at": 30, "health": 1},
+            {"at": 40, "teleport": [294.0, 142.0, 49.0]},
+            {"at": 100, "hold": 200, "left": [128, 0]},
+            {"at": 500, "hold": 200, "left": [0, 128]}
+          ]
+        },
+        "11-swim": {
+          "level": 11,
+          "name": "Pokitaru: the water",
+          "length": 2000,
+          "steps": [
+            {"at": 30, "teleport": [500.0, 490.0, 216.0], "hold_place": 30},
+            {"at": 200, "hold": 300, "left": [128, 0]},
+            {"at": 700, "hold": 300, "left": [0, 128]},
+            {"at": 1200, "hold": 100, "left": [128, 0]}
+          ]
+        },
+        "00-clank": {
+          "level": 0,
+          "name": "Veldin: Clank's crash site",
+          "sequence": "talk",
+          "length": 4000,
+          "points": {"it": [171.43, 270.94, 30.5]}
+        },
+        "05-hoverboard-girl": {
+          "level": 5,
+          "name": "Rilgar: the hoverboard",
+          "sequence": "talk",
+          "length": 2400,
+          "points": {"it": [291.5, 225.4, 100.5]}
+        },
+        "05-bouncer": {
+          "level": 5,
+          "name": "Rilgar: the race's bouncer",
+          "sequence": "talk",
+          "length": 2400,
+          "points": {"it": [247.3, 201.1, 100.3]}
+        },
+        "16-hoverboard": {
+          "level": 16,
+          "name": "Kalebo III: the hoverboard",
+          "sequence": "talk",
+          "length": 2400,
+          "points": {"it": [139.3, 90.3, 83.2]}
+        },
+        "11-jet-fighter": {
+          "level": 11,
+          "name": "Pokitaru: the jet fighter",
+          "sequence": "talk",
+          "length": 2400,
+          "points": {"it": [622.5, 579.6, 234.5]}
+        },
+        "13-qwark": {
+          "level": 13,
+          "name": "Gemlik Base: Qwark",
+          "sequence": "talk",
+          "length": 2400,
+          "points": {"it": [455.9, 540.8, 316.5]}
+        },
+        "07-snagglebeast": {
+          "level": 7,
+          "name": "Umbris: the Snagglebeast",
+          "sequence": "talk",
+          "length": 2400,
+          "points": {"it": [278.4, 436.2, 37.0]}
+        },
+        "15-giant-clank": {
+          "level": 15,
+          "name": "Quartu: Giant Clank",
+          "sequence": "talk",
+          "length": 3000,
+          "points": {"it": [130.5, 222.4, 26.0]}
+        },
+        "18-giant-clank": {
+          "level": 18,
+          "name": "Veldin (final): Giant Clank",
+          "sequence": "talk",
+          "length": 3000,
+          "points": {"it": [604.1, 727.5, 96.5]}
+        },
+        "18-drek": {
+          "level": 18,
+          "name": "Veldin (final): Drek",
+          "sequence": "talk",
+          "length": 3000,
+          "points": {"it": [507.5, 630.5, 101.9]}
+        },
+        "06-clank": {
+          "level": 6,
+          "name": "Blarg Station: Clank",
+          "sequence": "talk",
+          "length": 2400,
+          "points": {"it": [222.9, 150.0, 136.6]}
+        },
+        "12-turret": {
+          "level": 12,
+          "name": "Hoven: the turret",
+          "sequence": "talk",
+          "length": 2400,
+          "points": {"it": [323.2, 342.5, 61.5]}
+        },
+        "09-turret": {
+          "level": 9,
+          "name": "Gaspar: the turret",
+          "sequence": "talk",
+          "length": 2400,
+          "points": {"it": [281.2, 344.2, 26.5]}
+        },
+        "17-turret": {
+          "level": 17,
+          "name": "Drek's Fleet: the turret",
+          "sequence": "talk",
+          "length": 2400,
+          "points": {"it": [481.2, 545.4, 153.7]}
+        },
+        "10-clank": {
+          "level": 10,
+          "name": "Orxon: Clank's part (no items)",
+          "length": 2400,
+          "steps": [
+            {"at": 30, "teleport": [222.7, 196.5, 49.5]},
+            {"at": 100, "buttons": "triangle", "hold": 5},
+            {"at": 160, "buttons": "cross", "hold": 5},
+            {"at": 300, "hold": 200, "left": [128, 0]},
+            {"at": 600, "buttons": "triangle", "hold": 5},
+            {"at": 800, "hold": 300, "left": [0, 128]},
+            {"at": 1200, "buttons": "cross", "hold": 5},
+            {"at": 1300, "buttons": "square", "hold": 5},
+            {"at": 1500, "hold": 300, "left": [128, 0]}
+          ]
+        },
+        "03-ship": {
+          "level": 3,
+          "name": "Kerwan: the ship and the galactic map",
+          "length": 4000,
+          "points": {"ship": [252.0, 99.0, 55.5]},
+          "steps": [
+            {"at": 30, "teleport": "ship"},
+            {"at": 100, "buttons": "triangle", "hold": 5, "what": "board: take-off, then the galactic map"},
+            {"at": 800, "buttons": "right", "hold": 5},
+            {"at": 900, "buttons": "cross", "hold": 5},
+            {"at": 1000, "buttons": "right", "hold": 10},
+            {"at": 1100, "buttons": "cross", "hold": 5},
+            {"at": 1300, "buttons": "down", "hold": 5},
+            {"at": 1400, "buttons": "cross", "hold": 5},
+            {"at": 1600, "buttons": "left", "hold": 5},
+            {"at": 1700, "buttons": "cross", "hold": 5},
+            {"at": 3000, "hold": 200, "left": [128, 0]}
+          ]
+        },
+        "title-new": {
+          "start": "title",
+          "name": "Title: New Game",
+          "skip": null,
+          "level": 0,
+          "length": 660,
+          "max_frames": 9000,
+          "sequence": "standard",
+          "boot": [
+            {"at": 100, "buttons": "cross", "hold": 5},
+            {"at": 600, "buttons": "start", "hold": 5},
+            {"at": 700, "buttons": "cross", "hold": 5},
+            {"at": 800, "buttons": "cross", "hold": 5},
+            {"at": 900, "buttons": "cross", "hold": 5},
+            {"at": 1000, "buttons": "cross", "hold": 5},
+            {"at": 1100, "buttons": "cross", "hold": 5},
+            {"at": 1200, "buttons": "cross", "hold": 5},
+            {"at": 1300, "buttons": "cross", "hold": 5},
+            {"at": 1400, "buttons": "cross", "hold": 5},
+            {"at": 1500, "buttons": "cross", "hold": 5}
+          ]
+        },
+        "title-load-0": {
+          "start": "title",
+          "card": "prepared",
+          "skip": null,
+          "level": 5,
+          "name": "Title: Load Game, slot 0 (Rilgar)",
+          "sequence": "loaded",
+          "length": 3200,
+          "max_frames": 9000,
+          "boot": [
+            {"at": 100, "buttons": "cross", "hold": 5},
+            {"at": 600, "buttons": "start", "hold": 5},
+            {"at": 700, "buttons": "down", "hold": 5},
+            {"at": 800, "buttons": "cross", "hold": 5},
+            {"at": 1400, "buttons": "cross", "hold": 5},
+            {"at": 1550, "buttons": "cross", "hold": 5},
+            {"at": 1700, "buttons": "cross", "hold": 5}
+          ]
+        },
+        "title-load-1": {
+          "start": "title",
+          "card": "prepared",
+          "skip": null,
+          "level": 10,
+          "name": "Title: Load Game, slot 1 (Orxon)",
+          "sequence": "loaded",
+          "length": 3200,
+          "max_frames": 9000,
+          "boot": [
+            {"at": 100, "buttons": "cross", "hold": 5},
+            {"at": 600, "buttons": "start", "hold": 5},
+            {"at": 700, "buttons": "down", "hold": 5},
+            {"at": 800, "buttons": "cross", "hold": 5},
+            {"at": 1000, "buttons": "down", "hold": 5},
+            {"at": 1400, "buttons": "cross", "hold": 5},
+            {"at": 1550, "buttons": "cross", "hold": 5},
+            {"at": 1700, "buttons": "cross", "hold": 5}
+          ]
+        },
+        "title-load-2": {
+          "start": "title",
+          "card": "prepared",
+          "skip": null,
+          "level": 13,
+          "name": "Title: Load Game, slot 2 (Gemlik Base)",
+          "sequence": "loaded",
+          "length": 3200,
+          "max_frames": 9000,
+          "boot": [
+            {"at": 100, "buttons": "cross", "hold": 5},
+            {"at": 600, "buttons": "start", "hold": 5},
+            {"at": 700, "buttons": "down", "hold": 5},
+            {"at": 800, "buttons": "cross", "hold": 5},
+            {"at": 1000, "buttons": "down", "hold": 5},
+            {"at": 1060, "buttons": "down", "hold": 5},
+            {"at": 1400, "buttons": "cross", "hold": 5},
+            {"at": 1550, "buttons": "cross", "hold": 5},
+            {"at": 1700, "buttons": "cross", "hold": 5}
+          ]
+        },
+        "title-load-3": {
+          "start": "title",
+          "card": "prepared",
+          "skip": null,
+          "level": 12,
+          "name": "Title: Load Game, slot 3 (Hoven)",
+          "sequence": "loaded",
+          "length": 3200,
+          "max_frames": 9000,
+          "boot": [
+            {"at": 100, "buttons": "cross", "hold": 5},
+            {"at": 600, "buttons": "start", "hold": 5},
+            {"at": 700, "buttons": "down", "hold": 5},
+            {"at": 800, "buttons": "cross", "hold": 5},
+            {"at": 1000, "buttons": "down", "hold": 5},
+            {"at": 1060, "buttons": "down", "hold": 5},
+            {"at": 1120, "buttons": "down", "hold": 5},
+            {"at": 1400, "buttons": "cross", "hold": 5},
+            {"at": 1550, "buttons": "cross", "hold": 5},
+            {"at": 1700, "buttons": "cross", "hold": 5}
+          ]
+        },
+        "title-load-4": {
+          "start": "title",
+          "card": "prepared",
+          "skip": null,
+          "level": 16,
+          "name": "Title: Load Game, slot 4 (Kalebo III)",
+          "sequence": "loaded",
+          "length": 3200,
+          "max_frames": 9000,
+          "boot": [
+            {"at": 100, "buttons": "cross", "hold": 5},
+            {"at": 600, "buttons": "start", "hold": 5},
+            {"at": 700, "buttons": "down", "hold": 5},
+            {"at": 800, "buttons": "cross", "hold": 5},
+            {"at": 1000, "buttons": "down", "hold": 5},
+            {"at": 1060, "buttons": "down", "hold": 5},
+            {"at": 1120, "buttons": "down", "hold": 5},
+            {"at": 1180, "buttons": "down", "hold": 5},
+            {"at": 1400, "buttons": "cross", "hold": 5},
+            {"at": 1550, "buttons": "cross", "hold": 5},
+            {"at": 1700, "buttons": "cross", "hold": 5}
+          ]
+        },
+        "title-options": {
+          "start": "title",
+          "until": "frames",
+          "card": "prepared",
+          "skip": null,
+          "level": -1,
+          "name": "Title: Options pages",
+          "max_frames": 2600,
+          "steps": [],
+          "boot": [
+            {"at": 100, "buttons": "cross", "hold": 5},
+            {"at": 600, "buttons": "start", "hold": 5},
+            {"at": 700, "buttons": "down", "hold": 5},
+            {"at": 760, "buttons": "down", "hold": 5},
+            {"at": 820, "buttons": "cross", "hold": 5},
+            {"at": 900, "buttons": "down", "hold": 5},
+            {"at": 960, "buttons": "cross", "hold": 5},
+            {"at": 1020, "buttons": "right", "hold": 5},
+            {"at": 1080, "buttons": "left", "hold": 5},
+            {"at": 1140, "buttons": "triangle", "hold": 5},
+            {"at": 1200, "buttons": "down", "hold": 5},
+            {"at": 1260, "buttons": "cross", "hold": 5},
+            {"at": 1320, "buttons": "right", "hold": 5},
+            {"at": 1400, "buttons": "triangle", "hold": 5},
+            {"at": 1500, "buttons": "triangle", "hold": 5},
+            {"at": 1600, "buttons": "down", "hold": 5},
+            {"at": 1700, "buttons": "cross", "hold": 5},
+            {"at": 1800, "buttons": "triangle", "hold": 5},
+            {"at": 1900, "buttons": "triangle", "hold": 5}
+          ]
+        },
+        "title-idle": {
+          "start": "title",
+          "until": "frames",
+          "skip": null,
+          "level": -1,
+          "name": "Title: left alone",
+          "max_frames": 4000,
+          "steps": [],
+          "boot": [{"at": 100, "buttons": "cross", "hold": 5}]
+        }
+      }
+    }
   }
 }

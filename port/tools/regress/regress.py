@@ -3,14 +3,17 @@
 # Copyright (c) 2026 the OpenRAC contributors
 """Gameplay regression runs of the native port (docs/port/REGRESSION.md).
 
-    regress.py run --game rac1-pal|rac1-ntsc [--levels 0-18] [--build DIR] [--jobs N]
+    regress.py run --game rac1-pal|rac1-ntsc [--set wide] [--levels 0-18] [--only KEY,...] [--build DIR] [--jobs N]
     regress.py compare A B [--fields cam,fw] [--tol position=0.1]
-    regress.py baseline save NAME [RUN ...]      (the latest run of each version by default)
-    regress.py check NAME [RUN ...]              (the latest runs against the baseline)
+    regress.py baseline save NAME [RUN ...] [--set wide]   (the latest run of each version by default)
+    regress.py check NAME [RUN ...] [--set wide]           (the latest runs against the baseline)
     regress.py reach RUN [RUN ...] [--top N] [--json FILE]
+    regress.py card --game rac1-pal|rac1-ntsc [--from DIR]  (the prepared memory card, a copy)
+    regress.py sets                                          (the route sets and their routes)
 
-A run is a folder (build/regress/runs/<game>-<time>/), latest:<game> (the last run of that
-version) or baseline:NAME/<game>. Everything is kept under build/, never committed.
+A run is a folder (build/regress/runs/<game>[-<set>]-<time>/), latest:<game> (the last run of
+that version's standard routes), latest:<game>@<set> (of a set) or baseline:NAME/<game>.
+Everything is kept under build/, never committed.
 """
 
 from __future__ import annotations
@@ -25,6 +28,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+import card as card_mod  # noqa: E402
 import compare as compare_mod  # noqa: E402
 import reach as reach_mod  # noqa: E402
 import routes as routes_mod  # noqa: E402
@@ -69,12 +73,15 @@ def run_game(meta_path: Path) -> str | None:
 
 def cmd_run(args) -> int:
     build = Path(args.build) if args.build else runner.REPO / "port" / "build" / "release"
-    levels = parse_levels(args.levels)
+    levels = parse_levels(args.levels) if args.levels or args.set in (None, "standard") else None
+    only = [k.strip() for k in args.only.split(",")] if args.only else None
     started = time.monotonic()
-    print(f"{args.game}: {len(levels)} levels from {build}, {args.jobs} at once")
+    what = f"{len(levels)} levels" if levels is not None else "all routes"
+    print(f"{args.game}: {args.set or 'standard'} set, {what}{' ' + args.only if only else ''} from {build}, "
+          f"{args.jobs} at once")
     out = runner.run(args.game, levels, build, Path(args.out) if args.out else None, args.jobs,
                      Path(args.data) if args.data else None, Path(args.level_data) if args.level_data else None,
-                     Path(args.routes) if args.routes else None)
+                     Path(args.routes) if args.routes else None, route_set=args.set, only=only)
     meta = json.loads((out / "run.json").read_text())
     counts = {}
     for r in meta["levels"].values():
@@ -134,8 +141,12 @@ def cmd_compare(args) -> int:
     return 0 if ok else 1
 
 
+def latest_runs(route_set: str | None) -> list[Path]:
+    return [p for p in (runner.latest(g, route_set) for g in routes_mod.GAMES) if p]
+
+
 def cmd_baseline_save(args) -> int:
-    runs = [resolve(r) for r in args.runs] if args.runs else [p for p in (runner.latest(g) for g in routes_mod.GAMES) if p]
+    runs = [resolve(r) for r in args.runs] if args.runs else latest_runs(args.set)
     if not runs:
         raise SystemExit("no runs to save: regress.py run first")
     dest = baselines_dir() / args.name
@@ -159,7 +170,7 @@ def cmd_baseline_save(args) -> int:
         (targets[0] / "noise.json").write_text(json.dumps(noise, indent=1) + "\n")
         if len(targets) > 1:
             print(f"  {len(noise)} levels part between its own runs: "
-                  + (", ".join(f"{k} (c={v['c']} {v['field']})" for k, v in sorted(noise.items(), key=lambda kv: int(kv[0])))
+                  + (", ".join(f"{k} (c={v['c']} {v['field']})" for k, v in sorted(noise.items(), key=lambda kv: key_order(kv[0])))
                      or "none"))
     return 0
 
@@ -168,7 +179,7 @@ def cmd_check(args) -> int:
     base = baselines_dir() / args.name
     if not base.is_dir():
         raise SystemExit(f"no baseline {args.name} (regress.py baseline save {args.name})")
-    runs = [resolve(r) for r in args.runs] if args.runs else [p for p in (runner.latest(g) for g in routes_mod.GAMES) if p]
+    runs = [resolve(r) for r in args.runs] if args.runs else latest_runs(args.set)
     fields = args.fields.split(",") if args.fields else None
     ok = True
     for run in runs:
@@ -184,15 +195,38 @@ def cmd_check(args) -> int:
     return 0 if ok else 1
 
 
+def cmd_card(args) -> int:
+    out = card_mod.prepare(args.game, Path(args.source) if args.source else None)
+    print(out)
+    return 0
+
+
+def cmd_sets(args) -> int:
+    data = routes_mod.load(Path(args.routes)) if args.routes else routes_mod.load()
+    for name in routes_mod.sets(data):
+        rs = routes_mod.set_routes(name, routes_mod.GAMES[0], data)
+        print(f"{name}: {len(rs)} routes")
+        for r in rs:
+            extra = ", ".join(x for x in (r.start if r.start != "direct" else "", "card" if r.card else "") if x)
+            print(f"  {r.key:<18} level {r.level:2d}  {r.name}" + (f"  ({extra})" if extra else ""))
+    return 0
+
+
+def key_order(key: str) -> tuple:
+    """Levels in number order, then a set's routes by name."""
+    return (0, int(key), "") if key.isdigit() else (1, 0, key)
+
+
 def check_status(base: Path, run: Path) -> bool:
     """Levels whose outcome changed (ok to crash, no-control to ok)."""
     a = json.loads((base / "run.json").read_text())["levels"]
     b = json.loads((run / "run.json").read_text())["levels"]
     same = True
-    for level in sorted(set(a) & set(b), key=int):
+    for level in sorted(set(a) & set(b), key=key_order):
         if a[level]["status"] != b[level]["status"]:
             same = False
-            print(f"level {int(level):2d} {a[level].get('name', ''):<15} was {a[level]['status']}, now {b[level]['status']}")
+            head = f"level {int(level):2d} {a[level].get('name', ''):<15}" if level.isdigit() else f"{level:<18}"
+            print(f"{head} was {a[level]['status']}, now {b[level]['status']}")
     return same
 
 
@@ -221,6 +255,8 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--data", help="the game's data folder (default: the checkout's)")
     r.add_argument("--level-data", help="the extracted levels (default: the checkout's)")
     r.add_argument("--routes", help="another routes file")
+    r.add_argument("--set", help="a route set of routes.json (default: standard, the level routes)")
+    r.add_argument("--only", help="a set's routes by name: 11-drown,05-long")
     r.set_defaults(fn=cmd_run)
 
     c = sub.add_parser("compare", help="two runs, aligned on control")
@@ -238,6 +274,7 @@ def main(argv: list[str] | None = None) -> int:
     s = bs.add_parser("save")
     s.add_argument("name")
     s.add_argument("runs", nargs="*")
+    s.add_argument("--set", help="the latest runs of this route set (default: standard)")
     s.set_defaults(fn=cmd_baseline_save)
     for parent in (bs, sub):
         k = parent.add_parser("check", help="the latest runs against a baseline")
@@ -245,6 +282,7 @@ def main(argv: list[str] | None = None) -> int:
         k.add_argument("runs", nargs="*")
         k.add_argument("--fields")
         k.add_argument("--tol", action="append")
+        k.add_argument("--set", help="the latest runs of this route set (default: standard)")
         k.set_defaults(fn=cmd_check)
 
     m = sub.add_parser("reach", help="what the runs reached without right C, ranked per version")
@@ -252,6 +290,15 @@ def main(argv: list[str] | None = None) -> int:
     m.add_argument("--top", type=int, default=25)
     m.add_argument("--json")
     m.set_defaults(fn=cmd_reach)
+
+    d = sub.add_parser("card", help="the prepared memory card: a copy of a card, every item, five slots")
+    d.add_argument("--game", required=True, choices=routes_mod.GAMES)
+    d.add_argument("--from", dest="source", help="the card to copy (default: the player's, read only)")
+    d.set_defaults(fn=cmd_card)
+
+    t = sub.add_parser("sets", help="the route sets and their routes")
+    t.add_argument("--routes", help="another routes file")
+    t.set_defaults(fn=cmd_sets)
 
     args = p.parse_args(argv)
     return args.fn(args)

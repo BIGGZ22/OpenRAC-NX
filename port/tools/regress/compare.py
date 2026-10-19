@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import routes as routes_mod
-from runner import read_trace
+from runner import read_trace, run_routes, run_set
 
 # Every field the trace has, in the order a divergence names them, and its tolerance's kind.
 FIELDS = {
@@ -37,7 +37,7 @@ class Divergence:
 
 @dataclass
 class LevelResult:
-    level: int
+    level: int | str           # the level (standard set) or the route's name (another set)
     name: str
     state: str                # "same", "diverges", "missing" (one side has no trace from control)
     compared: int = 0         # ticks compared
@@ -45,7 +45,8 @@ class LevelResult:
     note: str = ""
 
     def line(self) -> str:
-        head = f"level {self.level:2d} {self.name:<15}"
+        head = (f"level {self.level:2d} {self.name:<15}" if isinstance(self.level, int)
+                else f"{self.level:<18} {self.name[:28]:<28}")
         if self.state == "missing":
             return f"{head} not compared: {self.note}"
         if self.state == "same":
@@ -107,20 +108,27 @@ def ignored(differences: list[dict], c: int) -> set[str]:
     return {f for d in differences if c >= int(d.get("from", 0)) for f in d.get("fields", [])}
 
 
-def version_differences(level: int, data: dict | None = None) -> list[dict]:
-    """What routes.json says the two versions do differently on a level ("versions": the fields
-    not compared between PAL and US from a tick on, and why)."""
+def version_differences(level: int | str, data: dict | None = None, route_set: str = "standard") -> list[dict]:
+    """What routes.json says the two versions do differently on a level or a set's route
+    ("versions": the fields not compared between PAL and US from a tick on, and why)."""
     data = data if data is not None else routes_mod.load()
+    if route_set != "standard":
+        return list(data.get("sets", {}).get(route_set, {}).get("routes", {}).get(str(level), {}).get("versions", []))
     return list(data.get("levels", {}).get(str(level), {}).get("versions", []))
 
 
+def by_frame(ticks: list[dict]) -> dict[int, dict]:
+    """A route without control (the title's), read by window frame, with "c" the frame."""
+    return {t["f"]: dict(t, c=t["f"]) for t in ticks}
+
+
 def compare_ticks(a: list[dict], b: list[dict], fields: list[str], tolerance: dict,
-                  differences: list[dict] | None = None) -> tuple[int, Divergence | None, str]:
+                  differences: list[dict] | None = None, frames: bool = False) -> tuple[int, Divergence | None, str]:
     """Ticks compared, the first divergence, and a note: the largest gap of each field that
     diverges over the whole route (a drift and a broken routine read differently), or where one
     side ends first. Fields a version difference leaves out (differences) are not compared from
-    its tick on."""
-    ca, cb = by_control(a), by_control(b)
+    its tick on. frames: pair the ticks by window frame (routes without control)."""
+    ca, cb = (by_frame(a), by_frame(b)) if frames else (by_control(a), by_control(b))
     if not ca or not cb:
         return 0, None, ""
     end = min(max(ca), max(cb))
@@ -159,18 +167,13 @@ def run_game(run: Path) -> str | None:
     return json.loads(meta.read_text()).get("game") if meta.exists() else None
 
 
-def run_levels(run: Path) -> dict[int, tuple[str, Path]]:
-    """A run's levels (from run.json, else the folders) with their names and traces."""
-    out = {}
-    meta = run / "run.json"
-    names = {}
-    if meta.exists():
-        for k, v in json.loads(meta.read_text()).get("levels", {}).items():
-            names[int(k)] = v.get("name", "")
-    for d in sorted(run.iterdir()) if run.is_dir() else []:
-        if d.is_dir() and d.name.isdigit():
-            out[int(d.name)] = (names.get(int(d.name), ""), d / "trace.jsonl")
-    return out
+def run_levels(run: Path) -> dict[int | str, tuple[str, Path]]:
+    """A run's levels or routes (from run.json, else the folders) with their names and traces."""
+    return {k: (name, folder / "trace.jsonl") for k, (name, _, folder) in run_routes(run).items()}
+
+
+def _order(key) -> tuple:
+    return (0, key, "") if isinstance(key, int) else (1, 0, str(key))
 
 
 def compare_runs(a: Path, b: Path, fields: list[str] | None = None, tolerance: dict | None = None,
@@ -188,8 +191,9 @@ def compare_runs(a: Path, b: Path, fields: list[str] | None = None, tolerance: d
     ga, gb = run_game(a), run_game(b)
     versions = not strict and ga is not None and gb is not None and ga != gb
     data = (routes if routes is not None else routes_mod.load()) if versions else None
+    route_set = run_set(a)
     out = []
-    for level in sorted(set(la) | set(lb)):
+    for level in sorted(set(la) | set(lb), key=_order):
         if levels is not None and level not in levels:
             continue
         name = (la.get(level) or lb.get(level))[0]
@@ -197,11 +201,17 @@ def compare_runs(a: Path, b: Path, fields: list[str] | None = None, tolerance: d
             out.append(LevelResult(level, name, "missing", note=f"only in {'A' if level in la else 'B'}"))
             continue
         ta, tb = read_trace(la[level][1]), read_trace(lb[level][1])
+        if not any(t.get("c") is not None for t in ta + tb) and ta and tb and ga == gb:
+            # A route without control (the title's), two runs of one version: by window frame.
+            n, first, note = compare_ticks(ta, tb, fields, tol, None, frames=True)
+            out.append(LevelResult(level, name, "diverges" if first else "same", n, first,
+                                   "; ".join(x for x in ("by window frame", note) if x)))
+            continue
         if not by_control(ta) or not by_control(tb):
             which = [s for s, t in (("A", ta), ("B", tb)) if not by_control(t)]
             out.append(LevelResult(level, name, "missing", note=f"no control in {' and '.join(which)}"))
             continue
-        differences = version_differences(level, data) if versions else []
+        differences = version_differences(level, data, route_set) if versions else []
         n, first, note = compare_ticks(ta, tb, fields, tol, differences)
         out.append(LevelResult(level, name, "diverges" if first else "same", n, first, note))
     return out

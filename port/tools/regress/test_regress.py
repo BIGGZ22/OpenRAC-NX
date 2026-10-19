@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import math
+import struct
 import sys
 import tempfile
 import unittest
@@ -223,6 +224,154 @@ class Routes(unittest.TestCase):
         self.assertEqual(routes.route(2, "rac1-ntsc", data).length, 70)
         with self.assertRaises(ValueError):
             routes.mask("cros")
+
+
+class RouteSets(unittest.TestCase):
+    data = {
+        "defaults": {"boot": [{"at": 100, "buttons": "cross", "hold": 5}],
+                     "skip": {"every": 30, "buttons": "start", "hold": 5}, "sequence": "s", "length": 50},
+        "sequences": {"s": [{"at": 10, "hold": 20, "left": [128, 0]}]},
+        "levels": {},
+        "addresses": {"rac1-pal": {"hero": "0x13F450", "owned": "0x13D5C8", "acquired": "0x13D5F0", "ammo": "0x13D530"},
+                      "rac1-ntsc": {"hero": "0x13F350", "owned": "0x13D4C0", "acquired": "0x13D4E8", "ammo": "0x13D428"}},
+        "items": {"few": [2, 3, 10], "ammo": {"10": 40}},
+        "sets": {"t": {
+            "defaults": {"skip": {"every": 30, "buttons": "start", "hold": 5, "from": "scene", "after_control": True},
+                         "length": 900},
+            "lists": {"held": [15, 10]},
+            "sequences": {"tour": [
+                {"at": 5, "give": "few"},
+                {"at": 20, "each": "path", "every": 100, "do": [{"at": 0, "teleport": "$"},
+                                                                {"at": 30, "buttons": "cross", "hold": 5}]},
+                {"at": 400, "teleport": "vendor"},
+                {"at": 500, "each": "held", "every": 50, "do": [{"at": 0, "equip": "$"}, {"at": 20, "buttons": "circle"}]}]},
+            "routes": {
+                "04-tour": {"level": 4, "name": "tour", "sequence": "tour", "points": {"vendor": [1.0, 2.0, 3.0, 0.5]},
+                            "lists": {"path": [[10.0, 20.0, 30.0], [11.0, 21.0, 31.0]]}},
+                "title-load": {"start": "title", "card": "prepared", "skip": None, "level": 5, "steps": []},
+                "title-menu": {"start": "title", "until": "frames", "max_frames": 2000, "skip": None, "steps": []},
+                "02-old": {"level": 2, "skip": {"every": 30, "buttons": "start", "hold": 5, "from": "scene"},
+                           "rac1-ntsc": {"length": 70}}}}}}
+
+    def routes(self, game="rac1-pal"):
+        return {r.key: r for r in routes.set_routes("t", game, self.data)}
+
+    def test_each_block_unrolls_with_the_entry_and_named_points(self):
+        r = self.routes()["04-tour"]
+        teleports = [(s["at"], s["teleport"]) for s in r.steps if "teleport" in s]
+        self.assertEqual(teleports, [(20, [10.0, 20.0, 30.0]), (120, [11.0, 21.0, 31.0]), (400, [1.0, 2.0, 3.0, 0.5])])
+        self.assertEqual([(s["at"], s["equip"]) for s in r.steps if "equip" in s], [(500, 15), (550, 10)])
+        self.assertEqual(r.press(), "100:4000:5,S30:8:5,c50:4000:5:128:128:128:128,c150:4000:5:128:128:128:128,"
+                                    "c520:2000:5:128:128:128:128,c570:2000:5:128:128:128:128")
+        self.assertEqual(r.length, 900)
+
+    def test_writes_are_each_versions_words(self):
+        pal, us = self.routes()["04-tour"], self.routes("rac1-ntsc")["04-tour"]
+        w = {(at, a): (v, n) for at, a, v, n in pal.writes}
+        self.assertEqual(w[(20, 0x13F4D0)], (0x41200000, 10))      # x = 10.0, held 10 frames
+        self.assertEqual(w[(400, 0x13F4E8)], (0x3F000000, 50))     # the yaw, held 50
+        self.assertEqual(w[(500, 0x13F450 + 0x20B8)], (15, 1))     # the pending item
+        # Items 2 and 3 share the word at 0x13D5C8, 10 the one at 0x13D5D0; ammo by item.
+        self.assertEqual(w[(5, 0x13D5C8)], (0x01010000, 1))
+        self.assertEqual(w[(5, 0x13D5D0)], (0x00010000, 1))
+        self.assertEqual(w[(5, 0x13D530 + 40)], (40, 1))
+        self.assertIn((20, 0x13F3D0, 0x41200000, 10), us.writes)
+        self.assertTrue(pal.env()["OPENRAC_WRITE"].startswith("c5:"))
+        self.assertIn("c20:13f4d0:41200000:10", pal.env()["OPENRAC_WRITE"])
+
+    def test_title_routes_and_skips(self):
+        rs = self.routes()
+        load, menu, old = rs["title-load"], rs["title-menu"], rs["02-old"]
+        self.assertNotIn("OPENRAC_DIRECT", load.env())
+        self.assertEqual(load.env()["OPENRAC_CONTROL_FRAMES"], "900")
+        self.assertEqual((load.card, load.level), ("prepared", 5))
+        self.assertTrue(menu.until_frames)
+        self.assertNotIn("OPENRAC_CONTROL_FRAMES", menu.env())
+        self.assertIn("s30:8:5", old.press())                      # counted from the scene, before control only
+        self.assertEqual(self.routes("rac1-ntsc")["02-old"].length, 70)
+
+    def test_the_standard_set_is_the_level_routes(self):
+        self.assertEqual([r.key for r in routes.set_routes("standard", "rac1-pal")], [f"{i:02d}" for i in range(19)])
+        with self.assertRaises(ValueError):
+            routes.set_routes("nope", "rac1-pal", self.data)
+
+    def test_the_wide_set_resolves_for_both_versions(self):
+        for game in routes.GAMES:
+            rs = routes.set_routes("wide", game)
+            self.assertGreater(len(rs), 40)
+            for r in rs:
+                with self.subTest(game=game, route=r.key):
+                    r.env()
+                    if not r.until_frames:
+                        self.assertGreaterEqual(r.length, max((s["at"] + s.get("hold", 5) for s in r.steps), default=0))
+
+    def test_a_set_run_is_compared_and_merged_by_route(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            runs = []
+            for game, shift in (("rac1-pal", 0), ("rac1-ntsc", 40)):
+                root = tmp / game
+                root.mkdir()
+                meta = {"game": game, "set": "t", "levels": {}}
+                for key, level in (("04-tour", 4), ("title-menu", -1)):
+                    (root / key).mkdir()
+                    ticks = trace(100 + shift, 10) if key == "04-tour" else [tick(f, None, lv=-1) for f in range(5)]
+                    (root / key / "trace.jsonl").write_text("".join(json.dumps(t) + "\n" for t in ticks))
+                    (root / key / "reach.json").write_text(json.dumps({"game": game, "sites": [
+                        {"name": "f", "kind": "asm", "calls": 1}]}))
+                    meta["levels"][key] = {"name": key, "level": level, "key": key, "dir": key, "status": "ok"}
+                (root / "run.json").write_text(json.dumps(meta))
+                runs.append(root)
+            res = {r.level: r for r in compare.compare_runs(*runs, routes=self.data)}
+            self.assertEqual(res["04-tour"].state, "same")
+            self.assertEqual(res["title-menu"].state, "missing")  # no control: PAL and US are not paired
+            [r] = [r for r in compare.compare_runs(runs[0], runs[0], routes=self.data) if r.level == "title-menu"]
+            self.assertEqual(r.state, "same")                      # one version: by window frame
+            self.assertIn("04-tour", res["04-tour"].line())
+            rows = reach.merge(reach.load_run(runs[0]))["rac1-pal"]
+            self.assertEqual(rows[0].levels, {"04-tour", "title-menu"})
+
+
+class Card(unittest.TestCase):
+    def test_sections_round_trip_and_the_prepared_save(self):
+        import card
+        chunks = [[0, bytearray(struct.pack("<i", 1)), b""], [1, bytearray(4), b""], [5, bytearray(128), b""],
+                  [9, bytearray(148), b""], [10, bytearray(37), b"\0\0\0"], [11, bytearray(37), b"\0\0\0"],
+                  [12, bytearray(b"\xff" * 12), b""], [13, bytearray(32), b""], [14, bytearray(20), b""],
+                  [19, bytearray(4), b""], [20, bytearray(80), b""]]
+        level = [[3003, bytearray(4), b""]]
+        save = card.to_bytes(chunks, [level] * 20, len(card.encode_section(level)))
+        glob, levels, ls = card.parse(save)
+        self.assertEqual(card.to_bytes(glob, levels, ls), save)
+        out, _, _ = card.parse(card.prepared(save, 13))
+        self.assertEqual(struct.unpack("<i", card.chunk(out, card.PLANET))[0], 13)
+        self.assertEqual(card.chunk(out, card.OWNED)[15], 1)
+        self.assertEqual(struct.unpack_from("<i", card.chunk(out, card.AMMO), 4 * 15)[0], 200)
+        self.assertEqual(sum(card.chunk(out, card.PLANETS)[1:17]), 16)
+        bad = bytearray(save)
+        bad[20] ^= 1
+        with self.assertRaises(ValueError):
+            card.parse(bytes(bad))
+
+
+class Points(unittest.TestCase):
+    def test_path_runs_nearest_first_from_the_start(self):
+        import points
+
+        def moby(cls, x, y, z, yaw=0.0):
+            return {"class": cls, "matrix": [0] * 12 + [x, y, z, 1], "rotation": [0, 0, yaw]}
+        mobys = [moby(0, 0, 0, 0), moby(805, 50, 0, 0), moby(805, 10, 0, 0), moby(1134, 30, 0, 0),
+                 moby(1134, 31, 0, 0), moby(11, 0, 20, 0, math.pi / 2)]
+        orig = points.placements
+        points.placements = lambda level, root=None: mobys
+        try:
+            p = points.level_points(1)
+        finally:
+            points.placements = orig
+        self.assertEqual(p["start"], [0, 0, 0])
+        self.assertEqual([q[0] for q in p["path"]], [10, 30, 50, 0])  # 31 merged into 30; the vendor last
+        self.assertAlmostEqual(p["vendors"][0][1], 23.0)                    # three units in front of it
+        self.assertAlmostEqual(p["vendors"][0][3], -math.pi / 2, places=3)  # facing it
 
 
 class Outcome(unittest.TestCase):

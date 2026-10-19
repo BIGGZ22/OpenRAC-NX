@@ -24,7 +24,7 @@ class Row:
     details: set = field(default_factory=set)
 
     def as_dict(self) -> dict:
-        return {"name": self.name, "kind": self.kind, "levels": sorted(self.levels), "calls": self.calls,
+        return {"name": self.name, "kind": self.kind, "levels": sorted(self.levels, key=lambda k: (isinstance(k, str), str(k).zfill(4))), "calls": self.calls,
                 "details": sorted(self.details)}
 
 
@@ -46,22 +46,26 @@ def merge(files: list[tuple[str, int, dict]]) -> dict[str, list[Row]]:
     return {g: sorted(t.values(), key=lambda r: (-len(r.levels), -r.calls, r.name)) for g, t in rows.items()}
 
 
-def load_run(run: Path) -> list[tuple[str, int, dict]]:
+def load_run(run: Path) -> list[tuple[str, int | str, dict]]:
+    """A run's reach files: (game, the level, or the route's name in a set other than the
+    standard one, the file's JSON)."""
+    from runner import run_routes  # noqa: PLC0415 (runner imports nothing of this)
+
     meta = run / "run.json"
     game = json.loads(meta.read_text()).get("game", "?") if meta.exists() else "?"
     out = []
-    for d in sorted(run.iterdir()):
-        f = d / "reach.json"
-        if d.is_dir() and d.name.isdigit() and f.exists():
+    for key, (_, _, folder) in sorted(run_routes(run).items(), key=lambda kv: str(kv[0])):
+        f = folder / "reach.json"
+        if f.exists():
             try:
-                out.append((game, int(d.name), json.loads(f.read_text())))
+                out.append((game, key, json.loads(f.read_text())))
             except json.JSONDecodeError:
                 continue
     return out
 
 
 def table(game: str, rows: list[Row], top: int) -> str:
-    lines = [f"{game}: {len(rows)} functions reached without right C", "  levels  calls       kind          function"]
+    lines = [f"{game}: {len(rows)} functions reached without right C", "  routes  calls       kind          function"]
     for r in rows[:top]:
         extra = f"  -> {', '.join(sorted(r.details)[:2])}" if r.details else ""
         lines.append(f"  {len(r.levels):6d}  {r.calls:10d}  {r.kind:<12}  {r.name}{extra}")
