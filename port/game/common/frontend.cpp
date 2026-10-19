@@ -189,6 +189,10 @@ struct Route {
     int mode = -1;
     int streak = 0;
     std::int64_t control = -1;
+    // The window frame at which what plays now became skippable (-1 while nothing can be skipped):
+    // OPENRAC_PRESS's s entries count from it, so a skip falls on the same tick of a scene in every
+    // version, wherever the scene starts in window frames.
+    std::int64_t skippable_from = -1;
 };
 Route g_route;
 
@@ -2108,6 +2112,11 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         }
         g_route.level = in_level ? level : -1;
         g_route.mode = static_cast<int>(mode);
+        if (!skippable()) {
+            g_route.skippable_from = -1;
+        } else if (g_route.skippable_from < 0) {
+            g_route.skippable_from = static_cast<std::int64_t>(g->index);
+        }
         if (g_route.control < 0) {
             g_route.streak = in_level && mode == 0 ? g_route.streak + 1 : 0;
             if (g_route.streak >= kControlHold) {
@@ -2777,6 +2786,10 @@ bool hold() {
     return true;
 }
 
+std::int64_t since_control() {
+    return g && g_route.control >= 0 ? static_cast<std::int64_t>(g->index) - g_route.control : -1;
+}
+
 bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
     if (!g || port < 0 || port >= platform::kPadPorts) {
         return false;
@@ -2792,12 +2805,15 @@ bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
     // is left or up) for scripted checks. FRAME counts the window's frames (world, 2D and movie frames).
     // cFRAME counts from control instead (Route: the same moment in every version); kPERIOD holds the
     // buttons the first FRAMES of every PERIOD frames while what plays can be skipped and control has
-    // not come yet (Start through scenes and the flight).
+    // not come yet (Start through scenes and the flight), counted on window frames; sPERIOD does the
+    // same counted from the frame what plays became skippable, which is the same tick of the scene in
+    // every version (k's window frames fall at other ticks of it in PAL and US); SPERIOD as s, before
+    // and after control (the scenes and flights a route starts once the player has control).
     if (const char* script = port == 0 ? std::getenv("OPENRAC_PRESS") : nullptr) {
         for (const char* at = script; at && *at;) {
             unsigned long frame = 0, mask = 0, length = 5;
             unsigned int lx = 128, ly = 128, rx = 128, ry = 128;
-            const char kind = *at == 'c' || *at == 'k' ? *at : 0;
+            const char kind = *at == 'c' || *at == 'k' || *at == 's' || *at == 'S' ? *at : 0;
             const int read = std::sscanf(at + (kind != 0 ? 1 : 0), "%lu:%lx:%lu:%u:%u:%u:%u", &frame, &mask, &length,
                                          &lx, &ly, &rx, &ry);
             bool active = false;
@@ -2807,6 +2823,10 @@ bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
                          && since < static_cast<std::int64_t>(frame + length);
             } else if (kind == 'k') {
                 active = g_route.control < 0 && frame > 0 && skippable() && g->index % frame < length;
+            } else if (kind == 's' || kind == 'S') {
+                active = (kind == 'S' || g_route.control < 0) && frame > 0 && skippable() && g_route.skippable_from >= 0
+                         && (static_cast<std::int64_t>(g->index) - g_route.skippable_from) % static_cast<std::int64_t>(frame)
+                                < static_cast<std::int64_t>(length);
             } else {
                 active = g->index >= frame && g->index < frame + length;
             }

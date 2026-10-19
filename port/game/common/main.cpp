@@ -408,16 +408,24 @@ void openrac_game_draw(unsigned layers) {
 // OPENRAC_WRITE=FRAME:ADDRESS:VALUE[:FRAMES],...: a 32-bit word written into the game's memory at
 // each vertical blank from FRAME for FRAMES blanks (default 1), hexadecimal address and value; the
 // old interpreter's --write, for getting somewhere directly (0x15EE84, the level being played, set
-// around a new game's transition loads that level).
+// around a new game's transition loads that level). cFRAME counts the window's frames from control
+// instead, as OPENRAC_PRESS's c entries do (port/tools/regress: the same moment in every version).
 static void apply_writes() {
     static const char* script = std::getenv("OPENRAC_WRITE");
     if (script == nullptr) {
         return;
     }
+    std::int64_t since = -1;
+#ifdef OPENRAC_FRONTEND
+    since = g_window ? frontend::since_control() : -1;
+#endif
     for (const char* at = script; at && *at;) {
         unsigned long frame = 0, address = 0, value = 0, length = 1;
-        if (std::sscanf(at, "%lu:%lx:%lx:%lu", &frame, &address, &value, &length) >= 3
-            && g_frame >= frame && g_frame < frame + length) {
+        const bool from_control = *at == 'c';
+        const std::int64_t now = from_control ? since : static_cast<std::int64_t>(g_frame);
+        if (std::sscanf(at + (from_control ? 1 : 0), "%lu:%lx:%lx:%lu", &frame, &address, &value, &length) >= 3
+            && now >= 0 && now >= static_cast<std::int64_t>(frame)
+            && now < static_cast<std::int64_t>(frame + length)) {
             const std::uint32_t word = static_cast<std::uint32_t>(value);
             std::memcpy(G(static_cast<gaddr>(address)), &word, 4);
         }

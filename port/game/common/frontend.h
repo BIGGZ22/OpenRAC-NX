@@ -105,6 +105,10 @@ bool store_image(std::uint32_t base, std::uint32_t width_units, std::uint8_t psm
 // was closed.
 bool show_picture(const std::uint8_t* rgba, int width, int height, float black);
 
+// Window frames since the player got control in a scripted run (OPENRAC_PRESS's and OPENRAC_WRITE's
+// c entries), -1 before.
+std::int64_t since_control();
+
 // The pad of a port as the game's pad library reads it: buttons active low, then the right and
 // left sticks (x, y each).
 bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]);
