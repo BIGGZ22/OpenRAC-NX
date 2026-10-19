@@ -4,6 +4,7 @@
 #include "renderer/effects.h"
 
 #include <cstddef>
+#include <optional>
 #include <set>
 #include <vector>
 
@@ -67,32 +68,102 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
     glActiveTexture(GL_TEXTURE0);
 
-    std::vector<Vertex> vertices(4);
+    // Every strip and quad as triangles in one buffer, sent once; consecutive ones with the same GS
+    // state are then one draw. A frame has hundreds to thousands of them (particles, glows), and
+    // a draw each, with its own buffer and state, cost more than the rest of the frame on a phone.
+    // The triangles keep their order, so what is blended over what does not change.
+    m_vertices.clear();
+    const auto vertex = [](const EffectVertex& e) {
+        return Vertex{e.x, e.y, e.z, e.s, e.t, static_cast<std::uint8_t>(e.rgba & 0xFF),
+                      static_cast<std::uint8_t>((e.rgba >> 8) & 0xFF), static_cast<std::uint8_t>((e.rgba >> 16) & 0xFF),
+                      static_cast<std::uint8_t>(e.rgba >> 24)};
+    };
     for (const EffectStrip& strip : input.strips) {
         if (strip.count < 3 || static_cast<std::size_t>(strip.first) + strip.count > input.strip_vertices.size()) {
             continue;
         }
-        for (int u = 0; u < strip.upload_count; ++u) {
-            const std::size_t i = static_cast<std::size_t>(strip.uploads + u);
-            if (strip.uploads >= 0 && i < input.effect_uploads.size()) {
-                state.textures.upload(input.effect_uploads[i]);
+        for (std::uint32_t k = 0; k + 2 < strip.count; ++k) {
+            for (std::uint32_t c = 0; c < 3; ++c) {
+                m_vertices.push_back(vertex(input.strip_vertices[strip.first + k + c]));
             }
         }
-        apply(strip.tex0, strip.tex1, strip.clamp, strip.alpha, state);
-        vertices.resize(strip.count);
-        for (std::uint32_t k = 0; k < strip.count; ++k) {
-            const EffectVertex& e = input.strip_vertices[strip.first + k];
-            vertices[k] = {e.x, e.y, e.z, e.s, e.t, static_cast<std::uint8_t>(e.rgba & 0xFF),
-                           static_cast<std::uint8_t>((e.rgba >> 8) & 0xFF), static_cast<std::uint8_t>((e.rgba >> 16) & 0xFF),
-                           static_cast<std::uint8_t>(e.rgba >> 24)};
-        }
-        glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex)), vertices.data(),
-                     GL_STREAM_DRAW);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(strip.count));
-        state.stats.draw_calls++;
-        state.stats.triangles += strip.count - 2;
     }
-    vertices.resize(4);
+    const std::size_t quads_from = m_vertices.size();
+    for (const EffectQuad& q : input.effects) {
+        // The strip's two triangles, 0-1-2 and 1-2-3 (the faces are not culled).
+        for (const int k : {0, 1, 2, 1, 2, 3}) {
+            m_vertices.push_back({q.corner[k][0], q.corner[k][1], q.corner[k][2], q.st[k][0], q.st[k][1],
+                                  static_cast<std::uint8_t>(q.rgba[k] & 0xFF),
+                                  static_cast<std::uint8_t>((q.rgba[k] >> 8) & 0xFF),
+                                  static_cast<std::uint8_t>((q.rgba[k] >> 16) & 0xFF),
+                                  static_cast<std::uint8_t>(q.rgba[k] >> 24)});
+        }
+    }
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_vertices.size() * sizeof(Vertex)), m_vertices.data(),
+                 GL_STREAM_DRAW);
+
+    // The draw being gathered: its first vertex and count, and the GS state it was set up with.
+    struct Batch {
+        GLint first = 0;
+        GLsizei count = 0;
+    } batch;
+    struct State {
+        std::uint64_t tex0, tex1, clamp, alpha;
+        std::uint32_t tbp, cbp;
+        bool operator==(const State&) const = default;
+    };
+    std::optional<State> set;
+    const auto flush = [&] {
+        if (batch.count > 0) {
+            glDrawArrays(GL_TRIANGLES, batch.first, batch.count);
+            state.stats.draw_calls++;
+            state.stats.triangles += static_cast<std::uint64_t>(batch.count / 3);
+        }
+        batch.count = 0;
+    };
+    // Adds `count` vertices from `first` to the draw, with this state; false when the state has
+    // no texture in the pool (apply).
+    bool drawable = true;
+    const auto add = [&](const State& wanted, GLint first, GLsizei count, bool must_have_texture) {
+        if (!set || !(*set == wanted)) {
+            flush();
+            drawable = apply(wanted.tex0, wanted.tex1, wanted.clamp, wanted.alpha, state, wanted.tbp, wanted.cbp);
+            set = wanted;
+        }
+        if (must_have_texture && !drawable) {
+            return;
+        }
+        if (batch.count > 0 && batch.first + batch.count != first) {
+            flush();
+        }
+        if (batch.count == 0) {
+            batch.first = first;
+        }
+        batch.count += count;
+    };
+
+    GLint at = 0;
+    for (const EffectStrip& strip : input.strips) {
+        if (strip.count < 3 || static_cast<std::size_t>(strip.first) + strip.count > input.strip_vertices.size()) {
+            continue;
+        }
+        // An image put in the pool may replace what an earlier strip of the draw samples: that one
+        // is drawn first, and the state is set again after.
+        if (strip.uploads >= 0 && strip.upload_count > 0) {
+            flush();
+            set.reset();
+            for (int u = 0; u < strip.upload_count; ++u) {
+                const std::size_t i = static_cast<std::size_t>(strip.uploads + u);
+                if (i < input.effect_uploads.size()) {
+                    state.textures.upload(input.effect_uploads[i]);
+                }
+            }
+        }
+        const auto count = static_cast<GLsizei>(3 * (strip.count - 2));
+        add({strip.tex0, strip.tex1, strip.clamp, strip.alpha, 0, 0}, at, count, false);
+        at += count;
+    }
+    flush();
     // Every quad's texture before any quad is drawn. A texture's upload rides on the first quad that
     // named it (frontend::particle_quads hands out the pool keys per frame, in pool order), but the
     // quads are drawn back to front: one drawn before that quad sampled what the key held last frame,
@@ -104,29 +175,13 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
             state.textures.upload(input.effect_uploads[static_cast<std::size_t>(q.uploads) + 1]);
         }
     }
+    set.reset();
+    at = static_cast<GLint>(quads_from);
     for (const EffectQuad& q : input.effects) {
-        if (!apply(q.tex0, q.tex1, q.clamp, q.alpha, state, q.tbp, q.cbp)) {
-            continue;
-        }
-
-        for (int k = 0; k < 4; ++k) {
-            Vertex& v = vertices[static_cast<std::size_t>(k)];
-            v.x = q.corner[k][0];
-            v.y = q.corner[k][1];
-            v.z = q.corner[k][2];
-            v.s = q.st[k][0];
-            v.t = q.st[k][1];
-            v.r = static_cast<std::uint8_t>(q.rgba[k] & 0xFF);
-            v.g = static_cast<std::uint8_t>((q.rgba[k] >> 8) & 0xFF);
-            v.b = static_cast<std::uint8_t>((q.rgba[k] >> 16) & 0xFF);
-            v.a = static_cast<std::uint8_t>(q.rgba[k] >> 24);
-        }
-        glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex)), vertices.data(),
-                     GL_STREAM_DRAW);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        state.stats.draw_calls++;
-        state.stats.triangles += 2;
+        add({q.tex0, q.tex1, q.clamp, q.alpha, q.tbp, q.cbp}, at, 6, true);
+        at += 6;
     }
+    flush();
     glBindVertexArray(0);
     glDisable(GL_BLEND);
     glDepthMask(GL_TRUE);

@@ -11,6 +11,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "renderer/renderer.h"
 #include "renderer/shader.h"
@@ -42,6 +43,7 @@ private:
     int m_textured = -1, m_tcc = -1, m_tfx = -1, m_tex_alpha_scale = -1;
     int m_fog_enable = -1, m_alpha_test = -1;
     unsigned m_vao = 0, m_vbo = 0;
+    std::vector<Vertex> m_vertices;  // the frame's triangles, kept for their storage
 };
 
 }  // namespace openrac::renderer
