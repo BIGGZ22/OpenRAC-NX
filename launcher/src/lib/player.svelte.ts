@@ -29,6 +29,7 @@ export type PlayerKind =
   | "return" // Android: the game runs beside the launcher, in a window of its own
   | "building"
   | "play"
+  | "update" // built by an older OpenRAC: built again before it is played
   | "build"
   | "levels" // built, but the levels the game draws are not read from the disc yet
   | "blocked"; // a port exists but something it needs is missing
@@ -250,18 +251,28 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       tone: "warn",
     };
   }
+  // A game built by an older OpenRAC is not played as it is: everyone plays the version they have.
+  // Only an update that changed what the game is built from counts (port_build.rs), so a current
+  // game never builds here.
+  if (play.runnable && v.portOutdated && action(v, "port-rebuild")?.runnable) {
+    return {
+      ...base,
+      kind: "update",
+      label: "Update and play",
+      icon: "build",
+      hint: "OpenRAC was updated since this game was built. It is built again with the update first (a few minutes), then starts.",
+      primary: true,
+      status: "Update ready",
+      tone: "warn",
+    };
+  }
   if (play.runnable) {
-    // Play never builds: an outdated game is only pointed at Rebuild the game, in the menu.
-    const rebuild = action(v, "port-rebuild");
     return {
       ...base,
       kind: "play",
       label: "Play",
       icon: "play",
-      hint:
-        v.portOutdated && rebuild?.runnable
-          ? "OpenRAC was updated since this game was built. Rebuild the game, in the menu, to play the new version."
-          : "",
+      hint: "",
       primary: true,
       status: "Ready to play",
       tone: "ok",
@@ -321,7 +332,8 @@ const freshVersion = (v: VersionView) =>
 /**
  * Everything playing still needs, in order: the game built for this computer if it is not built
  * yet, then the levels read and checked (prepareLevels). A game already built is not built again
- * here: only Rebuild the game, in the menu, does that. True when the game can be played.
+ * here: Update and play (playerAct) or Rebuild the game, in the menu, does that. True when the game
+ * can be played.
  */
 export async function prepare(v: VersionView): Promise<boolean> {
   const scope = { kind: "version" as const, key: v.key };
@@ -388,6 +400,17 @@ export async function playerAct(v: VersionView, state: PlayerState): Promise<voi
   }
   if (state.kind === "set-up") {
     await setUp(v.game, v.title, foundDisc(v.game)?.path);
+    return;
+  }
+  if (state.kind === "update") {
+    // The rebuild, then the levels if they need anything, then the game.
+    const rebuild = action(v, "port-rebuild");
+    if (!rebuild?.runnable || !(await runChain(scope, [rebuild]))) return;
+    await refresh();
+    if (await prepare(freshVersion(v))) {
+      const play = action(freshVersion(v), "play");
+      if (play?.runnable) await run(scope, play);
+    }
     return;
   }
   if (state.kind === "build" || state.kind === "levels") {

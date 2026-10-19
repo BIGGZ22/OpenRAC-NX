@@ -77,9 +77,11 @@ OpenGOAL's flow, step for step ([docs/INTEGRATION.md](docs/INTEGRATION.md#settin
 4. In a checkout, **Build the game** runs [tools/build_port.py](../tools/build_port.py): it
    compiles the native port for this computer (a few minutes the first time).
    **Rebuild the game**, in the game's menu, deletes what was built and
-   compiles everything again; Play never builds a game that is built. After an
-   update (a new launcher, or a `git pull` in a checkout) the game page says
-   the game is outdated and points at Rebuild.
+   compiles everything again. After an update that changed what the game is
+   built from (a new version, or a `git pull` that touched `port/`, the game's
+   decompilation or the build), the main button is **Update and play**: the
+   game is built again from scratch, then starts. An outdated game is never
+   played as it is; a pull of docs or of another game changes nothing.
 5. **Play** starts the port with the set-up data.
 
 **Remove the set-up** deletes what set-up made, as OpenGOAL's uninstall does;

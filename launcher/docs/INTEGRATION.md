@@ -185,11 +185,13 @@ actions, as rac1/pal has on Windows:
   version and commit it built, and its games.
 - `port-rebuild`, "Rebuild the game from scratch": the same with `--clean`,
   which deletes the build folder first and keeps the `--source` and `--disc`
-  it held. Only the game page's Rebuild the game runs it; Play never builds
-  a game that is built. When the game is outdated (built by another OpenRAC
-  version, or another commit than the checkout's HEAD, than the stamp
-  records: after an update or a `git pull`;
-  [port_build.rs](../core/src/port_build.rs)), the page says so under Play.
+  it held. The game page's Rebuild the game runs it, and so does the main
+  button when the game is outdated: built by another OpenRAC version than
+  the stamp records, or at a commit before a change to what the game is built
+  from (`port/`, `games/<game>/`, the build's own files: git decides,
+  [port_build.rs](../core/src/port_build.rs)). The button is then **Update
+  and play** in place of Play, so an outdated game is never played as it is.
+  A current game is never built by Play.
 - `port-levels`: `editor/extract.py port {disc} assets/port/rac1/pal`, the
   levels in the form the port draws (the worlds behind the menus too). Half
   a minute, once. Building runs it after the build the first time, and the
