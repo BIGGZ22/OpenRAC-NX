@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Writes the 4x4 identity matrix (row-major, four quadword stores) to m. */
 void func_001FA190(void *m) {
     float *f = (float *)m;

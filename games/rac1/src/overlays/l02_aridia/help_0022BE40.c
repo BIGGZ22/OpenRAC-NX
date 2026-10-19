@@ -125,9 +125,9 @@ int HeroL02_SetMoveState(int a, int b) {
         *(int *)(p + 0x208C) = 0;
         *(int *)(p + 0x2284) = 0;
         *(int *)(p + 0x1010) = rand_range(scale_ticks(0x32), scale_ticks(0x64));
-        func_L00_0020AB78();
+        Hero_ClearSlotPairs();
         if (*(unsigned char *)(p + 0x20A4) != 0) {
-            func_L01_00240CE8();
+            Hero_SetMoveStateFromMode();
             return 1;
         }
         qcopy(p + 0x150, p + 0x110);
@@ -355,7 +355,7 @@ int HeroL02_SetMoveState(int a, int b) {
             char *q = D_0013E633 + 0xE1D;
             float d = *(float *)(q + 0xAA8);
             int id = 6;
-            if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
+            if (Hero_ResolveAnimId(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
             HeroStartAnim(id, 4, (float)scale_ticks(9));
         }
         break;
@@ -370,7 +370,7 @@ int HeroL02_SetMoveState(int a, int b) {
         if (b) {
             int id = 6;
             float d = *(float *)(p + 0xAA8);
-            if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
+            if (Hero_ResolveAnimId(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
             HeroStartAnim(id, 4, (float)scale_ticks(9));
         }
         break;
@@ -939,7 +939,7 @@ int HeroL02_SetMoveState(int a, int b) {
                 } else if (s == 9) {
                     int id = 8;
                     int n = truncate_float_to_s32(*(float *)(q + 0xAA8));
-                    if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4) id = D_L02_0017C458[n];
+                    if (Hero_ResolveAnimId(*(unsigned char *)(moby + 0x52)) == 4) id = D_L02_0017C458[n];
                     HeroStartAnim(id, 0, (float)scale_ticks(5));
                 } else if (s == 0xA) {
                     HeroStartAnim(0x12, 0, (float)scale_ticks(5));
@@ -1350,7 +1350,7 @@ int HeroL02_SetMoveState(int a, int b) {
         char *p = D_0013E633 + 0xE1D;
         *(int *)(p + 0x2284) = 0x51;
         *(int *)(p + 0x208C) = 0;
-        if (func_L00_002056D0(*(unsigned char *)(*(char **)(p + 0x2080) + 0x53)) != Help_GetRecordValue(1)) {
+        if (Hero_ResolveAnimId(*(unsigned char *)(*(char **)(p + 0x2080) + 0x53)) != Help_GetRecordValue(1)) {
             HeroStartAnim(Help_GetRecordValue(1), 0, (float)scale_ticks(5));
         }
         break;
@@ -1548,7 +1548,7 @@ void HeroL02_UpdateStateTransitions(void) {
     prevSub = D_0013F450.state.control_mode;
     prevState = D_0013F450.state.step;
     prevAnim = moby[0x53];
-    if (func_L02_002205B0(1) == 0) {
+    if (HeroL02_TryKnockback(1) == 0) {
         if (D_0013F450.health.hp <= 0 && D_0013F450.state.control_mode != 0x14 && (D_0013F450.state.current == 0 || D_0013F450.state.current == 2)) {
             HeroL02_SetMoveState(0x3D, 1);
         } else if (Hero_TryStartGadgetMove() == 0 && HeroTryEnterState35() == 0) {
@@ -1646,7 +1646,7 @@ void HeroL02_UpdateStateTransitions(void) {
                                 MobyBlendAnimation(m, 1, 0, scale_ticks(0xC));
                             }
                         }
-                        r = func_L00_002056D0(moby[0x53]);
+                        r = Hero_ResolveAnimId(moby[0x53]);
                         if (r == Help_GetRecordValue(0) && flag) {
                             if (PickIdleFidget(&sp20)) {
                                 Rec70 *rec;
@@ -1871,7 +1871,7 @@ void HeroL02_UpdateStateTransitions(void) {
                         }
                     }
                     if (D_0013F450.vehicle_mode != 0) {
-                        func_L01_00240CE8();
+                        Hero_SetMoveStateFromMode();
                         break;
                     }
                     if (D_0013CA40.held & 0xA) {
@@ -1945,7 +1945,7 @@ void HeroL02_UpdateStateTransitions(void) {
                         if ((float)rec->f14 < D_0013F450.anim_frame && D_0013F450.unkA9C == 0 && !(D_0013F450.state.current == 0x15 && D_0013F450.unk308 != 0)) {
                             if (PadPressedWithin(0x40, t, 0)) {
                                 if (D_0013CA40.held & 0xA) {
-                                    if (func_L00_00229E30()) {
+                                    if (Hero_TryJumpFromPads()) {
                                         break;
                                     }
                                 } else if (D_0013F450.unk1F2 == 0) {
@@ -1965,7 +1965,7 @@ void HeroL02_UpdateStateTransitions(void) {
                             break;
                         }
                         if (scale_ticks(0x64) < D_0013F450.state_timer && D_0013F450.unkAB4 < 0x1A) {
-                            func_L00_00232EC0(2);
+                            Hero_SetAttackTicks(2);
                             D_0013F450.unkAB4 = 0x1A;
                         }
                     }
@@ -2226,7 +2226,7 @@ void HeroL02_UpdateStateTransitions(void) {
                             HeroL02_SetMoveState(0x71, 1);
                             break;
                         }
-                    } else if (func_L00_00229E30()) {
+                    } else if (Hero_TryJumpFromPads()) {
                         break;
                     }
                     if (PadPressedWithin(0x80, scale_ticks(0xF), 0)) {
@@ -2467,7 +2467,7 @@ void HeroL02_UpdateStateTransitions(void) {
                             if (first) {
                                 D_0013F450.unk1C4 = scale_ticks(0x16);
                             }
-                            func_L00_00233B08(0.022f, 0.004f, 0xA, 4, 0, 1);
+                            Hero_SetBlendParams(0.022f, 0.004f, 0xA, 4, 0, 1);
                             break;
                         }
                         if (D_0013F450.state.step == one) {
@@ -2485,12 +2485,12 @@ void HeroL02_UpdateStateTransitions(void) {
                                     D_0013F450.unk1C4 = scale_ticks(0x12);
                                 }
                             }
-                            func_L00_00233B08(0.019f, 0.002f, 0xA, 2, 0, 1);
+                            Hero_SetBlendParams(0.019f, 0.002f, 0xA, 2, 0, 1);
                             break;
                         }
                         if (D_0013F450.unk229C > 0.5f && D_0013F450.unk1C4 == 0) {
                             HeroL02_SetMoveState(2, 1);
-                            func_L00_00233B08(0.016f, 0.002f, 7, 2, 0, 1);
+                            Hero_SetBlendParams(0.016f, 0.002f, 7, 2, 0, 1);
                             break;
                         }
                         if (D_0015EE6C * 3.0f < D_0013F450.motion.unk164) {
@@ -2502,7 +2502,7 @@ void HeroL02_UpdateStateTransitions(void) {
                             break;
                         }
                         HeroL02_SetMoveState(0, 1);
-                        func_L00_00233B08(0.016f, 0.002f, 5, 2, 0, 1);
+                        Hero_SetBlendParams(0.016f, 0.002f, 5, 2, 0, 1);
                         break;
                     }
                     if (D_0013F450.health.hp <= 0) {
@@ -2576,14 +2576,14 @@ void HeroL02_UpdateStateTransitions(void) {
                             break;
                         }
                         HeroStartAnim(7, 0x17, scale_ticks(9));
-                        func_L00_00233B08(0.016f, 0.002f, 5, 2, 0, 1);
+                        Hero_SetBlendParams(0.016f, 0.002f, 5, 2, 0, 1);
                         break;
                     }
                     if (HeroL02_SetMoveState(0, 0) == 0) {
                         break;
                     }
                     HeroStartAnim(Help_GetRecordValue(0), 0, -2.0f);
-                    func_L00_00233B08(0.016f, 0.002f, 5, 2, 0, 1);
+                    Hero_SetBlendParams(0.016f, 0.002f, 5, 2, 0, 1);
                     break;
                 case 8:
                     if (D_0013F450.unk1B4 != 0) {
@@ -2623,7 +2623,7 @@ void HeroL02_UpdateStateTransitions(void) {
                     }
                     if (D_0013CA40.held & 0xA) {
                         HeroL02_SetMoveState(4, 1);
-                        func_L00_00233B08(0.016f, 0.002f, 5, 2, 0, 1);
+                        Hero_SetBlendParams(0.016f, 0.002f, 5, 2, 0, 1);
                         break;
                     }
                     if (D_0013F450.target_speed > D_L02_0017C438.fC && FastDiffRots(D_0013F450.motion.move_yaw, D_0013F450.motion.rot.f[2]) < 1.5707964f) {
@@ -2637,7 +2637,7 @@ void HeroL02_UpdateStateTransitions(void) {
                             HeroStartAnim(4, 2, scale_ticks(8));
                             D_0013F450.unk3BC = 1;
                         }
-                        func_L00_00233B08(0.016f, 0.002f, 5, 2, 1, 0);
+                        Hero_SetBlendParams(0.016f, 0.002f, 5, 2, 1, 0);
                         break;
                     }
                     if (D_L02_0017C438.fC < D_0013F450.target_speed) {
@@ -2650,7 +2650,7 @@ void HeroL02_UpdateStateTransitions(void) {
                             D_0013F450.state.step = 1;
                             HeroStartAnim(4, D_L02_0015F7BC, scale_ticks(0xC));
                         }
-                        func_L00_00233B08(0.016f, 0.002f, 5, 2, 1, 0);
+                        Hero_SetBlendParams(0.016f, 0.002f, 5, 2, 1, 0);
                         break;
                     }
                     if (D_0013F450.air_frames.s == 0) {
@@ -2658,14 +2658,14 @@ void HeroL02_UpdateStateTransitions(void) {
                             break;
                         }
                         HeroStartAnim(Help_GetRecordValue(0), 0, -2.0f);
-                        func_L00_00233B08(0.016f, 0.002f, 5, 2, 0, 1);
+                        Hero_SetBlendParams(0.016f, 0.002f, 5, 2, 0, 1);
                         break;
                     }
                     if (HeroL02_SetMoveState(0, 0) == 0) {
                         break;
                     }
                     HeroStartAnim(7, 0x17, scale_ticks(9));
-                    func_L00_00233B08(0.016f, 0.002f, 5, 2, 0, 1);
+                    Hero_SetBlendParams(0.016f, 0.002f, 5, 2, 0, 1);
                     break;
                 case 7:
                 case 9:
@@ -2800,10 +2800,10 @@ void HeroL02_UpdateStateTransitions(void) {
                             int fr;
 
                             D_0013F450.unk418 = scale_ticks(1);
-                            func_L00_00233B08(0.016f, 0.002f, 5, 2, 0, 1);
+                            Hero_SetBlendParams(0.016f, 0.002f, 5, 2, 0, 1);
                             fr = truncate_float_to_s32(D_0013F450.unk448) + 2;
                             if (D_0013F450.unk444 - 1.5f > D_0013F450.anim_frame) {
-                                HeroStartAnim(func_L00_002056D0(moby[0x53]), fr, scale_ticks(7));
+                                HeroStartAnim(Hero_ResolveAnimId(moby[0x53]), fr, scale_ticks(7));
                             }
                         }
                         if (D_0013F450.unk418 != 0) {
@@ -2820,7 +2820,7 @@ void HeroL02_UpdateStateTransitions(void) {
                                 if (!isNear) {
                                     int fr = truncate_float_to_s32(D_0013F450.unk448) + 2;
                                     if (D_0013F450.anim_speed > 1.8f) {
-                                        HeroStartAnim(func_L00_002056D0(moby[0x53]), fr, D_0013F450.unk44C + 3);
+                                        HeroStartAnim(Hero_ResolveAnimId(moby[0x53]), fr, D_0013F450.unk44C + 3);
                                     }
                                 }
                                 if (0.2f > D_0013F450.anim_speed) {
@@ -2831,7 +2831,7 @@ void HeroL02_UpdateStateTransitions(void) {
                                 }
                             }
                             if (D_0013F450.state.current == 9 && D_0013F450.unk444 - D_0013F450.anim_frame > 6.0f
-                                && (func_L00_002056D0(moby[0x52]) == 8 || func_L00_002056D0(moby[0x52]) == 9)
+                                && (Hero_ResolveAnimId(moby[0x52]) == 8 || Hero_ResolveAnimId(moby[0x52]) == 9)
                                 && moby[0x52] == moby[0x53]
                                 && D_L02_0017C438.f18 * D_0015EE6C * 0.1f > D_0013F450.target_speed
                                 && D_0015EE6C * 2.5f > D_0013F450.motion.unk164) {
@@ -3138,7 +3138,7 @@ void HeroL02_UpdateStateTransitions(void) {
                 case 35:
                     if (19.0f < D_0013F450.anim_frame && PadPressedWithin(0x40, scale_ticks(0xB), 0)) {
                         if (D_0013CA40.held & 0xA) {
-                            func_L00_00229E30();
+                            Hero_TryJumpFromPads();
                             break;
                         }
                         HeroL02_SetMoveState(7, 1);
@@ -3205,7 +3205,7 @@ f32 HeroL02_PredictLanding(f32 a, f32 b, f32 c) {
             t[2] -= ((a * a + a) * 0.5f) * b;
             FastVecAdd(t, t, &(&D_0013F450_368E8)->v80);
             v.q = (&D_0013F450_368E8)->v80.q;
-            func_L00_0025E290(&v, t);
+            Vec4_AdjustNegativeComponents(&v, t);
             qcopy(&v, &(&D_0013F450_368E8)->v80);
             if (func_L00_001EFFF0(&v, t, 0x324, 0, 0) != 0) {
                 if (ViewGetPitch((f32 *)D_L02_00174500) <= 0.87266463f) {
@@ -3230,7 +3230,7 @@ f32 HeroL02_PredictLanding(f32 a, f32 b, f32 c) {
         FastVecAdd(t, &t1, t);
         FastVecAdd(t, &(&D_0013F450_368E8)->v80, t);
         v2.q = (&D_0013F450_368E8)->v80.q;
-        func_L00_0025E290(&v2, t);
+        Vec4_AdjustNegativeComponents(&v2, t);
         if (func_L00_001EFFF0(&(&D_0013F450_368E8)->v80, t, 0x324, 0, 0) != 0) {
             f32 nb;
             nb = b * -0.5f;
@@ -3254,7 +3254,7 @@ f32 HeroL02_PredictLanding(f32 a, f32 b, f32 c) {
         FastVecAdd(t, &t1, t);
         FastVecAdd(t, &(&D_0013F450_368E8)->v80, t);
         v2.q = (&D_0013F450_368E8)->v80.q;
-        func_L00_0025E290(&v2, t);
+        Vec4_AdjustNegativeComponents(&v2, t);
         if (func_L00_001EFFF0(&(&D_0013F450_368E8)->v80, t, 0x324, 0, 0) != 0) {
             f32 nb;
             nb = b * -0.5f;

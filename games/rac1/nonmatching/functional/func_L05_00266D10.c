@@ -1,4 +1,4 @@
-/* functional: medium. Draws a HUD info panel (frame box, two lines of text with a one pixel shadow, right-aligned counters, and on level-index 0x10 an extra icon box with a number) for the hud element whose word 0x6C (frames left) is positive; returns 0 when it is not, else the element's word 0x58. Not checked on real calls. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Draws a HUD info panel (frame box, two lines of text with a one pixel shadow, right-aligned counters, and on level-index 0x10 an extra icon box with a number) for the hud element whose word 0x6C (frames left) is positive; returns 0 when it is not, else the element's word 0x58. Not checked on real calls. */
 extern int D_0015EE80_66D10 __asm__("D_0015EE80") __attribute__((section(".sdata")));
 extern int D_0015EE84_66D10 __asm__("D_0015EE84") __attribute__((section(".sdata")));
 extern char D_0013E15A_66D10[] __asm__("D_0013E15A");

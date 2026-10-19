@@ -1,3 +1,4 @@
+/* fcheck: SAME on 1 call (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Fills the pause menu's table D_001D6448 (pairs of words) from the state at
    D_001D5F70: the first n entries get the word at +0x108 stepping by 0x11800,
    the next run gets the word at +0x10C stepping by 0x11800, the run after that

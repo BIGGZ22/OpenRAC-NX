@@ -221,8 +221,8 @@ void Hero_UpdateStateMovement(void) {
 
                     *(u128 *)vec[0] = 0;
                     vec[0][0] = 1.0f;
-                    func_001F9EC0(D_0013F450.motion.unk170.f, vec[0], D_L00_00166D80.f350);
-                    D_0013F450.motion.move_yaw = D_L00_00166D80.f158;
+                    func_001F9EC0(D_0013F450.motion.unk170.f, vec[0], gCameraLvl.f350);
+                    D_0013F450.motion.move_yaw = gCameraLvl.f158;
                     Hero_TurnToHeading(0, D_0015EE64, D_0015EE64 * 0.0f, D_0015EE6C * 174.53293f);
                     if (*(int *)&D_L00_0015F768 > 0) {
                         if (func_001F9908((int *)&D_L00_0015F768)) {
@@ -360,7 +360,7 @@ void Hero_UpdateStateMovement(void) {
                 D_0013F450.unk6A4->alpha = 0;
                 D_0013F450.unk6A4->flags |= 0x800;
                 func_L00_00251E30(D_0013F450.unk6A4);
-                func_0022ED80(0, 0, (int)D_0013F450.unk6A4);
+                Moby_PlaySound(0, 0, (int)D_0013F450.unk6A4);
             }
         }
         if (D_0013F450.unk6A4 != 0) {
@@ -649,9 +649,9 @@ void Hero_UpdateStateMovement(void) {
             Hero_ProbeGroundSupport(0);
             lean = D_0013F450.unk8EC * FastCos(ang) * -7.0f;
             SpringAngle(&D_0013F450.motion.rot.f[0], lean, &D_0013F450.unk8E4, 0, 0.007f, 0.17f, D_0015EE6C * 1.2217305f);
-            func_L00_0020A858(0.009f, 0.22f);
-            func_L00_0020A858(0.04f, 0.2f);
-            func_L00_0020A858(0.02f, 0.2f);
+            Hero_SetTiltSpringParams(0.009f, 0.22f);
+            Hero_SetTiltSpringParams(0.04f, 0.2f);
+            Hero_SetTiltSpringParams(0.02f, 0.2f);
             D_L00_0017A780[1].f60[1] = roll * 47.0f;
             D_L00_0017A780[1].f60[2] = lean * 1.5f;
             D_L00_0017A780[1].f60[0] = lean * 1.4f;
@@ -1130,8 +1130,8 @@ void Hero_UpdateStateMovement(void) {
             if (D_0013F450.unk4B8 != 0.0f) {
                 if (D_0013F450.air_frames.s == 0) {
                     if (D_0013F450.unk4C4 == 0) {
-                        D_L00_00166D80.f160 = 0.2f;
-                        D_L00_00166D80.f168 = scale_ticks(0x28);
+                        gCameraLvl.f160 = 0.2f;
+                        gCameraLvl.f168 = scale_ticks(0x28);
                     }
                     D_0013F450.unk4C4++;
                 }
@@ -1301,7 +1301,7 @@ void Hero_UpdateStateMovement(void) {
                     D_0013F450.motion.velocity.f[1] += FastSin(a) * s;
                     qcopy(D_0013F450.motion.unk130.f, D_0013F450.motion.velocity.f);
                 }
-                func_L00_00216F58();
+                Hero_ApplyStickVelocity();
             } else {
                 Hero_ApproachSpeed(D_0015EE70 * 37.0f, D_0015EE70 * 28.0f);
                 Hero_SetPlanarVelocity(99999.0f);
@@ -1315,7 +1315,7 @@ void Hero_UpdateStateMovement(void) {
         break;
     case 0x13:
         if (D_0013F450.unk12E2 != 0) {
-            func_L00_00216F58();
+            Hero_ApplyStickVelocity();
         } else {
             Rec2C *r;
 
@@ -1464,7 +1464,7 @@ void Hero_UpdateStateMovement(void) {
                     D_0013F450.motion.velocity.f[1] += FastSin(D_0013F450.motion.rot.f[2]) * (D_0015EE6C * 1.2f);
                     qcopy(D_0013F450.motion.unk130.f, D_0013F450.motion.velocity.f);
                 }
-                func_L00_00216F58();
+                Hero_ApplyStickVelocity();
             } else {
                 if (D_0013F450.state_timer > t0) {
                     Hero_ApproachSpeed(D_0015EE70 * 190.0f, D_0015EE70 * 90.0f);
@@ -1496,19 +1496,19 @@ void Hero_UpdateStateMovement(void) {
                         vec[4][1] = FastSin(yaw) * 0.8f;
                         vec[4][2] = 0.55f;
                         FastVecAdd(vec[4], vec[4], D_0013F450.motion.pos.f);
-                        func_L00_00217AF0((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
+                        Hero_HitMobySparks((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
                         yaw = FastAddRots(D_0013F450.motion.rot.f[2], -0.87266463f);
                         vec[4][0] = FastCos(yaw) * 0.8f;
                         vec[4][1] = FastSin(yaw) * 0.8f;
                         vec[4][2] = 0.55f;
                         FastVecAdd(vec[4], vec[4], D_0013F450.motion.pos.f);
-                        func_L00_00217AF0((int)w, coll_sphere_mobys(0.8f, vec[4], 0, D_0013F450.moby, vec[0]));
+                        Hero_HitMobySparks((int)w, coll_sphere_mobys(0.8f, vec[4], 0, D_0013F450.moby, vec[0]));
                         yaw = FastAddRots(D_0013F450.motion.rot.f[2], 0.87266463f);
                         vec[4][0] = FastCos(yaw) * 0.8f;
                         vec[4][1] = FastSin(yaw) * 0.8f;
                         vec[4][2] = 0.55f;
                         FastVecAdd(vec[4], vec[4], D_0013F450.motion.pos.f);
-                        func_L00_00217AF0((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
+                        Hero_HitMobySparks((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
                     }
                 }
             }
@@ -1692,11 +1692,11 @@ void Hero_UpdateStateMovement(void) {
         }
         break;
     case 0x2F:
-        func_L00_00216F58();
-        func_L00_0020A858(0.04f, 0.2f);
-        func_L00_0020A858(0.04f, 0.2f);
-        func_L00_0020A858(0.04f, 0.2f);
-        func_L00_0020A858(0.02f, 0.2f);
+        Hero_ApplyStickVelocity();
+        Hero_SetTiltSpringParams(0.04f, 0.2f);
+        Hero_SetTiltSpringParams(0.04f, 0.2f);
+        Hero_SetTiltSpringParams(0.04f, 0.2f);
+        Hero_SetTiltSpringParams(0.02f, 0.2f);
         if (moby->prev_seq == 0x37) {
             float a;
 
@@ -1782,9 +1782,9 @@ void Hero_UpdateStateMovement(void) {
             if (D_0013F450.state_timer > scale_ticks(0x64)) {
                 SpringAngle(&D_0013F450.motion.rot.f[1], -D_0013F450.unk9D4, &D_0013F450.unk9E8, 0, D_0015EE64 * 0.035f, D_0015EE64 * 0.3f, D_0015EE6C * 1.9198622f);
             }
-            func_L00_0020A858(0.009f, 0.22f);
-            func_L00_0020A858(0.04f, 0.2f);
-            func_L00_0020A858(0.02f, 0.2f);
+            Hero_SetTiltSpringParams(0.009f, 0.22f);
+            Hero_SetTiltSpringParams(0.04f, 0.2f);
+            Hero_SetTiltSpringParams(0.02f, 0.2f);
             D_L00_0017A780[1].f60[2] = lean * 2.1f;
             D_L00_0017A780[1].f60[0] = lean * 3.5f;
         }
@@ -1892,7 +1892,7 @@ void Hero_UpdateStateMovement(void) {
                         if (tilt < -0.7853982f) {
                             tilt = -0.7853982f;
                         }
-                        func_L00_0020A858(0.03f, 0.2f);
+                        Hero_SetTiltSpringParams(0.03f, 0.2f);
                         if (D_0013F450.unk58C != 0) {
                             D_L00_0017A7E0[1] = -tilt;
                         } else {
@@ -1904,9 +1904,9 @@ void Hero_UpdateStateMovement(void) {
                     D_L00_0017A7E0[0] = func_L00_001FF860(func_001F9CE8(D_0013F450.motion.displacement.f), D_0013F450.motion.displacement.f[2]);
                 }
                 if (hasW) {
-                    func_L00_0020A858(D_0015EE64 * 0.017f, D_0015EE64 * 0.3f);
-                    func_L00_0020A858(D_0015EE64 * 0.027f, D_0015EE64 * 0.3f);
-                    func_L00_0020A858(D_0015EE64 * 0.027f, D_0015EE64 * 0.3f);
+                    Hero_SetTiltSpringParams(D_0015EE64 * 0.017f, D_0015EE64 * 0.3f);
+                    Hero_SetTiltSpringParams(D_0015EE64 * 0.027f, D_0015EE64 * 0.3f);
+                    Hero_SetTiltSpringParams(D_0015EE64 * 0.027f, D_0015EE64 * 0.3f);
                     if (D_0013F450.unk5D8 != 0) {
                         float a;
 
@@ -2018,9 +2018,9 @@ void Hero_UpdateStateMovement(void) {
                             float a;
 
                             Hero_SetHeadingFromStick(1.0f, 0);
-                            a = FastDiffRots(D_0013F450.motion.move_yaw, D_L00_00166D80.f158);
+                            a = FastDiffRots(D_0013F450.motion.move_yaw, gCameraLvl.f158);
                             if (FastDiffRots(a, 1.5707964f) < 1.2217305f || FastDiffRots(a, -1.5707964f) < 1.2217305f) {
-                                if (FastDiffRots(FastSubRots(D_0013F450.motion.move_yaw, D_L00_00166D80.f158), 1.5707964f) < 0.7853982f) {
+                                if (FastDiffRots(FastSubRots(D_0013F450.motion.move_yaw, gCameraLvl.f158), 1.5707964f) < 0.7853982f) {
                                     D_0013F450.unk5A8 = 2;
                                 } else {
                                     D_0013F450.unk5A8 = 3;
@@ -2445,7 +2445,7 @@ void Hero_UpdateStateMovement(void) {
             }
             if (D_0013F450.unk418 != 0 || (t < lim && D_0013F450.state.current != 0xB && D_0013F450.state.current != 0x10 && D_0013F450.state.current != 0xC && D_0013F450.state.current != 0x11 && D_0013F450.state.current != 0x1C && D_0013F450.state.current != 0x4C)) {
                 if (D_0013F450.unk4A8 != 0) {
-                    func_L00_00216F58();
+                    Hero_ApplyStickVelocity();
                     if (D_0013F450.state.current == 0xA) {
                         if (D_0013F450.state_timer < scale_ticks(0xA)) {
                             if (D_0013F450.motion.unk168 < D_0015EE6C * 7.0f) {
@@ -3058,8 +3058,8 @@ void Hero_UpdateStateMovement(void) {
                 MobySphereHitDirectional((int)D_0013F450.moby, 2.7f, vec[0], 0x30000, 40.0f, 1.0f, 0, 1, 0);
             }
             if (Hero_IsTimeInWindow(30.0f) || Hero_IsTimeInWindow(0.0f)) {
-                D_L00_00166D80.f160 = 0.1f;
-                D_L00_00166D80.f168 = scale_ticks(0x14);
+                gCameraLvl.f160 = 0.1f;
+                gCameraLvl.f168 = scale_ticks(0x14);
             }
             k = 1.0f;
             Hero_SetHeadingFromStick(D_0015EE6C * 6.0f, 0);

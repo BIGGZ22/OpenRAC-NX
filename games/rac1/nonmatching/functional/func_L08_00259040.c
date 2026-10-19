@@ -1,4 +1,4 @@
-/* functional: high. Exact logic of handwritten PS2 VU0 UV shift assembly func_L08_00259040.
+/* functional: high. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Exact logic of handwritten PS2 VU0 UV shift assembly func_L08_00259040.
  * Offsets count 2D UV float pairs from src to dst by (offset[0], offset[1]).
  */
 void func_L08_00259040(float *dst, const float *src, int count, const float *offset) {

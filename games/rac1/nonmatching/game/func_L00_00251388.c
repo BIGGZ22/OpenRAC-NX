@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 extern char D_L00_0017FFC0[];
 
 /* LightMoby: a light vector for a moby. Its 0x38 word packs three 8-bit

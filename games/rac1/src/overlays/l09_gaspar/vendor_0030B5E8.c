@@ -53,7 +53,7 @@ extern void func_L00_00272488(void *, int, int, float, float);
 
 /* Flies the moby along its path toward the current node, turning and banking toward it, steps the node at each arrival and now and then drops a puff. Returns nonzero once it has run off the end of the path.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/vendor/003033a0.c, FUN_L09_0030a298. */
-int func_L09_0030B648(struct Moby *moby) {
+int LinkedRiser_StepAlongPath(struct Moby *moby) {
     PathFlyerVars *vars = (PathFlyerVars *)moby->pvars;
     PathNodes *path;
     f32 d;
@@ -116,7 +116,7 @@ extern void func_L01_00279790(void *);
 extern void func_L00_00264EA8(void *, int, int, int, int, int, int);
 extern void func_L01_00279E10(void *, int);
 extern void func_0020D678(void *);
-void func_L09_0030BA28(char *m) {
+void BreakableL09_Update(char *m) {
     int hit = 0;
     char *r = MobyGetHitMessage(m, 0x10000, 0);
     switch (*(unsigned char *)(m + 0x20)) {
@@ -128,7 +128,7 @@ void func_L09_0030BA28(char *m) {
         if (hit) m[0x20] = 2;
         break;
     case 2:
-        func_0022ED80(0, 0, (int)m);
+        Moby_PlaySound(0, 0, (int)m);
         SpawnBreakFxByDistance(m);
         SpawnMobyBurstFx(m, 0x73B, 1, 0x73B, 1, 7, 2);
         SpawnMobyCopyingPlacement(m, 0x73A);

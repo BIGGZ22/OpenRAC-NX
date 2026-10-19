@@ -11,6 +11,7 @@
  *   Further trials: p10 captures the old vertex index before increment (4216 bytes, still reverses the counter and
  *   Final: stop after 18/30 trials because p15, p16 and p17 compile to identical function instructions and branch 
  *   p13's aggregate initializer emitted memset calls and is unsuitable. p14's returning-vector constructor reserve
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 #include "common.h"
 typedef unsigned int Q41 __attribute__((mode(TI)));

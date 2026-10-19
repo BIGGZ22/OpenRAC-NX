@@ -158,7 +158,7 @@ void Moby819Update(char *m) {
         if ((unsigned char)(g[0x20A4] - 1) < 2 && (tg = d->target) == *(char **)(g + 0x2080)) {
             speed = FastVecLength(d);
             qcopy(tp, tg + 0x10);
-            h = func_00214358(tp, 0, 0.5f) + 0.2f;
+            h = ProbeGroundHeight(tp, 0, 0.5f) + 0.2f;
             *(Q_cc2e8 *)hv = *(Q_cc2e8 *)(g + 0x100);
             hv[2] = 0.0f;
             tp[2] = h;
@@ -208,7 +208,7 @@ void Moby819Update(char *m) {
         dist = FastVecDist(p, gHeroPos);
         func_001F9BD8_CD6A8(p, p, d);
         if (d->warned == 0 && d->passed != 0 && d->dist < dist && dist < 5.0f) {
-            func_0022ED80(0, 0, m);
+            Moby_PlaySound(0, 0, m);
             d->warned = 1;
         }
         if (dist < d->dist)
@@ -465,7 +465,127 @@ int Trigger_IsHeroInside(char *moby, char *unused)
     }
     return 0;
 }
-INCLUDE_ASM("asm/overlays", func_L10_002F6F18);
+struct CamK_72D8 {
+    short ids[8];
+    float vals[9];
+};
+extern void func_L00_00222B80(int, int);
+extern char *D_L10_0015F050 MACRO_ADDR;
+extern char *D_L10_001B0C30[];
+extern char D_L10_0016CF40[];
+extern char D_L10_00167180[];
+
+// Camera 19 activate: builds the two path length tables and copies the start state.
+void func_L10_002F6F18(char *cam) {
+    char *m;
+    char *q;
+    char *tb;
+    char *fb;
+    char *list;
+    char *p;
+    char *base;
+    char *src;
+    char *c10;
+    char *c20;
+    char *c30;
+    char *cf;
+    float d, f;
+    int i, k, idx, n;
+
+    m = *(char **)(D_L10_0015F050 + *(short *)(cam + 0x84) * 0x20 + 0x1C);
+    m[0x38] = 1;
+    q = *(char **)(cam + 0x70) + 0x40;
+    *(int *)q = 0;
+    *(int *)(q + 0x4) = 0;
+    *(int *)(q + 0x8) = 0;
+    *(int *)(q + 0xC) = 0;
+    *(int *)(q + 0x10) = 0;
+    *(short *)(q + 0x14) = 0;
+    *(short *)(q + 0x16) = func_001F9850(*(short *)(m + 0x3A));
+
+    tb = *(char **)(cam + 0x70) + 0x58;
+    fb = *(char **)(cam + 0x70) + 0x68;
+    {
+        struct CamK_72D8 *kv = (struct CamK_72D8 *)tb;
+        int c;
+        for (c = 0; c < 8; c++) {
+            kv->vals[c] = 0.0f;
+            kv->ids[c] = -1;
+        }
+    }
+
+    cf = D_L10_0016CF40;
+    c30 = cam + 0x30;
+    c10 = cam + 0x10;
+    c20 = cam + 0x20;
+    f = func_L00_001FF860(1.0f, *(float *)(cf + 0xB0));
+    *(float *)(tb + 0x30) = f + f;
+
+    idx = *(int *)(m + 0x20);
+    if (idx >= 0) {
+        list = D_L10_001B0C30[idx];
+        {
+            for (i = 0, n = 0; i < *(int *)list; i++) {
+                f = *(float *)(list + (i << 4) + 0x1C);
+                if (0.0f < f) {
+                    ((float *)fb)[n] = f;
+                    if (180.0f < f) {
+                        ((float *)fb)[n] = *(float *)(tb + 0x30) * 57.295776f;
+                    }
+                    ((short *)tb)[n] = i;
+                    n++;
+                }
+                k = (i + 1) % *(int *)list;
+                d = func_001F9D10(list + (i * 16 + 0x10), list + (k * 16 + 0x10));
+                *(float *)(list + (i << 4) + 0x1C) = d;
+                if (i < *(int *)list - 1) {
+                    *(float *)(q + 0x8) = *(float *)(q + 0x8) + d;
+                }
+            }
+        }
+    }
+
+    if (*(short *)(m + 0x3A) > 0) {
+        *(float *)(m + 0x3C) = *(float *)(q + 0x8) / func_001FA888(func_001F9850(*(short *)(m + 0x3A))) * 60.0f;
+    }
+
+    idx = *(int *)(m + 0x24);
+    if (idx >= 0) {
+        char *list2 = D_L10_001B0C30[idx];
+        {
+            int i2, off2, k2;
+            for (i2 = 0; i2 < *(int *)list2; i2++) {
+                off2 = i2 * 16;
+                k2 = (i2 + 1) % *(int *)list2;
+                d = func_001F9D10(list2 + (off2 + 0x10), list2 + (k2 * 16 + 0x10));
+                *(float *)(list2 + off2 + 0x1C) = d;
+                if (i2 < *(int *)list2 - 1) {
+                    *(float *)(q + 0xC) = *(float *)(q + 0xC) + d;
+                }
+            }
+        }
+    }
+
+    p = *(char **)(cam + 0x70);
+    *(float *)(p + 0x0) = 0.03f;
+    *(float *)(p + 0x4) = 0.2f;
+    func_001F9BC0(p + 0x10);
+    p = *(char **)(cam + 0x70);
+    *(float *)(p + 0x20) = 0.03f;
+    *(float *)(p + 0x24) = 0.2f;
+    func_001F9BC0(p + 0x30);
+
+    base = D_L10_00167180;
+    src = *(char **)(base + 0x184);
+    qcopy(c30, src + 0x30);
+    qcopy(cam, src);
+    qcopy(c10, src + 0x10);
+    qcopy(c20, src + 0x20);
+
+    if (*(int *)(m + 0x4C) == 0) {
+        func_L00_00222B80(0x72, 1);
+    }
+}
 extern char *D_L10_0015F050 MACRO_ADDR;
 extern float D_L10_0015F4FC MACRO_ADDR;
 extern char *D_L10_00160058 MACRO_ADDR;
@@ -484,10 +604,6 @@ extern int func_001F9938(void *);
 extern float func_00214220(float, float, float);
 extern void func_001E9768(void *, void *);
 
-struct CamK_72D8 {
-    short ids[8];
-    float vals[9];
-};
 
 /* Camera 19 update: advances the blend state and aims the camera each frame. */
 void Camera19_Update(char *moby) {
@@ -658,8 +774,8 @@ void Camera19_Update(char *moby) {
             ia = 0;
             ib = 0.0f;
             Spline_AdvanceByDistance(h, v2, &ia, &ib, d, 0);
-            ((void (*)(void *, float))func_001E9768)(v2, 0.2f);
-            func_001E9768(h + 0x10, h + (*(int *)h << 4));
+            ((void (*)(void *, float))Profile_Mark)(v2, 0.2f);
+            Profile_Mark(h + 0x10, h + (*(int *)h << 4));
             FastVecSub(v1, v2, (moby + 0x30));
         }
         FastVecScale(v2, D_0013E633 + 0x10AD, -1.0f);

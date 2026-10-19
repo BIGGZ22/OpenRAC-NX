@@ -286,7 +286,7 @@ extern int D_0013D844 NOT_SDA;
 extern unsigned char D_0013D4A8 NOT_SDA;
 
 /* Predicate: true when D_0013D844 and the flag byte D_0013D4A8 are both set. */
-int func_0020CB80(void) {
+int MissionCond_Obj18AndSpecial18(void) {
     if (D_0013D844 != 0 && D_0013D4A8 != 0) return 1;
     return 0;
 }
@@ -294,7 +294,7 @@ int func_0020CB80(void) {
 extern int D_0013D9B4 NOT_SDA;
 
 /* Predicate: true when D_0013D9B4 and special items 0x20 and 0x21 are all set. */
-int func_0020CBA8(void) {
+int MissionCond_Obj2FAndSpecials(void) {
     if (D_0013D9B4 != 0 && gSpecialItems[0x20] != 0 && gSpecialItems[0x21] != 0) return 1;
     return 0;
 }
@@ -303,7 +303,7 @@ extern unsigned char D_0013D5CA NOT_SDA;
 extern int D_0013D6B8 NOT_SDA;
 
 /* Predicate: true when both mission words at D_0013D6B8 are non-zero. */
-int func_0020CBE0(void) {
+int MissionCond_Obj3FAnd40(void) {
     char *base = (char *)&D_0013D6B8;
     if (*(int *)(base + 0x40C) != 0 && *(int *)(base + 0x3FC) != 0) return 1;
     return 0;
@@ -313,7 +313,7 @@ extern int D_0013DAE4 NOT_SDA;
 extern unsigned char D_0013D4E5 NOT_SDA;
 
 /* Predicate: true when D_0013DAE4 and the flag byte D_0013D4E5 are both set. */
-int func_0020CC10(void) {
+int MissionCond_Obj42AndSpecial55(void) {
     if (D_0013DAE4 != 0 && D_0013D4E5 != 0) return 1;
     return 0;
 }
@@ -322,7 +322,7 @@ extern int D_0013DB24 NOT_SDA;
 extern unsigned char D_0013D4F1 NOT_SDA;
 
 /* Predicate: true when D_0013DB24 and the flag byte D_0013D4F1 are both set. */
-int func_0020CC38(void) {
+int MissionCond_Obj46AndSpecial61(void) {
     if (D_0013DB24 != 0 && D_0013D4F1 != 0) return 1;
     return 0;
 }
@@ -331,7 +331,7 @@ extern int D_0013DC34 NOT_SDA;
 extern unsigned char D_0013D605 NOT_SDA;
 
 /* Predicate: true when D_0013DC34 and the flag byte D_0013D605 are both set. */
-int func_0020CC60(void) {
+int MissionCond_Obj57AndItem3D(void) {
     if (D_0013DC34 != 0 && D_0013D605 != 0) return 1;
     return 0;
 }
@@ -339,21 +339,21 @@ int func_0020CC60(void) {
 extern int D_0013D5C8 NOT_SDA;
 
 /* Predicate: true when two entries of the D_0013D5C8 table are both set. */
-int func_0020CC88(void) {
+int MissionCond_Items1FAnd21(void) {
     unsigned char *base = (unsigned char *)&D_0013D5C8;
     if (base[0x21] != 0 && base[0x1F] != 0) return 1;
     return 0;
 }
 
 /* Returns whether entry arg0 of the D_0013D5C8 table is set. */
-int func_0020CCB8(int arg0) {
+int HasItem(int arg0) {
     unsigned char *base = (unsigned char *)&D_0013D5C8;
     return base[arg0] != 0;
 }
 
 /* Two flat `&&` returns over D_0013D6B8_r[20/24/22].d; retail's reuse of
    the %hi register comes out by itself. */
-int func_0020CCD0(void) {
+int MissionCond_Obj14Obj18Stage(void) {
     if (D_0013D6B8_r[20].d != 0 && D_0013D6B8_r[24].d == 0) {
         return 1;
     }
@@ -366,7 +366,7 @@ int func_0020CCD0(void) {
 extern unsigned char D_0013D4B0 NOT_SDA;
 
 /* Returns 0 when D_0013D9B4 is clear, else 2 or 1 depending on D_0013D4B0. */
-int func_0020CD28(void) {
+int MissionCond_Obj2FVariant(void) {
     if (D_0013D9B4 != 0) {
         return D_0013D4B0 ? 2 : 1;
     }
@@ -376,7 +376,7 @@ int func_0020CD28(void) {
 extern unsigned char D_0013DE55 NOT_SDA;
 
 /* Predicate: true when both D_0013D4F1 and D_0013DE55 are set. */
-int func_0020CD58(void) {
+int MissionCond_Special61AndFlag0D(void) {
     if (D_0013D4F1 != 0 && D_0013DE55 != 0) return 1;
     return 0;
 }
@@ -384,7 +384,7 @@ int func_0020CD58(void) {
 extern unsigned char D_0013D5DD NOT_SDA;
 
 /* Returns 2 when the Morph-o-Ray is owned, else whether D_0013DC34 is set. */
-int func_0020CD80(void) {
+int Mission_GetMorphORayStatus(void) {
     if (gHaveMorphORay != 0) return 2;
     return D_0013DC34 != 0;
 }
@@ -397,7 +397,7 @@ int HasHologuise(void) {
 }
 
 /* Returns 2 or the state of another entry of the D_0013D5C8 table, depending on the first. */
-int func_0020CDB8(void) {
+int Mission_GetHologuiseOrMapStatus(void) {
     unsigned char *base = (unsigned char *)&D_0013D5C8;
     if (base[0x1F] != 0) return 2;
     return base[0x21] != 0;

@@ -296,7 +296,7 @@ extern void func_00238688(void *);
 extern char D_001E3500[];
 extern char D_001E4700[];
 
-void func_00238D88(void) {
+void DebugProfiler_Hook(void) {
 }
 
 INCLUDE_ASM("asm/nonmatchings/text", func_00238D90);
@@ -350,7 +350,7 @@ extern s32 func_00216960(void);
 /* Per-frame state machine of one boss-like moby: keeps a manipulator node attached while D_0015EEB0 is set,
    then steps the state byte at +0x20 through its animation and timer states.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/gameplay/vendor/fun_00237ed0.c, FUN_00237ed0. */
-void func_002391E8(Moby *m) {
+void VendorTalkUpdate(Moby *m) {
     s32 r;
     s32 a;
 

@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* RatchetAnimAdvance: one tick of Ratchet's animation (the moby at
    D_0013F450 + 0x2080). Clears the key flags (+0xA98 bits 0/1), advances
    the blend t (+0x54) by speed * rate on the same sequence, by the next

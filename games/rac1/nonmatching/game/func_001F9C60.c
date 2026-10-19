@@ -1,3 +1,4 @@
+/* fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* dst = a * b, componentwise on four floats (VU0 vmul.xyzw: load both, multiply, store). */
 void func_001F9C60(float *dst, float *a, float *b) {
     float r0 = a[0] * b[0];

@@ -609,7 +609,7 @@ void Hero_UpdateStatePhysicsL12(void) {
 
                         anim = 0xD;
                         if (D_0013F450.state.current == 0x17) {
-                            anim = func_L12_002284A8(0);
+                            anim = Hero_GetGadgetAnimId(0);
                         }
                         if (D_0013F450.moby->prev_seq != anim) {
                             HeroStartAnim(anim, 0, scale_ticks(7));
@@ -691,7 +691,7 @@ void Hero_UpdateStatePhysicsL12(void) {
                 D_0013F450.unk6A4->alpha = 0;
                 D_0013F450.unk6A4->flags |= 0x800;
                 func_L00_00251E30(D_0013F450.unk6A4);
-                func_0022ED80(0, 0, (int)D_0013F450.unk6A4);
+                Moby_PlaySound(0, 0, (int)D_0013F450.unk6A4);
             }
         }
         if (D_0013F450.unk6A4 != 0) {
@@ -980,9 +980,9 @@ void Hero_UpdateStatePhysicsL12(void) {
             HeroWallCheck(0);
             lean = D_0013F450.unk8EC * FastCos(ang) * -7.0f;
             SpringAngle(&D_0013F450.motion.rot.f[0], lean, &D_0013F450.unk8E4, 0, 0.007f, 0.17f, D_0015EE6C * 1.2217305f);
-            func_L00_0020A858(0.009f, 0.22f);
-            func_L00_0020A858(0.04f, 0.2f);
-            func_L00_0020A858(0.02f, 0.2f);
+            Hero_SetTiltSpringParams(0.009f, 0.22f);
+            Hero_SetTiltSpringParams(0.04f, 0.2f);
+            Hero_SetTiltSpringParams(0.02f, 0.2f);
             D_L12_0017AB80[1].f60[1] = roll * 47.0f;
             D_L12_0017AB80[1].f60[2] = lean * 1.5f;
             D_L12_0017AB80[1].f60[0] = lean * 1.4f;
@@ -1177,7 +1177,7 @@ void Hero_UpdateStatePhysicsL12(void) {
             if (anim != -1 && D_0013F450.moby->seq != 0x36) {
                 HeroStartAnim(anim, 0, frames);
             } else if ((D_0013F450.moby->anim_flags & 2) && D_0013F450.moby->seq == 0x36) {
-                HeroStartAnim(func_L12_002284A8(0), 0, scale_ticks(5));
+                HeroStartAnim(Hero_GetGadgetAnimId(0), 0, scale_ticks(5));
             }
         }
         break;
@@ -1632,7 +1632,7 @@ void Hero_UpdateStatePhysicsL12(void) {
                     D_0013F450.motion.velocity.f[1] += FastSin(a) * s;
                     qcopy(D_0013F450.motion.unk130.f, D_0013F450.motion.velocity.f);
                 }
-                func_L00_00216F58();
+                Hero_ApplyStickVelocity();
             } else {
                 Hero_ApproachSpeed(D_0015EE70 * 37.0f, D_0015EE70 * 28.0f);
                 Hero_SetPlanarVelocity(99999.0f);
@@ -1646,7 +1646,7 @@ void Hero_UpdateStatePhysicsL12(void) {
         break;
     case 0x13:
         if (D_0013F450.unk12E2 != 0) {
-            func_L00_00216F58();
+            Hero_ApplyStickVelocity();
         } else {
             Rec2C *r;
 
@@ -1795,7 +1795,7 @@ void Hero_UpdateStatePhysicsL12(void) {
                     D_0013F450.motion.velocity.f[1] += FastSin(D_0013F450.motion.rot.f[2]) * (D_0015EE6C * 1.2f);
                     qcopy(D_0013F450.motion.unk130.f, D_0013F450.motion.velocity.f);
                 }
-                func_L00_00216F58();
+                Hero_ApplyStickVelocity();
             } else {
                 if (D_0013F450.state_timer > t0) {
                     Hero_ApproachSpeed(D_0015EE70 * 190.0f, D_0015EE70 * 90.0f);
@@ -1827,19 +1827,19 @@ void Hero_UpdateStatePhysicsL12(void) {
                         vec[4][1] = FastSin(yaw) * 0.8f;
                         vec[4][2] = 0.55f;
                         FastVecAdd(vec[4], vec[4], D_0013F450.motion.pos.f);
-                        func_L00_00217AF0((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
+                        Hero_HitMobySparks((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
                         yaw = FastAddRots(D_0013F450.motion.rot.f[2], -0.87266463f);
                         vec[4][0] = FastCos(yaw) * 0.8f;
                         vec[4][1] = FastSin(yaw) * 0.8f;
                         vec[4][2] = 0.55f;
                         FastVecAdd(vec[4], vec[4], D_0013F450.motion.pos.f);
-                        func_L00_00217AF0((int)w, coll_sphere_mobys(0.8f, vec[4], 0, D_0013F450.moby, vec[0]));
+                        Hero_HitMobySparks((int)w, coll_sphere_mobys(0.8f, vec[4], 0, D_0013F450.moby, vec[0]));
                         yaw = FastAddRots(D_0013F450.motion.rot.f[2], 0.87266463f);
                         vec[4][0] = FastCos(yaw) * 0.8f;
                         vec[4][1] = FastSin(yaw) * 0.8f;
                         vec[4][2] = 0.55f;
                         FastVecAdd(vec[4], vec[4], D_0013F450.motion.pos.f);
-                        func_L00_00217AF0((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
+                        Hero_HitMobySparks((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
                     }
                 }
             }
@@ -2023,11 +2023,11 @@ void Hero_UpdateStatePhysicsL12(void) {
         }
         break;
     case 0x2F:
-        func_L00_00216F58();
-        func_L00_0020A858(0.04f, 0.2f);
-        func_L00_0020A858(0.04f, 0.2f);
-        func_L00_0020A858(0.04f, 0.2f);
-        func_L00_0020A858(0.02f, 0.2f);
+        Hero_ApplyStickVelocity();
+        Hero_SetTiltSpringParams(0.04f, 0.2f);
+        Hero_SetTiltSpringParams(0.04f, 0.2f);
+        Hero_SetTiltSpringParams(0.04f, 0.2f);
+        Hero_SetTiltSpringParams(0.02f, 0.2f);
         if (moby->prev_seq == 0x37) {
             float a;
 
@@ -2317,7 +2317,7 @@ void Hero_UpdateStatePhysicsL12(void) {
             }
             if (D_0013F450.unk418 != 0 || (t < lim && D_0013F450.state.current != 0xB && D_0013F450.state.current != 0x10 && D_0013F450.state.current != 0xC && D_0013F450.state.current != 0x11 && D_0013F450.state.current != 0x1C && D_0013F450.state.current != 0x4C)) {
                 if (D_0013F450.unk4A8 != 0) {
-                    func_L00_00216F58();
+                    Hero_ApplyStickVelocity();
                     if (D_0013F450.state.current == 0xA) {
                         if (D_0013F450.state_timer < scale_ticks(0xA)) {
                             if (D_0013F450.motion.unk168 < D_0015EE6C * 7.0f) {

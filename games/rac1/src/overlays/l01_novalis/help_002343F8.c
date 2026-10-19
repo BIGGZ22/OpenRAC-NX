@@ -576,7 +576,7 @@ void HeroStatePhysics(void) {
                 D_0013F450.unk6A4->alpha = 0;
                 D_0013F450.unk6A4->flags |= 0x800;
                 func_L00_00251E30(D_0013F450.unk6A4);
-                func_0022ED80(0, 0, (int)D_0013F450.unk6A4);
+                Moby_PlaySound(0, 0, (int)D_0013F450.unk6A4);
             }
         }
         if (D_0013F450.unk6A4 != 0) {
@@ -865,9 +865,9 @@ void HeroStatePhysics(void) {
             HeroWallCheck(0);
             lean = D_0013F450.unk8EC * FastCos(ang) * -7.0f;
             SpringAngle(&D_0013F450.motion.rot.f[0], lean, &D_0013F450.unk8E4, 0, 0.007f, 0.17f, D_0015EE6C * 1.2217305f);
-            func_L00_0020A858(0.009f, 0.22f);
-            func_L00_0020A858(0.04f, 0.2f);
-            func_L00_0020A858(0.02f, 0.2f);
+            Hero_SetTiltSpringParams(0.009f, 0.22f);
+            Hero_SetTiltSpringParams(0.04f, 0.2f);
+            Hero_SetTiltSpringParams(0.02f, 0.2f);
             D_L01_0017AB80[1].f60[1] = roll * 47.0f;
             D_L01_0017AB80[1].f60[2] = lean * 1.5f;
             D_L01_0017AB80[1].f60[0] = lean * 1.4f;
@@ -1399,19 +1399,19 @@ void HeroStatePhysics(void) {
                         vec[4][1] = FastSin(yaw) * 0.8f;
                         vec[4][2] = 0.55f;
                         FastVecAdd(vec[4], vec[4], D_0013F450.motion.pos.f);
-                        func_L00_00217AF0((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
+                        Hero_HitMobySparks((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
                         yaw = FastAddRots(D_0013F450.motion.rot.f[2], -0.87266463f);
                         vec[4][0] = FastCos(yaw) * 0.8f;
                         vec[4][1] = FastSin(yaw) * 0.8f;
                         vec[4][2] = 0.55f;
                         FastVecAdd(vec[4], vec[4], D_0013F450.motion.pos.f);
-                        func_L00_00217AF0((int)w, coll_sphere_mobys(0.8f, vec[4], 0, D_0013F450.moby, vec[0]));
+                        Hero_HitMobySparks((int)w, coll_sphere_mobys(0.8f, vec[4], 0, D_0013F450.moby, vec[0]));
                         yaw = FastAddRots(D_0013F450.motion.rot.f[2], 0.87266463f);
                         vec[4][0] = FastCos(yaw) * 0.8f;
                         vec[4][1] = FastSin(yaw) * 0.8f;
                         vec[4][2] = 0.55f;
                         FastVecAdd(vec[4], vec[4], D_0013F450.motion.pos.f);
-                        func_L00_00217AF0((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
+                        Hero_HitMobySparks((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
                     }
                 }
             }
@@ -1597,9 +1597,9 @@ void HeroStatePhysics(void) {
             if (D_0013F450.state_timer > scale_ticks(0x64)) {
                 SpringAngle(&D_0013F450.motion.rot.f[1], -D_0013F450.unk9D4, &D_0013F450.unk9E8, 0, D_0015EE64 * 0.035f, D_0015EE64 * 0.3f, D_0015EE6C * 1.9198622f);
             }
-            func_L00_0020A858(0.009f, 0.22f);
-            func_L00_0020A858(0.04f, 0.2f);
-            func_L00_0020A858(0.02f, 0.2f);
+            Hero_SetTiltSpringParams(0.009f, 0.22f);
+            Hero_SetTiltSpringParams(0.04f, 0.2f);
+            Hero_SetTiltSpringParams(0.02f, 0.2f);
             D_L01_0017AB80[1].f60[2] = lean * 2.1f;
             D_L01_0017AB80[1].f60[0] = lean * 3.5f;
         }

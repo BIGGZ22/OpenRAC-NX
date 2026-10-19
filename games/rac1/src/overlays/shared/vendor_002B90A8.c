@@ -750,7 +750,7 @@ void Moby156Update(char *moby) {
         func_L00_001FF4B0(normal, data + 8, 1.0f);
         InitDirectionalHitQuery(hit, moby, 0, 0.0f, normal);
         if (coll_sphere_mobys((*(f32 *)&D_L01_0016152C), moby + 0x10, 0x10, data[6], hit) &&
-            !func_001E97C8(moby)) {
+            !NullMobyUpdate(moby)) {
             CollisionHit *contact = (CollisionHit *)D_L01_00174340;
             if (contact->moby != 0)
                 PostHitMessage(1.0f, contact->moby, moby, 0x10001, &contact->point, normal);
@@ -919,7 +919,7 @@ void BoltCrankUpdate(char *m) {
                                                          scale_ticks(0xB4), 0);
                                 CameraScript_SetLookAt(D_L01_0016016C + (I(s, 0x20) << 7) + 0x70);
                                 CameraScript_SetPosition(D_L01_0016016C + (I(s, 0x20) << 7) + 0x30);
-                                func_L01_00318260(F(s, 0x28), F(s, 0x2C));
+                                BoltCrank_SetCameraParams(F(s, 0x28), F(s, 0x2C));
                                 m[0x20] = 3;
                                 I(s, 0x24) = 0;
                                 F(s, 0x18) = F(s, 0x0) * (F(s, 0x30) * 6.2831855f);
@@ -982,7 +982,7 @@ void BoltCrankUpdate(char *m) {
                     m[0x20] = 4;
                     *(int *)(D_0014171B + 0xAB75 + (((short)*(unsigned short *)(m + 0xB2) >> 5) * 4 + (D_0015EE84 << 8))) |= 1 << (*(unsigned short *)(m + 0xB2) & 0x1F);
                     D_L01_001BAC60[(short)*(unsigned short *)(m + 0xB2) >> 5] |= 1 << (*(unsigned short *)(m + 0xB2) & 0x1F);
-                    ((int (*)(int, int, char *))func_0022ED80)(0, 0, m);
+                    ((int (*)(int, int, char *))Moby_PlaySound)(0, 0, m);
                     if (I(s, 0x34) != -1 &&
                         ((unsigned char *)D_0014C150)[(unsigned char)m[0xB0] + (D_0015EE84 << 4)] != 0xFF) {
                         FindOrAddMobyEntry(s, 4, m, 2, D_L01_001BADB0);
@@ -1074,7 +1074,7 @@ void BoltCrankUpdate(char *m) {
         StepAngleToward((float *)(D_0013E633 + 0xEB5), F(H, 0x180), 0, D_0015EE6C * 6.2831855f);
         F(s, 0x24) = F(s, 0x24) + D_0015EE70 * 9.8f;
         F(H, 0x88) = F(H, 0x88) - (F(s, 0x24) - 2.0f);
-        g = func_00214358(HP, 0, 0.5f);
+        g = ProbeGroundHeight(HP, 0, 0.5f);
         F(H, 0x88) = F(H, 0x88) - 2.0f;
         if (F(H, 0x88) < g) {
             F(H, 0x88) = g;
@@ -1159,7 +1159,7 @@ void ItemOfferUpdate(struct Moby *m) {
         if (m->oclass != 0x130) {
             m->state = 2;
         } else if (D_0013E620[D_L01_001DEDE0[v->slot]] != 0 ||
-                   func_L00_002676E8(m, v) == -1) {
+                   DialogRequest_Init(m, v) == -1) {
             m->state = 3;
         } else {
             m->state = 1;
@@ -1167,7 +1167,7 @@ void ItemOfferUpdate(struct Moby *m) {
         break;
     case 1:
         v->radius = 1.9f;
-        func_L00_00267290(m, v);
+        Npc_TryStartDialog(m, v);
         if (v->result == 2) {
             D_0013E620[D_L01_001DEDE0[v->slot]] = 1;
             m->state = 4;
@@ -1467,7 +1467,7 @@ void SandMouse_StepMovement(M_4BA8 *m, char *p) {
                 *(short *)(p + 0x4a) = 0;
             }
         }
-        ground = func_00214358(m->pos, 0, 0.5f);
+        ground = ProbeGroundHeight(m->pos, 0, 0.5f);
         if ((hit & 2) || m->pos[2] - ground < *(float *)&D_L01_001619B0) {
             if (len < 0.005f) {
                 if (m->prev_seq >= 3 && m->prev_seq != func_001160D8() % 3) {
@@ -1482,7 +1482,7 @@ void SandMouse_StepMovement(M_4BA8 *m, char *p) {
                 MobyBlendAnimation(m, 5, 0, scale_ticks(7));
         }
     } else {
-        ground = func_00214358(m->pos, 0, 0.5f);
+        ground = ProbeGroundHeight(m->pos, 0, 0.5f);
         if (m->pos[2] - ground < *(float *)&D_L01_001619B0) {
  animation3:
             if (m->prev_seq != 3)
@@ -1901,7 +1901,7 @@ void BurningDebrisUpdate(char *m) {
                           rand_range(0x14, 0x23), 1);
         PartType04Spawn(m + 0x10, z, 0x1FFFFFFF, 0x4F4F4F, scale_ticks(rand_range(0x1E, 0x3C)), 0x28,
                           rand_range(0x32, 0x4B), 0);
-        gz = *(float *)(m + 0x18) - func_00214358(m + 0x10, 0, 0.5f);
+        gz = *(float *)(m + 0x18) - ProbeGroundHeight(m + 0x10, 0, 0.5f);
         if (gz < *(float *)(d + 0x18)) {
             *(float *)(m + 0x18) = *(float *)(m + 0x18) + (*(float *)(d + 0x18) - gz);
             *(int *)(d + 8) = 0;
@@ -2258,7 +2258,7 @@ void AmoeboidUpdate(unsigned char *moby) {
                                         *(float *)(data + 0x250) * 0.8f,
                                         moby + 0x10, data + 0x210, move);
             if (path_hit != 0) {
-                func_0022ED80(4, 0, (char *)moby);
+                Moby_PlaySound(4, 0, (char *)moby);
                 *(float *)(data + 0x194) = *(float *)(data + 0x23c) * D_0015EE6C;
                 moby[0x20] = 9;
                 if (moby[0x53] != 5)
@@ -2396,7 +2396,7 @@ void Amoeboid_HitAndSearch(char *m) {
     ComputeHitResponse(m, t, d + 0x20, 0, &flag, &amount, 0, 4);
     if (flag != 1 && amount != 0.0f && *(unsigned char *)(m + 0x20) != 0xB && *(unsigned char *)(m + 0x20) != 0xA && *(unsigned char *)(m + 0x20) != 8) {
         f20 = 0.8f;
-        func_0022ED80(0, 0, m);
+        Moby_PlaySound(0, 0, m);
         f24 = 1.0f;
         f22 = 1024.0f;
         f21 = 0.008f;
@@ -2759,7 +2759,7 @@ int Moby_UpdateGrabState(char *m, int a, int b, float f) {
     }
     if (h != 0) {
         if (*(short *)(h + 0x68) == 6) {
-            func_0022ED80(2, 0, m);
+            Moby_PlaySound(2, 0, m);
         }
     }
     return r;

@@ -1,4 +1,4 @@
-/* functional: medium. Written from the assembly (hand-written DMA-packet builder, no C existed): copies, appends and pads as the assembly does, the quadword moves done as four-word moves. The count loops are do-while as in retail (a count of 0 or less would run away there too; the callers pass at least 1). */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Written from the assembly (hand-written DMA-packet builder, no C existed): copies, appends and pads as the assembly does, the quadword moves done as four-word moves. The count loops are do-while as in retail (a count of 0 or less would run away there too; the callers pass at least 1). */
 extern int *D_L00_00161280;
 extern unsigned int D_L00_001C4320[];
 extern unsigned int D_L00_00160F80[];

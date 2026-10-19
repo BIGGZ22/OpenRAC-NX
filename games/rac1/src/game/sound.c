@@ -641,7 +641,7 @@ return_result:
 
 /* Starts entry idx of the sound bank arg2 points at; the same shape as
    its siblings func_0022EE28 and func_0022EEB8. */
-int func_0022ED80(int idx, int arg1, int arg2) {
+int Moby_PlaySound(int idx, int arg1, int arg2) {
     char *p;
     char *tbl;
     int h;
@@ -777,14 +777,14 @@ void sound_StopAllSounds(void) {
     } while (p < end);
 }
 
-void func_0022F090(int arg0, long arg1) {
+void SoundBank_StoreHandle(int arg0, long arg1) {
     int *p = (int *)(int)arg1;
     if (p != 0) {
         *p = arg0;
     }
 }
 
-void func_0022F0A8(int arg0, long arg1) {
+void Sound_StoreHandleAdvance(int arg0, long arg1) {
     unsigned char *p = (unsigned char *)(int)arg1;
     if (p != 0) {
         *(int *)p = arg0;
@@ -800,7 +800,7 @@ void func_0022F0A8(int arg0, long arg1) {
     }
 }
 
-void func_0022F0F0(int arg0, long arg1) {
+void Sound_StoreHandleReset(int arg0, long arg1) {
     int *p = (int *)(int)arg1;
     if (p != 0) {
         *p = arg0;

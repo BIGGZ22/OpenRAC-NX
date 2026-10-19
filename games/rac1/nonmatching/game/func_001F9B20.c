@@ -1,3 +1,4 @@
+/* fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Clip test of the vector at a0 against |w| (vclipw.xyz vf1, vf1w), returning
  * the six flag bits of that test in the order +x, -x, +y, -y, +z, -z (the low
  * six bits of CLIPFLAG, which cfc2 vi18 & 0x3F reads). */

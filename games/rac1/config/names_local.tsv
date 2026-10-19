@@ -972,7 +972,7 @@ func_001E9EC8	Level_ParseObjectTables	body: 353 lines walking the level header, 
 func_001EBAF0	IsStateEntryActive	body: 0x70-byte record at index; true when id matches and state byte is 1 or 2	
 func_001EC2B8	Camera_SwitchActive	body: picks blend mode/rates by old camera transition state and new descriptor kind, copies pose, installs next camera	
 func_001ED818	CameraPreUpdate	body: smooths camera dir/pos toward hero, tracks history and ground moby; called before camera update with the draw-mode pick	
-func_001EDCE8	Camera_PickDrawModes	body: sets D_0015F09C/0A0/098 draw-mode words from hero state and mode flags	
+func_001EDCE8	Camera_PickCollisionMasks	body: sets the camera's probe masks gCamSphereMask (MoveCameraToward passes it to coll_sphere), gCamSphereMaskBase and gCamLineMask (a line-probe mask in vendor_002E1660.c) from hero state; was Camera_PickDrawModes, but nothing draws with them	override
 func_001EDFF8	LensFlareUpdate	body: projects the flare moby to screen and fills per-element alpha, texture, colour, distance, scale tables	
 func_001EE3B0	DrawFlareSprites	body: switch on mode draws a fan, four offset quads or one quad of the effect texture through func_001F5E60	
 func_001F6410	DrawOutlinedRect	body: 9 DrawRectOverlay calls offset +-1/3/5 around one rect, first in dark colour	
@@ -2883,3 +2883,468 @@ func_L18_002FDB28	LaunchMoby1906	comment: launches first idle (state 8) class 0x
 func_L18_002FDD20	Moby1906Draw	body: draw callback (AddDrawCallback in 0x772 update) building a textured quad packet	
 func_L18_002FDF58	Moby1906JointGlowDraw	comment: for each listed class 0x772 moby spawns effects at joints 2-4	
 func_L18_002FE070	Moby1906HitCheck	comment: runs func_L00_002DCDA8 on the moby and switches state 7 accordingly	
+func_001E9768	Profile_Mark	empty in retail; called between hero/parts update steps with (label, id) in tieproc update loop	
+func_001E9778	Camera_DebugPosition	empty in retail; receives the interpolated camera position vector in space.c camera blend	
+func_001E9780	Camera_DebugRotation	empty in retail; receives the interpolated camera rotation vector in space.c camera blend	
+func_001E97A0	Profile_Checkpoint	empty in retail; called mid-frame in space.c state loop after sound callbacks	
+func_001E97A8	Profile_FrameEnd	empty in retail; called at end of space.c state-0 frame and end of transition render	
+func_001E97B0	Profile_FrameBegin	empty in retail; called first in space.c case 0/8 and 3 and at start of transition render	
+func_001E97C8	NullMobyUpdate	empty in retail; compared against moby class update fn pointer in Level 0 scan, takes 1 arg	
+func_001F2558	ProfileMarker_End	Empty in retail; called with a profile slot and id after the 2560 call at the end of tie/shrub/moby draw sections	
+func_001F2560	ProfileMarker_Begin	Empty in retail; called with a profile slot and id at the start of tie/shrub/sky/moby draw sections	
+func_00204BE8	Level_StartDataRead	DoSpaceTransition: after setting the target level, picks top-of-RAM buffer from header sizes and submits the stream read	
+func_002071D0	MenuL01_HasSpecialItem0C	Table row 0 slot 1: returns gSpecialItems[0x0C] != 0 (other levels set the same table range)	
+func_002071E0	MenuL01_HasSpecialItem0D	Table row 0 slot 2: returns gSpecialItems[0x0D] != 0 (other levels set the same table range)	
+func_002071F0	MenuL02_HasSpecialItem15	Table row 1 slot 0: returns gSpecialItems[0x15] != 0 (other levels set the same table range)	
+func_00207200	MenuL01_HitTest3	Table row 0 slot 3 (level 1): screen-region test; x<200 band on 3rd float, hero state test	
+func_002072C0	MenuL01_HitTest4	Table row 0 slot 4 (level 1): screen-region test; item 0E left, band 58-86 right	
+func_00207340	MenuL01_HitTest5	Table row 0 slot 5 (level 1): screen-region test; hero state left, float>=95 right	
+func_002073A8	MenuL03_IsStateWordZero	Table row 2 slot 0 (level 3): returns whether the word at D_0015FE24 is zero	
+func_002073B8	MenuL04_HasSpecialItem1C	Table row 3 slot 0: returns gSpecialItems[0x1C] != 0 (other levels set the same table range)	
+func_002073C8	MenuL04_HasSpecialItem1D	Table row 3 slot 1: returns gSpecialItems[0x1D] != 0 (other levels set the same table range)	
+func_002073D8	MenuL04_HasSpecialItem1E	Table row 3 slot 2: returns gSpecialItems[0x1E] != 0 (other levels set the same table range)	
+func_002073E8	MenuL04_HasSpecialItem1F	Table row 3 slot 3: returns gSpecialItems[0x1F] != 0 (other levels set the same table range)	
+func_002073F8	MenuL06_HasSpecialItem25	Table row 5 slot 0: returns gSpecialItems[0x25] != 0 (other levels set the same table range)	
+func_00207408	MenuL07_HitTest0	Table row 6 slot 0 (level 7): screen-region test; point-in-polygon pieces via menu_pointIsClockwise	
+func_00207780	MenuL07_HitTest2	Table row 6 slot 2 (level 7): screen-region test; four-box test left of x 0xE9, else three box pairs	
+func_00207930	MenuL07_HitTest3	Table row 6 slot 3 (level 7): screen-region test; two layouts split at y 0xBB	
+func_002079F0	MenuL07_HitTest4	Table row 6 slot 4 (level 7): screen-region test; two boxes gated by D_001A04B4	
+func_00207A80	MenuL07_HitTest5	Table row 6 slot 5 (level 7): screen-region test; float bands gated by D_001A04C0/04B8	
+func_00207B30	MenuL07_HitTest6	Table row 6 slot 6 (level 7): screen-region test; gated by hero state, D_001A04AC, one box	
+func_00207BE8	MenuL07_HitTest7	Table row 6 slot 7 (level 7): screen-region test; hero state, float>=71.5, two boxes	
+func_00207CB0	MenuL08_HitTest0	Table row 7 slot 0 (level 8): screen-region test; y>=0x101: D_001414DC==0xF else special item 0x35	
+func_00207CE0	MenuL08_HitTest1	Table row 7 slot 1 (level 8): screen-region test; x<0xE0: f>=47.75 else f<29	
+func_00207D38	MenuL08_HitTest2	Table row 7 slot 2 (level 8): screen-region test; x<0xE0: 44<=f<=45 else f>=37	
+func_00207DB0	MenuL08_HitTest3	Table row 7 slot 3 (level 8): screen-region test; twin of slot 2: 42-43 / 39	
+func_00207E28	MenuL08_HitTest4	Table row 7 slot 4 (level 8): screen-region test; x<0xE0 and f<=38	
+func_00207E60	MenuL08_HasSpecialItem30	Table row 7 slot 5: returns gSpecialItems[0x30] != 0 (other levels set the same table range)	
+func_00207E70	MenuL08_HasSpecialItem31	Table row 7 slot 6: returns gSpecialItems[0x31] != 0 (other levels set the same table range)	
+func_00207E80	MenuL08_HasSpecialItem32	Table row 7 slot 7: returns gSpecialItems[0x32] != 0 (other levels set the same table range)	
+func_00207E90	MenuL09_HasSpecialItem43	Table row 8 slot 0: returns gSpecialItems[0x43] != 0 (other levels set the same table range)	
+func_00207EA0	MenuL09_HasSpecialItem44	Table row 8 slot 1: returns gSpecialItems[0x44] != 0 (other levels set the same table range)	
+func_00207EB0	MenuL09_HasSpecialItem45	Table row 8 slot 2: returns gSpecialItems[0x45] != 0 (other levels set the same table range)	
+func_00207EC0	MenuL10_HitTest0	Table row 9 slot 0 (level 10): screen-region test; x>=0xBE: special item 0x50 else f>=58.5	
+func_00207F00	MenuL10_HasSpecialItem4C	Table row 9 slot 1: returns gSpecialItems[0x4C] != 0 (other levels set the same table range)	
+func_00207F10	MenuL10_HasSpecialItem4D	Table row 9 slot 2: returns gSpecialItems[0x4D] != 0 (other levels set the same table range)	
+func_00207F20	MenuL10_HasSpecialItem4E	Table row 9 slot 3: returns gSpecialItems[0x4E] != 0 (other levels set the same table range)	
+func_00207F30	MenuL10_HasSpecialItem4F	Table row 9 slot 4: returns gSpecialItems[0x4F] != 0 (other levels set the same table range)	
+func_00207F40	MenuL10_HasSpecialItem51	Table row 9 slot 5: returns gSpecialItems[0x51] != 0 (other levels set the same table range)	
+func_00207F50	MenuL11_HitTest0	Table row 10 slot 0 (level 11): screen-region test; x<0xDD: 232<=f<=235 and item 0x56 else f<=180	
+func_00207FD0	MenuL11_HitTest1	Table row 10 slot 1 (level 11): screen-region test; x<0xDD: f>=242 else f<=180 and item 0x57	
+func_00208030	MenuL11_HitTest2	Table row 10 slot 2 (level 11): screen-region test; x<0xDD: 238-241 else f<=180 and item 0x58	
+func_002080B0	MenuL11_HitTest3	Table row 10 slot 3 (level 11): screen-region test; x<0x15F: f>=200 and hero state; else 233-235 and item 0x5A	
+func_00208160	MenuL11_HitTest4	Table row 10 slot 4 (level 11): screen-region test; x<0x15F: 228-230 else 233-235 and item 0x5B	
+func_002081F8	MenuL11_HasSpecialItem59	Table row 10 slot 5: returns gSpecialItems[0x59] != 0 (other levels set the same table range)	
+func_00208208	MenuL12_HitTest0	Table row 11 slot 0 (level 12): screen-region test; returns 0 only when y<0x141 and f<63.5	
+func_00208238	MenuL12_IsAlwaysActive1	Table row 11 slot 1 (level 12): always returns 1	
+func_00208240	MenuL12_IsAlwaysActive2	Table row 11 slot 2 (level 12): always returns 1	
+func_00208248	MenuL15_HitTest0	Table row 14 slot 0 (level 15): screen-region test; within 35 of (161.5,249) or D_001A04A8 set	
+func_002082E8	MenuL16_HasSpecialItem72	Table row 15 slot 0: returns gSpecialItems[0x72] != 0 (other levels set the same table range)	
+func_002082F8	MenuL16_HasSpecialItem73	Table row 15 slot 1: returns gSpecialItems[0x73] != 0 (other levels set the same table range)	
+func_00208308	MenuL16_HasSpecialItem74	Table row 15 slot 2: returns gSpecialItems[0x74] != 0 (other levels set the same table range)	
+func_00208318	MenuL16_HasSpecialItem75	Table row 15 slot 3: returns gSpecialItems[0x75] != 0 (other levels set the same table range)	
+func_00208328	MenuL18_HasSpecialItem7F	Table row 17 slot 0: returns gSpecialItems[0x7F] != 0 (other levels set the same table range)	
+func_00209040	DebugEnter_Nop	Empty in retail; first call in Menu_ReadSector, UnpackOcclusionMap and UpdateMapZoomAndPan	
+func_00209160	CardMenu_State00Reset	Handler 0 of table D_001A0538 run by Menu_RunStateHandler: sets state 3, clears record+0xFC, copies +0xC4 to +0x1C	
+func_00209188	CardMenu_State01AdvanceOnInput	Handler 1 of table D_001A0538 run by Menu_RunStateHandler: clears flags 4/2, picks next state from 0x80/0x100/0x200 bits; copy named AdvanceCardMenu in L00	
+func_00209238	CardMenu_State02ReleaseSlot	Handler 2 of table D_001A0538 run by Menu_RunStateHandler: selected slot 2->0; state 3 when flag 1 clear	
+func_00209290	CardMenu_State03ClearSlots	Handler 3 of table D_001A0538 run by Menu_RunStateHandler: sets seven record words to -1, slot 2->0, state 4	
+func_002092E8	CardMenu_State04AdvanceOnStatus	Handler 4 of table D_001A0538 run by Menu_RunStateHandler: clears flag 0x20; on status 2 picks state 9/5 from +0x1C; L00 copy is CardMenu_AdvanceOnStatus	
+func_00209358	CardMenu_State05WaitFlag2	Handler 5 of table D_001A0538 run by Menu_RunStateHandler: state 3 unless status -2, then state 6 when flag 2	
+func_00209398	CardMenu_State06AdvanceOnFlags	Handler 6 of table D_001A0538 run by Menu_RunStateHandler: status -2 gate; flag 0x20 -> state 23 or 5, flag 8 -> state 7	
+func_00209448	CardMenu_State08StartFromStatus	Handler 8 of table D_001A0538 run by Menu_RunStateHandler: record +0xDC==2 and +0xE4<0: state 17 (flag 0x40) or 14	
+func_002094A8	CardMenu_State09WaitFlags	Handler 9 of table D_001A0538 run by Menu_RunStateHandler: state 3 if status nonzero, state 10 when flag 2 or 4	
+func_002094E0	CardMenu_State10BeginSlot7	Handler 10 of table D_001A0538 run by Menu_RunStateHandler: record +0xDC==2, +0xE4<0: +0xE4=7, state 11	
+func_00209520	CardMenu_State11MarkSlotChoose	Handler 11 of table D_001A0538 run by Menu_RunStateHandler: slot 1->2 then picks state 3/19/12/16; L00 copy is MarkSelectedCardSlot	
+func_002095E8	CardMenu_State12WaitFlag2	Handler 12 of table D_001A0538 run by Menu_RunStateHandler: state 3 if status nonzero, state 13 when flag 2	
+func_00209620	CardMenu_State13AdvanceOnFlags	Handler 13 of table D_001A0538 run by Menu_RunStateHandler: flag 0x20 -> state 24 or 12, flag 0x10 -> 14; L00 copy is CardMenu_AdvanceOnFlags	
+func_00209698	CardMenu_State14BeginSlot9	Handler 14 of table D_001A0538 run by Menu_RunStateHandler: record +0xDC==2, +0xE4<0: +0xE4=9, state 15	
+func_002096D8	CardMenu_State15AdvanceOrAlternate	Handler 15 of table D_001A0538 run by Menu_RunStateHandler: state 18 (flag 0x40) or slot 7 reset, state 16; L00 copy CardMenu_AdvanceOrAlternate	
+func_00209750	CardMenu_State16NextState	Handler 16 of table D_001A0538 run by Menu_RunStateHandler: clears flags 4/2 then 21/20/3/1; L00 copy is CardMenu_NextStateFromFlags	
+func_00209808	CardMenu_State17FinishSlot	Handler 17 of table D_001A0538 run by Menu_RunStateHandler: slot 2->0; state 3 unless flag 0x40	
+func_00209858	CardMenu_State18FinishSlot	Handler 18 of table D_001A0538 run by Menu_RunStateHandler: slot 2->0; state 3 unless flag 0x40 (twin of state 17)	
+func_002098A8	CardMenu_State19AbortOnStatus	Handler 19 of table D_001A0538 run by Menu_RunStateHandler: state 3 when status word nonzero	
+func_002098C8	CardMenu_State20FinishSlot	Handler 20 of table D_001A0538 run by Menu_RunStateHandler: slot 2->0; state 3 unless flag 0x40 (twin of state 17)	
+func_00209918	CardMenu_State21FinishSlot	Handler 21 of table D_001A0538 run by Menu_RunStateHandler: slot 2->0; state 3 unless flag 0x40 (twin of state 17)	
+func_00209968	CardMenu_State22StartOrFinish	Handler 22 of table D_001A0538 run by Menu_RunStateHandler: +0xDC<3, +0xE4<0: with +0xEC state 21 and flags 0x440, else state 1	
+func_002099D0	CardMenu_State23WaitFlag20	Handler 23 of table D_001A0538 run by Menu_RunStateHandler: status -2 gate; flag 0x20 taken down, state 5	
+func_00209A18	CardMenu_State24WaitFlag20	Handler 24 of table D_001A0538 run by Menu_RunStateHandler: status 0 gate; flag 0x20 taken down, state 12	
+func_0020CB80	MissionCond_Obj18AndSpecial18	Mission_CheckCondition callback: D_0013D6B8 object 0x18 flag and gSpecialItems[0x18] both set	
+func_0020CBA8	MissionCond_Obj2FAndSpecials	Callback: object 0x2F flag and gSpecialItems[0x20] and [0x21] all set	
+func_0020CBE0	MissionCond_Obj3FAnd40	Callback: flags of D_0013D6B8 objects 0x3F and 0x40 both set	
+func_0020CC10	MissionCond_Obj42AndSpecial55	Callback: object 0x42 flag and gSpecialItems[0x55] both set	
+func_0020CC38	MissionCond_Obj46AndSpecial61	Callback: object 0x46 flag and gSpecialItems[0x61] both set	
+func_0020CC60	MissionCond_Obj57AndItem3D	Callback: object 0x57 flag and D_0013D5C8 item 0x3D both set	
+func_0020CC88	MissionCond_Items1FAnd21	Callback: D_0013D5C8 items 0x1F and 0x21 both set	
+func_0020CCB8	HasItem	Returns D_0013D5C8[arg] != 0 (the item ownership table also read in the pause menu)	
+func_0020CCD0	MissionCond_Obj14Obj18Stage	Callback: returns 1 or 2 from objects 0x14/0x18/0x16 flags and gHaveHeliPack, else 0	
+func_0020CD28	MissionCond_Obj2FVariant	Callback: 0 when object 0x2F flag clear, else 2 or 1 by gSpecialItems[0x20]	
+func_0020CD58	MissionCond_Special61AndFlag0D	Callback: gSpecialItems[0x61] and D_0013DE48[0xD] (condition type 1 table) both set	
+func_0020CD80	Mission_GetMorphORayStatus	boot copy of GetMorphORayStatus: 2 when gHaveMorphORay, else D_0013DC34 != 0	
+func_0020CDB8	Mission_GetHologuiseOrMapStatus	returns 2 when gHaveHologuise (+0x1F), else gHaveMapOMatic (+0x21); same shape as GetMorphORayStatus	
+func_00214358	ProbeGroundHeight	copies pos, casts a segment arg2 up/down via collision query, returns hit height or 0; ~100 moby updates call it	
+func_00215328	Matrix_ToQuatCopyBack	fixes copy of arg1 into buf, MatrixToQuaternion(arg0,buf), writes buf back to arg1; camera/anim callers	
+func_00216098	GetUnspentGoldBolts	count_up_to_40 minus 4*count_up_to_10 clamped 0..40; pause screen prints total, spent, left; stream case 6 needs >=4	
+func_00219C08	Menu_SetupPanelView	sets view vectors/identity scale then BuildViewMatrices follows in Menu_DrawPanels (func_0021A610)	
+func_00219E60	Pause_ResetMenuObject	resets menu object (state 0x2D, mode 3); called from PauseAllSounds and transition input check	
+func_0021A610	Menu_DrawPanels	projects menu panel frames to screen, renders each panel's draw fn to a render target, blits; Transition_DefaultDraw calls it	
+func_0021B108	Menu_SelectTextTable	menu item init: stores D_001D4B90 or D_001D4BC0 at +0x34 depending on D_0015EF90	
+func_0021B288	Menu_ClearSelectedIndex	menu item init: stores -1 at +0x44, returns 0	
+func_0021B298	Pause_DrawDescriptionBox	draws help/description text window for hovered item (FindHelpEntry, font by flags, text fade timer)	
+func_0021CDA0	Pause_CancelSlotSelection	clears selected slot flag 0x1000 or breaks audio stream and resets slot selection	
+func_0021DA60	Pause_SaveQuickSelect	copies the 8-entry list at +0x30 into D_00141FA0; inverse of Pause_LoadQuickSelect	
+func_0021EDD8	Menu_SetPauseFlagState	stores pauseFlagState() into short at +2 of the item's data	
+func_0021EE00	Menu_DrawSlotMobys	loops 24 slots, skips hidden/locked ones, DrawMobyList(slot,1) each; returns 4	
+func_0021F7D0	Menu_BackInput	pad 0xD00 -> return -1 (back), 0x10 -> go to parent item, 0x20 resets selection globals	
+func_00221380	Pause_DrawCardStatusText	memory-card status text window via Font_PrintWindowAlt using card state and card_op_text	
+func_002229B0	Menu_SubmenuInput	pad 0x10 back to parent, 0x40 click sound + return 1, 0x20 opens submenu (state 3)	
+func_00222B00	Menu_ConfirmPromptInput	pad 0x20 sets parent +0x84=1 (yes), 0x10 sets 0 (no); returns to parent	
+func_00222D70	Menu_SelectEntryByLevel	stores D_001D48A8[current level % 19] at +0x34 of the menu item	
+func_00222DB0	Menu_CycleInput30	left/right pad cycles index +0x40 modulo 30 with click sound; back handling like Menu_BackInput	
+func_00222E98	Menu_CycleInput12	pad cycles index +0x54 modulo 12 with click sound; back handling like Menu_BackInput	
+func_00223FD0	BindStreamSlotB_Init	calls ClaimStreamBinding(0), stores at +0x48 (twin of BindStreamSlot_Init at +0x54)	
+func_00224010	BindStreamSlotB_Exit	ReleaseStreamBinding on +0x48 (twin of BindStreamSlot_Exit)	
+func_00225DF0	NullMobyUpdate_Gadget	empty in retail; installed as moby update hook (+0x74) by GadgetMenu_Init	
+func_00225DF8	NullMobyUpdate_Preview	empty in retail; set as +0x74 update hook of three preview mobys in ItemPreview_UpdateStreamQueue	
+func_00226380	HandGadget_SnapToJoint	LoadHandGadget helper: moves hand gadget moby to joint 0x1D/0x1E world matrix, normalizes	
+func_00226D48	NullMobyUpdate_Helper	empty in retail; set as +0x74 update hook in HelperMobyMenu_Init	
+func_00227068	StreamTable_MarkKey	finds D_001D6448 entry whose key == arg0, sets flag 4, returns 0 if found else 1	
+func_00228110	SpaceTransition_Tick	increments D_0015EF24 timer each frame unless D_0015F6D0; extra +10 every 50 when D_0015EE80	
+func_00228458	GraphicsSetup_QueueChunk	writes DMA tag words into D_00161000 chain, then func_002298B0 with table entry idx	
+func_0022C5A0	DrawSkyShells	loops shell_count sky shells with per-shell rotation/scale presets; caller DrawSpaceFlightFrame	
+func_0022ED80	Moby_PlaySound	starts sound entry idx of the moby's class sound table (moby+0x24 class), records moby in voice slot; ~100 callers	
+func_0022F090	SoundBank_StoreHandle	callback passed to snd_bank_load_from_ee_cb: stores arg0 through pointer arg1 (macro in space.c)	
+func_0022F0A8	Sound_StoreHandleAdvance	sound callback: *p=arg0; nonzero advances state byte 1->2, zero clears +0x18/+0x1C/state	
+func_0022F0F0	Sound_StoreHandleReset	sound callback: *p=arg0; zero clears +0x18/+0x1C/state byte	
+func_002348B8	VuChain_SetLevelOffset	stores D_001DE338[level index, 0 if >=19] into D_0016100C; called at level/mode transitions	
+func_00238D88	DebugProfiler_Hook	empty in retail; called by the draw loop when D_0015F534 bit 0x10000 set, after Dma_AppendRefDirect3	
+func_002391E8	VendorTalkUpdate	animation/state machine for the vendor's talking moby: blends sequences 2-5 with Music stream sync; VendorBuyDialogUpdate calls it	
+func_0023CE18	StrFile_Init	stores its two args into the StrFile and returns 1; sibling of strFileDelete (movie strfile.c)	
+func_L00_001F70F0	Frame_RollCounter	called from the main loop each iteration; moves counter 0x364 to 0x368 and clears it	
+func_L00_001F75F8	OcclGrid_Lookup	same grid lookup as ParseOcclGrid (comment in draw_001F3A78.c); name ParseOcclGrid taken	
+func_L00_001F8750	Level_ResetGameplayGlobals	zeroes a set of globals; called in level load just before HeroInit	
+func_L00_001F9D40	FrameSnapshot_Grab	syncs VU1 chain then DownloadFrameBuffer of the rendered frame to buffer a	
+func_L00_00204190	Moby_ClearGadgetControl	called from FighterJetUpdate and Moby_EndGadgetControl; clears a short control flag	
+func_L00_002056D0	Hero_ResolveAnimId	identity function returning its argument; used around HeroStartAnim(moby anim index)	
+func_L00_00207418	Cheats_PollCodes	records move symbols into a 16-entry ring and toggles gCheats on code match, shows banner	
+func_L00_0020A858	Hero_SetTiltSpringParams	stores two floats at ease table +0xA4/+0xA8; called with constant pairs by lean/tilt joint setters	
+func_L00_0020A990	Hero_UpdateObstacleLean	probes obstacle ahead and sets a lean angle (-0.52 to -1.22 rad) by distance	
+func_L00_0020AB78	Hero_ClearSlotPairs	clears hero fields 0x1004/0x1008 and four pairs at 0x1024; called from HeroEnterMoveState	
+func_L00_0020ABB8	Hero_UpdateBodyTilt	cheat-dependent approach values and tilt angle from slope; follows Hero_UpdateObstacleLean in HeroUpdate	
+func_L00_0020E0E8	HeroAnimLookup_Part2	constant 0x77 case body adjoining func_L00_0020E0A8 anim id lookup (joined.tsv)	
+func_L00_0020E0F0	HeroAnimLookup_Part3	constant 0x75 case body after Part2 in the same anim id lookup	
+func_L00_00213F38	Hero_ApplyMotionCollision	called from Hero_UpdateCollisionProbes; rides platform, limits horizontal velocity, places position	
+func_L00_00216F58	Hero_ApplyStickVelocity	turns to stick heading, velocity from cos/sin of heading times speed; states 0x13/0x15	
+func_L00_00217AF0	Hero_HitMobySparks	after sphere collision, plays sound once and spawns sparks for mobys of type 5 or 9	
+func_L00_00228770	Hero_TryLaunchGadget	equipped gadget item state 2: checks buttons and calls LaunchGadgetMoby; called before ShouldSwing	
+func_L00_00229E30	Hero_TryJumpFromPads	tests pad combos and gadget modules, enters move state 0xB/0xA/0xD/0x10 jump variants	
+func_L00_0022A340	HeroL00_UpdateStateTransitions	main state transition function of shared hero code; calls Hero_TryTakeHit first like the HeroLxx ones	
+func_L00_00232EC0	Hero_SetAttackTicks	stores id (or scale_ticks(5) if -1) at hero +0xAB8; called with 2 before weapon animation 26	
+func_L00_00233410	Hero_PredictLandingTime	solves quadratic for time until hero reaches target height; result truncated to frames in state code	
+func_L00_00233B08	Hero_SetBlendParams	stores two floats, an int, a short and masked flags at hero +0x12A0..0x12AE	
+func_L00_00233CC0	Hero_GetMagnetStickState	returns short at +0x308, forced to 1 in states 0x3F/0x70/0x71 or with magneboots in state 0	
+func_L00_002347B8	Level_GetSpecialMode	maps global 101/102 to 1 and 103 to 2 else 0; nonzero blocks gadget use in Hero_CanUseGadget	
+func_L00_00235040	Hero_ConstrainToPath	pushes hero point outside path axis radius and sets field 0x1F6 to 4 on contact	
+func_L00_002356D0	Hero_TryLedgeSnap	finds ground height ahead of hero and starts target move if within 0.3 units	
+func_L00_00235960	HudBanks_Upload	uploads HUD graphic banks 1,3 and optionally 4,5 by mode to VRAM offsets	
+func_L00_00235CA0	HudBank_Release	subtracts bank size from table offsets and marks entries released; called with 2,3,4 from pause code	
+func_L00_00235FF8	MobyPool_Swap	swaps two sets of moby array pointers when requested state differs, toggles state flag	
+func_L00_00238148	HudSuckCannon_Update	HUD element callback: Hud_UpdateCounter, icon id by gGoldSuckCannon, timer in state 9	
+func_L00_0024B920	CardMenu_AdvanceOnCardStatus	Menu state 3 if card status word != -2, else 6 when flag bit 2; sibling of CardMenu_AdvanceOnStatus	
+func_L00_0024BA70	CardMenu_AdvanceOnSaveByte	Menu state 3 while save byte 7 set, else 10 when flag bits 2/4 up	
+func_L00_0024BF30	CardMenu_NextStateOnCounters	State 21 with flags 0x440 or state 1, chosen from the save counters	
+func_L00_0025A868	Moby_HasLinkedRecord	True when the pointer at moby+0x94 is non-null and its word at +8 is nonzero	
+func_L00_0025E290	Vec4_AdjustNegativeComponents	Per negative component of v recomputes it through vector helpers against src	
+func_L00_0025F3C0	IsMobyClass502OrOutsideRange	0 for null, 1 outside classes 500..540, else class==0x1F6 (502)	
+func_L00_0025F450	IsMobyScatterClass	True for class in {0xE2,0xCC,0xDE,0x3EE,0xD6,0xE1,0xD5,0xDF}; used by ScatterMobyFromHazards	
+func_L00_00260D30	FindNearestTargetMoby	Scans mobs of class 0xCB/0x76C in state 3 for the nearest to a, within best; fills record	
+func_L00_002666C8	Music_SetActiveTrackValue	Writes v into three channel records whose flag 0x8000 is set; called by EndCutscene	
+func_L00_00267290	Npc_TryStartDialog	Range/facing checks, then starts dialog or cutscene for the NPC's table entry; called by NPC updates	
+func_L00_002676A0	LevelTable_SetSlotValue	Stores b in the d field of the 16-byte slot found by FindLevelTableIndex	
+func_L00_002676E8	DialogRequest_Init	Fills the request record (index, tick, flags) from the level table slot; called by NPC updates	
+func_L00_002951C8	GetStashSlotSize_Tail	Comment in stash_00295010.c: the split-off 'return -3' of GetStashSlotSize	
+func_L00_0029C840	PickupSpawn_Step	Steps the pickup-spawn state machine per mode with random timing	
+func_L00_002A27C8	WalkCycle_ResetFeet	clears two 0xB0-sized records, calling func_L00_001FFED8 where active	
+func_L00_002A60D8	Moby_FollowCameraSightLine	Moves moby toward a point on the camera sight line or parks it at fixed distance	
+func_L00_002A84B0	Moby_StartTumble	Own comment: picks default spin rates, builds basis, launches moby	
+func_L00_002A8A20	HeroEffect_Draw	Draws an effect from a table indexed by hero state 0x17..0x19/0x2B with fade timer	
+func_L00_002A9030	CollMoby_IsPvarTypeOne	Pvar of last-collision moby: byte +9 == 1	
+func_L00_002A9080	CollMoby_HasPvarFlag2	Pvar of last-collision moby: halfword +0x1E bit 2	
+func_L00_002AAEF0	Moby_DrawSpinningQuads	Builds two billboards spinning about the moby, kinds 0x11/0x12, queues them	
+func_L00_002AB548	ProjectilePath_Trace	Own comment: traces a projectile path step by step, resolves landing; same body as ThrownObject trace	
+func_L00_002AB910	MineUpdate	Own comment: mine moby class 74 update, falls, sticks, homes and explodes	
+func_L00_002B4F40	Moby_SpawnTrailParticles	Spawns PartType21/23 trail particles between last and current position	
+func_L00_002B5998	Aim_RefineTarget	Own comment: best-aimed target in global list for yaw/pitch, refining them	
+func_L00_002B6E90	HeldObject_UpdatePose	Own comment: steers held object pose, spins it, rebuilds matrix and position	
+func_L00_002B7EC0	Moby175_HitNearbyTargets	Posts hit messages to class 0x1F4.. mobs in radius, counts targets; caller Moby175Update	
+func_L00_002B9730	EffectSlots_SparkUpdate	Own comment: updates 15 slots, spawns and releases spark particles	
+func_L00_002BD6B8	Aim_FindAssistTarget	Picks aim-assist target by heading/pitch/angle scoring and collision; refines heading, pitch	
+func_L00_002BFDB8	Hero_ProbeSphereRaised	Nudges position up, coll_sphere test, lowers a global on success	
+func_L00_002BFF88	Ground_ProbeHeightBelow	Own comment: probe below point and return ground height offset or zero	
+func_L00_002C0098	Aim_PickBestTarget	Scores class-5 mobs within 40 by distance/angle/height; returns best	
+func_L00_002C0358	Aim_SweepBestAngle	Sweeps angle arc in steps, returns best angle by hit distance	
+func_L00_002C11D0	Moby_ProbeGroundState	Own comment: probes between nudged points; state check may override default result with 11	
+func_L00_002C4E00	ThrownObject_TracePath	Same body as ProjectilePath_Trace taking ThrowVars; caller ThrownObjectUpdate	
+func_L00_002C9820	ThrownObject_TracePathCopy	Duplicate of ThrownObject_TracePath with per-copy renamed externs	
+func_L00_002CA6B8	MobyData_ResetDefaults	Resets record fields (+0x78..0xAC) to defaults; caller SpawnMoby270	
+func_L00_002CC210	Moby_SetStateFromCheck	State 5 when check true, else back to 1 if it was 5; returns check	
+func_L00_002CC2B0	CarriedMoby_StartAnimState5	wraps StartCarriedMobyAnim; sets moby state 5 on success, restores state 1 otherwise	
+func_L00_002CC360	CarriedMoby_ReleaseToState5	calls ReleaseCarriedMobySlot then sets moby state 5	
+func_L00_002CF3D8	Moby_FindNearestTarget	scans moby list for class types 5/7/8, skips excluded array, returns nearest by FastVecDist	
+func_L00_002D3608	DecoyGlove_AimThrow	computes aim point/pitch from hero basis and pad; called by DecoyGloveUpdate	
+func_L00_002D6B90	CarriedMoby_UpdateState9	calls CarriedMoby grab-step check; sets state 9 on success, 5 back from 9 on failure	
+func_L00_002D6C80	CarriedMoby_ReleaseToState9	calls ReleaseCarriedMobySlot then sets moby state 9	
+func_L00_002DB428	SuckCannon_IsBlockedByHeroMode	returns 0 for hero modes 0/1/5/12 and mode 2/4 unless timer is 0x3C; gates slot claims	
+func_L00_002DB480	CarriedMoby_AttachMatrix	multiplies carrier matrix with given matrix into target, flags dirty; called by PlaceCarriedMoby	
+func_L00_002DB700	SuckCannon_GetAimOrigin	outputs yaw, pitch and muzzle point from hero state or moby	
+func_L00_002DB810	SuckCannon_ScanTargets	loops mobys, tests range/angle thresholds, calls TryClaimHeroSlot; called by SuckCannonUpdate	
+func_L00_002DCDA8	CarriedMoby_StepGrab	state machine on carried-moby record (blend anims, timer); used by grab helpers	
+func_L00_002DED98	SuckBeam_DrawMesh	draw callback: 10x20 textured quad grid of the suction beam	
+func_L00_002DF150	SuckBeam_Reset	sets two flags to 1 and clears first of ten timers	
+func_L00_002DF168	SuckBeam_Build	builds beam basis from hero/moby vectors on first call after reset	
+func_L00_002E0490	SuckBeam_QueueDraw	decays ten timers by 4 (cap 0x40) and queues SuckBeam_DrawMesh draw callback	
+func_L00_002E04F8	SuckBeam_ApplyPulls	for 200 pull slots computes pull vector into moby, then SuckBeam_QueueDraw	
+func_L00_002E0888	GroupMoby_DrawBillboards	iterates group mobys of same class and draws billboard at each position	
+func_L00_002E0958	PulsingColor_QueueDraw	queues GroupMoby_DrawBillboards when frame counter changes; from PulsingColorMobyUpdate	
+func_L00_002E0AE8	QuadMoby_Update	flag-gated 0/1 toggle then QuadMoby_UpdateEdgeLengths	
+func_L00_002E4838	EffectSlot_DrawPane	billboard quad for one effect slot built from camera cross vectors	
+func_L00_002E4F38	PathFollowMobyUpdate	moves moby along D_L00_001B0830 path, deleting when path is -1	
+func_L00_002E5740	Cam_IsInsideVolume	FindVolumeInGrid on a copied point, returns nonzero if found	
+func_L00_002E5770	Cam_GetPulledBackPosition	hero camera anchor pulled back along view axis, collision tested	
+func_L00_002E6BE0	Cam_UpdateOffsetBlend	CombineOffsetsByMode then Cam_InterpVec3 with mode-based rates	
+func_L00_002E74B0	CameraType0_HeroTweaks	CameraType0Update callee: hero move-state dependent camera nudges (setters)	
+func_L00_002E89D0	Cam_DebugCheck	empty in retail: unused stack buffer, returns 0	
+func_L00_002E89E0	Cam_BlendPushedPoint	interpolates a pushed-out camera point between two scales	
+func_L00_002E8AC8	Cam_PushOutOfWall	computes wall push distance for camera eye; called by collision loop	
+func_L00_002E8EE0	Cam_ResolveWallCollision	loops steps along camera boom calling Cam_PushOutOfWall	
+func_L00_002E9828	Cam_DebugDump	empty in retail: only a volatile stack buffer	
+func_L00_002E9900	Cam_SetDistanceGoal	camera data +0x130 flag, goal x, rate y, optional second x	
+func_L00_002E9D78	Cam_SignedAngleToPoint	subtracts camera offset from point then Cam_SignedAngleBetweenOffsets	
+func_L00_002E9E60	FollowCamera_ReadStickInput	reads pad stick (D_0013CB40) into follow camera yaw/pitch inputs	
+func_L00_002EA3F0	FollowCamera_ClampDistance	limits follow-boom length against its max and updates slack	
+func_L01_00231B98	HeroL01_TryTakeHit	same body as HeroL18_TryTakeHit; called first in HeroL01_UpdateStateTransitions	
+func_L01_00240CE8	Hero_SetMoveStateFromMode	switch on mode byte: 0 -> SetMoveState 0, 3 -> SetMoveState 0x53	
+func_L01_00241620	HeroL01_TryStartGadgetMove	L01 copy of Hero_TryStartGadgetMove: gadget input to move state; called in HeroL01_UpdateStateTransitions chain	
+func_L01_002A2C90	Reverb_SetParams	Stores five reverb params, sets dirty bits 1/2/4 when changed; caller SndInstReverbBoxUpdate	
+func_L01_002BE2C8	ParticleEmitterUpdate	spawns count particles at delay intervals with spread/flags from pvars; culls via FastBSphereCheck	
+func_L01_002F9AF0	DebrisMobyUpdate	DebrisVars: gravity, spin, bounds delete, collision bounce	
+func_L01_00300140	SlidingDoorUpdate	states: home, open when hero within radius (sound for class 0x300), close when hero leaves 1.1x radius	
+func_L01_0030D380	Moby1510_DrawGlow	builds glow quad packet from effect tex 0xB; Moby1510Update callee	
+func_L01_0030EC58	MouseCritter_StepCommand	switch on moby command with hover tuning and goal heading	
+func_L01_00318260	BoltCrank_SetCameraParams	writes two params into camera type 5 data	
+func_L02_002205B0	HeroL02_TryKnockback	contact with object at hero+0x2080: adds velocity away from it, sets move state 0x16/0x56; first call in L02 transitions	
+func_L02_00222D18	Hero_ApplyMotionCollisionL02	per-level copy of Hero_ApplyMotionCollision (same locals and calls)	
+func_L02_00265E58	EffectSlots_Clear	Zeroes seven slot words and a halfword	
+func_L02_00265E88	EffectSlots_Fire	Traces from position along direction with collision, fills effect slots; 7 slots	
+func_L02_002661E8	EffectSlots_Retire	Walks seven slots, frees finished (type 12) entries, spawns sphere bursts for live ones	
+func_L02_002A52B0	ScaleTableIntoBuffer128	Calls ScaleTableIntoBuffer with fixed size 0x80	
+func_L02_002A58C0	Backdrop_QueueGsPacket	Copies four floats into draw state, builds view, queues GS packet; called by DrawBackdropShapes	
+func_L02_002D77F8	SandShark_CheckInsideArea	IsPointInPolygon on the shark's area; if outside, state 0x12 and blend anim 0; SandSharkUpdate calls it	
+func_L02_002DBD70	RingMarker_DrawScroll	Quad draw with scrolling texture offset from tick; caller RingMarkersDraw	
+func_L02_002DC2C0	RingMarker_DrawQuads	Loops four quads from a table with fixed colours/effect tex; caller RingMarkersDraw	
+func_L02_002DE6E0	SandSharkNest_FindShark	scans nest group ids for a type 0x244 moby in state 0x1A, links it, shares hp, returns it	
+func_L02_002FBB10	CamOffsetFx_Reset	Clears block, sets 10000.0 and callback func_L02_002FBB48	
+func_L02_002FBB48	CamOffsetFx_Begin	When duration nonzero calls Cam_SetEyeOffset and registers the tick callback	
+func_L02_002FBBA8	CamOffsetFx_Tick	Resets block and decays the countdown toward zero	
+func_L02_002FBC00	Camera_TrackNearestTarget	Tracks nearest target in front of player inside a view cone	
+func_L02_002FCA80	CameraMoby_IsHeroInTrigger	Camera trigger test: special target, ground moby, radius, clip/cylinder/sphere/polygon volume	
+func_L02_002FD6D0	CameraMoby_Init	Own comment: camera init, runs setup when flag clear, clears field, returns 0	
+func_L03_0022CFA8	DrawSkyShellsL03	L03 sky: SetupSkyGifPaging, rotate-two or static shells by level, DoSkyGifPaging, GS regs	
+func_L03_00292AC0	Moby_DrawVu1AndBackdrop	DrawMobyVu1Packet then backdrop fx; called from backdrop draw	
+func_L03_002965A0	Platform_CarryRiders	tracks position/rotation delta and calls CarryRiders each frame (moving platform)	
+func_L03_002C81E0	Moby574_TryTurnToTarget	angle diff to target past thresholds starts turn anim 1 or 9, state 0xC, returns 1; Moby574Update calls it	
+func_L03_002CF600	Moby_UpdateHitHealth	Hit query lowers a timer, state 5 when depleted, aims head angles	
+func_L03_002DBAD8	QuestGiver_AttachCheatManipulator	when gCheats[0], attaches a manipulator to the quest giver's linked mobys; QuestGiverUpdate calls it	
+func_L03_002DC848	AttachCheatManipulatorToMatchingL03	Cheat mode 2: attaches manipulator to mobs of same class; as AttachCheatManipulatorToSiblings	
+func_L03_002DD6D8	Moby_DeleteSelf	Dead distance/angle math then DeleteMoby(m)	
+func_L04_002C5450	MobyL04_UpdateGrabState	Same shape as Moby_UpdateGrabState: StartCarriedMobyAnim, sets state 9 on success else 9->1	
+func_L04_002D27F8	WBMoby_InitData	Called from WBMoby update init: fills pvars joint/limit table, SetLegJointLimits, speed and angle constants	
+func_L04_002D29E8	WBMoby_SpawnJointEffect	Gets joint 12 world pos then spawns effect via func_L00_0025F4A8_alt; called from WBMoby update	
+func_L04_002D2A98	WBMoby_Update	WBMoby update: target pick, hit response via ComputeHitResponse, state machine; callers' siblings are its init/fx helpers	
+func_L04_002D48B8	SpawnMoby570	Spawns moby class 0x23A copying placement from src; sibling of SpawnMoby499; called by EmitRisingParticles	
+func_L04_002D9270	DriftSparkMoby_Update	State 0/1 update: random direction, waits near hero (dist<32), then drifts with scale/random motion	
+func_L04_002E4458	UnlockPlanetPad_Update	State machine: on state 2 UnlockPlanet(6), SetLevelTriggerDone, saves position and memcard_Save	
+func_L04_002E6780	SparksTriggerL04_Update	Waits for mode 0/1 in global then SpawnMoby750Sparks(slot); same shape as L06/L13 copies	
+func_L04_002E8D88	BreakableL04_Update	Same as BreakableUpdate: hit message -> break fx, burst fx, spawn replacement, DeleteMoby	
+func_L05_00263490	HudCounter_Reset	Sets display timer, clears the four digit slots, calls Hud_SetupCounterDigits	
+func_L05_002D8190	GlowOrbs_DrawCallback	Draw callback queued by func_L05_002D8268: DrawBillboardAt three glow points per matching group moby	
+func_L05_002D8268	GlowOrbs_Update	Gets 3 joint positions, pulses colour with FastTweenColor/FastSin, queues the billboard draw callback	
+func_L05_003065D0	Extermitank_ProcessHit	Called from ExtermitankUpdate: picks max hit message of body/parts, ComputeHitResponse, hp loss, death fx	
+func_L05_003165B8	EmitterL05_Update	Level 5 moby update with EmitterVars: state 0 checks D_0014C150 flag, then trigger/emit states	
+func_L05_00316B98	LiftL05_Update	LiftVars moby: phase/sound init, fade, camera script, state transitions; same skeleton as other lift updates	
+func_L05_003173A8	LiftL05_GetCameraView	Computes eye and look vectors from lift moby pos/rot for CameraScript (caller func_L05_00316B98)	
+func_L05_0031A0A8	BobbingMobyL05_Update	Sets scale from class, state 1 sine-bobs z around base height, hides when mode 2	
+func_L05_0031A188	PickupL05_Update	PickupPose moby: init slots, hero proximity at hero+0x80, PickNearestTargetSlot	
+func_L05_0031AA20	Taxi_SetTargetFromSpawn	copies found spawn moby pos/rot into slot entry then PickNearestTargetSlot; called by TaxiUpdate	
+func_L05_0031DDF0	MineMobyUpdate	MineVars: glow colour, distance fade of alpha, sparks and debris on hit	
+func_L06_00223630	HeroL06_ResetFrameFlags	Called in hero frame update after Hero_UpdateMotionInput; zeroes input block at +0x12E0 and re-derives flags	
+func_L06_00228510	HeroL06_TryApplyHitKnockback	Level 6 copy of Hero_TryApplyHitKnockback (family match 0.86); called from HeroL06_UpdateStateTransitions	
+func_L06_002289F8	CameraL06_UpdateFollowOffsets	Level 6 copy of Camera_UpdateFollowOffsets (family 0.87): sets hero +0x228..0x230 offsets by gadget	
+func_L06_002291D8	HeroL06_ApplyStickSpeed	Hero_SetHeadingFromStick(1.0) then picks speed from table by current speed; used in UpdateMovement	
+func_L06_00229CE8	HeroL06_ResetMotionState	Level 6 copy of HeroL15_ResetMotionState (family 0.96): clears hero motion fields	
+func_L06_002E7578	DriftingSprites_Activate	sets state 2, clears flag bits, DriftingSprites_Init	
+func_L06_002EA920	RespawnMobyUpdate	RespawnVars: health, hit response, death bits, removal	
+func_L06_002EBAD8	CarriedMoby_PlaceState16	PlaceCarriedMoby wrapper saving old state to +0xBC and entering state 0x10	
+func_L06_002EBBF8	CarriedMoby_ReleaseToState16	ReleaseCarriedMobySlot then saves state to +0xBC and enters state 0x10	
+func_L06_002F3D40	Gadgebot_FindTarget	picks nearest moby of classes 0x3B1/0x400/0x515/0x516 within 12 units	
+func_L06_002F4CF8	Gadgebot_DrawGlow	state-dependent tint scaled by sin pulse	
+func_L06_002F9098	Moby1040_SpawnSparks	spawns 40 PartType60 particles with random velocity and colours	
+func_L06_002FE5D0	EffectQuad_DrawVariantA	Builds two textured GS packets with shared texture flags, queued from RegisterMobyDrawCallbacks	
+func_L06_002FE890	EffectQuad_DrawVariantB	Sibling of func_L06_002FE5D0 (family): two textured GS packets, RegisterMobyDrawCallbacks	
+func_L06_002FEB78	EffectQuad_DrawVariantC	Sibling of func_L06_002FE890 (family): two textured GS packets, RegisterMobyDrawCallbacks	
+func_L06_00301B78	EffectQuad_DrawSingle	Single textured GS packet with matrix and colours; referenced from SetMobyGroupDormant	
+func_L06_00301FE8	SpinningDebrisUpdate	integrates velocity/rotation, gravity, frame countdown then DeleteMoby	
+func_L06_00303630	TimerMobyL06_Draw	level 06 copy of TimerMoby_Draw: frame plus pulsing mm:ss.t digits	
+func_L06_00304418	Shuttle_SelectMode	Called from ShuttleUpdate: switch on d+0xBC sets d+0x9C from D_0014C150 progress flags	
+func_L06_00304B88	ScatterPiecesExplode	SpawnExplosionFx then loops n random pieces from two tables; used by MoveAlongPathsWithSound/ScatterLinkedPieces	
+func_L06_00305C58	Moby1123_SpawnDebris	Called from Moby1123Update: loop spawning random-velocity pieces with random_float_between	
+func_L06_00306440	Moby1123_ProbeCorners	Called from Moby1123Update: InitHitQuery then four line probes at +-x,+-y corners rotated by moby rot	
+func_L06_003065B0	Moby1123_Draw	Called from Moby1123Update path: builds matrix and draws effect via VU1_addGSregister packets	
+func_L06_0030A788	SparksTriggerL06_Update	Waits for global mode then SpawnMoby750Sparks; same shape as L04/L13 copies	
+func_L07_0031B620	GunMoby_HandleHit	Moby with Gun data: ComputeHitResponse on hit message 0x230000, on 2+ hits starts death state	
+func_L07_0031BDB8	MovingMobyL07_Update	L07MovingVars: mission flag check, moves between start/target points with forced start/end	
+func_L08_00222E18	HeroL08_TryTakeHit	same body as HeroL18_TryTakeHit; called first in HeroL08_UpdateStateTransitions	
+func_L08_00248A58	Sky_DrawLevel08	Same body as Sky_DrawLevel18 pattern: SkyGifPaging, level==8 -> SkyShellsRotateOne	
+func_L08_002803B8	Particle_SpawnByKind	Spawns particle 0x49 of kind 0 or 1 with colour/size per kind at pos with velocity	
+func_L08_00280BC8	SpawnParticleType4D	Spawns particle class 0x4D with position, velocity b, lifetime; called from Moby1641Update	
+func_L08_002D5358	CarriedMoby_ReleaseToState3	ReleaseCarriedMobySlot, state 3, blends anim 2	
+func_L08_002D6C58	BomberTank_SpawnJointDebris	Called from BomberTankUpdate: joint pos then count random-velocity debris spawns	
+func_L08_002E2A10	Moby1283_SetHeroState	Sets arg+0xBC=1 and Hero_TryMoveStateL08(0x32,1); called from Moby1283Update	
+func_L08_003078B0	Moby1283_AttachCheatManipulators	Called from Moby1283Update: when cheat flag on, AttachManipulator to matching group mobys	
+func_L08_0030D0C0	BreakableL08_Update	Same as BreakableUpdate: hit message -> break fx, burst fx 0x736/0x737, spawn 0x735, DeleteMoby	
+func_L09_0025DEE0	Sky_DrawLevel09	Same pattern as Sky_DrawLevel18: SkyGifPaging, level==9 -> DrawSkyShellsExtra	
+func_L09_00304750	PathPlatformL09_Update	Level 9 copy of PathPlatformUpdate (family): clip-volume/collected switch, moves along D_L09_001B0930 path	
+func_L09_0030B648	LinkedRiser_StepAlongPath	Called from LinkedRiserUpdate: moves toward path node, rotates to face it, returns done	
+func_L09_0030BA28	BreakableL09_Update	Same as BreakableUpdate: hit message -> break fx, burst fx 0x73B, spawn 0x73A, DeleteMoby	
+func_L09_0030BB28	Moby_SpawnChildFromOwner	Allocates a child moby from owner's pool, copies class fields, links to owner	
+func_L10_002D9530	SwirlMoby_RayCollide	Called by SpawnSwirlMoby: ray test via func_L00_001EFFF0, moves moby along hit using global swirl record	
+func_L11_002CCB50	BossL11_AdvanceToState2	Boss class 0x41 in state 1 -> state 2 (and child state 2); called from BossL11_UpdateMovement	
+func_L11_002D3500	TargetZone_ContainsPoint	IsPointInPolygon against D_L11_001B11B0 zone entry; used with hero pos in boss update	
+func_L11_002D3620	EnemyGroup_FindNearEnemy	Scans group ids for non-busy enemies, returns 2 if one is within 10 units	
+func_L11_002F43B0	Moby318_ShowChildren	Called from Moby318Update: makes moby and up to 3 children visible and sets draw colours	
+func_L11_0030B850	BossL11_TryEnterState2	If moby in state 1 and is the current hero-target, set state 2 and blend anim; returns 1	
+func_L11_0030B8D0	RotatingParts_Update	DataA500 moby: for 4 parts AttachManipulator then spin joint angles, speed by state	
+func_L11_0030BC00	Moby_IsState5	Returns moby state == 5; used by L11 boss updates on referenced part mobys	
+func_L11_0030BC10	BossL11_SetPartFlag	Writes 1 to pvars+0xB8 of the moby; called on both referenced parts from L11 boss update	
+func_L11_0030BC20	EnemyGroup_AllBusy	Returns 1 if no free class 0x4DE enemy in the group (IsEnemyBusyState)	
+func_L11_0030E620	CutsceneController_ArrangeMobys	Called from CutsceneControllerUpdate: positions 6 child mobys in a ring from rot angles	
+func_L11_0030FBD0	Moby1158_DrawRipple	Called from Moby1158Update: RippleDraw(D_L11_001DAB40, 0x14)	
+func_L11_00310B28	Moby1219_SyncChild	Spawns Moby1219 child if missing then copies owner pos/rot and joint; returns 1 if alive	
+func_L11_00310BF0	ShipCollider_Update	Joint sphere collision, checks ship classes 0x4DA/0x45/0x563 and hero state 0x32; calls Moby1219_SyncChild	
+func_L11_00311318	ApplyHitToHealthL11	Level 11 copy of ApplyHitToHealth (family): hit message 0x330000, ComputeHitResponse, damage to hp	
+func_L11_00311F98	Hud_DrawPointList	builds GIF packet of n 16-bit point pairs scaled to x0,y0; called by Fleet/Gemlik/Jet HUD draws	
+func_L11_00312510	Hud_DrawFourRotatedQuads	draws same effect-tex quad four times rotated 90 deg apart	
+func_L11_0031B8A8	PathOrbitMobyUpdate	places moby on spline path points offset by radius*sin/cos(angle) around path axes	
+func_L12_002284A8	Hero_GetGadgetAnimId	returns anim id: 0x54, 0x6E or table entry by slot module id; used by HeroL12_SetMoveState	
+func_L12_00246938	HeroL12_UpdateStateTransitions	Level 12 copy of HeroL11_UpdateStateTransitions (family): hero state dispatch, HeroL12_SetMoveState	
+func_L12_0027C368	Moby_UpdateAttachedChildren	Rebuilds each child moby's pos/rotation from parent matrix and local offset	
+func_L12_002E29C8	GroupMoby_UpdateActiveState	Active check via func_L00_002DCDA8: sets group byte, state 8 when active else back to 1	
+func_L12_002E2A68	CarriedMoby_PlaceAndSetState	PlaceCarriedMoby wrapper: state 8 on success, else state 8 -> 1	
+func_L12_002E2B08	CarriedMoby_ReleaseAndSetState	ReleaseCarriedMobySlot wrapper then state 8 unless state 9/11	
+func_L12_002E8610	Moby294_SpawnExplosion	Called from Moby294Update: SpawnExplosionFxSwapped(a,b,-1,1.0,10.0)	
+func_L12_002ED028	Moby336_HandleHit	Called from Moby336Update: on hit message 0xA30000 counts hits, banner, sound, impact fx	
+func_L12_003046C8	Moby1267_SetCameraView	Called from Moby1267Update: CameraScript_SetPosition/SetLookAt from moby pos and rot	
+func_L13_002B4B90	LiftL13_UpdateAlt	Lift skeleton (delta=-pos, rot copy, phase init) like Lift1270Update, different state set	
+func_L13_002B5A88	Moby_PickTargetByState	Calls func_L00_00260D30 with distance 22 or 20 by state, falls back to hero target; state from +0xBC	
+func_L13_002B5C08	GemLockTurret_HandleHit	Called from GemLockTurretUpdate: hit message 0x330000, ComputeHitResponse, angle check on attacker	
+func_L13_002C4F10	PathVehicle_AdvanceNode	Advances node index along D_L13_001B0AB0 path (wrap at ends), returns wrapped flag; used for aim point	
+func_L13_002EA160	QwarkStarfighter_SyncParts	Called from QwarkStarfighterPartUpdate: 10 joint positions copied to part mobys, clamped	
+func_L13_002EC038	QwarkStarfighter_UpdateByMode	Called from QwarkStarfighterPartUpdate: switch on moby+0xBC mode, per-mode motion	
+func_L13_00307550	Moby1233_SpawnBigBurst	Called from Moby1233Init: func_L00_0025F4A8_alt effect with params 12,4,18 at moby pos	
+func_L13_003075E0	Moby1233_SpawnSmallBurst	Called from Moby1233Init: func_L00_0025F4A8 effect with params 5,1,5 at moby pos	
+func_L13_00307660	SpawnMoby1238	Spawns moby class 0x4D6 aimed along dir with speed; caller SpawnAimedProjectile	
+func_L13_00307798	ProjectileL13_Update	Integrates velocity from pvars, collision query, random bounce direction	
+func_L13_0030B340	BobbingLights_Update	Bob/Light structs: converts angle/speed to radians, light setup in state 0; returns if hero in state 0x32	
+func_L13_0030D2A8	SparksTriggerL13_Update	Waits D_L13_0016CBE0.state==2 then SpawnMoby750Sparks; same shape as L04/L06 copies	
+func_L14_002B3B78	BeamMoby_DrawLines	Own comment: draws five GIF line packets from beam points	
+func_L14_002DAC00	MobyL14_Activate	Starts idle moby in state 5, returns whether it was in state 6	
+func_L14_002E17B8	MobyL14_EngineExhaust	Own comment: engine exhaust puffs, trail piece and smoke at the nozzle	
+func_L14_002EC7E8	Sparks_InitParticle	Spk_k struct: builds fwd/side/up basis from dir and offsets particle i randomly	
+func_L14_002EC9C8	Sparks_Update	Spk_k struct: dir from rot.z, timers n320, shading, clip-volume check per particle	
+func_L14_002ECC70	Sparks_Draw	Builds GS packet with texture 0x30 and draws 48 particles via VU1_addGSregister	
+func_L14_002EDC70	MineL14_Update	L14MineVars: path-driven mine, DeleteMoby on missing path, hit/explode states	
+func_L14_002EF078	FadingQuads_Draw	Textured quads with effect tex 0x2D, alpha from timer ratio; called by LightningArcUpdate	
+func_L14_002F03E8	Moby685_InitPathLengths	called from Moby685Update area; fills per-segment lengths for two paths, deletes moby if path index -1	
+func_L14_002F0B78	Moby685_UpdateGlowTint	tweens moby tint; sine pulse when hero is within 40 units in XY, dim otherwise	
+func_L14_002F25C8	Taxi_SelectPath	called by TaxiUpdate; per-state picks path from table, sets speed from path length	
+func_L14_002FD870	ThrusterPuffs_Spawn	spawns exhaust puffs via particle helper at offsets along moby rot rows, skipped if state 0/2 or invisible	
+func_L14_002FDE28	Moby_SpringAlongPath	advances along path spline, springs pos and yaw/pitch/roll toward it (same body as OltanisJet helper)	
+func_L14_002FEDA0	OltanisJet_FollowPath	called by OltanisJetUpdate; spring-follows path, deletes moby and returns 1 at path end	
+func_L14_003047F8	AmbientStreamL14Update	same body as AmbientStreamL03Update (families.tsv 1.00): state 0 arms, state 1 registers audio stream callback	
+func_L14_00307660	Moby1397Update	config/overlays/names.tsv calls it UpdateMoby_1397; state 0 init, state 2 sets a counter	
+func_L14_00308AA8	BlargInterceptor_FollowPath	called by BlargInterceptorUpdate; follows path, explodes and stops sound at path end or low z	
+func_L14_00314A40	BlargInterceptor_NotifyGrab	called by BlargInterceptorUpdate when hero holds the part; sets race-state request fields when phase is 7	
+func_L15_00209448	HeroL15_TryTakeHit	same body as HeroL18_TryTakeHit; called first in HeroL15_UpdateStateTransitions with arg 1	
+func_L15_0022E3F8	Sky_DrawLevel15	sky GIF paging; level 15 uses sparkle shells else static, then GS regs (same shape as DrawSkyL01)	
+func_L15_0029C1D0	Moby67Update	config/overlays/names.tsv UpdateMoby_67; triggered mover with home pos, lock, open volume and sound	
+func_L15_002D8BB0	TimerMoby_Draw	draws UI frame and mm:ss.t countdown digits with pulsing colour	
+func_L15_002EC4F8	RingWave_DrawA	animated 68-point radial wave ring drawn with GS registers, sine height by radius	
+func_L15_002EF030	RingWave_DrawB	same as RingWave_DrawA with 46 points and different scale constants	
+func_L16_0020FEC8	HeroL16_IntegrateVelocity	adds scaled vector to hero pos, copies, clamps vector length; called from L16 hero physics	
+func_L16_002CAE18	Moby471_AttachToNearest	called by Moby471Update; finds nearest class 0x1D7 moby in group and links voice slot to it	
+func_L16_002CB000	Moby471_CarryGroupRiders	called by Moby471Update; CarryRiders for every class 0x1D7 moby in the group	
+func_L16_002D0B00	Moby552_AllGroupIdle	called by Moby552Update; returns 0 if any class 0x222 moby in group has flag set else 1	
+func_L16_002D0FC8	HoverboardRacer_CheckBoostGates	called by HoverboardRacerUpdate; adds ticks when racer passes class 0x473 gate mobys in groups	
+func_L16_002D1310	HoverboardRacer_SkipToMarker	called by HoverboardRacerUpdate; steps path table to next marker entry (value 2.0) and sets target	
+func_L16_002D7628	Moby654_ComputePose	called by Moby654Update; hero-relative approach value lerps position and yaw into out params	
+func_L16_002DF780	Challenge_SetLayoutParam	stores a float (76.0 active / 100.0 idle) called from Challenge_SetActiveLayout and Challenge_SetIdleLayout	
+func_L16_002E2290	TargetMoby_GetPhase	returns 1 for state 7/8, 2 for state 8 with timer over 0.2, else 0	
+func_L16_002E5408	CratePlatform_FollowPath	called by CratePlatformUpdate; spring-follows path by state, returns path-end flag	
+func_L16_002E5848	PathPickup_Update	moby state machine: selects nearest target slot, path, shows pickup help message, hands over to next moby	
+func_L16_002E6398	PathPickup_TransformPath	called from PathPickup_Update area; rotates 7 path points by moby rot and offsets by moby pos	
+func_L16_002E9DE8	TargetActivator_Update	state machine inside clip volume; activates target moby, uses TargetMoby_GetPhase result	
+func_L17_0020E320	HeroL17_TryTakeHit	same body as HeroL18_TryTakeHit; called first in HeroL17_UpdateStateTransitions with arg 1	
+func_L17_002CD088	FleetTurret_HandleHit	called by FleetTurretUpdate; reads hit message, subtracts damage, enters state 4 at 0 health	
+func_L17_002EBF08	Effect_DrawFourQuadStar	draws the same effect quad four times rotated by 90 degrees each	
+func_L17_002EFA20	PlayerShip_AvoidBounds	called by PlayerShipUpdate; steers inputs away from arena limits, sets hero flag bit	
+func_L17_002F04D0	Moby1380_InitAim	called by Moby1380Update; computes offset point toward hero and yaw into state vector	
+func_L17_002F1D20	Moby1382_UpdatePulse	called by Moby1382Update; mode by state, pulsing colour with scale_ticks period	
+func_L17_002F49B8	Moby750SparkTriggerUpdate	state 0 init, state 1 spawns Moby750 sparks when level flag equals 2	
+func_L18_002D74F8	Moby_StepStunState	wraps hit check; states 3/4 saved to command and switched to 4, otherwise clears counter	
+func_L18_002D9440	BossTimer_Poll	state 3 goes to 1 and returns 1; state 2 with zero timer returns -1; used by FinalBossUpdate	
+func_L18_002D9488	BossTimer_Draw	draw callback; frame plus formatted MM:SS.t timer text with colour pulse	
+func_L18_002D96B0	SinkingPlatformUpdate	state machine: sinks when hero stands on it (ground_moby == moby), random sparks, tilts	
+func_L18_002D9C48	Moby587_PollState	state 1 returns 1, state 2 becomes 5; called on class 0x24B mobys by FindNearestGroupMoby	
+func_L18_002E0E90	FinalBoss_StartMove	called by FinalBossUpdate; copies 5 vectors into child moby data, sets state 2 and tick durations	
+func_L18_002E0F90	FinalBoss_GetMoveStatus	returns 1 for state 2, 2 for state 3, else 0; FinalBossUpdate waits for 2	
+func_L18_002EAB58	HitTrigger_Update	state 1 on hit sets group state two and plays sound; state 2 spawns particle bursts	
+func_L18_002EC0C8	HomingSpark_InitTrail	called by HomingSpark_Update; one-shot init of 20-point trail arrays from moby to target	
+func_L18_002F86E8	FinalBoss_BlendByHeroDist	called by FinalBossUpdate; clamps hero distance to range and lerps two parameter pairs by it	
+func_L18_002F8B00	FinalBoss_SpawnBurstParticles	called by FinalBossUpdate; spawns PartType44 and PartType21 bursts around a point	
+func_L18_002F8CE0	FinalBoss_DrawGlowBillboards	draw callback registered by FinalBossUpdate; billboards at joints with sine colour tween	
+func_L18_002FB080	Moby1563_DrawQuad	draw callback registered in Moby1563Update; textured billboard quad with colour fade	
+func_L18_002FB318	Moby1563_DrawQuadAlt	sibling draw callback of Moby1563_DrawQuad with a different basis; same pk setup	
+func_001EDE08	Camera_UpdateFade	body: takes gCamera.follow.fade_rate (+0x258) off gFade each frame and stops both at 0 (docs/kb/refactor-camera.md)	
+func_L00_001ED2C0	Camera_PickCollisionMasksLvl	body: level copy of Camera_PickCollisionMasks (func_001EDCE8); Lvl = level copy of the executable function	
+func_L00_001EBDA0	UpdateAllCamerasLvl	body: level copy of UpdateAllCameras (func_001EC7C8) over the level's 48 slots; Lvl = level copy of the executable function	
+func_L00_001EB7C8	Camera_ReleaseCurrent	body: sets the current camera's transition_state to 1 and handoff_state to 0, so any eligible camera may take over (Camera_ActivationCheckPriority)	
+D_00187040	gCamera	camera block, 0x3A0 bytes (transition.c clears it): CameraSystem in include/camera.h; draw.c reads its view matrix and eye position	
+D_00187510	gCameraSlots	48 0xA0-byte Camera records UpdateAllCameras scans (camera.c)	
+D_00189C50	gCameraSlotUsed	48 words, nonzero = slot in use (UpdateAllCameras, Camera_InitSlots)	
+D_00189310	gCameraBackup	BackupCurrentCam copies the current camera (0xA0 bytes) here	
+D_00189750	gCamPrevState	0x280-byte state buffer of the previous camera; the current camera's is the 0x280 bytes before it (Camera_SwitchActive)	
+D_001899D0	gCamBackupState	0x280-byte state buffer BackupCurrentCam fills for gCameraBackup	
+D_001893B0	gCamPostUpdFuncs	callbacks ExecuteCamPostUpdFuncs runs and clears	
+D_0015F08C	gCamPostUpdCount	number of gCamPostUpdFuncs entries (ExecuteCamPostUpdFuncs)	
+D_0015F090	gCameraDefs	the level's camera table, 0x20-byte CameraDef rows (Camera_SwitchActive, Camera_ActivationCheckPriority)	
+D_001E8F80	gCameraTypes	the camvtbl table of 0x14-byte CameraType rows {id, check, activate, update, exit} the camera hooks dispatch through	
+D_0018C418	gDebugFreeCam	debug free-camera state: +0x14 set stops the camera code writing the view (UpdateCamera); DebugFreeCameraUpdate reads the level copy	
+D_0015F09C	gCamSphereMask	collision mask of the camera's sphere probes (level copy passed to coll_sphere by MoveCameraToward); Camera_PickCollisionMasks sets it	
+D_0015F0A0	gCamSphereMaskBase	gCamSphereMask before bit 0x80 is added (Camera_PickCollisionMasks)	
+D_0015F098	gCamLineMask	collision mask of the camera's line probes (level copy passed to func_L00_001EFFF0 in vendor_002E1660.c); Camera_PickCollisionMasks sets it	
+D_0015F53C	gFade	fade level: 1.0 on a level load (transition.c), cut by Camera_UpdateFade, a cutscene steps it down by 0.34 (tieproc_00299108.c level copy)	
+D_L00_00166D80	gCameraLvl	level copy of gCamera (CameraSystem, include/camera.h); Lvl = the level build's copy of the executable symbol	
+D_L00_00167250	gCameraSlotsLvl	level copy of gCameraSlots (Camera_InitSlots, FindCameraById)	
+D_L00_00169990	gCameraSlotUsedLvl	level copy of gCameraSlotUsed (Camera_InitSlots)	
+D_L00_00169210	gCamCurStateLvl	state buffer of the current camera, level build (CameraResetBehindHero); 0x280 bytes before gCamPrevStateLvl	
+D_L00_00169490	gCamPrevStateLvl	level copy of gCamPrevState (SwitchCamera)	
+D_L00_001690F0	gCamPostUpdFuncsLvl	level copy of gCamPostUpdFuncs (Camera_RunQueuedCallbacks)	
+D_L00_0015F04C	gCamPostUpdCountLvl	level copy of gCamPostUpdCount (Camera_RunQueuedCallbacks, Camera_InitSlots)	
+D_L00_0015F050	gCameraDefsLvl	level copy of gCameraDefs (Camera_InitSlots, SwitchCamera)	
+D_L00_0015F054	gCameraDefCountLvl	rows in gCameraDefsLvl (Camera_InitSlots)	
+D_L00_001EAC00	gCameraTypesLvl	the level's camvtbl rows read by UpdateAllCamerasLvl and Camera_FindTypeIndex	
+D_L00_0016C158	gDebugFreeCamLvl	level copy of gDebugFreeCam (Camera_UpdateFrame, DebugFreeCameraUpdate)	
+D_L00_0015F05C	gCamSphereMaskLvl	level copy of gCamSphereMask (MoveCameraToward passes it to coll_sphere)	
+D_L00_0015F060	gCamSphereMaskBaseLvl	level copy of gCamSphereMaskBase (Camera_PickCollisionMasksLvl)	
+D_L00_0015F058	gCamLineMaskLvl	level copy of gCamLineMask (Camera_PickCollisionMasksLvl; vendor_002E1660.c line probes)	
+D_L00_0015F4FC	gFadeLvl	level copy of gFade (tieproc_00299108.c cutscene fade)	

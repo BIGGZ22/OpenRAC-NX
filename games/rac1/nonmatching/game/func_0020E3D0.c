@@ -1,3 +1,4 @@
+/* fcheck: unchecked (the harness could not link it: ee_rate_0020E3D0 has no retail address; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* func_0020E3D0: MobyAnimAdvance, the per-moby animation step of MobyUpdateLoop. Moves the key
    pair (frame A = m->frame, frame B = m->prevFrame, t at +0x54) on by speed * rate (+0x58, +0x5C),
    stepping keys forward or back; each key takes its rate from the sequence's override or from its

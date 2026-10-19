@@ -1,4 +1,4 @@
-/* functional: medium. Handwritten MMI translated to plain arithmetic: 16-wide 2D half-pel (four-pixel average, +2 >>2) of two sources into dst. Byte rotation modelled explicitly; the addi trap cannot occur. */
+/* functional: medium. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). Handwritten MMI translated to plain arithmetic: 16-wide 2D half-pel (four-pixel average, +2 >>2) of two sources into dst. Byte rotation modelled explicitly; the addi trap cannot occur. */
 static void rot8_func_001269C8(const u8 *a, const u8 *b, int k, u8 *rot) {
     u8 buf[16];
     int i;

@@ -30,9 +30,10 @@ JTBL = re.compile(r"%hi\((jtbl_(?:L\d\d_)?[0-9A-F]{8})\)")
 
 def retail_tables(func: str) -> list[str]:
     """The jump tables retail's FUNC uses, in the order it first uses them."""
-    p = Path(f"asm/nonmatchings/text/{func}.s")
-    if p.exists():
-        return list(dict.fromkeys(JTBL.findall(p.read_text())))
+    for segment in ("text", "core_text"):
+        p = Path(f"asm/nonmatchings/{segment}/{func}.s")
+        if p.exists():
+            return list(dict.fromkeys(JTBL.findall(p.read_text())))
     # level code (docs/OVERLAYS.md): a joined function's pieces may hold its tables
     found = []
     for part in [func] + joined_pieces(func):

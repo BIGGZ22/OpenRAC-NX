@@ -211,7 +211,7 @@ extern s32 D_001873A0;
 extern s32 D_001873B0;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/rendering/fun_00218d10.c, FUN_00218d10. */
-void func_00219C08(void) {
+void Menu_SetupPanelView(void) {
     D_00187040_19C08.f140 = 256.0f;
     D_00187040_19C08.f148 = 64.0f;
     D_00187040_19C08.f144 = 256.0f;
@@ -311,7 +311,7 @@ void PauseAllSounds(int arg0) {
 
 LINKER_REMNANT("asm/remnants/text", func_00219E48);
 
-void func_00219E60(void) {
+void Pause_ResetMenuObject(void) {
     char *p = D_001D5F70;
     D_0015F6E8 = 3;
     *(int *)p = 0x2D;
@@ -854,7 +854,7 @@ struct RenderPanel { u8 pad0[4]; s32 (*draw)(RenderPanel *); u8 pad8[8]; s32 fla
 typedef struct { u8 pad0[4]; u8 *current; u8 pad8[0xD0]; s32 unkD8; } MenuSys_p;
 typedef struct { u8 pad0[0x44]; RenderPanel *screens[1]; } MenuScr_p;
 
-void func_0021A610(void) {
+void Menu_DrawPanels(void) {
     Vec4 frame_vectors[4];
     /* Hypothesis, not evidence of a real variable: retail reserves
        sp+0x50..0x9F, which nothing in the function reads or writes. This
@@ -904,7 +904,7 @@ void func_0021A610(void) {
     InitMobyClassDists();
     StashMobyClassDists();
     DrawMobyList(D_00160018, 4);
-    func_00219C08();
+    Menu_SetupPanelView();
     BuildViewMatrices();
     for (effect_slot_index = 0; effect_slot_index < slot_count; effect_slot_index++) {
         if (D_001CE640[effect_slot_index] != 0 && ((PanelRenderSlot **)D_001D6120)[effect_slot_index] != 0 &&
@@ -1147,7 +1147,7 @@ int Pause_ListInput(char *arg0) {
             }
         }
         if (*(int *)(arg0 + 0x3C) != old) {
-            func_0022ED80(1, 0x11, *(int *)(arg0 + 0x14));
+            Moby_PlaySound(1, 0x11, *(int *)(arg0 + 0x14));
         }
     }
     {
@@ -1231,7 +1231,7 @@ extern int D_0015EF90_m __asm__("D_0015EF90") MACRO_ADDR;
 
 /* D_0015EF90 is read through a MACRO_ADDR alias: retail's one-register
    load. */
-int func_0021B108(void *arg0) {
+int Menu_SelectTextTable(void *arg0) {
     *(char **)((char *)arg0 + 0x34) =
         (D_0015EF90_m != 0) ? D_001D4B90 : D_001D4BC0;
     return 0;
@@ -1292,7 +1292,7 @@ int func_0021B280(void) {
     return 0;
 }
 
-int func_0021B288(void *arg0) {
+int Menu_ClearSelectedIndex(void *arg0) {
     *(int *)((char *)arg0 + 0x44) = -1;
     return 0;
 }
@@ -1343,7 +1343,7 @@ static inline void win_unshift(Win *p) {
     p->s[5] -= x;
 }
 
-int func_0021B298(unsigned char *w) {
+int Pause_DrawDescriptionBox(unsigned char *w) {
     extern void func_001F65A8(void);
     extern void func_001F6598(void);
     char buf[0x40];
@@ -2132,7 +2132,253 @@ int Menu_SkipHiddenPages(char *arg0, int arg1) {
     return 0;
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_0021C840);
+typedef struct MenuScreen_C840 MenuScreen_C840;
+
+typedef struct {
+    u16 icon;
+    s16 frame;
+    s16 kind;
+    s16 id;
+    s16 stream_entry;
+} MenuGridCell_C840;
+
+struct MenuScreen_C840 {
+    char pad0[0x14];
+    s32 moby;
+    char pad18[0x18];
+    s32 flags;
+    f32 margin_x;
+    f32 margin_y;
+    s32 selected_cell;
+    s32 rows;
+    s32 cols;
+    MenuGridCell_C840 *cells;
+    MenuScreen_C840 *up;
+    MenuScreen_C840 *down;
+    MenuScreen_C840 *left;
+    MenuScreen_C840 *right;
+};
+
+typedef struct MenuPage_C840 {
+    s32 moby_anims[14];
+    struct MenuPage_C840 *back;
+    s32 state;
+    MenuScreen_C840 *focus;
+    MenuScreen_C840 *screens[14];
+    char pad7C[0x4];
+    MenuScreen_C840 *pending_focus;
+} MenuPage_C840;
+
+typedef struct {
+    s32 state;
+    MenuPage_C840 *current;
+    MenuPage_C840 *next;
+    char padC[0x24];
+    s32 equipped[4];
+    char pad40[0xE4];
+    s32 close_locked;
+    char pad128[0xC];
+    s32 unk134;
+    s32 unk138;
+    char pad13C[0xC];
+    s32 select_cooldown;
+} MenuSystem_C840;
+
+typedef struct {
+    char pad0[0x8];
+    s32 slot;
+    char padC[0x40];
+} MenuItemInfo_C840;
+
+typedef struct {
+    char pad0[0x1C4];
+    u32 pressed_unmasked;
+} PadState_C840;
+
+typedef struct {
+    char pad0[0x1FF5];
+    u8 unk1FF5;
+    u8 pad1FF6;
+    u8 ammo_capacity;
+} Hero_C840;
+
+extern MenuSystem_C840 menu_system_C840 __asm__("D_001D5F70");
+extern PadState_C840 controller_state_C840 __asm__("D_0013CA40");
+extern u8 item_available_C840[] __asm__("D_0013D5C8");
+extern MenuItemInfo_C840 menu_item_info_C840[] __asm__("D_001864D0");
+extern Hero_C840 hero_C840 __asm__("D_0013F450");
+extern s32 item_count_C840(s32) __asm__("func_001E97E8");
+extern s32 play_menu_sound_C840() __asm__("func_0022ED80");
+
+/* Adapted from Lombyte (MIT): src/ui/menus/update_menu_grid_selection.c, update_menu_grid_selection. */
+s32 func_0021C840(MenuScreen_C840 *grid) {
+    s32 column_count;
+    s32 row_count;
+    s32 cursor;
+    s32 row;
+    s32 column_index;
+    s32 column;
+    s32 hidden;
+    s32 next_rows;
+    MenuPage_C840 *back_page;
+    s32 total;
+    s32 next_column_count;
+    s32 next_columns;
+    MenuScreen_C840 *next;
+    MenuGridCell_C840 *entry;
+    s32 slot;
+
+    if (menu_system_C840.current->focus != grid) {
+        return 0;
+    }
+    if ((controller_state_C840.pressed_unmasked & 0xD00) && menu_system_C840.close_locked == 0) {
+        return 1;
+    }
+    if (controller_state_C840.pressed_unmasked & 0x10) {
+        back_page = menu_system_C840.current->back;
+        if (back_page != 0) {
+            menu_system_C840.next = back_page;
+            return 0;
+        } else if (menu_system_C840.close_locked == 0) {
+            return -1;
+        }
+    }
+
+    column_count = grid->cols;
+    cursor = grid->selected_cell;
+    row_count = grid->rows;
+    row = cursor / column_count;
+    column_index = cursor % column_count;
+    column = column_index;
+
+    /* Process every pressed direction in order; a page change can also adjust
+       column before the following direction checks. */
+    if (controller_state_C840.pressed_unmasked & 0x1000) {
+        if (row != 0) {
+            grid->selected_cell -= column_count;
+        } else if (grid->up != 0) {
+            next = grid;
+            do {
+                next = next->up;
+                next_rows = next->rows;
+                next_columns = next->cols;
+                hidden = 0;
+                if (menu_system_C840.unk134 != 0 && (next->flags & 8)) {
+                    hidden = 1;
+                }
+                if (menu_system_C840.unk138 != 0 && (next->flags & 4)) {
+                    hidden = 1;
+                }
+            } while (hidden);
+            menu_system_C840.current->pending_focus = next;
+            if (next_columns == 5 && grid->cols == 3) {
+                column++;
+            }
+            if (next_columns == 3 && grid->cols == 5) {
+                column--;
+                if (column > 2) {
+                    column = 2;
+                } else if (column < 0) {
+                    column = 0;
+                }
+            }
+            next->selected_cell = (next_rows - 1) * next_columns +
+                                            (column < next_columns - 1 ? column : next_columns - 1);
+        } else if (!(grid->flags & 0x8000)) {
+            grid->selected_cell = column_count * (row_count - 1) + cursor;
+        }
+    }
+
+    if (controller_state_C840.pressed_unmasked & 0x4000) {
+        if (row + 1 < row_count) {
+            grid->selected_cell = grid->selected_cell + column_count;
+        } else if (grid->down != 0) {
+            next = grid;
+            do {
+                next = next->down;
+                next_column_count = next->cols;
+                hidden = 0;
+                if (menu_system_C840.unk134 != 0 && (next->flags & 8)) {
+                    hidden = 1;
+                }
+                if (menu_system_C840.unk138 != 0 && (next->flags & 4)) {
+                    hidden = 1;
+                }
+            } while (hidden);
+            menu_system_C840.current->pending_focus = next;
+            if (next_column_count == 5 && grid->cols == 3) {
+                column++;
+            }
+            if (next_column_count == 3 && grid->cols == 5) {
+                column--;
+                if (column > 2) {
+                    column = 2;
+                } else if (column < 0) {
+                    column = 0;
+                }
+            }
+            next->selected_cell =
+                column < next_column_count - 1 ? column : next_column_count - 1;
+        } else if (!(grid->flags & 0x8000)) {
+            grid->selected_cell =
+                grid->selected_cell - grid->cols * (grid->rows - 1);
+        }
+    }
+
+    if (controller_state_C840.pressed_unmasked & 0x8000) {
+        if (column != 0) {
+            grid->selected_cell = grid->selected_cell - 1;
+        } else if (grid->left != 0) {
+            menu_system_C840.current->pending_focus = grid->left;
+        } else if (!(grid->flags & 0x8000)) {
+            grid->selected_cell += grid->cols - 1;
+        }
+    }
+
+    if (controller_state_C840.pressed_unmasked & 0x2000) {
+        if (column + 1 < column_count) {
+            grid->selected_cell = grid->selected_cell + 1;
+        } else if (grid->right != 0) {
+            menu_system_C840.current->pending_focus = grid->right;
+        } else if (!(grid->flags & 0x8000)) {
+            grid->selected_cell -= grid->cols - 1;
+        }
+    }
+
+    if (grid->selected_cell != cursor || menu_system_C840.current->pending_focus != 0) {
+        play_menu_sound_C840(1, 0x11, grid->moby);
+    }
+
+    if ((controller_state_C840.pressed_unmasked & 0x40) && ((grid->flags ^ 1) & 1)) {
+        if (menu_system_C840.select_cooldown != 0) {
+            return 0;
+        }
+        entry = &grid->cells[grid->selected_cell];
+        if (entry->id != 0 && item_available_C840[entry->id] != 0) {
+            slot = menu_item_info_C840[entry->id].slot;
+            play_menu_sound_C840(0, 0x11, grid->moby);
+            menu_system_C840.select_cooldown = 10;
+            if (menu_system_C840.equipped[slot] == entry->id && slot != 0 && slot != 3) {
+                menu_system_C840.equipped[slot] = 0;
+            } else if (entry->id == 0x18) {
+                if (item_count_C840(0x18) != 0 && menu_system_C840.state == 3) {
+                    next_columns = item_count_C840(0x18);
+                    hero_C840.unk1FF5 = 1;
+                    total = hero_C840.ammo_capacity + next_columns;
+                    if (total > 6) {
+                        total = 6;
+                    }
+                    hero_C840.ammo_capacity = total;
+                }
+            } else {
+                menu_system_C840.equipped[slot] = entry->id;
+            }
+        } else {
+            play_menu_sound_C840(2, 0x11, grid->moby);
+        }
+    }
+    return 0;
+}
 
 int func_0021CD98(void) {
     return 0;
@@ -2170,7 +2416,7 @@ extern short D_001517D0[];
  * Same instruction count, but it also changes what the branch delay
  * slot gets filled with, so it is a byte difference, not just cosmetic.
  */
-int func_0021CDA0(void) {
+int Pause_CancelSlotSelection(void) {
     int cur;
 
     if (D_001517D0[4] == 0) {
@@ -2668,7 +2914,7 @@ int LevelSelectMenu_Update(struct Menu *m) {
         }
     }
     if (D_001A01F0_lv.level != old) {
-        func_0022ED80(1, 0x11, m->unk14);
+        Moby_PlaySound(1, 0x11, m->unk14);
         func_0020C7A0_i();
     }
     if (m->count != 0) {
@@ -2682,7 +2928,7 @@ int LevelSelectMenu_Update(struct Menu *m) {
             m->choice[D_001A01F0_lv.level] = (m->choice[D_001A01F0_lv.level] + 1) % m->count;
         }
         if (m->choice[D_001A01F0_lv.level] != prev) {
-            func_0022ED80(1, 0x11, m->unk14);
+            Moby_PlaySound(1, 0x11, m->unk14);
         }
         if ((pad & 0x5000) || D_001A01F0_lv.level != old) {
             m->count = Mission_CollectObjectiveIds((void *)0x70000000, (void *)0, (void *)0x70000100, 1);
@@ -2741,7 +2987,7 @@ int Pause_QuickSelectInput(SelList_0021D7A0 *arg0) {
         arg0->idx = (arg0->idx + 7) % 8;
     }
     if (arg0->idx != old) {
-        func_0022ED80(1, 0x11, arg0->id);
+        Moby_PlaySound(1, 0x11, arg0->id);
     }
     if (item != 0 && ((unsigned char *)&D_0013D5C8)[item] != 0
         && (*(int *)(pad + 0x1C4) & 0x40)) {
@@ -2798,7 +3044,7 @@ int Pause_LoadQuickSelect(SelList_0021D9C8 *arg0) {
 
 extern int D_00141FA0[];
 
-int func_0021DA60(void *arg0) {
+int Pause_SaveQuickSelect(void *arg0) {
     int *src = (int *)((char *)arg0 + 0x30);
     int *dst = D_00141FA0;
     int i = 7;
@@ -3574,7 +3820,7 @@ static inline short pauseFlagState(void) {
 /* The select sits in a `static inline short` helper so that it stays a
    branch: jump.c turns an if into movz/movn only when its arm sets a
    full register, and the inline's short return value is a subreg. */
-int func_0021EDD8(char *arg0) {
+int Menu_SetPauseFlagState(char *arg0) {
     char *p = *(char **)(arg0 + 0x34);
     *(short *)(p + 2) = pauseFlagState();
     return 0;
@@ -3586,7 +3832,7 @@ extern void func_0020E180(int, int);
 /* Tears down the 24 handles at arg0+0x44, skipping the ones in use.
    The switch's table is jtbl_001E8AD0; `off` before `slots` and a second
    slots2/off2 pair give retail's copies. */
-int func_0021EE00(char *arg0) {
+int Menu_DrawSlotMobys(char *arg0) {
     int i;
 
     for (i = 0; i < 24; i++) {
@@ -3675,7 +3921,7 @@ int Pause_UpdateItemPreview(char *arg0) {
         char *o = func_00226720_a(want);
 
         if (o != 0) {
-            char *t = D_00187040;
+            char *t = gCamera;
 
             *(char **)(arg0 + 0x44) = o;
             *(short *)(o + 0x34) = 0;
@@ -4295,7 +4541,7 @@ extern int D_0015F690 MACRO_ADDR;
 /* Pad handler (func_0021ACD8's family). A separate `char *` local for
    each block that reads the pad word gives retail's pattern: the %hi
    kept in a register and the %lo rebuilt before each use. */
-int func_0021F7D0(char *arg0) {
+int Menu_BackInput(char *arg0) {
     char *pad = D_0013CA40;
     int v = *(int *)(pad + 0x1C4);
 
@@ -4395,7 +4641,7 @@ int Menu_SpawnMarkerMoby(void *arg0) {
     char *t;
 
     if (o != 0) {
-        t = D_00187040;
+        t = gCamera;
         *(char **)((char *)arg0 + 0x44) = o;
         *(short *)(o + 0x34) = 0;
         *(float *)(o + 0x10) = *(float *)(t + 0x140) + 8.0f;
@@ -4545,7 +4791,7 @@ s32 DrawItemsMenu(ItemsMenu *menu) {
     font_print_right_large(add_offset((*(s32 *)&D_001602B8), 0xF0), add_offset((*(s32 *)&D_001602BC), 0x36), 0x80000000L,
                     text_buffer, -1);
     font_print_right_large(0xF0, 0x36, 0x80FFA888L, text_buffer, -1);
-    func_00116248(text_buffer, D_001603A0, func_00216098());
+    func_00116248(text_buffer, D_001603A0, GetUnspentGoldBolts());
     font_print_right_large(add_offset((*(s32 *)&D_001602B8), 0xF0), add_offset((*(s32 *)&D_001602BC), 0x54), 0x80000000L,
                     text_buffer, -1);
     font_print_right_large(0xF0, 0x54, 0x80FFA888L, text_buffer, -1);
@@ -4579,7 +4825,7 @@ extern void func_001F6CF8_c(int, int, long, char *, int) __asm__("func_001F6CF8"
    copy). */
 int DrawGBsShipMenu__maybe(char *arg0) {
     char buf[0x100];
-    char *t = D_00187040;
+    char *t = gCamera;
     char *o = *(char **)(arg0 + 0x44);
     int count;
 
@@ -5768,7 +6014,7 @@ struct MS_21380 { char pad0[4]; struct Focus_21380 *current; char pad8[0x120]; i
 struct Card_21380 { char pad0[8]; int type; char padC[0xD0]; int state; char padE0[4]; int pending_state; };
 extern long func_00205520(int);
 
-int func_00221380(struct Stream_21380 *menu) {
+int Pause_DrawCardStatusText(struct Stream_21380 *menu) {
     FontWindow_21380 text_window;
     short window_fields[12];
     struct Cell_21380 *entry;
@@ -6083,7 +6329,7 @@ int ToggleList_PadInput(char *arg0) {
     if (*(int *)(arg0 + 0x3C) != 0) {
         int t = *(int *)(arg0 + 0x3C) - 1;
         *(int *)(arg0 + 0x3C) = t;
-        D_0015F53C = (float)(t < 5 ? t : 4) * 0.25f;
+        gFade = (float)(t < 5 ? t : 4) * 0.25f;
         return 0;
     }
     if (!sel) {
@@ -6129,7 +6375,7 @@ int ToggleList_PadInput(char *arg0) {
         {
             char *pad5 = D_0013CA40;
             if (*(int *)(pad5 + 0x1C4) & 0x40) {
-                func_0022ED80(0, 0x11, *(int *)(arg0 + 0x14));
+                Moby_PlaySound(0, 0x11, *(int *)(arg0 + 0x14));
                 if ((*(Row14 **)(arg0 + 0x34))[*(int *)(arg0 + 0x38)].flags & 1) {
                     if (*(unsigned char *)&D_0016044C_i) {
                         char *g3 = D_001D5F70;
@@ -6148,7 +6394,7 @@ int ToggleList_PadInput(char *arg0) {
             }
         }
         if (*(int *)(arg0 + 0x38) != old) {
-            func_0022ED80(1, 0x11, *(int *)(arg0 + 0x14));
+            Moby_PlaySound(1, 0x11, *(int *)(arg0 + 0x14));
         }
     }
     return 0;
@@ -6298,7 +6544,7 @@ int RowList_PadInput(char *arg0) {
             }
         }
         if (old != *(int *)(arg0 + 0x38)) {
-            func_0022ED80(1, 0x11, *(int *)(arg0 + 0x14));
+            Moby_PlaySound(1, 0x11, *(int *)(arg0 + 0x14));
         }
     }
     {
@@ -6318,7 +6564,7 @@ int RowList_PadInput(char *arg0) {
             unsigned char *buf = rec->buf;
             if (buf != 0) {
                 buf[0] = (buf[0] + 1) % n;
-                func_0022ED80(0, 0x11, *(int *)(arg0 + 0x14));
+                Moby_PlaySound(0, 0x11, *(int *)(arg0 + 0x14));
             }
         }
     }
@@ -6534,7 +6780,7 @@ extern void func_0022ED80(int, int, int);
 /* Pause sub-menu input on the pad word D_0013CC04. One if/else-if chain
    falling to a single `return 0`; early returns in the 0x10 arm give a
    movn instead. */
-int func_002229B0(char *arg0) {
+int Menu_SubmenuInput(char *arg0) {
     int v = D_0013CC04;
 
     if (v & 0x10) {
@@ -6549,7 +6795,7 @@ int func_002229B0(char *arg0) {
         D_001A0414 = D_0015EE84;
         return 1;
     } else if (v & 0x40) {
-        func_0022ED80(0, 0x11, *(int *)(arg0 + 0x14));
+        Moby_PlaySound(0, 0x11, *(int *)(arg0 + 0x14));
         return 1;
     } else if (v & 0x20) {
         char *g = D_001D5F70;
@@ -6557,7 +6803,7 @@ int func_002229B0(char *arg0) {
         *(int *)(g + 0xF0) = *(int *)(g + 4);
         *(int *)(g + 0xC) = 3;
         *(int *)(g + 0xF4) = 0xF;
-        func_0022ED80(0, 0x11, *(int *)(arg0 + 0x14));
+        Moby_PlaySound(0, 0x11, *(int *)(arg0 + 0x14));
     }
     return 0;
 }
@@ -6602,7 +6848,7 @@ extern int D_0013CBE4;
    per-block register retail uses instead of one merged pseudo. */
 extern char D_001D5F70[] NOT_SDA;
 
-int func_00222B00(void) {
+int Menu_ConfirmPromptInput(void) {
     if (D_0015EFB0_m != 0x10 && D_0015EFB0_m != 1) {
         char *g = D_001D5F70;
         int val = *(int *)(*(char **)(g + 4) + 0x38);
@@ -6685,7 +6931,7 @@ extern int D_001D48A8[];
 
 /* `D_001D48A8[(unsigned)D_0015EE84 % 19]`; the older near-miss
    predated MACRO_ADDR. */
-int func_00222D70(char *arg0) {
+int Menu_SelectEntryByLevel(char *arg0) {
     *(int *)(arg0 + 0x34) = D_001D48A8[(unsigned int)D_0015EE84 % 19];
     return 0;
 }
@@ -6694,7 +6940,7 @@ extern void func_0022ED80(int, int, int);
 
 /* Pause sub-menu with a 30-entry wrapping cursor at arg0+0x40, in
    func_0021F7D0's shape. */
-int func_00222DB0(char *arg0) {
+int Menu_CycleInput30(char *arg0) {
     char *pad = D_0013CA40;
     int w, old;
 
@@ -6728,7 +6974,7 @@ int func_00222DB0(char *arg0) {
         *(int *)(arg0 + 0x40) = (old + 29) % 30;
     }
     if (*(int *)(arg0 + 0x40) != old) {
-        func_0022ED80(1, 0x11, *(int *)(arg0 + 0x14));
+        Moby_PlaySound(1, 0x11, *(int *)(arg0 + 0x14));
     }
     return 0;
 }
@@ -6736,7 +6982,7 @@ int func_00222DB0(char *arg0) {
 extern void func_0022ED80(int, int, int);
 
 /* func_00222DB0's twin with a 12-entry cursor at arg0+0x54. */
-int func_00222E98(char *arg0) {
+int Menu_CycleInput12(char *arg0) {
     char *pad = D_0013CA40;
     int w;
 
@@ -6765,10 +7011,10 @@ int func_00222E98(char *arg0) {
     }
     if (w & 0x2040) {
         *(int *)(arg0 + 0x54) = (*(int *)(arg0 + 0x54) + 1) % 12;
-        func_0022ED80(1, 0x11, *(int *)(arg0 + 0x14));
+        Moby_PlaySound(1, 0x11, *(int *)(arg0 + 0x14));
     } else if (w & 0x8020) {
         *(int *)(arg0 + 0x54) = (*(int *)(arg0 + 0x54) + 11) % 12;
-        func_0022ED80(1, 0x11, *(int *)(arg0 + 0x14));
+        Moby_PlaySound(1, 0x11, *(int *)(arg0 + 0x14));
     }
     return 0;
 }
@@ -7321,14 +7567,14 @@ int DrawPageIconsGated(char *arg0) {
 }
 
 
-int func_00223FD0(void *arg0) {
+int BindStreamSlotB_Init(void *arg0) {
     func_00226D50(1);
     *(int *)((char *)arg0 + 0x48) = ClaimStreamBinding(0);
     *(int *)((char *)arg0 + 0x4C) = 0;
     return 0;
 }
 
-int func_00224010(void *arg0) {
+int BindStreamSlotB_Exit(void *arg0) {
     *(int *)((char *)arg0 + 0x48) = ReleaseStreamBinding(*(int *)((char *)arg0 + 0x48));
     return 0;
 }
@@ -7501,7 +7747,7 @@ int Pause_SaveSlotInput(char *arg0) {
         }
     }
     if (*(int *)(arg0 + 0x40) != old) {
-        func_0022ED80(1, 0x11, *(int *)(arg0 + 0x14));
+        Moby_PlaySound(1, 0x11, *(int *)(arg0 + 0x14));
     }
     return 0;
 }
@@ -7623,7 +7869,7 @@ int Pause_LoadSlotInput(char *arg0) {
                 if (*(int *)(d2 + 0x20 + D_0015EF34 * 0x1C) >= 0) {
                     char *g2;
 
-                    func_0022ED80(0, 0x11, *(int *)(arg0 + 0x14));
+                    Moby_PlaySound(0, 0x11, *(int *)(arg0 + 0x14));
                     *(int *)(d2 + 0xC8) = 0;
                     *(int *)(d2 + 0x14) = *(int *)(arg0 + 0x40);
                     if (*(int *)(d2 + 0xE4) < 0) {
@@ -7639,7 +7885,7 @@ int Pause_LoadSlotInput(char *arg0) {
         }
     }
     if (*(int *)(arg0 + 0x40) != old) {
-        func_0022ED80(1, 0x11, *(int *)(arg0 + 0x14));
+        Moby_PlaySound(1, 0x11, *(int *)(arg0 + 0x14));
     }
     return 0;
 }
@@ -7848,7 +8094,7 @@ cont:
     }
 moved:
     if (w->slot != old) {
-        func_0022ED80(1, 0x11, w->moby);
+        Moby_PlaySound(1, 0x11, w->moby);
     }
 out:
     return 0;
@@ -8155,7 +8401,7 @@ int GadgetMenu_Init(char *arg0) {
         q--;
     }
     if (m != 0) {
-        char *cam = D_00187040;
+        char *cam = gCamera;
         char *g;
 
         *(char **)(arg0 + 0x44) = m;
@@ -8164,7 +8410,7 @@ int GadgetMenu_Init(char *arg0) {
         *(float *)(m + 0x14) = *(float *)(cam + 0x144);
         *(float *)(m + 0x18) = *(float *)(cam + 0x148) - 0.6f;
         *(float *)(m + 0x48) = 3.1415927f;
-        *(void **)(m + 0x74) = func_00225DF0;
+        *(void **)(m + 0x74) = NullMobyUpdate_Gadget;
         v = *(int **)(m + 0x78);
         v[0] = (int)arg0;
         v[1] = 0;
@@ -8457,7 +8703,7 @@ s32 LoadHandGadget(HandGadgetState *hand) {
             moby = func_00226720_255F8(requested_class);
             if (moby != 0) {
                 *((void **)moby->pvars) = hand;
-                (*(void **)&moby->update) = func_00226380;
+                (*(void **)&moby->update) = HandGadget_SnapToJoint;
                 moby->flags = 4;
             }
         }
@@ -8472,7 +8718,7 @@ s32 LoadHandGadget(HandGadgetState *hand) {
             moby = func_00226720_255F8(requested_class);
             if (moby != 0) {
                 *((void **)moby->pvars) = hand;
-                (*(void **)&moby->update) = func_00226380;
+                (*(void **)&moby->update) = HandGadget_SnapToJoint;
                 moby->flags = 4;
             }
         }
@@ -8487,7 +8733,7 @@ s32 LoadHandGadget(HandGadgetState *hand) {
             moby = func_00226720_255F8(requested_class);
             if (moby != 0) {
                 *((void **)moby->pvars) = hand;
-                (*(void **)&moby->update) = func_00226380;
+                (*(void **)&moby->update) = HandGadget_SnapToJoint;
                 moby->flags = 4;
             }
         }
@@ -8554,10 +8800,10 @@ s32 LoadHandGadget(HandGadgetState *hand) {
     return 0;
 }
 
-void func_00225DF0(void) {
+void NullMobyUpdate_Gadget(void) {
 }
 
-void func_00225DF8(void) {
+void NullMobyUpdate_Preview(void) {
 }
 
 extern char D_001864D0_a[] __asm__("D_001864D0");
@@ -8792,7 +9038,7 @@ void BackItemUpdate(void *arg0) {
 }
 
 /* func_00225FB8's sibling: refresh the matrix from bone 0x1E (class 0x197) or 0x1D, copy its translation row to the position and re-register. func_0020E3D0 takes the moby, and the bone test is written == 0x197 so the movn picks 0x1D as retail does. */
-void func_00226380(PauseMoby *m) {
+void HandGadget_SnapToJoint(PauseMoby *m) {
     float mtx[16];
     int id = *(int *)(*m->cls + 0x44);
 
@@ -8974,7 +9220,7 @@ int HelperMobyMenu_Init(char *h) {
         *(f32 *)(m + 0x10) = D_00187040_19C08.f140 + 2.2f;
         *(f32 *)(m + 0x14) = D_00187040_19C08.f144 + 0.0f;
         *(f32 *)(m + 0x18) = D_00187040_19C08.f148 + -1.6f;
-        *(void **)(m + 0x74) = (void *)func_00226D48;
+        *(void **)(m + 0x74) = (void *)NullMobyUpdate_Helper;
         *(f32 *)(m + 0x48) = 3.1415927f;
         v[0] = (int)h;
         v[1] = 0;
@@ -9008,7 +9254,171 @@ int HelperMobyMenu_Exit(void *arg0) {
     return 0;
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_00226978);
+/* functional: medium. The NTSC decomp's pending C for the same instructions (a draft it has not matched
+   yet), carried to PAL's names by OpenRAC's tools/port.py. Never compared with retail's bytes here. */
+
+typedef struct {
+    u8 pad_0[0x20];
+    u8 moby_state;
+    u8 pad_21[0x52 - 0x21];
+    u8 primary_animation;
+    u8 secondary_animation;
+    u8 pad_54[0x70 - 0x54];
+    u8 transition_flags;
+    u8 pad_71[0xBC - 0x71];
+    u8 animation_frame_counter;
+} StreamedAnimationMoby_26978;
+typedef struct {
+    u8 pad_0[0x48];
+    u8 *animation_tables[4];
+} StreamedClassResource_26978;
+typedef struct {
+    s32 offset;
+    s32 reserved4;
+} AnimationTableHeader_26978;
+typedef struct {
+    u8 pad_0[0x34];
+    s32 state;
+    s32 pad_38;
+    u8 *buffer;
+    s32 read_offset;
+    StreamedAnimationMoby_26978 *moby;
+} MobyAnimationStream_26978;
+extern s32 D_001517EC[];
+extern s16 D_0015182A[];
+extern s32 D_0015EE88 MACRO_ADDR;
+extern s32 D_0015EF20 MACRO_ADDR;
+extern s32 func_001F98C0(s32);
+extern void func_00203B18(char *, int);
+extern void func_0020C468(int, int);
+extern void func_00213DE0(void *, s32, s32, s32);
+extern s32 func_00216960(void);
+extern int func_00217628(int, int, int);
+
+/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/assembly/textbin/fun_002256e8.c, update_streamed_moby_animation. */
+s32 func_00226978(MobyAnimationStream_26978 *stream) {
+    extern s16 D_001517D8[];
+    extern int func_00227068(int);
+    extern char *D_001B3580[];
+    StreamedAnimationMoby_26978 *moby;
+    AnimationTableHeader_26978 *header;
+    StreamedClassResource_26978 **class_resource;
+    StreamedClassResource_26978 **classes;
+    s32 table_index;
+    s32 k;
+    s32 dialogue_column;
+    u8 *animation_table;
+    s32 animation_index;
+    u16 class_slot;
+
+    switch (stream->state) {
+    case 0:
+        if (D_001517D8[0] != 0) {
+            break;
+        }
+        table_index = 0x4F000 - (D_00137C80[0x1614 / 4] << 11);
+        if (func_00217628((int)(stream->buffer + table_index), D_00137C80[0x1610 / 4],
+                                    D_00137C80[0x1614 / 4]) != 0) {
+            stream->read_offset = table_index;
+            stream->state = 1;
+            D_001D603B[0] = 1;
+            func_00227068((s32)stream->buffer);
+            return 0;
+        }
+        stream->state = 3;
+        break;
+    case 1:
+        /* Decompress the completed read and relocate three animation tables. */
+        if (D_001517D8[0] != 0) {
+            break;
+        }
+        D_001D603B[0] = 0;
+        func_0020C468((int)(stream->buffer + stream->read_offset), (int)stream->buffer);
+        class_slot = D_001B3E40[0x7A5];
+        classes = (StreamedClassResource_26978 **)D_001B3580;
+        header = (AnimationTableHeader_26978 *)stream->buffer;
+        class_resource = &classes[class_slot];
+        for (k = 0; k < 3; k++) {
+            animation_table = stream->buffer + ((AnimationTableHeader_26978 *)((u8 *)header + (k << 3)))->offset;
+            (*class_resource)->animation_tables[k + 1] = animation_table;
+            func_00203B18((char *)*class_resource, k + 1);
+        }
+        stream->state = 2;
+        if (D_0015EF20 == 0) {
+            stream->moby->moby_state = 0;
+        } else {
+            stream->moby->moby_state = 4;
+        }
+        stream->moby->animation_frame_counter = 0;
+        break;
+    case 2:
+        /* Even phases queue dialogue; odd phases wait for animation completion. */
+        moby = stream->moby;
+        switch (moby->moby_state) {
+        case 0:
+        case 2:
+        case 4:
+            dialogue_column = D_0015EE88 - 1;
+            if (dialogue_column < 0) {
+                dialogue_column = 0;
+            }
+            animation_index = moby->moby_state >> 1;
+            if (moby->animation_frame_counter == 0) {
+                D_001517EC[0] = animation_index * 6 + dialogue_column + 60000;
+            }
+            moby->animation_frame_counter++;
+            if (moby->animation_frame_counter > func_001F98C0(0x78)) {
+                moby->animation_frame_counter = func_001F98C0(0x78);
+            }
+            if (moby->animation_frame_counter < func_001F98C0(0x78)) {
+                return 0;
+            }
+            if (D_0015182A[0] != 3) {
+                return 0;
+            }
+            moby->animation_frame_counter = 0;
+            moby->moby_state++;
+            func_00213DE0(moby, animation_index + 1, 0, func_001F98C0(0x18));
+            break;
+        case 1:
+        case 3:
+        case 5:
+            if (moby->animation_frame_counter == 0 &&
+                moby->primary_animation == moby->secondary_animation) {
+                func_00216960();
+                moby->animation_frame_counter = 1;
+            }
+            if (moby->transition_flags & 2) {
+                if (moby->moby_state == 1) {
+                    moby->moby_state = moby->moby_state + 1;
+                } else {
+                    moby->moby_state = 6;
+                }
+                moby->animation_frame_counter = 0;
+                func_00213DE0(moby, 0, 0, func_001F98C0(0x18));
+                break;
+            }
+            break;
+        case 6:
+            moby->animation_frame_counter++;
+            if (moby->animation_frame_counter > func_001F98C0(0xF0)) {
+                moby->animation_frame_counter = func_001F98C0(0xF0);
+            }
+            if (moby->animation_frame_counter < func_001F98C0(0xF0)) {
+                return 0;
+            }
+            if (D_0015EF20 == 0) {
+                moby->moby_state = 0;
+            } else {
+                moby->moby_state = 4;
+            }
+            moby->animation_frame_counter = 0;
+            break;
+        }
+        break;
+    }
+    return 0;
+}
 
 extern void func_0020E180(int, int);
 
@@ -9025,7 +9435,7 @@ int MenuMobys_Draw(void *arg0) {
     return 4;
 }
 
-void func_00226D48(void) {
+void NullMobyUpdate_Helper(void) {
 }
 
 INCLUDE_ASM("asm/nonmatchings/text", func_00226D50);
@@ -9102,7 +9512,7 @@ int get_stream_buffer_size(int arg0) {
     return -1;
 }
 
-int func_00227068(int arg0) {
+int StreamTable_MarkKey(int arg0) {
     int i = 0;
     int *base = D_001D6448;
     int *e = base + 1;
@@ -9240,7 +9650,7 @@ int func_00227100_r(char *moby, char *m1, char *m2, char **o0, char **o1, char *
                 if (start_audio_stream_read(addr, D_00137C80_q[0].e[k].a, D_00137C80_q[0].e[k].b) == 0) {
                     func_001F9978();
                 }
-                func_00227068(buf);
+                StreamTable_MarkKey(buf);
                 D_001D5F70_q[0].pending = D_001D5F70_q[0].idx + 1;
                 ld[D_001D5F70_q[0].idx] = 0xFF;
                 D_001D6250_q[0].unk00 = 1;
@@ -9300,7 +9710,7 @@ int func_00227100_r(char *moby, char *m1, char *m2, char **o0, char **o1, char *
                         *(float *)(p + 0x2C) = *(float *)(p + 0x2C) * 3.0f;
                     }
                     func_0020ED48(*o0);
-                    *(void **)(*o0 + 0x74) = func_00225DF8;
+                    *(void **)(*o0 + 0x74) = NullMobyUpdate_Preview;
                 }
             }
             if (D_001D6410_q[0].arg[7] != -1) {
@@ -9315,7 +9725,7 @@ int func_00227100_r(char *moby, char *m1, char *m2, char **o0, char **o1, char *
                         *(float *)(p + 0x2C) = *(float *)(p + 0x2C) * 3.0f;
                     }
                     func_0020ED48(*o1);
-                    *(void **)(*o1 + 0x74) = func_00225DF8;
+                    *(void **)(*o1 + 0x74) = NullMobyUpdate_Preview;
                 }
             }
             if (D_001D6410_q[0].arg[9] != -1) {
@@ -9330,7 +9740,7 @@ int func_00227100_r(char *moby, char *m1, char *m2, char **o0, char **o1, char *
                         *(float *)(p + 0x2C) = *(float *)(p + 0x2C) * 3.0f;
                     }
                     func_0020ED48(*o2);
-                    *(void **)(*o2 + 0x74) = func_00225DF8;
+                    *(void **)(*o2 + 0x74) = NullMobyUpdate_Preview;
                 }
             }
         }
@@ -9725,7 +10135,7 @@ void ResetGameKeepingProgress(s32 slot) {
 extern int D_0015F6D0 MACRO_ADDR;
 extern int D_0015EE80 MACRO_ADDR;
 
-void func_00228110(void) {
+void SpaceTransition_Tick(void) {
     int t;
     if (D_0015F6D0 != 0) {
         return;
@@ -9899,7 +10309,7 @@ extern char D_001D8120[];
 extern short D_00160460;              /* SDA, gp -0x68A0 */
 extern void func_002298B0(int, int);
 
-void func_00228458(int arg0, int idx, int n) {
+void GraphicsSetup_QueueChunk(int arg0, int idx, int n) {
     D_00161000[0] = 0x30000003;
     D_00161000[1] = (int)(D_001D8120 + n * 0x30);
     D_00161000[2] = 0x13000000;
@@ -10124,8 +10534,8 @@ void SubmitGraphicsSetupStream(u8 *command_stream) {
             command_stream = func_00228400_28860(command_stream);
             func_00229838(first_vector, second_vector);
             func_00228D20(0x70000000, D_001604A0, record->command_flags);
-            func_00228458(2, 1, 2);
-            func_00228458(1, 0, 2);
+            GraphicsSetup_QueueChunk(2, 1, 2);
+            GraphicsSetup_QueueChunk(1, 0, 2);
         }
         record = (struct GraphicsSetupRecord *)command_stream;
     }

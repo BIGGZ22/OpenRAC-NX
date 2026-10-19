@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* moby_mark_joint_chain(moby, count, joints, out): marks in D_001B3080 every joint on the chain of each
    requested joint (the class's table at class+0x1C: entry j+1 points at {u16 n; ...; u8 chain[n] at +4},
    the chain ending in the joint itself), keeps each chain's last joint at D_001B3080[0x80 + i], ends the

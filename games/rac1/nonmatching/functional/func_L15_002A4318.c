@@ -1,4 +1,4 @@
-/* functional: medium. Draws six passes of two glow quads for the moby: per pass picks a colour (eased by data[5]/60), animates the first quad's UVs with a sine/cosine of a frame counter, derives the second quad's UVs from them, draws both with the moby's rotation and shifts all corners by 0.1. From the NTSC decomp's draft; UV copy indices and gp tables were re-read from the assembly. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Draws six passes of two glow quads for the moby: per pass picks a colour (eased by data[5]/60), animates the first quad's UVs with a sine/cosine of a frame counter, derives the second quad's UVs from them, draws both with the moby's rotation and shifts all corners by 0.1. From the NTSC decomp's draft; UV copy indices and gp tables were re-read from the assembly. */
 typedef int Q_2A4318 __attribute__((mode(TI)));
 typedef struct {
     Q_2A4318 corner[4];

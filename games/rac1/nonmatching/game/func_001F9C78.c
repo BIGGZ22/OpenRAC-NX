@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* FastVecDot: the dot product of the xyz parts of two vectors, as VU0 does it:
    (a.x*b.x + a.y*b.y), then + a.z*b.z (the z term times 1 from vf3). */
 float func_001F9C78(void *a, void *b)

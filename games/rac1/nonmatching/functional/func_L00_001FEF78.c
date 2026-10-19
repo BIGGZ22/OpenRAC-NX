@@ -1,4 +1,4 @@
-/* functional: high. Byte at p: 0 is left alone and returns 1; 1 is cleared and returns 2; n >= 2 is decremented and returns 0. The pmaxw is max(byte,1), and the handwritten addi are ordinary adds (no trap in practice: byte is 0..255). */
+/* functional: high. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Byte at p: 0 is left alone and returns 1; 1 is cleared and returns 2; n >= 2 is decremented and returns 0. The pmaxw is max(byte,1), and the handwritten addi are ordinary adds (no trap in practice: byte is 0..255). */
 int func_L00_001FEF78(unsigned char *p) {
     if (*p == 0) {
         return 1;

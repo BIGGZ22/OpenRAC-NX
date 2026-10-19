@@ -1,3 +1,4 @@
+/* fcheck: unchecked (the harness could not link it: sqrtf has no retail address; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Square root of a float on the VU0 (vsqrt takes |x|, then vf0.x + Q
    adds 0.0 so that a zero result comes out +0). */
 float func_001F9B50(float arg0) {

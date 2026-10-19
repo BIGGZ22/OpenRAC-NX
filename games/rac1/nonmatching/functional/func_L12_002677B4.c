@@ -1,4 +1,4 @@
-/* functional: medium. Environment-map UVs: for n points (pos, 3 floats each) with normals (3 floats each), v = (cam - pos) * 0.45/|cam - pos| (cam = float xyz at D_L12_00167180+0x140), u = -v; if dot(u,n) > 0 uses v, else the reflection 2(n*dot) - u... (u + 2(n*dot - u)); writes (x + 0.5, y + 0.5) to out (8 bytes per point). VU0 rounding and the rsqrt (|x|) not checked against hardware. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Environment-map UVs: for n points (pos, 3 floats each) with normals (3 floats each), v = (cam - pos) * 0.45/|cam - pos| (cam = float xyz at D_L12_00167180+0x140), u = -v; if dot(u,n) > 0 uses v, else the reflection 2(n*dot) - u... (u + 2(n*dot - u)); writes (x + 0.5, y + 0.5) to out (8 bytes per point). VU0 rounding and the rsqrt (|x|) not checked against hardware. */
 extern char D_L12_00167180_677B4[] __asm__("D_L12_00167180");
 void func_L12_002677B4(int n, float *pos, float *nrm, float *out) {
     float *cam = (float *)(D_L12_00167180_677B4 + 0x140);

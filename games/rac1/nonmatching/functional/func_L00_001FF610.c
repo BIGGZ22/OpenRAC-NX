@@ -1,4 +1,4 @@
-/* functional: medium. Corrected in place: a zero b vector gave 1/sqrtf(0) = inf and then NaN; retail's vrsqrt gives a finite Q there, so n = b*Q = 0 and the result is a. Otherwise reflects a about the plane with normal b: n = b/|b|, t = -(a.n); when t < 0 dst is a copied whole, otherwise dst.xyz = a.xyz + 2*t*n and dst.w = a.w (joined with func_L00_001FF670, the copy). VU0 vrsqrt is approximate; this uses an exact sqrt. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Corrected in place: a zero b vector gave 1/sqrtf(0) = inf and then NaN; retail's vrsqrt gives a finite Q there, so n = b*Q = 0 and the result is a. Otherwise reflects a about the plane with normal b: n = b/|b|, t = -(a.n); when t < 0 dst is a copied whole, otherwise dst.xyz = a.xyz + 2*t*n and dst.w = a.w (joined with func_L00_001FF670, the copy). VU0 vrsqrt is approximate; this uses an exact sqrt. */
 void func_L00_001FF610(float *dst, float *a, float *b) {
     float len2 = b[0] * b[0] + b[1] * b[1] + b[2] * b[2];
     float inv = len2 > 0.0f ? 1.0f / __builtin_sqrtf(len2) : 0.0f;

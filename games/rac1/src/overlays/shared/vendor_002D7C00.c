@@ -25,7 +25,7 @@ extern short D_L15_00161C74;
 #define W(x) (*(int *)&(x))
 
 /* Draws the level timer as "H:MM:SS.t" text with a pulsing colour. */
-void func_L15_002D8BB0(char *moby) {
+void TimerMoby_Draw(char *moby) {
     char buf[8];
     char *data = *(char **)(moby + 0x78);
     float v;
@@ -499,7 +499,7 @@ void Moby934Update(unsigned char *m) {
             if (*(short *)(hit + 0xA6) != 0x4E)
                 MobySphereHitDirectional(m, 0.5f, m + 0x10, 1, 2.0f, 0.0f, 0, 1, 0);
             SpawnExplosionFx(m, m + 0x10, 0.5f, 13.0f, -1);
-            func_0022ED80(0, 0, m);
+            Moby_PlaySound(0, 0, m);
             DeleteMoby(m);
             return;
         }
@@ -648,14 +648,14 @@ void UnderwaterRingUpdate(unsigned char *moby) {
                 parent_vars->timer = parent_vars->frame_count < 1 ? 900 : scale_ticks(vars->frame_count);
             }
             parent_vars->child_count++;
-            func_0022ED80(3, 0x31, (int)moby);
+            Moby_PlaySound(3, 0x31, (int)moby);
             func_L00_00251328(moby, 0, 0xff, 0);
             vars->triggered = 1;
         }
         if (moby[0x20] == 2) {
             if (vars->child_count >= vars->notified_count) {
                 MobyGroup_SetState(moby[0x21], 4);
-                ((int (*)(int, int, int))func_0022ED80)(1, 0x31, (int)moby);
+                ((int (*)(int, int, int))Moby_PlaySound)(1, 0x31, (int)moby);
                 vars->timer = vars->restart_timer;
                 moby[0x20] = 4;
                 break;
@@ -663,10 +663,10 @@ void UnderwaterRingUpdate(unsigned char *moby) {
                 if (FastDecTimer(&vars->timer) != 0) {
                     vars->child_count = 0;
                     vars->triggered = 0;
-                    func_0022ED80(2, 0x31, (int)moby);
+                    Moby_PlaySound(2, 0x31, (int)moby);
                     MobyGroup_SetState(moby[0x21], 3);
                 } else if (FastDecTimer(&vars->delay) != 0) {
-                    func_0022ED80(0, 0x31, (int)moby);
+                    Moby_PlaySound(0, 0x31, (int)moby);
                     first = scale_ticks(0x2d);
                     second = scale_ticks(5);
                     divisor = scale_ticks(0x28);
@@ -889,7 +889,7 @@ void GiantClankPadUpdate(char *m) {
             }
         }
         *(u128_2EE458 *)V = *(u128_2EE458 *)(m + 0x10);
-        f = func_00214358(V, 0, 0.5f);
+        f = ProbeGroundHeight(V, 0, 0.5f);
         V[2] = f + 0.1f;
         if (D_0015EE84 == 0xF) PauseMenu_SeedSnapshot(V, m + 0x40);
         Hero_ResetToPosition(V, m + 0x40, 0, 1);

@@ -1,4 +1,4 @@
-/* functional: high. Checked against the asm for behaviour: same calls, arguments, offsets, constants and loop bounds; retail computes side[1]/side[3] in place over along[0]/along[1], which gives the same values. */
+/* functional: high. fcheck: unchecked (the harness could not compile it in place; OpenRAC tools/fcheck_gate.py, 2026-10-18). Checked against the asm for behaviour: same calls, arguments, offsets, constants and loop bounds; retail computes side[1]/side[3] in place over along[0]/along[1], which gives the same values. */
 /* func_0022F738 -- src/game/space.c (functional C for the port, not a match)
  * The ship's two engine trails in the space scenes (DrawSpaceScene, func_002305A0): each trail is
  * the ring of 32 positions at D_0013E1F0 + 0x200 * trail (the newest at D_0013E130 +0x50, the count

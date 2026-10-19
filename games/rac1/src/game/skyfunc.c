@@ -504,7 +504,7 @@ extern void func_0022C870(void);
 extern void func_00234C98_2C5A0(s32, s64) __asm__("func_00234C98");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/rendering/sky/draw_sky_shells.c, draw_sky_shells. */
-void func_0022C5A0(void) {
+void DrawSkyShells(void) {
     f32 rotation_angles[4];
     f32 shell_scale;
     u8 *transform_row;
@@ -604,7 +604,7 @@ void SetupSkyGifPaging(void) {
     D_00160570 = p;
     p += 0x10;
     D_00161000 = p;
-    func_001F2560(D_00160550, 1);
+    ProfileMarker_Begin(D_00160550, 1);
     s = D_0016055C;
     D_0015EF74 = D_0015EF78;
     D_0015F558 = 0;

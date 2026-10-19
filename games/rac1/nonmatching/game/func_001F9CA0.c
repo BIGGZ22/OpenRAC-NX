@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /*
  * FastVecCross(out, a, b): out = b x a, from the xyz of the two vectors (VU0
  * vopmula / vopmsub: ACC = b.yzx * a.zxy, then out = ACC - a.yzx * b.zxy).

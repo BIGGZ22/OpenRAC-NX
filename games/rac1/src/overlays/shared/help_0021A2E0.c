@@ -54,7 +54,7 @@ extern float func_L00_00213A08(void *);
 extern void func_001F9C30(void *, void *, float);
 
 /* Integrate player motion, resolve contacts, and measure the resulting movement. */
-void func_L02_00222D18(void) {
+void Hero_ApplyMotionCollisionL02(void) {
     Vec4 previous;
     Vec4 work;
     Vec4 plane;
@@ -564,7 +564,7 @@ int Hero_TryStartGadgetMove(void) {
             if (D_0013CA40_p22F568.held & mask) {
                 if (!GetAmmo(-1)) {
                     if (!Sound_IsPlaying((Moby *)D_0013F450_h22F568.items[0].moby, pv->fC)) {
-                        pv->fC = func_0022ED80(0, 0, (int)((Moby *)D_0013F450_h22F568.items[0].moby));
+                        pv->fC = Moby_PlaySound(0, 0, (int)((Moby *)D_0013F450_h22F568.items[0].moby));
                     }
                 }
             }
@@ -598,7 +598,7 @@ int Hero_TryStartGadgetMove(void) {
                     break;
                 }
                 if (((Moby *)D_0013F450_h22F568.items[0].moby) != 0) {
-                    func_0022ED80(0, 0, (int)((Moby *)D_0013F450_h22F568.items[0].moby));
+                    Moby_PlaySound(0, 0, (int)((Moby *)D_0013F450_h22F568.items[0].moby));
                 }
             }
         }
@@ -613,7 +613,7 @@ int Hero_TryStartGadgetMove(void) {
                     if (((Moby *)D_0013F450_h22F568.items[0].moby) != 0) {
                         HeroL02_SetMoveState(0x20, 1);
                         if (((Moby *)D_0013F450_h22F568.items[0].moby) != 0) {
-                            func_0022ED80(0, 0, (int)((Moby *)D_0013F450_h22F568.items[0].moby));
+                            Moby_PlaySound(0, 0, (int)((Moby *)D_0013F450_h22F568.items[0].moby));
                         }
                     }
                 }

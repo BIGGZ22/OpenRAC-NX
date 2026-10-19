@@ -63,11 +63,11 @@ the tool and not without it.
 | `tools/check_macro_slots.py` | a one-instruction global access the compiler put in a branch delay slot comes out `$gp`-relative, as retail's toolchain assembled it; anything else in a slot fails the build | of 524 `$gp` accesses in compiled retail code to globals also reached through `lui`, 505 sit in a delay slot | 460 (1,398,252 bytes, 37.7%) |
 | `tools/fix_orphan_hi.py` | the high half of a `%hi` whose `%lo` the optimiser removed, which retail's linker filled and ours resolves wrongly | retail has the right high half in such `lui`s (func_001E9808) | none by the per-function check, which masks relocated fields; the linked image needs it |
 | `tools/fix_macro_load_delay.py` | the load-delay nop the assembler of `989snd.o` and `wad.o` put after a two-instruction macro load whose result is used next | retail's code in those objects (func_0012E060 has it, func_0012DDC0's one-instruction loads do not) | none of today's matches |
-| `tools/fix_volatile_slot.py` | the delay slot of a call filled with the volatile store before it, which retail's assembler did for 2.9-ee objects and GNU `as` does not | retail (func_0012C990, func_00128F90) | 2 (720 bytes) |
-| `tools/fix_jump_tables.py` | a switch's jump table placed at retail's table address (section placement only; no instruction changes) | retail's `jtbl_` symbols | 20 level functions (249,656 bytes) |
+| `tools/fix_volatile_slot.py` | a volatile store fills a following call slot; the whole-object `gas210` profile also permits verified based word loads in a reorder window | retail (func_0012C990, func_00128F90); original GNU 2.10-ee-001003-1 directly reproduces all six C functions in src/core/00121750.c | 3 (1,200 bytes) |
+| `tools/fix_jump_tables.py` | a switch's jump table placed at retail's table address (section placement only; no instruction changes); configured core tables also keep retail's padding between tables | retail's `jtbl_` symbols; core tables at 0x1528B0 and 0x1529E0 are separated by twelve 0xCD fill bytes | 20 level functions (249,656 bytes); core placement preserves all 1,209 executable C matches and removes twelve image-only data mismatches |
 | `tools/strip_dead.py` | retail's linker removing unreferenced libgcc functions (the first `floor(size/8)*8` bytes go, a 4-mod-8 function leaves its last word) | reproduces every odd spot in retail's libgcc from GCC's own source (`src/libgcc/README.md`) | the libgcc objects `dp-bit.o`, `fp-bit.o` and `L__main` |
 
-Together the assembler steps carry 1,078 functions, 1,710,356 bytes (46.1%
+Together the assembler steps carry 1,079 functions, 1,710,836 bytes (46.1%
 of the code); a function usually needs more than one of them. That is most
 of the level code's long functions: almost every long function has at least one
 short loop or FP compare. The padding changes no instruction the compiler
@@ -219,3 +219,64 @@ bash tools/docker/run.sh python tools/measure_build_step.py ps2eeas_nops
 It builds HEAD twice in scratch worktrees, once with the step replaced by a
 pass-through, checks every C function against retail on its own, and lists
 the functions that are exact only with the step.
+
+### Core jump-table padding (2026-10-18)
+
+`src/core/00119D88.c` reconstructs several contiguous SDK members in one
+translation unit. Its compiler-generated `.rodata` includes tables at
+`jtbl_001528B0` and `jtbl_001529E0`. The first table ends at `0x1529D4`;
+retail has twelve `0xCD` bytes before the second table. A single input
+section instead supplies twelve zero alignment bytes. This did not affect
+any compiled function but failed the full-image audit.
+
+`fix_jump_tables.py --core` now gives only the two explicitly configured
+core tables named input sections. `config/core_rodata.txt` places them
+independently, and leaves `D_001529D4` in the original data fragment. Core
+constants and all other core tables keep their existing sections. The
+configuration accepts `object.o(SECTION)`; an ordinary object row still
+means `.rodata`. The report measures the selected input section.
+
+On the actual compiler output, the only differences are two `.rdata`
+directives replaced by named `.section` directives: every instruction,
+constant, label and table entry remains unchanged. A forced complete
+executable rebuild retains all 1,209 exact C functions, preserves every
+function address, and has zero differing bytes across all linked image
+sections compared by `check_image.py`. Unimplemented functions remain
+retail assembly; this validation adds no completed C functions.
+
+### CD/DVD read: verified assembler profile (2026-10-18)
+
+`func_00121750` is a 480-byte C match. In its failure arm, both state
+clears and the semaphore-ID read are volatile. The compiler leaves the
+word load before an unfilled call. GNU 2.9-ee and the checked SN assembler
+versions retain a nop there, while the original Linux GNU assembler
+2.10-ee-001003-1 fills the call slot with that load. Assembling the compiler's
+raw output with that actual binary reproduces the function exactly,
+including resolved symbol references. All five other C functions in the
+translation unit also match under the real assembler.
+
+The fifth `config/core_text.objects` column records the `gas210` profile
+for the whole `00121750` source object. `fix_volatile_slot.py --loads`
+models only the verified, based `lw` case. It does not move an access to
+or through register 31, cross a label/alignment directive, move a macro
+load or an unverified load width, or move a load immediately following
+an explicitly noreordered instruction. The last restriction preserves
+`sceCdBreak`'s failure arm. Store handling in older SDK objects remains
+unchanged; applying load-slot behavior globally would break other members.
+
+Reproduce the independent original-assembler comparison with:
+
+```sh
+. toolchain/host-runners/env.sh
+python tools/tests/verify_read_assembler.py
+python -m unittest discover -s tools/tests -p test_volatile_call_slot.py
+bash tools/build_sn.sh
+```
+
+The oracle test assembles raw `a.s`, before every modeled pass, with the
+actual GNU 2.10-ee binary under the local QEMU runner. It compares all six
+C functions to retail. The final forced build has 1,210 exact C functions,
+zero size/byte mismatches, all functions at retail addresses and zero
+image differences. The portable build models a measured assembler action;
+it does not introduce a compiler flag or insert instructions to conceal
+a source mismatch.

@@ -162,7 +162,7 @@ extern void func_001F9BD8_BE2C8c(void *, void *, void *) __asm__("func_001F9BD8"
 extern f32 D_0015EE60_BE2C8b __asm__("D_0015EE60") MACRO_ADDR;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l01/unclassified_002b96e0.c, FUN_L01_002bd100. */
-void func_L01_002BE2C8(EmitterMoby *self) {
+void ParticleEmitterUpdate(EmitterMoby *self) {
     Emitter *v;
     Vec4 out;
     Vec4 p;
@@ -364,7 +364,7 @@ int PickFollowerPathNode(void *arg, int *idx) {
     r = fast ? v->radius * 2.0f : v->radius;
     prev = 0;
     next = 0;
-    func_L00_00260D30(m, &target, r);
+    FindNearestTargetMoby(m, &target, r);
     best_d = 10000.0f;
     best_a = 0.0f;
     best = 0;
@@ -685,7 +685,7 @@ void BirdbotUpdate(PeMoby *m) {
         res = PickFollowerPathNode(m, &idx);
     }
     r = flag ? v->f1A0 * 2.0f : v->f1A0;
-    func_L00_00260D30(m, &tgt, r);
+    FindNearestTargetMoby(m, &tgt, r);
     hit = MobyGetHitMessage(m, 0x210000, 0);
     kind = ComputeHitResponse(m, hit, &v->f20, 0, &hits, &dmg, 0, 4);
     FastDecTimer(&v->h26);
@@ -839,7 +839,7 @@ void BirdbotUpdate(PeMoby *m) {
             MobyBlendAnimation(m, 0, 0, scale_ticks(5));
         }
         v->h1E0 = m->h32;
-        if (m->pos.f[2] - func_00214358(&m->pos, 0, 0.5f) > 0.5f) {
+        if (m->pos.f[2] - ProbeGroundHeight(&m->pos, 0, 0.5f) > 0.5f) {
             m->w94 = 0;
             m->h34 |= 0x41;
         }
@@ -982,7 +982,7 @@ void BirdbotUpdate(PeMoby *m) {
             }
         } else {
             clear_u64_value(&va);
-            va.f[2] = func_00214358(&m->pos, 0, 0.5f) - m->pos.f[2];
+            va.f[2] = ProbeGroundHeight(&m->pos, 0, 0.5f) - m->pos.f[2];
             if (va.f[2] < -(D_0015EE6C * 10.0f)) {
                 va.f[2] = -(D_0015EE6C * 10.0f);
             }
@@ -1232,14 +1232,14 @@ void BirdbotUpdate(PeMoby *m) {
     if (m->state == 1 || m->state == 5 || m->state == 6 || m->state == 7 || m->state == 0xB) {
         v->fE8 += D_0015EE70 * 9.8f;
         m->pos.f[2] -= v->fE8 - 2.0f;
-        ground = func_00214358(&m->pos, 0, 0.5f);
+        ground = ProbeGroundHeight(&m->pos, 0, 0.5f);
         m->pos.f[2] -= 2.0f;
         if (m->pos.f[2] < ground) {
             m->pos.f[2] = ground;
             v->fE8 = 0.0f;
         }
     } else {
-        ground = func_00214358(&m->pos, 0, 0.5f);
+        ground = ProbeGroundHeight(&m->pos, 0, 0.5f);
     }
     SetRangeAroundValue((char *)m, ground);
     if (CollType() == 0 && m->pos.f[2] < ground + 1.0f) {
@@ -1410,7 +1410,7 @@ void PeckbotUpdate(GcMoby *m) {
     }
     m->w94 = *(int *)(m->w24 + 0x10);
     m->h34 &= 0xFFBE;
-    func_L00_00260D30(m, &tgt, v->f1FC + 4.0f);
+    FindNearestTargetMoby(m, &tgt, v->f1FC + 4.0f);
     tm = tgt.moby;
     qcopy(&old, &m->pos);
     if (v->w38 != 0) {
@@ -1555,7 +1555,7 @@ void PeckbotUpdate(GcMoby *m) {
     case 0x11: {
         float g;
 
-        g = func_00214358(&m->pos, 0, 0.5f);
+        g = ProbeGroundHeight(&m->pos, 0, 0.5f);
         ApproachValue(&v->v40.f[2], -(D_0015EE6C * 8.0f), D_0015EE70 * 10.8f);
         m->pos.f[2] += v->v40.f[2];
         if (m->b53 != 1
@@ -1581,7 +1581,7 @@ void PeckbotUpdate(GcMoby *m) {
     case 0x10: {
         float g;
 
-        g = func_00214358(&m->pos, 0, 0.5f);
+        g = ProbeGroundHeight(&m->pos, 0, 0.5f);
         ApproachValue(&v->v40.f[2], D_0015EE6C * 8.0f, D_0015EE70 * 10.8f);
         m->pos.f[2] += v->v40.f[2];
         if (g + 6.0f <= m->pos.f[2]) {
@@ -1761,7 +1761,7 @@ void PeckbotUpdate(GcMoby *m) {
         } else if (m->bBC != 1) {
             m->state = 5;
         }
-        func_00214358(&m->pos, 0, 0.5f);
+        ProbeGroundHeight(&m->pos, 0, 0.5f);
         if (CollType() == 0 || CollType() == 8) {
             m->state = 0x10;
             if (m->b53 != 0) {
@@ -1797,7 +1797,7 @@ void PeckbotUpdate(GcMoby *m) {
                 MobyBlendAnimation(m, 2, 0, scale_ticks(3));
             }
         }
-        g = func_00214358(&m->pos, 0, 0.5f);
+        g = ProbeGroundHeight(&m->pos, 0, 0.5f);
         v->f198 -= D_0015EE70 * 9.8f;
         m->pos.f[2] += v->f198;
         if (m->pos.f[2] < g) {
@@ -1849,7 +1849,7 @@ void PeckbotUpdate(GcMoby *m) {
                 MobyBlendAnimation(m, 5, 0, scale_ticks(3));
             }
         }
-        func_00214358(&m->pos, 0, 0.5f);
+        ProbeGroundHeight(&m->pos, 0, 0.5f);
         if (CollType() == 0 || CollType() == 8) {
             m->state = 0x10;
             if (m->b53 != 0) {
@@ -1950,7 +1950,7 @@ void PeckbotUpdate(GcMoby *m) {
             }
             MobyBlendAnimation(m, anim, 0, scale_ticks(3));
         }
-        func_00214358(&m->pos, 0, 0.5f);
+        ProbeGroundHeight(&m->pos, 0, 0.5f);
         if (CollType() == 0 || CollType() == 8) {
             m->state = 0x10;
             if (m->b53 != 0) {
@@ -2001,7 +2001,7 @@ void PeckbotUpdate(GcMoby *m) {
             }
         }
         qcopy(&m->pos, &vb);
-        g = func_00214358(&m->pos, 0, 0.5f);
+        g = ProbeGroundHeight(&m->pos, 0, 0.5f);
         v->f198 -= D_0015EE70 * 9.8f;
         m->pos.f[2] += v->f198;
         if (m->pos.f[2] < g) {
@@ -2680,7 +2680,7 @@ BeamMoby *SpawnBeam(void *owner, u128_t *pos, u128_t *dir, u128_t *color, int ki
         v->len = FastVecLength(pd);
         PartType26Spawn((char *)m, 0x2F4F7F7F, scale_ticks(0x78), -1, 420000.0f);
         PartType26Spawn((char *)m, 0x4F6F7F7F, scale_ticks(0x78), -1, 210000.0f);
-        func_0022ED80(0, 0, (int)m);
+        Moby_PlaySound(0, 0, (int)m);
         func_L00_00251E30(m);
     }
     return m;
@@ -3181,7 +3181,7 @@ void ApplyNodeLighting(char *moby) {
     char *p = D_L01_0016016C + (*(int *)(*(char **)(moby + 0x78) + 0x80) << 7);
     build_look_at_matrix(tmp, p, p + 0x20, *(float *)&D_L01_00161CB8);
     func_L00_002E9DC8(tmp, 0.13962633907794952f, 0.0f);
-    func_L00_002E9900(*(float *)&D_L01_00161CBC, *(float *)&D_L01_00161CC8, 0);
+    Cam_SetDistanceGoal(*(float *)&D_L01_00161CBC, *(float *)&D_L01_00161CC8, 0);
     func_L00_002E9968(*(float *)&D_L01_00161CC0, *(float *)&D_L01_00161CC8);
     Cam_SetEyeOffset(0, *(float *)&D_L01_00161CC4, *(float *)&D_L01_00161CC8);
 }
@@ -3399,7 +3399,7 @@ void LiftMoveUpdate(LiftMoby *m) {
             m->mode = 2;
             v->speed = v->travel / IntToFloat(scale_ticks(func_001FA898_r(v->period * 60.0f)));
             v->timer = scale_ticks(func_001FA898_r(v->period * 60.0f));
-            func_0022ED80(0, 0, (int)m);
+            Moby_PlaySound(0, 0, (int)m);
         }
         break;
     case 1:
@@ -3407,7 +3407,7 @@ void LiftMoveUpdate(LiftMoby *m) {
             m->mode = 2;
             v->speed = -(v->travel / IntToFloat(scale_ticks(func_001FA898_r(v->period * 60.0f))));
             v->timer = scale_ticks(func_001FA898_r(v->period * 60.0f));
-            func_0022ED80(1, 0, (int)m);
+            Moby_PlaySound(1, 0, (int)m);
         }
         break;
     case 2:

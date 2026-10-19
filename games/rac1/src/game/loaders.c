@@ -998,7 +998,7 @@ extern int D_00137C80[];
 extern char D_1FF7FF0[];
 extern int func_002175C8(int, int, int);
 
-int func_00204BE8(void) {
+int Level_StartDataRead(void) {
     int *hdr = D_00137C80;
     int want = ((hdr[0x13F] << 11) + 0x1057) & 0xFFFFF000;
 

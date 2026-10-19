@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Half-angle quaternion of angle a for axis n (VU0 code). Each lane is taken from the
    cos and sin of a: R = sqrt(|2 cos a| + 2), q = -sin a / R, h = 0.5 R. Lane x holds q when
    cos a >= 0 (w holds h), otherwise x holds h and w holds q. n = 0 writes x and w, n = 1 moves

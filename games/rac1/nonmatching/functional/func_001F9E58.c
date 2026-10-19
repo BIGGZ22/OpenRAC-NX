@@ -1,4 +1,4 @@
-/* functional: medium. Corrected from nonmatching/functional/func_001F9E58.c: retail returns an int (1 when it shortened a, 0 when it did not) and writes out only when it shortens it; the old copy returned void and always wrote out. A zero-length a returns 0 as retail does. Same result for the in-place call in sound.c. */
+/* functional: medium. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). Corrected from nonmatching/functional/func_001F9E58.c: retail returns an int (1 when it shortened a, 0 when it did not) and writes out only when it shortens it; the old copy returned void and always wrote out. A zero-length a returns 0 as retail does. Same result for the in-place call in sound.c. */
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright (c) 2026 the OpenRAC contributors */
 

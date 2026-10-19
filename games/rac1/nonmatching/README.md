@@ -13,15 +13,14 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_L00_002D8898`](shared/func_L00_002D8898.c) | shared | 2052 | BYTES 34/2052 | 98.3% |
 | [`func_L00_0024A798`](shared/func_L00_0024A798.c) | shared | 288 | BYTES 7/288 | 97.6% |
 | [`func_L00_0024A60C`](shared/func_L00_0024A60C.c) | shared | 76 | BYTES 2/76 | 97.4% |
+| [`func_001F10C8`](game/func_001F10C8.c) | game | 0 | BYTES 153/4932 | 96.9% |
 | [`func_L07_00319230`](l07_umbris/func_L07_00319230.c) | l07_umbris | 4044 | BYTES 126/4044 | 96.9% |
 | [`func_L00_001F4918`](shared/func_L00_001F4918.c) | shared | 4932 | BYTES 169/4932 | 96.6% |
-| [`func_L14_00303270`](shared/func_L14_00303270.c) | shared | 444 | BYTES 16/444 | 96.4% |
 | [`func_L00_00236F38`](shared/func_L00_00236F38.c) | shared | 1384 | BYTES 99/1384 | 92.8% |
 | [`func_L00_001F3980`](shared/func_L00_001F3980.c) | shared | 8 | BYTES 1/8 | 87.5% |
-| [`func_L00_0029AB38`](shared/func_L00_0029AB38.c) | shared | 480 | BYTES 88/480 | 81.7% |
 | [`func_L14_002E0538`](l14_oltanis/func_L14_002E0538.c) | l14_oltanis | 796 | BYTES 148/796 | 81.4% |
-| [`func_L00_00210E00`](shared/func_L00_00210E00.c) | shared | 480 | BYTES 117/480 | 75.6% |
 | [`func_L00_002AE278`](shared/func_L00_002AE278.c) | shared | 1076 | BYTES 682/1076 | 36.6% |
+| [`func_001150D4`](functional/func_001150D4.c) | functional | 0 | ? | - |
 | [`func_001151B4`](core/func_001151B4.c) | core | 0 | ? | - |
 | [`func_00115248`](functional/func_00115248.c) | functional | 0 | ? | - |
 | [`func_001152F8`](core/func_001152F8.c) | core | 0 | ? | - |
@@ -32,22 +31,54 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_00116810`](functional/func_00116810.c) | functional | 0 | ? | - |
 | [`func_00116948`](core/func_00116948.c) | core | 0 | ? | - |
 | [`func_00116B00`](core/func_00116B00.c) | core | 0 | ? | - |
-| [`func_00119EA8`](functional/func_00119EA8.c) | functional | 0 | ? | - |
-| [`func_0011B868`](functional/func_0011B868.c) | functional | 0 | ? | - |
-| [`func_0011BCB0`](core/func_0011BCB0.c) | core | 0 | ? | - |
-| [`func_0011CB40`](functional/func_0011CB40.c) | functional | 0 | ? | - |
-| [`func_00121750`](core/func_00121750.c) | core | 0 | ? | - |
-| [`func_00121DC8`](core/func_00121DC8.c) | core | 0 | ? | - |
+| [`func_00118D80`](functional/func_00118D80.c) | functional | 0 | ? | - |
+| [`func_00119110`](functional/func_00119110.c) | functional | 0 | ? | - |
+| [`func_001191E0`](functional/func_001191E0.c) | functional | 0 | ? | - |
+| [`func_00119288`](functional/func_00119288.c) | functional | 0 | ? | - |
+| [`func_00119678`](functional/func_00119678.c) | functional | 0 | ? | - |
+| [`func_0011AC48`](functional/func_0011AC48.c) | functional | 0 | ? | - |
+| [`func_0011AD70`](functional/func_0011AD70.c) | functional | 0 | ? | - |
+| [`func_0011BC80`](functional/func_0011BC80.c) | functional | 0 | ? | - |
+| [`func_0011D4E0`](functional/func_0011D4E0.c) | functional | 0 | ? | - |
+| [`func_0011E860`](functional/func_0011E860.c) | functional | 0 | ? | - |
+| [`func_0011EF28`](functional/func_0011EF28.c) | functional | 0 | ? | - |
+| [`func_0011F4F8`](functional/func_0011F4F8.c) | functional | 0 | ? | - |
+| [`func_001208E8`](functional/func_001208E8.c) | functional | 0 | ? | - |
+| [`func_00121DC8`](functional/func_00121DC8.c) | functional | 0 | ? | - |
+| [`func_00123EC0`](functional/func_00123EC0.c) | functional | 0 | ? | - |
+| [`func_001252A0`](functional/func_001252A0.c) | functional | 0 | ? | - |
+| [`func_00125300`](functional/func_00125300.c) | functional | 0 | ? | - |
+| [`func_00125328`](functional/func_00125328.c) | functional | 0 | ? | - |
 | [`func_00125358`](core/func_00125358.c) | core | 0 | ? | - |
 | [`func_00125F88`](functional/func_00125F88.c) | functional | 0 | ? | - |
+| [`func_001265C8`](functional/func_001265C8.c) | functional | 0 | ? | - |
+| [`func_00126640`](functional/func_00126640.c) | functional | 0 | ? | - |
+| [`func_001266D8`](functional/func_001266D8.c) | functional | 0 | ? | - |
+| [`func_00126790`](functional/func_00126790.c) | functional | 0 | ? | - |
+| [`func_00126860`](functional/func_00126860.c) | functional | 0 | ? | - |
+| [`func_00126910`](functional/func_00126910.c) | functional | 0 | ? | - |
+| [`func_001269C8`](functional/func_001269C8.c) | functional | 0 | ? | - |
+| [`func_00126AC0`](functional/func_00126AC0.c) | functional | 0 | ? | - |
+| [`func_00126BC0`](functional/func_00126BC0.c) | functional | 0 | ? | - |
+| [`func_00126C60`](functional/func_00126C60.c) | functional | 0 | ? | - |
+| [`func_00126D10`](functional/func_00126D10.c) | functional | 0 | ? | - |
+| [`func_00126DF0`](functional/func_00126DF0.c) | functional | 0 | ? | - |
+| [`func_00126ED8`](functional/func_00126ED8.c) | functional | 0 | ? | - |
+| [`func_00126FB0`](functional/func_00126FB0.c) | functional | 0 | ? | - |
+| [`func_00127080`](functional/func_00127080.c) | functional | 0 | ? | - |
+| [`func_001271A0`](functional/func_001271A0.c) | functional | 0 | ? | - |
+| [`func_001272B8`](functional/func_001272B8.c) | functional | 0 | ? | - |
 | [`func_00129690`](functional/func_00129690.c) | functional | 0 | ? | - |
+| [`func_0012A418`](functional/func_0012A418.c) | functional | 0 | ? | - |
+| [`func_0012A718`](functional/func_0012A718.c) | functional | 0 | ? | - |
 | [`func_0012A7E8`](functional/func_0012A7E8.c) | functional | 0 | ? | - |
-| [`func_0012AAA8`](core/func_0012AAA8.c) | core | 0 | ? | - |
+| [`func_0012C608`](functional/func_0012C608.c) | functional | 0 | ? | - |
 | [`func_0012DA28`](functional/func_0012DA28.c) | functional | 0 | ? | - |
 | [`func_0012DB68`](functional/func_0012DB68.c) | functional | 0 | ? | - |
 | [`func_0012EB18`](functional/func_0012EB18.c) | functional | 0 | ? | - |
-| [`func_001EBB48`](game/func_001EBB48.c) | game | 0 | ? | - |
-| [`func_001F3890`](game/func_001F3890.c) | game | 768 | ? | - |
+| [`func_001EE9F8`](functional/func_001EE9F8.c) | functional | 0 | ? | - |
+| [`func_001EFD70`](functional/func_001EFD70.c) | functional | 0 | ? | - |
+| [`func_001F0F00`](functional/func_001F0F00.c) | functional | 0 | ? | - |
 | [`func_001F7070`](game/func_001F7070.c) | game | 1264 | ? | - |
 | [`func_001F7E98`](functional/func_001F7E98.c) | functional | 96 | ? | - |
 | [`func_001F9840`](game/func_001F9840.c) | game | 0 | ? | - |
@@ -58,10 +89,13 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_001F98C0`](game/func_001F98C0.c) | game | 0 | ? | - |
 | [`func_001F98E8`](game/func_001F98E8.c) | game | 0 | ? | - |
 | [`func_001F98F8`](game/func_001F98F8.c) | game | 0 | ? | - |
+| [`func_001F9908`](functional/func_001F9908.c) | functional | 48 | ? | - |
 | [`func_001F9A00`](game/func_001F9A00.c) | game | 0 | ? | - |
+| [`func_001F9AC0`](functional/func_001F9AC0.c) | functional | 48 | ? | - |
 | [`func_001F9AF0`](game/func_001F9AF0.c) | game | 48 | ? | - |
 | [`func_001F9B20`](game/func_001F9B20.c) | game | 40 | ? | - |
 | [`func_001F9B50`](game/func_001F9B50.c) | game | 32 | ? | - |
+| [`func_001F9B70`](functional/func_001F9B70.c) | functional | 24 | ? | - |
 | [`func_001F9B90`](game/func_001F9B90.c) | game | 8 | ? | - |
 | [`func_001F9B98`](game/func_001F9B98.c) | game | 8 | ? | - |
 | [`func_001F9BA0`](functional/func_001F9BA0.c) | functional | 16 | ? | - |
@@ -80,6 +114,7 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_001F9CE8`](game/func_001F9CE8.c) | game | 40 | ? | - |
 | [`func_001F9D10`](game/func_001F9D10.c) | game | 56 | ? | - |
 | [`func_001F9D48`](game/func_001F9D48.c) | game | 48 | ? | - |
+| [`func_001F9D78`](functional/func_001F9D78.c) | functional | 0 | ? | - |
 | [`func_001F9E58`](functional/func_001F9E58.c) | functional | 0 | ? | - |
 | [`func_001F9EC0`](game/func_001F9EC0.c) | game | 40 | ? | - |
 | [`func_001F9EE8`](game/func_001F9EE8.c) | game | 48 | ? | - |
@@ -100,12 +135,17 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_001FA4F0`](game/func_001FA4F0.c) | game | 80 | ? | - |
 | [`func_001FA540`](game/func_001FA540.c) | game | 72 | ? | - |
 | [`func_001FA588`](game/func_001FA588.c) | game | 64 | ? | - |
+| [`func_001FA5C8`](functional/func_001FA5C8.c) | functional | 128 | ? | - |
+| [`func_001FA648`](functional/func_001FA648.c) | functional | 120 | ? | - |
 | [`func_001FA6C0`](functional/func_001FA6C0.c) | functional | 136 | ? | - |
 | [`func_001FA748`](game/func_001FA748.c) | game | 72 | ? | - |
+| [`func_001FA790`](functional/func_001FA790.c) | functional | 72 | ? | - |
 | [`func_001FA7D8`](game/func_001FA7D8.c) | game | 120 | ? | - |
 | [`func_001FA850`](game/func_001FA850.c) | game | 56 | ? | - |
 | [`func_001FA898`](game/func_001FA898.c) | game | 16 | ? | - |
 | [`func_001FA8A8`](game/func_001FA8A8.c) | game | 72 | ? | - |
+| [`func_001FA9E8`](functional/func_001FA9E8.c) | functional | 60 | ? | - |
+| [`func_001FAA28`](functional/func_001FAA28.c) | functional | 0 | ? | - |
 | [`func_001FBE80`](game/func_001FBE80.c) | game | 5480 | ? | - |
 | [`func_001FD3E8`](game/func_001FD3E8.c) | game | 2856 | ? | - |
 | [`func_00202AA8`](game/func_00202AA8.c) | game | 1104 | ? | - |
@@ -123,32 +163,30 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_0020EA70`](game/func_0020EA70.c) | game | 0 | ? | - |
 | [`func_0020ED48`](game/func_0020ED48.c) | game | 0 | ? | - |
 | [`func_0020EEE8`](game/func_0020EEE8.c) | game | 72 | ? | - |
+| [`func_0020EF30`](functional/func_0020EF30.c) | functional | 0 | ? | - |
+| [`func_002108E0`](functional/func_002108E0.c) | functional | 0 | ? | - |
 | [`func_00211548`](game/func_00211548.c) | game | 340 | ? | - |
 | [`func_002116A0`](game/func_002116A0.c) | game | 356 | ? | - |
 | [`func_00213A78`](game/func_00213A78.c) | game | 0 | ? | - |
 | [`func_00213C78`](game/func_00213C78.c) | game | 148 | ? | - |
-| [`func_00214778`](functional/func_00214778.c) | functional | 0 | ? | - |
 | [`func_00218928`](game/func_00218928.c) | game | 8 | ? | - |
 | [`func_00218930`](game/func_00218930.c) | game | 0 | ? | - |
 | [`func_00218A80`](game/func_00218A80.c) | game | 140 | ? | - |
-| [`func_0021C840`](functional/func_0021C840.c) | functional | 1368 | ? | - |
-| [`func_00226978`](functional/func_00226978.c) | functional | 892 | ? | - |
 | [`func_00226D50`](game/func_00226D50.c) | game | 340 | ? | - |
 | [`func_0022DD68`](game/func_0022DD68.c) | game | 3252 | ? | - |
 | [`func_0022F738`](functional/func_0022F738.c) | functional | 1188 | ? | - |
 | [`func_0022FDC0`](game/func_0022FDC0.c) | game | 2012 | ? | - |
 | [`func_00238D90`](game/func_00238D90.c) | game | 516 | ? | - |
 | [`func_00238F98`](functional/func_00238F98.c) | functional | 484 | ? | - |
-| [`func_0023A220`](game/func_0023A220.c) | game | 600 | ? | - |
+| [`func_0023C5E0`](functional/func_0023C5E0.c) | functional | 452 | ? | - |
+| [`func_0023C7A8`](functional/func_0023C7A8.c) | functional | 360 | ? | - |
 | [`func_0023C910`](functional/func_0023C910.c) | functional | 76 | ? | - |
-| [`func_0023CAF8`](functional/func_0023CAF8.c) | functional | 228 | ? | - |
-| [`func_0023DA88`](functional/func_0023DA88.c) | functional | 340 | ? | - |
 | [`func_L00_001EFF50`](game/func_L00_001EFF50.c) | game | 152 | ? | - |
 | [`func_L00_001EFFE8`](functional/func_L00_001EFFE8.c) | functional | 8 | ? | - |
 | [`func_L00_001F3958`](game/func_L00_001F3958.c) | game | 40 | ? | - |
 | [`func_L00_001F3988`](game/func_L00_001F3988.c) | game | 40 | ? | - |
 | [`func_L00_001F39B0`](functional/func_L00_001F39B0.c) | functional | 8 | ? | - |
-| [`func_L00_001FCC50`](shared/func_L00_001FCC50.c) | shared | 748 | SIZE ours 744 / retail 748 | - |
+| [`func_L00_001FDE48`](functional/func_L00_001FDE48.c) | functional | 500 | ? | - |
 | [`func_L00_001FEF78`](functional/func_L00_001FEF78.c) | functional | 48 | ? | - |
 | [`func_L00_001FF040`](game/func_L00_001FF040.c) | game | 72 | ? | - |
 | [`func_L00_001FF088`](functional/func_L00_001FF088.c) | functional | 40 | ? | - |
@@ -163,6 +201,7 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_L00_001FF4B0`](functional/func_L00_001FF4B0.c) | functional | 64 | ? | - |
 | [`func_L00_001FF500`](functional/func_L00_001FF500.c) | functional | 56 | ? | - |
 | [`func_L00_001FF548`](game/func_L00_001FF548.c) | game | 96 | ? | - |
+| [`func_L00_001FF5B0`](functional/func_L00_001FF5B0.c) | functional | 88 | ? | - |
 | [`func_L00_001FF610`](functional/func_L00_001FF610.c) | functional | 96 | ? | - |
 | [`func_L00_001FF670`](functional/func_L00_001FF670.c) | functional | 16 | ? | - |
 | [`func_L00_001FF718`](functional/func_L00_001FF718.c) | functional | 72 | ? | - |
@@ -177,24 +216,18 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_L00_00200290`](game/func_L00_00200290.c) | game | 232 | ? | - |
 | [`func_L00_002003C8`](functional/func_L00_002003C8.c) | functional | 240 | ? | - |
 | [`func_L00_00203F08`](functional/func_L00_00203F08.c) | functional | 24 | ? | - |
-| [`func_L00_00205110`](game/func_L00_00205110.c) | game | 68 | ? | - |
-| [`func_L00_0020E0A8`](functional/func_L00_0020E0A8.c) | functional | 64 | ? | - |
 | [`func_L00_0020E3B8`](functional/func_L00_0020E3B8.c) | functional | 1596 | ? | - |
 | [`func_L00_0020EDC0`](game/func_L00_0020EDC0.c) | game | 808 | ? | - |
 | [`func_L00_0020FC18`](shared/func_L00_0020FC18.c) | shared | 1828 | SIZE ours 1776 / retail 1828 | - |
-| [`func_L00_00214520`](shared/func_L00_00214520.c) | shared | 672 | SIZE ours 668 / retail 672 | - |
-| [`func_L00_002293E8`](shared/func_L00_002293E8.c) | shared | 912 | SIZE ours 908 / retail 912 | - |
 | [`func_L00_00232EF0`](shared/func_L00_00232EF0.c) | shared | 1312 | SIZE ours 1288 / retail 1312 | - |
-| [`func_L00_002377E0`](shared/func_L00_002377E0.c) | shared | 832 | SIZE ours 840 / retail 832 | - |
 | [`func_L00_00237B90`](functional/func_L00_00237B90.c) | functional | 1300 | ? | - |
-| [`func_L00_00242120`](shared/func_L00_00242120.c) | shared | 432 | SIZE ours 428 / retail 432 | - |
 | [`func_L00_00244AE0`](shared/func_L00_00244AE0.c) | shared | 4264 | SIZE ours 4268 / retail 4264 | - |
 | [`func_L00_00248EF8`](shared/func_L00_00248EF8.c) | shared | 1808 | SIZE ours 1804 / retail 1808 | - |
-| [`func_L00_00249EE0`](functional/func_L00_00249EE0.c) | functional | 88 | ? | - |
-| [`func_L00_0024B200`](game/func_L00_0024B200.c) | game | 164 | ? | - |
-| [`func_L00_0024B960`](functional/func_L00_0024B960.c) | functional | 32 | ? | - |
+| [`func_L00_0024DFC4`](functional/func_L00_0024DFC4.c) | functional | 96 | ? | - |
 | [`func_L00_0024E798`](game/func_L00_0024E798.c) | game | 352 | ? | - |
 | [`func_L00_0024EBF8`](game/func_L00_0024EBF8.c) | game | 40 | ? | - |
+| [`func_L00_0024EC20`](functional/func_L00_0024EC20.c) | functional | 28 | ? | - |
+| [`func_L00_0024F048`](functional/func_L00_0024F048.c) | functional | 12 | ? | - |
 | [`func_L00_00251328`](shared/func_L00_00251328.c) | shared | 48 | SIZE ours 52 / retail 48 | - |
 | [`func_L00_00251358`](shared/func_L00_00251358.c) | shared | 48 | SIZE ours 44 / retail 48 | - |
 | [`func_L00_00251388`](game/func_L00_00251388.c) | game | 64 | ? | - |
@@ -204,8 +237,11 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_L00_00251A78`](game/func_L00_00251A78.c) | game | 80 | ? | - |
 | [`func_L00_00251B58`](game/func_L00_00251B58.c) | game | 448 | ? | - |
 | [`func_L00_00251E30`](game/func_L00_00251E30.c) | game | 264 | ? | - |
+| [`func_L00_00252018`](functional/func_L00_00252018.c) | functional | 3284 | ? | - |
 | [`func_L00_00252CEC`](functional/func_L00_00252CEC.c) | functional | 48 | ? | - |
+| [`func_L00_00254218`](functional/func_L00_00254218.c) | functional | 2136 | ? | - |
 | [`func_L00_00255B90`](functional/func_L00_00255B90.c) | functional | 2664 | ? | - |
+| [`func_L00_002569F8`](functional/func_L00_002569F8.c) | functional | 3664 | ? | - |
 | [`func_L00_00257E18`](game/func_L00_00257E18.c) | game | 164 | ? | - |
 | [`func_L00_00257F4C`](shared/func_L00_00257F4C.c) | shared | 104 | SIZE ours 112 / retail 272 | - |
 | [`func_L00_0025805C`](game/func_L00_0025805C.c) | game | 496 | ? | - |
@@ -214,12 +250,10 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_L00_0025D6F0`](functional/func_L00_0025D6F0.c) | functional | 2136 | ? | - |
 | [`func_L00_00261B00`](shared/func_L00_00261B00.c) | shared | 2252 | SIZE ours 2284 / retail 2252 | - |
 | [`func_L00_002657B8`](shared/func_L00_002657B8.c) | shared | 260 | SIZE ours 256 / retail 260 | - |
-| [`func_L00_00267130`](game/func_L00_00267130.c) | game | 72 | ? | - |
-| [`func_L00_00267188`](game/func_L00_00267188.c) | game | 48 | ? | - |
 | [`func_L00_00268760`](functional/func_L00_00268760.c) | functional | 320 | ? | - |
 | [`func_L00_002688A8`](game/func_L00_002688A8.c) | game | 260 | ? | - |
+| [`func_L00_002689B0`](functional/func_L00_002689B0.c) | functional | 216 | ? | - |
 | [`func_L00_00268A88`](functional/func_L00_00268A88.c) | functional | 32 | ? | - |
-| [`func_L00_00273090`](shared/func_L00_00273090.c) | shared | 576 | SIZE ours 572 / retail 576 | - |
 | [`func_L00_00277208`](functional/func_L00_00277208.c) | functional | 1464 | ? | - |
 | [`func_L00_0027895C`](functional/func_L00_0027895C.c) | functional | 20 | ? | - |
 | [`func_L00_0028D958`](functional/func_L00_0028D958.c) | functional | 208 | ? | - |
@@ -227,7 +261,6 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_L00_002B8AE8`](shared/func_L00_002B8AE8.c) | shared | 2624 | SIZE ours 2684 / retail 2624 | - |
 | [`func_L00_002BA7C8`](shared/func_L00_002BA7C8.c) | shared | 5292 | SIZE ours 5284 / retail 5292 | - |
 | [`func_L00_002BE2A0`](shared/func_L00_002BE2A0.c) | shared | 260 | SIZE ours 264 / retail 260 | - |
-| [`func_L00_002BF958`](shared/func_L00_002BF958.c) | shared | 576 | SIZE ours 568 / retail 576 | - |
 | [`func_L00_002C9DC8`](shared/func_L00_002C9DC8.c) | shared | 2288 | SIZE ours 2248 / retail 2288 | - |
 | [`func_L00_002CF808`](shared/func_L00_002CF808.c) | shared | 3776 | SIZE ours 3804 / retail 3776 | - |
 | [`func_L00_002D1E68`](shared/func_L00_002D1E68.c) | shared | 2664 | SIZE ours 2656 / retail 2664 | - |
@@ -235,6 +268,7 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_L00_002D6610`](shared/func_L00_002D6610.c) | shared | 868 | SIZE ours 876 / retail 868 | - |
 | [`func_L00_002DACC0`](shared/func_L00_002DACC0.c) | shared | 1464 | SIZE ours 1460 / retail 1464 | - |
 | [`func_L00_002DF410`](shared/func_L00_002DF410.c) | shared | 4220 | SIZE ours 4216 / retail 4220 | - |
+| [`func_L00_002E17D4`](functional/func_L00_002E17D4.c) | functional | 28 | ? | - |
 | [`func_L00_002ED320`](functional/func_L00_002ED320.c) | functional | 1588 | ? | - |
 | [`func_L01_0021F9C8`](functional/func_L01_0021F9C8.c) | functional | 784 | ? | - |
 | [`func_L01_00262BC0`](functional/func_L01_00262BC0.c) | functional | 360 | ? | - |
@@ -250,19 +284,13 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_L02_00250C78`](functional/func_L02_00250C78.c) | functional | 836 | ? | - |
 | [`func_L02_002FCE00`](shared/func_L02_002FCE00.c) | shared | 2244 | SIZE ours 2236 / retail 2244 | - |
 | [`func_L03_00251AC8`](shared/func_L03_00251AC8.c) | shared | 716 | SIZE ours 704 / retail 716 | - |
-| [`func_L03_002ED138`](functional/func_L03_002ED138.c) | functional | 56 | ? | - |
-| [`func_L04_002E2B48`](functional/func_L04_002E2B48.c) | functional | 72 | ? | - |
-| [`func_L05_0023BA18`](functional/func_L05_0023BA18.c) | functional | 76 | ? | - |
-| [`func_L05_00254838`](shared/func_L05_00254838.c) | shared | 768 | SIZE ours 764 / retail 768 | - |
 | [`func_L05_00266D10`](functional/func_L05_00266D10.c) | functional | 908 | ? | - |
 | [`func_L05_002D28D0`](functional/func_L05_002D28D0.c) | functional | 1960 | ? | - |
 | [`func_L05_0030D678`](functional/func_L05_0030D678.c) | functional | 908 | ? | - |
-| [`func_L05_0030F358`](l05_rilgar/func_L05_0030F358.c) | l05_rilgar | 868 | SIZE ours 860 / retail 868 | - |
 | [`func_L05_00317B68`](functional/func_L05_00317B68.c) | functional | 368 | ? | - |
 | [`func_L06_00216B38`](functional/func_L06_00216B38.c) | functional | 940 | ? | - |
 | [`func_L06_002172B0`](functional/func_L06_002172B0.c) | functional | 8 | ? | - |
 | [`func_L06_0024A080`](functional/func_L06_0024A080.c) | functional | 940 | ? | - |
-| [`func_L06_002F78A0`](l06_blarg/func_L06_002F78A0.c) | l06_blarg | 2396 | SIZE ours 2336 / retail 2396 | - |
 | [`func_L06_00303858`](l06_blarg/func_L06_00303858.c) | l06_blarg | 348 | SIZE ours 352 / retail 348 | - |
 | [`func_L06_003089B8`](functional/func_L06_003089B8.c) | functional | 1740 | ? | - |
 | [`func_L07_00313D28`](l07_umbris/func_L07_00313D28.c) | l07_umbris | 1148 | SIZE ours 1120 / retail 1148 | - |
@@ -272,8 +300,6 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_L08_002F7318`](l08_batalia/func_L08_002F7318.c) | l08_batalia | 4676 | SIZE ours 4668 / retail 4676 | - |
 | [`func_L08_00303998`](shared/func_L08_00303998.c) | shared | 1440 | SIZE ours 1456 / retail 1440 | - |
 | [`func_L10_002DE018`](functional/func_L10_002DE018.c) | functional | 948 | ? | - |
-| [`func_L10_002F6F18`](shared/func_L10_002F6F18.c) | shared | 960 | SIZE ours 968 / retail 960 | - |
-| [`func_L11_0031A738`](functional/func_L11_0031A738.c) | functional | 932 | ? | - |
 | [`func_L12_002677B4`](functional/func_L12_002677B4.c) | functional | 216 | ? | - |
 | [`func_L12_00304750`](functional/func_L12_00304750.c) | functional | 464 | ? | - |
 | [`func_L12_003061E0`](functional/func_L12_003061E0.c) | functional | 1708 | ? | - |
@@ -281,6 +307,8 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_L12_0030A880`](l12_hoven/func_L12_0030A880.c) | l12_hoven | 152 | SIZE ours 144 / retail 152 | - |
 | [`func_L14_00303430`](functional/func_L14_00303430.c) | functional | 1424 | ? | - |
 | [`func_L14_00316E60`](l14_oltanis/func_L14_00316E60.c) | l14_oltanis | 880 | SIZE ours 864 / retail 880 | - |
-| [`func_L15_0029B1D8`](functional/func_L15_0029B1D8.c) | functional | 48 | ? | - |
 | [`func_L15_002A4318`](functional/func_L15_002A4318.c) | functional | 1184 | ? | - |
 | [`func_L15_002D7C00`](functional/func_L15_002D7C00.c) | functional | 4012 | ? | - |
+| [`func_L16_002D0B28`](functional/func_L16_002D0B28.c) | functional | 56 | ? | - |
+| [`func_L18_002D9C90`](functional/func_L18_002D9C90.c) | functional | 24 | ? | - |
+| [`func_L18_002FDCC4`](functional/func_L18_002FDCC4.c) | functional | 92 | ? | - |

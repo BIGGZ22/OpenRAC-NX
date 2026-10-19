@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /*
  * Moby transform update (PAL 0x20ED48). Rows: from the Euler angles at moby+0x40 (the VU0
  * program at 0xD18: sin/cos of each angle, then Rx, Ry, Rz applied to the identity), or the

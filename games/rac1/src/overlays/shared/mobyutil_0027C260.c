@@ -35,7 +35,7 @@ extern void func_001F9BD8(void *, void *, void *);
 extern void func_L00_00251E30(void *);
 
 // updates attached objects' transforms relative to a parent
-void func_L12_0027C368(char *parent, char *list, int n) {
+void Moby_UpdateAttachedChildren(char *parent, char *list, int n) {
     float m0[16];
     float m1[16];
     float m2[4];

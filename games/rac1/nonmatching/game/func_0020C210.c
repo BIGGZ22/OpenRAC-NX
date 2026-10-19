@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* DmaToSpr(madr, qwc, tadr): sets channel 8's MADR, QWC and TADR, then
    CHCR = 0x100 (STR) to start the transfer; returns 0x100. Stores in the
    retail order: TADR, QWC, MADR, CHCR. */

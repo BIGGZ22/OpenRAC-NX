@@ -538,7 +538,7 @@ void Moby_EnterState4WithChildren(char *moby) {
     int i;
     moby[0xBC] = 1;
     if ((unsigned char)moby[0x20] == 2) {
-        func_0022ED80(0, 0, (int)moby);
+        Moby_PlaySound(0, 0, (int)moby);
         moby[0x20] = 4;
         p = (char **)(data + 0x24);
         *(int *)(data + 0x14) = 0;
@@ -557,7 +557,7 @@ void Moby_EnterState8WithChildren(char *moby)
     moby[0xBC] = 1;
     if ((unsigned char)moby[0x20] == 6) {
         unsigned short fl;
-        func_0022ED80(0, 0, (int)moby);
+        Moby_PlaySound(0, 0, (int)moby);
         fl = *(unsigned short *)(moby + 0x34);
         moby[0x31] = 1;
         fl &= 0xFFFE;
@@ -912,7 +912,279 @@ void LayoutDrawbridgePieces(Moby *m)
         func_L00_00251E30(s->d[j]);
     }
 }
-INCLUDE_ASM("asm/overlays", func_L06_002F78A0);
+struct Moby;
+extern void func_L06_002F8430(struct Moby *);
+typedef int u128_78A0 __attribute__((mode(TI)));
+extern int D_L06_00161ED0[] MACRO_ADDR;
+
+extern void func_L06_002F8200(char *);
+extern int func_001F9938(void *);
+extern float func_00214D28(float *, float, float);
+extern void func_001F9BF0(void *, void *, void *);
+extern void func_L00_0025A8C0(void *, void *, int, float, void *);
+extern float func_001F9C78(void *, void *);
+extern void func_L00_0025AAC0(void *, void *);
+extern void func_001F49B0(void *, void *);
+extern char *func_L00_0025B478(void *, int, int);
+extern int func_L00_00203F20(int, int);
+extern void func_001FA1C0(void *, float);
+extern void func_001FA540(void *, void *, void *);
+extern float func_L00_00258C80(float, float);
+extern int func_001FA8A8(int, int, float);
+extern int func_002140B0(int);
+extern unsigned char *func_L00_00273F80(float *, char *, int, unsigned char, unsigned char, int, float);
+extern void func_0020D678(void *);
+
+extern int D_L06_00161EE0 MACRO_ADDR;
+extern int D_L06_00161EE4 MACRO_ADDR;
+extern short D_L06_00161E98;
+extern short D_L06_00161E9C;
+extern short D_L06_00161EA8;
+extern short D_L06_00161EAC;
+extern short D_L06_00161EB0;
+extern short D_L06_00161EB4;
+extern short D_L06_00161EB8;
+extern short D_L06_00161EBC;
+extern short D_L06_00161EC0;
+extern short D_L06_00161EC4;
+extern short D_L06_00161EC8;
+extern char D_L06_00167640[];
+extern char *D_L06_001746D8;
+extern int D_0015EFA4 MACRO_ADDR;
+extern int D_0015EE84 MACRO_ADDR;
+extern float D_L06_001DB3B0[];
+extern float D_L06_001DB320[];
+extern char D_0014171B[];
+
+#define FLD(base, off, T) (((struct { char _p[off]; T v; } *)(base))->v)
+/* Moby class 1035 update (level 06): 0 init, 1 update, 2 spawn an entry, 3 delete. */
+void func_L06_002F78A0(char *m) {
+    char *d = *(char **)(m + 0x78);
+    unsigned char st = *(unsigned char *)(m + 0x20);
+    struct {
+        float matrix[4][4];
+        union {
+            float local[4][4];
+            struct { float rows[3][4]; float delta[4]; } c;
+        } sh;
+        float at[4], offset[4], effect[4];
+    } V;
+    float k;
+    float v;
+    int i;
+    float *column;
+    int j;
+    float *pos;
+    float *p;  /* scratch vector pointer */
+    float q1, q2, qa, qb, qc, qd, dt;
+    float t, x, y1, y2, kf;
+    int c, w;
+    unsigned char life, bb;
+
+    switch (st) {
+    case 0: {
+        D_L06_00161EE4 = 0x16;
+        D_L06_00161EE0 = 0x2D;
+        D_L06_00161ED0[1] = 0xB;
+        D_L06_00161ED0[2] = 0x17;
+        D_L06_00161ED0[3] = 0x22;
+        D_L06_00161ED0[0] = 0;
+        FLD(d, 0x10, int) = -1;
+        FLD(m, 0x20, unsigned char) = 1;
+        FLD(m, 0x34, unsigned short) = FLD(m, 0x34, unsigned short) | 0x4000;
+        return;
+    }
+    case 1: {
+        func_001F9938(d + 0x16);
+        if (func_L00_0028EB98(m, *(int *)(d + 0x10)) == 0)
+            *(int *)(d + 0x10) = ((int (*)(int, int, int))func_0022ED80)(0, 4, (int)m);
+        {
+            p = (float *)(m + 0x10);
+            func_L06_002F8430((struct Moby *)m);
+            v = func_001F9D10(p, D_L06_00167640);
+            pos = p;
+        }
+        if (v < 48.0f) {
+            k = D_0015EE6C;
+            p = (float *)(d + 0x18);
+            func_00214D28(p, 1.0f, k + k);
+            V.matrix[2][0] = func_001F9F90(*(float *)(m + 0x48)) * 0.5f;
+            V.matrix[2][1] = func_001F9FA8(*(float *)(m + 0x48)) * 0.5f;
+            V.matrix[2][2] = 0.0f;
+            q1 = func_001FA748(*(float *)(m + 0x48), 1.5707964f);
+            V.matrix[3][0] = func_001F9F90(q1) * 3.0f;
+            q2 = func_001FA748(*(float *)(m + 0x48), 1.5707964f);
+            V.matrix[3][1] = func_001F9FA8(q2) * 3.0f;
+            V.matrix[3][2] = 0.0f;
+            qcopy(V.matrix[0], pos);
+            V.matrix[0][2] = V.matrix[0][2] - *(float *)&D_L06_00161EA8;
+            qcopy(V.matrix[1], V.matrix[0]);
+            func_001F9BD8(V.matrix[0], V.matrix[0], V.matrix[2]);
+            func_001F9BD8(V.matrix[1], V.matrix[1], V.matrix[2]);
+            func_001F9BD8(V.matrix[0], V.matrix[0], V.matrix[3]);
+            func_001F9BF0(V.matrix[1], V.matrix[1], V.matrix[3]);
+            func_L00_0025A8C0(V.sh.local[0], m, 0x10001, 5.0f, V.matrix[2]);
+            func_L00_001EFFF0(V.matrix[0], V.matrix[1], 0, m, V.sh.local[0]);
+            if (FLD((D_0014171B + 0x34D), 0x158, unsigned short) == 0 && *(short *)(d + 0x16) == 0
+                && D_L06_001746D8 == FLD((D_0013E633 + 0xE1D), 0x2080, char *)) {
+                short t = *(short *)(d + 0x14) + 1;
+                *(short *)(d + 0x14) = t;
+                *(short *)(d + 0x16) = func_001F9850(30);
+            }
+            /* second pass, with pi and pi/2 */
+            qa = func_001FA748(*(float *)(m + 0x48), 3.1415927f);
+            V.matrix[2][0] = func_001F9F90(qa) * 0.5f;
+            qb = func_001FA748(*(float *)(m + 0x48), 3.1415927f);
+            V.matrix[2][1] = func_001F9FA8(qb) * 0.5f;
+            V.matrix[2][2] = 0.0f;
+            qc = func_001FA748(*(float *)(m + 0x48), 1.5707964f);
+            V.matrix[3][0] = func_001F9F90(qc) * 3.0f;
+            qd = func_001FA748(*(float *)(m + 0x48), 1.5707964f);
+            V.matrix[3][1] = func_001F9FA8(qd) * 3.0f;
+            V.matrix[3][2] = 0.0f;
+            qcopy(V.matrix[0], pos);
+            V.matrix[0][2] = V.matrix[0][2] - *(float *)&D_L06_00161EA8;
+            qcopy(V.matrix[1], V.matrix[0]);
+            func_001F9BD8(V.matrix[0], V.matrix[0], V.matrix[2]);
+            func_001F9BD8(V.matrix[1], V.matrix[1], V.matrix[2]);
+            func_001F9BD8(V.matrix[0], V.matrix[0], V.matrix[3]);
+            func_001F9BF0(V.matrix[1], V.matrix[1], V.matrix[3]);
+            func_L00_0025A8C0(V.sh.local[0], m, 0x10001, 5.0f, V.matrix[2]);
+            func_L00_001EFFF0(V.matrix[0], V.matrix[1], 0, m, V.sh.local[0]);
+            if (FLD((D_0014171B + 0x34D), 0x158, unsigned short) == 0 && *(short *)(d + 0x16) == 0
+                && D_L06_001746D8 == FLD((D_0013E633 + 0xE1D), 0x2080, char *)) {
+                short t = *(short *)(d + 0x14) + 1;
+                *(short *)(d + 0x14) = t;
+                *(short *)(d + 0x16) = func_001F9850(30);
+            }
+            if (FLD((D_0013E633 + 0xE1D), 0x23C, int) == (int)m) {
+                func_001F9BF0(V.sh.c.delta, (char *)&FLD((D_0013E633 + 0xE1D), 0x80, int), pos);
+                dt = func_001F9C78(V.sh.c.delta, m + 0xC0);
+                if (0.0f < dt)
+                    func_L00_001FF4B0(V.sh.local[0], m + 0xC0, 1.0f);
+                else
+                    func_L00_001FF4B0(V.sh.local[0], m + 0xC0, -1.0f);
+                func_L00_0025AAC0(FLD((D_0013E633 + 0xE1D), 0x2080, void *), V.sh.local[0]);
+                if (FLD((D_0014171B + 0x34D), 0x158, unsigned short) == 0 && *(short *)(d + 0x16) == 0) {
+                    short t = *(short *)(d + 0x14) + 1;
+                    *(short *)(d + 0x14) = t;
+                    *(short *)(d + 0x16) = func_001F9850(30);
+                }
+            }
+        } else {
+            func_00214D28((float *)(d + 0x18), 0.0f, (k = D_0015EE6C) + k);
+        }
+        if (*(float *)(d + 0x18) != 0.0f)
+            func_001F49B0(func_L06_002F8200, m);
+        /* L7E0C */
+        if (FLD((D_0014171B + 0x34D), 0x158, unsigned short) == 0) {
+            if (*(short *)(d + 0x16) == 0) {
+                char *r = func_L00_0025B478(m, 0x330000, 0);
+                if (r != 0) {
+                    short t = *(short *)(d + 0x14) + 1;
+                    *(short *)(d + 0x14) = t;
+                    *(short *)(d + 0x16) = func_001F9850(30);
+                }
+            }
+            *(unsigned char *)(m + 0xA4) = 0xFF;
+            if (*(short *)(d + 0x14) >= 3)
+                func_L00_00203F20(0x1774, 0x2B);
+        }
+        {
+            int ok5 = 1;
+            int ok16 = 1;
+            char *base7 = D_L06_00160058;
+            int kk;
+            for (kk = 0; kk < 4; kk++) {
+                int idx = *(int *)(d + 4 * kk);
+                if (idx >= 0) {
+                    unsigned char *e = (unsigned char *)base7 + idx * 256;
+                    if (*(short *)(e + 0xA6) == 0x516) {
+                        if (e[0x20] != 2)
+                            ok5 = 0;
+                        else
+                            ok16 = 0;
+                    } else if (e[0xBC] == 0) {
+                        ok5 = 0;
+                    }
+                }
+            }
+            if (!ok5)
+                return;
+            *(int *)(m + 0x94) = 0;
+            *(unsigned char *)(m + 0x20) = 2;
+            {
+                int w = *(int *)(d + 0x10);
+                if (w != -1) {
+                    unsigned char *c = (unsigned char *)D_0013E633 + 0x1D + 0x70 * w;
+                    if (*(char **)(c + 0x88) == m && c[0x74] != 0)
+                        func_L00_0028EBF0(w);
+                }
+                *(int *)(d + 0x10) = -1;
+            }
+            func_0022ED80(1, 0, (int)m);
+            if (ok16) {
+                unsigned short hh = FLD((D_0014171B + 0x34D), 0x158, unsigned short);
+                if (hh <= 0xFFFE)
+                    FLD((D_0014171B + 0x34D), 0x158, short) = hh + 1;
+            }
+            {
+                int q = func_001F9850(D_0015EFA4) / 600;
+                if ((int)FLD((D_0014171B + 0x34D), 0x15A, unsigned short) < q) {
+                    int q2 = func_001F9850(D_0015EFA4) / 600;
+                    FLD((D_0014171B + 0x34D), 0x15A, short) = q2;
+                }
+                FLD((D_0014171B + 0x34D), 0x15C, int) = FLD((D_0014171B + 0x34D), 0x15C, int) | (1 << D_0015EE84) | 0x80000000;
+            }
+        }
+        return;
+    }
+    case 2: {
+        int kk;
+        int ib;
+        func_001FA218(V.matrix, m + 0x40);
+        func_001FA1C0(V.sh.local, *(float *)&D_L06_00161E9C);
+        i = 0;
+        pos = (float *)(m + 0x10);
+        func_001FA540(V.matrix, V.matrix, V.sh.local);
+        column = V.sh.local[1];
+        do {
+            ib = i * 16;
+            kk = 19;
+            func_001FA218(V.sh.local, (char *)D_L06_001DB3B0 + ib);
+            j = i + 1;
+            func_001FA540(V.sh.local, V.matrix, V.sh.local);
+            func_001F9EE8(V.at, (char *)D_L06_001DB320 + ib, V.matrix);
+            func_001F9BD8(V.sh.c.delta, V.at, pos);
+            V.sh.c.delta[3] = 1.0f;
+            do {
+                t = func_L00_00258C80(0.0f, *(float *)&D_L06_00161E98 * 0.5f);
+                func_L00_001FF4B0(V.offset, column, t);
+                func_001F9BD8(V.offset, V.offset, V.sh.c.delta);
+                x = func_002140F8(0.0f, 1.0f);
+                c = func_001FA8A8(*(int *)&D_L06_00161EAC, *(int *)&D_L06_00161EB0, x);
+                y1 = func_002140F8(*(float *)&D_L06_00161EB4, *(float *)&D_L06_00161EB8);
+                y2 = func_002140F8((float)*(int *)&D_L06_00161EBC, (float)*(int *)&D_L06_00161EC0);
+                w = func_001FA898(y2);
+                kf = D_0015EE6C;
+                func_L00_00258DB0(V.effect, *(float *)&D_L06_00161EC4 * kf, *(float *)&D_L06_00161EC8 * kf);
+                life = (unsigned char)func_001F9850(w);
+                bb = (unsigned char)func_002140B0(0xFF);
+                ((void (*)(float *, char *, int, float, unsigned char, unsigned char, int))func_L00_00273F80)(V.offset, (char *)V.effect, c, y1, life, bb, 0);
+                kk = kk - 1;
+            } while (kk >= 0);
+            i = j;
+        } while (i < 9);
+        *(unsigned char *)(m + 0x20) = 3;
+        return;
+    }
+    case 3:
+        func_0020D678(m);
+        return;
+    }
+}
+
+#undef FLD
 typedef u32 u128_F8200 __attribute__((mode(TI), aligned(16)));
 extern void func_001FA1C0(void *, float);
 extern void func_001FA540(void *, void *, void *);
@@ -2730,7 +3002,7 @@ void Moby1054Update(char *moby) {
         } else {
             moby[0x20] = 3;
         }
-        func_0022ED80(0, 0, (int)*(char **)(data + 0x40));
+        Moby_PlaySound(0, 0, (int)*(char **)(data + 0x40));
         return;
     case 3:
         target_delta = FastVecDist(moby + 0x10, data + 0x10);
@@ -3026,7 +3298,7 @@ void CallableLiftUpdate(Moby *moby) {
             && func_001F9908(&d->f90) != 0
             && moby->pos.z + 0.29f < ((Hero *)(D_0013E633 + 0xE1D))->motion.pos.f[2]
             && func_001F9D48(&((Hero *)(D_0013E633 + 0xE1D))->motion.pos, &moby->pos) < 1.0f) {
-            func_0022ED80(0, 0, (int)moby);
+            Moby_PlaySound(0, 0, (int)moby);
             if (moby->state == 3) {
                 moby->state = 5;
                 Moby_EnterState8WithChildren(D_L06_00160058 + (d->f64 << 8));
@@ -3117,12 +3389,12 @@ void RegisterMobyDrawCallbacks(char *moby) {
     int *data = *(int **)(moby + 0x78);
     int *p;
     int i;
-    AddDrawCallback((void *)func_L06_002FE890, moby);
+    AddDrawCallback((void *)EffectQuad_DrawVariantB, moby);
     p = data;
     for (i = 0; i < 4; p++, i++) {
         if (*p < 0) continue;
         if (is_point_inside_clip_volume(D_L06_00167640, *p)) {
-            AddDrawCallback((void *)func_L06_002FE5D0, moby);
+            AddDrawCallback((void *)EffectQuad_DrawVariantA, moby);
             break;
         }
     }
@@ -3130,7 +3402,7 @@ void RegisterMobyDrawCallbacks(char *moby) {
     for (i = 0; i < 4; p++, i++) {
         char *g = (char *)D_0013E633 + 0xE1D;
         if (*(int *)(g + 0x208C) == 15 || (*p >= 0 && is_point_inside_clip_volume(D_L06_00167640, *p))) {
-            AddDrawCallback((void *)func_L06_002FEB78, moby);
+            AddDrawCallback((void *)EffectQuad_DrawVariantC, moby);
             return;
         }
     }

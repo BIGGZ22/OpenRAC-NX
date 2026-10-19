@@ -11,6 +11,7 @@
  *   - p14, run 15: SIZE 5212/5292; independent stack locals preserve layout and emit the same instructions as the 
  *   - p15, run 16: SIZE 5212/5292; aligned float vectors produce identical function instructions and branch graph 
  *   No source writes. Best same-size candidate p8 is BYTES 3575/5292. The p13-p15 line has a stronger matching pro
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 #include "common.h"
 typedef union { float f[4]; struct { float x,y,z,w; } v; unsigned int q __attribute__((mode(TI))); } V43;

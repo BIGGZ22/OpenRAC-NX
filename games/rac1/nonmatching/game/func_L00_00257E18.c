@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Level copy of func_00213A78 (the environment zone a point is in; HeroEnvLighting reads the zone record
    D_L00_0017EFC0[*index]); its tail is the separate catalogue unit func_L00_00257EBC. Walks the
    region spheres D_L00_0017EDC0 (xyz centre, w = radius squared), entries 0..D_L00_0015FC84 inclusive (the

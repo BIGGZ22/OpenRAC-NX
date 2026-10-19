@@ -1,4 +1,4 @@
-/* functional: high. Corrected from nonmatching/game/func_0020E6B8.c: the group pass advanced the target list when mode & 0x1000 was clear; retail (func_0020E838, two slti) advances it when the bit is set, as the first pass does. */
+/* functional: high. fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). Corrected from nonmatching/game/func_0020E6B8.c: the group pass advanced the target list when mode & 0x1000 was clear; retail (func_0020E838, two slti) advances it when the bit is set, as the first pass does. */
 /*
  * Moby list head (MobyUpdateLoop): builds the run list of this frame in
  * scratchpad, then returns the first list head.

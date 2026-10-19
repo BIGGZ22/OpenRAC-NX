@@ -1,4 +1,4 @@
-/* functional: medium. corrected from nonmatching/game/func_001F9CE8.c: the VU0 flushes a square that is denormal to zero and saturates one that overflows to the largest float, so the sum is never inf and the Newton step never gives NaN (the old version did for |x| or |y| above about 1.8e19); Newton's seed and five steps are kept, and VU0's vsqrt may still differ from it in the last bit. Returns sqrt(x*x + y*y) over x and y only; z and w are not read. */
+/* functional: medium. fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). corrected from nonmatching/game/func_001F9CE8.c: the VU0 flushes a square that is denormal to zero and saturates one that overflows to the largest float, so the sum is never inf and the Newton step never gives NaN (the old version did for |x| or |y| above about 1.8e19); Newton's seed and five steps are kept, and VU0's vsqrt may still differ from it in the last bit. Returns sqrt(x*x + y*y) over x and y only; z and w are not read. */
 float func_001F9CE8(float *v)
 {
     union { float f; unsigned int i; } u;

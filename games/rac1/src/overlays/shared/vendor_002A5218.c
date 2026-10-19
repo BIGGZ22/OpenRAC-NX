@@ -35,7 +35,7 @@ void ScaleTableIntoBuffer(char *arg, int val, float scale) {
 }
 
 // Call vendor setup with a fixed value; the scale it was given goes through untouched.
-void func_L02_002A52B0(char *arg, float scale) {
+void ScaleTableIntoBuffer128(char *arg, float scale) {
     ScaleTableIntoBuffer(arg, 0x80, scale);
 }
 typedef struct Arg_2A52D0 {
@@ -240,7 +240,7 @@ extern char D_L02_0016D0C0[];
 extern int *D_L02_00161240 MACRO_ADDR;
 
 // Copy four level floats into the draw state, then queue a two-register GS packet from it.
-void func_L02_002A58C0(void) {
+void Backdrop_QueueGsPacket(void) {
     char *b;
     long *g;
     int *q;
@@ -276,6 +276,7 @@ void func_L02_002CCD18(char *moby) {
     }
 }
 extern int func_L00_002DCDA8_pt(void *, void *, void *) __asm__("func_L00_002DCDA8");
+/* Calls func_L00_002DCDA8(a) and sets state 9 from its result; returns the result. */
 int Moby_UpdateState9FromCheck(char *a, void *pos, void *target) {
     int r = func_L00_002DCDA8_pt(a, pos, target);
     if (r == 0) {
@@ -679,7 +680,7 @@ void RingMarkersDraw(char *moby) {
 
     VU1_addGSregister(0x47, 0x5380b);
     ctx.texture = GetEffectTex(0x10);
-    func_L02_002DC2C0();
+    RingMarker_DrawQuads();
     {
         int n, *q;
         for (n = 11, q = markers->v; n >= 0; --n, ++q) {
@@ -736,9 +737,9 @@ void RingMarkersDraw(char *moby) {
                     }
                 }
             }
-            func_L02_002DBD70(ctx.texture, FastAddRots(angle, 0.31415927f), (float)(*(int *)&D_L02_00161BE0), distance, color);
+            RingMarker_DrawScroll(ctx.texture, FastAddRots(angle, 0.31415927f), (float)(*(int *)&D_L02_00161BE0), distance, color);
             if (draw_second) {
-                func_L02_002DBD70(ctx.texture, FastAddRots(angle, 0.31415927f), distance, (float)(*(int *)&D_L02_00161BE0), (*(int *)&D_L02_00161C44));
+                RingMarker_DrawScroll(ctx.texture, FastAddRots(angle, 0.31415927f), distance, (float)(*(int *)&D_L02_00161BE0), (*(int *)&D_L02_00161C44));
             }
         }
     }
@@ -772,9 +773,9 @@ void RingMarkersDraw(char *moby) {
                     color = (*(int *)&D_L02_00161C40);
                 }
             }
-            func_L02_002DBD70(ctx.texture, FastAddRots(angle, 0.31415927f), (float)(*(int *)&D_L02_00161BD4), distance, color);
+            RingMarker_DrawScroll(ctx.texture, FastAddRots(angle, 0.31415927f), (float)(*(int *)&D_L02_00161BD4), distance, color);
             if (draw_second) {
-                func_L02_002DBD70(ctx.texture, FastAddRots(angle, 0.31415927f), distance, (float)(*(int *)&D_L02_00161BD4), (*(int *)&D_L02_00161C44));
+                RingMarker_DrawScroll(ctx.texture, FastAddRots(angle, 0.31415927f), distance, (float)(*(int *)&D_L02_00161BD4), (*(int *)&D_L02_00161C44));
             }
         }
     }
@@ -806,9 +807,9 @@ void RingMarkersDraw(char *moby) {
                     color = (*(int *)&D_L02_00161C40);
                 }
             }
-            func_L02_002DBD70(ctx.texture, FastAddRots(angle, 0.31415927f), (float)(*(int *)&D_L02_00161BC8), distance, color);
+            RingMarker_DrawScroll(ctx.texture, FastAddRots(angle, 0.31415927f), (float)(*(int *)&D_L02_00161BC8), distance, color);
             if (draw_second) {
-                func_L02_002DBD70(ctx.texture, FastAddRots(angle, 0.31415927f), distance, (float)(*(int *)&D_L02_00161BC8), (*(int *)&D_L02_00161C44));
+                RingMarker_DrawScroll(ctx.texture, FastAddRots(angle, 0.31415927f), distance, (float)(*(int *)&D_L02_00161BC8), (*(int *)&D_L02_00161C44));
             }
         }
     }
@@ -1049,7 +1050,7 @@ extern s32 func_001F4868(s32);
 typedef unsigned long u64_t;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002a4038.c, FUN_L02_002da938. */
-void func_L02_002DBD70(void *unused, f32 a, f32 b, f32 c, s32 d) {
+void RingMarker_DrawScroll(void *unused, f32 a, f32 b, f32 c, s32 d) {
     u64_t m[4];
     s32 a4[4];
     s32 p4[4];
@@ -1161,7 +1162,7 @@ int func_001F4868(int);
 void func_L02_0020BF88_DC2C0(Q_2dae88 *, int *, int *, int, int) __asm__("func_L02_0020BF88");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002a4038.c, FUN_L02_002dae88. */
-void func_L02_002DC2C0(void) {
+void RingMarker_DrawQuads(void) {
     Q_2dae88 q;
     int c[4];
     int b[4];
@@ -1431,7 +1432,7 @@ void Moby1005Update(char *moby) {
             DeleteMoby(moby);
             break;
         }
-        func_00214358(moby + 0x10, 0, 0.5f);
+        ProbeGroundHeight(moby + 0x10, 0, 0.5f);
         *(float *)(moby + 0x40) = 1.5707964f;
         *(float *)(moby + 0x44) = 3.1415927f;
         *(float *)(moby + 0x18) = D_L02_001744E8 + k;
@@ -2198,7 +2199,7 @@ void BreakOnHitL02Update(char *m) {
         if (hit) m[0x20] = 2;
         break;
     case 2:
-        func_0022ED80(0, 0, (int)m);
+        Moby_PlaySound(0, 0, (int)m);
         SpawnBreakFxByDistance(m);
         SpawnMobyBurstFx(m, 0x71D, 1, 0x71D, 1, 5, 2);
         SpawnMobyCopyingPlacement(m, 0x71C);
@@ -2257,12 +2258,12 @@ extern S_2fa6d8 D_L02_00167680_FBB10 __asm__("D_L02_00167680");
 extern void func_L02_002FBB48(void);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002ec308.c, FUN_L02_002fa6d8. */
-void func_L02_002FBB10(void) {
+void CamOffsetFx_Reset(void) {
     D_L02_00167680_FBB10.a = 0;
     D_L02_00167680_FBB10.b = 0;
     D_L02_00167680_FBB10.c = 10000.0f;
     D_L02_00167680_FBB10.d = 0;
-    D_L02_00167680_FBB10.e = func_L02_002FBB48;
+    D_L02_00167680_FBB10.e = CamOffsetFx_Begin;
 }
 extern float D_L02_0016768C;
 extern void func_L00_002E99A0(int, float, float);
@@ -2270,10 +2271,10 @@ extern void func_L02_002FBBA8(void);
 extern void func_L02_001FC308(void (*)(void));
 
 /* Start the timed effect while its duration is nonzero. */
-void func_L02_002FBB48(void) {
+void CamOffsetFx_Begin(void) {
     if (D_L02_0016768C != 0.0f) {
         Cam_SetEyeOffset(1, D_L02_0016768C * 0.35f + 0.0f, 0.005f);
-        RegisterUniqueCallback(func_L02_002FBBA8);
+        RegisterUniqueCallback(CamOffsetFx_Tick);
     }
 }
 typedef struct {
@@ -2285,7 +2286,7 @@ typedef struct {
 extern S D_L02_00167680;
 extern short D_L02_0016241C;
 // Resets a timer block: sets a large value and decays a countdown toward zero.
-void func_L02_002FBBA8(void) {
+void CamOffsetFx_Tick(void) {
     S *s = &D_L02_00167680;
     s->c = 10000.0f;
     if (s->b == 0) {
@@ -2306,7 +2307,7 @@ extern char D_L02_00167300[];
 extern char D_0013A5E0[];
 
 // Tracks the nearest target in front of the player that lies inside a view cone.
-void func_L02_002FBC00(char *m) {
+void Camera_TrackNearestTarget(char *m) {
     float v[4];
     char *g = D_L02_00167300;
     char *p = *(char **)(g + 0x180);
@@ -2361,7 +2362,7 @@ extern int func_L00_00260B68(void *, int);
 extern int func_L00_0025A778(void *, void *, int);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/002ec308.c, FUN_L02_002fb648. */
-int func_L02_002FCA80(char *moby) {
+int CameraMoby_IsHeroInTrigger(char *moby) {
     char *special = D_L02_0016755C;
     char *data = *(char **)(D_L02_0015F050 + *(short *)(moby + 0x84) * 32 + 0x1c);
     char *target = *(char **)(data + 0x48);
@@ -2474,7 +2475,7 @@ INCLUDE_ASM("asm/overlays", func_L02_002FCE00);
 extern int func_L02_002FCE00(char *);
 
 // Camera init: runs the setup when the flag is clear and the camera record is not negative, then clears a field and returns 0.
-int func_L02_002FD6D0(char *moby) {
+int CameraMoby_Init(char *moby) {
     char *cam = *(char **)(D_L02_0015F050 + *(short *)(moby + 0x84) * 32 + 0x1C);
     if (*(short *)(D_L02_00167480 + 0x86) == 0 && *(short *)(cam + 0x20) >= 0) func_L02_002FCE00(moby);
     *(int *)(cam + 0x50) = 0;

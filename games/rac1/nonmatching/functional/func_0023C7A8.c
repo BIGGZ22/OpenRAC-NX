@@ -1,4 +1,4 @@
-/* functional: medium. vblankHandler: same reads, writes and calls in the same order. Retail ends with sync + ei (re-enable interrupts) before returning 0; those two have no effect on the host and are left out. */
+/* functional: medium. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). vblankHandler: same reads, writes and calls in the same order. Retail ends with sync + ei (re-enable interrupts) before returning 0; those two have no effect on the host and are left out. */
 extern int func_001232E0(int);
 extern int func_00120858(int, int);
 extern void func_001235C8(int, int);

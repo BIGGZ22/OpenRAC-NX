@@ -239,7 +239,7 @@ char *Moby564Spawn(float *pos, float *dir, float *target, float a, float b, int 
         *(int *)(data + 0x38) = kind;
         *(float *)(moby + 0x48) = func_L00_001FF860(dir[0], dir[1]);
         *(float *)(moby + 0x44) = -func_L00_001FF860(func_001F9CE8(dir), dir[2]);
-        func_0022ED80(0, 0, (int)moby);
+        Moby_PlaySound(0, 0, (int)moby);
     }
     return moby;
 }
@@ -417,7 +417,7 @@ void Moby568Update(unsigned char *moby) {
         if (moby[0x31]) {
             char buf[0x50];
             float b[4];
-            int r = func_L00_00260D30((char *)moby, buf, 6.0f);
+            int r = FindNearestTargetMoby((char *)moby, buf, 6.0f);
             char *hit;
             
             char *vel;
@@ -539,7 +539,7 @@ char *Moby568Launch(float f, int a0, int idx, float *p6, float *p7, int a8) {
         *(int *)(data + 0x194) = a8;
         *(int *)(data + 0x198) = a0;
         *(int *)(data + 0x19C) = 0;
-        func_0022ED80(0, 0, (int)moby);
+        Moby_PlaySound(0, 0, (int)moby);
     }
     return moby;
 }
@@ -592,7 +592,7 @@ extern int func_L00_002DCDA8_D74F8(void *) __asm__("func_L00_002DCDA8");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002d6108. */
 extern int func_L00_002DCDA8_D74F8_pos(void *, void *, void *) __asm__("func_L00_002DCDA8");
-int func_L18_002D74F8(struct Moby *m, void *pos, void *target) {
+int Moby_StepStunState(struct Moby *m, void *pos, void *target) {
     char *d = (char *)m->pvars;
     int r = func_L00_002DCDA8_D74F8_pos(m, pos, target);
     if (r != 0) {
@@ -794,7 +794,7 @@ void EnergyFieldEmitterUpdate(char *moby) {
     case 0: {
         *(float *)(moby + 0x18) = *(float *)(moby + 0x18) + 1.0f;
         *(int *)(moby + 0x94) = 0;
-        *(float *)(moby + 0x18) = func_00214358(moby + 0x10, 0, 0.5f);
+        *(float *)(moby + 0x18) = ProbeGroundHeight(moby + 0x10, 0, 0.5f);
         qcopy(d, moby + 0x10);
         if (D_L18_001748D8 != 0) {
             d->i38 = 1;
@@ -857,13 +857,13 @@ void EnergyFieldEmitterUpdate(char *moby) {
         if (d->f24 != 0.0f) {
             if ((d->i30 == 0 && func_001F9908((int *)&d->f2C) == 2) ||
                 (D_L18_0015F6A8 == 2 && D_L18_0016D310 >= 4)) {
-                func_0022ED80(0, 0, (int)moby);
+                Moby_PlaySound(0, 0, (int)moby);
                 d->f24 = 0;
             }
             {
                 char *b = D_0013E633 + 0xE1D;
                 if (*(short *)(b + 0x30E) == 0 && *(int *)(b + 0x2084) == 0x22) {
-                    func_0022ED80(0, 0, (int)moby);
+                    Moby_PlaySound(0, 0, (int)moby);
                     d->f24 = 0;
                 }
             }
@@ -1120,7 +1120,7 @@ void Moby_DeactivateStopSound(unsigned char *arg) {
     }
 }
 /* Moby state check: state 3 becomes 1 and returns 1; state 2 returns -1 when data+0x6C is zero; else 0. */
-int func_L18_002D9440(char *moby) {
+int BossTimer_Poll(char *moby) {
     unsigned char st = moby[0x20];
     char *data = *(char **)(moby + 0x78);
     if (st == 3) {
@@ -1152,7 +1152,7 @@ extern int func_001F6FD8(int a, int b, int c, int d, int e);
 #define W(x) (*(int *)&(x))
 
 /* Draws the level timer as "H:MM:SS.t" text with a pulsing colour. */
-void func_L18_002D9488(char *moby) {
+void BossTimer_Draw(char *moby) {
     char buf[8];
     char *data = *(char **)(moby + 0x78);
     float v;
@@ -1232,7 +1232,7 @@ extern float func_00214158(void);
 extern int func_0022ED80_D96B0(int, int, struct Moby *) __asm__("func_0022ED80");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002d82c0. */
-void func_L18_002D96B0(struct Moby *moby) {
+void SinkingPlatformUpdate(struct Moby *moby) {
     char *data;
     float delta[4] __attribute__((aligned(16)));
     float old_rot[4] __attribute__((aligned(16)));
@@ -1378,7 +1378,7 @@ typedef struct {
 } Level18State;
 
 /* Return one for the active state; advance state two to five. */
-int func_L18_002D9C48(Level18State *obj) {
+int Moby587_PollState(Level18State *obj) {
     if (obj->state == 1) {
         return 1;
     }
@@ -1530,7 +1530,7 @@ void FallingFireballUpdate(char *moby) {
         }
         FastVecAdd(moby + 0x10, moby + 0x10, d);
         {
-            float t = func_00214358(moby + 0x10, 0, 0.5f);
+            float t = ProbeGroundHeight(moby + 0x10, 0, 0.5f);
             if (*(float *)(moby + 0x18) - 0.333f < t) {
                 ((unsigned char *)moby)[0x20] = 1;
                 *(float *)(moby + 0x18) = t + 0.333f;
@@ -2113,7 +2113,7 @@ void VendorMobyUpdate(char *moby) {
 extern float D_0015EE70 MACRO_ADDR;
 
 // Initialise a moby's data block from five vectors and a few parameters.
-void func_L18_002E0E90(char *moby, void *v0, void *v1, void *v2, void *v3, void *v4, int a6, int a7, int a8) {
+void FinalBoss_StartMove(char *moby, void *v0, void *v1, void *v2, void *v3, void *v4, int a6, int a7, int a8) {
     char *data = *(char **)(moby + 0x78);
     *(int *)(data + 0x60) = 0;
     *(int *)(data + 0x64) = 0;
@@ -2144,7 +2144,7 @@ float Moby_GetFloatValue(Level18VendorFloatMoby *moby) {
     return moby->data->value;
 }
 /* 1 when the byte at +0x20 is 2, 2 when it is 3, else 0 */
-int func_L18_002E0F90(u8 *p) {
+int FinalBoss_GetMoveStatus(u8 *p) {
     int c = p[0x20];
     if (c == 2) return 1;
     if (c == 3) return 2;
@@ -2183,7 +2183,7 @@ void func_L18_002EB240(char *arg);
 typedef struct { char pad[0x40]; float r0; float r1; } MobyR;
 
 /* Update function of a debris moby: spawn, burst into sparks and particles, fall. */
-void func_L18_002EAB58(char *moby) {
+void HitTrigger_Update(char *moby) {
     char *data = *(char **)(moby + 0x78);
     union {
         struct { int a[6]; int pad0[2]; int b[6]; int pad1[2]; float v[4]; } s1;
@@ -2332,7 +2332,7 @@ void HomingSpark_Update(char *moby) {
         HomingSpark_EmitTrail(moby);
         rand_vec(q, *(float *)&D_L18_00161F68 * d[9], *(float *)&D_L18_00161F68 * d[9]);
         FastVecAdd(q, q, p);
-        func_L18_002EC0C8(moby);
+        HomingSpark_InitTrail(moby);
         ArcEmitterUpdate(moby);
         AddDrawCallback((void (*)(void))UpdateBeamCurves, moby);
         if (len < lim) {
@@ -2343,7 +2343,7 @@ void HomingSpark_Update(char *moby) {
         func_L00_001FF4B0(buf, buf, lim);
         FastVecAdd(p, p, buf);
         qcopy(buf2, p);
-        buf2[2] = func_00214358(buf2, 0, 0.5f);
+        buf2[2] = ProbeGroundHeight(buf2, 0, 0.5f);
         func_L00_0025A8E8_2EB260(*(int *)(d + 8), p, 2.0f, 0x10001, 5.0f, 1.0f, 0, 1, 0);
         func_L00_0025A8E8_2EB260(*(int *)(d + 8), buf2, 2.0f, 0x10001, 5.0f, 1.0f, 0, 1, 0);
         if (func_001F9908((int *)(d + 13))) {
@@ -2988,7 +2988,7 @@ void Moby1355Update(char *moby) {
         *(short *)(moby + 0x32) = 0xFF;
         qcopy(d + 0x120, moby + 0x10);
         *(float *)(d + 0x128) += 5.0f;
-        *(float *)(d + 0x128) = func_00214358(d + 0x120, 0, 0.5f);
+        *(float *)(d + 0x128) = ProbeGroundHeight(d + 0x120, 0, 0.5f);
         Moby1355_PickWanderPoint(moby, d + 0x110);
         moby[0x20] = 1;
         *(unsigned short *)(moby + 0x34) |= 1;

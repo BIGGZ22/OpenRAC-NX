@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Native PAL hit spheres: func_L00_0025A8E8 (0x134 bytes) and func_L00_0025AA20
  * (0xA0 bytes, linked on levels 0, 6, 10, 16 and 18 only), which the decompilation

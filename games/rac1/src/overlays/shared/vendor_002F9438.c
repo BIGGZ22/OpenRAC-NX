@@ -234,7 +234,7 @@ void func_L07_003121D0(u8 *moby)
         *(quadword *)vectors = *(quadword *)(vectors + 4);
         *(f32 *)(data + 0x0c) = FastVecLength(vectors);
         if (*(s32 *)(data + 0x30) != -1)
-            func_0022ED80(*(s32 *)(data + 0x30), 0, moby);
+            Moby_PlaySound(*(s32 *)(data + 0x30), 0, moby);
         moby[0x20] = 2;
         return;
     case 2:
@@ -245,7 +245,7 @@ void func_L07_003121D0(u8 *moby)
             if (other != 0 && other[0x20] != 0xfe && other[0x20] != 0xfd &&
                 other[0x20] == *(u32 *)(data + 0x18)) {
                 if (*(s32 *)(data + 0x30) != -1)
-                    func_0022ED80(*(s32 *)(data + 0x30), 0, moby);
+                    Moby_PlaySound(*(s32 *)(data + 0x30), 0, moby);
                 moby[0x20] = 4;
                 return;
             }
@@ -265,7 +265,7 @@ void func_L07_003121D0(u8 *moby)
         *(f32 *)(data + 0x0c) = 0.0f;
         moby[0x20] = 3;
         if (*(s32 *)(data + 0x34) != -1)
-            func_0022ED80(*(s32 *)(data + 0x30), 0, moby);
+            Moby_PlaySound(*(s32 *)(data + 0x30), 0, moby);
         return;
     case 3:
         if (*(s32 *)(data + 0x38) != -1)
@@ -278,7 +278,7 @@ void func_L07_003121D0(u8 *moby)
             return;
         *(s32 *)(data + 0x0c) = 0;
         if (*(s32 *)(data + 0x30) != -1)
-            func_0022ED80(*(s32 *)(data + 0x30), 0, moby);
+            Moby_PlaySound(*(s32 *)(data + 0x30), 0, moby);
         moby[0x20] = 4;
         return;
     case 4:
@@ -289,7 +289,7 @@ void func_L07_003121D0(u8 *moby)
             other[0x20] == 0xfe || other[0x20] == 0xfd ||
             other[0x20] == *(u32 *)(data + 0x14)) {
             if (*(s32 *)(data + 0x30) != -1)
-                func_0022ED80(*(s32 *)(data + 0x30), 0, moby);
+                Moby_PlaySound(*(s32 *)(data + 0x30), 0, moby);
             moby[0x20] = 2;
         } else {
             *(quadword *)(vectors + 4) = 0;
@@ -306,7 +306,7 @@ void func_L07_003121D0(u8 *moby)
                 return;
             qcopy(moby + 0x10, data);
             if (*(s32 *)(data + 0x30) != -1)
-                func_0022ED80(*(s32 *)(data + 0x34), 0, moby);
+                Moby_PlaySound(*(s32 *)(data + 0x34), 0, moby);
             if (*(s32 *)(data + 0x38) != -1)
                 D_L07_001845A8[*(s32 *)(data + 0x38)] = 0;
             moby[0x20] = 1;
@@ -372,7 +372,7 @@ void func_L07_0031C2B0(u8 *moby)
         *(quadword *)vectors = *(quadword *)(vectors + 4);
         *(f32 *)(data + 0xac) = FastVecLength(vectors);
         if (*(s32 *)(data + 0xd0) != -1)
-            func_0022ED80(*(s32 *)(data + 0xd0), 0, moby);
+            Moby_PlaySound(*(s32 *)(data + 0xd0), 0, moby);
         moby[0x20] = 2;
         break;
     case 2:
@@ -381,7 +381,7 @@ void func_L07_0031C2B0(u8 *moby)
             if (other != 0 && other[0x20] != 0xfe && other[0x20] != 0xfd &&
                 other[0x20] == *(u32 *)(data + 0xb8)) {
                 if (*(s32 *)(data + 0xd0) != -1)
-                    func_0022ED80(*(s32 *)(data + 0xd0), 0, moby);
+                    Moby_PlaySound(*(s32 *)(data + 0xd0), 0, moby);
                 moby[0x20] = 4;
                 break;
             }
@@ -402,7 +402,7 @@ void func_L07_0031C2B0(u8 *moby)
                 D_L07_001845A8[*(s32 *)(data + 0xd8)] = 1;
             moby[0x20] = 3;
             if (*(s32 *)(data + 0xd4) != -1)
-                func_0022ED80(*(s32 *)(data + 0xd0), 0, moby);
+                Moby_PlaySound(*(s32 *)(data + 0xd0), 0, moby);
         }
         break;
     case 3:
@@ -412,7 +412,7 @@ void func_L07_0031C2B0(u8 *moby)
                 other[0x20] == *(u32 *)(data + 0xb8)) {
                 *(s32 *)(data + 0xac) = 0;
                 if (*(s32 *)(data + 0xd0) != -1)
-                    func_0022ED80(*(s32 *)(data + 0xd0), 0, moby);
+                    Moby_PlaySound(*(s32 *)(data + 0xd0), 0, moby);
                 moby[0x20] = 4;
             }
         }
@@ -423,7 +423,7 @@ void func_L07_0031C2B0(u8 *moby)
             other[0x20] == 0xfe || other[0x20] == 0xfd ||
             other[0x20] == *(u32 *)(data + 0xb4)) {
             if (*(s32 *)(data + 0xd0) != -1)
-                func_0022ED80(*(s32 *)(data + 0xd0), 0, moby);
+                Moby_PlaySound(*(s32 *)(data + 0xd0), 0, moby);
             moby[0x20] = 2;
         } else {
             *(quadword *)(vectors + 4) = 0;
@@ -439,7 +439,7 @@ void func_L07_0031C2B0(u8 *moby)
             if (distance < *(f32 *)(data + 0xac)) {
                 qcopy(moby + 0x10, data + 0xa0);
                 if (*(s32 *)(data + 0xd0) != -1)
-                    func_0022ED80(*(s32 *)(data + 0xd4), 0, moby);
+                    Moby_PlaySound(*(s32 *)(data + 0xd4), 0, moby);
                 if (*(s32 *)(data + 0xd8) != -1)
                     D_L07_001845A8[*(s32 *)(data + 0xd8)] = 0;
                 moby[0x20] = 1;

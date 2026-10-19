@@ -435,7 +435,7 @@ void MobySyncVoice(unsigned char *s) {
             s[0x7D] = 0xFF;
         }
     } else if (s[0x7C] != 0xFF) {
-        s[0x7D] = func_0022ED80(s[0x7C], 4, (int)s);
+        s[0x7D] = Moby_PlaySound(s[0x7C], 4, (int)s);
     }
 }
 
@@ -749,7 +749,7 @@ void SpliceShadowDma(void) {
     p[1] = D_00161000;
     p[2] = 0;
     p[3] = 0;
-    func_001F2558(D_0015FFC0, 8);
+    ProfileMarker_End(D_0015FFC0, 8);
 }
 
 extern void func_00118D80(int);
@@ -814,7 +814,7 @@ void DrawMobysSetup(void) {
     D_0015EF74 = D_0015EF78;
     p += 0x10;
     D_00161000 = p;
-    func_001F2560(D_0015FFD0, 1);
+    ProfileMarker_Begin(D_0015FFD0, 1);
     D_00160040 = 0;
     D_00161008 = D_0015F71C - 0x10000;
     D_00160014 = D_0015F718;
@@ -843,16 +843,16 @@ extern int D_00160038 MACRO_ADDR;
    DmaMobyTextures and func_00212508 take nothing. With the arguments
    right, D_0015FFF0 is a plain array, not MACRO_ADDR. */
 void DrawMobysCleanUp(void) {
-    func_001F2560(D_0015FFE0, 3);
+    ProfileMarker_Begin(D_0015FFE0, 3);
     DmaMobyTextures();
-    func_001F2558(D_0015FFE0, 5);
+    ProfileMarker_End(D_0015FFE0, 5);
     if (D_0018A3B0[10] != 0) {
         ProcessMobyAnimData();
         if (D_00160038 != 0) {
             func_00212508();
         }
     }
-    func_001F2558(D_0015FFF0, 3);
+    ProfileMarker_End(D_0015FFF0, 3);
     if (D_0018A3B0[10] != 0 && D_00160040 != 0) {
         SpliceShadowDma();
     }

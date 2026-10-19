@@ -139,13 +139,13 @@ void SndInstReverbBoxUpdate(char *moby) {
         int v = func_001FA898_r(IntToFloat(*(int *)(data + 4)) * t);
         int w = *(int *)(data + 4);
         if (!(w < v)) w = v;
-        func_L01_002A2C90((int)moby, data[0], w, data[1], data[2]);
+        Reverb_SetParams((int)moby, data[0], w, data[1], data[2]);
         data[3] = 1;
     } else if (data[3] != 0) {
         if (b[0] > 0.0f) {
-            func_L01_002A2C90(0, data[0], *(int *)(data + 4), data[1], data[2]);
+            Reverb_SetParams(0, data[0], *(int *)(data + 4), data[1], data[2]);
         } else {
-            func_L01_002A2C90((int)moby, 0, 0, 0, 0);
+            Reverb_SetParams((int)moby, 0, 0, 0, 0);
         }
         data[3] = 0;
     }

@@ -532,8 +532,8 @@ def compiled_data() -> list[tuple[str, str, int]]:
     import core_rodata
     import jump_tables
     out = []
-    for obj, labels in core_rodata.entries():
-        out.append((obj, ".rodata", int(EXE_LABEL.match(labels[0]).group(1), 16)))
+    for obj, section, labels in core_rodata.sections():
+        out.append((obj, section, int(EXE_LABEL.match(labels[0]).group(1), 16)))
     for label, _func, obj in jump_tables.provided():
         m = EXE_LABEL.match(label)
         if m:                                      # level code's tables live in the levels

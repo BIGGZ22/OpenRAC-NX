@@ -1,3 +1,4 @@
+/* fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Writes a 4x4 matrix with s on the first three diagonal entries and
    1 in the last entry: m = diag(s, s, s, 1), row by row (VU0 layout). */
 void func_001FA1C0(float *m, float s)

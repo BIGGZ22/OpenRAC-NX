@@ -132,7 +132,7 @@ void TrooperUpdate(struct Moby *m) {
     s32 n;
     s32 i;
 
-    func_L00_00260D30(m, &target, 100.0f);
+    FindNearestTargetMoby(m, &target, 100.0f);
     sight = 14.0f;
     Manipulator_ApplyScale(m, 0, v->unk160, 4.5f);
     func_L03_002CBBD0_CB280(m);
@@ -261,7 +261,7 @@ void TrooperUpdate(struct Moby *m) {
     if (m->state < 4) {
         v->fall_speed += D_0015EE70 * 9.8f;
         m->pos.z -= v->fall_speed - 2.0f;
-        ground = func_00214358(&m->pos, 0, 0.5f);
+        ground = ProbeGroundHeight(&m->pos, 0, 0.5f);
         m->pos.z -= 2.0f;
         if (m->pos.z < ground) {
             m->pos.z = ground;
@@ -776,7 +776,7 @@ void RailTaxiUpdate(struct Moby *m) {
     s32 i;
     s32 r;
 
-    func_L00_002676A0(m, IsTaxiInTransit((u8 *)m));
+    LevelTable_SetSlotValue(m, IsTaxiInTransit((u8 *)m));
     if (D_L03_00161B84_D4560 != 0) {
         for (i = 0; i < D_L03_001B08B0_D4560[v->out[0]]->count; i++) {
             PartType41Spawn(&D_L03_001B08B0_D4560[v->out[0]]->pts[i], m, 4, 0x800000FF, 0x7F, 2, 0xFF, 0.333f);
@@ -858,7 +858,7 @@ void RailTaxiUpdate(struct Moby *m) {
         }
         break;
     case 4:
-        if (!func_L00_002347B8()) {
+        if (!Level_GetSpecialMode()) {
             m->state = 5;
         }
         break;
@@ -1204,7 +1204,7 @@ extern void func_0020D960(char *, int, void *);
 extern short D_L03_00161C34;
 
 /* triggers objects matching the moby's class, with per-segment settings */
-void func_L03_002DBAD8(char *moby) {
+void QuestGiver_AttachCheatManipulator(char *moby) {
     int i;
     if (D_L03_0015F6A8 == 2 && gCheats[0]) {
         if (D_L03_0016C9E0.a == 2 && D_L03_0016C9E0.b >= 0x1EA && D_L03_0016C9E0.b < 0x266) {
@@ -1311,7 +1311,7 @@ void QuestGiverUpdate(struct Moby *m) {
     float pitch;
     int tracking;
 
-    func_L03_002DBAD8(m);
+    QuestGiver_AttachCheatManipulator(m);
     switch (m->state) {
     case 0:
         if (gHaveHeliPack[10] != 0) {
@@ -1328,11 +1328,11 @@ void QuestGiverUpdate(struct Moby *m) {
         m->state = 1;
         talk->script = D_L03_00161C38;
         v->talk.unk48 = 5;
-        ((void (*)(struct Moby *, struct TalkState_hg *))func_L00_002676E8)(m, talk);
+        ((void (*)(struct Moby *, struct TalkState_hg *))DialogRequest_Init)(m, talk);
         SetMobyZBand(m);
         break;
     case 1:
-        if (func_L00_00267290(m, talk)) {
+        if (Npc_TryStartDialog(m, talk)) {
             PlaceMarkerAheadOfMoby(2.3f, m);
             m->state = 2;
             if (v->link != -1) {
@@ -1671,7 +1671,7 @@ void GuideUpdate(struct Moby *m) {
     int tracking;
     u8 group;
 
-    func_L03_002DC848(m);
+    AttachCheatManipulatorToMatchingL03(m);
     switch (m->state) {
     case 0:
         if (*(s32 *)(D_0013D605 + 0x1FF) == 0) {
@@ -1688,7 +1688,7 @@ void GuideUpdate(struct Moby *m) {
         }
         m->spawn_frame = *(u64 *)(*(char **)&D_0013E633[0x2E9D] + 0x38);
         m->state = 1;
-        func_L00_002676E8(m, &v->talk);
+        DialogRequest_Init(m, &v->talk);
         SetMobyZBand(m);
         if (gHaveHeliPack[0] != 0) {
             v->talk.unk36 = -1;
@@ -1717,7 +1717,7 @@ void GuideUpdate(struct Moby *m) {
             break;
         }
         }
-        if (func_L00_00267290(m, &v->talk)) {
+        if (Npc_TryStartDialog(m, &v->talk)) {
             if (v->turned == 0) {
                 m->rot.z = FastAddRots(m->rot.z, 3.1415927f);
                 v->turned = 1;
@@ -1913,14 +1913,14 @@ void Moby914Update(unsigned char *m) {
     case 0:
         *(unsigned long *)(m + 0x38) = *(unsigned long *)(D_001414D0[0] + 0x38);
         m[0x20] = 1;
-        func_L00_002676E8(m, (unsigned char *)d);
+        DialogRequest_Init(m, (unsigned char *)d);
         if (D_0013D4A5[4] != 0) {
             d->mode = 1;
             d->unk36 = 2;
         }
         break;
     case 1:
-        if (func_L00_00267290(m, (unsigned char *)d)) {
+        if (Npc_TryStartDialog(m, (unsigned char *)d)) {
             D_0013D4A5[4] = 1;
             PlaceMarkerAheadOfMoby(2.7f, m);
             m[0x20] = 2;
@@ -2561,7 +2561,7 @@ void Kerwan_BreakOnHitUpdate(char *m) {
         if (hit) m[0x20] = 2;
         break;
     case 2:
-        func_0022ED80(0, 0, (int)m);
+        Moby_PlaySound(0, 0, (int)m);
         SpawnBreakFxByDistance(m);
         SpawnMobyBurstFx(m, 0x725, 1, 0x725, 1, 1, 2);
         SpawnMobyCopyingPlacement(m, 0x724);
@@ -2753,14 +2753,25 @@ void Camera14_RebuildAxes(void *arg) {
     func_L00_001FF4B0(m + 0x10, m + 0x10, 1.0f);
     FastVecCross(m + 0x20, m + 0x10, m);
 }
-INCLUDE_ASM("asm/overlays", func_L03_002ED138);
+int func_L03_002ED138(void) {
+    char *g = D_0013E633 + 0xE1D;
+
+    if (*(int *)(g + 0x2284) != 0x50 || *(int *)(g + 0x2084) == 0x11) {
+        if (*(int *)(g + 0x2084) != 6) {
+            goto none;
+        }
+    }
+    return -1;
+none:
+    return 0;
+}
 extern void func_L03_002ECEC8(void *);
 extern void func_001E9768(void *);
 extern void func_L03_002ED020(void *);
 
 void Camera14Update(void *arg) {
     Camera14_SmoothPosition(arg);
-    func_001E9768(arg);
+    Profile_Mark(arg);
     Camera14_RebuildAxes(arg);
 }
 extern int D_L03_0015F050 MACRO_ADDR;

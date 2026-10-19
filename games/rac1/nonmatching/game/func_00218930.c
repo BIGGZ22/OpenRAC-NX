@@ -1,3 +1,4 @@
+/* fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* CreatePart's allocator (hand-written): takes particle slot `cur` (gp-0x6B50) when it is below 0x800,
    marks it in the use bitmap D_001CDB00, then moves the cursor on: one past it when it was above the
    high-water mark (gp-0x6B4C), else to the first free bit from the start of the byte holding cur + 1

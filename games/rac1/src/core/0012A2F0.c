@@ -242,10 +242,13 @@ void func_0012AA70(void *arg0, int arg1, int arg2, int arg3) {
     func_0012AAC8(arg0, 0);
 }
 
-/* Bitstream peek: the top n bits of the 64-bit accumulator at +0x0, as
-   an int. The truncation's dsra sits in the return's delay slot, as the
-/* func_0012AAA8: matched only with the truncation's last instruction moved into the return slot by a removed step (docs/BUILD_FIDELITY.md, "Removed"). */
-INCLUDE_ASM("asm/nonmatchings/core_text", func_0012AAA8);
+/* Peek n high bits of the 64-bit accumulator, without consuming them.
+ * As a C shift, this requires 1 <= n <= 64. GNU 2.10-ee assembles the
+ * final int conversion directly into the return delay slot. */
+int func_0012AAA8(void *arg0, int n) {
+    unsigned long acc = *(unsigned long *)arg0;
+    return (int)(acc >> (64 - n));
+}
 
 /* The bitstream reader's state (func_0012AA70 sets it up). */
 typedef struct {

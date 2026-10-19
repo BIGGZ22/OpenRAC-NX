@@ -569,6 +569,15 @@ def _run_jobs(jobs):
     """Needs spimdisasm (only installed in the build container). One process,
     one call per level -- avoids re-starting the container or re-parsing
     each level's symbol_addrs per function."""
+    if len(jobs) > 1:
+        # Each level is its own spimdisasm call writing its own folders: run them at once, one
+        # process per level up to the cores there are (the output is the same as in turn).
+        import os
+        from concurrent.futures import ProcessPoolExecutor
+        with ProcessPoolExecutor(max_workers=min(len(jobs), os.cpu_count() or 1)) as pool:
+            for _ in pool.map(_run_jobs, [[job] for job in jobs]):
+                pass
+        return
     from spimdisasm.singleFileDisasm.SingleFileDisasmInternals import (  # type: ignore
         getArgsParser, processArguments)
 

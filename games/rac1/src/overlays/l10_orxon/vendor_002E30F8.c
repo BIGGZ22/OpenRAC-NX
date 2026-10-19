@@ -647,7 +647,7 @@ void ToxicCrabUpdate(Moby2E30F8 *m) {
 
             d->f78 = d->f78 - d->f80;
             func_L00_001FF240(tmp, m->pos, d->v70);
-            if (m->pos[2] < func_00214358(m->pos, 0, 0.5f)) {
+            if (m->pos[2] < ProbeGroundHeight(m->pos, 0, 0.5f)) {
                 int q;
                 float x;
                 r = CollType();
@@ -701,7 +701,7 @@ void ToxicCrabUpdate(Moby2E30F8 *m) {
     }
     }
     if (m->state == 3 || m->state == 5 || m->state == 7 || m->state == 8) {
-        float g = func_00214358(m->pos, 0, 0.5f);
+        float g = ProbeGroundHeight(m->pos, 0, 0.5f);
         if (g < m->pos[2]) {
             d->f78 = d->f78 - d->f80;
             if (d->f78 < D_0015EE6C * -7.0f) {
@@ -1333,7 +1333,7 @@ void BlargShipUpdate(Ship_5E48 *m) {
                 FastVecScale(&C, &((struct Hero *)(D_0013E633 + 0xE1D))->motion.displacement, (float)scale_ticks(20));
                 *(u128_2E52B0 *)&B = *(u128_2E52B0 *)&C;
                 func_L00_001FF240(&C, &A, &B);
-                A.z = func_00214358(&A, 0, 0.5f);
+                A.z = ProbeGroundHeight(&A, 0, 0.5f);
             }
             A.z += 0.2f;
             D_L10_00174358 = tgt;
@@ -1391,7 +1391,7 @@ void BlargShipUpdate(Ship_5E48 *m) {
                 FastVecScale(&C, &((struct Hero *)(D_0013E633 + 0xE1D))->motion.displacement, (float)scale_ticks(20));
                 *(u128_2E52B0 *)&B = *(u128_2E52B0 *)&C;
                 func_L00_001FF240(&C, &A, &B);
-                A.z = func_00214358(&A, 0, 0.5f);
+                A.z = ProbeGroundHeight(&A, 0, 0.5f);
             }
             A.z += 0.2f;
             D_L10_00174358 = tgt;
@@ -1603,7 +1603,7 @@ void NanotechVendorUpdate(char *m) {
             if (func_001F9D48(m + 0x10, g + 0x80) < 4.0f) {
                 if (*(int *)(d + 4) == 0) {
                     if (D_L10_0015F6A8 != 2) {
-                        func_L00_002676A0(m, 1);
+                        LevelTable_SetSlotValue(m, 1);
                         p = D_0013D355 + 0x13B;
                         if (p[4] == 0) {
                             if (gBolts > 4000) {
@@ -2176,8 +2176,8 @@ void EffectEmitterUpdate(char *m) {
     int n=*(int *)tab;
     if(n>32)n=32;
     if(n>0) {int count=n;float *height=(float *)(tab+0x1C);
-    do {*height=func_00214358(pos,0,0.5f);pos+=0x10;height+=4;}while(--count);}
-   }else *(float *)(d+0x88)=func_00214358(m+0x10,0,0.5f);
+    do {*height=ProbeGroundHeight(pos,0,0.5f);pos+=0x10;height+=4;}while(--count);}
+   }else *(float *)(d+0x88)=ProbeGroundHeight(m+0x10,0,0.5f);
    m[0x20]=2;break;
   case 2:m[0x20]=3;break;
   }
@@ -2384,7 +2384,7 @@ void Moby1855Update(char *m) {
         if (hit) m[0x20] = 2;
         break;
     case 2:
-        func_0022ED80(0, 0, (int)m);
+        Moby_PlaySound(0, 0, (int)m);
         SpawnBreakFxByDistance(m);
         SpawnMobyBurstFx(m, 0x742, 1, 0x742, 1, 11, 2);
         DeleteMoby(m);
@@ -2408,7 +2408,7 @@ void Moby1856Update(char *moby) {
         if (ok != 0) moby[0x20] = 2;
         break;
     case 2:
-        func_0022ED80(0, 0, (int)moby);
+        Moby_PlaySound(0, 0, (int)moby);
         SpawnBreakFxByDistance(moby);
         SpawnMobyCopyingPlacement(moby, 0x741);
         DeleteMoby(moby);

@@ -105,10 +105,29 @@ void HelpPopup_RequestDismiss(void) {
 }
 extern char D_L00_00179548[];
 // Clears a halfword global.
-void func_L00_00204190(void) {
+void Moby_ClearGadgetControl(void) {
     *(short *)D_L00_00179548 = 0;
 }
-INCLUDE_ASM("asm/overlays", func_L00_00205110);
+extern unsigned char D_L00_00179550[];
+
+int func_L00_00205110(short id, int a1, unsigned short *out) {
+    char *base = (char *)D_L00_00179550;
+    int off;
+    int i;
+    for (i = 0, off = 2; i < 150; off += 4, i++) {
+        int k = i * 4;
+        if (*(short *)(base + k + a1 * 2) == id) {
+            if (a1 != 0) {
+                off = k;
+            }
+            if (out != 0) {
+                *out = *(unsigned short *)(off + (int)base);
+            }
+            return i;
+        }
+    }
+    return -1;
+}
 INCLUDE_ASM("asm/overlays", func_L00_00205158);
 // returns -1
 int func_L00_0020516C(void) {
@@ -246,7 +265,7 @@ int Hero_PickSituationId(int a) {
     }
 }
 // Returns first argument
-int func_L00_002056D0(int a) {
+int Hero_ResolveAnimId(int a) {
     return a;
 }
 extern char D_0013F450_056D8[] __asm__("D_0013F450");
@@ -654,7 +673,7 @@ void SpawnFootstep(int a, int b, int c)
             Moby_GetJointWorldPos(*(void **)(g + 0x2080), b + 0x16, v);
             v[0] += FastCos(*(float *)(g + 0x98)) * k;
             v[1] += FastSin(*(float *)(g + 0x98)) * k;
-            v[2] = func_00214358(v, 0, 0.5f) + 0.04f;
+            v[2] = ProbeGroundHeight(v, 0, 0.5f) + 0.04f;
             PartType70Spawn(v, *(float *)(g + 0x98), b == 0);
         }
     }
@@ -828,7 +847,7 @@ void Hero_UpdateHelpState(void) {
         HeroLedgeProbe();
         CameraLeanFromPad();
     }
-    func_L00_0022A340();
+    HeroL00_UpdateStateTransitions();
     if (((GS_68C8 *)(D_0013E633 + 0xE1D))->b20A4 == 0) return;
     Hero_TickReleaseTimers();
     SettleAllHeldObjects();
@@ -1118,7 +1137,7 @@ extern unsigned char D_L00_00179800[][16];
 extern void func_L00_00264DB8(int arg0, int arg1);
 
 // Records a pressed-input code in a 16-entry ring buffer and toggles any cheat whose sequence now ends the buffer.
-void func_L00_00207418(void) {
+void Cheats_PollCodes(void) {
     char *g;
     int s;
     int i;
@@ -1258,14 +1277,14 @@ void Hero_UpdateWithBoundsCheck(void) {
     HeroLedgeProbe();
     Hero_LatchSurfaceProbe();
     Hero_LatchUpperProbe();
-    func_L00_0022A340();
+    HeroL00_UpdateStateTransitions();
     if (*(unsigned char *)(g + 0x20A4) != 0) {
         return;
     }
     Hero_TickReleaseTimers();
     Hero_CheckMovementThresholds();
-    func_L00_0020A990();
-    func_L00_0020ABB8();
+    Hero_UpdateObstacleLean();
+    Hero_UpdateBodyTilt();
     HeroScanTargets();
     RerollMotionParams();
     ClampAimLeanAngles();
@@ -1281,8 +1300,8 @@ void Hero_UpdateWithBoundsCheck(void) {
     HelpHintsPeriodicCheck();
     HudBoltAlertShow();
     FireGadgetStateHooks();
-    func_L00_00207418();
-    func_001E9768(*(void **)(g + 0x2080));
+    Cheats_PollCodes();
+    Profile_Mark(*(void **)(g + 0x2080));
     if (*(int *)(g + 0x208C) != 0x16 && *(int *)(g + 0x2084) != 0x32) {
         func_L00_00248EF8(g + 0x80);
     }
@@ -1563,15 +1582,15 @@ void UpdateRampUpDown(void) {
     if (*(int *)&D_L00_0015F760 != 0) {
         int s = *(int *)&D_L00_0015F764;
         if (s == 0) {
-            ApproachValue((float *)&D_L00_0015F4FC, 1.0f, *(float *)&D_L00_0015F75C);
-            if (*(float *)&D_L00_0015F4FC == 1.0f) {
+            ApproachValue((float *)&gFadeLvl, 1.0f, *(float *)&D_L00_0015F75C);
+            if (*(float *)&gFadeLvl == 1.0f) {
                 *(int *)&D_L00_0015F764 = 1;
             }
         } else if (s == 1) {
             *(int *)&D_L00_0015F764 = 2;
         } else if (s == 2) {
-            ApproachValue((float *)&D_L00_0015F4FC, 0.0f, *(float *)&D_L00_0015F75C);
-            if (*(float *)&D_L00_0015F4FC == 0.0f) {
+            ApproachValue((float *)&gFadeLvl, 0.0f, *(float *)&D_L00_0015F75C);
+            if (*(float *)&gFadeLvl == 0.0f) {
                 *(int *)&D_L00_0015F760 = 0;
             }
         }
@@ -2509,7 +2528,7 @@ void SparkBurstUpdate(void) {
 }
 extern char D_L00_0017A780[];
 // stores two floats into a global block
-void func_L00_0020A858(float a, float b) {
+void Hero_SetTiltSpringParams(float a, float b) {
     char *p = D_L00_0017A780;
     *(float *)(p + 0xA4) = a;
     *(float *)(p + 0xA8) = b;
@@ -2541,7 +2560,7 @@ extern int func_L00_0020A8B8(int, float, float);
 extern int func_L00_0025F410(void *);
 extern float func_001F9D10(void *, void *);
 // sets up the camera lag parameters for a zoom and records that it is active
-void func_L00_0020A990(void) {
+void Hero_UpdateObstacleLean(void) {
     char *g = (char *)D_0013E633 + 0xE1D;
     char *p;
     char *p2;
@@ -2585,7 +2604,7 @@ void func_L00_0020A990(void) {
     *(short *)(g2 + 0x22C8) = 1;
 }
 /* clears two words and four 16-byte slots of a table */
-void func_L00_0020AB78(void) {
+void Hero_ClearSlotPairs(void) {
     char *b = (char *)D_0013E633 + 0xE1D;
     char *p;
     int i;
@@ -2607,7 +2626,7 @@ extern short D_0015EE64_g __asm__("D_0015EE64");
 extern float D_0015EE64_m __asm__("D_0015EE64") MACRO_ADDR;
 
 // per-frame update of the camera/cursor sway: eases a value and feeds two scaled values into a global block
-void func_L00_0020ABB8(void) {
+void Hero_UpdateBodyTilt(void) {
     char *g1;
     char *h1;
     char *h2;
@@ -2641,7 +2660,7 @@ void func_L00_0020ABB8(void) {
     ga = (char *)D_0013E633 + 0xE1D;
     if (*(int *)(ga + 0x260) != 0 && *(float *)(ga + 0x258) > 1.4f && *(float *)(ga + 0x248) > 1.0f) {
         b = *(float *)&D_0015EE64_g;
-        func_L00_0020A858(b * 0.015f, b * 0.3f);
+        Hero_SetTiltSpringParams(b * 0.015f, b * 0.3f);
         a = *(float *)(ga + 0x258) * 1.5f * 0.0174532924f + 0.191986218f;
         if (a > 0.471238881f) a = 0.471238881f;
         lim = (1.0f - *(float *)(ga + 0x25C)) * 35.0f * 0.0174532924f;
@@ -2649,7 +2668,7 @@ void func_L00_0020ABB8(void) {
         f1 = D_0015EE64_m;
         h3 = D_L00_0017A780;
         *(float *)(h3 + 0x274) = a;
-        func_L00_0020A858(f1 * 0.008f, f1 * 0.3f);
+        Hero_SetTiltSpringParams(f1 * 0.008f, f1 * 0.3f);
         *(float *)(h3 + 0x114) = *(float *)(h3 + 0x274) * 0.7f;
         return;
     }
@@ -2681,12 +2700,12 @@ void func_L00_0020ABB8(void) {
         if (*(float *)(g3 + 0x1004) < 0.0f) *(float *)(g3 + 0x1004) = 0.0f;
     }
     g4 = (char *)D_0013E633 + 0xE1D;
-    func_L00_0020A858(*(float *)(g4 + 0x1014), *(float *)(g4 + 0x1018));
+    Hero_SetTiltSpringParams(*(float *)(g4 + 0x1014), *(float *)(g4 + 0x1018));
     f2 = D_0015EE64_m;
     h4 = D_L00_0017A780;
     *(float *)(h4 + 0x278) = *(float *)(g4 + 0x1008);
     *(float *)(h4 + 0x274) = *(float *)(g4 + 0x1004);
-    func_L00_0020A858(f2 * 0.008f, f2 * 0.3f);
+    Hero_SetTiltSpringParams(f2 * 0.008f, f2 * 0.3f);
     *(float *)(h4 + 0x118) = *(float *)(h4 + 0x278) * 0.52f;
     *(float *)(h4 + 0x114) = *(float *)(h4 + 0x274) * 0.55f;
 }
@@ -2830,11 +2849,11 @@ void HeroScanTargets(void) {
         else if (f20 < -0.296705961f) f20 = -0.296705961f;
         f21 = 0.0f;
     }
-    func_L00_0020A858(D_0015EE64 * 0.021f, D_0015EE64 * 0.27f);
+    Hero_SetTiltSpringParams(D_0015EE64 * 0.021f, D_0015EE64 * 0.27f);
     p = D_L00_0017A780;
     *(float *)(p + 0x274) = f21;
     *(float *)(p + 0x278) = f20 * 0.7f;
-    func_L00_0020A858(D_0015EE64 * 0.014f, D_0015EE64 * 0.3f);
+    Hero_SetTiltSpringParams(D_0015EE64 * 0.014f, D_0015EE64 * 0.3f);
     *(float *)(p + 0x1C8) = *(float *)(p + 0x278) * 0.55f;
 }
 typedef struct { u8 p0[0x2C0]; f32 f2C0, f2C4, f2C8, f2CC, f2D0, f2D4; u8 p2D8[0x308 - 0x2D8]; s16 h308; u8 p30A[0x418 - 0x30A]; s32 i418; u8 p41C[0x10E0 - 0x41C]; s32 i10E0; u8 p10E4[0x12A0 - 0x10E4]; f32 f12A0, f12A4; s32 i12A8; s16 h12AC; u16 h12AE; u8 p12B0[0x2080 - 0x12B0]; u8 *p2080; s32 i2084; u8 p2088[4]; s32 i208C; } P_20b1d8;

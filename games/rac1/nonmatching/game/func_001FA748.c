@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* FastAddRots(a, b): adds two angles in radians and wraps the sum into
    [-pi, pi): above pi, two subtractions of pi; below -pi (tested on the
    unwrapped sum), two additions of pi. */

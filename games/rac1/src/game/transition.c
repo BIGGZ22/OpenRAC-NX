@@ -211,7 +211,7 @@ unsigned char *Level_ParseObjectTables(LevelHeaderE9EC8 *hdr)
 
     p = D_001941D8;
     ((void (*)(void *, int, int))FastMemSet)(D_0013F450, 0, 0x2310);
-    ((void (*)(void *, int, int))FastMemSet)(D_00187040, 0, 0x3A0);
+    ((void (*)(void *, int, int))FastMemSet)(gCamera, 0, 0x3A0);
     ((void (*)(void *, int, int))FastMemSet)(D_001AADC0, 0, 0x180);
     if (D_0015EE80 != 0) {
         if (D_0015EE60 == 1.0f) {
@@ -497,7 +497,7 @@ unsigned char *Level_ParseObjectTables(LevelHeaderE9EC8 *hdr)
         D_00160F8C[i0].x3A = 0x7F80;
     }
     {
-        char *st = (char *)D_0018C418;
+        char *st = (char *)gDebugFreeCam;
 
         *(int *)(st + 0x1C) = 0;
     }
@@ -505,7 +505,7 @@ unsigned char *Level_ParseObjectTables(LevelHeaderE9EC8 *hdr)
     pad_resetState();
     Font_EnableColorCodes();
     D_0015F6F0 = 0;
-    D_0015F53C = 1.0f;
+    gFade = 1.0f;
     return p;
 }
 
@@ -1149,7 +1149,7 @@ void Transition_DefaultDraw(s32 *arg0)
     DrawShrubs();
     Vif1ChainCmd(0x02040000);
     if (D_0015F6E8 == 3) {
-        func_0021A610();
+        Menu_DrawPanels();
     } else {
         DrawMobys();
     }
@@ -1182,11 +1182,11 @@ void Transition_DefaultDraw(s32 *arg0)
                       (long)(D_0015F054 << 24 | 0x808080), GetEffectTex(n + 4));
     }
     DoGifPaging();
-    if (D_0015F53C > 0.0f) {
-        if (D_0015F53C > 1.0f) {
-            D_0015F53C = 1.0f;
+    if (gFade > 0.0f) {
+        if (gFade > 1.0f) {
+            gFade = 1.0f;
         }
-        emit_rgba_draw_packet(0, 0, 0, truncate_float_to_s32(D_0015F53C * 128.0f));
+        emit_rgba_draw_packet(0, 0, 0, truncate_float_to_s32(gFade * 128.0f));
     }
     VU0_loadMicroProgram(D_00100AE0);
     func_00118D80(0);
@@ -1227,7 +1227,230 @@ int IsStateEntryActive(int arg0, int arg1) {
     return 0;
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001EBB48);
+typedef struct {
+    s32 off;
+    s32 size;
+} WadChunk_BB48;
+
+typedef struct {
+    char pad0[0x20];
+    WadChunk_BB48 chunk[6];
+} WadHeader_BB48;
+
+typedef struct {
+    s32 sector;
+    s32 size;
+} DiscFile_BB48;
+
+typedef struct {
+    char pad0[0x14F8];
+    DiscFile_BB48 wad_chunks[6];
+} DiscTable_BB48;
+
+typedef struct {
+    s32 start;
+    s32 end;
+    s32 sound;
+    s32 voice;
+} SoundCue_BB48;
+
+typedef struct {
+    char pad0[0x34];
+    s32 time;
+    s32 pad38;
+    s32 f3C;
+} TransferState_BB48;
+
+extern s32 current_level_BB48 __asm__("D_0015EE84") MACRO_ADDR;
+extern s32 saved_EEE8_BB48 __asm__("D_0015EEE8") MACRO_ADDR;
+extern WadHeader_BB48 *volatile wad_buf_BB48[] __asm__("D_001941C8");
+extern DiscTable_BB48 disc_table_BB48 __asm__("D_00137C80");
+extern WadHeader_BB48 *level_root_BB48 __asm__("D_0015EF4C") MACRO_ADDR;
+extern s32 space_load_pending_BB48 __asm__("D_0015F690") MACRO_ADDR;
+extern s32 space_load_in_progress_BB48 __asm__("D_0015F6FC") MACRO_ADDR;
+extern s32 dma_index_BB48 __asm__("D_0015EE88") MACRO_ADDR;
+extern SoundCue_BB48 sound_cues_BB48[] __asm__("D_001863B0");
+extern TransferState_BB48 transfer_BB48 __asm__("D_0018CC20");
+extern s32 game_mode_BB48 __asm__("D_0015F6E8") MACRO_ADDR;
+extern f32 sequence_BB48 __asm__("D_0015F53C") MACRO_ADDR;
+extern s32 intro_alpha_BB48 __asm__("D_0015F050") MACRO_ADDR;
+extern s32 language_alpha_BB48 __asm__("D_0015F054") MACRO_ADDR;
+extern s32 intro_timer_BB48 __asm__("D_0015F058") MACRO_ADDR;
+extern u8 requested_video_mode_BB48 __asm__("D_0016044C") MACRO_ADDR;
+extern s32 pal_mode_BB48 __asm__("D_0015EE80") MACRO_ADDR;
+extern s32 tex_start_BB48 __asm__("D_0015EF78") MACRO_ADDR;
+extern s32 tex_cursor_BB48 __asm__("D_0015EF74") MACRO_ADDR;
+extern volatile s32 tex_base_BB48 __asm__("D_0015EF8C") MACRO_ADDR;
+extern s32 frame_counter_BB48 __asm__("D_0015F538") MACRO_ADDR;
+
+extern void load_and_init_BB48(void) __asm__("func_00209DC0");
+extern void transition_load_wad_BB48(void) __asm__("func_001EABE8");
+extern s32 load_BB48(u8 *dst, s32 sector, s32 size) __asm__("func_002176C8");
+extern void init_resource_BB48(void) __asm__("func_001FFA90");
+extern void init_sif_rpc_BB48(void) __asm__("func_00233FF8");
+extern void init_stash_BB48(void) __asm__("func_00234018");
+extern void init_hud_BB48(void) __asm__("func_001FF6B8");
+extern void load_hud_banks_BB48(void) __asm__("func_002032D0");
+extern s32 sync_v_BB48(s32) __asm__("func_00122598");
+extern s32 scale_frames_BB48(s32) __asm__("func_001F98C0");
+extern s32 snd_reset_BB48(void) __asm__("func_0012EC40");
+extern s32 snd_flush_BB48(void) __asm__("func_0012DDC0");
+extern void func_0012EC30_BB48(void) __asm__("func_0012EC30");
+extern void vu1_send_chain_BB48(void) __asm__("func_002349B8");
+extern void swap_chain_BB48(void) __asm__("func_00234948");
+extern void put_draw_small_BB48(void) __asm__("func_001FB598");
+extern void append_palette_BB48(void) __asm__("func_001FB8A8");
+extern void put_draw_large_BB48(void) __asm__("func_001FB498");
+extern s32 memcard_update_BB48(void) __asm__("func_00209E68");
+extern s32 run_state_handler_BB48(void) __asm__("func_00209070");
+extern void update_pad_BB48(void) __asm__("func_00218908");
+extern void queue_dma_BB48(s32) __asm__("func_001EB300");
+extern s32 is_active_BB48(s32, s32) __asm__("func_001EBAF0");
+extern s32 alloc_voice_BB48(s32, s32, s32) __asm__("func_0022EEB8");
+extern void release_voice_BB48(s32) __asm__("func_0022EAB0");
+extern void update_gameplay_BB48(void) __asm__("func_001EB458");
+extern void default_draw_BB48(void) __asm__("func_001EB7C0");
+extern void start_level_BB48(s32) __asm__("func_001E9808");
+extern void parse_space_scene_BB48(s32) __asm__("func_00205220");
+extern void vu1_init_chain_BB48(void) __asm__("func_002348E8");
+extern void fade_to_black_BB48(s32) __asm__("func_001F4E08");
+extern s32 reset_vif1_gif_BB48(void) __asm__("func_001207B8");
+extern void reset_graph_BB48(s16, s16, s16, s16) __asm__("func_00121B78");
+extern void set_pal_mode_BB48(void) __asm__("func_001F3890");
+extern void vu1_sync_chain_BB48(s32) __asm__("func_00234AC8");
+
+/* Adapted from Lombyte (MIT): src/gameplay/state/transition_do_transition.c, transition_do_transition. */
+void func_001EBB48(void) {
+    WadHeader_BB48 *hdr;
+    u8 *p;
+    s32 n;
+    s32 level;
+    s32 wait;
+    s32 i;
+    s32 old;
+    s32 saved;
+    s32 first_size;
+    u32 alignment_mask = 0xFFFFFFF0;
+    DiscTable_BB48 *tbl;
+
+    current_level_BB48 = 0;
+    *(volatile u32 *)0x10000010 = 0x83;
+    *(volatile u32 *)0x10000000 = 0;
+    saved = saved_EEE8_BB48;
+    load_and_init_BB48();
+    saved_EEE8_BB48 = saved;
+    transition_load_wad_BB48();
+    tbl = &disc_table_BB48;
+    p = (u8 *)wad_buf_BB48[0];
+    hdr = (WadHeader_BB48 *)p;
+    p = (u8 *)hdr + 0x60;
+    level_root_BB48 = hdr;
+    first_size = load_BB48(p, ((volatile DiscFile_BB48 *)&tbl->wad_chunks[1])->sector, ((volatile DiscFile_BB48 *)&tbl->wad_chunks[1])->size);
+    hdr->chunk[1].size = first_size;
+    hdr->chunk[1].off = p - (u8 *)hdr;
+    p += ((u32)first_size + 0xF) & alignment_mask;
+    hdr->chunk[2].size = load_BB48(p, tbl->wad_chunks[2].sector, tbl->wad_chunks[2].size);
+    hdr->chunk[2].off = p - (u8 *)hdr;
+    p += ((u32)hdr->chunk[2].size + 0xF) & alignment_mask;
+    hdr->chunk[3].size = load_BB48(p, tbl->wad_chunks[3].sector, tbl->wad_chunks[3].size);
+    hdr->chunk[3].off = p - (u8 *)hdr;
+    p += ((u32)hdr->chunk[3].size + 0xF) & alignment_mask;
+    hdr->chunk[4].size = load_BB48(p, tbl->wad_chunks[4].sector, tbl->wad_chunks[4].size);
+    hdr->chunk[4].off = p - (u8 *)hdr;
+    p += ((u32)hdr->chunk[4].size + 0xF) & alignment_mask;
+    hdr->chunk[5].size = load_BB48(p, tbl->wad_chunks[5].sector, tbl->wad_chunks[5].size);
+    hdr->chunk[5].off = p - (u8 *)hdr;
+    p += ((u32)hdr->chunk[5].size + 0xF) & alignment_mask;
+    hdr->chunk[0].size = load_BB48(p, tbl->wad_chunks[0].sector, tbl->wad_chunks[0].size);
+    hdr->chunk[0].off = p - (u8 *)hdr;
+    init_resource_BB48();
+    init_sif_rpc_BB48();
+    init_stash_BB48();
+    init_hud_BB48();
+    load_hud_banks_BB48();
+    for (n = *(volatile u32 *)0x10000000 / 0x109; n < scale_frames_BB48(0xB4); n++) {
+        sync_v_BB48(0);
+    }
+    snd_reset_BB48();
+    while (snd_flush_BB48() != 0) {
+    }
+    func_0012EC30_BB48();
+    level = 1;
+    wait = 0;
+    while (space_load_pending_BB48 == 0) {
+        vu1_send_chain_BB48();
+        swap_chain_BB48();
+        put_draw_small_BB48();
+        append_palette_BB48();
+        put_draw_large_BB48();
+        memcard_update_BB48();
+        run_state_handler_BB48();
+        update_pad_BB48();
+        queue_dma_BB48(dma_index_BB48);
+        space_load_in_progress_BB48 = 0;
+        for (i = 0; sound_cues_BB48[i].start != -1; i++) {
+            if (sound_cues_BB48[i].end == -1) {
+                if (transfer_BB48.time < sound_cues_BB48[i].start) {
+                    sound_cues_BB48[i].voice = -1;
+                    continue;
+                }
+                if (sound_cues_BB48[i].voice != -1) {
+                    continue;
+                }
+            } else if (transfer_BB48.time < sound_cues_BB48[i].start ||
+                       sound_cues_BB48[i].end < transfer_BB48.time) {
+                goto stop;
+            } else if (is_active_BB48(sound_cues_BB48[i].voice, sound_cues_BB48[i].sound) != 0) {
+                continue;
+            }
+            sound_cues_BB48[i].voice = alloc_voice_BB48(sound_cues_BB48[i].sound, 0, 0);
+            continue;
+        stop:
+            if (is_active_BB48(sound_cues_BB48[i].voice, sound_cues_BB48[i].sound) != 0) {
+                release_voice_BB48(sound_cues_BB48[i].voice);
+            }
+            sound_cues_BB48[i].voice = -1;
+        }
+        update_gameplay_BB48();
+        default_draw_BB48();
+        if (game_mode_BB48 != 0) {
+            wait = 0;
+        } else if (++wait >= scale_frames_BB48(0x5DC)) {
+            start_level_BB48(level);
+            wait = 0;
+            level = (level + 1) % 4;
+            if (level == 0) {
+                level++;
+            }
+            sequence_BB48 = 1.0f;
+            transfer_BB48.time = 0;
+            transfer_BB48.f3C = 0;
+            parse_space_scene_BB48(0);
+            intro_alpha_BB48 = 0;
+            language_alpha_BB48 = 0;
+            intro_timer_BB48 = 0;
+            vu1_init_chain_BB48();
+            continue;
+        }
+        if (requested_video_mode_BB48 != pal_mode_BB48) {
+            pal_mode_BB48 = pal_mode_BB48 == 0;
+            fade_to_black_BB48(4);
+            reset_vif1_gif_BB48();
+            reset_graph_BB48(0, 1, pal_mode_BB48 != 0 ? 3 : 2, 0);
+            old = tex_start_BB48;
+            sequence_BB48 = 1.0f;
+            set_pal_mode_BB48();
+            tex_start_BB48 = old;
+        }
+        vu1_sync_chain_BB48(1);
+        sync_v_BB48(0);
+        frame_counter_BB48++;
+    }
+    if (pal_mode_BB48 == 0) {
+        tex_base_BB48 = 0x280000;
+    }
+    tex_cursor_BB48 = tex_start_BB48 = tex_base_BB48;
+}
 
 /* Not a standalone function: single `addiu $sp,$sp,0x30`, no `jr $31` --
    fallthrough fragment, same category as func_00113AD8 in core_text. */

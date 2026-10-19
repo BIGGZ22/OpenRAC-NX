@@ -20,7 +20,11 @@ the linker would put somewhere of its own choosing. So is any other
 read-only data (a string literal): nothing places it at its retail
 address yet, so game code declares its strings `extern`.
 
-usage: python tools/fix_jump_tables.py IN.s OUT.s
+With --core, preserve ordinary constants and move only the core tables
+explicitly assigned named input sections in config/core_rodata.txt. This
+lets the linker retain retail's padding between originally separate tables.
+
+usage: python tools/fix_jump_tables.py [--core] IN.s OUT.s
 """
 import re
 import sys
@@ -45,7 +49,14 @@ def is_table(lines: list[str], i: int) -> bool:
 
 
 def main() -> None:
-    src, dst = sys.argv[1:3]
+    core = "--core" in sys.argv[1:]
+    args = [arg for arg in sys.argv[1:] if arg != "--core"]
+    src, dst = args
+    configured = set()
+    if core:
+        from core_rodata import sections
+        configured = {section.removeprefix(".rodata.") for _obj, section, _labels in sections()
+                      if section.startswith(".rodata.jtbl_")}
     lines = Path(src).read_text().splitlines(keepends=True)
     func, used, moved = None, 0, 0
     for i, line in enumerate(lines):
@@ -54,15 +65,22 @@ def main() -> None:
         elif END.match(line):
             func = None
         elif RDATA.match(line) and not (func and is_table(lines, i)):
+            if core:
+                continue
             sys.exit(f"fix_jump_tables: error: {src}:{i + 1}: read-only data that is not a jump "
                      f"table (a string literal?) -- declare it extern instead")
         elif RDATA.match(line):
             labels = retail_tables(func)
+            if core and not any(label in configured for label in labels):
+                continue
             if used >= len(labels):
                 sys.exit(f"fix_jump_tables: error: {func} has jump table #{used + 1}, retail's has "
                          f"{len(labels)} -- it cannot match")
-            lines[i] = f'\t.section\t.rodata.{labels[used]},"a"\n'
+            label = labels[used]
             used += 1
+            if core and label not in configured:
+                continue
+            lines[i] = f'\t.section\t.rodata.{label},"a"\n'
             moved += 1
     Path(dst).write_text("".join(lines))
     print(f"fix_jump_tables: {moved} jump table(s) {src} -> {dst}")

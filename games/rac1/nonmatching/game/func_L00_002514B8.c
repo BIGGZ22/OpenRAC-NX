@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Moby animation advance: steps the moby's keyframe time (m+0x54) by its
    speed pair (m+0x58 / m+0x5C) through the sequence in its class table,
    leaving the playback indices at m+0x50/0x51 and the flags at m+0x70.

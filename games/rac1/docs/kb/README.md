@@ -22,6 +22,7 @@ access), not observable results, outside the matched C where possible.
 | [data-structures.md](data-structures.md) | Field tables for `Moby`, `MobyClass`, `PadState`, hero records; vectors; pad bits and input; globals |
 | [mobys.md](mobys.md) | Moby lifecycle, save ids, pvars, animation fields, class-to-update tables, class ids named by debug strings |
 | [datamining.md](datamining.md) | Retail leftovers: debug menu, profiler, dev paths, NPC names, designer errors, button-code decoder, memory budget, SDK versions |
+| [refactor-camera.md](refactor-camera.md) | Camera system map: state, layouts (`include/camera.h`), functions and callers, names, and the byte-neutral rules for turning its raw offsets into fields |
 
 Older, more detailed documents:
 [OVERLAYS.md](../OVERLAYS.md), [ASSETS.md](../ASSETS.md), [NAMES.md](../NAMES.md),

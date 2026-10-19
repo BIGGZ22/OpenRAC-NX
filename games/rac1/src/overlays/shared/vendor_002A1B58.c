@@ -581,7 +581,7 @@ void Moby_HandleDamageKnockback(char *m) {
         char *path = D_L16_001B0C30[d->path_index];
         FindNearestEligibleMoby(24.0f, m, d->target, 0, 0, path + 0x10, *(int *)path);
     } else {
-        func_L00_00260D30(24.0f, m, d->target);
+        FindNearestTargetMoby(24.0f, m, d->target);
     }
     if (range < func_001F9D48(m + 0x10, d->target)) d->pursuit_mode = 2;
     if (d->owner == 0) d->owner = ((L16DamageResident *)((char *)&D_L16DamageState + 0xE1D))->owner;
@@ -1331,7 +1331,7 @@ void Group_TriggerNearest(int idx) {
             }
         } while (*p++ >= 0);
         if (best != 0) {
-            func_0022ED80(0, 0, (int)best);
+            Moby_PlaySound(0, 0, (int)best);
         }
     }
 }

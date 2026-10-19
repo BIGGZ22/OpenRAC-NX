@@ -78,19 +78,19 @@ int Menu_IsPointInFixedQuad(int x1, int y1) {
 
 extern unsigned char D_0013D49C NOT_SDA;
 
-int func_002071D0(void) {
+int MenuL01_HasSpecialItem0C(void) {
     return D_0013D49C != 0;
 }
 
 extern unsigned char D_0013D49D NOT_SDA;
 
-int func_002071E0(void) {
+int MenuL01_HasSpecialItem0D(void) {
     return D_0013D49D != 0;
 }
 
 extern unsigned char D_0013D4A5 NOT_SDA;
 
-int func_002071F0(void) {
+int MenuL02_HasSpecialItem15(void) {
     return D_0013D4A5 != 0;
 }
 
@@ -105,7 +105,7 @@ extern Menu13F450 D_0013F450;
 /* Menu hit test: arg3 is the third float ($f14). b (state 16) is
    computed before a, as retail evaluates it; the second if's own
    `arg1 >= 0xC8` is retail's second test of $a1. */
-int func_00207200(void *arg0, int arg1, float unused1, float unused2, float arg3) {
+int MenuL01_HitTest3(void *arg0, int arg1, float unused1, float unused2, float arg3) {
     Menu13F450 *s = &D_0013F450;
     int b = s->unk208C == 16;
     int a = s->unk208C == 17 || s->unk208C == 18 || s->unk12E4 == 1;
@@ -125,7 +125,7 @@ extern unsigned char D_0013D49E NOT_SDA;
 /* `if (x) return 1;` in both arms with one shared `return 0;` keeps the
    flag test a beqz with the li in its slot; a result variable or a
    return 0 per arm becomes sltu. */
-int func_002072C0(int arg0, float unused1, float unused2, float arg1) {
+int MenuL01_HitTest4(int arg0, float unused1, float unused2, float arg1) {
     int is16 = D_001414DC_early == 0x10;
 
     if (arg0 < 0x100) {
@@ -140,7 +140,7 @@ int func_002072C0(int arg0, float unused1, float unused2, float arg1) {
 
 /* The struct's address in a local keeps one base register for both
    field reads. */
-int func_00207340(int arg0, float unused1, float unused2, float arg1) {
+int MenuL01_HitTest5(int arg0, float unused1, float unused2, float arg1) {
     if (arg0 < 0x100) {
         Menu13F450 *s = &D_0013F450;
         return s->unk208C == 17 || s->unk208C == 18 || s->unk12E4 == 1;
@@ -150,37 +150,37 @@ int func_00207340(int arg0, float unused1, float unused2, float arg1) {
 
 extern short D_0015FE24;   /* declared small so -G2 puts it in SDA */
 
-int func_002073A8(void) {
+int MenuL03_IsStateWordZero(void) {
     return *(int *)&D_0015FE24 == 0;
 }
 
 extern unsigned char D_0013D4AC NOT_SDA;
 
-int func_002073B8(void) {
+int MenuL04_HasSpecialItem1C(void) {
     return D_0013D4AC != 0;
 }
 
 extern unsigned char D_0013D4AD NOT_SDA;
 
-int func_002073C8(void) {
+int MenuL04_HasSpecialItem1D(void) {
     return D_0013D4AD != 0;
 }
 
 extern unsigned char D_0013D4AE NOT_SDA;
 
-int func_002073D8(void) {
+int MenuL04_HasSpecialItem1E(void) {
     return D_0013D4AE != 0;
 }
 
 extern unsigned char D_0013D4AF NOT_SDA;
 
-int func_002073E8(void) {
+int MenuL04_HasSpecialItem1F(void) {
     return D_0013D4AF != 0;
 }
 
 extern unsigned char D_0013D4B5 NOT_SDA;
 
-int func_002073F8(void) {
+int MenuL06_HasSpecialItem25(void) {
     return D_0013D4B5 != 0;
 }
 
@@ -202,7 +202,7 @@ extern f32 func_001F9D48_07408(union RegionVector *, union RegionVector *) __asm
 s32 func_00207408(s32 projected_x, s32 projected_y, f32 x, f32 y, f32 z);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00206bd8.c, passes_projected_region_callback_0. */
-s32 func_00207408(s32 projected_x, s32 projected_y, f32 x, f32 y, f32 z) {
+s32 MenuL07_HitTest0(s32 projected_x, s32 projected_y, f32 x, f32 y, f32 z) {
     s32 special_state;
 
     if (menu_pointIsClockwise(projected_x, projected_y, 0x189, 0x16F, 0x87, 0xED)) {
@@ -280,7 +280,7 @@ int func_00207648(int arg0, int arg1, float unused1, float unused2,
    it $s0 before the arguments are allocated, as retail has it. The two
    compound conditions (`&&` chain, `!a && !b`) keep the return values
    as branches instead of an sltu. */
-int func_00207780(int arg0, int arg1) {
+int MenuL07_HitTest2(int arg0, int arg1) {
     if (arg1 < 0xE9) {
         if (menu_pointIsClockwise(arg0, arg1, 0x132, 0xA0, 0x15F, 0xD8)
             && menu_pointIsClockwise(arg0, arg1, 0x14D, 0xD8, 0x181, 0x9A)
@@ -323,7 +323,7 @@ extern int D_001A04BC NOT_SDA;
    needs its own `return 0`: jump.c then sets v0 = 1 before the test
    there too, which gives retail's registers and lets the arm be
    cross-jumped into the second one. */
-int func_00207930(int arg0, int arg1, float unused1, float unused2, float arg3) {
+int MenuL07_HitTest3(int arg0, int arg1, float unused1, float unused2, float arg3) {
     if (arg1 < 0xBB) {
         Menu13F450 *s = &D_0013F450;
         int a = s->unk208C == 17 || s->unk208C == 18 || s->unk12E4 == 1;
@@ -348,7 +348,7 @@ extern int D_001A04B4 NOT_SDA;
    The last store goes through a short: jump.c folds `r = 0; if (b) r = 1;`
    into an sltu only when the store sets a whole register, and a subreg
    store keeps retail's beqz. */
-int func_002079F0(int x1, int y1) {
+int MenuL07_HitTest4(int x1, int y1) {
     int a = menu_pointIsClockwise(x1, y1, 0x99, 0xED, 0x160, 0x117);
     int b = menu_pointIsClockwise(x1, y1, 0x10E, 0xF7, 0x13D, 0x119);
     int r = 0;
@@ -372,7 +372,7 @@ extern int D_001A04B8 NOT_SDA;
    [73.5, 80] with D_001A04C0 set, or for arg1 >= 0x9D in [51.5, 54] with
    D_001A04B8 set. Written as `<`/`>` rejections so they compile to retail's
    c.lt/bc1t; the second arm's `return 0` cross-jumps into the first's. */
-int func_00207A80(void *arg0, int arg1, float unused1, float unused2, float arg3) {
+int MenuL07_HitTest5(void *arg0, int arg1, float unused1, float unused2, float arg3) {
     if (arg1 < 0x9D) {
         if (arg3 < 73.5f || arg3 > 80.0f || D_001A04C0 == 0) {
             return 0;
@@ -393,7 +393,7 @@ extern int func_00209048(int, int, int, int, int, int);
    D_001A04AC set and arg3 >= 47.7; otherwise returns `a` directly when
    arg1 < 0xC1, else `a` unless func_00209048's box test hits (which
    clears it to 0). */
-int func_00207B30(int arg0, int arg1, float unused1, float unused2, float arg3) {
+int MenuL07_HitTest6(int arg0, int arg1, float unused1, float unused2, float arg3) {
     Menu13F450 *s = &D_0013F450;
     int a = s->unk208C == 17 || s->unk208C == 18 || s->unk12E4 == 1;
     int result;
@@ -417,7 +417,7 @@ int func_00207B30(int arg0, int arg1, float unused1, float unused2, float arg3) 
 /* Menu hit test (func_00207200's family): hits unless the menu state
    blocks it, arg3 ($f14) is below 71.5, or the first box is hit, and
    then only if the second box is not. */
-int func_00207BE8(int arg0, int arg1, float unused1, float unused2, float arg3) {
+int MenuL07_HitTest7(int arg0, int arg1, float unused1, float unused2, float arg3) {
     Menu13F450 *s = &D_0013F450;
     int a = s->unk208C == 17 || s->unk208C == 18 || s->unk12E4 == 1;
 
@@ -436,7 +436,7 @@ int func_00207BE8(int arg0, int arg1, float unused1, float unused2, float arg3) 
 extern unsigned char D_0013D4C5 NOT_SDA;
 extern int D_001414DC NOT_SDA;
 
-int func_00207CB0(int arg0, int arg1) {
+int MenuL08_HitTest0(int arg0, int arg1) {
     if (arg1 >= 0x101) {
         return D_001414DC == 0xF;
     }
@@ -446,7 +446,7 @@ int func_00207CB0(int arg0, int arg1) {
 /* The two unused float parameters put the threshold's argument in
    $f14 (floats count consecutively from $f12). The nops after the mtc1
    and the compare are ps2eeas's (tools/ps2eeas_nops.py). */
-int func_00207CE0(int arg0, float unused1, float unused2, float arg1) {
+int MenuL08_HitTest1(int arg0, float unused1, float unused2, float arg1) {
     if (arg0 < 0xE0) {
         return (arg1 >= 47.75f) ? 1 : 0;
     }
@@ -455,7 +455,7 @@ int func_00207CE0(int arg0, float unused1, float unused2, float arg1) {
 
 /* `(a && b) ? 1 : 0` gives retail's bc1f then bc1tl; the other arm is
    a plain `? 1 : 0`. */
-int func_00207D38(int arg0, float unused1, float unused2, float arg1) {
+int MenuL08_HitTest2(int arg0, float unused1, float unused2, float arg1) {
     if (arg0 < 0xE0) {
         return (arg1 >= 44.0f && arg1 <= 45.0f) ? 1 : 0;
     }
@@ -463,7 +463,7 @@ int func_00207D38(int arg0, float unused1, float unused2, float arg1) {
 }
 
 /* func_00207D38's twin. */
-int func_00207DB0(int arg0, float unused1, float unused2, float arg1) {
+int MenuL08_HitTest3(int arg0, float unused1, float unused2, float arg1) {
     if (arg0 < 0xE0) {
         return (arg1 >= 42.0f && arg1 <= 43.0f) ? 1 : 0;
     }
@@ -473,7 +473,7 @@ int func_00207DB0(int arg0, float unused1, float unused2, float arg1) {
 /* Returning the compare as `? 1 : 0` gives bc1t with the `li 1` in its
    slot; folded into `&&` it becomes bc1tl. The two nops, after the mtc1
    and after the compare, are ps2eeas's (tools/ps2eeas_nops.py). */
-int func_00207E28(int arg0, float unused1, float unused2, float arg1) {
+int MenuL08_HitTest4(int arg0, float unused1, float unused2, float arg1) {
     if (arg0 >= 0xE0) {
         return 0;
     }
@@ -487,27 +487,27 @@ extern unsigned char D_0013D4D3 NOT_SDA;
 extern unsigned char D_0013D4D4 NOT_SDA;
 extern unsigned char D_0013D4D5 NOT_SDA;
 
-int func_00207E60(void) {
+int MenuL08_HasSpecialItem30(void) {
     return D_0013D4C0 != 0;
 }
 
-int func_00207E70(void) {
+int MenuL08_HasSpecialItem31(void) {
     return D_0013D4C1 != 0;
 }
 
-int func_00207E80(void) {
+int MenuL08_HasSpecialItem32(void) {
     return D_0013D4C2 != 0;
 }
 
-int func_00207E90(void) {
+int MenuL09_HasSpecialItem43(void) {
     return D_0013D4D3 != 0;
 }
 
-int func_00207EA0(void) {
+int MenuL09_HasSpecialItem44(void) {
     return D_0013D4D4 != 0;
 }
 
-int func_00207EB0(void) {
+int MenuL09_HasSpecialItem45(void) {
     return D_0013D4D5 != 0;
 }
 
@@ -516,7 +516,7 @@ extern unsigned char D_0013D4E0;
 extern unsigned char D_0013D4E0_far __asm__("D_0013D4E0") NOT_SDA;
 /* The recorded C was right; the two ps2eeas nops were the only
    residual. */
-int func_00207EC0(int arg0, float unused1, float unused2, float arg1) {
+int MenuL10_HitTest0(int arg0, float unused1, float unused2, float arg1) {
     if (arg0 >= 0xBE) return D_0013D4E0_far != 0;
     return (arg1 >= 58.5f) ? 1 : 0;
 }
@@ -527,29 +527,29 @@ extern unsigned char D_0013D4DE NOT_SDA;
 extern unsigned char D_0013D4DF NOT_SDA;
 extern unsigned char D_0013D4E1 NOT_SDA;
 
-int func_00207F00(void) {
+int MenuL10_HasSpecialItem4C(void) {
     return D_0013D4DC != 0;
 }
 
-int func_00207F10(void) {
+int MenuL10_HasSpecialItem4D(void) {
     return D_0013D4DD != 0;
 }
 
-int func_00207F20(void) {
+int MenuL10_HasSpecialItem4E(void) {
     return D_0013D4DE != 0;
 }
 
-int func_00207F30(void) {
+int MenuL10_HasSpecialItem4F(void) {
     return D_0013D4DF != 0;
 }
 
-int func_00207F40(void) {
+int MenuL10_HasSpecialItem51(void) {
     return D_0013D4E1 != 0;
 }
 
 extern unsigned char D_0013D4E6 NOT_SDA;
 
-int func_00207F50(int arg0, float unused1, float unused2, float arg1) {
+int MenuL11_HitTest0(int arg0, float unused1, float unused2, float arg1) {
     if (arg0 < 0xDD) {
         return arg1 >= 232.0f && arg1 <= 235.0f && D_0013D4E6 != 0;
     }
@@ -558,7 +558,7 @@ int func_00207F50(int arg0, float unused1, float unused2, float arg1) {
 
 extern unsigned char D_0013D4E7 NOT_SDA;
 
-int func_00207FD0(int arg0, float unused1, float unused2, float arg1) {
+int MenuL11_HitTest1(int arg0, float unused1, float unused2, float arg1) {
     if (arg0 < 0xDD) {
         return (arg1 >= 242.0f) ? 1 : 0;
     }
@@ -567,7 +567,7 @@ int func_00207FD0(int arg0, float unused1, float unused2, float arg1) {
 
 extern unsigned char D_0013D4E8 NOT_SDA;
 
-int func_00208030(int arg0, float unused1, float unused2, float arg1) {
+int MenuL11_HitTest2(int arg0, float unused1, float unused2, float arg1) {
     if (arg0 < 0xDD) {
         return (arg1 >= 238.0f && arg1 <= 241.0f) ? 1 : 0;
     }
@@ -579,7 +579,7 @@ extern unsigned char D_0013D4EA NOT_SDA;
 /* The Menu13F450 state test of func_00207340, computed up front (retail
    evaluates it before the arg0 branch), gates the arg0 < 0x15F arm; the
    other arm is func_00208160's second test with D_0013D4EA. */
-int func_002080B0(int arg0, float unused1, float unused2, float arg1) {
+int MenuL11_HitTest3(int arg0, float unused1, float unused2, float arg1) {
     Menu13F450 *s = &D_0013F450;
     int a = s->unk208C == 17 || s->unk208C == 18 || s->unk12E4 == 1;
 
@@ -591,7 +591,7 @@ int func_002080B0(int arg0, float unused1, float unused2, float arg1) {
 
 extern unsigned char D_0013D4EB NOT_SDA;
 
-int func_00208160(int arg0, float unused1, float unused2, float arg1) {
+int MenuL11_HitTest4(int arg0, float unused1, float unused2, float arg1) {
     if (arg0 < 0x15F) {
         return (arg1 >= 228.0f && arg1 <= 230.0f) ? 1 : 0;
     }
@@ -600,7 +600,7 @@ int func_00208160(int arg0, float unused1, float unused2, float arg1) {
 
 extern unsigned char D_0013D4E9 NOT_SDA;
 
-int func_002081F8(void) {
+int MenuL11_HasSpecialItem59(void) {
     return D_0013D4E9 != 0;
 }
 
@@ -609,7 +609,7 @@ int func_002081F8(void) {
    func_00207CE0). With `r` defaulting to 1, reorg turns the reset into
    retail's bc1fl with `r = 0` in its delay slot. The nop after the mtc1
    is ps2eeas's (tools/ps2eeas_nops.py). */
-int func_00208208(void *arg0, int arg1, float unused1, float unused2, float arg3) {
+int MenuL12_HitTest0(void *arg0, int arg1, float unused1, float unused2, float arg3) {
     int r = 1;
 
     if (arg1 < 0x141 && !(63.5f <= arg3)) {
@@ -618,11 +618,11 @@ int func_00208208(void *arg0, int arg1, float unused1, float unused2, float arg3
     return r;
 }
 
-int func_00208238(void) {
+int MenuL12_IsAlwaysActive1(void) {
     return 1;
 }
 
-int func_00208240(void) {
+int MenuL12_IsAlwaysActive2(void) {
     return 1;
 }
 
@@ -633,7 +633,7 @@ extern float func_001F9D48(float *, float *);
    while D_001A04A8 is set. Both vectors are 16-byte aligned like the
    SDK's sceVu0FVECTOR; a partial initializer then clears the whole
    quadword with one por/sq (a plain float[4] gets a memset call). */
-int func_00208248(int x, int y) {
+int MenuL15_HitTest0(int x, int y) {
     if (D_001A04A8 == 0) {
         FVec4 p = { (float)x, (float)y };
         FVec4 c = { 0 };
@@ -647,13 +647,13 @@ int func_00208248(int x, int y) {
 
 extern unsigned char D_0013D502 NOT_SDA;
 
-int func_002082E8(void) {
+int MenuL16_HasSpecialItem72(void) {
     return D_0013D502 != 0;
 }
 
 extern unsigned char D_0013D503 NOT_SDA;
 
-int func_002082F8(void) {
+int MenuL16_HasSpecialItem73(void) {
     return D_0013D503 != 0;
 }
 
@@ -661,15 +661,15 @@ extern unsigned char D_0013D504 NOT_SDA;
 extern unsigned char D_0013D505 NOT_SDA;
 extern unsigned char D_0013D50F NOT_SDA;
 
-int func_00208308(void) {
+int MenuL16_HasSpecialItem74(void) {
     return D_0013D504 != 0;
 }
 
-int func_00208318(void) {
+int MenuL16_HasSpecialItem75(void) {
     return D_0013D505 != 0;
 }
 
-int func_00208328(void) {
+int MenuL18_HasSpecialItem7F(void) {
     return D_0013D50F != 0;
 }
 
@@ -692,7 +692,7 @@ extern int D_0015EE84 MACRO_ADDR;
 void Menu_ReadSector(int arg0) {
     int n;
 
-    func_00209040();
+    DebugEnter_Nop();
     if (D_001A01F0[0xA] == 0) {
         FastMemSet((void *)arg0, 0, 0x800);
         return;
@@ -714,7 +714,7 @@ void UnpackOcclusionMap(void *arg0, unsigned char *arg1, int arg2) {
     /* func_00209040 is empty in retail and takes no arguments; $4/$5/$6
        still hold our own incoming arguments across it, which is why retail
        saves them into $16-$18 rather than reloading. */
-    func_00209040();
+    DebugEnter_Nop();
     if (!D_001A0218[0]) {
         return;
     }
@@ -1095,7 +1095,7 @@ void Map_CopyObjectPositions(void) {
     }
 }
 
-void func_00209040(void) {
+void DebugEnter_Nop(void) {
 }
 
 /*
@@ -1192,7 +1192,7 @@ extern int D_0013D390_i[] __asm__("D_0013D390");
 
 /* Sets menu state 3, clears the record's word at +0xFC and copies +0xC4
    into +0x1C. */
-void func_00209160(void) {
+void CardMenu_State00Reset(void) {
     D_0015EFB0 = 3;
     D_0013D390_i[0x3F] = 0;
     D_0013D390_i[0x07] = D_0013D390_i[0x31];
@@ -1203,7 +1203,7 @@ void func_00209160(void) {
    D_0013D390 record. The cross-jumped `b` back into the 0x80 arm is
    one GNU as pads as a short loop and ps2eeas did not;
    tools/ps2eeas_nops.py writes it as a .word. */
-void func_00209188(void) {
+void CardMenu_State01AdvanceOnInput(void) {
     int flags = D_0015EFB4;
     char *b;
     int nf;
@@ -1237,7 +1237,7 @@ void func_00209188(void) {
     }
 }
 
-void func_00209238(void) {
+void CardMenu_State02ReleaseSlot(void) {
     char *b = D_0013D390;
     char *base = b + 0xB0;
     int idx = *(int *)(b + 0xCC);
@@ -1250,7 +1250,7 @@ void func_00209238(void) {
     }
 }
 
-void func_00209290(void) {
+void CardMenu_State03ClearSlots(void) {
     char *b = D_0013D390;
     char *base = b + 0xB0;
     int idx = *(int *)(b + 0xCC);
@@ -1269,7 +1269,7 @@ void func_00209290(void) {
     D_0015EFB0 = 4;
 }
 
-void func_002092E8(void) {
+void CardMenu_State04AdvanceOnStatus(void) {
     char *b = D_0013D390;
     int v;
     D_0015EFB4 &= ~0x20;
@@ -1287,7 +1287,7 @@ void func_002092E8(void) {
     }
 }
 
-void func_00209358(void) {
+void CardMenu_State05WaitFlag2(void) {
     if (D_0013D3AC != -2) {
         D_0015EFB0 = 3;
         return;
@@ -1299,7 +1299,7 @@ void func_00209358(void) {
 
 extern int D_0015F6C8 MACRO_ADDR;
 
-void func_00209398(void) {
+void CardMenu_State06AdvanceOnFlags(void) {
     int flags;
     if (D_0013D3AC != -2) {
         D_0015EFB0 = 3;
@@ -1331,7 +1331,7 @@ void menu_post_preparePageOpen(void) {
     D_0015EFB0 = 8;
 }
 
-void func_00209448(void) {
+void CardMenu_State08StartFromStatus(void) {
     char *s = D_0013D390;
     if (*(int *)(s + 0xDC) == 2 && *(int *)(s + 0xE4) < 0) {
         if (*(int *)(s + 0xEC) != 0) {
@@ -1343,7 +1343,7 @@ void func_00209448(void) {
     }
 }
 
-void func_002094A8(void) {
+void CardMenu_State09WaitFlags(void) {
     if (D_0013D3AC != 0) {
         D_0015EFB0 = 3;
         return;
@@ -1353,7 +1353,7 @@ void func_002094A8(void) {
     }
 }
 
-void func_002094E0(void) {
+void CardMenu_State10BeginSlot7(void) {
     char *s = D_0013D390;
     if (*(int *)(s + 0xDC) == 2 && *(int *)(s + 0xE4) < 0) {
         *(int *)(s + 0xE4) = 7;
@@ -1373,7 +1373,7 @@ extern char D_0013D390[];
    $a1, as retail does; keeping `b` mutated in place puts them the other
    way round). Then it re-reads the record fresh and sets D_0015EFB0
    (the next-state word) from unk1C/unkEC/unk14/unkC+unkAC. */
-void func_00209520(void) {
+void CardMenu_State11MarkSlotChoose(void) {
     char *b = D_0013D390;
     int v;
     if (*(int *)(b + 0xDC) >= 3 || *(int *)(b + 0xE4) >= 0) {
@@ -1403,7 +1403,7 @@ void func_00209520(void) {
     }
 }
 
-void func_002095E8(void) {
+void CardMenu_State12WaitFlag2(void) {
     if (D_0013D3AC != 0) {
         D_0015EFB0 = 3;
         return;
@@ -1413,7 +1413,7 @@ void func_002095E8(void) {
     }
 }
 
-void func_00209620(void) {
+void CardMenu_State13AdvanceOnFlags(void) {
     int flags;
     if (D_0013D3AC != 0) {
         D_0015EFB0 = 3;
@@ -1435,7 +1435,7 @@ void func_00209620(void) {
     }
 }
 
-void func_00209698(void) {
+void CardMenu_State14BeginSlot9(void) {
     char *s = D_0013D390;
     if (*(int *)(s + 0xDC) == 2 && *(int *)(s + 0xE4) < 0) {
         *(int *)(s + 0xE4) = 9;
@@ -1444,7 +1444,7 @@ void func_00209698(void) {
     }
 }
 
-void func_002096D8(void) {
+void CardMenu_State15AdvanceOrAlternate(void) {
     char *s = D_0013D390;
     if (*(int *)(s + 0xDC) == 2 && *(int *)(s + 0xE4) < 0) {
         if (*(int *)(s + 0xEC) != 0) {
@@ -1463,7 +1463,7 @@ void func_002096D8(void) {
 /* func_00209188's sibling: clears the 4 and 2 bits, then the same
    0x80/0x100 arms and the D_0013D390 record's tests. Its cross-jumped
    `b` is written as a .word too (tools/ps2eeas_nops.py). */
-void func_00209750(void) {
+void CardMenu_State16NextState(void) {
     int flags;
     char *b;
     if (D_0015EFB4 & 4) {
@@ -1494,7 +1494,7 @@ void func_00209750(void) {
 }
 
 
-void func_00209808(void) {
+void CardMenu_State17FinishSlot(void) {
     char *b = D_0013D390;
     char *base = b + 0xB0;
     int idx = *(int *)(b + 0xCC);
@@ -1507,7 +1507,7 @@ void func_00209808(void) {
     }
 }
 
-void func_00209858(void) {
+void CardMenu_State18FinishSlot(void) {
     char *b = D_0013D390;
     char *base = b + 0xB0;
     int idx = *(int *)(b + 0xCC);
@@ -1520,13 +1520,13 @@ void func_00209858(void) {
     }
 }
 
-void func_002098A8(void) {
+void CardMenu_State19AbortOnStatus(void) {
     if (D_0013D3AC != 0) {
         D_0015EFB0 = 3;
     }
 }
 
-void func_002098C8(void) {
+void CardMenu_State20FinishSlot(void) {
     char *b = D_0013D390;
     char *base = b + 0xB0;
     int idx = *(int *)(b + 0xCC);
@@ -1539,7 +1539,7 @@ void func_002098C8(void) {
     }
 }
 
-void func_00209918(void) {
+void CardMenu_State21FinishSlot(void) {
     char *b = D_0013D390;
     char *base = b + 0xB0;
     int idx = *(int *)(b + 0xCC);
@@ -1552,7 +1552,7 @@ void func_00209918(void) {
     }
 }
 
-void func_00209968(void) {
+void CardMenu_State22StartOrFinish(void) {
     char *b = D_0013D390;
     if (*(int *)(b + 0xDC) < 3 && *(int *)(b + 0xE4) < 0) {
         if (*(int *)(b + 0xEC) != 0) {
@@ -1565,7 +1565,7 @@ void func_00209968(void) {
     }
 }
 
-void func_002099D0(void) {
+void CardMenu_State23WaitFlag20(void) {
     int flags;
     if (D_0013D3AC != -2) {
         D_0015EFB0 = 3;
@@ -1578,7 +1578,7 @@ void func_002099D0(void) {
     }
 }
 
-void func_00209A18(void) {
+void CardMenu_State24WaitFlag20(void) {
     int flags;
     if (D_0013D3AC != 0) {
         D_0015EFB0 = 3;

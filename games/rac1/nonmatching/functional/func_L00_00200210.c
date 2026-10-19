@@ -1,4 +1,4 @@
-/* functional: medium. Plain C for the VU0 sequence: q = a / b (vdiv), truncate q toward zero (vftoi0 then vitof0), take the fraction (vsub), multiply by b (vmul). VU rounding is not reproduced. Corrected from the original for the host: vdiv by zero and overflow saturate to +-FLT_MAX (sign = sign(a) xor sign(b)), vftoi0 saturates to 0x7FFFFFFF / 0x80000000 instead of overflowing the (int) cast, and the product saturates too; no inf or NaN is produced. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Plain C for the VU0 sequence: q = a / b (vdiv), truncate q toward zero (vftoi0 then vitof0), take the fraction (vsub), multiply by b (vmul). VU rounding is not reproduced. Corrected from the original for the host: vdiv by zero and overflow saturate to +-FLT_MAX (sign = sign(a) xor sign(b)), vftoi0 saturates to 0x7FFFFFFF / 0x80000000 instead of overflowing the (int) cast, and the product saturates too; no inf or NaN is produced. */
 #define PS2_MAX_F 0x1.fffffep127f
 
 static float ps2_saturate(float v) {

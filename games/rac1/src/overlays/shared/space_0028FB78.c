@@ -83,11 +83,11 @@ void EnterShipMode(int a) {
     FastMemSet(&D_L00_0016C960_s, 0, 0x1C0);
     FastMemSet(D_L00_0017C440, 0, 0x40);
     FastMemSet(D_L00_0017C480, 0, 0x40);
-    func_002348B8();
+    VuChain_SetLevelOffset();
     u = D_L00_0016128C - 0x60000;
     D_L00_0016C960_s.x58 = D_L00_00173F00_s.x4 + u;
     D_L00_0016C960_s.x5c = D_L00_00173F00_s.x8 + u;
-    D_L00_0015F4FC = 1.0f;
+    gFadeLvl = 1.0f;
     D_L00_0015F6A8 = 6;
     D_L00_0016128C = u;
     D_L00_0015F500 = 0;
@@ -180,11 +180,11 @@ void ShipTravelTo(int dest) {
     int *q;
     D_L00_0015F6B8[1] = 1;
     D_L00_0015F6A8 = 6;
-    D_L00_0015F4FC = 1.0f;
+    gFadeLvl = 1.0f;
     D_L00_0015F500 = 0;
     *(int *)(g + 0x20) = 0;
     *(short *)(g + 0x24) = -1;
-    func_002348B8();
+    VuChain_SetLevelOffset();
     base = D_L00_00161288[1] - 0x60000;
     q = (int *)D_L00_00173F00;
     h = D_L00_0016C960;
@@ -239,9 +239,9 @@ out:
 in:
     D_0013E130_901A8.x24 = -1;
     D_L00_0015F6A8 = 6;
-    D_L00_0015F4FC = 1.0f;
+    gFadeLvl = 1.0f;
     D_0013E130_901A8.x20 = 0;
-    func_002348B8();
+    VuChain_SetLevelOffset();
     u = D_L00_0016128C_901A8 - 0x60000;
     D_L00_0016C960_901A8.x58 = D_L00_00173F00_901A8.x4 + u;
     D_L00_0016C960_901A8.x5c = D_L00_00173F00_901A8.x8_c + u;

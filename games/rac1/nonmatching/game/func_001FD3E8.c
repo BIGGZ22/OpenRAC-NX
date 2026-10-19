@@ -1,3 +1,4 @@
+/* fcheck: unchecked (every captured state was skipped, nothing compared; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* The freeze screen's update (game mode 4: the dialogs over a frozen frame). D_00193400 is the
    dialog: +0 its kind (0-8), +4 and +0x2C countdowns, +0x14 the mode to return to, +0x18 a menu
    to show, +0x1C a step, +0x20 a frame counter, +0x24 a delay before input is taken. D_0013CBE4

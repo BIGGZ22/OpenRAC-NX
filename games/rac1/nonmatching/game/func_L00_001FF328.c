@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* out.xyz = a.xyz * (1 / s) (VU0 vdiv Q = vf0.w / s, then vmulq.xyz), out.w = a.w; a zero s is
    the VU's division by zero, the largest float. */
 void func_L00_001FF328(float *out, float *a, float s) {

@@ -1,4 +1,4 @@
-/* functional: medium. Corrected in place: the translation row M[12..14] = moby +0x10 (lq) with M[15] = 1.0 was missing after the matrix build. Draw callback: builds a view matrix from the moby (+0xC0), sets up two quad packets (only the first is drawn) and draws it 5 x 6 times as a strip of jittering sparks (corner z grows by 1.0 per outer pass, y gets +-0.2 random jitter, u gets +-0.5 jitter per pass). Packet field meanings guessed from the layout. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Corrected in place: the translation row M[12..14] = moby +0x10 (lq) with M[15] = 1.0 was missing after the matrix build. Draw callback: builds a view matrix from the moby (+0xC0), sets up two quad packets (only the first is drawn) and draws it 5 x 6 times as a strip of jittering sparks (corner z grows by 1.0 per outer pass, y gets +-0.2 random jitter, u gets +-0.5 jitter per pass). Packet field meanings guessed from the layout. */
 typedef struct Pkt_09730 {
     float corner[4][4];
     unsigned int color[4];

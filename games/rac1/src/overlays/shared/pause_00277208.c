@@ -82,12 +82,12 @@ void PauseMenu_Close(void) {
             *(int *)&D_0015EF78 = *(int *)(state + 0x18);
             Hud_SendResidentBank(0, value, 0);
         }
-        func_L00_00235CA0(2);
+        HudBank_Release(2);
         if (*(int *)(*(char **)(table + 0x18) + 0x80) != 0) {
-            func_L00_00235CA0(3);
+            HudBank_Release(3);
         }
         if (*(int *)(*(char **)(table + 0x18) + 0x84) != 0) {
-            func_L00_00235CA0(4);
+            HudBank_Release(4);
         }
         {
             int k;
@@ -282,11 +282,11 @@ void PauseMenu_Update(void) {
             return;
         }
         *(int *)&D_L00_0015F658 = 0x1E000;
-        func_002348B8();
+        VuChain_SetLevelOffset();
         qcopy(D_L00_00166EC0, &GS.v40);
         qcopy(D_L00_00166EC0 + 4, &GS.v50);
         D_L00_0016CBF0 = GS.unkE8;
-        func_L00_00235FF8(0);
+        MobyPool_Swap(0);
         if (GS.unk140 != 0) {
             *(int *)&D_L00_001600CC = -1;
             LoadMobyClassResources(GS.unk140, GS.unk144);
@@ -373,9 +373,9 @@ void PauseMenu_Update(void) {
         }
     } else if (GS.unk8 != 0) {
         if (GS.owner == GS.unk8) {
-            func_0022ED80(3, 0x11, D_L00_001BA220[0]);
+            Moby_PlaySound(3, 0x11, D_L00_001BA220[0]);
         } else {
-            func_0022ED80(4, 0x11, D_L00_001BA220[0]);
+            Moby_PlaySound(4, 0x11, D_L00_001BA220[0]);
         }
         for (i = 0; i < 14; i++) {
             obj = GS.owner->objs[i];
@@ -916,14 +916,14 @@ int PauseMenu_SetupHelperMoby(char *h) {
     *(int *)(h + 0x34) = 0;
     if (m != 0) {
         char *d;
-        char *g = D_L00_00166D80;
+        char *g = gCameraLvl;
         *(char **)(h + 0x44) = m;
         *(short *)(m + 0x34) = 0;
         *(float *)(m + 0x10) = *(float *)(g + 0x140) + 2.2f;
         *(float *)(m + 0x14) = *(float *)(g + 0x144) + 0.0f;
         *(float *)(m + 0x18) = *(float *)(g + 0x148) + -1.6f;
         d = *(char **)(m + 0x78);
-        *(void **)(m + 0x74) = func_001E9768;
+        *(void **)(m + 0x74) = Profile_Mark;
         *(float *)(m + 0x48) = 3.1415927f;
         *(char **)d = h;
         *(int *)(d + 4) = 0;

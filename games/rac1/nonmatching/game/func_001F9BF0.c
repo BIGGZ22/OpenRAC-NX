@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* func_001F9BF0(dst, a, b): VU0 vsub.xyz: dst.xyz = a.xyz - b.xyz; the w of a
    is kept (the 16 bytes are stored whole). Both inputs are read before the store. */
 void func_001F9BF0(float *dst, float *a, float *b) {

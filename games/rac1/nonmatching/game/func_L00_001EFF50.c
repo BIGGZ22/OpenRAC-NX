@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* CollCellLookup: finds the leaf word of a collision cell. The mesh holds three
    levels indexed by z, then y, then x: each level has a base and a count (both
    16-bit) and an array of offsets (16-bit at the root and slab levels, 32-bit

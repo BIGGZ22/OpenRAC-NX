@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Clears the 16 bytes (one quadword, `sq $0`) at p. */
 void func_001F9BC0(void *p) {
     unsigned int *q = (unsigned int *)p;

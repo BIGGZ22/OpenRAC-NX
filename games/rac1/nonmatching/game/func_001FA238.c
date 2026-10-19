@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Rotation matrix from three angles in radians: angles[0] about X, angles[1]
    about Y, angles[2] about Z. Writes the 4x4 matrix as four column vectors
    (16 floats, column-major) to out. Starts from the identity and applies Z,

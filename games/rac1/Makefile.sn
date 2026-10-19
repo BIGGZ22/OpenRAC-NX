@@ -104,6 +104,10 @@ build-sn/core/%.o: src/core/%.c config/file_cflags.txt tools/file_cflags.py tool
 # headers (stdarg.h) are passed explicitly: under Wine the driver does
 # not find its built-in include directory.
 EE29_CORE := $(shell awk '!/^\#/ && $$3 == "ee29" {print $$1}' config/core_text.objects)
+GAS210_CORE := $(shell awk '!/^\#/ && $$5 == "gas210" {print $$1}' config/core_text.objects)
+GAS210_REAL_CORE := $(shell awk '!/^\#/ && $$5 == "gas210-real" {print $$1}' config/core_text.objects)
+DTLS29_REAL_CORE := $(shell awk '!/^\#/ && $$5 == "dtls29-real" {print $$1}' config/core_text.objects)
+REAL_AS_CORE := $(GAS210_REAL_CORE) $(DTLS29_REAL_CORE)
 EE29_INC := -I$(SN_114)/lib/gcc-lib/ee/2.9-ee-991111/include
 # ee29 objects whose fourth column is `991111-01` (config/core_text.objects):
 # built with Sony's Linux 2.9-ee-991111-01 when it is present (as libgcc is),
@@ -116,13 +120,14 @@ else
 CC_EE29_01 := toolchain/ee-gcc-2.9-991111-01/bin/ee-gcc
 INC_EE29_01 :=
 endif
-$(EE29_CORE): build-sn/core/%.o: src/core/%.c config/file_cflags.txt tools/file_cflags.py tools/fix_volatile_slot.py tools/check_macro_slots.py
+$(EE29_CORE): build-sn/core/%.o: src/core/%.c config/file_cflags.txt tools/file_cflags.py tools/fix_volatile_slot.py tools/check_macro_slots.py tools/fix_jump_tables.py tools/jump_tables.py tools/gas210.py tools/dtls29_as.py config/core_rodata.txt config/core_text.objects
 	@mkdir -p build-sn/core
 	$(if $(filter $@,$(EE29_01_CORE)),$(CC_EE29_01) $(CFLAGS) $$(python tools/file_cflags.py $<) $(INC_EE29_01),$(WINE) $(SN_114)/bin/ee-gcc.exe $(CFLAGS) $$(python tools/file_cflags.py $<) $(EE29_INC)) -S -o build-sn/core/$*.s $<
 	cp build-sn/core/$*.s build-sn/core/$*_fixed.s
-	python tools/fix_volatile_slot.py build-sn/core/$*_fixed.s build-sn/core/$*_fixed.s
+	python tools/fix_jump_tables.py --core build-sn/core/$*_fixed.s build-sn/core/$*_fixed.s
+	$(if $(filter $@,$(REAL_AS_CORE)),:,python tools/fix_volatile_slot.py $(if $(filter $@,$(GAS210_CORE)),--loads) build-sn/core/$*_fixed.s build-sn/core/$*_fixed.s)
 	python tools/check_macro_slots.py build-sn/core/$*_fixed.s
-	$(CC_CORE) $(CFLAGS) -c build-sn/core/$*_fixed.s -o $@
+	$(if $(filter $@,$(GAS210_REAL_CORE)),python tools/gas210.py build-sn/core/$*_fixed.s $@,$(if $(filter $@,$(DTLS29_REAL_CORE)),python tools/dtls29_as.py build-sn/core/$*_fixed.s $@,$(CC_CORE) $(CFLAGS) -c build-sn/core/$*_fixed.s -o $@))
 
 # libgcc modules: verbatim GCC source, no rewriters.
 LIBGCC_CFLAGS := -O2 -G2 -S

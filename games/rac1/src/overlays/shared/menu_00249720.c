@@ -51,7 +51,17 @@ int func_L00_002497A0(int item, float a, float b, float x) {
     return x >= 95.0f;
 }
 int func_L00_002497E0(float a, float b, float x) { return x >= 95.0f; }
-INCLUDE_ASM("asm/overlays", func_L00_00249EE0);
+extern int D_L00_001845C0;
+extern int D_L00_001845B8;
+
+int func_L00_00249EE0(float c, float d, float x, int a, int b) {
+    if (b < 0x9D) {
+        if (x < 73.5f || 80.0f < x || D_L00_001845C0 == 0) return 0;
+        return 1;
+    }
+    if (x < 51.5f || 54.0f < x || D_L00_001845B8 == 0) return 0;
+    return 1;
+}
 INCLUDE_ASM("asm/overlays", func_L00_00249F40);
 extern unsigned char D_0013D4C5 NOT_SDA;
 extern int D_001414DC;
@@ -150,7 +160,38 @@ void SetPlanetTableEntry(int a, int b) {
         D_L00_001792B8[b] = a;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_0024B200);
+typedef struct {
+    float x0;
+    float xs;
+    float y0;
+    float ys;
+} MapScale_182B70;
+extern MapScale_182B70 D_L00_00182B70[];
+
+void func_L00_0024B200(float *p1, float *p2, int k, float t, float u) {
+    int seven = 0;
+
+    if (k >= 100) {
+        k -= 100;
+        seven = 1;
+    }
+    if (k == -1) {
+        k = D_0015EE84_m;
+    }
+    if (k < 0) {
+        k = 0;
+    }
+    if (k >= 19) {
+        k = 0;
+    }
+    if (k == 6 && seven) {
+        *p1 = (D_L00_00182B70[6].ys * u + 1053.0f) * 0.001953125f;
+        *p2 = (740.0f - D_L00_00182B70[6].xs * t) * 0.001953125f;
+    } else {
+        *p1 = (D_L00_00182B70[k].x0 + D_L00_00182B70[k].xs * t) * 0.001953125f;
+        *p2 = (D_L00_00182B70[k].y0 + D_L00_00182B70[k].ys * u) * 0.001953125f;
+    }
+}
 INCLUDE_ASM("asm/overlays", func_L00_0024B2A4);
 extern int D_0015EFB4 MACRO_ADDR;
 extern int D_0015EFB0 MACRO_ADDR;
@@ -186,7 +227,7 @@ INCLUDE_ASM("asm/overlays", func_L00_0024B908);
 extern char D_0013D355[];
 
 // Sets the menu memory card state.
-void func_L00_0024B920(void) {
+void CardMenu_AdvanceOnCardStatus(void) {
     /* The card status word at 0x13D3AC, reached the way the assembly names it (D_0013D355 + 0x57). Its
        neighbours in this file read the same word as D_0013D390[7]; that spelling does not give retail's
        bytes here. Accepted as a last resort. */
@@ -199,14 +240,32 @@ void func_L00_0024B920(void) {
     }
 }
 INCLUDE_ASM("asm/overlays", func_L00_0024B940);
-INCLUDE_ASM("asm/overlays", func_L00_0024B960);
+extern int D_L00_0015F688 MACRO_ADDR;
+void func_L00_0024B960(void) {
+    int flags;
+    if (*(int *)(D_0013D355 + 0x57) != -2) {
+        D_0015EFB0 = 3;
+        return;
+    }
+    flags = D_0015EFB4;
+    if (flags & 0x20) {
+        D_0015EFB4 = flags ^ 0x20;
+        if (D_L00_0015F688 != 0) {
+            D_0015EFB0 = 0x17;
+            return;
+        }
+        D_0015EFB0 = 5;
+        return;
+    }
+    if (flags & 8) {
+        D_0015EFB4 = flags ^ 8;
+        D_0015EFB0 = 7;
+    }
+}
 INCLUDE_ASM("asm/overlays", func_L00_0024B980);
 extern int D_0015EFB0 MACRO_ADDR;
 
-// Stores constant to gp-relative address
-void CardMenu_SetStateFive(void) {
-    *(int *)&D_0015EFB0 = 5;
-}
+INCLUDE_ASM("asm/overlays", func_L00_0024B9A8);
 INCLUDE_ASM("asm/overlays", func_L00_0024B9B4);
 /* Sets the menu state from the status of the card record at D_0013D355 + 0x3B. */
 void SetMenuStateFromCardStatus(void) {
@@ -222,7 +281,7 @@ void SetMenuStateFromCardStatus(void) {
 }
 INCLUDE_ASM("asm/overlays", func_L00_0024BA60);
 /* sets the menu state to 3 while D_0013D390[7] is set, else to 10 when flag 2 or 4 is up */
-void func_L00_0024BA70(void) {
+void CardMenu_AdvanceOnSaveByte(void) {
     if (D_0013D390[7] != 0) {
         D_0015EFB0 = 3;
         return;
@@ -302,7 +361,7 @@ INCLUDE_ASM("asm/overlays", func_L00_0024BD84);
 INCLUDE_ASM("asm/overlays", func_L00_0024BDB8);
 /* while D_0013D390[55] < 3 and D_0013D390[57] < 0: with D_0013D390[59] set, D_0013D390[63] is
    cleared, the state becomes 21 and flags 0x40 and 0x400 go up; else the state becomes 1 */
-void func_L00_0024BF30(void) {
+void CardMenu_NextStateOnCounters(void) {
     if (D_0013D390[55] < 3 && D_0013D390[57] < 0) {
         if (D_0013D390[59] != 0) {
             D_0013D390[63] = 0;

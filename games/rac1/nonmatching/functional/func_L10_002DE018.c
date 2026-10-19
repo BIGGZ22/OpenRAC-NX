@@ -1,4 +1,4 @@
-/* functional: medium. Update of a rippling cloth/water grid moby (4 groups of 10 columns of 20 rows): state 0 sets up per-column timers (0x2D per step) unless on level 10 with flag set (then deletes itself); state 1 advances a phase, and for each column whose timer function says so rebuilds the wave rows and relaxes neighbouring rows, otherwise just relaxes. Statically checked only. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Update of a rippling cloth/water grid moby (4 groups of 10 columns of 20 rows): state 0 sets up per-column timers (0x2D per step) unless on level 10 with flag set (then deletes itself); state 1 advances a phase, and for each column whose timer function says so rebuilds the wave rows and relaxes neighbouring rows, otherwise just relaxes. Statically checked only. */
 extern void f_delete_DE018(void *) __asm__("func_0020D678");
 extern int f_timer_DE018(void *) __asm__("func_001F9908");
 extern void f_clear_DE018(void *) __asm__("func_001F9BC0");

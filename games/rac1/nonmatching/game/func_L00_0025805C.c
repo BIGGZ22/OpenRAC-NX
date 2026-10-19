@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* HeroEnvLighting: light colour of a moby from the environment zones around its position
    (a0 + 0x10). If func_L00_00257E18 finds a zone (record of 0x80 bytes in D_L00_0017EFC0,
    bit 0 of +0x50 set) at weight t, the colour at +0x80 becomes the per-channel blend of the

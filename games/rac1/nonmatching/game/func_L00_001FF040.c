@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* memcpy(dst, src, n). Retail picks its loop by the low bits of dst, src and dst+n:
    a 16-byte loop when all three are 16-byte aligned, a 4-byte loop when all three are
    4-byte aligned, else a byte loop. Each step loads its unit fully before storing it. */

@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /*
  * MobyBuildMatrix(moby): the moby's rotation rows and its bounding sphere in the world, then its cells
  * in the moby grid. As ReRAC's rebuild_matrix (crates/rc-game/src/moby_update/scheduler.rs; ISC

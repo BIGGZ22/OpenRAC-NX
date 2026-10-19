@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Copies len bytes from src to dst (no overlap). It picks the widest unit the
    alignment of dst, src and the end allows: 16-byte, then 4-byte, then bytes. */
 void func_001F9A00(void *dst_, void *src_, int len)

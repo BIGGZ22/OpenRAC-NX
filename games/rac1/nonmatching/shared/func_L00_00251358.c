@@ -5,6 +5,7 @@
  * What the last attempts found:
  *   func_L00_00251358: unpacks three bytes (bits 32-39, 40-47, 48-55) of the 64-bit word at moby+0x38 into three i
  *   Wall: retail uses $at ($1) as an ordinary register for dsrl32 results, which gcc never allocates; the original
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 /* unpacks three bytes from the upper half of the moby's 64-bit word at 0x38 */
 void func_L00_00251358(char *m, int *a, int *b, int *c) {

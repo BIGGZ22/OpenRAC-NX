@@ -1,3 +1,4 @@
+/* fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* FastCountChars: sums a byte buffer two bytes per pass. The loop always runs
    at least once and keeps going while the count stays positive after each
    step of two. */

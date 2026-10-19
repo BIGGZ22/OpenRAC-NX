@@ -2,6 +2,13 @@
 # Entries are segment/function names; tools/organize_asm.py moves
 # local .s files after tools/setup_asm.sh and leaves compatibility links.
 # Classification comes from tools/triage.py: handwritten asm.
+core_text/func_001150D4
+core_text/func_00116428
+core_text/func_001165B8
+core_text/func_001166FC
+core_text/func_00116810
+core_text/func_00116948
+core_text/func_00116B00
 core_text/func_00118A40
 core_text/func_00118A50
 core_text/func_00118A60
@@ -247,3 +254,26 @@ text/func_00236F00
 text/func_002383D8
 text/func_00238688
 text/func_0023C7A8
+text/func_001FA480
+text/func_001F9BA0
+text/func_0020C230
+text/func_001FA748
+text/func_001FA790
+text/func_001F9888
+text/func_0023C910
+text/func_001FA7D8
+text/func_001F98E8
+text/func_001F9878
+text/func_001F98F8
+text/func_001FA850
+text/func_001F9BB0
+text/func_0020C210
+text/func_001F98C0
+text/func_001F9B90
+text/func_001F9B98
+text/func_001F9BC0
+text/func_001F9AF0
+text/func_001F9850
+text/func_001F9840
+text/func_001F98B0
+core_text/func_001151B4

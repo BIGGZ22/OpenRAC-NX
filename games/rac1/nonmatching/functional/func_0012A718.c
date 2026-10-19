@@ -1,4 +1,4 @@
-/* functional: high. DMA channel 4 completion handler: acknowledges D_STAT, then sends the next piece of the record {remaining bytes, address}: a full 0xFFFF piece while more remains (advancing the address by 0xFFFF0 masked to 28 bits), else the remainder. Returns 1 when nothing remains, otherwise 0. Interrupt re-enable (ei) and the sync are dropped; they have no host meaning. */
+/* functional: high. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). DMA channel 4 completion handler: acknowledges D_STAT, then sends the next piece of the record {remaining bytes, address}: a full 0xFFFF piece while more remains (advancing the address by 0xFFFF0 masked to 28 bits), else the remainder. Returns 1 when nothing remains, otherwise 0. Interrupt re-enable (ei) and the sync are dropped; they have no host meaning. */
 int func_0012A718(int arg0, void *arg1) {
     unsigned int *rec = (unsigned int *)arg1;
     unsigned int v;

@@ -613,10 +613,10 @@ void DialogNode_Update(void *arg0, Menu *menu, s32 arg2) {
         ok = gSpecialItems[e->unkA] != 0;
         break;
     case 5:
-        ok = !(func_00216098() < e->unkA);
+        ok = !(GetUnspentGoldBolts() < e->unkA);
         break;
     case 6:
-        ok = gBolts >= D_001E02B0[e->unkA].unk14 && func_00216098() >= 4;
+        ok = gBolts >= D_001E02B0[e->unkA].unk14 && GetUnspentGoldBolts() >= 4;
         break;
     default:
         ok = 0;

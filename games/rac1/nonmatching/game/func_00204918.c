@@ -1,3 +1,4 @@
+/* fcheck: SAME on 1 call (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* func_00204918: RelocateTfrags, the level-load init of a tfrags block s (its table at s + w0,
    count w4, LOD base f8 at +8). Sets the LOD distances 6, 4 and 2 times the base in D_00160FA0 and
    calls func_00234380 with them; makes each tfrag's data pointer (+0x10) absolute; then for every

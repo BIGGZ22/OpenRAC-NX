@@ -68,7 +68,7 @@ extern void func_L00_00222B80(int, int);
 void func_L00_002E17F0(char *a) {
     if (*(unsigned char *)(a + 0x20) == 4) {
         D_L00_0015F504 = 0;
-        *(int *)&D_L00_0015F4FC = 0;
+        *(int *)&gFadeLvl = 0;
         CameraScript2(3);
     }
     if (*(int *)(D_0013F450 + 0x208C) == 0x13) {
@@ -564,7 +564,7 @@ void EffectSlot_DrawPanes(char *m) {
         f = D_L00_00161D48_f[i] - D_0015EE60 * 0.2f;
         D_L00_00161D48_f[i] = f;
         if (f <= -8.0f) D_L00_00161D48_f[i] = f + 8.0f;
-        func_L00_002E4838(D_L00_00161D58[i], i);
+        EffectSlot_DrawPane(D_L00_00161D58[i], i);
         a = d[1] + 0x28;
         b = d[0] + 0x28;
         DrawSlotBlendQuads(a, b, &D_L00_001E7190[k], 0x80, 0x40, i);
@@ -751,7 +751,7 @@ void func_001F9BD8(void *, void *, void *);
 void func_L00_001FD1D8(void *, s32, s32);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e3388. */
-void func_L00_002E4838(s32 unused, s32 idx) {
+void EffectSlot_DrawPane(s32 unused, s32 idx) {
     Q_e3388 q;
     f32 a[4] __attribute__((aligned(16)));
     f32 b[4] __attribute__((aligned(16)));
@@ -844,7 +844,7 @@ extern int func_002140B0(int);
 extern void func_00213DE0(void *, int, int, int);
 
 /* Path-following moby update: start a run along its path in state 0, then step along the path each frame and pick an animation when the flag is set. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e3a88. */
-void func_L00_002E4F38(unsigned char *m) {
+void PathFollowMobyUpdate(unsigned char *m) {
     D_2e *d = *(D_2e **)(m + 0x78);
     int *p = D_L00_001B0830[d->path];
     float y;
@@ -1030,7 +1030,7 @@ int func_L00_002E5630(VQ *p, float r) {
 }
 typedef struct { float f[4]; } __attribute__((aligned(16))) VS;
 extern int func_L00_001EE530(VS *, float);
-int func_L00_002E5740(VS *a) {
+int Cam_IsInsideVolume(VS *a) {
     VS v;
     v = *a;
     return FindVolumeInGrid(&v, 0.0f) != 0;
@@ -1042,7 +1042,7 @@ extern void func_L00_002E5618(char *, void *);
 extern int func_L00_001EFFF0(void *, void *, int, int, int);
 
 /* build the two edge vectors of a moving box from the game vector and clip them */
-int func_L00_002E5770(void *out, int flag) {
+int Cam_GetPulledBackPosition(void *out, int flag) {
     VQ_2E5770 a, b, c, d;
     char *base = D_0013E633 + 0xE1D;
     float f;
@@ -1089,7 +1089,7 @@ void CamAttach_Init(char *m) {
     char *q;
     char *r;
     float f;
-    func_L00_002E5770(a, 0);
+    Cam_GetPulledBackPosition(a, 0);
     q = p + 0x40;
     f = FastVecDot(a, g3);
     r = p + 0x130;
@@ -1552,7 +1552,7 @@ void CamAttach_EasePose(char *m, float *v2) {
                 FastVecSub(e, cam, tmp);
             }
         } else {
-            func_L00_002E5770(tmp, 1);
+            Cam_GetPulledBackPosition(tmp, 1);
             x = FastVecDot(tmp, g + 0x30);
             FastVecScale(v2, g + 0x30, x);
             FastVecSub(e, tmp, v2);
@@ -1668,7 +1668,7 @@ extern short D_L00_00161E00;
 extern short D_L00_00161E04;
 
 // Camera blend: compute interpolated camera vector from current mode.
-void func_L00_002E6BE0(char *m, float *in) {
+void Cam_UpdateOffsetBlend(char *m, float *in) {
     char *p = *(char **)(m + 0x70);
     char *q = p + 0x40;
     float v[4];
@@ -1964,7 +1964,7 @@ extern void func_L00_002E9A18(int);
 extern void func_L00_002E9A40(float, float);
 extern void func_L00_002E9E20(int, float, float);
 
-void func_L00_002E74B0(O_y *o) {
+void CameraType0_HeroTweaks(O_y *o) {
     S220_y *s;
     S40_y *q;
     S1D0_y *t;
@@ -2009,7 +2009,7 @@ void func_L00_002E74B0(O_y *o) {
     if (hero74.vehicle_mode == 1) {
         if (s->i0 == 0) {
             q = (S40_y *)((u8 *)o->m + 0x40);
-            func_L00_002E9900(3.0f, 0.003f, 1);
+            Cam_SetDistanceGoal(3.0f, 0.003f, 1);
             if (flag == 0) {
                 q->fB0 = 1.0f;
                 func_L00_002E9968(1.0f, 0.003f);
@@ -2020,7 +2020,7 @@ void func_L00_002E74B0(O_y *o) {
     if (hero74.vehicle_mode == 2) {
         if (s->i10 < 2) {
             Cam_SetEyeOffset(0, g68, 0.005f);
-            func_L00_002E9900(g6C, 0.003f, 1);
+            Cam_SetDistanceGoal(g6C, 0.003f, 1);
             func_L00_002E9968(g70, 0.003f);
         }
         func_L00_002E9AD0();
@@ -2124,7 +2124,7 @@ extern float func_001F9D48(void *, void *);
 extern void func_001F9CA0(void *, void *, void *);
 // camera type 0 snap: puts the camera behind the hero, pulls it in along the line of sight, then builds its axes
 void CamType0InitSnap(int snap) {
-    char *cams = D_L00_00166D80;
+    char *cams = gCameraLvl;
     char *cam = *(char **)(cams + 0x180);
     char *track = cams + 0x190; /* the followed hero: position at 0, up vector at 0x30 */
     char *data = *(char **)(cam + 0x70);
@@ -2711,7 +2711,7 @@ s32 func_L00_002E87C8(O002e7318 *o) {
     return r;
 }
 // returns zero, with a 0x50 byte frame
-long func_L00_002E89D0(void) {
+long Cam_DebugCheck(void) {
     char buf[0x50];
     return 0;
 }
@@ -2719,7 +2719,7 @@ extern void func_001F9BF0(float *, float *, float *);
 extern void func_L00_001FF4B0(void *, void *, float);
 
 // combines vectors through the moby's data
-void func_L00_002E89E0(char *m, float *out, float *b, float *c, float *d, float s0, float s1) {
+void Cam_BlendPushedPoint(char *m, float *out, float *b, float *c, float *d, float s0, float s1) {
     float v0[4];
     float v1[4];
     float v2[4];
@@ -2862,7 +2862,7 @@ extern short D_L00_00161DA8;
 extern unsigned char D_0013A5E0[];
 
 // Camera sweep: steps a vector along the path, testing each step against the edge and the wall.
-int func_L00_002E8EE0(char *m) {
+int Cam_ResolveWallCollision(char *m) {
     V4 v0, v1, x, t, u, w;
     char *pa;
     int ret;
@@ -2881,13 +2881,13 @@ int func_L00_002E8EE0(char *m) {
     func_L00_001FF4B0(x, v0, 1.0f);
     i = 0;
     while (i < func_001FA898_r(*(float *)(s18 + 0x40) - 1.0f)) {
-        if (i > 0 && func_L00_002E5740((VS *)v1) == 0) {
+        if (i > 0 && Cam_IsInsideVolume((VS *)v1) == 0) {
             char *base = D_0013E633 + 0xE1D;
-            if (func_L00_001F10E0_b(v1, D_L00_0015F05C, *(void **)(base + 0x2080), f20) != 0 &&
+            if (func_L00_001F10E0_b(v1, gCamSphereMaskLvl, *(void **)(base + 0x2080), f20) != 0 &&
                 func_L00_002E8E78_f(m, i, v1, f20) == 0) {
                 qcopy(t, D_L00_00173F60);
                 qcopy(u, v1);
-                if (func_L00_002E8AC8(m, v1, i, f22, f20) != 0) {
+                if (Cam_PushOutOfWall(m, v1, i, f22, f20) != 0) {
                     ret = 1;
                     if (*(unsigned char *)(base + 0x20A4) != 2) {
                         if (FastAbsF(*(float *)(D_0013A5E0 + 0x2560)) > 0.05f) {
@@ -2997,7 +2997,7 @@ void func_L00_002E91D0(int mi) {
             if (*(s32 *)(o + 0x94) == 0) {
                 goto next;
             }
-            if (func_L00_0025A868(o) && !any) {
+            if (Moby_HasLinkedRecord(o) && !any) {
                 goto next;
             }
             t = *(s16 *)(o + 0xA6);
@@ -3081,7 +3081,7 @@ move:
     if (D_0015EE84_x == 0xD && D_0013F450_x.i2084 == 0x7B) {
         goto clear;
     }
-    if (!CAST_func_L00_001EFFF0((x + 0x90), &v10, *(int *)&D_L00_0015F058, D_0013F450_x.p2080, 0)) {
+    if (!CAST_func_L00_001EFFF0((x + 0x90), &v10, *(int *)&gCamLineMaskLvl, D_0013F450_x.p2080, 0)) {
         goto clear;
     }
     if (CAST_func_L00_002E5740(D_L00_00173F60_x.v20)) {
@@ -3116,7 +3116,7 @@ fin:
     }
 }
 /* Empty function that only reserves 0x50 bytes of stack. Adapted from Lombyte (MIT), FUN_L00_002e8378; the volatile buffer is what keeps the frame. */
-void func_L00_002E9828(int a) { volatile char buf[0x50]; }
+void Cam_DebugDump(int a) { volatile char buf[0x50]; }
 typedef struct { u8 pad[0x220]; s32 cur; } Owner_2E9838;
 typedef struct { u8 pad[0x70]; Owner_2E9838 *p; u8 pad2[0x86 - 0x74]; s16 f86; } Vendor_2E9838;
 extern Vendor_2E9838 *D_L00_00166F00_2E9838 __asm__("D_L00_00166F00");
@@ -3167,7 +3167,7 @@ int Cam_AcquireLock(int arg1, int arg2) {
     if (cur->f220 == arg1) {
         return 1;
     }
-    tab = (u32)D_L00_0015F050;
+    tab = (u32)gCameraDefsLvl;
     x = *(u8 *)(*(u32 *)(tab + ((O842e83c0 *)(u32)cur->f220)->f84 * 0x20 + 0x1C) + 0x1C);
     y = *(u8 *)(*(u32 *)(tab + ((O842e83c0 *)(u32)arg1)->f84 * 0x20 + 0x1C) + 0x1C);
     if (x < y) {
@@ -3180,7 +3180,7 @@ INCLUDE_ASM("asm/overlays", func_L00_002E988C);
 INCLUDE_ASM("asm/overlays", func_L00_002E98A8);
 INCLUDE_ASM("asm/overlays", func_L00_002E98B8);
 extern char *D_L00_00166F00;
-void func_L00_002E9900(float x, float y, int flag) {
+void Cam_SetDistanceGoal(float x, float y, int flag) {
     char *p = D_L00_00166F00;
     if (*(short *)(p + 0x86) == 0) {
         char *q = *(char **)(p + 0x70) + 0x130;
@@ -3341,7 +3341,7 @@ void func_L00_002E9E20(int a, float x, float y) {
     char *p = D_L00_00166F00;
     if (*(short *)(p + 0x86) == 0) {
         *(float *)(*(char **)(p + 0x70) + 0x1BC) = x;
-        func_L00_002E9D78(p, a, y);
+        Cam_SignedAngleToPoint(p, a, y);
     }
 }
 extern s32 D_0015EE84_2E9E60 __asm__("D_0015EE84") MACRO_ADDR;
@@ -3509,7 +3509,7 @@ extern void func_001F9C08(float, void *, void *, void *);
 extern float func_001F9CB8(void *);
 extern void func_L00_001FF4B0(void *, void *, float);
 
-void func_L00_002EA3F0(int m) {
+void FollowCamera_ClampDistance(int m) {
     char *p = *(char **)(m + 0x70);
     char *r = p + 0x1D0;
     char *q = p + 0x130;
@@ -3661,7 +3661,7 @@ void func_L00_002EA9C8(char *m, float *o1, float *o2) {
         t = *(float *)(h + 8);
         y = x + (v - x) * k;
         if (t < y) *(float *)(h + 8) = y;
-        func_L00_002E9900(*(float *)(h + 8), 0.003f, 0);
+        Cam_SetDistanceGoal(*(float *)(h + 8), 0.003f, 0);
         *o1 = *(float *)&D_L00_00161DBC + (*(float *)&D_L00_00161DE4 - *(float *)&D_L00_00161DBC) * k;
         *o2 = *(float *)&D_L00_00161DC0 + (*(float *)&D_L00_00161DE8 - *(float *)&D_L00_00161DC0) * k;
     } else {
@@ -3764,7 +3764,7 @@ void func_L00_002EAF50(int a) {
                 char *it = e + 0x10 + k * 0x30;
                 if (*(int *)(it + 0x10) == 5) {
                     char *b = (char *)D_L00_001601B4 + (*(int *)(it + 0x14) << 7);
-                    func_001E9768(b + 0x30, FastVecLength(b));
+                    Profile_Mark(b + 0x30, FastVecLength(b));
                 }
             }
         }
@@ -3781,11 +3781,11 @@ extern void func_L00_002EA4C0(int);
 void FollowCameraBuildView(int a) {
     float v[2];
     func_L00_002EAF50(a);
-    func_L00_002EA3F0(a);
-    func_L00_002E9E60(a, &v[0], &v[1]);
+    FollowCamera_ClampDistance(a);
+    FollowCamera_ReadStickInput(a, &v[0], &v[1]);
     Cam_SteerHeadingFromStick(a, v[0], v[1]);
     func_L00_002E91D0(a);
     Cam_AimAtTarget(a);
-    func_L00_002E9828(a);
+    Cam_DebugDump(a);
     func_L00_002EA4C0(a);
 }

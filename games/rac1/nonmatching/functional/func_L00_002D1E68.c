@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Native PAL crate break, func_L00_002D1E68 (0xA68 bytes), which the decompilation
  * still has as assembly: the crate's sound, the crates stacked on it let go, the

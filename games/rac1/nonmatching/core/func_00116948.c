@@ -1,3 +1,4 @@
+/* fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* newlib strncmp: compares at most n bytes of s1 and s2. Returns 0 when n is 0,
    or when the bytes are equal up to a NUL or up to n; otherwise the difference of
    the first two bytes that differ, as unsigned chars. Retail compares 8- and

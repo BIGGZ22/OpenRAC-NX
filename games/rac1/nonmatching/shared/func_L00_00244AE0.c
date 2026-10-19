@@ -8,6 +8,7 @@
  *   p9 SIZE4272 real packed access plus reset counter and logger delta pseudo; p10 SIZE4244 natural logging OR con
  *   ## Main-agent continuation
  *   Runs p15/p16 SIZE4244: void logger and integer class-address table. p17 SIZE4252: macro address on moby offset
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 #include "common.h"
 

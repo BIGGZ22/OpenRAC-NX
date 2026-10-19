@@ -282,7 +282,7 @@ extern L13Action D_L13_0016CBE0;
 extern void func_L00_00264870(int);
 
 // Initializes the moby and invokes its selected level action.
-void func_L13_0030D2A8(unsigned char *moby)
+void SparksTriggerL13_Update(unsigned char *moby)
 {
     switch (moby[0x20]) {
     case 0:
@@ -625,7 +625,7 @@ void Moby1805Update(void *moby) {
                 }
             }
         }
-        func_0022ED80(0, 0, (int)moby);
+        Moby_PlaySound(0, 0, (int)moby);
         SpawnBreakFxByDistance(moby);
             D_0014C290[D_0015EE84][(short)*(unsigned short *)(m + 0xB2) >> 5] |= 1 << (*(unsigned short *)(m + 0xB2) & 0x1F);
             D_L13_001BAAE0[(short)*(unsigned short *)(m + 0xB2) >> 5] |= 1 << (*(unsigned short *)(m + 0xB2) & 0x1F);

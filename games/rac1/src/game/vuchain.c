@@ -311,7 +311,7 @@ extern int D_001DE338[];
    the condition backwards: `slti; movz x,$0,t` is `if (idx >= 0x13)
    idx = 0`. Both globals are MACRO_ADDR, which gives the one-register
    load and the $gp store in the jr slot. */
-void func_002348B8(void) {
+void VuChain_SetLevelOffset(void) {
     int idx = D_0015EE84_m;
     if (idx >= 0x13) {
         idx = 0;

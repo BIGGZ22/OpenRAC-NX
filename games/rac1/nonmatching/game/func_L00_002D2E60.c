@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Draw callback of Ratchet's ship on Veldin (class 530, registered by func_L00_002D3330): the
    canopy glass's shine. Pvars M (+0x00, the cockpit joint's matrix) and the cross-fade timer
    (+0x40). While the camera is within 16 of the ship in x and y, or in the moby's first state

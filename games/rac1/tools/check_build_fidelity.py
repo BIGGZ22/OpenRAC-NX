@@ -39,7 +39,7 @@ ALLOWED = {
     "strip_dead": "linker: dead-stripping of unreferenced libgcc functions",
 }
 # Not transforms: they choose flags or generate lists, and change no instruction.
-HELPERS = {"file_cflags", "sn_regnames", "jump_tables"}
+HELPERS = {"file_cflags", "sn_regnames", "jump_tables", "gas210", "dtls29_as"}
 # Removed 2026-10-07 for changing what the compiler emitted (BUILD_FIDELITY.md, "Removed").
 REMOVED = {"fix_core_spills", "fix_tail_calls", "fix_trunc_slot", "func_cflags"}
 

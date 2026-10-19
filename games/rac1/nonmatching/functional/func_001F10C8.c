@@ -1,4 +1,4 @@
-/* functional: medium. The debug menu update (nothing in the executable calls it, and its first 14 words are "addiu sp / nop" leftovers of stripped code, not a prologue; the real entry is the addiu sp,-0x150 after them): reads the pad (D_0013CA40+0x1A0/0x1A4) and moves a page/cursor (D_0018C418+0xC / +0x10) through six pages (menu state) and edits the debug values of the page under the cursor, then returns. Page 0 toggles bit flags in +8 (item 4 turns them into 0x10 or 0xF), page 1 has 11 items (the cursor mode, the item counts and the fog/LOD switch values, then a table of 16 flags at D_0014C150), page 2 toggles bits of +4, page 3 edits a counter per item with the ranges of D_001E02B0, page 4 edits the background/ambient values, and page 5 toggles two flags, appends an "occ_sample_deltas.dat" sample of the camera position to the level's folder and reads the samples back. The first branch (pressed 0x500) snapshots the camera into the menu state and returns. The 64-bit pad word at +0x1A0 is tested as two 32-bit halves; func_00120778 returns the double as a 64-bit value for the variadic call. Not run against retail (hand-checked against the assembly). */
+/* functional: medium. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). The debug menu update (nothing in the executable calls it, and its first 14 words are "addiu sp / nop" leftovers of stripped code, not a prologue; the real entry is the addiu sp,-0x150 after them, func_001F10C8 since #94 split them off as func_001F10A0): reads the pad (D_0013CA40+0x1A0/0x1A4) and moves a page/cursor (D_0018C418+0xC / +0x10) through six pages (menu state) and edits the debug values of the page under the cursor, then returns. Page 0 toggles bit flags in +8 (item 4 turns them into 0x10 or 0xF), page 1 has 11 items (the cursor mode, the item counts and the fog/LOD switch values, then a table of 16 flags at D_0014C150), page 2 toggles bits of +4, page 3 edits a counter per item with the ranges of D_001E02B0, page 4 edits the background/ambient values, and page 5 toggles two flags, appends an "occ_sample_deltas.dat" sample of the camera position to the level's folder and reads the samples back. The first branch (pressed 0x500) snapshots the camera into the menu state and returns. The 64-bit pad word at +0x1A0 is tested as two 32-bit halves; func_00120778 returns the double as a 64-bit value for the variadic call. Not run against retail (hand-checked against the assembly). */
 extern void func_0022DD68(void);
 extern void func_001FB448(int, int, int);
 extern int func_00116248(char *str, const char *fmt, ...);
@@ -111,7 +111,7 @@ static void adjust_byte_1088(unsigned char *v)
         *v = b - 1;
 }
 
-void func_001F10A0(void)
+void func_001F10C8(void)
 {
     int arr[6];
     char name[0x40];

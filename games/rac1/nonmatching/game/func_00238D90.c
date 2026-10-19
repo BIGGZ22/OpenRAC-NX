@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* moby_screen_rect: project two corner points a and b (vec4 each) through the
  * view matrix at D_00187180 - 0x40 to screen space, then write the rectangle as
  * x = a.x, y = a.y (the screen position of a) and w, h = the size from a to b. */

@@ -1,4 +1,4 @@
-/* functional: high. corrected from nonmatching/functional/func_L00_002A62D0.c: the four GS words (sp+0x70..0x8F in retail) are now part of the quad, which func_L00_001FD1D8 reads at +0x70..+0x88; the copy kept them in a separate 32-bit-long array, so the drawer read stack garbage and 0x4000000044 was truncated. */
+/* functional: high. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). corrected from nonmatching/functional/func_L00_002A62D0.c: the four GS words (sp+0x70..0x8F in retail) are now part of the quad, which func_L00_001FD1D8 reads at +0x70..+0x88; the copy kept them in a separate 32-bit-long array, so the drawer read stack garbage and 0x4000000044 was truncated. */
 /* func_L00_002A62D0 -- src/overlays/shared/vendor_002A5138.c (functional C for the port, not a match)
  * Draw callback of the pulsing light-beam moby (queued through func_001F49B0 by func_L00_002A6A38).
  * Scrolls the beam's texture offset (D_L00_0016145C), draws four quads of the beam from the

@@ -1,4 +1,4 @@
-/* functional: medium. Reads bytes 0-2 of the 8 at obj+0x38 (b0, b1, b2; retail loads all 8 and shifts); table D_L00_0017FFC0 has 64-byte entries whose first quad is a colour/vector. If b2 == 0 copies entry b0's quad to out; else out.xyz = e0.xyz*(1-t) + e1.xyz*t with t = b2/256 (e0 = entry b0, e1 = entry b1) and out.w = e0.w. Joined with func_L00_00251438; VU rounding (ACC then madd) written as separate float operations; not run. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Reads bytes 0-2 of the 8 at obj+0x38 (b0, b1, b2; retail loads all 8 and shifts); table D_L00_0017FFC0 has 64-byte entries whose first quad is a colour/vector. If b2 == 0 copies entry b0's quad to out; else out.xyz = e0.xyz*(1-t) + e1.xyz*t with t = b2/256 (e0 = entry b0, e1 = entry b1) and out.w = e0.w. Joined with func_L00_00251438; VU rounding (ACC then madd) written as separate float operations; not run. */
 extern char D_L00_0017FFC0_513F8[] __asm__("D_L00_0017FFC0");
 
 void func_L00_002513F8(char *obj, float *out) {

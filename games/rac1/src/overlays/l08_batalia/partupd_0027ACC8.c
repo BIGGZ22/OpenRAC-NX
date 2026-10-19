@@ -76,7 +76,7 @@ extern unsigned char *D_L08_001B2CB4;
 extern void qcopy(void *, void *);
 typedef int U128 __attribute__((mode(TI)));
 // Spawns a class 0x4D particle moby at a position.
-void func_L08_00280BC8(char *a, char *b, int c, float f) {
+void SpawnParticleType4D(char *a, char *b, int c, float f) {
     unsigned char *m = func_00218928(0x4D);
     char *q;
     int t;

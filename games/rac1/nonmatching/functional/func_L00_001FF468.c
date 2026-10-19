@@ -1,4 +1,4 @@
-/* functional: medium. Sphere overlap test on two 4-float vectors a, b (xyz = centre, w = radius): returns 1 if dx*dx+dy*dy+dz*dz - (a.w+b.w)^2 is negative (sign bit set, as the 64-bit bgez on the vector word sees), else 0. VU0 code, not run in capture; negative zero counted as non-negative here. Joined with func_L00_001F39B0 (return 0). */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Sphere overlap test on two 4-float vectors a, b (xyz = centre, w = radius): returns 1 if dx*dx+dy*dy+dz*dz - (a.w+b.w)^2 is negative (sign bit set, as the 64-bit bgez on the vector word sees), else 0. VU0 code, not run in capture; negative zero counted as non-negative here. Joined with func_L00_001F39B0 (return 0). */
 int func_L00_001FF468(float *a, float *b) {
     float dx = a[0] - b[0];
     float dy = a[1] - b[1];

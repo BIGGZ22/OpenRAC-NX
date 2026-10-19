@@ -16,7 +16,7 @@ void func_00234238_234fd0(void *, void *, int, int, int) __asm__("func_00234238"
 void func_0020C468_234fd0(void *, int) __asm__("func_0020C468");
 void func_001FF7F0_234fd0(int, int) __asm__("func_001FF7F0");
 /* HUD update. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_hud_00234fd0.c, FUN_L00_00234fd0. */
-void func_L00_00235960(int mode) {
+void HudBanks_Upload(int mode) {
     G_234fd0 *g = &D_L00_0017E5D8_234fd0;
     int off = D_L00_001BA070_234fd0.off;
     void *h = D_L00_001BA070_234fd0.h;
@@ -54,7 +54,7 @@ typedef struct { int v; short s; short pad; } E_235310;
 typedef struct { char pad[0x18]; T_235310 *t; char pad2[8]; E_235310 *a; E_235310 *b; } G_235310;
 extern G_235310 D_L00_0017E5D8_235ca0  __asm__("D_L00_0017E5D8") __attribute__((section(".data")));
 /* HUD update. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_hud_00234fd0.c, FUN_L00_00235310. */
-void func_L00_00235CA0(int n) {
+void HudBank_Release(int n) {
     int d = D_L00_0017E5D8_235ca0.t->c[n];
     int i, j, s, end;
     if (n == 0) {
@@ -87,7 +87,7 @@ extern volatile int D_L00_001600A8 MACRO_ADDR;
 extern short D_L00_0015F808;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/hud/00234fd0.c, FUN_L00_00235668. */
-void func_L00_00235FF8(int state) {
+void MobyPool_Swap(int state) {
     int oldState = (*(volatile int *)&D_L00_0015F808);
     if (state != oldState) {
         int old70, old74, old78, old7C, oldDC, oldE0, oldE8;
@@ -493,7 +493,86 @@ void Hud_UpdateParticles(HudElem *e) {
     }
 }
 INCLUDE_ASM("asm/overlays", func_L00_00236F38);
-INCLUDE_ASM("asm/overlays", func_L00_002377E0);
+/* func_L00_002377E0 -- src/overlays/shared/hud_00235960.c
+ * EXACT. The e->h copy goes through __builtin_memcpy (scalar MEM, as in
+ * Hud_DrawGaugeFrame) so the D_L00_0015F844 load is not anti-dependent on
+ * the e->w store. The offsets are computed first (half-size / 17 and
+ * -half-size / 116) and scaled by 16 after the v1 rows: that keeps the
+ * neg/div chain early but its *16 and store late, which gives the
+ * scale-Y chain the higher local-alloc priority ($f4) as in retail.
+ */
+extern int func_00200198(int, int);
+extern void func_L00_0023C458(int, int, int, int, int, int);
+extern void func_001F9BC0(void *);
+extern void func_001F9BF0(void *, void *, void *);
+extern void func_L00_001FF2F8(void *, void *, void *);
+extern void func_001F9BD8(void *, void *, void *);
+extern void func_002008B8(int, int, int, int, int, int);
+extern short D_L00_0015F840;
+extern short D_L00_0015F844;
+extern short D_L00_0015F848;
+extern short D_L00_0015F84C;
+
+/* Draws a HUD element's backdrop and the 100 entries of its particle table that are due */
+int func_L00_002377E0(HudElem *e) {
+    float v0[4], v1[4], v2[4], v3[4], v4[4], v5[4];
+    int x, y;
+    float t;
+    int tex, sz, i;
+
+    {
+        int ww = *(int *)&D_L00_0015F840;
+        x = e->unk50;
+        y = e->unk54;
+        e->w = ww;
+        {
+            int *src = (int *)&D_L00_0015F844;
+            int *dst = &e->h;
+            __builtin_memcpy(dst, src, 4);
+        }
+    }
+    func_L00_00236400(e, &x, &y);
+    func_L00_00236468(e, &x, &y, e->unk6C, 0);
+    tex = func_00200198(*(int *)e, 0);
+    func_L00_0023C458(tex, x + e->unk48, y + e->unk4A, *(int *)&D_L00_0015F840, *(int *)&D_L00_0015F844, 0x80);
+    {
+        float cx, cy, ox, oy;
+        ox = (*(int *)&D_L00_0015F840 * *(float *)&D_L00_0015F848 * 0.5f) / 17.0f;
+        oy = -(*(int *)&D_L00_0015F844 * *(float *)&D_L00_0015F84C * 0.5f) / 116.0f;
+        v0[2] = 1.0f;
+        v0[3] = 1.0f;
+        cx = *(int *)&D_L00_0015F840 * *(float *)&D_L00_0015F848 * 0.5f + (x + e->unk48);
+        cy = *(int *)&D_L00_0015F844 * *(float *)&D_L00_0015F84C * 0.5f + (y + e->unk4A);
+        v1[0] = (cx + (1.0f - *(float *)&D_L00_0015F848) * 0.5f * *(int *)&D_L00_0015F840) * 16.0f;
+        v1[1] = (cy + (1.0f - *(float *)&D_L00_0015F84C) * 0.5f * *(int *)&D_L00_0015F844) * 16.0f;
+        v1[2] = 0.0f;
+        v1[3] = 0.0f;
+        v0[0] = ox * 16.0f;
+        v0[1] = oy * 16.0f;
+    }
+    t = (10000 - e->unk74) / 10000.0f;
+    t = 116.0f - (t + t) * 116.0f;
+    tex = func_00200198(*(int *)e, 1);
+    func_001F9BC0(v2);
+    func_001F9BC0(v3);
+    func_001F9BC0(v4);
+    v2[1] = v2[0] = *(float *)&D_L00_0015F830 * 16.0f;
+    v3[1] = v3[0] = (*(float *)&D_L00_0015F834 - *(float *)&D_L00_0015F830) * 16.0f;
+    v4[1] = v4[0] = (*(float *)&D_L00_0015F838 - *(float *)&D_L00_0015F834) * 16.0f;
+    sz = 0;
+    for (i = 0; i < 100; i++) {
+        if (i == 0) {
+            func_001F9BF0(v1, v1, v2);
+            sz = (int)(*(float *)&D_L00_0015F830 * 32.0f);
+            t += *(float *)&D_L00_0015F830;
+        }
+        if (t < D_L00_0017E760[i][1]) continue;
+        func_L00_001FF2F8(v5, D_L00_0017E760[i], v0);
+        func_001F9BD8(v5, v5, v1);
+        func_002008B8(tex, (int)v5[0], (int)v5[1], sz, sz, 0x80);
+    }
+    return e->w;
+}
 void Hud_InitCounter(HudElem *e) {
     e->unk7C = scale_ticks(0xA) + 0x1E;
     e->unk48 = 0;
@@ -515,7 +594,7 @@ extern void func_L00_00236830(HudElem *);
    flag D_0013E629, 5. In mode 9 (D_0013F450 + 0x10B8) with +0x20A4 clear
    it restarts the timer at 30 + func_001F9850(120); otherwise it caps it
    at 30. */
-void func_L00_00238148(HudElem *e) {
+void HudSuckCannon_Update(HudElem *e) {
     char *base;
 
     Hud_UpdateCounter(e);
@@ -2188,7 +2267,7 @@ extern void func_L00_00261848(int);
    D_0015EF24 by 180. */
 void InitLevelResidentState(void) {
     register_audio_stream_callback();
-    func_002348B8();
+    VuChain_SetLevelOffset();
     InitMemSlots();
     D_0015EF74 = D_0015EF8C;
     D_0015EF78 = D_0015EF8C;

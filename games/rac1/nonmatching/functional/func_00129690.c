@@ -1,4 +1,4 @@
-/* functional: medium. Selects which of three slot records (pointer pairs at 0x1B8/0x1BC, 0x1C8/0x1CC, 0x1D8/0x1DC; their word 0x28 is a ready flag) to refresh for the current mode (0x174), copies 16 fields of the owner into it and returns 1 when the needed slots are ready. Modes outside 1..3 would store through NULL in retail; here that store is skipped. */
+/* functional: medium. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). Selects which of three slot records (pointer pairs at 0x1B8/0x1BC, 0x1C8/0x1CC, 0x1D8/0x1DC; their word 0x28 is a ready flag) to refresh for the current mode (0x174), copies 16 fields of the owner into it and returns 1 when the needed slots are ready. Modes outside 1..3 would store through NULL in retail; here that store is skipped. */
 int func_00129690(char *p, int a1) {
     int mode;
     int kind;

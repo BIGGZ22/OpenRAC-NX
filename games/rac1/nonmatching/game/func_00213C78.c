@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Moby update loop. Fetches the head of the moby list from func_0020E6B8 and keeps it in
    D_00160024. For each moby whose state byte is non-negative (signed): calls func_0020E3D0
    unless flags 0x40 is set, calls its update callback at 0x74 if non-null, then calls

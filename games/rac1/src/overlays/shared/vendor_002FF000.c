@@ -599,7 +599,7 @@ void BuildFanVectors(char *m) {
     char *d = *(char **)(m + 0x78);
     float v[4];
     int i;
-    func_00214358(m + 0x10, 0, 0.5f);
+    ProbeGroundHeight(m + 0x10, 0, 0.5f);
     func_L00_001FF4B0(d + 0x220, D_L06_00174700, 1.0f);
     Moby_GetJointWorldPos(m, 0, d + 0x210);
     *(float *)(d + 0x218) = *(float *)(m + 0x18);
@@ -868,7 +868,7 @@ extern float D_0015EE70 MACRO_ADDR;
 extern short D_L06_00162110;
 
 // Per-frame update: drift a moby and its rotation toward the data vectors, delete when timer ends.
-void func_L06_00301FE8(char *moby) {
+void SpinningDebrisUpdate(char *moby) {
     char *data;
     float t = D_0015EE70 * 15.0f;
     *(float *)(moby + 0x2C) = *(float *)(*(char **)(moby + 0x24) + 0x24) * *(float *)&D_L06_00162110;
@@ -937,7 +937,7 @@ extern int func_001F6FD8(int a, int b, int c, int d, int e);
 #define W(x) (*(int *)&(x))
 
 /* Draws the level timer as "H:MM:SS.t" text with a pulsing colour. */
-void func_L06_00303630(char *moby) {
+void TimerMobyL06_Draw(char *moby) {
     char buf[8];
     char *data = *(char **)(moby + 0x78);
     float v;
@@ -978,7 +978,7 @@ void Moby_AdvanceStateByClass(unsigned char *a, unsigned char *m) {
     case 0x502:
         if (m[0x20] == 2) {
             m[0x20] = 3;
-            func_0022ED80(0, 0, (int)m);
+            Moby_PlaySound(0, 0, (int)m);
         }
         break;
     case 0x404:
@@ -1154,7 +1154,7 @@ void SpawnChildAndDeleteUpdate(char *moby) {
         break;
     case 2:
         z = 0.0f;
-        func_0022ED80(0, 0, (int)moby);
+        Moby_PlaySound(0, 0, (int)moby);
         d = D_L06_0015F660;
         SpawnBreakFxByDistance(moby);
         a = moby + 0x10;

@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Length of the vector at a0 (floats x, y, z): sqrt(x*x + y*y + z*z).
    The retail routine does it on VU0 (vmul, vadda, vmadda, vsqrt); the
    sums are taken in the same order. The square root is done inline by

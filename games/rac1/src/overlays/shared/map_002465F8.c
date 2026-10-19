@@ -595,7 +595,7 @@ void Map_LoadRenderArchive(void) {
     s32 archive_index;
     RenderArchiveState *state = &D_L00_001842F0;
 
-    func_001E9768();
+    Profile_Mark();
     Map_RefreshIcons(state->archive_index, 1);
     first_base = D_L00_001BA070.first_base;
     second_base = D_L00_001BA070.second_base;

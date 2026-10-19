@@ -473,7 +473,7 @@ void Moby924Update(char *m) {
             return;
         }
         *(char **)(d + 0x20) = D_L14_001620B8;
-        func_L00_002676E8(m, d);
+        DialogRequest_Init(m, d);
         m[0x20] = 1;
         d[8] = 1;
         break;
@@ -490,7 +490,7 @@ void Moby924Update(char *m) {
         } else {
             *(float *)(d + 0xC) = 3.0f;
         }
-        if (func_L00_00267290(m, d) != 0) {
+        if (Npc_TryStartDialog(m, d) != 0) {
             char *g = D_L14_0016D060_300468;
             char *t = D_L14_001601AC_300468 + (*(int *)(d + 0x48) << 7);
             g[0x4A] = 1;
@@ -692,7 +692,7 @@ void BouncingSparkUpdate(Moby *m)
         func_L00_001FF4B0(&t, &D_L14_00174640.normal, *(float *)&D_L14_00162158);
         FastVecAdd(&m->pos, &D_L14_00174640.hit, &t);
         func_L00_001FF610(&d->vel, &d->vel, &D_L14_00174640.normal);
-        func_0022ED80(1, 0, m);
+        Moby_PlaySound(1, 0, m);
         if (m->state == 0)
         {
           m->state = 1;
@@ -840,7 +840,7 @@ extern void func_L02_002A5238(char *, float, int);
 extern void func_001F49B0(void (*)(void), void *);
 
 /* Moby update: init once, then draw each frame. */
-void func_L14_003047F8(unsigned char *moby) {
+void AmbientStreamL14Update(unsigned char *moby) {
     switch (moby[0x20]) {
     case 0:
         ScaleTableIntoBuffer(D_L14_001E9FA0, 0.6666667f, 0x40);
@@ -1274,7 +1274,7 @@ char *SpawnMoby1396(char *owner)
     return moby;
 }
 /* steps the moby from state 0 to 1 and 2 to 3, setting its pvars. Adapted from Lombyte (MIT) for PAL: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_003061d8. */
-void func_L14_00307660(void *arg) {
+void Moby1397Update(void *arg) {
     char *moby = arg;
     char *d;
     switch ((unsigned char)moby[0x20]) {
@@ -1374,7 +1374,7 @@ void StepOnSwitchUpdate(struct Moby *moby) {
             moby->state = 2;
             moby->command = 1;
             moby->glow_color = 0x80208020;
-            func_0022ED80(0, 0, moby);
+            Moby_PlaySound(0, 0, moby);
             list = d[0];
             if (list != -1) {
                 i = 0;
@@ -1700,7 +1700,7 @@ extern float func_001F9B88(float input);
 extern f32 func_001F9CE8(void *);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_00307620. */
-int func_L14_00308AA8(struct Moby *moby) {
+int BlargInterceptor_FollowPath(struct Moby *moby) {
     float pos[4];
     float delta[4];
     char *d = (char *)moby->pvars;
@@ -1842,7 +1842,7 @@ void SkillPointUpdate(unsigned char *moby) {
 extern char *D_L14_00167600;
 
 /* Sets the camera state block when the global camera record's descriptor is 7. */
-void func_L14_00314A40(int value)
+void BlargInterceptor_NotifyGrab(int value)
 {
     char *moby = D_L14_00167600;
     if (*(short *)(moby + 0x86) == 7) {

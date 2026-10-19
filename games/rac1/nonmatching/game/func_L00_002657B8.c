@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 extern char *D_L00_001ABD80[];
 extern char *D_L00_001600A4;
 extern char *D_L00_001600A4_sd __asm__("D_L00_001600A4") MACRO_ADDR;

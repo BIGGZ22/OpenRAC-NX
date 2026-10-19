@@ -1,3 +1,4 @@
+/* fcheck: SAME on 2 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Copies n bytes from src to dst, safe when the two overlap: copies from the end when src is
    below dst and the source range reaches past dst, otherwise from the start. Returns dst. */
 void *func_001152F8(void *dst, const void *src, unsigned int n) {

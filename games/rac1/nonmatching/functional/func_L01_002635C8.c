@@ -1,4 +1,4 @@
-/* functional: high. Per-element wave/ripple setup into scratchpad (0x70000000..): copies two words, blends two floats, rotates a (sin,cos)*scale offset onto B pairs. sin/cos taken as FastSin (vcallms 0xC90) / FastCos (0xC80); VU rounding not checked. */
+/* functional: high. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Per-element wave/ripple setup into scratchpad (0x70000000..): copies two words, blends two floats, rotates a (sin,cos)*scale offset onto B pairs. sin/cos taken as FastSin (vcallms 0xC90) / FastCos (0xC80); VU rounding not checked. */
 /* Checked on 2026-10-17 against VU0 program 28259 as the executable holds it (micro memory
    0xC80..0xD18): 0xC80 adds pi/2 to vf1.x and falls into 0xC90, which folds the angle with
    min(x, pi - x) and max(x, -pi - x) and sums x + c3 x^3 + c5 x^5 + c7 x^7 + c9 x^9 into vf1.x,

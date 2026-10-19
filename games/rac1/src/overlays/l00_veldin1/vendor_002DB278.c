@@ -48,7 +48,7 @@ void Moby834Update(M *m) {
     switch (m->state) {
     case 0:
         *(short *)(D_0014171B + 0xD) = 1;
-        func_L00_002676E8(m, (char *)e + 0x20);
+        DialogRequest_Init(m, (char *)e + 0x20);
         
         g = D_0013D355 + 0x13B;
         if (g[8]) {
@@ -70,7 +70,7 @@ void Moby834Update(M *m) {
             else
                 e->f2c = 3.0f;
         }
-        if (func_L00_00267290(m, (char *)e + 0x20)) {
+        if (Npc_TryStartDialog(m, (char *)e + 0x20)) {
             m->state = 2;
             e->f2c = 3.0f;
         }
@@ -607,7 +607,7 @@ void Troll_UpdateHitsAndTarget(void *mv) {
         if (vars->unk1DA != 0) {
             range = 37.0f;
         }
-        if (func_L00_00260D30(m, range, &vars->target) != 2 && range < func_001F9D48(&m->pos, &vars->target)) {
+        if (FindNearestTargetMoby(m, range, &vars->target) != 2 && range < func_001F9D48(&m->pos, &vars->target)) {
             vars->unk114 = 2;
         }
     }

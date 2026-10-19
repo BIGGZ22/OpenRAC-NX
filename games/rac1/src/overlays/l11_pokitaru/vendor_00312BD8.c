@@ -280,9 +280,9 @@ void DrawJetHud(char *moby) {
         do {
             g = (unsigned char *)D_0013E633 + 0xE1D;
             if (i < g[0x15F6]) {
-                func_L11_00311F98(x, y, 0.5f, D_L11_001F0FB8, 0x19, 0xFFFFF3, 0x50008F00);
+                Hud_DrawPointList(x, y, 0.5f, D_L11_001F0FB8, 0x19, 0xFFFFF3, 0x50008F00);
             } else {
-                func_L11_00311F98(x, y, 0.5f, D_L11_001F0FB8, 0x19, 0xFFFFF3, 0x20004F00);
+                Hud_DrawPointList(x, y, 0.5f, D_L11_001F0FB8, 0x19, 0xFFFFF3, 0x20004F00);
             }
             n = g[0x15F7];
             if (i == n >> 1) {
@@ -1467,7 +1467,7 @@ void Moby1246Update(struct Moby *moby) {
             float h;
             qcopy(pos, &moby->pos);
             pos[2] += 1.0f;
-            h = func_00214358(pos, 0, 0.5f);
+            h = ProbeGroundHeight(pos, 0, 0.5f);
             if (moby->pos.z < h) {
                 if (moby->state == 7) {
                     moby->pos.z = h;
@@ -1659,7 +1659,7 @@ void Moby1246Update(struct Moby *moby) {
         if (d->vel[2] < 0.0f) {
             qcopy(pos, &moby->pos);
             pos[2] += 1.0f;
-            if (moby->pos.z < func_00214358(pos, 0, 0.5f)) {
+            if (moby->pos.z < ProbeGroundHeight(pos, 0, 0.5f)) {
                 moby->anim_speed = 1.0f;
                 moby->state = 0xE;
             }
@@ -2234,7 +2234,7 @@ void GateUpdate(struct PMoby *moby) {
             is_point_inside_clip_volume(&hero_x.motion.pos, d->unk10) != 0) {
             d->t = 0.0f;
             moby->state = 2;
-            func_0022ED80(0, 4, (int)d->left);
+            Moby_PlaySound(0, 4, (int)d->left);
         }
         break;
     case 2:
@@ -2402,7 +2402,7 @@ void Moby1264Update(char *moby) {
             float old = *z;
             ApproachValue(zz, 0.0f, D_0015EE6C * 5.0f);
             if (old != 0.0f && *z == 0.0f) {
-                if (*q != 0) func_0022ED80(0, 0, *q);
+                if (*q != 0) Moby_PlaySound(0, 0, *q);
             }
             q++;
             zz++;
@@ -2503,7 +2503,7 @@ void MoveChainAlongPath(void *mv) {
                 char *lv = *(char **)(d->links[i] + 0x78);
                 if (*(int *)(lv + 0x28) == 0) {
                     if (D_L11_0015F6A8 == 0) {
-                        func_0022ED80(2, 0, (int)d->links[i]);
+                        Moby_PlaySound(2, 0, (int)d->links[i]);
                     }
                     *(int *)(lv + 0x28) = scale_ticks((*(int *)&D_L11_001623BC));
                 }
@@ -3012,7 +3012,7 @@ void FlyingCraftUpdate(unsigned char *moby) {
             *(int *)(d + 0x64) = (*(int *)(d + 0x64) + **(int **)(D_L11_001B11B0 + *(int *)(d + 0x60) * 4) - 1) % **(int **)(D_L11_001B11B0 + *(int *)(d + 0x60) * 4);
         }
         FastAddRots(*(float *)(d + 0x70), *(float *)(d + 0x74));
-        func_L11_0031B8A8(moby);
+        PathOrbitMobyUpdate(moby);
         if (moby[0x20] == 2) {
             SpawnExplosionFx(moby, moby + 0x10, -1, 2.0f, 13.0f);
             if (random_integer_below(2)) {
@@ -3020,7 +3020,7 @@ void FlyingCraftUpdate(unsigned char *moby) {
             } else {
                 SpawnDirectedMoby(moby + 0x10, D_L11_0015F660, 0x4C2);
             }
-            func_0022ED80(1, 0, (int)moby);
+            Moby_PlaySound(1, 0, (int)moby);
             *(unsigned short *)(D_0014171B + 0x5FD) = 0xFFFF;
             moby[0x20] = 3;
             *(int *)(moby + 0x94) = 0;
@@ -3107,7 +3107,7 @@ void FlyingCraftUpdate(unsigned char *moby) {
             ang = -func_L00_001FF860(func_001F9CE8(s70), s70[2]);
             SteerAngleWithVelocity(pitch, (float *)(d + 0x90), ang, D_0015EE70 * 12.566371f, D_0015EE70 * 12.566371f, D_0015EE6C * 12.566371f);
             if (D_L11_0015F6B0 % 10 == 0) {
-                func_0022ED80(2, 0, (int)moby);
+                Moby_PlaySound(2, 0, (int)moby);
                 ApproachValue((float *)(d + 0x94), 0.0f, 0.25f);
                 func_L00_001FF4B0(sB0, s20, *(float *)(d + 0x94));
                 FastVecAdd(sB0, sB0, tgt);
@@ -3145,7 +3145,7 @@ void FlyingCraftUpdate(unsigned char *moby) {
         } else {
             SpawnDirectedMoby(moby + 0x10, D_L11_0015F660, 0x4C2);
         }
-        func_0022ED80(1, 0, (int)moby);
+        Moby_PlaySound(1, 0, (int)moby);
         moby[0x20] = 4;
         *(int *)(moby + 0x94) = 0;
         *(unsigned short *)(moby + 0x34) |= 1;
@@ -3409,7 +3409,7 @@ void Pokitaru_BreakOnHitUpdate(char *m) {
         if (hit) m[0x20] = 2;
         break;
     case 2:
-        func_0022ED80(0, 0, (int)m);
+        Moby_PlaySound(0, 0, (int)m);
         SpawnBreakFxByDistance(m);
         SpawnMobyBurstFx(m, 0x745, 1, 0x745, 1, 11, 2);
         SpawnMobyCopyingPlacement(m, 0x744);

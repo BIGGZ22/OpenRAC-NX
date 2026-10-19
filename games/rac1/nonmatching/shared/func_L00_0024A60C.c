@@ -8,6 +8,7 @@
  *   A cross-function branch has no C form here; would need the two functions compiled as one unit or an assembler/
  *   fz4 z08: first bc1f (.word 0x4500FFF8) branches backward to .L0024A604, before the function start (shared tail
  *   hq12 s04: stopped at once (QUEUE.md walls). Its first bc1f branches to .L0024A604, two instructions before the
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 extern unsigned char D_0013D4EB NOT_SDA;
 

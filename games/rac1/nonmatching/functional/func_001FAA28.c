@@ -1,59 +1,63 @@
-/* functional: high. Run-length encodes a bit mask into bytes: input is a stream of (skip, run) byte pairs over the mask at the last argument (bit index advances by skip, then run bits are read); the output (at dst, limited to size bytes) is alternating run lengths of equal bits starting with the 1-bit class, each run capped at 0x7F for the first and 0xFF for later runs (a full run is followed by a 0 byte). Stops when the bit index reaches 0x40000. The first output byte is then rewritten as (b << 1) + 1. Returns the output length, or -1 if the output buffer fills. Argument names a and b are game addresses, kept as ints as callers declare them. */
-int func_001FAA28(void *dst, int size, int a, int b) {
-    unsigned char *d = (unsigned char *)dst;
-    unsigned char *end = d + size;
-    unsigned char *start = d;
-    unsigned char *src = (unsigned char *)a;
-    unsigned char *bits = (unsigned char *)b;
+/* functional: high. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). Handwritten in retail (asm/handwritten/text/func_001FAA28.s), written from its
+   instructions. Run-length codes the bits of a 0x40000-bit map at bits into dst (size bytes),
+   visiting only the bits that runs names: byte pairs (skip, count), skip bits passed over,
+   count bits coded, until a skip brings the bit index to exactly 0x40000. Each output byte is the
+   length of a run of equal bits, starting with a run of ones; the first run holds at most 0x7F,
+   the others 0xFF, and a full run is followed by an empty run of the other value. dst[0] becomes
+   dst[0] * 2 + 1 at the end. Returns the bytes written, or -1 when dst fills (the end is tested
+   for equality only, as retail does). */
+int func_001FAA28(unsigned char *dst, int size, unsigned char *runs, unsigned char *bits) {
+    unsigned char *end = dst + size;
+    unsigned char *out = dst;
     int limit = 0x7F;
-    int pos = 0;
-    int prev = 1;
-    int cnt = 0;
+    int index = 0;
+    int value = 1;
     int run = 0;
-    int bit;
+    int left = 0;
 
     for (;;) {
-        if (run == 0) {
-            int skip = src[0];
-            run = src[1];
-            pos += skip;
-            src += 2;
-            if (pos == 0x40000) {
+        int bit;
+
+        if (left == 0) {
+            int skip = runs[0];
+
+            left = runs[1];
+            runs += 2;
+            index += skip;
+            if (index == 0x40000) {
                 break;
             }
             continue;
         }
-        bit = (bits[pos >> 3] >> (pos & 7)) & 1;
-        pos++;
-        run--;
-        if (prev == bit) {
-            if (cnt != limit) {
-                cnt++;
-                continue;
-            }
-            *d = (unsigned char)cnt;
-            d += 2;
-            limit = 0xFF;
-            cnt = 1;
-            if (d == end) {
+        bit = (bits[index >> 3] >> (index & 7)) & 1;
+        index++;
+        left--;
+        if (bit != value) {
+            value = bit;
+            *out++ = run;
+            if (out == end) {
                 return -1;
             }
-            d[-1] = 0;
-        } else {
-            prev = bit;
-            *d = (unsigned char)cnt;
-            d++;
             limit = 0xFF;
-            if (d == end) {
-                return -1;
-            }
-            cnt = 1;
+            run = 1;
+            continue;
         }
+        if (run != limit) {
+            run++;
+            continue;
+        }
+        out[0] = run;
+        out += 2;
+        run = 1;
+        if (out == end) {
+            return -1;
+        }
+        limit = 0xFF;
+        out[-1] = 0;
     }
-    if (cnt != 0) {
-        *d = (unsigned char)cnt;
-        d++;
+    if (run != 0) {
+        *out++ = run;
     }
-    *start = (unsigned char)(((signed char)*start << 1) + 1);
-    return (int)(d - start);
+    dst[0] = (unsigned char)((signed char)dst[0] * 2 + 1);
+    return out - dst;
 }

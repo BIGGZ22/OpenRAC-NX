@@ -1,3 +1,4 @@
+/* fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* strcmp: compares s1 and s2 as unsigned bytes up to the first difference or the
    terminating NUL; returns the difference of the two bytes there, or 0. The
    assembly's 8- and 16-byte paths only skip blocks whose bytes are equal, so the

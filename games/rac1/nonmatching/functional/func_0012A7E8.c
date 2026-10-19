@@ -1,4 +1,4 @@
-/* functional: medium. libmpeg DMA of n*24 bytes (n = a1[3]*a1[4]) from the address in a1[0] to the IPU/SPR channel, split in two when over 0xFFFF; hardware polls kept as volatile reads. */
+/* functional: medium. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). libmpeg DMA of n*24 bytes (n = a1[3]*a1[4]) from the address in a1[0] to the IPU/SPR channel, split in two when over 0xFFFF; hardware polls kept as volatile reads. */
 extern void *func_00118AC0(int, void *, int, void *);
 extern void func_00119460(int);
 extern void func_0012A558(void *, int, int);

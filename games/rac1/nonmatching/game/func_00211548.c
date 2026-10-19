@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Builds the per-group table at D_001B3080 from the index list a2 (a1 entries) and the chain at
  * a0->0x24->0x1C, calls moby_anim_eval_chain, then copies a1 quadwords from scratchpad
  * 0x70000000 + v*64 + 0x30 (v from the table) to a3. */

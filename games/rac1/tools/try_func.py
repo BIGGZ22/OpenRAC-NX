@@ -43,7 +43,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from libgcc_units import SEGMENT_SOURCES, ee29_sources, ee29_01_sources  # noqa: E402
+from libgcc_units import SEGMENT_SOURCES, ee29_sources, ee29_01_sources, gas210_sources, gas210_real_sources, dtls29_sources  # noqa: E402
 from toolchain import sn  # noqa: E402
 import file_cflags  # noqa: E402
 import overlay_check  # noqa: E402
@@ -154,7 +154,19 @@ def build(name, seg, src, first, last, candidate, work):
             if not run(cc29, log):
                 return None
             shutil.copy(s[0], s[3])
-            if not run([sys.executable, "tools/fix_volatile_slot.py", str(s[3]), str(s[3])], log):
+            if not run([sys.executable, "tools/fix_jump_tables.py", "--core", str(s[3]), str(s[3])], log):
+                return None
+            assembler_script = ("tools/gas210.py" if src.as_posix() in gas210_real_sources()
+                                else "tools/dtls29_as.py" if src.as_posix() in dtls29_sources() else None)
+            if assembler_script:
+                if not run([sys.executable, "tools/check_macro_slots.py", str(s[3])], log):
+                    return None
+                if not run([sys.executable, assembler_script, str(s[3]), str(obj)], log):
+                    return None
+                return obj
+            if not run([sys.executable, "tools/fix_volatile_slot.py",
+                        *(["--loads"] if src.as_posix() in gas210_sources() else []),
+                        str(s[3]), str(s[3])], log):
                 return None
             if not run([sys.executable, "tools/check_macro_slots.py", str(s[3])], log):
                 return None

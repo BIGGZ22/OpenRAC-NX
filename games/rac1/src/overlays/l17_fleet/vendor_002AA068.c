@@ -292,7 +292,7 @@ void FleetTurretUpdate(char *m) {
     float from[4];
     Vars347 *d = *(Vars347 **)(m + 0x78);
 
-    func_L17_002CD088(m);
+    FleetTurret_HandleHit(m);
     switch (*(unsigned char *)(m + 0x20)) {
     case 0:
         *(unsigned char *)(m + 0x20) = 1;
@@ -365,7 +365,7 @@ void FleetTurretUpdate(char *m) {
                     if (p != 0) {
                         p[9] = func_001FA898_r(4.0f) + 0x70;
                     }
-                    func_0022ED80(0, 0, (int)m);
+                    Moby_PlaySound(0, 0, (int)m);
                     SpawnMoby558(m, (char *)from, (float *)(D_L17_0016016C + (d->zone << 7) + 0x30), D_0015EE6C * 60.0f);
                 }
             }
@@ -387,7 +387,7 @@ void FleetTurretUpdate(char *m) {
             float off;
 
             MobyTransformScaledVertexBatch(m, 2, &D_L17_00161A00, (char *)j);
-            func_L00_00260D30(m, &aim, 512.0f);
+            FindNearestTargetMoby(m, &aim, 512.0f);
             FastVecSub(dir, aim.pos, j);
             qcopy(from, j + 4);
             yaw = (float *)(m + 0x48);
@@ -410,7 +410,7 @@ void FleetTurretUpdate(char *m) {
                             p[9] = func_001FA898_r(4.0f) + 0x70;
                         }
                         d->timer = scale_ticks(0x5A) / 2;
-                        func_0022ED80(0, 0, (int)m);
+                        Moby_PlaySound(0, 0, (int)m);
                         SpawnMoby558(m, (char *)from, tmp, D_0015EE6C * 60.0f);
                     }
                 }
@@ -435,7 +435,7 @@ extern void func_L00_0025E4B0(void *m, short *p);
 extern void func_L00_0025E590(void *, void *);
 
 /* Steps a moby's countdown from a helper's output and retires it when it runs out. */
-void func_L17_002CD088(char *m) {
+void FleetTurret_HandleHit(char *m) {
     char *d;
     char *e;
     char *r;
@@ -847,7 +847,7 @@ void StopsPlatformUpdate(char *m) {
         break;
     case 2:
         if (*(int *)(*(char **)(m + 0x24) + 0x28) != 0 && Sound_IsPlaying(m, (*(int *)(d + ((0x20))))) == 0) {
-            (*(int *)(d + ((0x20)))) = func_0022ED80(0, 4, (int)m);
+            (*(int *)(d + ((0x20)))) = Moby_PlaySound(0, 4, (int)m);
         }
         k = D_0015EE6C * 3.0f;
         f = (*(float *)(d + ((0x14))));
@@ -893,7 +893,7 @@ void StopsPlatformUpdate(char *m) {
                 if (is_point_inside_clip_volume(D_L17_00160058 + (*(int *)(d + ((0x10)))) * 0x100 + 0x10, (*(int *)(d + ((0x18))))) == 0) break;
             }
             if (*(int *)(*(char **)(m + 0x24) + 0x28) != 0 && Sound_IsPlaying(m, (*(int *)(d + ((0x20))))) == 0) {
-                (*(int *)(d + ((0x20)))) = func_0022ED80(0, 4, (int)m);
+                (*(int *)(d + ((0x20)))) = Moby_PlaySound(0, 4, (int)m);
             }
             m[0x20] = 2;
         }
@@ -913,13 +913,13 @@ void StopsPlatformUpdate(char *m) {
         if (is_point_inside_clip_volume(D_L17_00167740, (*(int *)(d + ((0x1C)))))) break;
         if ((*(int *)(d + ((0x10)))) != -1 && is_point_inside_clip_volume(D_L17_00160058 + (*(int *)(d + ((0x10)))) * 0x100 + 0x10, (*(int *)(d + ((0x18)))))) break;
         if (*(int *)(*(char **)(m + 0x24) + 0x28) != 0 && Sound_IsPlaying(m, (*(int *)(d + ((0x20))))) == 0) {
-            (*(int *)(d + ((0x20)))) = func_0022ED80(0, 4, (int)m);
+            (*(int *)(d + ((0x20)))) = Moby_PlaySound(0, 4, (int)m);
         }
         m[0x20] = 5;
         break;
     case 5:
         if (*(int *)(*(char **)(m + 0x24) + 0x28) != 0 && Sound_IsPlaying(m, (*(int *)(d + ((0x20))))) == 0) {
-            (*(int *)(d + ((0x20)))) = func_0022ED80(0, 4, (int)m);
+            (*(int *)(d + ((0x20)))) = Moby_PlaySound(0, 4, (int)m);
         }
         if (is_point_inside_clip_volume(D_0013E633 + 0xE9D, (*(int *)(d + ((0x18))))) || is_point_inside_clip_volume(D_L17_00167740, (*(int *)(d + ((0x18)))))
             || ((*(int *)(d + ((0x10)))) != -1 && is_point_inside_clip_volume(D_L17_00160058 + (*(int *)(d + ((0x10)))) * 0x100 + 0x10, (*(int *)(d + ((0x18))))))) {
@@ -1121,7 +1121,7 @@ char *SpawnMoby558(char *src, char *pos, float *v, float f) {
 }
 extern int func_001F4868(int);
 extern void func_L11_003121C0(float, float, float, float, float, int, int, long, int, int, int, int, int);
-void func_L17_002EBF08(unsigned char a, unsigned char b, unsigned char c, unsigned char d, float x, float y, float s, float ang) {
+void Effect_DrawFourQuadStar(unsigned char a, unsigned char b, unsigned char c, unsigned char d, float x, float y, float s, float ang) {
     int h;
     float w;
     h = GetEffectTex(0x2E);
@@ -1554,9 +1554,9 @@ void DrawFleetHud(char *moby) {
     for (i = 0; i < n; i++) {
         g = D_0013E633 + 0xE1D;
         if (i < g[0x15F6]) {
-            func_L11_00311F98(x, y, 0.5f, D_L17_001D9CB0, 0x19, 0xFFFFF3, 0x50008F00);
+            Hud_DrawPointList(x, y, 0.5f, D_L17_001D9CB0, 0x19, 0xFFFFF3, 0x50008F00);
         } else {
-            func_L11_00311F98(x, y, 0.5f, D_L17_001D9CB0, 0x19, 0xFFFFF3, 0x20004F00);
+            Hud_DrawPointList(x, y, 0.5f, D_L17_001D9CB0, 0x19, 0xFFFFF3, 0x20004F00);
         }
         n = g[0x15F7];
         if (i == n >> 1) {
@@ -1614,7 +1614,7 @@ void Ship_FireHomingMissile(char *moby, char *obj, float p2, float p3) {
     BuildSphericalOffset(a, *(float *)&D_L17_001620EC * *(float *)&D_L17_00162120, p2, p3);
     FastVecAdd(a, a, obj);
     if (func_001F9908(obj + 0x80) && (*(int *)(D_0013A5E0 + 0x2610) & 0x84)) {
-        func_0022ED80(3, 0, (int)moby);
+        Moby_PlaySound(3, 0, (int)moby);
         func_L00_001FF4B0(c, a, 2.2f);
         Moby_GetJointWorldPos(moby, 3 + (obj[0x61] & 1), b);
         FastVecAdd(b, b, c);
@@ -1648,7 +1648,7 @@ void Ship_FireProjectile(char *moby, char *obj) {
             s = *(float *)&D_L17_001620F4 * *(float *)&D_L17_00162120;
             n = scale_ticks(300);
             if (SpawnRocket295(moby, a, *(int *)(obj + 0xEC), pos, s, n)) {
-                func_0022ED80(2, 0, (int)moby);
+                Moby_PlaySound(2, 0, (int)moby);
                 *(unsigned char *)(g + 0x15F6) -= 1;
                 *(int *)(obj + 0x84) = *(int *)&D_L17_001620F8;
             }
@@ -1823,7 +1823,7 @@ void PlayerShipUpdate(Moby *m, Obj *o) {
                     }
                 }
                 o->i10C = -1;
-                o->i10C = func_0022ED80(1, 4, (int)m);
+                o->i10C = Moby_PlaySound(1, 4, (int)m);
             } else if (*(int *)(pad + 0x1B8) & 0x40) {
                 idx = o->i10C;
                 if (idx != -1) {
@@ -1876,7 +1876,7 @@ void PlayerShipUpdate(Moby *m, Obj *o) {
             ka = D_L17_00162138;
             kb = D_L17_00162148;
         }
-        func_L17_002EFA20((char *)m, &a, &b);
+        PlayerShip_AvoidBounds((char *)m, &a, &b);
         Spring(&o->f6C, &o->f90, a, D_L17_0016212C, D_L17_00162130, ka);
         Spring(&o->f70, &o->f94, b, D_L17_0016213C, D_L17_00162140, kb);
         SpringAngle((char *)&o->f30, (char *)&o->f98, 0, o->f6C * D_L17_0016210C, D_L17_0016214C, D_L17_00162150, D_L17_00162154);
@@ -2335,7 +2335,7 @@ void FighterJetUpdate(Moby1379 *moby) {
                 moby->scale = *(float *)(moby->cls + 0x24) * D_L17_0016211C;
                 g->b20A5 = 1;
                 if (d->i108 == -1) {
-                    d->i108 = func_0022ED80(0, 4, (int)moby);
+                    d->i108 = Moby_PlaySound(0, 4, (int)moby);
                 }
                 HelpPopup_RequestDismiss();
                 D_L17_0015F6E8 = 2;
@@ -2351,7 +2351,7 @@ void FighterJetUpdate(Moby1379 *moby) {
             e = D_0013E650 + d->i108 * 0x70;
             if (*(void **)(e + 0x88) != moby || *(unsigned char *)(e + 0x74) == 0) {
                 d->i108 = -1;
-                d->i108 = func_0022ED80(0, 4, (int)moby);
+                d->i108 = Moby_PlaySound(0, 4, (int)moby);
             }
             PlayerShipUpdate(moby, d);
             if (d->iE8 <= 0) {
@@ -2408,7 +2408,7 @@ void FighterJetUpdate(Moby1379 *moby) {
             force_help_message(6, 0);
             D_L17_0015F6E8 = 2;
             if (FastDecTimer(&d->t62) != 0) {
-                func_L00_00204190();
+                Moby_ClearGadgetControl();
                 {
                     Glob1379 *g = (Glob1379 *)(D_0013E633 + 0xE1D);
                     g->p2080->i98 = 0;
@@ -2530,7 +2530,7 @@ extern char *D_L17_0016016C MACRO_ADDR;
 extern char (*D_L17_0016016C_t)[128] __asm__("D_L17_0016016C") MACRO_ADDR;
 
 // Pushes two float values away from a moby's room volume edges, scaled by distance and angle.
-void func_L17_002EFA20(char *moby, float *a, float *b) {
+void PlayerShip_AvoidBounds(char *moby, float *a, float *b) {
     char *d = *(char **)(moby + 0x78);
     float v[4];
     float zz, dist, tmp, hi, lo, f, t, k, r, s;
@@ -2628,7 +2628,7 @@ void Moby1380Update(char *moby) {
         if ((*(float *)((char *)(state) + (0x70))) < 1.0f) {
             float t = (1.0f - (*(float *)((char *)(state) + (0x70)))) / (1.0f - old);
             char *base;
-            func_L17_002F04D0(moby, (char *)b, (char *)c);
+            Moby1380_InitAim(moby, (char *)b, (char *)c);
             FastVecSub(a, D_L17_00167740, b);
             base = D_L17_00167740 - 0x140;
             FastVecScale(a, a, t);
@@ -2659,7 +2659,7 @@ void Moby1380Update(char *moby) {
             B(moby, 0x20) = 5;
         }
         if (!Sound_IsPlaying(moby, W(state, 0x6C))) {
-            W(state, 0x6C) = func_0022ED80(0, 4, (int)moby);
+            W(state, 0x6C) = Moby_PlaySound(0, 4, (int)moby);
         }
         if (B(moby, 0x20) == 2 || B(moby, 0x20) == 4) {
             target = (*(float *)((char *)(state) + (0x60)));
@@ -2718,7 +2718,7 @@ void Moby1380Update(char *moby) {
         g = (char *)D_0013E633 + 0xE1D;
         if (H(g, 0x308) != 0 || W(state, 0x7C) == 0) {
             if (P(g, 0x2FC) == moby && H(g, 0x30E) == 0 && func_001F9D48(g + 0x80, moby + 0x10) < 0.5f) {
-                func_0022ED80(1, 0, (int)moby);
+                Moby_PlaySound(1, 0, (int)moby);
                 if (B(moby, 0x20) == 7) {
                     B(moby, 0x20) = 2;
                 } else {
@@ -2763,7 +2763,7 @@ typedef struct {
 extern CameraGlobals D_0013F450;
 extern void func_L00_001FF500(void *, void *, float);
 
-void func_L17_002F04D0(char *moby, char *temp, char *state) {
+void Moby1380_InitAim(char *moby, char *temp, char *state) {
     FastVecSub(temp, D_L17_00167740, moby + 0x10);
     func_L00_001FF500(temp, temp, 2.5f);
     *(float *)(temp + 8) = 1.5f;
@@ -2883,7 +2883,7 @@ void Moby1382Update(unsigned char *m) {
     m[0x31] = 1;
     *(unsigned short *)(m + 0x34) &= 0xFFFE;
     AimTurretAtHero(m);
-    func_L17_002F1D20(m);
+    Moby1382_UpdatePulse(m);
     tgt = d->target;
     Manipulator_SetScale(d->a230, 2.1f);
     if (m[0x31] != 0 && FastVecDist(m + 0x10, D_L17_00167740) < 29.0f) {

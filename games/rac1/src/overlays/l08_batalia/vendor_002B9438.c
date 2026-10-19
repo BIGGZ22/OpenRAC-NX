@@ -308,7 +308,7 @@ void BombUpdate(char *moby) {
             } else if (*(int *)(tbl + 0x1C) > 0) {
                 if (*(unsigned char *)(moby + 0xBC) & 1) {
                     float k;
-                    func_0022ED80(1, 0, moby);
+                    Moby_PlaySound(1, 0, moby);
                     qcopy((moby + 0x10), tbl + 0x20);
                     *(float *)(moby + 0x18) += f20;
                     func_L00_001FF610((d + 0x10), (d + 0x10), tbl + 0x40);
@@ -355,7 +355,7 @@ void BombUpdate(char *moby) {
         StepColorFade(moby, d);
         break;
     case 0x62:
-        func_0022ED80(0, 0, moby);
+        Moby_PlaySound(0, 0, moby);
         c.p.moby = moby;
         c.p.flags = 0x810001;
         c.p.f = 1.0f;
@@ -367,7 +367,7 @@ void BombUpdate(char *moby) {
         return;
     case 0x63: {
         char *p;
-        func_0022ED80(0, 0, moby);
+        Moby_PlaySound(0, 0, moby);
         p = moby + 0x10;
         c.p.moby = moby;
         c.p.flags = 0x810001;
@@ -562,7 +562,7 @@ void BomberTankUpdate(Moby *moby) {
             unsigned char *pers;
             func_L08_002D7010_55E0(moby);
             pers = (unsigned char *)D_0013D355 + 0x13B;
-            if (pers[0x2E] != 0) func_0022ED80(6, 0, moby);
+            if (pers[0x2E] != 0) Moby_PlaySound(6, 0, moby);
             pers[0x2E] = 1;
             qcopy(&(*(Moby **)(d + 0x160))->pos, &moby->pos);
             qcopy(&(*(Moby **)(d + 0x164))->pos, &moby->pos);
@@ -586,9 +586,9 @@ void BomberTankUpdate(Moby *moby) {
         func_L08_002D68D0_55E0(moby, *(int *)(d + 0x150));
         f = func_0020D830_55E0(moby);
         if ((59.0f <= f && f <= 60.0f) || (119.0f <= f && f <= 120.0f)) {
-            func_L08_002D6C58((char *)moby, 4, 10);
+            BomberTank_SpawnJointDebris((char *)moby, 4, 10);
         } else if ((29.0f <= f && f <= 30.0f) || (89.0f <= f && f <= 90.0f)) {
-            func_L08_002D6C58((char *)moby, 5, 10);
+            BomberTank_SpawnJointDebris((char *)moby, 5, 10);
         }
         break;
     }
@@ -869,7 +869,7 @@ void PathMover_Step(struct Moby *moby, int path_id) {
     step[1] = FastSin(moby->rot.z) * vars->speed;
     step[2] = 0.0f;
     FastVecAdd(&moby->pos, &moby->pos, step);
-    moby->pos.z = func_00214358(&moby->pos, 0, 0.5f);
+    moby->pos.z = ProbeGroundHeight(&moby->pos, 0, 0.5f);
     if (func_001F9D48(&moby->pos, point) < 0.5f) {
         vars->point = (vars->point + 1) % *path;
     }
@@ -898,7 +898,7 @@ void PathMover_Step(struct Moby *moby, int path_id) {
     speed = FastVecLength(vars->velocity);
     if (D_0015EE6C * 0.1f < speed) {
         if (Sound_IsPlaying(moby, vars->sound) == 0) {
-            vars->sound = func_0022ED80(1, 4, moby);
+            vars->sound = Moby_PlaySound(1, 4, moby);
             Sound_SetPitchBend(vars->sound, 1);
         } else if (((SoundSlot_2d55c8 *)(D_0013E650 + (vars->sound) * 0x70))->volume < 0x400) {
             Sound_SetPitchBend(vars->sound, ((SoundSlot_2d55c8 *)(D_0013E650 + (vars->sound) * 0x70))->volume + 0x400 / scale_ticks(60));
@@ -936,7 +936,7 @@ extern float D_L08_00161988_2D6C58 SDATA(D_L08_00161988);
 extern float D_L08_0016198C_2D6C58 SDATA(D_L08_0016198C);
 
 // Jitters the moby's vector, then spawns the effect groups for each of the count steps.
-void func_L08_002D6C58(char *moby, int a1, int count) {
+void BomberTank_SpawnJointDebris(char *moby, int a1, int count) {
     char *d = *(char **)(moby + 0x78);
     char t10[32];
     float t30[8];
@@ -1485,7 +1485,7 @@ void BlargBombThrowerUpdate(Moby *moby) {
         effects_start_2D5FA8(moby, d->anim);
     }
     moby->hit_slot = 0xFF;
-    look.r44 = func_L00_00260D30(moby, 16.0f, &look);
+    look.r44 = FindNearestTargetMoby(moby, 16.0f, &look);
     if (look.target == 0) {
         look.target = *(Moby **)(D_0013E633 + 0x2E9D);
     }
@@ -2230,7 +2230,7 @@ void GuidedRocketUpdate(M46 *m) {
     V46 target,delta,accel,effect,aux;
     D46 *d=m->data;
     if (MobyGetHitMessage(m,0x210000,0) && m->state!=4) {
-        func_0022ED80(0,0,m);
+        Moby_PlaySound(0,0,m);
         SpawnExplosionFx(m,m->position,-1,0.5f,13.0f);
         DeleteMoby(m);
         return;
@@ -2296,7 +2296,7 @@ void GuidedRocketUpdate(M46 *m) {
         m->rotation[1]=-func_L00_001FF860(func_001F9CE8(d->velocity),d->velocity[2]);
         m->rotation[2]=func_L00_001FF860(d->velocity[0],d->velocity[1]);
         if (FastVecDist(m->position,d->target->position)<D_L08_00161A9C) {
-            t->health-=60; clear_u64_value(d->velocity); func_0022ED80(0,0,m); m->state=6;
+            t->health-=60; clear_u64_value(d->velocity); Moby_PlaySound(0,0,m); m->state=6;
         }
         radius=random_float_between(0.0f,D_L08_00161AA4)*D_0015EE6C;
         angle=random_angle_radians();
@@ -2314,7 +2314,7 @@ void GuidedRocketUpdate(M46 *m) {
         if (FastVecDist(D_0013E633+0xE9D,(char*)d->path+(d->path->count<<4))<d->activation_range && timer46(&d->timer)) {
             m->flags=0x40; m->state=4; m->animation=m->model->animation;
             m->rotation[2]=func_L00_001FF860(d->path->e[1][0]-m->position[0],d->path->e[1][1]-m->position[1]);
-            func_0022ED80(1,0,m);
+            Moby_PlaySound(1,0,m);
         }
         return;
     case 4: {
@@ -2398,7 +2398,7 @@ void GuidedRocketUpdate(M46 *m) {
                 }
             if (special) SpawnDebrisBurst(m,d->effect_path,30,1);
             else SpawnDebrisBurst(m,d->effect_path,30,0);
-            func_0022ED80(2,0,m); m->state=6;
+            Moby_PlaySound(2,0,m); m->state=6;
         }
         return;
     }

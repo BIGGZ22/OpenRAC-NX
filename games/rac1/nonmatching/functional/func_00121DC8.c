@@ -1,4 +1,4 @@
-/* functional: high. Corrected from nonmatching/core/func_00121DC8.c: in the f0s != 1 branch the quotient is (y + 0x9FF) / y (asm divides y+0x9FF by y in both branches), the near miss divided f0s by y. */
+/* functional: high. fcheck: SAME on 1 call (OpenRAC tools/fcheck_gate.py, 2026-10-18). Corrected from nonmatching/core/func_00121DC8.c: in the f0s != 1 branch the quotient is (y + 0x9FF) / y (asm divides y+0x9FF by y in both branches), the near miss divided f0s by y. */
 /*
  * GS packet builder for a display or draw environment (written from the assembly).
  * Writes five 64-bit words at out: out[0] = 0x66 (the GIF tag), out[1] = a mode

@@ -111,7 +111,7 @@ extern void func_001F9EC0(void *, void *, void *);
 extern int func_0022ED80(int, int, int);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/0030cd20.c, FUN_L07_0031a9e8. */
-void func_L07_0031BDB8(struct Moby *moby) {
+void MovingMobyL07_Update(struct Moby *moby) {
     struct L07MovingVars *vars = (struct L07MovingVars *)moby->pvars;
     struct Moby *target;
     Vec4 next;
@@ -160,7 +160,7 @@ void func_L07_0031BDB8(struct Moby *moby) {
         next.q = start.q;
         vars->home.w = FastVecLength(&next);
         if (vars->startSound != -1)
-            func_0022ED80(vars->startSound, 0, (int)moby);
+            Moby_PlaySound(vars->startSound, 0, (int)moby);
         moby->state = 2;
         break;
     case 2:
@@ -169,7 +169,7 @@ void func_L07_0031BDB8(struct Moby *moby) {
             target->state != 0xfe && target->state != 0xfd &&
             target->state == vars->shutState)) {
             if (vars->startSound != -1)
-                func_0022ED80(vars->startSound, 0, (int)moby);
+                Moby_PlaySound(vars->startSound, 0, (int)moby);
             moby->state = 4;
             break;
         }
@@ -191,7 +191,7 @@ void func_L07_0031BDB8(struct Moby *moby) {
             D_L07_001845A8[vars->indicator] = 1;
         moby->state = 3;
         if (vars->endSound != -1)
-            func_0022ED80(vars->startSound, 0, (int)moby);
+            Moby_PlaySound(vars->startSound, 0, (int)moby);
         return;
     case 3:
         if (!force_start && (force_end || vars->target == -1 ||
@@ -201,7 +201,7 @@ void func_L07_0031BDB8(struct Moby *moby) {
             return;
         vars->home.w = 0;
         if (vars->startSound != -1)
-            func_0022ED80(vars->startSound, 0, (int)moby);
+            Moby_PlaySound(vars->startSound, 0, (int)moby);
         moby->state = 4;
         break;
     case 4:
@@ -210,7 +210,7 @@ void func_L07_0031BDB8(struct Moby *moby) {
             target->state == 0xfe || target->state == 0xfd ||
             target->state == vars->openState)) {
             if (vars->startSound != -1)
-                func_0022ED80(vars->startSound, 0, (int)moby);
+                Moby_PlaySound(vars->startSound, 0, (int)moby);
             moby->state = 2;
             break;
         }
@@ -229,7 +229,7 @@ void func_L07_0031BDB8(struct Moby *moby) {
             return;
         qcopy(&moby->pos, &vars->home);
         if (vars->startSound != -1)
-            func_0022ED80(vars->endSound, 0, (int)moby);
+            Moby_PlaySound(vars->endSound, 0, (int)moby);
         if (vars->indicator != -1)
             D_L07_001845A8[vars->indicator] = 0;
         moby->state = 1;
@@ -272,7 +272,7 @@ void Moby1133Update(EaseMoby1C7C0 *moby) {
             }
             d->value.f = v;
             moby->angle.f = v;
-            func_0022ED80(0, 0, (int)moby);
+            Moby_PlaySound(0, 0, (int)moby);
             moby->state = 3;
             break;
         case 3:
@@ -291,7 +291,7 @@ void Moby1133Update(EaseMoby1C7C0 *moby) {
             if (d->target == -1 || (o = D_L07_00160058_ease + d->target) == 0 ||
                 o->state == 0xFE || o->state == 0xFD ||
                 o->state == d->startState) {
-                func_0022ED80(0, 0, (int)moby);
+                Moby_PlaySound(0, 0, (int)moby);
                 moby->state = 2;
             } else {
                 w = FastSubRots(moby->angle.f, d->limit);
@@ -571,7 +571,7 @@ void ProximityBreakReplaceUpdate(char *m) {
         if (hit) m[0x20] = 2;
         break;
     case 2:
-        func_0022ED80(0, 0, (int)m);
+        Moby_PlaySound(0, 0, (int)m);
         d = D_L07_0015F660;
         SpawnBreakFxByDistance(m);
         p = m + 0x10;
@@ -613,7 +613,7 @@ void ProximityBreakReplaceAltUpdate(char *self) {
         break;
     case 2: {
         char *m;
-        func_0022ED80(0, 0, (int)self);
+        Moby_PlaySound(0, 0, (int)self);
         SpawnBreakFxByDistance(self);
         SpawnBreakFragment(self, 0x68E, self + 0x10, self + 0x40, 0, 0, 0.0f, D_L07_0015F660, D_L07_0015F660, D_L07_0015F660);
         SpawnBreakFragment(self, 0x68F, self + 0x10, self + 0x40, 0, 0, 0.0f, D_L07_0015F660, D_L07_0015F660, D_L07_0015F660);
@@ -650,7 +650,7 @@ void ProximityBreakUpdate(unsigned char *m) {
         if (flag) m[0x20] = 2;
         break;
     case 2:
-        func_0022ED80(0, 0, (int)m);
+        Moby_PlaySound(0, 0, (int)m);
         z = 0.0f;
         p = D_L07_0015F660;
         pos = m + 0x10;

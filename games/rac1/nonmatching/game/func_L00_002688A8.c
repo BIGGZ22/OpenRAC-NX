@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* KillPart(rec): frees particle record rec (2048 records of 0x40 bytes at the pool pointer).
  * Live count--; clears the record's bit in the allocation bitmap (and in the second bitmap when
  * byte 1 has 0x40); when it was the highest live index, moves that index down to the next set

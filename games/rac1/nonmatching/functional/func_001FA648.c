@@ -1,4 +1,4 @@
-/* functional: high. Rotation matrix of the quaternion q = (x, y, z, w) at arg0, not normalised (retail does no normalising): rows 0..2 of four floats at arg1 (+0, +0x10, +0x20), each with w = 0; the fourth row at +0x30 is not written. Matches the port's hand C in port/game/rac1-pal/hand/game_fastfunc.c entry by entry. */
+/* functional: high. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). Rotation matrix of the quaternion q = (x, y, z, w) at arg0, not normalised (retail does no normalising): rows 0..2 of four floats at arg1 (+0, +0x10, +0x20), each with w = 0; the fourth row at +0x30 is not written. Matches the port's hand C in port/game/rac1-pal/hand/game_fastfunc.c entry by entry. */
 void func_001FA648(const float *q, float *m) {
     float x = q[0], y = q[1], z = q[2], w = q[3];
     float x2 = x + x, y2 = y + y, z2 = z + z;

@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Lookup in an 8-entry table of 16-byte records at D_L00_001842F0 (key at +0x30, value at +0x34,
    extra word at +0x38), keyed by an int. If the table is in use (+0x28 != 0): the key is searched
    among the records; if absent, the record with the smallest value is replaced (func_00207090 is

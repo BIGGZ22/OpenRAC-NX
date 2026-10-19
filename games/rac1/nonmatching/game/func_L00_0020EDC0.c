@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Hero animation slots (two entries at 0xD08 of the hero block): keeps each slot's object
    animated from the table D_L00_00179BC0 for the current state, and returns early when a
    slot's distance check (byte 0x23 / float at +8) says the object is done. Finishes with

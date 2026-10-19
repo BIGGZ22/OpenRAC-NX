@@ -522,7 +522,7 @@ void SteerAlongPath(char *m) {
 extern void *func_L00_002DD2D0(void *);
 extern void func_00213DE0(void *, int, int, int);
 
-void *func_L08_002D5358(char *arg)
+void *CarriedMoby_ReleaseToState3(char *arg)
 {
     void *result = ReleaseCarriedMobySlot(arg);
     char *obj = *(char **)(arg + 0x78);

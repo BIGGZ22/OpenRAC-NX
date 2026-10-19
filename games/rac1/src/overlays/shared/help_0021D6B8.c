@@ -143,7 +143,7 @@ void HeroL06_UpdateFrame(void) {
 
     func_L00_00232EF0();
     Hero_UpdateMotionInput();
-    func_L06_00223630();
+    HeroL06_ResetFrameFlags();
     if (((GS_E7B8 *)(D_0013E633 + 0xE1D))->b20A4 == 1) {
         HeroLedgeProbe();
         CameraLeanFromPad();
@@ -257,7 +257,7 @@ void HeroL06_UpdateFrame(void) {
         }
 skip:
         if (((GS_E7B8 *)(D_0013E633 + 0xE1D))->p22C0 != 0) {
-            func_0022ED80(((GS_E7B8 *)(D_0013E633 + 0xE1D))->p22C0 + 0x10, 0, ((GS_E7B8 *)(D_0013E633 + 0xE1D))->p2080);
+            Moby_PlaySound(((GS_E7B8 *)(D_0013E633 + 0xE1D))->p22C0 + 0x10, 0, ((GS_E7B8 *)(D_0013E633 + 0xE1D))->p2080);
             ((GS_E7B8 *)(D_0013E633 + 0xE1D))->s22FE = (short)(int)((GS_E7B8 *)(D_0013E633 + 0xE1D))->p22C0;
             ((GS_E7B8 *)(D_0013E633 + 0xE1D))->s22FC = scale_ticks(0x39);
         }
@@ -535,7 +535,7 @@ s32 HeroL06_ResolveCollisionStep(s32 mode) {
     qcopy(&old, &D_0013F450_2A868.pos);
     clear_u64_value(&v);
     if (D_0013F450_2A868.h22DA != 0) {
-        func_L00_00235040();
+        Hero_ConstrainToPath();
         D_0013F450_2A868.h22DA = 0;
     }
     if (D_0013F450_2A868.w208C != 0x11) {
@@ -808,7 +808,7 @@ f32 HeroL06_PredictLanding(f32 a, f32 b, f32 c) {
             t[2] -= ((a * a + a) * 0.5f) * b;
             FastVecAdd(t, t, &(&D_0013F450_431A0)->v80);
             v.q = (&D_0013F450_431A0)->v80.q;
-            func_L00_0025E290(&v, t);
+            Vec4_AdjustNegativeComponents(&v, t);
             qcopy(&v, &(&D_0013F450_431A0)->v80);
             if (func_L00_001EFFF0(&v, t, 0xd24, 0, 0) != 0) {
                 if (ViewGetPitch((f32 *)D_L06_00174700) <= 0.87266463f) {
@@ -833,7 +833,7 @@ f32 HeroL06_PredictLanding(f32 a, f32 b, f32 c) {
         FastVecAdd(t, &t1, t);
         FastVecAdd(t, &(&D_0013F450_431A0)->v80, t);
         v2.q = (&D_0013F450_431A0)->v80.q;
-        func_L00_0025E290(&v2, t);
+        Vec4_AdjustNegativeComponents(&v2, t);
         if (func_L00_001EFFF0(&(&D_0013F450_431A0)->v80, t, 0xd24, 0, 0) != 0) {
             f32 nb;
             nb = b * -0.5f;
@@ -857,7 +857,7 @@ f32 HeroL06_PredictLanding(f32 a, f32 b, f32 c) {
         FastVecAdd(t, &t1, t);
         FastVecAdd(t, &(&D_0013F450_431A0)->v80, t);
         v2.q = (&D_0013F450_431A0)->v80.q;
-        func_L00_0025E290(&v2, t);
+        Vec4_AdjustNegativeComponents(&v2, t);
         if (func_L00_001EFFF0(&(&D_0013F450_431A0)->v80, t, 0xd24, 0, 0) != 0) {
             f32 nb;
             nb = b * -0.5f;

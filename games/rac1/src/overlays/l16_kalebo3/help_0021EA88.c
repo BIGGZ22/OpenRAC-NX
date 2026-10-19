@@ -152,9 +152,9 @@ int Hero_TryMoveState(int a, int b) {
         *(int *)(p + 0x208C) = 0;
         *(int *)(p + 0x2284) = 0;
         *(int *)(p + 0x1010) = rand_range(scale_ticks(0x32), scale_ticks(0x64));
-        func_L00_0020AB78();
+        Hero_ClearSlotPairs();
         if (*(unsigned char *)(p + 0x20A4) != 0) {
-            func_L01_00240CE8();
+            Hero_SetMoveStateFromMode();
             return 1;
         }
         qcopy(p + 0x150, p + 0x110);
@@ -493,7 +493,7 @@ int Hero_TryMoveState(int a, int b) {
                 *(int *)(q + 0x880) = -1;
                 if (D_0013D355[0x13B] != 0) {
                     Hud_ReleaseHeldElement();
-                    *(int *)(q + 0x880) = queue_animation_update(0x10, 0xFFFF, (int)func_L05_00263490, (int)ChallengeHudUpdate, (int)ChallengeHudDraw, (int)(q + 0x864), (int)((float)scale_ticks(0x11) * 60.0f));
+                    *(int *)(q + 0x880) = queue_animation_update(0x10, 0xFFFF, (int)HudCounter_Reset, (int)ChallengeHudUpdate, (int)ChallengeHudDraw, (int)(q + 0x864), (int)((float)scale_ticks(0x11) * 60.0f));
                 }
                 *(float *)(q + 0x874) = *(float *)(q + 0x98);
                 queue_animation_update(5, 0xFFFF, (int)HudElementInit, (int)func_L05_00266BD8, (int)func_L05_00266D10, 0, 0);
@@ -743,7 +743,7 @@ int Hero_TryMoveState(int a, int b) {
             char *q = D_0013E633 + 0xE1D;
             float d = *(float *)(q + 0xAA8);
             int id = 6;
-            if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
+            if (Hero_ResolveAnimId(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
             HeroStartAnim(id, 4, (float)scale_ticks(9));
         }
         break;
@@ -758,7 +758,7 @@ int Hero_TryMoveState(int a, int b) {
         if (b) {
             int id = 6;
             float d = *(float *)(p + 0xAA8);
-            if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
+            if (Hero_ResolveAnimId(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
             HeroStartAnim(id, 4, (float)scale_ticks(9));
         }
         break;
@@ -1431,7 +1431,7 @@ int Hero_TryMoveState(int a, int b) {
                 } else if (s == 9) {
                     int id = 8;
                     int n = truncate_float_to_s32(*(float *)(q + 0xAA8));
-                    if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4) id = D_L16_0017C2B8[n];
+                    if (Hero_ResolveAnimId(*(unsigned char *)(moby + 0x52)) == 4) id = D_L16_0017C2B8[n];
                     HeroStartAnim(id, 0, (float)scale_ticks(5));
                 } else if (s == 0xA) {
                     HeroStartAnim(0x12, 0, (float)scale_ticks(5));
@@ -1830,7 +1830,7 @@ int Hero_TryMoveState(int a, int b) {
         char *p = D_0013E633 + 0xE1D;
         *(int *)(p + 0x2284) = 0x51;
         *(int *)(p + 0x208C) = 0;
-        if (func_L00_002056D0(*(unsigned char *)(*(char **)(p + 0x2080) + 0x53)) != Help_GetRecordValue(1)) {
+        if (Hero_ResolveAnimId(*(unsigned char *)(*(char **)(p + 0x2080) + 0x53)) != Help_GetRecordValue(1)) {
             HeroStartAnim(Help_GetRecordValue(1), 0, (float)scale_ticks(5));
         }
         break;

@@ -244,9 +244,9 @@ void VendorOpenMenu(VendorMoby_pv *m) {
     if (m == 0) {
         m = CreateMoby(0xB);
         *(s16 *)((char *)m + 0x32) = 0x40;
-        *(f32 *)((char *)m + 0x10) = D_L00_00166D80.x + *(f32 *)&D_L00_00161120;
-        *(f32 *)((char *)m + 0x14) = D_L00_00166D80.y;
-        *(f32 *)((char *)m + 0x18) = D_L00_00166D80.z - D_L00_00161128;
+        *(f32 *)((char *)m + 0x10) = gCameraLvl.x + *(f32 *)&D_L00_00161120;
+        *(f32 *)((char *)m + 0x14) = gCameraLvl.y;
+        *(f32 *)((char *)m + 0x18) = gCameraLvl.z - D_L00_00161128;
         clear_u64_value(&m->rot);
         m->rot.f[2] = 3.1415927f;
         func_L00_00251E30(m);
@@ -289,12 +289,12 @@ void VendorOpenMenu(VendorMoby_pv *m) {
     VP.f14 = D_L00_00173F00[1] + 0x60000;
     VP.f8 = 0;
     VP.moby = (char *)m;
-    func_0022ED80(3, 0, m);
+    Moby_PlaySound(3, 0, m);
     if (VP.mode == 0) {
         FadeToBlack(4);
     }
     HelpPopup_Cancel();
-    *(f32 *)&D_L00_0015F4FC = 1.0f;
+    *(f32 *)&gFadeLvl = 1.0f;
     *(s32 *)((char *)&D_L00_0015F6BC - 0x14) = 5;
     *(s32 *)&D_L00_0015F500 = 0;
     HeroEnterMoveState(100, 1);
@@ -1334,14 +1334,14 @@ void VendorStartWeaponDemo(void) {
     moby = (VendorMoby_29a6b0 *)g->moby;
     FastVecAdd(vec, vec, (char *)moby + 0x10);
     *(f32 *)((char *)g + 0xC8) += 2.0f;
-    *(f32 *)((char *)g + 0xC8) = func_00214358(0.5f, vec, 0);
+    *(f32 *)((char *)g + 0xC8) = ProbeGroundHeight(0.5f, vec, 0);
     clear_u64_value((char *)g + 0xB0);
     *(f32 *)((char *)g + 0xB8) = FastAddRots(((VendorMoby_29a6b0 *)g->moby)->rot.f[2], 3.1415927f);
     func_001FA1F8((char *)g + 0x80, (char *)g + 0xB0);
     FastMemSet(&D_L00_0016C960, 0, 0x1C0);
     FastMemSet(D_L00_0017C440, 0, 0x40);
     VU1_syncChain(1);
-    func_002348B8();
+    VuChain_SetLevelOffset();
     selected = (s32 *)((char *)g + 0x48);
     offset = D_L00_0016128C - 0x40000;
     D_L00_0016128C = offset;
@@ -1349,7 +1349,7 @@ void VendorStartWeaponDemo(void) {
     D_L00_0016C960.x58 = D_L00_00173F00.x4 + offset;
     D_L00_0016C960.x5c = D_L00_00173F00.x8 + offset;
     item = D_L00_001CA320[index];
-    D_L00_0015F4FC = 0;
+    gFadeLvl = 0;
     (*(s32 *)&D_L00_0015F500) = 0;
     if (D_0013F450.items[0].item_id != 0 && index != D_0013F450.items[0].item_id)
         Hero_DestroySlotMobys(0, 0);
@@ -1404,7 +1404,7 @@ extern int D_L00_00161250 MACRO_ADDR;
 extern int D_L00_00161254 MACRO_ADDR;
 
 /* steps the pickup-spawn state machine for the given mode */
-void func_L00_0029C840(int a) {
+void PickupSpawn_Step(int a) {
     char *b;
     unsigned char *m;
     int s;
@@ -1617,12 +1617,12 @@ void VendorBuyDialogUpdate(void) {
         D_L00_00161F10 = 0;
         if (D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].sel == 1
             && D_0013D530[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item] >= D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hE) {
-            func_0022ED80(2, 0, D_L00_001CA7C0_9CDE0.cam);
+            Moby_PlaySound(2, 0, D_L00_001CA7C0_9CDE0.cam);
         } else if (D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].sel == 1) {
             pr1 = D_L00_001CA7C0_9CDE0.f40 ? D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hA
                                              : D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].h8;
             if (gBolts < pr1) {
-                func_0022ED80(2, 0, D_L00_001CA7C0_9CDE0.cam);
+                Moby_PlaySound(2, 0, D_L00_001CA7C0_9CDE0.cam);
             } else {
                 D_L00_00161F10 = 1;
             }
@@ -1630,7 +1630,7 @@ void VendorBuyDialogUpdate(void) {
             pr1 = gHavePersuader[0] ? D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].f4
                                   : D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].f0;
             if (gBolts < pr1) {
-                func_0022ED80(2, 0, D_L00_001CA7C0_9CDE0.cam);
+                Moby_PlaySound(2, 0, D_L00_001CA7C0_9CDE0.cam);
             }
         }
         D_L00_001CA7C0_9CDE0.state = 2;
@@ -1646,7 +1646,7 @@ void VendorBuyDialogUpdate(void) {
                 if (D_L00_00161F30 >= 2) {
                     D_L00_00161F30--;
                     if (!(D_L00_00161F28 & 3) || D_L00_00161F28 < 16) {
-                        func_0022ED80(1, 0, D_L00_001CA7C0_9CDE0.cam);
+                        Moby_PlaySound(1, 0, D_L00_001CA7C0_9CDE0.cam);
                     }
                 }
             }
@@ -1662,7 +1662,7 @@ void VendorBuyDialogUpdate(void) {
                     if (D_L00_00161F30 < n2) {
                         D_L00_00161F30++;
                         if (!(D_L00_00161F2C & 3) || D_L00_00161F2C < 16) {
-                            func_0022ED80(1, 0, D_L00_001CA7C0_9CDE0.cam);
+                            Moby_PlaySound(1, 0, D_L00_001CA7C0_9CDE0.cam);
                         }
                     }
                 }
@@ -1710,7 +1710,7 @@ void VendorBuyDialogUpdate(void) {
                 }
                 if (gBolts < cost
                     && D_0013D530[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item] >= D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hE) {
-                    func_0022ED80(0, 0, D_L00_001CA7C0_9CDE0.cam);
+                    Moby_PlaySound(0, 0, D_L00_001CA7C0_9CDE0.cam);
                 } else if (D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].sel == 1) {
                     if (D_0013D530[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item] < D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hE) {
                         price = (D_L00_001CA7C0_9CDE0.f40 ? D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hA
@@ -1724,23 +1724,23 @@ void VendorBuyDialogUpdate(void) {
                             price = (D_L00_001CA7C0_9CDE0.f40 ? D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hA
                                                               : D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].h8) * n;
                             ((int *)(D_0013DE6E + 0xA))[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item] += n;
-                            func_L00_0029C840(3);
+                            PickupSpawn_Step(3);
                             gBolts = gBolts - price;
                             VendorBuildItemList(D_L00_001CA7C0_9CDE0.f40 != 0);
                             set_scrolling_status_message(msg_string(0x4F5F));
-                            func_0022ED80(7, 0, D_L00_001CA7C0_9CDE0.cam);
+                            Moby_PlaySound(7, 0, D_L00_001CA7C0_9CDE0.cam);
                         } else {
                             set_scrolling_status_message(msg_string(0x4F60));
-                            func_0022ED80(0, 0, D_L00_001CA7C0_9CDE0.cam);
+                            Moby_PlaySound(0, 0, D_L00_001CA7C0_9CDE0.cam);
                         }
                     } else {
-                        func_0022ED80(0, 0, D_L00_001CA7C0_9CDE0.cam);
+                        Moby_PlaySound(0, 0, D_L00_001CA7C0_9CDE0.cam);
                     }
                 } else {
                     price = gHavePersuader[0] ? D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].f4
                                           : D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].f0;
                     if (gBolts >= price) {
-                        func_L00_0029C840(2);
+                        PickupSpawn_Step(2);
                         GiveItem(D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item, 1);
                         D_L00_001CA7C0_9CDE0.f48 = D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item;
                         if (D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item == 0x18) {
@@ -1762,14 +1762,14 @@ void VendorBuyDialogUpdate(void) {
                             Vendor_InitItemDisplay();
                         }
                         set_scrolling_status_message(msg_string(0x4F5F));
-                        func_0022ED80(7, 0, D_L00_001CA7C0_9CDE0.cam);
+                        Moby_PlaySound(7, 0, D_L00_001CA7C0_9CDE0.cam);
                     } else {
                         set_scrolling_status_message(msg_string(0x4F60));
-                        func_0022ED80(0, 0, D_L00_001CA7C0_9CDE0.cam);
+                        Moby_PlaySound(0, 0, D_L00_001CA7C0_9CDE0.cam);
                     }
                 }
             } else {
-                func_0022ED80(0, 0, D_L00_001CA7C0_9CDE0.cam);
+                Moby_PlaySound(0, 0, D_L00_001CA7C0_9CDE0.cam);
             }
             D_L00_001CA7C0_9CDE0.state = 0;
         }

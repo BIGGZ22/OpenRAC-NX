@@ -48,9 +48,9 @@ extern void func_001F7B40(void);
 
 LINKER_REMNANT("asm/remnants/text", func_001F9810);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9840);
+ASM_FUNC("asm/handwritten/text", func_001F9840);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9850);
+ASM_FUNC("asm/handwritten/text", func_001F9850);
 
 /*
  * Hand-written: return *(float *)&D_0015EE64 * x;  (gp 0x0015EE64)
@@ -64,9 +64,9 @@ INCLUDE_ASM("asm/nonmatchings/text", func_001F9850);
  * (tools/ps2eeas_nops.py exempts it). Our C comes out 12 bytes, retail
  * is 16. An older note blamed an assembler load delay.
  */
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9878);
+ASM_FUNC("asm/handwritten/text", func_001F9878);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9888);
+ASM_FUNC("asm/handwritten/text", func_001F9888);
 
 /*
  * Hand-written: return *(float *)&D_0015EE68 * x;  (gp 0x0015EE68)
@@ -80,13 +80,13 @@ INCLUDE_ASM("asm/nonmatchings/text", func_001F9888);
  * (tools/ps2eeas_nops.py exempts it). Our C comes out 12 bytes, retail
  * is 16. An older note blamed an assembler load delay.
  */
-INCLUDE_ASM("asm/nonmatchings/text", func_001F98B0);
+ASM_FUNC("asm/handwritten/text", func_001F98B0);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F98C0);
+ASM_FUNC("asm/handwritten/text", func_001F98C0);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F98E8);
+ASM_FUNC("asm/handwritten/text", func_001F98E8);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F98F8);
+ASM_FUNC("asm/handwritten/text", func_001F98F8);
 
 ASM_FUNC("asm/handwritten/text", func_001F9908);
 
@@ -120,7 +120,7 @@ ASM_FUNC("asm/handwritten/text", func_001F9AC0);
  * diff under the scratch-register-allocation open question; that was a
  * misread.
  */
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9AF0);
+ASM_FUNC("asm/handwritten/text", func_001F9AF0);
 
 ASM_FUNC("asm/handwritten/text", func_001F9B20);
 
@@ -159,13 +159,13 @@ float FastAbsF(float arg0) {
  * as the old core_text func_00112380 drift, which is why that one was
  * worth fixing rather than tolerating.)
  */
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9B90);
+ASM_FUNC("asm/handwritten/text", func_001F9B90);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9B98);
+ASM_FUNC("asm/handwritten/text", func_001F9B98);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9BA0);
+ASM_FUNC("asm/handwritten/text", func_001F9BA0);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9BB0);
+ASM_FUNC("asm/handwritten/text", func_001F9BB0);
 
 /*
  * Same-size-but-4-over near-miss NOT kept (size mismatch: 12 vs
@@ -176,7 +176,7 @@ INCLUDE_ASM("asm/nonmatchings/text", func_001F9BB0);
  * the store source. `__builtin_memset(arg0, 0, 16)` produces the same
  * extra instruction. Not reachable from source tried so far.
  */
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9BC0);
+ASM_FUNC("asm/handwritten/text", func_001F9BC0);
 
 ASM_FUNC("asm/handwritten/text", func_001F9BC8);
 
@@ -261,7 +261,7 @@ ASM_FUNC("asm/handwritten/text", func_001FA460);
  * allocates, and its twin func_001FA460 has the same body with a
  * `sqc2 $vf0` in the slot. fastfunc.o is hand-written noreorder code.
  */
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA480);
+ASM_FUNC("asm/handwritten/text", func_001FA480);
 
 ASM_FUNC("asm/handwritten/text", func_001FA4A0);
 
@@ -289,15 +289,15 @@ ASM_FUNC("asm/handwritten/text", func_001FA6C0);
  * separate assignment+accumulate instead of one combined expression;
  * no change. See docs/DECOMP_PROGRESS.md.
  */
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA748);
+ASM_FUNC("asm/handwritten/text", func_001FA748);
 
 /* Same register-allocation-choice issue as func_001FA748 above (its
    arg0-arg1 sibling); logic confirmed identical shape via objdump. */
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA790);
+ASM_FUNC("asm/handwritten/text", func_001FA790);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA7D8);
+ASM_FUNC("asm/handwritten/text", func_001FA7D8);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA850);
+ASM_FUNC("asm/handwritten/text", func_001FA850);
 
 float IntToFloat(int arg0) {
     return (float)arg0;

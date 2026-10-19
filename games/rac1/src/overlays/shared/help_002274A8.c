@@ -239,8 +239,8 @@ void HeroUpdate(void) {
     }
     Hero_TickReleaseTimers();
     Hero_CheckMovementThresholds();
-    func_L00_0020A990();
-    func_L00_0020ABB8();
+    Hero_UpdateObstacleLean();
+    Hero_UpdateBodyTilt();
     HeroScanTargets();
     RerollMotionParams();
     ClampAimLeanAngles();
@@ -256,8 +256,8 @@ void HeroUpdate(void) {
     HelpHintsPeriodicCheck();
     HudBoltAlertShow();
     FireGadgetStateHooks();
-    func_L00_00207418();
-    func_001E9768(*(void **)(g + 0x2080));
+    Cheats_PollCodes();
+    Profile_Mark(*(void **)(g + 0x2080));
     if (*(int *)(g + 0x208C) != 0x16 && *(int *)(g + 0x2084) != 0x32) {
         func_L00_00248EF8(g + 0x80);
     }
@@ -820,7 +820,7 @@ void func_L00_00217570(s32, s32);
 void func_L00_00211338(void *, s32, f32, f32);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00226f10.c, FUN_L01_00231580. */
-s32 func_L01_00231B98(s32 arg) {
+s32 HeroL01_TryTakeHit(s32 arg) {
     u8 *m;
     T_8 *tbl;
     u8 *mob;
@@ -1411,7 +1411,7 @@ int HeroCanCapsulePass(int a0) {
     qcopy(A, g + 0x80);
     clear_u64_value(B);
     if (*(short *)(g + 0x22DA) != 0) {
-        func_L00_00235040();
+        Hero_ConstrainToPath();
         *(short *)(g + 0x22DA) = 0;
     }
     if (*(int *)(g + 0x208C) != 0x11) {
@@ -1706,7 +1706,7 @@ skip:
         Hero_OnKilled();
     }
 }
-void func_L01_00240CE8(void)
+void Hero_SetMoveStateFromMode(void)
 {
     switch ((unsigned char)D_0013E633[0x2EC1]) {
     case 0:

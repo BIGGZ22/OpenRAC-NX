@@ -1,3 +1,4 @@
+/* fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* FastArcSin: |x| through c0 + c1*a + c2*a^2 + c3*a^3 (the constants at gp-0x6560, 0x1607A0, read from
    the game's memory), times sqrt(1 - |x|) (VU0 vsqrt, which takes the magnitude), subtracted from pi/2
    and given the sign of x. From the earlier worker's C (build-sn/fill/func_001F9FC0), which used

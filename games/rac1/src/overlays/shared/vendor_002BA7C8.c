@@ -681,7 +681,7 @@ extern int func_L00_0025D390(char *);
 extern void func_00215C00(void *, float, float, float);
 extern int func_L00_001EFFF0(Vec4f *, Vec4f *, int, void *, int);
 
-char *func_L00_002BD6B8(char *self, float *position, float *heading, float *pitch) {
+char *Aim_FindAssistTarget(char *self, float *position, float *heading, float *pitch) {
     float start[4] __attribute__((aligned(16)));
     float end[4] __attribute__((aligned(16)));
     float target[4] __attribute__((aligned(16)));
@@ -1048,6 +1048,8 @@ void MorphorayUpdate(Moby *m) {
         D_L00_00161890_2BDAF0 = -1;
     }
 }
+typedef struct { float f[4]; } __attribute__((aligned(16))) V_t;
+extern V_t D_L00_001DC260;
 INCLUDE_ASM("asm/overlays", func_L00_002BE2A0);
 typedef struct {
     Vec4A pos;
@@ -1582,13 +1584,68 @@ void DrawScrollingRibbonColored(P_2BF380 *m, int a, int b, float sx, float sy, f
     }
     VU1_addGSregister(0x47, 0x5360B);
 }
-INCLUDE_ASM("asm/overlays", func_L00_002BF958);
+extern V_t D_L00_001DC220[];
+typedef struct {
+    float v[4][4];
+    int rgba[4];
+    float uv[4][2];
+    long gs[4];
+} QuadPkt;
+extern int D_L00_001618E8[3] MACRO_ADDR;
+extern float D_L00_001618B8[3] MACRO_ADDR;
+extern float D_L00_001618D8[3] MACRO_ADDR;
+extern Vec4A D_L00_001DD3A0[];
+extern Vec4A D_L00_001DD3D0[];
+extern short D_L00_00161834;
+extern short D_L00_00161830;
+
+void func_L00_002BF958(void *unused) {
+    QuadPkt q;
+    Vec4A A, B, C, D, E;
+    int base;
+    Vec4A *pd;
+    int i;
+    int j;
+    q.gs[1] = func_001F4868_BEF58(8);
+    q.gs[3] = 0x8000000048;
+    q.gs[2] = 0xFF9000000260;
+    q.gs[0] = 0;
+    q.uv[0][0] = 0; q.uv[0][1] = 0;
+    q.uv[1][0] = 0; q.uv[1][1] = 1.0f;
+    q.uv[2][0] = 1.0f; q.uv[2][1] = 0;
+    q.uv[3][0] = 1.0f; q.uv[3][1] = 1.0f;
+    {
+        int c = ((unsigned char)D_0013E633[2] != 0) ? *(int *)&D_L00_00161834 : *(int *)&D_L00_00161830;
+        base = c & 0xFFFFFF;
+    }
+    pd = &D;
+    for (i = 0; i < 3; i++) {
+        int col;
+        if (D_L00_001618E8[i] != 0) {
+            col = base | (func_001FA898_r(D_L00_001618B8[i]) << 24);
+            q.rgba[3] = col;
+            q.rgba[2] = col;
+            q.rgba[1] = col;
+            q.rgba[0] = col;
+            qcopy(pd, &D_L00_001DD3A0[i]);
+            qcopy(&A, &D_L00_001DD3D0[i]);
+            func_001F9C30(&C, D_0013E633 + 0x10AD, -1.0f);
+            func_001F9CA0(&B, &A, &C);
+            func_L00_001FF4B0(&B, &B, 1.0f);
+            func_001F9CA0(&C, &B, &A);
+            for (j = 0; j < 4; j++) {
+                func_001F9C30(&E, &D_L00_001DC220[j], D_L00_001618D8[i]);
+                func_001F9EE8(&q.v[j], &E, &A);
+            }
+            func_L00_001FD1D8(&q, 0, 0);
+        }
+    }
+}
 extern short D_L00_00161888;
 extern short D_L00_00161884;
 extern short D_L00_0016187C;
 extern short D_L00_00161880;
 
-typedef struct { float f[4]; } __attribute__((aligned(16))) V_t;
 typedef struct {
     V_t corner[4];
     int color[4];
@@ -1598,8 +1655,6 @@ typedef struct {
     float unk68, unk6C;
     long unk70, tex, unk80, unk88;
 } Q_t;
-extern V_t D_L00_001DC260;
-extern V_t D_L00_001DC220[];
 
 // Draws a textured quad twice (first tinted, then white) from a moby's orientation. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002b94d0.c, FUN_L00_002be890.
 void DrawMobyQuadTintedWhite(void *mv) {
@@ -1655,7 +1710,7 @@ extern int func_L00_001F10E0(float, void *, int, void *);
 extern int D_L00_00173F40[];
 
 /* Nudge a position and ask the level helper about it, lowering a global on success. */
-int func_L00_002BFDB8(char *a, int b, Vx *c) {
+int Hero_ProbeSphereRaised(char *a, int b, Vx *c) {
     Vx v;
     float s;
     float t;
@@ -1715,7 +1770,7 @@ typedef struct { char pad[0x18]; TopS *o18; char pad2[0xC]; float f28; } S173F40
 extern S173F40 D_L00_00173F40_s __asm__("D_L00_00173F40") NOT_SDA;
 
 /* Probe below a point and return the ground height offset, or zero when nothing is hit. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002b94d0.c, FUN_L00_002bec80. */
-float func_L00_002BFF88(Vx *a, void *b) {
+float Ground_ProbeHeightBelow(Vx *a, void *b) {
     Vx v1;
     Vx v2;
     float z;
@@ -1756,7 +1811,7 @@ extern float func_001F9B88(float);
 extern int func_L00_001EFFF0_C0098(void *, void *, int, void *, int) __asm__("func_L00_001EFFF0");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b94d0.c, FUN_L00_002bed90. */
-char *func_L00_002C0098(char *self, float *position, float *angles, int unused, int mode) {
+char *Aim_PickBestTarget(char *self, float *position, float *angles, int unused, int mode) {
     char *candidate;
     char *best = 0;
     float target[4] __attribute__((aligned(16)));
@@ -1843,7 +1898,7 @@ extern f32 func_L00_002BFF88_C0358(void *, void *) __asm__("func_L00_002BFF88");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002b94d0.c, FUN_L00_002bf050. */
 /* Exact match: tools/ps2eeas_nops.py keeps the hazard nop after the label the branch lands on. */
-f32 func_L00_002C0358(Mob *m, Vec4 *pos, f32 *tgt, f32 *out, f32 ang, f32 arc, f32 step, f32 h, f32 r2, f32 r1) {
+f32 Aim_SweepBestAngle(Mob *m, Vec4 *pos, f32 *tgt, f32 *out, f32 ang, f32 arc, f32 step, f32 h, f32 r2, f32 r1) {
     Vec4 v0;
     Vec4 v1;
     f32 da;
@@ -2210,7 +2265,7 @@ extern int func_L00_001F3958(void);
  * or a small dispatch table (keyed by func_L00_001F3958's result)
  * override the default return value (a0's byte at +0x20) with 11.
  */
-int func_L00_002C11D0(EffectSrc *a0) {
+int Moby_ProbeGroundState(EffectSrc *a0) {
     Vec4f v1, v2;
     int result;
 

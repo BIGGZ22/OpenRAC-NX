@@ -1,4 +1,4 @@
-/* functional: high. Corrected from nonmatching/l07_umbris/func_L07_00313D28.c: outer step was pi/2 but retail adds 0x3EC90FDB (pi/8); the func_001FA748 second argument was 0.7853982 but retail passes 0x3EC90FDB (pi/8); start angle was -2.7443 but retail is 0xC02FEDE0 (-2.74889); loop bound/pi/2 constants now exact bits (pi 0x40490FDB); locals are now one frame struct at retail offsets because the callees read the stack buffers. */
+/* functional: high. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Corrected from nonmatching/l07_umbris/func_L07_00313D28.c: outer step was pi/2 but retail adds 0x3EC90FDB (pi/8); the func_001FA748 second argument was 0.7853982 but retail passes 0x3EC90FDB (pi/8); start angle was -2.7443 but retail is 0xC02FEDE0 (-2.74889); loop bound/pi/2 constants now exact bits (pi 0x40490FDB); locals are now one frame struct at retail offsets because the callees read the stack buffers. */
 #include "common.h"
 extern void func_00234C98(int, long);
 extern int func_001F4868(int);

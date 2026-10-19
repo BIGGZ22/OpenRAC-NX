@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* newlib strncpy: copies up to n bytes from src to dst, stopping after a NUL
    that is copied; the rest of the n bytes are filled with NULs. Returns dst.
    Retail moves 16- and 8-byte blocks that contain no NUL (aligned pointers,

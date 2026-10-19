@@ -10,16 +10,16 @@
 void STUB_printf(int arg0, ...) {
 }
 
-void func_001E9768(void) {
+void Profile_Mark(void) {
 }
 
 void func_001E9770(void) {
 }
 
-void func_001E9778(void) {
+void Camera_DebugPosition(void) {
 }
 
-void func_001E9780(void) {
+void Camera_DebugRotation(void) {
 }
 
 void func_001E9788(void) {
@@ -31,13 +31,13 @@ void func_001E9790(void) {
 void func_001E9798(void) {
 }
 
-void func_001E97A0(void) {
+void Profile_Checkpoint(void) {
 }
 
-void func_001E97A8(void) {
+void Profile_FrameEnd(void) {
 }
 
-void func_001E97B0(void) {
+void Profile_FrameBegin(void) {
 }
 
 void func_001E97B8(void) {
@@ -48,7 +48,7 @@ void func_001E97C0(void) {
 
 /* Takes an argument (callers pass one, e.g. func_001EC210) and ignores
    it -- the unused parameter costs no codegen, still 0/8. */
-int func_001E97C8(void *arg0) {
+int NullMobyUpdate(void *arg0) {
     return 0;
 }
 

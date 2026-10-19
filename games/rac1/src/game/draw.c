@@ -93,7 +93,9 @@ __asm__(".section .text\n\tnop\n");
 
 LINKER_REMNANT("asm/remnants/text", func_001F1088);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F10A0);
+LINKER_REMNANT("asm/remnants/text", func_001F10A0);
+
+INCLUDE_ASM("asm/nonmatchings/text", func_001F10C8);
 
 LINKER_REMNANT("asm/remnants/text", func_001F2410);
 
@@ -147,11 +149,11 @@ void projectWorldPoint(Vec3f *a0, float *a1) {
 LINKER_REMNANT("asm/remnants/text", func_001F2550);
 
 /* Empty stub (returns immediately). */
-void func_001F2558(void) {
+void ProfileMarker_End(void) {
 }
 
 /* Empty stub (returns immediately). */
-void func_001F2560(void) {
+void ProfileMarker_Begin(void) {
 }
 
 extern int D_0015F6FC_m __asm__("D_0015F6FC") MACRO_ADDR;
@@ -830,7 +832,134 @@ void SetScreenSize(int w, int h, float a2, float a3, float a4, float a5, float a
     UpdateViewContext();
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F3890); /* SetPalMode(int) */
+typedef struct {
+    char disp_and_contexts[0x150];
+    s16 display_width;
+    s16 display_height;
+    s16 psm;
+    s16 fbp0;
+    s16 storage_width;
+    s16 storage_height;
+} FsAaBuf;
+
+typedef struct {
+    int width;
+    int height;
+    int half_width;
+    int half_height;
+    int left;
+    int top;
+    int right;
+    int bottom;
+} ScreenExtent;
+
+typedef struct {
+    u64 pad0[2];
+    u64 frame1;
+    u64 pad18;
+    u64 frame2;
+    u64 pad28;
+    u64 zbuf1;
+    u64 pad38;
+    u64 zbuf2;
+    u64 pad48;
+    u64 xyoffset1;
+    u64 pad58;
+    u64 xyoffset2;
+    u64 pad68;
+    u64 scissor1;
+    u64 pad78;
+    u64 scissor2;
+} GsDrawEnvRegs;
+
+typedef struct {
+    char b[0x60];
+} GsLoadImage;
+
+extern FsAaBuf fs_aa_buffer_3890 __asm__("D_00151880");
+extern ScreenExtent screen_extent_3890 __asm__("D_0013E600");
+extern GsDrawEnvRegs draw_env_3890 __asm__("D_0013D010");
+extern u64 depth_reg_3890 __asm__("D_0013D200");
+extern u64 masked_depth_reg_3890 __asm__("D_0013D270");
+extern unsigned char clear_buf_3890[] __asm__("D_001942C0");
+extern int D_0015EF74 MACRO_ADDR;
+extern int D_0015EF80 MACRO_ADDR;
+extern int D_0015EF84 MACRO_ADDR;
+extern int D_0015EF88 MACRO_ADDR;
+extern int D_0015EF8C MACRO_ADDR;
+extern void func_00118D80(int);
+extern int func_00120858(int, int);
+extern void func_001FAB40(int, int, int, int, int, int);
+extern void func_001FB498(void);
+extern void func_001FB530(void);
+extern void func_001FB470(void);
+extern int func_00122630(GsLoadImage *, s16, s16, s16, s16, s16, s16, s16);
+extern int func_00122958(GsLoadImage *, unsigned char *);
+
+/* Adapted from Lombyte (MIT): src/video/display/set_pal_mode.c, set_pal_mode. */
+void func_001F3890(void) {
+    GsLoadImage image;
+    int n;
+    int i;
+    u64 zbuf;
+    u64 frame;
+    u64 scissor;
+    s16 w;
+
+    func_00118D80(0);
+    if (D_0015EE80 != 0) {
+        D_0015EF84 = 0x100000;
+        D_0015EF88 = 0x1E0000;
+        D_0015EF80 = 0;
+        D_0015EF8C = 0x2C0000;
+        func_001FAB40(0x200, 0x1C0, 0x200, 0x200, 4, 0);
+    } else {
+        D_0015EF84 = 0xE0000;
+        D_0015EF88 = 0x1B0000;
+        D_0015EF80 = 0;
+        D_0015EF8C = 0x280000;
+        func_001FAB40(0x200, 0x1A0, 0x200, 0x1C0, 0, 0);
+    }
+    w = fs_aa_buffer_3890.display_width;
+    screen_extent_3890.width = w;
+    screen_extent_3890.half_width = w >> 1;
+    screen_extent_3890.half_height = (screen_extent_3890.height = fs_aa_buffer_3890.display_height) >> 1;
+    screen_extent_3890.left = (0x800 - screen_extent_3890.half_width) << 4;
+    screen_extent_3890.top = (0x800 - screen_extent_3890.half_height) << 4;
+    screen_extent_3890.right = (screen_extent_3890.half_width + 0x800) << 4;
+    screen_extent_3890.bottom = (screen_extent_3890.half_height + 0x800) << 4;
+    func_00118D80(0);
+    func_00120858(0, 0);
+    frame = (D_0015EF84 >> 13) | ((u64)(screen_extent_3890.width >> 6) << 16);
+    D_0015EF74 = D_0015EF8C;
+    draw_env_3890.frame1 = frame;
+    D_0015EF78 = D_0015EF8C;
+    zbuf = (D_0015EF88 >> 13) | 0x1000000;
+    draw_env_3890.frame2 = frame;
+    draw_env_3890.xyoffset1 = screen_extent_3890.left | ((u64)screen_extent_3890.top << 32);
+    draw_env_3890.zbuf1 = zbuf;
+    draw_env_3890.zbuf2 = zbuf;
+    draw_env_3890.xyoffset2 = screen_extent_3890.left | ((u64)screen_extent_3890.top << 32);
+    scissor = ((u64)(screen_extent_3890.width - 1) << 16) | ((u64)(screen_extent_3890.height - 1) << 48);
+    depth_reg_3890 = zbuf;
+    draw_env_3890.scissor1 = scissor;
+    draw_env_3890.scissor2 = scissor;
+    masked_depth_reg_3890 = zbuf | ((u64)0x8000 << 17);
+    func_00118D80(0);
+    func_001FB498();
+    func_001FB530();
+    func_00118D80(0);
+    func_00120858(0, 0);
+    func_001FB470();
+    func_001F99B0(clear_buf_3890, 0, 0x1000);
+    n = (fs_aa_buffer_3890.storage_width * fs_aa_buffer_3890.storage_height) >> 10;
+    for (i = 0; i < n; i++) {
+        func_00122630(&image, i << 4, 1, 0, 0, 0, 32, 32);
+        func_00118D80(0);
+        func_00122958(&image, clear_buf_3890);
+        func_00120858(0, 0);
+    }
+}
 
 /*
  * ResetDrawGlobals. Seventeen zero stores in a row, in three addressing
@@ -1117,7 +1246,7 @@ void DrawDebugProfiler(void) {
     func_001F2560_a(D_0015F4F0, 0xF);
     Dma_AppendRefDirect3();
     if (D_0015F534_f & 0x10000) {
-        func_00238D88();
+        DebugProfiler_Hook();
     }
     if ((D_0015F534_f & 0x80) && D_0018A3B0[0x40 / 4] != 0) {
         HudDraw();
@@ -1136,11 +1265,11 @@ void DrawDebugProfiler(void) {
             if (D_001873D4 != 0) {
                 emit_rgba_draw_packet(D_001611C0_F3D78[0], D_001611C1_F3D78[0], D_001611C2_F3D78[0], D_001611C3_F3D78[0]);
             }
-            if (D_0015F53C > 0.0f) {
-                if (D_0015F53C > 1.0f) {
-                    D_0015F53C = 1.0f;
+            if (gFade > 0.0f) {
+                if (gFade > 1.0f) {
+                    gFade = 1.0f;
                 }
-                emit_rgba_draw_packet(0, 0, 0, func_001FA898_r(D_0015F53C * 128.0f));
+                emit_rgba_draw_packet(0, 0, 0, func_001FA898_r(gFade * 128.0f));
             }
             if (D_0015F540 > 0.0f) {
                 if (D_0015F540 > 1.0f) {

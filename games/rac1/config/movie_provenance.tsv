@@ -78,3 +78,9 @@ func_0023C390	asm only	2026-10-12	ADPCM ring to SPU transfer in 0x400-byte chunk
 func_0023D540	asm only	2026-10-15	viBufStopDMA waits for IPU idle and saves DMA/IPU registers
 func_0023D650	asm only	2026-10-15	viBufRestartDMA restores DMA/IPU registers and restarts the ring
 func_0023D018	asm only	2026-10-15	viBufCreate sets up the ring buffer, tags and semaphore
+func_0023D340	asm only	2026-10-18	ring-buffer read step: advances the read position and tags the next DMA chunk
+func_0023DA88	asm only	2026-10-18	ring-buffer search: finds the timestamp entry covering a read position
+func_0023DCF0	asm only	2026-10-18	ring-buffer timestamp lookup for the current decode position
+func_0023CAF8	asm only	2026-10-18	PCM ring-buffer put: copies decoded audio into the ring and advances the write offset
+func_0023BB90	asm only	2026-10-19	movie init: sets up the read stream, decoder and DMA channel state
+func_0023B740	asm only	2026-10-19	movie stream read: pulls data from the source into the ring buffer

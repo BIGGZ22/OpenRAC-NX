@@ -38,7 +38,7 @@ void SpawnBreakBurst(void *moby_ptr, void *target_ptr) {
     float speed;
     unsigned char *fragment;
 
-    func_0022ED80(0, 0, (int)moby);
+    Moby_PlaySound(0, 0, (int)moby);
     qcopy(origin, moby + 0x10);
     origin[2] += 0.3f;
     PartType13Spawn(origin, 1, 0x40808080, 0.3f, 1.01f, 1.075f, 0.05f, 50000.0f);
@@ -306,7 +306,7 @@ void Moby303Update(char *moby) {
 extern void func_L00_002D80A0(char *);
 
 /* Sets the moby to state 2 and calls func_L00_002D80A0. */
-void func_L06_002E7578(char *moby)
+void DriftingSprites_Activate(char *moby)
 {
     moby[0x20] = 2;
     *(unsigned short *)(moby + 0x34) &= 0xFFBE;
@@ -505,7 +505,7 @@ void FrogUpdate(unsigned char *m) {
             m[0x20] = 7;
             if (m[0x53] != 3) MobyBlendAnimation(m, 3, 0, 1);
             *(float *)(m + 0x54) = 1.0f;
-            *(float *)(m + 0x18) = func_00214358(m + 0x10, 0, 0.5f);
+            *(float *)(m + 0x18) = ProbeGroundHeight(m + 0x10, 0, 0.5f);
         }
         break;
     case 6: {
@@ -514,7 +514,7 @@ void FrogUpdate(unsigned char *m) {
             m[0x20] = 7;
             if (m[0x53] != 3) MobyBlendAnimation(m, 3, 0, 1);
             *(float *)(m + 0x54) = 1.0f;
-            *(float *)(m + 0x18) = func_00214358(m + 0x10, 0, 0.5f);
+            *(float *)(m + 0x18) = ProbeGroundHeight(m + 0x10, 0, 0.5f);
         } else if (r & 0x120) {
             SetDeathBits(m, 0, -1);
             DeleteMoby(m);
@@ -718,7 +718,7 @@ extern void func_0020D678_EA920(struct Moby *) __asm__("func_0020D678");
 extern struct Moby * D_001414D0_EA920 __asm__("D_001414D0");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002e94f0. */
-void func_L06_002EA920(struct Moby *moby) {
+void RespawnMobyUpdate(struct Moby *moby) {
     struct RespawnVars *vars;
     struct MobyHit *hit;
     int kind;
@@ -753,7 +753,7 @@ void func_L06_002EA920(struct Moby *moby) {
                 SpawnSparkBurst((char *)moby);
                 vars->sparks_pending = 0;
             }
-            func_0022ED80(3, 0, (int)moby);
+            Moby_PlaySound(3, 0, (int)moby);
             if (vars->carried != 0) {
                 func_L06_002EB360_EA920(moby);
             }
@@ -842,8 +842,8 @@ void BuildMobyFrame(char *m, float *a1, float *a2) {
     qcopy(F, D);
     FastVecCross(G, F, H);
     m += 0xC0;
-    func_00215328(A, m);
-    func_00215328(B, F);
+    Matrix_ToQuatCopyBack(A, m);
+    Matrix_ToQuatCopyBack(B, F);
     func_001FA5C8(A, A, B, *(float *)&D_L06_00161C90);
     func_001FA648(A, m);
 }
@@ -921,7 +921,7 @@ void SpawnDeathParticlesAndRemove(struct Moby *moby) {
     int j;
 
     vars = moby->pvars;
-    func_0022ED80(4, 0, (int)moby);
+    Moby_PlaySound(4, 0, (int)moby);
     qcopy(origin, &moby->pos);
     origin[2] = origin[2] + 0.5f;
     for (i = 3; i >= 0; i--) {
@@ -1114,7 +1114,7 @@ extern void func_00213DE0(void *, int, int, int);
 
 // Switches moby state between 0x10 and 8 depending on a check result.
 extern int func_L00_002DCFD0_EBAD8(void *, void *) __asm__("func_L00_002DCFD0");
-int func_L06_002EBAD8(unsigned char *moby, void *v) {
+int CarriedMoby_PlaceState16(unsigned char *moby, void *v) {
     int r = func_L00_002DCFD0_EBAD8(moby, v);
     if (r != 0) {
         if (moby[0x20] != 0x10) {
@@ -1132,7 +1132,7 @@ int func_L06_002EBAD8(unsigned char *moby, void *v) {
 extern s32 func_L00_002DD2D0(void *);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00297d10.c, FUN_L06_002ea7c8. */
-s32 func_L06_002EBBF8(unsigned char *p) {
+s32 CarriedMoby_ReleaseToState16(unsigned char *p) {
     u8 t;
     s32 r;
     r = ReleaseCarriedMobySlot(p);
@@ -1404,7 +1404,7 @@ void GadgebotUpdate(Moby *moby) {
         int i;
 
         d->f308 = 1.0f;
-        (*(float (*)[4])&moby->pos)[2] = func_00214358((*(float (*)[4])&moby->pos), 0, 0.5f);
+        (*(float (*)[4])&moby->pos)[2] = ProbeGroundHeight((*(float (*)[4])&moby->pos), 0, 0.5f);
         SpawnMoby303LinkedToOwner((char *)moby);
         d->f2F0.q = d->f2E0.q = *(u128 *)(*(float (*)[4])&moby->pos);
         if (D_0014C150[moby->mission + D_0015EE84 * 16] == 0xFF) {
@@ -1412,7 +1412,7 @@ void GadgebotUpdate(Moby *moby) {
             return;
         }
         d->f170 = (Moby *)SpawnMoby302AtOwner((char *)moby);
-        (*(float (*)[4])&moby->pos)[2] = func_00214358((*(float (*)[4])&moby->pos), 0, 0.5f);
+        (*(float (*)[4])&moby->pos)[2] = ProbeGroundHeight((*(float (*)[4])&moby->pos), 0, 0.5f);
         qcopy(d->f0, (*(float (*)[4])&moby->pos));
         qcopy(d->fE0, (*(float (*)[4])&moby->pos));
         d->f14 = D_0015EE6C * 2.0f;
@@ -1481,7 +1481,7 @@ void GadgebotUpdate(Moby *moby) {
                 (*(int *)&d->f170->collision) = (*(GbClass **)&d->f170->pclass)->f10;
             }
             if (moby->visible != 0) {
-                func_L06_002F4CF8((char *)moby);
+                Gadgebot_DrawGlow((char *)moby);
             }
             return;
         }
@@ -1593,7 +1593,7 @@ void GadgebotUpdate(Moby *moby) {
                 }
                 dist = func_001F9D48((*(float (*)[4])&moby->pos), D_0013F450.f80);
                 dz = FastAbsF((*(float (*)[4])&moby->pos)[2] - D_0013F450.f2A0[2]);
-                func_00214358((*(float (*)[4])&moby->pos), 0, 0.5f);
+                ProbeGroundHeight((*(float (*)[4])&moby->pos), 0, 0.5f);
                 if (D_L06_001746D8 != 0 && D_L06_001746D8->oclass == 0x3B1) {
                     *(u128 *)(*(float (*)[4])&moby->pos) = *(u128 *)v60;
                 }
@@ -1788,7 +1788,7 @@ void GadgebotUpdate(Moby *moby) {
         switch (moby->command) {
         case 0:
             moby->command = 1;
-            func_L06_002F3D40(moby);
+            Gadgebot_FindTarget(moby);
             break;
         case 1:
             if (d->f174 != 0) {
@@ -1846,7 +1846,7 @@ void GadgebotUpdate(Moby *moby) {
             PartType26Spawn((1.0f - rr) * 0.5f * 210000.0f, (char *)moby, 0x3000407F, scale_ticks(2), 3);
         }
         if (moby->visible != 0) {
-            func_L06_002F4CF8((char *)moby);
+            Gadgebot_DrawGlow((char *)moby);
         }
         (*(int *)&moby->collision) = 0;
         moby->flags &= 0xEFFF;
@@ -1951,7 +1951,7 @@ void GadgebotUpdate(Moby *moby) {
                     i++;
                 } while (i < 6);
                 (*(float (*)[4])&moby->pos)[2] = z;
-                if (FastAbsF(save1[2] - func_00214358((*(float (*)[4])&moby->pos), 0, 0.5f)) >= d->ctl.f0C) {
+                if (FastAbsF(save1[2] - ProbeGroundHeight((*(float (*)[4])&moby->pos), 0, 0.5f)) >= d->ctl.f0C) {
                     *(u128 *)(*(float (*)[4])&moby->pos) = *(u128 *)save1;
                     d->f284 = 0.0f;
                 }
@@ -1961,7 +1961,7 @@ void GadgebotUpdate(Moby *moby) {
                 c->f18 = D_0015EE6C * -8.0f;
             }
             (*(float (*)[4])&moby->pos)[2] += 0.25f;
-            g = func_00214358((*(float (*)[4])&moby->pos), 0, 0.5f);
+            g = ProbeGroundHeight((*(float (*)[4])&moby->pos), 0, 0.5f);
             (*(float (*)[4])&moby->pos)[2] -= 0.25f;
             if ((*(float (*)[4])&moby->pos)[2] < g) {
                 Spring(&(*(float (*)[4])&moby->pos)[2], &d->f288, g, D_0015EE64 * 0.04f, D_0015EE64 * 0.3f, D_0015EE6C * 1.5f);
@@ -2002,7 +2002,7 @@ void GadgebotUpdate(Moby *moby) {
             moby->shadow_range = 0xD;
         }
         if (moby->visible != 0) {
-            func_L06_002F4CF8((char *)moby);
+            Gadgebot_DrawGlow((char *)moby);
         }
     }
     d->f2F0.q = d->f2E0.q;
@@ -2253,7 +2253,7 @@ extern float func_001F9B88_3D40(float) __asm__("func_001F9B88");
 extern int D_L06_001AC500_3D40[] __asm__("D_L06_001AC500");
 
 /* Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002f2910. */
-void func_L06_002F3D40(void *moby_arg) {
+void Gadgebot_FindTarget(void *moby_arg) {
     GbMoby_3D40 *moby = moby_arg;
     GbVars_3D40 *d = moby->vars;
     GbMoby_3D40 *candidate;
@@ -2608,7 +2608,7 @@ extern void func_001F49B0_F4CF8(void *, void *) __asm__("func_001F49B0");
 extern void func_L06_002F4C00_F4CF8(void *) __asm__("func_L06_002F4C00");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00297d10.c, FUN_L06_002f38c8. */
-void func_L06_002F4CF8(char *obj)
+void Gadgebot_DrawGlow(char *obj)
 {
     char *d;
     int tint;
@@ -3008,8 +3008,8 @@ void Moby1040Update(char *m) {
     char *d = *(char **)(m + 0x78);
     if (MobyGetHitMessage(m, 0x330000, 0) != 0) {
         int idx;
-        func_L06_002F9098(m);
-        func_0022ED80(1, 0, (int)m);
+        Moby1040_SpawnSparks(m);
+        Moby_PlaySound(1, 0, (int)m);
         idx = *(int *)(d + 0x60);
         if (idx != -1) {
             char *e = D_0013E633 + 0x1D + idx * 0x70;
@@ -3042,7 +3042,7 @@ void Moby1040Update(char *m) {
     }
     }
     if (Sound_IsPlaying(m, *(int *)(d + 0x60)) == 0) {
-        *(int *)(d + 0x60) = func_0022ED80(0, 4, (int)m);
+        *(int *)(d + 0x60) = Moby_PlaySound(0, 4, (int)m);
     }
 }
 extern float func_002140F8(float, float);
@@ -3059,7 +3059,7 @@ extern short D_L06_00161F34;
 extern unsigned char D_L06_00161F24;
 
 /* Spawn forty particles at the moby with randomised parameters. */
-void func_L06_002F9098(char *m) {
+void Moby1040_SpawnSparks(char *m) {
     float buf[4];
     int i;
     for (i = 0x27; i >= 0; i--) {

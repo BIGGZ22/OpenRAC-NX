@@ -11,6 +11,7 @@
  *   - Retail's first block needs: base loaded into the register e takes, the loop's base a copy made before the ad
  *   No plain-C form found that keeps that copy (cse2 makes the add use the copy whenever the copy precedes it).
  *   - Unchanged from e7: s18/s19/s21/flag allocation, the ticks join order, the fail block placement.
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 typedef struct {
     float speed;

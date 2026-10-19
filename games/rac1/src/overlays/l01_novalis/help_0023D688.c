@@ -130,9 +130,9 @@ int Hero_SetMoveState(int a, int b) {
         *(int *)(p + 0x208C) = 0;
         *(int *)(p + 0x2284) = 0;
         *(int *)(p + 0x1010) = rand_range(scale_ticks(0x32), scale_ticks(0x64));
-        func_L00_0020AB78();
+        Hero_ClearSlotPairs();
         if (*(unsigned char *)(p + 0x20A4) != 0) {
-            func_L01_00240CE8();
+            Hero_SetMoveStateFromMode();
             return 1;
         }
         qcopy(p + 0x150, p + 0x110);
@@ -560,7 +560,7 @@ int Hero_SetMoveState(int a, int b) {
             char *q = D_0013E633 + 0xE1D;
             float d = *(float *)(q + 0xAA8);
             int id = 6;
-            if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
+            if (Hero_ResolveAnimId(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
             HeroStartAnim(id, 4, (float)scale_ticks(9));
         }
         break;
@@ -575,7 +575,7 @@ int Hero_SetMoveState(int a, int b) {
         if (b) {
             int id = 6;
             float d = *(float *)(p + 0xAA8);
-            if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
+            if (Hero_ResolveAnimId(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
             HeroStartAnim(id, 4, (float)scale_ticks(9));
         }
         break;
@@ -1043,7 +1043,7 @@ int Hero_SetMoveState(int a, int b) {
                 } else if (s == 9) {
                     int id = 8;
                     int n = truncate_float_to_s32(*(float *)(q + 0xAA8));
-                    if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4) id = D_L01_0017C2D8[n];
+                    if (Hero_ResolveAnimId(*(unsigned char *)(moby + 0x52)) == 4) id = D_L01_0017C2D8[n];
                     HeroStartAnim(id, 0, (float)scale_ticks(5));
                 } else if (s == 0xA) {
                     HeroStartAnim(0x12, 0, (float)scale_ticks(5));
@@ -1398,7 +1398,7 @@ int Hero_SetMoveState(int a, int b) {
         char *p = D_0013E633 + 0xE1D;
         *(int *)(p + 0x2284) = 0x51;
         *(int *)(p + 0x208C) = 0;
-        if (func_L00_002056D0(*(unsigned char *)(*(char **)(p + 0x2080) + 0x53)) != Help_GetRecordValue(1)) {
+        if (Hero_ResolveAnimId(*(unsigned char *)(*(char **)(p + 0x2080) + 0x53)) != Help_GetRecordValue(1)) {
             HeroStartAnim(Help_GetRecordValue(1), 0, (float)scale_ticks(5));
         }
         break;
@@ -1539,7 +1539,7 @@ extern int func_0022ED80(int, int, int);
 extern int func_001F9908_241620(int *) __asm__("func_001F9908");
 
 /* Gadget and weapon input for the current hero state: starts the matching move and returns 1 when the state changed. */
-int func_L01_00241620(void) {
+int HeroL01_TryStartGadgetMove(void) {
     int out[3];
     int start;
     int mask;
@@ -1714,7 +1714,7 @@ int func_L01_00241620(void) {
             if (D_0013CA40_p241620.held & mask) {
                 if (!GetAmmo(-1)) {
                     if (!Sound_IsPlaying((Moby *)D_0013F450_h241620.items[0].moby, pv->fC)) {
-                        pv->fC = func_0022ED80(0, 0, (int)((Moby *)D_0013F450_h241620.items[0].moby));
+                        pv->fC = Moby_PlaySound(0, 0, (int)((Moby *)D_0013F450_h241620.items[0].moby));
                     }
                 }
             }
@@ -1748,7 +1748,7 @@ int func_L01_00241620(void) {
                     break;
                 }
                 if (((Moby *)D_0013F450_h241620.items[0].moby) != 0) {
-                    func_0022ED80(0, 0, (int)((Moby *)D_0013F450_h241620.items[0].moby));
+                    Moby_PlaySound(0, 0, (int)((Moby *)D_0013F450_h241620.items[0].moby));
                 }
             }
         }
@@ -1763,7 +1763,7 @@ int func_L01_00241620(void) {
                     if (((Moby *)D_0013F450_h241620.items[0].moby) != 0) {
                         Hero_SetMoveState(0x20, 1);
                         if (((Moby *)D_0013F450_h241620.items[0].moby) != 0) {
-                            func_0022ED80(0, 0, (int)((Moby *)D_0013F450_h241620.items[0].moby));
+                            Moby_PlaySound(0, 0, (int)((Moby *)D_0013F450_h241620.items[0].moby));
                         }
                     }
                 }

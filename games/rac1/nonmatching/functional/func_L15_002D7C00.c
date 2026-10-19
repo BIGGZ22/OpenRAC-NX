@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* func_L15_002D7C00 -- src/overlays/shared/vendor_002D7C00.c (functional C for the port, not a match)
  * Update of the electrified water (class 655, levels 15 and 17). Out of its area cuboid (any state
  * but 0) it releases its hum and its point light. State 0 resets its switches (floor switches 0x33E:

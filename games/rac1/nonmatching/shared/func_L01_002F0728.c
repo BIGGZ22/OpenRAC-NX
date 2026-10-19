@@ -7,6 +7,7 @@
  *   p2.c matches the prologue, the class map (movz), the found-block and the epilogue, but is 284 of 296 bytes: re
  *   for(;;), do-while, for(;;p++), a v-before test and v=0 header loop give 284/288 bytes; none yields that layout
  *   x04 round (p8-p13): p8.c fixes the layout with gotos (`goto body; next: if ((short)v < 0) return 0; p++; body:
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 extern unsigned short *D_L01_001ABFC0[];
 extern short D_L01_00160058;

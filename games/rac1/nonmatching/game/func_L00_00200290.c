@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Veldin level code: bounding-sphere visibility test against the view block at D_L00_0016CDC0
  * (retail func_L00_00200290, 0xE8 bytes, VU0). sphere = x, y, z, radius (floats); far = far distance.
  * Returns 1 when visible, -1 when the depth or the first side test culls it (retail func_L00_001F3980),

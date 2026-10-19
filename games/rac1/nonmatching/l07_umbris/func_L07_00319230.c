@@ -11,6 +11,7 @@
  *   func_L00_002688A8 takes one argument (`extern void func_L00_002688A8(void *)`, a0 = the spark moby). $a2 is no
  *   argument: in retail it still holds 200 from `addiu $6,$0,0xC8 ; sh $6,0xA($2)` (moby->life = 200) earlier in t
  *   block, in ours it holds the &D_L07_0020CB04 temporary. A stale scratch register, not a value passed: non-seman
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 typedef struct {
     short idx;

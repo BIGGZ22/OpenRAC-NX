@@ -1,4 +1,4 @@
-/* functional: high. DMA channel 3 completion handler for the chunked copy: acknowledges D_STAT, counts the chunk, flags an error if the channel still has quadwords or is still running, otherwise starts the next full chunk (or the final, shorter one). Second argument is the progress record {done, err, size, next, total}. Interrupt re-enable (ei) and the sync are dropped; they have no host meaning. */
+/* functional: high. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). DMA channel 3 completion handler for the chunked copy: acknowledges D_STAT, counts the chunk, flags an error if the channel still has quadwords or is still running, otherwise starts the next full chunk (or the final, shorter one). Second argument is the progress record {done, err, size, next, total}. Interrupt re-enable (ei) and the sync are dropped; they have no host meaning. */
 
 int func_0012A418(int arg0, void *arg1) {
     int *rec = (int *)arg1;

@@ -11,6 +11,7 @@
  *   Note: file declares `void func_L00_002D8898(void);` and P/Q/T; candidate defines func_L00_002D8898_r(P *) __as
  *   and its own Q_2D8898 (q fields 0x54..0x5F not in file's Q).
  *   Mistake: one awk command wrote a scratch copy of a dump to /tmp/x (not deleted, per no-delete rule).
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 typedef struct {
     s16 start; s16 count; int idx; char pad08[0x30];

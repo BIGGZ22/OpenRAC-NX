@@ -249,8 +249,8 @@ void PathVehicleUpdate(VehicleMoby_2CB800 *m) {
                 clear_u64_value(none);
                 FastVecAdd(&delta,&delta,&m->pos);
                 func_L00_0025F4A8(m,none,&delta,0.0f,0.0f,10,3,4,2,1,100000,3,-1,15,1,1,-1,0);
-                if (m->cls==0x1F2 || m->cls==0x22B) func_0022ED80(0,0,(s32)m);
-                else if (m->cls!=0x1E6) func_0022ED80(1,0,(s32)m);
+                if (m->cls==0x1F2 || m->cls==0x22B) Moby_PlaySound(0,0,(s32)m);
+                else if (m->cls!=0x1E6) Moby_PlaySound(1,0,(s32)m);
                 d->visibility_timer=scale_ticks(600);d->visibility_active=1;
             }
             break;
@@ -269,7 +269,7 @@ void PathVehicleUpdate(VehicleMoby_2CB800 *m) {
                 SpawnExplosionFx(m,&delta,-1,1.0f,13.0f);
                 FastVecAdd(&delta,offset,&m->pos);
                 func_L00_0025F4A8(m,none,&delta,0.0f,0.0f,20,5,4,2,1,100000,3,-1,15,1,1,-1,0);
-                func_0022ED80(1,0,(s32)m);
+                Moby_PlaySound(1,0,(s32)m);
                 query2.flags=0x810000;query2.strength=2;query2.owner=m;
                 clear_u64_value(&query2.vec);query2.result=0;
                 coll_sphere_mobys(&m->pos,6.0f,16,m,&query2);
@@ -422,7 +422,7 @@ extern void func_L04_00293530(void *, char *);
 extern void func_L04_00293578(void *, char *);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/entities/002ca420.c, FUN_L04_002d1418. */
-void func_L04_002D27F8(void *m) {
+void WBMoby_InitData(void *m) {
     char *d = *(char **)(m + 0x78);
     char *p = d + 0x160;
     float speed;
@@ -482,7 +482,7 @@ extern void func_L00_0025F4A8_alt(void *, void *, void *, float, float, int, int
     __asm__("func_L00_0025F4A8");
 
 // Clears a vector and spawns an effect on the moby.
-void func_L04_002D29E8(void *m) {
+void WBMoby_SpawnJointEffect(void *m) {
     char pos[16];
     char vec[16];
     clear_u64_value(vec);
@@ -643,7 +643,7 @@ extern int *D_L04_001B0930[];
 extern float D_L04_0015F660[] MACRO_ADDR;
 
 // Update function of the woodcut bot (moby class 563): damage reaction, saw attack, patrol/chase state machine, recoil and gravity.
-void func_L04_002D2A98(WBMoby *m) {
+void WBMoby_Update(WBMoby *m) {
     int excited = 0;
     WBData *d = m->d;
     unsigned char *p120;
@@ -659,7 +659,7 @@ void func_L04_002D2A98(WBMoby *m) {
     float hd;
 
     if (d->f38 != 0 || d->t3C6 != 0) excited = 1;
-    func_L00_00260D30(m, tgt, excited ? d->f3E8 * 2.0f : d->f3E8);
+    FindNearestTargetMoby(m, tgt, excited ? d->f3E8 * 2.0f : d->f3E8);
     p = &d->f120;
     Manipulator_ApplyScale(2.5f, m, 6, p);
     p120 = p;
@@ -744,7 +744,7 @@ void func_L04_002D2A98(WBMoby *m) {
 
                     m->fBC |= 5;
                     MobyBlendAnimation(m, 5, 0, scale_ticks(3));
-                    func_L00_002A27C8(d->f160);
+                    WalkCycle_ResetFeet(d->f160);
                     m->state = 9;
                     cls = *(short *)(*(char **)(p + 0x20) + 0xA6);
                     if (cls == 0x131 || cls == 0xB0) {
@@ -763,7 +763,7 @@ void func_L04_002D2A98(WBMoby *m) {
             case 4:
             case 5:
                 MobyBlendAnimation(m, 6, 0, scale_ticks(10));
-                func_L00_002A27C8(d->f160);
+                WalkCycle_ResetFeet(d->f160);
                 m->state = 1;
                 d->f3E4 = 2.0f / func_001F9878(15.0f);
                 *(w128 *)v = *(w128 *)(p + 0x10);
@@ -829,7 +829,7 @@ void func_L04_002D2A98(WBMoby *m) {
         d->f5A = 8;
         qcopy(d->f3B0, pos);
         if (d->f121 == 0) AttachManipulator(m, 6, p120);
-        func_L04_002D27F8(m);
+        WBMoby_InitData(m);
         if (d->f3C0 != 0) {
             m->state = 3;
             MobyBlendAnimation(m, 0xB, 0, scale_ticks(10));
@@ -862,7 +862,7 @@ void func_L04_002D2A98(WBMoby *m) {
                 } else {
                     d->f3D0 = 0.0f;
                     MobyBlendAnimation(m, 0x10, 0, scale_ticks(10));
-                    func_L00_002A27C8(d->f160);
+                    WalkCycle_ResetFeet(d->f160);
                     m->state = 0xA;
                     m->fBC |= 1;
                 }
@@ -934,7 +934,7 @@ void func_L04_002D2A98(WBMoby *m) {
                 } else {
                     d->f3D0 = 0.0f;
                     MobyBlendAnimation(m, 0x10, 0, scale_ticks(10));
-                    func_L00_002A27C8(d->f160);
+                    WalkCycle_ResetFeet(d->f160);
                     m->state = 0xA;
                     m->fBC |= 1;
                 }
@@ -946,7 +946,7 @@ void func_L04_002D2A98(WBMoby *m) {
         if (excited) {
             if (dist < 3.0f && adiff < 1.5707964f) {
                 MobyBlendAnimation(m, 4, 0, scale_ticks(10));
-                func_L00_002A27C8(d->f160);
+                WalkCycle_ResetFeet(d->f160);
                 m->state = 8;
             } else if (d->f3DC == -1 || IsPointInPolygon(tgt, D_L04_001B0930[d->f3DC] + 4, *D_L04_001B0930[d->f3DC]) != 0) {
                 m->state = 5;
@@ -954,7 +954,7 @@ void func_L04_002D2A98(WBMoby *m) {
             } else if (adiff > 1.5707964f) {
                 d->f3D0 = 0.0f;
                 MobyBlendAnimation(m, 0x10, 0, scale_ticks(10));
-                func_L00_002A27C8(d->f160);
+                WalkCycle_ResetFeet(d->f160);
                 m->state = 0xA;
             }
         } else {
@@ -969,7 +969,7 @@ void func_L04_002D2A98(WBMoby *m) {
         LegWalkerUpdate(m, d->f160, D_0015EE6C * 4.0f, func_L00_001FF860(tgt[0] - m->pos[0], tgt[1] - m->pos[1]), D_0015EE70 * 20.0f);
         if (dist < 3.0f && adiff < 1.5707964f) {
             MobyBlendAnimation(m, 4, 0, scale_ticks(10));
-            func_L00_002A27C8(d->f160);
+            WalkCycle_ResetFeet(d->f160);
             m->state = 8;
         } else if (d->f3DC != -1) {
             float v[4];
@@ -985,7 +985,7 @@ void func_L04_002D2A98(WBMoby *m) {
                 } else if (IsPointInPolygon(tgt, D_L04_001B0930[d->f3DC] + 4, *D_L04_001B0930[d->f3DC]) != 0) {
                     d->f3D0 = 0.0f;
                     MobyBlendAnimation(m, 0x10, 0, scale_ticks(10));
-                    func_L00_002A27C8(d->f160);
+                    WalkCycle_ResetFeet(d->f160);
                     m->state = 0xA;
                 }
             }
@@ -1004,7 +1004,7 @@ void func_L04_002D2A98(WBMoby *m) {
         }
         if (dist < 3.0f && adiff < 1.5707964f) {
             MobyBlendAnimation(m, 4, 0, scale_ticks(10));
-            func_L00_002A27C8(d->f160);
+            WalkCycle_ResetFeet(d->f160);
             m->state = 8;
         } else {
             if (m->fBC & 8) {
@@ -1025,7 +1025,7 @@ void func_L04_002D2A98(WBMoby *m) {
                     if (IsPointInPolygon(v, D_L04_001B0930[d->f3DC] + 4, *D_L04_001B0930[d->f3DC]) == 0) {
                         d->f3D0 = 0.0f;
                         MobyBlendAnimation(m, 0x10, 0, scale_ticks(10));
-                        func_L00_002A27C8(d->f160);
+                        WalkCycle_ResetFeet(d->f160);
                         m->state = 0xA;
                         m->fBC |= 0x10;
                     } else if (IsPointInPolygon(tgt, D_L04_001B0930[d->f3DC] + 4, *D_L04_001B0930[d->f3DC]) != 0) {
@@ -1038,7 +1038,7 @@ void func_L04_002D2A98(WBMoby *m) {
     case 7:
         if (dist < 3.0f && adiff < 1.5707964f) {
             MobyBlendAnimation(m, 4, 0, scale_ticks(10));
-            func_L00_002A27C8(d->f160);
+            WalkCycle_ResetFeet(d->f160);
             m->state = 8;
         } else {
             LegWalkerUpdate(m, d->f160, D_0015EE6C * 0.0f, m->rot[2], D_0015EE70 * 20.0f);
@@ -1154,7 +1154,7 @@ void func_L04_002D2A98(WBMoby *m) {
         break;
     case 11:
         if ((StepMobyPhysics(m, d->fC0) & 0x40) || m->pos[2] < 1.0f) {
-            func_L04_002D29E8(m);
+            WBMoby_SpawnJointEffect(m);
             SpawnBreakFragment(m, 0x6CB, pos, m->rot, 0, 0, 0.0f, D_L04_0015F660, D_L04_0015F660, D_L04_0015F660);
             SpawnBreakFragment(m, 0x6CC, pos, m->rot, 0, 0, 0.0f, D_L04_0015F660, D_L04_0015F660, D_L04_0015F660);
             SpawnBreakFragment(m, 0x6CD, pos, m->rot, 0, 0, 0.0f, D_L04_0015F660, D_L04_0015F660, D_L04_0015F660);
@@ -1188,7 +1188,7 @@ void func_L04_002D2A98(WBMoby *m) {
 
             d->f3E0 += D_0015EE70 * 9.8f;
             m->pos[2] -= d->f3E0 - 2.0f;
-            g = func_00214358(pos, 0, 0.5f);
+            g = ProbeGroundHeight(pos, 0, 0.5f);
             m->pos[2] -= 2.0f;
             if (m->pos[2] < g) {
                 m->pos[2] = g;
@@ -1206,7 +1206,7 @@ extern struct Moby *func_0020D348_m(int) __asm__("func_0020D348");
 extern void func_L00_00251E30(void *);
 extern void qcopy(void *, void *);
 // Spawns a class 0x23A moby copying fields from another and placing it at a position.
-void *func_L04_002D48B8(char *src, char *pos) {
+void *SpawnMoby570(char *src, char *pos) {
     char tmp[16];
     char *p = tmp;
     char *m;
@@ -1308,7 +1308,7 @@ extern float D_L04_001CBBC0[6];
 extern char D_L04_00174060[];
 
 /* Three-state motion update. The saved position is restored when the timer expires. */
-void func_L04_002D9270(struct MobyP *moby) {
+void DriftSparkMoby_Update(struct MobyP *moby) {
     Vec4P random;
     Vec4P old;
     Vec4P work;
@@ -1434,15 +1434,18 @@ void func_L04_002D9270(struct MobyP *moby) {
 #undef vector_length_xy
 #undef random_int_between
 #undef collision_line
-INCLUDE_ASM("asm/overlays", func_L04_002E2B48);
-// Return float constant
-float func_L04_002E2B90(void) {
-    return -2.55f;
-}
-// Return float constant
-float func_L04_002E2BA4(void) {
+float func_L04_002E2B48(char *moby) {
+    switch (*(short *)(moby + 0xA6)) {
+    case 0x44D:
+    case 0x5FC:
+        return 1.3f;
+    case 0x5FB:
+        return -2.55f;
+    }
     return -2.05f;
 }
+INCLUDE_ASM("asm/overlays", func_L04_002E2B90);
+INCLUDE_ASM("asm/overlays", func_L04_002E2BA4);
 typedef struct { int owner; float height; int timer; } CollectData2BB8;
 typedef struct { char pad[0x18]; float height; char pad1[4]; unsigned char state; char pad2[0x57]; CollectData2BB8 *data; char pad3[0x2a]; short oclass; char pad4[0xa]; unsigned short id; char pad5[0x4c]; } CollectMoby2BB8;
 extern int func_L00_0028EF68(int i, int a1, int v, int k);
@@ -1489,7 +1492,7 @@ void CollectableUpdate(CollectMoby2BB8 *m) {
             D_0014C290[D_0015EE84][(short)id1 >> 5] |= 1 << (id1 & 0x1F);
             id2 = m->id;
             D_L04_001BA960[(short)id2 >> 5] |= 1 << (id2 & 0x1F);
-            if (m->oclass == 0x44D) func_0022ED80(1, 0, (int)m);
+            if (m->oclass == 0x44D) Moby_PlaySound(1, 0, (int)m);
             m->state = 3;
         }
         break;
@@ -1640,7 +1643,7 @@ extern char D_L04_0016CA70[];
 extern unsigned char D_0014C150[];
 
 // UpdateMoby_1190: Updates the gate moby: checks the player's distance, then steps its four states.
-void func_L04_002E4458(char *m) {
+void UnlockPlanetPad_Update(char *m) {
     char *data = *(char **)(m + 0x78);
     float a[4];
     float b[4];
@@ -1659,7 +1662,7 @@ void func_L04_002E4458(char *m) {
         g = D_0015EE84;
         if (D_0014C150[c + (g << 4)] == 0xFF) goto done;
         *(unsigned char *)(m + 0x20) = 1;
-        func_L00_002676E8(m, data);
+        DialogRequest_Init(m, data);
         break;
     case 1:
         if (is_point_inside_clip_volume(D_0013E633 + 0xE9D, *(int *)(data + 0x140)) != 0) {
@@ -1667,7 +1670,7 @@ void func_L04_002E4458(char *m) {
         } else {
             *(float *)(data + 0xC) = 1.0f;
         }
-        if (func_L00_00267290(m, data) != 0) {
+        if (Npc_TryStartDialog(m, data) != 0) {
             *(unsigned char *)(m + 0x20) = 2;
         }
         break;
@@ -1688,7 +1691,7 @@ void func_L04_002E4458(char *m) {
             *(unsigned short *)(m + 0x34) |= 0x41;
             *(int *)(m + 0x94) = 0;
         } else if (*(int *)&D_L04_0015F6A8 != 2) {
-            func_L00_00267290(m, data);
+            Npc_TryStartDialog(m, data);
         }
         break;
     case 3:
@@ -2056,7 +2059,7 @@ extern struct L04MissionState D_L04_0016CA60;
 extern void func_L00_00264870(int);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/vendor/002e3078.c, FUN_L04_002e53a0. */
-void func_L04_002E6780(struct Moby *m) {
+void SparksTriggerL04_Update(struct Moby *m) {
     switch (m->state) {
     case 0:
         m->update_dist = 0xFF;
@@ -2082,7 +2085,7 @@ extern void func_L01_00279790(void *);
 extern void func_L00_00264EA8(void *, int, int, int, int, int, int);
 extern void func_L01_00279E10(void *, int);
 extern void func_0020D678(void *);
-void func_L04_002E8D88(char *m) {
+void BreakableL04_Update(char *m) {
     int hit = 0;
     char *r = MobyGetHitMessage(m, 0x10000, 0);
     switch (*(unsigned char *)(m + 0x20)) {
@@ -2094,7 +2097,7 @@ void func_L04_002E8D88(char *m) {
         if (hit) m[0x20] = 2;
         break;
     case 2:
-        func_0022ED80(0, 0, (int)m);
+        Moby_PlaySound(0, 0, (int)m);
         SpawnBreakFxByDistance(m);
         SpawnMobyBurstFx(m, 0x72C, 1, 0x72C, 1, 1, 2);
         SpawnMobyCopyingPlacement(m, 0x72B);

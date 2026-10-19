@@ -1,4 +1,4 @@
-/* functional: high. corrected from nonmatching/functional/func_0022FDC0.c: obj+0x51 is cleared before func_0020D6D0 (retail's delay slot), which reads it; the copy cleared it after the call. */
+/* functional: high. fcheck: unchecked (the harness could not compile it in place; OpenRAC tools/fcheck_gate.py, 2026-10-18). corrected from nonmatching/functional/func_0022FDC0.c: obj+0x51 is cleared before func_0020D6D0 (retail's delay slot), which reads it; the copy cleared it after the call. */
 /* Port copy of nonmatching/game/func_0022FDC0.c: the two bone matrices are 4x4 locals (retail's
    frame has them at sp+0x20 and sp+0x60) and the trail rings take their translation rows (sp+0x50
    and sp+0x90); the near miss's 16-byte locals let each matrix run over its neighbours, so the

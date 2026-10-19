@@ -678,7 +678,7 @@ void SnagglebeastUpdate(unsigned char *m) {
     t20 = (float *)(d + 0x20);
     EnemyHitReact(m, d, t20);
     see = 0;
-    func_L00_00260D30(m, &tgt, 30.0f);
+    FindNearestTargetMoby(m, &tgt, 30.0f);
     dist = func_001F9D48(&tgt, m + 0x10);
     ang = func_L00_001FF860(tgt.pos.f[0] - *(float *)(m + 0x10), tgt.pos.f[1] - *(float *)(m + 0x14));
     hdist = func_001F9D48(m + 0x10, D_0013F450 + 0x80);
@@ -774,15 +774,15 @@ void SnagglebeastUpdate(unsigned char *m) {
         }
     }
     if (m[0xBC] % 3U == 2) *(int *)(d + 0x1B4) += 0xF;
-    if (m[0x20] != 8 && m[0x20] != 0) func_L00_002E0490((int)m);
+    if (m[0x20] != 8 && m[0x20] != 0) SuckBeam_QueueDraw((int)m);
     if (d[0x1C5] == 1) {
-        if (*(int *)(d + 0x1F8) == -1) *(int *)(d + 0x1F8) = func_0022ED80(0xF, 4, (int)m);
+        if (*(int *)(d + 0x1F8) == -1) *(int *)(d + 0x1F8) = Moby_PlaySound(0xF, 4, (int)m);
         *(float *)(d + 0x1C8) += D_0015EE60 * 0.01f;
         if (*(float *)(d + 0x1C8) >= 1.0f) d[0x1C5] = 0;
         if (*(float *)(d + 0x1C8) > 1.0f) *(float *)(d + 0x1C8) = 1.0f;
     }
     if (d[0x1C5] == 2) {
-        if (*(int *)(d + 0x1F8) == -1) *(int *)(d + 0x1F8) = func_0022ED80(0xF, 4, (int)m);
+        if (*(int *)(d + 0x1F8) == -1) *(int *)(d + 0x1F8) = Moby_PlaySound(0xF, 4, (int)m);
         *(float *)(d + 0x1C8) -= D_0015EE60 * 0.01f;
         if (*(float *)(d + 0x1C8) <= 0.0f) {
             if (*(int *)(d + 0x1F8) != -1) {
@@ -842,7 +842,7 @@ void SnagglebeastUpdate(unsigned char *m) {
         *(int *)(d + 0x1A8) = -1;
         *(int *)(d + 0x1B0) = -1;
         *(int *)(d + 0x1C0) = FindClosestDistanceEntry(m + 0x10, D_L07_001B0830[*(int *)(d + 0x188)], 0.0f);
-        func_L00_002DF150(m);
+        SuckBeam_Reset(m);
         *(float *)(m + 0x2C) *= 1.75f;
         d[0x1C7] = 0;
         *(float *)(d + 0x98) = 1.7453293f;
@@ -889,7 +889,7 @@ void SnagglebeastUpdate(unsigned char *m) {
                 d[0x1C4] = 0;
                 m[0x20] = 8;
                 *(int *)(d + 0x294) = 0;
-                *(int *)(d + 0x1F8) = func_0022ED80(9, 4, (int)m);
+                *(int *)(d + 0x1F8) = Moby_PlaySound(9, 4, (int)m);
             }
             if (b) {
                 if (m[0x53] != 9) {
@@ -986,7 +986,7 @@ void SnagglebeastUpdate(unsigned char *m) {
         }
         if (m[0x52] == 5) {
             qcopy(&va, &tgt);
-            va.f[2] = func_00214358(&va, 0, 0.5f);
+            va.f[2] = ProbeGroundHeight(&va, 0, 0.5f);
             *(int *)(d + 0x160) += 1;
             if (*(int *)(d + 0x164) == 0) {
                 FastVecSub(&vb, m + 0x10, &va);
@@ -1142,7 +1142,7 @@ void SnagglebeastUpdate(unsigned char *m) {
                     d[0x1C4] = 0;
                     *(int *)(d + 0x294) = 0;
                     m[0x20] = 8;
-                    *(int *)(d + 0x1F8) = func_0022ED80(9, 4, (int)m);
+                    *(int *)(d + 0x1F8) = Moby_PlaySound(9, 4, (int)m);
                 }
             }
             if (!see) {
@@ -1293,7 +1293,7 @@ void SnagglebeastUpdate(unsigned char *m) {
                     *t20 = 0.0f;
                     if (m[0x53] != 8) MobyBlendAnimation(m, 8, 0, rand_range(0xA, 0xD));
                     if (*(int *)(d + 0x1F0) != -1) {
-                        func_L00_002676A0(m, 1);
+                        LevelTable_SetSlotValue(m, 1);
                         SetDeathBits(m, 0, -1);
                         SetLevelTriggerDone(m[0xB0]);
                         PauseMenu_SeedSnapshot(D_L07_0016016C + (*(int *)(d + 0x1F0) << 7) + 0x30, D_L07_0016016C + (*(int *)(d + 0x1F0) << 7) + 0x70);
@@ -1470,7 +1470,7 @@ void SnagglebeastUpdate(unsigned char *m) {
                             vb.f[2] = ComputeLaunchVelocityZ(&vc, &ve, 0, D_0015EE6C * 15.0f, D_0015EE70 * -9.8f);
                             *(float *)(d + 0x1AC) += random_float_between(0.7f, 2.0f);
                         }
-                        func_0022ED80(0xB, 0, (int)m);
+                        Moby_PlaySound(0xB, 0, (int)m);
                         {
                             char *obj = SpawnMobyFromTable(&vc, slot, cnt, 0);
                             if (obj != 0) {
@@ -1606,7 +1606,7 @@ void SnagglebeastUpdate(unsigned char *m) {
             va.f[2] = *(float *)(d + 0x1B8) + 1.0f;
             func_L00_0025F4A8(m, d + 0x100, &va, 0.0f, 0.0f, 0x14, 0xC, 0x40, 7.0f, 5.0f, 10.0f, -1, 1.0f, 50.0f, 1, 1, -1, 0);
             *(unsigned short *)(m + 0x34) |= 0x41;
-            if (*(int *)(d + 0x1CC) != -1) func_L06_002E7578(D_L07_00160058 + (*(int *)(d + 0x1CC) << 8));
+            if (*(int *)(d + 0x1CC) != -1) DriftingSprites_Activate(D_L07_00160058 + (*(int *)(d + 0x1CC) << 8));
             m[0x20] = 0x10;
             *(float *)(m + 0x18) = 20.0f;
         }
@@ -1837,7 +1837,7 @@ void PullMobysToTargets(int arg0) {
     *(int *)&D_L07_00161BFC = 1;
     *(int *)&D_L07_00161C00 = 1;
     *(float *)&D_L07_00161C0C = *(float *)&D_L07_00161C0C * 0.5f;
-    func_0022ED80(10, 0, arg0);
+    Moby_PlaySound(10, 0, arg0);
     base = (char *)D_L07_0020CB00;
     for (i = 0; i < 200; i++) {
         m = D_L07_0020CB00[i].moby;
@@ -1854,7 +1854,7 @@ void PullMobysToTargets(int arg0) {
             *(short *)(m + 0xA) = 0x46;
         }
     }
-    func_L00_002E0490(arg0);
+    SuckBeam_QueueDraw(arg0);
 }
 #define D_L07_00166EC0_p (*(Vec4 *)&D_L07_00166EC0)
 extern Vec4 D_L07_00173F70;
@@ -2393,7 +2393,7 @@ extern char D_0013F4D0_31B620[] __asm__("D_0013F4D0");
 
 /* Machine-gun turret update (moby class 1126): wakes when hit, sweeps between its two marker mobys
    and fires bursts, then sinks and rises again. */
-void func_L07_0031B620(Moby *moby)
+void GunMoby_HandleHit(Moby *moby)
 {
     float pos[4];
     float vel[4];

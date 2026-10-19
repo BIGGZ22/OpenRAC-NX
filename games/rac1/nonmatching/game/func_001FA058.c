@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /*
  * FastArcTan(a, b) = atan2(b, a), on the VU0 polynomial. With the smaller and the
  * larger of |a|, |b|: t = (min - max) / (min + max), the angle is pi/4 + atan(t) with

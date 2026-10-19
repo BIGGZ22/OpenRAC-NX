@@ -9,6 +9,7 @@
  *   Scale before position and step[1] before step[0] each brought the score down (209 -> 99).
  *   Still differing: 160*H/208*W swap a2/a3 in the rect, and four float regs in the setup (1.0, 0.5, b, 1-a).
  *   Tried: term and statement orders, locals or none, constant stores moved, half sizes kept in scale[].
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 extern void func_00201640(int, int, int, int, long, long);
 extern int func_001F9850(int);

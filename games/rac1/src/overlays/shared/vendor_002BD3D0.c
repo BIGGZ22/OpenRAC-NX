@@ -141,7 +141,7 @@ void LobbedMoby_Launch(void *unused, struct Moby *m) {
     float g;
 
     if (random_integer_below(3) == 0) {
-        func_0022ED80(1, 0x20, m);
+        Moby_PlaySound(1, 0x20, m);
     }
     d->unk48 = 0.7f;
     d->timer = truncate_float_to_s32(716.8f);

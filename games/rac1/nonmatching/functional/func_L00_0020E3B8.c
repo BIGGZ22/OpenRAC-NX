@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* func_L00_0020E3B8 -- src/overlays/shared/help_0020CDF0.c (functional C for the port, not a match)
  * Per-tick update of the hero's two hand attachments (slots at D_0013F450 + 0xD00 / 0xD04), run
  * from the hero update (the level copy of func_001F7B40). For each slot i:

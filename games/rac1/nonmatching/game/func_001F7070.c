@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /*
  * FontPrintWindow: word-wraps a string into the window rectangle (balancing
  * the lines when they fit), then draws each line, or only measures it (flag 4).

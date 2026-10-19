@@ -388,16 +388,16 @@ void DrawTies_1(void) {
     D_0015EF74 = D_0015EF78;
     p += 0x10;
     D_00161000 = p;
-    func_001F2560(D_00161030, 1);
+    ProfileMarker_Begin(D_00161030, 1);
     if (D_0018A3C8 != 0) {
         func_00118D80(0);
         TieProc();
         write_dma_channel(D_001E3500, 0x3600, 0x40);
     }
-    func_001F2560(D_00161040, 5);
+    ProfileMarker_Begin(D_00161040, 5);
     DmaTieTextures();
     FastMemCopy((void *)D_00161000, D_001DF3B0, 0x20);
-    func_001F2558(D_00161040, 5);
+    ProfileMarker_End(D_00161040, 5);
 }
 
 extern int D_0016104C MACRO_ADDR;
@@ -430,7 +430,7 @@ void DrawTies_2(void) {
         p += 0x10;
         D_00161000 = p;
     }
-    func_001F2560(D_00161030, 1);
+    ProfileMarker_Begin(D_00161030, 1);
     {
         DrawCfg_236CA8 *d = (DrawCfg_236CA8 *)D_0018A3B0;
         if (d->unk18 != 0) {
@@ -469,7 +469,7 @@ void DrawTies_2(void) {
             write_dma_channel(D_001E3500, 0x3600, 0x40);
         }
     }
-    func_001F2560(D_00161040, 5);
+    ProfileMarker_Begin(D_00161040, 5);
     DmaTieTextures();
     {
         int i;
@@ -479,5 +479,5 @@ void DrawTies_2(void) {
         }
     }
     FastMemCopy((void *)D_00161000, D_001DF3B0, 0x20);
-    func_001F2558(D_00161040, 5);
+    ProfileMarker_End(D_00161040, 5);
 }

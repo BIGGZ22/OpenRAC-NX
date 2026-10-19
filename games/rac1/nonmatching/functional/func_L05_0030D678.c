@@ -1,4 +1,4 @@
-/* functional: medium. Draw callback of the class 0x337 wobbling effect: builds a basis from the moby (rotation from its pvars phase, direction toward the camera position) and draws ten pairs of textured quads that widen with each step. Statically checked only. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Draw callback of the class 0x337 wobbling effect: builds a basis from the moby (rotation from its pvars phase, direction toward the camera position) and draws ten pairs of textured quads that widen with each step. Statically checked only. */
 typedef u32 u128_0D678 __attribute__((mode(TI), aligned(16)));
 typedef struct {
     float vertex[4][4];

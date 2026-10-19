@@ -1,3 +1,4 @@
+/* fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /*
  * The unsigned angle between two angles a and b (radians): |a - b|, or 2*pi - |a - b|
  * when that is the shorter way round (|a - b| >= pi).

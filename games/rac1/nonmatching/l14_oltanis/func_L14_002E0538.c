@@ -8,6 +8,7 @@
  *   Products before a call are separate statements (GCC evaluates all calls of an expression first).
  *   Left: float register order (retail: step f22, fi f20, z f21, 1.0 f23) and loop 2 reading pts[j][2]
  *   as (j << 4) + (d + 8) where retail has ((j << 4) + 8) + d. Loop 3's pointer starts at d + 0xA0, retail d.
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 typedef struct {
     float pts[29][4];

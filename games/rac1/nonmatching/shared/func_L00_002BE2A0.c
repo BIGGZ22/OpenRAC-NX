@@ -10,6 +10,7 @@
  *   Rebuilds camera tables; remaining source base+16 is folded, initialization lacks retail nop, and trailing poin
  *   ## hq3 s05 round (p10-p15)
  *   Best stays p12 (252/260). Tried: pointer-form second loop with d/e pointers (p10, p11, p12), the store to 1618
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 extern int D_L00_0016188C_m __asm__("D_L00_0016188C") MACRO_ADDR;
 extern short D_L00_001617AC;

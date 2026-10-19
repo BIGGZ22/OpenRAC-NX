@@ -35,8 +35,43 @@ void Stream_SetSlotValue(int value, long arg) {
 void func_L00_00267120(void *a0, unsigned char *a1) {
     *(volatile unsigned short *)(a1 + 0xA) = 0;
 }
-INCLUDE_ASM("asm/overlays", func_L00_00267130);
-INCLUDE_ASM("asm/overlays", func_L00_00267188);
+void func_L00_00267130(int value, long arg) {
+    Slot_2670E0 *s = (Slot_2670E0 *)arg;
+
+    if (s == 0) {
+        return;
+    }
+    if (value < 0) {
+        s->value = value;
+    }
+    if (value != 0) {
+        if (s->state == 9) {
+            s->state = 4;
+            if (s->flag != 0) {
+                D_001517F0 = 1;
+            }
+        }
+    } else {
+        s->state = 0;
+    }
+}
+/* stores value in the slot passed as a 64-bit argument; a zero value resets the slot's state,
+   otherwise a slot in state 1 moves to 8 */
+void func_L00_00267188(int value, long arg) {
+    Slot_2670E0 *s = (Slot_2670E0 *)arg;
+
+    if (s == 0) {
+        return;
+    }
+    s->value = value;
+    if (value != 0) {
+        if (s->state == 1) {
+            s->state = 8;
+        }
+    } else {
+        s->state = 0;
+    }
+}
 extern int D_L00_0015F6A8 MACRO_ADDR;
 extern char D_L00_00179200[];
 extern char D_L00_001C43B0[];
@@ -63,14 +98,14 @@ extern void func_L00_0023A690(void);
 extern void func_L00_0023A788(void);
 extern char D_0013D605[];
 extern s32 D_L00_0015F6B0 MACRO_ADDR;
-int func_L00_00267290(char *p, char *q) {
+int Npc_TryStartDialog(char *p, char *q) {
     extern float func_001F9D10(void *, void *);
     extern s32 func_L00_00267618(void *);
     char *g = D_0013E633 + 0xE1D;
     char *x; char *e; char *y; char *tb; unsigned char *tb2;
     int h4; float f, f0; int r, i, m; int *ptr;
     if (*(int *)(g + 0x2084) == 0x1D || *(int *)(g + 0x22A8) == 0) return 0;
-    if (*(unsigned char *)(q + 9) == 0) func_L00_002676E8(p, q);
+    if (*(unsigned char *)(q + 9) == 0) DialogRequest_Init(p, q);
     if (D_L00_0015F6A8 != 0) return 0;
     if (q == 0) return 0;
     if (*(short *)(q + 0x36) == -1) return 0;
@@ -149,7 +184,7 @@ extern char D_0013D605[];
 extern int func_L00_00267618(int, int);
 
 /* stores b in the d field of the slot func_L00_00267618 finds, if any. Adapted from Lombyte (MIT) for PAL: overlays/shared/audio_streaming_00266298.c, FUN_L00_00266858. */
-void func_L00_002676A0(int a, int b) {
+void LevelTable_SetSlotValue(int a, int b) {
     int i = FindLevelTableIndex(a, b);
     if (i != -1) {
         E00266858 *s = (E00266858 *)(D_0013D605 + 0xB3);
@@ -184,7 +219,7 @@ extern s32 D_L00_0015F6B0 MACRO_ADDR;
 extern s32 func_L00_00267618_676E8(void *) __asm__("func_L00_00267618");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/audio_streaming_00266298.c, FUN_L00_002668a0. */
-s32 func_L00_002676E8(void *p, u8 *out_p)
+s32 DialogRequest_Init(void *p, u8 *out_p)
 {
     Out002668a0 *out;
     s32 i;

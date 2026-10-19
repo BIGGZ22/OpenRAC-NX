@@ -643,7 +643,7 @@ void SentrybotUpdate(unsigned char *moby) {
     case 21: {
         int r = StepMobyPhysics(moby, data + 0x70);
         if (r & 0x40) {
-            func_00214358(moby + 0x10, 0, 0.5f);
+            ProbeGroundHeight(moby + 0x10, 0, 0.5f);
             if (CollType() == -1 && *(float *)(data + 0x168) - 5.0f < *(float *)(moby + 0x18)) {
                 if (((Hero98BB8 *)(D_0013E633 + 0xE1D))->f2084 == 0x65) {
                     moby[0x20] = 0xC;
@@ -671,7 +671,7 @@ void SentrybotUpdate(unsigned char *moby) {
                 Moby_MarkKilled(D_L15_00160058_m + (*(int *)(data + 0x150) << 8));
                 *(int *)(data + 0x150) = -1;
             }
-            func_0022ED80(0xD, 0, (int)moby);
+            Moby_PlaySound(0xD, 0, (int)moby);
             SpawnExplosionFx(moby, moby + 0x10, -1, 0.5f, 13.0f);
             SetDeathBits(moby, 0, -1);
             DeleteMoby(moby);
@@ -692,7 +692,7 @@ void SentrybotUpdate(unsigned char *moby) {
                 Moby_MarkKilled(D_L15_00160058_m + (*(int *)(data + 0x150) << 8));
                 *(int *)(data + 0x150) = -1;
             }
-            func_0022ED80(0xD, 0, (int)moby);
+            Moby_PlaySound(0xD, 0, (int)moby);
             SpawnExplosionFx(moby, moby + 0x10, -1, 0.5f, 13.0f);
             SetDeathBits(moby, 0, -1);
             DeleteMoby(moby);
@@ -898,7 +898,27 @@ int Moby_FindVisible27BTarget(char *m) {
     }
     return best;
 }
-INCLUDE_ASM("asm/overlays", func_L15_0029B1D8);
+// Returns 0 when a listed class-0x2C moby that is alive and visible has a lower 0x13C rank than this moby's own.
+int func_L15_0029B1D8(void *mm) {
+    char *m = mm;
+    unsigned short *p;
+    if (((unsigned char *)m)[0x21] == 0xFF) return 1;
+    p = (unsigned short *)D_L15_001AC140[((unsigned char *)m)[0x21]];
+    m = *(char **)(m + 0x78);
+    if (p == 0) return 1;
+    do {
+        char *o = (char *)(((*p & 0x7FFF) << 8) + D_L15_00160058_m);
+        if (*(short *)(o + 0xA6) == 0x2C && o != 0
+            && ((unsigned char *)o)[0x20] != 0xFE && ((unsigned char *)o)[0x20] != 0xFD
+            && ((unsigned char *)o)[0xBC] == 0) {
+            char *d = *(char **)(o + 0x78);
+            if (*(int *)(d + 0x144) == 0 && *(int *)(d + 0x124) != -1
+                && *(int *)(d + 0x13C) >= *(int *)(m + 0x13C))
+                return 0;
+        }
+    } while (*(short *)p++ >= 0);
+    return 1;
+}
 INCLUDE_ASM("asm/overlays", func_L15_0029B210);
 typedef struct { char pad0[0x156]; short timer; char pad158[3]; char active; } SpawnResetData_29B2B0;
 extern void func_L15_0029B428(char *, char *);
@@ -1747,7 +1767,7 @@ void func_L15_0029E8A0(M_29E8A0 *m) {
                 char *cam2 = D_L15_00167300;
                 *(int *)(cam2 + 0x168) = sh;
             }
-            func_0022ED80(0, 0, (int)m);
+            Moby_PlaySound(0, 0, (int)m);
             Moby639Spawn(&tbl, m->pos, 0, 0);
             MobyList_Remove(m, D_L15_001B1070);
             DeleteMoby(m);
@@ -3545,7 +3565,7 @@ void MovingMobyUpdate(struct Moby *moby) {
         if (((struct Moby *)(D_L15_00160058 + vars->trigger * 0x100))->state != 4)
             return;
         if (reversed)
-            func_0022ED80(0, 0, (int)moby);
+            Moby_PlaySound(0, 0, (int)moby);
         moby->state = 2;
         break;
     case 2:
@@ -3581,14 +3601,14 @@ void MovingMobyUpdate(struct Moby *moby) {
         if (!is_point_inside_clip_volume(&D_0013F450.motion.pos, vars->start_volume))
             return;
         if (reversed)
-            func_0022ED80(0, 0, (int)moby);
+            Moby_PlaySound(0, 0, (int)moby);
         moby->state = 2;
         break;
     case 5:
         if (is_point_inside_clip_volume(&D_0013F450.motion.pos, vars->stop_volume))
             return;
         if (reversed)
-            func_0022ED80(0, 0, (int)moby);
+            Moby_PlaySound(0, 0, (int)moby);
         moby->state = 6;
         break;
     case 6:
@@ -3879,7 +3899,7 @@ void LoopingFx_Update(void *arg) {
     if (*(float *)&D_L15_00161B44 != 0.0f) {
         *(int *)&D_L15_00161B48 = 1;
         if (Sound_IsPlaying(*(void **)&D_L15_00161B50, *(int *)&D_L15_00161B4C) == 0) {
-            *(int *)&D_L15_00161B4C = func_0022ED80(5, 0x11, (int)arg);
+            *(int *)&D_L15_00161B4C = Moby_PlaySound(5, 0x11, (int)arg);
             *(void **)&D_L15_00161B50 = arg;
         }
         AddDrawCallback(LoopingFx_Draw, arg);
@@ -3925,7 +3945,7 @@ int Hero_IsNearGround(void) {
     if ((unsigned)(*(int *)(p + 0x2084) - 0x18) < 2) {
         *(u128 *)vec = *(u128 *)(p + 0x80);
         vec[2] = vec[2] + 2.0f;
-        h = func_00214358(vec, 0, 0.5f);
+        h = ProbeGroundHeight(vec, 0, 0.5f);
         if (CollType() != 0) return 0;
         if (*(float *)(p + 0x88) <= h) return 1;
     }

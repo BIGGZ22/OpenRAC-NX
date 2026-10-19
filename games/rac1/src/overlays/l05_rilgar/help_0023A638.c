@@ -474,7 +474,7 @@ int Camera_MoveWithCollision(int mode) {
     qcopy(saved, a + 0x80);
     clear_u64_value(tmp);
     if (*(short *)(a + 0x22DA) != 0) {
-        func_L00_00235040();
+        Hero_ConstrainToPath();
         *(short *)(a + 0x22DA) = 0;
     }
     m = *(int *)(a + 0x208C);

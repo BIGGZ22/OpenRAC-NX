@@ -1,4 +1,4 @@
-/* functional: medium. HUD race-timer / message banner: draws a one or two line text banner with a 3-piece frame (alpha fades with the byte at e+0x70), and on levels 5 and 0x10 when the camera is near a fixed point also prints the saved race time and score; returns e->0x58. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). HUD race-timer / message banner: draws a one or two line text banner with a 3-piece frame (alpha fades with the byte at e+0x70), and on levels 5 and 0x10 when the camera is near a fixed point also prints the saved race time and score; returns e->0x58. */
 typedef struct { float x, y, z, w; } __attribute__((aligned(16))) HudPt_37B90;
 extern float func_001FA888_37B90(int) __asm__("func_001FA888");
 extern int func_001FA898_37B90(float) __asm__("func_001FA898");

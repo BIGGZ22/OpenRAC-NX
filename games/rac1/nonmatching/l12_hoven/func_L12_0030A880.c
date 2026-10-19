@@ -10,6 +10,7 @@
  *   rebuilds the base at the call as `addiu %lo` then `addiu 0x178`. Ours folds both into one addiu. Putting
  *   the index in its own local threads the jump (BYTES 10/152, same size). A list pointer at function scope
  *   gets hoisted. Not tried: GCSE-sensitive forms that reference the global in two separate blocks.
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 #include "common.h"
 extern int D_L12_0015F6A8 MACRO_ADDR;

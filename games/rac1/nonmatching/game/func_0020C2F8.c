@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 extern int D_00161000 MACRO_ADDR;
 extern int D_0015F558 MACRO_ADDR;
 extern unsigned char D_00160860[];

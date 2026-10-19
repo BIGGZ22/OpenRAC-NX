@@ -1,4 +1,4 @@
-/* functional: high. Corrected from nonmatching/game/func_001F9F30.c: ppach/ppacb keep the LOW halfword/byte of each word, so the result is the low byte of each saturated int (x lowest), not the top byte (>> 24). */
+/* functional: high. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). Corrected from nonmatching/game/func_001F9F30.c: ppach/ppacb keep the LOW halfword/byte of each word, so the result is the low byte of each saturated int (x lowest), not the top byte (>> 24). */
 static int func_001F9F30_ftoi(float f) {
     if (f >= 2147483648.0f) return 0x7FFFFFFF;
     if (f <= -2147483648.0f) return (int)0x80000000;
