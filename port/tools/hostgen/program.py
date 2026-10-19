@@ -206,6 +206,45 @@ class Program:
                 for place in self.code_places(sym):
                     self.by_place.setdefault(place, sym)
 
+    def code_tables(self) -> dict[int, list[tuple[int, str]]]:
+        """Every function with a code address, per overlay, as functions.c registers them for GFN:
+        (address, symbol), sorted. Worked out once (after the program is indexed)."""
+        tables = getattr(self, "_code_tables", None)
+        if tables is not None:
+            return tables
+        tables = {}
+        for sym, f in sorted(self.functions.items()):
+            if prototype(f, self.typedefs) is None:
+                continue
+            # Two spellings of one address (FUN_0020c828, func_0020C828): the one with C answers a
+            # call through the address too, not whichever sorts first.
+            own = self.canonical(sym)
+            if own != sym and own in self.functions and prototype(self.functions[own], self.typedefs) is not None:
+                continue
+            for overlay, addr in self.code_places(sym):
+                tables.setdefault(overlay, []).append((addr, sym))
+                # hostgen.json "entries": a function whose C starts this many bytes into its
+                # catalogue place answers calls through that address too.
+                offset = getattr(self, "entries", {}).get(sym)
+                if offset:
+                    tables[overlay].append((addr + offset, sym))
+        for entries in tables.values():
+            entries.sort()
+        self._code_tables = tables
+        return tables
+
+    def function_at(self, overlay: int, address: int) -> str | None:
+        """The function a call through address finds with overlay loaded: the first functions.c
+        lists there, which the runtime keeps (guest.cpp); None when there is none."""
+        index = getattr(self, "_function_at", None)
+        if index is None:
+            index = {}
+            for o, entries in self.code_tables().items():
+                for addr, sym in entries:
+                    index.setdefault((o, addr), sym)
+            self._function_at = index
+        return index.get((overlay, address))
+
     def canonical(self, symbol: str) -> str:
         """The symbol with C at the same place as symbol, or symbol: the port's own function
         there before the decompilation's C."""

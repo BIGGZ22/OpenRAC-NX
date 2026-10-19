@@ -281,22 +281,10 @@ def write_program_files(program: Program, out: Path, game: str) -> dict:
     _write(out / "stubs.c", "\n".join(stubs))
 
     # Every function with a code address, per overlay.
-    tables: dict[int, list[tuple[int, str]]] = {}
-    for sym, f in sorted(program.functions.items()):
-        if prototype(f, program.typedefs) is None:
-            continue
-        # Two spellings of one address (FUN_0020c828, func_0020C828): the one with C answers a
-        # call through the address too, not whichever sorts first.
-        own = program.canonical(sym)
-        if own != sym and prototype(program.functions[own], program.typedefs) is not None:
-            continue
-        for overlay, addr in program.code_places(sym):
-            tables.setdefault(overlay, []).append((addr, sym))
-            # hostgen.json "entries": a function whose C starts this many bytes into its
-            # catalogue place answers calls through that address too.
-            offset = getattr(program, "entries", {}).get(sym)
-            if offset:
-                tables[overlay].append((addr + offset, sym))
+    # (The translation's calls through a code address take the type of the function found there:
+    # Program.function_at, from the same tables.)
+    program._code_tables = None
+    tables = program.code_tables()
     fn = head + ["#include \"openrac/guest.h\"", "#include \"game_protos.h\"", ""]
     for overlay in sorted(tables):
         name = "exe" if overlay < 0 else f"overlay_{overlay:02d}"

@@ -56,6 +56,15 @@ does what the EE did:
   passes the caller's parameter in that position, or 0, and counts these
   in its report.
 - A result the caller reads but the callee does not return is 0.
+- A call by name that goes through a code address (a name the catalogue
+  folded, another level's function, a level copy's own callee, a function
+  cast to another type) uses the type of the function found there, its
+  arguments matched the same way, whenever the call site's declaration
+  puts a kind at another position. On the EE, System V and AArch64 that
+  order does not matter; on Windows x64 an argument's position decides
+  its register, and rac1/ntsc 0.8.0 crashed on Rilgar where a creature
+  declared level 0's `scale(float *out, float *a, float len)` as
+  `(float, void *, void *)`.
 
 ### What it does not translate
 

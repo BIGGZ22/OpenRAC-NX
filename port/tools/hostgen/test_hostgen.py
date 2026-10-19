@@ -257,6 +257,26 @@ class Translate(unittest.TestCase):
         self.assertIn("GFN(void (*)(gaddr, int, float, float), ", self.last_generated)
         self.assertNotIn("GFN(void (*)(gaddr, float, float, int), ", self.last_generated)
 
+    def test_a_cast_to_fewer_arguments_passes_the_callers_own(self):
+        # rac3's text code casts a width function to take only its float (`((s32 (*)(f32))f)(1.0f)`):
+        # the integers stay what the caller's registers held. Through the definition's type, as a
+        # direct call: on Windows x64 the cast's float would land where the callee reads a pointer.
+        out = self.run_program({
+            "callee.c": """
+                int func_00110000(int *p, int n, float x) { return n * 10 + (int)x; }
+            """,
+            "caller.c": """
+                extern int func_00110000(int *, int, float);
+                int func_00120000(int *p, int n) { return ((int (*)(float))func_00110000)(2.0f); }
+                int test_main(void) {
+                    test_print(func_00120000(0, 5));
+                    return 0;
+                }
+            """,
+        })
+        self.assertEqual(out, ["52"])
+        self.assertIn("GFN(int (*)(gaddr, int, float), ", self.last_generated)
+
     def test_a_callee_typedef_the_caller_does_not_know(self):
         # The callee's file names its float and its pointer by typedefs the caller's file does
         # not have: the call still passes the float in a float register and the pointer in an
@@ -1091,6 +1111,31 @@ class Places(unittest.TestCase):
             text = (out / "a.c").read_text()
             self.assertIn("0x00238128u", text)
             self.assertIn("0x00237B70u", text)
+
+    def test_a_call_to_another_levels_function_follows_the_definition(self):
+        # rac1/ntsc's Rilgar creature (FUN_L05_002d1688) declared level 0's vector scale as
+        # (float, void *, void *) and called it through its level 0 address with that type: right
+        # on the EE and System V, where each kind has registers of its own; on Windows x64 the
+        # scale wrote through a pointer read from a register nobody set (0.8.0's crash). The
+        # call goes through the definition's type, each kind's arguments in order.
+        with tempfile.TemporaryDirectory() as tmp:
+            out = self.generate(Path(tmp),
+                "void func_L00_001FF500(float *out, float *a, float len) { out[0] = a[0] * len; }\n"
+                "extern void scale(float, void *, void *) __asm__(\"func_L00_001FF500\");\n"
+                "extern float steer(float, void *, void *) __asm__(\"func_L00_0025BE00\");\n"
+                "float func_L00_0025BE00(void *a, void *b, float x) { return x; }\n"
+                "float func_L05_002D1688(char *moby, float len) {\n"
+                "    float w[4];\n"
+                "    scale(len, w, moby + 0xC0);\n"
+                "    return steer(len, moby, w);\n"
+                "}\n",
+                "func_L00_001FF500\tshared\t64\tfa\t1\t00:001FF500\n"
+                "func_L00_0025BE00\tshared\t64\tfc\t1\t00:0025BE00\n"
+                "func_L05_002D1688\tlevel\t64\tfb\t1\t05:002D1688\n")
+            text = (out / "a.c").read_text()
+            self.assertIn("GFN(void (*)(gaddr, gaddr, float), OPENRAC_LCODE(0, 0x001FF500u))(", text)
+            self.assertNotIn("GFN(void (*)(float, gaddr, gaddr)", text)
+            self.assertIn("GFN(float (*)(gaddr, gaddr, float), OPENRAC_LCODE(0, 0x0025BE00u))(", text)
 
     def test_an_entry_inside_a_catalogue_place_answers_calls(self):
         # hostgen.json "entries": rac1's HUD gauge draw starts 0x20 bytes into its catalogue place.
