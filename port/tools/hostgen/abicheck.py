@@ -290,8 +290,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="check every place a folded call can reach, not only the first")
     args = ap.parse_args(argv)
     if not (args.gen / "functions.c").exists():
-        print(f"abicheck: no functions.c in {args.gen} (not generated yet)", file=sys.stderr)
-        return 2
+        # A game this build does not make (CI builds some games only): skipped, not failed.
+        print(f"abicheck: no functions.c in {args.gen} (not generated yet): skipped", file=sys.stderr)
+        return 77
     problems, stats = check(args.gen, args.all)
     for p in problems:
         print(p)
