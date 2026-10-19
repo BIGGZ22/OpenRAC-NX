@@ -198,6 +198,37 @@ class Translate(unittest.TestCase):
         """})
         self.assertEqual(out, ["0", "16", "5", "0", "0", "0"])
 
+    def test_a_three_float_local_has_a_quadword_slot(self):
+        # The console's compiler gives an array or record with no machine mode of its own a
+        # slot of whole quadwords; the game copies 16-byte points into `float v[3]`, and the
+        # fourth word must not land in the next local (Umbris's moby 1142: a path index
+        # became a segment length's bits, and the next lookup read far outside the path).
+        out = self.run_program({"a.c": """
+            typedef struct { float x, y, z; } P3;
+            static void put4(float *to) { to[0] = 1.0f; to[1] = 2.0f; to[2] = 3.0f; to[3] = 7.5f; }
+            static void set(int *to, int n) { *to = n; }
+            int test_main(void) {
+                float v[3];
+                int i;
+                P3 p;
+                int j;
+                short pair[2];
+                int k;
+                set(&i, 5); set(&j, 6); set(&k, 8);
+                put4(v);
+                put4(&p.x);
+                pair[0] = 1; pair[1] = 2;
+                test_print(i);
+                test_print(j);
+                test_print(k + pair[0] + pair[1] - 3);
+                test_print((int)((unsigned long)&v[0] & 15));
+                test_print((int)((unsigned long)&p & 15));
+                test_print((int)v[2] + (int)p.z);
+                return 0;
+            }
+        """})
+        self.assertEqual(out, ["5", "6", "8", "0", "0", "6"])
+
     def test_a_call_short_of_arguments_is_reported(self):
         # The caller has no argument of its own for the callee's second: the register held
         # whatever the caller left there, so the call is filled with 0 and listed.

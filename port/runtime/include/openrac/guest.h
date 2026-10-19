@@ -114,6 +114,19 @@ static inline void openrac_guest_frame_end(gaddr* saved) {
     gaddr name##_saved_sp __attribute__((cleanup(openrac_guest_frame_end))) = openrac_guest_sp;    \
     const gaddr name = openrac_guest_frame(size)
 
+/* The slot an aggregate local gets in such a frame, as the console's compiler
+ * (GCC 2.95 for the R5900) gives it: a local with no machine mode of its own
+ * (an array or record that is not 1, 2, 4, 8 or 16 bytes at that size's
+ * alignment) gets a stack slot aligned to 16 bytes and its size rounded up to
+ * 16. The game relies on it: a `float v[3]` is written with quadword stores
+ * (a copy of a 16-byte point into it), whose fourth word lands in the slot's
+ * padding on the console, not in the next local. T is a type name. */
+#define OPENRAC_FRAME_BLK(T)                                                                       \
+    (!((sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8 || sizeof(T) == 16) && \
+       _Alignof(T) >= sizeof(T)))
+#define OPENRAC_FRAME_ALIGN(T) (OPENRAC_FRAME_BLK(T) ? 16 : _Alignof(T))
+#define OPENRAC_FRAME_SIZE(T) (OPENRAC_FRAME_BLK(T) ? (sizeof(T) + 15) & ~(size_t)15 : sizeof(T))
+
 /* A static local whose address the game takes: storage in game memory for
  * the life of the program, zeroed (the port's statics region). */
 gaddr openrac_guest_static(uint32_t size);

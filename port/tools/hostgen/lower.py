@@ -275,22 +275,22 @@ class Unit:
             return "va_list"
         return ctype.host(self._rename_type(t))
 
-    _FOUR_BYTE_ELEMENTS = {"float", "int", "unsigned int", "unsigned", "signed int", "s32", "u32", "f32"}
-
-    def _frame_alignment(self, t: ctype.Type) -> str:
-        """A local array of 16 bytes or more, whole quadwords of 32-bit elements (a vector, a
-        matrix), starts on a quadword in the frame: the console's compiler placed such locals so,
-        and the game copies them with quadword loads (lq), which the host makes movaps."""
-        count = 1
-        t = self.resolve(t)
-        while isinstance(t, ctype.Arr):
-            if t.size is None:
-                return ""
-            count *= t.size
-            t = self.resolve(t.of)
-        if isinstance(t, ctype.Base) and t.name in self._FOUR_BYTE_ELEMENTS and count >= 4 and count % 4 == 0:
-            return " __attribute__((aligned(16)))"
-        return ""
+    def _frame_slot(self, t: ctype.Type, name: str) -> str:
+        """A frame field for a local, in the slot the console's compiler gave it. An array or
+        record with no machine mode of its own (a `float v[3]`, a `float m[4][4]`, a 12-byte
+        struct) gets a slot aligned to 16 and rounded up to 16 bytes (OPENRAC_FRAME_SIZE and
+        OPENRAC_FRAME_ALIGN, in openrac/guest.h): the game copies such locals with quadword
+        loads and stores (lq/sq, which the host makes movaps), and a 16-byte copy into a
+        `float v[3]` puts its fourth word in the slot's padding there, not in the next local."""
+        decl = self.declare(t, name)
+        r = self.resolve(t)
+        aggregate = isinstance(r, ctype.Arr) or (
+            isinstance(r, ctype.Base) and r.name.split(" ")[0] in ("struct", "union"))
+        if not aggregate or (isinstance(r, ctype.Base) and r.name in VA_NAMES):
+            return f"    {decl};"
+        tn = self.host(t)
+        return (f"    union {{ {decl}; char {name}_slot_[OPENRAC_FRAME_SIZE({tn})]; }}"
+                f" __attribute__((aligned(OPENRAC_FRAME_ALIGN({tn}))));")
 
     def declare(self, t: ctype.Type, name: str) -> str:
         if isinstance(t, ctype.Base) and t.name in VA_NAMES:
@@ -677,7 +677,7 @@ class Unit:
         lines = self.compound(body, 1, top=True)
         frame_decl = []
         if fn.frame:
-            fields = "\n".join(f"    {self.declare(t, f)}{self._frame_alignment(t)};" for f, t in fn.frame)
+            fields = "\n".join(self._frame_slot(t, f) for f, t in fn.frame)
             frame_decl = [f"struct openrac_frame_{fn.name} {{\n{fields}\n}};"]
             prologue.append(f"    GFRAME(frame_, sizeof(struct openrac_frame_{fn.name}));")
             for p, n in zip(params, names):

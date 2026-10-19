@@ -28,7 +28,7 @@ for Jak's pointers. hostgen writes the C against it:
 | pointer arithmetic | scaled by the pointee's size, which is the console's: every record keeps its layout, since its pointers are 4-byte `gaddr`s too |
 | a global (`D_0013E650`, or a named one with its address) | the object at its retail address in game memory |
 | a literal address made a pointer (`*(s32 *)0x1610A8`, `((S *)0x160F08)->f`) | the global a name at that address would be, relocated the same way: in a range the levels move (`relocate`), the loaded level's copy, not the executable's under it |
-| a local whose address is taken, a local array, struct or union | a slot in a frame on the game stack (`GFRAME`), given back when the function returns |
+| a local whose address is taken, a local array, struct or union | a slot in a frame on the game stack (`GFRAME`), given back when the function returns; an array or record with no machine mode of its own (a `float v[3]`) gets a slot aligned to 16 and rounded up to 16 bytes, as the console's compiler gave it, since the game writes whole quadwords into such locals |
 | a string literal | copied into game memory once (`GSTR`) |
 | a direct call | a call to the callee's **definition**, its arguments matched to the definition's parameters as the EE passes them (below) |
 | a call through a pointer | `GFN`: the table of functions by code address, per level program |
