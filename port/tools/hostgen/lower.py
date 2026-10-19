@@ -1200,7 +1200,8 @@ class Unit:
         n = _strip_parens(n)
         if n.get("kind") == "DeclRefExpr" and (n["referencedDecl"].get("kind") == "FunctionDecl"
                                                or self._code_variable(n)):
-            return self.code_address(self._callee_symbol(n))
+            sym = self._callee_symbol(n)
+            return self.code_address(self._folded_place_name(n, sym))
         if n.get("kind") == "UnaryOperator" and n["opcode"] == "*":
             return self.rv(_inner(n)[0])
         raise Unsupported(f"function designator {n.get('kind')}")
@@ -1253,6 +1254,23 @@ class Unit:
             return False
         sym = self.program.canonical(symbol_of(d))
         return sym in self.program.functions and bool(self.program.code_places(sym))
+
+    def _folded_place_name(self, ref: dict, sym: str) -> str:
+        """For the address of a function: the name as written when it is one place of a function
+        the catalogue folded several places of one program into (func_L00_00238128, the second
+        of func_L00_00237B70's five level 0 wrappers), so the address is that place's and not
+        the folded function's first (each wrapper calls another function)."""
+        d = self.decls.get(ref["referencedDecl"]["id"])
+        raw = symbol_of(d) if d is not None else ref["referencedDecl"].get("name", "")
+        raw = self.program.aliases.get((self.unit, raw), raw)
+        if raw == sym or raw in self.program.places:
+            return sym
+        named = self.program.code_places(raw)
+        if len(named) != 1:
+            return sym
+        overlay = named[0][0]
+        folded = [p for p in self.program.code_places(sym) if p[0] == overlay]
+        return raw if len(folded) > 1 and named[0] in folded else sym
 
     def _callee_symbol(self, ref: dict) -> str:
         d = self.decls.get(ref["referencedDecl"]["id"])

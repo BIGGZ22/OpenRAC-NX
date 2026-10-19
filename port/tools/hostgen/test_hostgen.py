@@ -972,6 +972,34 @@ class Places(unittest.TestCase):
             self.assertIn("openrac_data_in_copy(-1, 0x00300000u, 36u, openrac_self_, 0x00200000u)", text)
             self.assertIn("openrac_guest_entry((openrac_host_fn)func_00300000)", text)
 
+    def generate(self, root: Path, source: str, places: str, cfg: dict | None = None) -> Path:
+        src = root / "game"
+        (src / "src").mkdir(parents=True)
+        (src / "src" / "a.c").write_text(source)
+        (src / "functions.tsv").write_text(places)
+        (root / "hostgen.json").write_text(json.dumps({
+            "sources": ["src"], "includes": [], "places": "functions.tsv", **(cfg or {})}))
+        out = root / "gen"
+        self.assertEqual(hostgen.main(["--game", str(root / "hostgen.json"), "--source", str(src),
+                                       "--out", str(out), "--jobs", "1", "--quiet"]), 0)
+        return out
+
+    def test_the_address_of_one_place_of_a_folded_wrapper_is_that_place(self):
+        # rac1's Suck Cannon passes func_L00_00238128, the second of the five level 0 wrappers the
+        # catalogue folds into func_L00_00237B70, as a HUD callback: each wrapper calls another
+        # function, so the address must be that wrapper's, not the folded function's first.
+        with tempfile.TemporaryDirectory() as tmp:
+            out = self.generate(Path(tmp),
+                "void func_L00_00237B70(void) {}\n"
+                "extern void cb(void) __asm__(\"func_L00_00238128\");\n"
+                "extern void func_00300000(int);\n"
+                "void func_L00_00240000(void) { func_00300000((int)cb); func_00300000((int)func_L00_00237B70); }\n",
+                "func_L00_00237B70\tshared\t28\tfp\t2\t00:00237B70,00:00238128,01:00337B70,01:00338128\n"
+                "func_L00_00240000\tlevel\t64\tfp2\t1\t00:00240000\n")
+            text = (out / "a.c").read_text()
+            self.assertIn("0x00238128u", text)
+            self.assertIn("0x00237B70u", text)
+
 
 class TypeStrings(unittest.TestCase):
     def test_declarators(self):
