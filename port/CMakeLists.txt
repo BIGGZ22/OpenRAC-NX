@@ -146,6 +146,14 @@ target_compile_options(moby_bounds_test PRIVATE -fno-strict-aliasing -ffp-contra
 openrac_warnings(moby_bounds_test)
 add_test(NAME moby_bounds COMMAND moby_bounds_test)
 
+add_executable(moby_view_test tests/moby_view_test.c)
+target_compile_options(moby_view_test PRIVATE -ffp-contract=off)
+if(UNIX)
+  target_link_libraries(moby_view_test PRIVATE m)
+endif()
+openrac_warnings(moby_view_test)
+add_test(NAME moby_view COMMAND moby_view_test)
+
 add_executable(hero_manipulators_test tests/hero_manipulators_test.c)
 target_compile_options(hero_manipulators_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
 openrac_warnings(hero_manipulators_test)

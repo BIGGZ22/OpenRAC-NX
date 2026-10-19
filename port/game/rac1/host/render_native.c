@@ -9,6 +9,7 @@
  * nothing. Each is where a native renderer takes over.
  */
 #include "rac1.h"
+#include "moby_view.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -100,7 +101,8 @@ void func_00212578(int a0, int a1) {
  * +0x31, drawn this frame (the moby loop keeps a drawn moby active; vehicles, enemies and effects
  * test it). Its culls, as ReRAC's moby_lod.rs replays them: the bounding sphere (+0x00, x y z r in
  * units of 1/1024) beyond the draw distance (+0x32, s16 units), wholly in front of the near plane,
- * or wholly outside a side plane of the view; a hidden moby (mode bit 0) is not drawn.
+ * or wholly outside a side plane of the view; a hidden moby (mode bit 0) is not drawn. The side
+ * planes are the port's picture's, wider than 4:3 when it is (moby_view.h).
  */
 static void mark_drawn_mobys(gaddr first, int count) {
     float cam[3], rows[12];
@@ -115,7 +117,8 @@ static void mark_drawn_mobys(gaddr first, int count) {
     if (!(ty > 0.05f && ty < 10.0f)) {
         ty = tx * 0.756f;
     }
-    const float kx = sqrtf(1.0f + tx * tx), ky = sqrtf(1.0f + ty * ty);
+    /* The picture's sides: the game's 4:3 tangent opened as the port's picture is (moby_view.h). */
+    const float wider = openrac_game_picture_wider();
     gaddr end = count < 0 ? GREF(gaddr, OPENRAC_DATA(RAC1_ADDR(0x00160020u))) : first + (gaddr)count * 0x100u;
     if (end < first || end - first > 0x100u * 4096u) {
         return;
@@ -126,14 +129,10 @@ static void mark_drawn_mobys(gaddr first, int count) {
         memcpy(sphere, b, sizeof(sphere));
         const float r = sphere[3] / 1024.0f;
         const float d[3] = {sphere[0] / 1024.0f - cam[0], sphere[1] / 1024.0f - cam[1], sphere[2] / 1024.0f - cam[2]};
-        const float z = d[0] * rows[0] + d[1] * rows[1] + d[2] * rows[2];
-        const float x = d[0] * rows[4] + d[1] * rows[5] + d[2] * rows[6];
-        const float y = d[0] * rows[8] + d[1] * rows[9] + d[2] * rows[10];
         const int distance = *(int16_t*)(b + 0x32);
         const uint16_t mode = *(uint16_t*)(b + 0x34);
         int drawn = (mode & 1) == 0 && b[0x20] != 0xFF;
-        drawn = drawn && z <= (float)distance && z + r > 32.0f / 1024.0f;
-        drawn = drawn && fabsf(x) - r * kx <= tx * z && fabsf(y) - r * ky <= ty * z;
+        drawn = drawn && moby_in_view(d, rows, r, (float)distance, tx, ty, wider);
         b[0x31] = (uint8_t)(drawn ? 1 : 0);
     }
 }
