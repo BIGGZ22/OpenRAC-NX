@@ -135,8 +135,10 @@ Routes are data, in [port/tools/regress/routes.json](../../port/tools/regress/ro
 
 - `defaults`: Cross through the boot screens (`boot`, window frames), Start
   every 30 frames while a scene or the flight can be skipped and control has
-  not come (`skip`), the `sequence` played from control, its `length`,
-  `max_frames` and `timeout`.
+  not come (`skip`; counted on window frames in the standard set, which
+  keeps its baseline; `"from": "scene"` counts from the frame the scene
+  became skippable, the same tick in both versions: see Route sets), the
+  `sequence` played from control, its `length`, `max_frames` and `timeout`.
 - `sequences`: steps with `at` and `hold` in frames from control, `buttons`
   (`cross`, `square`, `r1+square`, ...), `left` and `right` sticks (0 to 255,
   128 centred, 0 left or up; the left stick is relative to the camera), and a
@@ -159,19 +161,111 @@ for 30 ticks. Read a level's `trace.jsonl` to see what a step did (`hp`
 moving, `hs` changing, `fw` turning), and change one route at a time:
 existing baselines no longer compare with a changed route.
 
+## Route sets
+
+The level routes above are the `standard` set, and its baseline stays
+valid as long as they do not change. `routes.json` `sets` holds more sets,
+each a table of named routes (`"11-swim": {"level": 11, ...}`), run, saved
+and checked by name:
+
+```sh
+python3 port/tools/regress/regress.py sets                                # every set and its routes
+python3 port/tools/regress/regress.py card --game rac1-pal                # the prepared card (below), once
+python3 port/tools/regress/regress.py card --game rac1-ntsc
+python3 port/tools/regress/regress.py run --game rac1-pal --set wide      # its 56 routes
+python3 port/tools/regress/regress.py run --game rac1-ntsc --set wide --only 03-ship,title-load-2
+python3 port/tools/regress/regress.py baseline save wide --set wide       # latest:<game>@wide of each version
+python3 port/tools/regress/regress.py check wide --set wide
+python3 port/tools/regress/regress.py compare latest:rac1-pal@wide latest:rac1-ntsc@wide
+python3 port/tools/regress/regress.py reach latest:rac1-pal@wide latest:rac1-ntsc@wide --top 40
+```
+
+A set's run lives in `runs/<game>-<set>-<time>/`, one folder per route; its
+latest run is `latest:<game>@<set>`. `--levels` keeps the routes on those
+levels, `--only` the routes named. The two versions run at once with two
+`run` commands (six routes each at once is what an 18-core Mac holds; a
+route of the `wide` set's long kind takes two minutes or so, the whole set
+about ten minutes per version).
+
+A set has `defaults` over the standard ones, `sequences` and `lists` of its
+own, and its routes' keys are the level routes' (`level`, `name`, `sequence`
+or `steps`, `length`, `max_frames`, `timeout`, `versions`, a version's own
+keys under its id) and:
+
+| Key | |
+|---|---|
+| `start` | `direct` (the default: `OPENRAC_DIRECT` with `--level`) or `title`: from the boot screens, with the route's `boot` presses (window frames) through the title's menus |
+| `until` | `control` (the default) or `frames`: a route that never gets control (the title's menus) plays to `max_frames` and is `ok` when it got there |
+| `card` | `prepared`: the run plays on a fresh copy of the prepared card instead of `--no-card` |
+| `points`, `lists` | named places (`[x, y, z]` or `[x, y, z, yaw]`) and lists for the steps |
+| `then` | steps added to the sequence's (a death route's teleport) |
+
+and the steps can do more than press. Each becomes `OPENRAC_WRITE` entries
+counted from control, at the version's own addresses (`routes.json`
+`addresses`, paired by the version map):
+
+| Step key | |
+|---|---|
+| `teleport` | the hero to `[x, y, z]` (10 frames, `hold_place` to change it), and to the yaw when a fourth number is there (50 frames); or a point's name |
+| `yaw` | the hero's yaw |
+| `give` | a list of `items` (`all`): owned and acquired, the ammo full |
+| `equip` | an item id into the hero's pending item (include/hero.h `pending_item[0]`): the game's own switch puts it in his hand |
+| `health` | the hero's hit points (0 kills him) |
+| `write` | `{"address": "hero+0x22A8" or "0x...", "value": ..., "frames": N}` |
+| `each` | `{"at", "each": LIST, "every": N, "do": [steps]}`: the block once for every entry, `$` the entry |
+
+A skip with `"from": "scene"` presses Start from the frame what plays became
+skippable (`s` below), so a scene's skip falls on the same tick of it in
+both versions; `"after_control": true` keeps skipping the scenes and flights
+a route starts after control (`S`).
+
+### The wide set
+
+`wide` widens what a run reaches, for both versions alike:
+
+| Routes | What they play |
+|---|---|
+| `LL-long`, one a level | every item given; the level's path (up to ten places from its own data, `points.py` below), at each a teleport, a walk, a jump, the wrench, Triangle and a thrown wrench; the first vendor (open, move, buy, leave); the pause menu and the map opened and closed; the quick select; then each weapon and gadget equipped and fired three times (the Suck Cannon last) |
+| `01-pause-0` to `-6` | Novalis: the pause menu, then its page N opened, moved in and left; one route a page, so a page that stops the game leaves the others to run |
+| `03-fall`, `09-fall`, `05-health`, `12-enemies`, `03-dogs`, `11-swim` | deaths and respawns through to control: a teleport below the level, the hit points to 0, one hit point among Hoven's troopers and Kerwan's robot dogs; Pokitaru's water |
+| `00-clank`, `05-hoverboard-girl`, `05-bouncer`, `16-hoverboard`, `11-jet-fighter`, `13-qwark`, `07-snagglebeast`, `15-giant-clank`, `18-giant-clank`, `18-drek`, `06-clank`, `10-clank`, `12-turret`, `09-turret`, `17-turret`, `03-ship` | set pieces a direct start reaches: next to the moby that starts one, Triangle, then play on (Start skips the scenes they start). Orxon's Clank runs without items (the O2 mask would let Ratchet go) |
+| `title-new`, `title-load-0` to `-4`, `title-options`, `title-idle` | the title: a new game (no card) into Veldin's routes, each prepared save loaded (Load Game, slot N) and played, the options pages, the title left alone |
+
+`points.py LEVEL` prints a level's places from the extracted
+`placements.json`: the hero's start, the respawn points (class 805, the
+checkpoints), gold bolts, infobots, teleporters and vendors, nearest first
+from the start, a vendor's point three units in front of it, facing it. The
+`wide` routes hold what it printed; print them again after an export moves
+things.
+
+### The prepared card
+
+`regress.py card --game G` copies a memory card (the player's,
+`~/Library/Application Support/OpenRAC/memcard/<serial>` on macOS, only
+read; `--from DIR` another) to `build/regress/cards/G/card` and rewrites the
+copy's five slots from the first saved game on it: every weapon and gadget
+owned with full ammo, Ultra Nanotech, the planets the ship reaches unlocked,
+9,999,999 bolts, and slot 0 to 4 resuming on Rilgar, Orxon, Gemlik Base,
+Hoven and Kalebo III (the save editor's planets: Veldin and Drek's Fleet are
+reached by the story). `card.py` is the launcher's save format
+(`launcher/core/src/save_edit.rs`) in Python: the checksums are written
+again, so the game loads it. A route with `"card": "prepared"` plays on a
+fresh copy of it in its run folder: the player's card is never touched.
+
 ## The port's switches
 
 | Switch | |
 |---|---|
 | `OPENRAC_TRACE=FILE` | one JSON line a tick: `f` window frame, `c` frames since control (null before), `lv`, `m`, `cam`, `fw`, `hp`, `hr`, `hs`, `mb`, `dr` (the table above). The addresses are each version's: the camera and mobys from `viewer::rac1_addresses`, the game mode the loaded level's copy (`openrac_game_mode`) or the boot program's (`openrac_front_end`), the hero from `RAC1_ADDR(0x0013F450)` in rac1's `boot.c` (US position 0x13F3D0) |
 | `OPENRAC_REACH=FILE` | the reached sites as JSON, at exit and every 600 frames |
-| `OPENRAC_PRESS` `cF:...`, `kP:...` | a press F frames from control; a press held the first frames of every P while Start can skip what plays, until control |
+| `OPENRAC_PRESS` `cF:...`, `kP:...`, `sP:...`, `SP:...` | a press F frames from control; a press held the first frames of every P while Start can skip what plays, until control: `k` on window frames, `s` from the frame what plays became skippable (the same tick of a scene in PAL and US, where window frames fall at other ticks of it); `S` as `s`, after control too |
+| `OPENRAC_WRITE` `cF:ADDR:VALUE:N` | a word written F frames from control, for N frames |
 | `OPENRAC_CONTROL_FRAMES=N` | ends the run N frames after control |
 | `OPENRAC_AUDIO_TICKED=1` | no sound device; sounds advance with the ticks |
 
 ## Tests
 
 ```sh
-python3 -m unittest discover -s port/tools/regress    # comparing, merging reach files, routes, outcomes
+python3 -m unittest discover -s port/tools/regress    # comparing, merging reach files, routes, sets, the card, outcomes
 python3 -m unittest discover -s port/tools/hostgen     # the reach sites in the generated C
 ```
