@@ -380,8 +380,15 @@ def drop_superseded_declarations(root: Path, rel: str, text: str, stderr: str) -
         at = int(note["line"]) - 1
         if name not in lines[at] or "{" in lines[at] or not lines[at].rstrip().endswith(";"):
             continue
-        done.append(f"{other.name}:{at + 1}: declaration of {name} dropped, {rel} defines it differently")
-        lines[at] = ""
+        # The header's line becomes the definition's own prototype, so the other files that take the
+        # function from that header still have it (a matched debug menu that calls sound_update
+        # by the header's declaration, while a candidate defines it as returning int). A
+        # definition whose signature does not fit on its first line, or a static one, is dropped.
+        sig = defline.split("{")[0].strip()
+        whole = sig.endswith(")") and sig.count("(") == sig.count(")") and not sig.startswith("static")
+        lines[at] = f"{sig};" if whole else ""
+        done.append(f"{other.name}:{at + 1}: declaration of {name} "
+                    + (f"replaced by {rel}'s definition" if whole else f"dropped, {rel} defines it differently"))
         other.write_text("\n".join(lines), encoding="utf-8", errors="surrogateescape")
     return done
 

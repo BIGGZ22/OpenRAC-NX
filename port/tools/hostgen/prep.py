@@ -450,6 +450,22 @@ def own_declarations(text: str, tag: str) -> str:
     return text
 
 
+def own_statics(text: str, tag: str) -> str:
+    """The candidate's own file-scope statics (helpers and tables), under names of its own.
+
+    Each candidate is a file of its own in the decompilation, so two may keep a static helper of
+    one name (two sky candidates' `sky_sign_set`); put in one file, Clang rejects the second.
+    A static is nobody else's symbol, so NAME becomes NAME<tag> wherever the candidate uses it."""
+    names = []
+    for m in re.finditer(r"^static\b[^;{=(\[]*?\b([A-Za-z_]\w*)[ \t]*[(\[=;]", text, re.M):
+        if m.group(1) not in names:
+            names.append(m.group(1))
+    for name in names:
+        text = re.sub(r'"(?:\\.|[^"\\\n])*"|\b' + name + r'\b',
+                      lambda m: m.group(0) if m.group(0).startswith('"') else name + tag, text)
+    return text
+
+
 def without_definitions(text: str, names: set[str]) -> str:
     """TEXT without the definitions of the functions NAMES (each from its first line to its closing
     brace), a comment in the place of each.
@@ -505,8 +521,9 @@ def use_candidates(text: str, candidates: dict[str, str], used: set[str]) -> str
         text = candidates[name]
         if id(text) not in added:   # one file of C for several functions goes in once
             added.add(id(text))
+            suffix = f'_hc{len(added)}'
             tail.append(f"\n/* hostgen: {name} from a candidate, not the matched C */\n"
-                        f"{own_declarations(without_definitions(prepare(text), matched), f'_hc{len(added)}')}")
+                        f"{own_statics(own_declarations(without_definitions(prepare(text), matched), suffix), suffix)}")
         return "\n" * m.group(0).count("\n")   # a stub over several lines: the lines stay
 
     text = _INCLUDE_ASM.sub(blank, text)

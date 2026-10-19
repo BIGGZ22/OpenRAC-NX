@@ -938,7 +938,8 @@ class InputsDigest(unittest.TestCase):
 
 
 class SupersededDeclarations(unittest.TestCase):
-    def test_header_declaration_a_definition_contradicts_is_dropped(self):
+    def test_header_declaration_a_definition_contradicts_takes_its_prototype(self):
+        # Other files that take f from the header still have it, now with its real type.
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             (root / "include").mkdir()
@@ -948,7 +949,32 @@ class SupersededDeclarations(unittest.TestCase):
                    "include/h.h:2:13: note: previous declaration is here\n")
             done = clangast.drop_superseded_declarations(root, "a.c", text, err)
             self.assertEqual(len(done), 1)
-            self.assertEqual((root / "include/h.h").read_text(), "int keep;\n\nint tail;\n")
+            self.assertEqual((root / "include/h.h").read_text(), "int keep;\nvoid f(int *p, int n);\nint tail;\n")
+
+    def test_a_definition_over_several_lines_still_drops_the_declaration(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "include").mkdir()
+            (root / "include/h.h").write_text("extern void f(void *, int);\n")
+            text = '#include "include/h.h"\nvoid f(int *p,\n       int n) {\n}\n'
+            err = ("a.c:2:6: error: conflicting types for 'f'\n"
+                   "include/h.h:1:13: note: previous declaration is here\n")
+            clangast.drop_superseded_declarations(root, "a.c", text, err)
+            self.assertEqual((root / "include/h.h").read_text(), "\n")
+
+
+class CandidateStatics(unittest.TestCase):
+    def test_two_candidates_keep_their_own_static_helpers(self):
+        import prep
+        a = "static int sign(float f) { return f < 0; }\nint fa(float x) { return sign(x); }\n"
+        b = "static int sign(float f) { return f <= 0; }\nstatic int table[2];\nint fb(float x) { return sign(x) + table[0]; }\n"
+        a2, b2 = prep.own_statics(a, "_hc1"), prep.own_statics(b, "_hc2")
+        self.assertIn("static int sign_hc1(float f)", a2)
+        self.assertIn("return sign_hc1(x)", a2)
+        self.assertIn("static int sign_hc2(float f)", b2)
+        self.assertIn("static int table_hc2[2]", b2)
+        self.assertIn("table_hc2[0]", b2)
+        self.assertIn("int fb(float x)", b2)
 
 
 class SharedLibraries(unittest.TestCase):
