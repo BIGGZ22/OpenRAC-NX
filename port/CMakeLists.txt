@@ -169,6 +169,11 @@ add_executable(scale_matrix_test tests/scale_matrix_test.c)
 openrac_warnings(scale_matrix_test)
 add_test(NAME scale_matrix COMMAND scale_matrix_test)
 
+add_executable(rows_multiply_test tests/rows_multiply_test.c)
+target_compile_options(rows_multiply_test PRIVATE -ffp-contract=off)
+openrac_warnings(rows_multiply_test)
+add_test(NAME rows_multiply COMMAND rows_multiply_test)
+
 add_executable(vendor_draw_test tests/vendor_draw_test.c)
 target_compile_options(vendor_draw_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
 if(UNIX)
