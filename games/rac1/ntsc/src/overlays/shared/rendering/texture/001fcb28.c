@@ -2,43 +2,46 @@
 #include "types.h"
 #include "asm.h"
 
-extern int FUN_001f6250_1fcb28(char *, int) __asm__("FUN_001f6250");
-extern int FUN_001fa6d0_1fcb28(float) __asm__("FUN_001fa6d0");
-extern void FUN_00201128_1fcb28(int, int, int, int, int) __asm__("FUN_00201128");
-extern void FUN_001f61f8_1fcb28(void) __asm__("FUN_001f61f8");
-extern void FUN_001f61e8_1fcb28(void) __asm__("FUN_001f61e8");
-extern void FUN_001f6530_1fcb28(int, int, u64, char *, int) __asm__("FUN_001f6530");
+extern int measure_text_width_regular(char *, int) __asm__("FUN_001f6250");
+extern int truncate_float_to_s32(float) __asm__("FUN_001fa6d0");
+extern void draw_stretchable_ui_frame(int, int, int, int, int) __asm__("FUN_00201128");
+extern void disable_global_flag(void) __asm__("FUN_001f61f8");
+extern void enable_global_flag(void) __asm__("FUN_001f61e8");
+extern void font_print_large(int, int, u64, char *, int) __asm__("FUN_001f6530");
 
-void FUN_L00_001fcb28(int x, int y, int mode, char *str, float s, float a) {
-    int w, l, r;
-    u32 c;
-    s32 d;
-    w = FUN_001f6250_1fcb28(str, -1) * s;
-    r = x;
-    l = r;
+void draw_timed_text_line(int x, int y, int mode, float scale, float alpha, char *text) __asm__("FUN_L00_001fcb28");
+void draw_timed_text_line(int x, int y, int mode, float scale, float alpha, char *text) {
+    enum {
+        TEXT_ALIGN_CENTER = 0,
+        TEXT_ALIGN_RIGHT = 1
+    };
+    int width, right, left;
+    u32 shadow;
+    s32 color;
+    width = measure_text_width_regular(text, -1) * scale;
+    left = x;
+    right = left;
     switch (mode) {
-    case 0:
-        r -= w >> 1;
-        l = x + (w >> 1);
+    case TEXT_ALIGN_CENTER:
+        left -= width >> 1;
+        right = x + (width >> 1);
         break;
-    case 1:
-        r -= w;
+    case TEXT_ALIGN_RIGHT:
+        left -= width;
         break;
     case -1:
-        l = r + w;
+        right = left + width;
         break;
     }
-    FUN_00201128_1fcb28(r - 0x20, y - 0xE, l - r + 0x40, 0x1C, FUN_001fa6d0_1fcb28(s * 112.0f));
-    FUN_001f61f8_1fcb28();
-    c = (int)(a * 128.0f) << 24;
-    d = c + 0xE0E0E0;
-    FUN_001f6530_1fcb28(r + 1, y - 7, c, str, -1);
-    FUN_001f6530_1fcb28(r, y - 8, d, str, -1);
-    FUN_001f61e8_1fcb28();
+    draw_stretchable_ui_frame(left - 0x20, y - 0xE, right - left + 0x40, 0x1C, truncate_float_to_s32(scale * 112.0f));
+    disable_global_flag();
+    shadow = (int)(alpha * 128.0f) << 24;
+    color = shadow + 0xE0E0E0;
+    font_print_large(left + 1, y - 7, shadow, text, -1);
+    font_print_large(left, y - 8, color, text, -1);
+    enable_global_flag();
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_001fcca0.s", FUN_L00_001fcca0);
-#else
+/* Ported from rac1-decomp (src/overlays/shared/draw_001F3A78.c: func_L00_001FCC50), where it is exact; names translated to the US level program. */
 extern char *get_help_message_text(s32) __asm__("FUN_001fdd10");
 
 typedef struct {
@@ -51,97 +54,74 @@ typedef struct {
     s16 separator_mode;
 } LevelTextEntry;
 
-void FUN_L00_001fcca0(LevelTextEntry *entry, s32 frame) {
+void draw_timed_text(LevelTextEntry *entry, s32 frame) __asm__("FUN_L00_001fcca0");
+void draw_timed_text(LevelTextEntry *entry, s32 frame) {
+    int start = entry->start;
+    int end = start + entry->duration;
+    float scale, alpha;
+    unsigned char *source;
     char buffer[256];
-    u8 *source;
     char *out;
-    char *next;
-    s32 end;
-    s32 start;
-    s32 y;
-    f32 scale;
-    f32 alpha;
-    char ch;
+    int y;
+    int k;
 
-    start = entry->start;
-    end = start + entry->duration;
-    if (frame < start || frame > end)
-        return;
-
+    if (frame < start) return;
+    if (end < frame) return;
     scale = 1.0f;
-    if (frame < start + 16)
-        scale = (f32)(frame - start) * 0.0625f;
-    if (frame > end - 8)
-        scale = (f32)(end - frame) * 0.125f;
-
+    if (frame < start + 16) scale = (float)(frame - start) * 0.0625f;
+    if (end - 8 < frame) scale = (float)(end - frame) * 0.125f;
     alpha = 1.0f;
     if (frame < start + 32) {
-        alpha = (f32)(frame - (start + 16)) * 0.0625f;
-        if (alpha < 0.0f)
-            alpha = 0.0f;
+        k = frame - 16;
+        alpha = (float)(k - start) * 0.0625f;
+        if (alpha < 0.0f) alpha = 0.0f;
     }
-    if (frame > end - 16) {
-        s32 frame_plus_8 = frame + 8;
-        alpha = (f32)(end - frame_plus_8) * 0.125f;
-        if (alpha < 0.0f)
-            alpha = 0.0f;
+    if (end - 16 < frame) {
+        k = frame + 8;
+        alpha = (float)(end - k) * 0.125f;
+        if (alpha < 0.0f) alpha = 0.0f;
     }
-
-    source = get_help_message_text(entry->text_id);
+    source = (unsigned char *)get_help_message_text(entry->text_id);
     if (entry->separator_mode == 1) {
         out = buffer;
-        ch = *source;
-joined_text:
-        if (ch != 0) {
-            do {
-                if ((u8)ch == 1) {
-                    *out++ = ' ';
-                    *out++ = '-';
-                    *out++ = ' ';
-                    while (*source == 1)
-                        source++;
-                    ch = *source;
-                    if (ch != 0)
-                        goto joined_text;
-                    out -= 3;
-                    break;
-                } else {
-                    *out = ch;
-                    source++;
-                    out++;
-                }
-            } while ((ch = *source) != 0);
+    joined_text:
+        while (*source != 0) {
+            if (*source == 1) {
+                *out++ = ' ';
+                *out++ = '-';
+                *out++ = ' ';
+                while (*source == 1) source++;
+                if (*source != 0) goto joined_text;
+                out -= 3;
+            } else {
+                *out++ = *source++;
+            }
         }
         {
-            s32 mode = entry->mode;
-            s32 x = entry->x;
-            y = entry->y;
+            int x = entry->x;
+            int line_y = entry->y;
+            int mode = entry->mode;
             *out = 0;
-            FUN_L00_001fcb28(x, y, mode, buffer, scale, alpha);
+            draw_timed_text_line(x, line_y, mode, scale, alpha, buffer);
         }
     } else {
-        y = entry->y;
         out = buffer;
-        ch = *source;
+        y = entry->y;
         while (*source != 0) {
             if (*source == 1) {
                 *out = 0;
-                FUN_L00_001fcb28(entry->x, y, entry->mode, buffer, scale, alpha);
+                draw_timed_text_line(entry->x, y, entry->mode, scale, alpha, buffer);
                 y += 26;
                 out = buffer;
-                while (*source == 1)
-                    source++;
-                if (*source == 0)
-                    break;
+                while (*source == 1) source++;
+                if (*source == 0) break;
             } else {
-                *out++ = *source;
-                source++;
+                *out++ = *source++;
             }
         }
         if (out > buffer) {
             *out = 0;
-            FUN_L00_001fcb28(entry->x, y, entry->mode, buffer, scale, alpha);
+            draw_timed_text_line(entry->x, y, entry->mode, scale, alpha, buffer);
         }
     }
 }
-#endif

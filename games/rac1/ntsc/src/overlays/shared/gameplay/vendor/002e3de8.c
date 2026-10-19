@@ -61,17 +61,21 @@ extern void enqueue_callback_list_1(void (*)(void), void *) __asm__("FUN_001f460
 extern void subtract_vector_xyz(void *, void *, void *);
 
 void FUN_L10_002e9028(unsigned char *m) {
+    enum {
+        MOBY_UPDATE_INITIALIZE = 0,
+        MOBY_UPDATE_ACTIVE = 1
+    };
     float v[4] __attribute__((aligned(16)));
     float mtx[16] __attribute__((aligned(16)));
     char *player;
     unsigned int s = m[0x20];
     switch (s) {
-    case 0:
+    case MOBY_UPDATE_INITIALIZE:
         m[0x20] = 1;
         *(unsigned short *)(m + 0x34) |= 1;
         m[0x31] = 0;
         break;
-    case 1:
+    case MOBY_UPDATE_ACTIVE:
         player = (&hero.motion.pos);
         if (FUN_001f9b48(m + 0x10, player) < 8.0f) {
             subtract_vector_xyz(v, player + 0x50, m + 0x10);
@@ -257,161 +261,8 @@ int FUN_L10_002f5a78(char *moby) {
 }
 typedef struct {
     char pad0[0xB0];
-    float fB0; /* tan of half the field of view */
+    float tan_half_fov;
 } VendorView_5f18;
-
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L10_002f5b58.s", FUN_L10_002f5b58);
-#else
-#include "eetypes.h"
-extern int scale_game_frames(int) __asm__("FUN_001f96f8");
-extern float angle_atan2(float, float) __asm__("FUN_001f9e90");
-extern float FUN_001f9b48(void *, void *);
-extern void clear_u64_value(void *) __asm__("FUN_001f99f8");
-extern float s32_to_float(int) __asm__("FUN_001fa6c0");
-extern int hero_set_state(int, int) __asm__("FUN_L00_002223f8");
-/* Retail retains this global base and loads the four-block source at +0x184. */
-extern struct { char pad0[0x184]; char *source; } D_L10_00167100;
-
-extern VendorView_5f18 D_L10_0016CEC0;
-#include "qcopy.h"
-void FUN_L10_002f5b58(char *moby) {
-    char *data = *(char **)(D_L10_0015EF50 + *(short *)(moby + 0x84) * 0x20 + 0x1c);
-    char *work;
-    float angle;
-    short * volatile indices;
-    float *angles;
-    char *acc;
-    char *moby_rot;
-    char *moby_scale;
-    char *moby_pos;
-
-    data[0x38] = 1;
-    work = *(char **)(moby + 0x70);
-    acc = work + 0x40;
-    *(int *)(acc + 0x00) = 0;
-    *(int *)(acc + 0x04) = 0;
-    *(int *)(acc + 0x08) = 0;
-    *(int *)(acc + 0x0c) = 0;
-    *(int *)(acc + 0x10) = 0;
-    *(short *)(acc + 0x14) = 0;
-    *(short *)(acc + 0x16) = scale_game_frames(*(short *)(data + 0x3a));
-
-    work = *(char **)(moby + 0x70);
-    indices = (short *)(work + 0x58);
-    angles = (float *)(work + 0x68);
-    {
-        int i;
-        short *index_cursor;
-        float *angle_cursor;
-        index_cursor = indices;
-        angle_cursor = angles;
-        i = 7;
-        do {
-            *angle_cursor = 0.0f;
-            *index_cursor = -1;
-            angle_cursor++;
-            index_cursor++;
-            i--;
-        } while (i >= 0);
-    }
-    moby_scale = moby + 0x30;
-    moby_pos = moby + 0x10;
-    moby_rot = moby + 0x20;
-    angle = angle_atan2(1.0f, D_L10_0016CEC0.fB0);
-    *(float *)((char *)indices + 0x30) = angle + angle;
-
-    if (*(int *)(data + 0x20) >= 0) {
-        char *path;
-        int i, count, next;
-        unsigned int offset;
-        float distance;
-        path = D_L10_001B0930_5a78[*(int *)(data + 0x20)];
-        count = *(int *)path;
-        if (count > 0) {
-            short *index_cursor;
-            float *angle_cursor;
-            index_cursor = indices;
-            angle_cursor = angles;
-            i = 0;
-            do {
-                offset = i * 0x10;
-                angle = *(float *)((unsigned int)path + offset + 0x1c);
-                if (angle > 0.0f) {
-                    *angle_cursor = angle;
-                    if (angle > 180.0f)
-                        *angle_cursor = *(float *)((char *)indices + 0x30) * 57.295776f;
-                    *index_cursor = i;
-                    angle_cursor++;
-                    index_cursor++;
-                }
-                count = i + 1;
-                next = count % *(int *)path;
-                distance = FUN_001f9b48(
-                    (char *)((unsigned int)path + (offset + 0x10)),
-                    (char *)((unsigned int)path + ((unsigned int)next * 0x10 + 0x10)));
-                *(float *)((unsigned int)path + offset + 0x1c) = distance;
-                if (i < *(int *)path - 1)
-                    *(float *)(acc + 0x08) += distance;
-                i = count;
-            } while (i < *(int *)path);
-        }
-    }
-    if (*(short *)(data + 0x3a) > 0) {
-        *(float *)(data + 0x3c) = (*(float *)(acc + 0x08) /
-                                    s32_to_float(scale_game_frames(*(short *)(data + 0x3a)))) * 60.0f;
-    }
-    if (*(int *)(data + 0x24) >= 0) {
-        char *path;
-        int i, count, next;
-        unsigned int offset;
-        float distance;
-        path = D_L10_001B0930_5a78[*(int *)(data + 0x24)];
-        count = *(int *)path;
-        if (count > 0) {
-            i = 0;
-            do {
-                offset = i * 0x10;
-                next = (i + 1) % count;
-                distance = FUN_001f9b48(
-                    (char *)((unsigned int)path + (offset + 0x10)),
-                    (char *)((unsigned int)path + ((unsigned int)next * 0x10 + 0x10)));
-                *(float *)((unsigned int)path + offset + 0x1c) = distance;
-                if (i < *(int *)path - 1)
-                    *(float *)(acc + 0x0c) += distance;
-                count = *(int *)path;
-                i++;
-            } while (i < count);
-        }
-    }
-
-    work = *(char **)(moby + 0x70);
-    *(float *)(work + 0x00) = 0.03f;
-    *(float *)(work + 0x04) = 0.2f;
-    clear_u64_value(work + 0x10);
-    work = *(char **)(moby + 0x70);
-    *(float *)(work + 0x20) = 0.03f;
-    *(float *)(work + 0x24) = 0.2f;
-    clear_u64_value(work + 0x30);
-    {
-        char *source = D_L10_00167100.source;
-        char *source_block = source + 0x30;
-        qcopy(moby_scale, source_block);
-        qcopy(moby, source);
-        source_block = source + 0x10;
-        qcopy(moby_pos, source_block);
-        source += 0x20;
-        qcopy(moby_rot, source);
-    }
-    if (*(int *)(data + 0x4c) == 0)
-        hero_set_state(0x72, 1);
-}
-#endif
-#include "rnc/overlay/level_globals.h"
-#include "rnc/globals.h"
-#include "rnc/gameplay/entities/moby.h"
-#include "qcopy.h"
-#include "rnc/gameplay/camera/update_cam.h"
 
 typedef struct {
     s16 seg[8];   /* 0x00: path segment of each stop (-1 ends the list) */
@@ -422,12 +273,126 @@ typedef struct {
 typedef struct {
     s32 seg;      /* 0x40 */
     f32 t;        /* 0x44 */
-    f32 len_a;    /* 0x48: length of the camera path */
-    f32 len_b;    /* 0x4C: length of the look path */
+    f32 path_length;      /* 0x48 */
+    f32 look_path_length; /* 0x4C */
     f32 dist;     /* 0x50: distance travelled */
     s16 started;  /* 0x54 */
     s16 timer;    /* 0x56 */
 } VendorCamRun_5f18;
+
+#include "eetypes.h"
+#include "qcopy.h"
+#include "rnc/gameplay/camera/update_cam.h"
+extern int scale_game_frames(int) __asm__("FUN_001f96f8");
+extern float angle_atan2(float, float) __asm__("FUN_001f9e90");
+extern float distance_xyz(void *, void *) __asm__("FUN_001f9b48");
+extern void clear_u64_value(void *) __asm__("FUN_001f99f8");
+extern float s32_to_float(int) __asm__("FUN_001fa6c0");
+extern int hero_set_state(int, int) __asm__("FUN_L00_002223f8");
+/* Retail retains this global base and loads the four-block source at +0x184. */
+extern struct { char pad0[0x184]; char *source; } D_L10_00167100;
+extern VendorView_5f18 D_L10_0016CEC0;
+
+void FUN_L10_002f5b58(struct UpdateCam *cam) {
+    char *rec = *(char **)(D_L10_0015EF50 + cam->descriptor_index * 32 + 0x1C);
+    VendorCamRun_5f18 *run;
+    VendorCamStops_5f18 *stops;
+    f32 *fov;
+    Vec4f *m1, *m2, *pos;
+    char *saved;
+
+    rec[0x38] = 1;
+    run = (VendorCamRun_5f18 *)((char *)cam->saved_state + 0x40);
+    run->seg = 0;
+    run->t = 0.0f;
+    run->path_length = 0.0f;
+    run->look_path_length = 0.0f;
+    run->dist = 0.0f;
+    run->started = 0;
+    run->timer = scale_game_frames(*(s16 *)(rec + 0x3A));
+    stops = (VendorCamStops_5f18 *)((char *)cam->saved_state + 0x58);
+    fov = stops->fov;
+    {
+        int k;
+        for (k = 0; k < 8; k++) {
+            stops->fov[k] = 0.0f;
+            stops->seg[k] = -1;
+        }
+    }
+    pos = &cam->pos;
+    m1 = (Vec4f *)&cam->m1;
+    m2 = (Vec4f *)&cam->m2;
+    stops->fov_end = angle_atan2(1.0f, D_L10_0016CEC0.tan_half_fov) * 2.0f;
+    if (*(int *)(rec + 0x20) >= 0) {
+        char *path = D_L10_001B0930_5a78[*(int *)(rec + 0x20)];
+        int i = 0;
+        if (i < *(int *)path) {
+            f32 *stop_fov = fov;
+            s16 *stop_seg = stops->seg;
+            int next;
+            do {
+                int offset = i * 16;
+                f32 angle = *(f32 *)(path + offset + 0x1C);
+                f32 length;
+                if (angle > 0.0f) {
+                    *stop_fov = angle;
+                    if (angle > 180.0f)
+                        *stop_fov = stops->fov_end * 57.295776f;
+                    *stop_seg = i;
+                    stop_fov++;
+                    stop_seg++;
+                }
+                next = i + 1;
+                length = distance_xyz(&((Vec4f *)(path + 0x10))[i], &((Vec4f *)(path + 0x10))[next % *(int *)path]);
+                {
+                    char *point = path + i * 16;
+                    *(f32 *)(point + 0x1C) = length;
+                }
+                if (i < *(int *)path - 1)
+                    run->path_length += length;
+                i = next;
+            } while (i < *(int *)path);
+        }
+    }
+    {
+        s16 frames = *(s16 *)(rec + 0x3A);
+        if (frames > 0)
+            *(f32 *)(rec + 0x3C) = run->path_length / s32_to_float(scale_game_frames(frames)) * 60.0f;
+    }
+    if (*(int *)(rec + 0x24) >= 0) {
+        char *path = D_L10_001B0930_5a78[*(int *)(rec + 0x24)];
+        int i;
+        for (i = 0; i < *(int *)path; i++) {
+            int offset = i * 16;
+            f32 length = distance_xyz(path + (offset + 0x10), path + ((i + 1) % *(int *)path * 16 + 0x10));
+            *(f32 *)(path + offset + 0x1C) = length;
+            if (i < *(int *)path - 1)
+                run->look_path_length += length;
+        }
+    }
+    saved = (char *)cam->saved_state;
+    *(f32 *)(saved + 0x00) = 0.03f;
+    *(f32 *)(saved + 0x04) = 0.2f;
+    clear_u64_value(saved + 0x10);
+    saved = (char *)cam->saved_state;
+    *(f32 *)(saved + 0x20) = 0.03f;
+    *(f32 *)(saved + 0x24) = 0.2f;
+    clear_u64_value(saved + 0x30);
+    {
+        char *source = D_L10_00167100.source;
+        qcopy(pos, source + 0x30);
+        qcopy(cam, source);
+        qcopy(m1, source + 0x10);
+        qcopy(m2, source + 0x20);
+    }
+    if (*(int *)(rec + 0x4C) == 0)
+        hero_set_state(0x72, 1);
+}
+#include "rnc/overlay/level_globals.h"
+#include "rnc/globals.h"
+#include "rnc/gameplay/entities/moby.h"
+#include "qcopy.h"
+#include "rnc/gameplay/camera/update_cam.h"
 
 extern char *D_L10_0015EF50;
 extern char *D_L10_001B0930_5f18[] __asm__("D_L10_001B0930");
@@ -514,7 +479,7 @@ void FUN_L10_002f5f18(struct UpdateCam *cam) {
             run->started = 3;
             D_L10_0015F3FC = 1.0f;
             ang = stops->fov_end * 0.5f;
-            D_L10_0016CEC0.fB0 = fast_sin_5f18(ang) / fast_cos_5f18(ang);
+            D_L10_0016CEC0.tan_half_fov = fast_sin_5f18(ang) / fast_cos_5f18(ang);
             update_view_context_5f18();
             *(u8 *)(rec + 0x39) = 1;
             D_L10_00167358 = 0.05f;
@@ -563,7 +528,7 @@ void FUN_L10_002f5f18(struct UpdateCam *cam) {
             for (after = run->seg; after < stops->seg[i + 1]; after++)
                 total += *(float *)(path + (after * 16 + 0x1C));
             ang = cosine_interpolate_5f18(stops->fov[i], stops->fov[i + 1], sum / total) * 0.017453292f * 0.5f;
-            D_L10_0016CEC0.fB0 = fast_sin_5f18(ang) / fast_cos_5f18(ang);
+            D_L10_0016CEC0.tan_half_fov = fast_sin_5f18(ang) / fast_cos_5f18(ang);
             update_view_context_5f18();
         }
     }
@@ -582,7 +547,7 @@ void FUN_L10_002f5f18(struct UpdateCam *cam) {
         char *look = D_L10_001B0930_5f18[*(int *)(rec + 0x24)];
         look_seg = 0;
         look_t = 0.0f;
-        path_step_5f18(look, point, &look_seg, &look_t, 0, run->dist / run->len_a * run->len_b);
+        path_step_5f18(look, point, &look_seg, &look_t, 0, run->dist / run->path_length * run->look_path_length);
         debug_point_5f18(point, 0.2f);
         debug_line_5f18(look + 0x10, look + *(int *)look * 16);
         subtract_vector_xyz_5f18(offset, point, &cam->pos);

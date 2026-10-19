@@ -192,7 +192,7 @@ extern void pause_all_sounds(s32) __asm__("FUN_00218d78");
 extern void sound_update(void) __asm__("func_0022CA50");
 extern void enqueue_voice_request(void) __asm__("func_0022DC50");
 extern void update_level_gameplay_frame(void) __asm__("func_0022EAA8");
-extern void func_0022F5B0(ResidentRenderObject *, f32);
+extern void emit_six_spark_effects(ResidentRenderObject *, f32) __asm__("func_0022F5B0");
 extern void draw_light_flare() __asm__("func_0022DF40");
 extern void build_resident_indexed_texture_warp_meshes() __asm__("func_0022E420");
 extern void render_environment_mapped_object() __asm__("func_002327A0");
@@ -202,8 +202,10 @@ void update_resident_gameplay_state(void) __asm__("FUN_0022f778");
 extern f32 frame_time_sq_gp __asm__("D_0015ED70") __attribute__((sda));
 void update_resident_gameplay_state(void) {
     enum {
+        LEVEL_RENDER_STATE_PLAYBACK_TO_MENU = 0,
         LEVEL_RENDER_STATE_SCRIPTED_CAMERA_AND_PATH = 3,
-        LEVEL_RENDER_STATE_GAMEPLAY = 4
+        LEVEL_RENDER_STATE_GAMEPLAY = 4,
+        LEVEL_RENDER_STATE_PLAYBACK_WITH_MUSIC_RESUME = 8
     };
     Vector4 scratch_vectors[4];
     s32 keyframe_flags;
@@ -231,8 +233,8 @@ void update_resident_gameplay_state(void) {
 
     level_render_state.timer++;
     switch (level_render_state.state) {
-    case 0:
-    case 8:
+    case LEVEL_RENDER_STATE_PLAYBACK_TO_MENU:
+    case LEVEL_RENDER_STATE_PLAYBACK_WITH_MUSIC_RESUME:
         noop_callback_i();
         update_visible_resident_objects();
         enqueue_voice_request();
@@ -482,8 +484,8 @@ void update_resident_gameplay_state(void) {
                 } else if (render_sequence.time < scale_ticks(0xF0)) {
                     s32 color_intensity;
                     if (render_sequence.time < scale_ticks(0xC8)) {
-                        func_0022F5B0(object, frame_time * -4.0f);
-                        func_0022F5B0(object, frame_time * -3.0f);
+                        emit_six_spark_effects(object, frame_time * -4.0f);
+                        emit_six_spark_effects(object, frame_time * -3.0f);
                     }
                     color_intensity = (s32)(fast_cos(convert_integer_to_float(
                                                          (render_sequence.time & 0x3F) - 32) *
@@ -690,7 +692,7 @@ void update_resident_gameplay_state(void) {
                     }
                 }
                 if (blend < 1.0f) {
-                    func_0022F5B0(level_render_state.player, frame_time * -3.75f);
+                    emit_six_spark_effects(level_render_state.player, frame_time * -3.75f);
                 }
             } else {
                 ScriptedPath *active_path;

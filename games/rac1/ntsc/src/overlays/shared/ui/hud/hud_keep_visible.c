@@ -405,193 +405,216 @@ void FUN_L00_00236458(HudElem *e) {
     }
 }
 
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_002365a8.s", FUN_L00_002365a8);
-#else
+/* Ported from rac1-decomp (src/overlays/shared/hud_00235960.c: func_L00_00236F38). */
+
 extern int D_L00_0015F760 __attribute__((sda));
 extern int D_L00_0015F764 __attribute__((sda));
 extern float D_L00_0015F768 __attribute__((sda));
 extern float D_L00_0015F76C __attribute__((sda));
-extern void FUN_L00_0023caa8(int, int, int, int, unsigned long, int) __asm__("FUN_00200e08");
-extern int FUN_001fef20(int) __asm__("FUN_001f96f8");
-extern float FUN_001fef10(float) __asm__("FUN_001f96b0");
+extern void append_screen_rect_packet(s32, s32, s32, s32, u64, s32) __asm__("FUN_00200e08");
+extern float scale_game_seconds(float) __asm__("FUN_001f96b0");
 extern void FUN_L00_00216de8(int, int);
-extern void *FUN_0023b208(int, int) __asm__("FUN_001ff960");
-extern void FUN_L00_0023bac0(void *, int, int, int, int, int);
-extern void FUN_L00_0023bd20(void *, int, int, int, int, int) __asm__("FUN_00200080");
+extern s32 get_icon_frame(s32, s32) __asm__("FUN_001ff960");
+extern void FUN_L00_0023bac0(int, int, int, int, int, int);
 extern void FUN_L00_001ff348(void *, void *, void *);
-extern void FUN_001ff260(void *) __asm__("FUN_001f99f8");
-extern void FUN_001ff2a8(void *, void *, void *) __asm__("FUN_001f9a28");
-extern void FUN_001ff278(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void fast_vec_add(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void fast_vec_sub(void *, void *, void *) __asm__("FUN_001f9a28");
+extern void clear_u64_value(void *) __asm__("FUN_001f99f8");
+extern void draw_hud_sprite_subpixel(s32, s32, s32, s32, s32, s32) __asm__("FUN_00200080");
 
-typedef struct { float x, y, z, w; } HudStarVec;
+int FUN_L00_002365a8(HudElem *element) {
+    int x, y, i, previous, current, frames, image, star_width;
+    float origin[4], direction[4], first_step[4], second_step[4], third_step[4], star_position[4];
+    float seconds, sixteen, offset, thirty_two;
 
-int FUN_L00_002365a8(HudElem *e) {
-    int x = e->unk50, y = e->unk54;
-    int w, h, left, top, right, bottom, xbase, ybase;
-    int previous, current, period, threshold;
-    int size, i, star_width;
-    float fade, half_w, half_h, offset;
-    HudStarVec origin, direction, first_step, second_step, third_step, star_position;
-    void *image;
+    {
+        int width = D_L00_0015F760;
+        x = element->unk50;
+        y = element->unk54;
+        element->w = width;
+        element->h = D_L00_0015F764;
+    }
+    hud_screen_position(element, &x, &y);
+    FUN_L00_00235ad8(element, &x, &y, element->unk6C, 0);
 
-    e->w = D_L00_0015F760;
-    e->h = D_L00_0015F764;
-    hud_screen_position(e, &x, &y);
-    FUN_L00_00235ad8(e, &x, &y, e->unk6C, 0);
-    w = D_L00_0015F760;
-    h = D_L00_0015F764;
-    xbase = (x + e->unk48) << 4;
-    ybase = (y + e->unk4A) << 4;
-    left = xbase + (w * 0xd0) / 64;
-    top = ybase + (h * 0xa0) / 256;
-    right = left + (w * 0x260) / 64;
-    bottom = top + (h * 0xea0) / 256;
-    FUN_L00_0023caa8(left, top, right, bottom, 0x80684c2fUL, 1);
+    {
+        int left_inset = D_L00_0015F760 * 0xD0;
+        int top_inset = D_L00_0015F764 * 0xA0;
+        int bar_width = D_L00_0015F760 * 0x260;
+        int bottom = D_L00_0015F764 * 0xEA0;
+        int left = (x + element->unk48) << 4;
+        int top = (y + element->unk4A) << 4;
+        int right;
+        left += left_inset / 64;
+        top += top_inset / 256;
+        right = left + bar_width / 64;
+        bottom = top + bottom / 256;
+        append_screen_rect_packet(left, top, right, bottom, 0x80684C2F, 1);
+    }
 
-    if (e->unk74 * 3 < 10001) {
-        size = FUN_001fef20(1);
-        half_w = FUN_001fef10(0.75f);
-        previous = (D_L00_0015F3F8 - 1) % (int)((float)size * 60.0f) <
-                   (int)(half_w * 60.0f);
+    if (element->unk74 * 3 < 10001) {
+        frames = scale_game_frames(1);
+        seconds = scale_game_seconds(0.75f);
+        previous = (D_L00_0015F3F8 - 1) % (int)((float)frames * 60.0f) < (int)(seconds * 60.0f);
     } else {
         previous = 0;
     }
-    if (e->unk74 * 3 < 10001) {
-        size = FUN_001fef20(1);
-        half_w = FUN_001fef10(0.75f);
-        current = D_L00_0015F3F8 % (int)((float)size * 60.0f) <
-                  (int)(half_w * 60.0f);
+    if (element->unk74 * 3 < 10001) {
+        frames = scale_game_frames(1);
+        seconds = scale_game_seconds(0.75f);
+        current = D_L00_0015F3F8 % (int)((float)frames * 60.0f) < (int)(seconds * 60.0f);
     } else {
         current = 0;
     }
-    if (!previous && current == 1) FUN_L00_00216de8(11, 0);
-    image = FUN_0023b208(*(int *)e, current);
-    FUN_L00_0023bac0(image, x + e->unk48, y + e->unk4A,
-                       D_L00_0015F760, D_L00_0015F764, 0x80);
-
-    origin.z = 1.0f;
-    origin.w = 1.0f;
-    half_h = (float)D_L00_0015F764 * D_L00_0015F76C * 0.5f;
-    offset = (float)(10000 - e->unk74) / 10000.0f;
-    half_w = (float)D_L00_0015F760 * D_L00_0015F768 * 0.5f;
-    origin.x = half_w / 17.0f;
-    origin.y = -half_h / 116.0f;
-    direction.z = 0.0f;
-    direction.w = 0.0f;
-    direction.y = half_h + (float)(e->unk4A + y);
-    direction.x = half_w + (float)(x + e->unk48);
-    direction.x += (1.0f - D_L00_0015F768) * 0.5f * (float)D_L00_0015F760;
-    direction.y += (1.0f - D_L00_0015F76C) * 0.5f * (float)D_L00_0015F764;
-    direction.x *= 16.0f;
-    direction.y *= 16.0f;
-    origin.x *= 16.0f;
-    origin.y *= 16.0f;
-    offset = 116.0f - (offset + offset) * 116.0f;
-    image = FUN_0023b208(*(int *)e, 2);
-    FUN_001ff260(&first_step);
-    FUN_001ff260(&second_step);
-    FUN_001ff260(&third_step);
-    first_step.y = first_step.x = star_init_limit0_gp * 16.0f;
-    second_step.y = second_step.x = (star_init_limit1_gp - star_init_limit0_gp) * 16.0f;
-    third_step.y = third_step.x = (star_init_limit2_gp - star_init_limit1_gp) * 16.0f;
+    if (!previous && current == 1) {
+        FUN_L00_00216de8(0xB, 0);
+    }
     star_width = 0;
+    image = get_icon_frame(*(int *)element, current);
+    sixteen = 16.0f;
+    thirty_two = 32.0f;
+    FUN_L00_0023bac0(image, x + element->unk48, y + element->unk4A, D_L00_0015F760, D_L00_0015F764, 0x80);
+
+    {
+        float center_x, center_y, half_w, half_h;
+        half_w = (D_L00_0015F760 * D_L00_0015F768 * 0.5f) / 17.0f;
+        half_h = -(D_L00_0015F764 * D_L00_0015F76C * 0.5f) / 116.0f;
+        origin[2] = 1.0f;
+        origin[3] = 1.0f;
+        center_x = D_L00_0015F760 * D_L00_0015F768 * 0.5f + (x + element->unk48);
+        center_y = D_L00_0015F764 * D_L00_0015F76C * 0.5f + (y + element->unk4A);
+        direction[0] = (center_x + (1.0f - D_L00_0015F768) * 0.5f * D_L00_0015F760) * sixteen;
+        direction[1] = (center_y + (1.0f - D_L00_0015F76C) * 0.5f * D_L00_0015F764) * sixteen;
+        direction[2] = 0.0f;
+        direction[3] = 0.0f;
+        origin[0] = half_w * sixteen;
+        origin[1] = half_h * sixteen;
+    }
+    offset = (float)(10000 - element->unk74) / 10000.0f;
+    offset = 116.0f - (offset + offset) * 116.0f;
+    image = get_icon_frame(*(int *)element, 2);
+
+    clear_u64_value(first_step);
+    clear_u64_value(second_step);
+    clear_u64_value(third_step);
+    {
+        float limit0 = star_init_limit0_gp;
+        float limit1 = star_init_limit1_gp;
+        float limit2 = star_init_limit2_gp;
+        float first = limit0 * sixteen;
+        limit0 = limit1 - limit0;
+        limit2 = limit2 - limit1;
+        first_step[0] = first;
+        first_step[1] = first;
+        limit0 = limit0 * sixteen;
+        second_step[0] = limit0;
+        second_step[1] = limit0;
+        limit2 = limit2 * sixteen;
+        third_step[0] = limit2;
+        third_step[1] = limit2;
+    }
+
     for (i = 0; i < 100; i++) {
         if (i == 0) {
-            FUN_001ff2a8(&direction, &direction, &first_step);
-            offset += star_init_limit0_gp;
-            star_width = (int)(star_init_limit0_gp * 32.0f);
+            float limit;
+            fast_vec_sub(direction, direction, first_step);
+            limit = star_init_limit0_gp;
+            star_width = (int)(limit * thirty_two);
+            offset = offset + limit;
         } else if (i == 10) {
-            FUN_001ff2a8(&direction, &direction, &second_step);
-            star_width = (int)(star_init_limit1_gp * 32.0f);
-            offset += star_init_limit1_gp - star_init_limit0_gp;
+            float limit, previous_limit, width;
+            fast_vec_sub(direction, direction, second_step);
+            limit = star_init_limit1_gp;
+            previous_limit = star_init_limit0_gp;
+            width = limit * thirty_two;
+            limit = limit - previous_limit;
+            star_width = (int)width;
+            offset = offset + limit;
         } else if (i == 30) {
-            FUN_001ff2a8(&direction, &direction, &third_step);
-            star_width = (int)(star_init_limit2_gp * 32.0f);
-            offset += star_init_limit2_gp - star_init_limit1_gp;
+            float limit, previous_limit, width;
+            fast_vec_sub(direction, direction, third_step);
+            limit = star_init_limit2_gp;
+            previous_limit = star_init_limit1_gp;
+            width = limit * thirty_two;
+            limit = limit - previous_limit;
+            star_width = (int)width;
+            offset = offset + limit;
         }
-        if (!(offset < D_L00_0017E660[i].y)) {
-            FUN_L00_001ff348(&star_position, &D_L00_0017E660[i], &origin);
-            FUN_001ff278(&star_position, &star_position, &direction);
-            FUN_L00_0023bd20(image, (int)star_position.x, (int)star_position.y,
-                              star_width, star_width, 0x80);
-        }
+        if (offset < D_L00_0017E660[i].y) continue;
+        FUN_L00_001ff348(star_position, &D_L00_0017E660[i], origin);
+        fast_vec_add(star_position, star_position, direction);
+        draw_hud_sprite_subpixel(image, (int)star_position[0], (int)star_position[1], star_width, star_width, 0x80);
     }
-    return e->w;
+    return element->w;
 }
-#endif
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_00236e50.s", FUN_L00_00236e50);
-#else
+/* Ported from rac1-decomp (src/overlays/shared/hud_00235960.c: func_L00_002377E0), where it is exact; names translated to the US level program. */
+
+
 extern int D_L00_0015F760 __attribute__((sda));
 extern int D_L00_0015F764 __attribute__((sda));
 extern float D_L00_0015F768 __attribute__((sda));
 extern float D_L00_0015F76C __attribute__((sda));
-extern void *FUN_0023b208(int, int) __asm__("FUN_001ff960");
-extern void FUN_L00_0023bac0(void *, int, int, int, int, int);
-extern void FUN_L00_0023bd20(void *, int, int, int, int, int) __asm__("FUN_00200080");
+extern s32 get_icon_frame(s32, s32) __asm__("func_001FF960");
+extern void FUN_L00_0023bac0(int, int, int, int, int, int);
 extern void FUN_L00_001ff348(void *, void *, void *);
-extern void FUN_001ff260(void *) __asm__("FUN_001f99f8");
-extern void FUN_001ff2a8(void *, void *, void *) __asm__("FUN_001f9a28");
-extern void FUN_001ff278(void *, void *, void *) __asm__("FUN_001f9a10");
-int FUN_L00_00236e50(HudElem *e) {
-    int x = e->unk50, y = e->unk54;
-    int i, star_width = 0;
-    float half_h, offset, half_w;
-    int xbase, ybase;
-    struct { float x, y, z, w; } origin, direction, first_step, second_step, third_step, star_position;
-    void *image;
+extern void fast_vec_add(void *, void *, void *) __asm__("FUN_001f9a10");
+extern void fast_vec_sub(void *, void *, void *) __asm__("FUN_001f9a28");
+extern void clear_u64_value(void *) __asm__("func_001F99F8");
+extern void draw_hud_sprite_subpixel(s32, s32, s32, s32, s32, s32) __asm__("func_00200080");
 
+int FUN_L00_00236e50(HudElem *e) {
+    float origin[4], direction[4], first_step[4], second_step[4], third_step[4], star_position[4];
+    int x, y;
+    float offset;
+    s32 image;
+    int star_width, i;
+
+    x = e->unk50;
+    y = e->unk54;
     e->w = D_L00_0015F760;
     e->h = D_L00_0015F764;
     hud_screen_position(e, &x, &y);
     FUN_L00_00235ad8(e, &x, &y, e->unk6C, 0);
-    image = FUN_0023b208(*(int *)e, 0);
-    FUN_L00_0023bac0(image, x + e->unk48, y + e->unk4A,
-                       D_L00_0015F760, D_L00_0015F764, 0x80);
-    origin.z = 1.0f;
-    origin.w = 1.0f;
-    half_h = (float)D_L00_0015F764 * D_L00_0015F76C * 0.5f;
-    offset = (float)(10000 - e->unk74) / 10000.0f;
-    half_w = (float)D_L00_0015F760 * D_L00_0015F768 * 0.5f;
-    xbase = x + e->unk48;
-    ybase = y + e->unk4A;
-    origin.x = half_w / 17.0f;
-    origin.y = -half_h / 116.0f;
-    direction.z = 0.0f;
-    direction.w = 0.0f;
-    direction.y = half_h + (float)ybase;
-    direction.x = half_w + (float)xbase;
-    direction.x += (1.0f - D_L00_0015F768) * 0.5f * (float)D_L00_0015F760;
-    direction.y += (1.0f - D_L00_0015F76C) * 0.5f * (float)D_L00_0015F764;
-    direction.x *= 16.0f;
-    direction.y *= 16.0f;
-    origin.x *= 16.0f;
-    origin.y *= 16.0f;
+    image = get_icon_frame(*(int *)e, 0);
+    FUN_L00_0023bac0(image, x + e->unk48, y + e->unk4A, D_L00_0015F760, D_L00_0015F764, 0x80);
+    {
+        float center_x, center_y, half_w, half_h;
+        half_w = (D_L00_0015F760 * D_L00_0015F768 * 0.5f) / 17.0f;
+        half_h = -(D_L00_0015F764 * D_L00_0015F76C * 0.5f) / 116.0f;
+        origin[2] = 1.0f;
+        origin[3] = 1.0f;
+        center_x = D_L00_0015F760 * D_L00_0015F768 * 0.5f + (x + e->unk48);
+        center_y = D_L00_0015F764 * D_L00_0015F76C * 0.5f + (y + e->unk4A);
+        direction[0] = (center_x + (1.0f - D_L00_0015F768) * 0.5f * D_L00_0015F760) * 16.0f;
+        direction[1] = (center_y + (1.0f - D_L00_0015F76C) * 0.5f * D_L00_0015F764) * 16.0f;
+        direction[2] = 0.0f;
+        direction[3] = 0.0f;
+        origin[0] = half_w * 16.0f;
+        origin[1] = half_h * 16.0f;
+    }
+    offset = (10000 - e->unk74) / 10000.0f;
     offset = 116.0f - (offset + offset) * 116.0f;
-    image = FUN_0023b208(*(int *)e, 1);
-    FUN_001ff260(&first_step);
-    FUN_001ff260(&second_step);
-    FUN_001ff260(&third_step);
-    first_step.y = first_step.x = star_init_limit0_gp * 16.0f;
-    second_step.y = second_step.x = (star_init_limit1_gp - star_init_limit0_gp) * 16.0f;
-    third_step.y = third_step.x = (star_init_limit2_gp - star_init_limit1_gp) * 16.0f;
+    image = get_icon_frame(*(int *)e, 1);
+    clear_u64_value(first_step);
+    clear_u64_value(second_step);
+    clear_u64_value(third_step);
+    first_step[1] = first_step[0] = star_init_limit0_gp * 16.0f;
+    second_step[1] = second_step[0] = (star_init_limit1_gp - star_init_limit0_gp) * 16.0f;
+    third_step[1] = third_step[0] = (star_init_limit2_gp - star_init_limit1_gp) * 16.0f;
+    star_width = 0;
     for (i = 0; i < 100; i++) {
         if (i == 0) {
-            FUN_001ff2a8(&direction, &direction, &first_step);
-            offset += star_init_limit0_gp;
+            fast_vec_sub(direction, direction, first_step);
             star_width = (int)(star_init_limit0_gp * 32.0f);
+            offset += star_init_limit0_gp;
         }
-        if (!(offset < D_L00_0017E660[i].y)) {
-            FUN_L00_001ff348(&star_position, &D_L00_0017E660[i], &origin);
-            FUN_001ff278(&star_position, &star_position, &direction);
-            FUN_L00_0023bd20(image, (int)star_position.x, (int)star_position.y,
-                              star_width, star_width, 0x80);
-        }
+        if (offset < D_L00_0017E660[i].y) continue;
+        FUN_L00_001ff348(star_position, &D_L00_0017E660[i], origin);
+        fast_vec_add(star_position, star_position, direction);
+        draw_hud_sprite_subpixel(image, (int)star_position[0], (int)star_position[1], star_width, star_width, 0x80);
     }
     return e->w;
 }
-#endif
 void FUN_L00_00235ea0();
 /* Calls FUN_L00_00235ea0. */
 void mine_blend_color(void) __asm__("FUN_L00_002371e0");
@@ -628,7 +651,7 @@ extern void FUN_0023cf80(int, int, int, char *) __asm__("FUN_00201200");
 typedef struct { float x, y, z, w; } __attribute__((aligned(16))) HudPoint_237200;
 int FUN_L00_00237200(HudElem *e) {
     int y, i, width, left, other_width, other_left;
-    int alpha, color, level, elapsed, extra, interval, minute_scale, remainder, seconds;
+    unsigned int alpha, color, level, elapsed, extra, interval, minute_scale, remainder, seconds;
     float fade;
     HudPoint_237200 points[2];
     HudPoint_237200 point;

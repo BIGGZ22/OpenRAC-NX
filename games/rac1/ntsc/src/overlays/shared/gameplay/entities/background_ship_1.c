@@ -120,6 +120,11 @@ extern int func_0022ED80_r(int, int, int) __asm__("FUN_0022da68");
 
 void background_ship_1_update(char *moby) __asm__("FUN_L02_002ec4b8");
 void background_ship_1_update(char *moby) {
+    enum {
+        BACKGROUND_SHIP_1_INITIALIZE = 0,
+        BACKGROUND_SHIP_1_FOLLOW_PATH = 1,
+        BACKGROUND_SHIP_1_REMOVE = 2
+    };
     char *d;
     char *t;
     int r;
@@ -135,7 +140,7 @@ void background_ship_1_update(char *moby) {
     t = D_L02_001B0AB0[*(int *)(d + 0x60)];
     r = (int)find_moby_hit(moby, 0x10000, 0);
     switch (*(unsigned char *)(moby + 0x20)) {
-    case 0: {
+    case BACKGROUND_SHIP_1_INITIALIZE: {
         int m1;
         *(unsigned char *)(moby + 0x30) = 0xFF;
         *(short *)(moby + 0x32) = 0xFF;
@@ -162,7 +167,7 @@ void background_ship_1_update(char *moby) {
         *(float *)(d + 0x64) = *(float *)(d + 0x74) * (float)*(int *)t;
         break;
     }
-    case 1:
+    case BACKGROUND_SHIP_1_FOLLOW_PATH:
         qcopy(tv, moby + 0x10);
         if (voice_is_playing(moby, *(int *)(d + 0x6C)) == 0) {
             *(int *)(d + 0x6C) = func_0022ED80_r(1, 4, (int)moby);
@@ -194,7 +199,7 @@ void background_ship_1_update(char *moby) {
             *(unsigned char *)(moby + 0x20) = 2;
         }
         break;
-    case 2:
+    case BACKGROUND_SHIP_1_REMOVE:
         if (current_level_index == 2) {
             D_0015EDF4 = D_0015EDF4 + 1;
             if (D_0015EDF4 >= 3) {
@@ -370,6 +375,11 @@ extern char D_001413F4[];
 
 void background_ship_2_update(char *moby) __asm__("FUN_L02_002ece18");
 void background_ship_2_update(char *moby) {
+    enum {
+        BACKGROUND_SHIP_2_INITIALIZE = 0,
+        BACKGROUND_SHIP_2_FOLLOW_PATH = 1,
+        BACKGROUND_SHIP_2_REMOVE = 2
+    };
     char *d;
     char *t;
     int r;
@@ -385,7 +395,7 @@ void background_ship_2_update(char *moby) {
     t = D_L02_001B0AB0[*(int *)(d + 0x60)];
     r = (int)find_moby_hit(moby, 0x10000, 0);
     switch (*(unsigned char *)(moby + 0x20)) {
-    case 0: {
+    case BACKGROUND_SHIP_2_INITIALIZE: {
         int m1;
         *(unsigned char *)(moby + 0x30) = 0xFF;
         *(short *)(moby + 0x32) = 0xFF;
@@ -415,7 +425,7 @@ void background_ship_2_update(char *moby) {
         *(float *)(d + 0x64) = *(float *)(d + 0x74) * (float)*(int *)t;
         break;
     }
-    case 1:
+    case BACKGROUND_SHIP_2_FOLLOW_PATH:
         if (*(unsigned char *)D_001413F4 == 1 && current_level_index == 10) {
             delete_moby(moby);
             return;
@@ -458,7 +468,7 @@ void background_ship_2_update(char *moby) {
             *(unsigned char *)(moby + 0x20) = 2;
         }
         break;
-    case 2:
+    case BACKGROUND_SHIP_2_REMOVE:
         if (current_level_index == 2) {
             D_0015EDF4 = D_0015EDF4 + 1;
             if (D_0015EDF4 >= 3) {
@@ -624,19 +634,24 @@ void mark_moby_for_removal(struct Obj *obj) __asm__("FUN_0020c828");
 
 void white_flower_update(char *m) __asm__("FUN_L02_002f1f60");
 void white_flower_update(char *m) {
+    enum {
+        WHITE_FLOWER_INITIALIZE = 0,
+        WHITE_FLOWER_WAIT_FOR_HIT = 1,
+        WHITE_FLOWER_REMOVE = 2
+    };
     int hit = 0;
     char *r = find_moby_hit(m, 0x10000, 0);
     switch (*(unsigned char *)(m + 0x20)) {
-    case 0:
+    case WHITE_FLOWER_INITIALIZE:
         m[0x20] = 1;
         break;
-    case 1:
+    case WHITE_FLOWER_WAIT_FOR_HIT:
         if (r != 0 && *(float *)(r + 0x2C) > 0.0f)
             hit = 1;
         if (hit)
             m[0x20] = 2;
         break;
-    case 2:
+    case WHITE_FLOWER_REMOVE:
         allocate_voice_for_target_entry(0, 0, (int)m);
         FUN_L01_002787a0(m);
         FUN_L00_00263e30(m, 0x71D, 1, 0x71D, 1, 5, 2);
@@ -937,12 +952,11 @@ int FUN_L02_002fb788(char *moby, float a, float b) {
 #ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L02_002fb9c8.s", FUN_L02_002fb9c8);
 #else
-extern int D_L02_0015FFD8;
+extern int D_L02_0015FFD8 __attribute__((section(".data")));
 #include "rnc/input/pad_state.h"
 extern int D_L02_001ABE40[];
-extern char *D_L02_00167400;
 extern char *D_L02_0015EF50;
-extern char *D_0013F64C;
+extern struct Hero hero_lui __asm__("D_0013F350") __attribute__((section(".data")));
 extern char D_0013CA44[];
 extern void FUN_L00_002e8388(char *);
 extern int FUN_L00_002e83c0(char *);
@@ -970,9 +984,10 @@ int FUN_L02_002fb9c8(char *moby) {
     char *data = *(char **)(D_L02_0015EF50 + *(short *)(moby + 0x84) * 32 + 0x1c);
     char *target;
     unsigned short *group;
+    int id;
     int index;
     int duration;
-    int retry;
+    int count;
     int end;
     int frames;
     int active;
@@ -992,23 +1007,22 @@ int FUN_L02_002fb9c8(char *moby) {
     if (index >= 0) {
         group = (unsigned short *)D_L02_001ABE40[index];
         if (group == 0) goto invalid;
-        {
-            unsigned int entry = *group;
-            char *group_base = (char *)D_L02_0015FFD8;
-            target = group_base + ((entry & 0x7fff) << 8);
-            while (*(signed char *)(target + 0x20) < 0) {
+        id = *group;
+        target = (char *)(D_L02_0015FFD8 + ((id & 0x7fff) << 8));
+        if (*(signed char *)(target + 0x20) < 0) {
+            do {
+                if ((int)(*group << 16) < 0) goto invalid;
                 group++;
-                if ((int)(entry << 16) < 0) goto invalid;
-                entry = *group;
-                target = group_base + ((entry & 0x7fff) << 8);
-            }
+                id = *group;
+                target = (char *)(D_L02_0015FFD8 + ((id & 0x7fff) << 8));
+            } while (*(signed char *)(target + 0x20) < 0);
         }
     } else {
         target = (char *)(D_L02_0015FFD8 + (*(int *)(data + 0x28) << 8));
         if (*(signed char *)(target + 0x20) < 0) goto invalid;
     }
     *(char **)(data + 0x48) = target;
-    if (*(short *)(data + 0x3c) == 6 && D_0013F64C != target) {
+    if (*(short *)(data + 0x3c) == 6 && (char *)hero_lui.ground_moby != target) {
         *(short *)(data + 0x20) = 0;
         FUN_L00_002e8388(moby);
         return;
@@ -1023,7 +1037,7 @@ int FUN_L02_002fb9c8(char *moby) {
         return;
     }
     if (*(short *)(data + 0x3c) == 5) {
-        angle = fast_arc_tan(*(float *)D_L02_00167400, *(float *)(D_L02_00167400 + 4));
+        angle = fast_arc_tan(*(float *)D_L02_00167400_d, *(float *)(D_L02_00167400_d + 4));
         if (*(short *)(data + 0x20) < 2)
             *(float *)(data + 0x40) = *(float *)(D_L02_0015EF50 + *(short *)(moby + 0x84) * 32 + 0x18);
         else if (absolute_float(controller_state.analog[0]) >= 0.3f || absolute_float(controller_state.analog[1]) >= 0.3f)
@@ -1033,8 +1047,8 @@ int FUN_L02_002fb9c8(char *moby) {
             fast_add_rotations(heading, 3.1415927f);
     }
     if (*(short *)(data + 0x3c) == 4) {
-        angle = fast_arc_tan(*(float *)D_L02_00167400, *(float *)(D_L02_00167400 + 4));
         heading = *(float *)(D_L02_0015EF50 + *(short *)(moby + 0x84) * 32 + 0x18);
+        angle = fast_arc_tan(*(float *)D_L02_00167400_d, *(float *)(D_L02_00167400_d + 4));
         if (fast_difference_between_rotations(heading, angle) > 1.5707964f)
             heading = fast_add_rotations(heading, 3.1415927f);
         *(float *)(data + 0x40) = heading;
@@ -1044,16 +1058,16 @@ int FUN_L02_002fb9c8(char *moby) {
     *(short *)(data + 0x20) += 1;
     if (*(short *)(data + 0x3c) == 1) {
         duration = scale_game_frames(300);
-        retry = scale_game_frames(400);
+        count = scale_game_frames(400);
         end = scale_game_frames(560);
+        frames = scale_game_frames(200);
     } else {
         duration = scale_game_frames(300);
-        retry = scale_game_frames(350);
+        count = scale_game_frames(350);
         end = scale_game_frames(400);
+        frames = scale_game_frames(200);
     }
-    frames = scale_game_frames(200);
     if (*(short *)(data + 0x3c) == 7) {
-        int count;
         if (controller_state.analog[0] != 0.0f) *(short *)(data + 0x20) = duration;
         count = *(short *)(data + 0x20);
         if (count >= duration) {
@@ -1079,9 +1093,9 @@ int FUN_L02_002fb9c8(char *moby) {
         if (controller_state.analog[0] != 0.0f || controller_state.analog[1] != 0.0f)
             *(short *)(data + 0x20) = duration;
         if (*(short *)(data + 0x20) >= duration) {
-            int count = (unsigned short)*(short *)(data + 0x3e) + 1;
-            *(short *)(data + 0x3e) = count;
-            if ((short)count >= retry) {
+            int waited = (unsigned short)*(short *)(data + 0x3e) + 1;
+            *(short *)(data + 0x3e) = waited;
+            if ((short)waited >= count) {
                 if (FUN_L02_002fb788(moby, 30.0f, 0.0f) != 0)
                     *(short *)(data + 0x20) = end;
                 else
@@ -1113,9 +1127,12 @@ int FUN_L02_002fb9c8(char *moby) {
                 vec[2] = 0.0f;
                 FUN_L00_002e8918(amount, 0.0f, vec);
             } else if (*(short *)(data + 0x3c) == 3) {
+                float speed;
                 if (*(short *)(data + 0x20) < scale_game_frames(90))
-                    amount = (amount - 0.0f) * ((float)*(short *)(data + 0x20) / convert_integer_to_float(scale_game_frames(90))) + 0.0f;
-                FUN_L00_002e8970(amount, 0.0f, target + 0x10);
+                    speed = (amount - 0.0f) * ((float)*(short *)(data + 0x20) / convert_integer_to_float(scale_game_frames(90))) + 0.0f;
+                else
+                    speed = amount;
+                FUN_L00_002e8970(speed, 0.0f, target + 0x10);
             } else {
                 FUN_L00_002e8970(amount, 0.0f, target + 0x10);
             }

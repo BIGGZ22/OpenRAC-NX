@@ -129,6 +129,15 @@ extern int func_001F9908_r(int *) __asm__("FUN_001f9740");
 
 int r1_repeat_timer __asm__("D_L01_0015F678") = 0;
 void FUN_L01_00242930(void) {
+    enum {
+        HERO_STATE_LATERAL_MOVE_HOLD = 25,
+        HERO_STATE_LATERAL_MOVE_POSITIVE_YAW = 26,
+        HERO_STATE_LATERAL_MOVE_NEGATIVE_YAW = 27,
+        HERO_STATE_TARGET_POSE_APPROACH = 101,
+        HERO_STATE_TARGET_POSE_ANIMATION_WAIT = 102,
+        HERO_STATE_TARGET_POSE_HOLD = 103,
+        HERO_STATE_DEATH_PLANE_FALL = 119
+    };
     unsigned char *moby;
     int prevSub;
     int prevState;
@@ -209,7 +218,7 @@ void FUN_L01_00242930(void) {
                 hero_set_state(0x77, 1);
             } else {
                 switch (hero.state.current) {
-                case 0:
+                case HERO_STATE_IDLE:
                     if (controller_state.held & 5) {
                         hero_set_state(HERO_STATE_LOOK, 1);
                         break;
@@ -389,7 +398,7 @@ void FUN_L01_00242930(void) {
                         }
                     }
                     break;
-                case 0x40:
+                case HERO_STATE_FIDGET:
                     if (controller_state.held & 5) {
                         hero_set_state(HERO_STATE_LOOK, 1);
                         break;
@@ -416,7 +425,7 @@ void FUN_L01_00242930(void) {
                         hero_set_state(HERO_STATE_IDLE, 1);
                     }
                     break;
-                case 0x41:
+                case HERO_STATE_FIDGET_ALT:
                     if (scale_game_frames(8) < hero.state_timer) {
                         FUN_L00_00228fa8();
                         if (hero.air_frames.s != 0) {
@@ -438,7 +447,7 @@ void FUN_L01_00242930(void) {
                         hero_set_state(HERO_STATE_IDLE, 1);
                     }
                     break;
-                case 61:
+                case HERO_STATE_DYING:
                 case 71:
                 case 87:
                 case 98:
@@ -450,7 +459,7 @@ void FUN_L01_00242930(void) {
                         return;
                     }
                     break;
-                case 127:
+                case HERO_STATE_SINK:
                     if (hero.state_timer > scale_game_frames(0xDC)) {
                         hero_respawn();
                         return;
@@ -595,7 +604,7 @@ void FUN_L01_00242930(void) {
                         hero_set_state(0x37, 0);
                     }
                     break;
-                case 1:
+                case HERO_STATE_LOOK:
                     if (hero.vehicle_mode == 0) {
                         if (hero.unk20AA == 0 || hero.unk20A5 != 0) {
                             if (controller_state.held & 0xA) {
@@ -671,9 +680,9 @@ void FUN_L01_00242930(void) {
                         hero_set_state(HERO_STATE_IDLE, 1);
                     }
                 } break;
-                case 19:
-                case 20:
-                case 21:
+                case HERO_STATE_WRENCH_COMBO:
+                case HERO_STATE_WRENCH_SLAM:
+                case HERO_STATE_CROUCH_SWING:
                     if (hero.state.current == HERO_STATE_WRENCH_SLAM) {
                         int r = truncate_float_to_s32(
                             FUN_L00_00232b90(60.0f, frame_time_sq * 130.0f, -1.0f));
@@ -725,12 +734,12 @@ void FUN_L01_00242930(void) {
                     }
                     break;
                 case 33:
-                case 122:
+                case HERO_STATE_WALL_BONK:
                     if (hero.unkA98 & 2) {
                         hero_set_state(HERO_STATE_IDLE, 1);
                     }
                     break;
-                case 2:
+                case HERO_STATE_RUN:
                 case 47:
                 case 115:
                 case 126:
@@ -861,7 +870,7 @@ void FUN_L01_00242930(void) {
                         }
                     }
                     break;
-                case 101:
+                case HERO_STATE_TARGET_POSE_APPROACH:
                     if (vector_distance(hero.motion.pos.f, hero.unk1640.f) < 0.2f) {
                         if (frame_time * 2.7f > hero.motion.speed_xy) {
                             if (fast_difference_between_rotations(
@@ -877,12 +886,12 @@ void FUN_L01_00242930(void) {
                     }
                     FUN_L00_00228c18();
                     break;
-                case 102:
+                case HERO_STATE_TARGET_POSE_ANIMATION_WAIT:
                     if (hero.unkA98 & 2) {
                         hero_set_state(0x65, 1);
                     }
                     break;
-                case 103:
+                case HERO_STATE_TARGET_POSE_HOLD:
                     if ((hero.unkA98 & 2) || hero.unk1650 != 0) {
                         hero_set_state(HERO_STATE_IDLE, 1);
                     }
@@ -910,7 +919,7 @@ void FUN_L01_00242930(void) {
                     set_hero_animation(FUN_L01_00226f10(0), 0, scale_game_frames(0x11));
                     qcopy(hero.motion.unk150.f, hero.motion.platform_carry.f);
                     break;
-                case 3:
+                case HERO_STATE_STOP:
                     if (controller_state.held & 5) {
                         hero_set_state(HERO_STATE_LOOK, 1);
                         break;
@@ -950,7 +959,7 @@ void FUN_L01_00242930(void) {
                         hero_set_state(HERO_STATE_RUN, 1);
                     }
                     break;
-                case 4:
+                case HERO_STATE_CROUCH:
                     if (controller_state.held & 5) {
                         hero_set_state(HERO_STATE_LOOK, 1);
                         break;
@@ -1019,7 +1028,7 @@ void FUN_L01_00242930(void) {
                         hero_set_state(0x19, 0);
                     }
                     break;
-                case 25:
+                case HERO_STATE_LATERAL_MOVE_HOLD:
                     if ((hero.unkA98 & 2) && ((unsigned char *)hero.moby)[0x53] == 0x20) {
                         set_hero_animation(0x21, 0, scale_game_frames(6));
                     }
@@ -1072,8 +1081,8 @@ void FUN_L01_00242930(void) {
                         }
                     }
                     break;
-                case 26:
-                case 27: {
+                case HERO_STATE_LATERAL_MOVE_POSITIVE_YAW:
+                case HERO_STATE_LATERAL_MOVE_NEGATIVE_YAW: {
                     float ang;
 
                     qcopy(v0, hero.motion.pos.f);
@@ -1108,7 +1117,7 @@ void FUN_L01_00242930(void) {
                         hero_set_state(0x1C, 1);
                     }
                     break;
-                case 121:
+                case HERO_STATE_SLIP:
                     if (scale_game_frames(0x12C) < hero.state_timer) {
                         hero_respawn();
                     }
@@ -1121,7 +1130,7 @@ void FUN_L01_00242930(void) {
                     }
                     hero_set_state(HERO_STATE_IDLE, 1);
                     break;
-                case 6:
+                case HERO_STATE_FALL:
                 case 45:
                     if (hero.state.step == 0) {
                         if (!(scale_game_frames(0x12) > hero.state_timer) ||
@@ -1231,7 +1240,7 @@ void FUN_L01_00242930(void) {
                         hero_set_state(0x18, 1);
                     }
                     break;
-                case 119:
+                case HERO_STATE_DEATH_PLANE_FALL:
                     if ((current_level_index == 3 && 5.0f > hero.motion.pos.f[2]) ||
                         (current_level_index == 6 && 50.0f > hero.motion.pos.f[2]) ||
                         (current_level_index == 0x10 && (77.0f > hero.motion.pos.f[2] ||
@@ -1283,7 +1292,7 @@ void FUN_L01_00242930(void) {
                     set_hero_animation(FUN_L01_00226f10(0), 0, -2.0f);
                     FUN_L00_00233288(0.016f, 0.002f, 5, 2, 0, 1);
                     break;
-                case 8:
+                case HERO_STATE_LAND:
                     if (hero.unk1B4 != 0) {
                         if (scale_game_frames(9) > hero.state_timer) {
                             int hit = 0;
@@ -1369,15 +1378,15 @@ void FUN_L01_00242930(void) {
                     set_hero_animation(7, 0x17, scale_game_frames(9));
                     FUN_L00_00233288(0.016f, 0.002f, 5, 2, 0, 1);
                     break;
-                case 7:
-                case 9:
-                case 10:
-                case 11:
+                case HERO_STATE_JUMP:
+                case HERO_STATE_RUN_JUMP:
+                case HERO_STATE_PACK_JUMP:
+                case HERO_STATE_HIGH_JUMP:
                 case 12:
                 case 13:
                 case 14:
                 case 15:
-                case 16:
+                case HERO_STATE_PACK_LONG_JUMP:
                 case 17:
                 case 18:
                 case 28:
@@ -1693,7 +1702,7 @@ void FUN_L01_00242930(void) {
                         hero_set_state(0x18, 1);
                     }
                     break;
-                case 22:
+                case HERO_STATE_HURT:
                     if (12.5f < hero.anim_frame && hero.air_frames.s != 0 && hero.ground_distance > 1.0f) {
                         hero_set_state(HERO_STATE_FALL, 1);
                         break;

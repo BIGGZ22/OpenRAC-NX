@@ -430,564 +430,502 @@ void FUN_L00_001f4490(void) {
 #ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_001f4598.s", FUN_L00_001f4598);
 #else
+/* Ported from rac1-decomp (nonmatching/shared/func_L00_001F4918.c: func_L00_001F4918). */
 #include "types.h"
 #include "sda.h"
-#include "rnc/rendering/debug/debug_menu.h"
+#include "rnc/gameplay/state/game_globals.h"
+#include "rnc/gameplay/state/item_state.h"
+#include "rnc/rendering/fs_aa_buffer.h"
+#include "rnc/ui/vendor/vendor_item_info.h"
+
 typedef struct {
     s32 rows[6];
 } DebugRowCounts;
 extern DebugRowCounts D_L00_001E7920;
-extern u16 occl_cam_param0 __asm__("D_001518D0") NOT_SDA;
-extern u16 occl_cam_param1 __asm__("D_001518D2") NOT_SDA;
-extern s32 D_0015ED84 MACRO_ADDR;
-extern u8 D_L00_0015F444 MACRO_ADDR;
-extern u8 D_L00_0015F445 MACRO_ADDR;
-extern u8 D_L00_0015F446 MACRO_ADDR;
-extern f32 D_L00_0015F448 MACRO_ADDR;
-extern f32 D_L00_0015F44C MACRO_ADDR;
-extern f32 D_L00_0015F450 MACRO_ADDR;
-extern f32 D_L00_0015F454 MACRO_ADDR;
-extern s32 D_L00_0015F5C4 NOT_SDA;
-extern s32 D_L00_0015F600 MACRO_ADDR;
-extern s32 D_L00_0015F614 MACRO_ADDR;
-extern u8 mission_state_lui[] __asm__("D_L00_0015FC88") NOT_SDA;
-extern s32 D_L00_0015FFF0 MACRO_ADDR;
-extern s32 D_L00_0016017C NOT_SDA;
-extern float D_L00_001604A4_macro __asm__("D_L00_001604A4") MACRO_ADDR;
-extern float D_L00_00160F80_macro __asm__("D_L00_00160F80") MACRO_ADDR;
-extern float D_L00_00160FE0_macro __asm__("D_L00_00160FE0") MACRO_ADDR;
-extern u8 D_L00_0016CA40[] NOT_SDA;
-#define D_L00_0016CC40 (*(f32 *)(D_L00_0016CA40 + 0x200))
-#define D_L00_0016CC44 (*(f32 *)(D_L00_0016CA40 + 0x204))
-#define D_L00_0016CC48 (*(f32 *)(D_L00_0016CA40 + 0x208))
-#define D_L00_0016CC4C (*(f32 *)(D_L00_0016CA40 + 0x20C))
-#define D_L00_0016CC7C (*(s32 *)(D_L00_0016CA40 + 0x23C))
-#define D_L00_0016CC80 (*(s32 *)(D_L00_0016CA40 + 0x240))
-#define D_L00_0016CC84 (*(s32 *)(D_L00_0016CA40 + 0x244))
-extern f32 *D_L00_00173E20 NOT_SDA;
-extern u8 item_defs[] __asm__("D_L00_00179AC0") NOT_SDA;
-#define D_L00_00179AFE ((s16 *)(item_defs + 0x3E))
-#include "rnc/ui/vendor/vendor_item_info.h"
-#define D_L00_001C40BE ((u16 *)((u8 *)D_L00_001C40B0 + 0xE))
-extern s32 weapon_ammo_counts[] __asm__("D_0013D428");
-extern int D_0013E520[];
-#include "rnc/gameplay/state/game_globals.h"
-extern const char D_L00_0015EFE0[] __attribute__((sda));
-extern const char D_L00_0015EFF0[];
-extern const char D_L00_0015EFF8[];
-extern const char D_L00_001E7938[];
-extern const char D_L00_001E7958[];
-extern const char D_L00_001E7970[];
-extern const char D_L00_001E7990[];
-extern u8 D_L00_0015EFD0[] __attribute__((sda));
-extern void sound_update(void) __asm__("FUN_0022ca50");
+/* The screen half size and background color of the level's view context. */
+typedef struct {
+    u8 pad0[0x200];
+    f32 half_width;
+    f32 half_height;
+    f32 scr_x;
+    f32 scr_y;
+    u8 pad210[0x2C];
+    s32 background_color[3];
+} LevelViewContext;
+extern u8 D_L00_0016CA40[];
+#define level_view_context (*(LevelViewContext *)D_L00_0016CA40)
+typedef struct {
+    u8 pad0[0x3E];
+    union {
+        s16 value;
+        u8 low_byte;
+    } variant_limit;
+    u8 pad40[0xC];
+} ItemDef;
+extern ItemDef item_defs[] __asm__("D_L00_00179AC0");
+/* 13 item ids, declared as 8 bytes: the most gas reaches through $gp, as retail does. */
+extern u8 debug_menu_item_ids[8] __asm__("D_L00_0015EFD0") __attribute__((sda));
+/* Declared as 1 byte so the add_sample path forms its address through $gp, as retail does. */
+extern char level_file_path_format_gp[1] __asm__("D_L00_0015EFE0") __attribute__((sda));
+extern char level_file_path_format[] __asm__("D_L00_0015EFE0");
+extern char iso_version_suffix[] __asm__("D_L00_0015EFF0");
+extern char occlusion_samples_file_name[] __asm__("D_L00_0015EFF8");
+extern char level_directory_macro[] __asm__("D_L00_001E7938") MACRO_ADDR;
+extern char level_directory[] __asm__("D_L00_001E7938");
+extern char occlusion_deltas_file_name[] __asm__("D_L00_001E7958");
+extern char add_sample_format[] __asm__("D_L00_001E7970");
+extern char start_point_format[] __asm__("D_L00_001E7990");
+extern u8 mission_state[] __asm__("D_L00_0015FC88");
+extern s32 occlusion_sample_count __asm__("D_L00_0015F614");
+extern f32 *occlusion_samples __asm__("D_L00_00173E20") NOT_SDA;
+extern u8 D_L00_0015F444;
+extern f32 D_L00_0015F448;
+extern char *D_L00_0015F600;
+extern s32 sound_update(void) __asm__("FUN_0022ca50");
 extern void set_background_color(s32, s32, s32) __asm__("FUN_001fb280");
-extern void subtract_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a28");
 extern f32 vector_length_xy(void *) __asm__("FUN_001f9b20");
 extern f32 fast_arc_tan(f32, f32) __asm__("FUN_001f9e90");
-extern f32 fast_subtract_rotations(f32, f32) __asm__("FUN_001fa5c8");
 extern f32 convert_integer_to_float(s32) __asm__("FUN_001fa6c0");
-extern void update_fog(void) __asm__("FUN_001f2588");
 extern void update_view_context(void) __asm__("FUN_001f2d98");
-extern s32 FUN_00116248(char *, const char *, ...);
-extern f64 FUN_00120478(f32);
-extern s32 sceopen(const char *, s32) __asm__("FUN_0011bc80");
-extern s32 sce_lseek(s32, s32, s32) __asm__("FUN_0011c088");
-extern s32 scewrite(s32, const void *, s32) __asm__("FUN_0011c520");
-extern s32 sceRead(s32, void *, s32) __asm__("FUN_0011c2c0");
-extern s32 sceClose(s32) __asm__("FUN_0011bf08");
-extern s32 strlen(const char *) __asm__("FUN_001166cc");
-void FUN_L00_001f4598(void);
+extern void update_fog(void) __asm__("FUN_001f2588");
+extern s32 sprintf(char *, const char *, ...);
+extern f64 fptodp(f32) __asm__("FUN_00120478");
+extern s32 sceOpen(const char *, s32, ...);
+extern s32 sceLseek(s32, s32, s32);
+extern s32 sceWrite(s32, void *, s32);
+extern s32 sceRead(s32, void *, s32);
+extern s32 sceClose(s32);
+extern u32 strlen(const char *);
 
+/* Debug menu input: moves between the columns and rows and changes the selected toggle, mode, item
+   count or fog value; the last column records occlusion sample points to files. */
 void FUN_L00_001f4598(void) {
-    b32 enabled;
-    u32 new_count, current_count, maximum_count;
-    s32 index, row_count, text_length;
-    u32 *counter;
-    u8 *level;
-    f32 *capture_positions;
-    u8 *player_setting;
-    u8 byte_value;
-    f32 dimension, scale, angle;
-    s32 file, file_size;
     DebugRowCounts row_counts;
     union {
-        f32 difference[4];
-        char capture_path[16];
-    } capture __attribute__((aligned(16)));
-    char path_buffer[48];
-    char angle_buffer[16];
-    char position_buffer[48];
+        struct {
+            f32 hero_offset[4];
+            char path[64], line[32];
+        } sample;
+        struct {
+            char path[64], line[64];
+        } start_point;
+    } scratch;
+    s32 pressed;
     sound_update();
-    if ((D_0013C940.buttons.w.pressed & 0x500) != 0) {
+    pressed = D_0013C940.buttons.w.pressed;
+    if (pressed & 0x500) {
         D_L00_0015F5C4 = g_debug_menu.unknown_a4;
-        set_background_color(D_L00_0016CC7C, D_L00_0016CC80, D_L00_0016CC84);
-        g_debug_menu.unknown_94 = (int)D_L00_00166C80.camera.position[0] >> 2;
-        g_debug_menu.unknown_98 = (int)D_L00_00166C80.camera.position[1] >> 2;
-        g_debug_menu.unknown_9c = (int)D_L00_00166C80.camera.position[2] >> 2;
-        g_debug_menu.start_capture_status = 0x6e;
-        g_debug_menu.sample_capture_status = 0x6e;
+        set_background_color(level_view_context.background_color[0], level_view_context.background_color[1],
+                             level_view_context.background_color[2]);
+        g_debug_menu.start_capture_status = 110;
+        g_debug_menu.sample_capture_status = 110;
+        g_debug_menu.unknown_94 = (s32)D_L00_00166C80.camera.position[0] >> 2;
+        g_debug_menu.unknown_98 = (s32)D_L00_00166C80.camera.position[1] >> 2;
+        g_debug_menu.unknown_9c = (s32)D_L00_00166C80.camera.position[2] >> 2;
         return;
     }
     row_counts = D_L00_001E7920;
-    if ((D_0013C940.buttons.w.pressed & 0x2000) != 0) {
-        g_debug_menu.selected_column = g_debug_menu.selected_column + 1;
-        if (g_debug_menu.selected_column == 3) {
+    if (pressed & 0x2000) {
+        if (++g_debug_menu.selected_column == 3)
             g_debug_menu.selected_column = 0;
-        } else if (g_debug_menu.selected_column == 6) {
+        else if (g_debug_menu.selected_column == 6)
             g_debug_menu.selected_column = 3;
-        }
-    } else {
-        if ((D_0013C940.buttons.w.pressed & 0x8000) != 0) {
-            g_debug_menu.selected_column--;
-            if (g_debug_menu.selected_column < 0)
-                g_debug_menu.selected_column = 2;
-            else if (g_debug_menu.selected_column == 2)
-                g_debug_menu.selected_column = 5;
-        }
+    } else if (pressed & 0x8000) {
+        if (--g_debug_menu.selected_column < 0)
+            g_debug_menu.selected_column = 2;
+        else if (g_debug_menu.selected_column == 2)
+            g_debug_menu.selected_column = 5;
     }
-    if ((D_0013C940.buttons.w.pressed & 0x1000) != 0 &&
-        --g_debug_menu.selected_row < 0) {
-        if (2 < g_debug_menu.selected_column) {
+    if ((D_0013C940.buttons.w.pressed & 0x1000) && --g_debug_menu.selected_row < 0) {
+        if (g_debug_menu.selected_column >= 3)
             g_debug_menu.selected_column = (g_debug_menu.selected_column + 3) % 6;
-        }
         g_debug_menu.selected_row = row_counts.rows[g_debug_menu.selected_column] - 1;
-    } else {
-        if (((D_0013C940.buttons.w.pressed & 0x4000) != 0) &&
-            (g_debug_menu.selected_row = g_debug_menu.selected_row + 1,
-             row_counts.rows[g_debug_menu.selected_column] <= (int)g_debug_menu.selected_row)) {
-            if (g_debug_menu.selected_column < 3) {
+    } else if (D_0013C940.buttons.w.pressed & 0x4000) {
+        if (++g_debug_menu.selected_row >= row_counts.rows[g_debug_menu.selected_column]) {
+            if (g_debug_menu.selected_column < 3)
                 g_debug_menu.selected_column = (g_debug_menu.selected_column + 9) % 6;
-            }
             g_debug_menu.selected_row = 0;
         }
     }
-    row_count = row_counts.rows[g_debug_menu.selected_column];
-    if (row_count <= (int)g_debug_menu.selected_row) {
-        g_debug_menu.selected_row = row_count - 1;
-    }
+    if (g_debug_menu.selected_row >= row_counts.rows[g_debug_menu.selected_column])
+        g_debug_menu.selected_row = row_counts.rows[g_debug_menu.selected_column] - 1;
     switch (g_debug_menu.selected_column) {
     case 0:
-        if (((D_0013C940.buttons.w.pressed & 0x40) != 0) &&
-            (maximum_count = 1U << (g_debug_menu.selected_row & 0x1f),
-             g_debug_menu.update_flags = g_debug_menu.update_flags ^ maximum_count,
-             maximum_count == 0x10)) {
-            if ((g_debug_menu.update_flags & 0x10) == 0) {
-                g_debug_menu.update_flags = 0xf;
-            } else {
-                g_debug_menu.update_flags = 0x10;
+        if (D_0013C940.buttons.w.pressed & 0x40) {
+            s32 flag = 1 << g_debug_menu.selected_row;
+            g_debug_menu.update_flags ^= flag;
+            if (flag == 16) {
+                if (g_debug_menu.update_flags & 16)
+                    g_debug_menu.update_flags = flag;
+                else
+                    g_debug_menu.update_flags = 15;
             }
         }
         break;
     case 1:
         switch (g_debug_menu.selected_row) {
         case 0:
-            if ((D_0013C940.buttons.w.pressed & 0x50) != 0) {
-                if (((D_0013C940.buttons.w.pressed & 0x40) != 0) &&
-                    (g_debug_menu.control_mode = g_debug_menu.control_mode + 1,
-                     3 < g_debug_menu.control_mode)) {
-                    g_debug_menu.control_mode = 0;
+            if (D_0013C940.buttons.w.pressed & 0x50) {
+                if (D_0013C940.buttons.w.pressed & 0x40) {
+                    if (++g_debug_menu.control_mode >= 4)
+                        g_debug_menu.control_mode = 0;
                 }
-                if (((D_0013C940.buttons.w.pressed & 0x10) != 0) &&
-                    (g_debug_menu.control_mode = g_debug_menu.control_mode + -1,
-                     g_debug_menu.control_mode < 0)) {
-                    g_debug_menu.control_mode = 3;
+                if (D_0013C940.buttons.w.pressed & 0x10) {
+                    if (--g_debug_menu.control_mode < 0)
+                        g_debug_menu.control_mode = 3;
                 }
                 switch (g_debug_menu.control_mode) {
-                case 0: {
-                    g_debug_menu.update_flags = 0xf;
+                case 0:
+                    g_debug_menu.update_flags = 15;
                     break;
-                }
-                case 1: {
+                case 1:
                     g_debug_menu.update_flags = 0;
                     break;
-                }
-                case 2: {
+                case 2:
                     g_debug_menu.update_flags = 0;
-                    subtract_vector_xyz(capture.difference, hero.motion.pos.f, D_L00_00166C80.camera.position);
-                    g_debug_menu.target_distance = vector_length_xy(capture.difference);
-                    angle = fast_arc_tan(capture.difference[0], capture.difference[1]);
-                    g_debug_menu.target_angle =
-                        fast_subtract_rotations(angle, D_L00_00166C80.camera.angles[2]);
+                    subtract_vector_xyz(scratch.sample.hero_offset, &hero.motion.pos,
+                                        D_L00_00166C80.camera.position);
+                    g_debug_menu.target_distance = vector_length_xy(scratch.sample.hero_offset);
+                    g_debug_menu.target_angle = fast_subtract_rotations(
+                        fast_arc_tan(scratch.sample.hero_offset[0], scratch.sample.hero_offset[1]),
+                        D_L00_00166C80.camera.angles[2]);
                     g_debug_menu.target_height = hero.motion.pos.f[2] - D_L00_00166C80.camera.position[2];
                     g_debug_menu.target_yaw =
                         fast_subtract_rotations(hero.motion.rot.f[2], D_L00_00166C80.camera.angles[2]);
-                break;
-                }
-                case 3: {
+                    break;
+                case 3:
                     g_debug_menu.update_flags = 6;
                     break;
-                }
                 }
             }
             break;
         case 1:
-            if (((D_0013C940.buttons.w.pressed & 0x40) != 0) &&
-                (g_debug_menu.profiler_mode = g_debug_menu.profiler_mode + 1,
-                 7 < g_debug_menu.profiler_mode)) {
-                g_debug_menu.profiler_mode = 0;
+            if (D_0013C940.buttons.w.pressed & 0x40) {
+                if (++g_debug_menu.profiler_mode >= 8)
+                    g_debug_menu.profiler_mode = 0;
             }
-            if (((D_0013C940.buttons.w.pressed & 0x10) != 0) &&
-                (g_debug_menu.profiler_mode = g_debug_menu.profiler_mode + -1,
-                 g_debug_menu.profiler_mode < 0)) {
-                g_debug_menu.profiler_mode = 7;
+            if (D_0013C940.buttons.w.pressed & 0x10) {
+                if (--g_debug_menu.profiler_mode < 0)
+                    g_debug_menu.profiler_mode = 7;
             }
             break;
         case 2:
-            if (D_L00_0015F600 == 0) {
+            if (!D_L00_0015F600) {
                 g_debug_menu.occlusion_mode = 0;
-            } else {
-                if (((D_0013C940.buttons.w.pressed & 0x40) != 0) &&
-                    (g_debug_menu.occlusion_mode = g_debug_menu.occlusion_mode + 1,
-                     2 < g_debug_menu.occlusion_mode)) {
+                break;
+            }
+            if (D_0013C940.buttons.w.pressed & 0x40) {
+                if (++g_debug_menu.occlusion_mode >= 3)
                     g_debug_menu.occlusion_mode = 0;
-                }
-                if (((D_0013C940.buttons.w.pressed & 0x10) != 0) &&
-                    (g_debug_menu.occlusion_mode = g_debug_menu.occlusion_mode + -1,
-                     g_debug_menu.occlusion_mode < 0)) {
+            }
+            if (D_0013C940.buttons.w.pressed & 0x10) {
+                if (--g_debug_menu.occlusion_mode < 0)
                     g_debug_menu.occlusion_mode = 2;
-                }
             }
             break;
         case 3:
-            if ((D_0013C940.buttons.w.pressed & 0x50) != 0) {
-                g_debug_menu.bookmark_enabled = (u32)(g_debug_menu.bookmark_enabled == 0);
-            }
+            if (D_0013C940.buttons.w.pressed & 0x50)
+                g_debug_menu.bookmark_enabled = !g_debug_menu.bookmark_enabled;
             break;
         case 4:
-            if ((D_0013C940.buttons.w.pressed & 0x50) != 0) {
-                g_debug_menu.invincibility_enabled = (u32)(g_debug_menu.invincibility_enabled == 0);
-            }
+            if (D_0013C940.buttons.w.pressed & 0x50)
+                g_debug_menu.invincibility_enabled = !g_debug_menu.invincibility_enabled;
             break;
         case 5:
-            if ((D_0013C940.buttons.w.pressed & 0x50) != 0) {
-                enabled = g_debug_menu.draw_distance_override == 0;
-                g_debug_menu.draw_distance_override = (u32)enabled;
-                if (enabled) {
-                    (*(s32 *)&D_L00_00160F80_macro) = 0x47800000;
-                    D_L00_0015FFF0 = 0x40;
-                    (*(s32 *)&D_L00_00160FE0_macro) = 0x42800000;
-                    (*(s32 *)&D_L00_001604A4_macro) = 0x42200000;
+            if (D_0013C940.buttons.w.pressed & 0x50) {
+                g_debug_menu.draw_distance_override = !g_debug_menu.draw_distance_override;
+                if (g_debug_menu.draw_distance_override) {
+                    D_L00_00160F80 = 65536.0f;
+                    D_L00_00160FE0 = 64.0f;
+                    D_L00_001604A4 = 40.0f;
+                    D_L00_0015FFF0 = 64;
                     D_L00_0016017C = 0x40000;
                 } else {
-                    (*(s32 *)&D_L00_00160F80_macro) = 0x48fa0000;
-                    (*(s32 *)&D_L00_00160FE0_macro) = 0x44340000;
+                    D_L00_00160F80 = 512000.0f;
+                    D_L00_00160FE0 = 720.0f;
+                    D_L00_001604A4 = 500.0f;
                     D_L00_0015FFF0 = 500;
-                    (*(s32 *)&D_L00_001604A4_macro) = 0x43fa0000;
-                    D_L00_0016017C = 0x1f4000;
+                    D_L00_0016017C = 0x1F4000;
                 }
             }
             break;
         case 6:
-            if (((D_0013C940.buttons.w.pressed & 0x40) != 0) &&
-                (g_debug_menu.collision_mode = g_debug_menu.collision_mode + 1,
-                 2 < g_debug_menu.collision_mode)) {
-                g_debug_menu.collision_mode = 0;
+            if (D_0013C940.buttons.w.pressed & 0x40) {
+                if (++g_debug_menu.collision_mode >= 3)
+                    g_debug_menu.collision_mode = 0;
             }
-            if (((D_0013C940.buttons.w.pressed & 0x10) != 0) &&
-                (g_debug_menu.collision_mode = g_debug_menu.collision_mode + -1,
-                 g_debug_menu.collision_mode < 0)) {
-                g_debug_menu.collision_mode = 2;
+            if (D_0013C940.buttons.w.pressed & 0x10) {
+                if (--g_debug_menu.collision_mode < 0)
+                    g_debug_menu.collision_mode = 2;
             }
             break;
         case 7:
-            if ((D_0013C940.buttons.w.pressed & 0x50) != 0) {
-                g_debug_menu.television_mode = (u32)(g_debug_menu.television_mode == 0);
-            }
+            if (D_0013C940.buttons.w.pressed & 0x50)
+                g_debug_menu.television_mode = !g_debug_menu.television_mode;
             break;
         case 8:
-            if ((D_0013C940.buttons.w.pressed & 0x50) != 0) {
-                enabled = g_debug_menu.screen_mode == 0;
-                g_debug_menu.screen_mode = (u32)enabled;
-                if (!enabled) {
-                    scale = 0.5f;
-                } else {
+            if (D_0013C940.buttons.w.pressed & 0x50) {
+                f32 scale;
+                LevelViewContext *view;
+                g_debug_menu.screen_mode = !g_debug_menu.screen_mode;
+                if (g_debug_menu.screen_mode) {
                     scale = 0.125f;
+                    view = &level_view_context;
+                } else {
+                    scale = 0.5f;
+                    view = &level_view_context;
                 }
-                dimension = (float)convert_integer_to_float((s16)occl_cam_param0);
-                D_L00_0016CC40 = dimension * scale;
-                dimension = (float)convert_integer_to_float((s16)occl_cam_param1);
-                D_L00_0016CC44 = dimension * scale;
-                D_L00_0016CC48 = D_L00_0016CC40 * 4.0f;
-                D_L00_0016CC4C = D_L00_0016CC44 * 4.0f;
+                view->half_width = convert_integer_to_float(fs_aa_buffer.display_width) * scale;
+                view->half_height = convert_integer_to_float(fs_aa_buffer.display_height) * scale;
+                {
+                    f32 half_width = level_view_context.half_width;
+                    f32 half_height = level_view_context.half_height;
+                    level_view_context.scr_x = half_width * 4.0f;
+                    level_view_context.scr_y = half_height * 4.0f;
+                }
                 update_view_context();
             }
             break;
         case 9:
-            if ((D_0013C940.buttons.w.pressed & 0x50) != 0) {
-                if ((D_0013C940.buttons.w.pressed & 0x40) != 0) {
-                    g_debug_menu.scene_index = g_debug_menu.scene_index + 1;
-                    if (g_debug_menu.scene_index == 0x24) {
+            if (D_0013C940.buttons.w.pressed & 0x50) {
+                if (D_0013C940.buttons.w.pressed & 0x40) {
+                    if (++g_debug_menu.scene_index == 36)
                         g_debug_menu.scene_index = -1;
-                    }
                 } else {
-                    g_debug_menu.scene_index = g_debug_menu.scene_index + -1;
-                    if (g_debug_menu.scene_index < -1) {
-                        g_debug_menu.scene_index = 0x23;
-                    }
+                    if (--g_debug_menu.scene_index < -1)
+                        g_debug_menu.scene_index = 35;
                 }
             }
-            if (g_debug_menu.scene_index < 0) {
-                g_debug_menu.unknown_a4 = 0;
-            } else {
+            if (g_debug_menu.scene_index >= 0)
                 g_debug_menu.unknown_a4 = 2;
-            }
+            else
+                g_debug_menu.unknown_a4 = 0;
             break;
         case 10:
-            if ((D_0013C940.buttons.w.pressed & 0x50) == 0) {
-                if ((D_0013C940.buttons.w.pressed & 0x20) != 0) {
-                    index = g_debug_menu.segment_index;
-                    player_setting =
-                        (u8 *)(g_debug_menu.segment_index + D_0015ED84 * 0x10 + visited52);
-                    new_count = 0;
-                    if (*player_setting == 0)
-                        new_count = 255;
-                    *player_setting = new_count;
-                    mission_state_lui[index] = new_count;
+            if (D_0013C940.buttons.w.pressed & 0x50) {
+                if (D_0013C940.buttons.w.pressed & 0x40) {
+                    if (++g_debug_menu.segment_index == 16)
+                        g_debug_menu.segment_index = 0;
+                } else {
+                    if (--g_debug_menu.segment_index < 0)
+                        g_debug_menu.segment_index = 15;
                 }
-            } else if ((D_0013C940.buttons.w.pressed & 0x40) == 0) {
-                g_debug_menu.segment_index = g_debug_menu.segment_index + -1;
-                if (g_debug_menu.segment_index < 0) {
-                    g_debug_menu.segment_index = 0xf;
-                }
-            } else {
-                g_debug_menu.segment_index = g_debug_menu.segment_index + 1;
-                if (g_debug_menu.segment_index == 0x10) {
-                    g_debug_menu.segment_index = 0;
-                }
+            } else if (D_0013C940.buttons.w.pressed & 0x20) {
+                s32 mission = g_debug_menu.segment_index;
+                s32 index = mission + (current_level_index << 4);
+                u8 *visited = visited52 + index;
+                u8 state = *visited;
+                if (state == 0)
+                    state = ~state;
+                else
+                    state = 0;
+                *visited = state;
+                mission_state[mission] = state;
             }
+            break;
         }
         break;
     case 2:
-        if ((D_0013C940.buttons.w.pressed & 0x40) != 0) {
-            g_debug_menu.draw_flags =
-                g_debug_menu.draw_flags ^ 1U << (g_debug_menu.selected_row & 0x1f);
-        }
+        if (D_0013C940.buttons.w.pressed & 0x40)
+            g_debug_menu.draw_flags ^= 1 << g_debug_menu.selected_row;
         break;
-    case 3:
-        row_count = 999999;
-        if ((int)g_debug_menu.selected_row < 0xd) {
-            counter = &((u32 *)weapon_ammo_counts)[D_L00_0015EFD0[g_debug_menu.selected_row]];
-            row_count = (u32) * (u16 *)((u8 *)D_L00_001C40BE +
-                                            (u32)D_L00_0015EFD0[g_debug_menu.selected_row] * 0x18);
+    case 3: {
+        s32 *count;
+        s32 limit = 999999;
+        if (g_debug_menu.selected_row < 13) {
+            s32 item = debug_menu_item_ids[g_debug_menu.selected_row];
+            count = &weapon_ammo_counts[item];
+            limit = D_L00_001C40B0[item].hE;
         } else {
-            counter = (u32 *)&current_bolt_count;
+            count = &current_bolt_count;
         }
         if (D_0013C940.buttons.w.held & 8) {
             if (D_0013C940.buttons.w.pressed & 0x40)
-                *counter += 60;
+                *count += 60;
             if (D_0013C940.buttons.w.pressed & 0x20) {
-                if ((int)*counter > 60)
-                    *counter -= 60;
+                if (*count > 60)
+                    *count -= 60;
                 else
-                    *counter = 0;
+                    *count = 0;
             }
         } else if (D_0013C940.buttons.w.held & 2) {
             if (D_0013C940.buttons.w.pressed & 0x40)
-                *counter += 600;
+                *count += 600;
             if (D_0013C940.buttons.w.pressed & 0x20) {
-                if ((int)*counter > 600)
-                    *counter -= 600;
+                if (*count > 600)
+                    *count -= 600;
                 else
-                    *counter = 0;
+                    *count = 0;
             }
         } else {
             if (D_0013C940.buttons.w.pressed & 0x40)
-                *counter += 1;
+                *count += 1;
             if (D_0013C940.buttons.w.pressed & 0x20) {
-                if ((int)*counter > 0)
-                    *counter -= 1;
+                if (*count > 0)
+                    *count -= 1;
             }
         }
-        current_count = *counter;
-        if (row_count < (int)current_count) {
-            *counter = row_count;
-        }
-        if ((D_0013C940.buttons.w.pressed & 0x10) != 0) {
-            *(char *)(D_L00_0015EFD0[g_debug_menu.selected_row] + (u8 *)D_0013E520) =
-                *(char *)(D_L00_0015EFD0[g_debug_menu.selected_row] + (u8 *)D_0013E520) + '\x01';
-        }
-        if ((D_0013C940.buttons.w.pressed & 0x80) != 0) {
-            *(char *)(D_L00_0015EFD0[g_debug_menu.selected_row] + (u8 *)D_0013E520) =
-                *(char *)(D_L00_0015EFD0[g_debug_menu.selected_row] + (u8 *)D_0013E520) + -1;
-        }
-        level = (u8 *)(D_L00_0015EFD0[g_debug_menu.selected_row] + (u8 *)D_0013E520);
-        index = (u32)D_L00_0015EFD0[g_debug_menu.selected_row] * 0x4c;
-        if (*(s16 *)((u8 *)D_L00_00179AFE + index) < (short)(u16)*level) {
-            *level = ((u8 *)D_L00_00179AFE)[index];
+        if (*count > limit)
+            *count = limit;
+        if (D_0013C940.buttons.w.pressed & 0x10)
+            item_text_variant[debug_menu_item_ids[g_debug_menu.selected_row]]++;
+        if (D_0013C940.buttons.w.pressed & 0x80)
+            item_text_variant[debug_menu_item_ids[g_debug_menu.selected_row]]--;
+        {
+            s32 item = debug_menu_item_ids[g_debug_menu.selected_row];
+            ItemDef *def = item_defs + item;
+            u8 *variant = item_text_variant + item;
+            if (*variant > def->variant_limit.value)
+                *variant = def->variant_limit.low_byte;
         }
         break;
+    }
     case 4:
         if (g_debug_menu.selected_row == 0) {
-            if ((D_0013C940.buttons.held_pressed & 0x800000040) != 0) {
-                D_L00_0015F448 = D_L00_0015F448 + 1024.0f;
-            }
-            if ((D_0013C940.buttons.held_pressed & 0x400000010) != 0) {
-                D_L00_0015F448 = D_L00_0015F448 - 1024.0f;
-            }
-            if (D_L00_0015F448 > D_L00_0015F44C) {
+            u64 buttons = D_0013C940.buttons.held_pressed;
+            if (buttons & 0x800000040ULL)
+                D_L00_0015F448 += 1024.0f;
+            if (buttons & 0x400000010ULL)
+                D_L00_0015F448 -= 1024.0f;
+            if (D_L00_0015F448 > D_L00_0015F44C)
                 D_L00_0015F448 = D_L00_0015F44C;
-            } else if (D_L00_0015F448 < 0.0f) {
+            else if (D_L00_0015F448 < 0.0f)
                 D_L00_0015F448 = 0.0f;
-            }
         }
         if (g_debug_menu.selected_row == 2) {
-            if ((D_0013C940.buttons.held_pressed & 0x800000040) != 0) {
-                D_L00_0015F44C = D_L00_0015F44C + 1024.0f;
-            }
-            if ((D_0013C940.buttons.held_pressed & 0x400000010) != 0) {
-                D_L00_0015F44C = D_L00_0015F44C - 1024.0f;
-            }
-            if (524288.0f < D_L00_0015F44C) {
+            u64 buttons = D_0013C940.buttons.held_pressed;
+            if (buttons & 0x800000040ULL)
+                D_L00_0015F44C += 1024.0f;
+            if (buttons & 0x400000010ULL)
+                D_L00_0015F44C -= 1024.0f;
+            if (D_L00_0015F44C > 524288.0f)
                 D_L00_0015F44C = 524288.0f;
-            } else if (D_L00_0015F448 > D_L00_0015F44C) {
+            else if (D_L00_0015F44C < D_L00_0015F448)
                 D_L00_0015F44C = D_L00_0015F448;
-            }
         }
         if (g_debug_menu.selected_row == 1) {
-            if ((D_0013C940.buttons.held_pressed & 0x800000040) != 0) {
-                D_L00_0015F450 = D_L00_0015F450 - 2.55f;
-            }
-            if ((D_0013C940.buttons.held_pressed & 0x400000010) != 0) {
-                D_L00_0015F450 = D_L00_0015F450 + 2.55f;
-            }
-            if (255.0f < D_L00_0015F450) {
+            u64 buttons = D_0013C940.buttons.held_pressed;
+            if (buttons & 0x800000040ULL)
+                D_L00_0015F450 -= 2.55f;
+            if (buttons & 0x400000010ULL)
+                D_L00_0015F450 += 2.55f;
+            if (D_L00_0015F450 > 255.0f)
                 D_L00_0015F450 = 255.0f;
-            } else if (D_L00_0015F450 < 0.0f) {
+            else if (D_L00_0015F450 < 0.0f)
                 D_L00_0015F450 = 0.0f;
-            }
         }
         if (g_debug_menu.selected_row == 3) {
-            if ((D_0013C940.buttons.held_pressed & 0x800000040) != 0) {
-                D_L00_0015F454 = D_L00_0015F454 - 2.55f;
-            }
-            if ((D_0013C940.buttons.held_pressed & 0x400000010) != 0) {
-                D_L00_0015F454 = D_L00_0015F454 + 2.55f;
-            }
-            if (255.0f < D_L00_0015F454) {
+            u64 buttons = D_0013C940.buttons.held_pressed;
+            if (buttons & 0x800000040ULL)
+                D_L00_0015F454 -= 2.55f;
+            if (buttons & 0x400000010ULL)
+                D_L00_0015F454 += 2.55f;
+            if (D_L00_0015F454 > 255.0f)
                 D_L00_0015F454 = 255.0f;
-            } else if (D_L00_0015F454 < 0.0f) {
+            else if (D_L00_0015F454 < 0.0f)
                 D_L00_0015F454 = 0.0f;
-            }
         }
         if (g_debug_menu.selected_row == 4) {
-            if ((D_L00_0015F444 < 0xFF) &&
-                ((D_0013C940.buttons.held_pressed & 0x800000040) != 0)) {
-                D_L00_0015F444 = D_L00_0015F444 + '\x01';
-            }
-            if ((D_L00_0015F444 != '\0') &&
-                ((D_0013C940.buttons.held_pressed & 0x400000010) != 0)) {
-                D_L00_0015F444 = D_L00_0015F444 + -1;
-            }
+            if (D_L00_0015F444 < 255 && (D_0013C940.buttons.held_pressed & 0x800000040ULL))
+                ++D_L00_0015F444;
+            if (D_L00_0015F444 > 0 && (D_0013C940.buttons.held_pressed & 0x400000010ULL))
+                --D_L00_0015F444;
         }
         if (g_debug_menu.selected_row == 5) {
-            if ((D_L00_0015F445 < 0xFF) &&
-                ((D_0013C940.buttons.held_pressed & 0x800000040) != 0)) {
-                D_L00_0015F445 = D_L00_0015F445 + '\x01';
-            }
-            if ((D_L00_0015F445 != '\0') &&
-                ((D_0013C940.buttons.held_pressed & 0x400000010) != 0)) {
-                D_L00_0015F445 = D_L00_0015F445 + -1;
-            }
+            if (D_L00_0015F445 < 255 && (D_0013C940.buttons.held_pressed & 0x800000040ULL))
+                ++D_L00_0015F445;
+            if (D_L00_0015F445 > 0 && (D_0013C940.buttons.held_pressed & 0x400000010ULL))
+                --D_L00_0015F445;
         }
         if (g_debug_menu.selected_row == 6) {
-            byte_value = D_L00_0015F446;
-            if ((D_L00_0015F446 < 0xFF) &&
-                ((D_0013C940.buttons.held_pressed & 0x800000040) != 0)) {
-                D_L00_0015F446 = byte_value + 1;
-                byte_value = D_L00_0015F446;
-            }
-            if ((byte_value != '\0') &&
-                ((D_0013C940.buttons.held_pressed & 0x400000010) != 0)) {
-                D_L00_0015F446 = byte_value + -1;
-            }
+            if (D_L00_0015F446 < 255 && (D_0013C940.buttons.held_pressed & 0x800000040ULL))
+                ++D_L00_0015F446;
+            if (D_L00_0015F446 > 0 && (D_0013C940.buttons.held_pressed & 0x400000010ULL))
+                --D_L00_0015F446;
         }
         update_fog();
         break;
     case 5:
-        if ((g_debug_menu.selected_row == 0) && ((D_0013C940.buttons.w.pressed & 0x50) != 0)) {
-            g_debug_menu.battle_camera_enabled = (u32)(g_debug_menu.battle_camera_enabled == 0);
-        }
-        if ((g_debug_menu.selected_row == 1) && ((D_0013C940.buttons.w.pressed & 0x50) != 0)) {
-            g_debug_menu.actuator_enabled = (u32)(g_debug_menu.actuator_enabled == 0);
-        }
-        if ((g_debug_menu.selected_row == 2) && ((D_0013C940.buttons.w.pressed & 0xf0) != 0)) {
-            b32 enabled = FALSE;
-            s32 index = 0;
-            f64 formatted_x, formatted_y, formatted_z;
-            if (0 < D_L00_0015F614) {
-                f32 *capture_positions = D_L00_00173E20;
-                do {
-                    if (((((*capture_positions < D_L00_00166C80.camera.position[0] + 0.5f) &&
-                           (D_L00_00166C80.camera.position[0] - 0.5f < *capture_positions)) &&
-                          (capture_positions[1] < D_L00_00166C80.camera.position[1] + 0.5f)) &&
-                         ((D_L00_00166C80.camera.position[1] - 0.5f < capture_positions[1] &&
-                           (capture_positions[2] < D_L00_00166C80.camera.position[2] + 0.5f)))) &&
-                        (D_L00_00166C80.camera.position[2] - 0.5f < capture_positions[2])) {
-                        enabled = TRUE;
-                        break;
-                    }
-                    index = index + 1;
-                    capture_positions = capture_positions + 1;
-                } while (index < D_L00_0015F614);
-            }
-            if (enabled) {
-                return;
-            }
-            FUN_00116248(path_buffer, D_L00_0015EFE0, D_L00_001E7938, D_0015ED84, D_L00_001E7958,
-                         D_L00_0015EFF0);
-            formatted_x = FUN_00120478(D_L00_00166C80.camera.position[0]);
-            formatted_y = FUN_00120478(D_L00_00166C80.camera.position[1]);
-            formatted_z = FUN_00120478(D_L00_00166C80.camera.position[2]);
-            FUN_00116248(position_buffer, D_L00_001E7970, formatted_x, formatted_y, formatted_z);
-            file = sceopen(path_buffer, 0x303);
-            if (-1 < file) {
-                sce_lseek(file, 0, 2);
-                text_length = strlen(position_buffer);
-                scewrite(file, position_buffer, text_length);
-                sceClose(file);
-                g_debug_menu.sample_capture_status = 0x79;
-            }
-            capture_positions = D_L00_00173E20;
-            FUN_00116248(path_buffer, D_L00_0015EFE0, D_L00_001E7938, D_0015ED84, D_L00_0015EFF8,
-                         D_L00_0015EFF0);
-            file = sceopen(path_buffer, 0x303);
-            if (-1 < file) {
-                sce_lseek(file, 0, 2);
-                scewrite(file, D_L00_00166C80.camera.position, 4);
-                scewrite(file, D_L00_00166C80.camera.position + 1, 4);
-                scewrite(file, D_L00_00166C80.camera.position + 2, 4);
-                sce_lseek(file, 0, 0);
-                file_size = sce_lseek(file, 0, 2);
-                if (file_size < 0x100001) {
-                    sce_lseek(file, 0, 0);
-                    sceRead(file, capture_positions, file_size);
-                    D_L00_0015F614 = (int)file_size / 0xc;
-                } else {
-                    D_L00_0015F614 = 0;
+        if (g_debug_menu.selected_row == 0 && (D_0013C940.buttons.w.pressed & 0x50))
+            g_debug_menu.battle_camera_enabled = !g_debug_menu.battle_camera_enabled;
+        if (g_debug_menu.selected_row == 1 && (D_0013C940.buttons.w.pressed & 0x50))
+            g_debug_menu.actuator_enabled = !g_debug_menu.actuator_enabled;
+        if (g_debug_menu.selected_row == 2 && (D_0013C940.buttons.w.pressed & 0xF0)) {
+            s32 i = 0, found, fd, size;
+            char *version;
+            {
+                f32 *sample;
+                s32 count = occlusion_sample_count;
+                found = 0;
+                if (count > 0) {
+                    sample = occlusion_samples;
+                    do {
+                        if (sample[0] < D_L00_00166C80.camera.position[0] + 0.5f &&
+                            sample[0] > D_L00_00166C80.camera.position[0] - 0.5f &&
+                            sample[1] < D_L00_00166C80.camera.position[1] + 0.5f &&
+                            sample[1] > D_L00_00166C80.camera.position[1] - 0.5f &&
+                            sample[2] < D_L00_00166C80.camera.position[2] + 0.5f &&
+                            sample[2] > D_L00_00166C80.camera.position[2] - 0.5f) {
+                            found = 1;
+                            break;
+                        }
+                        sample++;
+                    } while (++i < count);
                 }
-                sceClose(file);
+            }
+            if (found)
+                break;
+            version = iso_version_suffix;
+            sprintf(scratch.sample.path, level_file_path_format_gp, level_directory_macro, current_level_index,
+                    occlusion_deltas_file_name, version);
+            sprintf(scratch.sample.line, add_sample_format, fptodp(D_L00_00166C80.camera.position[0]),
+                    fptodp(D_L00_00166C80.camera.position[1]), fptodp(D_L00_00166C80.camera.position[2]));
+            fd = sceOpen(scratch.sample.path, 0x303);
+            if (fd >= 0) {
+                sceLseek(fd, 0, 2);
+                sceWrite(fd, scratch.sample.line, strlen(scratch.sample.line));
+                sceClose(fd);
+                g_debug_menu.sample_capture_status = 121;
+            }
+            {
+                f32 *samples = occlusion_samples;
+                sprintf(scratch.sample.path, level_file_path_format_gp, level_directory_macro,
+                        current_level_index, occlusion_samples_file_name, version);
+                fd = sceOpen(scratch.sample.path, 0x303);
+                if (fd >= 0) {
+                    sceLseek(fd, 0, 2);
+                    sceWrite(fd, &D_L00_00166C80.camera.position[0], 4);
+                    sceWrite(fd, &D_L00_00166C80.camera.position[1], 4);
+                    sceWrite(fd, &D_L00_00166C80.camera.position[2], 4);
+                    sceLseek(fd, 0, 0);
+                    size = sceLseek(fd, 0, 2);
+                    if (size <= 0x100000) {
+                        sceLseek(fd, 0, 0);
+                        sceRead(fd, samples, size);
+                        occlusion_sample_count = size / 12;
+                    } else {
+                        occlusion_sample_count = 0;
+                    }
+                    sceClose(fd);
+                }
             }
         }
-        if ((g_debug_menu.selected_row == 3) && ((D_0013C940.buttons.w.pressed & 0xf0) != 0)) {
-            f64 formatted_x, formatted_y, formatted_z;
-            FUN_00116248(capture.capture_path, D_L00_0015EFE0, D_L00_001E7938, D_0015ED84, D_L00_001E7958,
-                         D_L00_0015EFF0);
-            formatted_x = FUN_00120478(D_L00_00166C80.camera.position[0]);
-            formatted_y = FUN_00120478(D_L00_00166C80.camera.position[1]);
-            formatted_z = FUN_00120478(D_L00_00166C80.camera.position[2]);
-            FUN_00116248(angle_buffer, D_L00_001E7990, formatted_x, formatted_y, formatted_z);
-            file = sceopen(capture.capture_path, 0x303);
-            if (-1 < file) {
-                sce_lseek(file, 0, 2);
-                text_length = strlen(angle_buffer);
-                scewrite(file, angle_buffer, text_length);
-                sceClose(file);
-                g_debug_menu.start_capture_status = 0x79;
+        if (g_debug_menu.selected_row == 3 && (D_0013C940.buttons.w.pressed & 0xF0)) {
+            s32 fd;
+            sprintf(scratch.start_point.path, level_file_path_format, level_directory, current_level_index,
+                    occlusion_deltas_file_name, iso_version_suffix);
+            sprintf(scratch.start_point.line, start_point_format, fptodp(D_L00_00166C80.camera.position[0]),
+                    fptodp(D_L00_00166C80.camera.position[1]), fptodp(D_L00_00166C80.camera.position[2]));
+            fd = sceOpen(scratch.start_point.path, 0x303);
+            if (fd >= 0) {
+                sceLseek(fd, 0, 2);
+                sceWrite(fd, scratch.start_point.line, strlen(scratch.start_point.line));
+                sceClose(fd);
+                g_debug_menu.start_capture_status = 121;
             }
         }
+        break;
     }
-    return;
 }
 #endif /* NON_MATCHING */
 /* Pending C: keep the oracle until the placed overlay bytes match. */
@@ -999,14 +937,6 @@ void FUN_L00_001f4598(void) {
  * (via the table at D_0014171B + 0xAA35), then the weapon and ammo counters. Waits on the flag at D_L00_00161260
  * before the last section. */
 /* Ported from rac1-decomp (src/overlays/shared/draw_001F3A78.c: func_L00_001F5C60), where it is exact; names translated to the US level program. */
-
-typedef struct {
- s32 mode, bits, draw_bits, group, item, camera_mode, display_mode, occl_mode;
- s32 f20, f24, f28, f2C, f30, f34, selection, mission;
- char pad40[0xB0];
- s32 fF0, fF4;
- u8 saved_timer, point_timer;
-} DebugMenu60;
 
 typedef struct {
  char pad0[0x28];
@@ -1094,7 +1024,6 @@ extern float D_L00_0015F44C;
 extern float D_L00_0015F450;
 extern float D_L00_0015F454;
 extern int D_0013E520[];
-extern int fptodp(float) __asm__("FUN_00120478");
 extern int print_debug_text_centered(int,int,int,char*) __asm__("FUN_001f0c50");
 extern char D_L00_0015F0F0[];
 extern s32 sprintf(char *, const char *, ...);
@@ -1105,7 +1034,6 @@ extern u8 D_L00_0015F446;
 extern void FUN_L00_001f36f8(void);
 extern void append_gif_transfer_packet() __asm__("func_001FB368");
 void print_debug_text(s32 x, s32 y, s32 color, char *text) __asm__("FUN_001f0bd0");
-extern DebugMenu60 debug_menu60 __asm__("D_L00_0016C058");
 extern double promote_float60(float) __asm__("FUN_00120478");
 
 static __inline__ int flag_offset60(int flags) {
@@ -1127,41 +1055,41 @@ void FUN_L00_001f58e0(void) {
         print_debug_text(0xC, 0x2C, 0x8000C000, D_L00_0015F020);
         print_debug_text(0xC, 0x32, 0x8000C000, D_L00_0015F028);
         print_debug_text(0x14, 0x40, 0x8000C0C0, D_L00_0015F030);
-        print_debug_text(0x6C, 0x40, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(debug_menu60.draw_bits & 1)));
+        print_debug_text(0x6C, 0x40, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(g_debug_menu.update_flags & 1)));
         print_debug_text(0x14, 0x4F, 0x8000C0C0, D_L00_0015F040);
-        print_debug_text(0x6C, 0x4F, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(debug_menu60.draw_bits & 2)));
+        print_debug_text(0x6C, 0x4F, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(g_debug_menu.update_flags & 2)));
         print_debug_text(0x14, 0x5E, 0x8000C0C0, D_L00_0015F048);
-        print_debug_text(0x6C, 0x5E, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(debug_menu60.draw_bits & 4)));
+        print_debug_text(0x6C, 0x5E, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(g_debug_menu.update_flags & 4)));
         print_debug_text(0x14, 0x6D, 0x8000C0C0, D_L00_0015F050);
-        print_debug_text(0x6C, 0x6D, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(debug_menu60.draw_bits & 8)));
+        print_debug_text(0x6C, 0x6D, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(g_debug_menu.update_flags & 8)));
         print_debug_text(0x14, 0x7C, 0x8000C0C0, D_L00_0015F058);
-        print_debug_text(0x6C, 0x7C, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(debug_menu60.draw_bits & 0x10)));
-        if (debug_menu60.group == 0) {
-            print_debug_text(9, (debug_menu60.item * 0xF) + 0x40, 0x800000C0, D_L00_0015F060);
+        print_debug_text(0x6C, 0x7C, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(g_debug_menu.update_flags & 0x10)));
+        if (g_debug_menu.selected_column == 0) {
+            print_debug_text(9, (g_debug_menu.selected_row * 0xF) + 0x40, 0x800000C0, D_L00_0015F060);
         }
         print_debug_text(0xA8, 0x2C, 0x8000C000, D_L00_0015F068);
         print_debug_text(0xA8, 0x32, 0x8000C000, D_L00_0015F070);
         print_debug_text(0xB0, 0x40, 0x8000C0C0, D_L00_0015F078);
-        print_debug_text(0x108, 0x40, 0x80F0F0F0, D_L00_00160C40[debug_menu60.camera_mode]);
+        print_debug_text(0x108, 0x40, 0x80F0F0F0, D_L00_00160C40[g_debug_menu.control_mode]);
         print_debug_text(0xB0, 0x4F, 0x8000C0C0, D_L00_0015F080);
-        print_debug_text(0x108, 0x4F, 0x80F0F0F0, D_L00_001C3E28[debug_menu60.display_mode]);
+        print_debug_text(0x108, 0x4F, 0x80F0F0F0, D_L00_001C3E28[g_debug_menu.profiler_mode]);
         print_debug_text(0xB0, 0x5E, 0x8000C0C0, D_L00_0015F088);
-        print_debug_text(0x108, 0x5E, 0x80F0F0F0, D_L00_00160D08[debug_menu60.occl_mode]);
+        print_debug_text(0x108, 0x5E, 0x80F0F0F0, D_L00_00160D08[g_debug_menu.occlusion_mode]);
         print_debug_text(0xB0, 0x6D, 0x8000C0C0, D_L00_0015F090);
-        print_debug_text(0x108, 0x6D, 0x80F0F0F0, D_L00_00160C18[(debug_menu60.f20 != 0) ? 0 : 1]);
+        print_debug_text(0x108, 0x6D, 0x80F0F0F0, D_L00_00160C18[(g_debug_menu.bookmark_enabled != 0) ? 0 : 1]);
         print_debug_text(0xB0, 0x7C, 0x8000C0C0, D_L00_0015F0A0);
-        print_debug_text(0x108, 0x7C, 0x80F0F0F0, D_L00_00160C18[debug_menu60.f24]);
+        print_debug_text(0x108, 0x7C, 0x80F0F0F0, D_L00_00160C18[g_debug_menu.invincibility_enabled]);
         print_debug_text(0xB0, 0x8B, 0x8000C0C0, D_L00_0015F0A8);
-        print_debug_text(0x108, 0x8B, 0x80F0F0F0, D_L00_00160CA8[debug_menu60.f28]);
+        print_debug_text(0x108, 0x8B, 0x80F0F0F0, D_L00_00160CA8[g_debug_menu.draw_distance_override]);
         print_debug_text(0xB0, 0x9A, 0x8000C0C0, D_L00_0015F0B8);
-        print_debug_text(0x108, 0x9A, 0x80F0F0F0, D_L00_00160CC0[debug_menu60.f2C]);
+        print_debug_text(0x108, 0x9A, 0x80F0F0F0, D_L00_00160CC0[g_debug_menu.collision_mode]);
         print_debug_text(0xB0, 0xA9, 0x8000C0C0, D_L00_0015F0C0);
-        print_debug_text(0x108, 0xA9, 0x80F0F0F0, D_L00_00160CE0[debug_menu60.f30]);
+        print_debug_text(0x108, 0xA9, 0x80F0F0F0, D_L00_00160CE0[g_debug_menu.television_mode]);
         print_debug_text(0xB0, 0xB8, 0x8000C0C0, D_L00_0015F0C8);
-        print_debug_text(0x108, 0xB8, 0x80F0F0F0, D_L00_00160CF0[debug_menu60.f34]);
+        print_debug_text(0x108, 0xB8, 0x80F0F0F0, D_L00_00160CF0[g_debug_menu.screen_mode]);
         print_debug_text(0xB0, 0xC7, 0x8000C0C0, D_L00_0015F0D0);
-        if (debug_menu60.selection >= 0) {
-            sprintf(buf, D_L00_0015F0D8, debug_menu60.selection);
+        if (g_debug_menu.scene_index >= 0) {
+            sprintf(buf, D_L00_0015F0D8, g_debug_menu.scene_index);
             print_debug_text(0x108, 0xC7, 0x80F0F0F0, buf);
         } else {
             print_debug_text(0x108, 0xC7, 0x80F0F0F0, D_L00_0015F0E0);
@@ -1169,40 +1097,40 @@ void FUN_L00_001f58e0(void) {
         stride = 16;
         print_debug_text(0xB0, 0xD6, 0x8000C0C0, D_L00_0015F0E8);
         {
-            int mission = debug_menu60.mission;
+            int mission = g_debug_menu.segment_index;
             sprintf(buf, D_L00_0015F0F0, mission, (visited52)[mission + D_0015ED84 * stride]);
         }
         print_debug_text(0x108, 0xD6, 0x80F0F0F0, buf);
-        if (debug_menu60.group == 1) {
-            print_debug_text(0xA5, (debug_menu60.item * 0xF) + 0x40, 0x800000C0, D_L00_0015F060);
+        if (g_debug_menu.selected_column == 1) {
+            print_debug_text(0xA5, (g_debug_menu.selected_row * 0xF) + 0x40, 0x800000C0, D_L00_0015F060);
         }
         print_debug_text(0x158, 0x2C, 0x8000C000, D_L00_0015F0F8);
         print_debug_text(0x158, 0x32, 0x8000C000, D_L00_0015F070);
         print_debug_text(0x160, 0x40, 0x8000C0C0, D_L00_0015F100);
-        print_debug_text(0x1CC, 0x40, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(debug_menu60.bits & 1)));
+        print_debug_text(0x1CC, 0x40, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(g_debug_menu.draw_flags & 1)));
         print_debug_text(0x160, 0x4F, 0x8000C0C0, D_L00_0015F108);
-        print_debug_text(0x1CC, 0x4F, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(debug_menu60.bits & 2)));
+        print_debug_text(0x1CC, 0x4F, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(g_debug_menu.draw_flags & 2)));
         print_debug_text(0x160, 0x5E, 0x8000C0C0, D_L00_0015F118);
-        print_debug_text(0x1CC, 0x5E, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(debug_menu60.bits & 4)));
+        print_debug_text(0x1CC, 0x5E, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(g_debug_menu.draw_flags & 4)));
         print_debug_text(0x160, 0x6D, 0x8000C0C0, D_L00_0015F128);
-        print_debug_text(0x1CC, 0x6D, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(debug_menu60.bits & 8)));
+        print_debug_text(0x1CC, 0x6D, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(g_debug_menu.draw_flags & 8)));
         print_debug_text(0x160, 0x7C, 0x8000C0C0, D_L00_0015F138);
-        print_debug_text(0x1CC, 0x7C, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(debug_menu60.bits & 0x10)));
+        print_debug_text(0x1CC, 0x7C, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(g_debug_menu.draw_flags & 0x10)));
         print_debug_text(0x160, 0x8B, 0x8000C0C0, D_L00_0015F148);
-        print_debug_text(0x1CC, 0x8B, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(debug_menu60.bits & 0x20)));
+        print_debug_text(0x1CC, 0x8B, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(g_debug_menu.draw_flags & 0x20)));
         print_debug_text(0x160, 0x9A, 0x8000C0C0, D_L00_0015F150);
-        print_debug_text(0x1CC, 0x9A, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(debug_menu60.bits & 0x40)));
+        print_debug_text(0x1CC, 0x9A, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(g_debug_menu.draw_flags & 0x40)));
         print_debug_text(0x160, 0xA9, 0x8000C0C0, D_L00_0015F158);
-        print_debug_text(0x1CC, 0xA9, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(debug_menu60.bits & 0x80)));
+        print_debug_text(0x1CC, 0xA9, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(g_debug_menu.draw_flags & 0x80)));
         print_debug_text(0x160, 0xB8, 0x8000C0C0, D_L00_0015F160);
-        print_debug_text(0x1CC, 0xB8, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(debug_menu60.bits & 0x100)));
-        if (debug_menu60.group == 2) {
-            print_debug_text(0x155, (debug_menu60.item * 0xF) + 0x3E, 0x800000C0, D_L00_0015F060);
+        print_debug_text(0x1CC, 0xB8, 0x80F0F0F0, *(char **)((char *)D_L00_00160C18 + flag_offset60(g_debug_menu.draw_flags & 0x100)));
+        if (g_debug_menu.selected_column == 2) {
+            print_debug_text(0x155, (g_debug_menu.selected_row * 0xF) + 0x3E, 0x800000C0, D_L00_0015F060);
         }
         print_debug_text(0xC, 0xA6, 0x8000C000, D_L00_0015F168);
         print_debug_text(0xC, 0xAC, 0x8000C000, D_L00_0015F070);
-        if (debug_menu60.group == 3) {
-            print_debug_text(9, (debug_menu60.item * 0xF) + 0xB8, 0x800000C0, D_L00_0015F060);
+        if (g_debug_menu.selected_column == 3) {
+            print_debug_text(9, (g_debug_menu.selected_row * 0xF) + 0xB8, 0x800000C0, D_L00_0015F060);
         }
         print_debug_text(0x14, 0xBA, 0x8000C0C0, D_L00_0015F170);
         weapon_order = (u8 *)D_0013E520;
@@ -1264,8 +1192,8 @@ void FUN_L00_001f58e0(void) {
         print_debug_text(0x8C, 0x17D, 0x80F0F0F0, buf);
         print_debug_text(0xBC, 0x100, 0x8000C000, D_L00_0015F230);
         print_debug_text(0xBC, 0x106, 0x8000C000, D_L00_0015F238);
-        if (debug_menu60.group == 4) {
-            print_debug_text(0xB9, (debug_menu60.item * 0xF) + 0x112, 0x800000C0, D_L00_0015F060);
+        if (g_debug_menu.selected_column == 4) {
+            print_debug_text(0xB9, (g_debug_menu.selected_row * 0xF) + 0x112, 0x800000C0, D_L00_0015F060);
         }
         print_debug_text(0xC4, 0x114, 0x8000C0C0, D_L00_0015F240);
         sprintf(buf, D_L00_0015F248, promote_float60(D_L00_0015F448 * 0.0009765625f));
@@ -1290,20 +1218,20 @@ void FUN_L00_001f58e0(void) {
         print_debug_text(0x11C, 0x16E, 0x80F0F0F0, buf);
         print_debug_text(0x160, 0x100, 0x8000C000, D_L00_0015F280);
         print_debug_text(0x160, 0x106, 0x8000C000, D_L00_0015F070);
-        if (debug_menu60.group == 5) {
-            print_debug_text(0x15D, (debug_menu60.item * 0xF) + 0x112, 0x800000C0, D_L00_0015F060);
+        if (g_debug_menu.selected_column == 5) {
+            print_debug_text(0x15D, (g_debug_menu.selected_row * 0xF) + 0x112, 0x800000C0, D_L00_0015F060);
         }
         print_debug_text(0x168, 0x114, 0x8000C0C0, D_L00_0015F288);
-        print_debug_text(0x1CA, 0x114, 0x80F0F0F0, D_L00_00160C18[(debug_menu60.fF0 != 0) ? 0 : 1]);
+        print_debug_text(0x1CA, 0x114, 0x80F0F0F0, D_L00_00160C18[(g_debug_menu.battle_camera_enabled != 0) ? 0 : 1]);
         print_debug_text(0x168, 0x123, 0x8000C0C0, D_L00_0015F298);
-        print_debug_text(0x1CA, 0x123, 0x80F0F0F0, D_L00_00160C18[debug_menu60.fF4]);
+        print_debug_text(0x1CA, 0x123, 0x80F0F0F0, D_L00_00160C18[g_debug_menu.actuator_enabled]);
         print_debug_text(0x168, 0x132, 0x8000C0C0, D_L00_0015F2A8);
         buf[1] = 0;
-        buf[0] = debug_menu60.point_timer;
+        buf[0] = g_debug_menu.sample_capture_status;
         print_debug_text(0x1CA, 0x132, 0x80F0F0F0, buf);
         print_debug_text(0x168, 0x141, 0x8000C0C0, D_L00_0015F2B8);
         buf[1] = 0;
-        buf[0] = debug_menu60.saved_timer;
+        buf[0] = g_debug_menu.start_capture_status;
         print_debug_text(0x1CA, 0x141, 0x80F0F0F0, buf);
         FUN_L00_001f36f8();
         while (D_L00_001611A0 & 1) {}

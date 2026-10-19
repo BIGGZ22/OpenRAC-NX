@@ -81,6 +81,38 @@ extern void FUN_L00_00263fd8(void *, int, void *, void *, int, int, float, void 
 /* Class-dependent movement, manipulator rotation, hit effects and visibility. */
 void snow_plow_update(struct Moby *moby) __asm__("FUN_L04_002ca420");
 void snow_plow_update(struct Moby *moby) {
+    enum {
+        SNOW_PLOW_SCAN_CLIP_VOLUMES = 0,
+        SNOW_PLOW_MOVE_TO_CLIP_VOLUME = 1,
+        SNOW_PLOW_WAIT_BEFORE_RETURN = 2,
+        SNOW_PLOW_RETURN_TO_SAVED_TRANSFORM = 3
+    };
+    enum {
+        SNOW_PLOW_CLASS_WITH_QUARTER_TURN_LINKED_MOBY = 0x1e0,
+        SNOW_PLOW_CLASS_WITH_ALIGNED_LINKED_MOBY = 0x1ee
+    };
+    enum {
+        SNOW_PLOW_CLASS_OFFSET_WITH_QUARTER_TURN_LINKED_MOBY = 0xe,
+        SNOW_PLOW_CLASS_OFFSET_WITH_ALIGNED_LINKED_MOBY = 0x1c
+    };
+    enum {
+        SNOW_PLOW_CLASS_OFFSET_WITH_TWO_POINT_CART_BURST = 0x1b
+    };
+    enum {
+        SNOW_PLOW_CLASS_OFFSET_WITH_TWO_ROTATING_MANIPULATORS = 0x16
+    };
+    enum {
+        SNOW_PLOW_CLASS_OFFSET_WITH_HIT_SPHERE_QUERY_WITHOUT_TARGET_VOICE = 0x14
+    };
+    enum {
+        SNOW_PLOW_CLASS_OFFSET_WITH_HIT_SPHERE_QUERY_AND_TARGET_VOICE = 0x13
+    };
+    enum {
+        SNOW_PLOW_CLASS_OFFSET_WITH_THREE_HIT_SPAWNS_AND_TARGET_VOICE_SELECTOR_ZERO = 0x20
+    };
+    enum {
+        SNOW_PLOW_CLASS_OFFSET_WITH_FOUR_HIT_SPAWNS_AND_TARGET_VOICE_SELECTOR_ONE = 0x1d
+    };
     Vec4 old;
     Vec4 delta, *d;
     /* The sphere query is its position followed by the record; the hit cases pass one or the other. */
@@ -129,7 +161,7 @@ void snow_plow_update(struct Moby *moby) {
     if (moby->oclass != 0x1e4) {
         fast_dec_timer_s16(data + 0x14a);
         switch (*(unsigned char *)(data + 0x149)) {
-        case 0: {
+        case SNOW_PLOW_SCAN_CLIP_VOLUMES: {
             float length = *(float *)(data + 0xfc);
             float target = *(float *)(data + 0x138);
             if (length < target) {
@@ -154,7 +186,7 @@ void snow_plow_update(struct Moby *moby) {
             } while (i < 4);
             break;
         }
-        case 1:
+        case SNOW_PLOW_MOVE_TO_CLIP_VOLUME:
             FUN_L00_00258278(moby, *(float *)(D_L04_001600EC + *(unsigned char *)(data + 0x148) * 0x80 + 0x78),
                 data + 0x7c, frame_time_sq * 1.0471976f, frame_time_sq * 3.1415927f, frame_time * 3.1415927f);
             if (vector_distance(&moby->pos, D_L04_001600EC + *(unsigned char *)(data + 0x148) * 0x80 + 0x30) < 1.0f &&
@@ -166,13 +198,13 @@ void snow_plow_update(struct Moby *moby) {
             normalize_vector_xyz(&delta, &delta, frame_time * 3.0f);
             add_vector_xyz(&moby->pos, &moby->pos, &delta);
             break;
-        case 2:
+        case SNOW_PLOW_WAIT_BEFORE_RETURN:
             if (*(short *)(data + 0x14a) == 0) {
                 *(float *)(data + 0x7c) = amount;
                 *(unsigned char *)(data + 0x149) = 3;
             }
             break;
-        case 3:
+        case SNOW_PLOW_RETURN_TO_SAVED_TRANSFORM:
             FUN_L00_00258278(moby, *(float *)(data + 0x14c), data + 0x7c,
                 frame_time_sq * 1.0471976f, frame_time_sq * 3.1415927f, frame_time * 3.1415927f);
             if (vector_distance(&moby->pos, data + 0x160) < 1.0f &&
@@ -200,11 +232,11 @@ void snow_plow_update(struct Moby *moby) {
     }
     if (!state) {
         switch ((short)(moby->oclass - 0x1d2)) {
-        case 0: case 0xe: case 0x13: case 0x14: case 0x1c: case 0x1d: case 0x20: case 0x59:
+        case 0: case SNOW_PLOW_CLASS_OFFSET_WITH_QUARTER_TURN_LINKED_MOBY: case SNOW_PLOW_CLASS_OFFSET_WITH_HIT_SPHERE_QUERY_AND_TARGET_VOICE: case SNOW_PLOW_CLASS_OFFSET_WITH_HIT_SPHERE_QUERY_WITHOUT_TARGET_VOICE: case SNOW_PLOW_CLASS_OFFSET_WITH_ALIGNED_LINKED_MOBY: case SNOW_PLOW_CLASS_OFFSET_WITH_FOUR_HIT_SPAWNS_AND_TARGET_VOICE_SELECTOR_ONE: case SNOW_PLOW_CLASS_OFFSET_WITH_THREE_HIT_SPAWNS_AND_TARGET_VOICE_SELECTOR_ZERO: case 0x59:
             attach_manipulator((char *)moby, 0, data + 0x180);
             *(int *)(data + 0x140) = 0;
             break;
-        case 0x16: case 0x1b:
+        case SNOW_PLOW_CLASS_OFFSET_WITH_TWO_ROTATING_MANIPULATORS: case SNOW_PLOW_CLASS_OFFSET_WITH_TWO_POINT_CART_BURST:
             attach_manipulator((char *)moby, 0, data + 0x180);
             *(int *)(data + 0x140) = 0;
             attach_manipulator((char *)moby, 1, data + 0x1c0);
@@ -213,15 +245,15 @@ void snow_plow_update(struct Moby *moby) {
         }
     } else {
         switch ((short)(moby->oclass - 0x1d2)) {
-        case 0: case 0xe:
+        case 0: case SNOW_PLOW_CLASS_OFFSET_WITH_QUARTER_TURN_LINKED_MOBY:
             *(float *)(data + 0x140) = fast_add_rotations(*(float *)(data + 0x140), frame_time * 12.566371f);
             FUN_L00_001fff28(data + 0x190, 0, *(float *)(data + 0x140));
             break;
-        case 0x13: case 0x14: case 0x1c: case 0x1d: case 0x20: case 0x59:
+        case SNOW_PLOW_CLASS_OFFSET_WITH_HIT_SPHERE_QUERY_AND_TARGET_VOICE: case SNOW_PLOW_CLASS_OFFSET_WITH_HIT_SPHERE_QUERY_WITHOUT_TARGET_VOICE: case SNOW_PLOW_CLASS_OFFSET_WITH_ALIGNED_LINKED_MOBY: case SNOW_PLOW_CLASS_OFFSET_WITH_FOUR_HIT_SPAWNS_AND_TARGET_VOICE_SELECTOR_ONE: case SNOW_PLOW_CLASS_OFFSET_WITH_THREE_HIT_SPAWNS_AND_TARGET_VOICE_SELECTOR_ZERO: case 0x59:
             *(float *)(data + 0x140) = fast_add_rotations(*(float *)(data + 0x140), frame_time * 12.566371f);
             FUN_L00_001fff28(data + 0x190, 2, *(float *)(data + 0x140));
             break;
-        case 0x16: case 0x1b:
+        case SNOW_PLOW_CLASS_OFFSET_WITH_TWO_ROTATING_MANIPULATORS: case SNOW_PLOW_CLASS_OFFSET_WITH_TWO_POINT_CART_BURST:
             *(float *)(data + 0x140) = fast_add_rotations(*(float *)(data + 0x140), frame_time * 12.566371f);
             FUN_L00_001fff28(data + 0x190, 2, *(float *)(data + 0x140));
             *(float *)(data + 0x144) = fast_add_rotations(*(float *)(data + 0x144), frame_time * 12.566371f);
@@ -233,7 +265,7 @@ void snow_plow_update(struct Moby *moby) {
         struct Moby *other = (struct Moby *)(D_L04_0015FFD8 + (*(int *)(data + 0x17c) << 8));
         other->draw_dist = 0x7f;
         switch (moby->oclass) {
-        case 0x1e0:
+        case SNOW_PLOW_CLASS_WITH_QUARTER_TURN_LINKED_MOBY:
             delta.q = 0;
             delta.f[0] = 0.5f;
             delta.f[2] = -5.0f;
@@ -242,7 +274,7 @@ void snow_plow_update(struct Moby *moby) {
             qcopy(&other->rot, &moby->rot);
             other->rot.y = fast_add_rotations(other->rot.y, 1.5707964f);
             break;
-        case 0x1ee:
+        case SNOW_PLOW_CLASS_WITH_ALIGNED_LINKED_MOBY:
             delta.q = 0;
             delta.f[2] = -2.0f;
             transform_vector_by_basis(&delta, &delta, &moby->rot_row0);
@@ -268,14 +300,14 @@ hit:
             }
         }
         switch ((short)(moby->oclass - 0x1d2)) {
-        case 0x13: case 0x14:
+        case SNOW_PLOW_CLASS_OFFSET_WITH_HIT_SPHERE_QUERY_AND_TARGET_VOICE: case SNOW_PLOW_CLASS_OFFSET_WITH_HIT_SPHERE_QUERY_WITHOUT_TARGET_VOICE:
             sphere.flags = 0x810000;
             sphere.scale = 1.0f;
             sphere.moby = moby;
             clear_vector(&sphere_pos);
             sphere.zero = 0;
             collect_mobies_in_sphere(&moby->pos, 4.0f, 0x10, moby, &sphere_pos);
-        case 0: case 0xe: case 0x16: case 0x18: case 0x1c: case 0x1d: case 0x20: case 0x59:
+        case 0: case SNOW_PLOW_CLASS_OFFSET_WITH_QUARTER_TURN_LINKED_MOBY: case SNOW_PLOW_CLASS_OFFSET_WITH_TWO_ROTATING_MANIPULATORS: case 0x18: case SNOW_PLOW_CLASS_OFFSET_WITH_ALIGNED_LINKED_MOBY: case SNOW_PLOW_CLASS_OFFSET_WITH_FOUR_HIT_SPAWNS_AND_TARGET_VOICE_SELECTOR_ONE: case SNOW_PLOW_CLASS_OFFSET_WITH_THREE_HIT_SPAWNS_AND_TARGET_VOICE_SELECTOR_ZERO: case 0x59:
             delta.q = 0;
             delta.f[2] = 0.75f;
             clear_vector(&sphere_pos);
@@ -287,7 +319,7 @@ hit:
             *(int *)(data + 0x170) = scale_game_frames(600);
             *(int *)(data + 0x174) = 1;
             break;
-        case 0x1b:
+        case SNOW_PLOW_CLASS_OFFSET_WITH_TWO_POINT_CART_BURST:
             sphere_pos.q = 0;
             sphere_pos.f[2] = 0.75f;
             clear_vector(&sphere);
@@ -466,6 +498,10 @@ f32 compute_interpolated_record_value(void *anim) __asm__("FUN_0020c9e0");
 
 void floating_platform_update(char *moby) __asm__("FUN_L04_002cdda0");
 void floating_platform_update(char *moby) {
+    enum {
+        FLOATING_PLATFORM_INITIALIZE = 0,
+        FLOATING_PLATFORM_UPDATE_MOTION = 1
+    };
     float old[4];
     float delta[4];
     char *data = *(char **)(moby + 0x78);
@@ -475,7 +511,7 @@ void floating_platform_update(char *moby) {
         return;
     }
     switch (((unsigned char *)moby)[0x20]) {
-    case 0: {
+    case FLOATING_PLATFORM_INITIALIZE: {
         int i;
         *(float *)(moby + 0x58) = random_float_between(0.5f, 0.8f);
         moby[0x20] = 1;
@@ -487,7 +523,7 @@ void floating_platform_update(char *moby) {
         }
         break;
     }
-    case 1: {
+    case FLOATING_PLATFORM_UPDATE_MOTION: {
         float off = 0.0f;
         float bob = fast_cos(fast_normalize_angle(compute_interpolated_record_value(moby) * 6.2831855f / 118.0f)) * 0.75f;
         int i;
@@ -768,6 +804,24 @@ void mark_moby_for_removal(void *obj) __asm__("FUN_0020c828");
 
 void woodcut_bot_update(WBMoby *m) __asm__("FUN_L04_002d16b8");
 void woodcut_bot_update(WBMoby *m) {
+    enum {
+        WOODCUT_BOT_INITIALIZE = 0,
+        WOODCUT_BOT_IDLE = 1,
+        WOODCUT_BOT_WAIT_FOR_ANIMATION_BEFORE_PURSUIT = 2,
+        WOODCUT_BOT_PLAY_ANIMATION_AND_EMIT_DEBRIS = 3,
+        WOODCUT_BOT_SELECT_ACTION_WHILE_EXCITED = 4,
+        WOODCUT_BOT_MOVE_TOWARD_TARGET = 5,
+        WOODCUT_BOT_RETURN_TO_SAVED_POSITION = 6,
+        WOODCUT_BOT_STOP_MOVEMENT = 7,
+        WOODCUT_BOT_MELEE_ATTACK = 8,
+        WOODCUT_BOT_HIT_RECOVERY_AND_REPOSITION = 9,
+        WOODCUT_BOT_TURN_BEFORE_MOVEMENT = 10,
+        WOODCUT_BOT_DEATH_KNOCKBACK = 11
+    };
+    enum {
+        WOODCUT_BOT_REACTION_START_DEATH_KNOCKBACK = 1,
+        WOODCUT_BOT_REACTION_HIT_RECOVERY_AND_REPOSITION = 3
+    };
     int excited = 0;
     WBData *d = m->d;
     unsigned char *p120;
@@ -850,7 +904,7 @@ void woodcut_bot_update(WBMoby *m) {
             switch (r) {
             case 0:
                 break;
-            case 1:
+            case WOODCUT_BOT_REACTION_START_DEATH_KNOCKBACK:
             case 2:
                 d->fD4 = frame_time_sq * 17.0f;
                 d->fD8 = frame_time * 7.0f;
@@ -866,7 +920,7 @@ void woodcut_bot_update(WBMoby *m) {
                 trooper_anim_update(m, d->fB0);
                 d->f3E4 = (2.0f / multiply_global_factor_ed64(15.0f)) * 2.0f;
                 break;
-            case 3:
+            case WOODCUT_BOT_REACTION_HIT_RECOVERY_AND_REPOSITION:
             case 6:
                 d->f3C8 = -0.5235988f;
                 if (m->anim != 4 || hd < 16.0f || hd > 27.0f) {
@@ -948,7 +1002,7 @@ void woodcut_bot_update(WBMoby *m) {
     fast_dec_timer_s16(tm);
 
     switch (m->state) {
-    case 0:
+    case WOODCUT_BOT_INITIALIZE:
         d->hp = 2.0f;
         d->f24 = 2;
         d->f30 = 1.0f;
@@ -970,7 +1024,7 @@ void woodcut_bot_update(WBMoby *m) {
             m->state = 1;
         }
         break;
-    case 1:
+    case WOODCUT_BOT_IDLE:
         if (m->f70 & 2) {
             if (excited ? (d->f3E8 * 2.0f < dist) : (d->f3E8 < dist)) {
                 int anims[6];
@@ -1014,7 +1068,7 @@ void woodcut_bot_update(WBMoby *m) {
             }
         }
         break;
-    case 2:
+    case WOODCUT_BOT_WAIT_FOR_ANIMATION_BEFORE_PURSUIT:
         if (m->anim == 2 && (m->f70 & 2)) {
             if (excited || d->f3DC == -1 ||
                 point_in_path_xy(tgt, D_L04_001B0630[d->f3DC] + 4, *D_L04_001B0630[d->f3DC]) != 0) {
@@ -1026,7 +1080,7 @@ void woodcut_bot_update(WBMoby *m) {
             }
         }
         break;
-    case 3: {
+    case WOODCUT_BOT_PLAY_ANIMATION_AND_EMIT_DEBRIS: {
         if (m->anim != 0 && (m->f70 & 2)) {
             blend_moby_animation(m, 0xC, 0, scale_game_frames(10));
             m->f58 = random_float_between(0.8f, 1.2f);
@@ -1082,7 +1136,7 @@ void woodcut_bot_update(WBMoby *m) {
         }
         break;
     }
-    case 4:
+    case WOODCUT_BOT_SELECT_ACTION_WHILE_EXCITED:
         if (excited) {
             if (dist < 3.0f && adiff < 1.5707964f) {
                 blend_moby_animation(m, 4, 0, scale_game_frames(10));
@@ -1102,7 +1156,7 @@ void woodcut_bot_update(WBMoby *m) {
             m->state = 1;
         }
         break;
-    case 5: {
+    case WOODCUT_BOT_MOVE_TOWARD_TARGET: {
         if (m->fBC & 8) {
             m->fBC &= ~8;
             FUN_L04_00295de8(m, d->f160);
@@ -1142,7 +1196,7 @@ void woodcut_bot_update(WBMoby *m) {
         }
         break;
     }
-    case 6:
+    case WOODCUT_BOT_RETURN_TO_SAVED_POSITION:
         if (m->fBC & 8) {
             m->fBC &= ~8;
             FUN_L04_00295de8(m, d->f160);
@@ -1184,7 +1238,7 @@ void woodcut_bot_update(WBMoby *m) {
             }
         }
         break;
-    case 7:
+    case WOODCUT_BOT_STOP_MOVEMENT:
         if (dist < 3.0f && adiff < 1.5707964f) {
             blend_moby_animation(m, 4, 0, scale_game_frames(10));
             FUN_L00_002a1538(d->f160);
@@ -1200,14 +1254,14 @@ void woodcut_bot_update(WBMoby *m) {
             }
         }
         break;
-    case 8:
+    case WOODCUT_BOT_MELEE_ATTACK:
         if (m->anim == 4 && (m->f70 & 2)) {
             d->t3C2 = 0;
             blend_moby_animation(m, 0, 0, scale_game_frames(10));
             m->state = 1;
         }
         break;
-    case 9:
+    case WOODCUT_BOT_HIT_RECOVERY_AND_REPOSITION:
         if (m->anim2 != 5 || (m->anim == 5 && (m->f70 & 2))) {
             if (m->fBC & 4) {
                 m->fBC &= ~4;
@@ -1293,7 +1347,7 @@ void woodcut_bot_update(WBMoby *m) {
             }
         }
         break;
-    case 10:
+    case WOODCUT_BOT_TURN_BEFORE_MOVEMENT:
         if (m->anim == 0x10 && (m->f70 & 2)) {
             if ((m->fBC & 0x10) ||
                 point_in_path_xy(tgt, D_L04_001B0630[d->f3DC] + 4, *D_L04_001B0630[d->f3DC]) == 0) {
@@ -1314,7 +1368,7 @@ void woodcut_bot_update(WBMoby *m) {
                                  &d->f3D0, 0.03f, 0.3f, frame_time * 6.4577184f);
         }
         break;
-    case 11:
+    case WOODCUT_BOT_DEATH_KNOCKBACK:
         if ((mine_fall(m, d->fC0) & 0x40) || m->pos[2] < 1.0f) {
             FUN_L04_002d1608(m);
             FUN_L00_00263fd8(m, 0x6CB, pos, m->rot, 0, 0, 0.0f, D_L04_0015F580, D_L04_0015F580,
@@ -1421,6 +1475,11 @@ extern char D_L04_00173FE0[];
 /* Three-state motion update. The saved position is restored when the timer expires. */
 void leaf_update(struct Moby *moby) __asm__("FUN_L04_002d7e90");
 void leaf_update(struct Moby *moby) {
+    enum {
+        LEAF_INITIALIZE = 0,
+        LEAF_WAIT_FOR_ACTIVATION = 1,
+        LEAF_UPDATE_MOTION = 2
+    };
     Vec4 random;
     Vec4 old;
     Vec4 work;
@@ -1440,13 +1499,13 @@ void leaf_update(struct Moby *moby) {
     speed = vector_length_xy(data);
     qcopy(&old, &moby->pos);
     switch (moby->state) {
-    case 0:
+    case LEAF_INITIALIZE:
         qcopy(data + 0x30, &moby->pos);
         *(int *)(data + 0x40) = *(int *)(data + 0x44) = random_int_between(120, 2400);
         *(float *)(data + 0x4c) = moby->scale * random_float_between(0.8f, 1.2f);
         moby->state = 1;
         break;
-    case 1:
+    case LEAF_WAIT_FOR_ACTIVATION:
         if (!(vector_distance(&moby->pos, D_L04_00166F40) < 32.0f))
             return;
         if (!fast_dec_timer((int *)(data + 0x44)))
@@ -1470,7 +1529,7 @@ void leaf_update(struct Moby *moby) {
         *(int *)(motion + 16) = *(int *)(motion + 17) = random_int_between(720, 1200);
         moby->state = 2;
         return;
-    case 2:
+    case LEAF_UPDATE_MOTION:
         fast_dec_timer((int *)(data + 0x44));
         normalize_vector_xyz(&random, &random, D_L04_001CB940[5] / 10.0f);
         add_vector_xyz(data + 0x10, data + 0x10, &random);
@@ -1535,11 +1594,16 @@ void leaf_update(struct Moby *moby) {
 float riser_rise_speed(struct Moby *moby) __asm__("FUN_L04_002e1768");
 
 float riser_rise_speed(struct Moby *moby) {
+    enum {
+        RISER_CLASS_ASCENDING_WITH_COMPLETION_VOICE = 0x44D,
+        RISER_CLASS_FAST_DESCENDING = 0x5FB,
+        RISER_CLASS_ASCENDING_WITHOUT_COMPLETION_VOICE = 0x5FC
+    };
     switch (moby->oclass) {
-    case 0x44D:
-    case 0x5FC:
+    case RISER_CLASS_ASCENDING_WITH_COMPLETION_VOICE:
+    case RISER_CLASS_ASCENDING_WITHOUT_COMPLETION_VOICE:
         return 1.3f;
-    case 0x5FB:
+    case RISER_CLASS_FAST_DESCENDING:
         return -2.55f;
     }
     return -2.05f;
@@ -1567,17 +1631,22 @@ extern int allocate_voice_for_target_entry(int, int, struct Moby *) __asm__("FUN
 extern s32 D_0014C190_257218[][64] __asm__("D_0014C190");
 void upper_door_update(struct Moby *m) __asm__("FUN_L04_002e17d8");
 void upper_door_update(struct Moby *m) {
+    enum {
+        UPPER_DOOR_INITIALIZE = 0,
+        UPPER_DOOR_WAIT_FOR_ACTIVATION = 1,
+        UPPER_DOOR_MOVE_VERTICAL = 2
+    };
     struct RiserVars *d = (struct RiserVars *)m->pvars;
     struct Moby *t;
     s16 idx;
     u16 id;
 
     switch (m->state) {
-    case 0:
+    case UPPER_DOOR_INITIALIZE:
         d->baseZ = m->pos.z;
         m->state = 1;
         break;
-    case 1:
+    case UPPER_DOOR_WAIT_FOR_ACTIVATION:
         id = m->save_id;
         idx = id;
         if (D_L04_001BB3B0.collected[idx] == 0 && !((D_0014C190_257218[current_level_index][idx >> 5] >> (id & 0x1F)) & 1)) {
@@ -1592,7 +1661,7 @@ void upper_door_update(struct Moby *m) {
         m->state = 2;
         d->timer = scale_game_frames(60);
         break;
-    case 2:
+    case UPPER_DOOR_MOVE_VERTICAL:
         m->pos.z += riser_rise_speed(m) * frame_time;
         if (fast_dec_timer(&d->timer)) {
             D_0014C190_257218[current_level_index][(s16)m->save_id >> 5] |= 1 << (m->save_id & 0x1F);
@@ -1633,6 +1702,12 @@ extern void memcard_save_data(int, int) __asm__("FUN_0020b178");
 
 void suck_cannon_update(struct Moby *moby) __asm__("FUN_L04_002e1a10");
 void suck_cannon_update(struct Moby *moby) {
+    enum {
+        SUCK_CANNON_INITIALIZE = 0,
+        SUCK_CANNON_WAIT_FOR_HERO = 1,
+        SUCK_CANNON_WAIT_TO_RESET_CAMERA = 2,
+        SUCK_CANNON_REMOVE = 3
+    };
     struct PortalVars *vars = (struct PortalVars *)moby->pvars;
     struct Moby *exit;
 
@@ -1642,7 +1717,7 @@ void suck_cannon_update(struct Moby *moby) {
     else if (moby->flags & 1)
         moby->flags &= ~0x41;
     switch (moby->state) {
-    case 0:
+    case SUCK_CANNON_INITIALIZE:
         FUN_L00_002d6bf0(moby);
         if (D_0013D4F1[0]) {
             remove_moby_2e1a10(moby);
@@ -1651,7 +1726,7 @@ void suck_cannon_update(struct Moby *moby) {
         moby->state = 1;
         moby->pos.z += 1.0f;
         break;
-    case 1:
+    case SUCK_CANNON_WAIT_FOR_HERO:
         FUN_L04_002e1d00_m(moby);
         if (vector_distance(&moby->pos, &hero.motion.pos) < 3.0f) {
             moby->flags |= 0x41;
@@ -1659,7 +1734,7 @@ void suck_cannon_update(struct Moby *moby) {
             moby->state = 2;
         }
         break;
-    case 2:
+    case SUCK_CANNON_WAIT_TO_RESET_CAMERA:
         if (D_L04_0015F5C4 == 2)
             break;
         if (!D_0013D4C9[0])
@@ -1677,7 +1752,7 @@ void suck_cannon_update(struct Moby *moby) {
         moby->state = 3;
         memcard_save_data(0, -1);
         break;
-    case 3:
+    case SUCK_CANNON_REMOVE:
         remove_moby_2e1a10(moby);
         break;
     }

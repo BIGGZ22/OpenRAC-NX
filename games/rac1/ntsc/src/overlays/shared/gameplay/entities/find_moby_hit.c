@@ -717,12 +717,18 @@ extern float FUN_001f96b0_25b440(float) __asm__("FUN_001f96b0");
 extern float FUN_00213508_25b440(void *, int, float) __asm__("FUN_00213508");
 
 int FUN_L00_0025b440(O_25b440 *o, S_25b440 *s) {
+    enum {
+        CHECK_ARC_ENTRY_GATES = 0,
+        INTEGRATE_ARC_MOTION = 1,
+        DESCEND_TO_GROUND = 2,
+        WAIT_AFTER_GROUND_CLAMP = 3
+    };
     float v[4];
     float t;
     float g;
 
     switch (s->state) {
-    case 0:
+    case CHECK_ARC_ENTRY_GATES:
         if (o->b52 != s->b2C) {
             break;
         }
@@ -733,7 +739,7 @@ int FUN_L00_0025b440(O_25b440 *o, S_25b440 *s) {
             FUN_00212f90_25b440(o, s->b2D, 0, 10);
             s->state = 1;
         }
-    case 1:
+    case INTEGRATE_ARC_MOTION:
         FUN_L00_00258278_25b440(o, &s->f30, s->f18, s->f34, s->f38, s->f3C);
         v[0] = FUN_001f9dc8_25b440(s->f18) * s->f14;
         v[1] = FUN_001f9de0_25b440(s->f18) * s->f14;
@@ -748,7 +754,7 @@ int FUN_L00_0025b440(O_25b440 *o, S_25b440 *s) {
             }
         }
         break;
-    case 2:
+    case DESCEND_TO_GROUND:
         o->z += s->f10;
         s->f10 -= s->f1C;
         g = FUN_00213508_25b440(o->pos, 0, 0.5f);
@@ -761,7 +767,7 @@ int FUN_L00_0025b440(O_25b440 *o, S_25b440 *s) {
             v[2] = 0.0f;
             FUN_001f9a10_25b440(o->pos, o->pos, v);
         }
-    case 3:
+    case WAIT_AFTER_GROUND_CLAMP:
         if (o->b70 & 2) {
             s->state = 4;
         }
@@ -774,28 +780,31 @@ f32 FUN_L00_0025b6a8(f32 a, f32 b, f32 t);
 f32 FUN_L00_0025b6a8(f32 a, f32 b, f32 t) {
     return a + (b - a) * t;
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_0025b6b8.s", FUN_L00_0025b6b8);
-#else
-typedef union {
-    u128 q;
-    f32 f[4];
-} Vec4_25b6b8 __attribute__((aligned(16)));
+#include "rnc/math/vector.h"
 
-void FUN_L00_0025b6b8(f32 t, f32 *out, f32 *a, f32 *b);
-void FUN_L00_0025b6b8(f32 t, f32 *out, f32 *a, f32 *b) {
-    Vec4_25b6b8 left, right;
-    f32 *dest = out;
-    volatile f32 *rightPtr = right.f;
-    volatile f32 *leftPtr = left.f;
+typedef struct {
+    f32 *p;
+} OutPtr;
+
+/* Interpolates the four components of two copied vectors by t into dst. */
+void FUN_L00_0025b6b8(f32 *dst, f32 *a, f32 *b, f32 t);
+void FUN_L00_0025b6b8(f32 *dst, f32 *a, f32 *b, f32 t) {
+    Vec4 left, right;
+    /* Fakematch: the struct copy of dst and the dead dst = 0 stores keep each store ahead of the next call's loads. */
+    OutPtr out = { dst };
+
+    dst = 0;
     left.q = *(u128 *)a;
     right.q = *(u128 *)b;
-    dest[0] = FUN_L00_0025b6a8(left.f[0], right.f[0], t);
-    dest[1] = FUN_L00_0025b6a8(left.f[1], right.f[1], t);
-    dest[2] = FUN_L00_0025b6a8(left.f[2], rightPtr[2], t);
-    dest[3] = FUN_L00_0025b6a8(leftPtr[3], rightPtr[3], t);
+    b = right.f;
+    out.p[0] = FUN_L00_0025b6a8(left.f[0], b[0], t);
+    dst = out.p;
+    out = (OutPtr){ dst };
+    dst = 0;
+    out.p[1] = FUN_L00_0025b6a8(left.f[1], b[1], t);
+    out.p[2] = FUN_L00_0025b6a8(left.f[2], b[2], t);
+    out.p[3] = FUN_L00_0025b6a8(left.f[3], b[3], t);
 }
-#endif
 #define NOT_SDA
 
 #define MACRO_ADDR

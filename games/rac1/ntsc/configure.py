@@ -377,6 +377,7 @@ OVERLAY_SN_UNITS = {
     "shared/ui/menus/0027f448.c",
     "shared/ui/text/001fb470.c",
     "shared/ui/text/002377b8.c",
+    "shared/ui/text/00262ae8.c",
     "shared/world/loaders/0023fa00.c",
     "shared/world/loaders/load_level_gameplay.c",
 }
@@ -417,9 +418,9 @@ RODATA_OVERLAYS = {
     "ui/help/draw_help": (0x1E7A70, 0xE89F0, 28),  # switch table (migrated)
     "ui/help/dismiss_help": (0x1E7A20, 0xE89A0, 32),  # switch table (migrated)
     "_sceFs_Rcv_Intr": (0x1528E0, 0x53860, 100),  # retail switch table (jtbl_001528E0)
-    "fun_00216c48": (0x1E86A0, 0xE9620, 24),  # retail switch table (jtbl_001E86A0)
+    "ui/menus/process_menu_entry": (0x1E86A0, 0xE9620, 24),  # retail switch table (jtbl_001E86A0)
     "draw_sky_shells": (0x1E8910, 0xE9890, 24),  # switch table
-    "fun_002223f0": (0x1E8810, 0xE9790, 80),  # switch table
+    "ui/menus/update_timed_menu_sequence": (0x1E8810, 0xE9790, 80),  # switch table
     "gameplay/vendor/update_resident_dialogue_animation_state": (0x1E8A90, 0xE9A10, 52),  # switch table
     "update_help_state": (0x1E7A40, 0xE89C0, 36),  # switch table
     "memcard_update_state": (0x1E8200, 0xE9180, 348),  # switch table
@@ -446,6 +447,7 @@ RODATA_OVERLAYS = {
     "sdk/callbacks/report_mpeg_picture_temporal_scalable_unsupported": (0x153BC8, 0x54B48, 51),
     "sdk/library/GetRomName": (0x153C00, 0x54B80, 12),
     "draw_scrolling_sky_shells": (0x1E88F0, 0xE9870, 20),  # switch table
+    "update_streamed_moby_animation": (0x1E88B0, 0xE9830, 28),  # switch table
 }
 
 # Recovered C units that define the small-data variables their original
@@ -503,7 +505,7 @@ DATA_OVERLAYS = {
     "textbin/video/player/init_all": (0x1E8AF0, 0xE9A70, 18),
     "rendering/view/update_view_context": (0x18CFC0, 0x8DF40, 64),
     "input/pad/init_pads": (0x1CD760, 0xCE6E0, 16),
-    "ui/menus/fun_002223f0": (0x1D5298, 0xD6218, 3),
+    "ui/menus/update_timed_menu_sequence": (0x1D5298, 0xD6218, 3),
     "gameplay/vendor/update_resident_dialogue_animation_state": (0x1E63FC, 0xE737C, 4),
     "rendering/draw_dialog_text": (0x1E78F0, 0xE8870, 48),
 }
@@ -1110,10 +1112,11 @@ def hoist_sda_externs(assembly, source):
     that did and did not define the symbol), so the directive goes in front
     of the first function defined after the sda declaration instead.  A
     NON_MATCHING `#else` draft is not compiled, so its declarations do not
-    count.
+    count, unless the file defines NON_MATCHING to compile the drafts.
     """
-    source = re.sub(r"^(#ifndef NON_MATCHING\n(?:INCLUDE_ASM[^\n]*\n)*)#else\n.*?^#endif",
-                    r"\1#endif", source, flags=re.M | re.S)
+    if not re.search(r"^#\s*define\s+NON_MATCHING\b", source, re.M):
+        source = re.sub(r"^(#ifndef NON_MATCHING\n(?:INCLUDE_ASM[^\n]*\n)*)#else\n.*?^#endif",
+                        r"\1#endif", source, flags=re.M | re.S)
     sda = {}
     for match in re.finditer(r"^extern[^;]*__attribute__\(\(sda\)\)[^;]*;", source, re.M):
         decl = match.group(0)
@@ -1164,6 +1167,68 @@ def reference_assembly(assembly):
     return re.sub(r"^[ \t]*\.set[ \t]+no(?:reorder|macro)[ \t]*\r?\n", "", assembly, flags=re.M)
 
 
+def fill_jump_slots(assembly):
+    """Fill the delay slot of a reorder-mode jump or branch as retail did.
+
+    cc1 leaves a jump in reorder mode when it found nothing for the slot
+    itself: after a volatile access, or after the second half of a two-line
+    pattern (`dsll`/`dsra` sign extension).  GNU as pads those with a nop;
+    retail's SDK assembler moved the instruction before the jump into the
+    slot (_setDefaultQM, kputchar, ftoi, sceCdRead).  A load moved only when
+    the instruction before it was itself assembled in reorder mode with no
+    label between (PollSema calls in cd_check_ncmd stay); `mflo`/`mfhi` never
+    moved.  Debug line labels and comments do not count as labels.  Same
+    model as rac1-decomp's tools/fix_volatile_slot.py.
+    """
+    jump = re.compile(r"^\s*(?:jal\s+[\w.$]+|j\s+\$31|b\s+[\w.$]+"
+                      r"|(?:beq|bne)\s+\$\w+,\s*\$\w+,\s*[\w.$]+"
+                      r"|(?:beqz|bnez|blez|bgtz|bltz|bgez)\s+\$\w+,\s*[\w.$]+)\s*$")
+    load = re.compile(r"^\s*(?:lb|lbu|lh|lhu|lw|ld|lq|lwc1)\s+\$\w+,\s*-?[\w%()]*\(\$\w+\)\s*$")
+    other = re.compile(
+        r"^\s*(?:(?:sb|sh|sw|sd|sq|swc1)\s+\$\w+,\s*-?[\w%()]*\(\$\w+\)"
+        r"|(?:move|addu|addiu|daddu|daddiu|subu|dsubu|and|andi|or|ori|xor|xori|nor|lui"
+        r"|sll|srl|sra|dsll|dsrl|dsra|dsll32|dsrl32|dsra32|sllv|srlv|srav|dsllv|dsrlv|dsrav"
+        r"|slt|slti|sltu|sltiu)\s+\$\w+(?:,\s*[$\w-]+)*)\s*$")
+
+    def skippable(text):
+        return not text or text.startswith((".stab", "#")) or re.match(r"^\$LM\d+:$", text)
+
+    def code_before(index):
+        while index >= 0 and skippable(out[index].strip()):
+            index -= 1
+        return index
+
+    out, reordered, reorder = [], [], True
+    for line in assembly.split("\n"):
+        text = line.strip()
+        if text in (".set\tnoreorder", ".set noreorder"):
+            reorder = False
+        elif text in (".set\treorder", ".set reorder"):
+            reorder = True
+        if reorder and jump.match(line):
+            k = code_before(len(out) - 1)
+            previous = out[k].split("#")[0] if k >= 0 else ""
+            movable = bool(other.match(previous))
+            if load.match(previous):
+                j = code_before(k - 1)
+                text_j = out[j].strip() if j >= 0 else ""
+                movable = (j >= 0 and reordered[j] and not text_j.endswith(":")
+                           and not text_j.startswith("."))
+            written = re.match(r"^\s*(?!s[bhwdq]\s|swc1\s)\w+\s+(\$\w+)", previous)
+            if written and written.group(1) in re.findall(r"\$\w+", line):
+                movable = False
+            if movable and "$31" not in previous:
+                slot = out.pop(k)
+                reordered.pop(k)
+                added = ["\t.set\tnoreorder", "\t.set\tnomacro", line, slot, "\t.set\tmacro", "\t.set\treorder"]
+                out += added
+                reordered += [False] * len(added)
+                continue
+        out.append(line)
+        reordered.append(reorder)
+    return "\n".join(out)
+
+
 def main(argv):
     if len(argv) == 5 and argv[1] == "externs":
         _, _, source, destination, c_source = argv
@@ -1173,9 +1238,12 @@ def main(argv):
     if len(argv) == 4 and argv[1] == "reference":
         open(argv[3], "w").write(reference_assembly(open(argv[2]).read()))
         return
+    if len(argv) == 4 and argv[1] == "slots":
+        open(argv[3], "w").write(fill_jump_slots(open(argv[2]).read()))
+        return
     if len(argv) not in (4, 5):
         raise SystemExit("usage: padless-asm.py normalize IN OUT [POLICY] | finish IN OUT [REFERENCE] | "
-                         "externs IN OUT SOURCE | reference IN OUT")
+                         "externs IN OUT SOURCE | reference IN OUT | slots IN OUT")
     mode, source, destination = argv[1:4]
     policy = argv[4] if len(argv) == 5 else "none"
     data = open(source, "rb").read()
@@ -1319,10 +1387,17 @@ def build_stuff(
         ),
     )
 
+    # SDK code: cc1 output goes through `padless-asm.py slots` (retail's SDK
+    # assembler filled the jump delay slots cc1 left empty) before GNU as.
     ninja.rule(
         "sdk-compiler",
         description="sdk-compiler $in",
-        command=f"{compile_cmd} $in $extra -o $out && {CROSS}strip $out -N dummy-symbol-name -R .mdebug",
+        command=(
+            f"mkdir -p $sdk_work && {compile_cmd} -S $in $extra -o $sdk_work/cand.s && "
+            f"{sys.executable} padless-asm.py slots $sdk_work/cand.s $sdk_work/cand-slots.s && "
+            f"{compile_cmd} $extra $sdk_work/cand-slots.s -o $out && "
+            f"{CROSS}strip $out -N dummy-symbol-name -R .mdebug"
+        ),
     )
 
     if not game_compiler_configured():
@@ -1516,7 +1591,9 @@ def build_stuff(
                 build(entry.object_path, entry.src_paths, rule, variables=variables)
             elif rule == "sdk-compiler":
                 flags = SDK_COMPILER_FLAG_UNITS.get(unit, "")
-                variables = {"extra": f"{flags} "} if flags else {}
+                variables = {"sdk_work": str(ROOT / "build/sdk-work/units" / unit)}
+                if flags:
+                    variables["extra"] = f"{flags} "
                 build(entry.object_path, entry.src_paths, rule, variables=variables)
             elif rule == "cc_ee_gcc_patched" and not patched_route:
                 # No patched profile: build from the retail oracle; the C is
@@ -2149,12 +2226,14 @@ def build_overlays() -> Path:
     # obj/ only checks that the file compiles as written; its code is never
     # compared.  GNU as can assert (tc-mips.c:11454) on a bare symbol access
     # in a noreorder delay slot, with -G0 on some files and without it on
-    # others, so a file passes when it assembles either way.
+    # others, and on some with both; cc1 -G0 leaves no such access, so a file
+    # passes when it assembles any of the three ways.
     overlay_cc = f"{game_root}/ee-gcc -c {includes} {LANG_DEFINE} {COMPILER_FLAGS} $in -o $out"
     ninja.rule(
         "overlay-cc",
         description="overlay-cc $in",
-        command=f"{overlay_cc.replace(' -c ', ' -c -Wa,-G0 ', 1)} 2>/dev/null || {overlay_cc}",
+        command=(f"{overlay_cc.replace(' -c ', ' -c -Wa,-G0 ', 1)} 2>/dev/null || {overlay_cc} 2>/dev/null || "
+                 f"{overlay_cc.replace(' -c ', ' -c -G0 ', 1)}"),
     )
     ninja.rule(
         "c-only",

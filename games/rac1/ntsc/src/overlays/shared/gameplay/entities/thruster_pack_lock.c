@@ -84,10 +84,14 @@ extern int func_001F9850_3102C8(int) __asm__("FUN_001f96f8");
 void thruster_pack_lock_update(Lock_3102C8 *moby) __asm__("FUN_L11_0030ee00");
 void thruster_pack_lock_update(Lock_3102C8 *moby)
 {
+    enum {
+        THRUSTER_PACK_LOCK_STATE_INIT = 0,
+        THRUSTER_PACK_LOCK_STATE_ACTIVE = 1
+    };
     char *vars = moby->vars;
 
     switch (moby->state) {
-    case 0: {
+    case THRUSTER_PACK_LOCK_STATE_INIT: {
         int level = current_level_index;
         ((Stats_3102C8 *)(D_00141968_r))->count = 0;
         ((Stats_3102C8 *)(D_00141968_r))->best = 0;
@@ -104,7 +108,7 @@ void thruster_pack_lock_update(Lock_3102C8 *moby)
         moby->state = 1;
         break;
     }
-    case 1:
+    case THRUSTER_PACK_LOCK_STATE_ACTIVE:
         if (((void *)((Hero *)(D_0013F350_r))->ground_moby) == moby && D_0013D4C0[3] != 0 &&
             ((Hero *)(D_0013F350_r))->air_frames.s == 0 && ((Hero *)(D_0013F350_r))->state.current == 0x22) {
             if (current_level_index == 0xB && moby->bB0 != 0xFF) {
@@ -419,7 +423,6 @@ extern float D_L11_001F1490[];
 extern short D_L11_001623F0_d __asm__("D_L11_001623F0") __attribute__((sda));
 extern long long trail_effect_texture(int) __asm__("FUN_001f44b8");
 extern float integer_to_float(int) __asm__("FUN_001fa6c0");
-extern int tween_color(float, int, int) __asm__("FUN_001fa6e0");
 extern void memset(void *, int, int) __asm__("FUN_001153fc");
 extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
 extern void draw_packet(void *, int, int) __asm__("FUN_001f7d30");
@@ -427,18 +430,25 @@ extern int level_frame __asm__("D_L11_0015F5CC");
 extern int D_L11_0015FFD8;
 extern short *D_L11_001AC240[];
 
-int FUN_L11_003192c8(char *moby) {
-    char stack_data[0x900] __attribute__((aligned(16)));
-    float offset[8] __attribute__((aligned(16)));
-    short *list;
-    int i;
-    short *next_list;
-    float phase;
-    float *position_base;
-    float *position_y_base;
-    int *colors_base;
+typedef struct {
+    float positions[4][4];
+    int colors[4];
+    float texture_coordinates[4][2];
+    long packet[4];
+} TrailQuad;
 
-    if ((unsigned char)moby[0x21] == 0xff) {
+extern int fast_tween_color(int, int, float) __asm__("FUN_001fa6e0");
+
+int FUN_L11_003192c8(char *moby) {
+    TrailQuad quads[16];
+    float offset[2][4];
+    short *list, *next_list;
+    int i, j, segment, side, slot, more, next_segment, next_side, own_class, other_class, visible, half, corner;
+    float base, blend;
+    long skip;
+    char *other, *trail;
+
+    if (*(unsigned char *)(moby + 0x21) == 0xFF) {
         return;
     }
     if (D_0015EDB2 != 0) {
@@ -446,83 +456,71 @@ int FUN_L11_003192c8(char *moby) {
     } else {
         *(float *)&D_L11_001623F0_d = 5.0f;
     }
-    position_y_base = (float *)(stack_data + 0x54);
-    position_base = (float *)(stack_data + 0x50);
-    colors_base = (int *)(stack_data + 0x40);
+
     for (i = 0; i < 16; i++) {
-        long long texture;
-        long long *packet = (long long *)(stack_data + 0x70);
-        float *source;
-        float *position;
-        float *position_y;
-        int *colors;
-        float span;
-        int j;
-        j = 0;
-        texture = trail_effect_texture(0x13);
-        packet[i * 18 + 1] = texture;
-        packet[i * 18 + 3] = 0x8000000048LL;
-        packet[i * 18 + 2] = 0xff9000000260LL;
-        packet[i * 18] = 0;
-        span = *(float *)&D_L11_001623F0_d * 4.0f;
-        phase = integer_to_float((level_frame + 3) & 3) / span;
-        source = D_L11_001F1490;
-        position = position_base + i * 0x24;
-        position_y = position_y_base + i * 0x24;
-        colors = colors_base + i * 0x24;
-        for (; j < 4; j++) {
-            float t;
-            position[j * 2] = source[j * 2];
-            position_y[j * 2] = source[j * 2 + 1];
-            t = integer_to_float(i - ((j >> 1) - 1)) / *(float *)&D_L11_001623F0_d + phase;
-            if (t > 1.0f) t = 1.0f;
-            else if (t < 0.0f) t = 0.0f;
-            colors[j] = tween_color(t, 0x8c28aa28, 0x144646);
+        long texture = trail_effect_texture(0x13);
+        TrailQuad *quad = &quads[i];
+        quad->packet[1] = texture;
+        quad->packet[2] = 0xFF9000000260L;
+        quad->packet[0] = 0;
+        quad->packet[3] = 0x8000000048L;
+        base = integer_to_float((level_frame + 3) & 3) / (*(float *)&D_L11_001623F0_d * 4.0f);
+        for (j = 0; j < 4; j++) {
+            half = (j >> 1) - 1;
+            quads[i].texture_coordinates[j][0] = ((float (*)[2])D_L11_001F1490)[j][0];
+            quads[i].texture_coordinates[j][1] = ((float (*)[2])D_L11_001F1490)[j][1];
+            blend = integer_to_float(i - half) / *(float *)&D_L11_001623F0_d + base;
+            if (1.0f < blend) {
+                blend = 1.0f;
+            } else if (blend < 0.0f) {
+                blend = 0.0f;
+            }
+            quads[i].colors[j] = fast_tween_color(0x8C28AA28, 0x144646, blend);
         }
     }
+
     memset(offset, 0, 0x20);
-    offset[2] = 0.25f;
-    offset[6] = -0.25f;
-    list = D_L11_001AC240[(unsigned char)moby[0x21]];
+    offset[0][2] = 0.25f;
+    offset[1][2] = -0.25f;
+
+    list = D_L11_001AC240[*(unsigned char *)(moby + 0x21)];
     do {
-        unsigned short entry = *(unsigned short *)list;
-        char *linked = (char *)(((entry & 0x7fff) << 8) + D_L11_0015FFD8);
-        int skip = *(short *)(linked + 0xa6) != *(short *)(moby + 0xa6);
-        if (*(unsigned char *)(linked + 0x31) == 0) skip = 1;
         next_list = list + 1;
-        if (skip == 0) {
-            char *trail = *(char **)(linked + 0x78);
-            long limit = -1;
-            for (i = 0; i < *(int *)(trail + 0x2c0); i++) {
-                int next = *(int *)(trail + 0x2c4) - i;
-                int a = next + 15;
-                int b = next + 30;
-                int start;
-                int j;
-                if (limit < a) b = a;
-                start = b >> 4;
-                next = start << 4;
-                start = a - next;
-                for (j = 0; j < 2; j++) {
-                    int k;
-                    char *packet = stack_data + i * 0x90;
-                    char *points = trail + 0xc0 + j * 0x100;
-                    for (k = 0; k < 4; k++) {
-                        int n = start + (k >> 1);
-                        int q = n + 15;
-                        if (limit < n) q = n;
-                        q = (q >> 4) << 4;
-                        n = n - q;
-                        add_vector_xyz((float *)stack_data + i * 0x24 + k * 4, points + n * 16,
-                                       (char *)offset + (k & 1) * 16);
-                    }
-                    draw_packet(packet, 0, 0);
-                }
+        skip = 1;
+        other = (char *)(((*list & 0x7FFF) << 8) + D_L11_0015FFD8);
+        other_class = *(short *)(other + 0xA6);
+        own_class = *(short *)(moby + 0xA6);
+        visible = *(unsigned char *)(other + 0x31);
+        if ((other_class ^ own_class) == 0) {
+            skip = 0;
+        }
+        if (visible == 0) {
+            skip = 1;
+        }
+        if (!skip) {
+            trail = *(char **)(other + 0x78);
+            segment = 0;
+            if (*(int *)(trail + 0x2C0) > 0) {
+                do {
+                    next_segment = segment + 1;
+                    slot = (*(int *)(trail + 0x2C4) - segment + 15) % 16;
+                    side = 0;
+                    do {
+                        next_side = side + 1;
+                        for (corner = 0; corner < 4; corner++) {
+                            int point = (slot + (corner >> 1)) % 16;
+                            add_vector_xyz(quads[segment].positions[corner], trail + 0xC0 + side * 0x100 + point * 16, offset[corner & 1]);
+                        }
+                        draw_packet(&quads[segment], 0, 0);
+                        side = next_side;
+                    } while (side < 2);
+                    segment = next_segment;
+                } while (segment < *(int *)(trail + 0x2C0));
             }
         }
-        if (*list < 0) break;
+        more = *list >= 0;
         list = next_list;
-    } while (1);
+    } while (more);
 }
 #endif
 /* Advances a trail ring buffer and records two offset points each fourth frame. */

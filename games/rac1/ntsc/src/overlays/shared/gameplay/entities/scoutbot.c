@@ -124,6 +124,16 @@ extern float dt_3DF8 __asm__("D_0015ED70");
 
 void scoutbot_update(Moby *moby) __asm__("FUN_L08_002d2af0");
 void scoutbot_update(Moby *moby) {
+    enum {
+        SCOUTBOT_STATE_INITIALIZE = 0,
+        SCOUTBOT_STATE_IDLE = 1,
+        SCOUTBOT_STATE_APPROACH_TARGET = 2,
+        SCOUTBOT_STATE_RETURN_HOME = 3,
+        SCOUTBOT_STATE_ATTACK = 4,
+        SCOUTBOT_STATE_WAIT_FOR_VOICE = 6,
+        SCOUTBOT_STATE_MOVE_TO_WANDER_GOAL = 7,
+        SCOUTBOT_STATE_EXPLODE_AND_REMOVE = 0x63
+    };
     Data_3DF8 *data = (struct Data_3DF8 *)moby->pvars;
     float target_pos[4];
     float offset[4];
@@ -138,7 +148,7 @@ void scoutbot_update(Moby *moby) {
     data->current_target = data->target;
     qcopy(target_pos, data->target_pos);
     switch (moby->state) {
-    case 0:
+    case SCOUTBOT_STATE_INITIALIZE:
         if (data->f21C == -1) {
             delete_3DF8(moby);
             return;
@@ -168,7 +178,7 @@ void scoutbot_update(Moby *moby) {
         qcopy(data->wander_goal, data->home);
         data->b29 = 0;
         break;
-    case 1:
+    case SCOUTBOT_STATE_IDLE:
         if (data->f1B4 != 2) {
             data->f200 = 0.0f;
             data->f208 = 0.1f;
@@ -190,7 +200,7 @@ void scoutbot_update(Moby *moby) {
             moby->state = 7;
         }
         break;
-    case 7: {
+    case SCOUTBOT_STATE_MOVE_TO_WANDER_GOAL: {
         float heading = angle_3DF8(data->wander_goal[0] - moby->pos.x, data->wander_goal[1] - moby->pos.y);
 
         turn_3DF8(moby, heading, &data->yaw_speed, 0.01f, 0.3f, 0.05f);
@@ -206,7 +216,7 @@ void scoutbot_update(Moby *moby) {
         }
         break;
     }
-    case 2: {
+    case SCOUTBOT_STATE_APPROACH_TARGET: {
         float heading = angle_3DF8(target_pos[0] - moby->pos.x, target_pos[1] - moby->pos.y);
 
         turn_3DF8(moby, heading, &data->yaw_speed, 0.01f, 0.3f, 0.05f);
@@ -227,7 +237,7 @@ void scoutbot_update(Moby *moby) {
         }
         break;
     }
-    case 3: {
+    case SCOUTBOT_STATE_RETURN_HOME: {
         float heading = angle_3DF8(data->home[0] - moby->pos.x, data->home[1] - moby->pos.y);
 
         data->f200 = 4.0f;
@@ -245,7 +255,7 @@ void scoutbot_update(Moby *moby) {
         }
         break;
     }
-    case 4: {
+    case SCOUTBOT_STATE_ATTACK: {
         float heading = angle_3DF8(target_pos[0] - moby->pos.x, target_pos[1] - moby->pos.y);
         float frame;
 
@@ -282,7 +292,7 @@ void scoutbot_update(Moby *moby) {
         }
         break;
     }
-    case 6: {
+    case SCOUTBOT_STATE_WAIT_FOR_VOICE: {
         float heading = angle_3DF8(target_pos[0] - moby->pos.x, target_pos[1] - moby->pos.y);
 
         turn_3DF8(moby, heading, &data->yaw_speed, 0.01f, 0.3f, 0.05f);
@@ -304,7 +314,7 @@ void scoutbot_update(Moby *moby) {
             data->hC8 = 0;
         }
         break;
-    case 0x63:
+    case SCOUTBOT_STATE_EXPLODE_AND_REMOVE:
         qcopy(offset, &moby->pos);
         offset[2] += 1.0f;
         sound_id_3DF8(1, 0, moby);
@@ -1264,6 +1274,20 @@ extern void *FUN_L00_00263fd8_c(void *, int, void *, void *, int, int, float, vo
 extern char D_L08_001FC600[];
 void blarg_paratrooper_update(char *moby) __asm__("FUN_L08_00301158");
 void blarg_paratrooper_update(char *moby) {
+    enum {
+        PARATROOPER_STATE_INITIALIZE = 0,
+        PARATROOPER_STATE_PATROL_PATH = 1,
+        PARATROOPER_STATE_APPROACH_WAYPOINT = 2,
+        PARATROOPER_STATE_WAIT_FACING_TARGET = 3,
+        PARATROOPER_STATE_HOP_BETWEEN_WAYPOINTS = 4,
+        PARATROOPER_STATE_FIRE_PROJECTILES = 5,
+        PARATROOPER_STATE_MOVE_TOWARD_FIRST_WAYPOINT = 6,
+        PARATROOPER_STATE_MELEE_ATTACK = 7,
+        PARATROOPER_STATE_WAIT_FOR_HERO_TRIGGERED_ANIMATION = 8,
+        PARATROOPER_STATE_PAUSE_AFTER_HOP_LIMIT = 9,
+        PARATROOPER_STATE_KNOCKBACK_RECOVERY = 10,
+        PARATROOPER_STATE_DEATH_EFFECTS_AND_REMOVE = 11
+    };
     Paratrooper302618 *data = (Paratrooper302618 *)(*(char * *)((char *)(moby)+0x78));
     char *path;
     char *target;
@@ -1295,7 +1319,7 @@ void blarg_paratrooper_update(char *moby) {
         return;
     }
     switch((*(unsigned char *)((char *)(moby)+0x20))) {
-    case 0: {
+    case PARATROOPER_STATE_INITIALIZE: {
         float turn_rate;
         data->f29=0; data->f28=1; data->f2E=1;
         data->f20=2.0f; data->f24=2;
@@ -1329,7 +1353,7 @@ void blarg_paratrooper_update(char *moby) {
         data->f1DA=0;
         break;
     }
-    case 1:
+    case PARATROOPER_STATE_PATROL_PATH:
         if(fast_distance302618(moby+0x10,path+0x10+data->f1F4*16)<data->fE0) {
             short direction=data->f20C;
             int index = data->f1F4+direction;
@@ -1346,7 +1370,7 @@ void blarg_paratrooper_update(char *moby) {
             (*(unsigned char *)((char *)(moby)+0x20))=2;
         }
         break;
-    case 2: {
+    case PARATROOPER_STATE_APPROACH_WAYPOINT: {
         float distance;
         data->f1F4=FUN_L01_0028b510(moby+0x10,D_L08_001B0CB0[data->f1D4],0.0f);
         distance=fast_distance302618(moby+0x10,D_L08_001B0CB0[data->f1D4]+0x10+data->f1F4*16);
@@ -1358,7 +1382,7 @@ void blarg_paratrooper_update(char *moby) {
         }
         break;
     }
-    case 3: {
+    case PARATROOPER_STATE_WAIT_FACING_TARGET: {
         float *rotation=(float *)(moby+0x48);
         float heading;
         float frame;
@@ -1395,7 +1419,7 @@ void blarg_paratrooper_update(char *moby) {
         }
         break;
     }
-    case 4: {
+    case PARATROOPER_STATE_HOP_BETWEEN_WAYPOINTS: {
         float *rotation=(float *)(moby+0x48);
         float heading;
         float frame;
@@ -1433,7 +1457,7 @@ void blarg_paratrooper_update(char *moby) {
         }
         break;
     }
-    case 5:
+    case PARATROOPER_STATE_FIRE_PROJECTILES:
         if(fast_distance302618(moby+0x10,target+0x10)<melee302618) {
             (*(unsigned char *)((char *)(moby)+0x20))=7; data->f1EC=0;
             if((*(unsigned char *)((char *)(moby)+0x53))==13) break;
@@ -1465,7 +1489,7 @@ void blarg_paratrooper_update(char *moby) {
             }
         }
         break;
-    case 6: {
+    case PARATROOPER_STATE_MOVE_TOWARD_FIRST_WAYPOINT: {
         float *rotation=(float *)(moby+0x48);
         float heading;
         float frame;
@@ -1483,7 +1507,7 @@ void blarg_paratrooper_update(char *moby) {
         }
         break;
     }
-    case 7: {
+    case PARATROOPER_STATE_MELEE_ATTACK: {
         float *rotation=(float *)(moby+0x48);
         float heading;
         float frame;
@@ -1502,13 +1526,13 @@ void blarg_paratrooper_update(char *moby) {
         if((*(unsigned char *)((char *)(moby)+0x70))&2) (*(unsigned char *)((char *)(moby)+0x20))=2;
         break;
     }
-    case 8: case 9:
+    case PARATROOPER_STATE_WAIT_FOR_HERO_TRIGGERED_ANIMATION: case PARATROOPER_STATE_PAUSE_AFTER_HOP_LIMIT:
         if((*(unsigned char *)((char *)(moby)+0x70))&2) {
             (*(unsigned char *)((char *)(moby)+0x20))=3;
             if((*(unsigned char *)((char *)(moby)+0x53))!=0) animate302618(moby,0,0,scale302618(10));
         }
         break;
-    case 10:
+    case PARATROOPER_STATE_KNOCKBACK_RECOVERY:
         {
             int flags=dying302618(moby,(char *)data+0x70);
             if(flags&0x40) {
@@ -1532,7 +1556,7 @@ delete_moby:
             }
         }
         break;
-    case 11:
+    case PARATROOPER_STATE_DEATH_EFFECTS_AND_REMOVE:
         if(dying302618(moby,(char *)data+0x70)&0x160) {
             float *color;
             char *rotation;
@@ -1550,182 +1574,203 @@ delete_moby:
         break;
     }
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L08_003024d8.s", FUN_L08_003024d8);
-#else
-extern char *create_moby_3024d8(int) __asm__("FUN_0020c4f8");
-extern void get_moby_position_3024d8(void *, int, void *) __asm__("FUN_L00_0024f7c8");
-extern void get_moby_rotation_3024d8(void *, int, void *) __asm__("FUN_0020cca8");
-extern void copy_vector_3024d8(void *, void *) __asm__("FUN_001fa2b8");
+/* Ported from rac1-decomp (src/overlays/shared/vendor_002D3DF8.c: func_L08_00303998), where it is exact; names translated to the US level program. */
+extern char *create_moby(int) __asm__("FUN_0020c4f8");
+extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
+extern void build_moby_bone_transform(void *, int, void *) __asm__("FUN_0020cca8");
+extern void copy_matrix3x4(void *, void *) __asm__("FUN_001fa2b8");
 extern void update_moby_3024d8(void *) __asm__("FUN_L00_00250df8");
 extern int hit_3024d8(void *, void *, void *, int, int *, float *, int, int) __asm__("FUN_00213928");
-extern int truncate_3024d8(float) __asm__("FUN_001fa6d0");
-extern void set_knockback_3024d8(void *, void *, float *, float *) __asm__("FUN_L00_0025ab48");
-extern void start_knockback_3024d8(float, void *, void *, int, int, int) __asm__("FUN_L00_0025c558");
+extern int truncate_float_to_s32(float) __asm__("FUN_001fa6d0");
+extern void trooper_knockback_arc(void *, void *, float *, float *) __asm__("FUN_L00_0025ab48");
+extern void trooper_start_knockback(void *, void *, float, int, int, int) __asm__("FUN_L00_0025c558");
 extern void FUN_L00_00260a88(void *, int, int, int, int);
-extern void update_animation_3024d8(void *, void *) __asm__("FUN_L00_0025d458");
-extern void finish_animation_3024d8(void *, void *) __asm__("FUN_L00_0025d538");
-extern int tick_countdown_16_3024d8(short *) __asm__("FUN_001f9770");
-extern int random_integer_3024d8(int) __asm__("FUN_00213260");
-extern int scan_target_3024d8(float, void *, void *, int, int, void *, int) __asm__("FUN_L00_0025ff38");
-extern float distance_xy_3024d8(void *, void *) __asm__("FUN_001f9b80");
-extern float absolute_float_3024d8(float) __asm__("FUN_001f99c0");
-extern float angle_atan2_3024d8(float, float) __asm__("FUN_001f9e90");
-extern float floor_height_3024d8(float, void *, int) __asm__("FUN_00213508");
-extern float D_00162180_3024d8 __asm__("D_L08_00162180") __attribute__((sda));
-extern float D_00162184_3024d8 __asm__("D_L08_00162184") __attribute__((sda));
-extern float D_0016218C_3024d8 __asm__("D_L08_0016218C") __attribute__((sda));
-extern float D_00162190_3024d8 __asm__("D_L08_00162190") __attribute__((sda));
-extern float D_00162194_3024d8 __asm__("D_L08_00162194") __attribute__((sda));
-extern float D_001621B0_3024d8 __asm__("D_L08_001621B0") __attribute__((sda));
+extern void trooper_anim_update(void *, void *) __asm__("FUN_L00_0025d458");
+extern void trooper_anim_finish(void *, void *) __asm__("FUN_L00_0025d538");
+extern int fast_dec_timer_s16(short *) __asm__("FUN_001f9770");
+extern int scan_target_3024d8(void *, void *, float, int, int, void *, int) __asm__("FUN_L00_0025ff38");
+extern float vector_distance(void *, void *) __asm__("FUN_001f9b80");
+extern float fast_arc_tan(float, float) __asm__("FUN_001f9e90");
+extern float D_L08_00162180 __attribute__((sda));
+extern float D_L08_00162184 __attribute__((sda));
+extern float D_L08_0016218C __attribute__((sda));
+extern float D_L08_00162190 __attribute__((sda));
+extern float D_L08_00162194 __attribute__((sda));
+extern float D_L08_001621B0 __attribute__((sda));
 
-void FUN_L08_003024d8(char *m) {
-    char *d = *(char **)(m + 0x78);
-    char *h;
-    char *t;
-    char *e;
-    int hit;
-    int idx;
-    float dmg;
-    float angle;
-    float reach;
-    float height;
+void FUN_L08_003024d8(char *moby) {
+    char *data, *target, *child, *attached, *chased;
     float pos[4] __attribute__((aligned(16)));
-    char matrix[64] __attribute__((aligned(16)));
-    float knock_angle;
-    float pose_scale;
-    float timer_scale;
+    float matrix[16] __attribute__((aligned(16)));
+    float damage, knock_angle, second_knock_angle;
+    int hit_state, reaction, turn, state;
+    float angle, distance, height, dx, dy;
 
-    if (((unsigned char *)m)[0x20] == 0)
-        return;
+    data = *(char **)(moby + 0x78);
+    if (*(unsigned char *)(moby + 0x20) == 0) return;
     {
-    float pose_scale, timer_scale;
-    pose_scale = *(float *)(*(char **)(m + 0x24) + 0x24) * D_00162180_3024d8;
-    timer_scale = D_001621B0_3024d8 * frame_time;
-    *(float *)(m + 0x2c) = pose_scale;
-    *(float *)(d + 0xf4) = timer_scale;
+        float timer_scale = D_L08_001621B0 * frame_time;
+        ((Moby *)moby)->scale = *(float *)(*(char **)(moby + 0x24) + 0x24) * D_L08_00162180;
+        *(float *)(data + 0xf4) = timer_scale;
     }
-    if (*(char **)(d + 0x1f8) == 0) {
-        if ((*(char **)(d + 0x1f8) = create_moby_3024d8(0x401)) != 0) {
-            *(short *)(*(char **)(d + 0x1f8) + 0x32) = 0x40;
-            (*(char **)(d + 0x1f8))[0x30] = 0x40;
-            (*(char **)(d + 0x1f8))[0x31] = 1;
-            *(unsigned short *)(*(char **)(d + 0x1f8) + 0x34) |= 0x100;
-            get_moby_position_3024d8(m, 4, pos);
-            qcopy(*(char **)(d + 0x1f8) + 0x10, pos);
+
+    if (*(char **)(data + 0x1f8) == 0) {
+        child = create_moby(0x401);
+        *(char **)(data + 0x1f8) = child;
+        if (child != 0) {
+            *(short *)(child + 0x32) = 0x40;
+            *(unsigned char *)(*(char **)(data + 0x1f8) + 0x30) = 0x40;
+            *(unsigned char *)(*(char **)(data + 0x1f8) + 0x31) = 1;
+            *(unsigned short *)(*(char **)(data + 0x1f8) + 0x34) |= 0x100;
+            moby_point_position(moby, 4, pos);
+            qcopy(*(char **)(data + 0x1f8) + 0x10, pos);
         }
-        *(unsigned short *)(m + 0x34) |= 0x1000;
+        *(unsigned short *)(moby + 0x34) |= 0x1000;
     } else {
-        get_moby_position_3024d8(m, 4, pos);
-        get_moby_rotation_3024d8(m, 4, matrix);
-        copy_vector_3024d8(*(char **)(d + 0x1f8) + 0xc0, matrix);
-        t = *(char **)(d + 0x1f8);
-        qcopy(t + 0x10, pos);
-        update_moby_3024d8(t);
+        moby_point_position(moby, 4, pos);
+        build_moby_bone_transform(moby, 4, matrix);
+        copy_matrix3x4(*(char **)(data + 0x1f8) + 0xc0, matrix);
+        attached = *(char **)(data + 0x1f8);
+        qcopy(attached + 0x10, pos);
+        update_moby_3024d8(attached);
     }
-    dmg = 0.0f;
-    h = FUN_L00_0025a420(m, 0x330000, 0);
-    idx = hit_3024d8(m, h, d + 0x20, 0, &hit, &dmg, 0, 4);
-    if (hit != 1 && ((unsigned char *)m)[0x20] != 11) {
-        int hit;
-        *(float *)(d + 0x20) -= dmg;
-        if (*(short *)(*(char **)(h + 0x20) + 0xa6) == 0x47)
-            idx = 3;
-        if (*(float *)(d + 0x20) <= 0.0f)
-            idx = 1;
-        hit = truncate_3024d8(512.0f);
-        angle = D_00162184_3024d8 * frame_time_sq;
-        *(int *)(d + 0x90) = hit;
-        *(float *)(d + 0x98) = 0.5f;
-        *(int *)(d + 0x94) = 9;
-        *(float *)(d + 0x80) = angle;
-        d[0xad] = 0;
-        switch (idx) {
-        case 0: case 11: break;
-        case 9: case 10:
-            ((unsigned char *)d)[0x67] = 0xfa;
-            break;
-        case 3: case 4: case 5: case 6: case 7: case 8: {
-            float pose_scale, timer_scale;
-            timer_scale = frame_time * 3.0f;
-            pose_scale = D_0016218C_3024d8 * frame_time;
-            *(float *)(d + 0x88) = pose_scale;
-            *(float *)(d + 0x8c) = timer_scale;
-            *(float *)(d + 0xc0) = 5.0f;
-            *(float *)(d + 0xc4) = 10.0f;
-            angle = angle_atan2_3024d8(*(float *)(m + 0x10) - *(float *)(*(char **)(h + 0x20) + 0x10),
-                *(float *)(m + 0x14) - *(float *)(*(char **)(h + 0x20) + 0x14));
-            *(u128 *)pos = *(u128 *)(h + 0x10);
-            knock_angle = angle;
-            set_knockback_3024d8(pos, &knock_angle, (float *)(d + 0x88), (float *)(d + 0x8c));
-            start_knockback_3024d8(knock_angle, m, d + 0x70, 8, 1, 0);
-            m[0x20] = 10;
-            d[0x67] = 0x78;
-            break;
+
+    damage = 0.0f;
+    target = find_moby_hit(moby, 0x330000, 0);
+    reaction = hit_3024d8(moby, target, data + 0x20, 0, &hit_state, &damage, 0, 4);
+    if (hit_state != 1 && *(unsigned char *)(moby + 0x20) != 11) {
+        {
+            float health = *(float *)(data + 0x20) - damage;
+            *(float *)(data + 0x20) = health;
+            if (*(short *)(*(char **)(target + 0x20) + 0xa6) == 0x47) reaction = 3;
+            if (health <= 0.0f) reaction = 1;
         }
-        case 1:
-        case 2: {
-            float knock_angle, pose_scale, timer_scale, angle;
-            pose_scale = D_00162184_3024d8 * frame_time_sq;
-            timer_scale = D_00162194_3024d8 * frame_time;
-            angle = D_00162190_3024d8 * frame_time;
-            *(unsigned short *)(m + 0x34) &= 0xefff;
-            *(int *)(d + 0x90) = 0x200;
-            *(float *)(d + 0x80) = pose_scale;
-            *(float *)(d + 0x98) = 0.25f;
-            *(float *)(d + 0x8c) = angle;
-            *(float *)(d + 0x88) = timer_scale;
-            *(float *)(d + 0xc0) = 11.0f;
-            *(float *)(d + 0xc4) = 16.0f;
-            angle = angle_atan2_3024d8(*(float *)(m + 0x10) - *(float *)(*(char **)(h + 0x20) + 0x10),
-                *(float *)(m + 0x14) - *(float *)(*(char **)(h + 0x20) + 0x14));
-            *(u128 *)pos = *(u128 *)(h + 0x10);
-            knock_angle = angle;
-            set_knockback_3024d8(pos, &knock_angle, (float *)(d + 0x88), (float *)(d + 0x8c));
-            start_knockback_3024d8(knock_angle, m, d + 0x70, 12, 1, 0);
-            m[0x20] = 11;
-            ((unsigned char *)d)[0x67] = 0xf0;
-            FUN_L00_00260a88(m, 2, 3, 0, -1);
-            break;
+
+        turn = truncate_float_to_s32(512.0f);
+        {
+            float pose_scale = D_L08_00162184 * frame_time_sq;
+            *(int *)(data + 0x90) = turn;
+            *(float *)(data + 0x98) = 0.5f;
+            *(int *)(data + 0x94) = 9;
+            *(float *)(data + 0x80) = pose_scale;
         }
+        *(unsigned char *)(data + 0xad) = 0;
+
+        if ((unsigned)reaction < 12) {
+            switch (reaction) {
+            case 0:
+            case 11:
+                break;
+            case 9:
+            case 10:
+                *(unsigned char *)(data + 0x67) = 0xfa;
+                break;
+            case 3:
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+                {
+                    float pose_scale = D_L08_0016218C * frame_time;
+                    float timer_scale = frame_time * 3.0f;
+                    *(float *)(data + 0x88) = pose_scale;
+                    *(float *)(data + 0x8c) = timer_scale;
+                    *(float *)(data + 0xc0) = 5.0f;
+                    *(float *)(data + 0xc4) = 10.0f;
+                }
+                {
+                    char *hit_moby = *(char **)(target + 0x20);
+                    dx = *(float *)(moby + 0x10) - *(float *)(hit_moby + 0x10);
+                    dy = *(float *)(moby + 0x14) - *(float *)(hit_moby + 0x14);
+                }
+                angle = fast_arc_tan(dx, dy);
+                *(u128 *)pos = *(u128 *)(target + 0x10);
+                knock_angle = angle;
+                trooper_knockback_arc(pos, &knock_angle, (float *)(data + 0x88), (float *)(data + 0x8c));
+                trooper_start_knockback(moby, data + 0x70, knock_angle, 8, 1, 0);
+                *(unsigned char *)(moby + 0x20) = 10;
+                *(unsigned char *)(data + 0x67) = 0x78;
+                break;
+            case 1:
+            case 2:
+                {
+                    float push_limit = 16.0f;
+                    float pose_rate = D_L08_00162184;
+                    float timer_rate = D_L08_00162194;
+                    float angle_rate = D_L08_00162190;
+                    float step, pose_scale, timer_scale, angle_scale;
+                    ((Moby *)moby)->flags &= 0xefff;
+                    step = frame_time;
+                    pose_scale = pose_rate * frame_time_sq;
+                    timer_scale = timer_rate * step;
+                    angle_scale = angle_rate * step;
+                    *(float *)(data + 0x98) = 0.25f;
+                    *(float *)(data + 0x8c) = angle_scale;
+                    *(float *)(data + 0x80) = pose_scale;
+                    *(float *)(data + 0x88) = timer_scale;
+                    *(float *)(data + 0xc0) = 11.0f;
+                    *(float *)(data + 0xc4) = push_limit;
+                    *(int *)(data + 0x90) = 0x200;
+                }
+                {
+                    char *hit_moby = *(char **)(target + 0x20);
+                    dx = *(float *)(moby + 0x10) - *(float *)(hit_moby + 0x10);
+                    dy = *(float *)(moby + 0x14) - *(float *)(hit_moby + 0x14);
+                }
+                angle = fast_arc_tan(dx, dy);
+                *(u128 *)pos = *(u128 *)(target + 0x10);
+                second_knock_angle = angle;
+                trooper_knockback_arc(pos, &second_knock_angle, (float *)(data + 0x88), (float *)(data + 0x8c));
+                trooper_start_knockback(moby, data + 0x70, second_knock_angle, 12, 1, 0);
+                *(unsigned char *)(moby + 0x20) = 11;
+                *(unsigned char *)(data + 0x67) = 0xf0;
+                FUN_L00_00260a88(moby, 2, 3, 0, -1);
+                break;
+            default:
+                break;
+            }
         }
-        update_animation_3024d8(m, d + 0x60);
+        trooper_anim_update(moby, data + 0x60);
     }
-    ((unsigned char *)m)[0xa4] = 0xff;
-    finish_animation_3024d8(m, d + 0x60);
-    if (*(int *)(d + 0x38) != 0) {
+    *(unsigned char *)(moby + 0xa4) = 0xff;
+    trooper_anim_finish(moby, data + 0x60);
+
+    if (*(int *)(data + 0x38) != 0) {
         angle = random_float_between(180.0f, 240.0f);
-        *(short *)(d + 0x1d8) = truncate_3024d8(multiply_global_factor_ed64(angle));
-        *(int *)(d + 0x38) = 0;
+        angle = multiply_global_factor_ed64(angle);
+        *(short *)(data + 0x1d8) = (short)truncate_float_to_s32(angle);
+        *(int *)(data + 0x38) = 0;
     }
-    tick_countdown_16_3024d8((short *)(d + 0x1d8));
-    if (*(short *)(d + 0x1d8) != 0)
-        *(float *)(d + 0x1dc) = *(float *)(d + 0x1e4) + 6.0f;
-    else
-        *(float *)(d + 0x1dc) = *(float *)(d + 0x1e4);
-    if (random_integer_3024d8(4) == 0) {
-        e = D_L08_001B0CB0[*(int *)(d + 0x1d0)];
-        if (scan_target_3024d8(*(float *)(d + 0x1dc), m, d + 0x120, 0, 0, e + 0x10, *(int *)e) != 2) {
-            if (distance_xy_3024d8(m + 0x10, d + 0x120) > *(float *)(d + 0x1dc) ||
-                absolute_float_3024d8(*(float *)(m + 0x18) - *(float *)(d + 0x128)) > 3.0f)
-                *(int *)(d + 0x164) = 2;
+    fast_dec_timer_s16((short *)(data + 0x1d8));
+    if (*(short *)(data + 0x1d8) != 0) *(float *)(data + 0x1dc) = *(float *)(data + 0x1e4) + 6.0f;
+    else *(float *)(data + 0x1dc) = *(float *)(data + 0x1e4);
+
+    if (random_integer_below(4) == 0) {
+        {
+            char *path = D_L08_001B0CB0[*(int *)(data + 0x1d0)];
+            reaction = scan_target_3024d8(moby, data + 0x120, *(float *)(data + 0x1dc), 0, 0, path + 0x10, *(int *)path);
+        }
+        if (reaction != 2) {
+            distance = vector_distance(moby + 0x10, data + 0x120);
+            if (*(float *)(data + 0x1dc) < distance
+                || 3.0f < absolute_float(*(float *)(moby + 0x18) - *(float *)(data + 0x128)))
+                *(int *)(data + 0x164) = 2;
         }
     } else {
-        t = *(char **)(d + 0x160);
-        if (t != 0 && (unsigned char)t[0x20] != 0xfe && (unsigned char)t[0x20] != 0xfd)
-            qcopy(d + 0x120, t + 0x10);
-        else {
-            *(char **)(d + 0x160) = 0;
-            *(int *)(d + 0x164) = 2;
+        chased = *(char **)(data + 0x160);
+        if (chased != 0 && *(unsigned char *)(chased + 0x20) != 0xfe && *(unsigned char *)(chased + 0x20) != 0xfd) {
+            qcopy(data + 0x120, chased + 0x10);
+        } else {
+            *(char **)(data + 0x160) = 0;
+            *(int *)(data + 0x164) = 2;
         }
     }
-    if (*(char **)(d + 0x160) == 0)
-        *(char **)(d + 0x160) = (char *)hero.moby;
-    if (((unsigned char *)m)[0x20] == 0 || ((unsigned char *)m)[0x20] == 5 ||
-        ((unsigned char *)m)[0x20] == 7 || ((unsigned char *)m)[0x20] == 4) {
-        height = floor_height_3024d8(0.5f, m + 0x10, 0);
-        if (height < *(float *)(m + 0x18))
-            *(float *)(m + 0x18) = height;
+    if (*(int *)(data + 0x160) == 0) *(char **)(data + 0x160) = (char *)hero.moby;
+
+    state = *(unsigned char *)(moby + 0x20);
+    if (state == 0 || state == 5 || state == 7 || state == 4) {
+        height = probe_ground_height(moby + 0x10, 0, 0.5f);
+        if (height < *(float *)(moby + 0x18)) *(float *)(moby + 0x18) = height;
     }
 }
-#endif

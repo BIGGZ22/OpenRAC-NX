@@ -431,63 +431,51 @@ unsigned char *FUN_L00_00272060(void *pos, int s, int color, int mode, int b, fl
     }
     return m;
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_002721f0.s", FUN_L00_002721f0);
-#else
-extern float FUN_001fa6c0_2721f0(int) __asm__("FUN_001fa6c0");
-extern int FUN_001fa6d0_2721f0(float) __asm__("FUN_001fa6d0");
-extern void FUN_001f9a10_2721f0(void *, void *, void *) __asm__("FUN_001f9a10");
-extern int FUN_001f9770_2721f0(void *) __asm__("FUN_001f9770");
-extern void FUN_L00_00267a08_2721f0(void *) __asm__("FUN_L00_00267a08");
+/* Ported from rac1-decomp (src/overlays/shared/partupd_00272158.c: func_L00_00273090), where it is exact; names translated to the US level program. */
 
-void FUN_L00_002721f0(unsigned char *p) {
-    unsigned char *q = p + 0x20;
-    float *r;
-    float v[4];
+extern s32 fast_dec_timer_s16(void *) __asm__("FUN_001f9770");
+extern s32 truncate_float_to_s32(f32) __asm__("func_001FA6D0");
+extern void FUN_L00_00267a08(void *);
+extern void fast_vec_add(void *, void *, void *) __asm__("FUN_001f9a10");
+
+static __inline__ void vcopy_273090(float *d, float *s) {
+    d[0] = s[0];
+    d[1] = s[1];
+    d[2] = s[2];
+    *(int *)&d[3] = 0;
+}
+
+void FUN_L00_002721f0(char *part) {
+    char *data = part + 0x20;
     float t;
-    float a;
+    float velocity[4] __attribute__((aligned(16)));
     int alpha;
-    int originalAlpha;
-    p[8] += q[0xA];
-    if (*(short *)(q + 8) - *(short *)(p + 0xA) < 6) {
-        t = (float)(*(short *)(q + 8) - *(short *)(p + 0xA)) / 5.0f;
-        *(float *)(p + 0xC) = *(float *)(q + 4) +
-            ((*(float *)q + *(float *)(q + 4)) * 0.5f - *(float *)(q + 4)) * t;
-        alpha = q[0xB];
-        originalAlpha = alpha;
-        alpha = (unsigned int)alpha >> 1;
-        a = (float)(alpha - originalAlpha);
-        a *= t;
-        t = (float)originalAlpha + a;
-        a = t;
+    part[8] += data[0xA];
+    if (*(short *)(data + 8) - *(short *)(part + 0xA) < 6) {
+        int start;
+        int end;
+        t = (float)(*(short *)(data + 8) - *(short *)(part + 0xA)) / 5.0f;
+        *(float *)(part + 0xC) = *(float *)(data + 4) + ((*(float *)(part + 0x20) + *(float *)(data + 4)) * 0.5f - *(float *)(data + 4)) * t;
+        end = (unsigned char)data[0xB] >> 1;
+        start = (unsigned char)data[0xB];
+        alpha = truncate_float_to_s32((float)start + (float)(end - start) * t);
     } else {
-        t = (float)*(short *)(p + 0xA) / FUN_001fa6c0_2721f0(*(short *)(q + 8) - 6);
-        *(float *)(p + 0xC) = *(float *)q +
-            ((*(float *)q + *(float *)(q + 4)) * 0.5f - *(float *)q) * t;
-        a = (float)(q[0xB] >> 1);
-        a *= t;
-        a += 0.0f;
+        t = (float)*(short *)(part + 0xA) / convert_integer_to_float(*(short *)(data + 8) - 6);
+        *(float *)(part + 0xC) = *(float *)(part + 0x20) + ((*(float *)(part + 0x20) + *(float *)(data + 4)) * 0.5f - *(float *)(part + 0x20)) * t;
+        alpha = truncate_float_to_s32((float)((unsigned char)data[0xB] >> 1) * t + 0.0f);
     }
-    alpha = FUN_001fa6d0_2721f0(a);
-    *(unsigned int *)(p + 4) = (alpha << 24) |
-                                (*(unsigned int *)(p + 4) & 0xFFFFFF);
-    r = (float *)(q + 0xC);
-    *(volatile float *)&v[0] = *(float *)(q + 0xC);
-    t = *(volatile float *)&r[1];
-    *(volatile float *)&v[1] = t;
-    *(volatile float *)&v[2] = *(volatile float *)&r[2];
-    *(int *)&v[3] = 0;
-    FUN_001f9a10_2721f0(p + 0x10, p + 0x10, &v);
-    *(float *)(q + 0x14) -= *(float *)(q + 0x18);
-    if (*(float *)(p + 0x10) < 2.0f || 1021.0f < *(float *)(p + 0x10) ||
-        *(float *)(p + 0x14) < 2.0f || 1021.0f < *(float *)(p + 0x14) ||
-        *(float *)(p + 0x18) < 2.0f || 1021.0f < *(float *)(p + 0x18)) {
-        FUN_L00_00267a08_2721f0(p);
-    } else if (FUN_001f9770_2721f0(p + 0xA)) {
-        FUN_L00_00267a08_2721f0(p);
+    *(int *)(part + 4) = (alpha << 24) | (*(int *)(part + 4) & 0xFFFFFF);
+    vcopy_273090(velocity, (float *)(data + 0xC));
+    fast_vec_add(part + 0x10, part + 0x10, velocity);
+    *(float *)(data + 0x14) -= *(float *)(data + 0x18);
+    if (*(float *)(part + 0x10) < 2.0f || *(float *)(part + 0x10) > 1021.0f ||
+        *(float *)(part + 0x14) < 2.0f || *(float *)(part + 0x14) > 1021.0f ||
+        *(float *)(part + 0x18) < 2.0f || *(float *)(part + 0x18) > 1021.0f) {
+        FUN_L00_00267a08(part);
+    } else if (fast_dec_timer_s16(part + 0xA)) {
+        FUN_L00_00267a08(part);
     }
 }
-#endif
 typedef unsigned int u128_272438 __attribute__((mode(TI), aligned(16)));
 extern unsigned char D_L00_00177F00_272438[] __asm__("D_L00_00177F00");
 void FUN_L00_00262360_272438(int, float *, float *, void *, float,
@@ -553,28 +541,28 @@ extern u8 *D_L00_001B215C __attribute__((section(".data")));
 P_2725d8 *FUN_L00_002678b8_c2(s32) __asm__("FUN_L00_002678b8");
 s32 FUN_001fa6d0(f32);
 void add_vector_xyz_cf(u8 *, u8 *, void *) __asm__("FUN_L00_0024f7c8");
-P_2725d8 *FUN_L00_002725d8(u8 *owner, u8 *attachment_point_selector, s32 color, s32 a3, f32 a4, f32 a5) {
+P_2725d8 *FUN_L00_002725d8(u8 *owner, u8 *attachment_point_selector, s32 color, s32 initial_size_bits, f32 primary_position_w, f32 secondary_position_w) {
     P_2725d8 *p = FUN_L00_002678b8_c2(0x37);
     /* Fakematch: the dead update gives a0 and a3 retail's saved registers. */
-    a3++;
-    a3--;
+    initial_size_bits++;
+    initial_size_bits--;
     if (p) {
         S_2725d8 *s;
         p->w4 = color;
-        p->wC = a3;
+        p->wC = initial_size_bits;
         p->b9 = FUN_001fa6d0(0.4f) + 0x20;
         p->b3 = 0x48;
         p->b1 = 3;
         p->b2 = *D_L00_001B215C;
         add_vector_xyz_cf(owner, attachment_point_selector, p->v10);
         qcopy(p->v20, p->v10);
-        p->unk2C = a5;
-        *(f32 *)((u8 *)p + 0x1C) = a4;
+        p->unk2C = secondary_position_w;
+        *(f32 *)((u8 *)p + 0x1C) = primary_position_w;
         s = &p->s;
         p->s.o = owner;
         s->k = *(s16 *)(owner + 0xA6);
         s->b = attachment_point_selector;
-        s->f = a4;
+        s->f = primary_position_w;
     }
     return p;
 }
@@ -663,6 +651,11 @@ void build_spherical_offset(void *, float, float, float) __asm__("FUN_00214db0")
 extern unsigned char *D_L00_001B2168 __attribute__((section(".data")));
 unsigned char *FUN_L00_002729c8(void *pos, unsigned char a, unsigned char b, unsigned char c,
                                 unsigned char d, unsigned char e, int g, float x, float y) {
+    enum {
+        PARTICLE_MODE_COLOR_TWEEN_THEN_EMIT = 0,
+        PARTICLE_MODE_COLOR_TWEEN_ONLY = 1,
+        PARTICLE_MODE_EMITTED_PARTICLE = 2
+    };
     unsigned char *m = p27fe00_alloc(0x3A);
     if (m) {
         unsigned char *q;
@@ -686,13 +679,13 @@ unsigned char *FUN_L00_002729c8(void *pos, unsigned char a, unsigned char b, uns
         q[0x15] = e;
         mode = q[0x10];
         switch (mode) {
-        case 0:
-        case 1:
+        case PARTICLE_MODE_COLOR_TWEEN_THEN_EMIT:
+        case PARTICLE_MODE_COLOR_TWEEN_ONLY:
             *(short *)(m + 0xA) = b;
             *(int *)(m + 4) = 0xFF808080;
             q[0x14] = 0;
             break;
-        case 2:
+        case PARTICLE_MODE_EMITTED_PARTICLE:
             r = FUN_002132a8_2729c8(3.0f, 9.0f) * y * frame_time;
             t = random_angle_radians();
             u = FUN_002132a8_2729c8(1.3439035f, 1.7976891f);
@@ -731,6 +724,11 @@ extern void FUN_L00_00259bc8_272bc0(int, int, int, void *, void *,
                                     float) __asm__("FUN_L00_00259bc8");
 
 void FUN_L00_00272bc0(unsigned char *p) {
+    enum {
+        PARTICLE_PHASE_INITIAL_COLOR_TWEEN = 0,
+        PARTICLE_PHASE_EMISSION = 1,
+        PARTICLE_PHASE_EMITTED_PARTICLE = 2
+    };
     V_272bc0 t;
     unsigned char *q;
     unsigned char *c;
@@ -741,7 +739,7 @@ void FUN_L00_00272bc0(unsigned char *p) {
 
     q = p + 0x20;
     switch (q[0x14]) {
-    case 0: {
+    case PARTICLE_PHASE_INITIAL_COLOR_TWEEN: {
         float n = FUN_001fa6c0_272bc0(q[0x11]);
         *(int *)(p + 4) =
             fast_tween_color((n - FUN_001fa6c0_272bc0(*(short *)(p + 0xA))) / n, 0xFF4080FF, 0);
@@ -755,7 +753,7 @@ void FUN_L00_00272bc0(unsigned char *p) {
             }
         }
         break;
-    case 1: {
+    case PARTICLE_PHASE_EMISSION: {
         float m;
         for (i = 0; i < q[0x13]; i++) {
             qcopy(t, p + 0x10);
@@ -783,7 +781,7 @@ void FUN_L00_00272bc0(unsigned char *p) {
             }
         }
         break;
-    case 2:
+    case PARTICLE_PHASE_EMITTED_PARTICLE:
         FUN_001f9a10_272bc0(p + 0x10, p + 0x10, q);
         a = FUN_001fa6c0_272bc0(q[0x15]);
         k = a - FUN_001fa6c0_272bc0(*(short *)(p + 0xA));

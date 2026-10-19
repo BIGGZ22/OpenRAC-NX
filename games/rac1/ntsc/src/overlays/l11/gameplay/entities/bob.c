@@ -27,8 +27,13 @@ int memcard_save_data(int slot, int flags) __asm__("FUN_0020b178");
 void mark_moby_for_removal(struct Moby *obj) __asm__("FUN_0020c828");
 
 void FUN_L11_002cb668(struct Moby *moby) {
+    enum {
+        PICKUP_INITIALIZE = 0,
+        PICKUP_IDLE = 1,
+        PICKUP_CHECK_PROXIMITY = 2
+    };
     switch (moby->state) {
-    case 0:
+    case PICKUP_INITIALIZE:
         if (D_0013D4C2[4] != 0) {
             mark_moby_for_removal(moby);
         } else {
@@ -37,9 +42,9 @@ void FUN_L11_002cb668(struct Moby *moby) {
             moby->state = 1;
         }
         break;
-    case 1:
+    case PICKUP_IDLE:
         break;
-    case 2:
+    case PICKUP_CHECK_PROXIMITY:
         fast_add_rotations(moby->rot.z, frame_time * 4.7123890f);
         if (vector_distance(&moby->pos, D_0013E533 + 0xE9D) < 2.0f) {
             D_0013D4C2[4] = 1;
@@ -61,10 +66,15 @@ extern float approach_angle(float *p, float a, float *v, float b, float c, float
 extern float fast_add_rotations_c(float, float) __asm__("func_001FA580");
 
 void FUN_L11_002cb810(struct Moby *moby) {
+    enum {
+        ROTATION_INITIALIZE = 0,
+        ROTATION_WAIT_FOR_TRIGGER = 1,
+        ROTATION_APPROACH_OFFSET = 2
+    };
     char *data = (char *)moby->pvars;
     int state = (unsigned char)MOBY(moby)->state;
     switch (state) {
-    case 0:
+    case ROTATION_INITIALIZE:
         MOBY(moby)->state = 1;
         *(float *)(data + 4) = moby->rot.z;
         if ((moby->flags & 0x8000) == 0) {
@@ -78,9 +88,9 @@ void FUN_L11_002cb810(struct Moby *moby) {
             *(float *)(*(char **)(c + 0x78) + 4) = moby->rot.z;
         }
         break;
-    case 1:
+    case ROTATION_WAIT_FOR_TRIGGER:
         break;
-    case 2: {
+    case ROTATION_APPROACH_OFFSET: {
         float f;
         if ((moby->flags & 0x8000) == 0)
             f = fast_add_rotations_c(*(float *)(data + 4), 0.20769417f);
@@ -191,6 +201,11 @@ extern void update_joint_animation(float, float, void *, void *, int) __asm__("F
 /* Watcher update, same routine as commando_update with this level's states and data layout. */
 void bob_update(WM11 *m) __asm__("FUN_L11_002d0710");
 void bob_update(WM11 *m) {
+    enum {
+        BOB_INITIALIZE = 0,
+        BOB_CHECK_DIALOGUE = 1,
+        BOB_WAIT_FOR_DIALOGUE_END = 2
+    };
     WS11 scratch;
     WD11 *d = (WD11 *)m->data;
     float rate;
@@ -198,7 +213,7 @@ void bob_update(WM11 *m) {
     int tracking;
     FUN_L05_00317398(m);
     switch (m->state) {
-    case 0:
+    case BOB_INITIALIZE:
         if (D_0013D4C3) {
             m->state = 3;
         } else {
@@ -207,7 +222,7 @@ void bob_update(WM11 *m) {
         initialize_npc_dialogue(m, d);
         d->f0C = 3.7f;
         break;
-    case 1:
+    case BOB_CHECK_DIALOGUE:
         if (FUN_00214720(hero.motion.pos.f, d->region)) {
             if (update_npc_dialogue(m, d)) {
                 begin_dialogue_camera_transition(m, 2.7f);
@@ -215,7 +230,7 @@ void bob_update(WM11 *m) {
             }
         }
         break;
-    case 2:
+    case BOB_WAIT_FOR_DIALOGUE_END:
         if (D_L11_0015F5C4 != 2) {
             m->state = 1;
             if (d->h04 == 2) {
@@ -334,7 +349,20 @@ extern int D_L11_0015FFD8;
 
 void FUN_L11_002d1030(void *mp) {
     enum {
-        RESORT_OWNER_JUMP_TO_TARGET = 7
+        RESORT_OWNER_INITIALIZE = 0,
+        RESORT_OWNER_CHECK_INITIAL_DIALOGUE = 1,
+        RESORT_OWNER_INITIAL_DIALOGUE = 2,
+        RESORT_OWNER_WAIT_TO_FOLLOW_HERO = 3,
+        RESORT_OWNER_FOLLOW_HERO = 4,
+        RESORT_OWNER_FOLLOW_DISTANT_HERO = 5,
+        RESORT_OWNER_MOVE_TO_PATH_POINT = 6,
+        RESORT_OWNER_JUMP_TO_TARGET = 7,
+        RESORT_OWNER_MOVE_TO_GATE_TARGET = 8,
+        RESORT_OWNER_WAIT_AT_GATE = 9,
+        RESORT_OWNER_MOVE_TO_GATE_DEPARTURE_TARGET = 10,
+        RESORT_OWNER_WAIT_TO_ADVANCE_FINAL_PATH_LEG = 11,
+        RESORT_OWNER_CHECK_PATH_COMPLETION_DIALOGUE = 12,
+        RESORT_OWNER_WAIT_FOR_PATH_COMPLETION_DIALOGUE_END = 13
     };
     struct Moby *moby = mp;
     char *d = (char *)moby->pvars;
@@ -345,18 +373,18 @@ void FUN_L11_002d1030(void *mp) {
     float f3;
 
     switch (moby->state) {
-    case 0:
-    case 1:
-    case 2:
-    case 3:
-    case 11:
-    case 12:
+    case RESORT_OWNER_INITIALIZE:
+    case RESORT_OWNER_CHECK_INITIAL_DIALOGUE:
+    case RESORT_OWNER_INITIAL_DIALOGUE:
+    case RESORT_OWNER_WAIT_TO_FOLLOW_HERO:
+    case RESORT_OWNER_WAIT_TO_ADVANCE_FINAL_PATH_LEG:
+    case RESORT_OWNER_CHECK_PATH_COMPLETION_DIALOGUE:
         break;
-    case 4:
-    case 5:
-    case 6:
-    case 8:
-    case 10:
+    case RESORT_OWNER_FOLLOW_HERO:
+    case RESORT_OWNER_FOLLOW_DISTANT_HERO:
+    case RESORT_OWNER_MOVE_TO_PATH_POINT:
+    case RESORT_OWNER_MOVE_TO_GATE_TARGET:
+    case RESORT_OWNER_MOVE_TO_GATE_DEPARTURE_TARGET:
     {
         char *m48 = (char *)moby + 0x48;
         ang = fast_arc_tan(*(float *)(d + 0x120) - *(float *)((char *)moby + 0x10),
@@ -398,7 +426,7 @@ void FUN_L11_002d1030(void *mp) {
             *(float *)((char *)moby + 0x58) = 1.0f;
         }
         break;
-    case 9:
+    case RESORT_OWNER_WAIT_AT_GATE:
     {
         int *tbl = (int *)(d + 0xF0);
         unsigned int idx = 0U < *(unsigned int *)(d + 0x158);
@@ -413,7 +441,7 @@ void FUN_L11_002d1030(void *mp) {
         if (moby->prev_seq != 5)
             FUN_00212f90(moby, 5, 0, scale_game_frames(0x14));
         break;
-    case 13:
+    case RESORT_OWNER_WAIT_FOR_PATH_COMPLETION_DIALOGUE_END:
         if (D_L11_0016D260[12] != 1)
             break;
         if (D_L11_0016D260[13] != scale_game_frames(0x7D0))
@@ -434,6 +462,10 @@ extern void FUN_L00_00258830(int, int, float, float, float, int);
 extern void FUN_L00_00261d78(float, void *, void *, void *);
 
 void FUN_L11_002d1340(void *mp) {
+    enum {
+        RESORT_OWNER_PENULTIMATE_PATH_LEG = 2,
+        RESORT_OWNER_FINAL_PATH_LEG = 3
+    };
     unsigned char *moby = mp;
     char *d = *(char **)(moby + 0x78);
     float A[4];
@@ -445,12 +477,12 @@ void FUN_L11_002d1340(void *mp) {
         FUN_L00_00261d78(0.3f, *(void **)(d + 0x60 - -(*(int *)(d + 0x158) * 4)), moby + 0x10,
                          moby + 0x10);
         switch (*(int *)(d + 0x158)) {
-        case 2:
+        case RESORT_OWNER_PENULTIMATE_PATH_LEG:
             FUN_L00_00261d78(0.3f, *(void **)(d + 0x80), moby + 0x10, moby + 0x10);
             FUN_L00_00261d78(0.3f, *(void **)(d + 0x84), moby + 0x10, moby + 0x10);
             FUN_L00_00261d78(0.3f, *(void **)(d + 0x88), moby + 0x10, moby + 0x10);
             break;
-        case 3:
+        case RESORT_OWNER_FINAL_PATH_LEG:
             FUN_L00_00261d78(0.3f, *(void **)(d + 0x80), moby + 0x10, moby + 0x10);
             FUN_L00_00261d78(0.3f, *(void **)(d + 0x84), moby + 0x10, moby + 0x10);
             break;
@@ -526,6 +558,30 @@ struct PokKeeperVars {
 /* NPC that talks to the hero, then walks a chain of level path points ahead of him, opening the
    gate mobys (FUN_L11_0030a840) and moving path points as it goes. */
 void FUN_L11_002d14b0(void *arg) {
+    enum {
+        RESORT_OWNER_INITIALIZE = 0,
+        RESORT_OWNER_CHECK_INITIAL_DIALOGUE = 1,
+        RESORT_OWNER_INITIAL_DIALOGUE = 2,
+        RESORT_OWNER_WAIT_TO_FOLLOW_HERO = 3,
+        RESORT_OWNER_FOLLOW_HERO = 4,
+        RESORT_OWNER_FOLLOW_DISTANT_HERO = 5,
+        RESORT_OWNER_MOVE_TO_PATH_POINT = 6,
+        RESORT_OWNER_JUMP_TO_TARGET = 7,
+        RESORT_OWNER_MOVE_TO_GATE_TARGET = 8,
+        RESORT_OWNER_WAIT_AT_GATE = 9,
+        RESORT_OWNER_MOVE_TO_GATE_DEPARTURE_TARGET = 10,
+        RESORT_OWNER_WAIT_TO_ADVANCE_FINAL_PATH_LEG = 11,
+        RESORT_OWNER_CHECK_PATH_COMPLETION_DIALOGUE = 12,
+        RESORT_OWNER_WAIT_FOR_PATH_COMPLETION_DIALOGUE_END = 13,
+        RESORT_OWNER_CHECK_POST_PATH_DIALOGUE = 14,
+        RESORT_OWNER_WAIT_FOR_POST_PATH_DIALOGUE_END = 15
+    };
+    enum {
+        RESORT_OWNER_FIRST_PATH_LEG = 0,
+        RESORT_OWNER_SECOND_PATH_LEG = 1,
+        RESORT_OWNER_PENULTIMATE_PATH_LEG = 2,
+        RESORT_OWNER_FINAL_PATH_LEG = 3
+    };
     struct Moby *moby = arg;
     struct PokKeeperVars *d = (struct PokKeeperVars *)moby->pvars;
     int proximity = FUN_L11_002d2460(moby);
@@ -547,7 +603,7 @@ void FUN_L11_002d14b0(void *arg) {
         }
     }
     switch (moby->state) {
-    case 0:
+    case RESORT_OWNER_INITIALIZE:
         initialize_npc_dialogue(moby, d->talk);
         moby->update_dist = 0xFF;
         FUN_L05_0028be78(&d->unk60[0], 1, d->unk70[0]);
@@ -592,7 +648,7 @@ void FUN_L11_002d14b0(void *arg) {
         d->talk_range = 5.0f;
         FUN_L11_002d2088_c(moby, 1);
         break;
-    case 1:
+    case RESORT_OWNER_CHECK_INITIAL_DIALOGUE:
         if (d->unk56 == 0) {
             if (hero.air_frames.s == 0 && update_npc_dialogue(moby, d->talk)) {
                 begin_dialogue_camera_transition(moby, 2.5f);
@@ -602,34 +658,34 @@ void FUN_L11_002d14b0(void *arg) {
             FUN_L11_002d2088_c(moby, 3);
         }
         break;
-    case 2:
+    case RESORT_OWNER_INITIAL_DIALOGUE:
         if (D_L11_0015F5C4 != 2)
             FUN_L11_002d2088_c(moby, 3);
         break;
-    case 3:
+    case RESORT_OWNER_WAIT_TO_FOLLOW_HERO:
         if (vector_distance(&moby->pos, &hero.motion.pos) > 6.0f &&
             FUN_L11_002d2340(moby, (char *)&hero.motion.pos) && proximity == 1)
             FUN_L11_002d2088_c(moby, 4);
         break;
-    case 4:
+    case RESORT_OWNER_FOLLOW_HERO:
         if (vector_distance(&moby->pos, &hero.motion.pos) < 3.0f ||
             !FUN_L11_002d2340(moby, (char *)&hero.motion.pos) || proximity == 2)
             FUN_L11_002d2088_c(moby, 3);
         else if (vector_distance(&moby->pos, &hero.motion.pos) > 8.0f)
             FUN_L11_002d2088_c(moby, 5);
         break;
-    case 5:
+    case RESORT_OWNER_FOLLOW_DISTANT_HERO:
         if (vector_distance(&moby->pos, &hero.motion.pos) < 3.0f ||
             !FUN_L11_002d2340(moby, (char *)&hero.motion.pos) || proximity == 2)
             FUN_L11_002d2088_c(moby, 3);
         else if (vector_distance(&moby->pos, &hero.motion.pos) < 4.0f)
             FUN_L11_002d2088_c(moby, 4);
         break;
-    case 6:
+    case RESORT_OWNER_MOVE_TO_PATH_POINT:
         FUN_L11_002d2340(moby, (char *)&path_points_14b0[d->points[d->leg]].pos);
         if (vector_distance(&moby->pos, &d->target) < 1.0f) {
             switch (d->leg) {
-            case 0: {
+            case RESORT_OWNER_FIRST_PATH_LEG: {
                 struct Moby *o = (struct Moby *)(D_L11_0015FFD8 + (d->gates[0] << 8));
                 qcopy(&d->target, &o->pos);
                 scale_vector_14b0(v, &o->rot_row0, D_L11_00161418);
@@ -642,7 +698,7 @@ void FUN_L11_002d14b0(void *arg) {
                 FUN_L11_002d2088_c(moby, 7);
                 break;
             }
-            case 1: {
+            case RESORT_OWNER_SECOND_PATH_LEG: {
                 struct Moby *o = (struct Moby *)(D_L11_0015FFD8 + (d->gates[1] << 8));
                 qcopy(&d->target, &o->pos);
                 scale_vector_14b0(v, &o->rot_row0, D_L11_00161418);
@@ -656,17 +712,17 @@ void FUN_L11_002d14b0(void *arg) {
                 FUN_L11_002d2088_c(moby, 7);
                 break;
             }
-            case 2:
+            case RESORT_OWNER_PENULTIMATE_PATH_LEG:
                 FUN_L11_002d2088_c(moby, 0xB);
                 break;
-            case 3:
+            case RESORT_OWNER_FINAL_PATH_LEG:
                 path_points_14b0[d->unk114].pos.z += 500.0f;
                 FUN_L11_002d2088_c(moby, 0xC);
                 break;
             }
         }
         break;
-    case 12:
+    case RESORT_OWNER_CHECK_PATH_COMPLETION_DIALOGUE:
         d->talk_range = 255.0f;
         if (update_npc_dialogue(moby, d->talk)) {
             jet_clear_persistent(d->unk10C);
@@ -686,28 +742,28 @@ void FUN_L11_002d14b0(void *arg) {
             FUN_L11_002d2088_c(moby, 0xD);
         }
         break;
-    case 13:
+    case RESORT_OWNER_WAIT_FOR_PATH_COMPLETION_DIALOGUE_END:
         if (D_L11_0015F5C4 != 2) {
             FUN_L11_002cb990((struct Moby *)(D_L11_0015FFD8 + (d->unk104 << 8)));
             FUN_L11_002d2088_c(moby, 0xE);
         }
         break;
-    case 7:
+    case RESORT_OWNER_JUMP_TO_TARGET:
         if (moby->anim_flags & 2)
             FUN_L11_002d2088_c(moby, d->next_state);
         break;
-    case 8:
+    case RESORT_OWNER_MOVE_TO_GATE_TARGET:
         if (vector_distance(&moby->pos, &d->target) < 0.5f)
             FUN_L11_002d2088_c(moby, 9);
         break;
-    case 9:
+    case RESORT_OWNER_WAIT_AT_GATE:
         {
             int i = d->leg != 0;
             if (FUN_L11_0030a830((struct Moby *)(D_L11_0015FFD8 + (d->gates[i] << 8))))
                 FUN_L11_002d2088_c(moby, 0xA);
         }
         break;
-    case 10:
+    case RESORT_OWNER_MOVE_TO_GATE_DEPARTURE_TARGET:
         if (vector_distance(&moby->pos, &d->target) < 0.5f) {
             int n = ++d->leg;
             qcopy(&d->target, &path_points_14b0[d->unkD0[n]].pos);
@@ -715,20 +771,20 @@ void FUN_L11_002d14b0(void *arg) {
             FUN_L11_002d2088_c(moby, 7);
         }
         break;
-    case 11:
+    case RESORT_OWNER_WAIT_TO_ADVANCE_FINAL_PATH_LEG:
         if (FUN_L11_0030a830((struct Moby *)(D_L11_0015FFD8 + (d->unk100 << 8)))) {
             d->leg += 1;
             FUN_L11_002d2088_c(moby, 3);
         }
         break;
-    case 14:
+    case RESORT_OWNER_CHECK_POST_PATH_DIALOGUE:
         if (D_0014C050[d->unk118 + D_0015ED84 * 16] == 0xFF && D_001413D4_14b0 != 0x32 &&
             update_npc_dialogue(moby, d->talk)) {
             begin_dialogue_camera_transition(moby, 2.5f);
             FUN_L11_002d2088_c(moby, 0xF);
         }
         break;
-    case 15:
+    case RESORT_OWNER_WAIT_FOR_POST_PATH_DIALOGUE_END:
         if (D_L11_0015F5C4 != 2) {
             FUN_L00_00260860(6, 1);
             memcard_save_data(0, -1);
@@ -750,18 +806,29 @@ extern int D_L11_0015FFD8;
 
 void FUN_L11_002d2088(struct Moby *moby, unsigned char state) {
     enum {
-        RESORT_OWNER_JUMP_TO_TARGET = 7
+        RESORT_OWNER_CHECK_INITIAL_DIALOGUE = 1,
+        RESORT_OWNER_WAIT_TO_FOLLOW_HERO = 3,
+        RESORT_OWNER_FOLLOW_HERO = 4,
+        RESORT_OWNER_FOLLOW_DISTANT_HERO = 5,
+        RESORT_OWNER_MOVE_TO_PATH_POINT = 6,
+        RESORT_OWNER_JUMP_TO_TARGET = 7,
+        RESORT_OWNER_MOVE_TO_GATE_TARGET = 8,
+        RESORT_OWNER_WAIT_AT_GATE = 9,
+        RESORT_OWNER_MOVE_TO_GATE_DEPARTURE_TARGET = 10,
+        RESORT_OWNER_WAIT_TO_ADVANCE_FINAL_PATH_LEG = 11,
+        RESORT_OWNER_CHECK_PATH_COMPLETION_DIALOGUE = 12,
+        RESORT_OWNER_CHECK_POST_PATH_DIALOGUE = 14
     };
     char *d = (char *)moby->pvars;
     float tmp[4];
 
     moby->state = state;
     switch (moby->state) {
-    case 1:
-    case 3:
-    case 11:
-    case 12:
-    case 14:
+    case RESORT_OWNER_CHECK_INITIAL_DIALOGUE:
+    case RESORT_OWNER_WAIT_TO_FOLLOW_HERO:
+    case RESORT_OWNER_WAIT_TO_ADVANCE_FINAL_PATH_LEG:
+    case RESORT_OWNER_CHECK_PATH_COMPLETION_DIALOGUE:
+    case RESORT_OWNER_CHECK_POST_PATH_DIALOGUE:
         if (moby->prev_seq != 0)
             FUN_00212f90(moby, 0, 0, scale_game_frames(0x14));
         if (moby->state == 14)
@@ -770,13 +837,13 @@ void FUN_L11_002d2088(struct Moby *moby, unsigned char state) {
         if (moby->state == 14)
             *(short *)(d + 0x56) = 2;
         break;
-    case 4:
+    case RESORT_OWNER_FOLLOW_HERO:
         if (moby->prev_seq != 2)
             FUN_00212f90(moby, 2, 0, scale_game_frames(0x14));
         *(float *)(d + 0x154) = D_L11_001613D0 * frame_time;
         break;
-    case 5:
-    case 6:
+    case RESORT_OWNER_FOLLOW_DISTANT_HERO:
+    case RESORT_OWNER_MOVE_TO_PATH_POINT:
         if (moby->prev_seq != 3)
             FUN_00212f90(moby, 3, 0, scale_game_frames(0x14));
         *(float *)(d + 0x154) = D_L11_001613D4 * frame_time;
@@ -786,7 +853,7 @@ void FUN_L11_002d2088(struct Moby *moby, unsigned char state) {
             FUN_00212f90(moby, 4, 0, scale_game_frames(0x14));
         clear_u64_value(d + 0x130);
         break;
-    case 8:
+    case RESORT_OWNER_MOVE_TO_GATE_TARGET:
         if (moby->prev_seq != 3)
             FUN_00212f90(moby, 3, 0, scale_game_frames(0x14));
         {
@@ -803,13 +870,13 @@ void FUN_L11_002d2088(struct Moby *moby, unsigned char state) {
             fast_vec_add(d + 0x120, d + 0x120, tmp);
         }
         break;
-    case 9:
+    case RESORT_OWNER_WAIT_AT_GATE:
     case 16:
         if (moby->prev_seq != 0)
             FUN_00212f90(moby, 0, 0, scale_game_frames(0x14));
         clear_u64_value(d + 0x130);
         break;
-    case 10:
+    case RESORT_OWNER_MOVE_TO_GATE_DEPARTURE_TARGET:
         if (moby->prev_seq != 3)
             FUN_00212f90(moby, 3, 0, scale_game_frames(0x14));
         {
@@ -847,6 +914,10 @@ extern int point_in_path_xy(void *, void *, int) __asm__("FUN_L00_00259740");
 extern int follow_path(int *, int, int, void *, void *, void *, float) __asm__("FUN_L01_00276fe8");
 
 int FUN_L11_002d2340(struct Moby *moby, char *other) {
+    enum {
+        RESORT_OWNER_PENULTIMATE_PATH_LEG = 2,
+        RESORT_OWNER_FINAL_PATH_LEG = 3
+    };
     struct TgtData *d = (struct TgtData *)moby->pvars;
     int *p = d->a;
     int *ent = D_L11_001B0EB0[*(int *)((char *)p - (-(d->idx * 4)))];
@@ -857,13 +928,13 @@ int FUN_L11_002d2340(struct Moby *moby, char *other) {
     buf[0] = *(int *)((char *)p - (-(d->idx * 4)));
     n = 1;
     switch (d->idx) {
-    case 2:
+    case RESORT_OWNER_PENULTIMATE_PATH_LEG:
         n = 4;
         buf[1] = d->c[0];
         buf[2] = d->c[1];
         buf[3] = d->c[2];
         break;
-    case 3:
+    case RESORT_OWNER_FINAL_PATH_LEG:
         n = 3;
         buf[1] = d->c[0];
         buf[2] = d->c[1];
@@ -988,7 +1059,15 @@ typedef struct {
 /* Guard head update: in its watching states it turns its body and head toward the hero. */
 void FUN_L11_002d27b0(WM11 *m) {
     enum {
-        RESORT_OWNER_INITIALIZE = 0
+        RESORT_OWNER_INITIALIZE = 0,
+        RESORT_OWNER_CHECK_INITIAL_DIALOGUE = 1,
+        RESORT_OWNER_INITIAL_DIALOGUE = 2,
+        RESORT_OWNER_WAIT_TO_FOLLOW_HERO = 3,
+        RESORT_OWNER_FOLLOW_HERO = 4,
+        RESORT_OWNER_FOLLOW_DISTANT_HERO = 5,
+        RESORT_OWNER_WAIT_TO_ADVANCE_FINAL_PATH_LEG = 11,
+        RESORT_OWNER_CHECK_PATH_COMPLETION_DIALOGUE = 12,
+        RESORT_OWNER_CHECK_POST_PATH_DIALOGUE = 14
     };
     WS11 scratch;
     WD11b *d = (WD11b *)m->data;
@@ -999,14 +1078,14 @@ void FUN_L11_002d27b0(WM11 *m) {
     head_rate = 0.3f;
     switch (m->state) {
     case RESORT_OWNER_INITIALIZE:
-    case 1:
-    case 2:
-    case 3:
-    case 4:
-    case 5:
-    case 11:
-    case 12:
-    case 14:
+    case RESORT_OWNER_CHECK_INITIAL_DIALOGUE:
+    case RESORT_OWNER_INITIAL_DIALOGUE:
+    case RESORT_OWNER_WAIT_TO_FOLLOW_HERO:
+    case RESORT_OWNER_FOLLOW_HERO:
+    case RESORT_OWNER_FOLLOW_DISTANT_HERO:
+    case RESORT_OWNER_WAIT_TO_ADVANCE_FINAL_PATH_LEG:
+    case RESORT_OWNER_CHECK_PATH_COMPLETION_DIALOGUE:
+    case RESORT_OWNER_CHECK_POST_PATH_DIALOGUE:
     case 16:
         tracking = 1;
         qcopy(scratch.target, &hero.motion.pos);
@@ -1075,6 +1154,11 @@ extern void queue_dialogue_message(int, int) __asm__("FUN_L00_00263d40");
 
 void fred_pokitaru_update(struct Moby *moby) __asm__("FUN_L11_002f0e40");
 void fred_pokitaru_update(struct Moby *moby) {
+    enum {
+        FRED_POKITARU_INITIALIZE = 0,
+        FRED_POKITARU_CHECK_DIALOGUE = 1,
+        FRED_POKITARU_WAIT_FOR_DIALOGUE_END = 2
+    };
     WS11 scratch;
     struct PokSentryVars *d = (struct PokSentryVars *)moby->pvars;
     float rate;
@@ -1087,7 +1171,7 @@ void fred_pokitaru_update(struct Moby *moby) {
         moby->shadow_range = 24;
     }
     switch (moby->state) {
-    case 0:
+    case FRED_POKITARU_INITIALIZE:
         moby->state = 1;
         if (moby->prev_seq != 1)
             FUN_00212f90(moby, 1, 0, scale_game_frames(20));
@@ -1098,7 +1182,7 @@ void fred_pokitaru_update(struct Moby *moby) {
         initialize_npc_dialogue(moby, d);
         d->f0C = 4.0f;
         break;
-    case 1:
+    case FRED_POKITARU_CHECK_DIALOGUE:
         if (update_npc_dialogue(moby, d)) {
             begin_dialogue_camera_transition(moby, 3.0f);
             moby->state = 2;
@@ -1122,7 +1206,7 @@ void fred_pokitaru_update(struct Moby *moby) {
             jet_reset_camera(entry + 0x30, entry + 0x70);
         }
         break;
-    case 2:
+    case FRED_POKITARU_WAIT_FOR_DIALOGUE_END:
         if (D_L11_0015F5C4 != 2) {
             moby->state = 1;
             if (d->h04 == 2) {
@@ -1230,10 +1314,17 @@ extern float D_L11_00161918 __attribute__((sda));
  * open and moves the linked moby (or its fallback) along. */
 void teleporter_update(struct Moby *moby) __asm__("FUN_L11_002f2518");
 void teleporter_update(struct Moby *moby) {
+    enum {
+        TELEPORTER_INITIALIZE = 0,
+        TELEPORTER_WAIT_FOR_ACTIVATION = 1,
+        TELEPORTER_OPEN_PARTS = 2,
+        TELEPORTER_CONTRACT_RING = 3,
+        TELEPORTER_RESET = 4
+    };
     char *data = (char *)moby->pvars;
 
     switch (moby->state) {
-    case 0: {
+    case TELEPORTER_INITIALIZE: {
         char **slots = (char **)(data + 0x14);
         int i;
         int j;
@@ -1265,7 +1356,7 @@ void teleporter_update(struct Moby *moby) {
         FUN_L01_003092d0_2518(moby);
         break;
     }
-    case 1: {
+    case TELEPORTER_WAIT_FOR_ACTIVATION: {
         struct Hero *g;
         if (*(int *)data == -1)
             break;
@@ -1290,7 +1381,7 @@ void teleporter_update(struct Moby *moby) {
         FUN_L00_002598b0_2518((int)moby, 1.5f, &moby->pos, 0x10000, 20.0f, 1.0f, 0, 1, 0);
         break;
     }
-    case 2: {
+    case TELEPORTER_OPEN_PARTS: {
         int r = FUN_L00_00233f38_2518();
         if (*(float *)(data + 0x20) < 1.0f) {
             advance_accelerated_scalar_2518((float *)(data + 0x20), (float *)(data + 0x28), 1.0f,
@@ -1313,7 +1404,7 @@ void teleporter_update(struct Moby *moby) {
         FUN_L01_003092d0_2518(moby);
         break;
     }
-    case 3:
+    case TELEPORTER_CONTRACT_RING:
         if (*(float *)(data + 0x3C) != 0.0f) {
             enqueue_callback_2518(FUN_L11_002f2d58_2518, moby);
             approach_value_2518((float *)(data + 0x3C), 0.0f, D_0015ED6C_2518 * 4.0f);
@@ -1349,7 +1440,7 @@ void teleporter_update(struct Moby *moby) {
             FUN_L01_003092d0_2518(moby);
         }
         break;
-    case 4:
+    case TELEPORTER_RESET:
         if (D_0013F3D8_lui < 138.0f)
             D_0013D3DD = 1;
         if (*(float *)(data + 0x3C) < 1.95f) {
@@ -1527,15 +1618,19 @@ typedef struct {
 
 
 void FUN_L11_002f3350(struct Moby *moby) {
+    enum {
+        MOBY_INITIALIZE = 0,
+        MOBY_COPY_PVAR_TO_HERO = 1
+    };
     char *state = (char *)moby->pvars;
     switch (moby->state) {
-    case 0:
+    case MOBY_INITIALIZE:
         moby->update_dist = 0xFF;
         moby->state = 1;
         if (*(int *)state == -1)
             delete_moby(moby);
         break;
-    case 1:
+    case MOBY_COPY_PVAR_TO_HERO:
         if (hero.motion.pos.f[2] > 194.0f && hero.state.current != 0x32) {
             *(short unsigned int *)&hero.unk22DA = *(unsigned short *)state;
         }
@@ -1666,6 +1761,14 @@ extern float D_L11_00161DEC __attribute__((sda));
 extern float D_L11_00161DF0 __attribute__((sda));
 void pokitaru_boat_update(struct Moby *moby) __asm__("FUN_L11_00309ac0");
 void pokitaru_boat_update(struct Moby *moby) {
+    enum {
+        POKITARU_BOAT_INITIALIZE = 0,
+        POKITARU_BOAT_WAIT_FOR_ACTIVATION = 1,
+        POKITARU_BOAT_FOLLOW_PATH = 2,
+        POKITARU_BOAT_WAIT_FOR_GROUP_CLEAR = 3,
+        POKITARU_BOAT_RISE_ABOVE_PATH = 4,
+        POKITARU_BOAT_ADJUST_HEIGHT_FOR_HERO = 5
+    };
     struct PokPv_309ac0 *pv = (struct PokPv_309ac0 *)moby->pvars;
     float start_pos[4];
     float start_rot[4];
@@ -1684,7 +1787,7 @@ void pokitaru_boat_update(struct Moby *moby) {
     FUN_L11_0030a500(moby);
 
     switch (moby->state) {
-    case 0: {
+    case POKITARU_BOAT_INITIALIZE: {
         int *tab_a8;
         int *tab_ac;
         int *path;
@@ -1715,7 +1818,7 @@ void pokitaru_boat_update(struct Moby *moby) {
         pv->flags |= 1;
         break;
     }
-    case 1:
+    case POKITARU_BOAT_WAIT_FOR_ACTIVATION:
         if (pv->flag_b8 != 0) {
             int *path = D_L11_001B0EB0[pv->path_a0];
             int n;
@@ -1729,7 +1832,7 @@ void pokitaru_boat_update(struct Moby *moby) {
             moby->state = 5;
         }
         break;
-    case 2: {
+    case POKITARU_BOAT_FOLLOW_PATH: {
         int *tab_a8;
         int *tab_ac;
         int i;
@@ -1813,7 +1916,7 @@ void pokitaru_boat_update(struct Moby *moby) {
         }
         break;
     }
-    case 3:
+    case POKITARU_BOAT_WAIT_FOR_GROUP_CLEAR:
         if (FUN_L11_0030a850(moby) != 0) {
             if (pv->flag_b0 != 0) {
                 pv->approach_d0 = 0.0f;
@@ -1823,14 +1926,14 @@ void pokitaru_boat_update(struct Moby *moby) {
             }
         }
         break;
-    case 4:
+    case POKITARU_BOAT_RISE_ABOVE_PATH:
         qcopy(target, (char *)pv->path_c4 + 0x10 + pv->seg_d4 * 16);
         advance_309ac0(&moby->pos.z, &pv->approach_d0, target[2] + 6.0f, frame_time_sq, frame_time_sq, frame_time);
         if (target[2] + 5.9f <= moby->pos.z) {
             moby->state = 5;
         }
         break;
-    case 5:
+    case POKITARU_BOAT_ADJUST_HEIGHT_FOR_HERO:
         qcopy(target, (char *)pv->path_c4 + 0x10 + pv->seg_d4 * 16);
         if (pv->flag_b0 != 0) {
             if (D_0013F3D8_lui < moby->pos.z) {

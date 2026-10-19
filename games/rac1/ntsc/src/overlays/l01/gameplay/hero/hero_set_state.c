@@ -78,6 +78,9 @@ extern int hero_set_state(int, int) __asm__("FUN_L01_0023cf98");
 extern char D_L01_0017C3A0[];
 extern char D_L01_0017C3E0[];
 int hero_set_state(int a, int b) {
+    enum {
+        HERO_STATE_DROWN = 0x6A
+    };
     int old2088;
     char *moby;
     int old20A7;
@@ -131,7 +134,7 @@ int hero_set_state(int a, int b) {
         p->rand_timer.range = 0;
     }
     switch (a) {
-    case 0: {
+    case HERO_STATE_IDLE: {
         struct Hero *p = &hero;
         p->state.control_mode = 0;
         p->unk2284 = 0;
@@ -174,7 +177,7 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 0x41: {
+    case HERO_STATE_FIDGET_ALT: {
         int t = scale_game_frames(9);
         set_hero_animation(FUN_L01_00226f10(0), 0, (float)t);
         {
@@ -185,7 +188,7 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 0x3D: {
+    case HERO_STATE_DYING: {
         struct Hero *p = &hero;
         p->state.control_mode = 0x14;
         p->unk2284 = 0;
@@ -205,7 +208,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0x7C, 0, (float)scale_game_frames(0xC));
         break;
     }
-    case 0x7F: {
+    case HERO_STATE_SINK: {
         struct Hero *p = &hero;
         p->state.control_mode = 0x14;
         p->unk2284 = 0;
@@ -384,7 +387,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0x65, 0, (float)scale_game_frames(0x11));
         break;
     }
-    case 0x6A: {
+    case HERO_STATE_DROWN: {
         struct Hero *p = &hero;
         p->state.control_mode = 0x14;
         p->unk20A7 = 1;
@@ -439,7 +442,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0x80, 0, (float)scale_game_frames(0xA));
         break;
     }
-    case 1: {
+    case HERO_STATE_LOOK: {
         struct Hero *p = &hero;
         int t;
         p->state.control_mode = 0;
@@ -482,7 +485,7 @@ int hero_set_state(int a, int b) {
         set_hero_animation(0x2E, 0, (float)scale_game_frames(5));
         break;
     }
-    case 2:
+    case HERO_STATE_RUN:
     case 0x3F:
     case 0x73: {
         struct Hero *p = &hero;
@@ -577,7 +580,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0x64, 0, (float)scale_game_frames(0xF));
         break;
     }
-    case 3: {
+    case HERO_STATE_STOP: {
         struct Hero *p = &hero;
         p->state.control_mode = 1;
         p->unk2284 = 0;
@@ -620,7 +623,7 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 4: {
+    case HERO_STATE_CROUCH: {
         struct Hero *p = &hero;
         p->state.control_mode = 0xC;
         p->unk2284 = 0;
@@ -709,7 +712,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0x25, 0, (float)scale_game_frames(6));
         break;
     }
-    case 0x79: {
+    case HERO_STATE_SLIP: {
         struct Hero *p = &hero;
         p->state.control_mode = 2;
         p->unk2284 = 0;
@@ -718,7 +721,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0xB, 0, (float)scale_game_frames(0xC));
         break;
     }
-    case 6:
+    case HERO_STATE_FALL:
     case 0x77: {
         struct Hero *p = &hero;
         p->state.control_mode = 2;
@@ -770,7 +773,7 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 8: {
+    case HERO_STATE_LAND: {
         struct Hero *p = &hero;
         int animation_timing_override = -2;
         p->state.control_mode = 5;
@@ -785,15 +788,15 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 7:
-    case 9:
-    case 0xA:
-    case 0xB:
+    case HERO_STATE_JUMP:
+    case HERO_STATE_RUN_JUMP:
+    case HERO_STATE_PACK_JUMP:
+    case HERO_STATE_HIGH_JUMP:
     case 0xC:
     case 0xD:
     case 0xE:
     case 0xF:
-    case 0x10:
+    case HERO_STATE_PACK_LONG_JUMP:
     case 0x11:
     case 0x12:
     case 0x1C:
@@ -1146,9 +1149,9 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 0x13:
-    case 0x14:
-    case 0x15:
+    case HERO_STATE_WRENCH_COMBO:
+    case HERO_STATE_WRENCH_SLAM:
+    case HERO_STATE_CROUCH_SWING:
     case 0x20:
     case 0x23:
     case 0x51: {
@@ -1160,7 +1163,7 @@ int hero_set_state(int a, int b) {
         *(int *)&p->unkA54 = 0;
         p->unkA64 = 0;
         switch (p->state.current) {
-        case 0x14: {
+        case HERO_STATE_WRENCH_SLAM: {
             struct UsageStat *h = usage_stats.stat;
             struct Hero *q;
             if (h[0].count <= 0xFFFE) {
@@ -1189,7 +1192,7 @@ int hero_set_state(int a, int b) {
             }
             break;
         }
-        case 0x15: {
+        case HERO_STATE_CROUCH_SWING: {
             struct UsageStat *h = usage_stats.stat;
             char *h2;
             struct Hero *q;
@@ -1237,7 +1240,7 @@ int hero_set_state(int a, int b) {
             FUN_L00_00214ed8(11.0f, 0.87266463f, -1.0f);
             break;
         }
-        case 0x13: {
+        case HERO_STATE_WRENCH_COMBO: {
             char *h = ((char *)&item_usage);
             struct Hero *q;
             T2C_23D688 *e;
@@ -1328,7 +1331,7 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 0x7A: {
+    case HERO_STATE_WALL_BONK: {
         struct Hero *p = &hero;
         p->state.control_mode = 0xA;
         p->unk2284 = 0;
@@ -1338,7 +1341,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0x29, 5, (float)scale_game_frames(8));
         break;
     }
-    case 0x16: {
+    case HERO_STATE_HURT: {
         struct Hero *p = &hero;
         char *r;
         p->state.control_mode = 7;
@@ -1618,6 +1621,9 @@ extern int voice_is_playing(struct Moby *, int) __asm__("FUN_L00_0028d8c0");
 extern void FUN_L00_0029a6b0(int);
 
 int FUN_L01_00240ed8(void) {
+    enum {
+        ITEM_WRENCH = 8
+    };
     int out0;
     int out1;
     int out2;
@@ -1637,7 +1643,7 @@ int FUN_L01_00240ed8(void) {
     buttons = hero.items[0].button_mask;
 
     switch (hero.items[0].item_id) {
-    case 8:
+    case ITEM_WRENCH:
         if ((unsigned int)hero.state.control_mode < 2 ||
             (hero.state.control_mode == 4 && hero.unk418 != 0)) {
             if (hero.on_slip_ground == 0 && FUN_L00_00266d60(buttons, scale_game_frames(7), &out0) != 0) {

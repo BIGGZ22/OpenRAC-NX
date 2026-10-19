@@ -9,7 +9,11 @@ extern s32 _sceMpegFlush();
 
 s32 _getpic(struct sceMpeg *mpeg) {
     enum {
-        MPEG_SEQUENCE_END = 0
+        MPEG_SEQUENCE_END = 0,
+        MPEG_INTRA_PICTURE = 1,
+        MPEG_PREDICTIVE_PICTURE = 2,
+        MPEG_BIDIRECTIONAL_PICTURE = 3,
+        MPEG_DC_INTRA_PICTURE = 4
     };
     s32 temp_6_13;
     s32 var_18_8;
@@ -45,19 +49,19 @@ s32 _getpic(struct sceMpeg *mpeg) {
             _sceMpegFlush(mpeg);
             temp_16_12->unk0 = 1;
             break;
-        case 1:
+        case MPEG_INTRA_PICTURE:
             temp_16_12->unkA8 = 0;
             temp_16_12->unkA4 = 0;
             temp_16_12->unkA0 = 0;
             var_18_8 = _decodeOrSkip(mpeg, 0, temp_16_12->unk94);
             temp_16_12->unkA0 = (s32)(temp_16_12->unkA0 + 1);
             break;
-        case 2:
+        case MPEG_PREDICTIVE_PICTURE:
             var_18_8 = _decodeOrSkip(mpeg, temp_16_12->unkA4, temp_16_12->unk98);
             temp_16_12->unkA4 = (s32)(temp_16_12->unkA4 + 1);
             break;
-        case 3:
-        case 4:
+        case MPEG_BIDIRECTIONAL_PICTURE:
+        case MPEG_DC_INTRA_PICTURE:
             var_18_8 = _decodeOrSkip(mpeg, temp_16_12->unkA8, temp_16_12->unk9C);
             temp_16_12->unkA8 = (s32)(temp_16_12->unkA8 + 1);
             break;

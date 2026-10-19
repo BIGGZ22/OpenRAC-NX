@@ -173,10 +173,29 @@ void blend_moby_animation(void *arg0, int arg1, int arg2, int arg3) __asm__("FUN
 
 void walker_update_gait(WalkMoby *m, WalkData *d, int flags, float speed, float ang, float accel) __asm__("FUN_L00_002a1670");
 void walker_update_gait(WalkMoby *m, WalkData *d, int flags, float speed, float ang, float accel) {
+    enum {
+        WALKER_GAIT_IDLE = 0,
+        WALKER_GAIT_RESET_TO_IDLE = 12,
+        WALKER_GAIT_RUN = 13,
+        WALKER_GAIT_ALTERNATE_TAKEOFF_ANIMATION = 14,
+        WALKER_GAIT_TAKEOFF_ANIMATION = 15,
+        WALKER_GAIT_WAIT_FOR_LANDING = 16,
+        WALKER_GAIT_SYNC_ALTERNATE_LANDING_ANIMATION = 17,
+        WALKER_GAIT_SYNC_LANDING_ANIMATION = 18,
+        WALKER_GAIT_RESUME_RUN_AFTER_ALTERNATE_LANDING = 19,
+        WALKER_GAIT_RESUME_RUN_AFTER_LANDING = 20
+    };
+    enum {
+        WALKER_GAIT_WALK = 1
+    };
+    enum {
+        WALKER_GAIT_WALK_UPHILL = 4,
+        WALKER_GAIT_WALK_DOWNHILL = 9
+    };
     float vec[4];
 
     switch (d->bB7) {
-    case 0:
+    case WALKER_GAIT_IDLE:
         d->fE4 = 0.0f;
         if (accel > 0.0008f && speed > d->anim[0]->f08 * 1.35f) {
             {
@@ -204,10 +223,10 @@ void walker_update_gait(WalkMoby *m, WalkData *d, int flags, float speed, float 
             }
         }
         break;
-    case 1:
+    case WALKER_GAIT_WALK:
     case 2:
     case 3:
-    case 4:
+    case WALKER_GAIT_WALK_UPHILL:
     case 5:
     case 6:
         if (flags & 5) {
@@ -215,7 +234,7 @@ void walker_update_gait(WalkMoby *m, WalkData *d, int flags, float speed, float 
         }
     case 7:
     case 8:
-    case 9:
+    case WALKER_GAIT_WALK_DOWNHILL:
     case 10:
     case 11: {
         int idx = D_L00_001CA760[d->bB7];
@@ -291,7 +310,7 @@ void walker_update_gait(WalkMoby *m, WalkData *d, int flags, float speed, float 
                     h = probe_ground_height(vec, 0, 0.5f);
                     d->fE4 = h;
                     switch (d->bB7) {
-                    case 1:
+                    case WALKER_GAIT_WALK:
                         if ((h - vec[2]) + d->anim[idx]->f04 * 0.5f * fast_sin(d->fB8) >
                             d->fE0 * 0.75f) {
                             if (flags & 1) {
@@ -419,7 +438,7 @@ void walker_update_gait(WalkMoby *m, WalkData *d, int flags, float speed, float 
                             d->bB7 = 4;
                         }
                         break;
-                    case 4:
+                    case WALKER_GAIT_WALK_UPHILL:
                         if ((h - vec[2]) + d->anim[idx]->f04 * 0.5f * fast_sin(d->fB8) <
                             -d->fE0 * 0.75f) {
                             d->uEE |= 8;
@@ -609,7 +628,7 @@ void walker_update_gait(WalkMoby *m, WalkData *d, int flags, float speed, float 
                             d->bB7 = 9;
                         }
                         break;
-                    case 9:
+                    case WALKER_GAIT_WALK_DOWNHILL:
                         if ((h - vec[2]) + d->anim[idx]->f04 * 0.5f * fast_sin(d->fB8) >
                             d->fE0 * 0.75f) {
                             if (flags & 1) {
@@ -734,7 +753,7 @@ void walker_update_gait(WalkMoby *m, WalkData *d, int flags, float speed, float 
         }
         break;
     }
-    case 13: {
+    case WALKER_GAIT_RUN: {
         float t = (d->anim[7]->f08 + d->anim[0]->f08) * 0.35f;
         if (m->b52 == d->anim[7]->id && !(d->bB6 & 0x30)) {
             if (speed < t && d->fC0 <= t) {
@@ -803,12 +822,12 @@ void walker_update_gait(WalkMoby *m, WalkData *d, int flags, float speed, float 
         }
         break;
     }
-    case 12:
+    case WALKER_GAIT_RESET_TO_IDLE:
         blend_moby_animation(m, d->bB0, 0, 10);
         FUN_L00_002a1538_c((char *)d);
         d->bB7 = 0;
         break;
-    case 15:
+    case WALKER_GAIT_TAKEOFF_ANIMATION:
         if (flags & 0x30) {
             float dist = vector_distance_xy(m->pos, d->v60);
             debug_print_alt(D_L00_001611E0, dist);
@@ -838,7 +857,7 @@ void walker_update_gait(WalkMoby *m, WalkData *d, int flags, float speed, float 
             }
         }
         break;
-    case 14:
+    case WALKER_GAIT_ALTERNATE_TAKEOFF_ANIMATION:
         if (flags & 0x30) {
             float dist = fast_vec_dist(m->pos, d->v60);
             debug_print_alt(D_L00_001611E0, dist);
@@ -868,7 +887,7 @@ void walker_update_gait(WalkMoby *m, WalkData *d, int flags, float speed, float 
             }
         }
         break;
-    case 16:
+    case WALKER_GAIT_WAIT_FOR_LANDING:
         if (m->b52 == d->bB3) {
             float t = FUN_L00_002a15c8_c((char *)m, (char *)d);
             float len = (d->anim[12]->f44 - d->anim[12]->f0C) * 2.0f;
@@ -882,7 +901,7 @@ void walker_update_gait(WalkMoby *m, WalkData *d, int flags, float speed, float 
             }
         }
         break;
-    case 18:
+    case WALKER_GAIT_SYNC_LANDING_ANIMATION:
         if (m->b52 == d->anim[12]->id) {
             float t = FUN_L00_002a15c8_c((char *)m, (char *)d);
             if (t > 1.0f) {
@@ -909,7 +928,7 @@ void walker_update_gait(WalkMoby *m, WalkData *d, int flags, float speed, float 
             }
         }
         break;
-    case 17:
+    case WALKER_GAIT_SYNC_ALTERNATE_LANDING_ANIMATION:
         if (m->b52 == d->anim[10]->id) {
             float t = FUN_L00_002a15c8_c((char *)m, (char *)d);
             if (t > 1.0f) {
@@ -936,7 +955,7 @@ void walker_update_gait(WalkMoby *m, WalkData *d, int flags, float speed, float 
             }
         }
         break;
-    case 20:
+    case WALKER_GAIT_RESUME_RUN_AFTER_LANDING:
         if (flags & 1) {
             int bl =
                 truncate_float_to_s32((d->anim[7]->f38 * 0.25f + 2.0f) / (speed / d->anim[7]->f08));
@@ -959,7 +978,7 @@ void walker_update_gait(WalkMoby *m, WalkData *d, int flags, float speed, float 
             d->fE4 = probe_ground_height(vec, 0, 0.5f);
         }
         break;
-    case 19:
+    case WALKER_GAIT_RESUME_RUN_AFTER_ALTERNATE_LANDING:
         if (flags & 1) {
             int bl =
                 truncate_float_to_s32((d->anim[7]->f3C * 0.25f + 2.0f) / (speed / d->anim[7]->f08));

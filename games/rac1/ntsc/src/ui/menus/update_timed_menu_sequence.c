@@ -20,9 +20,29 @@ extern u8 D_001D5208[];
 u8 D_001D5298[] NOT_SDA = "9Q";
 extern u8 D_001D52B0[];
 extern s32 scale_game_frames(s32) __asm__("FUN_001f96f8");
-s32 FUN_002223f0(struct Menu *menu) {
+s32 update_timed_menu_sequence(struct Menu *menu) __asm__("FUN_002223f0");
+
+s32 update_timed_menu_sequence(struct Menu *menu) {
     enum {
         INITIALIZE_MENU_SEQUENCE = 0,
+        WAIT_FOR_INITIAL_DELAY = 1,
+        ADVANCE_FIRST_PROGRESS_PHASE = 2,
+        BEGIN_DELAY_AFTER_FIRST_PROGRESS_PHASE = 3,
+        PREPARE_SECOND_PROGRESS_PHASE = 4,
+        WAIT_BEFORE_SECOND_PROGRESS_PHASE = 5,
+        ADVANCE_SECOND_PROGRESS_PHASE = 6,
+        BEGIN_DELAY_AFTER_SECOND_PROGRESS_PHASE = 7,
+        WAIT_BEFORE_THIRD_PROGRESS_PHASE = 8,
+        ADVANCE_THIRD_PROGRESS_PHASE = 9,
+        BEGIN_DELAY_AFTER_THIRD_PROGRESS_PHASE = 10,
+        PREPARE_FOURTH_PROGRESS_PHASE = 11,
+        WAIT_BEFORE_FOURTH_PROGRESS_PHASE = 12,
+        ADVANCE_FOURTH_PROGRESS_PHASE = 13,
+        BEGIN_DELAY_AFTER_FOURTH_PROGRESS_PHASE = 14,
+        PREPARE_FIFTH_PROGRESS_PHASE = 15,
+        WAIT_BEFORE_FIFTH_PROGRESS_PHASE = 16,
+        ADVANCE_FIFTH_PROGRESS_PHASE = 17,
+        BEGIN_FINAL_DELAY = 18,
         WAIT_FOR_FINAL_DELAY = 19
     };
     int flag;
@@ -58,30 +78,30 @@ s32 FUN_002223f0(struct Menu *menu) {
         menu->str = (s32)D_001D5098;
         break;
 
-    case 1:
+    case WAIT_FOR_INITIAL_DELAY:
 
-    case 5:
+    case WAIT_BEFORE_SECOND_PROGRESS_PHASE:
 
-    case 8:
+    case WAIT_BEFORE_THIRD_PROGRESS_PHASE:
 
-    case 12:
+    case WAIT_BEFORE_FOURTH_PROGRESS_PHASE:
 
-    case 16:
+    case WAIT_BEFORE_FIFTH_PROGRESS_PHASE:
         if (menu->unk40 == 0) {
             menu->unk54 = 0;
             menu->unk50 = *(volatile u32 *)(&menu->unk50) + 1;
         }
         break;
 
-    case 2:
+    case ADVANCE_FIRST_PROGRESS_PHASE:
 
-    case 6:
+    case ADVANCE_SECOND_PROGRESS_PHASE:
 
-    case 9:
+    case ADVANCE_THIRD_PROGRESS_PHASE:
 
-    case 13:
+    case ADVANCE_FOURTH_PROGRESS_PHASE:
 
-    case 17:
+    case ADVANCE_FIFTH_PROGRESS_PHASE:
         n = menu->unk3C;
         menu->unk3C = n + 0xA;
         if (flag) {
@@ -93,7 +113,7 @@ s32 FUN_002223f0(struct Menu *menu) {
         }
         break;
 
-    case 4:
+    case PREPARE_SECOND_PROGRESS_PHASE:
         if (menu->unk40 == 0) {
             menu->unk50 = 5;
             menu->unk40 = scale_game_frames(0xB4);
@@ -103,7 +123,7 @@ s32 FUN_002223f0(struct Menu *menu) {
         }
         break;
 
-    case 3:
+    case BEGIN_DELAY_AFTER_FIRST_PROGRESS_PHASE:
         if (menu->unk40 == 0) {
             D_001D2AF4[0] = 0x50D4;
             menu->str = 0x50D5;
@@ -113,7 +133,7 @@ s32 FUN_002223f0(struct Menu *menu) {
         }
         break;
 
-    case 7:
+    case BEGIN_DELAY_AFTER_SECOND_PROGRESS_PHASE:
         if (menu->unk40 == 0) {
             D_001D2AF4[0] = 0x5106;
             menu->str = (s32)D_001D5208;
@@ -123,7 +143,7 @@ s32 FUN_002223f0(struct Menu *menu) {
         }
         break;
 
-    case 10:
+    case BEGIN_DELAY_AFTER_THIRD_PROGRESS_PHASE:
         if (menu->unk40 == 0) {
             D_001D2AF4[0] = 0x5136;
             menu->str = 0x5137;
@@ -133,7 +153,7 @@ s32 FUN_002223f0(struct Menu *menu) {
         }
         break;
 
-    case 11:
+    case PREPARE_FOURTH_PROGRESS_PHASE:
         if (menu->unk40 == 0) {
             menu->unk40 = scale_game_frames(0xB4);
             menu->unk3C = 0;
@@ -143,7 +163,7 @@ s32 FUN_002223f0(struct Menu *menu) {
         }
         break;
 
-    case 14:
+    case BEGIN_DELAY_AFTER_FOURTH_PROGRESS_PHASE:
         if (menu->unk40 == 0) {
             D_001D2AF4[0] = 0;
             menu->str = 0x5143;
@@ -153,7 +173,7 @@ s32 FUN_002223f0(struct Menu *menu) {
         }
         break;
 
-    case 15:
+    case PREPARE_FIFTH_PROGRESS_PHASE:
         if (menu->unk40 == 0) {
             menu->unk40 = scale_game_frames(0xB4);
             menu->unk3C = 0;
@@ -163,7 +183,7 @@ s32 FUN_002223f0(struct Menu *menu) {
         }
         break;
 
-    case 18:
+    case BEGIN_FINAL_DELAY:
         if (menu->unk40 == 0) {
             D_001D2AF4[0] = 0;
             menu->str = 0x5175;
@@ -184,4 +204,4 @@ s32 FUN_002223f0(struct Menu *menu) {
     return 0;
 }
 
-extern __typeof__(FUN_002223f0) func_002223F0 __attribute__((alias("FUN_002223f0")));
+extern __typeof__(update_timed_menu_sequence) func_002223F0 __attribute__((alias("FUN_002223f0")));

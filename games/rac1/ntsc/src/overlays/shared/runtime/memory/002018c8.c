@@ -88,12 +88,29 @@ extern void vu1_add_g_sregister(s32, s64) __asm__("FUN_00233980");
 
 void level_draw_dialog_text(void) __asm__("FUN_L00_002018c8");
 void level_draw_dialog_text(void) {
+    enum {
+        MESSAGE_BOX_RESULTS_PANEL = 0,
+        MESSAGE_BOX_TITLE_ONLY = 2,
+        MESSAGE_BOX_FREEZE_MODE_DIALOG = 3,
+        MESSAGE_BOX_SPLIT_TEXT_SPRITE_DIALOG = 5,
+        MESSAGE_BOX_CHOICE_DIALOG = 6
+    };
+    enum {
+        CHOICE_DIALOG_SINGLE_CENTERED_BUTTON = 3
+    };
+    enum {
+        FREEZE_DIALOG_TIMER_GATED_CENTERED_BUTTON = 2,
+        FREEZE_DIALOG_FORMATTED_BODY_CENTERED_BUTTON = 5,
+        FREEZE_DIALOG_FLAG_GATED_PAIRED_BUTTONS = 12,
+        FREEZE_DIALOG_CONDITIONAL_FORMATTED_BODY = 19,
+        FREEZE_DIALOG_FORMATTED_BODY_PAIRED_BUTTONS = 24
+    };
     char buf[0x200];
     struct TextRegion box;
 
     setup_gif_paging(0);
     switch (D_L00_00173040.state) {
-    case 5: {
+    case MESSAGE_BOX_SPLIT_TEXT_SPRITE_DIALOG: {
         u8 *p;
         s32 color;
         s32 tint;
@@ -141,7 +158,7 @@ void level_draw_dialog_text(void) {
                             get_frame_texture(find_valid_animation_frame_index_alt(0x755D, 1)));
         break;
     }
-    case 3: {
+    case MESSAGE_BOX_FREEZE_MODE_DIALOG: {
         char *text;
         s32 left;
         s32 right;
@@ -161,7 +178,7 @@ void level_draw_dialog_text(void) {
             right = 0x524B;
             text = get_help_message_text(0x4FAF);
             break;
-        case 12:
+        case FREEZE_DIALOG_FLAG_GATED_PAIRED_BUTTONS:
             if (!(mode_freeze_flags & 2)) {
                 mid = 0x4FA8;
                 text = get_help_message_text(0x4FA7);
@@ -192,14 +209,14 @@ void level_draw_dialog_text(void) {
             mid = 0x524A;
             text = get_help_message_text(0x4FBC);
             break;
-        case 2:
+        case FREEZE_DIALOG_TIMER_GATED_CENTERED_BUTTON:
             mid = 0x524A;
             text = get_help_message_text(0x4FA6);
             if (D_L00_00173040.timer != 0) {
                 mid = 0;
             }
             break;
-        case 19:
+        case FREEZE_DIALOG_CONDITIONAL_FORMATTED_BODY:
             if (mode_freeze_flags & 4) {
                 mid = 0x4FA8;
                 text = get_help_message_text(0x4FA7);
@@ -221,7 +238,7 @@ void level_draw_dialog_text(void) {
             mid = 0x524A;
             text = get_help_message_text(0x4FBB);
             break;
-        case 24:
+        case FREEZE_DIALOG_FORMATTED_BODY_PAIRED_BUTTONS:
             left = 0x524E;
             right = 0x524B;
             sprintf(buf, D_L00_0015F510, get_help_message_text(0x4FAE), 1, 1, get_help_message_text(0x4FAA));
@@ -243,7 +260,7 @@ void level_draw_dialog_text(void) {
                 text = get_help_message_text(0x4FAC);
             }
             break;
-        case 5:
+        case FREEZE_DIALOG_FORMATTED_BODY_CENTERED_BUTTON:
             mid = 0x4FA8;
             sprintf(buf, D_L00_0015F510, get_help_message_text(0x4FB0), 1, 1, get_help_message_text(0x4FA7));
             text = buf;
@@ -273,7 +290,7 @@ void level_draw_dialog_text(void) {
         }
         break;
     }
-    case 6: {
+    case MESSAGE_BOX_CHOICE_DIALOG: {
         s32 text_color;
         s32 button_color;
         s32 id;
@@ -296,7 +313,7 @@ void level_draw_dialog_text(void) {
             font_print_center(0x135, 0x118, button_color, get_help_message_text(0x524B), -1);
             id = 0x522B;
             break;
-        case 3:
+        case CHOICE_DIALOG_SINGLE_CENTERED_BUTTON:
             font_print_center(0x100, 0x118, button_color, get_help_message_text(0x524A), -1);
             id = 0x522C;
             break;
@@ -309,7 +326,7 @@ void level_draw_dialog_text(void) {
         }
         break;
     }
-    case 0: {
+    case MESSAGE_BOX_RESULTS_PANEL: {
         char line[0x40];
         s32 pulse;
         s32 c1;
@@ -410,7 +427,7 @@ void level_draw_dialog_text(void) {
         }
         break;
     }
-    case 2:
+    case MESSAGE_BOX_TITLE_ONLY:
         draw_outlined_rect(0x64, 0xA0, 0xB0, 0x150,
                      fast_tween_color(D_L00_0015F4E4, D_L00_0015F4E8,
                                   fast_sin((f32)(D_L00_0015F3F8 % D_L00_0015F4E0) / convert_integer_to_float(D_L00_0015F4E0) * 6.28318f -

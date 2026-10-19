@@ -13,16 +13,20 @@ float fast_add_rotations(float, float) __asm__("FUN_001fa580");
 void FUN_L00_001fff28(char *, int, float);
 void vendor_orb_update(unsigned char *p) __asm__("FUN_L00_002df730");
 void vendor_orb_update(unsigned char *p) {
+    enum {
+        VENDOR_ORB_INITIALIZE = 0,
+        VENDOR_ORB_ROTATE = 1
+    };
     char *m = *(char **)(p + 0x78);
     float s;
     switch (p[0x20]) {
-    case 0:
+    case VENDOR_ORB_INITIALIZE:
         p[0x20] = 1;
         p[0x73] = 0x20;
         *(float *)(m + 0x40) = random_angle_radians();
         attach_manipulator(p, 1, m);
         break;
-    case 1:
+    case VENDOR_ORB_ROTATE:
         s = D_L00_00161BB0 * DEG_TO_RAD * frame_time;
         *(float *)(p + 0x48) = fast_add_rotations(*(float *)(p + 0x48), s);
         *(float *)(m + 0x40) = fast_add_rotations(*(float *)(m + 0x40), s * -2.0f);
@@ -167,6 +171,19 @@ extern int func_001F9908_2E0E50(void *) __asm__("FUN_001f9740");
 
 void hydrodisplacer_update(Moby *moby) __asm__("FUN_L00_002df9a0");
 void hydrodisplacer_update(Moby *moby) {
+    enum {
+        HYDRODISPLACER_INITIALIZE = 0,
+        HYDRODISPLACER_WAIT_FOR_ANIMATION_FLAG = 1,
+        HYDRODISPLACER_WAIT_FOR_ACTIVATION = 2,
+        HYDRODISPLACER_WAIT_FOR_HERO_FLAG = 3,
+        HYDRODISPLACER_CAMERA_TRANSITION = 4,
+        HYDRODISPLACER_WAIT_FOR_TIMER = 5
+    };
+    enum {
+        HYDRODISPLACER_CAMERA_PREPARE_INTERPOLATION = 0,
+        HYDRODISPLACER_CAMERA_INTERPOLATE = 1,
+        HYDRODISPLACER_CAMERA_RETURN_TO_ACTIVATION = 2
+    };
     Vec_2E0E50 camera_pos, camera_rot;
     Data_2E0E50 *data = (void *)moby->pvars;
 
@@ -201,16 +218,16 @@ void hydrodisplacer_update(Moby *moby) {
         }
     }
     switch (moby->state) {
-    case 0:
+    case HYDRODISPLACER_INITIALIZE:
         func_0022ED80_2E0E50(0, 0, moby);
         moby->state = 1;
         break;
-    case 1:
+    case HYDRODISPLACER_WAIT_FOR_ANIMATION_FLAG:
         if (moby->anim_flags & 2) {
             moby->state = 2;
         }
         break;
-    case 2:
+    case HYDRODISPLACER_WAIT_FOR_ACTIVATION:
         if (func_L00_00267BA8_2E0E50(((Hero *)D_0013E633_2E0E50)->items[0].button_mask, func_001F9850_2E0E50(8), 0) == 0) {
             break;
         }
@@ -232,7 +249,7 @@ void hydrodisplacer_update(Moby *moby) {
             func_L00_00232C10_2E0E50(0x46, 0, func_001F9850_2E0E50(6));
         }
         break;
-    case 3: {
+    case HYDRODISPLACER_WAIT_FOR_HERO_FLAG: {
         int *platform;
         char *linked;
 
@@ -281,13 +298,13 @@ void hydrodisplacer_update(Moby *moby) {
         }
         break;
     }
-    case 4:
+    case HYDRODISPLACER_CAMERA_TRANSITION:
         if (((Hero *)D_0013E633_2E0E50)->ground_moby == 0 || ((Hero *)D_0013E633_2E0E50)->ground_moby->oclass != 0x155) {
             func_L00_002E17F0_2E0E50(moby);
             return;
         }
         switch (moby->command) {
-        case 0: {
+        case HYDRODISPLACER_CAMERA_PREPARE_INTERPOLATION: {
             char *linked;
 
             func_00214D28_2E0E50(&D_L00_0015F4FC_2E0E50, 1.0f, 1.0f / func_001F9850_2E0E50(15));
@@ -308,7 +325,7 @@ void hydrodisplacer_update(Moby *moby) {
             }
             break;
         }
-        case 1:
+        case HYDRODISPLACER_CAMERA_INTERPOLATE:
             if (data->f10 == 0.0f && 0.0f < D_L00_0015F4FC_2E0E50) {
                 func_00214D28_2E0E50(&D_L00_0015F4FC_2E0E50, 0.0f, 1.0f / func_001F9850_2E0E50(15));
                 return;
@@ -333,7 +350,7 @@ void hydrodisplacer_update(Moby *moby) {
             D_L00_0015F404_macro = 0;
             func_L00_002EC0C8_2E0E50(3);
             return;
-        case 2:
+        case HYDRODISPLACER_CAMERA_RETURN_TO_ACTIVATION:
             if (0.0f < D_L00_0015F4FC_2E0E50) {
                 func_00214D28_2E0E50(&D_L00_0015F4FC_2E0E50, 0.0f, 1.0f / func_001F9850_2E0E50(15));
                 return;
@@ -348,7 +365,7 @@ void hydrodisplacer_update(Moby *moby) {
             return;
         }
         break;
-    case 5:
+    case HYDRODISPLACER_WAIT_FOR_TIMER:
         if (((Hero *)D_0013E633_2E0E50)->ground_moby != 0 && ((Hero *)D_0013E633_2E0E50)->ground_moby->oclass == 0x155
             && func_001F9908_2E0E50(data) == 0) {
             break;
@@ -497,6 +514,12 @@ extern T_2e03a0_2e03a0 D_L00_001BB230;
 extern s32 current_level_index_gp __asm__("D_0015ED84") __attribute__((sda));
 void pilots_helmet_update(M_2e03a0_2e03a0 *m) __asm__("FUN_L00_002e03a0");
 void pilots_helmet_update(M_2e03a0_2e03a0 *m) {
+    enum {
+        PILOTS_HELMET_INITIALIZE = 0,
+        PILOTS_HELMET_WAIT_FOR_HERO_PROXIMITY = 1,
+        PILOTS_HELMET_GRANT_REWARD = 2,
+        PILOTS_HELMET_SAVE_AND_REMOVE = 3
+    };
     P_2e03a0_2e03a0 *p = m->p;
     char *g;
     E_2e03a0_2e03a0 *e;
@@ -505,7 +528,7 @@ void pilots_helmet_update(M_2e03a0_2e03a0 *m) {
 
     m->ang = FUN_001fa580_2e03a0(m->ang, D_0015ED6C_2e03a0 * 1.5707964f);
     switch (m->state) {
-    case 0:
+    case PILOTS_HELMET_INITIALIZE:
         FUN_L00_002d6bf0_2e03a0(m);
         if (p->fa_2e03a0 == -1)
             stub_printf(D_L00_001EA1B0, m->h);
@@ -517,7 +540,7 @@ void pilots_helmet_update(M_2e03a0_2e03a0 *m) {
         m->state = 1;
         m->z += 1.0f;
         break;
-    case 1:
+    case PILOTS_HELMET_WAIT_FOR_HERO_PROXIMITY:
         FUN_L00_002e0788_2e03a0(m);
         g = (char *)&hero.motion.pos;
         if (vector_distance((char *)m + 0x10, g) < 3.0f) {
@@ -532,7 +555,7 @@ void pilots_helmet_update(M_2e03a0_2e03a0 *m) {
             }
         }
         break;
-    case 2:
+    case PILOTS_HELMET_GRANT_REWARD:
         if (D_L00_0015F5C4_2e03a0 == 2)
             return;
         stub_printf(D_L00_00161BC0);
@@ -559,7 +582,7 @@ void pilots_helmet_update(M_2e03a0_2e03a0 *m) {
         D_00141410_2e03a0[0] = 7;
         m->state = 3;
         break;
-    case 3:
+    case PILOTS_HELMET_SAVE_AND_REMOVE:
         memcard_save_data(0, -1);
         FUN_0020c828_2e03a0(m);
         break;
@@ -1016,155 +1039,164 @@ void FUN_L00_002e2af0(char *m) {
     int i;
     vu1_add_g_sregister(0x47, 0x51001);
     for (i = 0; i < 3; i++) {
-        float f;
-        int a, b;
-        int k, k1;
+        float scroll;
+        int texture_id, glow_texture_id;
+        int pane, next_pane;
         if (D_L00_00161C88_c2[i] == 0 || D_L00_00161BF8_c2[i] < 2) continue;
-        k = i << 1;
-        k1 = k + 1;
-        f = D_L00_00161C78_f[i] - frame_scale * 0.2f;
-        D_L00_00161C78_f[i] = f;
-        if (f <= -8.0f) D_L00_00161C78_f[i] = f + 8.0f;
+        pane = i << 1;
+        next_pane = pane + 1;
+        scroll = D_L00_00161C78_f[i] - frame_scale * 0.2f;
+        D_L00_00161C78_f[i] = scroll;
+        if (scroll <= -8.0f) D_L00_00161C78_f[i] = scroll + 8.0f;
         FUN_L00_002e3388_c(D_L00_00161C88_c2[i], i);
-        a = d[1] + 0x28;
-        b = d[0] + 0x28;
-        FUN_L00_002e2c88(a, b, &D_L00_001E6E40[k], 0x80, 0x40, i);
-        FUN_L00_002e2c88(a, b, &D_L00_001E6E40[k1], 0x30, 0x10, i);
+        texture_id = d[1] + 0x28;
+        glow_texture_id = d[0] + 0x28;
+        FUN_L00_002e2c88(texture_id, glow_texture_id, &D_L00_001E6E40[pane], 0x80, 0x40, i);
+        FUN_L00_002e2c88(texture_id, glow_texture_id, &D_L00_001E6E40[next_pane], 0x30, 0x10, i);
     }
 }
 #ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L00_002e2c88.s", FUN_L00_002e2c88);
 #else
+/* Builds the trail quad and its glow quad from the slot tables and draws them along the
+   19 steps of points. */
 #include "rnc/rendering/geometry_quad.h"
-extern u8 g_debug_camera[] __asm__("D_L00_00166DC0");
-s64 get_effect_texture(s32) __asm__("FUN_001f44b8");
-void draw_geometry_quad(void *, s32, s32) __asm__("FUN_001f7d30");
-extern f32 cubic_hermite_scalar(f32, f32, f32, f32, f32) __asm__("FUN_L00_00257e20");
-void FUN_L00_002e2c88(int a, int b, void *points, int alpha, int glow_alpha, int idx) {
-    struct GeometryQuad q, glow;
+/* Ported from rac1-decomp (src/overlays/shared/vendor_002E1660.c: func_L00_002E4138), where it is exact; names translated to the US level program. */
+typedef struct { OvlVec4 axis, unk10, position, unk30; } TrailSlot;
+extern TrailSlot D_L00_001E6D30[];
+extern float cubic_hermite_scalar(float, float, float, float, float) __asm__("FUN_L00_00257e20");
+extern s64 get_effect_texture(s32) __asm__("FUN_001f44b8");
+extern void fast_draw_quad_real(void *, int, int) __asm__("FUN_001f7d30");
+void FUN_L00_002e2c88(int texture_id, int glow_texture_id, void *points, int alpha, int glow_alpha, int slot)
+{
+    struct GeometryQuad quads[2];
     OvlVec4 width, glow_width;
     OvlVec4 basis[4];
     OvlVec4 transform[4];
     OvlVec4 direction, from, to;
-    f32 one;
-    OvlVec4 *position;
-    f32 zero;
-    f32 scale;
-    f32 f, numerator, denominator, uv_start, uv_end;
-    u64 texture0, texture2, texture3;
-    u32 color, glow_color;
+    float zero, half_width, uv_offset;
+    int color, glow_color;
     int i;
-    char *current, *next;
 
-    q.texture = get_effect_texture(a);
-    one = 1.0f;
-    q.primitive = 0x8000000048ULL;
-    q.texture_state = 0xff9000000260ULL;
-    q.reserved.value = 0;
-    color = ((u32)alpha << 24) | 0x7f7f7f;
-    q.colors[0] = q.colors[1] = q.colors[2] = q.colors[3] = color;
-    glow.texture = get_effect_texture(b);
-    scale = 0.6f;
-    glow.texture_coordinates[0][1] = 0.0f;
-    zero = glow.texture_coordinates[0][1];
-    {
-        f32 uv_start, uv_end;
-        uv_start = D_L00_00161C78_f[idx] + zero;
-        uv_end = D_L00_00161C78_f[idx] + one;
-        glow_color = ((u32)glow_alpha << 24) | 0x7f4040;
-        texture3 = q.primitive; texture2 = q.texture_state; texture0 = q.reserved.value;
-        glow.colors[0] = glow.colors[1] = glow.colors[2] = glow.colors[3] = glow_color;
-        glow.primitive = texture3; glow.texture_state = texture2; glow.reserved.ordered = texture0;
-        glow.texture_coordinates[0][0] = one; glow.texture_coordinates[0][1] = zero;
-        glow.texture_coordinates[1][0] = one; glow.texture_coordinates[1][1] = one;
-        *(u32 *)&glow.texture_coordinates[2][0] = 0; *(u32 *)&glow.texture_coordinates[2][1] = 0;
-        *(u32 *)&glow.texture_coordinates[3][0] = 0; glow.texture_coordinates[3][1] = one;
-        q.texture_coordinates[0][0] = uv_start; q.texture_coordinates[1][0] = uv_start; q.texture_coordinates[0][1] = zero;
-        q.texture_coordinates[1][1] = one; q.texture_coordinates[2][0] = uv_end; q.texture_coordinates[3][0] = uv_end;
-        q.texture_coordinates[2][1] = zero; q.texture_coordinates[3][1] = one;
-    }
-    if (*(short *)(D_L00_00161C88_c2[idx] + 0xa6) == 0x1c) scale = 0.3f;
-    width.q = 0; glow_width.q = 0;
-    glow_width.f[2] = scale + scale;
-    width.f[2] = scale; glow_width.f[3] = one; width.f[3] = one;
-    qcopy_nc(&basis[0], D_L00_001E6D20[idx].b + 0x10);
-    one = *(volatile f32 *)&width.f[3];
-    position = (OvlVec4 *)(D_L00_001E6D20[idx].b + 0x30);
-    subtract_vector_xyz(&basis[1], g_debug_camera, position);
-    fast_vec_scale(&basis[1], &basis[1], one);
+    quads[0].texture = get_effect_texture(texture_id);
+    color = (alpha << 24) | 0x7F7F7F;
+    quads[0].primitive = 0x8000000048L;
+    quads[0].texture_state = 0xFF9000000260L;
+    quads[0].reserved.value = 0;
+    quads[0].colors[0] = quads[0].colors[1] = quads[0].colors[2] = quads[0].colors[3] = color;
+    quads[1].texture = get_effect_texture(glow_texture_id);
+    *(int *)&quads[1].texture_coordinates[0][1] = 0;
+    glow_color = (glow_alpha << 24) | 0x7F4040;
+    zero = quads[1].texture_coordinates[0][1];
+    uv_offset = *(float *)&D_C78_2e1f28[slot];
+    quads[1].colors[0] = quads[1].colors[1] = quads[1].colors[2] = quads[1].colors[3] = glow_color;
+    quads[1].primitive = quads[0].primitive;
+    quads[1].texture_state = quads[0].texture_state;
+    quads[1].reserved.value = quads[0].reserved.value;
+    quads[1].texture_coordinates[0][0] = 1.0f;
+    quads[1].texture_coordinates[1][0] = 1.0f;
+    quads[1].texture_coordinates[1][1] = 1.0f;
+    quads[1].texture_coordinates[2][0] = 0.0f;
+    quads[1].texture_coordinates[2][1] = 0.0f;
+    quads[1].texture_coordinates[3][0] = 0.0f;
+    quads[1].texture_coordinates[3][1] = 1.0f;
+    quads[0].texture_coordinates[1][0] = quads[0].texture_coordinates[0][0] = uv_offset + zero;
+    quads[0].texture_coordinates[0][1] = zero;
+    quads[0].texture_coordinates[1][1] = 1.0f;
+    quads[0].texture_coordinates[3][0] = quads[0].texture_coordinates[2][0] = uv_offset + 1.0f;
+    quads[0].texture_coordinates[2][1] = zero;
+    quads[0].texture_coordinates[3][1] = 1.0f;
+    half_width = 0.6f;
+    if (*(short *)(D_L00_00161C88[slot] + 0xA6) == 0x1C) half_width = 0.3f;
+    width.q = 0;
+    glow_width.q = 0;
+    glow_width.f[2] = half_width + half_width;
+    width.f[3] = 1.0f;
+    width.f[2] = half_width;
+    glow_width.f[3] = 1.0f;
+
+    qcopy(&basis[0], &D_L00_001E6D30[slot].axis);
+    subtract_vector_xyz(&basis[1], D_L00_00166DC0, &D_L00_001E6D30[slot].position);
+    fast_vec_scale(&basis[1], &basis[1], 1.0f);
     cross_vectors_xyz(&basis[2], &basis[1], &basis[0]);
-    normalize_vector_xyz(&basis[2], &basis[2], one);
+    normalize_vector_xyz(&basis[2], &basis[2], 1.0f);
     cross_vectors_xyz(&basis[0], &basis[2], &basis[1]);
-    qcopy(&basis[3], position);
-    qcopy(&transform[3], position);
-    /* The copied fourth vector is the third subtraction input in retail. */
-    subtract_vector_xyz(&direction, &D_L00_001E6DE0[idx], &transform[3]);
-    normalize_vector_xyz(&transform[0], &direction, one);
+    qcopy(&basis[3], &D_L00_001E6D30[slot].position);
+    qcopy(&transform[3], &D_L00_001E6D30[slot].position);
+    subtract_vector_xyz(&direction, &D_L00_001E6DE0[slot], &transform[3]);
+    normalize_vector_xyz(&transform[0], &direction, 1.0f);
     cross_vectors_xyz(&transform[1], &transform[0], D_0013E633_2E3700);
     normalize_vector_xyz(&transform[1], &transform[1], -1.0f);
     cross_vectors_xyz(&transform[2], &transform[1], &transform[0]);
-    qcopy(&q.positions[0], &width);
-    fast_vec_scale(&q.positions[1], &q.positions[0], -1.0f);
-    *(volatile u128 *)&glow.positions[0] = glow_width.q;
-    fast_vec_scale(&glow.positions[1], &glow.positions[0], -1.0f);
-    transform_vector_c(&from, points, transform);
-    transform_vector_c(&to, (char *)points + 0x10, transform);
+
+    qcopy(&quads[0].positions[0], &width);
+    fast_vec_scale(&quads[0].positions[1], &quads[0].positions[0], -1.0f);
+    qcopy(&quads[1].positions[0], &glow_width);
+    fast_vec_scale(&quads[1].positions[1], &quads[1].positions[0], -1.0f);
+    transform_vector_c(&from, &((OvlVec4 *)points)[0], transform);
+    transform_vector_c(&to, &((OvlVec4 *)points)[1], transform);
     subtract_vector_xyz(&basis[0], &to, &from);
-    normalize_vector_xyz(&basis[0], &basis[0], one);
-    subtract_vector_xyz(&basis[1], g_debug_camera, &from);
+    normalize_vector_xyz(&basis[0], &basis[0], 1.0f);
+    subtract_vector_xyz(&basis[1], D_L00_00166DC0, &from);
     cross_vectors_xyz(&basis[2], &basis[1], &basis[0]);
-    normalize_vector_xyz(&basis[2], &basis[2], one);
+    normalize_vector_xyz(&basis[2], &basis[2], 1.0f);
     cross_vectors_xyz(&basis[1], &basis[0], &basis[2]);
     qcopy(&basis[3], &from);
-    transform_vector_c(&q.positions[0], &q.positions[0], basis);
-    transform_vector_c(&q.positions[1], &q.positions[1], basis);
-    transform_vector_c(&glow.positions[0], &glow.positions[0], basis);
-    transform_vector_c(&glow.positions[1], &glow.positions[1], basis);
-    next = (char *)points + 0x20; current = (char *)points + 0x10;
+    transform_vector_c(&quads[0].positions[0], &quads[0].positions[0], basis);
+    transform_vector_c(&quads[0].positions[1], &quads[0].positions[1], basis);
+    transform_vector_c(&quads[1].positions[0], &quads[1].positions[0], basis);
+    transform_vector_c(&quads[1].positions[1], &quads[1].positions[1], basis);
+
     i = 1;
     do {
-        qcopy(&q.positions[2], &width);
-        fast_vec_scale(&q.positions[3], &q.positions[2], -1.0f);
-        qcopy(&glow.positions[2], &glow_width);
-        fast_vec_scale(&glow.positions[3], &glow.positions[2], -1.0f);
-        transform_vector_c(&from, current, transform);
-        transform_vector_c(&to, next, transform);
+        float taper, scroll;
+        qcopy(&quads[0].positions[2], &width);
+        fast_vec_scale(&quads[0].positions[3], &quads[0].positions[2], -1.0f);
+        qcopy(&quads[1].positions[2], &glow_width);
+        fast_vec_scale(&quads[1].positions[3], &quads[1].positions[2], -1.0f);
+        transform_vector_c(&from, &((OvlVec4 *)points)[i], transform);
+        transform_vector_c(&to, &((OvlVec4 *)points)[i + 1], transform);
         subtract_vector_xyz(&basis[0], &to, &from);
-        normalize_vector_xyz(&basis[0], &basis[0], one);
-        subtract_vector_xyz(&basis[1], g_debug_camera, &from);
+        normalize_vector_xyz(&basis[0], &basis[0], 1.0f);
+        subtract_vector_xyz(&basis[1], D_L00_00166DC0, &from);
         cross_vectors_xyz(&basis[2], &basis[1], &basis[0]);
-        normalize_vector_xyz(&basis[2], &basis[2], one);
+        normalize_vector_xyz(&basis[2], &basis[2], 1.0f);
         cross_vectors_xyz(&basis[1], &basis[0], &basis[2]);
         qcopy(&basis[3], &from);
-        transform_vector_c(&q.positions[2], &q.positions[2], basis);
-        transform_vector_c(&q.positions[3], &q.positions[3], basis);
-        transform_vector_c(&glow.positions[2], &glow.positions[2], basis);
-        transform_vector_c(&glow.positions[3], &glow.positions[3], basis);
+        transform_vector_c(&quads[0].positions[2], &quads[0].positions[2], basis);
+        transform_vector_c(&quads[0].positions[3], &quads[0].positions[3], basis);
+        transform_vector_c(&quads[1].positions[2], &quads[1].positions[2], basis);
+        transform_vector_c(&quads[1].positions[3], &quads[1].positions[3], basis);
         if (i == 1) {
-            color = q.colors[0]; glow_color = glow.colors[0];
-            q.colors[0] = q.colors[1] = 0xffffff;
-            glow.colors[0] = glow.colors[1] = 0x7f4040;
-            draw_geometry_quad(&q, 0, 0); draw_geometry_quad(&glow, 0, 0);
-            q.colors[0] = q.colors[1] = q.colors[2] = q.colors[3] = color;
-            glow.colors[0] = glow.colors[1] = glow.colors[2] = glow.colors[3] = glow_color;
+            int saved_color = quads[0].colors[0];
+            int saved_glow_color = quads[1].colors[0];
+            quads[0].colors[0] = quads[0].colors[1] = 0xFFFFFF;
+            quads[1].colors[0] = quads[1].colors[1] = 0x7F4040;
+            fast_draw_quad_real(&quads[0], 0, 0);
+            fast_draw_quad_real(&quads[1], 0, 0);
+            quads[0].colors[0] = quads[0].colors[1] = quads[0].colors[2] = quads[0].colors[3] = saved_color;
+            quads[1].colors[0] = quads[1].colors[1] = quads[1].colors[2] = quads[1].colors[3] = saved_glow_color;
         } else {
-            draw_geometry_quad(&q, 0, 0); draw_geometry_quad(&glow, 0, 0);
+            fast_draw_quad_real(&quads[0], 0, 0);
+            fast_draw_quad_real(&quads[1], 0, 0);
         }
-        qcopy(&q.positions[0], &q.positions[2]); qcopy(&q.positions[1], &q.positions[3]);
-        qcopy(&glow.positions[0], &glow.positions[2]); qcopy(&glow.positions[1], &glow.positions[3]);
-        next += 0x10;
-        numerator = func_001FA888_2E3700(i);
-        i++;
-        denominator = func_001FA888_2E3700(20);
-        current += 0x10;
-        f = cubic_hermite_scalar(-1.0f, zero, one, zero, numerator / denominator);
-        uv_start = D_L00_00161C78_f[idx] + zero;
-        uv_end = D_L00_00161C78_f[idx] + one;
-        q.texture_coordinates[0][0] = uv_start; q.texture_coordinates[2][0] = uv_end;
-        width.f[2] = scale + (0.05f - scale) * f;
+        qcopy(&quads[0].positions[0], &quads[0].positions[2]);
+        qcopy(&quads[0].positions[1], &quads[0].positions[3]);
+        qcopy(&quads[1].positions[0], &quads[1].positions[2]);
+        qcopy(&quads[1].positions[1], &quads[1].positions[3]);
+        taper = cubic_hermite_scalar(-1.0f, zero, 1.0f, zero, convert_integer_to_float_c2(i) / convert_integer_to_float_c2(20));
+        scroll = D_L00_00161C78_f[slot];
+        quads[0].texture_coordinates[0][0] = scroll + zero;
+        quads[0].texture_coordinates[0][1] = zero;
+        quads[0].texture_coordinates[1][0] = scroll + zero;
+        quads[0].texture_coordinates[1][1] = 1.0f;
+        quads[0].texture_coordinates[2][0] = scroll + 1.0f;
+        quads[0].texture_coordinates[2][1] = zero;
+        quads[0].texture_coordinates[3][0] = scroll + 1.0f;
+        quads[0].texture_coordinates[3][1] = 1.0f;
+        width.f[2] = half_width + (0.05f - half_width) * taper;
         glow_width.f[2] = width.f[2] + width.f[2];
-        q.texture_coordinates[0][1] = zero; q.texture_coordinates[1][0] = q.texture_coordinates[0][0]; q.texture_coordinates[1][1] = one;
-        q.texture_coordinates[2][1] = zero; q.texture_coordinates[3][0] = q.texture_coordinates[2][0]; q.texture_coordinates[3][1] = one;
+        i++;
     } while (i < 19);
 }
 #endif
@@ -1297,11 +1329,15 @@ extern float D_L00_00161C98 __attribute__((sda));
 extern float D_L00_00161C9C __attribute__((sda));
 void pterodactyl_update(unsigned char *m) __asm__("FUN_L00_002e3a88");
 void pterodactyl_update(unsigned char *m) {
+    enum {
+        PTERODACTYL_INITIALIZE = 0,
+        PTERODACTYL_FOLLOW_PATH = 1
+    };
     D_2e3a88 *d = *(D_2e3a88 **)(m + 0x78);
     int *p = vend_paths[d->path];
     float y;
     switch (m[0x20]) {
-    case 0:
+    case PTERODACTYL_INITIALIZE:
         if (d->path == -1) {
             FUN_0020c828_2e3a88(m);
             return;
@@ -1316,7 +1352,7 @@ void pterodactyl_update(unsigned char *m) {
         m[0x20] = 1;
         *(float *)(m + 0x2C) *= D_L00_00161C9C;
         m[0x30] = 0xFF;
-    case 1:
+    case PTERODACTYL_FOLLOW_PATH:
         y = *(float *)(m + 0x18);
         sample_camera_path(p, d->f6C, d->i70, m + 0x10, m + 0x40, 0);
         *(float *)(m + 0x44) *= 0.5f;
@@ -1385,6 +1421,12 @@ extern int func_L00_001F10E0_s(void *, float, int, void *) __asm__("FUN_L00_001f
 extern float coll_hit_normal[] __asm__("D_L00_00173E80") __attribute__((section(".data")));
 void robot_arm_update(char *m) __asm__("FUN_L00_002e3d88");
 void robot_arm_update(char *m) {
+    enum {
+        ROBOT_ARM_REMOVE = 0,
+        ROBOT_ARM_WAIT_FOR_TIMER = 1,
+        ROBOT_ARM_SPAWN_EFFECT_AND_REMOVE = 2,
+        ROBOT_ARM_FADE_AND_REMOVE = 3
+    };
     char *d = *(char **)(m + 0x78);
     float effect_offset_or_world_position[4];
     float rotation_step_basis[12];
@@ -1399,17 +1441,17 @@ void robot_arm_update(char *m) {
     float *q;
 
     switch (*(unsigned char *)(m + 0x20)) {
-    case 0:
+    case ROBOT_ARM_REMOVE:
         mark_moby_for_removal(m);
         return;
-    case 1:
+    case ROBOT_ARM_WAIT_FOR_TIMER:
         if (func_001F9908_r((int *)(d + 0x30))) {
             m[0x20] = (*(int *)(d + 0x34) & 1) ? 3 : 2;
             *(int *)(d + 0x30) = func_001FA898_r(multiply_global_factor_ed64(10.0f));
             return;
         }
         break;
-    case 2:
+    case ROBOT_ARM_SPAWN_EFFECT_AND_REMOVE:
         transform_vector_by_basis(effect_offset_or_world_position, d + 0x20, m + 0xC0);
         add_vector_xyz(effect_offset_or_world_position, effect_offset_or_world_position, m + 0x10);
         if (*(int *)(d + 0x34) & 2) {
@@ -1420,7 +1462,7 @@ void robot_arm_update(char *m) {
         }
         mark_moby_for_removal(m);
         return;
-    case 3:
+    case ROBOT_ARM_FADE_AND_REMOVE:
         if (func_001F9908_r((int *)(d + 0x30))) {
             mark_moby_for_removal(m);
             return;
@@ -1441,16 +1483,16 @@ void robot_arm_update(char *m) {
     transform_vector_by_basis(collision_probe_position, d + 0x20, m + 0xC0);
     add_vector_xyz(collision_probe_position, collision_probe_position, m + 0x10);
     if (func_L00_001F10E0_s(collision_probe_position, r, 0, m)) {
-        float f21, f20;
+        float speed, approach;
         q = coll_hit_normal;
         normalize_vector_xyz(q, q, 1.0f);
-        f21 = vector_length_xyz(d);
-        f20 = dot_vectors_xyz(d, q);
-        if (f20 < 0.0f) {
+        speed = vector_length_xyz(d);
+        approach = dot_vectors_xyz(d, q);
+        if (approach < 0.0f) {
             FUN_L00_001ff660(d, d, q);
-            normalize_vector_xyz(aD0, q, f20 * 0.5f);
+            normalize_vector_xyz(aD0, q, approach * 0.5f);
             add_vector_xyz(d, d, aD0);
-            normalize_vector_xyz(d, d, f21);
+            normalize_vector_xyz(d, d, speed);
             cross_vectors_xyz(aE0, q, d);
             normalize_vector_xyz(aE0, aE0, 1.0f);
             build_quaternion_from_axis_angle(aE0, aE0, vector_length_xyz(rotation_step_euler));
@@ -2001,7 +2043,15 @@ extern short D_L00_00161D10 __attribute__((sda));
 extern short D_L00_00161D80 __attribute__((sda));
 void FUN_L00_002e4fe8(char *m, float *out_focus_velocity) {
     enum {
-        CAM_ATTACH_HOLD_FOCUS_VELOCITY = 8
+        CAM_ATTACH_GROUND_AWARE_FOCUS_VELOCITY = 2,
+        CAM_ATTACH_BLEND_TO_PROJECT_HERO_FOCUS_VELOCITY = 3,
+        CAM_ATTACH_PROJECT_HERO_FOCUS_VELOCITY = 4,
+        CAM_ATTACH_BLEND_FOCUS_VELOCITY_WITH_HOLD_TRANSITION = 5,
+        CAM_ATTACH_BLEND_OUT_FOCUS_VELOCITY = 6,
+        CAM_ATTACH_BLEND_BACK_FOCUS_VELOCITY = 7,
+        CAM_ATTACH_HOLD_FOCUS_VELOCITY = 8,
+        CAM_ATTACH_BLEND_PROJECTED_HERO_FOCUS_VELOCITY = 9,
+        CAM_ATTACH_CONTINUE_BLEND_PROJECTED_HERO_FOCUS_VELOCITY = 10
     };
     float cam[4];
     float tmp[4];
@@ -2035,7 +2085,7 @@ void FUN_L00_002e4fe8(char *m, float *out_focus_velocity) {
         return;
     }
     switch (*(unsigned char *)(e + 0xC4)) {
-    case 2:
+    case CAM_ATTACH_GROUND_AWARE_FOCUS_VELOCITY:
         padb = &hero;
         if (padb->state.current == 0x11 ||
             (padb->unk41E != 0 && padb->ground_distance > 0.2f &&
@@ -2081,10 +2131,10 @@ void FUN_L00_002e4fe8(char *m, float *out_focus_velocity) {
             FUN_001f9a28(e, tmp, out_focus_velocity);
         }
         break;
-    case 3:
-    case 5:
-    case 6:
-    case 7:
+    case CAM_ATTACH_BLEND_TO_PROJECT_HERO_FOCUS_VELOCITY:
+    case CAM_ATTACH_BLEND_FOCUS_VELOCITY_WITH_HOLD_TRANSITION:
+    case CAM_ATTACH_BLEND_OUT_FOCUS_VELOCITY:
+    case CAM_ATTACH_BLEND_BACK_FOCUS_VELOCITY:
         lerp_vector((float)*(short *)(e + 0xD4) * *(float *)(e + 0xCC), e + 0x10, e + 0x30,
                      e + 0x20);
         if (*(unsigned char *)(e + 0xD7) == 0) {
@@ -2124,14 +2174,14 @@ void FUN_L00_002e4fe8(char *m, float *out_focus_velocity) {
         FUN_001f9a68_c2(tmp, g + 0x30, x);
         FUN_001f9a28(e, cam, tmp);
         break;
-    case 9:
-    case 10:
+    case CAM_ATTACH_BLEND_PROJECTED_HERO_FOCUS_VELOCITY:
+    case CAM_ATTACH_CONTINUE_BLEND_PROJECTED_HERO_FOCUS_VELOCITY:
         x = fast_vec_dot(cam, g + 0x30);
         FUN_001f9a68_c2(out_focus_velocity, g + 0x30, x);
         FUN_001f9a28(e, cam, out_focus_velocity);
         lerp_vector(*(float *)&D_L00_00161D80, out_focus_velocity, out_focus_velocity, e + 0x20);
         break;
-    case 4:
+    case CAM_ATTACH_PROJECT_HERO_FOCUS_VELOCITY:
     default:
         x = fast_vec_dot(cam, g + 0x30);
         FUN_001f9a68_c2(out_focus_velocity, g + 0x30, x);
@@ -2151,21 +2201,27 @@ void FUN_L00_002e55b8(void *mm, void *vv, void *tt, f32 a, f32 b, f32 c) {
 void fast_vec_add(void *, void *, void *) __asm__("FUN_001f9a10");
 s32 FUN_L00_002e5678(void *mm, void *a, void *b, s32 k) {
     enum {
-        CAM_ATTACH_HERO_POSITION_BASE = 1
+        CAM_ATTACH_HERO_POSITION_BASE = 1,
+        CAM_ATTACH_STORED_FOCUS_POSITION_BASE = 2,
+        CAM_ATTACH_BLEND_TO_PROJECT_HERO_FOCUS_VELOCITY = 3,
+        CAM_ATTACH_PROJECT_HERO_FOCUS_VELOCITY = 4,
+        CAM_ATTACH_BLEND_FOCUS_VELOCITY_WITH_HOLD_TRANSITION = 5,
+        CAM_ATTACH_BLEND_OUT_FOCUS_VELOCITY = 6,
+        CAM_ATTACH_BLEND_BACK_FOCUS_VELOCITY = 7
     };
     u8 *m = mm;
     s32 r = 1;
     u8 *p = *(u8 **)(m + 0x70) + 0x40;
     f32 t[4] __attribute__((aligned(16)));
     switch (k) {
-    case 3:
-    case 4:
+    case CAM_ATTACH_BLEND_TO_PROJECT_HERO_FOCUS_VELOCITY:
+    case CAM_ATTACH_PROJECT_HERO_FOCUS_VELOCITY:
         fast_vec_add(b, a, p);
         r = 0;
         break;
-    case 5:
-    case 6:
-    case 7:
+    case CAM_ATTACH_BLEND_FOCUS_VELOCITY_WITH_HOLD_TRANSITION:
+    case CAM_ATTACH_BLEND_OUT_FOCUS_VELOCITY:
+    case CAM_ATTACH_BLEND_BACK_FOCUS_VELOCITY:
         fast_vec_add(b, a, p);
         r = 0;
         break;
@@ -2173,7 +2229,7 @@ s32 FUN_L00_002e5678(void *mm, void *a, void *b, s32 k) {
         follow_camera_hero_target((int)m, t);
         fast_vec_add(b, a, t);
         break;
-    case 2:
+    case CAM_ATTACH_STORED_FOCUS_POSITION_BASE:
     default:
         fast_vec_add(b, a, p);
         break;

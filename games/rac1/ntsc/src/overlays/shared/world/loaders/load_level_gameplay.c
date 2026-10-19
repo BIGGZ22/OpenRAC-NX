@@ -27,67 +27,57 @@ void FUN_L00_00241728(s32 *h) {
         }
     }
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L00_00241788.s", FUN_L00_00241788);
-#else
+/* Ported from rac1-decomp (src/overlays/shared/loaders_00240398.c: func_L00_00242120), where it is exact; names translated to the US level program. */
+
 typedef struct {
-    f32 id;
-    f32 length;
-} P_241788;
+    f32 class_id;
+    f32 size;
+} MobyClassSize;
 
-extern f32 convert_integer_to_float(s32) __asm__("FUN_001fa6c0");
-extern s32 FUN_001fa6d0(f32);
-extern s32 fptodp(f32) __asm__("FUN_00120478");
-extern void debug_print(void *, s32, s32) __asm__("FUN_001e93b0");
-extern u8 D_L00_001E8640[];
+extern char moby_class_size_format[] __asm__("D_L00_001E8640");
+extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
+extern void debug_print(const char *, ...) __asm__("FUN_001e93b0");
+extern int fptodp(float) __asm__("FUN_00120478");
+extern s32 truncate_float_to_s32(f32) __asm__("func_001FA6D0");
 
-void FUN_L00_00241788(u8 *src, s32 n) {
-    P_241788 entries[512];
-    s32 i;
-    s32 done;
-    s32 k;
-    s32 j;
+void print_moby_class_sizes(int *record, int n) __asm__("FUN_L00_00241788");
+void print_moby_class_sizes(int *record, int n) {
+    MobyClassSize entries[512];
+    int i, j, k, done;
 
-    for (i = 0; i < n; i++) {
-        entries[i].id = (f32)*(s32 *)(src + 4);
-        if (*(s32 *)(src + 0) == 0) {
-            entries[i].length = 0.0f;
+    for (i = 0; i < n; i++, record += 8) {
+        entries[i].class_id = (float)record[1];
+        if (record[0] == 0) {
+            entries[i].size = 0;
         } else {
-            s32 next_start = *(s32 *)(src + 0x20);
-
-            if (next_start == 0) {
-                next_start = *(s32 *)(src + 0x40);
+            if (record[8] != 0) {
+                entries[i].size = convert_integer_to_float(record[8] - record[0]) * 0.0009765625f;
+            } else {
+                entries[i].size = convert_integer_to_float(record[0x10] - record[0]) * 0.0009765625f;
             }
-            entries[i].length = convert_integer_to_float(next_start - *(s32 *)(src + 0)) * 0.0009765625f;
-            entries[i + 1].id = -1.0f;
-            entries[i + 1].length = 0.0f;
+            entries[i + 1].class_id = -1.0f;
+            entries[i + 1].size = 0;
         }
-        src += 0x20;
     }
     do {
         done = 1;
         for (j = 0; j < n; j++) {
-            if (entries[j].length < entries[j + 1].length) {
-                f32 id = entries[j].id;
-                f32 length = entries[j].length;
-
-                entries[j].id = entries[j + 1].id;
-                entries[j].length = entries[j + 1].length;
-                entries[j + 1].id = id;
-                entries[j + 1].length = length;
+            if (entries[j].size < entries[j + 1].size) {
+                float class_id = entries[j].class_id;
+                float size = entries[j].size;
                 done = 0;
+                entries[j].class_id = entries[j + 1].class_id;
+                entries[j].size = entries[j + 1].size;
+                entries[j + 1].class_id = class_id;
+                entries[j + 1].size = size;
             }
         }
-    } while (done == 0);
+    } while (!done);
     for (k = 0; k < n; k++) {
-        s32 entry_id = FUN_001fa6d0(entries[k].id);
-        s32 entry_length = fptodp(entries[k].length);
-
-        debug_print(D_L00_001E8640, entry_id, entry_length);
+        int class_id = truncate_float_to_s32(entries[k].class_id);
+        debug_print(moby_class_size_format, class_id, fptodp(entries[k].size));
     }
-
 }
-#endif
 /* Reads the gameplay file of a level, which lists the objects placed in the
  * world. The file header holds offsets to lists. Each list starts with the
  * number of entries, then 12 bytes of padding, then the entries:
@@ -465,7 +455,6 @@ extern int D_L00_00160FCC MACRO_ADDR;
 extern int D_L00_0016C058[];
 extern int D_L00_001AB840[];
 extern int D_L00_001BA4D0[];
-extern int debug_print_alt() __asm__("FUN_001e93b0");
 extern int fast_decompress(void *, void *) __asm__("FUN_L00_0024d8d0");
 extern int FUN_L00_00284d90(int, int);
 extern s32 truncate_float_to_s32(f32) __asm__("func_001FA6D0");
@@ -599,7 +588,7 @@ char *load_level_gameplay(int skip_gameplay_read) {
 
         p += 0x10;
         if (n >= 12) {
-            debug_print_alt(D_L00_001E8658);
+            debug_print(D_L00_001E8658);
             n = 12;
         }
         if (n != 0) {
@@ -1573,13 +1562,13 @@ char *load_level_gameplay(int skip_gameplay_read) {
                 }
             }
             if (flag) {
-                debug_print_alt(D_L00_001E86A8, cnt, k);
+                debug_print(D_L00_001E86A8, cnt, k);
             }
         }
         if (bad1) {
             int i;
 
-            debug_print_alt(D_L00_001E86E0);
+            debug_print(D_L00_001E86E0);
             for (i = 0; i < D_L00_00160F50; i++) {
                 D_L00_00160F4C[i].f3A = 0x7F80;
             }
@@ -1619,7 +1608,7 @@ char *load_level_gameplay(int skip_gameplay_read) {
                     t->f18 = ((w >> 3) << 8) | (1 << (w & 7));
                 }
             }
-            debug_print_alt(D_L00_001E8708, cnt, k);
+            debug_print(D_L00_001E8708, cnt, k);
         } else {
             int i;
 
@@ -1637,7 +1626,7 @@ char *load_level_gameplay(int skip_gameplay_read) {
         TieInst *t;
         int i;
 
-        debug_print_alt(D_L00_001E8740);
+        debug_print(D_L00_001E8740);
         for (m = D_L00_0015FFD8; m != D_L00_0015FFE0; m++) {
             m->f36 = 0x7F80;
         }
@@ -1805,7 +1794,6 @@ extern void initialize_tfrag_render_data(char *, void *) __asm__("FUN_002040e0")
 extern void relocate_sky_definition(char *) __asm__("FUN_002028e0");
 extern void FUN_L00_00241728_244110(char *) __asm__("FUN_L00_00241728");
 extern void register_moby_class(char *, void *, void *, s32) __asm__("FUN_00203640");
-extern void FUN_L00_00241788_244110(void *, s32) __asm__("FUN_L00_00241788");
 extern void relocate_asset_entry_pointers(Class244110 *, s32) __asm__("FUN_002032e0");
 extern void register_object_render_class(char *, void *, void *, s32) __asm__("FUN_00203730");
 extern void noop_main_callback(void *, s32) __asm__("FUN_001e93e8");
@@ -1814,7 +1802,6 @@ extern void unpack_point_records(void *, s32) __asm__("FUN_00202800");
 extern void FUN_L00_0023f120(char *);
 extern void FUN_L00_0023f0d8(char *);
 extern void parse_particle_textures(void *, char *, void *, s32) __asm__("FUN_002026c8");
-extern void printf_1e93b0(const char *, ...) __asm__("FUN_001e93b0");
 extern void fill_transfer_words(void *, s32, s32) __asm__("FUN_001f97e8");
 extern char *FUN_L00_0023fa00(char *, s32 *);
 extern char *FUN_L00_00241940_244110(s32) __asm__("FUN_L00_00241940");
@@ -1928,7 +1915,7 @@ s32 FUN_L00_00244110(s32 full, s32 keep) {
         FUN_L00_00241728_244110(base + h[5]);
         for (i = 0, q2 = (char *)h + h[7]; i < h[6]; i++, q2 += 0x20)
             register_moby_class(*(s32 *)q2 ? base + *(s32 *)q2 : 0, (char *)h + h[0xF], q2 + 0x10, *(s32 *)(q2 + 4));
-        FUN_L00_00241788_244110((char *)h + h[7], h[7]);
+        print_moby_class_sizes((int *)((char *)h + h[7]), h[7]);
         for (sq = 0, p = (char *)h + h[0x1E]; sq < D_L00_00197300[0]->seq_count; sq++, p += 4) {
             if (*(s32 *)p) {
                 D_L00_00197300[0]->seqs[sq] = base + *(s32 *)p;
@@ -1991,7 +1978,7 @@ s32 FUN_L00_00244110(s32 full, s32 keep) {
         e = tbl + span->off;
         for (sound_slot_index = 0; sound_slot_index < D_L00_0015F5F0; sound_slot_index++) {
             if (D_L00_0015F5F4[sound_slot_index].sound >= span->count) {
-                printf_1e93b0(D_L00_001E8780);
+                debug_print(D_L00_001E8780);
                 D_L00_0015F5F4[sound_slot_index].sound = -1;
             } else {
                 D_L00_0015F5F4[sound_slot_index].sound = *(u16 *)(e + D_L00_0015F5F4[sound_slot_index].sound * 4);
@@ -2014,7 +2001,7 @@ s32 FUN_L00_00244110(s32 full, s32 keep) {
                 }
             } else {
                 if (span->count != cls->count0D)
-                    printf_1e93b0(D_L00_001E87A0, D_L00_00197A00[ci]);
+                    debug_print(D_L00_001E87A0, D_L00_00197A00[ci]);
                 e = tbl + span->off;
                 for (k = 0; k < D_L00_00197300[ci]->count0D; k++, e += 4) {
                     D_L00_00197300[ci]->f28[k].sound = *(u16 *)e;
@@ -2027,54 +2014,54 @@ s32 FUN_L00_00244110(s32 full, s32 keep) {
     D_L00_00173E00_244110.f1C = FUN_L00_00241940_244110(full);
     if (full) {
         char *top;
-        printf_1e93b0(D_L00_001E87D0);
-        printf_1e93b0(D_L00_001E87E8, KB(0x100000));
+        debug_print(D_L00_001E87D0);
+        debug_print(D_L00_001E87E8, KB(0x100000));
         top = D_L00_002F0CD0;
-        printf_1e93b0(D_L00_001E8800, KB(top - 0x100000));
-        printf_1e93b0(D_L00_001E8818, KB(D_L00_00173E00_244110.f0 - top));
-        printf_1e93b0(D_L00_001E8830, KB(D_L00_00173E00_244110.fC - D_L00_00173E00_244110.f0));
-        printf_1e93b0(D_L00_001E8848, KB(D_L00_00173E00_244110.f10 - D_L00_00173E00_244110.fC));
-        printf_1e93b0(D_L00_001E8860, KB(D_L00_00173E00_244110.f14 - D_L00_00173E00_244110.f10));
+        debug_print(D_L00_001E8800, KB(top - 0x100000));
+        debug_print(D_L00_001E8818, KB(D_L00_00173E00_244110.f0 - top));
+        debug_print(D_L00_001E8830, KB(D_L00_00173E00_244110.fC - D_L00_00173E00_244110.f0));
+        debug_print(D_L00_001E8848, KB(D_L00_00173E00_244110.f10 - D_L00_00173E00_244110.fC));
+        debug_print(D_L00_001E8860, KB(D_L00_00173E00_244110.f14 - D_L00_00173E00_244110.f10));
         if (D_L00_0015F600_244110 != 0)
-            printf_1e93b0(D_L00_001E8878, KB(D_L00_0015F600_244110 - D_L00_00173E00_244110.f14));
+            debug_print(D_L00_001E8878, KB(D_L00_0015F600_244110 - D_L00_00173E00_244110.f14));
         else if (D_L00_0016051C != 0)
-            printf_1e93b0(D_L00_001E8878, KB((char *)D_L00_0016051C - D_L00_00173E00_244110.f14));
+            debug_print(D_L00_001E8878, KB((char *)D_L00_0016051C - D_L00_00173E00_244110.f14));
         else
-            printf_1e93b0(D_L00_001E8890);
+            debug_print(D_L00_001E8890);
         if (D_L00_0015F600_244110 != 0) {
             if (D_L00_0016051C != 0)
-                printf_1e93b0(D_L00_001E88B0, KB(D_L00_0016051C - (s32)D_L00_0015F600_244110));
+                debug_print(D_L00_001E88B0, KB(D_L00_0016051C - (s32)D_L00_0015F600_244110));
             else
-                printf_1e93b0(D_L00_001E88B0, KB(D_L00_00173E40_244110[0] - D_L00_0015F600_244110));
+                debug_print(D_L00_001E88B0, KB(D_L00_00173E40_244110[0] - D_L00_0015F600_244110));
         }
         if (h[4])
-            printf_1e93b0(D_L00_001E88C8, KB(D_L00_00173E40_244110[0] - (char *)D_L00_0016051C));
-        printf_1e93b0(D_L00_001E88E0, KB(D_L00_0015F40C - (s32)D_L00_00173E40_244110[0]));
-        printf_1e93b0(D_L00_001E88F8, KB((D_L00_001B1A80[1] >> 4) - D_L00_0015F40C));
-        printf_1e93b0(D_L00_001E8910, KB((s32)D_L00_0015F420 - (D_L00_001B1A80[1] >> 4)));
-        printf_1e93b0(D_L00_001E8928, KB((char *)D_L00_00197300[0] - D_L00_0015F420));
-        printf_1e93b0(D_L00_001E8940, KB(D_L00_001C5800_244110[0] - (char *)D_L00_00197300[0]));
+            debug_print(D_L00_001E88C8, KB(D_L00_00173E40_244110[0] - (char *)D_L00_0016051C));
+        debug_print(D_L00_001E88E0, KB(D_L00_0015F40C - (s32)D_L00_00173E40_244110[0]));
+        debug_print(D_L00_001E88F8, KB((D_L00_001B1A80[1] >> 4) - D_L00_0015F40C));
+        debug_print(D_L00_001E8910, KB((s32)D_L00_0015F420 - (D_L00_001B1A80[1] >> 4)));
+        debug_print(D_L00_001E8928, KB((char *)D_L00_00197300[0] - D_L00_0015F420));
+        debug_print(D_L00_001E8940, KB(D_L00_001C5800_244110[0] - (char *)D_L00_00197300[0]));
         if (h[0xA])
-            printf_1e93b0(D_L00_001E8958, KB(D_L00_001BC030_244110[0] - D_L00_001C5800_244110[0]));
+            debug_print(D_L00_001E8958, KB(D_L00_001BC030_244110[0] - D_L00_001C5800_244110[0]));
         else
-            printf_1e93b0(D_L00_001E8958, KB(D_L00_00160FC0_244110 - D_L00_001C5800_244110[0]));
+            debug_print(D_L00_001E8958, KB(D_L00_00160FC0_244110 - D_L00_001C5800_244110[0]));
         if (h[0xA])
-            printf_1e93b0(D_L00_001E8970, KB(D_L00_00197300[0]->seqs[0] - D_L00_001BC030_244110[0]));
-        printf_1e93b0(D_L00_001E8988, KB(D_L00_00160FC0_244110 - D_L00_00197300[0]->seqs[0]));
-        printf_1e93b0(D_L00_001E89A0, KB(D_L00_00160494_244110 - D_L00_00160FC0_244110));
-        printf_1e93b0(D_L00_001E89B8, KB(D_L00_0015FFD8_244110 - D_L00_00160494_244110));
-        printf_1e93b0(D_L00_001E89D0, KB(D_L00_0015FFE8 - D_L00_0015FFD8_244110));
-        printf_1e93b0(D_L00_001E89E8, KB(D_L00_00160108 - D_L00_0015FFE8));
-        printf_1e93b0(D_L00_001E8A00, KB(D_L00_0016016C - D_L00_00160108));
-        printf_1e93b0(D_L00_001E8A18, 128.0);
-        printf_1e93b0(D_L00_0015FC80);
-        printf_1e93b0(D_L00_001E8A30, int_to_float((s32)D_L00_0016016C + 0x20000) * (1.0f / 1048576.0f));
-        printf_1e93b0(D_L00_0015FC80);
+            debug_print(D_L00_001E8970, KB(D_L00_00197300[0]->seqs[0] - D_L00_001BC030_244110[0]));
+        debug_print(D_L00_001E8988, KB(D_L00_00160FC0_244110 - D_L00_00197300[0]->seqs[0]));
+        debug_print(D_L00_001E89A0, KB(D_L00_00160494_244110 - D_L00_00160FC0_244110));
+        debug_print(D_L00_001E89B8, KB(D_L00_0015FFD8_244110 - D_L00_00160494_244110));
+        debug_print(D_L00_001E89D0, KB(D_L00_0015FFE8 - D_L00_0015FFD8_244110));
+        debug_print(D_L00_001E89E8, KB(D_L00_00160108 - D_L00_0015FFE8));
+        debug_print(D_L00_001E8A00, KB(D_L00_0016016C - D_L00_00160108));
+        debug_print(D_L00_001E8A18, 128.0);
+        debug_print(D_L00_0015FC80);
+        debug_print(D_L00_001E8A30, int_to_float((s32)D_L00_0016016C + 0x20000) * (1.0f / 1048576.0f));
+        debug_print(D_L00_0015FC80);
         {
             char *lo = D_L00_00173E00_244110.f0 - 0x2D0000;
-            printf_1e93b0(D_L00_001E8A48, int_to_float(D_L00_00173E00_244110.f1C - lo) * (1.0f / 1048576.0f));
+            debug_print(D_L00_001E8A48, int_to_float(D_L00_00173E00_244110.f1C - lo) * (1.0f / 1048576.0f));
         }
-        printf_1e93b0(D_L00_0015FC80);
+        debug_print(D_L00_0015FC80);
     }
     if (keep) {
         FUN_L00_00285008();

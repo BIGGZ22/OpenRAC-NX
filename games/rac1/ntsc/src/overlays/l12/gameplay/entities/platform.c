@@ -54,6 +54,11 @@ extern void FUN_L12_002bf770(int);
 extern void FUN_L12_002bf748(void);
 
 void FUN_L12_002bf140(struct Moby *moby) {
+    enum {
+        SLOT_INITIALIZE = 0,
+        SLOT_INITIALIZE_NEIGHBORS_AND_HEIGHT = 1,
+        SLOT_UPDATE_HEIGHT_AND_MOTION = 2
+    };
     int state = moby->state;
     int *data = (int *)moby->pvars;
     int slot;
@@ -61,7 +66,7 @@ void FUN_L12_002bf140(struct Moby *moby) {
     float other;
     int i;
     switch (state) {
-    case 0:
+    case SLOT_INITIALIZE:
         i = (data[3] = D_L12_00151388) + 1;
         D_L12_00151388 = i;
         if (i > 0x7f) {
@@ -115,13 +120,13 @@ void FUN_L12_002bf140(struct Moby *moby) {
         copy_slot_c(D_L12_001CBF40_c + data[3] * 0x1190, D_L12_001CBE00_c + data[3] * 16);
         moby->state = 1;
         break;
-    case 1:
+    case SLOT_INITIALIZE_NEIGHBORS_AND_HEIGHT:
         D_L12_00151388 = 0;
         FUN_L12_002bf770(data[3]);
         moby->state = 2;
         *(float *)(data + 4) = moby->pos.z;
         break;
-    case 2:
+    case SLOT_UPDATE_HEIGHT_AND_MOTION:
         if ((moby->command & 4) == 0) {
             moby->command = 1;
         } else {
@@ -302,12 +307,16 @@ extern int scale_game_frames(int);
 extern void blend_moby_animation(void *, int, int, int);
 
 void FUN_L12_002e18e8(struct Moby *moby) {
+    enum {
+        ANKLEBITER_PURSUIT_ANIMATION_VARIANT_A = 0,
+        ANKLEBITER_PURSUIT_ANIMATION_VARIANT_B = 1
+    };
     switch (random_integer_below(2)) {
-    case 0:
+    case ANKLEBITER_PURSUIT_ANIMATION_VARIANT_A:
         if (moby->prev_seq != 3)
             blend_moby_animation(moby, 3, 0, scale_game_frames(8));
         break;
-    case 1:
+    case ANKLEBITER_PURSUIT_ANIMATION_VARIANT_B:
         if (moby->prev_seq != 0xF)
             blend_moby_animation(moby, 0xF, 0, scale_game_frames(8));
         break;
@@ -392,23 +401,23 @@ void FUN_L12_002e19a8(void *pos) {
 }
 #include "rnc/math/vector.h"
 
-/* Updates a Hoven troll's idle, pursuit, melee, leap, landing and death states. */
+/* Updates a Hoven anklebiter's (moby class 238) idle, pursuit, melee, leap, landing and death states. */
 /* Ported from rac1-decomp (src/overlays/l12_hoven/vendor_002C0310.c: func_L12_002E2EF0), where it is exact; names translated to the US level program. */
 
 typedef struct Moby Moby;
 
-typedef struct TrollData54_2E2EF0 TrollData54_2E2EF0;
+typedef struct AnklebiterData_2E2EF0 AnklebiterData_2E2EF0;
 
-typedef struct TrollMoby54_2E2EF0 {
+typedef struct AnklebiterMoby_2E2EF0 {
     char p0[0x10]; float pos[4]; unsigned char state, group; char p22[2]; char *model;
     char p28[9]; unsigned char enabled; unsigned short joints, flags; char p36[0xA];
     float rot[4]; char p50[2]; unsigned char anim_end, anim; float anim_time, anim_rate;
-    char p5C[0x14]; unsigned char anim_flags; char p71[7]; TrollData54_2E2EF0 *data;
+    char p5C[0x14]; unsigned char anim_flags; char p71[7]; AnklebiterData_2E2EF0 *data;
     char p7C[3]; unsigned char active; char p80[0x14]; int collision;
     char p98[0x24]; unsigned char proximity;
-} TrollMoby54_2E2EF0;
+} AnklebiterMoby_2E2EF0;
 
-struct TrollData54_2E2EF0 {
+struct AnklebiterData_2E2EF0 {
     char p0[0x20]; float health; char p24[5]; unsigned char mode; char p2A[0x2E];
     unsigned char blend; char p59; unsigned char count; char p5B[0x6D]; short stuck; char pCA[6]; void *tuning;
     char pD4[0x4C]; float fall[4], gravity, zero, launch_speed, launch_time; int fall_flags, fall_mode; float damping;
@@ -421,7 +430,7 @@ struct TrollData54_2E2EF0 {
     int path, blocked, return_timer, group_enabled; int *group_count; int group_check;
 };
 
-typedef struct TargetReport54_2E2EF0 { float v0[4], v10[4], v20[4], v30[4]; TrollMoby54_2E2EF0 *moby; int mode; char pad48[8]; } TargetReport54_2E2EF0;
+typedef struct TargetReport54_2E2EF0 { float v0[4], v10[4], v20[4], v30[4]; AnklebiterMoby_2E2EF0 *moby; int mode; char pad48[8]; } TargetReport54_2E2EF0;
 
 typedef struct {
     char pad0[0x248];
@@ -541,22 +550,40 @@ extern void func_0020D678_2E2EF0(void *) __asm__("FUN_0020c828");
 extern void func_L00_00263950_2E2EF0(char *,char *,int,float,float) __asm__("FUN_L00_002628d8");
 extern void func_L00_0025B178_2E2EF0(void *) __asm__("FUN_L00_0025a120");
 
-void FUN_L12_002e1be0(TrollMoby54_2E2EF0 *moby) {
+void FUN_L12_002e1be0(AnklebiterMoby_2E2EF0 *moby) {
+    enum {
+        ANKLEBITER_INITIALIZE = 0,
+        ANKLEBITER_IDLE = 1,
+        ANKLEBITER_FACE_TARGET_BEFORE_PURSUIT = 3,
+        ANKLEBITER_PURSUE_TARGET = 4,
+        ANKLEBITER_MELEE_ATTACK = 5,
+        ANKLEBITER_RETURN_HOME = 6,
+        ANKLEBITER_KNOCKBACK_FALL = 7,
+        ANKLEBITER_CONTROLLED_MOTION_UNTIL_RETURN_HOME = 8,
+        ANKLEBITER_DORMANT = 9,
+        ANKLEBITER_RECOVER_AFTER_KNOCKBACK = 10,
+        ANKLEBITER_WAIT_FOR_LEAP_TRIGGER = 11,
+        ANKLEBITER_LEAP_TO_HOME = 12,
+        ANKLEBITER_ACTIVATE_FROM_DORMANCY = 13,
+        ANKLEBITER_LAND_AFTER_LEAP = 14,
+        ANKLEBITER_DEATH_EFFECTS_AND_REMOVE = 15,
+        ANKLEBITER_DEATH_FALL = 99
+    };
     TargetReport54_2E2EF0 work;
-    TrollMoby54_2E2EF0 *iterator;
+    AnklebiterMoby_2E2EF0 *iterator;
     float trajectory;
-    TrollData54_2E2EF0 *data = moby->data;
-    TrollMoby54_2E2EF0 *target;
+    AnklebiterData_2E2EF0 *data = moby->data;
+    AnklebiterMoby_2E2EF0 *target;
     float angle;
     int count, first, blocked, hit;
     func_L12_002E4838_2E2EF0(moby);
     func_L00_00264BB0_2E2EF0(data->collision_data,2.2f);
     FUN_L01_00274b78_c((char *)moby,(char *)&work,data->range);
     target=work.moby;
-    if (!target) target=*(TrollMoby54_2E2EF0 **)D_0013E633_2E2EF0;
+    if (!target) target=*(AnklebiterMoby_2E2EF0 **)D_0013E633_2E2EF0;
     if (moby->pos[2]<26.0f) { func_0020D678_2E2EF0(moby); return; }
     switch(moby->state) {
-    case 0:
+    case ANKLEBITER_INITIALIZE:
         if(data->sleep) {
             qcopy(data->home,moby->pos); moby->state=9;
             if(moby->anim!=12) func_00213DE0_2E2EF0(moby,12,0,3);
@@ -582,7 +609,7 @@ void FUN_L12_002e1be0(TrollMoby54_2E2EF0 *moby) {
         data->tuning=&D_L12_001618E8;
         }
         break;
-    case 1: {
+    case ANKLEBITER_IDLE: {
         float idle_distance, idle_angle, idle_difference;
         idle_distance=func_001F9D10_2E2EF0(target->pos,data->home);
         idle_angle=func_L00_001FF860_2E2EF0(target->pos[0]-moby->pos[0],target->pos[1]-moby->pos[1]);
@@ -610,7 +637,7 @@ void FUN_L12_002e1be0(TrollMoby54_2E2EF0 *moby) {
         }
         break;
     }
-    case 9:
+    case ANKLEBITER_DORMANT:
         if(data->group_enabled) {
             if(func_001F9D48_2E2EF0(moby->pos,target->pos)<2.0f) break;
             if(data->group_check<D_L12_0015F5CC) {
@@ -634,7 +661,7 @@ void FUN_L12_002e1be0(TrollMoby54_2E2EF0 *moby) {
         *(u128 *)work.v10=*(u128 *)moby->pos;
         func_L12_002E2CB8_2E2EF0(work.v10);
         break;
-    case 13: {
+    case ANKLEBITER_ACTIVATE_FROM_DORMANCY: {
         int collision=*(int *)(moby->model+0x10);
         moby->flags&=0xFFBE; moby->collision=collision;
         angle=func_L00_001FF860_2E2EF0(target->pos[0]-moby->pos[0],target->pos[1]-moby->pos[1]);
@@ -647,7 +674,7 @@ void FUN_L12_002e1be0(TrollMoby54_2E2EF0 *moby) {
         }
         break;
     }
-    case 11:
+    case ANKLEBITER_WAIT_FOR_LEAP_TRIGGER:
         angle=func_L00_001FF860_2E2EF0(data->home[0]-moby->pos[0],data->home[1]-moby->pos[1]);
         func_L00_002592B0_2E2EF0((char *)moby,&data->turn_velocity,angle,0.05f,0.3f,0.2f);
         fast_vec_sub(work.v0,target->pos,data->home);
@@ -662,7 +689,7 @@ void FUN_L12_002e1be0(TrollMoby54_2E2EF0 *moby) {
             moby->collision=*(int *)(moby->model+0x10);
         }
         break;
-    case 12:
+    case ANKLEBITER_LEAP_TO_HOME:
         if(func_L00_0025D6F0_2E2EF0(moby,data->fall)&1) {
             moby->state=14;
             if(moby->anim!=9) func_00213DE0_2E2EF0(moby,9,8,func_001F9850_2E2EF0(7));
@@ -670,7 +697,7 @@ void FUN_L12_002e1be0(TrollMoby54_2E2EF0 *moby) {
         }
         if(moby->pos[2]<0.0f) { func_0020D678_2E2EF0(moby); return; }
         break;
-    case 14:
+    case ANKLEBITER_LAND_AFTER_LEAP:
         if(moby->anim_flags&2) {
             moby->state=4; data->blocked=0;
             if(func_002140B0_2E2EF0(256)&1) data->circle_rate=-data->circle_rate;
@@ -679,12 +706,12 @@ void FUN_L12_002e1be0(TrollMoby54_2E2EF0 *moby) {
             func_L12_002E2BF8_2E2EF0((unsigned char *)moby);
         }
         break;
-    case 3:
+    case ANKLEBITER_FACE_TARGET_BEFORE_PURSUIT:
         angle=func_L00_001FF860_2E2EF0(target->pos[0]-moby->pos[0],target->pos[1]-moby->pos[1]);
         func_L00_002592B0_2E2EF0((char *)moby,&data->turn_velocity,angle,0.03f,0.3f,D_0015ED6C*6.2831855f);
         if(moby->anim_flags&2) { moby->state=4; data->blocked=0; func_L12_002E2BF8_2E2EF0((unsigned char *)moby); }
         break;
-    case 4: {
+    case ANKLEBITER_PURSUE_TARGET: {
         float chase_angle, look_difference, clamp;
         chase_angle=func_L00_001FF860_2E2EF0(target->pos[0]-moby->pos[0],target->pos[1]-moby->pos[1]);
         look_difference=func_001FA790_2E2EF0(chase_angle,moby->rot[2]);
@@ -707,8 +734,8 @@ void FUN_L12_002e1be0(TrollMoby54_2E2EF0 *moby) {
         moby->proximity=0;
         break;
     }
-    case 5:
-        (*(TrollMoby54_2E2EF0 **)D_0013E633_2E2EF0)->anim_rate=1.3f;
+    case ANKLEBITER_MELEE_ATTACK:
+        (*(AnklebiterMoby_2E2EF0 **)D_0013E633_2E2EF0)->anim_rate=1.3f;
         angle=func_L00_001FF860_2E2EF0(target->pos[0]-moby->pos[0],target->pos[1]-moby->pos[1]);
         func_L00_002592B0_2E2EF0((char *)moby,&data->turn_velocity,angle,0.05f,0.3f,0.2f);
         if(moby->anim_end==moby->anim && func_00215B18_2E2EF0((char *)moby,13.0f) && func_001F9B88_2E2EF0(moby->pos[2]-target->pos[2])<0.5f && func_001F9D48_2E2EF0(moby->pos,target->pos)<2.0f && func_001FA850_2E2EF0(func_L00_001FF860_2E2EF0(target->pos[0]-moby->pos[0],target->pos[1]-moby->pos[1]),moby->rot[2])<0.2617994f) {
@@ -718,7 +745,7 @@ void FUN_L12_002e1be0(TrollMoby54_2E2EF0 *moby) {
         }
         if((moby->anim_flags&2)&&func_001F9D48_2E2EF0(moby->pos,target->pos)>=2.0f) { moby->state=4; data->blocked=0; func_L12_002E2BF8_2E2EF0((unsigned char *)moby); }
         break;
-    case 6: {
+    case ANKLEBITER_RETURN_HOME: {
         float return_distance;
         func_L12_002E41C8_2E2EF0((char *)moby,func_L00_001FF860_2E2EF0(data->home[0]-moby->pos[0],data->home[1]-moby->pos[1]));
         if(func_001F9D48_2E2EF0(moby->pos,data->home)<2.0f) {
@@ -741,7 +768,7 @@ void FUN_L12_002e1be0(TrollMoby54_2E2EF0 *moby) {
         moby->proximity=0;
         break;
     }
-    case 7:
+    case ANKLEBITER_KNOCKBACK_FALL:
         if(moby->group!=255) func_L01_0026F040_2E2EF0(moby->group,1);
         if(func_L00_0025D6F0_2E2EF0(moby,data->fall)&1) {
             moby->state=10;
@@ -750,20 +777,20 @@ void FUN_L12_002e1be0(TrollMoby54_2E2EF0 *moby) {
         }
         if(moby->pos[2]<27.0f) { func_0020D678_2E2EF0(moby); return; }
         break;
-    case 8:
+    case ANKLEBITER_CONTROLLED_MOTION_UNTIL_RETURN_HOME:
         if(func_L00_002DDEA0_2E2EF0(moby,data->fall)) { moby->state=6; data->return_timer=0; data->stuck=0; }
         break;
-    case 10:
+    case ANKLEBITER_RECOVER_AFTER_KNOCKBACK:
         if(height54(moby)>29.0f) { moby->state=4; data->blocked=0; func_L12_002E2BF8_2E2EF0((unsigned char *)moby); return; }
         break;
-    case 99:
+    case ANKLEBITER_DEATH_FALL:
         hit=func_L00_0025D6F0_2E2EF0(moby,data->fall);
         if((hit&0x40)||(height54(moby)>37.0f && moby->anim_end==moby->anim)) {
             moby->anim_rate=0.0f; func_L00_002584A8_2E2EF0(moby,0,-1); moby->state=15; moby->flags|=8;
         } else if(moby->pos[2]<10.0f) { func_L00_002584A8_2E2EF0(moby,0,-1); { func_0020D678_2E2EF0(moby); return; } }
         else if(hit&1) func_L10_002E51A8_2E2EF0((char *)moby);
         break;
-    case 15:
+    case ANKLEBITER_DEATH_EFFECTS_AND_REMOVE:
         func_L10_002E51A8_2E2EF0((char *)moby); func_L12_002E43A8_2E2EF0(moby); func_L12_002E43A8_2E2EF0(moby); { func_0020D678_2E2EF0(moby); return; }
     }
     if(moby->enabled && moby->state!=9 && moby->state!=8) {
@@ -927,7 +954,7 @@ void FUN_L12_002e3098(struct Moby *moby) {
 #include "rnc/gameplay/entities/moby.h"
 #include "rnc/math/vector.h"
 
-/* Variables of the l12 troll moby (moby->pvars); the layout of FUN_L00_002e1678's TrollVars moved by 0xB0. */
+/* Variables of the Hoven anklebiter (moby->pvars); the l00 ElectroidVars damage layout moved by 0xB0. */
 typedef struct {
     u8 pad0[0x20];
     f32 health;          /* 0x20 */
@@ -962,12 +989,12 @@ typedef struct {
     u8 pad2C8[0x20];
     s16 call_enabled;    /* 0x2E8 */
     s16 call_timer;      /* 0x2EA */
-} TrollVars_e3528;
+} AnklebiterVars_e3528;
 
 typedef struct {
     u8 pad0[0x10];
     Vec4 pos;
-} TrollHit_e3528;
+} AnklebiterHit_e3528;
 
 extern f32 D_0015ED6C_e3528 __asm__("D_0015ED6C");
 extern s32 D_001413D0_e3528 __asm__("D_001413D0") __attribute__((section(".data")));
@@ -980,8 +1007,8 @@ extern f32 fast_sin_e3528(f32) __asm__("FUN_001f9de0");
 extern s32 FUN_L01_0026e008(s32, s32);
 extern void alert_group_e3528(s32, s32) __asm__("FUN_L01_0026e090");
 extern void call_for_help_e3528(struct Moby *, s32, s32, Vec4f *, f32 *, f32) __asm__("FUN_L00_00259bc8");
-extern TrollHit_e3528 *find_hit_e3528(struct Moby *, s32, s32) __asm__("FUN_L00_0025a420");
-extern void take_damage_e3528(struct Moby *, TrollHit_e3528 *, f32 *, s32, s32 *, f32 *, s32, s32) __asm__("FUN_00213928");
+extern AnklebiterHit_e3528 *find_hit_e3528(struct Moby *, s32, s32) __asm__("FUN_L00_0025a420");
+extern void take_damage_e3528(struct Moby *, AnklebiterHit_e3528 *, f32 *, s32, s32 *, f32 *, s32, s32) __asm__("FUN_00213928");
 extern void knockback_e3528(void *, f32 *, f32 *, f32 *) __asm__("FUN_L00_0025ab48");
 extern void start_fall_e3528(struct Moby *, void *, s32, s32, s32, f32) __asm__("FUN_L00_0025c558");
 extern void anim_reset_e3528(struct Moby *, void *) __asm__("FUN_L00_0025d458");
@@ -990,16 +1017,16 @@ extern void FUN_L12_002e3098(struct Moby *);
 
 extern f32 D_L12_001618D0 __attribute__((sda));
 extern f32 D_L12_001618D4 __attribute__((sda));
-/* Damage and alert step of the l12 troll: refreshes its speed while alerted, now and then calls for help behind
+/* Damage and alert step of the Hoven anklebiter: refreshes its speed while alerted, now and then calls for help behind
    itself, and takes hits (dying, or staggering back). */
 void FUN_L12_002e3528(struct Moby *moby) {
-    TrollVars_e3528 *vars = (TrollVars_e3528 *)moby->pvars;
+    AnklebiterVars_e3528 *vars = (AnklebiterVars_e3528 *)moby->pvars;
     Vec4 v;
     s32 hit;
     f32 dmg;
     f32 angle;
     f32 unused;
-    TrollHit_e3528 *coll;
+    AnklebiterHit_e3528 *coll;
 
     if (vars->reset_alert != 0) {
         vars->reset_alert = 0;
@@ -1260,6 +1287,24 @@ extern void func_L12_002E4F18_2E51E8(void *, void *, void *, int, int) __asm__("
 
 void platform_update(Moby *moby) __asm__("FUN_L12_002e3ed8");
 void platform_update(Moby *moby) {
+    enum {
+        PLATFORM_INITIALIZE = 0,
+        PLATFORM_OSCILLATE_BETWEEN_PATH_ENDPOINTS = 2,
+        PLATFORM_WAIT_TO_RESUME_OSCILLATION = 3,
+        PLATFORM_OSCILLATE_BETWEEN_PATH_ENDPOINTS_FIXED_PITCH = 4,
+        PLATFORM_WAIT_TO_RESUME_FIXED_PITCH_OSCILLATION = 5,
+        PLATFORM_ACCELERATE_UPWARD_UNTIL_NOT_VISIBLE = 6,
+        PLATFORM_FOLLOW_WAYPOINTS = 7,
+        PLATFORM_FALL_AND_TUMBLE = 8,
+        PLATFORM_TRACK_REFERENCED_MOBY_HEIGHT = 9
+    };
+    enum {
+        PLATFORM_KIND_FOLLOW_WAYPOINTS = 0,
+        PLATFORM_KIND_OSCILLATE_BETWEEN_PATH_ENDPOINTS = 1,
+        PLATFORM_KIND_OSCILLATE_BETWEEN_PATH_ENDPOINTS_FIXED_PITCH = 2,
+        PLATFORM_KIND_DISABLE_DRAWING_AND_COLLISION = 3,
+        PLATFORM_KIND_TRACK_REFERENCED_MOBY_HEIGHT = 4
+    };
     float oldPos[4];
     float oldRot[4];
     float delta[4];
@@ -1280,9 +1325,9 @@ void platform_update(Moby *moby) {
         return;
     }
     switch (moby->state) {
-    case 0:
+    case PLATFORM_INITIALIZE:
         switch (data->kind) {
-        case 0:
+        case PLATFORM_KIND_FOLLOW_WAYPOINTS:
             (*(int *)&moby->collision) = (*(Class_2E51E8 **)&moby->pclass)->f10;
             data->walk.path = D_L12_001B0C30_2E51E8[data->walk.pathIdx];
             data->walk.idx = 0;
@@ -1293,7 +1338,7 @@ void platform_update(Moby *moby) {
             clear_u64_value_c2(data->vel);
             moby->state = 7;
             break;
-        case 1:
+        case PLATFORM_KIND_OSCILLATE_BETWEEN_PATH_ENDPOINTS:
             (*(int *)&moby->collision) = (*(Class_2E51E8 **)&moby->pclass)->f10;
             data->walk.path = D_L12_001B0C30_2E51E8[data->walk.pathIdx];
             data->walk.idx = 0;
@@ -1305,7 +1350,7 @@ void platform_update(Moby *moby) {
             clear_u64_value_c2(data->vel);
             moby->state = 2;
             break;
-        case 2:
+        case PLATFORM_KIND_OSCILLATE_BETWEEN_PATH_ENDPOINTS_FIXED_PITCH:
             (*(int *)&moby->collision) = (*(Class_2E51E8 **)&moby->pclass)->f10;
             (*(float (*)[4])&moby->rot)[1] = -1.5707964f;
             (*(float (*)[4])&moby->rot)[2] = (*(float (*)[4])&moby->rot)[2] + 3.1415927f;
@@ -1317,12 +1362,12 @@ void platform_update(Moby *moby) {
             clear_u64_value_c2(data->vel);
             moby->state = 4;
             break;
-        case 3:
+        case PLATFORM_KIND_DISABLE_DRAWING_AND_COLLISION:
             moby->draw_dist = 0;
             moby->state = 1;
             (*(int *)&moby->collision) = 0;
             break;
-        case 4:
+        case PLATFORM_KIND_TRACK_REFERENCED_MOBY_HEIGHT:
             moby->state = 9;
             data->fD4 = 4.0f;
             data->fD0 = 4.0f;
@@ -1330,7 +1375,7 @@ void platform_update(Moby *moby) {
             break;
         }
         break;
-    case 7: {
+    case PLATFORM_FOLLOW_WAYPOINTS: {
         Walk_2E51E8 *w = &data->walk;
         Path_2E51E8 *path;
         int next;
@@ -1355,7 +1400,7 @@ void platform_update(Moby *moby) {
         }
         break;
     }
-    case 2: {
+    case PLATFORM_OSCILLATE_BETWEEN_PATH_ENDPOINTS: {
         Path_2E51E8 *path = data->walk.path;
         float swing;
         data->fD4 = 0.0f;
@@ -1380,7 +1425,7 @@ void platform_update(Moby *moby) {
         }
         break;
     }
-    case 4: {
+    case PLATFORM_OSCILLATE_BETWEEN_PATH_ENDPOINTS_FIXED_PITCH: {
         Path_2E51E8 *path = data->walk.path;
         float swing;
         data->fD8 = fast_add_rotations_c2(data->fD8, D_0015ED6C * 1.2217305f);
@@ -1397,7 +1442,7 @@ void platform_update(Moby *moby) {
         (*(float (*)[4])&moby->rot)[1] = -1.5707964f;
         break;
     }
-    case 3:
+    case PLATFORM_WAIT_TO_RESUME_OSCILLATION:
         angles[2] = (*(float (*)[4])&moby->rot)[2];
         if (tick_countdown_32_alt_c(&data->timer)) {
             if (data->walk.dir == 1) {
@@ -1415,7 +1460,7 @@ void platform_update(Moby *moby) {
             func_L12_002E4F18_2E51E8(moby, angles, (*(float (*)[4])&moby->pos), 0, 1);
         }
         break;
-    case 5:
+    case PLATFORM_WAIT_TO_RESUME_FIXED_PITCH_OSCILLATION:
         if (tick_countdown_32_alt_c(&data->timer)) {
             if (data->walk.dir == 1) {
                 data->walk.dir = 2;
@@ -1430,7 +1475,7 @@ void platform_update(Moby *moby) {
         qcopy(angles, (*(float (*)[4])&moby->rot));
         func_L12_002E4F18_2E51E8(moby, angles, (*(float (*)[4])&moby->pos), 0, 1);
         break;
-    case 6:
+    case PLATFORM_ACCELERATE_UPWARD_UNTIL_NOT_VISIBLE:
         if (vector_length_xyz_c2(data->vel) < D_0015ED6C * 6.0f) {
             data->vel[2] = data->vel[2] + D_0015ED70 * 6.0f;
         }
@@ -1439,7 +1484,7 @@ void platform_update(Moby *moby) {
             mark_moby_for_removal_c(moby);
         }
         break;
-    case 8:
+    case PLATFORM_FALL_AND_TUMBLE:
         add_vector_xyz_c3((*(float (*)[4])&moby->pos), (*(float (*)[4])&moby->pos), data->vel);
         if (FUN_L08_002025d0((*(float (*)[4])&moby->pos), 0x600, 0, moby, 0) && data->walk.path == 0) {
             FUN_L00_0025e450_c(moby, data->vel, 0, 2.0f, 0.0f, 10, 3, 16, 4.0f, 2.0f, 9.0f, -1, 1.0f, 15.0f, 1, 1, -1, 0);
@@ -1456,7 +1501,7 @@ void platform_update(Moby *moby) {
             mark_moby_for_removal_c(moby);
         }
         break;
-    case 9: {
+    case PLATFORM_TRACK_REFERENCED_MOBY_HEIGHT: {
         Moby *o = (Moby *)((char *)(*(Moby * *)&D_L12_0015FFD8_p) + (data->fF0 << 8));
         qcopy(angles, (*(float (*)[4])&moby->pos));
         angles[2] = (*(float (*)[4])&o->pos)[2];
@@ -1575,6 +1620,11 @@ extern L16WatchPlayer D_0013E633_watch __asm__("D_0013E533");
 extern char *D_L12_001600EC;
 void miner_update(L16WatchMoby *m) __asm__("FUN_L12_002e6c48");
 void miner_update(L16WatchMoby *m) {
+    enum {
+        MINER_INITIALIZE = 0,
+        MINER_UPDATE_DIALOGUE = 1,
+        MINER_APPLY_DIALOGUE_COMPLETION = 2
+    };
     L16WatchScratch scratch;
     L16WatchData *d = m->data;
     float rate;
@@ -1582,7 +1632,7 @@ void miner_update(L16WatchMoby *m) {
     int tracking;
     FUN_L12_002e6b60((char *)m);
     switch (m->state) {
-    case 0:
+    case MINER_INITIALIZE:
         if (alternate_item_available[1] != 0) {
             FUN_0020c828_c(m);
             return;
@@ -1591,14 +1641,14 @@ void miner_update(L16WatchMoby *m) {
         initialize_npc_dialogue(m, &d->activation);
         initialize_moby_grounding(m);
         break;
-    case 1:
+    case MINER_UPDATE_DIALOGUE:
         if (alternate_item_available[1] == 0 && update_npc_dialogue(m, &d->activation)) {
             FUN_L01_002783a8_c(m, 2.5f);
             *(int *)((char *)m + 0x58) = 0;
             m->state = 2;
         }
         break;
-    case 2:
+    case MINER_APPLY_DIALOGUE_COMPLETION:
         if (D_L12_0015F5C4 != 2) {
             *(float *)((char *)m + 0x58) = 1.0f;
             alternate_item_available[1] = 1;
@@ -1701,13 +1751,17 @@ extern char D_L12_00167240[];
 extern void FUN_L12_002e71b0(void);
 
 void FUN_L12_002e7208(struct Moby *moby) {
+    enum {
+        DRAW_CALLBACK_INITIALIZE = 0,
+        DRAW_CALLBACK_CHECK_VOLUME_AND_REGISTER = 1
+    };
     char *data = (char *)moby->pvars;
     switch (moby->state) {
-    case 0:
+    case DRAW_CALLBACK_INITIALIZE:
         moby->state = 1;
         moby->update_dist = 0xFF;
         break;
-    case 1: {
+    case DRAW_CALLBACK_CHECK_VOLUME_AND_REGISTER: {
         int value = *(int *)(data + 0xC);
         if (value == -1 || is_point_inside_clip_volume(D_L12_00167240, value)) {
             add_draw_callback((void *)FUN_L12_002e71b0, moby);
@@ -1754,17 +1808,29 @@ extern int FUN_L12_0027b8e0(void *, void *, float, float, float);
 extern float vector_project_72(void *) __asm__("FUN_001f9b20");
 extern void FUN_L04_002aee30(void *, void *, void *, int);
 
-#define OGRE_I(offset) (*(int *)(data + (offset)))
-#define OGRE_F(offset) (*(float *)(data + (offset)))
-#define OGRE_B(offset) (*(u8 *)(data + (offset)))
-#define OGRE_H(offset) (*(u16 *)(data + (offset)))
-#define OGRE_CHILD (*(struct Moby **)(data + 0x248))
+#define TROOPER_I(offset) (*(int *)(data + (offset)))
+#define TROOPER_F(offset) (*(float *)(data + (offset)))
+#define TROOPER_B(offset) (*(u8 *)(data + (offset)))
+#define TROOPER_H(offset) (*(u16 *)(data + (offset)))
+#define TROOPER_CHILD (*(struct Moby **)(data + 0x248))
 
-/* Ogre update: initialization, path following, aiming, attack and removal.
+/* Blarg trooper update: initialization, path following, aiming, attack and removal.
    The retail unsigned group sentinel is 0xff; unordered angle comparisons
    keep the original branch outcomes. Quad copies include the fourth word. */
 void blarg_trooper_update(struct Moby *moby) __asm__("FUN_L12_002e72c0");
 void blarg_trooper_update(struct Moby *moby) {
+    enum {
+        BLARG_TROOPER_INITIALIZE = 0,
+        BLARG_TROOPER_FOLLOW_WAYPOINTS = 1,
+        BLARG_TROOPER_WAIT_FOR_ACTIVATION = 2,
+        BLARG_TROOPER_APPROACH_TARGET = 3,
+        BLARG_TROOPER_KNOCKBACK_RECOVERY = 4,
+        BLARG_TROOPER_PREPARE_SHOT = 5,
+        BLARG_TROOPER_FIRE_PROJECTILE = 6,
+        BLARG_TROOPER_WAIT_BETWEEN_SHOTS = 7,
+        BLARG_TROOPER_RETURN_HOME = 8,
+        BLARG_TROOPER_DEATH_FALL = 9
+    };
     TargetReport54_2E2EF0 work;
     Vec4 v;
     Vec4 delta;
@@ -1775,47 +1841,47 @@ void blarg_trooper_update(struct Moby *moby) {
     if (D_L12_0015F5C4 == 2) goto hide;
     if (moby->state >= 3) {
         moby->flags &= 0xffbe;
-        if (OGRE_CHILD) OGRE_CHILD->flags &= 0xffbe;
+        if (TROOPER_CHILD) TROOPER_CHILD->flags &= 0xffbe;
     }
-    if (OGRE_B(0x269) && hero.state.current == 0 && hero.state.prev == 0x67) {
+    if (TROOPER_B(0x269) && hero.state.current == 0 && hero.state.prev == 0x67) {
         if (vector_distance(&moby->pos, &hero.motion.pos) < 30.0f) goto leave;
     }
-    if (OGRE_I(0x270) != -1) {
-        if (!is_point_inside_clip_volume(D_L12_00167240, OGRE_I(0x270))) {
+    if (TROOPER_I(0x270) != -1) {
+        if (!is_point_inside_clip_volume(D_L12_00167240, TROOPER_I(0x270))) {
 hide:
             moby->flags |= 0x41;
-            if (OGRE_CHILD) OGRE_CHILD->flags |= 0x41;
+            if (TROOPER_CHILD) TROOPER_CHILD->flags |= 0x41;
             return;
         }
         moby->flags &= 0xffbe;
-        if (OGRE_CHILD) OGRE_CHILD->flags &= 0xffbe;
+        if (TROOPER_CHILD) TROOPER_CHILD->flags &= 0xffbe;
     }
-    if (OGRE_B(0x2e) == 2) goto leave;
+    if (TROOPER_B(0x2e) == 2) goto leave;
     FUN_L12_002e81e0(moby);
-    FUN_L01_00274b78_c((char *)moby, (char *)&work, OGRE_F(0x230));
+    FUN_L01_00274b78_c((char *)moby, (char *)&work, TROOPER_F(0x230));
     target = (struct Moby *)work.moby;
     if (!target) {
         target = hero.moby;
         qcopy(work.v20, hero.motion.unkD0.f);
     }
     switch (moby->state) {
-    case 0: {
+    case BLARG_TROOPER_INITIALIZE: {
         float value;
-        float other = OGRE_F(0x230);
-        OGRE_F(0x20) = 2.0f;
-        OGRE_H(0x24) = 2;
-        OGRE_B(0x29) = 1;
-        OGRE_B(0x2e) = 1;
-        OGRE_B(0x58) = 8;
-        OGRE_B(0x5a) = 8;
-        OGRE_F(0x28c) = other;
-        OGRE_I(0x90) = 0x200;
-        OGRE_F(0x98) = 0.5f;
+        float other = TROOPER_F(0x230);
+        TROOPER_F(0x20) = 2.0f;
+        TROOPER_H(0x24) = 2;
+        TROOPER_B(0x29) = 1;
+        TROOPER_B(0x2e) = 1;
+        TROOPER_B(0x58) = 8;
+        TROOPER_B(0x5a) = 8;
+        TROOPER_F(0x28c) = other;
+        TROOPER_I(0x90) = 0x200;
+        TROOPER_F(0x98) = 0.5f;
         func_L01_0026E8E0_2E2EF0(data + 0xd0);
         value = D_0015ED6C * 5.5f;
-        OGRE_I(0xd0) = 0x38d;
+        TROOPER_I(0xd0) = 0x38d;
         *(volatile float *)(data + 0xd8) = 1.0f;
-        OGRE_I(0x108) = 0x18;
+        TROOPER_I(0x108) = 0x18;
         *(volatile float *)(data + 0xf4) = value;
         *(volatile float *)(data + 0xdc) = 1.0f;
         qcopy(data + 0x220, &moby->pos);
@@ -1825,71 +1891,71 @@ hide:
         } else if (func_001160D8_2E2EF0() & 1) {
             moby->flags |= 0x8000;
         }
-        if (OGRE_I(0x274)) OGRE_I(0x288) = scale_game_frames_e81e0(FUN_L00_00257b90(0, 300));
+        if (TROOPER_I(0x274)) TROOPER_I(0x288) = scale_game_frames_e81e0(FUN_L00_00257b90(0, 300));
         moby->rot.x = 0.0f;
         moby->rot.y = 0.0f;
-        if (OGRE_F(0x244) == moby->rot.x) {
+        if (TROOPER_F(0x244) == moby->rot.x) {
             if (moby->group != 0xff) {
                 int *path = *(int **)(data + 0x250);
                 int count;
-                OGRE_F(0x244) = (float)*path;
+                TROOPER_F(0x244) = (float)*path;
                 count = *path;
                 if (count > 0) *path = -count;
                 else *path = count + 20;
-            } else OGRE_F(0x244) = FUN_L00_00257c48(15.0f, 35.0f);
+            } else TROOPER_F(0x244) = FUN_L00_00257c48(15.0f, 35.0f);
         }
-        OGRE_F(0x244) *= 0.017453292f;
+        TROOPER_F(0x244) *= 0.017453292f;
         moby->pos.z = probe_ground_height(&moby->pos, 0, 0.5f);
-        if (OGRE_B(0x268)) {
+        if (TROOPER_B(0x268)) {
             moby->flags |= 0x41;
-            if (OGRE_CHILD) OGRE_CHILD->flags |= 0x41;
+            if (TROOPER_CHILD) TROOPER_CHILD->flags |= 0x41;
         }
         moby->state = 2;
         break;
     }
-    case 2: {
+    case BLARG_TROOPER_WAIT_FOR_ACTIVATION: {
         if (distance_xyz(&moby->pos, &hero.motion.pos) > 64.0f) return;
         if (moby->prev_seq != 0 && moby->seq == moby->prev_seq)
             blend_moby_animation_ex(moby, 0, 0, scale_game_frames_e81e0(8), 5);
-        if (!FUN_L12_0027b8e0(moby, &target->pos, OGRE_F(0x230), 3.0f, 0.0f)) {
-            if ((OGRE_I(0x25c) == -1 || !is_point_inside_clip_volume(&target->pos, OGRE_I(0x25c))) && moby->command == 0) break;
+        if (!FUN_L12_0027b8e0(moby, &target->pos, TROOPER_F(0x230), 3.0f, 0.0f)) {
+            if ((TROOPER_I(0x25c) == -1 || !is_point_inside_clip_volume(&target->pos, TROOPER_I(0x25c))) && moby->command == 0) break;
         }
         if (moby->flags & 1) {
             qcopy(v.f, &moby->pos);
             v.f[2] += 0.5f;
             if (coll_line_fix_72(&v, D_L12_00167240, 2, moby, 0)) {
                 moby->flags &= 0xffbe;
-                if (OGRE_CHILD) OGRE_CHILD->flags &= 0xffbe;
+                if (TROOPER_CHILD) TROOPER_CHILD->flags &= 0xffbe;
             } else {
-                if (OGRE_CHILD) mark_moby_for_removal(OGRE_CHILD);
+                if (TROOPER_CHILD) mark_moby_for_removal(TROOPER_CHILD);
                 mark_moby_for_removal(moby);
                 return;
             }
         }
         if (moby->group != 0xff) FUN_L01_0026e090(moby->group, 1);
-        if (OGRE_I(0x254) == -1) goto state3;
+        if (TROOPER_I(0x254) == -1) goto state3;
         else {
-            OGRE_I(0x260) = FUN_L01_0028b510(&moby->pos, D_L12_001B0930_w[OGRE_I(0x254)], 0.0f);
+            TROOPER_I(0x260) = FUN_L01_0028b510(&moby->pos, D_L12_001B0930_w[TROOPER_I(0x254)], 0.0f);
             moby->state = 1;
         }
         break;
     }
-    case 1: {
+    case BLARG_TROOPER_FOLLOW_WAYPOINTS: {
         int *path;
         if (!tick_countdown_32_alt_c2((int *)(data + 0x258))) break;
         if (moby->prev_seq != 8 && moby->seq == moby->prev_seq)
             blend_moby_animation_ex(moby, 8, 0, scale_game_frames_e81e0(11), 5);
-        path = (int *)D_L12_001B0930_w[OGRE_I(0x254)];
-        if (vector_distance(&moby->pos, path + (OGRE_I(0x260) * 4 + 4)) < 3.0f) ++OGRE_I(0x260);
-        if (*path - 1 < OGRE_I(0x260)) OGRE_I(0x260) = *path - 1;
-        FUN_L12_002e8808(moby, (float *)(path + (OGRE_I(0x260) * 4 + 4)), 0.0f, D_0015ED6C * 8.0f);
-        if (OGRE_I(0x260) == *path - 1) goto state3;
-        else if (vector_distance(&moby->pos, &target->pos) < OGRE_F(0x264)) moby->state = 3;
+        path = (int *)D_L12_001B0930_w[TROOPER_I(0x254)];
+        if (vector_distance(&moby->pos, path + (TROOPER_I(0x260) * 4 + 4)) < 3.0f) ++TROOPER_I(0x260);
+        if (*path - 1 < TROOPER_I(0x260)) TROOPER_I(0x260) = *path - 1;
+        FUN_L12_002e8808(moby, (float *)(path + (TROOPER_I(0x260) * 4 + 4)), 0.0f, D_0015ED6C * 8.0f);
+        if (TROOPER_I(0x260) == *path - 1) goto state3;
+        else if (vector_distance(&moby->pos, &target->pos) < TROOPER_F(0x264)) moby->state = 3;
         break;
     }
-    case 3: {
+    case BLARG_TROOPER_APPROACH_TARGET: {
         float angle;
-        if (OGRE_B(0x268) == 1) {
+        if (TROOPER_B(0x268) == 1) {
             int hit;
             qcopy(v.f, &moby->pos);
             v.f[0] += fast_cos_e81e0(moby->rot.z);
@@ -1912,10 +1978,10 @@ hide:
         angle = func_001FA790_2E2EF0(fast_arc_tan(target->pos.x - moby->pos.x, target->pos.y - moby->pos.y), moby->rot.z);
         if (angle > 0.9599311f) angle = 0.9599311f;
         else if (angle < -0.9599311f) angle = -0.9599311f;
-        OGRE_F(0x188) = angle * 0.5f;
-        OGRE_F(0x208) = angle * 0.5f;
-        FUN_L12_002e8808(moby, (float *)&target->pos, OGRE_F(0x244), 0.0f);
-        if (vector_distance(&moby->pos, &target->pos) < 5.5f || OGRE_B(0x242)) {
+        TROOPER_F(0x188) = angle * 0.5f;
+        TROOPER_F(0x208) = angle * 0.5f;
+        FUN_L12_002e8808(moby, (float *)&target->pos, TROOPER_F(0x244), 0.0f);
+        if (vector_distance(&moby->pos, &target->pos) < 5.5f || TROOPER_B(0x242)) {
             angle = fast_arc_tan(target->pos.x - moby->pos.x, target->pos.y - moby->pos.y);
             if (angle_difference_8808(moby->rot.z, angle) < 0.08726646f) goto state5;
         }
@@ -1923,8 +1989,8 @@ hide:
             blend_moby_animation_ex(moby, 8, 0, scale_game_frames_e81e0(11), 5);
         break;
     }
-    case 5: {
-        if (OGRE_F(0x28c) < 8.0f) OGRE_F(0x28c) = 8.0f;
+    case BLARG_TROOPER_PREPARE_SHOT: {
+        if (TROOPER_F(0x28c) < 8.0f) TROOPER_F(0x28c) = 8.0f;
         FUN_L12_002e8608(moby, (float *)&target->pos);
         FUN_L12_002e87b0((char *)moby);
         if (moby->prev_seq != 2 && moby->seq == moby->prev_seq)
@@ -1936,15 +2002,15 @@ hide:
         }
         break;
     }
-    case 6: {
+    case BLARG_TROOPER_FIRE_PROJECTILE: {
         int count; float angle; float other; float value;
         FUN_L12_002e8608(moby, (float *)&target->pos);
         FUN_L12_002e87b0((char *)moby);
-        if (OGRE_CHILD && is_value_within_interpolated_window(moby, 0.0f)) {
-            moby_point_position(OGRE_CHILD, 0, &v);
+        if (TROOPER_CHILD && is_value_within_interpolated_window(moby, 0.0f)) {
+            moby_point_position(TROOPER_CHILD, 0, &v);
             subtract_8808(&delta, work.v20, &v);
             angle = fast_arc_tan(delta.f[0], delta.f[1]);
-            other = fast_add_rotations_e81e0(moby->rot.z, OGRE_F(0x208));
+            other = fast_add_rotations_e81e0(moby->rot.z, TROOPER_F(0x208));
             angle = 0.2268928f < angle_difference_8808(angle, other) ? other : angle;
             value = vector_project_72(&delta);
             value = fast_arc_tan(value, delta.f[2]);
@@ -1960,34 +2026,34 @@ hide:
         }
         break;
     }
-    case 7: {
+    case BLARG_TROOPER_WAIT_BETWEEN_SHOTS: {
         float angle;
         FUN_L12_002e8608(moby, (float *)&target->pos);
         FUN_L12_002e87b0((char *)moby);
         if ((moby->prev_seq != 5 || (moby->anim_flags & 2)) && moby->prev_seq != 0 && moby->seq == moby->prev_seq)
             blend_moby_animation_ex(moby, 0, 0, scale_game_frames_e81e0(8), 5);
         if (!random_integer_below_e81e0(9)) goto state5;
-        if (vector_distance(&moby->pos, &target->pos) > 10.5f && !OGRE_B(0x242)) goto state3;
+        if (vector_distance(&moby->pos, &target->pos) > 10.5f && !TROOPER_B(0x242)) goto state3;
         angle = fast_arc_tan(target->pos.x - moby->pos.x, target->pos.y - moby->pos.y);
         if (angle_difference_8808(moby->rot.z, angle) > 0.4886922f) moby->state = 3;
         break;
     }
-    case 8: {
+    case BLARG_TROOPER_RETURN_HOME: {
         float angle;
         FUN_L12_002e8808(moby, (float *)(data + 0x220), 0.0f, 0.0f);
-        angle = OGRE_F(0x23c) * 30.0f;
+        angle = TROOPER_F(0x23c) * 30.0f;
         if (angle > 0.7853982f) angle = 0.7853982f;
         else if (angle < -0.7853982f) angle = -0.7853982f;
-        OGRE_F(0x188) = angle * 0.7f;
-        OGRE_F(0x208) = angle * 0.4f;
+        TROOPER_F(0x188) = angle * 0.7f;
+        TROOPER_F(0x208) = angle * 0.4f;
         if (vector_distance(&moby->pos, data + 0x220) < 1.0f) moby->state = 2;
         break;
     }
-    case 4: {
+    case BLARG_TROOPER_KNOCKBACK_RECOVERY: {
         float angle;
         moby->flags &= 0xffbe;
         if (mine_fall(moby, data + 0x70) & 0x60) {
-            if (vector_distance(&moby->pos, &target->pos) < 6.0f || OGRE_B(0x242)) {
+            if (vector_distance(&moby->pos, &target->pos) < 6.0f || TROOPER_B(0x242)) {
                 angle = fast_arc_tan(target->pos.x - moby->pos.x, target->pos.y - moby->pos.y);
                 if (angle_difference_8808(moby->rot.z, angle) < 0.12217305f) {
 state5:
@@ -2002,7 +2068,7 @@ state3:
         if (!(moby->pos.z < 2.0f)) goto finish;
         goto leave;
     }
-    case 9: {
+    case BLARG_TROOPER_DEATH_FALL: {
         if (mine_fall(moby, data + 0x70) & 0x60) {
             FUN_L00_00257470(moby, 0, -1);
             FUN_L12_002e7290(moby, &moby->pos);
@@ -2018,24 +2084,24 @@ leave:
     }
     }
 finish:
-    if (moby->visible || (OGRE_CHILD && OGRE_CHILD->visible)) {
+    if (moby->visible || (TROOPER_CHILD && TROOPER_CHILD->visible)) {
         FUN_L12_002e8720(moby);
         if (moby->flags & 0x8000) {
-            OGRE_F(0x188) = -OGRE_F(0x188);
-            OGRE_F(0x208) = -OGRE_F(0x208);
+            TROOPER_F(0x188) = -TROOPER_F(0x188);
+            TROOPER_F(0x208) = -TROOPER_F(0x208);
         }
         update_joint_animation(D_0015ED64 * 0.018f, D_0015ED64 * 0.3f, moby, data + 0x120, 5);
         update_joint_animation(D_0015ED64 * 0.024f, D_0015ED64 * 0.3f, moby, data + 0x1a0, 6);
     }
     return;
 }
-#undef OGRE_I
-#undef OGRE_F
-#undef OGRE_B
-#undef OGRE_H
-#undef OGRE_CHILD
-/* Variables of the l12 ogre moby (moby->pvars): FUN_L00_002e1678's TrollVars
-   layout, with the alert and call-for-help state at 0x230.. */
+#undef TROOPER_I
+#undef TROOPER_F
+#undef TROOPER_B
+#undef TROOPER_H
+#undef TROOPER_CHILD
+/* Variables of the Hoven blarg trooper (moby->pvars): the l00 ElectroidVars
+   damage layout, with the alert and call-for-help state at 0x230.. */
 typedef struct {
     u8 pad0[0x20];
     f32 health;          /* 0x20 */
@@ -2072,14 +2138,14 @@ typedef struct {
     s32 groups[4];       /* 0x278: group ids counted before calling for help (-1: none) */
     s32 call_timer;      /* 0x288 */
     f32 alert_speed;     /* 0x28C */
-    s32 volume;          /* 0x290: clip volume that hands the ogre to FUN_L12_002e86d0 (-1: none) */
-} OgreVars_e81e0;
+    s32 volume;          /* 0x290: clip volume that hands the trooper to FUN_L12_002e86d0 (-1: none) */
+} BlargTrooperVars_e81e0;
 
 typedef struct {
     u8 pad0[0x10];
     Vec4 pos;
     struct Moby *moby;   /* 0x20 */
-} OgreHit_e81e0;
+} BlargTrooperHit_e81e0;
 
 extern s32 D_001413D0_e81e0 __asm__("D_001413D0") __attribute__((section(".data")));
 extern f32 D_0015ED6C_e81e0 __asm__("D_0015ED6C");
@@ -2094,26 +2160,26 @@ extern s32 count_group_e81e0(s32, s32) __asm__("FUN_L01_0026e008");
 extern void alert_group_e81e0(s32, s32) __asm__("FUN_L01_0026e090");
 extern void call_for_help_e81e0(struct Moby *, s32, s32, Vec4f *, f32 *, f32) __asm__("FUN_L00_00259bc8");
 extern s32 is_point_inside_clip_volume_e81e0(void *, s32) __asm__("FUN_00214720");
-extern OgreHit_e81e0 *find_hit_e81e0(struct Moby *, s32, s32) __asm__("FUN_L00_0025a420");
-extern void take_damage_e81e0(struct Moby *, OgreHit_e81e0 *, f32 *, s32, s32 *, f32 *, s32, s32) __asm__("FUN_00213928");
+extern BlargTrooperHit_e81e0 *find_hit_e81e0(struct Moby *, s32, s32) __asm__("FUN_L00_0025a420");
+extern void take_damage_e81e0(struct Moby *, BlargTrooperHit_e81e0 *, f32 *, s32, s32 *, f32 *, s32, s32) __asm__("FUN_00213928");
 extern void knockback_e81e0(void *, f32 *, f32 *, f32 *) __asm__("FUN_L00_0025ab48");
 extern void start_fall_e81e0(struct Moby *, void *, s32, s32, s32, f32) __asm__("FUN_L00_0025c558");
 extern void anim_reset_e81e0(struct Moby *, void *) __asm__("FUN_L00_0025d458");
 extern void anim_update_e81e0(struct Moby *, void *) __asm__("FUN_L00_0025d538");
 extern void FUN_L12_002e86d0(struct Moby *);
 
-/* Damage and alert step of the l12 ogre (cf. FUN_L12_002e3528): refreshes its
+/* Damage and alert step of the Hoven blarg trooper (cf. FUN_L12_002e3528): refreshes its
    speed while alerted, calls for help behind itself once its groups have 9 or
    more members, hands off inside its clip volume, and takes hits from other
    classes (dying, or staggering back). */
 void FUN_L12_002e81e0(struct Moby *moby) {
-    OgreVars_e81e0 *vars = (OgreVars_e81e0 *)moby->pvars;
+    BlargTrooperVars_e81e0 *vars = (BlargTrooperVars_e81e0 *)moby->pvars;
     Vec4 v;
     s32 hit;
     f32 dmg;
     f32 angle;
     f32 unused;
-    OgreHit_e81e0 *coll;
+    BlargTrooperHit_e81e0 *coll;
 
     if (vars->reset_alert != 0) {
         vars->reset_alert = 0;
@@ -2849,6 +2915,11 @@ extern void FUN_L00_00260860_b570(int, int) __asm__("FUN_L00_00260860");
 
 void edwina_update(L16WatchMoby *m) __asm__("FUN_L12_002eb570");
 void edwina_update(L16WatchMoby *m) {
+    enum {
+        EDWINA_INITIALIZE = 0,
+        EDWINA_UPDATE_DIALOGUE = 1,
+        EDWINA_APPLY_DIALOGUE_COMPLETION = 2
+    };
     L16WatchScratch scratch;
     L12WatchData *d = (L12WatchData *)m->data;
     float rate;
@@ -2862,7 +2933,7 @@ void edwina_update(L16WatchMoby *m) {
         blend_moby_animation_b570(m, 0, 0, 2);
     }
     switch (m->state) {
-    case 0:
+    case EDWINA_INITIALIZE:
         m->state = 1;
         initialize_npc_dialogue(m, &d->activation);
         d->activation.radius = 1.7f;
@@ -2870,14 +2941,14 @@ void edwina_update(L16WatchMoby *m) {
         if (alternate_item_available[0x13C])
             *(short *)((char *)d + 0x56) = -1;
         break;
-    case 1:
+    case EDWINA_UPDATE_DIALOGUE:
         if (alternate_item_available[0x13C] == 0 && update_npc_dialogue(m, &d->activation)) {
             FUN_L01_002783a8_c(m, 2.52f);
             *(int *)((char *)m + 0x58) = 0;
             m->state = 2;
         }
         break;
-    case 2:
+    case EDWINA_APPLY_DIALOGUE_COMPLETION:
         if (D_L12_0015F5C4 != 2) {
             *(float *)((char *)m + 0x58) = 1.0f;
             jet_clear_persistent(m->widget);
@@ -3090,6 +3161,10 @@ extern float D_L12_001619AC __attribute__((sda));
 extern float D_L12_001619B0 __attribute__((sda));
 void helicopter_update(char *m) __asm__("FUN_L12_002ebea8");
 void helicopter_update(char *m) {
+    enum {
+        HELICOPTER_INITIALIZE_PATH = 0,
+        HELICOPTER_FOLLOW_PATH = 1
+    };
     char *d = *(char **)(m + 0x78);
     float A[4];
     float B[4];
@@ -3099,7 +3174,7 @@ void helicopter_update(char *m) {
         int r = func_L01_00276680_i(m, convert_integer_to_float(*(short *)(m + 0x32)));
         FUN_L12_002ebca8_c(m, r == -1);
         switch ((unsigned char)m[0x20]) {
-        case 0:
+        case HELICOPTER_INITIALIZE_PATH:
             if (*(int *)(d + 0x74) != -1) {
                 char *tbl;
                 int idx;
@@ -3122,7 +3197,7 @@ void helicopter_update(char *m) {
                 *(unsigned short *)(m + 0x34) |= 0x1000;
             }
             break;
-        case 1: {
+        case HELICOPTER_FOLLOW_PATH: {
             char *p = d + 0x60;
             int cur = *(int *)p;
             char *tbl = *(char **)(p + 0x10);
@@ -3179,7 +3254,19 @@ void crane_arm_update(unsigned char *m) __asm__("FUN_L12_002ec1d0");
 void crane_arm_update(unsigned char *m) {
     enum {
         CRANE_ARM_INITIALIZE = 0,
-        CRANE_ARM_WAIT_DELAY = 1
+        CRANE_ARM_WAIT_DELAY = 1,
+        CRANE_ARM_WAIT_ANIMATION_FLAG = 2
+    };
+    enum {
+        CRANE_ARM_ANIM_BASE = 0,
+        CRANE_ARM_ANIM_DELAY_A = 1,
+        CRANE_ARM_ANIM_DELAY_B = 2
+    };
+    enum {
+        CRANE_ARM_ANIM_BASE_TO_DELAY_A = 3,
+        CRANE_ARM_ANIM_RETURN_TO_BASE_A = 4,
+        CRANE_ARM_ANIM_BASE_TO_DELAY_B = 5,
+        CRANE_ARM_ANIM_RETURN_TO_BASE_B = 6
     };
     float dist = vector_distance(m + 0x10, &hero.motion.pos);
     switch (m[0x20]) {
@@ -3196,7 +3283,7 @@ void crane_arm_update(unsigned char *m) {
             m[0xBC] = 0;
         if (FUN_L00_001fefc8(m + 0xBC)) {
             switch (m[0x52]) {
-            case 0:
+            case CRANE_ARM_ANIM_BASE:
                 if (random_integer_below(0x100) & 1) {
                     if (m[0x53] != 3)
                         blend_moby_animation(m, 3, 0, 0);
@@ -3205,11 +3292,11 @@ void crane_arm_update(unsigned char *m) {
                         blend_moby_animation(m, 5, 0, 0);
                 }
                 break;
-            case 1:
+            case CRANE_ARM_ANIM_DELAY_A:
                 if (m[0x53] != 4)
                     blend_moby_animation(m, 4, 0, 0);
                 break;
-            case 2:
+            case CRANE_ARM_ANIM_DELAY_B:
                 if (m[0x53] != 6)
                     blend_moby_animation(m, 6, 0, 0);
                 break;
@@ -3217,19 +3304,19 @@ void crane_arm_update(unsigned char *m) {
             m[0x20] = 2;
         }
         break;
-    case 2:
+    case CRANE_ARM_WAIT_ANIMATION_FLAG:
         if (m[0x70] & 2) {
             switch (m[0x52]) {
-            case 3:
+            case CRANE_ARM_ANIM_BASE_TO_DELAY_A:
                 if (m[0x53] != 1)
                     blend_moby_animation(m, 1, 0, 0);
                 break;
-            case 4:
-            case 6:
+            case CRANE_ARM_ANIM_RETURN_TO_BASE_A:
+            case CRANE_ARM_ANIM_RETURN_TO_BASE_B:
                 if (m[0x53] != 0)
                     blend_moby_animation(m, 0, 0, 0);
                 break;
-            case 5:
+            case CRANE_ARM_ANIM_BASE_TO_DELAY_B:
                 if (m[0x53] != 2)
                     blend_moby_animation(m, 2, 0, 0);
                 break;

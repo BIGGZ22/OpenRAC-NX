@@ -8,135 +8,121 @@
 #include "rnc/data_labels.h"
 #include "rnc/gameplay/state/options.h"
 
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L07_00312948.s", FUN_L07_00312948);
-#else
 #include "qcopy.h"
 #include "rnc/rendering/geometry_quad.h"
-extern s32 frame_count_l07 __asm__("D_L07_0015F5CC");
+
+/* Ported from rac1-decomp (src/overlays/l07_umbris/effect_00313D28.c: func_L07_00313D28). */
+
+extern s32 level_frame_count __asm__("D_L07_0015F5CC");
+/* [4] is depth_buffer_address. */
+extern s32 gs_texture_allocation_start_macro[6] __asm__("D_0015EE78") __attribute__((section(".sdata")));
 extern float convert_integer_to_float(int) __asm__("FUN_001fa6c0");
 extern int truncate_float_to_s32(float) __asm__("FUN_001fa6d0");
 extern u64 get_effect_texture(int) __asm__("FUN_001f44b8");
-extern void vu1_add_g_sregister_l07(int, u64) __asm__("FUN_00233980");
+extern void vu1_add_g_sregister(s32, u64) __asm__("FUN_00233980");
 extern void draw_geometry_quad(void *, int, int) __asm__("FUN_001f7d30");
-extern void FUN_L00_0024f7c8(void *, int, void *);
+extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8");
+extern float split_float_fraction(void *, float) __asm__("FUN_L00_00200228");
 extern float normalize_angle(float) __asm__("FUN_L00_0025e310");
 extern float fast_add_rotations(float, float) __asm__("FUN_001fa580");
 extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
-extern void build_spherical_offset(void *, float, float, float) __asm__("FUN_00214db0");
+extern void build_spherical_offset(void *, f32, f32, f32) __asm__("FUN_00214db0");
 
-extern float split_float_fraction(float, void *) __asm__("FUN_L00_00200228");
+static inline int tint_color(int color) {
+    int tinted = color | 0x404040;
+    return tinted;
+}
 
-/* Draw successive latitude strips around point 9, preserving the retail
-   alpha OR and the asymmetric vertical adjustment at the equator. */
-void FUN_L07_00312948(char *moby, int phase, float speed, float radius,
-                       float ang, float alpha, float end_alpha) {
+/* Draws a textured sphere around point 9 of the moby, one ring of latitude strips per
+   longitude step, its alpha ramped from alpha to end_alpha. */
+void FUN_L07_00312948(char *moby, int phase, float speed, float radius, float latitude_span,
+                      float alpha, float end_alpha) {
+    char *data = *(char **)(moby + 0x78);
+    int shade = *(unsigned char *)(data + 0x1C6);
+    int grey = (shade << 24) | (shade << 16) | (shade << 8) | shade;
+    u64 texture_state = 0xFF9000000260L;
+    u64 primitive = 0xA000000029L;
     struct GeometryQuad quad;
-    Vec4 position;
+    Vec4 origin;
     Vec4 center;
-    Vec4 scratch;
-    float spin;
-    float step;
-    float alpha_step;
-    float angle;
-    float next_angle;
-    float latitude;
-    float limit;
-    float row_alpha;
-    float wrapped;
-    float u, v;
-    u32 color;
-    u8 color_byte;
-    u32 base_color;
-    u64 texture_state = 0xff9000000260ULL;
-    u64 primitive = 0xa000000029ULL;
+    float whole_part;
     u64 texture;
+    int color;
+    float alpha_step, base, spin, latitude_step, angle_step, angle, next_angle, longitude;
+    float latitude, row_alpha;
 
-    color_byte = *(u8 *)(*(char **)(moby + 0x78) + 0x1c6);
-    color = ((u32)color_byte << 24) | ((u32)color_byte << 16) | ((u32)color_byte << 8) | color_byte;
-    scratch.f[1] = ang;
-    scratch.f[2] = alpha;
-    vu1_add_g_sregister_l07(0x4e, (s64)((depth_buffer_address >> 13) | 0x1000000) | ((u64)0x8000 << 17));
-    row_alpha = scratch.f[2];
-    texture = get_effect_texture(0x3c);
-    quad.colors[0] = quad.colors[1] = quad.colors[2] = quad.colors[3] = ((u32)truncate_float_to_s32(convert_integer_to_float(0) * row_alpha) << 24) | (base_color = color | 0x404040);
+    vu1_add_g_sregister(0x4E, (u64)(depth_buffer_address >> 13) | 0x1000000L | (0x8000L << 17));
+    texture = get_effect_texture(0x3C);
+    row_alpha = alpha;
+    color = truncate_float_to_s32(convert_integer_to_float(0) * row_alpha) << 24;
+    color |= tint_color(grey);
+    quad.colors[3] = color;
+    quad.colors[2] = color;
+    quad.colors[1] = color;
+    quad.colors[0] = color;
     quad.texture = texture;
     quad.texture_state = texture_state;
     quad.primitive = primitive;
-
     quad.reserved.value = 0;
-    spin = convert_integer_to_float(frame_count_l07 + phase) * speed;
-    FUN_L00_0024f7c8(moby, 9, &position);
-    qcopy(&center, &position);
-    u = radius - 0.8f;
-    center.f[2] = center.f[2] - u;
-    angle = -2.7488937f;
-    scratch.i[3] = base_color;
-    u = split_float_fraction(spin * -0.01f, &scratch);
-    quad.texture_coordinates[0][0] = u;
-    quad.texture_coordinates[2][0] = u;
-    quad.texture_coordinates[3][0] = u + 1.0f;
-    quad.texture_coordinates[1][0] = u + 1.0f;
-    v = split_float_fraction(spin * -0.02f, &scratch);
-    quad.texture_coordinates[0][1] = v;
-    quad.texture_coordinates[1][1] = v;
-    v += 1.0f;
-    quad.texture_coordinates[3][1] = v;
-    quad.texture_coordinates[2][1] = v;
-    end_alpha -= row_alpha;
-    alpha_step = end_alpha * 0.0625f;
-    step = scratch.f[1] * 0.0625f;
-    do {
+    spin = convert_integer_to_float(level_frame_count + phase) * speed;
+    moby_point_position(moby, 9, &origin);
+    qcopy(&center, &origin);
+    center.f[2] = center.f[2] - (radius - 0.8f);
+    quad.texture_coordinates[0][0] = split_float_fraction(&whole_part, spin * -0.01f);
+    quad.texture_coordinates[2][0] = quad.texture_coordinates[0][0];
+    quad.texture_coordinates[1][0] = quad.texture_coordinates[0][0] + 1.0f;
+    quad.texture_coordinates[3][0] = quad.texture_coordinates[1][0];
+    quad.texture_coordinates[0][1] = split_float_fraction(&whole_part, spin * -0.02f);
+    quad.texture_coordinates[1][1] = quad.texture_coordinates[0][1];
+    quad.texture_coordinates[2][1] = quad.texture_coordinates[0][1] + 1.0f;
+    quad.texture_coordinates[3][1] = quad.texture_coordinates[2][1];
+    alpha_step = (end_alpha - row_alpha) * 0.0625f;
+    latitude_step = latitude_span * 0.0625f;
+    angle_step = 0.3926991f;
+    for (angle = -2.7488937f; angle < 3.1415927f; angle = next_angle) {
         qcopy(&quad.positions[2], &center);
-        qcopy(&quad.positions[3], &quad.positions[2]);
-
-        next_angle = angle + 0.3926991f;
-        row_alpha = scratch.f[2];
-        quad.colors[2] = ((u32)truncate_float_to_s32(convert_integer_to_float(0) * row_alpha) << 24) | scratch.i[3];
-
-        latitude = step + -1.5707964f;
-        quad.colors[3] = quad.colors[2];
-        if (latitude <= (limit = scratch.f[1] - 1.5707964f)) {
-            float z_adjustment = 0.375f;
-            u32 inner_color = color | 0x404040;
-            do {
-                qcopy(&quad.positions[0], &quad.positions[2]);
-                qcopy(&quad.positions[1], &quad.positions[3]);
-                row_alpha += alpha_step;
-                quad.colors[0] = quad.colors[2];
-                quad.colors[1] = quad.colors[3];
-                quad.colors[3] = ((u32)truncate_float_to_s32(convert_integer_to_float(0) * row_alpha) << 24) | inner_color;
-                quad.colors[2] = quad.colors[3];
-                wrapped = normalize_angle(angle + spin * 0.02f);
-                build_spherical_offset(&quad.positions[2], radius, wrapped, latitude);
-                wrapped = fast_add_rotations(wrapped, 0.3926991f);
-                build_spherical_offset(&quad.positions[3], radius, wrapped, latitude);
-                if (0.0f < latitude) {
-                    quad.positions[2].f[2] += 0.6f;
-                    quad.positions[3].f[2] += 0.6f;
-                } else {
-                    quad.positions[2].f[2] -= z_adjustment;
-                    quad.positions[3].f[2] -= z_adjustment;
-                }
-                latitude += step;
-                add_vector_xyz(&quad.positions[2], &quad.positions[2], &position);
-                add_vector_xyz(&quad.positions[3], &quad.positions[3], &position);
-                draw_geometry_quad(&quad, 0, 1);
-            } while (latitude <= limit);
+        qcopy(&quad.positions[3], &center);
+        next_angle = angle + angle_step;
+        base = convert_integer_to_float(0);
+        row_alpha = alpha;
+        color = truncate_float_to_s32(base * row_alpha) << 24;
+        color |= tint_color(grey);
+        quad.colors[3] = color;
+        quad.colors[2] = color;
+        for (latitude = latitude_step + -1.5707964f; latitude <= latitude_span - 1.5707964f;
+             latitude += latitude_step) {
+            qcopy(&quad.positions[0], &quad.positions[2]);
+            qcopy(&quad.positions[1], &quad.positions[3]);
+            row_alpha += alpha_step;
+            quad.colors[0] = quad.colors[2];
+            quad.colors[1] = quad.colors[3];
+            color = truncate_float_to_s32(convert_integer_to_float(0) * row_alpha) << 24;
+            color |= tint_color(grey);
+            quad.colors[3] = color;
+            quad.colors[2] = color;
+            longitude = normalize_angle(angle + spin * 0.02f);
+            build_spherical_offset(&quad.positions[2], radius, longitude, latitude);
+            build_spherical_offset(&quad.positions[3], radius, fast_add_rotations(longitude, angle_step), latitude);
+            if (0.0f < latitude) {
+                quad.positions[2].f[2] = quad.positions[2].f[2] + 0.6f;
+                quad.positions[3].f[2] = quad.positions[3].f[2] + 0.6f;
+            } else {
+                quad.positions[2].f[2] = quad.positions[2].f[2] - 0.375f;
+                quad.positions[3].f[2] = quad.positions[3].f[2] - 0.375f;
+            }
+            add_vector_xyz(&quad.positions[2], &quad.positions[2], &origin);
+            add_vector_xyz(&quad.positions[3], &quad.positions[3], &origin);
+            draw_geometry_quad(&quad, 0, 1);
         }
-        angle = next_angle;
-    } while (angle < 3.1415927f);
-    vu1_add_g_sregister_l07(0x4e, (s64)(depth_buffer_address >> 13) | 0x1000000);
+    }
+    vu1_add_g_sregister(0x4E, (u64)(gs_texture_allocation_start_macro[4] >> 13) | 0x1000000L);
 }
-#endif
 #define NOT_SDA
 
 #define MACRO_ADDR
 
 /* Starts the effect with an angle ramped from the moby's timer, capped at pi. */
 /* Ported from rac1-decomp (src/overlays/l07_umbris/vendor_00313D28.c: func_L07_003141A8), where it is exact; names translated to the US level program. */
-
-extern void FUN_L07_00312948(char *, int, float, float, float, float, float);
 
 void FUN_L07_00312dc8(char *moby) {
     char *data = *(char **)(moby + 0x78);
@@ -659,12 +645,9 @@ void FUN_L07_00314058(char *moby) {
         }
     }
 }
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L07_00314150.s", FUN_L07_00314150);
-#else
-/* Target sensing, fade timers, and state transitions. Adapted from
- * OpenRAC/rac1-decomp func_L07_00315528 and checked against US level-07
- * instructions; only navigation result 4 takes the stop transition. */
+
+/* Ported from rac1-decomp (src/overlays/l07_umbris/vendor_00313D28.c: func_L07_00315528). */
+/* Target sensing, fade timers, and state transitions; only navigation result 4 takes the stop transition. */
 typedef struct {
     Vec4 pos;
     Vec4 rotation;
@@ -1181,17 +1164,24 @@ void snagglebeast_update(unsigned char *moby) {
             float spd;
             int near;
             int moving;
+            int four;
             fast_difference_between_rotations(*(float *)(moby + 0x48), rot);
             spd = fast_vec_length(data + 0x100);
             near = 0;
             if (!path_point_ready && target_distance < 20.0f) near = 1;
-            moving = frame_time * 0.01f < spd;
-            if (hit == 4) {
-                if (frame_time * 0.01f < spd) hit = 4;
+            /* Fakematch: four set on both paths hides the 4 from cse, and the no-op near == 2
+             * split is cross-jumped after reload, leaving retail's dead `li v0,2` before the test. */
+            if (!(frame_time * 0.01f < spd)) {
+                moving = 0;
+                four = 4;
             } else {
-                hit = 2;
+                moving = 1;
+                four = 4;
             }
-            if ((hit == 4) || !moving) {
+            if (hit != four && near == 2) {
+                if (hit == 4 || !moving) goto stop;
+            } else if (hit == 4 || !moving) {
+            stop:
                 data[0x1F7] = scale_ticks(0x5A);
                 if (moby[0x53] != (FUN_001160d8() & 1)) {
                     int r1 = FUN_001160d8() & 1;
@@ -1438,14 +1428,14 @@ void snagglebeast_update(unsigned char *moby) {
         }
         break;
     case 15: {
-        int iF0;
+        int point;
         if (FUN_0020c9e0(moby) > 198.0f) {
             if (moby[0x53] != 0xA) FUN_00212f90(moby, 0xA, 0, 0);
             FUN_L00_0024f7c8(moby, 0xA, &position);
             qcopy(data + 0xC0, &position);
             *(float *)(data + 0xC8) = *(float *)(data + 0x128);
-            iF0 = 0xA;
-            FUN_00210850(moby, 1, &iF0, &velocity);
+            point = 0xA;
+            FUN_00210850(moby, 1, &point, &velocity);
             matrix_to_euler(&velocity, &step);
             *(float *)(data + 0xCC) = fast_add_rotations(*(float *)(moby + 0x48), step.f[2]);
         }
@@ -1742,10 +1732,6 @@ void snagglebeast_update(unsigned char *moby) {
     if (moby[0x20] < 0xA) jet_animate((struct Moby *)moby, 2.5f);
     FUN_L07_00312150((char *)data);
 }
-#endif
-extern u64 get_effect_texture_l07(int) __asm__("FUN_001f44b8");
-extern void vu1_add_g_sregister_l07(int, u64) __asm__("FUN_00233980");
-extern void draw_geometry_quad_l07(void *, int, int) __asm__("FUN_001f7d30");
 float scroll_phase __asm__("D_L07_00161B74") = 0;
 float row_start_phase __asm__("D_L07_00161B78") = 0;
 float row_phase_step_gp __asm__("D_L07_00161B7C") = 0.006f;
@@ -1772,18 +1758,18 @@ void FUN_L07_00317910(void) {
     float phase_step;
     float column_step;
 
-    packet.header[1] = get_effect_texture_l07(0x15);
+    packet.header[1] = get_effect_texture(0x15);
     packet.header[2] = 0xff9000000260ULL;
     packet.header[3] = 0x8000000048ULL;
     packet.header[0] = 0;
     phase = scroll_phase;
     scroll_phase += 0.001f;
     if (scroll_phase > 7.0f) scroll_phase -= 7.0f;
-    vu1_add_g_sregister_l07(0x47, 0x5301b);
+    vu1_add_g_sregister(0x47, 0x5301b);
     phase_step = 0.3f;
     phase += phase_step;
     column_step = 0.05f;
-    vu1_add_g_sregister_l07(0x4e, (depth_buffer_address >> 13) | 0x1000000 | ((u64)0x8000 << 17));
+    vu1_add_g_sregister(0x4e, (depth_buffer_address >> 13) | 0x1000000 | ((u64)0x8000 << 17));
     for (row = 1; row < 10; row++) {
         row_phase = row_start_phase;
         row_start_phase += row_phase_step_gp;
@@ -1818,12 +1804,12 @@ void FUN_L07_00317910(void) {
             packet.uv[6] = phase - phase_step;
             packet.uv[7] = end_phase;
             row_phase = end_phase;
-            draw_geometry_quad_l07(&packet, 0, 0);
+            draw_geometry_quad(&packet, 0, 0);
         }
         phase += phase_step;
     }
-    vu1_add_g_sregister_l07(0x4e, (s64)(depth_buffer_address >> 13) | 0x1000000);
-    vu1_add_g_sregister_l07(0x47, 0x5360b);
+    vu1_add_g_sregister(0x4e, (s64)(depth_buffer_address >> 13) | 0x1000000);
+    vu1_add_g_sregister(0x47, 0x5360b);
 }
 
 extern int D_L07_00161B6C_gp __asm__("D_L07_00161B6C") __attribute__((sda));
@@ -1834,13 +1820,20 @@ extern int D_L07_00161B84;
 extern float D_L07_00161BB0;
 extern char D_L07_00161B90[] __attribute__((section(".sdata")));
 extern char D_L07_00161BA0[] __attribute__((section(".sdata")));
-extern RopeVec D_L07_0020DAF0_c[] __asm__("D_L07_0020DAF0");
-extern RopeVec D_L07_0020DB00_c[] __asm__("D_L07_0020DB00");
+extern RopeVec rope_previous_points[] __asm__("D_L07_0020DAF0");
+extern RopeVec rope_points[] __asm__("D_L07_0020DB00");
+/* A particle travelling down the rope: it moves along segment toward the anchor, and between
+ * ring columns by blend. */
 typedef struct {
-    int pad[5];
-    char *moby;
-} RopeMobySlot;
-extern RopeMobySlot D_L07_0020C840_c[] __asm__("D_L07_0020C840");
+    short segment;
+    short column;
+    float distance;
+    float blend;
+    float blend_speed;
+    float speed;
+    char *particle;
+} RopeParticle;
+extern RopeParticle rope_particles[] __asm__("D_L07_0020C840");
 
 /* Starts the rope when one is pending: lays nine points out from the anchor along the moby's
  * axis, then resets the swing state and, once, clears every entry's link. */
@@ -1861,12 +1854,12 @@ void FUN_L07_00317cb0(char *moby, void *anchor) {
     D_L07_00161B6C_gp = 0;
     normalize_vector_xyz(step, moby + 0xC0, 2.8f);
     normalize_vector_xyz(up, moby + 0xE0, 1.0f);
-    qcopy(D_L07_0020DB00_c, anchor);
+    qcopy(rope_points, anchor);
     pc = &c;
     pd = &d;
     D_L07_0020DBC8[0] = 0;
     for (i = 1; i < 10; i++) {
-        add_vector_xyz(D_L07_0020DB00_c[i], D_L07_0020DAF0_c[i], step);
+        add_vector_xyz(rope_points[i], rope_previous_points[i], step);
         D_L07_0020DBC8[i] = 0;
     }
     clear_u64_value(D_L07_00161B90);
@@ -1885,321 +1878,336 @@ void FUN_L07_00317cb0(char *moby, void *anchor) {
     if (D_L07_00161B70_gp != 0) {
         D_L07_00161B70_gp = 0;
         for (j = 199; j >= 0; j--) {
-            D_L07_0020C840_c[j].moby = 0;
+            rope_particles[j].particle = 0;
         }
     }
 }
 
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/overlays/asm/FUN_L07_00317e60.s", FUN_L07_00317e60);
-#else
-extern char D_0013F3D0[];
-extern void FUN_L07_00317910(void);
-extern float fast_add_rotations(float, float) __asm__("FUN_001fa580");
-extern float FUN_001f99c0(float);
-extern float fast_vec_dot(void *, void *) __asm__("FUN_001f9ab0");
-extern float fast_subtract_rotations(float, float) __asm__("FUN_001fa5c8");
-extern float FUN_L07_0029e6d8(void *, void *, void *, void *, void *, float);
-extern void add_draw_callback(void (*)(), void *) __asm__("FUN_L07_002211c8");
-extern int FUN_00213260(int);
+/* Ported from rac1-decomp (src/overlays/l07_umbris/vendor_00313D28.c: func_L07_00319230). */
+typedef int RopeU128 __attribute__((mode(TI)));
+
+typedef struct {
+    char pad0[4];
+    int mode;
+    char pad8[2];
+    unsigned char tint;
+    char fade;
+    char padC[4];
+    float vel[4];
+} RopeTail;
+
+typedef struct {
+    char pad0[0xA];
+    short life;
+    char padC[0x14];
+    RopeTail tail;
+} RopePuff;
+
+extern RopeVec rope_points_lui[] __asm__("D_L07_0020DB00");
+extern RopePuff *FUN_L00_0026d000(void *, float, float, float, int, void *, float, int);
 extern RopeVec D_L07_0020C700[];
-extern char D_0013F5E0[];
-extern float vector_length_xyz(void *) __asm__("FUN_001f9af0");
-extern void fast_vec_cross(void *, void *, void *) __asm__("FUN_001f9ad8");
-extern void lerp_vector(void *, void *, void *, float) __asm__("FUN_001f9a40");
+extern RopeVec D_L07_0020DAA0[][20];
+extern RopeVec D_L07_0020DAE0[];
 extern float fast_arc_sin(float) __asm__("FUN_001f9df8");
+extern float fast_vec_dot(void *, void *) __asm__("FUN_001f9ab0");
+extern float fast_vec_length(void *) __asm__("FUN_001f9af0");
+extern float D_L07_0020DBA0[];
 extern float rope_spring_turn(void *, float, float, float, float, float) __asm__("FUN_L00_001eb328");
+extern float FUN_L07_0029e6d8(void *, void *, void *, void *, void *, float);
+extern int random_integer_below(int) __asm__("FUN_00213260");
 extern void interpolate_vector(void *, void *, void *, float) __asm__("FUN_L00_0025b6b8");
 extern void release_particle(void *) __asm__("FUN_L00_00267a08");
-extern char *FUN_L00_0026d000(void *, int, void *, int, float, float, float, float);
+extern void fast_vec_cross(void *, void *, void *) __asm__("FUN_001f9ad8");
+extern void enqueue_callback_list_1(void (*)(), void *) __asm__("FUN_001f4600");
+extern void lerp_vector(void *, void *, void *, float) __asm__("FUN_001f9a40");
+extern float FUN_001f99c0(float);
 extern int D_L07_00161B84_gp __asm__("D_L07_00161B84") __attribute__((sda));
-extern float D_L07_0020DBA0[];
 
 /* Updates the rope points, its ring mesh and the particles travelling along it. */
 float FUN_L07_00317e60(void *moby, void *anchor) {
-    Vec4 center;
-    Vec4 step;
-    Vec4 axis;
-    Vec4 start;
-    Vec4 end;
-    Vec4 up;
-    Vec4 delta;
-    Vec4 basis;
-    struct { Vec4 matrix, cross, reference; } ring_basis;
-    Vec4 velocity;
-    Vec4 extension;
-    Vec4 direction;
-    Vec4 tangent;
-    struct { Vec4 side, perpendicular, normal; } point_basis;
-    Vec4 offset;
-    Vec4 previous;
-    Vec4 previous_cross;
-    float zero;
-    volatile float one;
+    RopeVec center;
+    RopeVec step;
+    RopeVec axis;
+    RopeVec start;
+    RopeVec end;
+    RopeVec up;
+    RopeVec delta;
+    RopeVec basis;
+    struct { RopeVec matrix; RopeVec cross; RopeVec reference; } ring_basis;
+    RopeVec velocity;
+    RopeVec extension;
+    RopeVec direction;
+    RopeVec tangent;
+    RopeVec side;
+    RopeVec perpendicular;
+    RopeVec normal;
+    RopeVec offset;
+    RopeVec previous;
+    RopeVec previous_cross;
+    extern RopeParticle rope_particles[];
     float minimum;
-    float fraction;
-    float swing_fraction;
-    float wave_scale;
+
+    minimum = 1000.0f;
+    FUN_L07_00317cb0(moby, anchor);
+    qcopy(center, D_0013F3D0);
+    center[2] += 0.6f;
+    D_L07_0020DBC8[0] += 4;
+    {
+        int row;
+        for (row = 1; row < 10; row++) {
+            D_L07_0020DBC8[row] = D_L07_0020DBC8[row - 1] - 0x20;
+        }
+    }
+    subtract_vector_xyz(step, D_0013F3D0, anchor);
+    step[2] += 0.6f;
+    normalize_vector_xyz(step, step, 2.8f);
+    fast_vec_cross(axis, step, (char *)moby + 0xD0);
+    normalize_vector_xyz(axis, axis, 1.0f);
+    qcopy(rope_points, anchor);
+    transform_vector_by_basis(start, D_L07_00161B90, (char *)moby + 0xC0);
+    add_vector_xyz(start, start, step);
+    transform_vector_by_basis(end, D_L07_00161BA0, (char *)moby + 0xC0);
+    add_vector_xyz(end, end, step);
+    {
+        float swing_fraction = (float)D_L07_00161B80 / convert_integer_to_float(scale_game_frames(60));
+        D_L07_00161B80++;
+        step[0] = start[0] + (end[0] - start[0]) * swing_fraction;
+        step[1] = start[1] + (end[1] - start[1]) * swing_fraction;
+        step[2] = start[2] + (end[2] - start[2]) * swing_fraction;
+    }
+    if (D_L07_00161B80 >= scale_game_frames(60)) {
+        qcopy(D_L07_00161B90, D_L07_00161BA0);
+        normalize_vector_xyz(up, (char *)moby + 0xC0, 2.8f);
+        *(RopeU128 *)delta = 0;
+        *(RopeU128 *)basis = 0;
+        delta[2] = 0.1f;
+        delta[3] = 1.0f;
+        basis[0] = 1.0f;
+        basis[3] = 1.0f;
+        {
+            float turn = fast_add_rotations(D_L07_00161BB0, random_float_between(45.0f, 315.0f) * 0.017453292f);
+            build_look_at_matrix(D_L07_00161BA0, delta, basis, turn);
+            D_L07_00161BB0 = turn;
+        }
+        D_L07_00161B80 = 0;
+    }
+    (*(float *)&D_L07_00161B84_gp) = fast_add_rotations((*(float *)&D_L07_00161B84_gp), 0.1f);
+    normalize_vector_xyz(up, (D_0013F3D0 + 0x210), -1.0f);
+    qcopy(ring_basis.reference, up);
+    fast_vec_cross(ring_basis.cross, step, ring_basis.reference);
+    normalize_vector_xyz(ring_basis.cross, ring_basis.cross, 1.0f);
+    fast_vec_cross(ring_basis.matrix, ring_basis.reference, ring_basis.cross);
+    {
+        int column;
+        for (column = 0; column < 20; column++) {
+            scale_vector_xyz(delta, D_L07_0020C700[column], 0.02f);
+            transform_vector_by_basis(delta, delta, ring_basis.matrix);
+            add_vector_xyz(rope_grid[0][column], rope_points[0], delta);
+        }
+    }
+    {
+    float dot;
     float length;
     float angle;
     float turn;
     float difference;
     float index;
-    float distance;
-    float phase;
-    float radius;
-    int point_offset;
-    float wave;
+    int i;
+    for (i = 1; i < 10; i++) {
+        subtract_vector_xyz(delta, rope_points[i], rope_previous_points[i]);
+        qcopy(basis, step);
+        fast_vec_cross(velocity, basis, delta);
+        dot = fast_vec_dot(delta, basis);
+        length = fast_vec_length(delta);
+        angle = 1.5707964f - fast_arc_sin(dot / (length * 2.8f));
+        turn = rope_spring_turn(&D_L07_0020DBA0[i], 0.0f, angle, 0.06f, 0.2f, 0.0f);
+        difference = fast_subtract_rotations(angle, turn);
+        if (FUN_001f99c0(difference) > 0.31415927f) {
+            turn = fast_add_rotations(turn, fast_subtract_rotations(difference, 0.31415927f));
+        }
+        build_look_at_matrix(extension, delta, velocity, turn);
+        normalize_vector_xyz(direction, extension, 2.8f);
+        lerp_vector(extension, extension, direction, 1.0f);
+        {
+            float extension_length = fast_vec_length(extension);
+            if (extension_length > 3.9f) {
+                scale_vector_xyz(extension, extension, 3.9f / extension_length);
+            }
+        }
+        if (i >= 6) {
+            lerp_vector(extension, extension, delta, (float)i / convert_integer_to_float(10) + 0.0f);
+        }
+        index = i;
+        add_vector_xyz(rope_points[i], rope_previous_points[i], extension);
+        {
+            float distance = FUN_L07_0029e6d8(tangent, center, center, rope_previous_points[i], rope_points[i], 0.0f);
+            if (distance < minimum) {
+                minimum = distance;
+            }
+        }
+        qcopy(tangent, step);
+        if (FUN_001f99c0(step[2]) > 2.1f) {
+            qcopy(normal, up);
+            fast_vec_cross(offset, normal, step);
+            subtract_vector_xyz(previous_cross, D_L07_0020DAE0[i], rope_previous_points[i]);
+            fast_vec_cross(previous, normal, previous_cross);
+            {
+                float facing = fast_vec_dot(offset, previous);
+                if (facing > 0.0f) {
+                    scale_vector_xyz(normal, normal, -1.0f);
+                }
+            }
+        } else {
+            normalize_vector_xyz(normal, (D_0013F3D0 + 0x210), -1.0f);
+        }
+        normalize_vector_xyz(side, tangent, 1.0f);
+        fast_vec_cross(perpendicular, side, normal);
+        normalize_vector_xyz(perpendicular, perpendicular, 1.0f);
+        fast_vec_cross(normal, perpendicular, side);
+        qcopy(up, normal);
+        {
+            int column;
+            float radius;
+            for (column = 0; column < 20; column++) {
+                radius = index * 0.2f + 0.02f;
+                radius += radius * 0.25f * fast_sin(fast_add_rotations((*(float *)&D_L07_00161B84_gp) + index * 0.7f, 0.0f));
+                scale_vector_xyz(offset, D_L07_0020C700[column], radius);
+                transform_vector_by_basis(offset, offset, side);
+                add_vector_xyz(rope_grid[i][column], rope_points[i], offset);
+            }
+        }
+        normalize_vector_xyz(step, extension, 2.8f);
+    }
+    }
+    enqueue_callback_list_1(FUN_L07_00317910, moby);
+    {
+    int created;
+    int extras;
+    int segment;
+    float fraction;
+    float length;
     float blend;
     float lifetime;
-    int i, j, segment, column, next_column;
-    int created, extras;
-    char *particle;
-    char *slot;
-    char *ring;
-    void *point;
-    void *prior;
-    short *alpha;
-
-    FUN_L07_00317cb0(moby, anchor);
-    minimum = 1000.0f;
-    one = 1.0f;
-    qcopy(&center, D_0013F3D0);
-    center.f[2] += 0.6f;
-    D_L07_0020DBC8[0] += 4;
-    alpha = D_L07_0020DBC8 + 1;
-    i = 8;
-    do {
-        i--;
-        *alpha = alpha[-1] - 32;
-        alpha++;
-    } while (i >= 0);
-    subtract_vector_xyz(&step, D_0013F3D0, anchor);
-    step.f[2] += 0.6f;
-    normalize_vector_xyz(&step, &step, 2.8f);
-    fast_vec_cross(&axis, &step, (char *)moby + 0xd0);
-    normalize_vector_xyz(&axis, &axis, 1.0f);
-    qcopy(D_L07_0020DB00_c, anchor);
-    transform_vector_by_basis(&start, D_L07_00161B90, (char *)moby + 0xc0);
-    add_vector_xyz(&start, &start, &step);
-    transform_vector_by_basis(&end, D_L07_00161BA0, (char *)moby + 0xc0);
-    add_vector_xyz(&end, &end, &step);
-    swing_fraction = (float)D_L07_00161B80 / convert_integer_to_float(scale_game_frames(60));
-    D_L07_00161B80++;
-    step.f[0] = start.f[0] + (end.f[0] - start.f[0]) * swing_fraction;
-    step.f[1] = start.f[1] + (end.f[1] - start.f[1]) * swing_fraction;
-    step.f[2] = start.f[2] + (end.f[2] - start.f[2]) * swing_fraction;
-    if (scale_game_frames(60) <= D_L07_00161B80) {
-        qcopy(D_L07_00161B90, D_L07_00161BA0);
-        normalize_vector_xyz(&up, (char *)moby + 0xc0, 2.8f);
-        delta.q = 0;
-        basis.q = 0;
-        delta.f[2] = 0.1f;
-        delta.f[3] = 1.0f;
-        basis.f[0] = 1.0f;
-        basis.f[3] = 1.0f;
-        angle = random_float_between(45.0f, 315.0f);
-        turn = fast_add_rotations(D_L07_00161BB0, angle * 0.017453292f);
-        build_look_at_matrix(D_L07_00161BA0, &delta, &basis, turn);
-        D_L07_00161BB0 = turn;
-        D_L07_00161B80 = 0;
-    }
-    (*(float *)&D_L07_00161B84_gp) = fast_add_rotations((*(float *)&D_L07_00161B84_gp), 0.1f);
-    normalize_vector_xyz(&up, D_0013F3D0 + 0x210, -1.0f);
-    qcopy(&ring_basis.reference, &up);
-    fast_vec_cross(&ring_basis.cross, &step, &ring_basis.reference);
-    normalize_vector_xyz(&ring_basis.cross, &ring_basis.cross, 1.0f);
-    fast_vec_cross(&ring_basis.matrix, &ring_basis.reference, &ring_basis.cross);
-    i = 19;
-    point = D_L07_0020C700;
-    ring = (char *)&D_L07_0020DB00_c[14];
-    do {
-        scale_vector_xyz(&delta, point, 0.02f);
-        transform_vector_by_basis(&delta, &delta, &ring_basis.matrix);
-        add_vector_xyz(ring, D_L07_0020DB00_c, &delta);
-        point = (char *)point + 16;
-        ring += 16;
-        i--;
-    } while (i >= 0);
-    zero = 0.0f;
-    i = 1;
-    do {
-        point_offset = i * 16;
-        point = (char *)D_L07_0020DB00_c + point_offset;
-        prior = (char *)D_L07_0020DAF0_c + point_offset;
-        subtract_vector_xyz(&delta, point, prior);
-        qcopy(&basis, &step);
-        fast_vec_cross(&velocity, &basis, &delta);
-        angle = fast_vec_dot(&delta, &basis);
-        length = vector_length_xyz(&delta);
-        angle = fast_arc_sin(angle / (length * 2.8f));
-        angle = 1.5707964f - angle;
-        turn = rope_spring_turn(D_L07_0020DBA0 + i, zero, angle, 0.06f, 0.2f, zero);
-        difference = fast_subtract_rotations(angle, turn);
-        if (0.31415927f < FUN_001f99c0(difference)) {
-            /* Retail's second argument is the comparison threshold in f13. */
-            difference = fast_subtract_rotations(difference, 0.31415927f);
-            turn = fast_add_rotations(turn, difference);
-        }
-        build_look_at_matrix(&extension, &delta, &velocity, turn);
-        normalize_vector_xyz(&direction, &extension, 2.8f);
-        lerp_vector(&extension, &extension, &direction, 1.0f);
-        distance = vector_length_xyz(&extension);
-        if (3.9f < distance) scale_vector_xyz(&extension, &extension, 3.9f / distance);
-        if (i > 5) lerp_vector(&extension, &extension, &delta, (float)i / convert_integer_to_float(10) + zero);
-        add_vector_xyz(point, prior, &extension);
-        distance = FUN_L07_0029e6d8(&tangent, &center, &center, prior, point, zero);
-        if (distance < minimum) minimum = distance;
-        qcopy(&tangent, &step);
-        if (2.1f < FUN_001f99c0(step.f[2])) {
-            qcopy(&point_basis.normal, &up);
-            fast_vec_cross(&offset, &point_basis.normal, &step);
-            subtract_vector_xyz(&previous_cross, (char *)D_L07_0020DAF0_c + point_offset - 16, prior);
-            fast_vec_cross(&previous, &point_basis.normal, &previous_cross);
-            if (zero < fast_vec_dot(&offset, &previous)) scale_vector_xyz(&point_basis.normal, &point_basis.normal, -1.0f);
-        } else {
-            normalize_vector_xyz(&point_basis.normal, D_0013F5E0, -1.0f);
-        }
-        normalize_vector_xyz(&point_basis.side, &tangent, one);
-        fast_vec_cross(&point_basis.perpendicular, &point_basis.side, &point_basis.normal);
-        normalize_vector_xyz(&point_basis.perpendicular, &point_basis.perpendicular, one);
-        fast_vec_cross(&point_basis.normal, &point_basis.perpendicular, &point_basis.side);
-        qcopy(&up, &point_basis.normal);
-        ring = (char *)&D_L07_0020DB00_c[14] + i * 0x140;
-        point = D_L07_0020C700;
-        phase = (float)i * 0.7f;
-        index = (float)i;
-        wave_scale = 0.25f;
-        next_column = i + 1;
-        j = 0;
-        do {
-            radius = index * 0.2f;
-            radius += 0.02f;
-            j++;
-            wave = fast_add_rotations((*(float *)&D_L07_00161B84_gp) + phase, 0.0f);
-            wave = fast_sin(wave);
-            scale_vector_xyz(&offset, point, radius + radius * wave_scale * wave);
-            transform_vector_by_basis(&offset, &offset, &point_basis.side);
-            add_vector_xyz(ring, (char *)D_L07_0020DB00_c + point_offset, &offset);
-            ring += 16;
-            point = (char *)point + 16;
-        } while (point != (void *)(D_L07_0020C700 + 20));
-        normalize_vector_xyz(&step, &extension, 2.8f);
-        i = next_column;
-    } while (i < 10);
-    one = 1.0f;
-    add_draw_callback(FUN_L07_00317910, moby);
+    int random_column;
+    int column;
+    RopePuff *puff;
+    RopePuff *particle;
+    RopeVec *points;
+    int k;
+    short life;
+    life = 200;
     created = 0;
     extras = 0;
-    i = 0;
-    do {
-        slot = (char *)(D_L07_0020C840_c + i);
-        if (*(char * *)((char *)D_L07_0020C840_c + 20 + i * 24) == 0 && created < 5) {
-            segment = 9;
-            if (D_L07_0020DBC8[9] < 64) {
-                alpha = D_L07_0020DBC8 + 9;
-                do {
-                    segment--;
-                    if (segment < 0) break;
-                    alpha--;
-                } while (*alpha < 64);
+    for (k = 0; k < 200; k++) {
+        if (rope_particles[k].particle == 0 && created < 5) {
+            for (segment = 9; segment >= 0; segment--) {
+                if (D_L07_0020DBC8[segment] >= 0x40) {
+                    break;
+                }
             }
             if (segment > 0) {
-                if (segment > 1 && extras < 2) {
-                    column = FUN_00213260(20);
+                if (segment >= 2 && extras < 2) {
+                    random_column = random_integer_below(20);
                     blend = random_float_between(0.2f, 1.0f);
-                    ring = (char *)&D_L07_0020DB00_c[14] + column * 16;
-                    lerp_vector(&delta, ring, ring + segment * 0x140, blend);
-                    lerp_vector(&velocity, D_L07_0020DB00_c, D_L07_0020DB00_c[segment], blend);
+                    lerp_vector(delta, rope_grid[0][random_column], rope_grid[segment][random_column], blend);
+                    /* Fakematch: a second label and a dead store keep this address out of the
+                     * loop-hoisted constant, so it is built in a1 next to the call. */
+                    points = rope_points_lui;
+                    lerp_vector(velocity, points[0], points[segment], blend);
+                    points = 0;
                     lifetime = random_float_between(60000.0f, 180000.0f);
-                    column = FUN_00213260(5);
-                    particle = FUN_L00_0026d000(&delta, column + 1, &basis, 0x404040, 0.0f, one, 1.03f, lifetime);
-                    if (particle != 0) {
-                        subtract_vector_xyz(&extension, &delta, &velocity);
+                    puff = FUN_L00_0026d000(delta, 0.0f, 1.0f, 1.03f, random_integer_below(5) + 1, basis, lifetime, 0x404040);
+                    if (puff != 0) {
+                        RopeTail *tail = &puff->tail;
+                        subtract_vector_xyz(extension, delta, velocity);
                         extras++;
-                        normalize_vector_xyz(particle + 0x30, &extension, 0.01f);
-                        *(float *)(particle + 0x38) += 0.02f;
+                        normalize_vector_xyz(tail->vel, extension, 0.01f);
+                        tail->vel[2] += 0.02f;
                     }
                 }
-                qcopy(&delta, D_L07_0020DB00_c[segment]);
-                clear_u64_value(&basis);
-                lifetime = random_float_between(60000.0f, 180000.0f);
-                particle = FUN_L00_0026d000(&delta, 6, &basis, 0x7f404040, 0.0f, one, one, lifetime);
-                *(char * *)((char *)D_L07_0020C840_c + 20 + i * 24) = particle;
+                qcopy(delta, rope_points[segment]);
+                clear_u64_value(basis);
+                particle = FUN_L00_0026d000(delta, 0.0f, 1.0f, 1.0f, 6, basis, random_float_between(60000.0f, 180000.0f), 0x7F404040);
+                rope_particles[k].particle = (char *)particle;
                 if (particle != 0) {
-                    *(short *)(particle + 10) = 200;
-                    *(int *)(particle + 0x24) = 2;
+                    RopeTail *tail;
+                    particle->life = life;
+                    tail = &particle->tail;
+                    tail->mode = 2;
                     created++;
-                    particle[0x2a] = 0x7f;
-                    particle[0x2b] = 200;
+                    tail->tint = 0x7F;
+                    tail->fade = life;
                 }
-                *(short *)((char *)D_L07_0020C840_c + 0 + i * 24) = segment;
-                *(float *)((char *)D_L07_0020C840_c + 4 + i * 24) = 0.0f;
-                *(float *)((char *)D_L07_0020C840_c + 8 + i * 24) = 0.0f;
-                *(short *)((char *)D_L07_0020C840_c + 2 + i * 24) = FUN_00213260(20);
-                *(float *)((char *)D_L07_0020C840_c + 12 + i * 24) = random_float_between(0.1f, 0.8f);
-                *(float *)((char *)D_L07_0020C840_c + 16 + i * 24) = random_float_between(0.1f, 0.4f);
+                rope_particles[k].segment = segment;
+                rope_particles[k].distance = 0.0f;
+                rope_particles[k].blend = 0.0f;
+                rope_particles[k].column = random_integer_below(20);
+                rope_particles[k].blend_speed = random_float_between(0.1f, 0.8f);
+                rope_particles[k].speed = random_float_between(0.1f, 0.4f);
             }
         }
-        if (*(char * *)((char *)D_L07_0020C840_c + 20 + i * 24) != 0) {
-            segment = *(short *)((char *)D_L07_0020C840_c + 0 + i * 24);
-            subtract_vector_xyz(&delta, D_L07_0020DAF0_c[segment], D_L07_0020DB00_c[segment]);
-            length = vector_length_xyz(&delta);
-            *(float *)((char *)D_L07_0020C840_c + 4 + i * 24) += *(float *)((char *)D_L07_0020C840_c + 16 + i * 24);
-            *(short *)(*(char * *)((char *)D_L07_0020C840_c + 20 + i * 24) + 10) = 200;
-            if (length < *(float *)((char *)D_L07_0020C840_c + 4 + i * 24)) {
-                *(short *)((char *)D_L07_0020C840_c + 0 + i * 24) = (unsigned short)*(short *)((char *)D_L07_0020C840_c + 0 + i * 24) - 1;
-                if (*(short *)((char *)D_L07_0020C840_c + 0 + i * 24) <= 0) {
-                    release_particle(*(char * *)((char *)D_L07_0020C840_c + 20 + i * 24));
-                    *(char * *)((char *)D_L07_0020C840_c + 20 + i * 24) = 0;
+        if (rope_particles[k].particle != 0) {
+            subtract_vector_xyz(delta, rope_previous_points[rope_particles[k].segment],
+                          rope_points[rope_particles[k].segment]);
+            length = fast_vec_length(delta);
+            rope_particles[k].distance += rope_particles[k].speed;
+            *(short *)(rope_particles[k].particle + 0xA) = life;
+            if (length < rope_particles[k].distance) {
+                if (--rope_particles[k].segment <= 0) {
+                    release_particle(rope_particles[k].particle);
+                    rope_particles[k].particle = 0;
                 } else {
-                    *(float *)((char *)D_L07_0020C840_c + 4 + i * 24) -= length;
-                    segment = *(short *)((char *)D_L07_0020C840_c + 0 + i * 24);
-                    subtract_vector_xyz(&delta, D_L07_0020DAF0_c[segment], D_L07_0020DB00_c[segment]);
-                    length = vector_length_xyz(&delta);
+                    rope_particles[k].distance -= length;
+                    subtract_vector_xyz(delta, rope_previous_points[rope_particles[k].segment],
+                                  rope_points[rope_particles[k].segment]);
+                    length = fast_vec_length(delta);
                 }
             }
-            if (*(char * *)((char *)D_L07_0020C840_c + 20 + i * 24) != 0) {
-                fraction = *(float *)((char *)D_L07_0020C840_c + 4 + i * 24) / length;
-                if (*(short *)((char *)D_L07_0020C840_c + 0 + i * 24) == 2) *(short *)(*(char * *)((char *)D_L07_0020C840_c + 20 + i * 24) + 10) = 100;
-                else if (*(short *)((char *)D_L07_0020C840_c + 0 + i * 24) < 2) {
-                    *(short *)(*(char * *)((char *)D_L07_0020C840_c + 20 + i * 24) + 10) = truncate_float_to_s32((one - fraction) * 100.0f);
-                    if (*(short *)(*(char * *)((char *)D_L07_0020C840_c + 20 + i * 24) + 10) < 61) *(short *)(*(char * *)((char *)D_L07_0020C840_c + 20 + i * 24) + 10) = 60;
-                }
-                if (*(short *)((char *)D_L07_0020C840_c + 0 + i * 24) == 1) {
-                    subtract_vector_xyz(&basis, anchor, *(char * *)((char *)D_L07_0020C840_c + 20 + i * 24) + 16);
-                    normalize_vector_xyz(&basis, &basis, *(float *)((char *)D_L07_0020C840_c + 16 + i * 24));
-                    add_vector_xyz(*(char * *)((char *)D_L07_0020C840_c + 20 + i * 24) + 16, *(char * *)((char *)D_L07_0020C840_c + 20 + i * 24) + 16, &basis);
-                    *(float *)(*(char * *)((char *)D_L07_0020C840_c + 20 + i * 24) + 12) *= frame_scale * -0.050000012f + one;
-                } else {
-                    scale_vector_xyz(&delta, &delta, fraction);
-                    segment = *(short *)((char *)D_L07_0020C840_c + 0 + i * 24);
-                    add_vector_xyz(*(char * *)((char *)D_L07_0020C840_c + 20 + i * 24) + 16, D_L07_0020DB00_c[segment], &delta);
-                    column = *(short *)((char *)D_L07_0020C840_c + 2 + i * 24);
-                    ring = (char *)&D_L07_0020DB00_c[14];
-                    subtract_vector_xyz(&basis, ring + column * 16 + segment * 0x140, D_L07_0020DB00_c[segment]);
-                    subtract_vector_xyz(&velocity, (char *)&D_L07_0020DB00_c[0] + segment * 0x140 + column * 16 - 0x60, D_L07_0020DAF0_c[segment]);
-                    interpolate_vector(&extension, &basis, &velocity, fraction);
-                    next_column = (column + 19) % 20;
-                    subtract_vector_xyz(&direction, ring + next_column * 16 + segment * 0x140, D_L07_0020DB00_c[segment]);
-                    subtract_vector_xyz(&tangent, (char *)&D_L07_0020DB00_c[0] + segment * 0x140 + next_column * 16 - 0x60, D_L07_0020DAF0_c[segment]);
-                    interpolate_vector(&point_basis.side, &direction, &tangent, fraction);
-                    interpolate_vector(&extension, &extension, &point_basis.side, *(float *)((char *)D_L07_0020C840_c + 8 + i * 24));
-                    blend = *(float *)((char *)D_L07_0020C840_c + 8 + i * 24) + *(float *)((char *)D_L07_0020C840_c + 12 + i * 24);
-                    *(float *)((char *)D_L07_0020C840_c + 8 + i * 24) = blend;
-                    if (1.0f <= blend) {
-                        *(float *)((char *)D_L07_0020C840_c + 8 + i * 24) = blend - 1.0f;
-                        *(short *)((char *)D_L07_0020C840_c + 2 + i * 24) = next_column;
+            if (rope_particles[k].particle != 0) {
+                fraction = rope_particles[k].distance / length;
+                if (rope_particles[k].segment == 2) {
+                    *(short *)(rope_particles[k].particle + 0xA) = 100;
+                } else if (rope_particles[k].segment < 2) {
+                    *(short *)(rope_particles[k].particle + 0xA) = truncate_float_to_s32((1.0f - fraction) * 100.0f);
+                    if (*(short *)(rope_particles[k].particle + 0xA) <= 60) {
+                        *(short *)(rope_particles[k].particle + 0xA) = 60;
                     }
-                    add_vector_xyz(*(char * *)((char *)D_L07_0020C840_c + 20 + i * 24) + 16, *(char * *)((char *)D_L07_0020C840_c + 20 + i * 24) + 16, &extension);
+                }
+                if (rope_particles[k].segment == 1) {
+                    subtract_vector_xyz(basis, anchor, rope_particles[k].particle + 0x10);
+                    normalize_vector_xyz(basis, basis, rope_particles[k].speed);
+                    add_vector_xyz(rope_particles[k].particle + 0x10, rope_particles[k].particle + 0x10, basis);
+                    *(float *)(rope_particles[k].particle + 0xC) *= frame_scale * -0.050000012f + 1.0f;
+                } else {
+                    scale_vector_xyz(delta, delta, fraction);
+                    add_vector_xyz(rope_particles[k].particle + 0x10,
+                               rope_points[rope_particles[k].segment], delta);
+                    column = rope_particles[k].column;
+                    subtract_vector_xyz(basis, rope_grid[rope_particles[k].segment][column],
+                                  rope_points[rope_particles[k].segment]);
+                    subtract_vector_xyz(velocity, D_L07_0020DAA0[rope_particles[k].segment][column],
+                                  rope_previous_points[rope_particles[k].segment]);
+                    interpolate_vector(extension, basis, velocity, fraction);
+                    column = (column + 19) % 20;
+                    subtract_vector_xyz(direction, rope_grid[rope_particles[k].segment][column],
+                                  rope_points[rope_particles[k].segment]);
+                    subtract_vector_xyz(tangent, D_L07_0020DAA0[rope_particles[k].segment][column],
+                                  rope_previous_points[rope_particles[k].segment]);
+                    interpolate_vector(side, direction, tangent, fraction);
+                    interpolate_vector(extension, extension, side, rope_particles[k].blend);
+                    rope_particles[k].blend += rope_particles[k].blend_speed;
+                    if (rope_particles[k].blend >= 1.0f) {
+                        rope_particles[k].blend -= 1.0f;
+                        rope_particles[k].column = column;
+                    }
+                    add_vector_xyz(rope_particles[k].particle + 0x10, rope_particles[k].particle + 0x10, extension);
                 }
             }
         }
-        i++;
-    } while (i < 200);
+    }
+    }
     return minimum;
 }
-#endif
 
 #define NOT_SDA
 
@@ -2208,29 +2216,18 @@ float FUN_L07_00317e60(void *moby, void *anchor) {
 /* Pulls each pending moby toward its target point and smooths its velocity. */
 /* Ported from rac1-decomp (src/overlays/l07_umbris/vendor_00313D28.c: func_L07_0031A268), where it is exact; names translated to the US level program. */
 
-typedef struct {
-    short idx;
-    short pad;
-    float f;
-    int pad2[3];
-    char *moby;
-} L07Ent;
-
-extern L07Ent D_L07_0020C840[];
-extern char D_L07_0020DB00[];
 extern float vector_length_xyz(void *);
 extern int allocate_voice_for_target_entry(int, int, int) __asm__("FUN_0022da68");
 extern int D_L07_00161B6C_gp __asm__("D_L07_00161B6C") __attribute__((sda));
 extern int D_L07_00161B70_gp __asm__("D_L07_00161B70") __attribute__((sda));
 extern float row_phase_step_gp __asm__("D_L07_00161B7C") __attribute__((sda));
 extern void FUN_L00_002defe0(int arg0);
-extern char D_L07_0020DDC0_v[] __asm__("D_L07_0020DAF0");
 
 void FUN_L07_00318e98(int target_entry) {
     float a[4];
     float b[4];
     float c[4];
-    L07Ent *e;
+    RopeParticle *e;
     char *m;
     float len;
     int off;
@@ -2241,16 +2238,16 @@ void FUN_L07_00318e98(int target_entry) {
     D_L07_00161B70_gp = 1;
     row_phase_step_gp = row_phase_step_gp * 0.5f;
     allocate_voice_for_target_entry(10, 0, target_entry);
-    base = (char *)D_L07_0020C840;
+    base = (char *)rope_particles;
     for (i = 0; i < 200; i++) {
-        m = D_L07_0020C840[i].moby;
+        m = rope_particles[i].particle;
         if (m != 0) {
-            D_L07_0020C840[i].moby = 0;
-            subtract_vector_xyz(a, D_L07_0020DDC0_v + D_L07_0020C840[i].idx * 16,
-                                D_L07_0020DB00 + D_L07_0020C840[i].idx * 16);
+            rope_particles[i].particle = 0;
+            subtract_vector_xyz(a, (char *)rope_previous_points + rope_particles[i].segment * 16,
+                                (char *)rope_points + rope_particles[i].segment * 16);
             len = vector_length_xyz(a);
-            scale_vector_xyz(a, a, D_L07_0020C840[i].f / len);
-            add_vector_xyz(b, D_L07_0020DB00 + D_L07_0020C840[i].idx * 16, a);
+            scale_vector_xyz(a, a, rope_particles[i].distance / len);
+            add_vector_xyz(b, (char *)rope_points + rope_particles[i].segment * 16, a);
             subtract_vector_xyz(c, m + 0x10, b);
             normalize_vector_xyz(c, c, 0.03f);
             scale_vector_xyz(a, a, 0.1f / len);
@@ -2302,6 +2299,12 @@ extern struct Moby *debris_target __asm__("D_L07_00173ED8") __attribute__((secti
    solid moby or when its timer runs out, and is removed once 64 units from home. */
 void homing_mine_update(struct Moby *moby) __asm__("FUN_L07_00319040");
 void homing_mine_update(struct Moby *moby) {
+    enum {
+        HOMING_MINE_INITIALIZE = 0,
+        HOMING_MINE_WAIT_FOR_PROXIMITY = 1,
+        HOMING_MINE_START_CHASE = 2,
+        HOMING_MINE_CHASE = 3
+    };
     Mine_19040 *vars;
     f32 *health;
     char sight[0x50];
@@ -2339,13 +2342,13 @@ void homing_mine_update(struct Moby *moby) {
     }
 
     switch (moby->state) {
-    case 0:
+    case HOMING_MINE_INITIALIZE:
         moby->flags |= 0x1000;
         qcopy(&vars->home, &moby->pos);
         moby->collision = moby->pclass->collision;
         moby->state = 1;
         break;
-    case 1:
+    case HOMING_MINE_WAIT_FOR_PROXIMITY:
         timer = scale_ticks(600);
         turn = D_0015ED6C * 6.2831855f;
         vars->timeout = timer;
@@ -2363,10 +2366,10 @@ void homing_mine_update(struct Moby *moby) {
             moby->state = 2;
         }
         break;
-    case 2:
+    case HOMING_MINE_START_CHASE:
         if (moby->prev_seq != 1) FUN_00212f90(moby, 1, 0, 10);
         moby->state = 3;
-    case 3:
+    case HOMING_MINE_CHASE:
         if ((moby->anim_flags & 2) && moby->seq == 1 && moby->prev_seq != 2) {
             FUN_00212f90(moby, 2, 0, 10);
         }
@@ -2507,6 +2510,12 @@ extern void jet_animate(struct Moby *, f32) __asm__("FUN_L00_00259fe8");
 
 /* Swooper: holds at its goal, dives at the hero once it sees it and bursts on contact. */
 void FUN_L07_003196e0(struct Moby *moby) {
+    enum {
+        SWOOPER_INITIALIZE = 0,
+        SWOOPER_WAIT_AT_GOAL = 1,
+        SWOOPER_CHASE_TARGET = 2,
+        SWOOPER_EXPLODE = 3
+    };
     SwooperVars *vars;
     SwooperSpawnerVars *spawner_vars;
     SwooperSight sight;
@@ -2542,7 +2551,7 @@ void FUN_L07_003196e0(struct Moby *moby) {
         FUN_L07_00319698(moby, spawner_vars);
     }
     switch (moby->state) {
-    case 0:
+    case SWOOPER_INITIALIZE:
         if (spawner_vars == NULL) {
             break;
         }
@@ -2555,7 +2564,7 @@ void FUN_L07_003196e0(struct Moby *moby) {
         moby->state = 1;
         moby->command = 0;
         break;
-    case 1:
+    case SWOOPER_WAIT_AT_GOAL:
         subtract_vector_xyz(&vars->velocity, &vars->goal, &moby->pos);
         FUN_L00_00258278(moby, fast_arc_tan(vars->goal.f[0] - moby->pos.x, vars->goal.f[1] - moby->pos.y),
                          &vars->turn_speed, frame_time_sq * 6.2831855f, D_0015ED6C * 3.1415927f,
@@ -2578,7 +2587,7 @@ void FUN_L07_003196e0(struct Moby *moby) {
             moby->state = 2;
         }
         break;
-    case 2:
+    case SWOOPER_CHASE_TARGET:
         if ((moby->anim_flags & 2) && moby->seq == 1 && moby->prev_seq != 2) {
             blend_moby_animation((MobyAnim *)moby, 2, 0, 10);
         }
@@ -2631,7 +2640,7 @@ void FUN_L07_003196e0(struct Moby *moby) {
             FUN_L07_00319698(moby, spawner_vars);
         }
         break;
-    case 3:
+    case SWOOPER_EXPLODE:
         spawn_explosion(moby, &vars->velocity, NULL, 0.0f, 0.0f, 3, 3, 5, 2.0f, 1.0f, 4.0f, 1.0f, 2, 7.0f, 0, 1, -1, 0);
         FUN_L07_00319698(moby, spawner_vars);
         break;
@@ -2710,6 +2719,13 @@ extern float D_0015ED6C;
 
 void machinegun_turret_update(unsigned char *moby) __asm__("FUN_L07_0031a250");
 void machinegun_turret_update(unsigned char *moby) {
+    enum {
+        TURRET_INITIALIZE = 0,
+        TURRET_SWEEP_AND_FIRE = 1,
+        TURRET_HIT_SPIN = 2,
+        TURRET_LOWER_AND_REALIGN = 3,
+        TURRET_RESTORE_HEIGHT = 4
+    };
     char *data;
     char *hit;
     char *collision;
@@ -2740,7 +2756,7 @@ void machinegun_turret_update(unsigned char *moby) {
     *(u8 *)(moby + 0xa4) = 0xff;
     trooper_anim_finish(moby, animation);
     switch ((u8)moby[0x20]) {
-    case 0:
+    case TURRET_INITIALIZE:
         if (*(int *)(data + 0x70) != -1) {
             char *target = (char *)(*(int *)(data + 0x70) * 0x100 + (int)level_mobys);
             *(float *)(data + 0x80) = fast_arc_tan(*(float *)(target + 0x10) - *(float *)(moby + 0x10),
@@ -2767,7 +2783,7 @@ void machinegun_turret_update(unsigned char *moby) {
         if ((u8)moby[0x53] != 1) FUN_00212f90(moby, 1, 0, 0);
         moby[0x20] = 1;
         break;
-    case 1:
+    case TURRET_SWEEP_AND_FIRE:
         if ((u8)moby[0x52] != 1 && ((u8)moby[0x70] & 2) != 0 && (u8)moby[0x53] != 1)
             FUN_00212f90(moby, 1, 0, 1);
         if (*(s16 *)(data + 0x7e) != 0) {
@@ -2820,7 +2836,7 @@ void machinegun_turret_update(unsigned char *moby) {
             *(s16 *)(data + 0x7c) = timer << 1;
         }
         break;
-    case 2:
+    case TURRET_HIT_SPIN:
         direction = frame_time;
         if ((u8)moby[0x52] != 4 && ((u8)moby[0x70] & 2) && (u8)moby[0x53] != 4) {
             FUN_00212f90(moby, 4, 0, 1);
@@ -2831,7 +2847,7 @@ void machinegun_turret_update(unsigned char *moby) {
         *(s16 *)(data + 0x7c) = scale_game_frames(180);
         moby[0x20] = 3;
         break;
-    case 3:
+    case TURRET_LOWER_AND_REALIGN:
         if ((u8)moby[0x52] != 4 && ((u8)moby[0x70] & 2) && (u8)moby[0x53] != 4)
             FUN_00212f90(moby, 4, 0, 0);
         if (*(float *)(data + 0x90) - 0.7f < *(float *)(moby + 0x18))
@@ -2850,7 +2866,7 @@ void machinegun_turret_update(unsigned char *moby) {
             moby[0x20] = 4;
         }
         break;
-    case 4:
+    case TURRET_RESTORE_HEIGHT:
         if (*(float *)(moby + 0x18) < *(float *)(data + 0x90)) {
             *(float *)(moby + 0x18) += D_0015ED6C * 5.0f;
             return;

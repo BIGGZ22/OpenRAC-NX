@@ -56,12 +56,16 @@ extern s32 compute_clamped_count_difference(void) __asm__("FUN_00215248");
 
 #define SCRATCH ((char *)0x70000000)
 
-void FUN_00216c48(void *arg0, Menu *menu, s32 follow_entry_link) {
+void process_menu_entry(void *callback_context, Menu *menu, s32 follow_entry_link) __asm__("FUN_00216c48");
+
+void process_menu_entry(void *callback_context, Menu *menu, s32 follow_entry_link) {
     enum {
         MENU_CONDITION_PURCHASE_PRICE_MET = 1,
         MENU_CONDITION_ITEM_AVAILABLE = 2,
         MENU_CONDITION_ITEM_AVAILABLE_NOT_ACQUIRED = 3,
-        MENU_CONDITION_ALTERNATE_ITEM_AVAILABLE = 4
+        MENU_CONDITION_ALTERNATE_ITEM_AVAILABLE = 4,
+        MENU_CONDITION_COUNT_DIFFERENCE_MET = 5,
+        MENU_CONDITION_BOLT_THRESHOLD_AND_COUNT_DIFFERENCE_MET = 6
     };
     char buf[0x100];
     Suffixes sfx;
@@ -89,7 +93,7 @@ void FUN_00216c48(void *arg0, Menu *menu, s32 follow_entry_link) {
             e = (MenuItem *)(menu->unk3C + n * 0x1C);
             menu->unk8 = *(u8 *)&e->unk10 & 1;
             if (flags & 4) {
-                D_001993C0[2] = (s32)arg0;
+                D_001993C0[2] = (s32)callback_context;
                 D_001993C0[3] = (s32)menu;
                 if (e->unk4 & 0x4000) {
                     noop_callback_n((s16)(e->unk4 ^ 0x4000));
@@ -145,10 +149,10 @@ void FUN_00216c48(void *arg0, Menu *menu, s32 follow_entry_link) {
     case MENU_CONDITION_ALTERNATE_ITEM_AVAILABLE:
         ok = alternate_item_available[e->unkA] != 0;
         break;
-    case 5:
+    case MENU_CONDITION_COUNT_DIFFERENCE_MET:
         ok = !(compute_clamped_count_difference() < e->unkA);
         break;
-    case 6:
+    case MENU_CONDITION_BOLT_THRESHOLD_AND_COUNT_DIFFERENCE_MET:
         ok = current_bolt_count >= D_001DFFB0[e->unkA].unk14 && compute_clamped_count_difference() >= 4;
         break;
     default:
@@ -165,8 +169,8 @@ void FUN_00216c48(void *arg0, Menu *menu, s32 follow_entry_link) {
         menu->unk38 = world_update_time_macro;
         e = (MenuItem *)(menu->unk3C + next * 0x1C);
         menu->unk8 = *(u8 *)&e->unk10 & 1;
-        FUN_00216c48(arg0, menu, 0);
+        process_menu_entry(callback_context, menu, 0);
     }
 }
 
-extern __typeof__(FUN_00216c48) func_00216C48 __attribute__((alias("FUN_00216c48")));
+extern __typeof__(process_menu_entry) func_00216C48 __attribute__((alias("FUN_00216c48")));

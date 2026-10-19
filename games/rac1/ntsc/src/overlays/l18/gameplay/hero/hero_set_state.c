@@ -142,7 +142,7 @@ int hero_set_state(int a, int b) {
         p->rand_timer.range = 0;
     }
     switch (a) {
-    case 0: {
+    case HERO_STATE_IDLE: {
         struct Hero *p = &hero;
         p->state.control_mode = 0;
         p->unk2284 = 0;
@@ -196,7 +196,7 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 0x3D: {
+    case HERO_STATE_DYING: {
         struct Hero *p = &hero;
         p->state.control_mode = 0x14;
         p->unk2284 = 0;
@@ -495,7 +495,7 @@ int hero_set_state(int a, int b) {
         set_hero_animation(0x2E, 0, (float)scale_game_frames(5));
         break;
     }
-    case 2:
+    case HERO_STATE_RUN:
     case 0x3F:
     case 0x73: {
         struct Hero *p = &hero;
@@ -606,7 +606,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0x64, 0, (float)scale_game_frames(0xF));
         break;
     }
-    case 3: {
+    case HERO_STATE_STOP: {
         struct Hero *p = &hero;
         p->state.control_mode = 1;
         p->unk2284 = 0;
@@ -649,7 +649,7 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 4: {
+    case HERO_STATE_CROUCH: {
         struct Hero *p = &hero;
         p->state.control_mode = 0xC;
         p->unk2284 = 0;
@@ -811,7 +811,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0x2A, 0, (float)scale_game_frames(6));
         break;
     }
-    case 0x28: {
+    case HERO_STATE_GRIND: {
         struct Hero *p = &hero;
         float pos[4];
         int seg;
@@ -910,7 +910,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0x25, 0, (float)scale_game_frames(6));
         break;
     }
-    case 0x79: {
+    case HERO_STATE_SLIP: {
         struct Hero *p = &hero;
         p->state.control_mode = 2;
         p->unk2284 = 0;
@@ -919,7 +919,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0xB, 0, (float)scale_game_frames(0xC));
         break;
     }
-    case 6:
+    case HERO_STATE_FALL:
     case 0x77: {
         struct Hero *p = &hero;
         p->state.control_mode = 2;
@@ -986,7 +986,7 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 7:
+    case HERO_STATE_JUMP:
     case 9:
     case 0xA:
     case 0xB:
@@ -1442,7 +1442,7 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 0x13:
+    case HERO_STATE_WRENCH_COMBO:
     case 0x14:
     case 0x15:
     case 0x20:
@@ -1533,7 +1533,7 @@ int hero_set_state(int a, int b) {
             FUN_L00_00214ed8(11.0f, 0.87266463f, -1.0f);
             break;
         }
-        case 0x13: {
+        case HERO_STATE_WRENCH_COMBO: {
             char *h = ((char *)&item_usage);
             struct Hero *q;
             T2C_2284E0 *e;
@@ -1681,7 +1681,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0x29, 5, (float)scale_game_frames(8));
         break;
     }
-    case 0x16: {
+    case HERO_STATE_HURT: {
         struct Hero *p = &hero;
         char *r;
         p->state.control_mode = 7;
