@@ -123,6 +123,8 @@
 #define func_00212578 game_FUN_00211728
 #define func_00212658 game_FUN_00211808
 #define func_002167C0 game_FUN_00215970
+#define func_002181F0 game_FUN_00217328
+#define func_002181F0__game game_FUN_00217328__game
 #define func_00218B10 game_FUN_00217c18
 #define func_00228A58 game_FUN_00227740
 #define func_00228D20 game_FUN_00227a08
@@ -171,6 +173,8 @@
 #define func_L00_00200290 game_FUN_001fa728
 #define func_L00_00200290__game game_FUN_001fa728__game
 #define func_L00_00201300 func_L00_00201350
+#define func_L00_00211D28 game_FUN_L00_00211670
+#define func_L00_00211D28__game game_FUN_L00_00211670__game
 #define func_L00_002124E8 game_FUN_L00_00211e30
 #define func_L00_002124E8__game game_FUN_L00_00211e30__game
 #define func_L00_00212790 game_FUN_L00_002120d8
@@ -195,6 +199,7 @@
 #define func_L00_002E9A18 game_FUN_L00_002e8568
 #define func_L00_002E9A40 game_FUN_L00_002e8590
 #define func_L00_002E9AF8 game_FUN_L00_002e8648
+#define func_L00_002E9DC8 game_FUN_L00_002e8918
 #define func_L02_0020A690 func_L02_0020A390
 #define func_L02_00250720 game_FUN_L02_0024f748
 #define func_L02_00250720__game game_FUN_L02_0024f748__game
@@ -228,6 +233,8 @@
 #define RAC1_ADDR_0x0015EDA8u 0x0015ECA8u
 #define RAC1_ADDR_0x0015EDB0u 0x0015ECB0u
 #define RAC1_ADDR_0x0015EDC0u 0x0015ECC0u
+#define RAC1_ADDR_0x0015EE64u 0x0015ED64u
+#define RAC1_ADDR_0x0015EE6Cu 0x0015ED6Cu
 #define RAC1_ADDR_0x0015EE80u 0x0015ED80u
 #define RAC1_ADDR_0x0015EE84u 0x0015ED84u
 #define RAC1_ADDR_0x0015EE98u 0x0015ED98u

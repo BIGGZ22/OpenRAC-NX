@@ -252,10 +252,10 @@ int openrac_game_hud_side(void);
  * horizontal tangent is the game's times this. 1 for a 4:3 picture, and without a window. */
 float openrac_game_picture_wider(void);
 
-/* Whether the player turned lock-strafe on (settings lock_strafe; rac1: host/strafe.c): while a
- * weapon is fired the hero keeps facing the camera's way and the stick moves him sideways and
- * back. 0 without a window (no settings) or with the option off, the game's own movement. */
-int openrac_game_lock_strafe(void);
+/* How the player strafes on foot (settings strafe; rac1: host/strafe.c): 0 the game's own turning,
+ * 1 hold L2 or R2 to keep the facing he had when it went down, 2 that and, with a forward-firing
+ * weapon in hand, always facing the camera's way. 0 without a window (no settings). */
+int openrac_game_strafe_mode(void);
 
 /* A live particle the game's particle renderer would draw (rac1: PartProc): its 0x40-byte record
  * (+0x01 bits 0-1 the render kind: 0 camera-facing sprite, 1 flat quad, 2 line, 3 ribbon; +0x03

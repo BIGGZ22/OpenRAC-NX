@@ -879,9 +879,9 @@ float openrac_game_picture_wider(void) {
     return 1.0f;
 }
 
-int openrac_game_lock_strafe(void) {
+int openrac_game_strafe_mode(void) {
 #ifdef OPENRAC_FRONTEND
-    return settings::get().lock_strafe ? 1 : 0;
+    return static_cast<int>(settings::get().strafe);
 #else
     return 0;
 #endif
