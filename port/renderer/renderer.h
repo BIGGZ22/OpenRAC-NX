@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "renderer/math.h"
+#include "renderer/shadow_volume.h"
 #include "renderer/texture_pool.h"
 
 namespace openrac::renderer {
@@ -108,6 +109,9 @@ inline constexpr std::uint32_t kUiSprite = 2;
 inline constexpr std::uint32_t kUiGlyph = 1;
 
 struct FrameInput {
+    std::span<const ShadowCapsule> shadow_capsules;
+    Vec3 shadow_extrusion{};
+    std::optional<std::array<float,2>> shadow_heights;
     // The packets the game built for each bucket this frame (empty when a
     // bucket has nothing, or its renderer draws from elsewhere).
     std::array<std::span<const std::uint8_t>, kBucketCount> packets{};

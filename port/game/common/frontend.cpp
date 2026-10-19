@@ -39,10 +39,12 @@
 #include "renderer/gl.h"
 #include "renderer/gl_stats.h"
 #include "renderer/renderer.h"
+#include "renderer/shadows.h"
 #include "viewer/game_state.h"
 #include "viewer/level.h"
 #include "viewer/level_renderer.h"
 #include "viewer/moby_pose.h"
+#include "viewer/moby_shadow.h"
 #include "viewer/screenshot.h"
 
 #include <cstdio>
@@ -77,6 +79,9 @@ struct Kept {
     std::vector<std::uint32_t> addresses;  // each live moby's address, for its last matrix
     std::unordered_map<std::uint32_t, renderer::Mat4> prev_matrices;
     std::vector<viewer::LevelScene::JointColumns> palette;
+    std::vector<renderer::ShadowCapsule> shadows, prev_shadows;
+    std::uint32_t shadow_moby = 0, prev_shadow_moby = 0;
+    viewer::MobyShadowState shadow_state, prev_shadow_state;
     // The last tick's poses, by moby: where its joints start in prev_palette and how many.
     std::vector<viewer::LevelScene::JointColumns> prev_palette;
     std::unordered_map<std::uint32_t, std::pair<int, int>> prev_poses;
@@ -622,6 +627,13 @@ gaddr light_bank_address() {
     return openrac_game_front_end != nullptr ? openrac_game_front_end->light_bank : 0;
 }
 
+// The four shadow directions in each version's executable (relocated when read).
+gaddr shadow_directions_address() {
+    if (g->game == "rac1-pal") return 0x001CAE00u;
+    if (g->game == "rac1-ntsc") return 0x001CAA80u;
+    return 0;
+}
+
 // Uploads a level's geometry; while the boot program runs (the title and the main menu), the title
 // world's, or level 0's when the title world was not extracted.
 void use_level(int number) {
@@ -680,6 +692,13 @@ void use_level(int number) {
                                                           renderer::DirectRenderer::Input::Vif);
     g->renderer->add(std::make_unique<renderer::DirectBackground>(*hud), error);
     for (std::size_t layer = 0; layer < viewer::kLayerCount; ++layer) {
+        // The caster is drawn after its shadow, so its proxy cannot darken
+        // Ratchet himself. Opaque scenery has already filled the depth buffer.
+        if (shadow_directions_address() != 0 && layer == static_cast<std::size_t>(viewer::Layer::Mobys)) {
+            if (g->renderer->add(std::make_unique<renderer::ShadowRenderer>(), error) == nullptr) {
+                log::error("shadow renderer: {}", error);
+            }
+        }
         g->renderer->add(
             std::make_unique<viewer::LayerRenderer>(g->scene, static_cast<viewer::Layer>(layer)),
             error
@@ -1782,6 +1801,36 @@ void draw_kept(bool first) {
         g->renderer->textures().set_anisotropy(static_cast<float>(settings::get().anisotropy));
     }
     renderer::FrameInput input;
+    input.shadow_extrusion = k.shadow_state.extrusion;
+    if (k.shadow_state.enabled) input.shadow_heights = k.shadow_state.heights;
+    auto shadows = k.shadows;
+    if (alpha < 1.0f && k.shadow_moby != 0 && k.shadow_moby == k.prev_shadow_moby
+        && shadows.size() == k.prev_shadows.size()) {
+        const auto prev = k.prev_matrices.find(k.shadow_moby);
+        const auto now = std::find(k.addresses.begin(),k.addresses.end(),k.shadow_moby);
+        if (prev != k.prev_matrices.end() && now != k.addresses.end()
+            && same_moby(prev->second,k.live[static_cast<std::size_t>(now-k.addresses.begin())].matrix)) {
+            for (std::size_t i=0; i<shadows.size(); ++i) {
+                for (int j=0; j<3; ++j) {
+                    shadows[i].a[j] = k.prev_shadows[i].a[j] + (shadows[i].a[j]-k.prev_shadows[i].a[j])*alpha;
+                    shadows[i].b[j] = k.prev_shadows[i].b[j] + (shadows[i].b[j]-k.prev_shadows[i].b[j])*alpha;
+                }
+                shadows[i].radius_a = k.prev_shadows[i].radius_a + (shadows[i].radius_a-k.prev_shadows[i].radius_a)*alpha;
+                shadows[i].radius_b = k.prev_shadows[i].radius_b + (shadows[i].radius_b-k.prev_shadows[i].radius_b)*alpha;
+            }
+            if (k.prev_shadow_state.enabled && k.shadow_state.enabled) {
+                for (int j=0;j<3;++j)
+                    input.shadow_extrusion[j] = k.prev_shadow_state.extrusion[j]
+                        + (k.shadow_state.extrusion[j]-k.prev_shadow_state.extrusion[j])*alpha;
+                std::array<float,2> heights{};
+                for (int j=0;j<2;++j)
+                    heights[j] = k.prev_shadow_state.heights[j]
+                        + (k.shadow_state.heights[j]-k.prev_shadow_state.heights[j])*alpha;
+                input.shadow_heights = heights;
+            }
+        }
+    }
+    input.shadow_capsules = shadows;
     // No camera yet (loading, fades between programs): a black frame, not the level's background.
     const bool has_camera = k.has_camera;
     input.clear_colour = has_camera
@@ -2353,6 +2402,9 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     std::vector<std::uint32_t> live_addresses;
     std::vector<int> live_joints;
     std::vector<viewer::LevelScene::JointColumns> palette;
+    std::vector<renderer::ShadowCapsule> shadows;
+    std::uint32_t shadow_moby = 0;
+    viewer::MobyShadowState shadow_state;
     std::vector<Kept::TargetMoby> target_mobys;
     // Mobys the game drew into a texture, and the ones it drew that are not in its list. The game
     // renders some mobys into a target the 2D layer then copies onto the screen: the vendor's item
@@ -2519,6 +2571,21 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
             continue;
         }
         live_joints.push_back(instance.palette >= 0 ? joints : 0);
+        if (shadow_directions_address() != 0 && g->loaded >= 0 && g->loaded < 19 && animate
+            && m.class_id == 0 && !extra && instance.moby_light[3] < 1.5f && instance.tint[3] > 0.0f) {
+            const auto directions = OPENRAC_DATA(shadow_directions_address());
+            shadow_state = viewer::moby_shadow_state(ram, m.address, directions, state.view());
+            if (shadow_state.enabled) {
+                shadows = viewer::moby_shadows(ram, m.address, m.matrix, shadow_state.scale);
+                shadow_moby = m.address;
+            }
+            if (debug && g->index%100 == 0) {
+                log::info("Ratchet shadow: {} proxies, slot {}, table {:#x}, extrusion {:.2f} {:.2f} {:.2f}, slab {:.3f}..{:.3f}, scale {:.3f}",
+                          shadows.size(), shadow_state.direction_index, directions,
+                          shadow_state.extrusion[0], shadow_state.extrusion[1], shadow_state.extrusion[2],
+                          shadow_state.heights[0], shadow_state.heights[1], shadow_state.scale);
+            }
+        }
         live.push_back(instance);
         live_addresses.push_back(m.address);
     }
@@ -2544,6 +2611,8 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         k.live.clear();
         k.addresses.clear();
         k.joints.clear();
+        k.shadows.clear();
+        k.shadow_moby = 0;
         k.level = g->loaded;
     }
     k.prev_state = k.state;
@@ -2557,6 +2626,12 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         }
     }
     k.prev_palette = std::move(k.palette);
+    k.prev_shadows = std::move(k.shadows);
+    k.prev_shadow_moby = k.shadow_moby;
+    k.shadows = std::move(shadows);
+    k.shadow_moby = shadow_moby;
+    k.prev_shadow_state = k.shadow_state;
+    k.shadow_state = shadow_state;
     k.state = state;
     k.has_state = true;
     k.live = std::move(live);
