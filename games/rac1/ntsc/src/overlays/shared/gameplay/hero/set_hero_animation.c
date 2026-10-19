@@ -251,7 +251,7 @@ end:
 
 void blend_moby_animation(MobyAnim *arg0, int arg1, int arg2, int arg3) __asm__("FUN_00212f90");
 
-void FUN_L00_00232220(int animation_id, int a1, float blend_frames) {
+void FUN_L00_00232220(int animation_id, int frame_index, float blend_frames) {
     struct Hero *base = &hero;
     int buf[4];
     int ok;
@@ -260,7 +260,7 @@ void FUN_L00_00232220(int animation_id, int a1, float blend_frames) {
         if (base->unk227C != 0) {
             ok = FUN_L00_002321c0_u(animation_id, buf);
             if (ok != 0) {
-                blend_moby_animation(((void *)base->unk2278), buf[0], a1, (int)blend_frames);
+                blend_moby_animation(((void *)base->unk2278), buf[0], frame_index, (int)blend_frames);
             } else if (*(unsigned char *)(((char *)base->unk2278) + 0x53) != 0) {
                 blend_moby_animation(((void *)base->unk2278), 0, 0, scale_game_frames(7));
             }
@@ -534,7 +534,7 @@ extern s32 FUN_L00_002595a0_32b90(f32 *, f32 *, f32, f32, f32) __asm__("FUN_L00_
 f32 FUN_L00_00232b90(f32 a, f32 b, f32 c) {
     f32 t[4];
     V4_32b90 v;
-    V4_32b90 t1;
+    V4_32b90 trajectory_work_vector;
     V4_32b90 hero_position_copy;
     f32 o[6];
     f32 x, y, z;
@@ -567,8 +567,8 @@ f32 FUN_L00_00232b90(f32 a, f32 b, f32 c) {
         FUN_001f9bf8_32b90(&v, &v, b);
         FUN_001f9a68_32b90(&v, &v, -1.0f);
         FUN_001f9a68_32b90(t, &hero.motion.velocity, a);
-        FUN_001f9a68_32b90(&t1, &v, ((a * a + a) * 0.5f) * b);
-        FUN_001f9a10_32b90(t, &t1, t);
+        FUN_001f9a68_32b90(&trajectory_work_vector, &v, ((a * a + a) * 0.5f) * b);
+        FUN_001f9a10_32b90(t, &trajectory_work_vector, t);
         FUN_001f9a10_32b90(t, &hero.motion.pos, t);
         hero_position_copy.q = hero.motion.pos.q;
         FUN_L00_0025d238_32b90(&hero_position_copy, t);
@@ -584,15 +584,15 @@ f32 FUN_L00_00232b90(f32 a, f32 b, f32 c) {
         }
         break;
     case 2:
-        t1.f[2] = 100.0f;
-        t1.f[1] = 100.0f;
-        t1.f[0] = 100.0f;
-        FUN_001f9a28_32b90(&v, &hero.motion.pos, &t1);
+        trajectory_work_vector.f[2] = 100.0f;
+        trajectory_work_vector.f[1] = 100.0f;
+        trajectory_work_vector.f[0] = 100.0f;
+        FUN_001f9a28_32b90(&v, &hero.motion.pos, &trajectory_work_vector);
         FUN_001f9bf8_32b90(&v, &v, b);
         FUN_001f9a68_32b90(&v, &v, -1.0f);
         FUN_001f9a68_32b90(t, &hero.motion.velocity, a);
-        FUN_001f9a68_32b90(&t1, &v, ((a * a + a) * 0.5f) * b);
-        FUN_001f9a10_32b90(t, &t1, t);
+        FUN_001f9a68_32b90(&trajectory_work_vector, &v, ((a * a + a) * 0.5f) * b);
+        FUN_001f9a10_32b90(t, &trajectory_work_vector, t);
         FUN_001f9a10_32b90(t, &hero.motion.pos, t);
         hero_position_copy.q = hero.motion.pos.q;
         FUN_L00_0025d238_32b90(&hero_position_copy, t);
@@ -1341,7 +1341,7 @@ extern f32 frame_time_sq_macro __asm__("D_0015ED70") __attribute__((section(".sd
 /* The hero on a moving platform: finds the platform the hero stands on or hangs from, tracks the platform's motion
    between frames (its attach points at 0x310-0x330) and carries the hero (position, facing, ledge-grab point) with it. */
 void FUN_L00_00233f80(void) {
-    Vec_234800 probed_position, v10, v20, v30, v40, v50, primary_attachment_position, v70, secondary_attachment_position, v90, vA0;
+    Vec_234800 probed_position, unanchored_probe_rotation, v20, v30, v40, anchored_probe_rotation, primary_attachment_position, primary_attachment_rotation, secondary_attachment_position, v90, vA0;
     float sB0, sB4;
     float amt, ang;
     int mode;
@@ -1434,20 +1434,20 @@ void FUN_L00_00233f80(void) {
         }
         qcopy(&v30, &v20);
     } else if (mode == 1) {
-        probe_ground_height_cf(((Hero_234800 *)hero_233f80)->i2080, ((Hero_234800 *)hero_233f80)->p360, &((Hero_234800 *)hero_233f80)->pos, &((Hero_234800 *)hero_233f80)->v90, &probed_position, &v10);
-        ((Hero_234800 *)hero_233f80)->v90.z = v10.z;
+        probe_ground_height_cf(((Hero_234800 *)hero_233f80)->i2080, ((Hero_234800 *)hero_233f80)->p360, &((Hero_234800 *)hero_233f80)->pos, &((Hero_234800 *)hero_233f80)->v90, &probed_position, &unanchored_probe_rotation);
+        ((Hero_234800 *)hero_233f80)->v90.z = unanchored_probe_rotation.z;
         f_001f9a28(&v20, &probed_position, &((Hero_234800 *)hero_233f80)->pos);
         qcopy((Vec_234800 *)(hero_233f80 + 0x350), &v20);
     } else if (mode == 2) {
-        probe_ground_height_cf(((Hero_234800 *)hero_233f80)->i2080, ((Hero_234800 *)hero_233f80)->p360, &((Hero_234800 *)hero_233f80)->pos, &((Hero_234800 *)hero_233f80)->v90, &v40, &v50);
-        FUN_L00_002604f0(((Hero_234800 *)hero_233f80)->i2080, ((Hero_234800 *)hero_233f80)->p360, &((Hero_234800 *)hero_233f80)->v310, &((Hero_234800 *)hero_233f80)->v320, &primary_attachment_position, &v70);
+        probe_ground_height_cf(((Hero_234800 *)hero_233f80)->i2080, ((Hero_234800 *)hero_233f80)->p360, &((Hero_234800 *)hero_233f80)->pos, &((Hero_234800 *)hero_233f80)->v90, &v40, &anchored_probe_rotation);
+        FUN_L00_002604f0(((Hero_234800 *)hero_233f80)->i2080, ((Hero_234800 *)hero_233f80)->p360, &((Hero_234800 *)hero_233f80)->v310, &((Hero_234800 *)hero_233f80)->v320, &primary_attachment_position, &primary_attachment_rotation);
         FUN_L00_002604f0(((Hero_234800 *)hero_233f80)->i2080, ((Hero_234800 *)hero_233f80)->p360, &((Hero_234800 *)hero_233f80)->v330, &((Hero_234800 *)hero_233f80)->v320, &secondary_attachment_position, &v90);
         if ((((Hero_234800 *)hero_233f80)->i2084 == 1 || ((Hero_234800 *)hero_233f80)->i2084 == 0x1E) && ((Hero_234800 *)hero_233f80)->b20A5 != 0) {
-            ((Hero_234800 *)hero_233f80)->v90.z = v50.z;
+            ((Hero_234800 *)hero_233f80)->v90.z = anchored_probe_rotation.z;
         } else if (((Hero_234800 *)hero_233f80)->i364 & 2) {
-            ((Hero_234800 *)hero_233f80)->v90.z = v70.z;
+            ((Hero_234800 *)hero_233f80)->v90.z = primary_attachment_rotation.z;
         } else {
-            ((Hero_234800 *)hero_233f80)->v90.z = v50.z;
+            ((Hero_234800 *)hero_233f80)->v90.z = anchored_probe_rotation.z;
         }
         if (((Hero_234800 *)hero_233f80)->i364 & 1) {
             if ((unsigned int)(((Hero_234800 *)hero_233f80)->i2084 - 0x18) < 2) {

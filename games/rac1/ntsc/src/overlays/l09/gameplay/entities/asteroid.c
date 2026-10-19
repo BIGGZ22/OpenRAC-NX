@@ -736,7 +736,7 @@ void FUN_L09_002eaea8(Moby *m) {
             add_vector_xyz(v2, v2, d->pos);
             add_vector_xyz(v3, v2, collision_probe_offset);
             if (FUN_001efa68(v2, v3, 4, (int)m, 0) != 0 && D_L09_00173FE8 > 26.5f) {
-                float v4[4];
+                float scaled_movement_step[4];
                 V6_2EC188 A;
                 V6_2EC188 B;
                 float extra;
@@ -744,7 +744,7 @@ void FUN_L09_002eaea8(Moby *m) {
                 int h;
                 extra = 0.0f;
                 if (len < 7.0f) extra = 7.0f - len;
-                scale_vector_xyz_c(v4, movement_step, 0.1f);
+                scale_vector_xyz_c(scaled_movement_step, movement_step, 0.1f);
                 for (i = 7; i >= 0; i--) {
                     float s;
                     float sc;
@@ -766,7 +766,7 @@ void FUN_L09_002eaea8(Moby *m) {
                         int lo = scale_game_frames(25), hi = scale_game_frames(30);
                         b = FUN_L00_00257b90(lo, hi);
                     }
-                    FUN_L00_0026a9f0(d->pos, v4, *pa, *pb, a, b, 0, 0, 400000.0f, sc);
+                    FUN_L00_0026a9f0(d->pos, scaled_movement_step, *pa, *pb, a, b, 0, 0, 400000.0f, sc);
                 }
                 for (i = 9; i >= 0; i--) {
                     FUN_L09_002ea528_c((char *)m, movement_step);
@@ -960,7 +960,7 @@ void asteroid_update(struct Moby *m) __asm__("FUN_L09_002eb970");
 void asteroid_update(struct Moby *m) {
     Data_2ECC50 *d = (*(Data_2ECC50 **)&m->pvars);
     Path_2ECC50 *path;
-    float v0[4];
+    float displacement_vector[4];
     float endpoint_offset[4];
     float len;
     float dot;
@@ -988,9 +988,9 @@ void asteroid_update(struct Moby *m) {
                 struct Moby *q = func_L09_002EBA58_2ECC50();
                 if (q != 0) {
                     Data_2ECC50 *e = (*(Data_2ECC50 **)&q->pvars);
-                    subtract_vector_xyz(v0, e->target, e);
-                    normalize_vector_xyz_c3(v0, v0, random_float_between_c3(0.0f, vector_length_xyz_c3(v0) - 32.0f));
-                    add_vector_xyz(e, e, v0);
+                    subtract_vector_xyz(displacement_vector, e->target, e);
+                    normalize_vector_xyz_c3(displacement_vector, displacement_vector, random_float_between_c3(0.0f, vector_length_xyz_c3(displacement_vector) - 32.0f));
+                    add_vector_xyz(e, e, displacement_vector);
                 }
             }
             for (i = 0; i < 50; i++) {
@@ -1000,9 +1000,9 @@ void asteroid_update(struct Moby *m) {
                     int n = random_integer_below_c3(ring->n - 2);
                     float t = random_float_between_c3(0.0f, 1.0f);
                     e->node = n;
-                    subtract_vector_xyz(v0, ring->pts[n + 1], ring->pts[n]);
-                    scale_vector_xyz_c2(v0, v0, t);
-                    add_vector_xyz(e->target, v0, ring->pts[n]);
+                    subtract_vector_xyz(displacement_vector, ring->pts[n + 1], ring->pts[n]);
+                    scale_vector_xyz_c2(displacement_vector, displacement_vector, t);
+                    add_vector_xyz(e->target, displacement_vector, ring->pts[n]);
                     qcopy(((f32 *)&q->pos), e->target);
                     add_vector_xyz(((f32 *)&q->pos), ring->pts[0], e);
                     add_vector_xyz(((f32 *)&q->pos), ((f32 *)&q->pos), D_L09_00166F40);
@@ -1041,11 +1041,11 @@ void asteroid_update(struct Moby *m) {
         }
     }
     if (d->node == 0) {
-        subtract_vector_xyz(v0, path->pts[1], path->pts[0]);
-        len = vector_length_xyz_c3(v0);
-        normalize_vector_xyz_c3(v0, v0, 1.0f);
+        subtract_vector_xyz(displacement_vector, path->pts[1], path->pts[0]);
+        len = vector_length_xyz_c3(displacement_vector);
+        normalize_vector_xyz_c3(displacement_vector, displacement_vector, 1.0f);
         subtract_vector_xyz(endpoint_offset, ((f32 *)&m->pos), path->pts[0]);
-        dot = fast_vec_dot(endpoint_offset, v0);
+        dot = fast_vec_dot(endpoint_offset, displacement_vector);
         if (dot < 0.0f) {
             dot = 0.0f;
         }
@@ -1054,11 +1054,11 @@ void asteroid_update(struct Moby *m) {
             m->alpha = 0x80;
         }
     } else if (d->node == path->n - 2) {
-        subtract_vector_xyz(v0, path->pts[path->n - 2], path->pts[path->n - 1]);
-        len = vector_length_xyz_c3(v0);
-        normalize_vector_xyz_c3(v0, v0, 1.0f);
+        subtract_vector_xyz(displacement_vector, path->pts[path->n - 2], path->pts[path->n - 1]);
+        len = vector_length_xyz_c3(displacement_vector);
+        normalize_vector_xyz_c3(displacement_vector, displacement_vector, 1.0f);
         subtract_vector_xyz(endpoint_offset, ((f32 *)&m->pos), path->pts[path->n - 1]);
-        dot = fast_vec_dot(endpoint_offset, v0);
+        dot = fast_vec_dot(endpoint_offset, displacement_vector);
         if (dot < 0.0f) {
             dot = 0.0f;
         }

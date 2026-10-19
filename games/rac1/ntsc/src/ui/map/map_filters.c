@@ -47,15 +47,15 @@ int map_filter_l02_0(void) {
    `arg1 >= 0xC8` is retail's second test of $a1. */
 int map_filter_l01_3(void *arg0, int arg1, float unused1, float unused2, float arg3) __asm__("func_002069D0");
 
-int map_filter_l01_3(void *unused_input, int arg1, float unused1, float unused2, float reveal_test_value) {
+int map_filter_l01_3(void *unused_input, int reveal_test_selector, float unused1, float unused2, float reveal_test_value) {
     struct Hero *s = &hero;
     int b = s->state.control_mode == 16;
     int a = s->state.control_mode == 17 || s->state.control_mode == 18 || s->base_condition == 1;
 
-    if (arg1 < 0xC8 && reveal_test_value >= 39.5f && reveal_test_value <= 42.5f && !a) {
+    if (reveal_test_selector < 0xC8 && reveal_test_value >= 39.5f && reveal_test_value <= 42.5f && !a) {
         return 1;
     }
-    if (arg1 >= 0xC8 && reveal_test_value >= 87.0f && !b) {
+    if (reveal_test_selector >= 0xC8 && reveal_test_value >= 87.0f && !b) {
         return 1;
     }
     return 0;
@@ -68,10 +68,10 @@ extern unsigned char D_0013D396 NOT_SDA;
    return 0 per arm becomes sltu. */
 int map_filter_l01_4(int arg0, float unused1, float unused2, float arg1) __asm__("func_00206A90");
 
-int map_filter_l01_4(int arg0, float unused1, float unused2, float reveal_test_value) {
+int map_filter_l01_4(int reveal_test_selector, float unused1, float unused2, float reveal_test_value) {
     int is16 = D_001413DC[0] == 0x10;
 
-    if (arg0 < 0x100) {
+    if (reveal_test_selector < 0x100) {
         if (D_0013D396 != 0) {
             return 1;
         }
@@ -86,8 +86,8 @@ int map_filter_l01_4(int arg0, float unused1, float unused2, float reveal_test_v
    field reads. */
 int map_filter_l01_5(int arg0, float unused1, float unused2, float arg1) __asm__("func_00206B10");
 
-int map_filter_l01_5(int arg0, float unused1, float unused2, float reveal_test_value) {
-    if (arg0 < 0x100) {
+int map_filter_l01_5(int reveal_test_selector, float unused1, float unused2, float reveal_test_value) {
+    if (reveal_test_selector < 0x100) {
         struct Hero *s = &hero;
         return s->state.control_mode == 17 || s->state.control_mode == 18 || s->base_condition == 1;
     }
@@ -309,8 +309,8 @@ extern int D_001A03B8 NOT_SDA;
    c.lt/bc1t; the second arm's `return 0` cross-jumps into the first's. */
 int map_filter_l07_5(void *arg0, int arg1, float unused1, float unused2, float arg3) __asm__("func_00207250");
 
-int map_filter_l07_5(void *unused_input, int arg1, float unused1, float unused2, float reveal_test_value) {
-    if (arg1 < 0x9D) {
+int map_filter_l07_5(void *unused_input, int reveal_test_selector, float unused1, float unused2, float reveal_test_value) {
+    if (reveal_test_selector < 0x9D) {
         if (reveal_test_value < 73.5f || reveal_test_value > 80.0f || D_001A03C0 == 0) {
             return 0;
         }
@@ -384,8 +384,8 @@ s32 map_filter_l07_7(s32 px, s32 py, f32 fparg0, f32 fparg1, f32 fparg2) {
 extern unsigned char menu_item_enabled_41 __asm__("D_0013D3BD") NOT_SDA;
 int map_filter_l08_0(int arg0, int arg1) __asm__("func_00207480");
 
-int map_filter_l08_0(int unused_input, int arg1) {
-    if (arg1 >= 0x101) {
+int map_filter_l08_0(int unused_input, int reveal_test_selector) {
+    if (reveal_test_selector >= 0x101) {
         return D_001413DC[0] == 0xF;
     }
     return menu_item_enabled_41 != 0;
@@ -397,8 +397,8 @@ int map_filter_l08_0(int unused_input, int arg1) {
    and the compare are ps2eeas's (tools/ps2eeas_nops.py). */
 int map_filter_l08_1(int arg0, float unused1, float unused2, float arg1) __asm__("func_002074B0");
 
-int map_filter_l08_1(int arg0, float unused1, float unused2, float reveal_test_value) {
-    if (arg0 < 0xE0) {
+int map_filter_l08_1(int reveal_test_selector, float unused1, float unused2, float reveal_test_value) {
+    if (reveal_test_selector < 0xE0) {
         return (reveal_test_value >= 47.75f) ? 1 : 0;
     }
     return (reveal_test_value < 29.0f) ? 1 : 0;
@@ -409,8 +409,8 @@ int map_filter_l08_1(int arg0, float unused1, float unused2, float reveal_test_v
    a plain `? 1 : 0`. */
 int map_filter_l08_2(int arg0, float unused1, float unused2, float arg1) __asm__("func_00207508");
 
-int map_filter_l08_2(int arg0, float unused1, float unused2, float reveal_test_value) {
-    if (arg0 < 0xE0) {
+int map_filter_l08_2(int reveal_test_selector, float unused1, float unused2, float reveal_test_value) {
+    if (reveal_test_selector < 0xE0) {
         return (reveal_test_value >= 44.0f && reveal_test_value <= 45.0f) ? 1 : 0;
     }
     return (reveal_test_value >= 37.0f) ? 1 : 0;
@@ -434,8 +434,8 @@ int map_filter_l08_3(int frame, float unused0, float unused1, float value) {
    and after the compare, are ps2eeas's (tools/ps2eeas_nops.py). */
 int map_filter_l08_4(int arg0, float unused1, float unused2, float arg1) __asm__("func_002075F8");
 
-int map_filter_l08_4(int arg0, float unused1, float unused2, float reveal_test_value) {
-    if (arg0 >= 0xE0) {
+int map_filter_l08_4(int reveal_test_selector, float unused1, float unused2, float reveal_test_value) {
+    if (reveal_test_selector >= 0xE0) {
         return 0;
     }
     return (reveal_test_value <= 38.0f) ? 1 : 0;
@@ -495,8 +495,8 @@ int map_filter_l09_2(void) {
    residual. */
 int map_filter_l10_0(int arg0, float unused1, float unused2, float arg1) __asm__("func_00207690");
 
-int map_filter_l10_0(int arg0, float unused1, float unused2, float reveal_test_value) {
-    if (arg0 >= 0xBE)
+int map_filter_l10_0(int reveal_test_selector, float unused1, float unused2, float reveal_test_value) {
+    if (reveal_test_selector >= 0xBE)
         return menu_item_enabled_68[0] != 0;
     return (reveal_test_value >= 58.5f) ? 1 : 0;
 }
@@ -545,8 +545,8 @@ int map_filter_l10_5(void) {
 extern unsigned char D_0013D3DE NOT_SDA;
 int map_filter_l11_0(int arg0, float unused1, float unused2, float arg1) __asm__("func_00207720");
 
-int map_filter_l11_0(int arg0, float unused1, float unused2, float reveal_test_value) {
-    if (arg0 < 0xDD) {
+int map_filter_l11_0(int reveal_test_selector, float unused1, float unused2, float reveal_test_value) {
+    if (reveal_test_selector < 0xDD) {
         return reveal_test_value >= 232.0f && reveal_test_value <= 235.0f && D_0013D3DE != 0;
     }
     return (reveal_test_value <= 180.0f) ? 1 : 0;
@@ -556,8 +556,8 @@ int map_filter_l11_0(int arg0, float unused1, float unused2, float reveal_test_v
 extern unsigned char D_0013D3DF NOT_SDA;
 int map_filter_l11_1(int arg0, float unused1, float unused2, float arg1) __asm__("func_002077A0");
 
-int map_filter_l11_1(int arg0, float unused1, float unused2, float reveal_test_value) {
-    if (arg0 < 0xDD) {
+int map_filter_l11_1(int reveal_test_selector, float unused1, float unused2, float reveal_test_value) {
+    if (reveal_test_selector < 0xDD) {
         return (reveal_test_value >= 242.0f) ? 1 : 0;
     }
     return reveal_test_value <= 180.0f && D_0013D3DF != 0;
@@ -567,8 +567,8 @@ int map_filter_l11_1(int arg0, float unused1, float unused2, float reveal_test_v
 extern unsigned char D_0013D3E0 NOT_SDA;
 int map_filter_l11_2(int arg0, float unused1, float unused2, float arg1) __asm__("func_00207800");
 
-int map_filter_l11_2(int arg0, float unused1, float unused2, float reveal_test_value) {
-    if (arg0 < 0xDD) {
+int map_filter_l11_2(int reveal_test_selector, float unused1, float unused2, float reveal_test_value) {
+    if (reveal_test_selector < 0xDD) {
         return (reveal_test_value >= 238.0f && reveal_test_value <= 241.0f) ? 1 : 0;
     }
     return reveal_test_value <= 180.0f && D_0013D3E0 != 0;
@@ -580,11 +580,11 @@ int map_filter_l11_2(int arg0, float unused1, float unused2, float reveal_test_v
    other arm is func_00208160's second test with D_0013D3E2. */
 int map_filter_l11_3(int arg0, float unused1, float unused2, float arg1) __asm__("func_00207880");
 
-int map_filter_l11_3(int arg0, float unused1, float unused2, float reveal_test_value) {
+int map_filter_l11_3(int reveal_test_selector, float unused1, float unused2, float reveal_test_value) {
     struct Hero *s = &hero;
     int a = s->state.control_mode == 17 || s->state.control_mode == 18 || s->base_condition == 1;
 
-    if (arg0 < 0x15F) {
+    if (reveal_test_selector < 0x15F) {
         return (reveal_test_value >= 200.0f) ? a : 0;
     }
     return reveal_test_value >= 233.0f && reveal_test_value <= 235.0f && D_0013D3E2[0] != 0;
@@ -617,10 +617,10 @@ int map_filter_l11_5(void) {
    is ps2eeas's (tools/ps2eeas_nops.py). */
 int map_filter_l12_0(void *arg0, int arg1, float unused1, float unused2, float arg3) __asm__("func_002079D8");
 
-int map_filter_l12_0(void *unused_input, int arg1, float unused1, float unused2, float reveal_test_value) {
+int map_filter_l12_0(void *unused_input, int reveal_test_selector, float unused1, float unused2, float reveal_test_value) {
     int r = 1;
 
-    if (arg1 < 0x141 && !(63.5f <= reveal_test_value)) {
+    if (reveal_test_selector < 0x141 && !(63.5f <= reveal_test_value)) {
         r = 0;
     }
     return r;

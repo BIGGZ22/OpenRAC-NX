@@ -420,7 +420,7 @@ extern void allocate_voice_for_target_entry(int, int, int) __asm__("FUN_0022da68
 void FUN_L13_002c25b8(unsigned char *moby) {
     unsigned char *d = *(unsigned char **)(moby + 0x78);
     unsigned char *target;
-    float v0[4], shot_direction_vector[4], z[4];
+    float scratch_vector[4], shot_direction_vector[4], z[4];
     float f;
     float *rot;
     float *pos;
@@ -460,10 +460,10 @@ void FUN_L13_002c25b8(unsigned char *moby) {
         pos = (float *)(moby + 0x10);
         z[0] = 0.0f;
         f = distance_xyz(pos, D_L13_001600EC + index + 0x30);
-        subtract_vector_xyz(v0, D_L13_001600EC + *(int *)(d + 0xD4) * 128 + 0x30, pos);
+        subtract_vector_xyz(scratch_vector, D_L13_001600EC + *(int *)(d + 0xD4) * 128 + 0x30, pos);
         advance_accelerated_scalar(f, frame_time_sq * 10.0f, frame_time_sq * 10.0f, frame_time * 20.0f, z, (float *)(d + 0xF0));
-        normalize_vector_xyz(v0, v0, *(float *)(d + 0xF0));
-        add_vector_xyz(pos, pos, v0);
+        normalize_vector_xyz(scratch_vector, scratch_vector, *(float *)(d + 0xF0));
+        add_vector_xyz(pos, pos, scratch_vector);
         if (f < 0.1f && *(float *)(d + 0xF0) < 0.01f) {
             if (moby[0x53] != 0) blend_moby_animation_c13(moby, 0, 0, 10);
             moby[0xBC] = 0;
@@ -499,9 +499,9 @@ void FUN_L13_002c25b8(unsigned char *moby) {
         case 3:
             if (tick_countdown_32_alt(d + 0xE8)) {
                 *(int *)(d + 0xE8) = scale_game_frames_alt(60);
-                if (*(int *)(d + 0xF4) != 0) moby_point_position(moby, 1, v0);
-                else moby_point_position(moby, 0, v0);
-                subtract_vector_xyz(shot_direction_vector, target + 0x10, v0);
+                if (*(int *)(d + 0xF4) != 0) moby_point_position(moby, 1, scratch_vector);
+                else moby_point_position(moby, 0, scratch_vector);
+                subtract_vector_xyz(shot_direction_vector, target + 0x10, scratch_vector);
                 normalize_vector_xyz(shot_direction_vector, shot_direction_vector, D_L13_0016149C * frame_time);
                 if (*(int *)(d + 0xF4) != 0) {
                     if (*(void **)(d + 0xF8)) {
@@ -556,8 +556,8 @@ void FUN_L13_002c25b8(unsigned char *moby) {
         }
         break;
     case 8:
-        clear_u64_value(v0);
-        func_L00_0025F4A8_alt(moby, v0, moby + 0x10, 0.0f, 0.0f, 10, 3, 16, 4.0f, 2.0f, 9.0f, 1.0f, 2, 15.0f, 1, 1, -1, 0);
+        clear_u64_value(scratch_vector);
+        func_L00_0025F4A8_alt(moby, scratch_vector, moby + 0x10, 0.0f, 0.0f, 10, 3, 16, 4.0f, 2.0f, 9.0f, 1.0f, 2, 15.0f, 1, 1, -1, 0);
         if (*(void **)(d + 0xF8)) mark_moby_for_removal(*(void **)(d + 0xF8));
         if (*(void **)(d + 0xFC)) mark_moby_for_removal(*(void **)(d + 0xFC));
         mark_moby_for_removal(moby);
@@ -1125,7 +1125,7 @@ void FUN_L13_002c4428(Moby_2C56B0 *moby) {
     int close = 0;
     char *path;
     float hpos[4];
-    float v30[4];
+    float scratch_vector[4];
     float spawn_position[4];
     float vehicle_lead_offset[4];
 
@@ -1168,9 +1168,9 @@ void FUN_L13_002c4428(Moby_2C56B0 *moby) {
         Moby_2C56B0 *p;
         if (d->fBC == -1 || (p = (Moby_2C56B0 *)(D_L13_0015FFD8 + (d->fBC << 8))) == 0 || p->state == 0xFE
             || p->state == 0xFD || p->bBC == 4) {
-            normalize_vector_xyz(v30, D_L13_001670C0 + 0x84, 40.0f);
-            subtract_vector_xyz_c(v30, D_L13_001670C0, v30);
-            d->hB6 = d->hB4 = FUN_L01_0028b510(v30, path, 0.0f);
+            normalize_vector_xyz(scratch_vector, D_L13_001670C0 + 0x84, 40.0f);
+            subtract_vector_xyz_c(scratch_vector, D_L13_001670C0, scratch_vector);
+            d->hB6 = d->hB4 = FUN_L01_0028b510(scratch_vector, path, 0.0f);
             qcopy(&d->v90, path + (d->hB6 * 16 + 0x10));
             qcopy(&moby->pos, &d->v90);
             moby->f94 = moby->cls->f10;
@@ -1266,16 +1266,16 @@ void FUN_L13_002c4428(Moby_2C56B0 *moby) {
                         cross_vectors_xyz(up, lateral_aim_offset, &vehd->vel);
                         normalize_vector_xyz(up, up, d->fAC * 5.0f * fast_sin(d->fB0));
                         normalize_vector_xyz(lateral_aim_offset, lateral_aim_offset, d->fAC * 5.0f * fast_cos(d->fB0));
-                        add_vector_xyz(v30, hpos, up);
-                        add_vector_xyz(v30, v30, lateral_aim_offset);
-                        FUN_L00_0025f8e0(v30, 0.6f);
+                        add_vector_xyz(scratch_vector, hpos, up);
+                        add_vector_xyz(scratch_vector, scratch_vector, lateral_aim_offset);
+                        FUN_L00_0025f8e0(scratch_vector, 0.6f);
                         lead = vector_distance(&moby->pos, ((char *)&D_0013F3D0));
                         normalize_vector_xyz(vehicle_lead_offset, &vehd->vel, vehd->f64 * (lead / (vehd->f64 + D_0015ED6C * 50.0f)));
-                        add_vector_xyz(v30, v30, vehicle_lead_offset);
-                        subtract_vector_xyz_c(v30, v30, &moby->pos);
-                        normalize_vector_xyz(spawn_position, v30, 2.6f);
+                        add_vector_xyz(scratch_vector, scratch_vector, vehicle_lead_offset);
+                        subtract_vector_xyz_c(scratch_vector, scratch_vector, &moby->pos);
+                        normalize_vector_xyz(spawn_position, scratch_vector, 2.6f);
                         add_vector_xyz(spawn_position, spawn_position, &moby->pos);
-                        FUN_L11_00308f48((int)moby, v30, spawn_position, 121.0f, D_0015ED6C * 50.0f, 5.0f);
+                        FUN_L11_00308f48((int)moby, scratch_vector, spawn_position, 121.0f, D_0015ED6C * 50.0f, 5.0f);
                         func_0022ED80_s(0, 0, (int)moby);
                     }
                     d->fAC = d->fAC * ((random_float_between(0.92f, 0.94f) - 1.0f) * D_0015ED60 + 1.0f);
@@ -1306,11 +1306,11 @@ void FUN_L13_002c4428(Moby_2C56B0 *moby) {
             }
             d->fD4 = -1;
         }
-        subtract_vector_xyz_c(v30, D_L13_001670C0, &moby->pos);
-        func_L00_0025F4A8_alt(moby, v30, 0, 0.0f, 0.0f, 5, 3, 10, 4.0f, 3.0f, 9.0f, 1.1f, -1, 20.0f, 0, 1, -1, 0);
-        normalize_vector_xyz(v30, v30, 4.0f);
-        subtract_vector_xyz_c(spawn_position, &moby->pos, v30);
-        scale_vector_xyz(v30, &d->vel, 0.5f);
+        subtract_vector_xyz_c(scratch_vector, D_L13_001670C0, &moby->pos);
+        func_L00_0025F4A8_alt(moby, scratch_vector, 0, 0.0f, 0.0f, 5, 3, 10, 4.0f, 3.0f, 9.0f, 1.1f, -1, 20.0f, 0, 1, -1, 0);
+        normalize_vector_xyz(scratch_vector, scratch_vector, 4.0f);
+        subtract_vector_xyz_c(spawn_position, &moby->pos, scratch_vector);
+        scale_vector_xyz(scratch_vector, &d->vel, 0.5f);
         switch (rand() % 10) {
         case 0:
             FUN_L13_002e1c50((char *)spawn_position, 0xE0);

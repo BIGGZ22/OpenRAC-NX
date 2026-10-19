@@ -207,7 +207,7 @@ f32 FUN_001f9b48_c(void *, V_cf58 *) __asm__("FUN_001f9b48");
 #include "rnc/overlay/path.h"
 void find_grind_rail(void) __asm__("FUN_L00_0020cf58");
 void find_grind_rail(void) {
-    V_cf58 v0, v1, third_proximity_point;
+    V_cf58 proximity_or_rail_point, proximity_or_query_position, third_proximity_point;
 
     s32 a, b, e;
     f32 c;
@@ -219,29 +219,29 @@ void find_grind_rail(void) {
     if (hero.unk1C8 != 0)
         return;
     if (current_level_index == 16) {
-        *(OvlQuad *)&v0 = 0;
-        v0.x = 115.0f;
-        v0.y = 264.0f;
-        v0.z = 133.0f;
-        if (12.0f < FUN_001f9b48_c(&hero.motion.pos, &v0)) {
-            *(OvlQuad *)&v1 = 0;
-            v1.x = 257.0f;
-            v1.y = 301.0f;
-            v1.z = 128.0f;
-            if (12.0f < FUN_001f9b48_c(&hero.motion.pos, &v1))
+        *(OvlQuad *)&proximity_or_rail_point = 0;
+        proximity_or_rail_point.x = 115.0f;
+        proximity_or_rail_point.y = 264.0f;
+        proximity_or_rail_point.z = 133.0f;
+        if (12.0f < FUN_001f9b48_c(&hero.motion.pos, &proximity_or_rail_point)) {
+            *(OvlQuad *)&proximity_or_query_position = 0;
+            proximity_or_query_position.x = 257.0f;
+            proximity_or_query_position.y = 301.0f;
+            proximity_or_query_position.z = 128.0f;
+            if (12.0f < FUN_001f9b48_c(&hero.motion.pos, &proximity_or_query_position))
                 return;
         }
     } else if (current_level_index == 14) {
-        *(OvlQuad *)&v0 = 0;
-        v0.x = 157.0f;
-        v0.y = 265.0f;
-        v0.z = 51.0f;
-        if (12.0f < FUN_001f9b48_c(&hero.motion.pos, &v0)) {
-            *(OvlQuad *)&v1 = 0;
-            v1.x = 162.0f;
-            v1.y = 341.0f;
-            v1.z = 48.0f;
-            if (12.0f < FUN_001f9b48_c(&hero.motion.pos, &v1)) {
+        *(OvlQuad *)&proximity_or_rail_point = 0;
+        proximity_or_rail_point.x = 157.0f;
+        proximity_or_rail_point.y = 265.0f;
+        proximity_or_rail_point.z = 51.0f;
+        if (12.0f < FUN_001f9b48_c(&hero.motion.pos, &proximity_or_rail_point)) {
+            *(OvlQuad *)&proximity_or_query_position = 0;
+            proximity_or_query_position.x = 162.0f;
+            proximity_or_query_position.y = 341.0f;
+            proximity_or_query_position.z = 48.0f;
+            if (12.0f < FUN_001f9b48_c(&hero.motion.pos, &proximity_or_query_position)) {
                 *(OvlQuad *)&third_proximity_point = 0;
                 third_proximity_point.x = 308.0f;
                 third_proximity_point.y = 104.0f;
@@ -251,11 +251,11 @@ void find_grind_rail(void) {
             }
         }
     } else if (current_level_index == 6) {
-        *(OvlQuad *)&v0 = 0;
-        v0.x = 177.0f;
-        v0.y = 304.0f;
-        v0.z = 143.0f;
-        if (14.0f < FUN_001f9b48_c(&hero.motion.pos, &v0))
+        *(OvlQuad *)&proximity_or_rail_point = 0;
+        proximity_or_rail_point.x = 177.0f;
+        proximity_or_rail_point.y = 304.0f;
+        proximity_or_rail_point.z = 143.0f;
+        if (14.0f < FUN_001f9b48_c(&hero.motion.pos, &proximity_or_rail_point))
             return;
     }
     s = hero.state.control_mode;
@@ -269,17 +269,17 @@ void find_grind_rail(void) {
                 return;
         }
     }
-    *(OvlQuad *)&v1 = *(OvlQuad *)&hero.motion.pos;
-    if (!nearest_rail_point((OvlQuad *)&v1, &a, &v0, &b, &c, &e, 0, 0))
+    *(OvlQuad *)&proximity_or_query_position = *(OvlQuad *)&hero.motion.pos;
+    if (!nearest_rail_point((OvlQuad *)&proximity_or_query_position, &a, &proximity_or_rail_point, &b, &c, &e, 0, 0))
         return;
     if (hero.state.current == 41 && hero.unk5C4 != 0 && a == hero.unk560)
         return;
-    d = hero.motion.pos.f[2] - v0.z;
+    d = hero.motion.pos.f[2] - proximity_or_rail_point.z;
     if (!(-0.5f < d))
         return;
     if (!(d < 0.57f) && hero.unk1CA == 0)
         return;
-    qcopy(&hero.unk500, &v0);
+    qcopy(&hero.unk500, &proximity_or_rail_point);
     hero.unk560 = a;
     hero.unk564 = b;
     hero.unk568 = c;
@@ -3156,7 +3156,7 @@ extern CollisionHit HH __asm__("D_L00_00173E40") __attribute__((section(".data")
 #define HF(o) (*(f32 *)(D_L00_00173E40 + (o)))
 
 void FUN_L00_002127b8(void) {
-    V collision_ray_end, ground_ray_start, v20, side_ray_start, v40, v50, v60;
+    V collision_ray_end, ground_ray_start, ground_offset_or_angles, side_ray_start, v40, side_hit_angles, side_hit_normal;
     f32 f;
     s32 r;
     s32 i;
@@ -3249,8 +3249,8 @@ void FUN_L00_002127b8(void) {
         sceVu0Normalize(&hero.unk270, (u8 *)&HH.normal_x);
         hero.ground_slope.f = FUN_L00_00233d30((u8 *)&HH.normal_x);
         hero.downhill_yaw = FUN_001f9e90_c(HH.normal_x, HH.normal_y);
-        fast_vec_sub(&v20, &hero.ground_point, &hero.motion.pos);
-        if (0.0f < FUN_001f9ab0_c(&v20, &hero.unk270)) {
+        fast_vec_sub(&ground_offset_or_angles, &hero.ground_point, &hero.motion.pos);
+        if (0.0f < FUN_001f9ab0_c(&ground_offset_or_angles, &hero.unk270)) {
             hero.ground_distance = -hero.ground_distance;
         }
         if (hero.ground_distance < 0.02f) {
@@ -3301,12 +3301,12 @@ d1:
     if (!(hero.ground_distance < 0.25f)) {
         return;
     }
-    FUN_L00_00216078(&hero.unk270, &v20);
-    if (-0.78539819f < v20.f[1] && v20.f[1] < 0.78539819f) {
-        hero.ground_pitch.f = v20.f[1];
+    FUN_L00_00216078(&hero.unk270, &ground_offset_or_angles);
+    if (-0.78539819f < ground_offset_or_angles.f[1] && ground_offset_or_angles.f[1] < 0.78539819f) {
+        hero.ground_pitch.f = ground_offset_or_angles.f[1];
     }
-    if (-0.78539819f < v20.f[0] && v20.f[0] < 0.78539819f) {
-        hero.unk2E8.f = v20.f[0];
+    if (-0.78539819f < ground_offset_or_angles.f[0] && ground_offset_or_angles.f[0] < 0.78539819f) {
+        hero.unk2E8.f = ground_offset_or_angles.f[0];
     }
     for (i = 0; i < 2; i++) {
         a = 1.5707964f;
@@ -3321,13 +3321,13 @@ d1:
             if (0.4f < FUN_001f99c0(f)) {
                 hero.unk2C0.f[i] = 0.0f;
             }
-            sceVu0Normalize(&v60, (u8 *)&HH.normal_x);
-            FUN_L00_00216078(&v60, &v50);
-            if (-0.78539819f < v50.f[1] && v50.f[1] < 0.78539819f) {
-                hero.unk2C8.f[i] = v50.f[1];
+            sceVu0Normalize(&side_hit_normal, (u8 *)&HH.normal_x);
+            FUN_L00_00216078(&side_hit_normal, &side_hit_angles);
+            if (-0.78539819f < side_hit_angles.f[1] && side_hit_angles.f[1] < 0.78539819f) {
+                hero.unk2C8.f[i] = side_hit_angles.f[1];
             }
-            if (-0.78539819f < v50.f[0] && v50.f[0] < 0.78539819f) {
-                hero.unk2D0.f[i] = v50.f[0];
+            if (-0.78539819f < side_hit_angles.f[0] && side_hit_angles.f[0] < 0.78539819f) {
+                hero.unk2D0.f[i] = side_hit_angles.f[0];
             }
         } else {
             hero.unk2C0.i[i] = 0;
@@ -3624,7 +3624,7 @@ void FUN_L00_00213880(void)
 {
     Vec4 old_pos;
     Vec4 tmp;
-    Vec4 tmp2;
+    Vec4 gravity_axis_velocity;
     f32 limit;
     f32 d;
     f32 w;
@@ -3703,15 +3703,15 @@ void FUN_L00_00213880(void)
     }
     normalize_vector_xyz(&hero.motion.unk130, &tmp, d);
 
-    qcopy(&tmp2, &hero.motion.velocity);
-    FUN_L00_00233ba0((float *)&tmp2, (float *)&tmp2, 0.0f);
+    qcopy(&gravity_axis_velocity, &hero.motion.velocity);
+    FUN_L00_00233ba0((float *)&gravity_axis_velocity, (float *)&gravity_axis_velocity, 0.0f);
     FUN_L00_00233ba0((float *)&hero.motion.unk120, (float *)&hero.motion.unk120, 0.0f);
     normalize_vector_xyz(&hero.motion.unk120, &hero.motion.unk120, 1.0f);
-    d = dot_vectors_xyz(&hero.motion.unk120, &tmp2);
+    d = dot_vectors_xyz(&hero.motion.unk120, &gravity_axis_velocity);
     if (d < 0.0f) {
         d = 0.0f;
     }
-    normalize_vector_xyz(&hero.motion.unk120, &tmp2, d);
+    normalize_vector_xyz(&hero.motion.unk120, &gravity_axis_velocity, d);
 
     hero.motion.speed_xy = vector_length_xyz(&hero.motion.unk110);
     hero.motion.unk164 = vector_length_xy(&hero.motion.unk110);

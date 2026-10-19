@@ -45,11 +45,11 @@ void follow_camera_build_view(u8 *p) {
     f32 r0;
     f32 g2, g3, e2, h2;
     f32 g, r, d, e, t, x, h;
-    f32 v0[4];
+    f32 vector_scratch[4];
     f32 projected_reference_position[4];
     f32 projected_camera_position[4];
     f32 view_direction[4];
-    f32 v4[4];
+    f32 adjusted_aim_position[4];
 
     base = D_L00_00166E10_2e9010;
     q = *(u8 **)(p + 0x70);
@@ -66,13 +66,13 @@ void follow_camera_build_view(u8 *p) {
         up = D_L00_00166E30;
         tb = base + 0x20;
         g = FUN_001f9ab0_2e9010(q + 0x80, tb);
-        FUN_001f9a68_2e9010(v0, tb, g);
-        FUN_001f9a28_2e9010(projected_reference_position, q + 0x80, v0);
+        FUN_001f9a68_2e9010(vector_scratch, tb, g);
+        FUN_001f9a28_2e9010(projected_reference_position, q + 0x80, vector_scratch);
         q2 = *(u8 **)(p + 0x70);
         q130 = q2 + 0x130;
         g = FUN_001f9ab0_2e9010(p + 0x30, tb);
-        FUN_001f9a68_2e9010(v0, tb, g);
-        FUN_001f9a28_2e9010(projected_camera_position, p + 0x30, v0);
+        FUN_001f9a68_2e9010(vector_scratch, tb, g);
+        FUN_001f9a28_2e9010(projected_camera_position, p + 0x30, vector_scratch);
         FUN_001f9a28_2e9010(view_direction, projected_reference_position, projected_camera_position);
         r0 = FUN_001f9af0_2e9010(view_direction);
         if (0.05f <= r0) {
@@ -89,12 +89,12 @@ void follow_camera_build_view(u8 *p) {
                                0.004f, 0.2f, 0.0f);
         d = *(f32 *)(q20 + 0x8) - g2;
         *(f32 *)(q20 + 0x4) = g2;
-        FUN_001f9a68_2e9010(v0, up, -FUN_001f9ab0_2e9010(q2 + 0x140, up));
-        FUN_001f9a28_2e9010(v0, v0, view_direction);
-        w = (u8 *)v4;
-        FUN_001f9a28_2e9010(w, p + 0x30, v0);
-        FUN_001f9a68_2e9010(v0, up, -d);
-        FUN_001f9a28_2e9010(w, w, v0);
+        FUN_001f9a68_2e9010(vector_scratch, up, -FUN_001f9ab0_2e9010(q2 + 0x140, up));
+        FUN_001f9a28_2e9010(vector_scratch, vector_scratch, view_direction);
+        w = (u8 *)adjusted_aim_position;
+        FUN_001f9a28_2e9010(w, p + 0x30, vector_scratch);
+        FUN_001f9a68_2e9010(vector_scratch, up, -d);
+        FUN_001f9a28_2e9010(w, w, vector_scratch);
         FUN_001f9a28_2e9010(view_direction, w, p + 0x30);
         r = FUN_001f9af0_2e9010(view_direction);
         if (r != 0.0f) {
@@ -228,15 +228,15 @@ extern short D_L00_00161D00 __attribute__((sda));
 void follow_camera_orbit(int arg) {
     char *m = (char *)arg;
     char *d = *(char **)(m + 0x70);
-    float t0[4];
-    float t1[4];
-    float t2[4];
-    float t3[4];
-    float t4[4];
-    float t5[4];
-    float t6[4];
+    float reference_up_projection[4];
+    float projected_reference_offset[4];
+    float current_up_projection[4];
+    float projected_current_offset[4];
+    float orbit_cross_scratch[4];
+    float rotated_orbit_offset[4];
+    float scaled_up_offset[4];
     float t7[4];
-    float t8[4];
+    float forward_clamp_axis[4];
     float tb[4];
     float x, bc, e, e1, y, h, r, i, s, len;
     char *base = D_L00_00166E10;
@@ -258,33 +258,33 @@ void follow_camera_orbit(int arg) {
     r = fast_arc_sin(h / bc);
     i = rope_spring_turn(d + 0x154, r, y, *(float *)&D_L00_00161CFC, *(float *)&D_L00_00161D00,
                          0.0f);
-    fast_vec_scale(t0, up, e1);
-    subtract_vector_xyz(t1, p130, t0);
-    fast_vec_scale(t2, up, h);
-    subtract_vector_xyz(t3, p140, t2);
-    e = fast_vec_dot(t1, t3);
-    x = fast_vec_length(t1);
-    x = x * fast_vec_length(t3);
+    fast_vec_scale(reference_up_projection, up, e1);
+    subtract_vector_xyz(projected_reference_offset, p130, reference_up_projection);
+    fast_vec_scale(current_up_projection, up, h);
+    subtract_vector_xyz(projected_current_offset, p140, current_up_projection);
+    e = fast_vec_dot(projected_reference_offset, projected_current_offset);
+    x = fast_vec_length(projected_reference_offset);
+    x = x * fast_vec_length(projected_current_offset);
     r = 1.5707964f - fast_arc_sin(e / x);
     x = rope_spring_turn(d + 0x150, 0.0f, r, *(float *)&D_L00_00161CF4,
                          *(float *)&D_L00_00161CF8, 0.0f);
-    fast_vec_cross(t4, t3, up);
-    s = (fast_vec_dot(t4, t1) >= 0.0f) ? 1.0f : -1.0f;
+    fast_vec_cross(orbit_cross_scratch, projected_current_offset, up);
+    s = (fast_vec_dot(orbit_cross_scratch, projected_reference_offset) >= 0.0f) ? 1.0f : -1.0f;
     base2 = D_L00_00166E10;
     fw = base2 + 0x30;
-    build_look_at_matrix(t5, t3, up, x * s);
-    fast_vec_cross(t4, up, t5);
-    build_look_at_matrix(t5, t5, t4, i);
-    fast_vec_normalize(p140, t5, bc);
-    fast_vec_scale(t6, up, *(float *)(p130 + 0x30));
-    add_vector_xyz(t7, t6, d + 0xA0);
+    build_look_at_matrix(rotated_orbit_offset, projected_current_offset, up, x * s);
+    fast_vec_cross(orbit_cross_scratch, up, rotated_orbit_offset);
+    build_look_at_matrix(rotated_orbit_offset, rotated_orbit_offset, orbit_cross_scratch, i);
+    fast_vec_normalize(p140, rotated_orbit_offset, bc);
+    fast_vec_scale(scaled_up_offset, up, *(float *)(p130 + 0x30));
+    add_vector_xyz(t7, scaled_up_offset, d + 0xA0);
     e = fast_vec_dot(p140, fw);
     len = fast_vec_length(p140);
     if (len != 0.0f) {
         x = 1.5707964f - fast_arc_sin(e / len);
         if (absolute_float(x) < 0.2617994f) {
-            fast_vec_cross(t8, p140, fw);
-            build_look_at_matrix(p140, p140, t8,
+            fast_vec_cross(forward_clamp_axis, p140, fw);
+            build_look_at_matrix(p140, p140, forward_clamp_axis,
                                  fast_subtract_rotations(0.2617994f, absolute_float(x)));
             *(float *)(p130 + 0x28) = 0.0f;
             *(float *)(p130 + 0x20) = 0.0f;
