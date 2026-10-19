@@ -6,8 +6,12 @@
  *   D_L00_00161EA8 -> 00161DD8: guess
  */
 
+/* The quadword helpers in plain C: hostgen maps only the decompilation's own qcopy, qcopy_nc and
+ * qzero to the runtime's, and wrote these renamed copies' inline assembly as nothing (every
+ * copy through them was lost). Four words in order, as the lq/sq pair moves them. */
 static __inline__ void qcopy_c00_2ebe70(void *dst, void *src) {
-    __asm__ __volatile__("lq $2,0x0(%1)\n\tsq $2,0x0(%0)" : : "r"(dst), "r"(src) : "$2", "memory");
+    int *d_ = (int *)dst, *s_ = (int *)src;
+    d_[0] = s_[0]; d_[1] = s_[1]; d_[2] = s_[2]; d_[3] = s_[3];
 }
 extern void func_00214D28_ED320_c00_2ebe70(float, float, void *) __asm__("func_00213ED8");
 extern void func_001F9BF0_ED320_c00_2ebe70(void *, void *, void *) __asm__("func_001F9A28");
