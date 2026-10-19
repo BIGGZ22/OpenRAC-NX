@@ -53,7 +53,6 @@ func_L00_00200290	same	2026-10-18	2e43062c	e37035d6e384	3 calls (level 00)
 func_L00_00251388	same	2026-10-18	2e43062c	cd020170aa78	3 calls (level 00)
 func_001FD3E8	unchecked	2026-10-18	6a72939b	9c67e6b82e94	every captured state was skipped (nothing compared)
 func_0022FDC0	same	2026-10-18	2e43062c	e6946a6ea535	3 calls
-func_L00_00244AE0	differs	2026-10-18	6a72939b	0462e7bd65e5	level 00: func_L00_00244AE0.0.f1219.snap: DIFFERS;     word at 00199e00: ours 00000000, retail 80ad5f40 (before 00000000)
 func_L00_001F3958	same	2026-10-18	2e43062c	5497d8a9ddcd	3 calls (level 00)
 func_L00_001F3988	same	2026-10-18	2e43062c	d4c917ac09d0	3 calls (level 00)
 func_L00_001FF040	same	2026-10-18	2e43062c	d4ed93d3fec2	3 calls (level 00)
