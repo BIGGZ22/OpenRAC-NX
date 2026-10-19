@@ -1136,6 +1136,37 @@ class Places(unittest.TestCase):
             self.assertIn("GFN(void (*)(gaddr, gaddr, float), OPENRAC_LCODE(0, 0x001FF500u))(", text)
             self.assertNotIn("GFN(void (*)(float, gaddr, gaddr)", text)
             self.assertIn("GFN(float (*)(gaddr, gaddr, float), OPENRAC_LCODE(0, 0x0025BE00u))(", text)
+            import abicheck
+            problems, stats = abicheck.check(out)
+            self.assertEqual(problems, [])
+            self.assertEqual(stats["known"], 2)
+
+    def test_abicheck_finds_a_call_whose_positions_differ(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            gen = Path(tmp)
+            (gen / "game_protos.h").write_text(
+                "void func_L00_001FF500(gaddr a0, gaddr a1, float a2);\nint func_00100000(gaddr a0);\n")
+            (gen / "functions.c").write_text(
+                "static const openrac_fn_entry k_exe[] = {\n"
+                "    {0x00100000u, (openrac_host_fn)func_00100000, \"func_00100000\"},\n};\n"
+                "static const openrac_fn_entry k_overlay_00[] = {\n"
+                "    {0x001FF500u, (openrac_host_fn)func_L00_001FF500, \"func_L00_001FF500\"},\n};\n")
+            (gen / "a.c").write_text(
+                "void func_L05_002D1688(gaddr moby)\n{\n"
+                "    GFN(void (*)(float, gaddr, gaddr), OPENRAC_LCODE(0, 0x001FF500u))(1.0f, moby, moby);\n"
+                "    GFN(void (*)(gaddr, gaddr, float), OPENRAC_LCODE(0, 0x001FF500u))(moby, moby, 1.0f);\n"
+                "    float x = GFN(float (*)(gaddr), OPENRAC_CODE(0x00100000u))(moby);\n"
+                "    GFN(float (*)(gaddr), OPENRAC_CODE(0x00100000u))(moby);\n"
+                "    GFN(void (*)(float), GREF(gaddr, moby))(x);\n"
+                "}\n")
+            import abicheck
+            problems, stats = abicheck.check(gen)
+            self.assertEqual(len(problems), 2, problems)
+            self.assertIn("a.c:3:", problems[0])
+            self.assertIn("argument 1", problems[0])
+            self.assertIn("a.c:5:", problems[1])
+            self.assertIn("reads a float result, returns int", problems[1])
+            self.assertEqual(stats, {"calls": 5, "known": 4, "unknown": 1})
 
     def test_an_entry_inside_a_catalogue_place_answers_calls(self):
         # hostgen.json "entries": rac1's HUD gauge draw starts 0x20 bytes into its catalogue place.

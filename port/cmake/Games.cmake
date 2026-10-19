@@ -172,6 +172,9 @@ function(openrac_add_game config)
     JOB_POOL openrac_hostgen
     VERBATIM)
   add_custom_target(openrac_${target_id}_hostgen DEPENDS "${gen}/hostgen.stamp")
+  # Every call through a known code address passes its arguments as the function there takes them,
+  # by position (Windows x64) as well as by kind (tools/hostgen/abicheck.py).
+  add_test(NAME ${id}_call_abi COMMAND "${Python3_EXECUTABLE}" "${hostgen_dir}/abicheck.py" "${gen}")
 
   # The game: generated C, and the game's own host C if it has any.
   file(GLOB host CONFIGURE_DEPENDS "${config_dir}/host/*.c")

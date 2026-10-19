@@ -64,7 +64,11 @@ does what the EE did:
   order does not matter; on Windows x64 an argument's position decides
   its register, and rac1/ntsc 0.8.0 crashed on Rilgar where a creature
   declared level 0's `scale(float *out, float *a, float len)` as
-  `(float, void *, void *)`.
+  `(float, void *, void *)`. [abicheck.py](abicheck.py) reads the generated
+  C, `functions.c` and `game_protos.h` and lists every call through a
+  known address whose type differs from the function there by position or
+  by the kind of its result; the port's ctest runs it for each game
+  (`<id>_call_abi`).
 
 ### What it does not translate
 
