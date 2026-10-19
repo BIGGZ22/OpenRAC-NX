@@ -1,5 +1,8 @@
 /* Carried from the PAL decompilation's nonmatching/shared/func_L00_002C9DC8.c (games/rac1) through the version
- * map (../../README.md): functional C, not matched C. Names and addresses are this version's. */
+ * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
+ * With PAL's later corrections (nonmatching/functional/func_L00_002C9DC8.c), both in the US assembly
+ * (config/us/overlays/asm/FUN_L00_002c89e8.s): the position bounds are 1021.0 (0x447F4000), not 1023.0,
+ * and state 3's spiral offset scale is 0.05 (0x3D4CCCCD), not 0.1. */
 #include "types.h"
 #include "qcopy.h"
 #include "qzero.h"
@@ -69,9 +72,9 @@ void FUN_L00_002c89e8(char *m) {
     if (m == 0) return;
     s = *(char **)(m + 0x78);
     if (s == 0) return;
-    if (*(float *)(m + 0x10) < 2.0f || 1023.0f < *(float *)(m + 0x10) ||
-        *(float *)(m + 0x14) < 2.0f || 1023.0f < *(float *)(m + 0x14) ||
-        *(float *)(m + 0x18) < 2.0f || 1023.0f < *(float *)(m + 0x18)) {
+    if (*(float *)(m + 0x10) < 2.0f || 1021.0f < *(float *)(m + 0x10) ||
+        *(float *)(m + 0x14) < 2.0f || 1021.0f < *(float *)(m + 0x14) ||
+        *(float *)(m + 0x18) < 2.0f || 1021.0f < *(float *)(m + 0x18)) {
         func_0020C828(m);
         return;
     }
@@ -231,7 +234,7 @@ void FUN_L00_002c89e8(char *m) {
             if (cnt >= 8) {
                 *(short *)(s + 0x38) = func_001F9688(0xF);
             } else {
-                f20 = 0.1f;
+                f20 = 0.05f;
                 f21 = 6.2831855f;
                 f22 = 0.25f;
                 f0 = func_001F9DC8(((float)*(int *)(s + 0x3C)) * f21 * f22);
