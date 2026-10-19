@@ -9,6 +9,7 @@ use crate::actions::{self, ActionFile, ActionView, Context, Inputs, Plan, Platfo
 use crate::catalog::{self, Version};
 use crate::config::Config;
 use crate::install::{self, InstallState};
+use crate::port_build;
 use crate::status::{self, DiscState, VersionStatus};
 
 #[derive(Debug, Clone, Serialize)]
@@ -44,6 +45,9 @@ pub struct VersionView {
     pub version: Version,
     pub status: VersionStatus,
     pub actions: Vec<ActionView>,
+    /// The game is built, but from an older OpenRAC than the checkout holds now (an update): it is
+    /// built again from scratch before it is played (port_build.rs).
+    pub port_outdated: bool,
 }
 
 /// A version's status, with the disc image a set-up from the player's disc
@@ -109,7 +113,9 @@ pub fn library(config: &Config) -> Result<Library, String> {
                         option: None,
                     };
                     let actions = views(file.as_ref().and_then(|f| f.versions.get(&version.key)), &ctx);
-                    VersionView { version, status, actions }
+                    let built = actions.iter().any(|a| a.id == "play" && a.this_platform && a.done);
+                    let port_outdated = built && port_build::outdated(&root, &version.key.replace('/', "-"));
+                    VersionView { version, status, actions, port_outdated }
                 })
                 .collect(),
             id: game.id,

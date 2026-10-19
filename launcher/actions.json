@@ -288,6 +288,27 @@
         "todo": "Run it from the desktop app on each platform. tools/build_port.py ran from a shell on Windows 11 (Visual Studio 2026, Clang 21): an incremental build, a rerun of hostgen, nothing to do. Another copy of the decompilation is chosen once, with tools/build_port.py --source DIR; the launcher has no setting for it yet."
       },
       {
+        "id": "port-rebuild",
+        "label": "Rebuild the game from scratch",
+        "description": "Deletes everything built before and compiles the game again from the start, keeping the decompilation and disc it was built from. The launcher does this after an update, when the game was built by an older OpenRAC. A few minutes.",
+        "kind": "build",
+        "area": "port",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "tools/build_port.py",
+          "rac1-pal",
+          "--disc",
+          "{disc}",
+          "--clean"
+        ],
+        "cwd": ".",
+        "requires": [
+          "python"
+        ],
+        "docs": "port/README.md"
+      },
+      {
         "id": "port-levels",
         "label": "Get the levels ready",
         "description": "Reads the levels from your disc into the form the game draws: the worlds behind the menus and all 19 levels, in assets/port/rac1/pal. About half a minute and 1 GB, once.",
@@ -757,6 +778,27 @@
         ],
         "docs": "port/README.md",
         "todo": "The same step as PAL's: tools/build_port.py builds the version of the disc set up. Run it from the desktop app on each platform."
+      },
+      {
+        "id": "port-rebuild",
+        "label": "Rebuild the game from scratch",
+        "description": "Deletes everything built before and compiles the game again from the start, keeping the decompilation and disc it was built from. The launcher does this after an update, when the game was built by an older OpenRAC. A few minutes.",
+        "kind": "build",
+        "area": "port",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "tools/build_port.py",
+          "rac1-ntsc",
+          "--disc",
+          "{disc}",
+          "--clean"
+        ],
+        "cwd": ".",
+        "requires": [
+          "python"
+        ],
+        "docs": "port/README.md"
       },
       {
         "id": "port-levels",

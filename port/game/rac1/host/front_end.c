@@ -50,4 +50,5 @@ const openrac_front_end rac1_front_end = {
     .level = RAC1_ADDR(0x0015EE84u),
     .dialog = RAC1_ADDR(0x00193400u),
     .title_exit = RAC1_ADDR(0x0015F690u),
+    .ship_state = RAC1_ADDR(0x0013E150u),
 };

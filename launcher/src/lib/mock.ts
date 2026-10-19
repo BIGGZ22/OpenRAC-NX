@@ -383,6 +383,7 @@ function library(): Library {
           progress: progress(key),
           status: st,
           actions: (actions.versions[key] ?? []).map((a) => view(a, st)),
+          portOutdated: false,
         };
       });
       return { id: g.id, title: g.title, year: g.year ?? null, install: installState(g.id), versions };

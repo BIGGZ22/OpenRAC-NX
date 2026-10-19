@@ -236,7 +236,7 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       tone: "ok",
     };
   }
-  const building = jobOf(v, ["port-build", "port-levels", "port-levels-check"]);
+  const building = jobOf(v, ["port-build", "port-rebuild", "port-levels", "port-levels-check"]);
   if (building) {
     return {
       ...base,
@@ -245,17 +245,23 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       icon: "x",
       hint: phaseLabel(building),
       job: building,
-      status: building.actionId === "port-build" ? "Building…" : "Getting ready…",
+      status:
+        building.actionId.startsWith("port-") && building.actionId.endsWith("build") ? "Building…" : "Getting ready…",
       tone: "warn",
     };
   }
   if (play.runnable) {
+    // Play never builds: an outdated game is only pointed at Rebuild the game, in the menu.
+    const rebuild = action(v, "port-rebuild");
     return {
       ...base,
       kind: "play",
       label: "Play",
       icon: "play",
-      hint: "",
+      hint:
+        v.portOutdated && rebuild?.runnable
+          ? "OpenRAC was updated since this game was built. Rebuild the game, in the menu, to play the new version."
+          : "",
       primary: true,
       status: "Ready to play",
       tone: "ok",
@@ -313,16 +319,14 @@ const freshVersion = (v: VersionView) =>
   app.library?.games.flatMap((g) => g.versions).find((x) => x.key === v.key) ?? v;
 
 /**
- * Everything playing still needs, in order: the game built for this computer as its sources are
- * now, then the levels read and checked (prepareLevels). The build comes first even when a game is
- * already built (only what changed is redone): the levels' check runs the game, and a game older
- * than its sources refuses levels of a newer format, so they would be read again for nothing and
- * fail the same check again. True when the game can be played.
+ * Everything playing still needs, in order: the game built for this computer if it is not built
+ * yet, then the levels read and checked (prepareLevels). A game already built is not built again
+ * here: only Rebuild the game, in the menu, does that. True when the game can be played.
  */
 export async function prepare(v: VersionView): Promise<boolean> {
   const scope = { kind: "version" as const, key: v.key };
   const build = action(v, "port-build");
-  if (build?.runnable) {
+  if (build?.runnable && !action(v, "play")?.done) {
     if (!(await runChain(scope, [build]))) return false;
     await refresh();
   }
@@ -395,13 +399,6 @@ export async function playerAct(v: VersionView, state: PlayerState): Promise<voi
     return;
   }
   if (state.kind !== "play") return;
-  // A computer that builds the game builds it again first: only what changed is redone (a moment
-  // when nothing did), so Play always starts the game as its sources are now, never an old build.
-  const build = action(v, "port-build");
-  if (build?.runnable) {
-    if (!(await runChain(scope, [build]))) return;
-    await refresh();
-  }
-  const act = action(freshVersion(v), "play");
+  const act = action(v, "play");
   if (act?.runnable) await run(scope, act);
 }

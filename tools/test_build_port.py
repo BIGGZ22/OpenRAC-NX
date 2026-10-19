@@ -118,6 +118,48 @@ class Commands(unittest.TestCase):
         self.assertIn("-DCMAKE_C_COMPILER=C:/LLVM/bin/clang.exe", steps[0])
         self.assertNotIn("-DCMAKE_C_COMPILER=other", steps[0])
 
+    def test_a_clean_build_keeps_the_folders_choices(self):
+        cache = build_port.parse_cache(CACHE)
+        cache["OPENRAC_RAC1_PAL_RETAIL_IMAGE"] = "/discs/rac1.iso"
+        kept = build_port.kept_choices(cache)
+        self.assertEqual(kept, {"OPENRAC_RAC1_PAL_SOURCE": "C:/work/rac1-decomp",
+                                "OPENRAC_RAC1_PAL_RETAIL_IMAGE": "/discs/rac1.iso"})
+        steps = build_port.commands("cmake", "release", self.build, ["rac1-pal"], None, {}, kept=kept)
+        self.assertEqual(steps[0], ["cmake", "--preset", "release", "-DOPENRAC_RAC1_PAL_SOURCE=C:/work/rac1-decomp",
+                                    "-DOPENRAC_RAC1_PAL_RETAIL_IMAGE=/discs/rac1.iso"])
+        # A --source given with --clean wins over the kept one.
+        steps = build_port.commands("cmake", "release", self.build, ["rac1-pal"], Path("/new/rac1"), {}, kept=kept)
+        self.assertIn("-DOPENRAC_RAC1_PAL_SOURCE=" + Path("/new/rac1").as_posix(), steps[0])
+        self.assertNotIn("-DOPENRAC_RAC1_PAL_SOURCE=C:/work/rac1-decomp", steps[0])
+
+
+class Stamp(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.build = Path(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def read(self):
+        import json
+        return json.loads((self.build / "openrac-build.json").read_text(encoding="utf-8"))
+
+    def test_a_build_records_its_version_commit_and_games(self):
+        build_port.write_stamp(self.build, ["rac1-pal"])
+        stamp = self.read()
+        self.assertEqual(stamp["version"], build_port.checkout_version())
+        self.assertEqual(stamp["commit"], build_port.checkout_commit())
+        self.assertEqual(stamp["games"], ["rac1-pal"])
+        # Another game built from the same checkout joins it.
+        build_port.write_stamp(self.build, ["rac1-ntsc"])
+        self.assertEqual(self.read()["games"], ["rac1-ntsc", "rac1-pal"])
+
+    def test_a_build_from_another_checkout_starts_the_list_again(self):
+        (self.build / "openrac-build.json").write_text('{"version": "0.0.1", "commit": null, "games": ["rac1-pal"]}')
+        build_port.write_stamp(self.build, ["rac1-ntsc"])
+        self.assertEqual(self.read()["games"], ["rac1-ntsc"])
+
 
 class CommandLine(unittest.TestCase):
     def refused(self, argv):

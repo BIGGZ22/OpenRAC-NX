@@ -139,6 +139,9 @@ typedef struct openrac_front_end {
     gaddr level;      /* the level being played, or -1 */
     gaddr dialog;     /* the front end's dialog: +0 its kind, +0x1C its step (logged) */
     gaddr title_exit; /* the title loop's exit (logged) */
+    gaddr ship_state; /* the ship's sequence word: 4 the flight through space (the flight world),
+                         others drawn on the planet (0 take-off, 8 landing, 3 and 7 leaving it);
+                         0 for a game without one */
 } openrac_front_end;
 
 extern const openrac_front_end* openrac_game_front_end;
