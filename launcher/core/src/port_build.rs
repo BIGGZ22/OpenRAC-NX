@@ -40,7 +40,11 @@ pub fn checkout_commit(root: &Path) -> Option<String> {
     let git_dir = if dot_git.is_file() {
         let text = std::fs::read_to_string(&dot_git).ok()?;
         let named = PathBuf::from(text.trim().strip_prefix("gitdir:")?.trim());
-        if named.is_absolute() { named } else { root.join(named) }
+        if named.is_absolute() {
+            named
+        } else {
+            root.join(named)
+        }
     } else {
         dot_git
     };
@@ -53,7 +57,11 @@ pub fn checkout_commit(root: &Path) -> Option<String> {
     let common = match std::fs::read_to_string(git_dir.join("commondir")) {
         Ok(text) => {
             let named = PathBuf::from(text.trim());
-            if named.is_absolute() { named } else { git_dir.join(named) }
+            if named.is_absolute() {
+                named
+            } else {
+                git_dir.join(named)
+            }
         }
         Err(_) => git_dir.clone(),
     };
