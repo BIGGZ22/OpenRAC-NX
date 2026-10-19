@@ -348,6 +348,7 @@ class Card(unittest.TestCase):
         self.assertEqual(card.chunk(out, card.OWNED)[15], 1)
         self.assertEqual(struct.unpack_from("<i", card.chunk(out, card.AMMO), 4 * 15)[0], 200)
         self.assertEqual(sum(card.chunk(out, card.PLANETS)[1:17]), 16)
+        self.assertEqual(card.chunk(out, card.FLAGS)[card.SAVE_NOTICE_SEEN], 1, "the save notice seen")
         bad = bytearray(save)
         bad[20] ^= 1
         with self.assertRaises(ValueError):

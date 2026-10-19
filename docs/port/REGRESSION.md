@@ -247,7 +247,11 @@ copy's five slots from the first saved game on it: every weapon and gadget
 owned with full ammo, Ultra Nanotech, the planets the ship reaches unlocked,
 9,999,999 bolts, and slot 0 to 4 resuming on Rilgar, Orxon, Gemlik Base,
 Hoven and Kalebo III (the save editor's planets: Veldin and Drek's Fleet are
-reached by the story). `card.py` is the launcher's save format
+reached by the story). It also marks the save notice seen (story flag
+0x10): a level shows that notice once after Load Game, on every level but
+the first Veldin, and holds the game in mode 4 until Cross, so a card whose first save
+was made before it (on Veldin) would keep every loaded route from control.
+`card.py` is the launcher's save format
 (`launcher/core/src/save_edit.rs`) in Python: the checksums are written
 again, so the game loads it. A route with `"card": "prepared"` plays on a
 fresh copy of it in its run folder: the player's card is never touched.

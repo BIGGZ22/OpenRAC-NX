@@ -3,11 +3,11 @@
 """The prepared memory card for the routes that load a game (docs/port/REGRESSION.md).
 
 A copy of a card (the player's by default, only read), with its five slots rewritten from the
-first saved game on it: every weapon and gadget owned with full ammo, Ultra Nanotech, every
-planet the ship reaches unlocked, the bolt counter full, and each slot resuming on another
-planet (SLOT_PLANETS). The format and what each chunk means are the launcher's save editor's
-(launcher/core/src/save_edit.rs, which documents them); this is the same encoding in Python,
-so the harness needs no Rust build. The copy lives in build/regress/cards/<game>/card, and each
+first saved game on it: every weapon and gadget owned with full ammo, Ultra Nanotech, the save
+notice seen (SAVE_NOTICE_SEEN), every planet the ship reaches unlocked, the bolt counter full,
+and each slot resuming on another planet (SLOT_PLANETS). The format and what each chunk means
+are the launcher's save editor's (launcher/core/src/save_edit.rs, which documents them); this is
+the same encoding in Python, so the harness needs no Rust build. The copy lives in build/regress/cards/<game>/card, and each
 run plays on a fresh copy of it (runner.py), never on the player's card.
 """
 
@@ -38,6 +38,14 @@ ITEMS = {2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 9: 0, 10: 40, 11: 20, 12: 0, 13: 20
          30: 0, 31: 0, 32: 0, 33: 0, 34: 0, 35: 0}
 VENDOR_ITEMS = (10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 24, 25)
 QUICK_SELECT = (15, 10, 16, 19, 11, 17, 25, 23)   # Blaster, Bomb Glove, Pyrocitor, Tesla, ...
+# Story flags (chunk 5, gSpecialItems: PAL 0x13D490, US 0x13D388): [4] and [5] the nanotech, and
+# [0x10] the save notice seen. The level's frame update (PAL LevelFrameUpdate, func_L00_00299250;
+# US FUN_L00_00297f78) shows that notice once, on any level but 0, while the flag is clear and the
+# word before the flags (PAL 0x13D48C, US 0x13D384) is set, as it is after Load Game: the freeze
+# screen's kind 5 (help text 0x4E2B, game mode 4) holds the game until Cross, and the flag is set.
+# From a base save made before that notice (a first save on Veldin), every loaded route would wait
+# there, before control.
+PREMIUM, ULTRA, SAVE_NOTICE_SEEN = 4, 5, 0x10
 SHIP_PLANETS = range(1, 17)
 MAX_BOLTS = 9_999_999
 
@@ -122,7 +130,8 @@ def prepared(save: bytes, planet: int) -> bytes:
     set_i32(chunk(glob, PLANET), 0, planet)
     set_i32(chunk(glob, BOLTS), 0, MAX_BOLTS)
     flags = chunk(glob, FLAGS)
-    flags[4] = flags[5] = 1          # Premium and Ultra Nanotech
+    flags[PREMIUM] = flags[ULTRA] = 1  # Premium and Ultra Nanotech
+    flags[SAVE_NOTICE_SEEN] = 1      # or the notice waits for Cross before control
     set_i32(chunk(glob, MAX_HEALTH), 0, 8)
     owned, acquired, ammo, stock = chunk(glob, OWNED), chunk(glob, ACQUIRED), chunk(glob, AMMO), chunk(glob, VENDOR)
     for item, limit in ITEMS.items():
