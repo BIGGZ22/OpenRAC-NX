@@ -3322,11 +3322,27 @@ bool make_instance(const Config& config, bool validation, std::string& error) {
         layers.push_back("VK_LAYER_KHRONOS_validation");
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
+    // A driver that carries out only part of Vulkan (MoltenVK, on Metal) is listed by the loader
+    // only to an instance that asks for these.
+    VkInstanceCreateFlags flags = 0;
+    {
+        std::uint32_t n = 0;
+        vkEnumerateInstanceExtensionProperties(nullptr, &n, nullptr);
+        std::vector<VkExtensionProperties> offered(n);
+        vkEnumerateInstanceExtensionProperties(nullptr, &n, offered.data());
+        for (const VkExtensionProperties& e : offered) {
+            if (std::strcmp(e.extensionName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) == 0) {
+                extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+                flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+            }
+        }
+    }
     VkApplicationInfo app{VK_STRUCTURE_TYPE_APPLICATION_INFO};
     app.pApplicationName = "OpenRAC";
     app.pEngineName = "OpenRAC";
     app.apiVersion = VK_API_VERSION_1_3;
     VkInstanceCreateInfo info{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
+    info.flags = flags;
     info.pApplicationInfo = &app;
     info.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
     info.ppEnabledExtensionNames = extensions.data();
@@ -3423,6 +3439,21 @@ bool make_device(std::string& error) {
     std::vector<const char*> extensions;
     if (g->surface != VK_NULL_HANDLE) {
         extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    }
+    // A driver that offers it (MoltenVK) must be told the application knows it carries out only
+    // part of Vulkan. What it leaves out (point polygons, wide lines, cull distances, logic ops)
+    // the renderer does not use; triangle fans it has.
+    {
+        constexpr const char* kPortabilitySubset = "VK_KHR_portability_subset";  // vulkan_beta.h
+        std::uint32_t n = 0;
+        vkEnumerateDeviceExtensionProperties(g->physical, nullptr, &n, nullptr);
+        std::vector<VkExtensionProperties> offered(n);
+        vkEnumerateDeviceExtensionProperties(g->physical, nullptr, &n, offered.data());
+        for (const VkExtensionProperties& e : offered) {
+            if (std::strcmp(e.extensionName, kPortabilitySubset) == 0) {
+                extensions.push_back(kPortabilitySubset);
+            }
+        }
     }
     VkDeviceCreateInfo info{VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
     info.pNext = &f13;
