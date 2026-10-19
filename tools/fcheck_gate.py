@@ -436,12 +436,24 @@ class Places:
         a = int(name[5:], 16)
         if level is None or a < RESIDENT_MAX:
             return [at(a, self.exe(a, self.exe_size(name)))]
-        size, places = self.catalogue.get(name, (0, []))
         base, text = self.text(level)
+        same = lambda exe, p: same_code(exe, text[p - base:p - base + len(exe)],
+                                        lambda x: self.exe(x, 4), lambda x: self.level_word(level, x))
+        if name not in self.catalogue:
+            # One the catalogue took as part of the function before it (func_001F98B0 after
+            # func_001F9878): after that one's own copy, at the same distance.
+            near = [(int(n[5:], 16), n) for n in self.catalogue
+                    if EXECUTABLE.fullmatch(n) and 0 < a - int(n[5:], 16) <= 0x400]
+            if not near:
+                return []
+            x, pn = max(near)
+            psize, pplaces = self.catalogue[pn]
+            own = [p for lv, p in pplaces if lv == level and same(self.exe(x, psize), p)]
+            exe = self.exe(a, self.exe_size(name))
+            return [at(p + a - x, text[p + a - x - base:p + a - x - base + len(exe)]) for p in own if same(exe, p + a - x)]
+        size, places = self.catalogue[name]
         exe = self.exe(a, size)
-        return [at(p, text[p - base:p - base + size]) for lv, p in places
-                if lv == level and same_code(exe, text[p - base:p - base + size],
-                                             lambda x: self.exe(x, 4), lambda x: self.level_word(level, x))]
+        return [at(p, text[p - base:p - base + size]) for lv, p in places if lv == level and same(exe, p)]
 
     def level_word(self, level: int, address: int) -> bytes | None:
         """The four bytes a level loads at ADDRESS (its lit, data and bss records), or None."""
