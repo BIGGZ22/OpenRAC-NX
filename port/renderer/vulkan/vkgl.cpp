@@ -888,25 +888,21 @@ BufferRef dummy_buffer_ref() {
     return {g->dummy_buffer, 0, 256};
 }
 
-BufferRef resolve(Buffer& b) {
+BufferRef resolve(Buffer& b, bool persistent = true) {
     if (b.data.empty()) {
         return dummy_buffer_ref();
     }
     const VkDeviceSize size = b.data.size();
-    if (b.own != VK_NULL_HANDLE && b.own_version == b.version) {
+    if (persistent && b.own != VK_NULL_HANDLE && b.own_version == b.version) {
         return {b.own, 0, size};
     }
     if (b.gpu != VK_NULL_HANDLE && b.gpu_frame == g->frame_count && b.gpu_version == b.version) {
         return {b.gpu, b.gpu_offset, size};
     }
     // Unchanged for a few frames: a copy of its own, which stays where it is.
-    if (g->frame_count >= b.changed_frame + 3 && size >= 4096) {
+    if (persistent && g->frame_count >= b.changed_frame + 3 && size >= 4096) {
         VkBufferCreateInfo info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-        // Keep the same buffer-size alignment as the frame ring. Exact-sized
-        // persistent instance buffers corrupt vertex fetches on AMD's Windows
-        // driver after promotion; padding to this alignment keeps them stable.
-        const VkDeviceSize alignment = ring_alignment();
-        info.size = (size + alignment - 1) / alignment * alignment;
+        info.size = size;
         info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT
                      | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
         VmaAllocationCreateInfo alloc{};
@@ -1674,7 +1670,10 @@ void draw(GLenum mode, GLsizei count, GLsizei instances, bool indexed, GLenum in
         const VkFormat format = attr.enabled ? vertex_format(attr.type, attr.size, attr.normalized, attr.integer)
                                              : VK_FORMAT_UNDEFINED;
         if (b != nullptr && format != VK_FORMAT_UNDEFINED) {
-            const BufferRef r = resolve(*b);
+            // Small persistent instance buffers corrupt vertex fetches on the
+            // AMD Windows driver. Keep instance data in the frame ring; large
+            // per-vertex and index buffers can still use persistent storage.
+            const BufferRef r = resolve(*b, attr.divisor == 0);
             const GLsizei stride = attr.stride != 0 ? attr.stride : attr.size * type_bytes(attr.type);
             inputs[n] = {static_cast<std::uint32_t>(a.location), static_cast<std::uint32_t>(format),
                          static_cast<std::uint32_t>(stride), attr.divisor != 0 ? 1u : 0u};
