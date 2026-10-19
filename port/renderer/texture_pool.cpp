@@ -265,6 +265,14 @@ std::vector<std::uint32_t> TexturePool::palette(
 }
 
 TextureHandle TexturePool::convert_upload(const gs::Tex0& tex0, const gs::Texa& texa) {
+    // The chip samples textures up to 1024 x 1024 (TW and TH up to 10); a
+    // larger claim only arrives in a garbage register write, and converting
+    // one would allocate up to gigabytes (a 32768 x 32768 RGBA8 image).
+    if (tex0.tw > 10 || tex0.th > 10) {
+        log::debug("texture at block {:#x} claims {} x {} texels; not converted", tex0.tbp0,
+                   tex0.width(), tex0.height());
+        return 0;
+    }
     std::uint32_t offset = 0;
     const Stored* stored = upload_at(tex0.tbp0, offset);
     if (stored == nullptr) {

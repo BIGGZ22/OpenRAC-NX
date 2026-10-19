@@ -1317,7 +1317,7 @@ extern void func_001153FC(void *, int, int);
 extern int func_001FA8A8(int, int, float);
 extern int func_0021C6C0(int, int, int);
 #define TEXT(id) ((char *(*)(int))func_001FE540)(id)
-#define DRAW(c, t) ((void (*)(void *, long, char *, long, int, unsigned char *))func_001F7070)(&win, c, t, -1, tex, glyphs)
+#define DRAW(c, t) ((void (*)(void *, long, char *, long, long, unsigned char *))func_001F7070)(&win, c, t, -1, tex, glyphs)
 #define ST (*(char **)(D_001D5F74 + 0x40))
 typedef struct { short s[12]; } Win;
 
@@ -1353,7 +1353,10 @@ int Pause_DrawDescriptionBox(unsigned char *w) {
     char *text = D_00160370;
     unsigned char *glyphs = D_001DF3D0;
     int font = 1;
-    int f0, flags, g, f, content, variant = 0, a21, a23, colour, t, wflags, tex;
+    int f0, flags, g, f, content, variant = 0, a21, a23, colour, t, wflags;
+    /* GetEffectTex's TEX0 is 64 bits, and FontPrintWindow reads all of them: on the console the
+       register keeps them whatever the C says, on a PC an int keeps only the low half. */
+    long tex;
 
     f0 = *(int *)(w + 0x30);
     if (f0 & 8) {

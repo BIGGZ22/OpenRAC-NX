@@ -22,7 +22,11 @@
       "name": "standalone",
       "inherits": "base",
       "displayName": "What an installer carries: SDL3 built in, nothing of the system's to find",
-      "cacheVariables": {"CMAKE_BUILD_TYPE": "RelWithDebInfo", "OPENRAC_STATIC_SDL": "ON"}
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "OPENRAC_STATIC_SDL": "ON",
+        "OPENRAC_PORT_LTO": "ON"
+      }
     },
     {
       "name": "debug",

@@ -1657,7 +1657,7 @@ typedef struct {
     char pad[0x20];
     unsigned char t;
     char pad2[0x74 - 0x21];
-    void (*fn)(void);
+    void (*fn)(void *);
 } O;
 void mark_moby_for_removal(void *) __asm__("FUN_0020c828");
 void FUN_L00_0020fca8(int i, int v) {
@@ -1670,7 +1670,7 @@ void FUN_L00_0020fca8(int i, int v) {
             o = (O *)f->items[0].moby;
             f->items[0].state = 3;
             if (o && o->t != 0xfe && o->t != 0xfd && o->fn)
-                o->fn();
+                o->fn(o);
         }
     }
     e = (struct Hero *)(((char *)&hero) + i * sizeof(struct HeroItemSlot));
