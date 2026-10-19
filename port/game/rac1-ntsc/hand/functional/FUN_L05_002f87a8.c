@@ -36,7 +36,8 @@ extern int D_L05_0015F6A8 MACRO_ADDR;
 extern short D_L05_00161928;
 extern short D_L05_0016190C;
 extern short D_L05_00161910;
-extern unsigned char D_0013D255[];
+/* PAL's D_0013D355[0x13B] (0x13D490) is 0x13D388 in NTSC-U (lbu at 0x2F8894), not 0x13D390. */
+extern unsigned char D_0013D388[];
 extern unsigned char D_0014161B[];
 
 
@@ -90,7 +91,7 @@ void FUN_L05_002f87a8(unsigned char *moby) {
         break;
     case 1: {
         if (*(int *)(data + 0x50) == 0) {
-            if (D_0013D255[0x13B] != 0) {
+            if (D_0013D388[0] != 0) {
                 if (*(unsigned short *)(D_0014161B + 0x31D) == 0) {
                     if (D_L05_0015F6A8 != 0) {
                         char *h = D_0013E533 + 0xE1D;

@@ -294,7 +294,7 @@ void FUN_L08_002d42d8(Moby_c08_2d42d8 *moby) {
         if (*(int *)(d + 0xF4) != 2) {
             unsigned char *pers;
             func_L08_002D7010_55E0_c08_2d42d8(moby);
-            pers = (unsigned char *)D_0013D255 + 0x13B;
+            pers = (unsigned char *)D_0013D255 + 0x133; /* 0x13D388 (lui/addiu at 0x2D4A38): PAL's 0x13D490 is 0x108 lower here, not 0x100 */
             if (pers[0x2E] != 0) func_0022DA68(6, 0, moby);
             pers[0x2E] = 1;
             qcopy_c08_2d42d8(&(*(Moby_c08_2d42d8 **)(d + 0x160))->pos, &moby->pos);
