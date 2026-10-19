@@ -26,6 +26,15 @@ translated from that disc's own programs (OPENRAC_<ID>_RETAIL_IMAGE,
 port/tools/hostgen/retail.py) instead of staying a stub that does nothing; the
 build folder keeps it too.
 
+--clean deletes the build folder first and builds everything again (the
+launcher's "Rebuild the game", and what it runs after an update); the
+--source and --disc choices the folder kept are kept.
+
+Each build that succeeds leaves openrac-build.json in the folder: the OpenRAC
+version and commit it built, and the games. The launcher compares them with
+the checkout to know a game is outdated after an update
+(launcher/core/src/port_build.rs).
+
 On Windows the build runs in Visual Studio's x64 environment (the MSVC
 libraries and the Windows SDK, from any edition with the C++ tools, found
 with vswhere), with Clang (OPENRAC_CLANG, else LLVM's installer, Scoop or
@@ -131,6 +140,51 @@ def parse_environment(text: str) -> dict[str, str]:
     return env
 
 
+def kept_choices(cache: dict[str, str]) -> dict[str, str]:
+    """What a build folder keeps of --source and --disc (OPENRAC_<ID>_SOURCE, _RETAIL_IMAGE)."""
+    return {
+        key: value
+        for key, value in cache.items()
+        if key.startswith("OPENRAC_") and (key.endswith("_SOURCE") or key.endswith("_RETAIL_IMAGE")) and value
+    }
+
+
+def checkout_version() -> str | None:
+    """OpenRAC's version, as the port's build reads it (port/cmake/BuildInfo.cmake)."""
+    try:
+        conf = json.loads((ROOT / "launcher" / "src-tauri" / "tauri.conf.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    version = conf.get("version")
+    return version if isinstance(version, str) else None
+
+
+def checkout_commit() -> str | None:
+    """The checkout's commit, or None outside git."""
+    git = shutil.which("git")
+    if git is None:
+        return None
+    done = subprocess.run([git, "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True)
+    commit = done.stdout.strip()
+    return commit if done.returncode == 0 and len(commit) == 40 else None
+
+
+def write_stamp(build: Path, names: list[str]) -> None:
+    """openrac-build.json: what this build is of, for the launcher (port_build.rs). Games built
+    before with the same version and commit stay listed."""
+    stamp = build / "openrac-build.json"
+    version, commit = checkout_version(), checkout_commit()
+    games = set(names)
+    try:
+        old = json.loads(stamp.read_text(encoding="utf-8"))
+        if old.get("version") == version and old.get("commit") == commit:
+            games |= {g for g in old.get("games", []) if isinstance(g, str)}
+    except (OSError, ValueError, AttributeError):
+        pass
+    stamp.write_text(json.dumps({"version": version, "commit": commit, "games": sorted(games)}, indent=2) + "\n",
+                     encoding="utf-8")
+
+
 def same_path(a: str | Path, b: str | Path) -> bool:
     def norm(p: str | Path) -> str:
         return os.path.normcase(os.path.normpath(str(p)))
@@ -149,6 +203,7 @@ def commands(
     python: str | None = None,
     more: list[str] | None = None,
     disc: Path | None = None,
+    kept: dict[str, str] | None = None,
 ) -> list[list[str]]:
     """The command lines to run, in order. A folder not configured yet is configured from the
     preset; a configured one is only built, after a configure without the preset when `source`
@@ -158,8 +213,10 @@ def commands(
     (C, C++, Ninja) when given. `python` is the interpreter hostgen runs under in a new folder
     (this one: CMake's own choice may be an older Python than hostgen reads). `disc` is the
     player's image of the first game's disc, kept as its OPENRAC_<ID>_RETAIL_IMAGE: hostgen reads
-    the instructions of the functions with no C from it (port/tools/hostgen/retail.py)."""
-    wanted = {}
+    the instructions of the functions with no C from it (port/tools/hostgen/retail.py). `kept`:
+    choices a deleted folder held (kept_choices), passed again where `source` and `disc` do not
+    name new ones."""
+    wanted = dict(kept or {})
     if source is not None:
         wanted[source_variable(names[0])] = Path(source).as_posix()
     if disc is not None:
@@ -306,6 +363,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--preset", default="release", help="the CMake preset (port/CMakePresets.json); default release")
     parser.add_argument("--target", action="append", default=[], metavar="NAME",
                         help="also build this target of the port (a test program such as runtime_test)")
+    parser.add_argument("--clean", action="store_true",
+                        help="delete the build folder first and build everything again (its --source and --disc kept)")
     args = parser.parse_args(argv)
 
     names = args.games or [DEFAULT_GAME]
@@ -329,6 +388,12 @@ def main(argv: list[str] | None = None) -> int:
 
     build = PORT / "build" / args.preset
     cache = read_cache(build)
+    kept: dict[str, str] = {}
+    if args.clean and build.exists():
+        kept = kept_choices(cache)
+        say(f"deleting {build.relative_to(ROOT).as_posix()} to build everything again")
+        shutil.rmtree(build)
+        cache = {}
     try:
         env, cmake, compilers = prepare(cache)
     except BuildError as e:
@@ -336,17 +401,19 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     for name in names:
-        decompilation = source if name == names[0] and source else cache.get(source_variable(name)) or default_source(name)
+        decompilation = (source if name == names[0] and source
+                         else cache.get(source_variable(name)) or kept.get(source_variable(name)) or default_source(name))
         say(f"{name}: from {decompilation}")
     python = Path(sys.executable).as_posix()
     for command in commands(str(cmake), args.preset, build, names, source, cache, compilers, python, args.target,
-                            disc):
+                            disc, kept):
         say("> " + " ".join(f'"{part}"' if " " in part else part for part in command))
         status = subprocess.run(command, cwd=PORT, env=env).returncode
         if status != 0:
             print(f"error: the build stopped ({Path(command[0]).name} {command[1]} exited with {status})",
                   file=sys.stderr, flush=True)
             return 1
+    write_stamp(build, names)
     suffix = ".exe" if WINDOWS else ""
     for name in names:
         # On macOS a windowed game is an application bundle (port/cmake/MacApp.cmake).
