@@ -78,7 +78,7 @@ extern int func_00214720(void *, int);
 extern float func_001F9B48(void *, void *);
 extern void func_L00_0025A120(void *);
 extern void func_L07_00313420(void *, void *, void *);
-extern void func_L00_0025FCB8(void *, void *, float);
+extern int func_L07_002886D8(void *, void *, float);
 extern int func_L00_001FEFC8(void *);
 extern int func_001F9770(void *);
 extern float func_001F99C0(float);
@@ -203,7 +203,7 @@ void FUN_L07_00314150(unsigned char *m) {
     t20 = (float *)(d + 0x20);
     func_L07_00313420(m, d, t20);
     see = 0;
-    func_L00_0025FCB8(m, &tgt, 30.0f);
+    func_L07_002886D8(m, &tgt, 30.0f); /* US 0x00314274: level 7's own copy, not level 0's 0x0025FCB8 */
     dist = func_001F9B80(&tgt, m + 0x10);
     ang = func_L00_001FF8B0(tgt.pos.f[0] - *(float *)(m + 0x10), tgt.pos.f[1] - *(float *)(m + 0x14));
     hdist = func_001F9B80(m + 0x10, D_0013F350 + 0x80);
