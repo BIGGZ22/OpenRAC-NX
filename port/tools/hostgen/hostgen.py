@@ -482,6 +482,14 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         "assembly_unsupported": dict(sorted(stage.unsupported.items())),
         "assembly_unsupported_reasons": dict(sorted(asm_reasons.items(), key=lambda kv: -kv[1])),
         "without_c_or_assembly": sorted(stage.without_asm),
+        # Each function with no C or with C from its assembly: where it sits, and the spelling with
+        # C its calls go to instead (no_c.py classifies them from this).
+        "without_c_places": {
+            f.symbol: {"places": [[ov, f"{a:08X}"] for ov, a in program.code_places(f.symbol)],
+                       "kind": "asm" if f.asm else "no-c",
+                       **({"other_spelling": program.canonical(f.symbol)}
+                          if program.canonical(f.symbol) != f.symbol else {})}
+            for f in no_c + [program.functions[r.name] for r in stage.translated if r.name in program.functions]},
         **extra,
     }
     summary["call_graph"].update({r.name: sorted(r.report.calls) for r in stage.translated
