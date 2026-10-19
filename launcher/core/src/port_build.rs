@@ -105,8 +105,11 @@ const BUILT_FROM: &[&str] = &[
 /// (`rac1-pal`) is built from. Changed when git cannot tell (no git, a commit it does not have):
 /// an update is never missed for want of an answer. Each answer is kept, since the library asks on
 /// every refresh.
+/// The checkout, the game, and the two commits compared.
+type Asked = (PathBuf, String, String, String);
+
 fn inputs_changed(root: &Path, game: &str, from: &str, to: &str) -> bool {
-    static SEEN: OnceLock<Mutex<HashMap<(PathBuf, String, String, String), bool>>> = OnceLock::new();
+    static SEEN: OnceLock<Mutex<HashMap<Asked, bool>>> = OnceLock::new();
     let key = (root.to_path_buf(), game.to_string(), from.to_string(), to.to_string());
     if let Some(&changed) = SEEN.get_or_init(Default::default).lock().unwrap().get(&key) {
         return changed;
