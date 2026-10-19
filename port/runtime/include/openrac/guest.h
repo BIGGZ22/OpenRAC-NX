@@ -240,6 +240,13 @@ gaddr openrac_guest_nearest(const uint32_t* places, int count, gaddr caller);
  * `size` bytes, in the program loaded) to any of `places`; openrac_guest_nearest's when the caller's
  * code has no such call (or its size is not known). */
 gaddr openrac_folded_call(const uint32_t* places, int count, gaddr caller, uint32_t size, int k);
+/* The address of a folded function a function takes (a draw callback it registers): the k-th
+ * address of any of `places` the caller's code forms (a lui and an addiu or ori on its register,
+ * in the program loaded); `fallback` when it forms none (or its size is not known). The places of a
+ * folded wrapper call other functions (rac1's Umbris sea: each class registers its own wrapper of
+ * the liquid grid's draw), so the address of the first in the level is not the one retail takes. */
+gaddr openrac_folded_address(const uint32_t* places, int count, gaddr caller, uint32_t size, int k,
+                             gaddr fallback);
 
 /* Level to level: a function several levels' programs carry is written with the addresses of the
  * level its name gives (rac1: func_L05_... has level 5's). OPENRAC_LDATA and OPENRAC_LCODE give

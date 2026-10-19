@@ -1169,6 +1169,24 @@ class Places(unittest.TestCase):
             self.assertIn("0x00238128u", text)
             self.assertIn("0x00237B70u", text)
 
+    def test_the_address_of_a_folded_wrapper_is_the_one_the_code_forms(self):
+        # rac1's Umbris sea classes register func_00216270 as their draw callback: the catalogue
+        # folds 32-byte wrappers that each call another function into that name, and each class's
+        # own wrapper is a later place in the level, not the first. The address is found in the
+        # caller's code at run time, the first place when it forms none.
+        with tempfile.TemporaryDirectory() as tmp:
+            out = self.generate(Path(tmp),
+                "void func_L07_0028E068(void) {}\n"
+                "extern void func_00300000(void (*)(void), void *);\n"
+                "void func_L07_002F9438(char *m) { func_00300000(func_L07_0028E068, m); }\n",
+                "func_L07_0028E068\tshared\t32\tfw\t2\t07:0028E068,07:002F9418,08:0028F000\n"
+                "func_L07_002F9438\tshared\t64\tfu\t2\t07:002F9438,08:002FA000\n",
+                {"relocate": [0x15F000, 0x500000]})
+            text = (out / "a.c").read_text()
+            self.assertIn("openrac_folded_address((const uint32_t[]){", text)
+            self.assertIn("0x082F9418u", text)
+            self.assertIn("0x0828E068u", text)
+
     def test_a_call_to_another_levels_function_follows_the_definition(self):
         # rac1/ntsc's Rilgar creature (FUN_L05_002d1688) declared level 0's vector scale as
         # (float, void *, void *) and called it through its level 0 address with that type: right

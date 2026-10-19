@@ -1227,7 +1227,26 @@ class Unit:
         if n.get("kind") == "DeclRefExpr" and (n["referencedDecl"].get("kind") == "FunctionDecl"
                                                or self._code_variable(n)):
             sym = self._callee_symbol(n)
-            return self.code_address(self._folded_place_name(n, sym))
+            named = self._folded_place_name(n, sym)
+            address = self.code_address(named)
+            places = self._folded_places(sym) if named == sym and self.fn is not None else []
+            own_size = getattr(self.program, "sizes", {}).get(self.fn.name) or 0 if places else 0
+            if places and own_size:
+                # A name the catalogue folded, whose places in one program are other functions (each
+                # wrapper calls its own; split_places.tsv): the place the caller's own code forms,
+                # its k-th address of any of them (openrac_folded_address), this one when it forms
+                # none. The first place in the level was taken before: Umbris's sea classes
+                # registered a wrapper of another routine as their draw callback, and the sea was
+                # never drawn.
+                literal = ", ".join(f"0x{(o + 1) << 24 | a:08X}u" for o, a in places)
+                taken = getattr(self.fn, "folded_addresses", None)
+                if taken is None:
+                    taken = self.fn.folded_addresses = {}
+                k = taken.get(sym, 0)
+                taken[sym] = k + 1
+                return (f"openrac_folded_address((const uint32_t[]){{{literal}}}, {len(places)}, "
+                        f"{self._own_address()}, {own_size}u, {k}, {address})")
+            return address
         if n.get("kind") == "UnaryOperator" and n["opcode"] == "*":
             return self.rv(_inner(n)[0])
         raise Unsupported(f"function designator {n.get('kind')}")

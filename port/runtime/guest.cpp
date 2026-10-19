@@ -363,6 +363,57 @@ gaddr openrac_folded_call(const uint32_t* places, int count, gaddr caller, uint3
     return result;
 }
 
+gaddr openrac_folded_address(const uint32_t* places, int count, gaddr caller, uint32_t size, int k,
+                             gaddr fallback) {
+    const int overlay = g_overlay_source != nullptr ? g_overlay_source() : g_overlay;
+    if (size == 0 || caller == 0 || caller + size > 0x02000000u) {
+        return fallback;
+    }
+    static std::mutex lock;
+    static std::map<std::tuple<int, gaddr, std::uint32_t, int, int>, gaddr> found;
+    std::scoped_lock hold(lock);
+    const auto key = std::make_tuple(overlay, caller, places[0], count, k);
+    if (auto it = found.find(key); it != found.end()) {
+        return it->second;
+    }
+    // The upper halves the code's lui instructions put in each register, as it reads in order.
+    std::uint32_t high[32] = {};
+    bool known[32] = {};
+    gaddr result = 0;
+    int seen = 0;
+    for (std::uint32_t i = 0; i * 4 < size && result == 0; ++i) {
+        std::uint32_t w;
+        std::memcpy(&w, G(caller + i * 4), 4);
+        const std::uint32_t op = w >> 26;
+        const std::uint32_t rs = (w >> 21) & 31;
+        const std::uint32_t rt = (w >> 16) & 31;
+        if (op == 0x0F) {  // lui
+            high[rt] = (w & 0xFFFFu) << 16;
+            known[rt] = true;
+            continue;
+        }
+        if ((op != 0x09 && op != 0x0D) || !known[rs]) {  // addiu, ori
+            continue;
+        }
+        const gaddr formed = op == 0x09 ? high[rs] + static_cast<std::uint32_t>(static_cast<std::int16_t>(w & 0xFFFFu))
+                                        : high[rs] | (w & 0xFFFFu);
+        for (int p = 0; p < count; ++p) {
+            const int o = static_cast<int>(places[p] >> 24) - 1;
+            if ((places[p] & 0x00FFFFFFu) == formed && (o == overlay || o == OPENRAC_OVERLAY_EXE)) {
+                if (seen++ == k) {
+                    result = formed;
+                }
+                break;
+            }
+        }
+    }
+    if (result == 0) {
+        result = fallback;
+    }
+    found.emplace(key, result);
+    return result;
+}
+
 const char* openrac_guest_function_name(gaddr address) {
     const Entry* e = find(address);
     return e == nullptr ? nullptr : e->name;

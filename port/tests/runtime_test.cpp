@@ -104,6 +104,24 @@ void code_in_copy_jal() {
     openrac_guest_set_overlay(OPENRAC_OVERLAY_EXE);
 }
 
+// The address of a folded wrapper a function takes: the place its own code forms (rac1's Umbris sea
+// classes each register their own wrapper of the liquid grid's draw, one name in the catalogue).
+void folded_address() {
+    const auto jal = [](gaddr target) { return 0x0C000000u | ((target & 0x0FFFFFFFu) >> 2); };
+    // lui a0, 0x0035; jal register; addiu a0, a0, -0x7FF0 (0x00348010): the level 5 wrapper at
+    // 0x00348010, not the first place 0x00340000. Then a second address, with ori: 0x00350020.
+    const std::uint32_t code[] = {0x3C040035u, jal(0x00310000u), 0x24848010u, 0x3C050035u, 0x34A50020u, 0x03E00008u};
+    std::memcpy(G(0x00360000u), code, sizeof code);
+    const std::uint32_t places[] = {0x01200000u, 0x06340000u, 0x06348010u, 0x06350020u, 0x07340000u};
+    openrac_guest_set_overlay(5);
+    CHECK(openrac_folded_address(places, 5, 0x00360000u, sizeof code, 0, 0x00340000u) == 0x00348010u);
+    CHECK(openrac_folded_address(places, 5, 0x00360000u, sizeof code, 1, 0x00340000u) == 0x00350020u);
+    // No third one formed, or no size known: the fallback.
+    CHECK(openrac_folded_address(places, 5, 0x00360000u, sizeof code, 2, 0x00340000u) == 0x00340000u);
+    CHECK(openrac_folded_address(places, 5, 0x00360000u, 0, 0, 0x00340000u) == 0x00340000u);
+    openrac_guest_set_overlay(OPENRAC_OVERLAY_EXE);
+}
+
 int folded_measure(int a) {
     return a;
 }
@@ -266,6 +284,7 @@ int main() {
     frames_and_strings();
     functions();
     code_in_copy_jal();
+    folded_address();
     relocation_with_folded_copies();
     elf();
     host_stack();
