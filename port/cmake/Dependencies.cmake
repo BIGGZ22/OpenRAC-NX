@@ -144,6 +144,12 @@ endif()
 # Apple's systems have no Vulkan of their own: there it runs on MoltenVK (Apache-2.0, Vulkan on
 # Metal), which each game's application bundle carries (cmake/MacApp.cmake, below).
 option(OPENRAC_VULKAN "Build the Vulkan renderer (OPENRAC_GL_API=vulkan)" ON)
+# A build folder configured before Apple had Vulkan kept OFF, the default then, in its cache (CI
+# restores those): turned on once, after which a choice made with -D stays.
+if(APPLE AND NOT OPENRAC_VULKAN_APPLE_DEFAULT)
+  set(OPENRAC_VULKAN ON CACHE BOOL "Build the Vulkan renderer (OPENRAC_GL_API=vulkan)" FORCE)
+  set(OPENRAC_VULKAN_APPLE_DEFAULT ON CACHE INTERNAL "OPENRAC_VULKAN was set to Apple's default once")
+endif()
 if(OPENRAC_VULKAN AND NOT TARGET openrac_vulkan)
   FetchContent_Declare(vulkan_headers
     GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
