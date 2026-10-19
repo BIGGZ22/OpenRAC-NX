@@ -1,238 +1,321 @@
 # Android
 
-The native port and the launcher on Android phones, tablets and handhelds:
-arm64-v8a, Android 10 (API 29) or later, a Mali or Adreno GPU with OpenGL
-ES 3.2. As on the desktop there is no emulation: the APK carries the same
-translated game code, built for arm64 by the NDK, and the player's own disc
-is read on the device.
+OpenRAC runs on Android phones, tablets and handhelds. You need:
 
-This note is the design; [port/android/README.md](../../port/android/README.md)
-says how to build and test it.
+- a 64-bit ARM device (arm64-v8a),
+- Android 10 (API 29) or newer,
+- a Mali or Adreno GPU with OpenGL ES 3.2.
 
-## One APK, two activities
+There is no emulation here either. The APK contains the same translated game
+code as the desktop build, compiled for ARM with the Android NDK, and the
+game data comes from your own disc, read on the device.
 
-| | |
+This page explains how the Android version is put together and why. To build
+it and test it yourself, see [port/android/README.md](../../port/android/README.md).
+
+## The short version
+
+- One APK holds both the launcher and the game.
+- The launcher is the desktop launcher (Tauri 2 + Svelte), so it looks and
+  works the same.
+- The game runs as a separate Android activity, in its own process.
+- You pick a disc image once; the launcher copies it into the app and sets
+  the game up on the device, the same way the desktop launcher does.
+- A controller works everywhere. Touch controls appear when you touch the
+  screen.
+- The launcher updates itself from GitHub releases.
+- By default the game draws with OpenGL ES on the system's driver. There is
+  also a Vulkan renderer, which can use a custom Adreno driver (Turnip).
+
+## One APK, two parts
+
+**The launcher** is the desktop launcher's interface and logic
+(`launcher/core`), built with Tauri 2's Android support. Its Android project
+lives in `launcher/src-tauri/gen/android`. Tauri generates it with
+`tauri android init` and expects it to be committed. Because it is the same
+code, the library, game pages, settings, saves and mods all behave as on the
+desktop. It always plays from the copy of OpenRAC it carries inside the APK.
+
+The few things only Android can do (open a file with the system picker,
+import a disc or a driver package, start the game) go through a small Kotlin
+plugin, `OpenracPlugin`. Where a desktop command does the same job, the
+plugin's command has the same name and arguments.
+
+**The game** is `GameActivity`, which is SDL3's `SDLActivity` loading the game
+as a library (`libopenrac-rac1-pal.so`, whose `main` SDL calls as
+`SDL_main`). It runs:
+
+- **in its own process** (`:game`), because the game reserves 4 GB of address
+  space and quits with `exit()`, which must not close the launcher too;
+- **in its own task**, so the game and the launcher are two separate windows
+  in Recents. The game keeps running while you look at the launcher, and the
+  game's page then offers *Return to game* and, in its menu, *Stop the game*.
+
+### Why Tauri and not a separate Android app
+
+One interface for every platform. The launcher's logic is plain Rust and
+compiles for Android unchanged, and Tauri 2 supports Android officially. A
+native Kotlin launcher would be smaller, but it would be a second launcher
+to keep in sync with the first.
+
+## How the game is built and runs
+
+**Building.** `cmake --preset android-arm64` cross-compiles the port with the
+NDK. hostgen still runs on the build machine, since it only writes C. On
+Android the game is a shared library rather than a program, and SDL3 becomes
+`libSDL3.so`. `tools/build_android.py` builds both and copies them into the
+launcher's `jniLibs/arm64-v8a` before Gradle packages the APK.
+
+**Graphics.** The renderer is written for desktop OpenGL 4.1. On Android it
+asks for an OpenGL ES 3.2 context instead:
+
+- Almost everything it uses exists in ES 3.2. The two functions that don't
+  (`glClearDepth`, `glPolygonMode`) are replaced in `renderer/gl.cpp`.
+- Shaders are written once, in GLSL 4.10, and turned into GLSL ES 3.20 when
+  the context is ES (`es_source` in `renderer/shader.cpp`).
+- Two optional driver extensions are used when present. Without
+  `GL_NV_shader_noperspective_interpolation` some values are interpolated
+  with perspective; without `GL_EXT_clip_cull_distance` the widescreen crop
+  of the 2D layer is skipped.
+- The same ES path runs on a desktop with `OPENRAC_GL_API=es`. That is how
+  CI and the tests check it without a phone, using Mesa's ES driver.
+
+**Input.** Controllers work as on the desktop: Bluetooth, USB, and the
+built-in pads of handhelds. For touch there is an on-screen pad
+(`platform/touch_pad.h`). It is laid out from the screen edges, stays inside
+the safe area, and its left stick moves to wherever your thumb lands. The
+layout is plain data with desktop tests, and it is drawn by a single shader
+(`game/common/touch_overlay.cpp`).
+
+**Files.** The launcher tells the game where everything is, on the command
+line and in the environment (`--data`, `--levels`, `HOME`, `XDG_DATA_HOME`,
+all inside the app's own storage). So `main.cpp` needs no Android-specific
+paths.
+
+**Older Android versions.** Android's C library (bionic) only has
+`backtrace()` from Android 13 (API 33). For Android 10 to 12 a small
+replacement built on `_Unwind_Backtrace` is compiled in (`port/android/compat`).
+`memfd_create` is called through `syscall` below API 30.
+
+## Setting up a game on the device
+
+**Choosing the disc.** You pick the `.iso` with Android's file picker. The
+picker hands over an open file rather than a path, and the game needs to read
+the disc by sector for as long as it runs, so the image is copied once into
+the app's storage (`files/discs/`). Free space is checked first, and the
+copy shows its progress. A `.chd` image (from `chdman createdvd`) is
+unpacked into a plain `.iso` instead of copied (`launcher/core/src/chd.rs`).
+
+**Running the setup.** After that, the launcher runs exactly what the
+desktop launcher runs: `tools/extractor.py`, then `editor/extract.py port`
+for the levels, then the game's `--check-levels`. Their output streams into
+the launcher.
+
+These steps need Python and some programs, and Android only lets an app run
+programs from its native library folder. So the APK carries:
+
+- **Python.** CPython for Android as packaged by
+  [Chaquopy](https://github.com/chaquo/chaquopy) (MIT; `libpython3.13.so`
+  with its modules and standard library, a pinned version from Maven
+  Central), plus `libopenrac-python.so`, a small `python3` program around it
+  (`port/android/python_main.c`).
+- **The game without a window** (`libopenrac-<id>-cli.so`), the game built a
+  second time as a program, for `--check-levels`.
+- **A copy of OpenRAC** (`tools/bundle_standalone.py --android`), stored as
+  `assets/openrac.zip`. When the APK changes, `OpenracSetup.kt` unpacks it
+  into `files/openrac` on a background thread (into `files/openrac.new`
+  first, which then replaces the old copy). It then links `python3` and the
+  game's programs to the libraries above, so the launcher finds them where a
+  desktop copy keeps them. The launcher waits for this and explains the
+  wait if it takes more than a second.
+
+**Made for a phone.** The setup tries to be light on storage and CPU:
+
+- The image is copied by the kernel (`copy_file_range` or `sendfile`).
+- The extractor writes out only `SYSTEM.CNF` and the boot executable
+  (`--boot-only`). It still reads and checks every file; the port reads
+  nothing else from the disc.
+- Android's Python has no process pools (no `sem_open`), so
+  `editor/extract.py` runs up to four levels at once in separate Python
+  processes (`SubprocessPool`).
+
+**Leaving the app during setup.** You can switch away while it works. A
+foreground service (`SetupService.kt`) keeps it running and shows the
+current step and its progress in a notification
+(`backgroundStatus` in `launcher/src/lib/progress.ts`).
+
+Playing is the one action that doesn't run a program: the launcher starts
+the game's activity with the same command line a desktop would use. Nothing
+leaves the device.
+
+## The launcher's screen and controls
+
+The launcher runs full screen. The system bars are hidden (swipe to show
+them for a moment) and the page stays clear of a camera cut-out
+(`MainActivity.kt`).
+
+You don't need a touch screen (`launcher/src/lib/pad.ts`; the desktop does
+the same through the Gamepad API):
+
+| Button | Does |
 |---|---|
-| Launcher | the desktop launcher's Svelte interface and `launcher/core`, through Tauri 2's Android support (`launcher/src-tauri/gen/android`, generated by `tauri android init` and committed, as Tauri expects). Tauri is the launcher's framework already, so the library, a game's page, settings, saves and mods are the same code. It always plays from the copy of OpenRAC it carries, as an installed desktop launcher does; it updates itself from the releases' APK (below) |
-| Game | `GameActivity`, SDL3's `SDLActivity` with the game's program as its main library (`libopenrac-rac1-pal.so`, `main` called as `SDL_main`). It runs in a process of its own (`:game`): the game reserves 4 GB of address space and ends with `exit()`, which must not take the launcher with it. And in a task of its own (its `taskAffinity`): the game and the launcher are two windows in Recents, the game goes on while the launcher is in front, and the game's page says *Return to game*, with *Stop the game* in its menu (`gameStatus`, `returnToGame`, `stopGame`) |
+| D-pad or left stick | moves the focus to the nearest control in that direction |
+| A | presses it |
+| B | closes a menu or dialog, then goes back to the games |
+| LB / RB | switch tabs |
+| Android's Back | same as B; from the games list it leaves the launcher (a running setup keeps going) |
 
-The launcher talks to Android through a small Tauri plugin in Kotlin
-(`OpenracPlugin`): pick a disc image or a driver package with the Storage
-Access Framework, import it, start the game. The plugin is the only
-Android-specific part of the launcher; its commands have the desktop
-commands' names and shapes where both exist.
+The game is full screen too (`port/platform/window.cpp`). Its on-screen pad
+appears only after you touch the screen, and hides again once you use a
+controller or leave the screen alone for ten seconds.
 
-Why Tauri and not a separate Android launcher: one interface for every
-platform, the launcher's logic (`launcher/core`, plain Rust with only serde)
-compiles for Android unchanged, and Tauri 2 supports Android officially.
-A native Kotlin launcher would be smaller but would be a second launcher to
-keep in step with the first.
+## The in-game drawer
 
-## The game on Android
+On a desktop, the game has menus along the top of the window (View,
+Graphics, Sound, Developer). On Android they live in a drawer, like in an
+emulator. It slides in from the left over the paused game when you press:
 
-- **Build.** `cmake --preset android-arm64` (port/CMakePresets.json) cross
-  compiles the port with the NDK's toolchain file; hostgen still runs on the
-  build machine with its Clang, as it only writes C. The game becomes a
-  shared library instead of a program, SDL3 is built as `libSDL3.so`, and
-  `tools/build_android.py` builds both and puts them in the launcher's
-  `jniLibs/arm64-v8a` before Gradle packages the APK.
-- **Graphics.** The renderer is OpenGL 4.1 core; on Android it asks for an
-  OpenGL ES 3.2 context instead. Everything the renderer calls is in ES 3.2
-  core but two functions (`glClearDepth`, `glPolygonMode`), which the loader
-  replaces (renderer/gl.cpp). Shaders stay written once, as GLSL 4.10: on an
-  ES context they are given as GLSL ES 3.20 (renderer/shader.cpp,
-  `es_source`) with the precisions ES wants, and with
-  `GL_NV_shader_noperspective_interpolation` and `GL_EXT_clip_cull_distance`
-  where the driver has them; without them, noperspective varyings are
-  interpolated with perspective and the wide-screen cut of the 2D layer is
-  off. The same path runs on a desktop with `OPENRAC_GL_API=es`, which is how
-  CI and the tests check it without a phone (Mesa's ES driver).
-- **Input.** SDL3's gamepads (Bluetooth and USB controllers, handhelds'
-  built-in pads) as on the desktop, and an on-screen pad for touch
-  (platform/touch_pad.h), placed from the screen's edges in its heights and
-  inside its safe area, with a left stick that comes to the thumb: its layout
-  is plain data, tested on the desktop, and its look is drawn by one shader
-  (game/common/touch_overlay.cpp).
-- **Files.** The launcher gives the game its folders on the command line and
-  in the environment (`--data`, `--levels`, `HOME`,
-  `XDG_DATA_HOME` in the app's own storage), so main.cpp needs no Android
-  paths of its own.
-- **What bionic lacks below API 33.** `backtrace()` (execinfo.h) is in bionic
-  from API 33; for API 29 to 32 a small replacement over `_Unwind_Backtrace`
-  is compiled in (port/android/compat). `memfd_create` is called through
-  `syscall` below API 30.
+- the pad's options button (between Select and Start),
+- Back, or
+- a controller's Guide button.
 
-## The disc and the tools on Android
+Its rows are grouped on cards like the launcher's settings, big enough for a
+thumb, and a controller can move through them (left and right change a
+value, B closes). It contains:
 
-The player picks the image (`.iso`) with Android's file picker, which gives
-an open file, not a path. The game reads the disc by sector for its whole
-life and the extractor links it into place, so the image is copied once into
-the app's own storage (`files/discs/`, the launcher's games folder there),
-with the free space checked first and `disc-copy` events as it goes. A
-`.chd` (`chdman createdvd`) is unpacked into a plain `.iso` there instead of
-copied (launcher/core/src/chd.rs), its unpacked size checked against the
-free space.
+- **Graphics:** picture shape (4:3, 16:10, 16:9, 21:9, 32:9 or the whole
+  screen), HUD position, render scale, anti-aliasing, texture filtering,
+  frame rate, VSync and the FPS counter.
+- **Sound and game:** volume and skipping cutscenes.
+- **Developer tools**, folded away: the debug overlay, pause, a single
+  frame step, game speed, a screenshot (saved to the app's
+  `files/screenshots`), and the level select in developer mode.
+- **Quit.**
 
-Setting a game up then runs exactly what an installed desktop launcher runs:
-`tools/extractor.py`, then `editor/extract.py port` for the levels, then the
-game's `--check-levels`, as jobs whose output streams into the launcher.
-They need a Python and programs the launcher can execute, and Android runs
-programs only from the app's native library folder. So the APK carries:
+A change is saved and applied right away. Back, Resume, B or a touch outside
+the drawer closes it (`port/game/common/debug_overlay.cpp`; set
+`OPENRAC_DRAWER=1` to see it on a desktop). The debug overlay shows no
+keyboard shortcuts on Android: you scroll it with a finger, and a
+controller can move through it while the game is paused.
 
-- **Python**: CPython for Android as [Chaquopy](https://github.com/chaquo/chaquopy)
-  packages it (MIT; the interpreter as `libpython3.13.so` with its modules
-  and standard library, from Maven Central at a pinned version), and
-  `libopenrac-python.so`, the `python3` program around it
-  (port/android/python_main.c). The standard library and `lib-dynload` are
-  the carried copy's `python/`, which is `PYTHONHOME`.
-- **The games' windowless programs**: `libopenrac-<id>-cli.so`, the game
-  built a second time as an executable, for `--check-levels`.
-- **The copy of OpenRAC** (`tools/bundle_standalone.py --android`) as
-  `assets/openrac.zip`, unpacked into `files/openrac` when the APK changes
-  (`OpenracSetup.kt`), which then links `python/bin/python3` and
-  `port/build/release/openrac-<id>` to those libraries, so the launcher's
-  actions find them where a desktop copy has them. The unpacking runs on a
-  thread of its own, into `files/openrac.new` that then takes the place of
-  the old copy; the page waits for it (`tools_ready`) and says why after a
-  second.
-
-Setting up is made for a phone's storage and cores: the image is copied
-file to file by the kernel (`copy_file_range`/`sendfile`, through
-`std::io::copy`), the extractor writes out only SYSTEM.CNF and the boot
-executable beside the image (`--boot-only`; every file is still read and
-checked, and nothing else on the disc is read by the port), and, since
-Android's CPython has no process pools (no `sem_open`), `editor/extract.py`
-writes up to four levels at once in Pythons of their own (`SubprocessPool`).
-The player can leave the launcher while it works: a foreground service
-(`SetupService.kt`, of the data-sync type) keeps its process running and
-shows the step and its progress in a notification, which the UI keeps
-current (`backgroundStatus` in launcher/src/lib/progress.ts).
-Play is the one action that does not run a program: the launcher starts the
-game's activity with the same command line. Nothing leaves the device.
-
-## The launcher's window
-
-The launcher runs full screen: the system's bars are hidden (a swipe shows
-them for a moment) and the page keeps clear of a camera's cut-out
-(MainActivity.kt). It works without a touch screen: a controller's d-pad or
-left stick moves the focus to the nearest control in that direction, A
-presses it, B closes a menu or a dialog and then returns to the games, LB
-and RB change tabs (launcher/src/lib/pad.ts; on a desktop the same through
-the Gamepad API). Android's Back does what B does, and leaves the launcher
-from the games, which keeps a set-up running. The game covers the screen
-too: its window is fullscreen on Android (port/platform/window.cpp), and
-its on-screen pad shows only once the screen is touched, until a
-controller is used or the screen is left alone for ten seconds.
-
-The menus a desktop has along the window's top (View, Graphics, Sound,
-Developer) are a drawer on Android, as in an emulator: the pad's options
-button between Select and Start, Back, or a controller's Guide button
-slides it in from the left over the paused game. Its rows are grouped on
-cards as the launcher's settings are, large enough for a thumb, and a
-controller moves through them (left and right change a value, B closes).
-Graphics has the picture's shape (4:3, 16:10, 16:9, 21:9, 32:9 or the
-whole screen), the HUD's place, the render scale, anti-aliasing, the
-texture filter, the frame rate, VSync and the frame counter; then the
-volume and skipping cutscenes; then, folded away, the developer tools (the
-debug overlay, pause, a single tick, the speed, a screenshot, written to
-the app's files/screenshots, the level select in developer mode); and
-quitting. A change is saved and applies at once. Back, Resume, B or a
-touch beside it closes it (port/game/common/debug_overlay.cpp;
-`OPENRAC_DRAWER=1` shows it on a desktop too). The debug overlay names no
-keys there: a finger scrolls it, and a controller moves through it while
-the game is paused.
+The game asks Android for the display's fastest refresh rate while it is in
+front (`GameActivity.java`). Otherwise a 120 Hz panel can drop to 60 Hz after
+the game has been capped at 60 for a while, and then stay there.
 
 ## Updating the launcher
 
-Tauri's updater replaces a desktop program in place, which Android does not
-allow; the Android launcher has its own, on the same release manifest
-(`latest.json`, whose `android-aarch64` entry is the APK) and the same
-minisign key. It downloads the APK into its cache, checks the signature
-against the public key in `tauri.conf.json` (launcher/core/src/update.rs)
-and hands it to Android's installer (`PackageInstaller`), which asks the
-player to confirm and checks that the APK is signed with the same Android
-key as the launcher installed. The first update asks the player to allow
-the launcher to install apps. When the player has left the launcher by
-then, the confirmation waits in a notification and shows as the launcher
-comes back (UpdateReceiver.kt). A build's APK is signed for the updater
-only when it carries the launcher's own Android key, so that no update is
-offered that Android would refuse to install. Releases are signed with the launcher's own
-Android key ([RELEASING.md](../../launcher/docs/RELEASING.md)); a build made
-elsewhere has another key and is neither updated nor an update.
+On the desktop, Tauri's updater replaces the program in place. Android
+doesn't allow that, so the Android launcher has its own updater, using the
+same release manifest (`latest.json`, whose `android-aarch64` entry is the
+APK) and the same signing key:
 
-## GPU drivers, including the player's own
+1. It downloads the APK into its cache.
+2. It checks the APK's signature against the public key in `tauri.conf.json`
+   (`launcher/core/src/update.rs`).
+3. It hands the APK to Android's installer (`PackageInstaller`). Android
+   asks you to confirm, and checks that the new APK is signed with the same
+   Android key as the installed one.
 
-What emulators on Android (Skyline, Yuzu and its successors, Eden, Citron,
-Winlator Bionic) do in practice, and what it means here:
+The first time, Android asks you to allow the launcher to install apps. If
+you have left the launcher by the time the download is done, the
+confirmation waits in a notification and appears when you come back
+(`UpdateReceiver.kt`).
 
-| Driver | Vendors | How | For OpenRAC |
+An update is only offered when the build carries the launcher's own Android
+key, so you are never offered an update that Android would refuse. Releases
+are signed with that key ([RELEASING.md](../../launcher/docs/RELEASING.md)).
+A build made elsewhere has a different key: it is not updated, and it is not
+offered as an update.
+
+## GPU drivers, including your own
+
+Emulators on Android (Skyline, Yuzu and its successors, Eden, Citron,
+Winlator Bionic) use these kinds of drivers. Here is what each one means for
+OpenRAC:
+
+| Driver | GPUs | How you get it | In OpenRAC |
 |---|---|---|---|
-| The system's GLES driver | Mali, Adreno | what every app gets | works: the default |
-| An updated system driver | the vendor's own | Android 10+ "updatable graphics drivers" (Game Driver), installed by the vendor or the phone's maker | works with no code: OpenRAC uses whatever driver the system gives it |
-| ANGLE (GLES over Vulkan) | both | Developer options, "ANGLE preferences", per app | works with no code: a player can choose it for OpenRAC on a phone whose GLES driver is broken |
-| A custom Vulkan driver package (Mesa Turnip, Qualcomm's newer drivers) | Adreno | [libadrenotools](https://github.com/bylaws/libadrenotools) (BSD-2-Clause) loads a driver `.so` from the app's private storage into the system Vulkan loader's namespace; packages are zips with a `meta.json` (`name`, `author`, `vendor`, `driverVersion`, `minApi`, `libraryName`), the format Eden and the driver builders use | a **Vulkan** driver: it reaches a renderer that draws with Vulkan |
+| The system's OpenGL ES driver | Mali, Adreno | every app gets it | works; the default |
+| An updated system driver | the vendor's | Android's "updatable graphics drivers", installed by the vendor or phone maker | works with no extra code |
+| ANGLE (OpenGL ES on top of Vulkan) | both | Developer options, "ANGLE preferences", per app | works with no extra code; useful on a phone whose GLES driver is broken |
+| A custom Vulkan driver package (Mesa Turnip, newer Qualcomm drivers) | Adreno | [libadrenotools](https://github.com/bylaws/libadrenotools) (BSD-2-Clause) loads the driver from the app's storage; packages are zips with a `meta.json` (`name`, `author`, `vendor`, `driverVersion`, `minApi`, `libraryName`), the format Eden and the driver builders use | Vulkan only: needs the Vulkan renderer |
 
-The last row is the custom-driver case players mean, and it is Vulkan only:
-libadrenotools hooks the Vulkan loader, there is no GLES equivalent, and
-ANGLE on Android has no way to be given another Vulkan library without
-patching it. Mali has no replacement drivers to load in practice (Eden only
-offers them where `/dev/kgsl-3d0`, Qualcomm's kernel driver, exists), so on
-Mali the system driver, an updated one, or ANGLE are the choices.
+The last row is what players usually mean by "custom drivers", and it only
+works with Vulkan. libadrenotools hooks the Vulkan loader; there is nothing
+like it for OpenGL ES, and Android's ANGLE can't be pointed at another
+Vulkan driver without patching it. Mali has no replacement drivers worth
+loading (Eden only offers them on Qualcomm devices, where `/dev/kgsl-3d0`
+exists), so on Mali the choices are the system driver, an updated one, or
+ANGLE.
 
-So this work builds the custom-driver path up to the renderer:
+So the custom-driver path is built in three parts:
 
-1. **Driver packages** (launcher, `OpenracPlugin.kt`, Settings' "GPU
-   driver"): import a zip, validate `meta.json` (a `libraryName` that is in
-   the zip, `minApi` not above the device's API), unpack it into the app's
-   private `files/gpu_drivers/<id>/`, list, select, remove. The chosen one
-   is handed to the game in its environment (`OPENRAC_GPU_DRIVER_DIR`,
-   `OPENRAC_GPU_DRIVER_LIBRARY`).
-2. **Loading** (port, `port/android/gpu_driver.cpp`): on Adreno
-   (`/dev/kgsl-3d0` present), the chosen package is loaded with
-   `adrenotools_open_libvulkan` and its `vkGetInstanceProcAddr` handed to
-   the Vulkan side; the result (driver name and version, or why it was
-   refused) is logged and shown in the launcher. Anywhere else, or when
-   loading fails, the system driver is used.
-3. **A Vulkan renderer** consumes it (port/renderer/vulkan/vkgl.cpp). The
-   renderers are written against a small set of GL calls (renderer/gl.h,
-   renderer/world/gl_world.h), and this carries those calls out on Vulkan
-   1.3: GL's objects become Vulkan's, a program is compiled with glslang,
-   the state a pipeline bakes in keys a pipeline cache, buffers stream
-   through a per-frame ring until they stop changing. The renderers, their
-   shaders, the touch pad and the debug overlay with the drawer (through
-   game/common/imgui_gl.cpp) run on it unchanged. Settings' "Renderer"
-   chooses it (the launcher passes `OPENRAC_GL_API=vulkan`); where Vulkan
-   1.3 cannot open, the game falls back to OpenGL ES by itself.
+1. **Driver packages** (`OpenracPlugin.kt`, "GPU driver" in Settings). You
+   import a zip. The launcher checks its `meta.json` (the `libraryName` must
+   be in the zip, and `minApi` must not be above the device's), unpacks it
+   into `files/gpu_drivers/<id>/`, and lets you list, choose and remove
+   packages. The chosen one is passed to the game in
+   `OPENRAC_GPU_DRIVER_DIR` and `OPENRAC_GPU_DRIVER_LIBRARY`.
+2. **Loading** (`port/android/gpu_driver.cpp`). On Adreno, the game loads the
+   chosen package with `adrenotools_open_libvulkan` and uses its
+   `vkGetInstanceProcAddr`. What happened (the driver's name and version, or
+   why it was refused) is logged and shown in the launcher. Anywhere else, or
+   if loading fails, the system driver is used.
+3. **The Vulkan renderer** (`port/renderer/vulkan/vkgl.cpp`). The renderers
+   only use a small set of OpenGL calls (`renderer/gl.h`,
+   `renderer/world/gl_world.h`), and this layer carries out those calls on
+   Vulkan 1.3. OpenGL objects become Vulkan objects, shaders are compiled
+   with glslang, pipelines are cached by the state they bake in, and buffers
+   stream through a per-frame ring until they stop changing. The renderers,
+   their shaders, the touch pad and the drawer run on it unchanged. You
+   choose it with "Renderer" in Settings (the launcher passes
+   `OPENRAC_GL_API=vulkan`). If Vulkan 1.3 can't start, the game falls back
+   to OpenGL ES by itself.
 
-Decided: the Vulkan renderer is this layer first, and measured before any
-of it is rewritten for Vulkan itself. Each frame's cost is in the debug
-tools: `--debug-dump` writes the `vk_*` gauges (draws, pipelines made, ring
-kilobytes, flushes, and the CPU milliseconds of the draws, of present and
-of the wait for the GPU); the paths that cost most are the ones a native
-Vulkan version would be written for. A patched ANGLE in the APK was the
-alternative and was not taken. The tests that draw also run on it
-(`*_vulkan`, with the validation layer, on Mesa's lavapipe in CI).
+**Decided:** the Vulkan renderer stays a translation layer for now, and gets
+measured before any part of it is rewritten as native Vulkan. `--debug-dump`
+writes its per-frame numbers (`vk_*`: draws, pipelines created, ring
+kilobytes, flushes, and CPU time spent drawing, presenting and waiting for
+the GPU). The most expensive paths are the ones to rewrite first. Shipping a
+patched ANGLE was the alternative and was not chosen. The drawing tests also
+run on Vulkan (`*_vulkan`, with the validation layer, on Mesa's lavapipe in
+CI).
 
 ## Building and CI
 
 `tools/build_android.py` builds everything: Python, the port with the NDK,
-the libraries and SDL's Java into the launcher's Android project, the
-carried copy, and the APK with `yarn tauri android build`.
-In the launcher's workflow (`.github/workflows/launcher.yml`) Android is a
-row of both matrices, beside the desktop systems (ubuntu-latest has the
-Android SDK and NDK): `game (android)` runs it with `--no-apk` and keeps
-what it put in the Android project, `android` makes the debug APK from that
-and keeps it with the installers (on a `launcher-v*` tag, on the draft
-release too); the port's desktop tests (checks.yml)
-include the OpenGL ES variants on Mesa. A release APK needs a signing key in the repository's
-secrets; until then the artifact is a debug build.
+the libraries and SDL's Java code into the launcher's Android project, the
+carried copy of OpenRAC, and finally the APK with
+`yarn tauri android build`.
 
-## What a device must test
+In CI (`.github/workflows/launcher.yml`), Android is a row in both build
+matrices, next to the desktop systems. It runs on `ubuntu-latest`, which
+comes with the Android SDK and NDK:
 
-No phone or disc is reachable from CI, so these are manual (the list with
-steps is in [port/android/README.md](../../port/android/README.md)): the
-launcher's screens, importing a disc, the game's first frames on Mali and
-on Adreno, a controller and the touch pad, the options drawer, suspend and
-resume, the Vulkan renderer (and that it falls back where it cannot open),
-and, on Adreno, importing a Turnip package and reading in the log that it
-loaded and draws.
+- `game (android)` runs `build_android.py --no-apk` and keeps what it put into
+  the Android project;
+- `android` builds the APK from that and keeps it with the other installers
+  (and, on a `launcher-v*` tag, adds it to the draft release).
+
+The desktop port tests (`checks.yml`) include the OpenGL ES variants on Mesa.
+
+The APK is signed with the launcher's Android key when the repository has
+the `ANDROID_KEYSTORE` secrets. Without them, CI signs it with a throwaway
+debug key, so each build has to be installed fresh rather than over the
+previous one. `python3 tools/android_keystore.py` makes the key once and
+prints the secrets to add ([RELEASING.md](../../launcher/docs/RELEASING.md)).
+
+## What still needs a real device
+
+CI has no phone and no disc, so these are tested by hand (step by step in
+[port/android/README.md](../../port/android/README.md)):
+
+- the launcher's screens;
+- importing a disc;
+- the game's first frames on Mali and on Adreno;
+- a controller and the touch pad;
+- the in-game drawer;
+- suspending and resuming;
+- the Vulkan renderer, and that it falls back when it can't start;
+- on Adreno, importing a Turnip package and seeing in the log that it
+  loaded and draws.
