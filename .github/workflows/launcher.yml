@@ -157,7 +157,7 @@ jobs:
         if: matrix.name == 'fedora'
         run: |
           dnf install -y --setopt=install_weak_deps=False git curl tar xz gcc gcc-c++ make file rpm-build \
-            clang cmake ninja-build ccache python3 python-unversioned-command binutils \
+            clang llvm cmake ninja-build ccache python3 python-unversioned-command binutils \
             webkit2gtk4.1-devel gtk3-devel librsvg2-devel libsoup3-devel openssl-devel \
             mesa-libGL-devel mesa-libEGL-devel libX11-devel libXext-devel libXrandr-devel libXcursor-devel \
             libXi-devel libXScrnSaver-devel libXfixes-devel wayland-devel wayland-protocols-devel \
@@ -210,7 +210,7 @@ jobs:
           echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] https://apt.llvm.org/$codename/ llvm-toolchain-$codename-19 main" \
             | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends clang-19 lld-19 libc++-19-dev libc++abi-19-dev \
+          sudo apt-get install -y --no-install-recommends clang-19 lld-19 llvm-19 libc++-19-dev libc++abi-19-dev \
             ninja-build pkg-config \
             libgl1-mesa-dev libegl1-mesa-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
             libxss-dev libxfixes-dev libwayland-dev wayland-protocols libxkbcommon-dev libdecor-0-dev \
