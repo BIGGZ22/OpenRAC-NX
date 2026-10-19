@@ -13,6 +13,19 @@
 #include "openrac/guest.h"
 #include "openrac/sound_engine.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+
+/* OPENRAC_SOUND_LOG (as the command flush, rac1/host/hand.c): the stops and the still-playing
+ * questions, which go to the engine directly rather than through the batch, on stderr too. */
+static int sound_log(void) {
+    static int on = -1;
+    if (on < 0) {
+        on = getenv("OPENRAC_SOUND_LOG") != NULL;
+    }
+    return on;
+}
+
 int openrac_lib_snd_StartSoundSystem(void) {
     return 0;
 } /* snd_StartSoundSystem */
@@ -78,6 +91,9 @@ void openrac_lib_snd_ContinueAllSoundsInGroup(int group) {
 void openrac_lib_snd_SoundIsStillPlaying_CB(int a, int b, int c) {
     if (b != 0) {
         const int live = openrac_stream_live((uint32_t)a) || openrac_sound_playing((uint32_t)a);
+        if (sound_log()) {
+            fprintf(stderr, "[debug] sound still playing %#x -> %d\n", (unsigned)a, live);
+        }
         GFN(void (*)(int, long long), (gaddr)b)(live ? a : 0, (long long)c);
     }
 } /* snd_SoundIsStillPlaying_CB */
@@ -99,6 +115,10 @@ void openrac_lib_snd_StopAllStreams(void) {
 
 /* snd_StopSound(handle): a sound or a stream ends. */
 void openrac_lib_snd_StopSound(int handle) {
+    if (sound_log()) {
+        fprintf(stderr, "[debug] sound stop %#x (%s)\n", (unsigned)handle,
+                handle == 0 ? "none" : openrac_sound_playing((uint32_t)handle) ? "playing" : "not playing");
+    }
     if (handle != 0) {
         if (openrac_stream_live((uint32_t)handle)) {
             openrac_stream_stop((uint32_t)handle);
