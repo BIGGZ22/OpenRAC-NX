@@ -126,6 +126,13 @@ export async function checkForUpdate(
   source: UpdateSource = DEFAULT_SOURCE,
   channel: UpdateChannel = source.channel ? "dev" : "stable",
 ): Promise<UpdateInfo | null> {
+  if (!inTauri) {
+    // The browser preview's own answer (?update, ?latest, ?offline), when it has one.
+    const { mockUpdate } = await import("./mock");
+    const answer = mockUpdate(currentVersion);
+    if (answer instanceof Error) throw answer;
+    if (answer !== undefined) return answer;
+  }
   if (inTauri && onAndroid) {
     // The chosen channel's manifest in the repository that built it (a fork's) is the one answer:
     // GitHub's latest release may be another channel's, which this launcher cannot install from.
@@ -173,6 +180,11 @@ export async function checkForUpdate(
  * Downloads and installs the update in-place, then restarts the application.
  */
 export async function installUpdate(onProgress?: UpdateProgressCallback): Promise<void> {
+  if (!inTauri) {
+    const { mockInstall } = await import("./mock");
+    await mockInstall(onProgress);
+    return;
+  }
   if (onAndroid && activeAndroidRelease) {
     await installAndroidUpdate(activeAndroidRelease, onProgress);
     return;

@@ -76,9 +76,16 @@ class ManifestTests(unittest.TestCase):
         for game, name, version in openrac.versions():
             for key in ("region", "serial", "disc", "boot", "target"):
                 self.assertIn(key, version, f"{game['id']}/{name}")
-            for key in ("size", "crc32", "md5", "sha1", "sha256"):
+            # Size and SHA-256 pin a build; the other checksums follow once someone with the disc
+            # records them (rac5's project pins its boot by SHA-256 alone).
+            for key in ("size", "sha256"):
                 self.assertIn(key, version["disc"], f"{game['id']}/{name}")
                 self.assertIn(key, version["boot"], f"{game['id']}/{name}")
+            self.assertIn("sha1", version["disc"], f"{game['id']}/{name}")
+            if game["id"] != "rac5":
+                for key in ("crc32", "md5", "sha1"):
+                    self.assertIn(key, version["disc"], f"{game['id']}/{name}")
+                    self.assertIn(key, version["boot"], f"{game['id']}/{name}")
             self.assertNotIn(version["serial"], serials)
             serials.add(version["serial"])
             if version.get("source"):

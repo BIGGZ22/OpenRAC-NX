@@ -60,6 +60,11 @@ function jobOf(v: VersionView, ids: string[]): Job | null {
   );
 }
 
+/** The launcher is running V's game, which writes its memory card too. */
+export function isPlaying(v: VersionView): boolean {
+  return jobOf(v, ["play"]) !== null;
+}
+
 const action = (v: VersionView, id: string): ActionView | null =>
   v.actions.find((a) => a.id === id && a.thisPlatform) ?? null;
 

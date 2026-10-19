@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -84,6 +84,12 @@ jobs:
           python tests/check_repository.py
           python tools/progress.py --check
 
+      - name: rac5 tools and layout
+        working-directory: games/rac5/ntsc
+        run: |
+          python -m unittest discover -s tests -v
+          python tools/check_repository.py
+
   # The desktop launcher (launcher/): its UI checks, and its Rust side, whose tests also check
   # launcher/actions.json against games/*/game.json. On Windows too, where paths join with
   # backslashes, files are checked out with CRLF and the Unix-only tests are left out.
@@ -94,7 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-26.04, windows-latest]
     defaults:
       run:
         shell: bash
@@ -134,7 +140,7 @@ jobs:
   # Clang (SDL3 fetched by CMake) and its tests, the OpenGL ones on Mesa's
   # software renderer. The rac1 program is built from games/rac1's C.
   port:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -174,7 +180,7 @@ jobs:
   # "Build the game" builds it (tools/build_port.py), against the system's SDL3, Clang and CMake,
   # then hostgen's tests and every test of the port on Mesa's software renderer.
   port-fedora:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     container: registry.fedoraproject.org/fedora:44
     timeout-minutes: 60
     steps:

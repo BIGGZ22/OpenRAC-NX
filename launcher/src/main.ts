@@ -1,6 +1,7 @@
 import "@fontsource-variable/inter";
 import "@fontsource-variable/orbitron";
 import "@fontsource/audiowide";
+import "@fontsource/chakra-petch/600.css";
 import { mount } from "svelte";
 import "./app.css";
 import "./layouts/compact.css";

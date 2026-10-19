@@ -15,10 +15,11 @@ BOOT = b"\x7fELF" + bytes(3000)
 CNF = b"BOOT2 = cdrom0:\\SCES_999.99;1\r\nVER = 1.00\r\n"
 
 
-def fake_builds(boot_sha1: str):
-    """A game.json that knows one build, SCES_999.99 of game "rac9"."""
+def fake_builds(boot_sha1: str | None, boot_sha256: str | None = None):
+    """A game.json that knows one build, SCES_999.99 of game "rac9", by its boot's SHA-1 (or SHA-256 alone)."""
     game = {"id": "rac9", "title": "Nine"}
-    version = {"serial": "SCES_999.99", "region": "PAL", "boot": {"sha1": boot_sha1}, "disc": {}}
+    boot = {"sha1": boot_sha1} if boot_sha1 else {"sha256": boot_sha256}
+    version = {"serial": "SCES_999.99", "region": "PAL", "boot": boot, "disc": {}}
     return lambda wanted=None: {"SCES_999.99": (game, "pal", version)} if wanted in (None, "rac9") else {}
 
 
@@ -75,6 +76,15 @@ class ExtractTests(unittest.TestCase):
         self.assertFalse((self.proj / "iso_data" / "rac9").exists())
         self.assertFalse((self.proj / "iso_data" / "_temp").exists())
 
+    def test_a_build_pinned_by_sha256_alone(self):
+        good = hashlib.sha256(BOOT).hexdigest()
+        with mock.patch.object(extractor, "builds", fake_builds(None, good)):
+            self.assertEqual(extractor.extract(self.iso, "rac9", self.proj, minimum=0)["serial"], "SCES_999.99")
+        with mock.patch.object(extractor, "builds", fake_builds(None, "0" * 64)):
+            with self.assertRaises(extractor.ExtractError) as caught:
+                extractor.extract(self.iso, "rac9", self.proj, minimum=0)
+        self.assertEqual(caught.exception.code, 4002)
+
     def test_refuses_another_game(self):
         with mock.patch.object(extractor, "builds", fake_builds(hashlib.sha1(BOOT).hexdigest())):
             with self.assertRaises(extractor.ExtractError) as caught:
@@ -112,6 +122,8 @@ class ExtractTests(unittest.TestCase):
         for serial in ("SCES_509.16", "SCUS_971.99", "SCUS_972.68", "SCUS_973.53", "SCUS_974.65"):
             self.assertIn(serial, serials)
             self.assertEqual(len(serials[serial][2]["boot"]["sha1"]), 40)
+        # Size Matters' project pins its boot by SHA-256 only.
+        self.assertEqual(len(serials["SCUS_976.15"][2]["boot"]["sha256"]), 64)
 
 
 if __name__ == "__main__":

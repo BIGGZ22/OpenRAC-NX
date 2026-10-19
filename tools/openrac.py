@@ -140,7 +140,8 @@ def scan(full: bool = False) -> dict[str, Path]:
             continue
         game, name, version = known[serial]
         want, got = version["disc"], checksums(iso, full)
-        bad = [k for k, v in got.items() if want.get(k) != v]
+        # A checksum game.json does not record yet (rac5's CRC32 and MD5) is not compared.
+        bad = [k for k, v in got.items() if k in want and want[k] != v]
         label = f"{game['title']} ({version['region']}, {serial})"
         if bad:
             print(f"{iso.name}: {label}, but {', '.join(bad)} differ from games/{game['id']}/game.json")
@@ -346,13 +347,18 @@ def progress(fetch: bool) -> None:
     print(table)
 
 
+def sums(d: dict) -> str:
+    """The four checksums' table cells; one a project has not recorded yet is a dash."""
+    return " | ".join(f"`{d[k]}`" if d.get(k) else "–" for k in ("crc32", "md5", "sha1", "sha256"))
+
+
 def disc_table() -> str:
     out = ["| Game | Version | Serial | Size (bytes) | CRC32 | MD5 | SHA-1 | SHA-256 |",
            "|---|---|---|---:|---|---|---|---|"]
     for game, name, v in versions():
         d = v["disc"]
         out.append(f"| {game['title']} | {v['region']}, disc v{d['version']} | `{v['serial']}` | {d['size']:,} | "
-                   f"`{d['crc32']}` | `{d['md5']}` | `{d['sha1']}` | `{d['sha256']}` |")
+                   f"{sums(d)} |")
     return "\n".join(out) + "\n"
 
 
@@ -361,8 +367,7 @@ def boot_table() -> str:
            "|---|---|---|---:|---|---|---|---|"]
     for game, name, v in versions():
         b = v["boot"]
-        out.append(f"| {game['title']} | {v['region']} | `{b['file']}` | {b['size']:,} | `{b['crc32']}` | "
-                   f"`{b['md5']}` | `{b['sha1']}` | `{b['sha256']}` |")
+        out.append(f"| {game['title']} | {v['region']} | `{b['file']}` | {b['size']:,} | {sums(b)} |")
     return "\n".join(out) + "\n"
 
 

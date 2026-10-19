@@ -37,6 +37,8 @@
   --font-sans: "Inter Variable", system-ui, sans-serif;
   --font-brand: "Audiowide", "Inter Variable", sans-serif;
   --font-head: "Orbitron Variable", "Inter Variable", sans-serif;
+  /* Size Matters' titles, as on the site's card. */
+  --font-chakra: "Chakra Petch", "Orbitron Variable", sans-serif;
   --font-mono: ui-monospace, "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
 
   --radius: 16px;
@@ -50,11 +52,9 @@
   --medium: 0.28s;
   --slow: 0.5s;
 
-  /* A page's margins and the space between its sections, the same on every page. */
-  --page-x: 28px;
-  --page-top: 24px;
-  --page-bottom: 60px;
-  --page-gap: 20px;
+  /* A page's margins and the space between its sections (--page-x, --page-top, --page-bottom,
+     --page-gap) are each page's own on a desktop, its fallback values; a narrow window and Android
+     set them below, the same on every page. */
   /* What the navigation takes of the window: the header bar on top, or on Android the rail on
      the left or the bar at the bottom (Header.svelte). */
   --nav-top: 60px;
@@ -525,7 +525,8 @@ details.more[open] > :not(summary) {
   inset: 0;
   background: linear-gradient(to right, transparent, rgb(255 255 255 / 0.45), transparent);
   transform: translateX(-100%);
-  animation: sweep 2.6s ease-in-out 1.6s infinite;
+  /* A few shines when the bar shows, then it rests. */
+  animation: sweep 2.6s ease-in-out 1.6s 3;
 }
 
 /* Functional C after the matched part: stripes of the game's colour, muted, since it is not

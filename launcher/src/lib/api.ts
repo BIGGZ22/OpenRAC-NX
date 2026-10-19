@@ -450,6 +450,8 @@ export interface WriteResult {
 export interface SaveBackupInfo {
   name: string;
   path: string;
+  /** What it is called, for people ("before the last boss"); null when taken without a note. */
+  note: string | null;
   createdMillis: number;
   totalSize: number;
 }

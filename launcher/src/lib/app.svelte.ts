@@ -28,7 +28,7 @@ import { backgroundStatus } from "./progress";
 import { lastLines, PLAY_ACTIONS, unseenRecent, type StopNotice } from "./reports";
 import { checkForUpdate, type UpdateInfo } from "./updates";
 
-export type Page = "library" | "game" | "mods" | "tasks" | "settings";
+export type Page = "library" | "game" | "mods" | "tasks" | "develop" | "settings";
 
 interface AppState {
   info: AppInfo | null;
@@ -43,6 +43,8 @@ interface AppState {
   page: Page;
   /** The version the game page shows (`rac1/pal`). */
   version: string | null;
+  /** What Develop shows: "checkout", "console", or a version's key (`rac1/pal`). */
+  develop: string;
   toasts: { id: number; text: string; kind: "info" | "error" }[];
   update: UpdateInfo | null;
   showUpdateModal: boolean;
@@ -69,6 +71,7 @@ export const app = $state<AppState>({
   discChoices: [],
   page: "library",
   version: null,
+  develop: "checkout",
   toasts: [],
   update: null,
   showUpdateModal: false,
@@ -295,26 +298,44 @@ export async function lookForUpdate(channel?: UpdateChannel): Promise<boolean> {
 }
 
 /** Reads the library again: after a job, on focus, after settings change. */
+// What the library and the disc scan last were, as JSON: refresh runs on every focus of the
+// window, and an answer that did not change is not put in `app`, so nothing that shows it is
+// worked out and drawn again.
+const seen = { library: "", discs: "" };
+
+function same(key: keyof typeof seen, value: unknown): boolean {
+  const json = JSON.stringify(value);
+  if (json === seen[key]) return true;
+  seen[key] = json;
+  return false;
+}
+
+function setLibrary(library: Library | null) {
+  if (!same("library", library)) app.library = library;
+}
+
 export async function refresh() {
   if (!app.config?.root) {
-    app.library = null;
+    setLibrary(null);
     app.libraryError = "Choose your OpenRAC folder in Settings.";
     return;
   }
   try {
-    app.library = await api.library();
+    setLibrary(await api.library());
     app.libraryError = null;
   } catch (e) {
     app.libraryError = errorText(e);
   }
   void countCrashes();
+  let scan: { found: FoundDisc[]; choices: DiscChoice[] } = { found: [], choices: [] };
   try {
-    const scan = app.config.discsDir ? await api.scanDiscs() : { found: [], choices: [] };
+    if (app.config.discsDir) scan = await api.scanDiscs();
+  } catch {
+    // A folder that went away: the game pages ask for an image as before.
+  }
+  if (!same("discs", scan)) {
     app.discs = scan.found;
     app.discChoices = scan.choices;
-  } catch {
-    app.discs = []; // a folder that went away: the tiles ask for an image as before
-    app.discChoices = [];
   }
 }
 
@@ -323,7 +344,7 @@ export async function refresh() {
 export async function syncProgressWeb() {
   if (!app.config?.root) return;
   try {
-    app.library = await api.syncProgressFromWeb();
+    setLibrary(await api.syncProgressFromWeb());
   } catch {
     // Offline: keep what was read at start (the kept copy)
   }
@@ -360,6 +381,13 @@ export function openVersion(key: string) {
       if (saved) app.config = saved;
     });
   }
+}
+
+/** Opens Develop on TARGET: "checkout", "console" or a version's key; by default the version
+ *  the game page shows, else the checkout. */
+export function openDevelop(target?: string) {
+  app.develop = target ?? app.version ?? "checkout";
+  app.page = "develop";
 }
 
 export function currentVersion(): VersionView | null {
@@ -518,7 +546,10 @@ export async function installGame(game: string, title: string, found?: string): 
   });
   pump();
   const ok = await ended;
-  toast(ok ? `${title} is set up from your disc.` : `Setting ${title} up failed: see Tasks.`, ok ? "info" : "error");
+  toast(
+    ok ? `${title} is set up from your disc.` : `Setting ${title} up stopped: Activity has what it printed.`,
+    ok ? "info" : "error",
+  );
   return ok;
 }
 

@@ -17,6 +17,7 @@ each project.
 | [`games/rac2/ntsc`](../games/rac2/ntsc) | rac2-decomp | https://github.com/OpenRAC/rac2-gc-decomp | master | `86dbd8523696` | 2026-10-15 | GPL-3.0 |
 | [`games/rac3/ntsc`](../games/rac3/ntsc) | rac3-uya-decomp | https://github.com/OpenRAC/rac3-uya-decomp | main | `bfd8278e8c73` | 2026-10-07 | GPL-3.0 |
 | [`games/rac4/ntsc`](../games/rac4/ntsc) | rac-deadlocked-decomp | https://github.com/OpenRAC/rac-deadlocked-decomp | main | `dedfcd416a1b` | 2026-10-05 | MIT (GPL libgcc, newlib libm) |
+| [`games/rac5/ntsc`](../games/rac5/ntsc) | rac5-sm-decomp | https://github.com/OpenRAC/rac5-sm-decomp | master | `57b025248ac0` | 2026-10-18 | GPL-3.0 |
 <!-- sources:end -->
 
 The full commit hashes are in each `games/<game>/game.json` under `source`,
@@ -65,6 +66,10 @@ Everything else is exactly as it was at that commit.
   rebuilt to rac1-decomp's structure, so it was imported afresh at that commit.
 - `ports/pal-functional/` (platypet2217-star's RAC2Decomp, MIT) comes along unchanged; it is
   not part of the matching sources or progress.
+
+**rac5/ntsc**
+- Nothing changed: imported as the project's commit, whole. It already states the sourcing
+  rule in its own LEGAL.md, CONTRIBUTING.md and AGENTS.md.
 
 **rac4/ntsc**
 - In `src/game/00473A88.c`, the five members of the local struct are named by

@@ -1,0 +1,42 @@
+name: Source checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Synthetic ISO and ELF tests
+        run: python -m unittest discover -s tests -v
+      - name: Check scoped progress snapshot
+        run: python tools/progress_status.py --check
+      - name: Check boot promotion candidates
+        run: python tools/boot_promotion_audit.py --check
+      - name: Generate labelled ByteMatch estimate
+        run: |
+          python tools/bytematch_estimate.py --write
+          python tools/bytematch_estimate.py --check
+      - name: Upload ByteMatch report from master
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v4
+        with:
+          name: SCUS_976.15_report
+          path: build/bytematch/SCUS_976.15/report.json
+          if-no-files-found: error
+      - name: Check level function inventory metadata
+        run: python tools/level_function_inventory.py --check
+      - name: Check independent boundaries and translation leads
+        run: |
+          python tools/level_ghidra_crosscheck.py --check
+          python tools/level_translation_families.py --check
+          python tools/level_flow_ranges.py --check
+          python tools/level_full_module_flow.py --check
+          python tools/level_split_dedupe.py --check
+      - name: No game data or build artifacts in the repository
+        run: python tools/check_repository.py

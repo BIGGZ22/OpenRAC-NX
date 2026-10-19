@@ -124,6 +124,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@fontsource/chakra-petch@npm:^5.3.0":
+  version: 5.3.0
+  resolution: "@fontsource/chakra-petch@npm:5.3.0"
+  checksum: 10c0/51f6cbc690dd349afb87593705406acd2e18267ca02f0ddfba57522658e5daa2804b2d0df2bd5624fcadadb68c6a88069b09e2d7b91e5c45b644d704634e8fe8
+  languageName: node
+  linkType: hard
+
 "@humanfs/core@npm:^0.19.2":
   version: 0.19.2
   resolution: "@humanfs/core@npm:0.19.2"
@@ -1652,6 +1659,7 @@ __metadata:
     "@fontsource-variable/inter": "npm:^5.3.0"
     "@fontsource-variable/orbitron": "npm:^5.3.0"
     "@fontsource/audiowide": "npm:^5.3.0"
+    "@fontsource/chakra-petch": "npm:^5.3.0"
     "@sveltejs/vite-plugin-svelte": "npm:^7.3.1"
     "@tauri-apps/api": "npm:^2.12.1"
     "@tauri-apps/cli": "npm:^2.12.1"

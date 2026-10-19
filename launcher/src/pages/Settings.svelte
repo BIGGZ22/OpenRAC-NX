@@ -26,6 +26,30 @@
     return { ...app.config };
   }
 
+  /** What this page edits. The rest of the config (the last game opened, the crash reports seen)
+   *  changes elsewhere while the page is open, so it is neither compared nor saved from here. */
+  const EDITED = [
+    "root",
+    "python",
+    "godot",
+    "docker",
+    "discsDir",
+    "installDir",
+    "layout",
+    "discordRpc",
+    "checkUpdates",
+    "updateChannel",
+    "detailedGameLog",
+    "saveEditorAdvanced",
+    "developer",
+    "discordClientId",
+  ] as const satisfies (keyof Config)[];
+  type Edited = Pick<Config, (typeof EDITED)[number]>;
+
+  function edited(config: Config): Edited {
+    return Object.fromEntries(EDITED.map((k) => [k, config[k]])) as Edited;
+  }
+
   // Edits stay local until saved.
   let draft = $state<Config>(saved());
   let found = $state<Detected | null>(null);
@@ -34,9 +58,12 @@
   let looked = $state<"idle" | "looking" | "found" | "none" | "failed">("idle");
   let lookError = $state("");
 
-  /** The OpenRAC folder is a contributor's choice in an installed launcher, and Android has no
-   *  folders to choose (its picker copies discs into the app): no panel when it would be empty. */
-  const showFolders = $derived(!app.info?.standalone || draft.developer || !onAndroid);
+  /** The OpenRAC folder is the first thing on the first run; after it, a player sees it only while
+   *  it is missing (an installed launcher carries its own copy), and a contributor in Developer. */
+  const rootHere = $derived(setup || (!app.info?.standalone && !draft.root));
+  /** Android has no folders to choose (its picker copies discs into the app): no panel when it
+   *  would be empty. */
+  const showFolders = $derived(rootHere || !onAndroid || draft.developer);
   /** Advanced opens by itself when something in it is on. */
   let advancedOpen = $state(saved().detailedGameLog || saved().developer || saved().saveEditorAdvanced);
 
@@ -69,16 +96,16 @@
     });
   });
 
-  const changed = $derived(JSON.stringify(draft) !== JSON.stringify(app.config));
+  const changed = $derived(!!app.config && JSON.stringify(edited(draft)) !== JSON.stringify(edited(app.config)));
   const tool = (t: "python" | "godot" | "docker") => (path: string) => api.checkTool(t, path);
   const root = (path: string): Promise<Check> => api.checkRoot(path);
   /** The install folder only has to be a place to write; the extractor makes what it needs inside. */
   const installFolder = (path: string): Promise<Check> =>
-    Promise.resolve({ ok: true, version: null, message: `games are set up in ${path}/active/<game>/data` });
+    Promise.resolve({ ok: true, version: null, message: `Games are set up in ${path}/active/<game>/data` });
 
   /** The games folder is looked through when it is saved; what it holds shows on the Games page. */
   const gamesFolder = (path: string): Promise<Check> =>
-    Promise.resolve({ ok: true, version: null, message: `disc images (.iso) are looked for in ${path}` });
+    Promise.resolve({ ok: true, version: null, message: `Disc images (.iso) are looked for in ${path}` });
 
   async function save(finish: boolean) {
     saving = true;
@@ -86,9 +113,10 @@
     if (customId === "") customId = null;
     const before = app.info ? updateChannelOf(app.info, app.config) : null;
     await saveConfig({
-      ...draft,
+      ...saved(),
+      ...edited(draft),
       discordClientId: customId,
-      setupComplete: draft.setupComplete || finish,
+      setupComplete: (app.config?.setupComplete ?? false) || finish,
     });
     draft = saved();
     // Another channel: what was found on the last one is not what this one offers.
@@ -119,9 +147,8 @@
 
   {#if showFolders}
     <section class="panel">
-      <h2>Folders</h2>
-      <!-- An installed launcher carries its own copy: the folder is a contributor's choice there. -->
-      {#if !app.info?.standalone || draft.developer}
+      <h2>Your games</h2>
+      {#if rootHere}
         <PathField
           label="OpenRAC folder"
           hint="Your copy of OpenRAC: the folder with games/ and tools/ in it."
@@ -225,7 +252,7 @@
         {#if looked === "looking"}· Looking…{:else if looked === "found" || app.update}· {app.update?.name ??
             "A new version"} is out.
           <button class="link" onclick={() => (app.showUpdateModal = true)}>Update</button>{:else if looked === "none"}·
-          You have the latest.{:else if looked === "failed"}· Could not check: {lookError}.{/if}
+          You have the latest ({app.info?.version ?? ""}).{:else if looked === "failed"}· Could not check: {lookError}.{/if}
         {#if app.info?.updateChannels}
           {@const source = app.info.updateChannels[channel]}
           · <button class="link" onclick={() => void api.openUrl(source.page)}>Releases</button>
@@ -240,19 +267,19 @@
     </section>
   {/if}
 
-  {#if !app.info?.standalone || draft.developer}
+  {#if !app.info?.standalone}
     <section class="panel">
       <h2>Programs</h2>
       <PathField
         label="Godot"
-        hint="Godot 4.7 or newer, for the level editor. Optional."
+        hint="Godot 4.7 or newer, for the level editor (Mods). Optional."
         bind:value={draft.godot}
         candidates={found?.godots}
         detail={draft.developer}
         check={tool("godot")}
       />
-      <!-- A player is asked for Python only when none was found; contributors always see it. -->
-      {#if draft.developer || setup || !app.config?.python}
+      <!-- A player is asked for Python only when none was found; contributors find it in Developer. -->
+      {#if setup || (!draft.developer && !app.config?.python)}
         <PathField
           label="Python"
           hint="Python 3.10 or newer: OpenRAC's tools run with it."
@@ -260,16 +287,6 @@
           candidates={found?.pythons}
           detail={draft.developer}
           check={tool("python")}
-        />
-      {/if}
-      {#if draft.developer}
-        <PathField
-          label="Docker"
-          hint="The build container of Ratchet & Clank (PAL) and Deadlocked runs in it, on Linux and macOS. Optional."
-          bind:value={draft.docker}
-          candidates={found?.dockers}
-          detail={draft.developer}
-          check={tool("docker")}
         />
       {/if}
     </section>
@@ -282,16 +299,9 @@
         <label class="setting">
           <span class="text">
             <strong>Detailed game logs</strong>
-            <small>Turn on when we ask you to. Logs are on each game's page.</small>
+            <small>Turn on when we ask you to. Logs and crash reports are under Help, on each game's page.</small>
           </span>
           <input type="checkbox" role="switch" class="switch" bind:checked={draft.detailedGameLog} />
-        </label>
-        <label class="setting">
-          <span class="text">
-            <strong>Developer tools</strong>
-            <small>Builds, checks, progress, disc serials and the Tasks page.</small>
-          </span>
-          <input type="checkbox" role="switch" class="switch" bind:checked={draft.developer} />
         </label>
         <label class="setting">
           <span class="text">
@@ -300,6 +310,55 @@
           </span>
           <input type="checkbox" role="switch" class="switch" bind:checked={draft.saveEditorAdvanced} />
         </label>
+        <label class="setting">
+          <span class="text">
+            <strong>Developer tools</strong>
+            <small>The Develop tab (builds, checks, decompilation, the console), disc serials and file names.</small>
+          </span>
+          <input type="checkbox" role="switch" class="switch" bind:checked={draft.developer} />
+        </label>
+        {#if draft.developer}
+          <!-- What developer tools add: under the switch, set in from it. -->
+          <div class="dev">
+            {#if !rootHere}
+              <PathField
+                label="OpenRAC folder"
+                hint="Your copy of OpenRAC: the folder with games/ and tools/ in it."
+                folder
+                bind:value={draft.root}
+                candidates={found?.roots}
+                detail={draft.developer}
+                check={root}
+              />
+            {/if}
+            {#if !onAndroid}
+              <PathField
+                label="Python"
+                hint="Python 3.10 or newer: OpenRAC's tools run with it."
+                bind:value={draft.python}
+                candidates={found?.pythons}
+                detail={draft.developer}
+                check={tool("python")}
+              />
+              <PathField
+                label="Docker"
+                hint="The build container of Ratchet & Clank (PAL) and Deadlocked runs in it, on Linux and macOS. Optional."
+                bind:value={draft.docker}
+                candidates={found?.dockers}
+                detail={draft.developer}
+                check={tool("docker")}
+              />
+            {/if}
+            {#if app.info}
+              <dl class="facts">
+                <dt>System</dt>
+                <dd>{app.info.platform}</dd>
+                {#if app.info.configFile}<dt>Settings file</dt>
+                  <dd class="mono">{app.info.configFile}</dd>{/if}
+              </dl>
+            {/if}
+          </div>
+        {/if}
         {#if draft.developer && draft.discordRpc}
           <div class="field">
             <label for="discord-client-id">Discord application ID</label>
@@ -328,9 +387,7 @@
     </div>
   {:else}
     <p class="dim about">
-      OpenRAC Launcher {app.info?.version ?? ""}{#if draft.developer && app.info}
-        · {app.info.platform}{#if app.info.configFile}
-          · <span class="mono">{app.info.configFile}</span>{/if}{/if}
+      OpenRAC Launcher {app.info?.version ?? ""}
       <!-- The header's links, which Android's navigation has no room for. -->
       {#if onAndroid}
         · <button class="link" onclick={() => void api.openUrl(SITE_URL)}>openrac.dev</button>
@@ -353,10 +410,10 @@
     max-width: 820px;
     margin: 0 auto;
     /* Room at the bottom for the bar that saves. */
-    padding: var(--page-top) var(--page-x) calc(var(--page-bottom) + 56px);
+    padding: var(--page-top, 28px) var(--page-x, 28px) calc(var(--page-bottom, 54px) + 56px);
     display: flex;
     flex-direction: column;
-    gap: var(--page-gap);
+    gap: var(--page-gap, 18px);
   }
 
   .welcome {
@@ -395,6 +452,31 @@
 
   .status + .note {
     margin-top: 4px;
+  }
+
+  .dev {
+    display: flex;
+    flex-direction: column;
+    margin: 4px 0 6px;
+    padding-left: 16px;
+    border-left: 1px solid var(--line);
+  }
+
+  .facts {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 4px 14px;
+    margin: 12px 0 4px;
+    font-size: 13px;
+  }
+
+  .facts dt {
+    color: var(--dim);
+  }
+
+  .facts dd {
+    margin: 0;
+    overflow-wrap: anywhere;
   }
 
   details.more > summary h2 {
@@ -446,7 +528,7 @@
     bottom: calc(22px + var(--nav-bottom));
     transform: translateX(-50%);
     z-index: 25;
-    width: min(764px, calc(100% - var(--nav-left) - 2 * var(--page-x)));
+    width: min(764px, calc(100% - var(--nav-left) - 2 * var(--page-x, 28px)));
     display: flex;
     align-items: center;
     gap: 10px;

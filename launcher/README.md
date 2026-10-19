@@ -1,6 +1,6 @@
 # OpenRAC Launcher
 
-A desktop app for the Ratchet & Clank games through OpenRAC, for all four
+A desktop app for the Ratchet & Clank games through OpenRAC, for all five
 games. It is to OpenRAC what [OpenGOAL's launcher](https://github.com/open-goal/launcher)
 is to Jak and Daxter: a player sets a game up from the image of their own
 disc, plays the **native PC port**, and can open the levels in Godot to edit
@@ -87,7 +87,9 @@ the disc image and saves are kept.
 - **One main button**, always in the same place, says the next thing to do:
   Set up from your disc, Build the game, Play. What is done less often
   (rebuild, open the folder, the activity log, remove the set-up) is in the
-  menu beside it. The games page shows the same button on each game's tile.
+  menu beside it. Every game has this page, the same for all of them; the
+  list on the left switches between them, and the Games tab opens on the one
+  you used last.
 - **Save files**: the port's memory card (`~/.local/share/openrac/memcard/<serial>/`
   on Linux) with each slot's planet, bolts and save time, backups you can
   restore, and the folder. **Edit** opens a slot of Ratchet & Clank in the save
@@ -104,8 +106,9 @@ the disc image and saves are kept.
   to attach. Say what you were doing. Nothing personal goes in: your home
   folder reads `~`.
 - **Logs and crash reports**, under the save files: each time you played
-  and each crash, newest first, with the same Copy and Save. A recent crash
-  marks the game's tile. **Detailed logs** makes the game write more, for
+  and each crash, newest first, with the same Copy and Save, under **Help**
+  beside the saves. A recent crash marks the game in the list.
+  **Detailed logs** makes the game write more, for
   when we ask for it.
 - **Level editor**: under **Mods** (below), and in the game's menu.
 - **Two discs of a game, for developers**: with developer tools on and both

@@ -126,8 +126,10 @@ def contents_hash(hashes: dict[str, str]) -> str:
     return hashlib.sha256("".join(f"{p}\0{h}\n" for p, h in sorted(hashes.items())).encode()).hexdigest()
 
 
-def validate(game: str, serial: str | None, boot_sha1: str | None, files: dict[str, str]) -> tuple[dict, str, dict]:
-    """The known build these files are, or an ExtractError."""
+def validate(game: str, serial: str | None, boot_sha1: str | None, files: dict[str, str],
+             boot_sha256: str | None = None) -> tuple[dict, str, dict]:
+    """The known build these files are, or an ExtractError. A build game.json pins by the boot's
+    SHA-256 alone (rac5, recorded from its project's target.json) is checked by that."""
     if serial is None or serial not in files:
         raise ExtractError(4000)
     known = builds(game)
@@ -137,8 +139,12 @@ def validate(game: str, serial: str | None, boot_sha1: str | None, files: dict[s
             raise ExtractError(4001, f"{serial} is {other[0]['title']} ({other[2]['region']}), not {game}")
         raise ExtractError(4001, serial)
     g, name, version = known[serial]
-    if boot_sha1 != version["boot"]["sha1"]:
-        raise ExtractError(4002, f"{serial} SHA-1 {boot_sha1}, game.json has {version['boot']['sha1']}")
+    want = version["boot"]
+    if "sha1" in want:
+        if boot_sha1 != want["sha1"]:
+            raise ExtractError(4002, f"{serial} SHA-1 {boot_sha1}, game.json has {want['sha1']}")
+    elif boot_sha256 != want.get("sha256"):
+        raise ExtractError(4002, f"{serial} SHA-256 {boot_sha256}, game.json has {want.get('sha256')}")
     # game.json may list the disc's file count and contents hash once someone
     # with the disc records them (the line print_new_build prints).
     disc = version.get("disc", {})
@@ -202,7 +208,9 @@ def extract(image: Path, game: str, proj: Path, minimum: int = MIN_IMAGE_SIZE, b
             print(f"  {path}: {size} bytes{'' if keep else ', checked'}")
 
     try:
-        g, name, version = validate(game, serial, hashes.get(serial or ""), hashes)
+        boot = temp / serial if serial else None
+        boot_sha256 = hashlib.sha256(boot.read_bytes()).hexdigest() if boot and boot.is_file() else None
+        g, name, version = validate(game, serial, hashes.get(serial or ""), hashes, boot_sha256)
     except ExtractError as e:
         if e.code in (4001, 4002, 4011, 4012):
             print_new_build(serial, hashes.get(serial or ""), hashes)

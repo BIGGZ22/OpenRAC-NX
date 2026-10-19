@@ -1,0 +1,8 @@
+--- a/gcc/config/mips/mips.c
++++ b/gcc/config/mips/mips.c
+@@ -9003 +9003 @@
+-		  for (; loop < 7; loop++)
++		  for (; loop < 6; loop++)
+@@ -9044 +9044 @@
+-		  for (; loop < 7; loop++)
++		  for (; loop < 6; loop++)

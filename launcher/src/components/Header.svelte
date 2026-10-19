@@ -4,19 +4,19 @@
   // On Android the same places are a navigation rail on the left, or a bar at the bottom when
   // the window is narrow, as Android's own apps have them (Material's navigation rail and bar).
   import { api, inTauri, onAndroid } from "$lib/api";
-  import { app, jobs, pendingJobs, runningJob, type Page } from "$lib/app.svelte";
+  import { app, jobs, openDevelop, pendingJobs, runningJob, type Page } from "$lib/app.svelte";
   import { DISCORD_URL, SITE_URL } from "$lib/links";
   import { untrack } from "svelte";
   import Icon, { type IconName } from "./Icon.svelte";
 
   // A player has three places to be: the games, modding and the settings. What the launcher
-  // ran (Activity) opens from the running job here and from a game's menu; with
-  // developer tools on it is a tab of its own, Tasks.
+  // ran (Activity) opens from the running job here and from a game's menu. With
+  // developer tools on, Develop is a tab of its own: the checkout, each version and the jobs.
   const tabs = $derived<{ page: Page; label: string; icon: IconName }[]>([
     { page: "library", label: "Games", icon: "library" },
     // The level editor works in a checkout's folders: not from the copy an installed launcher carries.
     ...(app.info?.standalone ? [] : [{ page: "mods" as Page, label: "Mods", icon: "edit" as IconName }]),
-    ...(app.config?.developer ? [{ page: "tasks" as Page, label: "Tasks", icon: "terminal" as IconName }] : []),
+    ...(app.config?.developer ? [{ page: "develop" as Page, label: "Develop", icon: "terminal" as IconName }] : []),
     { page: "settings", label: "Settings", icon: "gear" },
   ]);
 
@@ -94,7 +94,7 @@
           </span>
         {/if}
         <span class="label">{tab.label}</span>
-        {#if tab.page === "tasks" && pending > 0}<span class="count">{pending}</span>{/if}
+        {#if tab.page === "develop" && pending > 0}<span class="count">{pending}</span>{/if}
       </button>
     {/each}
   </nav>
@@ -105,7 +105,8 @@
       title={`${running.title}: show its output`}
       onclick={() => {
         jobs.selected = running.key;
-        app.page = "tasks";
+        if (app.config?.developer) openDevelop("console");
+        else app.page = "tasks";
       }}
     >
       <span class="spinner"></span>
@@ -119,18 +120,30 @@
          looked like a stray bar). -->
     {#if app.update && !onAndroid}
       {@const update = app.update}
+      <!-- A newer launcher: in the bar's dark brown, with a dot that says something is new. -->
       <button
         class="update"
         onclick={() => (app.showUpdateModal = true)}
-        title={`Version ${update.tag} is available!\nClick to inspect or update.`}
+        title={`Launcher ${update.version} is out: see what's new and update`}
       >
-        ▲ Update {update.version}
+        <span class="pulse" aria-hidden="true"></span>Update<span class="label">{update.version}</span>
       </button>
     {/if}
     {#if !inTauri}<span class="preview">Browser preview</span>{/if}
     {#if !onAndroid}
-      <button class="site" onclick={() => void api.openUrl(SITE_URL)}>openrac.dev</button>
-      <button class="discord" onclick={() => void api.openUrl(DISCORD_URL)}>Discord</button>
+      <button class="site" onclick={() => void api.openUrl(SITE_URL)} aria-label="openrac.dev" title="openrac.dev"
+        ><Icon name="external" size={14} /><span class="label">openrac.dev</span></button
+      >
+      <!-- The community: the site's white button, with Discord's mark, which tilts like the wrench. -->
+      <button class="discord" onclick={() => void api.openUrl(DISCORD_URL)} aria-label="Join the OpenRAC Discord">
+        <svg class="mark" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path
+            d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"
+            fill="currentColor"
+          />
+        </svg>
+        <span class="label">Discord</span>
+      </button>
     {/if}
   </div>
 </header>
@@ -320,6 +333,9 @@
   }
 
   .site {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: 14px;
     font-weight: 600;
     color: var(--bar-ink);
@@ -327,42 +343,143 @@
     border-radius: 999px;
   }
 
+  .site:hover {
+    background: rgb(0 0 0 / 0.1);
+  }
+
+  /* Discord: the site's white button, raised a little off the bar, its mark in the bar's ink. */
   .discord {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 700;
     background: #fff;
-    color: var(--bar-ink);
-    border: 1px solid rgb(0 0 0 / 0.15);
+    color: var(--bar-ink-deep);
+    border: 1px solid rgb(0 0 0 / 0.12);
     border-radius: 999px;
-    padding: 7px 16px;
+    padding: 6px 16px 6px 12px;
+    box-shadow:
+      0 2px 0 rgb(0 0 0 / 0.18),
+      inset 0 -2px 0 rgb(0 0 0 / 0.06);
+    transition:
+      transform 0.15s ease,
+      box-shadow 0.15s ease,
+      background 0.15s ease;
   }
 
-  @media (hover: hover) {
-    .site:hover {
-      background: rgb(0 0 0 / 0.1);
-    }
-
-    .discord:hover {
-      background: var(--bar-ink);
-      color: #fff;
-    }
-
-    .update:hover {
-      background: #00ea76;
-      transform: scale(1.03);
-    }
+  .discord .mark {
+    flex: none;
+    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
+  .discord:hover {
+    transform: translateY(-1px);
+    background: var(--bar-ink-deep);
+    color: #fff;
+    box-shadow: 0 6px 16px rgb(0 0 0 / 0.28);
+  }
+
+  .discord:hover .mark {
+    transform: rotate(-12deg) scale(1.08);
+    color: var(--gold);
+  }
+
+  .discord:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 0 rgb(0 0 0 / 0.2);
+  }
+
+  /* An update: the selected tab's dark brown and gold, with a dot that pulses. */
   .update {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     font-size: 13px;
     font-weight: 700;
-    background: #00d26a;
-    color: #052611;
-    border: 1px solid rgb(0 0 0 / 0.15);
+    background: var(--bar-ink-deep);
+    color: var(--gold);
+    border: 1px solid rgb(0 0 0 / 0.3);
     border-radius: 999px;
-    padding: 6px 14px;
-    cursor: pointer;
-    animation: rise var(--medium) var(--ease) both;
+    padding: 6px 14px 6px 11px;
+    transition: transform 0.15s ease;
+  }
+
+  .update:hover {
+    transform: translateY(-1px);
+    color: var(--amber);
+  }
+
+  /* The dot rings a few times when the update shows, then rests: a ring that grows and fades
+     (transform and opacity, which the compositor runs without restyling the page each frame). */
+  .pulse {
+    position: relative;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--amber);
+  }
+
+  .pulse::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: var(--amber);
+    opacity: 0;
+    animation: pulse 1.8s ease-out 5;
+  }
+
+  @keyframes pulse {
+    from {
+      opacity: 0.6;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(3);
+    }
+  }
+
+  .update .label {
+    margin-left: -4px;
+  }
+
+  /* The version tag beside the name gives way first (it is in the tooltip and in Settings). */
+  @media (max-width: 1240px) {
+    header,
+    .site-header {
+      gap: 18px;
+    }
+
+    .brand small,
+    .preview {
+      display: none;
+    }
+  }
+
+  /* Down to the window's smallest (960 px), with developer tools, a job and an update all showing:
+     the site link and Discord keep their marks, the update its word, the job less of its name. */
+  @media (max-width: 1180px) {
+    header,
+    .site-header {
+      gap: 14px;
+    }
+
+    .site .label,
+    .discord .label,
+    .update .label {
+      display: none;
+    }
+
+    .site,
+    .discord {
+      padding: 7px 9px;
+    }
+
+    .job {
+      max-width: 150px;
+    }
   }
 
   /* A narrow window keeps the tabs: the site link and the tag give way first. */

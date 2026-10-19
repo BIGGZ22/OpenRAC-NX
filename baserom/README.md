@@ -42,6 +42,7 @@ reported as such.
 | Ratchet & Clank: Going Commando | NTSC-U (North America), disc v1.01 | `SCUS_972.68` | 3,828,350,976 | `6d1fc798` | `3cbbb5127ee8a0be93ef0876f7781ee8` | `f2cfaf0eb12b3c0d8fd6db7aa49ce032e8a6020b` | `9db2e33e276133cc283647fa3279b37911955e123d6199d10065547eaa9b1ce5` |
 | Ratchet & Clank: Up Your Arsenal | NTSC-U (North America), disc v1.00 | `SCUS_973.53` | 4,379,377,664 | `2b9b91f7` | `ba9f2b38c7346e7b6e5b8e87717d5893` | `b080139c5a94688ef9472b78d5f5585a756d1ee4` | `d2bb15c7c5b2205db868713fc0362c2b10e87751ca5bcc4e96c1e244a8c42444` |
 | Ratchet: Deadlocked | NTSC-U (North America), disc v1.00 | `SCUS_974.65` | 4,356,898,816 | `66eb35f4` | `c1e1992076becc7de5aa70ef1de8bcd0` | `a85482348f741d848dd2ff4e4c3ba7c2c40f431d` | `dda48512e9b7609f69a49146ab239c4ebda7f13cf3d06397f19f6f3ce155a42b` |
+| Ratchet & Clank: Size Matters | NTSC-U (North America), disc v1.00 | `SCUS_976.15` | 1,744,764,928 | – | – | `61b9cf7f46b8fc318daa2b98cfc53301654775d6` | `ceae10a40d916eb78134c21cfe3d939a5c5d0a682a9382e1586df3274be7c7dc` |
 <!-- discs:end -->
 
 ## Boot executables inside them
@@ -55,4 +56,5 @@ reported as such.
 | Ratchet & Clank: Going Commando | NTSC-U (North America) | `SCUS_972.68` | 2,618,684 | `0fa89158` | `e514263cd9b01cad088839fbe8585e1e` | `bacda860cbd6723142e86db56f197e47e728970f` | `36d5814d8d95328d5839612ccdf7a2e7ecac0b6f868d3ad4bb2e98411f734b4a` |
 | Ratchet & Clank: Up Your Arsenal | NTSC-U (North America) | `SCUS_973.53` | 771,008 | `01affd24` | `c6075c4a296f656648bc9f64f4f1b09b` | `601012bb03ef1213ad1253baebae8a071b8a7df7` | `200068cb4186715521cdc1c20bc6c5a88054d0da54aa336ffdb2022633351c7d` |
 | Ratchet: Deadlocked | NTSC-U (North America) | `SCUS_974.65` | 1,692,216 | `eebbaace` | `9e33838c3939099d614963063544df3e` | `aa91b1c3b9b1a244320c47580b77342ef9856e95` | `2f305ab0ed47f148f599ef8769a534adf4080307aa11ab26a7966dedec897ed6` |
+| Ratchet & Clank: Size Matters | NTSC-U (North America) | `SCUS_976.15` | 856,120 | – | – | – | `d8f1794a5b4f6bd7f70ca62ae11fb790d1c300c2a877ef1aef4c1855fd6575ac` |
 <!-- boot:end -->

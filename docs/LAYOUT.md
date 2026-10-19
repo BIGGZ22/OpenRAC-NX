@@ -11,7 +11,8 @@ OpenRAC/
 │   │   └── ntsc/           SCUS_971.99, from Lombyte
 │   ├── rac2/ntsc/          Going Commando, SCUS_972.68 v1.01, from rac2-decomp
 │   ├── rac3/ntsc/          Up Your Arsenal, SCUS_973.53, from rac3-uya-decomp
-│   └── rac4/ntsc/          Deadlocked, SCUS_974.65, from rac-deadlocked-decomp
+│   ├── rac4/ntsc/          Deadlocked, SCUS_974.65, from rac-deadlocked-decomp
+│   └── rac5/ntsc/          Size Matters, SCUS_976.15, from rac5-sm-decomp
 ├── editor/                 Godot level editor and extractor (shared)
 ├── launcher/               desktop app to set up, build and play every game (Tauri)
 ├── port/                   the native PC port: runtime, hostgen, renderer, platform, the games' programs
@@ -68,13 +69,14 @@ are what readers see.
 
 ## Names
 
-- Games are `rac1`, `rac2`, `rac3` and `rac4` in release order. `rac4` is
-  Ratchet: Deadlocked (Ratchet: Gladiator in Europe).
+- Games are `rac1`, `rac2`, `rac3`, `rac4` and `rac5` in release order. `rac4` is
+  Ratchet: Deadlocked (Ratchet: Gladiator in Europe); `rac5` is the PlayStation 2
+  port of Ratchet & Clank: Size Matters.
 - Versions are named by region: `pal` (Europe), `ntsc` (North America,
   NTSC-U). A Japanese release would be `ntsc-j`. The serial and disc version
   are in `game.json`.
 - Commit scopes use the same names: `rac1/pal`, `rac1/ntsc`, `rac2`, `rac3`,
-  `rac4`, and `editor`, `launcher`, `port`, `tools`, `docs`, `progress` for the top level
+  `rac4`, `rac5`, and `editor`, `launcher`, `port`, `tools`, `docs`, `progress` for the top level
   ([CONTRIBUTING.md](../CONTRIBUTING.md#commits)).
 
 ## The decompilations, the port, and what is built from your disc
