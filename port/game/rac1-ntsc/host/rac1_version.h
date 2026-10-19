@@ -29,6 +29,9 @@
 #define RAC1_OMIT_func_L12_002C08A0 1 /* FUN_L12_002bf6d0 */
 #define RAC1_OMIT_func_L13_0030AD88 1 /* FUN_L13_003098d0 */
 #define RAC1_OMIT_func_L00_00261448 1 /* FUN_L00_002603d0 */
+/* DmaTieTextures' level copies: the NTSC decomp's catalogue lists them under dma_tie_textures
+ * (FUN_00235640) itself, whose C they are; games/rac1's folds them into DmaShrubTextures. */
+#define RAC1_OMIT_func_L00_00296CD0 1
 /* Entries the version map cannot pair, checked by hand. */
 /* sceVu0Normalize, an entry inside the VU0 library object, which the map does not cut out. */
 #define func_001252C0 game_FUN_00125180
@@ -146,7 +149,6 @@
 #define func_00230A90__game game_FUN_0022f778__game
 #define func_00234620 game_FUN_00233308
 #define func_002347F0 game_FUN_002334d8
-#define func_00234E80 game_FUN_00233b68
 #define func_00235118 func_00233E00
 #define func_002352C8 game_FUN_00233fb0
 #define func_00235EF0 game_FUN_00234bd8
@@ -182,7 +184,6 @@
 #define func_L00_00286598 func_L00_002852C0
 #define func_L00_0028D958 func_L00_0028C680
 #define func_L00_002963D8 func_L00_00295100
-#define func_L00_00296CD0 func_L00_002959F8
 #define func_L00_002A2020 func_L00_002A0D90
 #define func_L00_002A2080 func_L00_002A0DF0
 #define func_L00_002A20E0 func_L00_002A0E50
@@ -231,7 +232,6 @@
 #define RAC1_ADDR_0x0015EE84u 0x0015ED84u
 #define RAC1_ADDR_0x0015EE98u 0x0015ED98u
 #define RAC1_ADDR_0x0015EF4Au 0x0015EE4Au
-#define RAC1_ADDR_0x0015EF74u 0x0015EE74u
 #define RAC1_ADDR_0x0015F000u 0x0015EF00u
 #define RAC1_ADDR_0x0015F558u 0x0015F458u
 #define RAC1_ADDR_0x0015F56Cu 0x0015F46Cu
@@ -243,8 +243,6 @@
 #define RAC1_ADDR_0x00160020u 0x0015FF20u
 #define RAC1_ADDR_0x0016044Cu 0x0016034Cu
 #define RAC1_ADDR_0x001604CCu 0x001603CCu
-#define RAC1_ADDR_0x001604F0u 0x001603F0u
-#define RAC1_ADDR_0x001604F8u 0x001603F8u
 #define RAC1_ADDR_0x0016055Cu 0x0016045Cu
 #define RAC1_ADDR_0x00160FE0u 0x00160EE0u
 #define RAC1_ADDR_0x00161000u 0x00160F00u
@@ -253,7 +251,6 @@
 #define RAC1_ADDR_0x00187180u 0x00187080u
 #define RAC1_ADDR_0x00187390u 0x00187290u
 #define RAC1_ADDR_0x00187394u 0x00187294u
-#define RAC1_ADDR_0x0018A3B0u 0x0018A2B0u
 #define RAC1_ADDR_0x0018A3D0u 0x0018A2D0u
 #define RAC1_ADDR_0x0018CE00u 0x0018CD00u
 #define RAC1_ADDR_0x0018D140u 0x0018D040u

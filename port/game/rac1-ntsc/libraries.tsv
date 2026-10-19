@@ -240,7 +240,6 @@ func_L00_002A0D90	game	func_L00_002A0D90	host	a place the catalogue folds into a
 func_L00_002A0EB8	game	func_L00_002A0EB8	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L00_002A2148	void (void)
 func_L00_0024E01C	game	func_L00_0024E01C	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L00_0024F054, paired as found	int (void)
 func_L00_00266238	game	func_L00_00266238	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L00_00267080	void (int, long long)
-func_L00_002959F8	game	func_L00_002959F8	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L00_00296CD0	void (void)
 func_L02_0020A390	game	func_L02_0020A390	host	a level's draw callback register for list 3, folded into func_001F49B0 by the catalogue (split_places.tsv, rac1/host/callback_lists.c); PAL func_L02_0020A690	void (unsigned int, unsigned int)
 func_L14_0020C760	game	func_L14_0020C760	host	a level's draw callback register for list 4, folded into func_001F49B0 by the catalogue (split_places.tsv, rac1/host/callback_lists.c); PAL func_L14_0020CAE0	void (unsigned int, unsigned int)
 func_L00_002A0DF0	game	func_L00_002A0DF0	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L00_002A2080	void (void)

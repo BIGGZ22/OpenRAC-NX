@@ -97,36 +97,19 @@ void func_L00_00267080(int arg0, long long arg1) {
     }
 }
 
-/* func_00229C08's level copy: words 6 and 5 of D_0018A3B0 decide the shrub textures, not 8 and 7. */
+#if !RAC1_OMIT(func_L00_00296CD0)
+/* The places of func_00229C08 (DmaShrubTextures) the catalogue lists at the level programs' second
+ * copy (level 0's 0x296CD0) are DmaTieTextures' (func_00236958) copies: the two share a
+ * fingerprint, and these read the tie words of D_0018A3B0 (6 and 5, not 8 and 7), call the tie
+ * builder (func_002383D8) and splice the tie list (DrawTies_1's D_00161068, largest size in
+ * D_00161074). DmaTieTextures itself is that code; its globals become the loaded level's
+ * (OPENRAC_DATA). Written as the shrub code with the tie words, this spliced the shrub list
+ * (D_001604F0) instead: still 0 on a level's first frame in the US game, so the tie tag went to
+ * game address 0, over the star records of a sky without a star table (Gaspar's). */
 void func_L00_00296CD0(void) {
-    const gaddr out = OPENRAC_DATA(RAC1_ADDR(0x00161000u));
-    const gaddr list = OPENRAC_DATA(RAC1_ADDR(0x001604F0u));
-    const gaddr p = GREF(gaddr, out);
-    GREF(gaddr, out) += 16;
-    const gaddr l = GREF(gaddr, list);
-    GREF(int, l + 0) = 0x20000000;
-    GREF(int, l + 4) = (int)GREF(gaddr, out);
-    GREF(int, l + 8) = 0;
-    GREF(int, l + 12) = 0;
-    const gaddr flags = OPENRAC_DATA(RAC1_ADDR(0x0018A3B0u));
-    if (GREF(int, flags + 6 * 4) != 0 && GREF(int, flags + 5 * 4) != 0) {
-        const int size = func_0022B648(GREF(int, RAC1_ADDR(0x0015EF74u)));
-        func_00234E80();
-        if (GREF(int, OPENRAC_DATA(RAC1_ADDR(0x001604F8u))) < size) {
-            GREF(int, OPENRAC_DATA(RAC1_ADDR(0x001604F8u))) = size;
-        }
-    }
-    const gaddr q = GREF(gaddr, out);
-    GREF(int, q + 0) = 0x20000000;
-    GREF(int, q + 4) = (int)(GREF(gaddr, list) + 16);
-    GREF(int, q + 8) = 0;
-    GREF(int, q + 12) = 0;
-    GREF(gaddr, out) += 16;
-    GREF(int, p + 0) = 0x20000000;
-    GREF(int, p + 4) = (int)GREF(gaddr, out);
-    GREF(int, p + 8) = 0;
-    GREF(int, p + 12) = 0;
+    func_00236958();
 }
+#endif
 
 #if !RAC1_OMIT(func_L01_002A2B68)
 /* func_L00_0028F210's copy in some levels: the sound slot's +0x80, not +0x84. */
