@@ -61,6 +61,41 @@ class GateTests(unittest.TestCase):
             self.assertEqual(again[1].status, "")
             self.assertEqual(back.source("func_00100000"), d / "a.c")
 
+    def test_prepare(self):
+        src = "extern float sqrtf(float);\nstatic int helper(int x) {\n    return x;\n}\nint func_00100000(int a) {\n    return helper(a) + (int)sqrtf(a);\n}\n"
+        t = g.prepare(src, "func_00100000")
+        self.assertIn("static __inline__ int helper(int x) {", t)
+        self.assertIn("#define sqrtf __gate_sqrtf", t)
+        self.assertTrue(t.rstrip().endswith("#undef sqrtf"))
+        t = g.prepare(src, "func_00100000", {"func_00100000", "D_00123456_X"})
+        self.assertIn("#define D_00123456_X D_00123456_X__gate", t)
+        self.assertIn("#define func_00100000 func_00100000__gate", t)
+        # The exported label sits right before the renamed definition, the size after it.
+        self.assertLess(t.index("func_00100000:"), t.index("int func_00100000(int a) {"))
+        self.assertIn(".size func_00100000, . - func_00100000", t)
+        t = g.prepare("extern void *memcpy(void *, const void *, unsigned long);\n"
+                      "unsigned long long func_00100000(char *d) {\n    memcpy(d, d + 4, 4);\n    return sqrtf(1.0f);\n}\n",
+                      "func_00100000")
+        self.assertNotIn("unsigned long);", t)
+        self.assertIn("    memcpy(d, d + 4, 4);", t)
+        self.assertIn("    return sqrtf(1.0f);", t)
+        self.assertIn("unsigned long func_00100000", t)
+        self.assertNotIn("__gate", g.prepare("int func_00100000(void) { return 0; }\n", "func_00100000"))
+
+    def test_clashes(self):
+        log = ("src.c:12: conflicting types for `func_001F4868'\nsrc.c:3: previous declaration of `func_001F4868'\n"
+               "src.c:20: redefinition of `struct Foo'\n")
+        self.assertEqual(g.clashes(log), {"func_001F4868", "Foo"})
+
+    def test_combine(self):
+        self.assertEqual(g.combine("func_00200000", None, [("level 01", "same", "3 calls"), ("level 02", "same", "1 calls")]),
+                         ("same", "3 calls (level 01), 1 calls (level 02)"))
+        self.assertEqual(g.combine("func_00200000", None, [("level 01", "same", "3 calls"), ("level 02", "differs", "x")])[0],
+                         "differs")
+        self.assertEqual(g.combine("func_L03_00200000", None, []),
+                         ("no-states", "never called in level 03's capture run"))
+        self.assertEqual(g.combine("func_00200000", None, [])[0], "no-states")
+
     def test_summary(self):
         rows = [g.Row("a", "same"), g.Row("b", "differs"), g.Row("c")]
         self.assertEqual(g.summary(rows), "3 rows: 1 same, 1 differs, 0 unchecked, 0 no-states, 0 not-executable, 1 no verdict")

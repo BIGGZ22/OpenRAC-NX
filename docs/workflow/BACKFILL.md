@@ -168,6 +168,32 @@ scratchpad), the result by the return type, the registers a function keeps,
 and the order of device accesses and system calls. It is an offline check: it
 is never shipped and never used to play.
 
+**Levels.** fcheck's own run stops in level 0 and takes states at the boot
+executable's addresses. In a level, the code above 0x15F000 is the level's
+overlay: the level's own functions (`func_LNN_`) and the executable's
+functions linked into it at places of their own (rac1-decomp's
+`config/overlays/functions.tsv`). The gate captures there itself: one headless
+`openrac-boot --capture` run per level (`--level N`, six at once), at each
+function's places in that level, with the CRC of the level's own bytes, into
+`build-sn/fcheck/gate/lstates/LNN/`. A level's function is checked from its
+own level's states; an executable function the boot run never calls, from the
+first three levels whose run called it. The candidate is built by
+`tools/fcheck_level_build.py`, which is fcheck's own build with the symbols
+resolved the way rac1-decomp's `overlay_check.py` resolves them for that level
+(it runs in rac1-decomp's container, from the ignored `build-sn/fcheck/gate/`;
+nothing in rac1-decomp is changed). The state holds the whole machine, the
+level's code and data with it.
+
+**The test copy.** fcheck compiles the candidate inside its source file in
+rac1-decomp, which can clash with what that file declares. The gate's copy
+(only the copy) gets: a prototype or typedef the file has differently renamed
+for the copy (`NAME__gate`; an address name still resolves to its retail
+address), the function itself exported under its own name when it is the one
+renamed, a `static` helper made `__inline__` (fcheck places one function), the
+host library's `sqrtf`/`fabsf` as the console's FPU computes them, and a
+scratch source for a function no source file has (a libgcc routine, a second
+entry point inside another function). The log says what was renamed.
+
 The verdicts are kept in files OpenRAC owns, one per backfill table and keyed
 by function name, so the tables themselves (`functional.tsv` is synced from
 rac1-decomp, both are read by hostgen) are never changed:
@@ -177,7 +203,7 @@ rac1-decomp, both are read by hostgen) are never changed:
 
 | Column | Meaning |
 |---|---|
-| `status` | `same`: compared real calls, all equal. `differs`: a difference (the note says where; fix the C, not the verdict). `unchecked`: fcheck could not compare (the C did not build or place, every state was skipped, no oracle for that version); the note says why. `no-states`: the capture run (title, menu, level 0) never calls it. `not-executable`: not a boot-executable `func_XXXXXXXX` (level and overlay code; fcheck runs those only for now) |
+| `status` | `same`: compared real calls, all equal. `differs`: a difference (the note says where; fix the C, not the verdict). `unchecked`: fcheck could not compare (the C did not build or place, every state was skipped, no oracle for that version); the note says why. `no-states`: no capture run calls it (title, menu and every level for an executable function; its own level for a level function). `not-executable`: neither a `func_XXXXXXXX` nor a `func_LNN_XXXXXXXX` |
 | `date` | the day it was run |
 | `fcheck` | the rac1-decomp commit fcheck ran from (`+dirty` when `tools/fcheck.py` had local edits) |
 | `csum` | the first 12 hex digits of the sha1 of the C file; an edit after the verdict makes it stale |
@@ -193,6 +219,7 @@ retail compiler; headless, it opens no window):
 
 ```sh
 python3 tools/fcheck_gate.py run                       # every PAL row: capture what is missing, check in parallel, write fcheck.tsv
+python3 tools/fcheck_gate.py run --no-levels           # the boot run only (level functions stay not-executable); --frames N, --press F:B[:N] for the capture runs
 python3 tools/fcheck_gate.py run --only func_001F7E98  # one or a few rows after you changed their C
 python3 tools/fcheck_gate.py report [--strict]         # joins each backfill table with its verdicts: counts, differing, stale and unverdicted rows; --strict exits 1 on any
 python3 tools/fcheck_gate.py us                        # the US table: unchecked, no US oracle
