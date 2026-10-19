@@ -22,20 +22,18 @@
   },
   "levels": {
     "0": {"name": "Veldin", "versions": [
-      {"fields": ["mb"], "from": 0, "why": "random and timed spawns (the shower, debris, bombs, bolts) do not happen at the same tick; the random sequence parts early in the level, where the sky walks low memory that differs between the runs (docs/port/RAC1_NTSC_HINTS.md 7)"}
+      {"fields": ["mb"], "from": 0, "why": "a bolt more or less: the random sequence parts on the level's 20th frame, where PAL's run draws numbers in level 0's code at US 0x20A9E8 (called from 0x2070D0) and US's does not (RAC1_NTSC_HINTS.md 7)"}
     ]},
     "1": {"name": "Novalis", "versions": [
       {"fields": ["mb"], "from": 0, "why": "the scene before control ends two ticks apart (the route's Start presses fall on window frames, and the versions reach the level at other frames), so the level's mobys run that much out of step with the hero (RAC1_NTSC_HINTS.md 7)"}
     ]},
     "2": {"name": "Aridia"},
     "3": {"name": "Kerwan", "versions": [
-      {"fields": ["mb"], "from": 0, "why": "random and timed spawns (the shower, debris, bombs, bolts) do not happen at the same tick; the random sequence parts early in the level, where the sky walks low memory that differs between the runs (docs/port/RAC1_NTSC_HINTS.md 7)"}
+      {"fields": ["mb"], "from": 0, "why": "a bolt more or less: the random sequence parts on the level's first frame, where allocate_voice_slot (US FUN_0022d7f0) draws a pitch bend for four sounds in PAL's run and for one in US's (RAC1_NTSC_HINTS.md 7)"}
     ]},
-    "4": {"name": "Eudora", "versions": [
-      {"fields": ["mb"], "from": 0, "why": "random and timed spawns (the shower, debris, bombs, bolts) do not happen at the same tick; the random sequence parts early in the level, where the sky walks low memory that differs between the runs (docs/port/RAC1_NTSC_HINTS.md 7)"}
-    ]},
+    "4": {"name": "Eudora"},
     "5": {"name": "Rilgar", "versions": [
-      {"fields": ["mb"], "from": 0, "why": "random and timed spawns (the shower, debris, bombs, bolts) do not happen at the same tick; the random sequence parts early in the level, where the sky walks low memory that differs between the runs (docs/port/RAC1_NTSC_HINTS.md 7)"}
+      {"fields": ["mb"], "from": 0, "why": "a bolt more or less: the random sequence parts on the level's 60th frame, where a sharkigator's update (US FUN_L05_002d1688) draws a number in US's run and not in PAL's (RAC1_NTSC_HINTS.md 7)"}
     ]},
     "6": {"name": "Blarg Station"},
     "7": {"name": "Umbris", "versions": [
@@ -44,18 +42,11 @@
     "8": {"name": "Batalia", "versions": [
       {"fields": ["mb"], "from": 0, "why": "the scene before control ends two ticks apart (the route's Start presses fall on window frames, and the versions reach the level at other frames), so the level's mobys run that much out of step with the hero (RAC1_NTSC_HINTS.md 7)"}
     ]},
-    "9": {"name": "Gaspar", "versions": [
-      {"fields": ["mb"], "from": 0, "why": "random and timed spawns (the shower, debris, bombs, bolts) do not happen at the same tick; the random sequence parts early in the level, where the sky walks low memory that differs between the runs (docs/port/RAC1_NTSC_HINTS.md 7)"}
-    ]},
-    "10": {"name": "Orxon", "versions": [
-      {"fields": ["mb"], "from": 0, "why": "random and timed spawns (the shower, debris, bombs, bolts) do not happen at the same tick; the random sequence parts early in the level, where the sky walks low memory that differs between the runs (docs/port/RAC1_NTSC_HINTS.md 7)"}
-    ]},
-    "11": {"name": "Pokitaru", "versions": [
-      {"fields": ["mb"], "from": 0, "why": "random and timed spawns (the shower, debris, bombs, bolts) do not happen at the same tick; the random sequence parts early in the level, where the sky walks low memory that differs between the runs (docs/port/RAC1_NTSC_HINTS.md 7)"}
-    ]},
+    "9": {"name": "Gaspar"},
+    "10": {"name": "Orxon"},
+    "11": {"name": "Pokitaru"},
     "12": {"name": "Hoven", "versions": [
-      {"fields": ["mb"], "from": 0, "why": "the scene before control ends two ticks apart (the route's Start presses fall on window frames, and the versions reach the level at other frames), so the level's mobys run that much out of step with the hero (RAC1_NTSC_HINTS.md 7)"},
-      {"fields": ["cam", "fw", "hp", "hr"], "from": 604, "why": "an enemy out of step (above) reaches Ratchet differently"}
+      {"fields": ["mb"], "from": 0, "why": "the scene before control ends two ticks apart (the route's Start presses fall on window frames, and the versions reach the level at other frames), so the level's mobys run that much out of step with the hero (RAC1_NTSC_HINTS.md 7)"}
     ]},
     "13": {"name": "Gemlik Base", "versions": [
       {"fields": ["mb"], "from": 0, "why": "the scene before control ends two ticks apart (the route's Start presses fall on window frames, and the versions reach the level at other frames), so the level's mobys run that much out of step with the hero (RAC1_NTSC_HINTS.md 7)"},
