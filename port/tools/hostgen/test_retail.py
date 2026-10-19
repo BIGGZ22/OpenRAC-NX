@@ -222,5 +222,34 @@ class FromRetail(unittest.TestCase):
         self.assertEqual(b, a)
 
 
+@unittest.skipUnless(HAVE_CLANG, "needs Clang on a POSIX host")
+class SoftDoubles(unittest.TestCase):
+    """A double is software on the EE, its 64 bits in one general register: a parameter, an
+    argument passed on and a result. ei and di do nothing (the port takes no interrupts)."""
+
+    def test_double_in_a_general_register(self):
+        c = """
+            double func_00200000(double d, int k) { test_print((int)(d * 10.0)); test_print(k); return d * 2.0; }
+            INCLUDE_ASM("asm", func_00100000);
+            extern double func_00100000(double d, int k);
+            int test_main(void) { test_print((int)(func_00100000(1.5, 7) * 10.0)); return 0; }
+        """
+        source = """
+            addiu $29, $29, -16
+            sq $31, 0($29)
+            di
+            jal func_00200000         # (d, k) as they came, in $a0 and $a1
+            nop
+            ei
+            lq $31, 0($29)
+            jr $31
+            addiu $29, $29, 16
+        """
+        t = test_hostgen.FromAssembly("run_asm")
+        out = t.run_asm(c, {"func_00100000": (0x00100000, source)}, symbols={"func_00200000": 0x00200000})
+        self.assertEqual(out, ["15", "7", "30"])
+        self.assertEqual(t.last_report["functions_from_assembly"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

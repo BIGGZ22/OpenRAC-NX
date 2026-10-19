@@ -50,6 +50,25 @@ OPENRAC_EE_INLINE openrac_u32 openrac_ee_bits(openrac_f32 f) {
     return b.u;
 }
 
+/* A double is software on the EE: its 64 bits travel in one general register (libgcc's
+ * soft-float routines take and give them there), where the host's C has a double. */
+typedef union {
+    double d;
+    openrac_u64 u;
+} openrac_ee_dbits_u;
+
+OPENRAC_EE_INLINE double openrac_ee_d(openrac_u64 bits) {
+    openrac_ee_dbits_u b;
+    b.u = bits;
+    return b.d;
+}
+
+OPENRAC_EE_INLINE openrac_u64 openrac_ee_dbits(double d) {
+    openrac_ee_dbits_u b;
+    b.d = d;
+    return b.u;
+}
+
 /* ---- Memory ---- */
 
 OPENRAC_EE_INLINE openrac_u64 openrac_ee_lb(openrac_u32 a) {

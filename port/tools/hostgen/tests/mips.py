@@ -80,6 +80,8 @@ def encode(op: str, args: list[str], addr: int, labels: dict[str, int], symbols:
         return reg(args[0]) << 21 | reg(args[1]) << 16 | SPECIAL[op]
     if op == "syscall":
         return SPECIAL[op]
+    if op in ("ei", "di"):
+        return 0x42000038 if op == "ei" else 0x42000039
     if op in SPECIAL:
         return reg(args[1]) << 21 | reg(args[2]) << 16 | reg(args[0]) << 11 | SPECIAL[op]
     if op in IMM:

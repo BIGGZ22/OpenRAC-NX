@@ -61,10 +61,12 @@ FARG_REGS = list(range(12, 20))   # $f12-$f19
 INT_TYPES = set(ctype.INT_NAMES) | {"gaddr"}
 WIDE = {"long long", "unsigned long long", "long", "unsigned long", "long long int", "long int",
         "unsigned long long int", "unsigned long int"}
-SKIP = {"nop", "sync", "pref", "cache", "vnop", "vwaitq", "ssnop"}
+# ei and di only gate the console's interrupts: the port takes none (its handlers run at set
+# points, never in the middle of a function), so they do nothing there, as sync does.
+SKIP = {"nop", "sync", "pref", "cache", "vnop", "vwaitq", "ssnop", "ei", "di"}
 UNSUPPORTED = {
     "syscall": "a system call", "mfc0": "COP0 (mfc0)", "mtc0": "COP0 (mtc0)", "eret": "COP0 (eret)",
-    "ei": "COP0 (ei)", "di": "COP0 (di)", "cop0": "COP0", "vcallms": "a VU0 microprogram (vcallms)",
+    "cop0": "COP0", "vcallms": "a VU0 microprogram (vcallms)",
     "vcallmsr": "a VU0 microprogram (vcallmsr)", "vclipw": "VU0 clipping (vclipw)",
     "bc0f": "COP0 branch", "bc0t": "COP0 branch", "bc0fl": "COP0 branch", "bc0tl": "COP0 branch",
     "bc2f": "VU0 branch", "bc2t": "VU0 branch", "bc2fl": "VU0 branch", "bc2tl": "VU0 branch",
@@ -653,11 +655,11 @@ class Translator:
                     raise AsmUnsupported(f"a call to {sym} with more than eight float arguments")
                 out.append(f"f{FARG_REGS[nf]}")
                 nf += 1
-            elif c in INT_TYPES or c in WIDE:
-                if ni < len(ARG_REGS):
-                    out.append(f"({c}){self.R(ARG_REGS[ni])}")
-                else:
-                    out.append(f"({c})openrac_ee_ld((openrac_u32)r29 + {8 * (ni - len(ARG_REGS))}u)")
+            elif c in INT_TYPES or c in WIDE or c == "double":
+                reg = (self.R(ARG_REGS[ni]) if ni < len(ARG_REGS)
+                       else f"openrac_ee_ld((openrac_u32)r29 + {8 * (ni - len(ARG_REGS))}u)")
+                # A double is a doubleword in an integer register (the EE's soft float).
+                out.append(f"openrac_ee_d({reg})" if c == "double" else f"({c}){reg}")
                 ni += 1
             else:
                 raise AsmUnsupported(f"a call to {sym}, which takes {c or 'a record'}")
@@ -674,6 +676,8 @@ class Translator:
             return pre + [f"f0 = {call};"] + post
         if ret in WIDE:
             return pre + [f"r2 = (openrac_u64)({call});"] + post
+        if ret == "double":
+            return pre + [f"r2 = openrac_ee_dbits({call});"] + post
         if ret in INT_TYPES:
             return pre + [f"r2 = {S32(f'({ret})({call})')};"] + post
         raise AsmUnsupported(f"a call whose result is {ret}")
@@ -727,6 +731,8 @@ class Translator:
             return "return (gaddr)r2;"
         if ret in INT_TYPES or ret in WIDE:
             return f"return ({ret})r2;"
+        if ret == "double":
+            return "return openrac_ee_d(r2);"
         raise AsmUnsupported(f"a result of type {ret}")
 
     # ---- One instruction ----
@@ -1134,8 +1140,9 @@ class Translator:
                 if nf < len(FARG_REGS) and f"f{FARG_REGS[nf]}" in [f"f{n}" for n in fprs]:
                     setup.append(f"    f{FARG_REGS[nf]} = a{k};")
                 nf += 1
-            elif c in INT_TYPES or c in WIDE:
-                value = f"(openrac_u64)a{k}" if c in WIDE else S32(f"(openrac_s32)a{k}")
+            elif c in INT_TYPES or c in WIDE or c == "double":
+                value = (f"openrac_ee_dbits(a{k})" if c == "double" else
+                         f"(openrac_u64)a{k}" if c in WIDE else S32(f"(openrac_s32)a{k}"))
                 if ni >= len(ARG_REGS):
                     # Past the eighth: where the EE's caller put it, a doubleword each above $sp.
                     stacked.append(f"    openrac_ee_sd((openrac_u32)r29 + {8 * (ni - len(ARG_REGS))}u, {value});")
