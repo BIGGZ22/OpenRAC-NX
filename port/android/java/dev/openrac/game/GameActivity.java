@@ -4,12 +4,15 @@
 package dev.openrac.game;
 
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
+import android.view.Display;
 import android.view.InputDevice;
 import android.view.KeyEvent;
+import android.view.WindowManager;
 
 import org.libsdl.app.SDLActivity;
 
@@ -60,6 +63,36 @@ public class GameActivity extends SDLActivity {
         }
         Log.i(TAG, "starting lib" + library + ".so with " + String.join(" ", arguments));
         super.onCreate(savedInstanceState);
+        preferFastestRefresh();
+    }
+
+    /**
+     * The display's fastest refresh, asked for while the game is in front. Without it a display
+     * that changes its rate (Odin's 120 Hz panel) follows what the game draws: a while at a cap of
+     * 60 frames a second sets it to 60 Hz, and then the display's rate (the "Display" frame rate,
+     * the swap's wait) is 60 for good. The game's own frame cap paces it below the display's rate.
+     */
+    private void preferFastestRefresh() {
+        @SuppressWarnings("deprecation")
+        Display display = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ? getDisplay()
+                                                                          : getWindowManager().getDefaultDisplay();
+        if (display == null) {
+            return;
+        }
+        Display.Mode current = display.getMode();
+        Display.Mode fastest = current;
+        for (Display.Mode mode : display.getSupportedModes()) {
+            if (mode.getPhysicalWidth() == current.getPhysicalWidth()
+                    && mode.getPhysicalHeight() == current.getPhysicalHeight()
+                    && mode.getRefreshRate() > fastest.getRefreshRate()) {
+                fastest = mode;
+            }
+        }
+        WindowManager.LayoutParams attributes = getWindow().getAttributes();
+        attributes.preferredDisplayModeId = fastest.getModeId();
+        getWindow().setAttributes(attributes);
+        Log.i(TAG, "display mode " + fastest.getPhysicalWidth() + "x" + fastest.getPhysicalHeight() + " at "
+                + fastest.getRefreshRate() + " Hz");
     }
 
     @Override
