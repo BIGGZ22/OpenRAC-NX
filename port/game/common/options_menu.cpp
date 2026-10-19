@@ -14,6 +14,7 @@
 #include "common/log.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
+#include "pause_options.h"
 #include "platform/window.h"
 #include "renderer/framebuffer.h"
 #include "renderer/texture_pool.h"
@@ -596,9 +597,14 @@ bool update(gaddr page_menu, gaddr pad) {
     if (shown == 0) {
         return false;
     }
-    // The Options page: its list's items are the game's with Camera in them.
-    const gaddr list = GREF(std::uint32_t, shown + 0x40);
-    if (list != 0 && shown != m.page) {
+    if (shown != m.page || m.page == 0) {
+        // The Options page (pause_options.h): its list's items are the game's with Camera in them.
+        // Another page's focus may be no list at all: the item grids keep floats where a list keeps
+        // its items.
+        const gaddr list = pause_options::options_list([](gaddr at) { return GREF(std::uint32_t, at); }, shown);
+        if (list == 0) {
+            return false;
+        }
         const gaddr items = GREF(std::uint32_t, list + 0x34);
         gaddr camera = 0, sound = 0;
         if (items != 0 && items != m.items && count_items(items, &camera, &sound) > 0 && camera != 0) {
@@ -611,9 +617,7 @@ bool update(gaddr page_menu, gaddr pad) {
         }
         return false;
     }
-    if (shown != m.page || m.page == 0) {
-        return false;
-    }
+    // The port's Video page.
     page::build();
     bool changed = false;
     for (int i = 0; i < kShownHere; ++i) {
