@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <optional>
+#include <span>
 #include <set>
 #include <vector>
 
@@ -18,6 +19,22 @@
 namespace openrac::renderer {
 
 using namespace gl;
+
+bool liquid_strip(std::uint64_t alpha) {
+    return (alpha & 0xFF) == 0x64 && ((alpha >> 32) & 0xFF) > 0x60;
+}
+
+bool EffectRenderer::draws(const EffectStrip& strip) const {
+    switch (m_part) {
+        case EffectPart::Liquids:
+            return liquid_strip(strip.alpha);
+        case EffectPart::Rest:
+            return !liquid_strip(strip.alpha);
+        case EffectPart::All:
+            break;
+    }
+    return true;
+}
 
 bool EffectRenderer::init(RenderState& state, std::string& error) {
     (void)state;
@@ -48,7 +65,12 @@ bool EffectRenderer::init(RenderState& state, std::string& error) {
 }
 
 void EffectRenderer::render(const FrameInput& input, RenderState& state) {
-    if (input.effects.empty() && input.strips.empty()) {
+    const bool quads = m_part != EffectPart::Liquids && !input.effects.empty();
+    bool any = quads;
+    for (const EffectStrip& strip : input.strips) {
+        any = any || draws(strip);
+    }
+    if (!any) {
         return;
     }
     m_shader.use();
@@ -63,7 +85,7 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
     glDisable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_GEQUAL);  // reversed depth
-    glDepthMask(GL_FALSE);
+    glDepthMask(m_part == EffectPart::Liquids ? GL_TRUE : GL_FALSE);
     glBindVertexArray(m_vao);
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
     glActiveTexture(GL_TEXTURE0);
@@ -79,7 +101,8 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
                       static_cast<std::uint8_t>(e.rgba >> 24)};
     };
     for (const EffectStrip& strip : input.strips) {
-        if (strip.count < 3 || static_cast<std::size_t>(strip.first) + strip.count > input.strip_vertices.size()) {
+        if (strip.count < 3 || static_cast<std::size_t>(strip.first) + strip.count > input.strip_vertices.size()
+            || !draws(strip)) {
             continue;
         }
         for (std::uint32_t k = 0; k + 2 < strip.count; ++k) {
@@ -89,7 +112,7 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
         }
     }
     const std::size_t quads_from = m_vertices.size();
-    for (const EffectQuad& q : input.effects) {
+    for (const EffectQuad& q : quads ? input.effects : std::span<const EffectQuad>{}) {
         // The strip's two triangles, 0-1-2 and 1-2-3 (the faces are not culled).
         for (const int k : {0, 1, 2, 1, 2, 3}) {
             m_vertices.push_back({q.corner[k][0], q.corner[k][1], q.corner[k][2], q.st[k][0], q.st[k][1],
@@ -144,7 +167,8 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
 
     GLint at = 0;
     for (const EffectStrip& strip : input.strips) {
-        if (strip.count < 3 || static_cast<std::size_t>(strip.first) + strip.count > input.strip_vertices.size()) {
+        if (strip.count < 3 || static_cast<std::size_t>(strip.first) + strip.count > input.strip_vertices.size()
+            || !draws(strip)) {
             continue;
         }
         // An image put in the pool may replace what an earlier strip of the draw samples: that one
@@ -169,7 +193,7 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
     // quads are drawn back to front: one drawn before that quad sampled what the key held last frame,
     // another texture, and the nanotech crates' orbs came out as opaque white quads.
     // Refactor note: the uploads could travel as a list of their own instead of riding on quads.
-    for (const EffectQuad& q : input.effects) {
+    for (const EffectQuad& q : quads ? input.effects : std::span<const EffectQuad>{}) {
         if (q.uploads >= 0 && static_cast<std::size_t>(q.uploads) + 1 < input.effect_uploads.size()) {
             state.textures.upload(input.effect_uploads[static_cast<std::size_t>(q.uploads)]);
             state.textures.upload(input.effect_uploads[static_cast<std::size_t>(q.uploads) + 1]);
@@ -177,7 +201,7 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
     }
     set.reset();
     at = static_cast<GLint>(quads_from);
-    for (const EffectQuad& q : input.effects) {
+    for (const EffectQuad& q : quads ? input.effects : std::span<const EffectQuad>{}) {
         add({q.tex0, q.tex1, q.clamp, q.alpha, q.tbp, q.cbp}, at, 6, true);
         at += 6;
     }

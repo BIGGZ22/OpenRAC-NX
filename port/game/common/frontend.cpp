@@ -684,8 +684,17 @@ void use_level(int number) {
             std::make_unique<viewer::LayerRenderer>(g->scene, static_cast<viewer::Layer>(layer)),
             error
         );
+        // The liquids (the seas and lava the game draws solid) after the ties, where retail's draw
+        // callback list 3 draws them, before the shrubs and mobys (renderer/effects.h).
+        if (static_cast<viewer::Layer>(layer) == viewer::Layer::Ties
+            && g->renderer->add(std::make_unique<renderer::EffectRenderer>("liquids", renderer::EffectPart::Liquids,
+                                                                           renderer::Bucket::Ties),
+                                error) == nullptr) {
+            log::error("liquid renderer: {}", error);
+        }
     }
-    if (g->renderer->add(std::make_unique<renderer::EffectRenderer>(), error) == nullptr) {
+    if (g->renderer->add(std::make_unique<renderer::EffectRenderer>("effects", renderer::EffectPart::Rest), error)
+        == nullptr) {
         log::error("effect renderer: {}", error);
     }
     g->renderer->add(std::move(hud), error);
