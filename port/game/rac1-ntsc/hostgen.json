@@ -151,6 +151,7 @@
     "enabled": true,
     "dirs": ["config/us/overlays/asm", "config/us/expected/asm", "config/us/asm",
              "build/baseline/config/us/expected/asm", "build/baseline/config/us/asm"],
+    "retail": {"exe": "config/us/SCUS_971.99", "dump": "config/us/overlays"},
     "gp": "0x00166C00"
   }
 }

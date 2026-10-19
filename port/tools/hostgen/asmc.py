@@ -52,6 +52,7 @@ from pathlib import Path
 
 import asm
 import ctype
+import retail
 from lower import FnReport, Unit, UnitReport, Unsupported, _Fn, hexaddr, LEVEL_NAME
 from program import Function, Program, Signature, canon, cname, prototype
 
@@ -133,7 +134,7 @@ class Translator:
         return -1
 
     def find(self, f: Function) -> tuple[int, int] | None:
-        return self.index.find([f.symbol], self.program.code_places(f.symbol))
+        return self.index.find([f.symbol], self.program.code_places(f.symbol), own=f.asm)
 
     # ---- One function ----
 
@@ -1247,6 +1248,7 @@ class Stage:
     without_asm: list[str] = field(default_factory=list)
     translator: "Translator | None" = None    # for the console's form (write_console)
     found: dict = field(default_factory=dict)  # name -> (program, address) of its entry
+    retail: str = ""                           # the retail program read for instructions, if any
 
 
 def asm_config(cfg: dict) -> dict | None:
@@ -1254,6 +1256,22 @@ def asm_config(cfg: dict) -> dict | None:
     if not a or not a.get("enabled", False):
         return None
     return a
+
+
+def retail_source(a: dict, program: Program, base: Path) -> "retail.Retail | None":
+    """The retail program hostgen.json's "asm" names, when it is there: "retail": {"image": ISO}
+    (the player's disc image) or {"exe": ELF, "dump": level dumps}, relative to the decompilation
+    the assembly is read from (where its setup puts them) unless absolute; hostgen's
+    --retail-image, --retail-exe and --retail-dump give them instead."""
+    r = a.get("retail") or {}
+    low = (getattr(program, "relocate", None) or [0x15F000])[0]
+    path = lambda key: (base / r[key]) if r.get(key) else None
+    image, exe, dump = path("image"), path("exe"), path("dump")
+    if image is not None and image.is_file():
+        return retail.Retail.from_image(image, low)
+    if exe is not None and exe.is_file():
+        return retail.Retail.from_files(exe, dump if dump is not None and dump.is_dir() else None, low)
+    return None
 
 
 def file_names(cfg: dict) -> list[str]:
@@ -1278,7 +1296,15 @@ def run(program: Program, cfg: dict, source: Path, host_text: str = "") -> tuple
     tr.host_text = host_text
     index = asm.read_index(dirs, tr.overlay_of)
     tr.index = index
-    if not index.blocks:
+    # The retail program's own instructions (retail.py), where the player's executable and level
+    # programs are given: everything the assembly files do not have, or all of it without them.
+    source_of = retail_source(a, program, base)
+    if source_of is not None:
+        index.code = retail.CombinedCode(index.code, retail.RetailCode(source_of, retail.starts_of(program),
+                                                                       source_of.low))
+        index.called |= source_of.called()
+        stage.retail = source_of.label
+    elif not index.blocks:
         return stage, {}
     # A stub whose place has C under another spelling (func_0020C828 for FUN_0020c828) is that C
     # already: calls to it go there (Program.canonical).

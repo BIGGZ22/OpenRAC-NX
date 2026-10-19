@@ -96,7 +96,11 @@ def parse_file(path: Path) -> list[Block]:
         if m:
             name = m.group(1)
             kind = raw.split()[0]
-            if section.startswith(".text") and kind == "glabel":
+            # A function spimdisasm took for data (its words written as .word under a dlabel, in
+            # .text, in the file named for the function): code all the same, as the catalogue says.
+            code_dlabel = (kind == "dlabel" and section.startswith(".text") and name == path.stem
+                           and re.match(r"(?:func|FUN)_", name) is not None)
+            if section.startswith(".text") and (kind == "glabel" or code_dlabel):
                 cur = Block(name, path)
                 blocks.append(cur)
                 pending = [name]
@@ -162,14 +166,24 @@ class Index:
     by_name: dict[str, tuple[int, int]] = field(default_factory=dict)     # name -> (program, address)
     by_place: dict[tuple[int, int], str] = field(default_factory=dict)    # (program, address) -> name
     code: dict[tuple[int, int], tuple[Line, Block]] = field(default_factory=dict)
+    called: set[tuple[int, int]] = field(default_factory=set)   # (program, address) a jal or j goes to
 
-    def find(self, names: list[str], places: list[tuple[int, int]]) -> tuple[int, int] | None:
-        """Where a function starts, (program, address): by one of its names, else by its place."""
+    def find(self, names: list[str], places: list[tuple[int, int]], own: bool = False) -> tuple[int, int] | None:
+        """Where a function starts, (program, address): by one of its names, else by its place.
+        `own`: the place is the decompilation's own for the function (its INCLUDE_ASM stub), so
+        code there with no label is its code (read from the retail program)."""
         for n in names:
             if n in self.by_name:
                 return self.by_name[n]
         for p in places:
             if p in self.by_place:
+                return p
+        # A second entry the files do not label: an address inside another function's code that
+        # the decompilation calls by a name of its own, and the program's code calls or jumps to
+        # (the EE runs the code from there). A name whose address only another version's
+        # numbering gives is not one.
+        for p in places:
+            if (own or p in self.called) and self.code.get(p) is not None:
                 return p
         return None
 
@@ -187,6 +201,8 @@ def read_index(dirs: list[Path], overlay_of) -> Index:
                 ov = overlay_of(b.name)
                 for line in b.lines:
                     idx.code.setdefault((ov, line.addr), (line, b))
+                    if line.word >> 26 in (2, 3):
+                        idx.called.add((ov, (line.addr & 0xF0000000) | ((line.word & 0x3FFFFFF) << 2)))
                 for name, addr in b.entries.items():
                     if b.index_of(addr) is None:
                         continue

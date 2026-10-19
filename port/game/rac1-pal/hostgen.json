@@ -112,6 +112,7 @@
   "asm": {
     "enabled": true,
     "dirs": ["asm/nonmatchings", "asm/handwritten", "asm/overlays", "asm/remnants"],
+    "retail": {"exe": "baserom/SCES_509.16", "dump": "baserom/overlays"},
     "gp": "0x00166D00"
   }
 }

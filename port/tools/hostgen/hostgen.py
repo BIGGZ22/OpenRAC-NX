@@ -542,6 +542,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--asm-source", type=Path, metavar="DIR",
                     help="where the assembly's directories (hostgen.json \"asm\") are, if not in --source: "
                          "a copy of the decompilation the game's setup ran in")
+    ap.add_argument("--retail-image", type=Path, metavar="ISO",
+                    help="with \"asm\" on: read the instructions of the functions with no C from the player's disc "
+                         "image (its executable and every level's program; retail.py), where the assembly files "
+                         "do not have them")
+    ap.add_argument("--retail-exe", type=Path, metavar="ELF",
+                    help="the same from the executable itself (and --retail-dump, the level dumps)")
+    ap.add_argument("--retail-dump", type=Path, metavar="DIR",
+                    help="with --retail-exe: the level dumps (level_NN/manifest.json and its records)")
     ap.add_argument("--asm-console", type=Path, metavar="DIR",
                     help="also write each executable function translated from assembly in the console's "
                          "form, a candidate file each in DIR (for rac1-decomp's tools/fcheck.py)")
@@ -554,6 +562,10 @@ def main(argv: list[str] | None = None) -> int:
         cfg["asm"] = {**cfg["asm"], "enabled": args.asm == "on"}
     if args.asm_source and cfg.get("asm"):
         cfg["asm"] = {**cfg["asm"], "source": str(args.asm_source.resolve())}
+    if cfg.get("asm") and (args.retail_image or args.retail_exe):
+        cfg["asm"] = {**cfg["asm"], "retail": {
+            k: str(v.resolve()) for k, v in (("image", args.retail_image), ("exe", args.retail_exe),
+                                             ("dump", args.retail_dump)) if v}}
     source = args.source.resolve()
     out = args.out.resolve()
     if args.list:
