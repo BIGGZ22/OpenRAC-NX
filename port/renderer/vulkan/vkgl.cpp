@@ -902,7 +902,11 @@ BufferRef resolve(Buffer& b) {
     // Unchanged for a few frames: a copy of its own, which stays where it is.
     if (g->frame_count >= b.changed_frame + 3 && size >= 4096) {
         VkBufferCreateInfo info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-        info.size = size;
+        // Keep the same buffer-size alignment as the frame ring. Exact-sized
+        // persistent instance buffers corrupt vertex fetches on AMD's Windows
+        // driver after promotion; padding to this alignment keeps them stable.
+        const VkDeviceSize alignment = ring_alignment();
+        info.size = (size + alignment - 1) / alignment * alignment;
         info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT
                      | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
         VmaAllocationCreateInfo alloc{};
