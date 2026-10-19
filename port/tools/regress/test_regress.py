@@ -14,6 +14,8 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -376,6 +378,22 @@ class Points(unittest.TestCase):
 
 
 class Outcome(unittest.TestCase):
+    def test_run_selects_the_platform_executable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for platform, suffix in (("nt", ".exe"), ("posix", "")):
+                with self.subTest(platform=platform):
+                    exe = root / f"openrac-rac1-ntsc{suffix}"
+                    exe.touch()
+                    result = {"status": "ok", "seconds": 0, "control_frame": 1}
+                    with patch.object(runner, "os", SimpleNamespace(name=platform)), \
+                         patch.object(runner, "run_level", return_value=result) as play:
+                        runner.run("rac1-ntsc", [0], root, out=root / platform,
+                                   data=root, level_dir=root, jobs=1, progress=lambda _: None)
+                    self.assertEqual(play.call_count, 1)
+                    self.assertEqual(play.call_args.args[2], exe)
+                    exe.unlink()
+
     def test_classify(self):
         ticks = trace(10, 21)
         self.assertEqual(runner.classify(0, False, ticks, 20), "ok")
