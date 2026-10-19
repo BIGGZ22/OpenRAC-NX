@@ -29,16 +29,20 @@
  *
  * Two ways to strafe, the later games':
  *
- * - Hold (Going Commando's): while L2 or R2 is held the facing he had when it went down is kept;
- *   the stick moves him sideways, back and forward along the move yaw, and the camera is swung
- *   round behind that facing and then held there.
+ * - Hold (Going Commando's): when L2 or R2 goes down the camera swings round, once, behind the
+ *   facing he has then, and he keeps that facing while it swings. From then on, as long as it is
+ *   held, he faces the camera's yaw as Lock does: the right stick (the game's own camera control)
+ *   turns the camera and him with it, and the stick moves him sideways, back and forward along the
+ *   move yaw. The swing ends when the camera is behind him, when the right stick is pushed
+ *   sideways, or after a while (a wall or a camera volume can keep it from getting there); nothing
+ *   pulls the camera back to the facing he had at the press after that.
  * - Lock (Up Your Arsenal's lock-strafe): with a forward-firing weapon ready in hand
  *   (rac1_strafe_aimable) he always faces the camera's yaw, which the right stick turns (the game's
  *   own camera control), and the stick moves him; the camera does not swing to follow where he
  *   goes. With anything else in hand, Hold.
  *
- * Either is done in the run (states 2 and 0x73) and the jump (7), on level ground; Lock also turns
- * him standing (state 0) with the camera. Everything else is the game's own.
+ * Either is done in the run (states 2 and 0x73) and the jump (7), on level ground; both also turn
+ * him standing (state 0) with the camera (Hold once its swing is done). Everything else is the game's own.
  */
 #ifndef OPENRAC_RAC1_STRAFE_H
 #define OPENRAC_RAC1_STRAFE_H
@@ -68,8 +72,15 @@
 
 /* What a strafe does this tick. */
 #define RAC1_STRAFE_NONE 0
-#define RAC1_STRAFE_HELD 1   /* facing the yaw latched when L2 or R2 went down */
+#define RAC1_STRAFE_HELD 1   /* L2 or R2 held: the swing behind his facing, then the camera's yaw */
 #define RAC1_STRAFE_LOCKED 2 /* facing the camera's yaw */
+
+/* Hold's swing ends with the camera's yaw this near the latched facing (radians), the right stick
+ * pushed this far sideways (the game's own test for the stick moved, CameraType0_HeroTweaks), or
+ * after this many ticks. */
+#define RAC1_STRAFE_SWING_DONE 0.05f
+#define RAC1_STRAFE_SWING_STICK 0.3f
+#define RAC1_STRAFE_SWING_TICKS 120
 
 /* What the decision reads of the hero and the pad. */
 typedef struct rac1_strafe_input {
@@ -81,13 +92,29 @@ typedef struct rac1_strafe_input {
     int slot_item;    /* hero +0x1090 + 0x28: slot 0's item */
     uint32_t held;    /* the pad's buttons as the player holds them (+0x1A0, L2 and R2 from before strafe.c takes them) */
     float facing;     /* hero +0x98 */
+    float camera;     /* the camera's yaw (D_L00_00166ED8) */
+    float look_x;     /* the right stick sideways (PadState.analog[0], +0x100) */
 } rac1_strafe_input;
 
 /* What Hold remembers from tick to tick. */
 typedef struct rac1_strafe_hold {
-    int latched; /* L2 or R2 held since it went down on foot */
-    float yaw;   /* the facing then */
+    int latched;  /* L2 or R2 held since it went down on foot */
+    int swinging; /* the camera still swinging round behind yaw */
+    int ticks;    /* ticks of the swing so far */
+    float yaw;    /* the facing when it went down */
 } rac1_strafe_hold;
+
+/* b - a, within -pi..pi. */
+static inline float rac1_strafe_angle_diff(float a, float b) {
+    float d = b - a;
+    while (d > 3.14159274f) {
+        d -= 6.28318548f;
+    }
+    while (d < -3.14159274f) {
+        d += 6.28318548f;
+    }
+    return d;
+}
 
 /* The items that fire forward or at what the hero faces, Lock's weapons (slot 0's item ids):
  * the Suck Cannon, the Bomb Glove, the Devastator, the Blaster, the Pyrocitor, the Tesla Claw, the
@@ -122,15 +149,30 @@ static inline int rac1_strafe_takes_buttons(int mode, const rac1_strafe_input* i
 }
 
 /* Hold's memory, once a tick at the pad's report: L2 or R2 going down on foot latches the
- * facing; letting both go, or the setting off, forgets it. */
+ * facing and starts the swing; the swing ends with the camera behind that facing, the right stick
+ * pushed sideways or the ticks run out; letting both go, or the setting off, forgets it all. */
 static inline void rac1_strafe_hold_update(int mode, const rac1_strafe_input* in, rac1_strafe_hold* hold) {
     if (mode == RAC1_STRAFE_OFF || (in->held & RAC1_STRAFE_BUTTONS) == 0) {
         hold->latched = 0;
+        hold->swinging = 0;
         return;
     }
-    if (!hold->latched && rac1_strafe_on_foot(in)) {
-        hold->latched = 1;
-        hold->yaw = in->facing;
+    if (!hold->latched) {
+        if (rac1_strafe_on_foot(in)) {
+            hold->latched = 1;
+            hold->swinging = 1;
+            hold->ticks = 0;
+            hold->yaw = in->facing;
+        }
+        return;
+    }
+    if (hold->swinging) {
+        const float d = rac1_strafe_angle_diff(in->camera, hold->yaw);
+        const float x = in->look_x < 0.0f ? -in->look_x : in->look_x;
+        if ((d < RAC1_STRAFE_SWING_DONE && d > -RAC1_STRAFE_SWING_DONE) || x >= RAC1_STRAFE_SWING_STICK
+            || ++hold->ticks >= RAC1_STRAFE_SWING_TICKS) {
+            hold->swinging = 0;
+        }
     }
 }
 
@@ -149,14 +191,20 @@ static inline int rac1_strafe_kind(int mode, const rac1_strafe_input* in, const 
     return hold->latched ? RAC1_STRAFE_HELD : RAC1_STRAFE_NONE;
 }
 
+/* Whether the camera is asked this tick to swing round behind Hold's latched facing. */
+static inline int rac1_strafe_swings_camera(int kind, const rac1_strafe_hold* hold) {
+    return kind == RAC1_STRAFE_HELD && hold->swinging;
+}
+
 /* The yaw Hero_TurnToHeading eases the facing toward: while strafing (its first argument 0, the
- * turns that follow the move yaw) the latched yaw or the camera's, else the move yaw, as the game
- * has it. */
-static inline float rac1_strafe_turn_target(int kind, int mode, float move_yaw, float camera_yaw, float hold_yaw) {
+ * turns that follow the move yaw) the latched yaw while Hold's swing lasts, the camera's after it
+ * and in Lock; else the move yaw, as the game has it. */
+static inline float rac1_strafe_turn_target(int kind, int mode, float move_yaw, float camera_yaw,
+                                            const rac1_strafe_hold* hold) {
     if (mode != 0 || kind == RAC1_STRAFE_NONE) {
         return move_yaw;
     }
-    return kind == RAC1_STRAFE_LOCKED ? camera_yaw : hold_yaw;
+    return rac1_strafe_swings_camera(kind, hold) ? hold->yaw : camera_yaw;
 }
 
 /* The angle Hero_SetPlanarVelocity builds the velocity along: while strafing, a request for the
@@ -165,10 +213,11 @@ static inline float rac1_strafe_planar_angle(int kind, float requested, float mo
     return kind != RAC1_STRAFE_NONE && !(requested <= 3.14159274f) ? move_yaw : requested;
 }
 
-/* Whether strafe.c turns him itself early in the hero's update: Lock standing, where the game's
- * standing state does not turn him. */
-static inline int rac1_strafe_turns_standing(int kind, int state) {
-    return kind == RAC1_STRAFE_LOCKED && state == RAC1_STRAFE_STATE_STAND;
+/* Whether strafe.c turns him toward the camera itself early in the hero's update: standing, where
+ * the game's standing state does not turn him, in Lock and in Hold once its swing is done. */
+static inline int rac1_strafe_turns_standing(int kind, int state, const rac1_strafe_hold* hold) {
+    return state == RAC1_STRAFE_STATE_STAND
+           && (kind == RAC1_STRAFE_LOCKED || (kind == RAC1_STRAFE_HELD && !hold->swinging));
 }
 
 #endif /* OPENRAC_RAC1_STRAFE_H */

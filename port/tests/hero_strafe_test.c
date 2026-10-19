@@ -17,14 +17,14 @@
 
 /* The hero running on level ground on foot, the blaster ready, nothing held. */
 static rac1_strafe_input running(void) {
-    rac1_strafe_input in = {1, RAC1_STRAFE_STATE_RUN, 0, 0, RAC1_STRAFE_SLOT_READY, BLASTER, 0, 0.75f};
+    rac1_strafe_input in = {1, RAC1_STRAFE_STATE_RUN, 0, 0, RAC1_STRAFE_SLOT_READY, BLASTER, 0, 0.75f, 0.0f, 0.0f};
     return in;
 }
 
 /* One tick as the run does it, with the decision in the two places strafe.c changes: the facing
  * eased toward its target by a fraction (the game springs it, the same direction), the velocity
  * along the planar angle (the facing for 99999, the run's request). */
-static void tick(int kind, float camera, float stick, float hold_yaw, float* facing, float v[2]) {
+static void tick(int kind, float camera, float stick, const rac1_strafe_hold* hold, float* facing, float v[2]) {
     /* The stick handler adds the rotations as the game's FastAddRots does: within -pi..pi. */
     float move_yaw = camera + stick;
     if (move_yaw > 3.1415927f) {
@@ -32,8 +32,8 @@ static void tick(int kind, float camera, float stick, float hold_yaw, float* fac
     } else if (move_yaw < -3.1415927f) {
         move_yaw += 6.2831855f;
     }
-    const float target = rac1_strafe_turn_target(kind, 0, move_yaw, camera, hold_yaw);
-    *facing += (target - *facing) * 0.25f;
+    const float target = rac1_strafe_turn_target(kind, 0, move_yaw, camera, hold);
+    *facing += rac1_strafe_angle_diff(*facing, target) * 0.25f;
     float angle = rac1_strafe_planar_angle(kind, 99999.0f, move_yaw);
     if (!(angle <= 3.14159274f)) {
         angle = *facing;
@@ -55,7 +55,7 @@ static void items(void) {
 
 /* Off: nothing strafes, L2 and R2 reach the game, nothing is latched. */
 static void off(void) {
-    rac1_strafe_hold hold = {0, 0.0f};
+    rac1_strafe_hold hold = {0, 0, 0, 0.0f};
     rac1_strafe_input in = running();
     in.held = RAC1_PAD_R2 | CIRCLE;
     rac1_strafe_hold_update(RAC1_STRAFE_OFF, &in, &hold);
@@ -64,9 +64,10 @@ static void off(void) {
     CHECK(rac1_strafe_kind(RAC1_STRAFE_OFF, &in, &hold) == RAC1_STRAFE_NONE);
     hold.latched = 1; /* even a latch left over gives nothing */
     CHECK(rac1_strafe_kind(RAC1_STRAFE_OFF, &in, &hold) == RAC1_STRAFE_NONE);
-    CHECK(!rac1_strafe_turns_standing(RAC1_STRAFE_NONE, RAC1_STRAFE_STATE_STAND));
+    CHECK(!rac1_strafe_turns_standing(RAC1_STRAFE_NONE, RAC1_STRAFE_STATE_STAND, &hold));
+    CHECK(!rac1_strafe_swings_camera(RAC1_STRAFE_NONE, &hold));
     /* The game's own values pass through untouched. */
-    CHECK(rac1_strafe_turn_target(RAC1_STRAFE_NONE, 0, 1.25f, -2.0f, 0.5f) == 1.25f);
+    CHECK(rac1_strafe_turn_target(RAC1_STRAFE_NONE, 0, 1.25f, -2.0f, &hold) == 1.25f);
     CHECK(rac1_strafe_planar_angle(RAC1_STRAFE_NONE, 99999.0f, 1.25f) == 99999.0f);
     CHECK(rac1_strafe_planar_angle(RAC1_STRAFE_NONE, 0.5f, 1.25f) == 0.5f);
 }
@@ -75,20 +76,21 @@ static void off(void) {
  * let go, the game's own. */
 static void hold_mode(void) {
     const int mode = RAC1_STRAFE_HOLD;
-    rac1_strafe_hold hold = {0, 0.0f};
+    rac1_strafe_hold hold = {0, 0, 0, 0.0f};
     rac1_strafe_input in = running();
     in.slot_item = WRENCH;
     rac1_strafe_hold_update(mode, &in, &hold);
     CHECK(!hold.latched && rac1_strafe_kind(mode, &in, &hold) == RAC1_STRAFE_NONE);
     CHECK(rac1_strafe_takes_buttons(mode, &in)); /* on foot: L2 and R2 are the strafe's */
     in.held = RAC1_PAD_R2;
+    in.camera = -2.0f; /* the camera elsewhere: the swing starts */
     rac1_strafe_hold_update(mode, &in, &hold);
-    CHECK(hold.latched && hold.yaw == 0.75f);
+    CHECK(hold.latched && hold.swinging && hold.yaw == 0.75f);
     CHECK(rac1_strafe_kind(mode, &in, &hold) == RAC1_STRAFE_HELD);
     /* Held: the facing he turns to later is not latched again. */
     in.facing = -1.0f;
     rac1_strafe_hold_update(mode, &in, &hold);
-    CHECK(hold.yaw == 0.75f);
+    CHECK(hold.yaw == 0.75f && hold.swinging);
     /* L2 does it too, and with both the latch stays. */
     in.held = RAC1_PAD_L2 | RAC1_PAD_R2;
     rac1_strafe_hold_update(mode, &in, &hold);
@@ -153,10 +155,20 @@ static void hold_mode(void) {
     /* The aimable weapon makes no difference to Hold. */
     in.slot_item = BLASTER;
     CHECK(rac1_strafe_kind(mode, &in, &hold) == RAC1_STRAFE_HELD);
-    CHECK(!rac1_strafe_turns_standing(RAC1_STRAFE_HELD, RAC1_STRAFE_STATE_STAND));
-    /* Targets: the latched yaw for turns of mode 0; the move yaw for the velocity. */
-    CHECK(rac1_strafe_turn_target(RAC1_STRAFE_HELD, 0, 1.25f, -2.0f, 0.5f) == 0.5f);
-    CHECK(rac1_strafe_turn_target(RAC1_STRAFE_HELD, 1, 1.25f, -2.0f, 0.5f) == 1.25f);
+    CHECK(hold.swinging && rac1_strafe_swings_camera(RAC1_STRAFE_HELD, &hold));
+    CHECK(!rac1_strafe_turns_standing(RAC1_STRAFE_HELD, RAC1_STRAFE_STATE_STAND, &hold));
+    /* Targets: while the swing lasts the latched yaw for turns of mode 0; the move yaw for the
+     * velocity. */
+    hold.yaw = 0.5f;
+    CHECK(rac1_strafe_turn_target(RAC1_STRAFE_HELD, 0, 1.25f, -2.0f, &hold) == 0.5f);
+    CHECK(rac1_strafe_turn_target(RAC1_STRAFE_HELD, 1, 1.25f, -2.0f, &hold) == 1.25f);
+    /* The swing done: the camera's, standing too, and no more swing. */
+    hold.swinging = 0;
+    CHECK(rac1_strafe_turn_target(RAC1_STRAFE_HELD, 0, 1.25f, -2.0f, &hold) == -2.0f);
+    CHECK(rac1_strafe_turn_target(RAC1_STRAFE_HELD, 1, 1.25f, -2.0f, &hold) == 1.25f);
+    CHECK(rac1_strafe_turns_standing(RAC1_STRAFE_HELD, RAC1_STRAFE_STATE_STAND, &hold));
+    CHECK(!rac1_strafe_turns_standing(RAC1_STRAFE_HELD, RAC1_STRAFE_STATE_RUN, &hold));
+    CHECK(!rac1_strafe_swings_camera(RAC1_STRAFE_HELD, &hold));
     CHECK(rac1_strafe_planar_angle(RAC1_STRAFE_HELD, 99999.0f, 1.25f) == 1.25f);
     CHECK(rac1_strafe_planar_angle(RAC1_STRAFE_HELD, 0.5f, 1.25f) == 0.5f);
 }
@@ -165,15 +177,16 @@ static void hold_mode(void) {
  * hand is Hold. */
 static void lock_mode(void) {
     const int mode = RAC1_STRAFE_LOCK;
-    rac1_strafe_hold hold = {0, 0.0f};
+    rac1_strafe_hold hold = {0, 0, 0, 0.0f};
     rac1_strafe_input in = running();
     rac1_strafe_hold_update(mode, &in, &hold);
     CHECK(rac1_strafe_kind(mode, &in, &hold) == RAC1_STRAFE_LOCKED);
     CHECK(rac1_strafe_takes_buttons(mode, &in));
     in.state = RAC1_STRAFE_STATE_STAND;
     CHECK(rac1_strafe_kind(mode, &in, &hold) == RAC1_STRAFE_LOCKED);
-    CHECK(rac1_strafe_turns_standing(RAC1_STRAFE_LOCKED, in.state));
-    CHECK(!rac1_strafe_turns_standing(RAC1_STRAFE_LOCKED, RAC1_STRAFE_STATE_RUN));
+    CHECK(rac1_strafe_turns_standing(RAC1_STRAFE_LOCKED, in.state, &hold));
+    CHECK(!rac1_strafe_turns_standing(RAC1_STRAFE_LOCKED, RAC1_STRAFE_STATE_RUN, &hold));
+    CHECK(!rac1_strafe_swings_camera(RAC1_STRAFE_LOCKED, &hold));
     in.state = RAC1_STRAFE_STATE_RUN;
     /* L2 held with the weapon: still the camera's. */
     in.held = RAC1_PAD_L2;
@@ -207,40 +220,46 @@ static void lock_mode(void) {
     in.frame_mode = 0;
     in.state = 0x35; /* crouching */
     CHECK(rac1_strafe_kind(mode, &in, &hold) == RAC1_STRAFE_NONE);
-    CHECK(rac1_strafe_turn_target(RAC1_STRAFE_LOCKED, 0, 1.25f, -2.0f, 0.5f) == -2.0f);
-    CHECK(rac1_strafe_turn_target(RAC1_STRAFE_LOCKED, 1, 1.25f, -2.0f, 0.5f) == 1.25f);
+    hold.swinging = 1; /* a swing never matters to Lock */
+    hold.yaw = 0.5f;
+    CHECK(rac1_strafe_turn_target(RAC1_STRAFE_LOCKED, 0, 1.25f, -2.0f, &hold) == -2.0f);
+    CHECK(rac1_strafe_turn_target(RAC1_STRAFE_LOCKED, 1, 1.25f, -2.0f, &hold) == 1.25f);
+    CHECK(!rac1_strafe_swings_camera(RAC1_STRAFE_LOCKED, &hold));
 }
 
 /* Moving: stick right (a quarter turn clockwise of the camera's forward) for a while. */
 static void movement(void) {
     const float camera = 0.5f;
     const float right = -1.5707964f;
+    const rac1_strafe_hold none = {0, 0, 0, 0.0f};
+    const rac1_strafe_hold latched = {1, 1, 0, 1.2f}; /* swinging behind 1.2 */
     float facing, v[2];
     /* Lock: he ends facing the camera's way and moving at right angles to it. */
     facing = camera;
     for (int i = 0; i < 60; ++i) {
-        tick(RAC1_STRAFE_LOCKED, camera, right, 0.0f, &facing, v);
+        tick(RAC1_STRAFE_LOCKED, camera, right, &none, &facing, v);
     }
     CHECK(fabsf(facing - camera) < 1e-4f);
     CHECK(fabsf(v[0] * cosf(camera) + v[1] * sinf(camera)) < 1e-4f); /* no forward part */
     CHECK(fabsf(v[0] - cosf(camera + right)) < 1e-4f && fabsf(v[1] - sinf(camera + right)) < 1e-4f);
-    /* Hold, latched at 1.2 with the camera elsewhere: he keeps 1.2 and moves where the stick says. */
+    /* Hold, swinging behind 1.2 with the camera still elsewhere: he keeps 1.2 and moves where the
+     * stick says. */
     facing = 1.2f;
     for (int i = 0; i < 60; ++i) {
-        tick(RAC1_STRAFE_HELD, camera, right, 1.2f, &facing, v);
+        tick(RAC1_STRAFE_HELD, camera, right, &latched, &facing, v);
     }
     CHECK(fabsf(facing - 1.2f) < 1e-4f);
     CHECK(fabsf(v[0] - cosf(camera + right)) < 1e-4f && fabsf(v[1] - sinf(camera + right)) < 1e-4f);
     /* The game's way: he turns round to face where he goes. */
     facing = camera;
     for (int i = 0; i < 60; ++i) {
-        tick(RAC1_STRAFE_NONE, camera, right, 0.0f, &facing, v);
+        tick(RAC1_STRAFE_NONE, camera, right, &none, &facing, v);
     }
     CHECK(fabsf(facing - (camera + right)) < 1e-4f);
     /* Back: still facing the camera's way, moving toward it. */
     facing = camera;
     for (int i = 0; i < 60; ++i) {
-        tick(RAC1_STRAFE_LOCKED, camera, 3.1415927f, 0.0f, &facing, v);
+        tick(RAC1_STRAFE_LOCKED, camera, 3.1415927f, &none, &facing, v);
     }
     CHECK(fabsf(facing - camera) < 1e-4f && v[0] * cosf(camera) + v[1] * sinf(camera) < -0.999f);
 }

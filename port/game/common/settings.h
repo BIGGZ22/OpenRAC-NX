@@ -55,7 +55,7 @@ enum class VSync {
 // section 7). The game's own turning when Off.
 enum class Strafe {
     Off,
-    Hold,  // while L2 or R2 is held he keeps the facing he had when it went down (Going Commando's)
+    Hold,  // L2 or R2 held: the camera swings behind him once, then he faces its way (Going Commando's)
     Lock,  // with a forward-firing weapon in hand he always faces the camera's way; Hold otherwise
     Count,
 };

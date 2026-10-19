@@ -253,8 +253,9 @@ int openrac_game_hud_side(void);
 float openrac_game_picture_wider(void);
 
 /* How the player strafes on foot (settings strafe; rac1: host/strafe.c): 0 the game's own turning,
- * 1 hold L2 or R2 to keep the facing he had when it went down, 2 that and, with a forward-firing
- * weapon in hand, always facing the camera's way. 0 without a window (no settings). */
+ * 1 hold L2 or R2: the camera swings behind him once, then he faces the camera's way, 2 that and,
+ * with a forward-firing weapon in hand, always facing the camera's way. 0 without a window (no
+ * settings). */
 int openrac_game_strafe_mode(void);
 
 /* A live particle the game's particle renderer would draw (rac1: PartProc): its 0x40-byte record
