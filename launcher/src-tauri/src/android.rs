@@ -390,6 +390,17 @@ pub async fn game_status<R: Runtime>(app: AppHandle<R>) -> Result<GameStatus, St
     }
 }
 
+/// Names the game when it may be using a memory card, for the save editor and a backup's restore
+/// (core/src/save_edit.rs, card_in_use). On Android that reads no process list: an app sees
+/// only its own processes, the game's carries the package's name and not its command line, and
+/// toybox's ps refused the desktop's options ("could not check whether the game is running"). The
+/// game's activity running counts as the card in use, whichever game and card it is.
+#[cfg(target_os = "android")]
+pub async fn game_holding_card<R: Runtime>(app: &AppHandle<R>) -> Result<Option<String>, String> {
+    let status = game_status(app.clone()).await?;
+    Ok(status.running.then(|| "The game".to_string()))
+}
+
 /// Brings the running game back in front of the launcher, or (`stop`) ends it.
 #[tauri::command]
 pub async fn game_window<R: Runtime>(app: AppHandle<R>, stop: bool) -> Result<(), String> {

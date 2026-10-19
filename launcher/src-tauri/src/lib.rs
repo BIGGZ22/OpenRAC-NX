@@ -678,12 +678,34 @@ fn backup_saves(serial: String, note: Option<String>) -> Result<openrac_launcher
     openrac_launcher_core::saves::backup_saves(&serial, note.as_deref())
 }
 
+/// Whether the game runs with a memory card (the name to show when it does), for an edit or a
+/// restore: on a desktop from the process list when asked, on Android from the game's activity,
+/// asked here before (android.rs, game_holding_card).
+async fn card_check(app: &AppHandle) -> Result<impl Fn(&Path, &str) -> Result<Option<String>, String>, String> {
+    #[cfg(target_os = "android")]
+    let running = android::game_holding_card(app).await?;
+    #[cfg(not(target_os = "android"))]
+    let _ = app;
+    Ok(move |card: &Path, serial: &str| {
+        #[cfg(target_os = "android")]
+        {
+            let _ = (card, serial);
+            Ok(running.clone())
+        }
+        #[cfg(not(target_os = "android"))]
+        {
+            openrac_launcher_core::save_edit::card_in_use(card, serial)
+        }
+    })
+}
+
 /// Restores a backup of the card; refused while the game runs with it, as an edit is.
 #[tauri::command]
-async fn restore_backup(serial: String, backup_name: String) -> Result<(), String> {
+async fn restore_backup(app: AppHandle, serial: String, backup_name: String) -> Result<(), String> {
+    let in_use = card_check(&app).await?;
     tauri::async_runtime::spawn_blocking(move || {
         let card = openrac_launcher_core::saves::get_memcard_dir(&serial);
-        if let Some(game) = openrac_launcher_core::save_edit::card_in_use(&card, &serial)? {
+        if let Some(game) = in_use(&card, &serial)? {
             return Err(format!("{game} is running with this memory card: close it first"));
         }
         openrac_launcher_core::saves::restore_backup(&serial, &backup_name)
@@ -724,6 +746,7 @@ async fn read_save(
 /// advanced save editor switched on in Settings.
 #[tauri::command]
 async fn write_save(
+    app: AppHandle,
     state: State<'_, AppState>,
     serial: String,
     slot: usize,
@@ -738,11 +761,10 @@ async fn write_save(
     if matches!(change, save_edit::SaveChange::Raw { .. }) && !advanced {
         return Err("raw edits need the advanced save editor (Settings)".into());
     }
+    let in_use = card_check(&app).await?;
     tauri::async_runtime::spawn_blocking(move || {
         let card = openrac_launcher_core::saves::get_memcard_dir(&serial);
-        let mut result = save_edit::write_save(&card, &serial, slot, &fingerprint, &change, || {
-            save_edit::card_in_use(&card, &serial)
-        })?;
+        let mut result = save_edit::write_save(&card, &serial, slot, &fingerprint, &change, || in_use(&card, &serial))?;
         result.view.skill_names = skill_names(install);
         Ok(result)
     })
