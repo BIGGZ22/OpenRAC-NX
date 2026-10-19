@@ -467,6 +467,15 @@ impl Action {
         if self.kind == Kind::Play && ctx.config.detailed_game_log {
             env.push(("OPENRAC_LOG".to_string(), "verbose".to_string()));
         }
+        // Settings, "Renderer" (Windows and Linux): the port's Vulkan renderer, which draws with
+        // OpenGL instead where Vulkan cannot start (port/platform/window.cpp). macOS builds have
+        // none, and Android keeps its own choice (src-tauri/src/android.rs).
+        if self.kind == Kind::Play
+            && ctx.config.renderer == "vulkan"
+            && matches!(ctx.platform, Platform::Windows | Platform::Linux)
+        {
+            env.push(("OPENRAC_GL_API".to_string(), "vulkan".to_string()));
+        }
         Ok(Plan { title, program, args, cwd, detached: self.detached, env })
     }
 }
@@ -669,6 +678,15 @@ mod tests {
         let detailed = Config { detailed_game_log: true, ..installed.clone() };
         let plan = play.plan(&ctx(&detailed)).unwrap();
         assert!(plan.env.contains(&("OPENRAC_LOG".to_string(), "verbose".to_string())), "{:?}", plan.env);
+        // Settings, "Renderer": Vulkan on Windows and Linux; OpenGL, the default, sets nothing.
+        assert!(!plan.env.iter().any(|(k, _)| k == "OPENRAC_GL_API"));
+        let vulkan = Config { renderer: "vulkan".into(), ..installed.clone() };
+        let plan = play.plan(&ctx(&vulkan)).unwrap();
+        assert!(plan.env.contains(&("OPENRAC_GL_API".to_string(), "vulkan".to_string())), "{:?}", plan.env);
+        // macOS builds have no Vulkan renderer: the setting is not passed on there.
+        let on_mac = Context { platform: Platform::Macos, ..ctx(&vulkan) };
+        let plan = play.plan(&on_mac).unwrap();
+        assert!(!plan.env.iter().any(|(k, _)| k == "OPENRAC_GL_API"), "{:?}", plan.env);
     }
 
     /// `{path}` is a chosen file or folder that is there; `{option}` one of the action's options.
