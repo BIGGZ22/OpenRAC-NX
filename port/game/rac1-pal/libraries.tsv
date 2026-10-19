@@ -69,6 +69,7 @@ func_00120858	vu	sceGsSyncPath	host
 func_0011DFC8	libgcc	__main	host	the host runs no global constructors for the game: it has none
 func_00120778	libgcc	__extendsfdf2	host	float to double; libgcc is the host compiler's
 func_0011EEC8	libgcc	__muldi3	host	64-bit multiply (src/libgcc, which hostgen does not read)
+func_0011E6D8	libgcc	__fixunsdfdi	host	double to unsigned 64-bit (libgcc's soft-float one, 0 for a negative); the float printer's (func_00119F38) only call. Its parameter is a double, which hostgen's translation from assembly cannot pass
 func_00120F30	cdvd	sceCdSync	host	reads are done at once from the extracted disc image
 func_001211B0	cdvd	sceCdInit	host
 func_00121490	cdvd	sceCdDiskReady	host

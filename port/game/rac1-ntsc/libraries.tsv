@@ -316,6 +316,8 @@ Rfu116SetSyscallTail	kernel	SetSyscall	host	system call 0x74; PAL func_0011DDD0
 InvokeKernelSyscall005A_RfuTail	kernel	Copy	host	system call 0x5A; PAL func_0011DDE0
 Rfu091Tail	kernel	GetEntryAddress	host	system call 0x5B; PAL func_0011DE28
 __muldi3	libgcc	__muldi3	host	64-bit multiply; PAL func_0011EEC8
+__udivdi3	libgcc	__udivdi3	host	64-bit unsigned divide (src/sdk/library/udivdi3.c, which hostgen.json skips: libgcc's GCC-only assembly); newlib's printf, strtol and malloc call it
+__umoddi3	libgcc	__umoddi3	host	64-bit unsigned remainder (src/sdk/library/umoddi3.c, skipped as above)
 FUN_L00_00211e30	hero	Hero_TurnToHeading	wrap	eases the facing toward the move yaw: with the player's lock-strafe on and a weapon fired while running, toward the camera's yaw (rac1/host/strafe.c); PAL func_L00_002124E8	void (int, float, float, float)
 FUN_L00_002120d8	hero	Hero_SetPlanarVelocity	wrap	the velocity along an angle, the facing for one above pi: with lock-strafe strafing, along the move yaw (rac1/host/strafe.c); PAL func_L00_00212790	void (float)
 FUN_L00_002e6000	camera	follow_camera_apply_overrides	wrap	the follow camera's requests from the hero's state: while lock-strafing, the strafe camera the game asks for in state 0x81 with L2 or R2 held (rac1/host/strafe.c); PAL func_L00_002E74B0	void (unsigned int)

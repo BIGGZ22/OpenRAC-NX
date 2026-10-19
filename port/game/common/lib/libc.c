@@ -69,6 +69,31 @@ long long openrac_lib___muldi3(long long a, long long b) {
     return (long long)((unsigned long long)a * (unsigned long long)b);
 }
 
+/* __udivdi3, __umoddi3: 64-bit unsigned division, which the console's 32-bit
+ * divider built from halves (libgcc). A zero divisor, which libgcc divides by
+ * on purpose to fault where a CPU does, gives what the EE's divu leaves: all
+ * ones for the quotient, the dividend for the remainder. */
+unsigned long long openrac_lib___udivdi3(unsigned long long a, unsigned long long b) {
+    return b ? a / b : ~0ull;
+}
+
+unsigned long long openrac_lib___umoddi3(unsigned long long a, unsigned long long b) {
+    return b ? a % b : a;
+}
+
+/* __fixunsdfdi: a double to an unsigned 64-bit integer (libgcc's soft-float
+ * one: negative gives 0). Past 2^64 the console's result is not defined; this
+ * saturates rather than leaving it to the host's conversion. */
+unsigned long long openrac_lib___fixunsdfdi(double d) {
+    if (!(d > 0.0)) {
+        return 0;
+    }
+    if (d >= 18446744073709551616.0) {
+        return ~0ull;
+    }
+    return (unsigned long long)d;
+}
+
 /* __main: what the console's start-up ran before main (global constructors;
  * the game has none). */
 void openrac_lib___main(void) {}
