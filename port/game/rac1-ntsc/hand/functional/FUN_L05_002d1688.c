@@ -56,7 +56,8 @@ void FUN_L05_002d1688(char *moby) {
     float z[4] __attribute__((aligned(16)));
     float speed, height, rise;
     int index, duration;
-    float lvl = *(float *)(D_L05_001613A8_2D28D0 + 0xA8);
+    /* NTSC-U reads gp-0x5878 = 0x161388 (0x2D179C, ...): PAL's 0x161450 is 0xC8 lower here, not 0xC0 as the base. */
+    float lvl = *(float *)(D_L05_001613A8_2D28D0 + 0xA0);
 
     if (state == 1) {
         path = D_L05_001B0CB0_2D28D0[*(int *)(data + 0x60)];
