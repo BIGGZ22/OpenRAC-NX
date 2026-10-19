@@ -202,14 +202,15 @@ actions, as rac1/pal has on Windows:
 
 A `play` action also gets the environment Settings asks for
 (`core/src/actions.rs`, `Action::plan`): `OPENRAC_DEVELOPER=1` with developer
-tools on, `OPENRAC_LOG=verbose` with Detailed game logs, and, on Windows and
-Linux with Renderer set to Vulkan (Advanced, `Config.renderer`),
+tools on, `OPENRAC_LOG=verbose` with Detailed game logs, and, on Windows,
+Linux and macOS with Renderer set to Vulkan (Advanced, `Config.renderer`),
 `OPENRAC_GL_API=vulkan`: the port's experimental Vulkan renderer
 (`port/renderer/vulkan`) in place of OpenGL 4.1. Where Vulkan 1.3 cannot
 start, or the build has no Vulkan renderer, the game logs why and draws with
 OpenGL (`port/platform/window.cpp`). It applies from the game's next start.
-macOS builds have no Vulkan renderer, so the row is not shown there; Android
-keeps its own choice under Graphics (`src-tauri/src/android.rs`).
+On macOS it runs on MoltenVK, which each game's application bundle carries
+(`port/cmake/MacApp.cmake`). Android keeps its own choice under Graphics
+(`src-tauri/src/android.rs`).
 
 Each version's levels have a folder of their own under one root, since the
 versions of a game share its data folder: `assets/port/<game>/<version>` in a

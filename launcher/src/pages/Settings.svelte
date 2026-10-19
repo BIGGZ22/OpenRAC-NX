@@ -65,9 +65,11 @@
   /** Android has no folders to choose (its picker copies discs into the app): no panel when it
    *  would be empty. */
   const showFolders = $derived(rootHere || !onAndroid || draft.developer);
-  /** The game's Vulkan renderer is built for Windows and Linux only (port/cmake/Dependencies.cmake);
+  /** The game's Vulkan renderer, on the desktops (on macOS through the MoltenVK its bundle carries);
    *  Android chooses its own in Graphics (GpuDrivers). */
-  const desktopRenderer = $derived(app.info?.platform === "windows" || app.info?.platform === "linux");
+  const desktopRenderer = $derived(
+    app.info?.platform === "windows" || app.info?.platform === "linux" || app.info?.platform === "macos",
+  );
   /** Advanced opens by itself when something in it is on. */
   let advancedOpen = $state(
     saved().detailedGameLog || saved().developer || saved().saveEditorAdvanced || saved().renderer === "vulkan",

@@ -50,10 +50,10 @@ pub struct Config {
     /// The game writes a detailed log (OPENRAC_LOG=verbose): level loads, controller changes,
     /// what the port is missing. Off by default, so a log stays small.
     pub detailed_game_log: bool,
-    /// What the game draws with on Windows and Linux: "opengl" (OpenGL 4.1, the default) or
-    /// "vulkan", the port's experimental Vulkan renderer (OPENRAC_GL_API=vulkan). Where Vulkan
-    /// cannot start, the game draws with OpenGL (port/platform/window.cpp). Not used on macOS,
-    /// whose builds have no Vulkan renderer, nor on Android, which keeps its own choice
+    /// What the game draws with on Windows, Linux and macOS: "opengl" (OpenGL 4.1, the default)
+    /// or "vulkan", the port's experimental Vulkan renderer (OPENRAC_GL_API=vulkan; on macOS the
+    /// MoltenVK its bundle carries). Where Vulkan cannot start, the game draws with OpenGL
+    /// (port/platform/window.cpp). Not used on Android, which keeps its own choice
     /// (src-tauri/src/android.rs).
     pub renderer: String,
     /// For each game, the time (seconds since 1970) of the newest crash report the player has
