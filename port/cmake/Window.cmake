@@ -53,6 +53,7 @@ add_library(openrac_platform STATIC
   platform/gpu_driver.cpp
   platform/input.cpp
   platform/pad.cpp
+  platform/performance_hint.cpp
   platform/pump.cpp
   platform/touch_pad.cpp
   platform/window.cpp

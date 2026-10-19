@@ -30,6 +30,7 @@
 #include "openrac/guest.h"
 #include "platform/gpu_driver.h"
 #include "platform/input.h"
+#include "platform/performance_hint.h"
 #include "platform/pump.h"
 #include "platform/window.h"
 #include "renderer/direct.h"
@@ -1481,6 +1482,7 @@ float alpha_at(std::chrono::steady_clock::time_point display) {
 void swapped(std::chrono::steady_clock::time_point started) {
     using namespace std::chrono;
     const auto before = steady_clock::now();
+    platform::frame_work_done();
     g->window->swap();
     const auto after = steady_clock::now();
     const double cost = duration<double>(before - started).count();
@@ -1493,6 +1495,10 @@ void swapped(std::chrono::steady_clock::time_point started) {
         pacing.interval = rate > 20.0f ? 1.0 / rate : 0.0;
         pacing.interval_stale = false;
     }
+    // What a frame may take, for the system's CPU clocks (performance_hint.h): a refresh, or the
+    // player's frame cap when it is lower.
+    const double cap = frame_cap();
+    platform::set_frame_target(cap > 0.0 ? std::max(1.0 / cap, pacing.interval) : pacing.interval);
     if (g->swap == platform::SwapInterval::Immediate) {
         // No refresh is waited for: there is no phase to draw the next frame for.
         pacing.last_swap = {};
@@ -1512,7 +1518,7 @@ void swapped(std::chrono::steady_clock::time_point started) {
     // next ones; one more than a frame late starts the count again. It holds beside the swap's
     // wait: 60 frames a second on a 120 Hz display are every other refresh. Nothing sleeps here:
     // the game's tick may be due before the next frame is (frame_due).
-    if (const double cap = frame_cap(); cap > 0.0) {
+    if (cap > 0.0) {
         const auto step = duration_cast<steady_clock::duration>(duration<double>(1.0 / cap));
         const auto now = steady_clock::now();
         pacing.due = pacing.due.time_since_epoch().count() == 0 || now > pacing.due + 2 * step ? now
@@ -1520,6 +1526,8 @@ void swapped(std::chrono::steady_clock::time_point started) {
     } else {
         pacing.due = {};
     }
+    // The next frame's work counts from here: the swap, and any wait in it, is the display's.
+    platform::work_resumed();
 }
 
 // Whether the frame cap lets a frame start now (within a millisecond: a sleep wakes that coarsely).
@@ -2654,6 +2662,7 @@ int between(std::chrono::steady_clock::time_point next_tick) {
             return 0;
         }
         std::this_thread::sleep_until(pacing.due);
+        platform::work_resumed();
         now = std::chrono::steady_clock::now();
     }
     const auto display = next_display(now);

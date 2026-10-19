@@ -62,6 +62,7 @@
 #include "settings.h"
 #include "openrac/sound_engine.h"
 #include "platform/audio.h"
+#include "platform/performance_hint.h"
 #include "platform/pump.h"
 #include "renderer/direct.h"
 #include "renderer/texture.h"
@@ -617,6 +618,7 @@ int openrac_game_vsync(void) {
         std::this_thread::sleep_until(g_next_frame);
     }
 #ifdef OPENRAC_FRONTEND
+    openrac::platform::work_resumed();  // the next tick's work counts from here (performance_hint.h)
     // [debug tools] A paused game stays here, its last tick drawn again (frontend.h, hold).
     if (g_window && !frontend::hold()) {
         std::exit(0);
