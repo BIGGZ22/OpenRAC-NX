@@ -272,9 +272,16 @@ Platform::Platform(unsigned subsystems) {
         // On Wayland, allow tearing / immediate presentation when vsync is disabled.
         SDL_SetHint("SDL_VIDEO_WAYLAND_ALLOW_TEARING", "1");
 #endif
+        // The game goes on while another window has the focus: a full-screen window stays up
+        // instead of minimising (SDL's default on Windows), so it can stay on one display while
+        // the player uses another.
+        SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
     }
     if ((subsystems & kGamepad) != 0) {
         flags |= SDL_INIT_GAMEPAD;
+        // ...and the controller still plays it. The keyboard counts only while the window has the
+        // focus (Input::update), so typing elsewhere never moves Ratchet.
+        SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
     }
     if ((subsystems & kAudio) != 0) {
         flags |= SDL_INIT_AUDIO;
