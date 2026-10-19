@@ -1569,3 +1569,17 @@ Moby tour (teleport beside up to 3 live mobys of each class, wrench twice, 130 t
   from func_L05_0031AAA8 there; the catalogue has no level 14 place for either.
 Only believed correct, not exercised: everything the tour did not reach; progression (infobots,
 gates, bosses) was not played at all.
+
+### Kerwan landing crash from a garbage TEX0, 2026-10-19
+
+A player's travel from Novalis ended in std::bad_alloc during Kerwan's
+landing (game mode 6, hero at the pad): a DIRECT-path sprite resolved a
+TEX0 claiming more than 1024 texels a side, and Rgba8Image's int size math
+overflowed. The pool now refuses such a claim (placeholder; a debug line
+names the block and the claimed size) and the image size is computed in
+size_t (commit 86bde6b4, renderer_texture test). A direct `--level 3` run
+plays the flight and landing cleanly; the state that produces the garbage
+TEX0 (carried over from Novalis play) was not reproduced — if a player sees
+a checkerboard where a HUD element should be, the debug log now says which
+texture. ~/rac1-decomp is read-only since 2026-10-19: backfill C goes to
+the port side (hand/, nonmatching/functional copies), never committed there.
