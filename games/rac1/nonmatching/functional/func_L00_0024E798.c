@@ -1,7 +1,7 @@
-/* functional: high. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Corrected from nonmatching/game/func_L00_0024E798.c: when the count runs out retail does not just call func_00218A78; that routine is the 4-byte `sw $24, 0($gp)` that falls through into func_00218A80, with $24 the advanced output pointer, so the pointer is stored to the word at $gp+0 (D_00166D00) and func_00218A80 runs; the near miss dropped that store. */
+/* functional: high. fcheck: same (3 calls in level 0; OpenRAC tools/fcheck_gate.py run --try, 2026-10-19). Corrected twice from nonmatching/game/func_L00_0024E798.c. When the count runs out, retail branches to the level's 4-byte routine at 0x0024E8F8 that the catalogue files as func_00218A78: in level 0 it is `sw $24, -0x5A80($gp)` (the advanced output pointer back to D_L00_00161280), then `jr $31`. The executable's func_00218A78 is `sw $24, 0($gp)` falling into func_00218A80, but the level's copy neither stores to D_00166D00 nor calls on. */
 /* For each 0x10-byte record of the table at D_L00_0016CE80 (count at D_L00_0015F518), writes one or
- * two 0x70-byte blocks at the output pointer D_L00_00161280, then tail-calls func_00218A78 when the
- * count runs out. The five quadwords come from D_L00_001608E0..D_L00_00160920 (gp-relative). */
+ * two 0x70-byte blocks at the output pointer D_L00_00161280, and stores the advanced pointer back
+ * there when the count runs out. The five quadwords come from D_L00_001608E0..D_L00_00160920 (gp-relative). */
 typedef struct { unsigned int w[4]; } __attribute__((aligned(16))) Quad16;
 extern Quad16 D_L00_001608E0 MACRO_ADDR;
 extern Quad16 D_L00_001608F0 MACRO_ADDR;
@@ -11,8 +11,6 @@ extern Quad16 D_L00_00160920 MACRO_ADDR;
 extern int D_L00_0015F518 MACRO_ADDR;
 extern char *D_L00_00161280 MACRO_ADDR;
 extern unsigned char D_L00_0016CE80[];
-extern void func_00218A80(void);
-extern unsigned int G_00166D00 __asm__("D_00166D00") MACRO_ADDR;
 
 void func_L00_0024E798(void) {
     Quad16 q11, q12, q13, q14, q15;
@@ -32,8 +30,7 @@ void func_L00_0024E798(void) {
 
     for (;;) {
         if (count == 0) {
-            G_00166D00 = (unsigned int)p;
-            func_00218A80();
+            D_L00_00161280 = p;
             return;
         }
         count = count - 1;

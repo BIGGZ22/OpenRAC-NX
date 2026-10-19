@@ -758,7 +758,117 @@ void Hero_ClearPendingModuleAnim(void) {
         D_0013F450[0x20AA] = 0;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_0020EDC0);
+extern int func_L00_00234718(int);
+extern void func_001F9BC0(void *);
+extern void func_001F9EC0(void *, void *, void *);
+extern void func_001FA1F8(void *, void *);
+
+#define HB(o) (*(unsigned char *)(g + (o)))
+
+/* Hero animation slots: keeps each of the two slot objects (hero +0xD08) animated for the
+   current state, then rebuilds the 0x640 matrix block from the object's 0xC0..0xEF data. */
+void func_L00_0020EDC0(void) {
+    char *g = D_0013E633 + 0xE1D;
+    int k;
+
+    if (HB(0x20A8) != 0 && HB(0x20AA) != 0) {
+        if (func_L00_00234718(-1) == 0) {
+            func_L00_0020ED30();
+        }
+    }
+
+    for (k = 0; k < 2; k++) {
+        char *l = D_0013E633 + 0xE1D;
+        unsigned char **slotp = (unsigned char **)(l + 0xD08) + k;
+        unsigned char **cur;
+        int ret;
+        int v5;
+
+        if (*slotp == 0) {
+            continue;
+        }
+        ret = func_L00_0020DB30(0);
+        if (ret == *(int *)(l + 0x2298)) {
+            v5 = ((struct { ID_20e4c8 a[1]; } *)D_L00_00179BC0_0EB60)->a[ret].f28;
+            if (*(int *)(l + 0x208C) == 0xC) {
+                v5 = ((struct { ID_20e4c8 a[1]; } *)D_L00_00179BC0_0EB60)->a[ret].f2C;
+            }
+            if (v5 != -1 && (*slotp)[0x23] != v5) {
+                *(int *)(l + 0x2294) = v5;
+                func_L00_00250418(*(int *)(l + 0x2080), *slotp, *(int *)(l + 0x2294), 0,
+                                  func_001F9850(8), 1);
+            }
+        }
+
+        cur = (unsigned char **)(l + 0xD08) + k;
+        {
+        char *h = D_0013E633 + 0xE1D;
+        func_L00_002501C8(*(void **)(h + 0x2080), *cur);
+
+        if (*(int *)(h + 0xD14) != 0) {
+            if (*(int *)(h + 0xD14) == 2) {
+                func_00214D28((float *)(*cur + 8), 0.0f, D_0015EE60 * 0.25f);
+            } else {
+                func_00214D28((float *)(*cur + 8), 0.0f, D_0015EE60 * 0.07f);
+            }
+            g = D_0013E633 + 0xE1D;
+            if (*(float *)(*slotp + 8) != 0.0f) {
+                continue;
+            }
+            func_L00_00250120(*(void **)(g + 0x2080), slotp);
+            return;
+        } else {
+            func_00214D28((float *)(*cur + 8), 1.0f, D_0015EE60 * 0.2f);
+            if (((*cur)[5] & 2) == 0) {
+                continue;
+            }
+            if (*(unsigned char *)(h + 0x20AA) == 0) {
+                *(int *)(h + 0xD14) = 1;
+                *(int *)(*cur + 0x28) = 0;
+                *(unsigned char *)(h + 0x20A8) = 0;
+                return;
+            }
+        }
+        }
+    }
+
+    {
+    char *h = D_0013E633 + 0xE1D;
+    if (*(int *)(h + 0x208C) == 0xF) {
+        char *ptr = *(char **)(h + 0x5D8);
+        float f0;
+
+        if (ptr != 0) {
+            *(VecQuad *)(h + 0x680) = *(VecQuad *)(h + 0x90);
+            *(float *)(h + 0x688) = func_L00_001FF860(*(float *)(ptr + 0x10) - *(float *)(h + 0x80),
+                                   *(float *)(ptr + 0x14) - *(float *)(h + 0x84));
+            *(float *)(h + 0x684) = -*(float *)(h + 0x580);
+        } else {
+            *(VecQuad *)(h + 0x680) = *(VecQuad *)(h + 0x90);
+            *(float *)(h + 0x688) = func_001FA748(*(float *)(h + 0x57C), *(float *)(h + 0x5D0));
+            *(float *)(h + 0x684) = -*(float *)(h + 0x580);
+        }
+        {
+            char *m = D_0013E633 + 0x145D;
+            func_001FA1F8(m, m + 0x40);
+            func_001F9BC0(m + 0x30);
+            *(float *)(m + 0x30) = 1.0f;
+            func_001F9EC0(m + 0x30, m + 0x30, m);
+        }
+    } else {
+        char *a = *(char **)(h + 0x2080);
+        char *m = h + 0x640;
+        char *n = h + 0x670;
+        *(VecQuad *)(m + 0x00) = *(VecQuad *)(a + 0xC0);
+        *(VecQuad *)(m + 0x10) = *(VecQuad *)(a + 0xD0);
+        *(VecQuad *)(m + 0x20) = *(VecQuad *)(a + 0xE0);
+        func_001F9BC0(n);
+        *(float *)(h + 0x670) = 1.0f;
+        func_001F9EC0(n, n, m);
+        *(VecQuad *)(h + 0x680) = *(VecQuad *)(h + 0x90);
+    }
+    }
+}
 #include "moby.h"
 typedef struct {
     unsigned char pad0[0x8];

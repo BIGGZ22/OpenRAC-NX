@@ -492,7 +492,156 @@ void Hud_UpdateParticles(HudElem *e) {
         p += 8;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_00236F38);
+extern int func_L00_00236400(HudElem *rec, int *x, int *y);
+extern void func_L00_00236468(HudElem *, int *, int *, int, int);
+extern void func_00201640(int, int, int, int, long, long);
+extern float func_001F9878(float);
+extern int func_L00_00217570(int, int);
+extern int func_00200198(int, int);
+extern void func_001F9BC0(void *);
+extern void func_001F9BF0(void *dst, void *a, void *b);
+extern void func_L00_001FF2F8(void *, void *, void *);
+extern void func_001F9BD8(void *, void *, void *);
+extern void func_002008B8(int, int, int, int, int, int);
+extern void func_L00_0023C458(int tex, int x, int y, int w, int h, int alpha);
+extern short D_L00_0015F840;
+extern short D_L00_0015F844;
+extern short D_L00_0015F848;
+extern short D_L00_0015F84C;
+
+// HUD element update: places sprite pairs along a 100-step arc
+int func_L00_00236F38(HudElem *rec) {
+    char *r = (char *)rec;
+    int x, y, a, b, n, i, flagA, flagB, s, t21, tex, w;
+    float v0[4], v10[4], v20[4], v30[4], v40[4], v50[4];
+    float f0, f20, f21, f22;
+
+    {
+        int ww = *(int *)&D_L00_0015F840;
+        x = rec->unk50;
+        y = rec->unk54;
+        rec->w = ww;
+        {
+            int *src = (int *)&D_L00_0015F844;
+            int *dst = &rec->h;
+            __builtin_memcpy(dst, src, 4);
+        }
+    }
+    func_L00_00236400(rec, &x, &y);
+    func_L00_00236468(rec, &x, &y, *(int *)(r + 0x6C), 0);
+
+    {
+        int w = *(int *)&D_L00_0015F840 * 0xD0;
+        int h = *(int *)&D_L00_0015F844 * 0xA0;
+        int bh = *(int *)&D_L00_0015F840 * 0x260;
+        int bottom = *(int *)&D_L00_0015F844 * 0xEA0;
+        int left = (x + rec->unk48) << 4;
+        int top = (y + rec->unk4A) << 4;
+        int right;
+        left += w / 64;
+        top += h / 256;
+        right = left + bh / 64;
+        bottom = top + bottom / 256;
+        func_00201640(left, top, right, bottom, 0x80684C2F, 1);
+    }
+
+    n = *(int *)(r + 0x74);
+    if (n * 3 < 10001) {
+        s = func_001F9850(1);
+        f0 = func_001F9878(0.75f);
+        flagA = (D_L00_0015F4F8 - 1) % (int)((float)s * 60.0f) < (int)(f0 * 60.0f);
+    } else {
+        flagA = 0;
+    }
+    n = *(int *)(r + 0x74);
+    if (n * 3 < 10001) {
+        s = func_001F9850(1);
+        f0 = func_001F9878(0.75f);
+        flagB = D_L00_0015F4F8 % (int)((float)s * 60.0f) < (int)(f0 * 60.0f);
+    } else {
+        flagB = 0;
+    }
+    if (!flagA && flagB == 1) {
+        func_L00_00217570(0xB, 0);
+    }
+    w = 0;
+    tex = func_00200198(*(int *)r, flagB);
+    f20 = 16.0f;
+    f22 = 32.0f;
+    func_L00_0023C458(tex, x + rec->unk48, y + rec->unk4A, (*(int *)&D_L00_0015F840), (*(int *)&D_L00_0015F844), 0x80);
+
+    {
+        float cx, cy, ox, oy;
+        ox = (*(int *)&D_L00_0015F840 * *(float *)&D_L00_0015F848 * 0.5f) / 17.0f;
+        oy = -(*(int *)&D_L00_0015F844 * *(float *)&D_L00_0015F84C * 0.5f) / 116.0f;
+        v0[2] = 1.0f;
+        v0[3] = 1.0f;
+        cx = *(int *)&D_L00_0015F840 * *(float *)&D_L00_0015F848 * 0.5f + (x + rec->unk48);
+        cy = *(int *)&D_L00_0015F844 * *(float *)&D_L00_0015F84C * 0.5f + (y + rec->unk4A);
+        v10[0] = (cx + (1.0f - *(float *)&D_L00_0015F848) * 0.5f * *(int *)&D_L00_0015F840) * f20;
+        v10[1] = (cy + (1.0f - *(float *)&D_L00_0015F84C) * 0.5f * *(int *)&D_L00_0015F844) * f20;
+        v10[2] = 0.0f;
+        v10[3] = 0.0f;
+        v0[0] = ox * f20;
+        v0[1] = oy * f20;
+    }
+    f21 = (float)(10000 - *(int *)(r + 0x74)) / 10000.0f;
+    f21 = 116.0f - (f21 + f21) * 116.0f;
+    t21 = func_00200198(*(int *)r, 2);
+
+    func_001F9BC0(v20);
+    func_001F9BC0(v30);
+    func_001F9BC0(v40);
+    {
+        float q0 = *(float *)&D_L00_0015F830;
+        float q2 = *(float *)&D_L00_0015F834;
+        float q1 = *(float *)&D_L00_0015F838;
+        float q3 = q0 * f20;
+        q0 = q2 - q0;
+        q1 = q1 - q2;
+        v20[0] = q3;
+        v20[1] = q3;
+        q0 = q0 * f20;
+        v30[0] = q0;
+        v30[1] = q0;
+        q1 = q1 * f20;
+        v40[0] = q1;
+        v40[1] = q1;
+    }
+
+    for (i = 0; i < 100; i++) {
+        if (i == 0) {
+            float c0;
+            func_001F9BF0(v10, v10, v20);
+            c0 = *(float *)&D_L00_0015F830;
+            w = (int)(c0 * f22);
+            f21 = f21 + c0;
+        } else if (i == 10) {
+            float c0, c1, c2;
+            func_001F9BF0(v10, v10, v30);
+            c0 = *(float *)&D_L00_0015F834;
+            c1 = *(float *)&D_L00_0015F830;
+            c2 = c0 * f22;
+            c0 = c0 - c1;
+            w = (int)c2;
+            f21 = f21 + c0;
+        } else if (i == 30) {
+            float c0, c1, c2;
+            func_001F9BF0(v10, v10, v40);
+            c0 = *(float *)&D_L00_0015F838;
+            c1 = *(float *)&D_L00_0015F834;
+            c2 = c0 * f22;
+            c0 = c0 - c1;
+            w = (int)c2;
+            f21 = f21 + c0;
+        }
+        if (f21 < D_L00_0017E760[i][1]) continue;
+        func_L00_001FF2F8(v50, D_L00_0017E760[i], v0);
+        func_001F9BD8(v50, v50, v10);
+        func_002008B8(t21, (int)v50[0], (int)v50[1], w, w, 0x80);
+    }
+    return *(int *)(r + 0x58);
+}
 /* func_L00_002377E0 -- src/overlays/shared/hud_00235960.c
  * EXACT. The e->h copy goes through __builtin_memcpy (scalar MEM, as in
  * Hud_DrawGaugeFrame) so the D_L00_0015F844 load is not anti-dependent on

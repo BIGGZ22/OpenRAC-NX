@@ -295,14 +295,14 @@ extern int D_001601BC MACRO_ADDR;
 extern int D_0015F598 MACRO_ADDR;
 extern void func_001F3140(void);
 
-/* UpdateFog(int): copies the fog preset (the fixed D_001611C4 when
+/* UpdateFog(void): copies the fog preset (the fixed D_001611C4 when
    D_001873D4 is set, else the current D_0015F584) into the draw context
    at D_0018CE00+0x218, sets the mode word D_001601BC (0x40000 or
    0x1F4000), runs UpdateViewContext (func_001F3140) and clears
    D_0015F598. The presets and the two words it writes are MACRO_ADDR:
    retail reads each field with the one-register macro, and the mode
    word's store fits the branch delay slot ($gp-relative there). */
-void UpdateFog(int arg0) {
+void UpdateFog(void) {
     if (D_001873D4 != 0) {
         D_0018CE00[0x8C] = D_001611C4.r;
         D_0018CE00[0x8D] = D_001611C4.g;
@@ -1693,14 +1693,14 @@ extern int *D_00161000 MACRO_ADDR;
 extern int D_0015F538 MACRO_ADDR;
 extern char D_0013CED0[];
 
-/* FadeToBlack(frames, color): `frames` VU1 chains, each drawing a
+/* FadeToBlack(frames): `frames` VU1 chains, each drawing a
    full-screen quad (D_0013CED0's GS packet) with its alpha ramped down
-   from 0x80 by (n << 7) / (n + 1) of the count still to go; `color` is
-   not read. Each chain is bracketed by func_00234AC8/func_00122598 and a
+   from 0x80 by (n << 7) / (n + 1) of the count still to go. It takes no
+   colour: retail writes $a1 before it reads it. Each chain is bracketed by func_00234AC8/func_00122598 and a
    D_0015F538 bump. func_00122598 (sceGsSyncV) returns int: declared that
    way, the bump's temporary moves to $v1 as in retail. D_0015F538 is
    MACRO_ADDR so each bump reloads it in one register. */
-void FadeToBlack(int frames, unsigned int color) {
+void FadeToBlack(int frames) {
     int n;
     int q;
 
@@ -2370,7 +2370,7 @@ void DrawOutlinedRect(int a0, int a1, int a2, int a3, int a4) {
 /* gp-relative: declared as a 2-byte type purely so -G2 places it in the
    small-data area (placement is decided by DECLARED size), then accessed
    as the 4-byte word it really is. gp base 0x166D00 - 0x7764 = 0x15F59C. */
-extern short D_0015F59C;
+extern int D_0015F59C MACRO_ADDR;
 
 /* Sets the word flag at D_0015F59C to 1. */
 void Font_EnableColorCodes(void) {
@@ -2554,10 +2554,10 @@ extern s32 D_0015F5A0 MACRO_ADDR;
 extern s32 D_0018CBF8[];
 extern f32 func_001FA888(s32);
 extern void func_001F5BB8_F69F0(f32, f32, f32, f32, s32, s32, s32, s32, u64, s64) __asm__("func_001F5BB8");
-void func_001F69F0(u64 color, u8 *s, s32 n, s64 tex, struct Glyph *g, f32 x, f32 y, f32 scale);
+void func_001F69F0(u64 color, u8 *s, f32 x, s32 n, s64 tex, struct Glyph *g, f32 y, f32 scale);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/audio/music/process_bgm_display_text_event.c, process_bgm_display_text_event. */
-void Font_DrawString(u64 color, u8 *str, s32 n, s64 tex, struct Glyph *g, f32 x, f32 y, f32 scale) {
+void Font_DrawString(u64 color, u8 *str, f32 x, s32 n, s64 tex, struct Glyph *g, f32 y, f32 scale) {
     u8 *s;
     s32 i;
     f32 size;
@@ -2678,7 +2678,138 @@ int FontPrintCenterLarge(int a, int b, int c, int d, int e) {
     return p;
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F7070); /* FontPrintWindow */
+extern void func_00234D58(int, int, int, int);
+struct FontWindow {
+    short y_min, y_max, x_min, x_max, x_anchor, y_start;
+    short out_w, out_h, line_h;
+    unsigned short flags;
+    short x_sub, y_sub;
+};
+
+/* FontPrintWindow */
+void func_001F7070(void *win_p, long a1, void *text_p, int len, long a4, unsigned char *glyphs)
+{
+    struct FontWindow *win = (struct FontWindow *)win_p;
+    unsigned char *text = (unsigned char *)text_p;
+    short start[32];
+    short endi[32];
+    short colr_arr[32];
+    int W, Wsave, line, i, brk, width, colr, n0, last, balanced;
+    int k, y, flags, adv, c;
+
+    func_00234D58(win->x_min, win->x_max - 1, win->y_min, win->y_max - 1);
+    D_0015F5A0 = 1;
+    if ((win->flags ^ 1) & 1) {
+        W = win->x_max - win->x_anchor;
+    } else {
+        int l = win->x_anchor;
+        int a = win->x_max - l;
+        W = l - win->x_min;
+        if (a < W)
+            W = a;
+        W = W * 2;
+    }
+    Wsave = W;
+    colr = 0;
+    balanced = 0;
+    n0 = 0;
+    last = 0;
+
+    for (;;) {
+        line = 0;
+        i = 0;
+        if (len != 0 && text[0] != 0) {
+            for (;;) {
+                start[line] = i;
+                colr_arr[line] = colr;
+                width = 0;
+                brk = i;
+                {
+                    while (width < W) {
+                        if (text[i] == 0x20 || text[i] < 0x10)
+                            brk = i;
+                        if (*(int *)&D_0015F59C != 0 && (unsigned char)(text[i] - 8) < 8)
+                            colr = text[i] - 8;
+                        if (text[i] < 2)
+                            break;
+                        adv = ((signed char *)glyphs)[text[i] * 4 + 3];
+                        i++;
+                        if (adv != 0)
+                            width += adv;
+                    }
+                }
+                endi[line] = brk;
+                if ((short)brk == start[line])
+                    endi[line] = i;
+                i = endi[line];
+                if (text[i] == 0x20 || text[i] < 0x10)
+                    endi[line] = endi[line] - 1;
+                line++;
+                if (text[i] == 0) {
+                    last = width;
+                    break;
+                }
+                i++;
+                if (i == len || text[i] == 0)
+                    break;
+            }
+        }
+        if (balanced || line < 2)
+            break;
+        if (n0 == 0)
+            n0 = line;
+        if (n0 < line) {
+            W = Wsave;
+            balanced = 1;
+            continue;
+        }
+        if (last < W / 3) {
+            W -= 16;
+            continue;
+        }
+        break;
+    }
+
+    {
+        struct FontWindow *dw = win;
+        int cnt, w;
+        dw->out_w = 0;
+        y = dw->y_start;
+        dw->out_h = line * dw->line_h;
+        if (dw->flags & 2)
+            y -= (line * dw->line_h) >> 1;
+        for (k = 0; k < line; k++, y += dw->line_h) {
+            if (y + dw->line_h < dw->y_min)
+                continue;
+            if (dw->y_max < y)
+                continue;
+            cnt = endi[k] - start[k] + 1;
+            w = func_001F65B0(text + start[k], cnt, glyphs);
+            if (dw->out_w < w)
+                dw->out_w = w;
+            if (dw->flags & 4)
+                continue;
+            D_0018CBF8[0] = a1;
+            if (dw->flags & 8) {
+                float fx;
+                if (dw->flags & 1)
+                    fx = (dw->x_anchor - (w >> 1)) + dw->x_sub * 0.0625f;
+                else
+                    fx = dw->x_anchor + dw->x_sub * 0.0625f;
+                func_001F69F0(D_0018CBF8[colr_arr[k]], text + start[k], fx, cnt, a4, (struct Glyph *)glyphs,
+                              y + dw->y_sub * 0.0625f, 1.0f);
+            } else if (dw->flags & 1) {
+                func_001F6668((void *)(dw->x_anchor - (w >> 1)), (void *)y, (void *)D_0018CBF8[colr_arr[k]],
+                              text + start[k], (void *)cnt, a4, glyphs);
+            } else {
+                func_001F6668((void *)(int)dw->x_anchor, (void *)y, (void *)D_0018CBF8[colr_arr[k]],
+                              text + start[k], (void *)cnt, a4, glyphs);
+            }
+        }
+    }
+    D_0015F5A0 = 0;
+    func_00234D58(0, D_0013E600[0] - 1, 0, D_0013E600[1] - 1);
+}
 
 extern int func_001F4868(int);
 

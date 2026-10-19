@@ -1,10 +1,10 @@
-/* functional: high. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). corrected from the previous candidate in this file: the small-value test used the bits of the damped result and skipped the store; retail tests |diff| (before damping), stores the damped value when |diff| >= threshold and the undamped diff when it is below. Wave step over the 16x16 ripple grid (scratch a0+0x70, rows of 24 floats; 8 neighbours * 0.25 - old value, minus 1/64 of it) into grid a1 buffer a2 of base a3 (entries 0x1190 bytes, buffers 0x5C0), then copies the border rows/columns/corners into the eight neighbour grids named by bytes 0xC..0x13 of the entry (0xFF: none). */
+/* functional: high. fcheck: same (3 calls in level 1; OpenRAC tools/fcheck_gate.py run --try, 2026-10-19). corrected from the previous candidate in this file: the small-value test used the bits of the damped result and skipped the store; retail tests |diff| (before damping), stores the damped value when |diff| >= threshold and the undamped diff when it is below. Wave step over the 16x16 ripple grid (scratch a0+0x70, rows of 24 floats; 8 neighbours * 0.25 - old value, minus 1/16 of it: the damping constant is 0x3D800000) into grid a1 buffer a2 of base a3 (entries 0x1190 bytes, buffers 0x5C0), then copies the border rows/columns/corners into the eight neighbour grids named by bytes 0xC..0x13 of the entry (0xFF: none). */
 extern void *memcpy(void *, const void *, unsigned long);
 extern float D_L01_001CAF80[] __asm__("D_L01_001CAF80");
 
 void func_L01_00262FE8(char *scratch, int idx, int buf_sel, char *base) {
     union { float f; int i; } v;
-    float k_damp = 0.015625f;
+    float k_damp = 0.0625f; /* lui 0x3D80: 1/16 */
     float k_wave = 0.25f;
     float k_one = 1.0f;
     int thresh;

@@ -27,7 +27,7 @@ extern void func_001254A0(float *, float *, float);
 extern void func_00125548(float *, float *, float);
 extern void func_00129F40();
 extern int func_0012AAA8(void *, int);
-extern void func_001F7070(void *, void *, void *, void *, int, unsigned char *);
+extern void func_001F7070(void *, long, void *, int, long, unsigned char *);
 extern void func_001F9978(void);
 extern void func_001F9988(int);
 extern void func_001F99D8(void *, int);

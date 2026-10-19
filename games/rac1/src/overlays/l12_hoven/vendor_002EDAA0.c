@@ -2419,7 +2419,6 @@ void Moby1345Update(struct Moby *m) {
         break;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L12_00309730);
 extern char D_0013D355[];
 extern char D_0013E633[];
 extern int D_L12_0015F6B0 MACRO_ADDR;

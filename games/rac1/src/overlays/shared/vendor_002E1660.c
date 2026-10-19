@@ -3150,7 +3150,7 @@ typedef struct {
     char pad00[0x84];
     short f84;
 } O842e83c0;
-int Cam_AcquireLock(int arg1, int arg2) {
+int Cam_AcquireLock(int arg1) {
     void *a = D_L00_00166F00;
     C842e83c0 *cur;
     u8 x;
