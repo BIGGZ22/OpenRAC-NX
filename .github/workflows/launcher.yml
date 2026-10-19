@@ -575,6 +575,16 @@ jobs:
           # The installers' names have spaces in them: an array, not a word list.
           mapfile -d '' files < <(find installers -type f -print0 | sort -z)
           printf '%s\n' "${files[@]}"
+          # The release's text is its notes (launcher/release-notes/X.Y.Z.md), which the launcher's
+          # update prompt shows, then the commit the installers were built from.
+          notes="$RUNNER_TEMP/notes.md"
+          version_notes="launcher/release-notes/${TAG#launcher-v}.md"
+          if [ -f "$version_notes" ]; then
+            { cat "$version_notes"; printf '\n---\n\n'; } > "$notes"
+          else
+            echo "::warning::no $version_notes: the release says only what it was built from"
+            : > "$notes"
+          fi
+          echo "Installers built by the launcher workflow from $GITHUB_SHA." >> "$notes"
           gh release create "$TAG" --draft --title "OpenRAC Launcher ${TAG#launcher-v}" \
-            --notes "Installers built by the launcher workflow from $GITHUB_SHA." \
-            "${files[@]}"
+            --notes-file "$notes" "${files[@]}"
