@@ -17,7 +17,6 @@ func_0020C210	same	2026-10-18	2e43062c	456f5c096662	3 calls
 func_0020C230	same	2026-10-18	2e43062c	a2146f85bccf	3 calls
 func_00213C78	same	2026-10-18	2e43062c	0a5b1df19c75	3 calls
 func_0022DD68	unchecked	2026-10-18	6a72939b	01b73b8d39d4	every captured state was skipped (nothing compared)
-func_001F7070	same	2026-10-18	2e43062c	36c62a4e7316	3 calls
 func_001F9840	no-states	2026-10-18	2e43062c	ae35e234462d	never called in the capture runs (title, menu and every level)
 func_001F9B20	same	2026-10-18	2e43062c	3c8899bb85e0	3 calls (level 00), 3 calls (level 01), 3 calls (level 02)
 func_001FA168	no-states	2026-10-18	2e43062c	c005ff17ffef	never called in the capture runs (title, menu and every level)
@@ -40,7 +39,6 @@ func_00226D50	same	2026-10-18	2e43062c	178bded62597	1 calls
 func_00238D90	same	2026-10-18	2e43062c	1391c3efe6d8	3 calls
 func_00121DC8	same	2026-10-18	2e43062c	5913f51b1473	1 calls
 func_00203F68	same	2026-10-18	2e43062c	5bf3a67418a8	3 calls
-func_00204918	same	2026-10-18	2e43062c	6cea1add6125	1 calls
 func_001F9F60	same	2026-10-18	2e43062c	0d9455b7eff8	3 calls (level 00), 3 calls (level 01), 3 calls (level 02)
 func_00211548	same	2026-10-18	2e43062c	78ba89962717	3 calls
 func_L00_001EFF50	unchecked	2026-10-18	6a72939b	e35fb6239a04	not the C's difference: hand-written register convention: retail takes the mesh in $t8, z in $v1, y in $v0, x in $at and returns the leaf word in $at (it leaves a row pointer in $v0), while the C takes them as arguments; fcheck reads the arguments from $a0-$a3 and compares only $v0, so neither the inputs nor the result line up (2026-10-18) (fcheck: level 00: func_L00_001EFF50.0.f1281.snap: DIFFERS
@@ -56,7 +54,6 @@ func_0022FDC0	same	2026-10-18	2e43062c	e6946a6ea535	3 calls
 func_L00_001F3958	same	2026-10-18	2e43062c	5497d8a9ddcd	3 calls (level 00)
 func_L00_001F3988	same	2026-10-18	2e43062c	d4c917ac09d0	3 calls (level 00)
 func_L00_001FF040	same	2026-10-18	2e43062c	d4ed93d3fec2	3 calls (level 00)
-func_L00_0020EDC0	same	2026-10-18	2e43062c	8475814cc9e1	3 calls (level 00)
 func_L00_0024A798	same	2026-10-18	2e43062c	bbf7249e1edd	3 calls (level 00)
 func_L00_0024E798	differs	2026-10-18	6a72939b	e0f6d75ed572	level 00: func_L00_0024E798.0.f1315.snap: DIFFERS;     word at 0012f5d8: ours 8568c0be, retail e1190541 (before e1190541)
 func_L00_0024EBF8	unchecked	2026-10-18	6a72939b	183993eea774	not the C's difference: hand-written register convention: retail spins on the word $v1 points to (the callers leave a DMA channel's CHCR there, 0x1000D400), the C on its third argument; from a captured call the C reads whatever $a2 holds, so the run cannot compare (2026-10-18) (fcheck: level 00: func_L00_0024EBF8.0.f1219.snap: DIFFERS;     outside memory, step 0: ours [nothing more], retail [r 100
@@ -179,7 +176,6 @@ func_L08_002F7318	same	2026-10-18	2e43062c	ad32145dca15	3 calls (level 08)
 func_L12_00304038	no-states	2026-10-18	2e43062c	c82dbfb6361f	never called in level 12's capture run
 func_L14_002E0538	no-states	2026-10-18	2e43062c	807d678723eb	never called in level 14's capture run
 func_L00_001F4918	no-states	2026-10-18	2e43062c	0b02ce8aacde	never called in level 00's capture run
-func_L00_00236F38	no-states	2026-10-18	2e43062c	4e6007318b64	never called in level 00's capture run
 func_L00_00251328	same	2026-10-18	2e43062c	cb8c6899db4a	3 calls (level 00); the port runs hand/overlays_shared_mobyfunc_0024FD50.c instead (hostgen's hand row comes first)
 func_L00_0025BCF8	no-states	2026-10-18	2e43062c	74b58e59e5a3	never called in level 00's capture run
 func_L00_002AE278	same	2026-10-18	2e43062c	4e4961b81151	3 calls (level 00)
@@ -202,13 +198,11 @@ func_L00_00237B90	no-states	2026-10-18	2e43062c	2c01a7f7c71b	never called in lev
 func_L00_00255B90	differs	2026-10-18	6a72939b	e990148bed26	level 00: func_L00_00255B90.0.f2204.snap: DIFFERS;     scratchpad differs, first at offset 1af4
 func_00125F88	no-states	2026-10-18	2e43062c	40eca7311f87	never called in the capture runs (title, menu and every level)
 func_L01_00262DA8	differs	2026-10-18	6a72939b	bbe3aed6d8ef	level 01: func_L01_00262DA8.0.f1138.snap: DIFFERS;     scratchpad differs, first at offset 1088
-func_L15_002A4318	same	2026-10-18	2e43062c	ef3b7bd332fb	3 calls (level 15)
 func_0012A7E8	no-states	2026-10-18	2e43062c	6b5f07d96a16	never called in the capture runs (title, menu and every level)
 func_L01_00263338	same	2026-10-18	2e43062c	24c24a5b123d	3 calls (level 01)
 func_00129690	no-states	2026-10-18	2e43062c	33db02d0223d	never called in the capture runs (title, menu and every level)
 func_L01_0021F9C8	same	2026-10-18	2e43062c	cc8dedd551e6	3 calls (level 01)
 func_L14_00303430	differs	2026-10-18	6a72939b	7fef99c6fa6f	level 14: func_L14_00303430.0.f3768.snap: DIFFERS;     word at 0037d944: ours 3953ddcb, retail 3a1f26a9 (before fc001382)
-func_L12_00309730	same	2026-10-18	2e43062c	8ba2337c9c74	3 calls (level 12)
 func_L02_00250720	same	2026-10-18	2e43062c	f28d31a43313	3 calls (level 02)
 func_L02_00250C78	unchecked	2026-10-18	6a72939b	8ba6de7306f9	not the C's difference: DMA hardware: retail stages the palette in the scratchpad with DMA (waits on 0x1000D400) and VU0; the C uses tables of its own, so only the scratchpad work area and the device accesses differ, the image written to main memory is the same (2026-10-18) (fcheck: level 02: func_L02_00250C78.0.f1416.snap: DIFFERS;     scratchpad differs, first at offset 0000)
 func_L00_002ED320	no-states	2026-10-18	2e43062c	e1b9052ff4e0	never called in level 00's capture run
