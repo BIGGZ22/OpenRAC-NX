@@ -42,6 +42,36 @@ const void* offset(std::size_t bytes) {
     return reinterpret_cast<const void*>(bytes);
 }
 
+// The sides of what a camera sees (its view and projection, column-major), as planes a point is
+// inside of when a x + b y + c z + d >= 0: left, right, bottom, top. Near and far are left out, so
+// that nothing depends on the projection's depth range; they would leave out little.
+std::array<std::array<float, 4>, 4> frustum_sides(const renderer::Mat4& m) {
+    const auto row = [&](int i) { return std::array<float, 4>{m[i], m[4 + i], m[8 + i], m[12 + i]}; };
+    const auto x = row(0), y = row(1), w = row(3);
+    std::array<std::array<float, 4>, 4> planes{};
+    for (int k = 0; k < 4; ++k) {
+        planes[0][k] = w[k] + x[k];
+        planes[1][k] = w[k] - x[k];
+        planes[2][k] = w[k] + y[k];
+        planes[3][k] = w[k] - y[k];
+    }
+    return planes;
+}
+
+// Whether a box is wholly outside one of the sides: its corner furthest along the side's inward
+// direction is outside it.
+bool outside(const std::array<std::array<float, 4>, 4>& planes, const renderer::Vec3& low, const renderer::Vec3& high) {
+    for (const auto& p : planes) {
+        const float x = p[0] >= 0.0f ? high[0] : low[0];
+        const float y = p[1] >= 0.0f ? high[1] : low[1];
+        const float z = p[2] >= 0.0f ? high[2] : low[2];
+        if (p[0] * x + p[1] * y + p[2] * z + p[3] < 0.0f) {
+            return true;
+        }
+    }
+    return false;
+}
+
 }  // namespace
 
 bool LevelScene::upload(
@@ -76,6 +106,43 @@ bool LevelScene::upload(
         );
     }
 
+    // The static layers' models again, their primitives in material order, for the opaque pass:
+    // the level's terrain is one model of a primitive per fragment and material, two thousand
+    // draws in a frame, and in material order a material's fragments are one run of indices,
+    // one draw (draw_layer joins them). Depth decides what is in front in that pass, so the order
+    // does not change the picture; the blended passes keep the stored order.
+    std::vector<std::uint32_t> indices = level.indices;
+    m_opaque.assign(m_models.size(), 0);
+    std::vector<bool> fixed(m_models.size(), false);
+    for (const Layer layer : {Layer::Terrain, Layer::Ties, Layer::Shrubs}) {
+        for (const Instance& instance : level.instances[static_cast<std::size_t>(layer)]) {
+            if (instance.model < fixed.size()) {
+                fixed[instance.model] = true;
+            }
+        }
+    }
+    for (std::uint32_t m = 0; m < m_opaque.size(); ++m) {
+        m_opaque[m] = m;
+        const Model& model = m_models[m];
+        if (!fixed[m] || model.primitives.size() < 2) {
+            continue;
+        }
+        Model sorted = model;
+        std::stable_sort(sorted.primitives.begin(), sorted.primitives.end(),
+                         [](const Primitive& a, const Primitive& b) { return a.material < b.material; });
+        for (Primitive& p : sorted.primitives) {
+            const std::uint32_t first = static_cast<std::uint32_t>(indices.size());
+            if (static_cast<std::size_t>(p.first_index) + p.index_count > level.indices.size()) {
+                continue;
+            }
+            indices.insert(indices.end(), level.indices.begin() + p.first_index,
+                           level.indices.begin() + p.first_index + p.index_count);
+            p.first_index = first;
+        }
+        m_opaque[m] = static_cast<std::uint32_t>(m_models.size());
+        m_models.push_back(std::move(sorted));
+    }
+
     glGenBuffers(1, &m_vertices);
     glBindBuffer(GL_ARRAY_BUFFER, m_vertices);
     glBufferData(
@@ -90,8 +157,8 @@ bool LevelScene::upload(
     glBindBuffer(GL_ARRAY_BUFFER, m_indices);
     glBufferData(
         GL_ARRAY_BUFFER,
-        static_cast<GLsizeiptr>(level.indices.size() * sizeof(std::uint32_t)),
-        level.indices.data(),
+        static_cast<GLsizeiptr>(indices.size() * sizeof(std::uint32_t)),
+        indices.data(),
         GL_STATIC_DRAW
     );
 
@@ -252,6 +319,29 @@ void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instance
         }
         g.blend = static_cast<int>(m_grouping[i].first & 3);
         fill_group(g, m_grouping[i].second, live ? GL_STREAM_DRAW : GL_STATIC_DRAW);
+        // A static group's box: its model's box at each of its instances.
+        g.bounded = false;
+        const Model& shape = m_models[model];
+        if (!live && shape.min[0] <= shape.max[0]) {
+            constexpr float kHuge = 3.0e38f;
+            g.low = {kHuge, kHuge, kHuge};
+            g.high = {-kHuge, -kHuge, -kHuge};
+            for (const InstanceData& d : m_grouping[i].second) {
+                renderer::Mat4 matrix;
+                std::copy(std::begin(d.matrix), std::end(d.matrix), matrix.begin());
+                for (int corner = 0; corner < 8; ++corner) {
+                    const renderer::Vec3 at = renderer::transform_point(
+                        matrix, {(corner & 1) != 0 ? shape.max[0] : shape.min[0],
+                                 (corner & 2) != 0 ? shape.max[1] : shape.min[1],
+                                 (corner & 4) != 0 ? shape.max[2] : shape.min[2]});
+                    for (int k = 0; k < 3; ++k) {
+                        g.low[k] = std::min(g.low[k], at[k]);
+                        g.high[k] = std::max(g.high[k], at[k]);
+                    }
+                }
+            }
+            g.bounded = g.count > 0;
+        }
         groups.push_back(g);
     }
     glBindVertexArray(0);
@@ -426,6 +516,13 @@ void LevelScene::draw_layer(
     }
     const renderer::Mat4 view_projection =
         renderer::multiply(input.camera.projection, input.camera.view);
+    // The static groups the camera does not see are left out: a level's ties and shrubs are
+    // hundreds of draws, most of them behind or beside the camera.
+    const auto sides = frustum_sides(view_projection);
+    m_visible.assign(groups.size(), true);
+    for (std::size_t i = 0; i < groups.size(); ++i) {
+        m_visible[i] = !groups[i].bounded || !outside(sides, groups[i].low, groups[i].high);
+    }
     m_mesh.use();
     glUniformMatrix4fv(m_mesh.uniform("view_projection"), 1, GL_FALSE, view_projection.data());
     // On a target wider than the game's picture, the 2D layer's mobys are cut at the picture's sides
@@ -505,8 +602,9 @@ void LevelScene::draw_layer(
             glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
             glDepthMask(GL_FALSE);
         }
-        for (const Group& g : groups) {
-            if (!metal && (g.blend != 0) != effects) {
+        for (std::size_t gi = 0; gi < groups.size(); ++gi) {
+            const Group& g = groups[gi];
+            if (!m_visible[gi] || (!metal && (g.blend != 0) != effects)) {
                 continue;
             }
             if (effects) {
@@ -556,7 +654,10 @@ void LevelScene::draw_layer(
                     static_cast<std::uint64_t>(run_count / 3) * static_cast<std::uint64_t>(g.count);
                 run_count = 0;
             };
-            for (const Primitive& p : m_models[g.model].primitives) {
+            // The opaque pass of a static layer in material order (m_opaque).
+            const std::uint32_t model = pass == 0 && layer != Layer::Mobys && g.model < m_opaque.size()
+                                            ? m_opaque[g.model] : g.model;
+            for (const Primitive& p : m_models[model].primitives) {
                 const bool is_metal = m_materials[static_cast<std::size_t>(p.material)].metal;
                 if (is_metal != metal) {
                     continue;

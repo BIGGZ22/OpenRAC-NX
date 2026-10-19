@@ -218,6 +218,14 @@ int draw(viewer::LevelData& level) {
     renderer.render(input, {frame.id(), 128, 128});
     CHECK(renderer.last_stats().draw_calls == 2);
 
+    // What the camera does not see is not drawn: looking down far beside the level, the terrain,
+    // the tie and the moby are all outside the picture.
+    renderer.renderers()[static_cast<std::size_t>(viewer::Layer::Mobys)]->enabled = true;
+    camera.position = {500.0f, 0.0f, 30.0f};
+    input.camera.view = camera.view();
+    renderer.render(input, {frame.id(), 128, 128});
+    CHECK(renderer.last_stats().draw_calls == 0);
+
     frame.release();
     scene.release();
     renderer.release();

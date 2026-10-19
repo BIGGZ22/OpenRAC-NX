@@ -73,6 +73,10 @@ private:
         unsigned vao = 0;
         unsigned instances = 0;  // instance buffer
         int count = 0;
+        // A static group's instances' box in the world, for leaving it out when the camera does
+        // not see it (draw_layer); bounded false: always drawn (live mobys).
+        bool bounded = false;
+        renderer::Vec3 low{}, high{};
     };
 
     // One instance, as the vertex shader's per-instance attributes take it.
@@ -91,6 +95,10 @@ private:
     void build_groups(Layer layer, const std::vector<Instance>& instances, bool live);
 
     std::vector<Model> m_models;
+    // Each model's copy in material order, for the opaque pass of the static layers (upload); a
+    // model of one primitive, or one only live mobys use, is its own.
+    std::vector<std::uint32_t> m_opaque;
+    std::vector<bool> m_visible;  // draw_layer's: which of the layer's groups the camera sees
     std::vector<Material> m_materials;
     std::vector<renderer::TextureHandle> m_textures;  // by image
     renderer::TextureHandle m_white = 0;
