@@ -220,4 +220,63 @@ static inline int rac1_strafe_turns_standing(int kind, int state, const rac1_str
            && (kind == RAC1_STRAFE_LOCKED || (kind == RAC1_STRAFE_HELD && !hold->swinging));
 }
 
+/* The backpedal. RAC1 has no animation for walking sideways or back: in the run (states 2 and
+ * 0x73) the walk (sequence 3) or the run (4) loops, the walk/run routine (func_L00_002293E8)
+ * setting its speed (hero +0xA90) from his ground speed, and his own animation advance
+ * (func_L00_00232EF0) moving it on by that speed times the key's rate (+0xA94). That advance only
+ * goes forward (a negative speed would leave the blend below 0, never stepping a key back, unlike
+ * the advance other mobys get from their +0x58), so while he strafes away from where he faces,
+ * strafe.c steps the walk or the run back itself and the advance adds nothing more: the cycle
+ * plays backwards, at the speed the game chose. It starts with the move yaw more than 110 degrees
+ * from his facing and stops under 100 (no flicker at the edge). */
+#define RAC1_STRAFE_SEQ_WALK 3
+#define RAC1_STRAFE_SEQ_RUN 4
+#define RAC1_STRAFE_BACK_ENTER 1.91986218f /* 110 degrees */
+#define RAC1_STRAFE_BACK_LEAVE 1.74532926f /* 100 degrees */
+/* The highest blend strafe.c leaves: the advance takes one from 0.99 up as 1 and steps forward. */
+#define RAC1_STRAFE_BACK_TOP 0.985f
+
+/* Whether he backpedals this tick (was: last tick's answer). */
+static inline int rac1_strafe_backpedal(int kind, int state, float facing, float move_yaw, int was) {
+    if (kind == RAC1_STRAFE_NONE || (state != RAC1_STRAFE_STATE_RUN && state != RAC1_STRAFE_STATE_RUN_ALT)) {
+        return 0;
+    }
+    float d = rac1_strafe_angle_diff(facing, move_yaw);
+    if (d < 0.0f) {
+        d = -d;
+    }
+    return d > (was ? RAC1_STRAFE_BACK_LEAVE : RAC1_STRAFE_BACK_ENTER);
+}
+
+/* Where a looping sequence stands (the hero moby's +0x50, +0x51, +0x54, and hero +0xA94). */
+typedef struct rac1_strafe_anim {
+    int key;        /* key A */
+    int next_key;   /* key B, A + 1 going forward */
+    float fraction; /* from A to B */
+    float rate;     /* this interval's: key A's rate (the first word of its record) */
+} rac1_strafe_anim;
+
+/* One tick of the sequence backwards by step (speed times rate, as the advance takes it forward):
+ * below 0 it moves to the interval before, key B taking key A and key A the one before it (the
+ * last after key 0), with that key's rate; the mirror of the advance's step forward. count: the
+ * sequence's keys, rates: each key's rate. */
+static inline void rac1_strafe_anim_back(rac1_strafe_anim* a, float step, int count, const float* rates) {
+    if (count <= 0 || a->key < 0 || a->key >= count) {
+        return;
+    }
+    float f = a->fraction - step;
+    for (int n = 0; f < 0.0f; ++n) {
+        if (!(a->rate > 0.0f) || n > count) { /* no rate, or a whole loop in a tick: stop at a key */
+            f = 0.0f;
+            break;
+        }
+        const float ticks = -f / a->rate; /* what is left of the step, in ticks */
+        a->next_key = a->key;
+        a->key = a->key == 0 ? count - 1 : a->key - 1;
+        a->rate = rates[a->key];
+        f = 1.0f - ticks * a->rate;
+    }
+    a->fraction = f > RAC1_STRAFE_BACK_TOP ? RAC1_STRAFE_BACK_TOP : f;
+}
+
 #endif /* OPENRAC_RAC1_STRAFE_H */

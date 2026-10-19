@@ -179,6 +179,8 @@
 #define func_L00_002124E8__game game_FUN_L00_00211e30__game
 #define func_L00_00212790 game_FUN_L00_002120d8
 #define func_L00_00212790__game game_FUN_L00_002120d8__game
+#define func_L00_00232EF0 game_FUN_L00_00232670
+#define func_L00_00232EF0__game game_FUN_L00_00232670__game
 #define func_L00_0024F054 func_L00_0024E01C
 #define func_L00_00252D20 func_L00_00251CE8
 #define func_L00_00254218 game_FUN_0020fa90

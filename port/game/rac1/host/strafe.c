@@ -28,6 +28,7 @@ static const uint32_t k_pad_words[] = {0x1A0u, 0x1A4u, 0x1A8u, 0x1B0u, 0x1B4u, 0
 
 static uint32_t s_buttons;    /* L2 and R2 as the player holds them, from the last report */
 static rac1_strafe_hold s_hold;
+static int s_backpedal; /* the walk or the run played backwards (strafe.h) */
 
 static float get_float(gaddr at) {
     float v;
@@ -67,6 +68,17 @@ static int strafe_kind(void) {
     return rac1_strafe_kind(mode, &in, &s_hold);
 }
 
+/* The hero moby's animation fields (the trace's). */
+static int anim_byte(unsigned at) {
+    const gaddr moby = GREF(gaddr, HERO + 0x2080u);
+    return moby != 0 ? GREF(uint8_t, moby + at) : -1;
+}
+
+static float anim_float(unsigned at) {
+    const gaddr moby = GREF(gaddr, HERO + 0x2080u);
+    return moby != 0 ? get_float(moby + at) : 0.0f;
+}
+
 /* OPENRAC_STRAFE_TRACE=1: a line each pad report (docs/port/SETTINGS.md section 7). */
 static void trace(int mode) {
     static int on = -1;
@@ -80,11 +92,12 @@ static void trace(int mode) {
     read_input(&in);
     fprintf(stderr,
             "[debug] strafe: mode %d kind %d playing %d state %#x vehicle %d item %#x/%d held %#x seen %#x latched %d/%d/%.3f "
-            "look %.2f facing %.3f move %.3f camera %.3f pos %.3f %.3f\n",
+            "look %.2f facing %.3f move %.3f camera %.3f pos %.3f %.3f back %d anim %d/%d %d-%d %.3f speed %.3f\n",
             mode, rac1_strafe_kind(mode, &in, &s_hold), in.playing, (unsigned)in.state, in.vehicle_mode,
             (unsigned)in.slot_item, in.slot_state, (unsigned)in.held, GREF(uint32_t, PAD + 0x1A0u), s_hold.latched,
             s_hold.swinging, s_hold.yaw, in.look_x, in.facing, get_float(HERO + 0x180u), camera_yaw(), get_float(HERO + 0x80u),
-            get_float(HERO + 0x84u));
+            get_float(HERO + 0x84u), s_backpedal, anim_byte(0x52u), anim_byte(0x53u), anim_byte(0x50u),
+            anim_byte(0x51u), anim_float(0x54u), get_float(HERO + 0xA90u));
 }
 
 /* Hero_TurnToHeading under the camera's yaw or Hold's latched one, as state 0x81 turns him while L2 or R2 is
@@ -199,4 +212,51 @@ void func_L00_00212790(float angle) {
         angle = rac1_strafe_planar_angle(strafe_kind(), angle, get_float(HERO + 0x180u));
     }
     func_L00_00212790__game(angle);
+}
+
+/* Ratchet's animation advance (func_L00_00232EF0, once a tick after his state's update): the key
+ * and blend of his moby moved on by his animation speed (+0xA90) times the key's rate (+0xA94).
+ * While he strafes away from his facing in the walk or the run (strafe.h, the backpedal), the
+ * sequence is stepped back here by what the advance would add, and the blend left that much lower
+ * so that the advance, adding it, ends where the step back did: the rest of what it does (the
+ * sounds, the items that follow his speed, the distance moved) is the game's. Only a sequence
+ * looping on itself (keys A and B in it, no blend from another, no sub-range or restart pending). */
+void func_L00_00232EF0(void) {
+    rac1_strafe_input in;
+    read_input(&in);
+    const int kind = strafe_kind();
+    s_backpedal = rac1_strafe_backpedal(kind, in.state, in.facing, get_float(HERO + 0x180u), s_backpedal);
+    const gaddr moby = GREF(gaddr, HERO + 0x2080u);
+    if (!s_backpedal || moby == 0) {
+        func_L00_00232EF0__game();
+        return;
+    }
+    const int seq = GREF(uint8_t, moby + 0x53u);
+    if (GREF(uint8_t, moby + 0x52u) != seq || (seq != RAC1_STRAFE_SEQ_WALK && seq != RAC1_STRAFE_SEQ_RUN)
+        || GREF(int32_t, HERO + 0xAB0u) != -1 || GREF(int32_t, HERO + 0xAB8u) != 0) {
+        func_L00_00232EF0__game();
+        return;
+    }
+    const gaddr sequence = GREF(gaddr, GREF(gaddr, moby + 0x24u) + 0x48u + 4u * (unsigned)seq);
+    const int count = GREF(uint8_t, sequence + 0x10u);
+    if (GREF(uint8_t, moby + 0x50u) >= count || GREF(uint8_t, moby + 0x51u) >= count) {
+        func_L00_00232EF0__game();
+        return;
+    }
+    float rates[256];
+    for (int i = 0; i < count; ++i) {
+        rates[i] = get_float(GREF(gaddr, sequence + 0x1Cu + 4u * (unsigned)i));
+    }
+    const float step = get_float(HERO + 0xA90u) * get_float(HERO + 0xA94u);
+    rac1_strafe_anim a = {GREF(uint8_t, moby + 0x50u), GREF(uint8_t, moby + 0x51u), get_float(moby + 0x54u),
+                          get_float(HERO + 0xA94u)};
+    rac1_strafe_anim_back(&a, step, count, rates);
+    GREF(uint8_t, moby + 0x50u) = (uint8_t)a.key;
+    GREF(uint8_t, moby + 0x51u) = (uint8_t)a.next_key;
+    GREF(gaddr, moby + 0x68u) = GREF(gaddr, sequence + 0x1Cu + 4u * (unsigned)a.key);
+    GREF(gaddr, moby + 0x6Cu) = GREF(gaddr, sequence + 0x1Cu + 4u * (unsigned)a.next_key);
+    put_float(HERO + 0xA94u, a.rate);
+    /* The advance adds speed times the rate it now reads: the step of the interval stepped into. */
+    put_float(moby + 0x54u, a.fraction - get_float(HERO + 0xA90u) * a.rate);
+    func_L00_00232EF0__game();
 }

@@ -332,7 +332,7 @@ the Video page:
 | Value | Key | Controls on foot |
 |---|---|---|
 | Off | `off` | The game's own: Ratchet turns toward the stick and runs where he faces. L1 or L2 looks in first person, R1 or R2 crouches |
-| Hold L2-R2 | `hold` | Hold **L2 or R2**: the camera swings round once behind the way Ratchet faces. From then on he faces the camera's way: the **right stick** turns the camera and him with it, and the left stick moves him sideways, back and forward without turning him toward it (jumps too). Nothing pulls the camera back to where he faced at the press. Let go: the game's turning again, the camera left where it is. **L1** looks, **R1** crouches (and crouch-jumps) |
+| Hold L2-R2 | `hold` | Hold **L2 or R2**: the camera swings round once behind the way Ratchet faces. From then on he faces the camera's way: the **right stick** turns the camera and him with it, and the left stick moves him sideways, back and forward without turning him toward it (jumps too); going back, the walk or the run plays backwards. Nothing pulls the camera back to where he faced at the press. Let go: the game's turning again, the camera left where it is. **L1** looks, **R1** crouches (and crouch-jumps) |
 | Lock with weapons | `lock` | With a forward-firing weapon ready in hand (the Suck Cannon, the Bomb Glove, the Devastator, the Blaster, the Pyrocitor, the Tesla Claw, the Morph-o-Ray, the R.Y.N.O.), Ratchet always faces the camera's way: the **right stick** turns the camera and him with it, standing or running, and the left stick strafes. The camera does not swing round to follow where he goes. With anything else in hand (the wrench, the Swingshot, the gadgets, and the weapons that do not fire ahead: the Visibomb, the Taunter, the Mine Glove, the Walloper, the Glove of Doom, the Drone Device, the Decoy Glove), Hold L2-R2. L1 and R1 as in Hold |
 
 A file from before this setting with `lock_strafe = 1` loads as `lock`
@@ -396,17 +396,40 @@ sideways (the game's own test for the stick moved) or 120 ticks have gone
 by; after that nothing turns the camera toward the old facing, so the right
 stick's turn stays, and Hold plays as Lock does. Both turn him standing
 too, early in his update (`Hero_UpdateMotionInput`), at the rates state
-0x81 uses (Hold once its swing is done). Everything else is the game's
-code. Each version's addresses come from its table
+0x81 uses (Hold once its swing is done).
+
+**The backpedal.** RAC1 has no animation for walking sideways or back. In
+the run the walk (sequence 3) or the run (4) loops: the walk/run routine
+(`func_L00_002293E8`) sets its speed (hero `+0xA90`) from his ground speed,
+and Ratchet's own animation advance (`func_L00_00232EF0`) moves it on by that
+speed times the key's rate (`+0xA94`). That advance only goes forward (a
+negative speed would leave the blend below 0 without ever stepping a key
+back; the moby's own `+0x58`, which plays other mobys backwards, is not what
+moves Ratchet). So while he strafes with the move yaw more than 110 degrees
+from his facing (until it is back under 100), strafe.c steps the walk or the
+run back itself, by what the advance would add, and leaves the blend that
+much lower, so the advance ends where the step back did and does the rest
+(sounds, the items that follow his speed, the distance moved) as the game
+does. The cycle plays backwards at the speed the game chose. Only a sequence
+looping on itself is stepped (keys A and B in it, no blend from another
+sequence, no sub-range or restart pending); the blend into the run from a
+standstill plays as the game has it. Everything else is the game's code. Each version's addresses come from its table
 ([port/game/rac1](../../port/game/rac1/README.md)); the decision is in
 [strafe.h](../../port/game/rac1/host/strafe.h) and tested by `hero_strafe`
 (ctest). `OPENRAC_STRAFE_TRACE=1` logs a line each pad report: the mode, what
 the strafe does, the hero's state, item, buttons, whether Hold is latched and
 still swinging, the latched yaw, the right stick sideways, his facing, move
-yaw, the camera's yaw and his position.
+yaw, the camera's yaw, his position, whether he backpedals, and his
+animation (sequences A/B, keys A-B, blend, speed).
 
-**Not done.** RAC1 has no strafing animations: he runs sideways and back
-with the run's. A level's camera (a wall, a camera volume) can still turn
+**Not done.** Sideways he still runs with the run's animation, facing
+ahead: no turn of the hips toward where he goes. The engine's joint
+modifiers (`AttachManipulator`, the blink and the NPCs' head turns) would
+carry one, but they act on the joints a class lists for them, so the hip
+would first have to be found among Ratchet's, and turning it turns the
+spine and everything above with it, which a second, opposite modifier on
+the spine would have to undo, about axes that depend on each joint's own
+frame. A level's camera (a wall, a camera volume) can still turn
 the camera while L2 or R2 is held, and once the swing is done he turns with
 it.
 
