@@ -76,8 +76,48 @@ it is in git. Where it is there and the game's `hostgen.json` turns it on
 assembly for, from the instructions, so the port runs the function instead
 of a stub. C in the decompilation (matched, a candidate, a draft, the
 port's own) always wins: only stubs are translated, and a translation goes
-away when its function gets C. Without the assembly (CI has no disc)
-nothing changes.
+away when its function gets C. Without the assembly or the retail program
+(CI has no disc) nothing changes.
+
+### The retail program, where the assembly is not
+
+The assembly files are only on a machine that ran the decompilation's
+setup; a player's machine has the disc. So the same instructions are also
+read from the retail program itself ([retail.py](retail.py)): the
+executable's code sections and every level's program (the records the game
+loads over the executable), from the player's disc image or from the
+executable and level dumps the decompilation's setup placed. Where both are
+there, the files' lines come first (their text has splat's symbols) and the
+retail bytes fill the rest, which also lets a translation run on into a
+neighbour that has C (a function the catalogue cut short, a shared tail).
+
+| Where it comes from | |
+|---|---|
+| `hostgen.json` `"asm"` `"retail"` | `{"exe": ..., "dump": ...}` (or `{"image": ...}`), relative to the decompilation the assembly is read from: rac1/pal's `baserom/SCES_509.16` and `baserom/overlays`, the NTSC decomp's `config/us/SCUS_971.99` and `config/us/overlays` |
+| `--retail-image ISO`, `--retail-exe ELF` and `--retail-dump DIR` | in place of those |
+| `OPENRAC_<ID>_RETAIL_IMAGE` | the build's: the player's disc image. `tools/build_port.py GAME --disc IMAGE` sets it, and the launcher's "Build the game" passes the disc it set up |
+
+What the text says beyond the words is worked out as spimdisasm does: where
+functions start (every function hostgen knows, by its places); which
+immediates are halves of an address (a `lui` and the `addiu`, `ori`, load or
+store that completes it before the register is written again, followed
+through a branch whose delay slot holds the `lui`), named as the
+decompilations name them (the function there, `D_<addr>`, `D_Lnn_<addr>` for
+a level's own data, `jtbl_...`); and jump tables (a `jr` through a word
+loaded from such an address after an index was added). On 2026-10-18 the
+translations of rac1/pal and rac1/ntsc from the disc images alone were the
+same C as with the assembly files, but for three PAL functions where the
+pairing differs from splat's text and reaches the same address (a `lui`
+splat left unpaired, a global named with another offset, a call by address
+rather than by name).
+
+Besides glabel functions, [asm.py](asm.py) reads a function spimdisasm took
+for data (its words as `.word` under a `dlabel` named for the function, in
+`.text`) as code, and a stub whose address is inside another function's code
+(a second entry with no label) translates from there when the decompilation
+has an `INCLUDE_ASM` for it or the program's code calls, jumps to or forms
+that address: a name whose address only another version's numbering gives
+(rac1/ntsc's C keeps a few PAL names) is not one.
 
 [asm.py](asm.py) reads the files: the word in each instruction's comment is
 what is decoded (every R5900 encoding, MMI and VU0 macro included); the text
@@ -103,16 +143,35 @@ The C keeps the EE's registers as locals ([ee.h](../../runtime/include/openrac/e
 | `jr $ra` | returns `$v0` or `$f0` as the prototype says |
 | `jal` | hostgen's call path: the callee's definition by its prototype (arguments from the registers by kind, then the stack a doubleword each), its place for a name the catalogue folded, the level's function for a hook stub; the result lands in `$v0` or `$f0`. A callee with no C that takes inputs in other registers (a hand-written helper) runs in place instead, and its `jr $ra` comes back to the call |
 | `j` | a goto, unless it goes to a function with C (a tail call); a hand-written routine's continuation in the next file is followed |
-| `jalr`, a jump through a register | through `GFN` (eight integer registers, and eight float ones when the function sets any); a jump table (the tables and `jlabel`s beside the function) is a `switch` on the offset into the copy loaded |
+| `jalr`, a jump through a register | through `GFN` (eight integer registers, and eight float ones when the function sets any), or, where an argument's position decides its register whatever its type (Windows x64, `OPENRAC_REGS_THUNKS`), through the callee's thunk in `functions.c`, which gives the registers to its parameters as the EE passes them (`openrac_guest_call_regs`, [guest.h](../../runtime/include/openrac/guest.h)); a jump table (the tables and `jlabel`s beside the function) is a `switch` on the offset into the copy loaded |
 | `%hi` / `%lo` of a symbol | relocated as the C's globals and function addresses are (`Unit.global_address`, `code_address`) |
 | `div.s`, `sqrt.s`, `rsqrt.s`, `cvt.w.s` | the EE's: no infinities, no NaN, saturation |
+| a `double` (a parameter, an argument, a result) | software on the EE: its 64 bits in one general register, in the integer registers' order; the host's `double` (`openrac_ee_d`, `openrac_ee_dbits`) |
+| `ei`, `di` | nothing: the port takes no interrupts (its handlers run at set points) |
 | `break`, `teq` and the other traps | `openrac_ee_break`: logged, and the function goes on |
 
 What it cannot write keeps the stub, and the report lists the function and
-why: system calls, COP0, VU0 microprograms (`vcallms`) and clipping, a few
-rare MMI operations, a variadic definition, records by value, and code that
-reads a register no caller passes (a hand-written routine's own convention,
-or a fragment of a function with C that the catalogue named).
+why: system calls, COP0 (but `ei`, `di`), VU0 microprograms (`vcallms`) and
+clipping, a few rare MMI operations, a variadic definition, records by
+value, and code that reads a register no caller passes (a hand-written
+routine's own convention, or a fragment of a function with C that the
+catalogue named).
+
+### Which of them need C at all (no_c.py)
+
+[no_c.py](no_c.py) sorts every function hostgen has no C for, or wrote from
+its assembly, into what needs no C (a linker remnant, padding, a piece of a
+function with C, another spelling, something nothing can run), what the host
+replaces on purpose, and what needs C, from the retail program itself: every
+call, jump, branch, address formed in code and data word that refers to it,
+in the executable and in every level, with hostgen's own call graph. Its
+table is each game's `no_c.tsv` ([port/game](../../game/README.md#the-functions-with-no-c)):
+
+```sh
+python3 port/tools/hostgen/no_c.py --game port/game/rac1-pal/hostgen.json \
+    --gen port/build/release/games/rac1-pal/gen --source games/rac1 \
+    --image <the PAL disc image> --out port/game/rac1-pal/no_c.tsv
+```
 
 ### Checking a translation against retail
 
@@ -171,7 +230,7 @@ describes every key). What hostgen itself reads:
 | `groups` | parts of the tree that are programs of their own, loaded over part of the executable (Up Your Arsenal's menu, `src/frontbin`): their definitions are their own symbols (`func_00385750__frontbin`) in their own overlay, and their calls find their own functions first |
 | `candidates` | a table in the decompilation (`name<TAB>file` lines, the file relative to the decompilation) of C for functions it still has as assembly: near misses that do what the retail function does without matching its bytes. Each goes at the end of its file in place of the stub ([prep.py](prep.py)); the report counts them. A missing table means none. rac1/pal's is `nonmatching/functional.tsv`, the near misses its `tools/equiv.py` finds to be the same program |
 | `hand` | a table beside the game's configuration (`name<TAB>file`, the file relative to the table) of the port's own C for functions the decompilation has as assembly: placed like a candidate, and before one for the same function |
-| `asm` | `{"enabled": true, "dirs": [...], "gp": "0x00166D00", "files": 8}`: translate stubs from the assembly under `dirs` (relative to the decompilation; missing ones are skipped), with `$gp` at `gp`, into `asm_0.c` ... (`files` of them). Off when absent or `enabled` is false; `--asm on` / `--asm off` overrides `enabled`, and `--asm-source DIR` (the build's `OPENRAC_<ID>_ASM_SOURCE`) reads the directories from another copy of the decompilation, the one the game's setup ran in |
+| `asm` | `{"enabled": true, "dirs": [...], "gp": "0x00166D00", "files": 8}`: translate stubs from the assembly under `dirs` (relative to the decompilation; missing ones are skipped), with `$gp` at `gp`, into `asm_0.c` ... (`files` of them). Off when absent or `enabled` is false; `--asm on` / `--asm off` overrides `enabled`, and `--asm-source DIR` (the build's `OPENRAC_<ID>_ASM_SOURCE`) reads the directories from another copy of the decompilation, the one the game's setup ran in. `"retail"` names the retail program to read where the files are not ([above](#the-retail-program-where-the-assembly-is-not)) |
 | `drafts` | `{"guard": "NON_MATCHING", "units": "drafts.tsv"}`: files of the decompilation (one a line, from its top) whose own pending C, kept under the `#else` of `#ifndef <guard>` around the assembly stub, is read in place of the stub. For a decompilation that keeps drafts it never compiles (the NTSC decomp); a file whose stub a candidate replaced keeps the candidate |
 | `level_hooks` | stubs of the executable that only return, which every level's program fills with a function of its own (rac1/pal's `func_001E9780` to `func_001E97C0`). A call to one from engine code the levels also carry goes to what the loaded level's copy calls at the same instruction (`openrac_hook_in_copy`, [guest.h](../../runtime/include/openrac/guest.h)); in the executable's own program it is the stub |
 | `libraries` | the game's table of library entry points ([port/game/rac1-pal/libraries.tsv](../../game/rac1-pal/libraries.tsv)) |
@@ -199,10 +258,11 @@ with C). A level function is one named `func_Lnn_...` or `FUN_Lnn_...`.
 | `game_protos.h` | every function of the program, with the signature calls are matched to |
 | `stubs.c` | the functions with no C yet |
 | `asm_<n>.c` | the functions with no C, translated from their assembly (when `asm` is on) |
-| `functions.c` | every function by code address, per level program (`openrac_game_register_functions`) |
+| `functions.c` | every function by code address, per level program (`openrac_game_register_functions`), and, where `OPENRAC_REGS_THUNKS` is on, each one's thunk for a call with the EE's registers |
 | `libraries.c` | the game's library addresses bound to the shared replacements |
 | `game_info.c` | the game's description (`openrac_game`), its entry (`openrac_game_run`) and, unless the game has its own, its overlay hook |
 | `report.json` `literal_addresses` | each function's literal addresses in the relocated range and what each became (`OPENRAC_DATA(...)`, `OPENRAC_LDATA(...)`, or `kept` in a function of one level, whose addresses are that level's) |
+| `report.json` `without_c_places` | each function with no C or with C from its assembly: where it sits, and the spelling with C its calls go to instead ([no_c.py](no_c.py) reads it) |
 | `report.md`, `report.json` | what was translated, what became a stub and why, and **the frontier**: the functions without C that the program reaches from its roots, nearest first. That list is where decompiling moves the port on. |
 | `report.json` `call_graph`, `call_site_mismatches` | what each translated function calls or takes the address of, and the direct calls whose site disagrees with the callee's definition (arity, kinds, result): [priority.py](priority.py) ranks the weak functions gameplay reaches from them ([BACKFILL.md](../../../docs/workflow/BACKFILL.md#picking-what-to-backfill-first)) |
 
@@ -220,6 +280,8 @@ the game's own `memcpy` or `main` never meets the host's.
 | [program.py](program.py) | what the whole program defines: signatures, addresses, typedefs |
 | [lower.py](lower.py) | the translation of one unit |
 | [asm.py](asm.py), [asmc.py](asmc.py) | reading the decompilation's assembly, and C from it for the functions with no C |
+| [retail.py](retail.py), [test_retail.py](test_retail.py) | the same instructions from the retail program (the disc image, or the executable and level dumps) |
+| [no_c.py](no_c.py), [test_no_c.py](test_no_c.py) | which functions with no C need C: each game's `no_c.tsv` |
 | [tests/mips.py](tests/mips.py) | the tests' small assembler: assembly files written the way the setup writes them |
 | [test_hostgen.py](test_hostgen.py), [tests/harness.c](tests/harness.c) | small programs in the console's C, translated, built, run and checked |
 | [priority.py](priority.py), [test_priority.py](test_priority.py) | what to backfill first: the weak functions each level program reaches, ranked |
