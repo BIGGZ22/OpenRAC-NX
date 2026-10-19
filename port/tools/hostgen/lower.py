@@ -172,6 +172,8 @@ class Unit:
         self.fn: _Fn | None = None
         self.local_names: dict[str, str] = {}
         self.emitted_tags: set[str] = set()  # the unnamed records written so far
+        self.enum_consts: dict[str, str | None] = {}  # enumerators written so far -> value text
+        self.const_names: dict[str, str] = {}  # a function's enumerators renamed apart from another's
         # Type names that are also a function's name (a names.h macro used as a
         # typedef name): renamed in this unit, since the port declares the function.
         self.type_renames: dict[str, str] = {}
@@ -492,7 +494,17 @@ class Unit:
             if c.get("kind") != "EnumConstantDecl":
                 continue
             value = next((x.get("value") for x in _inner(c) if "value" in x), None)
-            items.append(f"    {c['name']}" + (f" = {value}" if value is not None else "") + ",")
+            name = c["name"]
+            if name in self.enum_consts:
+                # Hoisted from several functions (each declared `enum { X = 7 };` locally): one
+                # file-scope constant when they agree, the function's own name when they differ.
+                if self.enum_consts[name] == value and value is not None:
+                    continue
+                if self.fn is not None:
+                    self.const_names[name] = f"{cname(self.fn.name)}__{name}"
+                    name = self.const_names[name]
+            self.enum_consts.setdefault(name, value)
+            items.append(f"    {name}" + (f" = {value}" if value is not None else "") + ",")
         if not items:
             return [f"enum {tag};"] if tag else []
         return [f"enum{(' ' + tag) if tag else ''} {{", *items, "};"]
@@ -606,6 +618,7 @@ class Unit:
         self.report.functions.append(report)
         self.fn = None
         self.local_names = {}
+        self.const_names = {}
         return proto, out
 
     def _local_types(self, body: dict) -> list[dict]:
@@ -1294,7 +1307,7 @@ class Unit:
         ref = n["referencedDecl"]
         kind = ref.get("kind")
         if kind == "EnumConstantDecl":
-            return ref["name"]
+            return self.const_names.get(ref["name"], ref["name"])
         if kind == "FunctionDecl":
             return self.function_value(n)
         return self.lv(n).text

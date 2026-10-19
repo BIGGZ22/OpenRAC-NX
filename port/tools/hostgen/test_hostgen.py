@@ -399,6 +399,17 @@ class Translate(unittest.TestCase):
         """})
         self.assertEqual(out, ["16", "10"])
 
+    def test_two_functions_with_the_same_local_enum(self):
+        # The NTSC decomp declares `enum { JUMP = 7 };` inside several functions; hoisted to file
+        # scope the constant is written once, and one that differs keeps the function's own name.
+        out = self.run_program({"a.c": """
+            int one(int c) { enum { JUMP = 7, STAY = 1 }; return c == JUMP ? STAY : JUMP; }
+            int two(int c) { enum { JUMP = 7 }; return c + JUMP; }
+            int three(int c) { enum { JUMP = 9 }; return c + JUMP; }
+            int test_main(void) { test_print(one(7)); test_print(two(1)); test_print(three(1)); return 0; }
+        """})
+        self.assertEqual(out, ["1", "8", "10"])
+
     def test_candidate_replaces_an_assembly_stub(self):
         # The decompilation still has func_00110100 as assembly; its table of
         # candidates offers C for it, which goes at the end of the file.
