@@ -1000,6 +1000,17 @@ class Places(unittest.TestCase):
             self.assertIn("0x00238128u", text)
             self.assertIn("0x00237B70u", text)
 
+    def test_an_entry_inside_a_catalogue_place_answers_calls(self):
+        # hostgen.json "entries": rac1's HUD gauge draw starts 0x20 bytes into its catalogue place.
+        with tempfile.TemporaryDirectory() as tmp:
+            out = self.generate(Path(tmp),
+                "int func_L06_0024A080(char *p) { return p[0]; }\n",
+                "func_L06_0024A080\tshared\t940\tfp\t2\t06:0024A080,07:00262970\n",
+                {"entries": {"func_L06_0024A080": "0x20"}})
+            text = (out / "functions.c").read_text()
+            for addr in ("0x0024A080u", "0x0024A0A0u", "0x00262970u", "0x00262990u"):
+                self.assertIn(f"{{{addr}, (openrac_host_fn)func_L06_0024A080", text)
+
 
 class TypeStrings(unittest.TestCase):
     def test_declarators(self):

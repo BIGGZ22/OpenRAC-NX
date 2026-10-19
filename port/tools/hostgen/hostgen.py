@@ -290,6 +290,11 @@ def write_program_files(program: Program, out: Path, game: str) -> dict:
             continue
         for overlay, addr in program.code_places(sym):
             tables.setdefault(overlay, []).append((addr, sym))
+            # hostgen.json "entries": a function whose C starts this many bytes into its
+            # catalogue place answers calls through that address too.
+            offset = getattr(program, "entries", {}).get(sym)
+            if offset:
+                tables[overlay].append((addr + offset, sym))
     fn = head + ["#include \"openrac/guest.h\"", "#include \"game_protos.h\"", ""]
     for overlay in sorted(tables):
         name = "exe" if overlay < 0 else f"overlay_{overlay:02d}"
@@ -684,6 +689,7 @@ def main(argv: list[str] | None = None) -> int:
     # relocation): [low, high), or none.
     program.relocate = cfg.get("relocate")
     program.returns_64 = set(cfg.get("returns_64", []))
+    program.entries = {sym: int(str(off), 0) for sym, off in cfg.get("entries", {}).items()}
     # Stubs of the executable that every level program fills with a function of its own.
     program.level_hooks = set(cfg.get("level_hooks", []))
     with ProcessPoolExecutor(args.jobs, initializer=_init, initargs=(state,)) as ex:
