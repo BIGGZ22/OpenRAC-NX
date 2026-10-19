@@ -53,6 +53,37 @@ the two versions have the same instructions for it (only addresses differ),
 | [hand/functional/](hand/functional) | the PAL decompilation's functional C and its matched C (rac1-pal's `hand/` where it has its own) | 220 files for functions the NTSC decomp has only as assembly: refreshed on 2026-10-16 from what PAL had then (some `near`: their header says so), and 34 more on 2026-10-17 by [carry_functions.py](../../tools/versionmap/README.md#carrying-functions) (their header says so). The 97 rows (and files) that no longer replaced a stub, the NTSC decomp having its own C for them, are gone |
 | [drafts.tsv](drafts.tsv) | the NTSC decomp itself | 58 files whose own pending C (the `#else` of their `NON_MATCHING` guard) is read in place of the stub: where rac1-pal has nothing for the function, and for the six `near` functions that have a draft (the title loop is one). That decompilation never compiles these |
 
+### Checking the hand C against the US code
+
+Carried C keeps whatever the carry got wrong: a neighbour's address, PAL's
+name for a routine the US program has elsewhere, a level 0 routine called
+from a level that has its own copy, locals the US code keeps together.
+[xcheck.py](../../tools/versionmap/xcheck.py) reads both sides of every row
+of `hand.tsv` that hostgen places: the US function's instructions (the
+executable and level dumps the NTSC decomp's setup placed) and Clang's IR
+of the row's C, prepared as hostgen prepares it, where every address the C
+forms from a global and a constant is folded into one. Calls are compared
+by the function `functions.c` binds at each place (so `func_L00_001FF500`
+and `FUN_001f9bf8` are one), globals by address, field and element offsets
+included; each level's copy of a shared function is compared call by call
+with the home copy, and a difference counts only where hostgen would not
+take that copy's own `jal` for it. What differs on purpose is in
+[hand/allow.tsv](hand/allow.tsv), each row with its reason; a row there
+that nothing matches any more fails as well. ctest runs it as
+`rac1-ntsc_hand_xcheck` (skipped where the retail program is not there):
+
+```sh
+python3 port/tools/versionmap/xcheck.py check port/game/rac1-ntsc --gen port/build/release/games/rac1-ntsc/gen
+python3 port/tools/versionmap/xcheck.py report port/game/rac1-ntsc --gen ... -v FUN_L07_00314150   # one row, both sides
+```
+
+In a worktree, `--asm-source` (or `OPENRAC_RAC1_NTSC_ASM_SOURCE`, as for
+the build) names the checkout whose `games/rac1/ntsc` holds
+`config/us/SCUS_971.99` and `config/us/overlays`. Rows the NTSC decomp now
+has its own C for are not read by hostgen; the check lists them (they can
+go) and does not compare them. The data side is coarse where the C or the
+code indexes an array: an element within 0x1000 bytes of one passes.
+
 The title's Options list gets the Video page back (the US game's list is
 Language and Sound; the page is still in its data), with the port's rows on
 it, as on the PAL disc.
