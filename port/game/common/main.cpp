@@ -357,10 +357,27 @@ void finish() {
 std::unique_ptr<platform::AudioOutput> g_sound;
 long g_sound_retry_frame = 0;
 
-// Every way out is std::exit: the output's thread stops before the globals it renders from go
-// (its callback ran on into their destruction, a crash at quit).
+// Every way out runs this (at exit, or in leave): the output's thread stops before the globals it
+// renders from go (its callback ran on into their destruction, a crash at quit).
 void close_sound() {
     g_sound.reset();
+}
+
+// The window was closed: the player quit, or Android ended the game's activity (closed from
+// Recents, or the launcher's Stop). On a desktop that is std::exit. On Android the game is often
+// in the background then, its surface already gone, and exit's destructors would tear the renderer
+// and the window down against a driver that lost it, while SDL's onDestroy frees its own state a
+// second after asking the game to quit; a close from Recents was written down as a crash. There
+// the game runs exit's handlers itself and ends at once; the system frees the rest.
+[[noreturn]] void leave() {
+#if defined(__ANDROID__)
+    finish();
+    stats::close_dump();
+    close_sound();
+    std::_Exit(0);
+#else
+    std::exit(0);
+#endif
 }
 
 // REPORT: whether a device that cannot be opened is logged (the first try is; the retries,
@@ -502,7 +519,7 @@ int openrac_game_vsync(void) {
         const std::uint32_t draws = g_reports_draws ? g_draws : ~0u;
         g_draws = 0;
         if (!frontend::frame(std::span<const std::uint8_t>(ram, 32u * 1024 * 1024), g_chain, draws)) {
-            std::exit(0);
+            leave();
         }
         watch_sound();
     }
@@ -608,7 +625,7 @@ int openrac_game_vsync(void) {
     if (g_window && frontend::wants_between()) {
         for (int drawn; (drawn = frontend::between(g_next_frame)) != 0;) {
             if (drawn < 0) {
-                std::exit(0);
+                leave();
             }
         }
     }
@@ -621,7 +638,7 @@ int openrac_game_vsync(void) {
     openrac::platform::work_resumed();  // the next tick's work counts from here (performance_hint.h)
     // [debug tools] A paused game stays here, its last tick drawn again (frontend.h, hold).
     if (g_window && !frontend::hold()) {
-        std::exit(0);
+        leave();
     }
 #endif
     return static_cast<int>(g_frame & 1);
@@ -812,7 +829,7 @@ int openrac_game_play_movie(uint32_t lsn, uint32_t bytes, int channel, int start
         if (shown) {
             media::frame_to_rgba(*shown, rgba);
             if (!frontend::show_picture(rgba.data(), int(shown->width), int(shown->height), 0.0f)) {
-                std::exit(0);
+                leave();
             }
         }
         // Start skips when pressed during the movie: what is held as it starts is not a press.

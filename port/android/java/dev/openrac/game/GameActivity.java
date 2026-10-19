@@ -6,6 +6,7 @@ package dev.openrac.game;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Process;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
@@ -32,6 +33,8 @@ public class GameActivity extends SDLActivity {
     public static final String EXTRA_ENVIRONMENT = "dev.openrac.game.ENVIRONMENT";
 
     private static final String TAG = "OpenRAC";
+    /** How long a game asked to quit has to end its process (onDestroy). */
+    private static final long QUIT_WAIT_MS = 3000;
 
     private String library = "openrac-rac1-pal";
     private String[] arguments = new String[0];
@@ -129,6 +132,23 @@ public class GameActivity extends SDLActivity {
 
     @Override
     protected void onDestroy() {
+        // Closed from Recents or with the launcher's Stop: the game is asked to quit and ends its
+        // process itself (main.cpp, leave). SDL's own onDestroy waits a second for that and then
+        // frees the state the game's thread may still be using, and the exit below ran the
+        // library's destructors beside the game's: a close that came out as a crash report. The
+        // game gets longer here, and one that has not ended by then is ended without either.
+        if (isFinishing() && mSDLThread != null && mSDLThread.isAlive()) {
+            nativeSendQuit();
+            try {
+                mSDLThread.join(QUIT_WAIT_MS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            if (mSDLThread != null && mSDLThread.isAlive()) {
+                Log.w(TAG, "the game did not quit within " + QUIT_WAIT_MS + " ms: ending its process");
+                Process.killProcess(Process.myPid());
+            }
+        }
         super.onDestroy();
         // The game's state lives in its library's globals: a second play in the same process
         // would start from the first's. The process is the game's alone, so it ends with it.
