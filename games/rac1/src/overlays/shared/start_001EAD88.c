@@ -2,7 +2,119 @@
 #include "common.h"
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/overlays", func_L00_001EAD88);
+/* NON_MATCHING func_L00_001EAD88 -- src/overlays/shared/start_001EAD88.c
+ * Best so far: BYTES 2/1044 (99.8% of the bytes match), checked 2026-10-15.
+ * Not built into anything: the retail assembly stays in the source file
+ * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
+ * What the last attempts found:
+ *   2026-10-15: one function of 1044 bytes in six catalogue pieces (joined.tsv). Updates eight pulse channels
+ *   at D_L00_00166100 (16 bytes each) and averages them into out[0..1]. Its switch has six cases (none,
+ *   square, triangle, ramp up, ramp down, FastCos pulse). Needed: the jump table tools read joined pieces, an
+ *   explicit case 0, timers life/delay/time through D_L00_00166100[i], the pointer set after the type test,
+ *   amp converted once. BYTES 2/1044: count and sum_count get swapped saved registers. Their address pseudos
+ *   (sp+0x10, sp+0x20) tie, and ours always numbers sp+0x10 first. No declaration order, init order, arm order
+ *   or acc[3][4] array changes it.
+ */
+extern float func_001FA888(int);
+extern int func_001FA898(float);
+extern float FastCos(float);
+
+typedef struct {
+    short type;
+    unsigned char slot;
+    unsigned char weighted;
+    short delay;
+    short life;
+    short time;
+    short rise;
+    short fall;
+    unsigned char amp;
+    unsigned char base;
+} Pulse;
+extern Pulse D_L00_00166100[8];
+
+int func_L00_001EAD88(int *out) {
+    int aa[3][4];
+    int *q2;
+    int *q1;
+    int i;
+    int active;
+
+    active = 0;
+    q1 = aa[1];
+    q2 = aa[2];
+    for (i = 0; i < 2; i++) {
+        out[i] = 0;
+        aa[0][i] = 0;
+        aa[1][i] = 0;
+        aa[2][i] = 0;
+    }
+    for (i = 0; i < 8; i++) {
+        Pulse *p;
+        int r, v;
+        unsigned short life;
+        if (D_L00_00166100[i].type == 0) continue;
+        p = &D_L00_00166100[i];
+        active++;
+        life = D_L00_00166100[i].life;
+        D_L00_00166100[i].life = life - 1;
+        if ((short)life <= 0) p->type = 0;
+        if (D_L00_00166100[i].delay != 0) {
+            D_L00_00166100[i].delay = D_L00_00166100[i].delay - 1;
+            continue;
+        }
+        v = 0;
+        D_L00_00166100[i].time++;
+        r = p->time % (p->rise + p->fall);
+        switch (p->type) {
+        case 0:
+            break;
+        case 1:
+            if (r < p->rise) v = p->amp + p->base;
+            else v = p->base;
+            break;
+        case 2:
+            if (r < p->rise) v = (p->amp * r) / p->rise;
+            else v = (p->amp * (p->fall + p->rise - r)) / p->fall;
+            v = v + p->base;
+            break;
+        case 3:
+            if (r < p->rise) v = (p->amp * r) / p->rise + p->base;
+            break;
+        case 4:
+            if (r >= p->rise) v = (p->amp * (p->fall + p->rise - r)) / p->fall + p->base;
+            break;
+        case 5: {
+            float f, g;
+            if (r < p->fall) {
+                f = func_001FA888(r) * 3.1415927f / func_001FA888(p->fall);
+            } else {
+                f = 3.1415927f - func_001FA888(r - p->fall) * 3.1415927f / func_001FA888(p->rise);
+            }
+            f = FastCos(f);
+            g = func_001FA888(p->amp);
+            v = func_001FA898((f * g + g) * 0.5f) + p->base;
+            if (v >= 256) v = 255;
+            break;
+        }
+        }
+        if (p->weighted != 0) {
+            aa[0][p->slot] = aa[0][p->slot] + v;
+            { int *t = q1 + p->slot; *t = *t + 1; }
+        } else {
+            out[p->slot] = out[p->slot] + v;
+            { int *t = q2 + p->slot; *t = *t + 1; }
+        }
+    }
+    for (i = 0; i < 2; i++) {
+        if (q2[i] != 0) out[i] = out[i] / q2[i];
+        if (q1[i] != 0) {
+            aa[0][i] = aa[0][i] / q1[i];
+            out[i] = (out[i] * aa[0][i]) / 255;
+        }
+    }
+    return active;
+}
 INCLUDE_ASM("asm/overlays", func_L00_001EADE8);
 INCLUDE_ASM("asm/overlays", func_L00_001EADEC);
 INCLUDE_ASM("asm/overlays", func_L00_001EB0A0);

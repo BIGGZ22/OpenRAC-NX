@@ -392,14 +392,14 @@ void SetLevelTriggerDone(int idx) {
         D_0014C150[idx + D_0015EE84 * 16] = 0xFF;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_00251328);
-INCLUDE_ASM("asm/overlays", func_L00_00251358);
-INCLUDE_ASM("asm/overlays", func_L00_00251388);
+ASM_FUNC("asm/overlays", func_L00_00251328);
+ASM_FUNC("asm/overlays", func_L00_00251358);
+ASM_FUNC("asm/overlays", func_L00_00251388);
 INCLUDE_ASM("asm/overlays", func_L00_002513C8);
-INCLUDE_ASM("asm/overlays", func_L00_002513F8);
+ASM_FUNC("asm/overlays", func_L00_002513F8);
 INCLUDE_ASM("asm/overlays", func_L00_00251438);
-INCLUDE_ASM("asm/overlays", func_L00_00251468);
-INCLUDE_ASM("asm/overlays", func_L00_002514B8);
+ASM_FUNC("asm/overlays", func_L00_00251468);
+ASM_FUNC("asm/overlays", func_L00_002514B8);
 INCLUDE_ASM("asm/overlays", func_L00_00251570);
 INCLUDE_ASM("asm/overlays", func_L00_00251628);
 INCLUDE_ASM("asm/overlays", func_L00_002516C8);

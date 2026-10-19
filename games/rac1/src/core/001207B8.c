@@ -13,6 +13,20 @@
 
 INCLUDE_ASM("asm/nonmatchings/core_text", func_001207B8);
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_00120858);
+int func_00120858(void) {
+    int busy;
+    int stat;
+
+    do {
+        busy = 0;
+        if (*(volatile int *)0x10009000 & 0x100) busy = 1;
+        if (*(volatile int *)0x1000A000 & 0x100) busy |= 2;
+        if (*(volatile int *)0x10003C00 & 3) busy |= 4;
+        __asm__ __volatile__("cfc2.ni %0, $vi29\n\tnop" : "=r"(stat));
+        if (stat & 0x100) busy |= 8;
+        if (*(volatile int *)0x10003020 & 0xC00) busy |= 0x10;
+    } while (busy);
+    return 0;
+}
 
 INCLUDE_ASM("asm/nonmatchings/core_text", func_001208E4);

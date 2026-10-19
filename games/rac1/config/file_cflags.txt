@@ -6,15 +6,18 @@
 #
 #   src/path/file.c  -flag ...
 
-src/game/movie/disp.c                        -mno-split-addresses
 src/overlays/l15_quartu/vendor_002F9FF8.c    -fno-force-mem
 src/overlays/l16_kalebo3/vendor_002A50F0.c   -fno-sched-interblock
 src/overlays/l18_veldin2/vendor_002FAEF8.c   -mno-split-addresses
 src/overlays/shared/camera_001ED6D8.c        -fno-force-mem
 src/overlays/shared/vendor_002E9D78.c        -fno-schedule-insns
+src/overlays/shared/vendor_00303430.c        -fno-sched-spec
+src/overlays/l14_oltanis/ribbons_002E0538.c   -fno-gcse
+src/overlays/l07_umbris/effect_00313D28.c     -mno-split-addresses
 # func_L00_00207220 (voice-slot pruner) needs it; the file's other functions build the same either way
 src/overlays/shared/help_00203E98.c    -fno-sched-interblock
 src/overlays/shared/hud_00235960.c -fno-sched-interblock
-src/overlays/l12_hoven/vendor_002EDAA0.c -fno-sched-interblock
+src/overlays/l12_hoven/vendor_002EDAA0.c -fno-sched-interblock -fno-thread-jumps
 src/game/framebuf.c -fno-rerun-loop-opt
 src/overlays/shared/fastfunc_001FEF78.c -fno-rerun-loop-opt
+src/overlays/l14_oltanis/vendor_002FF358.c -fno-sched-interblock

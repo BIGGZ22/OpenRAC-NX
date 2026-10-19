@@ -3,7 +3,440 @@
 #include "include_asm.h"
 #include "moby.h"
 
-INCLUDE_ASM("asm/overlays", func_L15_002D7C00);
+typedef unsigned int Q_2D7C00 __attribute__((mode(TI), aligned(16)));
+typedef struct {
+    int sw[4];
+    short onT;
+    short offT;
+    int voice0;
+    float offSecs;
+    int shocks;
+    int water[12];
+    float fog[4];
+    int levels[4];
+    int resetA;
+    int lamps[3];
+    int voice1;
+    unsigned char *owner;
+    unsigned char fogRGB[4];
+    int armed;
+    int lines[24];
+    Q_2D7C00 start;
+    Q_2D7C00 end;
+    Q_2D7C00 aim;
+    int light;
+    int area;
+    int resetB;
+} Pv_2D7C00;
+typedef struct {
+    float v[4];
+    unsigned char *attacker;
+    int flags;
+    unsigned char b28;
+    unsigned char b29;
+    unsigned short oclass;
+    float damage;
+    int flag2;
+    int pad[3];
+} Hit_2D7C00;
+typedef struct {
+    unsigned char pad0[0x80];
+    Q_2D7C00 pos;
+    unsigned char pad90[0xD0 - 0x90];
+    Q_2D7C00 body;
+    unsigned char padE0[0x2F0 - 0xE0];
+    float waterLevel;
+    unsigned char pad2F4[0x2FC - 0x2F4];
+    unsigned char *standing;
+    unsigned char pad300[0x30E - 0x300];
+    short airTicks;
+    unsigned char pad310[0x2080 - 0x310];
+    unsigned char *moby;
+} Hero_2D7C00;
+typedef struct {
+    float f0, f4, f8;
+    int iC;
+    Q_2D7C00 pos;
+    unsigned char pad20[0x1C - 0x20 + 0x20];
+} Light_2D7C00;
+
+extern Hero_2D7C00 D_0013F450;
+extern char D_0013F4D0[];
+extern unsigned char D_0013E650[];
+extern unsigned char *D_L15_00160058 MACRO_ADDR;
+extern char *D_L15_0016016C MACRO_ADDR;
+extern int D_0015EE84 MACRO_ADDR;
+extern short D_L15_00161C48;
+extern short D_L15_00161C4C;
+extern short D_L15_00161C50;
+extern unsigned char D_L15_001BB334[];
+extern unsigned char D_L15_001BBF94[];
+extern int D_0014C290[];
+extern int D_L15_001BADE0[];
+extern char D_L15_00180940[];
+extern unsigned char D_L15_0015F544[] MACRO_ADDR;
+extern unsigned char D_L15_0015F545[] MACRO_ADDR;
+extern unsigned char D_L15_0015F546[] MACRO_ADDR;
+extern float D_L15_0015F548 MACRO_ADDR;
+extern float D_L15_0015F54C MACRO_ADDR;
+extern float D_L15_0015F550 MACRO_ADDR;
+extern float D_L15_0015F554 MACRO_ADDR;
+extern int func_00215570(void *, int);
+extern void func_L00_0028EBF0(int);
+extern void func_L00_0023F1D0(int);
+extern void func_L15_002DA990(char *);
+extern float func_001F9878(float);
+extern int func_001FA898(float);
+extern int func_001F9850(int);
+extern int func_L15_002D7B60(void);
+extern int func_001F9938(void *);
+extern void func_L00_00251328(void *, int, int, int);
+extern int func_L00_00258BC8(int, int);
+extern int func_002140B0(int);
+extern float func_001F9D10(void *, void *);
+extern int func_L00_0023F0D0(void *, float, float, float, float, float);
+extern void func_L15_002D8DD8(char *);
+extern void func_L15_002D8FA0(Moby *);
+extern void func_L15_002D9B00(char *);
+extern void func_L15_002D8BB0(char *);
+extern void func_001F49B0(void *, void *);
+extern int func_L00_0028EF68(int, int, void *, int);
+extern float func_002140F8(float, float);
+extern float func_00214158(void);
+extern void func_00215C00(void *, float, float, float);
+extern void func_L00_001FF240(void *, void *, void *);
+extern float func_001F9F90(float);
+extern float func_001F9FA8(float);
+extern void func_L00_001FF500(void *, void *, float);
+extern void func_L00_0025AAC0(void *, void *);
+extern float func_001F9D48(void *, void *);
+extern int func_L00_0028EB98(void *, int);
+extern int func_L11_00310738(void *);
+extern int func_L00_0020DC00(void);
+
+#define MOBY_2D7C00(i) ((unsigned char *)(((i) << 8) + (int)D_L15_00160058))
+#define MOBYP_2D7C00(i) (D_L15_00160058 + ((i) << 8))
+#define CUBP_2D7C00(i) (D_L15_0016016C + ((i) << 7))
+#define CUB_2D7C00(i) ((char *)(((i) << 7) + (int)D_L15_0016016C))
+/* A sound voice stopped if it still plays for this owner. */
+#define STOP_2D7C00(i, own)                                                                        \
+    if ((i) != -1) {                                                                               \
+        unsigned char *e_ = D_0013E650 + (i) * 0x70;                                                 \
+        if (*(unsigned char **)(e_ + 0x88) == (own) && e_[0x74] != 0) {                                     \
+            func_L00_0028EBF0(i);                                                           \
+        }                                                                                          \
+    }
+#define RELEASE_2D7C00(pv)                                                                         \
+    STOP_2D7C00((pv)->voice0, (pv)->owner);                                                        \
+    (pv)->voice0 = -1;                                                                             \
+    STOP_2D7C00((pv)->voice1, (pv)->owner);                                                        \
+    (pv)->voice1 = -1;
+#define SECS_2D7C00(x) func_001FA898(func_001F9878((x) * 60.0f))
+
+void func_L15_002D7C00(unsigned char *m) {
+    extern float D_L15_00167440[];
+    float tmp[4];
+    Hit_2D7C00 hit;
+    Pv_2D7C00 *pv = *(Pv_2D7C00 **)(m + 0x78);
+    int armed = 1;
+    int wet, inside, n, r, t;
+    int k1, k2, k3, k4, k5, k6, k7, k8, k11;
+
+    int *best, *line;
+    unsigned char *near, *o;
+    unsigned short u;
+    float d1, a, b, c;
+
+    if (m[0x20] != 0 && func_00215570(D_0013F4D0, pv->area) == 0) {
+        if (pv->owner != 0) {
+            RELEASE_2D7C00(pv);
+        }
+        if (pv->light != -1) {
+            func_L00_0023F1D0(pv->light);
+            pv->light = -1;
+        }
+        return;
+    }
+
+    switch (m[0x20]) {
+    case 0:
+        m[0x30] = 0xFF;
+        for (k1 = 0; k1 < 4; k1++) {
+            if (pv->sw[k1] == -1) {
+                continue;
+            }
+            if (*(short *)(MOBY_2D7C00(pv->sw[k1]) + 0xA6) == 0x33E) {
+                D_L15_001BB334[*(short *)(MOBY_2D7C00(pv->sw[k1]) + 0xB2)] = 0;
+                D_L15_001BBF94[*(short *)(MOBY_2D7C00(pv->sw[k1]) + 0xB2)] = 0;
+                u = *(unsigned short *)(MOBY_2D7C00(pv->sw[k1]) + 0xB2);
+                *(int *)((((short)u >> 5) << 2) + (D_0015EE84 << 8) + (int)D_0014C290) &=
+                    ~(1 << (u & 0x1F));
+                u = *(unsigned short *)(MOBY_2D7C00(pv->sw[k1]) + 0xB2);
+                *(int *)((((short)u >> 5) << 2) + (int)D_L15_001BADE0) &= ~(1 << (u & 0x1F));
+            } else {
+                func_L15_002DA990(MOBY_2D7C00(pv->sw[k1]));
+            }
+        }
+        pv->onT = SECS_2D7C00((*(float *)&D_L15_00161C48));
+        pv->offT = func_001F9850(200);
+        pv->shocks = 0;
+        pv->light = -1;
+        m[0x20] = 1;
+        pv->voice0 = -1;
+        pv->voice1 = -1;
+        break;
+
+    case 1:
+        inside = 0;
+        wet = func_L15_002D7B60();
+        if (func_001F9938(&pv->onT) != 0) {
+            pv->offT = SECS_2D7C00((*(float *)&D_L15_00161C4C));
+            m[0x20] = 2;
+            if (pv->owner != 0) {
+                STOP_2D7C00(pv->voice1, pv->owner);
+                pv->voice1 = -1;
+            }
+        }
+        for (k2 = 0; k2 < 12; k2++) {
+            if (func_00215570(D_0013F4D0, pv->water[k2]) != 0) {
+                inside = 1;
+                break;
+            }
+        }
+        if (m[0x20] == 2) {
+            for (k3 = 0; k3 < 3; k3++) {
+                if (pv->lamps[k3] != -1) {
+                    func_L00_00251328(MOBYP_2D7C00(pv->lamps[k3]), 0x40, 0x40, 0x40);
+                }
+            }
+        } else {
+            for (k4 = 0; k4 < 3; k4++) {
+                int v = func_L00_00258BC8(0x40, 0x7F);
+                if (pv->lamps[k4] != -1) {
+                    func_L00_00251328(MOBYP_2D7C00(pv->lamps[k4]), v, v, v);
+                }
+            }
+        }
+
+        if ((!inside || !wet) && func_002140B0(1) == 0 && (*(float *)&D_L15_00161C50) == 0.0f) {
+            best = 0;
+            for (k5 = 0; k5 < 24; k5 += 8) {
+                line = &pv->lines[k5];
+                if (line[0] == -1) {
+                    continue;
+                }
+                if (best != 0) {
+                    d1 = func_001F9D10(CUBP_2D7C00(best[0]) + 0x30, D_0013F4D0);
+                    if (!(func_001F9D10(CUBP_2D7C00(line[0]) + 0x30, D_0013F4D0) < d1)) {
+                        continue;
+                    }
+                }
+                best = line;
+            }
+            if (best != 0) {
+                n = 8;
+                for (r = 0; r < 8; r++) {
+                    if (best[r] == -1) {
+                        n = r;
+                        break;
+                    }
+                }
+                if (n >= 2) {
+                    line = (int *)((func_L00_00258BC8(0, n - 2) << 2) + (int)best);
+                    pv->start = *(Q_2D7C00 *)(CUB_2D7C00(line[0]) + 0x30);
+                    pv->aim = pv->end = *(Q_2D7C00 *)(CUB_2D7C00(line[1]) + 0x30);
+                    if (pv->light == -1) {
+                        pv->light = func_L00_0023F0D0(&pv->start, 8.0f, 0.0f, 1.0f, 1.0f, 0.5f);
+                    } else {
+                        Light_2D7C00 *l = (Light_2D7C00 *)(D_L15_00180940 + (pv->light << 5));
+                        qcopy(&l->pos, &pv->start);
+                        *(float *)((char *)l + 0x1C) = 8.0f;
+                        l->f0 = 1.0f;
+                        l->f4 = 1.0f;
+                        l->f8 = 0.5f;
+                        l->iC = 0;
+                    }
+                    func_L15_002D8DD8(m);
+                    func_L15_002D8FA0(m);
+                    func_001F49B0(func_L15_002D9B00, m);
+                }
+            }
+        }
+
+        if (inside && wet) {
+            if (pv->owner != 0 && pv->owner != D_0013F450.moby) {
+                RELEASE_2D7C00(pv);
+            }
+            pv->owner = D_0013F450.moby;
+            pv->voice0 = func_L00_0028EF68(0, 4, D_0013F450.moby, 0x28F);
+            pv->voice1 = func_L00_0028EF68(1, 4, D_0013F450.moby, 0x28F);
+            if (pv->shocks == 0) {
+                pv->fog[0] = D_L15_0015F548;
+                pv->fog[1] = D_L15_0015F54C;
+                pv->fog[2] = D_L15_0015F550;
+                pv->fog[3] = D_L15_0015F554;
+                pv->fogRGB[0] = D_L15_0015F544[0];
+                pv->fogRGB[1] = D_L15_0015F545[0];
+                pv->fogRGB[2] = D_L15_0015F546[0];
+            }
+            pv->shocks = pv->shocks + 1;
+            D_L15_0015F544[0] = 0x7F;
+            D_L15_0015F545[0] = 0x7F;
+            D_L15_0015F546[0] = 0x7F;
+            D_L15_0015F54C = 131072.0f;
+            *(int *)&D_L15_0015F548 = 0;
+            D_L15_0015F550 = func_002140F8(128.0f, 255.0f);
+            *(int *)&D_L15_0015F554 = 0;
+            c = func_002140F8(5.0f, 8.0f);
+            a = func_00214158();
+            b = func_00214158();
+            func_00215C00(&pv->aim, c, a, b);
+            func_L00_001FF240(tmp, &pv->aim, &D_0013F450.body);
+            pv->end = pv->aim;
+            pv->start = D_0013F450.body;
+            func_L15_002D8DD8(m);
+            func_L15_002D8FA0(m);
+            func_001F49B0(func_L15_002D9B00, m);
+            hit.attacker = m;
+            hit.flags = 0x10001;
+            hit.damage = 1.0f;
+            hit.v[0] = func_001F9F90(*(float *)(m + 0x48)) * 0.2f;
+            hit.v[1] = func_001F9FA8(*(float *)(m + 0x48)) * 0.2f;
+            *(int *)&hit.v[2] = 0;
+            func_L00_001FF500(hit.v, hit.v, 1.0f);
+            hit.b29 = 1;
+            hit.oclass = *(unsigned short *)(m + 0xA6);
+            hit.v[2] = 1.0f;
+            hit.v[3] = 5627.9248f;
+            hit.b28 = 0;
+            func_L00_0025AAC0(D_0013F450.moby, &hit);
+            if (m[0x20] == 2) {
+                D_L15_0015F548 = pv->fog[0];
+                D_L15_0015F54C = pv->fog[1];
+                D_L15_0015F550 = pv->fog[2];
+                D_L15_0015F554 = pv->fog[3];
+                D_L15_0015F544[0] = pv->fogRGB[0];
+                D_L15_0015F545[0] = pv->fogRGB[1];
+                D_L15_0015F546[0] = pv->fogRGB[2];
+            }
+        }
+        /* fall through: the hum and the switches, as in state 2 */
+    case 2:
+        near = 0;
+        for (k6 = 0; k6 < 3; k6++) {
+            if (pv->lamps[k6] == -1) {
+                continue;
+            }
+            if (near != 0) {
+                d1 = func_001F9D48(near + 0x10, D_L15_00167440);
+                if (!(func_001F9D48(MOBYP_2D7C00(pv->lamps[k6]) + 0x10, D_L15_00167440) < d1)) {
+                    continue;
+                }
+            }
+            near = MOBYP_2D7C00(pv->lamps[k6]);
+        }
+        if (pv->owner == 0
+            || (d1 = func_001F9D48(pv->owner + 0x10, D_L15_00167440), func_001F9D48(near + 0x10, D_L15_00167440) < d1)) {
+            if (pv->owner != 0) {
+                RELEASE_2D7C00(pv);
+            }
+            pv->owner = near;
+        }
+        if (func_L00_0028EB98(pv->owner, pv->voice0) == 0) {
+            pv->voice0 = func_L00_0028EF68(0, 5, pv->owner, 0x28F);
+        }
+        if (m[0x20] == 1 && func_L00_0028EB98(pv->owner, pv->voice1) == 0) {
+            pv->voice1 = func_L00_0028EF68(1, 5, pv->owner, 0x28F);
+        }
+        if (func_001F9938(&pv->offT) != 0 && m[0x20] == 2) {
+            pv->onT = SECS_2D7C00((*(float *)&D_L15_00161C48));
+            pv->offT = func_001F9850(200);
+            pv->shocks = 0;
+            m[0x20] = 1;
+        }
+        for (k7 = 0; k7 < 4; k7++) {
+            if (pv->sw[k7] != -1 && *(short *)(MOBY_2D7C00(pv->sw[k7]) + 0xA6) == 0x33E && MOBY_2D7C00(pv->sw[k7])[0x20] == 2) {
+                pv->offT = SECS_2D7C00(pv->offSecs);
+                m[0x20] = 3;
+                func_L00_0028EF68(2, 0, MOBYP_2D7C00(pv->sw[k7]), 0x28F);
+                pv->armed = 0;
+            } else if (pv->sw[k7] != -1 && func_L11_00310738(MOBYP_2D7C00(pv->sw[k7])) != 0) {
+                pv->offT = SECS_2D7C00(pv->offSecs);
+                m[0x20] = 3;
+                func_L00_0028EF68(2, 0, MOBYP_2D7C00(pv->sw[k7]), 0x28F);
+                pv->armed = 0;
+            }
+        }
+        break;
+
+    case 3:
+        for (k8 = 0; k8 < 3; k8++) {
+            if (pv->lamps[k8] != -1) {
+                func_L00_00251328(MOBYP_2D7C00(pv->lamps[k8]), 0x40, 0x40, 0x40);
+            }
+        }
+        if (pv->light != -1) {
+            func_L00_0023F1D0(pv->light);
+            pv->light = -1;
+        }
+        if (pv->offT != 0) {
+            func_001F49B0(func_L15_002D8BB0, m);
+        }
+        if (pv->owner != 0) {
+            RELEASE_2D7C00(pv);
+            pv->owner = 0;
+        }
+        for (k8 = 0; k8 < 4; k8++) {
+            if (pv->sw[k8] == -1) {
+                continue;
+            }
+            if (D_0013F450.standing != MOBYP_2D7C00(pv->sw[k8]) || *(short *)(D_0013F450.standing + 0xA6) != 0x33E || D_0013F450.airTicks != 0) {
+                continue;
+            }
+            if (pv->armed != 0) {
+                t = pv->offT;
+                if (t < SECS_2D7C00(pv->offSecs) - func_001F9850(0x3C)) {
+                    pv->offT = SECS_2D7C00(pv->offSecs);
+                    func_L00_0028EF68(2, 0, MOBYP_2D7C00(pv->sw[k8]), 0x28F);
+                }
+            }
+            armed = 0;
+        }
+        pv->armed = armed;
+        if (func_001F9938(&pv->offT) == 0) {
+            if (func_00215570(&D_0013F450.pos, pv->resetA) == 0 || D_0013F450.airTicks != 0) {
+                if (func_00215570(&D_0013F450.pos, pv->resetB) == 0) {
+                    break;
+                }
+            }
+        }
+        for (k8 = 0; k8 < 4; k8++) {
+            if (pv->sw[k8] == -1) {
+                continue;
+            }
+            if (*(short *)(MOBY_2D7C00(pv->sw[k8]) + 0xA6) == 0x33E) {
+                MOBY_2D7C00(pv->sw[k8])[0x20] = 1;
+            } else {
+                func_L15_002DA990(MOBY_2D7C00(pv->sw[k8]));
+            }
+        }
+        pv->onT = SECS_2D7C00((*(float *)&D_L15_00161C48));
+        pv->offT = func_001F9850(200);
+        pv->shocks = 0;
+        m[0x20] = 1;
+        break;
+    }
+
+    {
+        char *pos = D_0013F4D0;
+        Hero_2D7C00 *g = (Hero_2D7C00 *)(pos - 0x80);
+        for (k11 = 0; k11 < 4; k11++) {
+            if (func_00215570(pos, pv->levels[k11]) != 0 && func_L00_0020DC00() != 0) {
+                g->waterLevel = *(float *)(CUB_2D7C00(pv->levels[k11]) + 0x38);
+            }
+        }
+    }
+}
 extern void func_001F62C8(int, int, int, int, int);
 extern float func_001FA888(int);
 extern float func_001F9FA8(float);

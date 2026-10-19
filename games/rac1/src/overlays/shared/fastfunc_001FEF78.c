@@ -2,9 +2,9 @@
 #include "common.h"
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/overlays", func_L00_001FEF78);
-INCLUDE_ASM("asm/overlays", func_L00_001FEFE0);
-INCLUDE_ASM("asm/overlays", func_L00_001FF040);
+ASM_FUNC("asm/overlays", func_L00_001FEF78);
+ASM_FUNC("asm/overlays", func_L00_001FEFE0);
+ASM_FUNC("asm/overlays", func_L00_001FF040);
 INCLUDE_ASM("asm/overlays", func_L00_001FF088);
 INCLUDE_ASM("asm/overlays", func_L00_001FF0B0);
 void Vec_ZeroXYZ(s64 *v) {
@@ -12,33 +12,33 @@ void Vec_ZeroXYZ(s64 *v) {
     __asm__ volatile ("nop");
     ((s32 *)v)[2] = 0;
 }
-INCLUDE_ASM("asm/overlays", func_L00_001FF240);
-INCLUDE_ASM("asm/overlays", func_L00_001FF270);
-INCLUDE_ASM("asm/overlays", func_L00_001FF2C8);
-INCLUDE_ASM("asm/overlays", func_L00_001FF2F8);
-INCLUDE_ASM("asm/overlays", func_L00_001FF328);
-INCLUDE_ASM("asm/overlays", func_L00_001FF3E0);
-INCLUDE_ASM("asm/overlays", func_L00_001FF468);
-INCLUDE_ASM("asm/overlays", func_L00_001FF4B0);
+ASM_FUNC("asm/overlays", func_L00_001FF240);
+ASM_FUNC("asm/overlays", func_L00_001FF270);
+ASM_FUNC("asm/overlays", func_L00_001FF2C8);
+ASM_FUNC("asm/overlays", func_L00_001FF2F8);
+ASM_FUNC("asm/overlays", func_L00_001FF328);
+ASM_FUNC("asm/overlays", func_L00_001FF3E0);
+ASM_FUNC("asm/overlays", func_L00_001FF468);
+ASM_FUNC("asm/overlays", func_L00_001FF4B0);
 INCLUDE_ASM("asm/overlays", func_L00_001FF4F0);
-INCLUDE_ASM("asm/overlays", func_L00_001FF500);
+ASM_FUNC("asm/overlays", func_L00_001FF500);
 INCLUDE_ASM("asm/overlays", func_L00_001FF538);
-INCLUDE_ASM("asm/overlays", func_L00_001FF548);
-INCLUDE_ASM("asm/overlays", func_L00_001FF5B0);
-INCLUDE_ASM("asm/overlays", func_L00_001FF610);
+ASM_FUNC("asm/overlays", func_L00_001FF548);
+ASM_FUNC("asm/overlays", func_L00_001FF5B0);
+ASM_FUNC("asm/overlays", func_L00_001FF610);
 INCLUDE_ASM("asm/overlays", func_L00_001FF670);
-INCLUDE_ASM("asm/overlays", func_L00_001FF718);
-INCLUDE_ASM("asm/overlays", func_L00_001FF860);
+ASM_FUNC("asm/overlays", func_L00_001FF718);
+ASM_FUNC("asm/overlays", func_L00_001FF860);
 INCLUDE_ASM("asm/overlays", func_L00_001FF968);
-INCLUDE_ASM("asm/overlays", func_L00_001FFA40);
+ASM_FUNC("asm/overlays", func_L00_001FFA40);
 INCLUDE_ASM("asm/overlays", func_L00_001FFB78);
-INCLUDE_ASM("asm/overlays", func_L00_001FFCF8);
-INCLUDE_ASM("asm/overlays", func_L00_001FFDD0);
-INCLUDE_ASM("asm/overlays", func_L00_001FFED8);
+ASM_FUNC("asm/overlays", func_L00_001FFCF8);
+ASM_FUNC("asm/overlays", func_L00_001FFDD0);
+ASM_FUNC("asm/overlays", func_L00_001FFED8);
 INCLUDE_ASM("asm/overlays", func_L00_002001D8);
-INCLUDE_ASM("asm/overlays", func_L00_00200210);
-INCLUDE_ASM("asm/overlays", func_L00_00200290);
-INCLUDE_ASM("asm/overlays", func_L00_002003C8);
+ASM_FUNC("asm/overlays", func_L00_00200210);
+ASM_FUNC("asm/overlays", func_L00_00200290);
+ASM_FUNC("asm/overlays", func_L00_002003C8);
 extern float func_001FA790(float, float);
 extern float func_001FA748(float, float);
 extern float func_001F9B88(float);

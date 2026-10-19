@@ -1,14 +1,16 @@
 /* NON_MATCHING func_L00_00248EF8 -- src/overlays/shared/map_002465F8.c
- * Best so far: SIZE ours 1804 / retail 1808, checked 2026-10-15.
+ * Best so far: SIZE ours 1804 / retail 1808, checked 2026-10-19.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
  * What the last attempts found:
- *   Stopped at budget (12 runs). Best p5.c is SIZE 1796 vs 1808 (12 bytes short); p0 was 1748, p4 1780, p6 1788. B
- *   Differences left: retail keeps gy (sp+0x48) and the box bounds in stack slots and reloads them for each callba
- *   2026-10-15: compiles again (the file now declares D_L00_001842F0 as RenderArchiveState, so the candidate
- *   uses a char alias). The ax/bx/sel/m1 variables were GCC's signed / 8 and % 8 written out by hand: with lx
- *   = x - gx + 16, byte lx / 8 and bit lx % 8 it is SIZE 1804/1808 (was 1796). The hero through a local struct
- *   (the file has its own Vec4, so no hero.h).
+ *   - p10 struct {ox, oy, gy, f4c}: gy at sp+0x48, f4c at sp+0x4C like retail; 1784, 305 diff lines.
+ *   - p11 m0f/m10 from a fresh read of control_mode (retail re-reads the global): 1800.
+ *   - p12-p16: declaration order of m0f/m10 decides which gets s7/fp (declare m0f before m10 and assign m0f first 
+ *   Findings:
+ *   - regalloc.py: priority = floor_log2(refs)*refs/live, refs weighted by loop depth. Retail spills gy (sp+0x48, 
+ *   - Forcing gy into a local struct (memory) reproduces slot layout and the mask/hoist structure but the schedule
+ *   - The struct is a workaround, not natural source.
+ *   Remaining: gy must be a genuinely spilled pseudo (lower allocation priority than hoisted st and x0); 2 instruc
  */
 typedef struct {
     char pad0[0x308];

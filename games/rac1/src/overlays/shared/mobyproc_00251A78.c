@@ -2,28 +2,28 @@
 #include "common.h"
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/overlays", func_L00_00251A78);
-INCLUDE_ASM("asm/overlays", func_L00_00251B58);
+ASM_FUNC("asm/overlays", func_L00_00251A78);
+ASM_FUNC("asm/overlays", func_L00_00251B58);
 INCLUDE_ASM("asm/overlays", func_L00_00251D18);
-INCLUDE_ASM("asm/overlays", func_L00_00251E30);
+ASM_FUNC("asm/overlays", func_L00_00251E30);
 INCLUDE_ASM("asm/overlays", func_L00_00251F38);
-INCLUDE_ASM("asm/overlays", func_L00_00252018);
+ASM_FUNC("asm/overlays", func_L00_00252018);
 INCLUDE_ASM("asm/overlays", func_L00_00252CEC);
-INCLUDE_ASM("asm/overlays", func_L00_00252D20);
-INCLUDE_ASM("asm/overlays", func_L00_002535C8);
-INCLUDE_ASM("asm/overlays", func_L00_002539C8);
+ASM_FUNC("asm/overlays", func_L00_00252D20);
+ASM_FUNC("asm/overlays", func_L00_002535C8);
+ASM_FUNC("asm/overlays", func_L00_002539C8);
 INCLUDE_ASM("asm/overlays", func_L00_00254130);
-INCLUDE_ASM("asm/overlays", func_L00_00254218);
-INCLUDE_ASM("asm/overlays", func_L00_00254A70);
-INCLUDE_ASM("asm/overlays", func_L00_00255B90);
+ASM_FUNC("asm/overlays", func_L00_00254218);
+ASM_FUNC("asm/overlays", func_L00_00254A70);
+ASM_FUNC("asm/overlays", func_L00_00255B90);
 INCLUDE_ASM("asm/overlays", func_L00_002569F8);
 INCLUDE_ASM("asm/overlays", func_L00_00257848);
-INCLUDE_ASM("asm/overlays", func_L00_00257E18);
+ASM_FUNC("asm/overlays", func_L00_00257E18);
 INCLUDE_ASM("asm/overlays", func_L00_00257EBC);
-INCLUDE_ASM("asm/overlays", func_L00_00257F4C);
+ASM_FUNC("asm/overlays", func_L00_00257F4C);
 INCLUDE_ASM("asm/overlays", func_L00_00257FB4);
 INCLUDE_ASM("asm/overlays", func_L00_0025804C);
-INCLUDE_ASM("asm/overlays", func_L00_0025805C);
+ASM_FUNC("asm/overlays", func_L00_0025805C);
 typedef struct {
     unsigned char pad[0xE];
     unsigned short count;

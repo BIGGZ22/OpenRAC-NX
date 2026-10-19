@@ -988,7 +988,153 @@ void RegisterMobyClass(void *arg0, int arg1, int arg2, int arg3) {
 }
 __asm__(".section .text\n\tnop\n");
 
-INCLUDE_ASM("asm/nonmatchings/text", func_00203F68);
+/*
+ * tie_ad_gif_convert (written from the assembly). Records the tie ad self in
+ * the table D_001E1A00 at the count D_0016104C, stores the count and the ad's
+ * index, scales the float at +0x48 by 1024 for func_001FA898, and relocates the
+ * three pointers at +0 .. +8 and the pair at +0xC and +0x2C. Then, for each of
+ * the self's entries (count at +0x23, 0x50 bytes each, from the pointer at +0x2C),
+ * writes four 64-bit GIF words from the record at a1 (index idx in D_001E3900)
+ * or, when a1 is 0, from D_0019E640.
+ */
+extern int D_0016104C MACRO_ADDR;
+extern char D_001E1C00[] NOT_SDA;
+extern char D_001E1D00[] NOT_SDA;
+extern char D_001E1A00[] NOT_SDA;
+extern char D_001E3100[] NOT_SDA;
+extern char D_001E3900[] NOT_SDA;
+extern int func_001FA898(float);
+
+void func_00203F68(char *self, int a1, char *src, int a3) {
+    int N;
+    int N2;
+    int R;
+    float f;
+    int k;
+    int j;
+    int P;
+    int v;
+    char *m;
+    char *cur;
+    char *dest;
+    int idx;
+    int local4;
+    int local8;
+    int local12;
+    int t23;
+    int F1;
+    int F2;
+    int H;
+    int W;
+    int t4;
+    int K;
+    int c7;
+    int c9;
+    int S8;
+    int i;
+    int jj;
+    unsigned long D0;
+    unsigned long T;
+    unsigned long D1;
+    unsigned long D2;
+    unsigned long D3;
+    unsigned long dw4;
+    unsigned long dw7;
+    unsigned long dw8;
+    unsigned long c4p;
+    unsigned long c7p;
+    char *rec;
+    char *E;
+
+    *(short *)(D_001E1C00 + D_0016104C * 2) = a3;
+    *(unsigned char *)(D_001E1D00 + a3) = D_0016104C;
+    *(char **)(D_001E1A00 + D_0016104C * 4) = self;
+    *(short *)(self + 0x46) = D_0016104C;
+    R = func_001FA898(*(float *)(self + 0x48) * 1024.0f);
+    N2 = D_0016104C;
+    D_0016104C = N2 + 1;
+    *(int *)(D_001E3100 + 4 * N2) = R;
+
+    *(int *)(self + 0x28) = 0;
+    *(short *)(self + 0x26) = 0;
+
+    for (k = 0; k < 3; k++) {
+        if (((struct { int p[3]; } *)self)->p[k] != 0) {
+            ((struct { int p[3]; } *)self)->p[k] += (int)self;
+            for (jj = 0; jj < ((struct { char p[0x20]; unsigned char c[4]; } *)self)->c[k]; jj++) {
+                ((int *)((struct { int p[3]; } *)self)->p[k])[jj * 4] += ((struct { int p[3]; } *)self)->p[k];
+            }
+        }
+    }
+
+    v = *(int *)(self + 0x0C) + (int)self;
+    m = (char *)(*(int *)(self + 0x2C) + (int)self);
+    *(int *)(self + 0x0C) = v;
+    *(int *)(self + 0x2C) = (int)m;
+
+    dest = D_001E3900 + ((*(unsigned char *)(D_001E1D00 + a3)) << 4);
+    qcopy(dest, src);
+
+    for (j = 0, cur = m; j < *(unsigned char *)(self + 0x23); j++, cur += 0x50) {
+        local4 = *(int *)(cur + 0x10);
+        idx = *(unsigned char *)(dest + j);
+        t23 = *(int *)(cur + 0x14);
+        local8 = *(int *)(cur + 0x30);
+        local12 = *(int *)(cur + 0x34);
+
+        if (a1 != 0) {
+            int h, w; int f1; long HH, WW; long G;
+            rec = (char *)a1 + (idx << 4);
+            t4 = (int)((unsigned int)*(unsigned short *)(rec + 4) << 16);
+            h = t4 >> 22;
+            w = t4 >> 23;
+            if (!(0 < h)) {
+                h = 1;
+            }
+            if (!(0 < w)) {
+                w = 1;
+            }
+            f1 = func_001F9968(t4 >> 16);
+            F2 = func_001F9968(*(short *)(rec + 6));
+            K = D_0015EF8C >> 8;
+            c7 = *(short *)(rec + 0x0E) + K;
+            c9 = *(short *)(rec + 0x0C) + K;
+            t4 = *(short *)(rec + 0x0A) + K;
+            S8 = *(short *)(rec + 0x08);
+
+            HH = ((unsigned long)(long)h << 14) | ((unsigned long)0x13 << 20) | ((unsigned long)(long)f1 << 26)
+               | ((unsigned long)(long)F2 << 30) | ((unsigned long)1 << 34)
+               | ((unsigned long)(long)t4 << 37) | ((unsigned long)4 << 61);
+            D1 = ((unsigned long)(long)(S8 - 1) << 2) | ((unsigned long)1 << 5)
+               | ((unsigned long)(long)t23 << 6) | ((unsigned long)(long)local4 << 32);
+            WW = ((unsigned long)(long)w << 14) | ((unsigned long)(long)c9 << 20)
+               | ((unsigned long)1 << 34) | ((unsigned long)(long)c7 << 40)
+               | ((unsigned long)1 << 54);
+            D3 = (unsigned long)(long)local8 | ((unsigned long)(long)local12 << 2) | ((unsigned long)(long)idx << 24);
+
+            *(unsigned long *)(cur + 0x00) = HH;
+            *(unsigned long *)(cur + 0x10) = D1;
+            *(unsigned long *)(cur + 0x20) = WW;
+            *(unsigned long *)(cur + 0x30) = D3;
+            *(unsigned long *)(cur + 0x40) = 0;
+            continue;
+        } else {
+            unsigned long T2, E1, E3;
+            dw7 = *(unsigned long *)((char *)D_0019E640 + 24 * idx);
+            i = idx * 3;
+            dw4 = *(unsigned long *)((char *)D_0019E640 + ((i + 1) << 3));
+            dw8 = *(unsigned long *)((char *)D_0019E640 + ((i + 2) << 3));
+            T2 = ((unsigned long)(long)t23 << 6) | 0x20UL;
+            E1 = (dw4 & 0x1CUL) | T2 | ((unsigned long)(long)local4 << 32);
+            E3 = (unsigned long)(long)local8 | ((unsigned long)(long)local12 << 2) | ((unsigned long)(long)idx << 24);
+            *(unsigned long *)(cur + 0x00) = dw7;
+            *(unsigned long *)(cur + 0x10) = E1;
+            *(unsigned long *)(cur + 0x20) = dw8;
+            *(unsigned long *)(cur + 0x30) = E3;
+            *(unsigned long *)(cur + 0x40) = 0;
+        }
+    }
+}
 
 INCLUDE_ASM("asm/nonmatchings/text", func_00204340);
 

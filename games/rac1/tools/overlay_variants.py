@@ -46,7 +46,7 @@ DUMP = ROOT / "baserom/overlays"
 TRY = ROOT / "build-sn/try"
 HEADER = ("/* Functions of {where} added after the first split; stubs added by tools/overlay_variants.py, "
           "replaced by C as functions are matched. */\n#include \"common.h\"\n#include \"include_asm.h\"\n\n")
-STUB = re.compile(r'^\s*(?:INCLUDE_ASM|LINKER_REMNANT)\([^)]*\b(func_L\d\d_[0-9A-F]{8})\);')
+STUB = re.compile(r'^\s*(?:INCLUDE_ASM|LINKER_REMNANT|ASM_FUNC)\([^)]*\b(func_L\d\d_[0-9A-F]{8})\);')
 DEF = re.compile(r"^(?!extern\b)[A-Za-z_].*?\b(func_L\d\d_[0-9A-F]{8})\s*\(")
 SYMBOL = re.compile(r"\b(?:func_|D_|jtbl_)(?:L\d\d_)?[0-9A-F]{8}\b")
 NUMBER = re.compile(r"(?<![\w.])(0[xX][0-9A-Fa-f]+|\d+\.\d*(?:[eE][-+]?\d+)?[fF]?|\d+)(?![\w.])")

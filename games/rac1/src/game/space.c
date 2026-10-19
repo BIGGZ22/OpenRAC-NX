@@ -477,7 +477,146 @@ void DrawResidentEffectQuads(unsigned char *m) {
     }
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_0022F738);
+/* Engine trail ribbons, reconstructed from retail instructions. */
+typedef struct {
+    char pad[0x20];
+    int mode;
+    short level, ship;
+    char pad28[0x28];
+    int newest, count;
+    char pad58[0x68];
+    Vec4 ring[2][32];
+} TrailState_2F738;
+extern TrailState_2F738 trail_state_2F738 __asm__("D_0013E130");
+
+extern float trail_uv_2F738[4][2] __asm__("D_001D9DA0");
+extern unsigned int trail_color_a_2F738[][2] __asm__("D_001D9DC0");
+extern unsigned int trail_color_b_2F738[][2] __asm__("D_001D9DC4");
+extern short trail_width_2F738 __asm__("D_001605D0");
+extern unsigned int trail_lerp_2F738(unsigned int, unsigned int, float) __asm__("func_001FA8A8");
+extern float trail_float_2F738(int) __asm__("func_001FA888");
+extern void trail_scale_2F738(void *, void *, float) __asm__("func_001F9DC0");
+
+static __inline__ Vec4 *trail_at_2F738(int t, int n) {
+    return &trail_state_2F738.ring[t][n];
+}
+
+void func_0022F738(int unused) {
+    GeometryQuad_2F4C8 q;
+    struct {
+        Vec4 across[4];
+        Vec4 side[4];
+    } workspace;
+    int vertex, uv;
+    int ring_index;
+    Vec4 *secondary_current;
+    Vec4 *primary_current;
+    Vec4 *secondary_next;
+    Vec4 *primary_next;
+    Vec4 *primary_after_next;
+    QuadOffset_2F4C8 *position_first;
+    QuadOffset_2F4C8 *position_second;
+    Vec4 *normal_second;
+
+    if (D_0015F6E8 == 6 && trail_state_2F738.mode == 4) {
+        q.texture = func_001F4868_2F4C8(0);
+    } else {
+        q.texture = func_001F4868_2F4C8(0x13);
+    }
+    q.texture_state = 0xFF9000000260UL;
+    q.primitive = 0x8000000048UL;
+    q.reserved = 0;
+    {
+        float *src;
+        float *dst1;
+        float *dst;
+        src = &trail_uv_2F738[0][0];
+        dst1 = &q.texture_coordinates[0][1];
+        dst = &q.texture_coordinates[0][0];
+        uv = 3;
+        do {
+            dst[0] = src[0];
+            dst1[0] = src[1];
+            src += 2;
+            dst += 2;
+            dst1 += 2;
+        } while (--uv >= 0);
+    }
+    {
+        int segment;
+        for (segment = 0; segment < trail_state_2F738.count - 1; segment++) {
+            ring_index = (trail_state_2F738.newest - segment + 31) & 31;
+            secondary_current = &trail_state_2F738.ring[1][ring_index];
+            primary_current = &trail_state_2F738.ring[0][ring_index];
+            secondary_next = &trail_state_2F738.ring[1][(ring_index + 1) & 31];
+            {
+                int engine;
+                primary_next = &trail_state_2F738.ring[0][(ring_index + 1) & 31];
+                primary_after_next = &trail_state_2F738.ring[0][(ring_index + 2) & 31];
+                for (engine = 0; engine < 2; engine++) {
+                    func_001F9BF0(&workspace.across[0], secondary_current, primary_current);
+                    func_001F9BF0(&workspace.across[1], primary_current, secondary_current);
+                    func_001F9BF0(&workspace.across[2], secondary_next, primary_next);
+                    func_001F9BF0(&workspace.across[3], primary_next, secondary_next);
+                    func_001F9BF0(&workspace.side[1],
+                        (Vec4 *)((engine << 9) + (u32)primary_next),
+                        (Vec4 *)((engine << 9) + (u32)primary_current));
+                    func_001F9BF0(&workspace.side[3],
+                        (Vec4 *)((engine << 9) + (u32)primary_after_next),
+                        (Vec4 *)((engine << 9) + (u32)primary_next));
+                    if (segment == 0) qcopy(&workspace.side[3], &workspace.side[1]);
+                    func_001F9CA0(&workspace.side[0], &workspace.across[0], &workspace.side[1]);
+                    func_001F9CA0(&workspace.side[1], &workspace.across[1], &workspace.side[1]);
+                    func_001F9CA0(&workspace.side[2], &workspace.across[2], &workspace.side[3]);
+                    func_001F9CA0(&workspace.side[3], &workspace.across[3], &workspace.side[3]);
+                    {
+                        position_first = &q.positions[0];
+                        vertex = 0;
+                        for (; vertex < 4; vertex++) {
+                            int step;
+                            int age;
+                            float t;
+                            step = vertex >> 1;
+                            age = step;
+                            age--;
+                            t = trail_float_2F738(segment - age) * 0.03125f;
+                            q.colors[vertex] = trail_lerp_2F738(
+                                trail_color_a_2F738[trail_state_2F738.ship][0],
+                                trail_color_b_2F738[trail_state_2F738.ship][0], t);
+                            t = 1.0f - t * t;
+                            trail_scale_2F738(position_first, &workspace.side[vertex],
+                                t * ((float *)&trail_width_2F738)[trail_state_2F738.ship]);
+                            func_001F9BD8_2F4C8(position_first, position_first,
+                                trail_at_2F738(engine, (ring_index + step) & 31));
+                            position_first++;
+                        }
+                    }
+                    {
+                        func_001F7EF8_2F4C8(&q, 0, 0);
+                        normal_second = &workspace.across[0];
+                        vertex = 0;
+                        for (position_second = &q.positions[0]; vertex < 4; vertex++) {
+                            int step;
+                            int age;
+                            float t;
+                            step = vertex >> 1;
+                            age = step;
+                            age--;
+                            t = trail_float_2F738(segment - age) * 0.03125f;
+                            trail_scale_2F738(position_second, normal_second,
+                                (1.0f - t * t) * ((float *)&trail_width_2F738)[trail_state_2F738.ship]);
+                            func_001F9BD8_2F4C8(position_second, position_second,
+                                trail_at_2F738(engine, (ring_index + step) & 31));
+                            normal_second++;
+                            position_second++;
+                        }
+                    }
+                    func_001F7EF8_2F4C8(&q, 0, 0);
+                }
+            }
+        }
+    }
+}
 
 extern void func_00234C98_l(int, long) __asm__("func_00234C98");
 extern long D_00160680 MACRO_ADDR;

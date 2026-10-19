@@ -82,3 +82,54 @@ On 2026-10-19, 23 more were listed: the remaining fastfunc.o scalar helpers
 `adda.s` 0.25+0.25 rounding), func_0020C210/func_0020C230 in miscproc (`$at`
 address, mid-function jump), func_0023C910 (labelled hand-written: `ei` and a
 mid-function `.align`) and memcmp func_001151B4 (MMI `pxor`/`pcpyud`).
+
+### Hand-written level functions
+
+Level code also has functions written as assembly. `config/overlays/handwritten_asm.txt`
+lists them (67 entries, covering 94 catalogue entries and 51,748 bytes once joined pieces
+are counted). The source marks each with `ASM_FUNC("asm/overlays", name)` where its
+`INCLUDE_ASM` stub was. As with remnants, the report counts it as finished and checks the
+list against the source. A joined function (`config/overlays/joined.tsv`) is listed under its
+first name, and its later pieces are finished with it, as they are when a joined
+function is matched in C.
+
+The list uses the executable's rule: a function the disassembler marks "Handwritten
+function" (it holds an instruction ee-gcc 2.9 does not emit: a trapping `addi`/`teq`, VU0
+macro instructions, MMI, `$at` as a working register). That gives 87 entries, 67 after
+joined pieces fold into their first names. Two joined functions are listed under first names the
+disassembler did not mark, because their other pieces are marked and the first
+pieces hold VU0/MMI instructions themselves: func_L00_001FD1D8 (`lqc2`) and
+func_L00_00257F4C (`prot3w`). Two are listed by hand:
+
+- func_L00_00251328 (48 bytes) has a `nop` before `jr $31` with the delay slot filled
+  (`sd`), a slot no ee-gcc 2.9 schedule leaves empty;
+- func_L00_00251358 (48 bytes) uses `$at` as an ordinary register for a `dsrl32` result, which
+  ee-gcc 2.9 never allocates, and leaves the `jr $31` slot empty.
+
+Cross-check against the NTSC-U decompilation (Lombyte, MIT): 87 of the 89 entries (the
+87 marked ones and these two) are assembly there as well. They are either `INCLUDE_ASM`
+stubs or copies of executable functions it keeps under `assembly/`, and it documents the
+two hand-listed ones as "hand-written in retail" for the same reasons. The other two have no
+NTSC-U counterpart: func_L00_0024EC20 and func_L01_00262BB0 are `teq $0, $0, 0`
+trap stubs.
+
+Two marked functions are left out for now: func_L00_002569F8 and func_L00_00257848, which
+together are the level programs' copy of MobyProc (5,152 bytes, as `func_00212658` is). The
+native port replaces the executable's MobyProc with its own code, but not yet this copy (its
+`no_c.tsv` says it needs C), so it stays an `INCLUDE_ASM` stub until the port runs it.
+
+On 2026-10-19, the last five fastfunc.o functions were listed: the VU0 helpers
+func_001F9B50, func_001F9F90, func_001F9FA8 and func_001F9FC0 (`qmtc2`/`vcallms`/`vsqrt` with
+`$at` scratch and hand-placed nops), and func_001FA898, a float-to-int helper that
+converts in place in `$f12` where every ee-gcc truncation picks its own scratch register.
+Also listed then: func_00125380 (Sony libvu0's `_sceVu0ecossin`, a stand-alone asm routine taking
+its input in `$vf6`/`$7`) and func_001F7DD8 (drawquad: MMI packing, a never-taken `bnez $0`,
+hand-placed nops), the same shape as its level copies listed upstream.
+
+On 2026-10-19, twelve more level functions were listed by hand: the VU0 leaf helpers of the
+level copies of fastfunc (`shared/fastfunc_001FEF78.c` and level 6's `fastfunc_002172B0.c`) and
+func_L00_00251468. Each has a VU0 instruction in a branch or `jr` delay slot, or `$at` as a
+working register: func_L00_001FF240, 001FF270, 001FF2C8, 001FF2F8, 001FF328, 001FF4B0,
+001FF500, 001FF610, 001FFCF8, 00200210, 00251468 and func_L06_002172B0.
+Then func_L00_001FF3E0 (`mtc1` in the `jr` delay slot, `$4` as scratch) and func_L00_001FFDD0 (an
+empty `jr` slot after four `sqc2`, which the assembler fills in any compiled copy).

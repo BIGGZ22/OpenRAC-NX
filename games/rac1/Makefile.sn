@@ -89,6 +89,11 @@ build-sn/core/%.o: src/core/%.c config/file_cflags.txt tools/file_cflags.py tool
 	  $(CC_CORE) $(CFLAGS) -c build-sn/core/$*_fixed.s -o build-sn/core/$*_first.o && \
 	  python tools/ps2eeas_nops.py build-sn/core/$*_fixed.s build-sn/core/$*_first.o build-sn/core/$*_fixed.s; fi
 	$(CC_CORE) $(CFLAGS) -c build-sn/core/$*_fixed.s -o $@
+	if [ "$*" = 989snd ] || [ "$*" = wad ]; then \
+	  python tools/ps2eeas_nops.py build-sn/core/$*_fixed.s $@ build-sn/core/$*_again.s && \
+	  if ! cmp -s build-sn/core/$*_fixed.s build-sn/core/$*_again.s; then \
+	    cp build-sn/core/$*_again.s build-sn/core/$*_fixed.s && \
+	    $(CC_CORE) $(CFLAGS) -c build-sn/core/$*_fixed.s -o $@; fi; fi
 
 # Sony SDK code that was built with the SDK's own 2.9-ee, like libgcc,
 # not with the game's 2.95.3: the objects marked `ee29` in
@@ -200,6 +205,10 @@ build-sn/game/%.o: src/game/%.c config/file_cflags.txt tools/file_cflags.py tool
 	$(CC_TEXT) $(CFLAGS) -c build-sn/game/$*_jt.s -o build-sn/game/$*_jt.o
 	python tools/ps2eeas_nops.py build-sn/game/$*_jt.s build-sn/game/$*_jt.o build-sn/game/$*_fixed.s
 	$(CC_TEXT) $(CFLAGS) -c build-sn/game/$*_fixed.s -o $@
+	python tools/ps2eeas_nops.py build-sn/game/$*_fixed.s $@ build-sn/game/$*_again.s
+	if ! cmp -s build-sn/game/$*_fixed.s build-sn/game/$*_again.s; then \
+	  cp build-sn/game/$*_again.s build-sn/game/$*_fixed.s && \
+	  $(CC_TEXT) $(CFLAGS) -c build-sn/game/$*_fixed.s -o $@; fi
 
 clean:
 	rm -rf build-sn

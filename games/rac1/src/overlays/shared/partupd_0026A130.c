@@ -230,6 +230,8 @@ extern int func_001F9908(void *);
 extern int func_001F9850(int);
 extern void func_L00_002688A8(void *);
 
+/* Type 5 particle update: kills it once the timer at +0x20 runs out (func_001F9908), else grows its size (+0xC)
+   by the rate at +0x24 and, over the last 6 ticks, fades the colour's alpha byte out. */
 void PartType05Update(char *m) {
     float *p;
     p = (float *)(m + 0x20);
@@ -1016,6 +1018,8 @@ void PartType19Spawn(char *pos, char *vel) {
 }
 extern void func_001F9BD8(void *, void *, void *);
 extern void func_L00_002688A8(void *);
+/* Type 19 particle update: moves the position and the second point (+0x20) by the velocity at +0x30, takes 6 off the
+   colour's alpha byte each frame (the colour is mirrored into +0xC) and kills the particle once the alpha wraps below 0. */
 void PartType19Update(char *a) {
     int t;
     FastVecAdd(a + 0x10, a + 0x10, a + 0x30);
@@ -1489,6 +1493,8 @@ char *PartType27Spawn(char *pos, char *vel, int c, int d, float f) {
     }
     return p;
 }
+/* Type 27 particle update: moves it by the velocity at +0x20, sets the colour's alpha to
+   peak alpha (+0x38) * timer (+0x30) / lifetime (+0x34), and kills it when the timer at +0x30 runs out. */
 void PartType27Update(char *a) {
     char *b = a + 0x20;
     FastVecAdd(a + 0x10, a + 0x10, b);
@@ -1830,6 +1836,9 @@ extern float func_002140F8(float, float);
 extern int func_001FA898_r(float) __asm__("func_001FA898");
 extern float D_0015EE60 MACRO_ADDR;
 
+/* Spawns a type 0x20 particle riding on ARG0 (a moby or particle, kept at +0x20): white at ARG0's position, phase 0,
+   fade speed from the frame time (D_0015EE60 * 0.016), random brightness and unit colour channels at +0x30..+0x38.
+   Returns the particle, 0 when none is free. */
 void *PartType32Spawn(void *arg0) {
     char *p = func_00218928(0x20);
 
@@ -1906,6 +1915,7 @@ void PartType32Update(char *m) {
 }
 extern int func_001F9938(void *);
 extern void func_L00_002688A8(void *);
+/* Type 33 particle update: counts the timer at +0xA down and kills the particle when it expires. */
 void PartType33Update(char *a) {
     if (FastDecTimer(a + 10) != 0) {
         KillPart(a);
@@ -2260,7 +2270,7 @@ typedef struct PV_26ff10 {
     char pad19[3];
     void *f1C;
 } PV_26ff10;
-typedef struct Moby_26ff10 {
+typedef struct Part_26ff10 {
     u8 b00_26ff10;
     char pad01;
     u8 b02;
@@ -2272,7 +2282,7 @@ typedef struct Moby_26ff10 {
     f32 f0C;
     VV_26ff10 posv;
     PV_26ff10 pv;
-} Moby_26ff10;
+} Part_26ff10;
 typedef struct { VV_26ff10 v_26ff10; void *f10; s32 f14; s32 f18; f32 f1C; s32 f20; char pad[0xC]; } S_26ff10;
 extern u8 * D_L00_001B2430;
 extern f32 D_L00_00173F80[];
@@ -2281,23 +2291,23 @@ extern f32 D_0015EE64 MACRO_ADDR;
 extern s32 func_001F9938_70DB0(s16 *) __asm__("func_001F9938");
 extern f32 func_002140F8(f32, f32);
 extern void func_001F9C30(void *, void *, f32);
-extern Moby_26ff10 *func_L00_00270BC8_70DB0(void *, void *, s32, void *) __asm__("func_L00_00270BC8");
+extern Part_26ff10 *func_L00_00270BC8_70DB0(void *, void *, s32, void *) __asm__("func_L00_00270BC8");
 extern s32 func_001F9850(s32);
 extern s32 func_L00_001EFFF0_70DB0(void *, void *, s32, void *, void *) __asm__("func_L00_001EFFF0");
 extern void func_L00_001FF4B0(void *, void *, f32);
 extern void func_L00_001FF610(void *, void *, void *);
-extern void func_L00_002688A8_70DB0(Moby_26ff10 *) __asm__("func_L00_002688A8");
+extern void func_L00_002688A8_70DB0(Part_26ff10 *) __asm__("func_L00_002688A8");
 extern f32 func_001FA888(s32);
 extern s32 func_001FA898(f32);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_00269290.c, FUN_L00_0026ff10. */
-void PartType40Update(Moby_26ff10 *p) {
+void PartType40Update(Part_26ff10 *p) {
     VV_26ff10 v0u;
     VV_26ff10 v1u;
     S_26ff10 c;
     f32 v2[4];
     PV_26ff10 *pv;
-    Moby_26ff10 *r;
+    Part_26ff10 *r;
     u8 *tab;
     u8 fl;
     s32 fm;
@@ -2435,6 +2445,7 @@ void PartType40Update(Moby_26ff10 *p) {
     if (pv->t < 0.0f) pv->t = pv->t + 1.0f;
     p->f08 = (s32)(pv->t * 256.0f);
 }
+/* Type 41 particle update: unless its timer at +0xA is -1 (lives forever), counts it down and kills the particle when it expires. */
 void PartType41Update(char *a) {
     if (*(short *)(a + 0xA) != -1) {
         if (FastDecTimer(a + 0xA) != 0) {

@@ -66,4 +66,19 @@ struct PadState {
 
 typedef struct PadState PadState;
 
+/*
+ * The two button pairs as doublewords: retail reads held/pressed (0x1A0) and
+ * held_unmasked/pressed_unmasked (0x1C0) with a single ld in
+ * DebugFreeCameraUpdate and func_L02_002D9F08, and the pair comes out as one
+ * long. Only a union member of a struct the pad is cast to gives GCC 2.95
+ * that load with retail's schedule (a cast of the field's address does not),
+ * so those two readers cast the pad to this view.
+ */
+typedef struct {
+    u8 pad_0[0x1A0];
+    union { s64 l; s32 i; struct { s32 lo; s32 hi; } w; } held_pressed;   /* 0x1A0: held (lo), pressed (hi) */
+    u8 pad_1A8[0x18];
+    union { s64 l; s32 i; struct { s32 lo; s32 hi; } w; } unmasked;       /* 0x1C0: held_unmasked (lo), pressed_unmasked (hi) */
+} PadDwords;
+
 #endif /* PAD_H */

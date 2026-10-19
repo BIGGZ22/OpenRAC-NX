@@ -2,6 +2,7 @@
 #include "common.h"
 #include "callees.h"
 #include "include_asm.h"
+#include "pad.h"
 #include "hero.h"
 #include "moby.h"
 
@@ -338,9 +339,6 @@ void GetMobySpawnPoint(float *pos, float *rot, char *moby) {
         qcopy(rot, base + idx * 128 + 0x70);
     }
 }
-typedef struct {
-    float x, y, z, w;
-} __attribute__((aligned(16))) Vec_2D9F08;
 typedef struct Data_2D9F08 {
     char p0[0x10];
     short h10;
@@ -354,8 +352,8 @@ typedef struct Data_2D9F08 {
     float fE4;
     char pE8[0x4];
     int iEC;
-    Vec_2D9F08 vF0;
-    Vec_2D9F08 v100;
+    Vec4A vF0;
+    Vec4A v100;
     float f110;
     float f114;
     char p118[0x4];
@@ -364,23 +362,11 @@ typedef struct Data_2D9F08 {
 } Data_2D9F08;
 typedef struct Cam_2D9F08 {
     char p0[0x140];
-    Vec_2D9F08 v140;
-    Vec_2D9F08 v150;
+    Vec4A v140;
+    Vec4A v150;
     char p160[0x20];
     struct Moby *p180;
 } Cam_2D9F08;
-typedef struct Pad_2D9F08 {
-    char p0[0x1A4];
-    int i1A4;
-    char p1A8[0x18];
-    union {
-        long l;
-        struct {
-            int lo;
-            int hi;
-        } w;
-    } b1C0;
-} Pad_2D9F08;
 typedef struct {
     int i0;
     char p4[0x20];
@@ -415,7 +401,7 @@ typedef struct {
 extern Lvl_2D9F08 D_L02_001BBB40_2D9F08 __asm__("D_L02_001BBB40");
 extern int D_0015EE84_2D9F08 __asm__("D_0015EE84") MACRO_ADDR;
 extern char D_0014C290_2D9F08[] __asm__("D_0014C290");
-extern Vec_2D9F08 D_L02_00167440_2D9F08[] __asm__("D_L02_00167440");
+extern Vec4A D_L02_00167440_2D9F08[] __asm__("D_L02_00167440");
 extern float D_0015EE70_2D9F08 __asm__("D_0015EE70") MACRO_ADDR;
 extern float D_0015EE6C_2D9F08 __asm__("D_0015EE6C") MACRO_ADDR;
 extern int D_L02_0017EB88_2D9F08 __asm__("D_L02_0017EB88");
@@ -433,7 +419,7 @@ extern char D_0013A5E0_2D9F08[] __asm__("D_0013A5E0");
 /* Trespasser puzzle (level 2): the hero rotates its three rings with the pad; when every ring is aligned the gate
    opens and the puzzle is marked solved. State 0 sets up, 1 waits for the hero, 2 is the puzzle view, 3 opens. */
 void TrespasserPuzzleUpdate(Moby *moby) {
-    Vec_2D9F08 v0, v10;
+    Vec4A v0, v10;
     Data_2D9F08 *d = (struct Data_2D9F08 *)moby->pvars;
     int i;
 
@@ -549,15 +535,15 @@ void TrespasserPuzzleUpdate(Moby *moby) {
                 if (func_001F9938_2D9F08(&d->h10)) {
                     moby->state = 3;
                 }
-            } else if (((Pad_2D9F08 *)(D_0013A5E0_2D9F08 + 0x2460))->b1C0.l & 0xA00000000000) {
+            } else if (((PadDwords *)(D_0013A5E0_2D9F08 + 0x2460))->unmasked.l & 0xA00000000000) {
                 d->h11E |= 1;
                 func_0022ED80_2D9F08(0, 0, moby);
-                if (((Pad_2D9F08 *)(D_0013A5E0_2D9F08 + 0x2460))->b1C0.w.hi & 0x8000) {
+                if (((PadDwords *)(D_0013A5E0_2D9F08 + 0x2460))->unmasked.w.hi & 0x8000) {
                     d->fE4 = -(D_0015EE6C_2D9F08 * 6.2831855f);
                 } else {
                     d->fE4 = D_0015EE6C_2D9F08 * 6.2831855f;
                 }
-            } else if (((Pad_2D9F08 *)(D_0013A5E0_2D9F08 + 0x2460))->i1A4 & 0x1000) {
+            } else if (((PadState *)(D_0013A5E0_2D9F08 + 0x2460))->pressed & 0x1000) {
                 d->h11E |= 2;
                 d->iE0 = d->iE0 - 1;
                 if (d->iE0 == 0) {
@@ -565,7 +551,7 @@ void TrespasserPuzzleUpdate(Moby *moby) {
                 } else {
                     func_0022ED80_2D9F08(1, 0, moby);
                 }
-            } else if (((Pad_2D9F08 *)(D_0013A5E0_2D9F08 + 0x2460))->i1A4 & 0x4000) {
+            } else if (((PadState *)(D_0013A5E0_2D9F08 + 0x2460))->pressed & 0x4000) {
                 d->h11E |= 2;
                 d->iE0 = d->iE0 + 1;
                 if (d->iE0 == 4) {

@@ -5,6 +5,7 @@
 #include "vector.h"
 #include "hero.h"
 #include "moby.h"
+#include "camera.h"
 
 extern char D_0013E633[];
 extern float D_0015EE6C MACRO_ADDR;
@@ -65,6 +66,8 @@ extern int D_L00_0015F504 MACRO_ADDR;
 extern short D_L00_0015F4FC;
 extern void func_L00_002EC0C8(int);
 extern void func_L00_00222B80(int, int);
+/* Level camera hook for moby A: when the moby's state is 4, clears D_L00_0015F504 and the fade level and runs camera
+   script 3; then, if the hero's control mode is 0x13, puts the hero back into move state 0. */
 void func_L00_002E17F0(char *a) {
     if (*(unsigned char *)(a + 0x20) == 4) {
         D_L00_0015F504 = 0;
@@ -1030,6 +1033,7 @@ int func_L00_002E5630(VQ *p, float r) {
 }
 typedef struct { float f[4]; } __attribute__((aligned(16))) VS;
 extern int func_L00_001EE530(VS *, float);
+/* True when point A lies inside a camera volume of the level's volume grid (FindVolumeInGrid with no margin). */
 int Cam_IsInsideVolume(VS *a) {
     VS v;
     v = *a;
@@ -1193,6 +1197,8 @@ extern void func_001F9C30(void *, void *, float);
 extern void func_L00_002E5618(char *, void *);
 extern void func_001F9BD8(void *, void *, void *);
 extern float func_001F9C78(void *, void *);
+/* OUT = the axis at D_L00_00166F40 scaled by the component along it of (hero position + F * the camera up axis
+   D_L00_00166F30): the hero's height-offset point projected onto that axis. */
 void Cam_ProjectOntoAxis(void *out, float f) {
     Vq t0, t1;
     char *b = (char *)&D_L00_00166F00 + 0x10;
@@ -1617,6 +1623,8 @@ void CamAttach_EasePose(char *m, float *v2) {
 }
 extern float func_001EC120(void *, float, float, float, float, float);
 
+/* Eases the three components of OUT toward IN with Cam_InterpValues, one spring state each at +0xE0/+0xE4/+0xE8 of
+   camera M's state buffer (M + 0x70), with the rates A, B and C. */
 void Cam_InterpVec3(char *m, float *out, float *in, float a, float b, float c) {
     char *p = *(char **)(m + 0x70);
     out[0] = Cam_InterpValues(p + 0xE0, out[0], in[0], a, b, c);
@@ -1844,6 +1852,9 @@ typedef struct { char pad0[0x10]; int unk10; float unk14; char pad18[4]; union {
 typedef struct { char pad0[0x70]; unsigned char *cam; } CamObject_2E72E8;
 float cam_interp_values(void *, float, float, float, float, float) __asm__("func_001EC120");
 
+/* Resets camera MOBY's state buffer for a new activation: eases the orbit distance and height (+0x130 block) and
+   the target offset (+0x40 block) toward their requested or default values, clears the requests, and restores the
+   default spring (+0x1D0), target and end-of-blend (+0x220) parameters. */
 void func_L00_002E72E8(unsigned char *moby) __asm__("func_L00_002E72E8");
 void CamObject_Reset(unsigned char *moby)
 {
@@ -1964,6 +1975,10 @@ extern void func_L00_002E9A18(int);
 extern void func_L00_002E9A40(float, float);
 extern void func_L00_002E9E20(int, float, float);
 
+/* Per-frame hero-driven tweaks of the type-0 follow camera O: swings behind the hero on event 0xD (unk2284), picks
+   orbit distance and height for the vehicle and control modes, runs the player-camera hook table (D_L00_00166D80),
+   looks toward a nearby flagged moby, then times the look-ahead easing (h12/h14/h16) from the recent heading
+   changes, writing the blend weight into D_L00_0015F040. */
 void CameraType0_HeroTweaks(O_y *o) {
     S220_y *s;
     S40_y *q;
@@ -2388,17 +2403,6 @@ typedef struct Cam_2E8210 {
     Cam220_2E8210 p220;           /* 0x220 */
     Cam240_2E8210 p240;           /* 0x240 */
 } Cam_2E8210;
-typedef struct Moby_2E8210 {
-    float v0[4];                  /* 0x00 */
-    char pad10[0x20];
-    float v30[4];                 /* 0x30 */
-    float v40[4];                 /* 0x40 */
-    char pad50[0x20];
-    Cam_2E8210 *cam;              /* 0x70 */
-    char pad74[9];
-    unsigned char b7D;            /* 0x7D */
-    short h7E;                    /* 0x7E */
-} Moby_2E8210;
 typedef struct Ctl_2E8210 {
     char pad0[0x86];
     short h86;                    /* 0x86 */
@@ -2423,12 +2427,12 @@ extern void func_001F9BF0_2E8210(void *, void *, void *) __asm__("func_001F9BF0"
 extern float func_001F9C78_2E8210(void *, void *) __asm__("func_001F9C78");
 extern void func_001F9C30_2E8210(void *, void *, float) __asm__("func_001F9C30");
 extern float func_001F9CB8_2E8210(void *) __asm__("func_001F9CB8");
-extern void func_L00_002E80A8_2E8210(Moby_2E8210 *) __asm__("func_L00_002E80A8");
-extern void func_L00_002E58E0_2E8210(Moby_2E8210 *) __asm__("func_L00_002E58E0");
+extern void func_L00_002E80A8_2E8210(Camera *) __asm__("func_L00_002E80A8");
+extern void func_L00_002E58E0_2E8210(Camera *) __asm__("func_L00_002E58E0");
 extern void func_L00_002E7B68_2E8210(int) __asm__("func_L00_002E7B68");
 
 /* Initialises the type-0 camera: fills its data blocks and seeds the first position. */
-void CamType0Init(Moby_2E8210 *m) {
+void CamType0Init(Camera *m) {
     CamA_2E8210 *a;
     CamB_2E8210 *b;
     Cam_2E8210 *c;
@@ -2447,7 +2451,7 @@ void CamType0Init(Moby_2E8210 *m) {
 
     D_L00_00161E5C_2E8210 = 0;
     D_L00_00161E60_2E8210 = 0;
-    a = &m->cam->a;
+    a = &((Cam_2E8210 *)m->state_buf)->a;
     qcopy(a->pos, D_0013F4D0_2E8210);
     a->fB0 = 1.5f;
     a->iC0 = (int)D_0013F450_2E8210.moby;
@@ -2464,7 +2468,7 @@ void CamType0Init(Moby_2E8210 *m) {
     a->hDA = 0;
     a->iBC = 0;
 
-    b = &m->cam->b;
+    b = &((Cam_2E8210 *)m->state_buf)->b;
     b->f2C = 4.64f;
     b->f48 = 0.003f;
     b->f54 = 0.003f;
@@ -2480,14 +2484,14 @@ void CamType0Init(Moby_2E8210 *m) {
     b->i44 = 0;
     b->i50 = 0;
 
-    c = m->cam;
+    c = (Cam_2E8210 *)m->state_buf;
     c->h10 = 1;
     c->h12 = 0;
     c->h14 = 0;
     c->h16 = 0;
     D_L00_0015F040_2E8210 = 0.75f;
 
-    e = m->cam;
+    e = (Cam_2E8210 *)m->state_buf;
     e->e.h0 = 0;
     f = &e->e;
     f->i10 = 0;
@@ -2496,7 +2500,7 @@ void CamType0Init(Moby_2E8210 *m) {
     f->i14 = 0;
     f->i18 = 0;
 
-    q1 = (char *)m->cam;
+    q1 = (char *)m->state_buf;
     ((Cam_2E8210 *)q1)->p190.i0 = 0;
     q1 = (char *)&((Cam_2E8210 *)q1)->p190;
     ((Cam190_2E8210 *)q1)->f8 = 0.005f;
@@ -2505,7 +2509,7 @@ void CamType0Init(Moby_2E8210 *m) {
     ((Cam190_2E8210 *)q1)->i4 = 0;
     ((Cam190_2E8210 *)q1)->f14 = 14.2857f;
 
-    q2 = (char *)m->cam;
+    q2 = (char *)m->state_buf;
     ((Cam_2E8210 *)q2)->p1A8.flags = 0;
     q2 = (char *)&((Cam_2E8210 *)q2)->p1A8;
     ((Cam1A8_2E8210 *)q2)->f14 = D_L00_0015F044_2E8210;
@@ -2518,7 +2522,7 @@ void CamType0Init(Moby_2E8210 *m) {
     ((Cam1A8_2E8210 *)q2)->i20 = 0;
     ((Cam1A8_2E8210 *)q2)->i24 = 0;
 
-    q3 = (char *)m->cam;
+    q3 = (char *)m->state_buf;
     ((Cam_2E8210 *)q3)->p220.i0 = 0;
     q3 = (char *)&((Cam_2E8210 *)q3)->p220;
     ((Cam220_2E8210 *)q3)->i10 = 0;
@@ -2527,7 +2531,7 @@ void CamType0Init(Moby_2E8210 *m) {
     ((Cam220_2E8210 *)q3)->f8 = b->f2C;
     ((Cam220_2E8210 *)q3)->fC = D_L00_00161DEC_2E8210;
 
-    d = m->cam;
+    d = (Cam_2E8210 *)m->state_buf;
     r = func_001F9850_2E8210(0x7D0);
     g = &d->g;
     g->f30 = 0.0f;
@@ -2542,15 +2546,15 @@ void CamType0Init(Moby_2E8210 *m) {
     g->i48 = D_L00_0015F060_2E8210;
     func_001F9BC0_2E8210(d->g.v10);
 
-    p240 = &m->cam->p240;
+    p240 = &((Cam_2E8210 *)m->state_buf)->p240;
     p240->h28 = 0;
     p240->i24 = 0;
     qcopy(p240->v0, D_0013F4D0_2E8210);
     qcopy(p240->v10, D_0013F4D0_2E8210);
 
-    if (m->b7D == 2) {
+    if (m->handoff_state == 2) {
         func_L00_002E80A8_2E8210(m);
-        qcopy(m->v40, m->v0);
+        qcopy(m->type_data, m->basis);
         if (D_L00_00166F04_2E8210->h86 == 7 && D_0013F450_2E8210.frames_off_ground.s == 0) {
             e->e.h0 = 0;
         } else {
@@ -2560,10 +2564,10 @@ void CamType0Init(Moby_2E8210 *m) {
         func_L00_002E58E0_2E8210(m);
         func_L00_002E7B68_2E8210(1);
     }
-    func_001F9BF0_2E8210(b->v0, m->v30, a->f50);
+    func_001F9BF0_2E8210(b->v0, &m->pos, a->f50);
     qcopy(b->v10, b->v0);
-    qcopy(c->pos, m->v30);
-    qcopy(g->v20, m->v30);
+    qcopy(c->pos, &m->pos);
+    qcopy(g->v20, &m->pos);
     func_001F9C30_2E8210(v0, D_0013F6E0_E80A8, func_001F9C78_2E8210(b->v0, D_0013F6E0_E80A8));
     func_001F9BF0_2E8210(v1, b->v0, v0);
     t = b->f2C - func_001F9CB8_2E8210(v1);
@@ -2573,7 +2577,7 @@ void CamType0Init(Moby_2E8210 *m) {
     }
     f->f8 = b->f30;
     f->f4 = a->fB0;
-    m->h7E = 0;
+    m->transition_state = 0;
 }
 typedef struct { unsigned char p0[0x208C]; int w208C; unsigned char p1[0x20A4 - 0x2090]; unsigned char b20A4; } G_2e7138;
 extern G_2e7138 D_0013F450_E85E8 __asm__("D_0013F450");
@@ -2741,10 +2745,6 @@ typedef struct Cam_2E8AC8 {
     float f210;
     float f214;
 } Cam_2E8AC8;
-typedef struct Wrap_2E8AC8 {
-    char pad0[0x70];
-    Cam_2E8AC8 *cam; /* 0x70 */
-} Wrap_2E8AC8;
 typedef struct Mdata_2E8AC8 {
     char pad0[0x90];
     V4_2E8AC8 v90; /* 0x90 */
@@ -2753,10 +2753,6 @@ typedef struct Mdata_2E8AC8 {
     char pad140[0x90];
     V4_2E8AC8 v1D0; /* 0x1D0 */
 } Mdata_2E8AC8;
-typedef struct Moby_2E8AC8 {
-    char pad0[0x70];
-    Mdata_2E8AC8 *d; /* 0x70 */
-} Moby_2E8AC8;
 extern void func_001F9BC0_2E8AC8(void *) __asm__("func_001F9BC0");
 extern void func_001F9BD8_2E8AC8(void *, void *, void *) __asm__("func_001F9BD8");
 extern float func_L00_0025ED30_2E8AC8(void *, void *, void *, void *, float) __asm__("func_L00_0025ED30");
@@ -2764,15 +2760,15 @@ extern float func_001F9D10_2E8AC8(void *, void *) __asm__("func_001F9D10");
 extern int func_L00_001F10E0_2E8AC8(void *, int, void *, float) __asm__("func_L00_001F10E0");
 extern void func_001F9BF0_2E8AC8(void *, void *, void *) __asm__("func_001F9BF0");
 extern void func_L00_002E89E0_2E8AC8(void *, void *, void *, void *, void *, float, float) __asm__("func_L00_002E89E0");
-extern Wrap_2E8AC8 *D_L00_00166F00_2E8AC8 __asm__("D_L00_00166F00");
+extern Camera *D_L00_00166F00_2E8AC8 __asm__("D_L00_00166F00");
 extern char D_L00_00173F70_2E8AC8[] __asm__("D_L00_00173F70");
 extern int D_L00_0015F05C_2E8AC8 __asm__("D_L00_0015F05C") MACRO_ADDR;
 extern float D_L00_00161DA8_2E8AC8 SDATA(D_L00_00161DA8);
 extern char D_0013F450_2E8AC8[] __asm__("D_0013F450");
 
 /* Clips a move of pos against up to three planes; returns whether the first pass clipped it. */
-int func_L00_002E8AC8_r(Moby_2E8AC8 *m, float *pos, int unused, float sa, float sb) __asm__("func_L00_002E8AC8");
-int func_L00_002E8AC8_r(Moby_2E8AC8 *m, float *pos, int unused, float sa, float sb) {
+int func_L00_002E8AC8_r(Camera *m, float *pos, int unused, float sa, float sb) __asm__("func_L00_002E8AC8");
+int func_L00_002E8AC8_r(Camera *m, float *pos, int unused, float sa, float sb) {
     V4_2E8AC8 r;
     V4_2E8AC8 t;
     V4_2E8AC8 o;
@@ -2781,8 +2777,8 @@ int func_L00_002E8AC8_r(Moby_2E8AC8 *m, float *pos, int unused, float sa, float 
     V4_2E8AC8 e;
     V4_2E8AC8 w;
     V4_2E8AC8 u;
-    Cam_2E8AC8 *g = D_L00_00166F00_2E8AC8->cam;
-    Mdata_2E8AC8 *d = m->d;
+    Cam_2E8AC8 *g = (Cam_2E8AC8 *)D_L00_00166F00_2E8AC8->state_buf;
+    Mdata_2E8AC8 *d = (Mdata_2E8AC8 *)m->state_buf;
     float *c = d->v130;
     float *q = d->v1D0;
     int res = 0;
@@ -3150,6 +3146,9 @@ typedef struct {
     char pad00[0x84];
     short f84;
 } O842e83c0;
+/* Grants camera ARG1 the lock word (+0x220) of the current camera's state: 1 when it is free or already ARG1's, or
+   when ARG1's CameraInfo priority byte (gCameraDefsLvl row + 0x1C -> + 0x1C) beats the holder's; 0 when refused;
+   -1 while the current camera is not the hero camera (id at +0x86 nonzero). */
 int Cam_AcquireLock(int arg1) {
     void *a = D_L00_00166F00;
     C842e83c0 *cur;
@@ -3180,6 +3179,8 @@ INCLUDE_ASM("asm/overlays", func_L00_002E988C);
 INCLUDE_ASM("asm/overlays", func_L00_002E98A8);
 INCLUDE_ASM("asm/overlays", func_L00_002E98B8);
 extern char *D_L00_00166F00;
+/* Requests orbit distance X for the hero camera (D_L00_00166F00, only while its id is 0): sets the request flag at
+   +0x3C of the orbit block (+0x130), the goal at +0x40, the rate Y at +0x48 and, when FLAG, the default at +0x58. */
 void Cam_SetDistanceGoal(float x, float y, int flag) {
     char *p = D_L00_00166F00;
     if (*(short *)(p + 0x86) == 0) {
@@ -3192,6 +3193,7 @@ void Cam_SetDistanceGoal(float x, float y, int flag) {
         }
     }
 }
+/* Sets the float at +0x22C of the hero camera's state buffer while the current camera is the hero camera (id 0). */
 void func_L00_002E9940(float value) {
     char *moby = D_L00_00166F00;
     if (*(short *)(moby + 0x86) == 0) {
@@ -3199,6 +3201,8 @@ void func_L00_002E9940(float value) {
         *(float *)(data + 0x22C) = value;
     }
 }
+/* Requests orbit height X for the hero camera: flag +0x3E of the orbit block (+0x130), goal at +0x4C and rate Y at
+   +0x54, only while the current camera's id is 0. */
 void func_L00_002E9968(float x, float y) {
     char *p = D_L00_00166F00;
     if (*(short *)(p + 0x86) == 0) {
@@ -3227,6 +3231,7 @@ void Cam_SetEyeOffset(int add, float a, float b) {
 }
 /* From Lombyte (MIT), FUN_L00_002e8534 (PR #66), adapted to PAL. */
 void func_L00_002E99E4(void *u, char *p, float a) { *(volatile float *)(p + 0xB4) = a; }
+/* Sets the float at +0x1CC of the hero camera's state buffer while the current camera's id is 0. */
 void func_L00_002E99F0(float value) {
     char *moby = D_L00_00166F00;
     if (*(short *)(moby + 0x86) == 0) {
@@ -3234,6 +3239,8 @@ void func_L00_002E99F0(float value) {
         *(float *)(data + 0x1CC) = value;
     }
 }
+/* Sets the mode short at +0x10 of the hero camera's state buffer (read by FollowCamera_ClampDistance) while the
+   current camera's id is 0. */
 void func_L00_002E9A18(int value) {
     char *moby = D_L00_00166F00;
     if (*(short *)(moby + 0x86) == 0) {
@@ -3241,6 +3248,8 @@ void func_L00_002E9A18(int value) {
         *(short *)(data + 0x10) = value;
     }
 }
+/* Sets the target block's (+0x40) ease rates at +0xDC and +0xE0 of the hero camera's state, each only when nonzero,
+   while the current camera's id is 0. */
 void func_L00_002E9A40(float a, float b) {
     char *p = D_L00_00166F00;
     if (*(short *)(p + 0x86) == 0) {
@@ -3250,18 +3259,21 @@ void func_L00_002E9A40(float a, float b) {
     }
 }
 extern char *D_L00_00166F00;
+/* Sets the short flag at +0x226 of the hero camera's state buffer while the current camera's id is 0. */
 void func_L00_002E9AD0(void) {
     char *p = D_L00_00166F00;
     if (*(short *)(p + 0x86) == 0) {
         *(short *)(*(char **)(p + 0x70) + 0x226) = 1;
     }
 }
+/* Sets the byte flag at +0x116 of the hero camera's state buffer while the current camera's id is 0. */
 void func_L00_002E9AF8(void) {
     char *p = D_L00_00166F00;
     if (*(short *)(p + 0x86) == 0) {
         *(char *)(*(char **)(p + 0x70) + 0x116) = 1;
     }
 }
+/* ORs bits 0 and 1 into the flags word at +0x10 of the hero camera's +0x1A8 block while the current camera's id is 0. */
 void func_L00_002E9B30(void) {
     char *p = D_L00_00166F00;
     if (*(short *)(p + 0x86) == 0) {
@@ -3327,6 +3339,8 @@ float Cam_SignedAngleBetweenOffsets(char *a0, float *a1, float lim) {
 }
 extern float func_L00_002E9B60(char *, float *, float);
 
+/* Asks the hero camera to swing toward direction A: when X is nonzero stores it at +0x1BC of the state buffer and
+   measures the swing with Cam_SignedAngleBetweenOffsets(camera, A, Y); only while the current camera's id is 0. */
 void func_L00_002E9DC8(void *a, float x, float y) {
     char *p = D_L00_00166F00;
     if (*(short *)(p + 0x86) == 0) {
@@ -3337,6 +3351,8 @@ void func_L00_002E9DC8(void *a, float x, float y) {
     }
 }
 extern void func_L00_002E9D78(char *, int, float);
+/* Asks the hero camera to swing toward point A: stores X at +0x1BC of the state buffer and measures the swing with
+   Cam_SignedAngleToPoint(camera, A, Y); only while the current camera's id is 0. */
 void func_L00_002E9E20(int a, float x, float y) {
     char *p = D_L00_00166F00;
     if (*(short *)(p + 0x86) == 0) {
@@ -3509,6 +3525,10 @@ extern void func_001F9C08(float, void *, void *, void *);
 extern float func_001F9CB8(void *);
 extern void func_L00_001FF4B0(void *, void *, float);
 
+/* Keeps the follow camera's orbit vector (+0x130 of M's state buffer) within its maximum length (+0x2C): the
+   eye-to-target vector is turned by D_L00_0015F040 into the orbit vector, shortened to the maximum when longer and
+   otherwise kept at least as long as the previous frame's reach; the slack is recorded at +0x30 of the +0x1D0 block.
+   Only in modes (+0x10) above 0. */
 void FollowCamera_ClampDistance(int m) {
     char *p = *(char **)(m + 0x70);
     char *r = p + 0x1D0;
@@ -3539,6 +3559,10 @@ extern char D_0013E633[] NOT_SDA;
 extern char D_L00_00166F30[] NOT_SDA;
 extern float func_L00_001EB6A8(void *, float, float, float, float, float);
 
+/* Final placement of follow camera A_'s basis for the frame: in target mode 0xB looks along the hero, else builds the
+   forward row from the target-to-eye direction with the camera up axis (D_L00_00166F30) projected off, eases the orbit
+   and eye heights (+0x20 block), pitches by the smoothed look angle clamped to +-70 degrees, blends out the start-up
+   timer at +0x20, and re-orthogonalises the right and up rows. */
 void func_L00_002EA4C0(int a_) {
     u8 *p = (u8 *)a_;
     u8 *q40, *q, *q2, *q20, *q130, *tb, *base, *p10, *p20, *w, *up;
@@ -3778,6 +3802,8 @@ extern void func_L00_002E91D0(int);
 extern void func_L00_002EABD0(int);
 extern void func_L00_002E9828(int);
 extern void func_L00_002EA4C0(int);
+/* Builds follow camera A for this frame: func_L00_002EAF50, clamp the orbit distance, read the stick, steer the heading,
+   func_L00_002E91D0, aim at the target, debug dump, then func_L00_002EA4C0's final placement. */
 void FollowCameraBuildView(int a) {
     float v[2];
     func_L00_002EAF50(a);

@@ -2,4 +2,91 @@
 #include "common.h"
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/overlays", func_L06_0024A080);
+LINKER_REMNANT("asm/overlays", func_L06_0024A080);
+extern float func_001FA888(int);
+extern int func_001FA898(float);
+extern int func_001FA8A8(int, int, float);
+extern int func_00200198(int, int);
+extern void func_00200468(int, int, int, int, int, int);
+extern void func_00200650(int, int, int, int, int, int);
+extern void func_00201640(int, int, int, int, long, int);
+extern int D_0013E604;
+extern int D_0015EE80 MACRO_ADDR;
+extern int D_0015EE84 MACRO_ADDR;
+extern short D_L06_0015F9BC;
+extern short D_L06_0015F9C4;
+extern short D_L06_0015F9C8;
+
+int func_L06_0024A0A0(unsigned char *p) {
+    int y;
+    int ntsc_y;
+    int level;
+    int segments = 3;
+    int x, start_x, inner, i, color, remaining, tile_count, k;
+    int center_x = *(int *)&D_L06_0015F9BC;
+    float alpha, scaled_alpha, fill, step, limit;
+
+    ntsc_y = D_0013E604 - 50;
+    y = D_0013E604 - 42;
+    if (!D_0015EE80) y = ntsc_y;
+    level = D_0015EE84;
+    if (level == 7 || level == 13) segments = 6;
+    if (level == 18) segments = 7;
+    if (p[0x70] == 0) return *(int *)(p + 0x58);
+    {
+        if (level == 13) {
+            y = 18;
+            if (D_0015EE80 != 0) y = 10;
+        }
+        alpha = func_001FA888(p[0x70]) * 0.125f;
+        if (alpha > 1.0f) alpha = 1.0f;
+        else if (alpha < 0.0f) alpha = 0.0f;
+        remaining = segments - 1;
+        scaled_alpha = alpha * 128.0f;
+        i = func_001FA898(scaled_alpha);
+        inner = func_001FA898(scaled_alpha);
+        start_x = center_x - segments * 16;
+        x = start_x;
+        for (k = 0; k < segments; k++) {
+            func_00200650(func_00200198(0x7562, 3), x, y + 6, 32, 18, i);
+            x += 32;
+        }
+        x = 0;
+        color = 0x800000ff;
+        if (*(int *)(p + 0x74) != 0) {
+            fill = (float)*(int *)(p + 0x74) / func_001FA888(*(int *)(p + 8));
+            step = 1.0f / func_001FA888(segments);
+            limit = remaining * step;
+            if (limit < fill) {
+                fill -= limit;
+                fill *= *(float *)&D_L06_0015F9C4;
+                fill += limit;
+            } else if (fill < step) {
+                fill -= step;
+                fill *= *(float *)&D_L06_0015F9C8;
+                fill += step;
+            }
+            x = func_001FA898((float)(segments << 5) * fill);
+            if (0.5f < fill) {
+                color = func_001FA8A8(0x8000ffff, 0x8000ff00, (fill + fill) - 1.0f);
+            } else {
+                color = func_001FA8A8(0x800000ff, 0x8000ffff, fill + fill);
+            }
+        }
+        func_00201640(start_x, y + 8, start_x + x, y + 26, color, 0);
+        x = start_x;
+        segments = x - 40;
+        if (remaining > 0) {
+            tile_count = remaining;
+            do {
+                func_00200468(func_00200198(0x7562, 1), x, y, 32, 32, inner);
+                x += 32;
+                tile_count--;
+            } while (tile_count != 0);
+        }
+        func_00200468(func_00200198(0x7562, 2), x, y, 32, 32, inner);
+        func_00200468(func_00200198(0x7562, 4), segments, y - 8, 48, 48, i);
+        func_00200468(func_00200198(0x7562, 0), segments, y - 8, 48, 48, i);
+    }
+    return *(int *)(p + 0x58);
+}

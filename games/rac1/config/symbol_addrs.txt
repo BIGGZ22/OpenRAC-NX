@@ -24,6 +24,9 @@ func_00123168 = 0x00123168; // type:func
 func_001236F0 = 0x001236F0; // type:func
 func_00125218 = 0x00125218; // type:func
 func_001252A0 = 0x001252A0; // type:func
+func_001252C0 = 0x001252C0; // type:func
+func_00125300 = 0x00125300; // type:func
+func_00125328 = 0x00125328; // type:func
 func_0012CC70 = 0x0012CC70; // type:func
 
 // libgcc's __do_global_ctors. retail's L__main module opens with the one

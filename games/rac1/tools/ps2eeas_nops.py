@@ -104,6 +104,9 @@ def noreorder_ranges():
     return [(a, rows[k + 1][0] if k + 1 < len(rows) else 1 << 32)
             for k, (a, obj) in enumerate(rows) if obj in NOREORDER_OBJECTS]
 BRANCH_LINE = re.compile(r"^\s*(b[a-z0-9]*)\s+(.*)$")
+# A branch this tool already wrote as a .word (branch_as_word): still a
+# branch to its label when the tool runs again on its own output.
+WORD_BRANCH_LINE = re.compile(r"^\s*\.word\s+0x[0-9a-fA-F]+\s*\|\s*\(\(\((\$L\w+|\.L\w+)\s*-\s*\.")
 BC1_LINE = re.compile(r"^\s*bc1(t|f)l?\s")
 LABEL_LINE = re.compile(r"^\s*(\$L\w+|\.L\w+):")
 
@@ -386,9 +389,14 @@ def mfc1_sites(lines, start, end):
         elif stripped in (".set\treorder", ".set reorder"):
             reorder = True
         m = MFC1_LINE.match(lines[j])
-        if not m or not reorder:
+        # This tool's own form of rule 4, read back on a later run: the
+        # mfc1 alone in a noreorder block it opened right before it.
+        own = (not reorder and j > start and j + 1 < end
+               and lines[j - 1].strip() in (".set\tnoreorder", ".set noreorder")
+               and lines[j + 1].strip() in (".set\treorder", ".set reorder"))
+        if not m or not (reorder or own):
             continue
-        k, entered = j + 1, False
+        k, entered = (j + 2, False) if own else (j + 1, False)
         while k < end:
             s = lines[k].split("#")[0].strip()
             if s in (".set\tnoreorder", ".set noreorder"):
@@ -442,6 +450,9 @@ def main() -> None:
             bm = BRANCH_LINE.match(lines[j])
             if bm and is_local_branch(bm.group(1), bm.group(2)) \
                     and bm.group(2).split(",")[-1].strip() in seen:
+                src_back.append(j)
+            wm = WORD_BRANCH_LINE.match(lines[j])
+            if wm and wm.group(1) in seen:
                 src_back.append(j)
         start, size = funcs[name]
         obj_back, obj_fp, obj_moves = scan(start, size, text)

@@ -79,11 +79,15 @@ WORK_ROOT = Path("build-sn/overlays/report")
 # standard library: try_func.py and overlay_check.py import rabbitizer and
 # pyelftools at module scope for the toolchain-driven build/compare path,
 # which CI (no toolchain, no baserom) never runs.
-OVERLAY_STUB = re.compile(r'^\s*(?:INCLUDE_ASM|LINKER_REMNANT)\([^)]*\b(func_L\d{2}_[0-9A-Fa-f]{8})\)')
+OVERLAY_STUB = re.compile(r'^\s*(?:INCLUDE_ASM|LINKER_REMNANT|ASM_FUNC)\([^)]*\b(func_L\d{2}_[0-9A-Fa-f]{8})\)')
 # Level-code linker remnants (docs/ASM_CLASSIFICATION.md): what the linker left of stripped functions
 # (each one's last delay slot), kept as assembly and counted as finished, as the executable's are.
 OVERLAY_REMNANT = re.compile(r'^\s*LINKER_REMNANT\("asm/overlays",\s*(func_L\d{2}_[0-9A-Fa-f]{8})\);', re.M)
 OVERLAY_REMNANTS = Path("config/overlays/linker_remnants.txt")
+# Level-code hand-written functions (docs/ASM_CLASSIFICATION.md): original assembly, kept as it is
+# and counted as finished, as the executable's ASM_FUNC functions are.
+OVERLAY_HANDWRITTEN = re.compile(r'^\s*ASM_FUNC\("asm/overlays",\s*(func_L\d{2}_[0-9A-Fa-f]{8})\);', re.M)
+OVERLAY_HANDWRITTEN_LIST = Path("config/overlays/handwritten_asm.txt")
 OVERLAY_JOINED = Path("config/overlays/joined.tsv")
 OVERLAY_DEF = re.compile(r"^(?!extern\b)[A-Za-z_].*?\b(func_L\d{2}_[0-9A-Fa-f]{8})(?:_r)?\s*\(")
 
@@ -235,27 +239,39 @@ def overlay_file_functions(path: Path) -> list[tuple[str, bool]]:
     return out
 
 
-def overlay_remnants() -> set[str]:
-    """The level-code linker remnants: config/overlays/linker_remnants.txt, which has to agree
-    with the LINKER_REMNANT lines of src/overlays/ and name only catalogue entries.
-    Tracked files only, so --check can run it; tools/overlay_remnants.py --check holds the
-    list to the rule, against the level dumps."""
-    listed = [l.strip() for l in OVERLAY_REMNANTS.read_text().splitlines()
-              if l.strip() and not l.startswith("#")] if OVERLAY_REMNANTS.exists() else []
+def overlay_listed(listing: Path, marker: re.Pattern) -> set[str]:
+    """The names in LISTING, which has to agree with the MARKER lines of src/overlays/ and
+    name only catalogue entries. Tracked files only, so --check can run it."""
+    listed = [l.strip() for l in listing.read_text().splitlines()
+              if l.strip() and not l.startswith("#")] if listing.exists() else []
     if len(set(listed)) != len(listed):
-        sys.exit(f"*** {OVERLAY_REMNANTS}: a name is listed twice")
+        sys.exit(f"*** {listing}: a name is listed twice")
     marked = []
     for directory, _ in overlay_dirs():
         for path in sorted(directory.glob("*.c")):
-            marked += OVERLAY_REMNANT.findall(path.read_text(errors="replace"))
+            marked += marker.findall(path.read_text(errors="replace"))
     if sorted(marked) != sorted(listed):
-        sys.exit(f"*** {OVERLAY_REMNANTS} disagrees with src/overlays/: "
+        sys.exit(f"*** {listing} disagrees with src/overlays/: "
                  f"listed only {sorted(set(listed) - set(marked))}, marked only {sorted(set(marked) - set(listed))}")
     catalogue = overlay_catalogue()
     wrong = sorted(n for n in listed if n not in catalogue)
     if wrong:
-        sys.exit(f"*** {OVERLAY_REMNANTS}: not a catalogue entry: {wrong}")
+        sys.exit(f"*** {listing}: not a catalogue entry: {wrong}")
     return set(listed)
+
+
+def overlay_remnants() -> set[str]:
+    """The level-code linker remnants: config/overlays/linker_remnants.txt and the
+    LINKER_REMNANT lines of src/overlays/. tools/overlay_remnants.py --check holds the
+    list to the rule, against the level dumps."""
+    return overlay_listed(OVERLAY_REMNANTS, OVERLAY_REMNANT)
+
+
+def overlay_handwritten() -> set[str]:
+    """The level-code hand-written functions: config/overlays/handwritten_asm.txt and the
+    ASM_FUNC lines of src/overlays/ (docs/ASM_CLASSIFICATION.md, "Level code"). A joined
+    function is listed under its first name; its later pieces are finished with it."""
+    return overlay_listed(OVERLAY_HANDWRITTEN_LIST, OVERLAY_HANDWRITTEN)
 
 
 def overlay_joined() -> dict[str, list[str]]:
@@ -312,11 +328,11 @@ def overlay_match_results(file_map: dict) -> dict[str, float]:
 
     out = {}
     jobs = []
-    remnants = overlay_remnants()
+    original_asm = overlay_remnants() | overlay_handwritten()
     for path, fns in file_map.items():
         for n, is_c in fns:
             if not is_c:
-                out[n] = 100.0 if n in remnants else 0.0
+                out[n] = 100.0 if n in original_asm else 0.0
         c_names = [n for n, is_c in fns if is_c]
         if c_names:
             jobs.append((path, c_names))
@@ -764,6 +780,7 @@ def check() -> None:
     # gone stale about which functions have C.
     _overlay_map, have_c = overlay_c_functions()
     have_c |= overlay_remnants()        # classified original assembly counts as finished too
+    have_c |= overlay_handwritten()
     level_names = overlay_catalogue()
     have_c |= {piece for owner, pieces in overlay_joined().items() if owner in have_c
                for piece in pieces if level_names.get(piece, ("exe",))[0] != "exe"}
@@ -775,7 +792,7 @@ def check() -> None:
     if stale_new_c or stale_gone_c:
         print("progress/report.json is out of date with src/overlays/:")
         for n in stale_new_c:
-            print(f"  has C (or is a listed remnant or a joined piece), report doesn't mark it: {n}")
+            print(f"  has C (or is listed original assembly or a joined piece), report doesn't mark it: {n}")
         for n in stale_gone_c:
             print(f"  report marks it as C, no C source any more: {n}")
         sys.exit("*** regenerate with: python tools/gen_progress_report.py")

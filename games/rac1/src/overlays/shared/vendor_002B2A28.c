@@ -2611,7 +2611,7 @@ extern float func_001F9CB8(void *);
 extern int func_001F9938(void *);
 extern void func_L14_003039C0(char *);
 extern void func_L14_00303270(char *);
-extern void func_L14_00303430(void);
+extern void func_L14_00303430(char *);
 extern void func_001F49B0(void (*)(void), void *);
 
 /* Moby update for a timed effect that triggers when the hero is near. */
@@ -2871,7 +2871,6 @@ void func_L14_00303270(char *moby) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L14_00303430);
 typedef struct { f32 x; f32 y; f32 z; } Vec3_3039C0;
 typedef struct {
     int w0;

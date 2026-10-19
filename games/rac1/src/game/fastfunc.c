@@ -126,7 +126,7 @@ ASM_FUNC("asm/handwritten/text", func_001F9B20);
 
 LINKER_REMNANT("asm/remnants/text", func_001F9B48);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9B50);
+ASM_FUNC("asm/handwritten/text", func_001F9B50);
 
 ASM_FUNC("asm/handwritten/text", func_001F9B70);
 
@@ -222,11 +222,11 @@ ASM_FUNC("asm/handwritten/text", func_001F9F30);
 
 ASM_FUNC("asm/handwritten/text", func_001F9F60);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9F90);
+ASM_FUNC("asm/handwritten/text", func_001F9F90);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9FA8);
+ASM_FUNC("asm/handwritten/text", func_001F9FA8);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F9FC0);
+ASM_FUNC("asm/handwritten/text", func_001F9FC0);
 
 ASM_FUNC("asm/handwritten/text", func_001FA058);
 
@@ -312,7 +312,7 @@ float IntToFloat(int arg0) {
  * question. Tried an extra (float)(int) round-trip to nudge it toward
  * reusing $f12 -- made it worse (50% mismatch), reverted.
  */
-INCLUDE_ASM("asm/nonmatchings/text", func_001FA898);
+ASM_FUNC("asm/handwritten/text", func_001FA898);
 
 ASM_FUNC("asm/handwritten/text", func_001FA8A8);
 

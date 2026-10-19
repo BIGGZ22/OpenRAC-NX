@@ -1050,7 +1050,43 @@ void MorphorayUpdate(Moby *m) {
 }
 typedef struct { float f[4]; } __attribute__((aligned(16))) V_t;
 extern V_t D_L00_001DC260;
-INCLUDE_ASM("asm/overlays", func_L00_002BE2A0);
+extern int D_L00_0016188C MACRO_ADDR;
+extern float D_L00_0016189C MACRO_ADDR;
+extern short D_L00_001617E8;
+extern short D_L00_001617F0;
+extern short D_L00_001617F4;
+extern int D_L00_001618A0 MACRO_ADDR;
+extern int D_L00_001618E8[] MACRO_ADDR;
+extern int D_L00_001618F4 MACRO_ADDR;
+extern char D_L00_001DC250[];
+extern Vec4A D_L00_001DD3D0[];
+
+/* rebuilds the camera tables from a moby's matrix */
+void func_L00_002BE2A0(char *m) {
+    char *p = *(char **)(m + 0x78);
+    if (D_L00_0016188C != 0) {
+        float f;
+        char v[16];
+        int i, j;
+        D_L00_0016188C = 0;
+        f = *(float *)&D_L00_001617AC / func_001FA888(12);
+        D_L00_0016189C = f;
+        func_001F9C30(v, m + 0xD0, -f);
+        qcopy(&D_L00_001DC260, p);
+        for (i = 10; i >= 0; i--) {
+            func_001F9BD8((char *)&D_L00_001DC260 + 16 * (11 - i), D_L00_001DC250 + 16 * (11 - i), v);
+        }
+        *(int *)&D_L00_001617E8 = 0;
+        *(int *)&D_L00_001617F0 = 0;
+        *(int *)&D_L00_001617F4 = 0;
+        D_L00_001618A0 = 0;
+        D_L00_001618F4 = 0;
+        for (j = 0; j < 3; j++) {
+            D_L00_001618E8[j] = 0;
+            qcopy(&D_L00_001DD3D0[j], v);
+        }
+    }
+}
 typedef struct {
     Vec4A pos;
     Moby *target;

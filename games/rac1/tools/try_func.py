@@ -204,6 +204,18 @@ def build(name, seg, src, first, last, candidate, work):
             shutil.copy(s[2], s[3])
         if not run(sn(CC, *CFLAGS, "-c", str(s[3]), "-o", str(obj)), log):
             return None
+        if seg == "text" or src.name in ("989snd.c", "wad.c"):
+            # GNU as can pad a short loop in this second assembly that it left
+            # alone in the first (the nops added elsewhere move its fragment
+            # boundaries). Measure again and assemble once more if anything
+            # moved: ps2eeas_nops changes nothing in an object that has it all.
+            again = work / "again.s"
+            if not run([sys.executable, "tools/ps2eeas_nops.py", str(s[3]), str(obj), str(again)], log):
+                return None
+            if again.read_text() != s[3].read_text():
+                shutil.copy(again, s[3])
+                if not run(sn(CC, *CFLAGS, "-c", str(s[3]), "-o", str(obj)), log):
+                    return None
     return obj
 
 

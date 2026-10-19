@@ -1070,7 +1070,105 @@ char *SpawnHeroBomb(int owner, void *pos) {
     }
     return m;
 }
-INCLUDE_ASM("asm/overlays", func_L00_002AE278);
+extern char D_0013A5E0[];
+extern char D_L00_00173F60[];
+extern float func_001F9CE8(void *);
+extern float func_001F9D48(void *, void *);
+extern float func_001FA850(float, float);
+extern void func_L00_002C3790(float *, float *, float *, float, float, float);
+
+void func_L00_002AE278(float *pos, unsigned char *moby, float *velocity) {
+    float *v = *(float **)(moby + 0x78);
+    float difference[4] __attribute__((aligned(16)));
+    float direction[4] __attribute__((aligned(16)));
+    float result[4] __attribute__((aligned(16)));
+    float working[4] __attribute__((aligned(16)));
+    float desired[4] __attribute__((aligned(16)));
+    char *g;
+    char *gb;
+    char *gc;
+    unsigned char *mp;
+    char *e;
+    char *ge;
+    float *rp;
+    float dot, length, distance, angle, height, total;
+
+    *(short *)((char *)v + 0x6a) = func_001F9850(30);
+    moby[0x20] = 1;
+    qcopy(v, velocity);
+    g = (char *)&D_G910;
+    if (*(int *)(g + 0x208C) == 15) {
+        func_001F9BD8(v, v, g + 0x100);
+    } else if (*(unsigned char **)(g + 0x2FC) != 0 && func_L00_0025D390(*(unsigned char **)(g + 0x2FC)) != 0) {
+        func_001F9BD8(v, v, g + 0x100);
+    } else if (*(float **)((char *)v + 0x60) != 0) {
+        short cls = *(short *)(*(char **)((char *)v + 0x60) + 0xa6);
+        if (cls == 0x56e || cls == 0x58e) {
+            func_001F9BD8(v, v, v + 0x10);
+        } else if (*(int *)((char *)v + 0x64) != 0) {
+            length = func_001F9CE8(velocity);
+            func_001F9BF0(difference, D_G910.pos, *(char **)((char *)v + 0x60) + 0x10);
+            func_L00_001FF4B0(difference, difference, 1.0f);
+            dot = func_001F9C78(difference, v + 0x10);
+            total = dot + length;
+            distance = func_001F9D48(pos, *(char **)((char *)v + 0x60) + 0x10) / total;
+            if (dot > 0.0f) {
+                func_001F9C30(direction, difference, distance * dot);
+                func_001F9BD8(working, direction, *(char **)((char *)v + 0x60) + 0x10);
+                *(VecQuad *)direction = *(VecQuad *)working;
+            } else {
+                func_001F9C30(direction, v + 0x10, distance);
+                func_001F9BD8(working, direction, *(char **)((char *)v + 0x60) + 0x10);
+                *(VecQuad *)direction = *(VecQuad *)working;
+            }
+            gb = (char *)&D_G910;
+            {
+                float heading = func_L00_001FF860(*(float *)(gb + 0x670), *(float *)(gb + 0x674));
+                float toward = func_L00_001FF860(direction[0] - *(float *)(gb + 0x80),
+                                             direction[1] - *(float *)(gb + 0x84));
+                angle = func_001FA850(heading, toward);
+            }
+            if (angle > 1.5707964f) {
+                working[0] = func_001F9F90(func_L00_001FF860(*(float *)(gb + 0x670), *(float *)(gb + 0x674))) *
+                            func_001F9D48(gb + 0x80, direction) * 0.5f;
+                angle = func_001F9FA8(func_L00_001FF860(*(float *)(gb + 0x670), *(float *)(gb + 0x674)));
+                working[1] = angle * func_001F9D48(gb + 0x80, direction) * 0.5f;
+                working[2] = 0.0f;
+                func_001F9BD8(desired, working, gb + 0x80);
+                *(VecQuad *)direction = *(VecQuad *)desired;
+            }
+            total = D_0015EE70 * 11.0f;
+            rp = result;
+            if (*(int *)(D_0013A5E0 + 0x2600) & 5) {
+                e = (char *)&D_E910;
+                height = func_001FA888(*(unsigned char *)(e + 0xa)) * 2.5f + 8.5f;
+            } else {
+                height = 8.5f;
+            }
+            func_L00_002C3790(pos, direction, rp, total, 0.00001f, height);
+            func_001F9C30(result, result, 0.65f);
+            func_001F9C30(v, v, 0.35f);
+            func_001F9BD8(working, v, result);
+            *(VecQuad *)v = *(VecQuad *)working;
+        }
+    }
+    mp = moby + 0x10;
+    *(short *)((char *)v + 0x54) = func_001F9850(300);
+    qcopy(mp, pos);
+    gc = (char *)&D_G910;
+    *(VecQuad *)difference = *(VecQuad *)(*(char **)(gc + 0x2080) + 0x10);
+    difference[2] = pos[2];
+    if (func_L00_001EFFF0(difference, pos, 0, *(int *)(gc + 0x2080), 0) != 0) {
+        moby[0xbc] = 1;
+        qcopy(mp, D_L00_00173F60);
+    }
+    ge = (char *)&D_E910;
+    if (*(unsigned char *)(ge + 0xa) != 0 && *(int *)(gc + 0x2084) == 1) {
+        float z = v[2];
+        func_001F9C30(v, v, 1.5f);
+        v[2] = z / 1.5f;
+    }
+}
 typedef struct { float f[4]; } __attribute__((aligned(16))) V_AE6B0;
 typedef struct {
     V_AE6B0 vel;

@@ -1,17 +1,19 @@
 /* NON_MATCHING func_L02_002FCE00 -- src/overlays/shared/vendor_002A5218.c
- * Best so far: SIZE ours 2236 / retail 2244, checked 2026-10-09.
+ * Best so far: SIZE ours 2236 / retail 2244, checked 2026-10-19.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
+ * Lead note 2026-10-19: the 8 missing bytes are the first block's base/id copies (lw a0 + daddu a1,a0; daddu a3).
+ *   Only a second extern alias of D_L02_00160058 (build-sn opus/p9) keeps cse1 from merging the first block into
+ *   the loop, which cannot land; a base local in the loop merges it (2208). Natural form still unknown.
  * What the last attempts found:
- *   while (e->state < 0) { if ((short)id < 0) goto fail; p++; id = *p; e = ...; } ent = e;` -- rotated, no
- *   cross-jump, m in $s4 as retail. Missing: the two copies of the first block (`daddu $a3,$v1` id, `daddu $a1,$a0
- *   base) and the bottom's andi on the load register.
- *   - w3 (66 lines): block-local `unsigned int v = *p; e = ...(v & 0x7FFF)...; id = v;` gives retail's bottom exac
- *   (lhu v0 / andi v1,v0 / daddu id,v0) but the first block is then identical and cross-jumped again.
- *   - Retail's first block needs: base loaded into the register e takes, the loop's base a copy made before the ad
- *   No plain-C form found that keeps that copy (cse2 makes the add use the copy whenever the copy precedes it).
- *   - Unchanged from e7: s18/s19/s21/flag allocation, the ticks join order, the fail block placement.
- *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
+ *   p2 decl reorder no effect; p3 drop t: worse; p4 tm: no change; p5 separate 'hit' var for post-speed s18 flag: 
+ *   p6 decl swap no change; p7 (v/id copies+base var) restructured loop worse (2220); p8 base var: cse collapses c
+ *   p10 loop uses array index: same; p11 alias+v: worse; p12 for(;;)break: size 2208; p13 v/id copies no alias: cr
+ *   p16 id int: loop merged 2208; p17-19 ++count: fixes sext but s18/s19 reg flip; p20/21 t=(unsigned short)count+
+ *   p23-p31: count block variants. `s->count = s->count + 1; if (s->count >= s19)` reproduces retail's count block
+ *   Best: p9.c = BYTES 70/2244 (needs a second extern alias of D_L02_00160058 for the first block, which stops cse
+ *   Fail block placement fixed in p1+ (gotos put fail between zoom 3.36 and zoom 8.0 paths).
+ *   Round 2 (from p5, no alias): p32 e=base;e+=off, p33 base+idx both blocks, p41 base local inside if/do-while: a
  */
 typedef struct {
     float speed;
@@ -76,7 +78,7 @@ void func_L02_002FCE00_r(Moby_2FCE00 *m) {
     Cam_2FCE00 *s;
     Ent_2FCE00 *ent;
     float v[3];
-    int s16, s18, s19, s21, flag, t, arg;
+    int s16, s18, s19, s21, flag, t, arg, hit;
     float k, speed;
 
     s = D_L02_0015F050_2FCE00[m->spot].cam;
@@ -89,14 +91,16 @@ void func_L02_002FCE00_r(Moby_2FCE00 *m) {
         unsigned short *p = D_L02_001AC140_2FCE00[s->list];
         Ent_2FCE00 *e;
         unsigned short id;
+        unsigned int v;
         if (p == 0) goto fail;
         id = *p;
         e = (Ent_2FCE00 *)((char *)D_L02_00160058_2FCE00 + ((*p & 0x7FFF) << 8));
         while (e->state < 0) {
             if ((short)id < 0) goto fail;
             p++;
-            id = *p;
-            e = (Ent_2FCE00 *)((char *)D_L02_00160058_2FCE00 + ((*p & 0x7FFF) << 8));
+            v = *p;
+            e = (Ent_2FCE00 *)((char *)D_L02_00160058_2FCE00 + ((v & 0x7FFF) << 8));
+            id = v;
         }
         ent = e;
     } else {
@@ -210,12 +214,12 @@ void func_L02_002FCE00_r(Moby_2FCE00 *m) {
     }
     {
         float f = fixed_2FCE00(s18);
-        s18 = 0;
+        hit = 0;
         speed = s->speed * k * 0.017453292f * ((float)s->timer / f);
     }
     if (flag) {
         if (can_see_2FCE00(m, s->range_a, s->range_b) != 0) {
-            s18 = 1;
+            hit = 1;
             if ((unsigned short)(s->mode - 4) < 2) {
                 v[0] = sine_2FCE00(s->heading);
                 v[1] = cosine_2FCE00(s->heading);
@@ -270,18 +274,19 @@ void func_L02_002FCE00_r(Moby_2FCE00 *m) {
         float f;
         subtract_2FCE00(v, ent->pos, D_0013E633_2FCE00 + 0xE9D);
         f = angle_2FCE00(v[0], v[1]);
-        if (s18 != 0 && 1.9198622f < angle_delta_2FCE00(f, s->heading)) {
-            if (s->shake != 0.0f) {
-                zoom_2FCE00(0, s->shake + 3.36f, z);
-            } else {
-                zoom_2FCE00(0, 8.0f, z);
-            }
+        if (hit != 0 && 1.9198622f < angle_delta_2FCE00(f, s->heading)) {
+            if (s->shake == 0.0f) goto eight;
+            zoom_2FCE00(0, s->shake + 3.36f, z);
+            goto end;
+fail:
+            s->timer = -1;
+            release_2FCE00(m);
+            return;
+eight:
+            zoom_2FCE00(0, 8.0f, z);
         }
     }
     }
+end:
     sound_2FCE00(0xB0);
-    return;
-fail:
-    s->timer = -1;
-    release_2FCE00(m);
 }

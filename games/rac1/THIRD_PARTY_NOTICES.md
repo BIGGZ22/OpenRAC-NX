@@ -197,6 +197,7 @@ The following functions adapt source from
 - `src/overlays/shared/mobyutil_00258BC8.c`: `func_L00_0025BBA0` (splits a vector into an angle and two scales)
 - `src/overlays/shared/vendor_002EB0D8.c`: `func_L00_002EC860` (sets a moby's damping and scale constants, then re-runs its setup)
 - `src/overlays/shared/help_00203E98.c`: `func_L00_0020A8B8` (tests a segment against the world and returns the hit distance)
+- `src/overlays/l14_oltanis/vendor_002FF358.c`: `func_L14_00316E60` (starts the vendor camera: measures its three paths and aims it at the hero; Lombyte's `src/overlays/l14/gameplay/entities/morphoray.c`, `FUN_L14_003159d8`, with PAL symbols and the file's `MACRO_ADDR` declarations)
 
 The next 114 were carried over by machine (OpenRAC's `tools/port.py`, 2026-10-04): the PAL code is
 the same instructions as the US code Lombyte matched, the C is Lombyte's with every symbol renamed

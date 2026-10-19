@@ -172,21 +172,21 @@ int IsPointInVolume(Vec4 *pt, int *vol, float rad) {
     }
     return 0;
 }
-INCLUDE_ASM("asm/overlays", func_L00_001EEBD8);
-INCLUDE_ASM("asm/overlays", func_L00_001EF944);
-INCLUDE_ASM("asm/overlays", func_L00_001EFF50);
+ASM_FUNC("asm/overlays", func_L00_001EEBD8);
+ASM_FUNC("asm/overlays", func_L00_001EF944);
+ASM_FUNC("asm/overlays", func_L00_001EFF50);
 INCLUDE_ASM("asm/overlays", func_L00_001EFFE8);
-INCLUDE_ASM("asm/overlays", func_L00_001EFFF0);
+ASM_FUNC("asm/overlays", func_L00_001EFFF0);
 INCLUDE_ASM("asm/overlays", func_L00_001F07A8);
 INCLUDE_ASM("asm/overlays", func_L00_001F07AC);
-INCLUDE_ASM("asm/overlays", func_L00_001F080C);
+ASM_FUNC("asm/overlays", func_L00_001F080C);
 INCLUDE_ASM("asm/overlays", func_L00_001F10B0);
-INCLUDE_ASM("asm/overlays", func_L00_001F10E0);
-INCLUDE_ASM("asm/overlays", func_L00_001F1D20);
-INCLUDE_ASM("asm/overlays", func_L00_001F2BE8);
+ASM_FUNC("asm/overlays", func_L00_001F10E0);
+ASM_FUNC("asm/overlays", func_L00_001F1D20);
+ASM_FUNC("asm/overlays", func_L00_001F2BE8);
 INCLUDE_ASM("asm/overlays", func_L00_001F34B0);
-INCLUDE_ASM("asm/overlays", func_L00_001F34F0);
-INCLUDE_ASM("asm/overlays", func_L00_001F3958);
-INCLUDE_ASM("asm/overlays", func_L00_001F3980);
-INCLUDE_ASM("asm/overlays", func_L00_001F3988);
+ASM_FUNC("asm/overlays", func_L00_001F34F0);
+ASM_FUNC("asm/overlays", func_L00_001F3958);
+ASM_FUNC("asm/overlays", func_L00_001F3980);
+ASM_FUNC("asm/overlays", func_L00_001F3988);
 INCLUDE_ASM("asm/overlays", func_L00_001F39B0);

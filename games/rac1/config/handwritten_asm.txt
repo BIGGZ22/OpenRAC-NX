@@ -277,3 +277,10 @@ text/func_001F9850
 text/func_001F9840
 text/func_001F98B0
 core_text/func_001151B4
+text/func_001F9B50
+text/func_001F9F90
+text/func_001F9FA8
+text/func_001F9FC0
+text/func_001FA898
+core_text/func_00125380
+text/func_001F7DD8

@@ -1292,7 +1292,50 @@ void Moby1108Update(unsigned char *m) {
         return;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L06_00303858);
+extern int D_0015EE88 MACRO_ADDR;
+extern char D_0014171B[];
+extern short D_L06_00162148;
+extern int D_L06_0016214C MACRO_ADDR;
+extern int D_L06_00162150 MACRO_ADDR;
+extern int func_002140B0(int);
+
+typedef struct { char pad0[0x38]; int a[6]; int b[6]; int c[3][6]; } Pick;
+// picks an id for the moby by mode from its data block and stores it offset by 20000
+void func_L06_00303858(char *moby, int mode) {
+    int n = D_0015EE88;
+    Pick *data;
+    int id;
+    int r;
+    int i;
+    if (n != 0) n = n - 1;
+    data = *(Pick **)(moby + 0x78);
+    id = -1;
+    switch (mode) {
+    case 0:
+        id = data->a[n];
+        break;
+    case 1:
+        r = func_002140B0(3);
+        for (i = 0; i < 4; i++) {
+            if (((int *)&D_L06_00162148)[r] == 0) {
+                ((int *)&D_L06_00162148)[r] = 1;
+                break;
+            }
+            r = (r + 1) % 3;
+            if (i == 2) {
+                *(int *)&D_L06_00162148 = 0;
+                D_L06_0016214C = 0;
+                D_L06_00162150 = 0;
+            }
+        }
+        id = data->c[r][n];
+        break;
+    case 2:
+        id = data->b[n];
+        break;
+    }
+    if (id != -1) *(int *)(D_0014171B + 0x100D1) = id + 0x4E20;
+}
 typedef int u128_3039B8 __attribute__((mode(TI)));
 typedef struct {
     char pad0[0x24];

@@ -1,17 +1,16 @@
 /* NON_MATCHING func_L00_002C12B0 -- src/overlays/shared/vendor_002C12B0.c
- * Best so far: BYTES 12/5996 (99.8% of the bytes match), checked 2026-10-09.
+ * Best so far: BYTES 12/5996 (99.8% of the bytes match), checked 2026-10-19.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
  * What the last attempts found:
- *   `$4=$21` of the following func_L00_002BFED0 call (REG_DEP_OUTPUT 3234 on insn 3249). Retail's order needs that
- *   ranked last. With the block ending after the spring call (w7a: spring written in both cases, label before
- *   func_L00_002BFED0) f12 comes first as in retail, but a0 still precedes a1 and cross-jumping does not merge the
- *   (SIZE). Tried without effect: direction nested in the call or as a local, `hero` declared first, a pointer loc
- *   `&data->turn_velocity`, the other prototype order (float before the pointer).
- *   Not in alias form. Declarations to look at when landing: all private (suffix 44); `gravity44` must stay the fi
- *   declaration of D_0015EE70 in the file.
- *   Final check against the destination file as of 2026-10-09 15:30 (others had landed into these files): run 2, B
- *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
+ *   f12,f15,a0,f13,a1,f14: only the a0/a1 swap is left, but then the two arms are not cross-jumped (SIZE 6096/5996
+ *   cross-jump does not run on identical post-reload tails here).
+ *   - No effect (same 12 bytes): temps for k/d/m in all 6 orders (w10-15), reversed prototype order (w5), directio
+ *   (SIZE), a pointer local for &turn_velocity (x1, w22), &data->target for BFED0 (x2), hero first (x4: worse),
+ *   int return types for spring44 / BFED0 (y1-y3). BFED0 arg as moby->data (w4) gives a0,f15,a1,f13,f12 + an lw.
+ *   - sched1 orders the arg moves f12,a0,a1 (emission order); retail needs a1 before a0 AND no WAW boost on a0.
+ *   Remaining: the 3-word order difference. Needs a source shape where BFED0's `$4=$21` is not in the same sched2 
+ *   as spring's `$4=$20` yet the arms still merge, and a1 is emitted before a0.
  */
 #include "common.h"
 typedef union { float f[4]; struct { float x,y,z,w; } v; unsigned int q __attribute__((mode(TI))); } V44;
@@ -67,7 +66,7 @@ extern char D_L00_00178000[],D_L00_001E9EC8[],D_L00_001E9EF0[];
 extern int pause44 SDATA(D_L00_0015F6A8);
 extern float D_0015EE60 MACRO_ADDR;
 extern float gravity44 __asm__("D_0015EE70") MACRO_ADDR;
-extern void *func_L00_0025B478(void*,int,int);
+extern void *try44(void*,int,int) __asm__("func_L00_0025B478");
 extern float func_001FA888(int),func_001F9B88(float),func_001F9F90(float),func_001F9FA8(float);
 extern float func_001F9D10(void*,void*),func_001F9D48(void*,void*),func_001F9CB8(void*);
 extern float func_L00_001FF860(float,float),func_001FA850(float,float),func_002140F8(float,float);
@@ -117,7 +116,7 @@ void func_L00_002C12B0(M44 *moby) {
     if (moby->position.v.x<2.0f || moby->position.v.x>1021.0f ||
         moby->position.v.y<2.0f || moby->position.v.y>1021.0f ||
         moby->position.v.z<2.0f || moby->position.v.z>1021.0f) { delete44(moby); return; }
-    if (func_L00_0025B478(moby,0x800001,0)) moby->state=11;
+    if (try44(moby,0x800001,0)) moby->state=11;
     { Order44 *order=(Order44*)order_bytes44;
     scale=func_001FA888(order->gold)+1.0f;
     moby->scale += (moby->cls->base_scale*scale-moby->scale)*0.05f;

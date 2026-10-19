@@ -4,17 +4,331 @@
 #include "pad.h"
 #include "vector.h"
 
-INCLUDE_ASM("asm/overlays", func_L00_00277208);
+typedef unsigned int Q_277208 __attribute__((mode(TI), aligned(16)));
+
+typedef struct {
+    unsigned char pad0[0x10];
+    unsigned char b10;
+} AnimInfo_277208;
+typedef struct {
+    unsigned char pad0[0x48];
+    AnimInfo_277208 *anims[1];
+} Class_277208;
+typedef struct {
+    unsigned char pad0[0x10];
+    float x, y, z;
+    unsigned char pad1C[0x24 - 0x1C];
+    Class_277208 *cls;
+    unsigned char pad28[0x34 - 0x28];
+    unsigned short flags;
+    unsigned char pad36[0x40 - 0x36];
+    int r40, r44, r48;
+    unsigned char pad4C[0x74 - 0x4C];
+    void *update;
+} Moby_277208;
+typedef struct {
+    int state;
+    int *page;
+    int *next;
+    int unkC;
+    int unk10;
+    int unk14;
+    int unk18;
+    unsigned char pad1C[0x30 - 0x1C];
+    int unk30[4];
+    Q_277208 v40;
+    Q_277208 v50;
+    unsigned char pad60[0xCC - 0x60];
+    int unkCC;
+    int unkD0;
+    unsigned char padD4[0xE4 - 0xD4];
+    int unkE4;
+    float unkE8;
+    unsigned char padEC[0xF0 - 0xEC];
+    int *queued;
+    int queuedState;
+    unsigned char padF8[0xFC - 0xF8];
+    int unkFC;
+    int unk100;
+    int unk104;
+    int unk108;
+    int unk10C;
+    unsigned char pad110[0x124 - 0x110];
+    int unk124;
+    unsigned char pad128[0x130 - 0x128];
+    int unk130;
+} Menu_277208;
+typedef struct {
+    unsigned char pad0[4];
+    int f4;
+    int f8;
+} Vram_277208;
+typedef struct {
+    unsigned char padA[0xB0];
+    float fB0;
+    unsigned char padB[0x218 - 0xB4];
+    int i218;
+    float f21C;
+    unsigned char padC[0x228 - 0x220];
+    float f228;
+    int i22C;
+} Cam_277208;
+typedef struct {
+    unsigned char pad0[0xC];
+    unsigned char bC;
+} Cnt_277208;
+
+typedef struct {
+    unsigned char pad0[0x224];
+    int unk224;
+    unsigned char pad228[0x240 - 0x228];
+    int unk240;
+    int unk244;
+    int bufs[4];
+} Snd_277208;
+
+extern char D_L00_001BA070[] NOT_SDA;
+extern int D_L00_00173F40[];
+extern int D_L00_001B3898[];
+extern int D_L00_001B6408[];
+extern struct Own D_L00_001B7570;
+extern int D_L00_001B6EB8[];
+extern int D_L00_001B8A48[];
+extern int D_L00_001B2908[];
+extern int D_L00_0015F68C MACRO_ADDR;
+extern int D_0015EFD8 MACRO_ADDR;
+extern char D_L00_001842F0[];
+extern Q_277208 D_L00_00180350[];
+extern short D_L00_00160340;
+extern short D_L00_00160350;
+extern float D_L00_00166EC0[];
+extern char D_L00_0016CB40[];
+extern int D_L00_0015F4F8 MACRO_ADDR;
+extern Vram_277208 D_L00_00173F00;
+extern int D_L00_0016128C MACRO_ADDR;
+extern short D_L00_0015F658;
+extern int D_0013E15A[];
+extern int D_0015EF84 MACRO_ADDR;
+extern int D_0015EF78 MACRO_ADDR;
+extern char *D_L00_00197680[] NOT_SDA;
+extern unsigned char D_0014171B NOT_SDA;
+extern struct HEnt *D_L00_001BA220[];
+extern char D_L00_00166D80[];
+
+extern void func_0020C7A0(void);
+extern void func_001F9C30(void *, void *, float);
+extern void func_001F3140(void);
+extern void func_00219C08(void);
+extern void func_001F2608(void);
+extern void func_00234AC8(int);
+extern int func_00122598(int);
+extern void func_00226D50(int);
+extern void func_002348E8(void);
+extern void func_L00_002472D0(void);
+extern void func_L00_00235CA0(int);
+extern void func_L00_00235960(int);
+extern void func_L00_002A21A8(int, int, int);
+extern void func_L00_00235FF8(int);
+extern Moby_277208 *func_00226720(int);
+extern void func_00213D28(void *, int, int);
+extern void func_L00_002E0AE8(void);
+
+void func_L00_00277208(void) {
+    Menu_277208 *m = &(*(Menu_277208 *)D_L00_001BA070);
+    int *page;
+    int queued = 0;
+    int s, i, j, n, k, t, u;
+    int *p;
+
+    D_L00_00173F40[4] |= 0x80000000;
+    s = m->state;
+    m->unk124 = 0;
+    m->unkD0 = 0;
+    if (s == 10) {
+        (*(Menu_277208 *)D_L00_001BA070).state = 11;
+        page = D_L00_001B3898;
+        m->page = page;
+        m->next = page;
+        queued = 1;
+    } else if (s == 14) {
+        (*(Menu_277208 *)D_L00_001BA070).state = 15;
+        page = D_L00_001B6408;
+        m->page = page;
+        m->next = page;
+        queued = 1;
+    } else if (s == 0x21) {
+        (*(Menu_277208 *)D_L00_001BA070).state = 0x22;
+        page = (int *)&D_L00_001B7570;
+        m->page = page;
+        m->next = page;
+        m->unk124 = 1;
+        D_L00_0015F68C = 1;
+    } else if (s == 0x23) {
+        page = D_L00_001B6EB8;
+        m->page = page;
+        m->next = page;
+    } else if (s == 0x2D) {
+        page = D_L00_001B8A48;
+        (*(Menu_277208 *)D_L00_001BA070).state = 2;
+        m->page = page;
+        m->next = page;
+    } else {
+        page = D_L00_001B2908;
+        (*(Menu_277208 *)D_L00_001BA070).state = 2;
+        m->page = page;
+        m->next = page;
+    }
+
+    if ((*(Menu_277208 *)D_L00_001BA070).queued != 0) {
+        int st;
+        D_0015EFD8 = (*(Menu_277208 *)D_L00_001BA070).unk130;
+        (*(Menu_277208 *)D_L00_001BA070).page = (*(Menu_277208 *)D_L00_001BA070).queued;
+        (*(Menu_277208 *)D_L00_001BA070).next = (*(Menu_277208 *)D_L00_001BA070).queued;
+        st = (*(Menu_277208 *)D_L00_001BA070).queuedState;
+        (*(Menu_277208 *)D_L00_001BA070).state = st;
+        if (st == 11 || st == 15) {
+            queued = 1;
+            (*(Snd_277208 *)D_L00_001842F0).unk224 = (*(Menu_277208 *)D_L00_001BA070).unkE4;
+            func_0020C7A0();
+        }
+        (*(Menu_277208 *)D_L00_001BA070).queued = 0;
+        (*(Menu_277208 *)D_L00_001BA070).queuedState = 0;
+    }
+
+    {
+        char *r = (char *)D_L00_00180350;
+        func_001F9C30(r, &D_L00_00160340, 1.0f);
+        qcopy(r - 0x10, &D_L00_00160350);
+        r += 0x20;
+        qzero(r);
+    }
+    qzero((char *)D_L00_00180350 + 0x10);
+    qcopy(&(*(Menu_277208 *)D_L00_001BA070).v40, &D_L00_00166EC0[0]);
+    qcopy(&(*(Menu_277208 *)D_L00_001BA070).v50, &D_L00_00166EC0[4]);
+    {
+        float zfar = 524288.0f;
+        float fog = 255.0f;
+        float scale = 0.63f;
+        (*(Menu_277208 *)D_L00_001BA070).unkE8 = ((Cam_277208 *)D_L00_0016CB40)->fB0;
+        ((Cam_277208 *)D_L00_0016CB40)->fB0 = scale;
+        ((Cam_277208 *)D_L00_0016CB40)->f21C = zfar;
+        ((Cam_277208 *)D_L00_0016CB40)->f228 = fog;
+        ((Cam_277208 *)D_L00_0016CB40)->i22C = 0;
+        ((Cam_277208 *)D_L00_0016CB40)->i218 = 0;
+    }
+    func_001F3140();
+    func_00219C08();
+    func_001F2608();
+    func_00234AC8(1);
+    func_00122598(0);
+    D_L00_0015F4F8 = D_L00_0015F4F8 + 1;
+
+    if (queued) {
+        int a, b, c, d;
+        a = D_L00_00173F00.f4 + 0x30000;
+        b = D_L00_00173F00.f8 + 0x30000;
+        c = a + 0x3C000;
+        d = b + 0xE0000;
+        (*(Menu_277208 *)D_L00_001BA070).unkFC = c + 0x11800;
+        D_L00_0016128C = 0x30000;
+        (*(Menu_277208 *)D_L00_001BA070).unk104 = a;
+        (*(Menu_277208 *)D_L00_001BA070).unk10 = b;
+        (*(Menu_277208 *)D_L00_001BA070).unk108 = c;
+        (*(Menu_277208 *)D_L00_001BA070).unk10C = d;
+        (*(Menu_277208 *)D_L00_001BA070).unk100 = d;
+        func_00226D50(0);
+    } else {
+        int a, b, c, d, e, f;
+        a = D_L00_00173F00.f4 + 0x60000;
+        b = D_L00_00173F00.f8 + 0x60000;
+        b = b + 0xC000;
+        a = a + 0xC000;
+        c = a + 0x30000;
+        d = b + 0xE0000;
+        e = c + 0xC1000;
+        f = d + 0x11800;
+        (*(Menu_277208 *)D_L00_001BA070).unkFC = e;
+        D_L00_0016128C = 0x60000;
+        (*(Menu_277208 *)D_L00_001BA070).unk104 = a;
+        (*(Menu_277208 *)D_L00_001BA070).unk10 = b;
+        (*(Menu_277208 *)D_L00_001BA070).unk108 = c;
+        (*(Menu_277208 *)D_L00_001BA070).unk10C = d;
+        (*(Menu_277208 *)D_L00_001BA070).unk100 = f;
+        func_00226D50(1);
+    }
+    *(int *)&D_L00_0015F658 = 0x2000;
+    func_002348E8();
+
+    if ((*(Menu_277208 *)D_L00_001BA070).state == 11 || (*(Menu_277208 *)D_L00_001BA070).state == 15) {
+        func_L00_002472D0();
+    }
+    func_L00_00235CA0(0);
+    if ((*(Menu_277208 *)D_L00_001BA070).state == 11 || (*(Menu_277208 *)D_L00_001BA070).state == 15 || (*(Menu_277208 *)D_L00_001BA070).state == 0x12) {
+        func_L00_00235960(1);
+    } else {
+        func_L00_00235960(0);
+    }
+    func_L00_002A21A8((*(Menu_277208 *)D_L00_001BA070).unk10, D_0015EF84, *(int *)((char *)D_0013E15A + 0x4AA) << 11);
+    t = D_0015EF78;
+    (*(Menu_277208 *)D_L00_001BA070).unk18 = t;
+    if ((*(Menu_277208 *)D_L00_001BA070).state == 11 || (*(Menu_277208 *)D_L00_001BA070).state == 15) {
+        (*(Snd_277208 *)D_L00_001842F0).unk240 = t;
+        u = t + 0x40000;
+        (*(Snd_277208 *)D_L00_001842F0).unk244 = u;
+        D_0015EF78 = u + 0x400;
+        for (j = 0; j < 4; j++) {
+            int v = D_0015EF78;
+            (*(Snd_277208 *)D_L00_001842F0).bufs[j] = v;
+            D_0015EF78 = v + 0x4000;
+        }
+    } else {
+        int z;
+        (*(Snd_277208 *)D_L00_001842F0).unk240 = 0;
+        (*(Snd_277208 *)D_L00_001842F0).unk244 = 0;
+        p = &(*(Snd_277208 *)D_L00_001842F0).bufs[3];
+        for (z = 0; z < 4; z++) {
+            *p = 0;
+            p--;
+        }
+    }
+    func_L00_00235FF8(1);
+    (*(Menu_277208 *)D_L00_001BA070).unkCC = ((Cnt_277208 *)D_L00_00197680[0])->bC;
+    ((Cnt_277208 *)D_L00_00197680[0])->bC += 0x1C;
+    for (n = 0; n < 4; n++) {
+        (*(Menu_277208 *)D_L00_001BA070).unk30[n] = ((int *)(&D_0014171B + 0x45))[n];
+    }
+
+    if ((*(Menu_277208 *)D_L00_001BA070).page != 0) {
+        for (i = 0; i < 14; i++) {
+            Moby_277208 *o = func_00226720(0x472);
+            ((Moby_277208 **)D_L00_001BA220)[i] = o;
+            if (o != 0) {
+                char *mtx;
+                o->flags &= 0xFFFD;
+                ((Moby_277208 **)D_L00_001BA220)[i]->update = (void *)func_L00_002E0AE8;
+                mtx = D_L00_00166D80;
+                ((Moby_277208 **)D_L00_001BA220)[i]->x = *(float *)(mtx + 0x140);
+                ((Moby_277208 **)D_L00_001BA220)[i]->y = *(float *)(mtx + 0x144);
+                ((Moby_277208 **)D_L00_001BA220)[i]->z = *(float *)(mtx + 0x148);
+                ((Moby_277208 **)D_L00_001BA220)[i]->r40 = 0;
+                ((Moby_277208 **)D_L00_001BA220)[i]->r44 = 0;
+                ((Moby_277208 **)D_L00_001BA220)[i]->r48 = 0;
+                k = ((struct { int ids[14]; } *)(*(Menu_277208 *)D_L00_001BA070).page)->ids[i];
+                func_00213D28(((Moby_277208 **)D_L00_001BA220)[i], k, ((Moby_277208 **)D_L00_001BA220)[i]->cls->anims[k]->b10 - 1);
+            }
+        }
+    }
+}
 extern char D_L00_001BA070[] NOT_SDA;
 extern int D_L00_0015F6BC MACRO_ADDR;
 extern unsigned char D_0014171B NOT_SDA;
 extern unsigned char D_0013E633 NOT_SDA;
 extern int D_0015EE98 MACRO_ADDR;
-extern short D_0015EF78;
+extern int D_0015EF78 MACRO_ADDR;
 extern struct HEnt *D_L00_001BA220[];
 extern char *D_L00_00197680[] NOT_SDA;
 extern unsigned char D_L00_0017E5D8[];
-extern unsigned char D_L00_00173F40[];
+extern int D_L00_00173F40[];
 extern void func_00234AC8(int);
 extern void func_002348E8(void);
 extern void func_001FF958(int, int, int);

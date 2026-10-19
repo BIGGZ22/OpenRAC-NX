@@ -2,10 +2,10 @@
 #include "common.h"
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/overlays", func_L00_0024E798);
+ASM_FUNC("asm/overlays", func_L00_0024E798);
 void func_L00_0024E8FC(void) {
     __asm__ volatile ("nop");
     __asm__ volatile ("nop");
 }
 INCLUDE_ASM("asm/overlays", func_L00_0024EBF8);
-INCLUDE_ASM("asm/overlays", func_L00_0024EC20);
+ASM_FUNC("asm/overlays", func_L00_0024EC20);

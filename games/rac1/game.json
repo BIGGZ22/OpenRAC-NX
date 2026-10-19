@@ -42,7 +42,7 @@
           "tools/extract",
           "docs/GDSCRIPT_CONVENTIONS.md"
         ],
-        "commit": "a6b285da1beb0e3b0825bff132584ab2e786a41f",
+        "commit": "801437f45d25bfe25c7f91b89ab7e7df2887d608",
         "date": "2026-10-19",
         "imported": "2026-10-19"
       },
@@ -176,7 +176,7 @@
         "checkout": "~/Projects/rac1-decomp-ntsc",
         "license": "MIT (GPL-2.0 and newlib parts)",
         "exclude": [],
-        "commit": "60233883ec9563440a5029f8882b42741d0846e4",
+        "commit": "6c47562761736ebf8d65801b27278504d70b4dd0",
         "date": "2026-10-19",
         "imported": "2026-10-19"
       },

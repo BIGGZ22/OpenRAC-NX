@@ -2,11 +2,11 @@
 #include "common.h"
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/overlays", func_L00_001FD1D8);
+ASM_FUNC("asm/overlays", func_L00_001FD1D8);
 INCLUDE_ASM("asm/overlays", func_L00_001FD428);
 INCLUDE_ASM("asm/overlays", func_L00_001FD6A8);
-INCLUDE_ASM("asm/overlays", func_L00_001FDE48);
-INCLUDE_ASM("asm/overlays", func_L00_001FE688);
+ASM_FUNC("asm/overlays", func_L00_001FDE48);
+ASM_FUNC("asm/overlays", func_L00_001FE688);
 typedef unsigned int u128_pt __attribute__((mode(TI)));
 extern char D_L00_0016EB40_001fe990[] __asm__("D_L00_0016EB40");
 float func_00214158_001fe990() __asm__("func_00214158");

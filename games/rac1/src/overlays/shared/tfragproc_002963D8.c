@@ -2,5 +2,5 @@
 #include "common.h"
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/overlays", func_L00_002963D8);
+ASM_FUNC("asm/overlays", func_L00_002963D8);
 INCLUDE_ASM("asm/overlays", func_L00_00296620);

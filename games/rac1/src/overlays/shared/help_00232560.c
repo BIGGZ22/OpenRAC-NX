@@ -827,6 +827,7 @@ void LocalToWorldPoint(float *out, float x, float y, float z) {
 // Wrapper that negates float argument
 void func_L00_00233D50(float *dst, float *src, float h);
 
+/* Moves SRC up by H along the hero's surface normal into DST: HeroMoveDownAlongNormal with the distance negated. */
 void HeroMoveUpAlongNormal(float *dst, float *src, float h) {
     HeroMoveDownAlongNormal(dst, src, -h);
 }
@@ -1082,6 +1083,8 @@ int TakeAmmo(int id, int amount) {
     return 1;
 }
 INCLUDE_ASM("asm/overlays", func_L00_00234674);
+/* Adds B rounds to weapon A's ammo (D_0013D530[a]), clamped to the weapon's capacity (D_L00_001C43B0[a].max):
+   returns the overflow that did not fit, 0 when it all fit or the weapon has no ammo limit. */
 int AddAmmo(int a, int b) {
     int *p = &D_0013D530[a];
     unsigned short *q = (unsigned short *)((char *)D_L00_001C43B0 + a * 0x18);
@@ -1172,46 +1175,6 @@ extern float func_L00_001FF860_234800(float, float) __asm__("func_L00_001FF860")
 extern float func_001FA790_234800(float, float) __asm__("func_001FA790");
 
 typedef struct {
-    float x, y, z, w;
-} __attribute__((aligned(16))) Vec_234800_34800;
-typedef struct Hero_234800_34800 {
-    char p0[0x80];
-    Vec_234800_34800 pos;
-    Vec_234800_34800 v90;
-    char pA0[0x5C];
-    float fFC;
-    char p100[0x50];
-    Vec_234800_34800 v150;
-    char p160[0x24];
-    float f184;
-    char p188[0x6E];
-    short h1F6;
-    char p1F8[0x104];
-    void *p2FC;
-    char p300[0xE];
-    short h30E;
-    Vec_234800_34800 v310;
-    Vec_234800_34800 v320;
-    Vec_234800_34800 v330;
-    char p340[0x10];
-    Vec_234800_34800 v350;
-    void *p360;
-    int i364;
-    char p368[0x168];
-    Vec_234800_34800 v4D0;
-    char p4E0[0x4];
-    float f4E4;
-    char p4E8[0x10];
-    void *p4F8;
-    char p4FC[0x1B84];
-    int i2080;
-    int i2084;
-    char p2088[0x4];
-    int i208C;
-    char p2090[0x15];
-    unsigned char b20A5;
-} Hero_234800_34800;
-typedef struct {
     char p0[0x3C];
     int i3C;
 } Plat_234800_34800;
@@ -1230,7 +1193,7 @@ extern f32 D_0015EE70 MACRO_ADDR;
 /* The hero on a moving platform: finds the platform the hero stands on or hangs from, tracks the platform's motion between frames (its attach points at 0x310-0x330) and carries the hero (position, facing, ledge-grab point) with it.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/hero/set_hero_animation.c, FUN_L00_00233f80. */
 void HeroRideMovingPlatform(void) {
-    Vec_234800_34800 v0, v10, v20, v30, v40, v50, v60, v70, v80, v90, vA0;
+    Vec4A v0, v10, v20, v30, v40, v50, v60, v70, v80, v90, vA0;
     float sB0, sB4;
     float amt, ang;
     int mode;
@@ -1238,143 +1201,143 @@ void HeroRideMovingPlatform(void) {
 
     mode = 0;
     amt = 0.0f;
-    ang = ((Hero_234800_34800 *)D_0013F450)->v90.z;
-    if (((Hero_234800_34800 *)D_0013F450)->h30E == 0) {
-        if (((Hero_234800_34800 *)D_0013F450)->p2FC != 0) {
+    ang = ((Hero *)D_0013F450)->motion.rot.f[2];
+    if (((Hero *)D_0013F450)->air_frames.s == 0) {
+        if (((Hero *)D_0013F450)->ground_moby != 0) {
             mode = 1;
-            if (((Hero_234800_34800 *)D_0013F450)->p360 != ((Hero_234800_34800 *)D_0013F450)->p2FC) {
-                ((Hero_234800_34800 *)D_0013F450)->i364 &= ~1;
+            if (((Hero *)D_0013F450)->unk360 != ((Hero *)D_0013F450)->ground_moby) {
+                ((Hero *)D_0013F450)->unk364 &= ~1;
             }
-            ((Hero_234800_34800 *)D_0013F450)->p360 = ((Hero_234800_34800 *)D_0013F450)->p2FC;
+            ((Hero *)D_0013F450)->unk360 = ((Hero *)D_0013F450)->ground_moby;
         } else {
-            ((Hero_234800_34800 *)D_0013F450)->p360 = 0;
-            ((Hero_234800_34800 *)D_0013F450)->i364 &= ~1;
-            ((Hero_234800_34800 *)D_0013F450)->i364 &= ~2;
+            ((Hero *)D_0013F450)->unk360 = 0;
+            ((Hero *)D_0013F450)->unk364 &= ~1;
+            ((Hero *)D_0013F450)->unk364 &= ~2;
         }
-    } else if (((Hero_234800_34800 *)D_0013F450)->i2084 == 0x1C && ((Hero_234800_34800 *)D_0013F450)->p4F8 != 0) {
-        ((Hero_234800_34800 *)D_0013F450)->p360 = ((Hero_234800_34800 *)D_0013F450)->p4F8;
+    } else if (((Hero *)D_0013F450)->state.current == 0x1C && ((Hero *)D_0013F450)->unk4F8 != 0) {
+        ((Hero *)D_0013F450)->unk360 = (void *)((Hero *)D_0013F450)->unk4F8;
         mode = 1;
-    } else if (((Hero_234800_34800 *)D_0013F450)->i208C == 3 && ((Hero_234800_34800 *)D_0013F450)->p4F8 != 0) {
-        ((Hero_234800_34800 *)D_0013F450)->p360 = ((Hero_234800_34800 *)D_0013F450)->p4F8;
+    } else if (((Hero *)D_0013F450)->state.control_mode == 3 && ((Hero *)D_0013F450)->unk4F8 != 0) {
+        ((Hero *)D_0013F450)->unk360 = (void *)((Hero *)D_0013F450)->unk4F8;
         mode = 1;
-    } else if (((Hero_234800_34800 *)D_0013F450)->p360 != 0) {
+    } else if (((Hero *)D_0013F450)->unk360 != 0) {
         mode = 1;
-        IntToFloat(scale_ticks(120) - ((Hero_234800_34800 *)D_0013F450)->h30E);
+        IntToFloat(scale_ticks(120) - ((Hero *)D_0013F450)->air_frames.s);
         func_001F9850_34800b(120);
-        amt = ((Hero_234800_34800 *)D_0013F450)->h30E;
+        amt = ((Hero *)D_0013F450)->air_frames.s;
     } else {
-        ((Hero_234800_34800 *)D_0013F450)->p360 = 0;
-        ((Hero_234800_34800 *)D_0013F450)->i364 &= ~1;
-        ((Hero_234800_34800 *)D_0013F450)->i364 &= ~2;
+        ((Hero *)D_0013F450)->unk360 = 0;
+        ((Hero *)D_0013F450)->unk364 &= ~1;
+        ((Hero *)D_0013F450)->unk364 &= ~2;
     }
     if (!mode) {
         return;
     }
-    plat = GetFlaggedPvarWord(((Hero_234800_34800 *)D_0013F450)->p360);
+    plat = GetFlaggedPvarWord(((Hero *)D_0013F450)->unk360);
     if (plat == 0) {
         return;
     }
-    if (((((Hero_234800_34800 *)D_0013F450)->i208C == 0 || ((Hero_234800_34800 *)D_0013F450)->i208C == 12) && FastVecLength(&((Hero_234800_34800 *)D_0013F450)->v150) == 0.0f && ((Hero_234800_34800 *)D_0013F450)->h30E == 0 && ((Hero_234800_34800 *)D_0013F450)->h1F6 == 0)
-        || (unsigned int)(((Hero_234800_34800 *)D_0013F450)->i2084 - 0x18) < 2) {
-        if ((((Hero_234800_34800 *)D_0013F450)->i364 ^ 1) & 1) {
-            if ((unsigned int)(((Hero_234800_34800 *)D_0013F450)->i2084 - 0x18) < 2) {
-                qcopy(&v20, &((Hero_234800_34800 *)D_0013F450)->v4D0);
-                v20.x += FastCos(FastAddRots(((Hero_234800_34800 *)D_0013F450)->f4E4, 3.1415925f)) * 0.45f;
-                v20.y += FastSin(FastAddRots(((Hero_234800_34800 *)D_0013F450)->f4E4, 3.1415925f)) * 0.45f;
+    if (((((Hero *)D_0013F450)->state.control_mode == 0 || ((Hero *)D_0013F450)->state.control_mode == 12) && FastVecLength(&((Hero *)D_0013F450)->motion.unk150) == 0.0f && ((Hero *)D_0013F450)->air_frames.s == 0 && ((Hero *)D_0013F450)->unk1F6 == 0)
+        || (unsigned int)(((Hero *)D_0013F450)->state.current - 0x18) < 2) {
+        if ((((Hero *)D_0013F450)->unk364 ^ 1) & 1) {
+            if ((unsigned int)(((Hero *)D_0013F450)->state.current - 0x18) < 2) {
+                qcopy(&v20, &((Hero *)D_0013F450)->unk4D0);
+                v20.x += FastCos(FastAddRots(((Hero *)D_0013F450)->unk4E4, 3.1415925f)) * 0.45f;
+                v20.y += FastSin(FastAddRots(((Hero *)D_0013F450)->unk4E4, 3.1415925f)) * 0.45f;
                 v20.z -= -1.43f;
-                RotateWithMoby(((Hero_234800_34800 *)D_0013F450)->i2080, ((Hero_234800_34800 *)D_0013F450)->p360, &((Hero_234800_34800 *)D_0013F450)->v4D0, &((Hero_234800_34800 *)D_0013F450)->v90, &v30, &v40);
-                RotateWithMoby(((Hero_234800_34800 *)D_0013F450)->i2080, ((Hero_234800_34800 *)D_0013F450)->p360, &v20, &((Hero_234800_34800 *)D_0013F450)->v90, &v20, &v40);
-                RotateIntoMobySpace(((Hero_234800_34800 *)D_0013F450)->i2080, ((Hero_234800_34800 *)D_0013F450)->p360, &((Hero_234800_34800 *)D_0013F450)->v4D0, &((Hero_234800_34800 *)D_0013F450)->v90, &((Hero_234800_34800 *)D_0013F450)->v310, &v40);
-                RotateIntoMobySpace(((Hero_234800_34800 *)D_0013F450)->i2080, ((Hero_234800_34800 *)D_0013F450)->p360, &v20, &((Hero_234800_34800 *)D_0013F450)->v90, &((Hero_234800_34800 *)D_0013F450)->v330, &v40);
+                RotateWithMoby((int)((Hero *)D_0013F450)->moby, ((Hero *)D_0013F450)->unk360, &((Hero *)D_0013F450)->unk4D0, &((Hero *)D_0013F450)->motion.rot, &v30, &v40);
+                RotateWithMoby((int)((Hero *)D_0013F450)->moby, ((Hero *)D_0013F450)->unk360, &v20, &((Hero *)D_0013F450)->motion.rot, &v20, &v40);
+                RotateIntoMobySpace((int)((Hero *)D_0013F450)->moby, ((Hero *)D_0013F450)->unk360, &((Hero *)D_0013F450)->unk4D0, &((Hero *)D_0013F450)->motion.rot, &((Hero *)D_0013F450)->unk310, &v40);
+                RotateIntoMobySpace((int)((Hero *)D_0013F450)->moby, ((Hero *)D_0013F450)->unk360, &v20, &((Hero *)D_0013F450)->motion.rot, &((Hero *)D_0013F450)->unk330, &v40);
             } else if (plat->i3C & 4) {
-                RotateIntoMobySpace(((Hero_234800_34800 *)D_0013F450)->i2080, ((Hero_234800_34800 *)D_0013F450)->p360, &((Hero_234800_34800 *)D_0013F450)->pos, &((Hero_234800_34800 *)D_0013F450)->v90, &((Hero_234800_34800 *)D_0013F450)->v310, &v20);
+                RotateIntoMobySpace((int)((Hero *)D_0013F450)->moby, ((Hero *)D_0013F450)->unk360, &((Hero *)D_0013F450)->motion.pos, &((Hero *)D_0013F450)->motion.rot, &((Hero *)D_0013F450)->unk310, &v20);
             } else {
-                RotateWithMoby(((Hero_234800_34800 *)D_0013F450)->i2080, ((Hero_234800_34800 *)D_0013F450)->p360, &((Hero_234800_34800 *)D_0013F450)->pos, &((Hero_234800_34800 *)D_0013F450)->v90, &v30, &v40);
-                RotateIntoMobySpace(((Hero_234800_34800 *)D_0013F450)->i2080, ((Hero_234800_34800 *)D_0013F450)->p360, &v30, &v40, &((Hero_234800_34800 *)D_0013F450)->v310, &v20);
+                RotateWithMoby((int)((Hero *)D_0013F450)->moby, ((Hero *)D_0013F450)->unk360, &((Hero *)D_0013F450)->motion.pos, &((Hero *)D_0013F450)->motion.rot, &v30, &v40);
+                RotateIntoMobySpace((int)((Hero *)D_0013F450)->moby, ((Hero *)D_0013F450)->unk360, &v30, &v40, &((Hero *)D_0013F450)->unk310, &v20);
             }
-            ((Hero_234800_34800 *)D_0013F450)->i364 |= 1;
+            ((Hero *)D_0013F450)->unk364 |= 1;
         }
     } else {
-        ((Hero_234800_34800 *)D_0013F450)->i364 &= ~1;
+        ((Hero *)D_0013F450)->unk364 &= ~1;
     }
-    if ((((Hero_234800_34800 *)D_0013F450)->i208C == 0 || ((Hero_234800_34800 *)D_0013F450)->i208C == 12) && ((Hero_234800_34800 *)D_0013F450)->f184 == 0.0f && ((Hero_234800_34800 *)D_0013F450)->h30E == 0) {
-        if (!(((Hero_234800_34800 *)D_0013F450)->i364 & 2)) {
-            RotateIntoMobySpace(((Hero_234800_34800 *)D_0013F450)->i2080, ((Hero_234800_34800 *)D_0013F450)->p360, &((Hero_234800_34800 *)D_0013F450)->pos, &((Hero_234800_34800 *)D_0013F450)->v90, &v20, &((Hero_234800_34800 *)D_0013F450)->v320);
-            ((Hero_234800_34800 *)D_0013F450)->i364 |= 2;
+    if ((((Hero *)D_0013F450)->state.control_mode == 0 || ((Hero *)D_0013F450)->state.control_mode == 12) && ((Hero *)D_0013F450)->motion.unk184 == 0.0f && ((Hero *)D_0013F450)->air_frames.s == 0) {
+        if (!(((Hero *)D_0013F450)->unk364 & 2)) {
+            RotateIntoMobySpace((int)((Hero *)D_0013F450)->moby, ((Hero *)D_0013F450)->unk360, &((Hero *)D_0013F450)->motion.pos, &((Hero *)D_0013F450)->motion.rot, &v20, &((Hero *)D_0013F450)->unk320);
+            ((Hero *)D_0013F450)->unk364 |= 2;
         }
     } else {
-        ((Hero_234800_34800 *)D_0013F450)->i364 &= ~2;
+        ((Hero *)D_0013F450)->unk364 &= ~2;
     }
-    if (((Hero_234800_34800 *)D_0013F450)->i364 & 3) {
+    if (((Hero *)D_0013F450)->unk364 & 3) {
         mode = 2;
     }
     clear_u64_value(&v20);
     clear_u64_value(&v30);
     if (amt != 0.0f) {
-        sB4 = func_001F9CE8(&((Hero_234800_34800 *)D_0013F450)->v350);
-        sB0 = ((Hero_234800_34800 *)D_0013F450)->v350.z;
+        sB4 = func_001F9CE8(&((Hero *)D_0013F450)->unk350);
+        sB0 = ((Hero *)D_0013F450)->unk350.f[2];
         if (!(plat->i3C & 2)) {
             ApproachValue(&sB0, 0.0f, D_0015EE70 * 25.0f * amt);
             ApproachValue(&sB4, 0.0f, (D_0015EE70 + D_0015EE70) * amt);
-            func_L00_001FF500_34800(&v20, &((Hero_234800_34800 *)D_0013F450)->v350, sB4);
+            func_L00_001FF500_34800(&v20, &((Hero *)D_0013F450)->unk350, sB4);
             v20.z = sB0;
         } else {
-            qcopy(&v20, &((Hero_234800_34800 *)D_0013F450)->v350);
+            qcopy(&v20, &((Hero *)D_0013F450)->unk350);
         }
         qcopy(&v30, &v20);
     } else if (mode == 1) {
-        RotateWithMoby(((Hero_234800_34800 *)D_0013F450)->i2080, ((Hero_234800_34800 *)D_0013F450)->p360, &((Hero_234800_34800 *)D_0013F450)->pos, &((Hero_234800_34800 *)D_0013F450)->v90, &v0, &v10);
-        ((Hero_234800_34800 *)D_0013F450)->v90.z = v10.z;
-        FastVecSub(&v20, &v0, &((Hero_234800_34800 *)D_0013F450)->pos);
-        qcopy((Vec_234800_34800 *)(D_0013F450 + 0x350), &v20);
+        RotateWithMoby((int)((Hero *)D_0013F450)->moby, ((Hero *)D_0013F450)->unk360, &((Hero *)D_0013F450)->motion.pos, &((Hero *)D_0013F450)->motion.rot, &v0, &v10);
+        ((Hero *)D_0013F450)->motion.rot.f[2] = v10.z;
+        FastVecSub(&v20, &v0, &((Hero *)D_0013F450)->motion.pos);
+        qcopy((Vec4A *)(D_0013F450 + 0x350), &v20);
     } else if (mode == 2) {
-        RotateWithMoby(((Hero_234800_34800 *)D_0013F450)->i2080, ((Hero_234800_34800 *)D_0013F450)->p360, &((Hero_234800_34800 *)D_0013F450)->pos, &((Hero_234800_34800 *)D_0013F450)->v90, &v40, &v50);
-        TransformToMobyLocal(((Hero_234800_34800 *)D_0013F450)->i2080, ((Hero_234800_34800 *)D_0013F450)->p360, &((Hero_234800_34800 *)D_0013F450)->v310, &((Hero_234800_34800 *)D_0013F450)->v320, &v60, &v70);
-        TransformToMobyLocal(((Hero_234800_34800 *)D_0013F450)->i2080, ((Hero_234800_34800 *)D_0013F450)->p360, &((Hero_234800_34800 *)D_0013F450)->v330, &((Hero_234800_34800 *)D_0013F450)->v320, &v80, &v90);
-        if ((((Hero_234800_34800 *)D_0013F450)->i2084 == 1 || ((Hero_234800_34800 *)D_0013F450)->i2084 == 0x1E) && ((Hero_234800_34800 *)D_0013F450)->b20A5 != 0) {
-            ((Hero_234800_34800 *)D_0013F450)->v90.z = v50.z;
-        } else if (((Hero_234800_34800 *)D_0013F450)->i364 & 2) {
-            ((Hero_234800_34800 *)D_0013F450)->v90.z = v70.z;
+        RotateWithMoby((int)((Hero *)D_0013F450)->moby, ((Hero *)D_0013F450)->unk360, &((Hero *)D_0013F450)->motion.pos, &((Hero *)D_0013F450)->motion.rot, &v40, &v50);
+        TransformToMobyLocal((int)((Hero *)D_0013F450)->moby, ((Hero *)D_0013F450)->unk360, &((Hero *)D_0013F450)->unk310, &((Hero *)D_0013F450)->unk320, &v60, &v70);
+        TransformToMobyLocal((int)((Hero *)D_0013F450)->moby, ((Hero *)D_0013F450)->unk360, &((Hero *)D_0013F450)->unk330, &((Hero *)D_0013F450)->unk320, &v80, &v90);
+        if ((((Hero *)D_0013F450)->state.current == 1 || ((Hero *)D_0013F450)->state.current == 0x1E) && ((Hero *)D_0013F450)->unk20A5 != 0) {
+            ((Hero *)D_0013F450)->motion.rot.f[2] = v50.z;
+        } else if (((Hero *)D_0013F450)->unk364 & 2) {
+            ((Hero *)D_0013F450)->motion.rot.f[2] = v70.z;
         } else {
-            ((Hero_234800_34800 *)D_0013F450)->v90.z = v50.z;
+            ((Hero *)D_0013F450)->motion.rot.f[2] = v50.z;
         }
-        if (((Hero_234800_34800 *)D_0013F450)->i364 & 1) {
-            if ((unsigned int)(((Hero_234800_34800 *)D_0013F450)->i2084 - 0x18) < 2) {
-                vA0.x = FastCos(((Hero_234800_34800 *)D_0013F450)->f4E4) * 0.45f;
-                vA0.y = FastSin(((Hero_234800_34800 *)D_0013F450)->f4E4) * 0.45f;
+        if (((Hero *)D_0013F450)->unk364 & 1) {
+            if ((unsigned int)(((Hero *)D_0013F450)->state.current - 0x18) < 2) {
+                vA0.x = FastCos(((Hero *)D_0013F450)->unk4E4) * 0.45f;
+                vA0.y = FastSin(((Hero *)D_0013F450)->unk4E4) * 0.45f;
                 vA0.z = 0.0f;
                 FastVecAdd(&vA0, &vA0, &v80);
                 vA0.z += -1.43f;
-                FastVecSub(&v20, &v40, &((Hero_234800_34800 *)D_0013F450)->pos);
-                qcopy(&((Hero_234800_34800 *)D_0013F450)->v4D0, &vA0);
-                ((Hero_234800_34800 *)D_0013F450)->f4E4 = func_L00_001FF860(v60.x - v80.x, v60.y - v80.y);
+                FastVecSub(&v20, &v40, &((Hero *)D_0013F450)->motion.pos);
+                qcopy(&((Hero *)D_0013F450)->unk4D0, &vA0);
+                ((Hero *)D_0013F450)->unk4E4 = func_L00_001FF860(v60.x - v80.x, v60.y - v80.y);
             } else {
                 float len;
 
-                FastVecSub(&v20, &v60, &((Hero_234800_34800 *)D_0013F450)->pos);
+                FastVecSub(&v20, &v60, &((Hero *)D_0013F450)->motion.pos);
                 len = FastVecLength(&v20);
                 if (len < 0.0001f) {
                     clear_u64_value(&v20);
-                    qcopy(&((Hero_234800_34800 *)D_0013F450)->pos, &v60);
+                    qcopy(&((Hero *)D_0013F450)->motion.pos, &v60);
                 } else if (2.0f < len) {
                     clear_u64_value(&v20);
-                    ((Hero_234800_34800 *)D_0013F450)->i364 &= ~2;
-                    ((Hero_234800_34800 *)D_0013F450)->i364 &= ~1;
+                    ((Hero *)D_0013F450)->unk364 &= ~2;
+                    ((Hero *)D_0013F450)->unk364 &= ~1;
                 }
                 FastVecAdd(D_0013F450 + 0x4D0, D_0013F450 + 0x4D0, &v20);
                 FastVecSub(&vA0, &v20, D_0013F450 + 0x140);
                 if (0.1f < FastVecLength(&vA0)) {
-                    ((Hero_234800_34800 *)D_0013F450)->i364 &= ~1;
+                    ((Hero *)D_0013F450)->unk364 &= ~1;
                 }
             }
         } else {
-            FastVecSub(&v20, &v40, &((Hero_234800_34800 *)D_0013F450)->pos);
+            FastVecSub(&v20, &v40, &((Hero *)D_0013F450)->motion.pos);
             qcopy(&v30, &v20);
         }
-        qcopy((Vec_234800_34800 *)(D_0013F450 + 0x350), &v20);
+        qcopy((Vec4A *)(D_0013F450 + 0x350), &v20);
     }
     FastVecAdd(D_0013F450 + 0xF0, D_0013F450 + 0xF0, &v20);
-    ((Hero_234800_34800 *)D_0013F450)->fFC = FastSubRots(((Hero_234800_34800 *)D_0013F450)->v90.z, ang);
+    ((Hero *)D_0013F450)->motion.platform_delta.f[3] = FastSubRots(((Hero *)D_0013F450)->motion.rot.f[2], ang);
 }
 extern int func_L00_002630A8(int, void *, void *, float);
 

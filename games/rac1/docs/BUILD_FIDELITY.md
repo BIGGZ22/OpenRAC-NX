@@ -58,7 +58,7 @@ the tool and not without it.
 
 | Tool | What it reproduces | Evidence | Functions that depend |
 |---|---|---|---|
-| `tools/ps2eeas_nops.py` | `ps2eeas` pads every loop shorter than six instructions before its backward branch (the R5900 short-loop erratum), separates an FP compare from a directly following `bc1`, and a `mtc1` from the instruction reading its register. The other way round, it leaves an `mfc1` next to the branch that reads its register, where GNU `as` puts a nop | measured on `ps2eeas` itself; retail text has 309 backward branches spanning exactly six instructions and 191 of 191 compare/branch pairs separated; a compiled `mfc1` then branch occurs four times, adjacent each time (func_L00_00269BE8, func_L00_002761C0) | 781 (1,592,084 bytes, 42.9% of the code) |
+| `tools/ps2eeas_nops.py` | `ps2eeas` pads every loop shorter than six instructions before its backward branch (the R5900 short-loop erratum), separates an FP compare from a directly following `bc1`, and a `mtc1` from the instruction reading its register. The other way round, it leaves an `mfc1` next to the branch that reads its register, where GNU `as` puts a nop. It measures the first assembly and runs once more on the second: GNU `as` can pad a short loop there that it left alone the first time (the nops added elsewhere move its fragment boundaries), and that branch is then written as a `.word` as in the first pass (func_L00_002AE278 next to func_L00_002B1688) | measured on `ps2eeas` itself; retail text has 309 backward branches spanning exactly six instructions and 191 of 191 compare/branch pairs separated; a compiled `mfc1` then branch occurs four times, adjacent each time (func_L00_00269BE8, func_L00_002761C0) | 781 (1,592,084 bytes, 42.9% of the code) |
 | `tools/ps2eeas_dli.py` | `ps2eeas`'s instruction sequence for each 64-bit constant (`dli`); GNU `as` picks other sequences for many values | the algorithm reproduces `ps2eeas`'s output on 871 constants | 113 (395,716 bytes, 10.7%) |
 | `tools/check_macro_slots.py` | a one-instruction global access the compiler put in a branch delay slot comes out `$gp`-relative, as retail's toolchain assembled it; anything else in a slot fails the build | of 524 `$gp` accesses in compiled retail code to globals also reached through `lui`, 505 sit in a delay slot | 460 (1,398,252 bytes, 37.7%) |
 | `tools/fix_orphan_hi.py` | the high half of a `%hi` whose `%lo` the optimiser removed, which retail's linker filled and ours resolves wrongly | retail has the right high half in such `lui`s (func_001E9808) | none by the per-function check, which masks relocated fields; the linked image needs it |
@@ -156,6 +156,16 @@ What that meant for the nine functions that had per-function flags
 
 The two split-off shared files are new units of one function each in the
 progress report; the level ones stay in their level's unit.
+
+Later functions matched the same way (2026-10-19):
+
+| Function | Flag | Its old file with the flag | Now |
+|---|---|---|---|
+| func_L12_00309730 | none (its file has `-fno-sched-interblock`) | 10 of 27 change | its own file, `l12_hoven/vendor_00309730.c` |
+| func_L14_00303430 | `-fno-sched-spec` | func_L14_00300130 changes | its own file, `shared/vendor_00303430.c` |
+| func_L14_002E0538 | `-fno-gcse` | 18 of 36 change | its own file, `l14_oltanis/ribbons_002E0538.c` |
+| func_L07_00313D28 | `-mno-split-addresses` | 11 change | its own file, `l07_umbris/effect_00313D28.c` |
+| func_L12_0030A880 (`l12_hoven/vendor_002EDAA0.c`) | `-fno-thread-jumps` | 27 of 27 exact | the file has the flag |
 
 ## Removed, 2026-10-07
 

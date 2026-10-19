@@ -6,7 +6,6 @@
 #include "hero.h"
 #include "moby.h"
 
-INCLUDE_ASM("asm/overlays", func_L14_002E0538);
 extern void func_00234C98(int, long);
 extern void func_L14_002E0910(void *, void *, int, int, int);
 extern float D_0015EE60 MACRO_ADDR;

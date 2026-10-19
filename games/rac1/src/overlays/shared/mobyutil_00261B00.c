@@ -6,7 +6,261 @@
 #include "hero.h"
 #include "moby.h"
 
-INCLUDE_ASM("asm/overlays", func_L00_00261B00);
+typedef int OvlQuad __attribute__((mode(TI)));
+typedef struct {
+    s32 count;
+    u8 pad[12];
+    Vec4 points[1];
+} SegmentPath_261d78;
+extern SegmentPath_261d78 * D_L00_001B0830[];
+extern void func_001F9BC0(void *);
+extern int func_002140B0(int);
+extern int func_001F9850(int);
+extern void func_001E9730();
+extern float func_001FA888(int);
+extern float func_00214158(void);
+extern float func_001F9F90(float);
+extern float func_002140F8(float, float);
+extern float func_001F9FA8(float);
+extern void func_L00_001FF4B0(void *, void *, float);
+extern void func_001F9BD8(void *, void *, void *);
+extern int func_L00_0025A5D8(float *, float *, float, float, float);
+extern void func_001F9C30(void *, void *, float);
+extern int func_L00_00262BC0(int, void *, void *, void *);
+extern void func_001F9BF0(void *, void *, void *);
+extern void func_L00_002A86D8(void *, void *, void *, int, int, int);
+struct MobyBound;
+struct MobyBound *func_L00_0025D390(struct Moby *);
+
+extern int D_L00_0015F678 MACRO_ADDR;
+extern unsigned char D_L00_0015FD48[] MACRO_ADDR;
+extern int D_0015EFA0 MACRO_ADDR;
+extern int D_0015EF20 MACRO_ADDR;
+extern int D_0015EF28 MACRO_ADDR;
+extern int D_0015EF24[] MACRO_ADDR;
+extern float D_0015EE6C MACRO_ADDR;
+extern float D_0015EE70 MACRO_ADDR;
+extern char D_L00_00160160[];
+extern char D_L00_00160170[];
+extern char D_L00_00160180[];
+
+/* Per-moby effect update: builds a short vector set from the moby's
+   0x10 vector and calls the helper chain for each queued unit. */
+void func_L00_00261B00(char *a, int b, int c, int flags, int idx)
+{
+    float s0[4], s10[4], s20[4], s30[4], s40[4], s50[4], s60[4];
+    float t70, t74;
+    int f84;
+    int n, k, w, sum, m, rv, ones;
+    int c4, c5, c6, c8, c10, c11, c12, c13, c14, c15, c16, c17, c20, c22, c23, c30;
+    unsigned char *r;
+    char *p;
+    float lim;
+    float f0, f12, f13, f14, f20, f21;
+
+    c23 = 0;
+    c22 = 0;
+    c30 = 0;
+    func_001F9BC0(s0);
+    if (!(flags & 0x20)) {
+        if (*(unsigned char *)(a + 0xB0) != 0xFF
+            && (unsigned)(*(unsigned short *)(a + 0xA6) - 0x1F4) >= 0x29) {
+            D_L00_0015F678 = D_L00_0015FD48[*(unsigned char *)(a + 0xB0)] == 0xFF;
+        }
+    }
+    f84 = 0;
+    if (D_L00_0015F678) {
+        if (!(flags & 0x20)) {
+            f84 = 1;
+        }
+    }
+    if (flags == 0) {
+        return;
+    }
+    if (b == 0 && c == 0) {
+        return;
+    }
+    if (flags & 4) {
+        r = (unsigned char *)func_L00_0025D390((struct Moby *)a);
+        if (r) {
+            qcopy(s0, r + 0x20);
+        }
+    }
+    if (b <= 0) {
+        b = 1;
+    }
+    n = func_002140B0(c - b + 1) + b;
+    if (D_0015EFA0 || D_0015EF20) {
+        n <<= 1;
+    }
+    if (n < 0x1F4) {
+        if (f84 && D_0015EF28) {
+            m = (int)((float)func_001F9850(0x3C) * 60.0f) * D_0015EF24[2] / D_0015EF24[1];
+            if (D_0015EFA0 || D_0015EF20) {
+                m /= 2;
+            }
+            if (m < 0x96) {
+                if (m < 0x5B) {
+                    func_001E9730(D_L00_00160160);
+                    n *= 5;
+                } else {
+                    func_001E9730(D_L00_00160170, (0xBE - m) / 20);
+                    n *= (0xBE - m) / 20;
+                }
+                if (D_0015EFA0) {
+                    if (n > 0x3E8) n = 0x3E8;
+                } else {
+                    if (n > 0x1F4) n = 0x1F4;
+                }
+            } else if (m >= 0x12D) {
+                if (m >= 0x160) {
+                    func_001E9730(D_L00_00160180, 0x3FB99999A0000000L);
+                    n /= 10;
+                } else {
+                    func_001E9730(D_L00_00160180, func_001FA888(0x168 - m) / 20.0f);
+                    n *= (0x168 - m) / 80;
+                }
+                if (n <= 0) {
+                    n = 1;
+                }
+            }
+        }
+    }
+    k = n;
+    if (n >= 0x12C) {
+        do {
+            k -= 50;
+            c30++;
+        } while (k >= 0x12C);
+    }
+    while (k >= 0xC8) {
+        k -= 20;
+        c22++;
+    }
+    if (k >= 0x1E) {
+        do {
+            k -= 25;
+            c22++;
+            c23++;
+        } while (k >= 0x1E);
+    }
+    if (k >= 7) {
+        do {
+            k -= 5;
+            c23++;
+        } while (k >= 7);
+    }
+    ones = k;
+    sum = c30 + c22 + c23 + ones;
+    if (sum >= 4 && (flags & 8)) {
+        c17 = 0;
+        c14 = 0;
+        c13 = 0;
+        c16 = 3;
+        c15 = 3;
+        c10 = 0;
+        c12 = 0;
+        c20 = 0;
+        c11 = 0x96;
+        c5 = 3;
+        if (ones + c23 + c22 + c30 >= 4) {
+        if (n < c11) {
+            do {
+                if (c16) {
+                    c16--;
+                    c13++;
+                } else if (c13) {
+                    c13--;
+                    c14++;
+                } else if (c14) {
+                    c14--;
+                    c17++;
+                }
+                c11 = c16 * 50 + c13 * 20 + c14 * 5 + c17;
+            } while (n < c11 && c11 >= 4);
+        }
+        c5 = 3;
+        if (c5 < n) {
+            do {
+                if (c15) {
+                    c15--;
+                    c10++;
+                } else if (c10) {
+                    c10--;
+                    c12++;
+                } else if (c12) {
+                    c12--;
+                    c20++;
+                }
+                c5 = c20 * 50 + c12 * 20 + c10 * 5 + c15;
+            } while (c5 < n && c5 < 0x96);
+        }
+        }
+        if ((c11 - n) < (n - c5)) {
+            ones = c17;
+            c23 = c14;
+            c22 = c13;
+            c30 = c16;
+        } else {
+            ones = c15;
+            c23 = c10;
+            c22 = c12;
+            c30 = c20;
+        }
+    }
+    while (ones || c23 || c22 || c30) {
+        qcopy(s10, a + 0x10);
+        s10[2] = s10[2] + 0.5f;
+        f21 = func_00214158();
+        s20[0] = func_001F9F90(f21) * (func_002140F8(0.0f, 3.0f) * D_0015EE6C);
+        s20[1] = func_001F9FA8(f21) * (func_002140F8(0.0f, 3.0f) * D_0015EE6C);
+        s20[2] = 0.0f;
+        s20[2] = func_002140F8(3.7f, 6.0f) * D_0015EE6C;
+        s30[0] = s20[0];
+        s30[1] = s20[1];
+        s30[2] = 0.0f;
+        func_L00_001FF4B0(s30, s30, 0.5f);
+        func_001F9BD8(s10, s10, s30);
+        if (idx >= 0) {
+            f12 = D_0015EE70 * 10.8f * -0.5f;
+            f13 = s20[2] - f12;
+            f14 = s10[2] - D_L00_001B0830[idx]->points[0].f[2];
+            lim = 120.0f;
+            rv = func_L00_0025A5D8(&t70, &t74, f12, f13, f14);
+            if (1.0f <= (float)rv) {
+                if (0.0f < t70) {
+                    if (t70 < lim) {
+                        lim = t70;
+                    }
+                }
+            }
+            func_001F9C30(s40, s20, lim);
+            func_001F9BD8(s40, s40, a + 0x10);
+            rv = func_L00_00262BC0(idx, a + 0x10, s40, s50);
+            func_001F9BF0(s40, s50, s10);
+            s40[2] = 0.0f;
+            func_L00_001FF4B0(s60, s40, 0.25f);
+            func_001F9BF0(s40, s40, s60);
+            func_001F9C30(s40, s40, 1.0f / lim);
+            s20[0] = s40[0];
+            s20[1] = s40[1];
+        }
+        func_001F9BD8(s20, s20, s0);
+        if (c30) {
+            func_L00_002A86D8(a, s10, s20, flags, 50, f84);
+            c30--;
+        } else if (c22) {
+            func_L00_002A86D8(a, s10, s20, flags, 20, f84);
+            c22--;
+        } else if (c23) {
+            func_L00_002A86D8(a, s10, s20, flags, 5, f84);
+            c23--;
+        } else {
+            func_L00_002A86D8(a, s10, s20, flags, 1, f84);
+            ones--;
+        }
+    }
+}
 extern float D_0015EE60 MACRO_ADDR;
 extern float D_0015EE64 MACRO_ADDR;
 extern float D_0015EE68 MACRO_ADDR;
@@ -197,13 +451,6 @@ int SegmentCrossPolyline(int idx, void *a, void *b, void *c) {
     return found;
 }
 LINKER_REMNANT("asm/overlays", func_L00_00262DE8);
-typedef int OvlQuad __attribute__((mode(TI)));
-typedef struct {
-    s32 count;
-    u8 pad[12];
-    Vec4 points[1];
-} SegmentPath_261d78;
-extern SegmentPath_261d78 * D_L00_001B0830[];
 extern f32 func_001F9B88(f32);
 extern void func_001F9BD8_62DF0(Vec4 *, Vec4 *, Vec4 *) __asm__("func_001F9BD8");
 extern void func_001F9BF0_62DF0(Vec4 *, Vec4 *, Vec4 *) __asm__("func_001F9BF0");

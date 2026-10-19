@@ -1,17 +1,16 @@
 /* NON_MATCHING func_L00_002DF410 -- src/overlays/shared/vendor_002D9438.c
- * Best so far: SIZE ours 4216 / retail 4220, checked 2026-10-09.
+ * Best so far: SIZE ours 4208 / retail 4220, checked 2026-10-19.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
  * What the last attempts found:
- *   - Run 7: p6.c SIZE ours 4160 / retail 4220
- *   - Run 8: p7.c SIZE ours 4200 / retail 4220
- *   - Run 9: p8.c SIZE ours 4208 / retail 4220
- *   - Run 10: p9.c SIZE ours 4208 / retail 4220
- *   - Run 11: p10.c SIZE ours 4216 / retail 4220
- *   Further trials: p10 captures the old vertex index before increment (4216 bytes, still reverses the counter and
- *   Final: stop after 18/30 trials because p15, p16 and p17 compile to identical function instructions and branch 
- *   p13's aggregate initializer emitted memset calls and is unsuitable. p14's returning-vector constructor reserve
- *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
+ *   - s3/s7/s8/s11: shared function-level `j` for the 19-i loop, the ring loop and the later `ring` uses (retail s
+ *   - s4/s14: src/dst as walking pointers; s5 short j (4224, sign extension); s6 do-while; s9 unsigned j with (int
+ *   s10 j live after loop; s12 j<=19; s13 &D[j]. All: the 20-point loop is STILL reversed (bgez, counter from 0x13
+ *   retail counts up (daddu s3,zero; addiu s3,1; slti s3,0x14; bnez). TRY_CFLAGS=-dL log: pass 2 prints "Can rever
+ *   loop" for biv 120 (initial 0, compare LT 20), nothing in the source variants I tried prevents it.
+ *   - Best (structure): s11.c, SIZE ours 4208 / retail 4220. Remaining: that reversed loop (+1 insn in retail, slt
+ *   3 daddu, ~6 nops from different scheduling, orientation pointer in $s3 in retail vs $s2 ours, spill slot order
+ *   the &local pointer table (0x1B4..0x1D0).
  */
 #include "common.h"
 typedef unsigned int Q41 __attribute__((mode(TI)));
@@ -43,20 +42,19 @@ extern char D_L00_001E6290[];
 extern char D_L00_001E6280[];
 extern char D_L00_00173F60[];
 extern short D_L00_001E6358[];
-extern V41 D_L00_00161C30 MACRO_ADDR;
-extern V41 D_L00_00161C40 MACRO_ADDR;
+extern V41 vec30_41 __asm__("D_L00_00161C30") MACRO_ADDR;
+extern V41 vec40_41 __asm__("D_L00_00161C40") MACRO_ADDR;
 extern float D_L00_00161C50 MACRO_ADDR;
 extern int tick41 SDATA(D_L00_00161C24);
 extern float wave41 SDATA(D_L00_00161C28);
 extern float motion_scale41 SDATA(D_L00_00161C54);
 extern V41 D_L00_001E4E90[];
-extern V41 D_L00_001E6370[];
-extern V41 D_L00_001E6230[];
+extern V41 ring41[] __asm__("D_L00_001E6370");
+extern V41 ring41b[] __asm__("D_L00_001E6230");
 extern float D_L00_001E6330[];
 extern char D_L00_001E4FE4[],D_L00_001E4FD4[],D_L00_001E4FE0[];
 extern Entry41 entries41[] __asm__("D_L00_001E4FD0");
 extern float D_0015EE60 MACRO_ADDR;
-extern void func_L00_002DF168(void *,void *);
 extern void func_001F9C30(void *,void *,float);
 extern void func_L00_001FF4B0(void *,void *,float);
 extern void func_001F9BD8(void *,void *,void *);
@@ -100,7 +98,7 @@ void func_L00_002DF410(void *moby,void *position) {
     V41 step,up,orient[3],ray_end,start,end,axis,tmp_a,tmp_b,
         cross_b,cross_a,basis,tmp_c,motion,tmp_d,tmp_e,interp,cross_c,basis_c,tmp_f;
     V41 *orientation;
-    int i,j,n,count,sparks,segment,ring,next_ring;
+    int i,j,n,count,sparks,segment,next_ring;
     float t,angle,turn,delta,dot,length,radius,phase,amount,speed;
     Particle41 *p;
     V41 *anchor,*previous,*source;
@@ -144,9 +142,9 @@ void func_L00_002DF410(void *moby,void *position) {
         D_L00_001E6358[0]=(u16)D_L00_001E6358[0]+4;
         for(i=1;i<10;i++)D_L00_001E6358[i]=D_L00_001E6358[i-1]-32;
     }
-    func_001F9EC0(&start,&D_L00_00161C30,orientation);
+    func_001F9EC0(&start,&vec30_41,orientation);
     func_001F9BD8(&start,&start,&step);
-    func_001F9EC0(&end,&D_L00_00161C40,orientation);
+    func_001F9EC0(&end,&vec40_41,orientation);
     func_001F9BD8(&end,&end,&step);
     t=(float)tick41/func_001FA888(func_001F9850(60));
     tick41++;
@@ -154,13 +152,13 @@ void func_L00_002DF410(void *moby,void *position) {
     step.f.y=start.f.y+(end.f.y-start.f.y)*t;
     step.f.z=start.f.z+(end.f.z-start.f.z)*t;
     if(tick41>=func_001F9850(60)) {
-        qcopy(&D_L00_00161C30,&D_L00_00161C40);
+        qcopy(&vec30_41,&vec40_41);
         func_L00_001FF4B0(&axis,orientation,D_L00_00161C54);
-        clear_vectors41(&tmp_a,&tmp_b);
+        tmp_a.q=0; tmp_b.q=0;
         tmp_a.f.z=0.1f; tmp_a.f.w=1.0f;
         tmp_b.f.x=1.0f; tmp_b.f.w=1.0f;
         angle=func_001FA748(D_L00_00161C50,func_002140F8(45.0f,315.0f)*0.0174532924f);
-        func_002156E0(&D_L00_00161C40,&tmp_a,angle,&tmp_b);
+        func_002156E0(&vec40_41,&tmp_a,angle,&tmp_b);
         D_L00_00161C50=angle;
         tick41=0;
     }
@@ -170,11 +168,11 @@ void func_L00_002DF410(void *moby,void *position) {
     func_001F9CA0(&cross_a,&step,&basis);
     func_L00_001FF4B0(&cross_a,&cross_a,1.0f);
     func_001F9CA0(&cross_b,&basis,&cross_a);
-    { int i;
-    for(i=19;i>=0;i--) {
-        func_001F9C30(&tmp_a,&D_L00_001E4E90[19-i],0.1f);
+    { 
+    for(j=19;j>=0;j--) {
+        func_001F9C30(&tmp_a,&D_L00_001E4E90[19-j],0.1f);
         func_001F9EC0(&tmp_a,&tmp_a,&cross_b);
-        func_001F9BD8(&D_L00_001E6370[19-i],D_L00_001E6290,&tmp_a);
+        func_001F9BD8(&ring41[19-j],D_L00_001E6290,&tmp_a);
     }
     }
     { int i;
@@ -206,13 +204,13 @@ void func_L00_002DF410(void *moby,void *position) {
         qcopy(&axis,&basis_c);
         radius=amount*0.3f;
         phase=amount*0.7f;
-        { int j;
+        { V41 *dst=ring41+i*20;
         for(j=0;j<20;j++) {
             angle=radius+0.1f;
             angle+=func_001F9FA8(func_001FA748(wave41+phase,0.0f))*0.1f;
             func_001F9C30(&tmp_f,(char *)D_L00_001E4E90+j*16,angle);
             func_001F9EC0(&tmp_f,&tmp_f,&interp);
-            func_001F9BD8((char *)D_L00_001E6370+i*320+j*16,D_L00_001E6290+i*16,&tmp_f);
+            func_001F9BD8(dst+j,D_L00_001E6290+i*16,&tmp_f);
         }
         }
         func_L00_001FF4B0(&step,&motion,D_L00_00161C54);
@@ -225,9 +223,9 @@ void func_L00_002DF410(void *moby,void *position) {
             for(segment=9;segment>=0 && D_L00_001E6358[segment]<64;segment--);
             if(segment>0) {
                 if(segment>=2 && sparks<2) {
-                    ring=func_002140B0(20);
+                    j=func_002140B0(20);
                     amount=func_002140F8(0.2f,1.0f);
-                    source=&D_L00_001E6370[ring];
+                    source=&ring41[j];
                     func_001F9C08(&tmp_a,source,source+segment*20,amount);
                     func_001F9C08(&tmp_c,D_L00_001E6290,D_L00_001E6290+segment*16,amount);
                     speed=func_002140F8(60000.0f,180000.0f);
@@ -286,17 +284,17 @@ void func_L00_002DF410(void *moby,void *position) {
                 } else {
                     func_001F9C30(&tmp_a,&tmp_a,amount);
                     func_001F9BD8(&(entries41[i].particle)->pos,D_L00_001E6290+entries41[i].segment*16,&tmp_a);
-                    ring=entries41[i].angle;
-                    func_001F9BF0(&tmp_b,(char *)D_L00_001E6370+entries41[i].segment*320+ring*16,D_L00_001E6290+entries41[i].segment*16);
-                    func_001F9BF0(&tmp_c,(char *)D_L00_001E6230+entries41[i].segment*320+ring*16,D_L00_001E6280+entries41[i].segment*16);
+                    j=entries41[i].angle;
+                    func_001F9BF0(&tmp_b,(char *)ring41+entries41[i].segment*320+j*16,D_L00_001E6290+entries41[i].segment*16);
+                    func_001F9BF0(&tmp_c,(char *)ring41b+entries41[i].segment*320+j*16,D_L00_001E6280+entries41[i].segment*16);
                     func_L00_0025C710(&motion,&tmp_b,&tmp_c,amount);
-                    ring=(ring+19)%20;
-                    func_001F9BF0(&tmp_d,(char *)D_L00_001E6370+entries41[i].segment*320+ring*16,D_L00_001E6290+entries41[i].segment*16);
-                    func_001F9BF0(&tmp_e,(char *)D_L00_001E6230+entries41[i].segment*320+ring*16,D_L00_001E6280+entries41[i].segment*16);
+                    j=(j+19)%20;
+                    func_001F9BF0(&tmp_d,(char *)ring41+entries41[i].segment*320+j*16,D_L00_001E6290+entries41[i].segment*16);
+                    func_001F9BF0(&tmp_e,(char *)ring41b+entries41[i].segment*320+j*16,D_L00_001E6280+entries41[i].segment*16);
                     func_L00_0025C710(&interp,&tmp_d,&tmp_e,amount);
                     func_L00_0025C710(&motion,&motion,&interp,entries41[i].phase);
                     entries41[i].phase+=entries41[i].phase_step;
-                    if(entries41[i].phase>=1.0f) { entries41[i].phase-=1.0f; entries41[i].angle=ring; }
+                    if(entries41[i].phase>=1.0f) { entries41[i].phase-=1.0f; entries41[i].angle=j; }
                     func_001F9BD8(&(entries41[i].particle)->pos,&(entries41[i].particle)->pos,&motion);
                 }
             }

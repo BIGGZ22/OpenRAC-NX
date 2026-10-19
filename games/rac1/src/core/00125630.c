@@ -1960,7 +1960,115 @@ void func_00129600(void *arg0, int arg1, int arg2) {
     }
 }
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_00129690);
+/* libmpeg picture-buffer update: for a B picture refresh the current
+   frame pointers and decide from the ready flags (+0x28) of the
+   reference frames whether the picture can be output; otherwise rotate
+   forward/backward pairs (when arg1 is 0). Then stamp the selected
+   frame record with the picture's parameters. */
+#define PI_(o) (*(int *)((char *)p + (o)))
+#define PP_(o) (*(char **)((char *)p + (o)))
+#define RDY_(o) (*(int *)(PP_(o) + 0x28))
+int func_00129690(void *p, int arg1) {
+    char *rec;
+    int ret;
+    int n;
+    char *tmp;
+    char *cur;
+
+    rec = 0;
+    ret = 0;
+    n = (PI_(0x174) == 3) ? 2 : 4;
+    if (PI_(0x150) == 3) {
+        PP_(0x1C0) = PP_(0x1C4);
+        PP_(0x1D0) = PP_(0x1D4);
+        PP_(0x1E0) = PP_(0x1E4);
+        if (PI_(0xA0) + PI_(0xA4) >= n) {
+            PI_(0xE8) = 0;
+            PI_(0x1A8) = 0;
+            PI_(0x1A4) = 0;
+        }
+        if ((PI_(0xE8) != 0 || PI_(0x1A8) != 0) && PI_(0x1A4) == 0) {
+            RDY_(0x1B8) = 0;
+            RDY_(0x1C8) = 0;
+            RDY_(0x1D8) = 0;
+        }
+        PI_(0xE8) = 0;
+        PI_(0x1A8) = 0;
+        if (PI_(0x174) == 3) {
+            if (RDY_(0x1B8) == 1 || PI_(0x1A4) != 0) {
+                if (RDY_(0x1BC) == 1) {
+                    ret = 1;
+                }
+            }
+        } else {
+            if ((RDY_(0x1C8) == 1 && RDY_(0x1D8) == 1) || PI_(0x1A4) != 0) {
+                if (RDY_(0x1CC) == 1) {
+                    if (RDY_(0x1DC) == 1) {
+                        ret = 1;
+                    }
+                }
+            }
+        }
+    } else {
+        if (arg1 == 0) {
+            tmp = PP_(0x1B8);
+            PP_(0x1B8) = PP_(0x1BC);
+            PP_(0x1BC) = tmp;
+            tmp = PP_(0x1C8);
+            PP_(0x1C8) = PP_(0x1CC);
+            PP_(0x1CC) = tmp;
+            tmp = PP_(0x1D8);
+            PP_(0x1D8) = PP_(0x1DC);
+            PP_(0x1DC) = tmp;
+        }
+        PP_(0x1C0) = PP_(0x1BC);
+        PP_(0x1D0) = PP_(0x1CC);
+        PP_(0x1E0) = PP_(0x1DC);
+        if (PI_(0x174) == 3) {
+            if (PI_(0x150) != 2 || RDY_(0x1B8) == 1) {
+                ret = 1;
+            }
+        } else {
+            cur = (PI_(0x174) == 1) ? PP_(0x1E0) : PP_(0x1D0);
+            if (PI_(0x150) != 2 || (arg1 != 0 && *(int *)(cur + 0x28) == 1) ||
+                (RDY_(0x1C8) == 1 && RDY_(0x1D8) == 1)) {
+                ret = 1;
+            }
+        }
+    }
+    switch (PI_(0x174)) {
+    case 3:
+        rec = PP_(0x1C0);
+        break;
+    case 1:
+        rec = PP_(0x1D0);
+        break;
+    case 2:
+        rec = PP_(0x1E0);
+        break;
+    }
+    *(int *)(rec + 0x28) = 0;
+    *(long *)(rec + 0x18) = *(long *)((char *)p + 0x828);
+    *(int *)(rec + 0x2C) = PI_(0x150);
+    *(long *)(rec + 0x20) = *(long *)((char *)p + 0x830);
+    *(int *)(rec + 0x30) = PI_(0x174);
+    *(int *)(rec + 0x34) = PI_(0x13C);
+    *(int *)(rec + 0x38) = PI_(0x188);
+    *(int *)(rec + 0x3C) = PI_(0x178);
+    *(int *)(rec + 0x40) = PI_(0x184);
+    *(int *)(rec + 0x44) = PI_(0x18C);
+    *(int *)(rec + 0x48) = PI_(0x190);
+    *(int *)(rec + 0x4C) = PI_(0x194);
+    *(int *)(rec + 0x50) = PI_(0x198);
+    *(int *)(rec + 0x54) = PI_(0x19C);
+    *(int *)(rec + 0x58) = PI_(0x1A0);
+    *(int *)(rec + 0x5C) = PI_(0x148);
+    *(int *)(rec + 0x60) = PI_(0x14C);
+    return ret;
+}
+#undef PI_
+#undef PP_
+#undef RDY_
 
 extern char D_00153A80[];
 extern void func_00116248_4(void *, char *, int, int) __asm__("func_00116248");

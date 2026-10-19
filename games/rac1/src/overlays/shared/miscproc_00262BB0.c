@@ -2,9 +2,9 @@
 #include "common.h"
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/overlays", func_L01_00262BB0);
-INCLUDE_ASM("asm/overlays", func_L01_00262BC0);
-INCLUDE_ASM("asm/overlays", func_L01_00262D28);
-INCLUDE_ASM("asm/overlays", func_L01_00262DA8);
-INCLUDE_ASM("asm/overlays", func_L01_00262FE8);
-INCLUDE_ASM("asm/overlays", func_L01_00263338);
+ASM_FUNC("asm/overlays", func_L01_00262BB0);
+ASM_FUNC("asm/overlays", func_L01_00262BC0);
+ASM_FUNC("asm/overlays", func_L01_00262D28);
+ASM_FUNC("asm/overlays", func_L01_00262DA8);
+ASM_FUNC("asm/overlays", func_L01_00262FE8);
+ASM_FUNC("asm/overlays", func_L01_00263338);

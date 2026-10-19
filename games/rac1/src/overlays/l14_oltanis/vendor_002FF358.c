@@ -2196,7 +2196,108 @@ int CamRecord_CheckConditions(char *a, char *b) {
     if (u >= 0 && *(int *)(D_0013E633 + 0x2EA1) != u) return 0;
     return 1;
 }
-INCLUDE_ASM("asm/overlays", func_L14_00316E60);
+/* Starts the vendor camera: measures the three camera paths of the slot record into the length tables,
+ * resets the camera's blend state, loads the default angles and aims the camera at the hero.
+ * Adapted from Lombyte (MIT): src/overlays/l14/gameplay/entities/morphoray.c, FUN_L14_003159d8. */
+extern char *D_L14_0015F050_16E60 __asm__("D_L14_0015F050") MACRO_ADDR;
+extern char *D_L14_0015F7EC_16E60 __asm__("D_L14_0015F7EC") MACRO_ADDR;
+/* the third path read goes through a volatile alias (retail reloads the zone table there) */
+extern char *volatile D_L14_0015F7EC_16E60v __asm__("D_L14_0015F7EC") MACRO_ADDR;
+extern float D_L14_001F6FC0_16E60[][1000] __asm__("D_L14_001F6FC0");
+extern float D_L14_001F67C8_16E60[] __asm__("D_L14_001F67C8");
+extern float D_L14_00162578_16E60 SDATA(D_L14_00162578);
+extern float atan2_16E60(float, float) __asm__("func_L00_001FF860");
+extern void func_L00_001ED900_16E60(void *, void *, void *) __asm__("func_L00_001ED900");
+extern void sub_16E60(void *, void *, void *) __asm__("func_001F9BF0");
+extern void scale_16E60(void *, void *, float) __asm__("func_001F9C30");
+extern void add_16E60(void *, void *, void *) __asm__("func_001F9BD8");
+extern void normalize_16E60(void *, void *, float) __asm__("func_L00_001FF4B0");
+extern void cross_16E60(void *, void *, void *) __asm__("func_001F9CA0");
+
+void func_L14_00316E60(struct UpdateCam *cam) {
+    float ang[4];
+    float pad[4]; /* unused; keeps the frame layout */
+    float dir[4];
+    float up[4];
+    char *rec = *(char **)(D_L14_0015F050_16E60 + cam->descriptor_index * 32 + 0x1C);
+    char *path;
+    char *tbl;
+    char *p;
+    float *v;
+    int *q;
+    int j;
+    int *w;
+    int *r;
+    float sum;
+    float f;
+    int i;
+
+    tbl = D_L14_0015F7EC_16E60;
+    *(int *)(rec + 0x20) = 2;
+    *(short *)(rec + 0x30) = 0;
+    *(short *)(rec + 0x32) = 0;
+    path = *(char **)(tbl + *(int *)(rec + 0x34) * 32 + 0x10);
+    sum = 0.0f;
+    for (i = 0; i < *(int *)path - 1; i++) {
+        D_L14_001F6FC0_16E60[0][i] = sum;
+        sum += *(float *)(path + i * 16 + 0x1C);
+    }
+    D_L14_001F6FC0_16E60[0][i] = sum;
+    path = *(char **)(D_L14_0015F7EC_16E60 + *(int *)(rec + 0x38) * 32 + 0x10);
+    sum = 0.0f;
+    for (i = 0; i < *(int *)path - 1; i++) {
+        D_L14_001F6FC0_16E60[1][i] = sum;
+        sum += *(float *)(path + i * 16 + 0x1C);
+    }
+    D_L14_001F6FC0_16E60[1][i] = sum;
+    path = *(char **)(D_L14_0015F7EC_16E60v + *(int *)(rec + 0x3C) * 32 + 0x10);
+    sum = 0.0f;
+    for (i = 0; i < *(int *)path - 1; i++) {
+        D_L14_001F6FC0_16E60[2][i] = sum;
+        sum += *(float *)(path + i * 16 + 0x1C);
+    }
+    D_L14_001F6FC0_16E60[2][i] = sum;
+    p = cam->saved_state;
+    *(int *)(p + 0x88) = 1;
+    q = (int *)(p + 0x88);
+    q[1] = 0;
+    q[2] = 0;
+    q[3] = 0;
+    q[4] = 0;
+    D_L14_00162578_16E60 = 1.0f;
+    v = (float *)((char *)cam->saved_state + 0x60);
+    v[0] = D_L14_001F67C8_16E60[0] * 0.017453292f;
+    v[1] = D_L14_001F67C8_16E60[1] * 0.017453292f;
+    v[2] = D_L14_001F67C8_16E60[2];
+    v[3] = D_L14_001F67C8_16E60[3] * 0.017453292f;
+    v[4] = D_L14_001F67C8_16E60[4] * 0.017453292f;
+    w = (int *)((char *)cam->saved_state + 0x74);
+    *w = 0;
+    w[1] = 0;
+    w[2] = 0;
+    w[3] = 0;
+    w[4] = 0;
+    f = atan2_16E60(D_0013F450.moby->rot_row1.x, D_0013F450.moby->rot_row1.y);
+    ang[1] = v[1];
+    ang[0] = f;
+    ang[2] = v[2];
+    func_L00_001ED900_16E60(&cam->pos, ang, &D_0013F450.motion);
+    sub_16E60(dir, &D_0013F450.motion, &cam->pos);
+    scale_16E60(up, &D_0013F450.gravity_dir, -1.5f);
+    add_16E60(dir, dir, up);
+    normalize_16E60(&cam->m0, dir, 1.0f);
+    cross_16E60(&cam->m1, &cam->m0, up);
+    normalize_16E60(&cam->m1, &cam->m1, 1.0f);
+    cross_16E60(&cam->m2, &cam->m1, &cam->m0);
+    /* give every key without a duration (+0x44) the default 10000 */
+    r = (int *)&D_L14_001F67C8_16E60[0x11];
+    for (j = 38; j >= 0; j--) {
+        if (*r == 0) {
+            *r = 10000;
+        }
+        r += 12;
+    }
+}
 typedef struct {
     char pad0[0x24];
     int m24;

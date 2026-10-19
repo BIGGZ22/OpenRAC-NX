@@ -129,7 +129,7 @@ extern void func_001F9BD8(void *, void *, void *);
 extern void func_L18_002D6A00(void *, void *);
 extern float func_001F9878(float);
 extern void func_001F49B0(void (*)(void), void *);
-extern void func_L18_002D6B58(void);
+extern void func_L18_002D6B58();
 extern int D_L18_0015F6A8 MACRO_ADDR;
 extern float D_0015EE6C MACRO_ADDR;
 extern short D_L18_001619F4;
@@ -306,8 +306,7 @@ extern float D_L18_001D3900[];
 extern float D_L18_001D3940[];
 
 /* Builds a 4-vertex textured quad packet from a moby's angle and draws it. */
-void impl_2D6B58(char *moby) __asm__("func_L18_002D6B58");
-void impl_2D6B58(char *moby) {
+void func_L18_002D6B58(char *moby) {
     char *data = *(char **)(moby + 0x78);
     float v[16];
     int col[4];
@@ -3245,8 +3244,7 @@ extern short D_L18_001622F4;
 extern short D_L18_001622F8;
 extern short D_L18_001622FC;
 
-void impl_2F1AB0(char *moby) __asm__("func_L18_002F1AB0");
-void impl_2F1AB0(char *moby) {
+void func_L18_002F1AB0(char *moby) {
     short *p;
     float a, b;
     if (*(int *)&D_L18_001622C8 != 0) {
@@ -3256,7 +3254,7 @@ void impl_2F1AB0(char *moby) {
     a = *(float *)&D_L18_001622E8 * 0.017453292f * D_0015EE6C;
     b = *(float *)&D_L18_001622EC * 0.017453292f * D_0015EE6C;
     do {
-        char *o = D_L18_00160058_m + (*(unsigned short *)p & 0x7FFF) * 256;
+        char *o = D_L18_00160058 + (*(unsigned short *)p & 0x7FFF) * 256;
         if (*(short *)(o + 0xA6) == 0x54B) {
             char *data = *(char **)(o + 0x78);
             int t = FastTweenColor(*(int *)&D_L18_001622F0, *(int *)&D_L18_001622F4,
@@ -3282,7 +3280,7 @@ void impl_2F1AB0(char *moby) {
 }
 extern short D_L18_001622C0;
 extern void func_L18_002F1780(struct Moby *);
-extern void func_L18_002F1AB0(void);
+extern void func_L18_002F1AB0();
 
 /* Advance a ring of recorded positions, store the moby's position, and register draw callbacks once per frame. */
 void Moby1355_RecordTrail(char *moby) {

@@ -1,141 +1,139 @@
 /* NON_MATCHING func_L00_00232EF0 -- src/overlays/shared/help_00232560.c
- * Best so far: SIZE ours 1288 / retail 1312, checked 2026-10-09.
+ * Best so far: BYTES 4/1312 (99.7% of the bytes match), checked 2026-10-19.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
  * What the last attempts found:
- *   func_L00_00232EF0 (RatchetAnimAdvance): advances the player animation by the frame step, handles sequence tran
- *   Understood and reproduced: the five separate D_0013E633+0xE1D pointers (top, loop prelude, third loop branch, 
- *   Not reproduced: retail hoists `mtc1 $0,$f22` and stores case 1's r[0x54]=0 with swc1 (ours sw $zero), delta la
- *   Unblock: find the source form that makes gcc keep a float zero in a register across the loop (and another save
+ *   2026-10-19: Lombyte port (FUN_L00_00232670, matched there). Hero animation frame advance: steps the hero moby'
+ *   anim_time, walks frames, fires the sequence's sound triggers, keeps the looping voice slot in step. The +inf
+ *   Lombyte writes as 1.0f/0.0f is the level literal D_L00_0015F7E8 here, declared extern const so GCC hoists the
+ *   load like retail. BYTES 4/1312: the two hoisted loop invariants swap FP registers (retail: 0.0f in $f22, +inf 
+ *   $f23; ours the reverse). Statement order (p2), a const array (p4), an early local for the zero (p7, p8), the z
+ *   from the assignment's value (p10) and a local load before the loop (p6, size) do not move it. A pointer local 
+ *   the +inf (p11) changes the frame. What would unblock it: a way to number the zero's pseudo before the +inf's
+ *   without changing the two stores' order.
  */
-extern void func_L00_00232B78(void);
-extern void func_L00_00232980(void);
-extern void func_L00_00232B20(void);
+#include "moby.h"
+typedef struct {
+    u8 pad0[0x10];
+    u8 frame_count;     /* 0x10 */
+    u8 unk11;
+    u8 trigger_count;   /* 0x12 */
+    u8 pad13[9];
+    void *frames[1];    /* 0x1C; the sound triggers (sound | frame << 16) follow the frames */
+} AnimSeq_32EF0;
+typedef struct {
+    u8 pad0[0x7E];
+    s16 sound;          /* 0x7E */
+    u8 pad80[8];
+    Moby *owner;        /* 0x88 */
+} VoiceSlot_32EF0;
+extern f32 D_L00_0017BEF0[][25];
+extern const f32 D_L00_0015F7E8;
+extern int D_L00_0015F6A8 MACRO_ADDR;
+extern int func_0022ED80(int, int, Moby *);
 extern void func_L00_0028EBF0(int);
-extern int func_0022ED80(int, int, void *);
-extern float func_0020D830(void *);
-extern float D_L00_0017BEF0[];
-extern float D_L00_0015F7E8;
-extern short D_L00_0015F6A8_s __asm__("D_L00_0015F6A8");
+extern float func_0020D830(Moby *);
 
-// Advances the player model's animation by the frame step, running sequence changes and sounds.
+/* Hero animation frame advance: steps the hero moby's frame position (anim_time) by anim_speed * unkA94 or a
+   scripted rate table (D_L00_0017BEF0[unkAA0]), moves to the next frame of the sequence each time it passes 1.0
+   (wrapping, or jumping as unkAB0/unkAB4/unkAB8 request), fires the sequence's sound triggers crossed this frame,
+   keeps the moby's looping sound (sound_slot) in step with unk7C, and records the distance moved (anim_frame, unkAAC).
+   Adapted from Lombyte (MIT) for PAL: src/overlays/shared/ui/help/00232670.c, FUN_L00_00232670. */
 void func_L00_00232EF0(void) {
-    char *g = D_0013E633 + 0xE1D;
-    char *gB, *gL, *gC, *gD;
-    float cur2, x, z;
-    unsigned char *r = *(unsigned char **)(g + 0x2080);
-    unsigned char a, b, prev;
-    int same, i, n, lo, hi, v, t;
-    float old, delta, cur, k, tmp;
-    char *seq, *p, *e;
-    func_L00_00211F68();
-    *(int *)(g + 0xA98) &= -4;
-    a = r[0x52];
-    b = r[0x53];
-    prev = r[0x50];
-    old = *(float *)(r + 0x54);
-    same = a == b;
-    if (a == b) {
-        *(float *)(r + 0x54) = old + *(float *)(g + 0xA90) * *(float *)(g + 0xA94);
-    } else if (*(int *)(g + 0xAA0) >= 0) {
-        i = *(int *)(g + 0xAA4);
-        *(float *)(r + 0x54) = *(float *)((char *)D_L00_0017BEF0 + *(int *)(g + 0xAA0) * 100 + i * 4);
-        *(int *)(g + 0xAA4) = i + 1;
+    Moby *m = ((Hero *)D_0013F450)->moby;
+    s32 same;
+    u8 frame0;
+    f32 t0;
+    f32 dt;
+    f32 prev;
+
+    Hero_ClearSpeedTargets();
+    ((Hero *)D_0013F450)->unkA98 &= ~3;
+    same = m->seq == m->prev_seq;
+    frame0 = m->frame;
+    t0 = m->anim_time;
+    if (m->seq == m->prev_seq) {
+        m->anim_time = t0 + ((Hero *)D_0013F450)->anim_speed * ((Hero *)D_0013F450)->unkA94;
+    } else if (((Hero *)D_0013F450)->unkAA0 >= 0) {
+        m->anim_time = D_L00_0017BEF0[((Hero *)D_0013F450)->unkAA0][((Hero *)D_0013F450)->unkAA4++];
     } else {
-        *(float *)(r + 0x54) = old + *(float *)(g + 0xA94);
+        m->anim_time = t0 + ((Hero *)D_0013F450)->unkA94;
     }
-    if (*(float *)(r + 0x54) > 0.99f && *(float *)(r + 0x54) < 1.01f) {
-        *(float *)(r + 0x54) = 1.0f;
-    }
-    if (*(float *)(r + 0x54) > -0.01f && *(float *)(r + 0x54) < 0.01f) {
-        *(float *)(r + 0x54) = 0.0f;
-    }
-    x = *(float *)(r + 0x54);
-    delta = x - old;
-    if (1.0f <= x) {
-        k = D_L00_0015F7E8;
-        z = 0.0f;
-        while (1.0f <= x) {
-            if (r[0x52] != r[0x53]) {
-                r[0x52] = r[0x53];
-                r[0x7E] = *(unsigned char *)(*(char **)(*(char **)(r + 0x24) + r[0x53] * 4 + 0x48) + 0x12);
+    if (0.99f < m->anim_time && m->anim_time < 1.01f)
+        m->anim_time = 1.0f;
+    if (-0.01f < m->anim_time && m->anim_time < 0.01f)
+        m->anim_time = 0.0f;
+    dt = m->anim_time - t0;
+    while (1.0f <= m->anim_time) {
+        if (m->seq != m->prev_seq) {
+            m->seq = m->prev_seq;
+            m->anim_trigger_count = ((AnimSeq_32EF0 *)m->pclass->seqs[m->seq])->trigger_count;
+        }
+        ((Hero *)D_0013F450)->unkAA0 = -1;
+        ((Hero *)D_0013F450)->unkA98 |= 1;
+        m->frame = m->prev_frame;
+        m->cur_frame_data = m->prev_frame_data;
+        m->prev_frame++;
+        if (((Hero *)D_0013F450)->unkAB8 != 0) {
+            ((Hero *)D_0013F450)->unkAB8 = 0;
+            ((Hero *)D_0013F450)->unkA94 = D_L00_0015F7E8; /* +inf, the level's literal pool */
+            /* the just-cleared int, converted: retail holds this 0.0f in a register across the loop,
+               which a literal 0.0f (stored from $zero, as in the next branch) does not give */
+            m->anim_time = ((Hero *)D_0013F450)->unkAB8;
+            m->prev_frame = ((Hero *)D_0013F450)->unkAB4;
+            m->prev_frame_data = ((AnimSeq_32EF0 *)m->pclass->seqs[m->prev_seq])->frames[m->prev_frame];
+            HeroClearQueuedSequence();
+            HeroSyncSecondaryAnim();
+        } else if (((Hero *)D_0013F450)->unkAB0 != -1 && ((Hero *)D_0013F450)->unkAB4 < m->prev_frame) {
+            ((Hero *)D_0013F450)->unkA94 = 0.33333334f;
+            m->anim_time = 0.0f;
+            m->prev_frame = ((Hero *)D_0013F450)->unkAB0;
+            m->prev_frame_data = ((AnimSeq_32EF0 *)m->pclass->seqs[m->prev_seq])->frames[m->prev_frame];
+            HeroSyncSecondaryAnim();
+        } else {
+            if (m->prev_frame >= ((AnimSeq_32EF0 *)m->pclass->seqs[m->prev_seq])->frame_count) {
+                m->prev_frame = 0;
+                ((Hero *)D_0013F450)->unkA98 |= 2;
             }
-            gL = D_0013E633 + 0xE1D;
-            *(int *)(gL + 0xAA0) = -1;
-            *(int *)(gL + 0xA98) |= 1;
-            r[0x50] = r[0x51];
-            *(int *)(r + 0x68) = *(int *)(r + 0x6C);
-            r[0x51] = r[0x51] + 1;
-            if (*(int *)(gL + 0xAB8) != 0) {
-                *(int *)(gL + 0xAB8) = 0;
-                *(float *)(gL + 0xA94) = k;
-                *(float *)(r + 0x54) = z;
-                r[0x51] = *(unsigned char *)(gL + 0xAB4);
-                *(int *)(r + 0x6C) = *(int *)(*(char **)(*(char **)(r + 0x24) + r[0x53] * 4 + 0x48) + (unsigned char)r[0x51] * 4 + 0x1C);
-                func_L00_00232EA8();
-                func_L00_00232B78();
-            } else if (*(int *)(gL + 0xAB0) != -1 && *(int *)(gL + 0xAB4) < (int)(unsigned char)r[0x51]) {
-                *(float *)(gL + 0xA94) = 0.33333334f;
-                *(int *)(r + 0x54) = 0;
-                r[0x51] = *(unsigned char *)(gL + 0xAB0);
-                *(int *)(r + 0x6C) = *(int *)(*(char **)(*(char **)(r + 0x24) + r[0x53] * 4 + 0x48) + (unsigned char)r[0x51] * 4 + 0x1C);
-                func_L00_00232B78();
-            } else {
-                gB = D_0013E633 + 0xE1D;
-                seq = *(char **)(*(char **)(r + 0x24) + (unsigned char)r[0x53] * 4 + 0x48);
-                if (!((unsigned char)r[0x51] < (unsigned char)seq[0x10])) {
-                    r[0x51] = 0;
-                    *(int *)(gB + 0xA98) |= 2;
-                }
-                *(float *)(r + 0x54) -= 1.0f;
-                *(int *)(r + 0x6C) = *(int *)(*(char **)(*(char **)(r + 0x24) + (unsigned char)r[0x53] * 4 + 0x48) + (unsigned char)r[0x51] * 4 + 0x1C);
-                *(float *)(r + 0x54) /= *(float *)(gB + 0xA94);
-                *(float *)(gB + 0xA94) = **(float **)(r + 0x68);
-                *(float *)(r + 0x54) *= *(float *)(gB + 0xA94);
-            }
-            x = *(float *)(r + 0x54);
+            m->prev_frame_data = ((AnimSeq_32EF0 *)m->pclass->seqs[m->prev_seq])->frames[m->prev_frame];
+            m->anim_time -= 1.0f;
+            m->anim_time /= ((Hero *)D_0013F450)->unkA94;
+            ((Hero *)D_0013F450)->unkA94 = *(f32 *)m->cur_frame_data;
+            m->anim_time *= ((Hero *)D_0013F450)->unkA94;
         }
     }
-    if (same != 0 && r[0x7E] != 0) {
-        hi = ((unsigned char)r[0x50] << 4) + func_001FA898(*(float *)(r + 0x54) * 16.0f);
-        lo = (prev << 4) + func_001FA898(old * 16.0f);
-        seq = *(char **)(*(char **)(r + 0x24) + (unsigned char)r[0x52] * 4 + 0x48);
-        p = seq + 0x1C + (unsigned char)seq[0x10] * 4;
-        for (n = 0; n < (unsigned char)seq[0x12]; n++, p += 4) {
-            v = *(int *)p;
-            if (lo < (v >> 16) && !(hi < (v >> 16))) {
-                func_0022ED80(v & 0xFFFF, 0, r);
+    if (same && m->anim_trigger_count != 0) {
+        s32 hi = (m->frame << 4) + truncate_float_to_s32(m->anim_time * 16.0f);
+        s32 lo = (frame0 << 4) + truncate_float_to_s32(t0 * 16.0f);
+        AnimSeq_32EF0 *seq = ((AnimSeq_32EF0 *)m->pclass->seqs[m->seq]);
+        s32 *trig = (s32 *)&seq->frames[seq->frame_count];
+        s32 i;
+        for (i = 0; i < seq->trigger_count; i++, trig++) {
+            s32 at = *trig >> 16;
+            if (lo < at && !(hi < at)) {
+                func_0022ED80(*trig & 0xFFFF, 0, m);
                 break;
             }
         }
     }
-    t = (unsigned char)r[0x7D];
-    if (t != 0xFF) {
-        e = D_0013E633 + 0x1D + t * 0x70;
-        if (*(unsigned char **)(e + 0x88) == r) {
-            if (*(short *)(e + 0x7E) != (unsigned char)r[0x7C]) {
-                func_L00_0028EBF0(t);
-                r[0x7D] = 0xFF;
-            }
-        } else {
-            r[0x7D] = 0xFF;
+    if (m->sound_slot != 0xFF) {
+        VoiceSlot_32EF0 *v = (VoiceSlot_32EF0 *)(D_0013E633 + 0x1D + m->sound_slot * 0x70);
+        if (v->owner != m) {
+            m->sound_slot = 0xFF;
+        } else if (v->sound != m->unk7C) {
+            func_L00_0028EBF0(m->sound_slot);
+            m->sound_slot = 0xFF;
         }
-    } else if ((unsigned char)r[0x7C] != t) {
-        if (*(int *)&D_L00_0015F6A8_s != 2 && *(int *)&D_L00_0015F6A8_s != 6) {
-            r[0x7D] = func_0022ED80((unsigned char)r[0x7C], 4, r);
-        }
+    } else if (m->unk7C != 0xFF && D_L00_0015F6A8 != 2 && D_L00_0015F6A8 != 6) {
+        m->sound_slot = func_0022ED80(m->unk7C, 4, m);
     }
-    func_L00_00232980();
-    func_L00_00232B20();
-    gC = D_0013E633 + 0xE1D;
-    tmp = *(float *)(gC + 0xAA8);
-    cur2 = func_0020D830(r);
-    *(float *)(gC + 0xAA8) = cur2;
-    if (tmp <= cur2) {
-        *(float *)(gC + 0xAAC) = cur2 - tmp;
-    } else {
-        *(float *)(gC + 0xAAC) = delta;
-    }
-    gD = D_0013E633 + 0xE1D;
-    *(int *)(gD + 0xA9C) = r[0x52] != r[0x53];
+    HeroSyncPairAnimSpeed();
+    HeroSyncMappedSpeed();
+    prev = ((Hero *)D_0013F450)->anim_frame;
+    ((Hero *)D_0013F450)->anim_frame = func_0020D830(m);
+    if (prev <= ((Hero *)D_0013F450)->anim_frame)
+        ((Hero *)D_0013F450)->unkAAC = ((Hero *)D_0013F450)->anim_frame - prev;
+    else
+        ((Hero *)D_0013F450)->unkAAC = dt;
+    ((Hero *)D_0013F450)->unkA9C = m->seq != m->prev_seq;
 }

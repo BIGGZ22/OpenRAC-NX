@@ -1,17 +1,19 @@
 /* NON_MATCHING func_L00_002BA7C8 -- src/overlays/shared/vendor_002BA7C8.c
- * Best so far: SIZE ours 5284 / retail 5292, checked 2026-10-09.
+ * Best so far: BYTES 3888/5292 (26.5% of the bytes match), checked 2026-10-19.
  * Not built into anything: the retail assembly stays in the source file
  * until a candidate is EXACT (docs/NONMATCHING.md). Start from this one.
+ * Lead note 2026-10-19: this file (p2) is the only same-size candidate. Structurally closer is build-sn opus/p25
+ *   (SIZE 5268/5292): hero43.position used directly, per-loop counters, arc loops over arcpoint[j+2]; continue from
+ *   p25's ideas on top of this one. Left: beam-loop float regs (height f20, amp f21) and store sinking.
  * What the last attempts found:
- *   - p9, run 10: COMPILE; counter rename missed the remaining arc body. Corrected in a new candidate; no usable c
- *   - p10, run 11: SIZE 5228/5292; corrected independent loop counters compile, but beam index takes s2 while the 
- *   - p11, run 12: SIZE 5212/5292; true two-track beam array shares the initial base but loop.c still gives the se
- *   - p12, run 13: SIZE 5252/5292; indexed previous-point copy reintroduces a beam high-half value over selection;
- *   - p13, run 14: SIZE 5212/5292; point-minus-one fallback removes the early beam high half and restores retail w
- *   - p14, run 15: SIZE 5212/5292; independent stack locals preserve layout and emit the same instructions as the 
- *   - p15, run 16: SIZE 5212/5292; aligned float vectors produce identical function instructions and branch graph 
- *   No source writes. Best same-size candidate p8 is BYTES 3575/5292. The p13-p15 line has a stronger matching pro
- *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
+ *   Using c.o in the side-by-side hides ps2eeas nop padding; use obj.o (run.sh fixed).
+ *   Remaining (p25: SIZE 5268 / 5292, 6 instructions short; p2 is the size-exact one but with worse registers):
+ *   1. Height/amp float registers are swapped in the beam loop (retail height=f20, amp=f21; ours opposite).
+ *   Retail also sinks the `D_L00_001DBCD0[i]=height` and `secondary z` stores below the loads for the
+ *   func_L00_001FF860 call (store into the jal delay slot); ours stores first. That is most of the missing instruc
+ *   2. Arc loop index `i` takes s3 in ours, retail s5 (allocated after the j-reversal counters and pointers).
+ *   3. Spill-slot numbering differs (0x358/0x35C/0x360 vs retail), purely cosmetic but shifts many lines.
+ *   4. Candidate search: hero/camera saved regs are swapped (retail hero=s1, camera=s2).
  */
 #include "common.h"
 typedef union { float f[4]; struct { float x,y,z,w; } v; unsigned int q __attribute__((mode(TI))); } V43;
@@ -60,15 +62,14 @@ typedef struct {
 extern char D_0013E633[] NOT_SDA;
 extern Hero43 hero43 __asm__("D_0013F450");
 extern Camera43 camera43 __asm__("D_L00_00166D80");
-extern M43 *D_L00_001ABD80[];
+extern M43 *list43[] __asm__("D_L00_001ABD80");
 extern V43 beam43[] __asm__("D_L00_001DB8C0");
 extern V43 D_L00_001DB8B0[];
 extern V43 noise43[] __asm__("D_L00_001DBB90");
 extern float D_L00_001DBB40[], D_L00_001DBCD0[];
 extern V43 raystart43[] __asm__("D_L00_001DB8A0");
 extern float D_L00_00166EC0[];
-extern M43 *hit43 __asm__("D_L00_00173F58");
-extern V43 hitpoint43 __asm__("D_L00_00173F60");
+extern struct { M43 *hit; int pad; char pt[16]; } hit43 __asm__("D_L00_00173F58");
 extern V43 D_L00_001DB9F0;
 extern short D_L00_00161728[4],D_L00_00161738[4],D_L00_00161740[4];
 extern short arccolor43[4] __asm__("D_L00_00161730");
@@ -142,7 +143,7 @@ void func_L00_002BA7C8(M43 *moby) {
             weapon->timers.h.seek1=0;
         } else {
             hero=&hero43;
-            for(list=D_L00_001ABD80; (candidate=*list)!=0; list++) {
+            for(list=list43; (candidate=*list)!=0; list++) {
                 if(candidate==weapon->target || candidate==weapon->second || !candidate || !candidate->cls || candidate->cls->category!=5 || candidate->state==0xFE || candidate->state==0xFD || !aim43(candidate)) continue;
                 func_001F9BF0(&w.target0,&candidate->position,weapon);
                 length=func_001F9CE8(&w.target0);
@@ -185,7 +186,7 @@ void func_L00_002BA7C8(M43 *moby) {
         w.target1.v.z+=aim->height;
         step_length=(func_001F9D10(&w.target0,&w.target1)+distance)*0.05f;
     }
-    color43=gold?0x207F20:0x7F2020;
+    if(gold) color43=0x207F20; else color43=0x7F2020;
     hero=&hero43;
     func_001F9BC0(&w.normal);
     func_L00_0025A8C0(&w.damage,moby,0x210000,&w.normal,(float)gold+2.0f);
@@ -242,7 +243,8 @@ void func_L00_002BA7C8(M43 *moby) {
                 length=func_001F9CB8(&w.goal);
                 if(length!=0.0f) {
                     if(i==9 || i==19) { step_length=length; blend=0.7f; }
-                    else if((unsigned)(i-5)<5 || i>=15) { step_length=length/func_001FA888(firsthalf?9-i:19-i); blend=0.7f; }
+                    else if((unsigned)(i-5)<5) { step_length=length/func_001FA888(9-i); blend=0.7f; }
+                    else if(i>=15) { step_length=length/func_001FA888(19-i); blend=0.7f; }
                     else blend=0.2f;
                     func_001F9C30(&w.goal,&w.goal,step_length/length);
                     func_001F9C08(&w.step,&w.step,&w.goal,blend);
@@ -287,7 +289,7 @@ void func_L00_002BA7C8(M43 *moby) {
         w.normal.v.w=5627.925f;
         qcopy(&w.damage.normal,&w.normal);
         if(blocked) {
-            candidate=hit43;
+            candidate=hit43.hit;
             if(candidate) {
                 if(!aim43(candidate) || !candidate->cls || candidate->cls->category!=5) func_L00_0025AAC0(candidate,&w.damage);
                 else {
@@ -297,10 +299,10 @@ void func_L00_002BA7C8(M43 *moby) {
                 }
             }
             if(blocked) {
-                qcopy(point,&hitpoint43);
+                qcopy(point,hit43.pt);
                 weapon->count=i;
-                qcopy(&weapon->end,&hitpoint43);
-                if(!hit43 || func_L00_0025A868((char*)hit43)) {
+                qcopy(&weapon->end,hit43.pt);
+                if(!hit43.hit || func_L00_0025A868((char*)hit43.hit)) {
                     weapon->target=0; weapon->timers.h.seek0=0;
                 }
                 break;

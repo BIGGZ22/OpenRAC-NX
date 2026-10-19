@@ -84,3 +84,4 @@ func_0023DCF0	asm only	2026-10-18	ring-buffer timestamp lookup for the current d
 func_0023CAF8	asm only	2026-10-18	PCM ring-buffer put: copies decoded audio into the ring and advances the write offset
 func_0023BB90	asm only	2026-10-19	movie init: sets up the read stream, decoder and DMA channel state
 func_0023B740	asm only	2026-10-19	movie stream read: pulls data from the source into the ring buffer
+func_0023C5E0	asm only	2026-10-19	setImageTag: builds the DMA/GIF tag chain for a grid of 16x16 image blocks
