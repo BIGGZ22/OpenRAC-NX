@@ -592,6 +592,14 @@ void install(gl::GetProcAddress get) {
     all = all && name != nullptr;
     OPENRAC_GL_STATS_FUNCTIONS(OPENRAC_GL_STATS_LOAD)
 #undef OPENRAC_GL_STATS_LOAD
+    // OpenGL ES has GPU timer queries through GL_EXT_disjoint_timer_query only (Adreno, Mali),
+    // whose 64-bit result is read with the EXT form: without it the overlay's GPU times stay
+    // "not measured" on a phone, where the GPU is what most often holds the frame up.
+    if (gl::is_es() && gl::has_extension("GL_EXT_disjoint_timer_query")) {
+        glGetQueryObjectui64v = reinterpret_cast<PFN_glGetQueryObjectui64v>(get("glGetQueryObjectui64vEXT"));
+    } else if (gl::is_es()) {
+        glGetQueryObjectui64v = nullptr;
+    }
 
     s.info.vendor = gl_string(GL_VENDOR);
     s.info.renderer = gl_string(GL_RENDERER);
