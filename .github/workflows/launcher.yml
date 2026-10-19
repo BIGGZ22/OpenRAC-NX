@@ -223,9 +223,11 @@ jobs:
           echo "CXXFLAGS=-stdlib=libc++" >> "$GITHUB_ENV"
           echo "LDFLAGS=-stdlib=libc++ -static-libstdc++ -static-libgcc -l:libc++abi.a" >> "$GITHUB_ENV"
 
-      - name: Ninja (macOS)
+      # MoltenVK: the Vulkan renderer's driver on macOS, carried in each game's application bundle
+      # (port/cmake/MacApp.cmake).
+      - name: Ninja and MoltenVK (macOS)
         if: matrix.name == 'macos'
-        run: brew install ninja
+        run: brew install ninja molten-vk
 
       - name: Clang (Windows)
         if: matrix.name == 'windows'
@@ -298,6 +300,13 @@ jobs:
           us=$(program "$COPY/port/build/release/openrac-rac1-ntsc")
           [ -f "$us" ] || { echo "the copy carries no openrac-rac1-ntsc"; exit 1; }
           "$us" --help || true
+          # On macOS each game carries MoltenVK, for the Vulkan renderer (port/cmake/MacApp.cmake).
+          if [ "$NAME" = macos ]; then
+            for program in "$game" "$us"; do
+              lib="$(dirname "$program")/../Frameworks/libMoltenVK.dylib"
+              [ -f "$lib" ] || { echo "$program's bundle carries no libMoltenVK.dylib"; exit 1; }
+            done
+          fi
           # On Linux: what the game asks of the system, libc and libm but not libstdc++, and on
           # x86_64 (Ubuntu 22.04) glibc 2.35 at most.
           case "$NAME" in linux*)
