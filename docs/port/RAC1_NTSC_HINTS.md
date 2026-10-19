@@ -585,6 +585,12 @@ PAL-US `compare` shows only what is new. All are compared again with
   version, and Ratchet lands back on the same spot. The C and the assembly
   agree; only the random state differs (above: on these levels it still parts
   for a cause not yet looked for).
+- **Boarding Pokitaru's fighter (a difference of the discs).** On PAL,
+  Triangle by the fighter (`func_L11_003146E0`) puts Ratchet in state 50 at
+  once; on US (`FUN_L11_00313290`) the press only starts the fade (the
+  fighter's state 2, retail 0x3137F4), and state 50 comes when it ends
+  (0x313854), 16 ticks later. The wide route `11-jet-fighter` leaves `hs` and
+  `mb` out from c=100.
 
 Port bugs these comparisons found and fixed (OPENRAC_PATCHES.md has each US
 edit): Eudora's walker gait read time 0 (`FUN_L04_002927d0`); the Oltanis,
@@ -595,4 +601,12 @@ moby renderer marked no moby drawn and out-of-view mobys kept updating
 (Kerwan's 33 rail movers ran off their paths); the levels' joint pose had no
 host C on this disc; Quartu's helicopter update was a stub and its 28 Blarg
 commanders never existed; Gaspar's asteroid passed its dust spawn the radii
-and vectors crossed.
+and vectors crossed. On the wide routes (2026-10-18): Gaspar read the pad
+twice a tick (an ambient-sound moby queued the level's copy of the pad
+update as its draw callback: `FUN_L07_002f8058`), so a press's first-frame
+edge was lost (`09-turret`'s jump, `09-long`'s Bomb Glove); the Snagglebeast's
+shockwaves started at (0, 0, 1) (carried files' renamed quadword helpers were
+translated as nothing); Gemlik's fighter steered toward a home point 8 bytes
+off (`FUN_L13_002ba178`, `13-qwark`); Oltanis queued Hoven's callback
+(`FUN_L14_00307a80`); the Suck Cannon's HUD gauge took another folded
+wrapper's address (hostgen).

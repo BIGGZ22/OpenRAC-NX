@@ -791,7 +791,10 @@
           "name": "Pokitaru: the jet fighter",
           "sequence": "talk",
           "length": 2400,
-          "points": {"it": [622.5, 579.6, 234.5]}
+          "points": {"it": [622.5, 579.6, 234.5]},
+          "versions": [
+            {"fields": ["hs", "mb"], "from": 100, "why": "the fighter's update (PAL func_L11_003146E0, US FUN_L11_00313290) puts Ratchet in state 50 when Triangle boards it on PAL, and only once the fade has ended on US (16 ticks later; retail US 0x3137F4 sets the fighter's state alone, 0x313854 the hero's): a difference of the discs, and the fighter's parts spawn that much later (RAC1_NTSC_HINTS.md 7)"}
+          ]
         },
         "13-qwark": {
           "level": 13,
