@@ -80,6 +80,10 @@ class GateTests(unittest.TestCase):
         self.assertIn("    memcpy(d, d + 4, 4);", t)
         self.assertIn("    return sqrtf(1.0f);", t)
         self.assertIn("unsigned long func_00100000", t)
+        t = g.prepare("static float f(float d) { return 1.0f / d; }\n#define M 0x1.fffffep127f\n"
+                      "float func_00100000(float x) { return f(x) + M; }\n", "func_00100000")
+        self.assertIn("static __inline__ float f(float d) {", t)
+        self.assertIn("#define M 3.4028234663852886e+38f", t)
         self.assertNotIn("__gate", g.prepare("int func_00100000(void) { return 0; }\n", "func_00100000"))
 
     def test_clashes(self):

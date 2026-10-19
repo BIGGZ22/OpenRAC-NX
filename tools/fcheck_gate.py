@@ -219,18 +219,26 @@ def waive(name: str, status: str, note: str, known: dict[str, str]) -> tuple[str
 
 # The host library's functions the port's C calls, as the console's FPU computes them (the
 # retail code uses VU0 or FPU instructions there; a call of sqrtf has no retail address).
-PRELUDE = """\
-/* fcheck gate (test copy only): the host library's float functions as the console computes them. */
-static __inline__ float __gate_sqrtf(float x) { float r; __asm__ ("sqrt.s %0, %1" : "=f" (r) : "f" (x)); return r; }
-static __inline__ float __gate_fabsf(float x) { float r; __asm__ ("abs.s %0, %1" : "=f" (r) : "f" (x)); return r; }
-static __inline__ void *__gate_memcpy(void *d, const void *s, unsigned int n) { char *a = d; const char *b = s; while (n--) *a++ = *b++; return d; }
-static __inline__ void *__gate_memset(void *d, int c, unsigned int n) { char *a = d; while (n--) *a++ = c; return d; }
-"""
+# memcpy and memset are the game's own (port/game/rac1-pal/libraries.tsv).
+PRELUDE = {
+    "__gate_sqrtf": 'static __inline__ float __gate_sqrtf(float x) { float r; __asm__ ("sqrt.s %0, %1" : "=f" (r) : "f" (x)); return r; }',
+    "__gate_fabsf": 'static __inline__ float __gate_fabsf(float x) { float r; __asm__ ("abs.s %0, %1" : "=f" (r) : "f" (x)); return r; }',
+    "func_00115248": "extern void *func_00115248(void *, const void *, unsigned int);",
+    "func_001153FC": "extern void *func_001153FC(void *, int, unsigned int);",
+}
 LIBM = {"sqrtf": "__gate_sqrtf", "__builtin_sqrtf": "__gate_sqrtf", "openrac_sqrt": "__gate_sqrtf",
         "fabsf": "__gate_fabsf", "__builtin_fabsf": "__gate_fabsf",
-        "memcpy": "__gate_memcpy", "__builtin_memcpy": "__gate_memcpy",
-        "memset": "__gate_memset", "__builtin_memset": "__gate_memset"}
-STATIC_FN = re.compile(r"^(static\s+)(?!inline\b|__inline__\b)(?=[\w \t\*]+?\b(\w+)\s*\([^;{]*\)\s*\{?\s*$)", re.M)
+        "memcpy": "func_00115248", "__builtin_memcpy": "func_00115248",
+        "memset": "func_001153FC", "__builtin_memset": "func_001153FC"}
+STATIC_FN = re.compile(r"^(static\s+)(?!inline\b|__inline__\b)(?=[\w \t\*]+?\b(\w+)\s*\([^;{]*\)\s*(?:\{|$))", re.M)
+# A C99 hexadecimal float (0x1.fffffep127f), which GCC 2.95 does not read.
+HEX_FLOAT = re.compile(r"\b0[xX]([0-9a-fA-F]*\.?[0-9a-fA-F]*[pP][+-]?\d+)([fFlL]?)")
+
+
+def decimal_float(m: re.Match) -> str:
+    """A hexadecimal float literal as a decimal one of the same value (17 digits round-trip a
+    double; a float suffix rounds it the way the hex literal rounds)."""
+    return f"{float.fromhex('0x' + m.group(1)):.17g}" + m.group(2)
 CLASH = re.compile(r"(?:conflicting types for|redefinition of) `(?:struct |union |enum )?(\w+)'")
 
 
@@ -253,10 +261,13 @@ def prepare(text: str, name: str, renames: set[str] = frozenset()) -> str:
     text = re.sub(rf"^[ \t]*(?:extern[ \t]+)?(?:const[ \t]+)?(?:void|float|double|int|unsigned|char|long)\b"
                   rf"[\w \t\*]*?\b(?:{'|'.join(LIBM)})[ \t]*\([^;{{)]*\)[ \t]*;[ \t]*$", "", text, flags=re.M)
     text = re.sub(r"\blong[ \t]+long\b", "long", text)
+    text = HEX_FLOAT.sub(decimal_float, text)
     body = STATIC_FN.sub(lambda m: m.group(1) + "__inline__ " if m.group(2) != name else m.group(0), text)
     head, tail = [], []
+    used = [k for k in used if LIBM[k] != name]
     if used:
-        head.append(PRELUDE)
+        head.append("/* fcheck gate (test copy only): the host library's functions the C calls, as the console has them. */")
+        head += [PRELUDE[t] for t in dict.fromkeys(LIBM[k] for k in used)]
         for k in used:
             head.append(f"#define {k} {LIBM[k]}")
             tail.append(f"#undef {k}")
@@ -354,6 +365,7 @@ LEVEL_FN = re.compile(r"func_L(\d{2})_([0-9A-F]{8})")
 # Most levels a function is checked in (the first ones whose run called it).
 CHECK_LEVELS = 3
 BUILDER = ROOT / "tools/fcheck_level_build.py"
+BUILD_TIMEOUT = 1800
 
 
 def fcheck_module(decomp: Path):
@@ -569,8 +581,13 @@ def placed_check(decomp: Path, name: str, cand: Path, level, states: list[Path])
     if not builder.is_file() or builder.read_bytes() != BUILDER.read_bytes():
         shutil.copyfile(BUILDER, builder)
     rel = lambda p: str(Path(p).resolve().relative_to(decomp.resolve()))
-    r = subprocess.run(["bash", "tools/docker/run.sh", "python3", rel(builder), name, rel(cand), rel(out),
-                        str(level)], cwd=decomp, capture_output=True, text=True)
+    try:
+        r = subprocess.run(["bash", "tools/docker/run.sh", "python3", rel(builder), name, rel(cand), rel(out),
+                            str(level)], cwd=decomp, capture_output=True, text=True, timeout=BUILD_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        # The compiler under Wine has hung once in a busy machine; its container is left to
+        # docker's --rm when it is stopped (`docker ps`).
+        return 2, f"the build did not finish within {BUILD_TIMEOUT} s", clog
     if r.returncode or not out.exists():
         return 2, "\n".join((r.stdout + r.stderr).strip().splitlines()[-25:]), clog
     import json

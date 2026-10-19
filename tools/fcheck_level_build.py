@@ -44,6 +44,8 @@ from pathlib import Path
 ROOT = Path.cwd()
 sys.path.insert(0, str(ROOT / "tools"))
 
+# The game's libc routines (port/game/rac1-pal/libraries.tsv), resident.
+LIBC = {"memcpy": 0x00115248, "memset": 0x001153FC}
 ADDRESSED = re.compile(r"^(D|func|jtbl)_(?:L(\d{2})_)?([0-9A-Fa-f]{8})(?:_\w+)?$")
 
 
@@ -63,6 +65,14 @@ def resolver(name: str, level: int, original):
     near = int(me.group(1), 16) if me else 0x200000
 
     def address(sym: str):
+        # The compiler calls these by name for a block copy or clear: the game's own.
+        if sym in LIBC:
+            return LIBC[sym]
+        m = re.fullmatch(r"func_([0-9A-Fa-f]{8})(?:_\w+)?", sym)
+        if m and int(m.group(1), 16) >= oc.RESIDENT_MAX:
+            at = exe_place(oc, f"func_{m.group(1).upper()}", level, near)
+            if at is not None:
+                return at
         try:
             return oc.resolve_symbol(sym, level, near)
         except oc.Unresolved:
@@ -114,11 +124,34 @@ def exe_bytes(address: int, n: int) -> bytes:
     return raw[address - delta:address - delta + n]
 
 
+def exe_place(oc, name: str, level: int, near: int):
+    """Of an executable function's places in LEVEL, the nearest whose code is the executable's
+    but for call and jump targets, or None (then overlay_check's nearest place). The catalogue
+    folds routines that differ in a constant or an offset under one name (func_001F9878 has five
+    places in some levels, one of them its own code); the C means the executable's."""
+    places = oc.places_in_level(name, level) if name in oc.load_catalogue() else []
+    if len(places) < 2:
+        return None
+    size = oc.load_catalogue()[name][1]
+    ours = exe_bytes(int(name[5:], 16), size)
+    text = oc.text_record(oc.level_manifest(level))
+    blob = (oc.DUMP / f"level_{level:02d}/text.bin").read_bytes()
+    same = []
+    for at in places:
+        theirs = blob[at - text["address"]:at - text["address"] + size]
+        if len(theirs) == len(ours) and all(
+                a == b or (a >> 26 == b >> 26 and a >> 26 in (2, 3))
+                for a, b in ((int.from_bytes(ours[i:i + 4], "little"), int.from_bytes(theirs[i:i + 4], "little"))
+                             for i in range(0, size - size % 4, 4))):
+            same.append(at)
+    return min(same, key=lambda a: abs(a - near)) if same else None
+
+
 def inside(oc, y: int, level: int):
     """An executable function the catalogue has no entry for (it took it as part of the one
     before it, func_00218930 after func_00218928): the place of the nearest catalogued
-    executable function before it, plus the distance, when the level's code there is the
-    executable's (but for call targets)."""
+    executable function before it, plus the distance, when the level's code there is the same
+    instructions (func_0020EA70 is level 0's func_L00_00251B58)."""
     best = None
     for n, (kind, _size, places) in oc.load_catalogue().items():
         m = re.fullmatch(r"func_([0-9A-Fa-f]{8})", n)
@@ -126,15 +159,25 @@ def inside(oc, y: int, level: int):
             x = int(m.group(1), 16)
             if best is None or x > best[0]:
                 best = (x, [a for lv, a in places if lv == level])
-    if not best or len(best[1]) != 1:
+    if not best or not best[1]:
         return None
-    at = best[1][0] + (y - best[0])
+    if len(best[1]) == 1:
+        at = best[1][0] + (y - best[0])
+    else:
+        # A folded function: the place that is its own code (func_001F98B0 follows
+        # func_001F9878's own copy, not the copies of its neighbours folded into it).
+        own = exe_place(oc, f"func_{best[0]:08X}", level, y)
+        if own is None:
+            return None
+        at = own + (y - best[0])
     text = oc.text_record(oc.level_manifest(level))
     blob = (oc.DUMP / f"level_{level:02d}/text.bin").read_bytes()
+    # The same instructions (by opcode): the level's copy reaches the level's data, so its
+    # addresses differ from the executable's.
     ours, theirs = exe_bytes(y, 32), blob[at - text["address"]:at - text["address"] + 32]
     for i in range(0, 32, 4):
         a, b = int.from_bytes(ours[i:i + 4], "little"), int.from_bytes(theirs[i:i + 4], "little")
-        if a != b and not (a >> 26 == b >> 26 and a >> 26 in (2, 3)):
+        if a >> 26 != b >> 26:
             return None
     return at
 
