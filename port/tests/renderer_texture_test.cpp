@@ -277,6 +277,10 @@ void pool() {
     // A larger TEX0 than the upload pads with zero.
     const TextureHandle c = textures.resolve(tex0(0x100, gs::kPsmct32, 3, 3), texa);
     CHECK(textures.image(c).width == 8 && textures.image(c).texel(7, 7) == 0u);
+    // A TEX0 beyond the chip's 1024-texel limit (a garbage register write) is
+    // not converted: it would allocate gigabytes (and once threw bad_alloc).
+    CHECK(textures.resolve(tex0(0x100, gs::kPsmct32, 15, 14), texa) == textures.placeholder());
+    CHECK(textures.resolve(tex0(0x100, gs::kPsmct32, 11, 2), texa) == textures.placeholder());
 
     // An 8-bit texture with its CLUT elsewhere.
     textures.upload(upload(0x200, gs::kPsmct32, 16, 16, clut256()));

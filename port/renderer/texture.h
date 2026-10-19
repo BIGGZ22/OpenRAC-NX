@@ -31,7 +31,12 @@ struct Rgba8Image {
 
     Rgba8Image() = default;
 
-    Rgba8Image(int w, int h) : width(w), height(h), pixels(static_cast<std::size_t>(w * h * 4)) {}
+    Rgba8Image(int w, int h)
+        : width(w),
+          height(h),
+          // In std::size_t: w * h * 4 in int overflows for sizes a garbage
+          // TEX0 can claim (up to 32768 x 32768).
+          pixels(static_cast<std::size_t>(w) * static_cast<std::size_t>(h) * 4) {}
 
     std::uint32_t texel(int x, int y) const;  // R in the low byte
     void set_texel(int x, int y, std::uint32_t rgba);
