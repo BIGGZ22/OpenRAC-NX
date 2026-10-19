@@ -857,6 +857,34 @@ class InputsDigest(unittest.TestCase):
                 hostgen.inputs_digest(source, config, cfg, []), hostgen.inputs_digest(source, config, cfg, ["src/a.c"])
             )
 
+    def test_changes_with_the_assembly_and_disc_it_translates(self):
+        # With the assembly stage on, the assembly the setup wrote and the player's disc are
+        # inputs too: a new setup, or a disc set up after a build, must not reuse the old C.
+        with tempfile.TemporaryDirectory() as tmp:
+            source, game = Path(tmp) / "decomp", Path(tmp) / "game" / "g"
+            (source / "src").mkdir(parents=True)
+            (source / "asm").mkdir()
+            game.mkdir(parents=True)
+            (source / "src" / "a.c").write_text("int a(void) { return 1; }\n")
+            (source / "asm" / "f.s").write_text("nop\n")
+            disc = Path(tmp) / "disc.iso"
+            disc.write_bytes(b"\0" * 16)
+            config = game / "hostgen.json"
+            config.write_text("{}")
+            cfg = {"sources": ["src"], "includes": [], "symbols": [],
+                   "asm": {"enabled": True, "dirs": ["asm"]}}
+            first = hostgen.inputs_digest(source, config, cfg, [])
+            (source / "asm" / "f.s").write_text("nop\nnop\n")
+            second = hostgen.inputs_digest(source, config, cfg, [])
+            self.assertNotEqual(first, second)
+            off = {**cfg, "asm": {**cfg["asm"], "enabled": False}}
+            self.assertNotEqual(second, hostgen.inputs_digest(source, config, off, []))
+            with_disc = {**cfg, "asm": {**cfg["asm"], "retail": {"image": str(disc)}}}
+            third = hostgen.inputs_digest(source, config, with_disc, [])
+            self.assertNotEqual(second, third)
+            disc.write_bytes(b"\0" * 32)
+            self.assertNotEqual(third, hostgen.inputs_digest(source, config, with_disc, []))
+
 
 class SupersededDeclarations(unittest.TestCase):
     def test_header_declaration_a_definition_contradicts_is_dropped(self):

@@ -630,6 +630,20 @@ def inputs_digest(source: Path, config: Path, cfg: dict, options: list[str]) -> 
         for f in sorted(_files(root)):
             h.update(str(f.relative_to(root) if f != root else f.name).encode() + b"\0")
             h.update(hashlib.sha256(f.read_bytes()).digest())
+    # The assembly the setup wrote and the player's disc (hostgen.json "asm", --asm, --asm-source,
+    # --retail-*): C is translated from them too, so a new setup or a disc set up after a build
+    # changes the output. They are large (thousands of files, a disc image), so each file counts
+    # by its path, size and time rather than its bytes.
+    a = asmc.asm_config(cfg)
+    if a:
+        h.update(json.dumps(a, sort_keys=True, default=str).encode())
+        base = Path(a["source"]) if a.get("source") else source
+        stat_roots = [base / d for d in a.get("dirs", [])]
+        stat_roots += [Path(v) for v in (a.get("retail") or {}).values() if v]
+        for root in stat_roots:
+            for f in sorted(_files(root)):
+                st = f.stat()
+                h.update(f"{f}\0{st.st_size}\0{st.st_mtime_ns}\0".encode())
     try:
         clang = subprocess.run([clangast.clang_binary(), "--version"], capture_output=True, text=True).stdout
     except (OSError, SystemExit):
