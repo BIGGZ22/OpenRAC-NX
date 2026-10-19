@@ -19,6 +19,16 @@ if(NOT CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
   message(FATAL_ERROR "OpenRAC's Android build is arm64-v8a only (game memory is a 4 GB reservation)")
 endif()
 
+# ---- calls inside a library ----
+# The game is a shared library here, not a program: a call from one of its functions to another, by
+# default, goes through the procedure linkage table, in case another library replaces the callee.
+# Nothing replaces OpenRAC's functions, and translated code makes many small calls: each binds to
+# its own library's function, directly: -fno-semantic-interposition lets the compiler call and
+# inline it as in a program, and the game's library is linked with -Bsymbolic-functions
+# (cmake/Games.cmake) for the linker to bind what is left. The runtime's hot globals are hidden for
+# the same reason (OPENRAC_GUEST_GLOBAL, openrac/guest.h).
+add_compile_options(-fno-semantic-interposition)
+
 # ---- bionic ----
 # <execinfo.h> below API 33 (android/compat/execinfo.h falls through to bionic's from 33 on): first
 # on every target's include path, so common/ and runtime/ include it as on Linux.

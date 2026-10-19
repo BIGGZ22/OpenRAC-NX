@@ -68,9 +68,19 @@ __extension__ typedef unsigned __int128 openrac_u128;
 
 /* ---- Addresses ---- */
 
+/* The runtime's globals that translated code reads all the time (each game
+ * memory access reads openrac_guest_base). On Android the game is a shared
+ * library, whose globals are otherwise reached through its global offset
+ * table, one more load each time: there they are the library's own. */
+#if defined(__ANDROID__)
+#define OPENRAC_GUEST_GLOBAL __attribute__((visibility("hidden")))
+#else
+#define OPENRAC_GUEST_GLOBAL
+#endif
+
 /* Where game memory starts in the host's address space. Set once by the
  * runtime before any game code runs. */
-extern uint8_t* openrac_guest_base;
+extern OPENRAC_GUEST_GLOBAL uint8_t* openrac_guest_base;
 
 /* The host pointer for a game address, and an lvalue of type T there. */
 #define G(a) ((void*)(openrac_guest_base + (gaddr)(a)))
@@ -93,7 +103,7 @@ extern uint8_t* openrac_guest_base;
  * gives the function a frame on the game stack (GUEST_STACK_*): GFRAME(n)
  * reserves n bytes, aligned to 16, and gives them back when the function
  * returns, by whatever path. */
-extern gaddr openrac_guest_sp;
+extern OPENRAC_GUEST_GLOBAL gaddr openrac_guest_sp;
 gaddr openrac_guest_frame(uint32_t size);
 
 static inline void openrac_guest_frame_end(gaddr* saved) {
@@ -165,7 +175,7 @@ void openrac_guest_set_overlay_source(int (*current)(void));
  * code (the two differ only in addresses), so nothing of the game is stored. */
 void openrac_guest_set_relocation(gaddr low, gaddr high, gaddr gp, const uint8_t* exe_code,
                                   gaddr exe_base, uint32_t exe_size);
-extern gaddr openrac_relocate_low, openrac_relocate_high;
+extern OPENRAC_GUEST_GLOBAL gaddr openrac_relocate_low, openrac_relocate_high;
 /* The executable as its loader placed it before the game ran (load_elf keeps a copy, openrac/elf.h):
  * its bytes in [low, high) copied back into memory; returns how many. For a game that loads its boot
  * program again over a level's in another build of it (rac1: Quit Game reads one from the disc whose
@@ -213,8 +223,8 @@ gaddr openrac_relocate_level_code(int from, gaddr address);
  * where the copy at `canon` (in level `from`'s program, `size` bytes) forms `target`, and reads
  * the same instructions at `self`. Without a place, or one that does not form it, it is
  * OPENRAC_LCODE's. */
-extern gaddr openrac_guest_last_entry;
-extern openrac_host_fn openrac_guest_last_fn;
+extern OPENRAC_GUEST_GLOBAL gaddr openrac_guest_last_entry;
+extern OPENRAC_GUEST_GLOBAL openrac_host_fn openrac_guest_last_fn;
 static inline gaddr openrac_guest_entry(openrac_host_fn self) {
     return openrac_guest_last_fn == self ? openrac_guest_last_entry : 0;
 }

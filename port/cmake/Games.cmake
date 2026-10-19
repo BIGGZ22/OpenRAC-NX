@@ -165,6 +165,8 @@ function(openrac_add_game config)
   if(ANDROID)
     add_library(openrac-${id} SHARED "${OPENRAC_GAME_DIR}/common/main.cpp")
     target_compile_definitions(openrac-${id} PRIVATE OPENRAC_ANDROID_ACTIVITY=1)
+    # Its calls to its own functions bound inside it, as in a program (cmake/Android.cmake).
+    target_link_options(openrac-${id} PRIVATE LINKER:-Bsymbolic-functions)
     add_executable(openrac-${id}-cli "${OPENRAC_GAME_DIR}/common/main.cpp")
     # It finds libSDL3.so and libc++_shared.so beside it, in the same folder.
     set_target_properties(openrac-${id}-cli PROPERTIES OUTPUT_NAME "libopenrac-${id}-cli.so"
