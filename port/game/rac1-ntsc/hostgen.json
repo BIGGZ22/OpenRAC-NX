@@ -66,7 +66,11 @@
     "func_001E9438",
     "func_001E9440",
     "func_001E9458",
-    "func_001E9460"
+    "func_001E9460",
+    "func_001E9468",
+    "func_001E9470",
+    "func_001E9478",
+    "func_001E9480"
   ],
   "host_functions": [
     "FUN_001f7580",
