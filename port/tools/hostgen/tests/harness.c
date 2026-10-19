@@ -84,6 +84,34 @@ openrac_host_fn openrac_guest_function(gaddr address) {
     exit(3);
 }
 
+static struct {
+    openrac_host_fn fn;
+    openrac_regs_thunk thunk;
+} thunks[MAX_FUNCTIONS];
+static size_t thunk_count;
+
+void openrac_guest_register_thunks(const openrac_thunk_entry* entries, size_t count) {
+    for (size_t i = 0; i < count && thunk_count < MAX_FUNCTIONS; i++) {
+        thunks[thunk_count].fn = entries[i].fn;
+        thunks[thunk_count].thunk = entries[i].thunk;
+        thunk_count++;
+    }
+}
+
+uint64_t openrac_guest_call_regs(gaddr address, const uint64_t* ints, const float* floats, float* result,
+                                 int float_result) {
+    openrac_host_fn fn = openrac_guest_function(address);
+    *result = 0.0f;
+    for (size_t i = 0; i < thunk_count; i++) {
+        if (thunks[i].fn == fn) {
+            return thunks[i].thunk(ints, floats, result);
+        }
+    }
+    (void)float_result;
+    fprintf(stderr, "no thunk for %08x\n", address);
+    exit(3);
+}
+
 const char* openrac_guest_function_name(gaddr address) {
     (void)address;
     return NULL;

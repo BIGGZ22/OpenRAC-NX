@@ -148,6 +148,32 @@ openrac_host_fn openrac_guest_function(gaddr address);
 const char* openrac_guest_function_name(gaddr address);
 #define GFN(T, a) ((T)openrac_guest_function(a))
 
+/* A call through a code address with the EE's argument registers as they are, which C written
+ * from assembly makes (hostgen's asmc.py: a jalr, a jump through a register). Casting the
+ * function to eight integer and eight float parameters hands each its register on the System V
+ * and AArch64 conventions, which keep integers and floats in registers of their own; on Windows
+ * x64 an argument's position decides its register whatever its type, so a float, and an integer
+ * after one, would arrive in the wrong place. There each function of the game has a thunk
+ * (hostgen's functions.c) that gives the registers to its definition's parameters as the EE
+ * passes them: integers from `ints` in order, floats from `floats`. The call returns the integer
+ * result and puts a float result in *result; a function with no thunk (the port's own) is called
+ * by the cast. OPENRAC_REGS_THUNKS turns this on elsewhere too (hostgen's tests). */
+#ifndef OPENRAC_REGS_THUNKS
+#ifdef _WIN32
+#define OPENRAC_REGS_THUNKS 1
+#else
+#define OPENRAC_REGS_THUNKS 0
+#endif
+#endif
+typedef uint64_t (*openrac_regs_thunk)(const uint64_t* ints, const float* floats, float* result);
+typedef struct openrac_thunk_entry {
+    openrac_host_fn fn;
+    openrac_regs_thunk thunk;
+} openrac_thunk_entry;
+void openrac_guest_register_thunks(const openrac_thunk_entry* entries, size_t count);
+uint64_t openrac_guest_call_regs(gaddr address, const uint64_t* ints, const float* floats, float* result,
+                                 int float_result);
+
 /* Which overlay is loaded, asked at each call through a code address when
  * set: the game knows (rac1 keeps its current level in a global). */
 void openrac_guest_set_overlay_source(int (*current)(void));

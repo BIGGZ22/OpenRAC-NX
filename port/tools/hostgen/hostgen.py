@@ -298,14 +298,73 @@ def write_program_files(program: Program, out: Path, game: str) -> dict:
             fn.append(f"    {{0x{addr:08X}u, (openrac_host_fn){cname(sym)}, \"{sym}\"}},")
         fn.append("};")
         fn.append("")
+    # Each function's thunk, for a call through its address with the EE's registers as they are
+    # (guest.h, openrac_guest_call_regs; where OPENRAC_REGS_THUNKS is on: Windows).
+    thunks = []
+    for sym in sorted({s for entries in tables.values() for _a, s in entries}):
+        text = thunk_text(sym, program.functions[sym], program.typedefs, len(thunks))
+        if text is not None:
+            thunks.append((sym, text))
+    if thunks:
+        fn += ["#if OPENRAC_REGS_THUNKS",
+               "static double thunk_d_(uint64_t b) { double d; memcpy(&d, &b, sizeof d); return d; }",
+               "static uint64_t thunk_bits_(double d) { uint64_t b; memcpy(&b, &d, sizeof b); return b; }"]
+        fn += [text for _sym, text in thunks]
+        fn.append("static const openrac_thunk_entry k_thunks[] = {")
+        fn += [f"    {{(openrac_host_fn){cname(sym)}, thunk_{k}}}," for k, (sym, _t) in enumerate(thunks)]
+        fn += ["};", "#endif", ""]
     fn.append("void openrac_game_register_functions(void) {")
     for overlay in sorted(tables):
         name = "exe" if overlay < 0 else f"overlay_{overlay:02d}"
         fn.append(f"    openrac_guest_register({overlay}, k_{name}, sizeof k_{name} / sizeof k_{name}[0]);")
+    if thunks:
+        fn += ["#if OPENRAC_REGS_THUNKS", "    openrac_guest_register_thunks(k_thunks, sizeof k_thunks / sizeof k_thunks[0]);",
+               "#endif"]
     fn.append("}")
     _write(out / "functions.c", "\n".join(fn) + "\n")
     return {"stubs": stub_count, "unprototyped": unprototyped,
             "addresses": sum(len(v) for v in tables.values())}
+
+
+def thunk_text(sym: str, f: Function, typedefs: dict, k: int) -> str | None:
+    """thunk_<k>: f called with the EE's argument registers, integers from i[] in order and floats
+    from f[], by its definition's parameters; its result as the EE has it (a float in *r). None
+    where a parameter or the result has no form there (a record by value)."""
+    sig = f.sig
+    ret = canon(sig.ret, typedefs)
+    if ret is None or ret in ("long double", "va_list"):
+        return None
+    args: list[str] = []
+    if not sig.prototyped:
+        args = [f"(int)i[{n}]" for n in range(8)]
+    else:
+        ni = nf = 0
+        for p in sig.params:
+            c = canon(p, typedefs)
+            if c is None or c in ("va_list", "long double"):
+                return None
+            if c == "float":
+                args.append(f"f[{nf}]" if nf < 8 else "0.0f")
+                nf += 1
+            elif c == "double":
+                args.append(f"thunk_d_(i[{ni}])" if ni < 8 else "0.0")
+                ni += 1
+            else:
+                args.append(f"({c})i[{ni}]" if ni < 8 else f"({c})0")
+                ni += 1
+        if sig.variadic:
+            args += [f"i[{n}]" for n in range(ni, 8)]
+    call = f"{cname(sym)}({', '.join(args)})"
+    if ret == "void":
+        body = f"{call}; return 0;"
+    elif ret == "float":
+        body = f"*r = {call}; return 0;"
+    elif ret == "double":
+        body = f"return thunk_bits_({call});"
+    else:
+        body = f"return (uint64_t)({call});"
+    return (f"static uint64_t thunk_{k}(const uint64_t* i, const float* f, float* r) {{ "
+            f"(void)i; (void)f; (void)r; {body} }}")
 
 
 def _c_string(text: str | None) -> str:

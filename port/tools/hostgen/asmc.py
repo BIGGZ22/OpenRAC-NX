@@ -691,8 +691,21 @@ class Translator:
         params = ["openrac_u64"] * 8 + (["float"] * 8 if floats else [])
         args = [self.R(r) for r in ARG_REGS] + ([f"f{r}" for r in FARG_REGS] if floats else [])
         t = f"{ret} (*)({', '.join(params)})"
-        callee = f"GFN({t}, {value})" if self.mode == "host" else f"(({t})({value}))"
-        return self._invoke(f"{callee}({', '.join(args)})", ret)
+        if self.mode != "host":
+            return self._invoke(f"(({t})({value}))({', '.join(args)})", ret)
+        cast = self._invoke(f"GFN({t}, {value})({', '.join(args)})", ret)
+        # Where an argument's position decides its register whatever its type (Windows x64), the
+        # cast would put the floats in the wrong place: each function's thunk gives the registers
+        # to its parameters instead (guest.h, openrac_guest_call_regs).
+        ints = ", ".join(f"(openrac_u64){self.R(r)}" for r in ARG_REGS)
+        fl = ", ".join(f"f{r}" if floats else "0.0f" for r in FARG_REGS)
+        regs = f"{value}, (const openrac_u64[8]){{{ints}}}, (const float[8]){{{fl}}}, &fr_"
+        if ret == "float":
+            body = f"{{ float fr_; (void)openrac_guest_call_regs({regs}, 1); f0 = fr_; }}"
+        else:
+            body = f"{{ float fr_; r2 = {S32(f'(int)openrac_guest_call_regs({regs}, 0)')}; }}"
+        thunked = ["OPENRAC_ASM_CALL();", "OPENRAC_VU0_OUT();", body, "OPENRAC_VU0_IN();"]
+        return ["#if OPENRAC_REGS_THUNKS", *thunked, "#else", *cast, "#endif"]
 
     def _float_writes(self) -> set:
         """The FPU registers the function writes anywhere."""

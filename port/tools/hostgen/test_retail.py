@@ -251,5 +251,50 @@ class SoftDoubles(unittest.TestCase):
         self.assertEqual(t.last_report["functions_from_assembly"], 1)
 
 
+@unittest.skipUnless(HAVE_CLANG, "needs Clang on a POSIX host")
+class CallsThroughRegisters(unittest.TestCase):
+    """A jalr in C from assembly reaches the callee's parameters as the EE passes them, by the
+    cast (System V, AArch64) and by each function's thunk (Windows x64; OPENRAC_REGS_THUNKS)."""
+
+    def test_floats_and_integers_reach_their_parameters(self):
+        c = """
+            float func_00200000(float a, int b, float c, int d) {
+                test_print_float(a); test_print(b); test_print_float(c); test_print(d);
+                return a * 2.0f + (float)(b + d);
+            }
+            int func_00200100(int a, int b) { return a - b; }
+            INCLUDE_ASM("asm", func_00100000);
+            extern int func_00100000(int a, int b, float f);
+            int test_main(void) { test_print(func_00100000(7, 3, 1.5f)); return 0; }
+        """
+        source = """
+            addiu $29, $29, -16
+            sq $31, 0($29)
+            lui $25, %hi(func_00200000)
+            addiu $25, $25, %lo(func_00200000)
+            mov.s $f13, $f12          # c = f
+            jalr $31, $25             # (f, a, f, b): the floats in $f12, $f13, the integers in $a0, $a1
+            nop
+            cvt.w.s $f0, $f0
+            mfc1 $16, $f0
+            lui $25, %hi(func_00200100)
+            addiu $25, $25, %lo(func_00200100)
+            daddu $4, $16, $0
+            jalr $31, $25             # (result, b)
+            addiu $5, $0, 4
+            lq $31, 0($29)
+            jr $31
+            addiu $29, $29, 16
+        """
+        symbols = {"func_00200000": 0x00200000, "func_00200100": 0x00200100}
+        t = test_hostgen.FromAssembly("run_asm")
+        files = {"game/asm/func_00100000.s": mips.assemble("func_00100000", 0x00100000, source, symbols)}
+        want = ["1.500", "7", "1.500", "3", "9"]
+        for flags in ([], ["-DOPENRAC_REGS_THUNKS=1"]):
+            with self.subTest(flags=flags):
+                out = t.run_program({"a.c": c}, config=test_hostgen.ASM_CONFIG, extra_files=files, cflags=flags)
+                self.assertEqual(out, want)
+
+
 if __name__ == "__main__":
     unittest.main()

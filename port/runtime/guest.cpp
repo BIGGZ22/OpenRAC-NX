@@ -62,6 +62,8 @@ std::map<int, Table> g_overlays;
 // folded into one name (their bytes are the same but for the address they call), each place a
 // different function. A call through one of their addresses goes where its code calls.
 std::unordered_map<openrac_host_fn, int> g_ambiguous;
+// Each game function's thunk (openrac_guest_call_regs), by its host function.
+std::unordered_map<openrac_host_fn, openrac_regs_thunk> g_thunks;
 int g_overlay = OPENRAC_OVERLAY_EXE;
 thread_local gaddr g_unknown_target = 0;
 
@@ -217,6 +219,35 @@ void openrac_guest_register(int overlay, const openrac_fn_entry* entries, size_t
             );
         }
     }
+}
+
+void openrac_guest_register_thunks(const openrac_thunk_entry* entries, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        g_thunks.emplace(entries[i].fn, entries[i].thunk);
+    }
+}
+
+uint64_t openrac_guest_call_regs(gaddr address, const uint64_t* ints, const float* floats, float* result,
+                                 int float_result) {
+    const openrac_host_fn fn = openrac_guest_function(address);
+    *result = 0.0f;
+    if (auto it = g_thunks.find(fn); it != g_thunks.end()) {
+        return it->second(ints, floats, result);
+    }
+    // The port's own function (a library replacement, a stub): by the cast, as on System V.
+    using F8 = float;
+    using U8 = uint64_t;
+    if (float_result) {
+        *result = reinterpret_cast<float (*)(U8, U8, U8, U8, U8, U8, U8, U8, F8, F8, F8, F8, F8, F8, F8, F8)>(fn)(
+            ints[0], ints[1], ints[2], ints[3], ints[4], ints[5], ints[6], ints[7], floats[0], floats[1], floats[2],
+            floats[3], floats[4], floats[5], floats[6], floats[7]
+        );
+        return 0;
+    }
+    return reinterpret_cast<U8 (*)(U8, U8, U8, U8, U8, U8, U8, U8, F8, F8, F8, F8, F8, F8, F8, F8)>(fn)(
+        ints[0], ints[1], ints[2], ints[3], ints[4], ints[5], ints[6], ints[7], floats[0], floats[1], floats[2],
+        floats[3], floats[4], floats[5], floats[6], floats[7]
+    );
 }
 
 void openrac_guest_set_overlay(int overlay) {

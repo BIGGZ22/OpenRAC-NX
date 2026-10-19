@@ -65,7 +65,8 @@ def have_compiler() -> bool:
 class Translate(unittest.TestCase):
     def run_program(self, files: dict[str, str], places: str = "", config: dict | None = None,
                     extra_files: dict[str, str] | None = None, host_c: str = "",
-                    stubs: int = 0, hostgen_args: list[str] | None = None) -> list[str]:
+                    stubs: int = 0, hostgen_args: list[str] | None = None,
+                    cflags: list[str] | None = None) -> list[str]:
         """Translates, builds and runs files (name -> C); returns the printed lines.
         config adds to hostgen.json; extra_files are written beside it (tables);
         host_c is linked in (the port's own C); stubs is how many functions are
@@ -105,7 +106,7 @@ class Translate(unittest.TestCase):
             exe = tmp / "prog"
             build = subprocess.run(
                 ["clang", "-std=gnu11", "-O1", "-w", "-fno-strict-aliasing", "-fwrapv", "-fsigned-char",
-                 "-I", str(RUNTIME_INCLUDE), "-I", str(out), "-o", str(exe), *map(str, sources)],
+                 *(cflags or []), "-I", str(RUNTIME_INCLUDE), "-I", str(out), "-o", str(exe), *map(str, sources)],
                 capture_output=True, text=True)
             self.assertEqual(build.returncode, 0, build.stderr)
             run = subprocess.run([str(exe)], capture_output=True, text=True, timeout=30)
