@@ -96,6 +96,18 @@ GameState read_game_state(std::span<const std::uint8_t> ram, const GameAddresses
 /** The moby at address m as the renderers place it; none when its position or scale is unusable. */
 std::optional<LiveMoby> read_live_moby(std::span<const std::uint8_t> ram, std::uint32_t m);
 
+/**
+ * Whether MobyProc leaves a moby out by its distance, as ReRAC's moby_lod.rs replays it: the
+ * bounding sphere (+0x00: x y z r in 1/1024 units) has its centre deeper along the view than the
+ * draw distance (+0x32, s16 units), or lies wholly behind the eye. The side planes are left out:
+ * the window's picture can be wider than the game's.
+ *
+ * @param moby The moby's 0x100 bytes.
+ * @param eye The camera's position, game units.
+ * @param forward The camera's view direction (unit).
+ */
+bool moby_beyond_draw_distance(const std::uint8_t* moby, const renderer::Vec3& eye, const renderer::Vec3& forward);
+
 /** The display list of the frame being shown (the buffer VU1_swapChain retired last). */
 std::uint32_t shown_chain(std::span<const std::uint8_t> ram, const GameAddresses& a);
 

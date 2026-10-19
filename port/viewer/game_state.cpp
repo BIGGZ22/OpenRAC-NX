@@ -139,6 +139,24 @@ std::optional<LiveMoby> read_live_moby(std::span<const std::uint8_t> ram, std::u
     return live;
 }
 
+bool moby_beyond_draw_distance(const std::uint8_t* moby, const renderer::Vec3& eye, const renderer::Vec3& forward) {
+    float sphere[4];
+    std::memcpy(sphere, moby, sizeof(sphere));
+    std::int16_t distance;
+    std::memcpy(&distance, moby + 0x32, sizeof(distance));
+    if (!std::isfinite(sphere[0]) || !std::isfinite(sphere[1]) || !std::isfinite(sphere[2])
+        || !std::isfinite(sphere[3])) {
+        return true;
+    }
+    // No sphere yet (a moby not built since it was made): nothing to go by.
+    if (sphere[0] == 0.0f && sphere[1] == 0.0f && sphere[2] == 0.0f && sphere[3] == 0.0f) {
+        return false;
+    }
+    const float depth = (sphere[0] / 1024.0f - eye[0]) * forward[0] + (sphere[1] / 1024.0f - eye[1]) * forward[1]
+                      + (sphere[2] / 1024.0f - eye[2]) * forward[2];
+    return depth > static_cast<float>(distance) || depth + std::fabs(sphere[3]) / 1024.0f <= 32.0f / 1024.0f;
+}
+
 GameState read_game_state(std::span<const std::uint8_t> ram, const GameAddresses& a) {
     GameState s;
     s.camera_position = vec3(ram, a.camera_position);
