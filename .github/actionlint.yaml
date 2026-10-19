@@ -1,0 +1,6 @@
+# Runner labels newer than the actionlint that checks.yml pins (1.7.12, the latest release): GitHub's
+# Ubuntu 26.04 image, which the workflows use where ubuntu-latest was. Drop a label here once
+# actionlint knows it.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04
